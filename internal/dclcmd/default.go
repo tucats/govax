@@ -1,6 +1,13 @@
 package dclcmd
 
-import "github.com/tucats/govax/internal/vmserrors"
+import (
+	"errors"
+	"strings"
+
+	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmserrors"
+)
 
 // This file implements the console SET DEFAULT/SHOW DEFAULT commands
 // (docs/PHASE-23.md, subtask 3) — the operator-facing half of "remember a
@@ -35,6 +42,19 @@ func (c *Context) SetDefault(text string) error {
 			return lnmErr
 		}
 
+		var syntax *rms.DirectorySyntaxError
+		if errors.As(err, &syntax) {
+			return vmserrors.ConditionError{
+				Status: vmsdef.LibrarySymbols["CLI$_DIRECT"],
+				Text:   "DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters",
+			}
+		}
+
+		var bad *rms.NameError
+		if errors.As(err, &bad) {
+			return vmserrors.ConditionError{Status: bad.Status, Text: strings.TrimPrefix(ConditionLine(bad.Status), "-")}
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, text)
 	}
 
@@ -45,9 +65,17 @@ func (c *Context) SetDefault(text string) error {
 // matching real VMS's own SHOW DEFAULT (with a "=" line per element when
 // the default device is a search list). It never fails — see
 // internal/rms.Session.DefaultString's own doc comment on why there's
-// always something displayable, even before any SET DEFAULT has run.
+// always something displayable, even before any SET DEFAULT has run. A
+// default that can't be used is shown, and then said to be so (VMS 7.1's
+// INVDEF: testdata/lnm91).
 func (c *Context) ShowDefault() error {
-	c.Printf("  %s\n", c.ContainerSession.DefaultString())
+	text := c.ContainerSession.DefaultString()
+	c.Printf("  %s\n", text)
+
+	if c.ContainerSession.DefaultMissing() {
+		first, _, _ := strings.Cut(text, "\n")
+		c.Printf("%%DCL-I-INVDEF, %s does not exist\n", first)
+	}
 
 	return nil
 }

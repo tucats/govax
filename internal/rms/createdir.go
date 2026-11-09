@@ -122,7 +122,7 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 		return nil, fmt.Errorf("create directory: no directory given")
 	}
 
-	if classifyName(text) == nameHost || (!strings.Contains(text, ":") && !s.DefaultOnVolume()) {
+	if s.classify(text) == nameHost || (!strings.Contains(text, ":") && !s.DefaultOnVolume()) {
 		if opts.VolumeOnly {
 			return nil, fmt.Errorf("create directory: %s: %w: no mounted volume", text, ErrNotDirectorySpec)
 		}
@@ -142,6 +142,11 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 		var nameErr *NameError
 		if errors.As(err, &nameErr) && nameErr.Status == rmsDirError {
 			return nil, fmt.Errorf("create directory: %w: %v", volume.ErrDirectoryName, err)
+		}
+
+		// A device name RMS refuses is RMS's to report (VMS 7.1: testdata/lnm91).
+		if errors.As(err, &nameErr) && nameErr.Status == rmsDeviceError {
+			return nil, fmt.Errorf("create directory: %w", err)
 		}
 
 		return nil, fmt.Errorf("create directory: %w: %v", ErrNotDirectorySpec, err)
@@ -201,15 +206,10 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 		createErr = err
 	}
 
-	display := r.Display
-	if display == "" {
-		display = spec.Device
-	}
-
 	created := make([]CreatedDirectory, 0, len(levels))
 
 	for _, l := range levels {
-		created = append(created, CreatedDirectory{Name: display + ":" + l.String(), Created: l.Created})
+		created = append(created, CreatedDirectory{Name: r.shownDir(l.Path), Created: l.Created})
 	}
 
 	if createErr != nil {

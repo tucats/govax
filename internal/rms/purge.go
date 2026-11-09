@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"slices"
 	"fmt"
 	"sort"
 
@@ -50,7 +51,7 @@ import (
 // name should use Delete's own ";*" version selector instead (matching
 // real VMS's convention that DELETE, not PURGE, is the tool for removing
 // everything).
-func (s *Session) Purge(specText string, keep uint16) (purged []string, err error) {
+func (s *Session) Purge(specText string, keep uint16) (purged []DeletedFile, err error) {
 	if keep == 0 {
 		return nil, fmt.Errorf("purge: %w", &InvalidLimitError{Limit: keep})
 	}
@@ -62,8 +63,8 @@ func (s *Session) Purge(specText string, keep uint16) (purged []string, err erro
 	// A search list purges in each of its elements (User's Manual
 	// §11.7.1).
 	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
-		names, err := purgeOnVolume(vol, r.Spec, keep)
-		purged = append(purged, names...)
+		files, err := purgeOnVolume(vol, r, keep)
+		purged = append(purged, files...)
 
 		return err
 	})
@@ -75,8 +76,9 @@ func (s *Session) Purge(specText string, keep uint16) (purged []string, err erro
 }
 
 // purgeOnVolume is Purge for one resolved spec on one volume, returning
-// the names it purged (even when it fails partway).
-func purgeOnVolume(vol *volume.Volume, spec filespec.Spec, keep uint16) (purged []string, err error) {
+// the files it purged (even when it fails partway).
+func purgeOnVolume(vol *volume.Volume, r resolvedSpec, keep uint16) (purged []DeletedFile, err error) {
+	spec := r.Spec
 	spec.Version = "*"
 
 	if len(vol.Devices) != 1 {
@@ -127,13 +129,27 @@ func purgeOnVolume(vol *volume.Volume, spec filespec.Spec, keep uint16) (purged 
 				continue
 			}
 
+			// The blocks go with the files, so they're read first.
+			files := make([]DeletedFile, 0, len(doomed))
+
+			for _, m := range group.matches {
+				if m.Name+"."+m.Type != name || !slices.Contains(doomed, m.Version) {
+					continue
+				}
+
+				d := DeletedFile{Name: m.Name, Type: m.Type, Version: m.Version, Full: r.shownFile(m)}
+				if f, openErr := vol.OpenFID(m.Fid); openErr == nil {
+					d.Blocks = f.Header.RecordAttributes.HighestBlock
+				}
+
+				files = append(files, d)
+			}
+
 			if purgeErr := volume.PurgeVersions(dir, name, keep, bm, ib); purgeErr != nil {
 				return purged, purgeErr
 			}
 
-			for _, v := range doomed {
-				purged = append(purged, fmt.Sprintf("%s;%d", name, v))
-			}
+			purged = append(purged, files...)
 		}
 	}
 

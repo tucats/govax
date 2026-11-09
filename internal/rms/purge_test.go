@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"fmt"
 	"errors"
 	"slices"
 	"testing"
@@ -52,7 +53,7 @@ func TestSession_purgeDefaultLimitKeepsOnlyHighestVersion(t *testing.T) {
 		t.Fatalf("Purge: %v", err)
 	}
 
-	if want := []string{"FOO.TXT;1", "FOO.TXT;2", "BAR.TXT;1"}; !slices.Equal(sortedCopy(purged), sortedCopy(want)) {
+	if want := []string{"FOO.TXT;1", "FOO.TXT;2", "BAR.TXT;1"}; !slices.Equal(sortedCopy(purgedNames(purged)), sortedCopy(want)) {
 		t.Errorf("Purge(*.TXT) reported %v, want exactly the deleted versions %v", purged, want)
 	}
 
@@ -229,4 +230,14 @@ func sortedCopy(in []string) []string {
 	slices.Sort(out)
 
 	return out
+}
+
+// purgedNames is each purged file as NAME.TYPE;VERSION.
+func purgedNames(purged []DeletedFile) []string {
+	names := make([]string, len(purged))
+	for i, d := range purged {
+		names[i] = fmt.Sprintf("%s.%s;%d", d.Name, d.Type, d.Version)
+	}
+
+	return names
 }

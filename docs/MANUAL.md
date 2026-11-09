@@ -1104,7 +1104,7 @@ General rules, as in VMS's DCL:
 ```text
 DIRECTORY [file-spec[,...]]   (or file-spec+file-spec)
     /SIZE[=USED|ALLOCATION|ALL]  /DATE  /OWNER  /PROTECTION  /FILE
-    /FULL  /VERSIONS=n  /[NO]HEADING  /[NO]TRAILING  /OUTPUT[=file]
+    /FULL  /TOTAL  /VERSIONS=n  /[NO]HEADING  /[NO]TRAILING  /OUTPUT[=file]
 ```
 
 Lists files on a volume, laid out as VMS lays them out. With no file
@@ -1223,7 +1223,7 @@ knows the file's type.
 
 ```text
 COPY source[/HOST] destination[/HOST]
-    /BINARY  /QUIET  /VERBOSE  /TEST
+    /BINARY  /LOG  /QUIET  /VERBOSE  /TEST
     (to the host only) /CRLF  /LF  /TIME  /STREAM  /DIRS  /IGNORE
     (from the host only) /RECORD_FORMAT=format  /RECORD_SIZE=n
                          /CARRIAGE_CONTROL=kind  /CONTROL_FIELD_SIZE=n
@@ -1344,10 +1344,11 @@ missing fields from the one before: `DELETE A.TXT;1,;2,B;1`.
 #### PURGE
 
 ```text
-PURGE [/LIMIT=n] [file-spec]
+PURGE [/LIMIT=n] [/LOG] [file-spec]
 ```
 
-Deletes all but the newest `n` versions (default 1) of each file.
+Deletes all but the newest `n` versions (default 1) of each file. `/LOG`
+names each file deleted in full, with its size.
 
 #### RENAME
 
@@ -1630,7 +1631,18 @@ SHOW DEFAULT
 ```
 
 Sets and shows the default device and directory. Omitted parts are kept
-from the current default; `[.SUB]` and `[-]` are relative.
+from the current default; `[.SUB]` and `[-]` are relative. A logical name
+that's concealed, or gives only a device, becomes the default device as
+it stands. One that gives a directory as well sets both, and can't have
+another directory after it. SHOW DEFAULT says so when the default
+directory doesn't exist:
+
+```text
+VAX> SET DEFAULT DUA1:[NOSUCH]
+VAX> SHOW DEFAULT
+  DUA1:[NOSUCH]
+%DCL-I-INVDEF, DUA1:[NOSUCH] does not exist
+```
 
 ### 6.2 Volumes and devices
 

@@ -104,6 +104,13 @@
    For a host output, ends each line with a line feed.  This is the
    default.
 
+/LOG
+
+      /LOG
+
+   Shows each file copied by its full name, the output file's too, with
+   the number of blocks copied, in place of the short confirmation.
+
 /QUIET
 
    Leaves out the %COPY-S-COPIED message for each file.

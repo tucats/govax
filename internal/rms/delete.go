@@ -161,7 +161,7 @@ type DeleteResult struct {
 func (s *Session) DeleteList(specs []string) []DeleteResult {
 	var (
 		results []DeleteResult
-		sticky  *filespec.Spec
+		sticky  *defaultName
 	)
 
 	for _, text := range specs {
@@ -184,7 +184,7 @@ func (s *Session) DeleteList(specs []string) []DeleteResult {
 // logical name that translates to one) is returned as it is, to be
 // resolved against the process defaults like any other, as is text that
 // doesn't parse: Delete reports its error.
-func (s *Session) listDefaults(text string, sticky *filespec.Spec) string {
+func (s *Session) listDefaults(text string, sticky *defaultName) string {
 	if sticky == nil {
 		return text
 	}
@@ -194,21 +194,20 @@ func (s *Session) listDefaults(text string, sticky *filespec.Spec) string {
 		return text
 	}
 
-	return names[0].spec().String()
+	// A version of ";" alone would say the newest; no version must stay none.
+	return strings.TrimSuffix(names[0].String(), ";")
 }
 
 // listSticky returns the defaults text supplies to the next element of a
 // DeleteList: its device, directory, name, and type, as its first search
 // list element resolves them, or nil if text doesn't resolve.
-func (s *Session) listSticky(text string) *filespec.Spec {
+func (s *Session) listSticky(text string) *defaultName {
 	specs, err := expandSpec(s.Logicals, text, s.Default)
 	if err != nil || len(specs) == 0 {
 		return nil
 	}
 
-	r := specs[0].Spec
-
-	return &filespec.Spec{Device: r.Device, Dirs: r.Dirs, Recursive: r.Recursive, Name: r.Name, Type: r.Type}
+	return specs[0].name.defaults()
 }
 
 // deleteOnVolume is Delete for one resolved spec on one volume, returning
@@ -283,7 +282,7 @@ func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (delete
 
 			deleted = append(deleted, DeletedFile{
 				Name: m.Name, Type: m.Type, Version: m.Version,
-				Full:   r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';'),
+				Full:   r.shownFile(m),
 				Blocks: blocks,
 			})
 		}

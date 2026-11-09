@@ -76,7 +76,7 @@ func (s *Session) AnalyzeSearch(spec string, host bool, visit func(*AnalyzedFile
 			}
 
 			attrs := headerAttributes(f.Header)
-			attrs.Name = r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';')
+			attrs.Name = r.shownFile(m)
 			attrs.Device = r.Spec.Device
 			attrs.FID = m.Fid.String()
 			found = true

@@ -94,11 +94,11 @@ func TestConsoleDirectory_badFileSpec(t *testing.T) {
 
 	err := c.cmd().Directory("DUA0:[UNTERMINATED", rms.DirectoryOptions{})
 	if err == nil {
-		t.Fatal("Directory with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
+		t.Fatal("Directory with an unterminated directory bracket = nil error, want RMS-F-SYN")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADFILESPEC)) {
-		t.Errorf("Directory error = %v, want CLI_BADFILESPEC", err)
+	if !strings.Contains(err.Error(), "RMS-F-SYN") {
+		t.Errorf("Directory error = %v, want RMS-F-SYN", err)
 	}
 }
 

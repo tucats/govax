@@ -58,13 +58,27 @@ func (c *Context) Delete(specs []string, log bool) error {
 		elements = append(elements, strings.Split(spec, "+")...)
 	}
 
-	var shown error
+	var (
+		shown  error
+		count  int
+		blocks uint32
+	)
+
+	// More than one file deleted ends with a total (VMS 7.1: testdata/lnm91).
+	defer func() {
+		if log && count > 1 {
+			c.Printf("%%DELETE-I-TOTAL, %d files deleted (%d block%s)\n", count, blocks, plural(blocks))
+		}
+	}()
 
 	results := c.ContainerSession.DeleteList(elements)
 	for i, r := range results {
 		if log {
 			for _, d := range r.Deleted {
 				c.Printf("%%DELETE-I-FILDEL, %s deleted (%d block%s)\n", d.Full, d.Blocks, plural(d.Blocks))
+
+				count++
+				blocks += d.Blocks
 			}
 		}
 
@@ -126,6 +140,13 @@ func (c *Context) deleteFailure(specText string, err error) error {
 		if missing.STV != 0 {
 			text += "\n" + ConditionLine(missing.STV)
 		}
+
+		return vmserrors.ConditionError{Status: deleteSearchFail | stsInhibitMsg, Text: text}
+	}
+
+	var bad *rms.NameError
+	if errors.As(err, &bad) {
+		text := "DELETE-W-SEARCHFAIL, error searching for " + strings.ToUpper(bad.Spec) + "\n" + ConditionLine(bad.Status)
 
 		return vmserrors.ConditionError{Status: deleteSearchFail | stsInhibitMsg, Text: text}
 	}

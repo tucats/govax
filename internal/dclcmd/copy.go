@@ -184,6 +184,12 @@ func (c *Context) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
 		}
 
 	default: // rms.CopyCopied
+		if opts.Log && r.FullSource != "" {
+			c.Printf("%%COPY-S-COPIED, %s copied to %s (%d block%s)\n", r.FullSource, r.FullDest, r.Blocks, plural(r.Blocks))
+
+			return
+		}
+
 		if opts.Verbose {
 			c.Printf("%%COPY-I-COPYING, copying %s to %s\n", r.Source, r.Dest)
 		}

@@ -96,7 +96,7 @@ func TestExpandSpec_precedence(t *testing.T) {
 		{"GETTYSBURG:SPEECH.TXT", []string{"DISK9:[JONES.HISTORY]SPEECH.TXT", "DISK9:[JONES.WORKFILES]SPEECH.TXT"}},
 		{"X.DAT", []string{"DISK9:[MEATBALL.SUB]X.DAT"}},
 		{"DISK4:X.DAT", []string{"DISK4:[MEATBALL.SUB]X.DAT"}},
-		{"_DISK4:X.DAT", []string{"DISK4:[MEATBALL.SUB]X.DAT"}},
+		{"_DISK4:X.DAT", []string{"_DISK4|DISK4:[MEATBALL.SUB]X.DAT"}},
 		// A concealed device is displayed by its logical name.
 		{"HIDDEN:[SAM]X.DAT", []string{"HIDDEN|DJA3:[SAM]X.DAT"}},
 	}
@@ -203,7 +203,7 @@ func TestSession_setDefaultSearchList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := "FIFI:[MEATBALL.SUB]\n=   DISK1:[FRED]\n=   DISK2:[GLADYS]\n=   DISK3:[MEATBALL.SUB]"
+	want := "FIFI:[MEATBALL.SUB]\n  =   DISK1:[FRED]\n  =   DISK2:[GLADYS]\n  =   DISK3:[MEATBALL.SUB]"
 	if got := s.DefaultString(); got != want {
 		t.Errorf("SHOW DEFAULT = %q, want %q", got, want)
 	}
@@ -421,7 +421,8 @@ func TestExpandNames_against(t *testing.T) {
 	defineTestLogical(t, db, "SYS$DISK", "DISK9:")
 	defineTestLogical(t, db, "ELSE", "DISK2:[Q]")
 
-	against := filespec.Spec{Device: "DUA1", Dirs: []string{"A", "B"}, Name: "OLD", Type: "TXT"}
+	dua1 := translatedName{fileName: fileName{Dev: "DUA1:"}}
+	against := defaultName{Disk: dua1, Dirs: []string{"A", "B"}, Name: "OLD", Type: ".TXT"}
 	process := filespec.Spec{Dirs: []string{"PROCESS"}}
 
 	for _, tt := range []struct{ text, want string }{
@@ -440,7 +441,7 @@ func TestExpandNames_against(t *testing.T) {
 		}
 	}
 
-	tree := filespec.Spec{Device: "DUA1", Dirs: []string{"A"}, Recursive: true}
+	tree := defaultName{Disk: dua1, Dirs: []string{"A"}, Recursive: true}
 
 	names, sts := expandNames(db, process, nameInputs{Primary: "X", Against: &tree})
 	if sts != 0 || !names[0].spec().Recursive || names[0].String() != "DUA1:[A...]X.;" {
@@ -448,9 +449,50 @@ func TestExpandNames_against(t *testing.T) {
 	}
 
 	// An empty one is no defaults at all: not SYS$DISK, not the process's.
-	names, sts = expandNames(db, process, nameInputs{Primary: "X", Against: &filespec.Spec{}})
+	names, sts = expandNames(db, process, nameInputs{Primary: "X", Against: &defaultName{}})
 	if sts != 0 || names[0].Dev != "" || len(names[0].spec().Dirs) != 0 {
 		t.Errorf("X against nothing = %v, %#x", names, sts)
+	}
+}
+
+// TestShownDirectory: a file found through a root is shown relative to it,
+// and a root that isn't concealed is shown before the directory (VMS 7.1:
+// testdata/lnm91).
+func TestShownDirectory(t *testing.T) {
+	db := newTestLogicals(t)
+
+	concealed := []lnm.Equivalence{{Value: "_DUA1:[R1.R2.]", Attrs: lnm.AttrConcealed | lnm.AttrTerminal}}
+	if _, err := db.Define(lnm.ProcessTableName, "BASE", lnm.Supervisor, 0, concealed); err != nil {
+		t.Fatal(err)
+	}
+
+	defineTestLogical(t, db, "NOCON", "_DUA1:[R1.R2.]")
+
+	process := filespec.Spec{Dirs: []string{"JONES"}}
+
+	for _, tt := range []struct {
+		text string
+		dirs []string
+		want string
+	}{
+		{"BASE:[SUB]", []string{"R1", "R2", "SUB"}, "BASE:[SUB]"},
+		{"BASE:[*...]", []string{"R1", "R2", "SUB", "K"}, "BASE:[SUB.K]"},
+		{"BASE:[000000]", []string{"R1", "R2"}, "BASE:[000000]"},
+		{"BASE:[000000...]", []string{"R1", "R2", "SUB"}, "BASE:[000000.SUB]"},
+		{"NOCON:[SUB]", []string{"R1", "R2", "SUB"}, "_DUA1:[R1.R2.][SUB]"},
+		{"_DUA1:[SUB]", []string{"SUB"}, "_DUA1:[SUB]"},
+		{"DUA1:<SUB>", []string{"SUB"}, "DUA1:<SUB>"},
+	} {
+		specs, err := expandSpec(db, tt.text, process)
+		if err != nil {
+			t.Errorf("%s: %v", tt.text, err)
+
+			continue
+		}
+
+		if got := specs[0].shownDir(tt.dirs); got != tt.want {
+			t.Errorf("%s shows %v as %q, want %q", tt.text, tt.dirs, got, tt.want)
+		}
 	}
 }
 

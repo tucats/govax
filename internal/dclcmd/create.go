@@ -177,9 +177,14 @@ func (c *Context) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Creat
 // createDirectoryStatus is the secondary status VMS shows for err, a
 // directory CREATE/DIRECTORY couldn't make.
 func (c *Context) createDirectoryStatus(err error) uint32 {
-	var notMounted *rms.NotMountedError
+	var (
+		notMounted *rms.NotMountedError
+		bad        *rms.NameError
+	)
 
 	switch {
+	case errors.As(err, &bad):
+		return bad.Status
 	case errors.Is(err, volume.ErrDirectoryName):
 		return rmsDIR
 	case errors.Is(err, rms.ErrNotDirectorySpec):

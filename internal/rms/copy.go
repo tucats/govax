@@ -120,6 +120,10 @@ type CopyOptions struct {
 	// always the file as it is (copyVolumeToVolume).
 	Binary bool
 
+	// Log is /LOG: VMS's message for each file copied, its name in full and
+	// its size, in place of the short confirmation.
+	Log bool
+
 	// Records is /RECORD_FORMAT and its companions: what a host source's file
 	// is to be on the volume (copyformat.go). Only from a host file to a volume.
 	Records HostRecords
@@ -250,6 +254,11 @@ type CopyResult struct {
 	Source string
 	Dest   string
 
+	// FullSource and FullDest are a volume-to-volume copy's files as COPY/LOG
+	// names them, and Blocks how many blocks it copied.
+	FullSource, FullDest string
+	Blocks               uint32
+
 	// Warning, non-empty only for a Kind == CopyCopied result with /TIME
 	// set whose os.Chtimes call itself failed, holds that failure's own
 	// text (no "%COPY-W-..." prefix -- Console.Copy adds that). A /TIME
@@ -371,7 +380,12 @@ func requireMatchable(matches []filespec.Match, destAcceptsMultiple bool, specTe
 // records) a different file, which no longer ran (docs/PHASE-66 - mapped
 // image activation.md, subtask 7).
 func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptions) ([]CopyResult, error) {
-	srcVol, srcSpec, err := s.resolveVolume(sourceText)
+	srcFound, err := expandSpec(s.Logicals, sourceText, s.Default)
+	if err != nil {
+		return nil, fmt.Errorf("copy: %w", err)
+	}
+
+	srcVol, srcSpec, err := s.mounted(srcFound[0])
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
 	}
@@ -381,7 +395,12 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	destVol, destSpec, err := s.resolveVolume(destText)
+	destFound, err := expandSpec(s.Logicals, destText, s.Default)
+	if err != nil {
+		return nil, fmt.Errorf("copy: %w", err)
+	}
+
+	destVol, destSpec, err := s.mounted(destFound[0])
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
 	}
@@ -466,7 +485,12 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 
 		dest.Version = fmt.Sprint(version)
 
-		results = append(results, CopyResult{Kind: CopyCopied, Source: sourceDisplay, Dest: dest.String()})
+		results = append(results, CopyResult{
+			Kind: CopyCopied, Source: sourceDisplay, Dest: dest.String(),
+			FullSource: srcFound[0].shownFile(m),
+			FullDest:   destFound[0].name.resultFor(dest),
+			Blocks:     lastUsedBlock(src),
+		})
 	}
 
 	return results, nil

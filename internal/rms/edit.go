@@ -177,7 +177,7 @@ func (s *Session) openVolumeForEdit(name string) (*EditFile, error) {
 			return &AmbiguousError{Spec: name, Count: len(matches)}
 		}
 
-		spec := fullSpec(r.Display, matches[0])
+		spec := r.shownFile(matches[0])
 
 		if !s.Mounts.Writable(r.Spec.Device) {
 			return &ReadOnlyError{Spec: spec}

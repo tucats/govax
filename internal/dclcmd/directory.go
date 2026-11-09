@@ -72,7 +72,18 @@ func (c *Context) DirectoryTo(specText string, opts rms.DirectoryOptions, output
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
 		}
 
+		var bad *rms.NameError
+		if errors.As(err, &bad) {
+			return directoryOpenFailure(strings.ToUpper(bad.Spec), bad.Status, 0)
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
+	}
+
+	if !found {
+		if missing := c.ContainerSession.DirectoryMissing(specText); missing != nil {
+			return directoryOpenFailure(missing.Name, missing.Status, missing.STV)
+		}
 	}
 
 	if output == "" {
@@ -86,6 +97,21 @@ func (c *Context) DirectoryTo(specText string, opts rms.DirectoryOptions, output
 	}
 
 	return nil
+}
+
+// directoryOpenFailure is DIRECTORY's OPENIN, an error, for a name it can't
+// look in, as VMS 7.1 showed it (testdata/lnm91):
+//
+//	%DIRECT-E-OPENIN, error opening BASE:[NOSUCH]*.*;* as input
+//	-RMS-E-DNF, directory not found
+//	-SYSTEM-W-NOSUCHFILE, no such file
+func directoryOpenFailure(name string, status, stv uint32) error {
+	text := "DIRECT-E-OPENIN, error opening " + name + " as input\n" + ConditionLine(status)
+	if stv != 0 {
+		text += "\n" + ConditionLine(stv)
+	}
+
+	return vmserrors.ConditionError{Status: directOpenIn | stsInhibitMsg, Text: text}
 }
 
 // writeDirectoryListing writes text, DIRECTORY's listing, as the text
@@ -120,6 +146,9 @@ func (c *Context) writeDirectoryListing(name, text string) error {
 // (unconfirmed against VMS: the facility number, and the message, which
 // no probe has shown).
 var directNoFiles = 146<<16 | vmsdef.LibrarySymbols["SHR$_NOFILES"]
+
+// directOpenIn is DIRECTORY's OPENIN condition value, at severity E.
+var directOpenIn = 146<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]&^7 | 2
 
 // DirectorySizeMode is /SIZE's value as an rms.SizeMode: USED,
 // ALLOCATION, or ALL, or an abbreviation; another is CLI_IVKEYW.

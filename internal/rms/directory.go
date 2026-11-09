@@ -63,6 +63,9 @@ type DirectoryOptions struct {
 	// full name, one to a line; NoTrailing is /NOTRAILING: no totals.
 	NoHeading, NoTrailing bool
 
+	// Total is /TOTAL: each directory's heading and total, and no files.
+	Total bool
+
 	// OwnerName writes an owner's UIC (group in the high word) as /OWNER
 	// and /FULL show it, "[SYSTEM]"; nil writes it as numbers, "[1,4]".
 	OwnerName func(uic uint32) string
@@ -171,7 +174,7 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 					continue
 				}
 
-				if err := l.list(vol, r.Display+":"+dirSpec{Elems: group.dirs}.String(), listed); err != nil {
+				if err := l.list(vol, r.shownDir(group.dirs), listed); err != nil {
 					return err
 				}
 			}
@@ -190,6 +193,35 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 	}
 
 	return l.b.String(), l.files > 0, nil
+}
+
+// DirectoryMissing says why specText, which found nothing, found nothing,
+// when the reason is its directory: VMS's DIRECTORY reports that as a
+// failure to open the name, its fields filled in from "*.*;*" (VMS 7.1:
+// testdata/lnm91). It's nil for anything else: a list of names, a search
+// list, a wildcard directory, or a directory that's there.
+func (s *Session) DirectoryMissing(specText string) *DCLFileError {
+	if len(SplitSpecList(specText)) != 1 {
+		return nil
+	}
+
+	names, err := expandText(s.Logicals, s.Default, nameInputs{Primary: specText, Default: "*.*;*", ThroughPermanent: true})
+	if err != nil || len(names) != 1 {
+		return nil
+	}
+
+	full := names[0].spec()
+
+	vol, ok := s.Mounts.Lookup(full.Device)
+	if !ok || full.Recursive || strings.ContainsAny(strings.Join(full.Dirs, "."), "*%") {
+		return nil
+	}
+
+	if _, err := filespec.ResolveDirectory(vol, full.Dirs); err == nil {
+		return nil
+	}
+
+	return newDCLFileError(names[0].String(), rmsDirNotFound)
 }
 
 // directoryListing is DIRECTORY's listing as it's written: the text so
@@ -222,6 +254,12 @@ func (l *directoryListing) list(vol *volume.Volume, dirName string, listed []fil
 		if !opts.NoHeading {
 			fmt.Fprintf(&l.b, "\nDirectory %s\n\n", dirName)
 		}
+	}
+
+	if opts.Total {
+		l.count += len(listed)
+
+		return nil
 	}
 
 	for _, m := range listed {
@@ -279,7 +317,7 @@ func (l *directoryListing) endDirectory() {
 	l.totalAlloc += l.alloc
 
 	if !l.opts.NoTrailing {
-		if !l.opts.Full {
+		if !l.opts.Full && !l.opts.Total {
 			l.b.WriteString("\n")
 		}
 

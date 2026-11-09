@@ -353,6 +353,7 @@ func (d *Dispatcher) bindGrammar() {
 
 			NoHeading:  r.Negated("HEADING"),
 			NoTrailing: r.Negated("TRAILING"),
+			Total:      r.Present("TOTAL") && !r.Negated("TOTAL"),
 		}
 
 		if opts.Size {
@@ -465,7 +466,7 @@ func (d *Dispatcher) bindGrammar() {
 			limit = uint16(r.Int("LIMIT"))
 		}
 
-		return d.Console.cmd().Purge(r.String("SPEC"), limit)
+		return d.Console.cmd().Purge(r.String("SPEC"), limit, r.Present("LOG") && !r.Negated("LOG"))
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 8): TYPE writes one file's
@@ -512,6 +513,7 @@ func (d *Dispatcher) bindGrammar() {
 
 		opts := rms.CopyOptions{
 			Binary:  r.Present("BINARY"),
+			Log:     r.Present("LOG") && !r.Negated("LOG"),
 			Quiet:   r.Present("QUIET"),
 			Verbose: r.Present("VERBOSE"),
 			Test:    r.Present("TEST"),

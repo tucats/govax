@@ -84,6 +84,20 @@ func classifyName(name string) nameKind {
 	return nameBare
 }
 
+// classify is classifyName, except that a one-letter device that's a
+// logical name is one, not a Windows drive letter.
+func (s *Session) classify(name string) nameKind {
+	kind := classifyName(name)
+
+	if kind == nameHost && s.Logicals != nil && len(name) > 1 && name[1] == ':' && !strings.ContainsAny(name, `/\`) {
+		if _, err := s.Logicals.Translate(lnm.FileDevName, strings.ToUpper(name[:1]), lnm.User, 0); err == nil {
+			return nameVolume
+		}
+	}
+
+	return kind
+}
+
 // BareName reports whether name's syntax alone says nothing about where it
 // is (rule 4 above): no directory, no device or logical name, no host
 // path. A command may treat such a name more freely than an explicit one,
@@ -118,7 +132,7 @@ func (s *Session) Locate(name string, host bool) (FileLocation, error) {
 		return FileLocation{Host: true, Name: name}, nil
 	}
 
-	switch classifyName(name) {
+	switch s.classify(name) {
 	case nameHost:
 		return FileLocation{Host: true, Name: name}, nil
 
@@ -143,7 +157,7 @@ func (s *Session) Locate(name string, host bool) (FileLocation, error) {
 // follows related: on the host it's in related's directory, and on a
 // volume it takes related's device and directory.
 func (s *Session) LocateRelated(name string, host bool, related FileLocation) (FileLocation, error) {
-	if host || classifyName(name) != nameBare {
+	if host || s.classify(name) != nameBare {
 		return s.Locate(name, host)
 	}
 

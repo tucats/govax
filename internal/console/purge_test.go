@@ -14,7 +14,7 @@ import (
 func TestConsolePurge_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.cmd().Purge("DUB0:*.*", 1)
+	err := c.cmd().Purge("DUB0:*.*", 1, false)
 	if err == nil {
 		t.Fatal("Purge against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -29,7 +29,7 @@ func TestConsolePurge_badLimit(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Purge("DUA0:INDEXF.SYS", 0)
+	err := c.cmd().Purge("DUA0:INDEXF.SYS", 0, false)
 	if err == nil {
 		t.Fatal("Purge with /LIMIT=0 = nil error, want CLI_BADLIMIT")
 	}
@@ -46,7 +46,7 @@ func TestConsolePurge_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Purge("DUA0:[UNTERMINATED", 1)
+	err := c.cmd().Purge("DUA0:[UNTERMINATED", 1, false)
 	if err == nil {
 		t.Fatal("Purge with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -77,7 +77,7 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := c.cmd().Purge("FOO.TXT", 1); err != nil {
+	if err := c.cmd().Purge("FOO.TXT", 1, false); err != nil {
 		t.Fatalf("Purge: %v", err)
 	}
 

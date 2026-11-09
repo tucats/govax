@@ -38,11 +38,11 @@ func TestConsoleSetDefault_badFileSpec(t *testing.T) {
 
 	err := c.cmd().SetDefault("DUA0:[UNTERMINATED")
 	if err == nil {
-		t.Fatal("SetDefault with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
+		t.Fatal("SetDefault with an unterminated directory bracket = nil error, want RMS-F-SYN")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADFILESPEC)) {
-		t.Errorf("SetDefault error = %v, want CLI_BADFILESPEC", err)
+	if !strings.Contains(err.Error(), "RMS-F-SYN") {
+		t.Errorf("SetDefault error = %v, want RMS-F-SYN", err)
 	}
 }
 

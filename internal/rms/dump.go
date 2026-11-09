@@ -169,7 +169,7 @@ func (s *Session) OpenDump(spec string) (*DumpFile, error) {
 		}
 
 		dump = &DumpFile{
-			Name:      r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';'),
+			Name:      r.shownFile(m),
 			FID:       m.Fid.String(),
 			EndBlock:  lastUsedBlock(f),
 			Allocated: f.Header.RecordAttributes.HighestBlock,

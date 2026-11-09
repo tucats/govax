@@ -44,7 +44,7 @@ import (
 //     device volume set, or a genuine I/O failure freeing storage) is
 //     reported as CLI_BADFILESPEC, matching Context.Delete's own catch-all
 //     bucket.
-func (c *Context) Purge(specText string, keep uint16) error {
+func (c *Context) Purge(specText string, keep uint16, log bool) error {
 	purged, err := c.ContainerSession.Purge(specText, keep)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
@@ -64,8 +64,22 @@ func (c *Context) Purge(specText string, keep uint16) error {
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
 	}
 
-	for _, name := range purged {
-		c.Printf("%%PURGE-S-PURGED, %s purged\n", name)
+	var blocks uint32
+
+	for _, d := range purged {
+		if !log {
+			c.Printf("%%PURGE-S-PURGED, %s.%s;%d purged\n", d.Name, d.Type, d.Version)
+
+			continue
+		}
+
+		c.Printf("%%PURGE-I-FILPURG, %s deleted (%d block%s)\n", d.Full, d.Blocks, plural(d.Blocks))
+
+		blocks += d.Blocks
+	}
+
+	if log && len(purged) > 1 {
+		c.Printf("%%PURGE-I-TOTAL, %d files deleted (%d block%s)\n", len(purged), blocks, plural(blocks))
 	}
 
 	return nil

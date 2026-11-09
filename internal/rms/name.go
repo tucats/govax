@@ -526,6 +526,45 @@ func (p parsedName) shownDir(path []string) string {
 	return p.ShownRoot + likeBrackets(dirSpec{Elems: path}.String(), p.Dir[len(p.ShownRoot):])
 }
 
+// relative is dirs, a directory path from the volume's MFD, as the name
+// shows it: the root's levels taken off. A name whose directory was written
+// from "000000" keeps that as its first level, as VMS shows it under a root
+// ([000000.SUB], VMS 7.1: testdata/lnm91), and as $SEARCH does.
+func (p parsedName) relative(dirs []string) []string {
+	if p.Root == "" {
+		return dirs
+	}
+
+	root := p.RootSpec.names()
+	if p.RootSpec.Relative {
+		root = []string{"."}
+	}
+
+	if len(dirs) < len(root) {
+		return dirs
+	}
+
+	dirs = dirs[len(root):]
+
+	if len(dirs) > 0 && len(p.DirSpec.Elems) > 0 && p.DirSpec.Elems[0] == "000000" {
+		return append([]string{"000000"}, dirs...)
+	}
+
+	return dirs
+}
+
+// resultFor is the resultant name of a file with spec's fields, its
+// directory a path from the volume's MFD, found through p: the "." and ";"
+// are always there, even with no type or version.
+func (p parsedName) resultFor(spec filespec.Spec) string {
+	dir := p.Dir
+	if !spec.Recursive {
+		dir = p.shownDir(p.relative(spec.Dirs))
+	}
+
+	return p.Dev + dir + spec.Name + "." + spec.Type + ";" + spec.Version
+}
+
 // volumeDir is p's directory as the volume has it: the root's levels, then
 // the directory's. A root that names no directory gives an element no
 // directory can have, so that looking for it finds nothing.
@@ -561,6 +600,36 @@ func (p parsedName) spec() filespec.Spec {
 	}
 }
 
+// defaultName is a name that stands in for the process defaults
+// (nameInputs.Against): a device with the root and concealed name that go
+// with it, a directory relative to that root, and a name and type.
+type defaultName struct {
+	Disk      translatedName
+	Dirs      []string
+	Recursive bool
+	Name      string
+	Type      string
+}
+
+// defaults is p as the defaults of the name after it. A concealed name
+// comes back as a concealed name, so that the name after this one shows it
+// too.
+func (p parsedName) defaults() *defaultName {
+	d := &defaultName{
+		Disk:      translatedName{fileName: fileName{Dev: p.Dev, Root: p.Root}},
+		Dirs:      p.DirSpec.names(),
+		Recursive: len(p.DirSpec.Elems) > 0 && p.DirSpec.Elems[len(p.DirSpec.Elems)-1] == ellipsis,
+		Name:      p.Name,
+		Type:      p.Type,
+	}
+
+	if p.FNB&fnbCnclDev != 0 {
+		d.Disk.Dev, d.Disk.Concealed = p.Lookup+":", p.Dev
+	}
+
+	return d
+}
+
 // nameInputs are a name processing's sources.
 type nameInputs struct {
 	// Primary and Default are the FAB's file name and default name.
@@ -587,9 +656,8 @@ type nameInputs struct {
 	// for SYS$DISK's, its directory for the default directory (and what a
 	// relative directory applies to), and its name and type for ones no
 	// other source gives. It's how a name takes its defaults from the name
-	// before it in a list, or from the file being renamed, and an empty
-	// Spec means no defaults at all.
-	Against *filespec.Spec
+	// before it in a list, or from the file being renamed.
+	Against *defaultName
 
 	// BadString is RMS$_FNA or RMS$_DNA when the file name's or default
 	// name's string can't be read, and 0 otherwise. A status, not a fault:
@@ -857,11 +925,11 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 	}
 
 	if in.Against != nil {
-		base = *in.Against
+		base = filespec.Spec{Dirs: in.Against.Dirs}
 	}
 
 	defaultDir := dirSpec{Elems: base.Dirs}.String()
-	if in.Against != nil && base.Recursive {
+	if in.Against != nil && in.Against.Recursive {
 		defaultDir = dirSpec{Elems: append(append([]string{}, base.Dirs...), ellipsis)}.String()
 	}
 
@@ -939,7 +1007,7 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 		}
 
 		if in.Against != nil {
-			f, _ = mergeName(f, againstFields(*in.Against))
+			f, _ = mergeName(f, fileName{Name: in.Against.Name, Type: in.Against.Type})
 		}
 
 		if dir != "" {
@@ -961,7 +1029,7 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 		switch {
 		case f.Dev != "":
 		case in.Against != nil:
-			disks[0].Dev = againstDevice(*in.Against)
+			disks[0] = in.Against.Disk
 		case db != nil:
 			if _, err := db.Translate(lnm.FileDevName, sysDiskName, lnm.User, 0); err == nil {
 				if disks, sts = translateName(db, sysDiskName+":", in.ThroughPermanent); sts != 0 {
@@ -1014,26 +1082,6 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 	}
 
 	return out, 0
-}
-
-// againstFields is the name and type an Against spec gives.
-func againstFields(s filespec.Spec) fileName {
-	f := fileName{Name: s.Name}
-	if s.Type != "" {
-		f.Type = "." + s.Type
-	}
-
-	return f
-}
-
-// againstDevice is an Against spec's device as a name's device field, or
-// "" for none.
-func againstDevice(s filespec.Spec) string {
-	if s.Device == "" {
-		return ""
-	}
-
-	return s.Device + ":"
 }
 
 // scanSpec is text's own fields as a filespec.Spec: nothing translated and

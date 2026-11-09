@@ -111,7 +111,7 @@ func TestSystemFTNRTL(t *testing.T) {
 			}
 		}
 
-		if got := run("SHOW DEFAULT"); got != "  _DUA0:[TEST]\n" {
+		if got := run("SHOW DEFAULT"); got != "  SYS$SYSDEVICE:[TEST]\n" {
 			t.Errorf("after BUILDFTN, the default is %q", got)
 		}
 

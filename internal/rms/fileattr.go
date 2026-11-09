@@ -181,7 +181,7 @@ func (s *Session) FileAttributes(spec string) (FileAttributes, error) {
 			}
 
 			attrs = indexedAttributesOf(f)
-			attrs.Name = r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';')
+			attrs.Name = r.shownFile(m)
 			attrs.Device = r.Spec.Device
 			attrs.FID = m.Fid.String()
 			found = true

@@ -160,6 +160,10 @@ type DCLFile struct {
 	// the logical name OPEN defines is equated to its physical name.
 	Device string
 
+	// Concealed says the file was named through a concealed device, which
+	// the logical name OPEN defines then is too (VMS 7.1: testdata/lnm91).
+	Concealed bool
+
 	ctx    *Context
 	handle *FileHandle
 	ifi    uint16
@@ -251,6 +255,7 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 
 	f := &DCLFile{
 		Name: found.resultant().String(), Device: found.Device, ctx: ctx, handle: handle, ifi: ifi,
+		Concealed: found.Parsed.FNB&fnbCnclDev != 0,
 	}
 
 	// A file that was there before OPEN opened it to write gets a new

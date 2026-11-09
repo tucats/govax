@@ -141,7 +141,7 @@ func (s *Session) OpenSaveSet(loc FileLocation) (*SaveSetFile, error) {
 
 		ra := a.file.Header.RecordAttributes
 		set = &SaveSetFile{
-			Name:       fullSpec(r.Display, m),
+			Name:       r.shownFile(m),
 			Size:       odsrms.FileByteLength(ra),
 			Format:     uint8(ra.Format) & 0x0F,
 			RecordSize: ra.RecordSize,

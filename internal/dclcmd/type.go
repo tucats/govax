@@ -154,6 +154,11 @@ func (c *Context) typeFailure(err error, specText string, loc rms.FileLocation) 
 		return TypeOpenFailure(locked.Name, vmsdef.Symbols["RMS$_FLK"])
 	}
 
+	var bad *rms.NameError
+	if errors.As(err, &bad) {
+		return typeMissing(strings.ToUpper(bad.Spec), bad.Status, 0)
+	}
+
 	return FileFailure(err, specText)
 }
 

@@ -3,9 +3,10 @@
 **Status:** planned 2026-11-09; the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
 Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
-answers"), 3 (one name processor), 4 (syntax and `$PARSE`), and 5 (files
-through the services) are done. RMS's services know roots; the DCL
-utilities and the device services are subtasks 6 and 7.
+answers"), 3 (one name processor), 4 (syntax and `$PARSE`), 5 (files
+through the services), and 6 (the DCL utilities) are done. RMS's services
+and DCL's commands know roots; the device services are subtask 7, and the
+system names subtask 8.
 
 ## Goal
 
@@ -466,7 +467,7 @@ Each is one commit, with tests, stopping for review.
    wildcards (`[*]`, `[*...]`, `[...]`, 8 levels from the root),
    `$ERASE`, `$RENAME`, resultant
    strings, related names, a search list of roots.
-6. **The DCL utilities**: the display helper, every command in A.3, SET
+6. **The DCL utilities** (done 2026-11-09): the display helper, every command in A.3, SET
    and SHOW DEFAULT with a rooted device, F$PARSE, and F$SEARCH. Held to
    the probe's DCL log.
 7. **Devices and the rest**: `PhysicalDevice`, `$ASSIGN`, `$GETDVI` and
@@ -679,3 +680,40 @@ The author accepted the plan and answered its questions:
   FNB now follows the rooted case. `$OPEN` of a search list stops before an element
   that can't be used and reports the elements before it as usual, without that
   element's status.
+- **2026-11-09** Subtask 6: the DCL utilities. One helper shows a name (Decision 5):
+  `resolvedSpec.shownDir` and `shownFile` (`logicals.go`), over `parsedName.relative`,
+  which takes the root's levels off a path, and `parsedName.resultFor`. Every site in A.3
+  uses them, and the device shows as written, `_` and all (`_DUA1:[LNM91]`, `_DUA1:[LNM91.ROOT1.][SUB]`).
+  A name's defaults for the name after it (`nameInputs.Against`) are now a `defaultName`, from
+  `parsedName.defaults`, so a concealed name and a root carry from one element of a DELETE or RENAME
+  list to the next and from a file to its new name. `ExpandName` is the parse's own text.
+
+  `Session.SetDefault` is VMS's: `defaultDevice` follows the device's logical name a level at a time
+  (A.4), SYS$DISK changes before the directory is looked at, and a directory typed after a name that
+  gives one is `DirectorySyntaxError`, CLI$_DIRECT. SHOW DEFAULT's search list lines are RMS's names
+  indented as VMS's are, and `DefaultMissing` is INVDEF. A name RMS refuses is RMS's message under
+  each command's own: DIRECTORY's OPENIN (also for a directory that isn't there,
+  `DirectoryMissing`, where it was NOFILES), TYPE's and DELETE's SEARCHFAIL, CREATE/DIRECTORY's
+  DIRNOTCRE, and SET DEFAULT's bare `%RMS-F-`. These replace `CLI_BADFILESPEC` for those names on
+  plain devices too, so four old tests of it now expect `RMS-F-SYN`.
+
+  Added because the probe shows names with them: COPY/LOG (the full names and blocks,
+  `CopyResult.FullSource`; without it COPY is as before), PURGE/LOG (`Purge` returns
+  `DeletedFile`s), DIRECTORY/TOTAL, and DELETE/LOG's `TOTAL` line. F$PARSE of one field gives the field
+  even when the directory isn't there. OPEN's logical name is concealed if the file's name went
+  through a concealed device. A one-letter device that's a logical name is no longer taken for a
+  Windows drive letter (`Session.classify`).
+
+  `TestLnm91DCLOracle` runs both of the probe's procedures and compares every DCL command of their
+  DCL sections with VMS's log, output and all. It leaves out what isn't this subtask's: the system names
+  (subtask 8, and everything after `SET DEFAULT SYS$SYSTEM:` in its section), F$GETDVI's `CONCEALED`
+  and RUN's IMAGEFNF text (subtask 7), and SET PROTECTION, which govax doesn't have. BACKUP's section is
+  subtask 7's. Until subtask 8, the system names are plain, so a file through `SYS$SYSDEVICE:` shows
+  `_DUA0:`, and `SET DEFAULT SYS$SYSDEVICE:` is `SYS$SYSDEVICE:` where it was `_DUA0:`.
+
+  Unconfirmed, the probe having no such case: `SET DEFAULT A2:` with `A2` = `BASE:[SUB.]` takes the
+  root as the directory, and VMS's result can't be told from leaving the directory alone; `SET DEFAULT
+  NOCON:` follows it. A `[000000...]` under a root in DIRECTORY shows `[000000.SUB]`, as `$SEARCH`
+  does. SHOW DEFAULT's INVDEF looks at a search list's first element only. F$PARSE of one field on a
+  device that isn't mounted gives the field. PURGE/LOG's `TOTAL` line is DELETE's in PURGE's facility.
+  `DIRECTORY [NOSUCH]A.DAT` names `A.DAT;*` in its OPENIN.

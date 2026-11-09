@@ -73,6 +73,12 @@
    Shows each file's size in blocks: USED (the default), ALLOCATION, or
    ALL (used/allocated).
 
+/TOTAL
+
+      /TOTAL
+
+   Shows only each directory's heading and its total of files.
+
 /TRAILING
 
       /[NO]TRAILING

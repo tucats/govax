@@ -24,6 +24,13 @@
    How many of each file's newest versions to keep.  The default is 1,
    the newest alone.
 
+/LOG
+
+      /LOG
+
+   Shows each file deleted, by its full name, with its size, and a total
+   when there is more than one.
+
 2 Examples
 
    1.$ PURGE FOO.TXT

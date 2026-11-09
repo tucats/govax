@@ -49,8 +49,8 @@ type resolvedSpec struct {
 	Spec filespec.Spec
 
 	// Display is the device name to show the user: the concealed
-	// logical name when the translation went through one, Spec.Device
-	// otherwise.
+	// logical name when the translation went through one, and otherwise
+	// the device as it was written, "_" and all.
 	Display string
 
 	// Explicit reports that the specification, once its logical names
@@ -58,6 +58,23 @@ type resolvedSpec struct {
 	// default's: "[A]" or "DISK:" where DISK translates to "DUA1:[A]",
 	// but not "DUA1:".
 	Explicit bool
+
+	// name is the name processing this came from.
+	name parsedName
+}
+
+// shownDir is the device and directory to show for a file found in dirs, a
+// path from the volume's MFD. Every command that names a file it found
+// shows it through here or shownFile, since a directory under a root isn't
+// shown as the path the volume has: "BASE:[SUB]", "_DUA1:[ROOT.][SUB]", and
+// the root itself "[000000]" (VMS 7.1: testdata/lnm91).
+func (r resolvedSpec) shownDir(dirs []string) string {
+	return r.Display + ":" + r.name.shownDir(r.name.relative(dirs))
+}
+
+// shownFile is m's whole name as a user sees it: "BASE:[SUB]A.DAT;1".
+func (r resolvedSpec) shownFile(m filespec.Match) string {
+	return r.shownDir(m.Dirs) + m.ShortName(';')
 }
 
 // translateSpec returns text's logical-name translations in search order
@@ -117,8 +134,9 @@ func expandText(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedNa
 func (p parsedName) resolved() resolvedSpec {
 	return resolvedSpec{
 		Spec:     p.spec(),
-		Display:  strings.TrimPrefix(strings.TrimSuffix(p.Dev, ":"), "_"),
+		Display:  strings.TrimSuffix(p.Dev, ":"),
 		Explicit: p.FNB&fnbExpDir != 0,
+		name:     p,
 	}
 }
 

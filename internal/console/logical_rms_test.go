@@ -77,7 +77,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 
 	// SET DEFAULT to a search list (User's Manual §11.7.2).
 	mustDispatch(t, d, "SET DEFAULT BOTH")
-	wantOutput(t, d, buf, "SHOW DEFAULT", "  BOTH:[000000]\n=   DUA0:[000000]\n=   DUA1:[000000]\n")
+	wantOutput(t, d, buf, "SHOW DEFAULT", "  BOTH:[000000]\n  =   DUA0:[000000]\n  =   DUA1:[000000]\n")
 	wantOutput(t, d, buf, "TYPE ONLY.TXT", "second\n")
 
 	// DELETE works through every element.

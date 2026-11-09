@@ -106,7 +106,7 @@ func TestRun_systemVolumeKernel(t *testing.T) {
 	withSystemVolume(t, systemFlags{file: filepath.Join(t.TempDir(), "govax-system.dsk")})
 
 	out = runOnce(t, nil, "SHOW ROM")
-	if want := `ROM FILE="DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(out, want) {
+	if want := `ROM FILE="_DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(out, want) {
 		t.Errorf("with a system volume, output lacks %s:\n%s", want, out)
 	}
 

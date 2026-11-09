@@ -217,6 +217,9 @@ type dclOpenFile struct {
 	stream  dclStream
 	entry   *rms.PermanentEntry
 	env     *corevms.Environment
+
+	// concealed is rms.DCLFile's, which OPEN's logical name follows.
+	concealed bool
 }
 
 // dclFileName is a logical name as OPEN, READ, WRITE, and CLOSE take it:
@@ -415,7 +418,12 @@ func (c *Interpreter) openCommand(id int64, r *dcl.Result) error {
 		return err
 	}
 
-	eqv := []lnm.Equivalence{{Value: file.entry.EquivalenceString(), Attrs: lnm.AttrTerminal}}
+	attrs := lnm.AttrTerminal
+	if file.concealed {
+		attrs |= lnm.AttrConcealed
+	}
+
+	eqv := []lnm.Equivalence{{Value: file.entry.EquivalenceString(), Attrs: attrs}}
 	if _, err := c.Logicals.Define(lnm.ProcessTableName, logical, lnm.Supervisor, lnm.AttrConfine, eqv); err != nil {
 		_ = file.close()
 
@@ -457,7 +465,7 @@ func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) 
 		return nil, err
 	}
 
-	return c.openEntry(&dclOpenFile{name: f.Name, stream: f}, f, access)
+	return c.openEntry(&dclOpenFile{name: f.Name, stream: f, concealed: f.Concealed}, f, access)
 }
 
 // openEntry makes file, which OPEN opened (f; nil for the null device), a

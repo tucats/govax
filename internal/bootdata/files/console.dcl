@@ -522,6 +522,7 @@ grammar console
                     /type=$integer
         qualifier   heading/id=909
         qualifier   trailing/id=910
+        qualifier   total/id=912
         qualifier   output/id=911               -
                     /type=$string               -
                     /default=""
@@ -648,6 +649,7 @@ grammar console
                     /type=$string
         qualifier   limit/id=1152               -
                     /type=$integer
+        qualifier   log/id=1153
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
@@ -735,6 +737,7 @@ grammar console
         qualifier   dirs/id=1261
         qualifier   stream/id=1262
         qualifier   vfc/id=1263
+        qualifier   log/id=1270
         qualifier   crlf/id=1264
         qualifier   lf/id=1265
         ! govax's (docs/PHASE-86; rms/copyformat.go): what a host file is to be

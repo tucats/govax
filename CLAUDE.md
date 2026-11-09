@@ -797,7 +797,9 @@ never had.
   (`applyTranslation`), and subtask 5 (2026-11-09) files through the services:
   `$SEARCH` from the root (`search.go`'s `searchDirs`, `openRoot`), `wildTop`'s end
   marks, `parsedName.shownDir`, and the NAMs of `$ERASE` and `$RENAME`, held by
-  `TestLnm91ServicesOracle`.
+  `TestLnm91ServicesOracle`, and subtask 6 (2026-11-09) the DCL utilities:
+  `resolvedSpec.shownDir` and `shownFile`, the one way a command shows a name it found, and
+  `Session.SetDefault`'s `defaultDevice`, held by `TestLnm91DCLOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

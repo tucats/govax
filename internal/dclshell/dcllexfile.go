@@ -47,8 +47,8 @@ var parseTypes = map[string]parseType{
 // [,parse-type]): filespec with the fields it leaves out filled in, from
 // default-spec, then related-spec's name and type, then the default
 // device and directory (15.4.2), the whole of it or the one field asked
-// for. It is "" when the device isn't mounted or the directory isn't
-// there (unless SYNTAX_ONLY), and for a specification RMS can't parse
+// for. The whole is "" when the device isn't mounted or the directory
+// isn't there (unless SYNTAX_ONLY), and either is for a specification RMS can't parse
 // (unconfirmed against VMS: that a syntax error is "", not a message).
 func lexParse(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	field := func(p rms.ParsedName) string { return p.String() }
@@ -74,7 +74,10 @@ func lexParse(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	}
 
 	p, found, err := e.console.ContainerSession.Parse(args[0].str(), args[1].str(), args[2].str(), how.syntaxOnly, how.noConceal)
-	if err != nil || !found {
+
+	// One field is the field, whether or not the directory is there (VMS
+	// 7.1: testdata/lnm91's BASE:[NOSUCH]A.DAT).
+	if err != nil || (!found && !args[3].present) {
 		return dclString(""), nil
 	}
 

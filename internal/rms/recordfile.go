@@ -141,7 +141,7 @@ func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, F
 			return err
 		}
 
-		found = FileLocation{Name: fullSpec(r.Display, m)}
+		found = FileLocation{Name: r.shownFile(m)}
 
 		return nil
 	})
@@ -192,7 +192,7 @@ func (s *Session) ReadRawFile(loc FileLocation) ([]byte, FileLocation, error) {
 			return err
 		}
 
-		found = FileLocation{Name: fullSpec(r.Display, matches[0]), Physical: fullSpec(r.Spec.Device, matches[0])}
+		found = FileLocation{Name: r.shownFile(matches[0]), Physical: fullSpec(r.Spec.Device, matches[0])}
 
 		return nil
 	})

@@ -137,25 +137,25 @@ func (s *Session) ForProcess(logicals *lnm.Database) *Session {
 // goes into SYS$DISK untranslated and the directory is left as it was
 // (§11.7.2), so later commands search each element in turn.
 func (s *Session) SetDefault(text string) error {
-	fs, err := translateSpec(s.Logicals, text)
-	if err != nil {
+	if _, err := translateSpec(s.Logicals, text); err != nil {
 		return err
 	}
 
-	primary, device := text, ""
-	if len(fs) > 1 {
-		primary = fs[0].Remainder
-		device = strings.TrimSuffix(text[:len(text)-len(primary)], ":")
+	typed, sts := scanName(text)
+	if sts != 0 {
+		return &NameError{Spec: text, Status: sts}
 	}
 
-	names, err := expandText(s.Logicals, s.Default, nameInputs{Primary: primary, ThroughPermanent: true})
+	// A logical name alone is a device, its colon left off.
+	if typed.Dev == "" && typed.Dir == "" && typed.Root == "" && typed.Type == "" && typed.Ver == "" && s.Logicals != nil {
+		if _, err := s.Logicals.Translate(lnm.FileDevName, typed.Name, lnm.User, 0); err == nil {
+			typed = fileName{Dev: typed.Name + ":"}
+		}
+	}
+
+	device, translated, err := s.defaultDevice(typed, text)
 	if err != nil {
-		return fmt.Errorf("rms: SET DEFAULT %q: %w", text, err)
-	}
-
-	n := names[0]
-	if len(fs) == 1 && n.FNB&fnbExpDev != 0 {
-		device = strings.TrimSuffix(n.Dev, ":")
+		return err
 	}
 
 	if device != "" {
@@ -165,13 +165,119 @@ func (s *Session) SetDefault(text string) error {
 		}
 	}
 
+	// From here on SYS$DISK has changed, whatever becomes of the directory
+	// (VMS 7.1: testdata/lnm91).
+	switch {
+	case translated != nil:
+		s.Default = filespec.Spec{Dirs: translated.names()}
+
+		return nil
+	case typed.Root != "":
+		return &NameError{Spec: text, Status: rmsDirError}
+	case device != "" && typed.Dir == "":
+		return nil
+	}
+
+	names, err := expandText(s.Logicals, s.Default, nameInputs{Primary: typed.Dir + typed.Name + typed.Type + typed.Ver, ThroughPermanent: true})
+	if err != nil {
+		return fmt.Errorf("rms: SET DEFAULT %q: %w", text, err)
+	}
+
 	// The default directory is relative to the root, if SYS$DISK has one.
-	spec := n.spec()
+	spec := names[0].spec()
 	spec.Device = ""
-	spec.Dirs = n.DirSpec.names()
+	spec.Dirs = names[0].DirSpec.names()
 	s.Default = spec
 
 	return nil
+}
+
+// defaultDevice is what SET DEFAULT makes SYS$DISK ("" to leave it), from
+// the name's device, typed, and the default directory the device's logical
+// name gives, if it gives one. It follows VMS 7.1's answers
+// (testdata/lnm91, A.4 of Phase 91's doc), which are the name's translation
+// taken a level at a time:
+//
+//   - A device that isn't a logical name is itself.
+//   - A concealed name is SYS$DISK as it stands, whatever it translates to,
+//     and a search list too. So is a plain name that gives only a device
+//     (LDEV = _DUA1: stays LDEV:).
+//   - A plain name that gives a directory gives the default directory as
+//     well, and SYS$DISK is its device, followed in turn: A1 = BASE:[SUB] is
+//     BASE: and [SUB]. A physical device loses its "_" there (P =
+//     _DUA1:[LNM91] is DUA1:). A directory typed after it is CLI$_DIRECT,
+//     which is why a root that isn't concealed can't be a default.
+//   - A name that gives a file name is RMS$_DIR.
+//
+// A root given as the directory, A2 = BASE:[SUB.], is taken as that
+// directory (unconfirmed: on VMS the case can't be told from leaving the
+// default directory as it was).
+func (s *Session) defaultDevice(typed fileName, text string) (string, *dirSpec, error) {
+	if typed.Dev == "" {
+		return "", nil, nil
+	}
+
+	name := strings.TrimSuffix(typed.Dev, ":")
+	hasDir := typed.Dir != "" || typed.Root != ""
+
+	var translated *dirSpec
+
+	for range lnm.MaxDepth {
+		if s.Logicals == nil || strings.HasPrefix(name, "_") {
+			break
+		}
+
+		e, err := s.Logicals.Translate(lnm.FileDevName, name, lnm.User, 0)
+		if err != nil || len(e.Equivalences) != 1 || e.Equivalences[0].Attrs&lnm.AttrConcealed != 0 {
+			break
+		}
+
+		eqv, sts := scanName(e.Equivalences[0].Value)
+		if sts != 0 {
+			break
+		}
+
+		if eqv.Name != "" || eqv.Type != "" || eqv.Ver != "" {
+			return "", nil, &NameError{Spec: text, Status: rmsDirError}
+		}
+
+		if eqv.Dir == "" && eqv.Root == "" || eqv.Dev == "" {
+			break
+		}
+
+		if hasDir {
+			return "", nil, &DirectorySyntaxError{Spec: text}
+		}
+
+		hasDir = true
+
+		// With no directory after it, a root is the one directory there is.
+		body := dirBody(eqv.Dir)
+		if eqv.Dir == "" {
+			body = strings.TrimSuffix(dirBody(eqv.Root), ".")
+		}
+
+		d, _ := scanDir(body)
+		translated = &d
+
+		name = strings.TrimPrefix(strings.TrimSuffix(eqv.Dev, ":"), "_")
+
+		if e.Equivalences[0].Attrs&lnm.AttrTerminal != 0 {
+			break
+		}
+	}
+
+	return name, translated, nil
+}
+
+// DirectorySyntaxError reports a SET DEFAULT with a directory after a
+// logical name that gives one itself: CLI$_DIRECT.
+type DirectorySyntaxError struct {
+	Spec string
+}
+
+func (e *DirectorySyntaxError) Error() string {
+	return fmt.Sprintf("rms: %q: invalid directory syntax", e.Spec)
 }
 
 // DefaultString renders the current default back into VMS file-
@@ -179,7 +285,7 @@ func (s *Session) SetDefault(text string) error {
 // the Go equivalent of running SHOW DEFAULT. The device is SYS$DISK's
 // value as SET DEFAULT stored it. When that is a search list, one
 // "=   DEVICE:[DIR]" line follows for each place it stands for, as VMS
-// shows it (User's Manual §11.7.2).
+// shows it (User's Manual §11.7.2), each named as RMS names it.
 //
 // It never fails: filespec.Spec.String always produces something
 // displayable, even for the all-zero-value "nothing set yet" starting
@@ -194,16 +300,25 @@ func (s *Session) DefaultString() string {
 
 	out := spec.String()
 
-	defaults, err := defaultSpecs(s.Logicals, s.Default)
-	if err != nil || len(defaults) < 2 {
+	names, err := expandText(s.Logicals, s.Default, nameInputs{ThroughPermanent: true})
+	if err != nil || len(names) < 2 {
 		return out
 	}
 
-	for _, d := range defaults {
-		out += "\n=   " + d.String()
+	for _, n := range names {
+		out += "\n  =   " + n.Dev + n.Dir
 	}
 
 	return out
+}
+
+// DefaultMissing reports whether the current default directory can't be
+// used, which SHOW DEFAULT then says: its name isn't one RMS takes, or its
+// directory isn't on its volume (VMS 7.1's INVDEF: testdata/lnm91).
+func (s *Session) DefaultMissing() bool {
+	_, found, err := s.Parse("", "", "", false, false)
+
+	return err != nil || !found
 }
 
 // ExpandName is specText as RMS expands it, with its logical names
@@ -217,21 +332,7 @@ func (s *Session) ExpandName(specText string) (string, error) {
 		return "", err
 	}
 
-	r := specs[0]
-	spec := r.Spec
-	spec.Device = ""
-
-	text := spec.String()
-	if spec.Version == "" {
-		text += ";"
-	}
-
-	device := r.Display
-	if device == "" {
-		device = r.Spec.Device
-	}
-
-	return device + ":" + text, nil
+	return specs[0].name.String(), nil
 }
 
 // NotFound is how DCL's messages report a volume file name that found no

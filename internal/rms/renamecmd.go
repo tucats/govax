@@ -88,8 +88,8 @@ func (r RenamedFile) OK() bool { return r.Status == rmsNormal }
 
 // renameSource is one file an input matched.
 type renameSource struct {
-	spec    filespec.Spec // its full name, with its version
-	display string        // the device to show: a concealed name, if one was used
+	spec filespec.Spec // its full name, with its version
+	name parsedName    // the name it was found through, which says how to show it
 
 	// wildVersion says the input's version was ";*" (see this file's
 	// opening comment).
@@ -105,7 +105,7 @@ func (s *Session) Rename(inputs []string, output string, opts RenameOptions) []R
 
 	var (
 		results []RenamedFile
-		sticky  *filespec.Spec
+		sticky  *defaultName
 	)
 
 	for _, input := range inputs {
@@ -135,7 +135,7 @@ func (s *Session) Rename(inputs []string, output string, opts RenameOptions) []R
 // directory, the defaults for an input that names no device. It returns
 // the files, or the search failure to report, and this input's device and
 // directory for the next.
-func (s *Session) findRenameInputs(input string, sticky *filespec.Spec) ([]renameSource, *RenamedFile, *filespec.Spec) {
+func (s *Session) findRenameInputs(input string, sticky *defaultName) ([]renameSource, *RenamedFile, *defaultName) {
 	fail := func(expanded string, sts uint32) *RenamedFile {
 		return &RenamedFile{Old: expanded, Status: sts, STV: sts, Stage: RenameSearching}
 	}
@@ -150,20 +150,20 @@ func (s *Session) findRenameInputs(input string, sticky *filespec.Spec) ([]renam
 		return nil, fail(input, rmsSyntaxError), nil
 	}
 
-	first := specs[0].Spec
-	next := &filespec.Spec{Device: first.Device, Dirs: first.Dirs}
+	next := specs[0].name.defaults()
+	next.Recursive, next.Name, next.Type = false, "", ""
 
 	var sources []renameSource
 
 	sts := rmsFileNotFound
-	expanded := resultName(specs[0].Display, first)
+	expanded := specs[0].name.String()
 
 	for _, r := range specs {
 		wild := hasWildcard(r.Spec)
 
 		found, elementSts := searchRenameElement(s, r)
 		if len(found) == 0 {
-			sts, expanded = elementSts, resultName(r.Display, r.Spec)
+			sts, expanded = elementSts, r.name.String()
 
 			continue
 		}
@@ -177,7 +177,7 @@ func (s *Session) findRenameInputs(input string, sticky *filespec.Spec) ([]renam
 					Type:    m.Type,
 					Version: strconv.Itoa(int(m.Version)),
 				},
-				display:     r.Display,
+				name:        r.name,
 				wildVersion: r.Spec.Version == "*",
 			})
 		}
@@ -197,7 +197,7 @@ func (s *Session) findRenameInputs(input string, sticky *filespec.Spec) ([]renam
 // expandRenameInput resolves one input: against the process defaults, or,
 // when sticky is set and the input names no device of its own, against
 // sticky's device and directory.
-func (s *Session) expandRenameInput(input string, sticky *filespec.Spec) ([]resolvedSpec, error) {
+func (s *Session) expandRenameInput(input string, sticky *defaultName) ([]resolvedSpec, error) {
 	if sticky == nil {
 		return expandSpec(s.Logicals, input, s.Default)
 	}
@@ -243,26 +243,26 @@ func searchRenameElement(s *Session, r resolvedSpec) ([]filespec.Match, uint32) 
 
 // renameOne works out src's new name from output and renames it.
 func (s *Session) renameOne(ctx *Context, src renameSource, output string, opts RenameOptions) RenamedFile {
-	result := RenamedFile{Old: resultName(src.display, src.spec)}
+	result := RenamedFile{Old: src.name.resultFor(src.spec)}
 
-	target, sts := s.renameTarget(src, output, opts)
+	target, shown, sts := s.renameTarget(src, output, opts)
 	if sts != 0 {
 		result.New, result.Status, result.STV, result.Stage = output, sts, sts, RenameParsing
 		if target.Device != "" {
-			result.New = resultName(target.Device, target)
+			result.New = shown.resultFor(target)
 		}
 
 		return result
 	}
 
-	result.New = resultName(target.Device, target)
+	result.New = shown.resultFor(target)
 
 	r, sts, stv := renameText(ctx, src.spec.String(), target.String())
 	result.Status, result.STV, result.Stage = sts, stv, RenameRenaming
 
 	if sts == rmsNormal {
 		target.Version = strconv.Itoa(int(r.Version))
-		result.New = resultName(target.Device, target)
+		result.New = shown.resultFor(target)
 	}
 
 	return result
@@ -271,14 +271,26 @@ func (s *Session) renameOne(ctx *Context, src renameSource, output string, opts 
 // renameTarget parses output with src as its related file, and applies
 // the output wildcards and the version rules (see this file's opening
 // comment). A search list in output uses its first element. On RMS$_WLD
-// the parsed target is still returned, for the message to show.
-func (s *Session) renameTarget(src renameSource, output string, opts RenameOptions) (filespec.Spec, uint32) {
+// the parsed target is still returned, for the message to show. The name
+// it returns is how to show the target.
+func (s *Session) renameTarget(src renameSource, output string, opts RenameOptions) (filespec.Spec, parsedName, uint32) {
 	old := src.spec
-	related := filespec.Spec{Device: old.Device, Dirs: old.Dirs, Name: old.Name, Type: old.Type}
 
-	names, sts := expandNames(s.Logicals, filespec.Spec{}, nameInputs{Primary: output, ThroughPermanent: true, Against: &related})
+	// The output's defaults are the old file's fields: its directory where
+	// the file really is, which a wildcard search may have found below the
+	// name it was looked for through.
+	related := src.name.defaults()
+	related.Dirs = src.name.relative(old.Dirs)
+	related.Recursive, related.Name = false, old.Name
+	related.Type = "." + old.Type
+
+	if old.Type == "" {
+		related.Type = ""
+	}
+
+	names, sts := expandNames(s.Logicals, filespec.Spec{}, nameInputs{Primary: output, ThroughPermanent: true, Against: related})
 	if sts != 0 {
-		return filespec.Spec{}, sts
+		return filespec.Spec{}, parsedName{}, sts
 	}
 
 	target := names[0].spec()
@@ -299,47 +311,14 @@ func (s *Session) renameTarget(src renameSource, output string, opts RenameOptio
 	}
 
 	if strings.ContainsAny(target.Name, "*%") {
-		return target, rmsFileNameError
+		return target, names[0], rmsFileNameError
 	}
 
 	if hasWildcard(target) {
-		return target, rmsWildcardError
+		return target, names[0], rmsWildcardError
 	}
 
-	return target, 0
-}
-
-// resultName is spec as RMS shows a resultant name, on device:
-// "DUA0:[DIR]NAME.TYP;VER" -- the "." and ";" are always there, even with
-// no type or version.
-func resultName(device string, spec filespec.Spec) string {
-	var b strings.Builder
-
-	if device != "" {
-		b.WriteString(device)
-		b.WriteByte(':')
-	}
-
-	b.WriteByte('[')
-
-	if len(spec.Dirs) == 0 {
-		b.WriteString("000000")
-	} else {
-		b.WriteString(strings.Join(spec.Dirs, "."))
-	}
-
-	if spec.Recursive {
-		b.WriteString("...")
-	}
-
-	b.WriteByte(']')
-	b.WriteString(spec.Name)
-	b.WriteByte('.')
-	b.WriteString(spec.Type)
-	b.WriteByte(';')
-	b.WriteString(spec.Version)
-
-	return b.String()
+	return target, names[0], 0
 }
 
 // RenameTarget is one file's new name for LIB$RENAME_FILE, which, unlike
@@ -367,13 +346,21 @@ func (s *Session) RenameTarget(old, output, inputVersion string, newVersion bool
 		return "", sts, 0
 	}
 
-	src := renameSource{spec: spec, display: spec.Device, wildVersion: inputVersion == "*"}
+	found, sts := expandNames(s.Logicals, filespec.Spec{}, nameInputs{Primary: old, ThroughPermanent: true})
+	if sts != 0 {
+		return "", rmsSyntaxError, 0
+	}
 
-	target, sts := s.renameTarget(src, output, RenameOptions{NewVersion: newVersion})
+	spec = found[0].spec()
+	spec.Version = strings.TrimPrefix(found[0].Ver, ";")
+
+	src := renameSource{spec: spec, name: found[0], wildVersion: inputVersion == "*"}
+
+	target, shown, sts := s.renameTarget(src, output, RenameOptions{NewVersion: newVersion})
 
 	name := ""
 	if target.Device != "" {
-		name = resultName(target.Device, target)
+		name = shown.resultFor(target)
 	}
 
 	if sts != 0 {
@@ -401,12 +388,10 @@ func (s *Session) RenameFile(old, target string) (string, uint32, uint32) {
 		return target, sts, stv
 	}
 
-	spec, bad := scanSpec(target)
-	if bad != 0 {
+	semi := strings.LastIndexByte(target, ';')
+	if semi < 0 {
 		return target, sts, stv
 	}
 
-	spec.Version = strconv.Itoa(int(r.Version))
-
-	return resultName(spec.Device, spec), sts, stv
+	return target[:semi+1] + strconv.Itoa(int(r.Version)), sts, stv
 }
