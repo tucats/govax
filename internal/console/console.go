@@ -3,6 +3,7 @@ package console
 import (
 	"io"
 	"os/exec"
+	"time"
 
 	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/machine"
@@ -55,6 +56,9 @@ type Console struct {
 	// runCommandLine is RunCommandLine, taken when govax's one-shot
 	// command runs, for that command's RUN to give its image.
 	runCommandLine string
+
+	// InitTime is the initialization time for the console.
+	InitTime time.Duration
 }
 
 // New returns a Console with no machine allocated yet (vax_init == 0 in the

@@ -243,6 +243,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// The grammars and help files, the system volume's copies before
 	// govax's own (grammarfiles.go).
 	files := grammarFiles{resolver: resolver, out: out}
+
 	if system.Mounted {
 		resolver.Volume = c.Commands().SystemFS()
 		files.device = system.Device
@@ -282,6 +283,8 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	c.SetRunLimits(instructionLimit, timeLimit)
 
 	// We've done all the setup we can before tracking actual user run time.
+	// Track the initialization time, and reset the clock for emulation time.
+	c.InitTime = time.Since(startTime)
 	startTime = time.Now()
 
 	// STARTUP.COM is govax's login command procedure, run at command level
@@ -512,7 +515,8 @@ func printStats(c *console.Console, out io.Writer, flag bool) {
 		translate, readCount, writeCount, mbReadCount, mbWriteCount := c.Engine.Memory().Stats()
 		elapsed := time.Since(startTime)
 
-		fmt.Fprintf(out, "\nEmulation Statistics:\n")
+		fmt.Fprintf(out, "Emulation Statistics:\n")
+		fmt.Fprintf(out, "  Initialization Time:   %16s\n\n", formatDuration(c.InitTime))
 		fmt.Fprintf(out, "  CPU:\n")
 		fmt.Fprintf(out, "    Elapased Time:       %16s\n", formatDuration(elapsed))
 		fmt.Fprintf(out, "    Instructions:        %16s\n", formatLargeNumber(int64(instructionCount)))
