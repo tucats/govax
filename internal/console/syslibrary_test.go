@@ -81,8 +81,8 @@ func TestSystemFTNRTL(t *testing.T) {
 		c, run := libraryConsole(t, paging)
 
 		const (
-			first  = "DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;1"
-			second = "DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2"
+			first  = "_DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;1"
+			second = "_DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2"
 		)
 
 		writeText(t, c, "[TEST]FTNCALL.MAR", sourceLines(ftnCaller)...)
@@ -264,7 +264,7 @@ func TestSystemFortranLibrary(t *testing.T) {
 		t.Errorf("LIBUSE:\n%q\nwant:\n%q", got, want)
 	}
 
-	if spec, want := ftnrtlSpec(c), "DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;1"; spec != want {
+	if spec, want := ftnrtlSpec(c), "_DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;1"; spec != want {
 		t.Errorf("FTNRTL came from %q, want %q", spec, want)
 	}
 }

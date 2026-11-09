@@ -191,6 +191,9 @@ type backupTarget struct {
 	dirs   []string
 	path   string
 
+	// root is a root the output name shows ("[USERS.]"), "" for none.
+	root string
+
 	// name, typ, and version replace the saved ones unless "" or wild.
 	name, typ, version string
 }
@@ -223,6 +226,11 @@ func (c *Context) restoreTarget(spec BackupSpecifier) (backupTarget, error) {
 
 	device, rest, _ := strings.Cut(expanded, ":")
 	t.device = device
+
+	// A root the name shows ("_DUA1:[USERS.][SUB]") stays with the device.
+	if i := strings.IndexAny(rest, "]>"); i > 0 && rest[i-1] == '.' && !strings.HasSuffix(rest[:i], "...") {
+		t.root, rest = rest[:i+1], rest[i+1:]
+	}
 
 	dir, rest, _ := splitBackupDirectory(rest)
 	t.dirs = directoryComponents(dir)
@@ -280,7 +288,7 @@ func (t backupTarget) location(saved savedName, carried []string) rms.FileLocati
 		dir = "000000"
 	}
 
-	return rms.FileLocation{Name: fmt.Sprintf("%s:[%s]%s.%s;%s", t.device, dir, name, typ, version)}
+	return rms.FileLocation{Name: fmt.Sprintf("%s:%s[%s]%s.%s;%s", t.device, t.root, dir, name, typ, version)}
 }
 
 // keepSaved is the output specifier's part given, or the saved one when

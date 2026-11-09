@@ -232,7 +232,7 @@ func (p *ImageProcess) ActivateImage(fn string) (*ICB, error) {
 	}
 
 	if env := p.process(); env != nil {
-		env.SetImageName(main.Spec.Name, main.Spec.Host)
+		env.SetImageName(main.Spec.Name)
 	}
 
 	return main, nil

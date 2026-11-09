@@ -335,6 +335,18 @@ func (s *Session) ExpandName(specText string) (string, error) {
 	return specs[0].name.String(), nil
 }
 
+// PhysicalName is specText as ExpandName expands it but with its physical
+// device and any root in place of a concealed name, as VMS's image
+// activator names a file ("_DUA1:[USERS.][SUB]NOSUCH.EXE;").
+func (s *Session) PhysicalName(specText string) (string, error) {
+	specs, err := expandSpec(s.Logicals, specText, s.Default)
+	if err != nil {
+		return "", err
+	}
+
+	return specs[0].name.physical(), nil
+}
+
 // NotFound is how DCL's messages report a volume file name that found no
 // file: the name as ExpandName expands it ("DUA0:[WORK]NOSUCH.COM;"),
 // with RMS$_FNF, or RMS$_DNF (and SS$_NOSUCHFILE under it, as with

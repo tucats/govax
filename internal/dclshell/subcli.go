@@ -984,7 +984,7 @@ func (c *Interpreter) foundImageFile(env *corevms.Environment, image string) (st
 		return "", false
 	}
 
-	_, found, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
+	_, found, err := s.ReadRawFile(s.ImageLocation(loc))
 	if err != nil {
 		return "", false
 	}
@@ -992,15 +992,16 @@ func (c *Interpreter) foundImageFile(env *corevms.Environment, image string) (st
 	return found.Name, true
 }
 
-// imageFileSpec is image as RMS expands it, with the default type .EXE,
-// for DCL's IMAGEFNF message ("DUA0:[000000]NOSUCH.EXE;"); as typed,
-// with .EXE;, when it doesn't name a volume file.
+// imageFileSpec is image as RMS expands it with the default type .EXE and
+// no concealed name, for DCL's IMAGEFNF message
+// ("_DUA1:[USERS.][SUB]NOSUCH.EXE;"); as typed, with .EXE;, when it
+// doesn't name a volume file.
 func (c *Interpreter) imageFileSpec(env *corevms.Environment, image string) string {
 	name := strings.ToUpper(image)
 
 	if s := env.Session; s != nil {
 		if loc, err := s.Locate(image, false); err == nil && !loc.Host {
-			if spec, err := s.ExpandName(loc.WithDefaultType("EXE").Name); err == nil {
+			if spec, err := s.PhysicalName(s.ImageLocation(loc).Name); err == nil {
 				return spec
 			}
 		}

@@ -105,6 +105,10 @@ var dviItemsByName = map[string]dviItemFunc{
 	"DVI$_SERVED_DEVICE": func(*Environment, *iodev.Device) itemValue { return itemLong(0) },
 	"DVI$_VOLSETMEM":     func(*Environment, *iodev.Device) itemValue { return itemLong(0) },
 
+	// FALSE for every name VMS 7.1 was asked about, concealed or not
+	// (testdata/lnm91).
+	"DVI$_CONCEALED": func(*Environment, *iodev.Device) itemValue { return itemLong(0) },
+
 	// The terminal's page length: the high byte of DEVDEPEND.
 	"DVI$_TT_PAGE": dviLong(func(d *iodev.Device) uint32 { return d.DevDepend >> 24 }),
 }

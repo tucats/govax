@@ -4,9 +4,9 @@
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
 Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
 answers"), 3 (one name processor), 4 (syntax and `$PARSE`), 5 (files
-through the services), and 6 (the DCL utilities) are done. RMS's services
-and DCL's commands know roots; the device services are subtask 7, and the
-system names subtask 8.
+through the services), 6 (the DCL utilities), and 7 (devices and the rest)
+are done. RMS's services, DCL's commands, the device services, the image
+activator, and BACKUP know roots; the system names are subtask 8.
 
 ## Goal
 
@@ -470,7 +470,7 @@ Each is one commit, with tests, stopping for review.
 6. **The DCL utilities** (done 2026-11-09): the display helper, every command in A.3, SET
    and SHOW DEFAULT with a rooted device, F$PARSE, and F$SEARCH. Held to
    the probe's DCL log.
-7. **Devices and the rest**: `PhysicalDevice`, `$ASSIGN`, `$GETDVI` and
+7. **Devices and the rest** (done 2026-11-09): `PhysicalDevice`, `$ASSIGN`, `$GETDVI` and
    `DVI$_CONCEALED`, the image activator's message and
    `JPI$_IMAGNAME`, `LIB$FID_TO_NAME`, BACKUP, and the depth (with an
    `ods2` release if Decision 7 needs one).
@@ -717,3 +717,33 @@ The author accepted the plan and answered its questions:
   does. SHOW DEFAULT's INVDEF looks at a search list's first element only. F$PARSE of one field on a
   device that isn't mounted gives the field. PURGE/LOG's `TOTAL` line is DELETE's in PURGE's facility.
   `DIRECTORY [NOSUCH]A.DAT` names `A.DAT;*` in its OPENIN.
+- **2026-11-09** Subtask 7: devices and the rest. `PhysicalDevice` needed no change: both logs' `$ASSIGN` and
+  `$GETDVI` cases pass, `A2` and `A4` too. `DVI$_CONCEALED` is answered, FALSE, by `$GETDVI` and F$GETDVI.
+
+  A name's physical form is `parsedName.physical` and `physicalFile`, from a new `PhysicalDev` (the device as the
+  translation wrote it, which a concealed name replaces in `Dev`) and the root. `FileLocation.Physical` is that, so
+  `JPI$_IMAGNAME` is `_DUA1:[LNM91.ROOT1.][SUB]LNM91.EXE;1` and `DUA1:[000000]LNM91.EXE;1`; `SetImageName` no
+  longer adds the node's name, VMS's `SIMVAX$DUA0:` having come from the system names' own equivalences. IMAGEFNF
+  uses `Session.PhysicalName`, and a missing shareable image's message the same form, so it now reads
+  `_DUA0:[SYSTEM.SYSLIB]MYSHR.EXE;`. RUN of a bare logical name (`DEFINE LNM91_F BASE:[SUB]LNM91.EXE`, `RUN LNM91_F`)
+  used to fail, `.EXE` having been added before RMS saw the name; `Session.ImageLocation` adds it after the translation.
+
+  BACKUP: a save's paths are relative to the root (`parsedName.belowRoot`), so `/SELECT` of the full path finds nothing, as
+  on VMS; its `/LOG` lines and a restore's names and messages use `shownDir`; a restore's output name keeps a root it shows
+  (`backupTarget.root`). `TestBackupThroughRoot` covers the restores, which the probe's `/SELECT` never reached.
+
+  Depth: `ods2`'s `MaxDirectoryDepth` is 15 (Decision 7), committed in the sibling checkout. **Not yet tagged or pinned:** `go.work`
+  picks it up, and with `GOWORK=off` (the pinned v0.1.27) "FIFTEEN LEVELS" fails until a release is tagged and pinned.
+
+  An end mark after a walk that reached 8 levels keeps that level's wildcard bits (`searchState.AtLimit`; `FE`, `FF` in FNB's high
+  byte, where a shallower walk's has only the level below the top). `TestLnm91ServicesOracle` now has the DEVICES and FIFTEEN
+  LEVELS sections and `J` and `D` cases, and `TestLnm91DCLOracle` FIFTEEN LEVELS, DCL: BACKUP, F$GETDVI's `CONCEALED`, and RUN's IMAGEFNF.
+  The system names' cases stay subtask 8's.
+
+  Masked in the DCL oracle: a save set's system and CPU lines; LNM91.EXE's size and the total (the image copied from the host by the
+  replay shows 17 blocks, VMS's 16; not looked into); RMS's channel in STV; and `%COPY-S-COPIED` from a COPY without `/LOG`, which
+  govax prints and VMS doesn't (an older difference, shown with the physical name under a root).
+
+  Unconfirmed, the probe having no such case: a walk's end when the deepest directory wasn't the last one walked (`AtLimit` stays
+  set); RUN of a bare name that's a search list (its first element); a save of `BASE:[000000...]` (recorded `[SUB]`, logged
+  `BASE:[000000.SUB]`, as `$SEARCH` shows it); a restore's message through a root, `_DUA1:[R.][OUT]C.DAT;1`.

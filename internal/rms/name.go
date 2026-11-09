@@ -491,6 +491,10 @@ type parsedName struct {
 	// "_" and ":".
 	Lookup string
 
+	// PhysicalDev is the device as the translation wrote it ("_DUA1:"),
+	// which Dev is unless a concealed name's taken its place.
+	PhysicalDev string
+
 	// DirSpec is the directory's elements, relative to the root if there
 	// is one. RootSpec is the root's; Relative in it means a root that
 	// names no directory (scanRoot).
@@ -531,6 +535,18 @@ func (p parsedName) shownDir(path []string) string {
 // from "000000" keeps that as its first level, as VMS shows it under a root
 // ([000000.SUB], VMS 7.1: testdata/lnm91), and as $SEARCH does.
 func (p parsedName) relative(dirs []string) []string {
+	below := p.belowRoot(dirs)
+
+	if p.Root != "" && len(below) > 0 && len(p.DirSpec.Elems) > 0 && p.DirSpec.Elems[0] == "000000" {
+		return append([]string{"000000"}, below...)
+	}
+
+	return below
+}
+
+// belowRoot is a volume path with p's root's levels taken off, the path a
+// save set records (VMS 7.1: [SUB]A.DAT for BASE:[SUB]A.DAT).
+func (p parsedName) belowRoot(dirs []string) []string {
 	if p.Root == "" {
 		return dirs
 	}
@@ -544,13 +560,20 @@ func (p parsedName) relative(dirs []string) []string {
 		return dirs
 	}
 
-	dirs = dirs[len(root):]
+	return dirs[len(root):]
+}
 
-	if len(dirs) > 0 && len(p.DirSpec.Elems) > 0 && p.DirSpec.Elems[0] == "000000" {
-		return append([]string{"000000"}, dirs...)
-	}
+// physical is p as NAM$V_NOCONCEAL shows it: the device as translated and
+// any root, "_DUA1:[USERS.][SUB]A.DAT;". VMS's image activator shows and
+// records a file this way.
+func (p parsedName) physical() string {
+	return p.PhysicalDev + p.Root + p.Dir[len(p.ShownRoot):] + p.Name + p.Type + p.Ver
+}
 
-	return dirs
+// physicalFile is physical for a file found at the volume path dirs,
+// file its name, type, and version.
+func (p parsedName) physicalFile(dirs []string, file string) string {
+	return p.PhysicalDev + p.Root + likeBrackets(dirSpec{Elems: p.belowRoot(dirs)}.String(), p.Dir[len(p.ShownRoot):]) + file
 }
 
 // resultFor is the resultant name of a file with spec's fields, its
@@ -1146,7 +1169,7 @@ func finishName(f fileName, concealed string, fnb uint32, noConceal bool) parsed
 		f.Ver = ";"
 	}
 
-	p := parsedName{fileName: f, FNB: fnb}
+	p := parsedName{fileName: f, FNB: fnb, PhysicalDev: f.Dev}
 	p.Lookup = strings.TrimSuffix(strings.TrimPrefix(f.Dev, "_"), ":")
 	p.DirSpec, _ = scanDir(dirBody(f.Dir))
 	p.Dir = likeBrackets(p.DirSpec.String(), f.Dir)

@@ -2,7 +2,6 @@ package corevms
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
@@ -123,22 +122,12 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 }
 
 // SetImageName records name, the file the image activator found the
-// process's main image in, as the process's JPI$_IMAGNAME. A volume
-// file's specification has its device written with the node's name, as
-// VMS writes it ("SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]REMACP.EXE;1",
-// VMS 7.3 on simh); a host file's path (host) is kept as it is.
-func (env *Environment) SetImageName(name string, host bool) {
-	if !host && env.NodeName != "" {
-		if i := strings.IndexByte(name, ':'); i > 0 {
-			device := strings.TrimPrefix(name[:i], "_")
-			if j := strings.LastIndexByte(device, '$'); j >= 0 {
-				device = device[j+1:]
-			}
-
-			name = strings.ToUpper(env.NodeName) + "$" + device + name[i:]
-		}
-	}
-
+// process's main image in, as the process's JPI$_IMAGNAME: the file's
+// physical name, its device as the name's translation wrote it and any
+// root shown ("DUA1:[000000]LNM91.EXE;1",
+// "_DUA1:[LNM91.ROOT1.][SUB]LNM91.EXE;1"; VMS 7.1, testdata/lnm91), or a
+// host file's path.
+func (env *Environment) SetImageName(name string) {
 	env.Process.ImageName = name
 }
 

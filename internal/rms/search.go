@@ -68,6 +68,10 @@ type searchState struct {
 	// Found is whether any file has been returned, and Below whether the
 	// search has looked in a directory below the first wildcard's level.
 	Found, Below bool
+
+	// AtLimit is the wildcard bits of a directory the walk found at
+	// maxDirDepth levels, 0 if it found none.
+	AtLimit uint32
 }
 
 // saveSearch makes a context for names, numbering it in NAM$L_WCC.
@@ -632,6 +636,10 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 				st.Below = true
 			}
 
+			if d.depth() >= maxDirDepth {
+				st.AtLimit = matchFNB(0, *d) &^ fnbDirLvlsMask
+			}
+
 			// The directory as it is now: its header and map read
 			// again, in case it has grown or moved since the last call.
 			entries, err := d.current()
@@ -687,7 +695,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 	// 2, <LNM91.SUB...>).
 	top, wild := wildTop(last.DirSpec)
 	if wild && st.Found {
-		if err := ctx.endAtTop(nam, last, top, st.Below); err != nil {
+		if err := ctx.endAtTop(nam, last, top, st); err != nil {
 			return 0, 0, err
 		}
 	} else if err := ctx.endSearch(nam, last); err != nil {
@@ -768,7 +776,7 @@ func (ctx *Context) storeResultant(nam uint32, f fileName) error {
 // endAtTop ends a search whose directory has top above its first wildcard
 // (see searchContext). With nothing above it, VMS's string has eight empty
 // levels, "[.......]", and its FNB counts them (VMS 7.1: testdata/lnm91).
-func (ctx *Context) endAtTop(nam uint32, p parsedName, top []string, below bool) error {
+func (ctx *Context) endAtTop(nam uint32, p parsedName, top []string, st *searchState) error {
 	dir := p.shownDir(top)
 	if len(top) == 0 {
 		dir = p.ShownRoot + likeBrackets("[.......]", p.Dir[len(p.ShownRoot):])
@@ -792,12 +800,16 @@ func (ctx *Context) endAtTop(nam uint32, p parsedName, top []string, below bool)
 		fnb := matchFNB(p.FNB, searchDir{Path: top})
 
 		switch lvl := len(top); {
-		case !below:
+		case !st.Below:
 		case lvl == 0:
 			fnb |= fnbWildUFD | uint32(7)<<fnbDirLvls
 		case lvl <= 7:
 			fnb |= fnbWildSFD1 << (lvl - 1)
 		}
+
+		// A walk that got to the deepest level an ellipsis goes to leaves
+		// that level's wildcard bits behind (testdata/lnm91's round 2).
+		fnb |= st.AtLimit
 
 		if err := ctx.storeLongword(nam+namFNB, fnb); err != nil {
 			return err

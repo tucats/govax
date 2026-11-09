@@ -157,7 +157,7 @@ var dviForms = map[string]forms{
 // dviBooleans are the $GETDVI items that are truths but neither a
 // DEVCHAR bit nor a terminal characteristic.
 var dviBooleans = map[string]bool{
-	"DVI$_REMOTE_DEVICE": true, "DVI$_SERVED_DEVICE": true, "DVI$_VOLSETMEM": true,
+	"DVI$_REMOTE_DEVICE": true, "DVI$_SERVED_DEVICE": true, "DVI$_VOLSETMEM": true, "DVI$_CONCEALED": true,
 }
 
 // dviIsBoolean reports whether the $GETDVI item called name is a truth:

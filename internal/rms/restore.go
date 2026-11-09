@@ -190,12 +190,7 @@ func (s *Session) restoreToVolume(text string, file *backup.File, opts RestoreOp
 		return RestoreResult{}, fmt.Errorf("restore: %w", err)
 	}
 
-	display := r.Display
-	if display == "" {
-		display = spec.Device
-	}
-
-	w := &volumeRestore{vol: vol, dev: dev, bm: bm, ib: ib, display: display, file: file}
+	w := &volumeRestore{vol: vol, dev: dev, bm: bm, ib: ib, name: r, file: file}
 	result, restoreErr := w.restore(spec, version, opts)
 
 	// The bitmaps are written whatever happened: directories made before
@@ -222,8 +217,26 @@ type volumeRestore struct {
 	dev     *volume.Device
 	bm      *volume.Bitmap
 	ib      *volume.IndexBitmap
-	display string // the device as the user sees it
+	name    resolvedSpec // the output name, which says how a file is shown
 	file    *backup.File
+}
+
+// outputExists gives an *OutputExistsError in err out's name as the user
+// sees it, with the version the error found.
+func (w *volumeRestore) outputExists(err error, out filespec.Spec) error {
+	var exists *OutputExistsError
+	if errors.As(err, &exists) {
+		out.Version = exists.version
+		exists.Spec = w.shown(out)
+	}
+
+	return err
+}
+
+// shown is out's name as the user sees it: under its concealed name, with
+// its directory relative to any root.
+func (w *volumeRestore) shown(out filespec.Spec) string {
+	return w.name.shownDir(out.Dirs) + out.Name + "." + out.Type + ";" + out.Version
 }
 
 // restore makes w's file as spec names it, at version (0 for the next).
@@ -254,13 +267,13 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 	}
 
 	fullName := spec.Name + "." + spec.Type
-	out := filespec.Spec{Device: w.display, Dirs: spec.Dirs, Name: spec.Name, Type: spec.Type}
+	out := filespec.Spec{Device: spec.Device, Dirs: spec.Dirs, Name: spec.Name, Type: spec.Type}
 
 	version, overlay, err := w.existing(parent, fullName, version, opts.Existing)
 	if err != nil {
 		out.Version = fmt.Sprint(version)
 
-		return result, fullOutputName(err, out)
+		return result, w.outputExists(err, out)
 	}
 
 	if overlay != nil {
@@ -273,7 +286,7 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 		}
 
 		out.Version = fmt.Sprint(version)
-		result.Name = out.String()
+		result.Name = w.shown(out)
 		result.Created = true
 
 		return result, nil
@@ -281,7 +294,7 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 
 	f, err := createVersion(w.vol, parent, fullName, version, copiedAttributes(saved), w.bm, w.ib)
 	if err != nil {
-		return result, fullOutputName(err, out)
+		return result, w.outputExists(err, out)
 	}
 
 	made1, err := createdVersion(parent, fullName, version)
@@ -301,7 +314,7 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 	}
 
 	out.Version = fmt.Sprint(made1)
-	result.Name = out.String()
+	result.Name = w.shown(out)
 	result.Created = true
 
 	return result, nil
@@ -499,7 +512,7 @@ func (w *volumeRestore) restoreDirectory(parent *volume.Directory, spec filespec
 	}
 
 	dirs := append(append([]string(nil), spec.Dirs...), strings.ToUpper(spec.Name))
-	result.Name = filespec.Spec{Device: w.display, Dirs: dirs}.String()
+	result.Name = w.name.shownDir(dirs)
 
 	fullName := spec.Name + ".DIR"
 	if _, err := parent.Lookup(fullName, 0); err == nil {
@@ -553,7 +566,7 @@ func (w *volumeRestore) makeDirectories(dirs []string) ([]CreatedDirectory, erro
 			err = markErr
 		}
 
-		made = append(made, CreatedDirectory{Name: w.display + ":" + l.String(), Created: true})
+		made = append(made, CreatedDirectory{Name: w.name.shownDir(l.Path), Created: true})
 	}
 
 	return made, err

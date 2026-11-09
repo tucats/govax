@@ -3897,7 +3897,7 @@ When `RUN` starts an image, govax does what VMS's image activator does:
 
    ```text
    %DCL-W-ACTIMAGE, error activating image MYSHR
-   -CLI-E-IMAGEFNF, image file not found DUA0:[SYSTEM.SYSLIB]MYSHR.EXE;
+   -CLI-E-IMAGEFNF, image file not found _DUA0:[SYSTEM.SYSLIB]MYSHR.EXE;
    ```
 
 3. **Checks each shareable image's ident** against the program's `GSMATCH`

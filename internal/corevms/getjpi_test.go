@@ -322,19 +322,16 @@ func TestImageName(t *testing.T) {
 	}
 
 	for _, c := range []struct {
-		name string
-		host bool
-		want string
+		name, want string
 	}{
-		{"DUA0:[SYS0.SYSCOMMON.SYSEXE]REMACP.EXE;1", false, "SIMVAX$DUA0:[SYS0.SYSCOMMON.SYSEXE]REMACP.EXE;1"},
-		{"_DUA1:[WORK]PROG.EXE;3", false, "SIMVAX$DUA1:[WORK]PROG.EXE;3"},
-		{"GOVAX$DUA1:[WORK]PROG.EXE;3", false, "SIMVAX$DUA1:[WORK]PROG.EXE;3"},
-		{"/tmp/x:y/prog.exe", true, "/tmp/x:y/prog.exe"},
+		{"DUA1:[000000]LNM91.EXE;1", "DUA1:[000000]LNM91.EXE;1"},
+		{"_DUA1:[LNM91.ROOT1.][SUB]LNM91.EXE;1", "_DUA1:[LNM91.ROOT1.][SUB]LNM91.EXE;1"},
+		{"/tmp/x:y/prog.exe", "/tmp/x:y/prog.exe"},
 	} {
-		env.SetImageName(c.name, c.host)
+		env.SetImageName(c.name)
 
 		if got := imagname(); got != c.want {
-			t.Errorf("SetImageName(%q, %v): %q, want %q", c.name, c.host, got, c.want)
+			t.Errorf("SetImageName(%q): %q, want %q", c.name, got, c.want)
 		}
 	}
 

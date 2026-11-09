@@ -85,3 +85,19 @@ func NameType(spec string) string {
 
 	return spec
 }
+
+// ImageLocation is loc, an image to run, with its default type .EXE. RMS
+// applies a default name after translating the primary name, so a bare
+// name that's a logical name is that name's file, with .EXE only if its
+// translation has no type: DEFINE PROG BASE:[SUB]X.EXE, then RUN PROG
+// (VMS 7.1, testdata/lnm91). A search list's first element stands for it
+// (unconfirmed).
+func (s *Session) ImageLocation(loc FileLocation) FileLocation {
+	if !loc.Host && !strings.ContainsAny(loc.Name, ":[]<>.;") && s.definesName(strings.ToUpper(loc.Name)) {
+		if fs, err := translateSpec(s.Logicals, loc.Name); err == nil && len(fs) > 0 {
+			return FileLocation{Name: fs[0].Spec}.WithDefaultType("EXE")
+		}
+	}
+
+	return loc.WithDefaultType("EXE")
+}

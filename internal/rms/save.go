@@ -136,7 +136,7 @@ func (s *Session) SaveSearch(spec string, visit func(*SaveFile) error) error {
 			return &NotFoundError{Spec: spec}
 		}
 
-		search := &saveSearch{mounts: s.Mounts, device: r.Spec.Device, vol: vol, display: r.Display, recursive: pattern.Recursive, visit: visit, matched: map[string]bool{}}
+		search := &saveSearch{mounts: s.Mounts, device: r.Spec.Device, vol: vol, name: r, recursive: pattern.Recursive, visit: visit, matched: map[string]bool{}}
 		for _, m := range matches {
 			search.matched[matchKey(m.Dirs, m.Name+"."+m.Type, m.Version)] = true
 		}
@@ -223,7 +223,7 @@ type saveSearch struct {
 	mounts    *MountTable
 	device    string
 	vol       *volume.Volume
-	display   string
+	name      resolvedSpec
 	recursive bool
 	visit     func(*SaveFile) error
 	matched   map[string]bool
@@ -275,8 +275,8 @@ func (s *saveSearch) directory(path []string, dir *volume.Directory) error {
 		}
 
 		saved := &SaveFile{
-			Name:       s.display + ":" + dirSpec{Elems: path}.String() + dottedName(e.Name) + fmt.Sprintf(";%d", e.Version),
-			Attributes: savedAttributes(f, dir, path, e),
+			Name:       s.name.shownDir(path) + dottedName(e.Name) + fmt.Sprintf(";%d", e.Version),
+			Attributes: savedAttributes(f, dir, s.name.name.belowRoot(path), e),
 			Walked:     sub != nil,
 			mounts:     s.mounts,
 			device:     s.device,
@@ -299,8 +299,8 @@ func (s *saveSearch) directory(path []string, dir *volume.Directory) error {
 	return nil
 }
 
-// savedAttributes are what a save set keeps of f, found in dir at path
-// through entry e: its header's fields, its version limit (both VERLIMIT
+// savedAttributes are what a save set keeps of f, found in dir through
+// entry e, path being dir's path below any root in the name that found it: its header's fields, its version limit (both VERLIMIT
 // and DIR_VERLIM, which VMS wrote alike for every file: 3 for VERLIM.TXT,
 // 5 for [B69.SUB1]'s files, 32767 for none; the directory entry's, or the
 // one govax keeps in a file's header when it has one), and dir's owner

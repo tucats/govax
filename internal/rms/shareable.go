@@ -220,7 +220,7 @@ func (s *Session) FindImageFile(name, defaultSpec string) (FileLocation, string,
 
 		for _, p := range names {
 			spec := p.spec()
-			tried = spec.Device + ":" + p.Dir + p.Name + p.Type + p.Ver
+			tried = p.physical()
 
 			if p.FNB&fnbWildcard != 0 || spec.Name == "" || s.Mounts == nil {
 				continue
@@ -255,8 +255,8 @@ func (s *Session) findVersion(p parsedName, spec filespec.Spec) (FileLocation, b
 
 	n, fileType := splitEntryName(entry.Name)
 	version := strconv.Itoa(int(entry.Version))
-	found := fileName{Dev: p.Dev, Dir: dirSpec{Elems: spec.Dirs}.String(), Name: n, Type: "." + fileType, Ver: ";" + version}
-	physical := filespec.Spec{Device: spec.Device, Dirs: spec.Dirs, Name: n, Type: fileType, Version: version}
+	file := n + "." + fileType + ";" + version
+	found := p.Dev + p.shownDir(p.relative(spec.Dirs)) + file
 
-	return FileLocation{Name: found.String(), Physical: physical.String()}, true
+	return FileLocation{Name: found, Physical: p.physicalFile(spec.Dirs, file)}, true
 }

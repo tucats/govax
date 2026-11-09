@@ -30,15 +30,15 @@ import (
 var lnm91Dir = filepath.Join("..", "..", "testdata", "lnm91")
 
 // lnm91Sections are the sections of each log with service cases to replay.
-// The others are the DCL utilities and devices, later subtasks'.
+// The others are the DCL utilities', TestLnm91DCLOracle's.
 var lnm91Sections = map[string][]string{
 	"lnm91.log": {
 		"GUIDE TABLE, DEFAULT [JONES] ON THE PLAIN DEVICE", "FORMS OF THE NAME", "CHAINS AND LISTS",
-		"SYNTAX", "ROOTED DEFAULT NAME AND RELATED FILE", "SYS$DISK ROOTED", "DEPTH", "FILES",
+		"SYNTAX", "ROOTED DEFAULT NAME AND RELATED FILE", "SYS$DISK ROOTED", "DEPTH", "FILES", "DEVICES",
 	},
 	"lnm91b.log": {
 		"PLAIN NAMES WITH A DIRECTORY", "CONCEALED NAMES WITH A DIRECTORY", "SYS$DISK WITH A DIRECTORY",
-		"ANGLE BRACKETS",
+		"ANGLE BRACKETS", "FIFTEEN LEVELS",
 	},
 }
 
@@ -126,13 +126,13 @@ func lnm91ServiceLog(t *testing.T, name, image string) (string, []lnm91Case) {
 			inRun = true
 
 		case strings.HasPrefix(l, "$ SET DEFAULT"), strings.HasPrefix(l, "$ DEFINE"), strings.HasPrefix(l, "$ DEASSIGN"),
-			strings.HasPrefix(l, "$ CREATE/DIRECTORY"):
+			strings.HasPrefix(l, "$ CREATE/DIRECTORY"), strings.HasPrefix(l, "$ COPY T.DAT"):
 			endRun()
 
 			proc = append(proc, l)
 
 		case inRun && strings.HasPrefix(l, "== "):
-			if strings.ContainsRune("PSOCERF", rune(l[3])) {
+			if strings.ContainsRune("PSOCERFDJ", rune(l[3])) && !lnm91SystemName.MatchString(l) {
 				proc = append(proc, l[3:])
 				cases = append(cases, lnm91Case{line: l[3:], report: lnm91Report(lines[i+1:])})
 			}
@@ -274,20 +274,18 @@ func TestLnm91ServicesOracle(t *testing.T) {
 var lnm91DCLSections = map[string][]string{
 	"lnm91": {
 		"DCL: F$PARSE", "DCL: F$SEARCH, F$TRNLNM, F$GETDVI, F$FILE_ATTRIBUTES", "DCL: SET DEFAULT",
-		"DCL: DIRECTORY", "DCL: FILE COMMANDS", "DCL: ERRORS AND IMAGES",
+		"DCL: DIRECTORY", "DCL: FILE COMMANDS", "DCL: ERRORS AND IMAGES", "DCL: BACKUP",
 	},
-	"lnm91b": {"DCL ON THOSE NAMES"},
+	"lnm91b": {"DCL ON THOSE NAMES", "FIFTEEN LEVELS"},
 }
 
 // lnm91SystemName is a name VMS's system has and subtask 8 gives govax's.
 var lnm91SystemName = regexp.MustCompile(`SYS\$(SYSTEM|SYSROOT|COMMON|SPECIFIC|SYSDEVICE)`)
 
 // lnm91Later reports a command, with its output, that isn't this subtask's to match: the system
-// names (subtask 8), F$GETDVI's CONCEALED and the image activator's message
-// (subtask 7), and SET PROTECTION, which govax doesn't have.
+// names (subtask 8), and SET PROTECTION, which govax doesn't have.
 func lnm91Later(cmd string) bool {
-	return lnm91SystemName.MatchString(cmd) || strings.Contains(cmd, `"CONCEALED")`) ||
-		strings.HasPrefix(cmd, "$ RUN BASE:") || strings.HasPrefix(cmd, "$ SET PROTECTION")
+	return lnm91SystemName.MatchString(cmd) || strings.HasPrefix(cmd, "$ SET PROTECTION")
 }
 
 // lnm91SystemDisk is the line VMS's SHOW LOGICAL SYS$DISK ends with, its
@@ -362,6 +360,26 @@ func TestLnm91DCLOracle(t *testing.T) {
 	}
 }
 
+// lnm91ImageSize is a save set listing's line for the probe's image and its
+// total: the image here is VMS's, copied from the host, and shows 17 blocks
+// where VMS's LINK made 16.
+var lnm91ImageSize = regexp.MustCompile(`(LNM91\.EXE;1 +|Total of 4 files, )[0-9]+`)
+
+// lnm91Masked is a command's text with what isn't the name's business
+// taken out of it: a save set's system and CPU, the image's size, RMS's
+// channel in a FAB's STV, and the message govax's COPY gives without /LOG,
+// where VMS's says nothing.
+func lnm91Masked(lines []string) string {
+	kept := slices.DeleteFunc(slices.Clone(lines), func(l string) bool {
+		return strings.HasPrefix(l, "CPU ID register:") || strings.HasPrefix(l, "Operating system:") ||
+			strings.HasPrefix(l, "%COPY-S-COPIED") && !strings.Contains(lines[0], "/LOG")
+	})
+
+	text := strings.ReplaceAll(strings.Join(kept, "\n"), lnm91Channel, "stv=00000000")
+
+	return lnm91ImageSize.ReplaceAllString(text, "${1}N")
+}
+
 // lnm91CompareSection holds a section's commands to VMS's. After a SET
 // DEFAULT to a system name, the rest of the section shows that default, and
 // is subtask 8's too.
@@ -384,8 +402,48 @@ func lnm91CompareSection(t *testing.T, sect string, want, got [][]string) {
 
 		w := slices.DeleteFunc(slices.Clone(want[i]), func(l string) bool { return l == lnm91SystemDisk })
 
-		if a, b := strings.Join(w, "\n"), strings.Join(got[i], "\n"); a != b {
+		if a, b := lnm91Masked(w), lnm91Masked(got[i]); a != b {
 			t.Errorf("%s:\n--- VMS\n%s\n--- govax\n%s", sect, a, b)
+		}
+	}
+}
+
+// TestBackupThroughRoot saves and restores through rooted names, whose
+// restored files the probe doesn't reach (its /SELECT finds nothing): a save
+// set's paths are relative to the root, and a file restored through a root
+// lands below it and is named as RMS would name it.
+func TestBackupThroughRoot(t *testing.T) {
+	proc := `$ SET NOON
+$ CREATE/DIRECTORY DUA1:[R.SUB]
+$ CREATE/DIRECTORY DUA1:[R.OUT]
+$ CREATE DUA1:[R.SUB]A.DAT
+one record
+$ DEFINE/TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL) BASE _DUA1:[R.]
+$ DEFINE NOCON _DUA1:[R.]
+$ BACKUP BASE:[SUB]A.DAT DUA1:[000000]S.BCK/SAVE_SET
+$ BACKUP/LIST DUA1:[000000]S.BCK/SAVE_SET
+$ BACKUP/LOG DUA1:[000000]S.BCK/SAVE_SET BASE:[OUT]B.DAT
+$ BACKUP/LOG DUA1:[000000]S.BCK/SAVE_SET NOCON:[OUT]C.DAT
+$ BACKUP/LOG DUA1:[000000]S.BCK/SAVE_SET BASE:[*...]
+$ BACKUP/LOG DUA1:[000000]S.BCK/SAVE_SET BASE:[OUT]B.DAT
+$ DIRECTORY DUA1:[R.OUT]
+$ RUN BASE:[SUB]NOSUCH
+$ RUN NOCON:[SUB]NOSUCH
+`
+
+	out := lnm91Run(t, "ROOTS", proc)
+
+	for _, want := range []string{
+		"\n[SUB]A.DAT;1 ",
+		"%BACKUP-S-CREATED, created BASE:[OUT]B.DAT;1",
+		"%BACKUP-S-CREATED, created _DUA1:[R.][OUT]C.DAT;1",
+		"BASE:[SUB]A.DAT;1",
+		"B.DAT;1",
+		"C.DAT;1",
+		"image file not found _DUA1:[R.][SUB]NOSUCH.EXE;",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
 		}
 	}
 }

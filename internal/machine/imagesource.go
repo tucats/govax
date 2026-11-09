@@ -49,7 +49,7 @@ func (m *Machine) openImage(fn string, main bool) ([]byte, corevms.PageSource, i
 		}
 
 		if !loc.Host {
-			a, data, found, err := s.AccessImage(loc.WithDefaultType("EXE"))
+			a, data, found, err := s.AccessImage(s.ImageLocation(loc))
 
 			var notFound *rms.NotFoundError
 			if errors.As(err, &notFound) {

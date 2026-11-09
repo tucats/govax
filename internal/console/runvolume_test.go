@@ -59,8 +59,7 @@ func TestRun_imageOnVolume(t *testing.T) {
 	}
 
 	// Activating the image by its bare name records the file's full
-	// specification, with the node's name on the device, as its process's
-	// JPI$_IMAGNAME; image rundown forgets it.
+	// specification as its process's JPI$_IMAGNAME; image rundown forgets it.
 	env := c.ProcessOne()
 
 	c.ImageRundown()
@@ -70,7 +69,7 @@ func TestRun_imageOnVolume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if want := env.NodeName + "$DUA0:[000000]MAIN.EXE;1"; env.Process.ImageName != want {
+	if want := "DUA0:[000000]MAIN.EXE;1"; env.Process.ImageName != want {
 		t.Errorf("JPI$_IMAGNAME = %q, want %q", env.Process.ImageName, want)
 	}
 
