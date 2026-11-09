@@ -782,6 +782,11 @@ never had.
   2026-11-08) is the close-out: MANUAL.md's "Writing help modules" and
   Appendix B's LBR$ routines, and HELP's default library always
   `SYS$HELP:HELPLIB`.
+  Phase 91 (planned 2026-11-09, awaiting the author's review) is concealed
+  logical names and rooted directories (`DEV:[ROOT.]`, `.][`), with
+  `SYS$SYSROOT` then a concealed root, `_DUA0:[SYSTEM.]`, and the system
+  names `SYS$SYSROOT:[dir]`; subtask 1 is the survey, its doc's Part A, and
+  its VMS probe is to be `testdata/lnm91`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
