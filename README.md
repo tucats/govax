@@ -27,8 +27,14 @@ You'll need [Go](https://go.dev) 1.26 or later:
 ```sh
 git clone https://github.com/tucats/govax.git
 cd govax
-go install ./cmd/govax
+cmd/govax/build.sh
 ```
+
+That builds `./govax` with the build number from `cmd/govax/tools/buildver.txt`
+injected, so `govax --version` reports it (`build.sh -i` bumps the number
+first, `-o NAME` picks the output file). Put the binary somewhere on your
+`PATH`. A plain `go install ./cmd/govax` also works, but the binary then
+reports version 0.0-0.
 
 That's the whole installation. The first time it runs, govax makes itself
 a system disk in `~/.govax`.
