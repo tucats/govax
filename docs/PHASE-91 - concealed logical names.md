@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-09; the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
-Part A below) is done, and subtask 2's first round has run on the VAX
-(A.4, "The probe's answers"). Nothing is implemented yet.
+Part A below) and 2 (the probe, two rounds on the VAX; A.4, "The probe's
+answers") are done. Nothing is implemented yet.
 
 ## Goal
 
@@ -292,11 +292,60 @@ and **`SYS$SYSDEVICE` are `[concealed,terminal]`**, all `[exec]` in the
 system table, and `SYS$SYSTEM` and the others are plain
 `SYS$SYSROOT:[dir]`.
 
-**Left open** (Round 2, below): whether a plain name with a plain directory
-fails the same way as `A1:[OTHER]`, which only `LIST3`'s element shows;
-what a concealed name with a plain directory does; and whether files can
-really be made 15 levels down, since the probe's deep tree used an 8-level
-root that VMS refused.
+#### Round 2 (`vax/lnm91b.log`)
+
+**A field on both sides of a translation is an error, for every logical
+name, rooted or not.** `P` = `_DUA1:[LNM91]` and `N` = `_DUA1:[LNM91]A.DAT`:
+
+| Case | Status |
+| --- | --- |
+| `P:A.DAT`, `N:`, `N:;5` (fields that don't overlap) | fine: `_DUA1:[LNM91]A.DAT;`, `...;5` |
+| `P:[SUB]A.DAT`, `P:[.ROOT1]`, `P:[-]`, `P:[]`, `P:[000000]`, `P:[*]`, `P:[...]`, `N:[SUB]` | `RMS$_DIR` |
+| `N:B.DAT` | `RMS$_FNM` |
+| `N:.TXT` | `RMS$_TYP` |
+
+The User's Manual's `PAY_FILE:*.DAT`, with `PAY_FILE` ending in a file
+name (11.3.3), is the same shape as `N:B.DAT` but with a wildcard name. The
+probe didn't try it; **unconfirmed**. govax keeps today's result for a
+`*` name there.
+
+This holds through chains (`P2` = `P:`, `P3` = `LDEV:[LNM91]`) and search
+list elements. It's only the *translation* that conflicts: defaults
+behave as before (`[SUB]A.DAT` with default `P:` is `_DUA1:[SUB]A.DAT;`,
+`B.DAT` with default `N:` is `_DUA1:[LNM91]B.DAT;`, and `P:B.DAT` with
+default `[SUB]` is `_DUA1:[LNM91]B.DAT;`).
+
+**A concealed name must be a device, or a device and a root, or RMS$_DEV.**
+`C` = `_DUA1:[LNM91]`, concealed, terminal or not, or through `LDEV:`, is
+`RMS$_DEV` wherever it's used: as the primary name, the default name, the
+related file, or `SYS$DISK`.
+
+**`SYS$DISK` with a directory** (plain) gives the directory only to a name
+with no directory of its own: `A.DAT` is `_DUA1:[LNM91]A.DAT;`, `[SUB]A.DAT`
+is `_DUA1:[SUB]A.DAT;`. Relative ones, and `[]`, use the process default,
+`[JONES]`. SHOW DEFAULT shows `_DUA1:[LNM91]` and `  [] =  [JONES]`.
+
+**Fifteen levels are real.** A 7-level root and 8 levels below it:
+CREATE/DIRECTORY, COPY, `$CREATE`, `$OPEN`, `$ERASE`, `$SEARCH`, and SET
+DEFAULT all work, and `LIB$FID_TO_NAME` gives
+`DISK$LNM91B:[R1.R2.R3.R4.R5.R6.R7.E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1`. But
+an ellipsis walks 8 levels from its MFD or root: `LDEV:[R1...]*.DAT` and
+`LDEV:[R1.R2.R3.R4.R5.R6.R7...]*.DAT` find nothing, `D7:[E1...]*.DAT`
+finds the files, and `LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2]` is `RMS$_DIR`.
+
+**Angle brackets are kept** in `$PARSE`'s and `$SEARCH`'s strings:
+`_DUA1:<SUB>A.DAT;`, `_DUA1:<JONES.K>A.DAT;`, `_DUA1:<000000>A.DAT;`,
+from the primary name, default name, or related file. A bracketed default
+wins: `<SUB>A.DAT` with default `[OTHER]` is `DUA1:[SUB]A.DAT;`.
+
+**SET DEFAULT:**
+
+- A plain name with a directory (`P:`) becomes `SYS$DISK` `DUA1:` and
+  default `[LNM91]`. `P:[SUB]` is `%DCL-W-DIRECT`, nothing changed; `N:`
+  (with a file name) is `%RMS-F-DIR`, nothing changed.
+- A concealed name with a plain directory is taken without complaint
+  (`SET DEFAULT C:`, `SYS$DISK` = `C:`; SHOW DEFAULT adds INVDEF). `C:[SUB]`
+  is `%RMS-F-DEV`, with `SYS$DISK` already changed to `C:`.
 
 ## Part B — decisions
 
@@ -322,9 +371,16 @@ the error it already gives. `fileName` gains `Root`, `scanName` recognizes
 written, brackets and all, for `.][` strings. A.4's errors are this
 decision's rules.
 
-The existing "fields the program wrote win over the translation's" stays
-for name, type, and version, but a directory on both sides becomes
-`RMS$_DIR` (A.4). `mergeName` applies one to the other today.
+The existing "fields the program wrote win over the translation's" goes
+(A.4, Round 2). In `translateName`, a directory, name, or type on both
+sides is `RMS$_DIR`, `RMS$_FNM`, or `RMS$_TYP`, for every logical name,
+and a concealed name that gives more than a device and root is
+`RMS$_DEV`. A `*` name over a translation's name keeps today's result,
+for the User's Manual's example, unconfirmed. `mergeName` still merges
+defaults, related files, and the process default as it does now.
+
+Directory text keeps its brackets, `<` or `[`, as written, a bracketed
+default winning. `dirSpec.String()` always writes `[` today.
 
 **Decision 3 — no change to `internal/lnm`** beyond whatever the probe
 finds wrong. Roots are a matter of reading the translated text.
@@ -378,14 +434,15 @@ sys$sysroot:[sysexe]` and so on, `SYS$SOURCES` as
 
 **Decision 7 — depth.** RMS's check is on the root (at most 7 levels,
 `RMS$_DEV` past it) and the directory (at most 8, `RMS$_DIR`) separately.
-Reaching 15 physical levels needs `ods2`'s `MaxDirectoryDepth` raised in a
-tagged `ods2` release, as Phase 22's note on `go.work` describes, and
-waits for Round 2 to show VMS really makes them.
+Round 2 shows VMS makes them, so `ods2`'s `MaxDirectoryDepth` is raised to
+15 in a tagged `ods2` release, as Phase 22's note on `go.work` describes.
+RMS's own limits stay in `scanDir`. An ellipsis walks 8 levels below its
+MFD or root.
 
 **Decision 8 — what names show.** Everything a user reads follows A.4.
 `DVI$_CONCEALED` is added and answers FALSE, as VMS's did. SET DEFAULT
-refuses a root that isn't concealed. BACKUP records paths relative to the
-root.
+takes A.4's cases as VMS does, including a concealed root's and refusing a
+plain root. BACKUP records paths relative to the root.
 
 ## Part C — subtasks
 
@@ -393,17 +450,19 @@ Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-09): Part A.
 2. **The probe**: `testdata/lnm91`, as in Part D; run on the simh VAX by
-   the author (round 1 done 2026-11-09, A.4; Round 2 written).
+   the author (done 2026-11-09, A.4).
 3. **One name processor** (Decision 4): `expandSpec` over `expandName`,
    errors reported as before, F$PARSE, SET DEFAULT, `LocateRelated`, and
    RENAME's own parsing moved onto it, `mfdRelative` gone. No change in
    behavior but the `SYS$DISK` fix; the whole test suite is the check.
 4. **Syntax and `$PARSE`**: `.][` and `[ROOT.]` in `scanName`, the root
-   through `expandName`, the guide's table, errors, `NAM$V_ROOT_DIR`,
-   `DIR_LVLS`, `NOCONCEAL`. Held to the probe's `$PARSE` cases, in an
+   through `expandName`, the guide's table, errors, the field conflicts
+   of Round 2, angle brackets kept, `NAM$V_ROOT_DIR`, `DIR_LVLS`,
+   `NOCONCEAL`. Held to the probe's `$PARSE` cases, in an
    oracle test.
 5. **Files through the services**: `$OPEN`, `$CREATE`, `$SEARCH` with
-   wildcards (`[*]`, `[*...]`, `[...]`), `$ERASE`, `$RENAME`, resultant
+   wildcards (`[*]`, `[*...]`, `[...]`, 8 levels from the root),
+   `$ERASE`, `$RENAME`, resultant
    strings, related names, a search list of roots.
 6. **The DCL utilities**: the display helper, every command in A.3, SET
    and SHOW DEFAULT with a rooted device, F$PARSE, and F$SEARCH. Held to
@@ -471,8 +530,9 @@ cases, and has nothing to wait on.
 
 ## Round 2
 
-Accepted by the author 2026-11-09, and written: `lnm91b.com` on its own
-exchange volume (README.md), the same program. It covers:
+Accepted by the author 2026-11-09, and run the same day (A.4):
+`lnm91b.com` on its own exchange volume (README.md), the same program. It
+covers:
 
 | Case | Why |
 | --- | --- |
@@ -518,5 +578,9 @@ The author accepted the plan and answered its questions:
 - **2026-11-09** Subtask 2's first round ran on VMS V7.1 (`vax/lnm91.log`,
   `vax/lnm91.exe`). A.4 is its answers. Decisions 2, 6, and 7 changed by
   them, and Decision 8 is new.
-- **2026-11-09** Round 2 written (`lnm91b.com`, 275 program cases) and
-  rehearsed on govax. Waiting for the VAX run.
+- **2026-11-09** Round 2 written (`lnm91b.com`, 275 program cases),
+  rehearsed on govax, and run on VMS V7.1 (`vax/lnm91b.log`; A.4, "Round
+  2"). A field on both sides of a translation is an error for every
+  logical name, which changes behavior Phase 33 assumed; a concealed name
+  must be a device or a device and root; 15 physical levels exist on disk.
+  Decisions 2, 7, and 8 revised. Subtask 2 done.

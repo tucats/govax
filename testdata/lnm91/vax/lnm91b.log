@@ -1,0 +1,3295 @@
+$ !
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+######## ENVIRONMENT
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME"), " ", F$GETSYI("NODENAME")
+V7.1     VAX 8600 SIMVAX
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ PDEV = F$GETDVI(DEV,"DEVNAM")
+$ SHOW SYMBOL DEV
+  DEV = "DUA1:"
+$ SHOW SYMBOL PDEV
+  PDEV = "_DUA1:"
+$ SET DEFAULT DUA1:[000000]
+$ !
+$ WRITE SYS$OUTPUT "######## TREE"
+######## TREE
+$ CREATE/DIRECTORY DUA1:[LNM91.SUB]
+$ CREATE/DIRECTORY DUA1:[LNM91.ROOT1]
+$ CREATE/DIRECTORY DUA1:[SUB]
+$ CREATE/DIRECTORY DUA1:[JONES]
+$ CREATE/DIRECTORY DUA1:[OTHER]
+$ CREATE/DIRECTORY DUA1:[R1.R2.R3.R4.R5.R6.R7]
+$ CREATE T.DAT
+template record
+$ !
+$ COPY T.DAT DUA1:[LNM91]A.DAT
+$ COPY T.DAT DUA1:[LNM91.SUB]A.DAT
+$ COPY T.DAT DUA1:[LNM91.ROOT1]A.DAT
+$ COPY T.DAT DUA1:[SUB]A.DAT
+$ COPY T.DAT DUA1:[JONES]A.DAT
+$ COPY T.DAT DUA1:[OTHER]A.DAT
+$ DEFINE/USER_MODE SYS$OUTPUT LNM91.MLG
+$ MACRO/NOLIST LNM91
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ DEFINE/USER_MODE SYS$OUTPUT LNM91.LLG
+$ LINK/NOMAP LNM91
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("LNM91.EXE") .EQS. "" THEN EXIT
+$ PROG = DEV + "[000000]LNM91"
+$ !
+$ WRITE SYS$OUTPUT "######## DEFINITIONS"
+######## DEFINITIONS
+$ DEFINE LDEV _DUA1:
+$ SHOW LOGICAL/FULL LDEV
+   "LDEV" [super] = "_DUA1:" (LNM$PROCESS_TABLE)
+$ DEFINE P _DUA1:[LNM91]
+$ SHOW LOGICAL/FULL P
+   "P" [super] = "_DUA1:[LNM91]" (LNM$PROCESS_TABLE)
+$ DEFINE P2 P:
+$ SHOW LOGICAL/FULL P2
+   "P2" [super] = "P:" (LNM$PROCESS_TABLE)
+1  "P" [super] = "_DUA1:[LNM91]" (LNM$PROCESS_TABLE)
+$ DEFINE P3 LDEV:[LNM91]
+$ SHOW LOGICAL/FULL P3
+   "P3" [super] = "LDEV:[LNM91]" (LNM$PROCESS_TABLE)
+$ DEFINE N _DUA1:[LNM91]A.DAT
+$ SHOW LOGICAL/FULL N
+   "N" [super] = "_DUA1:[LNM91]A.DAT" (LNM$PROCESS_TABLE)
+$ DEFINE L _DUA1:[LNM91],_DUA1:[LNM91.SUB]
+$ SHOW LOGICAL/FULL L
+   "L" [super] = "_DUA1:[LNM91]" (LNM$PROCESS_TABLE)
+	= "_DUA1:[LNM91.SUB]"
+$ DEFINE/TRANSLATION_ATTRIBUTES=CONCEALED C _DUA1:[LNM91]
+$ SHOW LOGICAL/FULL C
+   "C" [super] = "_DUA1:[LNM91]" [concealed] (LNM$PROCESS_TABLE)
+$ DEFINE/TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL) C2 _DUA1:[LNM91]
+$ SHOW LOGICAL/FULL C2
+   "C2" [super] = "_DUA1:[LNM91]" [concealed,terminal] (LNM$PROCESS_TABLE)
+$ DEFINE/TRANSLATION_ATTRIBUTES=CONCEALED C3 LDEV:[LNM91]
+$ SHOW LOGICAL/FULL C3
+   "C3" [super] = "LDEV:[LNM91]" [concealed] (LNM$PROCESS_TABLE)
+$ DEFINE/TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL) D7 _DUA1:[R1.R2.R3.R4.R5.R6.R7.]
+$ SHOW LOGICAL/FULL D7
+   "D7" [super] = "_DUA1:[R1.R2.R3.R4.R5.R6.R7.]" [concealed,terminal] (LNM$PROCESS_TABLE)
+$ !
+$ WRITE SYS$OUTPUT "######## PLAIN NAMES WITH A DIRECTORY"
+######## PLAIN NAMES WITH A DIRECTORY
+$ SET DEFAULT DUA1:[JONES]
+$ RUN DUA1:[000000]LNM91
+P- P:A.DAT
+== P- P:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN P:A.DAT
+== PN P:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS P:A.DAT
+== PS P:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:A.DAT
+== S- P:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- P:
+== P- P:
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN P:
+== PN P:
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS P:
+== PS P:
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:
+== S- P:
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=15 "_DUA1:[LNM91].;"
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+P- P
+== P- P
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN P
+== PN P
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS P
+== PS P
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P
+== S- P
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=0 ""
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=15 "_DUA1:[LNM91].;"
+  rsa=15 "_DUA1:[LNM91].;"
+  fnb=000000C0 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=0 type=1 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+P- P:[SUB]A.DAT
+== P- P:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[SUB]A.DAT
+== PN P:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[SUB]A.DAT
+== PS P:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[SUB]A.DAT
+== S- P:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P:[.ROOT1]A.DAT
+== P- P:[.ROOT1]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[.ROOT1]A.DAT
+== PN P:[.ROOT1]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[.ROOT1]A.DAT
+== PS P:[.ROOT1]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[.ROOT1]A.DAT
+== S- P:[.ROOT1]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P:[-]A.DAT
+== P- P:[-]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[-]A.DAT
+== PN P:[-]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[-]A.DAT
+== PS P:[-]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[-]A.DAT
+== S- P:[-]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P:[]A.DAT
+== P- P:[]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[]A.DAT
+== PN P:[]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[]A.DAT
+== PS P:[]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[]A.DAT
+== S- P:[]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P:[000000]A.DAT
+== P- P:[000000]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[000000]A.DAT
+== PN P:[000000]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[000000]A.DAT
+== PS P:[000000]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[000000]A.DAT
+== S- P:[000000]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P:[*]A.DAT
+== P- P:[*]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[*]A.DAT
+== PN P:[*]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[*]A.DAT
+== PS P:[*]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[*]A.DAT
+== S- P:[*]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P:[...]A.DAT
+== P- P:[...]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[...]A.DAT
+== PN P:[...]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[...]A.DAT
+== PS P:[...]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[...]A.DAT
+== S- P:[...]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P2:A.DAT
+== P- P2:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN P2:A.DAT
+== PN P2:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS P2:A.DAT
+== PS P2:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P2:A.DAT
+== S- P2:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- P2:[SUB]A.DAT
+== P- P2:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P2:[SUB]A.DAT
+== PN P2:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P2:[SUB]A.DAT
+== PS P2:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P2:[SUB]A.DAT
+== S- P2:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- P3:A.DAT
+== P- P3:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN P3:A.DAT
+== PN P3:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS P3:A.DAT
+== PS P3:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P3:A.DAT
+== S- P3:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- P3:[SUB]A.DAT
+== P- P3:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P3:[SUB]A.DAT
+== PN P3:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P3:[SUB]A.DAT
+== PS P3:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P3:[SUB]A.DAT
+== S- P3:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- N:
+== P- N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN N:
+== PN N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS N:
+== PS N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N:
+== S- N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- N
+== P- N
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN N
+== PN N
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS N
+== PS N
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N
+== S- N
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- N:B.DAT
+== P- N:B.DAT
+  $PARSE sts=0001852C stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN N:B.DAT
+== PN N:B.DAT
+  $PARSE sts=0001852C stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS N:B.DAT
+== PS N:B.DAT
+  $PARSE sts=0001852C stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N:B.DAT
+== S- N:B.DAT
+  $PARSE sts=0001852C stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- N:.TXT
+== P- N:.TXT
+  $PARSE sts=000186E4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN N:.TXT
+== PN N:.TXT
+  $PARSE sts=000186E4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS N:.TXT
+== PS N:.TXT
+  $PARSE sts=000186E4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N:.TXT
+== S- N:.TXT
+  $PARSE sts=000186E4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- N:;5
+== P- N:;5
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[LNM91]A.DAT;5"
+  rsa=0 ""
+  fnb=000000C7 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN N:;5
+== PN N:;5
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[LNM91]A.DAT;5"
+  rsa=0 ""
+  fnb=000000C7 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS N:;5
+== PS N:;5
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[LNM91]A.DAT;5"
+  rsa=0 ""
+  fnb=000000C7 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N:;5
+== S- N:;5
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[LNM91]A.DAT;5"
+  rsa=0 ""
+  fnb=000000C7 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=20 "_DUA1:[LNM91]A.DAT;5"
+  rsa=20 "_DUA1:[LNM91]A.DAT;5"
+  fnb=000000C7 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+P- N:[SUB]
+== P- N:[SUB]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN N:[SUB]
+== PN N:[SUB]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS N:[SUB]
+== PS N:[SUB]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N:[SUB]
+== S- N:[SUB]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- N:[SUB]B.DAT
+== P- N:[SUB]B.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN N:[SUB]B.DAT
+== PN N:[SUB]B.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS N:[SUB]B.DAT
+== PS N:[SUB]B.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- N:[SUB]B.DAT
+== S- N:[SUB]B.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- L:A.DAT
+== P- L:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000008C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN L:A.DAT
+== PN L:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000008C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS L:A.DAT
+== PS L:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000008C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- L:A.DAT
+== S- L:A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=000008C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000008C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=23 "_DUA1:[LNM91.SUB]A.DAT;"
+  rsa=24 "_DUA1:[LNM91.SUB]A.DAT;1"
+  fnb=002008C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(29,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=23 "_DUA1:[LNM91.SUB]A.DAT;"
+  rsa=23 "_DUA1:[LNM91.SUB]A.DAT;"
+  fnb=002008C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- L:*.DAT
+== P- L:*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]*.DAT;"
+  rsa=0 ""
+  fnb=000009E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN L:*.DAT
+== PN L:*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]*.DAT;"
+  rsa=0 ""
+  fnb=000009E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS L:*.DAT
+== PS L:*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]*.DAT;"
+  rsa=0 ""
+  fnb=000009E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- L:*.DAT
+== S- L:*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]*.DAT;"
+  rsa=0 ""
+  fnb=000009E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]*.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=000009E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=23 "_DUA1:[LNM91.SUB]*.DAT;"
+  rsa=24 "_DUA1:[LNM91.SUB]A.DAT;1"
+  fnb=002009E6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(29,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=23 "_DUA1:[LNM91.SUB]*.DAT;"
+  rsa=23 "_DUA1:[LNM91.SUB]*.DAT;"
+  fnb=002009E6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- L:[SUB]A.DAT
+== P- L:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN L:[SUB]A.DAT
+== PN L:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS L:[SUB]A.DAT
+== PS L:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- L:[SUB]A.DAT
+== S- L:[SUB]A.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- A.DAT|P:
+== P- A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN A.DAT|P:
+== PN A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS A.DAT|P:
+== PS A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT|P:
+== S- A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- [SUB]A.DAT|P:
+== P- [SUB]A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN [SUB]A.DAT|P:
+== PN [SUB]A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS [SUB]A.DAT|P:
+== PS [SUB]A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [SUB]A.DAT|P:
+== S- [SUB]A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=18 "_DUA1:[SUB]A.DAT;1"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=17 "_DUA1:[SUB]A.DAT;"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- [.SUB]A.DAT|P:
+== P- [.SUB]A.DAT|P:
+  $PARSE sts=0001C04A stv=00000910
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN [.SUB]A.DAT|P:
+== PN [.SUB]A.DAT|P:
+  $PARSE sts=0001C04A stv=00000910
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS [.SUB]A.DAT|P:
+== PS [.SUB]A.DAT|P:
+  $PARSE sts=00010001 stv=00000000
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [.SUB]A.DAT|P:
+== S- [.SUB]A.DAT|P:
+  $PARSE sts=0001C04A stv=00000910
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- B.DAT|N:
+== P- B.DAT|N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN B.DAT|N:
+== PN B.DAT|N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS B.DAT|N:
+== PS B.DAT|N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- B.DAT|N:
+== S- B.DAT|N:
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=19 "_DUA1:[LNM91]B.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+P- P:B.DAT|[SUB]
+== P- P:B.DAT|[SUB]
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN P:B.DAT|[SUB]
+== PN P:B.DAT|[SUB]
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS P:B.DAT|[SUB]
+== PS P:B.DAT|[SUB]
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:B.DAT|[SUB]
+== S- P:B.DAT|[SUB]
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=19 "_DUA1:[LNM91]B.DAT;"
+  rsa=19 "_DUA1:[LNM91]B.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+P- P:[SUB]B.DAT|[OTHER]
+== P- P:[SUB]B.DAT|[OTHER]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN P:[SUB]B.DAT|[OTHER]
+== PN P:[SUB]B.DAT|[OTHER]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS P:[SUB]B.DAT|[OTHER]
+== PS P:[SUB]B.DAT|[OTHER]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- P:[SUB]B.DAT|[OTHER]
+== S- P:[SUB]B.DAT|[OTHER]
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- A.DAT||P:X.DAT
+== P- A.DAT||P:X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN A.DAT||P:X.DAT
+== PN A.DAT||P:X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS A.DAT||P:X.DAT
+== PS A.DAT||P:X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT||P:X.DAT
+== S- A.DAT||P:X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## CONCEALED NAMES WITH A DIRECTORY"
+######## CONCEALED NAMES WITH A DIRECTORY
+$ SET DEFAULT DUA1:[JONES]
+$ RUN DUA1:[000000]LNM91
+P- C:A.DAT
+== P- C:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:A.DAT
+== PN C:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:A.DAT
+== PS C:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:A.DAT
+== S- C:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C:
+== P- C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:
+== PN C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:
+== PS C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:
+== S- C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C:[SUB]A.DAT
+== P- C:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:[SUB]A.DAT
+== PN C:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:[SUB]A.DAT
+== PS C:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:[SUB]A.DAT
+== S- C:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C:[.ROOT1]A.DAT
+== P- C:[.ROOT1]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:[.ROOT1]A.DAT
+== PN C:[.ROOT1]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:[.ROOT1]A.DAT
+== PS C:[.ROOT1]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:[.ROOT1]A.DAT
+== S- C:[.ROOT1]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C:[-]A.DAT
+== P- C:[-]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:[-]A.DAT
+== PN C:[-]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:[-]A.DAT
+== PS C:[-]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:[-]A.DAT
+== S- C:[-]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C:[]A.DAT
+== P- C:[]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:[]A.DAT
+== PN C:[]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:[]A.DAT
+== PS C:[]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:[]A.DAT
+== S- C:[]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C:[000000]A.DAT
+== P- C:[000000]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C:[000000]A.DAT
+== PN C:[000000]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C:[000000]A.DAT
+== PS C:[000000]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C:[000000]A.DAT
+== S- C:[000000]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C2:A.DAT
+== P- C2:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C2:A.DAT
+== PN C2:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C2:A.DAT
+== PS C2:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C2:A.DAT
+== S- C2:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C2:
+== P- C2:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C2:
+== PN C2:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C2:
+== PS C2:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C2:
+== S- C2:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C2:[SUB]A.DAT
+== P- C2:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C2:[SUB]A.DAT
+== PN C2:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C2:[SUB]A.DAT
+== PS C2:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C2:[SUB]A.DAT
+== S- C2:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C3:A.DAT
+== P- C3:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C3:A.DAT
+== PN C3:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C3:A.DAT
+== PS C3:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C3:A.DAT
+== S- C3:A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- C3:[SUB]A.DAT
+== P- C3:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN C3:[SUB]A.DAT
+== PN C3:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS C3:[SUB]A.DAT
+== PS C3:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- C3:[SUB]A.DAT
+== S- C3:[SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- A.DAT|C:
+== P- A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN A.DAT|C:
+== PN A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS A.DAT|C:
+== PS A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT|C:
+== S- A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- [SUB]A.DAT|C:
+== P- [SUB]A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN [SUB]A.DAT|C:
+== PN [SUB]A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS [SUB]A.DAT|C:
+== PS [SUB]A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [SUB]A.DAT|C:
+== S- [SUB]A.DAT|C:
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- A.DAT||C:X.DAT
+== P- A.DAT||C:X.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN A.DAT||C:X.DAT
+== PN A.DAT||C:X.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS A.DAT||C:X.DAT
+== PS A.DAT||C:X.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT||C:X.DAT
+== S- A.DAT||C:X.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## SYS$DISK WITH A DIRECTORY"
+######## SYS$DISK WITH A DIRECTORY
+$ SET DEFAULT DUA1:[JONES]
+$ DEFINE SYS$DISK _DUA1:[LNM91]
+%DCL-I-SUPERSEDE, previous value of SYS$DISK has been superseded
+$ SHOW DEFAULT
+  _DUA1:[LNM91]
+  [] =  [JONES]
+$ RUN DUA1:[000000]LNM91
+P- A.DAT
+== P- A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PN A.DAT
+== PN A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+PS A.DAT
+== PS A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT
+== S- A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=20 "_DUA1:[LNM91]A.DAT;1"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[LNM91]A.DAT;"
+  rsa=19 "_DUA1:[LNM91]A.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(14,1,0)
+  fid=(28,1,0)
+P- [SUB]A.DAT
+== P- [SUB]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN [SUB]A.DAT
+== PN [SUB]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS [SUB]A.DAT
+== PS [SUB]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [SUB]A.DAT
+== S- [SUB]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=18 "_DUA1:[SUB]A.DAT;1"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=17 "_DUA1:[SUB]A.DAT;"
+  rsa=17 "_DUA1:[SUB]A.DAT;"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- [.SUB]A.DAT
+== P- [.SUB]A.DAT
+  $PARSE sts=0001C04A stv=00000910
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN [.SUB]A.DAT
+== PN [.SUB]A.DAT
+  $PARSE sts=0001C04A stv=00000910
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS [.SUB]A.DAT
+== PS [.SUB]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [.SUB]A.DAT
+== S- [.SUB]A.DAT
+  $PARSE sts=0001C04A stv=00000910
+  esa=23 "_DUA1:[JONES.SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00200046 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- []A.DAT
+== P- []A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[JONES]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(0,0,0)
+PN []A.DAT
+== PN []A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[JONES]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(0,0,0)
+PS []A.DAT
+== PS []A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[JONES]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- []A.DAT
+== S- []A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[JONES]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:[JONES]A.DAT;"
+  rsa=20 "_DUA1:[JONES]A.DAT;1"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(32,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:[JONES]A.DAT;"
+  rsa=19 "_DUA1:[JONES]A.DAT;"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(32,1,0)
+P- [-]A.DAT
+== P- [-]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[000000]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+PN [-]A.DAT
+== PN [-]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[000000]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+PS [-]A.DAT
+== PS [-]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[000000]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [-]A.DAT
+== S- [-]A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:[000000]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=20 "_DUA1:[000000]A.DAT;"
+  rsa=20 "_DUA1:[000000]A.DAT;"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEFINE/TRANSLATION_ATTRIBUTES=CONCEALED SYS$DISK _DUA1:[LNM91]
+%DCL-I-SUPERSEDE, previous value of SYS$DISK has been superseded
+$ SHOW DEFAULT
+  _DUA1:[LNM91]
+  [] =  [JONES]
+%DCL-I-INVDEF, _DUA1:[LNM91] does not exist
+$ RUN DUA1:[000000]LNM91
+P- A.DAT
+== P- A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN A.DAT
+== PN A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS A.DAT
+== PS A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT
+== S- A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- [SUB]A.DAT
+== P- [SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN [SUB]A.DAT
+== PN [SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS [SUB]A.DAT
+== PS [SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- [SUB]A.DAT
+== S- [SUB]A.DAT
+  $PARSE sts=000184C4 stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SET DEFAULT DUA1:[JONES]
+$ !
+$ WRITE SYS$OUTPUT "######## DCL ON THOSE NAMES"
+######## DCL ON THOSE NAMES
+$ DIRECTORY P:
+
+Directory _DUA1:[LNM91]
+
+A.DAT;1             ROOT1.DIR;1         SUB.DIR;1           
+
+Total of 3 files.
+$ WRITE SYS$OUTPUT "<", F$PARSE("P:"), "> <", F$PARSE("P:",,,,"NO_CONCEAL"), ">"
+<_DUA1:[LNM91].;> <_DUA1:[LNM91].;>
+$ DIRECTORY P:A.DAT
+
+Directory _DUA1:[LNM91]
+
+A.DAT;1             
+
+Total of 1 file.
+$ WRITE SYS$OUTPUT "<", F$PARSE("P:A.DAT"), "> <", F$PARSE("P:A.DAT",,,,"NO_CONCEAL"), ">"
+<_DUA1:[LNM91]A.DAT;> <_DUA1:[LNM91]A.DAT;>
+$ DIRECTORY P:[SUB]
+%DIRECT-E-OPENIN, error opening P:[SUB] as input
+-RMS-F-DIR, error in directory name
+$ WRITE SYS$OUTPUT "<", F$PARSE("P:[SUB]"), "> <", F$PARSE("P:[SUB]",,,,"NO_CONCEAL"), ">"
+<> <>
+$ DIRECTORY C:
+%DIRECT-E-OPENIN, error opening C: as input
+-RMS-F-DEV, error in device name or inappropriate device type for operation
+$ WRITE SYS$OUTPUT "<", F$PARSE("C:"), "> <", F$PARSE("C:",,,,"NO_CONCEAL"), ">"
+<> <>
+$ DIRECTORY C:A.DAT
+%DIRECT-E-OPENIN, error opening C:A.DAT as input
+-RMS-F-DEV, error in device name or inappropriate device type for operation
+$ WRITE SYS$OUTPUT "<", F$PARSE("C:A.DAT"), "> <", F$PARSE("C:A.DAT",,,,"NO_CONCEAL"), ">"
+<> <>
+$ DIRECTORY C:[SUB]
+%DIRECT-E-OPENIN, error opening C:[SUB] as input
+-RMS-F-DEV, error in device name or inappropriate device type for operation
+$ WRITE SYS$OUTPUT "<", F$PARSE("C:[SUB]"), "> <", F$PARSE("C:[SUB]",,,,"NO_CONCEAL"), ">"
+<> <>
+$ DIRECTORY C2:
+%DIRECT-E-OPENIN, error opening C2: as input
+-RMS-F-DEV, error in device name or inappropriate device type for operation
+$ WRITE SYS$OUTPUT "<", F$PARSE("C2:"), "> <", F$PARSE("C2:",,,,"NO_CONCEAL"), ">"
+<> <>
+$ DIRECTORY N:
+
+Directory _DUA1:[LNM91]
+
+A.DAT;1             
+
+Total of 1 file.
+$ WRITE SYS$OUTPUT "<", F$PARSE("N:"), "> <", F$PARSE("N:",,,,"NO_CONCEAL"), ">"
+<_DUA1:[LNM91]A.DAT;> <_DUA1:[LNM91]A.DAT;>
+$ DIRECTORY L:
+
+Directory _DUA1:[LNM91]
+
+A.DAT;1             ROOT1.DIR;1         SUB.DIR;1           
+
+Total of 3 files.
+
+Directory _DUA1:[LNM91.SUB]
+
+A.DAT;1             
+
+Total of 1 file.
+
+Grand total of 2 directories, 4 files.
+$ WRITE SYS$OUTPUT "<", F$PARSE("L:"), "> <", F$PARSE("L:",,,,"NO_CONCEAL"), ">"
+<_DUA1:[LNM91].;> <_DUA1:[LNM91].;>
+$ SET DEFAULT P:
+$ SHOW DEFAULT
+  DUA1:[LNM91]
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "DUA1:" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SET DEFAULT DUA1:[JONES]
+$ SET DEFAULT P:[SUB]
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+$ SHOW DEFAULT
+  DUA1:[JONES]
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "DUA1:" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SET DEFAULT DUA1:[JONES]
+$ SET DEFAULT C:
+$ SHOW DEFAULT
+  C:[JONES]
+%DCL-I-INVDEF, C:[JONES] does not exist
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "C:" (LNM$PROCESS_TABLE)
+1  "C" = "_DUA1:[LNM91]" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SET DEFAULT DUA1:[JONES]
+$ SET DEFAULT C:[SUB]
+%RMS-F-DEV, error in device name or inappropriate device type for operation
+$ SHOW DEFAULT
+  C:[JONES]
+%DCL-I-INVDEF, C:[JONES] does not exist
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "C:" (LNM$PROCESS_TABLE)
+1  "C" = "_DUA1:[LNM91]" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SET DEFAULT DUA1:[JONES]
+$ SET DEFAULT C2:
+$ SHOW DEFAULT
+  C2:[JONES]
+%DCL-I-INVDEF, C2:[JONES] does not exist
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "C2:" (LNM$PROCESS_TABLE)
+1  "C2" = "_DUA1:[LNM91]" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SET DEFAULT DUA1:[JONES]
+$ SET DEFAULT N:
+%RMS-F-DIR, error in directory name
+$ SHOW DEFAULT
+  DUA1:[JONES]
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "DUA1:" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SET DEFAULT DUA1:[JONES]
+$ TYPE P:A.DAT
+template record
+$ TYPE C:A.DAT
+%TYPE-W-SEARCHFAIL, error searching for C:A.DAT
+-RMS-F-DEV, error in device name or inappropriate device type for operation
+$ TYPE N:
+template record
+$ CREATE/DIRECTORY/LOG P:[NEW]
+%CREATE-E-DIRNOTCRE, P:[NEW] directory file not created
+-RMS-F-DIR, error in directory name
+$ CREATE/DIRECTORY/LOG C:[NEW]
+%CREATE-E-DIRNOTCRE, C:[NEW] directory file not created
+-RMS-F-DEV, error in device name or inappropriate device type for operation
+$ !
+$ WRITE SYS$OUTPUT "######## FIFTEEN LEVELS"
+######## FIFTEEN LEVELS
+$ SET DEFAULT DUA1:[000000]
+$ CREATE/DIRECTORY/LOG D7:[E1.E2.E3.E4.E5.E6.E7.E8]
+%CREATE-I-CREATED, D7:[E1.E2.E3.E4.E5.E6.E7.E8] created
+$ COPY T.DAT D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT
+$ DIRECTORY D7:[E1.E2.E3.E4.E5.E6.E7.E8]
+
+Directory D7:[E1.E2.E3.E4.E5.E6.E7.E8]
+
+Y.DAT;1             
+
+Total of 1 file.
+$ DIRECTORY LDEV:[R1.R2.R3.R4.R5.R6.R7.E1]
+
+Directory _DUA1:[R1.R2.R3.R4.R5.R6.R7.E1]
+
+E2.DIR;1            
+
+Total of 1 file.
+$ DIRECTORY LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2]
+%DIRECT-E-OPENIN, error opening LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2] as input
+-RMS-F-DIR, error in directory name
+$ TYPE D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT
+template record
+$ RUN DUA1:[000000]LNM91
+C- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+== C- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+  $CREATE sts=00010001 stv=00000080
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E030C6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+O- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+== O- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+  $OPEN sts=00010001 stv=00000080
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E030C6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+ON D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+== ON D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+  $OPEN sts=00010001 stv=00000080
+  esa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;"
+  rsa=61 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E030C6 cncl=1 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+F- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+== F- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+  $OPEN sts=00010001 stv=00000080
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E030C6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+  LIB$FID_TO_NAME 00000001 "DISK$LNM91B:[R1.R2.R3.R4.R5.R6.R7.E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+S- D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT
+== S- D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=0 ""
+  fnb=00E031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;1"
+  fnb=00E031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  fnb=00E031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+S- D7:[E1...]*.DAT
+== S- D7:[E1...]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "D7:[E1...]*.DAT;"
+  rsa=0 ""
+  fnb=001031E6 cncl=1 root=1 lvls=0
+  len node=0 dev=3 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(36,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=16 "D7:[E1...]*.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=FEF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=16 "D7:[E1...]*.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;1"
+  fnb=FEF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+  $SEARCH sts=000182CA stv=00000000
+  esa=16 "D7:[E1...]*.DAT;"
+  rsa=14 "D7:[E1]*.DIR;1"
+  fnb=FE1031E6 cncl=1 root=1 lvls=0
+  len node=0 dev=3 dir=4 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(36,1,0)
+  fid=(0,0,0)
+S- D7:[*...]*.DAT
+== S- D7:[*...]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=15 "D7:[*...]*.DAT;"
+  rsa=0 ""
+  fnb=011031E6 cncl=1 root=1 lvls=0
+  len node=0 dev=3 dir=6 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(36,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=15 "D7:[*...]*.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=FFF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=15 "D7:[*...]*.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;1"
+  fnb=FFF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+  $SEARCH sts=000182CA stv=00000000
+  esa=15 "D7:[*...]*.DAT;"
+  rsa=19 "D7:[.......]*.DIR;1"
+  fnb=FFF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=9 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(26,1,0)
+  fid=(0,0,0)
+SN D7:[E1...]*.DAT
+== SN D7:[E1...]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=42 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1...]*.DAT;"
+  rsa=0 ""
+  fnb=001031E6 cncl=1 root=1 lvls=0
+  len node=0 dev=6 dir=30 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(36,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=42 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1...]*.DAT;"
+  rsa=61 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=FEF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=42 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1...]*.DAT;"
+  rsa=61 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;1"
+  fnb=FEF031E6 cncl=1 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+  $SEARCH sts=000182CA stv=00000000
+  esa=42 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1...]*.DAT;"
+  rsa=40 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1]*.DIR;1"
+  fnb=FE1031E6 cncl=1 root=1 lvls=0
+  len node=0 dev=6 dir=27 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(36,1,0)
+  fid=(0,0,0)
+S- LDEV:[R1...]*.DAT
+== S- LDEV:[R1...]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:[R1...]*.DAT;"
+  rsa=0 ""
+  fnb=001001E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(20,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000000
+  esa=19 "_DUA1:[R1...]*.DAT;"
+  rsa=19 "_DUA1:[R1...]*.DAT;"
+  fnb=001001E6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(20,1,0)
+  fid=(0,0,0)
+S- LDEV:[R1.R2.R3.R4.R5.R6.R7...]*.DAT
+== S- LDEV:[R1.R2.R3.R4.R5.R6.R7...]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=37 "_DUA1:[R1.R2.R3.R4.R5.R6.R7...]*.DAT;"
+  rsa=0 ""
+  fnb=00D001E6 cncl=0 root=0 lvls=6
+  len node=0 dev=6 dir=25 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(26,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000000
+  esa=37 "_DUA1:[R1.R2.R3.R4.R5.R6.R7...]*.DAT;"
+  rsa=37 "_DUA1:[R1.R2.R3.R4.R5.R6.R7...]*.DAT;"
+  fnb=00D001E6 cncl=0 root=0 lvls=6
+  len node=0 dev=6 dir=25 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(26,1,0)
+  fid=(0,0,0)
+P- LDEV:[R1.R2.R3.R4.R5.R6.R7.E1]X.DAT
+== P- LDEV:[R1.R2.R3.R4.R5.R6.R7.E1]X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=37 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.E1]X.DAT;"
+  rsa=0 ""
+  fnb=00E000C6 cncl=0 root=0 lvls=7
+  len node=0 dev=6 dir=25 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(36,1,0)
+  fid=(0,0,0)
+P- LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2]X.DAT
+== P- LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2]X.DAT
+  $PARSE sts=000184CC stv=00000000
+  esa=0 ""
+  rsa=0 ""
+  fnb=00000000 cncl=0 root=0 lvls=0
+  len node=0 dev=0 dir=0 name=0 type=0 ver=0
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- LDEV:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+== P- LDEV:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;"
+  rsa=0 ""
+  fnb=00E020C6 cncl=0 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(0,0,0)
+S- LDEV:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT
+== S- LDEV:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=0 ""
+  fnb=00E021E6 cncl=0 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=61 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E021E6 cncl=0 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=61 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;1"
+  fnb=00E021E6 cncl=0 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  rsa=60 "_DUA1:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT;"
+  fnb=00E021E6 cncl=0 root=1 lvls=7
+  len node=0 dev=6 dir=48 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(44,1,0)
+E- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+== E- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT
+  $ERASE sts=00010001 stv=00000000
+  esa=34 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;"
+  rsa=35 "D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT;1"
+  fnb=00E030C6 cncl=1 root=1 lvls=7
+  len node=0 dev=3 dir=25 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(43,1,0)
+  fid=(45,1,0)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DELETE/LOG D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;*
+%DELETE-I-FILDEL, D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;1 deleted (1 block)
+$ SET DEFAULT D7:[E1.E2.E3.E4.E5.E6.E7.E8]
+$ SHOW DEFAULT
+  D7:[E1.E2.E3.E4.E5.E6.E7.E8]
+$ SET DEFAULT [-]
+$ SHOW DEFAULT
+  D7:[E1.E2.E3.E4.E5.E6.E7]
+$ !
+$ WRITE SYS$OUTPUT "######## ANGLE BRACKETS"
+######## ANGLE BRACKETS
+$ SET DEFAULT DUA1:[JONES]
+$ RUN DUA1:[000000]LNM91
+P- LDEV:<SUB>A.DAT
+== P- LDEV:<SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN LDEV:<SUB>A.DAT
+== PN LDEV:<SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS LDEV:<SUB>A.DAT
+== PS LDEV:<SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<SUB>A.DAT
+== S- LDEV:<SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=18 "_DUA1:<SUB>A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=17 "_DUA1:<SUB>A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- LDEV:<LNM91.SUB>A.DAT
+== P- LDEV:<LNM91.SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(0,0,0)
+PN LDEV:<LNM91.SUB>A.DAT
+== PN LDEV:<LNM91.SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(0,0,0)
+PS LDEV:<LNM91.SUB>A.DAT
+== PS LDEV:<LNM91.SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<LNM91.SUB>A.DAT
+== S- LDEV:<LNM91.SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  rsa=24 "_DUA1:<LNM91.SUB>A.DAT;1"
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(29,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  rsa=23 "_DUA1:<LNM91.SUB>A.DAT;"
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(29,1,0)
+P- LDEV:<LNM91.SUB...>A.DAT
+== P- LDEV:<LNM91.SUB...>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=26 "_DUA1:<LNM91.SUB...>A.DAT;"
+  rsa=0 ""
+  fnb=003001C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=14 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(0,0,0)
+PN LDEV:<LNM91.SUB...>A.DAT
+== PN LDEV:<LNM91.SUB...>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=26 "_DUA1:<LNM91.SUB...>A.DAT;"
+  rsa=0 ""
+  fnb=003001C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=14 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(0,0,0)
+PS LDEV:<LNM91.SUB...>A.DAT
+== PS LDEV:<LNM91.SUB...>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=26 "_DUA1:<LNM91.SUB...>A.DAT;"
+  rsa=0 ""
+  fnb=003001C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=14 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<LNM91.SUB...>A.DAT
+== S- LDEV:<LNM91.SUB...>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=26 "_DUA1:<LNM91.SUB...>A.DAT;"
+  rsa=0 ""
+  fnb=003001C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=14 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=26 "_DUA1:<LNM91.SUB...>A.DAT;"
+  rsa=24 "_DUA1:<LNM91.SUB>A.DAT;1"
+  fnb=003001C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(29,1,0)
+  $SEARCH sts=000182CA stv=00000000
+  esa=26 "_DUA1:<LNM91.SUB...>A.DAT;"
+  rsa=24 "_DUA1:<LNM91.SUB>*.DIR;1"
+  fnb=003001C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=11 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(15,1,0)
+  fid=(29,1,0)
+P- LDEV:<.K>A.DAT
+== P- LDEV:<.K>A.DAT
+  $PARSE sts=0001C04A stv=00000910
+  esa=21 "_DUA1:<JONES.K>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=9 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PN LDEV:<.K>A.DAT
+== PN LDEV:<.K>A.DAT
+  $PARSE sts=0001C04A stv=00000910
+  esa=21 "_DUA1:<JONES.K>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=9 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+PS LDEV:<.K>A.DAT
+== PS LDEV:<.K>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=21 "_DUA1:<JONES.K>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=9 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<.K>A.DAT
+== S- LDEV:<.K>A.DAT
+  $PARSE sts=0001C04A stv=00000910
+  esa=21 "_DUA1:<JONES.K>A.DAT;"
+  rsa=0 ""
+  fnb=002000C6 cncl=0 root=0 lvls=1
+  len node=0 dev=6 dir=9 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+P- LDEV:<>A.DAT
+== P- LDEV:<>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:<JONES>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(0,0,0)
+PN LDEV:<>A.DAT
+== PN LDEV:<>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:<JONES>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(0,0,0)
+PS LDEV:<>A.DAT
+== PS LDEV:<>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:<JONES>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<>A.DAT
+== S- LDEV:<>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=19 "_DUA1:<JONES>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=19 "_DUA1:<JONES>A.DAT;"
+  rsa=20 "_DUA1:<JONES>A.DAT;1"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(32,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=19 "_DUA1:<JONES>A.DAT;"
+  rsa=19 "_DUA1:<JONES>A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=7 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(18,1,0)
+  fid=(32,1,0)
+P- LDEV:<->A.DAT
+== P- LDEV:<->A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+PN LDEV:<->A.DAT
+== PN LDEV:<->A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+PS LDEV:<->A.DAT
+== PS LDEV:<->A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<->A.DAT
+== S- LDEV:<->A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=20 "_DUA1:<000000>A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+P- LDEV:<000000>A.DAT
+== P- LDEV:<000000>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+PN LDEV:<000000>A.DAT
+== PN LDEV:<000000>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+PS LDEV:<000000>A.DAT
+== PS LDEV:<000000>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- LDEV:<000000>A.DAT
+== S- LDEV:<000000>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=0 ""
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+  $SEARCH sts=00018292 stv=00000910
+  esa=20 "_DUA1:<000000>A.DAT;"
+  rsa=20 "_DUA1:<000000>A.DAT;"
+  fnb=000000C6 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=8 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(4,4,0)
+  fid=(0,0,0)
+P- <SUB>A.DAT
+== P- <SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN <SUB>A.DAT
+== PN <SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS <SUB>A.DAT
+== PS <SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- <SUB>A.DAT
+== S- <SUB>A.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=17 "DUA1:<SUB>A.DAT;1"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=16 "DUA1:<SUB>A.DAT;"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- A.DAT|<SUB>
+== P- A.DAT|<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN A.DAT|<SUB>
+== PN A.DAT|<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS A.DAT|<SUB>
+== PS A.DAT|<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT|<SUB>
+== S- A.DAT|<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=17 "DUA1:<SUB>A.DAT;1"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=16 "DUA1:<SUB>A.DAT;"
+  rsa=16 "DUA1:<SUB>A.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- A.DAT|LDEV:<SUB>
+== P- A.DAT|LDEV:<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN A.DAT|LDEV:<SUB>
+== PN A.DAT|LDEV:<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS A.DAT|LDEV:<SUB>
+== PS A.DAT|LDEV:<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT|LDEV:<SUB>
+== S- A.DAT|LDEV:<SUB>
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=18 "_DUA1:<SUB>A.DAT;1"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=17 "_DUA1:<SUB>A.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- <SUB>A.DAT|[OTHER]
+== P- <SUB>A.DAT|[OTHER]
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN <SUB>A.DAT|[OTHER]
+== PN <SUB>A.DAT|[OTHER]
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS <SUB>A.DAT|[OTHER]
+== PS <SUB>A.DAT|[OTHER]
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- <SUB>A.DAT|[OTHER]
+== S- <SUB>A.DAT|[OTHER]
+  $PARSE sts=00010001 stv=00000000
+  esa=16 "DUA1:[SUB]A.DAT;"
+  rsa=0 ""
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=16 "DUA1:[SUB]A.DAT;"
+  rsa=17 "DUA1:[SUB]A.DAT;1"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=16 "DUA1:[SUB]A.DAT;"
+  rsa=16 "DUA1:[SUB]A.DAT;"
+  fnb=00000046 cncl=0 root=0 lvls=0
+  len node=0 dev=5 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+P- A.DAT||LDEV:<SUB>X.DAT
+== P- A.DAT||LDEV:<SUB>X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PN A.DAT||LDEV:<SUB>X.DAT
+== PN A.DAT||LDEV:<SUB>X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+PS A.DAT||LDEV:<SUB>X.DAT
+== PS A.DAT||LDEV:<SUB>X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="" did=(0,0,0)
+  fid=(0,0,0)
+S- A.DAT||LDEV:<SUB>X.DAT
+== S- A.DAT||LDEV:<SUB>X.DAT
+  $PARSE sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=0 ""
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(0,0,0)
+  $SEARCH sts=00010001 stv=00000000
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=18 "_DUA1:<SUB>A.DAT;1"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=2
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+  $SEARCH sts=000182CA stv=00000930
+  esa=17 "_DUA1:<SUB>A.DAT;"
+  rsa=17 "_DUA1:<SUB>A.DAT;"
+  fnb=00000006 cncl=0 root=0 lvls=0
+  len node=0 dev=6 dir=5 name=1 type=4 ver=1
+  dvi="_SIMVAX$DUA1" did=(17,1,0)
+  fid=(31,1,0)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DIRECTORY LDEV:<SUB>
+
+Directory _DUA1:<SUB>
+
+A.DAT;1             
+
+Total of 1 file.
+$ WRITE SYS$OUTPUT F$PARSE("LDEV:<SUB>A.DAT")
+_DUA1:<SUB>A.DAT;
+$ SET DEFAULT LDEV:<SUB>
+$ SHOW DEFAULT
+  LDEV:<SUB>
+$ !
+$ WRITE SYS$OUTPUT "######## CLEANUP"
+######## CLEANUP
+$ SET DEFAULT DUA1:[000000]
+$ DEASSIGN LDEV
+$ DEASSIGN P
+$ DEASSIGN P2
+$ DEASSIGN P3
+$ DEASSIGN N
+$ DEASSIGN L
+$ DEASSIGN C
+$ DEASSIGN C2
+$ DEASSIGN C3
+$ DEASSIGN D7
+$ SHOW DEFAULT
+  DUA1:[000000]
+$ WRITE SYS$OUTPUT "LNM91B FINISHED"
+LNM91B FINISHED
+$ SET NOVERIFY

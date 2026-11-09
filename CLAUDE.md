@@ -788,7 +788,7 @@ never had.
   `SYS$SYSROOT` then a concealed root, `_DUA0:[SYSTEM.]`, `SYS$COMMON` and
   `SYS$SPECIFIC` the same root, and the system names `SYS$SYSROOT:[dir]`;
   subtask 1 is the survey, its doc's Part A, and subtask 2 the probe,
-  `testdata/lnm91`, whose first round has run on VMS 7.1 (its doc's A.4).
+  `testdata/lnm91`, two rounds on VMS 7.1 (its doc's A.4).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1107,7 +1107,7 @@ never had.
   build FTNRTL and each program against it, and runs them; `ftn86d.com` is the same for DUNGEON, its log local.
   `TestFTN86Procedure` rehearses it on govax, and `TestFTN86Oracle` holds that run to VMS's log (`vax/`) but for `ftn86VMSDifferences`.
 - `testdata/for88/` — Phase 88's round 2, FORRTL on indexed files (README.md, which has FOR$OPEN's KEY= block and FOR$READ_KU's arguments): `gen.go` writes `for88.mar` (310 cases), `for88.com`, `exchange.cmd`, and `copyout.cmd`; `vax/` is VMS V7.1's run and the files it made. `TestFor88Oracle` runs it on FORRTL over govax's RMS and holds its output and files to them but for `for88Differences`. `for88f.mar` (by hand) passes all the program's `FOR$` calls to FTNRTL for `TestFor88OnFTNRTL`.
-- `testdata/lnm91/` — Phase 91's probe of concealed and rooted logical names (README.md): `lnm91.mar`, a program that takes its RMS cases from data lines, and `gen.go`'s `lnm91.com`, the cases and DCL's commands on a tree the procedure makes; `vax/` is VMS V7.1's run.
+- `testdata/lnm91/` — Phase 91's probe of concealed and rooted logical names (README.md): `lnm91.mar`, a program that takes its RMS cases from data lines, and `gen.go`'s `lnm91.com`, the cases and DCL's commands on a tree the procedure makes; `vax/` is VMS V7.1's runs; `lnm91b.com` is round 2, names with plain directories, 15 levels, and angle brackets.
 - `testdata/rms88/` — indexed files end to end (Phase 88, subtask 14; README.md): `phones.mar` makes a file by every RMS record service, `phonesl.mar` and `phonesc.mar` share it between two processes, `phonesf.for` and `phones.com` are FORTRAN and DCL on it (`TestIndexedPhones`), and `load.for` is a load big enough for two index levels (`TestIndexedLoad`); expected output by hand, `load.out` from `make_load_out.py`'s model.
 - `testdata/vms88/` — Phase 88's VMS round (README.md): `exchange.cmd` makes a volume of files govax made (`[G88]`, `[F88]`, `[R88]`), and `vms88.com` has VMS's ANALYZE/RMS_FILE and RMS judge them (`vms88w.mar` walks a file's keys, `vms88m.mar` changes it), asks what's still open (`vms88l.mar`), and runs `testdata/rms88`'s programs; `TestVMS88Procedure` rehearses it.
 - `testdata/idx88/` — Phase 88's probe of RMS's indexed files (README.md): `gen.go` writes `idx88.mar` (152 cases
