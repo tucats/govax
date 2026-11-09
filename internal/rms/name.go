@@ -496,6 +496,14 @@ type parsedName struct {
 	// names no directory (scanRoot).
 	DirSpec, RootSpec dirSpec
 
+	// ShownRoot is the root's text when the name shows it (a root that isn't
+	// concealed, "[USERS.]"), which Dir then begins with, and "" otherwise.
+	ShownRoot string
+
+	// FailsNext, on the last of a search list's usable names, is the status
+	// of the element after it, which $SEARCH reports on reaching it.
+	FailsNext uint32
+
 	// FNB is the NAM$L_FNB bits name processing sets.
 	FNB uint32
 
@@ -509,6 +517,13 @@ type parsedName struct {
 // with the directory.
 func (p parsedName) String() string {
 	return p.Dev + p.Dir + p.Name + p.Type + p.Ver
+}
+
+// shownDir is the directory text a file found at path shows: path is
+// relative to p's root, as p.DirSpec is, and the text has p's brackets and,
+// if p shows its root, the root before it.
+func (p parsedName) shownDir(path []string) string {
+	return p.ShownRoot + likeBrackets(dirSpec{Elems: path}.String(), p.Dir[len(p.ShownRoot):])
 }
 
 // volumeDir is p's directory as the volume has it: the root's levels, then
@@ -856,6 +871,10 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 
 	for _, p := range primaries {
 		if p.Fails != 0 {
+			if len(out) > 0 {
+				out[len(out)-1].FailsNext = p.Fails
+			}
+
 			break
 		}
 
@@ -957,6 +976,10 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 
 		for _, disk := range disks {
 			if disk.Fails != 0 {
+				if len(out) > 0 {
+					out[len(out)-1].FailsNext = disk.Fails
+				}
+
 				break
 			}
 
@@ -1096,6 +1119,7 @@ func finishName(f fileName, concealed string, fnb uint32, noConceal bool) parsed
 		p.RootSpec, _ = scanRoot(dirBody(f.Root))
 
 		if showRoot {
+			p.ShownRoot = f.Root
 			p.Dir = f.Root + p.Dir
 		}
 	}

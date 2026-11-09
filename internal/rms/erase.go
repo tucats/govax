@@ -63,7 +63,7 @@ func SysErase(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, rmsWildcardError, 0)
 	}
 
-	sts, err = eraseOnVolume(ctx, p)
+	found, sts, err := eraseOnVolume(ctx, p)
 	if err != nil {
 		return 0, err
 	}
@@ -80,57 +80,77 @@ func SysErase(ctx *Context, argv []uint32) (uint32, error) {
 
 	ctx.countIO(1, 0)
 
+	if nam != 0 {
+		// The NAM says which file went (VMS 7.1: testdata/lnm91).
+		if sts, err := ctx.fillNAM(fabAddr, nam, found, namOutputs{Resultant: true}); err != nil || sts != 0 {
+			if err != nil {
+				return 0, err
+			}
+
+			return fabStatus(ctx, fabAddr, sts, 0)
+		}
+	}
+
 	return fabStatus(ctx, fabAddr, rmsNormal, 0)
 }
 
-// eraseOnVolume deletes the file p names, returning a failure status, or
-// 0.
-func eraseOnVolume(ctx *Context, p parsedName) (uint32, error) {
+// eraseOnVolume deletes the file p names, returning it, or a failure
+// status.
+func eraseOnVolume(ctx *Context, p parsedName) (foundFile, uint32, error) {
+	var found foundFile
+
 	spec := p.spec()
 
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
 	if !ok {
-		return rmsFileNotFound, nil
+		return found, rmsFileNotFound, nil
 	}
 
 	if !ctx.Mounts.Writable(spec.Device) {
-		return rmsPrivilegeViolation, nil
+		return found, rmsPrivilegeViolation, nil
 	}
 
 	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
 	if err != nil {
-		return rmsDirNotFound, nil
+		return found, rmsDirNotFound, nil
 	}
 
 	entry, sts := lookupVersion(dir, specFileName(spec), spec.Version)
 	if sts != 0 {
-		return sts, nil
+		return found, sts, nil
+	}
+
+	name, typ := splitEntryName(entry.Name)
+	found = foundFile{
+		Parsed: p, Device: spec.Device, Dirs: spec.Dirs,
+		Name: name, Type: typ, Version: entry.Version,
+		FID: entry.Fid, DID: dir.Header.Fid,
 	}
 
 	// Someone writing it? A read access denying writers can't join one.
 	if vol.Accessed(entry.Fid) {
 		probe, err := vol.Access(entry.Fid, volume.AccessMode{NoWrite: true})
 		if err != nil {
-			return accessStatus(err), nil
+			return found, accessStatus(err), nil
 		}
 
 		if err := probe.Deaccess(); err != nil {
-			return 0, err
+			return found, 0, err
 		}
 	}
 
 	bm, ib, err := deviceBitmaps(dir.Device)
 	if err != nil {
-		return 0, err
+		return found, 0, err
 	}
 
 	if err := volume.DeleteFile(dir, entry.Name, entry.Version, bm, ib); err != nil {
 		if errors.Is(err, volume.ErrDirectoryNotEmpty) {
-			return rmsMarkDeleteFailed, nil
+			return found, rmsMarkDeleteFailed, nil
 		}
 
-		return rmsDeviceError, nil
+		return found, rmsDeviceError, nil
 	}
 
-	return 0, flushBitmaps(bm, ib)
+	return found, 0, flushBitmaps(bm, ib)
 }

@@ -52,7 +52,7 @@ type foundFile struct {
 func (f foundFile) resultant() fileName {
 	return fileName{
 		Dev:  f.Parsed.Dev,
-		Dir:  dirSpec{Elems: f.Dirs}.String(),
+		Dir:  f.Parsed.Dir,
 		Name: f.Name,
 		Type: "." + f.Type,
 		Ver:  versionText(f.Version),

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -63,10 +64,7 @@ import (
 //
 // # Not implemented
 //
-// NAM blocks (FAB$L_NAM: the expanded and resultant name strings, and
-// related-file defaults) and default file names (FAB$L_DNA/FAB$B_DNS) are
-// not supported by any service in this package yet, so $RENAME neither
-// reads nor fills them. A search list in the old name is searched for the
+// A search list in the old name is searched for the
 // file, as SYS$OPEN does; one in the new name uses its first element, as
 // SYS$CREATE does. Network (node::) names aren't supported.
 func SysRename(ctx *Context, argv []uint32) (uint32, error) {
@@ -112,27 +110,85 @@ func SysRename(ctx *Context, argv []uint32) (uint32, error) {
 type renameSide struct {
 	vol  *volume.Volume
 	spec filespec.Spec
+
+	// index is which element of a search list it came from.
+	index int
 }
 
 // renameFile does SysRename's work once both FABs have checked out,
 // returning the RMS status and STV to report: RMS$_NORMAL on success. err
-// is a VAX memory access failure.
+// is a VAX memory access failure. Each FAB's NAM, if it has one, is told
+// its name, as $OPEN's is (VMS 7.1: testdata/lnm91).
 func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error) {
 	// Each name goes through name processing with its FAB's default name
 	// and related file (docs/PHASE-33.md).
-	oldSpecs, sts, err := ctx.resolveFAB(oldFAB)
+	oldNam, oldNames, sts, err := renameNames(ctx, oldFAB)
 	if err != nil || sts != 0 {
 		return sts, sts, err
 	}
 
-	newSpecs, sts, err := ctx.resolveFAB(newFAB)
+	newNam, newNames, sts, err := renameNames(ctx, newFAB)
 	if err != nil || sts != 0 {
 		return sts, sts, err
 	}
 
-	_, sts, stv = renameSpecs(ctx, oldSpecs, newSpecs)
+	done, sts, stv := renameSpecs(ctx, resolvedNames(oldNames), resolvedNames(newNames))
+	if sts != rmsNormal {
+		return sts, stv, nil
+	}
 
-	return sts, stv, nil
+	oldName, oldType := splitEntryName(done.OldName)
+	newName, newType := splitEntryName(done.Name)
+
+	for _, side := range []struct {
+		fab, nam uint32
+		found    foundFile
+	}{
+		{oldFAB, oldNam, foundFile{
+			Parsed: oldNames[done.oldIndex], Device: done.oldDevice,
+			Name: oldName, Type: oldType, Version: done.OldVersion, FID: done.Fid, DID: done.oldDID,
+		}},
+		{newFAB, newNam, foundFile{
+			Parsed: newNames[0], Device: done.oldDevice,
+			Name: newName, Type: newType, Version: done.Version, FID: done.Fid, DID: done.newDID,
+		}},
+	} {
+		if side.nam == 0 {
+			continue
+		}
+
+		if s, err := ctx.fillNAM(side.fab, side.nam, side.found, allOutputs); err != nil || s != 0 {
+			return s, 0, err
+		}
+	}
+
+	return rmsNormal, 0, nil
+}
+
+// renameNames is one FAB's NAM, or 0, and its name's expansions.
+func renameNames(ctx *Context, fab uint32) (nam uint32, names []parsedName, sts uint32, err error) {
+	nam, sts, err = fabNAMBlock(ctx, fab)
+	if err != nil || sts != 0 {
+		return 0, nil, sts, err
+	}
+
+	names, sts, err = ctx.expandFAB(fab, nam)
+
+	return nam, names, sts, err
+}
+
+// renameDone is a finished rename: what the volume did, and what the NAMs
+// are told besides.
+type renameDone struct {
+	volume.Renamed
+
+	// oldIndex is which of the old name's search list elements held the
+	// file, and oldDevice the device it's on.
+	oldIndex  int
+	oldDevice string
+
+	// oldDID and newDID are the directories it left and went to.
+	oldDID, newDID ondisk.Fid
 }
 
 // renameText is $RENAME on two file specifications, steps 2 through 7 of
@@ -141,7 +197,7 @@ func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error
 // none) and the RMS status and STV, RMS$_NORMAL on success. The console's RENAME command
 // (Session.Rename) calls it too, once per file, as DCL's RENAME calls
 // $RENAME through LIB$RENAME_FILE.
-func renameText(ctx *Context, oldText, newText string) (r volume.Renamed, sts, stv uint32) {
+func renameText(ctx *Context, oldText, newText string) (r renameDone, sts, stv uint32) {
 	oldSpecs, sts := ctx.resolveFileSpec(oldText)
 	if sts != 0 {
 		return r, sts, sts
@@ -156,7 +212,7 @@ func renameText(ctx *Context, oldText, newText string) (r volume.Renamed, sts, s
 }
 
 // renameSpecs is renameText once both names are resolved.
-func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r volume.Renamed, sts, stv uint32) {
+func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r renameDone, sts, stv uint32) {
 	// Steps 2 and 3: the old name, and the old file.
 	oldSide, oldDir, oldVersion, sts := findRenameSource(ctx, oldSpecs)
 	if sts != 0 {
@@ -199,8 +255,12 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r volume.Rena
 		return r, rmsSystemError, rmsSystemError
 	}
 
-	r, renameErr := oldSide.vol.Rename(oldDir, specFileName(oldSide.spec), oldVersion,
+	var renameErr error
+
+	r.Renamed, renameErr = oldSide.vol.Rename(oldDir, specFileName(oldSide.spec), oldVersion,
 		newDir, specFileName(newSide.spec), newVersion, bm, ib)
+	r.oldIndex, r.oldDevice = oldSide.index, oldSide.spec.Device
+	r.oldDID, r.newDID = oldDir.Header.Fid, newDir.Header.Fid
 
 	// Whatever happened, what changed is on the disk once the bitmaps
 	// are: a failed rename may still have extended a directory.
@@ -230,7 +290,7 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r volume.Rena
 func findRenameSource(ctx *Context, specs []resolvedSpec) (renameSide, *volume.Directory, uint16, uint32) {
 	sts := rmsFileNotFound
 
-	for _, r := range specs {
+	for i, r := range specs {
 		if sts = checkRenameSpec(r.Spec); sts != 0 {
 			return renameSide{}, nil, 0, sts
 		}
@@ -266,7 +326,7 @@ func findRenameSource(ctx *Context, specs []resolvedSpec) (renameSide, *volume.D
 			continue
 		}
 
-		return renameSide{vol: vol, spec: r.Spec}, dir, version, 0
+		return renameSide{vol: vol, spec: r.Spec, index: i}, dir, version, 0
 	}
 
 	return renameSide{}, nil, 0, sts

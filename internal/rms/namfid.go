@@ -134,7 +134,7 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 		name, typ := splitEntryName(entry.Name)
 		p.Dev = dvi + ":"
 		found = foundFile{
-			Parsed: p, Device: device, Dirs: p.DirSpec.Elems,
+			Parsed: p, Device: device, Dirs: spec.Dirs,
 			Name: name, Type: typ, Version: entry.Version,
 			FID: entry.Fid, DID: did,
 		}

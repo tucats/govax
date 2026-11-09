@@ -3,9 +3,9 @@
 **Status:** planned 2026-11-09; the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
 Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
-answers"), 3 (one name processor), and 4 (syntax and `$PARSE`) are done.
-Name processing knows roots; the services and the utilities that use its
-results are subtasks 5 to 7.
+answers"), 3 (one name processor), 4 (syntax and `$PARSE`), and 5 (files
+through the services) are done. RMS's services know roots; the DCL
+utilities and the device services are subtasks 6 and 7.
 
 ## Goal
 
@@ -462,7 +462,7 @@ Each is one commit, with tests, stopping for review.
    of Round 2, angle brackets kept, `NAM$V_ROOT_DIR`, `DIR_LVLS`,
    `NOCONCEAL`. Held to the probe's `$PARSE` cases, in an
    oracle test.
-5. **Files through the services**: `$OPEN`, `$CREATE`, `$SEARCH` with
+5. **Files through the services** (done 2026-11-09): `$OPEN`, `$CREATE`, `$SEARCH` with
    wildcards (`[*]`, `[*...]`, `[...]`, 8 levels from the root),
    `$ERASE`, `$RENAME`, resultant
    strings, related names, a search list of roots.
@@ -647,3 +647,35 @@ The author accepted the plan and answered its questions:
   no root of its own (`CDISK:[R.]A`, shown physically), a typed root whose device
   comes with a root from a default (`RMS$_DEV`, as through a translation), and a
   related file's directory deciding the brackets as a default name's does.
+- **2026-11-09** Subtask 5: files through the services. `$SEARCH` walks from the
+  name's root (`searchDirs` takes the `parsedName`, `openRoot` is the root's directory),
+  so a `searchDir`'s `Path` is relative to the root and FNB's levels follow by themselves.
+  A resultant string is the parse's directory (`foundFile.resultant`, `Parsed.Dir`) or,
+  for a search with a wildcard directory, `parsedName.shownDir`, which keeps the
+  brackets and a shown root (`ShownRoot`). An ellipsis stops 8 levels below its MFD or
+  root (`descendants`).
+
+  The end of a wildcard search is now VMS's for any wildcard directory, not only
+  `[DIR...]` (`wildTop`, `endAtTop`): the resultant string names the directory above
+  the first wildcard, `[DIR]*.DIR;1`, or `[.......]*.DIR;1` with nothing above it, its
+  FNB counting 7 levels. If no directory below that level was looked in, FNB and FID
+  stay as the last file left them (`searchState.Below`; round 2's `<LNM91.SUB...>`).
+  A search list's element that can't be used is reported when `$SEARCH` reaches it
+  (`FailsNext`, `listElementFails`; `LIST3`).
+
+  `$ERASE` now fills its NAM's resultant string, DVI, DID, and FID, and `$RENAME` both
+  FABs' NAMs (`renameDone`, `renameNames`), which neither did before; `resolveFAB`,
+  left with no caller, is gone.
+
+  `TestLnm91ParseOracle` is now `TestLnm91ServicesOracle`: every `$PARSE`, `$SEARCH`,
+  `$OPEN`, `$CREATE`, `$ERASE`, `$RENAME`, and `LIB$FID_TO_NAME` case of both logs but
+  round 2's "FIFTEEN LEVELS", 671 in all, matches VMS's reports line for line, file numbers
+  included. Masked: the STV of a successful `$OPEN` or `$CREATE`, `00000080`, RMS's own
+  channel on VMS. "FIFTEEN LEVELS" needs `ods2`'s depth, subtask 7, so the ellipsis's
+  limit is tested only there; `J` cases (`JPI$_IMAGNAME`) are subtask 7's too.
+
+  Unconfirmed, the probe having no such case: `[000000...]` on a plain device keeps
+  showing `[SUB]`, as before, where a root shows `[000000.SUB]` (VMS 7.1); its end mark's
+  FNB now follows the rooted case. `$OPEN` of a search list stops before an element
+  that can't be used and reports the elements before it as usual, without that
+  element's status.

@@ -291,4 +291,55 @@ func TestSearchListStopsAtBadElement(t *testing.T) {
 	if names[0].FNB&fnbSearchList == 0 {
 		t.Error("SEARCH_LIST isn't set")
 	}
+
+	if names[0].FailsNext != rmsDirError {
+		t.Errorf("FailsNext is %#x, want RMS$_DIR", names[0].FailsNext)
+	}
+}
+
+// TestWildTop checks what's above a directory's first wildcard, the
+// directory an ended search names.
+func TestWildTop(t *testing.T) {
+	for _, tc := range []struct {
+		dir  string
+		want []string
+		ok   bool
+	}{
+		{"SUB.DEEP", nil, false},
+		{"SUB...", []string{"SUB"}, true},
+		{"SUB.*...", []string{"SUB"}, true},
+		{"A.B.%X.C", []string{"A", "B"}, true},
+		{"*", []string{}, true},
+		{"000000...", []string{"000000"}, true},
+	} {
+		d, ok := scanDir(tc.dir)
+		if !ok {
+			t.Fatalf("scanDir(%q) failed", tc.dir)
+		}
+
+		got, ok := wildTop(d)
+		if ok != tc.ok || !slices.Equal(got, tc.want) {
+			t.Errorf("wildTop(%q) = %v, %v; want %v, %v", tc.dir, got, ok, tc.want, tc.ok)
+		}
+	}
+}
+
+// TestShownDir checks a found file's directory text: relative to the
+// root, in the name's brackets, after the root only when it's shown.
+func TestShownDir(t *testing.T) {
+	for _, tc := range []struct {
+		p    parsedName
+		path []string
+		want string
+	}{
+		{parsedName{fileName: fileName{Dir: "[*]"}}, []string{"SUB"}, "[SUB]"},
+		{parsedName{fileName: fileName{Dir: "<*>"}}, []string{"SUB", "K"}, "<SUB.K>"},
+		{parsedName{fileName: fileName{Dir: "[*]"}}, nil, "[000000]"},
+		{parsedName{fileName: fileName{Dir: "[R.][*]"}, ShownRoot: "[R.]"}, []string{"SUB"}, "[R.][SUB]"},
+		{parsedName{fileName: fileName{Dir: "<R.>[*]"}, ShownRoot: "<R.>"}, []string{"SUB"}, "<R.>[SUB]"},
+	} {
+		if got := tc.p.shownDir(tc.path); got != tc.want {
+			t.Errorf("shownDir(%v) of %q = %q, want %q", tc.path, tc.p.Dir, got, tc.want)
+		}
+	}
 }

@@ -794,7 +794,10 @@ never had.
   (2026-11-09) syntax and `$PARSE`: `fileName.Root`, `scanRoot`,
   `parsedName.volumeDir` (the root and the directory together; `DirSpec` is
   relative to the root), a field on both sides of a translation an error
-  (`applyTranslation`), held by `TestLnm91ParseOracle`.
+  (`applyTranslation`), and subtask 5 (2026-11-09) files through the services:
+  `$SEARCH` from the root (`search.go`'s `searchDirs`, `openRoot`), `wildTop`'s end
+  marks, `parsedName.shownDir`, and the NAMs of `$ERASE` and `$RENAME`, held by
+  `TestLnm91ServicesOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

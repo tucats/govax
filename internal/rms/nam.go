@@ -328,32 +328,14 @@ func (ctx *Context) storeComponents(nam, buf uint32, p fileName) error {
 	return nil
 }
 
-// resolveFAB is resolveFileSpec for a FAB's file name: name processing
-// (name.go) with the FAB's default name and, when it has a NAM, the
-// related file. It returns the names in search order, or the RMS status
-// to fail with. err is a VAX memory access failure.
-func (ctx *Context) resolveFAB(fab uint32) ([]resolvedSpec, uint32, error) {
-	nam, sts, err := fabNAMBlock(ctx, fab)
-	if err != nil || sts != 0 {
-		return nil, sts, err
-	}
-
-	in, err := fabNames(ctx, fab, nam)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	names, sts := ctx.expandName(in)
-	if sts != 0 {
-		return nil, sts, nil
-	}
-
+// resolvedNames is names as the volume layer's specifications.
+func resolvedNames(names []parsedName) []resolvedSpec {
 	out := make([]resolvedSpec, len(names))
 	for i, p := range names {
 		out[i] = resolvedSpec{Spec: p.spec(), Display: p.Lookup}
 	}
 
-	return out, 0, nil
+	return out
 }
 
 // namNameFields are the offsets of NAM$B_NODE through NAM$L_VER: the six

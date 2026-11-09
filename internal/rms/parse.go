@@ -192,7 +192,7 @@ func (ctx *Context) checkParsed(p parsedName) (did ondisk.Fid, sts, stv uint32) 
 	}
 
 	if p.FNB&fnbWildDir != 0 {
-		if dirs := searchDirs(vol, p.volumeDir()); len(dirs) > 0 {
+		if dirs := searchDirs(vol, p); len(dirs) > 0 {
 			did = dirs[0].Dir.Header.Fid
 		}
 

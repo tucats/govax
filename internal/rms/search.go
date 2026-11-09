@@ -65,8 +65,9 @@ type searchState struct {
 	// reads each directory as it reaches it, would find it.
 	Visited map[string]bool
 
-	// Found is whether any file has been returned.
-	Found bool
+	// Found is whether any file has been returned, and Below whether the
+	// search has looked in a directory below the first wildcard's level.
+	Found, Below bool
 }
 
 // saveSearch makes a context for names, numbering it in NAM$L_WCC.
@@ -166,21 +167,48 @@ func resumeAfter(entries []ondisk.DirEntry, last ondisk.DirEntry, p parsedName) 
 	return i
 }
 
-// searchDirs returns the directories a search of d looks in, in the
+// openRoot opens the directory p's directory is relative to: its root, or
+// the volume's MFD. A root that names no directory (scanRoot) has none.
+func openRoot(vol *volume.Volume, p parsedName) (*volume.Directory, bool) {
+	if p.RootSpec.Relative {
+		return nil, false
+	}
+
+	dir, err := filespec.ResolveDirectory(vol, p.RootSpec.names())
+
+	return dir, err == nil
+}
+
+// searchDirs returns the directories a search of p looks in, in the
 // order VMS looks in them: depth first, each directory's subdirectories
-// in directory order.
-func searchDirs(vol *volume.Volume, d dirSpec) []searchDir {
-	mfd, err := vol.OpenDirectory(ondisk.MasterFileDirectoryFid)
-	if err != nil {
+// in directory order. The walk starts at p's root, so that each one's
+// Path is relative to it. Under a root, a directory written from "000000"
+// keeps that as its first level, as VMS shows it ([000000.SUB], VMS 7.1:
+// testdata/lnm91); the probe has no such search on a plain device, where
+// govax goes on showing [SUB] (unconfirmed).
+func searchDirs(vol *volume.Volume, p parsedName) []searchDir {
+	top, ok := openRoot(vol, p)
+	if !ok {
 		return nil
 	}
 
-	elems := d.Elems
+	node := searchDir{Vol: vol, Dir: top}
+
+	elems := p.DirSpec.Elems
 	if len(elems) > 0 && elems[0] == "000000" {
 		elems = elems[1:]
+
+		if p.Root != "" {
+			node.Path, node.Wild = []string{"000000"}, []bool{false}
+		}
 	}
 
-	return walkSearch(vol, searchDir{Vol: vol, Dir: mfd}, elems)
+	return walkSearch(vol, node, elems)
+}
+
+// depth is how many levels below the MFD or root d is.
+func (d *searchDir) depth() int {
+	return len(dirSpec{Elems: d.Path}.names())
 }
 
 // walkSearch returns the directories below node that elems lead to.
@@ -214,9 +242,15 @@ func walkSearch(vol *volume.Volume, node searchDir, elems []string) []searchDir 
 }
 
 // descendants returns node and every directory below it, depth first,
-// the levels below node marked as wild.
+// the levels below node marked as wild. An ellipsis goes no further than
+// maxDirDepth levels from the MFD or root, whatever the volume holds (VMS
+// 7.1: testdata/lnm91's round 2).
 func descendants(vol *volume.Volume, node searchDir) []searchDir {
 	out := []searchDir{node}
+
+	if node.depth() >= maxDirDepth {
+		return out
+	}
 
 	for _, child := range subdirectories(vol, node) {
 		child.Wild[len(child.Wild)-1] = true
@@ -442,7 +476,7 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 	var dir *volume.Directory
 
 	if did.IsZero() {
-		dirs := searchDirs(vol, p.DirSpec)
+		dirs := searchDirs(vol, p)
 		if len(dirs) > 0 {
 			dir = dirs[0].Dir
 		}
@@ -482,7 +516,7 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 				return 0, 0, err
 			}
 
-			return ctx.reportMatch(nam, p.Dev+p.Dir, entries[i], dir.Header.Fid)
+			return ctx.reportMatch(nam, p.Dev, p.Dir, entries[i], dir.Header.Fid)
 		}
 	}
 
@@ -567,11 +601,11 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 		if st.Dirs == nil {
 			vol, ok := ctx.Mounts.Lookup(p.Lookup)
 			if ok {
-				st.Dirs = searchDirs(vol, p.DirSpec)
+				st.Dirs = searchDirs(vol, p)
 
 				// The directory above the wildcard isn't there: RMS$_DNF
 				// at once ("[NODIR...]", VMS 7.1: testdata/lib58).
-				if len(st.Dirs) == 0 && !directoryExists(vol, fixedPrefix(p.DirSpec)) {
+				if len(st.Dirs) == 0 && !directoryExists(vol, fixedPrefix(p.volumeDir())) {
 					return ctx.wildDirNotFound(nam, st, p)
 				}
 			}
@@ -593,6 +627,10 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 
 		for st.Dir < len(st.Dirs) {
 			d := &st.Dirs[st.Dir]
+
+			if top, ok := wildTop(p.DirSpec); ok && d.depth() > len(dirSpec{Elems: top}.names()) {
+				st.Below = true
+			}
 
 			// The directory as it is now: its header and map read
 			// again, in case it has grown or moved since the last call.
@@ -620,7 +658,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 					return 0, 0, err
 				}
 
-				return ctx.reportMatch(nam, p.Dev+dirSpec{Elems: d.Path}.String(), entries[i], d.Dir.Header.Fid)
+				return ctx.reportMatch(nam, p.Dev, p.shownDir(d.Path), entries[i], d.Dir.Header.Fid)
 			}
 
 			st.HaveLast = false
@@ -635,22 +673,31 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 
 	last := st.Names[len(st.Names)-1]
 
-	// A search of "[DIR...]" that runs out leaves, as VMS's does, the
-	// search for subdirectories it made last: the resultant string
-	// "[DIR]*.DIR;1", DID [DIR]'s, and FNB as for [DIR]'s subdirectories
-	// (VMS 7.1 and 7.3:
-	// testdata/lib58, testdata/mar/rms3's SEARCH case 3). What a wildcard
-	// elsewhere in the directory leaves isn't modeled.
-	if root, ok := wildRoot(last.DirSpec); ok && st.Found {
-		if err := ctx.endAtRoot(nam, last, root); err != nil {
+	if last.FailsNext != 0 {
+		return ctx.listElementFails(nam, last)
+	}
+
+	// A search with a wildcard directory that runs out leaves, as VMS's
+	// does, the search for subdirectories it made last: above the first
+	// wildcard, the resultant string "[DIR]*.DIR;1", DID [DIR]'s, and FNB as
+	// for [DIR]'s subdirectories (VMS 7.1 and 7.3: testdata/lib58,
+	// testdata/mar/rms3's SEARCH case 3, testdata/lnm91). With no directory
+	// below that level, the search for them found nothing to go into, and
+	// FNB and FID stay as the last file left them (testdata/lnm91's round
+	// 2, <LNM91.SUB...>).
+	top, wild := wildTop(last.DirSpec)
+	if wild && st.Found {
+		if err := ctx.endAtTop(nam, last, top, st.Below); err != nil {
 			return 0, 0, err
 		}
 	} else if err := ctx.endSearch(nam, last); err != nil {
 		return 0, 0, err
 	}
 
-	if err := ctx.storeFid(nam+namFID, ondisk.Fid{}); err != nil {
-		return 0, 0, err
+	if !wild || !st.Found || st.Below {
+		if err := ctx.storeFid(nam+namFID, ondisk.Fid{}); err != nil {
+			return 0, 0, err
+		}
 	}
 
 	stv = 0
@@ -718,28 +765,36 @@ func (ctx *Context) storeResultant(nam uint32, f fileName) error {
 	return err
 }
 
-// endAtRoot ends a search of "[root...]" (see searchContext).
-func (ctx *Context) endAtRoot(nam uint32, p parsedName, root []string) error {
-	f := fileName{Dev: p.Dev, Dir: dirSpec{Elems: root}.String(), Name: "*", Type: ".DIR", Ver: ";1"}
+// endAtTop ends a search whose directory has top above its first wildcard
+// (see searchContext). With nothing above it, VMS's string has eight empty
+// levels, "[.......]", and its FNB counts them (VMS 7.1: testdata/lnm91).
+func (ctx *Context) endAtTop(nam uint32, p parsedName, top []string, below bool) error {
+	dir := p.shownDir(top)
+	if len(top) == 0 {
+		dir = p.ShownRoot + likeBrackets("[.......]", p.Dir[len(p.ShownRoot):])
+	}
+
+	f := fileName{Dev: p.Dev, Dir: dir, Name: "*", Type: ".DIR", Ver: ";1"}
 	if err := ctx.storeResultant(nam, f); err != nil {
 		return err
 	}
 
 	if vol, ok := ctx.Mounts.Lookup(p.Lookup); ok {
-		path := dirSpec{Elems: root}.names()
-		if dir, err := filespec.ResolveDirectory(vol, path); err == nil {
-			if err := ctx.storeFid(nam+namDID, dir.Header.Fid); err != nil {
+		path := append(p.RootSpec.names(), dirSpec{Elems: top}.names()...)
+		if d, err := filespec.ResolveDirectory(vol, path); err == nil {
+			if err := ctx.storeFid(nam+namDID, d.Header.Fid); err != nil {
 				return err
 			}
 		}
 
-		// The level below the root is the wildcard one, as in the
-		// search for its subdirectories.
-		fnb := matchFNB(p.FNB, searchDir{Path: path})
+		// The level below top is the wildcard one, as in the search for
+		// its subdirectories.
+		fnb := matchFNB(p.FNB, searchDir{Path: top})
 
-		switch lvl := len(path); {
+		switch lvl := len(top); {
+		case !below:
 		case lvl == 0:
-			fnb |= fnbWildUFD
+			fnb |= fnbWildUFD | uint32(7)<<fnbDirLvls
 		case lvl <= 7:
 			fnb |= fnbWildSFD1 << (lvl - 1)
 		}
@@ -750,6 +805,34 @@ func (ctx *Context) endAtRoot(nam uint32, p parsedName, root []string) error {
 	}
 
 	return ctx.storeLongword(nam+namWCC, wccDone)
+}
+
+// listElementFails ends a search on reaching a search list's element that
+// can't be used (FailsNext): its status, with the NAM's strings, FNB, and
+// identifiers cleared (VMS 7.1: testdata/lnm91's LIST3). The component
+// lengths are those of the expanded string.
+func (ctx *Context) listElementFails(nam uint32, p parsedName) (uint32, uint32, error) {
+	if err := ctx.storeExpanded(nam, p); err != nil {
+		return 0, 0, err
+	}
+
+	for _, field := range []uint32{namESL, namRSL, namDVI} {
+		if err := ctx.storeByte(nam+field, 0); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	if err := ctx.storeLongword(nam+namFNB, 0); err != nil {
+		return 0, 0, err
+	}
+
+	for _, field := range []uint32{namDID, namFID} {
+		if err := ctx.storeFid(nam+field, ondisk.Fid{}); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	return p.FailsNext, 0, ctx.storeLongword(nam+namWCC, 0)
 }
 
 // fixedPrefix is d's elements before the first wildcard or ellipsis, as
@@ -775,21 +858,16 @@ func directoryExists(vol *volume.Volume, path []string) bool {
 	return err == nil
 }
 
-// wildRoot is the directory above d's ellipsis, when d is a directory
-// whose only wildcard is a trailing ellipsis ("[DIR...]").
-func wildRoot(d dirSpec) ([]string, bool) {
-	n := len(d.Elems)
-	if n == 0 || d.Elems[n-1] != ellipsis {
-		return nil, false
-	}
-
-	for _, e := range d.Elems[:n-1] {
+// wildTop is d's elements above its first wildcard or ellipsis, and false
+// when it has none.
+func wildTop(d dirSpec) ([]string, bool) {
+	for i, e := range d.Elems {
 		if e == ellipsis || strings.ContainsAny(e, "*%") {
-			return nil, false
+			return append([]string{}, d.Elems[:i]...), true
 		}
 	}
 
-	return append([]string{}, d.Elems[:n-1]...), true
+	return nil, false
 }
 
 // nextDir moves st's search to its next directory once the current one
@@ -804,7 +882,7 @@ func (ctx *Context) nextDir(st *searchState, p parsedName) {
 	st.Dir++
 
 	if vol, ok := ctx.Mounts.Lookup(p.Lookup); ok {
-		fresh := searchDirs(vol, p.DirSpec)
+		fresh := searchDirs(vol, p)
 
 		for i, d := range fresh {
 			if d.key() == cur {
@@ -909,14 +987,13 @@ func (ctx *Context) endSearch(nam uint32, p parsedName) error {
 }
 
 // reportMatch writes a file $SEARCH found into nam: the resultant string
-// (where is its device and directory) and its components, FID, and DID.
-func (ctx *Context) reportMatch(nam uint32, where string, e ondisk.DirEntry, did ondisk.Fid) (sts, stv uint32, err error) {
-	dev, dir, _ := strings.Cut(where, "[")
+// (from the device and directory given) and its components, FID, and DID.
+func (ctx *Context) reportMatch(nam uint32, dev, dir string, e ondisk.DirEntry, did ondisk.Fid) (sts, stv uint32, err error) {
 	name, typ := splitEntryName(e.Name)
 
 	f := fileName{
 		Dev:  dev,
-		Dir:  "[" + dir,
+		Dir:  dir,
 		Name: name,
 		Type: "." + typ,
 		Ver:  ";" + strconv.Itoa(int(e.Version)),
