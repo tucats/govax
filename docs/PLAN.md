@@ -139,7 +139,7 @@ questions, and a progress log extended as that phase is worked.
 | 87 | [PHASE-87 - system volume](PHASE-87%20-%20system%20volume.md) | A system volume govax always mounts, made from its built-in files: STARTUP.COM (was vax.init), the grammars and help, SYS$LIBRARY's and SYS$SHARE's files, FTNRTL's and the kernel's sources with build procedures, the page file; refreshed on upgrade; next-free unit numbers — planned 2026-11-03, the plan reviewed and accepted the same day; done 2026-11-03 |
 | 88 | [PHASE-88 - keyed index files](PHASE-88%20-%20keyed%20index%20files.md) | RMS's indexed organization (XABKEY, Prolog 3 files as VMS's, keyed access, alternate keys, compression, areas) and FORTRAN's keyed statements through FTNRTL — planned 2026-11-03, the survey accepted the same day; done 2026-11-04 |
 | 89 | [PHASE-89 - reentrant FORTRAN](PHASE-89%20-%20reentrant%20FORTRAN.md) | FORTRAN's RECURSIVE, RESULT, and `/RECURSIVE`: each activation's storage in its frame, reentrant under ASTs and handlers; FTNRTL's format cache; the debugger's SET SCOPE — planned 2026-11-04, the survey accepted the same day; done 2026-11-05 |
-| 90 | [PHASE-90 - VMS help](PHASE-90%20-%20VMS%20help.md) | HELP as VMS's: help libraries (HELPLIB.HLB, DBG$HELP.HLB) built from VMS-format modules, LIBRARY/HELP, prompting and navigation, HLP$LIBRARY, the LBR$ routines that read and write libraries, and govax's help rewritten — planned 2026-11-07, the survey accepted the same day |
+| 90 | [PHASE-90 - VMS help](PHASE-90%20-%20VMS%20help.md) | HELP as VMS's: help libraries (HELPLIB.HLB, DBG$HELP.HLB) built from VMS-format modules, LIBRARY/HELP, prompting and navigation, HLP$LIBRARY, the LBR$ routines that read and write libraries, and govax's help rewritten — planned 2026-11-07, the survey accepted the same day; done 2026-11-08 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -610,3 +610,24 @@ answers (every recommendation taken: recursion by request, the default still sta
 
 MANUAL.md's 14.12 is the user's side, FORTRAN-INTERNALS.md's section 23 the compiler's. What the phase left is
 its doc's "Where things stand".
+
+## VMS help (Phase 90)
+
+Phase 90 (2026-11-07 to 2026-11-08) made HELP VMS's, and with it the librarian and LBRSHR. Its doc's Part A is
+the survey of VMS 7.1's help libraries and HELP, Part B the decisions with the author's review, "What the probe
+settled" each round's answers (`testdata/help90`, five rounds on VMS 7.1), and its log the work.
+
+- **HELP:** `internal/help` reads help modules and finds and lays out topics as VMS 7.1's HELP does, prompts and
+  all; DCL's HELP has VMS's qualifiers, SYS$HELP:HELPLIB.HLB, and the `HLP$LIBRARY` user libraries, and the
+  debugger's reads SYS$HELP:DBG$HELP.HLB's one DEBUG module.
+- **govax's help** is VMS-format `.HLP` modules (`internal/bootdata/files/help`, `dbghelp`), rewritten in VMS's
+  shapes, built into both libraries by `go generate` and on the system volume with their sources and
+  BUILDHELP.COM; the refresh treats a help library module by module, and tests hold every verb, qualifier,
+  lexical function, and configuration key to a topic.
+- **The librarian:** LIBRARY/HELP, and LIBRARY changing an existing library in place as LIBRARIAN does, with its
+  update history, `/HISTORY`, and `/DATA`; every library held to VMS's byte for byte.
+- **LBRSHR:** `internal/lbrrtl`, every documented routine on every kind of library, reading and writing in place
+  (`lbr.Updater`), the history, binary keys, NAM blocks, and a library held open against other processes.
+
+MANUAL.md's section 10 is the user's side (help libraries, writing help modules) and Appendix B the routines.
+What the phase left is its doc's "Where things stand".

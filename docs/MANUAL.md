@@ -3680,6 +3680,73 @@ debugger's HELP reads the library the logical name `DBG$HELP` names, or
 library with its own modules; a changed one it would have replaced is
 reported once, with `%MOUNT-I-SYSKEPT` naming the module.
 
+#### Writing help modules
+
+A help file is VMS's: lines of text, some of them **key lines**, a level
+number from 1 to 9, a blank, and the key. Each key line starts a topic one
+level below the key line before it (a level may not be skipped), and the
+text after it, up to the next key line, is the topic's. Each level-1 key
+is a module of the library, named by its key; text before the first key
+line is dropped. A line whose digit isn't followed by a blank (`2Note`) is
+text.
+
+```text
+1 TOOLS
+   TOOLS lists the tools on the work volume.
+
+   Format
+
+     TOOLS [name]
+
+2 Parameters
+
+ name
+
+   The tool to describe.  Without one, every tool is listed.
+
+2 Qualifiers
+/BRIEF
+
+   Gives each tool's name only.
+
+/OUTPUT=file
+
+   Writes the list to file.
+
+2 Examples
+
+   VAX> TOOLS/BRIEF
+```
+
+HELP shows a topic's keys first, each a line, then its text, moved right
+two columns for each level, then `Additional information available:` and
+its subtopics. A line with `/` in column 1 is a **qualifier line**: it
+starts a small topic of its own inside the topic it's in, found both
+there and one level up, so `HELP TOOLS /BRIEF` and `HELP TOOLS Qualifiers
+/BRIEF` both show the text under `/BRIEF`. A parameter's name under
+`Parameters`, written in column 1 with no digit, is text, not a key. Keys
+match whatever their case, and abbreviated: an exact key wins, and
+otherwise every key a word abbreviates is shown. `*` and `%` match within a
+key, and `KEY...` shows a topic with everything under it. A library's HELP
+module, if it has one, is what HELP with no topic shows above the list of
+topics.
+
+govax's own help follows the shapes of VMS's modules: a command's level 1
+is what it does and its format, with `Parameters`, `Description`,
+`Qualifiers` (a `/` line for each), and `Examples` below it; a command
+with subcommands has a level-2 topic for each; and a verb whose qualifier
+chooses what it does (ANALYZE, INITIALIZE) has a level-2 topic keyed by
+each such qualifier (`2 /IMAGE`). Its sources are in
+`SYS$HELP:[.SOURCES]`, a file for each level-1 topic, so a module of your
+own can be written beside them and put in `HELPLIB.HLB` with
+`LIBRARY/HELP SYS$HELP:HELPLIB SYS$HELP:[.SOURCES]MINE.HLP` (a refresh by a
+newer govax keeps it), or kept in a library of its own that `HLP$LIBRARY`
+names.
+
+Programs reach help and every other kind of library through the LBR$
+routines (Appendix B): `LBR$OUTPUT_HELP` is the same HELP, prompts and all,
+over a program's own output and input routines.
+
 ### Analyzing objects and images
 
 `ANALYZE/OBJECT` and `ANALYZE/IMAGE` describe object and image files
@@ -7189,7 +7256,26 @@ and run, but signals `GOVAX-E-NOTIMPL` if called.
 | Other | `LIB$AST_IN_PROG`, `LIB$ASN_WTH_MBX`, `LIB$GET_USERS_LANGUAGE`, `LIB$GET_ACCNAM`, `LIB$FORMAT_SOGW_PROT`, `LIB$PARSE_SOGW_PROT`, `LIB$PARSE_ACCESS_CODE`, `LIB$CURRENCY`, `LIB$DIGIT_SEP`, `LIB$RADIX_POINT`, `LIB$LP_LINES` |
 
 The tables `LIB$AB_ASC_EBC`, `LIB$AB_EBC_ASC`, and `LIB$AB_UPCASE` are
-there too, and the JSB entry points of the string routines. govax also
+there too, and the JSB entry points of the string routines.
+
+#### The librarian's routines
+
+LBRSHR's routines, from the *Utility Routines* manual, work on every kind
+of library LIBRARY makes (object, macro, help, text, shareable image, and a
+type of your own), and change one in place as VMS 7.1's do, so a library
+made or changed by them is VMS's byte for byte (but for times):
+`LBR$INI_CONTROL`, `LBR$OPEN` (to read, update, or create, with a NAM
+block), `LBR$CLOSE`, `LBR$GET_HEADER`, `LBR$SET_INDEX`, `LBR$LOOKUP_KEY`,
+`LBR$GET_INDEX`, `LBR$FIND`, `LBR$GET_RECORD`, `LBR$SET_LOCATE`,
+`LBR$SET_MOVE`, `LBR$SET_MODULE`, `LBR$PUT_RECORD`, `LBR$PUT_END`,
+`LBR$INSERT_KEY`, `LBR$REPLACE_KEY`, `LBR$DELETE_KEY`, `LBR$DELETE_DATA`,
+`LBR$SEARCH`, `LBR$GET_HISTORY`, `LBR$PUT_HISTORY`, `LBR$FLUSH`,
+`LBR$RET_RMSSTV`, `LBR$GET_HELP`, and `LBR$OUTPUT_HELP`. Binary keys
+(a key length of 0) work as the manual describes them, though VMS 7.1's
+failed on them. A library is held while it's open: another process's open
+that conflicts waits for it, up to two minutes, as VMS's did.
+`LBR$DCX_MAP` and `LBR$INSERT_TIME`, which the manual doesn't describe,
+signal `GOVAX-E-NOTIMPL`. govax also
 provides part of the C run-time library (`DECC$`) for the microkernel's
 use.
 

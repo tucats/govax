@@ -682,7 +682,8 @@ never had.
   `closeUpBoth` and `ChangedByCall` for static locals; `testdata/fortran/recursion.for`);
   subtask 5 (2026-11-04) frame addresses in data (a NAMELIST group with a frame variable is a block each statement fills in, `ir/lowerio.go`'s `namelistCell`; NMLAUTOMATIC withdrawn; the warning ASSOCFRAME; `testdata/fortran/recurio.for`); subtask 6 (2026-11-04) variable format expressions in the frame (FTNRTL calls F(n, ap, fp), GSMATCH 1,19; in `ir.ExpressionBlocks`' blocks a frame cell is a displacement from R11, `routineGen.frameBase`, which `needsFrameBase` keeps from the allocator; `$FP` gone for every unit; `testdata/fortran/recurvfe.for`); subtask 7 (2026-11-05) the optimizer under recursion (the register allocator's loop variables by `ChangedByCall`, a fix; a frame place not live at exit and a frame scalar able to die, `deadcode.go`'s `lasting` and `findDying`; `effects.go`'s argument for both kinds of unit; `testdata/fortran/optrecur.for`; the corpus, the modules, and DUNGEON also run `/RECURSIVE`, `recursiveModes`, with `recursiveDifferences` explained); subtask 8 (2026-11-05) FTNRTL under recursion (statements nested at depth, RECIO_OPE at depth, and unwinding across recursive levels, `testdata/fortran/recurrtl.for`; a FORMAT parsed by an AST's statement while the main line parses it no longer lost, `ftn_format.mar`'s `FTN$$FMT_START`, `testdata/rtl89`'s `fmtrace.for`; the same-frame difference after an unwind, `gone89.for`); subtask 9 (2026-11-05) the stack (paging off's fixed 2 MB, `vax.memory.p1` less 4,096 pages; paging on's table area, about 10 MB; a stack that runs out ends the image with no message, `%X1000000C`; `testdata/stack89`; MANUAL.md's "The user stack"); subtask 10 (2026-11-05) the debugger: 10a the probe, `testdata/dbg89`, run on VMS 7.1, and 10b SET SCOPE (`/MODULE`, `/CURRENT`), CANCEL SCOPE, SHOW SCOPE, the scope built-ins, a name's own scope (`1\R2`, `REC 1\%R2`), each call level's registers from the frames (`machine/scope.go`'s `CallLevels`, `RegistersAt`; the evaluator's `Register` and `Scoped` hooks), FORTRAN's frame variables at the scope's level, DYNMODSET, and TYPE with no line (`debugger/scope.go`), held to VMS's logs by `TestDebuggerSessionOracle`. Subtask 11 (2026-11-05) is end to end: `testdata/fortran`'s `recurtree.for`, `recurcalc.for`, `recurast.for`, and `modules/mutual`, `testdata/fortran/gfortran/compare.py` (the portable ones on gfortran), and a fix, a recursive CHARACTER function's call of itself as long as its RESULT variable (`ir`'s `funcLength`). Subtask 12 (2026-11-05) is `testdata/ftn86`'s fifth round, every program also `/RECURSIVE` (`[NAMER]`, DUNGEON's `[DUNGEONR]`), run on VMS 7.1: all printed govax's output but RECURAST's timing and two of `recursiveDifferences`; it found an ods2 bug, INDEXF.SYS's extension header put in the space it was to map. Subtask 13 (2026-11-05) is the close-out: MANUAL.md's 14.12 (and 14.2, 14.3, 14.7, 14.8), FORTRAN-INTERNALS.md's section 23, HELP FORTRAN, PLAN.md, and a fix, the `/DEBUG` table's frame cells in a recursive unit (`dbgtable.ThroughFrame`, `P:n`, and a descriptor's `F:n`, `TestFortranFrameCells`).
   Phase 90 (planned 2026-11-07, the plan accepted by the author the same
-  day, its "The review") is VMS help: HELPLIB.HLB and DBG$HELP.HLB built
+  day, its "The review"; done 2026-11-08; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is VMS help: HELPLIB.HLB and DBG$HELP.HLB built
   from VMS-format `.HLP` modules in govax's own words, LIBRARY/HELP, HELP's
   lookup, display, and prompts in one engine (`internal/help`), HLP$LIBRARY,
   and LBRSHR's routines (`internal/lbrrtl`); its probe is `testdata/help90`,
@@ -765,7 +766,22 @@ never had.
   held by the same oracle and `lbr`'s `TestUpdaterW14`; round 3b
   (`testdata/help90`'s `lbr90x.mar`, run on VMS 7.1 2026-11-08,
   `TestLBR90XOracle`) found VMS's binary keys broken, ENTALL 0 300 entries,
-  and opens of a library held open waiting (`internal/lbrrtl/hold.go`).
+  and opens of a library held open waiting (`internal/lbrrtl/hold.go`);
+  11e (done 2026-11-08) is LIBRARY as round 3 shows it: an existing library
+  changed in place through an `lbr.Updater`, as LIBRARIAN does
+  (`dclcmd/library.go`'s `openUpdater`, `updateInsert`, `updateReplace`,
+  `updateDelete`), with LIBRARIAN's update history records
+  (`lbr/librarian.go`'s `LibrarianHistory`; 1 deleted, 2 inserted, 3
+  replaced; a history block from the deleted list first, `reuseBlock`),
+  LIBRARY/LIST/HISTORY, `/DATA=REDUCE` and `/DATA=EXPAND` (`lbr.Rebuild`,
+  an empty DCX map), `/CREATE=BLOCKS` and CRE$L_ALLOC allocations
+  (`rms.Session.CreateRecordFileAllocated`, best effort; a rewrite keeps
+  its allocation), and LIBRARIAN's statuses; `TestLBR90WOracle` runs round
+  3's parts C and D (`lbr90wlib_test.go`), every library VMS's byte for
+  byte but WD4's block counts and W13's binary keys. Subtask 12 (done
+  2026-11-08) is the close-out: MANUAL.md's "Writing help modules" and
+  Appendix B's LBR$ routines, and HELP's default library always
+  `SYS$HELP:HELPLIB`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1567,7 +1583,8 @@ expect adjustment as phases land):
   debugger, or ASM.
 - `internal/debugger` — the machine debugger (Phase 42), modeled on the VMS
   debugger: a `Debugger` session and its `Dispatcher` over `debug.dcl`
-  (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt.
+  (`internal/bootdata/files`), with its help in SYS$HELP:DBG$HELP.HLB's
+  DEBUG module (Phase 90) and the `DBG> ` prompt.
   **The console and the debugger are two front ends to one machine, each
   with its own grammar:** `console.dcl` has the VMS command line (RUN,
   MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET DEFAULT, SAVE/LOAD, ...) and `debug.dcl` the machine's commands (EXAMINE, DEPOSIT,
@@ -2211,7 +2228,10 @@ expect adjustment as phases land):
   Phase 90: `update.go`'s `Updater` changes a library in place, call by
   call, for the LBR$ writing routines (`internal/lbrrtl`), its blocks as
   VMS 7.1's LBRSHR leaves them (B-tree splits, index blocks between data
-  blocks, deleted blocks' list).
+  blocks, deleted blocks' list). `librarian.go` (subtask 11e) is what
+  LIBRARY does to an existing library: `Updater.PutModule`, LIBRARIAN's
+  history records and LIBRARY/LIST/HISTORY's section, and `Rebuild`
+  (`/DATA`).
 - `internal/backup` — VMS BACKUP save sets (Phase 69): a leaf package
   (standard library only). `Read` takes any `io.ReaderAt` (a volume
   file or a host file), the block size from the first block's header;

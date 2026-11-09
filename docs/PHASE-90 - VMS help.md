@@ -954,7 +954,43 @@ library opened, as round 1b's 3 was a help library's.
 12. The close-out: MANUAL.md (HELP, LIBRARY/HELP, the system volume's
     table, a section on writing help modules), FORTRAN-INTERNALS.md and
     other docs that mention HELP, CLAUDE.md, PLAN.md, and this doc's "Where
-    things stand".
+    things stand" (done 2026-11-08).
+
+## Where things stand
+
+Phase 90 is done (2026-11-08). HELP is VMS 7.1's: help libraries of
+VMS-format modules, the lookup, layout, and prompts held to the probe's logs,
+the user libraries, and the debugger's DBG$HELP.HLB; LIBRARY makes and
+changes every kind of library as LIBRARIAN does, in place, with its update
+history; and LBRSHR's documented routines work on every kind of library,
+their libraries VMS's byte for byte. What it left:
+
+- **HELP's other qualifiers.** `/PAGE=SAVE` and its companions, `/SEARCH`,
+  `/EXACT`, `/HIGHLIGHT`, `/WRAP`, and `HELP/MESSAGE` (which needs the
+  MSGHLP database) are `%DCL-W-HELPNOTIMPL`, by the review's answer 3.
+- **Real DCX data reduction.** `/DATA=REDUCE` writes a map with no
+  sub-maps, so records are stored as they are; VMS 7.1's map for round 1b's
+  H90R really reduced it (15 blocks to govax's 18). Matching VMS's would
+  need its tree-building rules, which only more of its output could teach.
+  `LBR$DCX_MAP` and `LBR$INSERT_TIME`, undocumented, are NOTIMPL.
+- **`/COMPRESS`** and LIBRARY's `/CROSS_REFERENCE`, `/BEFORE`, `/SINCE`,
+  `/ONLY`, and the other qualifiers VMS's LIBRARIAN has and govax's doesn't.
+- **LIBRARIAN's rules round 3 didn't settle** (each unconfirmed in the log):
+  whether module data reuses deleted blocks (the history does); how a
+  history record with several modules lays out its names; HISTERR's,
+  MHDERR's, INDEXERR's, and SEQNCE's statuses; COMCOD's word for errors;
+  the time VMS listed for a key whose RFA is outside the file; and WD4's
+  block counts and next RFA after a failed object insertion.
+- **Allocation when the volume is full**: govax gives a new library only the
+  blocks it uses, where VMS's `$CREATE` would fail with RMS$_FUL.
+- **Binary keys** are the manual's, VMS 7.1's having crashed on them, and
+  the second update OPEN in one image is RMS$_FLK at once where VMS's took
+  120 seconds (round 3b).
+- **Grammar leftovers**: TEST and SHOW EXPAND in the console's grammar, and
+  SHOW MAPS, SET UIQUANTUM, and CANCEL MEMORY in the debugger's, have no
+  handlers and could go.
+- **The VMS-module runs** (round 1's G part, `TestHelp90VMSModules`) stay
+  local, by Decision 9; they skip without the system disk.
 
 ## Progress log
 
@@ -1910,3 +1946,15 @@ library opened, as round 1b's 3 was a help library's.
     and `TestHistoryListing` the listing's layout. LINK on the routines'
     object library (W12) was already VMS's. HELP LIBRARY has /DATA and
     /HISTORY. Subtask 11e done, and with it subtask 11.
+- **2026-11-08** — **Subtask 12, the close-out.** MANUAL.md: section 10's
+  "Writing help modules" (the key lines, qualifier lines, how HELP shows a
+  topic and matches words, govax's modules' shapes, adding a module to
+  HELPLIB.HLB), LIBRARY's `/HISTORY`, `/DATA`, and in-place changes, and
+  Appendix B's "The librarian's routines". Trying the manual's example
+  found that HELP with no `/LIBRARY`, in a session whose default directory
+  is the host's, opened the bare name HELPLIB as a host file and fell back
+  on govax's built-in copy: the default library is now
+  `SYS$HELP:HELPLIB` whatever the default directory
+  (`dclcmd/help.go`'s `helpMainSpec`). CLAUDE.md and PLAN.md say the phase
+  is done; "Where things stand" above is what it left. FORTRAN-INTERNALS.md
+  doesn't mention HELP. Phase 90 done.

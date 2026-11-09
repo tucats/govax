@@ -94,7 +94,7 @@ const (
 	helpNoHlpLibs = 0x10268002
 	helpRMSFNF    = 0x00018292 // RMS$_FNF
 	helpDefault   = "SYS$HELP:.HLB"
-	helpMainSpec  = "HELPLIB"
+	helpMainSpec  = "SYS$HELP:HELPLIB" // whatever the default directory, a host one too
 	helpListFile  = "HELP.LIS"
 	helpFileWidth = 132
 )
