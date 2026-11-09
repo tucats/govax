@@ -37,14 +37,18 @@ func (env *Environment) Yield() error {
 }
 
 // WaitUntil is a shim's way to wait until over reports true, in LEF,
-// woken with a timer's boost. deadline, when not 0, is the system time
+// woken with a timer's boost. over is a test of the host's time (DCL's
+// WAIT in a subprocess), which the scheduler waits in the host for. deadline, when not 0, is the system time
 // (Clock) by which over is expected to be true, so the scheduler, with
 // nothing to run, idles until then rather than retrying the wait at
 // once.
 func (env *Environment) WaitUntil(over func() bool, deadline uint64) error {
 	env.waitDeadline = deadline
 
-	return env.waitOn(sched.StateLEF, sched.ResourceNone, sched.ClassTimer, over)
+	err := env.waitOn(sched.StateLEF, sched.ResourceNone, sched.ClassTimer, over)
+	env.pendingWait.hostTimed = true
+
+	return err
 }
 
 // LendCPU makes env, the scheduler's current process, give the CPU up
@@ -74,7 +78,7 @@ func (sys *System) LendCPU(env *Environment, over func() bool, deadline uint64) 
 
 	// Process 1 runs nothing of its own while it lends the CPU, so an AST
 	// queued to it doesn't end the wait: DCL's next run takes it.
-	env.pendingWait = &waitCondition{state: sched.StateLEF, class: sched.ClassTimer, over: over, ignoreASTs: true}
+	env.pendingWait = &waitCondition{state: sched.StateLEF, class: sched.ClassTimer, over: over, ignoreASTs: true, hostTimed: true}
 	env.enterWait(true)
 
 	return true

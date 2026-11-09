@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
@@ -169,5 +170,44 @@ func TestLend_wait(t *testing.T) {
 
 	if n := len(c.RTL.Processes()); n != 1 {
 		t.Errorf("%d processes at the end, want only process 1", n)
+	}
+}
+
+// TestLend_waitBesideWaitingSubprocess: process 1's WAIT while a
+// subprocess's WAIT waits too. Both wait for the host's time, which the
+// scheduler waits for in the host; before it did, every process was made
+// to retry its wait at once, each retry's instructions counted as
+// emulated time in quantum-clock mode, and a WAIT of a second moved the
+// clock on by minutes (round 3b's rehearsal, docs/PHASE-90). With no
+// timer pending the clock now stands still meanwhile, as it does while
+// process 1 waits alone.
+func TestLend_waitBesideWaitingSubprocess(t *testing.T) {
+	_, dispatch := lendConsole(t)
+
+	proc := writeProcedure(t, t.TempDir(), "waits.com",
+		`$ WRITE SYS$OUTPUT F$TIME()`,
+		`$ SPAWN/NOWAIT/OUTPUT=NL: WAIT 00:00:02`,
+		`$ WAIT 00:00:01`,
+		`$ WRITE SYS$OUTPUT F$TIME()`,
+		`$ WAIT 00:00:02`,
+		`$ WRITE SYS$OUTPUT F$TIME()`,
+	)
+
+	var times []time.Time
+
+	for _, line := range dispatch("@" + proc) {
+		if at, err := time.Parse("_2-Jan-2006 15:04:05.00", strings.TrimSpace(line)); err == nil {
+			times = append(times, at)
+		}
+	}
+
+	if len(times) != 3 {
+		t.Fatalf("%d times, want 3", len(times))
+	}
+
+	for i := 1; i < len(times); i++ {
+		if d := times[i].Sub(times[0]); d < 0 || d > 5*time.Second {
+			t.Errorf("time %d is %v after the first; the clock ran away during WAIT", i+1, d)
+		}
 	}
 }

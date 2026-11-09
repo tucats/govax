@@ -61,6 +61,13 @@ type waitCondition struct {
 	// yield isn't a wait: the process gives up the CPU staying
 	// computable (Environment.Yield, lend.go).
 	yield bool
+
+	// hostTimed says over is a test of the host's time (DCL's WAIT, and
+	// process 1 lending the CPU: lend.go), which every scheduling call
+	// makes and nothing the process runs can change. The scheduler, with
+	// nobody to run, waits in the host for it (idle.go's hostWait) rather
+	// than having the process try again.
+	hostTimed bool
 }
 
 // The boost classes govax gives the events that end each kind of wait.

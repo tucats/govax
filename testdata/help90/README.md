@@ -258,10 +258,11 @@ second for 30 seconds, then RMS$_FLK; X13's `elapsed` says whether VMS
 7.1's does, from another process.
 
 Rehearsed on govax (2026-11-08): the procedure ran to its end, all 17
-cases. It showed a govax bug the run doesn't depend on: in quantum-clock
-mode a procedure's WAIT, while a spawned subprocess waits, returns long
-after its time (5 seconds took 33 emulated minutes), so X13 ran after X12
-had closed WX.
+cases. The first rehearsal showed a govax bug, since fixed: in
+quantum-clock mode a procedure's WAIT, while a spawned subprocess waited,
+returned long after its time (5 seconds took 33 emulated minutes), so X13
+ran after X12 had closed WX. In the second, X13 and X14 opened WX 15
+seconds into X12's 90.
 
 1. Build the exchange volume, from the repository root:
 

@@ -1735,3 +1735,23 @@ with the facility's inhibit bit (%X10000001).
   after `SPAWN/NOWAIT WAIT 00:00:20` took 33 emulated minutes, the next
   `WAIT 00:00:20` 1 hour 41), so X12 had closed WX before X13 ran. It's
   for a fix of its own. Waiting for the VAX run.
+- **2026-11-08** — **The WAIT bug the rehearsal found, fixed.** With every
+  process waiting and no timer due, the scheduler's idling made each
+  waiter retry its wait at once (`retryWaiters`), and each retry's
+  instructions were emulated time in quantum-clock mode: a subprocess's
+  WAIT beside process 1's made about 144,000 retries a second, a
+  millisecond each. DCL's WAIT (process 1 lending the CPU, and a
+  subprocess's WAIT) waits for the host's time, which only the host's
+  clock can end, so these waits are now marked (`waitCondition.hostTimed`),
+  and while one waits and nobody can run, the scheduler waits in the host
+  for up to 50 ms, testing the waits every 2 ms (`corevms/idle.go`'s
+  `hostWait`). In quantum-clock mode the emulated clock then follows the
+  host's, no further than the next timer, as `HostIdle` moves it while the
+  prompt waits, instead of jumping to the timer: with no timer the clock
+  stands still, as it always did while process 1 waited alone, and a timer
+  comes due about when it would with the host's clock (round 3b's X12, a
+  LIB$WAIT of 90 seconds, now holds WX while X13's WAIT of 15 seconds runs
+  out, where it used to end at once). `TestLend_waitBesideWaitingSubprocess`
+  holds the clock to within 5 seconds of a procedure's start over 3
+  seconds of WAITs beside a waiting subprocess (it was 12 minutes 44
+  seconds before the fix).

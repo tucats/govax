@@ -1555,7 +1555,11 @@ expect adjustment as phases land):
   readline's writer in whole lines, which redraws the line being typed,
   and `attentionStdin.lineRead` keeps programs' terminal reads off the
   keys meanwhile. Input from a pipe or a test stays synchronous. WAIT
-  lends the CPU (a subprocess's waits in the scheduler, `yieldTimer`).
+  lends the CPU (a subprocess's waits in the scheduler, `yieldTimer`);
+  these waits are for the host's time (`waitCondition.hostTimed`), which
+  the scheduler, with nobody to run, waits for in the host (`idle.go`'s
+  `hostWait`), the quantum clock following the host's up to the next
+  timer.
   Not inside a machine run (`consoleCommands`, frozen scheduling), the
   debugger, or ASM.
 - `internal/debugger` — the machine debugger (Phase 42), modeled on the VMS
