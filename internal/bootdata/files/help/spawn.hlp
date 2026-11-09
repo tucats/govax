@@ -6,6 +6,7 @@
    Format
 
      SPAWN [command]
+     SPAWN/HOST command
 
 2 Parameter
 
@@ -13,7 +14,8 @@
 
    A command for the subprocess to run before it logs out.  Without
    one, the subprocess reads commands from its input until the end of
-   the input, LOGOUT, or EXIT.
+   the input, LOGOUT, or EXIT.  With /HOST, a program on the host and
+   its arguments, which /HOST requires.
 
 2 Description
 
@@ -35,6 +37,34 @@
    configuration turns it off (see CONFIGURATION KEYS).
 
 2 Qualifiers
+/HOST
+
+      /HOST
+
+   Runs the command as a program on the host, with exec, instead of
+   making a subprocess; govax's own.  The command is split into the
+   program and its arguments at blanks, and single or double quotes
+   keep a word together; put a word that starts with "/" in quotes, or
+   DCL takes it for a qualifier.  No shell is involved, so name one
+   for a shell's pipes and wildcards.  DCL's 'symbol' substitution
+   happens first, as on any command line.
+
+   SPAWN waits, the machine standing still, and the program has the
+   terminal.  With /NOWAIT it runs beside the console with no input but
+   /INPUT.  DCL shows what it writes, unless /OUTPUT, between commands
+   and at the prompt.  A /NOWAIT program still running when govax ends
+   ends with it.
+
+   /INPUT and /OUTPUT are its standard input and output: a host file
+   or a volume file, by the usual rules for a name.  /SYMBOLS and
+   /LOGICAL_NAMES (or /LOGICALS) add to its environment, only if given:
+   GOVAX_SYM_name for each DCL symbol and GOVAX_LOG_name for each
+   process logical name, with a "$" in the name changed to "_".  So
+   PARTS$DATA is GOVAX_LOG_PARTS_DATA, and a search list's values are
+   separated by commas.  /PROCESS and /PROMPT can't be used with it.
+
+   A program that can't run or ends with a failure gives %VAX-E-HOSTCMD.
+
 /INPUT
 
       /INPUT=filespec
@@ -48,6 +78,12 @@
 
    Copies the current process's process logical names to the
    subprocess (the default, /LOGICAL_NAMES).
+
+/LOGICALS
+
+      /[NO]LOGICALS
+
+   The same as /LOGICAL_NAMES.
 
 /OUTPUT
 
@@ -102,3 +138,8 @@
    3.$ SPAWN/NOWAIT/OUTPUT=NIGHTLY.LOG @NIGHTLY
 
      Runs NIGHTLY.COM in a subprocess beside the console.
+
+   4.$ SPAWN/HOST/SYMBOLS/OUTPUT=LIST.TXT sh -c "ls *.go; env"
+
+     Runs a shell on the host, with DCL's symbols in its environment,
+     and makes LIST.TXT of what it writes.

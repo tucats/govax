@@ -2,7 +2,6 @@ package console
 
 import (
 	"io"
-	"os/exec"
 	"time"
 
 	"github.com/tucats/govax/internal/dclshell"
@@ -19,10 +18,6 @@ import (
 type Console struct {
 	// Machine is the emulated system (vaxmachine.go).
 	*machine.Machine
-
-	// LendTerminal is how a command runs a host program at the terminal
-	// (dclcmd.Context.LendTerminal): cmd/govax's, which knows the terminal.
-	LendTerminal func(cmd *exec.Cmd) error
 
 	// Interpreter is the DCL (interpreter.go).
 	*dclshell.Interpreter

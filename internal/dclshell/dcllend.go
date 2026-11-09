@@ -61,6 +61,8 @@ import (
 // and in a procedure: the CPU is given up for the other processes (see
 // above).
 func (c *Interpreter) commandBoundary() {
+	c.pollHostJobs()
+
 	if !c.Running() {
 		return
 	}
@@ -82,6 +84,8 @@ const promptLendLimit = 50 * time.Millisecond
 // 0 (see above): it lends the CPU, waiting, until no other process wants
 // it, or promptLendLimit has passed, or an attention key is typed.
 func (c *Interpreter) LendWhileIdle() {
+	c.pollHostJobs()
+
 	if !c.Running() || !c.canLend() {
 		return
 	}
@@ -142,7 +146,7 @@ func (c *Interpreter) LendWhileReading(line <-chan struct{}) {
 
 		switch {
 		case stopped:
-			<-line
+			c.awaitLine(line)
 
 			return
 
@@ -159,6 +163,22 @@ func (c *Interpreter) LendWhileReading(line <-chan struct{}) {
 			case <-time.After(promptPoll):
 			}
 		})
+		c.pollHostJobs()
+	}
+
+	c.awaitLine(line)
+}
+
+// awaitLine waits for line to close, showing meanwhile what any
+// SPAWN/HOST/NOWAIT program writes.
+func (c *Interpreter) awaitLine(line <-chan struct{}) {
+	for len(c.hostJobs) > 0 {
+		select {
+		case <-line:
+			return
+		case <-time.After(promptPoll):
+			c.pollHostJobs()
+		}
 	}
 
 	<-line

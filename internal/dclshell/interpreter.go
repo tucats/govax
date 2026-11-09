@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os/exec"
 	"sync/atomic"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -25,6 +26,16 @@ type Interpreter struct {
 	// machine is the machine DCL runs on: its processes, CPU, and
 	// images.
 	machine *machine.Machine
+
+	// LendTerminal is how a command runs a host program at the terminal
+	// (EDIT's and SPAWN/HOST's): cmd/govax's, which knows the terminal.
+	// It leaves alone any of the program's standard files already set,
+	// and it's nil when there's no terminal to lend, as in tests.
+	LendTerminal func(cmd *exec.Cmd) error
+
+	// hostJobs are the SPAWN/HOST/NOWAIT programs not yet finished up
+	// (spawnhost.go), whichever process's DCL started them.
+	hostJobs []*hostJob
 
 	// Grammar is the console's command grammar (console.dcl), which DCL
 	// parses each command with (dispatchParsed): DCL's own verbs, bound

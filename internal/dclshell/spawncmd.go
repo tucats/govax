@@ -32,11 +32,19 @@ import (
 // The qualifiers are DCL's: /INPUT and /OUTPUT (the subprocess's
 // SYS$INPUT and SYS$OUTPUT), /PROCESS (its name), /PROMPT, /NOSYMBOLS
 // and /NOLOGICAL_NAMES (CLI$M_NOCLISYM, CLI$M_NOLOGNAM), and /NOWAIT.
+// /HOST is govax's own, and makes no subprocess at all (spawnhost.go).
 
 // SpawnOptions are SPAWN's command and qualifiers.
 type SpawnOptions struct {
 	Command, Input, Output, Process, Prompt string
 	NoWait, NoSymbols, NoLogicalNames       bool
+
+	// Host is /HOST: the command is a program on the host (spawnhost.go).
+	// HostSymbols and HostLogicals say that /SYMBOLS and /LOGICAL_NAMES
+	// were given, which is what passes them to it. They are not the same
+	// as !NoSymbols, because a subprocess gets them by default and a host
+	// program doesn't.
+	Host, HostSymbols, HostLogicals bool
 }
 
 // The layout of the console's SPAWN procedure page (spawnPage): the
@@ -59,6 +67,10 @@ const (
 // (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits), and when process 1
 // has waited for one, that control has come back (%DCL-S-RETURNED).
 func (c *Interpreter) Spawn(o SpawnOptions) error {
+	if o.Host {
+		return c.spawnHost(o)
+	}
+
 	if err := c.machine.RequireInit(); err != nil {
 		return err
 	}

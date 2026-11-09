@@ -540,19 +540,28 @@ func installKeySignals(s *attentionStdin) func() {
 // terminal and takes the terminal back. For as long as the program runs,
 // the pump reads nothing (keys), the terminal is as the host's programs
 // expect it (hostMode), and the signals the program's keys make aren't
-// taken for CTRL/C or CTRL/Y (lent).
+// taken for CTRL/C or CTRL/Y (lent). A standard file the caller has set
+// already (SPAWN/HOST's /INPUT and /OUTPUT) stays as it is.
 //
 // With no terminal (keys is nil: the input is a pipe), the program has no
 // input, leaving the input to the commands it was meant for.
 func lendTerminal(s *attentionStdin, keys *terminalInput, hostMode func() (back func())) func(*exec.Cmd) error {
 	return func(cmd *exec.Cmd) error {
-		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if cmd.Stdout == nil {
+			cmd.Stdout = os.Stdout
+		}
+
+		if cmd.Stderr == nil {
+			cmd.Stderr = os.Stderr
+		}
 
 		if keys == nil {
 			return cmd.Run()
 		}
 
-		cmd.Stdin = os.Stdin
+		if cmd.Stdin == nil {
+			cmd.Stdin = os.Stdin
+		}
 
 		keys.pause()
 		defer keys.resume()

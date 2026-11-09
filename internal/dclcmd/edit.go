@@ -65,10 +65,10 @@ func editorScratch() string {
 	return os.TempDir()
 }
 
-// splitCommand splits a host command into its program and arguments: words
+// SplitCommand splits a host command into its program and arguments: words
 // separated by white space, where single or double quotes keep a word's white
 // space. No shell is involved, so a file's name can't mean anything but itself.
-func splitCommand(command string) ([]string, error) {
+func SplitCommand(command string) ([]string, error) {
 	var (
 		words   []string
 		word    strings.Builder
@@ -121,7 +121,7 @@ func splitCommand(command string) ([]string, error) {
 // editorArguments is the command to run to edit path: %file in any word of
 // command stands for it, and without one it goes last.
 func editorArguments(command, path string) ([]string, error) {
-	words, err := splitCommand(command)
+	words, err := SplitCommand(command)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ type EditorOptions struct {
 // changes if either value can't be used.
 func (c *Context) SetEditor(opts EditorOptions) error {
 	if opts.Command != nil && *opts.Command != "" {
-		if _, err := splitCommand(*opts.Command); err != nil {
+		if _, err := SplitCommand(*opts.Command); err != nil {
 			return vmserrors.New(vmserrors.EDIT_COMMAND, *opts.Command, err.Error())
 		}
 	}

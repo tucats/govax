@@ -373,6 +373,9 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 			NoWait:         r.Negated("WAIT"),
 			NoSymbols:      r.Negated("SYMBOLS"),
 			NoLogicalNames: r.Negated("LOGICAL_NAMES"),
+			Host:           r.Present("HOST"),
+			HostSymbols:    r.Present("SYMBOLS") && !r.Negated("SYMBOLS"),
+			HostLogicals:   r.Present("LOGICAL_NAMES") && !r.Negated("LOGICAL_NAMES"),
 		})
 	})
 	g.Bind("ATTACH", func(id int64, r *dcl.Result) error {

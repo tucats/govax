@@ -64,6 +64,8 @@ func (c *Interpreter) waitCommand(id int64, r *dcl.Result) error {
 	attention := func() bool { return c.machine.Engine != nil && isAttentionKey(c.machine.Engine.PendingAttention()) }
 
 	for {
+		c.pollHostJobs()
+
 		left := time.Until(deadline)
 		if left <= 0 || attention() {
 			return nil

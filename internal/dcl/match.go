@@ -65,6 +65,15 @@ func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool,
 	return nil, false, ambiguousError("keyword", token)
 }
 
+// resolved is the qualifier q stands for: its alias's target, or q itself.
+func (q *Qualifier) resolved() *Qualifier {
+	if q.aliasRef != nil {
+		return q.aliasRef
+	}
+
+	return q
+}
+
 // matchQualifier resolves token (already upcased, no leading "/") against an
 // Entry's qualifiers by unambiguous prefix, with the same NO-prefix
 // negation rule as matchKeyword — a direct port of DCLqualsearch.
@@ -76,8 +85,14 @@ func matchQualifier(quals []*Qualifier, token string) (q *Qualifier, negated boo
 
 	for _, cand := range quals {
 		if strings.HasPrefix(cand.Name, token) {
+			// A qualifier and its alias are one qualifier, so a prefix of
+			// both (/LOG of LOGICAL_NAMES and LOGICALS) isn't ambiguous.
+			if !exact && (found == nil || found.resolved() != cand.resolved()) {
+				count++
+			}
+
 			if !exact {
-				found, count = cand, count+1
+				found = cand
 			}
 
 			if cand.Name == token {

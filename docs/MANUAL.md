@@ -1821,6 +1821,8 @@ ONE TWO "Three"
 ```text
 SPAWN [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/PROCESS=name]
       [/PROMPT=string] [/NOSYMBOLS] [/NOLOGICAL_NAMES] [command]
+SPAWN/HOST [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/SYMBOLS]
+      [/LOGICAL_NAMES] command
 ATTACH process-name | ATTACH/IDENTIFICATION=pid
 LOGOUT
 ```
@@ -1852,6 +1854,20 @@ you type, and while your programs run. What it writes appears above the
 line you're typing. Commands that work on the machine itself (`DEBUG`,
 `INITIALIZE/MEMORY`, `INITIALIZE/VAX`, `SAVE`, `LOAD`, ...) aren't available in a
 subprocess (`%VAX-E-NOTSUBPROC`).
+
+`SPAWN/HOST`, govax's own, runs the command as a program on the host with
+exec, and makes no subprocess. The command is split at blanks, quotes
+keeping a word together, with no shell: write `SPAWN/HOST sh -c "ls | wc -l"`
+for a shell's features, and quote a first word starting with `/`, or DCL
+reads it as a qualifier. `SPAWN` waits while the machine stands still and
+the program has the terminal. With `/NOWAIT` it runs alongside, with no input
+but `/INPUT`; DCL shows what it writes between commands and at the prompt,
+and it ends with govax. `/INPUT` and `/OUTPUT` are its standard input and
+output, a host file or a volume file. Only if given, `/SYMBOLS` and
+`/LOGICAL_NAMES` (or `/LOGICALS`) add `GOVAX_SYM_name` and `GOVAX_LOG_name` to its
+environment for each symbol and process logical name, a `$` in the name
+becoming `_`: `PARTS$DATA` is `GOVAX_LOG_PARTS_DATA`. A failure is
+`%VAX-E-HOSTCMD`.
 
 `ATTACH` gives the terminal to another process of your job that's
 waiting for it. `LOGOUT` ends a subprocess's DCL; in the console's own

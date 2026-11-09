@@ -129,6 +129,7 @@ const (
 
 	// internal/console: a command a subprocess's DCL doesn't have.
 	vaxNotSubproc
+	vaxHostCmd
 	vaxIllSymLen
 	vaxSymDclExtr
 	vaxSymDefInMo
@@ -316,6 +317,10 @@ const (
 	// process 1's session, typed in a subprocess's DCL.
 	VAX_NOTSUBPROC = VAXFacility<<FacilityPosition | vaxNotSubproc<<MessagePosition | StatusError
 
+	// VAX_HOSTCMD is a SPAWN/HOST command that couldn't be run, or that
+	// ended with a failure on the host.
+	VAX_HOSTCMD = VAXFacility<<FacilityPosition | vaxHostCmd<<MessagePosition | StatusError
+
 	// VAX_SYSGRAMMAR reports a grammar or help file on the system volume
 	// that govax didn't use (docs/PHASE-87 - system volume.md, Decision
 	// 4): one that couldn't be read, or a grammar that doesn't parse or
@@ -430,6 +435,7 @@ func init() {
 	DefineMessage(VAX_DIVZEROWARN, VAXFacility, "DIVZERO", "Division by zero")
 
 	DefineMessage(VAX_NOTSUBPROC, VAXFacility, "NOTSUBPROC", "!S is not available in a subprocess")
+	DefineMessage(VAX_HOSTCMD, VAXFacility, "HOSTCMD", "host command !S failed: !S")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_SYSGRAMMAR, VAXFacility, "SYSGRAMMAR", "!S on the system volume not used; govax's own instead")

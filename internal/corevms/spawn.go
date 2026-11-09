@@ -355,10 +355,21 @@ func (env *Environment) processValue(name string) string {
 // user- and supervisor-mode names, but not CONFINE ones, and not the
 // SYS$ names child's startup defines from its own input and output.
 func (env *Environment) copyProcessNames(child *Environment) {
-	tables, err := env.Logicals.ResolveTables(lnm.ProcessTableName, lnm.User)
-	if err != nil || len(tables) == 0 {
-		return
+	for _, e := range InheritedNames(env.Logicals) {
+		_, _ = child.Logicals.Define(lnm.ProcessTableName, e.Name, e.Mode, e.Attrs, slices.Clone(e.Equivalences))
 	}
+}
+
+// InheritedNames are the process logical names of db that a spawned
+// process is given (copyProcessNames has the rule), sorted by name and,
+// for one name, from the outermost access mode inward.
+func InheritedNames(db *lnm.Database) []*lnm.Entry {
+	tables, err := db.ResolveTables(lnm.ProcessTableName, lnm.User)
+	if err != nil || len(tables) == 0 {
+		return nil
+	}
+
+	var names []*lnm.Entry
 
 	for _, e := range tables[0].Entries() {
 		switch {
@@ -369,6 +380,8 @@ func (env *Environment) copyProcessNames(child *Environment) {
 			continue
 		}
 
-		_, _ = child.Logicals.Define(lnm.ProcessTableName, e.Name, e.Mode, e.Attrs, slices.Clone(e.Equivalences))
+		names = append(names, e)
 	}
+
+	return names
 }
