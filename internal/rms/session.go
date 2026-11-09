@@ -165,8 +165,10 @@ func (s *Session) SetDefault(text string) error {
 		}
 	}
 
+	// The default directory is relative to the root, if SYS$DISK has one.
 	spec := n.spec()
 	spec.Device = ""
+	spec.Dirs = n.DirSpec.names()
 	s.Default = spec
 
 	return nil

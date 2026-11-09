@@ -3,7 +3,9 @@
 **Status:** planned 2026-11-09; the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
 Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
-answers"), and 3 (one name processor) are done. Roots aren't implemented yet.
+answers"), 3 (one name processor), and 4 (syntax and `$PARSE`) are done.
+Name processing knows roots; the services and the utilities that use its
+results are subtasks 5 to 7.
 
 ## Goal
 
@@ -455,7 +457,7 @@ Each is one commit, with tests, stopping for review.
    errors reported as before, F$PARSE, SET DEFAULT, `LocateRelated`, and
    RENAME's own parsing moved onto it, `mfdRelative` gone. No change in
    behavior but the `SYS$DISK` fix; the whole test suite is the check.
-4. **Syntax and `$PARSE`**: `.][` and `[ROOT.]` in `scanName`, the root
+4. **Syntax and `$PARSE`** (done 2026-11-09): `.][` and `[ROOT.]` in `scanName`, the root
    through `expandName`, the guide's table, errors, the field conflicts
    of Round 2, angle brackets kept, `NAM$V_ROOT_DIR`, `DIR_LVLS`,
    `NOCONCEAL`. Held to the probe's `$PARSE` cases, in an
@@ -614,3 +616,34 @@ The author accepted the plan and answered its questions:
   no longer taking `.B`. `[A...B]` (an ellipsis in the middle) looks in `[A.B]`
   rather than matching nothing; subtask 5 is the walk. A relative directory
   with a SYS$DISK that has its own applies to the process default (Round 2).
+- **2026-11-09** Subtask 4: syntax and `$PARSE`. `fileName` has a `Root`, written
+  as typed; `scanFields` (behind `scanName`) reads `[ROOT.]` and `[ROOT.][DIR]`,
+  `scanRoot` a root's elements and its statuses. A finished name's `Dir` has the
+  root before it when it's shown, `parsedName.RootSpec` is the root's elements,
+  `DirSpec` stays relative to the root, and `volumeDir` is the two together, which
+  `spec()` and `checkParsed` use. `translateName` is one call of `translateElement`
+  per list element: a field on both sides is `applyTranslation`'s `RMS$_DIR`, `FNM`,
+  or `TYP` (a `*` name kept as before, unconfirmed), a concealed name that gives
+  more than a device and a root `concealsMore`'s `RMS$_DEV`, and an element after
+  the first that can't be used ends the list (`Fails`), so `LIST3:` parses and
+  subtask 5 has what `$SEARCH` must report on reaching it. `mergeName` gives a root
+  only with its device. A related file's string is now translated as a name, since
+  it can show a concealed one. Directories keep their brackets (`likeBrackets`),
+  a default name's deciding them. `ROOT_DIR` is set. A `-` after a name takes the
+  name back out (`[SUB.-]`, `[.K.-]`), in plain directories too; before, an absolute
+  one was `RMS$_DIR`.
+
+  `TestLnm91ParseOracle` replays both logs' `$PARSE` cases, all of the sections
+  that have them but those of later subtasks (`lnm91Sections`), with VMS's image on
+  a volume built by the log's own commands, and matches every line, DIDs and DVI
+  included. A case that also searches runs as a `$PARSE` alone until subtask 5.
+
+  `Session.SetDefault` now keeps the directory relative to the root, as the replay's
+  `SET DEFAULT BASE:[SUB]` needs; subtask 6 has the rest of SET DEFAULT. So does the
+  showing of a directory: until then a DCL utility reaches a rooted name's real
+  directory but shows it whole, under the concealed name.
+
+  Unconfirmed, the probe having no such case: a typed root on a concealed name with
+  no root of its own (`CDISK:[R.]A`, shown physically), a typed root whose device
+  comes with a root from a default (`RMS$_DEV`, as through a translation), and a
+  related file's directory deciding the brackets as a default name's does.

@@ -88,7 +88,6 @@ func TestLocate(t *testing.T) {
 		{"C:hello.mar", false, true},             // Windows drive-relative
 		{"_DUA0:[X]HELLO.MAR", false, false},     // physical device marker
 		{"dua0:[x]hello.mar", false, false},      // lowercase VMS syntax
-		{"SRC:[.SUB]HELLO.MAR", false, false},    // logical name plus more directory
 		{"DUA0:[X]HELLO.MAR/extra", false, true}, // has a slash: host
 		{"DUA0:[X]HELLO.MAR;*", false, false},    // wildcards are the reader's concern
 		{"DUA0:[X]*.MAR", false, false},          // likewise
@@ -121,6 +120,13 @@ func TestLocate(t *testing.T) {
 
 	if _, err := s.Locate("[X]HELLO.MAR", false); err == nil {
 		t.Error("Locate([X]HELLO.MAR) with no default device succeeded, want an error")
+	}
+
+	// A directory after a name that translates to one is RMS$_DIR, even a
+	// relative one (VMS 7.1: testdata/lnm91's round 2).
+	var nameErr *NameError
+	if _, err := s.Locate("SRC:[.SUB]HELLO.MAR", false); !errors.As(err, &nameErr) || nameErr.Status != rmsDirError {
+		t.Errorf("Locate(SRC:[.SUB]HELLO.MAR) error = %v, want RMS$_DIR", err)
 	}
 
 	if _, err := s.Locate("", false); err == nil {

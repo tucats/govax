@@ -31,9 +31,10 @@ type FileSpec struct {
 	// translated logical name ("SPEECH.TXT" in "GETTYSBURG:SPEECH.TXT"),
 	// always a suffix of Spec; the whole spec when nothing translated.
 	// Spec minus Remainder is the translation itself, so a caller can
-	// give the fields the caller wrote precedence over the equivalence
-	// string's, as RMS does (PAY_FILE:*.DAT with PAY_FILE =
-	// DISK1:[SALES_STAFF]PAYROLL means DISK1:[SALES_STAFF]*.DAT).
+	// tell the fields the caller wrote from the equivalence string's, as
+	// RMS must: a field in both is an error (rms/name.go's
+	// applyTranslation), but for PAY_FILE:*.DAT with PAY_FILE =
+	// DISK1:[SALES_STAFF]PAYROLL, which means DISK1:[SALES_STAFF]*.DAT.
 	Remainder string
 
 	// Permanent, when the translation reached a process-permanent file

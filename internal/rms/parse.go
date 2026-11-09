@@ -192,14 +192,14 @@ func (ctx *Context) checkParsed(p parsedName) (did ondisk.Fid, sts, stv uint32) 
 	}
 
 	if p.FNB&fnbWildDir != 0 {
-		if dirs := searchDirs(vol, p.DirSpec); len(dirs) > 0 {
+		if dirs := searchDirs(vol, p.volumeDir()); len(dirs) > 0 {
 			did = dirs[0].Dir.Header.Fid
 		}
 
 		return did, 0, 0
 	}
 
-	dir, err := filespec.ResolveDirectory(vol, p.DirSpec.names())
+	dir, err := filespec.ResolveDirectory(vol, p.volumeDir().names())
 	if err != nil {
 		return did, rmsDirNotFound, ssNoSuchFile
 	}

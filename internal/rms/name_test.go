@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/tucats/govax/internal/lnm"
@@ -15,17 +16,17 @@ func TestScanName(t *testing.T) {
 		want fileName
 		sts  uint32
 	}{
-		{"DUA1:[TEST]A.DAT;3", fileName{"DUA1:", "[TEST]", "A", ".DAT", ";3"}, 0},
-		{"a.dat", fileName{"", "", "A", ".DAT", ""}, 0},
-		{"<TEST.SUB>X", fileName{"", "[TEST.SUB]", "X", "", ""}, 0},
-		{"A.B.3", fileName{"", "", "A", ".B", ";3"}, 0},
-		{"A.", fileName{"", "", "A", ".", ""}, 0},
-		{"A;", fileName{"", "", "A", "", ";"}, 0},
-		{"[TEST...]*.*;*", fileName{"", "[TEST...]", "*", ".*", ";*"}, 0},
-		{"_DUA1:X", fileName{"_DUA1:", "", "X", "", ""}, 0},
+		{"DUA1:[TEST]A.DAT;3", fileName{"DUA1:", "[TEST]", "A", ".DAT", ";3", ""}, 0},
+		{"a.dat", fileName{"", "", "A", ".DAT", "", ""}, 0},
+		{"<TEST.SUB>X", fileName{"", "<TEST.SUB>", "X", "", "", ""}, 0},
+		{"A.B.3", fileName{"", "", "A", ".B", ";3", ""}, 0},
+		{"A.", fileName{"", "", "A", ".", "", ""}, 0},
+		{"A;", fileName{"", "", "A", "", ";", ""}, 0},
+		{"[TEST...]*.*;*", fileName{"", "[TEST...]", "*", ".*", ";*", ""}, 0},
+		{"_DUA1:X", fileName{"_DUA1:", "", "X", "", "", ""}, 0},
 		{"A.B.C", fileName{}, rmsSyntaxError},
 		{"A;C", fileName{}, rmsSyntaxError}, // VMS 7.1: testdata/lib58
-		{"A;32768", fileName{"", "", "A", "", ";32768"}, 0},
+		{"A;32768", fileName{"", "", "A", "", ";32768", ""}, 0},
 		{"A;65536", fileName{}, rmsInvalidVersion},
 		{"[TEST", fileName{}, rmsSyntaxError}, // VMS 7.1: testdata/lib58
 		{"[A..B]", fileName{}, rmsDirError},
@@ -33,6 +34,23 @@ func TestScanName(t *testing.T) {
 		{"ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMN.DAT", fileName{}, rmsFileNameError},
 		{"A.ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMN", fileName{}, rmsTypeError},
 		{"A&B", fileName{}, rmsFileNameError},
+
+		// Roots, as VMS 7.1 has them (testdata/lnm91).
+		{"DUA1:[R1.R2.][SUB]A", fileName{Dev: "DUA1:", Root: "[R1.R2.]", Dir: "[SUB]", Name: "A"}, 0},
+		{"[R1.]A", fileName{Root: "[R1.]", Name: "A"}, 0},
+		{"<R1.>[SUB]", fileName{Root: "<R1.>", Dir: "[SUB]"}, 0},
+		{"[R1.]<SUB>", fileName{Root: "[R1.]", Dir: "<SUB>"}, 0},
+		{"[000000.][SUB]A", fileName{Root: "[000000.]", Dir: "[SUB]", Name: "A"}, 0},
+		{"[.A.][B]", fileName{Root: "[.A.]", Dir: "[B]"}, 0},
+		{"[.]", fileName{Root: "[.]"}, 0},
+		{"[A...]", fileName{Dir: "[A...]"}, 0},
+		{"[A.][B.]", fileName{}, rmsSyntaxError},
+		{"[A...][B]", fileName{}, rmsSyntaxError},
+		{"[A..B.]", fileName{}, rmsSyntaxError},
+		{"[R*.]", fileName{}, rmsDirError},
+		{"[-.A.][B]", fileName{}, rmsDirError},
+		{"[A.B.C.D.E.F.G.H.]", fileName{}, rmsDeviceError},
+		{"[A.B.C.D.E.F.G.]", fileName{Root: "[A.B.C.D.E.F.G.]"}, 0},
 	} {
 		got, sts := scanName(tc.text)
 		if sts != tc.sts {
@@ -62,6 +80,8 @@ func TestDirSpec(t *testing.T) {
 		{"--", "TEST.SUB", "[000000]"},
 		{"", "TEST", "[TEST]"},
 		{"...", "TEST", "[TEST...]"},
+		{"SUB.-", "", "[000000]"},  // VMS 7.1: testdata/lnm91
+		{".K.-", "JONES", "[JONES]"},
 	} {
 		d, ok := scanDir(tc.body)
 		if !ok {
@@ -150,5 +170,125 @@ func TestExpandName(t *testing.T) {
 	names, _ := ctx.expandName(nameInputs{Primary: "TSL:*.DAT"})
 	if len(names) != 2 || names[1].String() != "DUA1:[TEST]*.DAT;" {
 		t.Errorf("TSL:*.DAT expands to %v, want both elements", names)
+	}
+}
+
+// rootedNames is a database with the kinds of name testdata/lnm91 probes.
+func rootedNames(t *testing.T) *lnm.Database {
+	t.Helper()
+
+	db := lnm.NewDatabase(0)
+
+	for _, d := range []struct {
+		name, value string
+		attr        uint32
+	}{
+		{"BASE", "_DUA1:[R1.R2.]", lnm.AttrConcealed | lnm.AttrTerminal},
+		{"NOCON", "_DUA1:[R1.R2.]", 0},
+		{"CDISK", "_DUA1:", lnm.AttrConcealed},
+		{"A1", "BASE:[SUB]", 0},
+		{"A2", "BASE:[SUB.]", 0},
+		{"A4", "BASE:[SUB]", lnm.AttrConcealed},
+		{"P", "_DUA1:[R1]", 0},
+		{"N", "_DUA1:[R1]A.DAT", 0},
+		{sysDiskName, "DUA1:", 0},
+	} {
+		eqv := []lnm.Equivalence{{Value: d.value, Attrs: d.attr}}
+		if _, err := db.Define(lnm.ProcessTableName, d.name, lnm.Supervisor, 0, eqv); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return db
+}
+
+// TestRootedExpansion: what a root does to a name, the volume's directory
+// beside what's shown; TestLnm91ParseOracle has every case VMS was asked.
+func TestRootedExpansion(t *testing.T) {
+	db := rootedNames(t)
+	base := filespec.Spec{Dirs: []string{"JONES"}}
+
+	for _, tc := range []struct {
+		in   nameInputs
+		want string
+		dirs []string
+		sts  uint32
+	}{
+		{nameInputs{Primary: "BASE:[SUB]A.DAT"}, "BASE:[SUB]A.DAT;", []string{"R1", "R2", "SUB"}, 0},
+		{nameInputs{Primary: "BASE:[SUB]A.DAT", NoConceal: true}, "_DUA1:[R1.R2.][SUB]A.DAT;", []string{"R1", "R2", "SUB"}, 0},
+		{nameInputs{Primary: "NOCON:[SUB]A"}, "_DUA1:[R1.R2.][SUB]A.;", []string{"R1", "R2", "SUB"}, 0},
+		{nameInputs{Primary: "BASE:A"}, "BASE:[JONES]A.;", []string{"R1", "R2", "JONES"}, 0},
+		{nameInputs{Primary: "BASE:[000000]A"}, "BASE:[000000]A.;", []string{"R1", "R2"}, 0},
+		{nameInputs{Primary: "BASE:[-]A"}, "BASE:[000000]A.;", []string{"R1", "R2"}, 0},
+		{nameInputs{Primary: "A1:A"}, "BASE:[SUB]A.;", []string{"R1", "R2", "SUB"}, 0},
+		{nameInputs{Primary: "[R1.R2.][SUB]A"}, "DUA1:[R1.R2.][SUB]A.;", []string{"R1", "R2", "SUB"}, 0},
+		{nameInputs{Primary: "CDISK:[R1]A"}, "CDISK:[R1]A.;", []string{"R1"}, 0},
+
+		// The root goes with its device.
+		{nameInputs{Primary: "A", Default: "BASE:[SUB]"}, "BASE:[SUB]A.;", []string{"R1", "R2", "SUB"}, 0},
+		{nameInputs{Primary: "DUA1:A", Default: "BASE:[SUB]"}, "DUA1:[SUB]A.;", []string{"SUB"}, 0},
+		{nameInputs{Primary: ".DAT", Related: "BASE:[SUB]X.DAT;1"}, "BASE:[SUB]X.DAT;", []string{"R1", "R2", "SUB"}, 0},
+
+		// A bracketed default decides the brackets.
+		{nameInputs{Primary: "DUA1:<SUB>A"}, "DUA1:<SUB>A.;", []string{"SUB"}, 0},
+		{nameInputs{Primary: "DUA1:<SUB>A", Default: "[OTHER]"}, "DUA1:[SUB]A.;", []string{"SUB"}, 0},
+
+		// A field on both sides of a translation.
+		{nameInputs{Primary: "P:[SUB]A"}, "", nil, rmsDirError},
+		{nameInputs{Primary: "A1:[OTHER]A"}, "", nil, rmsDirError},
+		{nameInputs{Primary: "N:B.DAT"}, "", nil, rmsFileNameError},
+		{nameInputs{Primary: "N:.TXT"}, "", nil, rmsTypeError},
+		{nameInputs{Primary: "N:"}, "_DUA1:[R1]A.DAT;", []string{"R1"}, 0},
+		{nameInputs{Primary: "N:;5"}, "_DUA1:[R1]A.DAT;5", []string{"R1"}, 0},
+
+		// A concealed name's limits, and a second root.
+		{nameInputs{Primary: "A4:A"}, "", nil, rmsDeviceError},
+		{nameInputs{Primary: "A2:A"}, "", nil, rmsDeviceError},
+		{nameInputs{Primary: "BASE:[A.]X"}, "", nil, rmsDeviceError},
+		{nameInputs{Primary: "A", Default: "A4:"}, "", nil, rmsDeviceError},
+		{nameInputs{Primary: "A", Related: "A4:X.DAT"}, "", nil, rmsDeviceError},
+	} {
+		names, sts := expandNames(db, base, tc.in)
+		if sts != tc.sts {
+			t.Errorf("%+v: status %#x, want %#x", tc.in, sts, tc.sts)
+
+			continue
+		}
+
+		if sts != 0 {
+			continue
+		}
+
+		if got := names[0].String(); got != tc.want {
+			t.Errorf("%+v = %s, want %s", tc.in, got, tc.want)
+		}
+
+		if got := names[0].spec().Dirs; !slices.Equal(got, tc.dirs) {
+			t.Errorf("%+v: directories %v, want %v", tc.in, got, tc.dirs)
+		}
+	}
+}
+
+// TestSearchListStopsAtBadElement: a search list is usable up to an
+// element name processing refuses (VMS 7.1: testdata/lnm91's LIST3).
+func TestSearchListStopsAtBadElement(t *testing.T) {
+	db := rootedNames(t)
+
+	eqv := []lnm.Equivalence{{Value: "NOCON:"}, {Value: "CDISK:[R1]"}}
+	if _, err := db.Define(lnm.ProcessTableName, "LIST3", lnm.Supervisor, 0, eqv); err != nil {
+		t.Fatal(err)
+	}
+
+	names, sts := expandNames(db, filespec.Spec{}, nameInputs{Primary: "LIST3:[SUB]A"})
+	if sts != 0 || len(names) != 1 {
+		t.Fatalf("names %v, status %#x; want one name", names, sts)
+	}
+
+	if got, want := names[0].String(), "_DUA1:[R1.R2.][SUB]A.;"; got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+
+	if names[0].FNB&fnbSearchList == 0 {
+		t.Error("SEARCH_LIST isn't set")
 	}
 }

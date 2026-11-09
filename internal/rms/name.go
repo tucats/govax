@@ -19,7 +19,7 @@ import (
 // the fields the ones before it left out:
 //
 //  1. the primary name (FAB$L_FNA), after its logical name is translated
-//     (the fields the program wrote win over the translation's);
+//     (a field both the program and the translation give is an error);
 //  2. the default name (FAB$L_DNA), translated the same way;
 //  3. the related file's resultant string (NAM$L_RLF), for the device,
 //     directory, name, and type (with FAB$V_OFP, the directory, name,
@@ -29,13 +29,25 @@ import (
 // A relative directory ("[.SUB]", "[-]") is applied to the directory the
 // later sources give. A field no source gives is empty: no name, a type
 // of ".", and a version of ";".
+//
+// A device can bring a root with it: a directory ending in a period,
+// "_DUA1:[USERS.SMITH.]", which then looks like the volume's master file
+// directory (docs/PHASE-91, Decision 2; the Guide to OpenVMS File
+// Applications, 6.3). A name is a device, a root, and a directory
+// *relative to the root*, so nothing here can climb out of a root, and
+// only parsedName.volumeDir puts the two together for the volume.
 
 // fileName is a file specification's fields as name processing keeps
-// them: the text of each, with its delimiters ("DUA1:", "[TEST.SUB]",
-// "A", ".DAT", ";3"). An empty field is one not given; a given but empty
-// type or version is "." or ";".
+// them: the text of each, with its delimiters and as written ("DUA1:",
+// "[USERS.]", "[TEST.SUB]", "<TEST>", "A", ".DAT", ";3"). An empty field
+// is one not given; a given but empty type or version is "." or ";".
 type fileName struct {
 	Dev, Dir, Name, Type, Ver string
+
+	// Root is the root, if there is one. While a name is being put together
+	// Dir holds only the directory; in a finished name (finishName) Dir has
+	// the root before it when the root is shown.
+	Root string
 }
 
 // maxNameLen is the longest file name or type ODS-2 allows.
@@ -43,6 +55,10 @@ const maxNameLen = 39
 
 // maxDirDepth is how many directory levels RMS allows below the MFD.
 const maxDirDepth = 8
+
+// maxRootDepth is how many levels a root may have (VMS 7.1: testdata/lnm91,
+// DEEP7 and DEEP8). The directory below it may have maxDirDepth more.
+const maxRootDepth = 7
 
 // ellipsis is the directory element "...": this directory and every one
 // below it.
@@ -76,6 +92,42 @@ func validName(s string) bool {
 // a number ("A.B.C" is RMS$_SYN, as VMS has it); one after ";" that isn't
 // is RMS$_VER. Node names (DECnet) aren't supported, and give RMS$_SYN.
 func scanName(text string) (fileName, uint32) {
+	return scanFields(text, rmsSyntaxError)
+}
+
+// opensDir reports whether c begins a directory.
+func opensDir(c byte) bool {
+	return c == '[' || c == '<'
+}
+
+// nextDir splits s, which begins with a directory, into that directory's
+// text without its brackets and what follows the directory. ok is false
+// when it has no closing bracket.
+func nextDir(s string) (body, rest string, ok bool) {
+	end := byte(']')
+	if s[0] == '<' {
+		end = '>'
+	}
+
+	k := strings.IndexByte(s, end)
+	if k < 0 {
+		return "", "", false
+	}
+
+	return s[1:k], s[k+1:], true
+}
+
+// isRoot reports whether a directory's text (without its brackets) is a
+// root: it ends in a period that isn't part of an ellipsis.
+func isRoot(body string) bool {
+	return strings.HasSuffix(body, ".") && !strings.HasSuffix(body, ellipsis)
+}
+
+// scanFields is scanName, with secondRoot the status for a directory after
+// a root that is itself a root: RMS$_SYN when it was typed, and RMS$_DEV in
+// a logical name's translation (VMS 7.1: testdata/lnm91, "[A.][B.]" and
+// A2 = BASE:[SUB.]).
+func scanFields(text string, secondRoot uint32) (fileName, uint32) {
 	s := strings.ToUpper(text)
 
 	var f fileName
@@ -93,24 +145,39 @@ func scanName(text string) (fileName, uint32) {
 		f.Dev, s = s[:j+1], s[j+1:]
 	}
 
-	if s != "" && (s[0] == '[' || s[0] == '<') {
-		end := byte(']')
-		if s[0] == '<' {
-			end = '>'
-		}
-
+	if s != "" && opensDir(s[0]) {
 		// A directory with no closing bracket ("[[[") is a syntax error
 		// (VMS 7.1: testdata/lib58's FS bad default name).
-		k := strings.IndexByte(s, end)
-		if k < 0 {
+		body, rest, ok := nextDir(s)
+		if !ok {
 			return f, rmsSyntaxError
 		}
 
-		if _, ok := scanDir(s[1:k]); !ok {
-			return f, rmsDirError
+		if isRoot(body) {
+			if _, sts := scanRoot(body); sts != 0 {
+				return f, sts
+			}
+
+			f.Root, s = s[:len(s)-len(rest)], rest
+
+			if s != "" && opensDir(s[0]) {
+				if body, rest, ok = nextDir(s); !ok {
+					return f, rmsSyntaxError
+				}
+
+				if isRoot(body) {
+					return f, secondRoot
+				}
+			}
 		}
 
-		f.Dir, s = "["+s[1:k]+"]", s[k+1:]
+		if s != "" && opensDir(s[0]) {
+			if _, ok := scanDir(body); !ok {
+				return f, rmsDirError
+			}
+
+			f.Dir, s = s[:len(s)-len(rest)], rest
+		}
 	}
 
 	k := strings.IndexAny(s, ".;")
@@ -246,10 +313,27 @@ func scanDir(body string) (dirSpec, bool) {
 			}
 
 			if strings.Trim(e, "-") == "" {
-				if len(d.Elems) > 0 && d.Elems[len(d.Elems)-1][0] != '-' {
+				// A "-" after a name takes that name back out (VMS 7.1:
+				// testdata/lnm91, [SUB.-] and [.K.-]), and may not climb
+				// above where an absolute directory started.
+				n := len(e)
+
+				for n > 0 && len(d.Elems) > 0 && d.Elems[len(d.Elems)-1] != ellipsis && d.Elems[len(d.Elems)-1][0] != '-' {
+					d.Elems = d.Elems[:len(d.Elems)-1]
+					n--
+				}
+
+				if n == 0 {
+					i = j
+
+					continue
+				}
+
+				if n < len(e) && !d.Relative || len(d.Elems) > 0 && d.Elems[len(d.Elems)-1][0] != '-' {
 					return d, false
 				}
 
+				e = strings.Repeat("-", n)
 				d.Relative = true
 			}
 
@@ -263,6 +347,66 @@ func scanDir(body string) (dirSpec, bool) {
 	}
 
 	return d, true
+}
+
+// scanRoot splits a root's text (without its brackets, ending in its
+// period) into elements, or gives the RMS status for one that isn't well
+// formed, as VMS 7.1's (testdata/lnm91): an empty element is RMS$_SYN; a
+// wildcard, a "-", or a bad name RMS$_DIR; and more than maxRootDepth
+// levels RMS$_DEV.
+//
+// A root starting with a period ("[.A.]", "[.]") is accepted and names no
+// directory: VMS keeps its text and ends with RMS$_DNF. It comes back
+// Relative.
+func scanRoot(body string) (dirSpec, uint32) {
+	var d dirSpec
+
+	s := body
+	if strings.HasPrefix(s, ".") {
+		d.Relative = true
+		s = s[1:]
+	}
+
+	s = strings.TrimSuffix(s, ".")
+
+	if s == "" {
+		return d, 0
+	}
+
+	for _, e := range strings.Split(s, ".") {
+		switch {
+		case e == "":
+			return d, rmsSyntaxError
+		case !validName(e), strings.ContainsAny(e, "*%"), strings.Trim(e, "-") == "":
+			return d, rmsDirError
+		}
+
+		d.Elems = append(d.Elems, e)
+	}
+
+	if len(d.names()) > maxRootDepth {
+		return d, rmsDeviceError
+	}
+
+	return d, 0
+}
+
+// dirBody is a directory's text without its brackets.
+func dirBody(dir string) string {
+	if len(dir) < 2 {
+		return ""
+	}
+
+	return dir[1 : len(dir)-1]
+}
+
+// likeBrackets is the directory dir in the kind of brackets like has.
+func likeBrackets(dir, like string) string {
+	if like != "" && like[0] == '<' {
+		return "<" + dirBody(dir) + ">"
+	}
+
+	return "[" + dirBody(dir) + "]"
 }
 
 // applyDir applies the relative directory rel to base, an absolute one.
@@ -347,8 +491,10 @@ type parsedName struct {
 	// "_" and ":".
 	Lookup string
 
-	// DirSpec is the directory's elements.
-	DirSpec dirSpec
+	// DirSpec is the directory's elements, relative to the root if there
+	// is one. RootSpec is the root's; Relative in it means a root that
+	// names no directory (scanRoot).
+	DirSpec, RootSpec dirSpec
 
 	// FNB is the NAM$L_FNB bits name processing sets.
 	FNB uint32
@@ -359,9 +505,31 @@ type parsedName struct {
 	Permanent *lnm.PermanentFile
 }
 
-// String is the expanded specification.
+// String is the expanded specification. A root that's shown is in Dir,
+// with the directory.
 func (p parsedName) String() string {
 	return p.Dev + p.Dir + p.Name + p.Type + p.Ver
+}
+
+// volumeDir is p's directory as the volume has it: the root's levels, then
+// the directory's. A root that names no directory gives an element no
+// directory can have, so that looking for it finds nothing.
+func (p parsedName) volumeDir() dirSpec {
+	elems := p.DirSpec.Elems
+	if p.Root == "" {
+		return dirSpec{Elems: elems}
+	}
+
+	if len(elems) > 0 && elems[0] == "000000" {
+		elems = elems[1:]
+	}
+
+	root := p.RootSpec.names()
+	if p.RootSpec.Relative {
+		root = []string{"."}
+	}
+
+	return dirSpec{Elems: append(append([]string{}, root...), elems...)}
 }
 
 // spec is p as a filespec.Spec, for the volume layer.
@@ -370,7 +538,7 @@ func (p parsedName) spec() filespec.Spec {
 
 	return filespec.Spec{
 		Device:    p.Lookup,
-		Dirs:      p.DirSpec.names(),
+		Dirs:      p.volumeDir().names(),
 		Recursive: len(p.DirSpec.Elems) > 0 && p.DirSpec.Elems[len(p.DirSpec.Elems)-1] == ellipsis,
 		Name:      p.Name,
 		Type:      strings.TrimPrefix(p.Type, "."),
@@ -435,14 +603,20 @@ var (
 	fnbWildUFD    = vmsConst("NAM$M_WILD_UFD")
 	fnbWildSFD1   = vmsConst("NAM$M_WILD_SFD1")
 	fnbDirLvls    = vmsConst("NAM$V_DIR_LVLS")
+	fnbRootDir    = vmsConst("NAM$M_ROOT_DIR")
 )
 
 // translatedName is one translation of a name: its fields (the program's
-// over the logical name's), and the device to show when it went through
-// a concealed logical name.
+// and the logical name's together), and the device to show when it went
+// through a concealed logical name.
 type translatedName struct {
 	fileName
 	Concealed string
+
+	// Fails, in a search list's last element, is the status of the element
+	// that follows the ones given: the list is usable up to there (VMS 7.1:
+	// testdata/lnm91's LIST3, whose $SEARCH fails only on reaching it).
+	Fails uint32
 
 	// Permanent is the process-permanent file the name led to, if any:
 	// the fields are then only the program's own, with the logical name
@@ -450,9 +624,10 @@ type translatedName struct {
 	Permanent *lnm.PermanentFile
 }
 
-// translateName translates text's logical name and scans each result,
-// the program's fields winning over the translation's. A search list
-// gives one per element.
+// translateName translates text's logical name and scans each result. A
+// search list gives one per element, and the first element that can't be
+// used ends it (Fails), unless it's the first of all, whose status is
+// returned.
 //
 // A process-permanent file ends the name there, unless throughPermanent
 // asks for the device its string names instead.
@@ -468,37 +643,14 @@ func translateName(db *lnm.Database, text string, throughPermanent bool) ([]tran
 
 	out := make([]translatedName, 0, len(fs))
 
-	for _, f := range fs {
-		own, sts := scanName(f.Remainder)
+	for i, f := range fs {
+		t, sts := translateElement(db, f, throughPermanent)
 		if sts != 0 {
-			return nil, sts
-		}
-
-		// A process-permanent file ends name processing: the device is
-		// the logical name, and nothing else is merged (the Guide to
-		// OpenVMS File Applications, 6.2).
-		if f.Permanent != nil && !throughPermanent {
-			own.Dev = f.PermanentName + ":"
-			out = append(out, translatedName{fileName: own, Permanent: f.Permanent})
-
-			continue
-		}
-
-		prefix := f.Spec[:len(f.Spec)-len(f.Remainder)]
-		if prefix != "" {
-			eqv, sts := scanName(prefix)
-			if sts != 0 {
+			if i == 0 {
 				return nil, sts
 			}
 
-			if own, sts = mergeName(own, eqv); sts != 0 {
-				return nil, sts
-			}
-		}
-
-		t := translatedName{fileName: own}
-		if f.Concealed != "" {
-			t.Concealed = f.Concealed + ":"
+			return append(out, translatedName{Fails: sts}), 0
 		}
 
 		out = append(out, t)
@@ -507,33 +659,120 @@ func translateName(db *lnm.Database, text string, throughPermanent bool) ([]tran
 	return out, 0
 }
 
-// mergeName fills the fields f leaves out from def. A relative directory
-// in f is applied to def's when def's is absolute; otherwise the two
-// relative ones combine.
+// translateElement scans one translation: the fields the program wrote,
+// and the equivalence string's.
+func translateElement(db *lnm.Database, f lnm.FileSpec, throughPermanent bool) (translatedName, uint32) {
+	own, sts := scanName(f.Remainder)
+	if sts != 0 {
+		return translatedName{}, sts
+	}
+
+	// A process-permanent file ends name processing: the device is
+	// the logical name, and nothing else is merged (the Guide to
+	// OpenVMS File Applications, 6.2).
+	if f.Permanent != nil && !throughPermanent {
+		own.Dev = f.PermanentName + ":"
+
+		return translatedName{fileName: own, Permanent: f.Permanent}, 0
+	}
+
+	var t translatedName
+
+	typedRoot := own.Root != ""
+
+	prefix := f.Spec[:len(f.Spec)-len(f.Remainder)]
+	if prefix != "" {
+		eqv, sts := scanFields(prefix, rmsDeviceError)
+		if sts != 0 {
+			return t, sts
+		}
+
+		if f.Concealed != "" && concealsMore(db, f.Concealed) {
+			return t, rmsDeviceError
+		}
+
+		if own, sts = applyTranslation(own, eqv); sts != 0 {
+			return t, sts
+		}
+	}
+
+	t.fileName = own
+
+	// A root the program typed can't be hidden by the device's name
+	// (unconfirmed: the probe has no typed root on a concealed name).
+	if f.Concealed != "" && !typedRoot {
+		t.Concealed = f.Concealed + ":"
+	}
+
+	return t, 0
+}
+
+// concealsMore reports whether a concealed logical name translates to more
+// than a device and a root, which RMS refuses wherever the name is used
+// (VMS 7.1: testdata/lnm91, A4 and round 2's C).
+func concealsMore(db *lnm.Database, name string) bool {
+	fs, err := translateSpec(db, name+":")
+	if err != nil {
+		return true
+	}
+
+	for _, f := range fs {
+		eqv, sts := scanFields(f.Spec, rmsDeviceError)
+		if sts != 0 || eqv.Dir != "" || eqv.Name != "" || eqv.Type != "" || eqv.Ver != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
+// applyTranslation is own, the fields the program wrote, with those of
+// eqv, the logical name's translation. A field both give is an error, for
+// every logical name (VMS 7.1: testdata/lnm91's round 2), with one
+// exception kept for the User's Manual's PAY_FILE:*.DAT (11.3.3), where the
+// program's "*" name and its type are used instead; the probe didn't try
+// that form.
+func applyTranslation(own, eqv fileName) (fileName, uint32) {
+	if own.Root != "" && eqv.Root != "" {
+		return own, rmsDeviceError
+	}
+
+	if eqv.Dir != "" && (own.Dir != "" || own.Root != "") {
+		return own, rmsDirError
+	}
+
+	if own.Name != "*" {
+		if own.Name != "" && eqv.Name != "" {
+			return own, rmsFileNameError
+		}
+
+		if own.Type != "" && eqv.Type != "" {
+			return own, rmsTypeError
+		}
+	}
+
+	return mergeName(own, eqv)
+}
+
+// mergeName fills the fields f leaves out from def. A root goes with its
+// device: f takes def's only with def's device. A root f already has on a
+// device def gives, itself with a root, is RMS$_DEV, as a second root
+// through a concealed name is (unconfirmed for defaults).
 func mergeName(f, def fileName) (fileName, uint32) {
 	if f.Dev == "" {
+		if f.Root != "" && def.Root != "" {
+			return f, rmsDeviceError
+		}
+
 		f.Dev = def.Dev
+
+		if f.Root == "" {
+			f.Root = def.Root
+		}
 	}
 
 	if f.Dir == "" {
 		f.Dir = def.Dir
-	} else if def.Dir != "" {
-		d, _ := scanDir(strings.Trim(f.Dir, "[]"))
-		if d.Relative {
-			base, _ := scanDir(strings.Trim(def.Dir, "[]"))
-
-			if base.Relative {
-				d = dirSpec{Relative: true, Elems: append(append([]string{}, base.Elems...), d.Elems...)}
-				f.Dir = d.String()
-			} else {
-				out, ok := applyDir(d, base)
-				if !ok {
-					return f, rmsDirError
-				}
-
-				f.Dir = out.String()
-			}
-		}
 	}
 
 	if f.Name == "" {
@@ -581,16 +820,24 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 		return nil, sts
 	}
 
-	var related fileName
+	var related translatedName
 
 	if in.Related != "" {
-		if related, sts = scanName(in.Related); sts != 0 {
-			related = fileName{}
+		// A resultant string can show a concealed name, so it's translated
+		// as any other name. It's otherwise not checked, except that a
+		// concealed name's rules hold (VMS 7.1: testdata/lnm91's round 2).
+		rs, sts := translateName(db, in.Related, in.ThroughPermanent)
+		if sts == rmsDeviceError {
+			return nil, sts
+		}
+
+		if sts == 0 {
+			related = rs[0]
 		}
 
 		related.Ver = ""
 		if in.OFP {
-			related.Dev, related.Dir = "", ""
+			related.Dev, related.Root, related.Dir, related.Concealed = "", "", "", ""
 		}
 	}
 
@@ -608,6 +855,10 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 	searchList := len(primaries) > 1
 
 	for _, p := range primaries {
+		if p.Fails != 0 {
+			break
+		}
+
 		if perm := permanentName(p, defs[0]); perm != nil {
 			out = append(out, *perm)
 
@@ -639,24 +890,33 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 		f := p.fileName
 		concealed := p.Concealed
 
-		if concealed == "" && p.Dev == "" {
-			concealed = defs[0].Concealed
-		}
-
 		// The default name, then the related file, fill what the primary
 		// name left out. A directory from any of them that's relative is
 		// applied to the process default directory, not to a directory
-		// a later source gives (the oracle's PARSE cases 20 and 21).
+		// a later source gives (the oracle's PARSE cases 20 and 21). A
+		// directory they give decides the primary's brackets (VMS 7.1:
+		// testdata/lnm91's round 2, for the default name; the related
+		// file by analogy, unconfirmed).
 		dir := f.Dir
 		f.Dir = ""
 
-		for _, src := range []fileName{defs[0].fileName, related} {
-			if dir == "" {
+		for _, src := range []translatedName{defs[0], related} {
+			switch {
+			case dir == "":
 				dir = src.Dir
+			case src.Dir != "":
+				dir = likeBrackets(dir, src.Dir)
+			}
+
+			if f.Dev == "" && p.Root == "" && concealed == "" {
+				concealed = src.Concealed
 			}
 
 			src.Dir = ""
-			f, _ = mergeName(f, src)
+
+			if f, sts = mergeName(f, src.fileName); sts != 0 {
+				return nil, sts
+			}
 		}
 
 		if in.Against != nil {
@@ -664,14 +924,14 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 		}
 
 		if dir != "" {
-			d, _ := scanDir(strings.Trim(dir, "[]"))
+			d, _ := scanDir(dirBody(dir))
 			if d.Relative {
 				out, ok := applyDir(d, dirSpec{Elems: base.Dirs})
 				if !ok {
 					return nil, rmsDirError
 				}
 
-				dir = out.String()
+				dir = likeBrackets(out.String(), dir)
 			}
 		}
 
@@ -696,11 +956,15 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 		}
 
 		for _, disk := range disks {
+			if disk.Fails != 0 {
+				break
+			}
+
 			g := f
 			g.Dir = dir
 
-			if g.Dev == "" {
-				g.Dev = disk.Dev
+			if g, sts = mergeName(g, fileName{Dev: disk.Dev, Root: disk.Root}); sts != 0 {
+				return nil, sts
 			}
 
 			if g.Dir == "" {
@@ -712,7 +976,7 @@ func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedN
 			}
 
 			c := concealed
-			if c == "" && f.Dev == "" {
+			if c == "" && f.Dev == "" && p.Root == "" {
 				c = disk.Concealed
 			}
 
@@ -813,14 +1077,26 @@ func finishName(f fileName, concealed string, fnb uint32, noConceal bool) parsed
 
 	p := parsedName{fileName: f, FNB: fnb}
 	p.Lookup = strings.TrimSuffix(strings.TrimPrefix(f.Dev, "_"), ":")
-	p.DirSpec, _ = scanDir(strings.Trim(f.Dir, "[]"))
-	p.Dir = p.DirSpec.String()
+	p.DirSpec, _ = scanDir(dirBody(f.Dir))
+	p.Dir = likeBrackets(p.DirSpec.String(), f.Dir)
+
+	showRoot := true
 
 	if concealed != "" {
 		p.FNB |= fnbCnclDev
 
 		if !noConceal {
 			p.Dev = concealed
+			showRoot = false
+		}
+	}
+
+	if f.Root != "" {
+		p.FNB |= fnbRootDir
+		p.RootSpec, _ = scanRoot(dirBody(f.Root))
+
+		if showRoot {
+			p.Dir = f.Root + p.Dir
 		}
 	}
 

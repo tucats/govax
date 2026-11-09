@@ -114,3 +114,9 @@ Errors in the log are part of the probe: many cases are there to see what
 VMS refuses. A few DCL lines may also fail for reasons of the VAX's own
 (a directory's delete protection, for instance), which `SET NOON` lets
 the procedure go on from.
+
+## On govax
+
+`TestLnm91ParseOracle` (`internal/console/lnm91oracle_test.go`) replays the
+`$PARSE` cases of both logs with `vax/lnm91.exe`, on a volume built by the
+log's own commands, and matches VMS's report line for line.

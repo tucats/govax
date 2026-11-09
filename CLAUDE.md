@@ -790,7 +790,11 @@ never had.
   subtask 1 is the survey, its doc's Part A, and subtask 2 the probe,
   `testdata/lnm91`, two rounds on VMS 7.1 (its doc's A.4), and subtask 3
   (2026-11-09) one name processor: `rms/name.go`'s `expandNames`, with
-  `expandSpec` (`logicals.go`) the DCL utilities' way to it.
+  `expandSpec` (`logicals.go`) the DCL utilities' way to it, and subtask 4
+  (2026-11-09) syntax and `$PARSE`: `fileName.Root`, `scanRoot`,
+  `parsedName.volumeDir` (the root and the directory together; `DirSpec` is
+  relative to the root), a field on both sides of a translation an error
+  (`applyTranslation`), held by `TestLnm91ParseOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
