@@ -57,7 +57,7 @@
 
    /INPUT and /OUTPUT are its standard input and output: a host file
    or a volume file, by the usual rules for a name.  /SYMBOLS and
-   /LOGICAL_NAMES (or /LOGICALS) add to its environment, only if given:
+   /LOGICAL_NAMES add to its environment, only if given:
    GOVAX_SYM_name for each DCL symbol and GOVAX_LOG_name for each
    process logical name, with a "$" in the name changed to "_".  So
    PARTS$DATA is GOVAX_LOG_PARTS_DATA, and a search list's values are
@@ -78,12 +78,6 @@
 
    Copies the current process's process logical names to the
    subprocess (the default, /LOGICAL_NAMES).
-
-/LOGICALS
-
-      /[NO]LOGICALS
-
-   The same as /LOGICAL_NAMES.
 
 /OUTPUT
 

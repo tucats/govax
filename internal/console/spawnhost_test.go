@@ -41,15 +41,15 @@ func TestSpawnHostEnvironment(t *testing.T) {
 	shareFindRun(t, d, `MY$SYMBOL == "a value"`)
 
 	if got := spawnHostError(t, d, `SPAWN/HOST printenv GOVAX_LOG_PARTS_DATA`); !strings.Contains(got, "HOSTCMD") {
-		t.Errorf("no /LOGICALS: %q", got)
+		t.Errorf("no /LOGICAL_NAMES: %q", got)
 	}
 
-	if got := spawnHostError(t, d, `SPAWN/HOST/LOGICALS printenv GOVAX_SYM_MY_SYMBOL`); !strings.Contains(got, "HOSTCMD") {
-		t.Errorf("/LOGICALS passed a symbol: %q", got)
+	if got := spawnHostError(t, d, `SPAWN/HOST/LOGICAL_NAMES printenv GOVAX_SYM_MY_SYMBOL`); !strings.Contains(got, "HOSTCMD") {
+		t.Errorf("/LOGICAL_NAMES passed a symbol: %q", got)
 	}
 
 	buf.Reset()
-	shareFindRun(t, d, `SPAWN/HOST/LOGICALS printenv GOVAX_LOG_PARTS_DATA`)
+	shareFindRun(t, d, `SPAWN/HOST/LOGICAL_NAMES printenv GOVAX_LOG_PARTS_DATA`)
 	shareFindRun(t, d, `SPAWN/HOST/LOG printenv GOVAX_LOG_PARTS_LIST`)
 	shareFindRun(t, d, `SPAWN/HOST/SYMBOLS printenv GOVAX_SYM_MY_SYMBOL`)
 

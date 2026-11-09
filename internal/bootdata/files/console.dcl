@@ -1354,7 +1354,6 @@ grammar console
                     /type=$string
         qualifier   symbols/id=1696
         qualifier   logical_names/id=1697
-        qualifier   logicals/alias=logical_names
         qualifier   host/id=1699/nonegatable
         parameter   command/id=1698             -
                     /type=$rest_of_line

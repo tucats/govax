@@ -1864,7 +1864,7 @@ the program has the terminal. With `/NOWAIT` it runs alongside, with no input
 but `/INPUT`; DCL shows what it writes between commands and at the prompt,
 and it ends with govax. `/INPUT` and `/OUTPUT` are its standard input and
 output, a host file or a volume file. Only if given, `/SYMBOLS` and
-`/LOGICAL_NAMES` (or `/LOGICALS`) add `GOVAX_SYM_name` and `GOVAX_LOG_name` to its
+`/LOGICAL_NAMES` add `GOVAX_SYM_name` and `GOVAX_LOG_name` to its
 environment for each symbol and process logical name, a `$` in the name
 becoming `_`: `PARTS$DATA` is `GOVAX_LOG_PARTS_DATA`. A failure is
 `%VAX-E-HOSTCMD`.
