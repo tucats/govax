@@ -942,10 +942,11 @@ is the whole of the VAX's restart model:
 
 `Engine.HandleFault` (`cpu/handlefault.go`) then does what the processor
 does. It reads the exception's vector from the SCB at `SCBB + code`,
-physically. The vector's low two bits say which stack: 0 the kernel
-stack (the target mode's, for a change-mode trap), unless the CPU is
-already on the interrupt stack, where the event stays; 1 the interrupt
-stack, where an exception, though not an interrupt, also raises IPL to 31.
+physically. Its bits 31:2 are the service routine's address, and its low
+two bits say which stack: 0 the kernel stack (for a change-mode trap, the
+stack of its mode, 4.6), unless the CPU is already on the interrupt stack,
+where the event stays; 1 the interrupt stack, where an exception, though
+not an interrupt, also raises IPL to 31.
 Changing stacks never changes MAPEN: the interrupt stack is mapped like
 the others (section 5.5). `HandleFault` clears T and TP in the new PSL,
 switches stacks and modes, pushes the old PSL, the PC, and the
@@ -964,9 +965,12 @@ and stops.
 
 ### 4.6 Changing mode
 
-CHMK, CHME, CHMS, and CHMU are traps to the target mode's stack, with the
-instruction's operand (a code, conventionally the service's number) as
-the parameter (`cpu/changemode.go`). REI pops a PC and PSL and returns to
+CHMK, CHME, CHMS, and CHMU are traps through their own SCB vectors, with
+the instruction's operand (a code, conventionally the service's number) as
+the parameter (`cpu/changemode.go`). The trap's mode is the instruction's
+or the current one, whichever is more privileged, so a change-mode
+instruction never moves outward: a CHMS from kernel mode stays in kernel
+mode, on the kernel stack. One on the interrupt stack halts the processor. REI pops a PC and PSL and returns to
 them, saving the old mode's stack pointer in its register and loading the
 new mode's (`emulRei`, `cpu/call.go`). The previous-mode field of the PSL
 is set as the architecture requires.
@@ -1009,7 +1013,9 @@ written, and the side effects of writing one, such as TBIA flushing the
 translation buffer or SIRR requesting a software interrupt), LDPCTX and
 SVPCTX (`cpu/context.go`, a process's hardware context; section 7),
 PROBER and PROBEW (which ask whether a mode could read or write an
-address, without faulting), and HALT.
+address, without faulting: the less privileged of the mode operand and
+PSL's previous mode, so that code in an inner mode checks its caller's
+access), and HALT.
 
 ### 4.7 Fidelity: how govax knows
 
@@ -4344,6 +4350,8 @@ Internals and Data Structures*, 9.3.1), then calls it:
 5. A service that waits is noted for the scheduler (`enterWait`; section
    7.6), and with `SET DEBUG SERVICES` the call is traced, once, however
    many times a wait makes it run.
+6. A service that failed, in a mode that asked for system service failure
+   exceptions, signals `SS$_SSFAIL` instead of simply returning (10.7).
 
 One service, `SYS$CLRAST`, isn't called with an argument list at all
 (`RegisterNoArgs`): an AST routine's RET reaches it (section 7.7), as
@@ -4555,8 +4563,8 @@ mode and stack, as VMS's does (`corevms/condition.go`).
 **An exception.** The microkernel sets the SCB vectors of the exceptions a
 program can handle to `console$handler`, `FFFFFFFF`: the privileged and
 customer-reserved instructions, reserved operand and addressing mode,
-access violation, translation not valid, trace, breakpoint, and
-arithmetic. `HandleFault` offers such an exception to the running
+access violation, translation not valid, trace, breakpoint, arithmetic,
+and CHMS and CHMU. `HandleFault` offers such an exception to the running
 process's `DispatchException` (section 4.5), which turns it into a
 condition by *VAX/VMS Internals and Data Structures*' Table 4-2:
 
@@ -4570,6 +4578,8 @@ condition by *VAX/VMS Internals and Data Structures*' Table 4-2:
 | `28` | trace | `SS$_TBIT` | |
 | `2C` | BPT | `SS$_BREAK` | |
 | `34` | arithmetic | `SS$_INTOVF`, `SS$_FLTDIV_F`, ... by its type code | |
+| `48` | CHMS, with no change mode handler | `SS$_CMODSUPR` | the change mode code |
+| `4C` | CHMU, with no change mode handler | `SS$_CMODUSER` | the change mode code |
 
 **The dispatch.** `startDispatch` lays three blocks out on the current
 stack, just as VMS's exception code leaves them:
@@ -4605,6 +4615,35 @@ handler's R0:
 A handler that signals or faults starts a dispatch of its own on top of
 the first, whose search passes over the frames the first already searched
 (the book's 4.3.3).
+
+**Change mode handlers.** VMS uses CHMK and CHME for its services and
+leaves CHMS and CHMU to programs: a program, or a command interpreter in
+supervisor mode, declares a *change mode handler* for the mode it calls
+`$DCLCMH` from (`corevms/changemode.go`), and a CHMS then goes to the
+supervisor-mode handler, a CHMU to the user-mode one. The engine asks the
+running process for one before it dispatches the condition
+(`cpu.ChangeModeDispatcher`), and delivers the trap to it as the hardware
+delivers any: in the trap's mode, on its stack, the code on top, then the
+PC of the next instruction and the PSL. The handler pops the code and
+returns with REI. With no handler, the trap is the condition in the table
+above, reported to the mode that executed the CHMx. Image rundown forgets
+the user-mode handler; a supervisor-mode one lasts as long as the process.
+
+**System service failure exceptions.** A program that would rather not
+test every call's status can ask, with `$SETSFM`, for a failing service to
+signal `SS$_SSFAIL` instead. VMS keeps a bit per access mode; `$SETSFM`
+sets the caller's, `$CREPRC` with `PRC$M_SSFEXCU` starts a process with the
+user-mode one set, and image rundown clears it. VMS raises the exception
+in the exit path of the services that change mode, which RMS's reach too
+when they fail: an error or severe status (a warning doesn't count) from a
+mode whose bit is set (the book's 9.3.5 and 9.3.6.2). govax raises it in
+`SystemService` after the service returns (`failureException`), except for
+the services VMS runs in the caller's mode (`$FAO`, `$GETMSG`, `$PUTMSG`,
+`$UNWIND`, and a few more), which never pass through that path. The signal
+array is `SS$_SSFAIL`, the status, and the PC of the vector entry's RET and
+the PSL; a handler that continues it has the service return, with R0 from
+the mechanism array, the status unless the handler changed it. Unhandled,
+`SS$_SSFAIL` is severe, and the catch-all ends the image.
 
 **The end of the search.** When the frames run out (the frame whose saved
 FP and PC are the console's sentinel), the *catch-all* acts: it writes the
@@ -4679,13 +4718,17 @@ the process next runs one (`EndAbandonedImage`).
   inner-mode code a program could trace: a program that traces itself
   through a service sees the vector's XFC and RET. `$CMKRNL` and `$CMEXEC`
   do change mode, to run the program's routine.
-- **No system service failure exceptions.** `$SETSFM` is a missing
-  service (NOTIMPL), so a failing service never signals `SS$_SSFAIL`.
-- **CHMS and CHMU from a program** fault through SCB vectors the
-  microkernel doesn't set, which stops the console, where VMS would call
-  the handler `$DCLCMH` declared or signal `SS$_CMODSUPR` or
-  `SS$_CMODUSER`; govax has no `$DCLCMH`. A CHMK reaches the microkernel's
-  own dispatcher (section 8.6), not VMS's.
+- **Which services raise `SS$_SSFAIL`** is the Internals book's list of
+  the services that change mode, with RMS's; services VMS added later are
+  assumed to change mode too. Not checked on VMS.
+- **A CHME or CHMK from a program** reaches no VMS dispatcher: a CHME's
+  SCB vector isn't set, which stops the console, where VMS would return
+  `SS$_ILLSER` for a code it doesn't know; a CHMK reaches the microkernel's
+  own dispatcher (section 8.6).
+- **No compatibility mode.** `$DCLCMH` keeps a compatibility mode handler,
+  which nothing calls; and a call from kernel or executive mode is
+  `SS$_IVSSRQ`, govax's choice where the manual says only that the service
+  is for user and supervisor modes.
 - **Most run-time library routines are Go**, so a program can't step into
   them, and a signal from one is raised at its stub's PC, in its caller's
   frame for a JSB routine. A real library can be named instead (10.5).

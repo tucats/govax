@@ -12,22 +12,17 @@ func init() {
 	reg(0xBF, emulChmx) // CHMU
 }
 
-// emulChmx is CHMK/CHME/CHMS/CHMU's single shared handler, matching
-// emul_chmx: read the one word operand (the "change mode code", sign-
-// extended -- the C source reads it through a `short *`), then raise the
-// corresponding synchronous exception (EXC$CHMK + 4*(function-0xBC), i.e.
-// EXC$CHMK/CHME/CHMS/CHMU for K/E/S/U respectively) with that code as the
-// exception's one signal argument -- HandleFault does the rest (vector
-// lookup, mode/stack switch, PC/PSL/args push).
+// emulChmx is CHMK, CHME, CHMS, and CHMU: read the one word operand, the
+// "change mode code", sign-extended, and raise the change-mode trap
+// through the instruction's SCB vector (EXC$CHMK + 4*(function-0xBC)),
+// the code its one parameter. HandleFault does the rest: the vector, the
+// mode (the instruction's or the current one, whichever is more
+// privileged), the stack, and the PSL, PC, and code pushed there.
 //
-// Two of emul_chmx's own checks aren't ported: refusing to execute on the
-// interrupt stack (VAX_HALT -- no current fixture executes CHMx from there,
-// and this port has no other "halt the machine" outcome to map that to yet)
-// and the SRM's 12-byte new-stack probe before committing to the mode
-// switch (this port's HandleFault doesn't have a way to fail a fault
-// partway through and fall back to the old mode either). Both are real,
-// specified VAX behavior, not guessed at, but neither is exercised by any
-// current test fixture; revisit if that changes.
+// A CHMx on the interrupt stack halts the processor, as the architecture
+// says. Its other check, that the new mode's stack can take the 12 bytes
+// pushed (a fault if not), isn't made: HandleFault's push fails instead,
+// as govax's stacks are always mapped.
 func emulChmx(e *Engine, d *Decoded) error {
 	raw, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -35,6 +30,10 @@ func emulChmx(e *Engine, d *Decoded) error {
 	}
 
 	code := uint32(int32(int16(uint16(raw))))
+
+	if e.cpu.PSL().IS() {
+		return ErrHalted // "illegal from I stack"
+	}
 
 	// CHMx is a synchronous "system call" exception, not a retry-the-faulting-
 	// instruction one: its own return address must be the instruction *after*

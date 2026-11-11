@@ -487,3 +487,72 @@ interpreter process 1 runs, and what reads the startup procedure).
   signals `SS$_SSFAIL`; and CHMS and CHMU from a program reach unset SCB
   vectors and stop the console, where VMS calls a `$DCLCMH` handler or
   signals `SS$_CMODSUPR` or `SS$_CMODUSER` (govax has no `$DCLCMH`).
+- **2026-11-11** Subtask 8, continued, at the author's direction (10.9's
+  open items):
+  - **`$DCLCMH` and CHMS and CHMU** (`corevms/changemode.go`). The
+    microkernel's SCB sends both to `console$handler`, where they had no
+    vector and stopped the console. The engine first asks the running
+    process for the change mode handler `$DCLCMH` declared for the
+    instruction's mode (`cpu.ChangeModeDispatcher`, which
+    `corevms.EngineHooks` implements) and delivers the trap to it as the
+    hardware delivers any: in the trap's mode, on its stack, the code on
+    top, then PC and PSL, at the handler's exact address (VMS jumps to it;
+    the Internals book's 4.2.1.4 item 4 and 9.2.2, the VSI manual's
+    `$DCLCMH`). With none, the trap is `SS$_CMODSUPR` or `SS$_CMODUSER`,
+    the code its detail (the book's Table 4-2). `$DCLCMH` keeps a handler
+    per mode in Go (supervisor and user), writes the previous to prvhnd
+    (`SS$_ACCVIO`, nothing changed, if it can't), keeps a compatibility
+    mode handler for type 1 that nothing calls, and is `SS$_IVSSRQ` from
+    kernel or executive mode (unconfirmed: the manual says only that the
+    service is for user and supervisor modes). Image rundown forgets the
+    user-mode handler (the book's 21.3, step 16).
+  - **`$SETSFM` and `SS$_SSFAIL`.** A bit per access mode (the book's
+    Table 12-2), set and cleared by `$SETSFM` for the caller's mode
+    (`SS$_WASSET`/`WASCLR`), set for user mode by `$CREPRC`'s
+    `PRC$M_SSFEXCU`, cleared at image rundown. `SystemService` raises
+    `SS$_SSFAIL` (`failureException`) when a service returns an error or
+    severe status from a mode whose bit is set, but for the services VMS
+    runs in the caller's mode (the book's Table 9-1: `$ASCTIM`, `$BINTIM`,
+    `$FAO`, `$FAOL`, `$GETMSG`, `$PUTMSG`, `$EXCMSG`, `$IMGSTA`, `$IMGFIX`,
+    `$UNWIND`); RMS's failures raise it, as VMS's reach the same exit by
+    `$SSVEXC` (9.3.6.2). The signal array is the status and the PC of the
+    vector entry's RET, as the CHMx's trap PC is on VMS, so a handler's
+    continue returns from the service. Which of the services VMS added
+    after the book's list change mode is unconfirmed: govax assumes they do.
+  - govax's macros gained `$DCLCMH` and `$SETSFM` (`_S`, plain, `_G`; not
+    checked against real MACRO's objects), and the manual's lists both
+    services.
+  Reading for them found, and this fixes:
+  - **A change-mode trap took the instruction's mode, even outward.** The
+    architecture's CHM uses the more privileged of the instruction's mode
+    and the current one ("maximize privilege"), so a CHMS from kernel mode
+    stays in kernel mode; `HandleFault` now takes `min`. A CHMx on the
+    interrupt stack now halts, as the architecture says.
+    `TestChmsFromKernelStaysInKernel`, `TestChmxOnInterruptStackHalts`.
+  - **An exception taken in the current mode left PSL's previous mode as
+    it was.** The exception sequence loads it with the old current mode;
+    `setModeStack` returned early when the mode didn't change. `HandleFault`
+    now sets it for every exception (not an interrupt); `setModeStack`
+    itself is unchanged, since the console's own switches within a mode
+    (`withKernelMode`) must leave the PSL alone: the debugger oracles' test
+    console runs programs in kernel mode with INITIALIZE/MEMORY's previous
+    mode of user. `TestChmxPreviousModeWithinAMode`.
+  - **PROBER and PROBEW chose their mode wrongly.** The architecture's mode
+    is `MAXU(mode<1:0>, PSL<PRV_MOD>)`; govax used the previous mode only
+    when the current mode was less privileged than the operand, and the
+    operand's whole byte, so kernel code probing with mode 0 for a
+    user-mode caller checked kernel access. The length was sign-extended
+    where the architecture zero-extends it. `TestEmulProbeModeAndLength`.
+  - **The engine took a service routine's address from an SCB vector's
+    bits 31:3**, where the architecture uses bits 31:2, so a routine 4
+    bytes past an 8-byte boundary was entered 4 bytes early.
+    `TestHandleFaultVectorBits`.
+  Tests: `TestDclcmh`, `TestSetsfm`, `TestFailureException_which`, the
+  condition table's CHMS and CHMU rows, `TestChmuToDeclaredHandler`, and in
+  `internal/console` `TestChangeModeToUser`,
+  `TestSystemServiceFailureExceptions`, `TestSystemServiceFailureUnhandled`,
+  `TestCreprc_failureExceptions`. Section 4.5 says the vector's bits 31:2,
+  4.6 the trap's mode, 10.3's dispatch and 10.7 the new conditions, change
+  mode handlers, and failure exceptions, and 10.9 what's left: CHME from a
+  program (no vector, where VMS returns `SS$_ILLSER`) and the unconfirmed
+  choices above.

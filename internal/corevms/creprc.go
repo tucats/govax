@@ -401,6 +401,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	p.CreateFlags = req.Flags
 	p.TerminationMailbox = req.TerminationMailbox
 	p.ResourceWaitDisabled = req.Flags&prcSSRWAIT != 0
+	p.failureExceptions[registers.User] = req.Flags&prcSSFEXCU != 0
 
 	applyQuotas(p, quotas, detached)
 	p.MinWSCount = env.Sysgen.MinWSCount

@@ -225,3 +225,73 @@ func TestEmulMovpsl(t *testing.T) {
 		t.Errorf("R1 = %#x, want %#x (the whole PSL)", got, uint32(psl))
 	}
 }
+
+// TestEmulProbeModeAndLength: PROBE's mode is the less privileged of the
+// operand's low two bits and the PSL's previous mode (the architecture's
+// "MAXU(mode<1:0>, PSL<PRV_MOD>)"), so kernel code probing with mode 0 for
+// a caller in user mode checks user access; and the length is
+// zero-extended, so a length of ^XFFFF reaches 65,534 bytes past the base.
+func TestEmulProbeModeAndLength(t *testing.T) {
+	const (
+		sbr      = 0x3000
+		codeVA   = 0x80000000
+		codePhys = 0x2000
+		kernelVA = 0x80000200 // S0 page 1: KW
+		userVA   = 0x80000400 // S0 page 2: UR
+	)
+
+	cases := []struct {
+		name    string
+		prv     registers.AccessMode
+		mode    byte
+		length  []byte // the length operand's specifier
+		base    uint32
+		wantZ   bool
+		meaning string
+	}{
+		{"kernel page, caller user", registers.User, 0, []byte{shortLiteral(4)}, kernelVA, true, "the previous mode, user, can't read a KW page"},
+		{"user page, caller user", registers.User, 0, []byte{shortLiteral(4)}, userVA, false, "user can read a UR page"},
+		{"mode 4 is mode 0", registers.Kernel, 4, []byte{shortLiteral(4)}, kernelVA, false, "only the low two bits count"},
+		{"length ^XFFFF", registers.Kernel, 0, []byte{0x8F, 0xFF, 0xFF}, kernelVA, true, "the last byte is past SLR"},
+	}
+
+	for _, c := range cases {
+		cpu, mem := fixture()
+		e := NewEngine(cpu, mem)
+
+		for page, prot := range []vm.Protection{vm.ProtKW, vm.ProtKW, vm.ProtUR} {
+			var pte vm.PTE
+
+			pte.SetValid(true)
+			pte.SetProtection(prot)
+			pte.SetPFN(0x10 + uint32(page))
+			putLongword(t, cpu, mem, sbr+4*uint32(page), uint32(pte))
+		}
+
+		bytes := append([]byte{0x0C, c.mode}, c.length...)
+		bytes = append(bytes, absoluteMode(c.base)...)
+		putBytes(t, cpu, mem, codePhys, bytes...)
+
+		cpu.SetPR(registers.SBR, sbr)
+		cpu.SetPR(registers.SLR, 3)
+		cpu.SetGPR(registers.PC, codeVA)
+		cpu.SetPR(registers.MAPEN, 1)
+
+		psl := cpu.PSL()
+		psl.SetCurMod(registers.Kernel)
+		psl.SetPrvMod(c.prv)
+		cpu.SetPSL(psl)
+
+		if err := e.Step(); err != nil {
+			t.Fatalf("%s: Step: %v", c.name, err)
+		}
+
+		if got := cpu.PSL().Z(); got != c.wantZ {
+			t.Errorf("%s: Z = %v, want %v (%s)", c.name, got, c.wantZ, c.meaning)
+		}
+
+		if got := cpu.PSL().CurMod(); got != registers.Kernel {
+			t.Errorf("%s: mode %v after PROBE, want kernel", c.name, got)
+		}
+	}
+}

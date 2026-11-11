@@ -466,3 +466,23 @@ func TestHandleFaultOffersConsoleHandlerFaultToDispatcher(t *testing.T) {
 		}
 	}
 }
+
+// TestHandleFaultVectorBits: the service routine's address is the SCB
+// vector's bits 31:2 (the VAX Architecture Reference Manual's exception and
+// interrupt sequence): a routine at an address 4 past an 8-byte boundary is
+// entered there.
+func TestHandleFaultVectorBits(t *testing.T) {
+	e := newEngine()
+	e.instructionPC = 0x4000
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
+	putVector(t, e, ExcReservedOp, 0x104, 0)
+
+	if err := e.HandleFault(&Fault{Code: ExcReservedOp}); err != nil {
+		t.Fatalf("HandleFault: %v", err)
+	}
+
+	if got := e.cpu.GPR(registers.PC); got != 0x104 {
+		t.Errorf("PC = %#x, want 0x104", got)
+	}
+}

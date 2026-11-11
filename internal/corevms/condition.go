@@ -263,7 +263,17 @@ const (
 	scbTracePending  = 0x28 // trace fault (PSL<TP>; cpu/trace.go)
 	scbBreakpoint    = 0x2C // breakpoint fault (BPT)
 	scbArithmetic    = 0x34 // arithmetic trap or fault
+	scbChangeModeS   = 0x48 // CHMS, with no change mode handler (changemode.go)
+	scbChangeModeU   = 0x4C // CHMU, the same
 )
+
+// changeModeConditions are the conditions of a CHMS and a CHMU no change
+// mode handler took, whose one detail longword is the change mode code
+// (the book's Table 4-2).
+var changeModeConditions = map[uint32]uint32{
+	scbChangeModeS: vmsdef.Symbols["SS$_CMODSUPR"],
+	scbChangeModeU: vmsdef.Symbols["SS$_CMODUSER"],
+}
 
 // simpleExceptions are the exceptions whose condition value depends on
 // nothing else, and which have no detail longwords.
@@ -335,6 +345,14 @@ func exceptionCondition(code uint32, params []uint32) (cond uint32, detail []uin
 		}
 
 		return ssAccVioCond, []uint32{mask, va}, true
+
+	case scbChangeModeS, scbChangeModeU:
+		chm := uint32(0) // the instruction's change mode code
+		if len(params) > 0 {
+			chm = params[0]
+		}
+
+		return changeModeConditions[code], []uint32{chm}, true
 
 	case scbArithmetic:
 		if len(params) > 0 {

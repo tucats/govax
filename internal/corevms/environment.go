@@ -601,6 +601,10 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 
 	r0, err := callHandler(fn, env, argv)
 
+	// A service that fails in a mode with system service failure
+	// exceptions enabled signals SS$_SSFAIL (changemode.go).
+	signaled := err == nil && env.failureException(entry.Name, entry.Addr, r0)
+
 	// A waiting service is called again until its wait is satisfied
 	// (ErrWait); only its first attempt is traced. With the scheduler,
 	// the process waits in it meanwhile (waits.go).
@@ -635,6 +639,8 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 			result = fmt.Sprintf("calls %08X", call.Routine)
 		case errors.Is(err, ErrExit):
 			result = fmt.Sprintf("exits with status %08X", r0)
+		case signaled:
+			result += ", signals SS$_SSFAIL"
 		}
 
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), %s\n",

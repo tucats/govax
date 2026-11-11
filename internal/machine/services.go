@@ -19,6 +19,7 @@ var (
 	_ cpu.SystemServices      = (*Machine)(nil)
 	_ cpu.ASTSource           = (*Machine)(nil)
 	_ cpu.ExceptionDispatcher = (*Machine)(nil)
+	_ cpu.ChangeModeDispatcher = (*Machine)(nil)
 	_ cpu.AttentionHandler    = (*Machine)(nil)
 )
 

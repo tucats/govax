@@ -81,6 +81,7 @@ func registerServices(t *ServiceTable) {
 	registerMessageServices(t)
 	registerChangeModeServices(t)
 	registerConditionServices(t)
+	registerChangeModeHandlerServices(t)
 	registerDeviceServices(t)
 	registerDVIServices(t)
 	registerQIOServices(t)

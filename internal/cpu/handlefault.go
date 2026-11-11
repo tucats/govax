@@ -69,6 +69,18 @@ type ExceptionDispatcher interface {
 	DispatchException(code uint32, params []uint32, pc uint32, psl registers.PSL) (dispatched bool, err error)
 }
 
+// ChangeModeDispatcher is implemented by SystemServices that keep the
+// running process's change mode handlers ($DCLCMH): ChangeModeHandler
+// returns the address of the handler for CHMS (mode supervisor) or CHMU
+// (mode user), or 0 if there is none. When the SCB sends a CHMS or CHMU
+// to the console-handler sentinel, HandleFault asks first, and delivers
+// the trap to a handler it names as to an ordinary vector: in the trap's
+// mode, on its stack, with the code, PC, and PSL pushed. The handler
+// removes the code and returns with REI.
+type ChangeModeDispatcher interface {
+	ChangeModeHandler(mode registers.AccessMode) uint32
+}
+
 // ErrUnhandledVector is returned by Engine.HandleFault when the SCB vector
 // is zero. Unlike ErrNoExceptionHandler, the C source (and this port) still
 // builds and pushes the full exception stack frame and sets PC to the
@@ -98,6 +110,21 @@ func (e *Engine) HandleFault(f *Fault) error {
 
 	if err != nil {
 		return err
+	}
+
+	// A CHMS or CHMU the console's vector would report goes to the
+	// change mode handler the process declared for it, if it has one
+	// ($DCLCMH): the trap is delivered to the handler as to a vector
+	// naming the mode's own stack, at the handler's exact address, which
+	// VMS jumps to rather than taking from the SCB (handler, below).
+	var handler uint32
+
+	if rawVector == 0xFFFFFFFF && (f.Code == ExcChangeModeS || f.Code == ExcChangeModeU) {
+		if d, ok := e.services.(ChangeModeDispatcher); ok {
+			if handler = d.ChangeModeHandler(registers.AccessMode((f.Code & 0x0F) >> 2)); handler != 0 {
+				rawVector = 0
+			}
+		}
 	}
 
 	if rawVector == 0xFFFFFFFF {
@@ -130,11 +157,21 @@ func (e *Engine) HandleFault(f *Fault) error {
 	}
 
 	stack := rawVector & 0x3
-	vector := rawVector &^ 0x7
+	// The service routine's address is the vector's bits 31:2 (the VAX
+	// Architecture Reference Manual's exception and interrupt sequence).
+	vector := rawVector &^ 0x3
+	if handler != 0 {
+		vector = handler
+	}
 
+	// A change-mode trap goes to the instruction's mode or the current
+	// one, whichever is more privileged: CHMx never moves outward (the
+	// VAX Architecture Reference Manual's CHM, "maximize privilege"), so
+	// a CHMS from kernel mode stays in kernel mode, on the kernel stack,
+	// though it is dispatched through CHMS's vector.
 	newMode := registers.Kernel
 	if f.Code >= ExcChangeModeK && f.Code <= ExcChangeModeU {
-		newMode = registers.AccessMode((f.Code & 0x0F) >> 2)
+		newMode = min(registers.AccessMode((f.Code&0x0F)>>2), e.cpu.PSL().CurMod())
 	}
 
 	// Capture the PSL to push onto the new stack before anything below
@@ -168,6 +205,16 @@ func (e *Engine) HandleFault(f *Fault) error {
 		e.setModeStack(newMode, false)
 	case 1:
 		e.setModeStack(registers.Kernel, true)
+	}
+
+	// An exception's new PSL has the old current mode as its previous
+	// mode, whether or not the mode changed (the architecture's exception
+	// sequence: "previous mode is loaded with the old value of current
+	// mode"). An interrupt's leaves it as setModeStack made it.
+	if !f.Interrupt {
+		psl := e.cpu.PSL()
+		psl.SetPrvMod(savedPSL.CurMod())
+		e.cpu.SetPSL(psl)
 	}
 
 	sp := e.cpu.GPR(registers.SP)
@@ -251,12 +298,13 @@ func (e *Engine) setModeStack(newMode registers.AccessMode, interruptStack bool)
 
 	// The previous mode is the less privileged of the old and new modes
 	// (the higher-numbered: kernel is 0, user 3). Taking an exception
-	// into a more privileged mode records the mode it came from, as
-	// before; dropping to a less privileged one, as the console does to
-	// run an image in user mode (an REI, in effect), leaves the previous
-	// mode equal to the new one. Either way PRV >= CUR, which REI
-	// requires of every PSL: govax used to run images in user mode with
-	// a previous mode of kernel, where VMS has user (docs/DEVIATIONS.md).
+	// into a more privileged mode records the mode it came from;
+	// dropping to a less privileged one, as the console does to run an
+	// image in user mode (an REI, in effect), leaves the previous mode
+	// equal to the new one. Either way PRV >= CUR, which REI requires of
+	// every PSL. (An exception that stays in its mode records it too;
+	// HandleFault does that, since a console switch within a mode
+	// changes nothing.)
 	psl.SetPrvMod(max(curMod, actualNewMode))
 
 	var newSP uint32

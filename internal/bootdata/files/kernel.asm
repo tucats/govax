@@ -1413,6 +1413,8 @@ exe$dclstring:  .blkb           ^X100
                 .scb            exc$tp,        console$handler
                 .scb            exc$customer,  console$handler
                 .scb            exc$bpt,       console$handler
+                .scb            exc$chms,      console$handler
+                .scb            exc$chmu,      console$handler
                 .scb            exc$arith,     console$handler
                 .scb            exc$interval,  exe$interval
                 .scb            exc$software2, exe$deliver_ast

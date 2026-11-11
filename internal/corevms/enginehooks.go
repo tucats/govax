@@ -87,6 +87,17 @@ func (h EngineHooks) DispatchException(code uint32, params []uint32, pc uint32, 
 	return env.DispatchException(code, params, pc, psl)
 }
 
+// ChangeModeHandler makes EngineHooks a cpu.ChangeModeDispatcher: the
+// running process's handler for CHMS or CHMU ($DCLCMH), 0 if none.
+func (h EngineHooks) ChangeModeHandler(mode registers.AccessMode) uint32 {
+	env := h.Running()
+	if env == nil {
+		return 0
+	}
+
+	return env.ChangeModeHandler(mode)
+}
+
 // EngineError turns this package's signals into the engine's: ErrHalt (a
 // service or shim asking the machine to halt, e.g. an unrecognized
 // SYS$CLI request) into cpu.ErrHalted, ErrWait (a service waiting for an

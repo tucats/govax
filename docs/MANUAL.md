@@ -3295,7 +3295,7 @@ contains:
   `$LKWSET`, `$ULWSET`, `$PURGWS`, `$CRMPSC`, `$MGBLSC`, `$DGBLSC`,
   `$UPDSEC(W)`, `$ENQ(W)`, `$DEQ`, `$GETLKI(W)`, `$CMKRNL`, `$CMEXEC`,
   `$SETEXV`, `$UNWIND`, `$SYNCH`, `$SETRWM`, `$ASCTOID`, `$IDTOASC`,
-  `$CANWAK`.
+  `$CANWAK`, `$DCLCMH`, `$SETSFM`.
 - **Definitions**: `$ACCDEF`, `$ATRDEF`, `$BRKDEF`, `$CLIDEF`, `$DCDEF`,
   `$DEVDEF`, `$DSCDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$FORDEF`,
   `$IODEF`, `$JPIDEF`, `$LCKDEF`, `$LIBDEF`, `$LKIDEF`, `$LNMDEF`,
@@ -7295,7 +7295,7 @@ side effects follow DIGITAL's *System Services Reference Manual*.
 | Time and timers | `$GETTIM`, `$ASCTIM`, `$BINTIM`, `$NUMTIM`, `$SETIMR`, `$CANTIM`, `$SCHDWK`, `$CANWAK` |
 | Event flags | `$SETEF`, `$CLREF`, `$READEF`, `$WAITFR`, `$WFLOR`, `$WFLAND`, `$ASCEFC`, `$DACEFC`, `$DLCEFC` |
 | ASTs and synchronization | `$DCLAST`, `$SETAST`, `$SYNCH` |
-| Conditions and exit | `$EXIT`, `$DCLEXH`, `$CANEXH`, `$UNWIND`, `$SETEXV`, `$GETMSG`, `$PUTMSG`, `$FAO`, `$FAOL` |
+| Conditions and exit | `$EXIT`, `$DCLEXH`, `$CANEXH`, `$UNWIND`, `$SETEXV`, `$SETSFM`, `$DCLCMH`, `$GETMSG`, `$PUTMSG`, `$FAO`, `$FAOL` |
 | Processes | `$CREPRC`, `$DELPRC`, `$HIBER`, `$WAKE`, `$SUSPND`, `$RESUME`, `$FORCEX`, `$SETPRI`, `$SETPRN`, `$SETPRV`, `$SETRWM`, `$CMKRNL`, `$CMEXEC` |
 | Information | `$GETJPI(W)`, `$GETSYI(W)`, `$GETDVI(W)`, `$GETLKI(W)`, `$ASCTOID`, `$IDTOASC` |
 | Mailboxes | `$CREMBX`, `$DELMBX` |

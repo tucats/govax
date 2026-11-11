@@ -230,6 +230,19 @@ type Process struct {
 	// when not set (CTL$AQ_EXCVEC on VMS; condition.go).
 	exceptionVectors [4][3]uint32
 
+	// changeModeHandlers are the CHMS and CHMU handlers $DCLCMH declared
+	// (indexed by mode, supervisor and user; 0 none), and
+	// compatibilityHandler the compatibility mode one, never called:
+	// govax has no compatibility mode (CTL$GL_CMSUPR, CTL$GL_CMUSER, and
+	// CTL$GL_CMHANDLR on VMS; changemode.go).
+	changeModeHandlers   [4]uint32
+	compatibilityHandler uint32
+
+	// failureExceptions are each access mode's system service failure
+	// exception mode, $SETSFM's (PCB$V_SSFEXC to PCB$V_SSFEXCU on VMS;
+	// changemode.go).
+	failureExceptions [4]bool
+
 	// memoryLocks and workingSetLocks are the pages locked in memory
 	// ($LCKPAG) and in the working set ($LKWSET), by address: what the
 	// locking services report (pageprot.go). With paging on, the working
@@ -435,9 +448,11 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
-// forgets its user-mode exit handlers, the SYS$OUTPUT and SYS$ERROR
-// files it made (closeImageOutput), and any $PUTMSG, $CMKRNL, or
-// LIB$ routine left waiting for a routine it called, deletes P0 and the
+// forgets its user-mode exit handlers and change mode handler, the
+// SYS$OUTPUT and SYS$ERROR files it made (closeImageOutput), and any
+// $PUTMSG, $CMKRNL, or LIB$ routine left waiting for a routine it
+// called, disables user-mode system service failure exceptions
+// (cancelUserChangeMode), deletes P0 and the
 // sections mapped there (DeleteP0, unless KeepP0 keeps them), resets the working-set limit to its default (resetWorkingSet),
 // forgets the image's name (Process.ImageName), and forgets its heap (releaseHeap) and its RTL packages' data
 // (ImageData). The console calls it when an
@@ -458,6 +473,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelChangeModeCalls()
 	env.cancelShimCalls()
 	env.cancelConditions()
+	env.cancelUserChangeMode()
 	env.cancelPageLocks()
 	if !env.KeepP0 {
 		env.DeleteP0()

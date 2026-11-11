@@ -108,6 +108,8 @@ func TestExceptionCondition(t *testing.T) {
 		{"customer instruction", scbCustomer, nil, 0x434, nil},
 		{"trace fault", scbTracePending, nil, 0x464, nil},
 		{"breakpoint", scbBreakpoint, nil, 0x414, nil},
+		{"CHMS", scbChangeModeS, []uint32{3}, 0x41C, []uint32{3}},
+		{"CHMU", scbChangeModeU, []uint32{0xFFFFFFFF}, 0x424, []uint32{0xFFFFFFFF}},
 		{"integer divide", scbArithmetic, []uint32{2}, 0x484, nil},
 		{"subscript range", scbArithmetic, []uint32{7}, 0x4AC, nil},
 		{"floating underflow fault", scbArithmetic, []uint32{10}, 0x4C4, nil},

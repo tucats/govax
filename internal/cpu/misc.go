@@ -190,8 +190,11 @@ func emulPopr(e *Engine, d *Decoded) error {
 
 // emulProbe is PROBER/PROBEW: checks the read or write accessibility of the
 // first and last byte of the base/length-described region, at the larger
-// (less privileged) of the requested mode and the previous-mode PSL field,
-// port of emul_misc.c's emul_probe.
+// (less privileged) of the mode operand's low two bits and the PSL's
+// previous mode (the VAX Architecture Reference Manual's PROBE:
+// "probe_mode <- MAXU(mode<1:0>, PSL<PRV_MOD>)"), so that an inner mode's
+// code checking a caller's argument with mode 0 checks the caller's mode.
+// The length is zero-extended: the last byte is base+ZEXT(len)-1.
 //
 // Matching the C source's VM_NOSIGNAL translation mode (see docs/PHASE-07.md's
 // design notes), neither byte test raises a real fault regardless of why it
@@ -217,13 +220,10 @@ func emulProbe(e *Engine, d *Decoded) error {
 	}
 
 	base := d.Operands[2].Addr
-	mode := int8(uint8(modeRaw))
-	length := int16(uint16(lenRaw))
+	length := uint32(uint16(lenRaw))
 
 	savedPSL := e.cpu.PSL()
-	if int(savedPSL.CurMod()) > int(mode) {
-		mode = int8(savedPSL.PrvMod())
-	}
+	mode := max(registers.AccessMode(modeRaw&3), savedPSL.PrvMod())
 
 	access := vm.AccessRead
 	if d.Opcode.Function == 0x0D { // PROBEW
@@ -231,12 +231,12 @@ func emulProbe(e *Engine, d *Decoded) error {
 	}
 
 	testPSL := savedPSL
-	testPSL.SetCurMod(registers.AccessMode(mode))
+	testPSL.SetCurMod(mode)
 	e.cpu.SetPSL(testPSL)
 
 	ok := e.mem.ProbeAccess(e.cpu, base, access)
 	if ok {
-		last := uint32(int32(base) + int32(length) - 1)
+		last := base + length - 1
 		ok = e.mem.ProbeAccess(e.cpu, last, access)
 	}
 

@@ -505,3 +505,22 @@ func TestCreprc_startupFails(t *testing.T) {
 		}
 	}
 }
+
+// TestCreprc_failureExceptions: PRC$M_SSFEXCU starts the process with
+// system service failure exceptions enabled in user mode (the Internals
+// book's Table 12-2); without it they are disabled.
+func TestCreprc_failureExceptions(t *testing.T) {
+	c, _ := scheduledConsole(t, longQuantum, nil)
+	one := c.RTL
+
+	for _, flags := range []uint32{0, vmsdef.Symbols["PRC$M_SSFEXCU"]} {
+		child, st := one.CreateProcess(corevms.CreateRequest{Image: "X.EXE", Input: "NL:", Flags: flags})
+		if st != 1 {
+			t.Fatalf("CreateProcess (flags %#x): status %08X", flags, st)
+		}
+
+		if got := child.FailureExceptions(registers.User); got != (flags != 0) {
+			t.Errorf("flags %#x: user-mode failure exceptions %v", flags, got)
+		}
+	}
+}
