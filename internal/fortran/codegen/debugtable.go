@@ -27,6 +27,9 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		}
 	}
 
+	// The dummy arguments: found through the argument list (argument N), or
+	// in a routine with ENTRY statements through the cell its entry points
+	// copy the address to (Through).
 	for _, p := range g.r.Params {
 		place := dbgtable.Place{Kind: dbgtable.Argument, N: p.Index}
 		switch {
@@ -39,11 +42,21 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		lines = append(lines, g.debugVar(p.Name, p.Sym, place).Line())
 	}
 
+	// The variables: each where its cell is, in a register the optimizer
+	// gave it, in the stack frame, or in static storage. A variable kept in
+	// a register only while a loop runs gets a loop line too, so the
+	// debugger knows its value is in that register during the loop.
+	// strings.CutSuffix returns the text without the suffix and whether the
+	// suffix was there.
 	for _, c := range g.r.Cells {
 		if name, inLoop := strings.CutSuffix(c.Holds, ", during a loop"); inLoop && c.Register != 0 {
 			lines = append(lines, dbgtable.LoopLine(g.r.Name, name, c.Register))
 		}
 
+		// Cells of the compiler's own (no Sym) aren't the program's
+		// variables, and names a text library's module declared
+		// (INCLUDE '($SSDEF)') that the unit never used would only clutter
+		// the table, as they would the storage map.
 		switch {
 		case c.Sym == nil || c.Sym.UnusedFromLibrary():
 

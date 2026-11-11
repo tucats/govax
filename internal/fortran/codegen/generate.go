@@ -17,6 +17,17 @@ import (
 // (Decision 10 of docs/PHASE-74 - FORTRAN plan.md): the instructions,
 // read-only data (constants, descriptors, I/O control blocks), and the
 // static storage of variables and the compiler's cells.
+//
+// After a section's name come its attributes, which tell LINK how to treat
+// it: PIC (position independent: it works wherever it's loaded), CON
+// (concatenated: each module's contribution follows the one before, where
+// a COMMON block's sections are OVR, overlaid), REL (relocatable: its
+// addresses are fixed by LINK, not here), LCL (local to the cluster LINK
+// puts it in), SHR or NOSHR (whether processes may share one copy), EXE or
+// NOEXE (instructions or not), RD (readable), WRT or NOWRT (writable or
+// read-only), and last the alignment: LONG starts it on a longword
+// boundary. $LOCAL's alignment is left off here because it is chosen per
+// module (localAlignment).
 const (
 	codePsect  = "$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG"
 	pdataPsect = "$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG"
@@ -365,6 +376,11 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 	w.Comment("")
 	g.writeDebugTable(w)
 
+	// Each dummy argument gets a symbol for its place in the argument list,
+	// SUB.A = 4: the first argument's longword is 4 bytes past AP (the
+	// longword at 0(AP) is the argument count), the second 8, and so on.
+	// So the code can write SUB.A(AP) for the argument's address and
+	// @SUB.A(AP) for the argument itself, and a reader sees the name.
 	for _, p := range r.Params {
 		if p.Through == nil {
 			w.Assignment(g.names.symbol(p.Name), strconv.Itoa(4*p.Index),
@@ -424,6 +440,12 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 		return
 	}
 
+	// The code. The instructions were all chosen already, by g.generate in
+	// Generate, and kept in g.code: only now, with the storage written, are
+	// they written out. .ENTRY name,mask makes the routine's entry point, a
+	// global symbol where a 16-bit register mask comes first: CALLS reads the
+	// mask, saves the registers it names on the stack, and starts at the
+	// instruction after it; RET restores them.
 	w.Blank()
 	w.Statement("", ".PSECT", codePsect, "")
 	w.Append(&g.pre)

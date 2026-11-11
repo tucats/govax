@@ -94,13 +94,19 @@ func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
 
 // generate writes the routine's code into pre and code.
 func (g *routineGen) generate() {
+	// The source lines up to the unit's header go before .ENTRY (into pre).
 	g.src.through(&g.pre, g.r.Unit.AST.Header)
 
+	// Two preparations: which blocks are jumped to (and so need labels),
+	// and which registers the optimizer gave to variables for good.
 	g.findTargets()
 	g.noteCellRegisters()
 
 	expressions := ir.ExpressionBlocks(g.r)
 
+	// Then the blocks in their layout order. Each is told which block
+	// follows it, because a jump to the next block can be left out: control
+	// falls through into it.
 	for i, b := range g.r.Blocks {
 		var next *ir.Block
 		if i+1 < len(g.r.Blocks) {
@@ -123,6 +129,8 @@ func (g *routineGen) generate() {
 		g.source(body[len(body)-1])
 	}
 
+	// Under /OPTIMIZE, the instruction passes (opt.Improve) rework the list
+	// of instructions just made, before Generate writes it.
 	if g.improve != nil {
 		g.facts()
 		g.improve(&g.code)

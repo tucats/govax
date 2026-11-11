@@ -689,6 +689,11 @@ func (g *routineGen) eval(e ir.Expr) operand {
 		return inRegister(r, ir.Long)
 
 	case *ir.Op:
+		// Compute the operands, then free their registers before taking
+		// one for the result. That's not a mistake: the instruction reads
+		// its operands before it writes its result, so the result may go
+		// in a register an operand was in (ADDL3 R0,R1,R0), and an
+		// expression needs fewer registers in all.
 		x, y := g.operands(e)
 		g.free(x, y)
 
@@ -813,6 +818,9 @@ func (g *routineGen) inRange(e *ir.InRange) operand {
 // operate writes the instruction for e, whose operands are x and y (y
 // empty for one operand), its value going to dst.
 func (g *routineGen) operate(e *ir.Op, x, y operand, dst string) {
+	// t is the type's letter (B, W, L, F, D, G, H), which the VAX's
+	// opcodes end with: ADD+L is ADDL, MUL+D is MULD. A conversion's
+	// opcode has both types' letters, from and to: CVTLF.
 	t := e.T.String()
 
 	switch e.Op {
