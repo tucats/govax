@@ -495,6 +495,35 @@ func TestSaveLoadContext(t *testing.T) {
 	}
 }
 
+// TestLoadContextChecksPSL: LoadContext is LDPCTX and the REI after it, so
+// a PCB whose PSL REI would refuse (here, a previous mode more privileged
+// than its current one) is a reserved operand fault, with nothing loaded.
+func TestLoadContextChecksPSL(t *testing.T) {
+	e := kernelEngine()
+	e.cpu.SetPR(registers.PCBB, ctxPCB)
+
+	p := validPCB()
+	p.PSL = registers.PSL(0x03000000) // current user, previous kernel
+	p.R[registers.R0] = 0x1234
+
+	if err := WritePCB(e.mem, ctxPCB, &p); err != nil {
+		t.Fatal(err)
+	}
+
+	// Kernel mode on the interrupt stack, as SaveContext leaves the CPU.
+	e.cpu.SetPSL(registers.PSL(0x04030000))
+	e.cpu.SetPR(registers.IPL, 3)
+	e.cpu.SetGPR(registers.R0, 0)
+
+	if got := faultCode(t, e.LoadContext()); got != ExcReservedOp {
+		t.Errorf("LoadContext of PSL %08X: fault %#x, want ExcReservedOp", uint32(p.PSL), got)
+	}
+
+	if e.cpu.GPR(registers.R0) != 0 || e.cpu.PSL() != 0x04030000 {
+		t.Errorf("R0/PSL = %#x/%08X after the fault, want them unchanged", e.cpu.GPR(registers.R0), uint32(e.cpu.PSL()))
+	}
+}
+
 // TestPCBAddressSpace: a PCB's address space is its four memory-management
 // registers, with ASTLVL and PME left out of the lengths.
 func TestPCBAddressSpace(t *testing.T) {

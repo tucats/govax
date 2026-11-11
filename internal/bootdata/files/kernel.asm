@@ -627,9 +627,11 @@ exe$initialize: tstl            @#exe$init_done ; If we've already done
 ;       we fake out a REI instruction.  Push the desired PSL and PC
 ;       on the stack and do an REI.  This will take us to the exit
 ;       point, in user mode with IPL of zero (so interrupts will
-;       start happening).
+;       start happening).  The PSL's current and previous modes are
+;       both user (^X03C00000): REI refuses a PSL whose previous mode
+;       is more privileged than its current one.
 
-                pushl           #^X03000000       ; desired PSL
+                pushl           #^X03C00000       ; desired PSL
                 pushal          @#exe$init_exit ; desired PC
                 rei                             ; do it
 

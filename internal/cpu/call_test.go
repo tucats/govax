@@ -538,7 +538,10 @@ func TestEmulReiReversesModeSwitch(t *testing.T) {
 
 	restoredPSL := psl
 
+	// A user-mode PSL's previous mode is user too: REI refuses one that
+	// records a mode more privileged than its own (reiAllows).
 	restoredPSL.SetCurMod(registers.User)
+	restoredPSL.SetPrvMod(registers.User)
 	restoredPSL.SetN(true)
 	putLongword(t, cpu, mem, kernelFrame+4, uint32(restoredPSL))
 
@@ -585,6 +588,7 @@ func TestEmulReiDebugCHMTrace(t *testing.T) {
 	
 	restoredPSL := psl
 	restoredPSL.SetCurMod(registers.User)
+	restoredPSL.SetPrvMod(registers.User)
 	putLongword(t, cpu, mem, kernelFrame+4, uint32(restoredPSL))
 
 	var buf bytes.Buffer

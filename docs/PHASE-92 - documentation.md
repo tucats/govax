@@ -71,6 +71,14 @@ interpreter process 1 runs, and what reads the startup procedure).
    doesn't mistake it for VMS's.
 5. **Name.** The request said `docs/VAX-VMS-NTERNALS.md`; read as
    `docs/VAX-VMS-INTERNALS.md`.
+6. **Bugs found are fixed** (the author, 2026-11-11). Writing a guide
+   means reading the code closely; a bug or a departure from the VAX or
+   VMS that turns up is fixed in the same subtask, with its tests, rather
+   than logged in `DEVIATIONS.md` and deferred, and the guide describes
+   the fixed behavior. (This phase's exception to CLAUDE.md's default of
+   documenting and deferring ISA questions.) A fix too large for a
+   subtask, or whose right behavior is unclear, is raised with the author
+   first.
 
 ### The outline
 
@@ -162,3 +170,18 @@ interpreter process 1 runs, and what reads the startup procedure).
   doesn't check the PSL it restores; logged in `DEVIATIONS.md` (deferred).
   The clocks' and interrupts' detail stays here; the instruction-fetch
   window and the TB are section 5's.
+- **2026-11-11** Subtask 2, continued: the author made fixing such
+  findings part of this phase (Decision 6), so REI's was fixed.
+  `reiAllows` (`internal/cpu/call.go`) applies the eight checks of the
+  1987 *VAX Architecture Reference Manual*'s REI operation (the 1982
+  edition lists six; its "IS with a nonzero mode" follows from two of the
+  later ones), a refused PSL a reserved operand fault with nothing changed;
+  CM set faults, as on a processor without compatibility mode.
+  `Engine.LoadContext` checks the PCB's PSL the same way. The microkernel's
+  boot REI pushed `^X03000000` (current user, previous kernel), which the
+  check refuses, so `kernel.asm` now pushes `^X03C00000`; a system volume
+  whose KERNEL.ASM the user changed (kept, `%MOUNT-I-SYSKEPT`) needs the
+  same change. Two `cpu` tests' hand-built frames had the same PSL and were
+  corrected. New tests: `TestReiChecksPoppedPSL`, `TestLoadContextChecksPSL`.
+  The entry moved to `DEVIATIONS-RESOLVED.md`, and section 4.6 describes
+  the checks.

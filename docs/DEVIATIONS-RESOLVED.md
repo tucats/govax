@@ -3819,3 +3819,24 @@ Entry template:
     where VMS's EXCHANGE gave CR (the oracle rewrites VMS's RAT).
 - **Status**: open, unconfirmed; each would need another VAX run.
 
+### [Phase 92, resolved] REI doesn't check the PSL it restores
+
+- **Where**: `internal/cpu/call.go`'s `emulRei`; found writing
+  `docs/VAX-VMS-INTERNALS.md`'s section 4 (2026-11-11).
+- **What**: the architecture has REI take a reserved operand fault when
+  the PSL it pops is one it may not restore: among them, a current mode
+  more privileged than the CPU's now, a previous mode more privileged
+  than the new current mode, a raised IPL, the interrupt-stack bit set
+  when it isn't set now, and must-be-zero bits set (the manual's REI page
+  lists them all). govax's REI restores whatever it pops, so a
+  user-mode program could push a kernel-mode PSL and REI into kernel mode.
+- **Status**: resolved the same day (Phase 92, subtask 2, at the author's
+  direction). `reiAllows` (`internal/cpu/call.go`) applies the 1987
+  manual's eight checks before REI changes anything; a refused PSL is a
+  reserved operand fault with SP, PC, and the PSL as they were. CM set
+  faults, govax having no compatibility mode. `Engine.LoadContext` (the Go
+  scheduler's LDPCTX and REI) applies the same check to the PCB's PSL. The
+  microkernel's boot REI into user mode pushed `^X03000000` (current user,
+  previous kernel), which the check refuses; it now pushes `^X03C00000`.
+  `TestReiChecksPoppedPSL` (`internal/cpu/rei_test.go`) runs every rule,
+  and `TestLoadContextChecksPSL` the scheduler's.

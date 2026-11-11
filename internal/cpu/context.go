@@ -511,6 +511,14 @@ func (e *Engine) LoadContext() error {
 		return err
 	}
 
+	// The REI that follows LDPCTX checks the process's PSL as any REI
+	// does, from where the switch runs: kernel mode, on the interrupt
+	// stack. Checked before anything is loaded, so a refused PSL leaves
+	// the machine as it was.
+	if !reiAllows(psl, p.PSL) {
+		return &Fault{Code: ExcReservedOp}
+	}
+
 	e.loadContext(&p)
 
 	// What REI does with the PC and PSL LDPCTX pushes: the kernel stack

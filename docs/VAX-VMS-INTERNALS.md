@@ -961,7 +961,27 @@ instruction's operand (a code, conventionally the service's number) as
 the parameter (`cpu/changemode.go`). REI pops a PC and PSL and returns to
 them, saving the old mode's stack pointer in its register and loading the
 new mode's (`emulRei`, `cpu/call.go`). The previous-mode field of the PSL
-is set as the architecture requires. Every change of mode empties the
+is set as the architecture requires.
+
+Since any code may execute REI, user mode included, REI is also a guard.
+Before it changes anything it checks the PSL it popped against the one
+the CPU has (`reiAllows`), and takes a reserved operand fault, with SP
+and everything else as they were, if the new PSL would:
+
+- move to a more privileged mode (REI only goes outward; inward takes
+  CHMx, which goes only where the SCB's vectors say);
+- raise IPL, or have an IPL above 0 outside kernel mode;
+- set IS, the interrupt stack bit, when the CPU isn't on the interrupt
+  stack now, or with IPL 0;
+- record a previous mode more privileged than its current one;
+- set a must-be-zero bit, or CM, compatibility mode, which govax doesn't
+  implement.
+
+So a user-mode program can't push a kernel-mode PSL and REI into kernel
+mode. The microkernel's own REI into user mode at boot pushes a PSL with
+both modes user, `^X03C00000`, for the same reason. `Engine.LoadContext`,
+the Go scheduler's LDPCTX-and-REI (section 7), applies the same check to
+the PSL in the process's PCB. Every change of mode empties the
 translation buffer's notion of what the current mode may access
 (`Memory.InvalidateProtection`), since the same page may be writable in
 one mode and not in another.
@@ -1031,11 +1051,6 @@ What govax knowingly does differently:
 - **`PSL<FPD>` isn't modeled.** The long instructions run whole or restart
   (section 4.3). EDITPC's aborts part way, which VMS reports with FPD set
   and its registers part way, report with neither.
-- **REI doesn't check the PSL it restores.** The architecture has REI
-  fault if the new PSL would move to a more privileged mode, or has its
-  fields inconsistent; govax's restores what it pops. In govax only the
-  microkernel and Go code build those PSLs, but a user-mode program could
-  use REI to enter kernel mode (logged in `docs/DEVIATIONS.md`).
 - **CHMx skips two checks:** that it isn't executed on the interrupt
   stack, and that the new stack has room for the exception's frame.
 - **No PDP-11 compatibility mode,** and no machine checks or power

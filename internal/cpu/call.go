@@ -312,7 +312,14 @@ func emulRei(e *Engine, d *Decoded) error {
 
 	sp += 4
 
+	// The popped PSL must be one REI may restore from here; if it isn't,
+	// REI is a reserved operand fault, and nothing has changed yet (SP
+	// was only read from, so the fault leaves it where it was).
 	oldPSL := e.cpu.PSL()
+	if !reiAllows(oldPSL, registers.PSL(newPSL)) {
+		return &Fault{Code: ExcReservedOp}
+	}
+
 	if oldPSL.IS() {
 		e.cpu.SetPR(registers.ISP, sp)
 	} else {
@@ -346,3 +353,48 @@ func emulRei(e *Engine, d *Decoded) error {
 }
 
 var accessModeNames = [4]string{"KERNEL", "EXEC", "SUPER", "USER"}
+
+// pslMBZ is the PSL's must-be-zero bits: 15:8 (the PSW's reserved byte),
+// 21 (between IPL and the previous mode), and 29:28 (between FPD and TP).
+const pslMBZ = 0x0000FF00 | 1<<21 | 3<<28
+
+// reiAllows reports whether REI may restore next while the CPU's PSL is
+// cur. REI is the only way back out of an exception or interrupt, and any
+// code may execute it, user mode included, so the architecture has it
+// check the PSL it pops: a PSL that would give the code more privilege
+// than it has, or that is inconsistent in itself, is a reserved operand
+// fault (VAX Architecture Reference Manual, 1987, REI's operation):
+//
+//   - IS set with IPL 0: the interrupt stack is only ever used above IPL 0.
+//   - IPL above 0 outside kernel mode: only kernel code may raise IPL.
+//     (With the rule above, this also refuses IS set outside kernel mode,
+//     which the 1982 manual lists as a check of its own.)
+//   - a previous mode more privileged than the current one: a mode is
+//     only ever entered from one at least as privileged as it records.
+//   - a must-be-zero bit set.
+//   - a current mode more privileged than the CPU's now: REI can't move
+//     inward (that takes CHMx, which goes only where the operating
+//     system's vectors say).
+//   - IS set when the CPU isn't on the interrupt stack now: getting onto
+//     it takes an interrupt or an exception that chooses it.
+//   - an IPL above the CPU's now: REI only lowers IPL or leaves it.
+//   - CM set: compatibility mode (the PDP-11's instruction set) isn't
+//     implemented, and a processor without it faults any PSL asking for it.
+//
+// Access modes are numbered from kernel (0) to user (3), so "more
+// privileged" is "numerically lower".
+func reiAllows(cur, next registers.PSL) bool {
+	switch {
+	case next.IS() && next.IPL() == 0,
+		next.IPL() > 0 && next.CurMod() != registers.Kernel,
+		next.PrvMod() < next.CurMod(),
+		uint32(next)&pslMBZ != 0,
+		next.CurMod() < cur.CurMod(),
+		next.IS() && !cur.IS(),
+		next.IPL() > cur.IPL(),
+		next.CM():
+		return false
+	}
+
+	return true
+}
