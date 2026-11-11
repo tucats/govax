@@ -168,6 +168,8 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 			break
 		}
 
+		// Prepend: a new one-element slice with the older steps appended
+		// after it ("steps..." spreads a slice into append's arguments).
 		steps = append([]*ast.FieldRef{f}, steps...)
 		x = f.X
 	}
@@ -178,6 +180,10 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 		return a.bad(e.Pos)
 	}
 
+	// Walk down the path a field at a time. st is the structure the next
+	// field must be in: the record's own first, then each substructure's.
+	// A field that isn't a substructure has no structure (st nil), so a
+	// field named after it is an error.
 	st := ref.Sym.Struct
 
 	var prev *Field
@@ -551,10 +557,15 @@ func (a *analyzer) recordInitials() {
 // (section 4.15.3), and what is left of the earlier value keeps its bytes, as
 // CHARACTER pieces of them.
 func (s *Structure) image() []*FieldInitial {
+	// The image is worked out once per structure and kept (memoized):
+	// every record of the structure, and every structure that nests it,
+	// asks for the same list.
 	if s.imageMade {
 		return s.imageList
 	}
 
+	// A type declared inside a function is visible only there; entry pairs
+	// a value with where it was declared, for sorting.
 	type entry struct {
 		in    *FieldInitial
 		order diag.Position
@@ -571,6 +582,10 @@ func (s *Structure) image() []*FieldInitial {
 			continue
 		}
 
+		// A substructure field's values are its structure's, a recursive
+		// call, repeated for each element if the field is an array, each
+		// copy moved to its place in this structure. "range n" over an
+		// integer (Go 1.22 on) counts from 0 to n-1.
 		inner := f.Struct.image()
 
 		for n := range f.Elements() {
@@ -580,6 +595,8 @@ func (s *Structure) image() []*FieldInitial {
 			}
 
 			for _, in := range inner {
+				// *in copies the struct it points to, so changing c's
+				// Offset doesn't change the inner structure's own list.
 				c := *in
 				c.Offset = f.Offset + n*f.Struct.Size + in.Offset
 				c.Item = item + "." + in.Item
@@ -598,11 +615,15 @@ func (s *Structure) image() []*FieldInitial {
 		return x.Column < y.Column
 	})
 
+	// Lay the values down in declaration order, each taking its bytes
+	// from any earlier value it overlaps (in a UNION's maps, two fields may
+	// share bytes): the last one declared wins, byte by byte.
 	var kept []*FieldInitial
 
 	for _, e := range list {
 		kept = append(overlaid(kept, e.in), e.in)
 	}
+
 
 	sort.SliceStable(kept, func(i, j int) bool { return kept[i].Offset < kept[j].Offset })
 

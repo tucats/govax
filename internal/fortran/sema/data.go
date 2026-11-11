@@ -548,11 +548,19 @@ func (a *analyzer) dataImpliedDo(e *ast.ImpliedDo, vars map[string]int32, vals *
 		}
 	}
 
+	// The loop's variable is added to a copy of the outer loops' variables,
+	// not to vars itself: a Go map is a reference, so changing vars would
+	// change the caller's too, and the variable would still seem in use
+	// after this list.
 	inner := make(map[string]int32, len(vars)+1)
 	for k, v := range vars {
 		inner[k] = v
 	}
 
+	// FORTRAN's trip count for DO (section 5.3.1.1): (limit - start +
+	// step) / step, truncated, and none if that is 0 or less. It's computed
+	// once, before the first trip, as for an executable DO loop.
+	//
 	// A count in 64 bits, since the difference of two INTEGERs mightn't fit
 	// in 32.
 	n := (int64(limit) - int64(start) + int64(step)) / int64(step)
@@ -695,6 +703,9 @@ func littleEndian(v *big.Int, size int) []byte {
 func (a *analyzer) constBytes(c *Const) []byte {
 	switch c.T.Kind {
 	case Integer, Logical:
+		// The VAX is little-endian: the lowest byte goes at the lowest
+		// address. Byte i is the value shifted right by 8*i bits, its low
+		// 8 bits kept by the conversion to byte.
 		b := make([]byte, c.T.Size)
 
 		for i := range b {
@@ -715,10 +726,19 @@ func (a *analyzer) constBytes(c *Const) []byte {
 
 // floatBytes is a floating value's bytes in format f, lowest address first.
 func floatBytes(f vaxfloat.Format, v vaxfloat.Value) []byte {
+	// Pack gives the bytes the value occupies in memory, read as a
+	// little-endian integer in two 64-bit halves, Lo the first 8 bytes and
+	// Hi the next 8 (the VAX's floating formats store their 16-bit words in
+	// an order of their own, which vaxfloat has already dealt with). Spread
+	// them back out a byte at a time, then keep as
+
+	// many bytes as the format has: 4 for F, 8 for D and G, 16 for H.
+	// "range 8" (Go 1.22 on) counts i from 0 to 7.
 	bits, _ := vaxfloat.Pack(f, v)
 	b := make([]byte, 16)
 
 	for i := range 8 {
+
 		b[i] = byte(bits.Lo >> (8 * i))
 		b[8+i] = byte(bits.Hi >> (8 * i))
 	}

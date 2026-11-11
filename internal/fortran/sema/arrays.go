@@ -388,9 +388,13 @@ func (s *Symbol) ElementNumber(subs []int) (int, bool) {
 		return 0, false
 	}
 
+	// multiplier is n1*n2*... of the dimensions before this one: how many
+	// elements one step in this subscript skips over. It starts at 1,
+	// since a step in the first subscript is the next element.
 	number, multiplier := 0, 1
 
 	for i, d := range s.Dims {
+
 		switch {
 		case d.LowerExpr != nil || d.UpperExpr != nil:
 			return 0, false
