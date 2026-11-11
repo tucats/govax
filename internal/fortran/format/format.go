@@ -151,6 +151,16 @@ const MaxDepth = 8
 
 // Parse reads a format specification, its text from its opening
 // parenthesis.
+//
+// A format is a small language of its own, inside FORTRAN: in
+//
+//	100 FORMAT (1X, 'X =', F8.2, 3(I5))
+//
+// 1X skips a column, 'X =' is text to write, F8.2 writes a real in 8
+// columns with 2 digits after the point, and 3(I5) is a group repeated
+// three times, each writing an integer in 5 columns. Parse is a recursive
+// descent parser for it: list reads a parenthesized list of items, and a
+// group's item calls list again for its own list, so groups nest.
 func Parse(text string, opts Options) (*Format, error) {
 	p := &parser{text: text, opts: opts}
 
@@ -180,6 +190,10 @@ func (p *parser) fail(offset int, format string, args ...any) {
 	panic(failure{&Error{Offset: offset, Text: fmt.Sprintf(format, args...)}})
 }
 
+// parse reads the whole format. It uses the same bailout pattern as the
+// statement parser (package parse): an error anywhere panics with a
+// failure, which this deferred recover turns into the returned error, so
+// the reading functions needn't check for errors after every call.
 func (p *parser) parse() (f *Format, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -219,6 +233,8 @@ func (p *parser) next() byte {
 		return 0
 	}
 
+	// A small letter made a capital: 'a' - 'A' is the distance between
+	// the two cases in ASCII (32).
 	c := p.text[p.pos]
 	if c >= 'a' && c <= 'z' {
 		c -= 'a' - 'A'
@@ -253,6 +269,9 @@ func (p *parser) list(depth int) []*Item {
 			apart = false
 
 		case '/', ':', '$':
+			// These need no comma around them: (I5/I5) is fine. The map
+			// literal is made and indexed in one expression, choosing the
+			// code for the character.
 			p.pos++
 			apart = false
 			items = append(items, &Item{Code: map[byte]Code{'/': Slash, ':': Colon, '$': Dollar}[c], Offset: p.pos - 1})
@@ -389,6 +408,9 @@ func (p *parser) item(depth int) (item *Item, free bool) {
 		return p.hollerith(start, count, countAt), true
 
 	case '(':
+		// A group: read its items with a recursive call of list, one
+		// level deeper, up to the nesting VMS was seen to accept
+		// (MaxDepth).
 		if depth >= MaxDepth {
 			p.fail(p.pos, "groups are nested more than %d deep", MaxDepth)
 		}

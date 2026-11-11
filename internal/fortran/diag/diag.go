@@ -188,6 +188,8 @@ func (l *List) Report(ident string, pos Position, args ...any) Message {
 
 // Messages returns the messages reported, in order.
 func (l *List) Messages() []Message {
+	// A copy, made by appending every message to a nil slice: the caller
+	// may keep or change what it gets without changing the List's own.
 	return append([]Message(nil), l.messages...)
 }
 

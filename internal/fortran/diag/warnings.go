@@ -98,6 +98,11 @@ func (l *List) Drop(held func(Message) bool) {
 // FindKeyword finds the keyword word is in a qualifier's table of keywords, ignoring
 // case, whole or cut short, and says how many it could be: 1 if the result is good, 0 if
 // none, and more if it's ambiguous. A whole keyword is itself, even if it starts another.
+//
+// It's a generic function: [T any] is a type parameter, so one function
+// serves any table, whatever type its values are. Each qualifier's table
+// holds functions of a different type (func(*Debug) for /DEBUG's,
+// func(*Checks) for /CHECK's, ...), and the caller's map fixes what T is.
 func FindKeyword[T any](keywords map[string]T, word string) (T, int) {
 	word = strings.ToUpper(word)
 
@@ -105,6 +110,8 @@ func FindKeyword[T any](keywords map[string]T, word string) (T, int) {
 		return found, 1
 	}
 
+	// found starts as T's zero value, which the caller gets back if
+	// nothing matches; the count tells it not to use it then.
 	var found T
 
 	matches := 0
