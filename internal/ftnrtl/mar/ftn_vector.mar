@@ -191,9 +191,7 @@
 ; FTNRTL's names. FTN$name is an entry in this vector, which programs
 ; call. FTN$$name is global but private: one module's routine that
 ; another calls, which programs may not use, since it has no vector entry
-; and may move. Plain names are a module's own, but for the few that
-; are .ENTRY routines (FTN_STATEMENT's POP_TO and POP_GONE), whose names
-; LINK sees, though no other module calls them. Many routines keep the
+; and may move. Plain names are a module's own. Many routines keep the
 ; I/O statement's context (FTN_STATEMENT) in R11 throughout, and each
 ; module defines the context's fields it uses as offsets (CTX_...); they
 ; must agree with FTN_STATEMENT's.

@@ -740,7 +740,7 @@ FREE_CONTEXT:
 ; POP_TO(context): takes the context (by value) off the stack, popping any gone
 ; ones above it, which an AST's statement a handler unwound from may have left.
 ;
-	.ENTRY	POP_TO,^M<R2,R3>
+POP_TO:	.WORD	^M<R2,R3>
 	MOVL	4(AP),R2
 	BSBW	HOLD_ASTS
 10$:	MOVL	STMT_TOP,R3
@@ -757,7 +757,7 @@ FREE_CONTEXT:
 ; POP_GONE(fp): pops the contexts above the caller's statement, whose FP (by value)
 ; is further out than theirs: their routines have gone.
 ;
-	.ENTRY	POP_GONE,^M<R2,R3>
+POP_GONE:	.WORD	^M<R2,R3>
 	MOVL	4(AP),R2
 	BSBW	HOLD_ASTS
 10$:	MOVL	STMT_TOP,R3
