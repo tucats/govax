@@ -20,6 +20,9 @@
 ; a byte, and IZEXT and JZEXT a word, the low part of any longer value,
 ; since the VAX keeps a value's low bytes first.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
 ;

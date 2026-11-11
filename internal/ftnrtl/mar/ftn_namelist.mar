@@ -93,6 +93,9 @@
 ; error names, after a substring's parentheses; a doubled apostrophe split
 ; across records; a repeat value that isn't a number, text, or T or F word.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
 
@@ -213,8 +216,8 @@ FIND_GROUP:
 	MOVL	#1,CTX_POS(R6)		; a question, in column 2
 	BSBW	QUESTION
 	BRB	10$
-30$:	MOVL	NB_NAME(R7),R3		; the group's name
-	MOVZBL	(R3)+,R4
+30$:	MOVL	NB_NAME(R7),R3		; the group's name, a counted string: its
+	MOVZBL	(R3)+,R4		;  length, a byte, then its text
 	ADDL3	#2,R4,R5		; where the name in the record ends
 	CMPL	R5,CTX_RECLEN(R6)
 	BGTR	10$			; too short to hold it
@@ -405,7 +408,7 @@ FIND_ENTITY:
 90$:	RSB
 NOT_IN_GROUP:
 	MOVW	R4,CTX_NM_DESC(R6)	; the descriptor of the text in the record
-	MOVW	#^X010E,CTX_NM_DESC+2(R6)
+	MOVW	#^X010E,CTX_NM_DESC+2(R6) ; type T (14), class S (1), one word
 	ADDL3	CTX_RECP(R6),R3,CTX_NM_DESC+4(R6)
 	BRW	INVALID_TEXT
 
@@ -434,8 +437,9 @@ REFERENCE:
 	TSTL	MISSING(FP)
 	BNEQ	80$
 	MOVZBL	DSC$B_DIMCT(R8),R2	; the dimensions
-	MOVAL	DSC$L_M1(R8),R3		; the multipliers,
-	MOVAL	(R3)[R2],R4		;  then each one's bounds
+	MOVAL	DSC$L_M1(R8),R3		; the multipliers, a longword each,
+	MOVAL	(R3)[R2],R4		;  then each one's bounds, two longwords
+					;  each (a class A descriptor's tail)
 	CLRL	R5			; the sum so far
 	;
 	; From the last dimension in: s(n), then s(n-1) + m(n-1)*that, ...
@@ -444,7 +448,7 @@ REFERENCE:
 20$:	DECL	R2
 	BLSS	30$
 	MOVL	SUBS(FP)[R2],R0
-	ASHL	#3,R2,R1
+	ASHL	#3,R2,R1		; R2 times 8 (shifted left 3 bits)
 	ADDL2	R4,R1			; this dimension's bounds
 	CMPL	R0,(R1)
 	BLSS	80$
@@ -453,7 +457,9 @@ REFERENCE:
 	MULL2	(R3)[R2],R5
 	ADDL2	R0,R5
 	BRB	20$
-30$:	MULL3	R11,R5,R0		; the element's address, from A0
+30$:	MULL3	R11,R5,R0		; the element's address, from A0 (the
+					;  descriptor's address of the element
+					;  whose subscripts are all 0)
 	ADDL3	DSC$A_A0(R8),R0,R9
 	SUBL3	DSC$A_POINTER(R8),R9,R0	; how far it is into the array
 	SUBL3	R0,DSC$L_ARSIZE(R8),R0
@@ -522,7 +528,7 @@ PARENTHESES:
 25$:	MOVL	ITEMS(FP),R0		; nothing here
 	CMPL	R0,#8
 	BGEQ	50$
-	BBSS	R0,MISSING(FP),50$
+	BBSS	R0,MISSING(FP),50$	; set bit R0 (it branches either way)
 	BRB	50$
 	;
 	; A number: a sign, then digits, which keep to the largest longword
@@ -1085,8 +1091,8 @@ FRAME2_SIZE	= 112
 20$:	BSBW	FLUSH
 	ADDL2	#8,R8
 	SOBGTR	R9,10$
-80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END"
-	MOVB	#^A/D/,FIELD+4(FP)
+80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END": 4 characters in a longword,
+	MOVB	#^A/D/,FIELD+4(FP)	;  and the fifth
 	MOVL	#5,R0
 	MOVAB	FIELD(FP),R1
 	BSBW	PIECE
@@ -1108,6 +1114,7 @@ ENTITY_NAME:
 	TSTL	12(AP)
 	BEQL	90$
 	BICL2	#7,R2			; the next multiple of 8 past the name's
+					;  (the low 3 bits cleared, then 8 added)
 	ADDL2	#9,R2			;  length, plus 1: the place of the =
 	PUSHL	R2
 	SUBL3	CTX_RECLEN(R6),R2,R0	; the blanks before it
@@ -1292,7 +1299,7 @@ COUNT_TEXT:
 	MOVB	#^A/ /,FIELD(FP)
 	MOVL	RUN(FP),R0		; the digits, the last first, on the stack
 	CLRL	R3
-10$:	CLRL	R1
+10$:	CLRL	R1			; R0 and R1 the quadword dividend
 	EDIV	#10,R0,R0,R1
 	ADDL2	#^A/0/,R1
 	PUSHL	R1

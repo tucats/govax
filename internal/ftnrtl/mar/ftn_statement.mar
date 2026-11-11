@@ -9,12 +9,11 @@
 ;				CALLS #1,G^FTN$IO_ITEM	(X)
 ;				CALLS #0,G^FTN$IO_END	(the end)
 ;
-; The begin call is chosen by the statement's kind, named as VMS's
-; FORTRAN run-time library names its own: READ or WRITE, then S for a
-; unit (sequential access), D for a unit's record by its number (direct
-; access), K for a record by its key, or I for an internal file, then F formatted, L list-directed, N
-; namelist, or U unformatted; and FTN$ENCODE and FTN$DECODE. Its arguments
-; are
+; The begin call is chosen by the statement's kind, named as VMS's FORTRAN
+; run-time library names its own: READ or WRITE, then S for a unit (sequential
+; access), D for a unit's record by its number (direct access), K for a record
+; by its key, or I for an internal file, then F formatted, L list-directed, N
+; namelist, or U unformatted; and FTN$ENCODE and FTN$DECODE. Its arguments are
 ;
 ;	4(AP)	the statement's control block, made by the compiler:
 ;		+0  word  its size in bytes (8)
@@ -123,6 +122,9 @@
 ; FTN_UNITS has and on internal files (FTN_INTERNAL).
 ; Three namelist conditions name what was wrong (the text, or the
 ; entity's name) in their messages, before the unit: CTX_NM_FAO.
+;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
 ;
 	$FORDEF				; FORRTL's condition values
 	$RMSDEF
@@ -387,10 +389,10 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	MOVL	#FOR$_MIXFILACC,R0
 	CMPB	UB_ACCESS(R1),#ACCESS_KEYED
 	BEQL	34$
-33$:	MOVZBL	(AP),R0
-	PUSHL	(AP)[R0]		; the record
-	BICL3	#^C1,R6,R0
-	XORL2	#1,R0			; 1 for a READ
+33$:	MOVZBL	(AP),R0			; the argument count, so
+	PUSHL	(AP)[R0]		;  the last argument: the record
+	BICL3	#^C1,R6,R0		; the kind's low bit, 1 for a WRITE,
+	XORL2	#1,R0			;  flipped: 1 for a READ
 	PUSHL	R0
 	PUSHL	CTX_STREAM(R3)
 	CALLS	#3,FTN$$UNIT_DIRECT	; FTN_UNITS
@@ -416,6 +418,11 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,65$
 	BRW	FAIL
+	;
+	; FTN$$UNIT_RECORD's arguments are made where they are pushed: the
+	; first push is the last argument, and BISB2 and MOVL change it in
+	; place on the stack, (SP), before the next is pushed.
+	;
 65$:	MOVZBL	CTX_DIRECT(R3),-(SP)	; 1 for a direct statement, a REWRITE, or a
 	BISB2	CTX_REWRITE(R3),(SP)	;  keyed READ, which have seen to the access
 	BISB2	CTX_KEYED(R3),(SP)
@@ -434,8 +441,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	BRW	FAIL
 70$:	TSTB	CTX_KEYED(R3)
 	BEQL	75$
-	MOVZBL	(AP),R0			; a keyed READ: its last three arguments
-	PUSHL	(AP)[R0]		; the specifier
+	MOVZBL	(AP),R0			; a keyed READ: its last three arguments,
+	PUSHL	(AP)[R0]		; the specifier (the last, (AP)[count])
 	DECL	R0
 	PUSHL	(AP)[R0]		; the key's number
 	DECL	R0
@@ -536,7 +543,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 ; unformatted one.
 ;
 OPEN_FLAGS:
-	BICL3	#^C1,R6,R0		; 1 for a WRITE
+	BICL3	#^C1,R6,R0		; the kind's low bit: 1 for a WRITE
 	XORL2	#1,R0			; 1 for a READ
 	CMPL	R6,#K_READ_SU
 	BLSSU	10$
@@ -613,14 +620,14 @@ PUSH_CONTEXT:
 	CMPL	CTX_FP(R3),R2		; compared unsigned, as addresses are
 	BLEQU	18$			; at or below this routine: gone
 	MOVL	R2,R1			; further out: is it in the call chain?
-12$:	MOVL	12(R1),R0		; the frame's saved FP
+12$:	MOVL	12(R1),R0		; the frame's saved FP: the next frame out
 	CMPL	R0,R1
 	BLEQU	18$			; the chain's end: not in it
 	MOVL	R0,R1
 	CMPL	R1,CTX_FP(R3)
 	BLSSU	12$
 	BNEQ	18$			; passed it
-	CMPL	16(R1),CTX_FRAMEPC(R3)
+	CMPL	16(R1),CTX_FRAMEPC(R3)	; the frame's saved PC, 16 in a frame
 	BEQL	20$			; its own frame: still running
 18$:	BSBW	DROP_TOP		; gone
 	BRB	10$
@@ -643,7 +650,8 @@ PUSH_CONTEXT:
 	PUSHL	#FOR$_INSVIRMEM		; no memory: the end
 	CALLS	#1,G^LIB$STOP
 27$:	MOVL	4(SP),R3		; (ASTs stay off through LIB$GET_VM)
-	ADDL2	#8,SP
+	ADDL2	#8,SP			; the two longwords popped (RET popped
+					;  the argument list, not these)
 	CLRL	CTX_LI_BUFFER(R3)	; no text buffer yet
 	CLRL	CTX_LI_SIZE(R3)
 	;
@@ -680,7 +688,8 @@ PUSH_CONTEXT:
 	MOVL	#1,CTX_UNITBLANK(R3)
 	CLRL	CTX_USERPC(R3)
 	CLRL	CTX_REASON(R3)
-	MOVL	16(FP),CTX_ITEMPC(R3)
+	MOVL	16(FP),CTX_ITEMPC(R3)	; where the begin call returns (a BSBW
+					;  subroutine's FP is its caller's)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
 	MOVL	R3,STMT_TOP
 	BSBW	RELEASE_ASTS
@@ -770,7 +779,7 @@ FREE_CONTEXT:
 	.ENTRY	FTN$IO_ITEM,^M<R2>
 	MOVL	STMT_TOP,R2
 	BEQL	90$			; no statement: nothing to do
-	CMPL	CTX_FP(R2),12(FP)
+	CMPL	CTX_FP(R2),12(FP)	; 12(FP): the calling routine's FP
 	BGEQU	5$
 	PUSHL	12(FP)			; a statement of a routine that's gone
 	CALLS	#1,POP_GONE
@@ -779,7 +788,7 @@ FREE_CONTEXT:
 5$:
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$			; it has failed
-	MOVL	16(FP),CTX_ITEMPC(R2)
+	MOVL	16(FP),CTX_ITEMPC(R2)	; where this call returns
 	PUSHL	4(AP)
 	PUSHL	R2
 	CMPB	CTX_KIND(R2),#K_WRITE_SF
@@ -882,7 +891,7 @@ REPORT		= -36			; the name's length and address, RMS's
 	; A failure. What its unit's stream says of it: the file's name, and
 	; RMS's status and value, used only for the failures RMS reports.
 	;
-20$:	SUBL2	#-REPORT,SP
+20$:	SUBL2	#-REPORT,SP		; room below the frame, to REPORT(FP)
 	JSB	FAILURE_REPORT
 	;
 	; Returned if a specifier takes it: the FOR number, or -1 for an end
@@ -918,7 +927,7 @@ REPORT		= -36			; the name's length and address, RMS's
 ;
 	.ENTRY	FTN$$IO_SIGNAL,^M<R2,R3,R4,R5,R6,R7>
 	CLRL	R7			; the statement goes on
-	SUBL2	#-REPORT,SP
+	SUBL2	#-REPORT,SP		; room below the frame, as FTN$IO_END's
 	MOVL	4(AP),R2
 	MOVL	8(AP),R3
 	JSB	FAILURE_REPORT
@@ -969,6 +978,12 @@ FAILURE_REPORT:
 ; never come back.
 ; Changes R0, R1, R4, and R6, and returns if a handler goes on from it.
 ;
+;
+; The signal's arguments are the condition and the rest laid out as the
+; introduction says, first to last; they are pushed from the last, so
+; the code below reads them backward. PUSHAQ pushes a quadword's address:
+; a descriptor's.
+;
 SIGNAL_FAILURE:
 	MOVZWL	CTX_TEXT+4(R2),TEXT_DESC(FP) ; the text's descriptor
 	MOVL	CTX_TEXT(R2),TEXT_DESC+4(FP)
@@ -1016,13 +1031,13 @@ SIGNAL_FAILURE:
 	TSTL	R7
 	BEQL	58$
 	BSBW	FREE_CONTEXT
-58$:	CMPZV	#0,#3,R3,#4		; severe?
+58$:	CMPZV	#0,#3,R3,#4		; severe? (bits 0 to 2 are 4)
 	BNEQ	60$
 	CMPL	R3,#FOR$_INPCONERR	; severe, but a handler can go on
 	BEQL	60$
 	CMPL	R3,#FOR$_FORVARMIS
 	BEQL	60$
-	CALLS	R6,G^LIB$STOP		; never returns
+	CALLS	R6,G^LIB$STOP		; never returns (R6: the count pushed)
 60$:	CALLS	R6,G^LIB$SIGNAL
 	RSB
 
@@ -1046,7 +1061,8 @@ ERRSNS:	CLRL	R2			; the argument, from 0
 	BGEQ	40$
 	CMPB	R2,(AP)			; past the arguments given
 	BGEQU	40$
-	MOVL	4(AP)[R2],R0		; its address
+	MOVL	4(AP)[R2],R0		; its address: argument R2+1, R2 times 4
+					;  added to 4(AP)'s address
 	BEQL	30$			; a null argument
 	MOVL	LAST_ERROR[R2],R1
 	BLBS	R3,20$

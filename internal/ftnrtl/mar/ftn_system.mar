@@ -18,6 +18,9 @@
 ; R0's value after a subroutine means nothing to a program, but it comes out as
 ; FORRTL's does here, which lets the oracle compare it.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$SSDEF				; SS$_NORMAL
 
@@ -196,8 +199,8 @@ DATE_TEXT:
 	MULL2	#100,R0
 	MOVZWL	NUM_HUNDREDTH(R2),R1
 	ADDL2	R1,R0
-	CVTLF	R0,R0
-	DIVF2	#100.0,R0
+	CVTLF	R0,R0			; the count made a REAL*4 (F_floating)
+	DIVF2	#100.0,R0		;  and divided, in floating point
 	SUBF2	@4(AP),R0
 	BGEQ	10$
 	ADDF2	#86400.0,R0

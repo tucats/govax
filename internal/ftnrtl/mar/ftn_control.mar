@@ -15,6 +15,9 @@
 ; its code reaches its own data only through PC-relative addresses (a
 ; label used as an operand), never through stored addresses.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$SSDEF				; SS$_NORMAL
 

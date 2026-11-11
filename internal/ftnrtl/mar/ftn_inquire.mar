@@ -35,6 +35,9 @@
 ;			Otherwise it is opened to look at, read and shared, and
 ;			closed: the file's own attributes, nothing of a connection.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$FABDEF
 	$NAMDEF
 	$RABDEF
@@ -144,8 +147,8 @@ DAT_LEN		= .-DAT_NAME
 ; FTN$INQUIRE(control block, keyword, value, ...)
 ;
 	.ENTRY	FTN$INQUIRE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
-	MOVAB	F_WORK(SP),SP
-	MOVC5	#0,(SP),#0,#-F_WORK,F_WORK(FP)
+	MOVAB	F_WORK(SP),SP		; room for the frame (F_WORK is its
+	MOVC5	#0,(SP),#0,#-F_WORK,F_WORK(FP) ;  bottom), all zeros
 	MOVAB	T_UNKNOWN,R0		; each text UNKNOWN until it's known
 	MOVL	R0,A_ACCESS(FP)
 	MOVL	R0,A_SEQUENTIAL(FP)
@@ -163,8 +166,8 @@ DAT_LEN		= .-DAT_NAME
 	; What it asks about. R9 says if a unit was given, R10 is the unit, and
 	; R6 and R7 the name's and default name's descriptors.
 	;
-	CLRQ	R6
-	CLRQ	R9
+	CLRQ	R6			; R6 and R7 0 (a quadword: the pair)
+	CLRQ	R9			; R9 and R10 0
 	MOVL	#2,R8			; the first keyword's argument
 10$:	MOVZBL	(AP),R0
 	CMPL	R8,R0
@@ -208,7 +211,8 @@ DAT_LEN		= .-DAT_NAME
 	BSBW	OF_UNIT
 
 ;
-; Each answer asked for goes where its keyword says, by its mechanism.
+; Each answer asked for goes where its keyword says, by its mechanism. A
+; logical answer is -1 for .TRUE. (every bit set) and 0 for .FALSE.
 ;
 STORE:	MOVL	#2,R8
 10$:	MOVZBL	(AP),R0
@@ -223,8 +227,8 @@ STORE:	MOVL	#2,R8
 	BLSS	10$
 	CMPL	R2,#Q_LAST
 	BGTR	10$
-	MOVAL	ANSWERS(FP),R4
-	MOVL	-<Q_FIRST*4>(R4)[R2],R1
+	MOVAL	ANSWERS(FP),R4		; the answer to code R2: the table starts
+	MOVL	-<Q_FIRST*4>(R4)[R2],R1	;  at Q_FIRST, which the offset takes off
 	CMPL	R3,#MECHANISM_TEXT
 	BEQL	40$
 	CMPL	R3,#MECHANISM_LONG
@@ -246,7 +250,7 @@ STORE:	MOVL	#2,R8
 	BNEQ	50$
 	MOVL	NAME_LENGTH(FP),R0
 	BRB	60$
-50$:	MOVZBL	(R1)+,R0
+50$:	MOVZBL	(R1)+,R0		; a counted string: its length, then text
 60$:	MOVZWL	(R6),R4
 	MOVL	4(R6),R5
 	MOVC5	R0,(R1),#^A/ /,R4,(R5)

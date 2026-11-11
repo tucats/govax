@@ -48,6 +48,9 @@
 ; other VAL's bytes go to RMS as they are, as on a string key (#271: its length is then
 ; a generic key's), or a string on an integer key (#271).
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$FABDEF
 	$FORDEF				; FORRTL's condition values
@@ -77,7 +80,7 @@ FRAME_FAB	= FRAME_XAB-FAB$C_BLN	;  and the FAB's copy
 ; the last two by value. Returns SS$_NORMAL in R0, or the FOR$_ condition.
 ;
 	.ENTRY	FTN$$KEY_START,^M<R2,R3,R4,R5,R6,R7,R8,R9>
-	MOVAB	FRAME_FAB(SP),SP
+	MOVAB	FRAME_FAB(SP),SP	; room below FP for the frame's blocks
 	MOVL	4(AP),R7
 	MOVAB	UB_RAB(R7),R6
 	MOVL	8(AP),R9		; the descriptor

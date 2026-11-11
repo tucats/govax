@@ -73,10 +73,13 @@
 ; and the other types' are the same with their own widths and digits:
 ; 0.1D0 is "  0.1000000000000000    " as a REAL*8 in D_floating.
 ;
-; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H
-; forms), the routines VMS's own FORTRAN run-time library uses, which writes a value's decimal digits,
-; rounded to as many significant digits as asked, into its caller's
-; frame (internal/librtl/otscvtfor.go has its interface).
+; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H forms),
+; the routines VMS's own FORTRAN run-time library uses, which writes a value's
+; decimal digits, rounded to as many significant digits as asked, into its
+; caller's frame (internal/librtl/otscvtfor.go has its interface).
+;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
 ;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
@@ -281,7 +284,7 @@ PUT_TEXT:
 	SUBL2	R2,R7
 	PUSHL	R2			; MOVC3 changes R2; keep the count
 	MOVC3	R2,(R6),(R3)
-	ADDL2	(SP)+,R6		; past the text put
+	ADDL2	(SP)+,R6		; past the text put (the count, popped)
 	TSTL	R7
 	BLEQ	90$			; that was the end of it
 	PUSHL	R8
@@ -329,7 +332,7 @@ DIGITS_SPARE	= 28
 DIGITS		= CTEXT_LEN-DIGITS_SPARE-DIGITS_LEN
 FRAME_SIZE	= -DIGITS
 
-PUT_VALUE:
+PUT_VALUE:				; two names for one place: the module's,
 FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
 					;  given CTX_NM_CAPTURE (not for text)
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
@@ -393,7 +396,9 @@ WORD_I7:
 LONG_I12:
 	MOVL	#4,R7
 	MOVL	#12,R8
-INTEGER:
+INTEGER:				; FIELD's descriptor: the length (R8) in
+					;  the low word, the type and class in the
+					;  bytes above, made in one BISL3
 	BISL3	R8,#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>,FIELD_DESC(FP)
 	MOVAB	FIELD(FP),FIELD_DESC+DSC$A_POINTER(FP)
 	PUSHL	R7
@@ -470,7 +475,7 @@ COMPLEX_G:
 	MOVL	#3,FMT_E(FP)
 	MOVL	#2,FMT_KIND(FP)
 COMPLEX:
-	MOVW	#^A/ (/,CTEXT(FP)
+	MOVW	#^A/ (/,CTEXT(FP)	; both characters in one word
 	MOVL	#2,CTEXT_LEN(FP)
 	BSBW	PART			; the real part
 	MOVL	CTEXT_LEN(FP),R0
@@ -519,7 +524,8 @@ COMPLEX:
 ;
 PART:	BSBW	FORMAT_REAL
 	SKPC	#^A/ /,FMT_W(FP),FIELD(FP) ; R0: the bytes from the first
-	MOVQ	R0,R2			;  that isn't a blank, R1: its address
+	MOVQ	R0,R2			;  that isn't a blank, R1: its address;
+					;  MOVQ copies the pair to R2 and R3
 	LOCC	#^A/ /,R2,(R3)		; R0: the bytes from the blank after
 	SUBL3	R0,R2,R0		; the characters' length
 	MOVL	CTEXT_LEN(FP),R1

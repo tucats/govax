@@ -48,6 +48,9 @@
 ; character item's O and Z field is 15 columns: VMS's one case was a
 ; CHARACTER*5, so other lengths are unconfirmed.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
 	$SSDEF
@@ -94,7 +97,7 @@ C_L		= 7
 	MOVL	4(AP),R11
 	MOVL	8(AP),R10
 	JSB	WIDTH
-	BLBS	CTX_KIND(R11),5$
+	BLBS	CTX_KIND(R11),5$	; a WRITE: its kind is odd
 	BRW	INPUT
 	;
 	; Output: a field past the record's end is written not at all, though
@@ -109,6 +112,12 @@ C_L		= 7
 	PUSHL	R11
 	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
 	RET
+	;
+	; A switch on the operation's code: CASEB takes the entry of the
+	; table after it for code C_I to C_L, a word holding the distance to
+	; jump from the table's start, and goes on past the table (30$) for
+	; a code outside them.
+	;
 10$:	CASEB	OP_B_CODE(R10),#C_I,#<C_L-C_I>
 20$:	.WORD	OUT_I-20$		; I
 	.WORD	OUT_O-20$		; O
@@ -147,7 +156,11 @@ OUT_I:	JSB	INTEGER_TYPE
 	;
 	; The digits of its magnitude: EDIV of the magnitude, unsigned, as a
 	; quadword whose high half is 0, so the most negative longword's
-	; 2147483648 divides as it should.
+	; 2147483648 divides as it should. EDIV divisor,dividend,quotient,
+	; remainder divides a quadword (here R4 and R5, R4 the low half) by a
+	; longword: each division by 10 leaves the last digit as the remainder.
+	; The digits come out last first, so each is stored before the one
+	; before it, -(R6), in room made on the stack: R6 starts past its end.
 	;
 20$:	MOVL	R2,R4
 	BGEQ	22$
@@ -159,7 +172,7 @@ OUT_I:	JSB	INTEGER_TYPE
 25$:	TSTL	R4
 	BEQL	30$
 	EDIV	#10,R4,R4,R0
-	ADDB3	#^A/0/,R0,-(R6)
+	ADDB3	#^A/0/,R0,-(R6)		; the digit's character, '0' to '9'
 	INCL	R7
 	BRB	25$
 	;
@@ -244,7 +257,7 @@ OUT_OZ:	MULL3	#8,16(AP),R7
 	ADDL2	#^A/0/,R0
 	CMPL	R0,#^A/9/
 	BLEQ	45$
-	ADDL2	#^A/A/-^A/9/-1,R0
+	ADDL2	#^A/A/-^A/9/-1,R0	; past '9': 10 to 15 are 'A' to 'F'
 45$:	JSB	PUT_CHAR
 	BRB	40$
 50$:	RET
@@ -253,12 +266,16 @@ OUT_OZ:	MULL3	#8,16(AP),R7
 ; DIGIT: R0 the R8th digit, from 0, of the item's bits (R7 of them), at R6
 ; bits a digit. Uses R1.
 ;
+; EXTZV sees memory from an address as one long string of bits, the low
+; bit of the first byte first, so it can take a field of any of the
+; item's bytes, as the VAX stores a number low byte first.
+;
 DIGIT:	MULL3	R6,R8,R1		; its first bit
 	SUBL3	R1,R7,R0		; the bits from there to the top
 	CMPL	R0,R6
 	BLEQ	10$
 	MOVL	R6,R0			; a whole digit's
-10$:	EXTZV	R1,R0,@12(AP),R0
+10$:	EXTZV	R1,R0,@12(AP),R0	; @12(AP): the item itself
 	RSB
 
 ;
@@ -397,7 +414,7 @@ TYPED:	JSB	INTEGER_TYPE
 ; statement fails; if a handler goes on from that, the item's type counts, as
 ; it does after a field that was read (testdata/for83's part E).
 ;
-BAD:	MOVC5	#0,(R2),#0,16(AP),@12(AP)
+BAD:	MOVC5	#0,(R2),#0,16(AP),@12(AP) ; a source of no bytes: all fill, 0
 	PUSHL	#FOR$_INPCONERR
 	PUSHL	R11
 	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
@@ -410,9 +427,9 @@ BAD:	MOVC5	#0,(R2),#0,16(AP),@12(AP)
 ; from it, it is as it was before, which is kept on the stack meanwhile
 ; (testdata/for83's part E).
 ;
-IN_OZ:	SUBL2	16(AP),SP
-	MOVC3	16(AP),@12(AP),(SP)
-	MOVC5	#0,(R0),#0,16(AP),@12(AP)
+IN_OZ:	SUBL2	16(AP),SP		; room on the stack for the item's length,
+	MOVC3	16(AP),@12(AP),(SP)	;  and a copy of it there; RET takes it back
+	MOVC5	#0,(R0),#0,16(AP),@12(AP) ; the item zeros (no source bytes, all fill)
 	MOVL	#3,R6
 	CMPB	OP_B_CODE(R10),#C_O
 	BEQL	10$
@@ -486,7 +503,7 @@ IN_L:	JSB	FIELD
 	BEQL	20$
 	CMPB	R0,#^A/T/
 	BNEQ	90$
-	MNEGL	#1,R5
+	MNEGL	#1,R5			; .TRUE. is -1, every bit set
 20$:	MOVL	12(AP),R1		; stored by the item's length
 	CMPL	16(AP),#1
 	BNEQ	22$
@@ -562,7 +579,8 @@ FTN$$EDIT_FIELD::
 FIELD:	MOVL	CTX_POS(R11),R4
 	BGEQ	5$
 	CLRL	R4			; T0's column: the first
-5$:	MOVAB	@CTX_RECP(R11)[R4],R2
+5$:	MOVAB	@CTX_RECP(R11)[R4],R2	; byte R4 of the record whose address
+					;  is at CTX_RECP
 	SUBL3	R4,CTX_RECLEN(R11),R3	; what is left of the record
 	BGEQ	10$
 	CLRL	R3
@@ -570,7 +588,7 @@ FIELD:	MOVL	CTX_POS(R11),R4
 	BLEQ	15$
 	MOVL	R9,R3
 15$:	ADDL3	R4,R9,CTX_POS(R11)
-	LOCC	#^A/,/,R3,(R2)
+	LOCC	#^A/,/,R3,(R2)		; a comma? R1 its address if so
 	BEQL	20$			; no comma
 	SUBL3	R2,R1,R3		; the characters before it,
 	ADDL3	R4,R3,R0
@@ -584,8 +602,8 @@ FIELD:	MOVL	CTX_POS(R11),R4
 ; and R1.
 ;
 LEADING:
-	SKPC	#^A/ /,R3,(R2)
-	MOVL	R1,R2
+	SKPC	#^A/ /,R3,(R2)		; R1 the first that isn't a blank,
+	MOVL	R1,R2			;  R0 the characters from there
 	MOVL	R0,R3
 	BEQL	20$			; nothing else in the field
 	CMPB	(R2),#9
@@ -632,8 +650,8 @@ NEXT_DIGIT:
 ; blanks or zeros (none, if R0 isn't above 0). Use R0 and R1.
 ;
 PUT_CHAR:
-	MOVL	R0,-(SP)
-	MOVL	SP,R1
+	MOVL	R0,-(SP)		; the character, a buffer of one byte on
+	MOVL	SP,R1			;  the stack, FTN$$FMT_PUT's text
 	PUSHL	#1
 	PUSHL	R1
 	PUSHL	R11
@@ -653,8 +671,8 @@ PUT_BLANKS:
 PUT_ZEROS:
 	TSTL	R0
 	BLEQ	20$
-	PUSHL	R0
-10$:	MOVL	#^A/0/,R0
+	PUSHL	R0			; the count, kept on the stack: PUT_CHAR
+10$:	MOVL	#^A/0/,R0		;  changes R0 and R1
 	JSB	PUT_CHAR
 	DECL	(SP)
 	BGTR	10$

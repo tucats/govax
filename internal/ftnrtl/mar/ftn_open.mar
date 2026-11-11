@@ -44,6 +44,9 @@
 ; $CONNECT, and a failure it returns in R0 is FOR$_OPEFAI (#376); if it leaves
 ; the RAB unconnected, FTNRTL connects it (#377, which VMS's OPEN took).
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$FABDEF
 	$FORDEF				; FORRTL's condition values
@@ -245,7 +248,8 @@ CONVERT_TEXT:	.ASCIC	/NATIVE/
 
 ;
 ; Which codes are choices: each code's texts, as an offset from CHOICES, or
-; -1.
+; -1. An offset, not an address: the image holds no addresses (FTN_VECTOR's
+; PIC). .ALIGN WORD puts the table on an even address after the bytes above.
 ;
 	.ALIGN	WORD
 TEXTS:	.WORD	-1			; 0
@@ -283,7 +287,8 @@ FORMATS:
 ; context, R7 the unit's block, R11 the longwords. R0's low bit is clear if the
 ; statement has failed already.
 ;
-START:	MOVAB	4(SP),R11
+START:	MOVAB	4(SP),R11		; the room the entry made, just above
+					;  this subroutine's return address
 	MOVC5	#0,(SP),#0,#OPS_SIZE,(R11)
 	PUSHL	4(AP)			; the control block
 	PUSHL	16(FP)			; the user PC, saved in this frame
@@ -304,8 +309,8 @@ START:	MOVAB	4(SP),R11
 10$:	MOVZBL	(AP),R0
 	CMPL	R8,R0
 	BGEQ	80$
-	MOVL	(AP)[R8],R0
-	MOVL	4(AP)[R8],R1
+	MOVL	(AP)[R8],R0		; argument R8: the keyword's code and
+	MOVL	4(AP)[R8],R1		;  mechanism, then argument R8+1, its value
 	ADDL2	#2,R8
 	MOVZBL	R0,R2			; the code
 	EXTZV	#8,#8,R0,R3		; the mechanism
@@ -313,7 +318,7 @@ START:	MOVAB	4(SP),R11
 	BNEQ	30$
 	CMPL	R2,#CODES
 	BGEQU	30$
-	CVTWL	TEXTS[R2],R0
+	CVTWL	TEXTS[R2],R0		; the word, sign-extended: -1 stays -1
 	BLSS	30$			; not a choice: FILE=, DEFAULTFILE=
 	MOVAB	CHOICES,R3
 	ADDL2	R3,R0
@@ -347,7 +352,7 @@ CHOICE:	MOVZWL	(R1),R2			; the text's length
 	MOVL	4(R1),R3		; and address
 10$:	TSTL	R2			; less blanks at its end
 	BEQL	20$
-	CMPB	-1(R3)[R2],#^A/ /
+	CMPB	-1(R3)[R2],#^A/ /	; byte R2-1, the last one left
 	BNEQ	20$
 	DECL	R2
 	BRB	10$
@@ -396,9 +401,9 @@ NAME_TEXT:
 	BRB	10$
 15$:	RSB
 20$:	MOVL	4(R1),R1
-	LOCC	#0,#255,(R1)
-	SUBL3	R0,#255,R0
-	SUBL2	R0,R1
+	LOCC	#0,#255,(R1)		; the NUL: R0 the bytes from it on
+	SUBL3	R0,#255,R0		; the bytes before it,
+	SUBL2	R0,R1			;  and back from it to their start
 	RSB
 
 ;
@@ -741,7 +746,8 @@ SETUP:	PUSHL	R7
 34$:	MOVW	R0,FAB$W_DEQ(R6)
 	MOVL	OPS_MAXREC(R11),FAB$L_MRN(R6)
 	MOVB	OPS_BUFFERS(R11),RAB$B_MBF(R10)
-	ADDL3	#511,OPS_BLOCK(R11),R0	; in bytes, in whole blocks: the RAB's
+	ADDL3	#511,OPS_BLOCK(R11),R0	; in bytes, in whole blocks (511 added
+					;  first rounds up): the RAB's
 	DIVL2	#512,R0			;  and, as VMS's run gave them (#398), the
 	MOVB	R0,RAB$B_MBC(R10)	;  FAB's block and bucket sizes
 	BEQL	341$
@@ -751,7 +757,7 @@ SETUP:	PUSHL	R7
 341$:
 	TSTL	OPS_SHARED(R11)
 	BEQL	35$
-	MOVB	#^X0F,FAB$B_SHR(R6)
+	MOVB	#^X0F,FAB$B_SHR(R6)	; others may PUT, GET, DELETE, and UPDATE
 35$:	TSTL	OPS_READONLY(R11)
 	BEQL	36$
 	CLRB	FAB$B_FAC(R6)
@@ -788,7 +794,7 @@ SETUP:	PUSHL	R7
 ; A list that isn't a list is FOR$_INVARGFOR, and bounds that aren't a key's are
 ; FOR$_INVKEYSPE, before any of it reaches RMS.
 ;
-KEYS:	SUBL2	#XAB$C_SUMLEN,SP
+KEYS:	SUBL2	#XAB$C_SUMLEN,SP	; room on the stack, which RET gives back
 	MOVC3	#XAB$C_SUMLEN,PROTO_SUM,(SP)
 	MOVL	SP,UB_XAB+XAB$L_NXT(R7)
 	MOVL	SP,R8			; the last XAB in the chain
@@ -798,8 +804,8 @@ KEYS:	SUBL2	#XAB$C_SUMLEN,SP
 2$:	CMPL	OPS_KEYMECH(R11),#MECHANISM_VALUE
 	BNEQ	4$
 	MOVZWL	2(R2),R3		; how many longwords
-	CLRL	R4
-	EDIV	#3,R3,R3,R0
+	CLRL	R4			; R3 and R4 the quadword dividend: three
+	EDIV	#3,R3,R3,R0		;  longwords a key, R0 the remainder
 	TSTL	R0
 	BNEQ	4$
 	CMPL	R3,#KEY_MOST
@@ -1003,7 +1009,7 @@ USER_OPEN:
 	PUSHAL	UB_UNIT(R7)
 	PUSHL	R10
 	PUSHL	R6
-	CALLS	#3,@OPS_USEROPEN(R11)
+	CALLS	#3,@OPS_USEROPEN(R11)	; the routine whose address USEROPEN= gave
 	BLBS	R0,10$
 	MOVL	R0,UB_STS(R7)		; its status, as RMS's
 	MOVL	FAB$L_STV(R6),UB_STV(R7)

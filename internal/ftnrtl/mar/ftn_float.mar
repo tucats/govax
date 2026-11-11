@@ -66,6 +66,9 @@
 ; a REAL*4 or an item that isn't floating; w 25, d 16 for a REAL*8 of
 ; either format; w 42, d 33, and e 3 for a REAL*16.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
@@ -150,7 +153,7 @@ BUFFER_SPARE	= 9
 ; records say, so DIGITS keeps the ones this routine needs).
 ;
 	.ENTRY	FTN$$EDIT_FLOAT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
-	SUBL2	#FRAME_SIZE,SP
+	SUBL2	#FRAME_SIZE,SP		; room for the fields above, below FP
 	MOVL	4(AP),R11
 	MOVL	8(AP),R10
 	BSBW	ITEM_FORMAT
@@ -181,11 +184,12 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	MOVL	R0,L_SIZE(FP)
 	ADDL2	R9,R0			; the field after it
 	ADDL2	#BUFFER_SPARE,R0
-	ADDL2	#3,R0
-	BICL2	#3,R0
-	SUBL2	R0,SP
+	ADDL2	#3,R0			; rounded up to a multiple of 4, so that
+	BICL2	#3,R0			;  SP stays on a longword
+	SUBL2	R0,SP			; the room, taken from the stack
 	MOVL	SP,CVT_BUFFER(FP)
 	MOVC5	#0,(SP),#^A/0/,L_SIZE(FP),@CVT_BUFFER(FP) ; digits it doesn't write
+					;  (no source bytes: all fill)
 	ADDL3	CVT_BUFFER(FP),L_SIZE(FP),R0
 	ADDL3	#BUFFER_SPARE,R0,L_FIELD(FP)
 	MOVC5	#0,(SP),#^A/ /,R9,@L_FIELD(FP)	; w blanks
@@ -340,7 +344,7 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 	ADDL2	L_FIELD(FP),R2
 	TSTL	R5
 	BEQL	45$
-	MOVB	R5,(R2)+
+	MOVB	R5,(R2)+		; the sign, and R2 on to the next column
 45$:	BLBC	R1,50$
 	MOVB	#^A/0/,(R2)+
 50$:	MNEGL	L_INT(FP),R4
@@ -403,7 +407,7 @@ INPUT:	JSB	FTN$$EDIT_FIELD		; FTN_EDIT: R2 and R3
 	PUSHL	R8			;  the digits in the fraction,
 	PUSHAB	VALUE(FP)		;  the result,
 	PUSHAQ	L_DESC(FP)		;  and the text
-	CASEL	L_KIND(FP),#0,#3
+	CASEL	L_KIND(FP),#0,#3	; by the format: CASEB's longword form
 20$:	.WORD	21$-20$
 	.WORD	22$-20$
 	.WORD	23$-20$
@@ -486,6 +490,11 @@ FIELD_SIZES:
 ; its count say. Returns the decimal exponent in R0 (0 for zero, whose
 ; CVT_SIGN(FP) is 0). Changes R0 to R5.
 ;
+; OTS$$CVT_x_T_R8 is a JSB entry in another image, LIBRTL: it takes its
+; arguments in registers, not an argument list, and has no entry mask to
+; save the registers it uses, so PUSHR and POPR save and restore the
+; ones this routine still needs around it.
+;
 DIGITS:	CLRL	CVT_SIGN(FP)
 	CLRL	CVT_EXPONENT(FP)
 	PUSHR	#^M<R6,R7,R8>		; the value's address, the scale factor, d
@@ -558,9 +567,9 @@ EXPONENT:
 	BLEQ	20$
 	BRW	STARS
 20$:	ADDL3	L_FIELD(FP),R9,R5	; the digits, the last first
-25$:	MOVL	R0,R2
+25$:	MOVL	R0,R2			; R2 and R3 the quadword dividend
 	CLRL	R3
-	EDIV	#10,R2,R0,R2
+	EDIV	#10,R2,R0,R2		; quotient in R0, the digit in R2
 	ADDB3	#^A/0/,R2,-(R5)
 	SOBGTR	R1,25$
 	TSTL	R0			; digits left over: it doesn't fit
