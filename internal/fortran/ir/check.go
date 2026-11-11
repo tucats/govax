@@ -11,7 +11,17 @@ import (
 // statement uses is the routine's, and the cells lie in $LOCAL one after
 // another, overlapping only where EQUIVALENCE made them. It returns the
 // first problem found, or nil. Lowering's tests run it on every routine.
+//
+// A checker like this is a compiler writer's safety net. Each pass assumes
+// the IR it's given obeys certain rules (its invariants), and a pass with a
+// bug may quietly break one; the damage would then show up much later, as
+// wrong VAX code, far from its cause. Running Check after lowering and after
+// each optimizer pass (opt.Optimize does) catches the break at the pass that
+// made it. Its errors are for the compiler's authors, not its users: a
+// FORTRAN program can't cause one.
 func Check(r *Routine) error {
+	// Sets (maps to true) of what belongs to the routine, so that each
+	// reference below can be checked with one lookup.
 	blocks := map[*Block]bool{}
 	names := map[string]bool{}
 
@@ -100,6 +110,9 @@ type checker struct {
 
 // block checks one block.
 func (c *checker) block(b *Block) error {
+	// First the block's statements, then its terminator. Each case sets err
+	// rather than returning at once, so the common check after the switch
+	// can stop at the first error.
 	for _, s := range b.Stmts {
 		var err error
 
@@ -409,6 +422,11 @@ func (c *checker) expr(e Expr) error {
 		}
 
 	case *CharCmp:
+		// The VAX's string instructions (CMPC3, CMPC5, MATCHC, MOVC3, ...)
+		// use R0 to R5 for their own counts and addresses, and leave them
+		// changed. A value the code generator was holding in one of those
+		// registers would be lost, so these must stand where no register
+		// holds anything: as a whole statement, or a branch's condition.
 		return fmt.Errorf("%s is inside an expression, where it would hold registers across CMPC", ExprText(e))
 
 	case *CharIndex:

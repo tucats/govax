@@ -20,7 +20,13 @@ func Lower(p *sema.Program) []*Routine {
 	return routines
 }
 
-// lowerer is lowering's state for one routine.
+// lowerer is lowering's state for one routine. As with sema's analyzer,
+// lowering's functions are its methods, and its fields are what they share.
+//
+// The main idea: lowering appends IR statements to the current block, cur.
+// Code that changes the flow of control (an IF, a DO, a GO TO) ends cur with
+// a terminator and starts a new block. So lowering a FORTRAN statement is
+// mostly "emit some statements into cur, perhaps end it and start another".
 type lowerer struct {
 	unit *sema.Unit
 	r    *Routine
@@ -75,12 +81,14 @@ type lowerer struct {
 	// adjustable is each adjustable array's descriptor cell, and
 	// adjustableOrder the arrays in the unit's order (lowerbounds.go).
 	adjustable      map[*sema.Symbol]*Cell
+	adjustableOrder []*sema.Symbol
 
 	// inVFE is set while a variable format expression is lowered: code that
 	// runs with another routine's FP (lowervfe.go).
 	inVFE bool
-	adjustableOrder []*sema.Symbol
 
+	// returns are the blocks that return a value of each type, in a function
+	// whose entry points' types differ (entries, above; lowerentry.go).
 	returns []*returnBlock
 
 	// vfes are the FORMAT statements with variable format expressions that
@@ -115,7 +123,12 @@ func lowerUnit(u *sema.Unit) *Routine {
 		data:     map[string]*Datum{},
 	}
 
-	// A hidden argument moves the dummy arguments along by one.
+	// A function whose value doesn't fit in R0 and R1 (CHARACTER, REAL*16,
+	// COMPLEX*16) returns it through a hidden first argument: the caller
+	// passes the address of a place for the result (for CHARACTER, of a
+	// descriptor of one, which also gives its length), and the function
+	// stores there (sema.Type.HiddenResult). That argument moves the dummy
+	// arguments along by one.
 	hidden := 0
 
 	switch u.Kind {
@@ -182,6 +195,11 @@ func lowerUnit(u *sema.Unit) *Routine {
 	l.computeBounds(u.Params)
 	l.stmts(u.Body)
 
+	// The order of the work: the entry points' and adjustable arrays'
+	// preparation, then the first block, the code computing the main entry's
+	// array bounds, and every statement of the body. Code that must come
+	// after the body (shared return blocks, each ENTRY's own bound
+	// computations, variable format expressions) is laid out last.
 	if l.cur != nil {
 		// Only a unit whose END semantic analysis didn't find (an error)
 		// can end without a terminator; but lowering never leaves a
@@ -193,10 +211,14 @@ func lowerUnit(u *sema.Unit) *Routine {
 	l.layOutEntryBounds()
 	l.layOutVFEs()
 
+	// A panic, not an error message: a block made and never placed is a
+	// bug in lowering, not in the program, and must not go unnoticed.
 	if l.made != len(r.Blocks) {
 		panic(fmt.Sprintf("ir: %s: %d blocks made, %d laid out", r.Name, l.made, len(r.Blocks)))
 	}
 
+	// Name the blocks in layout order, B1 first, for the dump and the
+	// code generator's labels.
 	for i, b := range r.Blocks {
 		b.Name = "B" + strconv.Itoa(i+1)
 	}

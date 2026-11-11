@@ -902,7 +902,10 @@ type Mem struct {
 	T Type
 
 	// Volatile says the place is part of a variable a VOLATILE statement names:
-	// no reference to it may be optimized away, which Phase 84 will ask.
+	// no reference to it may be optimized away or kept in a register,
+	// since something outside the program's view (an AST routine, another
+	// process sharing the memory) may read or change it at any moment.
+	// The optimizer (package opt) asks.
 	Volatile bool
 
 	// Deferred, an optimizer's, asks that a place with a Ptr and an Index be reached

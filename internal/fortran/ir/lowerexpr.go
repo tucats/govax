@@ -317,6 +317,14 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 
 		m := l.symbolMem(e.Sym)
 
+		// The element number of sema's arrays.go, made into code. Each
+		// subscript is split (by checkedSubscript) into a part known only
+		// at run time, v, and a constant, k. The constants are summed now
+		// into first, a constant offset folded into the place's address;
+		// only the parts that aren't constant become the index expression,
+		// which the VAX's indexed mode multiplies by the element's size. So
+		// A(I+1) of DIMENSION A(10) costs no addition at run time: it is
+		// A+0[I] (with A(1) at A, the +1 and the -1 cancel).
 		var index Expr
 
 		first, multiplier := 0, 1

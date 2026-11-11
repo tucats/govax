@@ -394,6 +394,23 @@ func (l *lowerer) do(d *sema.Do) {
 // list's (impliedDo), whose body is lowered by body. A DO statement's
 // temporaries are given back once its count is set (release), since its
 // statement is over then; an implied-DO list's statement isn't.
+//
+// FORTRAN computes a DO loop's number of trips once, before the first
+// (section 5.3.1.1), so changing the limit inside the loop doesn't change
+// how often it runs. The loop is lowered so, with the count in a cell of
+// its own ($Cn) that counts down, for DO 10 I = 1, N:
+//
+//	B1: $C1 = N - 1 + 1        (the trip count)
+//	    I = 1
+//	    branch $C1 <= 0 B3 B2  (no trips at all: skip the body)
+//	B2: (the body)
+//	    I = I + 1
+//	    $C1 = $C1 - 1
+//	    branch $C1 > 0 B2 B3   (another trip?)
+//	B3: (after the loop)
+//
+// body is a function value: the caller passes in the code that lowers the
+// loop's body, so DO statements and implied-DO lists can share this.
 func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step sema.Expr, release bool, body func()) {
 	l.loops++
 	n := l.loops
@@ -405,6 +422,8 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	last := l.expr(limit)
 	by := l.expr(step)
 
+	// A step that isn't constant is computed once too, into a cell ($Sn),
+	// since the program may change the variables it's made of.
 	if _, ok := by.(*Const); !ok {
 		s := l.loopCell(StepCell, n, t, name)
 		l.emit(&Assign{origin: l.origin(), Dst: s, Src: by})
