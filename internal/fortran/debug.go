@@ -21,6 +21,12 @@ type Debug struct {
 }
 
 // debugKeywords are /DEBUG's keywords, each what it does to a setting.
+//
+// Rather than a switch statement on the keyword, each entry maps the keyword
+// to a small function (a function literal) that changes a *Debug. Adding a
+// keyword is then one line, and the same table also gives the list of
+// keywords that may be abbreviated (diag.FindKeyword). This "table of
+// functions" style is used throughout govax.
 var debugKeywords = map[string]func(*Debug){
 	"ALL":         func(d *Debug) { *d = Debug{Symbols: true} },
 	"NONE":        func(d *Debug) { *d = Debug{NoTraceback: true} },
@@ -38,6 +44,13 @@ func (d Debug) With(keywords []string) (Debug, error) {
 		keywords = []string{"ALL"}
 	}
 
+	// Two loops. The first decides where to start from: if any keyword
+	// asks for something (isn't a NO form), start from nothing at all, so
+	// that /DEBUG=SYMBOLS means symbols and nothing else. Otherwise d, the
+	// receiver, is kept: a list such as /DEBUG=NOTRACEBACK only takes away
+	// from it. d is a copy of the caller's value (the method has a value
+	// receiver, not a pointer), so changing it here changes nothing of
+	// theirs until it's returned.
 	for _, word := range keywords {
 		if !strings.HasPrefix(strings.ToUpper(word), "NO") {
 			d = Debug{NoTraceback: true}
@@ -48,6 +61,10 @@ func (d Debug) With(keywords []string) (Debug, error) {
 
 	const list = "ALL, NONE, [NO]SYMBOLS, or [NO]TRACEBACK"
 
+	// The second loop applies each keyword in the order given. FindKeyword
+	// accepts an abbreviation (SYM for SYMBOLS), as DCL does, and says how
+	// many keywords it matched: one is the keyword, none is a mistake, and
+	// more than one means the abbreviation was too short to choose.
 	for _, word := range keywords {
 		apply, matches := diag.FindKeyword(debugKeywords, word)
 

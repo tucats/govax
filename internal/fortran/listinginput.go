@@ -57,8 +57,14 @@ var referenceKinds = map[sema.RefKind]string{
 // line has that line's include depth before its number, as the listing's source lines
 // do, since line 1 of an INCLUDE file isn't line 1 of the file that includes it.
 func listingCrossRefs(prog *sema.Program, program *source.Program) []listing.CrossRef {
+	// make's third argument is the slice's capacity: room for every unit,
+	// so the appends below never have to grow it.
 	crossRefs := make([]listing.CrossRef, 0, len(prog.Units))
 
+	// A mention of a name records its line's serial number (each line read,
+	// counting INCLUDE files' lines, has its own), so build a map from that
+	// number to the line's include depth once, rather than searching the
+	// lines for every mention.
 	depths := map[int]int{}
 	for _, line := range program.Lines {
 		depths[line.Serial] = line.Depth
@@ -93,6 +99,9 @@ func listingUnits(prog *sema.Program) []listing.Unit {
 	units := make([]listing.Unit, 0, len(prog.Units))
 	start := 0
 
+	// Comment lines between two units belong to the second: they usually
+	// describe it. So each unit after the first starts on the line after
+	// the last statement (END) of the one before.
 	for _, u := range prog.Units {
 		units = append(units, listing.Unit{Line: start, Name: u.Name})
 
@@ -116,6 +125,10 @@ func lastStatement(u *ast.Unit) ast.Stmt {
 // listingHeadings finds the file's TITLE and SUBTITLE directives that give a string.
 // A directive without one changes nothing (section 10.3.3).
 func listingHeadings(tree *ast.File) []listing.Heading {
+	// walk is a recursive function literal. A function literal can't refer
+	// to itself by a name given in its own := statement, since the name
+	// doesn't exist until the statement ends, so walk is declared first
+	// with var and assigned after; the literal then calls walk freely.
 	var (
 		headings []listing.Heading
 		walk     func(list []ast.Stmt)
@@ -123,6 +136,11 @@ func listingHeadings(tree *ast.File) []listing.Heading {
 
 	walk = func(list []ast.Stmt) {
 		for _, s := range list {
+			// A type switch: s is an ast.Stmt, an interface, and each case
+			// asks whether the value inside it is of that concrete type.
+			// Within a case, s is that type, so its fields can be used.
+			// Directives may sit inside a STRUCTURE declaration (and its
+			// UNIONs and MAPs), whose statements nest, so walk goes in.
 			switch s := s.(type) {
 			case *ast.DirectiveStmt:
 				if (s.Name == "TITLE" || s.Name == "SUBTITLE") && s.HasText {
