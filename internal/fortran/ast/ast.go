@@ -106,6 +106,21 @@ func (u *Unit) Position() diag.Position {
 }
 
 // Stmt is a statement. Every statement type embeds StmtBase.
+//
+// How that works in Go: a struct that lists another type as a field with
+// no name, as
+//
+//	type GotoStmt struct {
+//		StmtBase
+//		Target LabelRef
+//	}
+//
+// embeds it. The embedded struct's fields and methods are promoted: a
+// *GotoStmt has a Label field and a Base method as if it had declared them
+// itself. So every statement type gets Position and Base from StmtBase,
+// and therefore satisfies this interface without a line of its own (Go
+// interfaces are satisfied implicitly, by having the methods). A pass that
+// holds an ast.Stmt finds out which statement it is with a type switch.
 type Stmt interface {
 	Node
 
@@ -326,10 +341,17 @@ func (o Op) Relational() bool {
 }
 
 // Expr is an expression. Every expression type embeds ExprBase.
+//
+// exprNode is a marker method: it does nothing, and exists only so that a
+// statement (which has a Position method too) can't be used where an
+// expression is wanted by mistake; only types embedding ExprBase have it.
+// Being unexported (lowercase), it also keeps other packages from adding
+// expression types of their own.
 type Expr interface {
 	Node
 	exprNode()
 }
+
 
 // ExprBase is what every expression has: where it is. For a Binary
 // expression that is its operator, which is what a message about the

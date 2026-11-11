@@ -24,6 +24,11 @@ type blockStack struct {
 
 // openBlock is one open declaration: the statement that opened it, its
 // kind (Structure, Union, or Map), and the body its statements go into.
+//
+// body is a pointer to the slice field in the declaration's node
+// (StructureStmt.Body, say), not a copy of the slice: appending through
+// the pointer updates the node's own field, wherever append moves the
+// slice's array.
 type openBlock struct {
 	stmt ast.Stmt
 	kind lex.Kind
@@ -56,7 +61,13 @@ func (b *blockStack) take(s ast.Stmt) bool {
 	top := b.open[len(b.open)-1]
 	k := s.Base().Kind
 
+	// Report a statement that doesn't belong where it is, but keep it in
+	// the declaration either way, so the END that follows still matches.
+	// A case with no body (the one listing MAP, UNION, STRUCTURE, and
+	// directives) is how a Go switch says "these are fine, do nothing":
+	// unlike C, Go's cases don't fall through to the next one.
 	switch {
+
 	case isBlockEnd(k):
 		b.end(s)
 

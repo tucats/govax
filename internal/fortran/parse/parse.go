@@ -33,6 +33,9 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 		blocks   = &blockStack{messages: messages}
 	)
 
+	// One statement per turn. Each is parsed on its own (statement), then
+	// placed: in the prologue waiting for a unit, inside an open STRUCTURE
+	// declaration, as a new unit's header, or in the open unit's body.
 	for _, ls := range statements {
 		if ls.Kind == lex.Empty {
 			if ls.Label != 0 {
@@ -250,6 +253,12 @@ func statement(ls *lex.Statement, messages *diag.List) (s ast.Stmt) {
 		return &ast.BadStmt{StmtBase: base}
 	}
 
+	// recover, called in a deferred function, stops a panic that is
+	// unwinding the stack and returns the value it was raised with (nil if
+	// there's no panic). s is a named result, so setting it here replaces
+	// what the function returns. Only our own bailout is caught: any other
+	// panic, such as an index out of range, is a bug, and is raised again
+	// so that it isn't hidden.
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(bailout); !ok {
@@ -260,6 +269,7 @@ func statement(ls *lex.Statement, messages *diag.List) (s ast.Stmt) {
 		}
 	}()
 
+	// Look up the kind's parsing function in the table and call it.
 	return parsers[ls.Kind](p)
 }
 
@@ -269,8 +279,13 @@ func (p *parser) base() ast.StmtBase {
 	return ast.StmtBase{Pos: p.st.Position(p.st.Offset), Label: p.st.Label, Kind: p.st.Kind, Source: p.st.Source}
 }
 
-// peek is the next token, or nil at the end of the statement.
+// peek is the next token, or nil at the end of the statement. It returns
+// a pointer so that "no token" can be nil; the pointer is into the token
+// slice, so the caller mustn't change what it points at. peek doesn't
+// move on: that is next's job. A parser that can look ahead without
+// consuming is called a predictive (or recursive descent) parser.
 func (p *parser) peek() *lex.Token {
+
 	if p.i < len(p.tokens) {
 		return &p.tokens[p.i]
 	}

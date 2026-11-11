@@ -64,6 +64,16 @@
 // file it writes beside its source: every FORTRAN line is there as a
 // comment above the VAX instructions it became.
 //
+// Comments cite their sources briefly. "Section 5.3.1" (or a table,
+// figure, or appendix) is the 1988 VAX FORTRAN Language Reference Manual,
+// the language's definition. "Decision 10" or "subtask 4" is a numbered
+// item in the phase doc of the phase that wrote the code (docs/PHASE-nn -
+// topic.md), where the choice and its reasons are written down.
+// "Unconfirmed" or "ours" marks a rule neither the manual nor a run on a
+// real VAX settled, so govax chose. "VMS's" behavior means what a real VAX
+// running VMS 7.1 was seen to do, in the probes under testdata.
+
+//
 // # A glossary
 //
 // The compiler's comments use the words of three subjects at once:

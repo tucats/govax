@@ -95,15 +95,28 @@ type control struct {
 	specs    []*ast.IOSpec
 }
 
-// controlList reads a statement's parenthesized control list.
+// controlList reads a statement's parenthesized control list. For
+//
+//	READ (5, 100, END=99, IOSTAT=IOS) X
+//
+// it reads (5, 100, END=99, IOSTAT=IOS): the unit 5 and the format 100 by
+// position, then two keyword specifiers. The items after the list (X) are
+// the statement's to read.
 func (p *parser) controlList() *control {
+	// cl is what this statement's list may hold, from the controls table.
 	cl := controls[p.st.Kind]
 	c := &control{}
+
+	// seen is the set of keywords already given, so that p.once can report
+	// one given twice. A map[string]bool is Go's usual set: a missing key
+	// reads as false.
 	seen := map[string]bool{}
 	positional := 0 // specifiers given without a keyword, in order from the first
 
 	p.expect("(")
 
+	// One specifier per turn; i is its position in the list. The loop
+	// ends when no comma follows a specifier.
 	for i := 0; ; i++ {
 		t := p.peek()
 
@@ -118,11 +131,16 @@ func (p *parser) controlList() *control {
 
 			c.specs = append(c.specs, &ast.IOSpec{Keyword: t.Text, Pos: p.pos(*t)})
 		} else if p.atKeyword() {
+			// keyword=value: skip the keyword and the =, then read what
+			// the keyword takes. The switch's "kw := t.Text;" is a short
+			// statement run before the cases, which have no value to
+			// compare with, so each case is a condition of its own.
 			p.next()
 			p.next()
 			p.once(seen, t)
 
 			switch kw := t.Text; {
+
 			case kw == "UNIT":
 				u := p.unitSpec()
 				c.unit = &u

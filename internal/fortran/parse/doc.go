@@ -104,7 +104,23 @@
 // semantic analysis builds the blocks, where the rules about jumping into
 // and out of them are checked too.
 //
+// # Reading the grammar in the comments
+//
+// Each parsing function's comment gives the statement's form as the
+// language manual writes it: capitals are written as they stand, small
+// letters stand for something (name, e for an expression, s for a label),
+// brackets [ ] enclose what may be left out, and ... means the item before
+// may be repeated. So
+//
+//	SUBROUTINE name [([p[,p]...])]
+//
+// is the word SUBROUTINE and a name, then optionally a parenthesized list,
+// itself possibly empty, of one or more dummy arguments separated by
+// commas. A section number after a form (section 6.2.3) is the 1988 VAX
+// FORTRAN Language Reference Manual's.
+//
 // # An example
+
 //
 // For the program
 //
