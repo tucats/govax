@@ -72,7 +72,6 @@
 // "Unconfirmed" or "ours" marks a rule neither the manual nor a run on a
 // real VAX settled, so govax chose. "VMS's" behavior means what a real VAX
 // running VMS 7.1 was seen to do, in the probes under testdata.
-
 //
 // # A glossary
 //

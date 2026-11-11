@@ -120,7 +120,6 @@
 // FORTRAN Language Reference Manual's.
 //
 // # An example
-
 //
 // For the program
 //

@@ -285,7 +285,6 @@ func (p *parser) base() ast.StmtBase {
 // move on: that is next's job. A parser that can look ahead without
 // consuming is called a predictive (or recursive descent) parser.
 func (p *parser) peek() *lex.Token {
-
 	if p.i < len(p.tokens) {
 		return &p.tokens[p.i]
 	}

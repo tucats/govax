@@ -731,14 +731,12 @@ func floatBytes(f vaxfloat.Format, v vaxfloat.Value) []byte {
 	// Hi the next 8 (the VAX's floating formats store their 16-bit words in
 	// an order of their own, which vaxfloat has already dealt with). Spread
 	// them back out a byte at a time, then keep as
-
 	// many bytes as the format has: 4 for F, 8 for D and G, 16 for H.
 	// "range 8" (Go 1.22 on) counts i from 0 to 7.
 	bits, _ := vaxfloat.Pack(f, v)
 	b := make([]byte, 16)
 
 	for i := range 8 {
-
 		b[i] = byte(bits.Lo >> (8 * i))
 		b[8+i] = byte(bits.Hi >> (8 * i))
 	}

@@ -536,7 +536,6 @@ func (ev *evaluator) operate(op ast.Op, x, y *Const, pos diag.Position) (*Const,
 		// G, or H), and vaxfloat does the arithmetic exactly, then rounds
 		// to that format.
 		v, err := realArith(op, ev.a.format(t), x.Real, y.Real)
-
 		if err != nil {
 			return nil, ev.floatError(err, pos, t)
 		}

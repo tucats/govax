@@ -192,7 +192,6 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		// symbol whose declaration failed, so later uses of it aren't
 		// reported again and again.
 		switch {
-
 		case sym.ResultVar != nil:
 			a.report("RESULTDECL", d.Pos, d.Name, sym.ResultVar.Name)
 		case sym.Class == UnitName || sym.Struct != nil:

@@ -67,7 +67,6 @@ func (b *blockStack) take(s ast.Stmt) bool {
 	// directives) is how a Go switch says "these are fine, do nothing":
 	// unlike C, Go's cases don't fall through to the next one.
 	switch {
-
 	case isBlockEnd(k):
 		b.end(s)
 

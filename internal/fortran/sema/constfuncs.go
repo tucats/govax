@@ -183,7 +183,6 @@ func minMax(sign int) func(*evaluator, *ast.Apply, []*Const) (*Const, *constErr)
 
 		for _, arg := range args[1:] {
 			if order(arg, best)*sign > 0 {
-
 				best = arg
 			}
 		}

@@ -328,7 +328,6 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 // (EQUIVALENCE, DATA, SAVE) can only be settled once every other is known,
 // so the first walk saves them in fields here for later.
 type analyzer struct {
-
 	messages *diag.List
 	prog     *Program
 	units    map[string]*fileUnit

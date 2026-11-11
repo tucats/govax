@@ -485,7 +485,6 @@ func (l *lexer) matchParen(open, j int) int {
 			// An if statement may start with a simple statement, run before
 			// the condition: here it decrements depth, then tests it.
 			if depth--; depth == 0 {
-
 				return k
 			}
 		}

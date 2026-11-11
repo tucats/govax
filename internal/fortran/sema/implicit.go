@@ -57,7 +57,6 @@ func (r *implicitRules) typeOf(name string) (t Type, untyped bool) {
 		return RealType, false
 	}
 
-
 	if r.none {
 		return invalid, true
 	}

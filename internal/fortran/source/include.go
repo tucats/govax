@@ -201,7 +201,6 @@ func characterConstant(text string, start int) (value string, end int, ok bool) 
 		// FORTRAN writes an apostrophe inside a quoted string as two:
 		// 'DON''T' is DON'T.
 		if i+1 < len(text) && text[i+1] == '\'' {
-
 			b.WriteByte('\'')
 			i++
 

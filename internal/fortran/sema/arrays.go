@@ -394,7 +394,6 @@ func (s *Symbol) ElementNumber(subs []int) (int, bool) {
 	number, multiplier := 0, 1
 
 	for i, d := range s.Dims {
-
 		switch {
 		case d.LowerExpr != nil || d.UpperExpr != nil:
 			return 0, false

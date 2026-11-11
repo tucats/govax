@@ -290,7 +290,6 @@ func (l *lexer) dotted(i, j int) (string, TokenKind, int) {
 	// the first period is something else, such as a decimal point.
 	kind, ok := dotted[word]
 	if !ok {
-
 		return "", 0, 0
 	}
 

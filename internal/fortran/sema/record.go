@@ -624,7 +624,6 @@ func (s *Structure) image() []*FieldInitial {
 		kept = append(overlaid(kept, e.in), e.in)
 	}
 
-
 	sort.SliceStable(kept, func(i, j int) bool { return kept[i].Offset < kept[j].Offset })
 
 	s.imageList, s.imageMade = kept, true

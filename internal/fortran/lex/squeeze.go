@@ -146,7 +146,6 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 		case (c == 'H' || c == 'h' || c == 'R' || c == 'r') && counting && count > 0:
 			// The H (or R) after a count: the next count characters are the
 			// constant's text.
-
 			c = upper(c)
 			keep(c, i, true)
 			hollerith, hollAt, hollCount, radix = count, countAt, count, c == 'R'

@@ -140,7 +140,6 @@ func (p *parser) controlList() *control {
 			p.once(seen, t)
 
 			switch kw := t.Text; {
-
 			case kw == "UNIT":
 				u := p.unitSpec()
 				c.unit = &u

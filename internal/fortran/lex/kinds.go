@@ -138,7 +138,6 @@ type kindInfo struct {
 // kind added to the const block above without an entry here gets the zero
 // kindInfo, which a test catches by its empty name.
 var kinds = [numKinds]kindInfo{
-
 	Unknown:      {name: "unrecognized statement"},
 	Empty:        {name: "empty statement"},
 	Assignment:   {name: "assignment", executable: true},
@@ -264,7 +263,6 @@ var byKeyword = func() []Kind {
 	// SliceStable sorts with the function given as "less than"; being
 	// stable, it keeps keywords of the same length in the table's order.
 	sort.SliceStable(list, func(i, j int) bool {
-
 		return len(kinds[list[i]].keyword) > len(kinds[list[j]].keyword)
 	})
 
