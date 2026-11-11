@@ -95,7 +95,7 @@ const MaxPrivReg = 128
 // implicit "trace to the same stream as console output" destination —
 // carried on CPU, not a separate type, since CPU is already threaded (by
 // value or by parameter) into every layer (internal/cpu, internal/vm,
-// internal/rtl) that needs to check a DBG_* flag. See docs/PHASE-17.md.
+// internal/corevms) that needs to check a DBG_* flag. See docs/PHASE-17.md.
 type CPU struct {
 	gpr [MaxReg + 1]uint32
 	pr  [MaxPrivReg + 1]uint32

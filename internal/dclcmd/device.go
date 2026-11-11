@@ -155,7 +155,7 @@ func (c *Context) showDeviceLine(d *iodev.Device, disk bool) {
 // (rms.MountTable.Operations), and d.OpCnt otherwise.
 //
 // "Reference count" is d.RefCnt, the count SYS$ASSIGN already maintains
-// (internal/rtl/devices.go) — the real VMS meaning of a device's
+// (internal/corevms/devices.go) — the real VMS meaning of a device's
 // reference count (outstanding channel assigns), not anything specific to
 // the mounted ODS-2 volume.
 //

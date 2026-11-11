@@ -24,7 +24,7 @@ import "github.com/tucats/govax/internal/registers"
 // # Who does what
 //
 // On a real VAX, AST delivery belongs to the VMS executive, not the
-// hardware. govax's executive is the Go RTL (internal/rtl), so the RTL
+// hardware. govax's executive is Go (internal/corevms), so corevms
 // owns the AST queues and decides *whether* an AST can be delivered now
 // and *which* one. What it can't do is build a procedure-call frame: that
 // is CALLG's job, and CALLG lives here, in the engine (buildCallFrame).

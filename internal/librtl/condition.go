@@ -13,10 +13,10 @@ var (
 	ssUnwind   = vmsdef.Symbols["SS$_UNWIND"]
 )
 
-// The condition-handling routines (moved from rtl, docs/PHASE-26.md
-// subtask 33). The dispatch itself -- building the signal and mechanism
-// arrays, searching the call frames, unwinding -- is rtl's; see
-// internal/rtl/signal.go and unwind.go.
+// The condition-handling routines (moved from internal/corevms, then named
+// rtl, docs/PHASE-26.md subtask 33). The dispatch itself -- building the signal and mechanism
+// arrays, searching the call frames, unwinding -- is corevms's; see
+// internal/corevms/signal.go and unwind.go.
 
 // libSignal is LIB$SIGNAL:
 //

@@ -805,16 +805,15 @@ never had.
   paths relative to the root (`parsedName.belowRoot`), and `ods2`'s 15 levels.
   Subtask 8 (2026-11-09) is the system names: `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` the root `_DUA0:[SYSTEM.]` (`sysvol.Rooted`), `SYS$SYSDEVICE` concealed,
   STARTUP.COM's names `SYS$SYSROOT:[dir]`, held by `TestSystemNames` (`internal/console/sysnames_test.go`). Subtask 9 (2026-11-09) is the close-out.
-  Phase 92 (planned 2026-11-11) is documentation, a standalone guide per
-  part: Part A is `docs/VAX-VMS-INTERNALS.md` (subtask 1, 2026-11-11: the
-  plan, the outline, and sections 0 to 3; subtask 2, 2026-11-11, section
-  4, the instruction set; subtask 3, 2026-11-11, section 5, memory;
-  subtask 4, 2026-11-11, section 6, VMS paging; subtask 5, 2026-11-11,
-  section 7, processes; subtask 6, 2026-11-11, section 8, I/O; subtask 7,
-  2026-11-11, section 9, RMS and ODS-2; subtask 8, 2026-11-11, section 10,
-  from VAX code to Go; subtask 9, 2026-11-11, section 11, starting the
-  system; section 12 is subtask 10; Decision 6, bugs the writing finds are
-  fixed in the same subtask).
+  Phase 92 (planned and done 2026-11-11; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is documentation, a
+  standalone guide per part: Part A is `docs/VAX-VMS-INTERNALS.md`
+  (subtask 1: the plan, the outline, and sections 0 to 3; subtasks 2 to
+  9: sections 4 to 11, the instruction set, memory, VMS paging,
+  processes, I/O, RMS and ODS-2, from VAX code to Go, and starting the
+  system; subtask 10: section 12, a map of the source, and the
+  close-out; Decision 6, bugs the writing found were fixed in the same
+  subtask). A further guide would be its Part B.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

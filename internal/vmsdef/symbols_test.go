@@ -8,7 +8,7 @@ import (
 
 // TestSymbols_LNM_values pins the $LNMDEF values docs/PHASE-25.md's
 // logical-name design depends on. Besides lnmdef.sdl itself, the attribute
-// bits and item codes agree with what internal/rtl/logicals.go and the
+// bits and item codes agree with what internal/corevms/logicals.go and the
 // since-deleted internal/io/logical.go used before this table existed.
 func TestSymbols_LNM_values(t *testing.T) {
 	want := map[string]uint32{
@@ -84,7 +84,7 @@ func TestSymbols_LNM_maskMatchesBit(t *testing.T) {
 }
 
 // TestSymbols_SS_values pins the $SSDEF completion codes the logical-name
-// services return, plus the codes internal/rtl/status.go already carried
+// services return, plus the codes internal/corevms/status.go already carried
 // as literals, which ssdef.txt independently confirms.
 func TestSymbols_SS_values(t *testing.T) {
 	want := map[string]uint32{

@@ -4303,7 +4303,7 @@ type ServiceFunc func(env *Environment, argv []uint32) (uint32, error)
 `env` is the calling process (section 3.5), `argv` its argument list
 already read out of memory, and the `uint32` the status for R0. Each
 service is registered by name in the System's `ServiceTable`, by a
-`register...Services` function in the file that implements it (120
+`register...Services` function in the file that implements it (122
 services, from `registerCoreServices` to `registerRMSServices`). Here is
 `$GETTIM`, whole (`corevms/vmstime.go`):
 
@@ -5358,4 +5358,193 @@ routine (section 7.10).
 
 ## 12. A map of the source
 
-*To be written.*
+Section 2 listed the packages a layer at a time. This section is the
+other way in: for each subject of sections 4 to 11, the files to open
+first, in the order they're best read; then the tests that hold each
+subject to the VAX or to VMS; then a few ways to watch the machine work.
+Paths are under `internal/` unless they say otherwise, and `ods2/...` is
+the separate `github.com/tucats/ods2` module.
+
+Every package has a `doc.go` that says what the package is for and how
+its files divide the work. It's the place to start in a package this map
+doesn't cover.
+
+### 12.1 By subject
+
+**The instruction set** (section 4).
+
+| File | What to read it for |
+| --- | --- |
+| `cpu/gen/operands.go`, `cpu/instructions_table.go` | the table: each opcode's name, operands, access kinds, and data types (generated; don't edit the table by hand) |
+| `cpu/engine.go` | `Engine`, `NewEngine`, and `Step`: what happens between two instructions and in one |
+| `cpu/decode.go`, `cpu/operand.go`, `cpu/operandaccess.go` | operand specifiers, and the `Operand` an instruction reads and writes through |
+| `cpu/dispatch.go` | `Handler`, and how each file registers its instructions' handlers |
+| `cpu/condcodes.go` | N, Z, V, and C |
+| `cpu/mov.go`, `cpu/integermath.go`, `cpu/branch.go`, `cpu/call.go`, ... | the instructions, a family to a file; `call.go` is CALLS, CALLG, RET, and REI |
+| `cpu/fpu.go`, `vaxfloat/` | the floating instructions and the formats beneath them |
+| `cpu/decimal.go`, `cpu/decimalmath.go`, `cpu/editpc.go` | packed decimal |
+| `registers/operandlog.go` | the operand log, which puts registers back when an instruction faults |
+| `cpu/exception.go`, `cpu/handlefault.go` | faults, traps, and aborts, and the SCB sequence that takes them |
+| `cpu/inttrap.go`, `cpu/trace.go` | the arithmetic traps and the trace trap |
+| `cpu/interrupt.go`, `cpu/clock.go`, `cpu/systime.go` | interrupts, the interval clock, and the time of day |
+| `cpu/changemode.go`, `cpu/procreg.go` | CHMK to CHMU, and MTPR and MFPR |
+| `cpu/context.go` | the hardware PCB, LDPCTX, and SVPCTX |
+
+**Memory** (section 5).
+
+| File | What to read it for |
+| --- | --- |
+| `vm/memory.go` | `Memory`: RAM, the ROM and NVRAM, physical loads and stores |
+| `vm/pte.go` | the page table entry and its forms, valid and not |
+| `vm/translate.go` | a virtual address made physical, step by step, and the faults on the way |
+| `vm/tb.go`, `vm/fetch.go` | the translation buffer and the instruction-fetch window |
+| `vm/space.go` | another process's address space, reached without a context switch |
+| `vm/pager.go`, `vm/frames.go` | the pager hook and the frame allocator: the two seams to VMS |
+| `machine/vminit.go` | INITIALIZE/MEMORY's layout of S0, P0, and P1 |
+| `corevms/addrspace.go`, `corevms/stacks.go`, `corevms/p1vector.go` | a process's address space, its mode stacks, and the P1 vector shared by all |
+| `corevms/filesec.go` | file sections, and `PageIn`, the pager every fault reaches |
+
+**VMS paging** (section 6).
+
+| File | What to read it for |
+| --- | --- |
+| `paging/doc.go`, `paging/database.go`, `paging/list.go` | the PFN database and its free and modified lists |
+| `paging/workingset.go` | one process's working set list and its replacement |
+| `corevms/frames.go`, `corevms/workingset.go` | frames claimed with their owners; a fault, an eviction, a soft fault |
+| `corevms/mpw.go`, `corevms/reclaim.go` | the modified page writer and the reclaimer |
+| `paging/pagefile.go`, `corevms/pagefile.go`, `rms/pagefile.go` | the page file's block map, its use, and the file itself |
+| `corevms/pgflquota.go` | PGFLQUOTA |
+| `corevms/globalpages.go`, `corevms/gblsec.go` | global sections and their pages |
+| `corevms/cluster.go` | read clustering |
+| `machine/imagemap.go`, `corevms/imagesec.go`, `corevms/pagesource.go` | an image activated by mapping |
+| `corevms/regions.go`, `corevms/tablearea.go`, `corevms/userstack.go` | created address space, the table area, and the user stack |
+| `machine/sysgen.go`, `corevms/sysgen.go` | the `vax.sysgen.*` settings |
+
+**Processes** (section 7).
+
+| File | What to read it for |
+| --- | --- |
+| `corevms/system.go`, `corevms/environment.go`, `corevms/process.go`, `corevms/job.go` | what's shared, what's one process's, and the job |
+| `corevms/proctable.go` | the process table and PIDs |
+| `sched/` | VMS's scheduling rules in plain Go |
+| `cpu/schedule.go`, `corevms/schedule.go` | the engine's hook and `switchTo`, where the CPU changes process |
+| `corevms/waits.go`, `corevms/idle.go` | waiting, event reporting, and what happens with nothing to run |
+| `cpu/ast.go`, `corevms/ast.go` | ASTs, the engine's half and VMS's |
+| `corevms/eventflags.go`, `corevms/hibernate.go`, `corevms/suspend.go`, `corevms/timers.go` | event flags, hibernation, suspension, and timers |
+| `corevms/mailbox.go`, `lck/`, `corevms/enq.go` | mailboxes and the lock manager |
+| `corevms/creprc.go`, `corevms/startup.go`, `corevms/delete.go`, `corevms/termmsg.go` | a process made, started, and deleted |
+| `corevms/spawn.go`, `corevms/cliprocess.go` | subprocesses, and processes that run DCL |
+| `corevms/terminal.go`, `corevms/lend.go` | the shared terminal, and lending the CPU while DCL waits |
+| `cpu/attention.go`, `corevms/ctrlast.go` | Ctrl/C and Ctrl/Y |
+
+**I/O** (section 8).
+
+| File | What to read it for |
+| --- | --- |
+| `io/device.go`, `corevms/devices.go` | the device table, and channels |
+| `corevms/qio.go` | `$QIO`: the request, its driver, and its completion |
+| `corevms/ttdriver.go`, `corevms/mbxdriver.go`, `corevms/nulldriver.go`, `corevms/diskdriver.go` | the drivers |
+| `corevms/iocount.go` | the I/O counts |
+| `cpu/xfc.go`, `machine/services.go` | the console's own XFCs |
+| `lnm/ppf.go`, `rms/ppf.go`, `rms/ppfaccess.go`, `corevms/ppfstart.go` | process-permanent files |
+
+**RMS and ODS-2** (section 9).
+
+| File | What to read it for |
+| --- | --- |
+| `ods2/volume/volume.go`, `ods2/ondisk/` | a mounted volume, and the structures on the disk |
+| `ods2/volume/access.go`, `ods2/volume/file.go` | an open file and its sharing counts |
+| `rms/mount.go`, `rms/session.go`, `rms/context.go` | the mount table, a session, and what a service is given |
+| `corevms/rms.go` | the services' connection from the vector to `rms` |
+| `rms/fab.go`, `rms/rab.go`, `rms/nam.go`, `rms/xab.go` | the control blocks in VAX memory |
+| `rms/name.go`, `rms/parse.go`, `rms/search.go`, `lnm/filespec.go` | names, logical names, `$PARSE`, and `$SEARCH` |
+| `rms/open.go`, `rms/create.go`, `rms/close.go`, `rms/ifi.go` | opening and closing, and the open-file table |
+| `rms/stream.go`, `rms/get.go`, `rms/put.go`, `rms/recordops.go` | records |
+| `rms/relative.go`, `rms/indexed.go`, `rms/indexedrecords.go`, `isam/` | relative and indexed files |
+| `rms/sharing.go`, `rms/recordlock.go` | sharing a file, and record locks |
+| `rms/blockio.go`, `rms/ufo.go`, `rms/acp.go` | block I/O, user file open, and the ACP's file operations |
+| `rms/location.go`, `rms/hostfile.go` | where a name points, host or volume |
+
+**From VAX code to Go** (section 10).
+
+| File | What to read it for |
+| --- | --- |
+| `cpu/xfc.go`, `cpu/services.go` | XFC, its selectors, and the interface it calls |
+| `vmsdef/p1vector.go` | the system service vector |
+| `machine/services.go`, `corevms/enginehooks.go` | the machine's and the process's halves of the engine's hooks |
+| `corevms/service.go` | `ServiceTable`, `SystemService`, and the dispatch's steps |
+| `corevms/vmstime.go` | `$GETTIM`, a short service to read whole |
+| `corevms/changemode.go` | `$DCLCMH` and failure exceptions |
+| `corevms/callback.go` | calling VAX code from Go |
+| `corevms/shim.go`, `corevms/shimlink.go`, `machine/shim.go` | the shims and their stubs |
+| `librtl/routines.go`, `mthrtl/routines.go`, `lbrrtl/` | the run-time libraries' tables |
+| `ftnrtl/mar/` | FTNRTL, a library in VAX code |
+| `corevms/condition.go`, `corevms/signal.go`, `corevms/unwind.go` | conditions: the search, signals, unwinds |
+| `corevms/traceback.go`, `corevms/excmsg.go`, `corevms/msgout.go` | traceback, the catch-all's dump, and where messages go |
+| `corevms/exit.go` | `$EXIT`, exit handlers, and rundown |
+
+**Starting the system** (section 11).
+
+| File | What to read it for |
+| --- | --- |
+| `cmd/govax/main.go`, `cmd/govax/grammar.go` | the program, its options, and its subcommands |
+| `console/console.go`, `console/startup.go` | the console made, and STARTUP.COM run |
+| `sysvol/`, `dclcmd/sysvolume.go` | the system volume: what it holds, how it's mounted and refreshed |
+| `bootdata/files/startup.com` | STARTUP.COM |
+| `machine/init_vax.go`, `machine/vminit.go` | `INIT/VAX` and `INITIALIZE/MEMORY` |
+| `bootdata/files/kernel.asm`, `machine/asm.go` | the microkernel, and ASM into live memory |
+| `machine/rom.go` | `LOAD/ROM` and `LOAD/NVRAM` |
+| `machine/run.go`, `machine/activate.go`, `machine/shareable.go`, `machine/image.go` | RUN, the image activator, and the copying loader |
+
+### 12.2 The tests that hold it to the VAX and to VMS
+
+Each package's unit tests sit beside its files. The tests that compare
+govax with a real VAX running VMS are mostly in `console`'s tests, since
+they need the whole machine; each reads a program and VMS's own output
+from a directory under `testdata/`, whose `README.md` says how the run
+on VMS was made.
+
+| Subject | Test | `testdata/` |
+| --- | --- | --- |
+| every opcode has a handler | `TestEveryInstructionImplemented` (`cpu`) | |
+| the instructions' results | `TestInsn35Oracle` | `insn35` |
+| LIBRTL's instruction routines | `TestLib53Oracle` | `lib53` |
+| processes, mailboxes, and the scheduler | `TestMilestone` and its variants | `mp` |
+| working sets, the page file, sections, activation, address space | `TestPG63Oracle` to `TestPG67Oracle` | `pg63` to `pg67` |
+| RMS's names and `$SEARCH` | `TestRMS3Oracle` | `mar/rms3` |
+| relative files | `TestFor81RMSOracle` | `for81` |
+| indexed files | `TestIdx88Oracle` | `idx88` |
+| concealed and rooted names | `TestLnm91ServicesOracle` | `lnm91` |
+| process-permanent files | `TestPPF71Oracle` | `ppf71` |
+| conditions and traceback | `TestTB70Oracle` | `tb70` |
+| the trace trap | `TestTrace73Oracle` | `trace73` |
+| the system names | `TestSystemNames` | |
+| a service's argument list out of reach | `TestServiceArgumentListOutOfReach` | |
+| ill-formed RMS calls | `TestRMSIllFormedCalls` (`corevms`) | |
+
+A difference from VMS that a test has found and govax keeps on purpose
+is listed in the test, beside the comparison, with the reason; the
+departures this document notes in each section's last part are the same
+ones.
+
+### 12.3 Watching it run
+
+Reading the source goes faster beside a running machine. A few ways to
+watch one:
+
+- **`SET DEBUG SERVICES`** at the console traces each system service a
+  program calls, with its arguments and status (not the shims), and
+  **`SET DEBUG EXCEPTIONS`** each exception and signal and the handlers
+  the condition search calls (section 10.3).
+- **`SET DEBUG RMS`** traces RMS's services on a file.
+- **`RUN/DEBUG`** stops a program at its first instruction under the
+  debugger, where `EXAMINE/INSTRUCTION`, `STEP`, `SHOW CALLS`, and
+  `SHOW REGISTERS` show the VAX's side of everything here.
+- **`SHOW MEMORY`**, **`SHOW SYSTEM`**, and **`SHOW PROCESS`** report the
+  frames, the page file, and the processes (sections 6 and 7).
+- **`govax --stats`** prints the instruction, interrupt, and memory
+  counts and, with paging on, the paging statistics when it ends; **`govax --cpu-profile FILE`**
+  writes a Go CPU profile of a run.
+- **A test** is often the shortest way into a mechanism: each `doc.go`
+  and most files name the tests that exercise them, and `go test -run`
+  with `-v` runs one alone.

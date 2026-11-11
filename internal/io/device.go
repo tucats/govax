@@ -119,7 +119,7 @@ func DeviceTypeName(t uint32) (string, bool) {
 // fidelity reason to keep the C spelling. PID/OwnUIC are left for a caller
 // to fill in (define_device.c reads OwnUIC from a qualifier and otherwise
 // leaves PID at 0 until SYS$ASSIGN or SYS$ALLOC sets it from the calling
-// process, internal/rtl's emulated Process — docs/PHASE-26.md).
+// process, internal/corevms's emulated Process — docs/PHASE-26.md).
 type Device struct {
 	Name string
 

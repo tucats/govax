@@ -11,8 +11,8 @@ import (
 )
 
 // createFixture bundles everything TestSysCreate_* needs: a Context wired
-// to a small VAX memory/CPU pair (matching internal/rtl's own test
-// fixture convention — see internal/rtl/rtl_test.go's fixture) plus a
+// to a small VAX memory/CPU pair (matching internal/corevms's own test
+// fixture convention — see internal/corevms/rtl_test.go's fixture) plus a
 // MountTable with one device, "DUA0", already mounted (writable per the
 // writable argument) on a freshly initialized, empty ODS-2 volume.
 type createFixture struct {

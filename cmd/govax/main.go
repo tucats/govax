@@ -518,7 +518,7 @@ func printStats(c *console.Console, out io.Writer, flag bool) {
 		fmt.Fprintf(out, "Emulation Statistics:\n")
 		fmt.Fprintf(out, "  Initialization Time:   %16s\n\n", formatDuration(c.InitTime))
 		fmt.Fprintf(out, "  CPU:\n")
-		fmt.Fprintf(out, "    Elapased Time:       %16s\n", formatDuration(elapsed))
+		fmt.Fprintf(out, "    Elapsed Time:        %16s\n", formatDuration(elapsed))
 		fmt.Fprintf(out, "    Instructions:        %16s\n", formatLargeNumber(int64(instructionCount)))
 		fmt.Fprintf(out, "    Interrupts:          %16s\n", formatLargeNumber(int64(interruptCount)))
 

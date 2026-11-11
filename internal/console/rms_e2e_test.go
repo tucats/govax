@@ -14,7 +14,7 @@ import (
 // design decision: generated on the fly in t.TempDir(), never a committed
 // binary blob) and mounts it read/write on device name "DUA0" -- the same
 // pattern internal/rms/mount_test.go's newTestVolumeFile and
-// internal/rtl/rms_test.go's newMountedVolumeFixture already use, just at
+// internal/corevms/rms_test.go's newMountedVolumeFixture already use, just at
 // the Console level (c.Mounts) rather than a bare *rms.MountTable or
 // *corevms.Environment.
 func mountFreshRMSVolume(t *testing.T, c *Console) {
@@ -52,7 +52,7 @@ func mountFreshRMSVolume(t *testing.T, c *Console) {
 // (internal/asm/pseudo.go's pseudoP1Vector) rather than deposited by this
 // test by hand, now that .P1VECTOR is a real implementation instead of a
 // no-op. Every other RMS test in this project (internal/rms/*_test.go,
-// internal/rtl/rms_test.go) either calls the internal/rms handlers
+// internal/corevms/rms_test.go) either calls the internal/rms handlers
 // directly or drives them through env.SystemService(pc) from Go -- never
 // through genuinely assembled and executed VAX instructions, which is
 // exactly the gap this subtask closes. The assembled program itself

@@ -1,6 +1,6 @@
 // Package vmsdef holds static, architected VMS data tables that both
 // internal/asm (which emits symbols/bytes matching them at assembly time)
-// and an RTL-family package (which dispatches against them at run time)
+// and internal/corevms (which dispatches against them at run time)
 // need to agree on byte-for-byte — real VAX/VMS constants neither side gets
 // to choose, not something either package's own behavior. Named after the
 // real VMS "xxxdef.h"/$xxxDEF convention (fabdef.h, rabdef.h, rmsdef.h,
@@ -9,13 +9,13 @@
 // definitions.
 //
 // It's a standalone leaf package, rather than living in (and being
-// imported from) either consumer, because neither internal/rtl nor
+// imported from) either consumer, because neither internal/corevms nor
 // internal/asm is naturally "below" the other for data like this: a
 // dispatch table is read at run time by whichever package handles a live
-// call (internal/rtl for SYS$ services), while internal/asm needs the same
+// call (internal/corevms for SYS$ services), while internal/asm needs the same
 // facts to emit the matching symbols/bytes at assembly time. Letting
-// internal/asm import internal/rtl would pull in RTL's live dispatch
-// machinery just to reach a static data table; letting internal/rtl import
+// internal/asm import internal/corevms would pull in its live dispatch
+// machinery just to reach a static data table; letting internal/corevms import
 // internal/asm would be backwards the other way. A shared data-only
 // package avoids both problems and the alternative of hand-duplicating a
 // ~250-row table in two places.
@@ -37,7 +37,7 @@ type P1VectorEntry struct {
 	// Jmp is true only for SYS$SRCHANDLER, matching p1_vector.c's own
 	// comment: reached via JMP rather than CALL, so there's no procedure-
 	// entry mask word ahead of its XFC opcode — both a dispatch match
-	// (internal/rtl) and a trampoline deposit (internal/asm) happen at
+	// (internal/corevms) and a trampoline deposit (internal/asm) happen at
 	// Addr-2 instead of Addr.
 	Jmp bool
 }

@@ -1324,8 +1324,8 @@ func (a *Assembler) pseudoInclude(c *cursor) error {
 //
 // p1_init()'s own declare_services() call (wiring each service's native
 // function pointer) has no Go counterpart to invoke here: this port's
-// internal/rtl already registers every implemented SYS$ handler statically
-// at package init (ServiceTable.Register), entirely independent of
+// internal/corevms registers every implemented SYS$ handler in Go
+// (ServiceTable.Register, when a System is made), entirely independent of
 // assembly. The vector's pages get their protection when the machine
 // deposits them: corevms's ShareP1 makes them URKW and owned by kernel
 // mode, as VMS's are, in every process. Requires .MICROKERNEL, matching

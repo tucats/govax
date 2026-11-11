@@ -1,12 +1,14 @@
 # Phase 92 — documentation
 
-**Status:** in progress (planned 2026-11-11). Part A, the first
-document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
-document's outline, and its sections 0 to 3), 2 (section 4, the
+**Status:** done 2026-11-11 (planned the same day). Part A, the first
+document, `docs/VAX-VMS-INTERNALS.md`, is finished: subtasks 1 (the plan,
+the document's outline, and its sections 0 to 3), 2 (section 4, the
 instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), 5
 (section 7, processes), 6 (section 8, I/O), 7 (section 9, RMS and
-ODS-2), 8 (section 10, from VAX code to Go), and 9 (section 11, starting
-the system) are done.
+ODS-2), 8 (section 10, from VAX code to Go), 9 (section 11, starting the
+system), and 10 (section 12, the map of the source, and the close-out).
+A further guide would be a new part of this doc, with subtasks of its
+own; "Where things stand" lists what Part A left.
 
 ## Goal
 
@@ -157,6 +159,38 @@ interpreter process 1 runs, and what reads the startup procedure).
    image activation (the IMAGE$INIT driver). (done 2026-11-11)
 10. Section 12 and the close-out: the map, a read-through against the
     source, CLAUDE.md and PLAN.md, and this part's "Where things stand".
+    (done 2026-11-11)
+
+### Where things stand
+
+`docs/VAX-VMS-INTERNALS.md` is whole: sections 0 to 12, every file,
+package, type, function, and test it names checked against the source at
+the close-out. When a change alters a mechanism it describes, the change
+updates it (CLAUDE.md says so). What Part A left, each also in the
+section named:
+
+- **CHME from a program** reaches no SCB vector and stops the console,
+  where VMS returns `SS$_ILLSER` for a code it doesn't know (10.9).
+- **The PSL after `INIT/VAX`** is zero, not the architecture's
+  `041F0000`; the console's `GO` and `CALL` of code before the
+  microkernel would need a rule of their own first (11.11; raised with
+  the author).
+- **The microkernel's pages are all URKW**: making its code UR, as VMS's
+  executive code is, needs the debugger's breakpoints and a later ASM to
+  write it another way (11.11; raised with the author). The kernel stack
+  stays URKW for programs the console CALLs in kernel mode (5.5).
+- **No `LIB$INITIALIZE`**: govax's LINK builds none into an image, so a
+  main image's own initialization routines never run (11.11).
+- **Unconfirmed choices** to settle by a VMS probe: the order of the
+  ill-formed RMS call checks, and `RMS$_RSA` or `RMS$_BUSY` for a second
+  operation on a RAB with one pending (9.13); `RMS$_UBF` or `RMS$_USZ`
+  when a `$GET` lacks both; `$DCLCMH` from kernel or executive mode
+  (`SS$_IVSSRQ`); which services VMS added after the Internals book's
+  list change mode, and so raise `SS$_SSFAIL` (10.9); and LIBRTL's
+  initialization routine's first argument, 100 (11.11).
+- **Other guides.** The goal names guides, not one: a further part (DCL's
+  interpreter, or the tools' file formats, which this one leaves out)
+  would be planned as Part B.
 
 ## Progress log
 
@@ -620,3 +654,18 @@ interpreter process 1 runs, and what reads the startup procedure).
   "debugger/LIB$INITIALIZE-style" entry), the copying loader's header
   comment, and `cmd/govax`'s `vax.startup.procedure` comment (misspelt
   throughout).
+- **2026-11-11** Subtask 10: section 12, a map of the source (by subject,
+  the files to read first in each of sections 4 to 11; the oracle tests and
+  their `testdata` directories; the console's and govax's ways of watching
+  a run), and the close-out. The read-through checked every file path (some
+  250), every package-qualified name (87), and every other Go name (about
+  360) the document cites against the source and `ods2`, and spot-checked
+  its counts: the 306 instructions (the table's 314 entries less five
+  reserved opcodes and three prefixes) hold, and the registered services
+  are now 122, `$DCLCMH` and `$SETSFM` having come after section 10.3 was
+  written. Fixed: the twenty-odd comments still naming `internal/rtl`, the
+  package corevms once was (in `vmsdef`, `asm`, `cpu`, `io`, `registers`,
+  `vmserrors`, `librtl`, `dclcmd`, and two tests' comments), now name
+  `internal/corevms`; the `rtl:` prefix of corevms's error texts is left,
+  being message text; and `--stats`'s "Elapased Time" is "Elapsed Time".
+  CLAUDE.md and PLAN.md say the document is finished.

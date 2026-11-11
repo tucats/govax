@@ -141,7 +141,7 @@ questions, and a progress log extended as that phase is worked.
 | 89 | [PHASE-89 - reentrant FORTRAN](PHASE-89%20-%20reentrant%20FORTRAN.md) | FORTRAN's RECURSIVE, RESULT, and `/RECURSIVE`: each activation's storage in its frame, reentrant under ASTs and handlers; FTNRTL's format cache; the debugger's SET SCOPE — planned 2026-11-04, the survey accepted the same day; done 2026-11-05 |
 | 90 | [PHASE-90 - VMS help](PHASE-90%20-%20VMS%20help.md) | HELP as VMS's: help libraries (HELPLIB.HLB, DBG$HELP.HLB) built from VMS-format modules, LIBRARY/HELP, prompting and navigation, HLP$LIBRARY, the LBR$ routines that read and write libraries, and govax's help rewritten — planned 2026-11-07, the survey accepted the same day; done 2026-11-08 |
 | 91 | [PHASE-91 - concealed logical names](PHASE-91%20-%20concealed%20logical%20names.md) | Concealed logical names and rooted directories (`DEV:[ROOT.]`), RMS's two name processors made one, and the system names on the root `_DUA0:[SYSTEM.]` — planned 2026-11-09, the plan accepted the same day; done 2026-11-09 |
-| 92 | [PHASE-92 - documentation](PHASE-92%20-%20documentation.md) | Standalone guides to govax's internals, a document per part: Part A is `VAX-VMS-INTERNALS.md`, how govax is a VAX and how it gives a program VMS — planned 2026-11-11; in progress |
+| 92 | [PHASE-92 - documentation](PHASE-92%20-%20documentation.md) | Standalone guides to govax's internals, a document per part: Part A is `VAX-VMS-INTERNALS.md`, how govax is a VAX and how it gives a program VMS — planned and done 2026-11-11 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -650,3 +650,21 @@ Part A is the survey and the probe's answers (`testdata/lnm91`, two rounds on VM
   and the others `SYS$SYSROOT:[dir]`. The volume's directories didn't change.
 
 MANUAL.md's "Logical names" and "The system volume" are the user's side. What the phase left is its doc's "Where things stand".
+
+## Documentation (Phase 92)
+
+Phase 92 (2026-11-11) wrote the guide the phase docs never added up to: `docs/VAX-VMS-INTERNALS.md`, how govax is a
+VAX and how it gives a user-mode program VMS, for a reader who may know little of either. Its doc's Part A is the plan,
+its decisions, and the outline; its log is the work, a section per subtask.
+
+- **The guide:** a primer on the VAX and VMS, govax's packages by layer and the interfaces between them, the central
+  structures, then the instruction set, memory, VMS paging, processes, I/O, RMS and ODS-2, the crossing from VAX code to
+  Go, startup, and a map of the source. It is standalone: it never sends its reader to a phase doc, each section ends
+  with what differs from VMS, and its code excerpts and measurements are real.
+- **Bugs fixed on the way** (the author's Decision 6), among them: RET's and the services' argument counts by the
+  count's low byte, a service's unreadable argument list `SS$_ACCVIO`, REI's checks of the PSL it restores, the
+  process PTE read in kernel mode, the P1 vector URKW, MAPEN left alone by the interrupt stack, AST delivery by VMS's
+  queue head, terminal carriage control, RMS's completion routines and ill-formed calls, `$GET` without a buffer,
+  `$DCLCMH`, `$SETSFM` and `SS$_SSFAIL`, CHMS and CHMU, PROBE's mode, and the SCB vector's bits.
+
+What the phase left is its doc's "Where things stand"; a further guide would be its Part B.

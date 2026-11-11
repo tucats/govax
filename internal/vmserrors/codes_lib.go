@@ -1,6 +1,6 @@
 package vmserrors
 
-// LIB facility message IDs -- internal/rtl's LIBRTL shim/system-service
+// LIB facility message IDs -- the LIBRTL shims and the system-service
 // simulation. Private: only the composite LIB_* codes below are part of
 // this package's public API.
 const (
