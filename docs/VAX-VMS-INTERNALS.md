@@ -1377,9 +1377,12 @@ that is also a console:
   P1 space. govax keeps process 1's where INITIALIZE/MEMORY lays them out
   and every other process's in the S0 pool, mapped always, so a stack
   never faults.
-- The kernel stack is URKW, where VMS's is kernel-only: the console builds
-  the call frame that runs a program on it, and a user-mode program's last
-  RET reads that frame.
+- The kernel stack is URKW, where VMS's is kernel-only. When the console
+  CALLs code in kernel mode, it builds the call frame on the kernel stack,
+  and code that drops to user mode with REI, as many of govax's test
+  programs do, reads that frame with its last RET. (RUN, after the
+  microkernel's initialization, is in user mode, and builds its frame on
+  the user stack; section 11.10.)
 - There's no guard page below the kernel and interrupt stacks.
 - S0 holds console structures VMS doesn't have: the scratch page, the
   shim pages, the string pool.
@@ -4740,7 +4743,618 @@ the process next runs one (`EndAbandonedImage`).
 
 ## 11. Starting the system
 
-*To be written.*
+A real VAX starts VMS from its console. The console program in the boot
+ROM initializes the processor, finds a boot device, and loads VMB, the
+primary bootstrap, which sizes memory and loads SYSBOOT; SYSBOOT reads the
+SYSGEN parameters and loads the executive; the executive initializes
+itself and creates the swapper and then a STARTUP process, which runs
+`SYS$SYSTEM:STARTUP.COM` and, last, the site's `SYSTARTUP_VMS.COM`; only
+then can anyone log in.
+
+govax has the same pieces in a different order, because the console *is*
+the program the user runs. The Go program starts first, with a console and
+no machine; it mounts the system volume and reads its grammars; and then
+process 1, the console's own process, runs `STARTUP.COM` as its login
+command procedure. That procedure builds the VAX with console commands:
+memory, the address space, the microkernel, the devices. After it come the
+page file, the user's own startup, and the user's commands. Each step
+measured below is from a session started on a fresh system volume.
+
+| Step | Where | What |
+| --- | --- | --- |
+| 1 | `cmd/govax` | the command line, the configuration profile, the terminal |
+| 2 | `console.New`, `Console.Init` | a console, a DCL interpreter, and a 1 MB machine with no address space |
+| 3 | `dclcmd.MountSystemVolume` | the system volume made or refreshed, mounted as `DUA0:`, and its logical names |
+| 4 | `cmd/govax/grammarfiles.go` | the console's and the debugger's grammars |
+| 5 | `cmd/govax` | the `--mount` volumes and the default volume |
+| 6 | `STARTUP.COM` | the system names, `INIT/VAX`, `INITIALIZE/MEMORY`, the ROM, the microkernel and its initialization, the devices, `SYSTARTUP_VMS.COM` |
+| 7 | `Machine.StartPageFile` | the page file, with paging on |
+| 8 | `vax.startup.procedure` | the user's own procedure, if one is configured |
+| 9 | `Console.RunCommandLine`, the prompt | the one-shot command, or the user's commands |
+| 10 | `Console.EndSession` | process 1's files closed, every volume dismounted |
+
+A start on an existing system volume takes 20 to 30 ms on the development
+machine; making the volume the first time adds about 190 ms.
+
+### 11.1 The program and its console
+
+`main` (`cmd/govax/main.go`) hands the command line to `tucats/gopackages`'s
+`app-cli` package, which reads the options (`cmd/govax/grammar.go`), the
+subcommand (`console` unless another is named), and the configuration
+profile, a set of `vax.*` settings in `~/.govax/govax.json` (`--profile`
+picks one). Every setting govax reads is listed in `validConfigs`, and
+`auditConfig` warns of a setting in the profile that isn't, which is
+usually a misspelling. A subcommand other than `console` becomes a console
+command: `govax run hello.exe` is the console's `RUN "hello.exe"`, left as
+the *one-shot command* for step 9.
+
+`run` then makes the console (`console.New`), which is two things over one
+machine: a `machine.Machine` (`NewMachine`, `machine/machine.go`) and DCL's
+`dclshell.Interpreter`. The machine is made with its device table, its
+mount table, its RMS session, and process 1's logical name database, with
+its four process-permanent names already defined (SYS$INPUT, SYS$OUTPUT,
+SYS$ERROR, SYS$COMMAND, each `_GOVAX$TTA0:`; section 8.7). These outlive
+every machine `INIT` makes: a volume mounted, a logical name defined, or a
+DCL symbol set before `INIT` is still there after it. The interpreter makes
+process 1's DCL, its `Shell`, and puts DCL's hooks in the machine (where a
+command's output goes, the default directory, `$STATUS`, Ctrl/Y). At a
+terminal, `run` also puts the terminal in VMS's mode, so that Ctrl/C,
+Ctrl/Y, and Ctrl/Z mean what they mean on VMS (`cmd/govax/attention.go`;
+section 7.13).
+
+Then it makes a small machine: `Console.Init(minimumVAXMemory)`, 2048
+pages, 1 MB, with memory mapping off. It exists only so that commands that
+need a machine work before `STARTUP.COM` makes the real one; the system
+volume's mount, which comes next, is Go code that needs none.
+
+### 11.2 The system volume
+
+The system volume is govax's system disk: an ODS-2 volume in a container
+file, by default `~/.govax/govax-system.dsk`, mounted on `DUA0:` with the
+label `GOVAXSYS` every time govax starts. It holds what VMS's system disk
+holds for the same purposes, in the same directories, as files a user can
+read, edit, and rebuild with DCL's own commands
+(`internal/sysvol/files.go`'s table, written out by `Files()`):
+
+| Directory | Logical name | What |
+| --- | --- | --- |
+| `[SYSTEM.SYSEXE]` | SYS$SYSTEM | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the default page file (made by the pager, not supplied) |
+| `[SYSTEM.SYSMGR]` | SYS$MANAGER | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, the grammars `CONSOLE.DCL` and `DEBUG.DCL` |
+| `[SYSTEM.SYSHLP]` | SYS$HELP | `HELPLIB.HLB`, `DBG$HELP.HLB`, and their `.HLP` sources below it |
+| `[SYSTEM.SYSLIB]` | SYS$LIBRARY, SYS$SHARE | `STARLET.MLB`, `FTNRTL.EXE`, `FORSYSDEF.TLB` |
+| `[SYSTEM.SOURCES]` | SYS$SOURCES | `KERNEL.ASM` and `SSDEF.ASM`, FTNRTL's and STARLET's sources, and the procedures that rebuild them |
+
+On the fresh volume of the measurement, that was 124 files in 8
+directories. Every file comes from govax itself: `internal/bootdata`'s
+embedded files, `internal/ftnrtl`'s image and sources, and the FORTRAN
+definition library `internal/fortran/sysdef` builds.
+
+**Mounting it** is `dclcmd.Context.MountSystemVolume`
+(`dclcmd/sysvolume.go`), which `run` calls before anything else, since it
+needs no grammar: it's RMS's and `ods2`'s work in Go. In order:
+
+1. It finds the container (`--system-file`, or `vax.default.system.file`,
+   or the default), or makes one, an RD54 initialized with the label
+   `GOVAXSYS` (`InitializeContainer`, as `INITIALIZE/CONTAINER` makes one).
+   `--system-initialize` makes it again, keeping the old one as `FILE.old`.
+   `--system-file none` means no system volume.
+2. It takes a host lock on the container (`internal/hostlock`). A second
+   govax session finds the lock held and mounts the volume read-only
+   (`%MOUNT-I-SYSREADONLY`), so two sessions never write one volume.
+3. It mounts the volume on its device (`--system-device`, `DUA0` by
+   default; a controller alone, `DUA`, is its next free unit), checks the
+   label, and marks it the system volume in the mount table
+   (`MountTable.SetSystem`), which `DISMOUNT` then refuses.
+4. It defines the system's names for it (`dclcmd/sysnames.go`), in the
+   system table at executive mode, as VMS's boot defines its own:
+   `SYS$SYSDEVICE` as `_DUA0:`, and `SYS$SYSROOT`, `SYS$COMMON`, and
+   `SYS$SPECIFIC`, all three as the root `_DUA0:[SYSTEM.]`. Each is
+   concealed and terminal, so a file reached through one is shown by the
+   logical name, and `SYS$SYSROOT:[SYSEXE]` is the directory
+   `[SYSTEM.SYSEXE]` (section 9.5 has rooted directories). VMS has a root
+   per system, `[SYS0.]`; govax has one system and one root, and VMS's two
+   halves of it are the same root.
+5. On a volume mounted for writing, it brings the files up to date
+   (`sysvol.Refresh`, `sysvol/populate.go`).
+
+**The refresh** is how a newer govax gets its files onto an older volume
+without losing the user's changes. Each file is either *supplied*, govax's
+to keep current, or *seeded*, written once as a starting point and the
+user's from then on (`SYSTARTUP_VMS.COM` is the one seeded file). The
+volume keeps a manifest, `[SYSTEM]GOVAX$FILES.DAT`, with a SHA-256 digest of
+each supplied file as govax last wrote it, and the refresh decides by
+comparing three things, the file on the volume, the manifest's digest, and
+this govax's copy:
+
+- a supplied file that's missing is written;
+- one that is already this govax's copy is left alone;
+- one that matches the manifest's digest is govax's older copy, which the
+  user hasn't touched, so the new copy is written as a new version, the
+  old one kept below it;
+- any other was changed by the user, and is never written: govax says so
+  once per new copy, `%MOUNT-I-SYSKEPT`, and goes on with the user's;
+- a seeded file is written only if it's missing and the manifest doesn't
+  say it was made before, so one the user deleted stays deleted.
+
+A help library is compared module by module, so the user's own module in
+`HELPLIB.HLB` doesn't stop the rest of it from being refreshed. What a
+refresh writes is logged in `[SYSTEM]GOVAX$UPDATE.LOG`.
+
+Nothing about the system volume can stop govax from starting. A container
+that can't be made, opened, or mounted, or has the wrong label, is
+`%MOUNT-W-NOSYSVOL`, and govax goes on with no system volume, using its
+built-in files: the startup procedure, kernel, grammars, and libraries
+embedded in the program.
+
+### 11.3 The grammars, and the files govax reads as it starts
+
+Every console and debugger command is parsed by a grammar
+(`internal/dcl`): `CONSOLE.DCL` for the console, whose verbs DCL and the
+machine bind, and `DEBUG.DCL` for the debugger. govax reads them through
+its *resolver* (`internal/respath`), which looks for a file by name in
+four places: as the name is given, in the `--path` directories, on the
+system volume (the names in `sysvol.Resolved`, opened through RMS by
+`dclcmd.SystemFS`), and last in govax's embedded files. A host copy comes
+first so a developer can try a changed grammar without touching the
+volume. The volume's copy is the user's, and may be old or broken, so one
+that doesn't parse, or lacks a command this govax binds, is
+`%VAX-W-SYSGRAMMAR` and govax uses its own copy
+(`cmd/govax/grammarfiles.go`).
+
+With the grammars in place, `run` mounts the `--mount` and
+`--mount-write` containers, then the configured default volume
+(`vax.default.volume.*`), which it also makes the default device and
+directory (`dclcmd/defvolume.go`).
+
+### 11.4 STARTUP.COM
+
+`Console.RunStartup` (`console/startup.go`) runs the system volume's
+`STARTUP.COM` at command level 1, as a login command procedure runs before
+a user's first command. It names the file by device and directory,
+`DUA0:[SYSTEM.SYSMGR]STARTUP.COM`, so as not to depend on a logical name
+it hasn't defined yet; with no system volume it runs govax's built-in copy.
+It's an ordinary DCL procedure: a command that fails ends it, as DCL's
+default `ON ERROR THEN EXIT` says, and its lines without a `$` are data for
+whatever reads its input. What it does, in order (`SET VERIFY` and a second
+run of it showed these lines):
+
+```text
+$ define/system/executive_mode sys$system  sys$sysroot:[sysexe]
+   ...                         sys$manager, sys$help, sys$library,
+                               sys$share, sys$sources
+$ init/vax ^d16384
+$ initialize/memory /p0=16384 /p1=8192 /s0=8192 -
+     /ksp=20 /esp=8 /ssp=8 /isp=4
+$ load/rom/noerror sys$system:default.rom
+$ load/nvram/noerror
+$ asm sys$sources:kernel.asm
+$ set quantum 1
+$ debug
+go exe$initialize
+%SYSTEM-S-INIT, Kernel initialized
+exit
+$ set debug nouserhalt
+$ set radix dec
+$ print " "
+$ define/device tta0/devclass=term/devtype=vt100/devbufsiz=80/devchar=201588743/ownuic=65540
+$ define/device nla0/devclass=mailbox/devtype=null/devchar=202702849/ownuic=65537/devbufsiz=512
+$ if f$search("SYS$MANAGER:SYSTARTUP_VMS.COM") .nes. "" then -
+        @sys$manager:systartup_vms
+```
+
+The rest of the file is comments and the DCL that chooses the values. The
+system names are defined only when `SYS$SYSDEVICE` says there's a system
+volume. The kernel and ROM are the volume's files, so an edited
+`KERNEL.ASM` is the one that boots, or govax's built-in `kernel.asm` and
+`default.rom` without a volume. The memory's sizes are the procedure's
+defaults unless the configuration's `vax.memory.*` settings name others
+(read with govax's own lexical function `F$CONFIG`), and with
+`vax.sysgen.paging.enable` set, P0, P1, and S0 are 0, which
+`INITIALIZE/MEMORY` takes as its paging defaults. The sections below take
+the steps in turn.
+
+### 11.5 INIT/VAX: a new machine
+
+`INIT/VAX ^d16384` is `Machine.Init` (`machine/init_vax.go`). It ends every
+other process, then makes a new machine of the size asked for, rounded to
+a whole number of pages: a new `registers.CPU`, with every register and the
+PSL zero, a new `vm.Memory`, a new `cpu.Engine` (which reads the engine's
+settings, the clock among them, as it's made; section 4.4), and a new VMS.
+
+The new VMS is `newRTL` (`machine/machine.go`), and it's the same whenever
+the machine is remade, by `INIT`, `INITIALIZE/MEMORY`, or `ZERO`. It closes
+what the old process 1 left open, and the old page file, then makes a
+`corevms.System` on the new CPU and memory, sharing the machine's devices
+and mounts (section 3.5), and:
+
+- registers the run-time libraries' routines in its shim table: LIBRTL's,
+  MTHRTL's, and LBRSHR's (`librtl.Register`, `mthrtl.Register`,
+  `lbrrtl.Register`; section 10.5);
+- gives it the process settings (`vax.process.*`) and the SYSGEN parameters
+  (`vax.sysgen.*`; section 6.1), and its hooks into the machine: the image
+  activator for `$CREPRC`'s processes, the traceback's names, the AST exit
+  stub;
+- sets its clock to the engine's system time, and its boot time
+  (`SYI$_BOOTTIME`) to now on that clock, and makes it the engine's
+  scheduler if `vax.process.scheduler` is on (section 7.5);
+- makes process 1's `corevms.Environment`, on the machine's logical name
+  database, and opens the console terminal as its SYS$INPUT, SYS$OUTPUT,
+  SYS$ERROR, and SYS$COMMAND, process-permanent files (section 8.7), as
+  VMS's LOGINOUT does for a terminal's process.
+
+`Zero` then clears the symbols and the memory-management registers, MAPEN
+among them, and sets every stack pointer to the last longword of physical
+memory. The machine is now a VAX with memory, a processor in kernel mode
+at IPL 0, and no address space.
+
+### 11.6 INITIALIZE/MEMORY: the address space
+
+`INITIALIZE/MEMORY` (`Machine.VMInit`, `machine/vminit.go`) lays out the
+address space section 5.5 describes. In order, it:
+
+1. works out the regions' sizes (with paging off, regions given 0 share
+   what physical memory is left; with paging on, they take the paging
+   defaults) and refuses sizes that can't work: `P1TOOSMALL`,
+   `VMTOOLARGE`, `S0TOOSMALL`;
+2. ends the other processes and makes memory, the engine, and the
+   `System` new again, so physical memory is all zeros, with `vm`'s frame
+   allocator chosen by the paging mode (section 6.1);
+3. with MAPEN still 0, writes VMS V1's system service vector at physical
+   0 (section 10.2), then the system page table after it, S0 page `n`
+   mapping frame `n`;
+4. writes process 1's P0 and P1 page tables, every entry an invalid,
+   user-owned page (with paging on, only P1's existing part; section 6.11);
+5. lays out the stacks, the guard pages, the scratch page
+   (`CONSOLE$SCRATCH`), the first shim page, the SCB (SCBB), and the
+   string pool, and makes the rest of S0 the S0 pool;
+6. sets the registers: SBR and SLR, P0BR to P1LR, the five stack pointers
+   (KSP, ESP, SSP, and ISP to their stacks' tops, USP to
+   `corevms.UserStackTop`, `7FE00000`), SP to KSP, and the PSL's current
+   mode to kernel and its previous mode to user;
+7. adopts those tables and stacks as process 1's (`AdoptAddressSpace`,
+   `AdoptStacks`), and sets VIRTUALPAGECNT, every new process's table
+   area, to process 1's unless the configuration names one;
+8. turns MAPEN on, and empties the TB.
+
+It also forgets the interactive assembler's session and that a microkernel
+was placed: the memory they described is gone.
+
+`LOAD/ROM/NOERROR SYS$SYSTEM:DEFAULT.ROM` then reads the console ROM
+(`Machine.LoadROM`, `machine/rom.go`): a file that starts `;ROMIMG` and a
+carriage return, then the ROM's physical base and end addresses, then its
+non-zero pages, each with its offset. govax's is at `20040000`, as a
+MicroVAX II's boot ROM is (section 5.1). Nothing in govax's VMS uses it.
+`LOAD/NVRAM/NOERROR` reads `DEFAULT.NVRAM` the same way if one is found
+through the search path; govax supplies none, so there is no NVRAM.
+
+### 11.7 The microkernel
+
+VMS's executive is VAX code: the scheduler, the pager, the system
+services, the drivers. govax writes all of those in Go, and what's left
+that must be VAX code is small enough to be assembled at every start from
+its source, `SYS$SOURCES:KERNEL.ASM`: govax calls it the *microkernel*.
+It has
+
+- the exception and interrupt routines the SCB names, and the dispatcher
+  for its own `CHMK` calls (section 8.6);
+- `EXE$INITIALIZE`, below;
+- a page of user-mode routines: the console output routines the
+  microkernel's own messages use, a few C library routines, and LIB$CALLG,
+  whose whole job is a CALLG (section 10.5);
+- a table of `.SHIM` declarations, the shims' names and the shareable
+  image offsets they stand for;
+- writable data: the AST queue's head, the register save areas, the
+  message texts, the C library's character table.
+
+**Assembling into live memory.** The console's `ASM` command
+(`Machine.Assemble`, `machine/asm.go`) assembles a file with
+`internal/asm` in its console dialect, absolute rather than relocatable,
+and then deposits the result straight into the machine's memory. One
+assembler session lasts from one `INITIALIZE/MEMORY` to the next, so a file
+assembled later can name an earlier one's labels. The session's P0 code
+starts at `200`, its S0 code at the first page past `INITIALIZE/MEMORY`'s
+layout (`s0Free`), and its SCB at SCBB. `kernel.asm` starts with
+`.MICROKERNEL`, which enables the directives only a microkernel uses:
+
+| Directive | What it does |
+| --- | --- |
+| `.MICROKERNEL` | marks the assembly as the microkernel's, enabling the rest |
+| `.P1VECTOR` | writes the system service vector into P1 (`vmsdef.P1VectorTable`; section 10.2) and defines each service's name |
+| `.REGION SYSTEM` / `P0` | switches between the session's S0 and P0 locations |
+| `.SCB code, address` | stores a vector at SCBB + `code` (a stack can be named: `ISP` sets the vector's low bit) |
+| `.SHIM name, code, library, offset` | writes a shim stub (or names a routine of code 0) and defines `SHIM$library_offset` (section 10.5) |
+| `.CONSOLE command` | names a console command to run while assembling; govax's assembler accepts it and runs nothing |
+
+`depositAsmImage` copies four parts of the assembly into memory: the P0
+code; the S0 code, whose pages it first claims from the S0 pool's bottom
+(`Environment.ClaimS0`); the SCB page; and the P1 vector, whose pages every
+process then maps as its own (`Environment.ShareP1`, section 5.6). The
+assembly's symbols join the console's symbol table, so `EXE$INITIALIZE`
+and the rest can be named in commands; and once `EXE$INITIALIZE` is
+defined the microkernel counts as placed (`Machine.KernelPlaced`), and
+`ASM` is no longer a console command, but the debugger's.
+
+The microkernel's last lines set its SCB:
+
+```text
+                .scb            exc$chmk,      exe$chmk
+                .scb            exc$priv,      console$handler
+                .scb            exc$accvio,    console$handler
+                .scb            exc$resop,     console$handler
+                .scb            exc$resaddr,   console$handler
+                .scb            exc$tnv,       console$handler
+                .scb            exc$tp,        console$handler
+                .scb            exc$customer,  console$handler
+                .scb            exc$bpt,       console$handler
+                .scb            exc$chms,      console$handler
+                .scb            exc$chmu,      console$handler
+                .scb            exc$arith,     console$handler
+                .scb            exc$interval,  exe$interval
+                .scb            exc$software2, exe$deliver_ast
+                .scb            exc$conwrite,  exe$tx
+                .scb            exc$conread,   exe$rx
+```
+
+`console$handler` is the value `FFFFFFFF`, which no routine can have: an
+exception whose vector holds it goes to Go, where VMS's condition handling
+takes it (section 10.7), and a stop at the console if nothing does (section
+4.5). Every page of the microkernel keeps S0's protection, URKW: every
+mode can read it, and so run its code, and only kernel mode can write it.
+Its code, its user-mode routines, its data, and a spare buffer each start a
+page of their own, so that each could have a protection of its own, as the
+source once asked for with `.CONSOLE SET PAGE`; govax's assembler never ran
+those lines, and they're gone.
+
+**Initialization.** The microkernel's one run of its own is
+`EXE$INITIALIZE`. `GO` is a debugger command, so `STARTUP.COM` starts the
+debugger with `DEBUG` and gives it, as the procedure's data lines, `GO
+EXE$INITIALIZE` and `EXIT`. The routine runs in kernel mode, as
+`INITIALIZE/MEMORY` left the PSL:
+
+```text
+exe$initialize: tstl            @#exe$init_done ; If we've already done
+                bneq            exe$init_exit   ; this, just return
+                mtpr            #^X40,#VAX$PR_RXCS
+                movl            #1, @#exe$init_done
+                pushl           #^X03C00000       ; desired PSL
+                pushal          @#exe$init_exit ; desired PC
+                rei                             ; do it
+
+exe$init_exit:  tstl            @#exe$verbose
+                bneq            exe$printinitmsg
+                brw             exe$silenthalt
+
+exe$printinitmsg:
+                pushal          @#exe$init_msg
+                calls           #1, @#exe$put_output
+                brw             exe$silenthalt
+```
+
+It enables the console receiver's interrupt (which nothing raises; section
+8.6), notes that it has run, and leaves kernel mode the only way a VAX
+can: it pushes a PSL and a PC and executes REI, which pops them. The PSL,
+`03C00000`, is user mode with a previous mode of user and IPL 0, so
+interrupts and ASTs can be taken from now on; REI saves SP as KSP and
+loads SP from USP, the user stack's top. In user mode it writes its banner,
+`%SYSTEM-S-INIT, Kernel initialized`, through `exe$put_output`, one
+`XFC$CONSOLE_PUT` per string, unless the console is quiet (a one-shot
+command), and then `exe$silenthalt` executes `XFC #XFC$HALT_SILENT`, which
+stops the run without a message. The debugger's `EXIT` ends its session,
+and `STARTUP.COM` goes on, with the processor in user mode, where it stays:
+everything the user runs from here on starts in user mode.
+
+The microkernel doesn't start the interval clock: govax keeps time itself
+(section 4.4), and nothing needs the clock's interrupt.
+
+Three console settings follow. `SET QUANTUM 1` sets the instructions per
+emulated millisecond (section 4.4). `SET DEBUG NOUSERHALT` makes HALT
+outside kernel mode a privileged instruction fault, as the architecture
+has it: until then, so that a test program could stop the machine, a HALT
+in any mode halted. `SET RADIX DEC` makes the console's numbers decimal.
+
+### 11.8 Devices
+
+The devices `STARTUP.COM` defines are the two VMS always has: `TTA0:`, the
+console terminal, and `NLA0:`, the null device, each with the device
+characteristics, buffer size, and owner VMS 7.1 showed for its own
+(`DEFINE/DEVICE`, section 8.1). The disks are defined as they're mounted:
+the system volume's `DUA0:` before `STARTUP.COM` ran, and any others by
+`--mount` or `MOUNT`. Process 1's terminal names are already there, opened
+by `newRTL`. A site that wants more devices defines them in
+`SYSTARTUP_VMS.COM`, which `STARTUP.COM` runs last.
+
+### 11.9 After STARTUP.COM
+
+With the procedure done, `run` goes on in Go:
+
+1. **The page file.** `Machine.StartPageFile` installs it, with paging on:
+   the file `vax.sysgen.paging.file` names, or the system volume's
+   `SYS$SYSTEM:PAGEFILE.SYS` if it's mounted for writing, made or resized
+   to `vax.sysgen.paging.size` blocks, unless `vax.sysgen.paging.defer`
+   leaves it for the pager's first need (section 6.5). From here on, each
+   new `System` installs its own as it's made.
+2. **The user's procedure.** If the configuration names one in
+   `vax.startup.procedure`, it's run, a volume file or a host file by the
+   name's form; one that isn't there is passed over without a message.
+3. **The one-shot command.** A command left on govax's command line
+   (`Console.RunCommandLine`) is level 0's input in place of the terminal,
+   and the session ends after it. The console is quiet for it: no banner,
+   no kernel message.
+4. **The prompt.** Otherwise govax reads the terminal, one line at a time,
+   with the prompt of whichever reader has it: DCL's `$ `, the debugger's
+   `DBG> `, or the assembler's `ASM> `. While a line is typed, the other
+   processes run (section 7.12).
+
+The `--instruction-limit` and `--time-limit` options apply only from step
+3, so a limit meant for a runaway program doesn't stop the system's own
+start. When the session ends, `Console.EndSession` closes what process 1
+left open and the mount table dismounts every volume, so that each
+container has all its blocks, its bitmaps included.
+
+### 11.10 Running an image
+
+`RUN` is where everything before it comes together. `Machine.Run`
+(`machine/run.go`) does, for process 1:
+
+1. **Ends what came before.** An image that was stopped and never exited
+   (a breakpoint left, a Ctrl/C, a limit) is run down now
+   (`EndAbandonedImage`), the CPU comes back to process 1 if a run left it
+   in another, and the debugger forgets the old image's breakpoints.
+2. **Activates in kernel mode.** The activation writes the image into
+   pages a user-mode program could not write (the header, before the
+   sections' protection is set), so the machine switches to kernel mode and
+   its stack for it, and back afterward.
+3. **Writes the shim stubs**, the first time (`EnsureShims`; section 10.5).
+4. **Activates the image** (`ImageProcess.ActivateImage`), below.
+5. **Builds the IMAGE$INIT driver** (`buildDriver`), below.
+6. **Calls the driver**, under the debugger if the image was linked
+   `/DEBUG` or RUN said `/DEBUG`, and otherwise directly.
+
+**Finding the image.** The main image is found by the rules MACRO and LINK
+use (`rms.Session.Locate`): a VMS file specification, or a bare name while
+the default directory is on a volume, is a volume file with the default
+type `.EXE`; anything else, or a name with `/HOST`, is a host file, looked
+for through the resolver. A shareable image is found by the image
+activator's rules (`machine.ImageLocator` over `rms.ImageLocator`,
+`rms/shareable.go`), in this order:
+
+1. If govax stands for the image (LIBRTL, MTHRTL, LBRSHR, DECC$SHR, or any
+   other of VMS's run-time libraries: `machine.Emulated`), it has no file,
+   and its routines are the shims, unless a logical name of the image's
+   name is defined.
+2. `$PARSE`'s rules on the name with the default `SYS$SHARE:.EXE`, each
+   element of a search list in turn.
+3. A host file: after `SET SHARE_PREFIX`'s prefix, in the host library
+   directory (`vax.library`), then as given.
+4. An image built into govax: `FTNRTL.EXE`.
+
+So `DEFINE LIBRTL dua1:[mylib]librtl.exe` runs a program on a real
+LIBRTL, and a user's own `FTNRTL.EXE` on SYS$SHARE comes before the built-in
+one. An image found nowhere is `ACTIMAGE` and `IMAGEFNF`; a run-time library
+of VMS's that no shim stands for doesn't stop the activation, its routines
+each a stub that signals NOTIMPL (section 10.5).
+
+**Loading it.** With paging off, the *copying loader* (`loadImage`,
+`machine/image.go`) reads the whole file, copies its header into P0 just
+above the high-water mark to read it, and then copies each section to its
+place (`loadSection`), demand-zero sections as pages of zeros, moving P0's
+high-water mark past them. With paging on, the *mapping loader* decodes the
+header in Go and maps each section (section 6.10). Either way the image
+then gets an *image control block*, an `ICB`, with its base, its end, its
+sections, and its transfer addresses: up to three, of which the first is
+`SYS$IMGSTA` in P1 for an image linked with traceback, and the main
+routine is the first that's in P0 (`mainTransferAddress`). The main image's
+is defined as the console symbol `MAIN`. `finishLoad` reads the image's
+ident and GSMATCH, its debug symbol table (for the debugger and the
+traceback), and, if the image has a fixup section, its list of shareable
+images, each of which is loaded the same way, from the list's end.
+
+A shareable image the link placed at a fixed address goes there; others
+go at P0's high-water mark (`imageBase`, `machine/activate.go`). Each is
+checked against the GSMATCH its caller was linked with (`identMatches`), a
+mismatch being `SHRIDMISMAT`.
+
+**Fixing it up.** Once every image is loaded, `imageFixup` resolves each
+image's fixups: each G^ cell, which the linker left holding an offset into
+a shareable image, gets an address, the image's base plus the offset if
+it's loaded, the shim stub `SHIM$image_offset` if govax stands for it, or a
+NOTIMPL stub; and each `.ADDRESS` cell is rebased by its image's base. Only
+then does each section get its protection (`setImageProtection`), as VMS's
+image activator changes a section's protection after its fixups, and the
+process's `JPI$_IMAGNAME` become the image's file.
+
+**The driver.** RUN doesn't call the main routine itself, but a small
+procedure it writes at `CONSOLE$SCRATCH+8`, the IMAGE$INIT driver (section
+10.8). For `HELLO.EXE`, a MACRO program linked with traceback,
+`EXAMINE/INSTRUCTION` showed:
+
+```text
+80026008:       0000
+8002600A:       MOVL     I^#80029714,(FP)
+80026011:       CALLS    I^#00000000,@#HELLO
+8002601C:       PUSHL    R0
+8002601E:       CALLS    I^#00000001,@#SYS$EXIT
+80026029:       RET
+```
+
+The first word is the entry mask, which saves no registers. The `MOVL`
+puts the traceback handler, `EXE$TRACEBACK`, a shim stub, in the driver's
+frame, where VMS's `SYS$IMGSTA` puts it for an image linked with traceback
+(section 10.7). With `/INIT` in effect, as it is unless `SET DEBUG
+NOLIBINIT` or RUN's `/NOINIT` turns it off, a `CALLS` of each shareable
+image's initialization routine, its first transfer address, would come
+next, with three arguments. Then the main routine, and `$EXIT` with what it
+returned. An image with no transfer address, a shareable image, isn't run:
+DCL's `NOTFR`, and what its activation made goes. `RUN/NOEXECUTE` stops
+before the call.
+
+**The call.** `Machine.Call` has the engine build a CALLS frame for the
+driver on the current stack (`Engine.CallEntry`, `cpu/call.go`), with a
+saved PC and FP of `FFFFDEAF`, the console's sentinel, so that the
+driver's last RET, or `$EXIT`'s unwinding (section 10.8), ends the run
+rather than returning anywhere. Since `EXE$INITIALIZE`, the processor is in
+user mode, so the current stack is the user stack. At `HELLO`'s first
+instruction, under the debugger, the stack held the two frames:
+
+```text
+7FDFFFD0:       00000000    HELLO's frame: no handler
+7FDFFFD4:       20000000    the entry mask and PSW; bit 29 says CALLS
+7FDFFFD8:       7FDFFFFC    saved AP
+7FDFFFDC:       7FDFFFE8    saved FP: the driver's frame
+7FDFFFE0:       8002601C    saved PC: in the driver
+7FDFFFE4:       00000000    HELLO's argument count
+7FDFFFE8:       80029714    the driver's frame: EXE$TRACEBACK
+7FDFFFEC:       20000000
+7FDFFFF0:       00000000    saved AP
+7FDFFFF4:       FFFFDEAF    saved FP: the sentinel
+7FDFFFF8:       FFFFDEAF    saved PC: the sentinel
+7FDFFFFC:       00000000    the driver's argument count
+```
+
+The user stack starts at `UserStackTop`, `7FE00000`, so the driver's
+argument count is its first longword. The run loop then runs until the
+image ends, and `$STATUS` becomes its exit status.
+
+**Other processes.** A process `$CREPRC` makes activates its image the same
+way when it first runs (`ActivateCreatedImage`), into its own P0, with the
+driver in an S0 pool page of its own rather than the console's scratch page,
+and, for a process created to hibernate, a call of `$HIBER` before the main
+routine (section 7.10).
+
+### 11.11 What's VMS's and what isn't
+
+- **No boot path.** There's no boot ROM program, VMB, SYSBOOT, SYSINIT, or
+  STARTUP process: a Go program builds the machine, and process 1 runs
+  `STARTUP.COM` as its login procedure, with console commands that a VMS
+  startup procedure doesn't have (`INIT/VAX`, `INITIALIZE/MEMORY`, `ASM`).
+- **A microkernel, not an executive.** What VMS's executive does is Go;
+  the microkernel is the SCB, a few handlers, and a few routines, assembled
+  from source at every start.
+- **The processor's initial state.** `INIT/VAX` leaves the PSL zero:
+  kernel mode, IPL 0, not on the interrupt stack. The architecture's
+  processor initialization sets `041F0000`, kernel mode on the interrupt
+  stack at IPL 31. The microkernel's initialization doesn't depend on the
+  difference, but the console's `GO` and `CALL` of code before it does.
+- **The microkernel's pages are all URKW.** Its code is writable by kernel
+  mode, where VMS's executive code is read-only.
+- **SYSGEN parameters come from the configuration** (`vax.sysgen.*`),
+  read when a `System` is made; there's no SYSGEN utility or parameter
+  file.
+- **No LOGINOUT or SYSUAF for process 1.** Its UIC, privileges, and quotas
+  are govax's.
+- **One system root.** `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` are
+  the same root, `[SYSTEM.]`.
+- **No installed images.** A shareable image is mapped privately into each
+  process that uses it, never shared as global sections, and VMS's run-time
+  libraries are govax's shims unless a logical name names a real one.
+- **The system volume's refresh**, which keeps a user's changes while
+  bringing govax's files up to date, is govax's own.
+- **The copying loader** (paging off) writes an image's header into P0
+  while it reads it; VMS reads it into a buffer of its own.
+- **Initialization routines.** RUN's driver calls each shareable image's
+  initialization routine, with three arguments (100 as the first for
+  LIBRTL's, unconfirmed). govax's LINK builds no `LIB$INITIALIZE` into an
+  image, so a main image's own initialization routines are never called.
 
 ## 12. A map of the source
 

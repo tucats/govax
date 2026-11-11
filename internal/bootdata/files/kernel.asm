@@ -100,9 +100,9 @@
                 .iif not_defined SS$_NORMAL, .include "ssdef.asm"
                 
 ;       Note that this can only be built if we are in kernel mode.  The
-;       system initializes in kernel mode at IPL 31 to prevent interrupts,
-;       etc. from occuring.  We assume this state for the system to work
-;       correctly.
+;       console starts the system in kernel mode (INIT/VAX leaves the PSL
+;       zero, so IPL 0), and EXE$INITIALIZE runs there until its REI to
+;       user mode.
 
                 .region         system
 exe$base:       .byte 0
@@ -1392,8 +1392,7 @@ exe$dclstring:  .blkb           ^X100
 ;--------------------------------------------------------------------
 
 ;       This section takes care of miscellanous housekeeping.
-;       Define the exception handlers in the SCB and make the 
-;       entire kernel area protected from being written on.
+;       Define the exception handlers in the SCB.
 ;
 ;	Note that for many of these, we define "console$handler"
 ;       as the handler.  This equates to -1, and causes the emulator
@@ -1422,15 +1421,14 @@ exe$dclstring:  .blkb           ^X100
                 .scb            exc$conread,   exe$rx
                 
 
-;       Set page protections on the segments of the kernel.  This MUST
-;       be done after all symbol fixups are generated, because the
-;       microassembler is forced to abide by page table protections.
+;       Page protection.  Every page of the kernel keeps the protection
+;       S0's pages have, URKW: every mode may read it (and so run its
+;       code), and only kernel mode may write it.  The segments are still
+;       page-aligned (exe$base, exe$ubase, exe$wbase, exe$fbase), so that
+;       a protection of their own could be given to each; govax's
+;       assembler accepts .CONSOLE but runs no command from it, so it
+;       can't be done from here.
 
-                .console        set page exe$ubase to exe$uend prot=pte$k_ur
-                .console        set page exe$base to exe$end prot=pte$k_ur
-                .console        set page exe$wbase to exe$wend prot=pte$k_kwur
-                .console        set page exe$fbase to exe$fend prot=pte$k_all
-                
 
 ;       All done, let's set the console back so user assembly can
 ;       occur normally

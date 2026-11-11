@@ -1278,16 +1278,12 @@ func (a *Assembler) pseudoJcc(c *cursor, invByte byte) error {
 	return a.emitLongword(v)
 }
 
-// pseudoConsole assembles .CONSOLE <command>: the reference tool dispatches
-// the rest of the line to the interactive console's own DCL-style command
-// dispatcher (Phase 08's internal/console), which this package can't call
-// into without an inverted, assembler-depends-on-console package
-// dependency, so the command is accepted as a no-op, like a console
-// command whose only observable effect would be on a live interactive
-// session this batch assembler doesn't have. In the reference tool,
-// ".CONSOLE SET RADIX" also changed the assembler's own radix, which the
-// console shared; here the assembler's radix is always MACRO-32's decimal
-// (see Assembler.radix).
+// pseudoConsole assembles .CONSOLE <command>, which names a console
+// command to run while assembling. This package doesn't know the console
+// (it sits below it), so the line is accepted and nothing is run: a
+// .CONSOLE in a source has no effect. The assembler's radix is always
+// MACRO-32's decimal (see Assembler.radix), whatever a .CONSOLE SET RADIX
+// says.
 func (a *Assembler) pseudoConsole(c *cursor) error {
 	c.pos = len(c.s)
 

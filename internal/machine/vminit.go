@@ -256,12 +256,12 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	//	supervisor stack   sspPages (default 8), SW
 	//	interrupt stack    ispPages, URKW
 	//
-	// The kernel stack keeps S0's URKW: the frame the console builds to
-	// CALL a program lives there, and a user-mode program's final RET
-	// reads it. Only the executive and supervisor stacks are new: before,
-	// they shared the kernel stack's protection (only kernel mode could
-	// write them), and a caller passing 0 pages put them at the kernel
-	// stack's own address.
+	// The kernel stack keeps S0's URKW, where VMS's is kernel-only: when
+	// the console CALLs code in kernel mode, the frame is built on this
+	// stack, and code that drops to user mode with REI (as many test
+	// programs do, testdata/asm/cmkrnl.asm among them) reads it with its
+	// final RET. RUN, after the microkernel's initialization has left the
+	// processor in user mode, builds its frame on the user stack instead.
 	paddr = roundUpPage(paddr)
 
 	m.CPU.SetGPR(registers.SP, spP1) // USP, set below via SetPR too

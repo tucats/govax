@@ -302,13 +302,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// for the pager's first need).
 	c.StartPageFile()
 
-	// IF there is a default startup procedure speciried, run that. First check to
-	// see if the named script exists on the default container vaolume. If it doe snot,
-	// there is no error. But if it does, run it as a comamand procedure, and report
-	// any errors encountere.
+	// If a startup procedure of the user's own is configured, run it: a
+	// volume file or a host file, by the form of its name. One that isn't
+	// there is passed over without a message; one that is runs as a
+	// command procedure, and its failure is reported.
 	if startup := settings.Get("vax.startup.procedure"); startup != "" {
-		// Using the path string, infer if it is an ODS file name or a
-		// hos tfile name.
+		// The name's form says whether it is a volume file's or a host
+		// file's.
 		if rms.IsODSFileName(startup) {
 			if names, err := c.ContainerSession.Search(startup); len(names) > 0 && err == nil {
 				fileName := names[0]

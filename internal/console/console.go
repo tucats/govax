@@ -56,9 +56,9 @@ type Console struct {
 	InitTime time.Duration
 }
 
-// New returns a Console with no machine allocated yet (vax_init == 0 in the
-// C source's terms) — an INIT command (see init.go) must run before most
-// other commands will accept.
+// New returns a Console with no machine allocated yet: INIT/VAX
+// (machine.Machine.Init) must run before most commands will work.
+// cmd/govax makes a small one at once, and STARTUP.COM the real one.
 func New(out io.Writer) *Console {
 	m := machine.NewMachine(out)
 	c := &Console{Machine: m, Interpreter: dclshell.NewInterpreter(m, out)}

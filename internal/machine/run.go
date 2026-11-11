@@ -267,11 +267,11 @@ func (m *Machine) DefaultRunInits() bool {
 	return m.CPU != nil && m.CPU.DebugEnabled(registers.DebugLibinit)
 }
 
-// mainTransferAddress selects icb's own user-mode entry point, matching
-// console_run's own transfer[0]-then-[1]-then-[2] fallback: the first
-// transfer-vector entry that looks like a plausible P0/P1 user-space
-// address (nonzero, below 0x3FFFFFFF) -- transfer[0] is often a debugger/
-// LIB$INITIALIZE-style entry point outside that range, hence the fallback.
+// mainTransferAddress selects icb's main routine: the first of its
+// transfer addresses that is in P0 (nonzero, below 0x3FFFFFFF). An image
+// linked with traceback or /DEBUG has SYS$IMGSTA, in the P1 vector, as
+// its first, and its main routine second; a VMS V1 image's first is its
+// startup stub (LegacyStartup), which is passed over.
 func mainTransferAddress(icb *ICB) (uint32, bool) {
 	transfers := icb.Transfer[:3]
 	if icb.LegacyStartup {

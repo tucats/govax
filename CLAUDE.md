@@ -812,8 +812,9 @@ never had.
   subtask 4, 2026-11-11, section 6, VMS paging; subtask 5, 2026-11-11,
   section 7, processes; subtask 6, 2026-11-11, section 8, I/O; subtask 7,
   2026-11-11, section 9, RMS and ODS-2; subtask 8, 2026-11-11, section 10,
-  from VAX code to Go; sections 11 and 12 are subtasks 9 and 10; Decision 6, bugs the writing finds are fixed in the
-  same subtask).
+  from VAX code to Go; subtask 9, 2026-11-11, section 11, starting the
+  system; section 12 is subtask 10; Decision 6, bugs the writing finds are
+  fixed in the same subtask).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

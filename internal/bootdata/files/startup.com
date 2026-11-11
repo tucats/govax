@@ -110,7 +110,8 @@ $ initialize/memory /p0='memory_p0' /p1='memory_p1' /s0='memory_s0' -
      /ksp='memory_ksp' /esp='memory_esp' /ssp='memory_ssp' /isp='memory_isp'
 $!
 $!	Load the console ROM into ROM storage, if there is one found.
-$!	Also allocate the NVRAM storage area.
+$!	Also load the NVRAM from DEFAULT.NVRAM, if one is found (govax
+$!	supplies none, so there is no NVRAM unless you make one).
 $!
 $ load/rom/noerror 'rom'
 $ load/nvram/noerror

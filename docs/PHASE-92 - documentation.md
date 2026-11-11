@@ -5,7 +5,8 @@ document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
 document's outline, and its sections 0 to 3), 2 (section 4, the
 instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), 5
 (section 7, processes), 6 (section 8, I/O), 7 (section 9, RMS and
-ODS-2), and 8 (section 10, from VAX code to Go) are done.
+ODS-2), 8 (section 10, from VAX code to Go), and 9 (section 11, starting
+the system) are done.
 
 ## Goal
 
@@ -153,7 +154,7 @@ interpreter process 1 runs, and what reads the startup procedure).
 9. Section 11, startup: `cmd/govax`, the system volume, the grammars,
    STARTUP.COM, INIT and INITIALIZE/MEMORY, the microkernel and its
    initialization, devices, the page file, the user's startup, RUN and
-   image activation (the IMAGE$INIT driver).
+   image activation (the IMAGE$INIT driver). (done 2026-11-11)
 10. Section 12 and the close-out: the map, a read-through against the
     source, CLAUDE.md and PLAN.md, and this part's "Where things stand".
 
@@ -556,3 +557,66 @@ interpreter process 1 runs, and what reads the startup procedure).
   mode handlers, and failure exceptions, and 10.9 what's left: CHME from a
   program (no vector, where VMS returns `SS$_ILLSER`) and the unconfirmed
   choices above.
+- **2026-11-11** Subtask 9: section 11, starting the system: VMS's boot
+  path beside govax's, with a table of govax's ten steps; `cmd/govax`'s
+  start (the profile, `console.New`, the 1 MB machine before STARTUP.COM);
+  the system volume (its directories, the mount's five steps, the host
+  lock, the system names, the refresh's rules, NOSYSVOL); the grammars and
+  the resolver; STARTUP.COM's commands, shown by `SET VERIFY` on a second
+  run; `INIT/VAX` and `newRTL`; `INITIALIZE/MEMORY`'s steps (the layout
+  itself is 5.5's); LOAD/ROM and LOAD/NVRAM; the microkernel (what it
+  holds, ASM into live memory, its directives, `depositAsmImage`'s four
+  parts, its SCB and page protections, `EXE$INITIALIZE`'s REI to user
+  mode); the devices; what follows STARTUP.COM (the page file,
+  `vax.startup.procedure`, the one-shot command, the prompt, the end); RUN
+  step by step (finding the main image and shareable images, the two
+  loaders, the ICB, GSMATCH, fixups, protection, the driver's bytes and
+  the two frames on the user stack, measured with the debugger); and what
+  differs from VMS. The measurements (a start on a new and on an existing
+  scratch system volume, and a MACRO program run with `RUN/NOEXECUTE` and
+  `RUN/DEBUG`) were run from the scratchpad, not kept. Reading for it
+  found:
+  - **STARTUP.COM said `LOAD/NVRAM` allocates the NVRAM.** It loads
+    `DEFAULT.NVRAM` if one is found, and govax supplies none. The comment
+    now says so; a system volume whose STARTUP.COM the user hasn't changed
+    gets the new copy as a new version at its next refresh.
+  - **kernel.asm said the system initializes at IPL 31.** It starts at IPL
+    0: `INIT/VAX` leaves the PSL zero. The comment now says so.
+  - **Raised with the author, not fixed: the PSL after `INIT/VAX`.** The
+    architecture's processor initialization sets the PSL to `041F0000`
+    (kernel mode on the interrupt stack, IPL 31); govax's is zero (kernel
+    mode, IPL 0, not on the interrupt stack). Setting the architecture's
+    value (and SP to ISP in INITIALIZE/MEMORY) left STARTUP.COM working,
+    `EXE$INITIALIZE`'s REI leaving the interrupt stack as it should, but
+    failed the debugger's tests that GO a program straight after INIT
+    (`traced_test.go`'s, at IPL 31 on the interrupt stack, where CHMK
+    halts and nothing is delivered), so the console's GO and CALL of code
+    before the microkernel runs would need a rule of their own. Section
+    11.11 lists it, and `Machine.Init`'s comment says why.
+  - **The kernel stack's protection.** Section 5.5 said the kernel stack
+    is URKW because RUN's frame is on it; RUN's frame is on the user stack
+    (the processor is in user mode after `EXE$INITIALIZE`). Making the
+    kernel stack KW, as VMS's, failed `TestCmkrnl_assembledProgram`,
+    `TestPrivileges_assembledProgram`, and
+    `TestModeSwitchAST_assembledProgram`: a program the console CALLs in
+    kernel mode that drops to user mode with REI reads its frame there with
+    its last RET. The protection stays; section 5.5 and VMInit's comment
+    now give that reason.
+  - **kernel.asm's page protections never took effect.** Its last lines
+    were four `.CONSOLE SET PAGE ... PROT=` commands (code UR, data KWUR,
+    a spare buffer, `EXE$DCLSTRING`, which nothing uses, writable by all),
+    but govax's assembler accepts `.CONSOLE` and runs nothing (it sits
+    below the console), and the console has no `SET PAGE A TO B` form
+    anyway: every microkernel page has S0's URKW. The four lines are gone,
+    and a comment says what the protection is; `pseudoConsole`'s comment
+    says the directive has no effect. No assembled byte changed. Raised
+    with the author: giving the code pages UR, as VMS's executive code is,
+    would need the debugger's breakpoints and a later ASM to write them
+    some other way.
+  - govax's LINK builds no `LIB$INITIALIZE` into an image, so RUN never
+    calls a main image's own initialization routines; listed in 11.11.
+  Comments brought up to date: `Machine.Init`'s (the C source, Phase 09's
+  ROM), `console.New`'s, `mainTransferAddress`'s (SYS$IMGSTA, not a
+  "debugger/LIB$INITIALIZE-style" entry), the copying loader's header
+  comment, and `cmd/govax`'s `vax.startup.procedure` comment (misspelt
+  throughout).

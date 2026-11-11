@@ -415,10 +415,10 @@ func (p *ImageProcess) loadImage(fn string, flag uint32, linked *ISD) (*ICB, err
 		return nil, err
 	}
 
-	// The C source loads the header one page above the current high-water
-	// mark (page zero of P0 can't be written on VMS -- it's the guard
-	// page VMInit installs, see vminit.go), then treats everything from
-	// there on as belonging to the image itself.
+	// The header is copied into P0 a page above the high-water mark (P0's
+	// page 0 is a no-access guard page) so that its transfer addresses and
+	// ISDs can be read through memory; the image's own sections, copied
+	// next, are written over it where they reach.
 	base := p.process().RegionSize[0] + 0x200
 
 	headerLen := int(nblocks) * 512

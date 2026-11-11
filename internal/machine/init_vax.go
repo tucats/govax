@@ -6,13 +6,19 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Init allocates a fresh CPU/Memory/Engine of physBytes (rounded per
-// allocPhysMemory), minus ROM/NVRAM allocation (INIT/ROM, INIT/NVRAM; deferred to
-// Phase 09, see doc.go) and everything alloc_vax sets up that belongs to a
-// later phase (assembler flags, debug/quantum settings with no consumer
-// yet). Radix/Verbose/Verify are preserved across a re-INIT, matching
-// console_init's own save/restore of vax.console.radix/disasm/verify around
-// its free_vax+alloc_vax call.
+// Init is INIT/VAX: it ends every other process and makes a new machine
+// of physBytes (rounded by allocPhysMemory), a new CPU, memory, engine,
+// and VMS (newRTL), with no address space: MAPEN is 0. The ROM and NVRAM
+// are LOAD/ROM's and LOAD/NVRAM's. The console's radix, verbosity, and
+// verification, the devices, the mounts, and process 1's logical names
+// belong to the console and outlive it.
+//
+// The new CPU's registers and PSL are all zero: kernel mode at IPL 0, not
+// on the interrupt stack. That isn't the architecture's processor
+// initialization, which sets the PSL to 041F0000 (kernel mode on the
+// interrupt stack at IPL 31); the console's GO and CALL of code before
+// the microkernel has started depend on IPL 0 and the kernel stack
+// (docs/VAX-VMS-INTERNALS.md, section 11.11).
 func (m *Machine) Init(physBytes uint32) error {
 	size := allocPhysMemory(physBytes)
 
