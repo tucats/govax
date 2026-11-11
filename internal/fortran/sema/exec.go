@@ -22,6 +22,9 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 		return a.call(s, path)
 
 	case *ast.GotoStmt:
+		// A jump may go forward, to a label not seen yet, so whether
+		// the label exists (and may be jumped to from here) is checked
+		// at the unit's end, from the references saved in a.refs.
 		a.refs = append(a.refs, labelRef{label: s.Target.Label, pos: s.Target.Pos, path: path})
 
 		return &Goto{stmtBase{s}, s.Target.Label}
@@ -45,6 +48,9 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 			return nil
 		}
 
+		// A logical IF, IF (e) st, is made an IF block with one arm
+		// holding one statement, so later passes have only one kind of
+		// IF to handle.
 		ifs := &If{stmtBase: stmtBase{s}}
 		arm := &Arm{AST: s, Cond: a.condition(s.Cond)}
 		ifs.Arms = []*Arm{arm}

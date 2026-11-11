@@ -530,6 +530,13 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		return a.logical(e, x, y)
 	}
 
+	// FORTRAN's mixed-mode arithmetic: the operation is done in the
+	// "higher" of the operands' types (INTEGER < REAL < DOUBLE PRECISION <
+	// COMPLEX, section 2.3.1.2), and the other operand is converted first.
+	// So I + 1.5 is REAL(I) + 1.5. The conversion is made explicit here, a
+	// Convert node in the tree, so that no later pass has to know the rule.
+	// fold then computes the whole operation now if both sides are
+	// constants.
 	t := a.mixedType(x, y)
 
 	x, y = a.arithmetic(x), a.arithmetic(y)

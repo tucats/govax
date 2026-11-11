@@ -16,6 +16,14 @@ import (
 // what the reference becomes.
 
 // intrinsicRef analyzes a reference to the intrinsic function e.Name.
+//
+// FORTRAN's intrinsic functions come in two sorts of name. A specific name
+// works on one type: DSQRT takes and returns a DOUBLE PRECISION. A generic
+// name stands for a family, and the arguments choose among it: SQRT of a
+// REAL is SQRT, of a DOUBLE PRECISION is DSQRT, of a COMPLEX is CSQRT. This
+// is overloading resolved at compile time, much as a Go generic function's
+// type is chosen by its arguments. So the arguments are analyzed first, and
+// their types then select the table's row (selectForm).
 func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 	a.noteIntrinsic(e.Name, e.Pos)
 

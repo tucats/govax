@@ -16,9 +16,15 @@ import (
 // formatted, list-directed, namelist, and unformatted sequential READ,
 // WRITE, PRINT, TYPE, and ACCEPT is analyzed into an IO, and formatted and
 // unformatted direct access READ and WRITE, ENCODE, and DECODE too, and
-// REWRITE and the keyed READ (sections 7.4 and 7.2.3; FTNRTL answers the keyed
-// READ FOR$_NOTIMP until indexed files are done, Decision 13 of docs/PHASE-81 -
-// FORTRAN files.md).
+// REWRITE and the keyed READ (sections 7.4 and 7.2.3; indexed files are
+// Phase 88's).
+//
+// None of these statements becomes VAX code that does I/O itself. Each
+// becomes a series of calls of FTNRTL, the run-time library: one to begin
+// the statement (naming the unit, the format, ERR= and END=), one per item
+// in its list, and one to end it (ir/lowerio.go). What semantic analysis
+// settles is everything that call sequence needs: which form of I/O, which
+// unit, which format, and each item's type and place.
 
 // The default units, which the statements without a unit and the units
 // written * use. VMS's FORTRAN run-time library numbers them -1 to -4,
@@ -35,7 +41,7 @@ const (
 // Form is how an I/O statement turns values into text and back.
 type Form int
 
-// The forms of I/O this phase compiles.
+// The forms of I/O.
 const (
 	ListForm        Form = iota // list-directed: format * (section 7.2.1.2)
 	FormattedForm               // under a format
