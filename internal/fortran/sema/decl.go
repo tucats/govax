@@ -18,6 +18,9 @@ import (
 // told from them only here, where it is known which names are arrays.
 func (a *analyzer) declarations(body []ast.Stmt) {
 	for _, s := range body {
+		// Note where the statement came from: a few rules (unused names'
+		// warnings, /STANDARD) don't apply to lines from an INCLUDE file
+		// or a text library, which the programmer didn't write here.
 		from := s.Base().Source
 		a.inLibrary = from != nil && from.Library
 		a.inInclude = from != nil && from.Depth > 0
@@ -28,8 +31,13 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 			stmtFunc = a.statementFunction(st)
 		}
 
+		// Check the statement comes in its proper place among the others
+		// (declarations before executable statements, and so on).
 		a.order(s, stmtFunc)
 
+		// Each kind of declaration has its own method. Statements not
+		// listed here (the executable ones) are left for the second walk,
+		// statements in stmt.go.
 		switch s := s.(type) {
 		case *ast.TypeStmt:
 			a.typeStatement(s)
@@ -87,6 +95,10 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 // Its expression is analyzed where the statement walk reaches it, when every
 // declaration is known (stmtfunc.go).
 func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
+	// The target must look like F(...): a type assertion, s.Target.(*ast.Apply),
+	// asks whether the interface value holds that type, and with the two-result
+	// form gives ok false rather than panicking if it doesn't. a.group is how
+	// far through Figure 1-1's order of statements the unit has come.
 	ap, ok := s.Target.(*ast.Apply)
 	if !ok || a.group > stmtFuncGroup {
 		return false
@@ -102,6 +114,11 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		}
 	}
 
+	// It is a statement function's definition. Whatever is wrong with it
+	// now is reported, but it's still taken for one (true below), so that
+	// it isn't also reported as a misplaced assignment. stmtFuncs maps the
+	// statement to its function's symbol, or to nil after an error, so the
+	// statement walk knows to skip it.
 	sym := a.declare(ap.Name, ap.Pos)
 
 	switch {
@@ -139,6 +156,9 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 // INTEGER*4); the statement's is every other name's, checked once, at
 // the statement.
 func (a *analyzer) typeStatement(s *ast.TypeStmt) {
+	// The statement's own type (REAL*8 in REAL*8 X, Y*4) is worked out the
+	// first time a name needs it, and kept: so a bad length is reported
+	// once, not once per name, and not at all if every name has its own.
 	var (
 		stmtType Type
 		stmtOK   bool
@@ -146,6 +166,8 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 	)
 
 	for _, d := range s.Entities {
+		// declare finds the name's symbol in the unit's table, making one
+		// if this is the name's first mention.
 		sym := a.declare(d.Name, d.Pos)
 
 		t, ok := stmtType, stmtOK
@@ -164,7 +186,13 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 
 		a.checkBoundType(sym, t, ok, d.Pos)
 
+		// A name may be given a type only once, and not after it's been
+		// made something that has none of its own (a unit's name, a
+		// structure's). The default case records the type. broken marks a
+		// symbol whose declaration failed, so later uses of it aren't
+		// reported again and again.
 		switch {
+
 		case sym.ResultVar != nil:
 			a.report("RESULTDECL", d.Pos, d.Name, sym.ResultVar.Name)
 		case sym.Class == UnitName || sym.Struct != nil:

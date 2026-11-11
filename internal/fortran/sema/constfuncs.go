@@ -24,6 +24,13 @@ type constFunc struct {
 }
 
 // constFuncs are the functions, by name.
+//
+// Several entries share code through function makers: minMax, bitwise, and
+// lexical each return a new function (a closure) with one detail fixed,
+// MIN's or MAX's direction, the operator & or | or ^, the comparison. So
+// IAND's evaluator is bitwise called with a little function that ANDs two
+// integers, and the shared part (checking the arguments are INTEGER, making
+// the result) is written once.
 var constFuncs = map[string]constFunc{
 	"MIN":   {2, -1, "2 or more arguments", minMax(-1)},
 	"MAX":   {2, -1, "2 or more arguments", minMax(1)},
@@ -53,6 +60,10 @@ var constFuncs = map[string]constFunc{
 // constFuncs, of constant arguments. An array element, or any other
 // function, isn't constant.
 func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
+	// A(...) is a function reference only if A isn't something else the
+	// unit declared: an array (then it's an element), a variable, a
+	// dummy argument. A name only mentioned so far (Unclassified) may
+	// still be an intrinsic function's.
 	if s := ev.a.unit.byName[e.Name]; s != nil && s.Class != Intrinsic && (s.Class != Unclassified || s.Dummy != 0) {
 		if s.Class == Array {
 			return nil, named("the array element "+e.Name+"(...) is not a constant", e.Pos)
@@ -165,10 +176,14 @@ func minMax(sign int) func(*evaluator, *ast.Apply, []*Const) (*Const, *constErr)
 			return nil, err
 		}
 
+		// order is -1, 0, or 1 as arg is less than, equal to, or greater
+		// than best; multiplying by sign (1 for MAX, -1 for MIN) makes
+		// "greater than 0" mean "better" for both.
 		best := args[0]
 
 		for _, arg := range args[1:] {
 			if order(arg, best)*sign > 0 {
+
 				best = arg
 			}
 		}

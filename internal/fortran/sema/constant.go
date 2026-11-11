@@ -136,9 +136,19 @@ func (ev *evaluator) realRange(pos diag.Position, what string, t Type) *constErr
 }
 
 // eval is the value of the constant expression e.
+//
+// It is a recursive tree walk, the usual shape of an expression evaluator:
+// a leaf (a constant, a name) has its value at once, and an operation
+// evaluates its operands by calling eval on them, then combines their
+// values. Go functions can return two results; here either the *Const or
+// the *constErr is nil, a common Go pattern for "a value or a reason why
+// not".
 func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 	switch e := e.(type) {
 	case *ast.IntConst:
+		// intValue reads the digits as an int64, so that a value too
+		// big for INTEGER*4 can be seen to be too big rather than
+		// silently wrapping round.
 		v, err := intValue(e)
 		if err != nil || v > maxInt {
 			return nil, ev.intRange(e.Pos, ast.DumpExpr(e), IntegerType)
@@ -171,6 +181,9 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 		return nil, ev.report("RAD50PLACE", e.Pos)
 
 	case *ast.Name:
+		// vars holds the values of implied-DO variables while a DATA
+		// statement's list is walked, DATA (A(I), I = 1, 3) /.../: there
+		// I is a constant for each turn of the loop.
 		if v, ok := ev.vars[e.Name]; ok {
 			return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: v}, nil
 		}
@@ -308,6 +321,10 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 
 // truncate is v cut to an INTEGER or LOGICAL of size bytes, sign
 // extended: the value such a datum holds.
+//
+// Converting to a narrower Go integer type (int8, int16) keeps the low
+// bits; converting back to int32 copies the sign bit up, so 0x0000FFFF as
+// a 2-byte integer is -1.
 func truncate(v int32, size int) int32 {
 	switch size {
 	case 1:
@@ -484,6 +501,8 @@ func (ev *evaluator) operate(op ast.Op, x, y *Const, pos diag.Position) (*Const,
 
 	switch t.Kind {
 	case Integer:
+		// Compute in 64 bits, where no sum or product of two 32-bit
+		// values can overflow, then check the result fits the type.
 		a, b := int64(x.Int), int64(y.Int)
 
 		var v int64
@@ -511,7 +530,13 @@ func (ev *evaluator) operate(op ast.Op, x, y *Const, pos diag.Position) (*Const,
 		c.Int = int32(v)
 
 	case Real:
+		// Never Go's float64: VAX floating point isn't IEEE 754, and a
+		// constant must have exactly the bits the program would compute
+		// at run time. ev.a.format(t) is the VAX format of the type (F, D,
+		// G, or H), and vaxfloat does the arithmetic exactly, then rounds
+		// to that format.
 		v, err := realArith(op, ev.a.format(t), x.Real, y.Real)
+
 		if err != nil {
 			return nil, ev.floatError(err, pos, t)
 		}

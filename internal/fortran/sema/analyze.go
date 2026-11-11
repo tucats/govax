@@ -57,8 +57,14 @@ type Options struct {
 // meaningful only if no error was reported.
 func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List) *Program {
 	prog := &Program{}
+
+	// First, the names of every unit in the file, so that a unit can be
+	// checked as it calls another defined later in the file.
 	units := unitNames(file, mainName, messages)
 
+	// Then each unit in turn, with an analyzer of its own: every unit has
+	// its own names (FORTRAN has no nested scopes, and a name means
+	// nothing outside its unit unless it's in COMMON or names a unit).
 	for _, au := range file.Units {
 		unitOpts, psects, groups := prologue(prog, au.Prologue, opts, messages)
 
@@ -114,6 +120,9 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 		messages.Report("OPTIONSPLACE", s.Position(), "program unit's first")
 	}
 
+	// Last, the checks between units, which need them all analyzed: that
+	// each call matches what it calls, and that COMMON blocks of one name
+	// agree with each other from unit to unit.
 	checkReferences(prog, units, messages)
 	checkPsects(prog, messages)
 	checkCommonLayouts(prog, messages)
@@ -254,6 +263,9 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 
 	var main *ast.Unit
 
+	// Two passes over the units: the units' own names first, then their
+	// ENTRY statements' names, so that a clash between a unit and an entry
+	// point is always reported at the entry point.
 	for _, au := range file.Units {
 		kind := au.Kind()
 
@@ -303,8 +315,20 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 	return units
 }
 
-// analyzer is semantic analysis's state for one unit.
+// analyzer is semantic analysis's state for one unit. It's made fresh for
+// each unit (Analyze), and almost every function in this package is one of
+// its methods: they share what's known so far through its fields rather
+// than passing it about. Its result is the Unit in unit, which outlives it.
+//
+// Analysis reads a unit's statements twice. The first walk (decl.go)
+// reads the declarations, since FORTRAN lets them come in any order
+// before the executable statements and an executable statement can't be
+// understood until they're all known. The second (stmt.go) reads the
+// executable statements, giving each expression its type. Some declarations
+// (EQUIVALENCE, DATA, SAVE) can only be settled once every other is known,
+// so the first walk saves them in fields here for later.
 type analyzer struct {
+
 	messages *diag.List
 	prog     *Program
 	units    map[string]*fileUnit

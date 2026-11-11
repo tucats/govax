@@ -34,6 +34,9 @@ type implicitRules struct {
 func defaultImplicit(defaultInt Type) *implicitRules {
 	r := &implicitRules{}
 
+	// 'A' is a rune constant (the character's code, 65), so c counts
+	// through the letters, and c-'A' is a letter's place in the alphabet,
+	// 0 for A to 25 for Z: the index into the 26-entry arrays.
 	for c := 'A'; c <= 'Z'; c++ {
 		if c >= 'I' && c <= 'N' {
 			r.types[c-'A'] = defaultInt
@@ -48,9 +51,12 @@ func defaultImplicit(defaultInt Type) *implicitRules {
 // typeOf is the type a name has from its first letter. With IMPLICIT
 // NONE it is Invalid and untyped is set: the name must be declared.
 func (r *implicitRules) typeOf(name string) (t Type, untyped bool) {
+	// A name not starting with a letter has already been reported by an
+	// earlier pass; give it some type so analysis can go on.
 	if name == "" || name[0] < 'A' || name[0] > 'Z' {
 		return RealType, false
 	}
+
 
 	if r.none {
 		return invalid, true
