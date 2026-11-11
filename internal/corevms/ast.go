@@ -29,8 +29,11 @@ import (
 // # When an AST is delivered
 //
 // Between any two instructions, the engine asks NextAST whether an AST
-// can run now. An AST for mode m can run only if all of these hold, as
-// on VMS:
+// can run now. VMS keeps a process's ASTs in one queue ordered by mode,
+// kernel's first, oldest first within a mode, and its AST delivery
+// interrupt looks only at the queue's first AST (*VAX/VMS Internals and
+// Data Structures*, 7.2.2 and 7.3.1). That AST, of mode m, runs only if
+// all of these hold:
 //
 //   - The CPU is running in mode m or a less privileged one. A user-mode
 //     AST never interrupts kernel code, but a kernel-mode AST does
@@ -39,11 +42,10 @@ import (
 //   - IPL is below 2 (IPL$_ASTDEL) and the CPU isn't on the interrupt
 //     stack. So an interrupt handler, or kernel code that raised IPL to
 //     protect itself, is never interrupted by an AST.
-//   - ASTs are enabled for mode m and every more privileged one.
+//   - ASTs are enabled for mode m ($SETAST).
 //   - No AST of mode m is already running.
 //
-// Of the ASTs that could run, the most privileged mode's goes first, and
-// within a mode the oldest.
+// If it can't run, no AST runs: the ASTs behind it wait for it.
 //
 // Because waiting services ($WAITFR, $HIBER) wait by re-executing their
 // XFC instruction every step (see ErrWait), each retry is an instruction
@@ -273,27 +275,32 @@ func (p *Process) deliverableAST(psl registers.PSL) (mode uint32, index int) {
 		return 0, -1
 	}
 
-	// Look for the most privileged mode, from kernel out to psl's
-	// current mode, with an AST that can run.
-	for m := uint32(0); m <= uint32(psl.CurMod()); m++ {
-		// Disabling ASTs in a mode also holds back every less privileged
-		// mode's ASTs.
-		if !p.ast.enabled[m] {
-			break
-		}
+	// The queue's head, in VMS's order: the most privileged mode with an
+	// AST queued, and that mode's oldest. (govax appends every AST to one
+	// list; VMS inserts each in mode order, so its head is this one.)
+	head := -1
 
-		if p.ast.active[m] {
-			continue
-		}
-
-		for n, a := range p.ast.queue {
-			if a.mode == m {
-				return m, n
-			}
+	for n, a := range p.ast.queue {
+		if head < 0 || a.mode < p.ast.queue[head].mode {
+			head = n
 		}
 	}
 
-	return 0, -1
+	if head < 0 {
+		return 0, -1
+	}
+
+	// Only the head is considered, as SCH$ASTDEL takes only the first
+	// AST: if it can't run (its mode is less privileged than the CPU's,
+	// disabled, or already running one), nothing runs, not even a less
+	// privileged AST behind it. A mode with nothing queued holds nothing
+	// back, whether its ASTs are enabled or not.
+	m := p.ast.queue[head].mode
+	if m > uint32(psl.CurMod()) || !p.ast.enabled[m] || p.ast.active[m] {
+		return 0, -1
+	}
+
+	return m, head
 }
 
 // enterASTMode prepares the CPU to run an AST of mode (which is the

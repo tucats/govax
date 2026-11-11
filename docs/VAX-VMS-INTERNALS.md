@@ -2152,7 +2152,746 @@ showed it, but not all of it. A program could notice these:
 
 ## 7. Processes
 
-*To be written.*
+govax's VAX has one CPU, and VMS runs many processes on one CPU by taking turns:
+each has its own registers, its own P0 and P1, and its own stacks, and
+between two instructions the scheduler may put one away and bring
+another back. govax does the same with the same pieces: a hardware
+process control block per process, the VAX's context-switch semantics,
+and VMS's scheduling rules from *VAX/VMS Internals and Data Structures*
+(chapter 10, cited as "the book", as in section 6). What's different is
+who does the work: VMS's scheduler is VAX code run by a software
+interrupt; govax's is Go, called by the engine between instructions, and
+so are the services processes use to wait for, signal, and talk to one
+another.
+
+The subsections go from what a process is (7.1 to 7.3) to how the CPU
+moves between processes (7.4 to 7.6), then what a process can wait for
+and be interrupted by (7.7, 7.8), how processes talk (7.9), how they're
+made and ended (7.10, 7.11), and the console's place among them: the
+terminal they share, and the keys typed at it (7.12, 7.13).
+
+### 7.1 Process 1 and the others
+
+Every govax session has **process 1**, the console's. It's made with the
+System (`corevms.NewEnvironment`), so it's the first process in the
+table and has PID `00000301`. Its name, user name, and account are
+`SYSTEM`; its base priority is 4, VMS's default for an interactive user;
+its quotas are the SYSTEM account's (`corevms.SystemAccount`), with the
+`vax.sysgen.pql_*` keys laid over them (section 6.1). Its address space
+and stacks are the ones INITIALIZE/MEMORY laid out (section 5.5), and its
+command interpreter is the console's DCL, which runs in Go between
+machine runs. Process 1 is never deleted: an image it runs ends, and its
+DCL goes on.
+
+Every **other** process is made by a program or by DCL: `$CREPRC`,
+LIB$SPAWN, or DCL's SPAWN (which calls LIB$SPAWN). Each gets an address
+space, stacks, and a PCB from the S0 pool, runs an image or a command
+interpreter, and is deleted when that ends (7.10).
+
+All of this rests on one switch, `vax.process.scheduler`, on unless set
+false. With it off, process 1 is the only process: `$CREPRC` and LIB$SPAWN
+return `SS$_UNSUPPORTED`, and a service that must wait does so by running
+its XFC instruction again and again (7.6). Two more keys tune it:
+
+| Key | Default | What it governs |
+| --- | --- | --- |
+| `vax.process.scheduler` | true | whether processes other than process 1 exist |
+| `vax.process.quantum` | 20000 | a quantum, in instructions (7.5) |
+| `vax.process.preempt` | `all` | the modes in which a process may be preempted: `all` (VMS's rule), `user` (only user-mode code, so a service or supervisor-mode routine always finishes first), or `none` (processes switch only when one waits) |
+
+They're read into a `corevms.ProcessSettings` (`corevms/procsettings.go`)
+when the machine is initialized.
+
+### 7.2 The process table and PIDs
+
+VMS finds a process from its process ID through a table of pointers to
+process control blocks, indexed by a small number, the *process index*.
+The PID carries the index in its low bits and a *sequence number* above
+it. Each slot has its own sequence number, which moves on each time a new
+process takes the slot, so a deleted process's PID doesn't match the
+slot's next occupant: a stale PID is told from a live one by comparing
+the whole PID (the book's 20.1.3 and 20.1.4).
+
+govax's table is `corevms/proctable.go`'s `processTable`, a fixed array of
+`*Environment` by index. The PID's layout is govax's choice, in the shape
+of VMS 7's *extended* PIDs, which pack both fields into 21 bits:
+
+```text
+   31          21 20                 8 7          0
+  ┌──────────────┬────────────────────┬────────────┐
+  │      0       │  sequence (13)     │ index (8)  │
+  └──────────────┴────────────────────┴────────────┘
+```
+
+Index 0 is the *null process* (the idle loop) and never used, so there
+are 255 slots. Every slot's sequence starts at 2, so a slot's first
+process gets 3: process 1 is index 1, sequence 3, `00000301`. A new
+process takes the next free index **after** the one the last new process
+took, wrapping round, as VMS 7.3 did when a probe asked (the book's VMS
+searched from the lowest index). Measured on govax, two subprocesses
+spawned together, then a third after both had gone:
+
+```text
+00000301 SYSTEM          CUR      6 ...
+00000302 KID             LEF      4 ...
+00000303 KID2            LEF      4 ...
+  (both log out)
+00000301 SYSTEM          CUR      6 ...
+00000304 KID3            LEF      4 ...
+```
+
+KID3 took index 4, not the freed 2. `System.FindProcess(pid)` looks the
+index up and compares the whole PID; `FindProcessName` finds a process by
+name, which is unique only within a UIC group.
+
+**Jobs.** VMS groups processes into *jobs*: a detached process (one with
+no owner, such as the one a user logs in to) and every subprocess under
+it. A job shares one *job information block*, the JIB, which holds its
+master process's PID and the *pooled* quotas all its processes draw on
+together (the book's 20.1.1 and table 20-3). govax's is `corevms.Job`
+(`corevms/job.go`): `MasterPID`, the subprocess limit and count (the PRCLM
+quota: process 1's account allows 10, and an eleventh SPAWN fails with
+`SS$_EXQUOTA`), the other pooled quotas, the page file charge of section
+6.7, the job's logical name table, and which of its processes has the
+terminal (7.12). Process 1 is the master of its own job, and so is every
+detached process; a subprocess points at its creator's.
+
+### 7.3 What a process owns
+
+A process is a `corevms.Environment` (section 3.5), and what the CPU
+needs to run it is three things, each built by `buildProcessMemory`
+(`corevms/creprc.go`) from the S0 pool (`corevms/s0pool.go`), each run of
+pages charged to the process's PID so its deletion can give it back:
+
+1. **A table area** (`System.BuildAddressSpace`, section 5.6): its P0 and
+   P1 page tables, with the P1 system service vector mapped. With paging
+   off, the tables are the size of its creator's, and every entry is
+   there; with paging on, the area holds `vax.sysgen.virtualpagecnt`
+   entries, backed by frames only where the regions reach (section 6.11).
+2. **Its privileged stacks** (`System.BuildStacks`, `corevms/stacks.go`),
+   one run of 22 pages:
+
+   ```text
+     kernel stack       4 pages   URKW
+     guard page         1 page    NA
+     executive stack    8 pages   EW
+     guard page         1 page    NA
+     supervisor stack   8 pages   SW
+   ```
+
+   These are INITIALIZE/MEMORY's default sizes, whatever process 1's
+   were given (STARTUP.COM gives process 1 a 20-page kernel stack). A
+   push past the executive or supervisor stack's bottom lands on its
+   guard page and faults. Each process needs its own kernel stack because
+   one switched out in the middle of a service leaves its frames there;
+   only the interrupt stack is shared, since interrupts belong to no
+   process. The user stack is in the process's own P1, with its top at
+   `7FE00000` in every process.
+3. **A hardware PCB**, a pool page of its own, kernel-only (KW). VMS keeps
+   the PCB in the process header beside the page tables; a page apart is
+   simpler. The PCBB register holds the PCB's *physical* address, since
+   the instructions that use it run with the old process's mapping.
+
+Process 1 starts with no PCB: INITIALIZE/MEMORY's layout has no room for
+one, and the pool's first pages are the microkernel's. It gets one the
+first time it's switched out (`System.EnsurePCB`).
+
+Everything else a process has is Go: its `Process` record (identity,
+quotas, privileges, priorities, event flags, its AST queue, its timers),
+its channels, its RMS files and session, its logical name tables, and,
+for a process that runs DCL, its DCL state. None of it is in VAX memory,
+so a program can reach it only through the services, as a VMS program
+must.
+
+### 7.4 Switching the CPU
+
+The VAX defines what a process's registers look like at rest: the
+**hardware process control block**, 96 bytes (the *VAX Architecture
+Reference Manual*, chapter 6; `cpu/context.go`):
+
+```text
+  00  KSP      kernel stack pointer        40  AP
+  04  ESP      executive                   44  FP
+  08  SSP      supervisor                  48  PC
+  0C  USP      user                        4C  PSL
+  10  R0                                   50  P0BR
+  ..  R1-R11                               54  P0LR (21:0), ASTLVL (26:24)
+                                           58  P1BR
+                                           5C  P1LR (21:0), PME (31)
+```
+
+and gives the scheduler two instructions: SVPCTX saves the running
+process's general registers, stack pointers, PC, and PSL into the PCB
+PCBB names, leaving the CPU on the interrupt stack; LDPCTX loads a PCB,
+with its page table registers, empties the TB's process entries, and
+pushes the PC and PSL for the REI that follows. govax has both
+instructions, for VAX code that wants them. Its own scheduler, being Go,
+uses their Go halves, `Engine.SaveContext` and `Engine.LoadContext`, which
+do the same work and LoadContext also the REI's, checking the PSL it
+restores by REI's rules.
+
+`System.switchTo` (`corevms/schedule.go`) is the whole switch, between two
+instructions:
+
+1. Point PCBB at the outgoing process's PCB (giving process 1 its PCB if
+   it has none), and write its page table registers into the PCB with
+   `SaveMemoryContext`. SVPCTX doesn't save them, since VMS writes them
+   into the PCB whenever it changes them; govax's services change them in
+   the CPU's registers, so the switch copies them first.
+2. `SaveContext`: registers, stack pointers, PC, PSL. The CPU is now in
+   kernel mode on the interrupt stack, belonging to no process.
+3. Point PCBB at the incoming process's PCB and `LoadContext`: its
+   address space (with the TB's process entries and the instruction-fetch
+   window emptied, section 5.4), its registers, and the PC and PSL it
+   resumes at.
+4. Make it the System's current process, the one `EngineHooks.Running`
+   gives (section 3.4): from the next instruction on, an XFC is this
+   process's service call.
+5. If the outgoing process was deleted, free its memory now that the CPU
+   has left its stacks and tables (7.10). If the incoming one is marked
+   for deletion, delete it now, in its own context; if it has never run,
+   start it (7.10).
+
+Because the switch happens only between instructions, an instruction is
+never split by one. That's what makes the VAX's interlocked instructions
+(BBSSI, BBCCI, ADAWI, INSQHI, REMQHI, ...) work between processes sharing
+a global section: each runs whole.
+
+### 7.5 The scheduler
+
+**The rules** are in `internal/sched`, plain Go with no CPU in it, so they
+can be tested alone. A process (a `sched.Handle`, its PID) has a base
+priority and a current priority, 0 to 31; 0 to 15 are *normal*, 16 to 31
+*real-time*. It's in one **state**, by VMS's own numbers (`sched/state.go`,
+the book's Table 10-1), which `$GETJPI` and SHOW SYSTEM report:
+
+| State | Meaning |
+| --- | --- |
+| CUR | current: the CPU is running it |
+| COM | computable: ready, waiting only for the CPU |
+| LEF | waiting for one of its own event flags ($WAITFR, a $QIOW, a terminal read) |
+| CEF | waiting for a flag in a common event flag cluster |
+| HIB | hibernating, until a $WAKE |
+| SUSP | suspended, until a $RESUME |
+| MWAIT | waiting for a resource; SHOW SYSTEM names which (RWMBX for room in a mailbox, RWAST, ...) |
+
+The book's other states (the outswapped COMO, LEFO, HIBO, and SUSPO, and
+the paging waits PFW, COLPG, and FPG) are defined but never entered:
+govax doesn't swap, and its paging doesn't wait (section 6.1).
+
+The computable processes wait in 32 first-in, first-out **queues**, one
+per current priority. `Reschedule` puts the current process, if any, at
+the back of its queue, takes the head of the highest non-empty one, and,
+for a normal process above its base, lowers its priority by one first, so
+a process that keeps the CPU drifts back to its base (the book's 10.3.3).
+
+When an event ends a wait, `Ready` makes the process computable with a
+**boost** by the event's class (`sched/boost.go`, the book's Table 10-3):
+
+| Class | Boost | The event |
+| --- | --- | --- |
+| PRI$_NULL | 0 | none (a retry, a quantum's end) |
+| PRI$_IOCOM | 2 | disk, mailbox, or other non-terminal I/O completing |
+| PRI$_RESAVL, PRI$_TIMER | 3 | a resource available, a $WAKE, a $RESUME, a timer |
+| PRI$_TOCOM | 4 | terminal output completing |
+| PRI$_TICOM | 6 | terminal input completing |
+
+The boost is added to the base priority; the current priority is kept if
+it's already higher; and if the result is above 15, the base priority is
+used, so a real-time process is never boosted and a normal one never
+enters the real-time range. A newly computable process whose priority is
+higher than **or equal to** the current one's preempts it (the book's
+10.2.3, step 4): the current process goes to the back of the same queue,
+behind the newcomer.
+
+A normal process runs until it waits, is preempted, or uses its
+**quantum**, after which it goes to the back of its queue, so processes of
+equal priority take turns. A real-time process has no quantum end. VMS's
+quantum is time; govax's is `vax.process.quantum` instructions, so
+scheduling, like the clock in quantum mode (section 4.4), is the same on
+every run.
+
+**The engine's hook** (`cpu/schedule.go`) gives the rules their chance.
+The engine holds a `cpu.Scheduler`, the System, and a count of
+instructions left before it must call it; `Step` counts down, so most
+instructions pay a decrement and a compare. When the count runs out, or
+something asks for a decision now (`Engine.RequestReschedule`: a process
+started waiting, or one became computable that should run), the next
+`Step` calls `System.Schedule` with the instructions run and whether the
+process may be preempted at this boundary (`Engine.Preemptible`): IPL
+below 3, where VMS's rescheduling interrupt is taken; not on the interrupt
+stack; and in a mode `vax.process.preempt` allows. A process that waits
+gives the CPU up whatever those say.
+
+`System.Schedule` (`corevms/schedule.go`) then:
+
+1. charges the instructions to the current process's quantum, and the
+   system time since the last call to its CPU time (`accountTime`:
+   `JPI$_CPUTIM` and SHOW SYSTEM's CPU column are system time, not
+   instructions);
+2. looks at every process (`pollEvents`): expires each one's due timers,
+   runs the lock manager's deadlock search if one is due, completes
+   terminal reads whose lines have come (7.12), and tests every waiting
+   process (`wakeWaiters`, 7.6);
+3. if no reschedule is due, or one is but the process can't be preempted
+   and isn't waiting, returns at once;
+4. otherwise asks `sched.Reschedule` for the next process, idling if
+   there's none (7.6), and switches to it (7.4), choosing again if the
+   one chosen was deleted as it got the CPU;
+5. returns how many instructions may run before the next call: the rest
+   of the quantum, but no further than the next timer due in any process,
+   so a timer ends its process's wait on time while another runs.
+
+Two things hold the scheduler still. `Engine.FreezeScheduling` keeps the
+CPU in the process that has it: the debugger's STEP freezes it, so a step
+is one instruction of the process being debugged, and so does a nested
+run (a condition handler the console calls). And `Engine.SwitchIfDue`
+lets a run loop give the scheduler its turn before looking at the next
+instruction, so a breakpoint test or the trace sees the process that will
+run it.
+
+### 7.6 Waiting
+
+A service that can't finish yet (`$HIBER` with no wakeup pending,
+`$WAITFR` on a clear flag, `$QIOW` on an I/O still pending) returns
+`corevms.ErrWait`. The XFC instruction that called it doesn't complete:
+its handler puts PC back to the XFC (`cpu/xfc.go`, `ErrServiceWait`), so
+the call is made again later, and finishes then if the wait is over.
+Without the scheduler, "later" is the next instruction, and the process
+spins on its XFC, with interrupts, ASTs, and timers between tries.
+
+With the scheduler, the service first says what it's waiting for
+(`Environment.waitOn`, `corevms/waits.go`): a wait state, the boost class
+of the event that will end it, and a Go function that reports whether it
+has ended. `enterWait` hands that to the scheduler, which marks the process
+waiting and asks for a reschedule; another process runs. A wait ends in
+one of two ways:
+
+- **Reported.** Code that makes an event happen reports it for the
+  process it concerns (`reportEvent`, the book's SCH$RSE): an I/O request
+  completing, a timer expiring, a Ctrl/C or Ctrl/Y AST, a flag set in a
+  common cluster, a lock granted, room in a mailbox. If the process's test now
+  says its wait is over, it becomes computable at once, boosted by the
+  event's class, and may preempt the process that caused it.
+- **Noticed.** Before every choice, `wakeWaiters` runs every waiting
+  process's test. This catches whatever isn't reported, at the cost of a
+  call per waiter per choice, which with a handful of processes is
+  nothing.
+
+Either way, when the process next runs, its XFC runs again, and this time
+the service completes. A waiting process that has an AST it could take
+where it waits (by 7.7's rules, at the PSL saved in its PCB) is made
+computable too; it takes the AST, whose routine returns to the XFC, and
+the service runs again and waits again if it must, as on VMS (the book's
+10.2.2.1).
+
+The boosts govax gives the waits it can't trace to a reporter are its
+choice: 3 for a wakeup or a resource, and 2, an I/O completion's, for an
+event flag.
+
+**Idling.** When no process is computable, VMS runs its null process
+until an interrupt makes one so. In govax the only thing that can end a
+wait without an instruction running is time, so `System.idle`
+(`corevms/idle.go`) moves time to the next timer due in any process
+(`Engine.IdleUntil`: a jump in quantum mode, a sleep in hardware-clock
+mode), expires it, tests the waiters, and repeats, up to 64 timers. With
+no timer pending, it waits a little in the host for a terminal line, or
+for a wait on the host's time (DCL's WAIT, and process 1 lending the CPU:
+7.12), testing the waits every 2 milliseconds for up to 50; after that,
+every waiter is made to try again (`retryWaiters`), spinning on its XFC as
+a lone process would, which keeps Ctrl/C and the run's limits working.
+Idle time is charged to no process.
+
+### 7.7 ASTs
+
+An **AST**, an asynchronous system trap, is a procedure call VMS makes on
+a program's behalf, between two of its instructions, when something it
+asked about happens: a timer ($SETIMR's astadr), an I/O completing, a lock
+granted, a subprocess ending, or a $DCLAST. govax keeps each process's
+pending ASTs in Go (`Process.ast`, `corevms/ast.go`), with VMS's per-mode
+state: whether ASTs are enabled in each mode ($SETAST, PCB$B_ASTEN) and
+whether one is running (PCB$B_ASTACT).
+
+**When one is delivered.** At every instruction boundary the engine asks
+the running process's `NextAST`. VMS keeps a process's ASTs in one queue
+ordered by mode, kernel's first and oldest first within a mode, and its
+AST delivery interrupt looks only at the queue's first AST (the book's
+7.2.2 and 7.3.1). That AST, of mode m, is delivered only if:
+
+- the CPU is in mode m or a less privileged one (a kernel-mode AST
+  interrupts user code, switching the CPU into kernel mode to run it; a
+  user-mode AST never interrupts kernel code);
+- IPL is below 2 (IPL$_ASTDEL) and the CPU isn't on the interrupt stack;
+- ASTs are enabled in mode m; and
+- no AST of mode m is running already, so an AST routine is never
+  interrupted by another of its own mode and needn't be reentrant.
+
+If the first AST can't be delivered, none is: the ASTs behind it wait for
+it. govax's list isn't kept in mode order, so `deliverableAST` finds the
+head as VMS's queue would have it.
+
+**The frame.** `NextAST` switches mode if the AST's is more privileged
+(saving the current SP in its mode's register and taking the AST mode's),
+then pushes six longwords that are both the routine's argument list and
+what's needed to come back:
+
+```text
+  SP+0   5        argument count
+  SP+4   astprm   the request's parameter
+  SP+8   R0       the interrupted program's R0 and R1
+  SP+12  R1
+  SP+16  PC       where it was
+  SP+20  PSL      and its status
+```
+
+The engine calls the routine as `CALLG (SP), routine` would, with the
+return address `EXE$ASTRET`, a stub the machine places in S0 with the shim
+stubs (`ASTExitStub`), as VMS's routine returns to its executive's
+EXE$ASTRET (the book's 4.4.7), so a traceback shows the same PC. The stub
+jumps to the `SYS$CLRAST` entry of the system service vector, whose
+service (`serviceSysClrast`) pops the six longwords, puts back R0, R1, PC,
+and PSL, and switches back to the interrupted mode, never to one more
+privileged than the AST's, whatever the frame says. The interrupted
+instruction stream goes on.
+
+The PCB's ASTLVL field, which on a VAX tells REI when to request the AST
+delivery interrupt, is always 4 ("none pending") in govax: delivery is the
+engine's question at every boundary, not an interrupt. Image rundown
+discards the image's pending user-mode ASTs and enables user-mode ASTs
+again (`flushUserASTs`).
+
+### 7.8 Event flags, hibernation, timers, and suspension
+
+**Event flags** (`corevms/eventflags.go`) are 128 bits per process, in
+four clusters of 32. Clusters 0 and 1 (flags 0 to 63) are the process's
+own (`Process.LocalEventFlags`). Clusters 2 and 3 (64 to 127) are
+*common* clusters, named and shared by the processes of a UIC group: a
+process reaches one only after `$ASCEFC` associates it with cluster 2 or
+3. A common cluster is a `corevms.EventFlagCluster` in the System's table,
+temporary (gone with its last association) or permanent (until
+`$DLCEFC`). A flag set in one, by any process, is reported to every
+process associated with it (`postFlag`), so a waiter in CEF wakes at once.
+`$WAITFR`, `$WFLAND`, and `$WFLOR` wait with a test of the cluster's
+flags; `$SYNCH` waits for a flag and an I/O status block together.
+
+**Hibernation** (`corevms/hibernate.go`) is one flag per process, "wake
+pending". `$WAKE` sets it, in any process; `$SCHDWK` sets it later, from
+the target's timer queue; `$HIBER` waits in HIB until it's set, then clears
+it. Being a flag, two `$WAKE`s before a `$HIBER` end only that one.
+
+**Timers** (`corevms/timers.go`): each process has its own list of
+pending `$SETIMR` and `$SCHDWK` requests, by expiry time. The scheduler
+expires every process's at each call (7.5) and limits each process's
+budget so that none comes due late; the AST check expires the running
+process's at each boundary too. An expired timer sets its flag, wakes, or
+queues its AST, and reports the event with a timer's boost.
+
+**Suspension** (`corevms/suspend.go`): `$SUSPND` puts a process in SUSP,
+where it ignores every event, until `$RESUME`.
+
+### 7.9 How processes talk
+
+VMS gives processes four ways to cooperate, and govax has them all.
+
+**Mailboxes** (`corevms/mailbox.go`, `mbxdriver.go`) are software devices
+that hold messages: `$CREMBX` makes one, named `MBAn`, in the System's
+device table, and any process may assign a channel to it by that name or a
+logical name, if its protection mask allows. A write when a read is waiting
+hands its message straight to the reader; otherwise the message is queued,
+and a plain write stays pending until it's read. A write to a full mailbox
+(past its buffer quota) waits in MWAIT for the resource RWMBX, unless the
+process turned resource waits off ($SETRWM) or the write said
+`IO$M_NORSWAIT`; each read that makes room reports the resource to the
+writers waiting. Section 8 has the driver's details: the IOSB, attention
+ASTs, end-of-file messages.
+
+**Global sections** (`corevms/gblsec.go`) are pages several processes map,
+each process's PTEs pointing at the same frames, so a store by one is seen
+by the others at once (section 5.7, and section 6.8 under paging). A
+section has a group or system name and a UIC protection mask, and lasts
+until its last mapping goes (or, if permanent, until `$DGBLSC` and then
+its last mapping). Processes coordinate their use of it with the other
+three mechanisms, or with the interlocked instructions, which, as 7.4
+says, a switch never splits.
+
+**The lock manager** (`internal/lck`, with the services in
+`corevms/enq.go`) is VMS's: a process asks for a lock on a *resource*, a
+name the cooperating processes agree on, in one of six modes (NL, CR, CW,
+PR, PW, EX), and each resource keeps granted, conversion, and waiting
+queues, first in, first out, with the book's compatibility table, parent
+locks and sub-resources, value blocks, and NOQUEUE (the book's chapter
+13). Like `internal/sched`, `lck` knows nothing of processes but PIDs. It
+reports what happens to a lock (granted, blocking another) as an event,
+and the request's record in corevms carries it out in the owner's
+process: the lock status block is written through the owner's address
+space, its event flag set, its completion or blocking AST queued, and, if
+it waits, it's made computable (`reportEvent`). A request that has waited
+`DEADLOCK_WAIT` starts the book's deadlock search (`lck/deadlock.go`),
+whose victim gets `SS$_DEADLOCK`. RMS's record locks and file sharing go
+through the same database (section 9).
+
+**Event flags and wakeups** (7.8) carry no data, but are often all two
+processes need: a common cluster's flag, or a `$WAKE` of a hibernating
+server.
+
+### 7.10 Making and ending a process
+
+**$CREPRC** (`corevms/creprc.go`) only checks its arguments and builds the
+process; everything else happens in the new process when it first runs,
+which is VMS's order too. `CreateProcess`:
+
+1. checks the request: the status flags, the name's and strings' lengths,
+   the quota list's codes, the privileges some requests need (DETACH or
+   CMKRNL for a detached process with another UIC, or a batch or network
+   one; NETMBX, PSWAPM, NOACNT), and that no process of the new one's UIC
+   group has its name;
+2. works out its quotas (`resolveQuotas`, `corevms/quotas.go`): a
+   subprocess's are held to its creator's, and the CPU time it gets is
+   taken out of its creator's limit; a detached process created with the
+   DETACH privilege gets what it asks for;
+3. takes a slot in the table (7.2): a **subprocess**, without a UIC, joins
+   its creator's job and counts against PRCLM; a **detached** process, with
+   a UIC or `PRC$M_DETACH`, starts a job of its own, with a logical name
+   table of its own;
+4. builds its table area, stacks, and PCB (7.3), and writes the PCB the
+   first switch loads: the stacks and page table registers, user mode, PC 0
+   for now;
+5. gives it its creator's default device and directory, its privileges
+   (those asked for, limited to the creator's own without SETPRV), its base
+   priority (no higher than the creator's without ALTPRI), and a
+   `ProcessStartup` naming the image and its SYS$INPUT, SYS$OUTPUT, and
+   SYS$ERROR.
+
+`$CREPRC` returns with the process computable at its base priority, with
+no boost (VMS's own runs gave a new process 2 or 3 above its base, which
+fits no rule of the book's; govax adds none).
+
+**Startup** (`corevms/startup.go`). The first time the scheduler switches
+to the new process, `switchTo` calls `startProcess` instead of letting it
+run its first instruction. In the new process's context (its address
+space, its stacks), it opens the SYS$ names as process-permanent files
+(section 8), has the machine activate the image in the process's P0 and
+build its IMAGE$INIT driver (as RUN does; section 11), and calls the
+driver in user mode on the process's user stack, on a frame whose return
+address is the console's sentinel, `FFFFDEAF`. A process whose image
+can't be activated (it doesn't exist, say) is deleted at once with that
+failure's status, which its creator learns only from the termination
+message, as on VMS: `$CREPRC` has already succeeded.
+
+**Deletion** (`corevms/delete.go`). A process that runs an image ends
+when the image does: its `$EXIT`, or its return to the sentinel. Then
+`DeleteProcess` runs, in the process's own context, the steps of the
+book's 22.2.1 in order: image rundown (its RMS files closed, user-mode
+channels deassigned, user-mode ASTs discarded); process rundown (every
+channel, every allocated device, its locks); the unused CPU time given
+back to its owner; the **termination message**, if the creator named a
+mailbox (an 84-byte accounting record, `MSG$_DELPROC` and the `ACC$`
+fields: final status, PID, times, counts; `corevms/termmsg.go`); a
+LIB$SPAWN parent told (7.11); the terminal given back (7.12); and the
+process taken out of the table, the scheduler, and its job. What the CPU
+is still standing on, its page tables, stacks, and PCB, is freed by the
+next `switchTo`, once the CPU holds another process; the scheduler chooses
+one at once, since the deleted process has left it.
+
+A process with subprocesses can't go before them: it marks each for
+deletion and waits (MWAIT), and each, deleted in its own context, leaves
+its owner's count; when the last has gone, the owner's deletion goes on.
+A tree goes from its leaves up. **`$DELPRC`** of another process only
+marks it (`deletePending`); its deletion runs the next time the scheduler
+gives it the CPU, before anything else it would run, as VMS's special
+kernel-mode AST does. `$FORCEX` instead queues the target an AST that
+calls `$EXIT` with the given status.
+
+### 7.11 Processes that run DCL
+
+A process LIB$SPAWN creates, or `$CREPRC` creates with the image
+`LOGINOUT.EXE`, runs a command interpreter rather than one image
+(`corevms/cliprocess.go`). On VMS that's DCL; in govax it's the console's
+own DCL (`internal/dclshell/subcli.go`): the same grammar and commands,
+with each process its own DCL state (symbols, command levels, `$STATUS`,
+default directory, logical names, open files). Only the commands that
+work the machine (DEBUG, ASM, INITIALIZE/MEMORY, ...) are process 1's.
+
+**LIB$SPAWN** (`corevms/spawn.go`) makes the subprocess as `$CREPRC`
+does, and gives it more of its parent: a name (by default the parent's
+user name and `_n`), its parent's SYS$INPUT, SYS$OUTPUT, and SYS$ERROR
+unless others are named, its base priority and current privileges, and
+copies of its DCL symbols and user- and supervisor-mode process logical
+names. Unless `CLI$M_NOWAIT`, LIB$SPAWN doesn't return until the
+subprocess is gone: the parent waits in LEF. At the end, the
+subprocess's final status, event flag, and AST reach the parent directly
+from Go (`completeSpawn`), where VMS's LIB$SPAWN would read a termination
+mailbox; the parent can't tell.
+
+**The CLI runs in the process.** DCL is Go, but a process runs only VAX
+code, so the startup calls a small procedure in S0, the *CLI stub*, as it
+would an image's driver:
+
+```text
+stub:   .WORD   0                   ; entry mask
+loop:   MOVL    #cliShimCode, R0
+        XFC     #XFC$SHIM           ; EXE$CLI_COMMAND: the CLI, in Go
+        PUSHL   R0                  ; the CLI's final status
+        CALLS   #1, @#SYS$EXIT      ; logs out: deletes the process
+        RET
+args:   .LONG   0
+ctrly:  .WORD   0                   ; the Ctrl/Y AST's entry mask
+        MOVL    #cliShimCode, R0
+        XFC     #XFC$SHIM           ; EXE$CLI_COMMAND, in the AST
+        RET
+```
+
+The interpreter for each such process runs on a goroutine of its own,
+which takes turns with the engine: the shim hands it the CPU and waits
+until it hands it back, so only one of the two ever runs. It hands the
+CPU back:
+
+- **after each command**, yielding (`Environment.Yield`): the process
+  stays computable and goes to the back of its queue, and its XFC runs
+  again, with the next command, when the scheduler next chooses it. So a
+  SPAWN/NOWAIT procedure's commands interleave with process 1's;
+- **to wait**: for a command line from a terminal or mailbox not there
+  yet, or for a WAIT's time. The shim returns `ErrWait`, and the process
+  waits in the scheduler like any service;
+- **to run an image**: RUN activates it in the process's P0, and the
+  shim asks the engine to call its driver as an image's outermost call.
+  When the image ends, the machine runs it down and puts the stub's
+  registers back with PC at its MOVL, so the shim resumes the interpreter
+  in the middle of the command (or procedure) that ran it;
+- **to log out**, with the final status, which the stub passes to
+  `$EXIT`.
+
+LOGINOUT's CLI also echoes each command it reads from a file or a
+mailbox (DCL's verify, on for a job that isn't interactive) and writes
+LOGOUT's report when it ends, as VMS's did when a probe asked.
+
+### 7.12 The terminal, and lending the CPU
+
+Every process reads the one terminal (govax's standard input), and that
+needs rules, because a process reading a line mustn't stop the others.
+
+**One buffer, reads in turn** (`corevms/terminal.go`). Every read of the
+terminal (a terminal `$QIO`, RMS's `$GET` of it, LIB$GET_INPUT) goes
+through one shared buffer, so nothing one process's read takes ahead is
+lost to another. A read goes ahead only when a whole line is there; until
+then it waits in LEF, its test being "is a line there?", which the front
+end can answer without blocking (cmd/govax's reader knows whether keys
+it has read are waiting; `corevms.TerminalSource`). Reads are served in
+the order they were made, as VMS's terminal driver queues them, and a
+read's prompt is written when its turn comes. A `$QIO` read that must
+wait doesn't make the `$QIO` wait: it's queued among the other reads and
+the program goes on, and the scheduler's look at the terminal before each
+choice (`serviceTerminal`) completes it when its line comes, with the
+IOSB, event flag, and AST of any I/O.
+
+**The terminal's holder** (`corevms/attach.go`). The processes of a job
+share the terminal, but one *has* it: the one whose DCL reads what's typed,
+and which the control keys go to (`Environment.Attached`). It's the job's
+master process until a SPAWN that waits gives it to the subprocess (the
+parent hibernating until it comes back), or an ATTACH (DCL's, or
+LIB$ATTACH) gives it to another process of the job that's waiting for it.
+When the process that has it is deleted, it goes back to the parent.
+
+**Lending the CPU.** Process 1's DCL is Go that runs while the machine is
+stopped, so without help a subprocess spawned with /NOWAIT would run only
+during process 1's next RUN. On VMS the two take turns. So after each DCL
+command, process 1 *lends* the CPU (`internal/dclshell/dcllend.go`,
+`corevms/lend.go`): it yields in the scheduler (`LendCPU`), and the
+console runs the machine until the scheduler chooses process 1 again, and
+stops there, before process 1 runs an instruction (`ReclaimCPU` takes the
+CPU back). A process of the same priority gets about a turn. Process 1's
+own WAIT lends the CPU for its whole time, waiting in LEF on the host's
+clock. At command level 0 the console lends it, waiting, until no other
+process wants it or for 50 milliseconds of the host's time, so that a
+SPAWN/NOWAIT DIRECTORY has finished by the next prompt; then, while the
+prompt waits for a line, cmd/govax reads the terminal on a goroutine of
+its own and the others go on running until the line comes
+(`LendWhileReading`), the host waiting 10 milliseconds at a time when all
+of them wait (`HostIdle`). Their output reaches the terminal through the
+line editor a whole line at a time, so the line being typed is redrawn
+below it.
+
+Here's the trace SET DEBUG PROCESSES gives of that, measured on govax:
+process 1 spawns `WAIT 00:00:00.20` with /NOWAIT, then runs its own
+`WAIT 00:00:00.50`:
+
+```text
+DEBUG(PROCESS): SWITCH 00000301 -> 00000302, PC=80046409
+DEBUG(PROCESS): SWITCH 00000302 -> 00000301, PC=FFFFDEAF
+DEBUG(PROCESS): SWITCH 00000301 -> 00000302, PC=80046409
+DEBUG(PROCESS): SWITCH 00000302 -> 00000301, PC=FFFFDEAF
+DEBUG(PROCESS): SWITCH 00000301 -> 00000302, PC=80046409
+DEBUG(PROCESS): 00000302's rundown closed 2 process-permanent file(s), error <nil>
+DEBUG(PROCESS): 00000302 deleted, status 00000001
+DEBUG(PROCESS): SWITCH 00000302 -> 00000301, PC=FFFFDEAF
+```
+
+The subprocess always resumes at `80046409`, the XFC in its CLI stub in
+S0: it runs no VAX code of its own, only DCL, waiting in the scheduler for
+its WAIT's time. Process 1 resumes at `FFFFDEAF`, the sentinel: it runs
+nothing at all while it lends the CPU, and the console stops the machine
+as soon as the scheduler chooses it. When the subprocess's WAIT is over
+its CLI logs out; the stub's `$EXIT` deletes it, and the CPU goes back to
+process 1. SHOW SYSTEM meanwhile shows process 1, base priority 4, at 6:
+its lending wait ended with a timer's boost of 3, less the one it lost
+when it was chosen.
+
+### 7.13 Ctrl/C and Ctrl/Y
+
+A key typed at the host goes a long way to reach a process. In cmd/govax
+(`cmd/govax/attention.go`), one goroutine reads the terminal for govax's
+whole life, so a key is seen even while nothing reads; while a program
+runs, the terminal's driver turns Ctrl/C into SIGINT and Ctrl/Y into
+SIGQUIT, which govax catches. Either way the key becomes the engine's
+*attention* key (`Engine.Attention`), and the next `Step` offers it to the
+machine before running anything (`cpu/attention.go`). The offer goes, in
+order:
+
+1. **To a process's AST.** A program can ask the terminal driver for an
+   AST on Ctrl/C or Ctrl/Y (`IO$_SETMODE!IO$M_CTRLCAST` or `CTRLYAST`), a
+   one-shot request. `System.AttentionAny` (`corevms/ctrlast.go`) gives
+   the key to the running process if it has such a request, otherwise to
+   the others in PID order; a Ctrl/C with no Ctrl/C AST is taken by a
+   Ctrl/Y AST, as on VMS. A process waiting (for a line, say) is woken to
+   run it.
+2. **Nowhere,** with SET NOCONTROL=Y in effect: the key is echoed and
+   dropped.
+3. **To a subprocess's DCL**, if the terminal is attached to one. If it's
+   running an image, its DCL interrupts the image as VMS's does, with a
+   user-mode AST to the CLI stub's `ctrly` routine; when the process
+   takes it, the interpreter acts on the Ctrl/Y in the middle of the
+   command that ran the image, the image paused beneath the AST. CONTINUE
+   returns from the AST; anything else ends the image.
+4. **To process 1's DCL**, in a command procedure: its ON CONTROL_Y, or
+   the Ctrl/Y level, with the image paused.
+5. **Otherwise the machine stops** (`cpu.ErrAttention`). For Ctrl/C,
+   process 1's DCL prompts again; if the CPU was in another process, it
+   stays there until the next run, or the debugger's EXIT, gives it back
+   to process 1. Ctrl/Y ends govax, dismounting its volumes first: govax's
+   choice for a key nothing in the machine wanted, where VMS's DCL would
+   interrupt to its prompt.
+
+At govax's own `$ ` prompt, Ctrl/C cancels the line and Ctrl/Y ends govax.
+
+### 7.14 What's VMS's and what isn't
+
+- **The scheduler is Go**, called between instructions, not a software
+  interrupt at IPL 3; ASTLVL and the AST delivery interrupt aren't used
+  (7.7). A program sees the same choices, in instructions rather than time.
+- **No swapping**, and no outswapped states; no paging waits (section 6).
+- **No null process** to run: idle time is spent moving the clock to the
+  next timer or waiting in the host (7.6).
+- **No automatic priority or quantum adjustment** beyond the boosts and
+  their decay; no IOTA charge for each wait.
+- **The process header, the PCB, the JIB, and the AST queue are in Go**
+  (but for the hardware PCB, in a page of its own), so a privileged
+  program reading VMS's structures directly finds nothing.
+- **A new process gets no boost**, and a LIB$SPAWN parent hears of its
+  subprocess's end directly, not through a mailbox (7.10, 7.11).
+- **Every process's DCL is the console's**, in Go, on a goroutine of its
+  own; there is no CLI image in P1, and LOGINOUT is a name, not an image.
+- **At most 255 processes**, and the PID's layout is govax's choice in
+  VMS 7's form (7.2).
 
 ## 8. I/O
 

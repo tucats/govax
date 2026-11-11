@@ -64,13 +64,16 @@ own kernel stack. `corevms.System.BuildStacks`
 
 | Region | Size | Protection |
 | --- | --- | --- |
-| Kernel stack | the caller's (VMINIT's `/KSP` by default) | `URKW` |
+| Kernel stack | 4 pages | `URKW` |
 | Guard page | 1 page | `NA` |
-| Executive stack | the caller's | `EW` |
+| Executive stack | 8 pages | `EW` |
 | Guard page | 1 page | `NA` |
-| Supervisor stack | the caller's | `SW` |
+| Supervisor stack | 8 pages | `SW` |
 
-With STARTUP.COM's sizes that is 38 pages. The process's user stack is in
+That is 22 pages: the sizes are INITIALIZE/MEMORY's defaults
+(`corevms`'s `newKernelStackPages` and `newModeStackPages`), whatever
+process 1's were given; STARTUP.COM's 20-page kernel stack is process
+1's alone. The process's user stack is in
 its own P1, with the same top as process 1's (`corevms.UserStackTop`,
 `0x7FE00000`): P1 is private, so the same address names a different page
 in each process. **The interrupt stack is shared**: interrupts belong to

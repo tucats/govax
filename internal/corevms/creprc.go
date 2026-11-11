@@ -76,9 +76,10 @@ var (
 // are VMS 7.3's definitions, which govax accepts.)
 var validCreateFlags = uint32(1)<<(vmsdef.Symbols["PRC$V_TCB"]+1) - 1
 
-// A new process's privileged stacks, in pages: VMINIT's defaults for
-// process 1's (docs/MODE-STACKS.md). Its page tables are its creator's
-// size (createSpace).
+// A new process's privileged stacks, in pages: INITIALIZE/MEMORY's
+// defaults for process 1's (its /KSP, /ESP, and /SSP; docs/MODE-STACKS.md),
+// whatever sizes process 1's were given. (Its page tables are sized by
+// newSpaceSizes.)
 const (
 	newKernelStackPages = 4
 	newModeStackPages   = 8

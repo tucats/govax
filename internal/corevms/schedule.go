@@ -52,8 +52,9 @@ func (m PreemptMode) Modes() cpu.PreemptModes {
 }
 
 // CPUInstructions returns how many instructions env's process has
-// executed while the scheduler was installed: its CPU time, counted in
-// instructions (Decision 2's unit), for $GETJPI's JPI$_CPUTIM.
+// executed while the scheduler was installed, as the scheduler charged
+// them (its quanta are counted in instructions). Its CPU time, $GETJPI's
+// JPI$_CPUTIM, is CPUTime's, in system time.
 func (sys *System) CPUInstructions(env *Environment) uint64 {
 	info, _ := sys.sched.Info(handle(env))
 

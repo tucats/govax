@@ -19,10 +19,11 @@ import (
 // $CREPRC creates one when the image it's given is LOGINOUT.EXE, the
 // image that logs a process in and starts its CLI.
 //
-// govax's CLI for these processes is a small Go command interpreter, the
-// "subprocess CLI" (Decision 8 in docs/PHASE-43.md). It belongs to the
-// console, as DCL's symbols and image activation do, so corevms reaches
-// it through the CommandInterpreter the console installs on the System.
+// govax's CLI for these processes is the console's own DCL, run for the
+// process (internal/dclshell's subcli.go; Decision 8 in
+// docs/PHASE-43.md). It belongs to the console, as DCL's symbols and
+// image activation do, so corevms reaches it through the
+// CommandInterpreter the console installs on the System.
 // Everything else about the process (its creation, its SYS$ names, its
 // deletion when the CLI logs out) is the same as for a process created
 // to run an image.
@@ -64,7 +65,7 @@ type CLIStartup struct {
 // isLoginout reports whether image names LOGINOUT.EXE, the image
 // $CREPRC is given to start a process with a CLI (on VMS,
 // SYS$SYSTEM:LOGINOUT.EXE). Only the name counts: govax has no
-// SYS$SYSTEM to look in.
+// LOGINOUT.EXE to find, its CLI being Go.
 func isLoginout(image string) bool {
 	name := strings.ToUpper(image)
 

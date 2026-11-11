@@ -244,19 +244,19 @@ func TestNextASTConditions(t *testing.T) {
 	psl.SetIS(false)
 	c.SetPSL(psl)
 
-	// Disabled in this mode, or a more privileged one.
+	// Disabled in this mode.
 	p.ast.enabled[registers.Supervisor] = false
 
 	wantNoAST(t, env, "ASTs disabled in supervisor mode")
 
 	p.ast.enabled[registers.Supervisor] = true
+
+	// A more privileged mode disabled, with nothing queued for it, holds
+	// nothing back (TestNextASTQueueHead has the cases where it does).
 	p.ast.enabled[registers.Executive] = false
 
-	wantNoAST(t, env, "ASTs disabled in executive mode")
-
-	p.ast.enabled[registers.Executive] = true
-
-	// Now it goes: the supervisor AST, skipping the others in the queue.
+	// Now it goes: the supervisor AST, the queue's head in mode order,
+	// though the user AST was queued first.
 	routine, _, _, ok, err := env.NextAST()
 	if !ok || err != nil || routine != 0x2000 {
 		t.Fatalf("NextAST = %#x, %v, %v; want the supervisor AST", routine, ok, err)
@@ -339,6 +339,49 @@ func TestNextASTMostPrivilegedFirst(t *testing.T) {
 
 	// The user AST can't interrupt the executive-mode AST routine.
 	wantNoAST(t, env, "a user AST while an executive AST runs")
+}
+
+// TestNextASTQueueHead: only the queue's first AST, in mode order, is
+// looked at (VAX/VMS Internals and Data Structures, 7.3.1, step 3): one
+// that can't run holds back the less privileged ASTs behind it, and a
+// mode with nothing queued holds back nothing, its ASTs enabled or not.
+func TestNextASTQueueHead(t *testing.T) {
+	env := astFixture(t, registers.User)
+	p := env.Process
+
+	// Supervisor ASTs disabled, none queued: the user AST runs.
+	p.ast.enabled[registers.Supervisor] = false
+
+	env.queueAST(0x1000, 0, uint32(registers.User))
+
+	if routine, _, _, ok, _ := env.NextAST(); !ok || routine != 0x1000 {
+		t.Fatalf("NextAST = %#x (ok=%v), want the user AST: supervisor mode has nothing queued", routine, ok)
+	}
+
+	p.ast.active[registers.User] = false
+	env.cpu.SetGPR(registers.SP, 0x9000)
+
+	// A supervisor AST queued while its mode is disabled is the head, and
+	// keeps the user AST queued after it from running.
+	env.queueAST(0x2000, 0, uint32(registers.User))
+	env.queueAST(0x3000, 0, uint32(registers.Supervisor))
+	wantNoAST(t, env, "the head, a supervisor AST, disabled")
+
+	// Enabled, the supervisor AST runs first, and while it's active the
+	// user AST still waits behind nothing that can run.
+	p.ast.enabled[registers.Supervisor] = true
+	env.cpu.SetPR(registers.SSP, 0x7000)
+
+	if routine, _, _, ok, _ := env.NextAST(); !ok || routine != 0x3000 {
+		t.Fatalf("NextAST = %#x (ok=%v), want the supervisor AST", routine, ok)
+	}
+
+	// An AST of a mode already running one is the head and can't run:
+	// another supervisor AST, queued before a user one, in user mode
+	// (the supervisor routine having dropped to user mode, say).
+	env.queueAST(0x4000, 0, uint32(registers.Supervisor))
+	env.cpu.SetPSL(modePSL(registers.User))
+	wantNoAST(t, env, "the head's mode has an AST running")
 }
 
 // TestNextASTModeSwitchFailure: if the frame can't be pushed on the

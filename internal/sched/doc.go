@@ -42,7 +42,8 @@
 //
 // What the Scheduler leaves out, because govax has no use for it: memory
 // residence (VMS's outswapped states COMO, LEFO, HIBO, SUSPO and the
-// swapper), the page-fault waits (govax has no paging), and IOTA, the
+// swapper), the page-fault waits (govax's paging is synchronous: a fault completes
+// inside the instruction that took it, with no wait), and IOTA, the
 // extra quantum VMS charges a process each time it waits. The codes for
 // the outswapped and paging states are defined anyway, since $GETJPI and
 // SHOW SYSTEM report states by these numbers.

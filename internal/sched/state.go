@@ -10,7 +10,8 @@ type State uint16
 
 const (
 	// StateCOLPG is "collided page wait": a page fault on a page another
-	// process is already reading in. govax has no paging, so it's unused.
+	// process is already reading in. Unused: govax's paging is
+	// synchronous, so no page is ever being read in.
 	StateCOLPG State = 1
 
 	// StateMWAIT is "miscellaneous wait": waiting for a system resource,
@@ -21,7 +22,7 @@ const (
 	// common event flag cluster, a set of flags shared by processes.
 	StateCEF State = 3
 
-	// StatePFW is "page fault wait" (unused: no paging).
+	// StatePFW is "page fault wait" (unused: paging is synchronous).
 	StatePFW State = 4
 
 	// StateLEF is "local event flag wait": waiting for one of the
@@ -43,7 +44,7 @@ const (
 	// StateSUSPO is StateSUSP swapped out (unused).
 	StateSUSPO State = 10
 
-	// StateFPG is "free page wait" (unused: no paging).
+	// StateFPG is "free page wait" (unused: paging is synchronous).
 	StateFPG State = 11
 
 	// StateCOM is "computable": ready to run, waiting only for the CPU.

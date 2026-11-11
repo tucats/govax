@@ -809,8 +809,8 @@ never had.
   part: Part A is `docs/VAX-VMS-INTERNALS.md` (subtask 1, 2026-11-11: the
   plan, the outline, and sections 0 to 3; subtask 2, 2026-11-11, section
   4, the instruction set; subtask 3, 2026-11-11, section 5, memory;
-  subtask 4, 2026-11-11, section 6, VMS paging; sections 7 to 12 are
-  subtasks 5 to 10; Decision 6, bugs the writing finds are fixed in the
+  subtask 4, 2026-11-11, section 6, VMS paging; subtask 5, 2026-11-11,
+  section 7, processes; sections 8 to 12 are subtasks 6 to 10; Decision 6, bugs the writing finds are fixed in the
   same subtask).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

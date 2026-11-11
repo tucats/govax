@@ -33,12 +33,12 @@ import (
 //
 // Each mailbox is a device record in the shared device table (class
 // DC$_MAILBOX, so $GETDVI, SHOW DEVICE, and $ASSIGN see it), plus a
-// Mailbox here holding its messages and waiting requests. govax has one
-// process, so a mailbox connects the process with itself: a program's
-// AST routines, or two parts of a program, can pass messages through it.
-// Mailboxes are system state, like common event flag clusters, shared by
-// every process: one process creates a mailbox, and others assign
-// channels to it by its name or its logical name. A System starts with
+// Mailbox here holding its messages and waiting requests. Mailboxes are
+// system state, like common event flag clusters, shared by every
+// process: one process creates a mailbox, and others assign channels to
+// it by its name or its logical name. (A process may also use one with
+// itself: its AST routines, or two parts of a program, can pass messages
+// through it.) A System starts with
 // none, removing any mailbox devices a previous one left in the device
 // table.
 //

@@ -5,15 +5,15 @@ import (
 	"strings"
 )
 
-// The multiprocessing settings (Phase 43; docs/PHASE-43.md, Part A's
-// "Rules for every commit" and Decisions 2, 3, and 5). Phase 43 reads
-// them but nothing acts on them yet: there is no scheduler until Phase 44.
+// The multiprocessing settings (docs/PHASE-43.md, Part A's "Rules for
+// every commit" and Decisions 2, 3, and 5): whether processes other than
+// process 1 run at all, the quantum, and which modes may be preempted.
 
 // Default values for ProcessSettings.
 const (
 	// DefaultProcessQuantum is how many instructions a process runs
 	// before the scheduler may give the CPU to another of the same
-	// priority (Decision 2): a starting value, to be tuned in Phase 44.
+	// priority (Decision 2).
 	DefaultProcessQuantum = 20000
 )
 

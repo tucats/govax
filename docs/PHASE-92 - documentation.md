@@ -3,8 +3,8 @@
 **Status:** in progress (planned 2026-11-11). Part A, the first
 document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
 document's outline, and its sections 0 to 3), 2 (section 4, the
-instruction set), 3 (section 5, memory), and 4 (section 6, VMS paging)
-are done.
+instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), and
+5 (section 7, processes) are done.
 
 ## Goal
 
@@ -134,7 +134,7 @@ interpreter process 1 runs, and what reads the startup procedure).
    waits and event reporting, ASTs, event flags, mailboxes, global
    sections, the lock manager, subprocesses and detached processes, the
    CLI processes, the shared terminal, lending the CPU while DCL waits,
-   Ctrl/C and Ctrl/Y.
+   Ctrl/C and Ctrl/Y. (done 2026-11-11)
 6. Section 8, I/O: the device table, channels, `$QIO` and its drivers
    (terminal, mailbox, null, disk), I/O completion (IOSB, event flags,
    ASTs), the console's XFCs, process-permanent files, the host side.
@@ -263,3 +263,35 @@ interpreter process 1 runs, and what reads the startup procedure).
   Comments brought up to date: `corevms/workingset.go`'s, which still said
   a page-file section's pages never left a working set and that the writer
   had no page file.
+- **2026-11-11** Subtask 5: section 7, processes: process 1 and the
+  others with the `vax.process.*` keys, the process table and the PID's
+  layout (measured: a new process takes the index after the last, not a
+  freed one), jobs, what a process owns (table area, the 22 pages of
+  stacks, the PCB page), the hardware PCB and `switchTo`'s steps, the
+  scheduler's rules (states, queues, boosts, quantum in instructions,
+  preemption at equal priority) and the engine's hook, waiting (reported
+  and noticed events, idling), ASTs, event flags, hibernation, timers,
+  suspension, mailboxes, global sections, and the lock manager, `$CREPRC`,
+  startup, and deletion, the CLI processes and their stub, the shared
+  terminal and its holder, process 1 lending the CPU (with a SET DEBUG
+  PROCESSES trace measured on govax), Ctrl/C and Ctrl/Y, and what differs
+  from VMS. Reading for it found, and this subtask fixed (Decision 6):
+  - **AST delivery didn't follow VMS's queue.** `deliverableAST`
+    (`corevms/ast.go`) let a disabled mode hold back every less
+    privileged mode's ASTs, even with none of its own queued, and passed
+    over a mode with an AST running to deliver a less privileged one
+    behind it. VMS's AST delivery interrupt looks only at the first AST in
+    its mode-ordered queue and checks that AST's own mode (*VAX/VMS
+    Internals and Data Structures*, 7.2.2 and 7.3.1, SCH$ASTDEL's step
+    3). It now does the same: the head is the most privileged mode's
+    oldest AST, and if it can't run, nothing does. No user-mode program
+    could see the difference (only inner-mode code changes inner modes'
+    switches), so no oracle moved. `TestNextASTQueueHead`; the
+    conditions test's executive-mode case now expects the AST.
+  Documents and comments brought up to date: MODE-STACKS.md gave a new
+  process's stacks the sizes of process 1's (`/KSP`), where the code
+  always gives INITIALIZE/MEMORY's defaults, 22 pages in all; and stale
+  comments in `sched` (paging), `corevms`'s `procsettings.go` (no
+  scheduler yet), `mailbox.go` (one process), `cliprocess.go` (a small
+  CLI), `creprc.go`, and `schedule.go`'s `CPUInstructions` (not
+  `JPI$_CPUTIM`'s source).
