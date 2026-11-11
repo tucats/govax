@@ -346,7 +346,7 @@ func TestSpawn_outputFile(t *testing.T) {
 }
 
 // TestSpawn_permanentFiles: a subprocess's /OUTPUT file and /INPUT=NL:
-// are process-permanent files of its own (docs/PHASE-71 -
+// are process-permanent files of its own (docs/planning/PHASE-71 -
 // process-permanent files.md, subtask 8), as VMS 7.1's were
 // (testdata/ppf71's PPF71P): SYS$OUTPUT and SYS$ERROR one entry on the
 // log and SYS$INPUT and SYS$COMMAND one on _NLA0:, in executive mode,

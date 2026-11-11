@@ -60,7 +60,7 @@ func runIdx88(t *testing.T) string {
 // TestIdx88Probe rehearses testdata/idx88's program on govax, so that a probe the
 // author runs on a VAX can't lose a round to a mistake of ours: it must assemble
 // and link with no message, and run through every case to its end with no
-// condition reaching a case's handler (docs/PHASE-88 - keyed index files.md,
+// condition reaching a case's handler (docs/planning/PHASE-88 - keyed index files.md,
 // subtask 2). The first case, on a sequential file, is what exercises the
 // program's helpers.
 func TestIdx88Probe(t *testing.T) {

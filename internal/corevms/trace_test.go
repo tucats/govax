@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The trace fault as a condition (docs/PHASE-73 - trace trap.md, subtask
+// The trace fault as a condition (docs/planning/PHASE-73 - trace trap.md, subtask
 // 2): SS$_TBIT, its handlers run with T and TP clear, and continuing
 // takes T from the signal array's PSL.
 

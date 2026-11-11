@@ -36,7 +36,7 @@ const (
 	// isn't on the volume; the default directory is the MFD instead.
 	MOUNT_NODIR = MOUNTFacility<<FacilityPosition | mountNoDir<<MessagePosition | StatusWarning
 	// MOUNT_NOSYSVOL reports a system volume that can't be used
-	// (docs/PHASE-87 - system volume.md, Decision 1); its cause says why.
+	// (docs/planning/PHASE-87 - system volume.md, Decision 1); its cause says why.
 	// govax starts from its built-in files instead.
 	MOUNT_NOSYSVOL = MOUNTFacility<<FacilityPosition | mountNoSysVol<<MessagePosition | StatusWarning
 	// MOUNT_SYSREADONLY reports a system volume another govax session

@@ -13,7 +13,7 @@ import (
 
 // This file finds the VMS library files LINK and MACRO use (IMAGELIB.OLB,
 // STARLET.OLB, and the macro library), as VMS finds them through
-// SYS$LIBRARY (docs/PHASE-28.md subtask 9); shareable images are found
+// SYS$LIBRARY (docs/planning/PHASE-28.md subtask 9); shareable images are found
 // as RUN finds them (linksource.go's openSharedImage, rms.ImageLocator),
 // the host library directory among the places. Each library is looked
 // for through its logical name on a mounted volume first, then in the host

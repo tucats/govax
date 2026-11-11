@@ -51,7 +51,7 @@ type Decoded struct {
 // Disassemble decodes one instruction from r at pc, matching
 // decode_opcode.c/disasm_operand.c's combined algorithm — reusing the
 // same internal/cpu instruction table internal/asm's Assemble does rather
-// than a duplicate copy (see docs/PHASE-11.md). Unlike internal/cpu's own
+// than a duplicate copy (see docs/planning/PHASE-11.md). Unlike internal/cpu's own
 // decodeOperand (used at execution time), this never reads or writes
 // register state: autoincrement and autodecrement modes are recorded,
 // never performed.
@@ -210,7 +210,7 @@ func decodeOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, dt
 // readable and, unlike the reference tool's choice, round-trips through
 // internal/asm's assembleDisplacement, which parses "B^address" as an
 // absolute address and computes the displacement itself (see
-// docs/PHASE-11.md).
+// docs/planning/PHASE-11.md).
 func decodePCRelative(r ByteReader, pc *uint32, mode byte, op Operand) (Operand, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n

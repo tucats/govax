@@ -3,7 +3,7 @@ package console
 import "testing"
 
 // TestVMInitPagingQualifier: INITIALIZE/MEMORY/PAGING and /NOPAGING choose the
-// paging mode (docs/PHASE-62 - VMS paging.md, Decision 1), and the System
+// paging mode (docs/planning/PHASE-62 - VMS paging.md, Decision 1), and the System
 // INITIALIZE/MEMORY builds gets it.
 func TestVMInitPagingQualifier(t *testing.T) {
 	c, _ := newTestConsole(t)

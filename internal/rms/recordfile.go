@@ -20,7 +20,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is docs/PHASE-27.md subtask 9's record API: reading every
+// This file is docs/planning/PHASE-27.md subtask 9's record API: reading every
 // record of a file, or creating a file from a list of records, wherever a
 // FileLocation (location.go) says the file is. A command like MACRO reads
 // its source and writes its object through it without caring which side

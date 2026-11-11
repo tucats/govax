@@ -2,7 +2,7 @@ package cpu
 
 import "github.com/tucats/govax/internal/registers"
 
-// The engine's scheduling hook (docs/PHASE-44.md, "The engine's hook").
+// The engine's scheduling hook (docs/planning/PHASE-44.md, "The engine's hook").
 //
 // With several processes on one CPU, something has to decide, between
 // instructions, whether the running process should give the CPU to
@@ -112,7 +112,7 @@ func (e *Engine) schedule() error {
 
 // FreezeScheduling stops the engine calling the scheduler, so the
 // process the CPU holds keeps it, whatever happens, until the function
-// it returns is called (docs/PHASE-44.md, subtask 8). The debugger's STEP
+// it returns is called (docs/planning/PHASE-44.md, subtask 8). The debugger's STEP
 // freezes scheduling so a step is one instruction of the debugged
 // process, and a nested run (the console's condition-handler call) so
 // the outer run finds the CPU as it left it. Freezes nest. Instructions

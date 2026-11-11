@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements the console DIRECTORY command (docs/PHASE-23.md,
+// This file implements the console DIRECTORY command (docs/planning/PHASE-23.md,
 // subtask 5) — the operator-facing half of "list the files on a mounted
 // volume". The actual listing logic (glob-matching, per-directory
 // grouping, /FULL/FILE/SIZE/DATE formatting) already lives in the sibling

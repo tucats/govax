@@ -14,7 +14,7 @@ import (
 )
 
 // TestFor81OpenOracle holds FTNRTL's OPEN to VMS's FORRTL (Decision 1 of
-// docs/PHASE-81 - FORTRAN files.md): each case is one of testdata/for81's, as a
+// docs/planning/PHASE-81 - FORTRAN files.md): each case is one of testdata/for81's, as a
 // FORTRAN OPEN with its values in variables, so that FTNRTL decides them and not
 // the compiler, and its IOSTAT must be the FOR number of what VMS's FOR$OPEN
 // returned in vax/for81-vax.txt. Relative and indexed files wait for their

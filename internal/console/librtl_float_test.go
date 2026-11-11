@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The floating routines (docs/PHASE-53, subtask 8), called from a linked
+// The floating routines (docs/planning/PHASE-53, subtask 8), called from a linked
 // program as a program calls them.
 
 // floatCheck is check for a floating comparison in format x (F, D, G,

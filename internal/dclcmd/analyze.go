@@ -16,8 +16,8 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// ANALYZE/OBJECT (docs/PHASE-38.md) describes object files, and
-// ANALYZE/IMAGE (docs/PHASE-40.md) image files, as VMS's ANALYZE does:
+// ANALYZE/OBJECT (docs/planning/PHASE-38.md) describes object files, and
+// ANALYZE/IMAGE (docs/planning/PHASE-40.md) image files, as VMS's ANALYZE does:
 // internal/anl writes the report, and this file finds the files and sends
 // the report where it goes.
 //
@@ -77,7 +77,7 @@ func (c *Context) AnalyzeObject(opts AnalyzeOptions) error {
 	})
 }
 
-// AnalyzeImage runs one ANALYZE/IMAGE command (docs/PHASE-40.md), as
+// AnalyzeImage runs one ANALYZE/IMAGE command (docs/planning/PHASE-40.md), as
 // AnalyzeObject runs ANALYZE/OBJECT: the default input type is EXE, and
 // the default output NAME.ANI.
 func (c *Context) AnalyzeImage(opts AnalyzeOptions) error {

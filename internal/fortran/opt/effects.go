@@ -3,7 +3,7 @@ package opt
 import "github.com/tucats/govax/internal/fortran/ir"
 
 // Effects: what a statement reads and writes, and what a call may change that the
-// statement doesn't name (Decision 7 of docs/PHASE-84 - FORTRAN optimizer.md).
+// statement doesn't name (Decision 7 of docs/planning/PHASE-84 - FORTRAN optimizer.md).
 //
 // # What a call may change
 //
@@ -45,7 +45,7 @@ import "github.com/tucats/govax/internal/fortran/ir"
 // the variable is in an I/O list, so taken, and the AST came during a call.
 // optasts.for is the same with VOLATILE variables no call may touch.
 //
-// A RECURSIVE unit (ir.Routine.Reentrant; docs/PHASE-89 - reentrant FORTRAN.md) is
+// A RECURSIVE unit (ir.Routine.Reentrant; docs/planning/PHASE-89 - reentrant FORTRAN.md) is
 // the case section 6.2 leaves out: any call may lead back into it, directly or through
 // other routines. The activation that call starts is a fresh one, with a frame of its
 // own below the caller's, so it can't change this activation's frame, and a local

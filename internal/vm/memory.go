@@ -169,7 +169,7 @@ func (m *Memory) AllocatePage() (pfn uint32, ok bool) {
 
 // FreePage releases physical page pfn, claimed earlier by AllocatePage,
 // so a later AllocatePage can hand it out again: the system services that
-// delete or replace a process's pages ($DELTVA, $CRETVA; docs/PHASE-26.md
+// delete or replace a process's pages ($DELTVA, $CRETVA; docs/planning/PHASE-26.md
 // subtask 35) give their pages back this way. The page's contents are
 // cleared now, because a page handed out again is a "demand-zero" page:
 // the program expects it to read as zeros, and validatePage doesn't clear

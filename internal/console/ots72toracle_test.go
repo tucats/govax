@@ -10,7 +10,7 @@ import (
 )
 
 // Phase 72's study of FORRTL's calls (testdata/ots72's ots72t.mar) on
-// govax, with VMS's own FORRTL.EXE (docs/PHASE-73 - trace trap.md,
+// govax, with VMS's own FORRTL.EXE (docs/planning/PHASE-73 - trace trap.md,
 // subtask 6). Each case traces a FOR$CVT_x_Ty call until FORRTL's JSB to
 // OTS$$CVT_x_T_R8, and records the registers and FORRTL's frame at the
 // JSB and at the RSB. The routine is govax's (librtl/otscvtfor.go) and

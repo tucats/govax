@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// These tests are docs/PHASE-42.md's subtask 20: the debugger's built-in
+// These tests are docs/planning/PHASE-42.md's subtask 20: the debugger's built-in
 // symbols (the VMS 5.5 Debugger Manual's appendix D).
 
 // TestLocationSymbols: %CURLOC (and "."), %NEXTLOC, and %PREVLOC (and "^")

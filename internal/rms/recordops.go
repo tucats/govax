@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// The record operations past $GET and $PUT (docs/PHASE-49.md, subtasks
+// The record operations past $GET and $PUT (docs/planning/PHASE-49.md, subtasks
 // 2 and 3): $FIND, $UPDATE, $TRUNCATE, $DELETE, and $REWIND, on the
 // stream context stream.go keeps. Their rules are the RMS Reference
 // Manual's and the Guide to OpenVMS File Applications' (sections 8.2

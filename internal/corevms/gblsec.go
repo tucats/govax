@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Global sections (docs/PHASE-46.md, subtask 5): $CRMPSC, $MGBLSC, and
+// Global sections (docs/planning/PHASE-46.md, subtask 5): $CRMPSC, $MGBLSC, and
 // $DGBLSC, the way VMS processes share memory.
 //
 // # What a global section is

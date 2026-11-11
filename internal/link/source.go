@@ -1,6 +1,6 @@
 package link
 
-// This file is docs/PHASE-30.md's "symbol sources": where LINK finds the
+// This file is docs/planning/PHASE-30.md's "symbol sources": where LINK finds the
 // global symbols the object modules refer to but don't define. A source
 // can be govax's own tables (its shims and the P1 vector), a shareable
 // image's global symbol table, or an object library; LINK searches its

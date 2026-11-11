@@ -4,7 +4,7 @@ import "io"
 
 // DebugFlags is a bitmask of developer/tracing toggles, matching the C
 // source's `vax.debug` field and vax.h's DBG_* #defines (vax.h:320-346).
-// See docs/PHASE-17.md for which flags this port actually wires behavior
+// See docs/planning/PHASE-17.md for which flags this port actually wires behavior
 // for, and why several are deliberately settable/showable no-ops (matching
 // the C reference having no consumer for them either).
 type DebugFlags uint32

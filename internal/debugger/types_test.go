@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// These tests are docs/PHASE-42.md's subtask 18: EXAMINE's and DEPOSIT's
+// These tests are docs/planning/PHASE-42.md's subtask 18: EXAMINE's and DEPOSIT's
 // type qualifiers, and SET TYPE, SHOW TYPE, and CANCEL TYPE. They run on
 // the probe's program (dataSession: WATCHL at 200, WATCHB 204, BUFFER 208
 // for 16 bytes, SOURCE 218, MSG an .ASCID).

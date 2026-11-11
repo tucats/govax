@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The protection-text routines (docs/PHASE-55, the survey's "Protection
+// The protection-text routines (docs/planning/PHASE-55, the survey's "Protection
 // text"; VMS 7.x routines the 5.0 manual lacks, written from the VSI
 // LIB$ manual): LIB$FORMAT_SOGW_PROT turns a protection mask into text,
 // LIB$PARSE_SOGW_PROT text into a mask, and LIB$PARSE_ACCESS_CODE a

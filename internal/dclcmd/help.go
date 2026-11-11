@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is DCL's HELP (docs/PHASE-90 - VMS help.md, subtask 6): the
+// This file is DCL's HELP (docs/planning/PHASE-90 - VMS help.md, subtask 6): the
 // command's qualifiers, the libraries it reads, and where its output goes.
 // What HELP shows and how it prompts are internal/help's Session; this
 // file gives it its libraries, a way to write, and a way to read.

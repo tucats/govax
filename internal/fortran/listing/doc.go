@@ -1,5 +1,5 @@
 // Package listing lays out the FORTRAN compiler's listing, the file /LIST writes
-// (docs/PHASE-85 - FORTRAN compiler usability.md, Decision 11).
+// (docs/planning/PHASE-85 - FORTRAN compiler usability.md, Decision 11).
 //
 // A compiler's messages tell a programmer what's wrong; a listing shows it in
 // place, on paper. Each page has a two-line heading. Then come the source's lines,

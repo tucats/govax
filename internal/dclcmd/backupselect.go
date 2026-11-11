@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 )
 
-// BACKUP's /SELECT and /EXCLUDE on an input save set (docs/PHASE-69 -
+// BACKUP's /SELECT and /EXCLUDE on an input save set (docs/planning/PHASE-69 -
 // backup save sets.md, subtask 9): file specifications matched against
 // the names the save set holds ("[B69.SUB1]A.TXT;1"), not against a
 // directory on a volume, so they are matched here as text.

@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// docs/PHASE-68 - link shareable images.md, subtask 10: RUN finds a
+// docs/planning/PHASE-68 - link shareable images.md, subtask 10: RUN finds a
 // program's shareable images as VMS's image activator does (Decision 3),
 // checked against testdata/link68's runs R1 to R4. VMS's MAIN1 uses SHR1
 // and LIBRTL; RUN/NOEXECUTE loads and fixes them up.

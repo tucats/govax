@@ -1,0 +1,152 @@
+# Phase 02: Virtual memory support
+
+## Goal
+
+Implement VAX virtual-to-physical address translation and the load/store primitive
+layer that everything else (instruction decode, RTL, console EXAMINE/DEPOSIT) calls
+through.
+
+## Scope / C source mapping
+
+- `reference/eVAX/eVAX/Source/CPU/vm.c` — page tables, address translation.
+- `reference/eVAX/eVAX/Source/CPU/storage.c` — `load_memory`/`store_memory`/
+  `load_register` primitive layer (note: `get_operand`/`put_operand` operand resolution
+  belongs to Phase 03's decode engine, not here, since it's tied to instruction
+  operand-specifier parsing).
+- `reference/eVAX/eVAX/Headers/pte.h` — page table entry layout (`AUDIT.md` flags a
+  `union PTE` sizing issue class — check against the now-fixed C source).
+- `reference/eVAX/eVAX/Headers/memmap.h` — memory-mapping macros/offset tables (also
+  used by Phase 10's RMS struct mapping).
+
+## Deliverables
+
+- An `internal/vm` package providing address translation and typed load/store methods
+  against a `vax.Machine`'s memory, with clear byte/word/longword/quadword accessors
+  (avoiding any equivalent of the C `LONGWORD` width-ambiguity bug by construction).
+- Unit tests: page table setup, translation faults, load/store round-trips at each
+  granularity, boundary/alignment cases.
+
+## Open questions / notes
+
+- ~~Confirm whether `internal/vm` needs a back-reference to `internal/vax.Machine` or
+  should own the raw memory buffer itself with `vax.Machine` holding a `*vm.Memory`~~ —
+  resolved: `vm.Memory` owns the raw RAM buffer itself, independent of `vax.CPU`. Every
+  method that needs MAPEN/base-and-length registers/cur_mod takes a `*vax.CPU`
+  parameter instead of holding a reference, consistent with Phase 01's "instantiated
+  struct, passed explicitly" state model and with `vax.CPU` being registers/PSL only.
+- `memmap.h`'s `struct MAP`/`map()` declarative VAX-struct-to-native-struct mapping
+  (used by `structure_mapping.c` for RMS FAB/RAB fields) is not address
+  translation/load-store and is out of scope here, as the doc note next to it already
+  says — it's Phase 10's concern.
+- The C source's translation-buffer/"sequential translation cache" (`struct TB`, the
+  `cached_*` STC globals in `vm.c`) is a pure performance optimization with no effect on
+  translation results; not ported, same rationale as Phase 01 skipping `struct PSL_W`.
+  **Superseded by Phase 21** (user request, 2026-09-17): it is ported after all, so
+  `SHOW TB`/`CLEAR TB` can report real cache statistics and so PTE-mutating operations
+  have real cache state to invalidate — see docs/planning/PHASE-21.md.
+- `DYNVM` dynamic page-in-on-demand (`validate_page()`, gated on
+  `vax.console.vminit_valid`/`page_map`) is console/microkernel state owned by Phase
+  08's VMINIT command. Until that exists, an invalid PTE always faults
+  `TranslationNotValid` here — which is also exactly what `validate_page()` itself does
+  whenever `VMVALID` is false (the case until VMINIT has run), so this isn't a fidelity
+  deviation, just a scoping one, revisited when Phase 08 lands.
+- `vm.c`'s protection check has two implementations selected by `VM_TABLE_ACCESS`: the
+  algorithmic one (`VM_TABLE_ACCESS 0`, what the C source actually builds with) and a
+  table-driven `access_map[16][4]` alternative (`VM_TABLE_ACCESS 1`, dead code in the
+  current build). Only the algorithmic path is ported; hand-checking it against the
+  table found they agree on every architecturally-defined protection code and diverge
+  only on the reserved code `1`, which no valid PTE should carry — not logged to
+  `DEVIATIONS.md` since the active implementation isn't in question.
+
+## Progress Log
+
+### 2026-09-14 — Sub-phase 1: PTE type and physical memory layer
+
+- Added `internal/vm/pte.go`: `PTE uint32` with bit-masking get/set methods for every
+  `pte.h` `PTEBITS` field (PFN, software bits, owner, modify, protection, valid), plus
+  `Protection` (named constants matching `pte.h`'s `PTE_K_*`) and its unexported
+  `allows` method — a direct port of `vm()`'s algorithmic protection check (see Open
+  questions above on why the table-driven alternative isn't ported).
+  `reference/AUDIT.md` finding C8 (`sizeof(union PTE)` wrongly 8 bytes from the
+  `LONGWORD` bug) is confirmed fixed upstream, and moot in Go regardless since `PTE` is
+  a plain 32-bit type by construction.
+- Added `internal/vm/memory.go`: `Memory` (`NewMemory`, `Size`) owning a flat RAM byte
+  slice, a `phys` helper bounds-checking a physical window and a
+  `PhysicalAddressError` for one that doesn't fit, and `readPhysLongword`/
+  `writePhysLongword` for the untranslated PTE-storage access `Translate` needs.
+  Physical resolution beyond RAM (console ROM/NVRAM, memory-mapped I/O) is left to
+  Phases 08/09, which own that state.
+- Added `internal/vm/pte_test.go`: full-field no-overlap round-trip (each field set to a
+  distinct value, cleared one at a time with neighbors verified undisturbed, mirroring
+  `vax/psl_test.go`), a direct bit-offset check against the architecture manual/`pte.h`
+  layout independent of the accessor methods, and a protection-matrix table exercising
+  `allows` across representative protection codes/modes/access types.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./internal/vm/...` all clean.
+
+### 2026-09-14 — Sub-phase 2: address translation
+
+- Added `internal/vm/translate.go`: `Memory.Translate` ports `vm.c`'s `vm()` region
+  dispatch (P0/P1/S0 base-and-length checks, P1's inverted length-register sense, S1
+  always faulting), the recursive translation of a P0/P1 PTE's own (system-virtual)
+  address, the protection check via `Protection.allows`, and the write-sets-M-bit
+  update — all as reported in the Open questions above (no TB/STC cache, no DYNVM). VM
+  faults come back as `*TranslationFault` (`AccessViolation`/`TranslationNotValid` +
+  faulting address) rather than the C source's `set_fault`, which is Phase 03's
+  machinery to build.
+- Added `internal/vm/translate_test.go`: a two-level page-table fixture (an S0 table
+  whose one active entry locates P0's own page table, mirroring how process page tables
+  are themselves found via system-space translation on real VAX), covering a P0
+  round-trip, P0/P1/S0 length violations (including P1's inverted sense) and S1's
+  unconditional fault, a protection violation, an invalid-PTE TNV fault, and the M-bit
+  being set on a page's first write but not on a read.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
+
+### 2026-09-14 — Sub-phase 3: load/store primitive layer
+
+- Added `internal/vm/storage.go`: `LoadByte`/`StoreByte` (translate + single-byte
+  physical access) and, built on those, `Load`/`Store` (arbitrary-length, always
+  byte-at-a-time — see the file's header comment for why that's a deliberate
+  simplification of storage.c's spans-pages-only fallback rather than a fidelity gap:
+  `Translate` has no page-boundary-crossing cache to make the C source's "one wide
+  translation, unless it spans pages" special case worth the extra code path), the
+  typed `LoadWord`/`StoreWord`/`LoadLongword`/`StoreLongword`/`LoadQuadword`/
+  `StoreQuadword` accessors (little-endian, via `encoding/binary`; storage.c's
+  quadword-as-two-longwords split is a big-endian-host byte-order fix with no effect on
+  this little-endian-only Go port, so it's collapsed into a single 8-byte decode), and
+  `LoadRegister` (`load_register`'s architected-register-preserves-upper-bytes vs.
+  scratch-register-zeroes-first distinction; sign/zero-extension stays the caller's
+  job, same as the C source).
+- Added `internal/vm/storage_test.go`: byte/word/longword/quadword round-trips
+  (including little-endian byte-order checks), a round-trip through `Translate` (not
+  just identity-mapped physical memory), a value deliberately spanning two physically
+  disjoint pages to prove per-byte translation is happening rather than one lucky wide
+  copy, `LoadRegister`'s architected-preserves/scratch-zeroes distinction and a full
+  4-byte load, and the `PhysicalAddressError` case for an out-of-range physical access.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
+
+### 2026-09-14 — Sub-phase 4: close-out
+
+- Reviewed sub-phases 1-3 against this doc's Goal/Deliverables: address translation,
+  typed byte/word/longword/quadword accessors, and unit tests covering page table
+  setup, translation faults, load/store round-trips, and boundary/alignment cases are
+  all in place; no gaps found.
+- Added a few more `internal/vm` tests aimed at coverage rather than new behavior:
+  `Memory.Size`, both `TranslationFault`/`PhysicalAddressError` `Error()` strings, a
+  table of out-of-range-physical-address propagation through every multi-byte
+  accessor and `LoadRegister`, and a case where a P0 PTE's own recursive (system-space)
+  translation fails and that failure propagates rather than being masked. Package
+  coverage went from 85.6% to 94.5%.
+- All three open questions from planning are resolved in place (see Open questions
+  above): `vm.Memory` owns raw RAM and takes `*vax.CPU` by parameter; `memmap.h`'s
+  struct-mapping logic and the TB/STC caches are out of scope/not ported; DYNVM dynamic
+  paging is deferred to Phase 08.
+- No `docs/DEVIATIONS.md` entries were needed — every place the Go port diverges from
+  `vm.c`/`storage.c` (TB/STC caching, DYNVM, the table-driven protection-check
+  alternative) is a performance hack or dead code with no effect on results, not an
+  ISA/behavior fidelity question; see the Open questions above for the reasoning on
+  each.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean; phase complete.

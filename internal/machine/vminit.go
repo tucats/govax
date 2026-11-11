@@ -40,7 +40,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 }
 
 // VMInitPaging is VMINIT with its paging mode given: /PAGING or
-// /NOPAGING (docs/PHASE-62 - VMS paging.md, Decision 1). The mode lasts
+// /NOPAGING (docs/planning/PHASE-62 - VMS paging.md, Decision 1). The mode lasts
 // until the next VMINIT, INIT, or ZERO, since VMINIT is when physical
 // memory is wiped and the page tables built.
 func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
@@ -180,7 +180,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// internal/vm.Memory.Translate/AllocatePage), owned by user mode (a
 	// PTE's owner field, bits 23-24, names the access mode a page belongs
 	// to, which $CRETVA/$DELTVA check before replacing or deleting it;
-	// docs/PHASE-26.md subtask 35), and, but for page 0, a no-access
+	// docs/planning/PHASE-26.md subtask 35), and, but for page 0, a no-access
 	// guard, open to every mode.
 	paddr = roundUpPage(paddr)
 	p0br := paddr
@@ -432,7 +432,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 
 	// Invalidate_tb() plus a reset of its tries/hits/pflushes
 	// counters (tb_flush itself and the STC's own counters are left
-	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).
+	// alone, same asymmetry as CLEAR TB — see docs/planning/PHASE-21.md).
 	m.Mem.InvalidateTB()
 	m.Mem.ResetTBCounters()
 	m.asmSession = nil // a fresh address space invalidates any prior ASM session's state
@@ -447,7 +447,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 // gets a frame only when it's created, a table page when a region's
 // length reaches it, a pool page when it's allocated), so the defaults
 // are sized for what processes need rather than shares of physical
-// memory (docs/PHASE-67 - address space under paging.md, subtask 8):
+// memory (docs/planning/PHASE-67 - address space under paging.md, subtask 8):
 //
 //   - P1 holds the 4096 pages from the user stack's top (UserStackTop)
 //     to the P1 vector, which exist in P1's length but have no pages,

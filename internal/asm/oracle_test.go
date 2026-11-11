@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/obj"
 )
 
-// The Phase 32 oracle (docs/PHASE-32.md, testdata/mar/rms): govax-written
+// The Phase 32 oracle (docs/planning/PHASE-32.md, testdata/mar/rms): govax-written
 // programs that call VMS's RMS and definition macros, and real VAX MACRO's
 // objects for them. govax's own STARLET.MLB, which is written from the RMS
 // Reference Manual and these objects, never from VMS's macro library, must

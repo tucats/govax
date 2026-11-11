@@ -9,7 +9,7 @@ import (
 )
 
 // bindSetCommands binds SET's syntaxes (console.dcl's set_types and
-// set_* entries, docs/PHASE-37.md). Each SET keyword redirects the parse
+// set_* entries, docs/planning/PHASE-37.md). Each SET keyword redirects the parse
 // into its own syntax, so each form has its own handler; the Console
 // methods that do the work are in set.go.
 func (d *Dispatcher) bindSetCommands() {
@@ -37,7 +37,7 @@ func (d *Dispatcher) bindSetCommands() {
 
 	g.Bind("SET_QUANTUM", func(id int64, r *dcl.Result) error { return c.SetQuantum(int(r.Int("COUNT"))) })
 
-	// SET DEFAULT (docs/PHASE-23.md, subtask 3) establishes the
+	// SET DEFAULT (docs/planning/PHASE-23.md, subtask 3) establishes the
 	// operator's default device and directory for DIRECTORY, DELETE,
 	// PURGE, COPY, and TYPE; Session.SetDefault checks its syntax.
 	g.Bind("SET_DEFAULT", func(id int64, r *dcl.Result) error { return c.cmd().SetDefault(r.String("SPEC")) })

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// AST delivery: the RTL's half (docs/PHASE-26.md subtask 15).
+// AST delivery: the RTL's half (docs/planning/PHASE-26.md subtask 15).
 //
 // # ASTs in brief
 //
@@ -98,7 +98,7 @@ import (
 // # Changing mode
 //
 // Each access mode has its own stack. When the AST's mode is more
-// privileged than the CPU's (docs/PHASE-26.md subtask 22), NextAST first
+// privileged than the CPU's (docs/planning/PHASE-26.md subtask 22), NextAST first
 // switches the CPU into it, as VMS does: the current stack pointer is
 // saved in the current mode's stack-pointer register (USP, SSP, ESP),
 // PSL<CUR_MOD> becomes the AST's mode, PSL<PRV_MOD> the interrupted one,

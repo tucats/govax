@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// A section's page source (docs/PHASE-66 - mapped image activation.md,
+// A section's page source (docs/planning/PHASE-66 - mapped image activation.md,
 // subtask 2).
 //
 // A private section's pages come in from its file when they're first

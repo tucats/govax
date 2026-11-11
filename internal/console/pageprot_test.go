@@ -170,7 +170,7 @@ func TestLockServices(t *testing.T) {
 }
 
 // TestPageProt_assembledProgram runs testdata/asm/pageprot.asm
-// (docs/PHASE-26.md subtask 36): a page made read-only, written (an
+// (docs/planning/PHASE-26.md subtask 36): a page made read-only, written (an
 // access violation), made writable again, then locked and unlocked.
 func TestPageProt_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
@@ -200,7 +200,7 @@ func TestPageProt_assembledProgram(t *testing.T) {
 }
 
 // TestLockStatuses: the locking services' statuses run one way, the
-// unlocking services' the other (docs/PHASE-63 - working sets.md, Part
+// unlocking services' the other (docs/planning/PHASE-63 - working sets.md, Part
 // A): a lock is SS$_WASSET if any page was locked already, an unlock
 // SS$_WASSET only if every page was.
 func TestLockStatuses(t *testing.T) {

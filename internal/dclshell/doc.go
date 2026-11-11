@@ -1,6 +1,6 @@
 // Package dclshell is govax's DCL, the command language interpreter the
 // console runs in process 1 and in every process that runs a CLI
-// (docs/PHASE-50 - DCL command procedures.md, docs/PHASE-52 - console
+// (docs/planning/PHASE-50 - DCL command procedures.md, docs/planning/PHASE-52 - console
 // package split.md).
 //
 // An Interpreter is every process's DCL. Each process has a Shell of its

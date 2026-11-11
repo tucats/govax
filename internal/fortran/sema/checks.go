@@ -9,7 +9,7 @@ import (
 
 // Checks is what /CHECK asks the compiled code to look out for (section 1.4.3 and
 // appendix D of the language manual give the forms, the same on the FORTRAN command
-// and in an OPTIONS statement, and docs/PHASE-85 - FORTRAN compiler usability.md the
+// and in an OPTIONS statement, and docs/planning/PHASE-85 - FORTRAN compiler usability.md the
 // rest). The zero value checks nothing, the default here: nothing to hand states VAX
 // FORTRAN's, as MANUAL.md's section 14.7 says.
 type Checks struct {
@@ -81,7 +81,7 @@ func checkKeyword(word string) (func(*Checks), error) {
 // FORTRAN-66 wrote (*), which such programs index far past. dims is s.Dims, or a record's
 // field's, s then saying nothing, as it may be nil. The manual gives no rule for either
 // (section 6.1.1.2 says only that the size isn't known); this is Decision 4 of
-// docs/PHASE-85 - FORTRAN compiler usability.md, ours.
+// docs/planning/PHASE-85 - FORTRAN compiler usability.md, ours.
 func OpenEnded(s *Symbol, dims []Dim, i int) bool {
 	d := dims[i]
 	if d.Assumed {

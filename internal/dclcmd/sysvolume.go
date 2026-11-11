@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file mounts the system volume (docs/PHASE-87 - system volume.md):
+// This file mounts the system volume (docs/planning/PHASE-87 - system volume.md):
 // the container govax mounts every time it starts, before its startup
 // procedure runs, holding the files internal/sysvol lists. It is made the
 // first time, from govax's built-in files; a second session finds it in
@@ -217,7 +217,7 @@ func (c *Context) refreshSystemVolume(device string, created bool) {
 		}
 
 		// A help library's modules the user changed, each by name
-		// (docs/PHASE-90 - VMS help.md, Decision 7).
+		// (docs/planning/PHASE-90 - VMS help.md, Decision 7).
 		for _, module := range change.KeptModules {
 			c.Printf("%%%s\n", vmserrors.New(vmserrors.MOUNT_SYSKEPT, device+":"+change.File.Spec()+"("+module+")"))
 		}

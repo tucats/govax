@@ -14,7 +14,7 @@ const (
 	neither      = "neither"  // removed, or never a command
 )
 
-// TestGrammarSplit lists the commands that docs/PHASE-42.md's "command
+// TestGrammarSplit lists the commands that docs/planning/PHASE-42.md's "command
 // split" tables assign to the console and to the debugger, and checks each
 // line parses in exactly the grammar(s) it should: a command that landed in
 // the wrong grammar, or in neither, fails here. The console is the VMS
@@ -81,7 +81,7 @@ func TestGrammarSplit(t *testing.T) {
 		// Command files: the debugger's @ is in its grammar (INCLUDE is
 		// its name there). The console's "@file" is DCL's, read before
 		// the grammar (internal/dclshell/procedure.go), and the console
-		// has no INCLUDE (docs/PHASE-50 - DCL command procedures.md).
+		// has no INCLUDE (docs/planning/PHASE-50 - DCL command procedures.md).
 		{"INCLUDE A", debuggerOnly},
 		{"@A", debuggerOnly},
 

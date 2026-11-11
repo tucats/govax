@@ -9,7 +9,7 @@ import (
 
 // This file lays out a MACRO listing's closing pages, which follow the
 // source pages (listpage.go), as real VAX MACRO lays them out
-// (docs/PHASE-29.md, subtask 4):
+// (docs/planning/PHASE-29.md, subtask 4):
 //
 //   - the symbol table, on a page of its own: each symbol the module
 //     defined or referred to, in name order, with its value and

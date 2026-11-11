@@ -7,7 +7,7 @@ import (
 
 // ErrServiceWait is what SystemService returns when the service has put
 // the process in a wait state that isn't satisfied yet ($WAITFR on a clear
-// event flag, docs/PHASE-26.md). The XFC handler then leaves R0 alone and
+// event flag, docs/planning/PHASE-26.md). The XFC handler then leaves R0 alone and
 // backs PC up to the XFC instruction, so the next Step calls the service
 // again: the process waits in emulated time (which goes on advancing, so
 // its timers expire), and interrupts and ASTs are still delivered between
@@ -75,14 +75,14 @@ type SystemServices interface { //nolint:interfacebloat
 
 // ServiceCall is what SystemService returns when the service needs a
 // guest procedure called on its behalf before it can go on: $EXIT calling
-// an exit handler (docs/PHASE-26.md subtask 19). The XFC handler calls
+// an exit handler (docs/planning/PHASE-26.md subtask 19). The XFC handler calls
 // Routine as CALLG ArgList, Routine would, with the XFC itself as the
 // return address. So when the procedure executes RET, the XFC runs
 // again, calling the service again, which picks up where it left off
 // (the RTL keeps track of how far it got). R0 is left alone.
 //
 // With Image set, the call starts an image instead (the subprocess CLI's
-// RUN, docs/PHASE-48.md): the frame's saved PC and FP are SentinelReturn,
+// RUN, docs/planning/PHASE-48.md): the frame's saved PC and FP are SentinelReturn,
 // as Engine.CallEntry's are, so the image's $EXIT unwinds to this frame
 // and no further, and its return reports ErrConsoleCallReturned rather
 // than returning into the caller. Whoever asked for the call puts the
@@ -90,7 +90,7 @@ type SystemServices interface { //nolint:interfacebloat
 //
 // With Tail set, the procedure returns to the instruction after the XFC
 // rather than to the XFC: the call is the service's last act, and the
-// procedure's R0 is its result (a shim's action routine, docs/PHASE-55).
+// procedure's R0 is its result (a shim's action routine, docs/planning/PHASE-55).
 type ServiceCall struct {
 	Routine uint32 // the procedure's entry mask address
 	ArgList uint32 // its argument list (a count longword, then arguments)

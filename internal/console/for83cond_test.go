@@ -140,7 +140,7 @@ var for83ConditionMasked = map[int]bool{58: true, 82: true, 85: true}
 // address. On VMS it's a fault at a PC in LIBRTL, which continuing runs again until
 // the program stops itself. govax's routines are shims, whose memory faults are
 // conditions in the caller's frame that return SS$_ACCVIO if continued (librtl's
-// fault.go; docs/PHASE-53, Decision 5), so all that's compared is the condition.
+// fault.go; docs/planning/PHASE-53, Decision 5), so all that's compared is the condition.
 var for83FaultInRoutine = map[int]bool{32: true, 33: true, 39: true, 97: true, 103: true, 109: true}
 
 // TestFor83ConditionOracle runs part C, LIBRTL's condition routines, as

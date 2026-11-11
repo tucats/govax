@@ -8,7 +8,7 @@ import (
 
 // This file is what makes a shareable image different from an executable
 // (LINK/SHAREABLE; the Linker manual, chapter 4, and testdata/link68's
-// probe, docs/PHASE-68 - link shareable images.md):
+// probe, docs/planning/PHASE-68 - link shareable images.md):
 //
 //   - The image starts at address 0, not 0x200 (origin), since the image
 //     activator maps it wherever it finds room, and it has no user stack.

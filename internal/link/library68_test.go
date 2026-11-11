@@ -11,7 +11,7 @@ import (
 
 // TestLinkThroughShareableImageLibrary links testdata/link68's MAIN1L
 // and MAIN1U from real MACRO's object, SHR1 found in VMS's MYSHR.OLB
-// (docs/PHASE-68's subtask 12): MAIN1L named the library on the command
+// (docs/planning/PHASE-68's subtask 12): MAIN1L named the library on the command
 // line, and MAIN1U had it as a default user library, which LINK searches
 // after the command's own and before IMAGELIB.OLB, so the sources are the
 // same. The images are real LINK's byte for byte, SHR1's cells in the

@@ -10,7 +10,7 @@ import (
 )
 
 // This file implements the console SET DEFAULT/SHOW DEFAULT commands
-// (docs/PHASE-23.md, subtask 3) — the operator-facing half of "remember a
+// (docs/planning/PHASE-23.md, subtask 3) — the operator-facing half of "remember a
 // current default device/directory so a later DIRECTORY/DELETE/PURGE/COPY/
 // TYPE command's partial file spec can be filled in from it". The actual
 // state and file-specification parsing already live in the sibling

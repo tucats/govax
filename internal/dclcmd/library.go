@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements docs/PHASE-28.md subtask 7's LIBRARY command, in
+// This file implements docs/planning/PHASE-28.md subtask 7's LIBRARY command, in
 // the style of VMS's LIBRARIAN:
 //
 //	LIBRARY library[/HOST] [input[,...][/HOST]]
@@ -23,10 +23,10 @@ import (
 //	        [/HELP | /MACRO | /OBJECT | /SHARE | /TEXT] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
 //
 // It creates or changes a macro library (.MLB), an object library (.OLB),
-// a shareable image symbol table library (.OLB, /SHARE; docs/PHASE-68 -
+// a shareable image symbol table library (.OLB, /SHARE; docs/planning/PHASE-68 -
 // link shareable images.md, subtask 12), a text library (.TLB, /TEXT;
-// docs/PHASE-83 - FORTRAN and VMS.md, subtask 3), or a help library (.HLB,
-// /HELP; docs/PHASE-90 - VMS help.md, subtask 3) with internal/lbr, extracts
+// docs/planning/PHASE-83 - FORTRAN and VMS.md, subtask 3), or a help library (.HLB,
+// /HELP; docs/planning/PHASE-90 - VMS help.md, subtask 3) with internal/lbr, extracts
 // modules from one, and lists one as LIBRARY/LIST does. /MACRO, /OBJECT,
 // /SHARE, /TEXT, or /HELP picks the type of a new library (an object library by
 // default, as on VMS) and the library's default file type; an existing
@@ -53,7 +53,7 @@ import (
 // A new library (/CREATE) is laid out whole by an lbr.Builder, as
 // LIBRARIAN lays one out, and given /CREATE=BLOCKS's allocation. An
 // existing library is changed in place by an lbr.Updater, as LIBRARIAN
-// changes one through LBRSHR (docs/PHASE-90 - VMS help.md, subtask 11e):
+// changes one through LBRSHR (docs/planning/PHASE-90 - VMS help.md, subtask 11e):
 // each module written into new data, its keys entered, a replaced or
 // deleted module's data deleted, and LIBRARIAN's update history records
 // added for what changed; a Builder edits a copy alongside, for the
@@ -330,7 +330,7 @@ const (
 )
 
 // LIBRARIAN's condition values for the messages testdata/help90's round 3
-// showed with their $STATUS (docs/PHASE-90 - VMS help.md, subtask 11e).
+// showed with their $STATUS (docs/planning/PHASE-90 - VMS help.md, subtask 11e).
 const (
 	librarNoMatch   = 0x00868080 // %LIBRAR-W-NOMTCHFOU
 	librarDupModule = 0x00868088 // %LIBRAR-W-DUPMODULE
@@ -402,7 +402,7 @@ func (l *library) log(status uint32, module string) {
 // openUpdater starts the in-place change of the library open read: the
 // LBRSHR way LIBRARIAN changes an existing library, each module written in
 // new data and its keys entered, and the library's update history kept
-// (docs/PHASE-90 - VMS help.md, subtask 11e).
+// (docs/planning/PHASE-90 - VMS help.md, subtask 11e).
 func (l *library) openUpdater() error {
 	var err error
 
@@ -970,7 +970,7 @@ func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, 
 // library, whose header block reads as an end of module record of 512
 // bytes, of severity 1. The module's records are left in the library with
 // no key, which VMS 7.1 did too (its blocks differ from govax's:
-// docs/PHASE-90 - VMS help.md, subtask 11e).
+// docs/planning/PHASE-90 - VMS help.md, subtask 11e).
 func (l *library) badSequence(records [][]byte, found rms.FileLocation) *lbr.Entry {
 	// The module goes in as LIBRARIAN leaves it (Builder.Failed), so
 	// nothing is returned for insertFile to abandon.

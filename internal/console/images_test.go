@@ -30,7 +30,7 @@ func newSecondProcess(t *testing.T, c *Console) *corevms.Environment {
 }
 
 // TestActivateImageInAnotherProcess activates an image in a process that
-// isn't the current one (bugs 1 and 5 of docs/PHASE-43.md): it lands in
+// isn't the current one (bugs 1 and 5 of docs/planning/PHASE-43.md): it lands in
 // that process's P0, its ICB list and symbols are that process's, and its
 // IMAGE$INIT driver is in a page of its own, while process 1's P0, ICB
 // list, symbols, and driver are untouched.

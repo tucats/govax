@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// A VMS V1 image's shareable images (docs/PHASE-72 - legacy images.md,
+// A VMS V1 image's shareable images (docs/planning/PHASE-72 - legacy images.md,
 // subtask 4, Decision 4).
 //
 // An image linked by VMS V1's linker (format 02.01) has no fixup section

@@ -16,7 +16,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Command procedures and command levels (docs/PHASE-50 - DCL command
+// Command procedures and command levels (docs/planning/PHASE-50 - DCL command
 // procedures.md), as the OpenVMS User's Manual describes them.
 //
 // A command level is an input stream for the command interpreter. The

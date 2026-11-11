@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 66's subtask 3 (docs/PHASE-66 - mapped image activation.md):
+// Phase 66's subtask 3 (docs/planning/PHASE-66 - mapped image activation.md):
 // with paging on, RUN maps the image rather than copying it. Each
 // private ISD is a section of the image file whose pages come in when
 // they're touched, each demand-zero ISD demand-zero pages; the fixups

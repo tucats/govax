@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Tests of SET/SHOW/CANCEL TRACE and WATCH (docs/PHASE-42.md, subtask 13),
+// Tests of SET/SHOW/CANCEL TRACE and WATCH (docs/planning/PHASE-42.md, subtask 13),
 // against the sessions the VMS 7.3 debugger ran on the probe's DBGCMD image
 // (testdata/dbgcmd/vax/trace.dlg and watch.dlg).
 

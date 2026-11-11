@@ -11,7 +11,7 @@ import (
 // rmsFEX is RMS$_FEX, "file already exists, not superseded".
 var rmsFEX = vmsdef.Symbols["RMS$_FEX"]
 
-// This file implements the console COPY command (docs/PHASE-23.md,
+// This file implements the console COPY command (docs/planning/PHASE-23.md,
 // subtasks 9 and 10) — the operator-facing half of "copy one or more
 // files, between a mounted ODS-2 volume and the host filesystem, or
 // between two locations on mounted volumes". The actual work (the
@@ -147,7 +147,7 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 // every command shares (rms.Session.Locate: /HOST, a VMS specification, a
 // host path with "/" or "\", then the default directory's side), and
 // copies. Without it a name like "./notes.txt" was taken for a file in
-// the default directory of a volume (docs/PHASE-69 - backup save
+// the default directory of a volume (docs/planning/PHASE-69 - backup save
 // sets.md, side finding 1).
 func (c *Context) copyFiles(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) ([]rms.CopyResult, error) {
 	source, err := c.ContainerSession.Locate(sourceText, sourceHost)

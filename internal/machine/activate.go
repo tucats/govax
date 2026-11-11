@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// Activating a program's shareable images (docs/PHASE-68 - link
+// Activating a program's shareable images (docs/planning/PHASE-68 - link
 // shareable images.md, subtask 11), as VMS's image activator does for an
 // image that isn't installed (the book's 21.1.1.4), in both loaders:
 //

@@ -16,7 +16,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// This file is the FORTRAN milestone's test (docs/PHASE-86 - FORTRAN milestone.md).
+// This file is the FORTRAN milestone's test (docs/planning/PHASE-86 - FORTRAN milestone.md).
 // DUNGEON's source stays out of the repository, so it skips without it, and nothing
 // here quotes the game.
 

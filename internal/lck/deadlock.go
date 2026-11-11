@@ -2,7 +2,7 @@ package lck
 
 import "slices"
 
-// Deadlock detection (docs/PHASE-49.md, subtask 8), as the Internals
+// Deadlock detection (docs/planning/PHASE-49.md, subtask 8), as the Internals
 // book's section 13.3 describes VMS's lock manager doing it.
 //
 // A deadlock is a circle of locks each waiting for the next: process A

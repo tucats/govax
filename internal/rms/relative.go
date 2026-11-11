@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// Relative files (Phase 81, subtask 9; docs/PHASE-81 - FORTRAN files.md).
+// Relative files (Phase 81, subtask 9; docs/planning/PHASE-81 - FORTRAN files.md).
 //
 // A relative file is a row of numbered cells, one record a cell, the first
 // cell record 1. A program reaches a record by its number (RAB$B_RAC

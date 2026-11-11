@@ -1,6 +1,6 @@
 // Command gen parses reference/eVAX/eVAX/Headers/instruction_table.h and
 // emits internal/cpu/instructions_table.go, rather than hand-transcribing
-// the table's 314 entries — see docs/PHASE-03.md's design notes on why.
+// the table's 314 entries — see docs/planning/PHASE-03.md's design notes on why.
 // The go:generate directive in instruction.go is disabled; run it from
 // internal/cpu:
 //
@@ -109,7 +109,7 @@ func parse(src string) []field {
 // SUBD2, zero operand-count-only) scale/access/count columns in the C
 // header, and in most cases no init_emulators.c dispatch entry either — they
 // were never correctly wired up in the C reference at all, confirmed via
-// docs/PHASE-05.md's design notes. Applied here, at generation time, rather
+// docs/planning/PHASE-05.md's design notes. Applied here, at generation time, rather
 // than hand-edited into the generated instructions_table.go, so the fix
 // survives a future `go generate` instead of being silently reverted by it.
 // See docs/DEVIATIONS.md for the full writeup.
@@ -147,7 +147,7 @@ var knownTableFixes = map[string]field{
 		access: [6]string{"OP_RD", "OP_NL", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
 	},
 	// CRC's C header entry has all-zero operand count/scale/access, matching
-	// emul_crc.c's own empty-stub implementation (see docs/PHASE-06.md's
+	// emul_crc.c's own empty-stub implementation (see docs/planning/PHASE-06.md's
 	// design notes and docs/DEVIATIONS.md) -- there was never a working
 	// operand shape to preserve. Scale/access below is transcribed directly
 	// from vax_instr_set.pdf's CRC format line: `tbl.ab, inicrc.rl,

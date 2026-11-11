@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// BACKUP/LIST (docs/PHASE-69 - backup save sets.md, subtask 7): a save
+// BACKUP/LIST (docs/planning/PHASE-69 - backup save sets.md, subtask 7): a save
 // set's summary and its files, as VMS V7.1's BACKUP V6.2 lays them out
 // (testdata/backup69's log, text.lis, and b69full.lis).
 //

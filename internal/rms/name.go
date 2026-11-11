@@ -8,12 +8,12 @@ import (
 	"github.com/tucats/ods2/filespec"
 )
 
-// This file is RMS's name processing (docs/PHASE-33.md, subtask 2): how
+// This file is RMS's name processing (docs/planning/PHASE-33.md, subtask 2): how
 // $PARSE, $OPEN, $CREATE, and the rest turn a FAB's file name into the
 // expanded file specification. Written from the OpenVMS RMS Reference
 // Manual (FAB$L_DNA, NAM$L_RLF, FAB$V_OFP, and Table 5-2's NAM$L_FNB).
 // It is the only name processor: the DCL utilities reach it through
-// logicals.go's expandSpec (docs/PHASE-91, Decision 4).
+// logicals.go's expandSpec (docs/planning/PHASE-91, Decision 4).
 //
 // A specification is filled in from several sources, each supplying only
 // the fields the ones before it left out:
@@ -32,7 +32,7 @@ import (
 //
 // A device can bring a root with it: a directory ending in a period,
 // "_DUA1:[USERS.SMITH.]", which then looks like the volume's master file
-// directory (docs/PHASE-91, Decision 2; the Guide to OpenVMS File
+// directory (docs/planning/PHASE-91, Decision 2; the Guide to OpenVMS File
 // Applications, 6.3). A name is a device, a root, and a directory
 // *relative to the root*, so nothing here can climb out of a root, and
 // only parsedName.volumeDir puts the two together for the volume.

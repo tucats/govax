@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Phase 63's subtask 4 (docs/PHASE-63 - working sets.md): with paging on,
+// Phase 63's subtask 4 (docs/planning/PHASE-63 - working sets.md): with paging on,
 // $ADJWSL changes the size of the working set list itself, a smaller
 // limit taking the oldest pages over it out of the set; a larger limit
 // is room the next faults use at once; and image exit puts the limit back

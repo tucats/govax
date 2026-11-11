@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// String descriptors (docs/PHASE-53, Decision 3). A VAX procedure passes
+// String descriptors (docs/planning/PHASE-53, Decision 3). A VAX procedure passes
 // a string "by descriptor": the argument is the address of a small block
 // that says where the text is and how long it is. Its first longword is
 // the same in every class:

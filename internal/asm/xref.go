@@ -11,7 +11,7 @@ import (
 )
 
 // This file makes a MACRO listing's cross reference (MACRO/CROSS_REFERENCE,
-// docs/PHASE-29.md, subtask 9): for each symbol, macro, instruction,
+// docs/planning/PHASE-29.md, subtask 9): for each symbol, macro, instruction,
 // directive, or register the program used, the lines that defined it and
 // the lines that referred to it. Each kind is a section of its own, on a
 // page of its own, after the psect synopsis:
@@ -22,7 +22,7 @@ import (
 //
 // Every rule here comes from real MACRO's listings: the probe's xref.lis
 // (/CROSS_REFERENCE), xrefall.lis (/CROSS_REFERENCE=ALL), and symxref.lis
-// (the symbol table probe with /CROSS_REFERENCE). docs/PHASE-29.md lists
+// (the symbol table probe with /CROSS_REFERENCE). docs/planning/PHASE-29.md lists
 // the ones no real listing shows yet, which are govax's own choices.
 //
 // A line number is the program's: a reference in a macro expansion (or a

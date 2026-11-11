@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// LIB$CVT_DX_DX (docs/PHASE-54, "LIBRTL2: CVT_DX_DX"; LIB-60), LIBRTL2.EXE's
+// LIB$CVT_DX_DX (docs/planning/PHASE-54, "LIBRTL2: CVT_DX_DX"; LIB-60), LIBRTL2.EXE's
 // general data-type conversion:
 //
 //	LIB$CVT_DX_DX source-item.rz.dx ,destination-item.wz.dx

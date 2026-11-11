@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $GETSYI and $GETSYIW (docs/PHASE-26.md subtask 23): information about
+// $GETSYI and $GETSYIW (docs/planning/PHASE-26.md subtask 23): information about
 // the system — its VMS version, node name, CPU, boot time, and so on.
 //
 // It is $GETJPI's pattern for the system instead of a process: an item

@@ -52,7 +52,7 @@ func (d *Dispatcher) Dispatch(line string) error {
 	}
 
 	// Check vax.console.assembler_mode before ever reading a verb:
-	// while interactive ASM mode (docs/PHASE-19.md) is on,
+	// while interactive ASM mode (docs/planning/PHASE-19.md) is on,
 	// every line -- including one that happens to spell a command name --
 	// is a statement for the assembler, not a console command.
 	if d.Console.InAssemblerMode() {
@@ -120,7 +120,7 @@ func (d *Dispatcher) CancelContinuation() { d.continued = "" }
 func (d *Dispatcher) bindGrammar() {
 	g := d.Grammar
 
-	// docs/PHASE-37.md: the former fixed commands (commands.go).
+	// docs/planning/PHASE-37.md: the former fixed commands (commands.go).
 	d.bindConsoleCommands()
 	d.Console.BindDCL(g)
 
@@ -155,21 +155,21 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
 
-	// Phase 23 (docs/PHASE-23.md, subtask 3): SHOW DEFAULT displays the
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 3): SHOW DEFAULT displays the
 	// operator's current default device/directory (internal/console/
 	// default.go's Console.ShowDefault, backed by internal/rms.Session).
-	// It was a DCL grammar entry before SET DEFAULT was (docs/PHASE-37.md),
+	// It was a DCL grammar entry before SET DEFAULT was (docs/planning/PHASE-37.md),
 	// since SHOW already has a large family of "syntax show_*" entries
 	// (show_map/show_tb/... above) that DEFAULT slots into the same way.
 	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowDefault() })
 
-	// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10).
+	// SHOW SYSTEM and SHOW PROCESS (docs/planning/PHASE-44.md, subtask 10).
 	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowSystem() })
 	g.Bind("SHOW_PROCESS", func(id int64, r *dcl.Result) error {
 		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
 	})
 
-	// SET WORKING_SET and SHOW WORKING_SET (docs/PHASE-63, subtask 9):
+	// SET WORKING_SET and SHOW WORKING_SET (docs/planning/PHASE-63, subtask 9):
 	// the values of the process whose DCL runs the command.
 	g.Bind("SET_WORKING_SET", func(id int64, r *dcl.Result) error {
 		opts := dclcmd.WorkingSetOptions{Log: r.Present("LOG") && !r.Negated("LOG")}
@@ -291,7 +291,7 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().Dismount(r.String("DEVICE"))
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 1): INITIALIZE/VAX carries
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 1): INITIALIZE/VAX carries
 	// forward the old fixed-table INIT command's exact behavior (cmdInit,
 	// removed) now that INIT/INITIALIZE are unified onto this grammar as
 	// one verb, redirected by /VAX vs. /CONTAINER. PAGES has no /prompt= in
@@ -312,7 +312,7 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.Init(v * 512)
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 4): INITIALIZE/CONTAINER formats
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 4): INITIALIZE/CONTAINER formats
 	// a brand-new, empty ODS-2 volume via internal/rms.InitializeContainer
 	// (Console.InitializeContainer, internal/console/initialize.go). PATH
 	// and SIZE both carry /prompt= in the grammar (console.dcl's own
@@ -333,7 +333,7 @@ func (d *Dispatcher) bindGrammar() {
 		)
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 5): DIRECTORY lists the files on
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 5): DIRECTORY lists the files on
 	// a mounted volume via internal/rms.Session.Directory (Console.
 	// Directory, internal/dclcmd/directory.go). SPEC carries no /prompt=
 	// in the grammar (console.dcl's own directory verb), so a bare DIRECTORY
@@ -397,7 +397,7 @@ func (d *Dispatcher) bindGrammar() {
 		return nil
 	})
 
-	// docs/PHASE-69 - backup save sets.md: BACKUP, its qualifiers
+	// docs/planning/PHASE-69 - backup save sets.md: BACKUP, its qualifiers
 	// sorted by where they stand (backup.go, internal/dclcmd/backup.go).
 	g.Bind("BACKUP", func(id int64, r *dcl.Result) error {
 		cmd, err := backupCommand(r, d.Console.Line())
@@ -432,7 +432,7 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().Dump(r.String("SPEC"), records, span)
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 6): DELETE reclaims a file's
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 6): DELETE reclaims a file's
 	// storage via internal/rms.Session.Delete (Console.Delete, internal/
 	// console/delete.go). SPEC carries /prompt= in the grammar (console.dcl's
 	// own delete verb), so Grammar.Dispatch's own required-parameter
@@ -443,7 +443,7 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().Delete(r.List("SPEC"), r.Present("LOG") && !r.Negated("LOG"))
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 7): PURGE trims old versions via
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 7): PURGE trims old versions via
 	// internal/rms.Session.Purge (Console.Purge, internal/dclcmd/purge.go).
 	// LIMIT carries no /prompt= in the grammar (console.dcl's own purge verb),
 	// so an omitted /LIMIT reaches here as r.Present("LIMIT") == false --
@@ -451,7 +451,7 @@ func (d *Dispatcher) bindGrammar() {
 	// rather than in internal/rms.Session.Purge itself, since r.Int's own
 	// zero value can't be told apart from an explicit, invalid /LIMIT=0
 	// (which Session.Purge does reject, as *rms.InvalidLimitError).
-	// docs/PHASE-22.md subtask 18: RENAME renames or moves files on a
+	// docs/planning/PHASE-22.md subtask 18: RENAME renames or moves files on a
 	// mounted volume (Console.Rename, internal/dclcmd/rename.go). A
 	// negated /NONEW_VERSION is the only way to turn NEW_VERSION off.
 	g.Bind("RENAME", func(id int64, r *dcl.Result) error {
@@ -469,7 +469,7 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().Purge(r.String("SPEC"), limit, r.Present("LOG") && !r.Negated("LOG"))
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 8): TYPE writes one file's
+	// Phase 23 (docs/planning/PHASE-23.md, subtask 8): TYPE writes one file's
 	// content to the console via internal/rms.Session.Type (Console.Type,
 	// internal/dclcmd/type.go). SPEC carries /prompt= in the grammar
 	// (console.dcl's own type verb), so Grammar.Dispatch's own required-
@@ -488,7 +488,7 @@ func (d *Dispatcher) bindGrammar() {
 		return nil
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtasks 9-10): COPY moves one or more
+	// Phase 23 (docs/planning/PHASE-23.md, subtasks 9-10): COPY moves one or more
 	// files' content between a mounted volume and the host filesystem, or
 	// between two mounted volumes, via internal/rms.Session.Copy
 	// (Console.Copy, internal/dclcmd/copy.go). SOURCE and DESTINATION
@@ -537,11 +537,11 @@ func (d *Dispatcher) bindGrammar() {
 		)
 	})
 
-	// docs/PHASE-27.md subtask 10: MACRO assembles a MACRO-32 source into
+	// docs/planning/PHASE-27.md subtask 10: MACRO assembles a MACRO-32 source into
 	// an object module (Console.Macro, internal/dclcmd/macro.go). The
 	// command as typed goes into the object's SRC header, as real MACRO
 	// records its command line.
-	// docs/PHASE-30.md: LINK links object modules into an executable
+	// docs/planning/PHASE-30.md: LINK links object modules into an executable
 	// image (Console.Link, internal/dclcmd/link.go).
 	g.Bind("LINK", func(id int64, r *dcl.Result) error {
 		files := r.List("OBJECTS")
@@ -580,7 +580,7 @@ func (d *Dispatcher) bindGrammar() {
 		})
 	})
 
-	// docs/PHASE-38.md: ANALYZE/OBJECT describes object files
+	// docs/planning/PHASE-38.md: ANALYZE/OBJECT describes object files
 	// (Console.AnalyzeObject, internal/dclcmd/analyze.go). Each kind of
 	// analysis is a qualifier with its own syntax; a bare ANALYZE names
 	// none.
@@ -612,7 +612,7 @@ func (d *Dispatcher) bindGrammar() {
 		})
 	})
 
-	// docs/PHASE-40.md: ANALYZE/IMAGE describes image files
+	// docs/planning/PHASE-40.md: ANALYZE/IMAGE describes image files
 	// (Console.AnalyzeImage).
 	g.Bind("ANALYZE_IMAGE", func(id int64, r *dcl.Result) error {
 		return d.Console.cmd().AnalyzeImage(dclcmd.AnalyzeOptions{
@@ -641,7 +641,7 @@ func (d *Dispatcher) bindGrammar() {
 		})
 	})
 
-	// docs/PHASE-28.md subtask 7: LIBRARY creates, changes, extracts
+	// docs/planning/PHASE-28.md subtask 7: LIBRARY creates, changes, extracts
 	// from, and lists libraries (Console.Library, internal/console/
 	// library.go).
 	g.Bind("LIBRARY", func(id int64, r *dcl.Result) error {
@@ -719,7 +719,7 @@ func (d *Dispatcher) bindGrammar() {
 		})
 	})
 
-	// docs/PHASE-74 - FORTRAN plan.md: FORTRAN compiles FORTRAN sources
+	// docs/planning/PHASE-74 - FORTRAN plan.md: FORTRAN compiles FORTRAN sources
 	// into MACRO-32 sources (dclcmd.Context.Fortran, internal/fortran).
 	g.Bind("FORTRAN", func(id int64, r *dcl.Result) error {
 		names := r.List("SOURCES")

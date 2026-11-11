@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// LIB$FID_TO_NAME (docs/PHASE-58, subtask 7; the survey's "FID_TO_NAME
+// LIB$FID_TO_NAME (docs/planning/PHASE-58, subtask 7; the survey's "FID_TO_NAME
 // (149)"), written from the 5.0 LIB$ manual (LIB-149):
 //
 //	LIB$FID_TO_NAME device-name ,file-id ,filespec [,filespec-length]

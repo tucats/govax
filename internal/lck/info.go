@@ -4,7 +4,7 @@ import (
 	"slices"
 )
 
-// What the lock database tells about itself (docs/PHASE-49.md): the
+// What the lock database tells about itself (docs/planning/PHASE-49.md): the
 // questions $GETLKI asks, and the "who waits for whom" that deadlock
 // detection follows.
 

@@ -3,7 +3,7 @@ package corevms
 import "github.com/tucats/govax/internal/vmserrors"
 
 // CLI is a process's command language interpreter as the LIB$ CLI
-// routines reach it (docs/PHASE-57): on VMS they call the CLI through the
+// routines reach it (docs/planning/PHASE-57): on VMS they call the CLI through the
 // $CLI service, whose request block no manual at hand describes, so govax
 // gives them this Go interface instead. dclshell gives one to each
 // process whose DCL is govax's (Environment.CLI): process 1, and each

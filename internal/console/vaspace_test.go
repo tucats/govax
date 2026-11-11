@@ -266,7 +266,7 @@ func TestCntreg(t *testing.T) {
 }
 
 // TestVASpace_assembledProgram runs testdata/asm/vaspace.asm
-// (docs/PHASE-26.md subtask 35): pages created, used, deleted (an access
+// (docs/planning/PHASE-26.md subtask 35): pages created, used, deleted (an access
 // violation caught by the program's handler), and created again empty.
 func TestVASpace_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)

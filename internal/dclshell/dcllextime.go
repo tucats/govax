@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The lexical functions on time (docs/PHASE-50 - DCL command
+// The lexical functions on time (docs/planning/PHASE-50 - DCL command
 // procedures.md, subtask 14; the User's Manual, 15.3 and 15.6): F$TIME
 // and F$CVTIME. The time is the system's (the console engine's clock,
 // as $GETTIM reads it).

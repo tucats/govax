@@ -152,7 +152,7 @@ func BuiltinSymbols() map[string]uint32 {
 // table, for instance, uses EXC$CHMK/EXC$PRIV/... as vector codes) 
 // expects it to already exist without a corresponding .SET in the source,
 // the same way it would in a freshly booted reference-tool console 
-// session — see docs/PHASE-11.md.
+// session — see docs/planning/PHASE-11.md.
 func (a *Assembler) seedBuiltinSymbols() {
 	for name, value := range builtinSymbols {
 		sym := a.symbols.create(name)

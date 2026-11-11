@@ -11,7 +11,7 @@ import (
 // ran on VMS 7.1: on a fresh volume, building the images with govax's
 // MACRO and LINK, each debugger session reading its commands from
 // DBG$INPUT and logging itself with SET LOG and SET OUTPUT LOG,VERIFY
-// (docs/PHASE-73 - trace trap.md, subtask 5). The session logs that VMS's
+// (docs/planning/PHASE-73 - trace trap.md, subtask 5). The session logs that VMS's
 // match (trace73Identical) are held to them whole; the others differ only
 // where internal/debugger's session oracle lists, and are checked for
 // being logged at all. RUN/DEBUG's $STATUS is VMS's, and the volume

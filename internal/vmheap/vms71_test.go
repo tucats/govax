@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// The rules VMS 7.1 showed (docs/PHASE-59, subtask 10; testdata/lib59),
+// The rules VMS 7.1 showed (docs/planning/PHASE-59, subtask 10; testdata/lib59),
 // each on its own.
 
 // FreeRange trusts the size it's given: part of a block, a block and

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The Phase 72 OTS$ oracle (docs/PHASE-72 - legacy images.md, subtask 6):
+// The Phase 72 OTS$ oracle (docs/planning/PHASE-72 - legacy images.md, subtask 6):
 // testdata/ots72's ots72.mar calls LIBRTL's OTS$ floating conversions,
 // moves, and dynamic strings, case by case, and prints what each
 // returned, signaled, and stored. vax/ots72-vax.txt is its output on VMS

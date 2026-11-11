@@ -15,7 +15,7 @@ import (
 )
 
 // TestVMSInitializeFidelity checks ods2's volume.Initialize against volumes
-// VMS 7.3 INITIALIZE made on the user's simh VAX (docs/PHASE-27.md): for
+// VMS 7.3 INITIALIZE made on the user's simh VAX (docs/planning/PHASE-27.md): for
 // each reference disk in testdata/disks/, it initializes a scratch volume
 // of the same size with the same label and compares the two block by block.
 // Everything must match except what VMS itself varies from volume to

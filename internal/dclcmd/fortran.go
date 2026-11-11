@@ -20,7 +20,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is the FORTRAN command (docs/PHASE-74 - FORTRAN plan.md,
+// This file is the FORTRAN command (docs/planning/PHASE-74 - FORTRAN plan.md,
 // Decision 18; subtask 2):
 //
 //	FORTRAN source[+source...][+library/LIBRARY][,...][/HOST] [/MACRO[=file] | /NOMACRO]
@@ -39,7 +39,7 @@ import (
 // a host file or a file on a mounted volume (rms.Session.Locate's rules),
 // a source named without a type is .FOR, and the MACRO file is by default
 // the source's name with the type MAR, beside the source. /LIST writes a
-// listing the same way, of type LIS, even after errors (docs/PHASE-85).
+// listing the same way, of type LIS, even after errors (docs/planning/PHASE-85).
 //
 // The compiler prints its own messages. A compilation with errors writes
 // no MACRO file (so a failed compilation never replaces a good one) and
@@ -61,7 +61,7 @@ import (
 // the two agree. govax's choice, unconfirmed.
 //
 // INCLUDE '(module)' searches, in order and unconfirmed (the VAX FORTRAN User
-// Manual isn't to hand; docs/PHASE-83 - FORTRAN and VMS.md, Decision 2): the
+// Manual isn't to hand; docs/planning/PHASE-83 - FORTRAN and VMS.md, Decision 2): the
 // libraries named with /LIBRARY in the source's +-list, the library or search
 // list the logical name FORT$LIBRARY names, SYS$LIBRARY:FORSYSDEF.TLB if
 // there is one, and last the definition modules built into govax

@@ -6,7 +6,7 @@ import (
 )
 
 // TestHostIdle: the time the console waits in the host while every
-// process waits (docs/PHASE-51, subtask 4) moves the quantum clock on
+// process waits (docs/planning/PHASE-51, subtask 4) moves the quantum clock on
 // by the host's time, but no further than the next timer, and not at
 // all with no timer; it is no process's CPU time.
 func TestHostIdle(t *testing.T) {

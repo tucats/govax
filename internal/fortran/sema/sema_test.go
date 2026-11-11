@@ -533,7 +533,7 @@ func TestErrors(t *testing.T) {
 		{"a function calling itself", []string{"FUNCTION F(X)", "CALL F", "END"}, "RECURSIVE@2:12"},
 
 		// RECURSIVE and RESULT (the HP Fortran manual's 8.5.1.1, 8.5.2.1, 8.11;
-		// docs/PHASE-89).
+		// docs/planning/PHASE-89).
 		{"a recursive subroutine calling itself", []string{"RECURSIVE SUBROUTINE S(N)", "IF (N .GT. 0) CALL S(N - 1)", "END"}, ""},
 		{"a recursive subroutine calling its entry point", []string{"RECURSIVE SUBROUTINE S(N)", "CALL E(N)", "ENTRY E(M)", "CALL S(M)", "END"}, ""},
 		{"a recursive subroutine's call counted", []string{"RECURSIVE SUBROUTINE S(N)", "CALL S", "END"}, "ARGCOUNT@2:12"},

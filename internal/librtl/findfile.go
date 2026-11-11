@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// LIB$FIND_FILE and LIB$FIND_FILE_END (docs/PHASE-58, subtask 3; the
+// LIB$FIND_FILE and LIB$FIND_FILE_END (docs/planning/PHASE-58, subtask 3; the
 // survey's "FIND_FILE (155) and FIND_FILE_END (159)"), written from the
 // 5.0 LIB$ manual (LIB-155, LIB-159, and section 2.7.4, "File Searching
 // Routines"):
@@ -29,7 +29,7 @@ import (
 // address, as the date and time contexts are (dtcontext.go).
 //
 // What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
-// docs/PHASE-58's subtask 8):
+// docs/planning/PHASE-58's subtask 8):
 //
 //   - A new search starts on the first call, when filespec's text isn't
 //     the last call's (compared as given), and on every call with

@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Dynamic strings (docs/PHASE-54, "Dynamic strings"): LIB$SGET1_DD,
+// Dynamic strings (docs/planning/PHASE-54, "Dynamic strings"): LIB$SGET1_DD,
 // LIB$SFREE1_DD, LIB$SFREEN_DD, and their JSB entries.
 //
 // A dynamic string is a class D descriptor whose text lives in the heap:

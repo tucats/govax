@@ -10,7 +10,7 @@ import (
 
 // String renders dec in the syntax internal/asm's Assemble can parse back
 // in: "MNEMONIC OP1,OP2,...". This is what makes the round-trip property
-// in docs/PHASE-11.md's deliverables checkable: assemble a fixture,
+// in docs/planning/PHASE-11.md's deliverables checkable: assemble a fixture,
 // disassemble each instruction, reassemble the disassembly, and compare
 // bytes. An entry mask is ".ENTRY NAME,^M<...>".
 func (dec Decoded) String() string {

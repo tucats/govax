@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Hibernation and wakeups (docs/PHASE-26.md subtask 14): $HIBER, $WAKE,
+// Hibernation and wakeups (docs/planning/PHASE-26.md subtask 14): $HIBER, $WAKE,
 // $SCHDWK, and $CANWAK.
 //
 // Hibernation is VMS's simplest way for a process to sleep until someone
@@ -24,8 +24,8 @@ import (
 // On VMS, $WAKE and $SCHDWK usually come from *another* process (a
 // server waking a client), or from an AST routine in the same process,
 // interrupting its own $HIBER. $WAKE reaches any process in the process
-// table (docs/PHASE-44.md, subtask 4), as do $SCHDWK and $CANWAK
-// (docs/PHASE-45.md, subtask 9), whose timer queue entries go to the
+// table (docs/planning/PHASE-44.md, subtask 4), as do $SCHDWK and $CANWAK
+// (docs/planning/PHASE-45.md, subtask 9), whose timer queue entries go to the
 // target's own queue, expired by the scheduler with every process's.
 // With the scheduler, a hibernating process is in the HIB state, giving
 // the CPU to others until its wakeup is pending (waits.go).

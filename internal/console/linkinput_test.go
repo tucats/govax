@@ -12,7 +12,7 @@ import (
 
 // TestLinkOptionsInput runs LINKs whose options come from SYS$INPUT, a
 // procedure's data lines, and from a file, with verification on
-// (docs/PHASE-68's subtask 3). As in VMS's log (testdata/link68), each
+// (docs/planning/PHASE-68's subtask 3). As in VMS's log (testdata/link68), each
 // options line shows as LINK reads it, and a line in error stops LINK
 // with OPTSYNERR and the part in error quoted. The data lines LINK didn't
 // read are DCL's to skip (SKPDAT), not commands. An option govax's LINK

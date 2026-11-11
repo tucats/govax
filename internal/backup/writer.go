@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-// Writing a save set (docs/PHASE-69 - backup save sets.md, subtask 11),
+// Writing a save set (docs/planning/PHASE-69 - backup save sets.md, subtask 11),
 // laid out as VMS V7.1's BACKUP V6.2 lays one out. Every rule here was
 // read off the probe's save sets (testdata/backup69/vax), which the
 // tests rewrite byte for byte from what Read makes of them:

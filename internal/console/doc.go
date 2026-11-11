@@ -1,5 +1,5 @@
-// Package console is govax's front end (docs/PHASE-08.md, and
-// docs/PHASE-52 - console package split.md for its present shape): a
+// Package console is govax's front end (docs/planning/PHASE-08.md, and
+// docs/planning/PHASE-52 - console package split.md for its present shape): a
 // Console is a machine (internal/machine) and its DCL
 // (internal/dclshell), and a Dispatcher routes each command line typed
 // or read to whichever reads it now: the interactive assembler (ASM's

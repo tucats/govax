@@ -8,7 +8,7 @@ import (
 )
 
 // Tests of the source lines the debugger shows below a break or a step
-// (docs/PHASE-42.md, subtask 8). The expected text is what the VMS 7.3
+// (docs/planning/PHASE-42.md, subtask 8). The expected text is what the VMS 7.3
 // debugger showed in the probe's logs (testdata/dbgcmd/vax/*.dlg).
 
 // sourceSession is the probe session with SET SOURCE pointing at the

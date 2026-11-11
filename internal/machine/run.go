@@ -33,7 +33,7 @@ const (
 
 // RunOptions holds RUN's qualifiers: /[NO]INIT, /[NO]DEBUG (/STEP,
 // /BREAK), /NOEXECUTE, and the file's /HOST. console_run read at most one,
-// leading qualifier; the DCL grammar (docs/PHASE-37.md) reads any
+// leading qualifier; the DCL grammar (docs/planning/PHASE-37.md) reads any
 // combination (commands.go's runOptions).
 type RunOptions struct {
 	RunInits  bool     // /INIT (run each dependency's LIB$INITIALIZE); /NOINIT is the same as the zero value
@@ -159,7 +159,7 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 // runsUnderDebugger decides whether RUN starts the debugger on the image
 // main. An image with no debug symbol table (linked /NOTRACEBACK) runs
 // without it, however RUN was asked, as the VMS debugger does for such an
-// image (docs/PHASE-42.md, subtask 1's probe). Otherwise /DEBUG starts it,
+// image (docs/planning/PHASE-42.md, subtask 1's probe). Otherwise /DEBUG starts it,
 // /NODEBUG doesn't, and with neither it starts for an image linked
 // /DEBUG.
 func (m *Machine) runsUnderDebugger(main *ICB, choice RunDebug) bool {
@@ -377,7 +377,7 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 	code = append(code, EncodeCalls(0, addr)...)
 
 	// VMS's image activator calls $EXIT with whatever main returned, so
-	// the image's exit handlers run (docs/PHASE-26.md subtask 19). $EXIT
+	// the image's exit handlers run (docs/planning/PHASE-26.md subtask 19). $EXIT
 	// doesn't return: it ends the image by returning from this driver's
 	// own console call frame. It needs the P1 vector's SYS$EXIT stub in
 	// memory; without one, the driver just returns main's status.
@@ -486,7 +486,7 @@ func EncodeCalls(argc, target uint32) []byte {
 }
 
 // ActivateCreatedImage is the System's ActivateImage hook (newRTL): the
-// startup of a process $CREPRC created (docs/PHASE-45.md, subtask 5)
+// startup of a process $CREPRC created (docs/planning/PHASE-45.md, subtask 5)
 // activates the process's image into its own P0, as RUN activates one
 // into process 1's, and builds its IMAGE$INIT driver, running
 // LIB$INITIALIZE as RUN does by default. It returns the driver's address.
@@ -547,7 +547,7 @@ func (m *Machine) imageCompletion() error {
 // (User's Manual §11.3.5, §11.4) it deletes the user-mode names in the
 // process table, such as those DEFINE/USER_MODE made for the image that
 // just ended. The RTL's own per-image state (the files the image left
-// open, user-mode device allocations, docs/PHASE-26.md) is cleaned up by
+// open, user-mode device allocations, docs/planning/PHASE-26.md) is cleaned up by
 // Environment.ImageRundown.
 func (m *Machine) ImageRundown() {
 	if n, err := m.processOneLogicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {

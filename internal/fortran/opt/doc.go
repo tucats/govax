@@ -1,5 +1,5 @@
 // Package opt is the FORTRAN compiler's optimizer: what /OPTIMIZE adds between
-// lowering and the code generator (docs/PHASE-84 - FORTRAN optimizer.md).
+// lowering and the code generator (docs/planning/PHASE-84 - FORTRAN optimizer.md).
 //
 // # What an optimizer may do
 //

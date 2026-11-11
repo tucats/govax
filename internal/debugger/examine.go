@@ -9,7 +9,7 @@ import (
 )
 
 // This file is the debugger's EXAMINE command in its /INSTRUCTION form
-// (docs/PHASE-42.md, subtask 9; the data forms are subtask 10's, in
+// (docs/planning/PHASE-42.md, subtask 9; the data forms are subtask 10's, in
 // data.go), and the display modes and radix it follows.
 //
 // The VMS debugger's EXAMINE shows what is at a location. With

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// MTHRTL, VMS's mathematics library (docs/PHASE-77 - MTHRTL.md): LINK
+// MTHRTL, VMS's mathematics library (docs/planning/PHASE-77 - MTHRTL.md): LINK
 // finds its routines in the table captured from VMS 7.1's image, so a
 // program that calls one links with no MTHRTL.EXE anywhere. Every entry
 // has a stub of its kind: all have their routines but MTH$$REDUCE_, internal to VMS's

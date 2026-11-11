@@ -25,7 +25,7 @@ func newCommandDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 }
 
 // TestCommands_print checks PRINT's and ECHO's lists of strings and
-// expressions, now read by the grammar (docs/PHASE-37.md).
+// expressions, now read by the grammar (docs/planning/PHASE-37.md).
 func TestCommands_print(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 
@@ -143,7 +143,7 @@ func TestCommands_removed(t *testing.T) {
 
 // TestCommands_goIsNotConsole checks that GO and its spellings, and
 // (once the microkernel is in place) ASM are the debugger's commands: the
-// console's grammar has no GO (docs/PHASE-42.md's command split test
+// console's grammar has no GO (docs/planning/PHASE-42.md's command split test
 // checks the debugger has them). The console's CALL is DCL's, which calls
 // a procedure's subroutine (dclcall.go), and has no /STEP.
 func TestCommands_goIsNotConsole(t *testing.T) {
@@ -236,7 +236,7 @@ func TestCommands_saveLoad(t *testing.T) {
 }
 
 // TestCommands_at checks @'s spellings, that the console has no INCLUDE
-// (docs/PHASE-50 - DCL command procedures.md), and RunCommandLine, which
+// (docs/planning/PHASE-50 - DCL command procedures.md), and RunCommandLine, which
 // took over INCLUDE/COMMAND_LINE.
 func TestCommands_at(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
@@ -290,7 +290,7 @@ func TestCommands_at(t *testing.T) {
 
 // TestCommands_set checks SET's grammar: negated keywords and its
 // sub-forms' values. SET has no name=value form: DCL's assignments
-// replaced it (docs/PHASE-50).
+// replaced it (docs/planning/PHASE-50).
 func TestCommands_set(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 

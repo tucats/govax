@@ -8,7 +8,7 @@ import (
 )
 
 // Tests of STEP and SET/SHOW STEP as the VMS debugger has them
-// (docs/PHASE-42.md, subtask 7), against the session the VMS 7.3 debugger
+// (docs/planning/PHASE-42.md, subtask 7), against the session the VMS 7.3 debugger
 // ran on the probe's DBGCMD image (testdata/dbgcmd/vax/step.dlg). The
 // log also shows the source line after each step (subtask 8) and SHOW
 // CALLS and EXAMINE (later subtasks); these tests check the lines STEP

@@ -3,7 +3,7 @@ package cpu
 import "math/big"
 
 // ADDP4, ADDP6, SUBP4, SUBP6, MULP, DIVP, and ASHP: packed decimal
-// arithmetic (docs/PHASE-35.md, subtask 11). See decimal.go for the
+// arithmetic (docs/planning/PHASE-35.md, subtask 11). See decimal.go for the
 // strings, their signs, overflow, and how a fault part way is handled.
 //
 // Each computes the exact result from its sources' values, then stores it

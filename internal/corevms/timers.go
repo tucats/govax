@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $SETIMR and $CANTIM (docs/PHASE-26.md subtask 11): the process's timer
+// $SETIMR and $CANTIM (docs/planning/PHASE-26.md subtask 11): the process's timer
 // queue.
 //
 // The timers are the RTL's own — the Go equivalent of the VMS executive's
@@ -26,7 +26,7 @@ import (
 // path is what subtask 11 started with, when there were no ASTs and
 // event flags were only visible through services; it remains for code
 // driven without an engine. Those two expire only the running process's
-// timers. With the scheduler (docs/PHASE-44.md, subtask 5), every
+// timers. With the scheduler (docs/planning/PHASE-44.md, subtask 5), every
 // process's are expired at each scheduling call (pollEvents, waits.go),
 // which comes no later than the next timer of any process is due
 // (System.budget), and an idle CPU moves time on to the next one

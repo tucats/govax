@@ -8,7 +8,7 @@ import "github.com/tucats/govax/internal/fortran/ast"
 // calls: a routine gets only addresses and nothing of what's at them, so the
 // compiler chooses among FTNRTL's routines by the arguments it can see, as FORRTL
 // has its own for each (FOR$DATE and FOR$DATE_T_DS, FOR$IDATE and FOR$JDATE, ...;
-// docs/PHASE-83 - FORTRAN and VMS.md, Part A). A symbol of its own, in no unit's
+// docs/planning/PHASE-83 - FORTRAN and VMS.md, Part A). A symbol of its own, in no unit's
 // table, stands for the chosen routine. As for any routine, a unit's own of the
 // name wins, and so does EXTERNAL DATE, a program's way of saying it has its own
 // in another file: the callers only come here for a name the unit hasn't

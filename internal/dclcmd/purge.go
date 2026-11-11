@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements the console PURGE command (docs/PHASE-23.md,
+// This file implements the console PURGE command (docs/planning/PHASE-23.md,
 // subtask 7) — the operator-facing half of "trim old versions of a name
 // down to a keep count". The actual work (glob-matching, the group-by-
 // directory/PurgeVersions loop) already lives in the sibling internal/rms

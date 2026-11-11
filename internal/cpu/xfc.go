@@ -11,14 +11,14 @@ import (
 // XFC (opcode 0xFC) selector codes, matching emul_xfc.c's case labels. Not a
 // real VAX ISA instruction — eVAX's own escape hatch into console I/O, DCL
 // parsing, and RTL system-service/shim dispatch. Deferred entirely by Phase
-// 07 (docs/PHASE-07.md's open questions); implemented here per Phase 10's own
+// 07 (docs/planning/PHASE-07.md's open questions); implemented here per Phase 10's own
 // scope note.
 const (
 	xfcConsoleWrite = 0x01
 	xfcConsoleRead  = 0x02
 	xfcConsoleCmd   = 0x03
 	xfcConsolePut   = 0x04 // govax's own; not in eVAX (docs/PERFORMANCE.md, Study 1 R1)
-	xfcJSBShim      = 0x05 // govax's own: a shim reached by JSB (docs/PHASE-54)
+	xfcJSBShim      = 0x05 // govax's own: a shim reached by JSB (docs/planning/PHASE-54)
 	xfcQuitEmulator = 0x78
 	xfcP1Vector     = 0x7A
 	xfcHaltSilent   = 0x7B
@@ -268,17 +268,17 @@ func emulXfcP1Vector(e *Engine) error {
 // code, matching emul_xfc.c's `return shim()`. See emulXfcP1Vector's doc
 // comment on setting R0 even when a handled call also reports an error.
 // A shim that waits (ErrServiceWait: LIB$PUT_OUTPUT to a full mailbox,
-// docs/PHASE-46.md) runs again: the XFC is re-executed, with R0 still
+// docs/planning/PHASE-46.md) runs again: the XFC is re-executed, with R0 still
 // selecting it. A shim may also ask for a procedure to be called (a
 // *ServiceCall), as a service may: an image's call, after which the
 // shim's caller puts its own registers back (the subprocess CLI,
-// docs/PHASE-48.md); a tail call, which returns past the XFC
-// (LIB$SHOW_TIMER's action routine, docs/PHASE-55); or a plain call,
+// docs/planning/PHASE-48.md); a tail call, which returns past the XFC
+// (LIB$SHOW_TIMER's action routine, docs/planning/PHASE-55); or a plain call,
 // which returns to this XFC with the procedure's R0, where the services
 // find the shim waiting for it by its frame rather than by R0 (a LIB$
-// routine's callback, docs/PHASE-58; corevms's callback.go). And a
+// routine's callback, docs/planning/PHASE-58; corevms's callback.go). And a
 // shim may end the image, as $EXIT does (ErrImageExit, with r0 its
-// status): the subprocess CLI's Ctrl/Y AST does (docs/PHASE-51).
+// status): the subprocess CLI's Ctrl/Y AST does (docs/planning/PHASE-51).
 func emulXfcShim(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
@@ -346,7 +346,7 @@ func emulXfcVM(e *Engine, code uint32) error {
 
 // emulXfcJSBShim is XFC$JSBSHIM: the shim of a routine reached by JSB,
 // whose arguments are in R0, R1, R2, ... rather than an argument list
-// (docs/PHASE-54, "The JSB entry points"). R0 holds the first argument,
+// (docs/planning/PHASE-54, "The JSB entry points"). R0 holds the first argument,
 // so the stub can't pass the shim's code there as a CALL stub does:
 //
 //	PUSHL  #code

@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Events reported to the scheduler (docs/PHASE-46.md, subtask 1): an
+// Events reported to the scheduler (docs/planning/PHASE-46.md, subtask 1): an
 // I/O completion, or a timer's expiry, ends a waiting process's wait
 // when it happens, with the event's boost, rather than at the
 // scheduler's next look at its waiters.

@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The Phase 80 probe (docs/PHASE-80 - FORTRAN formatted IO.md, subtask 2):
+// The Phase 80 probe (docs/planning/PHASE-80 - FORTRAN formatted IO.md, subtask 2):
 // testdata/for80's for80.mar calls FORRTL's statement routines, case by case.
 // VMS's run of it is FTNRTL's requirement.
 

@@ -10,7 +10,7 @@ import (
 )
 
 // This file is ANALYZE/IMAGE's report of an image's header
-// (docs/PHASE-40.md): the fixed header and its blocks, then each image
+// (docs/planning/PHASE-40.md): the fixed header and its blocks, then each image
 // section descriptor. The fixup section's report is in imagefix.go.
 
 // ImageOptions are the ANALYZE/IMAGE choices that change a report.
@@ -130,7 +130,7 @@ var (
 
 // How many lines each kind of heading needs left on a page to be written
 // there (Line.Keep), reconstructed from the fixtures' page breaks
-// (docs/PHASE-40.md, "Page layout").
+// (docs/planning/PHASE-40.md, "Page layout").
 const (
 	keepImageItem  = 3
 	keepImageFlags = 3
@@ -197,7 +197,7 @@ func (a *imageAnalyzer) header() {
 		a.line("\t\t\tmatch control: " + match)
 	}
 
-	// VMS V1's format, 02.01, is read too (docs/PHASE-72 - legacy
+	// VMS V1's format, 02.01, is read too (docs/planning/PHASE-72 - legacy
 	// images.md); what VMS's ANALYZE says of it is unconfirmed.
 	if img.MajorID != vmsimage.FormatMajor || img.MinorID != vmsimage.FormatLatest && !img.Legacy() {
 		a.fail("Image format %s.%s is not the VAX image format, 02.05.", img.MajorID, img.MinorID)

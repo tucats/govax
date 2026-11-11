@@ -96,7 +96,7 @@ func (t Type) String() string {
 // passes the address of a place for it; and a CHARACTER value goes to the
 // place a class S descriptor describes, which the caller passes, so the
 // descriptor also tells a CHARACTER*(*) function its length (Decision 3 of
-// docs/PHASE-79 - FORTRAN control flow and subprograms.md).
+// docs/planning/PHASE-79 - FORTRAN control flow and subprograms.md).
 func (t Type) HiddenResult() bool {
 	return t.Kind == Character || t.Size > 8
 }
@@ -247,7 +247,7 @@ func (t Type) part() Type {
 }
 
 // format is the VAX floating format of a REAL type, or of a COMPLEX
-// type's parts, in the unit being analyzed (Decision 16 of docs/PHASE-74 -
+// type's parts, in the unit being analyzed (Decision 16 of docs/planning/PHASE-74 -
 // FORTRAN plan.md): REAL*4 is F_floating, REAL*8 D_floating, or G_floating
 // with /G_FLOATING (section 1.4.3: the command's qualifier, or the unit's
 // OPTIONS statement), REAL*16 H_floating. A unit has one format for REAL*8,

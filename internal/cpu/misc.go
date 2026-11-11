@@ -196,7 +196,7 @@ func emulPopr(e *Engine, d *Decoded) error {
 // code checking a caller's argument with mode 0 checks the caller's mode.
 // The length is zero-extended: the last byte is base+ZEXT(len)-1.
 //
-// Matching the C source's VM_NOSIGNAL translation mode (see docs/PHASE-07.md's
+// Matching the C source's VM_NOSIGNAL translation mode (see docs/planning/PHASE-07.md's
 // design notes), neither byte test raises a real fault regardless of why it
 // failed -- an access violation and a translation-not-valid both simply mean
 // "not accessible" here. The manual's own Note 4 describes a genuine
@@ -254,7 +254,7 @@ func emulProbe(e *Engine, d *Decoded) error {
 // emulMovpsl is MOVPSL: writes the whole PSL to the destination operand,
 // port of emul_misc.c's emul_movpsl. write_psl_bits (syncing a cached "wide"
 // bitfield copy purely for C bitfield-access speed) has no Go equivalent to
-// call -- see docs/PHASE-01.md's design notes -- since registers.PSL is already
+// call -- see docs/planning/PHASE-01.md's design notes -- since registers.PSL is already
 // the single canonical representation.
 func emulMovpsl(e *Engine, d *Decoded) error {
 	return d.Operands[0].Store(e.cpu, e.mem, uint64(e.cpu.PSL()))

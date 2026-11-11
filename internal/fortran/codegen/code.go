@@ -41,7 +41,7 @@ type Item struct {
 
 // Code is a routine's code as a list, between the code generator's choosing
 // instructions and its writing them: what an optimizer's instruction pass
-// works on (Decision 4 of docs/PHASE-84 - FORTRAN optimizer.md). Written with
+// works on (Decision 4 of docs/planning/PHASE-84 - FORTRAN optimizer.md). Written with
 // nothing changed, it is exactly the text the generator chose.
 //
 // Only a routine's body is here. Its entry points but the first, and the start
@@ -198,7 +198,7 @@ func (it *Item) Fits(d int) bool {
 // Bound is an upper bound on the bytes the item assembles to. A pass decides
 // that a branch reaches by adding these up, so a bound must never be too small,
 // and it is close enough to what MACRO chooses that a branch that could reach
-// mostly does (Decision 5 of docs/PHASE-84 - FORTRAN optimizer.md). A test holds
+// mostly does (Decision 5 of docs/planning/PHASE-84 - FORTRAN optimizer.md). A test holds
 // it to what MACRO assembles (internal/fortran/opt's TestBoundsHold).
 func (c *Code) Bound(it *Item) int {
 	if it.Kind != Instruction {

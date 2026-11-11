@@ -227,7 +227,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		case a.unit.Recursive:
 			// A recursive function's name, or an entry point's, with an
 			// argument list is a call: its value without one (Fortran 90's
-			// rule for a function without RESULT, 12.5.2.2; docs/PHASE-89's
+			// rule for a function without RESULT, 12.5.2.2; docs/planning/PHASE-89's
 			// answer 2). A substring of it is a Substring, not an Apply.
 			return a.selfReference(s, s.Type, e)
 		default:

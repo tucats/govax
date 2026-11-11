@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The logical-name system services (docs/PHASE-25.md subtask 8), all thin
+// The logical-name system services (docs/planning/PHASE-25.md subtask 8), all thin
 // wrappers over the shared internal/lnm database in env.Logicals:
 //
 //   - $CRELNM, $DELLNM, $TRNLNM and $CRELNT, as the VMS System Services
@@ -20,7 +20,7 @@ import (
 //     whose table numbers 0/1/2 select the system, group and process
 //     tables.
 //
-// Privileges (docs/PHASE-26.md subtask 38): $CRELNM, $DELLNM and $CRELNT
+// Privileges (docs/planning/PHASE-26.md subtask 38): $CRELNM, $DELLNM and $CRELNT
 // use an explicitly given access mode as-is only if the caller holds
 // SYSNAM; otherwise they "maximize" it with the caller's mode (the less
 // privileged of the two), and an omitted one is the caller's. The old
@@ -579,7 +579,7 @@ func (env *Environment) deleteNames(tabnam, lognam string, mode lnm.Mode) (uint3
 
 // SetSupervisorLogical defines lognam in the first table tabnam
 // designates at supervisor mode, whatever the caller's mode and
-// privileges (LIB$SET_LOGICAL, docs/PHASE-57: "does not require the
+// privileges (LIB$SET_LOGICAL, docs/planning/PHASE-57: "does not require the
 // caller to be executing in supervisor mode"). Its value is the item
 // list at itmlst, $CRELNM's, when itmlst isn't 0; then attr may hold
 // only the name's attributes (LNM$M_CONFINE, LNM$M_NO_ALIAS), since each

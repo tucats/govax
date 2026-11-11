@@ -1,6 +1,6 @@
 package dclshell
 
-// What DCL's HELP needs of the DCL running it (docs/PHASE-90 - VMS help.md,
+// What DCL's HELP needs of the DCL running it (docs/planning/PHASE-90 - VMS help.md,
 // subtask 6): where its answers come from, and whether its output goes to
 // a file.
 

@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Deleting files with the disk's $QIO (docs/PHASE-26.md subtask 44).
+// Deleting files with the disk's $QIO (docs/planning/PHASE-26.md subtask 44).
 //
 // # IO$_DELETE
 //

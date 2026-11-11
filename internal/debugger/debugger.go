@@ -22,7 +22,7 @@ const Prompt = "DBG> "
 // machine.Debugger so that the console can start it and route command
 // lines to it.
 //
-// Subtasks of docs/PHASE-42.md move the rest of the debugging state here
+// Subtasks of docs/planning/PHASE-42.md move the rest of the debugging state here
 // (the breakpoints, the step mode, the radix) as they move the commands.
 type Debugger struct {
 	// Machine is the machine this debugger works on. Its output (the
@@ -290,7 +290,7 @@ func Install(front Console, g *dcl.Grammar) *Debugger {
 func (d *Debugger) Active() bool { return d.active }
 
 // Start begins a session, or runs what the activation names under the
-// debugger (docs/PHASE-42.md, Decision 2).
+// debugger (docs/planning/PHASE-42.md, Decision 2).
 //
 //   - ActivateAttach just opens the session: the DBG> prompt on the
 //     machine as it stands.
@@ -333,7 +333,7 @@ func (d *Debugger) start(a machine.Activation) error {
 	nested := d.running > 0
 
 	// A run stopped in another process left the CPU there; the debugger
-	// runs process 1 (docs/PHASE-44.md, subtask 9). A nested run is in
+	// runs process 1 (docs/planning/PHASE-44.md, subtask 9). A nested run is in
 	// whatever process its outer run is.
 	if !nested {
 		if err := d.Machine.ReturnToProcessOne(); err != nil {

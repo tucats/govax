@@ -103,7 +103,7 @@ func TestFileTable_releaseFreesSlotForReuse(t *testing.T) {
 
 // TestFileTable_releaseUnknownIFIIsNoop confirms Release on an IFI that
 // was never allocated (including a reserved 0-3 slot) doesn't panic —
-// SYS$CLOSE (a later docs/PHASE-22.md subtask) should be able to call
+// SYS$CLOSE (a later docs/planning/PHASE-22.md subtask) should be able to call
 // this defensively without first having to prove the IFI is valid.
 func TestFileTable_releaseUnknownIFIIsNoop(t *testing.T) {
 	ft := NewFileTable(nil)

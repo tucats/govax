@@ -9,7 +9,7 @@ import (
 // say what a name is, or ask that it be kept.
 //
 // SAVE asks that a name keep its value between calls. Every variable here is
-// static storage (Decision 10 of docs/PHASE-74 - FORTRAN plan.md), and "the
+// static storage (Decision 10 of docs/planning/PHASE-74 - FORTRAN plan.md), and "the
 // definitions of data entities are retained automatically by VAX FORTRAN"
 // (section 4.14's note), so SAVE changes nothing; only its list is checked.
 //
@@ -101,7 +101,7 @@ func (a *analyzer) external(item *ast.AttrItem) {
 // .EXTRN, which makes LINK find it. A program's own EXTERNAL statement always
 // does, used or not, since that is how a BLOCK DATA unit gets linked. One from
 // a text library's module does only if the unit uses the name: $SYSSRVNAM names
-// every system service, and a unit calls few (docs/PHASE-83 - FORTRAN and
+// every system service, and a unit calls few (docs/planning/PHASE-83 - FORTRAN and
 // VMS.md, Decision 5).
 func (s *Symbol) Linked() bool {
 	return s.External && s.Dummy == 0 && (s.ownExternal || s.passed || s.Class != External)

@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// TestLogicalNames_fileCommands is docs/PHASE-25.md subtask 7's console
+// TestLogicalNames_fileCommands is docs/planning/PHASE-25.md subtask 7's console
 // end-to-end test: two real containers mounted through DCL, and the file
 // commands reaching them through logical names, search lists, the
 // DISK$label names MOUNT defines, and SYS$DISK.
@@ -110,7 +110,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 	wantDispatchStatus(t, d, "DISMOUNT _BOTH:", vmserrors.SS_DEVNOTMOUNT)
 }
 
-// TestLNMRoundTrip_assembledProgram is docs/PHASE-25.md subtask 8's
+// TestLNMRoundTrip_assembledProgram is docs/planning/PHASE-25.md subtask 8's
 // acceptance test: testdata/asm/lnm_roundtrip.asm, assembled and run as
 // real VAX code, creates a logical name with $CRELNM, reads it back with
 // $TRNLNM, writes a record through it with RMS (MYOUT -> SYS$OUTPUT ->

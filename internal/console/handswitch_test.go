@@ -17,7 +17,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 43's closing test (docs/PHASE-43.md, subtask 12): two processes,
+// Phase 43's closing test (docs/planning/PHASE-43.md, subtask 12): two processes,
 // switched by hand.
 //
 // The test does by hand what Phase 44's scheduler will do: boots as

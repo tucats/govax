@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The integer routines (docs/PHASE-53, subtask 7): LIB$ADDX, LIB$SUBX,
+// The integer routines (docs/planning/PHASE-53, subtask 7): LIB$ADDX, LIB$SUBX,
 // LIB$EMUL, LIB$EDIV, and LIB$ADAWI make the VAX's extended-precision and
 // interlocked integer instructions callable. The arithmetic is the CPU's
 // own (cpu.AddWithCarry, cpu.SubtractWithBorrow, cpu.ExtendedMultiply,

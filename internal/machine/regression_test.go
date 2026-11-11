@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// This file is Phase 12's own named deliverable (docs/PHASE-12.md): a
+// This file is Phase 12's own named deliverable (docs/planning/PHASE-12.md): a
 // fixture-driven regression suite exercising testdata/asm/*.asm (via the
 // ASM/CALL console commands, Phase 12 sub-phases 1-2) end to end, alongside
 // the exe-fixture milestone check already covered by run_test.go's
@@ -46,7 +46,7 @@ func runAsmRegression(t *testing.T, fixture, entrySymbol string, maxSteps int) (
 }
 
 // TestRegression_movq checks movq.asm's quadword move/store round trip
-// byte-for-byte (docs/PHASE-11.md's own testdata/asm fixture list). Only
+// byte-for-byte (docs/planning/PHASE-11.md's own testdata/asm fixture list). Only
 // R0 and the data2 memory side effect are checked, not R4/R5 (which
 // movq.asm's own ".entry main, ^m<r4,r5,r6,r7>" mask saves on entry and
 // restores on RET, so they're back to their pre-call value of 0 by the
@@ -84,7 +84,7 @@ func TestRegression_movq(t *testing.T) {
 }
 
 // TestRegression_movc3 checks movc3.asm's three repeated string moves land
-// the expected text and R0=1 (docs/PHASE-11.md's own fixture list).
+// the expected text and R0=1 (docs/planning/PHASE-11.md's own fixture list).
 func TestRegression_movc3(t *testing.T) {
 	c, err, hitCap := runAsmRegression(t, "movc3.asm", "MAIN", 1000)
 	if err != nil || hitCap {

@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// docs/PHASE-68 - link shareable images.md, subtask 11: RUN activates a
+// docs/planning/PHASE-68 - link shareable images.md, subtask 11: RUN activates a
 // program's shareable images (their placement, their own fixups, their
 // idents), checked against testdata/link68's runs R1 and R5 to R11 and
 // E7. These run VMS's own images; TestActivateGovaxShareableImages runs

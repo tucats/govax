@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 64's subtask 5 (docs/PHASE-64 - page file.md): the paging file
+// Phase 64's subtask 5 (docs/planning/PHASE-64 - page file.md): the paging file
 // quota. With paging on, the services that create pages charge them
 // against the job's PGFLQUOTA and stop with SS$_EXQUOTA when it runs
 // out, having made the pages before; deletion gives the charge back;

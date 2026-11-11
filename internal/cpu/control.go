@@ -12,7 +12,7 @@ func init() {
 // halting, unless DebugUserHalt is set (default: on, matching
 // initialization.c's alloc_vax default and emul_misc.c:215's
 // `!(vax.debug & DBG_USERHALT) && vax.pslw.cur_mod > 0` check), which lets
-// HALT stop the machine from any mode. See docs/PHASE-17.md sub-phase 2.
+// HALT stop the machine from any mode. See docs/planning/PHASE-17.md sub-phase 2.
 func emulHalt(e *Engine, d *Decoded) error {
 	if !e.cpu.DebugEnabled(registers.DebugUserHalt) && e.cpu.PSL().CurMod() != registers.Kernel {
 		return &Fault{Code: ExcPrivileged}

@@ -119,7 +119,7 @@ func TestDispatch_runHost(t *testing.T) {
 
 // TestRun_recordUpdates runs testdata/rms49/update.mar, a MACRO-32
 // program that uses $FIND, $UPDATE, $TRUNCATE, and $REWIND on a file on
-// a volume (docs/PHASE-49.md); it returns 999, or the step that failed.
+// a volume (docs/planning/PHASE-49.md); it returns 999, or the step that failed.
 func TestRun_recordUpdates(t *testing.T) {
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")

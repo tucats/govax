@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// A FORTRAN program's variables, in a program compiled with /DEBUG (docs/PHASE-85 -
+// A FORTRAN program's variables, in a program compiled with /DEBUG (docs/planning/PHASE-85 -
 // FORTRAN compiler usability.md, subtask 10).
 //
 // The debugger's language stays MACRO: the compiler writes no debugger records of

@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/vm"
 
-// Paging accounting (docs/PHASE-63 - working sets.md, subtask 8).
+// Paging accounting (docs/planning/PHASE-63 - working sets.md, subtask 8).
 //
 // # Page faults by kind
 //
@@ -115,7 +115,7 @@ func (f *FaultCounts) add(k faultKind) {
 
 // countFault counts a resolved fault of kind k on a process's own page
 // (P0 or P1): in its Process.PageFaults, $GETJPI's JPI$_PAGEFLTS, which
-// LIB$INIT_TIMER and its kind report (docs/PHASE-55, subtask 5), in its
+// LIB$INIT_TIMER and its kind report (docs/planning/PHASE-55, subtask 5), in its
 // counts by kind, and in the system's. A fault on a system (S0) page
 // belongs to no process, and isn't counted. VMS counts every fault a
 // working set sees, soft ones included, and so does govax with paging

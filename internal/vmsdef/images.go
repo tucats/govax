@@ -1,7 +1,7 @@
 package vmsdef
 
 // The symbols LINK finds in VMS's own files, as govax keeps them
-// (docs/PHASE-31.md). LINK reads a shareable image's symbols from the
+// (docs/planning/PHASE-31.md). LINK reads a shareable image's symbols from the
 // image file (SYS$SHARE:LIBRTL.EXE, say), and adds STARLET.OLB's modules
 // to a link, when it can find those files. When it can't, it uses these:
 // the same facts, captured once from the files by internal/vmsdef/gen, so
@@ -60,7 +60,7 @@ type SharedImageSection struct {
 
 // SharedImageSections are the image sections of shareable images in
 // SharedImages, for a link that places an image itself (LINK's BASE=,
-// docs/PHASE-68 - link shareable images.md, subtask 4) and maps each
+// docs/planning/PHASE-68 - link shareable images.md, subtask 4) and maps each
 // section through a global section ISD. They come from VMS's own output,
 // not the image files: testdata/link68/vax/exe1.ani, where VMS 7.1's LINK
 // placed LIBRTL as LIBRTL_001 (264 pages, ISD$K_SHRPIC) and LIBRTL_002

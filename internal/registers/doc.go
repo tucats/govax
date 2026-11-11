@@ -1,3 +1,3 @@
 // Package registers defines the core VAX machine state (registers, PSL,
-// condition codes) as an instantiated struct. See docs/PHASE-01.md.
+// condition codes) as an instantiated struct. See docs/planning/PHASE-01.md.
 package registers

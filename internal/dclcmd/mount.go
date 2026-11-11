@@ -12,7 +12,7 @@ import (
 )
 
 // This file implements the console MOUNT/DISMOUNT commands
-// (docs/PHASE-22.md, subtask 12) — the operator-facing half of "attach a
+// (docs/planning/PHASE-22.md, subtask 12) — the operator-facing half of "attach a
 // disk-image container file to a device name". The interesting work
 // (actually opening the container and reading its ODS-2 volume structure)
 // already lives in the sibling internal/rms package's MountTable
@@ -49,7 +49,7 @@ import (
 //     normally populated by an explicit DEFINE/DEVICE command), Mount
 //     auto-creates one classed as a disk, matching real VMS's own
 //     "MOUNT is how a lot of operators first make a device exist at all"
-//     workflow — see docs/PHASE-22.md's "Device model" design decision.
+//     workflow — see docs/planning/PHASE-22.md's "Device model" design decision.
 //     This only happens after the mount itself succeeds, so a failed
 //     MOUNT (bad path, corrupt volume, ...) never leaves a phantom disk
 //     device behind for a device name nothing is actually attached to.
@@ -71,7 +71,7 @@ import (
 // itself instead of guessing from a string.
 //
 // device may be a logical name ("DISK:") and is translated first; a
-// leading "_" suppresses that (docs/PHASE-25.md). Once mounted, the
+// leading "_" suppresses that (docs/planning/PHASE-25.md). Once mounted, the
 // volume's label is defined as the logical name DISK$label in the system
 // table, as VMS's MOUNT does, so DISK$label:[DIR]FILE reaches it.
 func (c *Context) Mount(device, path string, write bool) error {
@@ -206,7 +206,7 @@ func (c *Context) Dismount(device string) error {
 	}
 
 	// The system volume stays mounted for the whole session, as VMS's
-	// system disk does (docs/PHASE-87 - system volume.md). The second
+	// system disk does (docs/planning/PHASE-87 - system volume.md). The second
 	// line's wording is govax's: VMS's for this case is unconfirmed.
 	if c.Mounts.IsSystem(device) {
 		head := fmt.Sprintf("DISM-W-CANNOTDMT, %s: cannot be dismounted", device)

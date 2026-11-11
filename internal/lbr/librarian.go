@@ -9,7 +9,7 @@ import (
 
 // This file is what LIBRARY (VMS's LIBRARIAN) does to a library that
 // already exists, which it changes in place through LBRSHR rather than
-// laying out afresh (docs/PHASE-90 - VMS help.md, subtask 11e): a module
+// laying out afresh (docs/planning/PHASE-90 - VMS help.md, subtask 11e): a module
 // written whole by an Updater, LIBRARIAN's update history records and
 // their listing, and LIBRARY/DATA's rebuilt libraries. Round 3 of
 // testdata/help90 showed each, in VMS 7.1's H90T.TLB, WD1.HLB, and

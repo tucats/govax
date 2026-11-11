@@ -2,7 +2,7 @@ package corevms
 
 import iodev "github.com/tucats/govax/internal/io"
 
-// Per-process I/O counts (docs/PHASE-49.md, subtask 11): the accounting
+// Per-process I/O counts (docs/planning/PHASE-49.md, subtask 11): the accounting
 // statistics VMS keeps in the process header, PHD$L_BIOCNT (buffered
 // I/O operations) and PHD$L_DIOCNT (direct I/O operations). VAX/VMS
 // Internals and Data Structures, section 18.3.3, increments one of them

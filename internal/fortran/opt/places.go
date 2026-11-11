@@ -8,7 +8,7 @@ import (
 )
 
 // Places: which parts of memory an operand can be, so that a pass can ask whether
-// a store changes what a load reads (Decision 7 of docs/PHASE-84 - FORTRAN
+// a store changes what a load reads (Decision 7 of docs/planning/PHASE-84 - FORTRAN
 // optimizer.md).
 //
 // Names won't answer that. With

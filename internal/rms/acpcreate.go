@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// Creating files through the ACP (docs/PHASE-26.md subtask 43).
+// Creating files through the ACP (docs/planning/PHASE-26.md subtask 43).
 //
 // # What creating a file involves
 //

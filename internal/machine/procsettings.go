@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// The multiprocessing settings' keys (docs/PHASE-43.md; HELP CONFIG
+// The multiprocessing settings' keys (docs/planning/PHASE-43.md; HELP CONFIG
 // KEYS). Each must also be in cmd/govax/main.go's validConfigs.
 const (
 	SchedulerSetting = "vax.process.scheduler"
@@ -23,7 +23,7 @@ func processSettings() corevms.ProcessSettings {
 	ps := corevms.DefaultProcessSettings()
 
 	// The scheduler is on (the default) unless the setting says
-	// otherwise (Phase 48, Decision 5 in docs/PHASE-43.md).
+	// otherwise (Phase 48, Decision 5 in docs/planning/PHASE-43.md).
 	if settings.Exists(SchedulerSetting) {
 		ps.Scheduler = settings.GetBool(SchedulerSetting)
 	}

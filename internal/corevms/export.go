@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// What an RTL package needs from the Environment (docs/PHASE-34.md,
+// What an RTL package needs from the Environment (docs/planning/PHASE-34.md,
 // subtask 10). The routines of a shareable image like LIBRTL.EXE live in a
 // package of their own (internal/librtl); the process they run in -- its
 // CPU and memory, its call frames and condition dispatcher, its heap --

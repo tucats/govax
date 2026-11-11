@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// CONVERT (docs/PHASE-88 - keyed index files.md, subtask 10c; the Record
+// CONVERT (docs/planning/PHASE-88 - keyed index files.md, subtask 10c; the Record
 // Management Utilities manual's chapter 2): the records of up to 10 files copied
 // to one, changing their organization and format. The output is made from an FDL
 // file, or with the first input's attributes, unless it's to be an existing one.

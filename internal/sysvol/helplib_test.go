@@ -71,7 +71,7 @@ func (r *refreshTest) libraryOn(dir, name string) string {
 }
 
 // TestRefreshHelpLibrary walks a help library through the refresh's
-// cases by module (docs/PHASE-90 - VMS help.md, Decision 7), a refresh
+// cases by module (docs/planning/PHASE-90 - VMS help.md, Decision 7), a refresh
 // after each change.
 func TestRefreshHelpLibrary(t *testing.T) {
 	r := newRefreshTest(t)

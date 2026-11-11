@@ -28,7 +28,7 @@ func opcodeString(op cpu.Opcode) string {
 // extended opcodes the C source's OPC$_ symbols never registered. This is a
 // console-command-scope convenience, not an ISA-fidelity question, so it's
 // a deliberate improvement rather than something logged to
-// docs/DEVIATIONS.md — see docs/PHASE-18.md.
+// docs/DEVIATIONS.md — see docs/planning/PHASE-18.md.
 func lookupInstruction(name string) *cpu.Instruction {
 	return cpu.Instructions().ByName(strings.ToUpper(strings.TrimSpace(name)))
 }
@@ -177,7 +177,7 @@ func (d *Debugger) ShowInstructionBreakpoints() error {
 // instructionBreakpointHit reports whether the instruction about to execute
 // at the CPU's current PC has been flagged by SET BREAK/INSTRUCTION — the
 // Go equivalent of decode_opcode.c's own OP_DBG_BREAK check
-// (docs/PHASE-18.md). Peeking the opcode (Engine.PeekInstruction) rather
+// (docs/planning/PHASE-18.md). Peeking the opcode (Engine.PeekInstruction) rather
 // than running a real decode keeps this side-effect free: unlike the C
 // source, which fully decodes the instruction's operands (autoincrement/
 // autodecrement side effects included) before testing the flag, this port

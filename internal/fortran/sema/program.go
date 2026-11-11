@@ -59,7 +59,7 @@ type Unit struct {
 	// Recursive is set for a function or subroutine that may be active more
 	// than once at a time: its header says RECURSIVE, or /RECURSIVE or an
 	// OPTIONS statement's says so (the HP Fortran manual's 8.5.1.1;
-	// docs/PHASE-89 - reentrant FORTRAN.md). It may refer to itself and its
+	// docs/planning/PHASE-89 - reentrant FORTRAN.md). It may refer to itself and its
 	// entry points. A main program or block data subprogram never is.
 	Recursive bool
 

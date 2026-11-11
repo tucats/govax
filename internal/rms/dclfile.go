@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// The files DCL's OPEN opens (docs/PHASE-50 - DCL command procedures.md,
+// The files DCL's OPEN opens (docs/planning/PHASE-50 - DCL command procedures.md,
 // subtask 17): what READ, WRITE, and CLOSE need of RMS, called from Go
 // rather than through a FAB and a RAB in a process's memory.
 //

@@ -7,7 +7,7 @@ import (
 )
 
 // TestZeroPastEnd: an image section reads a block past its file's last
-// as zeros (docs/PHASE-66, question 4), where a $CRMPSC section's read
+// as zeros (docs/planning/PHASE-66, question 4), where a $CRMPSC section's read
 // fails; the file's own blocks read as they are, and other errors still
 // fail.
 func TestZeroPastEnd(t *testing.T) {

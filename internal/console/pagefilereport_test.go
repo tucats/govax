@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 )
 
-// Phase 64's subtask 7 (docs/PHASE-64 - page file.md): reporting. With
+// Phase 64's subtask 7 (docs/planning/PHASE-64 - page file.md): reporting. With
 // the modified page writer using the page file, SHOW MEMORY's page file
 // section shows its name, size, and the blocks in use, the writer's
 // write I/Os, and the pages committed; F$GETSYI's PAGEFILE_PAGE and

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The performance measurement routines (docs/PHASE-55, the survey's
+// The performance measurement routines (docs/planning/PHASE-55, the survey's
 // "Timers"; the 5.0 manual's section 2.5): LIB$INIT_TIMER records where
 // the process stands -- the time, its CPU time, its buffered and direct
 // I/O counts, and its page faults -- and LIB$SHOW_TIMER and

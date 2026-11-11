@@ -1,6 +1,6 @@
 package corevms
 
-// Argument counts of the system services (docs/PHASE-45.md, probe 1).
+// Argument counts of the system services (docs/planning/PHASE-45.md, probe 1).
 //
 // A service on VMS checks how many arguments its caller passed (the
 // argument count byte of the CALLS/CALLG argument list) and fails with

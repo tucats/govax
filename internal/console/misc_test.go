@@ -210,7 +210,7 @@ func TestZero_reinitializes(t *testing.T) {
 }
 
 // TestClearTB: a full translation-buffer flush plus a tries/hits/pflushes counter reset,
-// leaving the flush counter itself untouched -- see docs/PHASE-21.md.
+// leaving the flush counter itself untouched -- see docs/planning/PHASE-21.md.
 func TestClearTB(t *testing.T) {
 	c := newRunnableConsole(t)
 

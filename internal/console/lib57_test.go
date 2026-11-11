@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The Phase 57 probe (docs/PHASE-57, subtask 10): testdata/lib57's
+// The Phase 57 probe (docs/planning/PHASE-57, subtask 10): testdata/lib57's
 // lib57.com runs lib57.mar's groups of LIB$ CLI cases, each as a foreign
 // command, and shows DCL's state after each. vax/lib57.log is its log on
 // VMS, which govax's must match section by section (S1 to S9).

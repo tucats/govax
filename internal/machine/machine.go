@@ -61,7 +61,7 @@ type Machine struct {
 	FieldDots bool
 
 	// DebugNames, when set, is the Evaluator's Names: the debugger's names for what a
-	// program's symbols don't say (docs/PHASE-85, subtask 10). Nil for none.
+	// program's symbols don't say (docs/planning/PHASE-85, subtask 10). Nil for none.
 	DebugNames func(name string) (uint32, bool)
 	Verbose     bool
 
@@ -69,7 +69,7 @@ type Machine struct {
 	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
 	// it. STEP's own tracing follows a different, per-mode rule instead of
 	// this flag — see step.go's StepInto/StepOver/StepReturn doc comments
-	// and docs/PHASE-17.md sub-phases 6-7, docs/PHASE-18.md.
+	// and docs/planning/PHASE-17.md sub-phases 6-7, docs/planning/PHASE-18.md.
 	Trace bool
 
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
@@ -100,7 +100,7 @@ type Machine struct {
 	// reset by ZERO.
 	Devices *iodev.DeviceTable
 
-	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
+	// Mounts is docs/planning/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable): which VAX device names currently
 	// have a real disk-image container mounted on them, populated by the
 	// console MOUNT/DISMOUNT commands (internal/dclcmd/device.go). Built
@@ -171,7 +171,7 @@ type Machine struct {
 	// a since-wiped address space.
 	asmSession *asm.Assembler
 
-	// assemblerMode is vax.console.assembler_mode (docs/PHASE-19.md): once a
+	// assemblerMode is vax.console.assembler_mode (docs/planning/PHASE-19.md): once a
 	// bare "ASM" command sets this, Dispatcher.Dispatch hands every
 	// subsequent line straight to Console.AssembleInteractiveLine instead of
 	// the normal verb table/DCL grammar. Reset alongside asmSession (see above).
@@ -199,7 +199,7 @@ type Machine struct {
 	// prefix means none, matching find_image's own check.
 	SharePrefix string
 
-	// Paths is the search-path policy (docs/PHASE-15.md) every file-reading
+	// Paths is the search-path policy (docs/planning/PHASE-15.md) every file-reading
 	// method on Console (Include, Assemble, imageLoad, LoadROM, LoadNVRAM)
 	// resolves an unqualified name through: the name as given, then each of
 	// Paths' own search directories, then its embedded fallback. A nil
@@ -211,7 +211,7 @@ type Machine struct {
 
 	// OnUnhandled, when set, is told of every condition no handler
 	// continued, before VMS's catch-all acts on it. Returning true pauses
-	// the program there. The debugger sets it (docs/PHASE-42.md, subtask 5).
+	// the program there. The debugger sets it (docs/planning/PHASE-42.md, subtask 5).
 	OnUnhandled func(UnhandledException) bool
 
 	// OnSignal, when set, is told of every condition as it starts being
@@ -221,7 +221,7 @@ type Machine struct {
 
 	// DebugBuiltins, when set, resolves the debugger's built-in symbols in
 	// expressions (%CURLOC, %CURVAL, "^", "\\", ...; Evaluator.Builtins).
-	// The debugger sets it (docs/PHASE-42.md, subtask 20).
+	// The debugger sets it (docs/planning/PHASE-42.md, subtask 20).
 	DebugBuiltins func(name string) (uint32, bool, error)
 
 	// DebugRegister and DebugScoped, when set, are the evaluator's
@@ -393,11 +393,11 @@ func NewMachine(out io.Writer) *Machine {
 }
 
 // StartPageFile installs the page file as the system starts
-// (corevms.System.InstallPageFile; docs/PHASE-64 - page file.md, subtask
+// (corevms.System.InstallPageFile; docs/planning/PHASE-64 - page file.md, subtask
 // 8): cmd/govax calls it once STARTUP.COM has run, before any of the
 // user's commands, and from then on each new System (VMINIT, INIT, ZERO)
 // installs its own as it's made. With no page file configured, it's the
-// system volume's when that's mounted for writing (docs/PHASE-87 -
+// system volume's when that's mounted for writing (docs/planning/PHASE-87 -
 // system volume.md, Decision 8).
 func (m *Machine) StartPageFile() {
 	m.pageFileStarted = true
@@ -424,9 +424,9 @@ func (m *Machine) newRTL() *corevms.Environment {
 	}
 
 	sys := corevms.NewSystem(m.CPU, m.Mem, m.Devices, m.Mounts)
-	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
-	mthrtl.Register(sys.Shims()) // MTHRTL.EXE's (docs/PHASE-77 - MTHRTL.md)
-	lbrrtl.Register(sys.Shims()) // LBRSHR.EXE's (docs/PHASE-90 - VMS help.md)
+	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/planning/PHASE-34.md)
+	mthrtl.Register(sys.Shims()) // MTHRTL.EXE's (docs/planning/PHASE-77 - MTHRTL.md)
+	lbrrtl.Register(sys.Shims()) // LBRSHR.EXE's (docs/planning/PHASE-90 - VMS help.md)
 	m.unresolved = unresolvedStubs{}
 
 	// The old System's other processes are gone with it, and so is their
@@ -437,10 +437,10 @@ func (m *Machine) newRTL() *corevms.Environment {
 	sys.SetSysgen(sysgenSettings(m.paging))
 
 	// A process $CREPRC creates activates its image with the console's
-	// image activator (docs/PHASE-45.md, subtask 5).
+	// image activator (docs/planning/PHASE-45.md, subtask 5).
 	sys.ActivateImage = m.ActivateCreatedImage
 
-	// A deleted process's image state goes with it (docs/PHASE-45.md,
+	// A deleted process's image state goes with it (docs/planning/PHASE-45.md,
 	// subtask 6), and so does whatever the console keeps for it.
 	sys.ProcessDeleted = func(env *corevms.Environment) {
 		delete(m.otherImages, env)
@@ -452,7 +452,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	// The traceback dump names PCs from the main image's debug symbol
 	// table only: VMS's left shareable images' PCs unnamed, though one
-	// was linked with traceback (docs/PHASE-70 - traceback.md).
+	// was linked with traceback (docs/planning/PHASE-70 - traceback.md).
 	//
 	// A PC in system space is the system's code on VMS, which rule 1
 	// names from the image's last routine; in govax the only such code a
@@ -488,17 +488,17 @@ func (m *Machine) newRTL() *corevms.Environment {
 	}
 
 	// An AST routine returns to EXE$ASTRET in S0, as on VMS, once the
-	// stubs are in place (docs/PHASE-70 - traceback.md, subtask 9).
+	// stubs are in place (docs/planning/PHASE-70 - traceback.md, subtask 9).
 	sys.ASTExit = m.ASTExit
 
 	// $SETIMR's timers run on the engine's system time, the same time
-	// base as the interval clock (docs/PHASE-26.md subtask 11).
+	// base as the interval clock (docs/planning/PHASE-26.md subtask 11).
 	if m.Engine != nil {
 		sys.Clock = m.Engine.SystemTime
 		sys.BootTime = sys.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
 
 		// With vax.process.scheduler on, the System is the engine's
-		// scheduling hook (docs/PHASE-44.md); off, the engine has none
+		// scheduling hook (docs/planning/PHASE-44.md); off, the engine has none
 		// and never pays for one.
 		if sys.ProcessSettings.Scheduler {
 			sys.InstallScheduler(m.Engine)
@@ -510,7 +510,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	// LOGINOUT's step: the console terminal as process 1's SYS$INPUT,
 	// SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND, process-permanent files
-	// (docs/PHASE-71 - process-permanent files.md, subtask 5). Defining
+	// (docs/planning/PHASE-71 - process-permanent files.md, subtask 5). Defining
 	// the names can fail only for a full process table of names.
 	if err := env.OpenTerminalFiles(); err != nil {
 		fmt.Fprintf(m.Hooks.Output(), "%%GOVAX-W-PPF, opening the terminal's files: %v\n", err)

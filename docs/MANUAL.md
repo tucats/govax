@@ -5086,7 +5086,7 @@ back. `govax --stats` reports:
 - S0 is not paged.
 - There is one page file and no swap file.
 
-The phase documents `docs/PHASE-62` to `PHASE-67` describe the design
+The phase documents `docs/planning/PHASE-62` to `PHASE-67` describe the design
 in detail, and list every difference found by running the same probe
 programs on VMS.
 
@@ -6839,7 +6839,7 @@ A routine of your own with one of these names wins, and so does an `EXTERNAL` st
 naming it.
 
 The choices govax made where no VAX FORTRAN was at hand to ask are in the phase's document
-(`docs/PHASE-83 - FORTRAN and VMS.md`). The ones you're likely to meet: a second declaration of
+(`docs/planning/PHASE-83 - FORTRAN and VMS.md`). The ones you're likely to meet: a second declaration of
 a name a module declares is `DUPDECL` or `DUPATTR`, so don't declare a service you also get
 from `$SYSSRVNAM`; a name used both as a function and in a CALL in one unit is `BADUSE`; and
 the system subroutines' arguments are checked when compiling (`SYSARG`, `SYSCOUNT`), by the
@@ -7453,8 +7453,8 @@ difference in instruction behavior.
 ### Appendix D: Further reading
 
 - `HELP` at the `VAX>` and `DBG>` prompts: every command and qualifier.
-- `docs/PLAN.md`: the project's plan and the list of development phases.
-- `docs/PHASE-nn - topic.md`: a design document for each phase, with its
+- `docs/planning/PLAN.md`: the project's plan and the list of development phases.
+- `docs/planning/PHASE-nn - topic.md`: a design document for each phase, with its
   decisions, the VMS behavior it reproduces, and the probe programs used
   to check it against VMS.
 - `docs/DEVIATIONS.md`: known differences from the VAX architecture and

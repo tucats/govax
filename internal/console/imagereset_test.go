@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 )
 
-// Phase 66's subtask 5 (docs/PHASE-66 - mapped image activation.md):
+// Phase 66's subtask 5 (docs/planning/PHASE-66 - mapped image activation.md):
 // image reset. With paging on, an image's rundown deletes P0 as VMS's
 // MMG$IMGRESET does: every page goes back to its fresh form, the frames
 // the image's pages held are untied, its sections go with their last

@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The STR$ routines that take part of a string (docs/PHASE-83, subtask 9).
+// The STR$ routines that take part of a string (docs/planning/PHASE-83, subtask 9).
 // Positions count from 1. A position off the string isn't a failure but an
 // "alternate success": the routine uses the nearest one that makes sense and
 // says so with STR$_ILLSTRPOS, and STR$_ILLSTRSPE when the two arguments don't

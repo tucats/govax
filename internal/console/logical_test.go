@@ -361,7 +361,7 @@ func TestLogicals_beforeInit(t *testing.T) {
 
 // TestLogical_jobTable: DEFINE/JOB, SHOW LOGICAL/JOB, and DEASSIGN/JOB
 // work on the job table, which LNM$FILE_DEV searches after the process
-// table (docs/PHASE-45.md, subtask 3).
+// table (docs/planning/PHASE-45.md, subtask 3).
 func TestLogical_jobTable(t *testing.T) {
 	d, _, buf := logicalDispatcher(t)
 

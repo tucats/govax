@@ -282,7 +282,7 @@ func TestSymbolicInstructions(t *testing.T) {
 }
 
 // TestSymbolizeRules checks each of Symbolize's rules at an address the
-// probe's sessions name (docs/PHASE-41.md, subtask 1's results).
+// probe's sessions name (docs/planning/PHASE-41.md, subtask 1's results).
 func TestSymbolizeRules(t *testing.T) {
 	cases := []struct {
 		image string

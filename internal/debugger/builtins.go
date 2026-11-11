@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The debugger's built-in symbols (docs/PHASE-42.md, subtask 20; the VMS
+// The debugger's built-in symbols (docs/planning/PHASE-42.md, subtask 20; the VMS
 // 5.5 Debugger Manual's appendix D). They stand for things the debugger
 // knows rather than names the program defines:
 //

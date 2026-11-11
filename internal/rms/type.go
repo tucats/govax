@@ -12,11 +12,11 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-23.md subtask 8: TYPE, the operator-
+// This file implements docs/planning/PHASE-23.md subtask 8: TYPE, the operator-
 // console command that writes one file's content to the console as text.
 // Its behavioral reference is the sibling ods2 module's own cmd/ods2/
 // internal/session/type.go (read-only, per this phase's own "behavioral
-// spec, not code to link against" framing -- see docs/PHASE-23.md's "Why
+// spec, not code to link against" framing -- see docs/planning/PHASE-23.md's "Why
 // this phase looks different from most others"); Session.Type below
 // follows that file's shape closely (the same "exactly one match required"
 // rule, the same default-to-highest-version behavior) without being a

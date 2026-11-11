@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// $CMKRNL and $CMEXEC (docs/PHASE-26.md subtask 26): call a routine in
+// $CMKRNL and $CMEXEC (docs/planning/PHASE-26.md subtask 26): call a routine in
 // kernel or executive mode.
 //
 // # Why a program changes mode

@@ -49,7 +49,7 @@ func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool,
 	if strings.HasPrefix(token, "NO") && len(token) > 2 {
 		// The match found for the rest of the token is a negated one.
 		// (This used to return the recursive call's negated=false
-		// unchanged, losing the NO; fixed in docs/PHASE-25.md subtask 5.)
+		// unchanged, losing the NO; fixed in docs/planning/PHASE-25.md subtask 5.)
 		kw, _, err = matchKeyword(keywords, token[2:])
 		if err == nil {
 			return kw, true, nil

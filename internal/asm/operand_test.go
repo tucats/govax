@@ -51,7 +51,7 @@ func requireBytes(t *testing.T, got []byte, want ...byte) {
 // TestAddressingModes hand-verifies one instruction's encoding per VAX
 // addressing mode against the ISA manual's mode-byte layout (mode nibble
 // 0-F in the high bits, register number in the low 4 bits, following data
-// per mode) — the docs/PHASE-11.md-mandated cross-check, done here per
+// per mode) — the docs/planning/PHASE-11.md-mandated cross-check, done here per
 // addressing mode rather than only against the named small fixtures.
 func TestAddressingModes(t *testing.T) {
 	cases := []struct {
@@ -122,7 +122,7 @@ func TestIndexedModeFollowedByAnotherOperand(t *testing.T) {
 }
 
 // TestInsv hand-verifies insv.asm's own instructions byte-for-byte against
-// the ISA manual, as docs/PHASE-11.md calls for by name.
+// the ISA manual, as docs/planning/PHASE-11.md calls for by name.
 func TestInsv(t *testing.T) {
 	// movl #^x14, r0 ; insv #^x0d, r0, #3, @#bits ; ret
 	// "^X14" is 20 and "^X0D" is 13 -- both small enough to encode as
@@ -144,7 +144,7 @@ func TestInsv(t *testing.T) {
 
 // TestMovc3Prologue hand-verifies movc3.asm's .ENTRY mask and MOVAL/MOVC3
 // instructions, up to (but not including) the forward-referenced SRC/DST
-// addresses, matching docs/PHASE-11.md's call to hand-verify movc3.asm.
+// addresses, matching docs/planning/PHASE-11.md's call to hand-verify movc3.asm.
 func TestMovc3Prologue(t *testing.T) {
 	src := "\t.entry\tmain, ^m<r2,r3,r4,r5>\n\n\tmoval\t@#src, r1\n\tmovc3\t#5,(r1),(r3)\n\tmovl\t#1, r0\n\tret\n\nsrc:\t.ascii \"x\"\n\n\t.end\tmain\n"
 	got := assembleBytes(t, src)

@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The terminal's holder and ATTACH (docs/PHASE-57, subtask 9).
+// The terminal's holder and ATTACH (docs/planning/PHASE-57, subtask 9).
 //
 // A job's processes share one terminal (its input stream), but only one
 // of them has it at a time: the process the terminal is "attached" to,

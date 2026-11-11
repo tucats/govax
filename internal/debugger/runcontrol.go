@@ -10,7 +10,7 @@ import (
 // This file is the debugger's run control: the list of address
 // breakpoints, the loop that drives the CPU one instruction at a time while
 // checking them, and the GO, CALL, and STEP entry points that use it
-// (docs/PHASE-42.md, subtask 4). Until that subtask this lived in
+// (docs/planning/PHASE-42.md, subtask 4). Until that subtask this lived in
 // internal/console; the console now hands every run to the debugger
 // (Console.Execute, Console.Call, and Console.Step forward here through the
 // machine.Debugger interface).
@@ -75,7 +75,7 @@ const (
 
 // Breakpoint is one entry in Debugger.Breakpoints. Temporary and Step back
 // the internal one-shot breakpoints STEP/OVER and STEP/RETURN arm to resume
-// the debugger at the right place (docs/PHASE-18.md) — the Go equivalent of
+// the debugger at the right place (docs/planning/PHASE-18.md) — the Go equivalent of
 // vax.c's own set_break(pc, 0, BREAK_ADDRESS|BREAK_STEP|BREAK_TEMPORARY)
 // calls, sharing this same list with user-set breakpoints exactly as the C
 // source's single breakpoint_list does. A user breakpoint (AddBreakpoint)
@@ -382,7 +382,7 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 }
 
 // runOutcome says how a run ended, which decides whether the debugger
-// session carries on (docs/PHASE-42.md, Decision 2).
+// session carries on (docs/planning/PHASE-42.md, Decision 2).
 type runOutcome int
 
 const (
@@ -440,7 +440,7 @@ func (d *Debugger) reportStop(err error) (runOutcome, error) {
 // until it halts, hits a breakpoint, or an unhandled fault stops it — the
 // Go equivalent of console_exec.c's GO/EXEC command (console_exec), with
 // breakpoint checking layered on top of Engine.Step exactly as
-// docs/PHASE-03.md's design notes call for. A breakpoint at the address goRun
+// docs/planning/PHASE-03.md's design notes call for. A breakpoint at the address goRun
 // started from is not treated as an immediate stop (it must be reached again
 // after at least one instruction runs), matching vax.c's own initial_PC
 // tracking.
@@ -461,7 +461,7 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 }
 
 // callRun implements the CALL command's core mechanism (see
-// docs/PHASE-13.md): invokes the procedure at addr with the given arguments
+// docs/planning/PHASE-13.md): invokes the procedure at addr with the given arguments
 // (pushed right-to-left, matching a real CALLS instruction — see
 // cpu.Engine.CallEntry), then either runs Engine.Step in a loop until it
 // returns (cpu.CallEntry/ErrConsoleCallReturned) or halts (cpu.ErrHalted),
@@ -472,7 +472,7 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 // straight to console_step for one instruction.
 //
 // The run goes through runLoop, as GO's does, so breakpoints stop it
-// (docs/PHASE-42.md, bug 1). The first instruction is checked too
+// (docs/planning/PHASE-42.md, bug 1). The first instruction is checked too
 // (skipFirstCheck false): it's the called routine's, not a place the
 // debugger was already stopped at, so a breakpoint there fires at once, as
 // one does for STEP/OVER's callee.

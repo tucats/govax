@@ -14,7 +14,7 @@ import (
 )
 
 // The program sections a FORTRAN module's routines contribute to
-// (Decision 10 of docs/PHASE-74 - FORTRAN plan.md): the instructions,
+// (Decision 10 of docs/planning/PHASE-74 - FORTRAN plan.md): the instructions,
 // read-only data (constants, descriptors, I/O control blocks), and the
 // static storage of variables and the compiler's cells.
 //
@@ -1060,7 +1060,7 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 	w.Statement("", ".LONG", strings.Join(bounds, ","), "bounds")
 }
 
-// The I/O control block's layout (Decision 12 of docs/PHASE-74 -
+// The I/O control block's layout (Decision 12 of docs/planning/PHASE-74 -
 // FORTRAN plan.md; FTNRTL reads it, mar/ftn_statement.mar): a word of its
 // size in bytes, a word of flags saying which of the statement's optional
 // parts it has (ir.ControlErr and the others), and a longword not used

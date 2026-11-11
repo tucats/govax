@@ -14,7 +14,7 @@ import (
 )
 
 // This file reads the grammars govax starts with
-// (docs/PHASE-87 - system volume.md, Decision 4). Each is found through
+// (docs/planning/PHASE-87 - system volume.md, Decision 4). Each is found through
 // the resolver: a host copy (the current directory, then --path's
 // directories), the system volume's, then govax's own. The volume's copy
 // is the user's, and may be older than this govax, or edited: one that
@@ -140,7 +140,7 @@ func installConsoleGrammar(c *console.Console, files grammarFiles) (*console.Dis
 
 // installDebuggerGrammar reads the debugger's grammar and
 // installs the debugger on it, as installConsoleGrammar does the
-// console's (docs/PHASE-42.md: the DEBUG command and the DBG> prompt need
+// console's (docs/planning/PHASE-42.md: the DEBUG command and the DBG> prompt need
 // them).
 func installDebuggerGrammar(c *console.Console, files grammarFiles) error {
 	grammar, origin, err := files.grammar("debug.dcl")

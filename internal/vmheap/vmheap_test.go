@@ -609,7 +609,7 @@ func TestZoneRandomWorkload(t *testing.T) {
 }
 
 // TestZoneFragmentationBound is the workload that showed the old heap's
-// faults (docs/PHASE-59, the survey's review): rounds of 50 blocks of 8
+// faults (docs/planning/PHASE-59, the survey's review): rounds of 50 blocks of 8
 // to 207 bytes, 90% of the live ones then freed in random order. With
 // every free merged and first fit by address, the zone stays within a
 // small multiple of what's live at its peak.

@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The system volume's refresh on a real volume (docs/PHASE-87 - system
+// The system volume's refresh on a real volume (docs/planning/PHASE-87 - system
 // volume.md, Decision 3 and subtask 4); internal/sysvol's tests take each
 // case on its own.
 

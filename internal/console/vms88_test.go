@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Phase 88's VMS round (docs/PHASE-88 - keyed index files.md, subtask 15;
+// Phase 88's VMS round (docs/planning/PHASE-88 - keyed index files.md, subtask 15;
 // testdata/vms88's README). TestVMS88Procedure rehearses it on govax: the volume as
 // exchange.cmd makes it, and VMS88.COM on it, so a mistake of ours can't cost the author a
 // run on the VAX.

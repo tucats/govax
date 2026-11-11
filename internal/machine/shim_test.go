@@ -334,7 +334,7 @@ func TestEnsureShims_overflowPages(t *testing.T) {
 }
 
 // TestEnsureShims_placesASTExit: EnsureShims writes EXE$ASTRET, the AST
-// exit, in S0 after the table's stubs (docs/PHASE-70 - traceback.md,
+// exit, in S0 after the table's stubs (docs/planning/PHASE-70 - traceback.md,
 // subtask 9), a JMP to the SYS$CLRAST P1-vector entry's XFC, and
 // ASTExit returns its address only once it's there.
 func TestEnsureShims_placesASTExit(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 )
 
 // TestLibrtlMisc: a program calls the miscellaneous routines through
-// their stubs (docs/PHASE-55, subtask 6). LIB$AST_IN_PROG is 0 in the
+// their stubs (docs/planning/PHASE-55, subtask 6). LIB$AST_IN_PROG is 0 in the
 // main program and 1 in an AST routine, which also $WAKEs the process,
 // ending a 10-second LIB$WAIT; a quarter-second LIB$WAIT with
 // LIB$K_NOWAKE ends by its timer; LIB$ASN_WTH_MBX assigns a mailbox

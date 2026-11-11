@@ -10,7 +10,7 @@ import (
 )
 
 // Phase 44's subtask 11: determinism. In quantum-clock mode a run with
-// several processes depends on nothing but its inputs (docs/PHASE-43.md,
+// several processes depends on nothing but its inputs (docs/planning/PHASE-43.md,
 // Part A's rule 4): the same run interleaves its processes the same way,
 // instruction for instruction, every time; and a workload whose outcome
 // doesn't depend on the interleaving comes out the same whatever the

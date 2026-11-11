@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// WAIT (docs/PHASE-50 - DCL command procedures.md): DCL's own command
+// WAIT (docs/planning/PHASE-50 - DCL command procedures.md): DCL's own command
 // that waits a while, as the DCL Dictionary describes it.
 //
 //	WAIT delta-time

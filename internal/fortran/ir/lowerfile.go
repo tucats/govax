@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
-// The file statements (docs/PHASE-81 - FORTRAN files.md, Decision 4): one
+// The file statements (docs/planning/PHASE-81 - FORTRAN files.md, Decision 4): one
 // call each, which returns the status in R0 as FTN$IO_END does.
 //
 //	OPEN (UNIT=3, FILE=NAME, STATUS='OLD', RECL=N, ERR=99)

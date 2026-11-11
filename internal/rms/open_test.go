@@ -225,7 +225,7 @@ func TestSysOpen_diskFileForRead(t *testing.T) {
 // TestSysOpen_diskFileForWrite confirms SYS$OPEN honoring FAB$B_FAC's
 // FAB$V_PUT bit arms the found file for writing (volume.File.OpenForWrite)
 // so that a following SYS$CONNECT can actually construct a usable Writer —
-// docs/PHASE-22.md subtask 9's own description of what's new here versus
+// docs/planning/PHASE-22.md subtask 9's own description of what's new here versus
 // SysCreate. Without that arming, SYS$CONNECT's own odsrms.NewWriter would
 // still succeed (it doesn't itself check for an armed File), but the first
 // SYS$PUT that tried to extend the file past its current length would fail
@@ -558,7 +558,7 @@ func TestSysOpen_logicalNameTranslation(t *testing.T) {
 	}
 }
 
-// TestSysOpen_translationAndSearchLists covers docs/PHASE-25.md subtask
+// TestSysOpen_translationAndSearchLists covers docs/planning/PHASE-25.md subtask
 // 7's file-spec translation in SYS$OPEN: the leftmost component is
 // translated, SYS$DISK supplies a missing device, a search list opens the
 // first element that has the file (or reports the last element's

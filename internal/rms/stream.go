@@ -6,7 +6,7 @@ import (
 	odsrms "github.com/tucats/ods2/rms"
 )
 
-// A record stream's context (docs/PHASE-49.md, subtasks 2 to 4): what a
+// A record stream's context (docs/planning/PHASE-49.md, subtasks 2 to 4): what a
 // RAB connected to a sequential file on a volume remembers between
 // record operations, as the Guide to OpenVMS File Applications (section
 // 8.6, Table 8-3) describes it.

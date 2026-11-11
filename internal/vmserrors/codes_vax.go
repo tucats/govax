@@ -97,7 +97,7 @@ const (
 	vaxIgnored
 	vaxNotGlobal
 
-	// MACRO-32 macros (docs/PHASE-28.md).
+	// MACRO-32 macros (docs/planning/PHASE-28.md).
 	vaxNoEndm
 	vaxEndmName
 	vaxNotInDef
@@ -120,7 +120,7 @@ const (
 	vaxBadPacked
 	vaxDirSynx
 
-	// Errors real MACRO reports and assembles past (docs/PHASE-29.md,
+	// Errors real MACRO reports and assembles past (docs/planning/PHASE-29.md,
 	// subtask 8).
 	vaxIndexBase
 	vaxPCRegister
@@ -240,7 +240,7 @@ const (
 	VAX_RELEXPR   = VAXFacility<<FacilityPosition | vaxRelExpr<<MessagePosition | StatusError
 	VAX_MACROONLY = VAXFacility<<FacilityPosition | vaxMACROOnly<<MessagePosition | StatusError
 
-	// MACRO-32 program sections and directives (docs/PHASE-27.md, subtask 6).
+	// MACRO-32 program sections and directives (docs/planning/PHASE-27.md, subtask 6).
 	VAX_PSECTATTR     = VAXFacility<<FacilityPosition | vaxPsectAttr<<MessagePosition | StatusError
 	VAX_PSECTCONFLICT = VAXFacility<<FacilityPosition | vaxPsectConflict<<MessagePosition | StatusError
 	VAX_ABSDATA       = VAXFacility<<FacilityPosition | vaxAbsData<<MessagePosition | StatusError
@@ -254,7 +254,7 @@ const (
 	// VAX_IGNORED is a warning: assembly goes on without the feature.
 	VAX_IGNORED = VAXFacility<<FacilityPosition | vaxIgnored<<MessagePosition | StatusWarning
 
-	// MACRO-32 macros (docs/PHASE-28.md).
+	// MACRO-32 macros (docs/planning/PHASE-28.md).
 	VAX_NOENDM      = VAXFacility<<FacilityPosition | vaxNoEndm<<MessagePosition | StatusError
 	VAX_ENDMNAME    = VAXFacility<<FacilityPosition | vaxEndmName<<MessagePosition | StatusError
 	VAX_NOTINDEF    = VAXFacility<<FacilityPosition | vaxNotInDef<<MessagePosition | StatusError
@@ -322,7 +322,7 @@ const (
 	VAX_HOSTCMD = VAXFacility<<FacilityPosition | vaxHostCmd<<MessagePosition | StatusError
 
 	// VAX_SYSGRAMMAR reports a grammar or help file on the system volume
-	// that govax didn't use (docs/PHASE-87 - system volume.md, Decision
+	// that govax didn't use (docs/planning/PHASE-87 - system volume.md, Decision
 	// 4): one that couldn't be read, or a grammar that doesn't parse or
 	// lacks a command govax has. Its cause says why; govax uses its own
 	// built-in copy instead, so this is a warning.

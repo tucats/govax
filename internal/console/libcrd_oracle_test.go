@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The LIB$CREATE_DIR probe (docs/PHASE-34.md, subtasks 13-14):
+// The LIB$CREATE_DIR probe (docs/planning/PHASE-34.md, subtasks 13-14):
 // testdata/credir/libcrd.mar runs under govax on a fresh exchange volume,
 // and what it writes, and the directories it makes, are compared with VMS
 // 7.3's run of the same probe (testdata/credir/README.md).

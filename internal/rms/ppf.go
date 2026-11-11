@@ -10,7 +10,7 @@ import (
 	odsrms "github.com/tucats/ods2/rms"
 )
 
-// Process-permanent files (docs/PHASE-71 - process-permanent files.md):
+// Process-permanent files (docs/planning/PHASE-71 - process-permanent files.md):
 // the files RMS opens for a process, not for an image, and keeps open
 // across image activations, until the process closes them or ends.
 // LOGINOUT opens SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND this

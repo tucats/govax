@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The console's ATTACH command (docs/PHASE-57, subtask 9; the DCL
+// The console's ATTACH command (docs/planning/PHASE-57, subtask 9; the DCL
 // Dictionary's ATTACH).
 //
 // ATTACH [process-name] or ATTACH/IDENTIFICATION=pid gives the terminal

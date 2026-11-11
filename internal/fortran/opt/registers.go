@@ -18,7 +18,7 @@ import (
 // memory. The VAX has twelve general registers. R0 to R5 go to expressions, within one
 // statement, and MOVC and CMPC change them. R6 to R11 are left, which only a routine that
 // saves them in its entry mask may use, and every routine does (Decisions 2 and 3 of
-// docs/PHASE-84 - FORTRAN optimizer.md). So a value in R6 survives a call, and this pass
+// docs/planning/PHASE-84 - FORTRAN optimizer.md). So a value in R6 survives a call, and this pass
 // has six registers, sometimes fewer, to give away.
 //
 // # What gets a register

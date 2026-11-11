@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// The integer routines (docs/PHASE-53, subtask 7), called from a linked
+// The integer routines (docs/planning/PHASE-53, subtask 7), called from a linked
 // program as a program calls them.
 
 // integerData is the data the integer programs share: the manual's

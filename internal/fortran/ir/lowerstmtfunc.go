@@ -5,7 +5,7 @@ import (
 )
 
 // Statement functions (section 6.2.1), expanded in line at each reference
-// (Decision 8 of docs/PHASE-79). The definition's expression is lowered again
+// (Decision 8 of docs/planning/PHASE-79). The definition's expression is lowered again
 // each time, with its dummy arguments standing for places: symbolMem finds them
 // in bound while the reference is being expanded. So with
 //
@@ -42,7 +42,7 @@ func (l *lowerer) bindDummies(e *sema.StmtFuncRef) (unbind func()) {
 }
 
 // actualPlace is where the dummy argument d finds its actual argument's value
-// (the author's answer 5 in docs/PHASE-79): where it is, if it is a constant or
+// (the author's answer 5 in docs/planning/PHASE-79): where it is, if it is a constant or
 // a variable of d's type and length, and otherwise in a temporary it is assigned
 // to, as an assignment would, so a CHARACTER value is cut or padded to d's
 // length.

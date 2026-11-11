@@ -14,7 +14,7 @@ var (
 )
 
 // The condition-handling routines (moved from internal/corevms, then named
-// rtl, docs/PHASE-26.md subtask 33). The dispatch itself -- building the signal and mechanism
+// rtl, docs/planning/PHASE-26.md subtask 33). The dispatch itself -- building the signal and mechanism
 // arrays, searching the call frames, unwinding -- is corevms's; see
 // internal/corevms/signal.go and unwind.go.
 

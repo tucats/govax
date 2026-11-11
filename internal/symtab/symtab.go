@@ -3,7 +3,7 @@
 // as a disassembler or debugger does when it shows "START+2" instead of
 // 00000402. The assembler (internal/asm), the console's own table, and an
 // image's debug symbols (internal/dbgsym) all keep their symbols in it,
-// so one lookup serves them all (docs/PHASE-41.md).
+// so one lookup serves them all (docs/planning/PHASE-41.md).
 //
 // It's a leaf package: it imports nothing from govax.
 package symtab

@@ -5,7 +5,7 @@ import "strings"
 // Indirect access to process-permanent files (ppf.go): what each RMS
 // service does with a FAB or RAB whose IFI or ISI is an indirect
 // accessor's, from the Guide to OpenVMS File Applications, 6.6, and VMS
-// 7.1's answers to testdata/ppf71 (docs/PHASE-71 - process-permanent
+// 7.1's answers to testdata/ppf71 (docs/planning/PHASE-71 - process-permanent
 // files.md, Part A).
 
 // openIndirect is $OPEN's and $CREATE's work once name processing has led

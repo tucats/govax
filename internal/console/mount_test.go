@@ -19,7 +19,7 @@ import (
 
 // newTestContainer builds a small, freshly initialized ODS-2 container
 // file at a temp path and returns that path — mirroring internal/rms's own
-// mount_test.go helper (newTestVolumeFile) and docs/PHASE-22.md's "Test
+// mount_test.go helper (newTestVolumeFile) and docs/planning/PHASE-22.md's "Test
 // fixtures" design decision: every automated test in this project builds
 // its own throwaway container with the sibling ods2 module's own
 // diskimage.Create/volume.Initialize calls rather than depending on a
@@ -56,7 +56,7 @@ func newTestContainer(t *testing.T, label string) string {
 // TestConsoleMount_autoCreatesDevice confirms Mount both attaches the
 // container (visible afterward via c.Mounts.Lookup) and, since "DUA0"
 // was never DEFINE/DEVICE'd, auto-creates a disk-class device record for
-// it -- docs/PHASE-22.md's "Device model" design decision, matching how
+// it -- docs/planning/PHASE-22.md's "Device model" design decision, matching how
 // an operator would expect a bare MOUNT command to just work without a
 // separate DEFINE/DEVICE ceremony first.
 func TestConsoleMount_autoCreatesDevice(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Process deletion (docs/PHASE-45.md, subtask 6). The fixture has no
+// Process deletion (docs/planning/PHASE-45.md, subtask 6). The fixture has no
 // address spaces or S0 pool, so these tests are of the rundown and the
 // bookkeeping; giving the memory back is tested with a booted machine,
 // in internal/console's deleteprc_test.go.

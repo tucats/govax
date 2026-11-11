@@ -11,7 +11,7 @@ import (
 )
 
 // The lexical functions about the process and its command environment
-// (docs/PHASE-50 - DCL command procedures.md, subtask 14; the User's
+// (docs/planning/PHASE-50 - DCL command procedures.md, subtask 14; the User's
 // Manual, 15.2 and 15.3): F$ENVIRONMENT, F$VERIFY, F$MODE, F$DIRECTORY,
 // F$USER, F$IDENTIFIER, F$PROCESS, F$PID, F$GETJPI, F$GETSYI,
 // F$PRIVILEGE, and F$SETPRV. The process is the console's, process 1; F$GETJPI and F$PID

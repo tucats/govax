@@ -122,7 +122,7 @@ func TestEmulCvtRoundVsTruncate(t *testing.T) {
 	// CVTRFL rounds to nearest (ties away from zero); CVTFL truncates
 	// toward zero -- the distinction the C reference never actually
 	// implements (CVTRFL always faults EXC_PRIV there instead). See
-	// docs/PHASE-05.md's design notes.
+	// docs/planning/PHASE-05.md's design notes.
 	cases := []struct {
 		name       string
 		opcode     byte

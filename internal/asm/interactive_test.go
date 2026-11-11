@@ -3,7 +3,7 @@ package asm
 import "testing"
 
 // TestAssembleLineMatchesBatch feeds xor.asm to AssembleLine one line at a
-// time (as the console's interactive REPL mode does, docs/PHASE-19.md) and
+// time (as the console's interactive REPL mode does, docs/planning/PHASE-19.md) and
 // checks the result is byte-identical to assembling the whole file in one
 // Assemble call, confirming the two entry points share the same underlying
 // per-statement engine.

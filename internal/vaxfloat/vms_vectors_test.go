@@ -3,7 +3,7 @@ package vaxfloat
 // vmsVectors are the floating cases of the Phase 35 probes'
 // (testdata/insn35) VMS run, OpenVMS V7.1 on simh's VAX 8600: each
 // instruction's operands and the result VMS stored, or the condition it
-// signalled. Extracted once (2026-10-02, docs/PHASE-35.md subtask 4) by
+// signalled. Extracted once (2026-10-02, docs/planning/PHASE-35.md subtask 4) by
 // matching each probe case's instruction and operand bytes in the probe
 // sources with its record from the run (testdata/insn35/vax); the probes'
 // README says how the run was made. Only cases whose operands are all in

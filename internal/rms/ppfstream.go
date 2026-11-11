@@ -2,7 +2,7 @@ package rms
 
 import "errors"
 
-// Record I/O on a process-permanent file from Go (docs/PHASE-71 -
+// Record I/O on a process-permanent file from Go (docs/planning/PHASE-71 -
 // process-permanent files.md, subtask 5): what LIB$PUT_OUTPUT,
 // LIB$GET_INPUT, and $PUTMSG do on VMS by an indirect open of SYS$OUTPUT,
 // SYS$INPUT, or SYS$ERROR, a $CONNECT, and a $PUT or $GET (ppfaccess.go).
@@ -113,7 +113,7 @@ func (ctx *Context) GetPermanent(e *PermanentEntry) ([]byte, uint32, error) {
 
 // RecordStream is a RecordDevice made of Go functions: a stream DCL keeps
 // as a process-permanent file that is neither a volume file nor a device
-// of the system's (docs/PHASE-71 - process-permanent files.md, subtask 6):
+// of the system's (docs/planning/PHASE-71 - process-permanent files.md, subtask 6):
 // a command procedure's data records, which DCL's own reader gives out,
 // or an /OUTPUT file on the host.
 type RecordStream struct {

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The trace fault end to end (docs/PHASE-73 - trace trap.md, subtask 2):
+// The trace fault end to end (docs/planning/PHASE-73 - trace trap.md, subtask 2):
 // a program that sets PSL<T> takes SS$_TBIT in its handler after each
 // instruction.
 

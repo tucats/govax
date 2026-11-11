@@ -9,7 +9,7 @@ import (
 // cached so successive reads don't lose already-buffered-ahead bytes.
 // Every process reading the same stream (the terminal) shares one
 // buffer (System.terminalReader), so what one process's read took ahead
-// is there for the next process's (docs/PHASE-46.md, subtask 7).
+// is there for the next process's (docs/planning/PHASE-46.md, subtask 7).
 func (env *Environment) consoleReader() *bufio.Reader {
 	if env.consoleInBuf == nil {
 		if env.consoleIn == nil {

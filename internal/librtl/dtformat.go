@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// The date and time format mnemonics (docs/PHASE-56, "Formatting:
+// The date and time format mnemonics (docs/planning/PHASE-56, "Formatting:
 // mnemonics and predefined formats"; the 5.0 LIB$ manual's section
 // 3.3.2.1). A format is text in which each field of a date or time is
 // written as a mnemonic after an exclamation mark ("!DB-!MAAU-!Y4"), and

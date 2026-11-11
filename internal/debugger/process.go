@@ -9,8 +9,8 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The debugger's view of the processes (docs/PHASE-44.md, "Future work";
-// done in the multiprocessing program's close-out, docs/PHASE-48.md).
+// The debugger's view of the processes (docs/planning/PHASE-44.md, "Future work";
+// done in the multiprocessing program's close-out, docs/planning/PHASE-48.md).
 //
 // The VMS debugger's SET PROCESS and SHOW PROCESS are for programs that
 // run in several processes. govax's debugger is the machine's, and the
@@ -20,7 +20,7 @@ import (
 // process other than the console's), and EXAMINE, DEPOSIT, SHOW
 // REGISTERS, and the rest then see its registers and its P0 and P1
 // space. Running is unchanged: STEP and breakpoints belong to process 1
-// (Decision 11 in docs/PHASE-43.md), and GO, STEP, and CALL give the CPU
+// (Decision 11 in docs/planning/PHASE-43.md), and GO, STEP, and CALL give the CPU
 // back to process 1 first, the visible process keeping its place in the
 // scheduler.
 //

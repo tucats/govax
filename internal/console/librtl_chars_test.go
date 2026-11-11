@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// The character string routines (docs/PHASE-53, subtask 10), called from
+// The character string routines (docs/planning/PHASE-53, subtask 10), called from
 // a linked program as a program calls them.
 
 // charsData is the data the program uses: the manual's strings, a table

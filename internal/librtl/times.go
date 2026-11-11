@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The time arithmetic routines (docs/PHASE-56, subtask 2): LIB$ADD_TIMES,
+// The time arithmetic routines (docs/planning/PHASE-56, subtask 2): LIB$ADD_TIMES,
 // LIB$SUB_TIMES, LIB$MULT_DELTA_TIME, and LIB$MULTF_DELTA_TIME.
 //
 // A VMS time is a quadword count of 100-nanosecond "ticks". A positive

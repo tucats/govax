@@ -1,7 +1,7 @@
 // Package lnm is govax's VAX/VMS logical-name database: the shared store
 // behind the console's DEFINE/ASSIGN/DEASSIGN/SHOW LOGICAL commands, RMS
 // file-specification translation, and the $CRELNM/$DELLNM/$TRNLNM/$CRELNT
-// system services (docs/PHASE-25.md).
+// system services (docs/planning/PHASE-25.md).
 //
 // It models VMS 7.3's structure rather than a flat name map:
 //
@@ -20,7 +20,7 @@
 //     and process-private tables are its own, and the system directory
 //     with every shareable table (the system table, each UIC group's
 //     table, and each job's table) is shared by every view
-//     (docs/PHASE-45.md). A subprocess's view shares its creator's job
+//     (docs/planning/PHASE-45.md). A subprocess's view shares its creator's job
 //     table (NewProcessView).
 //
 // The behavioral reference is the VMS System Services Reference Manual's

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestLBR90Oracle runs part E of testdata/help90 (LBR90.MAR, docs/PHASE-90 -
+// TestLBR90Oracle runs part E of testdata/help90 (LBR90.MAR, docs/planning/PHASE-90 -
 // VMS help.md, subtask 10) on govax, in both paging modes: the libraries it
 // reads made by LIBRARY as HELP90.COM's part A made them, HLP$LIBRARY and
 // HLP$LIBRARY_1 naming H90B and H90C as part C left them, and the program

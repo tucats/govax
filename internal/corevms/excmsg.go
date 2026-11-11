@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// EXE$EXCMSG's dump (docs/PHASE-70 - traceback.md, subtask 7).
+// EXE$EXCMSG's dump (docs/planning/PHASE-70 - traceback.md, subtask 7).
 //
 // When the catch-all ends an image for a condition no handler took, and
 // the condition is one of the hardware exceptions' (an access violation,

@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The Phase 35 instruction probes (docs/PHASE-35.md, subtask 3):
+// The Phase 35 instruction probes (docs/planning/PHASE-35.md, subtask 3):
 // testdata/insn35/*.mar, written by testdata/insn35/gen.go. Each runs a
 // table of instruction cases and writes one record per case.
 // TestInsn35ProbesRun checks govax's MACRO and LINK build each probe and

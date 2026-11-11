@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Parsing a VMS message-file listing (docs/PHASE-26.md subtask 25).
+// Parsing a VMS message-file listing (docs/planning/PHASE-26.md subtask 25).
 //
 // VMS keeps the text of every condition value ("%SYSTEM-F-ACCVIO, access
 // violation, ...") in message files, compiled from sources written for

@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Privileges (docs/PHASE-26.md subtask 38): the process's privilege
+// Privileges (docs/planning/PHASE-26.md subtask 38): the process's privilege
 // masks, $SETPRV, and the check the other services make.
 //
 // # What a privilege is

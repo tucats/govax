@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// CREATE/FDL's file (docs/PHASE-88 - keyed index files.md, subtask 10b).
+// CREATE/FDL's file (docs/planning/PHASE-88 - keyed index files.md, subtask 10b).
 //
 // FDL$CREATE fills a FAB, a NAM, and XABs from an FDL file's definition and
 // calls $CREATE, then $CLOSE (the Record Management Utilities manual's

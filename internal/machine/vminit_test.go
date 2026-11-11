@@ -48,7 +48,7 @@ func TestVMInit_enablesTranslation(t *testing.T) {
 // TestVMInit_flushesTranslationBuffer matches console_vminit.c's own
 // "Dump the translation buffer" step: invalidate_tb() plus a tries/hits/
 // pflushes counter reset, run right alongside enabling MAPEN --
-// docs/PHASE-21.md.
+// docs/planning/PHASE-21.md.
 func TestVMInit_flushesTranslationBuffer(t *testing.T) {
 	c := NewMachine(&bytes.Buffer{})
 	if err := c.Init(128 * 512); err != nil {
@@ -452,7 +452,7 @@ func newSizedMachine(t *testing.T, pages uint32) *Machine {
 }
 
 // TestVMInit_pagingDefaults: with paging on, a region given 0 takes its
-// paging-mode default (docs/PHASE-67 - address space under paging.md,
+// paging-mode default (docs/planning/PHASE-67 - address space under paging.md,
 // subtask 8), whatever physical memory is, and VIRTUALPAGECNT is their
 // table area; with paging off, 0 still shares physical memory.
 func TestVMInit_pagingDefaults(t *testing.T) {

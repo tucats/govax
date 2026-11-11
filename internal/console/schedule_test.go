@@ -8,7 +8,7 @@ import (
 )
 
 // TestScheduler_oneProcessRun runs the FORTH interpreter with the
-// scheduler installed (vax.process.scheduler on, docs/PHASE-44.md) and a
+// scheduler installed (vax.process.scheduler on, docs/planning/PHASE-44.md) and a
 // short quantum, so its one process meets many quantum ends, and checks
 // that the session is the same as without the scheduler, and that the
 // scheduler charged the run's instructions to process 1.

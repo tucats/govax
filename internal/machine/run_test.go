@@ -30,7 +30,7 @@ func TestRun_noExecuteLoadsAndFixesUpOnly(t *testing.T) {
 }
 
 // TestRun_everyMilestoneFixture is Phase 12/13's own named milestone check
-// (docs/PHASE-13.md's Deliverables): put.exe, putc.exe, cli.exe, sieve.exe,
+// (docs/planning/PHASE-13.md's Deliverables): put.exe, putc.exe, cli.exe, sieve.exe,
 // and simple.exe must load and run "to whatever extent their actual code
 // paths are covered by Phase 10's RTL surface -- a program calling an
 // unregistered SHIM$/SYS$ entry is expected to report that clearly, not
@@ -74,7 +74,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 
 			// sieve.exe is a genuine CPU-bound benchmark (sieve of
 			// Eratosthenes up to 100,000) now that it actually runs its
-			// real code (see docs/PHASE-20.md's progress log) rather than
+			// real code (see docs/planning/PHASE-20.md's progress log) rather than
 			// faulting immediately as it did before that fix -- it needs
 			// far more steps than the other, effectively-instant fixtures,
 			// so it gets its own, much larger budget rather than raising
@@ -97,7 +97,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 // TestRun_driverCallsExitHandlers: RUN's image driver calls $EXIT with
 // the status main returns, as VMS's image activator does, so an image
 // that just returns still has its exit handlers called
-// (docs/PHASE-26.md subtask 19).
+// (docs/planning/PHASE-26.md subtask 19).
 func TestRun_driverCallsExitHandlers(t *testing.T) {
 	c := newBootableMachine(t)
 

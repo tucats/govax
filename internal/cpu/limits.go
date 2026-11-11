@@ -7,7 +7,7 @@ import (
 )
 
 // This file implements govax's own -instruction-limit/-time-limit flags
-// (docs/PHASE-15.md's sub-phase 2): an optional, per-run cap on how many
+// (docs/planning/PHASE-15.md's sub-phase 2): an optional, per-run cap on how many
 // instructions Engine.Step will execute and how much wall-clock time it will
 // spend doing so, so a runaway program under development doesn't hang the
 // emulator or the developer's terminal indefinitely. Not a port of any C

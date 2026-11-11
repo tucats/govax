@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// $FAO and $FAOL (docs/PHASE-26.md subtask 24): formatted ASCII output.
+// $FAO and $FAOL (docs/planning/PHASE-26.md subtask 24): formatted ASCII output.
 //
 // # What $FAO is for
 //

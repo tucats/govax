@@ -58,7 +58,7 @@ type Evaluator struct {
 	// label's contents in Value mode. Nil reads a longword with Load.
 	LoadSized func(addr, size uint32) (uint32, error)
 
-	// Builtins resolves the debugger's built-in symbols (docs/PHASE-42.md,
+	// Builtins resolves the debugger's built-in symbols (docs/planning/PHASE-42.md,
 	// subtask 20): a name with a "%" (%CURLOC, %NEXTLOC, %PREVLOC,
 	// %CURVAL, %DECWINDOWS, %EXC_NUMBER, ...), which it is asked about
 	// before the registers, and the debugger's one-character symbols "."

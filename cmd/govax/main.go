@@ -3,9 +3,9 @@
 // minimal machine, run STARTUP.COM as the real startup script, then prompt
 // for console input.
 //
-// The system volume (docs/PHASE-87 - system volume.md) holds STARTUP.COM,
+// The system volume (docs/planning/PHASE-87 - system volume.md) holds STARTUP.COM,
 // the grammars and help files, the kernel's sources, and the libraries.
-// Without one, the files are found as docs/PHASE-15.md describes: the
+// Without one, the files are found as docs/planning/PHASE-15.md describes: the
 // name exactly as given, then the directories of the repeatable --path
 // flag, in order; an embedded copy of the required startup files
 // (internal/bootdata) is always the last, implicit search location, so
@@ -126,7 +126,7 @@ func isLimitStop(err error) bool {
 // readline's input source instead of the real os.Stdin — tests pass a
 // controlled reader so startup can be exercised deterministically without
 // depending on the test process's own stdin. instructionLimit/timeLimit are
-// -instruction-limit/-time-limit (docs/PHASE-15.md's sub-phase 2), applied
+// -instruction-limit/-time-limit (docs/planning/PHASE-15.md's sub-phase 2), applied
 // only once STARTUP.COM's own startup script has finished running — a limit
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
@@ -234,7 +234,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintf(out, "govax %s\n", BuildVersion)
 	}
 
-	// The system volume first (docs/PHASE-87 - system volume.md), so that
+	// The system volume first (docs/planning/PHASE-87 - system volume.md), so that
 	// it gets its device, then the --mount options, whose devices may be a
 	// controller alone ("DUA") for its next free unit. Mounting it needs
 	// no grammar: it is RMS's and ods2's work, in Go.
@@ -288,8 +288,8 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	startTime = time.Now()
 
 	// STARTUP.COM is govax's login command procedure, run at command level
-	// 1 (docs/PHASE-50 - DCL command procedures.md): the system volume's,
-	// or govax's own without one (docs/PHASE-87 - system volume.md). A
+	// 1 (docs/planning/PHASE-50 - DCL command procedures.md): the system volume's,
+	// or govax's own without one (docs/planning/PHASE-87 - system volume.md). A
 	// command in it that fails has shown its message, which ends it.
 	if err := c.RunStartup(d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
 		fmt.Fprintln(out, "%"+err.Error())
@@ -452,7 +452,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 // readCommandLine reads a command line with rl. At a terminal, it is
 // read on a goroutine of its own while the console lets the other
-// processes run (docs/PHASE-51, subtask 4; Console.LendWhileReading),
+// processes run (docs/planning/PHASE-51, subtask 4; Console.LendWhileReading),
 // their output going through the line editor (promptOutput). Otherwise
 // (input from a pipe or a test's reader), the read is all that happens,
 // as before: the other processes ran after the last command until they
@@ -768,7 +768,7 @@ var validConfigs = map[string]bool{
 	"vax.process.quantum":   true,
 	"vax.process.preempt":   true,
 
-	// The system parameters (docs/PHASE-62 - VMS paging.md, Decision
+	// The system parameters (docs/planning/PHASE-62 - VMS paging.md, Decision
 	// 11): internal/machine's sysgen.go reads them.
 	"vax.sysgen.paging.enable":  true,
 	"vax.sysgen.paging.file":    true,

@@ -17,7 +17,7 @@ type Opcode struct {
 // about an opcode's operands, independent of any particular decode. This is
 // the static-data subset of the C source's struct INSTRUCTION — its
 // `routine` (dispatch handler), `use_count` and `debugdata` fields are
-// runtime/profiling concerns attached separately (see docs/PHASE-03.md's
+// runtime/profiling concerns attached separately (see docs/planning/PHASE-03.md's
 // design notes on the dispatch mechanism), not table data.
 type Instruction struct {
 	Name         string
@@ -51,7 +51,7 @@ type Instruction struct {
 // index a flat array directly, matching the C source's instruction[]; the
 // far smaller set of extended (two-byte) opcodes use a map instead of the C
 // source's linear scan — same result, O(1) instead of O(n), a pure lookup-
-// strategy improvement (see docs/PHASE-03.md).
+// strategy improvement (see docs/planning/PHASE-03.md).
 type Table struct {
 	single   [256]*Instruction
 	extended map[uint16]*Instruction

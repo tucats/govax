@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is $SEARCH (docs/PHASE-33.md, subtask 3), written from the RMS
+// This file is $SEARCH (docs/planning/PHASE-33.md, subtask 3), written from the RMS
 // Reference Manual and checked against VMS 7.3 (testdata/mar/rms3, the
 // SEARCH probe). VMS searches in one of two ways:
 //

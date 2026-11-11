@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// LOGOUT's report (docs/PHASE-48.md): what DCL writes on SYS$OUTPUT when
+// LOGOUT's report (docs/planning/PHASE-48.md): what DCL writes on SYS$OUTPUT when
 // a job logs out. A job that isn't interactive (a $CREPRC of LOGINOUT
 // reading a command file) gets the full report, laid out as VMS 7.3
 // wrote it in testdata/mp/probe4/vax/probe4.log:

@@ -36,7 +36,7 @@ const maxInputLength = maxStringLength
 // descriptor's class isn't a string's; or LIB$_INSVIRMEM. An argument it
 // can't read or write is an access violation, signaled (memoryFault).
 //
-// Unconfirmed against VMS (docs/PHASE-34.md, 2026-10-04): that flags is
+// Unconfirmed against VMS (docs/planning/PHASE-34.md, 2026-10-04): that flags is
 // set to 1 whether or not the routine prompted, and that a prompted line
 // is returned as typed, not uppercased.
 func libGetForeign(env *corevms.Environment, argv []uint32) (uint32, error) {

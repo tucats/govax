@@ -13,7 +13,7 @@ import (
 
 // This file checks the listing's pages (listpage.go) against real MACRO's
 // listings line for line, with the fidelity bar's masks
-// (docs/PHASE-29.md): the dates and times, the assembler's name, and the
+// (docs/planning/PHASE-29.md): the dates and times, the assembler's name, and the
 // source file's specification in each heading.
 
 // headDateColumn is where the heading's date begins, on both lines, and
@@ -391,7 +391,7 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 // FAB$V_FILE_MODE is here too: VMS's $FAB refers to it, building
 // FAB$B_ACMODES from a file access mode as well as CHAN_MODE and
 // LNM_MODE, but the RMS manual gives $FAB no argument for one, so govax's
-// $FAB leaves it out (docs/PHASE-34.md, 2026-10-04).
+// $FAB leaves it out (docs/planning/PHASE-34.md, 2026-10-04).
 func macroInternal(name string) bool {
 	return strings.HasPrefix(name, "$$") || strings.HasPrefix(name, "FAB$V_FILE_MODE ")
 }
@@ -510,7 +510,7 @@ func withoutInternals(lines []string, named, defined map[string]bool) []string {
 // memory its intermediate code, symbol table, and macros used.
 //
 // realClosingAllowed applies these and the other allowed differences
-// between govax's closing pages and real MACRO's (docs/PHASE-29.md, "The
+// between govax's closing pages and real MACRO's (docs/planning/PHASE-29.md, "The
 // fidelity bar"):
 //
 //   - The performance indicators' page faults column (Decision 2), which

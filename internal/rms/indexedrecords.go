@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/lck"
 )
 
-// The record operations on an indexed file (Phase 88, subtask 8; docs/PHASE-88
+// The record operations on an indexed file (Phase 88, subtask 8; docs/planning/PHASE-88
 // - keyed index files.md): $GET, $FIND, $PUT, $UPDATE, $DELETE, and $REWIND, on
 // the stream context below. The file's structure is internal/isam's; this file
 // is what RMS adds to it: the RAB's fields, the statuses, the stream's place,

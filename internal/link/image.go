@@ -8,13 +8,13 @@ import (
 
 // This file writes a VAX/VMS executable image: the image header block,
 // then each image section's pages, then the fixup section, then, with
-// traceback, the debug symbol table (docs/PHASE-29.md, subtask 13). In
+// traceback, the debug symbol table (docs/planning/PHASE-29.md, subtask 13). In
 // Phase 30 the first header record ($IHDDEF) came from the VMS source
 // archive's SDL (ihddef.sdl), which is off-limits now that the project
 // is fully clean room (CLAUDE.md). The other layouts come from the images
 // real LINK V11-39 wrote (testdata/mar/vax/*.exe and govax/gv_*.exe,
 // testdata/mar/list/vax, testdata/mar/round/vax) and from eVAX's
-// imgdef.h, as docs/PHASE-30.md's "What real LINK writes" records.
+// imgdef.h, as docs/planning/PHASE-30.md's "What real LINK writes" records.
 
 // blockSize is a disk block's, and a VAX page's, size.
 const blockSize = 512

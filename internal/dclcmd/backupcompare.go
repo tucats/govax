@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// BACKUP/COMPARE (docs/PHASE-69 - backup save sets.md, subtask 10): the
+// BACKUP/COMPARE (docs/planning/PHASE-69 - backup save sets.md, subtask 10): the
 // files of an input save set that /SELECT and /EXCLUDE choose, each held
 // up by rms.Session.CompareFile against the file the output specifier
 // names for it, by the same rules as a restore's (restoreTarget): [*...]

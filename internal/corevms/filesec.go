@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// File-backed sections (docs/PHASE-49 - record updates and locks.md,
+// File-backed sections (docs/planning/PHASE-49 - record updates and locks.md,
 // subtask 9): $CRMPSC of a file's blocks, private or global; the pager
 // that brings their pages in; writing modified pages back; and $UPDSEC.
 //

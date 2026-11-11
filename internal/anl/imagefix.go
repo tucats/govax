@@ -9,7 +9,7 @@ import (
 )
 
 // This file is ANALYZE/IMAGE's report of an image's fixup section
-// (docs/PHASE-40.md): what the image activator patches once it has
+// (docs/planning/PHASE-40.md): what the image activator patches once it has
 // mapped the shareable images the program uses.
 
 // refsPerLine is how many references a reference fixup list shows on a

@@ -8,7 +8,7 @@ import (
 )
 
 // The routines that work with the command language interpreter that ran
-// the image (docs/PHASE-57, the 5.0 manual's section 2.2). Each reaches
+// the image (docs/planning/PHASE-57, the 5.0 manual's section 2.2). Each reaches
 // the process's DCL through corevms.CLI (Environment.CLI); a process
 // with none (one $CREPRC created to run an image) gets LIB$_NOCLI, which
 // each routine checks for before it reads its arguments (unconfirmed:
@@ -233,7 +233,7 @@ func libDeleteSymbol(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return env.CLI.DeleteSymbol(name, table), nil
 }
 
-// The control keys (docs/PHASE-57, "Control keys"; the 5.0 manual's
+// The control keys (docs/planning/PHASE-57, "Control keys"; the 5.0 manual's
 // section 2.2.5): LIB$DISABLE_CTRL and LIB$ENABLE_CTRL are SET NOCONTROL
 // and SET CONTROL for Ctrl/T and Ctrl/Y, each key a bit of a mask
 // (LIB$M_CLI_CTRLT, LIB$M_CLI_CTRLY). The setting is the DCL's, so it

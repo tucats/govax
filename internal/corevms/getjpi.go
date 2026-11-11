@@ -8,8 +8,8 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $GETJPI and $GETJPIW (docs/PHASE-26.md, extended to every process by
-// docs/PHASE-45.md, subtask 10): information about a process, read from
+// $GETJPI and $GETJPIW (docs/planning/PHASE-26.md, extended to every process by
+// docs/planning/PHASE-45.md, subtask 10): information about a process, read from
 // its corevms.Process. A request names the caller (no process given), a
 // process by PID or name (processTarget), or scans the process table with
 // a wildcard.
@@ -237,7 +237,7 @@ var jpiItems = func() map[uint16]func(*Environment) itemValue {
 // the event flag (efn, default 0) is cleared and then set, iosb gets the
 // final status, and, if astadr isn't 0, an AST is queued to call it with
 // astprm in the caller's access mode. The AST usually runs as soon as the
-// service returns (docs/PHASE-26.md subtask 16). A call rejected before
+// service returns (docs/planning/PHASE-26.md subtask 16). A call rejected before
 // the request starts (bad efn, too few arguments, no such process)
 // completes nothing: no flag, IOSB status, or AST.
 func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
@@ -447,7 +447,7 @@ func registerJPIServices(t *ServiceTable) {
 
 // currentPriority is the process's current priority as $GETJPI's
 // JPI$_PRI reports it: the scheduler's, which includes any boost from the
-// event that ended its last wait, as VMS's does (docs/PHASE-44.md).
+// event that ended its last wait, as VMS's does (docs/planning/PHASE-44.md).
 func (env *Environment) currentPriority() uint32 {
 	if info, ok := env.sched.Info(handle(env)); ok {
 		return uint32(info.Priority)

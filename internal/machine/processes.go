@@ -9,7 +9,7 @@ import (
 )
 
 // RunningProcess is the process the engine's hooks reach: the System's current
-// process, the one whose context the CPU holds (docs/PHASE-44.md).
+// process, the one whose context the CPU holds (docs/planning/PHASE-44.md).
 // That's process 1 unless the scheduler has switched to another;
 // console commands keep using process 1 (or their own subprocess's DCL
 // its process), whichever runs. nil before the first INIT.
@@ -18,9 +18,9 @@ func (m *Machine) RunningProcess() *corevms.Environment {
 }
 
 // RunningProcessOne reports whether the CPU is running process 1, the
-// console's (and the debugger's: docs/PHASE-43.md, Decision 11) process.
+// console's (and the debugger's: docs/planning/PHASE-43.md, Decision 11) process.
 // The debugger's breakpoints, tracepoints, and watchpoints act only then
-// (docs/PHASE-44.md, subtask 8): a P0 address names process 1's memory,
+// (docs/planning/PHASE-44.md, subtask 8): a P0 address names process 1's memory,
 // and another process reaching the same address is somewhere else.
 func (m *Machine) RunningProcessOne() bool {
 	return m.RunningProcess() == m.processOne
@@ -28,7 +28,7 @@ func (m *Machine) RunningProcessOne() bool {
 
 // ProcessNote is what a stop message adds when the CPU holds a process
 // other than process 1, naming it (" in process 00000302"), and "" when
-// it holds process 1 (docs/PHASE-44.md, subtask 9).
+// it holds process 1 (docs/planning/PHASE-44.md, subtask 9).
 func (m *Machine) ProcessNote() string {
 	if env := m.RunningProcess(); env != m.processOne {
 		return fmt.Sprintf(" in process %08X", env.Process.PID)
@@ -38,11 +38,11 @@ func (m *Machine) ProcessNote() string {
 }
 
 // ReturnToProcessOne gives the CPU back to process 1 if a run stopped in
-// another process (docs/PHASE-44.md, subtask 9). After such a stop the
+// another process (docs/planning/PHASE-44.md, subtask 9). After such a stop the
 // CPU stays in that process, so EXAMINE and SHOW REGISTERS see it; the
 // next run (GO, STEP, CALL, RUN) and the debugger's EXIT come back here,
 // since the console's runs and the debugger's breakpoints are process
-// 1's (docs/PHASE-43.md, Decision 11). The other process keeps its place
+// 1's (docs/planning/PHASE-43.md, Decision 11). The other process keeps its place
 // in the scheduler. While scheduling is frozen (a nested run, inside
 // another process's) it does nothing.
 func (m *Machine) ReturnToProcessOne() error {

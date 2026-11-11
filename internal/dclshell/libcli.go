@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// What the LIB$ CLI routines ask of a process's DCL (docs/PHASE-57):
+// What the LIB$ CLI routines ask of a process's DCL (docs/planning/PHASE-57):
 // each process with a CLI gets a shellCLI bound to its own Shell
 // (Environment.CLI), set by newProcessOne for process 1 and by
 // cliHost.Start for a subprocess. A subprocess's image calls it on the

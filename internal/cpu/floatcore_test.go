@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Tests for F and D on the floating core (docs/PHASE-35.md, subtask 5).
+// Tests for F and D on the floating core (docs/planning/PHASE-35.md, subtask 5).
 // Each would have failed when the CPU held F and D values as float64s.
 // Where VMS's run of the Phase 35 probes (testdata/insn35) has the same
 // case, the expected bits are VMS's.

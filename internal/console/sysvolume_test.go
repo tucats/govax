@@ -16,7 +16,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The system volume's tests (docs/PHASE-87 - system volume.md, subtask
+// The system volume's tests (docs/planning/PHASE-87 - system volume.md, subtask
 // 3). They make their volumes RD51s, big enough for every file and
 // quicker to make than the default RD54.
 const testSystemType = "RD51"

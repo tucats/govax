@@ -38,7 +38,7 @@ msg:	.ascid	/paged image done/
 `
 
 // TestPagingFrames: with vax.sysgen.paging.enable on, VMINIT gives the
-// memory the PFN database (docs/PHASE-62 - VMS paging.md, subtask 4), a
+// memory the PFN database (docs/planning/PHASE-62 - VMS paging.md, subtask 4), a
 // program runs as it does without it, and the database is sound
 // afterward, its count of claimed frames the memory's.
 func TestPagingFrames(t *testing.T) {
@@ -85,7 +85,7 @@ func TestPagingFrames(t *testing.T) {
 }
 
 // TestPagingFileSections runs Phase 49's file section programs with
-// paging on (docs/PHASE-62 - VMS paging.md, subtask 5): a global section
+// paging on (docs/planning/PHASE-62 - VMS paging.md, subtask 5): a global section
 // two processes share, and private and copy-on-reference sections left
 // for image rundown. Each still ends as it should, and afterward no
 // frame is left tied to a global page; since Phase 67's subtask 3 image

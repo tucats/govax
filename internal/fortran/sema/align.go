@@ -24,7 +24,7 @@ import (
 //
 // A group's setting holds from its OPTIONS to its END OPTIONS, and changes only
 // the classes it names, so groups nest. The rules are the HP Fortran manual's
-// 14.14 (docs/PHASE-82 - FORTRAN DEC extensions.md, Decision 8); the boundaries,
+// 14.14 (docs/planning/PHASE-82 - FORTRAN DEC extensions.md, Decision 8); the boundaries,
 // which that manual leaves to one we don't have, are ours (naturalBoundary).
 //
 // The setting where a declaration stands decides its layout: a structure's where

@@ -31,7 +31,7 @@ const (
 	CLIFacility   = 2  // Command line or DCL errors
 	DBGFacility   = 3  // Messages from the debugger
 	LIBFacility   = 6  // MEssages from the LIBRTL shims and runtimes
-	CREFacility   = 7  // The CREATE command (docs/PHASE-34.md)
+	CREFacility   = 7  // The CREATE command (docs/planning/PHASE-34.md)
 	MOUNTFacility = 8  // The MOUNT command and the startup default volume
 	LIBRFacility  = 9  // The LIBRARY command, as VMS's LIBRARIAN names itself
 	EDITFacility  = 10 // The EDIT command and SET EDITOR

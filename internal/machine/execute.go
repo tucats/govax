@@ -12,7 +12,7 @@ import (
 // non-nil) until it halts, hits a breakpoint, or an unhandled fault stops
 // it — the console's GO/EXECUTE command.
 //
-// The run itself belongs to the debugger (docs/PHASE-42.md, subtask 4):
+// The run itself belongs to the debugger (docs/planning/PHASE-42.md, subtask 4):
 // the breakpoints, the run loop, and the stop messages are in
 // internal/debugger. With one installed, this starts a session and
 // returns when the program ends or the debugger stops it (the DBG>
@@ -53,7 +53,7 @@ func (m *Machine) Execute(startAddr *uint32) error {
 // (CALL/STEP), which needs the debugger.
 //
 // As with Execute, a debugger, when installed, runs it (and so honors
-// breakpoints, docs/PHASE-42.md bug 1); a bare Console runs it to its end.
+// breakpoints, docs/planning/PHASE-42.md bug 1); a bare Console runs it to its end.
 func (m *Machine) Call(addr uint32, step bool, args ...uint32) error {
 	if err := m.requireInit(); err != nil {
 		return err
@@ -129,12 +129,12 @@ func (m *Machine) BeginStep() error {
 
 // StepMachine executes one instruction of whichever process the CPU is
 // running (Engine.Step), for the console's and the debugger's run loops.
-// With several processes (docs/PHASE-44.md, subtask 7), only process 1's
+// With several processes (docs/planning/PHASE-44.md, subtask 7), only process 1's
 // image ending ends the run, as only process 1's image is the console's
 // RUN, CALL, or GO: another process whose image ends (its main routine
 // returning, or $EXIT, both of which reach Step as
 // cpu.ErrConsoleCallReturned) is deleted (corevms.System.DeleteProcess,
-// docs/PHASE-45.md), and the run goes on with the processes that are
+// docs/planning/PHASE-45.md), and the run goes on with the processes that are
 // left. Every other
 // error, a HALT in another process included (HALT stops the machine,
 // whoever runs it), is returned as Step returned it.
@@ -160,7 +160,7 @@ func (m *Machine) StepMachine() error {
 // ReportStop handles every "the run stopped for a benign, expected
 // reason" outcome Engine.Step can produce -- a HALT instruction, a Ctrl-C
 // interrupt (see cpu.Engine.Attention), and this project's own
-// -instruction-limit/-time-limit guards (docs/PHASE-15.md's sub-phase 2) --
+// -instruction-limit/-time-limit guards (docs/planning/PHASE-15.md's sub-phase 2) --
 // by printing a matching console message and returning nil, so
 // the debugger's run loops can just call this
 // on any Step error. Any other error (an unhandled fault, a real Go error)

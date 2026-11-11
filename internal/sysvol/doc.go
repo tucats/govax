@@ -1,4 +1,4 @@
-// Package sysvol describes govax's system volume (docs/PHASE-87 - system
+// Package sysvol describes govax's system volume (docs/planning/PHASE-87 - system
 // volume.md): the ODS-2 volume govax mounts, as DUA0: by default, every
 // time it starts, holding the files a VMS system disk would hold for it.
 //

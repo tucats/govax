@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// Process deletion (docs/PHASE-45.md, subtask 6).
+// Process deletion (docs/planning/PHASE-45.md, subtask 6).
 //
 // On VMS, a process created to run an image (one with no command
 // interpreter) is deleted when the image exits, and $DELPRC deletes any

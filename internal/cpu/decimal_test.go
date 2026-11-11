@@ -8,7 +8,7 @@ import (
 )
 
 // Tests for the packed decimal core and MOVP, CMPP3, CMPP4, CVTLP, and
-// CVTPL (docs/PHASE-35.md, subtask 10). Expected results are the
+// CVTPL (docs/planning/PHASE-35.md, subtask 10). Expected results are the
 // manual's, and where marked VMS's run of the Phase 35 probe
 // (testdata/insn35), which settles what the manual leaves UNPREDICTABLE.
 

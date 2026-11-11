@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/librtl"
 )
 
-// Stubs for run-time library routines govax lacks (docs/PHASE-72 -
+// Stubs for run-time library routines govax lacks (docs/planning/PHASE-72 -
 // legacy images.md, subtask 4).
 //
 // govax stands for VMS's run-time libraries (runtimeLibraries) unless a

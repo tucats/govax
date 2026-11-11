@@ -23,7 +23,7 @@ const formatCodes = "%dxXfsc"
 
 // loadDFloat converts VAX D_floating bits (lo/hi longwords, matching
 // fpu_load's own argument order) to a float64. This is a self-contained
-// copy of internal/cpu's unexported fpuLoad algorithm (docs/PHASE-05.md's
+// copy of internal/cpu's unexported fpuLoad algorithm (docs/planning/PHASE-05.md's
 // design notes explain its derivation) rather than a shared call, since
 // that function isn't exported and this package has no other reason to
 // depend on internal/cpu. A reserved encoding (fpuLoad's own

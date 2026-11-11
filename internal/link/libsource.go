@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// This file is docs/PHASE-30.md's symbol sources made from VMS files:
+// This file is docs/planning/PHASE-30.md's symbol sources made from VMS files:
 //
 //   - a shareable image's own global symbol table (ReadShareableImage),
 //     read from the image file, as real LINK reads SYS$SHARE:LIBRTL.EXE;

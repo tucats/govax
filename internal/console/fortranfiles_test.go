@@ -28,7 +28,7 @@ func fortranBuild(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, na
 }
 
 // TestFortranFiles is what testdata/fortran/files.for can't see of itself:
-// image exit closes each unit by its disposition (docs/PHASE-81 - FORTRAN
+// image exit closes each unit by its disposition (docs/planning/PHASE-81 - FORTRAN
 // files.md, Decision 12, as testdata/for81's FOR81X showed), keeping an
 // ordinary file and a unit with no OPEN, with their records, and removing
 // DISPOSE='DELETE' and STATUS='SCRATCH' files.

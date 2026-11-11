@@ -3,7 +3,7 @@
 This is a guided tour of govax's FORTRAN compiler and its run-time
 library, FTNRTL, for someone who wants to know how they work, or to
 write a compiler of their own for the VAX under VMS. It was written with
-the compiler, a phase at a time (`docs/PHASE-74 - FORTRAN plan.md` lays out
+the compiler, a phase at a time (`docs/planning/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to), and a
 later section may say what an earlier phase added. The user's side is the
 manual's chapter 14, "Programming in FORTRAN".
@@ -2268,7 +2268,7 @@ program must print the same. Most of what follows is what "correct" allows.
 ### Measure first
 
 The plan listed the classic passes in the classic order, constant propagation first.
-Measuring first (`PHASE-84 - FORTRAN optimizer.md`, Part A) turned the order round.
+Measuring first (`planning/PHASE-84 - FORTRAN optimizer.md`, Part A) turned the order round.
 The corpus's programs spend 95% of their time in FTNRTL, so it can't measure a compiler;
 five small kernels had to be written. In DUNGEON's own code, a fifth of the instructions
 were `BRW`, the far half of a branch around one (section 10). Constant propagation
@@ -2622,7 +2622,7 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Programs and expected output | `testdata/fortran`, `testdata/for80`, `testdata/for81`, `testdata/for88`, `testdata/ftn86` |
 | Indexed files under FTNRTL | `ftn_open.mar`'s `KEYS`, `ftn_keyed.mar`, `ftn_units.mar`'s `UB_KEYED`; RMS's `internal/rms/indexed*.go`, `internal/isam` |
 | Recursive storage: the rule; one constructor for cells | `sema/storage.go`'s `recursiveStorage`; `ir/lower.go`'s `Routine.NewCell` |
-| Why something is as it is | `docs/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, and `PHASE-89` for recursion, each with its decisions and log |
+| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, and `PHASE-89` for recursion, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
 

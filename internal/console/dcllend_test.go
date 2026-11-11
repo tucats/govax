@@ -178,7 +178,7 @@ func TestLend_wait(t *testing.T) {
 // scheduler waits for in the host; before it did, every process was made
 // to retry its wait at once, each retry's instructions counted as
 // emulated time in quantum-clock mode, and a WAIT of a second moved the
-// clock on by minutes (round 3b's rehearsal, docs/PHASE-90). With no
+// clock on by minutes (round 3b's rehearsal, docs/planning/PHASE-90). With no
 // timer pending the clock now stands still meanwhile, as it does while
 // process 1 waits alone.
 func TestLend_waitBesideWaitingSubprocess(t *testing.T) {

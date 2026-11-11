@@ -12,7 +12,7 @@ import (
 
 // The commands that show or change the machine's own state: registers, the
 // processor status longword, page tables, the translation buffer, the
-// system control block, the stacks, and so on (docs/PHASE-42.md, subtask
+// system control block, the stacks, and so on (docs/planning/PHASE-42.md, subtask
 // 11). Before this subtask they were console commands; they are the
 // debugger's now, since looking at the machine is what a debugger is for.
 //

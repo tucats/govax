@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// Indexed files (Phase 88; docs/PHASE-88 - keyed index files.md).
+// Indexed files (Phase 88; docs/planning/PHASE-88 - keyed index files.md).
 //
 // An indexed file's structure, its prolog, buckets, and records, is
 // internal/isam's, a package that knows nothing of FABs or VAX memory. This

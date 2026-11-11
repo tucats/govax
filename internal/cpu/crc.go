@@ -8,7 +8,7 @@ import (
 // CRC has no working C reference to port: emul_crc.c's `emul_crc` is a
 // complete no-op stub (`return VAX_OK;`, no computation at all), and its
 // instruction_table.h row has an all-zero operand count/scale/access to
-// match. Per user direction (docs/PHASE-06.md's design notes,
+// match. Per user direction (docs/planning/PHASE-06.md's design notes,
 // docs/DEVIATIONS.md), this is implemented from vax_instr_set.pdf's CRC
 // entry instead -- the table row is patched to the manual's actual operand
 // shape by internal/cpu/gen's knownTableFixes (see its comment) rather than

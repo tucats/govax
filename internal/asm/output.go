@@ -32,7 +32,7 @@ const (
 // outEvent is one step of a MACRO-dialect assembly's output, in source
 // order. Real MACRO writes its object's records as its second pass reads
 // the source, so the order of what it defines and stores follows the
-// source, not the psects (docs/PHASE-27.md, subtask 3's log). The object
+// source, not the psects (docs/planning/PHASE-27.md, subtask 3's log). The object
 // emitter (see Object) replays these events to write the same records.
 type outEvent struct {
 	kind   outKind

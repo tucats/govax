@@ -19,7 +19,7 @@ import (
 // the index arithmetic and the multiplication done once. This looks only inside a
 // basic block: nothing jumps into the middle of one, so whatever is computed early in
 // it has been computed by the time anything later runs. Across blocks the survey
-// found no case worth the machinery (docs/PHASE-84 - FORTRAN optimizer.md).
+// found no case worth the machinery (docs/planning/PHASE-84 - FORTRAN optimizer.md).
 //
 // # Which uses are the same value
 //

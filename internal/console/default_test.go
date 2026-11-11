@@ -80,7 +80,7 @@ func TestDispatch_setDefault(t *testing.T) {
 // TestDispatch_setDefaultNeedsArgument confirms a bare "SET DEFAULT" with
 // no file specification at all is reported as DCL's CLI_INSFPRM for the
 // grammar's missing parameter (since 2026-10-13; the grammar's
-// CLI_MISSINGPARAMETER since docs/PHASE-37.md, CLI_NEEDSETARG before),
+// CLI_MISSINGPARAMETER since docs/planning/PHASE-37.md, CLI_NEEDSETARG before),
 // rather than silently doing nothing or panicking on an empty string.
 func TestDispatch_setDefaultNeedsArgument(t *testing.T) {
 	d, _ := newTestDispatcher(t)

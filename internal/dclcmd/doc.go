@@ -4,7 +4,7 @@
 // SET/SHOW DEFAULT, MOUNT/DISMOUNT, INITIALIZE/CONTAINER, DEFINE/ASSIGN/
 // DEASSIGN and SHOW LOGICAL/TRANSLATION, DEFINE/DEVICE and SHOW DEVICES,
 // SHOW SYSTEM and SHOW PROCESS, and the development tools MACRO, LINK,
-// LIBRARY, and ANALYZE (docs/PHASE-52 - console package split.md).
+// LIBRARY, and ANALYZE (docs/planning/PHASE-52 - console package split.md).
 //
 // Each command is a method of Context, which the console builds for each
 // command from the DCL that runs it (internal/console's Console.cmd):

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The termination message (docs/PHASE-45.md, subtask 7).
+// The termination message (docs/planning/PHASE-45.md, subtask 7).
 //
 // A process that creates another with $CREPRC can name a mailbox, by its
 // unit number (mbxunt), to be told when the new process is deleted. When

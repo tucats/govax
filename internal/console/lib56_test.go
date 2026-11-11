@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 )
 
-// The Phase 56 oracle (docs/PHASE-56, subtask 8): testdata/lib56's
+// The Phase 56 oracle (docs/planning/PHASE-56, subtask 8): testdata/lib56's
 // lib56.mar calls every LIBRTL date and time routine, case by case, and
 // prints what each returned, signaled, and stored. vax/lib56-vax.txt is
 // its output on VMS, which govax's must match line for line, but for
@@ -22,7 +22,7 @@ import (
 var lib56Dir = filepath.Join("..", "..", "testdata", "lib56")
 
 // Why VMS's output differs from govax's for the cases in
-// expectedLib56Cases (docs/PHASE-56's progress log, the probe's second
+// expectedLib56Cases (docs/planning/PHASE-56's progress log, the probe's second
 // run).
 const (
 	// VMS V7.1's LIB$CONVERT_DATE_STRING returned SS$_ROPRAND (a reserved

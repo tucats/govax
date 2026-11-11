@@ -1410,7 +1410,7 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 }
 
 // pseudoRMSDEF assembles .RMSDEF — this port's combined equivalent of real
-// MACRO-32's $FABDEF/$RABDEF/$RMSDEF library macros (docs/PHASE-24.md):
+// MACRO-32's $FABDEF/$RABDEF/$RMSDEF library macros (docs/planning/PHASE-24.md):
 // defines every real FAB$/RAB$/RMS$ symbol as a permanent assembler
 // symbol — each field's offset symbol (e.g. "FAB$B_FAC"), every bit
 // number, bitmask flag, and named code value, and every RMS$_
@@ -1428,7 +1428,7 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 // microkernel context.
 //
 // unique=false on every setSymbol call, from the start (not a fix bolted
-// on after the fact the way .P1VECTOR's was — see docs/PHASE-11.md's own
+// on after the fact the way .P1VECTOR's was — see docs/planning/PHASE-11.md's own
 // progress log on that bug): running .RMSDEF twice in the same session
 // (e.g. a persistent console session's own kernel.asm boot having already
 // run it, then a second file's own ".RMSDEF" line) must not fail with a
@@ -1449,7 +1449,7 @@ func (a *Assembler) pseudoRMSDEF(c *cursor) error {
 }
 
 // pseudoFAB assembles .FAB [KEYWORD=value[, KEYWORD=value]...] — this
-// port's equivalent of real MACRO-32's $FAB macro (docs/PHASE-24.md):
+// port's equivalent of real MACRO-32's $FAB macro (docs/planning/PHASE-24.md):
 // builds an 80-byte FAB instance at the current deposit location. See
 // buildControlBlock's own doc comment for the shared implementation.
 func (a *Assembler) pseudoFAB(c *cursor) error {

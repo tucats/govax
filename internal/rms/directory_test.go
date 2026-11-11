@@ -87,7 +87,7 @@ func createTestFile(t *testing.T, vol *volume.Volume, name, content string) {
 // TestSession_directoryListsFiles confirms the basic happy path: every file
 // created on the volume shows up in a bare DIRECTORY listing, grouped under
 // one "Directory DUA0:[000000]" header (the master file directory, which
-// VMS writes [000000]; govax wrote "[]" until docs/PHASE-34.md).
+// VMS writes [000000]; govax wrote "[]" until docs/planning/PHASE-34.md).
 func TestSession_directoryListsFiles(t *testing.T) {
 	s, vol := newDirectoryTestSession(t)
 	createTestFile(t, vol, "FOO.TXT", "hello")

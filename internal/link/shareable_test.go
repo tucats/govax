@@ -13,7 +13,7 @@ import (
 
 // padded returns a real image padded to a whole block: real LINK ends a
 // shareable image at its global symbol table's last record, mid-block,
-// where govax pads it (docs/PHASE-29.md, Decision 7).
+// where govax pads it (docs/planning/PHASE-29.md, Decision 7).
 func padded(image []byte) []byte {
 	return append(bytes.Clone(image), make([]byte, int(pageUp(uint32(len(image))))-len(image))...)
 }

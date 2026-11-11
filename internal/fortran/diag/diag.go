@@ -5,7 +5,7 @@
 // wrong, where, and shows the line, so the programmer needn't hunt. Every
 // pass of govax's FORTRAN compiler reports through this package, so
 // messages look the same whichever pass found the problem. A message
-// looks like this (docs/PHASE-74 - FORTRAN plan.md, Decision 19):
+// looks like this (docs/planning/PHASE-74 - FORTRAN plan.md, Decision 19):
 //
 //	%FORT-E-UNDEFLBL, statement label 20 is never defined
 //	  at line 14 of DUA0:[WORK]SQUARES.FOR;1

@@ -151,7 +151,7 @@ ttnam:	.ascid	"TTA0:"
 	p.iosb(p.one, 16, "read", 1, 5, 0x1000D) // ended by RETURN, a 1-byte terminator
 }
 
-// TestPendingTerminalRead (docs/PHASE-49.md, subtask 10): a $QIO read
+// TestPendingTerminalRead (docs/planning/PHASE-49.md, subtask 10): a $QIO read
 // with nothing typed returns SS$_NORMAL at once and the program goes on
 // working, counting until its IOSB is written; the line typed then
 // completes the read, and the program sees it.

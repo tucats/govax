@@ -9,7 +9,7 @@ import (
 
 // A fast load: what CONVERT does to fill an indexed file, by building each key's
 // tree from records already in its order, rather than by a $PUT at a time
-// (the Record Management Utilities manual's /FAST_LOAD; docs/PHASE-88 - keyed
+// (the Record Management Utilities manual's /FAST_LOAD; docs/planning/PHASE-88 - keyed
 // index files.md, subtask 10c). The rules are from the files VMS 7.1's CONVERT
 // made in round 3 of the probe (testdata/idx88's C6 to C9), which load_test.go
 // compares with the ones made here:

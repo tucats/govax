@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// Waiting with the scheduler (docs/PHASE-44.md, subtask 4).
+// Waiting with the scheduler (docs/planning/PHASE-44.md, subtask 4).
 //
 // A service that can't finish yet ($HIBER with no wakeup pending,
 // $WAITFR on a clear flag, a $QIOW whose I/O hasn't completed) returns
@@ -29,7 +29,7 @@ import (
 // choice can't miss an event, and with a handful of processes it's cheap.
 //
 // An event that can end a wait is also reported when it happens
-// (reportEvent, docs/PHASE-46.md subtask 1): an I/O request completing,
+// (reportEvent, docs/planning/PHASE-46.md subtask 1): an I/O request completing,
 // an attention AST, or a timer expiring makes its process computable at
 // once, boosted by the event's own class, and may preempt the process
 // that caused it, as on VMS. A flag set in a common event flag cluster,

@@ -1,7 +1,7 @@
 // Package lex is the FORTRAN compiler's second pass, its lexer: it decides
 // what kind of statement each statement is and splits it into tokens, the
-// words the parser reads (docs/PHASE-75 - FORTRAN first light.md, Part
-// B, and Decision 5 of docs/PHASE-74 - FORTRAN plan.md).
+// words the parser reads (docs/planning/PHASE-75 - FORTRAN first light.md, Part
+// B, and Decision 5 of docs/planning/PHASE-74 - FORTRAN plan.md).
 //
 // # Why FORTRAN's lexer is unusual
 //

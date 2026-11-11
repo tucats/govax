@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The null device (docs/PHASE-45.md, subtask 11).
+// The null device (docs/planning/PHASE-45.md, subtask 11).
 
 func TestNull_qio(t *testing.T) {
 	env, out := fixture()

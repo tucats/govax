@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/ods2/filespec"
 )
 
-// This file is RMS's use of the logical-name database (docs/PHASE-25.md
+// This file is RMS's use of the logical-name database (docs/planning/PHASE-25.md
 // subtask 7): translating a file specification's logical names, applying
 // the default device (SYS$DISK) and directory, and fanning a search list
 // out into the specs it stands for.

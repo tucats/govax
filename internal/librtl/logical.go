@@ -11,7 +11,7 @@ import (
 var ssSupersede = vmsdef.Symbols["SS$_SUPERSEDE"]
 
 // The logical-name routines of the 5.0 manual's section 2.2.4
-// (docs/PHASE-57, "Logical names"): DCL's DEFINE and DEASSIGN for a
+// (docs/planning/PHASE-57, "Logical names"): DCL's DEFINE and DEASSIGN for a
 // program. Each works at supervisor mode whatever the caller's mode, so
 // the names outlive the image, and defaults the table to LNM$PROCESS.
 // The work is $CRELNM's and $DELLNM's (corevms.Environment's

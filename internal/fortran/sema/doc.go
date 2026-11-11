@@ -1,7 +1,7 @@
 // Package sema is the FORTRAN compiler's fourth pass, semantic analysis:
 // it reads the parser's syntax tree (package ast) and works out what the
-// program means, reporting what is wrong with it (docs/PHASE-75 -
-// FORTRAN first light.md, Part B, and Decision 7 of docs/PHASE-74 -
+// program means, reporting what is wrong with it (docs/planning/PHASE-75 -
+// FORTRAN first light.md, Part B, and Decision 7 of docs/planning/PHASE-74 -
 // FORTRAN plan.md).
 //
 // # What the tree doesn't say

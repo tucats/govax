@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Attribute lists (docs/PHASE-26.md subtask 42): how a disk $QIO reads
+// Attribute lists (docs/planning/PHASE-26.md subtask 42): how a disk $QIO reads
 // and writes what a file's header records about it.
 //
 // # The list

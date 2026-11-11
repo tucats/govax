@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Indexed files end to end (docs/PHASE-88 - keyed index files.md, subtask 14;
+// Indexed files end to end (docs/planning/PHASE-88 - keyed index files.md, subtask 14;
 // testdata/rms88's README): programs in MACRO and FORTRAN, and DCL, one after
 // another on the files they make, in both paging modes. FORTRAN's own programs
 // on indexed files are testdata/fortran's parts.for and shared.for, which

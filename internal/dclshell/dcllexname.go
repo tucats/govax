@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 )
 
-// The lexical functions on logical names and messages (docs/PHASE-50 -
+// The lexical functions on logical names and messages (docs/planning/PHASE-50 -
 // DCL command procedures.md, subtask 14; the User's Manual, 15.3 and
 // 15.5): F$TRNLNM, F$LOGICAL, and F$MESSAGE. Logical names are the
 // console process's (Console.Logicals), translated as $TRNLNM translates

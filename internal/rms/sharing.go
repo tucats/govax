@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// File sharing (docs/PHASE-47.md): how an RMS open's FAB$B_FAC and
+// File sharing (docs/planning/PHASE-47.md): how an RMS open's FAB$B_FAC and
 // FAB$B_SHR decide whether it may share a file with its other openers.
 //
 // The rules are the Guide to OpenVMS File Applications' (section 7.1.2,

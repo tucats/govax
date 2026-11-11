@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 67's subtask 7 (docs/PHASE-67 - address space under paging.md):
+// Phase 67's subtask 7 (docs/planning/PHASE-67 - address space under paging.md):
 // with paging on, the console's ASM and DEPOSIT (and the debugger's,
 // WriteBytes) create the P0 pages they write in process 1, so loading a
 // program by hand works as it does with paging off.

@@ -20,7 +20,7 @@ type callbackCounts struct {
 }
 
 // testCallback returns TEST$CALLBACK (routine, count, value), a routine
-// that calls back as the LIB$ file routines do (docs/PHASE-58, subtask
+// that calls back as the LIB$ file routines do (docs/planning/PHASE-58, subtask
 // 2): it calls routine count times, as CALLG (i, value), and returns the
 // sum of the R0s.
 func testCallback(counts *callbackCounts) corevms.ShimFunc {

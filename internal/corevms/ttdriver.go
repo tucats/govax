@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// The terminal driver (docs/PHASE-26.md subtask 17): the $QIO functions
+// The terminal driver (docs/planning/PHASE-26.md subtask 17): the $QIO functions
 // a terminal (device class DC$_TERM, such as TTA0:) supports. Every
 // terminal is the console: reads come from the console's input stream
 // (the same one DECC$GETS reads, input.go) and writes go to its output

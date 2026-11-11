@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-23.md subtask 4: the internal/rms half of
+// This file implements docs/planning/PHASE-23.md subtask 4: the internal/rms half of
 // the console INITIALIZE/CONTAINER command -- formatting a brand-new,
 // empty ODS-2 volume from nothing, as opposed to every other command in
 // this package (Mount, resolveVolume, ...), which all operate on a volume
@@ -25,7 +25,7 @@ import (
 // starts from a blank, unformatted container and writes just enough
 // structure to make it a valid, empty volume. Real VMS's own INITIALIZE
 // command does exactly this to a physical disk; here it does the same
-// thing to a container file standing in for one (see docs/PHASE-22.md for
+// thing to a container file standing in for one (see docs/planning/PHASE-22.md for
 // how containers already stand in for physical disks elsewhere in this
 // project).
 //
@@ -41,7 +41,7 @@ import (
 // this project's direct behavioral match for the sibling ods2 module's own
 // cmdInitialize (github.com/tucats/ods2/cmd/ods2/internal/session/
 // initialize.go), read here purely as a *behavioral* spec (see
-// docs/PHASE-23.md's "Why this phase looks different from most others").
+// docs/planning/PHASE-23.md's "Why this phase looks different from most others").
 //
 // Matching real VMS's own INITIALIZE (and ods2's own cmdInitialize), the
 // freshly built volume is *not* mounted -- a caller runs MountTable.Mount
@@ -63,7 +63,7 @@ import (
 // for even the minimal reserved-file layout every ODS-2 volume needs --
 // is returned as a plain Go error; internal/console's own thin wrapper
 // (initialize.go) is what translates that into a real, numbered VMS
-// status for the operator to see (docs/PHASE-23.md's "Status-code / error
+// status for the operator to see (docs/planning/PHASE-23.md's "Status-code / error
 // translation" design section).
 func InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
 	// If blocks were not specified, but a known device type was given, use it's max block

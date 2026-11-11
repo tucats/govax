@@ -9,7 +9,7 @@ import (
 // own routines (dynamic strings, FIND_FILE's and the timers' blocks, ...)
 // allocate. Its mechanisms are internal/vmheap's: a page pool over the
 // P0 region, and zones that divide the pool's pages into blocks
-// (docs/PHASE-59 - LIB VM zones.md, subtask 2). The RTL has two zones of
+// (docs/planning/PHASE-59 - LIB VM zones.md, subtask 2). The RTL has two zones of
 // its own (vmzone.go): the default zone, which LIB$GET_VM's zone 0,
 // DECC$MALLOC, and the RTL's own blocks use, and the string zone,
 // dynamic strings' (subtask 5). All belong to the running image: image

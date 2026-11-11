@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The one-shot subcommands with a system volume (docs/PHASE-87 - system
+// The one-shot subcommands with a system volume (docs/planning/PHASE-87 - system
 // volume.md, subtask 9): govax macro, fortran, link, run, library, and
 // analyze each start govax, mount the system volume, and run STARTUP.COM,
 // whose SYS$LIBRARY and SYS$SHARE lead them to the volume's macro library,

@@ -13,7 +13,7 @@ import (
 // evaluator's (constant.go), one set of rules for an executable statement
 // and a PARAMETER statement alike. REAL arithmetic goes through vaxfloat,
 // which rounds as the VAX's floating instructions do (Decision 16 of
-// docs/PHASE-74 - FORTRAN plan.md), so a folded expression has the value
+// docs/planning/PHASE-74 - FORTRAN plan.md), so a folded expression has the value
 // the program would have computed.
 
 // INTEGER*4's range (section 2.2.1.1).

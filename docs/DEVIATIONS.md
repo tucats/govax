@@ -22,12 +22,12 @@ but not perfect. When a suspected ISA/behavior mismatch is found while porting:
 - When it's not obvious which of the above applies, ask before deciding unilaterally.
 
 Entries get resolved (fixed or deliberately kept, with rationale) during Phase 12
-(`PHASE-12.md`) or whenever the relevant subsystem gets a dedicated debugging pass.
+(`planning/PHASE-12.md`) or whenever the relevant subsystem gets a dedicated debugging pass.
 
 
 ## Phase 22 (RMS / `ods2`) findings
 
-Phase 22 (`PHASE-22.md`) has no `reference/eVAX` counterpart at all — its own
+Phase 22 (`planning/PHASE-22.md`) has no `reference/eVAX` counterpart at all — its own
 correctness reference is the real VMS RMS manual (`rms_manual.pdf`) and the
 sibling `github.com/tucats/ods2` module's actual on-disk/record-format
 behavior, not the C source. The entries below are that phase's own findings
@@ -48,7 +48,7 @@ rather than silently guessing at), kept in this file per that phase's own
   (`rms_manual.pdf`'s own `$CREATE`/FAB description) rather than rejecting
   the call outright. This phase's own acceptance-test program and every
   unit-test fixture built so far always sets `FAB$B_RFM` explicitly (per
-  `docs/PHASE-22.md` subtask 5's own progress-log note), so there's no
+  `docs/planning/PHASE-22.md` subtask 5's own progress-log note), so there's no
   concrete calling program yet to motivate *which* default `ods2` should
   pick (Fixed? Stream? something derived from `FAB$B_RAT`?) — a real,
   deliberate gap in what's implemented, not a bug in what is.
@@ -58,7 +58,7 @@ rather than silently guessing at), kept in this file per that phase's own
 
 ## Phase 25 (logical names) findings
 
-Phase 25 (`PHASE-25.md`) replaced eVAX's logical-name support rather than
+Phase 25 (`planning/PHASE-25.md`) replaced eVAX's logical-name support rather than
 porting it. That was the user's explicit direction: the existing behavior was
 treated as suspect, and VAX/VMS 7.3 is the target. The references are the VSI
 OpenVMS User's Manual (chapter 11), the VMS 5.0 System Services Reference
@@ -105,7 +105,7 @@ against real VMS.
 
 ## Phase 26 (system services) findings
 
-Phase 26 (`PHASE-26.md`) adds VMS system services eVAX never implemented, so
+Phase 26 (`planning/PHASE-26.md`) adds VMS system services eVAX never implemented, so
 there is no C behavior to preserve; the reference is the VMS 5.0 System
 Services Reference Manual. These entries record where govax's version is
 knowingly simpler than real VMS, plus the one existing service whose behavior
@@ -413,7 +413,7 @@ changed as a result.
     termination mailboxes.
   - `$DASSGN` and `$CANCEL` end pending requests with `SS$_CANCEL`;
     whether VMS's mailbox driver says `SS$_ABORT` for requests it holds
-    is an open question (`docs/PHASE-26.md`).
+    is an open question (`docs/planning/PHASE-26.md`).
   - INIT/VMINIT/ZERO delete every mailbox, permanent ones included.
 - **Status**: open, by design.
 
@@ -624,7 +624,7 @@ changed as a result.
 
 ## Phase 27 (MACRO-32 object modules) findings
 
-Phase 27 (`PHASE-27.md`) adds a `MACRO` command that writes VAX object
+Phase 27 (`planning/PHASE-27.md`) adds a `MACRO` command that writes VAX object
 modules. eVAX had no object output, so there is no C behavior to
 preserve. The references are the VAX MACRO manual, the VMS 5.0 Linker
 manual's object language chapter, and objects real VAX MACRO V5.4-3
@@ -775,7 +775,7 @@ choices no fixture has confirmed yet.
   `DIRECTORY/OWNER/PROTECTION` listing.
 - **What**: VMS shows an owner with an identifier name by the name
   (`[SYSTEM]` for `[1,4]`) and lays the columns out its own way; govax
-  shows `[1,4]`, in its own one-file-per-line layout (docs/PHASE-23.md's
+  shows `[1,4]`, in its own one-file-per-line layout (docs/planning/PHASE-23.md's
   open question). The protection column, `(RWE,RWE,RE,E)`, is VMS's.
 - **Status**: deferred: govax has no rights database to name UICs from.
 
@@ -857,7 +857,7 @@ choices no fixture has confirmed yet.
   (`session_oracle_test.go`), whose `expectedDifferences` is the
   authoritative list, each entry with its reason.
 - **What**: the commands that still print something other than VMS's log
-  (docs/PHASE-42.md, subtask 16): (1) a `WHEN` condition's `.LABEL` is the
+  (docs/planning/PHASE-42.md, subtask 16): (1) a `WHEN` condition's `.LABEL` is the
   contents at the label, where VMS reads the contents at the address the
   label holds (`condition.go`); (2) at a break on an unhandled exception
   the PC is in the condition dispatcher, not at the fault, so `.PC` and
@@ -880,7 +880,7 @@ choices no fixture has confirmed yet.
 
 ### [Phase 42] Debugger rules chosen without a probe or a manual to settle them
 
-- **Where**: `internal/debugger`, as listed in docs/PHASE-42.md's progress
+- **Where**: `internal/debugger`, as listed in docs/planning/PHASE-42.md's progress
   log under "Unconfirmed".
 - **What**: where neither the *VMS 5.5 Debugger Manual* nor a probe
   session said, govax made a choice and logged it. The ones a later probe
@@ -1565,7 +1565,7 @@ choices no fixture has confirmed yet.
 
 - **Where**: `internal/console/subcli.go`, `logical.go` (SHOW LOGICAL's
   status), `procedure.go` (`Console.Exit` at level 0).
-- **What**: a subprocess runs the console's DCL (docs/PHASE-50, "The
+- **What**: a subprocess runs the console's DCL (docs/planning/PHASE-50, "The
   subprocess's DCL"). Chosen without VMS:
   - The commands refused in a subprocess (`processOneCommands`) are
     govax's machine commands. (SPAWN was refused too until Phase 51's
@@ -1815,7 +1815,7 @@ Entry template:
   `internal/dclshell/dclppf.go`, `dclfile.go`; `internal/lnm/ppf.go`.
 - **What**: VMS 7.1's run of `testdata/ppf71` settled the strings, the
   entries' sharing, indirect access, and DCL's names
-  (`docs/PHASE-71 - process-permanent files.md`, Part A), and the
+  (`docs/planning/PHASE-71 - process-permanent files.md`, Part A), and the
   oracles hold govax to it. Chosen without VMS:
   - Entries and streams are numbered lowest free first (VMS's numbers
     depend on its process I/O segment; masked), and the indirect STV is
@@ -1841,7 +1841,7 @@ Entry template:
 
 - **Where**: `internal/corevms`'s system service and shim stubs (the P1
   vector entries, `SHIM$LIBRTL_<offset>` stubs), and `corevms/signal.go`'s
-  `tracedSignal`; `docs/PHASE-73 - trace trap.md`, Decision 6.
+  `tracedSignal`; `docs/planning/PHASE-73 - trace trap.md`, Decision 6.
 - **What**: a program tracing itself (PSL<T>, SS$_TBIT) gets a trace at
   each instruction govax really runs, which isn't what VMS runs.
   VMS 7.1's run of `testdata/trace73` showed:
@@ -1872,7 +1872,7 @@ Entry template:
 ## [Phase 77] MTHRTL beside VMS 7.1's
 
 `testdata/mth77`'s oracle holds the library to VMS 7.1's. What it can't match is in
-`docs/PHASE-77 - MTHRTL.md`'s "What still differs from VMS 7.1". The one a program could
+`docs/planning/PHASE-77 - MTHRTL.md`'s "What still differs from VMS 7.1". The one a program could
 notice: VMS's routines go on after a handler continues from their condition, and may then fault
 on the reserved operand (`MTH$CEXP`, `MTH$CLOG`, ...), or store a corrected result (`MTH$HEXP`).
 govax's Go routines have ended by then, so the caller gets what the first signal left.
@@ -1887,7 +1887,7 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 
 ### [Phase 83] A gone statement in an identical frame
 
-- **Where**: `internal/ftnrtl/mar/ftn_statement.mar`'s `PUSH_CONTEXT`; `docs/PHASE-83 - FORTRAN and VMS.md`, subtask 7's log.
+- **Where**: `internal/ftnrtl/mar/ftn_statement.mar`'s `PUSH_CONTEXT`; `docs/planning/PHASE-83 - FORTRAN and VMS.md`, subtask 7's log.
 - **What**: FTNRTL tells a statement a handler unwound from by its frame's FP and saved PC. If the routine is called again from the same place, its frame is the same, and
   a statement on that unit from something it calls is `FOR$_RECIO_OPE`, unless a statement ran between at or above that frame. VMS's FORRTL goes on (`testdata/for83/vax/for83g-forrtl.txt`, cases 2 and 7;
   `TestFor83GoneOnFTNRTL` holds this as the known difference).

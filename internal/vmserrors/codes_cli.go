@@ -102,56 +102,56 @@ const (
 	cliParamNotFound
 	cliBadFileSpec
 
-	// docs/PHASE-23.md subtask 6: DELETE's own "no version specified"
+	// docs/planning/PHASE-23.md subtask 6: DELETE's own "no version specified"
 	// argument-validation failure -- see internal/rms.VersionRequiredError.
 	cliNeedVersion
 
-	// docs/PHASE-23.md subtask 7: PURGE's own invalid /LIMIT value -- see
+	// docs/planning/PHASE-23.md subtask 7: PURGE's own invalid /LIMIT value -- see
 	// internal/rms.InvalidLimitError.
 	cliBadLimit
 
-	// docs/PHASE-25.md subtask 5: internal/dcl's list values.
+	// docs/planning/PHASE-25.md subtask 5: internal/dcl's list values.
 	cliEmptyElement
 
-	// docs/PHASE-25.md subtask 6: INITIALIZE/CONTAINER's failure, which
+	// docs/planning/PHASE-25.md subtask 6: INITIALIZE/CONTAINER's failure, which
 	// used to borrow SS_BADPARAM's message text.
 	cliInitFail
 
-	// docs/PHASE-27.md subtask 10: the MACRO command.
+	// docs/planning/PHASE-27.md subtask 10: the MACRO command.
 	cliAsmErrors
 	cliAsmWarning
 	cliObjWrite
 
-	// docs/PHASE-30.md: the LINK command.
+	// docs/planning/PHASE-30.md: the LINK command.
 	cliLinking
 
-	// docs/PHASE-28.md subtask 7: the LIBRARY command.
+	// docs/planning/PHASE-28.md subtask 7: the LIBRARY command.
 	cliLibrary
 	cliLibWarning
 	cliLibInserted
 	cliLibReplaced
 	cliLibDeleted
 
-	// docs/PHASE-29.md subtask 5: MACRO's listing.
+	// docs/planning/PHASE-29.md subtask 5: MACRO's listing.
 	cliLisWrite
 
-	// docs/PHASE-34.md (2026-10-04): DCL symbols and foreign commands.
+	// docs/planning/PHASE-34.md (2026-10-04): DCL symbols and foreign commands.
 	cliExpSyn
 	cliSymDepth
 
-	// docs/PHASE-38.md: the ANALYZE command.
+	// docs/planning/PHASE-38.md: the ANALYZE command.
 	cliAnalyze
 	cliAnalyzeErrors
 
 	// DIRECTORY's /VERSIONS value.
 	cliBadVersions
 
-	// docs/PHASE-50 - DCL command procedures.md: @ and command levels.
+	// docs/planning/PHASE-50 - DCL command procedures.md: @ and command levels.
 	cliMaxParm
 	cliMaxDepth
 	cliSkpDat
 
-	// docs/PHASE-50 - DCL command procedures.md: symbol substitution and
+	// docs/planning/PHASE-50 - DCL command procedures.md: symbol substitution and
 	// expressions.
 	cliUndSym
 	cliIvOper
@@ -179,7 +179,7 @@ const (
 	cliUsCall
 	cliInvCall
 
-	// docs/PHASE-50 - DCL command procedures.md: lexical functions.
+	// docs/planning/PHASE-50 - DCL command procedures.md: lexical functions.
 	cliIvKeyw
 	cliIvSymb
 	cliInvRange
@@ -187,7 +187,7 @@ const (
 	cliIvDTime
 	cliIvValu
 
-	// docs/PHASE-50 - DCL command procedures.md: verification.
+	// docs/planning/PHASE-50 - DCL command procedures.md: verification.
 	cliConflict
 	cliInvPrefix
 	cliUndFil
@@ -195,19 +195,19 @@ const (
 	cliOnErr
 	cliStrTooLng
 
-	// docs/PHASE-51 - DCL follow-ups.md: F$CONTEXT.
+	// docs/planning/PHASE-51 - DCL follow-ups.md: F$CONTEXT.
 	cliFrznCtx
 	cliNotCtx
 	cliInvCtxTyp
 
-	// docs/PHASE-57 - LIB CLI access.md: the probe's answers.
+	// docs/planning/PHASE-57 - LIB CLI access.md: the probe's answers.
 	cliBufOvf
 
-	// docs/PHASE-67 - address space under paging.md: VMINIT's /P1 with
+	// docs/planning/PHASE-67 - address space under paging.md: VMINIT's /P1 with
 	// paging on.
 	cliP1TooSmall
 
-	// docs/PHASE-74 - FORTRAN plan.md: the FORTRAN command.
+	// docs/planning/PHASE-74 - FORTRAN plan.md: the FORTRAN command.
 	cliForErrors
 	cliForWarnings
 	cliForSameFile
@@ -220,17 +220,17 @@ const (
 	cliForDebug
 	cliForObject
 
-	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
+	// docs/planning/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
 	cliForNoSource
 
-	// docs/PHASE-88 - keyed index files.md: DCL's own messages for a
+	// docs/planning/PHASE-88 - keyed index files.md: DCL's own messages for a
 	// qualifier's value.
 	cliValReq
 	cliIVQUAL
 	cliNOVALU
 	cliAbKeyw
 
-	// docs/PHASE-90 - VMS help.md: HELP's qualifiers that wait for a later
+	// docs/planning/PHASE-90 - VMS help.md: HELP's qualifiers that wait for a later
 	// phase.
 	cliHelpNotImpl
 )
@@ -335,7 +335,7 @@ const (
 	CLI_BADFILESPEC           = CLIFacility<<FacilityPosition | cliBadFileSpec<<MessagePosition | StatusError
 
 	// CLI_NEEDVERSION reports a DELETE with no specific version in its file
-	// specification (docs/PHASE-23.md subtask 6) -- real VMS has no exact
+	// specification (docs/planning/PHASE-23.md subtask 6) -- real VMS has no exact
 	// equivalent status this project could reuse (the eVAX C source never
 	// implemented ODS-2 volume access at all), so this is a fresh CLI-
 	// facility argument-validation code, matching CLI_BADFILESPEC's own
@@ -344,21 +344,21 @@ const (
 	CLI_NEEDVERSION = CLIFacility<<FacilityPosition | cliNeedVersion<<MessagePosition | StatusError
 
 	// CLI_BADLIMIT reports a PURGE with a /LIMIT value it can't use --
-	// currently just zero (docs/PHASE-23.md subtask 7) -- matching
+	// currently just zero (docs/planning/PHASE-23.md subtask 7) -- matching
 	// CLI_NEEDVERSION's own "fresh CLI-facility argument-validation code"
 	// framing, since real VMS has no exact equivalent this project could
 	// reuse.
 	CLI_BADLIMIT = CLIFacility<<FacilityPosition | cliBadLimit<<MessagePosition | StatusError
 
 	// CLI_EMPTYELEMENT reports a comma-separated list value with an empty
-	// element ("A,,B", a trailing comma, or "()") -- docs/PHASE-25.md
+	// element ("A,,B", a trailing comma, or "()") -- docs/planning/PHASE-25.md
 	// subtask 5's list-valued parameters and qualifiers.
 	CLI_EMPTYELEMENT = CLIFacility<<FacilityPosition | cliEmptyElement<<MessagePosition | StatusError
 
 	// CLI_INITFAIL reports an INITIALIZE/CONTAINER that couldn't build its
 	// container or volume: a size of zero blocks, a path that can't be
 	// created, a label too long for its on-disk field, or a size too
-	// small for the reserved files (docs/PHASE-23.md). Real VMS reports
+	// small for the reserved files (docs/planning/PHASE-23.md). Real VMS reports
 	// these through an INIT facility govax doesn't model.
 	CLI_INITFAIL = CLIFacility<<FacilityPosition | cliInitFail<<MessagePosition | StatusError
 
@@ -467,14 +467,14 @@ const (
 	// govax doesn't have yet (govax's words).
 	CLI_LEXNOTIMPL = CLIFacility<<FacilityPosition | cliLexNotImpl<<MessagePosition | StatusWarning
 
-	// ON's messages (docs/PHASE-50, subtask 10), in DCL's words for its
+	// ON's messages (docs/planning/PHASE-50, subtask 10), in DCL's words for its
 	// CLI$_ messages of the same names: CLI_NOTHEN an ON without THEN,
 	// CLI_INSFPRM nothing after THEN.
 	CLI_NOTHEN  = CLIFacility<<FacilityPosition | cliNoThen<<MessagePosition | StatusWarning
 	CLI_INSFPRM = CLIFacility<<FacilityPosition | cliInsfPrm<<MessagePosition | StatusWarning
 
 	// The messages of labels, GOTO, IF blocks, GOSUB, and CALL
-	// (docs/PHASE-50, subtasks 11 to 13), DCL's CLI$_ messages of the
+	// (docs/planning/PHASE-50, subtasks 11 to 13), DCL's CLI$_ messages of the
 	// same names, warnings but for CLI_INVIFNEST and CLI_INVCALL, which
 	// VMS 7.3 showed as errors (testdata/dcl50's round 5): CLI_NOLBLS a
 	// label at the terminal;
@@ -495,7 +495,7 @@ const (
 	CLI_USCALL    = CLIFacility<<FacilityPosition | cliUsCall<<MessagePosition | StatusWarning
 	CLI_INVCALL   = CLIFacility<<FacilityPosition | cliInvCall<<MessagePosition | StatusError
 
-	// The lexical functions' messages (docs/PHASE-50, subtask 14), DCL's
+	// The lexical functions' messages (docs/planning/PHASE-50, subtask 14), DCL's
 	// CLI$_ messages of the same names, all warnings: CLI_IVKEYW a
 	// keyword argument the function doesn't have (F$GETJPI's item, ...);
 	// CLI_IVSYMB an argument that should name a symbol and doesn't;
@@ -505,7 +505,7 @@ const (
 	// of more than one character).
 	CLI_IVKEYW   = CLIFacility<<FacilityPosition | cliIvKeyw<<MessagePosition | StatusWarning
 
-	// F$CONTEXT's messages (docs/PHASE-51), DCL's CLI$_ messages of the
+	// F$CONTEXT's messages (docs/planning/PHASE-51), DCL's CLI$_ messages of the
 	// same names, warnings: CLI_FRZNCTX a selection added to a context
 	// F$PID has begun to use; CLI_NOTCTX a context symbol that names no
 	// context; CLI_INVCTXTYP a context symbol of another type.
@@ -532,7 +532,7 @@ const (
 	CLI_NOVALU = CLIFacility<<FacilityPosition | cliNOVALU<<MessagePosition | StatusWarning
 	CLI_ABKEYW = CLIFacility<<FacilityPosition | cliAbKeyw<<MessagePosition | StatusWarning
 
-	// Verification's messages (docs/PHASE-50, subtask 15), as VMS 7.3
+	// Verification's messages (docs/planning/PHASE-50, subtask 15), as VMS 7.3
 	// showed them (testdata/dcl50's round 2): CLI_CONFLICT, a warning,
 	// for SET NOVERIFY with keywords; CLI_INVPREFIX, an error, for a SET
 	// PREFIX control string it can't use.
@@ -542,7 +542,7 @@ const (
 	CLI_FORNOSOURCE = CLIFacility<<FacilityPosition | cliForNoSource<<MessagePosition | StatusError
 	CLI_INVPREFIX = CLIFacility<<FacilityPosition | cliInvPrefix<<MessagePosition | StatusError
 
-	// DCL's file I/O's message (docs/PHASE-50, subtask 17): CLI_UNDFIL, a
+	// DCL's file I/O's message (docs/planning/PHASE-50, subtask 17): CLI_UNDFIL, a
 	// warning, for a READ, WRITE, or CLOSE of a logical name OPEN didn't
 	// define.
 	CLI_UNDFIL = CLIFacility<<FacilityPosition | cliUndFil<<MessagePosition | StatusWarning
@@ -564,7 +564,7 @@ const (
 
 	// CLI_HELPNOTIMPL, a warning, is a HELP qualifier govax takes but
 	// doesn't do yet (/SEARCH, /EXACT, /HIGHLIGHT, /WRAP, /MESSAGE,
-	// /PAGE=SAVE: docs/PHASE-90 - VMS help.md, Decision 4).
+	// /PAGE=SAVE: docs/planning/PHASE-90 - VMS help.md, Decision 4).
 	CLI_HELPNOTIMPL = CLIFacility<<FacilityPosition | cliHelpNotImpl<<MessagePosition | StatusWarning
 
 	// CLI_P1TOOSMALL, an error, is VMINIT with paging on given a /P1 that
@@ -635,9 +635,9 @@ func init() {
 	DefineMessage(CLI_NOPROFILE, CLIFacility, "NOPROFILE", "SHOW INSTRUCTIONS/PROFILE is not implemented (no per-opcode execution counters in this port)")
 	DefineMessage(CLI_NOMODES, CLIFacility, "NOMODES", "SHOW INSTRUCTIONS/MODES is not implemented (no addressing-mode legality table exposed by this port)")
 	DefineMessage(CLI_BADOPCODE, CLIFacility, "BADOPCODE", "Invalid opcode !Q")
-	DefineMessage(CLI_NEEDRTL, CLIFacility, "NEEDRTL", "!S requires the RTL microkernel (not yet implemented, see docs/PHASE-08.md)")
+	DefineMessage(CLI_NEEDRTL, CLIFacility, "NEEDRTL", "!S requires the RTL microkernel (not yet implemented, see docs/planning/PHASE-08.md)")
 	DefineMessage(CLI_BADHEXVAL, CLIFacility, "BADHEXVAL", "Invalid hex value !Q")
-	DefineMessage(CLI_NEEDDEP, CLIFacility, "NEEDDEP", "!S requires !S (not yet implemented, see docs/PHASE-08.md)")
+	DefineMessage(CLI_NEEDDEP, CLIFacility, "NEEDDEP", "!S requires !S (not yet implemented, see docs/planning/PHASE-08.md)")
 	DefineMessage(CLI_NEEDPAGES, CLIFacility, "NEEDPAGES", "INIT requires a page count")
 	DefineMessage(CLI_NOFILE, CLIFacility, "NOFILE", "Missing file name to run")
 	DefineMessage(CLI_NEEDENTRY, CLIFacility, "NEEDENTRY", "CALL requires an entry-point address or symbol")

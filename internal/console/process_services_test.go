@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// TestProcessServices_assembledProgram is docs/PHASE-26.md's acceptance
+// TestProcessServices_assembledProgram is docs/planning/PHASE-26.md's acceptance
 // test for its first batch of services: testdata/asm/process_services.asm,
 // assembled and run as real VAX code, calls $ADJSTK, $ADJWSL, $ALLOC, and
 // $ASCEFC (with $SETEF/$READEF on the associated cluster) through their
@@ -65,7 +65,7 @@ func TestProcessServices_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestEventFlagWait_timerInterrupt is docs/PHASE-26.md subtask 9's
+// TestEventFlagWait_timerInterrupt is docs/planning/PHASE-26.md subtask 9's
 // acceptance test: testdata/asm/wait_timer.asm waits in $WAITFR for an
 // event flag that only its interval-timer interrupt handler sets. The
 // wait re-executes the service's XFC each step, the timer interrupt is
@@ -164,7 +164,7 @@ func continueBounded(c *Console, maxSteps int) (err error, hitCap bool) {
 	return nil, true
 }
 
-// TestTimerServices_assembledProgram is docs/PHASE-26.md subtask 11's
+// TestTimerServices_assembledProgram is docs/planning/PHASE-26.md subtask 11's
 // acceptance test: testdata/asm/timer_services.asm sets, cancels, and
 // waits on $SETIMR timers without any guest interrupt setup. The wait
 // lasts until the engine's system time (one millisecond per interval-
@@ -201,7 +201,7 @@ func TestTimerServices_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestHibernate_assembledProgram is docs/PHASE-26.md subtask 14's
+// TestHibernate_assembledProgram is docs/planning/PHASE-26.md subtask 14's
 // acceptance test: testdata/asm/hibernate.asm hibernates on an
 // already-pending $WAKE, then three times on a repeating $SCHDWK wakeup,
 // and cancels it. Each $HIBER that must sleep re-executes its XFC until
@@ -242,7 +242,7 @@ func TestHibernate_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestASTDelivery_assembledProgram is docs/PHASE-26.md subtask 15's
+// TestASTDelivery_assembledProgram is docs/planning/PHASE-26.md subtask 15's
 // acceptance test: testdata/asm/ast_delivery.asm declares ASTs with
 // $DCLAST, holds one back with $SETAST, and checks each ran when it
 // should and left R0, R1, and R2 as they were. This test also checks the
@@ -286,7 +286,7 @@ func TestASTDelivery_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestTimerAST_assembledProgram is docs/PHASE-26.md subtask 16's
+// TestTimerAST_assembledProgram is docs/planning/PHASE-26.md subtask 16's
 // acceptance test: testdata/asm/timer_ast.asm uses ASTs from $SETIMR
 // (ending a $HIBER through the AST routine's $WAKE, cancelled by $CANTIM,
 // and interrupting a loop that calls no services) and from $GETJPIW.
@@ -336,7 +336,7 @@ func TestTimerAST_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestTerminalQIO_assembledProgram is docs/PHASE-26.md subtask 17's
+// TestTerminalQIO_assembledProgram is docs/planning/PHASE-26.md subtask 17's
 // acceptance test: testdata/asm/terminal_qio.asm reads a prompted line
 // and writes to the terminal with $QIO/$QIOW. The console's input is the
 // typed line; its output must show the prompt, the carriage-controlled
@@ -394,7 +394,7 @@ func TestTerminalQIO_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestSynch_assembledProgram is docs/PHASE-26.md subtask 18's acceptance
+// TestSynch_assembledProgram is docs/planning/PHASE-26.md subtask 18's acceptance
 // test: testdata/asm/synch.asm's $SYNCH ignores a timer's "false alarm"
 // on a shared event flag (its IOSB is still 0 at 10ms) and returns only
 // when the stand-in request's AST writes the IOSB, at 30ms.
@@ -435,7 +435,7 @@ func TestSynch_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestExitHandlers_assembledProgram is docs/PHASE-26.md subtask 19's
+// TestExitHandlers_assembledProgram is docs/planning/PHASE-26.md subtask 19's
 // acceptance test: testdata/asm/exit_handlers.asm, run in user mode,
 // declares exit handlers, cancels one, and calls $EXIT, which calls the
 // others newest first and then ends the image, returning to the console
@@ -505,7 +505,7 @@ func TestExitHandlers_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestNumtim_assembledProgram is docs/PHASE-26.md subtask 20's
+// TestNumtim_assembledProgram is docs/planning/PHASE-26.md subtask 20's
 // acceptance test: testdata/asm/numtim.asm converts an absolute and a
 // delta time with $BINTIM, then breaks each down with $NUMTIM.
 func TestNumtim_assembledProgram(t *testing.T) {
@@ -559,7 +559,7 @@ func TestNumtim_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestJPIASTState_assembledProgram is docs/PHASE-26.md subtask 21's
+// TestJPIASTState_assembledProgram is docs/planning/PHASE-26.md subtask 21's
 // acceptance test: testdata/asm/jpi_ast_state.asm reads $GETJPI's AST
 // and state items normally, with ASTs disabled, from inside an AST
 // routine, and with a timer AST outstanding.
@@ -620,7 +620,7 @@ func TestJPIASTState_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestModeSwitchAST_assembledProgram is docs/PHASE-26.md subtask 22's
+// TestModeSwitchAST_assembledProgram is docs/planning/PHASE-26.md subtask 22's
 // acceptance test: testdata/asm/mode_switch_ast.asm sets a timer from
 // kernel mode, drops to user mode, and hibernates. The timer's kernel-mode
 // AST is delivered by switching into kernel mode (with memory protection
@@ -689,7 +689,7 @@ func TestModeSwitchAST_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestGetsyi_assembledProgram is docs/PHASE-26.md subtask 23's
+// TestGetsyi_assembledProgram is docs/planning/PHASE-26.md subtask 23's
 // acceptance test: testdata/asm/getsyi.asm asks $GETSYIW for the VMS
 // version and node name, then walks the cluster with a wildcard scan,
 // finding one node.
@@ -745,7 +745,7 @@ func TestGetsyi_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestFAO_assembledProgram is docs/PHASE-26.md subtask 24's acceptance
+// TestFAO_assembledProgram is docs/planning/PHASE-26.md subtask 24's acceptance
 // test: testdata/asm/fao.asm formats text with $FAO (parameters in the
 // call) and $FAOL (parameters in a list), and writes each result to the
 // terminal with $QIOW.
@@ -788,7 +788,7 @@ func TestFAO_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestPutmsg_assembledProgram is docs/PHASE-26.md subtask 25's
+// TestPutmsg_assembledProgram is docs/planning/PHASE-26.md subtask 25's
 // acceptance test: testdata/asm/putmsg.asm reads a message with $GETMSG
 // and writes message vectors with $PUTMSG, one through an action routine
 // that lets only the first line be written.
@@ -840,7 +840,7 @@ func TestPutmsg_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestCmkrnl_assembledProgram is docs/PHASE-26.md subtask 26's acceptance
+// TestCmkrnl_assembledProgram is docs/planning/PHASE-26.md subtask 26's acceptance
 // test: testdata/asm/cmkrnl.asm, running in user mode with memory
 // management on, calls routines of its own in kernel mode ($CMKRNL, one
 // executing a privileged MFPR) and executive mode ($CMEXEC), and gets
@@ -898,7 +898,7 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestCtrlCAST_assembledProgram is docs/PHASE-26.md subtask 27's
+// TestCtrlCAST_assembledProgram is docs/planning/PHASE-26.md subtask 27's
 // acceptance test: testdata/asm/ctrlc_ast.asm enables a CTRL/C AST and
 // spins until it runs, then a CTRL/Y AST. The test "types" CTRL/C
 // (Engine.Attention, as the host keyboard handler does) each time the
@@ -989,7 +989,7 @@ func TestAttentionKeys_matchRTL(t *testing.T) {
 	}
 }
 
-// TestGetdvi_assembledProgram is docs/PHASE-26.md subtask 28's acceptance
+// TestGetdvi_assembledProgram is docs/planning/PHASE-26.md subtask 28's acceptance
 // test: testdata/asm/getdvi.asm asks $GETDVIW about its terminal channel
 // and $GETDVI (then $SYNCH) about SYS$OUTPUT.
 func TestGetdvi_assembledProgram(t *testing.T) {
@@ -1056,7 +1056,7 @@ func TestGetdvi_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestMailbox_assembledProgram is docs/PHASE-26.md subtask 29's
+// TestMailbox_assembledProgram is docs/planning/PHASE-26.md subtask 29's
 // acceptance test: testdata/asm/mailbox.asm passes two messages through
 // a mailbox, the second read waiting in $QIOW until a timer AST writes
 // its message, then deletes the mailbox by deassigning its channels.
@@ -1119,7 +1119,7 @@ func TestMailbox_assembledProgram(t *testing.T) {
 	}
 }
 
-// TestProcessControl_assembledProgram is docs/PHASE-26.md subtask 30's
+// TestProcessControl_assembledProgram is docs/planning/PHASE-26.md subtask 30's
 // acceptance test: testdata/asm/process_control.asm renames its process,
 // sets its priority, and forces its own exit, which runs its exit
 // handler and ends the image before the code after $FORCEX.

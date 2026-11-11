@@ -1,6 +1,6 @@
 package rms
 
-// RMS on record devices (docs/PHASE-46.md, subtask 6): a file
+// RMS on record devices (docs/planning/PHASE-46.md, subtask 6): a file
 // specification that names a mailbox or the null device (NL:) opens a
 // record stream on the device, not a file on a volume.
 //

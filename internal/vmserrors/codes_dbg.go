@@ -1,6 +1,6 @@
 package vmserrors
 
-// DBG facility message IDs -- the debugger (docs/PHASE-42.md). The
+// DBG facility message IDs -- the debugger (docs/planning/PHASE-42.md). The
 // facility prints as DEBUG, as the VMS debugger's own messages do
 // (%DEBUG-E-SYNTAX, ...). Private: only the composite DBG_* codes below
 // are part of this package's public API.

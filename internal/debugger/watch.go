@@ -11,7 +11,7 @@ import (
 )
 
 // SET WATCH, SHOW WATCH, and CANCEL WATCH as the VMS debugger has them
-// (docs/PHASE-42.md, subtask 13; the formats are from
+// (docs/planning/PHASE-42.md, subtask 13; the formats are from
 // testdata/dbgcmd/vax/watch.dlg).
 //
 // A *watchpoint* stops the program when what is stored at a location

@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// A BACKUP save set opened for reading (docs/PHASE-69 - backup save
+// A BACKUP save set opened for reading (docs/planning/PHASE-69 - backup save
 // sets.md, subtask 5). VMS keeps a save set on a disk as a file of
 // fixed-length records, each one of the save set's blocks; govax reads
 // it as bytes, its blocks found by internal/backup from the first

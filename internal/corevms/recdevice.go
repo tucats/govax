@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// RMS's record devices (docs/PHASE-46.md, subtask 6): the mailboxes and
+// RMS's record devices (docs/planning/PHASE-46.md, subtask 6): the mailboxes and
 // the null device internal/rms opens as record streams when a file
 // specification names one (internal/rms/recdevice.go). This is the
 // device side: the Environment is RMS's rms.DeviceOpener.

@@ -13,7 +13,7 @@ import (
 )
 
 // runIdx88C runs round 3 of testdata/idx88, IDX88C.COM (the utilities:
-// CREATE/FDL, CONVERT, ANALYZE/RMS_FILE; docs/PHASE-88 - keyed index files.md,
+// CREATE/FDL, CONVERT, ANALYZE/RMS_FILE; docs/planning/PHASE-88 - keyed index files.md,
 // subtask 10), on govax, on a fresh volume of VMS's 3-block clusters as DUA1
 // with node SIMVAX, as the VAX's was, round 1's files restored into [IN] from
 // its save set as EXCHANGEC.CMD restores them, and returns the log it wrote

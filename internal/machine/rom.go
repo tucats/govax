@@ -75,7 +75,7 @@ func (m *Machine) SaveROM(path string) error {
 
 // LoadROM reads a binary ROM image file, matching load_rom. path is a
 // volume file or a host one, by consolefile.go's rules: a host file is
-// found through m.Paths (docs/PHASE-15.md).
+// found through m.Paths (docs/planning/PHASE-15.md).
 //
 // With noError (LOAD/ROM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.rom.

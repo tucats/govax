@@ -11,7 +11,7 @@ import (
 
 // The routines subtask 11c added to the writing routines: the update
 // history (LBR$PUT_HISTORY, LBR$GET_HISTORY), LBR$SEARCH, and LBR$FLUSH,
-// each as VMS 7.1's behaved in round 3 (docs/PHASE-90 - VMS help.md,
+// each as VMS 7.1's behaved in round 3 (docs/planning/PHASE-90 - VMS help.md,
 // "What the probe settled").
 
 // More statuses (round 3's definitions).

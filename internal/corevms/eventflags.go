@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Event flags (docs/PHASE-26.md). A process has 128 event flags in four
+// Event flags (docs/planning/PHASE-26.md). A process has 128 event flags in four
 // 32-flag clusters: clusters 0 and 1 (flags 0-63) are local to the process
 // (Process.LocalEventFlags), and clusters 2 and 3 (flags 64-127) are
 // common event flag clusters, named and shared by the processes in a UIC

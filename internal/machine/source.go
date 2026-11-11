@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Source lines for the debugger (docs/PHASE-42.md, subtask 8).
+// Source lines for the debugger (docs/planning/PHASE-42.md, subtask 8).
 //
 // A program linked /DEBUG carries, in its debug symbol table, the name of
 // each module's source file and a map from the module's *listing lines* to

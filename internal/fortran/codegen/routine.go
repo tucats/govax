@@ -139,7 +139,7 @@ func (g *routineGen) generate() {
 
 // noteCellRegisters keeps the register cells' registers from the expressions, and has
 // the entry mask save them: what keeps a value in R6 across a CALLS is that every
-// routine called saves what it uses (Decision 3 of docs/PHASE-84 - FORTRAN optimizer.md).
+// routine called saves what it uses (Decision 3 of docs/planning/PHASE-84 - FORTRAN optimizer.md).
 func (g *routineGen) noteCellRegisters() {
 	for _, c := range g.r.Cells {
 		if c.Register != 0 {
@@ -298,7 +298,7 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 }
 
 // noteRotated has the first instruction of a block moved to the bottom of its loop say
-// where it's from, since the source lines stay in order (Decision 12 of docs/PHASE-84 -
+// where it's from, since the source lines stay in order (Decision 12 of docs/planning/PHASE-84 -
 // FORTRAN optimizer.md).
 func (g *routineGen) noteRotated(b *ir.Block) {
 	from := b.End.Source()

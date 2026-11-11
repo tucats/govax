@@ -7,7 +7,7 @@ import "time"
 // keeps the system clock set to the wall-clock time where the machine is,
 // with no time zone attached, so $GETTIM followed by $ASCTIM prints the
 // time of day a user there would read off a clock. govax follows VMS
-// (docs/PHASE-26.md subtask 12): Time converts using t's own zone offset.
+// (docs/planning/PHASE-26.md subtask 12): Time converts using t's own zone offset.
 
 // UnixEpoch is the Unix epoch (1-Jan-1970 00:00) in VMS 64-bit system
 // time: the 40587 days between it and the VMS base date.

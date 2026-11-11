@@ -38,7 +38,7 @@ type Routine struct {
 	//
 	// Code 0 means the routine is written in VAX code in the microkernel
 	// (kernel.asm), under its own name, rather than in Go: the stub is
-	// the routine itself (docs/PHASE-53, Decision 1). Fn is then nil.
+	// the routine itself (docs/planning/PHASE-53, Decision 1). Fn is then nil.
 	Code uint32
 
 	// Fn is the routine.
@@ -78,7 +78,7 @@ func link(name string, code uint32) corevms.ShimLink {
 }
 
 // JSBRoutine is one LIBRTL routine reached by JSB, its arguments in
-// registers (docs/PHASE-54, "The JSB entry points"). Its stub is
+// registers (docs/planning/PHASE-54, "The JSB entry points"). Its stub is
 // corevms.JSBShimStub, and Code is in the same space as Routine's.
 type JSBRoutine struct {
 	Name string
@@ -339,7 +339,7 @@ var Routines = []Routine{
 // callsBack names the routines that call back into the program (a
 // success, error, or confirm routine it was given): Register installs
 // them with corevms.ShimTable.RegisterCallback, so each runs on a
-// goroutine of its own (docs/PHASE-58, subtask 2).
+// goroutine of its own (docs/planning/PHASE-58, subtask 2).
 var callsBack = map[string]bool{
 	"LIB$FILE_SCAN":   true,
 	"LIB$DELETE_FILE": true,

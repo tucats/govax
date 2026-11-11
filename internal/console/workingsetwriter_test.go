@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 63's subtask 7 (docs/PHASE-63 - working sets.md): the modified
+// Phase 63's subtask 7 (docs/planning/PHASE-63 - working sets.md): the modified
 // page writer writes a writable private section's pages from the
 // modified list to their file, once the list is over MPW_HILIMIT, and
 // moves their frames to the free list; pages it can't write (demand-zero

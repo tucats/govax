@@ -9,8 +9,8 @@ import (
 )
 
 // analyzeFlags are the analyze subcommand's options, which become the
-// ANALYZE/OBJECT command's qualifiers (docs/PHASE-38.md), or with --image
-// ANALYZE/IMAGE's (docs/PHASE-40.md).
+// ANALYZE/OBJECT command's qualifiers (docs/planning/PHASE-38.md), or with --image
+// ANALYZE/IMAGE's (docs/planning/PHASE-40.md).
 type analyzeFlags struct {
 	output     bool     // --output, or --output-file
 	outputFile string   // --output-file

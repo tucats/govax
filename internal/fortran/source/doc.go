@@ -1,6 +1,6 @@
 // Package source is the FORTRAN compiler's first pass: it reads a source
 // file's lines and puts together the statements they hold
-// (docs/PHASE-74 - FORTRAN plan.md, subtask 3).
+// (docs/planning/PHASE-74 - FORTRAN plan.md, subtask 3).
 //
 // # Why FORTRAN needs a pass for this
 //

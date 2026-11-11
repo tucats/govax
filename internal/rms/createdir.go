@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-34.md's subtask 5: CREATE/DIRECTORY's
+// This file implements docs/planning/PHASE-34.md's subtask 5: CREATE/DIRECTORY's
 // work below the console. The directory files themselves are laid out by
 // ods2 (volume.CreateDirectory, filespec.CreateDirectoryPath); this file
 // resolves the typed specification as every other console command does
@@ -38,7 +38,7 @@ const MaxVersionLimit = 32767
 type CreateDirectoryOptions struct {
 	// Owner is /OWNER_UIC=uic; nil without it (or with /OWNER_UIC=PARENT):
 	// the parent directory's owner, as VMS 7.3 gives a directory a
-	// privileged process makes (docs/PHASE-34.md, Decisions 6).
+	// privileged process makes (docs/planning/PHASE-34.md, Decisions 6).
 	Owner *ondisk.Uic
 
 	// VersionLimit is /VERSION_LIMIT=n (0 for no limit); nil for the
@@ -67,7 +67,7 @@ type CreateDirectoryOptions struct {
 	RequireDirectory bool
 
 	// VolumeOnly makes a specification always mean a mounted volume, never
-	// a host directory: a program's LIB$CREATE_DIR (docs/PHASE-34.md,
+	// a host directory: a program's LIB$CREATE_DIR (docs/planning/PHASE-34.md,
 	// Decisions 7). One that reaches no volume is ErrNotDirectorySpec.
 	VolumeOnly bool
 }

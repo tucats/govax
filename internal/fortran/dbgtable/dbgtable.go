@@ -1,5 +1,5 @@
 // Package dbgtable is what a FORTRAN program compiled with /DEBUG tells the debugger
-// about its variables (docs/PHASE-85 - FORTRAN compiler usability.md, subtask 10).
+// about its variables (docs/planning/PHASE-85 - FORTRAN compiler usability.md, subtask 10).
 //
 // The compiler writes MACRO, and MACRO's debugger records know a variable only as a label
 // over some directive: not that it's REAL, or that M is 2 by 3, or that a dummy argument

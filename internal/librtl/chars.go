@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The character string routines (docs/PHASE-53, subtask 10): LIB$LOCC,
+// The character string routines (docs/planning/PHASE-53, subtask 10): LIB$LOCC,
 // LIB$SKPC, LIB$MATCHC, LIB$SCANC, LIB$SPANC, LIB$MOVC3, LIB$MOVC5,
 // LIB$MOVTC, and LIB$MOVTUC make the VAX's character string instructions
 // callable.

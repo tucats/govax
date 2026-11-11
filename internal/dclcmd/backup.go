@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The BACKUP command (docs/PHASE-69 - backup save sets.md, subtask 6):
+// The BACKUP command (docs/planning/PHASE-69 - backup save sets.md, subtask 6):
 // the command as its qualifiers' places give it, the operation its
 // specifiers name, the input save set opened and read, and BACKUP's
 // messages for what goes wrong on the way. The operations themselves are

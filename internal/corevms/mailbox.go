@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Mailboxes (docs/PHASE-26.md subtask 29): $CREMBX and $DELMBX.
+// Mailboxes (docs/planning/PHASE-26.md subtask 29): $CREMBX and $DELMBX.
 //
 // # What a mailbox is
 //
@@ -42,7 +42,7 @@ import (
 // none, removing any mailbox devices a previous one left in the device
 // table.
 //
-// # Protection and lifetime (docs/PHASE-46.md, subtask 3)
+// # Protection and lifetime (docs/planning/PHASE-46.md, subtask 3)
 //
 // A mailbox has an owner, the UIC of the process that created it, and a
 // protection mask ($CREMBX's promsk), checked by the UIC rules of
@@ -196,7 +196,7 @@ func (t *MailboxTable) nextUnit(devices *iodev.DeviceTable) uint32 {
 // left in the shared device table: their messages were in its memory, so
 // they don't survive INIT/VMINIT/ZERO. It runs once per System, not per
 // process: a process created later must find the mailboxes other
-// processes have made (docs/PHASE-43.md, bug 2).
+// processes have made (docs/planning/PHASE-43.md, bug 2).
 func (sys *System) removeStaleMailboxes() {
 	if sys.Devices == nil {
 		return

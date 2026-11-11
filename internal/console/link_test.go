@@ -210,7 +210,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 			switch {
 			case isd.Flags&isdFIXUPVEC != 0:
 				// The fixup section's change-protection entry makes its
-				// page user-read, executive-write (docs/PHASE-66,
+				// page user-read, executive-write (docs/planning/PHASE-66,
 				// question 1).
 				want = vm.ProtUREW
 			case isd.Flags&isdWRT != 0:
@@ -573,7 +573,7 @@ func vmsdefP1Address(name string) (uint32, bool) {
 }
 
 // TestDispatch_linkDebug runs LINK/DEBUG through the DCL grammar on an
-// object MACRO/DEBUG wrote (docs/PHASE-29.md, subtask 16). The image
+// object MACRO/DEBUG wrote (docs/planning/PHASE-29.md, subtask 16). The image
 // asks for the debugger (IHD$V_LNKDEBUG) and its debug symbol table holds
 // the debugger records too, so it's longer than a traceback link's.
 // /DEBUG keeps traceback on through /NOTRACEBACK, as VMS LINK's does;

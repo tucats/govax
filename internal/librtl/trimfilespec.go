@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// LIB$TRIM_FILESPEC (docs/PHASE-58, subtask 7; the survey's
+// LIB$TRIM_FILESPEC (docs/planning/PHASE-58, subtask 7; the survey's
 // "TRIM_FILESPEC (461)"), written from the 5.0 LIB$ manual (LIB-461):
 //
 //	LIB$TRIM_FILESPEC old-filespec ,new-filespec [,word-integer-width]

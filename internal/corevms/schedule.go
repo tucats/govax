@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// The System's scheduler (docs/PHASE-44.md). The rules of who runs next
+// The System's scheduler (docs/planning/PHASE-44.md). The rules of who runs next
 // are internal/sched's; the System keeps a sched.Scheduler in step with
 // its process table (every process in the table is in the scheduler,
 // named by its PID) and is the engine's cpu.Scheduler hook, installed
@@ -240,7 +240,7 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 
 // SwitchCPU moves the CPU to env's process now, outside the scheduler's
 // choice: the console taking the CPU back for process 1 when the user
-// resumes after a run stopped in another process (docs/PHASE-44.md,
+// resumes after a run stopped in another process (docs/planning/PHASE-44.md,
 // subtask 9). The process the CPU held keeps its place in the scheduler
 // and runs again when it's chosen (sched.Choose). A waiting env is
 // switched to all the same (the console's commands need its context);

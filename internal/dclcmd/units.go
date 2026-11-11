@@ -9,7 +9,7 @@ import (
 )
 
 // This file is the "next free unit" rule for the devices govax mounts as
-// it starts (docs/PHASE-87 - system volume.md, Decision 6). A VMS device
+// it starts (docs/planning/PHASE-87 - system volume.md, Decision 6). A VMS device
 // name is a device type (DU, an MSCP disk), a controller letter (A), and
 // a unit number (0): DUA0. The system volume claims a unit (DUA0 by
 // default), so a configuration that also mounts a work volume can't know

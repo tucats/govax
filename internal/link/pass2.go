@@ -826,7 +826,7 @@ func (l *linker) image() (*Image, error) {
 	// govax pads it to a whole block, as images are whole blocks
 	// everywhere in govax (rms, and ods2's fixed-length records). Readers find the GST by the IHS's
 	// VBN and record count, so the padding should be harmless; it's a
-	// known difference to revisit if VMS objects (docs/PHASE-29.md,
+	// known difference to revisit if VMS objects (docs/planning/PHASE-29.md,
 	// Decision 7).
 	if l.opts.Debug || l.opts.Shareable {
 		gst, records, err := l.globalSymbolTable()

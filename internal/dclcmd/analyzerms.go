@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// ANALYZE/RMS_FILE (docs/PHASE-88 - keyed index files.md, subtask 10d): this file
+// ANALYZE/RMS_FILE (docs/planning/PHASE-88 - keyed index files.md, subtask 10d): this file
 // finds the files and sends each report where it goes; internal/anl writes it.
 //
 // VMS's rules, from rounds 1's and 3's logs. A report with /OUTPUT or /NOOUTPUT shows

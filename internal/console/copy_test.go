@@ -348,7 +348,7 @@ func TestDispatch_copyViaDCL(t *testing.T) {
 // TestDispatch_copyHostToContainerAttachedNoSpace exercises COPY's own
 // /HOST-on-SOURCE direction through the real DCL grammar, with /HOST
 // written directly against its parameter's value with no intervening
-// space ("COPY foo.txt/HOST BAR.TXT") -- docs/PHASE-23.md's own first
+// space ("COPY foo.txt/HOST BAR.TXT") -- docs/planning/PHASE-23.md's own first
 // COPY example.
 func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
 	d, c := newTestDispatcher(t)
@@ -384,7 +384,7 @@ func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
 	}
 }
 
-// TestDispatch_copyHostToContainerQuoted regresses docs/PHASE-23.md's own
+// TestDispatch_copyHostToContainerQuoted regresses docs/planning/PHASE-23.md's own
 // "Quoting" design section end to end, through the real DCL grammar and
 // dispatch path: a host path that needs quoting because it contains an
 // embedded '/' (an ordinary absolute path, exactly the motivating example
@@ -417,7 +417,7 @@ func TestDispatch_copyHostToContainerQuoted(t *testing.T) {
 // the parser's "most recently filled parameter" tracking correctly
 // attaches a trailing /HOST to DESTINATION rather than SOURCE. The
 // destination here is an absolute host path (a t.TempDir() path, starting
-// with '/'), so -- per docs/PHASE-23.md's own "Quoting" design section --
+// with '/'), so -- per docs/planning/PHASE-23.md's own "Quoting" design section --
 // it has to be quoted (an unquoted leading '/' would otherwise be
 // misread as introducing a qualifier immediately), with /HOST trailing it
 // space-separated, exactly like the design doc's own quoted SOURCE
@@ -558,7 +558,7 @@ func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
 }
 
 // A quoted host path with a "/" in it is a host file without /HOST, as
-// the user's manual's rule 3 says, in either direction (docs/PHASE-69 -
+// the user's manual's rule 3 says, in either direction (docs/planning/PHASE-69 -
 // backup save sets.md, side finding 1: COPY wrote "./pi.bck" onto the
 // default volume as a file of that name).
 func TestDispatch_copyHostPathWithoutHost(t *testing.T) {

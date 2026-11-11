@@ -99,7 +99,7 @@ func TestTranslateP0RoundTrip(t *testing.T) {
 }
 
 // TestTranslateDebugVMAndTBTrace matches vm.c's own DBG_VM/DBG_TB behavior
-// now that Translate has a real translation-buffer cache (docs/PHASE-21.md):
+// now that Translate has a real translation-buffer cache (docs/planning/PHASE-21.md):
 // DBG_VM traces every full page-table walk (a cold TB miss); DBG_TB traces
 // only an actual TB cache *hit*, never a miss -- vm.c's own DBG_TB printf
 // only exists on the tb_hit path, there is no equivalent trace on a miss.

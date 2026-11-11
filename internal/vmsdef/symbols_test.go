@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// TestSymbols_LNM_values pins the $LNMDEF values docs/PHASE-25.md's
+// TestSymbols_LNM_values pins the $LNMDEF values docs/planning/PHASE-25.md's
 // logical-name design depends on. Besides lnmdef.sdl itself, the attribute
 // bits and item codes agree with what internal/corevms/logicals.go and the
 // since-deleted internal/io/logical.go used before this table existed.
@@ -149,7 +149,7 @@ func TestSymbolNames_rmsFamilies(t *testing.T) {
 }
 
 // TestSymbols_DVIAndTT_values pins $DVIDEF item codes and $TTDEF bits
-// $GETDVI (docs/PHASE-26.md subtask 28) depends on, from the VMS I/O
+// $GETDVI (docs/planning/PHASE-26.md subtask 28) depends on, from the VMS I/O
 // User's Reference Manual and the System Services Reference Manual.
 func TestSymbols_DVIAndTT_values(t *testing.T) {
 	want := map[string]uint32{
@@ -183,7 +183,7 @@ func TestSymbols_DVIAndTT_values(t *testing.T) {
 }
 
 // TestSymbols_DEV_values pins the $DEVDEF DEVCHAR bits $ALLOC
-// (docs/PHASE-26.md) depends on, plus one DEVCHAR2 bit to show the second
+// (docs/planning/PHASE-26.md) depends on, plus one DEVCHAR2 bit to show the second
 // union member numbers its bits from 0 again.
 func TestSymbols_DEV_values(t *testing.T) {
 	want := map[string]uint32{
@@ -214,7 +214,7 @@ func TestSymbols_DEV_values(t *testing.T) {
 }
 
 // TestSymbols_IO_values pins the $IODEF function codes and terminal
-// modifier bits terminal $QIO (docs/PHASE-26.md subtask 17) depends on.
+// modifier bits terminal $QIO (docs/planning/PHASE-26.md subtask 17) depends on.
 // The values are the VMS I/O User's Reference Manual's; the modifiers sit
 // above the 6-bit function code (IO$M_FCODE), and the read and write
 // modifiers are different union members that reuse the same bits
@@ -259,7 +259,7 @@ func TestSymbols_IO_values(t *testing.T) {
 }
 
 // TestSymbols_ATR_values pins the $ATRDEF codes and sizes the disk
-// driver's attribute lists (docs/PHASE-26.md subtask 42) depend on, as
+// driver's attribute lists (docs/planning/PHASE-26.md subtask 42) depend on, as
 // the VMS I/O User's Reference lists them, and checks that the two sizes
 // the listings disagree on were left out.
 func TestSymbols_ATR_values(t *testing.T) {
@@ -299,7 +299,7 @@ func TestSymbols_ATR_values(t *testing.T) {
 }
 
 // TestSymbols_OBJ_values pins the VAX object language values against the
-// VMS 5.0 Linker Utility Manual's chapter 7 (docs/PHASE-27.md): its tables
+// VMS 5.0 Linker Utility Manual's chapter 7 (docs/planning/PHASE-27.md): its tables
 // of record, header, and GSD subrecord types, its TIR command numbers, and
 // the field layouts of its record diagrams.
 func TestSymbols_OBJ_values(t *testing.T) {
@@ -378,7 +378,7 @@ func TestSymbols_OBJ_values(t *testing.T) {
 // defines (LibrarySymbols): two independent sources. They agree except for
 // the JPI$ and SYI$ "last item" markers docs/DEVIATIONS.md lists, which
 // differ between VMS builds. A new difference fails here. Every SS$_ code
-// is STARLET's, all of them merged from it (docs/PHASE-31.md), which
+// is STARLET's, all of them merged from it (docs/planning/PHASE-31.md), which
 // corrected five that ssdef.txt gave wrongly.
 func TestSymbols_matchLibrarySymbols(t *testing.T) {
 	known := map[string]bool{

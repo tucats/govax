@@ -12,7 +12,7 @@ import (
 
 // TestLibrtlTimeArithmetic: a program works a delta time through all four
 // arithmetic routines by their stubs, then writes the result with
-// $ASCTIM and LIB$PUT_OUTPUT (docs/PHASE-56, subtask 2). One hour times 3
+// $ASCTIM and LIB$PUT_OUTPUT (docs/planning/PHASE-56, subtask 2). One hour times 3
 // is 3 hours; plus an hour, 4; times 1.5, 6; minus an hour, 5. Each
 // routine returns LIB$_NORMAL, whose low bit the program tests.
 func TestLibrtlTimeArithmetic(t *testing.T) {
@@ -55,7 +55,7 @@ func TestLibrtlTimeArithmetic(t *testing.T) {
 // to F-floating days and back (LIB$CVTF_FROM_ and LIB$CVTF_TO_), and
 // writes that (a quarter day is exact in F_floating; 5 hours, 5/24 of a
 // day, would come back a fraction of a millisecond short); it ends with the date's hour of the year (297, counted from 0) in R0, from
-// LIB$CVT_FROM_INTERNAL_TIME (docs/PHASE-56, subtask 3). The operation
+// LIB$CVT_FROM_INTERNAL_TIME (docs/planning/PHASE-56, subtask 3). The operation
 // codes are LIB$K_HOUR_OF_YEAR (3), LIB$K_DELTA_HOURS (23), and
 // LIB$K_DELTA_DAYS_F (27).
 func TestLibrtlTimeConversion(t *testing.T) {
@@ -113,7 +113,7 @@ func TestLibrtlTimeConversion(t *testing.T) {
 // with LIB$DAY_OF_WEEK, writes the current time from LIB$DATE_TIME into
 // a dynamic string, and ends with day number x 10 + day of the week in R0
 // (47,173 and Wednesday, 3), or 0 if the day-time isn't 3,320,514
-// hundredths (docs/PHASE-56, subtask 4).
+// hundredths (docs/planning/PHASE-56, subtask 4).
 func TestLibrtlDays(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"TIME:\t.ASCID\t/13-JAN-1988 09:13:25.14/\n"+
@@ -185,7 +185,7 @@ func TestLibrtlDateContext(t *testing.T) {
 // formats, then asks LIB$GET_MAXIMUM_DATE_LENGTH for the widest text (27,
 // the manual's example), formats a time with LIB$FORMAT_DATE_TIME, and
 // writes it and LIB$GET_DATE_FORMAT's legible input format with
-// LIB$PUT_OUTPUT (docs/PHASE-56, subtask 6).
+// LIB$PUT_OUTPUT (docs/planning/PHASE-56, subtask 6).
 func TestLibrtlDateOutput(t *testing.T) {
 	v := vmsdef.Time(time.Date(1988, time.September, 21, 23, 24, 0, 0, time.UTC))
 

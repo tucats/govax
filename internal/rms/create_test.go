@@ -136,7 +136,7 @@ func readLongword(t *testing.T, ctx *Context, addr uint32) uint32 {
 
 // TestSysCreate_console confirms SYS$CREATE against "TTA0:" binds a fresh
 // IFI to the console writer rather than touching the mounted volume at
-// all — real VMS RMS's own terminal-device support (docs/PHASE-22.md's
+// all — real VMS RMS's own terminal-device support (docs/planning/PHASE-22.md's
 // "Why this phase looks different"), carried forward from the deleted
 // Phase 10 stopgap.
 func TestSysCreate_console(t *testing.T) {
@@ -178,7 +178,7 @@ func TestSysCreate_console(t *testing.T) {
 
 // TestSysCreate_diskFile confirms SYS$CREATE against a real mounted
 // device actually creates a file on the ODS-2 volume — the acceptance
-// criterion this whole phase exists for (docs/PHASE-22.md's goal) — and
+// criterion this whole phase exists for (docs/planning/PHASE-22.md's goal) — and
 // returns RMS$_CREATED (not plain RMS$_NORMAL — see status.go's own doc
 // comment on the two being distinguishable) with an IFI whose FileHandle
 // wraps the new *volume.File.

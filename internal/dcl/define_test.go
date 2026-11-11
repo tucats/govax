@@ -17,7 +17,7 @@ const (
 // 15's embedded-fallback mechanism) -- not testdata/dcl/evax.dcl, which
 // stays a pure, untouched `git archive` import from the upstream C repo and
 // has diverged from this file since Phase 22 added MOUNT/DISMOUNT (see
-// docs/PHASE-22.md, "Grammar file" design decision).
+// docs/planning/PHASE-22.md, "Grammar file" design decision).
 func evaxGrammarPath(t *testing.T) string {
 	t.Helper()
 
@@ -46,7 +46,7 @@ func loadEvaxGrammar(t *testing.T) *Grammar {
 // 15's embedded-fallback mechanism) -- not testdata/dcl/evax.dcl, which
 // stays a pure, untouched `git archive` import from the upstream C repo and
 // has diverged from this file since Phase 22 added MOUNT/DISMOUNT (see
-// docs/PHASE-22.md, "Grammar file" design decision).
+// docs/planning/PHASE-22.md, "Grammar file" design decision).
 func debugGrammarPath(t *testing.T) string {
 	t.Helper()
 
@@ -138,7 +138,7 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 
 // TestLoadEvaxGrammar_mountDismount regresses Phase 22's MOUNT/DISMOUNT
 // grammar addition (internal/bootdata/files/evax.dcl only -- see
-// docs/PHASE-22.md's "Grammar file" design decision): both verbs parse,
+// docs/planning/PHASE-22.md's "Grammar file" design decision): both verbs parse,
 // MOUNT takes a required DEVICE and FILE parameter plus an optional WRITE
 // switch, and DISMOUNT takes just a required DEVICE parameter.
 func TestLoadEvaxGrammar_mountDismount(t *testing.T) {
@@ -178,7 +178,7 @@ func TestLoadEvaxGrammar_mountDismount(t *testing.T) {
 // TestLoadEvaxGrammar_initializeVaxContainer regresses Phase 23 subtask 1's
 // INITIALIZE grammar addition: the bare verb has no handler of its own and
 // redirects via /VAX and /CONTAINER to two separate syntaxes -- see
-// docs/PHASE-23.md's "INITIALIZE: unifying INIT and INITIALIZE under one
+// docs/planning/PHASE-23.md's "INITIALIZE: unifying INIT and INITIALIZE under one
 // verb" design section.
 func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 	const testSyntaxName = "INITIALIZE_VAX"
@@ -226,7 +226,7 @@ func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 	}
 
 	if initVax.Parameters[0].required() {
-		t.Error("PAGES should not be formally required (no /prompt=) -- INITIALIZE_VAX's handler checks Present itself, see docs/PHASE-23.md")
+		t.Error("PAGES should not be formally required (no /prompt=) -- INITIALIZE_VAX's handler checks Present itself, see docs/planning/PHASE-23.md")
 	}
 
 	initContainer, ok := g.entries["INITIALIZE_CONTAINER"]
@@ -247,7 +247,7 @@ func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 // DEFAULT grammar addition: SHOW_TYPES gained a DEFAULT keyword redirecting
 // to a new show_default syntax with no parameters/qualifiers of its own
 // (unlike SHOW MEMORY or SHOW BREAK, DEFAULT has nothing to qualify --
-// see docs/PHASE-23.md's design section).
+// see docs/planning/PHASE-23.md's design section).
 // TestLoadEvaxGrammar_directory regresses Phase 23 subtask 5's DIRECTORY
 // grammar addition: a single, optional SPEC parameter (no /prompt=, since
 // an omitted file spec is a normal way to run DIRECTORY, not a missing
@@ -265,7 +265,7 @@ func TestLoadEvaxGrammar_directory(t *testing.T) {
 	}
 
 	if directory.Parameters[0].required() {
-		t.Error("SPEC should not be formally required (no /prompt=) -- a bare DIRECTORY lists the current default directory, see docs/PHASE-23.md")
+		t.Error("SPEC should not be formally required (no /prompt=) -- a bare DIRECTORY lists the current default directory, see docs/planning/PHASE-23.md")
 	}
 
 	for _, name := range []string{"FULL", "FILE", "SIZE", "DATE"} {
@@ -292,7 +292,7 @@ func TestLoadEvaxGrammar_delete(t *testing.T) {
 	}
 
 	if !del.Parameters[0].required() {
-		t.Error("SPEC should be formally required (/prompt=) -- a bare DELETE has no sensible default, see docs/PHASE-23.md")
+		t.Error("SPEC should be formally required (/prompt=) -- a bare DELETE has no sensible default, see docs/planning/PHASE-23.md")
 	}
 }
 
@@ -313,7 +313,7 @@ func TestLoadEvaxGrammar_purge(t *testing.T) {
 	}
 
 	if purge.Parameters[0].required() {
-		t.Error("SPEC should not be formally required (no /prompt=) -- a bare PURGE defaults to *.*, see docs/PHASE-23.md")
+		t.Error("SPEC should not be formally required (no /prompt=) -- a bare PURGE defaults to *.*, see docs/planning/PHASE-23.md")
 	}
 
 	if _, _, err := purge.qualifier("LIMIT"); err != nil {
@@ -338,7 +338,7 @@ func TestLoadEvaxGrammar_type(t *testing.T) {
 	}
 
 	if !typ.Parameters[0].required() {
-		t.Error("SPEC should be formally required (/prompt=) -- a bare TYPE has no sensible default, see docs/PHASE-23.md")
+		t.Error("SPEC should be formally required (/prompt=) -- a bare TYPE has no sensible default, see docs/planning/PHASE-23.md")
 	}
 }
 

@@ -1,8 +1,8 @@
 // Package codegen is the back end of govax's FORTRAN compiler, its last
 // pass: it turns the intermediate representation (package ir) into VAX
 // MACRO-32 source text, which govax's MACRO command assembles
-// (docs/PHASE-74 - FORTRAN plan.md, Decisions 3, 8, 10, and 11;
-// docs/PHASE-75 - FORTRAN first light.md, Part B).
+// (docs/planning/PHASE-74 - FORTRAN plan.md, Decisions 3, 8, 10, and 11;
+// docs/planning/PHASE-75 - FORTRAN first light.md, Part B).
 //
 // A code generator has two jobs: choosing instructions, deciding which
 // VAX instructions and addressing modes do each thing the program does;

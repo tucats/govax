@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is docs/PHASE-69 - backup save sets.md's subtask 11, RMS's
+// This file is docs/planning/PHASE-69 - backup save sets.md's subtask 11, RMS's
 // side of saving: finding the files an input specifier names on a
 // mounted volume, each with the attributes and data a save set keeps of
 // it, and making the save set's file. BACKUP's command (internal/dclcmd)

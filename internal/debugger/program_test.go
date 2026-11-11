@@ -90,7 +90,7 @@ func dropBlank(lines []string) []string {
 // their addresses and types, and the module table.
 //
 // What can't match is left out: the sessions of TRACE, where VMS listed
-// only the routine named as the module (docs/PHASE-41.md's notes), and the
+// only the routine named as the module (docs/planning/PHASE-41.md's notes), and the
 // "bytes allocated" figures, which are the size of VMS's own tables.
 func TestShowSymbolOracle(t *testing.T) {
 	compared := 0
@@ -126,7 +126,7 @@ func TestShowSymbolOracle(t *testing.T) {
 				// VMS's listing of FORTH's F_A* omits the dictionary
 				// headers (F_ABORT_H, ...: labels DEFWORD puts in the
 				// FORTH_WORDS psect), which govax lists as data. No
-				// probe explains why (docs/PHASE-42.md, subtask 12).
+				// probe explains why (docs/planning/PHASE-42.md, subtask 12).
 				if tc.image == "forth.exe" {
 					have = withoutHeaders(have)
 				}

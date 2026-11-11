@@ -2,7 +2,7 @@ package corevms
 
 import "strings"
 
-// Where a message goes (docs/PHASE-70 - traceback.md, Decision 3 and
+// Where a message goes (docs/planning/PHASE-70 - traceback.md, Decision 3 and
 // subtask 8).
 //
 // $PUTMSG writes a message "to SYS$ERROR by an RMS $PUT request. If

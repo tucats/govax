@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestMTHRTLVector checks what docs/PHASE-77 - MTHRTL.md's survey says of
+// TestMTHRTLVector checks what docs/planning/PHASE-77 - MTHRTL.md's survey says of
 // the table captured from VMS 7.1's MTHRTL.EXE: its size, a few entries,
 // and that every entry is a quadword of one transfer vector, two pairs of
 // names sharing theirs.

@@ -75,7 +75,7 @@ func TestDispatch_defineAndShowDeviceViaDCL(t *testing.T) {
 
 // TestShowDevices_allocated checks SHOW DEVICE/FULL reports a device
 // $ALLOC has allocated, and that image rundown releases a user-mode
-// allocation (docs/PHASE-26.md).
+// allocation (docs/planning/PHASE-26.md).
 func TestShowDevices_allocated(t *testing.T) {
 	c, buf := newTestConsole(t)
 

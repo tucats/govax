@@ -64,7 +64,7 @@ type exprState struct {
 // In the MACRO dialect a constant computed by an operation also keeps its
 // shape, the tree of how it was computed. Real MACRO doesn't fold
 // anything in an expression it hands to the linker: EXT+<-4> is
-// STA_GBL EXT, STA_UB 4, OPR_NEG, OPR_ADD (docs/PHASE-27.md, subtask 11's
+// STA_GBL EXT, STA_UB 4, OPR_NEG, OPR_ADD (docs/planning/PHASE-27.md, subtask 11's
 // log). So when such a constant joins a value the assembler can't
 // finish, its shape goes into the tree, not its value.
 type exprVal struct {

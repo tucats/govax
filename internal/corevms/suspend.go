@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/sched"
 
-// Suspension (docs/PHASE-45.md, subtask 9): $SUSPND and $RESUME.
+// Suspension (docs/planning/PHASE-45.md, subtask 9): $SUSPND and $RESUME.
 //
 // A suspended process doesn't run until another process resumes it, even
 // if what it was waiting for happens. govax models the one kind of

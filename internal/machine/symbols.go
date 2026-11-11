@@ -111,7 +111,7 @@ func (t *SymbolTable) Find(name string) (*Symbol, bool) {
 // determinism, when more than one matches) whose value equals v, or ("",
 // false) if none — a simplified stand-in for find_label's SYM_LABEL/
 // SYM_ENTRY-kind-filtered reverse lookup: every symbol is a candidate
-// here (see docs/PHASE-16.md sub-phase 1c).
+// here (see docs/planning/PHASE-16.md sub-phase 1c).
 func (t *SymbolTable) FindByValue(v uint32) (string, bool) {
 	if s, ok := t.t.At(v, nil); ok {
 		return s.Name, true

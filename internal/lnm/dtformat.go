@@ -12,7 +12,7 @@ const DTFormatTableName = "LNM$DT_FORMAT_TABLE"
 
 // DateFormats and TimeFormats are DIGITAL's predefined formats, the 5.0
 // LIB$ manual's Tables 3-3 and 3-4: DateFormats[0] is LIB$DATE_FORMAT_001,
-// and so on (docs/PHASE-56, "Formatting: mnemonics and predefined
+// and so on (docs/planning/PHASE-56, "Formatting: mnemonics and predefined
 // formats", which shows each with the manual's example). The OCR's "O"
 // in the mnemonics is the digit 0, and its blanks are corrected from the
 // examples. A user may add LIB$DATE_FORMAT_501 to _999 (and the time

@@ -9,7 +9,7 @@ import (
 )
 
 // numRegisters is how many registers expressions use: R0 to R11 (Decision
-// 3 of docs/PHASE-78 - FORTRAN expressions and types.md). AP, FP, SP, and
+// 3 of docs/planning/PHASE-78 - FORTRAN expressions and types.md). AP, FP, SP, and
 // PC are the calling standard's. A routine saves the ones from R2 up that
 // it uses, in its entry mask, so a register costs nothing until it is used.
 const numRegisters = 12

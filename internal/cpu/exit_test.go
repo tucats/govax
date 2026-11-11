@@ -179,7 +179,7 @@ func TestImageExitLoopingChain(t *testing.T) {
 }
 
 // TestXfcShimImageCall: a shim answering with an image's *ServiceCall
-// (the subprocess CLI's RUN, docs/PHASE-48.md) has the image called on a
+// (the subprocess CLI's RUN, docs/planning/PHASE-48.md) has the image called on a
 // frame whose saved PC and FP are SentinelReturn: the image's $EXIT
 // unwinds to that frame and no further, reporting ErrConsoleCallReturned
 // with SP back where it was at the shim's XFC, and the outer frame (the

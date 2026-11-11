@@ -11,7 +11,7 @@ import (
 
 // TestRealObjects reads every object module MACRO produced on the user's
 // VAX (testdata/mar/vax/*.obj, in the host variable-length record layout;
-// see docs/PHASE-27.md) and checks that it decodes, that encoding it again
+// see docs/planning/PHASE-27.md) and checks that it decodes, that encoding it again
 // reproduces it byte for byte, and that Check finds nothing wrong. It
 // skips when there are none yet.
 func TestRealObjects(t *testing.T) {

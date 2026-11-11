@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The lexical functions on files and devices (docs/PHASE-50 - DCL command
+// The lexical functions on files and devices (docs/planning/PHASE-50 - DCL command
 // procedures.md, subtask 14; the User's Manual, 15.4): F$PARSE, F$SEARCH,
 // F$GETDVI, F$DEVICE, and F$FILE_ATTRIBUTES (Phase 51). F$PARSE and F$SEARCH apply RMS's rules (rms.Session's
 // Parse and Search) to a file on a mounted volume, and govax's

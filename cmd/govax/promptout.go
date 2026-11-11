@@ -10,7 +10,7 @@ import (
 // terminal output through it) when govax reads its command lines from a
 // terminal. Most of the time it writes straight to the terminal. While a
 // command line is being read and the other processes run meanwhile
-// (docs/PHASE-51, subtask 4: Console.LendWhileReading), what they write
+// (docs/planning/PHASE-51, subtask 4: Console.LendWhileReading), what they write
 // would land in the middle of the line being typed. So while the line is
 // read (begin to end), whole lines go through the line editor's own
 // writer (readline's Stdout), which takes the prompt and the line typed

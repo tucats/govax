@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 )
 
-// The locale routines (docs/PHASE-54, "Locale"): LIB$DIGIT_SEP,
+// The locale routines (docs/planning/PHASE-54, "Locale"): LIB$DIGIT_SEP,
 // LIB$RADIX_POINT, LIB$CURRENCY, and LIB$LP_LINES. Each returns what a
 // logical name says, for programs (BASIC's, implicitly) that format
 // numbers and listings: a system manager defines the name system-wide,

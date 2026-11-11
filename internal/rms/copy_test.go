@@ -140,7 +140,7 @@ func TestSessionCopy_volumeToVolume(t *testing.T) {
 // 512-byte records (as an image is), holding bytes that aren't text, is
 // copied as it is, without /BINARY: the copy's record format and record
 // size are the source's, and its bytes the same, as VMS's COPY keeps
-// them (docs/PHASE-66 - mapped image activation.md, subtask 7: a copied
+// them (docs/planning/PHASE-66 - mapped image activation.md, subtask 7: a copied
 // image was reframed as Stream_LF text and no longer ran).
 func TestSessionCopy_volumeToVolumeKeepsFormat(t *testing.T) {
 	s, vol := newCopyTestSession(t)

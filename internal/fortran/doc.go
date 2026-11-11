@@ -1,7 +1,7 @@
 // Package fortran is govax's FORTRAN compiler: it compiles a VAX FORTRAN
 // source file into a VAX MACRO-32 source file, which the MACRO command
 // assembles and LINK links against FTNRTL, the FORTRAN run-time library
-// (docs/PHASE-74 - FORTRAN plan.md).
+// (docs/planning/PHASE-74 - FORTRAN plan.md).
 //
 //	$ FORTRAN SQUARES      ! SQUARES.FOR -> SQUARES.MAR
 //	$ MACRO SQUARES        ! SQUARES.MAR -> SQUARES.OBJ
@@ -30,7 +30,7 @@
 //   - codegen: chooses VAX instructions and writes the MACRO file.
 //
 // listing isn't a pass: it lays out what /LIST asks for from what the passes that
-// ran have left (docs/PHASE-85 - FORTRAN compiler usability.md).
+// ran have left (docs/planning/PHASE-85 - FORTRAN compiler usability.md).
 //
 // diag holds every pass's error and warning messages, and ast the syntax
 // tree's node types, which parse builds and sema reads.
@@ -67,7 +67,7 @@
 // Comments cite their sources briefly. "Section 5.3.1" (or a table,
 // figure, or appendix) is the 1988 VAX FORTRAN Language Reference Manual,
 // the language's definition. "Decision 10" or "subtask 4" is a numbered
-// item in the phase doc of the phase that wrote the code (docs/PHASE-nn -
+// item in the phase doc of the phase that wrote the code (docs/planning/PHASE-nn -
 // topic.md), where the choice and its reasons are written down.
 // "Unconfirmed" or "ours" marks a rule neither the manual nor a run on a
 // real VAX settled, so govax chose. "VMS's" behavior means what a real VAX

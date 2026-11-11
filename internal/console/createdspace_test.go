@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 67's subtask 2 (docs/PHASE-67 - address space under paging.md):
+// Phase 67's subtask 2 (docs/planning/PHASE-67 - address space under paging.md):
 // with paging on, P0LR and P1LR describe the pages that exist, and the
 // services that create and delete pages move them.
 

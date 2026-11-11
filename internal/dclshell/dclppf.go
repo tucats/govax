@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// A command procedure's process-permanent files (docs/PHASE-71 -
+// A command procedure's process-permanent files (docs/planning/PHASE-71 -
 // process-permanent files.md, subtask 6).
 //
 // DCL opens a command procedure as a process-permanent file, and its

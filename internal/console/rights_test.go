@@ -7,7 +7,7 @@ import (
 )
 
 // TestRights_assembledProgram runs testdata/asm/rights.asm
-// (docs/PHASE-26.md subtask 40): $ASCTOID, $FAO's !%I, and $IDTOASC,
+// (docs/planning/PHASE-26.md subtask 40): $ASCTOID, $FAO's !%I, and $IDTOASC,
 // singly and as a listing.
 func TestRights_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)

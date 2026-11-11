@@ -13,7 +13,7 @@ import (
 // Console-level wrapper's happy path: InitializeContainer builds a
 // container the same c.Mount used by every other test in this package can
 // then attach to a device, with the label threaded all the way through --
-// the InitializeContainer/Mount two-step docs/PHASE-23.md's own design
+// the InitializeContainer/Mount two-step docs/planning/PHASE-23.md's own design
 // section describes (INITIALIZE formats a volume without mounting it; a
 // separate MOUNT attaches it).
 func TestConsoleInitializeContainer_buildsAMountableVolume(t *testing.T) {
@@ -107,7 +107,7 @@ func TestDispatch_initializeContainerViaDCL(t *testing.T) {
 // reaches INITIALIZE_CONTAINER via /CONTAINER, the container-formatting
 // counterpart to TestDispatch_initAbbreviatesInitializeVax
 // (dispatch_test.go) -- INIT is DCL's own unambiguous-prefix abbreviation
-// of INITIALIZE (docs/PHASE-23.md's "INITIALIZE: unifying INIT and
+// of INITIALIZE (docs/planning/PHASE-23.md's "INITIALIZE: unifying INIT and
 // INITIALIZE under one verb" design section), not tied to either
 // qualifier specifically, so it has to work for /CONTAINER exactly as well
 // as it already does for /VAX.
@@ -123,7 +123,7 @@ func TestDispatch_initializeContainerAbbreviatedViaDCL(t *testing.T) {
 // TestDispatch_initializeContainerDoesNotMount confirms INITIALIZE/
 // CONTAINER, dispatched through the real DCL grammar and Console layer end
 // to end, never leaves the new container mounted -- matching real VMS's
-// own INITIALIZE and docs/PHASE-23.md's own explicit design note that this
+// own INITIALIZE and docs/planning/PHASE-23.md's own explicit design note that this
 // command formats a volume without mounting it.
 func TestDispatch_initializeContainerDoesNotMount(t *testing.T) {
 	d, c := newTestDispatcher(t)

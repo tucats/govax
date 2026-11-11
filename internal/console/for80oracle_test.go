@@ -13,7 +13,7 @@ import (
 )
 
 // TestFor80Oracle holds FTNRTL to VMS's FORTRAN run-time library
-// (docs/PHASE-80 - FORTRAN formatted IO.md, Decision 2): testdata/for80's
+// (docs/planning/PHASE-80 - FORTRAN formatted IO.md, Decision 2): testdata/for80's
 // for80.for is the probe's output cases to unit 6 as FORTRAN statements,
 // each between a line "#n" and a line "=n" with its IOSTAT, and VMS's run
 // of the same cases through FORRTL is vax/for80-vax.txt, each case's

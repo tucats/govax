@@ -8,7 +8,7 @@ import (
 // Dialect is the source language an Assembler accepts. The two share one
 // core (one expression evaluator, instruction encoder, symbol table, and
 // directive table), and differ in which directives they allow and, as
-// docs/PHASE-27.md's later subtasks land, in how they place and relocate
+// docs/planning/PHASE-27.md's later subtasks land, in how they place and relocate
 // what they assemble.
 type Dialect int
 
@@ -205,7 +205,7 @@ func init() {
 
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
 		// but the MACRO command resolves .INCLUDE across host and ODS-2
-		// files (docs/PHASE-27.md, subtask 10).
+		// files (docs/planning/PHASE-27.md, subtask 10).
 		"INCLUDE": {both, (*Assembler).pseudoInclude},
 
 		// eVAX console directives, and eVAX forms of MACRO-32 names.

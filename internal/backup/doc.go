@@ -4,7 +4,7 @@
 // thousand to 65535 bytes, that BACKUP alone was meant to interpret.
 // The layout here comes from save sets real VMS (V7.1, BACKUP V6.2)
 // wrote, from the public save set readers' names for its fields, and
-// from the probe in testdata/backup69 (docs/PHASE-69 - backup save
+// from the probe in testdata/backup69 (docs/planning/PHASE-69 - backup save
 // sets.md, Part A):
 //
 //   - Every block starts with a 256-byte block header (block.go): the

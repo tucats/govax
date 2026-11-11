@@ -40,7 +40,7 @@ const (
 // the source expression's, because real MACRO-32 hands such expressions to
 // the linker as written: EXT+4 is STA_GBL EXT, STA_UB 4, OPR_ADD, and
 // <C-A>*2 is a subtraction and then a multiplication, even though C and A
-// are in the same psect (docs/PHASE-27.md, subtask 3's log). The one
+// are in the same psect (docs/planning/PHASE-27.md, subtask 3's log). The one
 // simplification is the manual's (§3.5): the difference of two symbols
 // already defined in the same psect is absolute (see binaryVal).
 type rexpr struct {
@@ -359,7 +359,7 @@ func isBranch(kind fixupKind) bool {
 // completeFixup finishes f once none of its symbols is still pending:
 // its value, if that's now a constant, is stored as it always was;
 // otherwise it becomes a relocation. Two cases follow real MACRO's
-// objects (docs/PHASE-27.md, subtask 3's log):
+// objects (docs/planning/PHASE-27.md, subtask 3's log):
 //   - A branch to a location in its own psect is finished here, whatever
 //     the psect's base, but an operand's displacement to a label defined
 //     after it is left to the linker (STO_LD).

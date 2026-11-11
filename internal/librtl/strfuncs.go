@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// The string functions (docs/PHASE-54, "Characters and search"): LIB$LEN,
+// The string functions (docs/planning/PHASE-54, "Characters and search"): LIB$LEN,
 // LIB$CHAR, LIB$ICHAR, and LIB$INDEX, what FORTRAN's and BASIC's LEN,
 // CHAR, ICHAR, and INDEX intrinsics compute in line. LEN, ICHAR, and
 // INDEX return values, not statuses, so an invalid descriptor can't be

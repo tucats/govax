@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is the NAM block on $OPEN and $CREATE (docs/PHASE-33.md,
+// This file is the NAM block on $OPEN and $CREATE (docs/planning/PHASE-33.md,
 // subtask 4), from the RMS Reference Manual's tables for the two services
 // (RMS-7, RMS-8, RMS-51, RMS-52) and FAB$V_NAM.
 

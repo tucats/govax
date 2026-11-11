@@ -6,7 +6,7 @@ import "testing"
 // with LIB$GET_VM and frees the 20, then reads the bytes still allocated
 // with LIB$STAT_VM (code 3), shows the heap's line with LIB$SHOW_VM, and
 // shows code 1's line through an action routine, which writes it and
-// returns its user argument, SHOW_VM's status then (docs/PHASE-59,
+// returns its user argument, SHOW_VM's status then (docs/planning/PHASE-59,
 // subtask 7). The program prints the figure and both statuses.
 func TestLibrtlVMStatistics(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+

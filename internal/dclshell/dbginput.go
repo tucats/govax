@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The debugger's command files (docs/PHASE-73 - trace trap.md, subtask
+// The debugger's command files (docs/planning/PHASE-73 - trace trap.md, subtask
 // 5). The VMS debugger reads its commands from DBG$INPUT, which is the
 // terminal unless a logical name of that name says otherwise; a command
 // procedure that runs a program under the debugger defines it, often

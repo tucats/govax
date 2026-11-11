@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is LINK's default user libraries (docs/PHASE-68 - link
+// This file is LINK's default user libraries (docs/planning/PHASE-68 - link
 // shareable images.md, subtask 12; the Linker manual's /USERLIBRARY): the
 // libraries the logical names LNK$LIBRARY, LNK$LIBRARY_1, ...,
 // LNK$LIBRARY_999 name, searched after the command's own input and before

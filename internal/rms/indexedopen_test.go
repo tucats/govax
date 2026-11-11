@@ -16,7 +16,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// The indexed file probe's VMS run (docs/PHASE-88 - keyed index files.md,
+// The indexed file probe's VMS run (docs/planning/PHASE-88 - keyed index files.md,
 // testdata/idx88): its files in a save set, and its log.
 const idx88Dir = "../../testdata/idx88/vax"
 

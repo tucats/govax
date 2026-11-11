@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// The item routines (docs/PHASE-55, the survey's "Item routines"):
+// The item routines (docs/planning/PHASE-55, the survey's "Item routines"):
 // LIB$GETJPI, LIB$GETDVI, and LIB$GETSYI. Each asks $GETJPI, $GETDVI, or
 // $GETSYI for one item, named by its code (passed by reference), so a
 // program needn't build an item list. A numeric item's value goes to a

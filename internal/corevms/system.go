@@ -14,7 +14,7 @@ import (
 )
 
 // System is the state one emulated VAX/VMS system has once, however many
-// processes run on it (docs/PHASE-43.md): the machine (one CPU, one
+// processes run on it (docs/planning/PHASE-43.md): the machine (one CPU, one
 // physical memory), the tables of system services and RTL shims, the
 // devices and mounted volumes, the mailboxes, common event flag clusters,
 // and OPCOM's state, the system's clock, boot time, and node name, and
@@ -45,7 +45,7 @@ type System struct {
 	// and it outlives an INIT/VMINIT/ZERO.
 	Devices *iodev.DeviceTable
 
-	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
+	// Mounts is docs/planning/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable), injected the same way Devices is:
 	// it's owned by internal/console's Console (constructed once,
 	// alongside Devices — a MOUNT command's effect must still be visible
@@ -148,7 +148,7 @@ type System struct {
 
 	// Interpreter is the command interpreter a process created to run one
 	// (LIB$SPAWN's, or $CREPRC's of LOGINOUT) runs instead of an image
-	// (cliprocess.go, docs/PHASE-48.md). The console installs it, as it
+	// (cliprocess.go, docs/planning/PHASE-48.md). The console installs it, as it
 	// does ActivateImage; nil means such processes can't start.
 	Interpreter CommandInterpreter
 

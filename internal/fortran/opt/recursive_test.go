@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/ir"
 )
 
-// A recursive routine's cells under the optimizer (docs/PHASE-89 - reentrant
+// A recursive routine's cells under the optimizer (docs/planning/PHASE-89 - reentrant
 // FORTRAN.md, subtask 4): the optimizer's own cells go in the frame, the frame closes
 // up when its cells become registers, and a call may change a static local.
 

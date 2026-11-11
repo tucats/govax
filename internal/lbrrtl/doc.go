@@ -1,4 +1,4 @@
-// Package lbrrtl is LBRSHR.EXE, VMS's librarian routines (docs/PHASE-90 -
+// Package lbrrtl is LBRSHR.EXE, VMS's librarian routines (docs/planning/PHASE-90 -
 // VMS help.md, Decision 8): the LBR$ routines a program calls to read a
 // library of any type, its keys and its modules' records, and to show help
 // text, and (subtask 11) to create and change one: LBR$PUT_RECORD,

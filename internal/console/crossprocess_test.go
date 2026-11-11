@@ -134,7 +134,7 @@ func TestNullDevice_defined(t *testing.T) {
 }
 
 // TestShowDeviceFull_nla0: SHOW DEVICE/FULL NLA0: in the layout the VMS 7.1
-// system gives it (docs/PHASE-45.md, probe 2), with govax's own counts, and
+// system gives it (docs/planning/PHASE-45.md, probe 2), with govax's own counts, and
 // the name taken with or without its colon.
 func TestShowDeviceFull_nla0(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
@@ -178,7 +178,7 @@ name:	.ascid	/SHOWBOX/
 
 // TestShowDeviceFull_terminalAndMailbox: SHOW DEVICE/FULL of TTA0: and of
 // a mailbox, in the layouts VMS 7.1 gave a terminal and a mailbox
-// (docs/PHASE-45.md, subtask 14's note): "Terminal" first for a
+// (docs/planning/PHASE-45.md, subtask 14's note): "Terminal" first for a
 // terminal, its sentence wrapped a word at a time at 80 columns, the
 // owner UIC [1,4] as [SYSTEM], and the protection as VMS shows it, the
 // mailbox's from its $CREMBX promsk.

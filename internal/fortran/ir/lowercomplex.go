@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
-// COMPLEX values (Decision 1 of docs/PHASE-78 - FORTRAN expressions and
+// COMPLEX values (Decision 1 of docs/planning/PHASE-78 - FORTRAN expressions and
 // types.md). The VAX has no complex instructions, so lowering splits a
 // complex expression into two trees of real operations, one for its real
 // part and one for its imaginary part, and the code generator never sees

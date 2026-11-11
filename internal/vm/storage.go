@@ -14,7 +14,7 @@ const PageMask = 0xFFFFFE00
 // This file is the Go port of storage.c's load_memory/store_memory/
 // load_register primitive layer (get_operand/put_operand stay out of scope
 // here — they belong to Phase 03's operand-decode engine, per
-// docs/PHASE-02.md).
+// docs/planning/PHASE-02.md).
 //
 // Everything in this file works at the level of *virtual* addresses (as
 // opposed to memory.go's phys/readPhysLongword/writePhysLongword, which
@@ -269,7 +269,7 @@ func (m *Memory) StoreLongword(cpu *registers.CPU, addr uint32, v uint32) error 
 // storage.c splits an 8-byte access into two 4-byte load_memory/
 // store_memory calls to keep byte order correct on big-endian hosts; on the
 // little-endian-only host this Go port targets that split has no observable
-// effect (see docs/PLAN.md's LONGWORD/typedef discussion), so it isn't
+// effect (see docs/planning/PLAN.md's LONGWORD/typedef discussion), so it isn't
 // ported — a straight little-endian 8-byte decode is equivalent.
 func (m *Memory) LoadQuadword(cpu *registers.CPU, addr uint32) (uint64, error) {
 	var buf [8]byte

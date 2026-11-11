@@ -1,7 +1,7 @@
 // Package ir is the FORTRAN compiler's intermediate representation, and
 // lowering, the fifth pass, which turns semantic analysis's tree into it
-// (docs/PHASE-75 - FORTRAN first light.md, Part B, and Decision 8 of
-// docs/PHASE-74 - FORTRAN plan.md).
+// (docs/planning/PHASE-75 - FORTRAN first light.md, Part B, and Decision 8 of
+// docs/planning/PHASE-74 - FORTRAN plan.md).
 //
 // # Why another representation
 //

@@ -9,7 +9,7 @@ import (
 
 // The file statements (chapter 9). OPEN and CLOSE give their keywords in
 // any order, and each becomes a code and a value that FTNRTL reads as VMS's
-// FORTRAN run-time library reads its own (docs/PHASE-81 - FORTRAN files.md,
+// FORTRAN run-time library reads its own (docs/planning/PHASE-81 - FORTRAN files.md,
 // "FOR$OPEN's arguments"): so one table, keyword to code, runs from here to
 // the run-time library.
 
@@ -516,7 +516,7 @@ func (a *analyzer) associatedVariable(e ast.Expr) Expr {
 }
 
 // checkAssociated warns of each associated variable in the frame, AUTOMATIC or
-// a recursive unit's unsaved local (Decision 10 of docs/PHASE-89 - reentrant
+// a recursive unit's unsaved local (Decision 10 of docs/planning/PHASE-89 - reentrant
 // FORTRAN.md). FTNRTL keeps the variable's address with the unit, and stores the
 // next record's number there after each direct access statement until the file
 // is closed, whichever routine does the I/O; once the routine that opened it
@@ -576,7 +576,7 @@ func (a *analyzer) defineFile(s *ast.DefineFileStmt) Stmt {
 }
 
 // checkOpen reports what FORRTL would refuse in an OPEN whose keywords are
-// constants (docs/PHASE-81 - FORTRAN files.md, Part A and round 1). A value
+// constants (docs/planning/PHASE-81 - FORTRAN files.md, Part A and round 1). A value
 // known only when the program runs is FTNRTL's to check, with the same rules.
 func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 	is := func(code, want int) bool {

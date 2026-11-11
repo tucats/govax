@@ -741,7 +741,7 @@ func (s *sharer) startSearch(spec string) {
 	}
 }
 
-// TestSharing_searchNewSubdirectory (docs/PHASE-49.md, subtask 11): a
+// TestSharing_searchNewSubdirectory (docs/planning/PHASE-49.md, subtask 11): a
 // wildcard directory search sees a subdirectory made after it began, if
 // the subdirectory comes later in its walk, and not one made behind its
 // place; no directory is searched twice.

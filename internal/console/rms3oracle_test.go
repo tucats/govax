@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The Phase 33 oracle's reconciliation (docs/PHASE-33.md, subtask 6):
+// The Phase 33 oracle's reconciliation (docs/planning/PHASE-33.md, subtask 6):
 // each probe runs under govax on a copy of the container the author's VMS
 // 7.3 system ran it on (testdata/mar/rms3/README.md), and what it writes
 // is compared with what it wrote there.
@@ -169,7 +169,7 @@ func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []prob
 }
 
 // maskRecord zeroes the bytes of r that differ between VMS and govax for
-// reasons outside RMS's definition (docs/PHASE-33.md, subtask 6):
+// reasons outside RMS's definition (docs/planning/PHASE-33.md, subtask 6):
 //
 //   - a FAB's IFI, an index into RMS's own table, and FAB$L_STV after a
 //     success, an I/O channel number (govax has no channels);

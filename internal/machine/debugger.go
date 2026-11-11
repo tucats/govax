@@ -1,7 +1,7 @@
 package machine
 
 // The console and the debugger are two front ends to one machine
-// (docs/PHASE-42.md). The console is the VMS command line (SET DEFAULT,
+// (docs/planning/PHASE-42.md). The console is the VMS command line (SET DEFAULT,
 // MACRO, LINK, RUN, ...); the debugger, in internal/debugger, is the
 // machine debugger modeled on the VMS debugger (EXAMINE, STEP, SET BREAK,
 // ...), with its own grammar and its own "DBG> " prompt.
@@ -43,7 +43,7 @@ const (
 )
 
 // Activation describes what is starting a debugger session. Later
-// subtasks of docs/PHASE-42.md add the other ways in (RUN of a debug
+// subtasks of docs/planning/PHASE-42.md add the other ways in (RUN of a debug
 // image) and what each needs.
 type Activation struct {
 	Kind ActivationKind

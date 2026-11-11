@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Condition handling (docs/PHASE-26.md subtasks 31-34): how VMS reports
+// Condition handling (docs/planning/PHASE-26.md subtasks 31-34): how VMS reports
 // an exception or a software error to the program's condition handlers.
 //
 // # Conditions and handlers
@@ -998,7 +998,7 @@ func (env *Environment) exitForCondition(d *conditionDispatch, cond uint32) (uin
 	return 0, &CallRequest{Routine: exitEntryAddr, ArgList: argList}
 }
 
-// serviceSysSetexv is SYS$SETEXV (docs/PHASE-26.md subtask 32):
+// serviceSysSetexv is SYS$SETEXV (docs/planning/PHASE-26.md subtask 32):
 //
 //	SYS$SETEXV [vector] ,[address] ,[acmode] ,[prvhnd]
 //

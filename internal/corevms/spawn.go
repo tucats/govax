@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Spawning a subprocess (docs/PHASE-48.md, subtask 2): the process side
+// Spawning a subprocess (docs/planning/PHASE-48.md, subtask 2): the process side
 // of LIB$SPAWN, which internal/librtl reads the arguments for.
 //
 // LIB$SPAWN (the RTL Library manual) creates a subprocess of its caller
@@ -106,7 +106,7 @@ type spawnCompletion struct {
 // Spawn creates the subprocess req asks for (see this file's opening
 // comment), as env's process's LIB$SPAWN. It returns the new process and
 // SS$_NORMAL, or nil and the status of the first check that failed:
-// SS$_UNSUPPORTED with the scheduler off (docs/PHASE-43.md, Part A, rule
+// SS$_UNSUPPORTED with the scheduler off (docs/planning/PHASE-43.md, Part A, rule
 // 2); LIB$_NOCLI if env has no CLI (a process $CREPRC created to run an
 // image has none, as on VMS); LIB$_INVARG for a flag LIB$SPAWN doesn't
 // define; SS$_IVLOGNAM for a name that's too long; or any of
@@ -301,7 +301,7 @@ func (env *Environment) processName(name string) string {
 // over for the process's own, the executive-mode name, as if the SPAWN
 // came from command level 0; an /OUTPUT file is shared with the
 // subprocess instead (procedureOutput). How VMS passes a procedure's
-// files on is docs/PHASE-71 - process-permanent files.md's subtask 8.
+// files on is docs/planning/PHASE-71 - process-permanent files.md's subtask 8.
 func (env *Environment) spawnDefault(name string) string {
 	e, err := env.Logicals.Translate(lnm.ProcessTableName, name, lnm.User, 0)
 	if err == nil && e.Mode == lnm.Supervisor && len(e.Equivalences) > 0 && isPermanentString(e.Equivalences[0].Value) {

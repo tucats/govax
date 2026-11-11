@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The Phase 59 oracle (docs/PHASE-59, subtask 10): testdata/lib59's
+// The Phase 59 oracle (docs/planning/PHASE-59, subtask 10): testdata/lib59's
 // lib59.mar calls every LIBRTL memory routine of the phase, case by
 // case, and prints what each returned, signaled, and stored, and what it
 // passed the program's own routines. vax/lib59-vax.txt is its output on
@@ -52,7 +52,7 @@ var expectedLib59Differences = map[string]string{
 	"SVZ X8 level 3/|": "a free-list link's address as text",
 
 	// Where a C block that has to move goes, and the C heap's place in
-	// P0, are VMS's own (docs/PHASE-59, subtask 10).
+	// P0, are VMS's own (docs/planning/PHASE-59, subtask 10).
 	"VM_REALLOC of 0/B_M8-B_M1:":                     "the C heap's layout",
 	"the C blocks and the default zone's/B_M1-B_D1:": "the C heap's place in P0",
 	"GV default after the C blocks/B_D4-B_M3:":       "the C heap's place in P0",
@@ -63,7 +63,7 @@ var expectedLib59Differences = map[string]string{
 
 	// The heap's totals: every count each case shows matches, but VMS
 	// counts some of the RTL's own work that the run doesn't show one by
-	// one (docs/PHASE-59, subtask 10): its totals differ from govax's by
+	// one (docs/planning/PHASE-59, subtask 10): its totals differ from govax's by
 	// a call or two and a few bytes and pages.
 	"STAT_VM 1/V:":                    "the heap's totals",
 	"SHOW_VM to SYS$OUTPUT/197":       "the heap's totals",

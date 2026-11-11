@@ -11,7 +11,7 @@ import (
 )
 
 // TestDiskDelete_assembledProgram runs testdata/asm/disk_delete.asm
-// (docs/PHASE-26.md subtask 44): a temporary file used and gone at
+// (docs/planning/PHASE-26.md subtask 44): a temporary file used and gone at
 // deaccess, KEEP.TXT renamed by entering a new name and removing the old,
 // and OLD.TXT deleted.
 func TestDiskDelete_assembledProgram(t *testing.T) {

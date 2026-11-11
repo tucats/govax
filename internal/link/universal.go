@@ -9,7 +9,7 @@ import (
 
 // This file is a shareable image's universal symbols: the symbols other
 // images may be linked against, which its global symbol table (GST)
-// lists (the Linker manual, 4.2; testdata/link68's probe, docs/PHASE-68 -
+// lists (the Linker manual, 4.2; testdata/link68's probe, docs/planning/PHASE-68 -
 // link shareable images.md, subtask 6). A symbol is universal when an
 // options file names it (UNIVERSAL=), or when a module's .TRANSFER
 // redefines it (TIR$C_OPR_REDEF), as a transfer vector's entries do.

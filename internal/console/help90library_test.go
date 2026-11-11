@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// help90Dir is the Phase 90 probe (docs/PHASE-90 - VMS help.md), whose part A
+// help90Dir is the Phase 90 probe (docs/planning/PHASE-90 - VMS help.md), whose part A
 // is LIBRARY/HELP on its own help files.
 const help90Dir = "../../testdata/help90/"
 

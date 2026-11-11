@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $GETDVI and $GETDVIW (docs/PHASE-26.md subtask 28): information about a
+// $GETDVI and $GETDVIW (docs/planning/PHASE-26.md subtask 28): information about a
 // device.
 //
 // It is the $GETJPI/$GETSYI pattern (getjpi.go, getsyi.go) for a device:

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// Deleting files through the ACP (docs/PHASE-26.md subtask 44).
+// Deleting files through the ACP (docs/planning/PHASE-26.md subtask 44).
 //
 // # What deleting involves
 //

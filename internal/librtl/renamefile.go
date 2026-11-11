@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// LIB$RENAME_FILE (docs/PHASE-58, subtask 6; the survey's "RENAME_FILE
+// LIB$RENAME_FILE (docs/planning/PHASE-58, subtask 6; the survey's "RENAME_FILE
 // (319)"), written from the 5.0 LIB$ manual (LIB-319):
 //
 //	LIB$RENAME_FILE old-filespec, new-filespec [,default-filespec]
@@ -48,7 +48,7 @@ import (
 // rest are LIB$_INVARG, as on VMS 7.1.
 //
 // What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
-// docs/PHASE-58's subtask 8), but where marked unconfirmed:
+// docs/planning/PHASE-58's subtask 8), but where marked unconfirmed:
 //
 //   - Fewer than two arguments, or more than twelve, is LIB$_WRONUMARG; a
 //     new-filespec over 255 characters is LIB$_INVFILSPE, as old-filespec

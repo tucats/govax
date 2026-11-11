@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements docs/PHASE-30.md's LINK command:
+// This file implements docs/planning/PHASE-30.md's LINK command:
 //
 //	LINK file[,file...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE | /SHAREABLE[=image]]
 //	     [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB] [/[NO]USERLIBRARY[=(table,...)]]
@@ -31,7 +31,7 @@ import (
 // on every VAX LINK option but UNSUPPORTED=, which it refuses.
 // UNIVERSAL= and GSMATCH= are a shareable image's, ignored in an
 // executable, as VMS's LINK ignored UNIVERSAL= (testdata/link68's E8).
-// /SHAREABLE makes a shareable image (docs/PHASE-68, subtask 5), whose
+// /SHAREABLE makes a shareable image (docs/planning/PHASE-68, subtask 5), whose
 // options files ignore ISD_MAX= (OPTIGNSHR).
 // SYS$INPUT/OPTIONS reads the options from SYS$INPUT: in a command
 // procedure, the data lines after the LINK command.
@@ -103,7 +103,7 @@ type LinkOptions struct {
 	// named after the first file with the type MAP. Brief is /BRIEF:
 	// only the object modules and the image synopsis. Full is /FULL:
 	// every section, and what libraries and shareable images contributed
-	// (docs/PHASE-68, subtask 8); it conflicts with /BRIEF.
+	// (docs/planning/PHASE-68, subtask 8); it conflicts with /BRIEF.
 	Map     bool
 	MapFile string
 	Brief   bool

@@ -11,7 +11,7 @@ import (
 )
 
 // SET BREAK, SHOW BREAK, and CANCEL BREAK as the VMS debugger has them
-// (docs/PHASE-42.md, subtask 6; the formats are from
+// (docs/planning/PHASE-42.md, subtask 6; the formats are from
 // testdata/dbgcmd/vax/break.dlg and brkcls.dlg). govax adds one
 // qualifier, /FAULT, for its own fault breakpoints (faultbreak.go).
 //

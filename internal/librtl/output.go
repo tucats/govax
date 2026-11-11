@@ -6,7 +6,7 @@ import "github.com/tucats/govax/internal/corevms"
 // string its one argument, a string descriptor, describes to SYS$OUTPUT
 // as one record. On the terminal a record is a line, so the text is
 // followed by a newline; an empty string writes an empty line. When
-// SYS$OUTPUT is a mailbox, the record is a message (docs/PHASE-46.md,
+// SYS$OUTPUT is a mailbox, the record is a message (docs/planning/PHASE-46.md,
 // subtask 6), and a full mailbox makes the caller wait for room. It
 // returns the write's status (SS$_NORMAL on the terminal), LIB$_INVSTRDES
 // when the descriptor's class isn't a string's. A descriptor or text it

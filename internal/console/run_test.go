@@ -23,7 +23,7 @@ func TestDefaultRunInits(t *testing.T) {
 }
 
 // TestRunOptions_defaultAndOverride checks RUN's qualifiers as the
-// grammar reads them (docs/PHASE-37.md): /INIT and /NOINIT override the
+// grammar reads them (docs/planning/PHASE-37.md): /INIT and /NOINIT override the
 // default, and the qualifiers combine.
 func TestRunOptions_defaultAndOverride(t *testing.T) {
 	g := loadEvaxGrammar(t)

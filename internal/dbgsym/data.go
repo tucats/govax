@@ -8,7 +8,7 @@ import (
 )
 
 // This file is what the debugger's data commands (EXAMINE of a data
-// location, EVALUATE, SYMBOLIZE; docs/PHASE-42.md, subtask 10) ask of the
+// location, EVALUATE, SYMBOLIZE; docs/planning/PHASE-42.md, subtask 10) ask of the
 // debug symbol table: which datum is at an address, how big its type is,
 // and the names the debugger gives an address.
 //

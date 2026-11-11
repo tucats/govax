@@ -87,7 +87,7 @@ func TestParse_qualifierSyntax(t *testing.T) {
 }
 
 // TestParse_define checks VMS DEFINE syntax, and that the eVAX-only
-// DEFINE/LOGICAL form is gone (docs/PHASE-25.md open question 4).
+// DEFINE/LOGICAL form is gone (docs/planning/PHASE-25.md open question 4).
 func TestParse_define(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
@@ -362,7 +362,7 @@ func TestParse_initializeContainerStub(t *testing.T) {
 // grammar itself imposes no requirement -- but ends up active on the
 // top-level INITIALIZE entry, which Grammar.Dispatch reports as having no
 // bound handler (see dispatch_test.go for that half of the check). Neither
-// qualifier is a default, matching docs/PHASE-23.md's explicit "there is no
+// qualifier is a default, matching docs/planning/PHASE-23.md's explicit "there is no
 // meaningful do-nothing form of this verb" design decision.
 func TestParse_initializeBareHasNoDefault(t *testing.T) {
 	g := loadEvaxGrammar(t)

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $GETMSG and $PUTMSG (docs/PHASE-26.md subtask 25): the text of a
+// $GETMSG and $PUTMSG (docs/planning/PHASE-26.md subtask 25): the text of a
 // condition value.
 //
 // # Messages

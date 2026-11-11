@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $UNWIND and LIB$SIG_TO_RET (docs/PHASE-26.md subtask 34): a condition
+// $UNWIND and LIB$SIG_TO_RET (docs/planning/PHASE-26.md subtask 34): a condition
 // handler's third answer.
 //
 // # Unwinding

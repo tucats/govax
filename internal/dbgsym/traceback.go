@@ -1,7 +1,7 @@
 package dbgsym
 
 // TraceName is how the traceback facility's symbolic stack dump names a
-// PC (docs/PHASE-70 - traceback.md, Part A, "Naming a PC"): the module
+// PC (docs/planning/PHASE-70 - traceback.md, Part A, "Naming a PC"): the module
 // and routine columns, the PC relative to what names it, and the
 // listing line. An empty Routine with a Module is a psect or a routine
 // with no name; both empty, the PC is in nothing the image describes,

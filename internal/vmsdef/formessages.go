@@ -3,7 +3,7 @@ package vmsdef
 // forMessages are the FOR facility's messages, VMS's FORTRAN run-time
 // library's, as VMS 7.1's $GETMSG returned them for FOR numbers 0 to 255
 // (testdata/for80, round 2's message table), keyed as Messages is. The texts
-// were taken by the author's leave (docs/PHASE-80, the answers to Part A's
+// were taken by the author's leave (docs/planning/PHASE-80, the answers to Part A's
 // questions). The two past 255, INVTEX and INVTEXREC, are as VMS 7.1 showed
 // them as secondary messages in round 1's run 3, their $FAO directives
 // unconfirmed. A message's "!+!+" skips the unit and file arguments that a

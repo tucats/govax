@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 63's subtask 3 (docs/PHASE-63 - working sets.md): with paging on,
+// Phase 63's subtask 3 (docs/planning/PHASE-63 - working sets.md): with paging on,
 // each page a process faults in enters its working set; a full working
 // set gives up its oldest page, whose PTE goes into transition and whose
 // frame goes to the modified list (a demand-zero page) or the free list

@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// The shared terminal (docs/PHASE-46.md, subtask 7): a process reading
+// The shared terminal (docs/planning/PHASE-46.md, subtask 7): a process reading
 // the terminal waits in the scheduler, not in a host read, so the other
 // processes run while it waits for someone to type.
 //
@@ -35,7 +35,7 @@ import (
 // input stream that is a TerminalSource. Otherwise a read blocks, as it
 // always has: with one process there is nobody else to run.
 //
-// A $QIO read that must wait doesn't make the $QIO wait (docs/PHASE-49.md,
+// A $QIO read that must wait doesn't make the $QIO wait (docs/planning/PHASE-49.md,
 // subtask 10): as on VMS, the $QIO returns SS$_NORMAL with the read
 // queued, its request in the terminal's queue among the other reads, and
 // the program goes on. When the read's turn comes and its line is there,

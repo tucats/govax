@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The FORTRAN code generator (docs/PHASE-75 - FORTRAN first light.md,
+// The FORTRAN code generator (docs/planning/PHASE-75 - FORTRAN first light.md,
 // subtask 6): a program compiled by FORTRAN, assembled by MACRO, and
 // linked with a MACRO module that prints values (FTNRTL's output is
 // subtask 7's) runs and computes what FORTRAN says it should.

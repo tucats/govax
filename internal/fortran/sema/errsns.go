@@ -9,7 +9,7 @@ import "github.com/tucats/govax/internal/fortran/ast"
 // all INTEGER*4 (D.4). The library's routine gets each argument's address
 // and nothing of its length, so the compiler chooses between two routines
 // by the arguments' type: FTN$ERRSNS stores longwords, FTN$ERRSNS_W words
-// (docs/PHASE-80 - FORTRAN formatted IO.md, Decision 13). A call with no
+// (docs/planning/PHASE-80 - FORTRAN formatted IO.md, Decision 13). A call with no
 // argument that isn't null calls FTN$ERRSNS, which only clears the saved
 // error.
 

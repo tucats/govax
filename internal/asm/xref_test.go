@@ -8,7 +8,7 @@ import (
 
 // This file checks the cross reference (xref.go) on cases the probe's
 // three real cross-reference listings don't show, which are govax's own
-// choices (docs/PHASE-29.md, subtask 9). TestFixtureListings compares
+// choices (docs/planning/PHASE-29.md, subtask 9). TestFixtureListings compares
 // those three listings whole.
 
 // xrefSection assembles src with a listing and /CROSS_REFERENCE=(kinds),

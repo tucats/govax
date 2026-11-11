@@ -155,7 +155,7 @@ func (w consoleOutput) Write(p []byte) (int, error) {
 // SET DEFAULT's default directory), on the console's terminal. It is
 // process 1's DCL's process (home), and its command interpreter: a
 // process LIB$SPAWN creates, or $CREPRC creates to run LOGINOUT, runs
-// the subprocess CLI (subcli.go, docs/PHASE-48.md), whose shim is the
+// the subprocess CLI (subcli.go, docs/planning/PHASE-48.md), whose shim is the
 // console's.
 func (c *Interpreter) newProcessOne(sys *corevms.System) *corevms.Environment {
 	c.clis = nil

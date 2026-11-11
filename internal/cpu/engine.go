@@ -40,7 +40,7 @@ var ErrAttention = vmserrors.New(vmserrors.VAX_ATTENTION)
 // the C source keeps on the global vax struct but Phase 01 deliberately left
 // out of registers.CPU (registers/PSL only) and Phase 02 left out of vm.Memory
 // (owns RAM, not CPU-loop state): the PC of the instruction currently being
-// decoded/executed, and whether the machine has halted. See docs/PHASE-03.md's
+// decoded/executed, and whether the machine has halted. See docs/planning/PHASE-03.md's
 // design notes on why this is a new type rather than registers.CPU growing these
 // fields.
 type Engine struct {
@@ -253,13 +253,13 @@ func (e *Engine) Memory() *vm.Memory { return e.mem }
 func (e *Engine) Halted() bool { return e.halted }
 
 // Halt marks the machine halted without going through a HALT instruction --
-// used by docs/PHASE-20.md's format_exception port, matching
+// used by docs/planning/PHASE-20.md's format_exception port, matching
 // interrupt.c's own direct `vax.halted = 1` when no condition handler wants
 // an unhandled exception.
 func (e *Engine) Halt() { e.halted = true }
 
 // ClearHalted unconditionally marks the machine not halted -- used by
-// docs/PHASE-20.md's Condition Handling Facility port (chf's own
+// docs/planning/PHASE-20.md's Condition Handling Facility port (chf's own
 // `vax.halted = saved_halt` restore after invoking a handler, for the
 // unusual case where running the handler itself executed a HALT).
 func (e *Engine) ClearHalted() { e.halted = false }
@@ -313,7 +313,7 @@ func (e *Engine) StoppedBy() byte { return e.stoppedBy }
 // allocation every instruction (this function's own doc comment explains
 // why), exposed read-only for a caller that wants to inspect the
 // just-executed instruction's operands (e.g. internal/console's
-// DebugFullDisasm trace — see docs/PHASE-17.md sub-phase 8). The zero
+// DebugFullDisasm trace — see docs/planning/PHASE-17.md sub-phase 8). The zero
 // value if Step has never been called.
 func (e *Engine) LastDecoded() Decoded { return e.decoded[e.current&1] }
 
@@ -333,7 +333,7 @@ func (e *Engine) InterruptCount() uint64 {
 // engine's current PC, without decoding operands, advancing PC, or
 // otherwise mutating any state — a side-effect-free lookup Console uses to
 // check instruction-level breakpoints (SET BREAK/INSTRUCTION,
-// docs/PHASE-18.md) before committing to a real Step; unlike a full decode,
+// docs/planning/PHASE-18.md) before committing to a real Step; unlike a full decode,
 // this never triggers an operand's autoincrement/autodecrement side effect,
 // so a flagged instruction can be identified without disturbing machine
 // state if the breakpoint fires. Returns nil, nil for a reserved/undefined
@@ -356,7 +356,7 @@ func (e *Engine) PeekInstruction() (*Instruction, error) {
 // Step decodes and executes one instruction. This is the Go port of
 // execute_vax's core fetch-decode-execute cycle, minus the console/
 // disassembly, breakpoint/single-step, and device-interrupt-queue/clock
-// concerns interleaved with it in the C source — see docs/PHASE-03.md's
+// concerns interleaved with it in the C source — see docs/planning/PHASE-03.md's
 // design notes. Phase 08's console is expected to layer STEP/breakpoint
 // semantics on top of Step rather than this reimplementing them.
 //
@@ -372,7 +372,7 @@ func (e *Engine) PeekInstruction() (*Instruction, error) {
 // local and passing it through handler (an indirectly-called function
 // value) defeats Go's escape analysis, forcing a fresh heap allocation of
 // the whole [6]Operand-sized struct on every single instruction --
-// confirmed by profiling (docs/PHASE-12.md's own performance-pass
+// confirmed by profiling (docs/planning/PHASE-12.md's own performance-pass
 // sub-phase). decodeInstruction fills in one of e.decoded's two buffers
 // directly, so there is neither an allocation nor a copy (Study 1's R2 in
 // docs/PERFORMANCE.md removed the copies). It decodes into the buffer that

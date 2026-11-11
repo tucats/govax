@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # cleanroom.sh: a Claude Code PreToolUse hook that keeps licensed VMS text
-# out of Claude's sessions in this repository (docs/PHASE-32.md, "The
+# out of Claude's sessions in this repository (docs/planning/PHASE-32.md, "The
 # clean-room method").
 #
 # govax's own system macros (internal/bootdata/files/starlet.mar) are
@@ -35,7 +35,7 @@ text=$(printf '%s' "$input" | jq -r '.tool_input | tostring' 2>/dev/null | tr '[
 text=$(printf '%s' "$text" | sed -E 's#testdata/vmslib/(starlet\.olb|imagelib\.olb|librtl\.exe)##g')
 
 refuse() {
-	echo "Clean-room barrier (.claude/hooks/cleanroom.sh, docs/PHASE-32.md): $1. govax's macros are written from the manuals and from real MACRO's output, not from STARLET.MLB's text." >&2
+	echo "Clean-room barrier (.claude/hooks/cleanroom.sh, docs/planning/PHASE-32.md): $1. govax's macros are written from the manuals and from real MACRO's output, not from STARLET.MLB's text." >&2
 	exit 2
 }
 

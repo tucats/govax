@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 )
 
-// Phase 65's subtask 6 (docs/PHASE-65 - sections and paging.md): read
+// Phase 65's subtask 6 (docs/planning/PHASE-65 - sections and paging.md): read
 // clustering. With paging on, a hard fault reads the faulting page's
 // neighbors in the same backing store with it, up to the section's
 // cluster size ($CRMPSC's pfc) or PFCDEFAULT, scanning up first and down

@@ -1,7 +1,7 @@
 package obj
 
 // This file packs the line-number table into debugger (DBG) records as
-// real MACRO does (docs/PHASE-29.md, subtask 12), which isn't the way
+// real MACRO does (docs/planning/PHASE-29.md, subtask 12), which isn't the way
 // Builder packs TIR, TBT, or a module's DBG symbol records:
 //
 //   - The table's commands go into DSTLineNumbers records of at most

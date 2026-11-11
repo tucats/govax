@@ -1,5 +1,5 @@
 // Package io implements the govax device abstraction (see
-// docs/PHASE-09.md), the Go equivalent of
+// docs/planning/PHASE-09.md), the Go equivalent of
 // reference/eVAX/eVAX/Source/RTL/devices.c. Phase 09 also ported
 // logical_names.c here; Phase 25 replaced that with internal/lnm.
 //

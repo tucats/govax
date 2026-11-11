@@ -276,7 +276,7 @@ func (a *analyzer) volatileBlock(item *ast.AttrItem) {
 
 // layout gives each of the unit's variables and arrays not in a common
 // block (common.go) its place in the unit's static storage, $LOCAL
-// (Decision 10 of docs/PHASE-74 - FORTRAN plan.md): in order of first
+// (Decision 10 of docs/planning/PHASE-74 - FORTRAN plan.md): in order of first
 // appearance, each on its type's natural boundary (Type.Align: a
 // longword's on a multiple of 4, a LOGICAL*1 or a CHARACTER variable
 // anywhere), and a group of names EQUIVALENCE ties together

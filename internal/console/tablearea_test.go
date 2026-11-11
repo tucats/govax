@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 67's subtask 4 (docs/PHASE-67 - address space under paging.md):
+// Phase 67's subtask 4 (docs/planning/PHASE-67 - address space under paging.md):
 // with paging on, a process's two page tables are one table area, P0's
 // growing up from its bottom and P1's down from its top, and only the
 // area's pages that hold entries of pages inside the regions' lengths

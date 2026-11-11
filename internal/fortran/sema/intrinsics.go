@@ -6,7 +6,7 @@ import (
 )
 
 // The intrinsic functions (section 6.3; appendix D, Table D-3), as a table
-// (Decision 7 of docs/PHASE-78 - FORTRAN expressions and types.md). Each row
+// (Decision 7 of docs/planning/PHASE-78 - FORTRAN expressions and types.md). Each row
 // is one line of Table D-3: a generic name, the specific name it selects, how
 // many arguments it takes, the type of each argument and of the result, and
 // how the function is compiled. A generic name has a row for each type of
@@ -47,7 +47,7 @@ import (
 //	LLT, LLE, LGT, LGE
 //	         the relational operators on CHARACTER values, which compare in
 //	         ASCII's order (section 6.3.2.2)
-//	ONE      the constant 1: NWORKERS, which Decision 1 of docs/PHASE-74 -
+//	ONE      the constant 1: NWORKERS, which Decision 1 of docs/planning/PHASE-74 -
 //	         FORTRAN plan.md makes one process
 //	SIZEOF   the constant size of the argument
 const intrinsicTable = `

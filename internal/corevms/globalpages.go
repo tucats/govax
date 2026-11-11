@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Global pages under the pager (docs/PHASE-65 - sections and paging.md,
+// Global pages under the pager (docs/planning/PHASE-65 - sections and paging.md,
 // subtasks 3 and 4), with paging on.
 //
 // # A global page's states

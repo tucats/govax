@@ -7,7 +7,7 @@ import "testing"
 // it fills a LIB$VM_MALLOC block, grows it with LIB$VM_REALLOC (which
 // moves it with its bytes), gets a LIB$VM_CALLOC array of zeros, and
 // frees both, a second free answering 0 where the first answers 1
-// (docs/PHASE-59, subtasks 8 and 10).
+// (docs/planning/PHASE-59, subtasks 8 and 10).
 func TestLibrtlVMMalloc(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"A:\t.LONG\t0\nB:\t.LONG\t0\nC:\t.LONG\t0\nF:\t.LONG\t0\n"+

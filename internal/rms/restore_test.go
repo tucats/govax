@@ -15,7 +15,7 @@ import (
 )
 
 // The probe's save sets and VMS's reports of what it restored from them
-// (docs/PHASE-69 - backup save sets.md, testdata/backup69).
+// (docs/planning/PHASE-69 - backup save sets.md, testdata/backup69).
 const backup69Dir = "../../testdata/backup69/vax"
 
 // readSaveSet reads the probe's save set name.

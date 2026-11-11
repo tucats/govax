@@ -2,7 +2,7 @@ package librtl
 
 import "github.com/tucats/govax/internal/corevms"
 
-// The common area (docs/PHASE-57, "The common area"): 256 bytes of
+// The common area (docs/planning/PHASE-57, "The common area"): 256 bytes of
 // per-process storage that outlasts each image, a longword length and
 // at most 252 characters of text, through which one image leaves text
 // for the next (LIB$RUN_PROGRAM's, say). govax keeps the text in Go on

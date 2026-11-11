@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// SHOW STACK (docs/PHASE-42.md, subtask 11, Decision 6), which describes
+// SHOW STACK (docs/planning/PHASE-42.md, subtask 11, Decision 6), which describes
 // each call frame on the stack in full, as the VMS debugger does
 // (testdata/dbgcmd/vax/exam.dlg):
 //

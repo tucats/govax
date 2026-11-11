@@ -9,10 +9,10 @@ import (
 )
 
 // consoleDeviceName is the one VMS device name this package's SYS$CREATE
-// (and, eventually, SYS$PUT — docs/PHASE-22.md's subtask 7) treats as the
+// (and, eventually, SYS$PUT — docs/planning/PHASE-22.md's subtask 7) treats as the
 // terminal pseudo-device rather than a real ODS-2 volume: real, unmodified
 // VAX/VMS software genuinely opens "TTA0:" this way (it's ordinary VMS
-// behavior, not a govax shortcut — see docs/PHASE-22.md's "Why this phase
+// behavior, not a govax shortcut — see docs/planning/PHASE-22.md's "Why this phase
 // looks different" section).
 //
 // This is a plain, hardcoded name check rather than a lookup against
@@ -22,7 +22,7 @@ import (
 // concept at all (mount.go's own doc comment explains why MountTable
 // avoids that same dependency); second, Phase 10's predecessor used
 // exactly this same hardcoded check and nothing in this phase's scope
-// (docs/PHASE-22.md) calls for generalizing it to other terminal devices.
+// (docs/planning/PHASE-22.md) calls for generalizing it to other terminal devices.
 const consoleDeviceName = "TTA0"
 
 // SysCreate implements SYS$CREATE: given a FAB's VAX address (argv[0]),

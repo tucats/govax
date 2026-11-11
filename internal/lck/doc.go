@@ -1,6 +1,6 @@
 // Package lck is govax's lock manager: VMS's rules for locking named
 // resources, as plain Go with no CPU or VMS dependency, so they can be
-// tested on their own (Phase 47; docs/PHASE-47.md, and docs/PHASE-43.md's
+// tested on their own (Phase 47; docs/planning/PHASE-47.md, and docs/planning/PHASE-43.md's
 // Part A for the program it belongs to).
 //
 // Processes that share something (a file, a global section, a record)

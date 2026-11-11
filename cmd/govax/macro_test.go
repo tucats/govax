@@ -250,7 +250,7 @@ func TestRun_mountFailure(t *testing.T) {
 }
 
 // TestFortranCommand checks the console FORTRAN command the fortran
-// subcommand runs (docs/PHASE-74 - FORTRAN plan.md).
+// subcommand runs (docs/planning/PHASE-74 - FORTRAN plan.md).
 func TestFortranCommand(t *testing.T) {
 	cases := []struct {
 		sources []string

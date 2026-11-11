@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/symtab"
 )
 
-// Names from the loaded images' debug symbol tables (docs/PHASE-41.md,
+// Names from the loaded images' debug symbol tables (docs/planning/PHASE-41.md,
 // subtask 11): imageNames resolves a typed name to an address for the
 // expression evaluator, and consoleSymbolizer names an address for the
 // disassembler, as the VMS debugger names them.

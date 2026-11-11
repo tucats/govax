@@ -443,7 +443,7 @@ func TestCrmpsc_lifetime(t *testing.T) {
 	}
 
 	// Image rundown deletes P0 too, so the test's own scratch pages are
-	// freed with the sections' (docs/PHASE-63, subtask 10).
+	// freed with the sections' (docs/planning/PHASE-63, subtask 10).
 	if after := c.Mem.MappedPages(); after > before {
 		t.Errorf("%d physical pages in use, %d before", after, before)
 	}

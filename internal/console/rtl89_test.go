@@ -7,7 +7,7 @@ import (
 )
 
 // rtl89Dir holds Phase 89's programs of FTNRTL under recursion and ASTs
-// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 8).
+// (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtask 8).
 const rtl89Dir = "../../testdata/rtl89/"
 
 // rtl89Run copies a program's files to a new volume, compiles the FORTRAN ones

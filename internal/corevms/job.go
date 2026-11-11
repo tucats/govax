@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Jobs (docs/PHASE-45.md, subtask 2).
+// Jobs (docs/planning/PHASE-45.md, subtask 2).
 //
 // On VMS a "job" is a process tree: a detached process (one with no
 // owner, such as the process a user logs in to) and every subprocess
@@ -168,7 +168,7 @@ func NewSubprocess(owner *Environment, consoleIn io.Reader, consoleOut io.Writer
 // leaveJob takes env's process out of its job's counts as it leaves the
 // process table: a subprocess is one subprocess fewer for its owner and
 // for the job. (A detached process's job ends with it; on VMS its
-// subprocesses are deleted before it, docs/PHASE-45.md, subtask 8.)
+// subprocesses are deleted before it, docs/planning/PHASE-45.md, subtask 8.)
 func (sys *System) leaveJob(env *Environment) {
 	p := env.Process
 	if p.Owner == 0 || p.Job == nil {

@@ -121,7 +121,7 @@ type renameSide struct {
 // its name, as $OPEN's is (VMS 7.1: testdata/lnm91).
 func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error) {
 	// Each name goes through name processing with its FAB's default name
-	// and related file (docs/PHASE-33.md).
+	// and related file (docs/planning/PHASE-33.md).
 	oldNam, oldNames, sts, err := renameNames(ctx, oldFAB)
 	if err != nil || sts != 0 {
 		return sts, sts, err

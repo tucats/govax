@@ -18,7 +18,7 @@ import (
 // This handles image_load/image_fixup and the IHD/IHI/ISD/IAF struct definitions:
 // read each struct's fields directly at their documented byte
 // offsets -- matching the precedent already set by internal/rms's own port
-// of FAB/RAB field access (docs/PHASE-22.md), which has the same
+// of FAB/RAB field access (docs/planning/PHASE-22.md), which has the same
 // "declarative offset table in C, direct typed reads in Go" relationship.
 
 // ICB flag bits, matching imgdef.h's ICB_* constants.
@@ -1031,7 +1031,7 @@ func imageProtection(isd *ISD) vm.Protection {
 // old image's read-only pages. Every page that exists is set, whatever
 // its PTE's form: valid, in transition, still mapped to its section in
 // the image file, demand-zero, or in the page file (a mapped image's
-// pages are mostly not yet valid; docs/PHASE-66, subtask 3). A page
+// pages are mostly not yet valid; docs/planning/PHASE-66, subtask 3). A page
 // deleted since, or outside the page tables (VMINIT shrank P0 since), is
 // skipped. The C source never sets image page protections, so every page
 // stayed at P0's default (UW); see docs/DEVIATIONS.md.

@@ -1,6 +1,6 @@
 package vm
 
-// The pager hook (docs/PHASE-49 - record updates and locks.md, subtask 9).
+// The pager hook (docs/planning/PHASE-49 - record updates and locks.md, subtask 9).
 //
 // # What happens on a page fault
 //
@@ -52,7 +52,7 @@ package vm
 // the pager that reads section pages from their files and hands out
 // demand-zero pages (DemandZero) for the rest.
 //
-// This is the seam VMS paging uses (VMINIT/PAGING; docs/PHASE-63 -
+// This is the seam VMS paging uses (VMINIT/PAGING; docs/planning/PHASE-63 -
 // working sets.md): corevms's pager puts each page it brings in into the
 // process's working set, takes another page out when the set is full
 // (leaving its PTE in transition, for PageIn to find), and resolves a
@@ -217,7 +217,7 @@ type Pager interface {
 func (m *Memory) SetPager(p Pager) { m.pager = p }
 
 // SetStackExpander installs fn, the routine that expands the user stack
-// (the book's 16.2.1.3, EXE$EXPANDSTK; docs/PHASE-67 - address space
+// (the book's 16.2.1.3, EXE$EXPANDSTK; docs/planning/PHASE-67 - address space
 // under paging.md, subtask 3). A P1 address below the P1 length register
 // is a length violation; when the access is a real one (not a PROBE's) in
 // user mode, translate first calls fn with the current address space and

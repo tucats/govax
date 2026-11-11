@@ -17,7 +17,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// DCL's file I/O (docs/PHASE-50 - DCL command procedures.md, subtask 17):
+// DCL's file I/O (docs/planning/PHASE-50 - DCL command procedures.md, subtask 17):
 // OPEN, READ, WRITE, CLOSE, and INQUIRE, as the DCL Dictionary describes
 // them, with what VMS 7.3 showed in testdata/dcl50's probes.
 //
@@ -30,7 +30,7 @@ import (
 //	$ CLOSE IN
 //
 // OPEN opens a file (rms.Session.OpenDCLFile: on a mounted volume, or on
-// the host) as a process-permanent file (docs/PHASE-71 - process-permanent
+// the host) as a process-permanent file (docs/planning/PHASE-71 - process-permanent
 // files.md, subtask 7), and defines a logical name for it in the process
 // table, in supervisor mode, CONFINE, TERMINAL, as the file's
 // process-permanent string: ESC, 0, its IFI word, and the volume's
@@ -97,7 +97,7 @@ import (
 // verification on, the substituted reply is shown on the procedure's
 // output (Q1, Q11); at Ctrl/Z the value is "", and nothing is shown.
 //
-// Indexed files (docs/PHASE-88 - keyed index files.md, subtask 9): READ's
+// Indexed files (docs/planning/PHASE-88 - keyed index files.md, subtask 9): READ's
 // /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK (readQualifiers) go to the
 // file's stream (keyedStream), and rms's dclkeyed.go turns them, WRITE, and
 // WRITE/UPDATE into the record services a program would call, records locked
@@ -139,7 +139,7 @@ type dclStream interface {
 }
 
 // keyedStream is a dclStream that takes READ's qualifiers for indexed files
-// (rms.DCLFile; docs/PHASE-88 - keyed index files.md, subtask 9). The other
+// (rms.DCLFile; docs/planning/PHASE-88 - keyed index files.md, subtask 9). The other
 // streams read in sequence whatever READ's qualifiers say.
 type keyedStream interface {
 	Read(r rms.DCLRead) ([]byte, uint32)

@@ -763,7 +763,7 @@ func TestDefineProcessNames(t *testing.T) {
 // the first's job) has a process table of its own, and shares the job,
 // group, and system tables: a name defined in the subprocess's process
 // table isn't seen by its parent, and one in the job table is
-// (docs/PHASE-45.md, subtask 3).
+// (docs/planning/PHASE-45.md, subtask 3).
 func TestProcessView_sharing(t *testing.T) {
 	parent := NewDatabase(testUIC)
 	child := parent.NewProcessView(testUIC, parent.JobTableName)

@@ -158,7 +158,7 @@ func TestInstructionTableDFloatingFixedEntries(t *testing.T) {
 	// SUBD2, CVTDB, CVTDW, CVTDL, CVTRDL, CMPD, TSTD have zeroed-out operand
 	// data in the C reference's own instruction_table.h (confirmed a real
 	// issue in the C source, not a Go transcription issue -- see
-	// docs/PHASE-05.md's design notes and docs/DEVIATIONS.md); the generator
+	// docs/planning/PHASE-05.md's design notes and docs/DEVIATIONS.md); the generator
 	// (internal/cpu/gen's knownTableFixes) patches them to mirror their
 	// already-correct F-floating/sibling D-floating rows. This test pins
 	// that fix down at the table level, independent of any handler.

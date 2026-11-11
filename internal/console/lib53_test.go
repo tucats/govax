@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The Phase 53 oracle (docs/PHASE-53, subtasks 12 and 13): testdata/
+// The Phase 53 oracle (docs/planning/PHASE-53, subtasks 12 and 13): testdata/
 // lib53's lib53.mar calls every LIBRTL routine of the phase, case by
 // case, and prints what each returned, signaled, and stored.
 // vax/lib53-vax.txt is its output on VMS (V7.1 on simh's VAX 8600,

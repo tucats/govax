@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// STEP as the VMS debugger has it (docs/PHASE-42.md, subtask 7). A step
+// STEP as the VMS debugger has it (docs/planning/PHASE-42.md, subtask 7). A step
 // has three independent choices, each with a default that SET STEP changes
 // and that a STEP qualifier overrides for one command:
 //
@@ -32,7 +32,7 @@ import (
 // it down.
 
 // StepMode selects what a STEP does about routine calls, matching vax.h's
-// STEP_INSTRUCTION/STEP_OVER/STEP_RETURN constants — see docs/PHASE-18.md.
+// STEP_INSTRUCTION/STEP_OVER/STEP_RETURN constants — see docs/planning/PHASE-18.md.
 type StepMode int
 
 const (
@@ -282,7 +282,7 @@ func (d *Debugger) addStepBreakpoint(bp *Breakpoint) *Breakpoint {
 // nothing; when the run stopped first somewhere else (a user breakpoint,
 // a fault breakpoint, Ctrl-C, a HALT, an unhandled fault), the STEP is
 // over, and its breakpoint would otherwise stay set and stop a later GO
-// (docs/PHASE-42.md, bugs 2 and 3). A STEP/RETURN is not like this: it is
+// (docs/planning/PHASE-42.md, bugs 2 and 3). A STEP/RETURN is not like this: it is
 // bound to its frame and stays pending (pendingReturn).
 func (d *Debugger) endStep(bp *Breakpoint) {
 	d.removeBreakpointPtr(bp)
@@ -306,7 +306,7 @@ func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, erro
 	d.resumeScope()
 
 	// A step is of the debugged process alone: no other process runs
-	// while it does (docs/PHASE-43.md, Decision 11; docs/PHASE-44.md,
+	// while it does (docs/planning/PHASE-43.md, Decision 11; docs/planning/PHASE-44.md,
 	// subtask 8). GO lets them run again.
 	defer c.Engine.FreezeScheduling()()
 

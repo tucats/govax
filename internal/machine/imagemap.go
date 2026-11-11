@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// Image activation by mapping (docs/PHASE-66 - mapped image
+// Image activation by mapping (docs/planning/PHASE-66 - mapped image
 // activation.md, subtask 3).
 //
 // With paging on, an image is mapped rather than copied, as VMS's image
@@ -118,7 +118,7 @@ func (p *ImageProcess) imageMap(fn string, flag uint32, linked *ISD) (*ICB, erro
 		})
 	}
 
-	// The main image brings the user stack (docs/PHASE-67 - address space
+	// The main image brings the user stack (docs/planning/PHASE-67 - address space
 	// under paging.md, subtask 3): its user stack ISD's pages, created
 	// below UserStackTop (LINK's default when it has none).
 	stack := uint32(0)

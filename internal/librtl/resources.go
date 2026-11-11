@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The processwide resource allocators (docs/PHASE-55, the survey's
+// The processwide resource allocators (docs/planning/PHASE-55, the survey's
 // "Event flags and LUNs"; the 5.0 manual's section 2.4): LIB$GET_EF,
 // LIB$FREE_EF, and LIB$RESERVE_EF hand out local event flags, and
 // LIB$GET_LUN and LIB$FREE_LUN logical unit numbers, so the separately

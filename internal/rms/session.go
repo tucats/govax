@@ -30,7 +30,7 @@ func (e *NotMountedError) Error() string {
 	return fmt.Sprintf("rms: %s: not mounted", e.Device)
 }
 
-// This file implements docs/PHASE-23.md subtask 3: Session, the piece of
+// This file implements docs/planning/PHASE-23.md subtask 3: Session, the piece of
 // operator-console state that DIRECTORY/DELETE/PURGE/COPY/TYPE (and
 // INITIALIZE/CONTAINER's sibling console commands) all need but that
 // Phase 22's MountTable never had to track on its own — a "current default
@@ -63,13 +63,13 @@ type Session struct {
 	// Mounts is the same *MountTable a Console already owns (Phase 22) —
 	// Session doesn't create or own a separate one of its own, it just
 	// holds a reference to the Console's existing table, exactly the way
-	// docs/PHASE-23.md's design section describes it ("reuses Console's
+	// docs/planning/PHASE-23.md's design section describes it ("reuses Console's
 	// existing MountTable, not a copy").
 	Mounts *MountTable
 
 	// Logicals is the process's logical-name database: file specs are
 	// translated through it, and SYS$DISK in it is the default device
-	// (docs/PHASE-25.md). NewSession gives a Session a private database;
+	// (docs/planning/PHASE-25.md). NewSession gives a Session a private database;
 	// the console replaces it with the one it shares with RMS and the
 	// RTL.
 	Logicals *lnm.Database
@@ -108,7 +108,7 @@ func NewSession(mounts *MountTable) *Session {
 // ForProcess returns a copy of s for a new process whose logical names
 // are logicals: the same mounts and host fallback, and the same default
 // directory, which the new process may then change without changing s's
-// (docs/PHASE-45.md: a process $CREPRC creates starts in its creator's
+// (docs/planning/PHASE-45.md: a process $CREPRC creates starts in its creator's
 // default directory).
 func (s *Session) ForProcess(logicals *lnm.Database) *Session {
 	c := *s

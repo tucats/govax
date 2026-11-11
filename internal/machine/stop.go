@@ -1,6 +1,6 @@
 package machine
 
-// STOP and the cleanup of processes (docs/PHASE-45.md, subtask 12).
+// STOP and the cleanup of processes (docs/planning/PHASE-45.md, subtask 12).
 
 // EndOtherProcesses deletes every process but process 1, closing their
 // files, before the machine they ran on is replaced or ends (INIT,

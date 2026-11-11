@@ -8,7 +8,7 @@ import (
 )
 
 // This file decides what the object's debugger (DBG) records say
-// (docs/PHASE-29.md, subtask 12): which symbols get a record and what
+// (docs/planning/PHASE-29.md, subtask 12): which symbols get a record and what
 // each says of its data, and the line-number table's rows. Object
 // (object.go) writes them; obj builds and packs the records (dbg.go,
 // dbglines.go).

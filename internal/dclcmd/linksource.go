@@ -16,7 +16,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// This file is where LINK's symbols come from (docs/PHASE-30.md, "Where
+// This file is where LINK's symbols come from (docs/planning/PHASE-30.md, "Where
 // external symbols come from"). The sources are searched in real LINK's
 // order:
 //
@@ -29,10 +29,10 @@ import (
 //  3. govax's own tables, which need no VMS files: the shareable images'
 //     global symbol tables captured in vmsdef.SharedImages and
 //     vmsdef.ImageSymbols, and STARLET.OLB's definition modules' symbols
-//     captured in vmsdef.LibrarySymbols (docs/PHASE-31.md); the routines
+//     captured in vmsdef.LibrarySymbols (docs/planning/PHASE-31.md); the routines
 //     the shims stand for (shimTable) in images not captured; and the
 //     system services at their addresses in the P1 vector. Before them,
-//     FTNRTL, the FORTRAN run-time library (docs/PHASE-74 - FORTRAN
+//     FTNRTL, the FORTRAN run-time library (docs/planning/PHASE-74 - FORTRAN
 //     plan.md, Decision 13), read from the image the locator finds,
 //     govax's own built-in one if no other (ftnrtlSource), so a FORTRAN
 //     program links against it with no options file.

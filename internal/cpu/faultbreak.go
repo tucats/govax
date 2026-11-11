@@ -26,7 +26,7 @@ import (
 // uses, but that works there because C's single execute_vax loop owns both
 // address- and fault-checking together. This port splits address-breakpoint
 // checking out into Console's own runLoop (between Engine.Step calls,
-// docs/PHASE-08.md's design), which has no opportunity to intercept a fault
+// docs/planning/PHASE-08.md's design), which has no opportunity to intercept a fault
 // raised *during* a Step call -- that has to happen synchronously inside
 // Step's own fault-delivery path (raise/deliverPendingInterrupt), which only
 // Engine can do. execute.go's BreakKind doc comment is updated accordingly.

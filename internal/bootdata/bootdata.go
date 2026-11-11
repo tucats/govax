@@ -3,16 +3,16 @@
 // grammar (console.dcl), the help libraries (help.go), the startup procedure
 // (startup.com), and the microkernel source it assembles (kernel.asm, which
 // .INCLUDEs ssdef.asm). These are copies of testdata/dcl and testdata/asm's
-// own files (see docs/PHASE-15.md) — go:embed can only embed files under
+// own files (see docs/planning/PHASE-15.md) — go:embed can only embed files under
 // this package's own directory, which is why a copy exists here rather than
 // embedding testdata/ in place.
 //
 // It also holds govax's own STARLET.MLB, the system macro library MACRO
 // falls back on, and STARLET.MAR, the source it's generated from
-// (starlet.go; docs/PHASE-28.md).
+// (starlet.go; docs/planning/PHASE-28.md).
 //
 // Most of these files are on the system volume too (internal/sysvol;
-// docs/PHASE-87 - system volume.md), where govax copies them: startup.com
+// docs/planning/PHASE-87 - system volume.md), where govax copies them: startup.com
 // is the volume's SYS$MANAGER:STARTUP.COM, which govax runs from there,
 // and from here only when there is no system volume. Some only the volume
 // uses: systartup_vms.com, the user's site-specific startup, written once;

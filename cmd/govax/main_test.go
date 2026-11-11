@@ -17,7 +17,7 @@ import (
 // stdin.
 func emptyStdin() io.ReadCloser { return io.NopCloser(strings.NewReader("")) }
 
-// TestRun_startupBootsFromEmbeddedFilesAlone is docs/PHASE-15.md's own named
+// TestRun_startupBootsFromEmbeddedFilesAlone is docs/planning/PHASE-15.md's own named
 // deliverable: govax with zero -path flags must still boot correctly using
 // only internal/bootdata's embedded copies of console.dcl/startup.com
 // (and, via startup.com's own "asm kernel.asm", kernel.asm/ssdef.asm) — no
@@ -62,7 +62,7 @@ func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
 }
 
 // TestRun_instructionLimitStopsARunawayProgram exercises govax's own
-// -instruction-limit flag end to end (docs/PHASE-15.md's sub-phase 2):
+// -instruction-limit flag end to end (docs/planning/PHASE-15.md's sub-phase 2):
 // after the embedded startup.com finishes booting, an infinite loop (NOP; BRB
 // back to itself) deposited from the debugger (DEBUG starts a session on
 // the booted machine) must not hang the process when a low instruction
@@ -159,7 +159,7 @@ func TestRun_limitsStopAOneShotRun(t *testing.T) {
 }
 
 // TestRun_pathOverridesEmbeddedForThatFileOnly exercises the per-file search
-// order docs/PHASE-15.md describes: a -path directory holding only a
+// order docs/planning/PHASE-15.md describes: a -path directory holding only a
 // customized startup.com is used for startup.com, while console.dcl
 // still falls through to the embedded copies (never named on
 // the command line) — a full replacement set isn't required to override
@@ -217,7 +217,7 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 	}
 }
 
-// TestRun_interactiveAsmRepl exercises docs/PHASE-19.md's own interactive
+// TestRun_interactiveAsmRepl exercises docs/planning/PHASE-19.md's own interactive
 // "ASM" mode (a debugger command once the microkernel is in place) end to end through the real readline loop: a bare ASM enters
 // assembler mode, several lines are typed one at a time (matching what a
 // real terminal session would feed the readline loop), and "END <entry>"
@@ -249,7 +249,7 @@ func TestRun_interactiveAsmRepl(t *testing.T) {
 }
 
 // TestRun_bareAsmStartsAtX200 checks that, with startup.com no longer setting
-// PC=200 (docs/PHASE-42.md), a bare ASM after boot still assembles at
+// PC=200 (docs/planning/PHASE-42.md), a bare ASM after boot still assembles at
 // X^200: statements typed with no .ORG land there, which the debugger's
 // EXAMINE/INSTRUCTION then shows.
 func TestRun_bareAsmStartsAtX200(t *testing.T) {

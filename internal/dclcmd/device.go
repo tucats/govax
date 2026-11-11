@@ -169,7 +169,7 @@ func (c *Context) showDeviceLine(d *iodev.Device, disk bool) {
 //
 // govax has no online/offline concept, so every disk device is reported
 // "is online" unconditionally; "allocated" follows it, as on VMS, when
-// $ALLOC has allocated the device (docs/PHASE-26.md); "device type X" is omitted whenever
+// $ALLOC has allocated the device (docs/planning/PHASE-26.md); "device type X" is omitted whenever
 // d.DevType doesn't map to a known name (iodev.DeviceTypeName) rather
 // than printing a placeholder — see that function's own doc comment.
 func (c *Context) showDiskDeviceFull(d *iodev.Device) {
@@ -256,7 +256,7 @@ const (
 
 // showRecordDeviceFull prints SHOW DEVICE/FULL of a terminal, a mailbox,
 // or the null device NLA0: in the layouts VMS 7.1 gave them
-// (testdata/mp/probe2 and the author's notes, docs/PHASE-45.md):
+// (testdata/mp/probe2 and the author's notes, docs/planning/PHASE-45.md):
 //
 //	Terminal TTA0:, device type unknown, is online, record-oriented device, carriage
 //	    control.

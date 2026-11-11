@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// ASM and LOAD on volume files (docs/PHASE-87 - system volume.md,
+// ASM and LOAD on volume files (docs/planning/PHASE-87 - system volume.md,
 // subtask 6; internal/machine/consolefile.go).
 
 // volumeFileConsole is a console with a system volume on DUA0, govax's

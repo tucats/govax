@@ -1,6 +1,6 @@
 // Package ast is the FORTRAN compiler's syntax tree: the Go types the
 // parser (internal/fortran/parse) builds from each statement's tokens,
-// and that semantic analysis (internal/fortran/sema) reads (docs/PHASE-75
+// and that semantic analysis (internal/fortran/sema) reads (docs/planning/PHASE-75
 // - FORTRAN first light.md, Part B, "The AST").
 //
 // # What a syntax tree is

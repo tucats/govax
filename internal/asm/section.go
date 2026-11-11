@@ -7,7 +7,7 @@ import "github.com/tucats/govax/internal/vmserrors"
 // to the current section, at its location, which then advances past it.
 //
 // This is the core's location model, shared by both dialects (see
-// docs/PHASE-27.md, "Program sections become the core's location model").
+// docs/planning/PHASE-27.md, "Program sections become the core's location model").
 // In the console dialect, every section is absolute: it has a fixed base
 // address, so a location is also an absolute VAX address right away and
 // output goes straight to the sparse image. There are two, P0 (at the

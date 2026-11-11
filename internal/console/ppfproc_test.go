@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Tests of a command procedure's process-permanent files (docs/PHASE-71 -
+// Tests of a command procedure's process-permanent files (docs/planning/PHASE-71 -
 // process-permanent files.md, subtask 6; internal/dclshell/dclppf.go).
 
 // procedureName is one of the supervisor-mode SYS$ names at a point in a

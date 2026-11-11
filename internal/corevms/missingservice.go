@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Services govax lacks (docs/PHASE-83 - FORTRAN and VMS.md, Decision 6). The
+// Services govax lacks (docs/planning/PHASE-83 - FORTRAN and VMS.md, Decision 6). The
 // P1 vector has an entry for every service of VMS's, so a program calling one
 // govax doesn't have links and runs up to that call. The call signals as a
 // missing LIB$ routine's does (librtl/missing.go): SS$_UNSUPPORTED, followed by

@@ -1,6 +1,6 @@
 package cpu
 
-// EDITPC: Edit Packed to Character String (docs/PHASE-35.md, subtask 13).
+// EDITPC: Edit Packed to Character String (docs/planning/PHASE-35.md, subtask 13).
 //
 //	EDITPC srclen.rw, srcaddr.ab, pattern.ab, dstaddr.ab
 //

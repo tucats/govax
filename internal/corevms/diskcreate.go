@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Creating files with the disk's $QIO (docs/PHASE-26.md subtask 43).
+// Creating files with the disk's $QIO (docs/planning/PHASE-26.md subtask 43).
 //
 // # IO$_CREATE
 //

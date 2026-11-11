@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The Phase 81 probe of RMS (docs/PHASE-81 - FORTRAN files.md, subtasks 3 and
+// The Phase 81 probe of RMS (docs/planning/PHASE-81 - FORTRAN files.md, subtasks 3 and
 // 9): testdata/for81's for81r.mar and for81d.mar run RMS's services case by
 // case and print what each returned and left behind. vax/for81r-vax.txt and
 // vax/for81d-vax.txt are their output on VMS, and vax/for81-blocks.txt and

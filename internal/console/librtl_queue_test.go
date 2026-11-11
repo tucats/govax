@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// The queue and interlock routines (docs/PHASE-53, subtask 9), called
+// The queue and interlock routines (docs/planning/PHASE-53, subtask 9), called
 // from a linked program as a program calls them.
 
 // queueData is the data the queue programs share: a header, two

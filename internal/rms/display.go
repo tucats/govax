@@ -1,6 +1,6 @@
 package rms
 
-// SysDisplay implements SYS$DISPLAY (docs/PHASE-33.md, subtask 5): it
+// SysDisplay implements SYS$DISPLAY (docs/planning/PHASE-33.md, subtask 5): it
 // reports an open file's attributes again, as $OPEN did.
 //
 // From the RMS Reference Manual's $DISPLAY description. The file is the

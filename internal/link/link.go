@@ -1,6 +1,6 @@
 // Package link is govax's VAX linker: it builds a VMS executable image from
-// object modules, as the VMS LINK command does (docs/PHASE-30.md), or a
-// shareable image, as LINK/SHAREABLE does (shareable.go; docs/PHASE-68 -
+// object modules, as the VMS LINK command does (docs/planning/PHASE-30.md), or a
+// shareable image, as LINK/SHAREABLE does (shareable.go; docs/planning/PHASE-68 -
 // link shareable images.md). It reads
 // modules through internal/obj, so it links govax's objects and real VAX
 // objects alike.

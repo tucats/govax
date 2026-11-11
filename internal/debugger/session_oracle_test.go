@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is the session oracle (docs/PHASE-42.md, subtask 16): it
+// This file is the session oracle (docs/planning/PHASE-42.md, subtask 16): it
 // replays each debugger command file of the two probes (testdata/dbg and
 // testdata/dbgcmd) through govax's debugger, over the same image, and
 // compares what govax printed for every command with what the VMS 7.3
@@ -368,7 +368,7 @@ const (
 
 	reasonDispatcher = "at a break on an unhandled exception govax's program is paused inside the condition " +
 		"dispatcher (an XFC), not at the faulting instruction, so .PC, SHOW CALLS, and the frame's register " +
-		"names are the dispatcher's (docs/PHASE-42.md, subtask 5)"
+		"names are the dispatcher's (docs/planning/PHASE-42.md, subtask 5)"
 
 	reasonHandlerCalls = "SHOW CALLS in a condition handler lacks the \"above condition handler called with " +
 		"exception\" lines between its frame and the one that signaled"
@@ -376,13 +376,13 @@ const (
 	reasonCall = "CALL's %VAL argument and its \"value returned is\" message (Future features)"
 
 	reasonStepException = "STEP, and what follows it, from a break on an exception: govax runs the paused " +
-		"dispatcher, and from a break in the traceback handler its stub's RET (docs/PHASE-42.md: stepping " +
+		"dispatcher, and from a break in the traceback handler its stub's RET (docs/planning/PHASE-42.md: stepping " +
 		"into a handler is a Future feature)"
 
 	reasonGlobalName = "VMS names a data address past the last label by the global constant GLIMIT " +
 		"(GLIMIT+25D); govax by the label before it"
 
-	reasonSymbolListing = "VMS lists only the routine named as the module for the TRACE images (docs/PHASE-42.md, " +
+	reasonSymbolListing = "VMS lists only the routine named as the module for the TRACE images (docs/planning/PHASE-42.md, " +
 		"subtask 12)"
 
 	reasonSymbolForm = "SHOW SYMBOL *: VMS also lists its debugger's own images as globals, SHARE$DEBUG and the rest"
@@ -407,7 +407,7 @@ const (
 // the script's commands, that differ from VMS's log, and why.
 var expectedDifferences = map[string]map[int]string{
 	// What VMS's debugger says of the names is matched. What's listed here is the rest of
-	// the survey's debugger review, subtask 10's (docs/PHASE-85 - FORTRAN compiler usability.md).
+	// the survey's debugger review, subtask 10's (docs/planning/PHASE-85 - FORTRAN compiler usability.md).
 	"dbg85m.dlg": {
 		4: reasonSymbolForm, 5: reasonSymbolForm, 6: reasonSymbolForm,
 	},
@@ -440,7 +440,7 @@ var expectedDifferences = map[string]map[int]string{
 
 	"forth.dlg": {
 		2: "FORTH's dictionary headers (F_ABORT_H and so on, labels in a data psect) are listed by govax " +
-			"and not by VMS, which no probe explains (docs/PHASE-42.md, subtask 12)",
+			"and not by VMS, which no probe explains (docs/planning/PHASE-42.md, subtask 12)",
 		4: "%LINE of a line with no code: VMS says %DEBUG-E-LINEINFO and the lines on either side, govax " +
 			"says the name is undefined",
 	},

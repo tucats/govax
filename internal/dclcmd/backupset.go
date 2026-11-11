@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// BACKUP's save sets as its specifiers name them (docs/PHASE-69 - backup
+// BACKUP's save sets as its specifiers name them (docs/planning/PHASE-69 - backup
 // save sets.md, subtask 5): which operation a command's input and output
 // specifiers ask for, and the input save set opened and read.
 //

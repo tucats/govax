@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/respath"
 )
 
-// Phase 67's subtask 8 (docs/PHASE-67 - address space under paging.md):
+// Phase 67's subtask 8 (docs/planning/PHASE-67 - address space under paging.md):
 // with paging on, STARTUP.COM gives VMINIT 0 for each region the
 // configuration doesn't size, so VMINIT's paging defaults apply.
 

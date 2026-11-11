@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Tests for repeat blocks (docs/PHASE-28.md, subtask 3). The first few
+// Tests for repeat blocks (docs/planning/PHASE-28.md, subtask 3). The first few
 // are the examples in the VAX MACRO manual's descriptions of .IRP, .IRPC,
 // and .REPEAT, whose expansions the manual prints.
 

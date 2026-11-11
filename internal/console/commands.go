@@ -18,7 +18,7 @@ const (
 )
 
 // bindConsoleCommands binds the console's former fixed commands, which
-// docs/PHASE-37.md moved onto the DCL grammar (console.dcl's Phase 37
+// docs/planning/PHASE-37.md moved onto the DCL grammar (console.dcl's Phase 37
 // block). The grammar divides each command line into its qualifiers and
 // parameters; an $expression parameter arrives as text, and its handler
 // evaluates it with the console's expression evaluator.
@@ -50,7 +50,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 
 // asmCommand implements ASM: the batch "ASM file" form (Console.Assemble)
 // when a file is named, or AssembleBegin's interactive mode
-// (docs/PHASE-19.md) for a bare "ASM".
+// (docs/planning/PHASE-19.md) for a bare "ASM".
 func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 	// Once the microkernel is in place ASM is the debugger's command.
 	if d.Console.KernelPlaced() {

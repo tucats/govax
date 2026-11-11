@@ -8,7 +8,7 @@ import (
 
 // This file is the Go port of interrupt.c's interrupt() (device/software
 // interrupt admission) and vax.c's execute_vax's own "quantum" block (the
-// interrupt-queue aging scan and interval-clock tick) -- see docs/PHASE-14.md.
+// interrupt-queue aging scan and interval-clock tick) -- see docs/planning/PHASE-14.md.
 //
 // Design departure from the C source, deliberate and user-directed: the C
 // reference's real driving clock for both the quantum counter and the
@@ -345,7 +345,7 @@ func (e *Engine) tickIntervalClock() {
 // If RXCS's DON bit is already set (the previous byte hasn't been read
 // yet), the new byte is dropped rather than overwriting RXDB, matching
 // poll_keyboard's own `if (registers.RXCS & 0x80) { ...; return 0; }` guard --
-// noticed while wiring DebugKeyboard's trace (docs/PHASE-17.md sub-phase 2)
+// noticed while wiring DebugKeyboard's trace (docs/planning/PHASE-17.md sub-phase 2)
 // and fixed here rather than left silently overwriting, since the trace
 // text itself ("not read yet, ignoring") would otherwise be a lie about
 // what this port actually does.

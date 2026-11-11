@@ -108,11 +108,11 @@ func emulMtpr(e *Engine, d *Decoded) error {
 // emul_procreg.c's set_priv_reg.
 //
 // IPL/SIRR's pending-interrupt delivery and ICCS/RXCS/TXCS/TXDB's console/
-// clock device modeling, both previously deferred (see docs/PHASE-07.md's
+// clock device modeling, both previously deferred (see docs/planning/PHASE-07.md's
 // open questions) for lack of an interrupt-admission mechanism, are wired up
 // as of Phase 14 -- see interrupt.go's Engine.Interrupt. TBIA/TBIS are wired
 // up as of Phase 21 to the real translation-buffer cache internal/vm now
-// maintains -- see docs/PHASE-21.md.
+// maintains -- see docs/planning/PHASE-21.md.
 func setPrivReg(e *Engine, reg int, value uint32) error {
 	if reg < 0 || reg > registers.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}

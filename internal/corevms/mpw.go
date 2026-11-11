@@ -7,8 +7,8 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// The modified page writer (docs/PHASE-63 - working sets.md, subtask 7;
-// docs/PHASE-64 - page file.md, subtask 3; docs/PHASE-62 - VMS
+// The modified page writer (docs/planning/PHASE-63 - working sets.md, subtask 7;
+// docs/planning/PHASE-64 - page file.md, subtask 3; docs/planning/PHASE-62 - VMS
 // paging.md, Decision 7).
 //
 // # What it does
@@ -99,7 +99,7 @@ import (
 // through a file's block I/O (rms.ACPFile.WritePage, or the page file's,
 // which never extends the file), as releasePTE's write-back does, never
 // through RMS's record path; ods2 keeps no locks for a write to wait on
-// (docs/PHASE-64 - page file.md, "The ods2 audit").
+// (docs/planning/PHASE-64 - page file.md, "The ods2 audit").
 
 // wakeModifiedPageWriter runs the modified page writer if the modified
 // list is over MPW_HILIMIT by more than the pages it couldn't write the

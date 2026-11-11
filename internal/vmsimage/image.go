@@ -7,8 +7,8 @@ import (
 )
 
 // This file decodes a VAX/VMS image file, for ANALYZE/IMAGE
-// (docs/PHASE-40.md) and the debug symbol reader (internal/dbgsym,
-// docs/PHASE-41.md). An image starts with one or more 512-byte header
+// (docs/planning/PHASE-40.md) and the debug symbol reader (internal/dbgsym,
+// docs/planning/PHASE-41.md). An image starts with one or more 512-byte header
 // blocks: the fixed header ($IHD), which gives the offsets of the
 // activation ($IHA), symbol table and debug ($IHS), identification
 // ($IHI), and patch ($IHP) blocks, then the image section descriptors
@@ -29,7 +29,7 @@ const BlockSize = 512
 
 // Image formats an image header's major and minor ids name. VMS V4 and
 // later write 02.05; 02.01 is the format of VMS V1's linker (linker
-// ident "01.20"; docs/PHASE-72 - legacy images.md), whose header blocks
+// ident "01.20"; docs/planning/PHASE-72 - legacy images.md), whose header blocks
 // are shorter. Nothing on hand shows 02.02 to 02.04, which are read as
 // 02.05.
 const (

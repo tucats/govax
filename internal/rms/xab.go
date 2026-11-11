@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is the extended attribute blocks (docs/PHASE-33.md, subtask
+// This file is the extended attribute blocks (docs/planning/PHASE-33.md, subtask
 // 5), from the RMS Reference Manual's chapters 9-11, 15, 16, and 18:
 // the XAB chain a FAB names at FAB$L_XAB, which $OPEN, $CREATE, and
 // $DISPLAY fill from the file header, $CREATE reads (XABDAT, XABPRO,

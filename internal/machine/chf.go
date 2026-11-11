@@ -6,7 +6,7 @@ import (
 )
 
 // This file is Condition Handling Facility frame search and format
-// capability -- see docs/PHASE-20.md.
+// capability -- see docs/planning/PHASE-20.md.
 //
 // Both only ever run for a fault whose SCB vector is kernel.asm's own
 // "console$handler" sentinel (0xFFFFFFFF): a real vector switches stack/
@@ -22,7 +22,7 @@ import (
 // running it to completion -- exactly Console.Call's own job (built for
 // Phase 13's LIB$INITIALIZE/main-image transfer, reused here for the same
 // "call an entry point, run until it returns via RET" primitive), which
-// internal/cpu deliberately doesn't provide on its own (see docs/PHASE-13.md's
+// internal/cpu deliberately doesn't provide on its own (see docs/planning/PHASE-13.md's
 // "Key finding").
 
 // maxCHFDepth is the frame-chase bail-out count, so a corrupt or cyclic
@@ -237,7 +237,7 @@ func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 
 	// The handler's run is nested inside the program's: it must run in
 	// this process and come back to it, so no other process may run
-	// meanwhile (docs/PHASE-43.md, bug 7; docs/PHASE-44.md, subtask 8).
+	// meanwhile (docs/planning/PHASE-43.md, bug 7; docs/planning/PHASE-44.md, subtask 8).
 	unfreeze := m.Engine.FreezeScheduling()
 	callErr := m.Call(handler, false, sigargs, mechargs)
 

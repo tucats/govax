@@ -1,5 +1,5 @@
 // Package debugger is govax's machine debugger, modeled on the VMS
-// debugger (docs/PHASE-42.md).
+// debugger (docs/planning/PHASE-42.md).
 //
 // The govax console has two jobs. It is a VMS command line (SET DEFAULT,
 // MOUNT, MACRO, LINK, RUN, ...), and it is a debugger for the emulated

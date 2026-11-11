@@ -8,7 +8,7 @@ import (
 // COMMON (section 4.2). A common block is storage program units share by
 // name: each unit that declares /BLK/ reaches the same bytes, whatever
 // names and types it gives them. The block is a program section (Decision
-// 10 of docs/PHASE-74 - FORTRAN plan.md), overlaid, so that every unit's
+// 10 of docs/planning/PHASE-74 - FORTRAN plan.md), overlaid, so that every unit's
 // contribution starts at its base, and LINK makes it as long as the
 // longest. A unit's names are laid out in the order its COMMON statements
 // list them, with nothing between them: the VAX reads unaligned data, and

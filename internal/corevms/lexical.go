@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// What DCL's lexical functions read (docs/PHASE-50 - DCL command
+// What DCL's lexical functions read (docs/planning/PHASE-50 - DCL command
 // procedures.md, subtask 14). The console's command interpreter answers
 // F$GETJPI, F$GETSYI, F$GETDVI, F$USER, F$PRIVILEGE, F$SETPRV, F$FAO,
 // F$TIME, and F$CVTIME with the same code the system services use, so a

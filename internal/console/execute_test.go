@@ -199,7 +199,7 @@ func TestCall_tracesWhenTraceEnabled(t *testing.T) {
 }
 
 // TestExecute_stopsAtInstructionLimit exercises govax's own -instruction-limit
-// flag (docs/PHASE-15.md's sub-phase 2): an infinite loop (NOP; BRB back to
+// flag (docs/planning/PHASE-15.md's sub-phase 2): an infinite loop (NOP; BRB back to
 // itself) must not hang Execute when a limit is configured -- it should stop
 // cleanly, reporting the limit rather than propagating an error.
 func TestExecute_stopsAtInstructionLimit(t *testing.T) {

@@ -323,7 +323,7 @@ func (s *Session) renameTarget(src renameSource, output string, opts RenameOptio
 
 // RenameTarget is one file's new name for LIB$RENAME_FILE, which, unlike
 // Session.Rename, searches for the files itself and calls back to the
-// program between finding a file and renaming it (docs/PHASE-58,
+// program between finding a file and renaming it (docs/planning/PHASE-58,
 // subtask 6). old is the file's full name as $SEARCH's resultant string
 // gives it, output the new-filespec, and inputVersion the version field
 // of the old specification as $PARSE expanded it ("" for none, "*", or a

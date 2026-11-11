@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// LIB$CREATE_DIR (docs/PHASE-34.md, subtask 12), written from the VMS
+// LIB$CREATE_DIR (docs/planning/PHASE-34.md, subtask 12), written from the VMS
 // Run-Time Library Routines Volume, Library (LIB$) Manual (VMS 5.0,
 // AA-LA76A-TE, LIB-35 to LIB-39):
 //

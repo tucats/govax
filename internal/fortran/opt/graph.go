@@ -17,7 +17,7 @@ import (
 //
 // is as much a loop as any DO, and a DO isn't always the simple shape it looks: the
 // extended range of section 5.3.1.4 leaves the loop by GO TO and comes back (Decision 1
-// of docs/PHASE-84 - FORTRAN optimizer.md).
+// of docs/planning/PHASE-84 - FORTRAN optimizer.md).
 //
 // # Every way in
 //

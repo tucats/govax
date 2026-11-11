@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file holds the console's logical-name commands (docs/PHASE-25.md):
+// This file holds the console's logical-name commands (docs/planning/PHASE-25.md):
 // DEFINE and ASSIGN, DEASSIGN, CREATE/NAME_TABLE, SHOW LOGICAL and SHOW
 // TRANSLATION, all working on the shared lnm.Database in c.Logicals.
 // The DCL bindings that call these are in dispatch.go.

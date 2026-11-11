@@ -4,7 +4,7 @@ import "testing"
 
 // TestLibrtlResources: a program allocates event flags and LUNs through
 // the routines' stubs and shows what each call wrote and returned with
-// LIB$SYS_FAO (docs/PHASE-55, subtask 4): GET_EF gives 63 first, flag 1
+// LIB$SYS_FAO (docs/planning/PHASE-55, subtask 4): GET_EF gives 63 first, flag 1
 // starts reserved (LIB$_EF_ALRRES), and once FREE_EF frees it GET_EF
 // still gives the highest free flag, 62; GET_LUN gives 119, which
 // FREE_LUN frees once (LIB$_LUNALRFRE the second time). VMS 7.1's order

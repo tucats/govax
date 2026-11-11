@@ -34,7 +34,7 @@ import (
 // # Which loops
 //
 // The natural loops of the control flow graph, not the DO statements, so a GO TO loop
-// is as good as any (Decision 1 of docs/PHASE-84 - FORTRAN optimizer.md). A loop's
+// is as good as any (Decision 1 of docs/planning/PHASE-84 - FORTRAN optimizer.md). A loop's
 // header is its only way in, so a new block before the header, its preheader, runs once
 // on every path into the loop, and only those. A DO loop's zero-trip test comes before
 // its header, so its preheader runs only if the body will. Outer loops go first: a value

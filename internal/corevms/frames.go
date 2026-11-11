@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Frame claims (docs/PHASE-62 - VMS paging.md, subtask 5).
+// Frame claims (docs/planning/PHASE-62 - VMS paging.md, subtask 5).
 //
 // Every physical page (frame) the system gives a page comes from
 // vm.Memory.AllocateFrame, with a vm.FrameClaim saying whose page it is.
@@ -86,7 +86,7 @@ var copyOnRefBacking = paging.Backing{Kind: paging.PageFile}
 
 // demandZeroBacking is the backing store of a demand-zero page from its
 // first fault: the page file too, a block to be allocated when it's first
-// written, as VMS's pager gives it (the book's 15.2.2; docs/PHASE-64 -
+// written, as VMS's pager gives it (the book's 15.2.2; docs/planning/PHASE-64 -
 // page file.md, finding 3). Its contents exist only in its frame until
 // then, so the frame is effectively modified (effectivelyModified).
 var demandZeroBacking = paging.Backing{Kind: paging.PageFile}

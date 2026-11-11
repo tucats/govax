@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The date and time formatting context (docs/PHASE-56, subtask 5; the
+// The date and time formatting context (docs/planning/PHASE-56, subtask 5; the
 // survey's "Formatting: the logical names and the context"). Every
 // formatting routine (LIB$FORMAT_DATE_TIME, LIB$CONVERT_DATE_STRING,
 // LIB$GET_DATE_FORMAT, LIB$GET_MAXIMUM_DATE_LENGTH) takes an optional

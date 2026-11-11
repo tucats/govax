@@ -2,7 +2,7 @@ package asm
 
 import "strings"
 
-// This file records what a MACRO listing (MACRO/LIST, docs/PHASE-29.md)
+// This file records what a MACRO listing (MACRO/LIST, docs/planning/PHASE-29.md)
 // shows for each source line, as the line is assembled. A later step lays
 // the recorded lines out as the listing's pages.
 //

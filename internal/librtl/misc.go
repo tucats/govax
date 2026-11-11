@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The miscellaneous interface routines (docs/PHASE-55, the survey's
+// The miscellaneous interface routines (docs/planning/PHASE-55, the survey's
 // "Miscellaneous"; the 5.0 manual's section 2.7): LIB$AST_IN_PROG,
 // LIB$ASN_WTH_MBX, LIB$WAIT, and LIB$GET_USERS_LANGUAGE. Each is a small
 // layer over system services or the logical names.

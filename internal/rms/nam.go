@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// This file is the NAM block (docs/PHASE-33.md): its field offsets, and
+// This file is the NAM block (docs/planning/PHASE-33.md): its field offsets, and
 // reading and writing the fields name processing uses. Written from the
 // RMS Reference Manual's chapter 5.
 

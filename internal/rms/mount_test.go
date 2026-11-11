@@ -14,7 +14,7 @@ import (
 // convention (see volume.TestInitializeProducesMountableVolume) of
 // building throwaway fixtures on the fly with ods2's own
 // diskimage.Create/volume.Initialize calls, rather than depending on a
-// binary blob under testdata/ — see docs/PHASE-22.md's "Test fixtures"
+// binary blob under testdata/ — see docs/planning/PHASE-22.md's "Test fixtures"
 // design decision for why: it keeps `go test ./...` fully portable, with
 // nothing to check into git.
 func newTestVolumeFile(t *testing.T, label string) string {

@@ -19,7 +19,7 @@ import (
 const lbr90wCases = 36
 
 // lbr90wLater are the cases of round 3 whose output depends on what later
-// parts of subtask 11 do (docs/PHASE-90 - VMS help.md): the reason for each.
+// parts of subtask 11 do (docs/planning/PHASE-90 - VMS help.md): the reason for each.
 // Their output isn't compared yet.
 var lbr90wLater = map[int]string{
 	31: "a second update open: VMS waited past the timer (round 3b: FLK after 120 seconds, govax's at once)",

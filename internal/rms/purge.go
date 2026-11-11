@@ -9,12 +9,12 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-23.md subtask 7: PURGE, the operator-
+// This file implements docs/planning/PHASE-23.md subtask 7: PURGE, the operator-
 // console command that trims every name a file specification matches down
 // to its N most recent surviving versions. Its behavioral reference is the
 // sibling ods2 module's own cmd/ods2/internal/session/purge.go (read-only,
 // per this phase's own "behavioral spec, not code to link against" framing
-// -- see docs/PHASE-23.md's "Why this phase looks different from most
+// -- see docs/planning/PHASE-23.md's "Why this phase looks different from most
 // others"); Session.Purge below follows that file's shape closely (the
 // same "*.* means everything", the same forced ";*" version override, the
 // same group-by-directory/PurgeVersions loop, the same deferred bitmap

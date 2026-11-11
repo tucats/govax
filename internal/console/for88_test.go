@@ -16,7 +16,7 @@ import (
 var for88Dir = filepath.Join("..", "..", "testdata", "for88")
 
 // runFor88OnFORRTL runs round 2 of the Phase 88 probe on VMS's FORRTL.EXE over
-// govax (docs/PHASE-88 - keyed index files.md, subtask 12), and returns its
+// govax (docs/planning/PHASE-88 - keyed index files.md, subtask 12), and returns its
 // output. It skips without FORRTL.EXE on a local volume.
 func runFor88OnFORRTL(t *testing.T) (out, saved string) {
 	t.Helper()
@@ -69,7 +69,7 @@ var for88Volatile = regexp.MustCompile(`stv=[0-9A-F]+|bls=[0-9]+`)
 // line, with why.
 var for88Differences = map[string]string{
 	// FORRTL's by-name NAME comes back blank over govax on any organization
-	// (docs/PHASE-81 - FORTRAN files.md, "Open"; for81's #479).
+	// (docs/planning/PHASE-81 - FORTRAN files.md, "Open"; for81's #479).
 	"#145 INQUIRE by file, closed": "NAME by file, on FORRTL only",
 
 	// W7's scattered load splits elsewhere, so it ends up another size.

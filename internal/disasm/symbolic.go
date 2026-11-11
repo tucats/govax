@@ -20,7 +20,7 @@ type Symbolizer interface {
 }
 
 // ConstantNamer names a constant: an option beyond what the VMS debugger
-// shows (docs/PHASE-41.md, Decision 5), for a short literal's or an
+// shows (docs/planning/PHASE-41.md, Decision 5), for a short literal's or an
 // integer immediate's value.
 type ConstantNamer interface {
 	// Constant returns the name of the one constant whose value is value
@@ -34,7 +34,7 @@ type ConstantNamer interface {
 // CALLS #1,G^LIB$PUT_OUTPUT into CALLS #1,@L^cell, through a longword
 // (the cell) in the image's fixup section, which the image activator
 // fills with the routine's address; the debugger names the cell's
-// address (@L^SUB2+0F0), not the routine (docs/PHASE-41.md, subtask 10).
+// address (@L^SUB2+0F0), not the routine (docs/planning/PHASE-41.md, subtask 10).
 type CellNamer interface {
 	// Cell returns the name of what the fixup cell at addr points to
 	// (LIB$PUT_OUTPUT), or ok false when addr isn't a fixup cell.
@@ -50,7 +50,7 @@ const (
 	StyleAssembler Style = iota
 
 	// StyleDebugger is the VMS debugger's EXAMINE/INSTRUCTION text
-	// (docs/PHASE-41.md, subtask 1's results): the mnemonic padded to 8
+	// (docs/planning/PHASE-41.md, subtask 1's results): the mnemonic padded to 8
 	// columns, numbers in hexadecimal without a radix operator, a short
 	// literal in two digits (S^#0A), an immediate in as many digits as
 	// its size (I^#000003E8, I^#9F16), an address in eight (L^00000200),

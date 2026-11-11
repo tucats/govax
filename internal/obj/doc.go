@@ -1,6 +1,6 @@
 // Package obj reads, writes, dumps, and checks VAX/VMS object modules: the
 // .OBJ files MACRO-32 and the other VAX language processors produce and the
-// VMS linker reads. See docs/PHASE-27.md.
+// VMS linker reads. See docs/planning/PHASE-27.md.
 //
 // The format is the VAX object language, specified in chapter 7 of the VMS
 // 5.0 Linker Utility Manual. An object module is a sequence of

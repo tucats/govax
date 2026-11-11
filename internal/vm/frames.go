@@ -2,7 +2,7 @@ package vm
 
 import "github.com/tucats/govax/internal/paging"
 
-// Frame allocation (docs/PHASE-62 - VMS paging.md, subtask 4).
+// Frame allocation (docs/planning/PHASE-62 - VMS paging.md, subtask 4).
 //
 // # Who hands out physical pages
 //

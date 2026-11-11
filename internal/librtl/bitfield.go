@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The bit field routines (docs/PHASE-53, subtask 6): LIB$EXTV, LIB$EXTZV,
+// The bit field routines (docs/planning/PHASE-53, subtask 6): LIB$EXTV, LIB$EXTZV,
 // LIB$INSV, LIB$FFC, and LIB$FFS make the VAX's variable-length bit field
 // instructions callable.
 //

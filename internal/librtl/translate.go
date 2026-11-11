@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// ASCII and EBCDIC (docs/PHASE-54, "Translation"): LIB$TRA_ASC_EBC and
+// ASCII and EBCDIC (docs/planning/PHASE-54, "Translation"): LIB$TRA_ASC_EBC and
 // LIB$TRA_EBC_ASC translate a string through LIBRTL's own tables
 // (tables.go), as MOVTC through LIB$AB_ASC_EBC or LIB$AB_EBC_ASC would,
 // but also report characters the other code has no equivalent for.

@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Tests for docs/PHASE-28.md subtask 2: created local labels, \symbol
+// Tests for docs/planning/PHASE-28.md subtask 2: created local labels, \symbol
 // values, .NARG, .NCHR, .NTYPE, and the string operators. Most follow the
 // VAX MACRO manual's own examples.
 

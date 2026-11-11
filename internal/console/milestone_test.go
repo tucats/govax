@@ -16,7 +16,7 @@ import (
 )
 
 // Phase 48's acceptance tests: the multiprocessing program's milestone
-// (docs/PHASE-43 - processes.md, "The milestone"; docs/PHASE-48 -
+// (docs/planning/PHASE-43 - processes.md, "The milestone"; docs/planning/PHASE-48 -
 // LIB_SPAWN.md, subtask 6). testdata/mp/msparent.mar starts
 // testdata/mp/mschild.mar, by $CREPRC or by LIB$SPAWN; the two exchange
 // messages through mailboxes, and both write files, one of them shared,

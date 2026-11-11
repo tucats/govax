@@ -90,7 +90,7 @@ func TestSysPut_console(t *testing.T) {
 // TestSysPut_diskFile confirms SYS$PUT against a RAB connected to a real
 // mounted ODS-2 volume actually writes the record through to disk: after
 // the write, this test closes the Writer directly (SYS$CLOSE is a later
-// subtask — docs/PHASE-22.md's subtask 8 — so this test reaches into the
+// subtask — docs/planning/PHASE-22.md's subtask 8 — so this test reaches into the
 // sibling ods2 module's own API the same way TestSysConnect_readArming
 // already does for its own read-side fixture) and reopens the file fresh
 // to read the record back with an independent odsrms.Reader, confirming

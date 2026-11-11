@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements MACRO-32 macros (docs/PHASE-28.md): defining them
+// This file implements MACRO-32 macros (docs/planning/PHASE-28.md): defining them
 // with .MACRO/.ENDM, calling them, and the directives that end or delete
 // them (.MEXIT, .MDELETE). macroargs.go parses a call's arguments and
 // substitutes them into the macro's lines.
@@ -90,7 +90,7 @@ type formal struct {
 	def string
 	// created says the argument was written "?NAME": when a call leaves
 	// it blank, the assembler makes up a local label for it
-	// (docs/PHASE-28.md, subtask 2).
+	// (docs/planning/PHASE-28.md, subtask 2).
 	created bool
 }
 

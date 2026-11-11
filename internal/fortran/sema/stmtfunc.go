@@ -8,7 +8,7 @@ import (
 // Statement functions (section 6.2.1): F(X, Y) = expression, a one-line
 // function a unit defines for its own use. No routine is made for one. Each
 // reference is expanded where it stands, when the unit is lowered (Decision 8
-// of docs/PHASE-79), so analysis gives lowering the definition's typed
+// of docs/planning/PHASE-79), so analysis gives lowering the definition's typed
 // expression once, and each reference its actual arguments.
 //
 // The dummy arguments belong to the definition alone: X is a new name there,

@@ -72,7 +72,7 @@ type objectAnalyzer struct {
 
 // How many lines each kind of heading needs left on a page to be written
 // there (Line.Keep). Real ANALYZE's rule, reconstructed from the page
-// breaks of the 54 fixtures (docs/PHASE-38.md): a record's heading needs
+// breaks of the 54 fixtures (docs/planning/PHASE-38.md): a record's heading needs
 // 5, a GSD subrecord's or a TIR command's 3, a flags list's label 3, a
 // STORE IMMEDIATE's 2, and a hex dump's 4. A subrecord's could be 2: the
 // fixtures allow 2 or 3, and 3 matches a TIR command's.

@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is the debugger's side of RUN (docs/PHASE-42.md, subtask 5):
+// This file is the debugger's side of RUN (docs/planning/PHASE-42.md, subtask 5):
 // starting an image under the debugger, and what the debugger does when
 // that image ends or fails.
 //

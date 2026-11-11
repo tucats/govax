@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// LIB$FILE_SCAN and LIB$FILE_SCAN_END (docs/PHASE-58, subtask 4; the
+// LIB$FILE_SCAN and LIB$FILE_SCAN_END (docs/planning/PHASE-58, subtask 4; the
 // survey's "FILE_SCAN (151) and FILE_SCAN_END (153)"), written from the
 // 5.0 LIB$ manual (LIB-151, LIB-153, and section 2.7.4, "File Searching
 // Routines"):
@@ -32,7 +32,7 @@ import (
 // contexts, as for LIB$FIND_FILE's (findfile.go).
 //
 // What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
-// docs/PHASE-58's subtask 8):
+// docs/planning/PHASE-58's subtask 8):
 //
 //   - The routines are called with LIB$FILE_SCAN's own argument list, the
 //     FAB's address first (a CALLG with its AP). A routine of 0 isn't

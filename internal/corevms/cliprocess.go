@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Processes that run a command interpreter (docs/PHASE-48.md).
+// Processes that run a command interpreter (docs/planning/PHASE-48.md).
 //
 // On VMS, an interactive or spawned process doesn't run one image and
 // end: it runs a command language interpreter (CLI), normally DCL, which
@@ -21,7 +21,7 @@ import (
 //
 // govax's CLI for these processes is the console's own DCL, run for the
 // process (internal/dclshell's subcli.go; Decision 8 in
-// docs/PHASE-43.md). It belongs to the console, as DCL's symbols and
+// docs/planning/PHASE-43.md). It belongs to the console, as DCL's symbols and
 // image activation do, so corevms reaches it through the
 // CommandInterpreter the console installs on the System.
 // Everything else about the process (its creation, its SYS$ names, its

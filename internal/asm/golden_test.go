@@ -16,7 +16,7 @@ var updateGolden = flag.Bool("update", false, "rewrite internal/asm/testdata/gol
 // whole result (every byte written, every symbol with its value and flags,
 // the final location counters, the .END entry, and any error) with a
 // snapshot in testdata/golden. It guards refactors that must not change
-// what the assembler produces (docs/PHASE-27.md, subtask 4). Run with
+// what the assembler produces (docs/planning/PHASE-27.md, subtask 4). Run with
 // -update to rewrite the snapshots after a deliberate change.
 //
 // Each fixture is assembled twice: on its own, and after kernel.asm in the

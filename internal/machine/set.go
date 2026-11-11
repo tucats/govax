@@ -27,7 +27,7 @@ var privRegNames = map[string]registers.PrivReg{
 // as a convenience alias; unlike the C source, setting CUR_MOD here does
 // not check for/deliver a pending AST itself. govax delivers ASTs from the
 // RTL, which checks the current mode at every instruction boundary
-// (docs/PHASE-26.md subtask 15), so the next step sees the new mode.
+// (docs/planning/PHASE-26.md subtask 15), so the next step sees the new mode.
 var pslFieldNames = map[string]func(p *registers.PSL, v uint32) error{
 	"CM":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetCM, v) },
 	"TP":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetTP, v) },
@@ -98,7 +98,7 @@ func (m *Machine) SetPSLField(field string, value uint32) error {
 	return nil
 }
 
-// debugFlagNames (the 25 names SET DEBUG accepts) — see docs/PHASE-17.md.
+// debugFlagNames (the 25 names SET DEBUG accepts) — see docs/planning/PHASE-17.md.
 var debugFlagNames = map[string]registers.DebugFlags{
 	"RMS":        registers.DebugRMS,
 	"FULLDISASM": registers.DebugFullDisasm,
@@ -260,7 +260,7 @@ func (m *Machine) SetVM(on bool) error {
 
 // SetBase implements SET BASE <addr>, sets the EXAMINE/DEPOSIT cursor
 // directly (Console.DepositAddr), the same cursor SHOW BASE reports
-// (see docs/PHASE-16.md sub-phase 1d's ShowBase fix) and EXAMINE/DEPOSIT
+// (see docs/planning/PHASE-16.md sub-phase 1d's ShowBase fix) and EXAMINE/DEPOSIT
 // themselves advance after every access.
 func (m *Machine) SetBase(addr uint32) error {
 	if err := m.requireInit(); err != nil {

@@ -20,7 +20,7 @@ import (
 //
 // Real VMS RMS genuinely supports opening a terminal device (like
 // "TTA0:") for SYS$CREATE/SYS$PUT — this isn't a govax-specific shortcut,
-// it's ordinary VMS behavior (see docs/PHASE-22.md's "Why this phase
+// it's ordinary VMS behavior (see docs/planning/PHASE-22.md's "Why this phase
 // looks different" section). When a FileHandle represents that case,
 // Console is set to wherever console output should go and every other
 // field is left at its zero value.
@@ -62,7 +62,7 @@ type FileHandle struct {
 
 	// Found is the file as $OPEN or $CREATE found it, for $DISPLAY's
 	// NAM; Writable is whether it was opened for writing, so $CLOSE
-	// takes its XABRDT and XABPRO (docs/PHASE-33.md).
+	// takes its XABRDT and XABPRO (docs/planning/PHASE-33.md).
 	Found    *foundFile
 	Writable bool
 

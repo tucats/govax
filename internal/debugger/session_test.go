@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Tests of the session's lifetime under run control (docs/PHASE-42.md,
+// Tests of the session's lifetime under run control (docs/planning/PHASE-42.md,
 // Decision 2): a run that ends by itself leaves the console prompt; a run
 // the debugger stops opens a session, whose commands are the debugger's.
 

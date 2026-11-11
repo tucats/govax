@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Verification (docs/PHASE-50 - DCL command procedures.md, subtask 15):
+// Verification (docs/planning/PHASE-50 - DCL command procedures.md, subtask 15):
 // SET [NO]VERIFY, SET [NO]PREFIX, and the echoing of a command
 // procedure's lines, as the DCL Dictionary (SET VERIFY, SET PREFIX,
 // F$VERIFY) and the User's Manual (13.5.5) describe them.

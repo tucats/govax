@@ -13,7 +13,7 @@ const startupName = sysvol.SysMgr + "STARTUP.COM"
 
 // RunStartup runs govax's startup procedure at command level 1, as a
 // login command procedure runs before a user's first command
-// (docs/PHASE-87 - system volume.md, Decisions 1 and 11).
+// (docs/planning/PHASE-87 - system volume.md, Decisions 1 and 11).
 //
 // With a system volume, it is the volume's STARTUP.COM, opened by device
 // and directory (DUA0:[SYSTEM.SYSMGR]STARTUP.COM), so that it doesn't

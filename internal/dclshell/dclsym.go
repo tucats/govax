@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// DCL symbols and foreign commands (docs/PHASE-34.md, 2026-10-04).
+// DCL symbols and foreign commands (docs/planning/PHASE-34.md, 2026-10-04).
 //
 // A DCL symbol is a name for a string, defined at the console prompt by
 // an assignment statement:

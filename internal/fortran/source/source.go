@@ -7,7 +7,7 @@ import (
 // The continuation limits: VAX FORTRAN's /CONTINUATIONS=n takes 0 to 99,
 // and allows 19 when it isn't given (the numbers as the VAX FORTRAN User
 // Manual is remembered to give them; that manual isn't to hand, so they
-// are unconfirmed, docs/PHASE-74 - FORTRAN plan.md, subtask 3).
+// are unconfirmed, docs/planning/PHASE-74 - FORTRAN plan.md, subtask 3).
 const (
 	DefaultContinuations = 19
 	MaxContinuations     = 99
@@ -146,7 +146,7 @@ type Line struct {
 
 	// Library says the line came from a text library's module, or from a file
 	// such a module includes. What such a line declares, a program may leave
-	// unused without cost (docs/PHASE-83 - FORTRAN and VMS.md, Decision 5).
+	// unused without cost (docs/planning/PHASE-83 - FORTRAN and VMS.md, Decision 5).
 	Library bool
 
 	// Serial numbers the lines in the order the program has them, from 1, across

@@ -8,7 +8,7 @@ import (
 )
 
 // What DCL's F$PARSE and F$SEARCH lexical functions ask of RMS
-// (docs/PHASE-50 - DCL command procedures.md, subtask 14): a file
+// (docs/planning/PHASE-50 - DCL command procedures.md, subtask 14): a file
 // specification taken apart, with the defaults RMS's $PARSE applies, and
 // the files a specification (wildcards and all) names, as $SEARCH finds
 // them.

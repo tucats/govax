@@ -1,7 +1,7 @@
 // Package parse is the FORTRAN compiler's third pass, its parser: it
 // reads each statement's tokens and builds the syntax tree of package ast
-// (docs/PHASE-75 - FORTRAN first light.md, Part B, and Decision 6 of
-// docs/PHASE-74 - FORTRAN plan.md).
+// (docs/planning/PHASE-75 - FORTRAN first light.md, Part B, and Decision 6 of
+// docs/planning/PHASE-74 - FORTRAN plan.md).
 //
 // # A function per statement
 //

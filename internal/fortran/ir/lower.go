@@ -494,7 +494,7 @@ func (l *lowerer) descriptorCell(d *Descriptor) *Cell {
 // descriptor (Descriptor.Fixed), if c is in the frame: a frame cell has no
 // initial values, and another activation, or another statement's descriptor of
 // the same form, may have left anything there. Each use writes it whole, the
-// statement storing the addresses after this (Decision 5 of docs/PHASE-89 -
+// statement storing the addresses after this (Decision 5 of docs/planning/PHASE-89 -
 // reentrant FORTRAN.md): cheaper than filling every descriptor at each entry point
 // for a routine that only sometimes does I/O.
 func (l *lowerer) fillDescriptor(c *Cell) {

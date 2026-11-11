@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/lck"
 )
 
-// Record locks (docs/PHASE-47.md, subtask 6): in a file several
+// Record locks (docs/planning/PHASE-47.md, subtask 6): in a file several
 // processes may write, RMS locks each record a stream reads, so another
 // stream can't take it from under it; the record-processing options
 // (RAB$L_ROP) say how. They're locks in the system's lock database

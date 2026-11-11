@@ -8,7 +8,7 @@ import (
 
 // This file changes a library in place, a block at a time, as the LBR$
 // routines do (LBR$PUT_RECORD, LBR$INSERT_KEY, and the rest;
-// docs/PHASE-90 - VMS help.md, subtask 11). Where a Builder lays a whole
+// docs/planning/PHASE-90 - VMS help.md, subtask 11). Where a Builder lays a whole
 // library out at once, an Updater keeps the file's blocks and changes them
 // as each call asks, so that a library made by a sequence of calls is the
 // one VMS 7.1's LBRSHR made from the same calls (testdata/help90's round 3,
@@ -34,7 +34,7 @@ import (
 //     block left with none goes on the deleted blocks' list. It doesn't
 //     look at whether it was done before: twice is twice.
 //
-// docs/PHASE-90 - VMS help.md's progress log (subtask 11b) has the cases
+// docs/planning/PHASE-90 - VMS help.md's progress log (subtask 11b) has the cases
 // that showed each rule, and which parts are unconfirmed.
 //
 // Only the V3 format's variable-length ASCII keys are changed; binary keys

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// LIB$DELETE_FILE (docs/PHASE-58, subtask 5; the survey's "DELETE_FILE
+// LIB$DELETE_FILE (docs/planning/PHASE-58, subtask 5; the survey's "DELETE_FILE
 // (106)"), written from the 5.0 LIB$ manual (LIB-106):
 //
 //	LIB$DELETE_FILE filespec [,default-filespec] [,related-filespec]
@@ -46,7 +46,7 @@ import (
 // LIB$FILE_SCAN_END frees it.
 //
 // What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
-// docs/PHASE-58's subtask 8), but where marked unconfirmed:
+// docs/planning/PHASE-58's subtask 8), but where marked unconfirmed:
 //
 //   - No arguments, or more than nine, is LIB$_WRONUMARG (the VSI
 //     manual's tenth argument, flags, isn't VMS 7.1's).

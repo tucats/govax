@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// CREATE/FDL (docs/PHASE-88 - keyed index files.md, subtask 10b; the Record
+// CREATE/FDL (docs/planning/PHASE-88 - keyed index files.md, subtask 10b; the Record
 // Management Utilities manual's chapter 5): an empty file made from an FDL
 // file's description. The FDL file is read (its default type .FDL) and
 // parsed (internal/fdl), its messages shown, and then, unless one was an

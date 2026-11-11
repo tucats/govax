@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// docs/PHASE-82 - FORTRAN DEC extensions.md: testdata/link82 asks what LINK does
+// docs/planning/PHASE-82 - FORTRAN DEC extensions.md: testdata/link82 asks what LINK does
 // with one program section given different attributes by different modules.
 // TestLink82Oracle runs its LINK82.COM on govax, as the author ran it on VMS V7.1,
 // and holds govax's log, case by case, and maps to VMS's.

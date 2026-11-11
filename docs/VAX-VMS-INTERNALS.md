@@ -22,9 +22,9 @@ and the compiler has its own tour (`docs/FORTRAN-INTERNALS.md`). This
 document is about what a user-mode program stands on: the VAX it runs on
 and the VMS it calls.
 
-govax was built in phases, and each phase has a document in `docs/`
-(`PHASE-nn - topic.md`) recording what it set out to do, what it found,
-what was decided, and a dated log of the work; `docs/PLAN.md` indexes
+govax was built in phases, and each phase has a document in
+`docs/planning/` (`PHASE-nn - topic.md`) recording what it set out to do, what it found,
+what was decided, and a dated log of the work; `docs/planning/PLAN.md` indexes
 them and summarizes the larger programs. Those are the history: where
 this document says how something *is*, they say how it came to be and
 what else was considered. Nothing here depends on them.
@@ -1026,7 +1026,7 @@ choice, written down. The C emulator govax was first ported from was the
 starting point, not an authority: its fidelity was good but not perfect,
 and where it disagreed with the manual, the finding went into
 `docs/DEVIATIONS.md` and the manual's behavior into govax. That log
-(and `DEVIATIONS-RESOLVED.md`, the entries since settled) is the record of
+(and `docs/planning/DEVIATIONS-RESOLVED.md`, the entries since settled) is the record of
 every place govax was found to differ from VAX/VMS, with the reason and
 what was done.
 

@@ -8,7 +8,7 @@ import (
 
 // What each of LIB$TPARSE's symbol types matches (the manual's Table LIB-21),
 // a table with a row per type code. The rules the manuals leave open are in
-// docs/PHASE-80's subtask 10, to be settled by testdata/tpa80's run on VMS.
+// docs/planning/PHASE-80's subtask 10, to be settled by testdata/tpa80's run on VMS.
 
 // tpaMatch is what a transition matched.
 type tpaMatch struct {

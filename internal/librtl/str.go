@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The STR$ string routines (docs/PHASE-83, subtask 9): written from the VMS
+// The STR$ string routines (docs/planning/PHASE-83, subtask 9): written from the VMS
 // 5.0 STR$ manual and held to VMS 7.1's run of testdata/str83. They share
 // LIB$'s descriptors (descriptor.go), with their own conditions: where a LIB$
 // routine returns LIB$_INVSTRDES, a STR$ routine signals STR$_ILLSTRCLA, and

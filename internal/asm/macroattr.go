@@ -8,7 +8,7 @@ import (
 )
 
 // This file holds the tools a macro uses to look at its own arguments
-// (docs/PHASE-28.md, subtask 2): the argument attribute directives .NARG,
+// (docs/planning/PHASE-28.md, subtask 2): the argument attribute directives .NARG,
 // .NCHR, and .NTYPE, and the string operators %LENGTH, %LOCATE, and
 // %EXTRACT. A macro uses them to decide, with conditional assembly, what
 // to generate. For example, VMS's $PUSHADR macro, which every system

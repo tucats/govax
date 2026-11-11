@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/vm"
 
-// The null device (docs/PHASE-45.md, subtask 11): NLA0:, which NL: names.
+// The null device (docs/planning/PHASE-45.md, subtask 11): NLA0:, which NL: names.
 // It is VMS's bit bucket. Every write succeeds and the data is thrown
 // away; every read finds the end of the file at once. It is the
 // natural SYS$INPUT, SYS$OUTPUT, and SYS$ERROR for a process that has

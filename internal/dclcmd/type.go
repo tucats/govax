@@ -19,7 +19,7 @@ var (
 	typeSearchFail = 149<<16 | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]
 )
 
-// This file implements the console TYPE command (docs/PHASE-23.md,
+// This file implements the console TYPE command (docs/planning/PHASE-23.md,
 // subtask 8) — the operator-facing half of "write one file's content to
 // the console". The actual work (glob-matching, the exactly-one-match
 // rule, record-format-aware text rendering) already lives in the sibling

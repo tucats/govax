@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $CREPRC's checks (docs/PHASE-45.md, subtask 4). The fixture has no
+// $CREPRC's checks (docs/planning/PHASE-45.md, subtask 4). The fixture has no
 // VMINIT, so no S0 pool: a request that passes every check fails at the
 // last step, building the process's memory, with SS$_NOSLOT. That makes
 // it a test of each check before it, and of the clean-up after the last:

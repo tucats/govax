@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The emulated system time (docs/PHASE-26.md subtask 11): the clock the
+// The emulated system time (docs/planning/PHASE-26.md subtask 11): the clock the
 // RTL's time services ($GETTIM, $SETIMR, ...) read, in VMS's 64-bit
 // format — 100ns units since 17-Nov-1858 00:00, local time, as VMS keeps
 // it (vmsdef.Time).

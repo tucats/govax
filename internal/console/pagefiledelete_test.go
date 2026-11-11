@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 )
 
-// Phase 64's subtask 4 (docs/PHASE-64 - page file.md): a page deleted
+// Phase 64's subtask 4 (docs/planning/PHASE-64 - page file.md): a page deleted
 // gives its page file block back, wherever the page holds it: in its PTE
 // (the page file form, its frame gone to another page), or as the
 // backing store of the frame it still has, valid (read back from the

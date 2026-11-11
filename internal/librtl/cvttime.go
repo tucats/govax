@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The time conversion routines (docs/PHASE-56, subtask 3):
+// The time conversion routines (docs/planning/PHASE-56, subtask 3):
 // LIB$CVT_FROM_INTERNAL_TIME and LIB$CVTF_FROM_INTERNAL_TIME, which turn a
 // VMS time into a number of some unit, LIB$CVT_TO_INTERNAL_TIME and
 // LIB$CVTF_TO_INTERNAL_TIME, which turn a number of units into a delta

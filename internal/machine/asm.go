@@ -26,7 +26,7 @@ import (
 //
 // This is the batch "ASM <filename>" form. The bare, no-filename form that
 // puts the console into interactive line-at-a-time assembler mode is
-// AssembleBegin/AssembleInteractiveLine (docs/PHASE-19.md); both forms share
+// AssembleBegin/AssembleInteractiveLine (docs/planning/PHASE-19.md); both forms share
 // the same persistent asmSession, ensureAsmSession/depositAsmImage/
 // mergeAsmSymbols helpers below, so a file assembled in one form can be
 // continued in the other.
@@ -52,7 +52,7 @@ func (m *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are looked for
 	// beside the file being assembled, on its side, volume or host
 	// (includeReader), then through m.Paths' search directories and
-	// built-in files (docs/PHASE-15.md). This replaces ensureAsmSession's
+	// built-in files (docs/planning/PHASE-15.md). This replaces ensureAsmSession's
 	// directory-less default every call, so a session shared across
 	// several ASM <file> commands always resolves .INCLUDE relative to
 	// whichever file is being assembled.
@@ -206,7 +206,7 @@ func (m *Machine) mergeAsmSymbols(a *asm.Assembler) {
 }
 
 // InAssemblerMode reports whether a bare "ASM" command has put the console
-// into interactive assembler-mode (docs/PHASE-19.md) -- Dispatcher.Dispatch
+// into interactive assembler-mode (docs/planning/PHASE-19.md) -- Dispatcher.Dispatch
 // consults this ahead of normal verb-table lookup, and main.go's own
 // readline prompt consults it to switch to "ASM> ", both matching the
 // reference tool.

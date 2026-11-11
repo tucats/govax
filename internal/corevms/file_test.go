@@ -111,7 +111,7 @@ func TestShimExeWriteToConsole(t *testing.T) {
 }
 
 // TestShimExeOpenSharing: host files opened by EXE$OPEN are shared by
-// RMS's rule (docs/PHASE-49.md, subtask 11): two processes may read a
+// RMS's rule (docs/planning/PHASE-49.md, subtask 11): two processes may read a
 // file together, but a writer and a reader may not have it open at once
 // either way round; a refused truncating open leaves the file alone; a
 // close, or the process's rundown, lets the next open in.

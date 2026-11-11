@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Virtual address space services (docs/PHASE-26.md subtask 35): $CRETVA,
+// Virtual address space services (docs/planning/PHASE-26.md subtask 35): $CRETVA,
 // $DELTVA, and the obsolete $CNTREG.
 //
 // # A process's address space

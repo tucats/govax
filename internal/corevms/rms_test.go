@@ -12,7 +12,7 @@ import (
 )
 
 // This file tests registerRMSServices (rms.go) and the Environment/Console
-// wiring docs/PHASE-22.md's subtask 11 added — NOT internal/rms's own field-
+// wiring docs/planning/PHASE-22.md's subtask 11 added — NOT internal/rms's own field-
 // layout/status-code/business-logic correctness, which that package's own,
 // much larger test suite (internal/rms/*_test.go) already covers
 // exhaustively. What's new and worth testing here is purely the glue: does
@@ -202,7 +202,7 @@ func newDiskFAB(t *testing.T, env *Environment, fabAddr, fnaAddr uint32, fac byt
 
 // newMountedVolumeFixture returns a path to a freshly initialized, empty
 // ODS-2 container (via the sibling ods2 module's own diskimage.Create +
-// volume.Initialize — the same two calls docs/PHASE-22.md's "Test
+// volume.Initialize — the same two calls docs/planning/PHASE-22.md's "Test
 // fixtures" design decision calls for, and internal/rms's own
 // mount_test.go uses under a different, unexported helper name this
 // package can't reach) and mounts it read/write on env.Mounts under

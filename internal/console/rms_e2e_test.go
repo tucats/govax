@@ -10,7 +10,7 @@ import (
 )
 
 // mountFreshRMSVolume builds a throwaway ODS-2 container via ods2's own
-// diskimage.Create + volume.Initialize (docs/PHASE-22.md's "Test fixtures"
+// diskimage.Create + volume.Initialize (docs/planning/PHASE-22.md's "Test fixtures"
 // design decision: generated on the fly in t.TempDir(), never a committed
 // binary blob) and mounts it read/write on device name "DUA0" -- the same
 // pattern internal/rms/mount_test.go's newTestVolumeFile and
@@ -42,7 +42,7 @@ func mountFreshRMSVolume(t *testing.T, c *Console) {
 	}
 }
 
-// TestRMSRoundTrip_assembledProgram is docs/PHASE-22.md's subtask 14
+// TestRMSRoundTrip_assembledProgram is docs/planning/PHASE-22.md's subtask 14
 // acceptance test: a real, assembled and executed MACRO-32 program
 // (testdata/asm/rms_roundtrip.asm) drives SYS$CREATE -> SYS$CONNECT ->
 // SYS$PUT (x3) -> SYS$CLOSE -> SYS$OPEN -> SYS$CONNECT -> SYS$GET (x3) ->

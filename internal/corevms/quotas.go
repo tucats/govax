@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/vmsdef"
 
-// Process quotas, as $CREPRC sets them (docs/PHASE-45.md, subtask 4).
+// Process quotas, as $CREPRC sets them (docs/planning/PHASE-45.md, subtask 4).
 //
 // A quota limits how much of some system resource a process may use: how
 // many ASTs it may have outstanding (ASTLM), how many files open (FILLM),

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// LIB$LOOKUP_KEY (docs/PHASE-54, "Keywords"; LIB-260): find a keyword, or
+// LIB$LOOKUP_KEY (docs/planning/PHASE-54, "Keywords"; LIB-260): find a keyword, or
 // an abbreviation of one, in a table of keywords and values:
 //
 //	LIB$LOOKUP_KEY search-string ,key-table-array [,key-value]

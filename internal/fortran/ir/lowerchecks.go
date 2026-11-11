@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
-// /CHECK=BOUNDS (docs/PHASE-85 - FORTRAN compiler usability.md, Decisions 1 to 5).
+// /CHECK=BOUNDS (docs/planning/PHASE-85 - FORTRAN compiler usability.md, Decisions 1 to 5).
 //
 // A subscript or substring bound that needs checking is wrapped in an InRange where it
 // is lowered, so that the rest of an element's address is what it always was and the

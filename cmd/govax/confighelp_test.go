@@ -11,7 +11,7 @@ import (
 )
 
 // TestConfigKeysHaveHelp: every configuration key govax reads (validConfigs)
-// is described under HELP CONFIGURATION KEYS (docs/PHASE-90 - VMS help.md,
+// is described under HELP CONFIGURATION KEYS (docs/planning/PHASE-90 - VMS help.md,
 // Decision 10). The debug switches are described together, as
 // vax.debug.NAME (SET DEBUG's names).
 func TestConfigKeysHaveHelp(t *testing.T) {

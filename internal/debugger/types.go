@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is the debugger's data types (docs/PHASE-42.md, subtask 18):
+// This file is the debugger's data types (docs/planning/PHASE-42.md, subtask 18):
 // what EXAMINE and DEPOSIT take a location to hold, by a type qualifier
 // (/FLOAT, /ASCIC, /PACKED:5, ...), by SET TYPE's default for locations
 // the program's symbols don't type, or by SET TYPE/OVERRIDE's type for

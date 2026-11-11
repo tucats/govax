@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Idling (docs/PHASE-44.md, subtask 5). When no process is computable,
+// Idling (docs/planning/PHASE-44.md, subtask 5). When no process is computable,
 // VMS runs its "null process" until an interrupt makes one computable.
 // The events that can do that in govax with no instruction running are
 // timers ($SETIMR, $SCHDWK), so the scheduler moves emulated time on to

@@ -20,7 +20,7 @@ type Options struct {
 	NoI4 bool
 
 	// GFloating is /G_FLOATING: REAL*8 and COMPLEX*16 are in G_floating,
-	// not D_floating (Decision 16 of docs/PHASE-74 - FORTRAN plan.md).
+	// not D_floating (Decision 16 of docs/planning/PHASE-74 - FORTRAN plan.md).
 	GFloating bool
 
 	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (Program.NoF77).

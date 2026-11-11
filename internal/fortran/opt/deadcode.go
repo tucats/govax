@@ -19,11 +19,11 @@ import (
 // # Which places can die
 //
 // A static variable can't, as VAX FORTRAN keeps every such variable's value from one
-// call to the next (Decision 6 of docs/PHASE-84 - FORTRAN optimizer.md, from the note to
+// call to the next (Decision 6 of docs/planning/PHASE-84 - FORTRAN optimizer.md, from the note to
 // SAVE in section 4.14). The compiler's own temporaries, DO counts, and DO steps can, and
 // a function's value, which the RETURN hands over. So can a scalar variable in the frame
 // area, AUTOMATIC or a RECURSIVE unit's local: it is undefined at each call (Decision 9
-// of docs/PHASE-89 - reentrant FORTRAN.md), so its value ends with the activation, and
+// of docs/planning/PHASE-89 - reentrant FORTRAN.md), so its value ends with the activation, and
 // a store nothing reads before the RETURN goes. Anything whose address has been let out
 // can't, nor anything VOLATILE (findDying).
 //
@@ -218,7 +218,7 @@ func (d *liveness) solve() {
 
 // lasting is the members of live whose values last from one call of the routine to the
 // next: all but those in the frame area, which each activation has afresh (a RECURSIVE
-// unit's cells, docs/PHASE-89 - reentrant FORTRAN.md). A frame cell live at an entry is
+// unit's cells, docs/planning/PHASE-89 - reentrant FORTRAN.md). A frame cell live at an entry is
 // read before anything writes it, and what it reads is whatever was on the stack, which
 // no store at an exit can be what gave it.
 func (d *liveness) lasting(live liveSet) liveSet {

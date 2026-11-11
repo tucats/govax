@@ -2,7 +2,7 @@ package corevms
 
 import "maps"
 
-// The paging file quota, PGFLQUOTA (docs/PHASE-64 - page file.md,
+// The paging file quota, PGFLQUOTA (docs/planning/PHASE-64 - page file.md,
 // subtask 5; the paging plan's Decision 10, as the survey's finding 10
 // changed it).
 //

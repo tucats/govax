@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The debugger's output and its log (docs/PHASE-73 - trace trap.md,
+// The debugger's output and its log (docs/planning/PHASE-73 - trace trap.md,
 // subtask 5), as the VMS 5.5 Debugger Manual's 8.1 and 8.3 describe them:
 //
 //   - SET OUTPUT [NO]VERIFY: whether the lines of a command procedure (@)

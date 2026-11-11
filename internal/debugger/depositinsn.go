@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// DEPOSIT/INSTRUCTION (docs/PHASE-42.md, subtask 19): assemble one machine
+// DEPOSIT/INSTRUCTION (docs/planning/PHASE-42.md, subtask 19): assemble one machine
 // instruction and store it at a location, as the VMS debugger's
 //
 //	DEPOSIT/INSTRUCTION SUB2+2 = 'MOVL #20A,R0'

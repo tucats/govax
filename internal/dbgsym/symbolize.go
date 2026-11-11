@@ -10,7 +10,7 @@ import (
 
 // Symbolize names addr as the VMS debugger names the address an
 // instruction's operand refers to, and the location an instruction is at
-// (docs/PHASE-41.md, subtask 1's results). From the most specific name to
+// (docs/planning/PHASE-41.md, subtask 1's results). From the most specific name to
 // the least:
 //
 //  1. A routine, label, or data symbol at addr, in the module whose
@@ -276,7 +276,7 @@ func number(n int64, radix int) string {
 
 // Constant names value as a constant of the module holding pc, when
 // exactly one of its constants (LIMIT = 10) has that value: the option
-// Decision 5 of docs/PHASE-41.md adds, beyond what the debugger shows. A
+// Decision 5 of docs/planning/PHASE-41.md adds, beyond what the debugger shows. A
 // value two constants share names neither, since either could be meant.
 func (p *Program) Constant(pc, value uint32) (string, bool) {
 	if p == nil {

@@ -6,7 +6,7 @@ import (
 )
 
 // FORTRAN's operators bind in this order, loosest first (sections 2.3.1
-// to 2.3.4; Decision 6 of docs/PHASE-74 - FORTRAN plan.md):
+// to 2.3.4; Decision 6 of docs/planning/PHASE-74 - FORTRAN plan.md):
 //
 //	.EQV. .NEQV. .XOR.     0
 //	.OR.                   1

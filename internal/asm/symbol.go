@@ -165,7 +165,7 @@ type symbol struct {
 	mask uint16
 	// absSect is the named absolute psect a MACRO-dialect label was
 	// defined in, whose index its GSD record carries, as real MACRO's
-	// does (docs/PHASE-27.md, subtask 11's log). It's nil otherwise.
+	// does (docs/planning/PHASE-27.md, subtask 11's log). It's nil otherwise.
 	absSect *section
 
 	// What a listing's symbol table needs (listclose.go). firstSect is

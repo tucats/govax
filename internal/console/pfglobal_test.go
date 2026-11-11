@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 65's subtask 4 (docs/PHASE-65 - sections and paging.md), with
+// Phase 65's subtask 4 (docs/planning/PHASE-65 - sections and paging.md), with
 // paging on: a page-file global section's pages are global demand-zero
 // pages. Mapping gives them no frames; the first fault anywhere gives a
 // page a frame of zeros, backed by the page file and effectively

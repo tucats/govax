@@ -29,12 +29,12 @@ import "github.com/tucats/govax/internal/vmsdef"
 // # Where these numbers come from
 //
 // The values below are the real, literal $RMSDEF completion codes. Read
-// from internal/vmsdef.Symbols (Phase 24, docs/PHASE-24.md — the complete
+// from internal/vmsdef.Symbols (Phase 24, docs/planning/PHASE-24.md — the complete
 // 267-entry RMS$_ table, machine-generated from VMS 7.3's rmsdef.h)
 // rather than their own literal copies; cross-checked one-for-one against
 // the values this file carried before that migration, which were
 // themselves cross-checked directly against a real VAX/VMS 7.3 system's
-// own rmsdef.h during Phase 22's implementation (docs/PHASE-22.md) — not
+// own rmsdef.h during Phase 22's implementation (docs/planning/PHASE-22.md) — not
 // derived from reference/eVAX (which has no RMS$_ status table at all;
 // its rms.c only ever returns the generic SS$_NORMAL) and not guessed.
 // Only the statuses the handlers use are named here and beside them; the
@@ -198,7 +198,7 @@ var (
 
 	// rmsLogicalNameError is RMS$_LNE: the file specification's logical
 	// names couldn't be translated — a circular definition, or more than
-	// lnm.MaxDepth levels (docs/PHASE-25.md).
+	// lnm.MaxDepth levels (docs/planning/PHASE-25.md).
 	rmsLogicalNameError = vmsConst("RMS$_LNE")
 
 	// The statuses SYS$RENAME (rename.go) adds, in the order its doc
@@ -256,7 +256,7 @@ var (
 	ssBadFileVersion    = ssConst("SS$_BADFILEVER")
 	ssInsufficientArgs  = ssConst("SS$_INSFARG")
 
-	// Name processing's failures (docs/PHASE-33.md): a block passed as a
+	// Name processing's failures (docs/planning/PHASE-33.md): a block passed as a
 	// NAM isn't one (RMS$_NAM), a directory, type, or device that isn't
 	// well formed (RMS$_DIR, RMS$_TYP, RMS$_DEV), and an expanded or
 	// resultant string too long for its buffer (RMS$_ESS, RMS$_RSS).

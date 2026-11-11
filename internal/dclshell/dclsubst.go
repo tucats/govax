@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Symbol substitution (docs/PHASE-50 - DCL command procedures.md,
+// Symbol substitution (docs/planning/PHASE-50 - DCL command procedures.md,
 // subtask 8), as the OpenVMS User's Manual (7.3) describes it in sections
 // 12.12 and 12.13, with the details VMS 7.3 showed in testdata/dcl50's
 // probe. DCL processes a command line in three phases, and the console

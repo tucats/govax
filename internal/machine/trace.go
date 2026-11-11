@@ -52,7 +52,7 @@ var operandAccessNames = [...]string{
 // address/immediate value. This necessarily reads state after cpu.Engine.Step returns;
 // Engine.Step decodes and executes in one call with no gap to hook between
 // the two -- so a written operand shows its new value rather than its
-// pre-execution one; see docs/PHASE-17.md sub-phase 8's own note on this.
+// pre-execution one; see docs/planning/PHASE-17.md sub-phase 8's own note on this.
 func (m *Machine) printOperandDump() {
 	dec := m.Engine.LastDecoded()
 
@@ -98,11 +98,11 @@ func traceStackName(psl registers.PSL) string {
 // Step, Call), so an instruction is always traced (if at all) before it
 // runs, not after. Traces only when force is true or c.Trace is set
 // (matching STEP's own "always in trace mode" vs. EXEC/GO/CALL/RUN's own
-// vax.console.disasm gating -- see docs/PHASE-17.md sub-phase 7).
+// vax.console.disasm gating -- see docs/planning/PHASE-17.md sub-phase 7).
 //
 // The returned finish func must be called after cpu.Engine.Step returns,
 // to print DebugRegisters' changed-register dump and DebugFullDisasm's
-// operand dump (docs/PHASE-17.md sub-phase 8) -- both need the
+// operand dump (docs/planning/PHASE-17.md sub-phase 8) -- both need the
 // instruction to have actually run.
 func (m *Machine) traceStep(pc uint32, force bool) (finish func()) {
 	if !force && !m.Trace {

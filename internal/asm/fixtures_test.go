@@ -37,9 +37,9 @@ func readKernel(t *testing.T) string {
 
 // TestAssembleFixtures assembles every self-contained testdata/asm program
 // (excluding ssdef.asm, an .INCLUDE-only fragment with no code of its own —
-// see docs/PHASE-11.md's own open question about it — and kernel.asm/
+// see docs/planning/PHASE-11.md's own open question about it — and kernel.asm/
 // forth.asm, which need extra configuration and get their own tests below),
-// matching docs/PHASE-11.md's deliverable to assemble every fixture.
+// matching docs/planning/PHASE-11.md's deliverable to assemble every fixture.
 func TestAssembleFixtures(t *testing.T) {
 	names := []string{
 		"atoi.asm", "bench.asm", "dbl.asm", "ff.asm", "float1.asm", "fmt.asm",
@@ -91,7 +91,7 @@ func TestAssembleForth(t *testing.T) {
 
 // TestAssembleKernel assembles kernel.asm, the microkernel image
 // STARTUP.COM's own "asm kernel.asm" builds: it needs an .INCLUDE resolver
-// (for ssdef.asm) and, per docs/PHASE-11.md's own scope note, exercises
+// (for ssdef.asm) and, per docs/planning/PHASE-11.md's own scope note, exercises
 // nearly every microkernel-gated pseudo-op (.MICROKERNEL/.SCB/.SHIM/
 // .REGION/.SCOPE/.P1VECTOR). Its bytes end up almost entirely in S0 (it
 // switches there early via .REGION SYSTEM and stays there for the rest of
@@ -121,7 +121,7 @@ func TestAssembleKernel(t *testing.T) {
 	// defines) to both resolve — a reasonable proxy for "the whole file's
 	// forward references and .INCLUDE actually resolved", since an
 	// unresolved forward reference would silently leave this slot zero
-	// rather than fail the assembly outright (see docs/PHASE-11.md's
+	// rather than fail the assembly outright (see docs/planning/PHASE-11.md's
 	// design notes on why: matching the reference tool's own single-pass,
 	// no-mandatory-unresolved-check model).
 	sym, ok := a.symbols.find("EXE$CHMK")
@@ -141,7 +141,7 @@ func TestAssembleKernel(t *testing.T) {
 // instruction from the program's entry point onward for as long as
 // decoding keeps succeeding, reassembles each disassembled instruction on
 // its own, and checks it reproduces the same bytes the original assembly
-// produced at that address — the round-trip property docs/PHASE-11.md's
+// produced at that address — the round-trip property docs/planning/PHASE-11.md's
 // deliverables call for. Decoding necessarily stops at the first place
 // code turns into data (a following .ASCII/.BLKB/... block, which would
 // otherwise "decode" as nonsense instructions), so this only walks up to

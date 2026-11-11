@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// The Phase 71 oracle (docs/PHASE-71 - process-permanent files.md,
+// The Phase 71 oracle (docs/planning/PHASE-71 - process-permanent files.md,
 // subtask 9): testdata/ppf71's probe, run on govax, held to VMS 7.1's
 // logs.
 

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The debugger's input (docs/PHASE-73 - trace trap.md, subtask 5). The VMS
+// The debugger's input (docs/planning/PHASE-73 - trace trap.md, subtask 5). The VMS
 // debugger reads its commands from DBG$INPUT, the terminal unless that
 // logical name names a file: a command procedure that runs a program
 // under the debugger can give it a file of commands (testdata/dbgcmd's

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The console's SPAWN command (docs/PHASE-48.md, subtask 4).
+// The console's SPAWN command (docs/planning/PHASE-48.md, subtask 4).
 //
 // SPAWN [command] creates a subprocess of process 1 running the
 // subprocess CLI (subcli.go), as DCL's SPAWN does, by calling LIB$SPAWN

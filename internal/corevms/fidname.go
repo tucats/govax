@@ -27,7 +27,7 @@ type FileName struct {
 // FileSpecByID names the file with ID fid on the disk device names (a
 // device or a logical name for one, "DUA1:", "_DUA1:", or NAM$T_DVI's
 // "_GOVAX$DUA1"), as LIB$FID_TO_NAME asks the ACP for its file
-// specification attribute (docs/PHASE-58, subtask 7), looking for it in
+// specification attribute (docs/planning/PHASE-58, subtask 7), looking for it in
 // the directory did when that isn't nil. notDisk reports a device that
 // isn't a disk. status is 0, or the status the $ASSIGN or $QIO a VAX
 // routine would make reports: the device name's translation's

@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Working sets (docs/PHASE-63 - working sets.md, subtask 3).
+// Working sets (docs/planning/PHASE-63 - working sets.md, subtask 3).
 //
 // # What a working set is
 //

@@ -1,5 +1,5 @@
 // Package asm implements the MACRO-32-ish assembler and disassembler shared
-// by the console's ASM/DISASM commands. See docs/PHASE-11.md.
+// by the console's ASM/DISASM commands. See docs/planning/PHASE-11.md.
 package asm
 
 import (
@@ -26,7 +26,7 @@ const defaultS0Base = 0x80000000
 // in) shares: the symbol table, output image, and location-counter/region
 // state. Matches the reference tool's vax.assembler/vax.console fields,
 // minus the console-interactive and live-VM-specific pieces Phase 11's
-// batch-oriented Assemble doesn't need (see docs/PHASE-11.md).
+// batch-oriented Assemble doesn't need (see docs/planning/PHASE-11.md).
 type Assembler struct {
 	// lastLabel is the label most recently defined, and where (noteMaskRoutine).
 	lastLabel     string
@@ -183,7 +183,7 @@ type Assembler struct {
 
 	// errs collects the statement errors of a MACRO-dialect assembly,
 	// which goes on after an error so that one assembly reports them all
-	// (docs/PHASE-27.md, subtask 10). The console dialect stops at the
+	// (docs/planning/PHASE-27.md, subtask 10). The console dialect stops at the
 	// first error, as eVAX's assembler does.
 	errs []error
 
@@ -322,11 +322,11 @@ func (a *Assembler) Deposit() uint32 { return a.pc() }
 // HasUnresolvedSymbols reports whether any symbol assembled so far still has
 // pending forward references, matching check_unresolved_symbols(0) — the
 // reference tool's interactive bare-END warns with this when ASM_WARNFORWARD
-// (on by default) is set; see docs/PHASE-19.md.
+// (on by default) is set; see docs/planning/PHASE-19.md.
 func (a *Assembler) HasUnresolvedSymbols() bool { return a.hasUnresolvedSymbols() }
 
 // BeginInteractive prepares the Assembler for a fresh interactive REPL
-// session (the console's bare "ASM" command, docs/PHASE-19.md): clears the
+// session (the console's bare "ASM" command, docs/planning/PHASE-19.md): clears the
 // "assembly stopped" flag a previous interactive session's own END may have
 // left set, exactly mirroring Assemble's own reset on every top-level call
 // for the same reason — a persistent session (internal/console/asm.go's
@@ -340,7 +340,7 @@ func (a *Assembler) BeginInteractive() {
 }
 
 // AssembleLine assembles one interactively-typed statement — the console's
-// bare "ASM" REPL mode (docs/PHASE-19.md) — depositing directly into this
+// bare "ASM" REPL mode (docs/planning/PHASE-19.md) — depositing directly into this
 // Assembler's own image/symbol table exactly like one line of Assemble's own
 // per-line loop. Reports done=true once a bare or dotted END statement has
 // stopped assembly (matching assemble()'s single-statement entry point in

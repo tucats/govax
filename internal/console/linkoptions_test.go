@@ -82,7 +82,7 @@ func TestLink_optionsFile(t *testing.T) {
 	}
 }
 
-// TestLink_clusters links a program laid out by options (docs/PHASE-68's
+// TestLink_clusters links a program laid out by options (docs/planning/PHASE-68's
 // subtask 4): the default cluster at BASE=, its subroutine in a cluster
 // of its own at another base, read first, and a psect made read-only by
 // PSECT_ATTR=. The image runs, each routine at its cluster's address, and

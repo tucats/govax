@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Process startup (docs/PHASE-45.md, subtask 5).
+// Process startup (docs/planning/PHASE-45.md, subtask 5).
 //
 // $CREPRC only builds a process (creprc.go). The rest of getting its
 // image running happens in the new process itself, the first time the

@@ -10,9 +10,9 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Page protection and page locking (docs/PHASE-26.md subtask 36):
+// Page protection and page locking (docs/planning/PHASE-26.md subtask 36):
 // $SETPRT, $LCKPAG, $ULKPAG, $LKWSET, and $ULWSET; and $PURGWS, from
-// Phase 63's subtask 6 ("docs/PHASE-63 - working sets.md"). They work on
+// Phase 63's subtask 6 ("docs/planning/PHASE-63 - working sets.md"). They work on
 // ranges of pages the way $CRETVA and $DELTVA do (vaspace.go), sharing
 // their range handling.
 //

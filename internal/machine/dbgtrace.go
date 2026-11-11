@@ -7,7 +7,7 @@ import (
 )
 
 // Where an instruction is, for the instruction trace, STEP, and SHOW
-// CALLS (docs/PHASE-41.md, subtask 12). Inside an image with a debug
+// CALLS (docs/planning/PHASE-41.md, subtask 12). Inside an image with a debug
 // symbol table, and with symbolic display on (the vax.disassemble.symbolic
 // setting, as for DISASSEMBLE), a PC is shown as the VMS debugger shows
 // it: DBGDIS\START\%LINE 43, FAILSUB\SUB2, TRACE+10. Anywhere else (the

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10). The
+// SHOW SYSTEM and SHOW PROCESS (docs/planning/PHASE-44.md, subtask 10). The
 // reports are built by internal/corevms (showsys.go), which has the
 // process table and the scheduler; these commands find the process and
 // print.

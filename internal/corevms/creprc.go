@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// $CREPRC, creating a process (docs/PHASE-45.md, subtask 4).
+// $CREPRC, creating a process (docs/planning/PHASE-45.md, subtask 4).
 //
 // A VMS program starts another process with the Create Process service:
 //
@@ -45,7 +45,7 @@ import (
 // govax accepts and ignores them.
 //
 // Like every other part of multiprocessing, $CREPRC works only with the
-// vax.process.scheduler setting on (docs/PHASE-43.md, Part A, rule 2);
+// vax.process.scheduler setting on (docs/planning/PHASE-43.md, Part A, rule 2);
 // with it off, it returns SS$_UNSUPPORTED.
 
 // Status codes $CREPRC returns, besides the ones other services share.

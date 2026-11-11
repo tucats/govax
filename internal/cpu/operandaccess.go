@@ -22,7 +22,7 @@ var ErrImmutableOperand = vmserrors.New(vmserrors.VAX_IMMOPND)
 // LoadOctaword for all of it. This is the Go port of storage.c's
 // get_operand, minus the pointer/scratch-register mechanism it uses to give
 // register, memory, and literal operands a uniform pointer interface — see
-// docs/PHASE-03.md's design notes. Sign-extension, when an instruction
+// docs/planning/PHASE-03.md's design notes. Sign-extension, when an instruction
 // needs it, is the caller's job, same as in the C source.
 //
 // A register operand sized 8 bytes reads a register pair (op.Reg holds the

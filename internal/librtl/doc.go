@@ -1,6 +1,6 @@
 // Package librtl emulates LIBRTL.EXE, VMS's general run-time library: the
 // LIB$ and STR$ routines a program calls through the shareable image's
-// transfer vector (docs/PHASE-34.md, subtask 10).
+// transfer vector (docs/planning/PHASE-34.md, subtask 10).
 //
 // # How a program reaches a routine here
 //
@@ -16,7 +16,7 @@
 //
 // A routine whose whole job is a transfer of control, such as LIB$CALLG,
 // is VAX code in the microkernel (kernel.asm) instead: its row has code 0,
-// and its SHIM$ symbol is the routine itself (docs/PHASE-53, Decision 1).
+// and its SHIM$ symbol is the routine itself (docs/planning/PHASE-53, Decision 1).
 //
 // # Failures that are signals
 //
@@ -24,7 +24,7 @@
 // SS$_ACCVIO, as VMS's routine's own instruction would fault, rather
 // than returning it (fault.go). Every LIBRTL.EXE entry govax doesn't
 // implement has a stub too, which signals SS$_UNSUPPORTED when called
-// (missing.go), so an image naming one can still run (docs/PHASE-53,
+// (missing.go), so an image naming one can still run (docs/planning/PHASE-53,
 // Decisions 5 and 6).
 //
 // # The instruction routines
@@ -109,7 +109,7 @@
 // (trimfilespec.go) fits a name to a width. A routine that calls back is
 // in routines.go's callsBack set: it runs on a goroutine of its own, and
 // corevms.Environment.Callback is a Go call of a VAX procedure that
-// returns its R0 (internal/corevms/callback.go; docs/PHASE-53's
+// returns its R0 (internal/corevms/callback.go; docs/planning/PHASE-53's
 // Decision 9). VMS 7.1's run of testdata/lib58 (TestLib58Oracle) settled
 // what the manuals left open.
 //

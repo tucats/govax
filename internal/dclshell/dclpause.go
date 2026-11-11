@@ -2,7 +2,7 @@ package dclshell
 
 import "github.com/tucats/govax/internal/corevms"
 
-// LIB$PAUSE (docs/PHASE-57, "PAUSE"; the 5.0 manual's LIB-299): an image
+// LIB$PAUSE (docs/planning/PHASE-57, "PAUSE"; the 5.0 manual's LIB-299): an image
 // asks to be paused and to give DCL the terminal, as a Ctrl/Y typed at
 // the terminal would. DCL reads the Ctrl/Y level (readControlYLevel)
 // wherever the image was run from, command level 0 included, with its

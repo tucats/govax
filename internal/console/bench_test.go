@@ -8,10 +8,10 @@ import (
 )
 
 // BenchmarkSieve is Phase 12's own named performance-pass target
-// (docs/PHASE-12.md's scope: "profile the fetch-decode-execute loop under
+// (docs/planning/PHASE-12.md's scope: "profile the fetch-decode-execute loop under
 // bench.asm"): calls bench.asm's own SIEVE routine directly (not MAIN,
 // which prints its result through LIB$PUT_OUTPUT-style RTL calls this
-// port's console-I/O interrupt gap -- see docs/PHASE-14.md -- would stall
+// port's console-I/O interrupt gap -- see docs/planning/PHASE-14.md -- would stall
 // on) with a fixed argument, so this profiles a pure, self-contained,
 // CPU-bound VAX computation: run with
 //
@@ -22,7 +22,7 @@ func BenchmarkSieve(b *testing.B) {
 }
 
 // BenchmarkSieveScheduled is BenchmarkSieve with the scheduler installed
-// as the engine's hook (vax.process.scheduler on; docs/PHASE-44.md,
+// as the engine's hook (vax.process.scheduler on; docs/planning/PHASE-44.md,
 // subtask 2), at the default quantum: what one process pays for the
 // scheduler's per-instruction count.
 func BenchmarkSieveScheduled(b *testing.B) {

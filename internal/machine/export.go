@@ -292,7 +292,7 @@ func (m *Machine) ReadBytes(addr, n uint32) ([]byte, error) {
 // page's modify bit is set (markModified), so that the change outlives
 // the page's leaving the working set: a read-only page of a mapped image
 // would otherwise be clean, and read again from the image file once its
-// frame went to another page (docs/PHASE-66, question 3). A page that
+// frame went to another page (docs/planning/PHASE-66, question 3). A page that
 // isn't there at all still fails, but for process 1's P0, whose missing
 // pages are created first (ensureConsolePages).
 func (m *Machine) WriteBytes(addr uint32, data []byte) error {

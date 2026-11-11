@@ -170,7 +170,7 @@ func TestResolver_withDirSearchesAheadOfExistingDirs(t *testing.T) {
 }
 
 // TestResolver_volumeBetweenDirsAndFallback checks the system volume's
-// place in the search (docs/PHASE-87 - system volume.md, Decision 4):
+// place in the search (docs/planning/PHASE-87 - system volume.md, Decision 4):
 // after the search directories, before the fallback, and each file's
 // origin reported.
 func TestResolver_volumeBetweenDirsAndFallback(t *testing.T) {

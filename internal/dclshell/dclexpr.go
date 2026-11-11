@@ -13,7 +13,7 @@ import (
 // dclExpression's operand).
 const maxExpressionValue = 1023
 
-// DCL expressions (docs/PHASE-50 - DCL command procedures.md, subtask 9),
+// DCL expressions (docs/planning/PHASE-50 - DCL command procedures.md, subtask 9),
 // as the OpenVMS User's Manual (7.3) describes them in sections 12.5 to
 // 12.9: what the right side of "=" and "==" is, and (later) what IF,
 // WRITE, and a lexical function's arguments are.

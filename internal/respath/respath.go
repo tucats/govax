@@ -1,11 +1,11 @@
-// Package respath implements the file-lookup policy docs/PHASE-15.md's first
+// Package respath implements the file-lookup policy docs/planning/PHASE-15.md's first
 // sub-phase describes: resolving a name that may be unqualified (typed on a
 // command line or named by a startup script, e.g. "console.dcl" or
 // "kernel.asm") by trying, in order, (1) the name exactly as given, relative
 // to the process's current working directory or as an absolute path, (2)
 // each of a configured list of search directories (the "-path" flag's -PATH-
 // style directory list), (3) the system volume's copy of the file, when
-// there is one (docs/PHASE-87 - system volume.md, Decision 4), and (4) an
+// there is one (docs/planning/PHASE-87 - system volume.md, Decision 4), and (4) an
 // embedded filesystem fallback so a standalone govax binary with no search
 // directories configured still finds its required startup files.
 //

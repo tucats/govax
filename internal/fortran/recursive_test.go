@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
-// The syntax of recursive routines (docs/PHASE-89 - reentrant FORTRAN.md, subtask
+// The syntax of recursive routines (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtask
 // 2): which units /RECURSIVE, OPTIONS, and RECURSIVE make recursive. Since subtask 4
 // a recursive unit is compiled with its storage in the frame, and its storage map's
 // heading says it is RECURSIVE, so these tests read the headings.

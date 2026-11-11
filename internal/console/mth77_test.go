@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
-// The Phase 77 oracle (docs/PHASE-77 - MTHRTL.md, subtask 10): testdata/mth77's
+// The Phase 77 oracle (docs/planning/PHASE-77 - MTHRTL.md, subtask 10): testdata/mth77's
 // mth77.mar calls MTHRTL's routines case by case, and prints what each returned and
 // signaled. vax/mth77-vax.txt is its output on VMS. govax's must match line for line
 // but for expectedMTH77Differences, except that a floating result may differ in its

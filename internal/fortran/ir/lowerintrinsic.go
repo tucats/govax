@@ -11,7 +11,7 @@ import (
 // functions are EXTZV, ASHL, BIS, and BIC, ICHAR is MOVZBL, INDEX is MATCHC.
 //
 // ABS, MAX, MIN, DIM, and SIGN choose between values, which takes a branch
-// (Decision 6 of docs/PHASE-78 - FORTRAN expressions and types.md): they
+// (Decision 6 of docs/planning/PHASE-78 - FORTRAN expressions and types.md): they
 // are lowered as a function's call is, their blocks before the statement and
 // their value in a temporary the statement loads. MAX(A, B, C) is
 //

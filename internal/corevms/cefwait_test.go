@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// Common event flags across processes (docs/PHASE-46.md, subtask 4): a
+// Common event flags across processes (docs/planning/PHASE-46.md, subtask 4): a
 // flag set in a common cluster, by $SETEF, a timer, or a completing
 // request, ends the CEF waits it satisfies in every process associated
 // with the cluster, at once (postFlag, as VMS's SCH$POSTEF), and a

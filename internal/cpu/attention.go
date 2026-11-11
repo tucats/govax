@@ -1,6 +1,6 @@
 package cpu
 
-// Attention keys and CTRL/C / CTRL/Y ASTs (docs/PHASE-26.md subtask 27).
+// Attention keys and CTRL/C / CTRL/Y ASTs (docs/planning/PHASE-26.md subtask 27).
 //
 // When the user types CTRL/C at the host terminal while a VAX program
 // runs, govax's console is told (Engine.Attention, from main.go's

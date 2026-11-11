@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/ods2/filespec"
 )
 
-// Finding a shareable image's file (docs/PHASE-68 - link shareable
+// Finding a shareable image's file (docs/planning/PHASE-68 - link shareable
 // images.md, Decision 3 and subtask 10). A program's shareable image
 // list holds only names ("SHR1", "LIBRTL"); the file each names is found
 // the same way by RUN's two loaders (copying and mapping), by LINK for
@@ -30,7 +30,7 @@ import (
 //     search list in SYS$SHARE is searched in order.
 //  3. The host: the SET SHARE_PREFIX prefix, the host library directory
 //     (vax.library), then the name as given (the current directory).
-//  4. An image built into govax (FTNRTL, docs/PHASE-74 - FORTRAN
+//  4. An image built into govax (FTNRTL, docs/planning/PHASE-74 - FORTRAN
 //     plan.md, Decision 13), so that it is always there, but anywhere
 //     above may hold a version of one's own.
 

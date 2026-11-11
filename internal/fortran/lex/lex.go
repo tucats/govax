@@ -35,7 +35,7 @@ type Statement struct {
 
 	// Recursive is set for a FUNCTION or SUBROUTINE statement that says
 	// RECURSIVE, before the type or FUNCTION or SUBROUTINE, or between the type
-	// and FUNCTION (the HP Fortran manual's 8.5.2 and 8.5.3; docs/PHASE-89 -
+	// and FUNCTION (the HP Fortran manual's 8.5.2 and 8.5.3; docs/planning/PHASE-89 -
 	// reentrant FORTRAN.md). The keyword is no token.
 	Recursive bool
 
@@ -354,7 +354,7 @@ func (l *lexer) ifStatement(st *Statement, elseIf bool, open, close, j int) *Sta
 // p=c [,p=c]..., which has no parentheses. Squeezed, PARAMETER PI=3.14
 // is PARAMETERPI=3.14, the same text as an assignment to a variable
 // named PARAMETERPI, so the text alone can't tell them apart. The rule
-// here is ours (docs/PHASE-76 - FORTRAN front end.md, Part A, unconfirmed
+// here is ours (docs/planning/PHASE-76 - FORTRAN front end.md, Part A, unconfirmed
 // on VMS): in a unit's specification part, before its first executable
 // statement, text that starts with PARAMETER and then a name running up
 // to the = is the PARAMETER statement. An assignment there would be the

@@ -9,7 +9,7 @@ import (
 )
 
 // $DELPRC of another process, and subprocesses deleted with their owner
-// (docs/PHASE-45.md, subtask 8). The fixture has no hardware PCBs, so
+// (docs/planning/PHASE-45.md, subtask 8). The fixture has no hardware PCBs, so
 // the scheduler can't switch to a marked process here: these tests mark,
 // wait, and then run each deletion as switchTo would. The deletions in
 // each process's own context, chosen by the scheduler, are tested with a

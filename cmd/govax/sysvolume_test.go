@@ -12,7 +12,7 @@ import (
 )
 
 // TestMain starts every test in this package with no system volume
-// (docs/PHASE-87 - system volume.md): run would otherwise mount, and the
+// (docs/planning/PHASE-87 - system volume.md): run would otherwise mount, and the
 // first time make, the user's own ~/.govax/govax-system.dsk, or one a
 // profile's vax.default.system.file names. A test of the system volume
 // sets systemOptions itself (withSystemVolume).

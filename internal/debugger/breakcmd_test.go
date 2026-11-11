@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 )
 
-// Tests of SET BREAK, SHOW BREAK, and CANCEL BREAK (docs/PHASE-42.md,
+// Tests of SET BREAK, SHOW BREAK, and CANCEL BREAK (docs/planning/PHASE-42.md,
 // subtask 6), against the sessions the VMS 7.3 debugger ran on the Phase 42
 // probe's DBGCMD image (testdata/dbgcmd/vax/break.dlg and brkcls.dlg).
 //

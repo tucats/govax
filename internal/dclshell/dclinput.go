@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// SYS$INPUT from a command procedure (docs/PHASE-50 - DCL command
+// SYS$INPUT from a command procedure (docs/planning/PHASE-50 - DCL command
 // procedures.md, subtask 16).
 //
 // In VMS, an image that a command procedure runs reads the procedure

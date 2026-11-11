@@ -153,7 +153,7 @@ func (m *Machine) ShowMemory() error {
 }
 
 // showPagedRegions prints SHOW MEMORY's region lines with paging on
-// (docs/PHASE-67 - address space under paging.md, subtask 5), for the
+// (docs/planning/PHASE-67 - address space under paging.md, subtask 5), for the
 // process the CPU is in, env. P0 and P1 are created space: each region's
 // size is the pages it has now (its length register), its virtual
 // addresses the range they cover, and its table frames how many pages of
@@ -199,7 +199,7 @@ func pluralS(n int) string {
 }
 
 // PagingStatistics is what SHOW MEMORY shows of paging, gathered for
-// govax's --stats report at exit (docs/PHASE-64 - page file.md, subtask
+// govax's --stats report at exit (docs/planning/PHASE-64 - page file.md, subtask
 // 10): the page frames by place, the system's page faults and the
 // writer's and reclaimer's work, and the page file.
 type PagingStatistics struct {
@@ -1155,7 +1155,7 @@ func (m *Machine) ShowCallFrames(countExpr string) error {
 
 // ShowCalls implements SHOW CALLS[/[NO]SYMBOLIC] [count]. With symbolic,
 // and the PC in a module of a loaded image's debug symbol table, it's the
-// VMS debugger's table of frames (showDebugCalls; docs/PHASE-41.md,
+// VMS debugger's table of frames (showDebugCalls; docs/planning/PHASE-41.md,
 // subtask 12), every frame when no count is given, as the debugger shows
 // them. Otherwise it's the console's own dump of the frames at FP
 // (ShowCallFrames), one frame when no count is given.
@@ -1619,8 +1619,8 @@ var tbModeNames = [2]string{"READ", "WRITE"}
 // miss/ratio line, whether TBDR has TB caching enabled, the 128-entry
 // translation buffer's own try/hit/miss/ratio/flush/pflush counters, and
 // one line per currently-populated TB slot. Ported as of Phase 21, which
-// added the real cache this command reports on -- see docs/PHASE-21.md
-// (supersedes the "not applicable to this port" stub docs/PHASE-16.md sub-
+// added the real cache this command reports on -- see docs/planning/PHASE-21.md
+// (supersedes the "not applicable to this port" stub docs/planning/PHASE-16.md sub-
 // phase 1f left behind).
 func (m *Machine) ShowTB() error {
 	if err := m.requireInit(); err != nil {
@@ -1729,7 +1729,7 @@ func sizeAbbrev(n int) string {
 // four-per-line opcode/name grid (implemented instructions by default,
 // unimplemented with /UNIMPLEMENTED); with /ALL or an opcode filter, one
 // line per instruction with full operand access/size detail. /MODES and
-// /PROFILE are not implemented — see docs/PHASE-16.md sub-phase 1e (the
+// /PROFILE are not implemented — see docs/planning/PHASE-16.md sub-phase 1e (the
 // former needs an addressing-mode legality table this port doesn't
 // expose, the latter needs per-opcode execution counters that don't
 // exist, arguably a developer/instrumentation feature rather than

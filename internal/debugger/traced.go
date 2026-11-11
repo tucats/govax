@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The debugger beside a program that traces itself (docs/PHASE-73 - trace
+// The debugger beside a program that traces itself (docs/planning/PHASE-73 - trace
 // trap.md, subtasks 3 and 4).
 //
 // A program can ask for control after each of its instructions by setting

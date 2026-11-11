@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/diag"
 )
 
-// Debug is what /DEBUG asks MACRO to write for the debugger (docs/PHASE-85 - FORTRAN
+// Debug is what /DEBUG asks MACRO to write for the debugger (docs/planning/PHASE-85 - FORTRAN
 // compiler usability.md). The compiler writes no debugger records itself (Phase 74's
 // Decision 3): it says so in the MACRO file, so that a plain MACRO does as it's told.
 // The zero value is the default, MACRO's own: traceback records alone.

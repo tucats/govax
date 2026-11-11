@@ -1,6 +1,6 @@
 package corevms
 
-// UIC-based protection (docs/PHASE-46.md, subtask 3): the check VMS
+// UIC-based protection (docs/planning/PHASE-46.md, subtask 3): the check VMS
 // makes before letting a process use an object that has an owner and a
 // protection mask, such as a mailbox.
 //

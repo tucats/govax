@@ -152,7 +152,7 @@ func lbr90wRunParts(t *testing.T, d *Dispatcher, c *Console, dir string, vms map
 // WD4.HLB, the object library LIBRARY made from a help library, isn't:
 // VMS's took the failed module's records off its blocks' counts and set the
 // header's next RFA back to the module's start (51,0), which govax doesn't
-// (docs/PHASE-90 - VMS help.md, subtask 11e); its size is VMS's.
+// (docs/planning/PHASE-90 - VMS help.md, subtask 11e); its size is VMS's.
 var lbr90wPartLibraries = []string{
 	"W2L.TLB;1", "WD1.HLB;1", "WD2.HLB;1", "WD3.HLB;1", "WD5.HLB;1", "WD6.HLB;1",
 	"WD7.HLB;1", "WD8.HLB;1", "WD8.HLB;2", "WD8.HLB;3",

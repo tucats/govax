@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// IF, THEN, ELSE, and ENDIF (docs/PHASE-50 - DCL command procedures.md,
+// IF, THEN, ELSE, and ENDIF (docs/planning/PHASE-50 - DCL command procedures.md,
 // subtask 12), as the OpenVMS User's Manual describes them (13.5.2 and
 // 14.16). IF has two forms. On one line, it runs one command when its
 // expression is true:

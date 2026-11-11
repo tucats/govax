@@ -9,7 +9,7 @@ import (
 )
 
 // Tests for the message and listing-control directives
-// (docs/PHASE-28.md, subtask 4).
+// (docs/planning/PHASE-28.md, subtask 4).
 
 // requireMessage fails the test unless err is the status code's, and its
 // text ends with want.

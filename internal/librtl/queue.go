@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The queue and interlock routines (docs/PHASE-53, subtask 9): LIB$INSQHI,
+// The queue and interlock routines (docs/planning/PHASE-53, subtask 9): LIB$INSQHI,
 // LIB$INSQTI, LIB$REMQHI, LIB$REMQTI, LIB$BBSSI, and LIB$BBCCI make the
 // VAX's interlocked instructions callable.
 //

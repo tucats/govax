@@ -187,7 +187,7 @@ end_module $PDEF;
 }
 
 // TestParseSDL_recordLayout covers the record-layout forms objfmt.sdl
-// uses (docs/PHASE-27.md): typed fields and their offsets, a flags word
+// uses (docs/planning/PHASE-27.md): typed fields and their offsets, a flags word
 // overlaid by its bits, "equals .", character lengths and a fill
 // dimension, a tag override, ifsymbol blocks, and an origin field.
 func TestParseSDL_recordLayout(t *testing.T) {

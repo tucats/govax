@@ -159,7 +159,7 @@ func (m *Machine) formatOne(addr uint32, sz ExamSize, v uint32) string {
 // no standalone DEPOSIT command of its own — memory is normally modified
 // through the inline mini-assembler's immediate mode (Phase 11's scope,
 // not ported here) — so this is a small, deliberate Go-native addition
-// implementing the "DEPOSIT" deliverable docs/PHASE-08.md names explicitly,
+// implementing the "DEPOSIT" deliverable docs/planning/PHASE-08.md names explicitly,
 // using the same size/register/addressing rules as Examine rather than
 // inventing a different convention.
 func (m *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) error {
@@ -208,7 +208,7 @@ func (m *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 // ensureConsolePages creates the P0 pages the console is about to write
 // length bytes of at addr (ASM's program, DEPOSIT's value) when they
 // don't exist, so interactive use works as it does with paging off
-// (docs/PHASE-67 - address space under paging.md, subtask 7). With paging
+// (docs/planning/PHASE-67 - address space under paging.md, subtask 7). With paging
 // on, P0's length register describes only the pages that exist, and a
 // write past P0's end would be an access violation; this extends P0 to
 // cover the pages, each created as $CRETVA creates a user-mode page

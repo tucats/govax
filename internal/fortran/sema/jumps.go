@@ -33,7 +33,7 @@ func (a *analyzer) computedGoto(s *ast.ComputedGotoStmt, path []frame) Stmt {
 // assignLabel analyzes ASSIGN s TO v (section 3.5). v holds the address
 // of the statement labeled s, which takes 32 bits: so it must be an
 // INTEGER*4 variable, whatever the unit's default INTEGER is (the
-// author's answer 1 in docs/PHASE-79). The label may be an executable
+// author's answer 1 in docs/planning/PHASE-79). The label may be an executable
 // statement's or a FORMAT statement's (checkLabels).
 func (a *analyzer) assignLabel(s *ast.AssignLabelStmt) Stmt {
 	a.refs = append(a.refs, labelRef{label: s.Target.Label, pos: s.Target.Pos, assign: true})

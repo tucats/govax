@@ -1,5 +1,5 @@
 // Package isam is the on-disk format of RMS's indexed files (Phase 88;
-// docs/PHASE-88 - keyed index files.md, whose Part A is where this layout
+// docs/planning/PHASE-88 - keyed index files.md, whose Part A is where this layout
 // was worked out, from VMS-made files and VMS's own reports of them).
 //
 // An indexed file keeps its records in order of one or more keys, so a

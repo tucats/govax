@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Copying strings and analyzing descriptors (docs/PHASE-54, "Copying and
+// Copying strings and analyzing descriptors (docs/planning/PHASE-54, "Copying and
 // descriptors"): LIB$SCOPY_DXDX, LIB$SCOPY_R_DX, LIB$ANALYZE_SDESC, and
 // their JSB entries. The copies write the destination by its class, as
 // every LIB$ output string is written (writeString, whose rules are

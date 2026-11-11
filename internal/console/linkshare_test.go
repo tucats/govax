@@ -20,7 +20,7 @@ import (
 var link68Vax = filepath.Join("..", "..", "testdata", "link68", "vax")
 
 // TestLinkShareable runs the probe's LINK/SHAREABLE of SHR4 through DCL,
-// its options from SYS$INPUT, with verification on (docs/PHASE-68's
+// its options from SYS$INPUT, with verification on (docs/planning/PHASE-68's
 // subtask 5). As in VMS's log, ISD_MAX= is ignored with OPTIGNSHR after
 // its line, the link succeeds without USRTFR, and the image is VMS's but
 // for the name, time, and linker ID in its header and global symbol
@@ -190,7 +190,7 @@ func link68Table(t *testing.T, path string, at uint32) []byte {
 
 // TestLinkShareableUsingAnother runs the probe's LINK/SHAREABLE of SHR2
 // through DCL, linked against VMS's SHR1.EXE, which a SYS$INPUT options
-// file names (docs/PHASE-68's subtask 7). The image is VMS's but for the
+// file names (docs/planning/PHASE-68's subtask 7). The image is VMS's but for the
 // name, time, and linker ID in its header: its ident is SHR1's, V1.0, the
 // first module LINK read; its shareable image list and global section
 // ISDs name LIBRTL, which SHR1 uses; and its cells for SHR1 are in
@@ -256,7 +256,7 @@ func TestLinkShareableUsingAnother(t *testing.T) {
 }
 
 // TestLinkShareableFullMap links SHR2 against VMS's SHR1.EXE with
-// /MAP/FULL: the map is a full one (docs/PHASE-68, subtask 8), with the
+// /MAP/FULL: the map is a full one (docs/planning/PHASE-68, subtask 8), with the
 // image section synopsis and its SHR1 sections, the module relocatable
 // reference synopsis, the symbols by value, and the image synopsis's
 // SHAREABLE line. /FULL with /BRIEF is DCL's CONFLICT, and links nothing.
@@ -322,7 +322,7 @@ func TestLinkShareableFullMap(t *testing.T) {
 }
 
 // TestLinkAgainstGovaxShareableImages runs the probe's shareable image
-// cycle through DCL on a volume, all of it govax's (docs/PHASE-68's
+// cycle through DCL on a volume, all of it govax's (docs/planning/PHASE-68's
 // subtask 9): MACRO of the sources, LINK/SHAREABLE of SHR1 and of SHR2,
 // which uses SHR1, then MAIN2 linked against SHR2. SHR1 is found through
 // its logical name, as the probe's VAX found it, for MAIN2's global

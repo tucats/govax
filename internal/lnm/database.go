@@ -22,7 +22,7 @@ const (
 // system table, the group tables, and the job tables.
 //
 // The shareable half is held once, in a sharedTables, and every process's
-// Database points to it (docs/PHASE-45.md, subtask 3). NewDatabase makes
+// Database points to it (docs/planning/PHASE-45.md, subtask 3). NewDatabase makes
 // the first process's view, along with the shareable tables; NewProcessView
 // makes another process's view of the same ones. A name one process
 // defines in its process table is seen by no other process; one it
@@ -124,7 +124,7 @@ func NewDatabase(uic uint32) *Database {
 		// for every name (testdata/ppf71).
 		{"LNM$DCL_LOGICAL", []string{"LNM$FILE_DEV"}, Supervisor},
 		{"LNM$DIRECTORIES", []string{ProcessDirectoryName, SystemDirectoryName}, Executive},
-		// Where $CREMBX puts mailbox logical names (docs/PHASE-26.md
+		// Where $CREMBX puts mailbox logical names (docs/planning/PHASE-26.md
 		// subtask 29): a temporary mailbox's in the job table, so every
 		// process in the job can find it.
 		{"LNM$TEMPORARY_MAILBOX", []string{"LNM$JOB"}, Executive},

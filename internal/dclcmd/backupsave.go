@@ -16,7 +16,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// BACKUP's save (docs/PHASE-69 - backup save sets.md, subtask 11): the
+// BACKUP's save (docs/planning/PHASE-69 - backup save sets.md, subtask 11): the
 // files the input specifier names on a mounted volume, chosen by the
 // input file-selection qualifiers, written into a new save set
 // (internal/backup's Writer) as VMS V7.1's BACKUP V6.2 writes one, with

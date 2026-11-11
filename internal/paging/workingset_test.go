@@ -320,7 +320,7 @@ func TestWorkingSetOverflow(t *testing.T) {
 // entry may be grown into, so the page takes an available entry rather
 // than a new one past the limit (a list over its limit has every entry in
 // use). Found running the whole suite with paging forced on and 30-page
-// working sets (docs/PHASE-66 - mapped image activation.md, subtask 7).
+// working sets (docs/planning/PHASE-66 - mapped image activation.md, subtask 7).
 func TestWorkingSetNowhereElse(t *testing.T) {
 	w := NewWorkingSet(6, Bounds{Quota: 3, Extent: 8, Minimum: 2})
 	scarce := Conditions{FreePages: 63, GrowLimit: 63}

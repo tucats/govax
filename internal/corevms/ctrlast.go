@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/sched"
 
-// CTRL/C and CTRL/Y ASTs (docs/PHASE-26.md subtask 27).
+// CTRL/C and CTRL/Y ASTs (docs/planning/PHASE-26.md subtask 27).
 //
 // # What they're for
 //
@@ -100,7 +100,7 @@ func (env *Environment) Attention(key byte) bool {
 	return env.deliverAttentionASTs(AttentionCtrlY)
 }
 
-// AttentionAny is Attention for the whole system (docs/PHASE-46.md,
+// AttentionAny is Attention for the whole system (docs/planning/PHASE-46.md,
 // subtask 7): the key goes to the process that enabled an AST for it,
 // first the running one (current), then the others in PID order; one
 // waiting (for a terminal line, say) is told at once, so it runs its AST.

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// The table area backed on demand (docs/PHASE-67 - address space under
+// The table area backed on demand (docs/planning/PHASE-67 - address space under
 // paging.md, subtask 4).
 //
 // A process's two page tables share one area of S0 (ProcessSpace): P0's

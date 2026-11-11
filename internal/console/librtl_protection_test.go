@@ -5,7 +5,7 @@ import "testing"
 // TestLibrtlProtection: a program formats a protection mask with
 // LIB$FORMAT_SOGW_PROT, parses a protection string with
 // LIB$PARSE_SOGW_PROT and an access string with LIB$PARSE_ACCESS_CODE,
-// and shows the masks and end positions with LIB$SYS_FAO (docs/PHASE-55,
+// and shows the masks and end positions with LIB$SYS_FAO (docs/planning/PHASE-55,
 // subtask 7).
 func TestLibrtlProtection(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+

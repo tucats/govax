@@ -1,7 +1,7 @@
 # govax's RMS macros: the specification
 
 This is the specification govax's own RMS macros (`internal/bootdata/files/
-starlet.mar`) are written from (docs/PHASE-32.md, subtask 2). It comes
+starlet.mar`) are written from (docs/planning/PHASE-32.md, subtask 2). It comes
 from three sources only:
 
 - **[M]** the *OpenVMS Record Management Services Reference Manual*

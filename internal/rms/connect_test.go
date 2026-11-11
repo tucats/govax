@@ -61,7 +61,7 @@ func TestSysConnect_console(t *testing.T) {
 // SYS$CREATEd disk file arms it for writing: the resulting FileHandle
 // gets a real *rms.Writer (from the sibling ods2 module), and that
 // Writer is immediately usable to put a record — the very next thing a
-// real VAX program would do (SYS$PUT, docs/PHASE-22.md's subtask 7).
+// real VAX program would do (SYS$PUT, docs/planning/PHASE-22.md's subtask 7).
 func TestSysConnect_diskWrite(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:TEST.DAT") // facPut, orgSeq, RecordFormatFixed, MRS 80 — see newFAB
@@ -200,7 +200,7 @@ func TestSysConnect_reusesExistingWriter(t *testing.T) {
 // TestSysConnect_readArming confirms SYS$CONNECT against a FAB whose
 // FAB$B_FAC asks for GET access arms the FileHandle's Reader instead of
 // its Writer. There's no SYS$OPEN yet to produce a read-only FileHandle
-// through this package's own services (docs/PHASE-22.md's subtask 9), so
+// through this package's own services (docs/planning/PHASE-22.md's subtask 9), so
 // this test builds one directly against the sibling ods2 module's own
 // volume API — writing a small file, closing it, and reopening it fresh
 // — exactly the kind of file SYS$OPEN will eventually hand SYS$CONNECT

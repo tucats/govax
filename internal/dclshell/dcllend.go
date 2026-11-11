@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Letting the other processes run between DCL commands (docs/PHASE-50,
+// Letting the other processes run between DCL commands (docs/planning/PHASE-50,
 // subtask 21).
 //
 // DCL is Go, so a DCL command runs no instructions, and while process 1's

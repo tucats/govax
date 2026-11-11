@@ -152,7 +152,7 @@ const GovaxFacility = 0xFFF
 
 // GovaxNotImplemented is GOVAX-E-NOTIMPL, the condition a routine of a
 // shareable image govax stands in for, but doesn't implement, signals
-// after SS$_UNSUPPORTED (docs/PHASE-53, Decision 6). Its one $FAO
+// after SS$_UNSUPPORTED (docs/planning/PHASE-53, Decision 6). Its one $FAO
 // parameter is the routine's name, by descriptor. Facility-specific (bit
 // 15), message 1, severity E.
 const GovaxNotImplemented = GovaxFacility<<16 | 1<<15 | 1<<3 | 2

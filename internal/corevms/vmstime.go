@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The VMS time services (docs/PHASE-26.md subtasks 12, 13, and 20):
+// The VMS time services (docs/planning/PHASE-26.md subtasks 12, 13, and 20):
 // $GETTIM reads the system clock, $ASCTIM/$BINTIM convert between binary
 // times and the text forms VMS prints and accepts, and $NUMTIM breaks a
 // binary time into numbers.

@@ -28,7 +28,7 @@ const (
 	OperandImmediate
 )
 
-// Operand is one decoded instruction operand. See docs/PHASE-03.md's design
+// Operand is one decoded instruction operand. See docs/planning/PHASE-03.md's design
 // notes for why this is value-based rather than the C source's pointer/
 // scratch-register mechanism (struct OPCODE's address[]/VAXaddr[]/regnum[]
 // fields).

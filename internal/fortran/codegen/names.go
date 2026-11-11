@@ -6,7 +6,7 @@ import "strconv"
 const maxSymbol = 31
 
 // namer makes the MACRO symbols of one module (Decision 10 of
-// docs/PHASE-74 - FORTRAN plan.md). Everything a routine owns is named
+// docs/planning/PHASE-74 - FORTRAN plan.md). Everything a routine owns is named
 // by the routine's name, a period, and its own name: SQUARES.I for the
 // variable I, SQUARES.L10 for the statement labeled 10, SQUARES.$C1 for
 // a DO loop's count. MACRO allows a period in a symbol and FORTRAN names

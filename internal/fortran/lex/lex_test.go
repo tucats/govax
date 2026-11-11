@@ -96,7 +96,7 @@ func TestClassify(t *testing.T) {
 		{text: "FUNCTION ROOT(A)", want: "FUNCTION: ROOT ( A )", first: true},
 		{text: "LOGICAL FUNCTION", want: "LOGICAL: FUNCTION", first: true},
 
-		// RECURSIVE, before the type or after it (docs/PHASE-89), only at a
+		// RECURSIVE, before the type or after it (docs/planning/PHASE-89), only at a
 		// unit's start; RESULT is a name for the parser.
 		{text: "RECURSIVE FUNCTION F(N) RESULT(L)", want: "FUNCTION (recursive): F ( N ) RESULT ( L )", first: true},
 		{text: "RECURSIVE INTEGER*2 FUNCTION F(N)", want: "FUNCTION (INTEGER) (recursive): * 2 FUNCTION F ( N )", first: true},

@@ -1,5 +1,5 @@
 // Package paging holds the bookkeeping beneath govax's VMS paging (the
-// paging program, Phases 62 to 67; docs/PHASE-62 - VMS paging.md): the
+// paging program, Phases 62 to 67; docs/planning/PHASE-62 - VMS paging.md): the
 // PFN database and its page lists, and each process's working set list
 // (WorkingSet, Phase 63), as plain Go with no CPU or memory of its own,
 // so the rules can be tested on their own.

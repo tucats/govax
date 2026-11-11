@@ -19,9 +19,9 @@ import (
 //   - XAB$: $XABDEF's extended attribute blocks: the common fields, and
 //     those of the XABALL, XABDAT, XABFHC, XABITM, XABKEY, XABPRO, XABRDT,
 //     XABSUM, and XABTRM blocks. XABKEY's, XABSUM's, and XABITM's came from
-//     real MACRO's output (testdata/mar/rms/defined.txt, docs/PHASE-32.md).
+//     real MACRO's output (testdata/mar/rms/defined.txt, docs/planning/PHASE-32.md).
 //   - SS$_: $SSDEF's system-service completion codes, exactly as
-//     STARLET.OLB's SYS$SSDEF defines them (docs/PHASE-31.md).
+//     STARLET.OLB's SYS$SSDEF defines them (docs/planning/PHASE-31.md).
 //   - LNM$: $LNMDEF's attribute bits, limits, and item codes. LNM$_CHAIN
 //     is -1, stored as its 32-bit two's complement.
 //   - DEV$: $DEVDEF's device-characteristics bits, for both the DEVCHAR
@@ -44,7 +44,7 @@ import (
 //   - MSG$_: $MSGDEF's mailbox message types, such as MSG$_DELPROC, the
 //     termination message's.
 //     These four came from real MACRO's output for the Phase 45
-//     definition probes (testdata/mp/defs, docs/PHASE-45.md).
+//     definition probes (testdata/mp/defs, docs/planning/PHASE-45.md).
 //   - SYI$: $SYIDEF's $GETSYI item codes and SYI$C_ values.
 //   - DVI$: $DVIDEF's $GETDVI item codes, item-code flags
 //     (DVI$M_SECONDARY), and DVI$C_ values.
@@ -69,7 +69,7 @@ import (
 //     the VAX modules are included, not the Alpha ones. $OBJRECDEF's
 //     SDA-only aggregate puts its flag bitfields directly in a union, so
 //     every OBJ$V_PSC_ and OBJ$V_SYM_ bit is 0: use the GPS$ and GSY$ bits
-//     instead. See docs/PHASE-27.md.
+//     instead. See docs/planning/PHASE-27.md.
 
 // SymbolNames returns, sorted, the names in Symbols that begin with any of
 // prefixes.

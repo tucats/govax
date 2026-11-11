@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 66's subtask 6 (docs/PHASE-66 - mapped image activation.md):
+// Phase 66's subtask 6 (docs/planning/PHASE-66 - mapped image activation.md):
 // the image of a process $CREPRC created, and the images a subprocess's
 // DCL runs, are mapped as RUN maps process 1's. Both reach the same
 // activation (Machine.ActivateCreatedImage, then

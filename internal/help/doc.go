@@ -1,5 +1,5 @@
 // Package help is VMS's HELP: it reads help modules, finds the topics a
-// request names, and lays them out as VMS 7.1's HELP does (docs/PHASE-90 -
+// request names, and lays them out as VMS 7.1's HELP does (docs/planning/PHASE-90 -
 // VMS help.md). It is plain Go, knowing nothing of RMS, DCL, or the
 // console; DCL's HELP, the debugger's HELP, and LBR$OUTPUT_HELP are to be
 // its callers.

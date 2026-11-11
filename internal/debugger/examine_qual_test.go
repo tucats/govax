@@ -6,7 +6,7 @@ import "testing"
 // qualifiers of EXAMINE/INSTRUCTION name what the VMS debugger doesn't: a
 // constant by the symbol that defines it, and a G^ reference (an address in
 // a shareable image, such as a run-time library routine) by routine.
-// They moved here with DISASSEMBLE, which had them (docs/PHASE-42.md,
+// They moved here with DISASSEMBLE, which had them (docs/planning/PHASE-42.md,
 // Decision 7), and SET MODE NOSYMBOLIC is the old /NOSYMBOLIC.
 func TestExamineInstructionQualifiers(t *testing.T) {
 	c := stoppedAt(t, dbgImagePath(t, "dbgdis.exe"), "%LINE 47")

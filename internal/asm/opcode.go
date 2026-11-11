@@ -10,7 +10,7 @@ import (
 // GAS-dialect-only entries (JBR) behind a runtime dialect switch, but 
 // since the default dialect is ASM_DIALECT_ANY — under which alias_opcode() 
 // matches every entry regardless of its tagged dialect — this just 
-// applies the whole table unconditionally; see docs/PHASE-11.md.
+// applies the whole table unconditionally; see docs/planning/PHASE-11.md.
 var opcodeAliases = map[string]string{
 	"JBR":    "JMP",
 	"BNEQU":  "BNEQ",
@@ -41,7 +41,7 @@ var opcodeAliases = map[string]string{
 // assembleOpcode assembles a real VAX instruction: mnemonic, then its
 // operands, matching asm_opcode()+the operand loop in assemble(). The
 // mnemonic table comes from internal/cpu (Phase 03's decoder), not a
-// duplicate copy, per docs/PHASE-11.md.
+// duplicate copy, per docs/planning/PHASE-11.md.
 func (a *Assembler) assembleOpcode(c *cursor) error {
 	c.skipBlanks()
 

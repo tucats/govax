@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Phase 73's probe of the trace trap (testdata/trace73, docs/PHASE-73 -
+// Phase 73's probe of the trace trap (testdata/trace73, docs/planning/PHASE-73 -
 // trace trap.md, subtask 4): VMS 7.1's own images run part by part on
 // govax, each part's report and $STATUS held to VMS's log. The debugger
 // sessions are internal/debugger's session oracle's.

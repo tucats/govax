@@ -16,8 +16,8 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements docs/PHASE-27.md subtask 10's MACRO command, with
-// docs/PHASE-28.md subtask 9's macro libraries:
+// This file implements docs/planning/PHASE-27.md subtask 10's MACRO command, with
+// docs/planning/PHASE-28.md subtask 9's macro libraries:
 //
 //	MACRO source[{,|+}...][/HOST] [/[NO]OBJECT[=object]] [/[NO]LIST[=listing]]
 //	      [/[NO]SHOW=(option[,...])] [/[NO]CROSS_REFERENCE[=(option[,...])]]
@@ -48,7 +48,7 @@ import (
 // so a failed assembly never leaves a partial object or replaces a good
 // one.
 //
-// /LIST (docs/PHASE-29.md subtask 5) writes the listing internal/asm lays
+// /LIST (docs/planning/PHASE-29.md subtask 5) writes the listing internal/asm lays
 // out, named and placed as the object is but with the type LIS. It's
 // written whether or not the assembly succeeds, as real MACRO's is.
 
@@ -67,7 +67,7 @@ type MacroOptions struct {
 	// Joined are the files + joins to Source (MACRO A+B), read after it as one
 	// input. Each takes its defaults from the file before it, and the single
 	// object and listing are named for Source, as on VMS (the author's check,
-	// docs/PHASE-86 - FORTRAN milestone.md).
+	// docs/planning/PHASE-86 - FORTRAN milestone.md).
 	Joined []string
 
 	// Object is the object file name from /OBJECT=; "" means the default
@@ -79,7 +79,7 @@ type MacroOptions struct {
 
 	// List is /LIST: write a listing, to ListFile, or by default to the
 	// source's name with the type LIS, beside the source as the object
-	// is (docs/PHASE-29.md subtask 5).
+	// is (docs/planning/PHASE-29.md subtask 5).
 	List     bool
 	ListFile string
 

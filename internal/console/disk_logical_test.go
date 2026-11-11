@@ -11,7 +11,7 @@ import (
 )
 
 // TestDiskLogical_assembledProgram runs testdata/asm/disk_logical.asm
-// (docs/PHASE-26.md subtask 45): the home block read logically, the boot
+// (docs/planning/PHASE-26.md subtask 45): the home block read logically, the boot
 // block written logically and read back physically, the privilege check,
 // and a block past the end of the volume.
 func TestDiskLogical_assembledProgram(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// checkPrograms are small programs that do or don't trip a /CHECK (docs/PHASE-85 -
+// checkPrograms are small programs that do or don't trip a /CHECK (docs/planning/PHASE-85 -
 // FORTRAN compiler usability.md, subtask 5). Each is compiled both ways with each
 // optimizer setting, by TestFortranCheck, since what the optimizer may do to a check
 // is the riskiest part of it. checked is what it prints or signals compiled with
@@ -783,7 +783,7 @@ func TestFortranF77Qualifier(t *testing.T) {
 
 // TestFortranRecursiveQualifier runs /[NO]RECURSIVE through the command: a
 // subroutine calling itself is RECURSIVE's error without it, and with it compiles
-// with nothing to say (docs/PHASE-89 - reentrant FORTRAN.md, subtasks 2 and 4).
+// with nothing to say (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtasks 2 and 4).
 func TestFortranRecursiveQualifier(t *testing.T) {
 	d, c, buf := shareFindConsole(t, false)
 

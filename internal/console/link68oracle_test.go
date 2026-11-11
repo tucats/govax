@@ -18,7 +18,7 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// docs/PHASE-68 - link shareable images.md, subtask 13: the milestone.
+// docs/planning/PHASE-68 - link shareable images.md, subtask 13: the milestone.
 // TestLink68Oracle runs testdata/link68's LINK68.COM on govax, as the
 // author ran it on VMS V7.1: MACRO/LIST of every source, LINK/SHAREABLE
 // and LINK with full maps, ANALYZE/IMAGE of every image, the runs R1 to

@@ -93,7 +93,7 @@ func TestSession_defaultStringInitialState(t *testing.T) {
 }
 
 // TestSession_resolveVolume regresses the shared lookup helper every later
-// docs/PHASE-23.md subtask's command (DIRECTORY, DELETE, PURGE, COPY, TYPE)
+// docs/planning/PHASE-23.md subtask's command (DIRECTORY, DELETE, PURGE, COPY, TYPE)
 // will call: parsing a partial spec against Default and finding its
 // device's mounted volume.
 func TestSession_resolveVolume(t *testing.T) {

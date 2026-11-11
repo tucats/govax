@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Tests for macro libraries (docs/PHASE-28.md, subtask 5).
+// Tests for macro libraries (docs/planning/PHASE-28.md, subtask 5).
 
 // mapLibrary is a MacroLibrary of macro sources keyed by name, counting
 // its lookups.

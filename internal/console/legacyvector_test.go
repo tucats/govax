@@ -10,7 +10,7 @@ import (
 
 // legacyVectorProgram calls $NUMTIM twice, through its P1 vector entry
 // and through its entry in VMS V1's system service vector in S0
-// (^X800001B8, as DUNGEON.EXE calls it; docs/PHASE-72 - legacy
+// (^X800001B8, as DUNGEON.EXE calls it; docs/planning/PHASE-72 - legacy
 // images.md), and leaves 1 in R0 when both worked and gave the same
 // date. SYS$NUMTIM's arguments: the 7-word buffer, and 0 for now.
 const legacyVectorProgram = `

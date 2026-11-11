@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/diag"
 )
 
-// The cross reference (docs/PHASE-85 - FORTRAN compiler usability.md, Decision 13):
+// The cross reference (docs/planning/PHASE-85 - FORTRAN compiler usability.md, Decision 13):
 // where each of a unit's names and labels is defined, assigned, and used.
 //
 // Semantic analysis is the one pass that knows what each name is, so it notes each

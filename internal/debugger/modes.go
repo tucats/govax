@@ -10,7 +10,7 @@ import (
 )
 
 // This file is SET MODE, CANCEL MODE, SHOW MODE, and SHOW RADIX
-// (docs/PHASE-42.md, subtask 11, Decisions 4 and 8).
+// (docs/planning/PHASE-42.md, subtask 11, Decisions 4 and 8).
 //
 // "Mode" means two unrelated things here:
 //
@@ -32,7 +32,7 @@ import (
 // symbolic and operands (which have fields of their own because
 // EXAMINE/INSTRUCTION reads them). govax records them and shows them in
 // SHOW MODE, as VMS does, but doesn't act on them yet: it has no
-// screen mode and shows no floating-point values (docs/PHASE-42.md lists
+// screen mode and shows no floating-point values (docs/planning/PHASE-42.md lists
 // this as unconfirmed).
 type displayModes struct {
 	// line says whether the debugger works by source line (the VMS

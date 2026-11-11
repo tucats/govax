@@ -899,7 +899,7 @@ func parseDCLInteger(token string) (int64, error) {
 // substring. A prior version of this function also truncated the
 // line at an unquoted ';', but the real DCLupcase does no such thing (it
 // only tracks quote state and upcases outside it) -- that truncation was a
-// plain porting bug, found while implementing docs/PHASE-23.md's DELETE
+// plain porting bug, found while implementing docs/planning/PHASE-23.md's DELETE
 // (subtask 6): unquoted ';' is exactly how an ODS-2 file version is
 // written (e.g. "FOO.TXT;1"), so it silently ate every file spec's version
 // field before Parse ever saw it. Fixed to match the real C source exactly,

@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The lock services' quotas (docs/PHASE-49.md, subtask 7). $ENQ uses
+// The lock services' quotas (docs/planning/PHASE-49.md, subtask 7). $ENQ uses
 // two (System Services manual, $ENQ's description):
 //
 //   - ENQLM, the enqueue limit: how many locks the job's processes may

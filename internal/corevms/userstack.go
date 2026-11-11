@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The user stack in created space (docs/PHASE-67 - address space under
+// The user stack in created space (docs/planning/PHASE-67 - address space under
 // paging.md, subtask 3).
 //
 // With VMS paging on, the user stack is part of the image, as VMS's is

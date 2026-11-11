@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Operator and broadcast messages (docs/PHASE-26.md subtask 39): $SNDOPR,
+// Operator and broadcast messages (docs/planning/PHASE-26.md subtask 39): $SNDOPR,
 // $BRKTHRU, and $BRKTHRUW.
 //
 // # Operators

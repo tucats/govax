@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 63's subtask 6 (docs/PHASE-63 - working sets.md): with paging on,
+// Phase 63's subtask 6 (docs/planning/PHASE-63 - working sets.md): with paging on,
 // the working set services work on the real working set list. $LKWSET
 // keeps pages in while others come and go, faulting a page in first if
 // it isn't there, and fails with SS$_LKWSETFUL when too few of the list's

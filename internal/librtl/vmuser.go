@@ -7,7 +7,7 @@ import (
 // User-defined zones: LIB$CREATE_USER_VM_ZONE, and the calls of the
 // program's routines that LIB$GET_VM, LIB$FREE_VM, LIB$RESET_VM_ZONE, and
 // LIB$DELETE_VM_ZONE make for such a zone (5.0 LIB$ manual, section 5.6
-// and the routine's entry; docs/PHASE-59 - LIB VM zones.md, subtask 6).
+// and the routine's entry; docs/planning/PHASE-59 - LIB VM zones.md, subtask 6).
 //
 // Each routine's status is the heap routine's, so the call is the
 // shim's tail call (corevms.CallRequest's Tail), as LIB$SHOW_TIMER calls

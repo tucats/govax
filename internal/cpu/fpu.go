@@ -11,7 +11,7 @@ import (
 // The CPU's side of floating point: loading and storing floating operands,
 // and turning the floating core's conditions into exceptions. The values
 // themselves, their formats, and their arithmetic are internal/vaxfloat's
-// (docs/PHASE-35.md, subtasks 4 and 5); this file only moves bits between
+// (docs/planning/PHASE-35.md, subtasks 4 and 5); this file only moves bits between
 // operands and that package.
 //
 // An operand's format comes from its data type in the instruction table

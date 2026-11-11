@@ -12,7 +12,7 @@
 //
 // govax's tables are committed, and building govax doesn't run gen: the
 // VMS files it reads are licensed, and they aren't part of this
-// repository (docs/PHASE-31.md). Run it when govax needs definitions it
+// repository (docs/planning/PHASE-31.md). Run it when govax needs definitions it
 // doesn't have yet, from the repository root:
 //
 //	go run ./internal/vmsdef/gen -bliss ~/vms/ssdef.txt -sdl ~/vms/iodef.sdl

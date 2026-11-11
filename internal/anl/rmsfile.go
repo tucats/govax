@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/ods2/vmstime"
 )
 
-// ANALYZE/RMS_FILE's reports (docs/PHASE-88 - keyed index files.md, subtask 10d):
+// ANALYZE/RMS_FILE's reports (docs/planning/PHASE-88 - keyed index files.md, subtask 10d):
 // /CHECK's integrity report, /STATISTICS, /SUMMARY, and /FDL. isam.Inspector reads
 // the file; this file lays out what it found, in the order it finds it, so a
 // report's "***" lines come where VMS's do: a prolog's sums before FIXED PROLOG, a

@@ -7,8 +7,8 @@ import (
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
-// The I/O statements (Decision 12 of docs/PHASE-74 - FORTRAN plan.md, and
-// docs/PHASE-80 - FORTRAN formatted IO.md). Each becomes FTNRTL calls: a
+// The I/O statements (Decision 12 of docs/planning/PHASE-74 - FORTRAN plan.md, and
+// docs/planning/PHASE-80 - FORTRAN formatted IO.md). Each becomes FTNRTL calls: a
 // begin call chosen by the statement's kind, one FTN$IO_ITEM call per
 // item (an implied-DO list a loop around its items' calls), and
 // FTN$IO_END, which finishes the statement and returns its status in R0.
@@ -32,7 +32,7 @@ import (
 // list-directed or unformatted statement has no format argument. ENCODE and DECODE have a
 // fourth, the count of characters, by value: a longword, since VMS's take
 // counts past a descriptor's word. A direct access statement's last argument
-// is its record number, by value (docs/PHASE-81 - FORTRAN files.md, Decision
+// is its record number, by value (docs/planning/PHASE-81 - FORTRAN files.md, Decision
 // 4), and a keyed READ's last three its key's descriptor, its key number by value,
 // -1 with no KEYID= so that the unit goes on with its last (section 7.1.1.8), and
 // how a record's key must compare with it (sema's Key constants, by value): VMS's
@@ -347,8 +347,8 @@ func (l *lowerer) namelist(n *sema.Namelist) *Mem {
 
 // namelistCell is NAMELIST group n's block, for a group with an entity in the
 // frame (an AUTOMATIC variable, or a recursive unit's unsaved one; Decision 7 of
-// docs/PHASE-89 - reentrant FORTRAN.md): the block FTNRTL takes (namelistBlock's
-// layout, docs/PHASE-80's "The namelist block") in a cell of its own, which each
+// docs/planning/PHASE-89 - reentrant FORTRAN.md): the block FTNRTL takes (namelistBlock's
+// layout, docs/planning/PHASE-80's "The namelist block") in a cell of its own, which each
 // statement that uses the group fills in whole, since an entity's descriptor
 // holds an address only this activation knows. The names stay in read-only
 // data; the cell holds their addresses, the count, and the descriptors'

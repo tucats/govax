@@ -18,7 +18,7 @@ type DeviceClass int32
 // workstation=70) is legal to set but has no display name of its own.
 //
 // DeviceClassMailbox (DC$_MAILBOX) was added for the mailboxes $CREMBX
-// creates (docs/PHASE-26.md subtask 29).
+// creates (docs/planning/PHASE-26.md subtask 29).
 const (
 	DeviceClassNone    DeviceClass = 0
 	DeviceClassDisk    DeviceClass = 1
@@ -119,7 +119,7 @@ func DeviceTypeName(t uint32) (string, bool) {
 // fidelity reason to keep the C spelling. PID/OwnUIC are left for a caller
 // to fill in (define_device.c reads OwnUIC from a qualifier and otherwise
 // leaves PID at 0 until SYS$ASSIGN or SYS$ALLOC sets it from the calling
-// process, internal/corevms's emulated Process — docs/PHASE-26.md).
+// process, internal/corevms's emulated Process — docs/planning/PHASE-26.md).
 type Device struct {
 	Name string
 
@@ -441,7 +441,7 @@ func (t *DeviceTable) Find(name string) (*Device, bool) {
 }
 
 // Remove takes d out of the table, reporting whether it was there. It is
-// how a deleted mailbox (docs/PHASE-26.md subtask 29) stops being a
+// how a deleted mailbox (docs/planning/PHASE-26.md subtask 29) stops being a
 // device; nothing removes the devices DEFINE/DEVICE creates.
 func (t *DeviceTable) Remove(d *Device) bool {
 	for i, e := range t.devices {

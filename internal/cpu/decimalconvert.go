@@ -3,7 +3,7 @@ package cpu
 import "math/big"
 
 // CVTPS, CVTSP, CVTPT, and CVTTP: conversions between packed decimal and
-// numeric strings (docs/PHASE-35.md, subtask 12).
+// numeric strings (docs/planning/PHASE-35.md, subtask 12).
 //
 // A leading separate numeric string is a sign byte, ASCII "+", "-", or
 // (as a source only) a space, followed by its length's worth of ASCII

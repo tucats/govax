@@ -9,7 +9,7 @@ import (
 )
 
 // Tests of the record operations past $GET and $PUT and the stream
-// context they share (stream.go, recordops.go; docs/PHASE-49.md).
+// context they share (stream.go, recordops.go; docs/planning/PHASE-49.md).
 
 // call runs one RAB service with RAB$L_ROP rop, returning its status.
 func (s *sharer) call(service func(*Context, []uint32) (uint32, error), rop uint32) uint32 {

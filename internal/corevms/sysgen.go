@@ -1,6 +1,6 @@
 package corevms
 
-// The system parameters (docs/PHASE-62 - VMS paging.md, Decision 11).
+// The system parameters (docs/planning/PHASE-62 - VMS paging.md, Decision 11).
 //
 // On VMS, the system manager tunes the system with SYSGEN, the System
 // Generation utility: a few hundred named parameters (MINWSCNT,
@@ -38,7 +38,7 @@ const DefaultTBSkipWSL = 8
 // cluster below the first (VMS 7.1's rule, testdata/pg64's round 2),
 // never below the second; writing for the reclaimer goes down to the
 // second (mpw.go). They're SYSGEN's defaults on a
-// VAX (docs/PHASE-64 - page file.md, finding 2; Phase 62's Decision 11
+// VAX (docs/planning/PHASE-64 - page file.md, finding 2; Phase 62's Decision 11
 // had taken 120, a VAX's AUTOGEN value, for the second).
 const (
 	DefaultMPWHiLimit = 500
@@ -195,7 +195,7 @@ func SystemAccount() Account {
 // job's paging file quota. A PQL_Dxxx parameter the configuration set
 // replaces the account's value: with no authorization file, the
 // configuration is how the author sets every process's starting values
-// (docs/PHASE-62, Decision 11). The working-set default can't exceed the
+// (docs/planning/PHASE-62, Decision 11). The working-set default can't exceed the
 // quota, the limit starts at the default, the quota and extent are the
 // ones the process is authorized for (WSAuth, WSAuthExt), and the
 // smallest working set is MINWSCNT.

@@ -24,9 +24,9 @@ import (
 // it runs on, which holds what every process shares (system.go:
 // the machine, the service and shim registries, devices, mounts,
 // mailboxes, common event flag clusters, OPCOM, the clock). See
-// docs/PHASE-43.md. It is created by the console (internal/console), not
+// docs/planning/PHASE-43.md. It is created by the console (internal/console), not
 // a package-level singleton, matching this project's state model
-// (docs/PLAN.md).
+// (docs/planning/PLAN.md).
 type Environment struct {
 	// *System is embedded: Go "promotes" an embedded struct's fields and
 	// methods, so env.Mailboxes, env.Devices, env.Clock, env.mem, and
@@ -63,11 +63,11 @@ type Environment struct {
 	// table, and the system directory's tables (system, group, and job
 	// tables) every process shares. Process 1's is the console's, injected
 	// so the console's DEFINE and SHOW LOGICAL work on it; a subprocess
-	// gets a new view of its owner's (NewSubprocess, docs/PHASE-45.md).
+	// gets a new view of its owner's (NewSubprocess, docs/planning/PHASE-45.md).
 	Logicals *lnm.Database
 
 	// Session is the console's rms.Session, whose default directory
-	// SYS$CREATE/SYS$OPEN resolve a spec in (docs/PHASE-25.md); nil means
+	// SYS$CREATE/SYS$OPEN resolve a spec in (docs/planning/PHASE-25.md); nil means
 	// the master file directory.
 	Session *rms.Session
 
@@ -83,7 +83,7 @@ type Environment struct {
 	// RegionSize holds the P0/P1/S0 region high-water marks (index 0/1/2),
 	// the Go-native replacement for get_region_size/set_region_size's
 	// indirection through a VAX memory cell addressed by an EXE$P0_RGN-
-	// style symbol (see docs/PHASE-10.md's open questions) — this phase's
+	// style symbol (see docs/planning/PHASE-10.md's open questions) — this phase's
 	// allocator (memory.go) and Phase 13's image loader both read/write it
 	// directly.
 	RegionSize [3]uint32
@@ -135,7 +135,7 @@ type Environment struct {
 
 	// Process is the emulated VMS process this Environment runs images in:
 	// its PID, username, UIC and quota state (process.go,
-	// docs/PHASE-26.md). Built fresh by NewEnvironment.
+	// docs/planning/PHASE-26.md). Built fresh by NewEnvironment.
 	Process *Process
 
 	// consoleIn/consoleInBuf back DECC$GETS/EXE$INPUT/EXE$READ's console
@@ -199,7 +199,7 @@ type Environment struct {
 	// LIB$PUT_COMMON writes and LIB$GET_COMMON reads (internal/librtl's
 	// common.go): storage that "remains defined across multiple image
 	// activations in a process", so ImageRundown leaves it. A process
-	// starts with it empty, a subprocess too (unconfirmed: docs/PHASE-57,
+	// starts with it empty, a subprocess too (unconfirmed: docs/planning/PHASE-57,
 	// "The common area"). VMS keeps the area in the process's P1 space;
 	// govax keeps it here, since programs reach it only through the two
 	// routines.
@@ -622,7 +622,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	}
 
 	// DBG_SERVICES: this port's table-driven service dispatch (see
-	// docs/PHASE-17.md sub-phase 4) gives every SYS$ call a single choke
+	// docs/planning/PHASE-17.md sub-phase 4) gives every SYS$ call a single choke
 	// point, unlike the C source's switch-based call_service.
 	if env.cpu.DebugEnabled(registers.DebugServices) && !retry {
 		args := make([]string, len(argv))

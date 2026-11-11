@@ -7,7 +7,7 @@ import (
 )
 
 // What /STANDARD=SOURCE_FORM looks for belongs to the lines, not to the statements made
-// from them, so this pass notes it as it goes (docs/PHASE-85 - FORTRAN compiler
+// from them, so this pass notes it as it goes (docs/planning/PHASE-85 - FORTRAN compiler
 // usability.md, Decision 15). The notes cost little, and semantic analysis's
 // ReportSourceExtensions turns them into messages only if they're asked for.
 

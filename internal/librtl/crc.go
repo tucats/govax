@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 )
 
-// The CRC routines (docs/PHASE-53, subtask 11): LIB$CRC_TABLE builds the
+// The CRC routines (docs/planning/PHASE-53, subtask 11): LIB$CRC_TABLE builds the
 // 16-longword table the CRC instruction works from, and LIB$CRC runs the
 // instruction's calculation over a string. Both are the CPU's own
 // (cpu.CRCTable, cpu.CRC).

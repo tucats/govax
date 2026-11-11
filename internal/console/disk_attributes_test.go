@@ -35,7 +35,7 @@ func fatEndOfFile(fat []byte) (uint32, uint16) {
 }
 
 // TestDiskAttributes_assembledProgram runs testdata/asm/disk_attributes.asm
-// (docs/PHASE-26.md subtask 42): a file's record attributes read on
+// (docs/planning/PHASE-26.md subtask 42): a file's record attributes read on
 // access, its first block overwritten with shorter text, and its end of
 // file set to the byte by an attribute list on deaccess, as RMS does.
 func TestDiskAttributes_assembledProgram(t *testing.T) {

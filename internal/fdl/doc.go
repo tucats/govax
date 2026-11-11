@@ -2,7 +2,7 @@
 // holds, which describes a file's organization, records, areas, and keys
 // (the Record Management Utilities Reference Manual, chapter 4). CREATE/FDL
 // makes an empty file from one, CONVERT/FDL the file it loads, and
-// ANALYZE/RMS_FILE/FDL writes one (docs/PHASE-88 - keyed index files.md,
+// ANALYZE/RMS_FILE/FDL writes one (docs/planning/PHASE-88 - keyed index files.md,
 // subtask 10).
 //
 // The package is plain Go: Parse turns the text into a Definition of

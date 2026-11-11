@@ -133,7 +133,7 @@ func ftn86Sections(log string) map[string]string {
 	return sections
 }
 
-// TestFTN86Procedure rehearses the VMS round (docs/PHASE-86 - FORTRAN milestone.md, subtask
+// TestFTN86Procedure rehearses the VMS round (docs/planning/PHASE-86 - FORTRAN milestone.md, subtask
 // 4) on govax. FTNRTL builds from its sources with no message, and each program prints what
 // the corpus says it should, but for ftn86FileDifferences, which it's held to as well: an
 // entry no longer needed is reported. A program's R variant, compiled /RECURSIVE, isn't

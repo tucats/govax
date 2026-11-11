@@ -8,7 +8,7 @@ import (
 
 // TestRoundTripAddressingModes reassembles every Decoded.String() from
 // TestDisassembleAddressingModes and checks it reproduces the same bytes —
-// the round-trip property docs/PHASE-11.md's deliverables call for.
+// the round-trip property docs/planning/PHASE-11.md's deliverables call for.
 func TestRoundTripAddressingModes(t *testing.T) {
 	cases := [][]byte{
 		{0xD4, 0x53},

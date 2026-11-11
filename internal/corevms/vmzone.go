@@ -9,7 +9,7 @@ import (
 // The image's zones: the heaps LIB$CREATE_VM_ZONE makes, each a
 // vmheap.Zone over the image's page pool, which LIB$GET_VM and
 // LIB$FREE_VM allocate from and LIB$RESET_VM_ZONE and LIB$DELETE_VM_ZONE
-// empty and remove (5.0 LIB$ manual, chapter 5; docs/PHASE-59 - LIB VM
+// empty and remove (5.0 LIB$ manual, chapter 5; docs/planning/PHASE-59 - LIB VM
 // zones.md).
 //
 // A zone's ID is the address of its control block in P0 (the phase

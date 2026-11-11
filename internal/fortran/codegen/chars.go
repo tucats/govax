@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/ir"
 )
 
-// CHARACTER values (Decision 2 of docs/PHASE-78 - FORTRAN expressions and
+// CHARACTER values (Decision 2 of docs/planning/PHASE-78 - FORTRAN expressions and
 // types.md): an assignment is a MOVC3 or MOVC5, a comparison a CMPC3 or
 // CMPC5. Each takes its operands, a length and an address for each value,
 // computed before it runs, and leaves R0 to R5 (MOVC) or R0 to R3 (CMPC)

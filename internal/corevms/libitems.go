@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/vmsdef"
 
-// What LIBRTL's item routines read (docs/PHASE-55, subtask 3):
+// What LIBRTL's item routines read (docs/planning/PHASE-55, subtask 3):
 // LIB$GETJPI, LIB$GETDVI, and LIB$GETSYI ask one item of $GETJPI,
 // $GETDVI, or $GETSYI by its code, naming the process, device, or node
 // as the service does. These answer the question with the services' own

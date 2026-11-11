@@ -5,7 +5,7 @@ import "github.com/tucats/govax/internal/registers"
 // This is the Go port of vm.c's translation buffer cache (struct TB
 // tb[128]) and its "sequential translation cache" (STC, the one-slot
 // cached_virtual_page/cached_physical_page fast path) -- see
-// docs/PHASE-21.md for the full design rationale, including why this
+// docs/planning/PHASE-21.md for the full design rationale, including why this
 // reverses Phase 02/16's earlier decision not to port it.
 //
 // # Why cache a translation at all
@@ -261,7 +261,7 @@ func (t *tb) stcFill(vpage uint32, entry *tbEntry, mode registers.AccessMode) {
 // ways cached entries get cleared outside of being naturally overwritten
 // by a newer translation, and every place elsewhere in this package (or in
 // internal/cpu, internal/console) that changes a PTE is expected to call
-// one of them — see translate.go's StorePTE and docs/PHASE-21.md's design
+// one of them — see translate.go's StorePTE and docs/planning/PHASE-21.md's design
 // notes for the full list of real call sites.
 
 // InvalidateTB empties every TB slot (and the STC and the instruction-fetch
@@ -320,7 +320,7 @@ func (m *Memory) InvalidatePage(addr uint32) {
 
 // ValidInTB reports whether the TB holds a translation of addr's page.
 // VMS's pager asks it when it chooses a page to take out of a working set
-// (docs/PHASE-63 - working sets.md): a page still in the TB was used
+// (docs/planning/PHASE-63 - working sets.md): a page still in the TB was used
 // recently, so it's passed over, up to TBSKIPWSL of them, in favor of an
 // older one. The answer is the current address space's: the TB holds
 // only the running process's P0 and P1 translations (LDPCTX empties
@@ -341,7 +341,7 @@ func (m *Memory) ValidInTB(addr uint32) bool {
 
 // InvalidateProtection is called whenever the CPU's current access mode
 // (CurMod) actually changes, at a real mode transition (see
-// docs/PHASE-21.md's design notes on why this port hooks the real
+// docs/planning/PHASE-21.md's design notes on why this port hooks the real
 // mode-change sites directly rather than replicating read_psl_bits/
 // write_psl_bits's call-site parity). The same page can be permitted to
 // one mode and denied to another (see pte.go's Protection type), so
@@ -364,7 +364,7 @@ func (m *Memory) InvalidateProtection() {
 // console_vminit.c's VMINIT, both of which call invalidate_tb() (a real
 // flush) immediately alongside this same reset -- tb_flush itself and the
 // STC's own try/hit counters are deliberately left alone by both C call
-// sites, replicated as-is (see docs/PHASE-21.md).
+// sites, replicated as-is (see docs/planning/PHASE-21.md).
 func (m *Memory) ResetTBCounters() {
 	m.tb.tries = 0
 	m.tb.hits = 0

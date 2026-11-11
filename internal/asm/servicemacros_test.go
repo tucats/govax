@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/obj"
 )
 
-// The Phase 45 system service macro oracle (docs/PHASE-45.md,
+// The Phase 45 system service macro oracle (docs/planning/PHASE-45.md,
 // testdata/mp/macros): programs that call each service's short-form macro
 // in many ways, and the objects real VAX MACRO made of them on VMS. govax's
 // own macros (internal/bootdata/files/starlet.mar), written from the System

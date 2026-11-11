@@ -45,7 +45,7 @@ type Builder struct {
 
 // DefaultRecordLimit is the record size Build uses when RecordLimit is 0:
 // 512 bytes, the maximum record size VAX MACRO V5.4-3 writes in its
-// objects' main headers (docs/PHASE-27.md), rather than the object
+// objects' main headers (docs/planning/PHASE-27.md), rather than the object
 // language's own 2048-byte limit.
 const DefaultRecordLimit = 512
 
@@ -54,7 +54,7 @@ const DefaultRecordLimit = 512
 // tirFill, cutting a run of immediate data to end a TIR record there (but
 // storing at least one byte of it). A subrecord or command that doesn't
 // fit in the record limit starts a new record too. Measured from real
-// MACRO's objects (docs/PHASE-32.md, subtask 4): of the Phase 27-32
+// MACRO's objects (docs/planning/PHASE-32.md, subtask 4): of the Phase 27-32
 // fixtures' TIR records, most that end in a cut immediate run are exactly
 // 461 bytes, and GSD records of 460 bytes are always followed by another.
 const (

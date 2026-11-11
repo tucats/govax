@@ -20,7 +20,7 @@ const maxWordLength = 65535
 // 4*(I-1) bytes is 2*(I-1) words. A structure is packed (structure.go), so a
 // length needn't be a multiple of a field's size; a place where one isn't is
 // reached through its address, computed with the bytes as the index
-// (MOVAB HISTORY+1-5[R0],R1, then (R1)): Decision 2 of docs/PHASE-82 - FORTRAN
+// (MOVAB HISTORY+1-5[R0],R1, then (R1)): Decision 2 of docs/planning/PHASE-82 - FORTRAN
 // DEC extensions.md. A CHARACTER field's place is a Byte place, whose index
 // is a count of bytes already, as is a substructure's, which is bytes itself.
 //

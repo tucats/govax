@@ -339,7 +339,7 @@ func TestNormalizeDeviceName_prefix(t *testing.T) {
 }
 
 // A concealed name that SYS$DISK holds is the device a name with none is
-// shown on, as it is for a name that gives it itself (docs/PHASE-91, A.3;
+// shown on, as it is for a name that gives it itself (docs/planning/PHASE-91, A.3;
 // VMS 7.1: testdata/lnm91's SET DEFAULT CDISK:[LNM91.ROOT1]).
 func TestExpandSpec_concealedSysDisk(t *testing.T) {
 	s, _, _ := newTwoVolumeSession(t)

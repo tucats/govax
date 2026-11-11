@@ -6,9 +6,9 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Software conditions (docs/PHASE-26.md subtask 33): the machinery behind
+// Software conditions (docs/planning/PHASE-26.md subtask 33): the machinery behind
 // LIB$SIGNAL, LIB$STOP, LIB$ESTABLISH, and LIB$REVERT, whose routines are
-// in internal/librtl (docs/PHASE-34.md, subtask 10) and reach this file
+// in internal/librtl (docs/planning/PHASE-34.md, subtask 10) and reach this file
 // through Signal and SetCallerHandler (export.go).
 //
 // # Signaling from software

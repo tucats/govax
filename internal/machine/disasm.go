@@ -37,7 +37,7 @@ func (m *Machine) Disassemble(start, end uint32) error {
 	return m.DisassembleWith(start, end, DisassembleOptions{})
 }
 
-// DisassembleOptions are DISASSEMBLE's qualifiers (docs/PHASE-41.md,
+// DisassembleOptions are DISASSEMBLE's qualifiers (docs/planning/PHASE-41.md,
 // subtask 11).
 type DisassembleOptions struct {
 	// Symbolic lays each instruction out as the VMS debugger's

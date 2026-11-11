@@ -209,7 +209,7 @@ func (p *Program) ModuleAt(addr uint32) (*Module, bool) {
 
 		// A VMS V1 image's DST has no psect records, and it has no
 		// debug module table: its routines are all a module has to
-		// place it by (docs/PHASE-72 - legacy images.md).
+		// place it by (docs/planning/PHASE-72 - legacy images.md).
 		if len(m.Psects) == 0 && m.RoutineAt(addr) != nil {
 			return m, true
 		}
@@ -322,7 +322,7 @@ func Path(s *symtab.Symbol) string {
 // DisplayScope is a scope as the debugger writes it: a routine named as
 // its module isn't repeated, so FORTH\FORTH (routine FORTH in module
 // FORTH) is FORTH, as in the VMS debugger's FORTH\F_ABS, FORTH\%LINE 332,
-// and FAILMAIN+0A (docs/PHASE-41.md, subtask 1's results).
+// and FAILMAIN+0A (docs/planning/PHASE-41.md, subtask 1's results).
 func DisplayScope(scope string) string {
 	parts := strings.Split(scope, `\`)
 	if len(parts) >= 2 && strings.EqualFold(parts[0], parts[1]) {

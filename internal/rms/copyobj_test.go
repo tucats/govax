@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// These tests check docs/PHASE-27.md subtask 9's requirement that an
+// These tests check docs/planning/PHASE-27.md subtask 9's requirement that an
 // object module survives COPY in both directions: a .OBJ keeps its record
 // boundaries on the host (in the ODS-2 variable-length layout), and comes
 // back into a volume as a real variable-length record file.

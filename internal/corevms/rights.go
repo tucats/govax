@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Rights identifiers (docs/PHASE-26.md subtask 40): $ASCTOID, $IDTOASC,
+// Rights identifiers (docs/planning/PHASE-26.md subtask 40): $ASCTOID, $IDTOASC,
 // and $FINISH_RDB.
 //
 // # Identifiers

@@ -6,7 +6,7 @@ import "testing"
 // internal/bootdata/files/evax.dcl) built specifically to exercise Phase
 // 23 subtask 2's parameter-scoped qualifier feature — the DCL engine
 // capability COPY's own /HOST qualifier will need once it's implemented
-// (docs/PHASE-23.md's "COPY direction and the /HOST qualifier" design
+// (docs/planning/PHASE-23.md's "COPY direction and the /HOST qualifier" design
 // section), but which no real command uses yet. Shaped after COPY's own
 // two-parameter design: SOURCE and DESTINATION each declare their own
 // private HOST qualifier via /parameter=, and BINARY is an ordinary
@@ -108,7 +108,7 @@ end
 }
 
 // TestParse_paramScopedQualifier_attachedNoSpace checks the plainest case
-// from docs/PHASE-23.md's COPY examples: "COPY foo.txt/HOST BAR.TXT",
+// from docs/planning/PHASE-23.md's COPY examples: "COPY foo.txt/HOST BAR.TXT",
 // where /HOST is written directly against its parameter's value with no
 // intervening space. It must land on SOURCE's own HOST, not DESTINATION's,
 // and not on any flat, unscoped "HOST" value either.
@@ -270,18 +270,18 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // doesn't deliberately use it: every qualifier elsewhere in the file still
 // ends up exactly where it always did, on its enclosing entry, never
 // misattributed to whatever parameter happened to precede it in the file.
-// COPY (subtask 9, docs/PHASE-23.md's "COPY direction and the /HOST
+// COPY (subtask 9, docs/planning/PHASE-23.md's "COPY direction and the /HOST
 // qualifier" design section) is excluded from this walk -- it's this
 // feature's first real consumer, with its own dedicated structural check
 // (TestLoadEvaxGrammar_copy, define_test.go). So are MACRO
-// (docs/PHASE-27.md subtask 10), LINK (docs/PHASE-30.md), and LIBRARY
-// (docs/PHASE-28.md subtask 7), whose SOURCE, OBJECTS, LIBRARY, and INPUTS
-// take COPY's /HOST, RUN (docs/PHASE-37.md), whose FILE does, and
-// ANALYZE/OBJECT, ANALYZE/IMAGE, and ANALYZE/RMS_FILE (docs/PHASE-38.md, PHASE-40.md, PHASE-88), whose
+// (docs/planning/PHASE-27.md subtask 10), LINK (docs/planning/PHASE-30.md), and LIBRARY
+// (docs/planning/PHASE-28.md subtask 7), whose SOURCE, OBJECTS, LIBRARY, and INPUTS
+// take COPY's /HOST, RUN (docs/planning/PHASE-37.md), whose FILE does, and
+// ANALYZE/OBJECT, ANALYZE/IMAGE, and ANALYZE/RMS_FILE (docs/planning/PHASE-38.md, PHASE-40.md, PHASE-88), whose
 // FILES do, CREATE, whose FILE does, OPEN, whose FILESPEC does,
-// BACKUP (docs/PHASE-69 - backup save sets.md), whose INPUT and OUTPUT
+// BACKUP (docs/planning/PHASE-69 - backup save sets.md), whose INPUT and OUTPUT
 // carry their own save-set and file qualifiers, and FORTRAN
-// (docs/PHASE-74 - FORTRAN plan.md), whose SOURCES take /HOST.
+// (docs/planning/PHASE-74 - FORTRAN plan.md), whose SOURCES take /HOST.
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 

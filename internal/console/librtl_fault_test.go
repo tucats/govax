@@ -10,7 +10,7 @@ import (
 )
 
 // The LIB$ routines' failures that are signals rather than statuses
-// (docs/PHASE-53, subtask 4): an argument a routine can't reach is an
+// (docs/planning/PHASE-53, subtask 4): an argument a routine can't reach is an
 // access violation, as on VMS, and a routine govax lacks signals
 // SS$_UNSUPPORTED when called, so an image that names one still runs.
 
@@ -65,7 +65,7 @@ func TestLibrtlMissingRoutine(t *testing.T) {
 }
 
 // TestMissingService: a service in the P1 vector with no routine behind it
-// signals as a missing LIB$ routine does (docs/PHASE-83, Decision 6), where it
+// signals as a missing LIB$ routine does (docs/planning/PHASE-83, Decision 6), where it
 // used to be a reserved operand fault. A handler that continues, or none,
 // gets SS$_UNSUPPORTED back.
 func TestMissingService(t *testing.T) {

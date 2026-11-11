@@ -17,7 +17,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-23.md subtask 9 (COPY's core direction
+// This file implements docs/planning/PHASE-23.md subtask 9 (COPY's core direction
 // logic and its /HOST qualifier, single-match-only) and subtask 10 (the
 // remaining qualifier parity -- /BINARY, /QUIET, /VERBOSE, /TEST, /TIME,
 // /IGNORE, /DIRS, /STREAM, /VFC, /CRLF, /LF -- plus lifting the
@@ -29,7 +29,7 @@ import (
 // locations on mounted volumes. Its behavioral reference is the sibling
 // ods2 module's own cmd/ods2/internal/session/copy.go (read-only, per
 // this phase's own "behavioral spec, not code to link against" framing --
-// see docs/PHASE-23.md's "Why this phase looks different from most
+// see docs/planning/PHASE-23.md's "Why this phase looks different from most
 // others"); the functions below follow its shape closely (the same
 // CreateFile-then-reframe-as-text approach, the same Stream_LF default,
 // the same per-qualifier restrictions) without being a literal port.
@@ -73,7 +73,7 @@ import (
 // # Qualifier scope, per direction
 //
 // Matching ods2's own cmdCopy/cmdCopyFromHost doc comments almost exactly
-// (see docs/PHASE-23.md's "COPY qualifier parity" design section):
+// (see docs/planning/PHASE-23.md's "COPY qualifier parity" design section):
 //
 //   - /BINARY, /QUIET, /VERBOSE, /TEST apply to every direction.
 //   - /TIME, /IGNORE, /DIRS, /STREAM, /CRLF, /LF only have an effect when
@@ -93,7 +93,7 @@ import (
 //     "un-interpreted" text mode /VFC could opt out of. It isn't even
 //     read by Go code here; see CopyOptions' own doc comment.
 
-// CopyOptions collects COPY's own qualifiers (docs/PHASE-23.md subtask
+// CopyOptions collects COPY's own qualifiers (docs/planning/PHASE-23.md subtask
 // 10), gathered into one value rather than a long, easy-to-transpose list
 // of bool parameters -- matching ods2's own copyOptions in spirit, though
 // this one also carries Quiet/Verbose/Test, which ods2's version doesn't
@@ -324,7 +324,7 @@ func (e *HostToHostError) Error() string {
 //   - Both set: rejected with a *HostToHostError -- see its own doc
 //     comment for why.
 //
-// opts carries every qualifier from docs/PHASE-23.md subtask 10 -- see
+// opts carries every qualifier from docs/planning/PHASE-23.md subtask 10 -- see
 // CopyOptions' own doc comment for exactly which ones apply to which
 // direction.
 func (s *Session) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts CopyOptions) ([]CopyResult, error) {
@@ -377,7 +377,7 @@ func requireMatchable(matches []filespec.Match, destAcceptsMultiple bool, specTe
 // /BINARY: its record attributes and its bytes (createBinaryFile), as
 // VMS's COPY keeps the input file's organization and record format. A
 // text reframing to Stream_LF made a copied image (fixed-length 512-byte
-// records) a different file, which no longer ran (docs/PHASE-66 - mapped
+// records) a different file, which no longer ran (docs/planning/PHASE-66 - mapped
 // image activation.md, subtask 7).
 func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptions) ([]CopyResult, error) {
 	srcFound, err := expandSpec(s.Logicals, sourceText, s.Default)
@@ -574,7 +574,7 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 // bar.txt/HOST"): sourceText is a VMS file specification naming one or
 // more files on a mounted volume, copied onto destPath, a plain host
 // path. destPath may only receive several matched files if it already
-// names an existing host directory; every qualifier docs/PHASE-23.md
+// names an existing host directory; every qualifier docs/planning/PHASE-23.md
 // subtask 10 added other than /BINARY/QUIET/VERBOSE/TEST only has an
 // effect in this direction -- see CopyOptions' own doc comment.
 func (s *Session) copyToHost(sourceText, destPath string, opts CopyOptions) ([]CopyResult, error) {

@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The FORTRAN command (docs/PHASE-74 - FORTRAN plan.md, subtask 2): it
+// The FORTRAN command (docs/planning/PHASE-74 - FORTRAN plan.md, subtask 2): it
 // reads a FORTRAN source from the host or a volume and writes a MACRO
 // file, the source's lines as comments among the code, which MACRO
 // assembles without a message.

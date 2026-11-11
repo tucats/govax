@@ -18,7 +18,7 @@ import (
 )
 
 // This file is what the debugger knows about the program it is
-// debugging (docs/PHASE-42.md, subtask 12): SHOW IMAGE, SHOW MODULE,
+// debugging (docs/planning/PHASE-42.md, subtask 12): SHOW IMAGE, SHOW MODULE,
 // SHOW SYMBOL, SHOW SCOPE, SHOW LANGUAGE, and SET MODULE.
 //
 // Some background for a reader new to VMS. A program is built from one or

@@ -1,5 +1,5 @@
 // Package mthrtl is MTHRTL.EXE, VMS's mathematics run-time library, written
-// in Go (docs/PHASE-77 - MTHRTL.md): the MTH$ routines (square root,
+// in Go (docs/planning/PHASE-77 - MTHRTL.md): the MTH$ routines (square root,
 // logarithms, the trigonometric functions, ...) and the OTS$ powers and
 // complex arithmetic VMS keeps with them. It serves any program, in MACRO,
 // govax's FORTRAN, or an image VMS's compilers made, and isn't part of

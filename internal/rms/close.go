@@ -72,7 +72,7 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 	} else if !handle.IsConsole() {
 		// A file opened for writing takes the revision date and number
 		// of a XABRDT, and the protection of a XABPRO, as it's closed
-		// (docs/PHASE-33.md, subtask 5).
+		// (docs/planning/PHASE-33.md, subtask 5).
 		var in xabInputs
 
 		if handle.Writable {

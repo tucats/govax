@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Warnings is what /WARNINGS asks the compiler to say (docs/PHASE-85 - FORTRAN compiler
+// Warnings is what /WARNINGS asks the compiler to say (docs/planning/PHASE-85 - FORTRAN compiler
 // usability.md). The zero value is the default: the general warnings and nothing else,
 // the one thing here the language manual speaks of being DECLARATIONS (the note in its
 // section 4.8). It has a NoGeneral, not a General, so that a program leaving it out gets

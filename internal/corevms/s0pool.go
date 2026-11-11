@@ -23,7 +23,7 @@ import (
 //
 // With paging off VMINIT maps every S0 page to a physical page up front,
 // so a pool page already has memory behind it: allocating one only
-// decides who uses it. With paging on (docs/PHASE-67 - address space
+// decides who uses it. With paging on (docs/planning/PHASE-67 - address space
 // under paging.md, subtask 5) VMINIT backs only the S0 it lays out
 // itself, and a pool page has no frame (the all-zero PTE, no access)
 // until the pool hands it out (AllocateS0) or the console's ASM claims

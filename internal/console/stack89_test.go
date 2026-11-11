@@ -12,7 +12,7 @@ import (
 )
 
 // stack89Dir holds Phase 89's programs of the user stack under recursion
-// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 9).
+// (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtask 9).
 const stack89Dir = "../../testdata/stack89"
 
 // stack89Console boots a console in the paging mode given, with the

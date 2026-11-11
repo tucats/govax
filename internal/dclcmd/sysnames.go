@@ -12,7 +12,7 @@ import (
 )
 
 // This file is what the rest of govax reaches the system volume by
-// (docs/PHASE-87 - system volume.md): the two logical names govax defines
+// (docs/planning/PHASE-87 - system volume.md): the two logical names govax defines
 // for it (Decision 5), and its files as an fs.FS for govax's resolver
 // (Decision 4).
 
@@ -28,7 +28,7 @@ const (
 	// ("_DUA0:[SYSTEM.]"), so that SYS$SYSROOT:[SYSEXE] is the directory
 	// [SYSTEM.SYSEXE], and is shown as SYS$SYSROOT:[SYSEXE]. VMS's is
 	// [SYS0.]; govax has one system, and so one root
-	// (docs/PHASE-91 - concealed logical names.md, Decision 1).
+	// (docs/planning/PHASE-91 - concealed logical names.md, Decision 1).
 	SystemRootName = "SYS$SYSROOT"
 
 	// SystemCommonName and SystemSpecificName are VMS's two halves of

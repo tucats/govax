@@ -14,7 +14,7 @@ import (
 )
 
 // runIdx88D runs round 4 of testdata/idx88, IDX88D.COM (DCL on indexed files;
-// docs/PHASE-88 - keyed index files.md, subtask 9), on govax, on a fresh volume
+// docs/planning/PHASE-88 - keyed index files.md, subtask 9), on govax, on a fresh volume
 // of VMS's 3-block clusters as DUA1 with node SIMVAX, as the VAX's was, and
 // returns the log it wrote and what reached the terminal.
 func runIdx88D(t *testing.T) (log, terminal string) {
@@ -87,7 +87,7 @@ func TestIdx88DProbe(t *testing.T) {
 }
 
 // TestIdx88DOracle holds round 4's log on govax to VMS V7.1's,
-// testdata/idx88/vax/idx88d.log, line for line (docs/PHASE-88 - keyed index
+// testdata/idx88/vax/idx88d.log, line for line (docs/planning/PHASE-88 - keyed index
 // files.md, subtask 9): every WRITE, READ, and WRITE/UPDATE on an indexed file,
 // its message and $STATUS, each READ's symbol, TYPE, DUMP/RECORD, DIRECTORY/FULL,
 // and F$FILE_ATTRIBUTES. Times are masked (idx88DMask), and VMS's log starts

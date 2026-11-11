@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// backupTestGrammar is BACKUP's shape (docs/PHASE-69 - backup save
+// backupTestGrammar is BACKUP's shape (docs/planning/PHASE-69 - backup save
 // sets.md, subtask 6): a list input specifier and an output specifier,
 // each with qualifiers of its own, some of them taking lists, beside the
 // command's own qualifiers.

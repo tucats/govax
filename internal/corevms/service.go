@@ -58,7 +58,7 @@ func (t *ServiceTable) Lookup(name string) (ServiceFunc, bool) {
 // rms.go) are thin wrapper closures over internal/rms's own handlers —
 // Phase 10's host-passthrough stopgap that used to implement a subset of
 // them directly in this package has been removed outright, not kept as a
-// fallback (docs/PHASE-22.md).
+// fallback (docs/planning/PHASE-22.md).
 func registerServices(t *ServiceTable) {
 	registerCoreServices(t)
 	registerAddressSpaceServices(t)

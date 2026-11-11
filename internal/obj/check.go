@@ -147,7 +147,7 @@ func (c *checker) run() {
 		case *GSD:
 			// GSD and TIR records may interleave: real MACRO defines each
 			// psect just before its first text, and each symbol near its
-			// definition (see docs/PHASE-27.md).
+			// definition (see docs/planning/PHASE-27.md).
 			seenGSD = true
 
 			c.gsd(rec)

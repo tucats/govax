@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The debugger beside a program that traces itself (docs/PHASE-73 -
+// The debugger beside a program that traces itself (docs/planning/PHASE-73 -
 // trace trap.md, subtask 3; traced.go).
 
 // tracedSource is a program that traces itself: TRACER takes each

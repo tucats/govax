@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 )
 
-// Phase 63's subtask 3 (docs/PHASE-63 - working sets.md), with paging
+// Phase 63's subtask 3 (docs/planning/PHASE-63 - working sets.md), with paging
 // on: the P1 vector's pages are system pages, in no working set (the
 // paging program's Decision 13). Since Phase 65's subtask 4, a page-file
 // global section's pages are global demand-zero pages: they enter the

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 )
 
-// These tests are Phase 71's (docs/PHASE-71 - process-permanent files.md,
+// These tests are Phase 71's (docs/planning/PHASE-71 - process-permanent files.md,
 // subtasks 4 and 5): RMS's table of process-permanent files and an image's
 // indirect access to them, checked against what VMS 7.1 showed in
 // testdata/ppf71.

@@ -21,7 +21,7 @@ and executive mode write the page and no other mode touch it.
 ## The layout
 
 VMINIT writes VMS V1's system service vector at S0's start (six pages;
-`docs/PHASE-72 - legacy images.md`), builds the page tables in S0 space
+`docs/planning/PHASE-72 - legacy images.md`), builds the page tables in S0 space
 after it, and then lays out the
 privileged stacks in S0 right after them, in this order (addresses
 increasing):
@@ -94,7 +94,7 @@ Before this change, the executive and supervisor stacks were in S0 but
 had S0's default protection, `URKW`: every mode could read them, but only
 kernel mode could write them. So any executive- or supervisor-mode code
 faulted on its first push once memory management was on. `$CMEXEC`'s
-routine was the first to hit this (docs/PHASE-26.md subtask 26), and its
+routine was the first to hit this (docs/planning/PHASE-26.md subtask 26), and its
 fixture had to set up a stack of its own. Also, a Go caller passing 0
 pages for them (as most tests did) put `ESP` and `SSP` at the kernel
 stack's own top, so the modes would have shared one stack.

@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 65's subtask 2 (docs/PHASE-65 - sections and paging.md): a
+// Phase 65's subtask 2 (docs/planning/PHASE-65 - sections and paging.md): a
 // private copy-on-reference section's page becomes the process's own at
 // its first fault, backed by the page file and effectively modified, so
 // the modified page writer writes it to the page file and it comes back

@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The floating routines (docs/PHASE-53, subtask 8): LIB$EMODx and
+// The floating routines (docs/planning/PHASE-53, subtask 8): LIB$EMODx and
 // LIB$POLYx, in each of the four floating formats (F, D, G, and H), make
 // the VAX's EMOD and POLY instructions callable.
 //

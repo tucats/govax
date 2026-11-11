@@ -56,7 +56,7 @@ type Options struct {
 
 	// Recursive is /RECURSIVE: every subprogram may be active more than once at a
 	// time, as if each FUNCTION and SUBROUTINE statement said RECURSIVE
-	// (sema.Unit.Recursive; docs/PHASE-89 - reentrant FORTRAN.md).
+	// (sema.Unit.Recursive; docs/planning/PHASE-89 - reentrant FORTRAN.md).
 	Recursive bool
 
 	// Debug is /DEBUG: what MACRO is to write for the debugger (debug.go).

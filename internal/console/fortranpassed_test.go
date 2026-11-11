@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Intrinsic functions' names passed as actual arguments (docs/PHASE-78 -
+// Intrinsic functions' names passed as actual arguments (docs/planning/PHASE-78 -
 // FORTRAN expressions and types.md, subtask 9): a FORTRAN program passes
 // MTHRTL's routines and each of FTNRTL's for the names MTHRTL lacks to a
 // MACRO routine that calls the routine it is given, and prints each value

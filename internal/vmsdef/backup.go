@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// BACKUP's messages (docs/PHASE-69 - backup save sets.md, subtask 6).
+// BACKUP's messages (docs/planning/PHASE-69 - backup save sets.md, subtask 6).
 // The system message file govax's tables were made from doesn't have
 // them, so they are as VMS V7.1's BACKUP V6.2 showed them in the probe's
 // log (testdata/backup69/vax/backup69.log): the texts are its, written as

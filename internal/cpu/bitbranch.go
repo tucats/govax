@@ -10,7 +10,7 @@ import "github.com/tucats/govax/internal/registers"
 // the identical "test/set/clear one bit at a bit position from a register or
 // memory base" semantics, and the value-based helpers already used by
 // EXTV/INSV/etc. have no pointer-endianness concern to inherit in the first
-// place (see docs/PHASE-03.md's design notes on why operands are values, not
+// place (see docs/planning/PHASE-03.md's design notes on why operands are values, not
 // pointers). This project does not emulate multiple processors, so the
 // interlocked variants (BBSSI/BBCCI) behave identically to their
 // non-interlocked counterparts, matching emul_bbstate's own comment to that

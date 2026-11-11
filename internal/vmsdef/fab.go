@@ -36,7 +36,7 @@ type Field struct {
 // reserved/padding fields (fabdef$$_fill_*) are omitted, since they have no
 // real name a program could set by keyword.
 //
-// Verified two independent ways during docs/PHASE-24.md's planning (neither
+// Verified two independent ways during docs/planning/PHASE-24.md's planning (neither
 // aware of the other's numbers until compared): once by hand, once by a
 // research agent working from the same header — both derivations agree on
 // every field, and both running totals land exactly on the header's own

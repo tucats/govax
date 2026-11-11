@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Idling, for the scheduler (docs/PHASE-44.md, subtask 5).
+// Idling, for the scheduler (docs/planning/PHASE-44.md, subtask 5).
 //
 // When every process waits, VMS runs its "null process", a loop that
 // does nothing until an interrupt (a clock tick ending a timer, an I/O

@@ -12,7 +12,7 @@ import (
 )
 
 // The system volume's STARTUP.COM, logical names, and grammars, end to end
-// (docs/PHASE-87 - system volume.md, subtask 5).
+// (docs/planning/PHASE-87 - system volume.md, subtask 5).
 
 // runOnce runs govax once with a one-shot command (none for an interactive
 // start with no input) and returns its output.

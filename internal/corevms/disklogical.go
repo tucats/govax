@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Logical and physical block I/O on a disk (docs/PHASE-26.md subtask 45).
+// Logical and physical block I/O on a disk (docs/planning/PHASE-26.md subtask 45).
 //
 // IO$_READLBLK and IO$_WRITELBLK read and write the disk's *logical*
 // blocks: numbered from 0 across the whole volume, with no files involved

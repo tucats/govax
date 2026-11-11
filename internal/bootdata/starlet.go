@@ -14,9 +14,9 @@ import (
 //go:generate go run ./mkstarlet
 
 // govax's own STARLET.MLB, MACRO's system macro library when no real one
-// is found, and the sources it's built from (docs/PHASE-28.md): the
+// is found, and the sources it's built from (docs/planning/PHASE-28.md): the
 // hand-written macros, and the $xxxDEF definition macros, which mkdefs
-// generates (docs/PHASE-32.md). The library is generated from the sources
+// generates (docs/planning/PHASE-32.md). The library is generated from the sources
 // and committed beside them; a test rebuilds it and checks that the two
 // match.
 const (
@@ -56,7 +56,7 @@ func BuildStarlet(src string) ([]byte, error) {
 
 // BuildStarletAt is BuildStarlet with when, a VMS time, as the library's
 // creation, revision, and insertion time: what LIBRARY/CREATE/MACRO makes
-// of the same source at that time (docs/PHASE-87 - system volume.md,
+// of the same source at that time (docs/planning/PHASE-87 - system volume.md,
 // subtask 8, holds BUILDSTARLET.COM's library to it).
 func BuildStarletAt(src string, when uint64) ([]byte, error) {
 	b, err := lbr.Create(lbr.TypeMacro)

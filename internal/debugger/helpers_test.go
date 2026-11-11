@@ -87,7 +87,7 @@ func noUserStep(c *console.Console) {
 // through DispatchConsole, since after a run stops the session is open and
 // Dispatch would route the line to the debugger's own grammar, which
 // doesn't have SET BREAK, DEPOSIT, ... until the later subtasks of
-// docs/PHASE-42.md add them.
+// docs/planning/PHASE-42.md add them.
 func newTestDispatcher(t *testing.T) (*console.Dispatcher, *console.Console) {
 	t.Helper()
 

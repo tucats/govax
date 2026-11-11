@@ -8,7 +8,7 @@ import (
 
 // TestImageLoad_simpleExe checks imageLoad against the real testdata/exe/
 // simple.exe fixture's header, cross-checked by hand against a raw hexdump
-// of the file (see docs/PHASE-13.md's progress log for the derivation):
+// of the file (see docs/planning/PHASE-13.md's progress log for the derivation):
 // IHD.offset_ident (@2 bytes 0x0030->wait see below) locates the IHI block
 // at file offset 0x60, whose IMGNAML/IMGNAM read "SIMPLE" -- confirmed
 // directly in the raw bytes (offset 0x60 is 0x06 followed by ASCII
@@ -49,7 +49,7 @@ func TestImageLoad_simpleExe(t *testing.T) {
 		t.Errorf("FindMainICB = %v, want the loaded ICB", got)
 	}
 
-	// simple.exe (per docs/PHASE-13.md's fixture notes) has exactly one
+	// simple.exe (per docs/planning/PHASE-13.md's fixture notes) has exactly one
 	// FIXUPVEC section and depends on four sharable images (LIBRTL,
 	// DECC$SHR, MTHRTL, CMA$TIS_SHR) plus its own self-reference (id 0) --
 	// five SHR entries in total, none of which are present as real
@@ -156,7 +156,7 @@ func TestImageFixup_simpleExe(t *testing.T) {
 // TestImageFixup_everyRealFixtureFixesUp runs imageLoad+imageFixup across
 // every real fixture (mirroring TestImageLoad_everyRealFixtureLoads),
 // reporting whichever SHIM$ symbol (if any) is missing so a gap in
-// shimTable is easy to see, matching docs/PHASE-13.md's own bar: an
+// shimTable is easy to see, matching docs/planning/PHASE-13.md's own bar: an
 // unresolved reference should be reported clearly, not silently ignored.
 func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 	for _, name := range []string{"cli.exe", "dbl.exe", "getvm.exe", "put.exe", "putc.exe", "sieve.exe", "simple.exe"} {
@@ -186,7 +186,7 @@ func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 
 // TestImageLoad_everyRealFixtureLoads is a smoke test: imageLoad must
 // succeed against every real fixture in testdata/exe/ (put1.exe is a
-// zero-byte file, excluded per docs/PHASE-12.md's own scope note), each in
+// zero-byte file, excluded per docs/planning/PHASE-12.md's own scope note), each in
 // a fresh Console so one fixture's high-water mark/ICB list can't affect
 // another's.
 func TestImageLoad_everyRealFixtureLoads(t *testing.T) {

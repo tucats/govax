@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Routines govax lacks (docs/PHASE-53, Decision 6). A program's image
+// Routines govax lacks (docs/planning/PHASE-53, Decision 6). A program's image
 // names each LIBRTL routine it calls by its transfer-vector offset, and
 // every one must resolve before the image can run. So every entry of
 // LIBRTL.EXE's transfer vector that Routines doesn't provide gets a stub
@@ -166,7 +166,7 @@ func notImplemented(name string) corevms.ShimFunc {
 // NotImplemented is notImplemented for the image activator: the shim of
 // a routine of a run-time library govax stands for, which no table here
 // names (BASRTL's, COBRTL's, ...), made when a program's fixup reaches it
-// (docs/PHASE-72 - legacy images.md, subtask 4). name says which entry
+// (docs/planning/PHASE-72 - legacy images.md, subtask 4). name says which entry
 // it is, for the message.
 func NotImplemented(name string) corevms.ShimFunc {
 	return notImplemented(name)

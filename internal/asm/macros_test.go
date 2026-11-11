@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Tests for macro definitions and calls (docs/PHASE-28.md, subtask 1).
+// Tests for macro definitions and calls (docs/planning/PHASE-28.md, subtask 1).
 // Most follow the examples in the VAX MACRO manual's chapter 4, whose
 // expansions the manual prints.
 

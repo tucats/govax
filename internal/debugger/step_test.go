@@ -87,7 +87,7 @@ func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 
 // TestStepReturn_stopsAtTheFramesRet: STEP/RETURN stops *at* the RET that
 // ends the frame (before it runs), reporting where it was given and where
-// it stopped, and the next STEP executes the RET (docs/PHASE-42.md,
+// it stopped, and the next STEP executes the RET (docs/planning/PHASE-42.md,
 // subtask 7).
 func TestStepReturn_stopsAtTheFramesRet(t *testing.T) {
 	c, buf := newTestConsole(t)

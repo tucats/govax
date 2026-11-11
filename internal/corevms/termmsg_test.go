@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The termination message (docs/PHASE-45.md, subtask 7): a process
+// The termination message (docs/planning/PHASE-45.md, subtask 7): a process
 // $CREPRC gave a termination mailbox writes the accounting message to it
 // when it's deleted. The fixture's processes share one memory; the
 // message reaching another address space is tested with a booted

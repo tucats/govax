@@ -40,7 +40,7 @@ func probeObject(t *testing.T, name string) *obj.Module {
 
 // TestLinkProbeImagesMatchRealLINK links the Phase 29 probe's programs as
 // its list.com did, and checks each image is real LINK's byte for byte,
-// debug symbol table and all (docs/PHASE-29.md, subtask 13):
+// debug symbol table and all (docs/planning/PHASE-29.md, subtask 13):
 //   - TRACE, three routines and three psects, with traceback and
 //     /NOTRACEBACK;
 //   - TRDBGTRC, TRACE assembled /DEBUG and linked with traceback: its
@@ -156,7 +156,7 @@ var probeRoutines = &TableSource{
 // untraced image has none, from real MACRO's objects and govax's. The
 // two images linked /DEBUG put their objects' debugger records in the
 // DST too: TRDBGLNK's (308 bytes where TRDBGTRC's has 106), and none
-// for TRLNKDBG, whose object has none (docs/PHASE-29.md, subtask 16). Unlike
+// for TRLNKDBG, whose object has none (docs/planning/PHASE-29.md, subtask 16). Unlike
 // TestLinkProbeImagesMatchRealLINK it needs none of VMS's libraries: the
 // DST describes only the program's own modules, whose psects come first.
 func TestLinkProbeDST(t *testing.T) {
@@ -303,7 +303,7 @@ func TestLinkRoundImagesMatchRealLINK(t *testing.T) {
 			// FAILSIG's two fixup cells are in the reverse of their
 			// places in LIBRTL's global symbol table (orderCells), which
 			// govax's tables don't record until vmsdef's ImageSymbols are
-			// regenerated from LIBRTL.EXE (docs/PHASE-68, subtask 7).
+			// regenerated from LIBRTL.EXE (docs/planning/PHASE-68, subtask 7).
 			if strings.HasPrefix(c.image, "rlfsig") && vmsdef.ImageSymbols["LIB$STOP"].Order == 0 {
 				t.Skip("govax's LIBRTL table has no symbol table places, which order FAILSIG's two fixup cells")
 			}

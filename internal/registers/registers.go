@@ -88,14 +88,14 @@ const MaxPrivReg = 128
 
 // CPU holds a VAX processor's register state: the general register file, the
 // privileged register file, and the processor status longword. It is created
-// with New and passed explicitly / receiver-bound — see docs/PLAN.md's
+// with New and passed explicitly / receiver-bound — see docs/planning/PLAN.md's
 // locked-in state model.
 //
 // debug/debugOut (see debug.go) are the C source's `vax.debug` and its
 // implicit "trace to the same stream as console output" destination —
 // carried on CPU, not a separate type, since CPU is already threaded (by
 // value or by parameter) into every layer (internal/cpu, internal/vm,
-// internal/corevms) that needs to check a DBG_* flag. See docs/PHASE-17.md.
+// internal/corevms) that needs to check a DBG_* flag. See docs/planning/PHASE-17.md.
 type CPU struct {
 	gpr [MaxReg + 1]uint32
 	pr  [MaxPrivReg + 1]uint32

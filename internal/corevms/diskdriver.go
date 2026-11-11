@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The disk driver (docs/PHASE-26.md subtask 41): $QIO on a disk channel,
+// The disk driver (docs/planning/PHASE-26.md subtask 41): $QIO on a disk channel,
 // the file-level functions of the disk's ACP.
 //
 // # Accessing a file

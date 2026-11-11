@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The help libraries on the system volume (docs/PHASE-90 - VMS help.md,
+// The help libraries on the system volume (docs/planning/PHASE-90 - VMS help.md,
 // subtask 7): SYS$HELP:HELPLIB.HLB is DCL's HELP and SYS$HELP:DBG$HELP.HLB
 // the debugger's, BUILDHELP.COM rebuilds them from their sources in
 // SYS$HELP:[.SOURCES], and a newer govax refreshes them module by module.

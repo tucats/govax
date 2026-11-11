@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// openByNAM is $OPEN with FAB$V_NAM set (docs/PHASE-33.md, subtask 4).
+// openByNAM is $OPEN with FAB$V_NAM set (docs/planning/PHASE-33.md, subtask 4).
 // From the RMS Reference Manual (FAB$V_NAM, and the $OPEN NAM tables),
 // and VMS 7.3 (the oracle's NAMFID probe): the file is the one on the
 // device NAM$T_DVI names whose ID is NAM$W_FID; or, when FID is zero, the

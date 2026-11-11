@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file holds the listing controls (docs/PHASE-29.md, subtask 7):
+// This file holds the listing controls (docs/planning/PHASE-29.md, subtask 7):
 // the directives that decide which source lines a MACRO listing shows,
 // and where its pages break.
 //
@@ -234,7 +234,7 @@ func (a *Assembler) listCall() {
 
 // listShown reports whether the listing shows l, by the listing state in
 // force when it began (see this file's comment). These rules are what
-// real MACRO's listings of the probe's lctl.mar show (docs/PHASE-29.md,
+// real MACRO's listings of the probe's lctl.mar show (docs/planning/PHASE-29.md,
 // subtask 7):
 //
 //   - A line of a macro expansion or repeat block is listed under

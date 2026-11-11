@@ -187,7 +187,7 @@ func pteReferenceFault(err error, addr uint32, access AccessType) error {
 //
 // This is a direct port of vm.c's vm() routine called with a "real",
 // signaling access -- see ProbeTranslate for the VM_NOSIGNAL counterpart,
-// and docs/PHASE-21.md for the translation-buffer/sequential-translation-
+// and docs/planning/PHASE-21.md for the translation-buffer/sequential-translation-
 // cache design this and ProbeTranslate share via translate.
 func (m *Memory) Translate(cpu *registers.CPU, addr uint32, access AccessType) (uint32, error) {
 	return m.translate(cpu, addr, access, true, cpu.PSL().CurMod(), false)
@@ -226,7 +226,7 @@ func (m *Memory) translatePTE(cpu *registers.CPU, pteVirtAddr uint32) (uint32, e
 // a VM_NOSIGNAL translation can never hit the STC, only the 128-entry TB
 // (whose own hit-check runs after the bit is stripped in the C source).
 // Population of either cache on a successful walk is unaffected: vm.c
-// does that unconditionally regardless of the flag. See docs/PHASE-21.md.
+// does that unconditionally regardless of the flag. See docs/planning/PHASE-21.md.
 //
 // PROBEx sets the CPU's mode to the mode being probed for the length of
 // its two translations, then puts it back, without InvalidateProtection.
@@ -610,7 +610,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 // back to pteAddr, matching the DYNVM demand-paging path every region
 // (P0, P1, and — should a caller ever invalidate an S0 PTE — S0 too) now
 // takes unconditionally, DYNVM having become this port's only supported
-// mode per docs/PHASE-*.md rather than a build-time #ifdef.
+// mode per docs/planning/PHASE-*.md rather than a build-time #ifdef.
 //
 // Reports false (leaving pte untouched, so the caller faults TNV exactly as
 // it did before demand-paging existed) if no VMINIT has run yet or physical

@@ -22,6 +22,6 @@
 // What's read here, and how the debugger scopes it, comes from DIGITAL's
 // documentation of the format (docs/DEBUG-RECORDS.md) checked against
 // real images and the VMS 7.3 debugger's own output for them
-// (testdata/dbg; docs/PHASE-41.md). It's the groundwork for a debugger:
+// (testdata/dbg; docs/planning/PHASE-41.md). It's the groundwork for a debugger:
 // the console's disassembler is its first user.
 package dbgsym

@@ -9,7 +9,7 @@ import (
 )
 
 // The Phase 80 probe of LIB$TPARSE, LIB$TABLE_PARSE, and $FILESCAN
-// (docs/PHASE-80 - FORTRAN formatted IO.md, subtask 10): testdata/tpa80's
+// (docs/planning/PHASE-80 - FORTRAN formatted IO.md, subtask 10): testdata/tpa80's
 // tpa80.mar runs them case by case, and prints what each returned and stored.
 // vax/tpa80-vax.txt is its output on VMS, which govax's must match line for
 // line, but for expectedTPA80Differences.

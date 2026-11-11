@@ -25,7 +25,7 @@
 // consolidation): each topic gets its own file here instead, since the
 // packages-per-topic approach doesn't scale as more of VMS's system-
 // service library needs the same asm/RTL-shared treatment (FAB/RAB field
-// layouts are the next one — see docs/PHASE-24.md — and won't be the
+// layouts are the next one — see docs/planning/PHASE-24.md — and won't be the
 // last). A caller needing several of these tables at once imports one
 // package, not several near-identically-shaped ones.
 package vmsdef

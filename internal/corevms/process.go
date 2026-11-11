@@ -7,7 +7,7 @@ import (
 
 // Process is the emulated VMS process an Environment runs images in: the
 // identity and quota state system services read and update on behalf of
-// "the calling process" (docs/PHASE-26.md). There is one Process per
+// "the calling process" (docs/planning/PHASE-26.md). There is one Process per
 // Environment; what every process shares is in the System (system.go).
 // It holds what VMS keeps in a process's PCB and process header; what a
 // job's processes share (VMS's JIB) is the Job it points to (job.go), and
@@ -488,10 +488,10 @@ func (env *Environment) ImageRundown() {
 	env.Process.ImageName = ""
 }
 
-// The small process-control services (docs/PHASE-26.md subtask 30):
+// The small process-control services (docs/planning/PHASE-26.md subtask 30):
 // $SETPRN, $SETPRI, $FORCEX, and $DELPRC. Each names its target process
 // the usual way ([pidadr] ,[prcnam], processTarget). $DELPRC reaches any
-// process (docs/PHASE-45.md, subtask 8), and so do $SETPRI and $FORCEX
+// process (docs/planning/PHASE-45.md, subtask 8), and so do $SETPRI and $FORCEX
 // (subtask 9), with mayAffect's privilege rules; $SETPRN names only the
 // caller.
 
@@ -546,7 +546,7 @@ func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
 // priority becomes the new base, in the scheduler too
 // (sched.SetBasePriority), which then reschedules if that means another
 // process should run: a process that lowers itself below a computable
-// one gives it the CPU at the next instruction (docs/PHASE-44.md,
+// one gives it the CPU at the next instruction (docs/planning/PHASE-44.md,
 // subtask 6). The book's Table 10-3 lists a boost of 2 for "Set
 // Priority"; govax doesn't apply it (unconfirmed). The target is picked
 // by processTarget (SS$_NONEXPR, SS$_IVLOGNAM, SS$_ACCVIO); prvpri that
@@ -639,7 +639,7 @@ func (env *Environment) ForceExit(target *Environment, code uint32) {
 	}
 }
 
-// serviceSysSetrwm is SYS$SETRWM (docs/PHASE-26.md subtask 37):
+// serviceSysSetrwm is SYS$SETRWM (docs/planning/PHASE-26.md subtask 37):
 //
 //	SYS$SETRWM [watflg]
 //

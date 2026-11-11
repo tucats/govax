@@ -103,7 +103,7 @@ func TestPseudoRMSDEFDefinesEveryConstantAndOffsetSymbol(t *testing.T) {
 }
 
 // TestPseudoRMSDEFIsIdempotent matches .P1VECTOR's own fixed idempotency
-// issue (docs/PHASE-11.md) — running .RMSDEF twice, whether in one source or
+// issue (docs/planning/PHASE-11.md) — running .RMSDEF twice, whether in one source or
 // across two separate top-level Assemble calls on the same Assembler (the
 // shape a persistent console session's asmSession actually produces), must
 // not fail with a duplicate-symbol error.

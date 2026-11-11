@@ -75,7 +75,7 @@ func TestFortranOptimizeQualifier(t *testing.T) {
 }
 
 // dungeonSource is where the author keeps DUNGEON's source and data, which stay
-// out of the repository (docs/PHASE-86 - FORTRAN milestone.md).
+// out of the repository (docs/planning/PHASE-86 - FORTRAN milestone.md).
 func dungeonSource() string {
 	home, _ := os.UserHomeDir()
 
@@ -86,7 +86,7 @@ func dungeonSource() string {
 var dungeonModules = []string{"dungeon", "game", "gdt", "objects", "parser", "rooms", "subr", "timefnc", "verbs"}
 
 // TestFortranDungeonBothWays plays a scripted game of DUNGEON compiled each way,
-// which must print the same (Decision 10 of docs/PHASE-84 - FORTRAN optimizer.md):
+// which must print the same (Decision 10 of docs/planning/PHASE-84 - FORTRAN optimizer.md):
 // the one large program to hand, and the optimizer's default depends on it. It
 // skips without DUNGEON's source. ITIME is fixed (testdata/opt84/measure), so the
 // game's random numbers are the same each run. What it prints is only compared

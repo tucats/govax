@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The Phase 83 oracle for STR$ (docs/PHASE-83, subtask 9): testdata/str83's
+// The Phase 83 oracle for STR$ (docs/planning/PHASE-83, subtask 9): testdata/str83's
 // str83.mar calls the 26 string routines and STR$UPCASE, case by case, and
 // prints what each returned, signaled, and stored. vax/str83-vax.txt is its
 // output on VMS (V7.1 on simh's VAX), which govax's must match line for line,

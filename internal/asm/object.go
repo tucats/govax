@@ -35,7 +35,7 @@ const defaultLanguage = "govax MACRO"
 
 // Object returns the object module for a finished MACRO-dialect assembly
 // (see Assemble). It writes the records real MACRO writes, in the same
-// order (docs/PHASE-27.md, subtask 3's log): the headers, then a GSD of
+// order (docs/planning/PHASE-27.md, subtask 3's log): the headers, then a GSD of
 // every global symbol but the entry points, then each psect's definition
 // and contents in source order, with each entry point's EPM where its
 // mask is stored, then the end of module record. With traceback (the
@@ -158,7 +158,7 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 }
 
 // traceback adds the traceback records real MACRO writes at the end of a
-// module (docs/PHASE-29.md, subtask 10): a TBT record of routine begin
+// module (docs/planning/PHASE-29.md, subtask 10): a TBT record of routine begin
 // records, one for each .ENTRY or label on a register mask in name order, then one of psect records,
 // one for each relocatable psect in psect number order (none for an
 // absolute psect, named or not: psects.obj's OFFSETS), and the module
@@ -329,7 +329,7 @@ func (e *emitter) finishLines() {
 // flushAbsStart sets the location in .  ABS  . for the start of assembly,
 // or a return there, if that's still to do, unless skip. Real MACRO sets it except when code
 // or data before any .PSECT moves assembly into . BLANK . first
-// (docs/PHASE-27.md, subtask 11's log).
+// (docs/planning/PHASE-27.md, subtask 11's log).
 func (e *emitter) flushAbsStart(skip bool) {
 	if !e.absStart {
 		return
@@ -344,7 +344,7 @@ func (e *emitter) flushAbsStart(skip bool) {
 
 // Real MACRO writes no TIR commands for an absolute psect, other than
 // setting the location in .  ABS  . at the start, and on a return there:
-// its offsets are only symbol values (docs/PHASE-27.md, subtask 11's
+// its offsets are only symbol values (docs/planning/PHASE-27.md, subtask 11's
 // log).
 func (e *emitter) event(ev outEvent) error {
 	if ev.kind != evSwitch || e.sect != nil {
@@ -446,7 +446,7 @@ func (e *emitter) definePsect(s *section) error {
 	}
 
 	// Each psect definition is a GSD record of its own, as real MACRO
-	// writes them (psects.obj, in docs/PHASE-27.md subtask 11's log).
+	// writes them (psects.obj, in docs/planning/PHASE-27.md subtask 11's log).
 	e.b.Break()
 	index := e.b.AddPsect(obj.Psect{Align: byte(s.align), Flags: uint16(s.flags), Alloc: alloc, Name: s.name})
 	e.b.Break()

@@ -13,7 +13,7 @@ import (
 // own STARLET.MLB (no VMS library: the host library directory is empty),
 // links it, and runs it with its source on a volume: it copies
 // RMSCOPY.MAR to RMSCOPY.OUT a record at a time through $FAB, $RAB, and
-// the RMS service macros (docs/PHASE-32.md, subtask 7), as it does on
+// the RMS service macros (docs/planning/PHASE-32.md, subtask 7), as it does on
 // VMS (testdata/mar/macros/vax/macros.log).
 func TestRMSCopy_govaxStarlet(t *testing.T) {
 	c := newBootableConsole(t)

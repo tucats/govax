@@ -4,8 +4,8 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// SYS$OUTPUT and SYS$ERROR as an image's own files (docs/PHASE-70 -
-// traceback.md, subtask 8; docs/PHASE-71 - process-permanent files.md,
+// SYS$OUTPUT and SYS$ERROR as an image's own files (docs/planning/PHASE-70 -
+// traceback.md, subtask 8; docs/planning/PHASE-71 - process-permanent files.md,
 // subtask 8).
 //
 // A process's SYS$OUTPUT and SYS$ERROR are normally process-permanent
@@ -122,7 +122,7 @@ func (env *Environment) closeImageOutput() {
 // SYS$INPUT as an image's own file: a name the image's DCL defined for it (DEFINE/USER_MODE
 // SYS$INPUT file, then RUN) leads to no process-permanent file, so LIB$GET_INPUT reads the
 // file it names, opened at the first read and held until the image's rundown, as
-// LIB$PUT_OUTPUT holds SYS$OUTPUT's (docs/PHASE-86 - FORTRAN milestone.md).
+// LIB$PUT_OUTPUT holds SYS$OUTPUT's (docs/planning/PHASE-86 - FORTRAN milestone.md).
 
 // inputFile is the file SYS$INPUT named at the image's first read.
 type inputFile struct {

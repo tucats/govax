@@ -126,7 +126,7 @@ type Routine struct {
 	// is RECURSIVE (sema.Unit.Recursive). Its compiler's cells are then in the frame
 	// area, as its unsaved variables are, so that no two activations share one
 	// (NewCell); only a FORMAT's parsed form ($FCn) stays in $LOCAL, being the same
-	// for every activation (docs/PHASE-89 - reentrant FORTRAN.md, Decision 2).
+	// for every activation (docs/planning/PHASE-89 - reentrant FORTRAN.md, Decision 2).
 	Reentrant bool
 
 	// Data are the routine's read-only data, its contribution to the
@@ -557,7 +557,7 @@ func (d *Descriptor) Size() int {
 }
 
 // Control is an I/O statement's control block (Decision 12 of
-// docs/PHASE-74 - FORTRAN plan.md), which the statement's begin call is
+// docs/planning/PHASE-74 - FORTRAN plan.md), which the statement's begin call is
 // given first. Its layout is FTNRTL's (internal/ftnrtl's
 // mar/ftn_statement.mar describes it); here it says which of the
 // statement's optional parts it has, as ControlErr and the other flags.
@@ -578,7 +578,7 @@ const (
 // FormatBlock is a FORMAT statement's block in the routine's read-only
 // data: where FTNRTL finds the specification's text, and Cache, a cell in
 // $LOCAL where it keeps the parsed form after the first use (Decision 4 of
-// docs/PHASE-80 - FORTRAN formatted IO.md). An I/O statement passes the
+// docs/planning/PHASE-80 - FORTRAN formatted IO.md). An I/O statement passes the
 // block's address; ASSIGN of the FORMAT's label stores it.
 type FormatBlock struct {
 	Label int
@@ -591,7 +591,7 @@ type FormatBlock struct {
 }
 
 // VFERoutine is the routine FTNRTL calls for a FORMAT statement's variable
-// format expressions (Decision 5 of docs/PHASE-80 - FORTRAN formatted IO.md):
+// format expressions (Decision 5 of docs/planning/PHASE-80 - FORTRAN formatted IO.md):
 // F(n, ap, fp) returns the nth expression's value in R0, ap and fp being the AP and
 // FP of the routine doing the I/O. Its code is one block (or more) per expression, each
 // ending in a Return, among the routine's blocks, and shares the routine's
@@ -603,7 +603,7 @@ type VFERoutine struct {
 }
 
 // NamelistBlock is a NAMELIST group's block in the routine's read-only
-// data, the layout VMS's FORTRAN run-time library takes (docs/PHASE-80,
+// data, the layout VMS's FORTRAN run-time library takes (docs/planning/PHASE-80,
 // "The namelist block"): the group's name, a count, and each entity's name
 // and descriptor. Names are counted strings (.ASCIC).
 type NamelistBlock struct {
@@ -711,7 +711,7 @@ type (
 	// CharMove is Dst = Src for CHARACTER values (section 3.3 of the
 	// language manual): Src's characters, cut to Dst's length, or filled
 	// after with blanks to it. It is MOVC3 or MOVC5, which leave R0 to R5
-	// changed (Decision 2 of docs/PHASE-78 - FORTRAN expressions and
+	// changed (Decision 2 of docs/planning/PHASE-78 - FORTRAN expressions and
 	// types.md): every operand is computed before the instruction runs, so
 	// none is held across it. A Dst that overlaps Src is right, as the
 	// instructions move characters as though Src were read first.

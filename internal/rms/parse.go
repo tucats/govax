@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// SysParse implements SYS$PARSE (docs/PHASE-33.md, subtask 2): it runs
+// SysParse implements SYS$PARSE (docs/planning/PHASE-33.md, subtask 2): it runs
 // name processing on a FAB's file name (name.go) and reports the expanded
 // specification in the FAB's NAM block, without looking for the file.
 //

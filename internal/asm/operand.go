@@ -1015,7 +1015,7 @@ func (a *Assembler) displacementOperand(c *cursor, deferred byte, size int) erro
 // dialect that's any constant. In the MACRO dialect it's only a label
 // already defined in the same psect (the MACRO manual, §5.2.1), or one
 // plus or minus a constant (START+2: real MACRO gives MOVAB START+2,R0 a
-// word displacement, as it does MOVAB START,R0; docs/PHASE-41.md,
+// word displacement, as it does MOVAB START,R0; docs/planning/PHASE-41.md,
 // subtask 1). Anything else, even an absolute address, depends on where
 // the linker puts the psect.
 func (a *Assembler) knownTarget(x exprVal) (uint32, bool) {
@@ -1096,7 +1096,7 @@ func (a *Assembler) relativeOperand(x exprVal, deferred byte, size int) error {
 // and a word in the MACRO dialect (the MACRO manual, §5.1.6), finished
 // once it's known or by the linker. In the MACRO dialect a byte or word
 // displacement is signed, as real MACRO stores it (STO_SW, in
-// docs/PHASE-27.md subtask 11's log); a longword is STO_L.
+// docs/planning/PHASE-27.md subtask 11's log); a longword is STO_L.
 func (a *Assembler) registerDisplacement(x exprVal, deferred, reg byte, size int) error {
 	loc := a.pc() + 1
 
@@ -1182,7 +1182,7 @@ func (a *Assembler) absoluteOperand(x exprVal) error {
 // relocatable address and absolute mode for an absolute one (STO_PICR).
 // In the MACRO dialect the linker decides even for an address already
 // known to be absolute, as real MACRO leaves it (STA_LW + STO_PICR, in
-// docs/PHASE-27.md subtask 11's log). In the console dialect, where every
+// docs/planning/PHASE-27.md subtask 11's log). In the console dialect, where every
 // address is absolute, it's absolute mode.
 func (a *Assembler) generalOperand(c *cursor, deferred byte) error {
 	if deferred != 0 {

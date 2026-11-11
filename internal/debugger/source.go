@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Source lines in the debugger's reports (docs/PHASE-42.md, subtask 8).
+// Source lines in the debugger's reports (docs/planning/PHASE-42.md, subtask 8).
 //
 // After a breakpoint, a step, or an exception break, the VMS debugger shows
 // the line of source code the program is stopped at, below its "break at"

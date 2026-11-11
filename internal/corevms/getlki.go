@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $GETLKI and $GETLKIW (docs/PHASE-49.md, subtask 6): information about
+// $GETLKI and $GETLKIW (docs/planning/PHASE-49.md, subtask 6): information about
 // a lock in the lock database, from the System Services Reference
 // Manual. The lock is named by its lock ID (the second longword of the
 // lock status block $ENQ filled in); a lock ID of 0 or -1 asks for a

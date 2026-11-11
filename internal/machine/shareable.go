@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Finding a program's shareable images (docs/PHASE-68 - link shareable
+// Finding a program's shareable images (docs/planning/PHASE-68 - link shareable
 // images.md, subtask 10): rms.ImageLocator's rules, with govax's shims
 // standing for the images they emulate. Both loaders use it, the copying
 // one (imageLoad) and the mapping one (imageMap); LINK uses the same

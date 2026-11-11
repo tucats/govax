@@ -38,7 +38,7 @@ type Routine struct {
 }
 
 // Routines are the routines this package provides: those that read a
-// library (docs/PHASE-90 - VMS help.md, Decision 8), those that write
+// library (docs/planning/PHASE-90 - VMS help.md, Decision 8), those that write
 // one (subtask 11), and the update history, LBR$SEARCH, and LBR$FLUSH
 // (11c). The transfer vector's other entries signal NOTIMPL.
 var Routines = []Routine{

@@ -1,6 +1,6 @@
 package rms
 
-// User file open (FAB$V_UFO; docs/PHASE-49 - record updates and locks.md,
+// User file open (FAB$V_UFO; docs/planning/PHASE-49 - record updates and locks.md,
 // subtask 9).
 //
 // A program that wants a file's blocks rather than its records asks RMS

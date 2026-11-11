@@ -1,9 +1,9 @@
 // Package lbr reads and writes VMS librarian files: object libraries
 // (.OLB), shareable image symbol table libraries (IMAGELIB.OLB), macro
 // libraries (.MLB), help libraries (.HLB), and text libraries (.TLB) all
-// share one format (docs/PHASE-30.md, subtask 3; the writer is
-// docs/PHASE-28.md's subtask 6, write.go and input.go, and update.go's
-// Updater changes a library in place for the LBR$ routines, docs/PHASE-90
+// share one format (docs/planning/PHASE-30.md, subtask 3; the writer is
+// docs/planning/PHASE-28.md's subtask 6, write.go and input.go, and update.go's
+// Updater changes a library in place for the LBR$ routines, docs/planning/PHASE-90
 // - VMS help.md's subtask 11). It reads a library
 // from its bytes and writes one as bytes; callers find, read, and write
 // the file. It imports only internal/obj, to read object modules' names

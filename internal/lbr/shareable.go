@@ -9,7 +9,7 @@ import (
 )
 
 // This file is LIBRARY/SHARE's input: a shareable image as a module of a
-// shareable image symbol table library (docs/PHASE-68 - link shareable
+// shareable image symbol table library (docs/planning/PHASE-68 - link shareable
 // images.md, subtask 12). VMS 7.1's librarian (testdata/link68's
 // MYSHR.OLB, made by LIBRARY/CREATE/SHARE MYSHR SHR1.EXE,SHR2.EXE) keeps
 // little of the image:

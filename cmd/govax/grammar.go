@@ -25,7 +25,7 @@ var (
 	mountRequests []mountRequest
 
 	// systemOptions are the --system-file, --system-device, and
-	// --system-initialize options (docs/PHASE-87 - system volume.md),
+	// --system-initialize options (docs/planning/PHASE-87 - system volume.md),
 	// which take precedence over the vax.default.system.* settings.
 	systemOptions systemFlags
 
@@ -62,7 +62,7 @@ type libraryFlags struct {
 }
 
 // fortranFlags are the fortran subcommand's options, which become the
-// FORTRAN command's qualifiers (docs/PHASE-74 - FORTRAN plan.md).
+// FORTRAN command's qualifiers (docs/planning/PHASE-74 - FORTRAN plan.md).
 type fortranFlags struct {
 	macro        string // --macro: the MACRO file's name
 	noMacro      bool   // --no-macro

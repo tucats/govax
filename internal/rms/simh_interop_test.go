@@ -18,7 +18,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// disksDir returns the absolute path of testdata/disks/ (docs/PHASE-22.md's
+// disksDir returns the absolute path of testdata/disks/ (docs/planning/PHASE-22.md's
 // "Container format fidelity / simh interoperability" section), regardless
 // of the directory `go test` happens to be run from. This mirrors
 // internal/console/asm_test.go's own asmFixturePath helper: runtime.Caller
@@ -79,7 +79,7 @@ func copyFile(t *testing.T, src, dst string) {
 	}
 }
 
-// TestSimhInterop_readRealVMSDisk is docs/PHASE-22.md's primary ODS-2
+// TestSimhInterop_readRealVMSDisk is docs/planning/PHASE-22.md's primary ODS-2
 // read-fidelity check: mount testdata/disks/rq0-ra92.dsk (a full, real
 // VAX/VMS system disk this project had no part in creating, per that
 // file's own doc comment "a full, real VAX/VMS system disk") read-only,
@@ -230,7 +230,7 @@ func TestSimhInterop_readRealVMSDisk(t *testing.T) {
 	}
 }
 
-// TestSimhInterop_directoryListsRealVMSDisk is docs/PHASE-23.md subtask 5's
+// TestSimhInterop_directoryListsRealVMSDisk is docs/planning/PHASE-23.md subtask 5's
 // own opt-in interop check: run a real DIRECTORY (Session.Directory, not
 // ods2's lower-level Directory.List that TestSimhInterop_readRealVMSDisk
 // already exercises directly) against testdata/disks/rq0-ra92.dsk's master
@@ -275,7 +275,7 @@ func TestSimhInterop_directoryListsRealVMSDisk(t *testing.T) {
 	t.Logf("DIRECTORY/FULL of a real VAX/VMS system disk's MFD:\n%s", out)
 }
 
-// TestSimhInterop_typeReadsRealVMSFile is docs/PHASE-23.md subtask 11's own
+// TestSimhInterop_typeReadsRealVMSFile is docs/planning/PHASE-23.md subtask 11's own
 // opt-in interop check, filling the one gap subtask 5's own
 // TestSimhInterop_directoryListsRealVMSDisk left: that test proves
 // Session.Directory's glob/formatting path handles a real system disk's
@@ -374,7 +374,7 @@ func TestSimhInterop_typeReadsRealVMSFile(t *testing.T) {
 	}
 }
 
-// TestSimhInterop_writeThenRereadEmptyDsk is docs/PHASE-22.md's write-path
+// TestSimhInterop_writeThenRereadEmptyDsk is docs/planning/PHASE-22.md's write-path
 // interop check: testdata/disks/empty.dsk is a real container `ods2`
 // itself already initialized (a real home block, INDEXF.SYS, BITMAP.SYS,
 // MFD, no user files -- see that file's own role described in

@@ -6,7 +6,7 @@ import (
 )
 
 // fileWalk is what LIB$DELETE_FILE and LIB$RENAME_FILE share
-// (docs/PHASE-58, subtasks 5 and 6): reading the file specification and
+// (docs/planning/PHASE-58, subtasks 5 and 6): reading the file specification and
 // its default and related names, the file-scan context, the search, and
 // the status rule. Each routine supplies what it does with a file found
 // (each) and how it reports an error searching (searchError).

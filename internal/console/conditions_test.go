@@ -45,7 +45,7 @@ func runFixture(t *testing.T, c *Console, name string) func(string) uint32 {
 }
 
 // TestConditions_assembledProgram runs testdata/asm/conditions.asm
-// (docs/PHASE-26.md subtask 31): an access violation that one frame's
+// (docs/planning/PHASE-26.md subtask 31): an access violation that one frame's
 // handler resignals and its caller's continues, and a subscript range
 // trap.
 func TestConditions_assembledProgram(t *testing.T) {
@@ -83,7 +83,7 @@ func TestConditions_assembledProgram(t *testing.T) {
 }
 
 // TestConditionExit_assembledProgram runs testdata/asm/condition_exit.asm
-// (docs/PHASE-26.md subtask 31): an access violation no handler takes is
+// (docs/planning/PHASE-26.md subtask 31): an access violation no handler takes is
 // reported by the catch-all and ends the image through $EXIT.
 func TestConditionExit_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
@@ -111,7 +111,7 @@ func TestConditionExit_assembledProgram(t *testing.T) {
 }
 
 // TestExceptionVectors_assembledProgram runs
-// testdata/asm/exception_vectors.asm (docs/PHASE-26.md subtask 32):
+// testdata/asm/exception_vectors.asm (docs/planning/PHASE-26.md subtask 32):
 // primary, secondary, and last-chance vectors set and cleared by
 // $SETEXV.
 func TestExceptionVectors_assembledProgram(t *testing.T) {
@@ -145,7 +145,7 @@ func TestExceptionVectors_assembledProgram(t *testing.T) {
 }
 
 // TestSignals_assembledProgram runs testdata/asm/signals.asm
-// (docs/PHASE-26.md subtask 33): LIB$SIGNAL continued by a handler and
+// (docs/planning/PHASE-26.md subtask 33): LIB$SIGNAL continued by a handler and
 // by the catch-all, LIB$ESTABLISH/LIB$REVERT, LIB$MATCH_COND, and a
 // LIB$STOP a handler can't continue.
 func TestSignals_assembledProgram(t *testing.T) {
@@ -187,7 +187,7 @@ func TestSignals_assembledProgram(t *testing.T) {
 }
 
 // TestUnwind_assembledProgram runs testdata/asm/unwind.asm
-// (docs/PHASE-26.md subtask 34): LIB$SIG_TO_RET, and $UNWIND with a depth
+// (docs/planning/PHASE-26.md subtask 34): LIB$SIG_TO_RET, and $UNWIND with a depth
 // and a new PC past a LIB$STOP.
 func TestUnwind_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)

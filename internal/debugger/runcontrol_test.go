@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 )
 
-// The run-control bugs docs/PHASE-42.md fixes in subtask 2, each on
+// The run-control bugs docs/planning/PHASE-42.md fixes in subtask 2, each on
 // Phase 41's probe image DBGDIS (testdata/dbg/vax/dbgdis.exe). Its
 // addresses: SUB2 is at 558, so its first instruction (after the entry
 // mask) is at 55A, DBGSUB\SUB2\%LINE 20; START's CALLS of SUB1 is

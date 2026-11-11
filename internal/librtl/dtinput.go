@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The date and time input routine (docs/PHASE-56, subtask 7; the survey's
+// The date and time input routine (docs/planning/PHASE-56, subtask 7; the survey's
 // "Input"): LIB$CONVERT_DATE_STRING, which reads a date and time written
 // by the context's input format and makes it a VMS internal time.
 //

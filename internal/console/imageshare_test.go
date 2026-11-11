@@ -11,13 +11,13 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 66's subtask 4 (docs/PHASE-66 - mapped image activation.md):
+// Phase 66's subtask 4 (docs/planning/PHASE-66 - mapped image activation.md):
 // with paging on, a shareable image the main image names is mapped as
 // the main image is, privately, at P0's high-water mark after it.
 //
 // The shareable image, SHRDATA, is one page of read-only data whose
 // first longword is its universal symbol SHR_DATA, made by govax's
-// LINK/SHAREABLE (docs/PHASE-68 - link shareable images.md; until then
+// LINK/SHAREABLE (docs/planning/PHASE-68 - link shareable images.md; until then
 // this test made one by hand from an executable). The main image reaches
 // it through a G^ reference to SHR_DATA, so the fixup cell holds the
 // image's base. SHRDATA is a host file, found through the console's

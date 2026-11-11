@@ -536,7 +536,7 @@ func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
 
 // TestShowP1LR regresses a copy-paste typo in evax.dcl's show_types
 // keyword table ("p1l4" instead of "p1lr", fixed alongside this sub-phase
-// per docs/PHASE-16.md's own cross-cutting open question about it) that
+// per docs/planning/PHASE-16.md's own cross-cutting open question about it) that
 // made SHOW P1LR unparseable — the grammar rejected the keyword before
 // parsing ever reached ShowRegisterOrPrivReg's fallback.
 func TestShowP1LR(t *testing.T) {

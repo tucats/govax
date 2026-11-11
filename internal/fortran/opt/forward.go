@@ -25,7 +25,7 @@ import (
 // A fact is "this place holds this constant". A store of a constant makes one; any
 // store that can touch the place ends it (Conflict, by bytes, so a store to half of
 // an INTEGER*4 through EQUIVALENCE ends the fact about the whole), as does a call
-// that may change the place (Storage.ChangedByCall, Decision 7 of docs/PHASE-84 -
+// that may change the place (Storage.ChangedByCall, Decision 7 of docs/planning/PHASE-84 -
 // FORTRAN optimizer.md). VOLATILE places have no facts.
 //
 // Facts cross blocks. In

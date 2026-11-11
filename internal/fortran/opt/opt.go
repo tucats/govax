@@ -14,7 +14,7 @@ type Pass struct {
 	Run  func(*ir.Routine)
 }
 
-// Passes are the optimizer's passes, in the order they run (docs/PHASE-84 -
+// Passes are the optimizer's passes, in the order they run (docs/planning/PHASE-84 -
 // FORTRAN optimizer.md). Each pass's file opens with a FORTRAN example and
 // the code before and after; in a line each:
 //

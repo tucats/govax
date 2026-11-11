@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// docs/PHASE-69 - backup save sets.md, subtask 12: the second round.
+// docs/planning/PHASE-69 - backup save sets.md, subtask 12: the second round.
 // VMS V7.1 ran testdata/backup69/round2's RUN2.COM on a volume govax
 // made (round 1's tree restored by govax, and govax's save sets of it),
 // listing, restoring, comparing, and damaging govax's save sets.

@@ -10,7 +10,7 @@ import (
 )
 
 // This file implements the record-format-aware "render a file's content as
-// plain text" logic docs/PHASE-23.md's subtask 8 (TYPE) calls for, written
+// plain text" logic docs/planning/PHASE-23.md's subtask 8 (TYPE) calls for, written
 // so subtask 9 (COPY's own container-to-host and container-to-container
 // text paths, copy.go) can reuse it unchanged rather than re-deriving the
 // same VFC-decoding/line-ending logic a second time -- see that subtask's
@@ -19,7 +19,7 @@ import (
 // reference is the sibling ods2 module's own cmd/ods2/internal/session/
 // type.go (writeRecords/typeFile), reproduced fresh here since that
 // package's own internal/ visibility rules this module out of importing it
-// directly -- see docs/PHASE-23.md's "Why this phase looks different from
+// directly -- see docs/planning/PHASE-23.md's "Why this phase looks different from
 // most others".
 //
 // # A note for a reader new to VMS record formats

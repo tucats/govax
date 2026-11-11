@@ -5,7 +5,7 @@ import "github.com/tucats/govax/internal/corevms"
 // maxSpawnArguments is how many arguments LIB$SPAWN takes.
 const maxSpawnArguments = 13
 
-// libSpawn is LIB$SPAWN (RTL Library manual, docs/PHASE-48.md):
+// libSpawn is LIB$SPAWN (RTL Library manual, docs/planning/PHASE-48.md):
 //
 //	LIB$SPAWN [command-string] [,input-file] [,output-file] [,flags]
 //	          [,process-name] [,process-id] [,completion-status-address]

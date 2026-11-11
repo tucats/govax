@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 64's subtask 3 (docs/PHASE-64 - page file.md): with a page file
+// Phase 64's subtask 3 (docs/planning/PHASE-64 - page file.md): with a page file
 // configured, the modified page writer writes demand-zero pages from the
 // modified list to it, in clusters, opening it at the first instruction
 // boundary after it's wanted; a written page's frame goes to the free

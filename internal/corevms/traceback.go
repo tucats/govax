@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The traceback handler (docs/PHASE-70 - traceback.md, Decision 1).
+// The traceback handler (docs/planning/PHASE-70 - traceback.md, Decision 1).
 //
 // An image linked with traceback, LINK's default, has SYS$IMGSTA's
 // address as its first transfer address. On VMS that "image startup"

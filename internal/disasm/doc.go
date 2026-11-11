@@ -29,7 +29,7 @@
 //     itself knows no symbols; internal/dbgsym and the console supply
 //     them.
 //
-// It began in internal/asm (docs/PHASE-11.md) and moved here in Phase 41
-// (docs/PHASE-41.md), so other packages (the console, and later a
+// It began in internal/asm (docs/planning/PHASE-11.md) and moved here in Phase 41
+// (docs/planning/PHASE-41.md), so other packages (the console, and later a
 // debugger) can use it without the assembler.
 package disasm

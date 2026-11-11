@@ -9,7 +9,7 @@ import (
 
 // The zone database as the RTL's debugging routines see it
 // (LIB$FIND_VM_ZONE, LIB$SHOW_VM_ZONE, LIB$VERIFY_VM_ZONE; the 5.0 LIB$
-// manual's chapter 6 and the routines' entries; docs/PHASE-59, subtask
+// manual's chapter 6 and the routines' entries; docs/planning/PHASE-59, subtask
 // 9): the image's zones in the order they were made, what each holds,
 // and a check of each.
 //

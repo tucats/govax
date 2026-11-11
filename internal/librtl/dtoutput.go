@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The date and time output routines (docs/PHASE-56, subtask 6; the
+// The date and time output routines (docs/planning/PHASE-56, subtask 6; the
 // survey's "Output"): LIB$FORMAT_DATE_TIME, which writes a time by the
 // context's output format, LIB$GET_MAXIMUM_DATE_LENGTH, the widest text
 // that format can write, and LIB$GET_DATE_FORMAT, the input format in a

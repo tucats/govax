@@ -254,7 +254,7 @@ func TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL(t *testing.T) {
 
 // TestEmulMtprTbiaInvalidatesTB matches emul_procreg.c's own TBIA case
 // (invalidate_tb()): a real full flush of the translation buffer, wired up
-// as of Phase 21 (see docs/PHASE-21.md) -- TBIA/TBIS are not stored into
+// as of Phase 21 (see docs/planning/PHASE-21.md) -- TBIA/TBIS are not stored into
 // the register array either way (the C source's switch case has no
 // fallthrough to its default `vax.preg[reg] = value`), which this test
 // keeps checking alongside the real invalidation.

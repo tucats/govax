@@ -92,8 +92,8 @@ type oracleImage struct {
 	debug   bool     // linked /DEBUG (else with traceback only)
 }
 
-// TestExamineInstructionOracle (docs/PHASE-41.md, subtask 13, moved to
-// the debugger's EXAMINE/INSTRUCTION by docs/PHASE-42.md, subtask 9):
+// TestExamineInstructionOracle (docs/planning/PHASE-41.md, subtask 13, moved to
+// the debugger's EXAMINE/INSTRUCTION by docs/planning/PHASE-42.md, subtask 9):
 // every range the probe's sessions examined under SET MODE SYMBOLIC,
 // run through the debugger's EXAMINE/INSTRUCTION with the session's
 // SET MODE and SET RADIX, prints exactly what VMS's debugger printed: the locations, the instructions with their operands named,

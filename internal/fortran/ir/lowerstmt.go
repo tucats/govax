@@ -9,7 +9,7 @@ import (
 )
 
 // The FTNRTL routines lowered statements call (Decision 12 of
-// docs/PHASE-74 - FORTRAN plan.md).
+// docs/planning/PHASE-74 - FORTRAN plan.md).
 const (
 	ftnStop      = "FTN$STOP"
 	ftnPause     = "FTN$PAUSE"

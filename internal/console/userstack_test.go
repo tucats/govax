@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 67's subtask 3 (docs/PHASE-67 - address space under paging.md):
+// Phase 67's subtask 3 (docs/planning/PHASE-67 - address space under paging.md):
 // with paging on, the user stack grows by itself when a user-mode access
 // falls below P1's low end, $ADJSTK expands it, and image rundown deletes
 // it but for the part still in use.

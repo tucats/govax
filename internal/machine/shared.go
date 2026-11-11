@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Naming references to shareable images (docs/PHASE-41.md, subtask 10).
+// Naming references to shareable images (docs/planning/PHASE-41.md, subtask 10).
 //
 // A program reaches a shareable image's routine through a G^ reference:
 // MACRO writes CALLS #1,G^LIB$PUT_OUTPUT, and LINK, finding the routine in

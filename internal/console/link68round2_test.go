@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// docs/PHASE-68 - link shareable images.md, subtask 13's second round:
+// docs/planning/PHASE-68 - link shareable images.md, subtask 13's second round:
 // VMS V7.1 ran testdata/link68/round2's RUN2.COM on a volume govax had
 // run LINK68.COM on. It analyzed govax's images (RUN2's NAME.AN2), ran
 // govax's programs against govax's shareable images, linked VMS's

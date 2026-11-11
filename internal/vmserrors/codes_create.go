@@ -1,7 +1,7 @@
 package vmserrors
 
 // CREATE facility message IDs -- the console's CREATE command
-// (docs/PHASE-34.md). Private: only the composite CREATE_* codes below are
+// (docs/planning/PHASE-34.md). Private: only the composite CREATE_* codes below are
 // part of this package's public API.
 const (
 	createCreated uint32 = iota + 1

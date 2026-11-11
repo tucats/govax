@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The page file (docs/PHASE-64 - page file.md, subtask 2; the paging
+// The page file (docs/planning/PHASE-64 - page file.md, subtask 2; the paging
 // plan's Decision 9).
 //
 // With paging on, a page that leaves a working set modified goes to the
@@ -167,7 +167,7 @@ func (sys *System) InstallPageFile() *PageFile {
 	return sys.OpenPageFile()
 }
 
-// The default page file (docs/PHASE-87 - system volume.md, Decision 8).
+// The default page file (docs/planning/PHASE-87 - system volume.md, Decision 8).
 // With no vax.sysgen.paging.file, the page file is PAGEFILE.SYS in the
 // system volume's [SYSTEM.SYSEXE], VMS's SYS$SYSTEM:PAGEFILE.SYS. It's
 // named by device and directory, not by SYS$SYSTEM, so that it doesn't
@@ -284,7 +284,7 @@ func (sys *System) FreePageFile(run paging.Run) error {
 	return nil
 }
 
-// Exhaustion (docs/PHASE-64 - page file.md, "Design notes"; the
+// Exhaustion (docs/planning/PHASE-64 - page file.md, "Design notes"; the
 // author's rule, 2026-10-15). When the page file is full, pages bound for
 // it stay on the modified list, and when no frame is left, a fault fails,
 // as it does when physical memory runs out without paging: no process

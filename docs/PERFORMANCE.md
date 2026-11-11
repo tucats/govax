@@ -796,7 +796,7 @@ each, Apple M5 Max, Go 1.26.0, quantum clock:
 
 - Scheduler off: no difference beyond run-to-run noise.
 - Scheduler on: within noise of the old build, and at most about 1% over
-  scheduler off. The open question in docs/PHASE-44.md (fold the count
+  scheduler off. The open question in docs/planning/PHASE-44.md (fold the count
   into `tickQuantum`'s) isn't worth pursuing at this cost.
 - Later in Phase 44 (subtask 8), the run loops call
   `Engine.SwitchIfDue` before each instruction. Called out of line it

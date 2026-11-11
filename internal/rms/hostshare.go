@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// Host file sharing (docs/PHASE-49.md, subtask 11): the arbitration
+// Host file sharing (docs/planning/PHASE-49.md, subtask 11): the arbitration
 // sharing.go applies to a volume's files, for files on the host that a
 // running program opens (the console's EXE$OPEN shim; RMS reaches only
 // volumes). The rule is the same, the File Applications guide's per

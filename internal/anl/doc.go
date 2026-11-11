@@ -1,5 +1,5 @@
 // Package anl is VMS's ANALYZE utility: ANALYZE/OBJECT now, and
-// ANALYZE/IMAGE later. See docs/PHASE-38.md.
+// ANALYZE/IMAGE later. See docs/planning/PHASE-38.md.
 //
 // An analyzer turns a file's contents into Lines, the text of a report
 // with the hints the page layout needs; a Pager lays the lines out on

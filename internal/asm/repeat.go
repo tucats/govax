@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements MACRO-32's repeat blocks (docs/PHASE-28.md,
+// This file implements MACRO-32's repeat blocks (docs/planning/PHASE-28.md,
 // subtask 3): .REPEAT (or .REPT), .IRP, and .IRPC, each ended by .ENDR.
 //
 // # Repeat blocks, for a reader new to VAX MACRO

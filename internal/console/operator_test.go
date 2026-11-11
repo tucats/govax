@@ -9,7 +9,7 @@ import (
 )
 
 // TestOperator_assembledProgram runs testdata/asm/operator.asm
-// (docs/PHASE-26.md subtask 39): an operator request with a reply
+// (docs/planning/PHASE-26.md subtask 39): an operator request with a reply
 // mailbox, the reply read from it, and a broadcast.
 func TestOperator_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)

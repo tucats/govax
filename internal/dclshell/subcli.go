@@ -15,8 +15,8 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The subprocess CLI (docs/PHASE-48.md, Decision 8 in docs/PHASE-43.md;
-// since docs/PHASE-50's subtask 19, the console's whole DCL).
+// The subprocess CLI (docs/planning/PHASE-48.md, Decision 8 in docs/planning/PHASE-43.md;
+// since docs/planning/PHASE-50's subtask 19, the console's whole DCL).
 //
 // A process LIB$SPAWN creates, or $CREPRC creates to run LOGINOUT.EXE,
 // runs a command interpreter rather than one image. On VMS that is DCL;

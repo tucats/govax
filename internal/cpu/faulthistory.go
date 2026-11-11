@@ -3,7 +3,7 @@ package cpu
 import "github.com/tucats/govax/internal/registers"
 
 // This file implements the fault/exception event history ring buffer (SET
-// FAULT/HISTORY, and the history half of SHOW FAULT — docs/PHASE-16.md
+// FAULT/HISTORY, and the history half of SHOW FAULT — docs/planning/PHASE-16.md
 // sub-phase 1b split this out from the pending-interrupt-queue half, which
 // landed separately once Phase 14 provided that state). The Go port of
 // interrupt.c's fault_history/store_fault/show_faults/set_fault_history: a

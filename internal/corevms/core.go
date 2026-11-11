@@ -10,7 +10,7 @@ import (
 // address regions by pagcnt 512-byte pages, matching sys_expreg's own
 // region-size bookkeeping (Environment.RegionSize takes the place of
 // get_region_size/set_region_size's VAX-memory-cell indirection — see
-// docs/PHASE-10.md's open questions).
+// docs/planning/PHASE-10.md's open questions).
 func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	// An argument the caller didn't pass is 0 (testdata/mp/probe5 calls
 	// it with fewer than four: it mustn't fail in Go).

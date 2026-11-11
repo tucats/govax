@@ -2,7 +2,7 @@ package cpu
 
 import "github.com/tucats/govax/internal/registers"
 
-// The engine's half of image exit (docs/PHASE-26.md subtask 19).
+// The engine's half of image exit (docs/planning/PHASE-26.md subtask 19).
 //
 // When a VMS program calls $EXIT, VMS first calls each *exit handler*
 // the program declared ($DCLEXH), then ends the image, returning to the

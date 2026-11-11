@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// DCL's READ and WRITE on an indexed file (docs/PHASE-88 - keyed index
+// DCL's READ and WRITE on an indexed file (docs/planning/PHASE-88 - keyed index
 // files.md, subtask 9), and READ's /KEY, /INDEX, /MATCH, and /DELETE on any
 // file.
 //

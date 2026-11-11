@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// The reclaimer (docs/PHASE-63 - working sets.md, subtask 8; docs/PHASE-62
+// The reclaimer (docs/planning/PHASE-63 - working sets.md, subtask 8; docs/planning/PHASE-62
 // - VMS paging.md, Decision 7).
 //
 // # Why it's needed

@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The page file on the system volume (docs/PHASE-87 - system volume.md,
+// The page file on the system volume (docs/planning/PHASE-87 - system volume.md,
 // subtask 7; Decision 8): with no vax.sysgen.paging.file, a writable
 // system volume holds the page file, [SYSTEM.SYSEXE]PAGEFILE.SYS, made at
 // the first start and used again by the next; a read-only one (another

@@ -15,7 +15,7 @@ import (
 // 15's embedded-fallback mechanism) -- not testdata/dcl/evax.dcl, a pure,
 // untouched `git archive` import from the upstream C repo that has diverged
 // from the bootdata copy since Phase 22 added MOUNT/DISMOUNT (see
-// docs/PHASE-22.md's "Grammar file" design decision). Dispatch tests exist
+// docs/planning/PHASE-22.md's "Grammar file" design decision). Dispatch tests exist
 // to exercise the same grammar/handler wiring cmd/govax uses, so they track
 // the bootdata copy exactly like internal/dcl's own grammar-parser
 // tests do.
@@ -71,7 +71,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 		t.Fatal("expected RUN to have loaded at least the main image")
 	}
 
-	// simple.exe (per docs/PHASE-13.md's own milestone notes) runs to a
+	// simple.exe (per docs/planning/PHASE-13.md's own milestone notes) runs to a
 	// clean completion, so a real (non-/NOEXECUTE) RUN can be dispatched
 	// end-to-end here too, via the "R" abbreviation.
 	if err := d.Dispatch(`R "` + exeFixturePath(t, "simple.exe") + `"`); err != nil {
@@ -125,9 +125,9 @@ func TestDispatch_exitStopsRunning(t *testing.T) {
 func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	// SHOW ASSEMBLER_FLAGS remains unbound -- it needs SET ASSEMBLER's flag
-	// set, not yet implemented (docs/PHASE-16.md sub-phase 1c). SHOW DEBUG,
+	// set, not yet implemented (docs/planning/PHASE-16.md sub-phase 1c). SHOW DEBUG,
 	// previously unbound here too, is now implemented -- see
-	// docs/PHASE-17.md and TestDispatch_showDebug.
+	// docs/planning/PHASE-17.md and TestDispatch_showDebug.
 	err := d.Dispatch("SHOW ASSEMBLER_FLAGS")
 	if err == nil {
 		t.Error("expected an error for the unimplemented SHOW ASSEMBLER_FLAGS")
@@ -282,7 +282,7 @@ func TestDispatch_clearInterrupt(t *testing.T) {
 // TestDispatch_notImplementedCommand checks ROM, still gated behind
 // notImplemented (commands.go; device support) -- ASM used to be this test's own
 // example (its bare, no-filename form returned CLI_NOASMREPL) until
-// docs/PHASE-19.md implemented interactive assembler mode; see
+// docs/planning/PHASE-19.md implemented interactive assembler mode; see
 // TestDispatchASM_bareEntersInteractiveMode (asm_repl_test.go) for its
 // current behavior.
 func TestDispatch_notImplementedCommand(t *testing.T) {
@@ -367,7 +367,7 @@ func TestDispatch_initializeVaxNeedsPages(t *testing.T) {
 
 // TestDispatch_initializeBareErrors checks that a bare INITIALIZE (no /VAX
 // or /CONTAINER) reaches Grammar.Dispatch's own "no handler bound" error --
-// per docs/PHASE-23.md, neither qualifier is a default, so there is no
+// per docs/planning/PHASE-23.md, neither qualifier is a default, so there is no
 // meaningful do-nothing form of this verb.
 func TestDispatch_initializeBareErrors(t *testing.T) {
 	d, _ := newTestDispatcher(t)

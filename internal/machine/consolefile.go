@@ -11,7 +11,7 @@ import (
 )
 
 // This file is how the machine's own commands that read a file, ASM and
-// LOAD/ROM and LOAD/NVRAM, find it (docs/PHASE-87 - system volume.md,
+// LOAD/ROM and LOAD/NVRAM, find it (docs/planning/PHASE-87 - system volume.md,
 // Decision 9). They once read only host files, through the console's
 // resolver (m.Paths: the host's current directory, the --path
 // directories, then govax's built-in files). Now a name is placed as RUN

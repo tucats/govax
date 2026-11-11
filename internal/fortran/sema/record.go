@@ -23,7 +23,7 @@ import (
 // 2.2.5.2: "can be treated like a normal reference to a FORTRAN variable or
 // array element"), and its place is the record's, plus the field's offset,
 // plus for each subscripted part its element's offset. Lowering folds the
-// constant parts of that into one offset (Decision 2 of docs/PHASE-82 -
+// constant parts of that into one offset (Decision 2 of docs/planning/PHASE-82 -
 // FORTRAN DEC extensions.md).
 //
 // A record or a substructure as a whole is an aggregate reference (section

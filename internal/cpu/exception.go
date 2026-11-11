@@ -33,7 +33,7 @@ const (
 	// matching internal/asm/builtins.go's EXC$INTERVAL/EXC$CONREAD/
 	// EXC$CONWRITE symbols and interrupt.c's own call sites (vax.c's
 	// interval-clock tick, emul_procreg.c's RXCS/TXCS/TXDB cases). See
-	// docs/PHASE-14.md.
+	// docs/planning/PHASE-14.md.
 	ExcInterval Exception = 0xC0
 	ExcConRead  Exception = 0xF8
 	ExcConWrite Exception = 0xFC

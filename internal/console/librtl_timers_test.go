@@ -6,7 +6,7 @@ import (
 )
 
 // TestLibrtlTimers: a program times three demand-zero page touches with
-// a heap timer block, through the routines' stubs (docs/PHASE-55,
+// a heap timer block, through the routines' stubs (docs/planning/PHASE-55,
 // subtask 5): LIB$STAT_TIMER's page faults grow by the three pages
 // (the calls fault a stack page in too, so a first reading is taken
 // before the touches), and

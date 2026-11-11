@@ -25,7 +25,7 @@ func mustLongword(t *testing.T, cpu *registers.CPU, mem *vm.Memory, addr uint32)
 }
 
 // TestEmulCallsFrameLayout hand-verifies CALLS's stack-frame construction
-// against a fully worked-out address trace (see docs/PHASE-07.md's progress
+// against a fully worked-out address trace (see docs/planning/PHASE-07.md's progress
 // log for the arithmetic), including a deliberately misaligned initial SP to
 // exercise the frame's SPA (saved-SP-alignment) bits.
 func TestEmulCallsFrameLayout(t *testing.T) {
@@ -183,7 +183,7 @@ func TestEmulCallsRoundTrip(t *testing.T) {
 }
 
 // TestEngineCallEntryRunsUntilSentinelReturn exercises the Console-facing
-// CallEntry primitive (docs/PHASE-13.md's Console.Call, built on this): a
+// CallEntry primitive (docs/planning/PHASE-13.md's Console.Call, built on this): a
 // zero-argument call built directly (no CALLS instruction), stepped through
 // a procedure body that itself CALLS/RETs a nested routine before returning,
 // ending in ErrConsoleCallReturned rather than a fault at the sentinel PC.

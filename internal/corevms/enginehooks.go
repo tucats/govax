@@ -22,7 +22,7 @@ type EngineHooks struct {
 }
 
 // Running is the process the engine's hooks reach: the System's current
-// process, the one whose context the CPU holds (docs/PHASE-44.md), or
+// process, the one whose context the CPU holds (docs/planning/PHASE-44.md), or
 // Home's when there's none. nil before the first System exists.
 func (h EngineHooks) Running() *Environment {
 	if h.Home == nil {
@@ -67,7 +67,7 @@ func (h EngineHooks) JSBShim(code uint32) (bool, error) {
 
 // NextAST makes EngineHooks a cpu.ASTSource: the engine asks at every
 // instruction boundary whether an AST is due, and the running process,
-// which owns the AST queues, answers (docs/PHASE-26.md subtask 15).
+// which owns the AST queues, answers (docs/planning/PHASE-26.md subtask 15).
 func (h EngineHooks) NextAST() (cpu.ASTCall, bool, error) {
 	routine, argList, returnPC, ok, err := h.Running().NextAST()
 
@@ -77,7 +77,7 @@ func (h EngineHooks) NextAST() (cpu.ASTCall, bool, error) {
 // DispatchException makes EngineHooks a cpu.ExceptionDispatcher: an
 // exception kernel.asm's SCB sends to console$handler is offered to the
 // running program's condition handlers before the console reports it
-// (docs/PHASE-26.md subtask 31).
+// (docs/planning/PHASE-26.md subtask 31).
 func (h EngineHooks) DispatchException(code uint32, params []uint32, pc uint32, psl registers.PSL) (bool, error) {
 	env := h.Running()
 	if env == nil {
@@ -101,7 +101,7 @@ func (h EngineHooks) ChangeModeHandler(mode registers.AccessMode) uint32 {
 // EngineError turns this package's signals into the engine's: ErrHalt (a
 // service or shim asking the machine to halt, e.g. an unrecognized
 // SYS$CLI request) into cpu.ErrHalted, ErrWait (a service waiting for an
-// event flag, docs/PHASE-26.md) into cpu.ErrServiceWait, ErrExit (the
+// event flag, docs/planning/PHASE-26.md) into cpu.ErrServiceWait, ErrExit (the
 // image has exited) into cpu.ErrImageExit, and $EXIT's CallRequest (call
 // an exit handler) into a cpu.ServiceCall. Any other error is unchanged.
 func EngineError(err error) error {

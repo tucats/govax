@@ -14,7 +14,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// STOP and Ctrl/Y in command procedures (docs/PHASE-50 - DCL command
+// STOP and Ctrl/Y in command procedures (docs/planning/PHASE-50 - DCL command
 // procedures.md, subtask 18), by the OpenVMS User's Manual's rules (13.7,
 // 13.8.1, 13.11 to 13.13) and the DCL Dictionary's (STOP, CONTINUE, EXIT,
 // SET CONTROL).
@@ -175,7 +175,7 @@ func (c *Interpreter) attachedCLI() *subprocessCLI {
 
 // HandleAttention makes Console a cpu.AttentionHandler: an attention key
 // typed while a program runs is offered first to the running process,
-// whose Ctrl/C or Ctrl/Y AST may take it (docs/PHASE-26.md, subtask 27).
+// whose Ctrl/C or Ctrl/Y AST may take it (docs/planning/PHASE-26.md, subtask 27).
 // Otherwise, with SET NOCONTROL=Y in effect, the key is ignored; in a
 // command procedure, it is DCL's Ctrl/Y: with no ON CONTROL_Y at any
 // level, the Ctrl/Y level is read now, with the image paused, and

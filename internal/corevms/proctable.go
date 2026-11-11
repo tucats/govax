@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The process table (docs/PHASE-43.md, subtask 3).
+// The process table (docs/planning/PHASE-43.md, subtask 3).
 //
 // VMS finds a process from its process ID (PID) through a table of
 // pointers to process control blocks, the "PCB vector", indexed by a
@@ -30,7 +30,7 @@ import (
 // 21 bits, with as few index bits as the system's maximum process count
 // needs, which is why a VMS 7.3 system's first processes have PIDs such
 // as 00000201 and 00000205. govax uses 8 index bits (255 processes, more
-// than S0 can hold; see docs/PHASE-43.md, subtask 6) and the remaining
+// than S0 can hold; see docs/planning/PHASE-43.md, subtask 6) and the remaining
 // 13 for the sequence number. Every slot's sequence number starts at 2,
 // so a slot's first process has sequence 3, and process 1 keeps the PID
 // govax has always given it, 00000301. The widths and the starting
@@ -249,5 +249,5 @@ func (sys *System) Current() *Environment { return sys.procs.current }
 
 // SetCurrent makes env the current process. It only records which
 // process that is; switching the CPU's context to it is the scheduler's
-// work (docs/PHASE-44.md).
+// work (docs/planning/PHASE-44.md).
 func (sys *System) SetCurrent(env *Environment) { sys.procs.current = env }

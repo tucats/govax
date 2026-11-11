@@ -2,7 +2,7 @@ package cpu
 
 import "github.com/tucats/govax/internal/registers"
 
-// AST delivery: the engine's half (docs/PHASE-26.md subtask 15).
+// AST delivery: the engine's half (docs/planning/PHASE-26.md subtask 15).
 //
 // # What an AST is
 //
@@ -93,7 +93,7 @@ func (e *Engine) deliverAST() error {
 
 	e.instructionPC = call.Routine
 
-	// The AST routine isn't traced (docs/PHASE-73 - trace trap.md,
+	// The AST routine isn't traced (docs/planning/PHASE-73 - trace trap.md,
 	// Decision 7): its delivery is an interrupt, which starts with T and
 	// TP clear. The interrupted PSL, in the AST's argument list, keeps
 	// them, and the AST's exit restores them (trace.go).

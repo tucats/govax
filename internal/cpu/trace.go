@@ -2,7 +2,7 @@ package cpu
 
 // The trace fault (VAX Architecture Reference Manual, chapter 5, "Trace
 // Fault", and the between-instructions sequence under "Serialization of
-// Notification of Multiple Events"; docs/PHASE-73 - trace trap.md).
+// Notification of Multiple Events"; docs/planning/PHASE-73 - trace trap.md).
 //
 // # What tracing is
 //

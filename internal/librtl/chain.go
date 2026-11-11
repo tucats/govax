@@ -2,7 +2,7 @@ package librtl
 
 import "github.com/tucats/govax/internal/corevms"
 
-// Chaining (docs/PHASE-57, "Chaining"; the 5.0 manual's sections 2.2.2
+// Chaining (docs/planning/PHASE-57, "Chaining"; the 5.0 manual's sections 2.2.2
 // and 2.2.3): LIB$DO_COMMAND and LIB$RUN_PROGRAM end the image and have
 // the DCL that ran it run a command, or another image, next. Each leaves
 // the text with the process's DCL (corevms.CLI's Chain) and then exits

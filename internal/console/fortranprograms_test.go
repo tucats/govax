@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// The FORTRAN end-to-end harness (docs/PHASE-75 - FORTRAN first
+// The FORTRAN end-to-end harness (docs/planning/PHASE-75 - FORTRAN first
 // light.md, subtask 8): each testdata/fortran/name.for is compiled by
 // FORTRAN, assembled by MACRO, linked by LINK against FTNRTL, and run,
 // and what it prints is compared with name.out, the expected terminal
@@ -30,7 +30,7 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 // (the plan's Decision 20: both paging modes for a subset).
 var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "checks", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "parts", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "recurast", "recurcalc", "recurio", "recurrtl", "recursion", "recurtree", "recurvfe", "rtlcalls", "rtlchars", "runformat", "optalias", "optasts", "optbranch", "optcse", "optchar", "optinvar", "optloop", "optrecur", "optfaults", "optflow", "services", "shared", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
 
-// fortranKernels are the optimizer's kernels (docs/PHASE-84 - FORTRAN
+// fortranKernels are the optimizer's kernels (docs/planning/PHASE-84 - FORTRAN
 // optimizer.md), compute programs that spend their time in their own loops, as
 // the corpus's programs don't, so the counts below mean something. A kernel
 // without an expected output (its value is a floating chain, not to be worked out
@@ -45,7 +45,7 @@ var optimizerModes = []struct{ name, qualifier string }{
 }
 
 // recursiveModes are optimizerModes with every subprogram compiled /RECURSIVE
-// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 7), its locals and the compiler's
+// (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtask 7), its locals and the compiler's
 // cells in each activation's frame. A conforming FORTRAN-77 program doesn't depend on
 // an unsaved local keeping its value from one call to the next (section 4.12's SAVE),
 // so each must print what it prints compiled the usual way, but for

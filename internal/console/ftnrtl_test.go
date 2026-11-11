@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// FTNRTL, the FORTRAN run-time library (docs/PHASE-74 - FORTRAN
+// FTNRTL, the FORTRAN run-time library (docs/planning/PHASE-74 - FORTRAN
 // plan.md, subtask 4): a MACRO program calls its routines, links against
 // it with no options file, and runs, with the image built into govax or
 // one of the user's own, in both paging modes.
@@ -220,7 +220,7 @@ func checkRebuiltFTNRTL(t *testing.T, built []byte) {
 }
 
 // ftnLister calls FTNRTL's list-directed output routines as a compiled
-// PRINT * or WRITE (*,*) does (docs/PHASE-75 - FORTRAN first light.md,
+// PRINT * or WRITE (*,*) does (docs/planning/PHASE-75 - FORTRAN first light.md,
 // subtask 7): integers at I12's limits, logicals, texts, REAL values on
 // each side of G editing's ranges, six REALs (a record that wraps), whole
 // arrays, a text longer than a record, and a statement with no items.

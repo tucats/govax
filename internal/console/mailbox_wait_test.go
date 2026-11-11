@@ -8,7 +8,7 @@ import (
 )
 
 // TestMailboxWait_assembledProgram runs testdata/asm/mailbox_wait.asm
-// (docs/PHASE-26.md subtask 37): a read attention AST, a writer waiting
+// (docs/planning/PHASE-26.md subtask 37): a read attention AST, a writer waiting
 // on a full mailbox for a timer AST to make room, and $SETRWM.
 func TestMailboxWait_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)

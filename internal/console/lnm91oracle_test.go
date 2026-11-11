@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The Phase 91 oracle (docs/PHASE-91, subtask 4): testdata/lnm91's program
+// The Phase 91 oracle (docs/planning/PHASE-91, subtask 4): testdata/lnm91's program
 // reports what RMS did with a name, case by case, and vax/lnm91.log and
 // vax/lnm91b.log are VMS 7.1's logs of it. TestLnm91ServicesOracle replays
 // each log's cases on govax with VMS's own image, on a volume built

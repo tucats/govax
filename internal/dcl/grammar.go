@@ -280,7 +280,7 @@ func (g *Grammar) Bind(name string, h Handler) {
 // Missing returns, sorted, the names that handlers are bound to (Bind)
 // for which the grammar has no verb or syntax: the commands a program
 // expects of its grammar that this one lacks, as an older or edited copy
-// of a program's grammar file may (docs/PHASE-87 - system volume.md,
+// of a program's grammar file may (docs/planning/PHASE-87 - system volume.md,
 // Decision 4). A grammar the program was built with has none.
 func (g *Grammar) Missing() []string {
 	var missing []string

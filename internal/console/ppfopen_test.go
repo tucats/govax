@@ -9,7 +9,7 @@ import (
 )
 
 // Tests of the files DCL's OPEN opens as process-permanent files
-// (docs/PHASE-71 - process-permanent files.md, subtask 7;
+// (docs/planning/PHASE-71 - process-permanent files.md, subtask 7;
 // internal/dclshell/dclfile.go).
 
 // TestDCLOpenFiles_partF runs part F of testdata/ppf71 on govax, with VMS

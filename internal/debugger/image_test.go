@@ -91,7 +91,7 @@ func TestRunDebugStopsAtMain(t *testing.T) {
 // TestRunDefaultsFollowLinkFlag: with no /DEBUG qualifier the debugger
 // starts for an image linked /DEBUG (dbgdis.exe) and RUN/NODEBUG runs it
 // to the end, with no session. An image linked /NOTRACEBACK runs without
-// the debugger even with RUN/DEBUG (docs/PHASE-42.md, subtask 1: VMS
+// the debugger even with RUN/DEBUG (docs/planning/PHASE-42.md, subtask 1: VMS
 // ran DBGNOTB silently).
 func TestRunDefaultsFollowLinkFlag(t *testing.T) {
 	c, out := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{})

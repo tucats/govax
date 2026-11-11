@@ -13,7 +13,7 @@ import (
 )
 
 // Conformance is what /STANDARD asks the compiler to flag: what a program does that
-// FORTRAN-77 doesn't have (docs/PHASE-85 - FORTRAN compiler usability.md, Decisions 14
+// FORTRAN-77 doesn't have (docs/planning/PHASE-85 - FORTRAN compiler usability.md, Decisions 14
 // and 15). The language manual prints those things in blue, which is where the tables
 // here come from: the phase doc's log says how the blue was read from its scan. Each
 // finding is a remark, so a program flagged still compiles with a good status. The zero

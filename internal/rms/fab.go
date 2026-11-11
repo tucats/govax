@@ -27,11 +27,11 @@ import "github.com/tucats/govax/internal/vmsdef"
 // # Where these numbers come from
 //
 // Every offset below was cross-checked two independent ways during Phase
-// 22's implementation (see docs/PHASE-22.md):
+// 22's implementation (see docs/planning/PHASE-22.md):
 //
 //  1. Directly against a real VAX/VMS 7.3 system's own $FABDEF structure
 //     definitions (not against reference/eVAX/eVAX/Headers/fab.h — see
-//     docs/PHASE-22.md's "Why this phase looks different" section for why
+//     docs/planning/PHASE-22.md's "Why this phase looks different" section for why
 //     the C reference project isn't this phase's correctness reference).
 //  2. Independently, by hand-walking fab.h's own C struct declaration
 //     field by field — respecting each field's natural alignment the way
@@ -41,7 +41,7 @@ import "github.com/tucats/govax/internal/vmsdef"
 //
 // Both methods agree on every field below.
 //
-// Phase 24 (docs/PHASE-24.md) generalized this same verification into
+// Phase 24 (docs/planning/PHASE-24.md) generalized this same verification into
 // internal/vmsdef.FABFields — the complete 33-field table (this file only
 // ever needed the ~10 below), independently re-derived by the same
 // alignment-walking method and confirmed to reproduce every offset here
@@ -81,7 +81,7 @@ var (
 	// fabORG is FAB$B_ORG: a 1-byte field naming the file's organization
 	// — sequential, relative, indexed, or hashed (see the org* constants
 	// below). This package implements sequential organization only
-	// (docs/PHASE-22.md's scope); any other value is a real error to
+	// (docs/planning/PHASE-22.md's scope); any other value is a real error to
 	// report back to the caller, not something to silently misinterpret.
 	fabORG = fabOffset("ORG")
 

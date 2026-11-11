@@ -11,7 +11,7 @@ import (
 
 // TestEveryLexicalHasHelp: each lexical function DCL knows by name
 // (lexicalNames, govax's F$CONFIG and the ones it lacks among them) has
-// a topic of its own under HELPLIB.HLB's Lexicals (docs/PHASE-90 - VMS
+// a topic of its own under HELPLIB.HLB's Lexicals (docs/planning/PHASE-90 - VMS
 // help.md, Decision 11), keyed by its whole name.
 func TestEveryLexicalHasHelp(t *testing.T) {
 	data, err := fs.ReadFile(bootdata.FS, bootdata.HelpLibrary)

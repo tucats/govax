@@ -8,7 +8,7 @@ import (
 // Decoded is one fully decoded instruction: which Instruction it is and its
 // resolved operands, ready for a Handler (Phases 04-07) to execute. This is
 // the value-based equivalent of the C source's struct OPCODE — see
-// docs/PHASE-03.md's design notes on why operands are resolved to values/
+// docs/planning/PHASE-03.md's design notes on why operands are resolved to values/
 // addresses rather than raw pointers.
 type Decoded struct {
 	Opcode      Opcode
@@ -34,7 +34,7 @@ type Decoded struct {
 // Shared by decodeInstruction and Engine.PeekInstruction, the latter needing
 // exactly this much of decode_opcode.c's own logic — opcode identification,
 // no operand decode — for instruction-level breakpoints (SET
-// BREAK/INSTRUCTION, docs/PHASE-18.md) to identify the next instruction
+// BREAK/INSTRUCTION, docs/planning/PHASE-18.md) to identify the next instruction
 // without the operand-decode side effects (autoincrement/autodecrement)
 // a full decode would incur.
 func fetchOpcode(cpu *registers.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error) {
@@ -75,7 +75,7 @@ func fetchOpcode(cpu *registers.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32,
 // This is the Go port of decode_opcode.c's decode_instruction, minus
 // disassembly, symbol-table/.ENTRY lookups, breakpoint/debug-flag data, and
 // profiling counters — all console (Phase 08) or disassembler (Phase 11)
-// concerns, not decode itself (see docs/PHASE-03.md's design notes).
+// concerns, not decode itself (see docs/planning/PHASE-03.md's design notes).
 //
 // Unlike the C source, decodeInstruction does not write back to cpu's PC
 // register at all, on success or on fault: decode_opcode.c updates

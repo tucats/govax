@@ -11,7 +11,7 @@ import (
 )
 
 // TestDiskQIO_assembledProgram runs testdata/asm/disk_qio.asm
-// (docs/PHASE-26.md subtask 41): a file on a mounted ODS-2 volume looked
+// (docs/planning/PHASE-26.md subtask 41): a file on a mounted ODS-2 volume looked
 // up, accessed, read, written, and read again with the disk's $QIO
 // functions.
 func TestDiskQIO_assembledProgram(t *testing.T) {

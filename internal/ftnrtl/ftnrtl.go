@@ -1,5 +1,5 @@
 // Package ftnrtl is FTNRTL.EXE, the run-time library of govax's FORTRAN
-// compiler (docs/PHASE-74 - FORTRAN plan.md, Decision 13): a shareable
+// compiler (docs/planning/PHASE-74 - FORTRAN plan.md, Decision 13): a shareable
 // image of routines written in MACRO-32, which a compiled FORTRAN
 // program calls for what its own instructions don't do (I/O, STOP, ...).
 //

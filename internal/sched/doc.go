@@ -1,6 +1,6 @@
 // Package sched holds VMS's process-scheduling rules as plain Go, with no
 // CPU or VMS dependency, so they can be tested on their own (Phase 44;
-// docs/PHASE-44.md, and docs/PHASE-43.md's Part A for the program it
+// docs/planning/PHASE-44.md, and docs/planning/PHASE-43.md's Part A for the program it
 // belongs to).
 //
 // A VMS system has many processes but, on a uniprocessor VAX, only one

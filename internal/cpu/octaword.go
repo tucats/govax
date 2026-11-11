@@ -31,7 +31,7 @@ func (o Octaword) Negative() bool { return o.Hi>>63 != 0 }
 // through Rn+3, so R11 (R11, AP, FP, SP) is the last start that doesn't
 // run into the PC. The manual calls R12 and above UNPREDICTABLE; govax
 // raises a reserved-addressing-mode fault, as decided in Phase 35
-// (docs/PHASE-35.md, Decision 4).
+// (docs/planning/PHASE-35.md, Decision 4).
 const octawordRegisterLimit = registers.R11
 
 // LoadOctaword reads op's full 16-byte value. Use it for an operand whose

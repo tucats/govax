@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The libraries on the system volume (docs/PHASE-87 - system volume.md,
+// The libraries on the system volume (docs/planning/PHASE-87 - system volume.md,
 // subtask 8). STARTUP.COM defines SYS$LIBRARY and SYS$SHARE as the
 // volume's [SYSTEM.SYSLIB], so MACRO reads its macro library there,
 // FORTRAN its FORSYSDEF.TLB, and LINK and RUN its FTNRTL.EXE, ahead of the

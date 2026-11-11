@@ -165,8 +165,8 @@ func TestJob_noSlot(t *testing.T) {
 // TestJob_logicalNames: a subprocess has a process table of its own and
 // shares its job's table with its owner: a name it defines in its
 // process table isn't seen by its owner, one in the job table is
-// (docs/PHASE-45.md, subtask 3). A temporary mailbox's name goes in the
-// job table (LNM$TEMPORARY_MAILBOX is LNM$JOB, docs/PHASE-43.md's bug 4),
+// (docs/planning/PHASE-45.md, subtask 3). A temporary mailbox's name goes in the
+// job table (LNM$TEMPORARY_MAILBOX is LNM$JOB, docs/planning/PHASE-43.md's bug 4),
 // so a subprocess finds its owner's mailbox by name.
 func TestJob_logicalNames(t *testing.T) {
 	parent, _ := fixture()

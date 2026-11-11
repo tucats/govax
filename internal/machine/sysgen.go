@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// The system parameters' keys (docs/PHASE-62 - VMS paging.md, Decision
+// The system parameters' keys (docs/planning/PHASE-62 - VMS paging.md, Decision
 // 11; HELP CONFIG KEYS). Each is vax.sysgen. and the VMS SYSGEN
 // parameter's name in lowercase; the paging ones are govax's own. Each
 // must also be in cmd/govax/main.go's validConfigs.

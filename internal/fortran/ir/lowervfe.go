@@ -15,8 +15,8 @@ import (
 // each time the scan reaches it, so it is code, which FTNRTL has to call. Each
 // FORMAT with such expressions gets one routine of a form that takes the
 // expression's number, n, and the AP and FP of the routine doing the I/O, and
-// returns the value in R0 (Decision 5 of docs/PHASE-80 - FORTRAN formatted IO.md,
-// and Decision 6 of docs/PHASE-89 - reentrant FORTRAN.md):
+// returns the value in R0 (Decision 5 of docs/planning/PHASE-80 - FORTRAN formatted IO.md,
+// and Decision 6 of docs/planning/PHASE-89 - reentrant FORTRAN.md):
 //
 //	FMT.$V100:
 //	  .WORD   ^M<R2>

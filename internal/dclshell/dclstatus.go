@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// $STATUS, $SEVERITY, and ON (docs/PHASE-50 - DCL command procedures.md,
+// $STATUS, $SEVERITY, and ON (docs/planning/PHASE-50 - DCL command procedures.md,
 // subtask 10), as the OpenVMS User's Manual describes them (13.8 to
 // 13.15), with what VMS 7.3 showed in testdata/dcl50's probe.
 //

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// File attributes through the ACP (docs/PHASE-26.md subtask 42).
+// File attributes through the ACP (docs/planning/PHASE-26.md subtask 42).
 //
 // # What "attributes" are
 //

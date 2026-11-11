@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10): the
+// SHOW SYSTEM and SHOW PROCESS (docs/planning/PHASE-44.md, subtask 10): the
 // console's reports of the process table, built here, where the data is.
 //
 // SHOW SYSTEM's layout is real VMS's, column for column, from the author's

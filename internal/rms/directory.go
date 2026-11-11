@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-23.md subtask 5: DIRECTORY, the
+// This file implements docs/planning/PHASE-23.md subtask 5: DIRECTORY, the
 // operator-console command that lists the files on a mounted volume. Its
 // behavioral reference is the sibling ods2 module's own
 // cmd/ods2/internal/session/directory.go (read-only, per this phase's own
@@ -44,7 +44,7 @@ type DirectoryOptions struct {
 	Size bool
 	Date bool
 
-	// Owner and Protection (docs/PHASE-34.md) add each file's owner UIC
+	// Owner and Protection (docs/planning/PHASE-34.md) add each file's owner UIC
 	// and protection, as VMS's DIRECTORY/OWNER and /PROTECTION do; /FULL
 	// shows both.
 	Owner      bool

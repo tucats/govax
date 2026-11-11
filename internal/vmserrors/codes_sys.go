@@ -26,7 +26,7 @@ const (
 	sysNoMount     uint32 = 1297 // real SS$_NOMOUNT's message field: 10380 >> 3
 	sysNoSuchFile  uint32 = 290  // real SS$_NOSUCHFILE's message field: 2320 >> 3
 
-	// Logical-name service codes (docs/PHASE-25.md). Values and message
+	// Logical-name service codes (docs/planning/PHASE-25.md). Values and message
 	// texts are from the real VMS 7.3 SYSMSG source listing
 	// (vmssrc_archive/v73/msgfil/lis/sysmsg.lis), and agree with
 	// VMS 7.3's $SSDEF (see codes_sys_test.go).
@@ -41,7 +41,7 @@ const (
 	sysParentDel   uint32 = 1098 // SS$_PARENT_DEL: 8788 >> 3
 	sysNoLogTab    uint32 = 1106 // SS$_NOLOGTAB:   8852 >> 3
 
-	// Process codes (docs/PHASE-44.md, subtask 10: SHOW PROCESS).
+	// Process codes (docs/planning/PHASE-44.md, subtask 10: SHOW PROCESS).
 	// Values and texts as internal/vmsdef's Symbols and Messages.
 	sysNonExpr uint32 = 285  // SS$_NONEXPR:  2280 >> 3
 	sysIvIdent uint32 = 1092 // SS$_IVIDENT:  8740 >> 3
@@ -56,12 +56,12 @@ const (
 	// SS_BADPARAM is real VMS's SS$_BADPARAM (20), "bad parameter value":
 	// a service argument that is out of range or malformed (for example
 	// internal/lnm's attribute and equivalence-count checks). Until
-	// docs/PHASE-25.md subtask 6 it also carried INITIALIZE/CONTAINER's
+	// docs/planning/PHASE-25.md subtask 6 it also carried INITIALIZE/CONTAINER's
 	// failure text; that now has its own code, CLI_INITFAIL.
 	SS_BADPARAM = SYSFacility<<FacilityPosition | sysBadParam<<MessagePosition | StatusSevere
 
 	// SS_DEVMOUNT is real VMS's SS$_DEVMOUNT (108, per
-	// reference/eVAX/eVAX/Headers/ss_def.h): docs/PHASE-22.md's MOUNT
+	// reference/eVAX/eVAX/Headers/ss_def.h): docs/planning/PHASE-22.md's MOUNT
 	// command reports this when asked to mount a device that already has
 	// a volume mounted on it (internal/dclcmd/mount.go), matching real
 	// MOUNT's refusal to implicitly swap an already-mounted device's
@@ -82,7 +82,7 @@ const (
 	SS_NOMOUNT = SYSFacility<<FacilityPosition | sysNoMount<<MessagePosition | StatusSevere
 
 	// SS_NOSUCHFILE is real VMS's SS$_NOSUCHFILE (2320, per
-	// reference/eVAX/eVAX/Headers/ss_def.h): docs/PHASE-23.md's DELETE
+	// reference/eVAX/eVAX/Headers/ss_def.h): docs/planning/PHASE-23.md's DELETE
 	// (internal/dclcmd/delete.go) reports this when a file specification's
 	// name/type/version pattern matches nothing on its resolved volume --
 	// the operator-console-facing "not found" status the design section's
@@ -94,7 +94,7 @@ const (
 	// expected outcome rather than a hard failure.
 	SS_NOSUCHFILE = SYSFacility<<FacilityPosition | sysNoSuchFile<<MessagePosition | StatusWarning
 
-	// Logical-name service codes (internal/lnm, docs/PHASE-25.md). The two
+	// Logical-name service codes (internal/lnm, docs/planning/PHASE-25.md). The two
 	// success codes are returned by $CRELNM/$CRELNT rather than as errors,
 	// but are defined here so their messages are registered too.
 	SS_NOPRIV      = SYSFacility<<FacilityPosition | sysNoPriv<<MessagePosition | StatusSevere

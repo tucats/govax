@@ -11,7 +11,7 @@ import (
 // RETURN, go back to the statement after the CALL.
 //
 // The labels mean nothing to the routine called, so the argument list that is
-// built has no longword for them (the author's answer 2 in docs/PHASE-79):
+// built has no longword for them (the author's answer 2 in docs/planning/PHASE-79):
 // CALL CHECK(A,B,*10,*20,C) is CALLS #3, and C is CHECK's third longword. The
 // routine leaves i in R0, and the caller chooses its label.
 

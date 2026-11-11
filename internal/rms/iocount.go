@@ -1,6 +1,6 @@
 package rms
 
-// The process's I/O counts (docs/PHASE-49.md, subtask 11; corevms's
+// The process's I/O counts (docs/planning/PHASE-49.md, subtask 11; corevms's
 // iocount.go keeps them): what RMS's own I/O adds to JPI$_BUFIO and
 // JPI$_DIRIO. VMS's RMS reaches the disk through the file system's
 // calls, which are buffered I/O, and moves records through multiblock

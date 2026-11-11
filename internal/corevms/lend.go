@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Giving the CPU up between DCL commands (docs/PHASE-50, subtask 21).
+// Giving the CPU up between DCL commands (docs/planning/PHASE-50, subtask 21).
 //
 // The command interpreter is Go, so a DCL command takes no instructions,
 // and nothing but a process's own wait or quantum end would let another
@@ -101,7 +101,7 @@ func (sys *System) LendCPU(env *Environment, over func() bool, deadline uint64) 
 
 // HostIdle is the console's idle time: wait blocks in the host, process
 // 1's DCL waiting for a terminal line while every other process waits
-// (docs/PHASE-51, subtask 4). As with the scheduler's own idling
+// (docs/planning/PHASE-51, subtask 4). As with the scheduler's own idling
 // (idle.go), the time it takes is no process's CPU time. In
 // quantum-clock mode, where emulated time counts instructions and so
 // stands still meanwhile, the clock is moved on by the host time wait

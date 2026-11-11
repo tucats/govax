@@ -142,7 +142,7 @@ func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *
 	return c
 }
 
-// Status codes and $DEVDEF bits $ALLOC uses (docs/PHASE-26.md).
+// Status codes and $DEVDEF bits $ALLOC uses (docs/planning/PHASE-26.md).
 var (
 	ssDevAlloc    = vmsdef.Symbols["SS$_DEVALLOC"]
 	ssDevAlrAlloc = vmsdef.Symbols["SS$_DEVALRALLOC"]
@@ -455,7 +455,7 @@ func registerDeviceServices(t *ServiceTable) {
 // deviceName translates a $ASSIGN/$GETDVI device name through its logical
 // names (SYS$OUTPUT becomes TTA0, as on VMS) into a physical device name
 // for Devices.Find; a leading "_" suppresses translation
-// (docs/PHASE-25.md). A name that can't be translated is reported as its
+// (docs/planning/PHASE-25.md). A name that can't be translated is reported as its
 // lnm status (SS$_TOOMANYLNAM), and one that names no device at all as
 // SS$_IVDEVNAM.
 func (env *Environment) deviceName(name string) (string, uint32) {

@@ -17,7 +17,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 63's subtask 5 (docs/PHASE-63 - working sets.md): a page deleted
+// Phase 63's subtask 5 (docs/planning/PHASE-63 - working sets.md): a page deleted
 // while it's in transition, out of the working set but still holding its
 // frame on the free or modified list, gives its frame up as a valid page
 // does, to the head of the free list, untied; and a writable private

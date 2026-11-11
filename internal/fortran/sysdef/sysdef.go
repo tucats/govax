@@ -3,7 +3,7 @@
 // FORTRAN's come from SYS$LIBRARY:FORSYSDEF.TLB, a library that comes with the
 // compiler; govax makes its from the values internal/vmsdef already holds, as
 // FORTRAN source, when a compilation first asks for one
-// (docs/PHASE-83 - FORTRAN and VMS.md, Decision 3).
+// (docs/planning/PHASE-83 - FORTRAN and VMS.md, Decision 3).
 //
 // Most modules are a family of constants, the names VMS's definition file of
 // that name defines. Each name is declared and given its value in two

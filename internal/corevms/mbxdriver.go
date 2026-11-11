@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// The mailbox driver (docs/PHASE-26.md subtask 29): the $QIO functions
+// The mailbox driver (docs/planning/PHASE-26.md subtask 29): the $QIO functions
 // of a mailbox (mailbox.go).
 //
 // # How reads and writes meet

@@ -1,6 +1,6 @@
 // Package format reads a FORTRAN format specification, the text of a
 // FORMAT statement or of a run-time format: (I5, 2X, F8.2), say. It is
-// the compiler's check of a FORMAT statement's syntax (docs/PHASE-80 -
+// the compiler's check of a FORMAT statement's syntax (docs/planning/PHASE-80 -
 // FORTRAN formatted IO.md, Decision 3): the same grammar is written again
 // in MACRO in FTNRTL, which interprets formats when the program runs, and
 // both are held to what VMS's FORTRAN run-time library accepted and

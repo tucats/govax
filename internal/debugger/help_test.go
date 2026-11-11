@@ -27,7 +27,7 @@ func found(t *testing.T, lib help.Library, words ...string) bool {
 }
 
 // TestEveryVerbHasHelp: each verb of the debugger's grammar has a topic
-// under DBG$HELP.HLB's DEBUG module (docs/PHASE-90 - VMS help.md, Decision
+// under DBG$HELP.HLB's DEBUG module (docs/planning/PHASE-90 - VMS help.md, Decision
 // 10; the console's are internal/console's help_test.go). An alias, such
 // as S for STEP, shares its verb's topic.
 func TestEveryVerbHasHelp(t *testing.T) {

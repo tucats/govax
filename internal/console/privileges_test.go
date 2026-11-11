@@ -7,7 +7,7 @@ import (
 )
 
 // TestPrivileges_assembledProgram runs testdata/asm/privileges.asm
-// (docs/PHASE-26.md subtask 38): JPI$_CURPRIV, $SETPRV disabling and
+// (docs/planning/PHASE-26.md subtask 38): JPI$_CURPRIV, $SETPRV disabling and
 // enabling CMKRNL around $CMKRNL, and $CREMBX without TMPMBX.
 func TestPrivileges_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)

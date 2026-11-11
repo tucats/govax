@@ -50,7 +50,7 @@ import (
 // allocator's on that edge comes along, so the way out still falls through.
 //
 // A source line stays in order, so the test's line comes before the body's code, and its first
-// instruction says where it's from (Decision 12 of docs/PHASE-84 - FORTRAN optimizer.md).
+// instruction says where it's from (Decision 12 of docs/planning/PHASE-84 - FORTRAN optimizer.md).
 
 // Rotate is the pass.
 func Rotate(r *ir.Routine) {

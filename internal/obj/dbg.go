@@ -8,7 +8,7 @@ import (
 )
 
 // This file builds the DST records real MACRO's debugger (DBG) records
-// hold (docs/PHASE-29.md, subtask 12): a symbol record for each symbol
+// hold (docs/planning/PHASE-29.md, subtask 12): a symbol record for each symbol
 // the module defines, the source file's record, and the line-number
 // table that maps code addresses to source lines.
 //

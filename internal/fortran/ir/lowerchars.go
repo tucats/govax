@@ -7,10 +7,10 @@ import (
 )
 
 // CHARACTER dummy arguments, character arguments, and concatenation
-// (Decisions 2 and 8 of docs/PHASE-78 - FORTRAN expressions and types.md).
+// (Decisions 2 and 8 of docs/planning/PHASE-78 - FORTRAN expressions and types.md).
 //
 // A CHARACTER argument is passed by descriptor (Decision 11 of
-// docs/PHASE-74 - FORTRAN plan.md): the argument list's longword holds the
+// docs/planning/PHASE-74 - FORTRAN plan.md): the argument list's longword holds the
 // address of a class S descriptor, whose first word is the value's length
 // and whose second longword (DSC$A_POINTER) its address. So a CHARACTER
 // dummy's text is two steps from the argument list,
@@ -53,7 +53,7 @@ func dummyText(p *Param) *Mem {
 // funcLength is the length of a CHARACTER function's value, as this unit
 // declares it: the reference's type, or for a passed-length one the length
 // its descriptor says. A recursive function's call of its own name, when
-// RESULT holds the value (docs/PHASE-89 - reentrant FORTRAN.md), is as long
+// RESULT holds the value (docs/planning/PHASE-89 - reentrant FORTRAN.md), is as long
 // as that variable, the function's name having no CHARACTER type of its
 // own.
 func (l *lowerer) funcLength(f *sema.FuncRef) Expr {

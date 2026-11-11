@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// The disk ACP's file operations (docs/PHASE-26.md subtask 41): what a
+// The disk ACP's file operations (docs/planning/PHASE-26.md subtask 41): what a
 // program's $QIO on a disk channel does to the files of a mounted volume.
 //
 // # The ACP and virtual blocks

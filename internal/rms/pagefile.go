@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// The page file's storage (docs/PHASE-64 - page file.md, subtask 2).
+// The page file's storage (docs/planning/PHASE-64 - page file.md, subtask 2).
 //
 // With paging on, govax's page file holds pages that have no other home
 // while their frames are reused (internal/corevms's pagefile.go). It's a

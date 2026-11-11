@@ -10,7 +10,7 @@ import (
 )
 
 // The global symbol table (GST) an image linked /DEBUG carries is an
-// object module named for the image (docs/PHASE-29.md, "What real
+// object module named for the image (docs/planning/PHASE-29.md, "What real
 // LINK/DEBUG writes"): a main header, the linker's name, a GSD record
 // defining one absolute psect, GSD records of the image's global
 // symbols, each with its final value, and an end of module record. It

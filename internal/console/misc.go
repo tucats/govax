@@ -76,7 +76,7 @@ func scaleCount(n float64) string {
 // RunCommandLine runs the one-shot command: the text left on govax's own
 // command line once its options are parsed (CommandLineString). cmd/govax
 // calls it once STARTUP.COM has run, as a login command procedure runs before
-// the command interpreter reads its input (docs/PHASE-50 - DCL command
+// the command interpreter reads its input (docs/planning/PHASE-50 - DCL command
 // procedures.md): the command is level 0's input, in place of the
 // terminal, and the session ends when it's done. It reports whether there
 // was a command to run; its failure is CommandLineErr's.
@@ -122,7 +122,7 @@ func (c *Console) Printf(format string, args ...any) {
 	c.Interpreter.Printf(format, args...)
 }
 
-// HelpCommand implements DCL's HELP (dclcmd.Context.Help, docs/PHASE-90 -
+// HelpCommand implements DCL's HELP (dclcmd.Context.Help, docs/planning/PHASE-90 -
 // VMS help.md, subtask 6): its qualifiers, read from r, and its responses
 // read from SYS$INPUT. When there's no /LIBRARY and SYS$HELP:HELPLIB.HLB
 // can't be opened, it reads govax's own HELPLIB.HLB.

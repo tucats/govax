@@ -7,7 +7,7 @@ import (
 )
 
 // TestItemText: each form's text, and where DCL's and LIB$'s styles
-// differ (docs/PHASE-55, subtask 3). None of these forms reads the
+// differ (docs/planning/PHASE-55, subtask 3). None of these forms reads the
 // process, so there's no Environment.
 func TestItemText(t *testing.T) {
 	var env *Environment

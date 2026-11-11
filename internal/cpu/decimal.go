@@ -8,7 +8,7 @@ import (
 )
 
 // Packed decimal strings, and the CPU's helpers for the decimal string
-// instructions (docs/PHASE-35.md, subtasks 10-13).
+// instructions (docs/planning/PHASE-35.md, subtasks 10-13).
 //
 // A packed decimal string is given by a length, the number of decimal
 // digits (0 to 31), and the address of its first byte. Each byte holds

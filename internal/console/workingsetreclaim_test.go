@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// Phase 63's subtask 8 (docs/PHASE-63 - working sets.md): when the free
+// Phase 63's subtask 8 (docs/planning/PHASE-63 - working sets.md): when the free
 // list falls below FREELIM, the reclaimer trims working sets that grew
 // past their quotas back to WSQUOTA, and has the modified page writer
 // write what it can; and the faults are counted by kind, and reported

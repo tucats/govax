@@ -10,7 +10,7 @@ import (
 const helpWidth = 80
 
 // help is the debugger's HELP: the topic looked up in the debugger's help
-// library (DBG$HELP, or SYS$HELP:DBG$HELP.HLB; docs/PHASE-90 - VMS
+// library (DBG$HELP, or SYS$HELP:DBG$HELP.HLB; docs/planning/PHASE-90 - VMS
 // help.md), whose one module, DEBUG, holds every command as a level-2
 // topic, so "HELP SET BREAK" is the library's DEBUG SET BREAK. It prompts
 // for more, as VMS 7.1's debugger does, its prompts naming DEBUG ("DEBUG

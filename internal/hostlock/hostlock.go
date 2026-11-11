@@ -1,5 +1,5 @@
 // Package hostlock takes an advisory lock on a host file, so that two
-// govax sessions don't both write one ODS-2 container (docs/PHASE-87 -
+// govax sessions don't both write one ODS-2 container (docs/planning/PHASE-87 -
 // system volume.md, Decision 7).
 //
 // A container is a volume's blocks in a host file. A session that mounts

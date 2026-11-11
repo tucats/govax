@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Phase 62's subtask 5 (docs/PHASE-62 - VMS paging.md): with paging on,
+// Phase 62's subtask 5 (docs/planning/PHASE-62 - VMS paging.md): with paging on,
 // every frame the system gives a page is recorded in the PFN database as
 // that page's.
 

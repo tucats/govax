@@ -14,7 +14,7 @@ import (
 
 //go:generate go run ./mkhelp
 
-// govax's help libraries (docs/PHASE-90 - VMS help.md, Decisions 1 and 2):
+// govax's help libraries (docs/planning/PHASE-90 - VMS help.md, Decisions 1 and 2):
 // HELPLIB.HLB, DCL's HELP, and DBG$HELP.HLB, the debugger's. Each is built
 // from a directory of help files in VMS's format (.HLP files, a module for
 // each level-1 key), one file per level-1 topic, as LIBRARY/CREATE/HELP

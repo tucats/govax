@@ -219,7 +219,7 @@ func TestMailbox_newSystem(t *testing.T) {
 
 // TestMailbox_newEnvironmentKeepsMailboxes: a second process's
 // Environment on the same System finds the mailboxes the first made
-// (docs/PHASE-43.md, bug 2: building an Environment used to delete them).
+// (docs/planning/PHASE-43.md, bug 2: building an Environment used to delete them).
 func TestMailbox_newEnvironmentKeepsMailboxes(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// Access violations (docs/PHASE-53, Decision 5). On VMS a LIB$ routine is
+// Access violations (docs/planning/PHASE-53, Decision 5). On VMS a LIB$ routine is
 // VAX code: when it reads or writes an argument it can't reach, its own
 // instruction faults, and the hardware's access violation is *signaled*,
 // not returned. The program's condition handlers see SS$_ACCVIO, and with

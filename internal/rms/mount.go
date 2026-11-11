@@ -63,7 +63,7 @@ type mountedVolume struct {
 // "which mounted volume, if any, currently backs it".
 //
 // A MountTable is system state: every VAX process sees the same mounted
-// volumes (internal/corevms.System holds it; docs/PHASE-43.md). It has no
+// volumes (internal/corevms.System holds it; docs/planning/PHASE-43.md). It has no
 // concurrency protection of its own (a mutex, for example), and needs
 // none: govax runs all its processes on one engine, in one goroutine,
 // switching between them only between instructions, so two processes
@@ -76,7 +76,7 @@ type MountTable struct {
 	mounts map[string]*mountedVolume
 
 	// system is the device the system volume is mounted on (SetSystem),
-	// normalized, or "" (docs/PHASE-87 - system volume.md).
+	// normalized, or "" (docs/planning/PHASE-87 - system volume.md).
 	system string
 }
 
@@ -141,7 +141,7 @@ func normalizeDeviceName(name string) string {
 
 // Mount opens the container file at path and mounts it as an ODS-2 volume
 // on device — the Go equivalent of real VMS's MOUNT command, in its
-// simplest single-disk form (docs/PHASE-22.md's grammar section covers
+// simplest single-disk form (docs/planning/PHASE-22.md's grammar section covers
 // what govax's own console MOUNT command exposes on top of this).
 //
 // writable selects which of ods2's two container-opening functions is
@@ -294,7 +294,7 @@ func (t *MountTable) DismountAll() error {
 
 // Lookup returns the *volume.Volume currently mounted on device, and
 // whether one is. This is what this package's SYS$CREATE/SYS$OPEN
-// handlers (added in a later docs/PHASE-22.md subtask) call once they've
+// handlers (added in a later docs/planning/PHASE-22.md subtask) call once they've
 // parsed a file spec's device name out of a FAB, to turn that name into
 // the real volume to operate on.
 func (t *MountTable) Lookup(device string) (*volume.Volume, bool) {
@@ -317,7 +317,7 @@ func (t *MountTable) Lookup(device string) (*volume.Volume, bool) {
 // the sibling ods2 module's own volume/ondisk types just to read one
 // string field — keeping that dependency confined to this package, the
 // one place govax code is allowed to reach into ods2 directly (see
-// mount.go's own package-level design note in docs/PHASE-22.md).
+// mount.go's own package-level design note in docs/planning/PHASE-22.md).
 //
 // A volume set's label lives on every member's home block identically (it
 // describes the logical volume as a whole, not any one member disk), so

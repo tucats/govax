@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 )
 
-// These tests are docs/PHASE-42.md's subtask 19: DEPOSIT/INSTRUCTION.
+// These tests are docs/planning/PHASE-42.md's subtask 19: DEPOSIT/INSTRUCTION.
 
 // bytesAt returns n bytes of memory at addr, in hexadecimal.
 func bytesAt(t *testing.T, c *console.Console, addr, n uint32) string {

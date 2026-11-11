@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The process-permanent files a process starts with (docs/PHASE-71 -
+// The process-permanent files a process starts with (docs/planning/PHASE-71 -
 // process-permanent files.md, subtask 5).
 //
 // LOGINOUT opens SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND as

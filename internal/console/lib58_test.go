@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 )
 
-// The Phase 58 oracle (docs/PHASE-58, subtask 8): testdata/lib58's
+// The Phase 58 oracle (docs/planning/PHASE-58, subtask 8): testdata/lib58's
 // lib58.mar calls every LIBRTL routine of the phase, case by case, and
 // prints what each returned, signaled, and stored, and what it passed
 // the program's own routines. vax/lib58-vax.txt is its output on VMS,

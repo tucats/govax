@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/sched"
 )
 
-// The process-control services on other processes (docs/PHASE-45.md,
+// The process-control services on other processes (docs/planning/PHASE-45.md,
 // subtask 9): $SCHDWK, $CANWAK, $FORCEX, $SETPRI, $SUSPND, $RESUME.
 // ($WAKE and $DELPRC were earlier.) The scheduler can't switch contexts
 // in this fixture, so these tests look at what each service does to the
@@ -264,7 +264,7 @@ func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint3
 	return 0
 }
 
-// $GETJPI of other processes and wildcard scans (docs/PHASE-45.md,
+// $GETJPI of other processes and wildcard scans (docs/planning/PHASE-45.md,
 // subtask 10).
 
 func TestGetjpi_otherProcess(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/lbr"
 )
 
-// This file is the refresh of a help library (docs/PHASE-90 - VMS help.md,
+// This file is the refresh of a help library (docs/planning/PHASE-90 - VMS help.md,
 // Decision 7). HELPLIB.HLB and DBG$HELP.HLB are refreshed module by module
 // rather than as whole files, since a user adds help of their own to them
 // with LIBRARY/HELP, and a newer govax's help should reach the modules the

@@ -457,7 +457,7 @@ func TestEmulXfcShimWait(t *testing.T) {
 	}
 }
 
-// jsbStub is a JSB stub (docs/PHASE-54): PUSHL #code, XFC #XFC$JSBSHIM,
+// jsbStub is a JSB stub (docs/planning/PHASE-54): PUSHL #code, XFC #XFC$JSBSHIM,
 // RSB.
 func jsbStub(code uint32) []byte {
 	return []byte{0xDD, 0x8F, byte(code), byte(code >> 8), byte(code >> 16), byte(code >> 24), 0xFC, xfcJSBShim, 0x05}

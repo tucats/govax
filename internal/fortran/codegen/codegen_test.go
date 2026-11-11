@@ -316,7 +316,7 @@ func TestSpill(t *testing.T) {
 
 // TestSpillInFrame checks that a recursive routine's spill cell is in its frame,
 // after lowering's cells there, and counted in what its entry point reserves
-// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 4).
+// (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtask 4).
 func TestSpillInFrame(t *testing.T) {
 	out := generate(t, "T.FOR",
 		"      RECURSIVE SUBROUTINE T(I, J, K)",

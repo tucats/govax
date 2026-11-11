@@ -31,7 +31,7 @@ type (
 
 		// Recursive is set if the statement says RECURSIVE, and Result is
 		// RESULT's name, or nil (the HP Fortran manual's 8.5.1.1 and
-		// 8.5.2.1; docs/PHASE-89 - reentrant FORTRAN.md).
+		// 8.5.2.1; docs/planning/PHASE-89 - reentrant FORTRAN.md).
 		Recursive bool
 		Result    *Name
 	}

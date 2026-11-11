@@ -217,7 +217,7 @@ func TestFortranReadOutputFile(t *testing.T) {
 }
 
 // TestFortranReadInputFile: a program's first READ of unit 5, with SYS$INPUT defined as a
-// file, reads that file, as VMS's library does (docs/PHASE-86 - FORTRAN milestone.md): a
+// file, reads that file, as VMS's library does (docs/planning/PHASE-86 - FORTRAN milestone.md): a
 // $OPEN, not the $CREATE a first WRITE does, which would make a new, empty version of it.
 // ACCEPT reaches SYS$INPUT too, and FOR005 is unit 5's own name for it.
 func TestFortranReadInputFile(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 )
 
 // SET TRACE, SHOW TRACE, and CANCEL TRACE as the VMS debugger has them
-// (docs/PHASE-42.md, subtask 13; the formats are from
+// (docs/planning/PHASE-42.md, subtask 13; the formats are from
 // testdata/dbgcmd/vax/trace.dlg).
 //
 // A *tracepoint* is a breakpoint that doesn't stop the program: when the

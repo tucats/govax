@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/sysvol"
 )
 
-// The system logical names (docs/PHASE-91 - concealed logical names.md,
+// The system logical names (docs/planning/PHASE-91 - concealed logical names.md,
 // Decisions 1 and 6, subtask 8).
 
 // TestSystemNames boots on a system volume and holds what its names do to

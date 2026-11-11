@@ -244,7 +244,7 @@ func (l *linker) patchGRefs(f fixupLayout, fixupVA uint32) error {
 }
 
 // fixupSection returns the fixup section's contents, a whole number of
-// pages, as real LINK writes them (docs/PHASE-30.md).
+// pages, as real LINK writes them (docs/planning/PHASE-30.md).
 func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 	b := make([]byte, pageUp(f.size))
 	le := binary.LittleEndian

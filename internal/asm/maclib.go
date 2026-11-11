@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements macro libraries (docs/PHASE-28.md, subtask 5):
+// This file implements macro libraries (docs/planning/PHASE-28.md, subtask 5):
 // .MCALL, .LIBRARY, and MACRO's automatic search of its libraries for an
 // undefined opcode.
 //

@@ -9,7 +9,7 @@ import (
 )
 
 // This file builds the tables an image linked /DEBUG has beside its debug
-// symbol table (docs/PHASE-29.md, subtasks 17 and 18, and docs/
+// symbol table (docs/planning/PHASE-29.md, subtasks 17 and 18, and docs/
 // DEBUG-RECORDS.md, 1.3 and 2.3), which the debugger reads to find its
 // way around the DST.
 
@@ -76,7 +76,7 @@ const gstPsectName = ".$$ABS$$."
 // linked /DEBUG, which the debugger falls back on where the DST says
 // nothing, or of a shareable image, which LINK reads to link programs
 // against it: an object module named for the image, as real LINK writes
-// it (docs/PHASE-29.md, "What real LINK/DEBUG writes"; docs/PHASE-68,
+// it (docs/planning/PHASE-29.md, "What real LINK/DEBUG writes"; docs/planning/PHASE-68,
 // "The probe's answers"). Its records are a main header (the image's
 // name and ident, the link time), the linker's name, a GSD record
 // defining the absolute psect .$$ABS$$., GSD records of the symbols
@@ -161,7 +161,7 @@ func (l *linker) globalSymbolTable() ([]byte, int, error) {
 // others), and those govax's own tables define in its place.
 //
 // Their order is real LINK's for both images that show it, by a rule
-// that isn't confirmed (docs/PHASE-29.md, subtask 18): symbols before
+// that isn't confirmed (docs/planning/PHASE-29.md, subtask 18): symbols before
 // entry points; within each, those a library or symbol source defined,
 // in name order, and then the modules' own, the last defined first.
 // TRACE's GST is SYS$IMGSTA, LEVEL, GLOBDATA, then SECOND, FIRST, TRACE;

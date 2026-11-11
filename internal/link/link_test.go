@@ -196,7 +196,7 @@ func diffBlocks(got, want []byte) string {
 
 // librtl is what VMS 7.3's LIBRTL looks like to an image linked against
 // it: LIB$PUT_OUTPUT's offset, and the global section ISD's size, ident,
-// and match control (ANALYZE/IMAGE of HELLO.EXE, docs/PHASE-30.md).
+// and match control (ANALYZE/IMAGE of HELLO.EXE, docs/planning/PHASE-30.md).
 var librtl = &TableSource{
 	Symbols: map[string]Definition{"LIB$PUT_OUTPUT": {Image: "LIBRTL", Value: 0x478}},
 	Images:  map[string]SharedImage{"LIBRTL": {Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ}},

@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 65's subtask 3 (docs/PHASE-65 - sections and paging.md), with
+// Phase 65's subtask 3 (docs/planning/PHASE-65 - sections and paging.md), with
 // paging on: a global file section's pages leave working sets. A process
 // PTE leaving gets its global page table index back; the frame stays in
 // memory while any PTE holds it valid (its share count), then waits on a

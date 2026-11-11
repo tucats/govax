@@ -8,7 +8,7 @@ import (
 
 // This file lays the recorded listing lines (listing.go) out as a MACRO
 // listing's source pages, as real VAX MACRO lays them out
-// (docs/PHASE-29.md, "What a real listing looks like"). A listing line is
+// (docs/planning/PHASE-29.md, "What a real listing looks like"). A listing line is
 // at most 132 columns (a long source line is kept whole, as real MACRO
 // keeps it):
 //

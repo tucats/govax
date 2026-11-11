@@ -12,7 +12,7 @@ import (
 )
 
 // OpenImage is ReadImage for an image that's mapped rather than copied
-// (docs/PHASE-66 - mapped image activation.md, subtask 2): it finds the
+// (docs/planning/PHASE-66 - mapped image activation.md, subtask 2): it finds the
 // image file fn by the same rules, and returns its bytes (for the
 // header, the ISDs, and the debug symbols) with the file held open as
 // the page source its sections read their pages from. An image on a

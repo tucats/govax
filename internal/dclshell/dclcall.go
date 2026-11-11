@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// GOSUB and RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE (docs/PHASE-50 -
+// GOSUB and RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE (docs/planning/PHASE-50 -
 // DCL command procedures.md, subtask 13), as the OpenVMS User's Manual
 // describes them (14.16.6 and 14.17).
 //

@@ -359,7 +359,7 @@ func (s *Scheduler) Reschedule() (Handle, bool) {
 
 // Choose makes h the current process now, outside the usual choice: for
 // the console taking the CPU back for process 1 after a run stopped in
-// another (docs/PHASE-44.md, subtask 9). The process that was current
+// another (docs/planning/PHASE-44.md, subtask 9). The process that was current
 // goes to the back of its queue, keeping its priority and the rest of its
 // quantum. A computable h becomes current, its priority unchanged. A
 // waiting h stays waiting, and then there is no current process and a

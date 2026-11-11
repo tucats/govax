@@ -6,7 +6,7 @@ import (
 )
 
 // This file implements the console INITIALIZE/CONTAINER command
-// (docs/PHASE-23.md, subtask 4) — the operator-facing half of "format a
+// (docs/planning/PHASE-23.md, subtask 4) — the operator-facing half of "format a
 // brand-new, empty ODS-2 volume". The actual work (writing the on-disk
 // volume structures) already lives in the sibling internal/rms package's
 // InitializeContainer (initialize.go, this same subtask); this file is a
@@ -41,7 +41,7 @@ import (
 // created, a volume too small for the minimal reserved-file layout, a
 // label too long for its fixed on-disk width, ...) is reported as the
 // CLI_INITFAIL console status rather than a bare Go error, per
-// docs/PHASE-23.md's "Status-code / error translation" design section.
+// docs/planning/PHASE-23.md's "Status-code / error translation" design section.
 // (Phase 23 used SS_BADPARAM with an INITIALIZE-specific message; Phase 25
 // gave SS$_BADPARAM back its real text and this command its own code.)
 func (c *Context) InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {

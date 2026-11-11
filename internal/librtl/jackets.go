@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The system service jackets (docs/PHASE-55, the survey's "Jackets"):
+// The system service jackets (docs/planning/PHASE-55, the survey's "Jackets"):
 // LIB$SYS_ASCTIM, LIB$SYS_FAO, LIB$SYS_FAOL, LIB$SYS_GETMSG, and
 // LIB$SYS_TRNLOG. A system service writes its string into a fixed
 // buffer, which suits MACRO but not a language whose strings are

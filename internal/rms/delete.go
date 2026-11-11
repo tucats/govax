@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements docs/PHASE-23.md subtask 6: DELETE, the operator-
+// This file implements docs/planning/PHASE-23.md subtask 6: DELETE, the operator-
 // console command that reclaims a file's storage and removes its directory
 // entry. Its behavioral reference is the sibling ods2 module's own
 // cmd/ods2/internal/session/delete.go (read-only, per this phase's own

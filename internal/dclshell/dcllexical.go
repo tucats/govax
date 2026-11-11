@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// DCL's lexical functions (docs/PHASE-50 - DCL command procedures.md,
+// DCL's lexical functions (docs/planning/PHASE-50 - DCL command procedures.md,
 // subtasks 9 and 14): F$name(arguments), in an expression, returns an
 // integer or a string (User's Manual, 12.8.4 and chapter 15). Each
 // function is an entry in lexicalFunctions, the table the expression

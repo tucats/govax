@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// Logical block I/O on a mounted volume (docs/PHASE-26.md subtask 45).
+// Logical block I/O on a mounted volume (docs/planning/PHASE-26.md subtask 45).
 //
 // # Virtual, logical, and physical blocks
 //

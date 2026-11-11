@@ -9,7 +9,7 @@ import (
 )
 
 // AccessImage opens the volume file at loc as the image activator does
-// when it maps an image (docs/PHASE-66 - mapped image activation.md,
+// when it maps an image (docs/planning/PHASE-66 - mapped image activation.md,
 // subtask 2): accessed for reading, others allowed to read it but not to
 // write it, and held so for as long as the image's sections use it.
 // While it's held an RMS open of the file for writing gets RMS$_FLK, an

@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Image sections (docs/PHASE-66 - mapped image activation.md, subtask 3).
+// Image sections (docs/planning/PHASE-66 - mapped image activation.md, subtask 3).
 //
 // With paging on, the image activator maps an image rather than copying
 // it, as VMS's does (the book's 21.1.1.3): each process-private image

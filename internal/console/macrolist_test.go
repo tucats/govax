@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// These test docs/PHASE-29.md subtask 5: MACRO's /LIST qualifier. The
+// These test docs/planning/PHASE-29.md subtask 5: MACRO's /LIST qualifier. The
 // listing's layout is internal/asm's (and its tests'); these check where
 // the console writes it and what it hands the assembler for the heading.
 
@@ -258,7 +258,7 @@ func TestDispatch_macroList(t *testing.T) {
 }
 
 // TestDispatch_macroShow checks MACRO's /SHOW= and /NOSHOW= through the
-// DCL grammar (docs/PHASE-29.md subtask 7): /SHOW=EXPANSIONS lists a
+// DCL grammar (docs/planning/PHASE-29.md subtask 7): /SHOW=EXPANSIONS lists a
 // macro's expansion, /NOSHOW=CALLS leaves its call out, and an option
 // MACRO doesn't have fails the command.
 // TestDispatch_macroCrossReference checks /CROSS_REFERENCE through DCL:

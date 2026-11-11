@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 )
 
-// docs/PHASE-70 - traceback.md, subtask 10: the oracle. TestTB70Oracle
+// docs/planning/PHASE-70 - traceback.md, subtask 10: the oracle. TestTB70Oracle
 // does on govax what the author did on VMS V7.1 (testdata/tb70's
 // README): it puts the probe's sources on a fresh volume as DUA1, runs
 // @TB70/OUTPUT=TB70.LOG and @TB70B/OUTPUT=TB70B.LOG, which assemble and

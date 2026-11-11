@@ -7,7 +7,7 @@ import (
 )
 
 // This file reads and writes the debug symbol table (DST) records that
-// traceback (TBT) and debugger (DBG) records carry (docs/PHASE-29.md,
+// traceback (TBT) and debugger (DBG) records carry (docs/planning/PHASE-29.md,
 // subtask 10).
 //
 // A TBT or DBG record holds TIR commands, as a TIR record does, but the

@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $QIO, $QIOW, and $CANCEL (docs/PHASE-26.md subtask 17): device I/O
+// $QIO, $QIOW, and $CANCEL (docs/planning/PHASE-26.md subtask 17): device I/O
 // through a channel.
 //
 // # How VMS device I/O works
@@ -57,8 +57,8 @@ import (
 // difference. Most terminal requests do.
 //
 // A request can also stay *pending*: a mailbox read with no message to
-// read waits for a write (mbxdriver.go, docs/PHASE-26.md subtask 29),
-// and a terminal read waits for its line (terminal.go, docs/PHASE-49.md
+// read waits for a write (mbxdriver.go, docs/planning/PHASE-26.md subtask 29),
+// and a terminal read waits for its line (terminal.go, docs/planning/PHASE-49.md
 // subtask 10). The driver keeps the request and completes it later with
 // completeIO, which does what completion always does: IOSB, event flag, AST. $QIOW then
 // waits for that, $CANCEL completes a channel's pending requests with
@@ -379,7 +379,7 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 // All of that is the requesting process's (req.owner), not necessarily
 // env's: a write to a mailbox completes the read another process has
 // waiting, and a process being deleted sends its termination message to
-// its creator's (docs/PHASE-43.md, "Touching another process's memory").
+// its creator's (docs/planning/PHASE-43.md, "Touching another process's memory").
 // The IOSB is written through the owner's address space, and the event
 // flag and the AST are Go state of the owner's. The completion is then
 // reported to the scheduler (reportEvent): if the owner was waiting for

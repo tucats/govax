@@ -7,7 +7,7 @@ import (
 )
 
 // This file covers setPrivReg/emulMfpr's ICCS/RXCS/RXDB/TXCS/TXDB cases --
-// docs/PHASE-14.md's interval-timer and console-I/O device modeling.
+// docs/planning/PHASE-14.md's interval-timer and console-I/O device modeling.
 
 func TestEmulMtprIccsXfrReloadsIcrFromNicr(t *testing.T) {
 	e := kernelEngine()

@@ -29,7 +29,7 @@ type Shell struct {
 	// ZERO.
 	Logicals *lnm.Database
 
-	// ContainerSession is docs/PHASE-23.md's operator-console state for
+	// ContainerSession is docs/planning/PHASE-23.md's operator-console state for
 	// working with an already-mounted ODS-2 container's files: the
 	// current default device/directory (SET DEFAULT/SHOW DEFAULT) a
 	// partial file spec typed at the console resolves against, plus (via

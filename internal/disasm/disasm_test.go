@@ -5,7 +5,7 @@ import "testing"
 // TestDisassembleAddressingModes decodes the same encodings
 // TestAddressingModes hand-verified, checking the disassembler's text
 // against what parseRegister/asm_operand's own conventions would produce —
-// the decode-side half of the cross-check docs/PHASE-11.md calls for.
+// the decode-side half of the cross-check docs/planning/PHASE-11.md calls for.
 func TestDisassembleAddressingModes(t *testing.T) {
 	cases := []struct {
 		name  string

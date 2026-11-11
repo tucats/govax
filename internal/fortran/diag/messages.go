@@ -8,7 +8,7 @@ type kind struct {
 }
 
 // messages is every message the compiler can report, by identifier. The
-// identifiers and wording are govax's own (docs/PHASE-74 - FORTRAN
+// identifiers and wording are govax's own (docs/planning/PHASE-74 - FORTRAN
 // plan.md, Decision 19): they follow the style of VAX FORTRAN's (a short
 // identifier, lowercase text) without copying them. Each phase adds the
 // messages its passes need.
@@ -613,7 +613,7 @@ var messages = map[string]kind{
 	// function never.
 	"RECURSIVE": {Error, "%s can't refer to itself: it isn't a RECURSIVE subprogram"},
 
-	// RESULT's messages (the HP Fortran manual's 8.5.2.1 and 8.11; docs/PHASE-89 -
+	// RESULT's messages (the HP Fortran manual's 8.5.2.1 and 8.11; docs/planning/PHASE-89 -
 	// reentrant FORTRAN.md). RESULTSUB is RESULT where there is no function,
 	// RESULTSAME a result named for its own function or entry point, RESULTNAME
 	// one that is another name the unit gives meaning to already, and RESULTDECL
@@ -823,7 +823,7 @@ var messages = map[string]kind{
 
 	// ASSIGNVAR is the variable of an ASSIGN or an assigned GO TO that
 	// isn't INTEGER*4: it holds a statement's address (section 3.5; the
-	// author's answer 1 in docs/PHASE-79).
+	// author's answer 1 in docs/planning/PHASE-79).
 	"ASSIGNVAR": {Error, "%s is %s, but a statement label is ASSIGNed only to an INTEGER*4 variable"},
 
 	// ARITHIF is an arithmetic IF whose expression isn't INTEGER or REAL

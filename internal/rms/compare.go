@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// This file is docs/PHASE-69 - backup save sets.md's subtask 10: holding
+// This file is docs/planning/PHASE-69 - backup save sets.md's subtask 10: holding
 // one file that a BACKUP save set holds (a backup.File) up against a file
 // on a mounted volume or on the host, for BACKUP/COMPARE. The command
 // (internal/dclcmd) decides which files to compare and what each is

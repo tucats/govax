@@ -44,7 +44,7 @@ func forthObject(t *testing.T) *obj.Module {
 // TestLinkForthDST links FORTH's /DEBUG object with LINK/DEBUG and checks
 // its debug symbol table, 56 blocks of TBT and DBG records, against real
 // LINK's, and the IHS's 32-bit block count (IHS$L_DSTBLKS, +20), which a
-// one-block DST can't tell from a constant 1 (docs/PHASE-29.md, subtask
+// one-block DST can't tell from a constant 1 (docs/planning/PHASE-29.md, subtask
 // 16). govax's own symbol tables stand in for VMS's libraries.
 func TestLinkForthDST(t *testing.T) {
 	want, opts := realImage(t, filepath.Join(dstDir, "forth.exe"))
@@ -131,7 +131,7 @@ func linkDebugCase(t *testing.T, c debugCase) (got, want []byte) {
 
 // TestLinkDebugModuleTable checks the debug module table (DMT) of each
 // image linked /DEBUG against real LINK's, block for block, with the
-// IHS's VBN and byte count for it (docs/PHASE-29.md, subtask 17).
+// IHS's VBN and byte count for it (docs/planning/PHASE-29.md, subtask 17).
 func TestLinkDebugModuleTable(t *testing.T) {
 	for _, c := range debugCases() {
 		t.Run(c.image, func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestLinkDebugModuleTable(t *testing.T) {
 
 // TestLinkGlobalSymbolTable checks the global symbol table (GST) of each
 // image linked /DEBUG against real LINK's, record for record, with the
-// IHS's VBN and record counts for it (docs/PHASE-29.md, subtask 18). Real
+// IHS's VBN and record counts for it (docs/planning/PHASE-29.md, subtask 18). Real
 // LINK's GST ends the file mid-block; the comparison is of the records.
 func TestLinkGlobalSymbolTable(t *testing.T) {
 	for _, c := range debugCases() {
@@ -215,7 +215,7 @@ func TestLinkGlobalSymbolTable(t *testing.T) {
 // TestLinkDebugImagesMatchRealLINK links the three images real LINK linked
 // /DEBUG, from real MACRO's objects and, for TRLNKDBG, from govax's object
 // of TRACE, and checks each is real LINK's byte for byte: header, image
-// sections, DST, DMT, and GST (docs/PHASE-29.md, subtask 19). The one
+// sections, DST, DMT, and GST (docs/planning/PHASE-29.md, subtask 19). The one
 // difference is Decision 7's: real LINK ends the file at the GST's last
 // byte, and govax pads that block with zeros.
 func TestLinkDebugImagesMatchRealLINK(t *testing.T) {

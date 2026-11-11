@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 )
 
-// This file implements the file-name rules of docs/PHASE-27.md's "File
+// This file implements the file-name rules of docs/planning/PHASE-27.md's "File
 // specifications: host files and ODS-2 volumes": how a command that takes
 // file names (MACRO now, LINK later) decides whether a name means a file
 // on the host or a file on a mounted ODS-2 volume. The rules live here so

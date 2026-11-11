@@ -10,7 +10,7 @@ import (
 // A zone's page routines: LIB$CREATE_VM_ZONE's get-page and free-page
 // arguments, procedures of the program's that the zone calls for its
 // areas instead of LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE, with the same
-// arguments (the VSI LIB$ manual's LIB$CREATE_VM_ZONE; docs/PHASE-59 -
+// arguments (the VSI LIB$ manual's LIB$CREATE_VM_ZONE; docs/planning/PHASE-59 -
 // LIB VM zones.md, subtask 6). The zone's allocator asks for pages in
 // the middle of an allocation, so each call is a callback
 // (callback.go's Callback): the RTL routine allocating must be running

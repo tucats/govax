@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// Numeric text to binary (docs/PHASE-54, "Numeric text"): LIB$CVT_DTB,
+// Numeric text to binary (docs/planning/PHASE-54, "Numeric text"): LIB$CVT_DTB,
 // LIB$CVT_HTB, and LIB$CVT_OTB (LIB-75, "LIB$CVT_xTB"). They're meant for
 // MACRO and BLISS, and unlike the rest of LIB$ take the byte count by
 // value and the text by reference:

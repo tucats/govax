@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// The Phase 34 oracle's reconciliation (docs/PHASE-34.md, subtask 8):
+// The Phase 34 oracle's reconciliation (docs/planning/PHASE-34.md, subtask 8):
 // credir.com's commands run under govax on a freshly built exchange
 // volume, and every directory they make is compared with the one VMS 7.3
 // made for the same command (testdata/credir/README.md).

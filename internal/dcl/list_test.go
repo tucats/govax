@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// listTestGrammar exercises docs/PHASE-25.md subtask 5's grammar features
+// listTestGrammar exercises docs/planning/PHASE-25.md subtask 5's grammar features
 // with DEFINE/ASSIGN-shaped commands: /list parameters and qualifiers,
 // DISALLOW ANY2(...), and a verb that has its own parameters as well as a
 // /syntax= redirect qualifier.

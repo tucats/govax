@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Routines that call back into the program (docs/PHASE-58, subtask 2;
+// Routines that call back into the program (docs/planning/PHASE-58, subtask 2;
 // the survey's "The callbacks").
 //
 // # What a callback is
@@ -220,7 +220,7 @@ func (env *Environment) CallingBack() bool {
 // registered with RegisterCallback, and returns what the routine's shim
 // returns. It's for a routine that only sometimes calls back, and finds
 // out it must after it has started: LIB$GET_VM calls the program's
-// get-page routine only for a zone made with one (docs/PHASE-59, the
+// get-page routine only for a zone made with one (docs/planning/PHASE-59, the
 // phase doc's Decision 4). Such a routine, having changed nothing yet,
 // returns RunCallingBack(name, itself, argv) unless CallingBack, and its
 // second run, on the goroutine, can call Callback. Every other call of

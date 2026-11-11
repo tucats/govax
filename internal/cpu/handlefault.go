@@ -24,13 +24,13 @@ var stackNames = [4]string{"KSP", "ESP", "SSP", "USP"}
 // ConsoleHandlerFault.Unwrap) while a caller that wants to actually run
 // that search (internal/console, the only place with the "invoke a nested
 // call and run it to completion" primitive that requires -- see
-// docs/PHASE-20.md) can errors.As for the richer type. No state is changed
+// docs/planning/PHASE-20.md) can errors.As for the richer type. No state is changed
 // when this is returned -- matching handle_fault's own early return before
 // any stack frame is pushed or mode/stack switch is made.
 var ErrNoExceptionHandler = vmserrors.New(vmserrors.VAX_NOHANDLER)
 
 // ConsoleHandlerFault is Engine.HandleFault's error when the SCB vector is
-// the console-handler sentinel: it carries everything docs/PHASE-20.md's
+// the console-handler sentinel: it carries everything docs/planning/PHASE-20.md's
 // Condition Handling Facility port needs that HandleFault alone has access
 // to (the faulting instruction's own PC, distinct from the live PC which
 // decode has already advanced past the faulting instruction -- see
@@ -55,7 +55,7 @@ func (f *ConsoleHandlerFault) Unwrap() error { return ErrNoExceptionHandler }
 
 // ExceptionDispatcher is implemented by SystemServices that can hand an
 // exception to the running program's VMS condition handlers
-// (docs/PHASE-26.md subtask 31): the RTL, through the console. When the
+// (docs/planning/PHASE-26.md subtask 31): the RTL, through the console. When the
 // SCB vector is the console-handler sentinel, HandleFault offers the
 // exception to DispatchException before falling back to a
 // *ConsoleHandlerFault. code is the exception's SCB offset, params its
@@ -99,7 +99,7 @@ var ErrUnhandledVector = vmserrors.New(vmserrors.VAX_UNHANDLED)
 // minus the parts that are console or device-interrupt concerns interleaved
 // with them in the C source (breakpoint-on-fault checking in execute_vax,
 // the DBG_EXCEPTIONS trace printf, format_exception's console fallback) —
-// see docs/PHASE-03.md's design notes.
+// see docs/planning/PHASE-03.md's design notes.
 func (e *Engine) HandleFault(f *Fault) error {
 	scbb := e.cpu.PR(registers.SCBB)
 
@@ -261,7 +261,7 @@ func (e *Engine) HandleFault(f *Fault) error {
 }
 
 // SetModeStack is setModeStack exported for non-fault-handling console
-// callers (see docs/PHASE-13.md's RUN command, which -- like the C source's
+// callers (see docs/planning/PHASE-13.md's RUN command, which -- like the C source's
 // own console_run.c -- must run image loading and fixups in kernel mode
 // regardless of the mode the console happened to be in, then restore it
 // afterward).
@@ -286,7 +286,7 @@ func (e *Engine) setModeStack(newMode registers.AccessMode, interruptStack bool)
 	// read_psl_bits/write_psl_bits noticing vax.psl.bit.cur_mod !=
 	// vax.pslw.cur_mod and calling invalidate_tb_prot(); this port has no
 	// wide/narrow PSL duality to compare, so the check is against the
-	// real transition itself. See docs/PHASE-21.md.
+	// real transition itself. See docs/planning/PHASE-21.md.
 	actualNewMode := newMode
 	if interruptStack {
 		actualNewMode = registers.Kernel

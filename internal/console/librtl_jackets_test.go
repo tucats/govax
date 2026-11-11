@@ -10,7 +10,7 @@ import (
 // TestLibrtlJackets: a program calls LIB$SYS_FAO and LIB$SYS_GETMSG
 // through their stubs with a dynamic string, and writes each result with
 // LIB$PUT_OUTPUT. The jackets' scratch buffers are in their own frames:
-// the caller's SP is the same after each call (docs/PHASE-55, subtask 2).
+// the caller's SP is the same after each call (docs/planning/PHASE-55, subtask 2).
 func TestLibrtlJackets(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+ // a dynamic string, empty
@@ -44,7 +44,7 @@ func TestLibrtlJackets(t *testing.T) {
 
 // TestLibrtlItemRoutines: a program asks LIB$GETJPI, LIB$GETSYI, and
 // LIB$GETDVI for one item each through their stubs, as text in a dynamic
-// string, and writes each with LIB$PUT_OUTPUT (docs/PHASE-55, subtask
+// string, and writes each with LIB$PUT_OUTPUT (docs/planning/PHASE-55, subtask
 // 3). LIB$GETJPI's numeric value goes to a longword too, which the
 // program checks against JPI$K_INTERACTIVE, and LIB$GETDVI asks about
 // a mailbox by the channel $CREMBX assigned it.

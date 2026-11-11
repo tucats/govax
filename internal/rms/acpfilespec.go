@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// A file's name from its file ID (docs/PHASE-58, subtask 7), for
+// A file's name from its file ID (docs/planning/PHASE-58, subtask 7), for
 // LIB$FID_TO_NAME.
 //
 // A file header records the file ID of the directory the file was

@@ -247,7 +247,7 @@ func TestHandleFaultNoHandlerVector(t *testing.T) {
 }
 
 // TestHandleFaultNoHandlerVectorCarriesFaultContext checks that the
-// console-handler sentinel case (see docs/PHASE-20.md) returns the richer
+// console-handler sentinel case (see docs/planning/PHASE-20.md) returns the richer
 // *ConsoleHandlerFault type carrying everything the Condition Handling
 // Facility port needs -- the faulting instruction's own PC (distinct from
 // whatever decode already advanced the live PC to), PSL, R0/R1, and the
@@ -363,7 +363,7 @@ func TestSetModeStackSameModeNoOp(t *testing.T) {
 }
 
 // TestSetModeStackRealModeChangeInvalidatesProtection matches
-// docs/PHASE-21.md's design decision: a real CurMod transition through
+// docs/planning/PHASE-21.md's design decision: a real CurMod transition through
 // setModeStack (fault/interrupt delivery, and Phase 13's RUN) must call
 // Memory.InvalidateProtection, so that nothing cached about what the old
 // mode could do lets the new mode through. The page here is kernel-only
@@ -440,7 +440,7 @@ func (d *dispatchingServices) DispatchException(code uint32, params []uint32, pc
 
 // TestHandleFaultOffersConsoleHandlerFaultToDispatcher checks that a
 // console-handler-sentinel exception goes to an ExceptionDispatcher first
-// (docs/PHASE-26.md subtask 31): accepted, HandleFault is done; declined,
+// (docs/planning/PHASE-26.md subtask 31): accepted, HandleFault is done; declined,
 // the usual *ConsoleHandlerFault follows.
 func TestHandleFaultOffersConsoleHandlerFaultToDispatcher(t *testing.T) {
 	for _, accept := range []bool{true, false} {

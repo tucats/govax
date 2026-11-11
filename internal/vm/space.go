@@ -40,7 +40,7 @@ type AddressSpace struct {
 // Same reports whether a and b are the same process's address space. A
 // process is known by where its page tables are, P0BR, which never moves
 // and which no two processes share; the lengths change as the process
-// creates and deletes pages (with VMS paging on, docs/PHASE-67), so two
+// creates and deletes pages (with VMS paging on, docs/planning/PHASE-67), so two
 // copies of one space's registers taken at different times may differ in
 // them.
 func (a AddressSpace) Same(b AddressSpace) bool {

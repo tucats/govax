@@ -136,7 +136,7 @@ func TestServiceSysAdjstkErrors(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, 0, newadr), ssNormal)
 }
 
-// TestPhase26ServicesRegistered checks each service docs/PHASE-26.md adds
+// TestPhase26ServicesRegistered checks each service docs/planning/PHASE-26.md adds
 // is reachable through SystemService, by its real P1-vector address.
 func TestPhase26ServicesRegistered(t *testing.T) {
 	env, _ := fixture()
@@ -213,7 +213,7 @@ func TestServiceSysAdjwsl(t *testing.T) {
 
 // TestImageRundownResetsWorkingSet: image exit puts the working-set
 // limit back at its default (DFWSCNT), undoing the image's $ADJWSL, with
-// paging off too (docs/PHASE-63 - working sets.md, finding 3), and the
+// paging off too (docs/planning/PHASE-63 - working sets.md, finding 3), and the
 // authorized values are the quota and extent it was given.
 func TestImageRundownResetsWorkingSet(t *testing.T) {
 	env, _ := fixture()

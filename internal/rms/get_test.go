@@ -30,7 +30,7 @@ func openAndConnectForRead(t *testing.T, ctx *Context, name string) uint16 {
 
 // TestSysGet_diskFile confirms SYS$GET against a real, freshly written and
 // reopened disk file reads its one record back correctly — the read-side
-// half of docs/PHASE-22.md's whole acceptance criterion (subtask 14's own
+// half of docs/planning/PHASE-22.md's whole acceptance criterion (subtask 14's own
 // CREATE-then-PUT-then-CLOSE-then-OPEN-then-GET sequence) — and that
 // RAB$W_RSZ is updated with the record's true length.
 func TestSysGet_diskFile(t *testing.T) {

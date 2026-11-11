@@ -1,5 +1,5 @@
 // Package vmheap holds the mechanisms beneath the Run-Time Library's
-// memory routines (Phase 59; docs/PHASE-59 - LIB VM zones.md): a page
+// memory routines (Phase 59; docs/planning/PHASE-59 - LIB VM zones.md): a page
 // pool and a zone's block allocator, as plain Go with no CPU or memory of
 // its own, so they can be tested on their own.
 //

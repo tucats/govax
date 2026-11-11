@@ -10,7 +10,7 @@
 // ties to even instead). Pack then lays the rounded value out in the
 // format's bits.
 //
-// Values are held as math/big Floats (docs/PHASE-35.md, Decision 2): they
+// Values are held as math/big Floats (docs/planning/PHASE-35.md, Decision 2): they
 // carry any precision, which H_floating's 113-bit fraction needs, and
 // round correctly in the VAX's mode.
 //

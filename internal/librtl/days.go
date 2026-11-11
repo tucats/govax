@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 )
 
-// The simple date routines (docs/PHASE-56, subtask 4): LIB$DATE_TIME, the
+// The simple date routines (docs/planning/PHASE-56, subtask 4): LIB$DATE_TIME, the
 // current time as text, and LIB$DAY and LIB$DAY_OF_WEEK, a time's day
 // number and day of the week. Unlike the arithmetic and the conversions,
 // they return SS$_NORMAL, as their entries list it.

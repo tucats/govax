@@ -12,7 +12,7 @@ import (
 )
 
 // This file holds govax's DCL help library (HELPLIB.HLB, built from
-// internal/bootdata/files/help) to the console's grammar (docs/PHASE-90 -
+// internal/bootdata/files/help) to the console's grammar (docs/planning/PHASE-90 -
 // VMS help.md, Decision 10), and checks that topics an operator asks for
 // are there.
 

@@ -8,7 +8,7 @@ import (
 
 // newRunnableDispatcher wires a Dispatcher around a freshly VMINIT'd
 // Console (newRunnableConsole, image_test.go), matching what a real govax
-// session hands Dispatch -- interactive ASM mode (docs/PHASE-19.md) needs a
+// session hands Dispatch -- interactive ASM mode (docs/planning/PHASE-19.md) needs a
 // live, translated address space to deposit into, exactly like the batch
 // "ASM <file>" tests in asm_test.go.
 func newRunnableDispatcher(t *testing.T) (*Dispatcher, *Console) {
@@ -99,7 +99,7 @@ func TestDispatchASM_depositsAndAutoCallsEntry(t *testing.T) {
 // session starts depositing at Console.DepositAddr's *current* value, not
 // the assembler package's own hardcoded default -- matching the reference
 // tool, where EXAMINE/DEPOSIT/interactive-ASM all share one
-// vax.console.deposit register (see docs/PHASE-19.md's design notes) -- and
+// vax.console.deposit register (see docs/planning/PHASE-19.md's design notes) -- and
 // that DepositAddr is kept in sync afterward.
 func TestDispatchASM_depositAddrIntegration(t *testing.T) {
 	d, c := newRunnableDispatcher(t)

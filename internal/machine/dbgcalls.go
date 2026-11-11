@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// SHOW CALLS as the VMS debugger shows it (docs/PHASE-41.md, subtask 12,
+// SHOW CALLS as the VMS debugger shows it (docs/planning/PHASE-41.md, subtask 12,
 // Decision 6): one row per call frame, naming the module, routine, and
 // line each frame's PC is in, from the loaded images' debug symbol
 // tables. The probe's sessions (testdata/dbg/vax/*.dlg) show the layout:

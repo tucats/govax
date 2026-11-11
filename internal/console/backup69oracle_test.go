@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// docs/PHASE-69 - backup save sets.md, subtask 12: the milestone.
+// docs/planning/PHASE-69 - backup save sets.md, subtask 12: the milestone.
 // TestBackup69Oracle runs testdata/backup69's BACKUP69.COM on govax, as
 // the author ran it on VMS V7.1: the saves, the listings, the restores,
 // the compares, and the errors, SSCOPY's damaged and truncated save sets

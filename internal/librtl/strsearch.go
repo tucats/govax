@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// The STR$ routines that compare and search (docs/PHASE-83, subtask 9).
+// The STR$ routines that compare and search (docs/planning/PHASE-83, subtask 9).
 
 // ordered is -1, 0, or 1 as a longword: a comparison routine's R0.
 func ordered(less, more bool) uint32 {

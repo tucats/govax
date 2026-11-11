@@ -2,7 +2,7 @@ package dclshell
 
 import "strings"
 
-// Chaining (docs/PHASE-57, "Chaining"): an image calls LIB$DO_COMMAND or
+// Chaining (docs/planning/PHASE-57, "Chaining"): an image calls LIB$DO_COMMAND or
 // LIB$RUN_PROGRAM, which leave a command line or an image's name with
 // the process's DCL (shellCLI's Chain, which sets Shell.chained) and end
 // the image. DCL runs it once the command that ran the image (RUN, MCR,

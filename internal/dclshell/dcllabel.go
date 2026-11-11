@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Labels and GOTO (docs/PHASE-50 - DCL command procedures.md, subtask
+// Labels and GOTO (docs/planning/PHASE-50 - DCL command procedures.md, subtask
 // 11), as the OpenVMS User's Manual describes them (13.2 and 14.16.5).
 //
 // A label marks a line of a command procedure: a name, ended by a colon,

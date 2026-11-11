@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Phase 65's subtask 5 (docs/PHASE-65 - sections and paging.md): a
+// Phase 65's subtask 5 (docs/planning/PHASE-65 - sections and paging.md): a
 // global copy-on-reference section under the new global page states. A
 // page's first fault through any PTE reads the file into a frame of the
 // process's own, never the section's (the book's 15.3.3: the global page

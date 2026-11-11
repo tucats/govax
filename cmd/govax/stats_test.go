@@ -29,7 +29,7 @@ func runWithStats(t *testing.T, script string) string {
 }
 
 // TestRun_statsPaging: with paging on, --stats ends with paging's section
-// (docs/PHASE-64 - page file.md, subtask 10), what SHOW MEMORY shows of
+// (docs/planning/PHASE-64 - page file.md, subtask 10), what SHOW MEMORY shows of
 // it: frames, faults, the writer and reclaimer, and the page file, here
 // a host file installed at startup.
 func TestRun_statsPaging(t *testing.T) {
@@ -60,7 +60,7 @@ func TestRun_statsPaging(t *testing.T) {
 		}
 	}
 
-	// VMINIT's paging-mode sizes (docs/PHASE-67 - address space under
+	// VMINIT's paging-mode sizes (docs/planning/PHASE-67 - address space under
 	// paging.md, subtask 8) leave nearly all of startup.com's 16384 frames
 	// free: VMINIT's layout, the microkernel, and process 1's few pages
 	// hold the rest.
@@ -110,7 +110,7 @@ func TestRun_statsNoPaging(t *testing.T) {
 
 // TestRun_systemPageFile: with paging on and no page file named, the page
 // file is the system volume's [SYSTEM.SYSEXE]PAGEFILE.SYS at its default
-// size (docs/PHASE-87 - system volume.md, Decision 8), on the default
+// size (docs/planning/PHASE-87 - system volume.md, Decision 8), on the default
 // RD54, and --stats and SHOW MEMORY/FILES name it.
 func TestRun_systemPageFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")

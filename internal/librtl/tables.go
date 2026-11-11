@@ -1,6 +1,6 @@
 package librtl
 
-// LIBRTL's data tables (docs/PHASE-54, "Data entries"). The first 768
+// LIBRTL's data tables (docs/planning/PHASE-54, "Data entries"). The first 768
 // bytes of LIBRTL.EXE's transfer vector aren't routines but three
 // 256-byte translation tables, which a program addresses directly, most
 // often as a translation table for MOVTC (LIB$MOVTC's descriptor, or the

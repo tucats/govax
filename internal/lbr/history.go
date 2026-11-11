@@ -9,7 +9,7 @@ import (
 // adds and LBR$GET_HISTORY returns (LIBRARY writes one for each change it
 // makes, and LIBRARY/LIST/HISTORY shows them). The layout is what VMS
 // 7.1's LBRSHR left in round 3's libraries (testdata/help90, W5 and H90T;
-// docs/PHASE-90 - VMS help.md, subtask 11c):
+// docs/planning/PHASE-90 - VMS help.md, subtask 11c):
 //
 //   - The records live in data blocks of their own, whose record count
 //     (the block's first byte) stays 0. Each record is a marker word

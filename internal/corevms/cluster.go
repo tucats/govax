@@ -2,7 +2,7 @@ package corevms
 
 import "github.com/tucats/govax/internal/vm"
 
-// Read clustering (docs/PHASE-65 - sections and paging.md, subtask 6),
+// Read clustering (docs/planning/PHASE-65 - sections and paging.md, subtask 6),
 // with paging on.
 //
 // # Why read more than one page

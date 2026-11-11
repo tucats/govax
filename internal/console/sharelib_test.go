@@ -15,7 +15,7 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// docs/PHASE-68 - link shareable images.md, subtask 12: shareable image
+// docs/planning/PHASE-68 - link shareable images.md, subtask 12: shareable image
 // libraries, checked against testdata/link68's R12 and E9.
 
 // listingDate is a date and time in a LIBRARY/LIST listing.

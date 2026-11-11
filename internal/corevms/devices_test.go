@@ -88,7 +88,7 @@ func TestServiceSysAssignArgCounts(t *testing.T) {
 
 // TestServiceSysAssignAndGetdviTranslateLogicalNames: $ASSIGN and
 // $GETDVIW translate a device name's logical names first, so SYS$OUTPUT
-// reaches the terminal, and "_" suppresses that (docs/PHASE-25.md).
+// reaches the terminal, and "_" suppresses that (docs/planning/PHASE-25.md).
 func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
 	env, _ := fixture()
 	defineTestDevice(env, "TTA0", iodev.DeviceClassTT)

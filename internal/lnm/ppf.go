@@ -6,7 +6,7 @@ import "strings"
 // image) and keeps open across image activations: SYS$INPUT, SYS$OUTPUT,
 // SYS$ERROR, and SYS$COMMAND, a command procedure's input and /OUTPUT
 // file, and the files DCL's OPEN opens (the Guide to OpenVMS File
-// Applications, 6.6; docs/PHASE-71 - process-permanent files.md). The
+// Applications, 6.6; docs/planning/PHASE-71 - process-permanent files.md). The
 // logical name that leads to one has an equivalence string of a special
 // form: ESC, a zero byte, the file's internal file index (IFI) as a VAX
 // word (low byte first), then the device's name:

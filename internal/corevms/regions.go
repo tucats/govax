@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Created space (docs/PHASE-67 - address space under paging.md, subtask
+// Created space (docs/planning/PHASE-67 - address space under paging.md, subtask
 // 2).
 //
 // With VMS paging on, a process's P0 and P1 length registers describe

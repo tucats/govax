@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file implements the console's CREATE/DIRECTORY (docs/PHASE-34.md,
+// This file implements the console's CREATE/DIRECTORY (docs/planning/PHASE-34.md,
 // subtask 6). The work is internal/rms.Session.CreateDirectory's; this file
 // reads the qualifiers, supplies the process's UIC, and reports each
 // directory as VMS 7.3's CREATE does (checked against its run of the

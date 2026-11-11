@@ -8,7 +8,7 @@ import (
 
 )
 
-// TestPhase23Acceptance_fullOperatorSession is docs/PHASE-23.md subtask
+// TestPhase23Acceptance_fullOperatorSession is docs/planning/PHASE-23.md subtask
 // 11's end-to-end acceptance pass: a single scripted operator session that
 // dispatches real command lines -- exactly the strings a person would type
 // at the govax console -- through the same Dispatcher/DCL-grammar path

@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Phase 63, subtask 9 (docs/PHASE-63 - working sets.md): DCL's SET
+// Phase 63, subtask 9 (docs/planning/PHASE-63 - working sets.md): DCL's SET
 // WORKING_SET changes the values of the process whose DCL runs it, within
 // what the process was authorized, and SHOW WORKING_SET shows them, the
 // default working set (DFWSCNT) as the limit.

@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// What an indexed file's statements pass FTNRTL (docs/PHASE-88 - keyed index
+// What an indexed file's statements pass FTNRTL (docs/planning/PHASE-88 - keyed index
 // files.md, subtask 11). The compiler comes before the run-time library here: a
 // program is linked with a MACRO module defining the routines it calls, each of
 // which prints what it was given, so its arguments are held whatever FTNRTL

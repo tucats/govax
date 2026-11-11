@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// The lexical functions on strings and data types (docs/PHASE-50 - DCL
+// The lexical functions on strings and data types (docs/planning/PHASE-50 - DCL
 // command procedures.md, subtask 14; the User's Manual, 15.6 and 15.7):
 // F$EXTRACT, F$LOCATE, F$ELEMENT, F$EDIT, F$FAO, F$CVSI, F$CVUI,
 // F$INTEGER, F$LENGTH, F$STRING, and F$TYPE. Offsets count from 0

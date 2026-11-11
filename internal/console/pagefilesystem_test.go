@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 )
 
-// Phase 64's subtask 6 (docs/PHASE-64 - page file.md): the page file
+// Phase 64's subtask 6 (docs/planning/PHASE-64 - page file.md): the page file
 // meets the rest of the system. DISMOUNT refuses the page file's volume
 // and says why, as VMS's does; the reclaimer, not only the writer's own
 // threshold, writes to the page file (opening it first); and a

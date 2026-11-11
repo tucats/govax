@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Information items as text (docs/PHASE-55, subtask 3). $GETJPI,
+// Information items as text (docs/planning/PHASE-55, subtask 3). $GETJPI,
 // $GETSYI, and $GETDVI return each item as bytes: a number, a mask, a
 // time, a name. Two callers write those bytes as text: DCL's lexical
 // functions (F$GETJPI, F$GETSYI, F$GETDVI) and LIBRTL's item routines

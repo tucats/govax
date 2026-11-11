@@ -5,7 +5,7 @@ package corevms
 type ShimFunc func(env *Environment, argv []uint32) (uint32, error)
 
 // JSBShimFunc implements a routine reached by JSB rather than CALL
-// (docs/PHASE-54, "The JSB entry points"): its arguments are in R0, R1,
+// (docs/planning/PHASE-54, "The JSB entry points"): its arguments are in R0, R1,
 // R2, ..., and it leaves its results in registers. It gets the registers
 // R0 to R7 in regs and changes the ones the routine returns; the XFC
 // puts all eight back. A JSB routine has no call frame of its own, so a

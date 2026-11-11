@@ -6,7 +6,7 @@ import (
 )
 
 // The C library's heap routines in LIBRTL: LIB$VM_MALLOC, LIB$VM_FREE,
-// LIB$VM_CALLOC, and LIB$VM_REALLOC (docs/PHASE-59, subtask 8). They are
+// LIB$VM_CALLOC, and LIB$VM_REALLOC (docs/planning/PHASE-59, subtask 8). They are
 // in VMS 7.3's transfer vector but in neither LIB$ manual. They are C's
 // malloc, free, calloc, and realloc, with C's conventions, as VMS 7.1
 // showed (testdata/lib59): every argument by value (a size or a

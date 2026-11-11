@@ -18,7 +18,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is docs/PHASE-69 - backup save sets.md's subtask 8: making
+// This file is docs/planning/PHASE-69 - backup save sets.md's subtask 8: making
 // one file that a BACKUP save set holds (a backup.File) on a mounted
 // volume or on the host. BACKUP's command (internal/dclcmd) decides which
 // files to restore and what each is called; RestoreFile makes one of them.
@@ -132,7 +132,7 @@ var ErrNoContiguousSpace = fmt.Errorf("%w: no free run of blocks large enough fo
 // directory: target is its file in the parent directory, "SUB1.DIR" or
 // "SUB1.DIR;1". One that exists already is left as it is (Created false).
 //
-// On the host the file is written by COPY's rule (docs/PHASE-69's
+// On the host the file is written by COPY's rule (docs/planning/PHASE-69's
 // Decision 9): an object module's records in the host's object layout, a
 // text file's records as lines, anything else its bytes up to its end of
 // file. A saved directory is a host directory. The host has no versions,

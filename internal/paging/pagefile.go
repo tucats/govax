@@ -5,7 +5,7 @@ import (
 	"math/bits"
 )
 
-// The page file's allocation map (docs/PHASE-64 - page file.md, the
+// The page file's allocation map (docs/planning/PHASE-64 - page file.md, the
 // survey's finding 7).
 //
 // VMS's page file holds the contents of pages that have no other home:

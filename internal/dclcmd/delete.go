@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements the console DELETE command (docs/PHASE-23.md,
+// This file implements the console DELETE command (docs/planning/PHASE-23.md,
 // subtask 6) — the operator-facing half of "reclaim a file's storage and
 // remove its directory entry". The actual work (glob-matching, the
 // required-version check, the DeleteFile/bitmap-flush loop) already lives

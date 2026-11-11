@@ -9,9 +9,18 @@ a DEC VAX/VMS system. The goal is a careful evaluation of the C implementation f
 by rewriting it in idiomatic Go, with a comprehensive unit test suite the C version
 never had.
 
-- `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
+The `docs/` tree (since 2026-11-11): `docs/` itself holds what a user or a
+developer learning govax reads (MANUAL.md, VAX-VMS-INTERNALS.md,
+FORTRAN-INTERNALS.md, DEVIATIONS.md, PERFORMANCE.md, DEBUG-RECORDS.md,
+MODE-STACKS.md, DISK-DEVICES.md, RMS-MACROS.md); `docs/planning/` holds
+the project's planning record: PLAN.md, every phase doc, and
+DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
+`docs/` names one as `planning/PHASE-nn - topic.md` (or
+`docs/planning/...` from the repository root).
+
+- `docs/planning/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-52.md` — one doc per phase: goal, C-source file
+- `docs/planning/PHASE-00.md` … `PHASE-52.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
   done through 52, but for Phase 42's Part B, the debugger's further
   features, in progress; 40 follows 38 directly: there is no Phase
@@ -1205,7 +1214,7 @@ never had.
 
 Module `github.com/tucats/govax`. State lives in an instantiated struct passed
 explicitly / receiver-bound — no package-level singleton mirroring the C source's
-global `struct VAX vax`. Current package layout (see `docs/PLAN.md` for rationale, and
+global `struct VAX vax`. Current package layout (see `docs/planning/PLAN.md` for rationale, and
 expect adjustment as phases land):
 
 - `internal/registers` — core machine state: registers, PSL, condition codes (Phase 01;
@@ -1773,7 +1782,7 @@ expect adjustment as phases land):
   (`iocount.go`: JPI$_BUFIO/DIRIO, counted as each `$QIO` completes; a
   disk's and NL:'s are direct I/O); EXE$OPEN's host files are shared by
   RMS's rule (`System.HostOpeners`, `rms/hostshare.go`).
-  Phase 63, with paging on (`docs/PHASE-63 - working sets.md`):
+  Phase 63, with paging on (`docs/planning/PHASE-63 - working sets.md`):
   `workingset.go` gives each process its `paging.WorkingSet`
   (`Environment.WorkingSet`): `System.PageIn` puts a page in before
   resolving its fault, replacement (`evictPage`) leaves a page in
@@ -1797,7 +1806,7 @@ expect adjustment as phases land):
   next image's activation). govax's list has no permanent part (page
   tables, the process header), so its floor is MINWSCNT where VMS's is
   higher; `testdata/pg63`'s oracle lists the differences that follows.
-  Phase 64 (`docs/PHASE-64 - page file.md`): `pagefile.go` is the
+  Phase 64 (`docs/planning/PHASE-64 - page file.md`): `pagefile.go` is the
   System's page file (`OpenPageFile` at first need, `InstallPageFile`
   at startup, `ClosePageFile`; `AllocatePageFile`/`FreePageFile` on
   its `paging.PageFileMap`; the console's PAGEFRAG, PAGECRIT, and
@@ -1819,7 +1828,7 @@ expect adjustment as phases land):
   pages with P0 (`vaspace.go`'s `deleteImageP1`). A full page file
   with no frame to free is a console message and a failed fault; no
   process waits for space.
-  Phase 65, with paging on (`docs/PHASE-65 - sections and paging.md`):
+  Phase 65, with paging on (`docs/planning/PHASE-65 - sections and paging.md`):
   a copy-on-reference page's first fault claims its frame with page
   file backing (`copyOnRefBacking`), effectively modified, and CRF
   pages are charged at mapping (`mapChargedPage`). `globalpages.go` is
@@ -1846,7 +1855,7 @@ expect adjustment as phases land):
   or successive GPTXs of the section; sized by the section's pfc or
   PFCDEFAULT, at most 127; stopping where the working set has no
   available entry), counted in `PageCounts.PagesRead`.
-  Phase 66, with paging on (`docs/PHASE-66 - mapped image
+  Phase 66, with paging on (`docs/planning/PHASE-66 - mapped image
   activation.md`): a section's file is a `PageSource`
   (`pagesource.go`; a volume image an `rms.ACPFile`, a host image a
   `HostPageSource`), held while any of its pages is mapped
@@ -1858,7 +1867,7 @@ expect adjustment as phases land):
   the debugger modified takes the page file as backing store when it
   leaves the working set (`leaveReadOnlySection`). The running image's
   file is JPI$_IMAGNAME (`SetImageName`, cleared at rundown).
-  Phase 67, with paging on (`docs/PHASE-67 - address space under
+  Phase 67, with paging on (`docs/planning/PHASE-67 - address space under
   paging.md`): created space (`regions.go`): `InitialLengths` and
   `InitialPTE` start a space with no P0 pages and P1 from UserStackTop
   up, `setRegionLength` is the one place a length changes (the
@@ -1877,7 +1886,7 @@ expect adjustment as phases land):
   back and free pool pages, `ClaimS0` the microkernel's. An exception
   whose arrays the user stack can't take ends the image
   (`condition.go`'s `noStackToReport`, `lastChanceExit`).
-  Phase 70 (`docs/PHASE-70 - traceback.md`): the condition search
+  Phase 70 (`docs/planning/PHASE-70 - traceback.md`): the condition search
   follows the Internals book (4.3.3, 4.5): a handler's own condition
   skips the frames already searched (`pastSearchedFrames`), the frame
   walk's end is the catch-all's (`stageCatchAll`), and the last-chance
@@ -2135,7 +2144,7 @@ expect adjustment as phases land):
   tracks real `ods2` handles Phase 10's RTL layer never needed. `go.mod`
   pins a tagged `ods2` release, so a plain clone builds; a local, gitignored
   `go.work` (`use .` / `use ../ods2`) overrides it with the sibling checkout
-  for co-development (see `docs/PHASE-22.md`'s "Dependency: `go.work`, not a
+  for co-development (see `docs/planning/PHASE-22.md`'s "Dependency: `go.work`, not a
   `replace` directive"). Because the workspace hides a stale pin, when govax
   starts using new `ods2` API, tag and push `ods2`, then
   `GOWORK=off go get github.com/tucats/ods2@vX.Y.Z` and check
@@ -2302,7 +2311,7 @@ expect adjustment as phases land):
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in
   `check.go`), and `Pager` (`page.go`) lays them out on ANALYZE's pages, by a
   page-break rule reconstructed from real output (`Line.Keep`/`Spill`;
-  docs/PHASE-38.md). `TestObjectPages` matches all 54 `.anl`/`.obj` pairs in
+  docs/planning/PHASE-38.md). `TestObjectPages` matches all 54 `.anl`/`.obj` pairs in
   `testdata/mar` byte for byte but for the time; `testdata/kinds.txt` shows
   the layouts no fixture settles. ANALYZE/IMAGE (Phase 40) is beside it:
   `vmsimage.ReadImage` decodes an image's header blocks, ISDs, and fixup
@@ -2317,7 +2326,7 @@ expect adjustment as phases land):
   write the report; in `console.dcl` each kind of analysis is a qualifier
   switching to its own syntax.
 - `internal/fortran` — the FORTRAN compiler (Phases 74–86;
-  `docs/PHASE-74 - FORTRAN plan.md`, `docs/FORTRAN-INTERNALS.md`): VAX
+  `docs/planning/PHASE-74 - FORTRAN plan.md`, `docs/FORTRAN-INTERNALS.md`): VAX
   FORTRAN V5.0 source in, an annotated MACRO-32 file out. A package per
   pass, each with a `doc.go` that teaches it; plain Go, knowing nothing
   of the machine, RMS, or the console (the FORTRAN command,

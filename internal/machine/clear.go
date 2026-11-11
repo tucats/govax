@@ -13,7 +13,7 @@ import (
 // printed in the console's current radix: PRINT is silent whenever
 // SET NOVERBOSE has turned Console.Verbose off (see set.go's
 // SetVerbose/SetNoVerbose). The items are the DCL grammar's
-// list of $expression values (docs/PHASE-37.md), quotes kept. A name
+// list of $expression values (docs/planning/PHASE-37.md), quotes kept. A name
 // in an expression is looked for among DCL's symbols first (an integer,
 // or a string holding a number), then as the evaluator looks for it.
 func (m *Machine) Print(items []string) error {

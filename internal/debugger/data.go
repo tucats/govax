@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is the debugger's data commands (docs/PHASE-42.md, subtask 10):
+// This file is the debugger's data commands (docs/planning/PHASE-42.md, subtask 10):
 // EXAMINE of data (a register or memory), DEPOSIT, EVALUATE, and SYMBOLIZE.
 // EXAMINE/INSTRUCTION, the other half of EXAMINE, is in examine.go.
 //

@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
-// BACKUP's restore (docs/PHASE-69 - backup save sets.md, subtask 9): the
+// BACKUP's restore (docs/planning/PHASE-69 - backup save sets.md, subtask 9): the
 // files of an input save set that /SELECT and /EXCLUDE choose, each made
 // by rms.Session.RestoreFile under the name the output specifier gives
 // it, with /BY_OWNER's owner and the output file qualifiers' rule for a

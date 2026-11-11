@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The process-permanent files DCL opens (docs/PHASE-71 - process-permanent
+// The process-permanent files DCL opens (docs/planning/PHASE-71 - process-permanent
 // files.md, subtask 6): a command procedure's input and its /OUTPUT file,
 // opened in the process's own table, as LOGINOUT's are (ppfstart.go), and
 // reached by the names DCL defines in supervisor mode.

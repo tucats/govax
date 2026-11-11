@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// LIB$TPARSE and LIB$TABLE_PARSE (docs/PHASE-80, subtask 10), written from the
+// LIB$TPARSE and LIB$TABLE_PARSE (docs/planning/PHASE-80, subtask 10), written from the
 // 5.0 LIB$ manual (LIB-411 to LIB-452) and VSI's LIB$ manual:
 //
 //	LIB$TPARSE       argument-block ,state-table ,key-table

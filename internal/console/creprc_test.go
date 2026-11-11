@@ -414,7 +414,7 @@ func TestCreprc_startup(t *testing.T) {
 
 	e, err := child.Logicals.Translate(lnm.ProcessTableName, "SYS$OUTPUT", lnm.User, 0)
 	// The terminal is the child's own process-permanent file
-	// (docs/PHASE-71 - process-permanent files.md, subtask 5).
+	// (docs/planning/PHASE-71 - process-permanent files.md, subtask 5).
 	if err != nil || lnm.DisplayValue(e.Equivalences[0].Value) != "_GOVAX$TTA0:" ||
 		e.Equivalences[0].Attrs != lnm.AttrTerminal || e.Mode != lnm.Executive {
 		t.Errorf("the child's SYS$OUTPUT: %+v, %v; want _GOVAX$TTA0:'s entry, terminal, executive mode", e, err)

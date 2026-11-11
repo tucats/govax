@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// CONVERT's files (docs/PHASE-88 - keyed index files.md, subtask 10c; the
+// CONVERT's files (docs/planning/PHASE-88 - keyed index files.md, subtask 10c; the
 // command is internal/dclcmd/convert.go). As VMS's CONVERT does, this goes through
 // RMS's services on blocks in a memory of its own: $OPEN, $CONNECT, and $GET for
 // an input, $CREATE (by CreateFDL or CreateLike) then $OPEN, $CONNECT, and $PUT for

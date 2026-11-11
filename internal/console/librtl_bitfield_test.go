@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The bit field routines (docs/PHASE-53, subtask 6), called from a
+// The bit field routines (docs/planning/PHASE-53, subtask 6), called from a
 // linked program as a program calls them.
 
 // bitFieldData is the data the bit field programs share: a quadword

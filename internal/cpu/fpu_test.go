@@ -8,7 +8,7 @@ import (
 // The F/D-floating raw bit patterns below were produced by a standalone C
 // test harness linked against the real reference/eVAX/eVAX/Source/CPU/fpu.c
 // (`clang -DLINUX86 -I eVAX/Headers probe.c fpu.c`), calling fpu_store/
-// fpu_load directly -- not hand-derived -- per docs/PHASE-05.md's design
+// fpu_load directly -- not hand-derived -- per docs/planning/PHASE-05.md's design
 // notes on why this file's byte-shuffle loops aren't trustworthy to trace by
 // eye. Some of these (1.0, -3.5, 3.14159265358979, 123456.789, -0.001) are
 // exactly reference/eVAX/AUDIT.md's own C3 verification values.
@@ -164,7 +164,7 @@ func TestFpuStoreUnderflowFlushesToZeroWhenFUClear(t *testing.T) {
 	// fpu_store's own C implementation is dead-code buggy here (the zeroed
 	// local variable is never actually read from) and produces a nonzero
 	// raw pattern instead of a true flush-to-zero; this is a confirmed,
-	// clear-cut bug fixed in Go -- see docs/PHASE-05.md's design notes and
+	// clear-cut bug fixed in Go -- see docs/planning/PHASE-05.md's design notes and
 	// docs/DEVIATIONS.md.
 	cpu, _ := fixture()
 	psl := cpu.PSL()

@@ -4,7 +4,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// This file is VMS V1's system service vector (docs/PHASE-72 - legacy
+// This file is VMS V1's system service vector (docs/planning/PHASE-72 - legacy
 // images.md, subtask 3). Before VMS V4 an image called a system service
 // through an entry in S0, at legacyVectorBase plus the service's offset;
 // V4 moved the vector to P1, at p1VectorBase, keeping every offset (SYS$IMGSTA
