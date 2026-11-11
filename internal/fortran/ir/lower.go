@@ -433,6 +433,9 @@ func (l *lowerer) newCell(name string, kind CellKind, t Type, size int) *Cell {
 func (r *Routine) NewCell(name string, kind CellKind, t Type, size int) *Cell {
 	c := &Cell{Name: name, Kind: kind, T: t, Size: size}
 
+	// (size + 3) &^ 3 rounds size up to a multiple of 4: adding 3, then
+	// clearing the low two bits (&^ is Go's "and not"). So every cell
+	// starts on a longword boundary, which the VAX reads fastest.
 	if r.Reentrant && kind != FormatCell {
 		c.Frame, c.Offset = true, r.FrameSize
 		r.FrameSize += (size + 3) &^ 3

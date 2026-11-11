@@ -17,9 +17,12 @@ import (
 // cell (@SUB.$A1). An entry point whose list doesn't name X leaves its cell
 // alone, and section 6.2.4 says X is then undefined.
 //
-// FORTRAN can do it this way because its routines have static storage and
-// aren't recursive (section 6.2): only one call of a routine is ever active,
-// so one set of cells is enough.
+// FORTRAN-77 can do it this way because its routines have static storage
+// and aren't recursive (section 6.2): only one call of a routine is ever
+// active, so one set of cells is enough. A RECURSIVE unit (Phase 89) may be
+// active several times at once, so there, as with every cell of the
+// compiler's, the cells are in each call's stack frame instead
+// (Routine.NewCell), and each activation has its own.
 //
 // A function's names (its own, and its entry points') share one place for the
 // value, so that defining one defines those of its type (section 6.2.4.1). But

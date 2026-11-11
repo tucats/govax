@@ -45,6 +45,10 @@ func (l *lowerer) partOf(t sema.Type) Type {
 // twice as many: C(I) of a COMPLEX*8 array is C-8[I] as a Quad, and its real
 // part C-8[2*I] as an F_floating value.
 func parts(m *Mem, part Type) (re, im *Mem) {
+	// r := *m copies the Mem struct, so the two parts are new places and m
+	// is left as it was; i := r copies again. Copying a struct is shallow:
+	// the copies share m's Index and Ptr expression trees rather than having
+	// trees of their own. Only the fields set here differ.
 	r := *m
 	r.T = part
 
