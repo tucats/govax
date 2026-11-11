@@ -4,8 +4,8 @@
 document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
 document's outline, and its sections 0 to 3), 2 (section 4, the
 instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), 5
-(section 7, processes), 6 (section 8, I/O), and 7 (section 9, RMS and
-ODS-2) are done.
+(section 7, processes), 6 (section 8, I/O), 7 (section 9, RMS and
+ODS-2), and 8 (section 10, from VAX code to Go) are done.
 
 ## Goal
 
@@ -149,7 +149,7 @@ interpreter process 1 runs, and what reads the startup procedure).
    service table, argument lists, statuses, waits, calls back into VAX
    code, the shims and their stubs, JSB entries, the run-time libraries
    (LIBRTL, MTHRTL, LBRSHR, FTNRTL as VAX code), condition dispatch and
-   the console handler, `$EXIT`, image rundown.
+   the console handler, `$EXIT`, image rundown. (done 2026-11-11)
 9. Section 11, startup: `cmd/govax`, the system volume, the grammars,
    STARTUP.COM, INIT and INITIALIZE/MEMORY, the microkernel and its
    initialization, devices, the page file, the user's startup, RUN and
@@ -422,3 +422,68 @@ interpreter process 1 runs, and what reads the startup procedure).
     operations never flush the bitmaps, cmd/ods2 flushes after each
     command, and `Volume.Dismount` flushes first (ods2's commit "volume:
     say when the bitmaps are flushed"; a comment only, so not tagged).
+- **2026-11-11** Subtask 8: section 10, from VAX code to Go and back:
+  XFC and its selectors, and the five outcomes of an XFC (done, wait,
+  call, exit, fault); the system service vector (312 entries, the jump-
+  reached `SYS$SRCHANDLER`, the data cells, VMS V1's vector in S0); a
+  service in Go (`ServiceFunc`, the 120 registered, `$GETTIM` whole, the
+  dispatch's five steps); a run measured with SET DEBUG SERVICES and
+  EXCEPTIONS (a service, a shim, an exit handler, a LIB$SIGNAL and an
+  access violation continued by a handler, an unreadable argument list,
+  `$EXIT`); waiting and `CallRequest`, with a table of the services that
+  call VAX code and how each knows the call has returned; the run-time
+  libraries as shims (the stubs measured on govax, `ShimTable` and
+  `EnsureShims`, G^ cells and the activator, the codes' ranges, JSB,
+  caller-R0, and code-0 routines, real libraries and FTNRTL); callbacks
+  from shims on goroutines; conditions (Table 4-2's mapping, the arrays,
+  the search, continue, resignal, unwind, the catch-all, traceback); and
+  the image's end (the IMAGE$INIT driver, `$EXIT`, `exitImage`, rundown).
+  The measurement was a MACRO program run from the scratchpad, not kept.
+  Reading for it found, and this subtask fixed (Decision 6):
+  - **RET popped a CALLS argument list by the whole count longword.** The
+    VAX Architecture Reference Manual's RET adds "four times the unsigned
+    value of the low byte of this longword" to SP; govax used all 32 bits,
+    an eVAX choice whose comment cited a `DEVIATIONS.md` entry that
+    doesn't exist. `emulRet` (`cpu/call.go`) now masks the count.
+    `TestEmulRetPopsArgumentsByCountsLowByte`.
+  - **A service's argument list was read as VMS's dispatcher doesn't read
+    it.** `readArgs` (`corevms/environment.go`) took the count as a whole
+    longword (so reserved bits could make a list of millions), and a list
+    the caller couldn't read was an access violation at the vector's XFC.
+    VMS's change mode dispatcher compares the count's byte and checks the
+    whole list with PROBER, returning `SS$_ACCVIO` in R0 (*VAX/VMS
+    Internals and Data Structures*, 9.3.1, Code Example 9-2's
+    CHECKARGLIST). `readArgs` now takes the low byte (for shims too), and
+    `SystemService` checks the list's pages' protection first
+    (`argListReadable`, no page brought in), returning `SS$_ACCVIO` with a
+    SET DEBUG SERVICES line of its own. `TestSystemService_argumentList`,
+    `TestReadArgs_countIsLowByte`, `TestServiceArgumentListOutOfReach` (in
+    `internal/console`).
+  - **A LIB$ routine's access violation rebuilt its reason mask.**
+    `librtl.memoryFault` set the length bit from the fault's kind and the
+    write bit only for an error a routine had marked with `writing`, so the
+    PTE-reference bit was lost, and a store not so marked reported a read.
+    It now takes the translation fault's own mask (`faultParameters`),
+    which has all three, the write mark still adding the bit for a
+    physical address error. `TestFaultParameters`.
+  - **An XFC with an unknown selector was a reserved operand fault.** On a
+    VAX with no microcode behind it, XFC takes the
+    opcode-reserved-to-customers fault (SCB `^X14`), which the manual
+    suggests for "an unrecognized second byte". It now does; and since
+    kernel.asm's SCB left `^X14`, and BPT's `^X2C`, unset, so that either
+    stopped the console, both now go to `console$handler`, and corevms
+    signals them as `SS$_OPCCUS` and `SS$_BREAK` (the book's Table 4-2;
+    `SS$_OPCCUS` was already mapped). `TestBPTAndCustomerOpcodeSignal`;
+    `TestEmulXfcUnknownSelectorFaults` expects the new vector; the
+    assembler's golden image of kernel.asm has the two vectors. A system
+    volume whose KERNEL.ASM the user changed (kept, `%MOUNT-I-SYSKEPT`)
+    lacks them until the same two lines are added.
+  Section 4.3 now says RET pops by the count's byte. Comments brought up to
+  date: `cpu.SystemServices`'s (it named `internal/console` and
+  `internal/rtl`), condition.go's `internal/console/chf.go`, kernel.asm's
+  header (the console commands' `/ENTRY=` and the shims' C files, gone),
+  and a REI test's note on MAPEN, fixed in subtask 3. Not fixed, raised
+  with the author and listed in 10.9: `$SETSFM` is missing, so no service
+  signals `SS$_SSFAIL`; and CHMS and CHMU from a program reach unset SCB
+  vectors and stop the console, where VMS calls a `$DCLCMH` handler or
+  signals `SS$_CMODSUPR` or `SS$_CMODUSER` (govax has no `$DCLCMH`).

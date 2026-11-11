@@ -114,7 +114,11 @@ func emulXfc(e *Engine, d *Decoded) error {
 		return emulXfcVM(e, code)
 
 	default:
-		return &Fault{Code: ExcReservedOp}
+		// A selector govax doesn't define is an XFC with nothing behind
+		// it, which on a VAX takes the opcode-reserved-to-customers fault
+		// (the VAX Architecture Reference Manual suggests that vector for
+		// "an unrecognized second byte of the instruction").
+		return &Fault{Code: ExcCustomer}
 	}
 }
 

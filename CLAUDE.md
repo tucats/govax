@@ -811,8 +811,8 @@ never had.
   4, the instruction set; subtask 3, 2026-11-11, section 5, memory;
   subtask 4, 2026-11-11, section 6, VMS paging; subtask 5, 2026-11-11,
   section 7, processes; subtask 6, 2026-11-11, section 8, I/O; subtask 7,
-  2026-11-11, section 9, RMS and ODS-2; sections 10 to 12 are subtasks 8
-  to 10; Decision 6, bugs the writing finds are fixed in the
+  2026-11-11, section 9, RMS and ODS-2; subtask 8, 2026-11-11, section 10,
+  from VAX code to Go; sections 11 and 12 are subtasks 9 and 10; Decision 6, bugs the writing finds are fixed in the
   same subtask).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

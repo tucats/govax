@@ -215,16 +215,17 @@ func emulRet(e *Engine, d *Decoded) error {
 	sp += spa
 
 	if maskWord&(1<<29) != 0 { // CALLS
-		// The manual specifies only the popped count longword's low byte is
-		// used ("four times the unsigned value of the low byte... is added
-		// to SP"), but emul_call.c's emul_ret uses the full 32-bit value
-		// unmasked. Replicated as-is -- see docs/DEVIATIONS.md.
+		// The argument count longword is popped, and "four times the
+		// unsigned value of the low byte of this longword is added to SP"
+		// (the VAX Architecture Reference Manual's RET): an argument list
+		// holds at most 255 arguments, and the count's other three bytes
+		// are reserved, so they don't move SP.
 		count, err := e.mem.LoadLongword(e.cpu, sp)
 		if err != nil {
 			return err
 		}
 
-		sp += 4 + count*4
+		sp += 4 + (count&0xFF)*4
 	}
 
 	psl := uint32(e.cpu.PSL())

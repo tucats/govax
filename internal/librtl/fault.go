@@ -20,26 +20,24 @@ import (
 // signal array the hardware would have built. If a handler continues
 // the condition anyway, the routine returns SS$_ACCVIO.
 
-// The reason mask of an access violation (the VAX Architecture Reference
-// Manual): which kind of failure it was.
-const (
-	accvioLength = 1 << 0 // the address was beyond its region's length
-	accvioWrite  = 1 << 2 // the access was a write (or a modify)
-)
+// accvioWrite is the reason mask's write bit (the VAX Architecture
+// Reference Manual): the access was a write, or a modify.
+const accvioWrite = vm.MaskWrite
 
-// writeFault marks a memory error as a write's, for the reason mask: the
-// memory errors themselves don't say which kind of access failed.
+// writeFault marks a memory error as a write's, for the reason mask. A
+// translation fault's own mask says which kind of access failed; a
+// physical address error's doesn't, so a store's is marked:
+//
+//	if err := mem.StoreLongword(cpu, addr, v); err != nil {
+//		return memoryFault(env, writing(err))
+//	}
 type writeFault struct{ err error }
 
 func (w writeFault) Error() string { return w.err.Error() }
 func (w writeFault) Unwrap() error { return w.err }
 
 // writing returns err marked as a write's (nil stays nil), so that
-// memoryFault sets the reason mask's write bit:
-//
-//	if err := mem.StoreLongword(cpu, addr, v); err != nil {
-//		return memoryFault(env, writing(err))
-//	}
+// memoryFault sets the reason mask's write bit.
 func writing(err error) error {
 	if err == nil {
 		return nil
@@ -53,34 +51,42 @@ func writing(err error) error {
 // is signaled as SS$_ACCVIO at the address it names. Any other error is
 // returned as it is, for the XFC to report.
 func memoryFault(env *corevms.Environment, err error) (uint32, error) {
+	va, reason, ok := faultParameters(err)
+	if !ok {
+		return 0, err
+	}
+
+	return accessViolation(env, va, reason)
+}
+
+// faultParameters returns the virtual address and reason mask an access
+// violation for the memory error err reports, as the hardware's would: a
+// translation fault's own mask (its length, PTE reference, and write
+// bits), with the write bit too if the error is marked as a write's. ok is
+// false if err isn't a memory error.
+func faultParameters(err error) (va, reason uint32, ok bool) {
 	var (
-		reason uint32
-		va     uint32
-		tf     *vm.TranslationFault
-		pe     *vm.PhysicalAddressError
-		wf     writeFault
+		tf *vm.TranslationFault
+		pe *vm.PhysicalAddressError
+		wf writeFault
 	)
 
 	switch {
 	case errors.As(err, &tf):
-		va = tf.Addr
-
-		if tf.Kind == vm.AccessViolation {
-			reason |= accvioLength
-		}
+		va, reason = tf.Addr, uint32(tf.Mask)
 
 	case errors.As(err, &pe):
 		va = pe.Addr
 
 	default:
-		return 0, err
+		return 0, 0, false
 	}
 
 	if errors.As(err, &wf) {
 		reason |= accvioWrite
 	}
 
-	return accessViolation(env, va, reason)
+	return va, reason, true
 }
 
 // MemoryFault is memoryFault for another RTL package's routines

@@ -458,6 +458,38 @@ func TestEmulRetReservedOperandFault(t *testing.T) {
 	}
 }
 
+// TestEmulRetPopsArgumentsByCountsLowByte checks that RET, returning from a
+// CALLS, removes as many arguments as the count longword's low byte says
+// and no more: the other three bytes are reserved and don't move SP (the
+// VAX Architecture Reference Manual's RET).
+func TestEmulRetPopsArgumentsByCountsLowByte(t *testing.T) {
+	e := newEngine()
+	cpu := e.cpu
+
+	const fp = 0x8000
+
+	cpu.SetGPR(registers.FP, fp)
+	cpu.SetGPR(registers.SP, 0x7000)
+
+	// A CALLS frame (bit 29), no saved registers, no alignment bytes; the
+	// count longword follows the frame's five longwords.
+	putLongword(t, cpu, e.mem, fp+4, 1<<29)
+	putLongword(t, cpu, e.mem, fp+8, 0x1111)  // AP
+	putLongword(t, cpu, e.mem, fp+12, 0x2222) // FP
+	putLongword(t, cpu, e.mem, fp+16, 0x3000) // PC
+	putLongword(t, cpu, e.mem, fp+20, 0x00030102)
+
+	stepInstruction(t, e, 0x04) // RET
+
+	if got, want := cpu.GPR(registers.SP), uint32(fp+20+4+2*4); got != want {
+		t.Errorf("SP = %#x, want %#x (the count's low byte, 2 arguments)", got, want)
+	}
+
+	if got := cpu.GPR(registers.PC); got != 0x3000 {
+		t.Errorf("PC = %#x, want 0x3000", got)
+	}
+}
+
 // TestEmulRetRestoresFullPSWFromFrame checks RET's "PSW <- tmp1<15:0>"
 // full replacement, and what CALLG saves for it: the caller's trap
 // enables, pushed before the entry mask's are set (the manual's order;
@@ -509,9 +541,7 @@ func TestEmulRetRestoresFullPSWFromFrame(t *testing.T) {
 
 // TestEmulReiReversesModeSwitch hand-builds a return frame as it would sit
 // on the kernel stack after an exception delivered from User mode (rather
-// than going through Engine.HandleFault, which would also need a page table
-// for the kernel stack once setModeStack's mode switch turns MAPEN on -- see
-// docs/DEVIATIONS.md on that MAPEN side effect; this test targets REI's own
+// than going through Engine.HandleFault: this test targets REI's own
 // restore mechanics, already covered on the delivery side by
 // TestHandleFaultBasicFrame/TestHandleFaultModeSwitch) and checks that REI
 // restores PC, the full PSL (including CurMod), and both mode stack

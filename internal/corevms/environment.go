@@ -376,16 +376,18 @@ func (env *Environment) rmsContext() *rms.Context {
 	}
 }
 
-// readArgs reads a VAX argument list off ap: a leading argument-count
-// longword, then that many longword arguments — the calling convention
-// CALLS/CALLG build and shim()/call_service() both read verbatim (their own
-// argc/argv loop over registers.AP).
+// readArgs reads a VAX argument list off ap: an argument count, then that
+// many longword arguments, as CALLS and CALLG leave them. The count is the
+// first longword's low byte: the procedure calling standard reserves the
+// other three bytes, and RET and VMS's change mode dispatcher look only at
+// the byte.
 func readArgs(cpu *registers.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
-	argc, err := mem.LoadLongword(cpu, ap)
+	first, err := mem.LoadLongword(cpu, ap)
 	if err != nil {
 		return nil, err
 	}
 
+	argc := first & 0xFF
 	argv := make([]uint32, argc)
 
 	for n := uint32(0); n < argc; n++ {
@@ -398,6 +400,39 @@ func readArgs(cpu *registers.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
 	}
 
 	return argv, nil
+}
+
+// argListReadable reports whether the current mode may read the whole
+// argument list at ap: its count longword, then the longwords the count's
+// low byte says follow. It is the check VMS's change mode dispatcher makes
+// with PROBER before it calls a service (*VAX/VMS Internals and Data
+// Structures*, 9.3.1), and like PROBER it reads only the pages'
+// protection, bringing none of them in. govax's services run in the
+// caller's mode, so the current mode is the caller's.
+func argListReadable(cpu *registers.CPU, mem *vm.Memory, ap uint32) bool {
+	if !mem.ProbeAccess(cpu, ap, vm.AccessRead) || !mem.ProbeAccess(cpu, ap+3, vm.AccessRead) {
+		return false
+	}
+
+	count, err := mem.LoadByte(cpu, ap)
+	if err != nil {
+		return false
+	}
+
+	last := ap + 4*uint32(count) + 3
+	if last < ap { // the list would run past the top of the address space
+		return false
+	}
+
+	// The list's other pages, after the count's (at most two more: 255
+	// longwords are 1,020 bytes).
+	for page := ap&^(pageSize-1) + pageSize; page != 0 && page <= last; page += pageSize {
+		if !mem.ProbeAccess(cpu, page, vm.AccessRead) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // callHandler invokes fn(env, argv), recovering a panic into an error.
@@ -540,7 +575,21 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	)
 
 	if env.services.ReadsArgs(entry.Name) {
-		if argv, err = readArgs(env.cpu, env.mem, env.cpu.GPR(registers.AP)); err != nil {
+		ap := env.cpu.GPR(registers.AP)
+
+		// An argument list the caller's mode can't read is SS$_ACCVIO,
+		// returned before the service runs, as VMS's change mode
+		// dispatcher returns it.
+		if !argListReadable(env.cpu, env.mem, ap) {
+			if env.cpu.DebugEnabled(registers.DebugServices) {
+				fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s, argument list at %08X can't be read, returns %08X\n",
+					entry.Name, ap, uint32(ssAccVio))
+			}
+
+			return ssAccVio, true, nil
+		}
+
+		if argv, err = readArgs(env.cpu, env.mem, ap); err != nil {
 			return 0, true, err
 		}
 	}

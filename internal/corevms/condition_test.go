@@ -107,6 +107,7 @@ func TestExceptionCondition(t *testing.T) {
 		{"privileged instruction", scbPrivileged, nil, 0x43C, nil},
 		{"customer instruction", scbCustomer, nil, 0x434, nil},
 		{"trace fault", scbTracePending, nil, 0x464, nil},
+		{"breakpoint", scbBreakpoint, nil, 0x414, nil},
 		{"integer divide", scbArithmetic, []uint32{2}, 0x484, nil},
 		{"subscript range", scbArithmetic, []uint32{7}, 0x4AC, nil},
 		{"floating underflow fault", scbArithmetic, []uint32{10}, 0x4C4, nil},
@@ -128,8 +129,8 @@ func TestExceptionCondition(t *testing.T) {
 		}
 	}
 
-	// Machine checks, breakpoints, and the like aren't signaled.
-	for _, code := range []uint32{0x04, 0x2C, 0x40} {
+	// Machine checks, compatibility mode, and the like aren't signaled.
+	for _, code := range []uint32{0x04, 0x30, 0x40} {
 		if _, _, ok := exceptionCondition(code, nil); ok {
 			t.Errorf("exception %#x was given a condition", code)
 		}
@@ -182,7 +183,7 @@ func TestDispatchException_declines(t *testing.T) {
 		code  uint32
 		setup func(env *Environment) registers.PSL
 	}{
-		{"no condition value", 0x2C, func(env *Environment) registers.PSL { return env.cpu.PSL() }},
+		{"no condition value", 0x30, func(env *Environment) registers.PSL { return env.cpu.PSL() }},
 		{"interrupt stack", scbReservedOp, func(env *Environment) registers.PSL {
 			psl := env.cpu.PSL()
 			psl.SetIS(true)

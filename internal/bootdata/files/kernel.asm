@@ -18,17 +18,15 @@
 ;       related routines.
 ;
 ;
-;       NATIVE VERSUS VAX CONSOLE
+;       WHERE VMS'S SERVICES ARE
 ;
-;       Most console commands are implemented natively, in the actual emulator
-;       code itself, and outside the emulated VAX.  However, some console
-;       commands can be written in VAX assembler directly.  These commands
-;       are identified by the /ENTRY= qualifier in the evax.dcl grammar
-;       definition file.  Commands with an /ENTRY case the associated entry
-;       point in the microkernel to be called when the command is given.  A
-;       set of services (DCL$PRESENT, DCL$STRING, etc.) can be used to determine
-;       if a parameter, qualifier, or keyword value is present, negated, or
-;       what it's string or numeric value is.
+;       The system services themselves are not here: govax writes them
+;       in Go (internal/corevms).  The .P1VECTOR directive below writes
+;       the system service vector, a tiny procedure at each service's
+;       fixed VMS address whose XFC #XFC$P1VECTOR hands the call to Go.
+;       This file holds what must be VAX code: the system control block,
+;       the CHMK dispatcher, the console's I/O, a few run-time library
+;       routines, and the shim table.
 ;
 ;
 ;       HOW TO ADD A USER-MODE ROUTINE
@@ -50,23 +48,17 @@
 ;       HOW TO ADD A SHIM ROUTINE
 ;
 ;       A SHIM routine is one that is not written in native VAX code at
-;       all.  Instead, a stub (shim) is created by the pseudo-assembler
-;       that generates an appropriate XFC instruction.  This instruction
-;       causes the emulator to read the native VAX argument list and
-;       dispatch to a runtime support routine written in the emulator
-;       itself.  An example of this is DECC$MALLOC(), which is implemented
-;       by the routine decc_malloc() located in the file librtl_memory.c
-;
-;       You must write the shim routine itself (see any of the librtl*.c
-;       files for how to read the argument list, access string descriptors
-;       easily, etc.).  Add a prototype for the runtime in shim.h, and
-;       an entry in the shim dispatch table in "shim.c".  Note that there
-;       is a table entry for each routine, plus a second call that at runtime
-;       fills in the function pointer value.  You must code both parts.
-;
-;       Finally, go to the _first_ section containing .SHIM declarations
-;       below and add an entry for your routine.  The second parameter
-;       must be the index into the shim table that contains your routine.
+;       all.  A program reaches it through a stub (MOVL #code,R0, then
+;       XFC #XFC$SHIM, then RET) whose XFC runs a Go function registered
+;       under that code.  LIBRTL's routines are internal/librtl's (its
+;       Routines table), MTHRTL's internal/mthrtl's, LBRSHR's
+;       internal/lbrrtl's, and the C library's internal/corevms's
+;       (CRTLLinks and registerShims); the machine writes every stub
+;       from those tables when the first image is run.  Add the routine
+;       to its package's table: nothing here needs to change.  The first
+;       .SHIM section below writes stubs of its own for a few routines;
+;       the machine's stubs take their names and SHIM$ symbols when it
+;       writes them.
 ;
 ;
 ;       HOW TO ADD A NEW KERNEL-mode SERVICE
@@ -1419,6 +1411,8 @@ exe$dclstring:  .blkb           ^X100
                 .scb            exc$resaddr,   console$handler; exe$resaddr
                 .scb            exc$tnv,       console$handler
                 .scb            exc$tp,        console$handler
+                .scb            exc$customer,  console$handler
+                .scb            exc$bpt,       console$handler
                 .scb            exc$arith,     console$handler
                 .scb            exc$interval,  exe$interval
                 .scb            exc$software2, exe$deliver_ast

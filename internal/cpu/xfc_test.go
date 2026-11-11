@@ -600,12 +600,12 @@ func TestEmulXfcUnknownSelectorFaults(t *testing.T) {
 	e := newEngine()
 	e.cpu.SetGPR(registers.SP, 0x7000)
 	e.cpu.SetPR(registers.KSP, 0x7000)
-	putVector(t, e, ExcReservedOp, 0x300, 0)
+	putVector(t, e, ExcCustomer, 0x300, 0)
 
 	stepInstruction(t, e, 0xFC, 0x55) // no such XFC selector
 
 	if got := e.cpu.GPR(registers.PC); got != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
+		t.Errorf("PC = %#x, want 0x300 (the customer-reserved instruction fault vector)", got)
 	}
 }
 

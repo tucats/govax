@@ -830,7 +830,10 @@ which leaves the frame VMS's condition handling and its debugger walk:
           | arguments         |
 ```
 
-RET reads it back. The same `buildCallFrame` also delivers an AST
+RET reads it back, and after a CALLS removes the argument list too, by
+the count longword's low byte: an argument list holds at most 255
+arguments, and the procedure calling standard reserves the count's other
+three bytes. The same `buildCallFrame` also delivers an AST
 (section 7), which on VMS is a CALLG made between two instructions.
 
 Beyond the integers, the instruction set has three families of its own,
@@ -4172,7 +4175,525 @@ an image, which may be a host file.
 
 ## 10. From VAX code to Go and back
 
-*To be written.*
+A program running on govax is VAX code, and almost everything it asks of
+VMS is answered by Go: the system services, RMS, and most of the run-time
+library routines. This section is about the crossing. A program never
+knows it happens: it calls `SYS$ASSIGN` or `LIB$GET_EF` at the address a
+VMS program would, with the argument list a VMS program would build, and
+gets back the status and results VMS would give. In between, the engine
+stops running instructions, a Go function reads the argument list out of
+VAX memory, does the work, and writes its answers back.
+
+The crossing goes the other way too. A Go service sometimes has to run
+VAX code before it can finish: `$EXIT` calls the program's exit handlers,
+the condition dispatcher calls its condition handlers, `LIB$FILE_SCAN`
+calls its success routine for each file. And Go can end the program
+altogether. This section takes each in turn: the instruction that
+crosses (10.1), the system service vector (10.2), a service in Go (10.3),
+waiting and calling back (10.4), the run-time libraries (10.5) and their
+callbacks (10.6), conditions (10.7), and the image's end (10.8).
+
+### 10.1 XFC
+
+The VAX architecture reserved opcode `FC`, XFC, "Extended Function
+Call", for a customer's own microcode: on a VAX without any, it takes the
+*opcode-reserved-to-customers* fault through SCB vector `^X14`. govax
+gives it a meaning. Its second byte, an implicit operand (section 4.1), is
+a *selector*, and the engine's XFC handler (`cpu/xfc.go`) does what the
+selector says:
+
+| Selector | Name | What it does |
+| --- | --- | --- |
+| `01`–`04` | `XFC$CONSOLE_WRITE`, `_READ`, `_CMD`, `_PUT` | the console's I/O (section 8.6) |
+| `05` | `XFC$JSBSHIM` | a run-time library routine reached by JSB (10.5) |
+| `78` | `XFC$QUIT_EMULATION` | end govax (kernel mode only) |
+| `7A` | `XFC$P1VECTOR` | a system service (10.2) |
+| `7B`, `7C` | `XFC$HALT_SILENT`, `XFC$HALT` | halt the CPU, quietly or with a message |
+| `7D` | `XFC$SHIM` | a run-time library routine reached by CALLS or CALLG (10.5) |
+| `7E`, `7F` | `XFC$VMW`, `XFC$VMR` | translate the address in R0 for writing or reading, into R0, PSL<V> set if it can't be |
+
+Any other selector is the customer-reserved fault, as the architecture
+suggests for "an unrecognized second byte of the instruction"; the
+program's handlers see it as `SS$_OPCCUS` (10.7).
+
+The engine itself knows nothing of VMS. Everything but the halts and the
+translation goes through the `cpu.SystemServices` interface
+(`cpu/services.go`), which `machine.Machine` implements: it answers the
+console's selectors itself, and passes the services and the run-time
+library routines, through its embedded `corevms.EngineHooks`, to whichever
+process the CPU is running (section 3.4). So an XFC is a Go call, and
+when it returns, the XFC instruction has one of five outcomes:
+
+- **Done.** R0 is set to the status the Go side returned, and execution
+  goes on at the next instruction. This is nearly every call.
+- **Wait.** The Go side can't finish yet (`cpu.ErrServiceWait`). The
+  handler puts PC back to the XFC, so the next `Step` runs it again;
+  between tries, time moves, interrupts and ASTs are delivered, and with
+  the scheduler the process waits in it (section 7.6).
+- **Call.** The Go side needs a VAX procedure run first (a
+  `cpu.ServiceCall`). The engine builds the procedure's call frame, with
+  the XFC as its return address, and jumps to it; when the procedure's
+  RET lands on the XFC, the Go side is called again (10.4).
+- **Exit.** The image has ended (`cpu.ErrImageExit`): R0 is its status,
+  and the engine unwinds to the frame that started it (10.8).
+- **Fault.** The Go side met memory it couldn't reach: a `vm` translation
+  fault, which `raise` turns into the access violation the XFC
+  instruction itself takes, PC back at the XFC, as any instruction's
+  would be (section 4.5). Any other Go error stops the run, and the
+  console shows it: a defect in govax, not something a program can cause.
+
+No mode changes along the way. A VMS program's service call changes mode
+twice, into kernel or executive mode by CHMK or CHME and back by REI; in
+govax the CPU stays in the caller's mode while the Go code runs, and the
+service's reads and writes of the caller's memory are checked against
+that mode's access, as VMS's services check them with PROBE.
+
+### 10.2 The system service vector
+
+VMS puts its services at fixed addresses in P1, eight bytes apart, from
+`^X7FFEDE00` up: `SYS$ASSIGN` is `^X7FFEDE50` on every VMS since V4, and
+a program linked on one version runs on the next because the address
+never changes. `vmsdef.P1VectorTable` (`vmsdef/p1vector.go`) lists 312
+entries, VMS's whole vector. The microkernel's `.P1VECTOR` directive
+(section 5.6) writes the same procedure at each:
+
+```text
+SYS$ASSIGN:     entry mask ^M<>        ; 00 00
+7FFEDE52:       XFC      #7A           ; FC 7A
+7FFEDE54:       RET                    ; 04
+```
+
+(that is the debugger's `EXAMINE/INSTRUCTION` of the vector on govax).
+A program's `CALLS #4,G^SYS$ASSIGN` builds its frame and lands on the XFC,
+two bytes in. Where VMS's vector has a `CHMK #code`, govax's has the XFC,
+and that's the whole of the difference a program could see.
+
+The XFC's handler passes the vector entry's address, PC less 4, and
+corevms finds the service's name by it (`lookupP1Vector`). Three entries
+are different. `SYS$SRCHANDLER`, where the condition dispatcher sends a
+program (10.7), is reached by a jump, not a call: its XFC is at the
+entry's own address, with no entry mask before it. And `SYS$GL_ASTRET`
+and `SYS$GL_COMMON` are data cells, longwords that share the vector to get
+an address, inside their neighbors' procedures: `.P1VECTOR` defines their
+symbols and writes nothing for them.
+
+Images linked before VMS V4 call their services through an older vector,
+in S0 from `^X80000000`, at the same offsets. govax keeps it too
+(`machine/legacyvector.go`): at each offset an empty entry mask and a
+`JMP @#` to the P1 entry's XFC, so the call is dispatched by the P1
+address as any other (section 5.5's first row).
+
+### 10.3 A service in Go
+
+A service is a Go function of one shape (`corevms/service.go`):
+
+```go
+type ServiceFunc func(env *Environment, argv []uint32) (uint32, error)
+```
+
+`env` is the calling process (section 3.5), `argv` its argument list
+already read out of memory, and the `uint32` the status for R0. Each
+service is registered by name in the System's `ServiceTable`, by a
+`register...Services` function in the file that implements it (120
+services, from `registerCoreServices` to `registerRMSServices`). Here is
+`$GETTIM`, whole (`corevms/vmstime.go`):
+
+```go
+func serviceSysGettim(env *Environment, argv []uint32) (uint32, error) {
+	timadr := optArg(argv, 0)
+	if timadr == 0 { // page 0 is never accessible on VMS
+		return ssAccVio, nil
+	}
+
+	if !env.storeQuad(timadr, env.Clock()) {
+		return ssAccVio, nil
+	}
+
+	return ssNormal, nil
+}
+```
+
+`optArg` gives 0 for an argument the list doesn't have, which is how VMS
+reads an omitted optional argument. The time is written with the caller's
+access, and an address the caller can't write is `SS$_ACCVIO`, returned:
+a VMS service probes what it's given and returns that status, rather than
+faulting. Statuses are VMS's own values, from `vmsdef.Symbols`
+(`SS$_ACCVIO` is 12).
+
+**The dispatch.** `Environment.SystemService` (`corevms/environment.go`)
+does what VMS's change mode dispatcher does before a service runs (*VAX/VMS
+Internals and Data Structures*, 9.3.1), then calls it:
+
+1. It finds the entry by its address, and the service by the entry's name.
+   An entry with no service behind it signals `SS$_UNSUPPORTED`, followed
+   by `GOVAX-E-NOTIMPL` naming the service (`corevms/missingservice.go`):
+   an error, not a severe one, so with no handler to take it the program
+   goes on, the call returning `SS$_UNSUPPORTED`.
+2. It checks that the caller's mode can read the whole argument list: the
+   count longword, then as many longwords as its low byte says (the
+   calling standard reserves the other three bytes). Like VMS's PROBER, it
+   looks only at the pages' protection (`argListReadable`). A list that
+   can't be read is `SS$_ACCVIO`, and the service isn't called.
+3. It reads the list (`readArgs`), and for the services VMS was seen to
+   count, checks there are enough (`serviceMinArgs`, `corevms/argcount.go`):
+   `$ASSIGN` with three arguments is `SS$_INSFARG`, as on VMS 7.1, though
+   its fourth is optional.
+4. It calls the service through `callHandler`, which turns a Go panic into
+   an error, so a service that indexes past a short `argv` stops the run
+   with a message instead of taking govax down.
+5. A service that waits is noted for the scheduler (`enterWait`; section
+   7.6), and with `SET DEBUG SERVICES` the call is traced, once, however
+   many times a wait makes it run.
+
+One service, `SYS$CLRAST`, isn't called with an argument list at all
+(`RegisterNoArgs`): an AST routine's RET reaches it (section 7.7), as
+`SYS$SRCHANDLER` is reached by a jump. Neither reads AP.
+
+**A run, traced.** Here is a program that calls `$GETTIM`, `LIB$GET_EF`,
+and `$DCLEXH`; signals a warning with LIB$SIGNAL, which its handler
+continues; makes an access violation, which the handler continues past;
+calls `$GETTIM` with an argument list on page 0, which a program can't
+read; and calls `$EXIT`, whose exit handler prints a line. It was run
+with `SET DEBUG SERVICES` and `SET DEBUG EXCEPTIONS`:
+
+```text
+DEBUG(SERVICES): SYS$GETTIM( 00000200 ), returns 00000001
+DEBUG(SERVICES): SYS$DCLEXH( 00000210 ), returns 00000001
+DEBUG(EXCEPTION): LIB$SIGNAL, CONDITION=00000028  PC=00000439  SIGNAL=7FDFFFA0
+DEBUG(EXCEPTION): condition handler 00000454, frame 7FDFFFD0, depth 0
+DEBUG(SERVICES): SYS$SRCHANDLER(  ), calls 00000454
+handler called
+DEBUG(SERVICES): SYS$SRCHANDLER(  ), returns 00000001
+DEBUG(EXCEPTION): SET, CODE=20  PC=00000439  PSL=03C00000  ARGC=2
+DEBUG(EXCEPTION): ARGS = 00000004, 00000000
+DEBUG(EXCEPTION): DISPATCH, CONDITION=0000000C  PC=00000439  SIGNAL=7FDFFFB8
+DEBUG(EXCEPTION): condition handler 00000454, frame 7FDFFFD0, depth 0
+DEBUG(SERVICES): SYS$SRCHANDLER(  ), calls 00000454
+handler called
+DEBUG(SERVICES): SYS$SRCHANDLER(  ), returns 00000001
+DEBUG(SERVICES): SYS$GETTIM, argument list at 00000004 can't be read, returns 0000000C
+DEBUG(SERVICES): SYS$EXIT( 00000001 ), calls 0000047C
+in the exit handler
+DEBUG(SERVICES): SYS$EXIT( 00000001 ), exits with status 00000001
+```
+
+`LIB$GET_EF` isn't in the trace: it isn't a system service but a shim
+(10.5). The rest of this section explains the other lines: the handler
+called from `SYS$SRCHANDLER` and its "returns 1", the continue (10.7), and
+`$EXIT`'s two calls, one to run the exit handler and one to end (10.8).
+
+### 10.4 Waiting, and calling VAX code
+
+A service that must wait returns `corevms.ErrWait`, which `EngineError`
+(`corevms/enginehooks.go`) turns into the engine's `cpu.ErrServiceWait`,
+and the XFC runs again until the service no longer waits. Section 7.6 has
+the rest: what the scheduler does with the process meanwhile, and how the
+wait ends.
+
+A service that needs VAX code run returns a `*corevms.CallRequest`
+(`corevms/exit.go`): a procedure's entry mask address and an argument
+list's, as for CALLG. `EngineError` makes it a `cpu.ServiceCall`, and the
+engine's `callForService` (`cpu/exit.go`) builds the procedure's frame as
+CALLG would, the saved PC the XFC's own address. When the procedure
+returns, its RET puts PC on the XFC, and the next `Step` calls the service
+again. R0 is left as the procedure set it.
+
+That second call has to know it's a second call, and where it left off.
+Each service that calls out keeps that in Go, and recognizes its return
+by the registers the RET restored:
+
+| Service | What it calls | How it knows the call has returned |
+| --- | --- | --- |
+| `$EXIT` | each exit handler, newest first | the process is exiting, and SP is where the first `$EXIT` had it |
+| `SYS$SRCHANDLER` | each condition handler, `$UNWIND`'s cleanup calls | SP is the dispatch's arrays' (10.7) |
+| `$CMKRNL`, `$CMEXEC` | the program's routine, in kernel or executive mode | FP is the service's stub's frame, and SP where the routine's frame was built |
+| `$PUTMSG` | the program's action routine, for each message line | the same |
+| the shims that call back | a routine the program passed (10.6) | FP, SP, PC, and mode the same as when the callback was made |
+
+`$CMKRNL` and `$CMEXEC` are the one place a service changes mode: they
+switch the CPU into the target mode and its stack before asking for the
+call, and back when the routine returns (`corevms/cmode.go`), as AST
+delivery does.
+
+Two variants. A `Tail` call is the service's last act: the frame's saved
+PC is the instruction after the XFC, so the procedure returns to the
+service's caller with its own R0 as the result. `LIB$SHOW_TIMER` calls its
+action routine this way, and `Environment.ExitFromShim` uses it to call
+the `SYS$EXIT` entry from a shim. An `Image` call starts an image: its
+frame's saved PC and FP are the console's sentinel, `^XFFFFDEAF`, so the
+image's `$EXIT` unwinds to it and no further (10.8). The subprocess CLI
+runs each command's image this way (section 7.11).
+
+### 10.5 The run-time libraries
+
+VMS's run-time libraries are shareable images of VAX code: LIBRTL.EXE
+(the LIB$ and STR$ routines), MTHRTL.EXE (mathematics), LBRSHR.EXE (the
+librarian's routines), the C library, and the rest. A program linked
+against one calls its routines through the image's *transfer vector*, a
+table of entry points at fixed offsets from the image's start.
+
+govax writes most of them in Go instead. Each routine is a *shim*: a Go
+function of the service's shape (`corevms.ShimFunc`), registered under a
+number, its *code*, and reached through a stub, a twelve-byte procedure in
+system space (`corevms/shimlink.go`):
+
+```text
+LIB$GET_EF:     entry mask ^M<>        ; 00 00
+80028BFA:       MOVL     I^#00000072,R0  ; D0 8F 72 00 00 00 50
+80028C01:       XFC      #7D           ; FC 7D
+80028C03:       RET                    ; 04
+```
+
+The stub puts its code in R0, and `XFC$SHIM` runs the shim registered
+under it, with the caller's argument list at AP; the shim's status comes
+back in R0, and RET returns to the caller. The dispatch,
+`Environment.Shim`, is `SystemService`'s with a code in place of an
+address, and a shim can wait, call, or exit as a service can.
+
+**Where a stub is.** `ShimTable` (`machine/shim.go`) is every routine
+govax provides, as `corevms.ShimLink`s: a name, the library, the offset
+in its transfer vector, and the code. At the first RUN, `EnsureShims`
+writes a stub for each: the first 42 into the page INITIALIZE/MEMORY set
+aside for them (section 5.5), the rest into pages from the S0 pool, so
+every process reaches a stub at the same address. Each stub's address is
+also a symbol, `SHIM$<library>_<offset>` (`LIB$GET_EF`'s is
+`SHIM$LIBRTL_000003B0`).
+
+**How a program finds it.** LINK turned the program's `CALLS
+#1,G^LIB$GET_EF` into a call through a longword in the image's fixup
+section, holding the routine's offset in LIBRTL's transfer vector. When
+the image is activated, the image activator (`imageFixup`,
+`machine/image.go`) writes the routine's address into that longword: the
+loaded image's base plus the offset, if a real LIBRTL.EXE was loaded, or
+else the `SHIM$LIBRTL_<offset>` stub. The program's code never changes.
+An image linked against a *based* library, one LINK placed at a fixed
+address, gets demand-zero pages there holding a transfer vector of its
+own, each entry an entry mask and a jump to the routine's stub
+(`placeEmulated`, `machine/activate.go`).
+
+**Codes.** The codes say whose a routine is:
+
+| Codes | Routines |
+| --- | --- |
+| 1 to about 150 | LIBRTL's and LIBRTL2's routines (`librtl.Routines`), the C library's and govax's own (`corevms.CRTLLinks`); 64 is DCL's `EXE$CLI_COMMAND`, the subprocess CLI's stub (section 7.11) |
+| 1000, 2000 on | every LIBRTL entry govax lacks, CALL and JSB: a stub that signals `SS$_UNSUPPORTED` and `GOVAX-E-NOTIMPL` with its name (`librtl/missing.go`) |
+| 3000 | the traceback handler, `EXE$TRACEBACK` (10.7) |
+| 4000 on | MTHRTL's, 4000 plus the entry's offset over 8 (`internal/mthrtl`) |
+| 5000 on | LBRSHR's, 5000 plus the entry's offset (`internal/lbrrtl`) |
+| 10000 on | a routine of a library govax stands for that no table has, made on first use when an image's fixup names it, which signals NOTIMPL with the library and offset (`machine/unresolved.go`) |
+
+**Three other kinds of stub.** A routine reached by JSB has its arguments
+in R0, R1, ..., so R0 can't carry its code: its stub pushes the code,
+`XFC$JSBSHIM` pops it, and the shim (a `corevms.JSBShimFunc`) works on R0
+to R7 in place, returning by RSB. LIB$SIGNAL and LIB$STOP need their
+caller's R0, which a handler sees in the mechanism array: their stub
+pushes R0 before it loads the code (`CallerR0Stub`). And a handful of
+routines whose whole job is a transfer of control are VAX code in the
+microkernel (`LIB$CALLG`, `DECC$STRCPY`, and a few more): code 0, no stub,
+the `SHIM$` symbol the routine's own address. EXE$ASTRET, the AST exit
+(section 7.7), takes a stub's slot after the table's last.
+
+**Not every library is Go.** The image locator (section 11) finds govax's
+own libraries unless a logical name of the library's name is defined, so a
+real VMS LIBRTL.EXE or FORRTL.EXE can be run in their place; such a
+library's own calls to LIBRTL land on the shims all the same. FTNRTL.EXE,
+the FORTRAN run-time library, is VAX code govax carries: MACRO-32 sources
+assembled and linked by govax's own MACRO and LINK (`internal/ftnrtl`),
+found by the locator last, and calling LIBRTL's and MTHRTL's shims and
+the services as any program does.
+
+**Access violations.** A LIB$ routine on VMS is VAX code, so an argument it
+can't reach faults in its own instruction, and the program's handlers see
+the hardware's `SS$_ACCVIO`. A shim does the same through
+`librtl.memoryFault`: the access violation is signaled with the translation
+fault's own reason mask and address, and if a handler continues, the
+routine returns `SS$_ACCVIO`. A service, as 10.3 said, returns it instead.
+An argument list a shim can't read is an access violation at the stub's
+XFC.
+
+### 10.6 When a library routine calls the program
+
+Some LIB$ routines call procedures the program passes them:
+`LIB$FILE_SCAN` its success routine for each file, `LIB$DELETE_FILE` its
+confirm routine before each deletion, `LIB$TPARSE` its action routines,
+`LIB$GET_VM` a zone's own get-page routine. Each callback is a
+`CallRequest`, as in 10.4. But a routine like `LIB$DELETE_FILE` calls out
+from the middle of a loop, from several places, and writing it as a state
+machine re-entered after each callback would be hard to follow.
+
+So a shim registered with `ShimTable.RegisterCallback` runs on a goroutine
+of its own (`corevms/callback.go`), and a callback is a plain Go call,
+`Environment.Callback(routine, args...)`, which returns the procedure's R0.
+Behind it, the goroutine and the engine take turns over two channels:
+`Callback` hands the dispatch its request and waits; the dispatch returns
+the `CallRequest` to the engine; when the procedure's RET runs the stub's
+XFC again, the dispatch hands the goroutine the R0 and waits for its next
+request or its result. Only one of the two runs at a time, so the machine
+stays deterministic and nothing needs a lock. The callback's argument
+list goes on the stack below SP, in the stub's frame.
+
+A shim's XFC chooses its routine by R0, which the callback has just set to
+its own result, so the dispatch first looks for a routine waiting for a
+callback whose stub frame this is: FP, SP, PC, and mode the same as when
+the callback was made. Nothing else can execute that XFC with that frame;
+a callback that calls the same routine again does so through a new frame.
+
+A callback may never return: a condition handler may unwind past the
+stub's frame, or the image may exit. The routine is then *abandoned*: its
+pending `Callback` panics with a sentinel its goroutine recovers, so the
+routine's own code needs no check, and the goroutine ends. `$UNWIND`
+abandons the calls whose frames it removes, image rundown all of them.
+
+### 10.7 Conditions
+
+A condition reaches a program's handlers from three places: a hardware
+exception, a routine that signals (LIB$SIGNAL and LIB$STOP, or a shim
+signaling its own failure), and govax itself (a missing service or
+routine). All three end in one mechanism, which runs in the program's own
+mode and stack, as VMS's does (`corevms/condition.go`).
+
+**An exception.** The microkernel sets the SCB vectors of the exceptions a
+program can handle to `console$handler`, `FFFFFFFF`: the privileged and
+customer-reserved instructions, reserved operand and addressing mode,
+access violation, translation not valid, trace, breakpoint, and
+arithmetic. `HandleFault` offers such an exception to the running
+process's `DispatchException` (section 4.5), which turns it into a
+condition by *VAX/VMS Internals and Data Structures*' Table 4-2:
+
+| SCB vector | Exception | Condition | Detail in the signal array |
+| --- | --- | --- | --- |
+| `10` | privileged or reserved instruction | `SS$_OPCDEC` | |
+| `14` | customer-reserved instruction (an unknown XFC) | `SS$_OPCCUS` | |
+| `18` | reserved operand | `SS$_ROPRAND` | |
+| `1C` | reserved addressing mode | `SS$_RADRMOD` | |
+| `20`, `24` | access violation; a page that can't be made valid | `SS$_ACCVIO` | the reason mask and the address |
+| `28` | trace | `SS$_TBIT` | |
+| `2C` | BPT | `SS$_BREAK` | |
+| `34` | arithmetic | `SS$_INTOVF`, `SS$_FLTDIV_F`, ... by its type code | |
+
+**The dispatch.** `startDispatch` lays three blocks out on the current
+stack, just as VMS's exception code leaves them:
+
+```text
+  SP →  argList:  2, sig, mech            the handlers' argument list
+        mech:     4, frame, depth, R0, R1 the mechanism array
+        sig:      n, condition, detail..., PC, PSL
+```
+
+records the dispatch on the process's stack of dispatches in progress, and
+sets PC to `SYS$SRCHANDLER`. The program "returns" there, and that
+entry's XFC runs `serviceSysSrchandler`, the search. It goes through the
+mode's primary and secondary exception vectors (`$SETEXV`), then the call
+frames from the condition's outward, each frame's handler at `0(FP)`, its
+caller at `12(FP)`; each handler found is a `CallRequest` with the
+mechanism array's frame and depth filled in. The handler's RET lands on
+`SYS$SRCHANDLER`'s XFC again, with SP at the arrays, which is how the
+search knows which dispatch it is continuing, and it acts on the
+handler's R0:
+
+- **Low bit set (`SS$_CONTINUE`).** The program goes on: for an exception,
+  at the signal array's PC (which a handler may change, as the traced
+  program's did to skip its faulting MOVL), its condition codes from the
+  array's PSL; for LIB$SIGNAL, by returning from LIB$SIGNAL; R0 and R1 from
+  the mechanism array. The trace's "returns 00000001" is this.
+- **Low bit clear (`SS$_RESIGNAL`).** The search goes on to the next frame.
+- **A `$UNWIND` was called.** Each frame to be removed has its handler
+  called once more with `SS$_UNWIND`, then each removed frame's saved PC
+  is pointed at a RET, so the frames go one by one as their own RETs would
+  take them (`corevms/unwind.go`).
+
+A handler that signals or faults starts a dispatch of its own on top of
+the first, whose search passes over the frames the first already searched
+(the book's 4.3.3).
+
+**The end of the search.** When the frames run out (the frame whose saved
+FP and PC are the console's sentinel), the *catch-all* acts: it writes the
+condition's message where `$PUTMSG` writes it, and for a severe condition
+(or any LIB$STOP) ends the image by calling the `SYS$EXIT` entry with the
+condition, marked `STS$M_INHIB_MSG` so it isn't shown twice, as the
+status; for any other condition the program continues. An image linked
+with traceback has one frame more: RUN's driver puts the traceback handler,
+`EXE$TRACEBACK` (shim code 3000, `corevms/traceback.go`), in its own frame,
+as VMS's image startup does: for every warning, error, and severe
+condition the program's handlers pass on, it writes the message with a
+symbolic dump of the stack, then continues the program, or for a severe
+condition ends the image. A frame that can't be read ends the search at the
+last-chance vector instead, and an exception the user stack has no room to
+report ends the image with no handler called (the book's 16.2.1.3).
+
+Only if `DispatchException` can't take an exception at all (no condition
+for it, the interrupt stack, no `SYS$SRCHANDLER` stub) does it go back to
+the console, which reports it and stops the run.
+
+### 10.8 How an image ends
+
+RUN doesn't call an image's main routine directly. It writes a small
+procedure, the *IMAGE$INIT driver*, and calls that from a frame whose saved
+PC and FP are the sentinel (`buildDriver`, `machine/run.go`; section 11
+has the rest):
+
+```text
+        .WORD   ^M<>
+        MOVL    #EXE$TRACEBACK,(FP)     ; if the image was linked with traceback
+        CALLS   #0,main                 ; the image's transfer address
+        PUSHL   R0                      ; what main returned
+        CALLS   #1,SYS$EXIT             ; is the image's status
+        RET
+```
+
+So an image that returns from its main routine ends by `$EXIT` too, as on
+VMS, whose image activator calls `$EXIT` with what main returned.
+`$EXIT` (`serviceSysExit`) first calls the caller's mode's exit handlers,
+one `CallRequest` each, the block removed from the list before its call;
+when none are left it returns `ErrExit` with the status. The engine's
+`exitImage` then follows the frames from FP to the sentinel frame and
+executes its RET, which restores the registers RUN saved and reports
+`cpu.ErrConsoleCallReturned`, as if the outermost procedure had returned.
+R0 is the exit status.
+
+The machine's run loop takes it from there (`ReportStop`,
+`machine/execute.go`): the status becomes RUN's, and `$STATUS`, and the
+machine runs the image down. `Environment.ImageRundown`
+(`corevms/process.go`) does what VMS does at image exit for the state
+corevms owns: it closes the files the image left open, deassigns its
+user-mode channels and deallocates its devices, disassociates its event
+flag clusters, cancels its timers and wakeups, dequeues its user-mode
+locks, discards its pending user-mode ASTs, forgets its exit handlers, the
+`$PUTMSG`, `$CMKRNL`, and library calls left waiting for a routine that
+never returned, its condition dispatches and user-mode exception vectors,
+and its page locks, deletes P0 (unless a debugger session holds the image)
+and the image's P1 pages, resets its privileges and working set, and frees
+its heap and its run-time libraries' per-image data. The machine deletes
+the user-mode logical names (`DEFINE/USER_MODE`'s) too.
+
+An image another process runs ends the same way, but `StepMachine` then
+deletes the process, or, if its CLI ran the image, the CLI goes on
+(section 7.11). An image that never exits (a HALT, Ctrl/C, Ctrl/Y, a
+limit) is run down when the next image starts, as VMS runs it down when
+the process next runs one (`EndAbandonedImage`).
+
+### 10.9 What's VMS's and what isn't
+
+- **Services run in Go, in the caller's mode.** There's no change mode
+  dispatcher, no kernel or executive stack in use during a service, and no
+  inner-mode code a program could trace: a program that traces itself
+  through a service sees the vector's XFC and RET. `$CMKRNL` and `$CMEXEC`
+  do change mode, to run the program's routine.
+- **No system service failure exceptions.** `$SETSFM` is a missing
+  service (NOTIMPL), so a failing service never signals `SS$_SSFAIL`.
+- **CHMS and CHMU from a program** fault through SCB vectors the
+  microkernel doesn't set, which stops the console, where VMS would call
+  the handler `$DCLCMH` declared or signal `SS$_CMODSUPR` or
+  `SS$_CMODUSER`; govax has no `$DCLCMH`. A CHMK reaches the microkernel's
+  own dispatcher (section 8.6), not VMS's.
+- **Most run-time library routines are Go**, so a program can't step into
+  them, and a signal from one is raised at its stub's PC, in its caller's
+  frame for a JSB routine. A real library can be named instead (10.5).
+- **Only the caller's mode's exit handlers run** at `$EXIT`: govax's
+  images have no supervisor- or executive-mode ones.
+- **A missing service or routine signals** `SS$_UNSUPPORTED` with
+  `GOVAX-E-NOTIMPL`, where VMS would have the routine; the program runs up
+  to the call.
 
 ## 11. Starting the system
 

@@ -103,7 +103,7 @@ import (
 // dispatches in progress are a stack (Process.conditions), each
 // identified by the stack pointer its handlers return with.
 //
-// Phase 20's console-side search (internal/console/chf.go) remains as a
+// Phase 20's console-side search (internal/machine/chf.go) remains as a
 // fallback for an exception the RTL can't dispatch: one it has no
 // condition value for, one taken on the interrupt stack, or one whose
 // stack can't be written.
@@ -261,6 +261,7 @@ const (
 	scbAccessViol    = 0x20 // access control violation
 	scbTranslationNV = 0x24 // translation not valid
 	scbTracePending  = 0x28 // trace fault (PSL<TP>; cpu/trace.go)
+	scbBreakpoint    = 0x2C // breakpoint fault (BPT)
 	scbArithmetic    = 0x34 // arithmetic trap or fault
 )
 
@@ -277,6 +278,11 @@ var simpleExceptions = map[uint32]uint32{
 	// takes it in a handler after each instruction. Its severity is F,
 	// so unhandled it ends the image.
 	scbTracePending: vmsdef.Symbols["SS$_TBIT"],
+
+	// BPT's fault is SS$_BREAK, "break instruction trap" (Internals
+	// book, Table 4-2), also severe: a program not run under a debugger
+	// that executes one ends there unless a handler takes it.
+	scbBreakpoint: vmsdef.Symbols["SS$_BREAK"],
 }
 
 // arithmeticConditions maps an arithmetic exception's type code (its one

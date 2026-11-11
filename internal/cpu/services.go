@@ -17,15 +17,14 @@ var ErrServiceWait = errors.New("cpu: system service waiting")
 
 // SystemServices is the hook interface Engine's XFC handler (opcode 0xFC,
 // internal/cpu/xfc.go) delegates to for every selector that needs state
-// outside internal/cpu: console I/O, DCL parsing, and RTL SYS$/LIB$ dispatch.
-// See docs/PHASE-07.md's XFC deferral and docs/PHASE-10.md's scope note.
+// outside internal/cpu: the console's I/O and commands, the system
+// services, and the run-time library routines govax writes in Go (shims).
 //
-// internal/console.Console implements this, delegating the RTL-specific
-// methods (SystemService/Shim) to an embedded *corevms.Environment — kept as an
-// interface here, rather than internal/cpu importing internal/console or
-// internal/rtl directly, so internal/cpu stays independent of both (matching
-// this project's layering: internal/cpu doesn't know about the console or
-// RTL phases built on top of it).
+// internal/machine's Machine implements it, answering the console's
+// selectors itself and passing the services and shims, through an
+// embedded corevms.EngineHooks, to the process the CPU is running. It is
+// an interface so that internal/cpu imports neither: the CPU knows
+// nothing of the console or of VMS.
 type SystemServices interface { //nolint:interfacebloat
 	// ConsoleWriteByte/ConsoleReadByte implement XFC$CONSOLE_WRITE (R0's low
 	// byte is the byte to write) and XFC$CONSOLE_READ (returns the byte read).
