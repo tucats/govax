@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/volume"
@@ -153,6 +154,8 @@ func rmsSuccess(r0 uint32) bool {
 func newConsoleFAB(t *testing.T, env *Environment, fabAddr, fnaAddr uint32, fac byte) {
 	t.Helper()
 
+	putFABHeader(t, env, fabAddr)
+
 	spec := "TTA0:"
 
 	putByte(t, env, fabAddr+testFabFAC, fac)
@@ -161,11 +164,29 @@ func newConsoleFAB(t *testing.T, env *Environment, fabAddr, fnaAddr uint32, fac 
 	putBytes(t, env, fnaAddr, []byte(spec))
 }
 
+// putFABHeader and putRABHeader write a block's identification, FAB$B_BID
+// or RAB$B_BID, and its length, FAB$B_BLN or RAB$B_BLN, as the $FAB and $RAB
+// macros do: RMS refuses a call with a block that isn't one (rms.go's
+// rmsBlockFault).
+func putFABHeader(t *testing.T, env *Environment, addr uint32) {
+	t.Helper()
+	putByte(t, env, addr, fabBID)
+	putByte(t, env, addr+1, fabBLN)
+}
+
+func putRABHeader(t *testing.T, env *Environment, addr uint32) {
+	t.Helper()
+	putByte(t, env, addr, rabBID)
+	putByte(t, env, addr+1, rabBLN)
+}
+
 // newDiskFAB lays out a FAB at fabAddr naming a real file on a mounted
 // ODS-2 volume ("DUA0:TEST.DAT"), sequential/Fixed-80, matching
 // internal/rms/create_test.go's own newFAB fixture.
 func newDiskFAB(t *testing.T, env *Environment, fabAddr, fnaAddr uint32, fac byte) {
 	t.Helper()
+
+	putFABHeader(t, env, fabAddr)
 
 	spec := "DUA0:TEST.DAT"
 
@@ -240,6 +261,7 @@ func TestRMSServices_consoleRoundTrip(t *testing.T) {
 		t.Fatal("FAB$W_IFI left at 0 after a successful SYS$CREATE")
 	}
 
+	putRABHeader(t, env, rabAddr)
 	putLongword(t, env, rabAddr+testRabFAB, fabAddr)
 
 	r0 = callService(t, env, testPCSysConnect, ap, []uint32{rabAddr})
@@ -310,6 +332,7 @@ func TestRMSServices_diskRoundTrip(t *testing.T) {
 		t.Fatalf("SYS$CREATE r0 = %#x, want success", r0)
 	}
 
+	putRABHeader(t, env, rabAddr)
 	putLongword(t, env, rabAddr+testRabFAB, fabAddr)
 
 	r0 = callService(t, env, testPCSysConnect, ap, []uint32{rabAddr})
@@ -442,5 +465,85 @@ func TestRMSCompletion_pendingUntilWait(t *testing.T) {
 
 	if n := env.PendingASTs(); n != 1 {
 		t.Errorf("an ill-formed call (STS not its status) queued an AST (%d queued)", n)
+	}
+}
+
+// TestRMSIllFormedCalls: a call whose FAB or RAB isn't one is refused in
+// R0 alone, nothing stored in the block and no completion routine called
+// (the RMS Reference Manual, 2.4.1): RMS$_FAB for a FAB without FAB$C_BID,
+// RMS$_RAB for a RAB service given a FAB, RMS$_BLN for a block shorter than
+// its kind, RMS$_FAB for a call with no block at all, and RMS$_BUSY for a
+// block in use by an operation pending until its $WAIT, or by a waiting
+// service in another frame (the frame that waits may call again).
+func TestRMSIllFormedCalls(t *testing.T) {
+	env, _ := fixture()
+
+	const (
+		fabAddr  = 0x1000
+		fnaAddr  = 0x1100
+		rabAddr  = 0x2000
+		ap       = 0x8000
+		errAST   = 0x3000
+		sentinel = 0x5EAF00D
+	)
+
+	newConsoleFAB(t, env, fabAddr, fnaAddr, testFacPut)
+	putLongword(t, env, fabAddr+8, sentinel)
+	putByte(t, env, fabAddr, 0) // not a FAB
+
+	if r0 := callService(t, env, testPCSysOpen, ap, []uint32{fabAddr, errAST}); r0 != rmsInvalidFAB {
+		t.Errorf("$OPEN of a block that isn't a FAB: r0 %08X, want RMS$_FAB (%08X)", r0, rmsInvalidFAB)
+	}
+
+	if sts, err := env.mem.LoadLongword(env.cpu, fabAddr+8); err != nil || sts != sentinel {
+		t.Errorf("the ill-formed FAB's STS was written: %08X", sts)
+	}
+
+	if n := env.PendingASTs(); n != 0 {
+		t.Errorf("an ill-formed call queued %d ASTs, want none", n)
+	}
+
+	putFABHeader(t, env, fabAddr)
+	putByte(t, env, fabAddr+1, fabBLN-1)
+
+	if r0 := callService(t, env, testPCSysOpen, ap, []uint32{fabAddr}); r0 != rmsInvalidBLN {
+		t.Errorf("$OPEN of a short FAB: r0 %08X, want RMS$_BLN (%08X)", r0, rmsInvalidBLN)
+	}
+
+	putFABHeader(t, env, fabAddr)
+
+	if r0 := callService(t, env, testPCSysGet, ap, []uint32{fabAddr}); r0 != rmsInvalidRAB {
+		t.Errorf("$GET given a FAB: r0 %08X, want RMS$_RAB (%08X)", r0, rmsInvalidRAB)
+	}
+
+	if r0 := callService(t, env, testPCSysOpen, ap, nil); r0 != rmsInvalidFAB {
+		t.Errorf("$OPEN with no argument: r0 %08X, want RMS$_FAB (%08X)", r0, rmsInvalidFAB)
+	}
+
+	putRABHeader(t, env, rabAddr)
+
+	inUse := env.rmsInUse()
+	inUse[rabAddr] = 0
+
+	if r0 := callService(t, env, testPCSysGet, ap, []uint32{rabAddr}); r0 != rmsBusy {
+		t.Errorf("$GET on a RAB with a pending operation: r0 %08X, want RMS$_BUSY (%08X)", r0, rmsBusy)
+	}
+
+	if sts := env.rmsBlockFault("SYS$WAIT", []uint32{rabAddr}); sts != 0 {
+		t.Errorf("$WAIT on the pending operation's RAB refused: %08X", sts)
+	}
+
+	const fp = 0x7000
+	env.cpu.SetGPR(registers.FP, fp)
+	inUse[rabAddr] = fp + 0x40
+
+	if sts := env.rmsBlockFault("SYS$GET", []uint32{rabAddr}); sts != rmsBusy {
+		t.Errorf("$GET on a RAB another frame's $GET waits on: %08X, want RMS$_BUSY", sts)
+	}
+
+	inUse[rabAddr] = fp
+
+	if sts := env.rmsBlockFault("SYS$GET", []uint32{rabAddr}); sts != 0 {
+		t.Errorf("the waiting frame's own $GET again refused: %08X", sts)
 	}
 }

@@ -3662,9 +3662,13 @@ first argument:
 ```go
 // corevms/rms.go, cut down
 t.Register(name, func(env *Environment, argv []uint32) (uint32, error) {
+	if sts := env.rmsBlockFault(name, argv); sts != 0 {
+		return sts, nil // an ill-formed call: R0 only
+	}
 	ctx := env.rmsContext()
 	r0, err := fn(ctx, argv) // rms.SysOpen, rms.SysGet, ...
-	if err == nil && len(argv) > 0 {
+	env.noteRMSBlockUse(name, argv[0], r0, err)
+	if err == nil {
 		env.rmsCompletion(name, argv, r0)
 	}
 	return r0, err
@@ -3689,6 +3693,24 @@ block's STS (and STV), and returns the same status as R0: `storeStatus`
 instruction as that instruction's failure, an access violation as any
 instruction would raise (section 10).
 
+**Ill-formed calls.** "Every RMS service call requires an interface data
+structure (FAB or RAB) which is writable in caller's mode and not currently
+in use for another operation" (the manual's 2.4.1). Before a service runs,
+`rmsBlockFault` checks its block (both FABs, for `$RENAME`): that the
+caller's mode may write it for its whole length, by the page table entries'
+protection as PROBEW tests it, so no page is brought in for the test;
+that its identification byte, FAB$B_BID or RAB$B_BID, says it's the kind
+the service takes (`$WAIT` takes either); and that its length byte isn't
+less than the block's, 80 bytes for a FAB, 68 for a RAB. A block that fails
+is `RMS$_FAB` or `RMS$_RAB`, or `RMS$_BLN` for the length. A block is *in
+use* while a service on it waits (a terminal `$GET` with no line typed yet,
+a record lock, a full mailbox), during which the process may take an AST,
+and while an operation on it is `RMS$_PENDING`, until the `$WAIT` that
+finishes it; another call on it is `RMS$_BUSY`, but for the waiting call
+itself, run again from its own frame, and the `$WAIT`. RMS can't trust an
+ill-formed call's block, so the status goes only in R0: nothing is stored
+in the block, and no completion routine is called.
+
 **Completion routines.** After the FAB or RAB, an RMS call may name an
 *error* and a *success completion routine*, which RMS calls as an AST, with
 the block's address as the AST parameter. For an operation that completes
@@ -3697,8 +3719,7 @@ control from the service call" (2.4.3). `rmsCompletion` queues the AST for
 the routine the status chooses, in the caller's mode, as the service
 finishes; the engine delivers it at the next instruction boundary, which is
 still inside the service's vector entry, before its RET (section 7.7). The
-service's R0 survives the AST. A call whose status RMS couldn't store, a
-block that can't be written, calls no routine (the manual's 2.4.1).
+service's R0 survives the AST.
 
 **Asynchronous operations.** With FAB$V_ASY or RAB$V_ASY a program asks for
 a service to return before its I/O is done, and `$WAIT`s for it later.
@@ -4133,9 +4154,9 @@ an image, which may be a host file.
   `$PUT` to a mailbox. A pending `$PUT`'s status, and its completion
   routine, come at the `$WAIT`, not when the message is read. FAB$V_SYNCSTS
   and RAB$V_SYNCSTS (`RMS$_SYNCH`), from a later OpenVMS, aren't there.
-- **Ill-formed calls aren't checked**: only `$RENAME` checks that its
-  blocks are a FAB (`RMS$_FAB`); other services take the block they're
-  given without looking at its BID and BLN, and none is `RMS$_BUSY`.
+- **Which status a second operation on a RAB with one pending gets** is
+  unconfirmed: govax's is `RMS$_BUSY`, where VMS may give `RMS$_RSA`,
+  "record stream currently active".
 - **One stream per open file**: a second RAB on a FAB continues the first's
   stream, where VMS can keep several (FAB$V_MSE).
 - **No file protection is checked**: a file's owner and protection mask,

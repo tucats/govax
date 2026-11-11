@@ -393,10 +393,32 @@ interpreter process 1 runs, and what reads the startup procedure).
   (a broken sentence), `MountTable`'s and `Session`'s, and every other
   mention of `internal/rtl` in `rms` and corevms's RMS glue; section 8.8's
   claim that RMS reads host files (govax's commands do; a program's RMS
-  reaches only volumes). Left for the author: RMS checks no block's BID
-  and BLN (only `$RENAME` is `RMS$_FAB`) and is never `RMS$_BUSY`, which
-  would touch every service in an order no probe has settled; and ods2's
-  `Bitmap` comment says each operation flushes the bitmaps, where both are
-  written only at dismount (a comment in the separate module, not
-  changed). The other packages' mentions of `internal/rtl` (about twenty)
-  wait for subtask 10's read-through.
+  reaches only volumes). Raised with the author: RMS checked no block's
+  BID and BLN (only `$RENAME` was `RMS$_FAB`) and was never `RMS$_BUSY`;
+  and ods2's `Bitmap` comment said each operation flushes the bitmaps,
+  where both are written only at dismount. The other packages' mentions
+  of `internal/rtl` (about twenty) wait for subtask 10's read-through.
+- **2026-11-11** Subtask 7, continued, at the author's direction:
+  - **Ill-formed RMS calls** (the RMS Reference Manual, 2.4.1) are refused
+    before the service runs, in corevms's RMS wrapper (`rmsBlockFault`):
+    a block the caller's mode can't write for its whole length (the PTEs'
+    protection, `vm.Memory.ProbeAccess`, so no page is brought in and no
+    fault counted), whose FAB$B_BID or RAB$B_BID isn't the service's kind
+    (`$WAIT` takes either, `$RENAME` checks both FABs), is `RMS$_FAB` or
+    `RMS$_RAB`; one whose length byte is less than FAB$C_BLN (80) or
+    RAB$C_BLN (68) is `RMS$_BLN`; and one in use, by a service on it that
+    waits (`ErrWait`; its own frame may call again) or by an operation
+    left `RMS$_PENDING` (until its `$WAIT`), is `RMS$_BUSY`
+    (`noteRMSBlockUse`, the image's blocks in use in `ImageData`). The
+    status is R0 only: nothing stored, no completion routine. The checks'
+    order, and whether VMS gives `RMS$_RSA` rather than `RMS$_BUSY` to a
+    second operation on a RAB with one pending, are unconfirmed. Every
+    block govax's own code passes through the service table is made by
+    `$FAB`/`$RAB` or the console's `.FAB`/`.RAB`, which set BID and BLN;
+    the DCL utilities call `rms`'s handlers directly and aren't checked.
+    corevms's tests' hand-built FABs and RABs now have them
+    (`putFABHeader`, `putRABHeader`). `TestRMSIllFormedCalls`.
+  - **ods2's `Bitmap` and `IndexBitmap` comments** now say the package's
+    operations never flush the bitmaps, cmd/ods2 flushes after each
+    command, and `Volume.Dismount` flushes first (ods2's commit "volume:
+    say when the bitmaps are flushed"; a comment only, so not tagged).
