@@ -118,3 +118,40 @@ func TestReiChecksPoppedPSL(t *testing.T) {
 		})
 	}
 }
+
+// TestReiStaysOnInterruptStack: an REI from one interrupt level to a lower
+// one restores a PSL with IS set, so the new SP is the interrupt stack's
+// (what's left of it once the PC and PSL are popped), not the kernel
+// stack's.
+func TestReiStaysOnInterruptStack(t *testing.T) {
+	const (
+		frame = 0x6050
+		ksp   = 0x7000
+	)
+
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	cpu.SetPSL(makePSL(registers.Kernel, registers.Kernel, 20, true))
+	cpu.SetPR(registers.IPL, 20)
+	cpu.SetPR(registers.KSP, ksp)
+	cpu.SetGPR(registers.SP, frame)
+	putLongword(t, cpu, mem, frame, 0x5000)
+	putLongword(t, cpu, mem, frame+4, uint32(makePSL(registers.Kernel, registers.Kernel, 8, true)))
+
+	if err := emulRei(e, &Decoded{}); err != nil {
+		t.Fatalf("REI: %v", err)
+	}
+
+	if got := cpu.GPR(registers.SP); got != frame+8 {
+		t.Errorf("SP = %#x, want the interrupt stack's %#x", got, frame+8)
+	}
+
+	if got := cpu.PR(registers.KSP); got != ksp {
+		t.Errorf("KSP = %#x, want it untouched, %#x", got, ksp)
+	}
+
+	if psl := cpu.PSL(); !psl.IS() || psl.IPL() != 8 {
+		t.Errorf("PSL = %08X, want IS set at IPL 8", uint32(psl))
+	}
+}

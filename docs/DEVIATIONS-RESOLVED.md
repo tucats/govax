@@ -813,6 +813,19 @@ choices no fixture has confirmed yet.
   fixture-driven regression pass (VMINIT always leaves `MAPEN=1` set from the moment
   it runs), so there's still no concrete scenario to weigh this against. Staying
   deferred; revisit only if one actually comes up.
+- **Resolved** (Phase 92, subtask 3, 2026-11-11, under that phase's Decision 6):
+  on a VAX only MTPR changes MAPEN, and the interrupt stack is an S0 region
+  mapped like any other. `setModeStack` no longer touches MAPEN in either
+  direction, and INITIALIZE/MEMORY gives ISP its S0 virtual address (it was a
+  physical one, which with mapping on named a P0 page of whatever process was
+  current). Nothing in govax's microkernel takes the interrupt stack (no `.SCB`
+  entry asks for it), so only tests, the console's SET, and the debugger's ISP
+  mode had reached the old path. Found with it: an exception whose vector sends
+  it to the interrupt stack now raises IPL to 31, as the architecture's SCB
+  vectors say (`Fault.Interrupt` tells an interrupt, which keeps its own IPL);
+  and REI that restores a PSL with IS set takes SP from ISP rather than KSP.
+  Tests: `TestHandleFaultInterruptStackMapped`, `TestHandleFaultInterruptStack`'s
+  IPL, `TestReiStaysOnInterruptStack`.
 
 ### [Phase 02, noticed in Phase 03, resolved Phase 12] `vm.TranslationFault` collapses `EXC_ACCVIO`'s two distinct signal subcodes
 

@@ -107,11 +107,10 @@ func TestHandleFaultReadsVectorWithVMDisabled(t *testing.T) {
 	}
 }
 
-// TestSetModeStackSwitchToKernel exercises set_mode_stack's mechanics
-// directly (rather than through HandleFault) so the test doesn't also need
-// a valid page table for the new stack: switching access mode sets
-// MAPEN = 1 (see docs/DEVIATIONS.md), and HandleFault would then need to
-// push the fault frame through translation.
+// TestSetModeStackSwitchToKernel exercises setModeStack's mechanics
+// directly (rather than through HandleFault): the mode, the previous mode,
+// and the stack pointers. Memory management is left as it was: only MTPR
+// changes MAPEN.
 func TestSetModeStackSwitchToKernel(t *testing.T) {
 	e := newEngine()
 	e.cpu.SetGPR(registers.SP, 0x8000) // current (user) stack
@@ -138,8 +137,8 @@ func TestSetModeStackSwitchToKernel(t *testing.T) {
 		t.Errorf("SP = %#x, want 0x6000 (KSP)", e.cpu.GPR(registers.SP))
 	}
 
-	if e.cpu.PR(registers.MAPEN) != 1 {
-		t.Errorf("MAPEN = %d, want 1 (see docs/DEVIATIONS.md)", e.cpu.PR(registers.MAPEN))
+	if e.cpu.PR(registers.MAPEN) != 0 {
+		t.Errorf("MAPEN = %d, want 0, as it was", e.cpu.PR(registers.MAPEN))
 	}
 }
 
@@ -163,11 +162,72 @@ func TestHandleFaultInterruptStack(t *testing.T) {
 	}
 
 	if e.cpu.PR(registers.MAPEN) != 0 {
-		t.Errorf("MAPEN = %d, want 0 (VM off on the interrupt stack)", e.cpu.PR(registers.MAPEN))
+		t.Errorf("MAPEN = %d, want 0, as it was", e.cpu.PR(registers.MAPEN))
 	}
 
 	if want := uint32(0x9000 - 8); e.cpu.GPR(registers.SP) != want {
 		t.Errorf("SP = %#x, want %#x (ISP minus PC+PSL)", e.cpu.GPR(registers.SP), want)
+	}
+
+	// An exception served on the interrupt stack runs at IPL 31.
+	if got := e.cpu.PSL().IPL(); got != 0x1F || e.cpu.PR(registers.IPL) != 0x1F {
+		t.Errorf("IPL = %d (register %d), want 31", got, e.cpu.PR(registers.IPL))
+	}
+}
+
+// TestHandleFaultInterruptStackMapped: taking the interrupt stack leaves
+// memory management on, and the frame is pushed through the system page
+// table at ISP's virtual address. An interrupt, unlike an exception, keeps
+// its own IPL there.
+func TestHandleFaultInterruptStackMapped(t *testing.T) {
+	e := newEngine()
+	putVector(t, e, ExcInterval, 0x400, 1) // stack bit 1 == interrupt stack
+
+	// S0 page 0 maps frame 0x20 (physical 0x4000), kernel-writable; the
+	// interrupt stack's top is in it.
+	const sbr = 0x3000
+
+	var pte vm.PTE
+
+	pte.SetValid(true)
+	pte.SetProtection(vm.ProtKW)
+	pte.SetPFN(0x20)
+	putLongword(t, e.cpu, e.mem, sbr, uint32(pte))
+
+	e.cpu.SetPR(registers.SBR, sbr)
+	e.cpu.SetPR(registers.SLR, 1)
+	e.cpu.SetPR(registers.ISP, 0x80000100)
+	e.cpu.SetGPR(registers.SP, 0x80000080) // the kernel stack, in the same page
+	e.cpu.SetGPR(registers.PC, 0x1234)
+	e.cpu.SetPR(registers.MAPEN, 1)
+
+	e.Interrupt(ExcInterval, 22, 0)
+
+	if err := e.deliverPendingInterrupt(); err != nil {
+		t.Fatalf("deliverPendingInterrupt: %v", err)
+	}
+
+	if e.cpu.PR(registers.MAPEN) != 1 || !e.cpu.PSL().IS() {
+		t.Fatalf("MAPEN = %d, IS = %v; want mapping on, on the interrupt stack", e.cpu.PR(registers.MAPEN), e.cpu.PSL().IS())
+	}
+
+	if got := e.cpu.PSL().IPL(); got != 22 {
+		t.Errorf("IPL = %d, want the interrupt's, 22", got)
+	}
+
+	// The PC and PSL were pushed at the virtual address below ISP, which is
+	// physical 0x4000 + 0xF8.
+	if want := uint32(0x800000F8); e.cpu.GPR(registers.SP) != want {
+		t.Errorf("SP = %#x, want %#x", e.cpu.GPR(registers.SP), want)
+	}
+
+	var pushed [4]byte
+	if err := e.mem.LoadPhysical(0x40F8, pushed[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := uint32(pushed[0]) | uint32(pushed[1])<<8 | uint32(pushed[2])<<16 | uint32(pushed[3])<<24; got != 0x1234 {
+		t.Errorf("pushed PC at physical 0x40F8 = %#x, want 0x1234", got)
 	}
 }
 

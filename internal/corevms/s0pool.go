@@ -38,8 +38,8 @@ import (
 //
 // How many processes fit, with STARTUP.COM's VMINIT /P0=16384 /P1=8192
 // /S0=8192 /KSP=20: S0 is 8192 pages (4 MB). VMINIT's own layout takes
-// pages 0-308 and the microkernel the next 11, so the pool is pages
-// 320-8191, 7872 pages (TestS0PoolAfterVaxInit measures it; the start
+// pages 0-314 and the microkernel the next 10, so the pool is pages
+// 325-8191, 7867 pages (TestS0PoolAfterVaxInit measures it; the start
 // moves with the microkernel's size). A process with VMINIT's sizes needs
 // a 192-page table area (24576 PTEs for P0's and P1's pages together, 4
 // bytes each, 128 to a page; with paging on its size is
@@ -50,7 +50,7 @@ import (
 // those of the table pages its regions need.) With paging on, STARTUP.COM
 // leaves the regions to VMINIT's paging defaults (subtask 8: /P0=19456
 // /P1=5120 /S0=16384), the same 24576-entry table area, and S0 twice as
-// big, apart from physical memory: VMINIT's layout takes pages 0-372
+// big, apart from physical memory: VMINIT's layout takes pages 0-378
 // (its system page table 128 of them), and the pool's 16000 pages or so
 // fit some 69 processes.
 

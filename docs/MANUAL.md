@@ -4748,8 +4748,8 @@ VAX> SHOW MEMORY
 
         P0 Region
             Size = 00004000 (16384 decimal) pages
-            PFN database = 128 pages  P0BR = 80008C00    P0LR = 00004000
-            Physical addresses = 00400000-00BFFFFF
+            Table pages = 128 pages  P0BR = 80008C00    P0LR = 00004000
+            Page table (phys.) = 00008C00-00018BFF
             Virtual addresses  = 00000000-007FFFFF
 
         P1 Region

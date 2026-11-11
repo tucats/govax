@@ -138,10 +138,14 @@ type sharedPage struct {
 // page (the deposit gave it one); a page without is skipped. Without
 // memory mapping (before VMINIT) nothing is recorded.
 //
+// The pages are made VMS's P1 system service vector pages in this
+// process too: URKW and owned by kernel mode (vectorPTE), so no
+// user-mode program can change the vector every process shares, nor
+// delete it. The console's deposits, which run in kernel mode, still may.
+//
 // The vector also holds two data cells, SYS$GL_ASTRET and SYS$GL_COMMON,
 // that would be per process on VMS; nothing in govax reads or writes
-// them, so sharing them is harmless, and a new process maps the pages
-// read-only (see BuildAddressSpace).
+// them, so sharing them is harmless.
 func (sys *System) ShareP1(base, end uint32) error {
 	sys.sharedP1 = nil
 
@@ -163,10 +167,24 @@ func (sys *System) ShareP1(base, end uint32) error {
 			return err
 		}
 
-		if pte.Valid() {
-			sys.sharedP1 = append(sys.sharedP1, sharedPage{va: va, pfn: pte.PFN()})
+		if !pte.Valid() {
+			continue
+		}
+
+		sys.sharedP1 = append(sys.sharedP1, sharedPage{va: va, pfn: pte.PFN()})
+
+		// Keep the modify bit: with paging off it's only a record, and
+		// with it on the pages become system pages just below, never
+		// written anywhere.
+		vector := vectorPTE(pte.PFN())
+		vector.SetModified(pte.Modified())
+
+		if err := sys.mem.StorePTEIn(sys.cpu, as, va, vector); err != nil {
+			return err
 		}
 	}
+
+	sys.mem.InvalidateTB()
 
 	sys.makeSharedSystem(as)
 
@@ -221,9 +239,9 @@ const MinPagingP1Pages = regionPages - userStackTopPage + defaultUserStackPages
 // exists at first, every other entry zero (InitialPTE; regions.go), and
 // only the area's pages that hold those entries have frames behind them
 // (tablearea.go). The P1 vector's pages (ShareP1) are mapped onto the
-// physical pages process 1's vector uses, read-only to every mode
-// (ProtUR) and owned by kernel mode, so the process can call system
-// services through it but can neither change it nor delete it.
+// physical pages process 1's vector uses, URKW and owned by kernel mode
+// (vectorPTE), so the process can call system services through it but
+// can neither change it nor delete it.
 //
 // The tables are written through their S0 addresses, so memory mapping
 // must be on (VMINIT has run). On an error, nothing stays allocated.
@@ -307,6 +325,14 @@ func (sys *System) writeTable(table, n uint32, pte func(uint32) vm.PTE) error {
 	return sys.mem.StoreIn(sys.cpu, vm.CurrentAddressSpace(sys.cpu), table, buf)
 }
 
+// vectorPTE is the PTE every process maps a P1 vector page with: valid,
+// the vector's frame pfn, readable by every mode and writable by kernel
+// mode only (URKW), and owned by kernel mode, as VMS maps its P1 system
+// service vectors (*VAX/VMS Internals and Data Structures*, Table 26-4b).
+func vectorPTE(pfn uint32) vm.PTE {
+	return vm.ValidPTE(pfn, vm.ProtURKW, uint8(registers.Kernel))
+}
+
 // mapShared points s's PTEs for the shared P1 pages at their physical
 // pages (see BuildAddressSpace).
 func (sys *System) mapShared(s *ProcessSpace) error {
@@ -318,14 +344,7 @@ func (sys *System) mapShared(s *ProcessSpace) error {
 			continue
 		}
 
-		var pte vm.PTE
-
-		pte.SetValid(true)
-		pte.SetPFN(sp.pfn)
-		pte.SetProtection(vm.ProtUR)
-		pte.SetOwner(uint8(registers.Kernel))
-
-		if err := sys.mem.StorePTEIn(sys.cpu, s.AddressSpace, sp.va, pte); err != nil {
+		if err := sys.mem.StorePTEIn(sys.cpu, s.AddressSpace, sp.va, vectorPTE(sp.pfn)); err != nil {
 			return err
 		}
 

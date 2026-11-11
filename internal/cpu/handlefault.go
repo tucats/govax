@@ -147,6 +147,16 @@ func (e *Engine) HandleFault(f *Fault) error {
 	// already in sync with the current PSL's IPL, making this a no-op.
 	// The handler starts untraced: T and TP are cleared in the new PSL,
 	// and the saved one keeps them for the REI (trace.go).
+	//
+	// An exception whose vector names the interrupt stack (code 1) is
+	// taken at IPL 31, so that nothing interrupts its handler before it
+	// has looked at what happened (the VAX Architecture Reference
+	// Manual's SCB vectors: "if this event is an exception, the IPL is
+	// raised to 1F"). An interrupt keeps the IPL it was taken at.
+	if stack == 1 && !f.Interrupt {
+		e.cpu.SetPR(registers.IPL, 0x1F)
+	}
+
 	psl := e.cpu.PSL()
 	psl.SetIPL(e.cpu.PR(registers.IPL))
 	psl.SetT(false)
@@ -163,7 +173,7 @@ func (e *Engine) HandleFault(f *Fault) error {
 	sp := e.cpu.GPR(registers.SP)
 
 	if e.cpu.DebugEnabled(registers.DebugExceptions) {
-		stackDesc := "ISP, VM=OFF"
+		stackDesc := "ISP"
 		if stack == 0 {
 			stackDesc = stackNames[newMode]
 		}
@@ -262,19 +272,17 @@ func (e *Engine) setModeStack(newMode registers.AccessMode, interruptStack bool)
 		e.cpu.SetPR(registers.PrivReg(curMod), e.cpu.GPR(registers.SP))
 	}
 
+	// The switch leaves memory management as it is. The interrupt stack
+	// is an ordinary S0 region, mapped like the others (INITIALIZE/MEMORY
+	// gives ISP its virtual address); only MTPR changes MAPEN.
 	if interruptStack {
 		e.cpu.SetGPR(registers.SP, newSP)
 		psl.SetIS(true)
 		psl.SetCurMod(registers.Kernel)
-		e.cpu.SetPR(registers.MAPEN, 0)
 	} else {
 		psl.SetCurMod(newMode)
 		e.cpu.SetGPR(registers.SP, newSP)
 		psl.SetIS(false)
-		// set_mode_stack's own comment flags this write as uncertain
-		// ("Not sure about this!!"); replicated as-is rather than
-		// second-guessed. See docs/DEVIATIONS.md.
-		e.cpu.SetPR(registers.MAPEN, 1)
 	}
 
 	e.cpu.SetPSL(psl)

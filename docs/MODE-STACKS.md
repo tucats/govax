@@ -1,6 +1,6 @@
 # Per-mode stacks after VMINIT
 
-This note describes where VMINIT (`internal/console/vminit.go`) puts the
+This note describes where VMINIT (INITIALIZE/MEMORY, `internal/machine/vminit.go`) puts the
 stack of each VAX access mode, and why. It was written on 2026-09-28,
 when the executive and supervisor stacks got their own protected pages.
 Revisit it if a program needs more stack, if the layout moves (to P1, as
@@ -28,14 +28,20 @@ increasing):
 
 | Region | Size | Protection | Initial stack pointer |
 | --- | --- | --- | --- |
-| Kernel stack | `/KSP` pages (`vax.init` asks for 20; grammar default 4) | `URKW` (S0's default) | `KSP` = its last longword |
+| Kernel stack | `/KSP` pages (STARTUP.COM asks for 20; grammar default 4) | `URKW` (S0's default) | `KSP` = its last longword |
 | Guard page | 1 page | `NA` (no access) | — |
 | Executive stack | `/ESP` pages, default **8** | `EW` | `ESP` = its last longword |
 | Guard page | 1 page | `NA` | — |
 | Supervisor stack | `/SSP` pages, default **8** | `SW` | `SSP` = its last longword |
-| Interrupt stack | `/ISP` pages (default 4) | S0's default, but addressed physically | `ISP` = its last longword (a physical address) |
+| Interrupt stack | `/ISP` pages (default 4) | `URKW` (S0's default) | `ISP` = its last longword |
 
 The user stack is in P1 (`USP` = `0x7FE00000`), demand-paged, `UW`.
+
+Every one of these stacks, the interrupt stack included, is an S0
+virtual address, used with memory management on. (Until 2026-11-11 the
+interrupt stack was addressed physically: taking it turned `MAPEN` off,
+and leaving it for any other stack turned `MAPEN` on, which no VAX does;
+Phase 92 made `MAPEN` change only by `MTPR`.)
 
 Stacks grow down, so each guard page sits just below its stack. A push
 past the bottom of the executive or supervisor stack lands on the guard
@@ -64,7 +70,7 @@ own kernel stack. `corevms.System.BuildStacks`
 | Guard page | 1 page | `NA` |
 | Supervisor stack | the caller's | `SW` |
 
-With `vax.init`'s sizes that is 38 pages. The process's user stack is in
+With STARTUP.COM's sizes that is 38 pages. The process's user stack is in
 its own P1, with the same top as process 1's (`corevms.UserStackTop`,
 `0x7FE00000`): P1 is private, so the same address names a different page
 in each process. **The interrupt stack is shared**: interrupts belong to
@@ -111,10 +117,10 @@ stack's own top, so the modes would have shared one stack.
 
 ## Where it's tested
 
-- `internal/console/vminit_test.go`: `TestVMInit_modeStacks` (the default
+- `internal/machine/vminit_test.go`: `TestVMInit_modeStacks` (the default
   sizes, each page's protection, the guard pages, and which modes can
   write each stack) and `TestVMInit_modeStackSizes` (explicit sizes).
-- `internal/console/dcl/parse_test.go`: the grammar's defaults.
+- `internal/dcl/parse_test.go`: the grammar's defaults.
 - `internal/console/stacks_test.go`: another process's stacks
   (`TestBuildStacks`: layout, protections, pointers, the PCB page, and
   protections reset when the pool reuses the pages), process 1's PCB

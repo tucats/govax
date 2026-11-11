@@ -8,11 +8,12 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// vmRegion is one entry of Console.Regions, matching vax.h's own struct
-// VMREGION (name/pte_count/size/v_start/v_end/p_start/p_end) — see that
-// field's own doc comment. PStart/PEnd describe where VMInit's own PFN
-// counter had reached when the region's page table was written.
-// for P0/P1.
+// vmRegion is one entry of Machine.Regions, what SHOW MEMORY reports of
+// a region VMINIT laid out: its size in pages, the pages its page table
+// fills (pteCount), the virtual addresses it covers, and physical
+// addresses: S0's own (S0 page n is frame n), and for P0 and P1 their
+// page tables', which with paging off are at fixed frames in S0. A P0 or
+// P1 page has no fixed frame: it gets one when first touched.
 type vmRegion struct {
 	name           string
 	size, pteCount uint32
@@ -72,8 +73,9 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// first page: the system page table, process 1's P0 and P1 tables, the
 	// stacks, the scratch, shim, and SCB pages, and the string pool. With
 	// paging on only these pages get frames (each S0 page the frame of
-	// its own number, so the interrupt stack can be addressed
-	// physically); the rest of S0 is the pool, backed page by page as it's
+	// its own number, so what the processor reads by physical address,
+	// the system page table at SBR and the SCB at SCBB, is where its S0
+	// address says); the rest of S0 is the pool, backed page by page as it's
 	// handed out. With paging off all of S0 is mapped that way, so it
 	// can't be bigger than physical memory.
 	layout := layoutPages(size, kspPages, espPages, sspPages, ispPages, stringPoolPages)
@@ -182,7 +184,6 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// guard, open to every mode.
 	paddr = roundUpPage(paddr)
 	p0br := paddr
-	p0PStart := page
 
 	// With paging on, P0 starts with no pages and P1 with its permanent
 	// part, the rest of each table zero, into which the regions grow
@@ -193,8 +194,6 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 
 	for i := uint32(0); i < size[0]; i++ {
 		pte := corevms.InitialPTE(false, i, p1Length, paging)
-
-		page++
 
 		if err := m.Mem.StoreLongword(m.CPU, paddr, uint32(pte)); err != nil {
 			return err
@@ -208,7 +207,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.Regions[0] = vmRegion{
 		name: "P0", size: size[0], pteCount: pageTablePages(size[0]),
 		vStart: 0, vEnd: size[0] << 9,
-		pStart: p0PStart << 9, pEnd: (p0PStart + size[0]) << 9,
+		pStart: p0br, pEnd: p0br + size[0]*4,
 	}
 
 	// P1 region: grows down towards virtual address maxP1. Demand-paged on
@@ -225,15 +224,13 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 
 	p1lr := uint32(p1TotalSlots) - size[1]
 	p1Base := maxP1 - size[1]*512
-	p1PStart := page
+	p1Table := paddr
 
 	m.CPU.SetPR(registers.P1LR, p1Length)
 	m.CPU.SetPR(registers.P1BR, (paddr+0x80000000)-p1lr*4)
 
 	for i := uint32(0); i < size[1]; i++ {
 		pte := corevms.InitialPTE(true, p1lr+i, p1Length, paging)
-
-		page++
 
 		if err := m.Mem.StoreLongword(m.CPU, paddr, uint32(pte)); err != nil {
 			return err
@@ -245,7 +242,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.Regions[1] = vmRegion{
 		name: "P1", size: size[1], pteCount: pageTablePages(size[1]),
 		vStart: p1Base, vEnd: p1Base + size[1]<<9,
-		pStart: p1PStart << 9, pEnd: (p1PStart + size[1]) << 9,
+		pStart: p1Table, pEnd: p1Table + size[1]*4,
 	}
 
 	// Privileged-mode stacks, allocated in S0 space after the page tables
@@ -257,7 +254,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	//	executive stack    espPages (default 8), EW
 	//	guard page         NA
 	//	supervisor stack   sspPages (default 8), SW
-	//	interrupt stack    ispPages, addressed physically
+	//	interrupt stack    ispPages, URKW
 	//
 	// The kernel stack keeps S0's URKW: the frame the console builds to
 	// CALL a program lives there, and a user-mode program's final RET
@@ -282,7 +279,11 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 		return err
 	}
 
-	isp := paddr + ispPages*512 - 4 // physical: no translation at interrupt time
+	// The interrupt stack is mapped like the others: S0 pages, ISP their
+	// virtual address. (It belongs to no process, and S0 is the same in
+	// every process, so whichever process is current when an event takes
+	// the interrupt stack, ISP names the same pages.)
+	isp := 0x80000000 + paddr + ispPages*512 - 4
 	paddr += ispPages * 512
 
 	m.CPU.SetPR(registers.KSP, ksp)

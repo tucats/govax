@@ -56,6 +56,12 @@ type Fault struct {
 	// where a fault clears it (trace.go).
 	Trap bool
 
+	// Interrupt is true for an interrupt (deliverPendingInterrupt), false
+	// for an exception. The two differ in one way at delivery: an
+	// exception whose vector sends it to the interrupt stack also raises
+	// IPL to 31, where an interrupt runs at its own level (HandleFault).
+	Interrupt bool
+
 	// held marks a trace fault a fault breakpoint has already stopped
 	// once (trace.go's holdTrace): this time it is delivered.
 	held bool

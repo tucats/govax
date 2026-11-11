@@ -276,7 +276,7 @@ func (e *Engine) deliverPendingInterrupt() error {
 		return &FaultBreak{Code: code}
 	}
 
-	return e.HandleFault(&Fault{Code: code})
+	return e.HandleFault(&Fault{Code: code, Interrupt: true})
 }
 
 // ICCS bit masks, matching emul_procreg.c's own literal masks for case 24.

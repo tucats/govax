@@ -72,12 +72,13 @@ func TestVaxInitMemoryConfig(t *testing.T) {
 	}
 
 	// SSP is past ESP by a guard page and the supervisor stack; the
-	// interrupt stack (physical) follows the supervisor stack.
+	// interrupt stack (an S0 address, as the others are) follows the
+	// supervisor stack.
 	if got := def.ssp - def.esp; got != 512*(1+8) {
 		t.Errorf("default supervisor stack: SSP-ESP %d, want %d", got, 512*(1+8))
 	}
 
-	if got := def.isp + 0x80000000 - def.ssp; got != 512*4 {
+	if got := def.isp - def.ssp; got != 512*4 {
 		t.Errorf("default interrupt stack: %d bytes, want %d", got, 512*4)
 	}
 
@@ -105,7 +106,7 @@ func TestVaxInitMemoryConfig(t *testing.T) {
 		t.Errorf("configured supervisor stack: SSP-ESP %d, want %d", got, 512*(1+12))
 	}
 
-	if got := conf.isp + 0x80000000 - conf.ssp; got != 512*6 {
+	if got := conf.isp - conf.ssp; got != 512*6 {
 		t.Errorf("configured interrupt stack: %d bytes, want %d", got, 512*6)
 	}
 

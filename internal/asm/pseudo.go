@@ -1330,13 +1330,10 @@ func (a *Assembler) pseudoInclude(c *cursor) error {
 // function pointer) has no Go counterpart to invoke here: this port's
 // internal/rtl already registers every implemented SYS$ handler statically
 // at package init (ServiceTable.Register), entirely independent of
-// assembly. Its final setpte_multiple(...PROT=PTE$K_UR) call is similarly
-// not replicated — this port has no PTE-protection pseudo-op or enforcement
-// this fine-grained (see this file's own scope-cut list), and every
-// existing caller through this trampoline already works without it (kernel
-// mode's own access already covers it; no fixture here runs the calling
-// program in user mode against page-protection checks that would need it).
-// Requires .MICROKERNEL, matching .SCB/.SHIM/.REGION.
+// assembly. The vector's pages get their protection when the machine
+// deposits them: corevms's ShareP1 makes them URKW and owned by kernel
+// mode, as VMS's are, in every process. Requires .MICROKERNEL, matching
+// .SCB/.SHIM/.REGION.
 func (a *Assembler) pseudoP1Vector(c *cursor) error {
 	_ = c
 

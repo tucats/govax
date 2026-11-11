@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -93,9 +94,33 @@ func TestBuildAddressSpace(t *testing.T) {
 		t.Errorf("P1 vector at %08X: process 1 %#x (%v), process 2 %#x (%v); want the same page", vec, p1, err1, p2, err2)
 	}
 
+	// In both processes the vector's pages are VMS's: URKW, so only kernel
+	// mode may write them, and owned by kernel mode, so $DELTVA from user
+	// mode can't take them away.
+	for _, as := range []vm.AddressSpace{one, s.AddressSpace} {
+		pte, err := c.Mem.LookupPTEIn(c.CPU, as, vec)
+		if err != nil || pte.Protection() != vm.ProtURKW || pte.Owner() != uint8(registers.Kernel) {
+			t.Errorf("P1 vector's PTE in %+v: %08X (%v), want URKW owned by kernel mode", as, uint32(pte), err)
+		}
+	}
+
+	// A user-mode program in process 1, whose vector every process maps,
+	// can't write it.
 	var tf *vm.TranslationFault
-	if err := c.Mem.StoreLongwordIn(c.CPU, s.AddressSpace, vec, 0); !errors.As(err, &tf) || tf.Kind != vm.ProtectionViolation {
-		t.Errorf("writing process 2's P1 vector: %v, want a protection violation", err)
+
+	psl := c.CPU.PSL()
+	user := psl
+	user.SetCurMod(registers.User)
+	c.CPU.SetPSL(user)
+	c.Mem.InvalidateProtection()
+
+	err = c.Mem.StoreLongword(c.CPU, vec, 0)
+
+	c.CPU.SetPSL(psl)
+	c.Mem.InvalidateProtection()
+
+	if !errors.As(err, &tf) || tf.Kind != vm.ProtectionViolation {
+		t.Errorf("a user-mode write of process 1's P1 vector: %v, want a protection violation", err)
 	}
 
 	// P0: separate pages. Page 0 is a no-access guard.

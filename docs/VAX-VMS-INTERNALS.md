@@ -882,8 +882,9 @@ decoded:
    it's read, so the two always agree.
 2. **Interrupts.** A device or software interrupt request
    (`Engine.Interrupt`, `cpu/interrupt.go`) is queued with its IPL, and
-   admitted when its level is above the CPU's. Delivery is an exception
-   through the SCB like any other, on the interrupt stack. The interval
+   admitted when its level is above the CPU's. Delivery goes through the
+   SCB as an exception's does, on the stack its vector names (the
+   microkernel's vectors all name the kernel stack). The interval
    clock, the software interrupt requests of MTPR to SIRR, and the console
    terminal's registers make interrupts. govax's own I/O doesn't: its
    device drivers are Go code that completes an I/O and reports it to the
@@ -938,10 +939,14 @@ is the whole of the VAX's restart model:
 
 `Engine.HandleFault` (`cpu/handlefault.go`) then does what the processor
 does. It reads the exception's vector from the SCB at `SCBB + code`,
-physically. The vector's low two bits say which stack: the current
-mode's (or the target mode's, for a change-mode trap), or the interrupt
-stack. It clears T and TP in the new PSL, switches stacks and modes,
-pushes the old PSL, the PC, and the parameters, and jumps to the vector.
+physically. The vector's low two bits say which stack: 0 the kernel
+stack (the target mode's, for a change-mode trap), unless the CPU is
+already on the interrupt stack, where the event stays; 1 the interrupt
+stack, where an exception, though not an interrupt, also raises IPL to 31.
+Changing stacks never changes MAPEN: the interrupt stack is mapped like
+the others (section 5.5). `HandleFault` clears T and TP in the new PSL,
+switches stacks and modes, pushes the old PSL, the PC, and the
+parameters, and jumps to the vector.
 
 One vector value is govax's own. The microkernel fills most of the SCB's
 exception vectors with `console$handler`, which is `FFFFFFFF`: "not
@@ -1065,7 +1070,449 @@ What govax knowingly does differently:
 
 ## 5. Memory: layout, translation, and faults
 
-*To be written.*
+This section is the VAX's memory as govax builds it: physical memory, the
+page tables and how an address is translated through them, the caches
+that make translation fast, the layout INITIALIZE/MEMORY gives the system
+and the first process, and what happens when a page isn't there. VMS's
+paging, which decides what happens to pages over time, is section 6. This
+section is the mechanism it stands on, and, with paging off (the
+default), the whole of memory management.
+
+### 5.1 Physical memory
+
+Physical memory is `vm.Memory`'s `ram`, a Go byte slice in which `ram[n]`
+is physical address `n` (section 3.2). STARTUP.COM's `INIT/VAX` sizes it:
+16384 pages, 8 MB, unless `vax.memory.size` says otherwise. A page of
+physical memory is a *page frame*, or just a *frame*, named by its *page
+frame number* (PFN): frame `n` is bytes `n*512` to `n*512+511`.
+
+A `vm.FrameAllocator` hands frames out and takes them back
+(`vm/frames.go`). With paging off it's a bitmap, one flag per frame,
+handing out the lowest free frame; a frame given back is cleared at once,
+so every frame handed out reads as zeros. With paging on it's VMS's PFN
+database, which knows whose page each frame holds (section 6). Either way
+frame 0 is never handed out: it's the first page of S0.
+
+While MAPEN is 0, as it is from `INIT/VAX` until INITIALIZE/MEMORY turns
+it on, there's no translation at all: every address is physical. Even with
+mapping on, the processor reads a few structures by physical address, and
+govax reads them the same way (`Memory.LoadPhysical` and
+`StorePhysical`): the system page table (at SBR), the system control block
+(at SCBB), and a process's hardware PCB (at PCBB).
+
+Beside RAM are two more buffers, the console's ROM and NVRAM, each with a
+physical base address beyond RAM's end. STARTUP.COM loads
+`SYS$SYSTEM:DEFAULT.ROM` at `20040000`–`200BFFFF`, where a MicroVAX II's
+boot ROM is, and no NVRAM. Every physical access goes through `phys`
+(`vm/memory.go`), which looks in RAM, then the ROM, then the NVRAM, and
+reports a `*vm.PhysicalAddressError` for anything else. Nothing in govax's
+VMS maps them; they're the console's (LOAD/ROM, SHOW ROM).
+
+### 5.2 Page table entries
+
+A page table entry is a longword (`vm.PTE`, `vm/pte.go`):
+
+```text
+ 31  30-27  26  25  24-23  22-21  20-0
+  V  PROT   M   -   OWN    S      PFN
+```
+
+- **V**, valid: the page is in memory, in frame PFN. The rest of this
+  list is about a valid PTE; an invalid one keeps PROT and OWN, and uses
+  the other bits to say where the page is (section 5.7).
+- **PROT**, the protection code: which access modes may read and write
+  the page.
+- **M**, modified: the hardware sets it on the first write to the page,
+  so the operating system knows which pages must be written back.
+- **OWN**, the owner: the access mode the page belongs to. The hardware
+  ignores it; VMS's services check it, so that `$DELTVA` from user mode
+  can't delete a page kernel mode made, say.
+- **S**, two bits for the operating system's own use.
+- **PFN**, the frame, 21 bits: up to a gigabyte of physical memory.
+
+The protection code is four bits naming who may read and who may write.
+Its names say it outright: `URKW` is "user read, kernel write". There are
+fifteen:
+
+| Code | Name | May read | May write |
+| --- | --- | --- | --- |
+| 0 | NA | no mode | no mode |
+| 1 | — | reserved: the architecture leaves it unpredictable | |
+| 2 | KW | kernel | kernel |
+| 3 | KR | kernel | no mode |
+| 4 | UW | every mode | every mode |
+| 5 | EW | kernel, executive | kernel, executive |
+| 6 | ERKW | kernel, executive | kernel |
+| 7 | ER | kernel, executive | no mode |
+| 8 | SW | kernel to supervisor | kernel to supervisor |
+| 9 | SREW | kernel to supervisor | kernel, executive |
+| 10 | SRKW | kernel to supervisor | kernel |
+| 11 | SR | kernel to supervisor | no mode |
+| 12 | URSW | every mode | kernel to supervisor |
+| 13 | UREW | every mode | kernel, executive |
+| 14 | URKW | every mode | kernel |
+| 15 | UR | every mode | no mode |
+
+Codes 2, 3, and 5 to 15 follow a formula: bits 3–2 are the least
+privileged mode that may read, and bits 1–0, complemented, are how many
+modes may write, counting out from kernel. (UW, code 4, is the exception,
+in the place the formula would give a code that contradicted itself.) A
+mode that may write may always read.
+`Protection.allows` computes it, and the translation buffer keeps the
+answer for every code and mode in a table (`protGrants`, `vm/tb.go`).
+
+### 5.3 Translating an address
+
+`Memory.Translate(cpu, addr, access)` (`vm/translate.go`) turns a virtual
+address into a physical one for a read or a write in the CPU's current
+mode, or fails with the fault the VAX would take. Here it is in order,
+without the caches (section 5.4):
+
+1. **Mapping off?** With MAPEN 0, the address is physical; return it.
+2. **Split the address.** Bits 31–30 are the region, bits 29–9 the page
+   number within it, bits 8–0 the byte within the page.
+3. **Check the length.** Each region's length register bounds its page
+   table. A P0 page must be below P0LR, and an S0 page below SLR. P1 grows
+   down, so its table describes only its top pages, and P1LR is the
+   lowest page it describes: a P1 page must be at or above P1LR. S1
+   doesn't exist, and every S1 address fails this check. A failure is an
+   access violation with the reason mask's *length* bit set.
+4. **Find the PTE.** An S0 page's PTE is at `SBR + 4*page`, a physical
+   address. A P0 page's is at `P0BR + 4*page`, but P0BR is an S0
+   *virtual* address (the process page tables live in S0), so the PTE's
+   own address must be translated first, through the system page table:
+   the one recursion in the whole walk. P1 is the same, from P1BR, which
+   is where P1's entry 0 *would* be; only the entries from P1LR up
+   exist.
+5. **Check the protection**, against the CPU's current mode, before the
+   valid bit: an invalid PTE still has a protection, and when both checks
+   would fail, the access violation takes precedence over the page fault.
+6. **Valid?** If not, the page has to be brought in (section 5.7); if it
+   can't be, the access is a *translation not valid* fault.
+7. **Set M.** On a write to a page whose M is clear, set it in the PTE
+   in memory.
+8. **Answer:** `PFN*512 + offset`.
+
+The recursion in step 4 is a read the processor makes on its own behalf,
+and the VAX makes it as kernel mode, whatever mode the access is in (the
+*VAX Architecture Reference Manual*: "fetch by system space translation
+algorithm, including length and kernel mode access checks"). So a user
+program's access to its own P0 goes through even when the page holding
+its page table is one only kernel mode may read, as VMS's are; govax's
+`translatePTE` makes the same kernel-mode read. If the PTE's own
+reference fails (its S0 page is past SLR, no access even for kernel, or
+not valid), the fault reports the original address, with the reason
+mask's *PTE reference* bit set.
+
+A walk through one, in process 1 after startup with paging off. A
+user-mode program reads address `00000A10` for the first time (every
+number hexadecimal):
+
+```text
+  address 00000A10: region 0 (P0), page 5, byte 010
+
+  page 5 < P0LR (4000)                                     length is fine
+  PTE address: P0BR + 4*5 = 80008C00 + 14 = 80008C14        an S0 address
+    S0 page 46 < SLR (2000)
+    its PTE, at SBR + 4*46 = 00000C00 + 118 = 00000D18:  F0000046
+      valid, URKW, frame 46: kernel may read it           (step 5, as kernel)
+    80008C14 is physical 00008C14
+  the PTE at physical 00008C14:  21800000
+    invalid, UW, owner user, frame 0: demand zero         (step 5: user may read)
+  not valid: give it a frame (5.7), say frame n;
+    the PTE becomes A1800000 + n
+  physical address: n*512 + 010
+```
+
+A later write sets M, and the PTE becomes `A5800000 + n`.
+
+A failed translation is a `*vm.TranslationFault`: its `Kind`
+(`AccessViolation` for a length violation, `ProtectionViolation`,
+`TranslationNotValid`), the address, and the reason mask (1 length
+violation, 2 PTE reference, 4 a write). The CPU turns it into the VAX's
+access violation (SCB offset `20`) or translation-not-valid fault (`24`),
+with the mask and the address as its two parameters (section 4.5). govax's
+VMS signals both to the program as `SS$_ACCVIO`, with the mask and the
+address, as VMS does for a page that can't be made valid.
+
+Not every reader of memory is an instruction, and `vm` has a door for
+each kind:
+
+| Method | For | How it differs |
+| --- | --- | --- |
+| `Translate`, `LoadLongword`, `StoreByte`, ... | instructions' operands, and Go code acting as the running process (a service reading its arguments) | the CPU's mode; the caches; an invalid page brought in |
+| `ProbeTranslate` | Go code that mustn't grow the user stack: the debugger's reads, `$QIO`'s buffer checks | as `Translate`, without the stack expansion (section 6) |
+| `ProbeAccess` | PROBER and PROBEW | reads the PTE's protection, and nothing more: an invalid page isn't brought in |
+| `LookupPTE`, `StorePTE` | Go code that reads or changes a PTE: the services, the debugger's SHOW PAGE and SET PTE | the PTE itself, with no access check |
+| `TranslateIn`, `LoadIn`, `StoreIn`, `LookupPTEIn`, `StorePTEIn` | Go code reaching a process that isn't running: a mailbox message copied into a waiting reader's buffer, an image put into a new process | another process's tables, named by a `vm.AddressSpace`; kernel mode; no caches |
+| `LoadPhysical`, `StorePhysical` | the PCB, the SCB | no translation |
+
+The console reads and writes memory in kernel mode, whatever mode the CPU
+is in (`Machine.withKernelMode`, `machine/image.go`), which is how
+EXAMINE, DEPOSIT, and the image loader reach pages a user program
+couldn't.
+
+An access that fits in one page is one translation. One that crosses a
+page boundary, a longword at `000001FE` say, goes a byte at a time, each
+byte translated on its own (`vm/storage.go`), so each page is checked.
+
+### 5.4 Making it fast: the TB, the STC, and the fetch window
+
+A walk is several memory reads, and nearly every instruction makes a
+translation or three. Like the VAX, govax remembers recent answers. These
+caches change only the speed: with them or without, every access gets
+the same answer, as long as they're emptied whenever a PTE they might
+hold changes.
+
+**The translation buffer** (`vm/tb.go`) has 128 entries. A page's slot is
+its region times 32 plus the low five bits of its page number, so each
+region has 32 slots, and two pages with the same low bits take turns. An
+entry holds the page number, the frame's address, the protection code,
+the modify bit, and, worked out from the code, how much each of the four
+modes may do. It hits when it holds the page and its grant for the
+current mode lets the access through. One exception: a write to a page
+whose M is still clear misses, so that the walk sets M in the PTE. The
+entries are emptied by MTPR to TBIA (all of them) and TBIS (one), by
+`StorePTE` for the page it changes, and at a process switch, which empties
+only the P0 and P1 slots: S0 is the same in every process. A nonzero TBDR,
+the TB disable register, stops lookups, though the walk still fills
+entries.
+
+**The sequential translation cache** (the STC) is a single slot in front
+of the TB: the last page translated, and what the current mode may do
+with it. Most accesses are to the page the last one used, and the STC
+answers those with one comparison. It's emptied with the TB, at every
+fault, and at every change of mode (`Memory.InvalidateProtection`, from
+REI, CHMx, exception and interrupt delivery, and AST delivery). The
+kernel-mode read of a process PTE (section 5.3) leaves it alone, since
+what it holds is for the current mode.
+
+**The instruction-fetch window** (`vm/fetch.go`) is a third, for the
+instruction stream alone: one page of code, translated once, which the
+decoder reads straight out of RAM until PC leaves the page. Data accesses
+can't evict it. It's emptied with the STC, and before each instruction if
+MAPEN or the mode isn't what it was when the window was filled
+(`SyncFetchWindow`). It holds a physical address, not a copy, so code that
+writes into itself is seen at once.
+
+The debugger's SHOW TB shows the TB's entries and how often each cache
+hit.
+
+### 5.5 The layout INITIALIZE/MEMORY builds
+
+`INITIALIZE/MEMORY` (still `VMInit` in the code, `machine/vminit.go`) makes
+memory a VMS system's. STARTUP.COM runs it with paging off as
+
+```text
+$ initialize/memory /p0=16384 /p1=8192 /s0=8192 /ksp=20 /esp=8 /ssp=8 /isp=4
+```
+
+after `INIT/VAX` has made 8 MB of memory. It starts from scratch: a new
+`vm.Memory` (so physical memory is all zeros), a new engine, a new
+`corevms.System`, and the other processes ended. Then, with MAPEN still 0,
+it builds the system page table, S0 page `n` mapping frame `n` for every
+page of S0, each `URKW`. S0 is then the whole of physical memory, in
+order, and anything the processor reads by physical address (the system
+page table, the SCB) is at the same offset in S0. With paging off S0
+therefore can't be bigger than physical memory. Then it lays out the rest
+of S0 from its first page, sets the registers, and turns MAPEN on. The
+result, from STARTUP.COM's sizes:
+
+| S0 addresses | Pages | Protection | What |
+| --- | --- | --- | --- |
+| `80000000`–`80000BFF` | 6 | URKW | VMS V1's system service vector: a stub per service that jumps to its entry in the P1 vector, for images linked before VMS V4 (section 10) |
+| `80000C00`–`80008BFF` | 64 | URKW | the system page table: SBR `00000C00`, SLR `2000` |
+| `80008C00`–`80018BFF` | 128 | URKW | process 1's P0 page table: P0BR `80008C00`, P0LR `4000` |
+| `80018C00`–`80020BFF` | 64 | URKW | process 1's P1 page table: P1BR `7F820C00`, P1LR `1FE000` |
+| `80020C00`–`800233FF` | 20 | URKW | the kernel stack: KSP `800233FC` |
+| `80023400`–`800235FF` | 1 | NA | a guard page |
+| `80023600`–`800245FF` | 8 | EW | the executive stack: ESP `800245FC` |
+| `80024600`–`800247FF` | 1 | NA | a guard page |
+| `80024800`–`800257FF` | 8 | SW | the supervisor stack: SSP `800257FC` |
+| `80025800`–`80025FFF` | 4 | URKW | the interrupt stack: ISP `80025FFC` |
+| `80026000`–`800261FF` | 1 | URKW | `CONSOLE$SCRATCH`, where RUN builds the procedure that starts an image (section 11) |
+| `80026200`–`800263FF` | 1 | URKW | the first page of shim stubs (section 10) |
+| `80026400`–`800265FF` | 1 | URKW | the system control block: SCBB `00026400` |
+| `80026600`–`800275FF` | 8 | UW | the string pool: string literals the console and debugger turn into descriptors |
+| `80027600`–`800289FF` | 10 | URKW | the microkernel, which STARTUP.COM's ASM puts here |
+| `80028A00`–`803FFFFF` | 7867 | URKW | the S0 pool |
+
+A stack grows down, so each stack pointer starts at its region's last
+longword, and a guard page below the executive and supervisor stacks makes
+an overflow fault rather than write over what's below. ISP, like the
+others, is an S0 virtual address: the interrupt stack is mapped as every
+other stack is, and taking it doesn't change MAPEN.
+
+The S0 pool (`corevms/s0pool.go`) is where every later process's
+system-space structures come from: its page tables, its kernel,
+executive, and supervisor stacks, and a page for its hardware PCB. An
+allocation is a run of whole pages, first fit from the pool's bottom,
+recorded with the process it belongs to and what it's for, so that SHOW
+MEMORY can list them and a process's deletion can give them all back. A
+run handed out is cleared, and its pages' protection set back to URKW, so
+that a stack's guard page doesn't follow its page to the next owner. At these sizes a
+process needs 231 pages (a 192-page table area, 38 stack pages, and the
+PCB's), so 34 processes fit beside process 1. The microkernel's own pages
+are claimed from the pool's bottom as ASM deposits them (`ClaimS0`).
+
+With paging on, INITIALIZE/MEMORY's regions cost virtual space, not
+frames, and it sizes them for processes (`P0` 19456, `P1` 5120, `S0`
+16384 pages, unless the configuration says otherwise): only its own
+layout's pages get frames, and an S0 pool page has none (its PTE all
+zeros, no access) until the pool hands it out. Section 6 has the rest.
+
+Where govax's layout differs from VMS's, it's for the sake of a machine
+that is also a console:
+
+- VMS keeps each process's kernel, executive, and supervisor stacks in its
+  P1 space. govax keeps process 1's where INITIALIZE/MEMORY lays them out
+  and every other process's in the S0 pool, mapped always, so a stack
+  never faults.
+- The kernel stack is URKW, where VMS's is kernel-only: the console builds
+  the call frame that runs a program on it, and a user-mode program's last
+  RET reads that frame.
+- There's no guard page below the kernel and interrupt stacks.
+- S0 holds console structures VMS doesn't have: the scratch page, the
+  shim pages, the string pool.
+
+### 5.6 Process space: P0 and P1
+
+Process 1's P0 and P1 page tables are the ones INITIALIZE/MEMORY built.
+Every other process gets a *table area* from the S0 pool
+(`System.BuildAddressSpace`, `corevms/addrspace.go`), laid out as VMS lays
+out its own: P0's table at the area's bottom, growing up, and P1's at its
+top, growing down, so that either region may grow into the room between
+them (with paging on; with it off, each region keeps the size it was made
+with).
+
+Every page of a new process starts as `ProcessPTE` makes it: invalid,
+with a frame of 0 (demand zero, section 5.7), UW, and owned by user mode.
+P0's page 0 is the exception: no access, and owned by kernel mode, so that
+a program following a null pointer faults rather than reading whatever is
+at address 0.
+
+P1, from STARTUP.COM's sizes, with paging off:
+
+```text
+  7FFFFFFF  ┐
+            │  unused
+  7FFEDE00  ├─ the P1 system service vector: a few pages, URKW, owned by
+            │  kernel mode, shared by every process
+            │  unused
+  7FE00000  ├─ the user stack's top, every process's USP; the stack grows
+            │  down, with 1024 pages kept for it
+  7FD80000  ├─ P1 expansion ($EXPREG of region 1, SEC$M_EXPREG sections)
+            │  grows down from here
+  7FC00000  ┘  P1's low end: P1LR is 1FE000
+```
+
+The system service vector is the one piece of P1 every process shares.
+The microkernel's `.P1VECTOR` directive writes, at each service's fixed
+VMS address, a tiny procedure: an entry mask of 0, `XFC #^X7A`, and RET
+(section 10). Those pages are deposited once, in process 1, and every
+later process's P1 maps the same frames (`ShareP1`, `mapShared`), so a
+service called from any process runs the same three instructions. In
+every process they're URKW and owned by kernel mode, as VMS maps its P1
+system service vectors (*VAX/VMS Internals and Data Structures*, Table
+26-4b), so no user-mode program can change them or delete them. With
+paging on they're system pages, never paged.
+
+VMS's P1 holds much more: the inner-mode stacks, the image I/O segment,
+the command language interpreter's data, the channel table, the
+per-process common area. In govax those are in S0 (the stacks) or in Go
+(channels, RMS's internal structures, DCL), and a program can't tell, so
+long as it reaches them through the services, as a VMS program must.
+
+### 5.7 When a page isn't valid: the pager hook
+
+When a translation finds a valid bit clear (after the protection check,
+which an invalid PTE still answers), the page has to be brought in. The
+invalid PTE says where it is, in one of the forms *VAX/VMS Internals and
+Data Structures* gives (14.1.1), told apart by two bits, bit 26 (TYP0,
+the modify bit's place) and bit 22 (TYP1, one of the software bits):
+
+| TYP1 | TYP0 | Bits 21–0 | The page is |
+| --- | --- | --- | --- |
+| 0 | 0 | frame 0 | demand zero: its first touch gives it a frame of zeros |
+| 0 | 0 | a frame | in transition: out of the working set, but still in that frame (paging on only) |
+| 0 | 1 | a process section table index | a page of a section of a file this process mapped: the index names the file and block |
+| 1 | 0 | a global page table index | a page of a global section, shared with other processes |
+| 1 | 1 | a page file block | in the page file, at that block (paging on only) |
+
+`vm/pager.go` reads and makes each form (`SectionPTE`, `GlobalPTE`,
+`PageFilePTE`, `TransitionPTE`, `ValidPTE`, and the tests `SectionIndex`,
+`GlobalIndex`, ...).
+
+The hardware's part ends at the fault; what a page fault *does* is the
+operating system's. In govax it's the `vm.Pager` seam (section 2.5):
+
+```go
+type Pager interface {
+    // PageIn returns the PTE the faulting page should now have, valid
+    // and pointing at a frame holding the page's contents, or false if
+    // it can't be brought in (the access then faults).
+    PageIn(f PageFault) (PTE, bool)
+}
+```
+
+`Memory.pageIn` hands the fault to the installed pager, and writes the
+PTE it returns back to the page table before the translation goes on. So
+the instruction that touched the page never sees a fault: the page is
+brought in between the walk's step 6 and step 7, and the access completes
+as if the page had always been there. A real VAX takes the fault, VMS's
+pager runs, and the instruction runs again; govax does the same work
+without the round trip, since its pager is Go code that needs no
+instructions to run. (A page the pager can't bring in, a section page it
+can't read, say, is a real translation-not-valid fault.)
+
+The pager is `corevms.System`, installed by each new `System`
+(`corevms/system.go`); its `PageIn` is in `corevms/filesec.go`. With
+paging off it does three things, by the PTE's form:
+
+- **Demand zero:** take a free frame (which reads as zeros) and make the
+  PTE valid with it. With paging off any invalid PTE that isn't a
+  section's or a global page's is taken as demand zero.
+- **A private section page:** read the page's block of its file into a
+  new frame. `$CRMPSC` of a file opened with RMS's user file open leaves
+  each page's PTE in the section form, pointing at an entry of the
+  process's section table (the file, its first block, the first page);
+  the first touch reads the block. A modified page is written back when
+  it's unmapped or by `$UPDSEC`.
+- **A global page:** find the section's page in the global page table,
+  reading it from the section's file the first time any process touches
+  it (or giving it zeros, for a section in the page file); after that
+  every process mapping the section shares the frame.
+
+Once in, with paging off, a page stays until it's deleted: nothing takes
+it away. With paging on the pager does a great deal more (working sets,
+soft faults, the page file, read clustering), and section 6 is about that.
+Without a pager at all, as in `vm`'s own tests, `validatePage` treats every
+invalid page as demand zero.
+
+One more hook sits beside the pager: the *stack expander*
+(`SetStackExpander`). A user-mode access just below P1's low end, a
+stack growing past its pages, is a length violation, unless the expander
+lowers P1LR to cover it first. That's paging's created address space,
+section 6.
+
+### 5.8 What's VMS's and what isn't
+
+The hardware here is the VAX's: the PTE, the protection codes, the
+translation walk and its order of checks, the faults and their
+parameters, the TB's invalidation by TBIA, TBIS, and process switch. The
+system above it is shaped like VMS's but simpler, and these are the
+differences a program could notice:
+
+- **No S1 region.** No VAX used it either.
+- **The inner-mode stacks are in S0**, mapped always, and the kernel
+  stack is readable by user mode (section 5.5).
+- **S0 holds the console's own pages**, and the old system service vector
+  at its start.
+- **A page fault completes the access** rather than restarting the
+  instruction (section 5.7). A program can't see the difference, unless
+  it counts faults: those are counted as VMS counts them, by the pager.
+- **The caches are govax's sizes.** A real VAX's TB size varies by model;
+  only a program timing itself could tell.
 
 ## 6. VMS paging
 

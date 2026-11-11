@@ -2,8 +2,8 @@
 
 **Status:** in progress (planned 2026-11-11). Part A, the first
 document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
-document's outline, and its sections 0 to 3) and 2 (section 4, the
-instruction set) are done.
+document's outline, and its sections 0 to 3), 2 (section 4, the
+instruction set), and 3 (section 5, memory) are done.
 
 ## Goal
 
@@ -120,6 +120,7 @@ interpreter process 1 runs, and what reads the startup procedure).
    system service vector, the page tables, the mode stacks, the shim
    page, the SCB, the string pool, the S0 pool), the P1 vector, the
    pager hook and the invalid PTE forms, demand zero, file sections.
+   (done 2026-11-11)
 4. Section 6, VMS paging: the switch, the PFN database and its lists,
    working sets and replacement, soft and hard faults, the modified page
    writer and the reclaimer, the page file, PGFLQUOTA, global pages,
@@ -185,3 +186,52 @@ interpreter process 1 runs, and what reads the startup procedure).
   corrected. New tests: `TestReiChecksPoppedPSL`, `TestLoadContextChecksPSL`.
   The entry moved to `DEVIATIONS-RESOLVED.md`, and section 4.6 describes
   the checks.
+- **2026-11-11** Subtask 3: section 5, memory: physical memory, the ROM
+  and NVRAM, the PTE and the protection codes (a table, and the formula
+  behind it), the translation walk in order with a worked address from
+  process 1, the faults and their masks, `vm`'s doors for each kind of
+  reader, the TB, the STC, and the fetch window, INITIALIZE/MEMORY's S0
+  layout as a table of addresses (measured on govax after STARTUP.COM),
+  the S0 pool, process space and P1's map, the P1 vector, the invalid PTE
+  forms and the pager hook, and a list of what differs from VMS. Section 4's
+  sentences on interrupts' stack and the SCB vector's stack bits were
+  corrected to match. Reading for it found, and this subtask fixed
+  (Decision 6):
+  - **The process PTE's reference was checked in the current mode.** The
+    VAX reads a P0 or P1 page table entry through the system page table as
+    a kernel-mode read. `vm`'s `translatePTE` now makes it so (kernel
+    mode, the TB but not the STC, which holds the current mode's grant);
+    `LookupPTE` and `StorePTE` reach the entry the same way. govax's
+    page-table pages are URKW, so no access had failed.
+    `TestPTEReferenceIsKernelRead`.
+  - **Process 1's P1 vector was UW, owned by user mode**, so a user-mode
+    program could change the vector every process maps; other processes
+    mapped it UR. All now map it as VMS does, URKW and owned by kernel mode
+    (*VAX/VMS Internals and Data Structures*, Table 26-4b; `corevms`'s
+    `vectorPTE`, set in process 1 by `ShareP1`). `TestBuildAddressSpace`
+    checks both processes and a user-mode write.
+  - **Taking the interrupt stack turned MAPEN off, and leaving it for any
+    other stack turned MAPEN on** (an eVAX choice kept since Phase 03,
+    `DEVIATIONS-RESOLVED.md`); ISP was a physical address, which with
+    mapping on named a P0 page. `setModeStack` no longer touches MAPEN, and
+    INITIALIZE/MEMORY gives ISP its S0 virtual address. No microkernel
+    vector names the interrupt stack, so only tests, the console's SET, and
+    the debugger's ISP mode had reached the old path. With it: an exception
+    served on the interrupt stack raises IPL to 31 (`Fault.Interrupt`
+    tells an interrupt, which keeps its IPL), and REI to a PSL with IS set
+    takes SP from ISP, not KSP. `TestHandleFaultInterruptStackMapped`,
+    `TestReiStaysOnInterruptStack`; `TestVaxInitMemoryConfig`'s arithmetic.
+  - **SHOW MEMORY's region lines, paging off**, gave P0 and P1 "physical
+    addresses" from a counter VMInit advanced per PTE written (P0's ran
+    past the end of memory) and called the page tables' size "PFN
+    database". They now give "Table pages", and for P0 and P1 the page
+    table's own physical addresses, "Page table (phys.)"; MANUAL.md's
+    example follows.
+  Comments brought up to date: `s0pool.go`'s figures (the layout is now
+  pages 0-314, the string pool's default having grown to 8 pages; the pool
+  325-8191), `.P1VECTOR`'s note on protection, MODE-STACKS.md's interrupt
+  stack and stale paths. Not this subtask's: four `internal/console` oracle
+  tests (`TestLBR90WOracle`, `TestVMS88Procedure`, `TestIdx88ReportsOracle`,
+  `TestIdx88CAnalyzeOracle`) fail on and after the 10th of a month, VMS's
+  logs having been made on a day of one digit and the masks keeping the
+  date's width; they fail the same at subtask 2's commit.

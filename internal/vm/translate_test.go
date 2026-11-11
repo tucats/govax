@@ -728,3 +728,86 @@ func TestReasonMasks(t *testing.T) {
 	_, err = mem.Translate(cpu, far, AccessRead)
 	check("read, PTE past SLR", err, far, want{AccessViolation, MaskPTERef | MaskLength})
 }
+
+// TestPTEReferenceIsKernelRead: the VAX reads a process page table entry
+// as kernel mode, whatever mode the access is made in (translatePTE). A
+// user-mode program's access to its own P0 page goes through even when the
+// S0 page holding its page table is kernel-only, and only a system PTE
+// that gives kernel mode no access stops it, as a protection violation on
+// the PTE's reference. The kernel-mode reference mustn't leave the STC
+// letting user mode read the page-table page itself.
+func TestPTEReferenceIsKernelRead(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	// S0 page 1 holds P0's page table: make it kernel-only.
+	setS0Protection := func(prot Protection) {
+		t.Helper()
+
+		raw, err := mem.readPhysLongword(sysPTBase + 1*4)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		pte := PTE(raw)
+		pte.SetProtection(prot)
+
+		if err := mem.writePhysLongword(sysPTBase+1*4, uint32(pte)); err != nil {
+			t.Fatal(err)
+		}
+
+		mem.InvalidateTB()
+	}
+
+	setS0Protection(ProtKW)
+
+	psl := cpu.PSL()
+	psl.SetCurMod(registers.User)
+	psl.SetPrvMod(registers.User)
+	cpu.SetPSL(psl)
+
+	addr := uint32(2*pageSize) + 16
+
+	for _, access := range []AccessType{AccessRead, AccessWrite} {
+		got, err := mem.Translate(cpu, addr, access)
+		if err != nil {
+			t.Fatalf("user access %d to P0 with a KW page table: %v, want it allowed", access, err)
+		}
+
+		if want := uint32(ptBase + 2*pageSize + 16); got != want {
+			t.Errorf("Translate = %#x, want %#x", got, want)
+		}
+	}
+
+	// The page table's page, read by user mode directly, is still a
+	// protection violation: the reference above didn't fill the STC (or the
+	// TB) with kernel mode's grant.
+	table := uint32(sysBase + pageSize)
+
+	if _, err := mem.Translate(cpu, table, AccessRead); err == nil {
+		t.Errorf("user read of the KW page-table page at %#x succeeded, want a protection violation", table)
+	}
+
+	// The access again, after the page table's own read failed: still fine.
+	if _, err := mem.Translate(cpu, addr, AccessRead); err != nil {
+		t.Errorf("user read of P0 after the failed table read: %v", err)
+	}
+
+	// No access at all, even for kernel mode: the reference itself is a
+	// protection violation, reported at the P0 address with the PTE
+	// reference bit.
+	setS0Protection(ProtNA)
+
+	_, err := mem.Translate(cpu, addr, AccessWrite)
+
+	var tf *TranslationFault
+	if !errors.As(err, &tf) || tf.Kind != ProtectionViolation || tf.Addr != addr || tf.Mask != MaskPTERef|MaskWrite {
+		t.Errorf("user write through an NA page table = %v, want a protection violation at %#x, mask %d", err, addr, MaskPTERef|MaskWrite)
+	}
+
+	// LookupPTE and StorePTE reach the entry the same way.
+	setS0Protection(ProtKW)
+
+	if _, _, _, err := mem.LookupPTE(cpu, addr); err != nil {
+		t.Errorf("LookupPTE in user mode with a KW page table: %v", err)
+	}
+}

@@ -190,13 +190,35 @@ func pteReferenceFault(err error, addr uint32, access AccessType) error {
 // and docs/PHASE-21.md for the translation-buffer/sequential-translation-
 // cache design this and ProbeTranslate share via translate.
 func (m *Memory) Translate(cpu *registers.CPU, addr uint32, access AccessType) (uint32, error) {
-	return m.translate(cpu, addr, access, true)
+	return m.translate(cpu, addr, access, true, cpu.PSL().CurMod(), false)
+}
+
+// translatePTE translates pteVirtAddr, the S0 virtual address of a P0 or
+// P1 page table entry, to its physical address: the second translation a
+// process-space access makes, to find the page table entry that maps it.
+//
+// The VAX makes that reference as a kernel-mode read whatever mode the CPU
+// is in (the VAX Architecture Reference Manual's P0 and P1 translations:
+// "fetch by system space translation algorithm, including length and
+// kernel mode access checks"). A user-mode program's access to its own P0
+// is allowed even if the page holding its page table is one only kernel
+// mode may read, as VMS's are; only a system page table entry saying "no
+// access" (or one past SLR, or not valid) stops it, and then the fault
+// reports the process address with the reason mask's PTE-reference bit
+// set (pteReferenceFault).
+//
+// The translation buffer is used as for any S0 page (an entry checks the
+// mode on every hit), but the one-slot STC isn't: it holds what the CPU's
+// current mode may do, and a kernel-mode fill would let a user-mode access
+// to the page-table page through it.
+func (m *Memory) translatePTE(cpu *registers.CPU, pteVirtAddr uint32) (uint32, error) {
+	return m.translate(cpu, pteVirtAddr, AccessRead, true, registers.Kernel, true)
 }
 
 // ProbeTranslate is Translate for a caller matching vm.c's VM_NOSIGNAL
-// mode flag: PROBEx's own addressability check (emul_misc.c's emul_probe),
-// and LookupPTE's recursive PTE-address step (tracevm's own VM_NOSIGNAL
-// call for the same purpose). The only observable difference from
+// mode flag: Go code that wants an address's translation without
+// expanding the user stack (the debugger's reads, $QIO's buffer checks).
+// The only observable difference from
 // Translate is that the sequential translation cache's own one-slot hit
 // check is never taken -- vm.c's STC compares the *raw* mode parameter
 // (which carries the VM_NOSIGNAL bit for these callers) against a
@@ -216,7 +238,7 @@ func (m *Memory) Translate(cpu *registers.CPU, addr uint32, access AccessType) (
 // gets the probed mode's answer from it, not the answer cached for the
 // mode that last touched the page (Study 1, R3 in docs/PERFORMANCE.md).
 func (m *Memory) ProbeTranslate(cpu *registers.CPU, addr uint32, access AccessType) (uint32, error) {
-	return m.translate(cpu, addr, access, false)
+	return m.translate(cpu, addr, access, false, cpu.PSL().CurMod(), false)
 }
 
 // ProbeAccess is the PROBER/PROBEW instruction's test: whether the CPU's
@@ -242,10 +264,13 @@ func (m *Memory) ProbeAccess(cpu *registers.CPU, addr uint32, access AccessType)
 	return pte.Protection().allows(cpu.PSL().CurMod(), access)
 }
 
-// translate is the shared implementation behind Translate/ProbeTranslate.
-// signal is true for a real (Translate) access and false for a probing
-// (ProbeTranslate) one -- see that function's doc comment for its one
-// effect (gating the STC hit-check).
+// translate is the shared implementation behind Translate, ProbeTranslate,
+// and translatePTE. signal is true for a real (Translate) access and false
+// for a probing (ProbeTranslate) one -- see that function's doc comment
+// for its one effect (gating the STC hit-check). mode is the access mode
+// the page's protection is checked against: the CPU's current mode, or
+// kernel for a page table entry's reference, which pteRef marks (see
+// translatePTE) and which leaves the STC alone.
 //
 // DYNVM dynamic page-in-on-demand (validate_page(), gated on
 // vax.console.vminit_valid/page_map) is console/microkernel state that
@@ -253,7 +278,7 @@ func (m *Memory) ProbeAccess(cpu *registers.CPU, addr uint32, access AccessType)
 // table entry always faults TNV here, which is also exactly what
 // validate_page() itself does whenever VMVALID is false (the normal case
 // until a real OS or VMINIT has run).
-func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, signal bool) (uint32, error) {
+func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, signal bool, mode registers.AccessMode, pteRef bool) (uint32, error) {
 	// cpu.PR(registers.MAPEN) reads the MAPEN processor register's current
 	// value; a machine that hasn't enabled virtual memory yet (MAPEN==0)
 	// uses every address as a physical address directly, with no
@@ -288,12 +313,14 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	// tbGrant(access) < stcGrant is that test (see tbGrant in tb.go). An
 	// empty slot's stcGrant is grantNone, which lets nothing through, so
 	// no separate "is the slot in use" test is needed.
-	m.tb.stcTries++
+	if !pteRef {
+		m.tb.stcTries++
 
-	if signal && vpage == m.tb.stcVPage && tbGrant(access) < m.tb.stcGrant {
-		m.tb.stcHits++
+		if signal && vpage == m.tb.stcVPage && tbGrant(access) < m.tb.stcGrant {
+			m.tb.stcHits++
 
-		return m.tb.stcPPage + byteOffset, nil
+			return m.tb.stcPPage + byteOffset, nil
+		}
 	}
 
 	// region is the address's top two bits (>>30 shifts them down to
@@ -312,12 +339,10 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	idx := tbIndex(region, page)
 	entry := &m.tb.entries[idx]
 
-	// mode is the CPU's current access mode (kernel, executive,
-	// supervisor, or user), read from the Processor Status Longword. A
-	// TB hit is checked against it, and an STC fill records what it may
-	// do.
-	mode := cpu.PSL().CurMod()
-
+	// mode is the access mode (kernel, executive, supervisor, or user)
+	// the access is made in: the CPU's current mode, from the Processor
+	// Status Longword, but for a page table entry's reference. A TB hit is
+	// checked against it, and an STC fill records what it may do.
 	// The 128-entry translation buffer, consulted only when TBDR == 0
 	// ("TB caching enabled") -- matching vm.c's `if (!registers.TBDR)`. Note
 	// this gates consultation only: a successful full walk below still
@@ -338,7 +363,9 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 			paddr := entry.paddr + byteOffset
 
-			m.tb.stcFill(vpage, entry, mode)
+			if !pteRef {
+				m.tb.stcFill(vpage, entry, mode)
+			}
 
 			if m.touched != nil {
 				m.noteTranslated(paddr)
@@ -463,9 +490,9 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	// pteAddr will end up as the *physical* address of the PTE itself —
 	// for S0 that's just pteVirtAddr already (see above), but for a
 	// recursively-mapped P0/P1 PTE, its own virtual address must first be
-	// translated through Translate, exactly the same function this whole
-	// block is inside of. This is the recursion the package doc comment
-	// mentions: translating a P0/P1 address requires translating another
+	// translated through translatePTE, this same function as a kernel-mode
+	// read. This is the recursion the package doc comment mentions:
+	// translating a P0/P1 address requires translating another
 	// (system-region) address first, to find the page table that
 	// describes the first one.
 	pteAddr := pteVirtAddr
@@ -473,7 +500,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	if pteRecursive {
 		var err error
 
-		pteAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
+		pteAddr, err = m.translatePTE(cpu, pteVirtAddr)
 		if err != nil {
 			return 0, pteReferenceFault(err, addr, access)
 		}
@@ -498,11 +525,9 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	}
 
 	// The page exists and is described by a real PTE, but is this
-	// particular access (read or write, at the CPU's current privilege
-	// mode) actually allowed against it? See pte.go's Protection.allows
-	// for the full logic; cpu.PSL().CurMod() is how the current privilege
-	// mode is read out of the Processor Status Longword.
-	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {
+	// particular access (read or write, in mode) actually allowed against
+	// it? See pte.go's Protection.allows for the full logic.
+	if !pte.Protection().allows(mode, access) {
 		*entry = tbEntry{}
 
 		m.tb.stcFlush()
@@ -572,7 +597,9 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	// this one access (see tbEntry in tb.go).
 	*entry = newTBEntry(page, pte.PFN()<<9, pte.Protection(), pte.Modified())
 
-	m.tb.stcFill(vpage, entry, mode)
+	if !pteRef {
+		m.tb.stcFill(vpage, entry, mode)
+	}
 
 	return paddr, nil
 }
@@ -698,10 +725,9 @@ func (m *Memory) LookupPTE(cpu *registers.CPU, addr uint32) (region int, pteAddr
 
 	physPTEAddr := pteVirtAddr
 	if pteRecursive {
-		// Matching tracevm's own recursive PTE-address translation, which
-		// passes VM_READ | VM_NOSIGNAL -- see ProbeTranslate's doc
-		// comment.
-		physPTEAddr, err = m.ProbeTranslate(cpu, pteVirtAddr, AccessRead)
+		// The page table entry's own address, read as kernel mode, as
+		// the hardware reads it (translatePTE).
+		physPTEAddr, err = m.translatePTE(cpu, pteVirtAddr)
 		if err != nil {
 			return region, pteVirtAddr, 0, err
 		}
@@ -770,7 +796,7 @@ func (m *Memory) StorePTE(cpu *registers.CPU, addr uint32, pte PTE) error {
 	if pteRecursive {
 		var err error
 
-		physPTEAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
+		physPTEAddr, err = m.translatePTE(cpu, pteVirtAddr)
 		if err != nil {
 			return err
 		}

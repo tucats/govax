@@ -132,13 +132,21 @@ func (m *Machine) ShowMemory() error {
 			plural = " "
 		}
 
-		m.Printf("        %s Region\n            Size = %08X (%5d decimal) pages\n            PFN database = %d page%s",
+		m.Printf("        %s Region\n            Size = %08X (%5d decimal) pages\n            Table pages = %d page%s",
 			r.name, r.size, r.size, r.pteCount, plural)
 
 		m.Printf("  %sBR = %08X    %sLR = %08X\n", r.name, bases[n], r.name, lens[n])
 
-		m.Printf("            Physical addresses = %08X-%08X\n            Virtual addresses  = %08X-%08X\n\n",
-			r.pStart, r.pEnd-1, r.vStart, r.vEnd-1)
+		// S0 maps physical memory one to one. A P0 or P1 page has no fixed
+		// frame (it's given one when first touched), so for those the
+		// line is where the region's page table is.
+		where := "Physical addresses"
+		if r.name != "S0" {
+			where = "Page table (phys.)"
+		}
+
+		m.Printf("            %s = %08X-%08X\n            Virtual addresses  = %08X-%08X\n\n",
+			where, r.pStart, r.pEnd-1, r.vStart, r.vEnd-1)
 	}
 
 	return nil
@@ -176,7 +184,7 @@ func (m *Machine) showPagedRegions(env *corevms.Environment, bases, lens [3]uint
 
 	region("P0", lens[0], "Table frames", p0Frames, bases[0], lens[0], extent(0, lens[0]))
 	region("P1", p1Pages, "Table frames", p1Frames, bases[1], lens[1], extent(0x40000000+lens[1]*512, p1Pages))
-	region("S0", s0.size, "PFN database", int(s0.pteCount), bases[2], lens[2],
+	region("S0", s0.size, "Table pages", int(s0.pteCount), bases[2], lens[2],
 		fmt.Sprintf("            Mapped pages       = %d\n%s", env.MappedS0Pages(), extent(s0.vStart, s0.size)))
 }
 

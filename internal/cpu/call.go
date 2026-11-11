@@ -337,7 +337,15 @@ func emulRei(e *Engine, d *Decoded) error {
 	e.cpu.SetPSL(restored)
 	e.cpu.SetPR(registers.IPL, e.cpu.PSL().IPL())
 
-	e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.PrivReg(e.cpu.PSL().CurMod())))
+	// The new stack: the interrupt stack if the restored PSL is on it (an
+	// REI from one interrupt level to a lower one), else the restored
+	// mode's.
+	if restored.IS() {
+		e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.ISP))
+	} else {
+		e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.PrivReg(restored.CurMod())))
+	}
+
 	e.cpu.SetGPR(registers.PC, newPC)
 
 	if newMode := e.cpu.PSL().CurMod(); oldPSL.CurMod() != newMode {
