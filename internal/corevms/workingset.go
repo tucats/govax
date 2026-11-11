@@ -45,15 +45,15 @@ import (
 // frames are shared, so a page leaving gives its PTE the global page
 // table index back rather than a transition form, and its frame goes to
 // a list only when no working set holds it (globalpages.go). A page-file
-// section's pages are never chosen to leave yet (wsProtected).
+// section's pages leave the same way, and its frames wait on the
+// modified list for the page file.
 //
-// # What isn't here yet
+// # Without a page file
 //
-// Without a page file
-// (pagefile.go), the modified page writer (mpw.go) writes only a
-// writable private file section's pages, to their file, so any other
-// page on the modified list leaves it only by a soft fault, or by being
-// deleted.
+// With no page file (pagefile.go), the modified page writer (mpw.go)
+// writes only file sections' pages, to their files, so a demand-zero or
+// copy-on-reference page on the modified list leaves it only by a soft
+// fault, or by being deleted.
 //
 // # Deleting a page in transition
 //

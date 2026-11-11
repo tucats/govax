@@ -3,7 +3,8 @@
 **Status:** in progress (planned 2026-11-11). Part A, the first
 document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
 document's outline, and its sections 0 to 3), 2 (section 4, the
-instruction set), and 3 (section 5, memory) are done.
+instruction set), 3 (section 5, memory), and 4 (section 6, VMS paging)
+are done.
 
 ## Goal
 
@@ -126,6 +127,7 @@ interpreter process 1 runs, and what reads the startup procedure).
    writer and the reclaimer, the page file, PGFLQUOTA, global pages,
    read clustering, image activation by mapping, created address space
    and the table area, the user stack's growth; what govax's VMS lacks.
+   (done 2026-11-11)
 5. Section 7, processes: process 1 and the others, the process table
    and PIDs, address spaces and stacks, the hardware PCB and
    LDPCTX/SVPCTX, the scheduler (states, priorities, quantum, boosts),
@@ -235,3 +237,29 @@ interpreter process 1 runs, and what reads the startup procedure).
   `TestIdx88CAnalyzeOracle`) fail on and after the 10th of a month, VMS's
   logs having been made on a day of one digit and the masks keeping the
   date's width; they fail the same at subtask 2's commit.
+- **2026-11-11** Subtask 4: section 6, VMS paging: the switch and the
+  SYSGEN keys (a table of each with its default), synchronous paging, the
+  PFN database and its five moves, the tie and `BreakTie`, system pages,
+  working sets and the replacement rules, instruction safety and the trim
+  at the next boundary, the pager's order of work and each PTE form's
+  fault, eviction, one page's life measured on govax (demand zero, written,
+  in transition, written to the page file by the writer, its frame reused,
+  read back), the modified page writer and its clusters, the page file and
+  its map, the reclaimer, PGFLQUOTA, global pages' three states, read
+  clustering (which, as the measurement showed, needs room in the working
+  set), images mapped, created space, the table area, the user stack's
+  growth, and what govax leaves out. The measurement was a throwaway test
+  in `internal/console` on `pageFileSettings`'s values, not kept. Reading
+  for it found, and this subtask fixed (Decision 6):
+  - **The system volume's default page file was never opened at the
+    pager's need.** `pageFileWanted` (`corevms/mpw.go`) asked whether
+    `vax.sysgen.paging.file` named one, which predates Phase 87's default;
+    so with `vax.sysgen.paging.defer`, or before the system had started,
+    no page file opened unless one was named, and pages bound for it stayed
+    on the modified list. `JPI$_PAGFILLOC` (`pageFileLocation`) had the
+    same test, and gave 0 for the default page file. Both now ask
+    `pageFileConfigured` (`corevms/pagefile.go`), which goes by
+    `pageFileName`. `TestDefaultPageFileWanted`.
+  Comments brought up to date: `corevms/workingset.go`'s, which still said
+  a page-file section's pages never left a working set and that the writer
+  had no page file.

@@ -237,9 +237,10 @@ const PageFileIndex = pageFileIndex
 
 // pageFileLocation is JPI$_PAGFILLOC: the index of the page file the
 // process is assigned to in the longword's fourth byte (the VSI system
-// services manual), with paging on and a page file configured, else 0.
+// services manual), with paging on and a page file configured (named, or
+// the system volume's default), else 0.
 func (env *Environment) pageFileLocation() uint32 {
-	if env.mem == nil || env.mem.Paging() == nil || env.Sysgen.PageFileName == "" {
+	if env.mem == nil || env.mem.Paging() == nil || !env.pageFileConfigured() {
 		return 0
 	}
 

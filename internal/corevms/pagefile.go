@@ -203,6 +203,15 @@ func (sys *System) pageFileName() (name string, unused string) {
 	return "_" + device + ":" + sysvol.PageFile, ""
 }
 
+// pageFileConfigured reports whether the System has a page file to use,
+// open or not: with paging on, one vax.sysgen.paging.file names, or the
+// system volume's default on a writable system volume (pageFileName).
+func (sys *System) pageFileConfigured() bool {
+	name, _ := sys.pageFileName()
+
+	return sys.Sysgen.Paging && name != ""
+}
+
 // pageFileSession is the RMS session a page file's name is resolved in:
 // process 1's, with the console's logical names and default directory,
 // or a bare one on the System's mounts.

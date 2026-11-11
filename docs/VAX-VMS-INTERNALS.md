@@ -1516,7 +1516,639 @@ differences a program could notice:
 
 ## 6. VMS paging
 
-*To be written.*
+Section 5 ended with a page brought in on its first touch and kept until
+it's deleted. That's all memory management needs while every process's
+pages fit in physical memory, and it's how govax runs by default. VMS
+does more: it gives each process a *working set*, a limited number of
+pages it may hold in memory at once, and when a process touches a page
+past that limit, VMS takes another of its pages away, keeping its
+contents somewhere they can be fetched back from. So a program can use
+more memory than its share of the machine, and many programs can share a
+small one. This section is that machinery as govax builds it, from
+*VAX/VMS Internals and Data Structures* (chapters 14 to 17, cited here as
+"the book"), and checked against a VMS 7.1 VAX where a probe could show
+the answer.
+
+All of it is under one switch, and the subsections follow a page's life:
+the record kept for each frame (6.2), the working set it lives in (6.3),
+the fault that brings it in and the step that takes it out (6.4), the
+writer that saves its contents and the file it saves them in (6.5), the
+reclaimer that keeps frames free (6.6) and the quota that bounds the
+file's use (6.7). Then the larger structures built on these: global
+sections (6.8), reading several pages at once (6.9), images mapped rather
+than copied (6.10), and address space that exists only where it's been
+created (6.11). The last subsection lists what govax leaves out.
+
+### 6.1 The switch
+
+`vax.sysgen.paging.enable` turns paging on; it's off unless set.
+INITIALIZE/MEMORY reads it (or its `/PAGING` and `/NOPAGING` override it),
+and the choice lasts until the next INITIALIZE/MEMORY. With paging off
+nothing in this section happens, and everything a program sees is section
+5's. With paging on:
+
+| | Paging off | Paging on |
+| --- | --- | --- |
+| Frames | a bitmap, lowest free first, cleared when freed | the PFN database: free and modified lists, each frame's owner and backing store (6.2) |
+| A process's pages in memory | every valid page, until deleted | its working set, at most its limit (6.3) |
+| Invalid PTE forms | demand zero, section, global | those, and transition and page file (5.7) |
+| Modified pages | written back only when unmapped or by `$UPDSEC` | written by the modified page writer, to their files or the page file (6.5) |
+| Running an image | copied into P0 | mapped: read page by page as it's touched (6.10) |
+| P0LR and P1LR | the tables' full lengths, fixed | the pages that exist; services lengthen and shorten them (6.11) |
+| INITIALIZE/MEMORY's regions | S0 fits in physical memory, every S0 page mapped | sized for processes; only its own layout's S0 pages have frames |
+
+Paging's tuning comes from VMS's SYSGEN parameters. govax has no SYSGEN
+command: each parameter is a configuration key named for it in lowercase
+(`internal/machine/sysgen.go` reads them into a `corevms.Sysgen`, which
+each new `System` gets with `SetSysgen`):
+
+| Key `vax.sysgen.` | Default | What it governs |
+| --- | --- | --- |
+| `minwscnt` | 20 | the smallest working set limit (6.3) |
+| `pql_dwsdefault`, `pql_dwsquota`, `pql_dwsextent` | 294, 588, 16400 | a created process's working set default limit, quota, and extent when its quota list names none; set, they're laid over process 1's account values too (512, 1024, 16400) |
+| `pql_dpgflquota` | 16400 | the same for a job's paging file quota (process 1's account: 40960) (6.7) |
+| `growlim` | 63 | past its quota, a working set grows only while more frames than this are free (6.3) |
+| `tbskipwsl` | 8 | how many pages still in the TB replacement passes over (6.3) |
+| `freelim`, `freegoal` | 32, 200 | the reclaimer wakes below the first and works up to the second (6.6) |
+| `mpw_hilimit`, `mpw_lolimit` | 500, 32 | the modified page writer's thresholds (6.5) |
+| `mpw_wrtcluster` | 120 | the most pages the writer writes at once (6.5) |
+| `paging.file`, `paging.size`, `paging.defer` | the system volume's, 32768, false | the page file: its name, its size in blocks, and whether to wait for the first need to open it (6.5) |
+| `gblsections`, `gblpages`, `gblpagfil` | 128, 4096, 4096 | the global section limits (6.8) |
+| `pfcdefault` | 32 | how many pages a hard fault reads at once (6.9) |
+| `virtualpagecnt` | P0 plus P1's sizes | a new process's P0 and P1 pages together (6.11) |
+
+`paging.enable`, `paging.file`, `paging.size`, and `paging.defer` are
+govax's own; VMS has no parameter for them. A `corevms.Sysgen`'s values
+that start a process off (its working set sizes, its job's quota) are
+copied into the process when it's made, so SET WORKING_SET changes one
+process only.
+
+One choice runs through all of it: govax's paging is **synchronous**. On
+VMS a page read or write is an I/O request, and the faulting process
+waits for it in the scheduler (the PFW state, "page fault wait"); the
+modified page writer and the swapper are processes of their own. In govax
+every page read and write completes inside the operation that needs it,
+and the writer and the reclaimer are Go routines called at the right
+moment. No process ever waits for paging, and nothing a program can see
+depends on how long a disk takes.
+
+### 6.2 The PFN database
+
+VMS keeps a record for every frame of physical memory, indexed by its
+frame number: the *PFN database* (the book's 14.2). govax's is
+`paging.Database` (`internal/paging/database.go`), and with paging on it
+is the frame allocator section 5.1 mentioned (`vm/frames.go`'s
+`pagingFrames`). It's kept entirely in Go: VMS's lives in system memory,
+but nothing a VAX program can do depends on its layout, so govax's is a
+slice of records. Each record, a `paging.Entry`, says:
+
+- **State**: `Active` (in use), `Free` (on the free page list), or
+  `Modified` (on the modified page list).
+- **Type**: a `ProcessPage` (a page of some process's P0 or P1), a
+  `GlobalPage` (a global section's page, 6.8), or a `SystemPage` (one
+  that's never paged).
+- **Owner**, while the frame is *tied* to a virtual page: which page.
+  For a process page, the process's PID and the page's address; for a
+  global page, the section's serial number and the page's offset in it.
+  No two frames of one type have the same owner.
+- **Backing**: where the page's contents come from and go back to. Its
+  `Kind` is `NoBacking`, `PageFile` (with a block, or 0 for "not
+  written yet"), `SectionFile` (a process section table index and the
+  file's block), or `GlobalSection` (a global page table index).
+- **RefCount**, how many reasons there are to keep the frame active (a
+  working set holding the page is one), and for a global page
+  **ShareCount**, how many process PTEs are valid on it.
+- **SavedModify**: the frame's contents differ from its backing store.
+  The modify bit lives in each PTE, and a frame's PTE can come and go;
+  the saved bit collects it, so the frame knows it must be written.
+
+The two lists thread through the database (VMS's FLINK and BLINK arrays,
+here two slices), so a frame can leave from the middle of a list in
+constant time. A frame's life is five moves, each a method:
+
+| Move | From | To | When |
+| --- | --- | --- | --- |
+| `Allocate` | the free list's head | active | a page needs a frame (only the free list gives frames: a modified one must be written first) |
+| `Release` | active | the modified list's tail if its saved modify bit is set, else the free list's tail | the last reason to keep it goes, as when its page leaves a working set |
+| `Reclaim` | either list | active | its page, in transition, is touched again: a soft fault, no I/O |
+| `Cleaned` | the modified list | the free list's tail | the writer has written it |
+| `Delete` | active, or either list | the free list's head | its page is deleted |
+
+A frame `Release` sends to a list *keeps its contents and its tie*, and
+a process page's PTE takes the transition form (5.7), naming the frame
+(a global page's is different, 6.8). Only
+`Delete` unties a frame, and puts it at the head, to be used first, since
+nothing will ever fault it back.
+
+So a frame released waits on the free list as long as it can, behind
+every frame released before it, and the page it holds can be faulted back
+cheaply all that time. When `Allocate` finally reuses it, the frame is
+still tied to its old page, and that page's PTE must stop naming it. The
+database can't do that itself (it knows no PTEs), so it calls a
+`TieBreaker`, which is `corevms.System.BreakTie`
+(`corevms/workingset.go`): it gives the old page's PTE the form that says
+where the page's contents are now (`backingPTE`), a section table index,
+a global page table index, or a page file block, so that the page's next
+touch reads it back. A frame is cleared as it's handed out, unless the
+caller fills it (`vm.FrameClaim.Fill`, for a page read from a file), since
+on these lists frames keep their contents.
+
+Every frame is claimed with a `vm.FrameClaim` saying whose page it is
+(`corevms/frames.go`). Frames that are never paged are system pages, tied
+to nothing: the S0 pages INITIALIZE/MEMORY lays out (`Reserve`, frame
+`n` for S0 page `n`), the S0 pool's pages as the pool hands them out, the
+pages of every process's page tables, and the frames of the P1 system
+service vector, which every process maps (`MakeSystem` turns them into
+system pages once process 1 has made them). So page tables never fault:
+6.12 says how that differs from VMS.
+
+`Database.Check` verifies the database's rules (each list's links agree
+both ways, each frame is in exactly one place, no two tied frames share
+an owner, the counts match), and the tests run it after every operation.
+
+### 6.3 Working sets
+
+A process's working set is the pages it holds valid in its page tables.
+VMS keeps it as a list, the *working set list*, whose length is the
+*working set limit*; govax's is `paging.WorkingSet`
+(`internal/paging/workingset.go`), one per process, made at its first
+use (`Environment.WorkingSet`, `corevms/workingset.go`). Each entry names
+a page by its address and says whether it's a global page; the list
+holds no frames or PTEs.
+
+The list has two parts:
+
+```text
+  entries 0 .. dyn-1      locked pages ($LKWSET, $LCKPAG): never replaced
+  entries dyn .. end      the dynamic part, a circular buffer
+                          next = the entry filled most recently
+                          next+1 (wrapping to dyn) = the oldest page
+```
+
+When a fault brings a page in, the pager calls `WorkingSet.Add` first.
+If the list has an available entry the page may take, it takes it; if
+not, the list *replaces* a page, which then leaves the working set. The
+rules are the book's (15.4), "modified first-in, first-out", and `Add`
+applies them in order, scanning from the oldest entry:
+
+1. **Growth.** An available entry takes the page only if the set holds
+   fewer pages than its limit and either it's below its *quota* or the
+   free list holds more than GROWLIM frames. So a process grows past its
+   quota toward its limit only while memory is plentiful.
+2. **Pages the instruction is using are passed over** (below).
+3. **Pages still in the translation buffer are passed over**, up to
+   TBSKIPWSL of them: a page the TB still holds was used recently, and is
+   worth keeping. Only for the process the CPU is running; the TB holds
+   no one else's pages.
+4. The first entry not passed over is reused, its page removed.
+
+Three sizes bound the list (`paging.Bounds`): the **quota**, WSQUOTA,
+above which growth needs free memory; the **extent**, WSEXTENT, the
+largest the limit may be; and the **minimum**, MINWSCNT, the fewest
+unlocked entries it keeps. The limit itself starts at WSDEFAULT.
+`$ADJWSL` moves it within those bounds (`setWorkingSetLimit`,
+which calls `WorkingSet.Resize`: a smaller limit removes the oldest pages
+over it), image exit puts it back (`resetWorkingSet`, the book's
+MMG$IMGRESET), and DCL's SET WORKING_SET sets the default, quota, and
+extent within what the process is authorized (`setworkingset.go`).
+`$LKWSET` and `$LCKPAG` move a page into the locked part (`Lock`, which
+fails with `SS$_LKWSETFUL` if fewer than MINWSCNT unlocked entries would
+be left), `$ULWSET` and `$ULKPAG` move it back, and `$PURGWS` removes a
+range of pages (`RemoveRange`), all in `corevms/pageprot.go`.
+
+**Instruction safety.** One VAX instruction can touch several pages: a
+MOVC3 has a source and a destination, and a service written in Go may
+translate an address, translate another, then copy between them. If the
+second translation's fault took away the first page's frame, the copy
+would go through a physical address that now holds another page. So `vm`
+remembers which frames have been translated since the current
+instruction began (`Memory.TranslatedThisInstruction`, a generation
+number per frame that `BeginInstruction` moves on), and the working set
+passes over such pages (`wsProtected`). If every page is in use that
+way, as when the image activator touches a hundred pages in one call,
+the list grows past its limit rather than replace one
+(`WorkingSet.Over`), and comes back down at the next instruction
+boundary: `enterWorkingSet` asks `Memory.AtNextInstruction` to call
+`System.atInstructionBoundary`, which trims each such list
+(`trimWorkingSets`).
+
+### 6.4 A fault and an eviction
+
+The pager is still `System.PageIn` (`corevms/filesec.go`), the `vm.Pager`
+of section 5.7, and its order matters:
+
+1. **Enter the working set** (`enterWorkingSet`). If the list is full, a
+   page leaves it now (`evictPage`, below), before a frame is taken, as
+   VMS's pager makes room first: a clean page leaving gives its frame to
+   the free list, where the faulting page may take it.
+2. **Resolve the fault** by the PTE's form (`resolveFault`):
+   - **transition**: a *soft fault* (`softFault`). The frame is still
+     tied to this page, on the free or modified list; `Reclaim` takes it
+     back. No I/O.
+   - **global page table index**: the section's page (6.8).
+   - **process section table index**: read the block from the section's
+     file into a new frame, its backing store that block. A
+     copy-on-reference section's page instead becomes the process's own
+     from this read: its backing store is the page file, and its saved
+     modify bit is set, since its contents now exist only in memory.
+   - **page file block** (not 0): a hard fault that reads the block back.
+   - otherwise **demand zero**: a frame of zeros, backed by the page file
+     and *effectively modified* (`effectivelyModified`), so that whenever
+     it leaves the working set it goes to the modified list, to be saved.
+3. **Count it** (`countFault`): in the process's `Faults`, by kind (free
+   list, modified list, global valid, demand zero, read), and in
+   `JPI$_PAGEFLTS`'s total, and in the system's `PageCounts`.
+4. **On a hard fault, read the neighbors too** (`readCluster`, 6.9).
+
+A fault the pager can't resolve (no frame free, a file that can't be
+read) takes the page back out of the working set and is a real
+translation-not-valid fault; the first such fault with no frame left
+tells the console `%GOVAX-F-MEMEXHAUST`, with why the modified pages
+couldn't make room (`noteFault`).
+
+**Eviction** (`evictPage`) is a page leaving the working set while its
+process keeps it. Its PTE becomes the transition form, keeping the frame
+number, which also empties the page's TB entry; then
+`Database.Release`, with the PTE's modify bit, sends the frame to a list.
+A frame sent to the modified list may make three more things happen: a
+page file block the page held goes back, since the block no longer
+matches (`forgetPageFileBlock`); a read-only image page the debugger
+wrote takes the page file as its backing store, so the change isn't lost
+(`leaveReadOnlySection`); and the modified page writer may wake (6.5). A
+global page leaves differently (6.8).
+
+Here is one page's life, measured on govax with paging on and small
+settings so that everything happens soon: a working set limit of 30,
+MPW_HILIMIT 10, MPW_LOLIMIT 2, MPW_WRTCLUSTER 16, a 1000-block page file.
+A program has an 80-page array in a demand-zero psect, at `00000200`; it
+writes the first page, then the other 79, then reads the first page back
+(every number hexadecimal):
+
+```text
+  before the touch    PTE 21800000   invalid, UW, owner user, frame 0:
+                                     demand zero (made at activation)
+  written             PTE A58000FD   valid, modified, frame FD
+                      frame FD: active, process page of PID 301 at 200,
+                      backing page file block 0, saved modify set
+                      (a demand-zero fault)
+  79 pages later      PTE 218000FD   transition, frame FD
+                      frame FD: on the free list, backing page file
+                      block 9, saved modify clear
+                      (it left the working set for the modified list;
+                      the writer, woken past MPW_HILIMIT, wrote it to
+                      block 9 in a cluster and moved it to the free list)
+  frame FD reused     PTE 25C00009   page file form, block 9
+                      (BreakTie, as Allocate took frame FD for another page)
+  read back           PTE A18000CB   valid, not modified, frame CB
+                      frame CB: backing page file block 9, saved modify
+                      clear (a hard fault: one read)
+```
+
+Had the program touched the page between "79 pages later" and the
+frame's reuse, the fault would have been soft: frame FD back off the
+free list, no read. And the read back is clean: if the page leaves the
+working set unmodified, its frame goes to the free list, since block 9
+still holds its contents.
+
+### 6.5 The modified page writer and the page file
+
+A frame on the modified list can't be reused until it's written. VMS's
+*modified page writer* writes them (the book's 15.5.2); govax's is
+`corevms/mpw.go`. It wakes when the list holds more than MPW_HILIMIT
+frames (`wakeModifiedPageWriter`, called by `evictPage` and the global
+page's equivalent) and writes, oldest first, down to a cluster below
+MPW_HILIMIT, never below MPW_LOLIMIT (`mpwGoal`). That stopping point is
+VMS 7.1's as a probe measured it (`testdata/pg64`): the book and the
+SYSGEN manual say the writer writes down to MPW_LOLIMIT, but the VAX
+stopped one cluster below where it woke. Writing for the reclaimer (6.6)
+goes down to MPW_LOLIMIT. Each frame written moves to the free list
+(`Cleaned`), still holding its page.
+
+Where a frame goes depends on its backing store:
+
+- a **writable private file section**'s page (`$CRMPSC` with `SEC$M_WRT`,
+  not copy-on-reference): back to its block of the file
+  (`writeSectionCluster`);
+- a **writable global file section**'s page: back to its block of the
+  section's file (`writeGlobalCluster`);
+- **everything else**, a demand-zero page, a private copy of a
+  copy-on-reference page, a page-file section's page: to the **page
+  file**, to a block allocated as it's written (`writePageFileCluster`).
+  The block becomes the frame's backing store, and the PTE's when the
+  frame is reused.
+
+**Clusters.** One write takes up to MPW_WRTCLUSTER pages (the book's
+15.5.2.2): a frame from the list, with its neighbors in the process's page
+table, first below it, then above, as long as each is in transition in a
+frame waiting on the modified list bound for the same place (a
+*minicluster*, `miniCluster`). For the page file the writer first
+allocates a run of blocks and fills it with as many miniclusters as fit,
+taking each next one from the next frame on the list; blocks left over go
+back.
+
+**The page file** (`corevms/pagefile.go`) is a file of
+`vax.sysgen.paging.size` blocks, one page per block: the file
+`vax.sysgen.paging.file` names, on a mounted volume or the host, or with
+none named the system volume's `[SYSTEM.SYSEXE]PAGEFILE.SYS`, VMS's
+`SYS$SYSTEM:PAGEFILE.SYS` (`pageFileName`). As on VMS it's installed when
+the system starts (`InstallPageFile`, which the console calls once
+STARTUP.COM has run): created if missing, made the configured size if it
+isn't, and held so no one else may read or write it, which also keeps its
+volume from being dismounted. With `paging.defer` it's opened instead at
+the writer's first need. Either way it's opened only at an instruction
+boundary (`openWantedPageFile`), never inside a fault: creating a file
+changes a volume's bitmap and directory, which an RMS service the fault
+interrupted may be changing too. Its blocks are read and written straight
+through the volume (`rms.PageFileStore`), never through RMS's record
+layer, and never extend the file, so that a page fault in the middle of
+an RMS call can use it.
+
+Which blocks are in use is `paging.PageFileMap`
+(`internal/paging/pagefile.go`), a bitmap kept in Go and empty each
+session, with the book's allocation rule (14.5): the writer asks for a run
+of contiguous blocks, at most the current *allocation size* (MPW_WRTCLUSTER
+to begin with); the map takes the first free run that long from the
+file's start, and when there's none, drops the size by 16 and looks again;
+at 16 it takes the first free run however short. Freeing blocks that
+leave a run long enough grows the size back by 8. When the file first
+passes 65% and 90% full the console is told, `%SYSTEM-W-PAGEFRAG` and
+`%SYSTEM-W-PAGECRIT`, as VMS tells the operator.
+
+A page's block goes back when the page is deleted (`releasePageFileBlock`,
+from `releasePTE`) or when it's written again after being read back
+(`forgetPageFileBlock`, 6.4).
+
+A page bound for the page file when there is none, or when it's full,
+stays on the modified list until it's faulted back or deleted. VMS's
+writer would wait for space; govax's tells the console once
+(`%GOVAX-W-PAGEFILEFULL`) and remembers how many frames it couldn't write
+(`mpwStuck`), so that it wakes again only when the list is that much past
+MPW_HILIMIT, rather than walking the list in vain at every eviction.
+
+### 6.6 The reclaimer
+
+Every new page takes a frame from the free list, and pages leaving
+working sets give frames back only when their contents are safe. If
+processes keep their pages, the list runs down. On VMS the swapper
+watches it: when the pager leaves fewer than FREELIM frames free, the
+swapper wakes and works to bring the list back to FREEGOAL (the book's
+17.1.1). govax's *reclaimer* (`corevms/reclaim.go`) does two of the
+swapper's four things:
+
+1. write modified pages down to MPW_LOLIMIT, so their frames move to the
+   free list (`reclaimWrite`);
+2. trim working sets: each process whose set holds more pages than its
+   quota, which it grew past while memory was plentiful, loses its oldest
+   pages down to the quota (`trimToQuota`, `WorkingSet.Shrink`), in the
+   order of the book's selection table: suspended processes first, then
+   those waiting for an event flag or hibernating, the computable ones
+   last, and the process the CPU is running last of all
+   (`reclaimOrder`);
+
+then writes again, stopping whenever the free list reaches FREEGOAL. The
+other two, outswapping process headers and whole processes, need a
+swapper govax doesn't have.
+
+The frame allocator wakes it (`vm.Memory.SetFreeLimit`): an allocation
+that leaves fewer than FREELIM frames free calls `wakeReclaimer`, as does
+a soft fault that takes a frame off the free list. It doesn't run there,
+in the middle of a fault, but at the next instruction boundary, through
+`Memory.AtNextInstruction`, where nothing is half-translated. One routine
+serves the boundary for everything the pager defers:
+`atInstructionBoundary` trims working sets left over their limits, opens
+a wanted page file, and runs the reclaimer if the free list is low.
+
+### 6.7 The paging file quota
+
+A page whose contents may one day have to go to the page file (a
+demand-zero page, a private copy of a copy-on-reference page) is charged
+against its job's PGFLQUOTA when it's *created*, not when it's touched
+(the book's 16.2.1.1), and the charge is given back when it's deleted
+(`corevms/pgflquota.go`). The quota is pooled: every process of a job
+draws on one count, `$GETJPI`'s `JPI$_PAGFILCNT` being what's left. A
+service that creates pages (`$CRETVA`, `$EXPREG`, the heap's growth of
+P0) creates them one at a time, charging each, and stops with
+`SS$_EXQUOTA` when the quota runs out, keeping the pages before it. A
+copy-on-reference section's pages are charged when they're mapped, an
+image's writable and demand-zero sections and its user stack when it's
+activated (6.10). Since every page that can hold contents only memory
+holds is made one of these ways, a fault never charges.
+
+govax keeps each process's charged pages as a set by address, so no page
+is charged twice, and the job's total (`Job.PageFileCharged`). Image
+rundown and `$DELTVA` refund through `releasePTE`, a process's deletion
+refunds the rest (`refundAllPageFile`), and the most a process has had
+charged is its peak, LOGOUT/FULL's "Peak page file size". With paging
+off, nothing is charged.
+
+### 6.8 Global sections under the pager
+
+A global section is pages several processes map together (section 7 has
+the services). With paging on, a page of a global file section, or of a
+page-file section, is in one of three states, which the section's entry
+in govax's global page table records (`corevms/globalpages.go`; the
+book's 14.3.3):
+
+- **valid**, in one or more processes' working sets: its frame is
+  active, its share count the number of process PTEs valid on it;
+- **in transition**: no working set holds it, but its frame is on the
+  free or modified list, tied to the *global* page;
+- **out**: no frame. Its contents are in its block of the section's file,
+  or for a page-file section in a page file block, or nowhere yet: a
+  page-file section's page never written is a global demand-zero page.
+
+A process PTE for a global page holds the global page table index (GPTX)
+until the process faults it, and then the frame, valid. When the page
+leaves that process's working set its PTE gets the GPTX back, never a
+transition form, since the frame isn't the process's; the process's
+share goes (`Unshare`), its modify bit gathered into the frame's saved
+modify bit, and the last share's going sends the frame to a list
+(`evictGlobalPage`). So every fault on a global page comes through its
+GPTX (`pageInSharedGlobal`): one valid elsewhere is a soft *global valid*
+fault that adds a share; one in transition is a soft fault off its list;
+one out is a hard fault, or for a page-file section's unwritten page a
+demand-zero one. A copy-on-reference global section's fault gives the
+process a private copy instead (6.4).
+
+When a global page's frame is reused, its tie is broken in the global
+page table (`loseGlobalFrame`); no process PTE changes, since none names
+the frame. The writer writes a global file section's modified frames to
+the file, a cluster of the section's successive pages at a time, and a
+page-file section's to the page file. `$UPDSEC` follows the global page
+table too: with UPDFLG 0 it writes every page of the section that has a
+frame, modified or not, as VMS 7.1 did, and with UPDFLG 1 only the
+modified ones (`updateGlobalPage`).
+
+A page-file section made with paging on has no frames when it's made;
+its pages count against GBLPAGFIL rather than the creator's quota. Every
+section uses GBLPAGES at a page per page plus 2, rounded up to an even
+number, and GBLSECTIONS one slot, in both paging modes. A deleted
+page-file or copy-on-reference section leaves the name table at once but
+keeps its entries, frames, and blocks on a pending list until the next
+global section is created or an image runs down
+(`ReleasePendingSections`), as VMS 7.1 was seen to hold them
+(`testdata/pg65`).
+
+### 6.9 Reading more than one page
+
+Most of a disk read's cost is starting it, and programs tend to touch the
+pages next to the one they just touched. So after a hard fault the pager
+reads some neighbors with it, each put in the working set, valid
+(`corevms/cluster.go`; the book's 15.5.1):
+
+- **The scan.** Up from the faulting page first, adding each page in the
+  same backing store, until the cluster is full or a page doesn't match;
+  only if that added nothing, down by the same rule.
+- **What matches.** A private section's page: a PTE holding the same
+  process section table index. A page file page: a PTE holding the next
+  block (the one before, scanning down). A global page: the next GPTX of
+  the same section, for a page that's out.
+- **How many.** The section's own cluster size (`$CRMPSC`'s pfc
+  argument, or for an image section LINK's `CLUSTER=` option), or when
+  that's 0, PFCDEFAULT; for the page file and page-file sections,
+  PFCDEFAULT. The count includes the faulting page, and is at most 127.
+- **Where it stops early**: a neighbor needs an available working set
+  entry it may take by the growth rules (`WorkingSet.AddAvailable`); the
+  cluster never takes a page out to make room. Nor does it read with no
+  free frame.
+
+So clustering helps a process whose working set has room. In 6.4's
+example, the read back of the first page read nothing more, though its
+three neighbors' PTEs held blocks A, B, and C: the working set was full.
+
+A cluster is one fault: `JPI$_PAGEFLTS` counts one, `PageCounts.Faults.Read`
+one read, and `PageCounts.PagesRead` every page read.
+
+### 6.10 Images mapped, not copied
+
+With paging off, RUN copies an image's sections into P0. With paging on
+the image activator maps it, as VMS's does (the book's 21.1.1.3;
+`machine/imagemap.go`'s `imageMap`):
+
+- The image file is opened as a *page source*
+  (`corevms/pagesource.go`): a volume file accessed through RMS with
+  sharing for readers only (`rms.ACPFile`), or a host file
+  (`HostPageSource`). It's held while any of its pages is mapped, so a
+  program that tries to write a running image's file gets `RMS$_FLK`.
+- The header is decoded in Go (`vmsimage.ReadImage`) and never written to
+  P0.
+- Each process-private section descriptor (ISD) becomes a private
+  section of the image file (`Environment.MapImageSection`,
+  `corevms/imagesec.go`), its PTEs holding the section's index. A
+  writable section is copy-on-reference, charged against the quota as
+  it's mapped; a read-only one stays backed by the file. An image
+  section never writes back to the image file, and a block past the
+  file's end reads as zeros (`zeroPastEnd`).
+- Each demand-zero ISD becomes demand-zero pages
+  (`CreateImagePages`), charged as `$CRETVA`'s are.
+- The user stack is created below `UserStackTop` from the image's stack
+  ISD, LINK's `STACK=` option, 20 pages by default
+  (`CreateUserStack`, 6.11).
+- The fixups run next, faulting in the pages they read and write; then
+  each section gets its own protection, whatever form its PTEs are in.
+
+Nothing else is read: a page of the image comes in when the program
+touches it. Shareable images the main image names are mapped the same
+way, privately to the process, at P0's high-water mark.
+
+Image rundown (`Environment.DeleteP0`, `corevms/vaspace.go`) deletes
+every P0 page, each frame released as `$DELTVA` releases it, and the P1
+pages the image added (`deleteImageP1`), including the user stack but for
+its live part. The sections go with their last pages, and the image file
+with its last section. The working set limit goes back to its default
+(`resetWorkingSet`), and global sections the rundown left pending are
+released.
+
+### 6.11 Address space that exists only where it's made
+
+With paging off, P0LR and P1LR are set once, to the page tables' whole
+lengths, and every page in them exists. With paging on, as on VMS, they
+describe the pages that *exist* (the book's 14.1.1 and 16.2;
+`corevms/regions.go`): P0LR is the number of P0 pages from page 0 up, and
+P1LR the lowest P1 page. A process starts with no P0 pages at all, and a
+P1 whose length reaches from `UserStackTop` (`7FE00000`) to the top, of
+which only the pages from the P1 vector up exist. Touching a page past either
+region's end is a length violation, an access violation with the reason
+mask's length bit set.
+
+The services that create pages, `$CRETVA`, `$EXPREG`, `$CRMPSC`, the
+image activator, the heap's page pool, lengthen a region to cover each
+page before writing its PTE (`coverPage`, `setRegionLength`); those that
+delete a region's end pages, `$DELTVA`, `$CNTREG`, image rundown, shorten
+it after (`contractRegions`). `setRegionLength` keeps the length in three
+places: the process's `ProcessSpace`, the CPU's register while it's
+current, and its hardware PCB's (which the next LDPCTX loads) while it
+isn't. A page inside a region that nothing created has the all-zero PTE,
+no access. `$GETJPI` reports the results as VMS does: `JPI$_FREP0VA`, the
+first address past P0; `JPI$_FREP1VA`, the page below P1's low end;
+`JPI$_FREPTECNT`, how many more pages the tables can describe; and
+`JPI$_VIRTPEAK`, the most pages the process has had.
+
+**The table area.** Each process's page tables are one *table area* in S0
+(section 5.6), VIRTUALPAGECNT entries: P0's table from its bottom up,
+P1's from its top down, so either region can grow into the room between.
+Past that room is `SS$_VASFULL`. Process 1's area, at INITIALIZE/MEMORY's
+paging defaults (P0 19456 pages, P1 5120), is 192 pages; a small image
+needs perhaps 33 of them. So an area page has a frame only while it holds
+an entry of a page that exists (`corevms/tablearea.go`):
+`setRegionLength` backs the area pages a growing region reaches *before*
+the length register lets the hardware read them, and gives back those a
+shrinking region leaves *after*. An area page without a frame has the
+all-zero S0 PTE, so a stray reference to it is an access violation, not
+a fault. The S0 pool works the same way: a pool page gets a frame when
+the pool hands it out, and gives it back when it's freed.
+
+**The user stack** is the image's, as on VMS (`corevms/userstack.go`).
+Activation creates its pages; when a program pushes past them, the access
+just below P1's low end is a length violation, which `vm` offers to the
+*stack expander* first (section 5.7's `SetStackExpander`).
+`System.expandUserStack` creates the pages from P1's low end down to the
+address (`expandStack`, the book's EXE$EXPANDSTK), each charged against
+the quota, and the access goes on. Only a user-mode access expands the
+stack, and only a real one: PROBEs and Go code that mustn't
+(`ProbeTranslate`) don't. Nothing else limits it but the table area's
+room and the quota, as on VMS: a stray user-mode reference far below the
+stack creates pages rather than failing. One check stops that from
+wasting the room P0 needs: a P1 creation the table area can't hold
+whole creates nothing (`spaceHolds`), as VMS 7.1 answered.
+`$ADJSTK` of the user stack expands it the same way.
+
+INITIALIZE/MEMORY with paging on makes process 1's tables this way too:
+P0LR 0, P1LR `UserStackTop`'s page, and `/P1` must be at least 4116
+pages (the 4096 from `UserStackTop` to the top, and a 20-page stack), or
+it fails with `P1TOOSMALL`. The console's DEPOSIT and ASM create the
+process 1 pages they write (`Environment.EnsurePages`).
+
+### 6.12 What govax's paging leaves out
+
+What's here is VMS's paging as the book describes it and a VMS 7.1 VAX
+showed it, but not all of it. A program could notice these:
+
+- **Paging is synchronous** (6.1). No process enters VMS's page fault
+  wait (PFW), collided page (COLPG), free page wait (FPG), or the
+  modified page writer's waits (RWMPE, RWMPB). A full page file or
+  exhausted memory fails a fault rather than making the process wait.
+- **No swapper.** Processes are never outswapped, nor their process
+  headers; the reclaimer only writes and trims (6.6).
+- **No permanent part of the working set.** VMS's working set list holds
+  the process header's pages, the page tables, and the kernel stack;
+  govax's tables and stacks are system pages, never in a working set, so
+  its working sets hold fewer pages than VMS's, and MINWSCNT is the
+  floor where VMS's is higher. The probes' expected differences are
+  mostly this.
+- **Page tables are never paged**, and a table page with no frame is no
+  access, not a fault.
+- **No automatic working set adjustment.** VMS grows and shrinks a
+  process's limit by its fault rate (PFRATL, PFRATH, WSINC, WSDEC);
+  govax's moves only by `$ADJWSL`, image exit, and SET WORKING_SET.
+- **One page file**, and no swap file.
+- **Shareable images aren't installed** as global sections shared between
+  processes; each process maps its own copy (6.10).
+- **The PFN database, the working set lists, and the page file's map are
+  in Go**, not in VAX memory, so a privileged program reading VMS's
+  structures directly would find nothing there.
+- **A fault completes the access** (section 5.7), with paging on as with
+  it off; the counts a program can see are VMS's.
 
 ## 7. Processes
 

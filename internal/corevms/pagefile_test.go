@@ -373,3 +373,48 @@ func TestInstallPageFileCantGrow(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestDefaultPageFileWanted: with no page file named, the system volume's
+// default is the one the pager wants and opens at its first need (with
+// vax.sysgen.paging.defer, nothing else opens it), and JPI$_PAGFILLOC
+// names it. Both once looked only at the configured name.
+func TestDefaultPageFileWanted(t *testing.T) {
+	env, out := pagingFixture("", 64)
+	env.mem.SetPaging(true)
+	newMountedVolumeFixture(t, env)
+
+	if _, err := rms.NewSession(env.Mounts).CreateDirectory("DUA0:[SYSTEM.SYSEXE]", rms.CreateDirectoryOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if env.pageFileWanted() || env.pageFileLocation() != 0 {
+		t.Fatal("a page file wanted with no system volume and none named")
+	}
+
+	env.Mounts.SetSystem("DUA0")
+
+	if !env.pageFileWanted() {
+		t.Fatal("the system volume's default page file isn't wanted")
+	}
+
+	if got := env.pageFileLocation(); got != pageFileIndex<<24 {
+		t.Errorf("JPI$_PAGFILLOC = %#x, want %#x", got, pageFileIndex<<24)
+	}
+
+	pf := env.OpenPageFile()
+	if pf == nil {
+		t.Fatalf("OpenPageFile failed: %q", out)
+	}
+
+	if !strings.HasSuffix(pf.Name(), "[SYSTEM.SYSEXE]PAGEFILE.SYS;1") {
+		t.Errorf("page file %s, want the system volume's default", pf.Name())
+	}
+
+	if env.pageFileWanted() {
+		t.Error("the page file is still wanted once open")
+	}
+
+	if err := env.ClosePageFile(); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -139,9 +139,10 @@ func (sys *System) mpwGoal() int {
 }
 
 // pageFileWanted reports whether the page file is configured but hasn't
-// been opened yet (pagefile.go).
+// been opened yet (pagefile.go): one vax.sysgen.paging.file names, or
+// the system volume's default.
 func (sys *System) pageFileWanted() bool {
-	return sys.pageFileState == pageFileUnopened && sys.Sysgen.Paging && sys.Sysgen.PageFileName != ""
+	return sys.pageFileState == pageFileUnopened && sys.pageFileConfigured()
 }
 
 // openWantedPageFile opens the page file if it's wanted and the modified

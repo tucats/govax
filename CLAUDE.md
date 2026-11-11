@@ -809,8 +809,9 @@ never had.
   part: Part A is `docs/VAX-VMS-INTERNALS.md` (subtask 1, 2026-11-11: the
   plan, the outline, and sections 0 to 3; subtask 2, 2026-11-11, section
   4, the instruction set; subtask 3, 2026-11-11, section 5, memory;
-  sections 6 to 12 are subtasks 4 to 10; Decision 6, bugs the writing
-  finds are fixed in the same subtask).
+  subtask 4, 2026-11-11, section 6, VMS paging; sections 7 to 12 are
+  subtasks 5 to 10; Decision 6, bugs the writing finds are fixed in the
+  same subtask).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
