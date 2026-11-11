@@ -30,12 +30,23 @@ const (
 func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 	var tokens []Token
 
+	// text is the squeezed statement (blanks gone, letters capitals), and
+	// lit[i] says whether text[i] is inside a constant, where an = or a
+	// period is just a character. See squeeze.go.
 	text, lit := l.sq.text, l.sq.lit
 
+	// add appends one token. It's a closure: a function literal that can
+	// use tokens and l from the function around it. from is the token's
+	// index in the squeezed text, which l.offset turns back into its place
+	// in the original statement, for messages.
 	add := func(kind TokenKind, from int, s string) {
 		tokens = append(tokens, Token{Kind: kind, Text: s, Offset: l.offset(from)})
 	}
 
+	// One token per turn: look at the first character, which says what
+	// kind of token starts here, and let that case move i past it. A
+	// switch with no value after the word switch tries each case's
+	// condition in order, like a chain of if ... else if.
 	for i < j {
 		c := text[i]
 
@@ -53,11 +64,16 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 			i = k
 
 		case isDigit(c), c == '.' && i+1 < j && isDigit(text[i+1]):
+			// A number, including one starting with a decimal point (.5).
+			// plain says it must be digits only: a DO statement's label, or
+			// a type length after *.
 			plain := mode == modeLabel && len(tokens) == 0 ||
 				mode == modeLengths && afterLengthStar(tokens)
 			i = l.number(&tokens, i, j, plain)
 
 		case c == '.':
+			// FORTRAN's operators and logical constants that are words
+			// between periods: .EQ., .AND., .TRUE., and the rest.
 			if word, kind, end := l.dotted(i, j); word != "" {
 				add(kind, i, "."+word+".")
 				i = end
@@ -91,6 +107,9 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 			i++
 
 		default:
+			// Report the character and skip it, so the rest of the
+			// statement still gets tokens and the later passes can look
+			// for more errors.
 			l.messages.Report("BADCHAR", l.src.Position(l.offset(i)), string(c))
 			i++
 		}
@@ -105,6 +124,9 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 // (REAL*8, X*4, FUNCTION F*8, CHARACTER A(10)*8).
 func afterLengthStar(tokens []Token) bool {
 	n := len(tokens)
+
+	// The token just before must be the *; and the one before it (if
+	// any) says whether the * is a length's or a multiplication's.
 	if n == 0 || !tokens[n-1].Is("*") {
 		return false
 	}
@@ -116,6 +138,11 @@ func afterLengthStar(tokens []Token) bool {
 // and returns where the text after it starts. An apostrophe doubled inside
 // the constant is one apostrophe of its value. A constant followed at
 // once by X or O is a hexadecimal or octal constant ('1F'X).
+//
+// tokens is a pointer to the caller's slice because append may have to
+// move a slice to a bigger array, giving back a new slice header. Writing
+// *tokens = append(*tokens, ...) puts that new header back in the
+// caller's variable, so the caller sees the token.
 func (l *lexer) character(tokens *[]Token, i, j int) int {
 	text, lit := l.sq.text, l.sq.lit
 
@@ -143,6 +170,10 @@ func (l *lexer) character(tokens *[]Token, i, j int) int {
 
 	tok := Token{Kind: CharConst, Text: string(value), Offset: l.offset(i)}
 
+	// '1F'X and '17'O are VAX FORTRAN's typeless constants: bits written
+	// in hexadecimal or octal, which take on the type of whatever they are
+	// used with. The X or O must not begin a longer name ('A'XYZ isn't
+	// one), hence the check of the character after it.
 	if k < j && !lit[k] && (text[k] == 'X' || text[k] == 'O') && (k+1 == j || !isNameChar(text[k+1])) {
 		tok.Kind, tok.Radix = TypelessConst, 16
 
@@ -169,12 +200,15 @@ func (l *lexer) character(tokens *[]Token, i, j int) int {
 func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 	text, lit := l.sq.text, l.sq.lit
 
+	// k runs over the leading digits; text[i:k] is them.
 	k := i
 	for k < j && isDigit(text[k]) && !lit[k] {
 		k++
 	}
 
-	// nH: a Hollerith constant, which squeeze marked.
+	// nH: a Hollerith constant, which squeeze marked. 5HHELLO is the five
+	// characters after the H. min keeps a count too large for the text
+	// from running past the end (squeeze has reported that already).
 	if k > i && k < j && lit[k] && text[k] == 'H' {
 		n, _ := strconv.Atoi(string(text[i:k]))
 		end := min(k+1+n, j)
@@ -183,7 +217,9 @@ func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 		return end
 	}
 
-	// nR: a RADIX-50 constant, which squeeze marked too.
+	// nR: a RADIX-50 constant, which squeeze marked too. RADIX-50 is a DEC
+	// code packing three characters from a 40-character set into 16 bits
+	// (40 is 50 in octal, hence the name).
 	if k > i && k < j && lit[k] && text[k] == 'R' {
 		n, _ := strconv.Atoi(string(text[i:k]))
 		end := min(k+1+n, j)
@@ -194,6 +230,9 @@ func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 
 	kind := IntegerConst
 
+	// Otherwise it's an integer, unless a decimal point or an exponent
+	// makes it a real. E is REAL*4's exponent letter, D REAL*8's, and Q
+	// REAL*16's: 1.5D0 is the REAL*8 value 1.5.
 	if !plain {
 		if k < j && text[k] == '.' && !lit[k] {
 			if word, _, _ := l.dotted(k, j); word == "" {
@@ -212,6 +251,9 @@ func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 				m++
 			}
 
+			// Only a letter followed by digits is an exponent: in 2EQ the
+			// E starts a name. The for loop with an empty body just moves
+			// k past the exponent's digits.
 			if m < j && isDigit(text[m]) {
 				kind = RealConst
 
@@ -243,8 +285,12 @@ func (l *lexer) dotted(i, j int) (string, TokenKind, int) {
 
 	word := string(text[i+1 : k])
 
+	// dotted (the map in kinds.go, not this method) has every word that
+	// may stand between periods. A letter run that isn't one (.X.) means
+	// the first period is something else, such as a decimal point.
 	kind, ok := dotted[word]
 	if !ok {
+
 		return "", 0, 0
 	}
 

@@ -63,28 +63,41 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 		count    int
 	)
 
+	// keep adds one character to the squeezed text, with where it came
+	// from and whether it's inside a constant. The three slices grow
+	// together, so index n of each is about the same character.
 	keep := func(c byte, at int, lit bool) {
 		s.text = append(s.text, c)
 		s.at = append(s.at, at)
 		s.lit = append(s.lit, lit)
 	}
 
+	// note records the last character kept outside a constant, which the
+	// rules for apostrophes and Hollerith counts look back at.
 	note := func(c byte) {
 		last = c
 		counting = false
 	}
 
+	// One character per turn. The loop is a small state machine: the
+	// variables above say whether we're inside a quoted constant, inside a
+	// Hollerith constant's text, or reading digits that may be a count, and
+	// each case either handles the character and continues the loop, or
+	// falls out of the switch to the common code at the bottom, which keeps
+	// it as an ordinary character in capitals.
 	for i := 0; i < len(text); i++ {
 		c := text[i]
 
 		switch {
 		case hollerith > 0:
+			// Inside 5HHELLO's HELLO: kept as is, blanks and case and all.
 			keep(c, i, true)
 			hollerith--
 
 			continue
 
 		case quoted:
+			// Inside 'text': kept as is, until the closing apostrophe.
 			keep(c, i, true)
 
 			if c == '\'' {
@@ -95,6 +108,7 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 			continue
 
 		case c == ' ' || c == '\t':
+			// Outside constants, blanks are dropped: the point of squeezing.
 			continue
 
 		case c == '\'':
@@ -109,6 +123,10 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 			continue
 
 		case c >= '0' && c <= '9':
+			// Digits may be an ordinary number, or a Hollerith count if an
+			// H follows. Whether a count can stand here depends on what came
+			// before (source.CountMayFollow): in X = 5HABCDE it can, but in
+			// DO 5 H = 1, 2 the 5 is a label and H a variable.
 			switch {
 			case counting:
 				count = min(count*10+int(c-'0'), maxHollerith)
@@ -126,6 +144,9 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 			}
 
 		case (c == 'H' || c == 'h' || c == 'R' || c == 'r') && counting && count > 0:
+			// The H (or R) after a count: the next count characters are the
+			// constant's text.
+
 			c = upper(c)
 			keep(c, i, true)
 			hollerith, hollAt, hollCount, radix = count, countAt, count, c == 'R'

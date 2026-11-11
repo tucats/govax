@@ -42,6 +42,9 @@ type includeSpec struct {
 func readIncludeSpec(text string) includeSpec {
 	spec := includeSpec{name: strings.TrimSpace(text)}
 
+	// A trailing /LIST or /NOLIST is a qualifier, not part of the name. Any
+	// other text after the last slash is left alone: it's part of a file
+	// name the opener will judge.
 	if slash := strings.LastIndexByte(spec.name, '/'); slash >= 0 {
 		switch strings.ToUpper(strings.TrimSpace(spec.name[slash+1:])) {
 		case "LIST":
@@ -65,6 +68,9 @@ func readIncludeSpec(text string) includeSpec {
 // string says. A statement that starts like one but isn't one in full is
 // reported as an error and dropped: its spec's name is empty.
 func (r *reader) include(s *Statement) (includeSpec, bool) {
+	// The statement's text here still has its blanks (the lexer, which
+	// takes them out, hasn't run yet), so the keyword is matched with
+	// blanks skipped.
 	keyword, rest := squeezeKeyword(s.Text, "INCLUDE")
 	if keyword < 0 || !strings.HasPrefix(s.Text[rest:], "'") {
 		return includeSpec{}, false
@@ -110,6 +116,8 @@ func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, line *Li
 		return
 	}
 
+	// The opener is told which file the INCLUDE is in, so that a file
+	// named without a directory can be looked for beside it.
 	from := r.program.Lines[s.First].File
 
 	var (
@@ -130,6 +138,10 @@ func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, line *Li
 		return
 	}
 
+	// Read the included file now, so that its lines and statements land
+	// in the program just after the INCLUDE's, where they belong. This is
+	// a recursive call: readFile may come back here for an INCLUDE inside
+	// the included file, which MaxIncludeDepth bounds above.
 	r.readFile(file, depth+1, line.Listed && spec.list, line.Library || spec.isModule)
 }
 
@@ -137,6 +149,7 @@ func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, line *Li
 // case: it returns the index of the keyword's first character and the
 // index just past its last, or -1 if text doesn't start with it.
 func squeezeKeyword(text, keyword string) (int, int) {
+	// k counts how many of the keyword's letters have matched so far.
 	start, k := -1, 0
 
 	for i := 0; i < len(text); i++ {
@@ -149,6 +162,10 @@ func squeezeKeyword(text, keyword string) (int, int) {
 			return start, i
 		}
 
+		// In ASCII a capital and a small letter differ only in the bit
+		// 0x20 ('A' is 0x41, 'a' 0x61), so setting that bit on both
+		// compares letters without regard to case. The keyword is all
+		// letters, so no other character can match by accident.
 		if c|0x20 != keyword[k]|0x20 {
 			return -1, 0
 		}
@@ -181,7 +198,10 @@ func characterConstant(text string, start int) (value string, end int, ok bool) 
 			continue
 		}
 
+		// FORTRAN writes an apostrophe inside a quoted string as two:
+		// 'DON''T' is DON'T.
 		if i+1 < len(text) && text[i+1] == '\'' {
+
 			b.WriteByte('\'')
 			i++
 

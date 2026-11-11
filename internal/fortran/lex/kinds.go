@@ -11,7 +11,10 @@ import "sort"
 // READ statement is not implemented yet") rather than as a syntax error.
 type Kind int
 
-// The kinds of statement.
+// The kinds of statement. iota is Go's counter for a const block: it is 0
+// on the first line and one more on each line after, so every kind gets
+// its own number without our writing them. A line with only a name
+// repeats the line before's type and expression (Kind = iota).
 const (
 	// Unknown is text the lexer can't take for any statement.
 	Unknown Kind = iota
@@ -104,6 +107,8 @@ const (
 	Volatile
 	Write
 
+	// numKinds isn't a kind: being last, its value is the number of kinds
+	// before it, which sizes the kinds table below.
 	numKinds
 )
 
@@ -127,8 +132,13 @@ type kindInfo struct {
 	typeKeyword bool
 }
 
-// kinds describes each kind.
+// kinds describes each kind. It's an array, not a slice, of exactly
+// numKinds entries, written as a keyed literal: each Kind before a colon is
+// the index its entry goes at. So the entries may be in any order, and a
+// kind added to the const block above without an entry here gets the zero
+// kindInfo, which a test catches by its empty name.
 var kinds = [numKinds]kindInfo{
+
 	Unknown:      {name: "unrecognized statement"},
 	Empty:        {name: "empty statement"},
 	Assignment:   {name: "assignment", executable: true},
@@ -235,6 +245,10 @@ func (k Kind) TypeKeyword() bool {
 // END IF would be END followed by IF. The IF statements, DO and DO WHILE
 // (DO's tests come before this table's), and kinds with no keyword are
 // left out.
+//
+// It's computed once, when the package is loaded: the value of the
+// variable is a function literal that's called at once (note the () after
+// its closing brace).
 var byKeyword = func() []Kind {
 	var list []Kind
 
@@ -247,7 +261,10 @@ var byKeyword = func() []Kind {
 		list = append(list, k)
 	}
 
+	// SliceStable sorts with the function given as "less than"; being
+	// stable, it keeps keywords of the same length in the table's order.
 	sort.SliceStable(list, func(i, j int) bool {
+
 		return len(kinds[list[i]].keyword) > len(kinds[list[j]].keyword)
 	})
 

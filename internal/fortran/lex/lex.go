@@ -192,7 +192,10 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 	}
 
 	// An = outside parentheses: an assignment, or a DO statement if a
-	// comma follows the = outside parentheses too. (OPTIONS
+	// comma follows the = outside parentheses too. This is FORTRAN's famous
+	// trap: DO 10 I = 1,5 is a DO loop, but DO 10 I = 1.5, with a period
+	// for the comma, squeezes to DO10I=1.5, an assignment to a variable
+	// named DO10I. Only the comma tells them apart. (OPTIONS
 	// /CHECK=ALL has one, but no assignment's target is followed by a
 	// slash.)
 	if eq := l.findLevel0(i, j, '='); eq >= 0 && !l.hasPrefix(i, j, "OPTIONS/") {
@@ -230,7 +233,10 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		}
 	}
 
-	// A keyword statement: the longest keyword the text starts with.
+	// A keyword statement: the longest keyword the text starts with. The
+	// text has no = at level 0 here (the test above took those), so it
+	// can't be an assignment to a variable whose name starts like a
+	// keyword; whatever it starts with is the keyword.
 	for _, k := range byKeyword {
 		kw := kinds[k].keyword
 		if !l.hasPrefix(i, j, kw) {
@@ -259,6 +265,8 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 	// DO WHILE, and a DO statement too broken for the = test (DO 10 I
 	// 1, 5), which the parser reports.
 	if l.hasPrefix(i, j, "DO") {
+		// Skip the optional label and comma (DO 10, WHILE (...)) to see
+		// whether WHILE( follows.
 		p := i + 2
 		for p < j && isDigit(l.sq.text[p]) {
 			p++
@@ -325,6 +333,10 @@ func (l *lexer) ifStatement(st *Statement, elseIf bool, open, close, j int) *Sta
 		st.Tokens = append(st.Tokens, l.tokenize(rest, j, modeNone)...)
 
 	default:
+		// A logical IF: IF (e) st, where st is any other executable
+		// statement. Classify st on its own, a recursive call, and hang it
+		// on the IF as Then.
+		//
 		// The IF is the unit's first executable statement if nothing
 		// before it was, so what it executes is past the specification
 		// part.
@@ -457,6 +469,8 @@ func (l *lexer) isWord(i, j int, word string) bool {
 // open, before j, or -1 if none does. Parentheses in constants don't
 // count.
 func (l *lexer) matchParen(open, j int) int {
+	// depth counts the parentheses open; the one at open makes it 1, and
+	// the parenthesis that brings it back to 0 is the match.
 	depth := 0
 
 	for k := open; k < j; k++ {
@@ -468,7 +482,10 @@ func (l *lexer) matchParen(open, j int) int {
 		case '(':
 			depth++
 		case ')':
+			// An if statement may start with a simple statement, run before
+			// the condition: here it decrements depth, then tests it.
 			if depth--; depth == 0 {
+
 				return k
 			}
 		}
