@@ -1,8 +1,9 @@
 # Phase 92 — documentation
 
 **Status:** in progress (planned 2026-11-11). Part A, the first
-document, `docs/VAX-VMS-INTERNALS.md`: subtask 1 (the plan, the
-document's outline, and its first three sections) is done.
+document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
+document's outline, and its sections 0 to 3) and 2 (section 4, the
+instruction set) are done.
 
 ## Goal
 
@@ -104,7 +105,7 @@ interpreter process 1 runs, and what reads the startup procedure).
    interrupts and the SCB, change mode and REI, the clocks, the
    instruction-fetch window; fidelity: the oracle tests
    (`testdata/insn35`), DEVIATIONS.md's policy, and what's known to
-   differ.
+   differ. (done 2026-11-11)
 3. Section 5, memory: physical memory, ROM and NVRAM, the regions,
    PTEs and protection, translation step by step, the TB and the
    sequential cache, length violations, VMINIT's layout of S0 (the old
@@ -150,3 +151,14 @@ interpreter process 1 runs, and what reads the startup procedure).
   the system service vector, the shim stubs, `kernel.asm`, STARTUP.COM,
   and `cmd/govax`'s start) and wrote this plan and the document's
   sections 0 to 3, with placeholders for 4 to 12.
+- **2026-11-11** Subtask 2: section 4, the instruction set: the table and
+  its generator, operand specifiers and the `Operand` they decode to (with
+  a worked ADDL3), handlers and condition codes, CALLS's frame, the
+  floating, decimal, and string families, what happens between
+  instructions (time, interrupts, the scheduler, ASTs, the trace trap),
+  faults and traps with the operand log and `HandleFault`'s SCB sequence
+  and `console$handler`, change mode and REI, and fidelity (the oracles
+  and what's known to differ). Reading `emulRei` for it found that REI
+  doesn't check the PSL it restores; logged in `DEVIATIONS.md` (deferred).
+  The clocks' and interrupts' detail stays here; the instruction-fetch
+  window and the TB are section 5's.

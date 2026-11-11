@@ -629,7 +629,424 @@ back into VAX code, or end the image.
 
 ## 4. The instruction set
 
-*To be written.*
+govax implements every instruction of the VAX architecture: 306 of them,
+from HALT to the H_floating polynomial, 56 of which are two-byte opcodes
+behind the `FD` prefix. This section follows an instruction from the
+table that describes it, through decoding and execution, to what
+happens when it can't finish, and ends with how govax knows it has the
+instructions right.
+
+### 4.1 The table
+
+Everything the CPU knows about an opcode before it sees any operands is
+one `cpu.Instruction` (`cpu/instruction.go`):
+
+```go
+type Instruction struct {
+    Name         string
+    Opcode       Opcode       // the FD prefix (or 0) and the opcode byte
+    OperandCount int
+    Scale        [6]int        // each operand's size in bytes
+    Access       [6]AccessKind // read, write, modify, address, field, branch, ...
+    DataType     [6]DataType   // byte, word, ..., F, D, G, H floating
+    TrapsOnOverflow bool       // V means integer overflow (section 4.5)
+}
+```
+
+That's the VAX manual's *format line*, the line each instruction's page
+begins with, in a struct. The manual writes ADDL3 as
+
+```text
+ADDL3 add1.rl, add2.rl, sum.wl
+```
+
+where each operand's two letters are its *access* (`r` read, `w` write,
+`m` modify, `a` address, `v` bit-field base, `b` branch displacement) and
+its *data type* (`b`, `w`, `l`, `q`, `o` for the integers of 1 to 16
+bytes; `f`, `d`, `g`, `h` for the floating formats). The table has the
+same: ADDL3 is three longword operands, read, read, and written.
+
+The table, `cpu/instructions_table.go`, is generated, not written by
+hand. Its generator (`cpu/gen`) read the C emulator govax was first
+ported from and checked it against a second source, `cpu/gen/operands.go`,
+every instruction's operands transcribed from the manual's format lines;
+where they disagreed the manual won. `TestInstructionTableMatchesManual`
+holds the table to that transcription still.
+
+Two kinds of entry aren't in the manual. Eight placeholders (`RSVD_...`
+and `EXT_...`) fill reserved opcodes, so that decoding one gives the
+architecture's reserved-instruction fault. And XFC, opcode `FC`, which
+the VAX reserved for a customer's own microcode, is govax's way out of
+the emulated machine into Go: it takes one *implicit* byte, a selector,
+which the manual has no letter for, so govax added `i`. Section 10 is
+about XFC.
+
+The table holds data only. Each instruction's behavior is a *handler*, a
+Go function registered for its opcodes by the file that implements it,
+in that file's `init` function (which Go runs once, when the program
+starts):
+
+```go
+func init() {
+    reg := func(fn byte, h Handler) {
+        instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
+    }
+    for _, fn := range []byte{0x80, 0x81, 0xA0, 0xA1, 0xC0, 0xC1} { // ADDB2 ... ADDL3
+        reg(fn, emulAdd)
+    }
+    ...
+}
+```
+
+So `integermath.go` has ADD, SUB, MUL, DIV, BIS, BIC, XOR; `movc.go` the
+character moves; `fpu.go`, `floatmath.go`, `cvtfloat.go` the floating
+instructions; `decimal*.go` and `editpc.go` packed decimal; `call.go`
+CALLS, CALLG, RET, and REI; and so on, a file per family. An opcode with
+no handler gets the reserved-instruction fault, and
+`TestEveryInstructionImplemented` checks that only the placeholders are
+left that way. The assembler and the disassembler read the same table,
+so the three can't disagree about an instruction's operands.
+
+### 4.2 Decoding: operand specifiers
+
+`decodeInstruction` (`cpu/decode.go`) reads the opcode (a second byte if
+the first is `FD` or above), looks it up, and then decodes one operand
+per entry of the format, with `decodeOperand` (`cpu/operand.go`). Two
+kinds of operand have no specifier byte: a branch displacement, a signed
+1, 2, or 4 bytes added to the PC, and govax's implicit immediate. For
+the rest, the specifier's high four bits are the *mode* and its low four
+a register:
+
+| Mode | Assembler | Meaning | With PC as the register |
+| --- | --- | --- | --- |
+| 0–3 | `S^#n` | short literal: the six bits are the value (0 to 63, or a floating value from 0.5 to 120) | |
+| 4 | `base[Rx]` | indexed: another specifier follows, and Rx times the operand's size is added to its address | |
+| 5 | `Rn` | register | |
+| 6 | `(Rn)` | register deferred: the operand is at the address in Rn | |
+| 7 | `-(Rn)` | autodecrement: Rn is decreased by the size, then used | |
+| 8 | `(Rn)+` | autoincrement: Rn is used, then increased | `I^#n`, immediate: the value follows |
+| 9 | `@(Rn)+` | autoincrement deferred: the longword at Rn is the address | `@#addr`, absolute |
+| A, C, E | `B^d(Rn)`, `W^`, `L^` | displacement: Rn plus a byte, word, or longword that follows | relative to the PC: position-independent |
+| B, D, F | `@B^d(Rn)`, ... | displacement deferred: the longword there is the address | relative deferred |
+
+Immediate and absolute modes are just autoincrement on the PC: the PC
+points at the bytes after the specifier, so `(PC)+` reads them and steps
+past. That's the VAX's regularity at work, and the decoder keeps it:
+mode 8 on the PC is decoded as an immediate, but it's the same idea.
+
+Decoding resolves each operand to a `cpu.Operand`, which says where the
+value is, not yet what it is:
+
+```go
+type Operand struct {
+    Access AccessKind
+    Kind   OperandKind   // OperandRegister, OperandMemory, or OperandImmediate
+    Reg    registers.Reg // for a register operand
+    Size   uint8         // 1, 2, 4, 8, or 16 bytes
+    Addr   uint32        // for a memory operand: its virtual address
+    Value  uint64        // for an immediate: the value (low 64 bits)
+    High   uint64        // the high 64 bits of a 16-byte immediate
+}
+```
+
+Here is `ADDL3 #5, 8(R2), R3` decoded, with R2 holding `00001000`:
+
+```text
+  bytes   C1  05  A2 08  53
+          |   |   |      +-- operand 2: mode 5, R3        -> Register R3
+          |   |   +--------- operand 1: mode A, R2, disp 8 -> Memory at 00001008
+          |   +------------- operand 0: mode 0, literal 5  -> Immediate 5
+          +----------------- opcode ADDL3: rl, rl, wl
+```
+
+A register, an address, or a value: that's all a handler needs.
+`Operand.Load` and `Operand.Store` (`cpu/operandaccess.go`) read and
+write each kind at its size, so `emulAdd` (section 3.3) never asks which
+mode an operand used.
+
+Decoding has side effects: autoincrement and autodecrement change their
+registers as they're decoded, and a deferred mode reads memory, which
+may fault. The decoder enforces the architecture's rules as it goes: a
+short literal or an immediate can't be written (a *reserved addressing
+mode* fault), indexed mode can't index itself, and an octaword in
+registers, which spans four of them, can't start past R11. A register
+operand where the instruction wants an address is allowed through to
+the handler, which decides: CALLG uses the register's value as the
+argument list's address, and govax's microkernel depends on that.
+
+A note on speed. govax runs some 10 to 20 million VAX instructions a
+second, and the decode path is most of where the time goes. A few
+choices there are for speed alone: the `Decoded` is two buffers kept in
+the engine and reused (so no instruction allocates memory), an `Operand`
+is packed into 24 bytes, and the instruction stream is read through the
+memory's *instruction-fetch window*, one page of code translated once
+and then read straight from the RAM slice (section 5). None of this
+changes what an instruction does.
+
+### 4.3 Executing
+
+Once decoded, the engine moves PC past the instruction and calls its
+handler. Most handlers are short: load the operands, compute, set the
+condition codes, store. The condition codes are where much of the care
+goes; `cpu/condcodes.go` computes N, Z, V, and C for every size from a
+result worked out in 64 bits, so that "did this byte add overflow?" is
+asked the same way for every width.
+
+The call instructions are the richest of the ordinary ones, and show the
+style. CALLS's handler (`emulCall` and `buildCallFrame`, `cpu/call.go`)
+does what the manual's description says, step by step:
+
+```go
+// CALLS: push the argument count; it and the arguments are the list.
+count, _ := d.Operands[0].Load(e.cpu, e.mem)
+sp := e.cpu.GPR(registers.SP) - 4
+e.mem.StoreLongword(e.cpu, sp, uint32(count))
+newAP := sp
+...
+// The procedure's entry mask: which of R0-R11 to save.
+mask, _ := e.mem.LoadWord(e.cpu, newPC)
+if mask&0x3000 != 0 {
+    return &Fault{Code: ExcReservedOp} // bits 13:12 must be zero
+}
+for n := 11; n >= 0; n-- { if mask&(1<<n) != 0 { push R[n] } }
+push(PC); push(FP); push(AP)
+// The PSW with T clear, the mask, and how SP was aligned, in one longword;
+// then the trap enables the mask asks for take effect (IV, DV).
+push(maskWord); push(0) // the condition handler slot
+FP = SP; AP = newAP; PC = newPC + 2
+```
+
+which leaves the frame VMS's condition handling and its debugger walk:
+
+```text
+            :                 :
+   FP ->  | 0 (handler)       |   0(FP)  a condition handler, if one is set
+          | mask | PSW        |   4(FP)
+          | saved AP          |   8(FP)
+          | saved FP          |  12(FP)  the caller's frame: a chain
+          | saved PC          |  16(FP)  the return address
+          | saved R2 ...      |  the registers the mask named
+          | argument count    |  <- AP, for CALLS
+          | arguments         |
+```
+
+RET reads it back. The same `buildCallFrame` also delivers an AST
+(section 7), which on VMS is a CALLG made between two instructions.
+
+Beyond the integers, the instruction set has three families of its own,
+each with a package or file that does the arithmetic:
+
+- **Floating point.** The VAX has four formats: F (32 bits), D and G (64
+  bits, D with more fraction, G with more exponent), and H (128 bits). They
+  aren't IEEE formats, and their rounding (half away from zero) isn't
+  IEEE's, so govax doesn't use Go's `float64` for them. `internal/vaxfloat`
+  unpacks a value into an exact number (`math/big`), does the arithmetic
+  exactly, and rounds once to the destination's format, reporting overflow,
+  underflow, divide by zero, and the *reserved operand* (a value with the
+  sign set and the exponent zero, which faults when used). `cpu/fpu.go` is
+  the CPU's side, which moves bits between operands and that package. An
+  operand's format comes from its data type in the table, never its size,
+  since D and G are both 8 bytes.
+- **Packed decimal.** Strings of up to 31 decimal digits, two to a byte,
+  with a sign nibble (`-123` is the bytes `12 3D`), for COBOL and PL/I:
+  move, compare, add, subtract, multiply, divide, shift, convert, and
+  EDITPC's picture editing (`cpu/decimal.go`, `decimalmath.go`,
+  `decimalconvert.go`, `editpc.go`).
+- **Strings, bit fields, queues.** MOVC3 and MOVC5, CMPC, LOCC, SKPC,
+  SCANC, MATCHC, MOVTC, CRC; variable-length bit fields (EXTV, INSV, FFS,
+  ...), which may lie in registers; and the queue instructions, INSQUE and
+  REMQUE and their interlocked forms. govax emulates one processor, so the
+  interlocked ones are the plain ones done at once.
+
+The long instructions don't model `PSL<FPD>`, the *first part done* bit
+with which a real VAX lets a string move be interrupted and resumed
+part way. Each reads all its sources, computes its result, and only then
+writes, so if it faults it can run again from the start and get the same
+answer.
+
+### 4.4 Between instructions
+
+The top of `Step` (section 3.3) is where the VAX's asynchronous events
+are taken, in the architecture's order, before the next instruction is
+decoded:
+
+1. **Time.** In the default *quantum* mode, the engine counts
+   instructions, and every `quantum` of them is one emulated millisecond
+   of system time (STARTUP.COM's `SET QUANTUM 1` makes each instruction
+   a millisecond). Time is then a function of the
+   instructions executed, and a program's timers expire at the same
+   instruction every run, which makes govax deterministic and its tests
+   repeatable. With `vax.hardware.clock` set, system time is the host's,
+   read every 1,024 instructions (`cpu/clock.go`, `cpu/systime.go`). The
+   time-of-year register, TODR, is computed from the system time whenever
+   it's read, so the two always agree.
+2. **Interrupts.** A device or software interrupt request
+   (`Engine.Interrupt`, `cpu/interrupt.go`) is queued with its IPL, and
+   admitted when its level is above the CPU's. Delivery is an exception
+   through the SCB like any other, on the interrupt stack. The interval
+   clock, the software interrupt requests of MTPR to SIRR, and the console
+   terminal's registers make interrupts. govax's own I/O doesn't: its
+   device drivers are Go code that completes an I/O and reports it to the
+   waiting process directly (section 8), so in practice a running govax
+   takes almost no interrupts. The microkernel leaves the interval clock
+   stopped.
+3. **The scheduler.** When the current process's slice of instructions
+   is spent, the scheduler may switch to another process (section 7).
+4. **ASTs.** If an AST is due for the process in a mode it may be
+   delivered to, it's delivered: the Go side pushes its argument list and
+   the engine builds a CALLG frame for its routine (`cpu/ast.go`;
+   section 7).
+5. **The trace trap.** If the last instruction was traced, its trace
+   fault comes now (`cpu/trace.go`). Tracing takes two PSL bits, T (trace
+   enable) and TP (trace pending): at each instruction's start TP is
+   copied from T, and a set TP makes the fault at the start of the *next*
+   one. The two-step is what gives exactly one trace per instruction when
+   the instruction faults and runs again, takes an arithmetic trap, or is
+   followed by an interrupt, and govax follows the manual's rules for each.
+   VMS signals the trace to the program as `SS$_TBIT`, so a program can
+   trace itself.
+
+### 4.5 When an instruction can't finish
+
+A handler that meets an exception returns a `*cpu.Fault`:
+
+```go
+type Fault struct {
+    Code Exception // its offset in the SCB: ExcAccessViol is 0x20, ...
+    Args []uint32  // its parameters: an access violation's address and reason
+    Trap bool      // taken after the instruction finished
+}
+```
+
+and `Engine.raise` delivers it. The difference between a fault and a trap
+is the whole of the VAX's restart model:
+
+- A **fault** (an access violation, a reserved operand, a page not
+  valid) means the instruction hasn't happened. The saved PC is the
+  instruction's own, so that when the handler returns, it runs again. For
+  that to work, its autoincrements and autodecrements must be undone: the
+  CPU's *operand log* (`registers/operandlog.go`) recorded each register
+  before a specifier changed it, and `undoOperands` puts them back, last
+  first. So a program's handler can fix a reserved floating operand, or
+  create the page that was missing, and continue.
+- A **trap** (integer overflow, decimal overflow, divide by zero, a
+  change-mode instruction) means it has: results stored, PC past it.
+  Integer overflow traps only if `PSL<IV>` is set (a procedure's entry mask
+  sets it with bit 14), and only for the instructions whose V means
+  overflow, which the table marks (`TrapsOnOverflow`; `cpu/inttrap.go`).
+  An integer divide by zero always traps.
+
+`Engine.HandleFault` (`cpu/handlefault.go`) then does what the processor
+does. It reads the exception's vector from the SCB at `SCBB + code`,
+physically. The vector's low two bits say which stack: the current
+mode's (or the target mode's, for a change-mode trap), or the interrupt
+stack. It clears T and TP in the new PSL, switches stacks and modes,
+pushes the old PSL, the PC, and the parameters, and jumps to the vector.
+
+One vector value is govax's own. The microkernel fills most of the SCB's
+exception vectors with `console$handler`, which is `FFFFFFFF`: "not
+handled by VAX code". When `HandleFault` finds it, it offers the
+exception to the program's VMS condition handlers through the
+`cpu.ExceptionDispatcher` seam, which the Go side of VMS implements: it
+builds the signal and mechanism arrays on the program's stack and starts
+the search of its call frames, exactly where VMS's exception dispatcher
+would (section 10). Only if the dispatcher can't take it (no program is
+running, say) does the exception go back to the console, which reports it
+and stops.
+
+### 4.6 Changing mode
+
+CHMK, CHME, CHMS, and CHMU are traps to the target mode's stack, with the
+instruction's operand (a code, conventionally the service's number) as
+the parameter (`cpu/changemode.go`). REI pops a PC and PSL and returns to
+them, saving the old mode's stack pointer in its register and loading the
+new mode's (`emulRei`, `cpu/call.go`). The previous-mode field of the PSL
+is set as the architecture requires. Every change of mode empties the
+translation buffer's notion of what the current mode may access
+(`Memory.InvalidateProtection`), since the same page may be writable in
+one mode and not in another.
+
+VMS reaches its system services by CHMK and CHME. govax's don't: its
+system service vector holds an XFC instead of a CHMK (section 10), and
+the service runs in Go without the CPU changing mode at all. The
+microkernel still installs a CHMK dispatcher for VAX code that uses
+one. `$CMKRNL` and `$CMEXEC`, which call a program's own routine in an
+inner mode, do change mode, but from Go: the service switches the CPU's
+mode and stack itself, as REI would, and has the engine call the routine
+there (`corevms/cmode.go`).
+
+The other privileged instructions are here too: MTPR and MFPR
+(`cpu/procreg.go`, with a table of which registers may be read and
+written, and the side effects of writing one, such as TBIA flushing the
+translation buffer or SIRR requesting a software interrupt), LDPCTX and
+SVPCTX (`cpu/context.go`, a process's hardware context; section 7),
+PROBER and PROBEW (which ask whether a mode could read or write an
+address, without faulting), and HALT.
+
+### 4.7 Fidelity: how govax knows
+
+govax's instructions answer to three authorities, in order: what a real
+VAX running VMS does, when that has been measured; DIGITAL's *VAX
+Architecture Reference Manual*; and, where neither speaks, a reasonable
+choice, written down. The C emulator govax was first ported from was the
+starting point, not an authority: its fidelity was good but not perfect,
+and where it disagreed with the manual, the finding went into
+`docs/DEVIATIONS.md` and the manual's behavior into govax. That log
+(and `DEVIATIONS-RESOLVED.md`, the entries since settled) is the record of
+every place govax was found to differ from VAX/VMS, with the reason and
+what was done.
+
+The measurements come from *oracle tests*: a program run on a real VMS
+system (OpenVMS V7.1 on the simh simulator's VAX 8600, a model with the
+whole instruction set in its microcode), its output saved in the
+repository, and a Go test that runs the same program on govax and
+compares. For the instruction set:
+
+- `testdata/insn35` is 567 cases of the floating, octaword, and packed
+  decimal instructions, each one instruction run under a condition
+  handler, recording the PSL, R0 to R11, the signal array if any, and the
+  destination's bytes. `TestInsn35Oracle` (`internal/console`) holds every
+  case to VMS's, field for field, but for the few fields it masks, each
+  one of the differences listed below. The cases were chosen for the edges:
+  rounding ties, the low bits of D_floating, reserved operands, overflow
+  and underflow with and without their trap enables, invalid digits and
+  signs, lengths 0 and 31.
+- `testdata/lib53` runs 132 cases of LIBRTL's routines that are
+  instructions (LIB$EMUL, LIB$INSQHI, LIB$MOVTC, ...), which govax writes
+  with the CPU's own code, so they check it too.
+- `testdata/trace73` checks the trace trap, and `testdata/tb70` the
+  exceptions and traps as VMS reports them to a program.
+- Beyond the probes, every program in the FORTRAN corpus and govax's run
+  time library FTNRTL has been built by VMS's own MACRO and LINK and run
+  there, giving govax's output (but for differences the tests list), and
+  DUNGEON, a large FORTRAN game, plays a scripted game the same on both to
+  the byte.
+
+Below them are the `cpu` package's own unit tests, some seventy files,
+which check instructions against the manual's descriptions, and the
+table against its format lines.
+
+What govax knowingly does differently:
+
+- **`PSL<FPD>` isn't modeled.** The long instructions run whole or restart
+  (section 4.3). EDITPC's aborts part way, which VMS reports with FPD set
+  and its registers part way, report with neither.
+- **REI doesn't check the PSL it restores.** The architecture has REI
+  fault if the new PSL would move to a more privileged mode, or has its
+  fields inconsistent; govax's restores what it pops. In govax only the
+  microkernel and Go code build those PSLs, but a user-mode program could
+  use REI to enter kernel mode (logged in `docs/DEVIATIONS.md`).
+- **CHMx skips two checks:** that it isn't executed on the interrupt
+  stack, and that the new stack has room for the exception's frame.
+- **No PDP-11 compatibility mode,** and no machine checks or power
+  failures: govax's hardware doesn't fail.
+- **One processor.** The interlocked instructions interlock nothing.
+- **Choices where the manual says UNPREDICTABLE:** an octaword in R12 or
+  above is a reserved addressing mode fault; DIVP's result with an
+  invalid digit differs from the VAX 8600's.
+- **The services aren't VAX code.** A program that traces itself through
+  a system service or a LIBRTL routine sees govax's few stub
+  instructions where VMS would show its own code (section 10).
 
 ## 5. Memory: layout, translation, and faults
 

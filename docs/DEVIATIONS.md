@@ -1902,3 +1902,19 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **What**: `CALL FOR$IMVBITS` with a position of 65535 writes bit 7 of a byte in a read-only page. VMS 7.1's signal names `00002B44`, a longword's start, and govax's, with
   FTNRTL's `INSV` on the same image layout, names that byte, `00002B45`. One case, on a simh MicroVAX, and FORRTL's own instruction is unknown, so whether the VAX
   reports the longword for every field is unconfirmed. Nothing is changed: the page and the reason are the same, and a handler has no use for the difference.
+
+### [Phase 92] REI doesn't check the PSL it restores
+
+- **Where**: `internal/cpu/call.go`'s `emulRei`; found writing
+  `docs/VAX-VMS-INTERNALS.md`'s section 4 (2026-11-11).
+- **What**: the architecture has REI take a reserved operand fault when
+  the PSL it pops is one it may not restore: among them, a current mode
+  more privileged than the CPU's now, a previous mode more privileged
+  than the new current mode, a raised IPL, the interrupt-stack bit set
+  when it isn't set now, and must-be-zero bits set (the manual's REI page
+  lists them all). govax's REI restores whatever it pops, so a
+  user-mode program could push a kernel-mode PSL and REI into kernel mode.
+- **Status**: deferred. In govax only the microkernel and Go code build
+  the PSLs REI restores, and govax has no security boundary to keep; no
+  program or probe has needed the checks. Worth doing with a probe case of
+  each fault if REI's behavior ever matters to a program.
