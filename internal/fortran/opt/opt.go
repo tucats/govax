@@ -14,8 +14,34 @@ type Pass struct {
 	Run  func(*ir.Routine)
 }
 
-// Passes are the optimizer's passes, in the order they run. Each subtask of
-// docs/PHASE-84 - FORTRAN optimizer.md adds to this list.
+// Passes are the optimizer's passes, in the order they run (docs/PHASE-84 -
+// FORTRAN optimizer.md). Each pass's file opens with a FORTRAN example and
+// the code before and after; in a line each:
+//
+//   - do limits (dolimit.go): a DO loop ended by comparing its variable with
+//     the limit (AOBLEQ) rather than by counting trips down as well;
+//   - one character (onechar.go): a one-character string's move or
+//     comparison made a byte's, MOVB or CMPB, not MOVC3 or CMPC3;
+//   - forward (forward.go): constants carried from where they're stored to
+//     where they're used, even across blocks, and branches whose outcome
+//     that settles made jumps;
+//   - unreachable (unreachable.go): blocks nothing can reach taken out;
+//   - dead code (deadcode.go): stores whose value nothing reads taken out;
+//   - deferred indexes (deferred.go): an adjustable array's element reached
+//     through its address in memory, @X[R1], without loading it first;
+//   - loop invariants (invariant.go): what every trip of a loop computes the
+//     same moved to before the loop;
+//   - common subexpressions (cse.go): a value a block computes twice computed
+//     once;
+//   - registers (registers.go): variables and the compiler's cells kept in
+//     R6 to R11 rather than memory;
+//   - rotate (rotate.go): a loop's test moved from its top to its bottom, so
+//     each trip takes one branch, not two.
+//
+// The order matters: earlier passes simplify what later ones look at (do
+// limits must see lowering's loops as written; registers comes after the
+// passes that recognize places by their form in memory, which a place
+// moved to a register no longer has).
 var Passes = []Pass{
 	{"do limits", DoLimits},
 	{"one character", OneCharacter},
@@ -37,7 +63,10 @@ type CodePass struct {
 	Run  func(*codegen.Code)
 }
 
-// CodePasses are the instruction passes, in the order they run.
+// CodePasses are the instruction passes, in the order they run: peephole
+// (peephole.go), single instructions made shorter (MOVL #0,R0 is CLRL R0);
+// and branches (branches.go), short branch forms where the target is near,
+// jumps to jumps threaded, and loops closed with SOBGTR, AOBLEQ, or ACBL.
 var CodePasses = []CodePass{
 	{"peephole", Peephole},
 	{"branches", Branches},

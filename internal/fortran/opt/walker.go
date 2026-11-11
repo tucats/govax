@@ -2,6 +2,19 @@ package opt
 
 import "github.com/tucats/govax/internal/fortran/ir"
 
+// Walkers. Several passes need to visit every expression, or every place in
+// memory, that a statement touches, and the IR has many kinds of node to
+// look inside. Rather than each pass having its own big type switch, a
+// walker does the walking and calls back a function the pass supplies
+// (visit) at each node: the visitor pattern, done with a function value
+// instead of an interface. A pass writes only what it cares about:
+//
+//	w := walker{visit: func(e ir.Expr, moved, maybe bool) bool {
+//		count[ir.ExprText(e)]++
+//		return true // and look inside e too
+//	}}
+//	w.stmt(st)
+//
 // walker goes through what a statement or terminator computes, each expression before
 // those inside it. Two passes share it, and what they share is the knowledge of what
 // the code generator computes where: a function's Result and a dummy procedure's place
@@ -62,6 +75,10 @@ func (w *walker) terminator(t ir.Terminator) {
 
 // condition looks at a branch's condition, whose .AND. and .OR. go on to their second
 // operand only some of the time (codegen's branchTo).
+//
+// That "maybe" matters to a pass that would move or reuse a computation: in
+// IF (I .NE. 0 .AND. J/I .GT. 1), J/I is computed only when I isn't 0, and
+// computing it earlier, every time, could divide by zero.
 func (w *walker) condition(e ir.Expr, maybe bool) {
 	if op, ok := e.(*ir.Op); ok {
 		switch op.Op {
@@ -231,6 +248,9 @@ func (w *memWalker) condition(e ir.Expr) {
 		case ir.And, ir.Or:
 			w.condition(op.X)
 
+			// Set maybe for the second operand only, then put back what
+			// it was: this condition may itself be the second operand of
+			// another .AND., inside which everything is a maybe already.
 			was := w.maybe
 			w.maybe = true
 			w.condition(op.Y)
