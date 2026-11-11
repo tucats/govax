@@ -593,7 +593,7 @@ from the S0 pool (section 7).
 device name to an `ods2` volume opened on a container file, shared by
 the console and every process. `rms.Session` (`rms/session.go`) is what
 one process's file operations need: the mount table, its logical names,
-and its default directory. Section 9 follows a `$GET` from a program's
+and its default directory. Section 9.7 follows a `$GET` from a program's
 RAB to a block of a container.
 
 ### 3.7 One instruction's trip
@@ -3463,9 +3463,10 @@ line editor's own writer, which takes the prompt and the half-typed line
 off the screen, writes, and puts them back below.
 
 **Volumes** are host files too, the *containers* MOUNT names, holding an
-ODS-2 volume block for block (section 9). And a file name in quotes, or
-one with no volume to go to, names a host file directly, which RMS reads
-and writes as a VMS file of its own record format (section 9).
+ODS-2 volume block for block (section 9). And to govax's own commands, a
+file name in quotes, or one with no volume to go to, names a host file
+directly, read and written as a VMS file of its own record format; a
+program's RMS reaches only volumes (section 9.12).
 
 ### 8.9 What's VMS's and what isn't
 
@@ -3489,7 +3490,664 @@ and writes as a VMS file of its own record format (section 9).
 
 ## 9. RMS and ODS-2
 
-*To be written.*
+On VMS, a program's files go through two layers. **RMS**, the Record
+Management Services, is what the program calls: it names a file, opens
+it, and reads and writes *records* (lines of text, fixed-size entries,
+keyed rows), keeping the details of how they're laid out in blocks to
+itself. Beneath RMS is the **file system**, Files-11 On-Disk Structure
+Level 2 (**ODS-2**): the disk's directories, file headers, and free-space
+maps, which the disk's *ancillary control process* (the ACP, later the XQP)
+maintains when RMS asks it through `$QIO` (section 8.5). On VMS, RMS is
+VAX code that runs in executive mode in the program's own process, with
+its buffers and internal structures in P1 space (the *Guide to OpenVMS
+File Applications* describes what a program sees of it; the *OpenVMS RMS
+Reference Manual* each service).
+
+govax keeps the same two layers and moves both into Go:
+
+```text
+   the program ............ FAB, RAB, NAM, XABs in its own memory
+       |                    CALLS SYS$OPEN, SYS$GET, ...
+       |                    (the system service vector: section 10)
+   corevms/rms.go ......... the service table's entries for RMS
+       |
+   rms .................... name processing, open files, sharing, record
+       |                    locks, sequential, relative, and indexed files
+       |                    (isam: an indexed file's buckets and keys)
+       |
+   ods2 (its own module) .. volume: files, headers, directories, bitmaps
+       |                    rms: records in a file's blocks
+       |                    diskimage: 512-byte blocks of a container
+       |
+   the host ............... a container file, the disk's blocks in order
+```
+
+`internal/rms` is the only package that imports `ods2`. Everything else in
+govax that touches a volume, DCL's DIRECTORY and COPY, LINK's libraries,
+the image activator, the page file, goes through `rms` too, so there is one
+idea of what a volume holds and who has a file open.
+
+### 9.1 The `ods2` module
+
+`github.com/tucats/ods2` is a separate Go module: a library for ODS-2
+volumes held in host files, with a command-line tool of its own. It knows
+nothing of the VAX, of FABs, or of govax. `go.mod` pins a tagged release;
+a local `go.work` can put a sibling checkout in its place while both are
+being changed.
+
+**Containers.** A volume lives in a *container*, a host file whose bytes
+are the disk's logical blocks, block 0 first (`diskimage`). A container can
+also be a raw CD-ROM sector dump, which is read-only. Every read and write
+of the volume is a whole 512-byte block of the container, numbered by
+*logical block number* (LBN).
+
+**Mounting** (`volume.Mount`) reads the *home block*, near the start of the
+disk, which gives the volume's label, cluster size, and where its index
+file is. The **index file**, INDEXF.SYS, holds a *file header* for every
+file on the volume, one block each, by file number. Its own header sits at
+a block the home block's fields locate directly, which breaks the circle:
+from there the rest of INDEXF.SYS can be mapped like any file, and then any
+other file's header found through it.
+
+**A file** is named, at this level, by its *file ID* (FID): the file's
+number in the index file, a sequence number bumped each time the slot is
+reused (so a stale FID is caught), and a relative volume number. Its header
+holds its attributes (the record attributes RMS needs, dates, owner,
+protection, ACL) and its *map*: retrieval pointers, each a run of
+contiguous logical blocks. `volume.File` has the header and the map
+resolved into `Extents`, and its *virtual blocks* (VBNs, numbered from 1
+within the file) are found by walking them:
+
+```go
+// ods2's volume/file.go, cut down
+func resolveExtentLBN(extents []ExtentLocation, vbn uint32) (uint32, error) {
+	remaining := vbn
+	for _, e := range extents {
+		if remaining <= e.Count {
+			return e.StartLBN + (remaining - 1), nil
+		}
+		remaining -= e.Count
+	}
+	return 0, fmt.Errorf("virtual block %d is beyond the end of the file", vbn)
+}
+```
+
+A block the file has been given but never written reads as zeros, as VMS
+guarantees, rather than as whatever a deleted file left there.
+
+**Directories** are files too, of a special format: a sorted list of
+names, each with its versions in descending order and each version's FID.
+`volume.Directory` looks a name and version up, lists, inserts, and
+removes; the master file directory, `[000000]`, is always file (4,4,0).
+
+**Free space** is two bitmaps: BITMAP.SYS, a bit per cluster of the disk,
+and the index file's own bitmap of header slots. ods2 reads each into
+memory the first time something allocates, and writes them back when the
+volume is dismounted (`Volume.Dismount`), not after each operation. Headers,
+directories, and data go to the container as they're written; the bitmaps
+wait. So a govax that is killed rather than allowed to exit leaves a
+writable volume's bitmaps as they were at its mount, and later allocations
+can collide with blocks already in use; govax dismounts every volume at
+the end of a session for this reason (`MountTable.DismountAll`).
+
+**Records.** ods2's own `rms` package reads and writes records in a
+sequential file's blocks by its record format (`odsrms.Reader`,
+`odsrms.Writer`):
+
+| Format | On disk |
+| --- | --- |
+| FIX, fixed length | each record its size in bytes, padded to a word |
+| VAR, variable length | a word's length, the bytes, a pad byte to a word; a block's records end with `FFFF` |
+| VFC, variable with fixed control | as VAR, the length counting the fixed control area (FAB$B_FSZ bytes) that leads the record |
+| STM, STMLF, STMCR | bytes ending with CR LF, LF, or CR |
+| UDF, undefined | bytes, with no records at all |
+
+A *record's file address*, its RFA, is the VBN of the block holding its
+first byte and that byte's offset in the block; govax keeps a sequential
+record's position as its byte offset in the file, from which the RFA
+follows.
+
+Here is a small file govax made, two lines copied from the host into a VAR
+file with carriage-return carriage control, as DCL's DUMP shows its one
+block:
+
+```text
+Dump of file DUA1:[000000]PARTS.DAT;1 on 11-NOV-2026 12:37:58.69
+File ID (11,1,0)   End of file block 1 / Allocated 1
+
+Virtual block number 1 (00000001), 512 (0200) bytes
+
+ 00000000 FFFF3032 2D342F31 2054554E 000A0030 322D342F 3120544C 4F42000B ..BOLT 1/4-20...NUT 1/4-20...... 000000
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 000020
+```
+
+Read from the right: `000B`, a length of 11, then `BOLT 1/4-20` and a pad
+byte; `000A`, 10, then `NUT 1/4-20`, even, so no pad; then `FFFF`, the end
+of the block's records. The file is number 11 on the volume, its slot used
+for the first time.
+
+### 9.2 Mounted volumes
+
+`rms.MountTable` (`rms/mount.go`) is the system's table of mounted
+volumes: device name to an open `ods2` volume, with whether it was mounted
+for writing. It's system state, shared by every process (`corevms.System`
+holds it), and has no locking: one goroutine runs every process, switching
+only between instructions (section 7), so no two operations on it ever
+overlap.
+
+DCL's MOUNT (`dclcmd`) opens the container and mounts it on a device name,
+`DUA1` say, and defines the device in the device table if it isn't there
+yet, with the logical name `DISK$label` (section 8.1). Device names are
+compared after `normalizeDeviceName`, so `DUA1`, `dua1:`, `_DUA1:`, and
+`_GOVAX$DUA1:` are one entry. DISMOUNT refuses a volume a process has a
+file open on (`FilesOpenError`), and the system volume (section 11)
+altogether; the page file's volume says so in its refusal.
+
+A volume mounted read-only takes `$OPEN`s that only read; a `$CREATE`, or
+an `$OPEN` asking to write, is `RMS$_PRV`.
+
+### 9.3 From a service call to Go
+
+A program calls an RMS service as it calls any system service,
+`CALLS #1,G^SYS$OPEN` with a FAB's address in its argument list, and the
+system service vector sends it into Go (section 10). corevms's service
+table has one entry per RMS service (`corevms/rms.go`): `$CREATE`,
+`$OPEN`, `$CONNECT`, `$DISCONNECT`, `$CLOSE`, `$GET`, `$PUT`, `$FIND`,
+`$UPDATE`, `$DELETE`, `$TRUNCATE`, `$REWIND`, `$FLUSH`, `$FREE`,
+`$RELEASE`, `$WAIT`, `$READ`, `$WRITE`, `$PARSE`, `$SEARCH`, `$DISPLAY`,
+`$ERASE`, `$RENAME`, and `$EXTEND`. Each entry is a small wrapper around
+`rms`'s handler, which has the same shape as a service with a different
+first argument:
+
+```go
+// corevms/rms.go, cut down
+t.Register(name, func(env *Environment, argv []uint32) (uint32, error) {
+	ctx := env.rmsContext()
+	r0, err := fn(ctx, argv) // rms.SysOpen, rms.SysGet, ...
+	if err == nil && len(argv) > 0 {
+		env.rmsCompletion(name, argv, r0)
+	}
+	return r0, err
+})
+```
+
+`rms` can't take a `corevms.Environment`: corevms imports `rms`, and Go
+forbids an import cycle. So each call builds an `rms.Context`
+(`rms/context.go`, filled by `Environment.rmsContext`): the process's
+memory and CPU, its open files (`rms.FileTable`), its logical names, its
+`rms.Session` (default directory), the mount table, and, as function
+fields, what RMS needs of the rest of VMS: the shared terminal's queue
+(`AwaitTerminal`), mailboxes and NL: (`Devices`), the lock database and the
+process's PID, a way to wait for a record lock (`AwaitLock`), the clock, the
+I/O counts, and a channel for a user file open (`AssignFileChannel`).
+
+A handler reads the FAB or RAB, does its work, stores the status in the
+block's STS (and STV), and returns the same status as R0: `storeStatus`
+(`rms/status.go`) does both at once, so a program may check either. A Go
+`error` is something else: a field the program's own memory can't supply
+(a FAB on a page it can't read), which goes back through the service's XFC
+instruction as that instruction's failure, an access violation as any
+instruction would raise (section 10).
+
+**Completion routines.** After the FAB or RAB, an RMS call may name an
+*error* and a *success completion routine*, which RMS calls as an AST, with
+the block's address as the AST parameter. For an operation that completes
+during the call, the manual says the routine "executes prior to returning
+control from the service call" (2.4.3). `rmsCompletion` queues the AST for
+the routine the status chooses, in the caller's mode, as the service
+finishes; the engine delivers it at the next instruction boundary, which is
+still inside the service's vector entry, before its RET (section 7.7). The
+service's R0 survives the AST. A call whose status RMS couldn't store, a
+block that can't be written, calls no routine (the manual's 2.4.1).
+
+**Asynchronous operations.** With FAB$V_ASY or RAB$V_ASY a program asks for
+a service to return before its I/O is done, and `$WAIT`s for it later.
+govax's RMS finishes every operation during the call, ASY or not, but one:
+a `$PUT` to a mailbox, which on VMS too isn't done until the message has
+been read. With ASY it returns `RMS$_PENDING`; `$WAIT` waits for the reader
+and stores the real status, and the `$PUT`'s completion routine, remembered
+until then, is called at the `$WAIT`.
+
+**SET DEBUG RMS** prints each RMS call's control block as the service left
+it (`rms/trace.go`). Here is a program reading PARTS.DAT (9.1) with
+`$OPEN`, `$CONNECT`, `$GET` until it fails, and `$CLOSE`, printing each
+record with LIB$PUT_OUTPUT:
+
+```text
+DEBUG(RMS): SYS$OPEN 00000200 name "PARTS.DAT" FAC 02 SHR 00 ORG 00 RFM 02 RAT 02 MRS 0 FOP 00000000 ALQ 1 IFI 0004, RMS$_NORMAL/S (00010001)
+DEBUG(RMS): SYS$CONNECT 00000250 ISI 0004 (file, access 02) RAC 0 ROP 00000000 RSZ 0, RMS$_NORMAL/S (00010001)
+DEBUG(RMS): SYS$GET 00000250 ISI 0004 (file, access 02) RAC 0 ROP 00000000 RSZ 11 "BOLT 1/4-20", RMS$_NORMAL/S (00010001)
+BOLT 1/4-20
+DEBUG(RMS): SYS$GET 00000250 ISI 0004 (file, access 02) RAC 0 ROP 00000000 RSZ 10 "NUT 1/4-20", RMS$_NORMAL/S (00010001)
+NUT 1/4-20
+DEBUG(RMS): SYS$GET 00000250 ISI 0004 (file, access 02) RAC 0 ROP 00000000 RSZ 0, RMS$_EOF/E (0001827A)
+DEBUG(RMS): SYS$CLOSE 00000200 name "PARTS.DAT" FAC 02 SHR 00 ORG 00 RFM 02 RAT 02 MRS 0 FOP 00000000 ALQ 1 IFI 0000, RMS$_NORMAL/S (00010001)
+```
+
+The `$OPEN` filled in the file's organization (sequential, 0), record
+format (VAR, 2), attributes (CR, 2), and allocation from its header, and
+its IFI, 4. `$CONNECT` copied the IFI to the RAB's ISI. The third `$GET`
+met the end of the file. `$CLOSE` cleared the IFI. The rest of this section
+follows those calls through `rms`.
+
+### 9.4 The control blocks
+
+A program describes what it wants in blocks in its own memory, and RMS
+reads and writes their fields there, by their VMS offsets:
+
+| Block | What it is | govax's offsets |
+| --- | --- | --- |
+| FAB, file access block | one file: its name (FNA/FNS) and default name (DNA/DNS), the access wanted (FAC) and the sharing allowed (SHR), organization (ORG), record format (RFM), attributes (RAT), sizes (MRS, ALQ, DEQ, BKS, FSZ), options (FOP); RMS returns the IFI, STS, STV, and the device's characteristics (DEV, SDC) | `rms/fab.go`, from `vmsdef.FABFields` |
+| RAB, record access block | one record stream on a FAB's file: the access mode (RAC: sequential, keyed, by RFA), options (ROP), the user buffer (UBF, USZ), the record buffer (RBF, RSZ), the key (KBF, KSZ, KRF), the RFA, a prompt; RMS returns the ISI, STS, STV, RFA, and RSZ | `rms/rab.go`, from `vmsdef.RABFields` |
+| NAM, name block | name processing's results: the expanded and resultant strings and their buffers, the FID, the directory's ID (DID), the device's name (DVI), the FNB bits, the wildcard context (WCC), the related file (RLF) | `rms/nam.go` |
+| XABs, extended attribute blocks | a chain from FAB$L_XAB: dates (XABDAT, XABRDT), protection (XABPRO), allocation (XABALL), the file header's characteristics (XABFHC), an indexed file's keys and summary (XABKEY, XABSUM) | `rms/xab.go`, `rms/indexedxab.go` |
+
+Every field is read when a service needs it, through the process's page
+tables in the current mode (`Context.loadByte`, `storeLongword`, ...), and
+written back the same way; nothing about a FAB or RAB is kept in Go but
+what its IFI or ISI names. A string RMS reads, a file name, is exactly
+FNS bytes from FNA, never NUL-terminated.
+
+The FAB and RAB's offsets were checked against VMS's own `$FABDEF` and
+`$RABDEF` and are kept in `vmsdef`, where the console assembler's `.FAB`
+and `.RAB` read them too, so the two can't disagree.
+
+### 9.5 Names
+
+A file name a program gives RMS is rarely complete. `PARTS.DAT` has no
+device or directory; `SYS$LOGIN:NOTES` has a logical name for its device
+and directory and no type; `[-]` is relative to wherever the program is.
+*Name processing* turns it into the *expanded specification*, the
+`DUA1:[000000]PARTS.DAT;` that names one place to look. govax has one name
+processor (`rms/name.go`'s `expandNames`) for every service and for DCL's
+utilities, which reach it through `logicals.go`'s `expandSpec`, so the same
+name means the same file wherever it's typed.
+
+A name is filled in from four sources, each supplying only the fields the
+ones before it left out (the RMS manual's FAB$L_DNA and NAM$L_RLF):
+
+1. the primary name, FAB$L_FNA, after its logical name is translated;
+2. the default name, FAB$L_DNA, translated the same way;
+3. the *related file*'s resultant string (NAM$L_RLF), for the device,
+   directory, name, and type, or with FAB$V_OFP only the name and type;
+4. the process's defaults: SYS$DISK's device and the default directory.
+
+A relative directory (`[.SUB]`, `[-]`) applies to the directory the later
+sources give. What no source gives stays empty: no name, a type of `.`, a
+version of `;`. A field is checked as it's scanned (`scanFields`): letters,
+digits, `$`, `_`, `-`, and the wildcards, names and types up to 39
+characters, eight directory levels, each fault its own status (`RMS$_DEV`,
+`RMS$_DIR`, `RMS$_FNM`, `RMS$_TYP`, `RMS$_VER`, `RMS$_SYN`).
+
+**Logical names.** Only the leftmost part of a name is a candidate, the text
+before its first colon, or the whole name when it has none, and only if
+it's a name's characters. It's looked up through LNM$FILE_DEV in the
+process's logical name tables (`lnm.Database.TranslateFileSpec`), and its
+equivalence string takes its place; the result is looked at again from the
+start, up to `LNM$C_MAXDEPTH` times, until nothing translates or the
+equivalence was terminal. A field that both the program and the
+translation give is an error, as VMS 7.1 has it. A name beginning with `_`
+is physical and isn't translated.
+
+- A **search list**, a name with several equivalence strings, makes several
+  expanded names, one per element in order; `$OPEN` tries each until a
+  file is found, and `$SEARCH` searches each in turn.
+- A **concealed** name (`DEFINE/TRANSLATION=CONCEALED`) stays in what RMS
+  shows: the expanded and resultant strings say `SYS$SYSDEVICE:` rather
+  than `_DUA0:`, while the volume is found by the device behind it.
+- A **rooted directory**, a concealed name translating to a device and a
+  directory ending in a period, `_DUA0:[SYSTEM.]`, makes that directory
+  look like a volume's master file directory: `SYS$SYSROOT:[SYSEXE]` is
+  `[SYSTEM.SYSEXE]` on the disk, and `[-]` can't climb out of it. A name
+  is kept as a device, a root, and a directory relative to the root
+  (`parsedName`), joined only when the volume is searched (`volumeDir`).
+- A **process-permanent file**'s name, SYS$INPUT and its kin (section 8.7),
+  ends name processing: its equivalence string is an escape and an IFI, not
+  a name, and the open goes to that file (`parsedName.Permanent`).
+
+**The default directory** is the process's `rms.Session` (`rms/session.go`):
+`Default`, the directory SET DEFAULT last set, and the logical name
+SYS$DISK, which holds the default device, as on VMS. A new process gets a
+copy of its creator's (`Session.ForProcess`).
+
+**`$PARSE` and `$SEARCH`** (`rms/parse.go`, `search.go`) are name
+processing on its own, with its results in a NAM, and the search for the
+files that match. VMS searches two ways, and govax does both as VMS 7.3's
+probe showed them: a name with no wildcard directory and no search list
+keeps no context, NAM$L_WCC holding the position of the directory entry
+last returned, so each `$SEARCH` starts again from the expanded string; a
+wildcard directory (`[*]`, `[TEST...]`) or a search list keeps a context,
+which `$PARSE` makes and the FileTable holds (`searchState`), WCC holding
+its number. After the last match the status is `RMS$_NMF`, or `RMS$_FNF` if
+nothing matched at all.
+
+### 9.6 Opening and closing
+
+**`$OPEN`** (`rms/open.go`'s `SysOpen`) goes in VMS's order:
+
+1. Read FAC and SHR. A FAB asking for no access is opened for GET.
+2. Check the NAM and the XAB chain, and FOP's options that refuse at once:
+   FAB$V_PPF (for executive mode, which no program's call is), a user file
+   open whose sharing lets others write without FAB$V_UPI, block I/O that
+   lets others write.
+3. With FAB$V_NAM, open by the NAM's FID, or its DID and name, skipping
+   name processing.
+4. Run name processing. For each expanded name in turn (more than one for a
+   search list), stopping at the first that opens or fails for a reason
+   other than not finding the file:
+   - a process-permanent file: an *indirect* open (section 8.7), no file
+     opened, the FAB given an IFI that names the permanent entry;
+   - a mailbox or NL: (a `RecordDevice` stream, `rms/recdevice.go`);
+   - the terminal, TTA0:;
+   - otherwise a volume file: find the mounted volume (`RMS$_DNR` if the
+     device holds none, `RMS$_DEV` if there's no such device), resolve the
+     directory (`RMS$_DNF`), look the name and version up (`RMS$_FNF`; no
+     version or `;0` is the highest, `;-1` the one below it), and open the
+     file by its FID (`openFID`).
+5. Fill in the FAB from the file's header (ORG, RFM, RAT, MRS, ALQ, ...),
+   the NAM (expanded and resultant strings, FID, DID, DVI), and the XABs;
+   store the IFI.
+
+`openFID` is where the file is opened twice over, once for each layer of
+sharing (9.9): `MountTable.claimOpen` adds the open to the file's list of
+RMS openers if every opener's access and sharing allows it, and
+`Volume.Access` adds it to the file system's accessors. Either can refuse,
+`RMS$_FLK`, "file currently locked by another user". The result is a
+`FileHandle` (`rms/ifi.go`) in the process's `FileTable`, under a new IFI.
+
+**`$CREATE`** (`rms/create.go`) checks the FAB's organization, record
+format, and sizes, and an indexed file's XABKEYs and XABALLs, in VMS's
+order, then makes the file: the next version above the directory's highest
+(or the one asked for; with FAB$V_MXV, whichever is higher), a header with
+the record attributes, an entry in the directory (`Volume.CreateFileVersion`).
+FAB$V_CIF opens a file that's already there instead; FAB$V_TMP and TMD make
+one with no directory entry, deleted at its close with TMD.
+
+**The file table.** A `FileHandle` is one open file: the shared
+`volume.File` and the open's `volume.Access`, the FAC and SHR it was opened
+with, its place among the RMS openers, its stream's state (9.7), its record
+locks, and, for a relative or an indexed file, that organization's state.
+`FileTable.Alloc` gives the lowest IFI not in use from 4 up (which IFIs
+VMS's RMS hands an image's files no probe has recorded); a FAB whose IFI no
+open gave out, never opened or already closed, is `RMS$_IFI`.
+
+**`$CLOSE`** writes what the stream still holds to the volume (a `Writer`'s
+last partial block) and the header's end of file and longest record; for a
+file opened to write, it sets the revision date and count (from an XABRDT
+the FAB names, or now and one more) and applies an XABPRO; then it ends the
+file system access and the RMS claim, and clears the IFI. The header goes back to the disk with the last accessor's
+deaccess; a file deleted while open is deleted then. At image rundown
+`FileTable.Rundown` closes every file the image left open, its records
+written, as VMS's RMS rundown does; the process-permanent files stay.
+
+### 9.7 Records
+
+**`$CONNECT`** (`rms/connect.go`) starts a record stream: it copies the
+FAB's IFI to the RAB's ISI and *arms* the file for the access FAC asked for,
+an `odsrms.Reader` for GET and an `odsrms.Writer` for PUT (both for both).
+A relative or indexed file has no Reader or Writer; its stream is its own
+organization's (9.8). govax keeps one stream per open file, so a second RAB
+connected to the same FAB continues the first's stream rather than starting
+another.
+
+**The stream's context** (`rms/stream.go`) is what the *Guide to OpenVMS
+File Applications* (8.6, Table 8-3) says a stream remembers between
+operations, as two positions, byte offsets in the file:
+
+- the **current record**, the one the last successful `$GET` or `$FIND`
+  reached, which `$UPDATE`, `$DELETE`, and `$TRUNCATE` act on; any other
+  operation, and any failure, leaves none;
+- the **next record**, where a sequential `$GET` or `$FIND` reads: the
+  first record after `$CONNECT` (the end of the file with RAB$V_EOF), the
+  one after the current record after a `$GET`, the end of the file after a
+  `$PUT`. A `$GET` right after a `$FIND` reads the record the `$FIND` found.
+
+**`$GET`** (`rms/get.go`) takes the record RAB$B_RAC chooses (the next one;
+with RAB$C_RFA the one at RAB$W_RFA) and copies it into the *user buffer*,
+RAB$L_UBF, of RAB$W_USZ bytes, which `$GET` requires: without one it's
+`RMS$_UBF` or `RMS$_USZ`, before any record is read. A record longer than
+the buffer is cut to it with `RMS$_RTB`, a warning whose STV is the
+record's whole size. RAB$W_RSZ gets the length stored, RAB$L_RBF the
+buffer's address, and RAB$W_RFA the record's RFA.
+
+So a `$GET` from the program in 9.3 goes like this:
+
+1. The wrapper builds a Context and calls `rms.SysGet`, which reads the
+   RAB's ISI, 4, and finds the FileHandle in the FileTable.
+2. It isn't a terminal, a mailbox, or a relative or indexed file, so
+   `locate` (`stream.go`) picks the next record's offset, takes a record
+   lock if the stream locks records (9.9), and asks the handle's Reader for
+   the record at that offset.
+3. The Reader (ods2's `rms/reader.go`) needs block 1 of the file, and asks
+   the `volume.File` for it: `ReadBlock` walks the extents to an LBN and
+   reads that block of the container, one host `ReadAt` of 512 bytes.
+4. The Reader takes the length word, 11, and the eleven bytes after it.
+5. `storeRecordStatus` copies them into the program's buffer through its
+   page tables, stores RSZ, RBF, and STS, and returns `RMS$_NORMAL` as R0.
+
+**`$PUT`** (`rms/put.go`) writes RAB$W_RSZ bytes from RAB$L_RBF. On a
+sequential file it goes at the end only, when the next record is the end
+of the file; anywhere else it's `RMS$_NEF`, unless RAB$V_TPT cuts the file
+off there first. The Writer frames the record by the format, keeps a
+partial block in memory and writes each block as it fills; a file others
+also have open is written through, each record on the disk with the end of
+file moved past it before `$PUT` returns, so their streams see it.
+
+The rest work on the current record: **`$FIND`** locates without copying;
+**`$UPDATE`** rewrites the current record in place (the same length on a
+sequential file; a stream file's record may change length, as on VMS);
+**`$DELETE`** is `RMS$_IOP` on a sequential file, as on VMS; **`$TRUNCATE`**
+ends the file at the current record; **`$REWIND`** starts the stream again;
+**`$FLUSH`** writes what the stream holds. On a fixed-length sequential file
+a program may also reach a record by its number (RAB$C_KEY, the number at
+RAB$L_KBF; `rms/keyed.go`, `keyedput.go`).
+
+### 9.8 Relative and indexed files
+
+A **relative file** (`rms/relative.go`) is a row of numbered cells, one
+record a cell, record 1 first. A program reaches a record by its number, or
+in sequence, which passes over cells that hold none. Block 1 is the
+prologue (the first data block, the maximum record number, the end of
+file, a checksum); the cells follow in buckets of FAB$B_BKS blocks, each
+cell a control byte (never used, a record, a deleted record) and room for
+the largest record. No manual gives the layout; it was read from files VMS
+7.1 made, and govax's are the same byte for byte. RMS reads and writes
+the cells' blocks itself, through the `volume.File`, with no ods2 Reader.
+
+An **indexed file** keeps its records in order of one or more keys, so a
+program can ask for "the record whose part number is 1234". Its structure
+is `internal/isam`'s, a package that knows nothing of RMS or of VAX memory:
+
+- The file is divided into *buckets*, 1 to 63 blocks each, RMS's unit of
+  I/O. The first blocks are the *prolog*: a *key descriptor* per key (where
+  the key is in a record, its type, its root bucket) and an *area
+  descriptor* per area (a set of buckets of one size).
+- Each key has a tree of buckets: level 0 is the data level, and each level
+  above it an index whose entries are "the highest key in that bucket
+  below". Every level's buckets are also chained in key order, so reading
+  in sequence never climbs the tree.
+- Key 0, the primary key, keeps the records themselves in its level 0. Each
+  alternate key keeps *SIDRs* there, a key value and pointers to the
+  records having it.
+- A record's RFA is the bucket it was first written into and an ID unique
+  in that bucket, and never changes: when a split moves a record, the old
+  bucket keeps an *RRV*, a record reference vector, saying where it went.
+  That's why an alternate key's pointers, and an RFA a program kept, still
+  work after the file grows.
+
+`isam` finds, reads in order, adds (splitting full buckets, adding index
+levels), updates, and deletes, on a `Blocks` interface. `rms/indexed.go` is
+what RMS puts around it: a `$CREATE`'s FAB and XABKEYs and XABALLs checked in
+VMS's order and turned into an `isam.Spec`, and the blocks isam reads and
+writes, which are the volume file's. `indexedrecords.go` is the record
+services on one: `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, and
+`$REWIND` by key (RAB$B_KRF the key, KBF and KSZ its value, ROP's KGE and
+KGT for "equal or greater" and "greater"), in sequence on the key of
+reference, and by RFA. Only Prolog 3 files are read, by the author's
+choice; an older prolog is `RMS$_PLV`.
+
+### 9.9 Sharing a file
+
+Several processes may have one file open at once, and RMS decides who may
+do what with it in two layers, as VMS's does.
+
+**RMS's rule** (`rms/sharing.go`) is the *Guide to OpenVMS File
+Applications*' (7.1.2, Tables 7-3 and 7-4), by record operation: GET, PUT,
+UPDATE, DELETE. An open *asks* for the operations its FAB$B_FAC names (GET
+whenever it asks for any) and *allows* the others its FAB$B_SHR names (none
+with FAB$V_NIL; with SHR 0, reading if it only reads and nothing if it
+writes). A new opener may join if every operation it asks for is one each
+current opener allows, and every operation each current opener has is one
+it allows:
+
+```go
+// rms/sharing.go
+func (a opener) compatible(b opener) bool {
+	return a.access&^b.share == 0 && b.access&^a.share == 0
+}
+```
+
+Each volume's entry in the mount table keeps every open file's list of
+openers by FID (`claimOpen`).
+
+**The file system's rule** (ods2's `volume.Access`) is coarser, as the ACP's
+is: an accessor writes or doesn't, and may deny others reading or writing.
+Every RMS open is also such an access, derived from its RMS access and
+sharing (`accessMode`), and so is a program's own `IO$_ACCESS` through the
+disk driver (section 8.5); this is the layer that arbitrates between the
+two, `SS$_ACCONFLICT` for the `$QIO`.
+
+While a file is accessed, every accessor shares one `volume.File`: one
+header, one map, one end of file, as VMS's accessors share one *file
+control block*. One process's appends and extensions are what the others
+read, and a file deleted while open loses its directory entry at once but
+keeps its blocks until its last accessor deaccesses it.
+
+**Record locks** (`rms/recordlock.go`). In a file others may write (an SHR
+with PUT, UPD, or DEL, and not FAB$V_UPI, which turns RMS's locking off),
+RMS locks each record a stream reads, so another stream can't take it from
+under it. The locks are real locks in the system's lock database (section
+7.9's `lck`), as VMS's RMS takes them in VMS's lock manager: each stream's
+record locks are sublocks of a null-mode lock on the file, named by its
+volume and FID, the record's named by its RFA, taken in executive mode so
+image rundown leaves them to the file's close. RAB$L_ROP says how:
+
+| Option | Effect |
+| --- | --- |
+| (none) | exclusive: no other stream may lock the record |
+| RAB$V_RLK | a write lock: others may still read it, without a lock |
+| RAB$V_REA | a read lock: others may read-lock it too |
+| RAB$V_NLK | no lock, only a query: `RMS$_RLK` if someone holds it exclusively |
+| RAB$V_RRL | a locked record is read anyway, without a lock |
+| RAB$V_WAT | wait for a locked record (`RMS$_OK_WAT`); with RAB$V_TMO, for at most RAB$B_TMO seconds (`RMS$_TMO`) |
+| RAB$V_ULK | locks stay until `$FREE`, `$RELEASE`, or the close |
+
+A refused lock is `RMS$_RLK`, and the record isn't consumed: the next `$GET`
+tries it again. A waiting `$GET` waits as any service waits (section 7.6):
+it returns `ErrWait`, its process waits in the scheduler, and the lock's
+grant, delivered to the stream's notifier, makes it computable; the `$GET`
+then runs again and finds the lock its own.
+
+### 9.10 Blocks rather than records
+
+A program that wants a file's blocks has three ways to them.
+
+- **Block I/O** (`rms/blockio.go`): with FAB$V_BIO (or FAB$V_BRO and
+  RAB$V_BIO), `$READ` and `$WRITE` move RAB$W_USZ or RAB$W_RSZ bytes of the
+  file's virtual blocks from RAB$L_BKT, 0 meaning the block after the last.
+  A record operation on such a stream is `RMS$_IOP`.
+- **User file open** (`rms/ufo.go`): with FAB$V_UFO, `$OPEN` or `$CREATE`
+  finds the file, checks access and sharing, and fills in the NAM and XABs,
+  then steps aside: the file is left accessed on a new I/O channel, its
+  number in FAB$L_STV, and the program reads and writes it with `$QIO`, or
+  maps it with `$CRMPSC`. In govax the open's access moves from the file
+  table to an `rms.ACPFile` (`rms/acp.go`), the same kind a disk
+  `IO$_ACCESS` makes, which corevms puts on the channel.
+- **The disk's `$QIO`** functions (section 8.5), on `rms/acp*.go`'s ACP
+  routines: access by FID or by directory and name, read and write virtual
+  blocks, create, delete, extend, and attributes, each over ods2, its errors
+  turned into `SS$_` statuses.
+
+### 9.11 Terminals, mailboxes, and process-permanent files
+
+RMS reaches three things that aren't files:
+
+- **The terminal** (`rms/terminal.go`), named TT:, TTA0:, or through a
+  logical name: a `$GET` writes the prompt, RAB$L_PBF's RAB$B_PSZ bytes, if
+  RAB$V_PMT asks for one, then reads up to a carriage return or line feed,
+  which isn't part of the record, or until the user buffer is full; a
+  Ctrl/Z with nothing before it is `RMS$_EOF`. It reads through the shared
+  terminal's queue (section 7.12), so a process waits its turn. A `$PUT`
+  writes a line, by the file's carriage control.
+- **Mailboxes and NL:** (`rms/recdevice.go`), streams on the same Go state
+  the mailbox and null drivers use (section 8.5): a `$PUT` is a message,
+  done when it's read; a `$GET` takes one, `RMS$_EOF` at an end-of-file
+  message, and NL: is always at its end.
+- **Process-permanent files**, the files a process keeps from one image to
+  the next (section 8.7). An image's `$OPEN` of SYS$OUTPUT opens nothing:
+  its IFI is *indirect*, with the PPF bit set, and every `$GET` and `$PUT`
+  through it works on the permanent entry's one stream
+  (`rms/ppfaccess.go`, the guide's 6.6). `$DISPLAY` of one shows the file
+  behind it; `$REWIND` is `RMS$_IOP`, `$ERASE` `RMS$_IFI`, and a `$GET` or
+  `$FIND` of SYS$OUTPUT `RMS$_FAC`, as VMS 7.1's answers were.
+
+### 9.12 Host files
+
+A program's RMS reaches only volumes, the terminal, mailboxes, and NL:. A
+name whose device has no volume mounted is `RMS$_DNR`, whatever files the
+host has; a VMS program can't reach the host's file system by RMS.
+
+govax's own commands can. DCL's utilities, MACRO, LINK, LIBRARY, and the
+rest take file names a user types, which may mean the host
+(`rms/location.go`'s `Session.Locate`, by the name's syntax):
+
+1. a name given with `/HOST`, or with a `/` or `\` in it (which, typed,
+   needs quotes), or a one-letter drive prefix (`C:`), is a host path;
+2. a name in VMS's syntax, with a bracketed directory or a device or logical
+   name of two or more characters before a colon, is a volume file (a
+   logical name that leads to no mounted volume is an error, not a host
+   file);
+3. a bare name, `HELLO.MAR`, is a volume file when a SET DEFAULT onto a
+   volume is in effect, and a host file otherwise.
+
+`rms/recordfile.go` reads and writes records on either side
+(`ReadRecordFile`, `CreateRecordFile`): a host file of text is lines; one of
+an object module's records is ODS-2's own VAR layout, so its bytes are what
+a copy of the volume file's blocks would be; an image is its blocks. COPY
+gives a host file the record format the user names (`/RECORD_FORMAT` and its
+companions; a host file can't say what records it holds).
+
+Two things a program runs do reach the host: the C library's `open` and its
+kin through the console's `EXE$OPEN` shim (arbitrated between processes by
+RMS's sharing rule, by host file identity: `rms/hostshare.go`), and RUN of
+an image, which may be a host file.
+
+### 9.13 What's VMS's and what isn't
+
+- **RMS is Go, not VAX code in executive mode.** There are no RMS
+  structures in P1 space (no IFABs or IRABs, no I/O segment), no RMS
+  buffers or global buffers, and no multiblock or multibuffer counts; RMS's
+  share of the I/O counts (JPI$_BUFIO, JPI$_DIRIO) is a model fitted to one
+  VMS run (`rms/iocount.go`).
+- **Operations complete during the call**, with or without ASY, but for a
+  `$PUT` to a mailbox. A pending `$PUT`'s status, and its completion
+  routine, come at the `$WAIT`, not when the message is read. FAB$V_SYNCSTS
+  and RAB$V_SYNCSTS (`RMS$_SYNCH`), from a later OpenVMS, aren't there.
+- **Ill-formed calls aren't checked**: only `$RENAME` checks that its
+  blocks are a FAB (`RMS$_FAB`); other services take the block they're
+  given without looking at its BID and BLN, and none is `RMS$_BUSY`.
+- **One stream per open file**: a second RAB on a FAB continues the first's
+  stream, where VMS can keep several (FAB$V_MSE).
+- **No file protection is checked**: a file's owner and protection mask,
+  and its ACL, are kept and shown, and any process may open any file. A
+  mailbox's protection is checked (section 7.9).
+- **No network files** (a node name is `RMS$_SYN`), no journaling, no
+  magnetic tape.
+- **Indexed files are Prolog 3 only**, and the file system is a single
+  volume: ods2 can mount a volume set, govax doesn't.
+- **The bitmaps are written at DISMOUNT**, not as each allocation is made
+  (9.1).
+- **A program's RMS never reaches host files**; govax's commands do (9.12).
 
 ## 10. From VAX code to Go and back
 

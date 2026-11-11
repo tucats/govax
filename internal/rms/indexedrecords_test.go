@@ -61,8 +61,8 @@ func getKey(t *testing.T, f *createFixture, service func(*Context, []uint32) (ui
 	putLongwordAt(t, f.ctx, testRabAddr+rabKBF, keyBufferAddr)
 	putByte(t, f.ctx, testRabAddr+rabKSZ, byte(len(value)))
 	putLongwordAt(t, f.ctx, testRabAddr+rabROP, rop)
-	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, 0)
-	putLongwordAt(t, f.ctx, testRabAddr+rabRBF, testRecordAddr)
+	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, f.ctx, testRabAddr+rabUSZ, 512)
 
 	return run(t, f.ctx, service, testRabAddr)
 }
@@ -73,8 +73,8 @@ func getSeq(t *testing.T, f *createFixture) (uint32, string) {
 
 	putByte(t, f.ctx, testRabAddr+rabRAC, racSeq)
 	putLongwordAt(t, f.ctx, testRabAddr+rabROP, 0)
-	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, 0)
-	putLongwordAt(t, f.ctx, testRabAddr+rabRBF, testRecordAddr)
+	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, f.ctx, testRabAddr+rabUSZ, 512)
 
 	r0 := run(t, f.ctx, SysGet, testRabAddr)
 	if r0&1 == 0 {

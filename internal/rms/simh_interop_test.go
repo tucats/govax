@@ -455,7 +455,8 @@ func TestSimhInterop_writeThenRereadEmptyDsk(t *testing.T) {
 	openAndConnectForRead(t, readCtx, "INTEROP.DAT")
 
 	putByte(t, readCtx, testRabAddr+rabRAC, racSeq)
-	putLongwordAt(t, readCtx, testRabAddr+rabRBF, testRecordAddr)
+	putLongwordAt(t, readCtx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, readCtx, testRabAddr+rabUSZ, 512)
 
 	r0, err := SysGet(readCtx, []uint32{testRabAddr})
 	if err != nil {

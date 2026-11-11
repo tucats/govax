@@ -39,11 +39,7 @@ import "github.com/tucats/govax/internal/vmsdef"
 //     lands exactly on FAB_K_BLN, the struct's documented overall size
 //     (80 bytes).
 //
-// Both methods agree on every field below. Where they matter, offsets are
-// also cross-checked against every offset the project's earlier Phase 10
-// RMS stopgap (deleted; see git history for internal/rtl/rms.go) already
-// used successfully — except one: see fabFNS's own comment for a bug that
-// comparison caught.
+// Both methods agree on every field below.
 //
 // Phase 24 (docs/PHASE-24.md) generalized this same verification into
 // internal/vmsdef.FABFields — the complete 33-field table (this file only
@@ -121,9 +117,8 @@ var (
 	// of the string fabFNA points at (VAX RMS file-spec strings are not
 	// NUL-terminated — the caller must say how long the string is).
 	//
-	// The real offset is 52, not 48. The project's now-deleted Phase 10
-	// stopgap (internal/rtl/rms.go) used 48 here, which was simply
-	// wrong: real VMS's $FABDEF places a whole extra 4-byte field,
+	// The real offset is 52, not 48, which an early version of govax
+	// used: real VMS's $FABDEF places a whole extra 4-byte field,
 	// FAB$L_DNA (the "default file name" address — unused by this
 	// package, but still present and still occupying space in the
 	// struct), between FAB$L_FNA and FAB$B_FNS. The old code's tests

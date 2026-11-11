@@ -1,50 +1,44 @@
-// Package rms is govax's implementation of VMS RMS (Record Management
-// Services) — the part of the VMS runtime that a VAX program calls into
-// (via SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$GET, SYS$PUT, SYS$CONNECT, and
-// SYS$RENAME) to create, open, read, write, and rename files. See
-// docs/PHASE-22.md for the full design.
+// Package rms is govax's RMS (Record Management Services): the part of
+// VMS a program calls (SYS$OPEN, SYS$CREATE, SYS$CONNECT, SYS$GET,
+// SYS$PUT, SYS$PARSE, SYS$SEARCH, and the rest) to name, open, read, and
+// write files, and the file work govax's own commands share with it.
 //
-// # Why this package exists, for a reader new to the project
+// # How a program reaches it
 //
-// A running VAX program never talks to a "file system" the way a modern Go
-// program does (os.Open, os.Create, ...). Instead it calls one of the
-// SYS$ services named above, which this emulator's RTL layer
-// (internal/rtl) dispatches by name into whichever package registered a
-// handler for it — see internal/rtl/service.go's ServiceTable. This
-// package registers the handlers for exactly those six services (create.go,
-// connect.go, open.go, close.go, get.go, put.go — added incrementally as
-// docs/PHASE-22.md's subtasks land) and backs them with a real, on-disk
-// ODS-2 ("Files-11 Structure Level 2") file system, using the sibling
-// module github.com/tucats/ods2 to actually read and write the volume's
-// bytes. That's a deliberate step up from Phase 10's original RMS
-// stopgap (deleted — see docs/PHASE-22.md's "Removing Phase 10's
-// host-passthrough RMS"), which just opened an arbitrary host file and
-// called that "RMS": real VMS software expects a real VMS-shaped volume
-// underneath it (directories, file headers, allocation bitmaps, and a
-// specific on-disk byte layout), and this package is what makes that true
-// here.
+// A program builds its control blocks (the FAB for a file, the RAB for a
+// record stream, NAMs and XABs beside them) in its own memory and calls a
+// service with the block's address. internal/corevms's service table
+// sends each RMS service to its handler here (SysOpen, SysGet, ...) with
+// a Context: the process's memory and CPU, its open files, its logical
+// names, the mounted volumes, and what it needs of the rest of VMS (the
+// terminal, mailboxes, the lock database). A handler reads and writes the
+// blocks' fields by their VMS offsets (fab.go, rab.go, nam.go, xab.go) and
+// returns the RMS status, which it has also stored in the block's STS.
 //
-// # The pieces in this package
+// # Where the files are
 //
-//   - mount.go's MountTable tracks which VAX device names (e.g. "DUA0:")
-//     currently have a container file mounted as an ODS-2 volume — the Go
-//     equivalent of real VMS's MOUNT command.
-//   - fab.go and rab.go define the exact byte layout of the two VMS
-//     control blocks (the FAB, "File Access Block", and RAB, "Record
-//     Access Block") that a calling VAX program builds in its own memory
-//     and hands to RMS by address. This package's service handlers read
-//     and write specific fields inside those blocks directly out of
-//     emulated VAX memory, so it has to know precisely where each field
-//     lives, the same way the CPU package has to know a VAX instruction's
-//     exact opcode encoding.
-//   - status.go defines the real numeric RMS$_ completion-code values a
-//     compiled VAX program checks FAB$L_STS/RAB$L_STS against after a
-//     call — these have to be the genuine VMS values, not values this
-//     project invented, or a real, unmodified VAX program would
-//     misinterpret what happened.
-//   - ifi.go's FileTable is this package's own "list of currently open
-//     files", keyed by a small integer ("internal file index", or IFI)
-//     the same way a Unix process's open files are keyed by small integer
-//     file descriptors. SYS$CREATE/SYS$OPEN hand back an IFI; SYS$PUT/
-//     SYS$GET/SYS$CLOSE take one as input to say which open file they mean.
+// Files are on ODS-2 volumes, container files mounted on device names
+// (mount.go's MountTable), read and written through the sibling module
+// github.com/tucats/ods2, which this is the only package to import. A
+// program's RMS reaches only volumes, the terminal, mailboxes, and NL:;
+// the DCL utilities and the tools reach host files too, through Session
+// (location.go, recordfile.go).
+//
+// # The pieces
+//
+//   - name.go and logicals.go: name processing, one for every caller;
+//     parse.go and search.go, $PARSE and $SEARCH.
+//   - ifi.go: a process's open files (FileTable) and each one's state
+//     (FileHandle); ppf.go and ppfaccess.go, its process-permanent files.
+//   - open.go, create.go, connect.go, close.go: opening; sharing.go, the
+//     arbitration between openers; ufo.go, user file open.
+//   - get.go, put.go, stream.go, recordops.go: sequential records;
+//     relative.go, relative files; indexed.go and indexedrecords.go,
+//     indexed files over internal/isam; keyed.go, keyed access to a
+//     fixed-length sequential file; blockio.go, $READ and $WRITE;
+//     recordlock.go, record locks in the lock database.
+//   - terminal.go and recdevice.go: the terminal, mailboxes, and NL:.
+//   - acp*.go: the disk ACP's functions, for a program's $QIO on a disk.
+//   - session.go, location.go, recordfile.go, and the files named for
+//     commands (directory.go, copy.go, ...): what the DCL utilities use.
 package rms

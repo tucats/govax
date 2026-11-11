@@ -318,22 +318,13 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 	return ctx.Files.Alloc(h), 0, nil
 }
 
-// parseOpenVersion interprets a file spec's version field (spec.Version —
-// the raw text after ';', e.g. "5", or "" if no version was written at
-// all) into the uint16 volume.Directory.Lookup expects, and whether that
-// interpretation succeeded at all.
-//
-// Only two shapes are supported: no version (or the literal "0", which
-// isn't itself a legal VMS version number), meaning "the highest existing
-// version" — Lookup's own convention for a 0 argument — and an explicit
-// positive version number. Real VMS's fuller version syntax (";*" for
-// every version, ";-1" for "N versions back from the highest") is a
-// wildcard-matching concern package filespec's own Glob already implements
-// for directory-listing use cases (internal/console's future DIRECTORY
-// command, say); SYS$OPEN's job is resolving one specific file, so this
-// function deliberately doesn't reuse that machinery — anything it doesn't
-// recognize is reported back to the caller as rmsInvalidVersion rather
-// than silently guessing what was meant.
+// parseOpenVersion reads a file spec's version field (the text after
+// ';', or "" if there was none) as the uint16 ods2's Directory.Lookup
+// takes: no version or "0" is 0, the highest version, and a positive
+// number is itself. It's for callers that want a version number; $OPEN's
+// lookup (namopen.go's lookupVersion) also takes ";-n", the nth below the
+// highest. Anything else reports false, and the caller's status is
+// RMS$_VER.
 func parseOpenVersion(v string) (uint16, bool) {
 	if v == "" || v == "0" {
 		return 0, true

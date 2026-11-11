@@ -89,9 +89,6 @@ var facReads = facGet | facUpd | facDel | facTrn
 // ropTPT is RAB$M_TPT, truncate on put.
 var ropTPT = vmsConst("RAB$M_TPT")
 
-// racRFA is RAB$C_RFA, record access by record file address.
-var racRFA = byte(vmsConst("RAB$C_RFA"))
-
 // endOfFile is the byte offset at which h's file ends now.
 func (h *FileHandle) endOfFile() int64 {
 	return odsrms.FileByteLength(h.File.Header.RecordAttributes)
@@ -209,6 +206,17 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 	rop, err := ctx.loadLongword(rabAddr + rabROP)
 	if err != nil {
 		return located{}, 0, err
+	}
+
+	if !find {
+		sts, err := ctx.missingBuffer(rabAddr, rac)
+		if err != nil {
+			return located{}, 0, err
+		}
+
+		if sts != 0 {
+			return fail(sts)
+		}
 	}
 
 	s := &h.stream

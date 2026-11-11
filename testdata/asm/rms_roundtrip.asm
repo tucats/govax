@@ -111,6 +111,8 @@ ok5:
 ok6:
 
 ; ---- reopen the same file for reading, reusing the same FAB/RAB ----
+; ($GET reads into the user buffer, RAB$L_UBF of RAB$W_USZ bytes, which it
+; requires; RAB$L_RBF is where $PUT's record comes from.)
 	movb	#FAB$M_GET, @#fab+FAB$B_FAC
 	pushal	@#fab
 	calls	#1, @#sys$open
@@ -125,7 +127,8 @@ ok7:
 ok8:
 
 	moval	@#readbuf, r1
-	movl	r1, @#rab+RAB$L_RBF
+	movl	r1, @#rab+RAB$L_UBF
+	movw	#4, @#rab+RAB$W_USZ
 	pushal	@#rab
 	calls	#1, @#sys$get
 	blbs	r0, ok9
@@ -138,7 +141,8 @@ ok9:
 ok10:
 
 	moval	@#readbuf, r1
-	movl	r1, @#rab+RAB$L_RBF
+	movl	r1, @#rab+RAB$L_UBF
+	movw	#4, @#rab+RAB$W_USZ
 	pushal	@#rab
 	calls	#1, @#sys$get
 	blbs	r0, ok11
@@ -151,7 +155,8 @@ ok11:
 ok12:
 
 	moval	@#readbuf, r1
-	movl	r1, @#rab+RAB$L_RBF
+	movl	r1, @#rab+RAB$L_UBF
+	movw	#4, @#rab+RAB$W_USZ
 	pushal	@#rab
 	calls	#1, @#sys$get
 	blbs	r0, ok13

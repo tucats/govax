@@ -42,7 +42,8 @@ func TestSysGet_diskFile(t *testing.T) {
 	openAndConnectForRead(t, f.ctx, "GET.DAT")
 
 	putByte(t, f.ctx, testRabAddr+rabRAC, racSeq)
-	putLongwordAt(t, f.ctx, testRabAddr+rabRBF, testRecordAddr)
+	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, f.ctx, testRabAddr+rabUSZ, 512)
 	putWord(t, f.ctx, testRabAddr+rabRSZ, 0) // sentinel: SysGet must overwrite this
 
 	r0, err := SysGet(f.ctx, []uint32{testRabAddr})
@@ -109,7 +110,8 @@ func TestSysGet_multipleRecordsThenEOF(t *testing.T) {
 
 	openAndConnectForRead(t, f.ctx, "MULTI.DAT")
 	putByte(t, f.ctx, testRabAddr+rabRAC, racSeq)
-	putLongwordAt(t, f.ctx, testRabAddr+rabRBF, testRecordAddr)
+	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, f.ctx, testRabAddr+rabUSZ, 512)
 
 	for i, want := range records {
 		r0, err := SysGet(f.ctx, []uint32{testRabAddr})
@@ -271,6 +273,85 @@ func TestSysGet_invalidRAC(t *testing.T) {
 
 	if r0 != rmsInvalidRAC {
 		t.Errorf("r0 = %d, want rmsInvalidRAC (%d)", r0, rmsInvalidRAC)
+	}
+}
+
+// TestSysGet_needsUserBuffer confirms a $GET with no user buffer is
+// RMS$_UBF (no RAB$L_UBF) or RMS$_USZ (a RAB$W_USZ of 0) and reads no
+// record: RAB$L_RBF, an output, isn't taken for one, and the next $GET
+// with a buffer gets the first record. A RAC that names no mode is still
+// RMS$_RAC. The terminal reads no line without one.
+func TestSysGet_needsUserBuffer(t *testing.T) {
+	f := newCreateFixture(t, true)
+
+	first := bytes.Repeat([]byte{'F'}, 80) // the fixture's records are 80 bytes
+	createAndCloseTestFile(t, f.ctx, "UBF.DAT", first)
+	openAndConnectForRead(t, f.ctx, "UBF.DAT")
+
+	// The file was written from the record area: clear it.
+	for i := range uint32(80) {
+		putByte(t, f.ctx, testRecordAddr+i, 0)
+	}
+
+	get := func(rac byte, ubf uint32, usz uint16) uint32 {
+		t.Helper()
+
+		putByte(t, f.ctx, testRabAddr+rabRAC, rac)
+		putLongwordAt(t, f.ctx, testRabAddr+rabUBF, ubf)
+		putWord(t, f.ctx, testRabAddr+rabUSZ, usz)
+		putLongwordAt(t, f.ctx, testRabAddr+rabRBF, testRecordAddr)
+
+		r0, err := SysGet(f.ctx, []uint32{testRabAddr})
+		if err != nil {
+			t.Fatalf("SysGet: %v", err)
+		}
+
+		return r0
+	}
+
+	if r0 := get(racSeq, 0, 80); r0 != rmsInvalidUBF {
+		t.Errorf("no RAB$L_UBF: r0 = %08X, want RMS$_UBF (%08X)", r0, rmsInvalidUBF)
+	}
+
+	if r0 := get(racSeq, testUserBufAddr, 0); r0 != rmsInvalidUSZ {
+		t.Errorf("RAB$W_USZ 0: r0 = %08X, want RMS$_USZ (%08X)", r0, rmsInvalidUSZ)
+	}
+
+	if r0 := get(9, 0, 0); r0 != rmsInvalidRAC {
+		t.Errorf("bad RAC, no buffer: r0 = %08X, want RMS$_RAC (%08X)", r0, rmsInvalidRAC)
+	}
+
+	if b := readByte(t, f.ctx, testRecordAddr); b == 'F' {
+		t.Error("a $GET with no user buffer wrote the record at RAB$L_RBF")
+	}
+
+	if r0 := get(racSeq, testUserBufAddr, 80); r0 != rmsNormal {
+		t.Fatalf("with a buffer: r0 = %08X, want RMS$_NORMAL", r0)
+	}
+
+	got := make([]byte, readWord(t, f.ctx, testRabAddr+rabRSZ))
+	for i := range got {
+		got[i] = readByte(t, f.ctx, testUserBufAddr+uint32(i))
+	}
+
+	if !bytes.Equal(got, first) {
+		t.Errorf("record = %q, want the first (the refused $GETs read nothing)", got)
+	}
+
+	if rbf := readLongword(t, f.ctx, testRabAddr+rabRBF); rbf != testUserBufAddr {
+		t.Errorf("RAB$L_RBF = %08X, want the user buffer %08X", rbf, testUserBufAddr)
+	}
+
+	tf, _ := consoleGetFixture(t, "LINE\n", "", 0)
+
+	if r0, err := SysGet(tf.ctx, []uint32{testRabAddr}); err != nil || r0 != rmsInvalidUSZ {
+		t.Fatalf("terminal, RAB$W_USZ 0: r0 = %08X, %v; want RMS$_USZ", r0, err)
+	}
+
+	putWord(t, tf.ctx, testRabAddr+rabUSZ, 80)
+
+	if sts, record := consoleGet(t, tf); sts != rmsNormal || record != "LINE" {
+		t.Errorf("terminal, then with a buffer: %08X %q, want the line typed", sts, record)
 	}
 }
 

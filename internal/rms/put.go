@@ -12,7 +12,7 @@ package rms
 // argv is a slice (Go's dynamically-sized array type) of uint32 VAX
 // memory addresses — every service handler in this emulator is called
 // with the same "(argv []uint32) (uint32, error)" shape (see
-// internal/rtl's ServiceTable), so argv[0] is simply "the first, and in
+// internal/corevms's ServiceTable), so argv[0] is simply "the first, and in
 // SYS$PUT's case only, argument the calling VAX program passed". The
 // (uint32, error) the function returns is Go's ordinary two-result
 // convention for "here's the value, and here's whether producing it

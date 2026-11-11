@@ -56,11 +56,9 @@ func (e *NotMountedError) Error() string {
 // unwritten, and Mounts is what turns the resulting device name into an
 // actual open volume to operate on (see resolveVolume below).
 //
-// A Session has no concurrency protection of its own, matching every other
-// piece of shared console state in this project (MountTable's own doc
-// comment explains why: govax has no concept of multiple VAX processes
-// sharing one Console at once, so nothing here needs to guard against two
-// goroutines racing on it).
+// Each process has a Session of its own (ForProcess), sharing the mount
+// table. It has no locking, and needs none: one goroutine runs every
+// process (MountTable's doc comment).
 type Session struct {
 	// Mounts is the same *MountTable a Console already owns (Phase 22) —
 	// Session doesn't create or own a separate one of its own, it just

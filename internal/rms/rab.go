@@ -43,10 +43,9 @@ var (
 	rabSTS = rabOffset("STS")
 	rabSTV = rabOffset("STV")
 
-	// rabRAC is RAB$B_RAC: a 1-byte field naming the record access mode
-	// — sequential, keyed, by RFA (record file address), and so on (see
-	// the rac* constants below). This package implements sequential
-	// access only.
+	// rabRAC is RAB$B_RAC: a 1-byte field naming the record access mode:
+	// sequential, keyed, or by RFA (record file address); see the rac*
+	// constants below.
 	rabRAC = rabOffset("RAC")
 
 	// rabRSZ is RAB$W_RSZ: a 2-byte field. On SYS$PUT, the calling
@@ -57,22 +56,15 @@ var (
 	rabRSZ = rabOffset("RSZ")
 
 	// rabRBF is RAB$L_RBF: a 4-byte field holding the VAX-memory address
-	// of the record buffer — where SYS$PUT reads the outgoing record's
-	// bytes from, and where SYS$GET writes the incoming record's bytes
-	// to.
+	// of the record buffer. SYS$PUT reads the outgoing record from it;
+	// SYS$GET sets it to where the record it read is (the user buffer,
+	// in move mode).
 	rabRBF = rabOffset("RBF")
 
-	// rabUBF/rabUSZ are RAB$L_UBF/RAB$W_USZ: an alternate "user buffer"
-	// address/size pair a calling program may supply on SYS$GET instead
-	// of (or in addition to) rabRBF/rabRSZ — real RMS uses UBF when it
-	// wants a separate, caller-owned copy destination distinct from
-	// whatever internal buffer it read the record into, most relevant
-	// for RMS's read-ahead/locate-mode optimizations. This phase's
-	// SYS$GET (get.go) always has real record bytes in hand already (no
-	// separate internal buffer to avoid copying out of), so when the
-	// caller has supplied a UBF/USZ pair get.go copies the record there
-	// instead of RBF/RSZ, matching what a real, unmodified VAX program
-	// expects to find populated.
+	// rabUBF/rabUSZ are RAB$L_UBF/RAB$W_USZ: the user buffer's address and
+	// size, where SYS$GET (get.go) and SYS$READ put what they read. $GET
+	// requires one (RMS$_UBF, RMS$_USZ without it), and cuts a record
+	// longer than it with RMS$_RTB.
 	rabUBF = rabOffset("UBF")
 	rabUSZ = rabOffset("USZ")
 
@@ -114,18 +106,14 @@ var (
 // file, so $PUT appends.
 var ropEOF = vmsConst("RAB$M_EOF")
 
-// RAB$B_RAC values (record access modes) this package recognizes. Real
-// VMS defines several (sequential, keyed by an indexed file's key, direct
-// by RFA, ...); this phase implements sequential organization only
-// (fab.go's orgSeq), so racSeq is the only access mode SYS$PUT/SYS$GET
-// accept — anything else is rejected with a real RMS$_ error rather than
-// silently misbehaving.
-//
-// racRFA is for future expansion (no indexed-file support yet).
+// RAB$B_RAC values, the record access modes: in sequence; by key (a
+// relative file's record number, an indexed file's key, or a record
+// number on a fixed-length sequential file, keyed.go); and by record file
+// address. Any other value is RMS$_RAC.
 var (
-	racSeq = byte(vmsConst("RAB$C_SEQ")) // sequential access; the only mode this phase implements.
-	racKey = byte(vmsConst("RAB$C_KEY")) // keyed access: by relative record number on a fixed-length sequential file (keyed.go); no indexed files yet.
-	//racRFA = byte(vmsConst("RAB$C_RFA")) // direct access by record file address; not implemented.
+	racSeq = byte(vmsConst("RAB$C_SEQ"))
+	racKey = byte(vmsConst("RAB$C_KEY"))
+	racRFA = byte(vmsConst("RAB$C_RFA"))
 )
 
 // rabOffset looks up keyword (e.g. "RAC") in internal/vmsdef.RABFields —

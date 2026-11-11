@@ -21,17 +21,10 @@ import "github.com/tucats/govax/internal/vmsdef"
 // own bookkeeping and never need to match anything else — these numbers
 // are not this project's to choose.
 //
-// This is exactly the same kind of "must match a fixed external
-// contract" situation this package's Environment (internal/rtl) already
-// tracks separately in internal/rtl/status.go for VMS's *other* status
-// family, SS$_ codes (the general system-service completion codes used
-// outside RMS, e.g. for SYS$ASSIGN or SYS$MOUNT). This package's own
-// RMS$_ table is kept here instead of merged into that one, matching
-// docs/PHASE-22.md's design: RMS$_ values live in a different numbering
-// space (VMS's "RMS" facility) from internal/rtl's SS$_ values (VMS's
-// "system services" facility), and mixing the two tables would make it
-// easy to accidentally write an SS$_ number into an RMS$_ field or vice
-// versa.
+// The RMS$_ statuses are VMS's RMS facility's, a numbering apart from the
+// system services' SS$_ ones, which internal/corevms uses; keeping them
+// apart makes it hard to write an SS$_ number into an RMS$_ field or the
+// other way round.
 //
 // # Where these numbers come from
 //
@@ -44,12 +37,8 @@ import "github.com/tucats/govax/internal/vmsdef"
 // own rmsdef.h during Phase 22's implementation (docs/PHASE-22.md) — not
 // derived from reference/eVAX (which has no RMS$_ status table at all;
 // its rms.c only ever returns the generic SS$_NORMAL) and not guessed.
-// Only the subset this phase's SYS$CREATE/SYS$CONNECT/SYS$OPEN/
-// SYS$CLOSE/SYS$GET/SYS$PUT handlers actually need is named here; like
-// internal/rtl/status.go's own SS$_ table, more can be named later as
-// later handlers need them — the full set is already in
-// internal/vmsdef.Symbols regardless, this is just this package's own
-// "the subset I actually use" convenience list.
+// Only the statuses the handlers use are named here and beside them; the
+// full set is in internal/vmsdef.Symbols.
 var (
 	// rmsNormal is RMS$_NORMAL (== RMS$_SUC): ordinary success. This is
 	// the value storeStatus (below) writes for every call that completed
@@ -152,13 +141,13 @@ var (
 	rmsInvalidIFI = vmsConst("RMS$_IFI")
 
 	// rmsInvalidOrg is RMS$_ORG: the FAB's FAB$B_ORG (fab.go's fabORG)
-	// named a file organization this phase doesn't implement (anything
-	// other than orgSeq).
+	// named no organization RMS has (sequential, relative, indexed).
 	rmsInvalidOrg = vmsConst("RMS$_ORG")
 
 	// rmsInvalidRAC is RMS$_RAC: the RAB's RAB$B_RAC (rab.go's rabRAC)
-	// named a record access mode this phase doesn't implement (anything
-	// other than racSeq).
+	// named a record access mode the file or device can't be read by
+	// (keyed access to a stream file, anything but sequential access to
+	// a terminal or mailbox), or no mode at all.
 	rmsInvalidRAC = vmsConst("RMS$_RAC")
 
 	// rmsInvalidRFM is RMS$_RFM: the FAB's FAB$B_RFM (fab.go's fabRFM)
@@ -166,14 +155,9 @@ var (
 	rmsInvalidRFM = vmsConst("RMS$_RFM")
 
 	// rmsInvalidVersion is RMS$_VER: a file specification's version field
-	// (the text after ';' — filespec.Spec's own Version) named something
-	// SYS$OPEN (open.go) doesn't know how to resolve to a single file —
-	// this phase only supports an explicit positive version number, or no
-	// version at all (meaning "the highest existing version", matching
-	// ods2's own volume.Directory.Lookup convention for a 0 argument).
-	// Real VMS's fuller version syntax (";*" for every version, ";-1" for
-	// "N versions back from the highest") is a filespec.Glob-level wildcard
-	// concern this phase's plain-file SYS$OPEN doesn't need.
+	// (the text after ';') isn't a version: a number from -32767 to 32767,
+	// where 0 or none is the highest version and -n the nth below it
+	// (namopen.go's lookupVersion). Wildcard versions are $SEARCH's.
 	rmsInvalidVersion = vmsConst("RMS$_VER")
 
 	// rmsInvalidRLF is RMS$_RLF: a NAM's NAM$L_RLF names a block that
@@ -198,6 +182,13 @@ var (
 	// that fits was stored, and RAB$L_STV holds the record's whole size
 	// (the message's "!UL byte record too large for user's buffer").
 	rmsRecordTruncated = vmsConst("RMS$_RTB")
+
+	// rmsInvalidUBF and rmsInvalidUSZ are RMS$_UBF and RMS$_USZ: a
+	// SYS$GET's user buffer (RAB$L_UBF) is missing, or its size
+	// (RAB$W_USZ) is 0. "The Get service always requires the presence of
+	// a user record area" (OpenVMS RMS Reference Manual, $GET).
+	rmsInvalidUBF = vmsConst("RMS$_UBF")
+	rmsInvalidUSZ = vmsConst("RMS$_USZ")
 
 	// rmsSystemError is RMS$_SYS: RMS's catch-all "the underlying
 	// system/device reported an error" code, used when an ods2 call
@@ -328,8 +319,7 @@ func ssConst(name string) uint32 {
 // and have sts become both the FAB/RAB's own recorded completion status
 // AND the value the calling VAX program sees in R0 (this package's
 // handlers return that same (uint32, error) shape services.ServiceFunc
-// expects — see docs/PHASE-22.md's subtask 11 for how internal/rtl wires
-// that up). This mirrors real RMS, where a call's completion code is
+// expects; internal/corevms/rms.go registers them). This mirrors real RMS, where a call's completion code is
 // always both of those things at once, never just one: an unmodified VAX
 // program is free to check either R0 right after the call, or FAB$L_STS
 // later, and both always agree.

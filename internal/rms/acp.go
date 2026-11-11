@@ -37,7 +37,7 @@ import (
 // This file is the part that touches the files: it's in internal/rms,
 // the one package allowed to import the ods2 module, whose volume package
 // does the real work (Directory.Lookup, Volume.OpenFID, File.ReadBlock,
-// WriteBlock, Extend). internal/rtl's disk driver decodes the $QIO
+// WriteBlock, Extend). internal/corevms's disk driver decodes the $QIO
 // arguments, calls these, and turns their errors into $SSDEF statuses.
 
 // FileID is a Files-11 file ID in the form a program's file information
@@ -56,7 +56,7 @@ func fileIDFrom(f ondisk.Fid) FileID {
 	return FileID{Num: f.Num, Seq: f.Seq, Rvn: f.Rvn, Nmx: f.Nmx}
 }
 
-// The ACP functions' errors. internal/rtl maps each to its $SSDEF status
+// The ACP functions' errors. internal/corevms maps each to its $SSDEF status
 // (shown here); any other error is a device error.
 var (
 	ErrACPNotMounted   = errors.New("rms: device not mounted")           // SS$_DEVNOTMOUNT

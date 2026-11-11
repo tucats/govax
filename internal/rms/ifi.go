@@ -8,24 +8,10 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// This file is this package's own "list of currently open files" — the Go
-// state behind RMS's "internal file index" (IFI) concept, which fab.go's
-// fabIFI field and rab.go's rabISI field both ultimately point at (an IFI
-// is what SYS$CREATE/SYS$OPEN hand back, stored into a FAB; SYS$CONNECT
-// copies that same number into a RAB; SYS$PUT/SYS$GET/SYS$CLOSE all take
-// an IFI as their real way of saying "this open file").
-//
-// # Generalized from Phase 10's stopgap
-//
-// The project's now-deleted Phase 10 RMS stopgap (internal/rtl/rms.go)
-// had an IFI table too, but every entry in it could only ever be a plain
-// io.Writer — enough for host-file "create and write" support, but with
-// no way to represent an open-for-reading file at all (SYS$OPEN/SYS$GET
-// didn't exist yet). This package's FileHandle (below) generalizes that
-// to whichever of two shapes an open file actually is: either the
-// console pseudo-device (unchanged from Phase 10 — see FileHandle's own
-// doc comment), or a real ODS-2-backed file, connected for either reading
-// or writing via the sibling ods2 module's own rms.Reader/rms.Writer.
+// This file is a process's open files: the Go state behind RMS's
+// "internal file index" (IFI), which SYS$CREATE and SYS$OPEN store in
+// FAB$W_IFI, SYS$CONNECT copies into RAB$W_ISI, and every later service
+// takes as its way of saying "this open file".
 
 // FileHandle is one entry in a FileTable: either the console
 // pseudo-device, or a real file on a mounted ODS-2 volume.
@@ -164,25 +150,15 @@ func (h *FileHandle) IsConsole() bool {
 	return h.Console != nil
 }
 
-// FileTable is this package's registry of currently open files, keyed by
-// IFI ("internal file index") — RMS's rough equivalent of a Unix
-// process's table of open file descriptors. One FileTable belongs to one
-// VAX "process" (see internal/corevms.Environment's own doc comment on what
-// "process" means in this emulator), the same way that Environment's own
-// (now-removed) Phase 10 IFI table used to be per-Environment.
+// FileTable is one process's open files, by IFI ("internal file index"),
+// the number $OPEN and $CREATE store in FAB$W_IFI and $CONNECT copies to
+// RAB$W_ISI: RMS's rough equivalent of a Unix process's file descriptors.
+// Each process's corevms.Environment has one.
 //
-// # Why IFIs 0-3 are reserved
-//
-// Real VMS seeds a process's IFI table with four fixed, pre-assigned
-// slots before any file is ever opened: 0 (an always-invalid sentinel),
-// 1 (SYS$OUTPUT, the process's default output — the console, in this
-// emulator), 2 (SYS$INPUT), and 3 (SYS$ERROR). This package only
-// actually wires up slot 1, matching Phase 10's own scope (nothing this
-// emulator implements yet reads from SYS$INPUT or writes to SYS$ERROR
-// through RMS specifically) — but slots 0-3 are still reserved and never
-// handed out by Alloc, so that a real VAX program's own assumptions about
-// those numbers being special stay true even though slots 2 and 3 aren't
-// individually usable yet.
+// An image's files are in handles, from IFI 4 up (firstUserIFI); an IFI no
+// open has given out, 0 to 3 among them, is RMS$_IFI. The process's
+// permanent files (ppf.go) are a table of their own, outliving images,
+// whose IFIs have the PPF bit set and never collide with these.
 type FileTable struct {
 	handles map[uint16]*FileHandle
 
@@ -197,46 +173,25 @@ type FileTable struct {
 	// lineOpen is whether the terminal's last line is open: a FORTRAN
 	// carriage control prompt left the cursor at its end (ftncc.go).
 	lineOpen bool
+
+	// console is the terminal's output, where Rundown ends an open line.
+	console io.Writer
 }
 
-// NewFileTable returns a FileTable with IFI 1 (SYS$OUTPUT) pre-seeded to
-// write to consoleOut — typically the same io.Writer the owning
-// Environment already uses for its own non-RMS console output (see
-// internal/corevms.NewEnvironment's consoleOut parameter). Passing a nil
-// consoleOut is valid and simply leaves slot 1 unusable (Lookup(1) will
-// report "not found"), matching how a FileTable used purely in a test
-// that never touches the console case doesn't need a real writer.
+// NewFileTable returns an empty FileTable for a process whose terminal
+// output is consoleOut (nil for one with none, as in tests).
 func NewFileTable(consoleOut io.Writer) *FileTable {
-	t := &FileTable{handles: map[uint16]*FileHandle{}}
-
-	if consoleOut != nil {
-		t.handles[1] = &FileHandle{Console: consoleOut}
-	}
-
-	return t
+	return &FileTable{handles: map[uint16]*FileHandle{}, console: consoleOut}
 }
 
-// firstUserIFI is the lowest IFI number Alloc will ever hand out — the
-// four slots below it (0-3) are reserved (see FileTable's own doc
-// comment) and never allocated, even if they're currently unused (for
-// instance, if NewFileTable was given a nil consoleOut, leaving slot 1
-// empty — Alloc still skips over it rather than handing it out).
+// firstUserIFI is the lowest IFI Alloc hands out. Which numbers VMS's RMS
+// gives an image's files no probe has recorded (only process-permanent
+// files' indirect IFIs, ^XC084 and the like, testdata/ppf71); govax starts
+// at 4.
 const firstUserIFI = 4
 
-// Alloc registers h under a fresh, currently-unused IFI (never one of the
-// four reserved slots — see FileTable's own doc comment) and returns that
-// IFI, matching what SYS$CREATE/SYS$OPEN hand back to a calling VAX
-// program and store into the FAB's fabIFI field.
-//
-// Alloc always scans upward from firstUserIFI looking for the lowest free
-// slot, rather than remembering a monotonically increasing "next" counter
-// across calls. This is deliberately the simple, obviously-correct choice
-// over a slightly faster stateful cursor: it costs a handful of map
-// lookups per call (this table only ever holds as many entries as a VAX
-// program has files open at once — never a performance-sensitive count),
-// and in exchange it automatically reuses an IFI that Release freed,
-// rather than burning through ever-larger numbers for the lifetime of the
-// process the way a cursor that only ever increases would.
+// Alloc registers h under the lowest IFI not in use, from firstUserIFI
+// up, so an IFI $CLOSE freed is used again, and returns it.
 func (t *FileTable) Alloc(h *FileHandle) uint16 {
 	for id := uint16(firstUserIFI); ; id++ {
 		if _, used := t.handles[id]; !used {
@@ -248,23 +203,14 @@ func (t *FileTable) Alloc(h *FileHandle) uint16 {
 }
 
 // Lookup returns the FileHandle registered under ifi, and whether one is.
-// SYS$CONNECT/SYS$PUT/SYS$GET/SYS$CLOSE all call this to turn the IFI
-// they were given (read out of a FAB or RAB) back into the actual open
-// file it refers to; a false result is a real RMS$_IFI error to report
-// back to the calling program (status.go's rmsInvalidIFI), not a bug —
-// it means the VAX program supplied a stale or fabricated IFI.
+// A false result is RMS$_IFI for the calling program (a FAB never opened,
+// or already closed), not a fault of this package.
 func (t *FileTable) Lookup(ifi uint16) (*FileHandle, bool) {
 	h, ok := t.handles[ifi]
 
 	return h, ok
 }
 
-// Release forgets ifi's entry, called by SYS$CLOSE once it has finished
-// flushing/closing whatever the handle pointed at. Releasing an IFI that
-// isn't currently allocated (including one of the reserved 0-3 slots) is
-// a harmless no-op — Go's built-in delete on a map behaves the same way
-// whether or not the key was present, so there's nothing extra for this
-// method to check.
 // Find returns the IFI h has in t, if it has one.
 func (t *FileTable) Find(h *FileHandle) (uint16, bool) {
 	for ifi, x := range t.handles {
@@ -276,6 +222,8 @@ func (t *FileTable) Find(h *FileHandle) (uint16, bool) {
 	return 0, false
 }
 
+// Release forgets ifi's entry, once $CLOSE has closed what it held.
+// Releasing an IFI not in use does nothing.
 func (t *FileTable) Release(ifi uint16) {
 	delete(t.handles, ifi)
 }

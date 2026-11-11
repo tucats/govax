@@ -11,29 +11,17 @@ import (
 )
 
 // This file defines Context, the one value every service handler in this
-// package (create.go, and — as docs/PHASE-22.md's later subtasks land —
-// connect.go/open.go/close.go/get.go/put.go) is called with, plus a
-// handful of small helper methods on it that every handler would
-// otherwise have to repeat.
+// package is called with, and small helpers on it that every handler
+// would otherwise repeat.
 //
-// # Why not just use internal/corevms.Environment directly?
+// # Why not internal/corevms.Environment?
 //
-// internal/corevms.Environment already bundles almost exactly this same set
-// of things (its own *vm.Memory, *registers.CPU, console-output io.Writer,
-// Logicals) — using it directly here would avoid a second, similar-looking
-// type. But Environment's mem/cpu/consoleOut fields are unexported,
-// reachable only from code inside package corevms itself, and this package's
-// handlers need to read and write VAX memory directly (FAB/RAB fields —
-// see fab.go/rab.go) the same way internal/rtl's own shims and services
-// do. Since package corevms is what will register this package's handlers
-// into its ServiceTable (docs/PHASE-22.md's subtask 11 — "registerRMSServices
-// shrinks to registering internal/rms's handlers"), the dependency has to
-// run rtl -> rms, not rms -> rtl: if this package imported internal/rtl
-// too (for example, just to spell out *corevms.Environment as a parameter
-// type), the two packages would import each other, which Go simply
-// refuses to build at all. Context is this package's own, self-contained
-// answer to the same need, built from types (internal/vm, internal/registers,
-// internal/io) that don't import internal/rtl either.
+// An Environment (one process) has all of this and more, but corevms
+// imports this package to register its handlers (corevms/rms.go), so
+// this package can't import corevms: Go refuses an import cycle. Context
+// is what a handler needs of the process, built from lower packages'
+// types (vm, registers, lnm, lck) and function fields, which corevms's
+// Environment.rmsContext fills in for each call.
 type Context struct {
 	// lockedByOpener says an open's RMS$_FLK was another RMS opener's sharing, which
 	// has no STV (stvFor).
@@ -181,8 +169,8 @@ func (ctx *Context) storeLongword(addr uint32, v uint32) error {
 }
 
 // loadFixedString reads exactly n bytes starting at addr into a Go
-// string. This is deliberately NOT a NUL-terminated scan the way
-// internal/rtl's own loadString helper is for ordinary C strings: per
+// string. This is deliberately NOT a NUL-terminated scan the way a
+// helper for C strings would be: per
 // fab.go's own fabFNS doc comment, RMS file-specification strings are
 // never NUL-terminated — the caller always says how long the string is
 // via a separate length field (FAB$B_FNS), so reading anything other

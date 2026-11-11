@@ -196,6 +196,8 @@ func TestRecordLock_wait(t *testing.T) {
 	a.get()
 
 	putLongwordAt(t, b.ctx, testRabAddr+rabROP, ropWAT)
+	putLongwordAt(t, b.ctx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, b.ctx, testRabAddr+rabUSZ, 1024)
 
 	if _, err := SysGet(b.ctx, []uint32{testRabAddr}); !errors.Is(err, errTestWait) {
 		t.Fatalf("B's waiting $GET: %v", err)

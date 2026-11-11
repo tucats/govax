@@ -339,6 +339,17 @@ func (ctx *Context) indexedLocate(rabAddr uint32, h *FileHandle, find bool) (uin
 		return 0, err
 	}
 
+	if !find {
+		sts, err := ctx.missingBuffer(rabAddr, rac)
+		if err != nil {
+			return 0, err
+		}
+
+		if sts != 0 {
+			return fail(sts)
+		}
+	}
+
 	f, err := h.indexedFile()
 	if err != nil {
 		return fail(prologStatus(err))

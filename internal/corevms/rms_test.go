@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/volume"
 )
@@ -41,6 +42,8 @@ const (
 	testRabRAC = 30 // RAB$B_RAC
 	testRabRSZ = 34 // RAB$W_RSZ
 	testRabRBF = 40 // RAB$L_RBF
+	testRabUSZ = 32 // RAB$W_USZ
+	testRabUBF = 36 // RAB$L_UBF
 
 	testFacPut = 0x01 // FAB$V_PUT
 	testFacGet = 0x02 // FAB$V_GET
@@ -344,10 +347,12 @@ func TestRMSServices_diskRoundTrip(t *testing.T) {
 	}
 
 	putByte(t, env, rabAddr+testRabRAC, racSeqTest)
-	// Point RAB$L_RBF at a fresh, still-zeroed buffer distinct from
-	// writeAddr, so a SYS$GET that silently did nothing couldn't make
-	// this test pass by accident on leftover memory contents.
-	putLongword(t, env, rabAddr+testRabRBF, readAddr)
+	// Point the user buffer (RAB$L_UBF, which $GET requires) at a fresh,
+	// still-zeroed buffer distinct from writeAddr, so a SYS$GET that
+	// silently did nothing couldn't make this test pass by accident on
+	// leftover memory contents.
+	putLongword(t, env, rabAddr+testRabUBF, readAddr)
+	putWord(t, env, rabAddr+testRabUSZ, 512)
 	putWord(t, env, rabAddr+testRabRSZ, 0)
 
 	r0 = callService(t, env, testPCSysGet, ap, []uint32{rabAddr})
@@ -395,5 +400,47 @@ func TestRMSServices_unmountedDeviceReachesEnvironmentMounts(t *testing.T) {
 
 	if ifi := readWordEnv(t, env, fabAddr+testFabIFI); ifi != 0 {
 		t.Errorf("FAB$W_IFI = %d after a failed SYS$CREATE, want 0 (untouched)", ifi)
+	}
+}
+
+// TestRMSCompletion_pendingUntilWait: an RMS operation left RMS$_PENDING
+// declares no completion routine; the $WAIT that finishes it declares the
+// operation's (the $WAIT has none of its own), once. A call whose status
+// isn't in its block's STS (ill-formed) declares none.
+func TestRMSCompletion_pendingUntilWait(t *testing.T) {
+	env, _ := fixture()
+
+	const (
+		rabAddr = 0x2000
+		errAST  = 0x3000
+		sucAST  = 0x3100
+	)
+
+	rmsNormal := vmsdef.Symbols["RMS$_NORMAL"]
+
+	putLongword(t, env, rabAddr+8, rmsPending)
+	env.rmsCompletion("SYS$PUT", []uint32{rabAddr, errAST, sucAST}, rmsPending)
+
+	if n := env.PendingASTs(); n != 0 {
+		t.Fatalf("%d ASTs queued for a pending $PUT, want none", n)
+	}
+
+	putLongword(t, env, rabAddr+8, rmsNormal)
+	env.rmsCompletion("SYS$WAIT", []uint32{rabAddr}, rmsNormal)
+
+	if n := env.PendingASTs(); n != 1 || env.Process.ast.queue[0].routine != sucAST || env.Process.ast.queue[0].param != rabAddr {
+		t.Fatalf("after $WAIT: queue %+v, want the $PUT's success routine with the RAB", env.Process.ast.queue)
+	}
+
+	env.rmsCompletion("SYS$WAIT", []uint32{rabAddr}, rmsNormal)
+
+	if n := env.PendingASTs(); n != 1 {
+		t.Errorf("a second $WAIT queued another AST (%d queued)", n)
+	}
+
+	env.rmsCompletion("SYS$GET", []uint32{rabAddr, errAST, sucAST}, vmsdef.Symbols["RMS$_RAB"])
+
+	if n := env.PendingASTs(); n != 1 {
+		t.Errorf("an ill-formed call (STS not its status) queued an AST (%d queued)", n)
 	}
 }

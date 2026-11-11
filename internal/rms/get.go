@@ -5,49 +5,30 @@ import (
 	"io"
 )
 
-// SysGet implements SYS$GET: given a RAB's VAX address (argv[0] — SYS$GET
-// takes exactly one argument, like SYS$PUT and SYS$CONNECT, and unlike
-// SYS$CREATE/SYS$OPEN/SYS$CLOSE, which take a FAB), reads the next
-// sequential record from whatever file the RAB is currently connected to
-// (via SYS$CONNECT — see connect.go) and copies its bytes into the
-// calling program's own record buffer.
+// SysGet implements SYS$GET: given a RAB's VAX address (argv[0]), reads
+// the record the stream's context and RAB$B_RAC choose (stream.go; the
+// next one, in sequential access) from the file, terminal, or mailbox the
+// RAB is connected to, and copies it into the caller's user buffer.
 //
-// # A quick Go note for readers new to the language
+// Like every handler in this package it returns (uint32, error): the
+// uint32 is R0 for the calling program, and a non-nil error is a failure
+// at the emulator's level (an address the program can't reach) rather
+// than an RMS status (status.go's storeStatus explains the split).
 //
-// Like every other handler in this package, SysGet takes a []uint32
-// (argv[0] is "the first, and in SYS$GET's case only, argument the
-// calling VAX program passed") and returns (uint32, error): the uint32
-// becomes register R0 back in the emulated VAX program (the real
-// system-service completion-status convention), and a non-nil error means
-// something went wrong at the Go/emulator level itself (for instance, an
-// address pointing at unmapped VAX memory) rather than an ordinary
-// RMS-level condition the calling program is expected to check for — see
-// status.go's storeStatus doc comment for the fuller explanation of that
-// split, and put.go's own doc comment (SysPut is SysGet's closest sibling
-// — everything said there about argv/return shape and sequential-only
-// scope applies equally here).
+// # The buffers: RAB$L_UBF in, RAB$L_RBF out
 //
-// # Two destinations for the record: RAB$L_RBF versus RAB$L_UBF
-//
-// A calling program almost always just supplies RAB$L_RBF (a record
-// buffer address) and lets SYS$GET fill it — see rab.go's own doc comment
-// on rabRBF/rabRSZ. But real RMS also lets a program supply a *separate*
-// "user buffer" via RAB$L_UBF/RAB$W_USZ (rab.go's rabUBF/rabUSZ) when it
-// specifically wants the record copied somewhere other than RMS's own
-// default destination. This function honors that: if RAB$L_UBF is
-// nonzero, the record is copied there instead of RAB$L_RBF, and — since
-// the calling program also declared RAB$W_USZ as that buffer's exact
-// capacity — a record too big to fit is truncated to it with RMS$_RTB, a
-// warning whose RAB$L_STV is the record's size, rather than an overflow. The plain RAB$L_RBF path has no such capacity check:
-// real RMS trusts the calling program to have sized that buffer itself
-// (typically from the file's own FAB$W_MRS, which the program already
-// knows), the same "trust the caller's own declared lengths" convention
-// SysPut already relies on for its outgoing RAB$W_RSZ/RAB$L_RBF pair.
-//
-// Either way, RAB$W_RSZ is always written with the record's true length
-// once SYS$GET succeeds — that field is how the calling program finds out
-// how long the record it just read actually was, regardless of which
-// buffer it ended up in.
+// The record goes to the user buffer, RAB$L_UBF, of RAB$W_USZ bytes:
+// "The Get service always requires the presence of a user record area"
+// (the OpenVMS RMS Reference Manual's $GET). Without one, $GET is RMS$_UBF
+// (no address) or RMS$_USZ (a size of 0) before any record is read, so
+// no terminal line is consumed (missingBuffer). A record longer than
+// the buffer is cut to it with RMS$_RTB, a warning whose RAB$L_STV is the
+// whole record's size. RAB$W_RSZ is set to the length stored, and
+// RAB$L_RBF to where the record is: the user buffer, in move mode (the
+// manual's 7.16). RAB$L_RBF is an output here, as RAB$L_UBF is an input:
+// a program that sets RBF and not UBF has a record buffer for $PUT, not
+// one for $GET. Which of RMS$_UBF and RMS$_USZ VMS gives when both are
+// missing is unconfirmed; govax checks the address first.
 func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 	rabAddr := argv[0]
 
@@ -79,6 +60,14 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 
 		if rac != racSeq {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidRAC)
+		}
+
+		if sts, err := ctx.missingBuffer(rabAddr, rac); err != nil || sts != 0 {
+			if err != nil {
+				return 0, err
+			}
+
+			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
 		}
 
 		if handle.IsConsole() {
@@ -135,27 +124,15 @@ func nextRecord(handle *FileHandle) ([]byte, uint32) {
 }
 
 // getTerminal is SYS$GET for a RAB connected to the terminal: it reads a
-// record as terminalRecord describes, into the user buffer (RAB$L_UBF,
-// at most RAB$W_USZ bytes) or, with none, RAB$L_RBF, as storeRecord
-// does for a file's record.
+// record as terminalRecord describes, of at most RAB$W_USZ characters,
+// into the user buffer, as storeRecord does for a file's record.
 func getTerminal(ctx *Context, rabAddr uint32) (uint32, error) {
-	capacity := maxTerminalRecord
-
-	ubf, err := ctx.loadLongword(rabAddr + rabUBF)
+	usz, err := ctx.loadWord(rabAddr + rabUSZ)
 	if err != nil {
 		return 0, err
 	}
 
-	if ubf != 0 {
-		usz, err := ctx.loadWord(rabAddr + rabUSZ)
-		if err != nil {
-			return 0, err
-		}
-
-		capacity = int(usz)
-	}
-
-	record, status, err := terminalRecord(ctx, rabAddr, capacity)
+	record, status, err := terminalRecord(ctx, rabAddr, int(usz))
 	if err != nil {
 		return 0, err
 	}
@@ -171,62 +148,72 @@ func getTerminal(ctx *Context, rabAddr uint32) (uint32, error) {
 	return storeRecord(ctx, rabAddr, record)
 }
 
-// maxTerminalRecord is the longest terminal record SYS$GET reads into a
-// RAB$L_RBF buffer, which has no size of its own: RAB$W_RSZ's limit.
-const maxTerminalRecord = 65535
+// missingBuffer returns the status for a $GET's RAB with no user buffer
+// (SysGet's doc comment), RMS$_UBF or RMS$_USZ, or 0 if it has one. Each
+// kind of stream asks once its own refusals (FAC, block I/O) are past and
+// before it reads a record, and only for a RAC that names a mode: a RAC
+// that names none is RMS$_RAC, whatever the buffer.
+func (ctx *Context) missingBuffer(rabAddr uint32, rac byte) (uint32, error) {
+	if rac != racSeq && rac != racKey && rac != racRFA {
+		return 0, nil
+	}
 
-// storeRecord copies a record SYS$GET has read into the caller's buffer,
-// sets RAB$W_RSZ to its length, and points RAB$L_RBF at it (see SysGet's
-// doc comment).
+	ubf, err := ctx.loadLongword(rabAddr + rabUBF)
+	if err != nil {
+		return 0, err
+	}
+
+	usz, err := ctx.loadWord(rabAddr + rabUSZ)
+	if err != nil {
+		return 0, err
+	}
+
+	switch {
+	case ubf == 0:
+		return rmsInvalidUBF, nil
+	case usz == 0:
+		return rmsInvalidUSZ, nil
+	}
+
+	return 0, nil
+}
+
+// storeRecord copies a record SYS$GET has read into the caller's user
+// buffer, sets RAB$W_RSZ to its length, and points RAB$L_RBF at it (see
+// SysGet's doc comment).
 func storeRecord(ctx *Context, rabAddr uint32, record []byte) (uint32, error) {
 	return storeRecordStatus(ctx, rabAddr, record, rmsNormal)
 }
 
 // storeRecordStatus is storeRecord returning sts, a success status, if
-// the record is stored.
+// the record is stored. A record longer than the buffer (RAB$W_USZ) is
+// RMS$_RTB: the part that fits is stored, RAB$W_RSZ is that part's
+// length, and RAB$L_STV the whole record's size (what VMS 7.1's FORTRAN
+// run-time library reported reading SYS$INPUT, testdata/for80's round 1).
 func storeRecordStatus(ctx *Context, rabAddr uint32, record []byte, sts uint32) (uint32, error) {
 	destAddr, err := ctx.loadLongword(rabAddr + rabUBF)
 	if err != nil {
 		return 0, err
 	}
 
-	if destAddr == 0 {
-		// No separate user buffer was supplied — the ordinary case — so
-		// the record goes straight into RAB$L_RBF, with no capacity
-		// check (see this function's own doc comment on why the RBF path
-		// trusts the caller).
-		destAddr, err = ctx.loadLongword(rabAddr + rabRBF)
-		if err != nil {
+	usz, err := ctx.loadWord(rabAddr + rabUSZ)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(record) > int(usz) {
+		whole := len(record)
+		record = record[:usz]
+
+		if _, err := storeRecordStatus(ctx, rabAddr, record, rmsRecordTruncated); err != nil {
 			return 0, err
 		}
-	} else {
-		usz, err := ctx.loadWord(rabAddr + rabUSZ)
-		if err != nil {
+
+		if err := ctx.storeLongword(rabAddr+rabSTV, uint32(whole)); err != nil {
 			return 0, err
 		}
 
-		if len(record) > int(usz) {
-			// A caller that did supply a separate user buffer also said
-			// exactly how big it is (RAB$W_USZ) — unlike the plain RBF
-			// path above, this really is a capacity real RMS enforces.
-			// A record too big for it is RMS$_RTB, a warning: the part
-			// that fits is stored, RAB$W_RSZ is that part's length, and
-			// RAB$L_STV is the whole record's size (what VMS 7.1's
-			// FORTRAN run-time library reported reading SYS$INPUT,
-			// testdata/for80's round 1).
-			whole := len(record)
-			record = record[:usz]
-
-			if _, err := storeRecordStatus(ctx, rabAddr, record, rmsRecordTruncated); err != nil {
-				return 0, err
-			}
-
-			if err := ctx.storeLongword(rabAddr+rabSTV, uint32(whole)); err != nil {
-				return 0, err
-			}
-
-			return rmsRecordTruncated, nil
-		}
+		return rmsRecordTruncated, nil
 	}
 
 	for i, b := range record {

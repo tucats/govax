@@ -563,6 +563,17 @@ func (ctx *Context) relativeLocate(rabAddr uint32, h *FileHandle, find bool) (ui
 		return 0, err
 	}
 
+	if !find {
+		sts, err := ctx.missingBuffer(rabAddr, rac)
+		if err != nil {
+			return 0, err
+		}
+
+		if sts != 0 {
+			return fail(sts)
+		}
+	}
+
 	var (
 		n    uint32
 		cell []byte

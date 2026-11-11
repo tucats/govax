@@ -140,10 +140,8 @@ type Environment struct {
 
 	// consoleIn/consoleInBuf back DECC$GETS/EXE$INPUT/EXE$READ's console
 	// line reading (input.go). consoleOut is also where non-RMS console
-	// writes go (print.go, file.go); RMS's own "internal file index" table
-	// now lives in internal/rms (docs/PHASE-22.md), not
-	// here — Phase 10's stopgap version of that table was removed along
-	// with the rest of internal/rtl/rms.go.
+	// writes go (print.go, file.go); RMS's open files are files, an
+	// internal/rms FileTable.
 	consoleIn    io.Reader
 	consoleInBuf *bufio.Reader
 	consoleOut   io.Writer
@@ -341,7 +339,7 @@ func newEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, co
 // logical-name-table/console-output into the self-contained *rms.Context
 // every internal/rms handler function expects (see internal/rms/context.go's
 // own doc comment on why that package can't just take *Environment
-// directly: internal/rtl imports internal/rms, so the reverse import would
+// directly: this package imports internal/rms, so the reverse import would
 // make the two packages depend on each other, which Go refuses to build).
 // Called fresh by each rms.go wrapper closure rather than cached in the
 // struct, since it's cheap to build and this keeps Environment itself free

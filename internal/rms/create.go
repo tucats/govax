@@ -13,9 +13,7 @@ import (
 // terminal pseudo-device rather than a real ODS-2 volume: real, unmodified
 // VAX/VMS software genuinely opens "TTA0:" this way (it's ordinary VMS
 // behavior, not a govax shortcut — see docs/PHASE-22.md's "Why this phase
-// looks different" section), and it's the one piece of the project's now-
-// deleted Phase 10 stopgap (internal/rtl/rms.go, see git history) worth
-// carrying forward unchanged.
+// looks different" section).
 //
 // This is a plain, hardcoded name check rather than a lookup against
 // internal/io's own DeviceTable/DeviceClassTT (which would tell "any

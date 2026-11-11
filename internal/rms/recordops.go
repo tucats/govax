@@ -58,6 +58,10 @@ func SysFind(ctx *Context, argv []uint32) (uint32, error) {
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, found.sts)
 }
 
+// maxTerminalRecord is the longest terminal record a $FIND reads (and
+// throws away): RAB$W_RSZ's limit, as a $FIND has no user buffer.
+const maxTerminalRecord = 65535
+
 // findOnDevice is $FIND on the terminal or a record device: a record is
 // read (the terminal prompting as for $GET) and thrown away, but for a
 // RecordStream's, which the next $GET gets.

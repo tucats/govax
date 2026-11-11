@@ -4,7 +4,8 @@
 document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
 document's outline, and its sections 0 to 3), 2 (section 4, the
 instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), 5
-(section 7, processes), and 6 (section 8, I/O) are done.
+(section 7, processes), 6 (section 8, I/O), and 7 (section 9, RMS and
+ODS-2) are done.
 
 ## Goal
 
@@ -143,7 +144,7 @@ interpreter process 1 runs, and what reads the startup procedure).
    table, the session, name processing and logical names, FAB/RAB/NAM/XAB
    in VAX memory, the file table and record streams, sequential,
    relative, and indexed files, sharing and record locks, block I/O and
-   user file open, host files beside volume files.
+   user file open, host files beside volume files. (done 2026-11-11)
 8. Section 10, from VAX code to Go: XFC, the system service vector, the
    service table, argument lists, statuses, waits, calls back into VAX
    code, the shims and their stubs, JSB entries, the run-time libraries
@@ -337,3 +338,65 @@ interpreter process 1 runs, and what reads the startup procedure).
     `TestTerminalQIO_assembledProgram` expect lines.
   Comments brought up to date: `$DASSGN`'s, which said a channel carried no
   requests or files.
+- **2026-11-11** Subtask 7: section 9, RMS and ODS-2: the two layers and
+  where govax puts them; the `ods2` module (containers, the home block and
+  the index file's bootstrap, FIDs and maps, directories, the bitmaps,
+  the record formats, with a DUMP of a VAR file's block); the mount table;
+  a service call's way to `rms` (the wrapper, `rms.Context`, R0 and STS,
+  completion routines, ASY) with a SET DEBUG RMS trace measured on govax;
+  the control blocks; name processing (the four sources, logical names,
+  search lists, concealed names and roots, process-permanent files, the
+  default directory, `$PARSE` and `$SEARCH`); `$OPEN`'s steps, `$CREATE`,
+  the file table, and `$CLOSE`; `$CONNECT`, the stream's context, a `$GET`
+  followed down to a container block, `$PUT` and the rest; relative and
+  indexed files; the two layers of sharing and record locks; block I/O,
+  user file open, and the ACP; the terminal, mailboxes, and indirect
+  access; host files; and what differs from VMS. The measurement was a
+  MACRO program on a scratch volume, not kept. Reading for it found, and
+  this subtask fixed (Decision 6):
+  - **RMS never called a program's completion routines.** An RMS call's
+    second and third arguments, an error and a success routine, were
+    ignored; the RMS Reference Manual (2.4.3) has the one the status
+    chooses run as an AST, with the FAB's or RAB's address as its
+    parameter, before the service returns. corevms's RMS wrapper
+    (`corevms/rms.go`'s `rmsCompletion`) now queues it in the caller's
+    mode, so the engine delivers it inside the service's vector entry,
+    R0 kept; an operation left `RMS$_PENDING` (a `$PUT` to a mailbox with
+    RAB$V_ASY) has its routines declared by the `$WAIT` that finishes it,
+    as the manual's `$WAIT` says; a call whose status isn't in its block's
+    STS (ill-formed) calls none (2.4.1). No VMS probe had used them
+    (`testdata/mar/rms/services.mar` is only assembled). New tests:
+    `TestRMSCompletionRoutines` (a MACRO program, in `internal/console`),
+    `TestRMSCompletion_pendingUntilWait`. FAB$V_SYNCSTS, a later
+    OpenVMS's, isn't added.
+  - **`$GET` with no user buffer wrote the record at RAB$L_RBF.** RBF is
+    an output of `$GET`; "the Get service always requires the presence of
+    a user record area" (the manual's `$GET`). A `$GET` whose RAB$L_UBF is
+    0 is now `RMS$_UBF`, and one whose RAB$W_USZ is 0 `RMS$_USZ`, checked
+    in each kind of stream after its own refusals (FAC, block I/O) and
+    only for a RAC that names a mode, before any record is read or
+    terminal line consumed (`get.go`'s `missingBuffer`); a terminal
+    record's limit is USZ. Which of the two VMS gives when both are
+    missing is unconfirmed. Every RAB govax builds (FTNRTL's units, DCL's
+    keyed RAB, CONVERT's) already set UBF; only tests and the govax-only
+    fixture `testdata/asm/rms_roundtrip.asm` (its golden image regenerated)
+    relied on RBF. `TestSysGet_needsUserBuffer`.
+  - **IFI 1 was the terminal in every file table**, a vestige of the first
+    RMS, so a `$CONNECT` with a FAB never opened whose FAB$W_IFI was 1 got
+    a terminal stream instead of `RMS$_IFI`. No IFI is preassigned now;
+    rundown ends an open terminal line through the table's own writer.
+    `TestFileTable_noPreassignedIFIs`, `TestFileTable_rundownEndsOpenLine`.
+  Comments brought up to date: `rms`'s package doc (six services, a
+  package `internal/rtl` that no longer exists), `Context`'s, the file
+  table's, `$GET`'s, the RAB's buffers and access modes, the statuses
+  RMS$_ORG, RAC, and VER, `parseOpenVersion`'s, `normalizeDeviceName`'s
+  (a broken sentence), `MountTable`'s and `Session`'s, and every other
+  mention of `internal/rtl` in `rms` and corevms's RMS glue; section 8.8's
+  claim that RMS reads host files (govax's commands do; a program's RMS
+  reaches only volumes). Left for the author: RMS checks no block's BID
+  and BLN (only `$RENAME` is `RMS$_FAB`) and is never `RMS$_BUSY`, which
+  would touch every service in an order no probe has settled; and ods2's
+  `Bitmap` comment says each operation flushes the bitmaps, where both are
+  written only at dismount (a comment in the separate module, not
+  changed). The other packages' mentions of `internal/rtl` (about twenty)
+  wait for subtask 10's read-through.

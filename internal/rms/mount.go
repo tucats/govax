@@ -47,9 +47,8 @@ type mountedVolume struct {
 }
 
 // MountTable tracks which VAX device names currently have an ODS-2 volume
-// mounted on them — the Go state behind govax's console MOUNT/DISMOUNT
-// commands (internal/console, wired up in a later docs/PHASE-22.md
-// subtask) and the thing this package's own SYS$CREATE/SYS$OPEN handlers
+// mounted on them: the Go state behind DCL's MOUNT and DISMOUNT
+// (internal/dclcmd) and what this package's SYS$CREATE/SYS$OPEN handlers
 // consult to turn a device name like "DUA0:" into a real, usable
 // *volume.Volume from the sibling github.com/tucats/ods2 module.
 //
@@ -120,21 +119,16 @@ func NewMountTable() *MountTable {
 
 // normalizeDeviceName upper-cases name and strips one trailing ':' and
 // the leading '_' that marks a physical device name, so that "DUA0",
-// "DUA0:", "_DUA0:", and "dua0:" — all valid ways to write the same VMS
-// device name — produce the same map key. It also drops a node's or
-// allocation class's prefix ("_GOVAX$DUA0:", as $GETDVI's FULLDEVNAM
-// and NAM$T_DVI write a device's name, or "$1$DUA0:"): a physical
-// device's own name (controller and unit) never has a '$' in it, so
-// everything up to the last one is the prefix.
+// "DUA0:", "_DUA0:", and "dua0:", all ways to write the same VMS device
+// name, produce the same map key. It also drops a node's or allocation
+// class's prefix ("_GOVAX$DUA0:", as $GETDVI's FULLDEVNAM and NAM$T_DVI
+// write a device's name, or "$1$DUA0:"): a physical device's own name
+// (controller and unit) never has a '$' in it, so everything up to the
+// last one is the prefix.
 //
-// internal/io's own DeviceTable has an unexported helper doing exactly
-// this same two-line job; it isn't reused here because this package
-// deliberately has no dependency on internal/io at all (docs/PHASE-22.md's
-// design has MountTable injected *into* the console/RTL layer, not the
-// other way around, so a dependency in that direction would be backwards)
-// — and an unexported function can't be called from another package
-// regardless. Duplicating two lines is simpler than restructuring package
-// boundaries just to share them.
+// internal/io's DeviceTable has a helper doing the same; this package
+// doesn't import internal/io (the mount table is lower than the device
+// table), so it keeps its own.
 func normalizeDeviceName(name string) string {
 	name = strings.ToUpper(strings.TrimPrefix(strings.TrimSuffix(name, ":"), "_"))
 

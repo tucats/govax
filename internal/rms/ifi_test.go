@@ -5,70 +5,61 @@ import (
 	"testing"
 )
 
-// TestFileTable_consoleSeeded confirms NewFileTable pre-seeds IFI 1 with
-// the console writer it was given (see FileTable's own doc comment on
-// why slot 1 is special — it's SYS$OUTPUT), and that the seeded handle
-// actually writes through to that same io.Writer.
-func TestFileTable_consoleSeeded(t *testing.T) {
-	var out bytes.Buffer
-
-	ft := NewFileTable(&out)
-
-	h, ok := ft.Lookup(1)
-	if !ok {
-		t.Fatal("Lookup(1) = not found, want the console handle NewFileTable seeds")
+// TestFileTable_noPreassignedIFIs confirms a new FileTable has no files,
+// with a terminal or without: no IFI is preassigned, so a FAB that was
+// never opened is RMS$_IFI to $CONNECT whatever its FAB$W_IFI says (IFI 1
+// was once the terminal, a stray a program could connect to).
+func TestFileTable_noPreassignedIFIs(t *testing.T) {
+	for _, ft := range []*FileTable{NewFileTable(nil), NewFileTable(&bytes.Buffer{})} {
+		for ifi := range uint16(firstUserIFI) {
+			if _, ok := ft.Lookup(ifi); ok {
+				t.Errorf("Lookup(%d) found a file in a new table", ifi)
+			}
+		}
 	}
 
-	if !h.IsConsole() {
-		t.Error("IsConsole() = false for the console-seeded slot 1")
+	f := newCreateFixture(t, true)
+	f.ctx.Console = &bytes.Buffer{}
+	f.ctx.Files = NewFileTable(f.ctx.Console)
+
+	putWord(t, f.ctx, testFabAddr+fabIFI, 1)
+	putRAB(t, f.ctx, testFabAddr)
+
+	r0, err := SysConnect(f.ctx, []uint32{testRabAddr})
+	if err != nil {
+		t.Fatalf("SysConnect: %v", err)
 	}
 
-	if _, err := h.Console.Write([]byte("hello")); err != nil {
-		t.Fatalf("writing through the seeded console handle: %v", err)
-	}
-
-	if got := out.String(); got != "hello" {
-		t.Errorf("console output = %q, want %q", got, "hello")
+	if r0 != rmsInvalidIFI {
+		t.Errorf("$CONNECT with FAB$W_IFI 1, never opened: r0 = %08X, want RMS$_IFI (%08X)", r0, rmsInvalidIFI)
 	}
 }
 
-// TestFileTable_nilConsoleLeavesSlotUnusable confirms a nil consoleOut
-// (valid for a test, or any other case with no real console) simply
-// leaves slot 1 empty rather than seeding a handle with a nil Console
-// writer that would panic the first time something tried to write
-// through it.
-func TestFileTable_nilConsoleLeavesSlotUnusable(t *testing.T) {
-	ft := NewFileTable(nil)
+// TestFileTable_rundownEndsOpenLine confirms Rundown ends a terminal line
+// a prompt left open, on the table's own terminal output.
+func TestFileTable_rundownEndsOpenLine(t *testing.T) {
+	var out bytes.Buffer
 
-	if _, ok := ft.Lookup(1); ok {
-		t.Error("Lookup(1) with a nil consoleOut = found, want not found")
+	ft := NewFileTable(&out)
+	ft.lineOpen = true
+
+	if _, err := ft.Rundown(); err != nil {
+		t.Fatalf("Rundown: %v", err)
+	}
+
+	if out.String() != "\n" || ft.lineOpen {
+		t.Errorf("after Rundown: output %q, line open %v; want a newline, closed", out.String(), ft.lineOpen)
 	}
 }
 
 // TestFileTable_allocSkipsReservedSlots confirms Alloc never hands out
-// one of the four reserved IFIs (0-3 — see FileTable's own doc comment),
-// even when — as here, with a nil console — slot 1 happens to be free.
+// an IFI below firstUserIFI.
 func TestFileTable_allocSkipsReservedSlots(t *testing.T) {
 	ft := NewFileTable(nil)
 
 	id := ft.Alloc(&FileHandle{})
 	if id < firstUserIFI {
 		t.Errorf("Alloc returned reserved IFI %d, want an IFI >= %d", id, firstUserIFI)
-	}
-}
-
-// TestFileTable_allocSkipsConsoleSlot confirms Alloc still skips IFI 1
-// even when a real console handle occupies it (as opposed to it simply
-// being below firstUserIFI).
-func TestFileTable_allocSkipsConsoleSlot(t *testing.T) {
-	var out bytes.Buffer
-
-	ft := NewFileTable(&out)
-
-	for range 5 {
-		if id := ft.Alloc(&FileHandle{}); id == 1 {
-			t.Fatal("Alloc handed out IFI 1, which NewFileTable already seeded with the console")
-		}
 	}
 }
 

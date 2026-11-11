@@ -33,7 +33,7 @@ import (
 // ACPAttributes is the attributes as plain Go values, in the forms the
 // attribute list's buffers hold them (the record attribute area as its 32
 // encoded bytes, a UIC as a longword, dates as 64-bit VMS times).
-// internal/rtl's disk driver moves them between those buffers and this
+// internal/corevms's disk driver moves them between those buffers and this
 // struct; this file moves them between the struct and a header, through
 // ods2's volume.UpdateHeader.
 //
