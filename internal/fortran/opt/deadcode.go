@@ -181,6 +181,18 @@ func (d *liveness) set() liveSet {
 }
 
 // solve finds what's live at each block's start: see the top of the file.
+//
+// This is the classic iterative data-flow analysis. Every block starts
+// with nothing live, and each round recomputes every block's set from its
+// successors'. Sets only ever grow (add never takes a member away), and there
+// are only so many members, so the rounds must stop changing; when a round
+// changes nothing, the answer is found (a "fixed point"). Going through the
+// blocks backward, last first, suits a backward analysis: a block's
+// successors are usually after it, so their sets are already this round's.
+//
+// The outer loop adds the rule for places live on entry: they become live at
+// the routine's exits, which can make more live elsewhere, so it goes round
+// again until that too stops growing.
 func (d *liveness) solve() {
 	for grew := true; grew; {
 		for changed := true; changed; {
@@ -250,6 +262,12 @@ func (d *liveness) atStart(b *ir.Block) liveSet {
 
 // through changes live from what's live after the effects to what's live before them.
 func (d *liveness) through(e Effects, live liveSet) {
+	// Writes first, then reads: walking backward through a statement, its
+	// reads happen before its writes, so they're what's live above it.
+	// I = I + 1 reads I, so I is live before it whatever the write did.
+	//
+	// A write kills a place only if it covers the whole of it (Lo to Hi):
+	// writing one byte of a longword leaves the rest's old value to be read.
 	for _, p := range e.Writes {
 		for i, q := range d.places {
 			if p.Region == q.Region && p.Cell == q.Cell && p.Lo <= q.Lo && p.Hi >= q.Hi {

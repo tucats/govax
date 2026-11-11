@@ -120,6 +120,10 @@ func Registers(r *ir.Routine) {
 		}
 	}
 
+	// Three steps: list every candidate of each kind with its gain (the
+	// find methods), choose which get registers (colour), then rewrite the
+	// routine for the winners (apply). Nothing is changed until every
+	// candidate is known, so one kind's rewrite can't spoil another's search.
 	a := newAllocator(r)
 	a.findTemporaries()
 	a.findStepped()
@@ -1016,6 +1020,11 @@ func (a *allocator) inValued(p *ir.Param, b *ir.Block) bool {
 }
 
 // conflict reports whether two candidates can't have one register.
+//
+// Two loop candidates conflict if they're for the same loop or one loop is
+// inside the other (Contains its header): both registers are in use at the
+// same time. Two separate
+// loops, one after the other, can use the same register.
 func (a *allocator) conflict(x, y *candidate) bool {
 	switch {
 	case x.cell != nil && y.cell != nil:
@@ -1042,7 +1051,19 @@ func occupies(l *Loop, blocks map[*ir.Block]bool) bool {
 
 // colour gives each candidate in order of gain the lowest registers no candidate it can't
 // share with has, of those the expressions leave free, and reports whether any got one.
+//
+// The name is the textbook one: register allocation is "graph colouring", where each
+// candidate is a node, an edge joins two that are live at the same time (conflict), and
+// the registers are colours no two joined nodes may share. Finding the best colouring is
+// hard in general; this is the usual greedy approach, most valuable candidate first, each
+// given the first colour its neighbours left free.
+//
+// busy is an array, [12]bool, not a slice: passed by value, it is the caller's copy, and
+// the length 12 is part of its type (R0 to R11).
 func (a *allocator) colour(busy [12]bool) bool {
+	// Most gain per register first: a D value takes two registers, so its gain
+	// is weighed against two. Comparing gain_i*width_j with gain_j*width_i is
+	// gain_i/width_i against gain_j/width_j without dividing.
 	sort.SliceStable(a.candidates, func(i, j int) bool {
 		return a.candidates[i].gain*a.candidates[j].t.Width() > a.candidates[j].gain*a.candidates[i].t.Width()
 	})
@@ -1054,6 +1075,8 @@ func (a *allocator) colour(busy [12]bool) bool {
 			continue
 		}
 
+		// The registers already given to candidates this one conflicts
+		// with (those earlier in the order, which were placed first).
 		var taken [12]bool
 
 		for _, o := range a.candidates[:i] {
