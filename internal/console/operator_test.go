@@ -24,7 +24,7 @@ func TestOperator_assembledProgram(t *testing.T) {
 	for _, want := range []string{
 		"%%%%%%%%%%% OPCOM    ",
 		"\nRequest 1, from user SYSTEM on GOVAX\nPlease mount tape 17\n",
-		"\nShutting down\r",
+		"\nShutting down\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output %q\nlacks %q", out, want)

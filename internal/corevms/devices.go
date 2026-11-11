@@ -358,10 +358,9 @@ func serviceSysDalloc(env *Environment, argv []uint32) (uint32, error) {
 // serviceSysDassgn is SYS$DASSGN: releases a channel $ASSIGN created.
 // Only the low word of chan counts; 0 is SS$_IVCHAN. A channel that isn't
 // assigned, or was assigned from a more privileged access mode than the
-// caller's, is SS$_NOPRIV, as the manual says. govax channels carry no
-// I/O requests, open files, or network links, so releasing one only
-// drops the device's reference count (and, once nothing references an
-// unallocated device, its owner PID).
+// caller's, is SS$_NOPRIV, as the manual says. Releasing it cancels its
+// pending I/O requests and attention ASTs, closes a file accessed on it,
+// and drops the device's reference count (releaseChannel).
 func serviceSysDassgn(env *Environment, argv []uint32) (uint32, error) {
 	number := optArg(argv, 0) & 0xFFFF
 	if number == 0 {

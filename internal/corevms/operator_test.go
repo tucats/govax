@@ -173,7 +173,7 @@ func TestBrkthru(t *testing.T) {
 	// AST.
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 5, msg, 0, 0, iosb, 0, 0, 0, 0, 0x5000, 9), ssNormal)
 
-	if out.String() != "\nSystem going down\r" {
+	if out.String() != "System going down\n" {
 		t.Errorf("output %q", out.String())
 	}
 
@@ -189,7 +189,7 @@ func TestBrkthru(t *testing.T) {
 	out.Reset()
 	wantR0(t, callLNM(t, env, serviceSysBrkthruw, 0, msg, a.desc("TTA0:"), brkDevice, 0, '0'), ssNormal)
 
-	if out.String() != "\n\nSystem going down\r" {
+	if out.String() != "\nSystem going down\n" {
 		t.Errorf("output %q", out.String())
 	}
 

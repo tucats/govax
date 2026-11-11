@@ -308,7 +308,7 @@ func (env *Environment) putRecord(out *processOutput, record string, async bool)
 	device, st := env.deviceName(out.name)
 	if st != 0 || env.isFileDevice(device) {
 		if !env.putRecordFile(out, record) {
-			env.writeConsole(record + "\n")
+			env.writeConsole(string(env.terminalText([]byte(record), ' ')))
 			env.countIO(false)
 		}
 
@@ -325,7 +325,7 @@ func (env *Environment) putRecord(out *processOutput, record string, async bool)
 
 		dev, found, st := env.OpenRecordDevice(device, fabFACPut)
 		if !found {
-			env.writeConsole(record + "\n")
+			env.writeConsole(string(env.terminalText([]byte(record), ' ')))
 			env.countIO(false)
 
 			return ssNormal, nil

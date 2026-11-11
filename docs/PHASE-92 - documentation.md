@@ -3,8 +3,8 @@
 **Status:** in progress (planned 2026-11-11). Part A, the first
 document, `docs/VAX-VMS-INTERNALS.md`: subtasks 1 (the plan, the
 document's outline, and its sections 0 to 3), 2 (section 4, the
-instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), and
-5 (section 7, processes) are done.
+instruction set), 3 (section 5, memory), 4 (section 6, VMS paging), 5
+(section 7, processes), and 6 (section 8, I/O) are done.
 
 ## Goal
 
@@ -138,6 +138,7 @@ interpreter process 1 runs, and what reads the startup procedure).
 6. Section 8, I/O: the device table, channels, `$QIO` and its drivers
    (terminal, mailbox, null, disk), I/O completion (IOSB, event flags,
    ASTs), the console's XFCs, process-permanent files, the host side.
+   (done 2026-11-11)
 7. Section 9, RMS and ODS-2: the `ods2` module, mounts and the mount
    table, the session, name processing and logical names, FAB/RAB/NAM/XAB
    in VAX memory, the file table and record streams, sequential,
@@ -303,3 +304,36 @@ interpreter process 1 runs, and what reads the startup procedure).
   digits but left the pad, so a two-digit day's line was a column short.
   Each mask now takes the pad with the day (`[ \d]?\d-`, and a lazy
   `Date: +?` before it in `analyzeDates`), as `idx88DTimes` already did.
+- **2026-11-11** Subtask 6: section 8, I/O: the four paths from a program
+  to a device, the device table and `io.Device` as the UCB's stand-in (who
+  makes devices: STARTUP.COM's DEFINE/DEVICE, MOUNT, `$CREMBX`; names;
+  `$GETDVI`; allocation), channels, `$QIO`'s five steps and the driver
+  table's four answers, completion for the requester (IOSB through its
+  page tables), `$QIOW`'s stack of waits, `$SYNCH`, `$CANCEL`, a measured
+  run of a program's `$QIO`s on govax (terminal, NL:, a bad function, a
+  mailbox), each driver, the console's XFCs, terminal registers, and CHMK
+  table, process-permanent files and where LIB$PUT_OUTPUT's line goes, the
+  host side (the pump, the modes, `promptOutput`), and what differs from
+  VMS. The measurement was a MACRO program run from the scratchpad, not
+  kept. Reading for it found, and this subtask fixed (Decision 6):
+  - **A terminal `$QIO` write's carriage control was sent as VMS's raw
+    characters**, a line feed before and a carriage return after
+    (`p4` of `' '` gave `"\nX\r"`), where every other writer of govax's
+    terminal writes a line and then a newline. At a host terminal, the
+    line LIB$PUT_OUTPUT wrote next began at the carriage return and
+    overwrote the `$QIO`'s line, and a blank line came before it; the
+    measurement showed it. The driver now translates carriage control into
+    govax's lines by the rule RMS already used for FORTRAN carriage control,
+    generalized to print-file control's prefix and postfix bytes
+    (`rms.PrintTerminalText`, which `ftnTerminalText` now calls), keeping
+    the process's open-line state (`rms.FileTable.LineOpen`, now shared
+    with the driver; a terminal read closes it, a raw write leaves the line
+    open unless it ends in a line feed). `$BRKTHRU` and LIB$PUT_OUTPUT's
+    no-SYS$OUTPUT fallback write the same way. A program that writes a raw
+    carriage return and then overprints, VMS-style, now gets a line of its
+    own instead. `TestQIO_carriageControl` (each form, with the line open
+    and closed), `TestQIO_linesBesideRecords`, `TestPrintTerminalText`;
+    `TestBrkthru`, `TestOperator_assembledProgram`, and
+    `TestTerminalQIO_assembledProgram` expect lines.
+  Comments brought up to date: `$DASSGN`'s, which said a channel carried no
+  requests or files.

@@ -494,8 +494,7 @@ func (env *Environment) breakthrough(argv []uint32) (uint32, error) {
 			carcon = defaultBreakthroughCC
 		}
 
-		prefix, postfix := carriageControl(carcon)
-		env.writeConsole(prefix + msg + postfix)
+		env.writeConsole(string(env.terminalText([]byte(msg), carcon)))
 	}
 
 	env.postFlag(efn, sched.ClassIOCompletion)

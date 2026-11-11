@@ -381,7 +381,11 @@ func TestTerminalQIO_assembledProgram(t *testing.T) {
 		t.Errorf("R0 = %d, want 1 (every $QIO did what it should)", got)
 	}
 
-	if want := "Name? \nHello, \rTom"; out.String() != want {
+	// The prompt is written as it is; the reply (which a test's input
+	// doesn't echo) ends its line. VMS's " " carriage control, a line feed
+	// before and a carriage return after, is a line of govax's: the text
+	// and a newline (the terminal driver's terminalText).
+	if want := "Name? Hello, \nTom"; out.String() != want {
 		t.Errorf("output = %q, want %q", out.String(), want)
 	}
 

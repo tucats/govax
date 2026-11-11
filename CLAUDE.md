@@ -810,7 +810,8 @@ never had.
   plan, the outline, and sections 0 to 3; subtask 2, 2026-11-11, section
   4, the instruction set; subtask 3, 2026-11-11, section 5, memory;
   subtask 4, 2026-11-11, section 6, VMS paging; subtask 5, 2026-11-11,
-  section 7, processes; sections 8 to 12 are subtasks 6 to 10; Decision 6, bugs the writing finds are fixed in the
+  section 7, processes; subtask 6, 2026-11-11, section 8, I/O; sections
+  9 to 12 are subtasks 7 to 10; Decision 6, bugs the writing finds are fixed in the
   same subtask).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -45,7 +46,7 @@ import (
 //
 // A terminal write (IO$_WRITEVBLK and its variants) sends p2 bytes from
 // p1 to the terminal, with optional carriage control from p4 (see
-// carriageControl). The IOSB's transfer count is the number of bytes.
+// terminalText). The IOSB's transfer count is the number of bytes.
 //
 // # Characteristics
 //
@@ -326,6 +327,9 @@ func (env *Environment) readQIOLine(r *bufio.Reader, req *ioRequest, set *termin
 	// the data too.
 	_ = env.storeOwn(buf, data)
 
+	// The reply typed ends the terminal's line (terminalText).
+	env.files.SetLineOpen(false)
+
 	return ioStatus{status: status, count: uint16(count), info: uint32(terminator) | terminatorSize<<16}
 }
 
@@ -358,11 +362,11 @@ func readTerminalByte(r *bufio.Reader) (byte, error) {
 
 // ttWrite is IO$_WRITEVBLK (and IO$_WRITELBLK, IO$_WRITEPBLK):
 //
-//	p1  buffer address          p4  carriage control (see carriageControl)
+//	p1  buffer address          p4  carriage control (see terminalText)
 //	p2  number of bytes
 //
-// The bytes are written to the console as they are, between the carriage
-// control's prefix and postfix. The IOSB's transfer count is p2.
+// The bytes are written to the console with the carriage control's
+// prefix and postfix. The IOSB's transfer count is p2.
 func ttWrite(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	size := req.p[1] & 0xFFFF
 
@@ -375,71 +379,54 @@ func ttWrite(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		return ioStatus{}, ssAccVio
 	}
 
-	prefix, postfix := carriageControl(req.p[3])
-	env.writeConsole(prefix + data + postfix)
+	env.writeConsole(string(env.terminalText([]byte(data), req.p[3])))
 
 	return ioStatus{status: ssNormal, count: uint16(size)}, 0
 }
 
-// carriageControl turns a terminal write's p4 into the characters to
-// write before and after the data. There are two forms, as in an RMS
-// print-format record:
+// terminalText turns a terminal write's data and carriage control (p4)
+// into what the console is sent. There are two forms of carriage
+// control, as in an RMS print-format record:
 //
 //   - Byte 0 nonzero: a FORTRAN carriage-control character. " " (the
-//     usual one) starts a new line and returns the carriage afterwards;
-//     "0" starts two new lines; "1" starts a new page; "+" overprints
-//     (no new line); "$" starts a new line but leaves the carriage at
-//     the end, for a prompt. Any other character acts like " ".
-//   - Byte 0 zero: byte 2 is a prefix and byte 3 a postfix, each coded
-//     as follows. 0 is nothing. 1-127 is that many new lines (line
-//     feeds). With bit 7 set and bit 6 clear, bits 0-4 are a control
-//     character (0-31) to write; with bits 7 and 6 set, bits 0-4 select
-//     one of the C1 control characters (128-159). Other values are
-//     nothing.
+//     usual one) is a line; "0" a line after a blank one; "1" a line on a
+//     new page; "+" overprints the line before; "$" is a line left open
+//     at its end, for a prompt. Any other character acts like " ".
+//   - Byte 0 zero: byte 2 is a prefix and byte 3 a postfix, each coded as
+//     follows. 0 is nothing. 1-127 is that many new lines (line feeds).
+//     With bit 7 set and bit 6 clear, bits 0-4 are a control character
+//     (0-31) to write; with bits 7 and 6 set, bits 0-4 select one of the
+//     C1 control characters (128-159). Other values are nothing.
+//
+// VMS writes a line feed before a line and a carriage return after it,
+// where govax's terminal is written a line and then a newline, so both
+// forms are translated as RMS translates a print file's records
+// (rms.PrintTerminalText), and the process's record of whether the last
+// line is open (rms.FileTable.LineOpen) kept up to date: a $QIO line and
+// a LIB$PUT_OUTPUT line after it are two lines on the screen, as on VMS.
 //
 // p4 of 0 is no carriage control at all, the usual case for programs
-// that put their own carriage returns and line feeds in the data.
-func carriageControl(p4 uint32) (prefix, postfix string) {
-	const newLine, carriageReturn, formFeed = "\n", "\r", "\f"
+// that put their own carriage returns and line feeds in the data, which
+// is sent as it is; the line is open after it unless it ends in a line
+// feed.
+func (env *Environment) terminalText(data []byte, p4 uint32) []byte {
+	if p4 == 0 {
+		if len(data) > 0 {
+			env.files.SetLineOpen(data[len(data)-1] != '\n')
+		}
 
+		return data
+	}
+
+	prefix, postfix := byte(p4>>16), byte(p4>>24)
 	if c := byte(p4); c != 0 {
-		switch c {
-		case '0':
-			return newLine + newLine, carriageReturn
-		case '1':
-			return formFeed, carriageReturn
-		case '+':
-			return "", carriageReturn
-		case '$':
-			return newLine, ""
-		default: // ' ', and anything else
-			return newLine, carriageReturn
-		}
+		prefix, postfix = rms.FortranPrintControl(c)
 	}
 
-	return printControl(byte(p4 >> 16)), printControl(byte(p4 >> 24))
-}
+	text, open := rms.PrintTerminalText(data, prefix, postfix, env.files.LineOpen())
+	env.files.SetLineOpen(open)
 
-// printControl decodes one prefix or postfix byte of carriageControl's
-// second form.
-func printControl(b byte) string {
-	switch {
-	case b&0x80 == 0: // 0-127: that many new lines
-		out := make([]byte, b)
-		for i := range out {
-			out[i] = '\n'
-		}
-
-		return string(out)
-
-	case b&0xE0 == 0x80: // 100x xxxx: a C0 control character
-		return string([]byte{b & 0x1F})
-
-	case b&0xE0 == 0xC0: // 110x xxxx: a C1 control character
-		return string([]byte{0x80 | b&0x1F})
-	}
-
-	return ""
+	return text
 }
 
 // ttSenseMode is IO$_SENSEMODE (and IO$_SENSECHAR): the terminal's

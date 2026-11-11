@@ -87,34 +87,83 @@ func TestQIO_write(t *testing.T) {
 	}
 }
 
+// TestQIO_carriageControl: each form of a terminal write's carriage
+// control, translated to govax's lines (a line, then a newline), with the
+// line before closed and open; and whether the line is open after.
 func TestQIO_carriageControl(t *testing.T) {
 	cases := []struct {
-		name string
-		p4   uint32
-		want string
+		name     string
+		p4       uint32
+		open     bool
+		want     string
+		wantOpen bool
 	}{
-		{"none", 0, "X"},
-		{"FORTRAN space", ' ', "\nX\r"},
-		{"FORTRAN zero", '0', "\n\nX\r"},
-		{"FORTRAN one", '1', "\fX\r"},
-		{"FORTRAN plus", '+', "X\r"},
-		{"FORTRAN dollar", '$', "\nX"},
-		{"FORTRAN other", 'Q', "\nX\r"},
-		{"prefix newlines", 2 << 16, "\n\nX"},
-		{"C0 postfix", 0x8D << 24, "X\r"},
-		{"C0 prefix and postfix", 0x8A<<16 | 0x8D<<24, "\nX\r"},
-		{"C1 prefix", 0xC4 << 16, "\x84X"},
-		{"reserved codes", 0xA0<<16 | 0xE0<<24, "X"},
+		{"none", 0, false, "X", true},
+		{"none, ending a line", 0, false, "X\r\n", false},
+		{"FORTRAN space", ' ', false, "X\n", false},
+		{"FORTRAN space after an open line", ' ', true, "\nX\n", false},
+		{"FORTRAN zero", '0', false, "\nX\n", false},
+		{"FORTRAN one", '1', false, "\fX\n", false},
+		{"FORTRAN one after an open line", '1', true, "\n\fX\n", false},
+		{"FORTRAN plus", '+', false, "X\n", false},
+		{"FORTRAN plus continuing an open line", '+', true, "X\n", false},
+		{"FORTRAN dollar", '$', false, "X", true},
+		{"FORTRAN dollar after an open line", '$', true, "\nX", true},
+		{"FORTRAN other", 'Q', false, "X\n", false},
+		{"prefix newlines", 2 << 16, false, "\nX", true},
+		{"postfix newlines", 2 << 24, false, "X\n\n\n", false},
+		{"C0 postfix", 0x8D << 24, false, "X\n", false},
+		{"C0 prefix and postfix", 0x8A<<16 | 0x8D<<24, false, "X\n", false},
+		{"C0 bell prefix", 0x87 << 16, true, "\aX", true},
+		{"C1 prefix", 0xC4 << 16, false, "\x84X", true},
+		{"reserved codes", 0xA0<<16 | 0xE0<<24, false, "X", true},
 	}
 
 	for _, c := range cases {
 		env, out, a, ch := qioFixture(t, "")
+		env.files.SetLineOpen(c.open)
 
-		wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, p: [6]uint32{a.str("X"), 1, 0, c.p4}}), ssNormal)
-
-		if got := out.String(); got != c.want {
-			t.Errorf("%s: output = %q, want %q", c.name, got, c.want)
+		data := "X"
+		if c.name == "none, ending a line" {
+			data = "X\r\n"
 		}
+
+		wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, p: [6]uint32{a.str(data), uint32(len(data)), 0, c.p4}}), ssNormal)
+
+		if got, open := out.String(), env.files.LineOpen(); got != c.want || open != c.wantOpen {
+			t.Errorf("%s: output = %q, open %v; want %q, open %v", c.name, got, open, c.want, c.wantOpen)
+		}
+	}
+}
+
+// TestQIO_linesBesideRecords: a $QIO line written with " " carriage
+// control and a LIB$PUT_OUTPUT line after it are two lines, as on VMS;
+// and a terminal read closes a line a "$" write left open, so the next
+// line doesn't start with another newline.
+func TestQIO_linesBesideRecords(t *testing.T) {
+	env, out, a, ch := qioFixture(t, "reply\n")
+
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, p: [6]uint32{a.str("first"), 5, 0, ' '}}), ssNormal)
+
+	if _, err := env.PutOutput("second"); err != nil {
+		t.Fatal(err)
+	}
+
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, p: [6]uint32{a.str("Name? "), 6, 0, '$'}}), ssNormal)
+
+	if !env.files.LineOpen() {
+		t.Fatal("a \"$\" write left the line closed")
+	}
+
+	buf := a.alloc(80)
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnReadVBlk, p: [6]uint32{buf, 80}}), ssNormal)
+
+	if env.files.LineOpen() {
+		t.Error("the line is still open after a read")
+	}
+
+	if want := "first\nsecond\nName? "; out.String() != want {
+		t.Errorf("output = %q, want %q", out.String(), want)
 	}
 }
 

@@ -193,6 +193,35 @@ func TestFTNTerminalText(t *testing.T) {
 	}
 }
 
+// TestPrintTerminalText: print-file control's prefixes and postfixes as
+// govax's lines, with the line before open or not.
+func TestPrintTerminalText(t *testing.T) {
+	for _, c := range []struct {
+		name            string
+		prefix, postfix byte
+		open            bool
+		want            string
+		wantOpen        bool
+	}{
+		{"a line", 0x01, 0x8D, false, "X\n", false},
+		{"a line after an open one", 0x01, 0x8D, true, "\nX\n", false},
+		{"three line feeds before", 0x03, 0x8D, false, "\n\nX\n", false},
+		{"a line feed as a control character", 0x8A, 0x8D, true, "\nX\n", false},
+		{"nothing either side", 0x00, 0x00, false, "X", true},
+		{"nothing before an open line", 0x00, 0x8D, true, "X\n", false},
+		{"a form feed", 0x8C, 0x8D, true, "\n\fX\n", false},
+		{"line feeds after", 0x01, 0x02, false, "X\n\n\n", false},
+		{"a bell before", 0x87, 0x00, true, "\aX", true},
+		{"a C1 character after", 0x01, 0xDB, false, "X\x9B", true},
+		{"reserved codes", 0xA0, 0xFF, false, "X", true},
+	} {
+		got, open := PrintTerminalText([]byte("X"), c.prefix, c.postfix, c.open)
+		if string(got) != c.want || open != c.wantOpen {
+			t.Errorf("%s: PrintTerminalText = %q, %v; want %q, %v", c.name, got, open, c.want, c.wantOpen)
+		}
+	}
+}
+
 // TestTerminalTextJoinsPromptAndReply: an FTN accessor's "$" prompt
 // leaves the line open for a "+" record, a terminal read closes it, and
 // another stream's record ends an open line first.

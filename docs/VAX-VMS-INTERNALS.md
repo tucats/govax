@@ -2895,7 +2895,597 @@ At govax's own `$ ` prompt, Ctrl/C cancels the line and Ctrl/Y ends govax.
 
 ## 8. I/O
 
-*To be written.*
+A VMS program never touches a device's registers. It asks VMS for a
+*channel* to a device by name (`$ASSIGN`), then hands `$QIO`, "queue I/O
+request", a request on that channel: a function (read, write, sense
+mode, ...), its parameters, and where to report the outcome. VMS checks
+the request, builds an *I/O request packet* (IRP), and queues it to the
+device's *driver*, VAX code that starts the device and returns. When the
+device interrupts, the driver finishes the request, and VMS's I/O
+postprocessing writes the outcome to the program's *I/O status block*,
+sets its event flag, and queues its AST (the book's chapter 18, and the
+*I/O User's Reference Manual*).
+
+govax gives a program the same interface with the same results, and
+does the work differently. Its devices are records in a Go table, its
+drivers Go functions, and there is no hardware to wait for: almost every
+request is done by the time `$QIO` returns, and the few that must wait (a
+terminal read with no line typed yet, a mailbox read with no message)
+are kept in Go until their event comes. No device interrupts, no IRPs,
+no fork processes.
+
+Four paths lead from a program to a device, and this section is about
+the first three:
+
+1. **`$QIO`** and the services around it (`$ASSIGN`, `$DASSGN`,
+   `$CANCEL`, `$QIOW`, `$GETDVI`), on four drivers: terminal, null
+   device, mailbox, and disk (8.1 to 8.5).
+2. **RMS**, which most programs use instead: it reaches the terminal,
+   mailboxes, and the null device through the same Go state the drivers
+   use, and disk files through the `ods2` module directly (section 9).
+   The files every process starts with, SYS$INPUT and SYS$OUTPUT among
+   them, are RMS's *process-permanent files* (8.7).
+3. **The console's own instructions**, the XFCs and the console
+   terminal's registers, which the microkernel uses and no VMS program
+   does (8.6).
+4. **Paging I/O**, a section's or the page file's pages read and
+   written by the pager, which never goes through `$QIO` (sections 5.7
+   and 6.5).
+
+Under all of it is the host: one terminal, standard input and output,
+and container files holding the volumes (8.8).
+
+### 8.1 Devices
+
+VMS describes each device unit with a *unit control block*, the UCB: its
+name, class and type, characteristics, owner, counts, and the
+device-specific fields its driver keeps. govax's stand-in is
+`io.Device` (`io/device.go`), a Go record with the fields `$GETDVI` and
+SHOW DEVICES report, named after the UCB's: `DevClass`, `DevType`,
+`DevChar` and `DevChar2` (UCB$L_DEVCHAR, the `DEV$M_` bits), `DevDepend`
+and `DevDepend2`, `DevBufSize`, `OwnUIC`, `PID` (the process that has it
+allocated, or the last to assign it), `RefCnt` (channels assigned),
+`OpCnt` (operations completed), and a disk's geometry. Every device is in
+one `io.DeviceTable`, which the machine owns and every process's
+`corevms.System` shares (`System.Devices`).
+
+Three things make devices:
+
+- **STARTUP.COM** defines the terminal and the null device with DCL's
+  DEFINE/DEVICE, with the values VMS 7.1 reported for its own:
+
+  ```text
+  $ define/device tta0/devclass=term/devtype=vt100/devbufsiz=80/devchar=201588743/ownuic=65540
+  $ define/device nla0/devclass=mailbox/devtype=null/devchar=202702849/ownuic=65537/devbufsiz=512
+  ```
+
+  `201588743` is `^X0C040007`, a terminal's characteristics
+  (record-oriented, carriage control, terminal, available, input,
+  output), and `65540` is `[1,4]`, SYSTEM's UIC. The null device really
+  is of class mailbox (160) and type 3 on VMS 7.1, which is why it's
+  defined so, and why `$QIO` picks its driver by its type (8.3).
+- **MOUNT** defines the disk it mounts on (DUA0, DUA1, ...) if it isn't
+  defined yet, of class disk, and the volume's label as the logical name
+  `DISK$label`.
+- **`$CREMBX`** defines a mailbox, `MBAn`, the next unit number free after
+  the last one used, and removes it again when the mailbox is deleted
+  (`corevms/mailbox.go`).
+
+The class decides the driver: terminal (66), disk (1), or mailbox (160).
+A device of any other class, which DEFINE/DEVICE can make, has no driver,
+and every `$QIO` to it is `SS$_ILLIOFUNC`.
+
+**Names.** A program names a device as VMS lets it: `TTA0:`, `TT:`,
+`SYS$OUTPUT`, `_DUA1:`, `GOVAX$DUA1:`. `Environment.deviceName`
+(`corevms/devices.go`) translates the name through the process's logical
+names, as RMS does, unless it starts with an underscore; drops a leading
+node name (`GOVAX$`, the node's own); turns `NL` into `NLA0`; and refuses a
+name that isn't letters, digits, and dollar signs (`SS$_IVDEVNAM`). A
+well-formed name no device has is `SS$_NOSUCHDEV`. `TT` is a process
+logical name, defined at startup as its terminal's device name; the four
+SYS$ names lead to process-permanent files (8.7), whose equivalence
+strings end in the device's name, which is what `$ASSIGN` finds.
+
+**`$GETDVI`** (`corevms/getdvi.go`) answers its item list from the record,
+a table of items by `DVI$_` name, with two things added: a mounted disk's
+characteristics get `DEV$M_MNT` (and `DEV$M_SWL` if the volume is
+read-only), and its label, size, and free blocks come from the volume; a
+mailbox's `DVI$_DEVDEPEND` holds its count of waiting messages. Like
+`$GETJPI`, it completes during the call, so `$GETDVI` and `$GETDVIW` are
+the same service.
+
+**`$ALLOC` and `$DALLOC`** mark a device for one process's use: `DEV$M_ALL`
+in its characteristics, its PID and the access mode of the allocation.
+Another process's `$ASSIGN` is then `SS$_DEVALLOC`. A mounted disk or a
+mailbox can't be allocated (`SS$_DEVMOUNT`). Image rundown deallocates
+what the image allocated in user mode.
+
+### 8.2 Channels
+
+On VMS a channel is a *channel control block*, a CCB, in a table in the
+process's P1 space, and the channel number is its offset in the table
+(the book's 18.1.1). govax keeps a process's channels in Go, a list of
+`corevms.channel` records on its `Environment`:
+
+```go
+type channel struct {
+	Name    string             // the name it was assigned by
+	Number  uint16             // 8, 16, 24, ...
+	Class   iodev.DeviceClass
+	Mode    uint32             // the access mode it was assigned from
+	Device  *iodev.Device
+	acp     *rms.ACPFile       // a disk file accessed on it, if any
+	...
+}
+```
+
+`$ASSIGN` (`serviceSysAssign`) finds the device, checks that another
+process hasn't allocated it and that the process may use it (a mailbox's
+protection; 7.9), and makes the channel: numbered 8 more than the last
+one this process made, from the access mode given or the caller's,
+whichever is less privileged, the device's reference count up by one.
+The number goes back to the program in a word. A channel's mode guards
+it: `$QIO`, `$CANCEL`, and `$DASSGN` from a more privileged mode than the
+channel's are `SS$_NOPRIV`, so user-mode code can't use or release a
+channel RMS assigned in executive mode.
+
+`$DASSGN` (`releaseChannel`) undoes it all: the channel's pending
+requests complete with `SS$_CANCEL`, its Ctrl/C and Ctrl/Y ASTs are
+disarmed, a disk file accessed on it is closed, the device's count goes
+down, and a temporary mailbox with no channels left is deleted. Image
+rundown deassigns every channel assigned from user mode
+(`deassignUserChannels`); process deletion, every channel.
+
+### 8.3 `$QIO`
+
+The call is
+
+```text
+SYS$QIO [efn] ,chan ,func [,iosb] [,astadr] [,astprm] [,p1] [,p2] [,p3] [,p4] [,p5] [,p6]
+```
+
+`func`'s low six bits are the *function code* (`IO$_READVBLK`,
+`IO$_WRITEVBLK`, `IO$_SETMODE`, ...) and the bits above it *modifiers*
+(`IO$M_NOECHO`, `IO$M_NOW`, ...); `p1` to `p6` mean what the function
+says (for a read, `p1` is the buffer and `p2` its size). The *I/O status
+block* is a quadword the outcome is written to:
+
+```text
+  word 0   the condition value: how the I/O went
+  word 1   the transfer count
+  long 1   the device's own information (a terminal read's terminator,
+           a mailbox message's sender, ...)
+```
+
+`$QIO`'s own status, in R0, says only whether the request was *accepted*.
+A read that meets the end of a file returns `SS$_NORMAL` in R0 and
+`SS$_ENDOFFILE` in the IOSB.
+
+`Environment.queueIO` (`corevms/qio.go`) is the body of both `$QIO` and
+`$QIOW`, in VMS's order:
+
+1. Clear the event flag (0 if none is named); a flag the process can't
+   use is `SS$_ILLEFC` or `SS$_UNASEFC`.
+2. Find the channel: `SS$_IVCHAN` for 0, `SS$_NOPRIV` for one that isn't
+   assigned or belongs to a more privileged mode.
+3. Clear the IOSB, if one is named: `SS$_ACCVIO` if it can't be written.
+4. Look the function up in the device's driver: `SS$_ILLIOFUNC` if it has
+   none.
+5. Call the driver's function with an `ioRequest`: the channel, the
+   function and modifiers, `p1` to `p6`, the efn, IOSB, and AST to
+   complete with, the caller's access mode, the requesting process
+   (`owner`), and the boost its completion carries (7.5).
+
+A failure at steps 2 to 5 sets the event flag and returns the error,
+with nothing written to the IOSB and no AST, as the *System Services
+Reference Manual* says.
+
+**The drivers** are a table, by device class, of tables by function code:
+
+```go
+var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
+	iodev.DeviceClassTT:      terminalFunctions,
+	iodev.DeviceClassMailbox: mailboxFunctions,
+	iodev.DeviceClassDisk:    diskFunctions,
+}
+```
+
+with one exception, `driverFor`'s: a device of class mailbox and type 3 is
+the null device, with its own table, `nullFunctions`. Adding a function is
+adding a line to its driver's table.
+
+A driver function returns one of four answers:
+
+```go
+type ioFunc func(env *Environment, req *ioRequest) (done ioStatus, reject uint32)
+```
+
+- **Done**: `reject` is 0 and `done` is the IOSB's contents. `queueIO`
+  completes the request at once (8.4) and returns `SS$_NORMAL`.
+- **Rejected**: `reject` is `$QIO`'s R0, usually `SS$_ACCVIO` for a
+  buffer the caller can't read or write. Drivers check a buffer before
+  doing anything (`Environment.accessible`, which probes every page it
+  touches in the caller's mode), so a bad buffer consumes no input and
+  writes no output.
+- **Pending** (`ioPending`): the driver has kept the request, and will
+  complete it later. It goes on the process's `pendingIO` list, and `$QIO`
+  returns `SS$_NORMAL`.
+- **Resource wait** (`ioResourceWait`): the request can't even start yet,
+  a write to a full mailbox in resource wait mode. Nothing is queued;
+  `$QIO` returns `corevms.ErrWait`, so its XFC runs again when the
+  process next runs (7.6), and the request is made afresh.
+
+None of VMS's I/O quotas (BIOLM, DIOLM, BYTLM, and the AST limit) is
+charged, so `SS$_EXQUOTA` never comes from `$QIO`.
+
+### 8.4 Completion
+
+Whenever it happens, during the call or later, completing a request is
+`Environment.completeIO`:
+
+1. Count it: the device's `OpCnt` (UCB$L_OPCNT, SHOW DEVICE/FULL's
+   "Operations completed"), and the requester's buffered or direct I/O
+   count (`JPI$_BUFIO`, `JPI$_DIRIO`; a disk's and the null device's are
+   direct, a terminal's and a mailbox's buffered, `corevms/iocount.go`).
+2. Take it off the requester's pending list.
+3. Write the IOSB: the status's low word, the count, the device's
+   longword.
+4. Set the event flag, reporting it to the scheduler with the request's
+   boost.
+5. Queue the AST, if one was named, in the mode the request was made
+   from.
+6. Report the event, so that a requester waiting for it becomes
+   computable at once (7.6).
+
+All of that belongs to the **requester**, which isn't always the process
+the CPU is running. A write to a mailbox completes the read another
+process has waiting; the scheduler's look at the terminal completes a
+read whichever process is current. So the IOSB is written through the
+requester's own page tables when it isn't current (`storeOwn`, with
+`vm`'s `StoreIn`; section 5.3), and the event flag and the AST queue are
+the requester's Go state.
+
+**`$QIOW`** is `$QIO` and a wait in LEF until the request is done. A
+request done during the call returns at once. One left pending waits as
+every govax service waits (7.6): `ErrWait`, its XFC run again, until the
+driver completes it. Since an AST routine can make a `$QIOW` of its own
+while one is waiting beneath it, the waits are a stack on the
+`Environment`, each entry the request and the frame pointer of the
+`SYS$QIOW` call it belongs to; a call that comes round again finds its own
+by its FP. `$SYNCH` waits for a flag and an IOSB together, for a program
+that used `$QIO` and wants to wait later.
+
+**`$CANCEL`** completes every request pending on a channel with
+`SS$_CANCEL`, each with its IOSB, flag, and AST, and disarms the channel's
+attention ASTs. A cancelled request is marked, and the driver holding it
+drops it the next time it looks.
+
+Here's all of it, measured on govax: a program that writes a line with
+`$QIOW` and another with `$QIO` and an AST, reads a line with a prompt,
+reads the null device, asks for a function no driver has (63), and passes
+a message through a mailbox it creates. Each line of the program's own
+report gives R0 and the IOSB's three fields:
+
+```text
+channel to TT: 8
+Hello from $QIOW
+$QIOW write: R0 00000001, IOSB status 00000001 count 16 info 00000000
+Hello from $QIO
+AST ran, astprm 00001234
+$QIO returned 00000001
+$QIO write: R0 00000001, IOSB status 00000001 count 15 info 00000000
+Name? $QIOW read: R0 00000001, IOSB status 00000001 count 5 info 0001000D
+read WORLD
+NL: read: R0 00000001, IOSB status 00000870 count 0 info 00000000
+bad function: R0 000000F4, IOSB status 00000000 count 0 info 00000000
+MBX read: R0 00000001, IOSB status 00000001 count 14 info 00000301
+```
+
+The `$QIO` write was done during the call, so its user-mode AST was
+already queued when the XFC finished, and the engine delivered it at the
+next instruction boundary (7.7): "AST ran" comes before the line the
+program printed after `$QIO` returned. The read's information longword is
+its terminator, a carriage return (`0D`), and the terminator's size, 1.
+`870` is `SS$_ENDOFFILE`, the null device's answer to every read. Function
+63 was refused in R0 (`F4`, `SS$_ILLIOFUNC`), so the IOSB is as step 3
+left it, cleared. The mailbox read's longword is the sender's PID,
+process 1. (The reply `WORLD` came from a script, so nothing echoed it,
+and the report follows the prompt on its line.)
+
+### 8.5 The drivers
+
+#### The terminal
+
+Every terminal is the console: the terminal driver
+(`corevms/ttdriver.go`) reads govax's standard input and writes its
+standard output, through the buffer and queue all processes share
+(7.12).
+
+**Reads** (`IO$_READVBLK` and its logical, physical, and read-all forms;
+`IO$_READPROMPT`, which writes `p5`/`p6`'s prompt first) collect
+characters into `p1`'s buffer until a *terminator* comes (by default any
+control character but backspace, tab, line feed, vertical tab, and form
+feed: in practice Return or Ctrl/Z; `p4` may give a mask of its own), the
+buffer is full, or the input ends (`SS$_ENDOFFILE`). The host delivers a
+line ending in a newline where a terminal would send Return, so a newline
+(or a `\r\n` pair) is read as one carriage return. The terminator isn't
+counted in the transfer count, but is stored after the data when the
+buffer has room, and reported in the IOSB's second longword: the
+character in its low word, its size in its high word. `IO$M_CVTLOW`
+raises lower case as it's stored, `IO$M_PURGE` throws away what was typed
+ahead.
+
+A read whose line isn't there yet doesn't wait in `$QIO`: it joins the
+terminal's queue, pending, and the program goes on (7.12). The scheduler
+completes it when its turn and its line have come (`serviceTerminal`),
+whatever process is running then.
+
+**Writes** (`IO$_WRITEVBLK` and its forms) send `p2` bytes from `p1`, with
+`p4` the *carriage control*: either a FORTRAN carriage control character
+in its low byte (`' '` a line, `'0'` a line after a blank one, `'1'` a new
+page, `'+'` overprinting, `'$'` a prompt, the cursor left at its end), or a
+*prefix* and *postfix* byte in its upper two (a count of line feeds, or a
+control character), as an RMS print file's records have them. `p4` of 0
+means the data has its own carriage returns and line feeds, and is sent as
+it is.
+
+VMS's convention for a line is a line feed before and a carriage return
+after: the cursor rests at the start of the line just written. govax's
+terminal is written a line at a time, each line followed by a newline,
+the cursor resting at the start of the *next* line; that's how RMS's
+records, DCL's output, and the host's own tools write. So the driver
+doesn't send VMS's characters as they are: it translates the carriage
+control into lines (`terminalText`, by RMS's rule for print files,
+`rms.PrintTerminalText`). A prefix's first line feed is the newline
+already written; a postfix's carriage return is the line's own newline;
+a line with nothing after it is *open*, and the next line written starts
+with a newline to end it. Whether the line is open is kept per process
+(`rms.FileTable.LineOpen`), shared with RMS's own terminal output and
+cleared by a read (the reply typed ends the line), so a `$QIO` line, a
+LIB$PUT_OUTPUT line, a FORTRAN `$` prompt, and its reply sit on the screen
+as they would on VMS. A program's own raw output leaves the line open
+unless it ends in a line feed.
+
+**Characteristics.** `IO$_SENSEMODE` returns the terminal's class, type,
+page width, characteristics (`TT$M_` bits), and page length in an 8- or
+12-byte buffer, and `IO$_SETMODE` sets them; they live in the device
+record's `DevType`, `DevBufSize`, `DevDepend`, and `DevDepend2`, where
+VMS keeps them in the UCB, so `$GETDVI` and SHOW DEVICE see a change. With
+`IO$M_TYPEAHDCNT`, sense mode returns how many characters are typed ahead.
+`IO$_SETMODE!IO$M_CTRLCAST` and `CTRLYAST` arm a one-shot Ctrl/C or Ctrl/Y
+AST (7.13).
+
+**What the host terminal can't do.** govax doesn't own the host's
+terminal: in its ordinary mode the host has already edited and echoed a
+line before govax sees it. So `IO$M_NOECHO` can't hide what's typed,
+`IO$M_TIMED` with a limit of 0 seconds reads only what's typed ahead (the
+usual "anything there?" poll) while a longer limit waits without one, and
+the modifiers for escape sequences, line editing, Ctrl/O, broadcast, and
+associated mailboxes succeed and do nothing.
+
+#### The null device
+
+`NLA0:` (`corevms/nulldriver.go`) is VMS's bit bucket. A read is
+`SS$_ENDOFFILE` at once, the buffer untouched; a write needs a readable
+buffer, discards it, and reports a transfer count of 0, as VMS 7.1's did;
+set mode and end of file succeed and do nothing; sense mode is
+`SS$_ILLIOFUNC`, again as on VMS 7.1. Its I/O counts as direct I/O. Any
+number of processes may have it assigned, and it's the natural SYS$INPUT
+and SYS$OUTPUT for a process with nothing to talk to.
+
+#### Mailboxes
+
+A mailbox (`corevms/mailbox.go`, its driver `mbxdriver.go`) holds whole
+messages, not a stream of bytes, and pairs readers with writers:
+
+- A **write** when a read is waiting hands its message straight to that
+  read, and both complete. Otherwise the message is queued, and the write
+  stays pending until someone reads it, so the writer learns its message
+  arrived; with `IO$M_NOW` it completes at once.
+- A **read** takes the oldest message, completing it and, if it waited,
+  its write. With nothing queued, it stays pending until a write comes;
+  with `IO$M_NOW` it completes at once with `SS$_ENDOFFILE`.
+
+A read's IOSB has the message's length and the writer's PID; a write's
+has the length and the reader's PID, or 0 for an `IO$M_NOW` write, which
+finishes before anyone reads it (as VMS 7.3's did). `IO$_WRITEOF` sends an
+end-of-file message, which a read gets as `SS$_ENDOFFILE`. A message longer
+than the mailbox's largest is `SS$_MBTOOSML`; a read into a shorter buffer
+gets `SS$_BUFFEROVF` and loses the rest. A write past the mailbox's buffer
+quota waits for room in RWMBX (the resource wait of 8.3) unless the process
+turned resource waits off or the write said `IO$M_NORSWAIT`, which get
+`SS$_MBFULL`. Reads need read access by the mailbox's protection mask and
+writes write access (`SS$_NOPRIV` otherwise); the system's own messages,
+a termination message or OPCOM's reply, aren't checked.
+
+A program that would rather be told than wait arms an *attention AST* with
+`IO$_SETMODE`: `IO$M_READATTN` for a message no read is waiting for,
+`IO$M_WRTATTN` for a read waiting on an empty mailbox, `IO$M_MB_ROOM_NOTIFY`
+for room made. Each is delivered once, at once if its event has already
+happened.
+
+#### Disks
+
+A program can read a file without RMS, block by block, through the disk
+driver (`corevms/diskdriver.go`): `$ASSIGN` a channel to the disk, then
+`IO$_ACCESS!IO$M_ACCESS` with a *file information block* (FIB) naming the
+file by its file ID, or by a directory's ID and a name in `p2`; then
+`IO$_READVBLK` and `IO$_WRITEVBLK` move the file's *virtual* blocks (block
+1 is its first) into and out of `p1`'s buffer, `p3` the first block and
+`p2` the byte count; then `IO$_DEACCESS`, or `$DASSGN`. `IO$_CREATE`,
+`IO$_DELETE`, and `IO$_MODIFY` (to extend a file, or write its attributes)
+take the same FIB, and every function may read or write an *attribute
+list* in `p5` (the file's record attributes, dates, protection, ...,
+`diskattr.go`). On VMS these are the functions of the disk's *ancillary
+control process*, the file system that runs beside the driver; in govax
+they're calls on `rms.MountTable`'s ACP routines, over `ods2` (section 9),
+with ods2's errors turned into `SS$_` statuses by a table
+(`acpStatuses`). The file accessed is kept on the channel (`channel.acp`),
+shared with RMS's opens of it by the same sharing rules, so a program's
+FIB$M_WRITE access conflicts with another's RMS `$OPEN` as it would on
+VMS (`SS$_ACCONFLICT`).
+
+`IO$_READLBLK` and `IO$_WRITELBLK` move the volume's *logical* blocks,
+numbered from 0 across the whole disk with no files involved, and
+`IO$_READPBLK` and `IO$_WRITEPBLK` its *physical* blocks, which on the
+MSCP disks govax pretends to have are the same numbers
+(`disklogical.go`). Going around the file system needs a privilege, which
+`$QIO` checks before anything else: LOG_IO or PHY_IO for logical I/O,
+PHY_IO for physical.
+
+Every disk request completes during the call: the volume is a host file,
+and reading it doesn't wait for anything govax could do something else
+during. The disk must be mounted; govax has a disk's blocks only through
+its mounted container.
+
+### 8.6 The console's own way in
+
+Beneath VMS is the console, and the microkernel (section 11) reaches it
+three ways a VMS program never uses.
+
+**XFCs.** XFC, opcode `FC`, which the VAX reserved for a customer's own
+microcode, is govax's door from VAX code into Go, its selector byte
+choosing what to do (`cpu/xfc.go`; section 4.1, and section 10 for the
+rest). Four of the choices are the console's:
+
+| Selector | Name | What it does |
+| --- | --- | --- |
+| 1 | `XFC$CONSOLE_WRITE` | write R0's low byte to the terminal |
+| 2 | `XFC$CONSOLE_READ` | read one byte from the terminal into R0's low byte |
+| 3 | `XFC$CONSOLE_CMD` | run the counted string R0 addresses as a console command line; R0 is 0 if it succeeded |
+| 4 | `XFC$CONSOLE_PUT` | write the string R0's descriptor describes, in one write |
+
+They go to the machine (`machine/services.go`), which writes to and reads
+from the console's own streams, not through a device or a channel, and
+they work in any mode, checked by the current mode's access to the string.
+The microkernel's console output, `exe$put_one` in `kernel.asm`, is one
+`XFC$CONSOLE_PUT` per string.
+
+**The console terminal's registers.** The VAX architecture defines a
+console terminal reached through four processor registers: RXCS and RXDB
+to receive, TXCS and TXDB to transmit, each with an interrupt
+(`EXC$CONREAD` and `EXC$CONWRITE`, at IPL 20). govax has them
+(`cpu/procreg.go`): `MTPR` to TXDB writes the character to the console at
+once, TXCS's ready bit is always set, and the transmit interrupt is
+raised if TXCS enables it; `MFPR` of RXDB reads a byte from the console's
+input then and there. The receive interrupt exists
+(`Engine.DeliverConsoleByte`) but nothing raises it: input is read by the
+processes from the shared terminal (7.12), never pushed at the CPU. The
+microkernel still enables RXCS's interrupt and has a handler for it,
+`exe$rx`, which never runs; its transmit handler only dismisses the
+interrupt.
+
+**CHMK.** The microkernel's own system calls, from before govax had VMS's
+services, are `CHMK #n` with a table of eight routines (`exe$table`):
+write a byte (an XFC), halt, read a byte (RXDB), the C library's read,
+write, open, and close, and quit. No VMS program calls them.
+
+### 8.7 SYS$INPUT, SYS$OUTPUT, and the process-permanent files
+
+A VMS program that writes a line with LIB$PUT_OUTPUT doesn't name a
+device: it writes to SYS$OUTPUT, whatever that leads to. On VMS, LOGINOUT
+opens a process's SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND as
+*process-permanent files*: files RMS opens for the process, not for an
+image, which stay open from one image to the next until the process ends
+(the *Guide to OpenVMS File Applications*, 6.6). DCL opens more of them: a
+command procedure, its `/OUTPUT` file, and the files of its OPEN command.
+
+govax does the same. Each process's RMS file table holds a table of
+entries (`rms/ppf.go`, `rms.PermanentEntry`), each one open stream (the
+terminal, a volume file, a mailbox, or the null device) with one position
+and the access of the open that made it. A logical name leads to an entry
+through an equivalence string of a special form: an escape, a zero byte,
+the entry's *internal file index* as a word, then the device's name
+(`lnm/ppf.go`):
+
+```text
+  1B 00 01 81 "_GOVAX$TTA0:"      IFI ^X8101: the terminal
+```
+
+`$TRNLNM` returns the string whole; SHOW LOGICAL shows only the device
+name. Process startup (`corevms/ppfstart.go`) opens the entries: for
+process 1, the terminal (`OpenTerminalFiles`), SYS$INPUT and SYS$COMMAND
+sharing one entry and SYS$OUTPUT and SYS$ERROR another, the names defined
+in executive mode as CONCEALED and TERMINAL; for a created process,
+whatever its creator named, each a terminal, a mailbox or NL:, or a file,
+each opened as an entry of the process's own, and TT defined as the
+device its SYS$INPUT names.
+
+An image's `$OPEN` of SYS$OUTPUT opens nothing: it's given an IFI marked
+*indirect*, and every `$GET` and `$PUT` through it works on the entry's one
+stream (`rms/ppfaccess.go`; section 9). Image rundown ends the indirect
+accesses and closes none of the entries, so the next image finds them as
+they were.
+
+**Where a line goes.** LIB$PUT_OUTPUT is `Environment.PutOutput`
+(`corevms/recdevice.go`), and what it does depends on what SYS$OUTPUT
+translates to:
+
+| SYS$OUTPUT leads to | The line goes |
+| --- | --- |
+| a process-permanent file (the usual case) | through the entry: the terminal, a procedure's `/OUTPUT` file, a subprocess's log, a mailbox (the write waits until it's read), or NL: |
+| a mailbox or NL: the image's DCL named for it alone (`DEFINE/USER SYS$OUTPUT MBA3:`) | through a stream the process keeps open in executive mode, as RMS would |
+| a file the image's DCL named for it alone (`DEFINE/USER SYS$OUTPUT X.LIS`) | into that file, made at the first line, held open by the image and closed at its rundown (`corevms/outfile.go`) |
+| nothing that can be written | the terminal, as a line |
+
+A condition's message goes the way `$PUTMSG` sends it, to SYS$ERROR and,
+if different, SYS$OUTPUT (`corevms/msgout.go`). LIB$GET_INPUT reads
+SYS$INPUT's entry the same way, which for a command procedure is the
+procedure's own data lines.
+
+### 8.8 The host side
+
+Everything a govax session shows and reads passes through `cmd/govax`.
+
+**Input.** One goroutine, the *pump* (`cmd/govax/attention.go`'s
+`attentionStdin`), reads the host's terminal for govax's whole life and
+hands each byte on through a channel, so that a key is seen even while
+nothing is reading, a program computing, say. Everything that reads the
+terminal reads the pump: the command line's editor at a prompt
+(`github.com/chzyer/readline`, which puts the terminal in raw mode while
+it reads a line), and, the rest of the time, the processes, with the
+terminal in its ordinary mode set up for VMS's keys
+(`cmd/govax/terminal_unix.go`'s `vmsTerminalMode`): Ctrl/C raises SIGINT
+and Ctrl/Y SIGQUIT, which govax catches (7.13); Ctrl/Z is the end of file,
+which the pump turns into VMS's Ctrl/Z character, echoing `*Exit*`; the
+host's suspend keys are off. The pump is the corevms terminal's
+`TerminalSource` (through the console's input): `Ready` says whether bytes
+are waiting, which is how a process's read knows whether its line has come
+without blocking the CPU (7.12). Input from a pipe or a file has no
+terminal modes and no keys; govax reads it as it comes.
+
+**Output.** Every process's terminal output (the drivers', RMS's,
+LIB$PUT_OUTPUT's, DCL's) goes to one writer, the console's output. At a
+terminal, that's `cmd/govax/promptout.go`'s `promptOutput`: it writes
+straight to the terminal, except while a command line is being read with
+the other processes running (7.12), when it passes whole lines through the
+line editor's own writer, which takes the prompt and the half-typed line
+off the screen, writes, and puts them back below.
+
+**Volumes** are host files too, the *containers* MOUNT names, holding an
+ODS-2 volume block for block (section 9). And a file name in quotes, or
+one with no volume to go to, names a host file directly, which RMS reads
+and writes as a VMS file of its own record format (section 9).
+
+### 8.9 What's VMS's and what isn't
+
+- **No I/O hardware and no interrupts.** No device interrupts, IRPs, fork
+  processes, or I/O postprocessing interrupt; drivers are Go functions,
+  and most requests complete during `$QIO`.
+- **The UCB, the CCB, and the IRP are Go records**, not in VAX memory, so
+  a privileged program looking for VMS's I/O database finds none. Channel
+  numbers are 8, 16, 24, ..., not offsets into a CCB table in P1.
+- **Four drivers**: terminal, null, mailbox, disk. No tapes, printers,
+  network devices, or associated mailboxes (`$ASSIGN`'s mailbox name is
+  kept and not used).
+- **No I/O quotas** charged: BIOLM, DIOLM, BYTLM, and ASTLM never refuse a
+  request.
+- **One terminal**, the host's, which edits and echoes lines itself:
+  `IO$M_NOECHO` and timed reads longer than 0 seconds don't do what they
+  ask, and terminal output is translated to the host's lines rather than
+  sent as VMS's line feeds and carriage returns.
+- **The console terminal's receive interrupt is never raised**; the
+  registers work, polled.
 
 ## 9. RMS and ODS-2
 
