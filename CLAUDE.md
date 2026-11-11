@@ -805,6 +805,10 @@ never had.
   paths relative to the root (`parsedName.belowRoot`), and `ods2`'s 15 levels.
   Subtask 8 (2026-11-09) is the system names: `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` the root `_DUA0:[SYSTEM.]` (`sysvol.Rooted`), `SYS$SYSDEVICE` concealed,
   STARTUP.COM's names `SYS$SYSROOT:[dir]`, held by `TestSystemNames` (`internal/console/sysnames_test.go`). Subtask 9 (2026-11-09) is the close-out.
+  Phase 92 (planned 2026-11-11) is documentation, a standalone guide per
+  part: Part A is `docs/VAX-VMS-INTERNALS.md` (subtask 1, 2026-11-11: the
+  plan, the outline, and sections 0 to 3; sections 4 to 12 are subtasks 2
+  to 10).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -828,6 +832,12 @@ never had.
   FTNRTL (Phase 74 on), for someone who wants to write a compiler for the
   VAX under VMS; each FORTRAN phase extends it. MANUAL.md's chapter 14 is
   the user's side.
+- `docs/VAX-VMS-INTERNALS.md` — a standalone, tutorial guide to how govax
+  is a VAX and gives a user-mode program VMS (Phase 92, Part A): a primer,
+  the package layers and seams, the central structures, then the
+  instruction set, memory, paging, processes, I/O, RMS and ODS-2, the
+  crossing from VAX code to Go, and startup. It never cites a phase doc;
+  when a change alters a mechanism it describes, update it too.
 
 ## Reference material
 
