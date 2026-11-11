@@ -16,9 +16,11 @@ import (
 )
 
 // Things in a report that are the moment's, not the file's: each page heading's
-// time, FDL's IDENT, and the file ID, a restored file's being its own.
+// time, FDL's IDENT, and the file ID, a restored file's being its own. In
+// the time, a day of one digit is blank-padded to two, so the mask takes the pad
+// with the day, and a date masks the same on the 8th as on the 18th.
 var (
-	analyzePageTime = regexp.MustCompile(`\d?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d   Page`)
+	analyzePageTime = regexp.MustCompile(`[ \d]?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d   Page`)
 	analyzeIdent    = regexp.MustCompile(`IDENT\t".*`)
 	analyzeFileID   = regexp.MustCompile(`File ID: \(\d+,\d+,\d+\)`)
 )
@@ -146,8 +148,10 @@ func TestIdx88ReportsOracle(t *testing.T) {
 	t.Logf("%d reports compared", compared)
 }
 
-// analyzeDates masks a report's file dates, which are this run's.
-var analyzeDates = regexp.MustCompile(`((?:Creation|Revision) Date: +)\d?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`)
+// analyzeDates masks a report's file dates, which are this run's. As in
+// analyzePageTime, a day of one digit is blank-padded to two, so the mask takes the pad
+// with the day, and a date masks the same on the 8th as on the 18th.
+var analyzeDates = regexp.MustCompile(`((?:Creation|Revision) Date: +?)[ \d]?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`)
 
 // analyzeCommand is an ANALYZE command of round 3 and what followed it, up to the
 // next command but for the status that follows it.

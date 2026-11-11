@@ -66,8 +66,10 @@ func vms88Text(f *backup.File) []string {
 	return lines
 }
 
-// vms88Dates are what a report says of when it ran and when its file was made.
-var vms88Dates = regexp.MustCompile(`\d?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d(\.\d\d)?|File ID: \(\d+,\d+,\d+\)|;2$`)
+// vms88Dates are what a report says of when it ran and when its file was made:
+// a day of one digit is blank-padded to two, so the mask takes the pad
+// with the day, and a date masks the same on the 8th as on the 18th.
+var vms88Dates = regexp.MustCompile(`[ \d]?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d(\.\d\d)?|File ID: \(\d+,\d+,\d+\)|;2$`)
 
 // vms88LogDifferences are the log's sections that differ from VMS's, with why. Round 2's
 // is the log held to (round 1's, vax/vms88.log, had FTNRTL fail to build).

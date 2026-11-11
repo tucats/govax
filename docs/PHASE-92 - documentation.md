@@ -295,3 +295,11 @@ interpreter process 1 runs, and what reads the startup procedure).
   scheduler yet), `mailbox.go` (one process), `cliprocess.go` (a small
   CLI), `creprc.go`, and `schedule.go`'s `CPUInstructions` (not
   `JPI$_CPUTIM`'s source).
+- **2026-11-11** The four `internal/console` oracles subtask 3 found
+  failing on and after the 10th of a month (`TestLBR90WOracle`,
+  `TestVMS88Procedure`, `TestIdx88ReportsOracle`, `TestIdx88CAnalyzeOracle`)
+  are fixed. VMS writes a day of one digit blank-padded (` 8-NOV-2026`),
+  and the logs were made on such days; each test's date mask matched the
+  digits but left the pad, so a two-digit day's line was a column short.
+  Each mask now takes the pad with the day (`[ \d]?\d-`, and a lazy
+  `Date: +?` before it in `analyzeDates`), as `idx88DTimes` already did.

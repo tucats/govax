@@ -54,8 +54,10 @@ func lbr90wSection(t *testing.T, text, start, end string) []string {
 }
 
 var (
-	// lbr90wDate is a date and time as LIBRARY and DIRECTORY show them.
-	lbr90wDate = regexp.MustCompile(`\d{1,2}-[A-Z]{3}-\d{4} \d\d:\d\d(:\d\d(\.\d\d)?)?`)
+	// lbr90wDate is a date and time as LIBRARY and DIRECTORY show them:
+	// a day of one digit is blank-padded to two, so the mask takes the pad
+	// with the day, and a date masks the same on the 8th as on the 18th.
+	lbr90wDate = regexp.MustCompile(`[ \d]?\d-[A-Z]{3}-\d{4} \d\d:\d\d(:\d\d(\.\d\d)?)?`)
 	// lbr90wCreator is the librarian's name in a listing's heading.
 	lbr90wCreator = regexp.MustCompile(`(Creator:  ).*$`)
 	// lbr90wAllocated is a file's allocation in DIRECTORY/SIZE=ALL, and
