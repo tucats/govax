@@ -10,6 +10,7 @@ COPY DUA5:[PROT93LOG]SEC93.LOG "testdata/prot93/vax/round3/sec93.log"/HOST/QUIET
 COPY DUA5:[PROT93LOG]SEC93U.LOG "testdata/prot93/vax/round3/sec93u.log"/HOST/QUIET
 COPY DUA5:[PROT93LOG]SEC93X.LOG "testdata/prot93/vax/round3/sec93x.log"/HOST/QUIET
 COPY DUA5:[PROT93LOG]SEC93Y.LOG "testdata/prot93/vax/round3/sec93y.log"/HOST/QUIET
+COPY DUA5:[PROT93LOG]SEC93X_567.LOG "testdata/prot93/vax/round3/sec93x_567.log"/HOST/QUIET
 COPY DUA5:[PROT93LOG]SEC93X_568.LOG "testdata/prot93/vax/round3/sec93x_568.log"/HOST/QUIET
 COPY DUA5:[PROT93LOG]SEC93X_569.LOG "testdata/prot93/vax/round3/sec93x_569.log"/HOST/QUIET
 COPY DUA5:[PROT93LOG]SEC93X_570.LOG "testdata/prot93/vax/round3/sec93x_570.log"/HOST/QUIET

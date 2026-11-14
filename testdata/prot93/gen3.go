@@ -201,6 +201,10 @@ type kase struct {
 	data  []string
 	code  []string
 	files []object
+
+	// crashes is a case expected to crash VMS: SEC93X.COM runs it only
+	// when asked (its P1 CRASH).
+	crashes bool
 }
 
 // object is a file or directory sec93.com makes for the cases, with its
@@ -1715,8 +1719,6 @@ func changeCases() {
 		[]item{in("ACL$C_ADDACLENT", alarmACE(tAlarm, 1, aW, "SECURITY"))}, changeOpts{acmode: -1, ctx: "-1"})
 	change('C', "ADDACLENT audit FAILURE DELETE", ca4,
 		[]item{in("ACL$C_ADDACLENT", alarmACE(tAudit, 2, aD, "SECURITY"))}, changeOpts{acmode: -1, ctx: "-1"})
-	change('C', "ADDACLENT alarm SUCCESS READ, other name", ca4,
-		[]item{in("ACL$C_ADDACLENT", alarmACE(tAlarm, 1, aR, "JOURNAL1"))}, changeOpts{acmode: -1, ctx: "-1"})
 	change('C', "READACL", ca4, []item{outNR("ACL$C_READACL", 512, kACL)}, changeOpts{acmode: -1, ctx: "0", noShow: true})
 
 	// CA5: several ACEs in one buffer.
@@ -2169,6 +2171,13 @@ func riskyCases() {
 	sx("ACL_ADD_ENTRY HIDDEN", []item{in("OSS$_ACL_ADD_ENTRY", idACE(oHidden, aR, idA))})
 	cx("ADDACLENT [200,1] HIDDEN READ", []item{in("ACL$C_ADDACLENT", idACE(oHidden, aR, idA))}, changeOpts{ctx: "-1"})
 	cx("ADDACLENT [200,1] READ with a reserved longword", []item{in("ACL$C_ADDACLENT", ace(tKeyID, 1, le32(aR), le32(0x12345678), le32(idA)))}, changeOpts{ctx: "-1"})
+
+	// Round 3's first two runs: VMS 7.1 bugchecked with SECAUDERR in the
+	// XQP at the first access to a file after this ACE was added (the
+	// file display after the change). Run only on request.
+	cx("ADDACLENT alarm SUCCESS READ, journal JOURNAL1 (crashed VMS: SECAUDERR)",
+		[]item{in("ACL$C_ADDACLENT", alarmACE(tAlarm, 1, aR, "JOURNAL1"))}, changeOpts{ctx: "-1"})
+	cases[len(cases)-1].crashes = true
 }
 
 // setdfprotCases are $SETDFPROT's: the process's default protection.
@@ -2326,7 +2335,7 @@ func (p *proc) header(name, who, logName string) {
 	}
 
 	p.line("$ LOGFILE = DEV + \"[PROT93LOG]\" + %s", logName)
-	p.line("$ @'HERE'/OUTPUT='LOGFILE' LOGGED")
+	p.line("$ @'HERE'/OUTPUT='LOGFILE' LOGGED 'P1'")
 	p.line("$ WRITE SYS$OUTPUT \"%s finished; the log is \", LOGFILE", name)
 	p.line("$ EXIT")
 	p.line("$ BEGIN:")
@@ -2654,7 +2663,7 @@ func xCases() []int {
 func buildRisky() string {
 	var p proc
 
-	p.header("SEC93X", "the cases that give a service malformed or unusual input. Run it as\n$ ! SYSTEM after PROT93C's run, and again after a crash, with the volume\n$ ! mounted /SYSTEM:\n$ !\n$ !     @DUA1:[000000]SEC93X\n$ !\n$ ! Its log is PROT93$DISK:[PROT93LOG]SEC93X.LOG, and each case's\n$ ! SEC93X_n.LOG",
+	p.header("SEC93X", "the cases that give a service malformed or unusual input. Run it as\n$ ! SYSTEM after PROT93C's run, and again after a crash, with the volume\n$ ! mounted /SYSTEM:\n$ !\n$ !     @DUA1:[000000]SEC93X\n$ !\n$ ! The last case is expected to crash VMS, and runs only with P1 CRASH:\n$ !\n$ !     @DUA1:[000000]SEC93X CRASH\n$ !\n$ ! Its log is PROT93$DISK:[PROT93LOG]SEC93X.LOG, and each case's\n$ ! SEC93X_n.LOG",
 		`"SEC93X.LOG"`)
 	p.line("$ HOME = F$ENVIRONMENT(\"DEFAULT\")")
 	p.line(restorePrivs)
@@ -2663,6 +2672,12 @@ func buildRisky() string {
 		p.line("$ !")
 		p.line("$ CASE_LOG = \"%s[PROT93LOG]SEC93X_%d.LOG\"", disk, n)
 		p.line("$ IF F$SEARCH(CASE_LOG) .NES. \"\" THEN GOTO DONE_%d", n)
+
+		if cases[n-1].crashes {
+			p.line("$ ! Expected to crash VMS: run only by @SEC93X CRASH.")
+			p.line("$ IF P2 .NES. \"CRASH\" THEN GOTO DONE_%d", n)
+		}
+
 		p.line("$ WRITE SYS$OUTPUT \"######## CASE %d: %s\"", n, strings.ReplaceAll(cases[n-1].title, `"`, `""`))
 		p.line("$ DEFINE SEC93_ONLY \"%d\"", n)
 		p.line("$ DEFINE/USER_MODE SYS$OUTPUT 'CASE_LOG'")

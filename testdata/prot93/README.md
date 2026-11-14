@@ -302,6 +302,17 @@ A case whose log is there already is passed over, so after another crash
 `@SEC93X` goes on from the case after the one that crashed, whose log is
 there and empty.
 
+**The second run crashed VMS too**, in the same place, and its console
+named the cause: a bugcheck, `SECAUDERR, Fatal error attempting to perform
+a security audit`, in the XQP, after OPCOM's security alarms for each read
+of `CA4.DAT`. CA4's cases put alarm ACEs on it; the one before the crash
+names a journal other than SECURITY, `(ALARM=JOURNAL1,ACCESS=READ+SUCCESS)`,
+and the first access after it was added (the file's display) brought VMS
+down. That case is now part X's last, `SEC93X.COM` running it only when
+asked (`@SEC93X CRASH`). The alarm ACEs naming SECURITY stay in part C: they
+put a message on the console for each access to `CA4.DAT`, which is
+expected.
+
 Round 3 runs on a volume of its own, not round 1's, with the accounts made
 again (PROT93_TEAM at round 1's value, which the cases' ACEs hold). The
 cases' files are made by `SEC93.COM` on the VAX, each with its owner,
@@ -353,7 +364,10 @@ protection, and ACL. No procedure waits for input.
    `SEC93X_n.LOG`. If the VAX crashes, reboot, `MOUNT/SYSTEM DUA1: SEC93`,
    and run `@DUA1:[000000]SEC93X` again (it defines `PROT93$DISK` itself);
    repeat until it finishes. Say which cases crashed it: their logs are
-   the empty ones.
+   the empty ones. The last case, the JOURNAL1 alarm, runs only with
+   `@PROT93$DISK:[000000]SEC93X CRASH`; it is expected to crash VMS, so
+   run it, if at all, after step 6's SEC93Y.COM has run and the logs are
+   copied out, then reboot and copy its log too.
 
 6. **As SYSTEM:**
 

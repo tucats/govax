@@ -1624,3 +1624,16 @@ The author accepted the plan and answered its questions:
   is there passed over so a rerun after a crash goes on past it, the two
   the crash points to last. Rehearsed on govax again, SEC93X.COM twice (the
   second run passing every case over). Waiting for the second VAX run.
+- **2026-11-14** Round 3's second VAX run crashed VMS in the same place,
+  and its console had the bugcheck: SECAUDERR, "Fatal error attempting to
+  perform a security audit", its PC in F11BXQP, after OPCOM's security
+  alarms for each read of `[SEC93.CHG]CA4.DAT`. The cause is the alarm ACE
+  naming a journal other than SECURITY, `(ALARM=JOURNAL1,ACCESS=READ+SUCCESS)`,
+  which CA4's sixth case adds: the first access after it (the file's
+  display) audits, and VMS 7.1 bugchecks. The first run fits: CA4 had all
+  six ACEs, JOURNAL1's last, so its add went through and the next access
+  crashed. The reserved longword and HIDDEN cases never ran. That case is
+  now part X's last, run only by `@SEC93X CRASH` (a `crashes` case). For
+  govax (10b and 13): an alarm ACE's journal name matters to VMS beyond its
+  text, and since govax keeps alarms and does nothing with them (the
+  review, answer 1), nothing here changes that. Waiting for the third run.
