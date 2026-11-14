@@ -1651,7 +1651,7 @@ The author accepted the plan and answered its questions:
   pass every check), without the INTERACTIVE identifier; `$GET_SECURITY`
   gives a file no OBJECT_NAME (length 0), names devices and volumes, and
   `SECURITY_CLASS FILE`'s first template is DEFAULT; `SYS_PROT` and the
-  other category items are `SS$_BADPARAM`-like `%XF12` for a file; contexts
+  other category items are `SS$_INVCLSITM` for a file; contexts
   are addresses in P1 (`%X7FFBEF10`); `$SET_SECURITY`'s LOCAL changes wait
   for RELCTX; the execute-only procedures ran for PROT93C (A.4's open
   question; the details go in A.4 with 10b). Round 3b (`SEC93B.COM`,
