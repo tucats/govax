@@ -1,0 +1,4 @@
+	.TITLE	DEF_ACL	$ACLDEF's values, in the object's global symbols
+; Written by testdata/prot93/gen.go.
+	$ACLDEF	GLOBAL
+	.END

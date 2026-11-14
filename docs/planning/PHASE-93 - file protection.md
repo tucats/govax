@@ -544,9 +544,10 @@ leave open.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-14): Part A, this plan.
-2. **The probe**: `testdata/prot93`, as in Part D, written and rehearsed
-   on govax; run on the VAX by the author; A.4 filled in and Part B
-   adjusted to its answers. Later rounds as later subtasks find gaps (the
+2. **The probe** (written and rehearsed 2026-11-14; waiting for the VAX
+   run): `testdata/prot93`, as in Part D, written and rehearsed on govax;
+   run on the VAX by the author; A.4 filled in and Part B adjusted to its
+   answers. Later rounds as later subtasks find gaps (the
    review, answer 7), each a section of A.4.
 3. **The rule**: `internal/security` (Decision 1), the guide's whole
    sequence with ACLs, `CanChangeOwner`, table-driven tests from A.1a and
@@ -594,90 +595,91 @@ Each is one commit, with tests, stopping for review.
 
 ## Part D — the probe (subtask 2)
 
-`testdata/prot93/`, run on an exchange volume on DUA5 like
-`testdata/lnm91`. `gen.go` writes the procedures and `exchange.cmd` and
-`copyout.cmd`; the README gives the steps. The procedure makes its own
-tree on the exchange volume, and its SET PROCESS/PRIVILEGES changes are
-undone at its end. Three throwaway accounts on the simh VAX (the review,
-answer 5), made once by the README's AUTHORIZE commands, give it real
-identities: PROT93A `[200,1]` (the owner), PROT93B `[200,2]` (the owner's
-group), and PROT93C `[300,1]` (the world), none with privileges, their
-default directories in the probe's tree.
+`testdata/prot93/` (its README has the files, the tree, and the steps for
+the VAX run). One program, `prot93.mar`, takes cases from SYS$INPUT and
+reports what RMS or the ACP did, and four procedures run it and DCL's
+commands under each identity. Everything happens on an exchange volume,
+mounted `/SYSTEM` so every user can reach it, and named by a system logical
+name, `PROT93$DISK`, whatever unit it is on. The run changes nothing else
+on the VAX but the accounts, their identifiers, and that name, which the
+last procedure removes.
 
-**The tree.** `[PROT93]` and below, directories owned by `[200,1]`,
-`[200,2]`, `[300,1]`, and `[1,4]`, with protections that give each
-category a different access (`(S:R,O:RW,G:E,W:D)` and its rotations), and
-directories with R only, E only, W and E, and none. Files of each owner
-and protection in each, a file with two versions of different protections,
-and directories with a default protection ACE, with DEFAULT identifier
-ACEs, and with a nopropagate one.
+**The identities.** Three accounts (the review, answer 5), made by
+`PROT93.COM` with AUTHORIZE: PROT93A `[200,1]`, which owns most of the
+tree; PROT93B `[200,2]`, in its group; PROT93C `[300,1]`, the world. Group
+identifiers PROT93G2 and PROT93G3, and a general identifier PROT93_TEAM
+held by PROT93C, for ACEs. PROT93B and PROT93C may turn on READALL,
+GRPPRV, SYSPRV, and BYPASS, and run the program in five passes: none, then
+each alone. SYSTEM runs three: without the four (`M0`), READALL (`M1`),
+all four (`M4`). The accounts take the place of the `$CREPRC` driver the
+plan first had: real logins give real identities, and turning privileges on
+and off gives the privilege passes. Each pass has a tag (`B3`), put in place
+of each `@` in a case, so each pass makes its own files.
 
-**Part A, DCL as SYSTEM with every privilege** (`prot93a.com`, under SET
-VERIFY):
+**The tree** (`[PROT93]`, mostly owned by `[200,1]`): the access matrix
+`[.F]` (26 files: each category alone, each access alone, rotations, UIC 0,
+and ACLs that grant, deny, give control, name a group, a wildcard UIC,
+INTERACTIVE, SYSTEM, or two ACEs in order); directories of one access each
+(`R`, `E`, `WE`, `RWE`, none, `W`); paths with one level's access taken
+away; and each identity's own files to supersede, delete, rename, and
+change (new versions over a previous one without W, past a version limit
+without D on the oldest).
 
-- SHOW PROTECTION, F$ENVIRONMENT("PROTECTION"), SET PROTECTION/DEFAULT
-  with partial codes, and files created after each.
-- New files in each kind of directory: CREATE, COPY (input of an unusual
-  protection), APPEND, RENAME, CREATE/DIRECTORY with and without
-  `/OWNER_UIC` and `/PROTECTION`, a new version of a file whose previous
-  version is protected differently and owned by another UIC; DIRECTORY/
-  SECURITY of each result.
-- SET SECURITY with each qualifier, SET FILE/PROTECTION and /OWNER_UIC,
-  SET PROTECTION=(code) file; SHOW SECURITY; DIRECTORY with `/OWNER`,
-  `/PROTECTION`, `/SECURITY`, `/ACL`, `/FULL`; F$FILE_ATTRIBUTES' PRO,
-  UIC, GRP, MBM, and ACL-related items.
-- Malformed codes and UICs in each command that takes one.
+**The program's cases.** `prot93c.dat`, every pass: each `[.F]` file opened
+with GET, PUT, both, and BIO, its XABPRO shown, and the ACP's read of its
+attributes and accesses for read and write; each directory searched with a
+wildcard and by name, parsed, opened, and created in; the paths; new files
+in a directory owned by another (plain, and with XABPROs naming each
+owner); a new file in the default protection ACE's directory.
+`prot93d.dat`, once per identity: CIF, new versions, a version limit, a
+supersede, erases, renames within and across directories, the ACP's
+modify of protection and owner, delete, and create. `prot93e.dat`: the
+bytes of every kind of ACE, from `$DISPLAY`'s XABPRO, which fix ods2's
+layouts (Decision 8). A file of file IDs, written by SYSTEM, opens files by
+ID in directories no one may read.
 
-**Part B, DCL as SYSTEM without BYPASS, SYSPRV, GRPPRV, or READALL**
-(`prot93b.com`): against files and directories whose system category is
-denied, every utility in A.3's item 6, each once with access and once
-without, and SET SECURITY without control access.
+**SYSTEM's DCL** (`PROT93.COM`, every privilege): SHOW PROTECTION,
+F$ENVIRONMENT, and SET PROTECTION/DEFAULT in seven forms, a file made after
+each; new files' profiles through CREATE, COPY, APPEND, RENAME, and
+CREATE/DIRECTORY (`/OWNER_UIC`, `PARENT`, `/PROTECTION`, top-level, a
+UIC-named directory, under a default protection ACE), and a new version of
+another owner's file; SET SECURITY with each qualifier, SET FILE, SET
+PROTECTION on a file, SET ACL and SHOW ACL; F$FILE_ATTRIBUTES' items;
+malformed protection codes, UICs, identifiers, and ACEs; every kind of ACE
+on a file or directory of its own, an ACL changed step by step (`/AFTER`,
+`/REPLACE`, `/DELETE`, `/DELETE=ALL`, protected and nopropagate ACEs through
+`/LIKE` and `/DEFAULT`); DIRECTORY's and SHOW SECURITY's layouts.
 
-**Part B2, DCL as each account** (`prot93u.com`, run by the author logged
-in as PROT93A, PROT93B, and PROT93C in turn, each run's log its own file):
-the same utilities against the same tree, so each category's messages are
-seen from a real login; SET SECURITY, `/OWNER`, and `/ACL` on the
-account's own files and others'; SET PROTECTION/DEFAULT and files created
-after it; SHOW PROCESS/PRIVILEGES.
+**Part B, DCL's utilities** (`PROT93B.COM`, by SYSTEM without its four
+privileges and by each account): TYPE, COPY, DUMP, SEARCH, DIFFERENCES,
+OPEN and READ, F$FILE_ATTRIBUTES, F$SEARCH, DIRECTORY (`/FULL`,
+`/SECURITY`), SHOW SECURITY, ANALYZE/RMS_FILE, CONVERT, BACKUP, MACRO, LINK,
+and LIBRARY/LIST on files the owner alone, the group, and everyone may use;
+DELETE, PURGE, RENAME, APPEND, COPY over, OPEN/WRITE and /APPEND, SET
+SECURITY, SET FILE, SET PROTECTION, an ACE, and /OWNER on the identity's
+own such files; directories it can't read or can only look up in, or can't
+write; RUN of images and `@` of procedures with E, R, or no access.
 
-On govax, Parts B2 and C are replayed in detached processes made by
-`$CREPRC` with the account's UIC: Part C's image directly, and B2's
-procedure under LOGINOUT's CLI (`corevms/cliprocess.go`), which already
-runs a command procedure in a detached process. This is test machinery
-until identities come; the process's username is set to the account's, so
-the logs compare.
+**Each account's own** (`PROT93U.COM`): the ACL'd files typed; control
+through an ACE; SET SECURITY/OWNER of its own file and another's; SET
+PROTECTION/DEFAULT then a new file; CREATE/DIRECTORY in others'
+directories; new files under the default protection ACE and in another
+owner's directory; a new version of another owner's file.
 
-**Part E, ACLs** (in `prot93a.com` and `prot93.mar`): SET SECURITY/ACL
-with every ACE form and OPTIONS, `/AFTER`, `/DELETE`, `/DELETE=ALL`,
-`/REPLACE`; protected, hidden, and nopropagate ACEs through `/LIKE` and
-`/DEFAULT`; SET ACL and SHOW ACL; SHOW SECURITY and DIRECTORY/SECURITY of
-each; malformed ACEs; and the ACEs' bytes as `$GET_SECURITY` returns them,
-dumped in hex, which fix ods2's layouts (Decision 8).
+**The end** (`PROT93Z.COM`): DIRECTORY/SECURITY of everything, so what each
+identity made is seen as SYSTEM sees it, then the accounts removed.
 
-**Part C, the services under other identities** (`prot93.mar`, a program
-that takes its cases from data lines, like `lnm91.mar`; `prot93d.mar`, a
-driver that runs it with `$CREPRC` under a UIC and privilege mask and waits
-for its termination message): `[200,1]` (owner), `[200,2]` (group),
-`[300,1]` (world), and `[1,4]` (system), each with no privileges, then
-READALL, GRPPRV, SYSPRV, and BYPASS. Each case reports the status, STV,
-and the XABPRO's owner, protection, and ACL status:
+**The definitions for round 2.** `def_*.mar` assemble `$CHPDEF`, `$OSSDEF`,
+`$ACEDEF`, `$ACLDEF`, `$ARMDEF`, `$KGBDEF`, and `$PRVDEF` `GLOBAL` on the VAX,
+and `decode.go` turns the objects into `defined.txt`, values only, as
+`testdata/idx88` did: the services' item codes and ACE layouts govax's
+`vmsdef` lacks. Round 2 is the security services (Decision 13), written
+once these values are in.
 
-| Group | Cases |
-| --- | --- |
-| Opens | `$OPEN` with each FAC (GET, PUT, UPD, DEL, TRN, BIO, BRO) against each file mask, by category; write with W but not R; by file ID in a directory with no access |
-| Evaluation | an identifier ACE denying what the code's group field grants; one granting what the code denies; a file owned by UIC 0, with and without an identifier ACE |
-| Lookups | a path of three directories with E removed from each level in turn; R without E; E without R |
-| Searches | `$SEARCH` with a wildcard and with a known name in R-only, E-only, and no-access directories |
-| Creation | `$CREATE` in each directory; a new version without W on the previous one; past the version limit without D on the oldest; `FAB$V_SUP`; `FAB$V_CIF`; with a XABPRO naming another owner (by each identity and privilege); the profile each new file and directory gets, in directories with and without a default protection ACE |
-| Deletion | `$ERASE` with D on the file and not on the directory, and the reverse |
-| Rename | `$RENAME` within and across directories, with each access removed in turn |
-| Attributes | `$DISPLAY` with a XABPRO of an unreadable file |
-| ACP | IO$_ACCESS, IO$_CREATE, IO$_DELETE, IO$_MODIFY of `ATR$C_FPRO` and `ATR$C_UIC`, with and without control |
-| Services | `$CHKPRO` with each category, privilege, and ACE; `$CHECK_ACCESS` for each account; `$GET_SECURITY` and `$SET_SECURITY` of each item code, by name and by channel, with and without control; `$PARSE_ACL` and `$FORMAT_ACL` of each ACE form and malformed text; `$CHANGE_ACL`'s functions; `$SETDFPROT` |
-| Images | `$CREPRC` of an image with E only, R only, neither (the termination status) |
-
-The program prints a status at every step and has nothing to wait on but
-the driver's termination messages.
+**On govax**, the accounts' runs are replayed in detached processes made
+by `$CREPRC` of LOGINOUT with the account's UIC (Decision 2), the
+username set to the account's, so the logs compare. Part C's program runs
+there the same way.
 
 ## The review (2026-11-14)
 
@@ -718,3 +720,21 @@ The author accepted the plan and answered its questions:
   subtasks; Part D has test accounts on the VAX (Part B2), the replay of
   their runs in detached processes on govax, and an ACL part (Part E).
   Subtask 2, the probe, is next.
+- **2026-11-14** Subtask 2, written: `testdata/prot93` (`prot93.mar` by
+  hand; `gen.go`'s four procedures, three case files, `hello.mar`, the
+  seven definition modules, and the govax scripts; `decode.go` from
+  `testdata/idx88`'s). Part D changed as it was written: the accounts run
+  the program themselves, privileges turned on and off for the passes, so
+  no `$CREPRC` driver; the security services' item codes aren't in
+  `vmsdef`, so round 1 brings their values back (`def_*.mar`) and the
+  services are round 2. Rehearsed on govax as SYSTEM, from a copy of the
+  exchange volume: the program assembles, links, and runs every case file
+  under every tag, and each procedure runs to its end. The rehearsal found
+  two mistakes of the probe's own, fixed: `$QIOW_S`'s P1 is an address
+  (`P1=FIBD`), and F$GETJPI's CURPRIV and AUTHPRIV overflow a DCL token when
+  every privilege is held (F$PRIVILEGE instead). What govax lacks is listed
+  in the README; among it, the ACP's `ATR$C_ACLLENGTH` (`SS$_BADATTRIB`)
+  and IO$_MODIFY by name (`SS$_BADPARAM`), both subtask 8's. A data line
+  after a command DCL failed to parse runs as a command on govax; that is
+  Phase 50's rule (data after one of DCL's own commands is a command),
+  checked, not a bug. Waiting for the VAX run.

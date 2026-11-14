@@ -1,0 +1,4 @@
+	.TITLE	DEF_KGB	$KGBDEF's values, in the object's global symbols
+; Written by testdata/prot93/gen.go.
+	$KGBDEF	GLOBAL
+	.END

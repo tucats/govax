@@ -1,0 +1,4 @@
+	.TITLE	DEF_ACE	$ACEDEF's values, in the object's global symbols
+; Written by testdata/prot93/gen.go.
+	$ACEDEF	GLOBAL
+	.END

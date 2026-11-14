@@ -1,0 +1,11 @@
+	.TITLE	HELLO	Phase 93's image to run
+; Written by testdata/prot93/gen.go: PROT93B.COM runs copies of it with
+; different protections.
+	.PSECT	DATA,WRT,NOEXE
+MSG:	.ASCID	/HELLO RAN/
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<>
+	PUSHAQ	MSG
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	RET
+	.END	START

@@ -1,0 +1,671 @@
+	.TITLE	PROT93 - file protection through RMS and the ACP
+	.IDENT	/1/
+;
+; Phase 93's probe (docs/planning/PHASE-93 - file protection.md). This
+; program reads cases from SYS$INPUT, one per line, does what each asks,
+; and reports what RMS or the ACP did. The same cases run under SYSTEM and
+; under each of the probe's accounts, with different privileges, so the
+; log shows what each identity may do. A line is
+;
+;	OF F1|F2|F3|F4|F5
+;
+; where O is the operation and F a flag. Every "@" in a line is replaced
+; first by the translation of the logical name PROT93_TAG (the account's
+; letter and the privilege pass, A0, B3, M4, ...), so each run makes and
+; changes files of its own. The operations:
+;
+;	O  $OPEN F1 with the access in F2 (G GET, P PUT, U UPD, D DEL,
+;	   T TRN, B BIO, R BRO), and $CLOSE
+;	I  $OPEN by file ID: F1 the device, F2-F4 the FID's three numbers
+;	   in decimal, F5 the access as for O
+;	A  $OPEN F1 for GET, then $DISPLAY its XABPRO: owner, protection,
+;	   and the ACL's bytes
+;	C  $CREATE F1 (PUT), then $DISPLAY the new file's XABPRO. Flag X:
+;	   with a XABPRO of protection F2 and owner F3 (hex; F3 empty is 0);
+;	   S: FAB$V_SUP; I: FAB$V_CIF
+;	E  $ERASE F1
+;	R  $RENAME F1 to F2
+;	P  $PARSE F1
+;	S  $PARSE F1, then $SEARCH until it stops
+;	Q  the ACP, by $QIO on the file F1 names (looked up by its
+;	   directory's ID and its name). Flag A: read the protection, owner,
+;	   and ACL length; R: access for read; W: access for write; M: write
+;	   the protection F2 (hex) and, if F3 isn't empty, the owner F3
+;	   (hex); D: delete; C: create and enter, then read the new file's
+;	   protection and owner
+;
+	$FABDEF
+	$NAMDEF
+	$XABDEF
+	$XABPRODEF
+	$RMSDEF
+	$SSDEF
+	$IODEF
+	$FIBDEF
+	$ATRDEF
+	$LNMDEF
+
+; SAY text, a1, ... a10: format text with $FAOL and the arguments (each
+; a longword, pushed by value) and write the line. The text is in line,
+; branched around.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A10,A9,A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; RMS service, fab: call an RMS service with no completion routines.
+	.MACRO	RMS	SERVICE,FAB
+	CLRQ	-(SP)
+	PUSHAB	FAB
+	CALLS	#3,G^SYS$'SERVICE
+	.ENDM	RMS
+
+; DONE label: report the status of the operation just done on FAB1.
+	.MACRO	DONE	LABEL
+	PUSHAB	NAM1
+	PUSHAB	FAB1
+	PUSHAQ	LABEL
+	CALLS	#3,REPORT
+	.ENDM	DONE
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+
+MAXLINE	= 400
+SEARCHMAX = 60
+ACLMAX	= 512
+
+LINE:	.BLKB	MAXLINE
+LINED:	.WORD	MAXLINE
+	.BYTE	14,1
+	.ADDRESS LINE
+LINLEN:	.WORD	0,0
+LINE2:	.BLKB	MAXLINE*2
+
+; The line's five fields, as descriptors, and its operation and flag.
+FIELDS:
+F1:	.LONG	0,0
+F2:	.LONG	0,0
+F3:	.LONG	0,0
+F4:	.LONG	0,0
+F5:	.LONG	0,0
+NULLD:	.LONG	0,0
+OPC:	.BYTE	0
+FLAG:	.BYTE	0
+
+; The tag that replaces "@", from PROT93_TAG ("X" if it isn't defined).
+TAGBUF:	.ASCII	/X/
+	.BLKB	31
+TAGLEN:	.LONG	1
+TABNAM:	.ASCID	/LNM$FILE_DEV/
+TAGNAM:	.ASCID	/PROT93_TAG/
+TRNLST:	.WORD	31,LNM$_STRING
+	.ADDRESS TAGBUF,TAGLEN
+	.LONG	0
+
+OUTD:	.LONG	600
+	.ADDRESS OUTBUF
+OUTBUF:	.BLKB	600
+OUTLEN:	.WORD	0,0
+
+	.ALIGN	LONG
+FABT:	$FAB	RFM=VAR,RAT=CR,MRS=0
+	.ALIGN	LONG
+NAMT:	$NAM
+
+	.ALIGN	LONG
+FAB1:	.BLKB	FAB$C_BLN
+FAB2:	.BLKB	FAB$C_BLN
+NAM1:	.BLKB	NAM$C_BLN
+NAM2:	.BLKB	NAM$C_BLN
+ESA1:	.BLKB	256
+RSA1:	.BLKB	256
+ESA2:	.BLKB	256
+RSA2:	.BLKB	256
+
+; XABC is the XABPRO a C/X case creates with; XABD the one $DISPLAY
+; fills, with the ACL's bytes in ACLB.
+	.ALIGN	LONG
+XABC:	$XABPRO
+	.ALIGN	LONG
+XABD:	$XABPRO	ACLBUF=ACLB,ACLSIZ=ACLMAX
+ACLB:	.BLKB	ACLMAX
+BYTES:	.BLKL	8
+
+; FAC letters and their bits.
+FACTAB:	.ASCII	/GPUDTBR/
+FACLEN	= 7
+FACMSK:	.BYTE	FAB$M_GET,FAB$M_PUT,FAB$M_UPD,FAB$M_DEL
+	.BYTE	FAB$M_TRN,FAB$M_BIO,FAB$M_BRO
+
+; The ACP's blocks.
+CHAN:	.WORD	0,0
+IOSB:	.QUAD	0
+	.ALIGN	LONG
+FIB:	.BLKB	FIB$C_LENGTH
+FIBD:	.LONG	FIB$C_LENGTH
+	.ADDRESS FIB
+NAMED:	.LONG	0,0
+DVID:	.WORD	0
+	.BYTE	14,1
+	.LONG	0
+APRO:	.WORD	0,0
+AUIC:	.LONG	0
+AACL:	.LONG	0
+WPRO:	.WORD	0,0
+WUIC:	.LONG	0
+VAL:	.LONG	0
+FUNC:	.LONG	0
+ATRR:	.WORD	ATR$S_FPRO,ATR$C_FPRO
+	.ADDRESS APRO
+	.WORD	ATR$S_UIC,ATR$C_UIC
+	.ADDRESS AUIC
+	.WORD	ATR$S_ACLLENGTH,ATR$C_ACLLENGTH
+	.ADDRESS AACL
+	.LONG	0
+ATRRS:	.WORD	ATR$S_FPRO,ATR$C_FPRO
+	.ADDRESS APRO
+	.WORD	ATR$S_UIC,ATR$C_UIC
+	.ADDRESS AUIC
+	.LONG	0
+ATRW1:	.WORD	ATR$S_FPRO,ATR$C_FPRO
+	.ADDRESS WPRO
+	.LONG	0
+ATRW2:	.WORD	ATR$S_FPRO,ATR$C_FPRO
+	.ADDRESS WPRO
+	.WORD	ATR$S_UIC,ATR$C_UIC
+	.ADDRESS WUIC
+	.LONG	0
+
+L_PARSE: .ASCID	/$PARSE/
+L_SEARCH: .ASCID /$SEARCH/
+L_OPEN:	.ASCID	/$OPEN/
+L_CREATE: .ASCID /$CREATE/
+L_ERASE: .ASCID	/$ERASE/
+L_RENAME: .ASCID /$RENAME/
+L_DISPLAY: .ASCID /$DISPLAY/
+
+	.PSECT	CODE,NOWRT,EXE
+
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	$TRNLNM_S TABNAM=TABNAM,LOGNAM=TAGNAM,ITMLST=TRNLST
+	BLBS	R0,2$
+	MOVB	#^A/X/,TAGBUF
+	MOVL	#1,TAGLEN
+2$:	MOVZWL	TAGLEN,TAGLEN
+	SAY	</tag !AD/>,TAGLEN,#TAGBUF
+
+LOOP:	PUSHAW	LINLEN
+	CLRL	-(SP)
+	PUSHAQ	LINED
+	CALLS	#3,G^LIB$GET_INPUT
+	BLBS	R0,10$
+	CMPL	R0,#RMS$_EOF
+	BEQL	5$
+	MOVL	R0,R2
+	SAY	</get input failed !XL/>,R2
+5$:	SAY	</end of cases/>
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+10$:	MOVZWL	LINLEN,R6
+	JSB	SUBST
+	SAY	</== !AD/>,R6,#LINE2
+	CMPL	R6,#2
+	BGEQ	15$
+	BRW	LOOP
+15$:	MOVB	LINE2,OPC
+	MOVB	LINE2+1,FLAG
+
+; Split the rest of the line, from its fourth character, at "|".
+	MOVAB	LINE2+3,R10
+	SUBL3	#3,R6,R11
+	BGEQ	20$
+	CLRL	R11
+20$:	MOVAQ	F1,R9
+	MOVL	#5,R8
+25$:	JSB	SPLIT
+	ADDL2	#8,R9
+	SOBGTR	R8,25$
+
+	PUSHAQ	F1
+	PUSHAB	RSA1
+	PUSHAB	ESA1
+	PUSHAB	NAM1
+	PUSHAB	FAB1
+	CALLS	#5,SETUP
+
+; Do the operation.
+	MOVZBL	OPC,R0
+	CMPL	R0,#^A/O/
+	BNEQ	51$
+	CALLS	#0,OPO
+	BRW	LOOP
+51$:	CMPL	R0,#^A/I/
+	BNEQ	52$
+	CALLS	#0,OPI
+	BRW	LOOP
+52$:	CMPL	R0,#^A/A/
+	BNEQ	53$
+	CALLS	#0,OPA
+	BRW	LOOP
+53$:	CMPL	R0,#^A/C/
+	BNEQ	54$
+	CALLS	#0,OPCR
+	BRW	LOOP
+54$:	CMPL	R0,#^A/E/
+	BNEQ	55$
+	CALLS	#0,OPE
+	BRW	LOOP
+55$:	CMPL	R0,#^A/R/
+	BNEQ	56$
+	CALLS	#0,OPR
+	BRW	LOOP
+56$:	CMPL	R0,#^A/P/
+	BNEQ	57$
+	CALLS	#0,OPP
+	BRW	LOOP
+57$:	CMPL	R0,#^A/S/
+	BNEQ	58$
+	CALLS	#0,OPS
+	BRW	LOOP
+58$:	CMPL	R0,#^A/Q/
+	BNEQ	59$
+	CALLS	#0,OPQ
+	BRW	LOOP
+59$:	SAY	</  unknown operation/>
+	BRW	LOOP
+
+; SUBST: copy the R6 bytes at LINE to LINE2, each "@" replaced by the tag,
+; and leave the new length in R6. Changes R0 to R5 and R7 to R10.
+SUBST:	MOVAB	LINE,R7
+	MOVAB	LINE2,R8
+	MOVL	R6,R9
+	BEQL	9$
+1$:	MOVZBL	(R7)+,R10
+	CMPB	R10,#^A/@/
+	BNEQ	2$
+	MOVC3	TAGLEN,TAGBUF,(R8)
+	MOVL	R3,R8
+	BRB	3$
+2$:	MOVB	R10,(R8)+
+3$:	SOBGTR	R9,1$
+9$:	MOVAB	LINE2,R0
+	SUBL3	R0,R8,R6
+	RSB
+
+; SPLIT: with R10 the text and R11 its length, make the descriptor at R9
+; the text up to the next "|" and step past it. Changes R0 to R5, R10,
+; and R11.
+SPLIT:	CLRQ	(R9)
+	TSTL	R11
+	BLEQ	9$
+	LOCC	#^A/|/,R11,(R10)
+	SUBL3	R0,R11,R2
+	MOVL	R2,(R9)
+	MOVL	R10,4(R9)
+	TSTL	R0
+	BEQL	8$
+	ADDL3	#1,R1,R10
+	SUBL3	#1,R0,R11
+	RSB
+8$:	CLRL	R11
+9$:	RSB
+
+; SETUP fab, nam, esa, rsa, name: make a FAB and its NAM new.
+	.ENTRY	SETUP,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	MOVL	8(AP),R7
+	MOVC3	#FAB$C_BLN,FABT,(R6)
+	MOVC3	#NAM$C_BLN,NAMT,(R7)
+	MOVL	20(AP),R0
+	MOVB	(R0),FAB$B_FNS(R6)
+	MOVL	4(R0),FAB$L_FNA(R6)
+	MOVL	R7,FAB$L_NAM(R6)
+	MOVL	12(AP),NAM$L_ESA(R7)
+	MOVB	#255,NAM$B_ESS(R7)
+	MOVL	16(AP),NAM$L_RSA(R7)
+	MOVB	#255,NAM$B_RSS(R7)
+	RET
+
+; REPORT label, fab, nam: the status of an operation and the name it
+; reached (the resultant string, or the expanded one if there is none).
+	.ENTRY	REPORT,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R6
+	MOVL	FAB$L_STS(R6),R2
+	MOVL	FAB$L_STV(R6),R3
+	SAY	</  !AS sts=!XL stv=!XL/>,4(AP),R2,R3
+	MOVL	12(AP),R6
+	MOVZBL	NAM$B_RSL(R6),R2
+	BEQL	10$
+	SAY	</  rsa="!AD"/>,R2,NAM$L_RSA(R6)
+	RET
+10$:	MOVZBL	NAM$B_ESL(R6),R2
+	BEQL	20$
+	SAY	</  esa="!AD"/>,R2,NAM$L_ESA(R6)
+20$:	RET
+
+; FACBITS: FAB1's access from the letters of the descriptor at 4(AP).
+	.ENTRY	FACBITS,^M<R2,R3,R4,R5,R6,R7>
+	CLRB	FAB1+FAB$B_FAC
+	MOVL	4(AP),R6
+	MOVL	(R6),R7
+	BEQL	9$
+	MOVL	4(R6),R6
+1$:	LOCC	(R6)+,#FACLEN,FACTAB
+	BEQL	2$
+	SUBL3	R0,#FACLEN,R2
+	BISB2	FACMSK[R2],FAB1+FAB$B_FAC
+2$:	SOBGTR	R7,1$
+9$:	RET
+
+; HEX value, descriptor: VAL from the descriptor's hex digits (0 if it is
+; empty).
+	.ENTRY	HEX,^M<R2>
+	CLRL	VAL
+	MOVL	4(AP),R2
+	TSTL	(R2)
+	BEQL	9$
+	PUSHAL	VAL
+	PUSHL	4(R2)
+	PUSHL	(R2)
+	CALLS	#3,G^LIB$CVT_HTB
+9$:	RET
+
+; DEC descriptor: VAL from the descriptor's decimal digits.
+	.ENTRY	DEC,^M<R2>
+	CLRL	VAL
+	MOVL	4(AP),R2
+	TSTL	(R2)
+	BEQL	9$
+	PUSHAL	VAL
+	PUSHL	4(R2)
+	PUSHL	(R2)
+	CALLS	#3,G^LIB$CVT_DTB
+9$:	RET
+
+; PROFILE: $DISPLAY FAB1's open file with XABD, and report its owner,
+; protection, and ACL, the ACL's bytes eight to a line.
+	.ENTRY	PROFILE,^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVC5	#0,(SP),#0,#ACLMAX,ACLB
+	CLRL	XABD+XAB$L_ACLCTX
+	CLRW	XABD+XAB$W_ACLLEN
+	CLRL	XABD+XAB$L_ACLSTS
+	CLRL	XABD+XAB$L_UIC
+	CLRW	XABD+XAB$W_PRO
+	MOVAB	XABD,FAB1+FAB$L_XAB
+	RMS	DISPLAY,FAB1
+	CLRL	FAB1+FAB$L_XAB
+	MOVL	FAB1+FAB$L_STS,R2
+	MOVL	FAB1+FAB$L_STV,R3
+	SAY	</  $DISPLAY sts=!XL stv=!XL/>,R2,R3
+	MOVL	XABD+XAB$L_UIC,R2
+	MOVZWL	XABD+XAB$W_PRO,R3
+	MOVZWL	XABD+XAB$W_ACLLEN,R4
+	MOVL	XABD+XAB$L_ACLSTS,R5
+	SAY	</  owner=!XL pro=!XW acllen=!UL aclsts=!XL/>,R2,R3,R4,R5
+	MOVAB	ACLB,R6
+	MOVZWL	XABD+XAB$W_ACLLEN,R7
+	CMPL	R7,#ACLMAX
+	BLEQ	10$
+	MOVL	#ACLMAX,R7
+10$:	TSTL	R7
+	BGTR	20$
+	RET
+20$:	CLRL	R8
+30$:	MOVZBL	(R6)+,BYTES[R8]
+	INCL	R8
+	CMPL	R8,#8
+	BLSS	30$
+	SAY	</  acl !XB !XB !XB !XB !XB !XB !XB !XB/>,-
+		BYTES,BYTES+4,BYTES+8,BYTES+12,BYTES+16,BYTES+20,BYTES+24,BYTES+28
+	SUBL2	#8,R7
+	BRW	10$
+
+	.ENTRY	OPO,^M<R2,R3>
+	PUSHAQ	F2
+	CALLS	#1,FACBITS
+	RMS	OPEN,FAB1
+	DONE	L_OPEN
+	BLBC	FAB1+FAB$L_STS,90$
+	RMS	CLOSE,FAB1
+90$:	RET
+
+	.ENTRY	OPI,^M<R2,R3>
+	RMS	PARSE,FAB1
+	DONE	L_PARSE
+	BLBS	FAB1+FAB$L_STS,10$
+	RET
+10$:	PUSHAQ	F2
+	CALLS	#1,DEC
+	MOVW	VAL,NAM1+NAM$W_FID
+	PUSHAQ	F3
+	CALLS	#1,DEC
+	MOVW	VAL,NAM1+NAM$W_FID+2
+	PUSHAQ	F4
+	CALLS	#1,DEC
+	MOVW	VAL,NAM1+NAM$W_FID+4
+	BISL2	#FAB$M_NAM,FAB1+FAB$L_FOP
+	PUSHAQ	F5
+	CALLS	#1,FACBITS
+	RMS	OPEN,FAB1
+	DONE	L_OPEN
+	BLBC	FAB1+FAB$L_STS,90$
+	RMS	CLOSE,FAB1
+90$:	RET
+
+	.ENTRY	OPA,^M<R2,R3>
+	MOVB	#FAB$M_GET,FAB1+FAB$B_FAC
+	RMS	OPEN,FAB1
+	DONE	L_OPEN
+	BLBC	FAB1+FAB$L_STS,90$
+	CALLS	#0,PROFILE
+	RMS	CLOSE,FAB1
+90$:	RET
+
+	.ENTRY	OPCR,^M<R2,R3>
+	MOVB	#FAB$M_PUT,FAB1+FAB$B_FAC
+	CMPB	FLAG,#^A/X/
+	BNEQ	20$
+	PUSHAQ	F2
+	CALLS	#1,HEX
+	MOVW	VAL,XABC+XAB$W_PRO
+	PUSHAQ	F3
+	CALLS	#1,HEX
+	MOVL	VAL,XABC+XAB$L_UIC
+	MOVAB	XABC,FAB1+FAB$L_XAB
+20$:	CMPB	FLAG,#^A/S/
+	BNEQ	30$
+	BISL2	#FAB$M_SUP,FAB1+FAB$L_FOP
+30$:	CMPB	FLAG,#^A/I/
+	BNEQ	40$
+	BISL2	#FAB$M_CIF,FAB1+FAB$L_FOP
+40$:	RMS	CREATE,FAB1
+	CLRL	FAB1+FAB$L_XAB
+	DONE	L_CREATE
+	BLBC	FAB1+FAB$L_STS,90$
+	CALLS	#0,PROFILE
+	RMS	CLOSE,FAB1
+90$:	RET
+
+	.ENTRY	OPE,^M<R2,R3>
+	RMS	ERASE,FAB1
+	DONE	L_ERASE
+	RET
+
+	.ENTRY	OPR,^M<R2,R3>
+	PUSHAQ	F2
+	PUSHAB	RSA2
+	PUSHAB	ESA2
+	PUSHAB	NAM2
+	PUSHAB	FAB2
+	CALLS	#5,SETUP
+	PUSHAB	FAB2
+	CLRQ	-(SP)
+	PUSHAB	FAB1
+	CALLS	#4,G^SYS$RENAME
+	DONE	L_RENAME
+	MOVZBL	NAM2+NAM$B_RSL,R2
+	SAY	</  new rsa="!AD"/>,R2,NAM2+NAM$L_RSA
+	RET
+
+	.ENTRY	OPP,^M<R2,R3>
+	RMS	PARSE,FAB1
+	DONE	L_PARSE
+	RET
+
+	.ENTRY	OPS,^M<R2,R3,R7>
+	RMS	PARSE,FAB1
+	DONE	L_PARSE
+	BLBC	FAB1+FAB$L_STS,90$
+	MOVL	#SEARCHMAX,R7
+10$:	RMS	SEARCH,FAB1
+	DONE	L_SEARCH
+	BLBC	FAB1+FAB$L_STS,90$
+	SOBGTR	R7,10$
+	SAY	</  search limit reached/>
+90$:	RET
+
+; QIO: the ACP function in FUNC on CHAN, with FIB, the name in NAMED (or
+; none if its length is 0), and the attribute list at 4(AP) (0 for none).
+; Reports R0 and the IOSB's status.
+	.ENTRY	QIO,^M<R2,R3,R4>
+	MOVL	4(AP),R4
+	MOVAQ	NAMED,R3
+	TSTL	NAMED
+	BNEQ	10$
+	CLRL	R3
+10$:	CLRQ	IOSB
+	$QIOW_S	CHAN=CHAN,FUNC=FUNC,IOSB=IOSB,P1=FIBD,P2=R3,P5=R4
+	MOVL	R0,R2
+	MOVZWL	IOSB,R3
+	SAY	</  $QIOW !XL iosb=!XW/>,R2,R3
+	MOVZWL	IOSB,R0
+	BLBC	R2,20$
+	RET
+20$:	MOVL	R2,R0
+	RET
+
+	.ENTRY	OPQ,^M<R2,R3,R4,R5,R6,R7>
+	RMS	PARSE,FAB1
+	DONE	L_PARSE
+	BLBS	FAB1+FAB$L_STS,5$
+	RET
+5$:	MOVZBW	NAM1+NAM$T_DVI,DVID
+	MOVAB	NAM1+NAM$T_DVI+1,DVID+4
+	$ASSIGN_S DEVNAM=DVID,CHAN=CHAN
+	BLBS	R0,10$
+	MOVL	R0,R2
+	SAY	</  $ASSIGN !XL/>,R2
+	RET
+10$:	MOVC5	#0,(SP),#0,#FIB$C_LENGTH,FIB
+	MOVC3	#6,NAM1+NAM$W_DID,FIB+FIB$W_DID
+	MOVZBL	NAM1+NAM$B_NAME,R2
+	MOVZBL	NAM1+NAM$B_TYPE,R3
+	ADDL2	R3,R2
+	MOVZBL	NAM1+NAM$B_VER,R3
+	ADDL2	R3,R2
+	MOVL	R2,NAMED
+	MOVL	NAM1+NAM$L_NAME,NAMED+4
+	CLRL	APRO
+	CLRL	AUIC
+	MNEGL	#1,AACL
+
+	CMPB	FLAG,#^A/A/
+	BNEQ	20$
+	MOVL	#IO$_ACCESS,FUNC
+	PUSHAB	ATRR
+	CALLS	#1,QIO
+	BLBC	R0,15$
+	MOVZWL	APRO,R2
+	SAY	</  fpro=!XW uic=!XL acllength=!SL/>,R2,AUIC,AACL
+15$:	BRW	90$
+
+20$:	CMPB	FLAG,#^A/R/
+	BEQL	22$
+	CMPB	FLAG,#^A/W/
+	BNEQ	30$
+	MOVL	#FIB$M_WRITE,FIB+FIB$L_ACCTL
+22$:	MOVL	#<IO$_ACCESS!IO$M_ACCESS>,FUNC
+	CLRL	-(SP)
+	CALLS	#1,QIO
+	BLBC	R0,25$
+	MOVL	#IO$_DEACCESS,FUNC
+	CLRL	NAMED
+	CLRL	-(SP)
+	CALLS	#1,QIO
+25$:	BRW	90$
+
+30$:	CMPB	FLAG,#^A/M/
+	BNEQ	40$
+	PUSHAQ	F2
+	CALLS	#1,HEX
+	MOVW	VAL,WPRO
+	MOVL	#IO$_MODIFY,FUNC
+	TSTL	F3
+	BNEQ	35$
+	PUSHAB	ATRW1
+	CALLS	#1,QIO
+	BRW	90$
+35$:	PUSHAQ	F3
+	CALLS	#1,HEX
+	MOVL	VAL,WUIC
+	PUSHAB	ATRW2
+	CALLS	#1,QIO
+	BRW	90$
+
+40$:	CMPB	FLAG,#^A/D/
+	BNEQ	50$
+	MOVL	#<IO$_DELETE!IO$M_DELETE>,FUNC
+	CLRL	-(SP)
+	CALLS	#1,QIO
+	BRW	90$
+
+50$:	CMPB	FLAG,#^A/C/
+	BEQL	51$
+	BRW	60$
+51$:	MOVL	#<IO$_CREATE!IO$M_CREATE>,FUNC
+	CLRL	-(SP)
+	CALLS	#1,QIO
+	BLBS	R0,52$
+	BRW	55$
+52$:
+	MOVZWL	FIB+FIB$W_FID,R2
+	MOVZWL	FIB+FIB$W_FID+2,R3
+	MOVZWL	FIB+FIB$W_FID+4,R4
+	SAY	</  fid=(!UL,!UL,!UL)/>,R2,R3,R4
+	CLRW	FIB+FIB$W_DID
+	CLRL	FIB+FIB$W_DID+2
+	CLRL	NAMED
+	MOVL	#IO$_ACCESS,FUNC
+	PUSHAB	ATRRS
+	CALLS	#1,QIO
+	BLBC	R0,55$
+	MOVZWL	APRO,R2
+	SAY	</  fpro=!XW uic=!XL/>,R2,AUIC
+55$:	BRW	90$
+
+60$:	SAY	</  unknown flag/>
+90$:	$DASSGN_S CHAN=CHAN
+	RET
+
+; SAYR text, a1, ...: format and write one line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#600,OUTD
+	$FAOL_S	CTRSTR=@4(AP),OUTLEN=OUTLEN,OUTBUF=OUTD,PRMLST=8(AP)
+	MOVZWL	OUTLEN,OUTD
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVL	#600,OUTD
+	RET
+
+	.END	START

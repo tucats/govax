@@ -1,0 +1,4 @@
+	.TITLE	DEF_PRV	$PRVDEF's values, in the object's global symbols
+; Written by testdata/prot93/gen.go.
+	$PRVDEF	GLOBAL
+	.END
