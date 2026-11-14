@@ -2,7 +2,8 @@
 
 **Status:** planned 2026-11-14; the plan accepted by the author the same
 day, with the answers in "The review". Subtasks 1 (the survey, Part A),
-2 (the probe), and 3 (the rule, `internal/security`) are done.
+2 (the probe), 3 (the rule, `internal/security`), and 4 (ods2) are
+done.
 
 ## Goal
 
@@ -975,7 +976,7 @@ Each is one commit, with tests, stopping for review.
    guide's whole sequence with ACLs, `CanChangeOwner`, table-driven tests
    from A.1a and A.4; `uicAccess` on it, the mailbox, section, and event
    flag tests unchanged.
-4. **ods2**: profiles at creation and the ACE layouts (Decision 8), a
+4. **ods2** (done 2026-11-14): profiles at creation and the ACE layouts (Decision 8), a
    tagged release, govax pinned to it.
 5. **Identity and defaults**: `Process.Credentials` (its rights
    identifiers; subtask 3 made it with the UIC and privileges),
@@ -1257,3 +1258,23 @@ The author accepted the plan and answered its questions:
   but not its `$PRVDEF` lines, whose display flags share the privilege bit
   numbers. The author asked for `vax.sysgen.maxsysgroup`; it is in Decision
   3 and subtask 5. Subtask 4, ods2, is next.
+- **2026-11-14** Subtask 4 done: ods2 v0.1.29, which govax now pins.
+  `ondisk/ace.go` is the ACE layouts A.4 found (`ACE`, `DecodeACE` and
+  `Encode`, `DecodeACL`/`EncodeACL`, `FileHeader.ACEs`; identifier,
+  default protection, creator, alarm, and audit ACEs, an unknown type
+  kept whole), `Identifier` (a UIC or general identifier), and the three
+  inheritance rules of A.4's "New files' profiles" as ACL filters:
+  `ACLForNewVersion` (NOPROPAGATE dropped), `ACLFromDirectoryDefaults`
+  (the DEFAULT ACEs, DEFAULT cleared, NOPROPAGATE kept, the default
+  protection ACE not copied), and `ACLForSubdirectory`. Its tests hold the
+  encoding to the bytes VMS's `$DISPLAY` returned in round 1 (`ACE01` to
+  `ACE20`, `DP.DIR`). `ondisk.Uic` has its wildcards (`WildGroup`,
+  `WildMember`, `Matches`, `ParseUicPattern`; `ParseUic` still refuses
+  them). In `volume`, `NewFileHeader` and `DirectoryOptions` take an ACL,
+  and `CreateFileVersionWith` takes a `NewFileProfile` (owner,
+  protection, ACL), `CreateFileVersion` being it with nil; and
+  `InheritedDirectoryOptions` now gives a new directory its parent's ACL
+  less NOPROPAGATE entries, so govax's CREATE/DIRECTORY inherits ACLs from
+  now on (the rest of Decision 4 is subtask 7's). `internal/security`'s
+  own ACE code stays: it is a leaf over `vmsdef`, and ods2's types are the
+  file system's. Subtask 5, identity and defaults, is next.
