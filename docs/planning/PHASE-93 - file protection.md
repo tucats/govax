@@ -703,6 +703,24 @@ category's *denied* bits with C (`S:RWED` `^X10`, `G:RE` `^X1A`, none
   | SET PROTECTION=(code) file | `%SET-E-PRONOTCHG` alone |
   | RUN | `%DCL-W-ACTIMAGE`, `-CLI-E-IMGNAME`, `-RMS-E-PRV` |
 
+#### Open for a later round
+
+Questions rounds 1 and 2 left unanswered, to go into the next VAX round
+(the security services' round with subtask 10, Part D) so they aren't
+lost; each is marked unconfirmed where govax decides it meanwhile:
+
+1. **Whether an execute-only command procedure's lines run.** Round 1's
+   procedures were empty (CREATE's data ended at the next `$` line) and
+   round 2's were opened to world RE by its own fix-up, `PROT93S.COM`, so
+   neither run answers it; both show only that `@` of a procedure with E
+   alone opens it. The case: a procedure written with OPEN/WRITE (a line
+   that writes a message), owned by PROT93A with `(S:E,O:RWED,G:E,W:E)`,
+   run with `@` by an account without privileges, PROT93C, in a fresh
+   login, with SET VERIFY on and off (VMS is said to run such a
+   procedure without verification). Until then govax runs its lines,
+   with verification as set (unconfirmed). This needs an account, so the
+   round makes PROT93C again and removes it after.
+
 ## Part B — decisions
 
 **Decision 1 — one rule, in a leaf package.** `internal/security` (plain
@@ -972,7 +990,8 @@ Each is one commit, with tests, stopping for review.
    A.2 moved onto the layer, `TestNoUncheckedAccess`, and each utility's
    messages held to the probe's DCL logs, SYSTEM's and the accounts'.
 10. **The ACL services**: `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
-    (Decision 13), the ACE text both ways, held to the probe.
+    (Decision 13), the ACE text both ways, held to the probe. Its VMS round
+    also asks A.4's "Open for a later round" questions.
 11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
     BACKUP's `/PROTECTION` (Decision 10).
@@ -1071,7 +1090,8 @@ identity made is seen as SYSTEM sees it, then the accounts removed.
 `GLOBAL` on the VAX, and `decode.go` turns the objects into `defined.txt`,
 values only, as `testdata/idx88` did: the services' item codes and ACE
 layouts govax's `vmsdef` lacks. The security services (Decision 13) are a
-later round, SYSTEM's alone, written with subtask 10.
+later round, written with subtask 10: SYSTEM's for the services, with one
+account (PROT93C) for A.4's "Open for a later round" questions.
 
 **Round 2** (A.4, "What round 1 lost"): `PROT93R.COM` (SYSTEM) makes the
 accounts again (PROT93_TEAM with round 1's value, which the tree's ACEs
