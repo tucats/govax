@@ -390,3 +390,35 @@ func TestStartPageFile(t *testing.T) {
 		t.Errorf("the deferred page file didn't open at need: %q", out)
 	}
 }
+
+// TestSysgenProtection: vax.sysgen.rms_fileprot and maxsysgroup reach
+// process 1; unset, or bad, they're %XFA00 and 8 (octal 10).
+func TestSysgenProtection(t *testing.T) {
+	for _, tc := range []struct {
+		prot, group string
+		wantProt    uint16
+		wantGroup   uint32
+	}{
+		{"%XFF00", "16", 0xFF00, 16},
+		{"64000", "%X20", 0xFA00, 0x20},
+		{"0", "1", 0, 1},
+		{"%X10000", "0", 0xFA00, 8},
+		{"lots", "16384", 0xFA00, 8},
+		{"", "", 0xFA00, 8},
+	} {
+		withSettings(t, map[string]string{FileProtSetting: tc.prot, MaxSysGroupSetting: tc.group})
+
+		if tc.prot == "" {
+			_ = settings.Delete(FileProtSetting)
+			_ = settings.Delete(MaxSysGroupSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		p := c.ProcessOne().Process
+
+		if p.DefaultProtection != tc.wantProt || p.MaxSysGroup != tc.wantGroup {
+			t.Errorf("%q, %q: protection %#04x, MAXSYSGROUP %d; want %#04x, %d",
+				tc.prot, tc.group, p.DefaultProtection, p.MaxSysGroup, tc.wantProt, tc.wantGroup)
+		}
+	}
+}

@@ -405,6 +405,20 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 
 	applyQuotas(p, quotas, detached)
 	p.MinWSCount = env.Sysgen.MinWSCount
+	p.MaxSysGroup = env.Sysgen.MaxSysGroup
+
+	// The default file protection is the creator's (docs/planning/PHASE-93 -
+	// file protection.md, Decision 3). A subprocess holds its owner's
+	// rights; a detached process logs in on no terminal and holds none
+	// (unconfirmed: which environmental identifiers VMS gives a detached
+	// process, with LOGINOUT or without).
+	p.DefaultProtection = creator.DefaultProtection
+	p.Rights = nil
+
+	if !detached {
+		p.Rights = slices.Clone(creator.Rights)
+	}
+
 	creator.CPULimit -= cpuDeducted
 	p.cpuDeducted = cpuDeducted
 
@@ -572,7 +586,7 @@ func (env *Environment) inheritDefaults(child *Environment) {
 	}
 
 	if env.Session != nil {
-		child.Session = env.Session.ForProcess(child.Logicals)
+		child.UseSession(env.Session.ForProcess(child.Logicals))
 	}
 }
 

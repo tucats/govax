@@ -329,6 +329,9 @@ grammar console
         keyword         working_set     /syntax=show_working_set
         ! EDITOR: the editor EDIT runs, and where it works.
         keyword         editor          /syntax=show_editor
+        ! PROTECTION (docs/planning/PHASE-93 - file protection.md,
+        ! subtask 5): the process's default file protection.
+        keyword         protection      /syntax=show_protection
                 
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
@@ -386,6 +389,8 @@ grammar console
                         /type=$string
             parameter   process_name/id=1941        -
                         /type=$string
+            qualifier   privileges/id=1942
+        syntax          show_protection/id=2720
         syntax          show_working_set/id=166
         syntax          show_editor/id=167
 
@@ -1424,6 +1429,11 @@ grammar console
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     working_set         /syntax=set_working_set/nonegatable
         keyword     editor              /syntax=set_editor/nonegatable
+        ! PROTECTION and PROCESS (docs/planning/PHASE-93 - file
+        ! protection.md, subtask 5): SET PROTECTION=(code)/DEFAULT, the
+        ! process's default file protection, and SET PROCESS/PRIVILEGES.
+        keyword     protection          /syntax=set_protection/nonegatable/value
+        keyword     process             /syntax=set_process/nonegatable
 
 
     verb set/id=1760
@@ -1449,6 +1459,26 @@ grammar console
                     /type=$integer
         qualifier   adjust/id=1824
         qualifier   log/id=1825
+
+    ! SET PROTECTION[=(code)]/DEFAULT: the code merged into the process's
+    ! default file protection, which a new file gets when nothing else
+    ! gives it one (internal/dclcmd/protection.go). Without /DEFAULT, SET
+    ! PROTECTION=(code) file changes a file's protection, VMS's obsolete
+    ! form, which is Phase 93's subtask 11.
+    syntax set_protection/id=2700
+        parameter   code/id=2701                -
+                    /type=$any/list
+        parameter   file/id=2702                -
+                    /type=$string
+        qualifier   default/id=2703/nonegatable
+
+    ! SET PROCESS/PRIVILEGES=(name[,...]): privileges enabled, or with NO
+    ! before a name disabled, for the process, as $SETPRV makes them
+    ! permanent (internal/dclcmd/privileges.go). SET PROCESS's other
+    ! qualifiers are for a later phase.
+    syntax set_process/id=2710
+        qualifier   privileges/id=2711/nonegatable  -
+                    /type=$any/list
 
     ! SET EDITOR [/COMMAND="host command"] [/SCRATCH="host directory"]: the
     ! editor EDIT runs, and where it works (internal/dclcmd/edit.go).

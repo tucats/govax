@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-14; the plan accepted by the author the same
 day, with the answers in "The review". Subtasks 1 (the survey, Part A),
-2 (the probe), 3 (the rule, `internal/security`), and 4 (ods2) are
-done.
+2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), and 5
+(identity and defaults) are done.
 
 ## Goal
 
@@ -978,7 +978,7 @@ Each is one commit, with tests, stopping for review.
    flag tests unchanged.
 4. **ods2** (done 2026-11-14): profiles at creation and the ACE layouts (Decision 8), a
    tagged release, govax pinned to it.
-5. **Identity and defaults**: `Process.Credentials` (its rights
+5. **Identity and defaults** (done 2026-11-14): `Process.Credentials` (its rights
    identifiers; subtask 3 made it with the UIC and privileges),
    `DefaultProtection` and `vax.sysgen.rms_fileprot`, and
    `vax.sysgen.maxsysgroup` (Decision 3; both in `validConfigs` and HELP),
@@ -1278,3 +1278,40 @@ The author accepted the plan and answered its questions:
   now on (the rest of Decision 4 is subtask 7's). `internal/security`'s
   own ACE code stays: it is a leaf over `vmsdef`, and ods2's types are the
   file system's. Subtask 5, identity and defaults, is next.
+- **2026-11-14** Subtask 5 done. `corevms.Process` has `Rights` (process 1
+  INTERACTIVE and LOCAL, as every account in the probe held; a subprocess
+  its owner's; a detached process none, unconfirmed), `DefaultProtection`,
+  and `MaxSysGroup`, the last two from `corevms.Sysgen`'s `FileProtection`
+  and `MaxSysGroup` at login (`LoginQuotas`), a created process taking its
+  creator's protection; `Process.Credentials` carries all of them, a copy
+  each time. The keys are `vax.sysgen.rms_fileprot` (a mask, decimal or %X,
+  %XFA00) and `vax.sysgen.maxsysgroup` (decimal, as SYSGEN shows it, 1 to
+  16383, 8), in `validConfigs`, the audit, HELP CONFIGURATION KEYS, and
+  MANUAL.md's table. `rms.Context.Credentials` (filled by `rmsContext`) and
+  `rms.Session.Credentials` (filled by `Environment.UseSession`, which each
+  place giving a process its session now calls), each read by `Identity`,
+  SYSTEM's when nil. `$SETDFPROT` (`corevms/defprot.go`) is an RMS service
+  by its statuses (RMS$_NORMAL, RMS$_IAL; IAL for a word it can't reach,
+  unconfirmed), and both manuals say it has no `_S` or `_G` macro, so
+  govax's STARLET gets none (Decision 13's macros don't apply to it).
+  DCL: SET PROTECTION[=(code)]/DEFAULT and SHOW PROTECTION
+  (`dclcmd/protection.go`), F$ENVIRONMENT("PROTECTION") from the process,
+  SET PROCESS/PRIVILEGES (on `SetProcessPrivileges`, F$SETPRV's, with
+  %SYSTEM-W-NOTALLPRIV printed and $STATUS left a success, unconfirmed) and
+  SHOW PROCESS/PRIVILEGES (`dclcmd/privileges.go`, VMS 7.1's layout and
+  words; the "System rights" section, VMS's SYS$NODE_ identifier, left out:
+  govax has none). SET PROTECTION without /DEFAULT is
+  `%DCL-E-PROTNOTIMPL` until subtask 11. A protection code's text is
+  `security.ParseProtection` and `Protection.Text` (only `rms` may import
+  ods2, so DCL can't use ods2's parser; subtask 6's grammar type will use
+  this one), with `ErrUnknownCategory` (IVKEYW), `ErrRepeatedCategory`,
+  `ErrBadAccess`, and `ErrNoCategories` for each command's messages; `CLI$_IVPROT`
+  added to `vmserrors`. Held to the probe by `TestDefaultProtectionOracle`
+  (the "DEFAULT PROTECTION" section's 25 commands and IVPROT against
+  `prot93.log`) and `TestShowProcessPrivilegesOracle` (SYSTEM's and
+  PROT93A's reports and NOTALLPRIV), with `TestSetProcessPrivileges`,
+  `TestCreprcInheritsProtection`, `TestSetdfprot`, `TestLoginProtection`,
+  `TestCredentialsReachRMS`, `TestSysgenProtection`, and `security`'s
+  `TestParseProtection`. HELP has SET PROCESS, SET PROTECTION, SHOW
+  PROTECTION, and SHOW PROCESS/PRIVILEGES. Subtask 6, the grammar types, is
+  next.

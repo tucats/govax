@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
@@ -96,6 +97,23 @@ type Session struct {
 	// a terminal, is a name all the same (Parse). The console sets it to
 	// its device table's.
 	DeviceExists func(device string) bool
+
+	// Credentials, if set, are the credentials of the process whose
+	// session this is, which the DCL utilities' accesses are checked
+	// against (docs/planning/PHASE-93 - file protection.md, Decision 2):
+	// corevms sets it when it gives a process its session
+	// (Environment.UseSession). nil is SYSTEM's; Identity reads it.
+	Credentials func() security.Credentials
+}
+
+// Identity returns the credentials of the session's process: the
+// Credentials function's, or SYSTEM's when there is none.
+func (s *Session) Identity() security.Credentials {
+	if s == nil || s.Credentials == nil {
+		return security.SystemCredentials()
+	}
+
+	return s.Credentials()
 }
 
 // NewSession returns a Session sharing mounts (a Console's existing

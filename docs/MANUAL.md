@@ -708,6 +708,8 @@ paging on; section 13 explains what they control.
 | `vax.sysgen.gblpages` | GBLPAGES | 4096 |
 | `vax.sysgen.gblpagfil` | GBLPAGFIL | 4096 |
 | `vax.sysgen.virtualpagecnt` | VIRTUALPAGECNT | P0 + P1 |
+| `vax.sysgen.rms_fileprot` | RMS_FILEPROT: the default file protection a process logs in with (`SET PROTECTION/DEFAULT` changes it) | %XFA00, `(S:RWED,O:RWED,G:RE,W)` |
+| `vax.sysgen.maxsysgroup` | MAXSYSGROUP: the highest UIC group in every protection code's SYSTEM category | 8 (octal 10) |
 
 The console's own process has the `SYSTEM` account's quotas rather than
 the PQL defaults: a working set default of 512, quota 1024, and page
@@ -2607,7 +2609,7 @@ behaves as VMS's in the cases they cover. The differences to know about:
 - Commands that aren't VMS's: the machine commands of section 6.9, `PRINT`,
   `TIME`, and `F$CONFIG`.
 - Commands VMS has that govax doesn't include `SUBMIT`, `PRINT` (VMS's,
-  for queues), `SET TERMINAL`, `SET PROCESS`, `SET FILE`, `SORT`, `DIFFERENCES`, `SEARCH`, `EDIT`, `INSTALL`, `ANALYZE/DISK`, and
+  for queues), `SET TERMINAL`, `SET PROCESS` (but for `/PRIVILEGES`), `SET FILE`, `SORT`, `DIFFERENCES`, `SEARCH`, `EDIT`, `INSTALL`, `ANALYZE/DISK`, and
   the compilers.
 - `F$MODE()` is always `INTERACTIVE`; there's no batch.
 - govax's `@` reads a procedure from a host file as well as a volume.

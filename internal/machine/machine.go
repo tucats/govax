@@ -377,7 +377,7 @@ func NewMachine(out io.Writer) *Machine {
 				panic(err) // the first process on a new System
 			}
 
-			env.Session = session
+			env.UseSession(session)
 
 			return env
 		},

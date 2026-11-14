@@ -40,6 +40,21 @@ var (
 	PrivREADALL = privilege("READALL")
 )
 
+// AllPrivileges is every privilege's bit: the first PRV$K_NUMBER_OF_PRIVS
+// bits of the mask.
+var AllPrivileges = uint64(1)<<vmsdef.Symbols["PRV$K_NUMBER_OF_PRIVS"] - 1
+
+// SystemUIC is the SYSTEM account's UIC, [1,4].
+var SystemUIC = NewUIC(1, 4)
+
+// SystemCredentials are the SYSTEM account's: UIC [1,4] with every
+// privilege, what govax's processes have unless something lowers them.
+// Code given no credentials (an RMS call a test makes with none) acts
+// with these.
+func SystemCredentials() Credentials {
+	return Credentials{UIC: SystemUIC, Privileges: AllPrivileges}
+}
+
 // AttributeResource is KGB$M_RESOURCE: the holder of an identifier with
 // it may change the owner of objects the identifier owns.
 var AttributeResource = uint32(vmsdef.Symbols["KGB$M_RESOURCE"])

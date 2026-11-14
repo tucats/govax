@@ -37,6 +37,12 @@ const (
 	// PFCDefaultSetting is PFCDEFAULT's key, whose value has a rule of
 	// its own (ParsePFCDefault).
 	PFCDefaultSetting = "vax.sysgen.pfcdefault"
+
+	// FileProtSetting is RMS_FILEPROT's key and MaxSysGroupSetting
+	// MAXSYSGROUP's (docs/planning/PHASE-93 - file protection.md, Decision
+	// 3), each with a rule of its own (ParseFileProt, ParseMaxSysGroup).
+	FileProtSetting    = "vax.sysgen.rms_fileprot"
+	MaxSysGroupSetting = "vax.sysgen.maxsysgroup"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -56,7 +62,7 @@ func SysgenKeys() []string {
 		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
 		pageFileSetting, pageSizeSetting, pageDeferSetting, WriteClusterSetting,
 		gblSectSetting, gblPagesSetting, gblPagFilSetting, PFCDefaultSetting,
-		virtPageSetting,
+		virtPageSetting, FileProtSetting, MaxSysGroupSetting,
 	}
 
 	for key := range pqlSettings {
@@ -140,6 +146,29 @@ func ParsePFCDefault(text string) (uint32, bool) {
 	return v, ok && v <= corevms.MaxPFCDefault
 }
 
+// ParseFileProt reads RMS_FILEPROT's text: a protection mask in
+// ParseSysgenNumber's forms, from 0 to %XFFFF (SYSGEN shows the
+// parameter in decimal, 64000 for %XFA00). It reports false for anything
+// else.
+func ParseFileProt(text string) (uint16, bool) {
+	v, ok := ParseSysgenNumber(text)
+
+	return uint16(v), ok && v <= 0xFFFF
+}
+
+// MaxMaxSysGroup is the largest MAXSYSGROUP: a UIC group number is 14
+// bits.
+const MaxMaxSysGroup = 0o37777
+
+// ParseMaxSysGroup reads MAXSYSGROUP's text: a group number in
+// ParseSysgenNumber's forms (decimal, as SYSGEN shows it: 8 is octal 10)
+// from 1 to MaxMaxSysGroup. It reports false for anything else.
+func ParseMaxSysGroup(text string) (uint32, bool) {
+	v, ok := ParseSysgenNumber(text)
+
+	return v, ok && v >= 1 && v <= MaxMaxSysGroup
+}
+
 // sysgenSettings reads the vax.sysgen.* keys into the parameters a new
 // System gets, each key that isn't set, or isn't a positive count,
 // keeping its default (cmd/govax warns about a bad value at startup).
@@ -200,6 +229,14 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 	// VIRTUALPAGECNT unset is 0, which VMINIT makes /P0 plus /P1.
 	if v, ok := ParseSysgenCount(settings.Get(virtPageSetting)); ok {
 		sg.VirtualPageCount = v
+	}
+
+	if v, ok := ParseFileProt(settings.Get(FileProtSetting)); ok {
+		sg.FileProtection = v
+	}
+
+	if v, ok := ParseMaxSysGroup(settings.Get(MaxSysGroupSetting)); ok {
+		sg.MaxSysGroup = v
 	}
 
 	sg.PageFileName = strings.TrimSpace(settings.Get(pageFileSetting))

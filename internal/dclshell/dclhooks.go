@@ -171,7 +171,7 @@ func (c *Interpreter) newProcessOne(sys *corevms.System) *corevms.Environment {
 		panic(err)
 	}
 
-	env.Session = c.home.ContainerSession
+	env.UseSession(c.home.ContainerSession)
 	c.home.RTL = env
 
 	// The console is process 1's command interpreter: LIB$SPAWN and the

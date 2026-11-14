@@ -209,6 +209,24 @@
    Names the process by its process ID, in hexadecimal, as SHOW SYSTEM
    lists it.
 
+/PRIVILEGES
+
+      /PRIVILEGES
+
+   Shows the privileges the process is authorized for, those enabled
+   now with what each allows, and the rights identifiers it holds, in
+   place of its details.  SET PROCESS/PRIVILEGES changes them.
+
+2 PROTECTION
+
+   Shows the current process's default file protection, the protection a
+   new file gets when nothing else gives it one, which SET
+   PROTECTION/DEFAULT changes.
+
+   Format
+
+     SHOW PROTECTION
+
 2 RADIX
 
    Shows the console's radix, as a number (10, 16, or 8), which SET RADIX

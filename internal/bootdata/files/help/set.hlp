@@ -184,6 +184,39 @@
 
      Shows the time before each line TEST.COM runs.
 
+2 PROCESS
+
+   Changes the current process's privileges.  A privilege the process
+   is not authorized for (SHOW PROCESS/PRIVILEGES lists those it is) is
+   not enabled, and the command says so with %SYSTEM-W-NOTALLPRIV,
+   unless the process is authorized for SETPRV.  A change lasts until
+   the next one, past each image's exit.
+
+   SYSTEM is authorized for every privilege, and holds them all, so
+   every file protection check passes; turning off BYPASS, SYSPRV,
+   GRPPRV, and READALL shows what a process without them would be
+   refused, though SYSTEM's UIC, [1,4], keeps it in the SYSTEM category
+   of every protection code.
+
+   Format
+
+     SET PROCESS/PRIVILEGES=(privilege[,...])
+
+3 Qualifiers
+/PRIVILEGES
+
+      /PRIVILEGES=(privilege[,...])
+
+   The privileges to enable, each by its name (BYPASS, SYSPRV, ...), and
+   to disable, each with NO before its name (NOBYPASS).  ALL is every
+   privilege, NOALL none.  The parentheses may be left out for one.
+
+3 Examples
+
+   1.$ SET PROCESS/PRIVILEGES=(NOREADALL,NOGRPPRV,NOSYSPRV,NOBYPASS)
+
+     Turns off the four privileges that bear on file protection.
+
 2 PROMPT
 
    Changes the prompt the console shows when it reads a command.  The
@@ -204,6 +237,44 @@
    1.$ SET PROMPT="vax$ "
 
      Makes the prompt vax$.
+
+2 PROTECTION
+
+   With /DEFAULT, changes the current process's default file
+   protection: the protection a new file gets when nothing else gives it
+   one.  The code is merged into the default: a category it doesn't name
+   keeps what it had, and with no code nothing changes.  A process
+   starts with the default the configuration's vax.sysgen.rms_fileprot
+   gives, normally (S:RWED,O:RWED,G:RE,W), and a process it creates gets
+   its own.  SHOW PROTECTION shows it.
+
+   A protection code is a list of categories, SYSTEM, OWNER, GROUP, and
+   WORLD (or their first letters), each with the access it gives: R
+   (read), W (write), E (execute), D (delete).  ":" or "=" may follow a
+   category, and a category with no letters gives no access.
+
+   Without /DEFAULT, SET PROTECTION=(code) file changes a file's
+   protection; govax doesn't do that yet.
+
+   Format
+
+     SET PROTECTION[=(code)]/DEFAULT
+
+3 Qualifiers
+/DEFAULT
+
+      /DEFAULT
+
+   Changes the process's default protection.
+
+3 Examples
+
+   1.$ SET PROTECTION=(G:RWED,W:R)/DEFAULT
+     $ SHOW PROTECTION
+       SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=R
+
+     Gives the group every access and the world read access to the
+     files made from now on.
 
 2 QUANTUM
 

@@ -1,7 +1,10 @@
 package corevms
 
 import (
+	"slices"
+
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -136,6 +139,26 @@ type Process struct {
 	// which services check (PCB$Q_PRIV); ImagePrivileges, the running
 	// image's installed ones (always empty: govax installs nothing).
 	AuthorizedPrivileges, ProcessPrivileges, CurrentPrivileges, ImagePrivileges uint64
+
+	// Rights are the general identifiers the process holds besides its
+	// UIC (the process rights list, PCB$L_ARB's): the environmental ones
+	// its login gave it (INTERACTIVE and LOCAL for process 1) and any
+	// granted to it. An access control list's identifier ACEs match
+	// against them (Credentials; docs/planning/PHASE-93 - file
+	// protection.md).
+	Rights []security.Identifier
+
+	// DefaultProtection is the protection a new file gets when nothing
+	// else gives it one (PCB$L_DEFPROT on VMS, a protection mask whose set
+	// bits deny): set at login from RMS_FILEPROT, copied to each process
+	// the process creates, changed by $SETDFPROT and SET
+	// PROTECTION/DEFAULT.
+	DefaultProtection uint16
+
+	// MaxSysGroup is the SYSGEN parameter MAXSYSGROUP as the process
+	// sees it, copied in at login and creation as MinWSCount is: a UIC
+	// group up to it is a system group, for every protection check.
+	MaxSysGroup uint32
 
 	// LocalEventFlags are event flag clusters 0 and 1 (flags 0-63), local
 	// to the process. CommonClusters are the common event flag clusters
@@ -324,6 +347,10 @@ func NewProcess() *Process {
 		AuthorizedPrivileges: allPrivileges,
 		ProcessPrivileges:    allPrivileges,
 		CurrentPrivileges:    allPrivileges,
+
+		Rights:            slices.Clone(interactiveRights),
+		DefaultProtection: DefaultFileProtection,
+		MaxSysGroup:       security.DefaultMaxSysGroup,
 
 		ast: newASTState(),
 	}

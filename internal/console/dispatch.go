@@ -166,7 +166,18 @@ func (d *Dispatcher) bindGrammar() {
 	// SHOW SYSTEM and SHOW PROCESS (docs/planning/PHASE-44.md, subtask 10).
 	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowSystem() })
 	g.Bind("SHOW_PROCESS", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
+		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"), r.Present("PRIVILEGES"))
+	})
+
+	// SET and SHOW PROTECTION, and SET PROCESS/PRIVILEGES (docs/planning/PHASE-93 -
+	// file protection.md, subtask 5): the default file protection and the
+	// privileges of the process whose DCL runs the command.
+	g.Bind("SHOW_PROTECTION", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowProtection() })
+	g.Bind("SET_PROTECTION", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().SetProtection(r.List("CODE"), r.Present("DEFAULT"))
+	})
+	g.Bind("SET_PROCESS", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().SetProcessPrivileges(r.List("PRIVILEGES"))
 	})
 
 	// SET WORKING_SET and SHOW WORKING_SET (docs/planning/PHASE-63, subtask 9):

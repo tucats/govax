@@ -1,6 +1,10 @@
 package corevms
 
-import "github.com/tucats/govax/internal/security"
+import (
+	"slices"
+
+	"github.com/tucats/govax/internal/security"
+)
 
 // UIC-based protection (docs/planning/PHASE-46.md, subtask 3): the check VMS
 // makes before letting a process use an object that has an owner and a
@@ -29,15 +33,22 @@ var (
 	privREADALL = privilegeBit("READALL")
 )
 
-// Credentials are what process p brings to an access check: its UIC and
-// its current privileges. (The rights identifiers it holds come with
-// Phase 93's subtask 5.)
+// Credentials are what process p brings to an access check: its UIC, its
+// current privileges, the rights identifiers it holds, and MAXSYSGROUP.
+// Nothing keeps a copy: each check asks again, so a privilege turned off
+// counts at once.
 func (p *Process) Credentials() security.Credentials {
 	return security.Credentials{
-		UIC:        security.UIC(p.UIC),
-		Privileges: p.CurrentPrivileges,
+		UIC:         security.UIC(p.UIC),
+		Privileges:  p.CurrentPrivileges,
+		Rights:      slices.Clone(p.Rights),
+		MaxSysGroup: p.MaxSysGroup,
 	}
 }
+
+// Credentials are the credentials of env's process, for RMS and the DCL
+// utilities (rms.Context.Credentials, rms.Session.Credentials).
+func (env *Environment) Credentials() security.Credentials { return env.Process.Credentials() }
 
 // uicAccess reports whether process p may have every access in want
 // (accessRead, accessWrite, ...) to an object owned by owner (a UIC)

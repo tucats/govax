@@ -373,6 +373,18 @@ func (env *Environment) rmsContext() *rms.Context {
 		CanLock:   func() bool { return env.remainingLocks() > 0 },
 
 		AssignFileChannel: env.assignFileChannel,
+		Credentials:       env.Credentials,
+	}
+}
+
+// UseSession gives env's process s as its RMS session, the one its DCL
+// utilities work through, with the process's credentials for their
+// accesses (docs/planning/PHASE-93 - file protection.md, Decision 2).
+func (env *Environment) UseSession(s *rms.Session) {
+	env.Session = s
+
+	if s != nil {
+		s.Credentials = env.Credentials
 	}
 }
 

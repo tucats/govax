@@ -17,6 +17,8 @@ package corevms
 // copied into the process when it's created, so a later change for one
 // process (SET WORKING_SET, a quota list) changes only that process.
 
+import "github.com/tucats/govax/internal/security"
+
 // DefaultMinWSCount is MINWSCNT's default: the smallest working set a
 // process may have, and the least $ADJWSL can shrink one to.
 const DefaultMinWSCount = 20
@@ -130,7 +132,20 @@ type Sysgen struct {
 	// table area (creprc.go's newSpaceSizes). 0 until VMINIT sets its
 	// default, /P0 plus /P1, when the configuration names none.
 	VirtualPageCount uint32
+
+	// FileProtection is RMS_FILEPROT: the default protection a process
+	// gets at login (Process.DefaultProtection), a mask whose set bits
+	// deny. MaxSysGroup is MAXSYSGROUP: the highest UIC group that is a
+	// system group (Process.MaxSysGroup). docs/planning/PHASE-93 - file
+	// protection.md, Decision 3.
+	FileProtection uint16
+	MaxSysGroup    uint32
 }
+
+// DefaultFileProtection is RMS_FILEPROT's default, %XFA00:
+// (S:RWED,O:RWED,G:RE,W), the default protection every account in Phase
+// 93's probe started with.
+const DefaultFileProtection = 0xFA00
 
 // DefaultSysgen returns the parameters with no key set.
 func DefaultSysgen() Sysgen {
@@ -141,6 +156,7 @@ func DefaultSysgen() Sysgen {
 		PageFileSize: DefaultPageFileSize, MPWWriteCluster: DefaultMPWWriteCluster,
 		GlobalSections: DefaultGlobalSectionLimit, GlobalPages: DefaultGlobalPageLimit,
 		GlobalPageFile: DefaultGlobalPageFileLimit, PFCDefault: DefaultPFCDefault,
+		FileProtection: DefaultFileProtection, MaxSysGroup: security.DefaultMaxSysGroup,
 	}
 }
 
@@ -192,7 +208,8 @@ func SystemAccount() Account {
 
 // LoginQuotas gives p, a process logging in as the user acct describes
 // and the master process of its own job, its working set sizes and its
-// job's paging file quota. A PQL_Dxxx parameter the configuration set
+// job's paging file quota, its default file protection (RMS_FILEPROT),
+// and MAXSYSGROUP. A PQL_Dxxx parameter the configuration set
 // replaces the account's value: with no authorization file, the
 // configuration is how the author sets every process's starting values
 // (docs/planning/PHASE-62, Decision 11). The working-set default can't exceed the
@@ -214,6 +231,8 @@ func (sg *Sysgen) LoginQuotas(p *Process, acct Account) {
 	p.WSLimit = p.WSDefault
 	p.WSAuth, p.WSAuthExt = p.WSQuota, p.WSExtent
 	p.MinWSCount = sg.MinWSCount
+	p.DefaultProtection = sg.FileProtection
+	p.MaxSysGroup = sg.MaxSysGroup
 
 	if p.Job != nil {
 		p.Job.Pooled.PGFLQUOTA = pick("PGFLQUOTA", acct.PGFLQUOTA)

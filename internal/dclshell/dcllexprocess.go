@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -82,10 +83,17 @@ var environmentItems = map[string]func(c *Interpreter) dclValue{
 	"PROMPT":         func(c *Interpreter) dclValue { return dclString(c.Prompt()) },
 	"PROMPT_CONTROL": func(c *Interpreter) dclValue { return dclTrueFalse(true) },
 
-	// PROTECTION is the default file protection, in SET PROTECTION's
-	// syntax (15.2.2): VMS's default, as govax has no SET
-	// PROTECTION/DEFAULT.
-	"PROTECTION": func(c *Interpreter) dclValue { return dclString("SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD") },
+	// PROTECTION is the process's default file protection, in SET
+	// PROTECTION's syntax (15.2.2), a category with no access its name
+	// alone: "SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD" (Phase 93's probe).
+	"PROTECTION": func(c *Interpreter) dclValue {
+		protection := security.Protection(corevms.DefaultFileProtection)
+		if c.RTL != nil {
+			protection = security.Protection(c.RTL.Process.DefaultProtection)
+		}
+
+		return dclString(protection.Text(""))
+	},
 
 	// SYMBOL_SCOPE and VERB_SCOPE are SET SYMBOL/SCOPE's settings
 	// (12.11.1), which govax doesn't have: every symbol is seen.

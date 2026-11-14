@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/lck"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -116,6 +117,13 @@ type Context struct {
 	// number and a system service status. nil: UFO is RMS$_SUPPORT.
 	AssignFileChannel func(device string, f *ACPFile) (uint16, uint32)
 
+	// Credentials, if set, are the credentials of the process making the
+	// call, which every access to a file is checked against
+	// (docs/planning/PHASE-93 - file protection.md, Decision 2); Identity
+	// reads them. nil is SYSTEM's, so a test that builds a Context alone
+	// acts as SYSTEM.
+	Credentials func() security.Credentials
+
 	// Clock, if set, is the system time, in VMS's 100-nanosecond units:
 	// what a record lock wait's time limit (RAB$V_TMO) is measured by.
 	// nil: no time limits.
@@ -200,4 +208,15 @@ func (ctx *Context) loadBytes(addr uint32, n int) ([]byte, error) {
 	}
 
 	return buf, nil
+}
+
+// Identity returns the credentials of the process making the call: the
+// Credentials function's, or SYSTEM's when there is none. Each access
+// asks again; nothing keeps a decision.
+func (c *Context) Identity() security.Credentials {
+	if c.Credentials == nil {
+		return security.SystemCredentials()
+	}
+
+	return c.Credentials()
 }

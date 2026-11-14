@@ -185,7 +185,12 @@ func TestGrammarSplit(t *testing.T) {
 		{"SET MODE SYMBOLIC", debuggerOnly},
 		{"SET MODULE A", debuggerOnly},
 		{"SET PROCESS 302", debuggerOnly},
-		{"SET PROCESS", debuggerOnly},
+		// The console's SET PROCESS is DCL's, its privileges (Phase 93);
+		// the debugger's moves the CPU to another process.
+		{"SET PROCESS", both},
+		{"SET PROCESS/PRIVILEGES=BYPASS", consoleOnly},
+		{"SET PROTECTION=(W:R)/DEFAULT", consoleOnly},
+		{"SHOW PROTECTION", consoleOnly},
 		{"SET PSL N=1", debuggerOnly},
 		{"SET PTE 200 VALID=1", debuggerOnly},
 		{"SET FAULT 3", debuggerOnly},

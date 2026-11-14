@@ -433,6 +433,25 @@
                                      /P0 plus /P1
                                      (process 1's).
 
+       vax.sysgen.rms_fileprot       RMS_FILEPROT: the default file
+                                     protection every process logs in
+                                     with, a protection mask whose set
+                                     bits deny (%XFA00 is
+                                     (S:RWED,O:RWED,G:RE,W)), decimal
+                                     or %X.  A process it creates gets
+                                     its own; SET PROTECTION/DEFAULT
+                                     and $SETDFPROT change it.  Default
+                                     %XFA00 (64000).
+
+       vax.sysgen.maxsysgroup        MAXSYSGROUP: the highest UIC group
+                                     whose processes are in the SYSTEM
+                                     category of every protection code,
+                                     for files, mailboxes, global
+                                     sections, and common event flag
+                                     clusters.  Decimal (as SYSGEN
+                                     shows it) or %X, from 1 to 16383.
+                                     Default 8 (octal 10).
+
        vax.sysgen.paging.file        With paging on, the page file: where
                                      pages with no file of their own go
                                      when their memory is needed.  A

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -54,6 +55,15 @@ var environmentalIdentifiers = []rightsIdentifier{
 	{name: "LOCAL", value: vmsdef.Symbols["KGB$K_LOCAL_ID"]},
 	{name: "NETWORK", value: vmsdef.Symbols["KGB$K_NETWORK_ID"]},
 	{name: "REMOTE", value: vmsdef.Symbols["KGB$K_REMOTE_ID"]},
+}
+
+// interactiveRights are the rights an interactive login on a local
+// terminal holds: INTERACTIVE and LOCAL, as VMS 7.1's SHOW
+// PROCESS/PRIVILEGES listed them for every account in Phase 93's probe.
+// Process 1 holds them.
+var interactiveRights = []security.Identifier{
+	{Value: vmsdef.Symbols["KGB$K_INTERACTIVE_ID"]},
+	{Value: vmsdef.Symbols["KGB$K_LOCAL_ID"]},
 }
 
 // maxIdentifierName is the longest identifier name.

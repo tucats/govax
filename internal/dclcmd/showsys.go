@@ -34,7 +34,11 @@ func (c *Context) ShowSystem() error {
 // process 1's UIC group, as VMS looks up process names; pid is
 // hexadecimal, as SHOW SYSTEM shows it, and wins if both are given. A
 // process that isn't there is %SYSTEM-W-NONEXPR.
-func (c *Context) ShowProcess(name, pid string) error {
+//
+// With /PRIVILEGES (privileges true) its heading is followed by the
+// process's privileges and rights (processPrivilegesReport) instead of
+// its details.
+func (c *Context) ShowProcess(name, pid string, privileges bool) error {
 	if c.RTL == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
@@ -60,12 +64,22 @@ func (c *Context) ShowProcess(name, pid string) error {
 		}
 	}
 
-	for _, line := range env.ProcessReport(hostNode()) {
+	lines := env.ProcessReport(hostNode())
+	if privileges {
+		lines = append(lines[:processHeadingLines:processHeadingLines], processPrivilegesReport(env)...)
+	}
+
+	for _, line := range lines {
 		c.Printf("%s\n", line)
 	}
 
 	return nil
 }
+
+// processHeadingLines is how many of ProcessReport's lines are its
+// heading: a blank line, then the time, user, and process ID, then the
+// node and process name.
+const processHeadingLines = 3
 
 // systemName is what SHOW SYSTEM calls the operating system: govax and
 // its version ("GOVAX 1.0-280"), where VMS's says "OpenVMS V7.3".

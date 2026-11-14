@@ -791,6 +791,8 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.gblpagfil":      true,
 	"vax.sysgen.pfcdefault":     true,
 	"vax.sysgen.virtualpagecnt": true,
+	"vax.sysgen.rms_fileprot":   true,
+	"vax.sysgen.maxsysgroup":    true,
 
 	// Read by STARTUP.COM (F$CONFIG): the memory's sizes, in pages.
 	"vax.memory.size": true,
@@ -848,6 +850,20 @@ func auditConfig() {
 		if _, ok := machine.ParseWriteCluster(settings.Get(key)); !ok {
 			fmt.Printf("\nWarning, %s is %q; it must be a multiple of 8 from 16 to 120, and its default will be used\n",
 				key, settings.Get(key))
+		}
+	}
+
+	if key := machine.FileProtSetting; settings.Exists(key) {
+		if _, ok := machine.ParseFileProt(settings.Get(key)); !ok {
+			fmt.Printf("\nWarning, %s is %q; it must be a protection mask from 0 to %%XFFFF, and its default will be used\n",
+				key, settings.Get(key))
+		}
+	}
+
+	if key := machine.MaxSysGroupSetting; settings.Exists(key) {
+		if _, ok := machine.ParseMaxSysGroup(settings.Get(key)); !ok {
+			fmt.Printf("\nWarning, %s is %q; it must be a group number from 1 to %d, and its default will be used\n",
+				key, settings.Get(key), machine.MaxMaxSysGroup)
 		}
 	}
 
