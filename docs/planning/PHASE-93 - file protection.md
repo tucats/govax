@@ -1011,8 +1011,9 @@ Each is one commit, with tests, stopping for review.
     (Decision 13), the ACE text both ways, held to the probe. Its VMS round
     also asks A.4's "Open for a later round" questions. In two parts:
     10a, round 3 of the probe (Part D's "Round 3"; written and rehearsed
-    2026-11-14, waiting for the VAX run), which asks for subtask 13's
-    services too; 10b, the services.
+    2026-11-14; its first VAX run crashed VMS, and the round was reworked
+    to survive that, waiting for the second run), which asks for subtask
+    13's services too; 10b, the services.
 11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
     BACKUP's `/PROTECTION` (Decision 10).
@@ -1598,3 +1599,28 @@ The author accepted the plan and answered its questions:
   procedure lasts after it returns on govax, which round 3's logs will
   show VMS's answer to (`SEC93.COM` sets verification again after each
   `@`). Waiting for the VAX run.
+- **2026-11-14** Round 3's first VAX run crashed VMS 7.1 (a dump and a
+  reboot) during `SEC93.COM`'s program run. The log's end of file was
+  never written, but its blocks were on the volume: read through the
+  file header's five extents past the end of file (a scratch reader over
+  ods2's `ondisk`), they are `vax/round3/sec93-crash.log`, the build, the
+  accounts, parts P and F whole, and part C to case 211. The map came back
+  (`vax/round3/sec93.map`) and settles where the services are: `SYS$CHKPRO`,
+  `SYS$GET_SECURITY`, `SYS$SET_SECURITY`, and `SYS$SETDFPROT` are in the P1
+  system service vector, and `SYS$FORMAT_ACL`, `SYS$PARSE_ACL`,
+  `SYS$CHANGE_ACL`, and `SYS$CHECK_ACCESS` in SECURESHR.EXE (with
+  SECURESHRP), a shareable image the link took from IMAGELIB. The volume
+  placed the crash: `[SEC93.CHG]CA4.DAT` had its first six ACEs (revision
+  7) and `CA5.DAT` none of its cases', so it came in CA4's last cases,
+  adding an identifier ACE with a reserved longword, adding a HIDDEN ACE,
+  or the read after them. The run also found the probe's own mistake:
+  SET SECURITY/PROTECTION refuses a category with a colon and no letters
+  (`W:`, `%DCL-W-VALREQ`), so the tree's files given one kept SYSTEM's owner
+  and default protection (an ACE's `WORLD:`, as `$FORMAT_ACL` writes it, is
+  accepted). Reworked: `gen3.go` writes such a category without its colon;
+  the 21 cases that give a service malformed or unusual input are part X,
+  each on a file of its own, run last by `SEC93X.COM`, one case to an image
+  (`SEC93_ONLY`, a case's number) with a log of its own, a case whose log
+  is there passed over so a rerun after a crash goes on past it, the two
+  the crash points to last. Rehearsed on govax again, SEC93X.COM twice (the
+  second run passing every case over). Waiting for the second VAX run.

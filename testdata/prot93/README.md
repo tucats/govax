@@ -27,10 +27,10 @@ forms change them; how they are shown; and what the messages are.
 | `vax/round2/` | What round 2 leaves: its five logs |
 | `gen3.go` | Round 3's generator, which writes the files below: `go run testdata/prot93/gen3.go` from the repository root |
 | `sec93.mar` | Round 3's program: 588 cases of the security services, each a routine of its own under a handler |
-| `sec93.com`, `sec93u.com`, `sec93y.com` | Round 3: SYSTEM's run, PROT93C's, and the end |
+| `sec93.com`, `sec93u.com`, `sec93x.com`, `sec93y.com` | Round 3: SYSTEM's run, PROT93C's, the risky cases one at a time, and the end |
 | `sec93t.dat` | The text of every file round 3's tree copies |
 | `exchange-r3.cmd`, `copyout-r3.cmd` | Round 3's govax scripts: a new volume, and its results back |
-| `vax/round3/` | What round 3 leaves: its three logs, the program's map, object, and image |
+| `vax/round3/` | What round 3 leaves: its logs, the program's map, object, and image; `sec93-crash.log`, what the first run's log held when VMS crashed |
 
 ## The identities
 
@@ -282,12 +282,37 @@ hex, an ACL's ACEs each in hex and as `$FORMAT_ACL` writes it, and, after a
 change, the file's profile through RMS's `$DISPLAY` (`file owner=...`). A
 condition a case signals is caught and shown (`signal`), and the next case
 runs. `SEC93_PART` picks the parts, a letter each (`sec93.mar`'s opening
-comment lists them).
+comment lists them), and `SEC93_ONLY` one case by its number.
+
+**The first run crashed VMS.** `SEC93.COM`'s program run took the VAX
+down (a dump and a reboot) in part C. Its log's end of file was never
+written, but its blocks were on the volume, and `vax/round3/sec93-crash.log`
+is what they held: the build, parts P and F whole, and part C to case 211.
+The volume showed the rest: `[SEC93.CHG]CA4.DAT` had its first six ACEs and
+`CA5.DAT` none of its cases', so the crash came in CA4's last cases, the
+addition of an identifier ACE with a reserved longword, of a HIDDEN ACE, or
+the read after them. That run also found a mistake of the probe's own:
+SET SECURITY/PROTECTION refuses a category written with a colon and no
+letters (`W:`, `%DCL-W-VALREQ`), so the files given one kept SYSTEM's
+owner and default protection; `gen3.go` now writes such a category without
+its colon. Every case that gives a service malformed or unusual input
+(21) is now part X, which `SEC93X.COM` runs last, one case to an image,
+each with its own log, `SEC93X_n.LOG`, the two the crash points to last.
+A case whose log is there already is passed over, so after another crash
+`@SEC93X` goes on from the case after the one that crashed, whose log is
+there and empty.
 
 Round 3 runs on a volume of its own, not round 1's, with the accounts made
 again (PROT93_TEAM at round 1's value, which the cases' ACEs hold). The
 cases' files are made by `SEC93.COM` on the VAX, each with its owner,
 protection, and ACL. No procedure waits for input.
+
+0. **After the first run's crash**, the accounts it made are still on
+   the VAX: mount the old volume /SYSTEM and run `@DUA1:[000000]SEC93Y` as
+   SYSTEM to remove them (its listing will fail without `PROT93$DISK`;
+   the AUTHORIZE part is what matters), then dismount and detach it. Keep
+   a copy of it if you like; `vax/round3/sec93-crash.log` already holds
+   what it had.
 
 1. **Build the exchange volume**, from the repository root:
 
@@ -320,7 +345,17 @@ protection, and ACL. No procedure waits for input.
    U as the world, then the execute-only procedures with verification on
    and off, nested, reading data, failing, with `/OUTPUT`, and read as files.
 
-5. **As SYSTEM:**
+5. **As SYSTEM**, the risky cases:
+
+       $ @PROT93$DISK:[000000]SEC93X
+
+   Its log is `SEC93X.LOG`, ending `SEC93X FINISHED`, and each case's is
+   `SEC93X_n.LOG`. If the VAX crashes, reboot, `MOUNT/SYSTEM DUA1: SEC93`,
+   and run `@DUA1:[000000]SEC93X` again (it defines `PROT93$DISK` itself);
+   repeat until it finishes. Say which cases crashed it: their logs are
+   the empty ones.
+
+6. **As SYSTEM:**
 
        $ @PROT93$DISK:[000000]SEC93Y
        $ DISMOUNT DUA1:
@@ -330,12 +365,12 @@ protection, and ACL. No procedure waits for input.
    It lists the tree, removes the accounts, PROT93_TEAM, and PROT93, and
    deassigns `PROT93$DISK`.
 
-6. **Copy the results back**, from the repository root:
+7. **Copy the results back**, from the repository root:
 
        mkdir -p testdata/prot93/vax/round3
        go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout-r3.cmd
 
-   It writes `vax/round3/` (the three logs, `sec93.map`, `sec93.obj`,
+   It writes `vax/round3/` (the logs, `sec93.map`, `sec93.obj`,
    `sec93.exe`) and round 9's objects, analyses, and log in
    `testdata/mp/macros/vax/`.
 

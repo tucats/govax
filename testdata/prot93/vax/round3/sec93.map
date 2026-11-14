@@ -1,0 +1,1179 @@
+
+                                                                14-NOV-2026 13:31        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+SEC93           V1.0               329842 DUA1:[SEC93]SEC93.OBJ;1              14-NOV-2026 13:31  VAX MACRO V5.4-3
+SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
+LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      24-NOV-1996 19:04  Linker V11-38
+SECURESHR       X-6                     0 SYS$COMMON:[SYSLIB]SECURESHR.EXE;1   24-NOV-1996 19:10  Linker V11-38
+SECURESHRP      X-6                     0 SYS$COMMON:[SYSLIB]SECURESHRP.EXE;1  24-NOV-1996 19:10  Linker V11-38
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    2
+
+                                             +------------------------+
+                                             ! Image Section Synopsis !
+                                             +------------------------+
+
+   Cluster      Type Pages   Base Addr  Disk VBN PFC Protection and Paging      Global Sec. Name   Match     Majorid   Minorid
+   -------      ---- -----   ---------  -------- --- ---------------------      ----------------   -----     -------   -------
+
+DEFAULT_CLUSTER    0   424    00000200          2   0 READ WRITE   COPY ON REF
+                   0   221    00035200        426   0 READ ONLY     
+                   0     1    00050C00        647   0 READ WRITE   FIXUP VECTORS
+                 253    20    7FFFD800          0   0 READ WRITE   DEMAND ZERO  
+
+LIBRTL             3   264    00000000-R        0   0 READ ONLY                  LIBRTL_001       LESS/EQUAL        1        14
+                   4    15    00021000-R        0   0 READ WRITE   DEMAND ZERO   LIBRTL_002       LESS/EQUAL        1        14
+
+SECURESHR          3     2    00000000-R        0   0 READ ONLY                  SECURESHR_001    LESS/EQUAL        1         2
+                   3    18    00000400-R        0   0 READ WRITE   COPY ON REF   SECURESHR_002    LESS/EQUAL        1         2
+                   3    82    00002800-R        0   0 READ ONLY                  SECURESHR_003    LESS/EQUAL        1         2
+                   2     1    0000CC00-R        0   0 READ WRITE   COPY ON REF   SECURESHR_004    LESS/EQUAL        1         2
+                   4    14    0000CE00-R        0   0 READ WRITE   COPY ON REF   SECURESHR_005    LESS/EQUAL        1         2
+                   2     6    0000EA00-R        0   0 READ WRITE   FIXUP VECTORS SECURESHR_006    LESS/EQUAL        1         2
+
+SECURESHRP         3     1  P-00000000-R        0   0 READ ONLY                  SECURESHRP_001   LESS/EQUAL        1         1
+                   3     1  P-00000200-R        0   0 READ ONLY                  SECURESHRP_002   LESS/EQUAL        1         1
+                   2     1  P-00000400-R        0   0 READ WRITE   COPY ON REF   SECURESHRP_003   LESS/EQUAL        1         1
+                   3    13  P-00000600-R        0   0 READ WRITE   COPY ON REF   SECURESHRP_004   LESS/EQUAL        1         1
+                   3    80  P-00002000-R        0   0 READ ONLY                  SECURESHRP_005   LESS/EQUAL        1         1
+                   2     1  P-0000C000-R        0   0 READ WRITE   COPY ON REF   SECURESHRP_006   LESS/EQUAL        1         1
+                   4    13  P-0000C200-R        0   0 READ WRITE   COPY ON REF   SECURESHRP_007   LESS/EQUAL        1         1
+                   2     4  P-0000DC00-R        0   0 READ WRITE   FIXUP VECTORS SECURESHRP_008   LESS/EQUAL        1         1
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! R  - Relocatable   !
+		! P  - Protected     !
+		+--------------------+
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+
+DATA                            00000200 0003509B 00034E9C (     216732.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                SEC93           00000200 0003509B 00034E9C (     216732.) LONG  2
+
+CODE                            00035200 00050BD5 0001B9D6 (     113110.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                SEC93           00035200 00050BD5 0001B9D6 (     113110.) BYTE  0
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    4
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol                          Value       Symbol                          Value       Symbol                          Value       
+------                          -----       ------                          -----       ------                          -----       
+ACLWALK                         000353FF-R                                              C142                            0003DC24-R  
+C1                              000357BF-R                                              C143                            0003DCF7-R  
+C10                             000360F5-R                                              C144                            0003DDCA-R  
+C100                            0003BA80-R                                              C145                            0003DE9D-R  
+C101                            0003BB4B-R                                              C146                            0003DF70-R  
+C102                            0003BC16-R                                              C147                            0003E043-R  
+C103                            0003BCE1-R                                              C148                            0003E116-R  
+C104                            0003BDAC-R                                              C149                            0003E1E9-R  
+C105                            0003BE77-R                                              C15                             00036613-R  
+C106                            0003BF42-R                                              C150                            0003E2BC-R  
+C107                            0003C00D-R                                              C151                            0003E38F-R  
+C108                            0003C0D8-R                                              C152                            0003E462-R  
+C109                            0003C1A3-R                                              C153                            0003E535-R  
+C11                             000361FB-R                                              C154                            0003E608-R  
+C110                            0003C26E-R                                              C155                            0003E6DB-R  
+C111                            0003C339-R                                              C156                            0003E7AE-R  
+C112                            0003C404-R                                              C157                            0003E881-R  
+C113                            0003C4CF-R                                              C158                            0003E954-R  
+C114                            0003C59A-R                                              C159                            0003EA46-R  
+C115                            0003C665-R                                              C16                             00036719-R  
+C116                            0003C730-R                                              C160                            0003EB38-R  
+C117                            0003C7FB-R                                              C161                            0003EC26-R  
+C118                            0003C8C6-R                                              C162                            0003ED14-R  
+C119                            0003C991-R                                              C163                            0003EDEB-R  
+C12                             00036301-R                                              C164                            0003EEC2-R  
+C120                            0003CA5C-R                                              C165                            0003EFB4-R  
+C121                            0003CB27-R                                              C166                            0003F0A6-R  
+C122                            0003CBF2-R                                              C167                            0003F198-R  
+C123                            0003CCBD-R                                              C168                            0003F28A-R  
+C124                            0003CD88-R                                              C169                            0003F359-R  
+C125                            0003CE53-R                                              C17                             0003681F-R  
+C126                            0003CF1E-R                                              C170                            0003F42C-R  
+C127                            0003CFE9-R                                              C171                            0003F51A-R  
+C128                            0003D0B4-R                                              C172                            0003F5FC-R  
+C129                            0003D17F-R                                              C173                            0003F6D3-R  
+C13                             00036407-R                                              C174                            0003F7AA-R  
+C130                            0003D24A-R                                              C175                            0003F881-R  
+C131                            0003D315-R                                              C176                            0003F958-R  
+C132                            0003D3E6-R                                              C177                            0003FA0E-R  
+C133                            0003D4B9-R                                              C178                            0003FA94-R  
+C134                            0003D58C-R                                              C179                            0003FB36-R  
+C135                            0003D65F-R                                              C18                             00036925-R  
+C136                            0003D732-R                                              C180                            0003FBDC-R  
+C137                            0003D805-R                                              C181                            0003FC82-R  
+C138                            0003D8D8-R                                              C182                            0003FD24-R  
+C139                            0003D9AB-R                                              C183                            0003FDC6-R  
+C14                             0003650D-R                                              C184                            0003FE7C-R  
+C140                            0003DA7E-R                                              C185                            0003FF50-R  
+C141                            0003DB51-R                                              C186                            00040011-R  
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    5
+
+
+Symbol                          Value       Symbol                          Value       Symbol                          Value       
+------                          -----       ------                          -----       ------                          -----       
+C187                            000400CB-R                                              C233                            00041EE3-R  
+C188                            00040185-R                                              C234                            00041F8C-R  
+C189                            0004023F-R                                              C235                            00042031-R  
+C19                             00036A2B-R                                              C236                            000420DA-R  
+C190                            00040300-R                                              C237                            00042153-R  
+C191                            000403AB-R                                              C238                            000421CC-R  
+C192                            00040431-R                                              C239                            00042279-R  
+C193                            000404B7-R                                              C24                             00036F49-R  
+C194                            0004053D-R                                              C240                            00042332-R  
+C195                            000405C3-R                                              C241                            00042410-R  
+C196                            00040649-R                                              C242                            000424B9-R  
+C197                            000406FF-R                                              C243                            00042562-R  
+C198                            000407A1-R                                              C244                            0004260B-R  
+C199                            00040843-R                                              C245                            000426B4-R  
+C2                              000358C5-R                                              C246                            00042713-R  
+C20                             00036B31-R                                              C247                            00042772-R  
+C200                            0004090A-R                                              C248                            000427D1-R  
+C201                            000409D1-R                                              C249                            00042830-R  
+C202                            00040A66-R                                              C25                             0003704F-R  
+C203                            00040B2D-R                                              C250                            0004288F-R  
+C204                            00040BC2-R                                              C251                            000428EE-R  
+C205                            00040C64-R                                              C252                            0004294D-R  
+C206                            00040D5B-R                                              C253                            000429AC-R  
+C207                            00040E06-R                                              C254                            00042A0B-R  
+C208                            00040ECD-R                                              C255                            00042A6A-R  
+C209                            00040F46-R                                              C256                            00042AC9-R  
+C21                             00036C37-R                                              C257                            00042B28-R  
+C210                            00040FCC-R                                              C258                            00042B87-R  
+C211                            00041072-R                                              C259                            00042BE6-R  
+C212                            00041118-R                                              C26                             00037155-R  
+C213                            000411BA-R                                              C260                            00042C45-R  
+C214                            00041260-R                                              C261                            00042CA4-R  
+C215                            00041306-R                                              C262                            00042D03-R  
+C216                            000413AC-R                                              C263                            00042D62-R  
+C217                            00041452-R                                              C264                            00042DC1-R  
+C218                            000414F8-R                                              C265                            00042E20-R  
+C219                            0004159E-R                                              C266                            00042E7F-R  
+C22                             00036D3D-R                                              C267                            00042EDE-R  
+C220                            00041644-R                                              C268                            00042F3D-R  
+C221                            000416EA-R                                              C269                            00042F9C-R  
+C222                            00041790-R                                              C27                             0003725B-R  
+C223                            00041836-R                                              C270                            00043061-R  
+C224                            000418FD-R                                              C271                            000430F6-R  
+C225                            0004199F-R                                              C272                            0004318B-R  
+C226                            00041A41-R                                              C273                            00043220-R  
+C227                            00041AE3-R                                              C274                            000432E5-R  
+C228                            00041B89-R                                              C275                            000433AA-R  
+C229                            00041C2F-R                                              C276                            0004343F-R  
+C23                             00036E43-R                                              C277                            000434D4-R  
+C230                            00041CD5-R                                              C278                            00043569-R  
+C231                            00041D7B-R                                              C279                            000435F8-R  
+C232                            00041E2D-R                                              C28                             00037361-R  
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    6
+
+
+Symbol                          Value       Symbol                          Value       Symbol                          Value       
+------                          -----       ------                          -----       ------                          -----       
+C280                            000436ED-R                                              C327                            0004522E-R  
+C281                            0004374C-R                                              C328                            000452DB-R  
+C282                            000437E1-R                                              C329                            00045388-R  
+C283                            00043870-R                                              C33                             0003787F-R  
+C284                            000438FF-R                                              C330                            00045435-R  
+C285                            0004398E-R                                              C331                            000454E2-R  
+C286                            000439ED-R                                              C332                            0004558F-R  
+C287                            00043A4C-R                                              C333                            0004563C-R  
+C288                            00043AAB-R                                              C334                            000456E9-R  
+C289                            00043B0A-R                                              C335                            00045796-R  
+C29                             00037467-R                                              C336                            00045843-R  
+C290                            00043B69-R                                              C337                            000458F0-R  
+C291                            00043BC8-R                                              C338                            0004599D-R  
+C292                            00043C27-R                                              C339                            00045A4A-R  
+C293                            00043C86-R                                              C34                             00037985-R  
+C294                            00043CE9-R                                              C340                            00045AF7-R  
+C295                            00043D78-R                                              C341                            00045BA4-R  
+C296                            00043E07-R                                              C342                            00045C51-R  
+C297                            00043E66-R                                              C343                            00045CFE-R  
+C298                            00043EC5-R                                              C344                            00045DAB-R  
+C299                            00043F5A-R                                              C345                            00045E58-R  
+C3                              000359CB-R                                              C346                            00045F05-R  
+C30                             0003756D-R                                              C347                            00045FB2-R  
+C300                            00043FEF-R                                              C348                            0004605F-R  
+C301                            0004409C-R                                              C349                            00046106-R  
+C302                            00044149-R                                              C35                             00037A8B-R  
+C303                            000441F6-R                                              C350                            000461AD-R  
+C304                            000442A3-R                                              C351                            00046254-R  
+C305                            00044350-R                                              C352                            000462CB-R  
+C306                            000443FD-R                                              C353                            00046342-R  
+C307                            000444AA-R                                              C354                            000463B9-R  
+C308                            00044557-R                                              C355                            00046430-R  
+C309                            00044604-R                                              C356                            000464A7-R  
+C31                             00037673-R                                              C357                            0004651E-R  
+C310                            000446B1-R                                              C358                            00046591-R  
+C311                            0004475E-R                                              C359                            00046608-R  
+C312                            0004480B-R                                              C36                             00037B91-R  
+C313                            000448B8-R                                              C360                            0004667F-R  
+C314                            00044965-R                                              C361                            000466FC-R  
+C315                            00044A12-R                                              C362                            0004677D-R  
+C316                            00044ABF-R                                              C363                            000467FA-R  
+C317                            00044B6C-R                                              C364                            00046873-R  
+C318                            00044C19-R                                              C365                            0004691C-R  
+C319                            00044CC6-R                                              C366                            000469C5-R  
+C32                             00037779-R                                              C367                            00046A6E-R  
+C320                            00044D73-R                                              C368                            00046B17-R  
+C321                            00044E20-R                                              C369                            00046BC0-R  
+C322                            00044ECD-R                                              C37                             00037C97-R  
+C323                            00044F7A-R                                              C370                            00046C69-R  
+C324                            00045027-R                                              C371                            00046D12-R  
+C325                            000450D4-R                                              C372                            00046DBB-R  
+C326                            00045181-R                                              C373                            00046E6A-R  
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    7
+
+
+Symbol                          Value       Symbol                          Value       Symbol                          Value       
+------                          -----       ------                          -----       ------                          -----       
+C374                            00046F19-R                                              C420                            00049450-R  
+C375                            00046FC8-R                                              C421                            0004952F-R  
+C376                            00047071-R                                              C422                            0004960E-R  
+C377                            00047120-R                                              C423                            000496ED-R  
+C378                            000471C9-R                                              C424                            000497CC-R  
+C379                            00047272-R                                              C425                            000498AB-R  
+C38                             00037D9D-R                                              C426                            000499F0-R  
+C380                            0004731B-R                                              C427                            00049AFF-R  
+C381                            000473CA-R                                              C428                            00049C44-R  
+C382                            00047479-R                                              C429                            00049D53-R  
+C383                            00047528-R                                              C43                             000382BB-R  
+C384                            000475D7-R                                              C430                            00049E98-R  
+C385                            00047716-R                                              C431                            00049FA7-R  
+C386                            0004788B-R                                              C432                            0004A0B6-R  
+C387                            0004794F-R                                              C433                            0004A19B-R  
+C388                            00047A0D-R                                              C434                            0004A2F0-R  
+C389                            00047ACB-R                                              C435                            0004A441-R  
+C39                             00037EA3-R                                              C436                            0004A59A-R  
+C390                            00047B59-R                                              C437                            0004A65E-R  
+C391                            00047C02-R                                              C438                            0004A71C-R  
+C392                            00047CCC-R                                              C439                            0004A7C5-R  
+C393                            00047D90-R                                              C44                             000383C1-R  
+C394                            00047E54-R                                              C440                            0004A872-R  
+C395                            00047F18-R                                              C441                            0004A8EB-R  
+C396                            00047FDC-R                                              C442                            0004A964-R  
+C397                            000480A0-R                                              C443                            0004A9EA-R  
+C398                            00048164-R                                              C444                            0004AA70-R  
+C399                            00048228-R                                              C445                            0004AAF6-R  
+C4                              00035AD1-R                                              C446                            0004AB7C-R  
+C40                             00037FA9-R                                              C447                            0004AC02-R  
+C400                            000482EC-R                                              C448                            0004AC88-R  
+C401                            000483B0-R                                              C449                            0004AD0E-R  
+C402                            00048474-R                                              C45                             000384C7-R  
+C403                            00048502-R                                              C450                            0004AD94-R  
+C404                            00048590-R                                              C451                            0004AE1A-R  
+C405                            000486A5-R                                              C452                            0004AEA0-R  
+C406                            000487BA-R                                              C453                            0004AF26-R  
+C407                            000488CF-R                                              C454                            0004AFAC-R  
+C408                            000489E4-R                                              C455                            0004B032-R  
+C409                            00048AF9-R                                              C456                            0004B0B8-R  
+C41                             000380AF-R                                              C457                            0004B13E-R  
+C410                            00048C0E-R                                              C458                            0004B1C4-R  
+C411                            00048CB3-R                                              C459                            0004B24A-R  
+C412                            00048D58-R                                              C46                             000385CD-R  
+C413                            00048E37-R                                              C460                            0004B2D0-R  
+C414                            00048F16-R                                              C461                            0004B356-R  
+C415                            00048FF5-R                                              C462                            0004B3DC-R  
+C416                            000490D4-R                                              C463                            0004B462-R  
+C417                            000491B3-R                                              C464                            0004B4E8-R  
+C418                            00049292-R                                              C465                            0004B56E-R  
+C419                            00049371-R                                              C466                            0004B5F4-R  
+C42                             000381B5-R                                              C467                            0004B67A-R  
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    8
+
+
+Symbol                          Value       Symbol                          Value       Symbol                          Value       
+------                          -----       ------                          -----       ------                          -----       
+C468                            0004B700-R                                              C514                            0004D7B1-R  
+C469                            0004B786-R                                              C515                            0004D878-R  
+C47                             000386D3-R                                              C516                            0004D8F1-R  
+C470                            0004B80C-R                                              C517                            0004D96A-R  
+C471                            0004B892-R                                              C518                            0004DA31-R  
+C472                            0004B918-R                                              C519                            0004DAAA-R  
+C473                            0004B99E-R                                              C52                             00038BF1-R  
+C474                            0004BA3F-R                                              C520                            0004DB23-R  
+C475                            0004BADA-R                                              C521                            0004DBEA-R  
+C476                            0004BB75-R                                              C522                            0004DC63-R  
+C477                            0004BC16-R                                              C523                            0004DCDC-R  
+C478                            0004BCB1-R                                              C524                            0004DD55-R  
+C479                            0004BD4C-R                                              C525                            0004DDCE-R  
+C48                             000387D9-R                                              C526                            0004DE5D-R  
+C480                            0004BDE8-R                                              C527                            0004DEEC-R  
+C481                            0004BE84-R                                              C528                            0004DF4B-R  
+C482                            0004BF0A-R                                              C529                            0004DFC2-R  
+C483                            0004BF83-R                                              C53                             00038CF7-R  
+C484                            0004BFFC-R                                              C530                            0004E039-R  
+C485                            0004C20A-R                                              C531                            0004E149-R  
+C486                            0004C319-R                                              C532                            0004E259-R  
+C487                            0004C428-R                                              C533                            0004E369-R  
+C488                            0004C537-R                                              C534                            0004E43C-R  
+C489                            0004C646-R                                              C535                            0004E50F-R  
+C49                             000388DF-R                                              C536                            0004E5E2-R  
+C490                            0004C755-R                                              C537                            0004E6F0-R  
+C491                            0004C864-R                                              C538                            0004E7FF-R  
+C492                            0004C8DD-R                                              C539                            0004E90E-R  
+C493                            0004C9EC-R                                              C54                             00038DFD-R  
+C494                            0004CA65-R                                              C540                            0004EA1D-R  
+C495                            0004CB74-R                                              C541                            0004EB2C-R  
+C496                            0004CBED-R                                              C542                            0004EC3B-R  
+C497                            0004CCFC-R                                              C543                            0004ED4A-R  
+C498                            0004CD75-R                                              C544                            0004EDC3-R  
+C499                            0004CE84-R                                              C545                            0004EED2-R  
+C5                              00035BD7-R                                              C546                            0004EF4B-R  
+C50                             000389E5-R                                              C547                            0004F05A-R  
+C500                            0004CEFD-R                                              C548                            0004F0D3-R  
+C501                            0004D00C-R                                              C549                            0004F1E2-R  
+C502                            0004D085-R                                              C55                             00038F03-R  
+C503                            0004D194-R                                              C550                            0004F25B-R  
+C504                            0004D20D-R                                              C551                            0004F36A-R  
+C505                            0004D286-R                                              C552                            0004F3E3-R  
+C506                            0004D34D-R                                              C553                            0004F4F2-R  
+C507                            0004D3C6-R                                              C554                            0004F56B-R  
+C508                            0004D43F-R                                              C555                            0004F67A-R  
+C509                            0004D506-R                                              C556                            0004F6F3-R  
+C51                             00038AEB-R                                              C557                            0004F76C-R  
+C510                            0004D57F-R                                              C558                            0004F833-R  
+C511                            0004D5F8-R                                              C559                            0004F8AC-R  
+C512                            0004D6BF-R                                              C56                             00039009-R  
+C513                            0004D738-R                                              C560                            0004F925-R  
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page    9
+
+
+Symbol                          Value       Symbol                          Value       Symbol                          Value       
+------                          -----       ------                          -----       ------                          -----       
+C561                            0004F9EC-R                                              C79                             0003A7AD-R  
+C562                            0004FA65-R                                              C8                              00035EE9-R  
+C563                            0004FADE-R                                              C80                             0003A8C0-R  
+C564                            0004FBA5-R                                              C81                             0003A9C6-R  
+C565                            0004FC1E-R                                              C82                             0003AAC8-R  
+C566                            0004FC97-R                                              C83                             0003ABCA-R  
+C567                            0004FD5E-R                                              C84                             0003ACD4-R  
+C568                            0004FDD7-R                                              C85                             0003ADDE-R  
+C569                            0004FE50-R                                              C86                             0003AEE8-R  
+C57                             0003910F-R                                              C87                             0003AFF2-R  
+C570                            0004FF17-R                                              C88                             0003B0FC-R  
+C571                            0004FF90-R                                              C89                             0003B1C7-R  
+C572                            00050009-R                                              C9                              00035FEF-R  
+C573                            000500D0-R                                              C90                             0003B292-R  
+C574                            00050149-R                                              C91                             0003B35D-R  
+C575                            000501C2-R                                              C92                             0003B428-R  
+C576                            0005023B-R                                              C93                             0003B4F3-R  
+C577                            000502B4-R                                              C94                             0003B5BE-R  
+C578                            00050343-R                                              C95                             0003B689-R  
+C579                            000503D2-R                                              C96                             0003B754-R  
+C58                             00039215-R                                              C97                             0003B81F-R  
+C580                            00050431-R                                              C98                             0003B8EA-R  
+C581                            000504A8-R                                              C99                             0003B9B5-R  
+C582                            0005051F-R                                              CLOSECHAN                       000357A0-R  
+C583                            0005062F-R                                              FORMAT1                         00035478-R  
+C584                            0005073F-R                                              HANDLER                         000352FA-R  
+C585                            0005084F-R                                              HEXLINES                        0003538B-R  
+C586                            00050922-R                                              LIB$PUT_OUTPUT                  00050C48-RX 
+C587                            000509F5-R                                              OPENCHAN                        0003571A-R  
+C588                            00050AC8-R                                              SAYR                            00035341-R  
+C59                             0003931B-R                                              SHOWFILE                        000355D6-R  
+C6                              00035CDD-R                                              SHOWOUT                         00035529-R  
+C60                             00039421-R                                              START                           00035200-R  
+C61                             00039527-R                                              SYS$CHANGE_ACL                  00050C5C-RX 
+C62                             0003962D-R                                              SYS$CHECK_ACCESS                00050C60-RX 
+C63                             00039733-R                                              SYS$CHKPRO                      7FFEE4E0    
+C64                             00039839-R                                              SYS$CLOSE                       7FFEE1B8    
+C65                             0003993F-R                                              SYS$DASSGN                      7FFEDEE0    
+C66                             00039A45-R                                              SYS$DISPLAY                     7FFEE1D8    
+C67                             00039B4B-R                                              SYS$FAOL                        7FFEDF58    
+C68                             00039C51-R                                              SYS$FORMAT_ACL                  00050C54-RX 
+C69                             00039D57-R                                              SYS$GET_SECURITY                7FFEE8F0    
+C7                              00035DE3-R                                              SYS$IMGSTA                      7FFEDF68    
+C70                             00039E5D-R                                              SYS$OPEN                        7FFEE208    
+C71                             00039F63-R                                              SYS$PARSE_ACL                   00050C58-RX 
+C72                             0003A069-R                                              SYS$SETDFPROT                   7FFEE258    
+C73                             0003A16F-R                                              SYS$SET_SECURITY                7FFEE8E8    
+C74                             0003A275-R                                              SYS$TRNLNM                      7FFEE490    
+C75                             0003A37B-R                                              SYS$UNWIND                      7FFEE070    
+C76                             0003A481-R                                              
+C77                             0003A587-R                                              
+C78                             0003A69A-R                                              
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   10
+
+                                                +------------------+
+                                                ! Symbols By Value !
+                                                +------------------+
+
+Value                                   Symbols...
+-----                                   ----------
+00035200      R-START           
+000352FA      R-HANDLER         
+00035341      R-SAYR            
+0003538B      R-HEXLINES        
+000353FF      R-ACLWALK         
+00035478      R-FORMAT1         
+00035529      R-SHOWOUT         
+000355D6      R-SHOWFILE        
+0003571A      R-OPENCHAN        
+000357A0      R-CLOSECHAN       
+000357BF      R-C1              
+000358C5      R-C2              
+000359CB      R-C3              
+00035AD1      R-C4              
+00035BD7      R-C5              
+00035CDD      R-C6              
+00035DE3      R-C7              
+00035EE9      R-C8              
+00035FEF      R-C9              
+000360F5      R-C10             
+000361FB      R-C11             
+00036301      R-C12             
+00036407      R-C13             
+0003650D      R-C14             
+00036613      R-C15             
+00036719      R-C16             
+0003681F      R-C17             
+00036925      R-C18             
+00036A2B      R-C19             
+00036B31      R-C20             
+00036C37      R-C21             
+00036D3D      R-C22             
+00036E43      R-C23             
+00036F49      R-C24             
+0003704F      R-C25             
+00037155      R-C26             
+0003725B      R-C27             
+00037361      R-C28             
+00037467      R-C29             
+0003756D      R-C30             
+00037673      R-C31             
+00037779      R-C32             
+0003787F      R-C33             
+00037985      R-C34             
+00037A8B      R-C35             
+00037B91      R-C36             
+00037C97      R-C37             
+00037D9D      R-C38             
+00037EA3      R-C39             
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   11
+
+
+Value                                   Symbols...
+-----                                   ----------
+00037FA9      R-C40             
+000380AF      R-C41             
+000381B5      R-C42             
+000382BB      R-C43             
+000383C1      R-C44             
+000384C7      R-C45             
+000385CD      R-C46             
+000386D3      R-C47             
+000387D9      R-C48             
+000388DF      R-C49             
+000389E5      R-C50             
+00038AEB      R-C51             
+00038BF1      R-C52             
+00038CF7      R-C53             
+00038DFD      R-C54             
+00038F03      R-C55             
+00039009      R-C56             
+0003910F      R-C57             
+00039215      R-C58             
+0003931B      R-C59             
+00039421      R-C60             
+00039527      R-C61             
+0003962D      R-C62             
+00039733      R-C63             
+00039839      R-C64             
+0003993F      R-C65             
+00039A45      R-C66             
+00039B4B      R-C67             
+00039C51      R-C68             
+00039D57      R-C69             
+00039E5D      R-C70             
+00039F63      R-C71             
+0003A069      R-C72             
+0003A16F      R-C73             
+0003A275      R-C74             
+0003A37B      R-C75             
+0003A481      R-C76             
+0003A587      R-C77             
+0003A69A      R-C78             
+0003A7AD      R-C79             
+0003A8C0      R-C80             
+0003A9C6      R-C81             
+0003AAC8      R-C82             
+0003ABCA      R-C83             
+0003ACD4      R-C84             
+0003ADDE      R-C85             
+0003AEE8      R-C86             
+0003AFF2      R-C87             
+0003B0FC      R-C88             
+0003B1C7      R-C89             
+0003B292      R-C90             
+0003B35D      R-C91             
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   12
+
+
+Value                                   Symbols...
+-----                                   ----------
+0003B428      R-C92             
+0003B4F3      R-C93             
+0003B5BE      R-C94             
+0003B689      R-C95             
+0003B754      R-C96             
+0003B81F      R-C97             
+0003B8EA      R-C98             
+0003B9B5      R-C99             
+0003BA80      R-C100            
+0003BB4B      R-C101            
+0003BC16      R-C102            
+0003BCE1      R-C103            
+0003BDAC      R-C104            
+0003BE77      R-C105            
+0003BF42      R-C106            
+0003C00D      R-C107            
+0003C0D8      R-C108            
+0003C1A3      R-C109            
+0003C26E      R-C110            
+0003C339      R-C111            
+0003C404      R-C112            
+0003C4CF      R-C113            
+0003C59A      R-C114            
+0003C665      R-C115            
+0003C730      R-C116            
+0003C7FB      R-C117            
+0003C8C6      R-C118            
+0003C991      R-C119            
+0003CA5C      R-C120            
+0003CB27      R-C121            
+0003CBF2      R-C122            
+0003CCBD      R-C123            
+0003CD88      R-C124            
+0003CE53      R-C125            
+0003CF1E      R-C126            
+0003CFE9      R-C127            
+0003D0B4      R-C128            
+0003D17F      R-C129            
+0003D24A      R-C130            
+0003D315      R-C131            
+0003D3E6      R-C132            
+0003D4B9      R-C133            
+0003D58C      R-C134            
+0003D65F      R-C135            
+0003D732      R-C136            
+0003D805      R-C137            
+0003D8D8      R-C138            
+0003D9AB      R-C139            
+0003DA7E      R-C140            
+0003DB51      R-C141            
+0003DC24      R-C142            
+0003DCF7      R-C143            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   13
+
+
+Value                                   Symbols...
+-----                                   ----------
+0003DDCA      R-C144            
+0003DE9D      R-C145            
+0003DF70      R-C146            
+0003E043      R-C147            
+0003E116      R-C148            
+0003E1E9      R-C149            
+0003E2BC      R-C150            
+0003E38F      R-C151            
+0003E462      R-C152            
+0003E535      R-C153            
+0003E608      R-C154            
+0003E6DB      R-C155            
+0003E7AE      R-C156            
+0003E881      R-C157            
+0003E954      R-C158            
+0003EA46      R-C159            
+0003EB38      R-C160            
+0003EC26      R-C161            
+0003ED14      R-C162            
+0003EDEB      R-C163            
+0003EEC2      R-C164            
+0003EFB4      R-C165            
+0003F0A6      R-C166            
+0003F198      R-C167            
+0003F28A      R-C168            
+0003F359      R-C169            
+0003F42C      R-C170            
+0003F51A      R-C171            
+0003F5FC      R-C172            
+0003F6D3      R-C173            
+0003F7AA      R-C174            
+0003F881      R-C175            
+0003F958      R-C176            
+0003FA0E      R-C177            
+0003FA94      R-C178            
+0003FB36      R-C179            
+0003FBDC      R-C180            
+0003FC82      R-C181            
+0003FD24      R-C182            
+0003FDC6      R-C183            
+0003FE7C      R-C184            
+0003FF50      R-C185            
+00040011      R-C186            
+000400CB      R-C187            
+00040185      R-C188            
+0004023F      R-C189            
+00040300      R-C190            
+000403AB      R-C191            
+00040431      R-C192            
+000404B7      R-C193            
+0004053D      R-C194            
+000405C3      R-C195            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   14
+
+
+Value                                   Symbols...
+-----                                   ----------
+00040649      R-C196            
+000406FF      R-C197            
+000407A1      R-C198            
+00040843      R-C199            
+0004090A      R-C200            
+000409D1      R-C201            
+00040A66      R-C202            
+00040B2D      R-C203            
+00040BC2      R-C204            
+00040C64      R-C205            
+00040D5B      R-C206            
+00040E06      R-C207            
+00040ECD      R-C208            
+00040F46      R-C209            
+00040FCC      R-C210            
+00041072      R-C211            
+00041118      R-C212            
+000411BA      R-C213            
+00041260      R-C214            
+00041306      R-C215            
+000413AC      R-C216            
+00041452      R-C217            
+000414F8      R-C218            
+0004159E      R-C219            
+00041644      R-C220            
+000416EA      R-C221            
+00041790      R-C222            
+00041836      R-C223            
+000418FD      R-C224            
+0004199F      R-C225            
+00041A41      R-C226            
+00041AE3      R-C227            
+00041B89      R-C228            
+00041C2F      R-C229            
+00041CD5      R-C230            
+00041D7B      R-C231            
+00041E2D      R-C232            
+00041EE3      R-C233            
+00041F8C      R-C234            
+00042031      R-C235            
+000420DA      R-C236            
+00042153      R-C237            
+000421CC      R-C238            
+00042279      R-C239            
+00042332      R-C240            
+00042410      R-C241            
+000424B9      R-C242            
+00042562      R-C243            
+0004260B      R-C244            
+000426B4      R-C245            
+00042713      R-C246            
+00042772      R-C247            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   15
+
+
+Value                                   Symbols...
+-----                                   ----------
+000427D1      R-C248            
+00042830      R-C249            
+0004288F      R-C250            
+000428EE      R-C251            
+0004294D      R-C252            
+000429AC      R-C253            
+00042A0B      R-C254            
+00042A6A      R-C255            
+00042AC9      R-C256            
+00042B28      R-C257            
+00042B87      R-C258            
+00042BE6      R-C259            
+00042C45      R-C260            
+00042CA4      R-C261            
+00042D03      R-C262            
+00042D62      R-C263            
+00042DC1      R-C264            
+00042E20      R-C265            
+00042E7F      R-C266            
+00042EDE      R-C267            
+00042F3D      R-C268            
+00042F9C      R-C269            
+00043061      R-C270            
+000430F6      R-C271            
+0004318B      R-C272            
+00043220      R-C273            
+000432E5      R-C274            
+000433AA      R-C275            
+0004343F      R-C276            
+000434D4      R-C277            
+00043569      R-C278            
+000435F8      R-C279            
+000436ED      R-C280            
+0004374C      R-C281            
+000437E1      R-C282            
+00043870      R-C283            
+000438FF      R-C284            
+0004398E      R-C285            
+000439ED      R-C286            
+00043A4C      R-C287            
+00043AAB      R-C288            
+00043B0A      R-C289            
+00043B69      R-C290            
+00043BC8      R-C291            
+00043C27      R-C292            
+00043C86      R-C293            
+00043CE9      R-C294            
+00043D78      R-C295            
+00043E07      R-C296            
+00043E66      R-C297            
+00043EC5      R-C298            
+00043F5A      R-C299            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   16
+
+
+Value                                   Symbols...
+-----                                   ----------
+00043FEF      R-C300            
+0004409C      R-C301            
+00044149      R-C302            
+000441F6      R-C303            
+000442A3      R-C304            
+00044350      R-C305            
+000443FD      R-C306            
+000444AA      R-C307            
+00044557      R-C308            
+00044604      R-C309            
+000446B1      R-C310            
+0004475E      R-C311            
+0004480B      R-C312            
+000448B8      R-C313            
+00044965      R-C314            
+00044A12      R-C315            
+00044ABF      R-C316            
+00044B6C      R-C317            
+00044C19      R-C318            
+00044CC6      R-C319            
+00044D73      R-C320            
+00044E20      R-C321            
+00044ECD      R-C322            
+00044F7A      R-C323            
+00045027      R-C324            
+000450D4      R-C325            
+00045181      R-C326            
+0004522E      R-C327            
+000452DB      R-C328            
+00045388      R-C329            
+00045435      R-C330            
+000454E2      R-C331            
+0004558F      R-C332            
+0004563C      R-C333            
+000456E9      R-C334            
+00045796      R-C335            
+00045843      R-C336            
+000458F0      R-C337            
+0004599D      R-C338            
+00045A4A      R-C339            
+00045AF7      R-C340            
+00045BA4      R-C341            
+00045C51      R-C342            
+00045CFE      R-C343            
+00045DAB      R-C344            
+00045E58      R-C345            
+00045F05      R-C346            
+00045FB2      R-C347            
+0004605F      R-C348            
+00046106      R-C349            
+000461AD      R-C350            
+00046254      R-C351            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   17
+
+
+Value                                   Symbols...
+-----                                   ----------
+000462CB      R-C352            
+00046342      R-C353            
+000463B9      R-C354            
+00046430      R-C355            
+000464A7      R-C356            
+0004651E      R-C357            
+00046591      R-C358            
+00046608      R-C359            
+0004667F      R-C360            
+000466FC      R-C361            
+0004677D      R-C362            
+000467FA      R-C363            
+00046873      R-C364            
+0004691C      R-C365            
+000469C5      R-C366            
+00046A6E      R-C367            
+00046B17      R-C368            
+00046BC0      R-C369            
+00046C69      R-C370            
+00046D12      R-C371            
+00046DBB      R-C372            
+00046E6A      R-C373            
+00046F19      R-C374            
+00046FC8      R-C375            
+00047071      R-C376            
+00047120      R-C377            
+000471C9      R-C378            
+00047272      R-C379            
+0004731B      R-C380            
+000473CA      R-C381            
+00047479      R-C382            
+00047528      R-C383            
+000475D7      R-C384            
+00047716      R-C385            
+0004788B      R-C386            
+0004794F      R-C387            
+00047A0D      R-C388            
+00047ACB      R-C389            
+00047B59      R-C390            
+00047C02      R-C391            
+00047CCC      R-C392            
+00047D90      R-C393            
+00047E54      R-C394            
+00047F18      R-C395            
+00047FDC      R-C396            
+000480A0      R-C397            
+00048164      R-C398            
+00048228      R-C399            
+000482EC      R-C400            
+000483B0      R-C401            
+00048474      R-C402            
+00048502      R-C403            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   18
+
+
+Value                                   Symbols...
+-----                                   ----------
+00048590      R-C404            
+000486A5      R-C405            
+000487BA      R-C406            
+000488CF      R-C407            
+000489E4      R-C408            
+00048AF9      R-C409            
+00048C0E      R-C410            
+00048CB3      R-C411            
+00048D58      R-C412            
+00048E37      R-C413            
+00048F16      R-C414            
+00048FF5      R-C415            
+000490D4      R-C416            
+000491B3      R-C417            
+00049292      R-C418            
+00049371      R-C419            
+00049450      R-C420            
+0004952F      R-C421            
+0004960E      R-C422            
+000496ED      R-C423            
+000497CC      R-C424            
+000498AB      R-C425            
+000499F0      R-C426            
+00049AFF      R-C427            
+00049C44      R-C428            
+00049D53      R-C429            
+00049E98      R-C430            
+00049FA7      R-C431            
+0004A0B6      R-C432            
+0004A19B      R-C433            
+0004A2F0      R-C434            
+0004A441      R-C435            
+0004A59A      R-C436            
+0004A65E      R-C437            
+0004A71C      R-C438            
+0004A7C5      R-C439            
+0004A872      R-C440            
+0004A8EB      R-C441            
+0004A964      R-C442            
+0004A9EA      R-C443            
+0004AA70      R-C444            
+0004AAF6      R-C445            
+0004AB7C      R-C446            
+0004AC02      R-C447            
+0004AC88      R-C448            
+0004AD0E      R-C449            
+0004AD94      R-C450            
+0004AE1A      R-C451            
+0004AEA0      R-C452            
+0004AF26      R-C453            
+0004AFAC      R-C454            
+0004B032      R-C455            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   19
+
+
+Value                                   Symbols...
+-----                                   ----------
+0004B0B8      R-C456            
+0004B13E      R-C457            
+0004B1C4      R-C458            
+0004B24A      R-C459            
+0004B2D0      R-C460            
+0004B356      R-C461            
+0004B3DC      R-C462            
+0004B462      R-C463            
+0004B4E8      R-C464            
+0004B56E      R-C465            
+0004B5F4      R-C466            
+0004B67A      R-C467            
+0004B700      R-C468            
+0004B786      R-C469            
+0004B80C      R-C470            
+0004B892      R-C471            
+0004B918      R-C472            
+0004B99E      R-C473            
+0004BA3F      R-C474            
+0004BADA      R-C475            
+0004BB75      R-C476            
+0004BC16      R-C477            
+0004BCB1      R-C478            
+0004BD4C      R-C479            
+0004BDE8      R-C480            
+0004BE84      R-C481            
+0004BF0A      R-C482            
+0004BF83      R-C483            
+0004BFFC      R-C484            
+0004C20A      R-C485            
+0004C319      R-C486            
+0004C428      R-C487            
+0004C537      R-C488            
+0004C646      R-C489            
+0004C755      R-C490            
+0004C864      R-C491            
+0004C8DD      R-C492            
+0004C9EC      R-C493            
+0004CA65      R-C494            
+0004CB74      R-C495            
+0004CBED      R-C496            
+0004CCFC      R-C497            
+0004CD75      R-C498            
+0004CE84      R-C499            
+0004CEFD      R-C500            
+0004D00C      R-C501            
+0004D085      R-C502            
+0004D194      R-C503            
+0004D20D      R-C504            
+0004D286      R-C505            
+0004D34D      R-C506            
+0004D3C6      R-C507            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   20
+
+
+Value                                   Symbols...
+-----                                   ----------
+0004D43F      R-C508            
+0004D506      R-C509            
+0004D57F      R-C510            
+0004D5F8      R-C511            
+0004D6BF      R-C512            
+0004D738      R-C513            
+0004D7B1      R-C514            
+0004D878      R-C515            
+0004D8F1      R-C516            
+0004D96A      R-C517            
+0004DA31      R-C518            
+0004DAAA      R-C519            
+0004DB23      R-C520            
+0004DBEA      R-C521            
+0004DC63      R-C522            
+0004DCDC      R-C523            
+0004DD55      R-C524            
+0004DDCE      R-C525            
+0004DE5D      R-C526            
+0004DEEC      R-C527            
+0004DF4B      R-C528            
+0004DFC2      R-C529            
+0004E039      R-C530            
+0004E149      R-C531            
+0004E259      R-C532            
+0004E369      R-C533            
+0004E43C      R-C534            
+0004E50F      R-C535            
+0004E5E2      R-C536            
+0004E6F0      R-C537            
+0004E7FF      R-C538            
+0004E90E      R-C539            
+0004EA1D      R-C540            
+0004EB2C      R-C541            
+0004EC3B      R-C542            
+0004ED4A      R-C543            
+0004EDC3      R-C544            
+0004EED2      R-C545            
+0004EF4B      R-C546            
+0004F05A      R-C547            
+0004F0D3      R-C548            
+0004F1E2      R-C549            
+0004F25B      R-C550            
+0004F36A      R-C551            
+0004F3E3      R-C552            
+0004F4F2      R-C553            
+0004F56B      R-C554            
+0004F67A      R-C555            
+0004F6F3      R-C556            
+0004F76C      R-C557            
+0004F833      R-C558            
+0004F8AC      R-C559            
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   21
+
+
+Value                                   Symbols...
+-----                                   ----------
+0004F925      R-C560            
+0004F9EC      R-C561            
+0004FA65      R-C562            
+0004FADE      R-C563            
+0004FBA5      R-C564            
+0004FC1E      R-C565            
+0004FC97      R-C566            
+0004FD5E      R-C567            
+0004FDD7      R-C568            
+0004FE50      R-C569            
+0004FF17      R-C570            
+0004FF90      R-C571            
+00050009      R-C572            
+000500D0      R-C573            
+00050149      R-C574            
+000501C2      R-C575            
+0005023B      R-C576            
+000502B4      R-C577            
+00050343      R-C578            
+000503D2      R-C579            
+00050431      R-C580            
+000504A8      R-C581            
+0005051F      R-C582            
+0005062F      R-C583            
+0005073F      R-C584            
+0005084F      R-C585            
+00050922      R-C586            
+000509F5      R-C587            
+00050AC8      R-C588            
+00050C48     RX-LIB$PUT_OUTPUT  
+00050C54     RX-SYS$FORMAT_ACL  
+00050C58     RX-SYS$PARSE_ACL   
+00050C5C     RX-SYS$CHANGE_ACL  
+00050C60     RX-SYS$CHECK_ACCESS
+7FFEDEE0        SYS$DASSGN      
+7FFEDF58        SYS$FAOL        
+7FFEDF68        SYS$IMGSTA      
+7FFEE070        SYS$UNWIND      
+7FFEE1B8        SYS$CLOSE       
+7FFEE1D8        SYS$DISPLAY     
+7FFEE208        SYS$OPEN        
+7FFEE258        SYS$SETDFPROT   
+7FFEE490        SYS$TRNLNM      
+7FFEE4E0        SYS$CHKPRO      
+7FFEE8E8        SYS$SET_SECURITY
+7FFEE8F0        SYS$GET_SECURITY
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   22
+
+
+Value                                   Symbols...
+-----                                   ----------
+
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[SEC93]SEC93.EXE;1                                         14-NOV-2026 13:31        Linker V11-39                    Page   23
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 00050DFF 00050C00 (330752. bytes, 646. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.      647. (  646. blocks)
+Image name and identification:                    SEC93 V1.0
+Number of files:                                         6.
+Number of modules:                                       5.
+Number of program sections:                              7.
+Number of global symbols:                              972.
+Number of image sections:                               20.
+User transfer address:                            00035200
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           5.
+Image type:                                       EXECUTABLE.
+Map format:                                       FULL in file DUA1:[SEC93]SEC93.MAP;1
+Estimated map length:                             142. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   105	00:00:00.00	00:00:00.00
+    Pass 1:                                              1666	00:00:00.03	00:00:00.05
+    Allocation/Relocation:                                146	00:00:00.00	00:00:00.01
+    Pass 2:                                              2212	00:00:00.20	00:00:00.22
+    Map data after object module synopsis:                283	00:00:00.02	00:00:00.02
+    Symbol table output:                                   30	00:00:00.00	00:00:00.01
+Total run values:                                        4442	00:00:00.25	00:00:00.31
+
+Using a working set limited to 1112 pages and 559 pages of data storage (excluding image)
+
+Total number object records read (both passes):   4426
+    of which 26 were in libraries and 23 were DEBUG data records containing 9568 bytes
+7145 bytes of DEBUG data were written,starting at VBN 648 with 14 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=PROT93$DISK:[SEC93]SEC93.MAP/FULL SEC93

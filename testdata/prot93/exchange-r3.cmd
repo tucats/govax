@@ -11,6 +11,7 @@ CREATE/DIRECTORY DUA5:[SEC93MAC]
 COPY "testdata/prot93/sec93.mar"/HOST DUA5:[000000]SEC93.MAR
 COPY "testdata/prot93/sec93.com"/HOST DUA5:[000000]SEC93.COM
 COPY "testdata/prot93/sec93u.com"/HOST DUA5:[000000]SEC93U.COM
+COPY "testdata/prot93/sec93x.com"/HOST DUA5:[000000]SEC93X.COM
 COPY "testdata/prot93/sec93y.com"/HOST DUA5:[000000]SEC93Y.COM
 COPY "testdata/prot93/sec93t.dat"/HOST DUA5:[PROT93LOG]T.DAT
 COPY "testdata/mp/macros/r9_change_acl.mar"/HOST DUA5:[SEC93MAC]R9_CHANGE_ACL.MAR
