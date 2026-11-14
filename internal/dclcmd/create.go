@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
@@ -128,21 +129,21 @@ func (c *Context) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Creat
 	case strings.EqualFold(owner, "PARENT"):
 		// The parent's owner, which is also the default.
 	default:
-		uic, err := ondisk.ParseUic(owner)
+		uic, err := security.ParseUIC(owner, c.identifierLookup())
 		if err != nil {
-			return syntax(owner, ssIVIDENT)
+			return syntax(owner, uicStatus(err))
 		}
 
-		opts.Owner = &uic
+		opts.Owner = &ondisk.Uic{Group: uint16(uic.Group()), Member: uint16(uic.Member())}
 	}
 
 	if len(req.Protection) > 0 {
-		text := "(" + strings.Join(req.Protection, ",") + ")"
-		if _, err := ondisk.ParseProtection(text, 0); err != nil {
-			return syntax(text, 0)
+		text := strings.Join(req.Protection, ",")
+		if _, err := security.ParseProtection(text, 0); err != nil {
+			return syntax(protectionFault(err, text), 0)
 		}
 
-		opts.Protection = text
+		opts.Protection = "(" + text + ")"
 	}
 
 	var ignored error

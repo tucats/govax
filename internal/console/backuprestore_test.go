@@ -209,15 +209,23 @@ func TestBackupRestoreHost(t *testing.T) {
 	}
 }
 
-// TestBackupRestoreBadOwner: /BY_OWNER with a UIC that isn't one is
-// SS$_IVIDENT, and nothing is restored.
+// TestBackupRestoreBadOwner: /BY_OWNER with a UIC out of range is
+// SS$_IVIDENT, one naming an identifier that doesn't exist SS$_NOSUCHID,
+// and one with three elements DCL's own %DCL-W-DIRECT (the $UIC grammar
+// type); nothing is restored.
 func TestBackupRestoreBadOwner(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := d.Dispatch(`BACKUP "` + backupSets + `pi.bck"/SAVE_SET DUA0:[R]/BY_OWNER=[NOT,A,UIC]`)
-	if err == nil || !strings.Contains(err.Error(), "IVIDENT") {
-		t.Errorf("%v, want IVIDENT", err)
+	for owner, want := range map[string]string{
+		"[400000,1]":  "IVIDENT",
+		"[NOSUCH]":    "NOSUCHID",
+		"[NOT,A,UIC]": "DIRECT",
+	} {
+		err := d.Dispatch(`BACKUP "` + backupSets + `pi.bck"/SAVE_SET DUA0:[R]/BY_OWNER=` + owner)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: %v, want %s", owner, err, want)
+		}
 	}
 
 	if _, err := c.cmd().ContainerSession.FileAttributes("DUA0:[R]PI.MAR;1"); err == nil {

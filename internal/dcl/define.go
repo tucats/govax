@@ -448,6 +448,12 @@ func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *st
 		case "$EXPRESSION":
 			*typ = TypeExpression
 
+		case "$PROTECTION":
+			*typ = TypeProtection
+
+		case "$UIC":
+			*typ = TypeUIC
+
 		default:
 			*typ = TypeKeyword
 			*typeName = upcase(t)

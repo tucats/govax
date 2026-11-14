@@ -95,8 +95,11 @@
 
       /OWNER_UIC=option
 
-   The directory's owner: a UIC, [group,member] in octal, or PARENT, the
-   owner of the directory it is made in, which is the default.
+   The directory's owner: a UIC, [group,member] in octal, [name] or
+   [group,name] by identifier names, or PARENT, the owner of the
+   directory it is made in, which is the default. A UIC whose numbers are
+   out of range, or a name the rights database doesn't have, makes
+   nothing.
 
 /PROTECTION
 

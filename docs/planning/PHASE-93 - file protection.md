@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-14; the plan accepted by the author the same
 day, with the answers in "The review". Subtasks 1 (the survey, Part A),
-2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), and 5
-(identity and defaults) are done.
+2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), 5
+(identity and defaults), and 6 (the grammar types) are done.
 
 ## Goal
 
@@ -987,7 +987,7 @@ Each is one commit, with tests, stopping for review.
    `rms.Session.Credentials` filled in; `$SETDFPROT`, SET
    PROTECTION/DEFAULT, SHOW PROTECTION, F$ENVIRONMENT; SET and SHOW
    PROCESS/PRIVILEGES.
-6. **The grammar types**: `$PROTECTION` and `$UIC` (Decision 9), the
+6. **The grammar types** (done 2026-11-14): `$PROTECTION` and `$UIC` (Decision 9), the
    existing qualifiers moved onto them, the parse errors held to the
    probe's.
 7. **New files' profiles**: `newFileProfile` (Decision 4) and every
@@ -1315,3 +1315,42 @@ The author accepted the plan and answered its questions:
   `TestParseProtection`. HELP has SET PROCESS, SET PROTECTION, SHOW
   PROTECTION, and SHOW PROCESS/PRIVILEGES. Subtask 6, the grammar types, is
   next.
+- **2026-11-14** Subtask 6 done. `internal/dcl/security.go` is the two
+  grammar types, `$PROTECTION` (`TypeProtection`) and `$UIC` (`TypeUIC`),
+  read before the other value types in all three of the parser's places
+  (a qualifier, a positional qualifier, a parameter). `$PROTECTION` reads a
+  parenthesized list, blanks allowed inside, or a single category, and
+  hands the command a list, an element per category as typed (uppercased,
+  blanks taken out); it checks the category names (`%DCL-W-IVKEYW` naming
+  one) and that no element is empty (`%DCL-W-VALREQ`, no segment, as VMS
+  showed it), never the letters. `$UIC` checks the brackets (`[` or `<`,
+  closed before the value ends, at most one comma: `%DCL-W-DIRECT`, its
+  segment as far as DCL read) and that a bare value has no comma
+  (`%DCL-W-NOLIST`), and hands over the text. `CLI_DIRECT` and
+  `CLI_NOLIST` are in `vmserrors`. The meaning is the command's:
+  `security.ParseUIC` and `ParseUICPattern` (`uicparse.go`) read `[g,m]`,
+  `[name]`, `[group,name]`, and a bare name, looking names up through an
+  `IdentifierLookup` (the process's rights database,
+  `Environment.IdentifierValue`, via `dclcmd`'s `identifierLookup`), with
+  `ErrBadUIC` (SS$_IVIDENT) and `ErrNoSuchIdentifier` (SS$_NOSUCHID);
+  `security.ParseProtection` the letters. CREATE/DIRECTORY's `/OWNER_UIC`
+  and `/PROTECTION`, BACKUP's two `/BY_OWNER`s, and SET PROTECTION's code
+  moved onto the types; CREATE/DIRECTORY names only the bad letters
+  (`%CREATE-F-SYNTAX, error parsing 'Z'`, `dclcmd`'s `protectionFault`) and
+  adds NOSUCHID for a name, as 7.1 did; BACKUP's restore and save read
+  their UICs with `ParseUIC`/`ParseUICPattern` (names now allowed).
+  `TestProbeMalformedValues` (`internal/dcl`) parses every SET SECURITY
+  line of the probe's "MALFORMED AND ODD VALUES" but the ACL ones through
+  a SET SECURITY grammar: DCL's refusals must be VMS's to the segment, and
+  SET's must pass the grammar and fail `security`'s parsers with the
+  error SET's second line names; `TestProtectionGrammarOracle` replays the
+  section's CREATE/DIRECTORY and SET PROTECTION lines on the console
+  against the log. Two old tests' expectations were govax's guesses and
+  are now the probe's: CREATE/DIRECTORY/PROTECTION=(X:RWED) is DCL's
+  IVKEYW, and a bad name in /OWNER_UIC NOSUCHID (`/OWNER_UIC=SYSTEM` now
+  resolves to `[1,4]`). Unconfirmed: a "(" never closed is NOPAREN with
+  the rest of the line as its segment (VMS's ACL case); `[group,name]`
+  with a group's name (the probe never wrote one); a general identifier
+  in brackets refused, bare accepted; CREATE/DIRECTORY's message for a
+  repeated category (the whole code). HELP CREATE's `/OWNER_UIC` has the
+  name forms. Subtask 7, new files' profiles, is next.

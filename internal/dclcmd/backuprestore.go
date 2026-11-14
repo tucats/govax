@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/backup"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
@@ -146,12 +147,14 @@ func (c *Context) restoreOptions(cmd BackupCommand) (rms.RestoreOptions, error) 
 	case "PARENT":
 		opts.ParentOwner = true
 	default:
-		uic, err := ondisk.ParseUic(option)
+		uic, err := security.ParseUIC(option, c.identifierLookup())
 		if err != nil {
-			return opts, vmserrors.ConditionError{Status: ssIVIDENT, Text: strings.TrimPrefix(ConditionLine(ssIVIDENT), "-")}
+			status := uicStatus(err)
+
+			return opts, vmserrors.ConditionError{Status: status, Text: strings.TrimPrefix(ConditionLine(status), "-")}
 		}
 
-		opts.Owner = &uic
+		opts.Owner = &ondisk.Uic{Group: uint16(uic.Group()), Member: uint16(uic.Member())}
 	}
 
 	return opts, nil

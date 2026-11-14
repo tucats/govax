@@ -146,12 +146,14 @@ func TestCreateDirectory_errors(t *testing.T) {
 			"%CREATE-F-SYNTAX, error parsing '[400000,1]'",
 			"-SYSTEM-F-IVIDENT, invalid identifier format",
 		}},
-		{"CREATE/DIRECTORY/OWNER_UIC=SYSTEM [BAD]", []string{
-			"%CREATE-F-SYNTAX, error parsing 'SYSTEM'",
-			"-SYSTEM-F-IVIDENT, invalid identifier format",
+		// Phase 93's probe, on VMS 7.1: a name the rights database doesn't
+		// have, and letters that aren't R, W, E, and D (named alone).
+		{"CREATE/DIRECTORY/OWNER_UIC=[NOSUCH] [BAD]", []string{
+			"%CREATE-F-SYNTAX, error parsing '[NOSUCH]'",
+			"-SYSTEM-F-NOSUCHID, unknown rights identifier",
 		}},
-		{"CREATE/DIRECTORY/PROTECTION=(X:RWED) [BAD]", []string{
-			"%CREATE-F-SYNTAX, error parsing '(X:RWED)'",
+		{"CREATE/DIRECTORY/PROTECTION=(S:Z) [BAD]", []string{
+			"%CREATE-F-SYNTAX, error parsing 'Z'",
 		}},
 		{"CREATE/DIRECTORY [BAD]FILE.DAT", []string{
 			"%CREATE-E-DIRNOTCRE, [BAD]FILE.DAT directory file not created",

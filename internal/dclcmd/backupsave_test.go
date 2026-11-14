@@ -55,7 +55,7 @@ func TestSaveFilter(t *testing.T) {
 	dir := backup.Attributes{Name: "[B69]SUB1.DIR;1", Owner: system, Characteristics: backup.CharDirectory}
 
 	byOwner := func(text string) saveFilter {
-		p, err := parseUICPattern(text, system)
+		p, err := parseUICPattern(text, system, nil)
 		if err != nil {
 			t.Fatalf("%q: %v", text, err)
 		}
@@ -90,7 +90,7 @@ func TestSaveFilter(t *testing.T) {
 		}
 	}
 
-	if _, err := parseUICPattern("[1,9]", system); err == nil {
+	if _, err := parseUICPattern("[1,9]", system, nil); err == nil {
 		t.Error("[1,9]: no error for a member that isn't octal")
 	}
 }

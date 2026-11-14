@@ -50,13 +50,14 @@ grammar console
     ! docs/PHASE-34.md: CREATE/DIRECTORY makes a directory on a mounted
     ! volume, and every missing directory above it (internal/rms.Session.
     ! CreateDirectory, internal/dclcmd/create.go). OWNER_UIC is a UIC or
-    ! PARENT; PROTECTION is a list of category:access items.
+    ! PARENT; PROTECTION is a protection code (Phase 93's $UIC and
+    ! $PROTECTION: the grammar checks their shape, the command the rest).
     !
     syntax create_directory
         parameter directories/id=1501/type=$string/list/prompt="Directory"
-        qualifier owner_uic/id=1502/type=$any
+        qualifier owner_uic/id=1502/type=$uic
         qualifier version_limit/id=1503/type=$integer
-        qualifier protection/id=1504/type=$any/list
+        qualifier protection/id=1504/type=$protection
         qualifier allocation/id=1505/type=$integer
         qualifier log/id=1506
 
@@ -614,7 +615,7 @@ grammar console
         qualifier   before/id=2208/parameter=input  -
                     /type=$string
         qualifier   by_owner/id=2209/parameter=input -
-                    /type=$string/default=""
+                    /type=$uic/default=""
         qualifier   backup/id=2210/parameter=input
         qualifier   created/id=2211/parameter=input
         qualifier   expired/id=2212/parameter=input
@@ -632,7 +633,7 @@ grammar console
         qualifier   comment/id=2226/parameter=output -
                     /type=$string
         qualifier   by_owner/id=2227/parameter=output -
-                    /type=$string/default=""
+                    /type=$uic/default=""
         qualifier   new_version/id=2228/parameter=output
         qualifier   overlay/id=2229/parameter=output
         qualifier   replace/id=2230/parameter=output
@@ -1467,7 +1468,7 @@ grammar console
     ! form, which is Phase 93's subtask 11.
     syntax set_protection/id=2700
         parameter   code/id=2701                -
-                    /type=$any/list
+                    /type=$protection
         parameter   file/id=2702                -
                     /type=$string
         qualifier   default/id=2703/nonegatable

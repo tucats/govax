@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/tucats/govax/internal/backup"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
@@ -514,9 +514,11 @@ func (c *Context) saveFilter(cmd BackupCommand) (saveFilter, error) {
 	f := saveFilter{exclude: newBackupSelection(nil, cmd.Exclude), date: cmd.DateKind}
 
 	if cmd.InputOwner != nil {
-		p, err := parseUICPattern(*cmd.InputOwner, c.processUIC())
+		p, err := parseUICPattern(*cmd.InputOwner, c.processUIC(), c.identifierLookup())
 		if err != nil {
-			return f, vmserrors.ConditionError{Status: ssIVIDENT, Text: strings.TrimPrefix(ConditionLine(ssIVIDENT), "-")}
+			status := uicStatus(err)
+
+			return f, vmserrors.ConditionError{Status: status, Text: strings.TrimPrefix(ConditionLine(status), "-")}
 		}
 
 		f.owner = &p
@@ -584,46 +586,23 @@ type uicPattern struct {
 	anyGroup, anyMember bool
 }
 
-// parseUICPattern reads /BY_OWNER's value: "[g,m]" in octal, either part
-// "*", or a UIC ondisk reads; "" is the process's own (own).
-func parseUICPattern(text string, own uint32) (uicPattern, error) {
-	text = strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(text), " ", ""))
-	if text == "" {
+// parseUICPattern reads /BY_OWNER's value: a UIC in any of
+// security.ParseUICPattern's forms, either part "*", its names looked up
+// with lookup; "" is the process's own (own).
+func parseUICPattern(text string, own uint32, lookup security.IdentifierLookup) (uicPattern, error) {
+	if strings.TrimSpace(text) == "" {
 		return uicPattern{group: uint16(own >> 16), member: uint16(own)}, nil
 	}
 
-	inner := strings.TrimSuffix(strings.TrimPrefix(text, "["), "]")
-	if g, m, ok := strings.Cut(inner, ","); ok && (g == "*" || m == "*") {
-		var p uicPattern
-
-		for _, part := range []struct {
-			text     string
-			value    *uint16
-			wildcard *bool
-		}{{g, &p.group, &p.anyGroup}, {m, &p.member, &p.anyMember}} {
-			if part.text == "*" {
-				*part.wildcard = true
-
-				continue
-			}
-
-			n, err := strconv.ParseUint(part.text, 8, 16)
-			if err != nil {
-				return p, err
-			}
-
-			*part.value = uint16(n)
-		}
-
-		return p, nil
-	}
-
-	uic, err := ondisk.ParseUic(text)
+	uic, err := security.ParseUICPattern(text, lookup)
 	if err != nil {
 		return uicPattern{}, err
 	}
 
-	return uicPattern{group: uic.Group, member: uic.Member}, nil
+	return uicPattern{
+		group: uint16(uic.Group()), member: uint16(uic.Member()),
+		anyGroup: uic.Group() == security.WildGroup, anyMember: uic.Member() == security.WildMember,
+	}, nil
 }
 
 // matches reports whether uic, group in the high word, is one p names.

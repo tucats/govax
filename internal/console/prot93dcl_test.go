@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Phase 93's subtask 5 (docs/planning/PHASE-93 - file protection.md): the
@@ -89,6 +90,48 @@ func TestDefaultProtectionOracle(t *testing.T) {
 
 	if commands != 25 {
 		t.Errorf("%d commands replayed, want 25", commands)
+	}
+}
+
+// TestProtectionGrammarOracle replays the lines of the probe's
+// "MALFORMED AND ODD VALUES" that govax's commands take today (Phase 93's
+// subtask 6, the $PROTECTION and $UIC grammar types): CREATE/DIRECTORY's
+// bad /OWNER_UIC and /PROTECTION, SET PROTECTION/DEFAULT's bad letters,
+// and an unknown category in SET PROTECTION=(code) of a file, which DCL
+// refuses before the command runs. Each one's messages must be VMS 7.1's.
+func TestProtectionGrammarOracle(t *testing.T) {
+	lines := logSection(t, prot93Log(t, "prot93.log"), "######## MALFORMED AND ODD VALUES", "######## ACLS")
+
+	d, _, buf := newCommandDispatcher(t)
+	commands := 0
+
+	for i := 0; i < len(lines); i++ {
+		command, ok := strings.CutPrefix(lines[i], "$ ")
+		if !ok || !(strings.HasPrefix(command, "CREATE/DIRECTORY/") || strings.HasPrefix(command, "SET PROTECTION=")) {
+			continue
+		}
+
+		var want []string
+		for i+1 < len(lines) && !strings.HasPrefix(lines[i+1], "$ ") {
+			i++
+			want = append(want, lines[i])
+		}
+
+		buf.Reset()
+
+		if err := d.Dispatch(command); err != nil && !vmserrors.MessageInhibited(err) {
+			buf.WriteString(dclMessage(err) + "\n")
+		}
+
+		if got := strings.TrimSuffix(buf.String(), "\n"); got != strings.Join(want, "\n") {
+			t.Errorf("%s:\n got %q\nwant %q", command, got, strings.Join(want, "\n"))
+		}
+
+		commands++
+	}
+
+	if commands != 4 {
+		t.Errorf("%d commands replayed, want 4", commands)
 	}
 }
 

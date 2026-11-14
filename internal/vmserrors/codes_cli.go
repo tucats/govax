@@ -237,6 +237,8 @@ const (
 	// docs/planning/PHASE-93 - file protection.md: protection codes.
 	cliIvProt
 	cliProtNotImpl
+	cliDirect
+	cliNoList
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -578,6 +580,13 @@ const (
 	CLI_IVPROT      = CLIFacility<<FacilityPosition | cliIvProt<<MessagePosition | StatusWarning
 	CLI_PROTNOTIMPL = CLIFacility<<FacilityPosition | cliProtNotImpl<<MessagePosition | StatusError
 
+	// CLI_DIRECT and CLI_NOLIST are DCL's CLI$_DIRECT and CLI$_NOLIST,
+	// warnings, for a $UIC value whose brackets or list are wrong
+	// ("[1,4,5]", "[200,1", "1,4"), as VMS 7.1 gave them (Phase 93's
+	// probe).
+	CLI_DIRECT = CLIFacility<<FacilityPosition | cliDirect<<MessagePosition | StatusWarning
+	CLI_NOLIST = CLIFacility<<FacilityPosition | cliNoList<<MessagePosition | StatusWarning
+
 	// CLI_P1TOOSMALL, an error, is VMINIT with paging on given a /P1 that
 	// can't hold P1's permanent part and the user stack.
 	CLI_P1TOOSMALL = CLIFacility<<FacilityPosition | cliP1TooSmall<<MessagePosition | StatusError
@@ -751,6 +760,8 @@ func init() {
 	DefineMessage(CLI_LEXNOTIMPL, CLIFacility, "LEXNOTIMPL", "lexical function !S is not implemented yet")
 	DefineMessage(CLI_HELPNOTIMPL, CLIFacility, "HELPNOTIMPL", "HELP !S is not implemented yet")
 	DefineMessage(CLI_IVPROT, CLIFacility, "IVPROT", "invalid protection code")
+	DefineMessage(CLI_DIRECT, CLIFacility, "DIRECT", "invalid directory syntax - check brackets and other delimiters")
+	DefineMessage(CLI_NOLIST, CLIFacility, "NOLIST", "list of parameter values not allowed - check use of comma (,)")
 	DefineMessage(CLI_PROTNOTIMPL, CLIFacility, "PROTNOTIMPL", "SET PROTECTION of a file is not implemented yet; SET PROTECTION/DEFAULT is")
 	DefineMessage(CLI_NOTHEN, CLIFacility, "NOTHEN", "IF or ON statement syntax error - check placement of THEN keyword")
 	DefineMessage(CLI_INSFPRM, CLIFacility, "INSFPRM", "missing command parameters - supply all required parameters")

@@ -25,6 +25,13 @@ const (
 	// value is the expression's text, quotes kept, for the console's
 	// expression evaluator; the grammar never evaluates it.
 	TypeExpression
+
+	// TypeProtection and TypeUIC (Phase 93) are a protection code and a
+	// UIC, whose shape the grammar checks as DCL does and whose meaning
+	// it leaves to the command (security.go). A protection code's value
+	// is a list, one element per category.
+	TypeProtection
+	TypeUIC
 )
 
 // Keyword is one named value of a Type, matching a grammar "keyword"

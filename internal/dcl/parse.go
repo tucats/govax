@@ -478,6 +478,25 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 
 		p := active.Parameters[nextParam]
 
+		if isSecurityType(p.Type) {
+			vals, rem, err := readSecurityValue(p.Type, pos)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if p.Type == TypeProtection {
+				r.setList(p.Name, p.ID, vals)
+			} else {
+				r.set(p.Name, p.ID, false, vals[0])
+			}
+
+			pos = skipSeparator(rem, p.Separator)
+			lastParam = p
+			nextParam++
+
+			continue
+		}
+
 		if p.List && (p.Joinable || len(p.positional()) > 0) {
 			var (
 				vals  []Value
@@ -625,6 +644,27 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 	var token string
 
 	haveVal := false
+
+	if strings.HasPrefix(rest, "=") && isSecurityType(q.Type) {
+		vals, rem, err := readSecurityValue(q.Type, rest[1:])
+		if err != nil {
+			return nil, 0, nil, "", err
+		}
+
+		switch {
+		case scopeParam != nil && q.Type == TypeProtection:
+			r.setParamList(scopeParam.Name, q.Name, q.ID, negated, vals)
+		case scopeParam != nil:
+			r.setParam(scopeParam.Name, q.Name, q.ID, negated, vals[0])
+		case q.Type == TypeProtection:
+			r.setList(q.Name, q.ID, vals)
+			r.values[q.Name].negated = negated
+		default:
+			r.set(q.Name, q.ID, negated, vals[0])
+		}
+
+		return active, nextParam, lastParam, rem, nil
+	}
 
 	if strings.HasPrefix(rest, "=") && q.List && q.hasValue() {
 		tokens, rem, err := readList(rest[1:], true, elementReader(q.Type))
@@ -1253,6 +1293,22 @@ func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest s
 
 	if !q.hasValue() {
 		return "", vmserrors.New(vmserrors.CLI_NOQUALIFIERVALUE, q.Name)
+	}
+
+	if isSecurityType(q.Type) {
+		vals, rem, err := readSecurityValue(q.Type, rest[1:])
+		if err != nil {
+			return "", err
+		}
+
+		if q.Type == TypeProtection {
+			item.setList(q.Name, q.ID, vals)
+			item.values[q.Name].negated = negated
+		} else {
+			item.set(q.Name, q.ID, negated, vals[0])
+		}
+
+		return rem, nil
 	}
 
 	if q.List {
