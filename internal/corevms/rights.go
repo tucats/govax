@@ -1,6 +1,7 @@
 package corevms
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -76,13 +77,47 @@ var (
 )
 
 // rightsDatabase returns the rights database, sorted by name (the order
-// $IDTOASC lists it in).
+// $IDTOASC lists it in): the process's own UIC identifier, the
+// environmental identifiers, and the System's (AddIdentifier), a name
+// already there passed over.
 func (env *Environment) rightsDatabase() []rightsIdentifier {
 	db := append([]rightsIdentifier{{name: env.Process.Username, value: env.Process.UIC}}, environmentalIdentifiers...)
+
+	if env.System != nil {
+		for _, r := range env.System.identifiers {
+			if !slices.ContainsFunc(db, func(have rightsIdentifier) bool { return have.name == r.name }) {
+				db = append(db, r)
+			}
+		}
+	}
 
 	sort.Slice(db, func(i, j int) bool { return db[i].name < db[j].name })
 
 	return db
+}
+
+// AddIdentifier puts an identifier called name, with value and attribute
+// bits attrib, in the System's rights database, as AUTHORIZE's ADD
+// /IDENTIFIER (and ADD's UIC identifier for a new user) would on VMS:
+// govax has no AUTHORIZE yet, so tests make the identifiers a probe's VAX
+// had this way (docs/planning/PHASE-93 - file protection.md, subtask 10).
+// A name that can't be an identifier's is SS$_IVIDENT, and one already
+// there, or a value already named, SS$_DUPIDENT.
+func (s *System) AddIdentifier(name string, value, attrib uint32) uint32 {
+	name = strings.ToUpper(strings.TrimSpace(name))
+	if !validIdentifierName(name) {
+		return ssIvIdent
+	}
+
+	for _, r := range append(slices.Clone(environmentalIdentifiers), s.identifiers...) {
+		if r.name == name || r.value == value {
+			return vmsdef.Symbols["SS$_DUPIDENT"]
+		}
+	}
+
+	s.identifiers = append(s.identifiers, rightsIdentifier{name: name, value: value, attrib: attrib})
+
+	return ssNormal
 }
 
 // identifierByValue returns the identifier with value id.

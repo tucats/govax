@@ -2053,6 +2053,15 @@ expect adjustment as phases land):
   library's file held while it's open (an ACP access, `rms.Session.HoldFile`),
   another process's open waiting for it (`corevms.Environment.WaitFor`).
   Strings through `librtl/export.go`.
+- `internal/securertl` — SECURESHR.EXE's routines (Phase 93, subtask 10),
+  beside `internal/lbrrtl`: the security services VMS keeps in a
+  shareable image, `$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, and
+  `$CHECK_ACCESS` (NOTIMPL until subtask 13), at the transfer vector
+  offsets VMS 7.1's SEC93.EXE held, codes from 6000; SECURESHRP is among
+  the machine's `runtimeLibraries`. An ACE's text both ways, the line
+  layout, and `$CHANGE_ACL`'s matching are `internal/security`'s
+  `acetext.go`, for DCL to share; a file's profile as a service reaches
+  it is `rms.SecurityObject` (`rms/secobject.go`).
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

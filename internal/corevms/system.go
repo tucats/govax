@@ -70,6 +70,12 @@ type System struct {
 	// system state like the mailboxes.
 	Sections *GlobalSections
 
+	// identifiers are the rights database's identifiers beyond those every
+	// process has (rights.go): AddIdentifier's, as AUTHORIZE's ADD
+	// /IDENTIFIER would make them. Like the mailboxes they're the
+	// System's, so INIT/VMINIT/ZERO start with none.
+	identifiers []rightsIdentifier
+
 	// sectionFiles counts the sections using each file (filesec.go).
 	sectionFiles map[PageSource]*sectionFile
 

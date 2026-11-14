@@ -40,6 +40,24 @@ func (env *Environment) findChannel(number uint32) (*channel, bool) {
 	return nil, false
 }
 
+// ChannelFile returns the file accessed on the process's channel number,
+// for a service that reaches a file by channel ($CHANGE_ACL,
+// $GET_SECURITY): status 0, SS$_IVCHAN for no such channel, or
+// SS$_NOSUCHOBJECT for a channel with no file accessed (unconfirmed: the
+// probe gave the services only channels with files).
+func (env *Environment) ChannelFile(number uint32) (*rms.ACPFile, uint32) {
+	c, ok := env.findChannel(number)
+
+	switch {
+	case !ok:
+		return nil, vmsdef.Symbols["SS$_IVCHAN"]
+	case c.acp == nil:
+		return nil, vmsdef.Symbols["SS$_NOSUCHOBJECT"]
+	}
+
+	return c.acp, 0
+}
+
 // serviceSysAssign is SYS$ASSIGN: given a device name, creates and returns a
 // channel number bound to that device. A mailbox the process may neither
 // read nor write, by its protection (mailbox.go), is SS$_NOPRIV.

@@ -70,6 +70,10 @@ var runtimeLibraries = map[string]bool{
 	"FORRTL": true, "FORRTL2": true, "LIBRTL": true, "LIBRTL2": true,
 	"MTHRTL": true, "PASRTL": true, "PLIRTL": true, "UVMTHRTL": true,
 	"VAXCRTL": true, "VAXCRTLG": true, "VMTHRTL": true,
+	// SECURESHR's protected image, which a program VMS 7.1's LINK linked
+	// against SECURESHR names too (testdata/prot93/vax/round3's map);
+	// securertl stands for both.
+	"SECURESHRP": true,
 }
 
 // Settings naming the host library directory (dclcmd's LibrarySetting

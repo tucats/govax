@@ -763,8 +763,8 @@ with it undefined today.
   `[*,m]`, `[*,*]`, `[name]`, `[group,name]`, a name (a UIC's, a group's,
   `SYSTEM`, a general or environmental identifier, any case), or
   `%Xhex`. ACCESS defaults to none; `NONE`, `READ` ... `CONTROL`, `BIT_5`
-  to `BIT_31` (or the caller's `accnam` names, which then replace the
-  defaults entirely: READ is unknown with them), joined by `+`, `NONE`
+  to `BIT_31` (and the caller's `accnam` names, tried first: case 84's
+  READ was still READ with the probe's names given), joined by `+`, `NONE`
   adding nothing; a repeated ACCESS or OPTIONS adds to the first.
   OPTIONS (before or after ACCESS) are DEFAULT, PROTECTED, NOPROPAGATE,
   HIDDEN, and NONE.
@@ -815,8 +815,13 @@ with it undefined today.
   header is formatted from the descriptor, and a descriptor with bytes
   after the ACE that aren't a whole ACE is IVACL (case 157, the output
   buffer then filled with blanks and no length written).
-- `width` wraps the text at the last `+`, `,`, or `=` that fits, writing
-  `trmdsc` and then `indent` blanks before each new line; `indent` is also
+- `width` wraps the text between pieces, a new line wherever the next
+  piece would take the line (its indentation counted) past the width, a
+  line holding at least one piece: an access or option name is a piece
+  with the `+`, `,`, or `)` after it, an identifier and the `+` between
+  identifiers are pieces of their own, as is the `,` after the last
+  (case 160's width 5 shows them), writing `trmdsc` and then `indent`
+  blanks before each new line; `indent` is also
   written before the first; width 0 or no `trmdsc` means no wrapping
   (with an empty `trmdsc` the indentation still comes at each break);
   a width smaller than a token breaks after every token. A short `aclstr`
@@ -827,15 +832,24 @@ with it undefined today.
 **`$CHANGE_ACL`** (cases 176 to 234, 573 to 575, 580 to 583, part M and U's):
 
 - Items are processed in order in one call, sharing a position (the
-  context, when given: the position's index, with `%X01000000` set after
-  a find and the bits 16 to 23 holding the found ACE's type, as the logs
-  show it); no item writes a return length. ADDACLENT with no context or
+  context, when given: the position's index in its low word, with
+  `%X01000000` set after a find; the bits 16 to 23 held 5 after READACE
+  and 4 after an ADDACLENT after a find, whose meaning the cases don't
+  settle); no item writes a return length. ADDACLENT with no context or
   context 0 adds at the top, -1 at the bottom, after a find before the
-  found ACE; adding at a position removes an ACE that matches it below it
-  and does nothing if one matches above it. Matching: an identifier ACE by
-  its flags and identifiers, a default protection ACE by type, an alarm by
-  flags and access, others whole; FNDACLENT and DELACLENT match the same
-  way, so DELACLENT `[300,1] WRITE` deletes `[300,1] READ`. A buffer of
+  found ACE, the position then past the added ACE; adding at a position
+  removes an ACE that matches it below it and does nothing if one matches
+  above it (the context's high bits then cleared, `%X0000FFFF`).
+  Matching, as the 5.0 manual has it: an identifier ACE by its flags and
+  identifiers, PROTECTED aside (case 182's PROTECTED entry took an
+  unprotected one's place), a default protection ACE by type, others
+  whole; but an alarm or audit ACE by its flags alone, where the manual
+  says flags and access, and its addition replaced a match above the
+  bottom and left a context of 0 (cases 215 to 219). FNDACLENT and
+  DELACLENT match the same way, so DELACLENT `[300,1] WRITE` deletes
+  `[300,1] READ`; FNDACLENT searches from the position, FNDACETYP from the
+  ACE after it (case 202 found the second of two identifier ACEs from a
+  context of 0). A buffer of
   several ACEs adds them in order; a buffer longer than its ACEs (zeros
   after) or shorter than an ACE, or an ACE of size 3, is IVACL. An unknown
   ACE type (200), HIDDEN, and the reserved-longword count are accepted.
@@ -1255,12 +1269,12 @@ Each is one commit, with tests, stopping for review.
 9. **Checking the DCL utilities** (done 2026-11-14): every `OpenFID` and directory site in
    A.2 moved onto the layer, `TestNoUncheckedAccess`, and each utility's
    messages held to the probe's DCL logs, SYSTEM's and the accounts'.
-10. **The ACL services**: `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
+10. **The ACL services** (done 2026-11-14): `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
     (Decision 13), the ACE text both ways, held to the probe. Its VMS round
     also asks A.4's "Open for a later round" questions. In two parts:
     10a, round 3 of the probe (Part D's "Round 3"; done 2026-11-14, with
     round 3b; A.4's "Round 3"), which asked for subtask 13's services too;
-    10b, the services.
+    10b, the services (done 2026-11-14).
 11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
     BACKUP's `/PROTECTION` (Decision 10).
@@ -1909,3 +1923,48 @@ The author accepted the plan and answered its questions:
   "Round 3: the security services" is written from rounds 3 and 3b, and
   answers A.3's last open question (execute-only procedures run without
   verification). Subtask 10a is done; 10b, the ACL services, is next.
+- **2026-11-14** Subtask 10b done: the ACL services. The map settled that
+  they aren't system services but SECURESHR.EXE's, so they are a package
+  beside `lbrrtl`, `internal/securertl`: a stub for each of the four
+  entries VMS 7.1's SEC93.EXE showed (its fixup vector: `$FORMAT_ACL` at
+  %X48, `$PARSE_ACL` %X50, `$CHANGE_ACL` %X58, `$CHECK_ACCESS` %X78, the
+  last NOTIMPL until subtask 13), codes from 6000, in the machine's shim
+  table; LINK finds them through govax's own tables, as an image name
+  with no captured header, and SECURESHRP, which VMS's LINK also names, is
+  among the machine's `runtimeLibraries`, so VMS's own SEC93.EXE runs
+  (`TestSec93VMSImage`). The ACE's text is `internal/security`'s
+  `acetext.go`, for the DCL commands to share (Decision 10): `ParseACE`
+  (each item kind's grammar, keywords by unique prefix, errpos where VMS
+  put it: an item's keyword, an identifier's value, or the text's end for
+  what reads but makes no ACE), `FormatPieces` and `Wrap` (the text in the
+  pieces VMS breaks lines between, case 160's width 5 showing them),
+  `IdentifierText` (names from the rights database, a UIC's group by its
+  group identifier), `MatchACE` and `AlarmLike` ($CHANGE_ACL's matching).
+  `$CHANGE_ACL`'s position and items are `securertl/change.go`; its file
+  is `rms.SecurityObject` (`rms/secobject.go`, in the checked layer:
+  `FindSecurityObject` by RMS's name rules with VMS's statuses,
+  `ACPFile.SecurityObject` for a channel, `MayRead`, `MayChange`, `SetACL`,
+  and `SetOwnerProtection` for subtasks 11 and 13), reached by channel
+  through corevms's new `Environment.ChannelFile`. The rights database can
+  hold identifiers beyond the process's own (`System.AddIdentifier`, as
+  AUTHORIZE would make them; govax has no AUTHORIZE), which the test
+  gives the probe's accounts, PROT93, and PROT93_TEAM. Writing it to the
+  cases corrected three of A.4's lines (above): `accnam`'s names are tried
+  before the defaults rather than replacing them; an alarm or audit ACE
+  matches by its flags alone and replaces a match wherever it is, leaving
+  a context of 0, against the 5.0 manual's "flags and access"; FNDACETYP
+  searches from the ACE after the position. Unconfirmed and chosen:
+  govax leaves bits 16 to 23 of the context 0 (VMS's 5 and 4 there are
+  unexplained); an identifier ACE's HIDDEN and NOPROPAGATE count in
+  matching (PROTECTED doesn't); an ACE shorter than its 8-byte header in a
+  buffer is IVACL; changes made by items before a failing item are kept;
+  a device's ACL (objtyp DEVICE) is empty and can't be changed; a channel
+  with no file is SS$_NOSUCHOBJECT. `TestSec93ACLOracle`
+  (`internal/console/sec93acl_test.go`) builds SEC93.MAR with govax's MACRO
+  and LINK, makes SEC93B.COM's [SEC93.CHG] files on a new volume (their
+  SET SECURITY lines applied in Go through `SecurityObject`, the ACEs read
+  by `ParseACE`), and holds parts P, F, and C and part X's nine
+  `$CHANGE_ACL` cases, 243 in all, to VMS 7.1's reports, masking only the
+  context's bits 16 to 23 and a channel number; parts M and U, which mix
+  in `$GET_SECURITY` and `$SET_SECURITY`, wait for subtask 13. Subtask 11,
+  changing profiles, is next.
