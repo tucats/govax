@@ -102,19 +102,19 @@ Total of 26 files.
 
 Directory DUA1:[PROT93.CTL]
 
-CC_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+CC_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,R)
           (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
 CC_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
           (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
-CC_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+CC_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,R)
           (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
 CC_M0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,R)
           (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
-CO_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+CO_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
 CO_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 CO_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 CO_M0.DAT;1          [310,2]                          (RWED,RWED,RE,)
-CT_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+CT_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,R)
 CT_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 CT_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 CT_M0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,R)
@@ -140,11 +140,11 @@ OS_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 OS_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RE,RE)
 OS_C0.DAT;1          [PROT93C]                        (RWED,RWED,RE,RE)
 OS_M0.DAT;1          [SYSTEM]                         (RWED,RWED,RE,RE)
-OT_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+OT_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RWED)
           (IDENTIFIER=[PROT93,PROT93A],ACCESS=CONTROL)
-OT_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+OT_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RWED)
           (IDENTIFIER=[PROT93,PROT93B],ACCESS=CONTROL)
-OT_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+OT_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RWED)
           (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
 OT_M0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
           (IDENTIFIER=[SYSTEM],ACCESS=CONTROL)
@@ -196,7 +196,16 @@ DC0.DIR;1            [PROT93C]                        (RWE,RWE,RWE,RWE)
           (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:R,WORLD:E)
           (IDENTIFIER=PROT93_TEAM,OPTIONS=DEFAULT,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93A],ACCESS=READ)
+DP_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+DP_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
 DP_B1.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+DP_B2.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
           (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
 DP_B3.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
@@ -205,7 +214,13 @@ DP_B3.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
 DP_B4.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
           (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+DP_C0.DAT;1          [PROT93C]                        (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
 DP_C1.DAT;1          [PROT93C]                        (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+DP_C2.DAT;1          [PROT93C]                        (RWED,RWED,R,E)
           (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
 DP_C3.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
@@ -232,6 +247,15 @@ N_B0.DAT;1           [PROT93,PROT93B]                 (RWED,RWED,R,E)
 N_C0.DAT;1           [PROT93C]                        (RWED,RWED,R,E)
           (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+R2_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+R2_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
+R2_C0.DAT;1          [PROT93C]                        (RWED,RWED,R,E)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
 S1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,R,E)
           (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93B],OPTIONS=NOPROPAGATE,ACCESS=READ+WRITE)
@@ -246,7 +270,7 @@ SUB.DIR;1            [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
           (IDENTIFIER=PROT93_TEAM,OPTIONS=DEFAULT,ACCESS=READ)
           (IDENTIFIER=[PROT93,PROT93A],ACCESS=READ)
 
-Total of 19 files.
+Total of 27 files.
 
 Directory DUA1:[PROT93.DP.SUB]
 
@@ -267,35 +291,50 @@ Total of 4 files.
 Directory DUA1:[PROT93.DRW]
 
 A.DAT;1              [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+C_A0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+C_B0.DAT;1           [PROT93,PROT93B]                 (RWED,RWED,RE,)
 C_B1.DAT;1           [PROT93,PROT93B]                 (RWED,RWED,RE,)
+C_B2.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_B3.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_B4.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+C_C0.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
 C_C1.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
+C_C2.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
 C_C3.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_C4.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_M0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_M1.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_M4.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+QC_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
+QC_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RE,)
+QC_C0.DAT;1          [PROT93C]                        (RWED,RWED,RE,)
 QC_M0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
 
-Total of 11 files.
+Total of 19 files.
 
 Directory DUA1:[PROT93.DRWO]
 
 A.DAT;1              [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+C_A0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+C_B0.DAT;1           [PROT93,PROT93B]                 (RWED,RWED,RE,)
+C_B2.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+C_C0.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
+C_C2.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
 C_M0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 C_M4.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
-E3_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-E3_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-E3_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+N3X_A0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+N3X_B0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+N3X_C0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 N3X_M0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-N3_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-N3_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-N3_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+QC_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
+QC_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RE,)
+QC_B2.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
+QC_C0.DAT;1          [PROT93C]                        (RWED,RWED,RE,)
+QC_C2.DAT;1          [PROT93C]                        (RWED,RWED,RE,)
 QC_M0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
 QC_M4.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
 
-Total of 12 files.
+Total of 19 files.
 
 Directory DUA1:[PROT93.DW]
 
@@ -325,18 +364,12 @@ Total of 4 files.
 
 Directory DUA1:[PROT93.ER]
 
-EA_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-EA_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-EA_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 EB_A0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 EB_B0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 EB_C0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 EB_M0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
-QD_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-QD_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-QD_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 
-Total of 10 files.
+Total of 4 files.
 
 Directory DUA1:[PROT93.ERX]
 
@@ -394,9 +427,9 @@ Directory DUA1:[PROT93.IMG]
 HELLOE.EXE;1         [PROT93,PROT93A]                 (E,RWED,E,E)
 HELLON.EXE;1         [PROT93,PROT93A]                 (,RWED,,)
 HELLOR.EXE;1         [PROT93,PROT93A]                 (R,RWED,R,R)
-PRO2E.COM;1          [PROT93,PROT93A]                 (E,RWED,E,E)
-PRO2N.COM;1          [PROT93,PROT93A]                 (,RWED,,)
-PRO2R.COM;1          [PROT93,PROT93A]                 (R,RWED,R,R)
+PRO2E.COM;1          [PROT93,PROT93A]                 (E,RWED,E,RE)
+PRO2N.COM;1          [PROT93,PROT93A]                 (,RWED,,RE)
+PRO2R.COM;1          [PROT93,PROT93A]                 (R,RWED,R,RE)
 PROCE.COM;1          [PROT93,PROT93A]                 (E,RWED,E,E)
 PROCN.COM;1          [PROT93,PROT93A]                 (,RWED,,)
 PROCR.COM;1          [PROT93,PROT93A]                 (R,RWED,R,R)
@@ -406,12 +439,11 @@ Total of 9 files.
 Directory DUA1:[PROT93.NV]
 
 L_A0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-L_A0.DAT;1           [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 L_B0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-L_B0.DAT;1           [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 L_C0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-L_C0.DAT;1           [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 L_M0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+NP_A0.DAT;2          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
 NP_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
           (IDENTIFIER=[PROT93,PROT93A],OPTIONS=NOPROPAGATE,ACCESS=READ)
           (IDENTIFIER=PROT93_TEAM,ACCESS=READ)
@@ -439,34 +471,44 @@ SUPD_B0.DAT;1        [PROT93,PROT93A]                 (RD,RD,RD,RD)
 SUPD_C0.DAT;1        [PROT93,PROT93A]                 (RD,RD,RD,RD)
 SUPD_M0.DAT;1        [PROT93,PROT93A]                 (RD,RD,RD,RD)
 SUPW_A0.DAT;1        [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-SUPW_B0.DAT;1        [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-SUPW_C0.DAT;1        [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+SUPW_B0.DAT;1        [PROT93,PROT93B]                 (RWED,RWED,RWED,RWED)
+SUPW_C0.DAT;1        [PROT93C]                        (RWED,RWED,RWED,RWED)
 SUPW_M0.DAT;1        [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 SUP_A0.DAT;1         [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 SUP_B0.DAT;1         [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 SUP_C0.DAT;1         [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 SUP_M0.DAT;1         [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
+V_A0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 V_A0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 V_B0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 V_C0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 V_M0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
 V_M0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,RE)
+W_A0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 W_A0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+W_B0.DAT;2           [PROT93,PROT93B]                 (RWED,RWED,RWED,RWED)
 W_B0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+W_C0.DAT;2           [PROT93C]                        (RWED,RWED,RWED,RWED)
 W_C0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 W_M0.DAT;2           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 W_M0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 
-Total of 38 files.
+Total of 40 files.
 
 Directory DUA1:[PROT93.OWN]
 
+CA_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
+CM_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
+CM_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RE,)
+CM_C0.DAT;1          [PROT93C]                        (RWED,RWED,RE,)
 CP_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RE,)
 CP_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RE,)
 CP_C0.DAT;1          [PROT93C]                        (RWED,RWED,RE,)
 DA0.DIR;1            [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 DB0.DIR;1            [PROT93,PROT93B]                 (RWE,RWE,RWE,RWE)
 DC0.DIR;1            [PROT93C]                        (RWE,RWE,RWE,RWE)
+DOA0.DIR;1           [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
+DPA0.DIR;1           [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 NVO_A0.DAT;2         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 NVO_A0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 NVO_B0.DAT;2         [PROT93,PROT93B]                 (RWED,RWED,RWED,RWED)
@@ -474,10 +516,15 @@ NVO_B0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 NVO_C0.DAT;2         [PROT93C]                        (RWED,RWED,RWED,RWED)
 NVO_C0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 NVO_M0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+O_A0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+O_B0.DAT;1           [PROT93,PROT93B]                 (RWED,RWED,RE,)
 O_B1.DAT;1           [PROT93,PROT93B]                 (RWED,RWED,RE,)
+O_B2.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 O_B3.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 O_B4.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+O_C0.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
 O_C1.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
+O_C2.DAT;1           [PROT93C]                        (RWED,RWED,RE,)
 O_C3.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 O_C4.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
 O_M0.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
@@ -513,17 +560,22 @@ XS_C4.DAT;1          [SYSTEM]                         (RWED,RWED,RWED,)
 XS_M0.DAT;1          [SYSTEM]                         (RWED,RWED,RWED,)
 XS_M1.DAT;1          [SYSTEM]                         (RWED,RWED,RWED,)
 XS_M4.DAT;1          [SYSTEM]                         (RWED,RWED,RWED,)
+XZ_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
+XZ_B0.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RWED,)
 XZ_B1.DAT;1          [PROT93,PROT93B]                 (RWED,RWED,RWED,)
+XZ_B2.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 XZ_B3.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 XZ_B4.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
+XZ_C0.DAT;1          [PROT93C]                        (RWED,RWED,RWED,)
 XZ_C1.DAT;1          [PROT93C]                        (RWED,RWED,RWED,)
+XZ_C2.DAT;1          [PROT93C]                        (RWED,RWED,RWED,)
 XZ_C3.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 XZ_C4.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 XZ_M0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 XZ_M1.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 XZ_M4.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,)
 
-Total of 61 files.
+Total of 77 files.
 
 Directory DUA1:[PROT93.PRF]
 
@@ -635,10 +687,10 @@ Total of 1 file.
 
 Directory DUA1:[PROT93.RN]
 
+RA2_A0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+RA2_B0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+RA2_C0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 RA2_M0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-RA_A0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-RA_B0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
-RA_C0.DAT;1          [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 RB_A0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 RB_B0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
 RB_C0.DAT;1          [PROT93,PROT93A]                 (RWE,RWE,RWE,RWE)
@@ -890,7 +942,7 @@ DLW_M0.DAT;1         [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
 
 Total of 4 files.
 
-Grand total of 42 directories, 558 files.
+Grand total of 42 directories, 593 files.
 $ !
 $ WRITE SYS$OUTPUT "######## REMOVING THE ACCOUNTS"
 ######## REMOVING THE ACCOUNTS

@@ -242,6 +242,11 @@ kept. To go on from there, without running PROT93R.COM again:
 3. Go on with steps 4 to 7 above (PROT93V.COM as each account, PROT93Y.COM
    as SYSTEM, copyout2.cmd, which also brings PROT93S.LOG back).
 
+**Round 2's results** came back on 2026-11-14 (`vax/round2/`), and the
+phase doc's A.4 has its answers. PROT93S.COM opened the `PRO2x.COM`
+procedures to world RE along with the files the accounts needed, so they
+no longer test an execute-only procedure; that question stays open.
+
 If round 2 stops partway, run `@PROT93$DISK:[000000]PROT93Y` as SYSTEM,
 copy `prot93-round1.dsk` back over `prot93-exchange.dsk`, and start again
 from step 1's second command.

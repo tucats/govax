@@ -351,8 +351,12 @@ BYPASS; `A`, `B`, `C` alone are the accounts' DCL runs without privileges.
   ended CREATE's data, so the procedures are empty: `@` shows whether the
   open is allowed, not whether an execute-only procedure's lines run.
 
-Round 2 (Part D) runs the lost passes on the same volume, whose per-tag
-files they never touched, with the cases below marked "round 2".
+Round 2 (Part D) ran the lost passes on the same volume, whose per-tag
+files they had never touched, on 2026-11-14 (`vax/round2/`), with the
+cases round 1 left open; its answers are folded in below, marked "round
+2". Its fix-up, `PROT93S.COM`, opened the `PRO2x.COM` procedures to world
+RE along with the files the accounts needed, so the question of an
+execute-only procedure's lines is still open (answer 4).
 
 #### Answers to A.3
 
@@ -365,22 +369,29 @@ files they never touched, with the cases below marked "round 2".
    directory): their READALL passes had run first in the same process, and
    RMS keeps a process's directories in a cache, so the upper levels were
    not looked up again. govax keeps no such cache: every level needs R or E,
-   as the guide's rule says. Round 2's account passes run first in a new
-   process, without privileges.
-2. **Rename** needs D on the file and W on both directories: no D on the
+   as the guide's rule says. Round 2: each account, its first pass in a new
+   process without privileges, is refused PX1 and PX2 too.
+2. **Rename** needs D on the file and R and W on both directories (round
+   2: refused within `[.DW]`, WE, and allowed within `[.DRWO]`, RW): no D on the
    file (`noDel`, or R alone) or no W on the old directory is `RMS$_RMV`
    with `SS$_NOPRIV`; no W on the new directory is `RMS$_ENT` with
    `SS$_NOPRIV`; DCL's RENAME says `%RENAME-E-OPENIN ... as input`,
    `-RMS-F-RMV`, `-SYSTEM-F-NOPRIV`. A rename keeps the file's profile.
 3. **A supersede** of a file without D is refused (`RMS$_PRV`/`SS$_NOPRIV`),
    as is a new version past the version limit whose oldest version lacks D;
-   neither creates anything. Whether a supersede also needs W: round 2.
+   neither creates anything. Round 2: a supersede needs W as well (a file
+   with R and D alone is refused, by M0 too), and one allowed returns
+   `RMS$_SUPERSEDE` (`%X10631`), the new file the creator's, with the old
+   file's protection. A new version needs W on the previous version (round
+   2: refused over a file giving R alone, and over one giving RE to the
+   group and world, to PROT93B and PROT93C, whose CIF opens are refused too).
 4. **RUN and `@`** need R or E: an image or procedure with only E or only R
    runs or opens; one with neither is `%DCL-W-ACTIMAGE`, `-CLI-E-IMGNAME,
    image file DUA1:[PROT93.IMG]HELLON.EXE;`, `-RMS-E-PRV` (`$STATUS`
    `%X1001829A`), and `%DCL-E-OPENIN, error opening ... as input` for `@`.
    READALL runs an image too (B1 ran PROT93.EXE). Whether an execute-only
-   procedure's lines run: round 2.
+   procedure's lines run is still open (round 2's procedures were opened by
+   its fix-up); govax runs them, unconfirmed.
 5. **READALL** gives read and nothing else: B1/C1 read every file, search
    every directory, and are refused every write, every create in a
    directory they can't write, and every change of profile.
@@ -401,7 +412,12 @@ files they never touched, with the cases below marked "round 2".
    gets the owner and protection given, a UIC no identifier names among
    them (`[310,1]`, `[454,1]`). A XABPRO owner of 0 is as if none were
    given; its protection is used. Whether `$CREATE` writes the XABPRO back
-   wasn't asked (the program shows `$DISPLAY`'s): round 2 of the services.
+   wasn't asked (the program shows `$DISPLAY`'s): the services' round.
+   Round 2: GRPPRV is not the privilege to name another group's owner
+   (B2 is refused `[310,1]`), and DCL's CREATE/OWNER_UIC of another's UIC
+   is `%CREATE-E-OPENOUT ... as output`, `-RMS-E-PRV`, its own UIC
+   allowed; CREATE/DIRECTORY/OWNER_UIC of another's, or `=PARENT` under
+   another's directory, is `%CREATE-E-DIRNOTCRE`, `-SYSTEM-F-NOPRIV`.
 9. **COPY** never gives the output the input's profile: `FROT1.DAT` copied
    is the process default, and a copy of a file with an ACL has none
    (`L3.DAT`). `COPY/PROTECTION=(W:R)` is merged into what the output
@@ -410,8 +426,10 @@ files they never touched, with the cases below marked "round 2".
 11. **The obsolete forms work:** `SET FILE/PROTECTION=(code)`, `SET
     FILE/OWNER_UIC=uic`, `SET PROTECTION=(code) file`, `SET ACL/ACL=(ace)
     file`, and `SHOW ACL file`. What `SET PROTECTION file`, `SET
-    FILE/OWNER_UIC file`, and `SET FILE/PROTECTION file` with no value do:
-    round 2 (round 1's files were changed again before they were shown).
+    FILE/OWNER_UIC file`, and `SET FILE/PROTECTION file` with no value do
+    (round 2): the first and last give the file the process default
+    protection, the owner kept; the second makes the process's UIC the
+    owner, the protection kept.
     SHOW SECURITY's and DIRECTORY's layouts: "Display" below.
 12. **DIRECTORY** lists a file it can't read in the brief form. `/FULL` and
     `/SECURITY` write the file's name, then the message's text, and count
@@ -448,6 +466,9 @@ file in the accounts' runs:
 - **ACE identifiers** match by UIC, a group wildcard `[200,*]`, a general
   identifier held (`PROT93_TEAM`), and an environmental one
   (`INTERACTIVE`).
+- **GRPPRV** (round 2) puts its holder in the system category for objects
+  owned by its own group: B2 opens `FSYS` and `FROT1` (system R) like M0,
+  C2 (group 300) gains nothing on group 200's files.
 - **Privileges** after the code: SYSPRV is the system category (no more:
   C3 is refused `FACLGRANT`'s files that give the system nothing), BYPASS
   is everything, READALL is read. A privilege doesn't overrule an ACE's
@@ -462,10 +483,14 @@ file in the accounts' runs:
   RWED) none. SHOW SECURITY needs read or control (M0 shows `UNONE`,
   which gives the system nothing; PROT93C is refused `UGRP`).
 - **The ACP's read of attributes** by name (`ATR$C_FPRO`, `UIC`,
-  `ACLLENGTH`) needs no access to the file, only the lookup: every identity
-  reads `FNONE`'s. One exception, unexplained: M0 and C3 were refused it
-  (`SS$_NOPRIV`) on `FUIC0ACL` alone. Recorded, not followed, unless round
-  2's passes explain it.
+  `ACLLENGTH`) needs read or control, as SHOW SECURITY does. Round 1 seemed
+  to show it free (every identity it had held control); round 2's
+  unprivileged passes are refused it (`SS$_NOPRIV`) where the file gives
+  them neither: B0, C0, and C2 on `FNONE`, `FE`, `FW`, `FD`, `FSYS`; A0
+  (the owner) and B2 (GRPPRV, so the system category for group 200's
+  files) never. On `FUIC0ACL` M0, A0, C2, and C3 are refused: an object
+  owned by `[0,0]` gives the system category no control (with no ACL it
+  needs none).
 - **An open by file ID** passes over directories: M0 opens `[.DN]A.DAT`
   and `[.PX1.PY.PZ]X.DAT` by ID, and is refused `FNONE` by ID for the
   file's own protection.
@@ -477,14 +502,16 @@ file in the accounts' runs:
 | R | yes | yes | no |
 | E | no (`RMS$_PRV`) | yes | no |
 | WE | no | yes | **no** |
+| RW (round 2) | yes | yes | yes |
 | RWE | yes | yes | yes |
 | W | no | no | no |
 | none | no | no (`$SEARCH`, open, ACP read) | no |
 
 Creating in a directory with W and E but not R is refused, by RMS and by
-the ACP's IO$_CREATE alike; so a create needs R and W, or more (round 2
-tries RW without E, and erases and renames in WE). Delete needs D on the
-file and W on the directory (`[.ERX]`, RE, refuses it). READALL searches
+the ACP's IO$_CREATE alike, and allowed with R and W but not E (round 2):
+a create needs R and W on the directory. So do an erase and a rename
+(round 2: both refused in `[.DW]`, WE, both allowed in `[.DRWO]`, RW;
+`[.ERX]`, RE, refuses an erase), with D on the file. READALL searches
 and looks up in every directory.
 
 #### New files' profiles
@@ -496,8 +523,10 @@ and looks up in every directory.
   `CREATE/PROTECTION=(W:RE)` there is `(RWED,RWED,R,RE)`), else the
   process default. CREATE, COPY, APPEND/NEW_VERSION, `$CREATE`, and the
   ACP's create all follow it.
-- **ACL:** the previous version's (`L1.DAT;2`; NOPROPAGATE's effect on it:
-  round 2), else the directory's DEFAULT ACEs, with DEFAULT cleared and
+- **ACL:** the previous version's but its NOPROPAGATE ACEs, protected
+  ones too (`L1.DAT;2`; round 2's `NP_A0.DAT;2` keeps only the
+  `PROT93_TEAM` ACE of three), else the directory's DEFAULT ACEs, with
+  DEFAULT cleared and
   NOPROPAGATE **kept**: `[.DP]`'s DEFAULT+NOPROPAGATE ACE for PROT93B is on
   every file made there, as `OPTIONS=NOPROPAGATE`. A subdirectory gets the
   parent's whole ACL but its NOPROPAGATE ACEs, the DEFAULT ones keeping
@@ -506,7 +535,9 @@ and looks up in every directory.
   owner (`P1.DAT;2` and `SYS1.DAT;2` are `[300,1]`'s), else the
   directory's. Privilege here is a system UIC (M0, with none of the four,
   and M1), SYSPRV, or BYPASS (B3, B4, C3, C4); READALL is not (B1 and C1 own
-  their files). GRPPRV: round 2. A rename keeps the owner and protection.
+  their files). GRPPRV is too, for a directory or version owned in its
+  group (round 2: B2's files in `[.DRW]`, `[.OWN]`, and `[.DP]` are
+  `[200,1]`'s; C2's its own). A rename keeps the owner and protection.
 - **The process default** is `(RWED,RWED,RE,)`, RMS_FILEPROT's `%XFA00`,
   and every account started with it.
 
@@ -527,8 +558,14 @@ and looks up in every directory.
   after `-RMS-E-DNF`. Each change raises the file's revision count.
 - **The owner:** SYSTEM changes any owner; a file's owner without
   privilege can't give it away (`%SET-F-WRITEERR, error writing ...`,
-  `-SYSTEM-F-NOPRIV`) but may set it to its own UIC again. Taking
-  ownership of another's file through CONTROL, and GRPPRV: round 2.
+  `-SYSTEM-F-NOPRIV`) but may set it to its own UIC again. CONTROL through
+  an ACE doesn't let an account take another's file (round 2:
+  `%SET-F-WRITEERR` for PROT93C on `OT_C0`, where its protection change
+  succeeds), and the ACP's IO$_MODIFY of the owner is refused to the
+  file's owner (`SS$_NOPRIV`, A0 on `CO_A0`).
+- **SET SECURITY/DEFAULT on a directory** (round 2) makes the process's
+  UIC the owner and gives it the protection a new directory there would
+  get, its parent's (`SD1.DIR` under `SEC.DIR`'s `(RWE,RWE,RWE,RWE)`).
 - **SET PROTECTION/DEFAULT** merges into the process default; with no
   code it changes nothing.
 - **ACL edits** (`SET SECURITY/ACL`): a new ACE goes first; an ACE for an
@@ -718,12 +755,12 @@ file's owner, protection, and ACL are chosen, by A.1's order:
   highest existing version), else the directory's default protection ACE,
   else the process default; an explicit code (a XABPRO, `/PROTECTION`) is
   merged into the base, changing only the categories it names (A.4).
-- **ACL of a data file:** the previous version's (what NOPROPAGATE does
-  there is round 2's), else the directory's DEFAULT ACEs with DEFAULT
+- **ACL of a data file:** the previous version's but its NOPROPAGATE ACEs
+  (protected ones too), else the directory's DEFAULT ACEs with DEFAULT
   removed and NOPROPAGATE kept (A.4: NOPROPAGATE doesn't stop a default
   ACE reaching a file). COPY's output never takes its input's ACL.
-- **Owner:** the creator's UIC; with privilege (a system UIC, SYSPRV, or
-  BYPASS, A.4; GRPPRV in that owner's group is round 2's), the previous
+- **Owner:** the creator's UIC; with privilege (a system UIC, SYSPRV,
+  BYPASS, or GRPPRV in that owner's group, A.4), the previous
   version's owner, else the directory's. A XABPRO's owner is explicit,
   allowed by `CanChangeOwner`; a refused one fails the whole `$CREATE`
   with `RMS$_PRV`/`SS$_NOPRIV`, and an owner of 0 is none given.
@@ -755,16 +792,19 @@ file protection stops being used for new files.
 | run an image, `@` a procedure | R or E | R or E |
 | `$SEARCH` with a wildcard, DIRECTORY | | R |
 | `$SEARCH` of a known name, `$PARSE` with a lookup | | R or E |
-| create | | R and W (WE is refused; RW without E is round 2's) |
-| new version | W on the previous version (round 2); D on the oldest past the limit | as create |
-| supersede | D on the old version (W: round 2) | as create |
-| delete | D | W |
-| rename | D | W on both: `RMS$_RMV` for the old, `RMS$_ENT` for the new |
+| create | | R and W (E not needed) |
+| new version | W on the previous version; D on the oldest past the limit | as create |
+| supersede | W and D on the old version | as create |
+| delete | D | R and W |
+| rename | D | R and W on both: `RMS$_RMV` for the old, `RMS$_ENT` for the new |
 | change protection, ACL | control | |
 | change owner | control and `CanChangeOwner` | |
-| show the profile (SHOW SECURITY, DIRECTORY/FULL and /SECURITY) | read or control | R or E |
+| show the profile (SHOW SECURITY, DIRECTORY/FULL and /SECURITY, the ACP's read of attributes) | read or control | R or E |
 | F$FILE_ATTRIBUTES, `$DISPLAY` | an open for read | R or E |
-| the ACP's read of attributes by name | none | R or E |
+
+Control is the system and owner categories' (GRPPRV making its holder the
+system category for its own group's objects), and an ACE's CONTROL; an
+object owned by `[0,0]` gives the system category none (A.4).
 
 Every level of a path above the file's directory needs R or E too (A.4,
 answer 1; VMS's directory cache, which can skip a level a process has
@@ -901,8 +941,7 @@ leave open.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-14): Part A, this plan.
-2. **The probe** (round 1 run 2026-11-14 and A.4 written from it; round 2
-   written and rehearsed, waiting for the VAX run): `testdata/prot93`, as
+2. **The probe** (done 2026-11-14; rounds 1 and 2, A.4): `testdata/prot93`, as
    in Part D, written and rehearsed on govax; run on the VAX by the author;
    A.4 filled in and Part B adjusted to its answers. Later rounds as later
    subtasks find gaps (the review, answer 7), each a section of A.4; the
@@ -1145,3 +1184,19 @@ The author accepted the plan and answered its questions:
   the accounts. `PROT93S.COM` (gen.go, exchange3.cmd) makes the accounts
   again and opens each file they read, one SET SECURITY each; the accounts'
   runs go on from there.
+- **2026-11-14** Subtask 2 done. Round 2 ran with `PROT93S.COM` in place of
+  the accounts' first try; every log is in `vax/round2/` (`prot93r`,
+  `prot93s`, `prot93v_prot93a`/`b`/`c`, `prot93y`). Its answers are in A.4,
+  each marked "round 2": the unprivileged categories' whole matrix; GRPPRV
+  as the system category for its own group and as privilege for owners in
+  it; directory changes needing R and W (a create E not at all); a
+  supersede needing W and D, a new version W; NOPROPAGATE ACEs dropped from
+  a new version; the obsolete forms with no value; SET SECURITY/DEFAULT on a
+  directory; CONTROL never taking ownership. It corrected one of round 1's
+  findings: the ACP's read of attributes needs read or control (round 1's
+  identities all held control), which also explains round 1's `FUIC0ACL`
+  oddity (`[0,0]` gives the system category no control). Decisions 4 and 5
+  changed to it. One question stays open: whether an execute-only
+  procedure's lines run, since `PROT93S.COM` opened the procedures with
+  the files the accounts needed (a mistake of the fix-up's); govax runs
+  them, unconfirmed. Subtask 3, the rule, is next.
