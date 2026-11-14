@@ -329,7 +329,342 @@ principle; the probe confirms them on 7.1.
 
 ### A.4 The probe's answers
 
-To be filled in from the VAX run (subtask 2).
+Round 1 ran on VMS V7.1 (a simulated VAX 8600) on 2026-11-14; its logs are
+`testdata/prot93/vax/`, and the exchange volume, whose headers VMS wrote,
+is kept local. Every procedure ran to its end. Tags: `M0` is SYSTEM
+without READALL, GRPPRV, SYSPRV, and BYPASS, `M1` with READALL, `M4` with
+all four; `B1`/`C1` are PROT93B/PROT93C with READALL, `x3` SYSPRV, `x4`
+BYPASS; `A`, `B`, `C` alone are the accounts' DCL runs without privileges.
+
+**What round 1 lost.** Two of the probe's own mistakes:
+
+- `PROT93.COM` gave PROT93.EXE and HELLO.EXE their protection in one SET
+  SECURITY with a comma list, which 7.1's SET SECURITY refuses
+  (`%DCL-W-NOLIST`). The image kept SYSTEM's default, `(RWED,RWED,RE,)`, so
+  no account could run it without READALL, SYSPRV, or BYPASS (GRPPRV gives
+  nothing in SYSTEM's group): the program's passes without privileges
+  (`A0`, `B0`, `C0`) and with GRPPRV (`B2`, `C2`) failed at activation. The
+  accounts' DCL runs (Part B) did not depend on it and are whole. SHOW
+  SECURITY with a list failed the same way in four places, but PROT93Z's
+  listing shows those files.
+- Each `PROCx.COM` was made by CREATE followed by a `$ WRITE` line, which
+  ended CREATE's data, so the procedures are empty: `@` shows whether the
+  open is allowed, not whether an execute-only procedure's lines run.
+
+Round 2 (Part D) runs the lost passes on the same volume, whose per-tag
+files they never touched, with the cases below marked "round 2".
+
+#### Answers to A.3
+
+1. **Each level of a path is looked up with a check.** M0 (system category,
+   no privileges, a new process) is refused `[PROT93.PX1.PY.PZ]X.DAT` and
+   `[.PX2.PY.PZ]X.DAT`, where an upper level gives no access, with
+   `RMS$_PRV`/`SS$_NOPRIV`; `$PARSE` itself fails when the path can't be
+   walked. B3 and C3 (SYSPRV, which gives the system category's empty
+   field) were let through PX1 and PX2 but refused PX3 (the file's own
+   directory): their READALL passes had run first in the same process, and
+   RMS keeps a process's directories in a cache, so the upper levels were
+   not looked up again. govax keeps no such cache: every level needs R or E,
+   as the guide's rule says. Round 2's account passes run first in a new
+   process, without privileges.
+2. **Rename** needs D on the file and W on both directories: no D on the
+   file (`noDel`, or R alone) or no W on the old directory is `RMS$_RMV`
+   with `SS$_NOPRIV`; no W on the new directory is `RMS$_ENT` with
+   `SS$_NOPRIV`; DCL's RENAME says `%RENAME-E-OPENIN ... as input`,
+   `-RMS-F-RMV`, `-SYSTEM-F-NOPRIV`. A rename keeps the file's profile.
+3. **A supersede** of a file without D is refused (`RMS$_PRV`/`SS$_NOPRIV`),
+   as is a new version past the version limit whose oldest version lacks D;
+   neither creates anything. Whether a supersede also needs W: round 2.
+4. **RUN and `@`** need R or E: an image or procedure with only E or only R
+   runs or opens; one with neither is `%DCL-W-ACTIMAGE`, `-CLI-E-IMGNAME,
+   image file DUA1:[PROT93.IMG]HELLON.EXE;`, `-RMS-E-PRV` (`$STATUS`
+   `%X1001829A`), and `%DCL-E-OPENIN, error opening ... as input` for `@`.
+   READALL runs an image too (B1 ran PROT93.EXE). Whether an execute-only
+   procedure's lines run: round 2.
+5. **READALL** gives read and nothing else: B1/C1 read every file, search
+   every directory, and are refused every write, every create in a
+   directory they can't write, and every change of profile.
+6. **Statuses and messages:** "Statuses and messages" below.
+7. **CREATE/DIRECTORY** gives the parent's protection (no parent had D to
+   take away) and the parent's ACL but its NOPROPAGATE ACEs. `/PROTECTION`
+   is merged into the parent's (`(W:RE)` under `(RWE,RWE,RWE,RWE)` is
+   `(RWE,RWE,RWE,RE)`). The owner is the creator's UIC, or with privilege
+   (SYSTEM's) the parent's owner; `/OWNER_UIC=PARENT` the same;
+   `/OWNER_UIC=[300,1]` that UIC. A top-level directory gets the MFD's
+   owner and protection. `[300001]` and `[200002.SUB]` are owned by
+   `[SYSTEM]`, the MFD's owner: 7.1 gives no UIC-named directory its UIC.
+   An account (no privilege) making a directory in another's directory owns
+   it, with the parent's protection and ACL (`[.OWN.DB0]`, `[.DP.DB0]`).
+8. **A XABPRO's owner** other than the creator's UIC, without the privilege
+   to choose one, makes `$CREATE` fail (`RMS$_PRV`/`SS$_NOPRIV`, B1 and C1),
+   creating nothing. With privilege (a system UIC, SYSPRV, BYPASS), the file
+   gets the owner and protection given, a UIC no identifier names among
+   them (`[310,1]`, `[454,1]`). A XABPRO owner of 0 is as if none were
+   given; its protection is used. Whether `$CREATE` writes the XABPRO back
+   wasn't asked (the program shows `$DISPLAY`'s): round 2 of the services.
+9. **COPY** never gives the output the input's profile: `FROT1.DAT` copied
+   is the process default, and a copy of a file with an ACL has none
+   (`L3.DAT`). `COPY/PROTECTION=(W:R)` is merged into what the output
+   would otherwise get (`(RWED,RWED,RE,R)`). BACKUP's restore: not asked.
+10. **Malformed values:** "Forms and their errors" below.
+11. **The obsolete forms work:** `SET FILE/PROTECTION=(code)`, `SET
+    FILE/OWNER_UIC=uic`, `SET PROTECTION=(code) file`, `SET ACL/ACL=(ace)
+    file`, and `SHOW ACL file`. What `SET PROTECTION file`, `SET
+    FILE/OWNER_UIC file`, and `SET FILE/PROTECTION file` with no value do:
+    round 2 (round 1's files were changed again before they were shown).
+    SHOW SECURITY's and DIRECTORY's layouts: "Display" below.
+12. **DIRECTORY** lists a file it can't read in the brief form. `/FULL` and
+    `/SECURITY` write the file's name, then the message's text, and count
+    no blocks (`Total of 1 file, 0/0 blocks.`):
+
+        UNONE.DAT;1         insufficient privilege or object protection violation
+        UNONE.DAT;1        insufficient privilege or object protection violation
+
+    (the first is `/FULL`, the name in 20 columns; the second `/SECURITY`,
+    in 19). F$SEARCH finds such a file; F$FILE_ATTRIBUTES of it, any item,
+    is `%SYSTEM-F-NOPRIV` (it opens the file).
+
+#### The check
+
+Every cell of the `[.F]` matrix in SYSTEM's and the privileged passes is
+the guide's `$CHKPRO` sequence (A.1a), and so is every TYPE of an ACL'd
+file in the accounts' runs:
+
+- **Categories add.** PROT93B (`[200,2]`, the owner's group) is in the
+  group and world categories; SYSTEM `[1,4]` in the system and world.
+- **Write needs read** for a `$OPEN` with PUT, and a file with W alone
+  opens for neither GET nor PUT (`FW.DAT`); BIO (block I/O for read) is
+  allowed where GET is.
+- **The first matching identifier ACE decides**, and the code is not
+  consulted, but for the system and owner fields after a denial:
+  `FACLOWN` (owner `RWED`, ACE `PROT93A` NONE) is read by its owner;
+  `FACLSYS` (system `RWED`, ACE `SYSTEM` NONE) is opened by M0;
+  `FACLDENY` (everyone `RWED`, ACE `PROT93B` NONE) is refused to PROT93B
+  and read by the others; `FACLTWO` (`PROT93C` NONE, then `PROT93_TEAM`
+  READ) is refused to PROT93C, who holds both; `FACLCTL` (ACE `PROT93C`
+  CONTROL) is refused to PROT93C for reading even after its world field
+  was set to RE. An ACE's grant is not limited by the code (`FACLGRANT`,
+  no access, ACE R+W: PROT93C writes it).
+- **ACE identifiers** match by UIC, a group wildcard `[200,*]`, a general
+  identifier held (`PROT93_TEAM`), and an environmental one
+  (`INTERACTIVE`).
+- **Privileges** after the code: SYSPRV is the system category (no more:
+  C3 is refused `FACLGRANT`'s files that give the system nothing), BYPASS
+  is everything, READALL is read. A privilege doesn't overrule an ACE's
+  denial (B1 is refused writing `FACLDENY`), but SYSPRV's system field
+  does (B3 writes it).
+- **Owner UIC `[0,0]`** with no ACL: every access to everyone (M0 writes
+  `FUIC0.DAT`, protection none). With an ACL (`FUIC0ACL`, ACE `PROT93B`
+  READ): the ordinary check (PROT93A and PROT93C refused, PROT93B reads).
+- **Control** is the system and owner categories' and an ACE's CONTROL's:
+  M0 changes the protection of PROT93A's files; PROT93A its own; PROT93C
+  those whose ACL gives it CONTROL (`DCC_C0`, `FACLCTL`); PROT93B (group,
+  RWED) none. SHOW SECURITY needs read or control (M0 shows `UNONE`,
+  which gives the system nothing; PROT93C is refused `UGRP`).
+- **The ACP's read of attributes** by name (`ATR$C_FPRO`, `UIC`,
+  `ACLLENGTH`) needs no access to the file, only the lookup: every identity
+  reads `FNONE`'s. One exception, unexplained: M0 and C3 were refused it
+  (`SS$_NOPRIV`) on `FUIC0ACL` alone. Recorded, not followed, unless round
+  2's passes explain it.
+- **An open by file ID** passes over directories: M0 opens `[.DN]A.DAT`
+  and `[.PX1.PY.PZ]X.DAT` by ID, and is refused `FNONE` by ID for the
+  file's own protection.
+
+#### Directories
+
+| Directory gives | Wildcard `$SEARCH` | Lookup by name | Create (RMS, ACP) |
+| --- | --- | --- | --- |
+| R | yes | yes | no |
+| E | no (`RMS$_PRV`) | yes | no |
+| WE | no | yes | **no** |
+| RWE | yes | yes | yes |
+| W | no | no | no |
+| none | no | no (`$SEARCH`, open, ACP read) | no |
+
+Creating in a directory with W and E but not R is refused, by RMS and by
+the ACP's IO$_CREATE alike; so a create needs R and W, or more (round 2
+tries RW without E, and erases and renames in WE). Delete needs D on the
+file and W on the directory (`[.ERX]`, RE, refuses it). READALL searches
+and looks up in every directory.
+
+#### New files' profiles
+
+- **Protection:** an explicit code is merged into the base; the base is
+  the previous version's (`P1.DAT;2` and `;3` take `;1`'s, an account's new
+  version of PROT93A's file takes its protection), else the directory's
+  default protection ACE (`[.DP]`'s files are `(RWED,RWED,R,E)`;
+  `CREATE/PROTECTION=(W:RE)` there is `(RWED,RWED,R,RE)`), else the
+  process default. CREATE, COPY, APPEND/NEW_VERSION, `$CREATE`, and the
+  ACP's create all follow it.
+- **ACL:** the previous version's (`L1.DAT;2`; NOPROPAGATE's effect on it:
+  round 2), else the directory's DEFAULT ACEs, with DEFAULT cleared and
+  NOPROPAGATE **kept**: `[.DP]`'s DEFAULT+NOPROPAGATE ACE for PROT93B is on
+  every file made there, as `OPTIONS=NOPROPAGATE`. A subdirectory gets the
+  parent's whole ACL but its NOPROPAGATE ACEs, the DEFAULT ones keeping
+  DEFAULT, the default protection ACE among them.
+- **Owner:** the creator's UIC; with privilege, the previous version's
+  owner (`P1.DAT;2` and `SYS1.DAT;2` are `[300,1]`'s), else the
+  directory's. Privilege here is a system UIC (M0, with none of the four,
+  and M1), SYSPRV, or BYPASS (B3, B4, C3, C4); READALL is not (B1 and C1 own
+  their files). GRPPRV: round 2. A rename keeps the owner and protection.
+- **The process default** is `(RWED,RWED,RE,)`, RMS_FILEPROT's `%XFA00`,
+  and every account started with it.
+
+#### Changing profiles
+
+- **SET SECURITY** takes one file specification, wildcards allowed (a list
+  is `%DCL-W-NOLIST`); `/PROTECTION` merges into the file's code;
+  `/OWNER` takes a UIC, an identifier name (`PROT93A`, or the general
+  identifier `PROT93_TEAM`, shown bare as the owner), or `[g,m]`;
+  `/DEFAULT` sets the process default protection, the process's UIC as the
+  owner, and deletes every ACE but the protected ones; `/LIKE=NAME=file`
+  copies the protection and the ACL but its NOPROPAGATE ACEs, keeping the
+  target's protected ACEs (`L2.DAT`), and `/COPY_ATTRIBUTE=OWNER` the
+  owner; `/EXCLUDE`, `/BY_OWNER`, `/CLASS=FILE`, `/LOG`
+  (`%SET-I-MODIFIED, DUA1:[PROT93.SEC]S2.DAT;1 modified`). A missing file
+  is `%SET-E-OPENOUT, error opening DUA1:[PROT93.SEC]NOSUCH.DAT; as
+  output`, `-RMS-E-FNF`; a missing directory adds `-SYSTEM-W-NOSUCHFILE`
+  after `-RMS-E-DNF`. Each change raises the file's revision count.
+- **The owner:** SYSTEM changes any owner; a file's owner without
+  privilege can't give it away (`%SET-F-WRITEERR, error writing ...`,
+  `-SYSTEM-F-NOPRIV`) but may set it to its own UIC again. Taking
+  ownership of another's file through CONTROL, and GRPPRV: round 2.
+- **SET PROTECTION/DEFAULT** merges into the process default; with no
+  code it changes nothing.
+- **ACL edits** (`SET SECURITY/ACL`): a new ACE goes first; an ACE for an
+  identifier the ACL already has replaces that ACE and goes first;
+  `/AFTER=(ace)` puts it after the ACE named; `/REPLACE=(ace)` replaces
+  in place; `/DELETE` with an ACE removes it, and with none removes them
+  all; `/DELETE=ALL` with `/ACL=(ace)` leaves only that ACE. An ACE with no
+  ACCESS is `ACCESS=NONE`. A missing ACE: `%SET-W-NOSUCHACE, ACE for
+  object DUA1:[PROT93.ACE]M.DAT;1, does not exist`, the ACE on the next
+  line indented four, then `%SET-F-WRITEERR, error writing ...`. HIDDEN
+  is refused (`%SET-E-NOHIDDEN, cannot modify hidden ACEs`).
+
+#### Forms and their errors
+
+- **Protection codes:** categories `SYSTEM`, `OWNER`, `GROUP`, `WORLD`,
+  abbreviated to one letter, with `:` or `=`, any case, a space after the
+  colon, letters repeated (`S:RRR`), a single category without
+  parentheses (`/PROTECTION=S:R`). For files the letters are R, W, E, D:
+  `C` is refused. A category with no letters is no access. An unknown
+  category is DCL's (`%DCL-W-IVKEYW, unrecognized keyword - check validity
+  and spelling`, `\X\`, `\SYSTEMS\`); `(S:RWED,)` and `()` are
+  `%DCL-W-VALREQ`. The letters are the command's: SET's
+  `%SET-F-SYNTAX, error parsing 'S:RQ'`, `-LIB-F-SYNTAXERR, string syntax
+  error detected by LIB$TPARSE`; a category twice `%SET-F-SYNTAX, error
+  parsing 'S:R,S:W'`, `-LIB-F-INVARG, invalid argument(s)`;
+  CREATE/DIRECTORY's `%CREATE-F-SYNTAX, error parsing 'Z'`; but SET
+  PROTECTION/DEFAULT's is DCL's own, `%DCL-W-IVPROT, invalid protection
+  code`.
+- **UICs:** `[1,99999]`, `[400000,1]`, `[1]`, `[NOSUCH]`, `NOSUCH`, and
+  `[PROT93G2,*]` are SET's `%SET-F-SYNTAX, error parsing '[1,99999]'` (no
+  second line); CREATE/DIRECTORY's adds `-SYSTEM-F-NOSUCHID, unknown rights
+  identifier` for a name. `[1,4,5]` and `[200,1` are DCL's
+  `%DCL-W-DIRECT, invalid directory syntax - check brackets and other
+  delimiters`, `1,4` `%DCL-W-NOLIST`.
+- **ACEs:** an unknown identifier `%SET-F-SYNTAX, error parsing
+  'NOSUCH,ACCESS=READ)'`, `-SYSTEM-F-NOSUCHID`; an unknown access, keyword,
+  or option `-SYSTEM-F-IVACL, invalid access control list entry syntax`,
+  the text quoted from the bad item to the ACE's end; an unclosed
+  parenthesis `%DCL-W-NOPAREN`.
+- **AUTHORIZE** made a group identifier for PROT93A's group, `PROT93`
+  `[200,177777]`, and refused the probe's own `PROT93G2` (`%UAF-E-UICERR`);
+  ACEs naming `PROT93G2` failed (ACE19), `[200,*]` serves.
+
+#### Display
+
+- **Names of UICs:** `[group,member]` by identifier names when the group
+  has one (`[PROT93,PROT93A]`, `[PROT93,*]`), `[member]` when only the
+  member has (`[PROT93C]`, `[SYSTEM]`), octal numbers otherwise (`[310,1]`,
+  `[0,0]`), `[*,*]`; a general identifier bare (`PROT93_TEAM`). The same
+  in SHOW SECURITY, DIRECTORY, ACEs, and F$FILE_ATTRIBUTES' UIC.
+- **SHOW SECURITY:** a blank line, then
+
+        DUA1:[PROT93.SEC]S1.DAT;1 object of class FILE
+             Owner: [SYSTEM]
+             Protection: (System: RWED, Owner: RWED, Group: R, World)
+             Access Control List: <empty>
+
+  each ACE on its own line indented ten; a category with no access is its
+  name alone (`World`). The volume: `PROT93 object of class VOLUME`.
+- **SHOW ACL:** `Object type: FILE,  Object name: DUA1:[PROT93.SEC]S14.DAT;1,
+  on 14-NOV-2026 09:05:39.99`, then the ACEs indented ten.
+- **DIRECTORY:** `/OWNER` the name in 21 columns and the owner padded to 31;
+  `/PROTECTION` `(RWED,RWED,RE,)`; `/SECURITY` both, the owner padded to 33,
+  each ACE after on its own line indented ten; `/ACL` the name padded to
+  19, then the ACEs; `/FULL` has `Owner:    [PROT93,PROT93A]`, `File
+  protection:    System:RWED, Owner:RWED, Group:, World:`, and `Access
+  Cntrl List:  None`, or the ACEs one a line from column 21.
+- **F$FILE_ATTRIBUTES:** `PRO` is `SYSTEM=RWED, OWNER=RWED, GROUP=RE,
+  WORLD=E` (`SYSTEM, OWNER, GROUP, WORLD` for none), `UIC` the named form,
+  `GRP` and `MBM` decimal (128 and 1).
+- **SHOW PROTECTION:** two spaces, then `SYSTEM=RWED, OWNER=RWED,
+  GROUP=RE, WORLD=NO ACCESS`; F$ENVIRONMENT("PROTECTION") has no leading
+  spaces and `WORLD` alone for none.
+- **DUMP/HEADER**'s owner and protection lines: `File owner UIC:
+  [PROT93,PROT93A]`, `File protection:  S:, O:RWED, G:, W:`.
+
+#### ACE layouts (`$DISPLAY`'s XABPRO)
+
+Byte 0 is the ACE's length, byte 1 its type (`ACE$C_KEYID` 1, `AUDIT` 5,
+`ALARM` 6, `DIRDEF` 9, `NEW_OWNER` 13), the word at 2 its flags (the
+options in the high byte: `DEFAULT` `^X100`, `PROTECTED` `^X200`, `HIDDEN`
+`^X400`, `NOPROPAGATE` `^X800`; an alarm's or audit's SUCCESS 1 and
+FAILURE 2 in the low), the longword at 4 the access (R 1, W 2, E 4, D 8,
+C `^X10`), then by type: an identifier ACE's identifiers, a longword each
+(`[200,1]` is `00800001`, `[200,*]` `0080FFFF`, `[*,*]` `3FFFFFFF`,
+`PROT93_TEAM` `80010001`, `INTERACTIVE` `80000003`); a default protection
+ACE's four longwords at 8, `ACE$L_SYS_PROT` to `WOR_PROT`, each the
+category's *denied* bits with C (`S:RWED` `^X10`, `G:RE` `^X1A`, none
+`^X1F`); an alarm's or audit's journal name, `SECURITY`. A creator ACE is
+8 bytes. An empty ACL is `aclsts` `SS$_ACLEMPTY` (`^X9D0`).
+`testdata/prot93/defined.txt` has every `$ACEDEF`, `$ACLDEF`, `$CHPDEF`,
+`$OSSDEF`, `$ARMDEF`, `$KGBDEF`, and `$PRVDEF` value.
+
+#### Statuses and messages
+
+- **RMS:** `RMS$_PRV` with STV `SS$_NOPRIV` from `$OPEN`, `$CREATE`,
+  `$ERASE`, `$SEARCH`, and `$PARSE` (a path it can't walk); `$RENAME`'s
+  `RMS$_RMV` and `RMS$_ENT`, each with `SS$_NOPRIV`. A file that isn't
+  there: `RMS$_FNF`, `SS$_NOSUCHFILE`. **The ACP:** `SS$_NOPRIV` in the
+  IOSB.
+- **DCL's utilities**, each with its RMS or system message under it
+  (`-RMS-E-PRV, insufficient privilege or file protection violation` or
+  `-SYSTEM-F-NOPRIV, insufficient privilege or object protection
+  violation`):
+
+  | Command | Message |
+  | --- | --- |
+  | TYPE | `%TYPE-W-OPENIN, error opening DUA1:[PROT93.U]UNONE.DAT;1 as input` |
+  | TYPE of a file in a directory it can't search | `%TYPE-W-SEARCHFAIL, error searching for DUA1:[PROT93.UDN]A.DAT;` |
+  | COPY's input | `%COPY-E-OPENIN, ... as input` |
+  | COPY's output | `%COPY-E-OPENOUT, error opening ...CPY_NONE_B0.DAT; as output`, then `%COPY-W-NOTCOPIED, DUA1:[PROT93.U]UWLD.DAT;1 not copied` |
+  | APPEND | `%APPEND-E-OPENOUT, ... as output` |
+  | DUMP | `%DUMP-E-OPENIN` |
+  | SEARCH | `%SEARCH-W-OPENIN`, then `%SEARCH-I-NOMATCHES, no strings matched` |
+  | DIFFERENCES | `%DIFF-F-OPENIN` |
+  | OPEN/READ, @ | `%DCL-E-OPENIN, error opening DUA1:[PROT93.U]UNONE.DAT; as input` |
+  | OPEN/WRITE | `%DCL-E-OPENOUT, ... as output` |
+  | OPEN/APPEND | `%DCL-E-OPENIN, ... as input` |
+  | F$FILE_ATTRIBUTES | `%SYSTEM-F-NOPRIV` |
+  | SHOW SECURITY | `%SHOW-F-READERR, error reading ...`, `-SYSTEM-F-NOPRIV` |
+  | ANALYZE/RMS_FILE | `%ANALYZE-E-OPENIN` |
+  | CONVERT | `%CONV-F-OPENIN` |
+  | BACKUP | `%BACKUP-E-OPENIN`, `-SYSTEM-F-NOPRIV`, then `%BACKUP-W-NOFILES, no files selected from DUA1:[PROT93.U]UNONE.DAT;*` |
+  | MACRO, LINK | `%MACRO-E-OPENIN`, `%LINK-F-OPENIN` |
+  | LIBRARY | `%LIBRAR-F-OPENIN, error opening DUA1:[PROT93.U]ULIBNONE.OLB; as input` |
+  | DELETE | `%DELETE-W-FILNOTDEL, error deleting ...;1` |
+  | PURGE | `%PURGE-W-FILNOTPUR, error deleting ...;1` |
+  | RENAME | `%RENAME-E-OPENIN, ... as input`, `-RMS-F-RMV, ACP remove function failed`, `-SYSTEM-F-NOPRIV` |
+  | DIRECTORY of a directory it can't read | `%DIRECT-E-OPENIN, error opening DUA1:[PROT93.UDN]*.*;* as input` |
+  | CREATE | `%CREATE-E-OPENOUT, ... as output` |
+  | CREATE/DIRECTORY | `%CREATE-E-DIRNOTCRE, PROT93$DISK:[PROT93.UDN.SC0] directory file not created`, `-SYSTEM-F-NOPRIV` (the name as typed) |
+  | SET SECURITY without control | `%SET-E-OPENIN, ... as input`, `-SYSTEM-F-NOPRIV` |
+  | SET SECURITY/OWNER without privilege | `%SET-F-WRITEERR, error writing ...` |
+  | SET FILE/PROTECTION | `%SET-E-PRONOTCHG, protection on ... not changed`, then `%SET-E-PROERR, error protecting ...`, each with `-SYSTEM-F-NOPRIV` |
+  | SET PROTECTION=(code) file | `%SET-E-PRONOTCHG` alone |
+  | RUN | `%DCL-W-ACTIMAGE`, `-CLI-E-IMGNAME`, `-RMS-E-PRV` |
 
 ## Part B — decisions
 
@@ -379,19 +714,25 @@ it.
 `newFileProfile(creds, dir, name, explicit)` is the only place a new
 file's owner, protection, and ACL are chosen, by A.1's order:
 
-- **Protection of a data file:** explicit, else the previous version's (the
-  highest existing version, unconfirmed), else the directory's default
-  protection ACE, else the process default.
-- **ACL of a data file:** the previous version's, else the directory's
-  DEFAULT ACEs with DEFAULT removed and NOPROPAGATE ones skipped.
-- **Owner:** the creator's UIC; with extended privileges (a system UIC,
-  SYSPRV, BYPASS, or GRPPRV in that owner's group), the previous version's
-  owner, else the directory's. A XABPRO's owner is explicit, allowed by
-  `CanChangeOwner`; what a refused one does is A.4's.
+- **Protection of a data file:** a base, the previous version's (the
+  highest existing version), else the directory's default protection ACE,
+  else the process default; an explicit code (a XABPRO, `/PROTECTION`) is
+  merged into the base, changing only the categories it names (A.4).
+- **ACL of a data file:** the previous version's (what NOPROPAGATE does
+  there is round 2's), else the directory's DEFAULT ACEs with DEFAULT
+  removed and NOPROPAGATE kept (A.4: NOPROPAGATE doesn't stop a default
+  ACE reaching a file). COPY's output never takes its input's ACL.
+- **Owner:** the creator's UIC; with privilege (a system UIC, SYSPRV, or
+  BYPASS, A.4; GRPPRV in that owner's group is round 2's), the previous
+  version's owner, else the directory's. A XABPRO's owner is explicit,
+  allowed by `CanChangeOwner`; a refused one fails the whole `$CREATE`
+  with `RMS$_PRV`/`SS$_NOPRIV`, and an owner of 0 is none given.
 - **Directories:** the parent's protection less delete (from the MFD for a
-  top-level one), the parent's whole ACL but NOPROPAGATE ACEs, and the
-  owner by the same rule, or the UIC a directory named `[g,m]` gives.
-  `volume.InheritedDirectoryOptions` already does the protection.
+  top-level one), an explicit code merged into it; the parent's whole ACL
+  but NOPROPAGATE ACEs, DEFAULT ones keeping DEFAULT; the owner by the same
+  rule (with privilege the parent's owner). No UIC from a directory named
+  `[g,m]`: 7.1 gives none (A.4). `volume.InheritedDirectoryOptions`
+  already does the protection.
 - The Creator ACE and its extra ACE need resource identifiers, which no
   govax process has: written so that a later phase can add them, and
   logged as not done.
@@ -411,20 +752,24 @@ file protection stops being used for new files.
 | open for read (FAC GET, BRO/BIO reading) | R | R or E to look it up |
 | open for write (PUT, UPD, TRN, DEL, BIO writing) | R and W | R or E |
 | open by file ID (`NAM$W_FID`, the ACP) | as above | none |
-| run an image | E (A.4) | R or E |
+| run an image, `@` a procedure | R or E | R or E |
 | `$SEARCH` with a wildcard, DIRECTORY | | R |
 | `$SEARCH` of a known name, `$PARSE` with a lookup | | R or E |
-| create | | W |
-| new version | W on the previous version; D on the oldest past the limit | W |
-| supersede | A.4 | W |
+| create | | R and W (WE is refused; RW without E is round 2's) |
+| new version | W on the previous version (round 2); D on the oldest past the limit | as create |
+| supersede | D on the old version (W: round 2) | as create |
 | delete | D | W |
-| rename | A.4 | W on both (A.4) |
+| rename | D | W on both: `RMS$_RMV` for the old, `RMS$_ENT` for the new |
 | change protection, ACL | control | |
 | change owner | control and `CanChangeOwner` | |
-| read attributes (`$DISPLAY`, F$FILE_ATTRIBUTES, DIRECTORY/FULL) | A.4 | R or E |
+| show the profile (SHOW SECURITY, DIRECTORY/FULL and /SECURITY) | read or control | R or E |
+| F$FILE_ATTRIBUTES, `$DISPLAY` | an open for read | R or E |
+| the ACP's read of attributes by name | none | R or E |
 
-The levels of a path above the file's directory, and the volume's own
-protection, are A.4's and out of scope (the review, answer 4).
+Every level of a path above the file's directory needs R or E too (A.4,
+answer 1; VMS's directory cache, which can skip a level a process has
+already looked up, isn't kept). The volume's own protection is out of
+scope (the review, answer 4).
 
 An access is checked when it is made, as VMS's file system checks it at
 access: an open file isn't checked again for each record, and a change of
@@ -442,11 +787,12 @@ named exceptions (mounting, verification, the page file, BACKUP's reads of
 a save set, ANALYZE's raw reads), each with its reason.
 
 **Decision 7 — statuses and messages are VMS's.** RMS's services return
-`RMS$_PRV` with STV `SS$_NOPRIV`; the ACP `SS$_NOPRIV`; the image
-activator's error as A.4 finds; each DCL utility its own message over
-`-RMS-E-PRV` (`%TYPE-W-OPENIN`, `%DELETE-W-FILNOTDEL`, ...), each held to
-the probe's log. Texts come from `vmsdef.Messages`; any missing message is
-added through `internal/vmsdef/gen`.
+`RMS$_PRV` with STV `SS$_NOPRIV`, and `$RENAME` `RMS$_RMV` or `RMS$_ENT`
+with it; the ACP `SS$_NOPRIV`; RUN `%DCL-W-ACTIMAGE` over `-CLI-E-IMGNAME`
+and `-RMS-E-PRV`; each DCL utility its own message over `-RMS-E-PRV` or
+`-SYSTEM-F-NOPRIV`, as A.4's table has them, each held to the probe's log.
+Texts come from `vmsdef.Messages`; any missing message is added through
+`internal/vmsdef/gen`.
 
 **Decision 8 — ods2 changes, in a tagged release.** In `ods2`:
 
@@ -457,8 +803,8 @@ added through `internal/vmsdef/gen`.
 - `ondisk` learns the ACE layouts it already stores, with encode and
   decode for the identifier, default protection, creator, alarm, and audit
   ACEs and their flags (DEFAULT, PROTECTED, NOPROPAGATE, HIDDEN), and
-  `ondisk.Uic`'s wildcard forms for identifier ACEs. The layouts come from
-  BACKUP's saved ACLs and the probe's files, as `rms/directory.go`'s
+  `ondisk.Uic`'s wildcard forms for identifier ACEs. The layouts are A.4's
+  ("ACE layouts"), with `defined.txt`'s values, as `rms/directory.go`'s
   `aceText` already reads identifier ACEs.
 - No access checks in ods2: it knows nothing of processes. Its
   `ParseProtection` and `FormatProtection` stay the shared syntax.
@@ -466,31 +812,42 @@ added through `internal/vmsdef/gen`.
 Tagged and pinned as Phase 22's note describes.
 
 **Decision 9 — grammar types `$PROTECTION` and `$UIC`.** `internal/dcl`
-gets two value types. `$PROTECTION` reads a protection code as one value
-(parenthesized or a single category), checks it at parse time, and hands
-the handler a parsed value: the mask *and* which categories were given,
-so a handler applies it to a base (`ondisk.ParseProtection`'s rule).
-`$UIC` reads `[g,m]` (octal), `[name]`, or `[group,name]` and an
-identifier name, resolved through the rights database when the command
-runs. A malformed value is a parse error with VMS's message (A.4). Every
-qualifier that takes one moves to the type: CREATE/DIRECTORY's, BACKUP's
-`/BY_OWNER` and `/PROTECTION`, and the new commands'.
+gets two value types, split as VMS splits the work (A.4, "Forms and their
+errors"). `$PROTECTION` reads a protection code as one value
+(parenthesized or a single category; `:` or `=`; any case) and checks at
+parse time what DCL checks: the category names (`%DCL-W-IVKEYW`) and an
+empty value (`%DCL-W-VALREQ`). The handler gets each category given with
+its letters as typed, and the shared parser (`ondisk.ParseProtection`'s
+rule) checks the letters and repeats with the command's own message
+(`%SET-F-SYNTAX, error parsing 'S:RQ'`, `-LIB-F-SYNTAXERR`;
+`%CREATE-F-SYNTAX`; DCL's `%DCL-W-IVPROT` for SET PROTECTION/DEFAULT), and
+merges the mask into a base. `$UIC` checks the brackets and list
+(`%DCL-W-DIRECT`, `%DCL-W-NOLIST`) and hands over the text; `[g,m]`
+(octal), `[name]`, `[group,name]`, and an identifier name are resolved
+through the rights database when the command runs, a bad one the
+command's `%SET-F-SYNTAX, error parsing '[1,99999]'` (CREATE adds
+`-SYSTEM-F-NOSUCHID`). Every qualifier that takes one moves to the type:
+CREATE/DIRECTORY's, BACKUP's `/BY_OWNER` and `/PROTECTION`, and the new
+commands'.
 
 **Decision 10 — the commands.**
 
-- **SET SECURITY** `file[,...]` with `/PROTECTION`, `/OWNER`, `/DEFAULT`,
+- **SET SECURITY** `file` (one specification, wildcards allowed; a list is
+  `%DCL-W-NOLIST` on 7.1) with `/PROTECTION`, `/OWNER`, `/DEFAULT`,
   `/LIKE`, `/COPY_ATTRIBUTE`, `/LOG`, `/CONFIRM`, `/EXCLUDE`, `/BY_OWNER`,
   `/CLASS=FILE` (other classes refused), and the date selectors, with
-  control access, and for `/OWNER` the guide's rule (`CanChangeOwner`,
-  which is wider than the Dictionary's "GRPPRV ... SYSPRV": a system UIC,
-  BYPASS, and the volume owner's UIC qualify too; A.4 settles it).
+  control access, each as A.4's "Changing profiles" has it, and for
+  `/OWNER` the guide's rule (`CanChangeOwner`, which is wider than the
+  Dictionary's "GRPPRV ... SYSPRV": a system UIC qualifies, A.4; BYPASS and
+  the volume owner's UIC as the guide says; one's own UIC again always).
 - **SET SECURITY/ACL**`=(ace[,...])` with `/AFTER`, `/DELETE[=ALL]`, and
   `/REPLACE`, every ACE form the ACL editor's chapter gives (identifier,
   default protection, creator, alarm, audit; their OPTIONS), protected and
   hidden ACEs' rules; the text of an ACE read and written by `$PARSE_ACL`'s
   and `$FORMAT_ACL`'s code (Decision 13), so DCL and programs share it.
   The ACL editor (`/EDIT`, EDIT/ACL) stays out.
-- **SHOW SECURITY** `file[,...]`, VMS's layout, ACEs included.
+- **SHOW SECURITY** `file` (one specification), VMS's layout, ACEs
+  included.
 - **SET FILE/PROTECTION** and **/OWNER_UIC**, **SET PROTECTION=(code)
   file**, and **SET ACL** and **SHOW ACL**, the obsolete forms, exactly as
   VMS 7.1 accepts them (A.4; the review, answer 6), on SET SECURITY's
@@ -544,11 +901,12 @@ leave open.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-14): Part A, this plan.
-2. **The probe** (written and rehearsed 2026-11-14; waiting for the VAX
-   run): `testdata/prot93`, as in Part D, written and rehearsed on govax;
-   run on the VAX by the author; A.4 filled in and Part B adjusted to its
-   answers. Later rounds as later subtasks find gaps (the
-   review, answer 7), each a section of A.4.
+2. **The probe** (round 1 run 2026-11-14 and A.4 written from it; round 2
+   written and rehearsed, waiting for the VAX run): `testdata/prot93`, as
+   in Part D, written and rehearsed on govax; run on the VAX by the author;
+   A.4 filled in and Part B adjusted to its answers. Later rounds as later
+   subtasks find gaps (the review, answer 7), each a section of A.4; the
+   security services' round goes with subtask 10.
 3. **The rule**: `internal/security` (Decision 1), the guide's whole
    sequence with ACLs, `CanChangeOwner`, table-driven tests from A.1a and
    A.4; `uicAccess` on it, the mailbox, section, and event flag tests
@@ -669,12 +1027,32 @@ owner's directory; a new version of another owner's file.
 **The end** (`PROT93Z.COM`): DIRECTORY/SECURITY of everything, so what each
 identity made is seen as SYSTEM sees it, then the accounts removed.
 
-**The definitions for round 2.** `def_*.mar` assemble `$CHPDEF`, `$OSSDEF`,
-`$ACEDEF`, `$ACLDEF`, `$ARMDEF`, `$KGBDEF`, and `$PRVDEF` `GLOBAL` on the VAX,
-and `decode.go` turns the objects into `defined.txt`, values only, as
-`testdata/idx88` did: the services' item codes and ACE layouts govax's
-`vmsdef` lacks. Round 2 is the security services (Decision 13), written
-once these values are in.
+**The definitions for the services.** `def_*.mar` assemble `$CHPDEF`,
+`$OSSDEF`, `$ACEDEF`, `$ACLDEF`, `$ARMDEF`, `$KGBDEF`, and `$PRVDEF`
+`GLOBAL` on the VAX, and `decode.go` turns the objects into `defined.txt`,
+values only, as `testdata/idx88` did: the services' item codes and ACE
+layouts govax's `vmsdef` lacks. The security services (Decision 13) are a
+later round, SYSTEM's alone, written with subtask 10.
+
+**Round 2** (A.4, "What round 1 lost"): `PROT93R.COM` (SYSTEM) makes the
+accounts again (PROT93_TEAM with round 1's value, which the tree's ACEs
+hold), gives PROT93.EXE and HELLO.EXE their protection one at a time, sets
+`FACLCTL` back to round 1's, and adds round 2's files: `[.DRWO]` (RW, no
+E), files to erase and rename in `[.DW]` and `[.DRWO]`, a file with
+NOPROPAGATE ACEs and supersedes and a new version without W in `[.NV]`,
+files to change the owner of in `[.CTL]`, and procedures with a line to
+run, `PRO2x.COM`; it shows what SET PROTECTION, SET FILE/OWNER_UIC, and
+SET FILE/PROTECTION with no value do, and SET SECURITY/DEFAULT on a
+directory, and runs `prot93f.dat` (the new directory's cases) and
+`prot93g.dat` (the new changing cases) as M0 and M4. `PROT93V.COM` (each
+account) runs the passes round 1 lost, without privileges first, in a new
+process (so RMS's directory cache is empty): `prot93c.dat`, `prot93f.dat`,
+`prot93d.dat`, `prot93g.dat`, and the file IDs; then with GRPPRV where the
+account has it; then owners (its own UIC again on its own file, another's
+through CONTROL, CREATE/OWNER_UIC, CREATE/DIRECTORY/OWNER_UIC), a new file
+under the default protection ACE, the NOPROPAGATE file's versions, and the
+procedures. `PROT93Y.COM` lists the tree and removes the accounts, and the
+group identifier PROT93 that round 1 left on the VAX.
 
 **On govax**, the accounts' runs are replayed in detached processes made
 by `$CREPRC` of LOGINOUT with the account's UIC (Decision 2), the
@@ -738,3 +1116,23 @@ The author accepted the plan and answered its questions:
   after a command DCL failed to parse runs as a command on govax; that is
   Phase 50's rule (data after one of DCL's own commands is a command),
   checked, not a bug. Waiting for the VAX run.
+- **2026-11-14** Subtask 2, round 1 run by the author on VMS V7.1; every
+  procedure reached its end, and the logs, the image, and the definition
+  objects are in `testdata/prot93/vax/` (`defined.txt` decoded). A.4 is
+  written from them: VMS follows the guide's check throughout, and the
+  run settled the directory rules (a create needs R as well as W), the
+  path rule, rename's and supersede's needs, the profiles of new files and
+  directories (an explicit code merged into a base; NOPROPAGATE keeps a
+  default ACE from subdirectories but not from files; no UIC from a
+  directory's name), SET SECURITY's qualifiers and ACL edits, every form's
+  errors and which part of VMS reports them, every display's layout, the
+  ACE bytes, and each utility's message. Part B changed to it: Decisions
+  4, 5, 7, 8, 9, and 10. Round 1 lost the accounts' program passes without
+  privileges and with GRPPRV (the image's protection was given with a comma
+  list, which 7.1's SET SECURITY refuses) and ran empty procedures (CREATE's
+  data ended at the `$` line meant for them). Round 2 (Part D) runs those
+  passes on the same volume with the cases round 1 left open, written in
+  `gen.go` (round 1's procedures as they ran) and rehearsed on govax on a
+  copy of the VAX's volume. Round 1 also left the group identifier PROT93
+  on the VAX, which round 2's last procedure removes. The security services
+  move to a later round with subtask 10. Waiting for round 2's VAX run.

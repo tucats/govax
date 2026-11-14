@@ -6,7 +6,9 @@
 // utilities, run by SYSTEM and by each account), and prot93z.com (the
 // listing at the end, and the accounts removed); the program's case
 // files; hello.mar; the definition modules; and the govax console scripts
-// exchange.cmd and copyout.cmd. Run it from the repository root:
+// exchange.cmd and copyout.cmd. Round 2 (README.md's "Round 2") is
+// prot93r.com, prot93v.com, prot93y.com, prot93f.dat, prot93g.dat,
+// exchange2.cmd, and copyout2.cmd. Run it from the repository root:
 //
 //	go run testdata/prot93/gen.go
 //
@@ -1341,18 +1343,406 @@ MOUNT DUA5 "testdata/disks/prot93-exchange.dsk"
 	return b.String()
 }
 
+// Round 2 (README.md's "Round 2"). Round 1's SET SECURITY of PROT93.EXE
+// and HELLO.EXE named both files in one command, which VMS 7.1's SET
+// SECURITY refuses (NOLIST), so the image kept SYSTEM's default protection
+// and no account could run it without a privilege: the accounts' passes
+// without privileges (A0, B0, C0) and with GRPPRV (B2, C2) were lost. Round
+// 2 runs them on the same volume, whose per-tag files those passes never
+// touched, with a few cases round 1 left open. Round 1's procedures are
+// left as they ran.
+
+// The round 2 case files.
+const (
+	core2Cases   = disk + "[000000]PROT93F.DAT"
+	change2Cases = disk + "[000000]PROT93G.DAT"
+)
+
+// r2Dirs are round 2's new directories: one a lookup without execute can't
+// pass, for creating, erasing, and renaming in it and in [.DW] (write and
+// execute, no read).
+var r2Dirs = []object{
+	{"DRWO", ownerA, "(S:RW,O:RW,G:RW,W:RW)", nil},
+}
+
+// r2Users are the accounts by tag: each one's UIC and username, for the
+// files round 2 makes for it alone.
+var r2Users = []struct{ tag, user, uic string }{
+	{"M0", "SYSTEM", "[1,4]"},
+	{"A0", "PROT93A", "[200,1]"},
+	{"B0", "PROT93B", "[200,2]"},
+	{"C0", "PROT93C", "[300,1]"},
+}
+
+// r2Procs are round 2's command procedures to run, each with a line to
+// show that its lines ran (round 1's CREATE took the procedure's $ line as
+// the end of its data, so its procedures were empty).
+var r2Procs = imgProts
+
+// buildRound2System is prot93r.com: the accounts again, the image's
+// protection, round 2's files, SYSTEM's round 2 cases.
+func buildRound2System() string {
+	var p proc
+
+	p.line("$ ! PROT93R.COM - Phase 93's probe, round 2: SYSTEM's run.")
+	p.line("$ ! Written by testdata/prot93/gen.go. Run it as SYSTEM, with round 1's")
+	p.line("$ ! exchange volume mounted /SYSTEM (README.md's \"Round 2\"):")
+	p.line("$ !")
+	p.line("$ !     @DUA1:[000000]PROT93R")
+	p.line("$ !")
+	p.line("$ ! Its log is PROT93$DISK:[PROT93LOG]PROT93R.LOG.")
+	p.line("$ !")
+	p.line("$ IF P1 .EQS. \"LOGGED\" THEN GOTO BEGIN")
+	p.line("$ HERE = F$ENVIRONMENT(\"PROCEDURE\")")
+	p.line("$ DEV = F$PARSE(HERE,,,\"DEVICE\")")
+	p.line("$ DEFINE/SYSTEM/EXECUTIVE_MODE PROT93$DISK 'DEV'")
+	p.line("$ LOGFILE = DEV + \"[PROT93LOG]PROT93R.LOG\"")
+	p.line("$ @'HERE'/OUTPUT='LOGFILE' LOGGED")
+	p.line("$ WRITE SYS$OUTPUT \"PROT93R finished; the log is \", LOGFILE")
+	p.line("$ EXIT")
+	p.line("$ BEGIN:")
+	p.line("$ SET NOON")
+	p.line("$ SET VERIFY")
+
+	environment(&p)
+
+	p.section("ACCOUNTS")
+	p.line("$ HOME = F$ENVIRONMENT(\"DEFAULT\")")
+	p.line("$ SET DEFAULT SYS$SYSTEM")
+	p.line("$ RUN SYS$SYSTEM:AUTHORIZE")
+
+	for _, l := range []string{
+		account("PROT93A", "[200,1]", "TMPMBX,NETMBX"),
+		account("PROT93B", "[200,2]", "TMPMBX,NETMBX,READALL,GRPPRV,SYSPRV,BYPASS"),
+		account("PROT93C", "[300,1]", "TMPMBX,NETMBX,READALL,GRPPRV,SYSPRV,BYPASS"),
+		// Round 1's value, which the tree's ACEs hold.
+		"ADD/IDENTIFIER PROT93_TEAM/VALUE=IDENTIFIER=65537",
+		"GRANT/IDENTIFIER PROT93_TEAM PROT93C",
+		"SHOW/IDENTIFIER/FULL PROT93",
+		"SHOW/IDENTIFIER/FULL PROT93_TEAM",
+		"EXIT",
+	} {
+		p.line("%s", l)
+	}
+
+	p.line("$ SET DEFAULT 'HOME'")
+	p.line("$ WRITE SYS$OUTPUT F$IDENTIFIER(\"PROT93_TEAM\",\"NAME_TO_NUMBER\")")
+
+	p.section("IMAGES")
+	p.line("$ ! Round 1 named both images in one SET SECURITY, which 7.1 refuses.")
+
+	for _, f := range []string{"PROT93.EXE", "HELLO.EXE"} {
+		p.line("$ SET SECURITY/PROTECTION=%s %s[000000]%s", stdProt, disk, f)
+		p.line("$ SHOW SECURITY %s[000000]%s", disk, f)
+	}
+
+	p.section("ROUND 2 TREE")
+	p.line("$ ! FACLCTL as round 1 made it: its owner and PROT93C changed it in Part B.")
+	p.security(spec("F", "FACLCTL.DAT"), "", none, nil)
+
+	for _, d := range r2Dirs {
+		p.line("$ CREATE/DIRECTORY %s[PROT93.%s]", disk, d.name)
+		p.file(spec(d.name, "A.DAT"), ownerA, all, nil)
+		p.security(dirFile(d.name), d.owner, d.prot, d.acl)
+	}
+
+	for _, u := range r2Users {
+		t := u.tag
+		p.file(spec("DW", "E2_"+t+".DAT"), ownerA, all, nil)
+		p.file(spec("DW", "N2_"+t+".DAT"), ownerA, all, nil)
+		p.file(spec("DRWO", "E3_"+t+".DAT"), ownerA, all, nil)
+		p.file(spec("DRWO", "N3_"+t+".DAT"), ownerA, all, nil)
+		p.file(spec("NV", "NP_"+t+".DAT"), ownerA, all, []string{
+			"IDENTIFIER=PROT93A,OPTIONS=NOPROPAGATE,ACCESS=READ",
+			"IDENTIFIER=PROT93_TEAM,ACCESS=READ",
+			"IDENTIFIER=PROT93B,OPTIONS=PROTECTED+NOPROPAGATE,ACCESS=READ",
+		})
+		p.file(spec("NV", "SUPD_"+t+".DAT"), ownerA, "(S:RD,O:RD,G:RD,W:RD)", nil)
+		p.file(spec("NV", "SUPW_"+t+".DAT"), ownerA, all, nil)
+		p.file(spec("NV", "NVR_"+t+".DAT"), ownerA, "(S:R,O:R,G:R,W:R)", nil)
+		p.file(spec("CTL", "OS_"+t+".DAT"), u.uic, stdProt, nil)
+		p.file(spec("CTL", "OT_"+t+".DAT"), ownerA, stdProt,
+			[]string{"IDENTIFIER=" + u.user + ",ACCESS=CONTROL"})
+	}
+
+	for _, im := range r2Procs {
+		f := spec("IMG", "PRO2"+im.name+".COM")
+		p.line("$ OPEN/WRITE PF %s", f)
+		p.line("$ WRITE PF \"$ WRITE SYS$OUTPUT \"\"PRO2%s RAN\"\"\"", im.name)
+		p.line("$ CLOSE PF")
+		p.security(f, ownerA, im.prot, nil)
+	}
+
+	p.line("$ DIRECTORY/SECURITY %s[PROT93...]*2*.*;*,*_M0.*;*", disk)
+
+	p.section("OBSOLETE FORMS WITH NO VALUE")
+	sp := func(n string) string { return spec("SEC", n) }
+	p.file(sp("SP1.DAT"), ownerA, all, nil)
+	p.line("$ SET PROTECTION %s", sp("SP1.DAT"))
+	p.line("$ SHOW SECURITY %s", sp("SP1.DAT"))
+	p.file(sp("SP2.DAT"), ownerA, all, nil)
+	p.line("$ SET FILE/OWNER_UIC %s", sp("SP2.DAT"))
+	p.line("$ SHOW SECURITY %s", sp("SP2.DAT"))
+	p.file(sp("SP3.DAT"), ownerA, all, nil)
+	p.line("$ SET FILE/PROTECTION %s", sp("SP3.DAT"))
+	p.line("$ SHOW SECURITY %s", sp("SP3.DAT"))
+	p.line("$ CREATE/DIRECTORY %s[PROT93.SEC.SD1]", disk)
+	p.security(dirFile("SEC.SD1"), ownerA, "(S:RWE,O:RWE,G:E,W)", nil)
+	p.line("$ SET SECURITY/DEFAULT %s", dirFile("SEC.SD1"))
+	p.line("$ SHOW SECURITY %s", dirFile("SEC.SD1"))
+	p.line("$ SHOW SECURITY %s", spec("ACE", "L2.DAT"))
+
+	p.section("PROGRAM AS SYSTEM")
+	p.line(dropPrivs)
+	p.line(showPrivs)
+	p.run("M0", core2Cases)
+	p.run("M0", change2Cases)
+	p.line(restorePrivs)
+	p.line(showPrivs)
+	p.run("M4", core2Cases)
+
+	p.section("END")
+	p.line("$ WRITE SYS$OUTPUT \"PROT93R FINISHED\"")
+	p.line("$ SET NOVERIFY")
+	p.line("$ EXIT")
+
+	return p.String()
+}
+
+// buildRound2User is prot93v.com: an account's lost passes, without
+// privileges first (so RMS's directory cache is empty for them), then with
+// GRPPRV, then round 2's DCL cases.
+func buildRound2User() string {
+	var p proc
+
+	p.line("$ ! PROT93V.COM - Phase 93's probe, round 2: an account's run.")
+	p.line("$ ! Written by testdata/prot93/gen.go. Run it logged in as PROT93A, then")
+	p.line("$ ! PROT93B, then PROT93C, after SYSTEM's PROT93R.COM (README.md):")
+	p.line("$ !")
+	p.line("$ !     @PROT93$DISK:[000000]PROT93V")
+	p.line("$ !")
+	p.line("$ ! Its log is PROT93$DISK:[PROT93LOG]PROT93V_username.LOG.")
+	p.line("$ !")
+	p.logged("\"PROT93V_\" + F$EDIT(F$GETJPI(\"\",\"USERNAME\"),\"TRIM\") + \".LOG\"", "PROT93V")
+
+	p.section("ENVIRONMENT")
+	p.line("$ USER = F$EDIT(F$GETJPI(\"\",\"USERNAME\"),\"TRIM\")")
+	p.line("$ LETTER = F$EXTRACT(F$LENGTH(USER)-1,1,USER)")
+	p.line("$ T = LETTER + \"0\"")
+	p.line("$ ME = F$GETJPI(\"\",\"UIC\")")
+	p.line("$ WRITE SYS$OUTPUT USER, \" \", ME, \" \", T")
+	p.line("$ SHOW PROCESS/PRIVILEGES")
+	p.line("$ SHOW SECURITY %s[000000]PROT93.EXE", disk)
+
+	p.section("PROGRAM, NO PRIVILEGES")
+	p.line(dropPrivs)
+	p.line(showPrivs)
+	p.run("'T'", coreCases)
+	p.run("'T'", core2Cases)
+	p.run("'T'", changeCases)
+	p.run("'T'", change2Cases)
+	p.run("'T'", fidCases)
+
+	p.section("PROGRAM, GRPPRV")
+	p.line("$ SET PROCESS/PRIVILEGES=GRPPRV")
+	p.line(showPrivs)
+	p.line("$ IF .NOT. F$PRIVILEGE(\"GRPPRV\") THEN GOTO NO_GRPPRV")
+	p.line("$ TN = LETTER + \"2\"")
+	p.run("'TN'", coreCases)
+	p.run("'TN'", core2Cases)
+	p.run("'TN'", fidCases)
+	p.line("$ NO_GRPPRV:")
+	p.line(dropPrivs)
+
+	p.section("OWNERS")
+	ctl := func(n string) string { return spec("CTL", n+"_'T'.DAT") }
+	p.line("$ ! OS: owned by this account; OT: owned by PROT93A, whose ACL gives this")
+	p.line("$ ! account CONTROL.")
+	p.line("$ SET SECURITY/OWNER='ME' %s", ctl("OS"))
+	p.line("$ SET SECURITY/OWNER=[200,1] %s", ctl("OS"))
+	p.line("$ SET SECURITY/OWNER='ME' %s", ctl("OT"))
+	p.line("$ SET SECURITY/PROTECTION=(W:RWED) %s", ctl("OT"))
+	p.line("$ SHOW SECURITY %s", ctl("OS"))
+	p.line("$ SHOW SECURITY %s", ctl("OT"))
+	p.line("$ CREATE/OWNER_UIC='ME' %s", spec("OWN", "CM_'T'.DAT"))
+	p.line("RECORD")
+	p.line("$ CREATE/OWNER_UIC=[200,1] %s", spec("OWN", "CA_'T'.DAT"))
+	p.line("RECORD")
+	p.line("$ CREATE/DIRECTORY/OWNER_UIC=[200,1] %s[PROT93.OWN.DO'T']", disk)
+	p.line("$ CREATE/DIRECTORY/OWNER_UIC=PARENT %s[PROT93.OWN.DP'T']", disk)
+	p.line("$ DIRECTORY/SECURITY %s", spec("OWN", "C%_'T'.DAT;*"))
+	p.line("$ DIRECTORY/SECURITY %s", spec("OWN", "D%'T'.DIR;*"))
+
+	p.section("NEW FILES' ACLS")
+	p.line("$ COPY %s[PROT93LOG]T.DAT %s", disk, spec("DP", "R2_'T'.DAT"))
+	p.line("$ SHOW SECURITY %s", spec("DP", "R2_'T'.DAT"))
+	p.line("$ SHOW SECURITY %s", spec("NV", "NP_'T'.DAT;*"))
+
+	p.section("PROCEDURES")
+
+	for _, im := range r2Procs {
+		p.line("$ @%s", spec("IMG", "PRO2"+im.name+".COM"))
+		p.line("$ SHOW SYMBOL $STATUS")
+	}
+
+	p.section("END")
+	p.line("$ WRITE SYS$OUTPUT \"PROT93V FINISHED\"")
+	p.line("$ SET NOVERIFY")
+	p.line("$ EXIT")
+
+	return p.String()
+}
+
+// core2File is round 2's cases for every pass: the directory without
+// execute, as [PROT93.DR] and the rest are in coreFile.
+func core2File() string {
+	var b strings.Builder
+
+	add := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
+
+	for _, d := range r2Dirs {
+		add("S- %s", spec(d.name, "*.*;*"))
+		add("S- %s", spec(d.name, "A.DAT"))
+		add("P- %s", spec(d.name, "A.DAT"))
+		add("O- %s|G", spec(d.name, "A.DAT"))
+		add("QA %s", spec(d.name, "A.DAT"))
+		add("C- %s", spec(d.name, "C_@.DAT"))
+		add("QC %s", spec(d.name, "QC_@.DAT"))
+	}
+
+	return b.String()
+}
+
+// change2File is round 2's changing cases, once per identity: erases and
+// renames in directories without read or without execute, a new version
+// of a file with NOPROPAGATE ACEs, supersedes and new versions of files
+// without write.
+func change2File() string {
+	var b strings.Builder
+
+	add := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
+
+	add("E- %s", spec("DW", "E2_@.DAT"))
+	add("E- %s", spec("DRWO", "E3_@.DAT"))
+	add("R- %s|%s", spec("DW", "N2_@.DAT"), spec("DW", "N2X_@.DAT"))
+	add("R- %s|%s", spec("DRWO", "N3_@.DAT"), spec("DRWO", "N3X_@.DAT"))
+	add("C- %s", spec("NV", "NP_@.DAT"))
+	add("A- %s", spec("NV", "NP_@.DAT"))
+	add("CS %s", spec("NV", "SUPD_@.DAT;1"))
+	add("CS %s", spec("NV", "SUPW_@.DAT;1"))
+	add("C- %s", spec("NV", "NVR_@.DAT"))
+
+	for _, n := range []string{"NP", "SUPD", "SUPW", "NVR"} {
+		add("S- %s", spec("NV", n+"_@.DAT;*"))
+	}
+
+	add("S- %s", spec("DW", "*_@.DAT;*"))
+	add("S- %s", spec("DRWO", "*_@.DAT;*"))
+
+	return b.String()
+}
+
+// buildRound2Final is prot93y.com: round 2's files listed, then the
+// accounts removed, with the group identifier AUTHORIZE made for PROT93A
+// (round 1's PROT93Z.COM left it).
+func buildRound2Final() string {
+	var p proc
+
+	p.line("$ ! PROT93Y.COM - Phase 93's probe, round 2: the listing at the end, and")
+	p.line("$ ! the accounts removed. Written by testdata/prot93/gen.go. Run it as")
+	p.line("$ ! SYSTEM after the accounts' runs (README.md's \"Round 2\"):")
+	p.line("$ !")
+	p.line("$ !     @PROT93$DISK:[000000]PROT93Y")
+	p.line("$ !")
+	p.logged("\"PROT93Y.LOG\"", "PROT93Y")
+	p.section("THE TREE")
+	p.line("$ DIRECTORY/SECURITY %s[PROT93...]*.*;*", disk)
+	p.section("REMOVING THE ACCOUNTS")
+	p.line("$ HOME = F$ENVIRONMENT(\"DEFAULT\")")
+	p.line("$ SET DEFAULT SYS$SYSTEM")
+	p.line("$ RUN SYS$SYSTEM:AUTHORIZE")
+
+	for _, l := range []string{
+		"REMOVE PROT93A", "REMOVE PROT93B", "REMOVE PROT93C",
+		"REMOVE/IDENTIFIER PROT93_TEAM", "REMOVE/IDENTIFIER PROT93",
+		"EXIT",
+	} {
+		p.line("%s", l)
+	}
+
+	p.line("$ SET DEFAULT 'HOME'")
+	p.line("$ WRITE SYS$OUTPUT \"PROT93Y FINISHED\"")
+	p.line("$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PROT93$DISK")
+	p.line("$ SET NOVERIFY")
+	p.line("$ EXIT")
+
+	return p.String()
+}
+
+// round2Files are the files exchange2.cmd copies to round 1's volume.
+var round2Files = []string{"prot93r.com", "prot93v.com", "prot93y.com", "prot93f.dat", "prot93g.dat"}
+
+func exchange2() string {
+	var b strings.Builder
+
+	b.WriteString(`! EXCHANGE2.CMD - adds round 2 of Phase 93's probe to round 1's volume.
+! Written by testdata/prot93/gen.go. Run from the repository root, after
+! keeping a copy of round 1's volume (README.md's "Round 2"):
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange2.cmd
+!
+MOUNT/WRITE DUA5 "testdata/disks/prot93-exchange.dsk"
+`)
+
+	for _, f := range round2Files {
+		fmt.Fprintf(&b, "COPY \"%s/%s\"/HOST DUA5:[000000]%s\n", dir, f, strings.ToUpper(f))
+	}
+
+	b.WriteString("DIRECTORY DUA5:[000000]PROT93*.*\nDISMOUNT DUA5\n")
+
+	return b.String()
+}
+
+func copyout2() string {
+	var b strings.Builder
+
+	b.WriteString(`! COPYOUT2.CMD - copies round 2's logs off prot93-exchange.dsk into
+! testdata/prot93/vax/round2 (README.md's "Round 2"). Written by
+! testdata/prot93/gen.go. Run from the repository root after the VAX runs:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout2.cmd
+!
+MOUNT DUA5 "testdata/disks/prot93-exchange.dsk"
+`)
+
+	for _, l := range []string{"PROT93R.LOG", "PROT93V_PROT93A.LOG", "PROT93V_PROT93B.LOG", "PROT93V_PROT93C.LOG", "PROT93Y.LOG"} {
+		fmt.Fprintf(&b, "COPY DUA5:[PROT93LOG]%s \"%s/vax/round2/%s\"/HOST/QUIET\n", l, dir, strings.ToLower(l))
+	}
+
+	b.WriteString("DISMOUNT DUA5\n")
+
+	return b.String()
+}
+
 func main() {
 	files := map[string]string{
-		"prot93.com":   buildSystem(),
-		"prot93u.com":  buildUser(),
-		"prot93b.com":  buildUtilities(),
-		"prot93z.com":  buildFinal(),
-		"prot93c.dat":  coreFile(),
-		"prot93d.dat":  changeFile(),
-		"prot93e.dat":  aceFile(),
-		"hello.mar":    hello,
-		"exchange.cmd": exchange(),
-		"copyout.cmd":  copyout(),
+		"prot93.com":    buildSystem(),
+		"prot93u.com":   buildUser(),
+		"prot93b.com":   buildUtilities(),
+		"prot93z.com":   buildFinal(),
+		"prot93c.dat":   coreFile(),
+		"prot93d.dat":   changeFile(),
+		"prot93e.dat":   aceFile(),
+		"hello.mar":     hello,
+		"exchange.cmd":  exchange(),
+		"copyout.cmd":   copyout(),
+		"prot93r.com":   buildRound2System(),
+		"prot93v.com":   buildRound2User(),
+		"prot93y.com":   buildRound2Final(),
+		"prot93f.dat":   core2File(),
+		"prot93g.dat":   change2File(),
+		"exchange2.cmd": exchange2(),
+		"copyout2.cmd":  copyout2(),
 	}
 
 	for _, d := range defModules {

@@ -19,7 +19,12 @@ forms change them; how they are shown; and what the messages are.
 | `def_*.mar` | `$CHPDEF`, `$OSSDEF`, `$ACEDEF`, `$ACLDEF`, `$ARMDEF`, `$KGBDEF`, `$PRVDEF`, each `GLOBAL`, for their values |
 | `decode.go` | Turns the VAX's `def_*.obj` into `defined.txt` (values only), for round 2's services |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring the results back |
-| `vax/` | What the VAX run leaves: the five logs, `prot93.exe`, and the definition objects |
+| `defined.txt` | The definitions' values, from `decode.go` |
+| `vax/` | What round 1 left: the five logs, `prot93.exe`, and the definition objects |
+| `prot93r.com`, `prot93v.com`, `prot93y.com` | Round 2: SYSTEM's run, each account's, and the end |
+| `prot93f.dat`, `prot93g.dat` | Round 2's cases: a directory without execute, and the new changing cases |
+| `exchange2.cmd`, `copyout2.cmd` | Round 2's govax scripts: its files onto round 1's volume, and its logs back |
+| `vax/round2/` | What round 2 leaves: its five logs |
 
 ## The identities
 
@@ -152,6 +157,72 @@ exchange volume. No procedure waits for input.
 
 If a run stops partway, run `@PROT93$DISK:[000000]PROT93Z` as SYSTEM to
 remove the accounts, then start again from step 1 with a new volume.
+
+## Round 1's results
+
+Round 1 ran on VMS V7.1 on 2026-11-14, and the phase doc's A.4 is written
+from it. Two of the probe's own mistakes, left in its procedures as they
+ran: `PROT93.COM` set PROT93.EXE's and HELLO.EXE's protection in one SET
+SECURITY with a comma list, which 7.1 refuses (`%DCL-W-NOLIST`), so the
+accounts couldn't run the program without a privilege, and their passes
+without privileges and with GRPPRV failed at activation; and each
+`PROCx.COM` was made by a CREATE whose data the next `$` line ended, so the
+procedures are empty. `PROT93Z.COM` also left the group identifier PROT93
+(`[200,177777]`, which AUTHORIZE made for PROT93A's group) on the VAX.
+Round 2 makes up for all three.
+
+## Round 2
+
+Round 2 runs the lost passes on round 1's volume, whose files for them are
+untouched, with cases round 1 left open (the phase doc's Part D). It needs
+the accounts again, which `PROT93R.COM` makes and `PROT93Y.COM` removes,
+with the PROT93 identifier round 1 left. No procedure waits for input.
+
+1. **Keep a copy of round 1's volume**, then add round 2's files to it,
+   from the repository root:
+
+       cp testdata/disks/prot93-exchange.dsk testdata/disks/prot93-round1.dsk
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange2.cmd
+
+2. **Attach it** to the simh VAX as before (`attach rq1
+   testdata/disks/prot93-exchange.dsk`).
+
+3. **As SYSTEM:**
+
+       $ MOUNT/SYSTEM DUA1: PROT93
+       $ @DUA1:[000000]PROT93R
+
+   Its log is `PROT93$DISK:[PROT93LOG]PROT93R.LOG`, ending `PROT93R
+   FINISHED`.
+
+4. **Log in as PROT93A** (password `PROT93PW`, as before), then:
+
+       $ @PROT93$DISK:[000000]PROT93V
+       $ LOGOUT
+
+   Its log is `PROT93V_PROT93A.LOG`, ending `PROT93V FINISHED`. Log in
+   anew for it: its first passes must run in a new process.
+
+5. **The same as PROT93B, then as PROT93C.**
+
+6. **As SYSTEM:**
+
+       $ @PROT93$DISK:[000000]PROT93Y
+       $ DISMOUNT DUA1:
+
+       sim> detach rq1
+
+   It lists the tree, then removes the accounts, PROT93_TEAM, and PROT93,
+   and deassigns `PROT93$DISK`.
+
+7. **Copy the logs back**, from the repository root:
+
+       mkdir -p testdata/prot93/vax/round2
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout2.cmd
+
+If round 2 stops partway, run `@PROT93$DISK:[000000]PROT93Y` as SYSTEM,
+copy `prot93-round1.dsk` back over `prot93-exchange.dsk`, and start again
+from step 1's second command.
 
 ## What the run is expected to show
 
