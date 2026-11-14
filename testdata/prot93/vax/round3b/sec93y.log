@@ -1,0 +1,244 @@
+$ !
+$ WRITE SYS$OUTPUT "######## THE TREE"
+######## THE TREE
+$ DIRECTORY/SECURITY PROT93$DISK:[SEC93...]*.*;*
+
+Directory DUA1:[SEC93]
+
+CHG.DIR;1            [SYSTEM]                         (RWE,RWE,RWE,RWE)
+CHK.DIR;1            [SYSTEM]                         (RWE,RWE,RWE,RWE)
+EXO.DIR;1            [SYSTEM]                         (RWE,RWE,RWE,RWE)
+GET.DIR;1            [SYSTEM]                         (RWE,RWE,RWE,RWE)
+NP.DIR;1             [SYSTEM]                         (RWE,RWE,RWE,RWE)
+SEC93.EXE;1          [SYSTEM]                         (RWED,RWED,RE,RE)
+SEC93.LIS;1          [SYSTEM]                         (RWED,RWED,RE,)
+SEC93.MAP;1          [SYSTEM]                         (RWED,RWED,RE,)
+SEC93.OBJ;1          [SYSTEM]                         (RWED,RWED,RE,)
+SET.DIR;1            [SYSTEM]                         (RWE,RWE,RWE,RWE)
+
+Total of 10 files.
+
+Directory DUA1:[SEC93.CHG]
+
+CA1.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+CA2.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+CA3.DIR;1            [PROT93,PROT93A]                 (RWE,RWE,RE,)
+          (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:,WORLD:)
+          (IDENTIFIER=[PROT93,PROT93A],ACCESS=READ)
+          (IDENTIFIER=[PROT93,PROT93A],OPTIONS=DEFAULT,ACCESS=READ)
+          (CREATOR,ACCESS=READ+WRITE)
+CA4.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (ALARM=SECURITY,ACCESS=READ+FAILURE)
+          (ALARM=SECURITY,ACCESS=WRITE+SUCCESS)
+          (AUDIT=SECURITY,ACCESS=DELETE+FAILURE)
+CA5.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=LOCAL,ACCESS=EXECUTE)
+          (IDENTIFIER=INTERACTIVE,ACCESS=EXECUTE)
+          (IDENTIFIER=[PROT93,PROT93A],ACCESS=WRITE)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=WRITE)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CA6.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93A],ACCESS=READ)
+CX1.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX10.DAT;1           [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX2.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX3.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX4.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX5.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX6.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX7.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX8.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+CX9.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+
+Total of 16 files.
+
+Directory DUA1:[SEC93.CHK]
+
+H1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,R,)
+H2.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,R,R)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=NONE)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ+WRITE)
+H3.DAT;1             [0,0]                            (,,,)
+H4.DAT;1             [PROT93,PROT93A]                 (,,,)
+          (IDENTIFIER=INTERACTIVE,ACCESS=READ)
+
+Total of 4 files.
+
+Directory DUA1:[SEC93.EXO]
+
+EXDATA.COM;1         [PROT93,PROT93A]                 (E,RWED,E,E)
+EXERR.COM;1          [PROT93,PROT93A]                 (E,RWED,E,E)
+EXNEST.COM;1         [PROT93,PROT93A]                 (E,RWED,E,E)
+EXONLY.COM;1         [PROT93,PROT93A]                 (E,RWED,E,E)
+EXREAD.COM;1         [PROT93,PROT93A]                 (R,RWED,R,R)
+
+Total of 5 files.
+
+Directory DUA1:[SEC93.GET]
+
+G1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+G2.DAT;1             [PROT93C]                        (RWED,RWED,RE,RE)
+G3.DIR;1             [PROT93,PROT93A]                 (RWE,RWE,RE,)
+          (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:R,WORLD:)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=DEFAULT,ACCESS=READ)
+
+Total of 3 files.
+
+Directory DUA1:[SEC93.NP]
+
+NC_M.DAT;1           [PROT93,PROT93A]                 (,RWED,,)
+          (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
+NC_U.DAT;1           [PROT93,PROT93A]                 (,RWED,,)
+          (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
+NN_M.DAT;1           [PROT93,PROT93A]                 (,RWED,,)
+NN_U.DAT;1           [PROT93,PROT93A]                 (,RWED,,)
+NO_M.DAT;1           [PROT93C]                        (,RWED,,)
+NO_U.DAT;1           [PROT93C]                        (,RWED,,)
+NR_M.DAT;1           [PROT93,PROT93A]                 (R,RWED,R,R)
+NR_U.DAT;1           [PROT93,PROT93A]                 (R,RWED,R,R)
+NS_M.DAT;1           [SYSTEM]                         (RWED,RWED,,)
+NS_U.DAT;1           [SYSTEM]                         (RWED,RWED,,)
+NZ_M.DAT;1           [0,0]                            (,,,)
+          (IDENTIFIER=[SYSTEM],ACCESS=READ)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+NZ_U.DAT;1           [0,0]                            (,,,)
+          (IDENTIFIER=[SYSTEM],ACCESS=READ)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+
+Total of 12 files.
+
+Directory DUA1:[SEC93.SET]
+
+S1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S10.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S11.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S12.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S13.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S14.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S15.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S16.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S17.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S18.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S19.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S2.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S20.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S21.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S22.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S23.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S24.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+S25.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S26.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S27.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S28.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S3.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S4.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S5.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S6.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S7.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S8.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+S9.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=READ)
+          (IDENTIFIER=PROT93_TEAM,OPTIONS=PROTECTED,ACCESS=READ+WRITE)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SD1.DIR;1            [PROT93,PROT93A]                 (RWE,RWE,RE,)
+SX1.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SX2.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SX3.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SX4.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SX5.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SX6.DAT;1            [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+
+Total of 35 files.
+
+Grand total of 7 directories, 85 files.
+$ !
+$ WRITE SYS$OUTPUT "######## REMOVING THE ACCOUNTS"
+######## REMOVING THE ACCOUNTS
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ RUN SYS$SYSTEM:AUTHORIZE
+REMOVE PROT93A
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PROT93A value [000200,000001] removed from rights database
+REMOVE PROT93B
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PROT93B value [000200,000002] removed from rights database
+REMOVE PROT93C
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PROT93C value [000300,000001] removed from rights database
+REMOVE/IDENTIFIER PROT93_TEAM
+%UAF-I-RDBREMMSG, identifier PROT93_TEAM value %X80010001 removed from rights database
+REMOVE/IDENTIFIER PROT93
+%UAF-I-RDBREMMSGU, identifier PROT93 value [000200,177777] removed from rights database
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SET DEFAULT SYS$SYSROOT:[SYSMGR]
+$ WRITE SYS$OUTPUT "SEC93Y FINISHED"
+SEC93Y FINISHED
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PROT93$DISK
+$ SET NOVERIFY

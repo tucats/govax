@@ -722,7 +722,255 @@ lost; each is marked unconfirmed where govax decides it meanwhile:
    login, with SET VERIFY on and off (VMS is said to run such a
    procedure without verification). Until then govax runs its lines,
    with verification as set (unconfirmed). This needs an account, so the
-   round makes PROT93C again and removes it after.
+   round makes PROT93C again and removes it after. **Answered by round 3**
+   (below, "Execute-only procedures").
+
+#### Round 3: the security services
+
+Round 3 (Part D) ran on VMS V7.1 on 2026-11-14 in three tries and a
+rerun (`testdata/prot93/vax/round3/` and `round3b/`; README's "Round 3").
+The first two tries crashed VMS (an alarm ACE naming journal JOURNAL1:
+the next access bugchecks with SECAUDERR in the XQP); the third ran
+whole, but its case 80 (a 65,535-byte `aclent` descriptor over a 256-byte
+buffer) wrote over cases 81 to 204, which round 3b ran again. So cases 1
+to 234 are `round3b/sec93b.log`'s, 235 to 566 `round3/sec93.log`'s and
+`sec93u.log`'s, 567 to 587 `round3/sec93x_n.log`'s. Statuses are named
+here; the logs have the values.
+
+**Where the services are.** The link's map: `$CHKPRO`, `$GET_SECURITY`,
+`$SET_SECURITY`, and `$SETDFPROT` are system services in the P1 vector
+(govax's `vmsdef` has them); `$FORMAT_ACL`, `$PARSE_ACL`, `$CHANGE_ACL`,
+and `$CHECK_ACCESS` are SECURESHR.EXE's (with SECURESHRP), a shareable
+image in IMAGELIB, which govax's tables lack: a program calling one links
+with it undefined today.
+
+**`$PARSE_ACL`** (cases 1 to 87, 508 to 510, 560 to 562):
+
+- The text is one ACE in parentheses, keywords and values in any case,
+  blanks allowed around `=`, `,`, and the parentheses and after the ACE,
+  keywords abbreviated to any unique prefix (`ID`, `IDENT`, `A`, `ACC`;
+  `R`, `RE` for READ, `WR`). Errors are `SS$_IVACL` with `errpos` at the
+  item that failed (its first character), `SS$_NOSUCHID` at an unknown
+  identifier name, `SS$_IVIDENT` at an identifier in brackets out of
+  range (`[400000,1]`, `[1,99999]`) or with one number (`[200]`); `[200,1,2]`
+  is IVACL. A second ACE, a comma, or anything after the closing
+  parenthesis is IVACL with `errpos` at it (32, the first ACE's length);
+  no parentheses, `()`, an empty string, `(FOO=1)`, an unknown keyword or
+  option, and `(IDENTIFIER=,...)` are IVACL. `errpos` on success is the
+  string's length, trailing blanks included.
+- **Identifier ACEs:** `IDENTIFIER=id[+id...]`, up to three (four is
+  IVACL with `errpos` past the whole string); an id is `[g,m]` octal, `[g,*]`,
+  `[*,m]`, `[*,*]`, `[name]`, `[group,name]`, a name (a UIC's, a group's,
+  `SYSTEM`, a general or environmental identifier, any case), or
+  `%Xhex`. ACCESS defaults to none; `NONE`, `READ` ... `CONTROL`, `BIT_5`
+  to `BIT_31` (or the caller's `accnam` names, which then replace the
+  defaults entirely: READ is unknown with them), joined by `+`, `NONE`
+  adding nothing; a repeated ACCESS or OPTIONS adds to the first.
+  OPTIONS (before or after ACCESS) are DEFAULT, PROTECTED, NOPROPAGATE,
+  HIDDEN, and NONE.
+- **Default protection:** `(DEFAULT_PROTECTION[,OPTIONS=...],cat:letters,...)`,
+  categories by any abbreviation with `:` or `=`, any subset, a category
+  not named having no access, a repeated category the first's, `C` a
+  letter (stored as granted, unlike the categories' default); a code in
+  parentheses, an unknown category, and no code at all are IVACL.
+- **Others:** `(CREATOR[,OPTIONS=...][,ACCESS=...])`, ACCESS none if
+  omitted; `(ALARM=SECURITY,...)` or `ALARM_JOURNAL=` and `(AUDIT=SECURITY,...)`,
+  ACCESS needing SUCCESS or FAILURE or both (IVACL without either, `errpos`
+  at its end), a journal name other than SECURITY IVACL (case 55);
+  `(SUBSYSTEM,IDENTIFIER=id)` (an ACCESS is IVACL), formatted back with
+  `ATTRIBUTES=NONE`.
+- **The buffer:** the ACE is written and the rest of the buffer, by its
+  descriptor's length, cleared to zeros (case 80; round 3's 65,535 cleared
+  64K). A buffer shorter than the ACE is `SS$_ACCVIO` with the ACE's first
+  bytes written (8 of 12) or all of it (11 of 12, the size byte saying 12);
+  `errpos` may be omitted.
+- An unprivileged process (SYSTEM without privileges, PROT93C) parses and
+  formats names as SYSTEM does.
+
+**`$FORMAT_ACL`** (cases 88 to 175, 511 to 513, 563 to 565):
+
+- Identifier ACEs as DCL shows them (A.4's "Display"): identifiers joined
+  by `+`, a name for each value the rights database has, `[g,m]` octal for
+  a UIC it hasn't (`[310,1]`, `[0,0]`), `[*,m]`, `[g,*]`, `[*,*]`, and
+  `%Xhex` for an identifier with neither (`%X8001FFFF`, `%X40000001`);
+  an ACE with no identifier is `(IDENTIFIER,ACCESS=...)`. ACCESS is the bits
+  in order (`READ+WRITE+EXECUTE+DELETE+CONTROL+BIT_5+...+BIT_31`), `NONE`
+  for none; OPTIONS in the order DEFAULT, HIDDEN, PROTECTED, NOPROPAGATE,
+  omitted for none, and any other flag bits (the reserved-longword count
+  too) as `OPTIONS=%Xhhhh` alone, replacing the names (cases 115 to 117).
+- Default protection: `SYSTEM:...,OWNER:...,GROUP:...,WORLD:` with the
+  letters each category is granted, `C` shown if granted (the stored bits
+  are the denied ones, so a mask without C shows `RWEDC`), the spare
+  longword ignored, `OPTIONS=` after the categories; a short ACE reads
+  past its size.
+- `(CREATOR,ACCESS=...)`; alarms and audits `(ALARM=name,ACCESS=...+SUCCESS+FAILURE)`,
+  the name the bytes after the access whatever they are (`JOURNAL1`, empty);
+  `(SUBSYSTEM)` alone; application ACEs (type 7) as
+  `(APPLICATION,SIZE=%Dn,FLAGS=%Xhhhh,ACCESS=%Xhhhhhhhh,DATA=%Xhhhhhhhh,...)`;
+  types 2, 3, 8, and 10 as RMS journaling ACEs (`RMS_BI_JOURNAL`, ...,
+  their fields from the bytes); any other type
+  `(UNKNOWN=%Xhh,SIZE=%Dn,FLAGS=...,ACCESS=...,DATA...)`, 255 `(RESERVED,...)`.
+- Only the first ACE is formatted, by its size byte; a descriptor shorter
+  than the ACE reads zeros past it, an ACE of size 0 or smaller than its
+  header is formatted from the descriptor, and a descriptor with bytes
+  after the ACE that aren't a whole ACE is IVACL (case 157, the output
+  buffer then filled with blanks and no length written).
+- `width` wraps the text at the last `+`, `,`, or `=` that fits, writing
+  `trmdsc` and then `indent` blanks before each new line; `indent` is also
+  written before the first; width 0 or no `trmdsc` means no wrapping
+  (with an empty `trmdsc` the indentation still comes at each break);
+  a width smaller than a token breaks after every token. A short `aclstr`
+  is `SS$_BUFFEROVF` with `acllen` the whole text's length and the buffer
+  filled to its end; an `aclstr` of length 0 is taken as no limit.
+  `accnam` names the access bits as `$PARSE_ACL`'s does.
+
+**`$CHANGE_ACL`** (cases 176 to 234, 573 to 575, 580 to 583, part M and U's):
+
+- Items are processed in order in one call, sharing a position (the
+  context, when given: the position's index, with `%X01000000` set after
+  a find and the bits 16 to 23 holding the found ACE's type, as the logs
+  show it); no item writes a return length. ADDACLENT with no context or
+  context 0 adds at the top, -1 at the bottom, after a find before the
+  found ACE; adding at a position removes an ACE that matches it below it
+  and does nothing if one matches above it. Matching: an identifier ACE by
+  its flags and identifiers, a default protection ACE by type, an alarm by
+  flags and access, others whole; FNDACLENT and DELACLENT match the same
+  way, so DELACLENT `[300,1] WRITE` deletes `[300,1] READ`. A buffer of
+  several ACEs adds them in order; a buffer longer than its ACEs (zeros
+  after) or shorter than an ACE, or an ACE of size 3, is IVACL. An unknown
+  ACE type (200), HIDDEN, and the reserved-longword count are accepted.
+- READACL reads whole ACEs that fit, advancing the context, then
+  `SS$_NOMOREACE`; a buffer smaller than the next ACE is `SS$_IVBUFLEN`.
+  FNDACLENT or FNDACETYP of nothing is `SS$_NOENTRY`; DELACLENT of an ACE
+  not there NOENTRY. DELETEACL leaves PROTECTED ACEs; DELACLENT removes a
+  protected one; DELETE_ALL removes all. ACLLENGTH is a longword. NEXT_ACE
+  moves the position; GRANT_ACE (as SYSTEM) is NOENTRY; the lock items do
+  nothing visible.
+- `objtyp` missing is `SS$_INSFARG`, unknown `SS$_BADPARAM`; neither
+  `objnam` nor `chan` `SS$_NOSUCHOBJECT`; a missing file `RMS$_FNF`, a
+  missing directory `RMS$_DNF`, a wildcard `SS$_INVFILFOROP`. By channel,
+  a file accessed for read is `SS$_NOPRIV` for a change and fine for
+  READACL. An unknown item code is BADPARAM, no items NORMAL.
+- It needs control access for a change (refused `SS$_NOPRIV`) and read
+  or control for READACL; part M and U's cases follow A.4's control rule.
+
+**`$CHKPRO`** (cases 235 to 285, 569 to 572):
+
+- The check is A.4's, by the items: categories by `CHP$_UIC` against
+  `CHP$_OWNER` (a system UIC by group, `[10,1]` in, `[11,1]` out), the
+  first identifier ACE of `CHP$_ACL` (in up to 20 segments, 21
+  `SS$_ACLFULL`) matched against `CHP$_RIGHTS` (the first entry the UIC,
+  a later `CHP$_UIC` replacing it) and `CHP$_ADDRIGHTS`, a denial leaving
+  the system and owner fields; a DEFAULT ACE matches nothing.
+  `CHP$_PRIV`'s SYSPRV, BYPASS, and GRPPRV act as in files; READALL only
+  with `CHP$_FLAGS` USEREADALL. The access bits are compared, not
+  interpreted: CONTROL (bit 4) was granted to the group and the owner
+  with one `CHP$_PROT` word and with a second word whose group field was
+  all set (cases 252 to 255), so how the second word is read is
+  unconfirmed. Owner `[0,0]` with no ACL grants all.
+  `CHP$_ACMODE` greater than `CHP$_MODE` is refused, as is any access a
+  `CHP$_MODES` field's mode forbids.
+- Items not given come from the caller: with no `CHP$_PRIV` the process's
+  privileges (Q under SYSTEM with and without them; PRIVUSED SYSPRV), with
+  no `CHP$_UIC` the process's UIC. No items at all is NORMAL; an unknown
+  code BADPARAM; an ACE of size 3 IVACL.
+- Outputs: `CHP$_MATCHEDACE` the ACE that decided (return length 0 for
+  none; a short buffer `SS$_BUFFEROVF`), `CHP$_PRIVUSED` a longword of
+  `CHP$M_` bits (SYSPRV 1 when SYSPRV or BYPASS was held, GRPPRV `%X10`),
+  `CHP$_ALARMNAME` the alarm ACE's journal name, `CHP$_AUDITNAME` none
+  here. Refused is `SS$_NOPRIV`. Three arguments are accepted.
+
+**`$CHECK_ACCESS`** (cases 286 to 349, 506, 507, 558, 559):
+
+- The user's UIC, its rights, and its authorized privileges, not its
+  defaults (PROT93B and PROT93C, authorized SYSPRV and BYPASS, are
+  granted everything, PRIVUSED SYSPRV), and no environmental identifier
+  (PROT93A is refused a file whose only grant is INTERACTIVE). The check
+  is A.4's otherwise ([0,0] refuses control). A user that doesn't exist,
+  or an empty name, is `RMS$_RNF`; the name is matched in any case and
+  with trailing blanks. `objtyp` missing is INSFARG; DEVICE with a file's
+  name NOPRIV; the eight-argument form with `clsnam` FILE and `objtyp` 0
+  works, with both BADPARAM, an unknown class `SS$_NOCLASS`. PROT93C,
+  without privileges, is refused the service, `SS$_NOCALLPRIV`; SYSTEM
+  without READALL, GRPPRV, SYSPRV, and BYPASS is not (which privilege it
+  needs is unconfirmed).
+
+**`$GET_SECURITY`** (cases 350 to 425, 567, 568, parts M and U):
+
+- Only the text items (CLASS_NAME, OBJECT_NAME, ACCESS_CLASS_NAME,
+  FIRST_TEMPLATE, NEXT_OBJECT), ACCESS_NAMES (285: 32 quadword descriptors,
+  then the five names they point to, in the buffer), DAMAGED_ACL, and
+  IN_TRANSITION (1 byte each) write their return lengths.
+  OWNER a longword, PROTECTION a word, ACL_LENGTH a longword, ACL_READ the
+  whole ACL (by a context, whole ACEs that fit a call, then
+  `SS$_NOMOREACE`; with no context a buffer too small for the ACL is
+  `SS$_IVBUFLEN`). A file's OBJECT_NAME is empty; SYS_PROT, OWN_PROT,
+  GRP_PROT, WOR_PROT, TRANQUILITY_COUNT, NEXT_OBJECT, and FIRST_TEMPLATE are
+  `SS$_INVCLSITM` for a file. Asking for ACL_READ of a file with no ACL
+  returns `SS$_ACLEMPTY` with the other items filled. ACL_GRANT_ACE is
+  NOENTRY (SYSTEM). ACCESS_CLASS_NAME is `FILE`.
+- Through a context: ACL_READ_ENTRY reads the next ACE, NOMOREACE at the
+  end; POSITION_TOP and POSITION_BOTTOM, FIND_NEXT, FIND_ENTRY (by
+  `$CHANGE_ACL`'s matching), and FIND_TYPE (a byte or an ACE's header)
+  set the position. RELCTX releases it (context 0). Contexts are P1
+  addresses (`%X7FFBEF10`).
+- Classes: FILE by any abbreviation and case; DEVICE (`_SIMVAX$DUA1:`,
+  from a device or file name), VOLUME (the label), LOGICAL_NAME_TABLE,
+  SECURITY_CLASS (FILE's first template DEFAULT, next object VOLUME); an
+  unknown class or none `SS$_NOCLASS`; no object name `SS$_NOSUCHOBJECT`.
+  Names: a logical name, `;`, `;1`, `;0`, `;-0` all find the file; no type
+  or a directory spec `RMS$_FNF`, a relative name `RMS$_FNF`, a wildcard
+  INVFILFOROP, a missing directory `RMS$_DNF`, a missing device `RMS$_DEV`.
+  A handle is a channel the file is accessed on; with a handle the class
+  is required (NOCLASS) and a name is ignored. Item 99 is ACCVIO; no items
+  NORMAL.
+- Access: read or control for the profile (SYSTEM without privileges,
+  PROT93C; A.4's rule); refused `SS$_NOPRIV`.
+
+**`$SET_SECURITY`** (cases 426 to 461, 576 to 579, 584, 585, parts M and U):
+
+- OWNER (any identifier, `[0,0]` too) and PROTECTION (a word; four bytes
+  or one `SS$_IVBUFLEN`; OWNER of two bytes IVBUFLEN); the category items
+  INVCLSITM for a file. ACL_ADD_ENTRY at the top (no context) or at
+  POSITION_TOP, POSITION_BOTTOM, or a FIND_ENTRY's place, by
+  `$CHANGE_ACL`'s matching; ACL_DELETE_ENTRY of an ACE given, or with no
+  buffer the found one (NOENTRY if not there, a PROTECTED one deleted);
+  ACL_DELETE leaves PROTECTED ACEs, ACL_DELETE_ALL removes all;
+  ACL_MODIFY_ENTRY replaces the found ACE or, with no position, the first.
+  HIDDEN and a default protection ACE on a file are accepted; size 3
+  IVACL; item 99 ACCVIO; no items NORMAL.
+- OSS$M_LOCAL changes wait in the context until a call with RELCTX
+  applies them; without LOCAL each call's change is made at once.
+  By handle, a file accessed for read is `SS$_NOPRIV` (the case accessing
+  it for write failed to open, `RMS$_SHR`). Class DEVICE with a file's
+  name is accepted and changes the device's profile (case 460 set
+  `PROT93$DISK`'s device protection to `%X0000` until the reboot); an
+  unknown class NOCLASS.
+- Access: control (A.4's rule, `[0,0]`'s included); an owner by
+  `CanChangeOwner` (PROT93C, with CONTROL by an ACE, is refused; its own
+  UIC again is allowed).
+
+**`$SETDFPROT`**: as subtask 5 has it; an unwritable or unreadable
+address is `RMS$_IAL`; an unprivileged process sets its own. Both manuals
+are right that it has no `_S` macro (round 9's `R9_SETDFPROT` is directive
+errors throughout).
+
+**Execute-only procedures** (A.3's open question 1; `sec93u.log`): a
+procedure PROT93C may execute but not read runs every line, but none is
+verified, whatever SET VERIFY says, inside it or before: neither its
+lines nor those of a procedure it calls, even a readable one
+(`EXREAD`). Its data lines are read (READ SYS$INPUT, TYPE SYS$INPUT). Its
+messages are shown (`%DCL-W-IVVERB` with its segment). Inside,
+F$ENVIRONMENT("VERIFY_PROCEDURE") reports the caller's setting and
+VERIFY_IMAGE FALSE; a SET VERIFY inside lasts within the execute-only
+chain and not past it. TYPE, OPEN/READ, and F$FILE_ATTRIBUTES are refused;
+F$SEARCH finds it; DIRECTORY/SECURITY gives no profile. As SYSTEM (who can
+read it) every line is verified. Separately: a SET NOVERIFY in a called
+procedure lasts after it returns (MACROS9.COM's), as govax has it.
+
+**Round 9 of the macro probes** (`testdata/mp/macros/vax/r9_*`): every
+program assembled to an object; the macros' keywords and argument lists
+are subtask 13's to read.
 
 ## Part B — decisions
 
@@ -1010,10 +1258,9 @@ Each is one commit, with tests, stopping for review.
 10. **The ACL services**: `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
     (Decision 13), the ACE text both ways, held to the probe. Its VMS round
     also asks A.4's "Open for a later round" questions. In two parts:
-    10a, round 3 of the probe (Part D's "Round 3"; written and rehearsed
-    2026-11-14; its first VAX run crashed VMS, and the round was reworked
-    to survive that, waiting for the second run), which asks for subtask
-    13's services too; 10b, the services.
+    10a, round 3 of the probe (Part D's "Round 3"; done 2026-11-14, with
+    round 3b; A.4's "Round 3"), which asked for subtask 13's services too;
+    10b, the services.
 11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
     BACKUP's `/PROTECTION` (Decision 10).
@@ -1658,3 +1905,7 @@ The author accepted the plan and answered its questions:
   README's "Round 3's results, and round 3b") runs parts P, F, and C again
   with case 80 and the channel fixed, case numbers unchanged. Waiting for
   it.
+- **2026-11-14** Round 3b ran (`vax/round3b/`): cases 1 to 234 whole. A.4's
+  "Round 3: the security services" is written from rounds 3 and 3b, and
+  answers A.3's last open question (execute-only procedures run without
+  verification). Subtask 10a is done; 10b, the ACL services, is next.
