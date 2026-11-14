@@ -1637,3 +1637,24 @@ The author accepted the plan and answered its questions:
   govax (10b and 13): an alarm ACE's journal name matters to VMS beyond its
   text, and since govax keeps alarms and does nothing with them (the
   review, answer 1), nothing here changes that. Waiting for the third run.
+- **2026-11-14** Round 3's third try ran whole (`vax/round3/`), with round 9
+  of the macro probes. One case of the probe's own spoiled cases 81 to 204:
+  case 80 gave `$PARSE_ACL` a 65,535-byte descriptor over a 256-byte
+  buffer, and the service wrote over the next 64K of the program's data
+  (the first two runs, the same program, lost the same cases, so
+  `sec93-crash.log`'s parts P and F past case 80 are void too). And
+  `$CHANGE_ACL` by channel (cases 229, 230) opened the file for write with
+  read sharing under UFO, `RMS$_SHR`. The rest answered, among it: VMS
+  writes or clears an `aclent` buffer by its whole descriptor; `$CHANGE_ACL`
+  keeps no item's return length; `$CHECK_ACCESS` judges an account with
+  the privileges it is authorized, not its defaults (PROT93B and PROT93C
+  pass every check), without the INTERACTIVE identifier; `$GET_SECURITY`
+  gives a file no OBJECT_NAME (length 0), names devices and volumes, and
+  `SECURITY_CLASS FILE`'s first template is DEFAULT; `SYS_PROT` and the
+  other category items are `SS$_BADPARAM`-like `%XF12` for a file; contexts
+  are addresses in P1 (`%X7FFBEF10`); `$SET_SECURITY`'s LOCAL changes wait
+  for RELCTX; the execute-only procedures ran for PROT93C (A.4's open
+  question; the details go in A.4 with 10b). Round 3b (`SEC93B.COM`,
+  README's "Round 3's results, and round 3b") runs parts P, F, and C again
+  with case 80 and the channel fixed, case numbers unchanged. Waiting for
+  it.

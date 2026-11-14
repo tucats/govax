@@ -30,6 +30,7 @@ forms change them; how they are shown; and what the messages are.
 | `sec93.com`, `sec93u.com`, `sec93x.com`, `sec93y.com` | Round 3: SYSTEM's run, PROT93C's, the risky cases one at a time, and the end |
 | `sec93t.dat` | The text of every file round 3's tree copies |
 | `exchange-r3.cmd`, `copyout-r3.cmd` | Round 3's govax scripts: a new volume, and its results back |
+| `sec93b.com`, `exchange-r3b.cmd`, `copyout-r3b.cmd` | Round 3b: parts P, F, and C again (README's "Round 3's results, and round 3b") |
 | `vax/round3/` | What round 3 leaves: its logs, the program's map, object, and image; `sec93-crash.log`, what the first run's log held when VMS crashed |
 
 ## The identities
@@ -401,6 +402,47 @@ SECURITY, SET VOLUME, the services), and AUTHORIZE, SEARCH, and the
 security services' macros. The rehearsal found that govax's MACRO writes
 its object beside its source where VMS writes it in the current default
 directory, so `SEC93.COM` names the object.
+
+## Round 3's results, and round 3b
+
+The third try ran whole (2026-11-14; `vax/round3/`: `sec93.log`,
+`sec93u.log`, `sec93x.log` and each part X case's `sec93x_n.log`,
+`sec93y.log`; round 9's macro objects are in `testdata/mp/macros/vax/`).
+One case of the probe's own spoiled a stretch of it: case 80 gave
+`$PARSE_ACL` a descriptor of 65,535 bytes over a 256-byte buffer, and the
+service wrote over the 64K of the program's data after it, so cases 81 to
+204 (the rest of part P, all of part F, and part C to case 204) ran on
+zeros, their titles blank. The first run's recovered log, the same program,
+lost the same cases. Everything else is whole: case 205 on, the pass
+without privileges, PROT93C's part U, and part X, each its own image. The
+other mistake of the probe's own: `$CHANGE_ACL` by channel opened its file
+for write with read sharing, which RMS refused (`RMS$_SHR`), so cases 229
+and 230 asked nothing; they now open it for read, as part G's handles did.
+
+**Round 3b** runs parts P, F, and C again, with case 80 given a buffer as
+big as its descriptor (filled first, to show what the service writes) and
+the channel fixed. The case numbers are round 3's. `SEC93B.COM` is
+`SEC93.COM`'s accounts, build, and tree, then the three parts.
+
+1. Build a new volume, from the repository root:
+
+       rm -f testdata/disks/sec93-exchange.dsk
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange-r3b.cmd
+
+2. Attach it, and as SYSTEM:
+
+       $ MOUNT/SYSTEM DUA1: SEC93
+       $ @DUA1:[000000]SEC93B
+       $ @PROT93$DISK:[000000]SEC93Y
+       $ DISMOUNT DUA1:
+
+   `SEC93B.LOG` ends `SEC93B FINISHED`; `SEC93Y.COM` removes the accounts.
+   Part C's alarm ACEs put security alarms on the console, as before.
+
+3. Copy the logs back:
+
+       mkdir -p testdata/prot93/vax/round3b
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout-r3b.cmd
 
 ## What the run is expected to show
 

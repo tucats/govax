@@ -1,0 +1,4 @@
+case 571
+== 571 X $CHKPRO 21 ACL items
+  $CHKPRO r0=000009F8
+end of cases

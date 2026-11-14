@@ -1,0 +1,4 @@
+case 568
+== 568 X $GET_SECURITY FILE PROT93$DISK:[SEC93.GET]G1.DAT [no items]
+  $GET_SECURITY r0=00000001
+end of cases

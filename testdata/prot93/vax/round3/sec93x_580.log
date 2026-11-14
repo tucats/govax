@@ -1,0 +1,7 @@
+case 580
+== 580 X $CHANGE_ACL PROT93$DISK:[SEC93.CHG]CX4.DAT ADDACLENT a buffer longer than its ACE
+  $CHANGE_ACL r0=000021E4 contxt=FFFFFFFF
+  file owner=00800001 pro=FA00 acllen=12 aclsts=00000001
+    0C 01 00 00 01 00 00 00 01 00 C0 00
+      (IDENTIFIER=[PROT93C],ACCESS=READ)
+end of cases

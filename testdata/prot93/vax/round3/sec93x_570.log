@@ -1,0 +1,4 @@
+case 570
+== 570 X $CHKPRO item 99
+  $CHKPRO r0=00000014
+end of cases

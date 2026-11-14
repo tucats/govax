@@ -448,6 +448,8 @@ type parseOpts struct {
 	accnam   bool // the probe's own access names
 	dump     int  // bytes of the buffer to show whatever the size says
 	args     int  // the CALLS count (6)
+	size     int  // the buffer's own size, if more than 256
+	fill     byte // what the buffer holds before the call (0)
 }
 
 func parse(part byte, text string, o parseOpts) {
@@ -474,10 +476,12 @@ func parse(part byte, text string, o parseOpts) {
 
 	k := newCase(part, "$PARSE_ACL %s", title)
 	k.ascid("%S", text)
-	k.buffer("%B", 256, o.bufLen)
+
+	size := max(o.size, 256)
+	k.buffer("%B", size, o.bufLen)
 	k.d("%%E:\t.WORD\t0,0")
 
-	k.c("MOVC5\t#0,(SP),#0,#256,%%B")
+	k.c("MOVC5\t#0,(SP),#%d,#%d,%%B", o.fill, size)
 	k.c("MOVW\t#^XFFFF,%%E")
 
 	for range o.args - 4 {
@@ -671,7 +675,7 @@ func change(part byte, what, spec string, list []item, o changeOpts) *kase {
 	}
 
 	if o.chan_ {
-		k.c("PUSHL\t#<FAB$M_GET!FAB$M_PUT>")
+		k.c("PUSHL\t#FAB$M_GET")
 		k.c("PUSHAQ\t%%NM")
 		k.c("CALLS\t#2,OPENCHAN")
 	}
@@ -1507,7 +1511,11 @@ func parseCases() {
 	parse('P', one, parseOpts{bufLen: 8, dump: 16})
 	parse('P', one, parseOpts{bufLen: 12, dump: 16})
 	parse('P', one, parseOpts{bufLen: 11, dump: 16})
-	parse('P', one, parseOpts{bufLen: 0x10000 - 1})
+	// Round 3 gave this case a 65,535-byte descriptor over a 256-byte
+	// buffer, and $PARSE_ACL wrote over the next 64K of the program's data
+	// (cases 81 to 204); the buffer is now as big as its descriptor, and
+	// filled first, to show how much of it the service writes.
+	parse('P', one, parseOpts{bufLen: 1024, size: 1024, fill: 0xEE, dump: 48})
 	parse('P', one, parseOpts{noErrpos: true})
 	parse('P', one, parseOpts{args: 4})
 	parse('P', "(IDENTIFIER=[200,1],ACCESS=LOOK+TOUCH+OWN)", parseOpts{accnam: true})
@@ -2330,7 +2338,7 @@ func (p *proc) header(name, who, logName string) {
 	p.line("$ HERE = F$ENVIRONMENT(\"PROCEDURE\")")
 	p.line("$ DEV = F$PARSE(HERE,,,\"DEVICE\")")
 
-	if name == "SEC93" || name == "SEC93X" {
+	if name == "SEC93" || name == "SEC93B" || name == "SEC93X" {
 		p.line("$ DEFINE/SYSTEM/EXECUTIVE_MODE PROT93$DISK 'DEV'")
 	}
 
@@ -2454,11 +2462,23 @@ func (p *proc) makeObject(o object) {
 	}
 }
 
-func buildSystem() string {
+func buildSystem() string { return systemRun(false) }
+
+// buildRerun is SEC93B.COM, round 3b: SEC93.COM's accounts, build, and
+// tree, then parts P, F, and C alone, which round 3's run lost to case
+// 80 (README.md's "Round 3b").
+func buildRerun() string { return systemRun(true) }
+
+func systemRun(rerun bool) string {
 	var p proc
 
-	p.header("SEC93", "SYSTEM's run. Run it as SYSTEM, with the round 3 volume mounted /SYSTEM:\n$ !\n$ !     @DUA1:[000000]SEC93\n$ !\n$ ! Its log is PROT93$DISK:[PROT93LOG]SEC93.LOG",
-		`"SEC93.LOG"`)
+	if rerun {
+		p.header("SEC93B", "round 3b, parts P, F, and C again. Run it as SYSTEM, with a new round 3\n$ ! volume mounted /SYSTEM:\n$ !\n$ !     @DUA1:[000000]SEC93B\n$ !\n$ ! Its log is PROT93$DISK:[PROT93LOG]SEC93B.LOG",
+			`"SEC93B.LOG"`)
+	} else {
+		p.header("SEC93", "SYSTEM's run. Run it as SYSTEM, with the round 3 volume mounted /SYSTEM:\n$ !\n$ !     @DUA1:[000000]SEC93\n$ !\n$ ! Its log is PROT93$DISK:[PROT93LOG]SEC93.LOG",
+			`"SEC93.LOG"`)
+	}
 
 	p.section("ENVIRONMENT")
 	p.line("$ WRITE SYS$OUTPUT F$GETSYI(\"VERSION\"), \" \", F$GETSYI(\"HW_NAME\"), \" \", F$GETSYI(\"NODENAME\")")
@@ -2542,6 +2562,17 @@ func buildSystem() string {
 
 	p.section("PROGRAM, ALL PRIVILEGES")
 	p.line(showPrivs)
+
+	if rerun {
+		p.run("PFC")
+		p.section("END")
+		p.line("$ WRITE SYS$OUTPUT \"SEC93B FINISHED\"")
+		p.line("$ SET NOVERIFY")
+		p.line("$ EXIT")
+
+		return p.String()
+	}
+
 	p.run("PFCKHGSDQ")
 
 	p.section("PROGRAM, NO PRIVILEGES")
@@ -2762,6 +2793,54 @@ CREATE/DIRECTORY DUA5:[SEC93MAC]
 	return b.String()
 }
 
+// exchangeRerun builds round 3b's volume: the program, SEC93B.COM, and
+// SEC93Y.COM (to remove the accounts after).
+func exchangeRerun() string {
+	var b strings.Builder
+
+	b.WriteString(`! EXCHANGE-R3B.CMD - builds round 3b of Phase 93's probe on a new volume.
+! Written by testdata/prot93/gen3.go. Run from the repository root:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange-r3b.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/sec93-exchange.dsk" /DEVICE=RD53 SEC93
+MOUNT/WRITE DUA5 "testdata/disks/sec93-exchange.dsk"
+CREATE/DIRECTORY DUA5:[PROT93LOG]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE)
+CREATE/DIRECTORY DUA5:[SEC93]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE)
+`)
+
+	for _, f := range []string{"sec93.mar", "sec93b.com", "sec93y.com"} {
+		fmt.Fprintf(&b, "COPY \"%s/%s\"/HOST DUA5:[000000]%s\n", dir, f, strings.ToUpper(f))
+	}
+
+	b.WriteString("COPY \"" + dir + "/sec93t.dat\"/HOST DUA5:[PROT93LOG]T.DAT\n")
+	b.WriteString("DIRECTORY/OWNER/PROTECTION DUA5:[000000],[PROT93LOG]\n")
+	b.WriteString("DISMOUNT DUA5\n")
+
+	return b.String()
+}
+
+func copyoutRerun() string {
+	var b strings.Builder
+
+	b.WriteString(`! COPYOUT-R3B.CMD - copies round 3b's logs off sec93-exchange.dsk into
+! testdata/prot93/vax/round3b. Written by testdata/prot93/gen3.go. Run from
+! the repository root after the VAX runs:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout-r3b.cmd
+!
+MOUNT DUA5 "testdata/disks/sec93-exchange.dsk"
+`)
+
+	for _, l := range []string{"SEC93B.LOG", "SEC93Y.LOG"} {
+		fmt.Fprintf(&b, "COPY DUA5:[PROT93LOG]%s \"%s/vax/round3b/%s\"/HOST/QUIET\n", l, dir, strings.ToLower(l))
+	}
+
+	b.WriteString("DISMOUNT DUA5\n")
+
+	return b.String()
+}
+
 func copyout() string {
 	var b strings.Builder
 
@@ -2818,13 +2897,16 @@ func main() {
 	// The program is written last: the procedures' tree comes from the
 	// cases, and the program's definitions from every case's use.
 	files := map[string]string{
-		"sec93.com":       buildSystem(),
-		"sec93u.com":      buildUser(),
-		"sec93y.com":      buildFinal(),
-		"sec93x.com":      buildRisky(),
-		"sec93t.dat":      "SEC93 TEST FILE\n",
-		"exchange-r3.cmd": exchange(),
-		"copyout-r3.cmd":  copyout(),
+		"sec93.com":        buildSystem(),
+		"sec93u.com":       buildUser(),
+		"sec93y.com":       buildFinal(),
+		"sec93x.com":       buildRisky(),
+		"sec93b.com":       buildRerun(),
+		"exchange-r3b.cmd": exchangeRerun(),
+		"copyout-r3b.cmd":  copyoutRerun(),
+		"sec93t.dat":       "SEC93 TEST FILE\n",
+		"exchange-r3.cmd":  exchange(),
+		"copyout-r3.cmd":   copyout(),
 	}
 
 	files["sec93.mar"] = program()
