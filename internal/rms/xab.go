@@ -479,10 +479,10 @@ func (ctx *Context) readXABInputs(chain []xabEntry) (xabInputs, error) {
 
 // applyCreateXABs writes $CREATE's inputs into a new file's header: the
 // XABDAT's dates (a zero creation or revision date keeps the file
-// system's), the XABPRO's protection and owner (a zero owner keeps the
-// file system's), the XABALL's extension quantity, and alq blocks
+// system's), the XABALL's extension quantity, and alq blocks
 // allocated (the XABALL's quantity, or else the FAB's). As VMS has it, a
-// new file's revision number is 0 until it's first closed.
+// new file's revision number is 0 until it's first closed. The XABPRO's
+// owner and protection were the file's when it was made (profile.go).
 func applyCreateXABs(f *volume.File, in xabInputs, alq uint32) error {
 	if alq > f.Blocks() {
 		bm, err := f.Device.Bitmap()
@@ -513,14 +513,6 @@ func applyCreateXABs(f *volume.File, in xabInputs, alq uint32) error {
 
 		id.ExpirationDate = in.Expires
 		id.BackupDate = in.Backup
-
-		if in.HasPro {
-			h.FileProtection = in.Protection
-
-			if in.Owner != (ondisk.Uic{}) {
-				h.Owner = in.Owner
-			}
-		}
 
 		if in.HasAll {
 			h.RecordAttributes.DefaultExtend = in.Extend

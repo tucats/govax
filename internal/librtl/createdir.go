@@ -31,6 +31,7 @@ import (
 var (
 	ssCreated    = vmsdef.Symbols["SS$_CREATED"]
 	ssWritLck    = vmsdef.Symbols["SS$_WRITLCK"]
+	ssNoPriv     = vmsdef.Symbols["SS$_NOPRIV"]
 	ssNoSuchDev  = vmsdef.Symbols["SS$_NOSUCHDEV"]
 	ssDevNotMnt  = vmsdef.Symbols["SS$_DEVNOTMOUNT"]
 	rmsDir       = vmsdef.Symbols["RMS$_DIR"]
@@ -221,6 +222,7 @@ func session(env *corevms.Environment) *rms.Session {
 
 	s := rms.NewSession(env.Mounts)
 	s.Logicals = env.Logicals
+	s.Credentials = env.Credentials
 
 	return s
 }
@@ -236,6 +238,8 @@ func createDirStatus(env *corevms.Environment, err error) uint32 {
 		return libInvFilSpe
 	case errors.Is(err, rms.ErrACPWriteLocked):
 		return ssWritLck
+	case errors.Is(err, rms.ErrNoPrivilege):
+		return ssNoPriv
 	case errors.As(err, &notMounted):
 		if env.Devices != nil {
 			if _, known := env.Devices.Find(notMounted.Device); known {

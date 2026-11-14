@@ -743,7 +743,12 @@ func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, rec
 
 	fullName := spec.Name + "." + spec.Type
 
-	f, err := vol.CreateFileVersion(dir, fullName, version, newRecordAttributes(kind, records), bm, ib)
+	profile, err := newFileProfile(s.creator(ExplicitProfile{}), vol, dir, fullName)
+	if err != nil {
+		return FileLocation{}, err
+	}
+
+	f, err := vol.CreateFileVersionWith(dir, fullName, version, newRecordAttributes(kind, records), profile, bm, ib)
 	if err != nil {
 		return FileLocation{}, err
 	}

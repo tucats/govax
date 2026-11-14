@@ -43,6 +43,8 @@ func (p *Process) Credentials() security.Credentials {
 		Privileges:  p.CurrentPrivileges,
 		Rights:      slices.Clone(p.Rights),
 		MaxSysGroup: p.MaxSysGroup,
+
+		DefaultProtection: security.Protection(p.DefaultProtection),
 	}
 }
 

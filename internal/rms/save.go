@@ -468,7 +468,7 @@ func (s *Session) CreateSaveSet(loc FileLocation, opts SaveSetOptions) (*SaveSet
 		MaxRecordSize: uint16(opts.BlockSize),
 	}
 
-	f, err := createVersion(vol, dir, fullName, version, attr, bm, ib)
+	f, err := createVersion(s.creator(ExplicitProfile{}), vol, dir, fullName, version, attr, bm, ib)
 	if err != nil {
 		return nil, err
 	}

@@ -113,6 +113,8 @@ func (env *Environment) createFile(req *ioRequest, f *fib, name string, change f
 		blocks = f.exsz
 	}
 
+	creds := env.Credentials()
+
 	created, err := env.Mounts.ACPCreate(diskDevice(req), rms.ACPCreateRequest{
 		Directory:    f.did,
 		Name:         name,
@@ -120,7 +122,7 @@ func (env *Environment) createFile(req *ioRequest, f *fib, name string, change f
 		Supersede:    f.nmctl&fibMSupersede != 0,
 		Blocks:       blocks,
 		VersionLimit: f.verlimit,
-		Owner:        env.Process.UIC,
+		Credentials:  &creds,
 		Attributes:   change,
 		Access:       access,
 		Write:        f.acctl&fibMWrite != 0,

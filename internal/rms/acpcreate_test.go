@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/ondisk"
 )
 
@@ -15,7 +16,8 @@ func TestACPCreate_inDirectory(t *testing.T) {
 		Directory: mfd,
 		Name:      "new.dat",
 		Blocks:    3,
-		Owner:     0o300<<16 | 0o7,
+		// A process without privilege owns what it makes.
+		Credentials: &security.Credentials{UIC: security.NewUIC(0o300, 0o7), DefaultProtection: security.DefaultFileProtection},
 		Attributes: func(a *ACPAttributes) {
 			copy(a.RecordAttributes[:], ondisk.EncodeRecAttr(ondisk.RecAttr{Format: ondisk.RecordFormatFixed, RecordSize: 512}))
 		},

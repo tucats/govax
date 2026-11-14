@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -69,13 +70,14 @@ type ACPCreateRequest struct {
 	// for the one it inherits (see ods2's CreateFile).
 	VersionLimit uint16
 
-	// Owner is the owner UIC to give the file (the creating process's);
-	// 0 for the volume's default.
-	Owner uint32
+	// Credentials are the creating process's, which choose the file's
+	// owner, protection, and ACL as RMS's $CREATE does (profile.go); nil
+	// for SYSTEM's.
+	Credentials *security.Credentials
 
 	// Attributes, if not nil, sets attributes of the new file (the
-	// $QIO's attribute list); it runs after Owner is applied, so it can
-	// override it.
+	// $QIO's attribute list, ATR$C_UIC and ATR$C_FPRO among them); it
+	// runs after the file is made, so it can override its profile.
 	Attributes func(*ACPAttributes)
 
 	// Access asks for the new file to be accessed (IO$M_ACCESS), for
@@ -86,6 +88,17 @@ type ACPCreateRequest struct {
 	// (acpdelete.go), so it goes, with its directory entry if it has one,
 	// when it's deaccessed; at once if it isn't accessed.
 	Temporary bool
+}
+
+// creator is the process making the file req asks for, as profile.go
+// takes it.
+func (req ACPCreateRequest) creator() creator {
+	creds := security.SystemCredentials()
+	if req.Credentials != nil {
+		creds = *req.Credentials
+	}
+
+	return creator{creds: creds}
 }
 
 // ACPCreated is ACPCreate's result.
@@ -140,7 +153,14 @@ func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated,
 			base = base[:i]
 		}
 
-		f, err = volume.CreateHeader(dev, ib, volume.NewFileHeader{Name: base})
+		var profile *volume.NewFileProfile
+
+		if profile, err = newFileProfile(req.creator(), vol, nil, base); err == nil {
+			f, err = volume.CreateHeader(dev, ib, volume.NewFileHeader{
+				Name: base, Owner: profile.Owner, Protection: profile.Protection,
+			})
+		}
+
 		if err == nil {
 			err = f.OpenForWrite(bm, ib)
 		}
@@ -239,7 +259,12 @@ func createInDirectory(vol *volume.Volume, req ACPCreateRequest, bm *volume.Bitm
 		version = next
 	}
 
-	f, err := vol.CreateFileVersion(dir, base, version, ondisk.RecAttr{}, bm, ib)
+	profile, err := newFileProfile(req.creator(), vol, dir, base)
+	if err != nil {
+		return nil, result, err
+	}
+
+	f, err := vol.CreateFileVersionWith(dir, base, version, ondisk.RecAttr{}, profile, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
 		return nil, result, ErrACPDuplicate
 	}
@@ -254,7 +279,7 @@ func createInDirectory(vol *volume.Volume, req ACPCreateRequest, bm *volume.Bitm
 }
 
 // finishCreate applies the rest of a create request to the new header f:
-// its version limit, its first allocation, and its owner and attributes;
+// its version limit, its first allocation, and its attributes;
 // then, unless it's to be accessed for writing, disarms it, and writes the
 // bitmaps back.
 func finishCreate(f *volume.File, req ACPCreateRequest, bm *volume.Bitmap, ib *volume.IndexBitmap) error {
@@ -278,17 +303,8 @@ func finishCreate(f *volume.File, req ACPCreateRequest, bm *volume.Bitmap, ib *v
 		}
 	}
 
-	if req.Owner != 0 || req.Attributes != nil {
-		err := updateAttributes(f, func(a *ACPAttributes) {
-			if req.Owner != 0 {
-				a.Owner = req.Owner
-			}
-
-			if req.Attributes != nil {
-				req.Attributes(a)
-			}
-		})
-		if err != nil {
+	if req.Attributes != nil {
+		if err := updateAttributes(f, req.Attributes); err != nil {
 			return err
 		}
 	}

@@ -364,7 +364,12 @@ func createDCLFile(ctx *Context, fac, shr byte, attr ondisk.RecAttr, p parsedNam
 		return nil, found, rmsDeviceError
 	}
 
-	file, err := vol.CreateFileVersion(dir, name, version, attr, bm, ib)
+	profile, err := newFileProfile(ctx.creator(ExplicitProfile{}), vol, dir, name)
+	if err != nil {
+		return nil, found, rmsPrivilegeViolation
+	}
+
+	file, err := vol.CreateFileVersionWith(dir, name, version, attr, profile, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
 		return nil, found, rmsFileExists
 	}

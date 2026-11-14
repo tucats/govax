@@ -190,3 +190,23 @@ func CanChangeOwner(c Credentials, p Profile, newOwner UIC) bool {
 
 	return d.ACE >= 0 && p.ACL[d.ACE].Access&Control != 0 && c.HoldsAsResource(uint32(p.Owner))
 }
+
+// InheritsOwner reports whether a file or directory the process creates
+// takes owner, its previous version's or its directory's owner, rather
+// than the process's own UIC. VMS gives a new file the creator's UIC
+// unless the creator has privilege over the files it makes: a system
+// user (a system group or SYSPRV), BYPASS, or GRPPRV when owner is in its
+// own group. READALL is not such a privilege. These are VMS 7.1's answers
+// (Phase 93's probe, A.4's "New files' profiles": P1.DAT;2 made by SYSTEM
+// without privileges kept [300,1]; PROT93B with READALL owned its files;
+// with GRPPRV, its files in group 200's directories were [200,1]'s).
+func InheritsOwner(c Credentials, owner UIC) bool {
+	switch {
+	case c.Has(PrivBYPASS), c.Has(PrivSYSPRV), c.InSystemGroup():
+		return true
+	case c.Has(PrivGRPPRV):
+		return c.UIC.Group() == owner.Group()
+	}
+
+	return false
+}

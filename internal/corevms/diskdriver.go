@@ -113,6 +113,7 @@ var acpStatuses = []struct {
 	{rms.ErrACPDuplicate, vmsdef.Symbols["SS$_DUPFILENAME"]},
 	{rms.ErrACPDirNotEmpty, vmsdef.Symbols["SS$_DIRNOTEMPTY"]},
 	{rms.ErrACPProtected, vmsdef.Symbols["SS$_NOPRIV"]},
+	{rms.ErrNoPrivilege, vmsdef.Symbols["SS$_NOPRIV"]},
 	{rms.ErrACPIllegalBlock, vmsdef.Symbols["SS$_ILLBLKNUM"]},
 	{rms.ErrACPAccessConflict, vmsdef.Symbols["SS$_ACCONFLICT"]},
 }

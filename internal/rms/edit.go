@@ -426,7 +426,7 @@ func (s *Session) writeNewVersion(e *EditFile, records [][]byte) (FileLocation, 
 
 	fullName := spec.Name + "." + spec.Type
 
-	f, err := createVersion(vol, dir, fullName, 0, e.newAttributes(records), bm, ib)
+	f, err := createVersion(s.creator(ExplicitProfile{}), vol, dir, fullName, 0, e.newAttributes(records), bm, ib)
 	if err != nil {
 		return FileLocation{}, err
 	}

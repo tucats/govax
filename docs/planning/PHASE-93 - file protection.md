@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-14; the plan accepted by the author the same
 day, with the answers in "The review". Subtasks 1 (the survey, Part A),
 2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), 5
-(identity and defaults), and 6 (the grammar types) are done.
+(identity and defaults), 6 (the grammar types), and 7 (new files'
+profiles) are done.
 
 ## Goal
 
@@ -990,7 +991,7 @@ Each is one commit, with tests, stopping for review.
 6. **The grammar types** (done 2026-11-14): `$PROTECTION` and `$UIC` (Decision 9), the
    existing qualifiers moved onto them, the parse errors held to the
    probe's.
-7. **New files' profiles**: `newFileProfile` (Decision 4) and every
+7. **New files' profiles** (done 2026-11-14): `newFileProfile` (Decision 4) and every
    creator on it, ACLs inherited, XABPRO applied and written back, the home
    block's default no longer used; CREATE/DIRECTORY's owner per A.4.
 8. **Checking RMS's services and the ACP**: the checked layer (Decision 6)
@@ -1354,3 +1355,47 @@ The author accepted the plan and answered its questions:
   in brackets refused, bare accepted; CREATE/DIRECTORY's message for a
   repeated category (the whole code). HELP CREATE's `/OWNER_UIC` has the
   name forms. Subtask 7, new files' profiles, is next.
+- **2026-11-14** Subtask 7 done. `rms/profile.go` is the one place a new
+  file's or directory's profile is chosen: `newFileProfile` (the previous
+  version's protection, else the directory's default protection ACE, else
+  `Credentials.DefaultProtection`, new, which `Process.Credentials` fills
+  and `SystemCredentials` gives %XFA00; the previous version's ACL less
+  NOPROPAGATE, else the directory's DEFAULT ACEs; the creator's UIC, or the
+  inherited owner when `security.InheritsOwner`, new: a system user,
+  BYPASS, or GRPPRV in that owner's group) and `newDirectoryProfile`
+  (`volume.InheritedDirectoryOptions`, the owner by the same rule). An
+  `ExplicitProfile` is what the creator asks for: an owner (0 none) checked
+  by `CanChangeOwner` against the profile the object would otherwise have,
+  a refusal `rms.ErrNoPrivilege` with nothing made, and a protection as a
+  function of the base (`WholeProtection` for a XABPRO; subtask 11's
+  `/PROTECTION` will merge). Every creator is on it, through ods2's
+  `CreateFileVersionWith`: `$CREATE` (the XABPRO read before the file is
+  made, `RMS$_PRV`/`SS$_NOPRIV` for a refused owner;
+  `applyCreateXABs` no longer sets the profile), DCL's OPEN/WRITE, the
+  ACP's IO$_CREATE (`ACPCreateRequest.Credentials` in place of `Owner`, the
+  process's from corevms; `SS$_NOPRIV`; a file with no directory gets the
+  process's default), COPY (never the input's profile), the record files
+  the utilities write, EDIT, BACKUP's save sets and restores (the saved
+  profile still laid over a restored file; a restore's missing directories
+  by `newDirectoryProfile`), the page file (SYSTEM's, through the ACP), and
+  CREATE/DIRECTORY and LIB$CREATE_DIR (`/OWNER_UIC=PARENT` now explicit,
+  `CreateDirectoryOptions.OwnerParent`; the owner checked against the
+  deepest existing level before anything is made, `deepestExisting`;
+  `%CREATE-E-DIRNOTCRE` over `-SYSTEM-F-NOPRIV`, held to round 2's PROT93C
+  by `TestCreateDirectoryOwnerOracle`; LIB$CREATE_DIR's session takes the
+  process's credentials, and `SS$_NOPRIV`). The home block's default owner
+  and protection are no longer used for a new file. `rms`'s
+  `TestNewFileFromDirectory`, `TestNewVersionFromPrevious`,
+  `TestNewFileFromDirectoryDefaults`, `TestExplicitOwner`,
+  `TestNewDirectoryProfile`, and `TestSysCreateXABPRO` hold the rules to
+  A.4's cases. No existing test's output changed (Decision 11). Left as
+  they were, unconfirmed or for later: `$CREATE` still leaves a XABPRO's
+  owner and protection as given (Phase 33's oracle; an owner of 0 isn't
+  written back with the one chosen); a XABPRO's ACL buffer at `$CREATE`
+  isn't applied (with subtask 10's ACL code); the Creator ACE needs
+  resource identifiers (Decision 4); a `$CREATE` supersede (FOP SUP) and the
+  ACP's ATR$C_UIC and ATR$C_FPRO, which still override the profile after
+  the file is made, are subtask 8's checks; LIB$CREATE_DIR's `[g,m]`
+  directories keep their UIC as VMS 7.3's probe had it, where 7.1's
+  CREATE/DIRECTORY gives none (A.4, answer 7). Subtask 8, checking RMS's
+  services and the ACP, is next.

@@ -55,6 +55,7 @@ var (
 	ssNOSUCHDEV   = vmsdef.Symbols["SS$_NOSUCHDEV"]
 	ssDEVNOTMOUNT = vmsdef.Symbols["SS$_DEVNOTMOUNT"]
 	ssWRITLCK     = vmsdef.Symbols["SS$_WRITLCK"]
+	ssNOPRIV      = vmsdef.Symbols["SS$_NOPRIV"]
 
 	// libINVFILSPE is LIB$_INVFILSPE (LIB-F-INVFILSPE), which
 	// vmsdef.Symbols doesn't carry; its message is in vmsdef.Messages.
@@ -127,7 +128,7 @@ func (c *Context) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Creat
 	switch owner := strings.TrimSpace(req.OwnerUIC); {
 	case owner == "":
 	case strings.EqualFold(owner, "PARENT"):
-		// The parent's owner, which is also the default.
+		opts.OwnerParent = true
 	default:
 		uic, err := security.ParseUIC(owner, c.identifierLookup())
 		if err != nil {
@@ -192,6 +193,8 @@ func (c *Context) createDirectoryStatus(err error) uint32 {
 		return libINVFILSPE
 	case errors.Is(err, rms.ErrACPWriteLocked):
 		return ssWRITLCK
+	case errors.Is(err, rms.ErrNoPrivilege):
+		return ssNOPRIV
 	case errors.As(err, &notMounted):
 		if _, known := c.Devices.Find(notMounted.Device); known {
 			return ssDEVNOTMOUNT

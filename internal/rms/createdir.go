@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -36,10 +37,15 @@ const MaxVersionLimit = 32767
 
 // CreateDirectoryOptions are CREATE/DIRECTORY's qualifiers.
 type CreateDirectoryOptions struct {
-	// Owner is /OWNER_UIC=uic; nil without it (or with /OWNER_UIC=PARENT):
-	// the parent directory's owner, as VMS 7.3 gives a directory a
-	// privileged process makes (docs/planning/PHASE-34.md, Decisions 6).
+	// Owner is /OWNER_UIC=uic; nil without it: the creator's UIC, or the
+	// parent directory's owner for a creator with privilege over what it
+	// makes (profile.go; VMS 7.1, the Phase 93 probe's A.4, answer 7).
 	Owner *ondisk.Uic
+
+	// OwnerParent is /OWNER_UIC=PARENT: the parent directory's owner,
+	// which a creator without privilege may give only when it is its own
+	// UIC (VMS 7.1: CREATE-E-DIRNOTCRE, SYSTEM-F-NOPRIV).
+	OwnerParent bool
 
 	// VersionLimit is /VERSION_LIMIT=n (0 for no limit); nil for the
 	// parent's limit.
@@ -194,7 +200,25 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 		return nil, fmt.Errorf("create directory: %w", err)
 	}
 
-	levels, createErr := filespec.CreateDirectoryPath(vol, spec.Dirs, opts.forParent, bm, ib)
+	// An owner the process may not give is refused before anything is
+	// made. The first directory made is checked: below it, the parent is
+	// one this call made, and the check comes out the same (a creator with
+	// privilege may give any owner; one without has its own UIC as the
+	// inherited owner at every level).
+	who := s.creator(ExplicitProfile{})
+
+	if first := deepestExisting(vol, spec.Dirs); first != nil {
+		if _, err := opts.forParent(who, vol, first); err != nil {
+			return nil, fmt.Errorf("create directory: %w", err)
+		}
+	}
+
+	options := func(parent *volume.Directory) volume.DirectoryOptions {
+		d, _ := opts.forParent(who, vol, parent)
+		return d
+	}
+
+	levels, createErr := filespec.CreateDirectoryPath(vol, spec.Dirs, options, bm, ib)
 
 	// Levels made before a failure stay made, so the bitmaps are written
 	// either way.
@@ -219,25 +243,49 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 	return created, nil
 }
 
-// forParent is the options callback filespec.CreateDirectoryPath calls for
-// each directory it makes, given the directory it's made in: VMS's
-// defaults worked out against that parent, with the qualifiers laid over
-// them.
-func (o CreateDirectoryOptions) forParent(parent *volume.Directory) volume.DirectoryOptions {
-	d := volume.InheritedDirectoryOptions(parent)
+// deepestExisting is the directory the first level of dirs that doesn't
+// exist would be made in: the deepest existing level (the MFD for none),
+// or nil when every level exists already, or the path can't be resolved.
+func deepestExisting(vol *volume.Volume, dirs []string) *volume.Directory {
+	for i := len(dirs); i >= 0; i-- {
+		d, err := filespec.ResolveDirectory(vol, dirs[:i])
+		if err != nil {
+			continue
+		}
 
-	if o.Owner != nil {
-		d.Owner = o.Owner
+		if i == len(dirs) {
+			return nil
+		}
+
+		return d
 	}
 
-	if o.VersionLimit != nil {
-		d.VersionLimit = *o.VersionLimit
+	return nil
+}
+
+// forParent is the options of a directory who makes in parent: VMS's
+// defaults worked out against that parent (newDirectoryProfile), with the
+// qualifiers laid over them. A refused owner is ErrNoPrivilege.
+func (o CreateDirectoryOptions) forParent(who creator, vol *volume.Volume, parent *volume.Directory) (volume.DirectoryOptions, error) {
+	switch {
+	case o.Owner != nil:
+		who.explicit.Owner = uicOf(*o.Owner)
+	case o.OwnerParent:
+		who.explicit.Owner = uicOf(parent.Header.Owner)
 	}
 
 	if o.Protection != "" {
-		// Can't fail: CreateDirectory parsed the same text first.
-		p, _ := ondisk.ParseProtection(o.Protection, *d.Protection)
-		d.Protection = &p
+		who.explicit.Protection = func(base security.Protection) security.Protection {
+			// Can't fail: CreateDirectory parsed the same text first.
+			p, _ := ondisk.ParseProtection(o.Protection, uint16(base))
+			return security.Protection(p)
+		}
+	}
+
+	d, err := newDirectoryProfile(who, vol, parent)
+
+	if o.VersionLimit != nil {
+		d.VersionLimit = *o.VersionLimit
 	}
 
 	if o.ProtectionEnable != 0 {
@@ -247,7 +295,7 @@ func (o CreateDirectoryOptions) forParent(parent *volume.Directory) volume.Direc
 
 	d.Allocation = o.Allocation
 
-	return d
+	return d, err
 }
 
 // createHostDirectory is CreateDirectory for a host directory: text is a

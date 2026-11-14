@@ -285,3 +285,60 @@ func TestSetProcessPrivileges(t *testing.T) {
 		t.Error("a refused list changed the privileges")
 	}
 }
+
+// TestCreateDirectoryOwnerOracle: an account without privileges may not
+// give a new directory another's UIC, by /OWNER_UIC=uic or =PARENT under
+// another's directory, and nothing is made (subtask 7; round 2's PROT93C,
+// [300,1], under PROT93A's [PROT93.OWN]).
+func TestCreateDirectoryOwnerOracle(t *testing.T) {
+	log := prot93Log(t, filepath.Join("round2", "prot93v_prot93c.log"))
+
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA1")
+
+	for _, line := range []string{"DEFINE PROT93$DISK DUA1:", "CREATE/DIRECTORY/OWNER_UIC=[200,1] DUA1:[PROT93.OWN]"} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	p := c.RTL.Process
+	p.UIC, p.CurrentPrivileges = uint32(security.NewUIC(0o300, 1)), 0
+
+	replayed := 0
+
+	for i, line := range log {
+		command, ok := strings.CutPrefix(line, "$ ")
+		if !ok || !strings.HasPrefix(command, "CREATE/DIRECTORY/OWNER_UIC=") || !strings.Contains(command, "[PROT93.OWN.") {
+			continue
+		}
+
+		var want []string
+		for j := i + 1; j < len(log) && !strings.HasPrefix(log[j], "$ "); j++ {
+			want = append(want, log[j])
+		}
+
+		buf.Reset()
+
+		if err := d.Dispatch(command); err != nil && !vmserrors.MessageInhibited(err) {
+			buf.WriteString(dclMessage(err) + "\n")
+		}
+
+		if got := strings.TrimSuffix(buf.String(), "\n"); got != strings.Join(want, "\n") {
+			t.Errorf("%s:\n got %q\nwant %q", command, got, strings.Join(want, "\n"))
+		}
+
+		replayed++
+	}
+
+	if replayed != 2 {
+		t.Errorf("%d commands replayed, want 2", replayed)
+	}
+
+	// Its own UIC it may give.
+	buf.Reset()
+
+	if err := d.Dispatch("CREATE/DIRECTORY/OWNER_UIC=[300,1] PROT93$DISK:[PROT93.OWN.MINE]"); err != nil {
+		t.Errorf("its own UIC: %v (%s)", err, buf.String())
+	}
+}

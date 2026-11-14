@@ -343,10 +343,10 @@ func (r HostRecords) controlledLines(data []byte, cc uint8) [][]byte {
 
 // createLaidOutFile makes the file a layout describes, from the host file's bytes
 // data, and returns the version it has (createVersion's rules).
-func createLaidOutFile(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, layout hostLayout, data []byte) (uint16, error) {
+func createLaidOutFile(who creator, destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, layout hostLayout, data []byte) (uint16, error) {
 	fullName := name + "." + typ
 
-	dst, err := createVersion(destVol, destDir, fullName, version, layout.attr, destBm, destIb)
+	dst, err := createVersion(who, destVol, destDir, fullName, version, layout.attr, destBm, destIb)
 	if err != nil {
 		return 0, err
 	}

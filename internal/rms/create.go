@@ -157,7 +157,20 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	case normalizeDeviceName(p.Lookup) == consoleDeviceName:
 		ifi, device = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), p.Lookup
 	default:
-		newIFI, found, opened, plan, failStatus, failSTV, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0)
+		// A XABPRO's owner and protection are the new file's
+		// (profile.go), chosen before it's made: an owner the process
+		// may not give makes nothing.
+		in, err := ctx.readXABInputs(chain)
+		if err != nil {
+			return 0, err
+		}
+
+		var explicit ExplicitProfile
+		if in.HasPro {
+			explicit = ExplicitProfile{Owner: uicOf(in.Owner), Protection: WholeProtection(in.Protection)}
+		}
+
+		newIFI, found, opened, plan, failStatus, failSTV, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0, ctx.creator(explicit))
 		if err != nil {
 			return 0, err
 		}
@@ -178,11 +191,6 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		// CIF, its NAM, FAB, and XABs report it.
 		if !opened {
 			h, _ := ctx.Files.Lookup(newIFI)
-
-			in, err := ctx.readXABInputs(chain)
-			if err != nil {
-				return 0, err
-			}
 
 			alq, err := ctx.loadLongword(fabAddr + fabOffset("ALQ"))
 			if err != nil {
@@ -299,7 +307,8 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 // "this isn't the TTA0: console special case" — resolving spec.Device to
 // a mounted volume, validating the FAB's own record-organization/-format
 // fields, creating the file via ods2's volume.CreateFile, and allocating
-// an IFI for the result.
+// an IFI for the result. who is the creating process, with the XABPRO's
+// owner and protection (profile.go).
 //
 // Its three-result shape keeps SysCreate itself simple: err is a genuine
 // Go/VAX-memory-access failure (propagate it up unchanged, exactly like
@@ -312,7 +321,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 // An indexed file's $CREATE is checked here, before the file exists
 // (indexed.go): plan is what initIndexed makes of it, and failSTV a
 // refusal's STV, 0 for stvFor's.
-func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bool) (ifi uint16, found foundFile, opened bool, plan *indexedPlan, failStatus, failSTV uint32, err error) {
+func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bool, who creator) (ifi uint16, found foundFile, opened bool, plan *indexedPlan, failStatus, failSTV uint32, err error) {
 	spec := p.spec()
 
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
@@ -495,7 +504,12 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		recAttr.RecordSize = mrs
 	}
 
-	f, err := vol.CreateFileVersion(dir, name, version, recAttr, bm, ib)
+	profile, err := newFileProfile(who, vol, dir, name)
+	if err != nil {
+		return 0, found, false, nil, rmsPrivilegeViolation, ssNoPriv, nil
+	}
+
+	f, err := vol.CreateFileVersionWith(dir, name, version, recAttr, profile, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
 		return 0, found, false, nil, rmsFileExists, 0, nil
 	}

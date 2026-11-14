@@ -19,6 +19,12 @@ type Credentials struct {
 	// MaxSysGroup is the SYSGEN parameter MAXSYSGROUP: a UIC group up to
 	// it is a system group. 0 means its usual value, DefaultMaxSysGroup.
 	MaxSysGroup uint32
+
+	// DefaultProtection is the process's default file protection (SET
+	// PROTECTION/DEFAULT, $SETDFPROT): what a new file gets when neither
+	// a previous version nor its directory gives one. A zero code gives
+	// everyone every access, as it would on VMS.
+	DefaultProtection Protection
 }
 
 // Identifier is a rights identifier a process holds, with the attributes
@@ -27,6 +33,11 @@ type Identifier struct {
 	Value      uint32
 	Attributes uint32
 }
+
+// DefaultFileProtection is the SYSGEN parameter RMS_FILEPROT's usual
+// value, %XFA00, (S:RWED,O:RWED,G:RE,W): the default protection every
+// account in Phase 93's probe started with.
+const DefaultFileProtection Protection = 0xFA00
 
 // DefaultMaxSysGroup is MAXSYSGROUP's usual value: groups up to octal 10
 // are system groups.
@@ -52,7 +63,7 @@ var SystemUIC = NewUIC(1, 4)
 // Code given no credentials (an RMS call a test makes with none) acts
 // with these.
 func SystemCredentials() Credentials {
-	return Credentials{UIC: SystemUIC, Privileges: AllPrivileges}
+	return Credentials{UIC: SystemUIC, Privileges: AllPrivileges, DefaultProtection: DefaultFileProtection}
 }
 
 // AttributeResource is KGB$M_RESOURCE: the holder of an identifier with

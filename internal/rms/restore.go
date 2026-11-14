@@ -190,7 +190,7 @@ func (s *Session) restoreToVolume(text string, file *backup.File, opts RestoreOp
 		return RestoreResult{}, fmt.Errorf("restore: %w", err)
 	}
 
-	w := &volumeRestore{vol: vol, dev: dev, bm: bm, ib: ib, name: r, file: file}
+	w := &volumeRestore{vol: vol, dev: dev, bm: bm, ib: ib, name: r, file: file, who: s.creator(ExplicitProfile{})}
 	result, restoreErr := w.restore(spec, version, opts)
 
 	// The bitmaps are written whatever happened: directories made before
@@ -219,6 +219,7 @@ type volumeRestore struct {
 	ib      *volume.IndexBitmap
 	name    resolvedSpec // the output name, which says how a file is shown
 	file    *backup.File
+	who     creator // the restoring process, whose files and directories they are until the saved profile is laid over them
 }
 
 // outputExists gives an *OutputExistsError in err out's name as the user
@@ -292,7 +293,7 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 		return result, nil
 	}
 
-	f, err := createVersion(w.vol, parent, fullName, version, copiedAttributes(saved), w.bm, w.ib)
+	f, err := createVersion(w.who, w.vol, parent, fullName, version, copiedAttributes(saved), w.bm, w.ib)
 	if err != nil {
 		return result, w.outputExists(err, out)
 	}
@@ -553,7 +554,12 @@ func (w *volumeRestore) restoreDirectory(parent *volume.Directory, spec filespec
 // down, with what a new directory inherits from its parent, and returns
 // the ones it made.
 func (w *volumeRestore) makeDirectories(dirs []string) ([]CreatedDirectory, error) {
-	levels, err := filespec.CreateDirectoryPath(w.vol, dirs, volume.InheritedDirectoryOptions, w.bm, w.ib)
+	options := func(parent *volume.Directory) volume.DirectoryOptions {
+		d, _ := newDirectoryProfile(w.who, w.vol, parent) // no explicit owner to refuse
+		return d
+	}
+
+	levels, err := filespec.CreateDirectoryPath(w.vol, dirs, options, w.bm, w.ib)
 
 	var made []CreatedDirectory
 
