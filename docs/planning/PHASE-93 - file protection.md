@@ -1,9 +1,8 @@
 # Phase 93 — file protection
 
-**Status:** planned 2026-11-14, waiting for the author's review. Subtask 1
-(the survey, Part A) is written; nothing is implemented. Part B's
-decisions are proposals until "The review" records the answers to the
-questions at the end of this doc.
+**Status:** planned 2026-11-14; the plan accepted by the author the same
+day, with the answers in "The review". Subtask 1 (the survey, Part A) is
+done; nothing is implemented yet.
 
 ## Goal
 
@@ -39,12 +38,18 @@ the accessor is SYSTEM; the tests reach other identities through
 `$CREPRC`'s UIC argument, SET PROCESS/PRIVILEGES, and credentials built in
 Go.
 
-Out of scope, unless the review says otherwise (questions at the end): a
-user authorization file and LOGINOUT's use of it, volume protection
-(the volume's own protection code), the ACL editor, security auditing and
-alarms, and protection of other object classes (devices, queues, logical
-name tables) beyond moving the existing mailbox and section checks onto
-the new code.
+ACLs are in, as VMS has them on files: evaluated in every check,
+inherited by new files and directories, shown, and changed by SET
+SECURITY/ACL; and so are the security services, `$SETDFPROT`, `$CHKPRO`,
+`$CHECK_ACCESS`, `$GET_SECURITY`, `$SET_SECURITY`, and the ACL services
+(the review, answers 1 and 2).
+
+Out of scope (the review): a user authorization file and LOGINOUT's use
+of it, volume protection (the volume's own protection code; answer 4), the
+ACL editor, security auditing and alarms (their ACEs are kept and shown,
+and do nothing), and protection of other object classes (devices, queues,
+logical name tables) beyond moving the existing mailbox and section checks
+onto the new code.
 
 ## Part A — the survey (2026-11-14)
 
@@ -326,7 +331,7 @@ principle; the probe confirms them on 7.1.
 
 To be filled in from the VAX run (subtask 2).
 
-## Part B — decisions (proposed)
+## Part B — decisions
 
 **Decision 1 — one rule, in a leaf package.** `internal/security` (plain
 Go, standard library and `vmsdef` only) holds the rule A.1 describes, for
@@ -355,8 +360,10 @@ in a test that builds RMS alone means SYSTEM's, so existing unit tests
 keep working, and new ones pass other credentials. A subprocess's DCL uses
 its own process's. Nothing caches a decision: each access asks.
 
-The tests reach other identities three ways: `$CREPRC` with a UIC and a
-privilege mask (already supported) runs a program as `[200,1]`; SET
+The tests reach other identities four ways: `$CREPRC` with a UIC and a
+privilege mask (already supported) runs a program as `[200,1]`; `$CREPRC`
+of LOGINOUT with a UIC runs a command procedure's DCL as that UIC, which
+replays the probe's account runs (Part D, Part B2); SET
 PROCESS/PRIVILEGES (new, Decision 10) lets SYSTEM drop BYPASS, SYSPRV,
 GRPPRV, and READALL, though `[1,4]` stays in the system category by its
 group; and RMS tests pass `Credentials` directly.
@@ -417,7 +424,7 @@ file protection stops being used for new files.
 | read attributes (`$DISPLAY`, F$FILE_ATTRIBUTES, DIRECTORY/FULL) | A.4 | R or E |
 
 The levels of a path above the file's directory, and the volume's own
-protection, are A.4's and question 4's.
+protection, are A.4's and out of scope (the review, answer 4).
 
 An access is checked when it is made, as VMS's file system checks it at
 access: an open file isn't checked again for each record, and a change of
@@ -476,12 +483,18 @@ qualifier that takes one moves to the type: CREATE/DIRECTORY's, BACKUP's
   `/CLASS=FILE` (other classes refused), and the date selectors, with
   control access, and for `/OWNER` the guide's rule (`CanChangeOwner`,
   which is wider than the Dictionary's "GRPPRV ... SYSPRV": a system UIC,
-  BYPASS, and the volume owner's UIC qualify too; A.4 settles it). `/ACL` by
-  question 1.
-- **SHOW SECURITY** `file[,...]`, VMS's layout.
-- **SET FILE/PROTECTION** and **/OWNER_UIC**, and **SET PROTECTION=(code)
-  file**, the obsolete forms, if VMS 7.1 accepts them (A.4), on the same
-  code as SET SECURITY.
+  BYPASS, and the volume owner's UIC qualify too; A.4 settles it).
+- **SET SECURITY/ACL**`=(ace[,...])` with `/AFTER`, `/DELETE[=ALL]`, and
+  `/REPLACE`, every ACE form the ACL editor's chapter gives (identifier,
+  default protection, creator, alarm, audit; their OPTIONS), protected and
+  hidden ACEs' rules; the text of an ACE read and written by `$PARSE_ACL`'s
+  and `$FORMAT_ACL`'s code (Decision 13), so DCL and programs share it.
+  The ACL editor (`/EDIT`, EDIT/ACL) stays out.
+- **SHOW SECURITY** `file[,...]`, VMS's layout, ACEs included.
+- **SET FILE/PROTECTION** and **/OWNER_UIC**, **SET PROTECTION=(code)
+  file**, and **SET ACL** and **SHOW ACL**, the obsolete forms, exactly as
+  VMS 7.1 accepts them (A.4; the review, answer 6), on SET SECURITY's
+  code.
 - **SET PROTECTION/DEFAULT** and **SHOW PROTECTION**.
 - **SET PROCESS/PRIVILEGES** and **SHOW PROCESS/PRIVILEGES**, through
   `$SETPRV`'s code: needed to see a denial as SYSTEM. SET PROCESS's other
@@ -492,8 +505,7 @@ qualifier that takes one moves to the type: CREATE/DIRECTORY's, BACKUP's
   `/OWNER`, `/PROTECTION`, and `/FULL` checked against the probe;
   F$FILE_ATTRIBUTES' PRO, UIC, GRP, MBM, and any item the probe shows
   missing; F$ENVIRONMENT("PROTECTION").
-- **`$SETDFPROT`** and **`$CHKPRO`**, with their macros in govax's
-  STARLET.
+- The services are Decision 13.
 
 **Decision 11 — no visible change for SYSTEM's existing work.** SYSTEM
 creates files owned by `[1,4]` with `%XFA00`, which is what the home block
@@ -506,17 +518,40 @@ version now gets its previous version's protection.
 govax neither checks it nor gives it a profile. DIRECTORY and
 F$FILE_ATTRIBUTES of a host file keep what they show today.
 
+**Decision 13 — the security services** (the review, answer 2), each a
+service in corevms over `internal/security` and the checked layer, with
+its macros in govax's STARLET (`_S`, `_G`, and argument-list forms,
+checked against real MACRO's objects as Phase 45's were), its symbols from
+`vmsdef`, and its statuses VMS's:
+
+- `$SETDFPROT`, the process's default protection;
+- `$CHKPRO`, the check itself, given credentials and a profile in its
+  item list;
+- `$CHECK_ACCESS`, whether a user may access a file, by item list;
+- `$GET_SECURITY` and `$SET_SECURITY`, an object's profile by name or
+  channel, class FILE (other classes `SS$_NOCLASS` or as A.4 finds), with
+  their item codes (`OSS$_`) and context;
+- `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`, an ACE between text and
+  binary, and an ACL changed in place.
+
+Sources: the VMS 5.0 System Services manual where it has the service,
+and VSI's public system services pages (the clean-room exception of
+2026-10-13) for the 6.0 ones, with the probe's cases deciding what they
+leave open.
+
 ## Part C — subtasks
 
 Each is one commit, with tests, stopping for review.
 
-1. **The survey** (written 2026-11-14): Part A, this plan.
+1. **The survey** (done 2026-11-14): Part A, this plan.
 2. **The probe**: `testdata/prot93`, as in Part D, written and rehearsed
    on govax; run on the VAX by the author; A.4 filled in and Part B
-   adjusted to its answers.
-3. **The rule**: `internal/security` (Decision 1), with table-driven
-   tests from A.1 and A.4, ACL evaluation by question 1; `uicAccess` on it,
-   the mailbox, section, and event flag tests unchanged.
+   adjusted to its answers. Later rounds as later subtasks find gaps (the
+   review, answer 7), each a section of A.4.
+3. **The rule**: `internal/security` (Decision 1), the guide's whole
+   sequence with ACLs, `CanChangeOwner`, table-driven tests from A.1a and
+   A.4; `uicAccess` on it, the mailbox, section, and event flag tests
+   unchanged.
 4. **ods2**: profiles at creation and the ACE layouts (Decision 8), a
    tagged release, govax pinned to it.
 5. **Identity and defaults**: `Process.Credentials`, `DefaultProtection`
@@ -529,37 +564,45 @@ Each is one commit, with tests, stopping for review.
    existing qualifiers moved onto them, the parse errors held to the
    probe's.
 7. **New files' profiles**: `newFileProfile` (Decision 4) and every
-   creator on it, XABPRO applied and written back, the home block's
-   default no longer used; CREATE/DIRECTORY's owner per A.4.
+   creator on it, ACLs inherited, XABPRO applied and written back, the home
+   block's default no longer used; CREATE/DIRECTORY's owner per A.4.
 8. **Checking RMS's services and the ACP**: the checked layer (Decision 6)
    under `$OPEN`, `$CREATE`, `$ERASE`, `$RENAME`, `$SEARCH`, `$PARSE`,
    `$DISPLAY`, and IO$_ACCESS, CREATE, DELETE, and MODIFY; the image
    activator; held to the probe's program runs under each identity.
 9. **Checking the DCL utilities**: every `OpenFID` and directory site in
    A.2 moved onto the layer, `TestNoUncheckedAccess`, and each utility's
-   messages held to the probe's DCL log.
-10. **Changing profiles**: SET SECURITY, SET FILE, SET PROTECTION on a
-    file, CREATE, COPY, and BACKUP's `/PROTECTION` (Decision 10); ACLs by
-    question 1.
-11. **Showing profiles**: SHOW SECURITY, DIRECTORY/SECURITY and the
-    others, F$FILE_ATTRIBUTES, `$CHKPRO`; held to the probe.
-12. **The VMS round** (if the review wants one): VMS reads a volume of
-    files govax made under several identities and protections, and its
-    DIRECTORY/SECURITY and access agree.
-13. **The close-out**: MANUAL.md (a section on file protection, the new
-    commands, the configuration key), HELP for every new command and
-    qualifier (`TestEveryVerbHasHelp`, `TestEveryQualifierHasHelp`),
-    `VAX-VMS-INTERNALS.md`'s RMS and processes sections, DEVIATIONS.md,
-    PLAN.md, and CLAUDE.md.
+   messages held to the probe's DCL logs, SYSTEM's and the accounts'.
+10. **The ACL services**: `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
+    (Decision 13), the ACE text both ways, held to the probe.
+11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
+    qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
+    BACKUP's `/PROTECTION` (Decision 10).
+12. **Showing profiles**: SHOW SECURITY, SHOW ACL, DIRECTORY/SECURITY,
+    /ACL, and the others, F$FILE_ATTRIBUTES; held to the probe.
+13. **The other security services**: `$CHKPRO`, `$CHECK_ACCESS`,
+    `$GET_SECURITY`, and `$SET_SECURITY` (Decision 13), their macros, held to
+    the probe.
+14. **The VMS round** (the review, answer 7): VMS reads a volume of files
+    govax made under several identities, protections, and ACLs, and its
+    DIRECTORY/SECURITY, SHOW SECURITY, and accesses agree with govax's.
+15. **The close-out**: MANUAL.md (a section on file protection, the new
+    commands and services, the configuration key), HELP for every new
+    command and qualifier (`TestEveryVerbHasHelp`,
+    `TestEveryQualifierHasHelp`), `VAX-VMS-INTERNALS.md`'s RMS and
+    processes sections, DEVIATIONS.md, PLAN.md, and CLAUDE.md.
 
 ## Part D — the probe (subtask 2)
 
 `testdata/prot93/`, run on an exchange volume on DUA5 like
 `testdata/lnm91`. `gen.go` writes the procedures and `exchange.cmd` and
 `copyout.cmd`; the README gives the steps. The procedure makes its own
-tree on the exchange volume, owned by made-up UICs, and changes nothing
-else on the VAX: it needs no AUTHORIZE accounts (question 5), and its SET
-PROCESS/PRIVILEGES changes are undone at its end.
+tree on the exchange volume, and its SET PROCESS/PRIVILEGES changes are
+undone at its end. Three throwaway accounts on the simh VAX (the review,
+answer 5), made once by the README's AUTHORIZE commands, give it real
+identities: PROT93A `[200,1]` (the owner), PROT93B `[200,2]` (the owner's
+group), and PROT93C `[300,1]` (the world), none with privileges, their
+default directories in the probe's tree.
 
 **The tree.** `[PROT93]` and below, directories owned by `[200,1]`,
 `[200,2]`, `[300,1]`, and `[1,4]`, with protections that give each
@@ -590,6 +633,27 @@ VERIFY):
 denied, every utility in A.3's item 6, each once with access and once
 without, and SET SECURITY without control access.
 
+**Part B2, DCL as each account** (`prot93u.com`, run by the author logged
+in as PROT93A, PROT93B, and PROT93C in turn, each run's log its own file):
+the same utilities against the same tree, so each category's messages are
+seen from a real login; SET SECURITY, `/OWNER`, and `/ACL` on the
+account's own files and others'; SET PROTECTION/DEFAULT and files created
+after it; SHOW PROCESS/PRIVILEGES.
+
+On govax, Parts B2 and C are replayed in detached processes made by
+`$CREPRC` with the account's UIC: Part C's image directly, and B2's
+procedure under LOGINOUT's CLI (`corevms/cliprocess.go`), which already
+runs a command procedure in a detached process. This is test machinery
+until identities come; the process's username is set to the account's, so
+the logs compare.
+
+**Part E, ACLs** (in `prot93a.com` and `prot93.mar`): SET SECURITY/ACL
+with every ACE form and OPTIONS, `/AFTER`, `/DELETE`, `/DELETE=ALL`,
+`/REPLACE`; protected, hidden, and nopropagate ACEs through `/LIKE` and
+`/DEFAULT`; SET ACL and SHOW ACL; SHOW SECURITY and DIRECTORY/SECURITY of
+each; malformed ACEs; and the ACEs' bytes as `$GET_SECURITY` returns them,
+dumped in hex, which fix ods2's layouts (Decision 8).
+
 **Part C, the services under other identities** (`prot93.mar`, a program
 that takes its cases from data lines, like `lnm91.mar`; `prot93d.mar`, a
 driver that runs it with `$CREPRC` under a UIC and privilege mask and waits
@@ -609,46 +673,30 @@ and the XABPRO's owner, protection, and ACL status:
 | Rename | `$RENAME` within and across directories, with each access removed in turn |
 | Attributes | `$DISPLAY` with a XABPRO of an unreadable file |
 | ACP | IO$_ACCESS, IO$_CREATE, IO$_DELETE, IO$_MODIFY of `ATR$C_FPRO` and `ATR$C_UIC`, with and without control |
-| Services | `$CHKPRO` with each category and privilege; `$SETDFPROT` |
+| Services | `$CHKPRO` with each category, privilege, and ACE; `$CHECK_ACCESS` for each account; `$GET_SECURITY` and `$SET_SECURITY` of each item code, by name and by channel, with and without control; `$PARSE_ACL` and `$FORMAT_ACL` of each ACE form and malformed text; `$CHANGE_ACL`'s functions; `$SETDFPROT` |
 | Images | `$CREPRC` of an image with E only, R only, neither (the termination status) |
 
 The program prints a status at every step and has nothing to wait on but
 the driver's termination messages.
 
-## Questions for the review
+## The review (2026-11-14)
 
-1. **ACLs.** Govax stores ACLs (BACKUP restores them, DIRECTORY/FULL shows
-   identifier ACEs). How much of them is this phase? Proposed: the
-   checks evaluate identifier ACEs (UIC and environmental identifiers,
-   wildcard UICs) before the protection code; the default protection ACE
-   and DEFAULT ACEs are inherited; SET SECURITY/ACL with `/DELETE`,
-   `/REPLACE`, and `/AFTER` is its own subtask; the ACL editor, alarms, and
-   audits are out. The smaller alternative: only the default protection
-   ACE now, the rest a later phase with the identities.
-2. **Security services.** `$SETDFPROT` and `$CHKPRO` (VMS 5.0) are in.
-   Should `$CHECK_ACCESS`, `$GET_SECURITY`, and `$SET_SECURITY` (VMS 6
-   on, in 7.1) be too, or wait for the identities phase?
-3. **SET PROCESS/PRIVILEGES.** Proposed in this phase, as the way to see
-   a denial as SYSTEM. SET PROCESS's other qualifiers later. Agreed?
-4. **Volume protection.** The guide says the volume's own protection code
-   (INITIALIZE/PROTECTION, MOUNT/PROTECTION, kept in the home block) is
-   checked before any directory or file access, and creating a file needs
-   read, write, and create access to it. govax's volumes all have
-   protections that grant SYSTEM everything, so leaving it out changes
-   nothing today. Proposed: out of scope and logged, for the identities
-   phase, which is when it would first matter. Or in, as one more check in
-   the layer?
-5. **The probe's identities.** Part C uses `$CREPRC` with a UIC, which
-   needs no accounts. DCL under another UIC (Part B as `[200,1]` rather
-   than as SYSTEM with privileges dropped) would need AUTHORIZE accounts
-   on the simh VAX, or a detached LOGINOUT. Is creating two or three
-   throwaway accounts there acceptable, or should Part B stay as SYSTEM
-   without privileges?
-6. **Obsolete forms.** Support SET PROTECTION=(code) on a file and SET
-   FILE/PROTECTION and /OWNER_UIC if VMS 7.1 accepts them (proposed), or
-   only SET SECURITY?
-7. **A VMS round** (subtask 12): worth a second VAX run, or are Part D's
-   runs enough?
+The author accepted the plan and answered its questions:
+
+1. **ACLs:** the fuller support: identifier ACEs evaluated in every check,
+   the default protection ACE and DEFAULT ACEs inherited, SET
+   SECURITY/ACL with its positional qualifiers. The ACL editor, alarms, and
+   audits stay out (Decision 10, subtasks 3, 7, 10, and 11).
+2. **Security services:** all in this phase: `$SETDFPROT`, `$CHKPRO`,
+   `$CHECK_ACCESS`, `$GET_SECURITY`, `$SET_SECURITY`, and with the ACLs
+   `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL` (Decision 13).
+3. **SET PROCESS/PRIVILEGES:** in this phase (subtask 5).
+4. **Volume protection:** out of scope, logged for the identities phase.
+5. **The probe's identities:** test accounts may be made on the simh VAX
+   (Part D's PROT93A, B, and C; Part B2).
+6. **Obsolete forms:** accepted exactly as VMS 7.1 accepts them (Decision 10).
+7. **More probes:** the author will run further rounds wherever they help
+   completeness, and the VMS round is subtask 14.
 
 ## Progress log
 
@@ -665,3 +713,8 @@ the driver's termination messages.
   a new version's and a directory's profiles, and creation's requirements,
   and Decisions 1, 4, 5, and 10 were revised to it. Stopped for the
   author's review.
+- **2026-11-14** The review: see "The review". ACLs and every security
+  service are in the phase (Decisions 10 and 13); Part C now has 15
+  subtasks; Part D has test accounts on the VAX (Part B2), the replay of
+  their runs in detached processes on govax, and an ACL part (Part E).
+  Subtask 2, the probe, is next.
