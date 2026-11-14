@@ -16,8 +16,8 @@ func uic(group, member uint32) uint32 { return group<<16 | member }
 func TestUICAccess(t *testing.T) {
 	owner := uic(0o100, 1)
 
-	// System: nothing denied. Owner: physical I/O denied. Group: write
-	// and physical I/O denied. World: everything denied. (A process is
+	// System: nothing denied. Owner: logical I/O (bit 3) denied. Group:
+	// write and logical I/O denied. World: everything denied. (A process is
 	// in every category it qualifies for, so the owner is in GROUP and
 	// WORLD too.)
 	const mask = 0xFA80
@@ -31,14 +31,15 @@ func TestUICAccess(t *testing.T) {
 	}{
 		{"owner reads", owner, 0, accessRead, true},
 		{"owner writes", owner, 0, accessWrite, true},
-		{"owner physical I/O", owner, 0, accessPhysical, false},
+		{"owner logical I/O", owner, 0, accessLogical, false},
+		{"owner physical I/O", owner, 0, accessPhysical, true},
 		{"group reads", uic(0o100, 2), 0, accessRead, true},
 		{"group writes", uic(0o100, 2), 0, accessWrite, false},
 		{"group reads and writes", uic(0o100, 2), 0, accessRead | accessWrite, false},
 		{"world reads", uic(0o200, 1), 0, accessRead, false},
-		{"system group", uic(1, 4), 0, accessRead | accessWrite | accessPhysical, true},
+		{"system group", uic(1, 4), 0, accessRead | accessWrite | accessLogical, true},
 		{"world with SYSPRV", uic(0o200, 1), privSYSPRV, accessWrite, true},
-		{"world with BYPASS", uic(0o200, 1), privBYPASS, accessPhysical, true},
+		{"world with BYPASS", uic(0o200, 1), privBYPASS, accessLogical, true},
 		{"world with READALL reads", uic(0o200, 1), privREADALL, accessRead, true},
 		{"world with READALL writes", uic(0o200, 1), privREADALL, accessWrite, false},
 		{"group with GRPPRV", uic(0o100, 2), privGRPPRV, accessWrite, true},

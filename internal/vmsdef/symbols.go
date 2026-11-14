@@ -55,6 +55,17 @@ import (
 //     entry's encoding.
 //   - PRV$: $PRVDEF's privilege bit numbers, which may be past bit 31 of
 //     the quadword privilege mask; PRV$K_NUMBER_OF_PRIVS is the count.
+//     $PRVDEF's display flags (PRV$V_BRIEF, ...) are left out: they share
+//     the privileges' bit numbers, which code looks privileges up by.
+//     These came from real MACRO's output for Phase 93's probe
+//     (testdata/prot93, defined.txt but its PRV$ lines):
+//   - ACE$, ACL$: $ACEDEF's access control entry layouts (types, option
+//     flags, access bits, field offsets) and $ACLDEF's.
+//   - CHP$: $CHPDEF's $CHKPRO item codes and flags.
+//   - ARM$: $ARMDEF's access rights masks.
+//   - KGB$: $KGBDEF's identifier attributes and identifier layout.
+//   - OSS$: $OSSDEF's $GET_SECURITY and $SET_SECURITY item codes and
+//     flags.
 //   - BRK$: $BRKDEF's $BRKTHRU send types, requestor classes, and flags.
 //   - FIB$: $FIBDEF's file information block field offsets, bits, and
 //     codes: the disk ACP's $QIO argument.

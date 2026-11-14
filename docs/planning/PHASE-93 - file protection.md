@@ -1,8 +1,8 @@
 # Phase 93 — file protection
 
 **Status:** planned 2026-11-14; the plan accepted by the author the same
-day, with the answers in "The review". Subtask 1 (the survey, Part A) is
-done; nothing is implemented yet.
+day, with the answers in "The review". Subtasks 1 (the survey, Part A),
+2 (the probe), and 3 (the rule, `internal/security`) are done.
 
 ## Goal
 
@@ -765,6 +765,13 @@ copied to every process a process creates. `$SETDFPROT`, SET
 PROTECTION/DEFAULT, SHOW PROTECTION, and F$ENVIRONMENT("PROTECTION") use
 it.
 
+MAXSYSGROUP is configurable the same way (the author, 2026-11-14): a key
+`vax.sysgen.maxsysgroup` (default octal 10, the SYSGEN parameter's usual
+value), reaching each `System` through `corevms.Sysgen` and every
+`Credentials` (`security.Credentials.MaxSysGroup`), so the system category
+by UIC group follows it for files and for mailboxes, sections, and event
+flag clusters alike.
+
 **Decision 4 — a new file's profile, in one function.** `rms`'s
 `newFileProfile(creds, dir, name, explicit)` is the only place a new
 file's owner, protection, and ACL are chosen, by A.1's order:
@@ -964,14 +971,17 @@ Each is one commit, with tests, stopping for review.
    A.4 filled in and Part B adjusted to its answers. Later rounds as later
    subtasks find gaps (the review, answer 7), each a section of A.4; the
    security services' round goes with subtask 10.
-3. **The rule**: `internal/security` (Decision 1), the guide's whole
-   sequence with ACLs, `CanChangeOwner`, table-driven tests from A.1a and
-   A.4; `uicAccess` on it, the mailbox, section, and event flag tests
-   unchanged.
+3. **The rule** (done 2026-11-14): `internal/security` (Decision 1), the
+   guide's whole sequence with ACLs, `CanChangeOwner`, table-driven tests
+   from A.1a and A.4; `uicAccess` on it, the mailbox, section, and event
+   flag tests unchanged.
 4. **ods2**: profiles at creation and the ACE layouts (Decision 8), a
    tagged release, govax pinned to it.
-5. **Identity and defaults**: `Process.Credentials`, `DefaultProtection`
-   and `vax.sysgen.rms_fileprot` (in `validConfigs` and HELP), inheritance
+5. **Identity and defaults**: `Process.Credentials` (its rights
+   identifiers; subtask 3 made it with the UIC and privileges),
+   `DefaultProtection` and `vax.sysgen.rms_fileprot`, and
+   `vax.sysgen.maxsysgroup` (Decision 3; both in `validConfigs` and HELP),
+   inheritance
    by created and spawned processes, `rms.Context.Credentials` and
    `rms.Session.Credentials` filled in; `$SETDFPROT`, SET
    PROTECTION/DEFAULT, SHOW PROTECTION, F$ENVIRONMENT; SET and SHOW
@@ -1220,3 +1230,30 @@ The author accepted the plan and answered its questions:
   procedure's lines run, since `PROT93S.COM` opened the procedures with
   the files the accounts needed (a mistake of the fix-up's); govax runs
   them, unconfirmed. Subtask 3, the rule, is next.
+- **2026-11-14** Subtask 3 done: `internal/security`, a leaf package over
+  `vmsdef`. `Check` and `Evaluate` are the guide's sequence (the first
+  identifier ACE whose identifiers the process holds all of, DEFAULT ACEs
+  ignored, a denial leaving the SYSTEM and OWNER fields; the categories'
+  fields added together; `[0,0]`'s rule; control from ownership, the system
+  category, an ACE, or BYPASS); `CanChangeOwner` is 4.8.4.2's list;
+  `DecodeACL`, `NewIdentifierACE`, and `NewDefaultProtectionACE` are VMS's
+  layouts. `TestProbeMatrix` replays the probe's whole `[.F]` matrix, 2,800
+  answers under 14 identities from both rounds' logs (`FACLCTL`, changed
+  between runs, is a case of its own), and found one thing A.4 hadn't said:
+  READALL answers a request as a whole, giving read alone and adding nothing
+  to the code's (a READALL process is refused `FW.DAT`, W for everyone, for
+  read and write); BYPASS is the only privilege that adds. `TestProbeACEs`
+  makes the probe's ACEs byte for byte as VMS's `$DISPLAY` returned them and
+  decodes them back. Unconfirmed: an ACE's grant and the SYSTEM or OWNER
+  field's add when each gives part of a request; GRPPRV's owner change needs
+  the new owner in its group as well (round 2's B2); a UIC is held as its
+  own resource identifier. `corevms`'s `uicAccess` now calls `Check`
+  (`Process.Credentials`), so objects owned by `[0,0]` follow the guide's
+  rule there too. Two fixes on the way: `uicprot.go` had a device's physical
+  and logical I/O bits swapped against `$ARMDEF` (physical is bit 2), and
+  `rights.go` NETWORK's and DIALUP's values (`$KGBDEF`: DIALUP `%X80000002`,
+  NETWORK `%X80000005`). `vmsdef` gained `$ACEDEF`, `$ACLDEF`, `$CHPDEF`,
+  `$ARMDEF`, `$KGBDEF`, and `$OSSDEF` from `defined.txt` (`gen -values`),
+  but not its `$PRVDEF` lines, whose display flags share the privilege bit
+  numbers. The author asked for `vax.sysgen.maxsysgroup`; it is in Decision
+  3 and subtask 5. Subtask 4, ods2, is next.

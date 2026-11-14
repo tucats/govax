@@ -45,14 +45,15 @@ type rightsIdentifier struct {
 }
 
 // environmentalIdentifiers are the general identifiers VMS creates in a
-// new rights database, with the values AUTHORIZE gives them.
+// new rights database, with $KGBDEF's values (VMS 7.1's, from Phase 93's
+// probe; before it, NETWORK and DIALUP had each other's).
 var environmentalIdentifiers = []rightsIdentifier{
-	{name: "BATCH", value: 0x80000001},
-	{name: "NETWORK", value: 0x80000002},
-	{name: "INTERACTIVE", value: 0x80000003},
-	{name: "LOCAL", value: 0x80000004},
-	{name: "DIALUP", value: 0x80000005},
-	{name: "REMOTE", value: 0x80000006},
+	{name: "BATCH", value: vmsdef.Symbols["KGB$K_BATCH_ID"]},
+	{name: "DIALUP", value: vmsdef.Symbols["KGB$K_DIALUP_ID"]},
+	{name: "INTERACTIVE", value: vmsdef.Symbols["KGB$K_INTERACTIVE_ID"]},
+	{name: "LOCAL", value: vmsdef.Symbols["KGB$K_LOCAL_ID"]},
+	{name: "NETWORK", value: vmsdef.Symbols["KGB$K_NETWORK_ID"]},
+	{name: "REMOTE", value: vmsdef.Symbols["KGB$K_REMOTE_ID"]},
 }
 
 // maxIdentifierName is the longest identifier name.

@@ -49,9 +49,9 @@ func TestIdtoasc(t *testing.T) {
 	namlen, resid := a.alloc(2), a.alloc(4)
 	nambuf, buf := a.outDesc(31)
 
-	wantR0(t, callLNM(t, env, serviceSysIdtoasc, 0x80000002, namlen, nambuf, resid), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysIdtoasc, 0x80000005, namlen, nambuf, resid), ssNormal)
 
-	if n := uint16(a.readLong(namlen)); a.readString(buf, n) != "NETWORK" || a.readLong(resid) != 0x80000002 {
+	if n := uint16(a.readLong(namlen)); a.readString(buf, n) != "NETWORK" || a.readLong(resid) != 0x80000005 {
 		t.Errorf("name %q resid %#x", a.readString(buf, n), a.readLong(resid))
 	}
 
