@@ -1679,6 +1679,93 @@ func buildRound2Final() string {
 	return p.String()
 }
 
+// round2Opened are the files the accounts' round 2 reads. exchange2.cmd's
+// copies have SYSTEM's default protection, which gives the world nothing,
+// and PROT93R.COM didn't open them (round 1's PROT93.COM opened [000000]'s
+// files before any were added), so the accounts' first try was refused
+// PROT93V.COM; prot93s.com opens them, one SET SECURITY each.
+var round2Opened = []string{
+	disk + "[000000]PROT93V.COM", disk + "[000000]PROT93F.DAT", disk + "[000000]PROT93G.DAT",
+	disk + "[000000]PROT93C.DAT", disk + "[000000]PROT93D.DAT", disk + "[000000]PROT93.EXE",
+	fidCases,
+	spec("IMG", "PRO2E.COM"), spec("IMG", "PRO2R.COM"), spec("IMG", "PRO2N.COM"),
+}
+
+// buildRound2Fix is prot93s.com: after PROT93R.COM and PROT93Y.COM ran
+// with the accounts unable to read PROT93V.COM, the accounts again and
+// round 2's files opened to them, each shown.
+func buildRound2Fix() string {
+	var p proc
+
+	p.line("$ ! PROT93S.COM - Phase 93's probe, round 2: the accounts again, and")
+	p.line("$ ! round 2's files opened to them (exchange2.cmd's copies gave the world")
+	p.line("$ ! no access). Written by testdata/prot93/gen.go. Run it as SYSTEM in")
+	p.line("$ ! place of PROT93R.COM, which has run (README.md's \"Round 2\"):")
+	p.line("$ !")
+	p.line("$ !     @DUA1:[000000]PROT93S")
+	p.line("$ !")
+	p.line("$ IF P1 .EQS. \"LOGGED\" THEN GOTO BEGIN")
+	p.line("$ HERE = F$ENVIRONMENT(\"PROCEDURE\")")
+	p.line("$ DEV = F$PARSE(HERE,,,\"DEVICE\")")
+	p.line("$ DEFINE/SYSTEM/EXECUTIVE_MODE PROT93$DISK 'DEV'")
+	p.line("$ LOGFILE = DEV + \"[PROT93LOG]PROT93S.LOG\"")
+	p.line("$ @'HERE'/OUTPUT='LOGFILE' LOGGED")
+	p.line("$ WRITE SYS$OUTPUT \"PROT93S finished; the log is \", LOGFILE")
+	p.line("$ EXIT")
+	p.line("$ BEGIN:")
+	p.line("$ SET NOON")
+	p.line("$ SET VERIFY")
+
+	p.section("ACCOUNTS")
+	p.line("$ HOME = F$ENVIRONMENT(\"DEFAULT\")")
+	p.line("$ SET DEFAULT SYS$SYSTEM")
+	p.line("$ RUN SYS$SYSTEM:AUTHORIZE")
+
+	for _, l := range []string{
+		account("PROT93A", "[200,1]", "TMPMBX,NETMBX"),
+		account("PROT93B", "[200,2]", "TMPMBX,NETMBX,READALL,GRPPRV,SYSPRV,BYPASS"),
+		account("PROT93C", "[300,1]", "TMPMBX,NETMBX,READALL,GRPPRV,SYSPRV,BYPASS"),
+		"ADD/IDENTIFIER PROT93_TEAM/VALUE=IDENTIFIER=65537",
+		"GRANT/IDENTIFIER PROT93_TEAM PROT93C",
+		"SHOW/IDENTIFIER/FULL PROT93",
+		"SHOW/IDENTIFIER/FULL PROT93_TEAM",
+		"EXIT",
+	} {
+		p.line("%s", l)
+	}
+
+	p.line("$ SET DEFAULT 'HOME'")
+	p.line("$ WRITE SYS$OUTPUT F$IDENTIFIER(\"PROT93_TEAM\",\"NAME_TO_NUMBER\")")
+
+	p.section("ROUND 2'S FILES OPENED")
+
+	for _, f := range round2Opened {
+		p.line("$ SET SECURITY/PROTECTION=(W:RE) %s", f)
+		p.line("$ SHOW SECURITY %s", f)
+	}
+
+	p.section("END")
+	p.line("$ WRITE SYS$OUTPUT \"PROT93S FINISHED\"")
+	p.line("$ SET NOVERIFY")
+	p.line("$ EXIT")
+
+	return p.String()
+}
+
+func exchange3() string {
+	return `! EXCHANGE3.CMD - adds PROT93S.COM to round 1's volume, after round 2's
+! accounts were refused PROT93V.COM (README.md's "Round 2"). Written by
+! testdata/prot93/gen.go. Run from the repository root:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange3.cmd
+!
+MOUNT/WRITE DUA5 "testdata/disks/prot93-exchange.dsk"
+COPY "` + dir + `/prot93s.com"/HOST DUA5:[000000]PROT93S.COM
+DIRECTORY/OWNER/PROTECTION DUA5:[000000]PROT93*.*
+DISMOUNT DUA5
+`
+}
+
 // round2Files are the files exchange2.cmd copies to round 1's volume.
 var round2Files = []string{"prot93r.com", "prot93v.com", "prot93y.com", "prot93f.dat", "prot93g.dat"}
 
@@ -1715,7 +1802,7 @@ func copyout2() string {
 MOUNT DUA5 "testdata/disks/prot93-exchange.dsk"
 `)
 
-	for _, l := range []string{"PROT93R.LOG", "PROT93V_PROT93A.LOG", "PROT93V_PROT93B.LOG", "PROT93V_PROT93C.LOG", "PROT93Y.LOG"} {
+	for _, l := range []string{"PROT93R.LOG", "PROT93S.LOG", "PROT93V_PROT93A.LOG", "PROT93V_PROT93B.LOG", "PROT93V_PROT93C.LOG", "PROT93Y.LOG"} {
 		fmt.Fprintf(&b, "COPY DUA5:[PROT93LOG]%s \"%s/vax/round2/%s\"/HOST/QUIET\n", l, dir, strings.ToLower(l))
 	}
 
@@ -1742,6 +1829,8 @@ func main() {
 		"prot93f.dat":   core2File(),
 		"prot93g.dat":   change2File(),
 		"exchange2.cmd": exchange2(),
+		"prot93s.com":   buildRound2Fix(),
+		"exchange3.cmd": exchange3(),
 		"copyout2.cmd":  copyout2(),
 	}
 

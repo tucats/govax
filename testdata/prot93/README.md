@@ -220,6 +220,28 @@ with the PROT93 identifier round 1 left. No procedure waits for input.
        mkdir -p testdata/prot93/vax/round2
        go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout2.cmd
 
+**The first try** stopped at step 4: exchange2.cmd's copies have SYSTEM's
+default protection, `(RWED,RWED,RE,)`, which PROT93R.COM didn't open, so
+the accounts were refused PROT93V.COM (`insufficient privilege`), and
+nothing ran under them. PROT93R.COM's and PROT93Y.COM's logs from it are
+kept. To go on from there, without running PROT93R.COM again:
+
+1. Add PROT93S.COM to the volume, from the repository root:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange3.cmd
+
+2. Attach it, and as SYSTEM:
+
+       $ MOUNT/SYSTEM DUA1: PROT93
+       $ @DUA1:[000000]PROT93S
+
+   It defines `PROT93$DISK` again, makes the accounts again, and gives
+   each file the accounts read world RE, showing each. Its log is
+   `PROT93S.LOG`, ending `PROT93S FINISHED`.
+
+3. Go on with steps 4 to 7 above (PROT93V.COM as each account, PROT93Y.COM
+   as SYSTEM, copyout2.cmd, which also brings PROT93S.LOG back).
+
 If round 2 stops partway, run `@PROT93$DISK:[000000]PROT93Y` as SYSTEM,
 copy `prot93-round1.dsk` back over `prot93-exchange.dsk`, and start again
 from step 1's second command.

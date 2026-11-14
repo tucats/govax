@@ -1136,3 +1136,12 @@ The author accepted the plan and answered its questions:
   copy of the VAX's volume. Round 1 also left the group identifier PROT93
   on the VAX, which round 2's last procedure removes. The security services
   move to a later round with subtask 10. Waiting for round 2's VAX run.
+- **2026-11-14** Round 2's first try: PROT93R.COM ran whole (its log is
+  `vax/round2/prot93r.log`: the accounts, PROT93_TEAM at round 1's value,
+  the images world RE, round 2's files, SYSTEM's passes), but the accounts
+  were refused PROT93V.COM: govax's COPY onto the volume (exchange2.cmd)
+  gave round 2's files SYSTEM's default protection, and nothing opened
+  them as round 1's PROT93.COM had opened its own. PROT93Y.COM then removed
+  the accounts. `PROT93S.COM` (gen.go, exchange3.cmd) makes the accounts
+  again and opens each file they read, one SET SECURITY each; the accounts'
+  runs go on from there.
