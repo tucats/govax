@@ -182,3 +182,18 @@ func EncodeACL(acl []ACE) []byte {
 
 	return raw
 }
+
+// DecodeACE reads one entry, data, as DecodeACL reads each of an ACL's;
+// an entry shorter than its header has only its type and flags.
+func DecodeACE(data []byte) ACE {
+	if len(data) < aceAccess {
+		a := ACE{Data: append([]byte(nil), data...)}
+		if len(data) > aceType {
+			a.Type = data[aceType]
+		}
+
+		return a
+	}
+
+	return decodeACE(data)
+}

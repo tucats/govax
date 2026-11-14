@@ -236,7 +236,7 @@ const (
 
 	// docs/planning/PHASE-93 - file protection.md: protection codes.
 	cliIvProt
-	cliProtNotImpl
+	_ // SET PROTECTION of a file's NOTIMPL until Phase 93's subtask 11
 	cliDirect
 	cliNoList
 )
@@ -575,10 +575,8 @@ const (
 
 	// CLI_IVPROT is DCL's CLI$_IVPROT, "invalid protection code" (a
 	// warning), for SET PROTECTION/DEFAULT's code, as VMS 7.1 gave it
-	// (Phase 93's probe). CLI_PROTNOTIMPL, govax's own, is SET
-	// PROTECTION of a file, which waits for Phase 93's subtask 11.
-	CLI_IVPROT      = CLIFacility<<FacilityPosition | cliIvProt<<MessagePosition | StatusWarning
-	CLI_PROTNOTIMPL = CLIFacility<<FacilityPosition | cliProtNotImpl<<MessagePosition | StatusError
+	// (Phase 93's probe).
+	CLI_IVPROT = CLIFacility<<FacilityPosition | cliIvProt<<MessagePosition | StatusWarning
 
 	// CLI_DIRECT and CLI_NOLIST are DCL's CLI$_DIRECT and CLI$_NOLIST,
 	// warnings, for a $UIC value whose brackets or list are wrong
@@ -762,7 +760,6 @@ func init() {
 	DefineMessage(CLI_IVPROT, CLIFacility, "IVPROT", "invalid protection code")
 	DefineMessage(CLI_DIRECT, CLIFacility, "DIRECT", "invalid directory syntax - check brackets and other delimiters")
 	DefineMessage(CLI_NOLIST, CLIFacility, "NOLIST", "list of parameter values not allowed - check use of comma (,)")
-	DefineMessage(CLI_PROTNOTIMPL, CLIFacility, "PROTNOTIMPL", "SET PROTECTION of a file is not implemented yet; SET PROTECTION/DEFAULT is")
 	DefineMessage(CLI_NOTHEN, CLIFacility, "NOTHEN", "IF or ON statement syntax error - check placement of THEN keyword")
 	DefineMessage(CLI_INSFPRM, CLIFacility, "INSFPRM", "missing command parameters - supply all required parameters")
 	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits")

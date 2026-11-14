@@ -11,6 +11,68 @@
    then HELP SET.  So are the console's string pool (SHOW STRING_POOL,
    CANCEL STRINGS) and the PSL's fields (HELP PSL).
 
+2 ACL
+
+   Changes a file's access control list: VMS's older form of SET
+   SECURITY/ACL, which it shares.  HELP SET SECURITY has the entries'
+   forms and what each qualifier does.
+
+   Format
+
+     SET ACL/ACL=(ace[,...]) file
+
+3 Qualifiers
+/ACL
+
+      /ACL[=(ace[,...])]
+
+   The entries to add, or with /DELETE or /REPLACE to delete or replace.
+
+/AFTER
+
+      /AFTER=(ace)
+
+   Adds the entries after this one rather than first.
+
+/DEFAULT
+
+      /DEFAULT
+
+   Gives the file the process's default protection and UIC, and deletes
+   every entry but the protected ones.
+
+/DELETE
+
+      /DELETE[=ALL]
+
+   Deletes /ACL's entries, or with none every entry but the protected
+   ones; =ALL deletes every entry, then adds /ACL's.
+
+/LIKE
+
+      /LIKE=NAME=file
+
+   Gives the file another file's protection and access control list.
+
+/LOG
+
+      /LOG
+      /NOLOG (default)
+
+   Reports each file changed.
+
+/REPLACE
+
+      /REPLACE=(ace[,...])
+
+   Replaces each of /ACL's entries, in place, by these.
+
+3 Examples
+
+   1.$ SET ACL/ACL=(IDENTIFIER=SMITH,ACCESS=READ) LEDGER.DAT
+
+     Lets SMITH read LEDGER.DAT.
+
 2 CONTROL
 
    Turns Ctrl/Y on or off.  SET NOCONTROL=Y makes Ctrl/Y echo
@@ -149,6 +211,48 @@
 
      Makes EDIT run Visual Studio Code, working in /tmp.
 
+2 FILE
+
+   Changes a file's protection or owner: VMS's older forms of SET
+   SECURITY/PROTECTION and /OWNER, which they share.  A list of files
+   may be given, and each may have wildcards.  Changing a file's
+   protection needs control access to it; giving it another owner needs
+   privilege (HELP SET SECURITY).
+
+   Format
+
+     SET FILE/PROTECTION[=(code)] file[,...]
+     SET FILE/OWNER_UIC[=uic] file[,...]
+
+3 Qualifiers
+/LOG
+
+      /LOG
+      /NOLOG (default)
+
+   Reports each file changed, %SET-I-MODIFIED.
+
+/OWNER_UIC
+
+      /OWNER_UIC[=uic]
+
+   Makes the UIC, or the identifier, the file's owner.  With no UIC, the
+   current process's UIC.
+
+/PROTECTION
+
+      /PROTECTION[=(code)]
+
+   Merges the code into the file's protection: a category the code
+   doesn't name keeps what it had.  With no code, the file gets the
+   process's default protection (SHOW PROTECTION).
+
+3 Examples
+
+   1.$ SET FILE/PROTECTION=(W:R) NOTES.TXT
+
+     Lets the world read NOTES.TXT.
+
 2 ON
 
    Turns a command procedure's checking of statuses on or off.  SET NOON
@@ -257,12 +361,15 @@
    (read), W (write), E (execute), D (delete).  ":" or "=" may follow a
    category, and a category with no letters gives no access.
 
-   Without /DEFAULT, SET PROTECTION=(code) file changes a file's
-   protection; govax doesn't do that yet.
+   Without /DEFAULT, SET PROTECTION[=(code)] file changes a file's
+   protection, VMS's older form of SET SECURITY/PROTECTION: the code is
+   merged into the file's, and with no code the file gets the process's
+   default protection.  It needs control access to the file.
 
    Format
 
      SET PROTECTION[=(code)]/DEFAULT
+     SET PROTECTION[=(code)] file
 
 3 Qualifiers
 /DEFAULT
@@ -311,6 +418,149 @@
      $ PRINT 10+10
 
      Prints 00000020.
+
+2 SECURITY
+
+   Changes a file's security profile: its owner, its protection code,
+   and its access control list (ACL).  The file specification may have
+   wildcards (a name with no version is its highest version), but only
+   one may be given.  Changing a profile needs control access to the
+   file: the SYSTEM and OWNER categories have it, and so does anyone an
+   ACL entry gives CONTROL.  Giving a file another owner needs more: a
+   system UIC (a group up to vax.sysgen.maxsysgroup), SYSPRV, or BYPASS,
+   or GRPPRV for an owner in its own group, though anyone with control
+   may make their own UIC the owner again.
+
+   A protection code is a list of categories, SYSTEM, OWNER, GROUP, and
+   WORLD (or their first letters), each with the access it gives: R
+   (read), W (write), E (execute), D (delete); HELP SET PROTECTION.
+
+   An ACL entry (ACE) is a list in parentheses:
+
+     (IDENTIFIER=id[+id...][,OPTIONS=options][,ACCESS=access])
+     (DEFAULT_PROTECTION[,OPTIONS=options],code)
+     (CREATOR[,OPTIONS=options],ACCESS=access)
+     (ALARM=SECURITY[,OPTIONS=options],ACCESS=access+SUCCESS+FAILURE)
+     (AUDIT=SECURITY[,OPTIONS=options],ACCESS=access+SUCCESS+FAILURE)
+
+   An identifier is a UIC ([200,1], [200,*], [SMITH]), a general
+   identifier, or an environmental one (INTERACTIVE); access is NONE or
+   READ, WRITE, EXECUTE, DELETE, and CONTROL joined by "+"; options are
+   DEFAULT, PROTECTED, NOPROPAGATE, and NONE.  The first identifier ACE
+   that matches a process decides what it may do.  A directory's
+   DEFAULT ACEs go to the files made in it, and its default protection
+   ACE gives them their protection.  Alarms and audits are kept and
+   shown, and do nothing.  HIDDEN entries can't be changed here.
+
+   Format
+
+     SET SECURITY[/qualifiers] file
+
+3 Qualifiers
+/ACL
+
+      /ACL[=(ace[,...])]
+
+   Adds the entries, in order, before the first entry (or after /AFTER's
+   entry).  An entry for the same identifiers as one already there takes
+   its place.  With /DELETE or /REPLACE, the entries to delete or to
+   replace.
+
+/AFTER
+
+      /AFTER=(ace)
+
+   Adds /ACL's entries after this one.
+
+/BY_OWNER
+
+      /BY_OWNER=uic
+
+   Changes only the files this UIC owns; "*" may stand for the group or
+   the member.
+
+/CLASS
+
+      /CLASS=FILE
+
+   The class of object; only FILE is supported.
+
+/COPY_ATTRIBUTE
+
+      /COPY_ATTRIBUTE=OWNER
+
+   With /LIKE, copies the other file's owner too.
+
+/DEFAULT
+
+      /DEFAULT
+
+   Gives the file the process's default protection (a directory, its
+   parent's less delete) and UIC, and deletes every ACL entry but the
+   protected ones.
+
+/DELETE
+
+      /DELETE[=ALL]
+
+   Deletes /ACL's entries (one that isn't there is %SET-W-NOSUCHACE), or
+   with none every entry but the protected ones; =ALL deletes every
+   entry, then adds /ACL's.
+
+/EXCLUDE
+
+      /EXCLUDE=(file[,...])
+
+   Leaves out the files these names match.
+
+/LIKE
+
+      /LIKE=NAME=file
+
+   Gives the file another file's protection and ACL (but its NOPROPAGATE
+   entries), keeping the file's own protected entries first.
+
+/LOG
+
+      /LOG
+      /NOLOG (default)
+
+   Reports each file changed, %SET-I-MODIFIED.
+
+/OWNER
+
+      /OWNER=uic
+
+   Makes the UIC or identifier the file's owner: [200,1], [SMITH],
+   SMITH, or a general identifier.
+
+/PROTECTION
+
+      /PROTECTION=(code)
+
+   Merges the code into the file's protection: a category the code
+   doesn't name keeps what it had.
+
+/REPLACE
+
+      /REPLACE=(ace[,...])
+
+   Replaces each of /ACL's entries, in place, by these.
+
+3 Examples
+
+   1.$ SET SECURITY/PROTECTION=(G:RWED,W) LEDGER.DAT
+
+     Gives the owner's group every access and the world none.
+
+   2.$ SET SECURITY/ACL=(IDENTIFIER=[200,*],ACCESS=READ+WRITE) LEDGER.DAT
+
+     Lets everyone in group 200 read and write LEDGER.DAT, whatever its
+     protection code says.
+
+   3.$ SET SECURITY/OWNER=[200,1]/LOG *.DAT
+
+     Gives every .DAT file in the default directory to [200,1].
 
 2 VERBOSE
 

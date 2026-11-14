@@ -4,8 +4,9 @@
 day, with the answers in "The review". Subtasks 1 (the survey, Part A),
 2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), 5
 (identity and defaults), 6 (the grammar types), 7 (new files'
-profiles), and 8 (checking RMS's services and the ACP, with SET DEBUG
-PROTECTION) are done.
+profiles), 8 (checking RMS's services and the ACP, with SET DEBUG
+PROTECTION), 9 (the DCL utilities), 10 (the ACL services), and 11a
+(the SET commands) are done.
 
 ## Goal
 
@@ -1277,7 +1278,9 @@ Each is one commit, with tests, stopping for review.
     10b, the services (done 2026-11-14).
 11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
-    BACKUP's `/PROTECTION` (Decision 10).
+    BACKUP's `/PROTECTION` (Decision 10). In two parts: 11a, the SET
+    commands (done 2026-11-14); 11b, CREATE's `/PROTECTION` and
+    `/OWNER_UIC`, COPY's `/PROTECTION`, and BACKUP's `/PROTECTION`.
 12. **Showing profiles**: SHOW SECURITY, SHOW ACL, DIRECTORY/SECURITY,
     /ACL, and the others, F$FILE_ATTRIBUTES; held to the probe.
 13. **The other security services**: `$CHKPRO`, `$CHECK_ACCESS`,
@@ -1968,3 +1971,67 @@ The author accepted the plan and answered its questions:
   context's bits 16 to 23 and a channel number; parts M and U, which mix
   in `$GET_SECURITY` and `$SET_SECURITY`, wait for subtask 13. Subtask 11,
   changing profiles, is next.
+- **2026-11-14** Subtask 11a done: the SET commands. Subtask 11 is now two
+  parts, as 10 was: 11a SET SECURITY and VMS's obsolete forms, SET
+  FILE/PROTECTION and /OWNER_UIC, SET PROTECTION[=(code)] file, and SET
+  ACL; 11b CREATE's, COPY's, and BACKUP's qualifiers. Every form is
+  `dclcmd/security.go`'s `SetSecurity` with a `SecurityForm` that picks
+  only the messages (SET SECURITY's and SET ACL's OPENIN, SET
+  FILE/PROTECTION's PRONOTCHG and PROERR, SET PROTECTION's PRONOTCHG
+  alone, each over `-SYSTEM-F-NOPRIV`). Its files come from
+  `rms.Session.SecurityObjects` (`secobject.go`: wildcards, search lists,
+  a name with no version its highest version, the directories searched
+  with the process's access; a missing file or directory VMS's
+  `%SET-E-OPENOUT` over RMS$_FNF, or RMS$_DNF and SS$_NOSUCHFILE), each
+  a `SecurityObject` that knows the directory it was found in, whose
+  protection less delete is what `/DEFAULT` gives a directory
+  (`DirectoryDefault`, `security.Protection.Without`). The values are read
+  before any file is touched, each refusal SET's own: a code's letters
+  `%SET-F-SYNTAX` over LIB$_SYNTAXERR, a category twice over LIB$_INVARG;
+  a UIC or identifier that doesn't resolve `%SET-F-SYNTAX` alone; an
+  ACE's text `%SET-F-SYNTAX` quoting the entry from `$PARSE_ACL`'s errpos,
+  over NOSUCHID, IVIDENT, or IVACL (which settled one errpos subtask 10b
+  had placed by guess: a default protection ACE's bad letters fail at the
+  letters, `'Q)'`, not the category); HIDDEN `%SET-E-NOHIDDEN`. Then per
+  file: control access (`MayChange`) or the form's refusal; `/DEFAULT`
+  (the process's default protection and UIC, the protected ACEs kept) or
+  `/LIKE` (the other file's protection, its ACL less NOPROPAGATE after the
+  file's own protected ACEs, and with `/COPY_ATTRIBUTE=OWNER` its owner),
+  then `/PROTECTION` merged (with no code the process default), `/OWNER`
+  (with no UIC the process's), and the ACL edits; an owner the process
+  may not give `%SET-F-WRITEERR` over NOPRIV, nothing changed; `/LOG`'s
+  `%SET-I-MODIFIED`. The ACL edits are A.4's: added entries go first in
+  their order (or after `/AFTER`'s), an identifier ACE already there for
+  the same identifiers taken out whatever its options and access (VMS
+  replaced a PROTECTED entry by a NOPROPAGATE one, which `$CHANGE_ACL`'s
+  matching wouldn't); `/DELETE` and `/REPLACE` match as `$CHANGE_ACL`
+  does (`security.MatchACE`), a missing entry `%SET-W-NOSUCHACE` with the
+  entry on the next line and `%SET-F-WRITEERR`; `/DELETE` alone keeps the
+  protected entries, `/DELETE=ALL` none. The grammar has a third type,
+  `$ACL` (`dcl/security.go`'s `readACL`: the text to its matching ")",
+  NOPAREN otherwise), and a `/value` keyword written without "=" leaves
+  its parameter empty when its syntax has more (`parse.go`): SET
+  PROTECTION file is a file with no code. `CLI_PROTNOTIMPL` is gone.
+  `TestSetSecurityOracle` (`internal/console/prot93set_test.go`) makes the
+  probe's [PROT93.SEC] and [PROT93.ACE] on a new volume and replays
+  SYSTEM's "SET SECURITY", "MALFORMED AND ODD VALUES", and "ACLS" sections
+  and round 2's "OBSOLETE FORMS WITH NO VALUE", 172 commands' output and
+  48 SHOW SECURITY and SHOW ACL reports, the reports made in Go from each
+  file's profile until subtask 12 brings the commands;
+  `TestProt93UtilitiesOracle` now compares the accounts' refused SET
+  commands too (their CONTROL and OWN FILES sections and round 2's
+  OWNERS), 519 commands, with the probe's identifiers in the rights
+  database, and its FACLCTL difference is gone (A0's SET SECURITY now
+  runs, so the volume follows VMS's order); `TestSetSecurityIdentities`
+  holds PROT93C's cases on a new volume. HELP SET has ACL, FILE, and
+  SECURITY, and SET PROTECTION's file form. Unconfirmed and chosen: SET's
+  facility number (119) and its own messages' numbers; `/CLASS` other
+  than FILE is IVKEYW; SET FILE/OWNER_UIC's and SET ACL's refusals are
+  SET SECURITY's; the `/LIKE` file's refusals; an added entry of a kind
+  other than an identifier ACE replaces one of its type (default
+  protection, creator) or by `$CHANGE_ACL`'s matching; an owner and a
+  protection are changed together or not at all, and a failed ACL edit
+  changes nothing. Left out, for a later probe round: `/CONFIRM` (its
+  prompt's text) and the date selectors (no other govax DCL command but
+  BACKUP has them). The F$FILE_ATTRIBUTES UIC item's named form is subtask
+  12's. Subtask 11b, CREATE's, COPY's, and BACKUP's qualifiers, is next.

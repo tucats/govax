@@ -139,8 +139,7 @@ func TestProtectionGrammarOracle(t *testing.T) {
 func dclMessage(err error) string { return "%" + err.Error() }
 
 // TestDefaultProtectionCommands: the code is merged into the process's own
-// default protection, SET PROTECTION=(Q:R)/DEFAULT is DCL's IVKEYW, and
-// SET PROTECTION of a file waits for subtask 11.
+// default protection, and SET PROTECTION=(Q:R)/DEFAULT is DCL's IVKEYW.
 func TestDefaultProtectionCommands(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 	p := c.RTL.Process
@@ -160,7 +159,6 @@ func TestDefaultProtectionCommands(t *testing.T) {
 	for _, tc := range []struct{ line, want string }{
 		{"SET PROTECTION=(Q:R)/DEFAULT", "%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling\n \\Q\\"},
 		{"SET PROTECTION=(S:R,S:W)/DEFAULT", "%DCL-W-IVPROT, invalid protection code"},
-		{"SET PROTECTION=(W:R) X.DAT", "%DCL-E-PROTNOTIMPL, SET PROTECTION of a file is not implemented yet; SET PROTECTION/DEFAULT is"},
 	} {
 		if err := d.Dispatch(tc.line); err == nil || dclMessage(err) != tc.want {
 			t.Errorf("%s: %v, want %q", tc.line, err, tc.want)

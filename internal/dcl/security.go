@@ -29,17 +29,25 @@ import (
 // mask order; any leading part of one names it.
 var protectionCategories = [...]string{"SYSTEM", "OWNER", "GROUP", "WORLD"}
 
-// isSecurityType reports whether typ is $PROTECTION or $UIC, the types
-// this file reads.
+// isSecurityType reports whether typ is $PROTECTION, $UIC, or $ACL, the
+// types this file reads.
 func isSecurityType(typ ValueType) bool {
-	return typ == TypeProtection || typ == TypeUIC
+	return typ == TypeProtection || typ == TypeUIC || typ == TypeACL
 }
 
 // readSecurityValue reads a $PROTECTION or $UIC value from the front of s,
 // returning its elements (one for a UIC) and what follows it.
 func readSecurityValue(typ ValueType, s string) ([]Value, string, error) {
-	if typ == TypeProtection {
+	switch typ {
+	case TypeProtection:
 		return readProtection(s)
+	case TypeACL:
+		v, rest, err := readACL(s)
+		if err != nil {
+			return nil, "", err
+		}
+
+		return []Value{v}, rest, nil
 	}
 
 	v, rest, err := readUIC(s)
@@ -188,4 +196,21 @@ func readUIC(s string) (Value, string, error) {
 	}
 
 	return Value{}, "", vmserrors.NewSegment(vmserrors.CLI_DIRECT, strings.ToUpper(s))
+}
+
+// readACL reads an $ACL value: one entry, "(IDENTIFIER=X,ACCESS=READ)",
+// or a list of them, "((...),(...))", running to its matching ")"
+// whatever is inside, uppercased as DCL uppercases what isn't quoted. What
+// the entries say is the command's to read ($PARSE_ACL's grammar), so a
+// bad keyword is its message; only a "(" never closed is DCL's,
+// %DCL-W-NOPAREN, its segment the rest of the line, as VMS 7.1 showed it.
+// A value with no parentheses is taken as it stands, for the command to
+// refuse.
+func readACL(s string) (Value, string, error) {
+	text, rest, err := readParenthesized(s)
+	if err != nil {
+		return Value{}, "", err
+	}
+
+	return Value{IsString: true, Str: strings.ToUpper(text)}, rest, nil
 }

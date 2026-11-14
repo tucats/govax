@@ -259,3 +259,71 @@ func probeSection(t *testing.T, heading string) []probeCase {
 
 	return nil
 }
+
+// aclTestGrammar has SET SECURITY's /ACL, whose value is optional, and
+// SET PROTECTION's /value keyword, whose code may be left out before the
+// file.
+const aclTestGrammar = `
+grammar test
+
+type kinds
+    keyword protection /syntax=prot/value
+
+verb set
+    parameter what/id=1/type=kinds/prompt="What"
+
+syntax prot/id=2
+    parameter code/id=3/type=$protection
+    parameter file/id=4/type=$string
+    qualifier default/id=5
+
+verb setsec
+    parameter file/id=10/type=$string/prompt="File"
+    qualifier acl/id=11/type=$acl/default=""
+    qualifier after/id=12/type=$acl
+
+end
+`
+
+// TestACLValues: an $ACL value is its text to the matching ")", entries
+// and all, uppercased; with no "=" the qualifier's default; a "(" never
+// closed is DCL's NOPAREN.
+func TestACLValues(t *testing.T) {
+	g, err := ParseGrammar(aclTestGrammar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for line, want := range map[string]string{
+		"SETSEC/ACL=(IDENTIFIER=[200,1],ACCESS=READ) F":                   "(IDENTIFIER=[200,1],ACCESS=READ)",
+		"SETSEC/ACL=((ID=a,ACCESS=READ),(ID=B,ACCESS=WRITE))/AFTER=(ID=C) F": "((ID=A,ACCESS=READ),(ID=B,ACCESS=WRITE))",
+		"SETSEC/ACL F": "",
+	} {
+		r, err := g.Parse(line)
+		if err != nil {
+			t.Errorf("%s: %v", line, err)
+
+			continue
+		}
+
+		if got := r.String("ACL"); got != want || r.String("FILE") != "F" {
+			t.Errorf("%s: ACL %q, FILE %q; want %q, F", line, got, r.String("FILE"), want)
+		}
+	}
+
+	if _, err := g.Parse("SETSEC/ACL=(ID=A,ACCESS=READ F"); err == nil || !strings.Contains(err.Error(), "NOPAREN") {
+		t.Errorf("an unclosed ACL: %v, want NOPAREN", err)
+	}
+
+	// SET PROTECTION file: the file, no code; SET PROTECTION=(code) file:
+	// both.
+	r, err := g.Parse("SET PROTECTION X.DAT")
+	if err != nil || r.Present("CODE") || r.String("FILE") != "X.DAT" {
+		t.Errorf("SET PROTECTION X.DAT: code %v, file %q, %v", r.List("CODE"), r.String("FILE"), err)
+	}
+
+	r, err = g.Parse("SET PROTECTION=(W:R) X.DAT")
+	if err != nil || !slices.Equal(r.List("CODE"), []string{"W:R"}) || r.String("FILE") != "X.DAT" {
+		t.Errorf("SET PROTECTION=(W:R) X.DAT: code %v, file %q, %v", r.List("CODE"), r.String("FILE"), err)
+	}
+}

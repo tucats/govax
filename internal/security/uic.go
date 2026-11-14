@@ -49,3 +49,7 @@ func matchesUIC(id uint32, u UIC) bool {
 	return (group == WildGroup || group == u.Group()) &&
 		(member == WildMember || member == u.Member())
 }
+
+// Matches reports whether u is a UIC pattern names, which may have a
+// wildcard group or member (WildGroup, WildMember): /BY_OWNER=[200,*].
+func (u UIC) Matches(pattern UIC) bool { return matchesUIC(uint32(pattern), u) }

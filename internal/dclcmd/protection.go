@@ -28,23 +28,30 @@ func (c *Context) ShowProtection() error {
 	return nil
 }
 
-// SetProtection is SET PROTECTION[=(code)] with /DEFAULT: code's items
-// ("G:RWED", "W:R", or the whole code as one item) are merged into the
-// process's default protection, a category the code doesn't name keeping
-// what it had, and no code changes nothing (the probe's "SET
+// SetProtection is SET PROTECTION[=(code)], with /DEFAULT the process's
+// default protection: code's items ("G:RWED", "W:R", or the whole code
+// as one item) are merged into it, a category the code doesn't name
+// keeping what it had, and no code changes nothing (the probe's "SET
 // PROTECTION/DEFAULT"). A category that isn't SYSTEM, OWNER, GROUP, or
 // WORLD is DCL's %DCL-W-IVKEYW naming it, and any other fault in the
 // code %DCL-W-IVPROT, as VMS 7.1's DCL reported them.
 //
-// Without /DEFAULT the command changes a file's protection, VMS's obsolete
-// form of SET SECURITY/PROTECTION, which comes with Phase 93's subtask 11.
-func (c *Context) SetProtection(code []string, isDefault bool) error {
+// Without /DEFAULT the command changes file's protection, VMS's obsolete
+// form of SET SECURITY/PROTECTION (security.go); with no code the file
+// gets the process's default protection (A.4, answer 11).
+func (c *Context) SetProtection(code []string, isDefault bool, file string) error {
 	if c.RTL == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
 
 	if !isDefault {
-		return vmserrors.New(vmserrors.CLI_PROTNOTIMPL)
+		if file == "" {
+			return vmserrors.New(vmserrors.CLI_INSFPRM)
+		}
+
+		return c.SetSecurity(SecurityOptions{
+			Form: FormProtection, Files: []string{file}, Protection: code, HasProtection: true,
+		})
 	}
 
 	if len(code) == 0 {

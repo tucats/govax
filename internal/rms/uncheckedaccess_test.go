@@ -140,6 +140,7 @@ var checkedAccess = map[string]string{
 	"namfid.go:openByNAM":             "$OPEN by DID: needLookup on the directory, openFID's check on the file",
 	"secobject.go:FindSecurityObject": "a security service's file: globChecked's directories; MayRead or MayChange before the profile is read or changed",
 	"secobject.go:SetACL":             "a security service's change: MayChange asked first",
+	"secobject.go:SecurityObjects":    "SET SECURITY's files: globChecked's directories; MayRead or MayChange before the profile is read or changed",
 	"rename.go:renameSpecs":           "$RENAME: RMV and ENT checked before it",
 	"search.go:current":               "$SEARCH's walk: searchAccess on each directory",
 	"search.go:subdirectories":        "$SEARCH's walk: searchAccess on each directory",

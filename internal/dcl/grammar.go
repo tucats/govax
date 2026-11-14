@@ -32,6 +32,11 @@ const (
 	// is a list, one element per category.
 	TypeProtection
 	TypeUIC
+
+	// TypeACL (Phase 93, subtask 11) is an access control list's text,
+	// one entry in parentheses or a parenthesized list of them, read
+	// whole to its closing parenthesis; the command reads the entries.
+	TypeACL
 )
 
 // Keyword is one named value of a Type, matching a grammar "keyword"

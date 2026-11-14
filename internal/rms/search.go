@@ -1093,3 +1093,7 @@ func (ctx *Context) reportMatch(nam uint32, dev, dir string, e ondisk.DirEntry, 
 
 	return rmsNormal, 0, nil
 }
+
+// WildMatch reports whether s matches pattern, "*" matching any run of
+// characters and "%" any one: a utility's /EXCLUDE of a file's name.
+func WildMatch(pattern, s string) bool { return wildMatch(pattern, s) }

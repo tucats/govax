@@ -174,7 +174,24 @@ func (d *Dispatcher) bindGrammar() {
 	// privileges of the process whose DCL runs the command.
 	g.Bind("SHOW_PROTECTION", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowProtection() })
 	g.Bind("SET_PROTECTION", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().SetProtection(r.List("CODE"), r.Present("DEFAULT"))
+		return d.Console.cmd().SetProtection(r.List("CODE"), r.Present("DEFAULT"), r.String("FILE"))
+	})
+
+	// SET SECURITY, SET FILE/PROTECTION and /OWNER_UIC, and SET ACL
+	// (docs/planning/PHASE-93 - file protection.md, subtask 11): a file's
+	// owner, protection, and ACL.
+	g.Bind("SET_SECURITY", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().SetSecurity(securityOptions(r, dclcmd.FormSecurity, []string{r.String("FILE")}))
+	})
+	g.Bind("SET_FILE", func(id int64, r *dcl.Result) error {
+		opts := securityOptions(r, dclcmd.FormFile, r.List("FILES"))
+		opts.HasProtection, opts.Protection = given(r, "PROTECTION"), nonEmpty(r.List("PROTECTION"))
+		opts.HasOwner, opts.Owner = given(r, "OWNER_UIC"), r.String("OWNER_UIC")
+
+		return d.Console.cmd().SetSecurity(opts)
+	})
+	g.Bind("SET_ACL", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().SetSecurity(securityOptions(r, dclcmd.FormACL, []string{r.String("FILE")}))
 	})
 	g.Bind("SET_PROCESS", func(id int64, r *dcl.Result) error {
 		return d.Console.cmd().SetProcessPrivileges(r.List("PRIVILEGES"))
@@ -801,3 +818,42 @@ func nonEmpty(list []string) []string {
 func (d *Dispatcher) DispatchConsole(line string) error {
 	return d.Console.Interpreter.DispatchConsole(line)
 }
+
+// securityOptions reads SET SECURITY's qualifiers (and those of SET ACL,
+// a subset) from r, for the files named.
+func securityOptions(r *dcl.Result, form dclcmd.SecurityForm, files []string) dclcmd.SecurityOptions {
+	opts := dclcmd.SecurityOptions{
+		Form:          form,
+		Files:         files,
+		Protection:    nonEmpty(r.List("PROTECTION")),
+		HasProtection: r.Present("PROTECTION"),
+		Owner:         r.String("OWNER"),
+		HasOwner:      r.Present("OWNER"),
+		Default:       r.Present("DEFAULT"),
+		ACL:           r.String("ACL"),
+		HasACL:        given(r, "ACL"),
+		After:         r.String("AFTER"),
+		Replace:       r.String("REPLACE"),
+		Delete:        r.String("DELETE"),
+		HasDelete:     given(r, "DELETE"),
+		Log:           r.Present("LOG") && !r.Negated("LOG"),
+		Exclude:       r.List("EXCLUDE"),
+		ByOwner:       r.String("BY_OWNER"),
+		Class:         r.String("CLASS"),
+	}
+
+	for _, item := range r.List("LIKE") {
+		if key, file, ok := strings.Cut(item, "="); ok && strings.HasPrefix("NAME", strings.ToUpper(key)) {
+			opts.Like = file
+		}
+	}
+
+	opts.CopyAttributes = r.List("COPY_ATTRIBUTE")
+
+	return opts
+}
+
+// given reports whether the qualifier name was on the command line: one
+// whose value is optional has a grammar default, so is present (but
+// defaulted) when it wasn't.
+func given(r *dcl.Result, name string) bool { return r.Present(name) && !r.Defaulted(name) }

@@ -1435,6 +1435,12 @@ grammar console
         ! process's default file protection, and SET PROCESS/PRIVILEGES.
         keyword     protection          /syntax=set_protection/nonegatable/value
         keyword     process             /syntax=set_process/nonegatable
+        ! SECURITY, FILE, and ACL (docs/planning/PHASE-93 - file
+        ! protection.md, subtask 11): a file's owner, protection, and ACL,
+        ! and VMS's obsolete forms of the same changes.
+        keyword     security            /syntax=set_security/nonegatable
+        keyword     file                /syntax=set_file/nonegatable
+        keyword     acl                 /syntax=set_acl/nonegatable
 
 
     verb set/id=1760
@@ -1464,14 +1470,85 @@ grammar console
     ! SET PROTECTION[=(code)]/DEFAULT: the code merged into the process's
     ! default file protection, which a new file gets when nothing else
     ! gives it one (internal/dclcmd/protection.go). Without /DEFAULT, SET
-    ! PROTECTION=(code) file changes a file's protection, VMS's obsolete
-    ! form, which is Phase 93's subtask 11.
+    ! PROTECTION[=(code)] file changes a file's protection, VMS's obsolete
+    ! form (internal/dclcmd/security.go); with no code, the file gets the
+    ! process's default protection.
     syntax set_protection/id=2700
         parameter   code/id=2701                -
                     /type=$protection
         parameter   file/id=2702                -
                     /type=$string
         qualifier   default/id=2703/nonegatable
+
+    ! SET SECURITY file: a file's profile changed, one specification
+    ! (wildcards allowed; a list is DCL's NOLIST, as on VMS 7.1), with
+    ! control access (internal/dclcmd/security.go). /PROTECTION merges a
+    ! code into the file's; /OWNER names a UIC or an identifier; /DEFAULT
+    ! gives the process's default protection and UIC and keeps only the
+    ! protected ACEs; /LIKE=NAME=file copies another file's protection and
+    ! ACL (and with /COPY_ATTRIBUTE=OWNER its owner); /ACL adds entries,
+    ! and with /AFTER, /REPLACE, or /DELETE[=ALL] places, replaces, or
+    ! deletes them. /EXCLUDE and /BY_OWNER choose among the files.
+    syntax set_security/id=2730
+        parameter   file/id=2731                -
+                    /type=$string               -
+                    /prompt="Object"
+        qualifier   protection/id=2732/nonegatable  -
+                    /type=$protection
+        qualifier   owner/id=2733/nonegatable   -
+                    /type=$uic
+        qualifier   default/id=2734/nonegatable
+        qualifier   like/id=2735/nonegatable    -
+                    /type=$any/list
+        qualifier   copy_attribute/id=2736/nonegatable -
+                    /type=$any/list
+        qualifier   acl/id=2737/nonegatable     -
+                    /type=$acl/default=""
+        qualifier   after/id=2738/nonegatable   -
+                    /type=$acl
+        qualifier   replace/id=2739/nonegatable -
+                    /type=$acl
+        qualifier   delete/id=2740/nonegatable  -
+                    /type=$any/default=""
+        qualifier   log/id=2741
+        qualifier   exclude/id=2742/nonegatable -
+                    /type=$string/list
+        qualifier   by_owner/id=2743/nonegatable -
+                    /type=$uic
+        qualifier   class/id=2744/nonegatable   -
+                    /type=$any
+
+    ! SET FILE file[,...]: VMS's obsolete forms, /PROTECTION[=(code)] (no
+    ! code is the process's default protection) and /OWNER_UIC[=uic] (no
+    ! UIC is the process's), on SET SECURITY's code.
+    syntax set_file/id=2750
+        parameter   files/id=2751               -
+                    /type=$string/list          -
+                    /prompt="File"
+        qualifier   protection/id=2752/nonegatable  -
+                    /type=$protection/default=""
+        qualifier   owner_uic/id=2753/nonegatable   -
+                    /type=$uic/default=""
+        qualifier   log/id=2754
+
+    ! SET ACL/ACL=(ace[,...]) file: VMS's obsolete form of SET
+    ! SECURITY/ACL, with its /AFTER, /REPLACE, /DELETE, /LIKE, and /DEFAULT.
+    syntax set_acl/id=2760
+        parameter   file/id=2761                -
+                    /type=$string               -
+                    /prompt="Object"
+        qualifier   acl/id=2762/nonegatable     -
+                    /type=$acl/default=""
+        qualifier   after/id=2763/nonegatable   -
+                    /type=$acl
+        qualifier   replace/id=2764/nonegatable -
+                    /type=$acl
+        qualifier   delete/id=2765/nonegatable  -
+                    /type=$any/default=""
+        qualifier   like/id=2766/nonegatable    -
+                    /type=$any/list
+        qualifier   default/id=2767/nonegatable
+        qualifier   log/id=2768
 
     ! SET PROCESS/PRIVILEGES=(name[,...]): privileges enabled, or with NO
     ! before a name disabled, for the process, as $SETPRV makes them

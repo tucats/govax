@@ -80,3 +80,13 @@ func (p Protection) With(c Category, a Access) Protection {
 
 	return p | Protection(^a&codeAccess)<<shift
 }
+
+// Without returns p with access a denied to every category: a new
+// directory's protection is its parent's without delete.
+func (p Protection) Without(a Access) Protection {
+	for c := System; c <= World; c++ {
+		p = p.With(c, p.Allows(c)&^a)
+	}
+
+	return p
+}

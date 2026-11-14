@@ -309,7 +309,7 @@ func (p *aceParser) item(a *parsed) error {
 
 	if a.kind == "DEFAULT_PROTECTION" {
 		if c := keyword(w, "SYSTEM", "OWNER", "GROUP", "WORLD"); c != "" {
-			return p.category(a, c, start)
+			return p.category(a, c)
 		}
 	}
 
@@ -554,19 +554,22 @@ func nameBit(w string, names []string) (int, bool) {
 	return 0, false
 }
 
-// category reads a default protection ACE's category c, which started at
-// start: "c", "c:", or "c:letters" ("=" for ":" too). A category named
-// twice keeps its first letters.
-func (p *aceParser) category(a *parsed, c string, start int) error {
+// category reads a default protection ACE's category c: "c", "c:", or
+// "c:letters" ("=" for ":" too). A category named twice keeps its first
+// letters. A letter that isn't R, W, E, D, or C fails at the letters, as
+// VMS 7.1's SET SECURITY quoted 'Q)' of (DEFAULT_PROTECTION,S:Q).
+func (p *aceParser) category(a *parsed, c string) error {
 	i := map[string]int{"SYSTEM": 0, "OWNER": 1, "GROUP": 2, "WORLD": 3}[c]
 
 	var granted uint32
 
 	if p.accept(':') || p.accept('=') {
+		letters := p.pos
+
 		for _, l := range strings.ToUpper(p.word()) {
 			k := strings.IndexRune("RWEDC", l)
 			if k < 0 {
-				return fail(BadACE, start)
+				return fail(BadACE, letters)
 			}
 
 			granted |= 1 << k

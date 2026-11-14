@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/tucats/ods2/filespec"
+
 	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/ods2/volume"
@@ -32,6 +34,11 @@ type SecurityObject struct {
 
 	// Name is the file's name, for tracing and messages.
 	Name string
+
+	// parent is the directory the file was found in, when it was found
+	// by name (SecurityObjects): a directory's default protection is its
+	// parent's, less delete.
+	parent *volume.File
 }
 
 // ssInvFilForOp is SS$_INVFILFOROP, a name with a wildcard given a
@@ -115,6 +122,128 @@ func (s *Session) FindSecurityObject(spec string) (*SecurityObject, error) {
 	}
 
 	return nil, err
+}
+
+// SecurityObjects finds the files spec names for DCL's SET SECURITY and
+// its obsolete forms (docs/planning/PHASE-93 - file protection.md,
+// subtask 11): wildcards allowed, every element of a search list, a name
+// with no version its highest version, the directories searched with the
+// process's access (globChecked). The objects are in the order DIRECTORY
+// lists the files. No file at all is a *DCLFileError, RMS$_FNF or
+// RMS$_DNF (with SS$_NOSUCHFILE) for the expanded name, as VMS 7.1's SET
+// SECURITY reported it; a directory the process may not search is a
+// *DeniedError; a host file SS$_UNSUPPORTED (Decision 12: a host file has
+// no profile).
+func (s *Session) SecurityObjects(spec string) ([]*SecurityObject, error) {
+	loc, err := s.Locate(spec, false)
+	if err != nil {
+		return nil, newDCLFileError(strings.ToUpper(spec), rmsFileNotFound)
+	}
+
+	if loc.Host {
+		return nil, newDCLFileError(loc.Name, ssUnsupported)
+	}
+
+	var found []*SecurityObject
+
+	err = s.eachSpec(spec, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := s.globChecked(vol, r.Spec)
+		if _, denied := IsDenied(err); denied {
+			return err
+		}
+
+		if err != nil {
+			return &NotFoundError{Spec: spec}
+		}
+
+		if r.Spec.Version == "" {
+			matches = highestVersions(matches)
+		}
+
+		before := len(found)
+		writable := s.Mounts.Writable(r.Spec.Device)
+		parents := map[string]*volume.File{}
+
+		for _, m := range matches {
+			f, err := vol.OpenFID(m.Fid)
+			if err != nil {
+				return err
+			}
+
+			key := strings.Join(m.Dirs, ".")
+
+			parent, ok := parents[key]
+			if !ok {
+				if dir, err := filespec.ResolveDirectory(vol, m.Dirs); err == nil {
+					parent = dir.File
+				}
+
+				parents[key] = parent
+			}
+
+			found = append(found, &SecurityObject{
+				vol: vol, file: f, creds: s.Identity(), writable: writable,
+				Name: r.shownFile(m), parent: parent,
+			})
+		}
+
+		if len(found) == before {
+			return &NotFoundError{Spec: spec}
+		}
+
+		return nil
+	})
+
+	var notMounted *NotMountedError
+
+	switch {
+	case len(found) > 0 && err == nil:
+		return found, nil
+	case errors.As(err, &notMounted):
+		return nil, newDCLFileError(strings.ToUpper(spec), rmsDeviceError)
+	case err == nil || isNotFound(err):
+		return nil, s.NotFound(spec)
+	}
+
+	return nil, err
+}
+
+// highestVersions is matches with only the highest version of each name,
+// what a specification with no version names.
+func highestVersions(matches []filespec.Match) []filespec.Match {
+	highest := map[string]int{}
+
+	var out []filespec.Match
+
+	for _, m := range matches {
+		key := strings.Join(m.Dirs, ".") + "]" + m.Name + "." + m.Type
+
+		i, ok := highest[key]
+		switch {
+		case !ok:
+			highest[key] = len(out)
+			out = append(out, m)
+		case m.Version > out[i].Version:
+			out[i] = m
+		}
+	}
+
+	return out
+}
+
+// IsDirectory reports whether the file is a directory.
+func (o *SecurityObject) IsDirectory() bool { return o.file.Header.IsDirectory() }
+
+// DirectoryDefault is the protection SET SECURITY/DEFAULT gives a
+// directory: the one a new directory in its parent would get, the
+// parent's less delete (A.4, round 2: SD1.DIR under SEC.DIR's
+// (RWE,RWE,RWE,RWE)). ok is false when the parent isn't known.
+func (o *SecurityObject) DirectoryDefault() (p security.Protection, ok bool) {
+	if o.parent == nil {
+		return 0, false
+	}
+
+	return headerProfile(o.vol, &o.parent.Header).Protection.Without(security.Delete), true
 }
 
 // SecurityObject is the file accessed through a, for the process with

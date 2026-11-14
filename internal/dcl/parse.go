@@ -555,7 +555,9 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 		}
 
 		// Its value follows the "=", for the redirected syntax.
-		if p.Type == TypeKeyword && g.takesValue(p.TypeName, val.Str) {
+		valued, hadValue := p.Type == TypeKeyword && g.takesValue(p.TypeName, val.Str), false
+		if valued {
+			hadValue = strings.HasPrefix(strings.TrimLeft(pos, " \t"), "=")
 			pos = skipSeparator(pos, '=')
 		}
 
@@ -568,6 +570,14 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 			active = g.entries[redirect]
 			nextParam = 0
 			lastParam = nil
+
+			// A /value keyword written without its "=" leaves the
+			// value's parameter empty when its syntax has others after
+			// it: SET PROTECTION file is a file with no code, where SET
+			// PROTECTION=(code) file is both.
+			if valued && !hadValue && len(active.Parameters) > 1 {
+				nextParam = 1
+			}
 		}
 	}
 
