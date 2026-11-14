@@ -1465,8 +1465,14 @@ The author accepted the plan and answered its questions:
   changed between round 1 and the end; B3's and C3's PX1 and PX2, which
   VMS's directory cache let through). `TestProt93ActivationOracle` holds
   RUN's refusal to round 1's (on that round's volume, both paging modes).
-  Found and left: ods2 enforces a version limit from the header's
-  `VersionLimit`, which a VMS volume's headers don't have (VMS keeps it in
-  the directory record), so a new version on a VMS-made volume never purges
-  the oldest past the limit; govax's own volumes have both. Subtask 9,
-  checking the DCL utilities, is next.
+  Found, and fixed at the author's request: ods2 enforced a version limit
+  from the header's `VersionLimit`, which a VMS volume's headers don't have
+  (VMS keeps it in the directory record), so a new version on a VMS-made
+  volume never purged the oldest past the limit. ods2 v0.1.30, which govax
+  now pins: its
+  `resolveVersionLimit` now takes the name's directory record's limit
+  first, and `Directory.insert` gives a new version of an existing name
+  that record's limit rather than the directory's default (ods2's
+  `TestCreateFileHonorsDirectoryRecordVersionLimit`; govax's
+  `TestNewVersionPastLimit` purges L.DAT;1). Subtask 9, checking the DCL
+  utilities, is next.

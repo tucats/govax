@@ -349,6 +349,32 @@ func TestNewVersionPastLimit(t *testing.T) {
 
 	sts, stv = f.create("DUA0:[NV]L.DAT", 0)
 	refused(t, "past the limit, the oldest without D", sts, stv)
+
+	// Allowed (SYSTEM, BYPASS), the new version takes the oldest's place:
+	// the limit is the directory record's, as on a volume VMS wrote.
+	f.as(security.SystemCredentials())
+
+	if sts, stv = f.create("DUA0:[NV]L.DAT", 0); sts&1 == 0 {
+		t.Fatalf("past the limit as SYSTEM: %#x, %#x", sts, stv)
+	}
+
+	nv, err = f.vol.OpenDirectory(dir.Header.Fid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var versions []uint16
+
+	entries, _ := nv.List()
+	for _, e := range entries {
+		if e.Name == "L.DAT" {
+			versions = append(versions, e.Version)
+		}
+	}
+
+	if len(versions) != 2 || versions[0] != 3 || versions[1] != 2 {
+		t.Errorf("L.DAT's versions %v, want [3 2]", versions)
+	}
 }
 
 // FOP SUP replaces a version that gives W and D, the new file the

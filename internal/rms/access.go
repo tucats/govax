@@ -304,10 +304,10 @@ func (ctx *Context) supersedeTarget(creds security.Credentials, vol *volume.Volu
 // go to keep it must give it D. A name with no version yet needs nothing
 // more than the directory's write access.
 //
-// The version limit is the name's directory record's, which VMS reads
-// (a VMS volume's headers have none: VMS 7.1 refused the probe's L files,
-// limit 2, whose oldest version gave no D), else the one ods2 enforces,
-// the highest version's header's.
+// The version limit is the one ods2 enforces: the name's directory
+// record's, where VMS keeps it (a VMS volume's headers have none: VMS 7.1
+// refused the probe's L files, limit 2, whose oldest version gave no D),
+// else the highest version's header's.
 func newVersionAllowed(creds security.Credentials, vol *volume.Volume, dir *volume.Directory, name string) bool {
 	if unchecked(creds) {
 		return true
