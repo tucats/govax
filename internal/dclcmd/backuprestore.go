@@ -375,6 +375,15 @@ func (r *backupRestore) openOutFailure(loc rms.FileLocation, err error) {
 		reason = ConditionLine(vmsdef.Symbols["SS$_WRITLCK"])
 	case errors.Is(err, rms.ErrACPAccessConflict):
 		reason = ConditionLine(vmsdef.Symbols["SS$_ACCONFLICT"])
+	case isDeniedErr(err):
+		// A file or directory the process's protection keeps it from
+		// making: SS$_NOPRIV, as BACKUP's OPENIN has it (unconfirmed for
+		// OPENOUT: docs/planning/PHASE-93 - file protection.md).
+		if denied, _ := rms.IsDenied(err); denied != nil && denied.Name != "" {
+			name = denied.Name
+		}
+
+		reason = ConditionLine(vmsdef.Symbols["SS$_NOPRIV"])
 	default:
 		reason = "-" + strings.TrimPrefix(FileFailure(err, name).Error(), "%")
 	}

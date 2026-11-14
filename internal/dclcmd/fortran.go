@@ -324,7 +324,11 @@ const (
 
 // Fortran compiles each source file and, unless opts.NoMacro, writes its
 // MACRO file.
-func (c *Context) Fortran(opts FortranOptions) error {
+func (c *Context) Fortran(opts FortranOptions) (err error) {
+	// A file its process's protection refused is FORT-F-OPENIN or
+	// OPENOUT, the compiler's (unconfirmed: govax has no VAX FORTRAN to ask) (openFailure).
+	defer func() { err = openFailure(err, "FORT-F", false) }()
+
 	if _, err := opts.Continuations.limit(); err != nil {
 		return err
 	}

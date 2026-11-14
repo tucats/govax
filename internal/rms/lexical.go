@@ -78,8 +78,12 @@ func (s *Session) Parse(spec, def, related string, syntaxOnly, noConceal bool) (
 		return p, found, nil
 	}
 
+	// The levels above the last must let the process look in them, as
+	// $PARSE's (access.go): a path it can't walk is no name (unconfirmed
+	// for F$PARSE; VMS 7.1's $PARSE failed with RMS$_PRV, the probe's
+	// A.4, answer 1).
 	if !full.Recursive && !strings.ContainsAny(strings.Join(full.Dirs, "."), "*%") {
-		if _, err := filespec.ResolveDirectory(vol, full.Dirs); err != nil {
+		if _, err := resolveChecked(s.Identity(), vol, full.Dirs); err != nil {
 			return p, false, nil
 		}
 	}
@@ -100,8 +104,10 @@ func (s *Session) Search(spec string) ([]string, error) {
 	var names []string
 
 	err := s.eachSpec(spec, func(vol *volume.Volume, r resolvedSpec) error {
-		// A directory that isn't there holds no files.
-		matches, err := filespec.Glob(vol, r.Spec)
+		// A directory that isn't there holds no files, nor does one the
+		// process may not search: VMS 7.1's F$SEARCH of *.DAT in a
+		// directory giving E alone was "" (the probe's Part B).
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return nil
 		}

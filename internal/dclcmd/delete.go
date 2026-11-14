@@ -144,6 +144,24 @@ func (c *Context) deleteFailure(specText string, err error) error {
 		return vmserrors.ConditionError{Status: deleteSearchFail | stsInhibitMsg, Text: text}
 	}
 
+	// Files the process's protection kept it from deleting, each as VMS
+	// 7.1 said it (docs/planning/PHASE-93 - file protection.md, A.4):
+	//
+	//	%DELETE-W-FILNOTDEL, error deleting DUA1:[A]B.DAT;1
+	//	-RMS-E-PRV, insufficient privilege or file protection violation
+	var notDeleted *rms.NotDeletedError
+	if errors.As(err, &notDeleted) {
+		return notDeletedFailure("DELETE-W-FILNOTDEL", notDeleted.Names, deleteFilNotDel)
+	}
+
+	// A directory it may not search: SEARCHFAIL, as for one that isn't
+	// there (unconfirmed: the probe didn't delete in one).
+	if _, denied := rms.IsDenied(err); denied {
+		text := "DELETE-W-SEARCHFAIL, error searching for " + c.expandedName(specText) + "\n" + ConditionLine(rmsPRV)
+
+		return vmserrors.ConditionError{Status: deleteSearchFail | stsInhibitMsg, Text: text}
+	}
+
 	var bad *rms.NameError
 	if errors.As(err, &bad) {
 		text := "DELETE-W-SEARCHFAIL, error searching for " + strings.ToUpper(bad.Spec) + "\n" + ConditionLine(bad.Status)
@@ -161,4 +179,26 @@ func plural[T ~int | ~uint32](n T) string {
 	}
 
 	return "s"
+}
+
+// deleteFilNotDel is DELETE's FILNOTDEL condition value, a warning, in
+// the facility of its SEARCHFAIL.
+var deleteFilNotDel = deleteSearchFail&^0xFFFF | vmsdef.LibrarySymbols["SHR$_FILNOTDEL"]
+
+// notDeletedFailure is one message for each file in names a DELETE or
+// PURGE passed over, what being "DELETE-W-FILNOTDEL" or
+// "PURGE-W-FILNOTPUR", each over RMS$_PRV; status is the command's.
+func notDeletedFailure(what string, names []string, status uint32) error {
+	lines := make([]string, 0, 2*len(names))
+
+	for i, name := range names {
+		line := what + ", error deleting " + name
+		if i > 0 {
+			line = "%" + line
+		}
+
+		lines = append(lines, line, ConditionLine(rmsPRV))
+	}
+
+	return vmserrors.ConditionError{Status: status | stsInhibitMsg, Text: strings.Join(lines, "\n")}
 }

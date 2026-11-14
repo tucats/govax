@@ -216,7 +216,8 @@ func (s *Session) expandRenameInput(input string, sticky *defaultName) ([]resolv
 
 // searchRenameElement finds the files one resolved input names, or the
 // status saying why there are none: RMS$_DNR (not mounted), RMS$_DNF (no
-// such directory), or RMS$_FNF.
+// such directory), RMS$_PRV (a directory the process may not search), or
+// RMS$_FNF.
 func searchRenameElement(s *Session, r resolvedSpec) ([]filespec.Match, uint32) {
 	vol, ok := s.Mounts.Lookup(r.Spec.Device)
 	if !ok {
@@ -229,7 +230,11 @@ func searchRenameElement(s *Session, r resolvedSpec) ([]filespec.Match, uint32) 
 		}
 	}
 
-	matches, err := filespec.Glob(vol, r.Spec)
+	matches, err := s.globChecked(vol, r.Spec)
+	if _, denied := IsDenied(err); denied {
+		return nil, rmsPrivilegeViolation
+	}
+
 	if err != nil {
 		return nil, rmsDirNotFound
 	}

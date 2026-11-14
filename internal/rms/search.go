@@ -317,12 +317,13 @@ func subdirectories(vol *volume.Volume, node searchDir) []searchDir {
 }
 
 // searchAccess is what a search of p needs of each directory it looks
-// in: a listing (R) when the name, type, or version has a wildcard, else
-// a lookup (R or E). VMS 7.1 refused a wildcard search of a directory
-// giving E alone, and allowed a search of a name in it (the probe's A.4,
-// "Directories").
+// in: a listing (R) when the name or type has a wildcard, else a lookup
+// (R or E). VMS 7.1 refused a wildcard search of a directory giving E
+// alone, and allowed a search of a name in it (the probe's A.4,
+// "Directories"); a version wildcard alone is a lookup, as its DIRECTORY
+// of A.DAT, a search of A.DAT;*, in such a directory showed (Part B).
 func searchAccess(p parsedName) dirNeed {
-	if p.FNB&(fnbWildName|fnbWildType|fnbWildVer) != 0 {
+	if p.FNB&(fnbWildName|fnbWildType) != 0 {
 		return needList
 	}
 

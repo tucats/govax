@@ -34,8 +34,19 @@ func (c *Context) CreateFile(spec string, host, log bool) error {
 		return FileFailure(err, spec)
 	}
 
+	// A file the process may not make is refused before its input is
+	// read, as VMS 7.1's was (docs/planning/PHASE-93 - file
+	// protection.md, A.4): CREATE-E-OPENOUT over RMS$_PRV.
+	if err := s.CreateAllowed(loc); err != nil {
+		return openFailure(FileFailure(err, spec), "CREATE-E", false)
+	}
+
 	created, err := s.CreateRecordFile(loc, rms.TextRecords, c.readInputRecords())
 	if err != nil {
+		if _, denied := rms.IsDenied(err); denied {
+			return openFailure(FileFailure(err, spec), "CREATE-E", false)
+		}
+
 		return objectFailureAs(vmserrors.CREATE_OPENOUT, err, spec)
 	}
 

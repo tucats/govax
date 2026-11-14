@@ -985,11 +985,17 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 
 	loc = loc.WithDefaultType("COM")
 
-	records, found, err := c.ContainerSession.ReadRecordFile(loc, rms.TextRecords)
+	records, found, err := c.ContainerSession.ReadProcedure(loc)
 	if err != nil {
 		var notFound *rms.NotFoundError
 		if errors.As(err, &notFound) {
 			return nil, procedureNotFound(c.ContainerSession.NotFound(loc.Name))
+		}
+
+		// One the process's protection refuses is OPENIN over RMS$_PRV,
+		// the name expanded (VMS 7.1: the probe's A.4, answer 4).
+		if denied := c.ContainerSession.DeniedFileError(err, loc.Name, true); denied != nil {
+			return nil, procedureNotFound(denied)
 		}
 
 		return nil, dclcmd.FileFailure(err, file)

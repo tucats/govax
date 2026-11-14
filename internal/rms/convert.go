@@ -153,6 +153,16 @@ func (s *Session) ReadConvertInput(spec string, krf int, share bool) (*ConvertIn
 	}
 
 	if failure := openBlocks(ctx); failure != nil {
+		// A file the process may not read is named with its version, as
+		// VMS 7.1's CONVERT named it (the probe's A.4), though $OPEN
+		// leaves no resultant name for a refusal: CONVERT has found the
+		// file by then.
+		if failure.Status == rmsPrivilegeViolation {
+			if names, err := s.Search(loc.Name); err == nil && len(names) > 0 {
+				failure.Name = names[0]
+			}
+		}
+
 		return nil, failure
 	}
 

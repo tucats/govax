@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
@@ -390,7 +391,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	matches, err := filespec.Glob(srcVol, srcSpec)
+	matches, err := s.globChecked(srcVol, srcSpec)
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
 	}
@@ -420,7 +421,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 	)
 
 	if !opts.Test {
-		destDir, destBm, destIb, err = resolveVolumeDest(destVol, destSpec)
+		destDir, destBm, destIb, err = resolveVolumeDest(s.Identity(), destVol, destSpec)
 		if err != nil {
 			return nil, fmt.Errorf("copy: %w", err)
 		}
@@ -451,7 +452,12 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 			continue
 		}
 
-		src, err := srcVol.OpenFID(m.Fid)
+		// The input must give R: VMS 7.1's COPY said OPENIN over RMS$_PRV.
+		src, err := s.openChecked(srcVol, m, security.Read, srcFound[0].shownFile(m))
+		if denied, ok := IsDenied(err); ok && denied != nil {
+			return results, &InputOpenError{Spec: denied.Name, Status: rmsPrivilegeViolation}
+		}
+
 		if err != nil {
 			return results, fmt.Errorf("copy: %w", err)
 		}
@@ -484,6 +490,13 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 
 		version, err = createBinaryFile(who, destVol, destDir, destBm, destIb, name, typ, version, src)
 		if err != nil {
+			asked := dest
+			if destSpec.Version != "" && destSpec.Version != "*" {
+				asked.Version = destSpec.Version
+			}
+
+			err = outputDenied(err, asked, srcFound[0].shownFile(m))
+
 			return results, fmt.Errorf("copy: %w", fullOutputName(err, dest))
 		}
 
@@ -540,7 +553,7 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 		return []CopyResult{{Kind: CopyTested, Source: hostPath, Dest: dest.String()}}, nil
 	}
 
-	destDir, destBm, destIb, err := resolveVolumeDest(destVol, destSpec)
+	destDir, destBm, destIb, err := resolveVolumeDest(s.Identity(), destVol, destSpec)
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
 	}
@@ -589,7 +602,7 @@ func (s *Session) copyToHost(sourceText, destPath string, opts CopyOptions) ([]C
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	matches, err := filespec.Glob(vol, spec)
+	matches, err := s.globChecked(vol, spec)
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
 	}
@@ -631,7 +644,14 @@ func (s *Session) copyToHost(sourceText, destPath string, opts CopyOptions) ([]C
 			continue
 		}
 
-		src, err := vol.OpenFID(m.Fid)
+		// The input must give R, as for a copy to a volume.
+		src, err := s.openChecked(vol, m, security.Read, spec.String())
+		if denied, ok := IsDenied(err); ok && denied != nil {
+			denied.Name = fullSpecOf(spec, m)
+
+			return results, &InputOpenError{Spec: denied.Name, Status: rmsPrivilegeViolation}
+		}
+
 		if err != nil {
 			return results, fmt.Errorf("copy: %w", err)
 		}
@@ -923,7 +943,14 @@ func checkDestWildcards(destSpec filespec.Spec, destText string) error {
 // above that creates a file on a volume. Functionally matches ods2's own
 // same-named helper (copy.go), reproduced here since that package's own
 // internal/ visibility rules out importing it directly.
-func resolveVolumeDest(destVol *volume.Volume, destSpec filespec.Spec) (*volume.Directory, *volume.Bitmap, *volume.IndexBitmap, error) {
+//
+// The directories above it must let creds look their way down
+// (pathAllowed); whether the file may be made there is createVersion's.
+func resolveVolumeDest(creds security.Credentials, destVol *volume.Volume, destSpec filespec.Spec) (*volume.Directory, *volume.Bitmap, *volume.IndexBitmap, error) {
+	if err := pathAllowed(creds, destVol, destSpec.Dirs); err != nil {
+		return nil, nil, nil, err
+	}
+
 	destDir, err := filespec.ResolveDirectory(destVol, destSpec.Dirs)
 	if err != nil {
 		return nil, nil, nil, err
@@ -1126,7 +1153,14 @@ func destVersion(destSpec filespec.Spec, source uint16) (uint16, error) {
 // version when version is 0, with attributes attr, its profile chosen for
 // who (profile.go). A version that exists already is an
 // *OutputExistsError.
+//
+// The creator must be allowed to make the file there (createAllowed): a
+// *DeniedError if not.
 func createVersion(who creator, destVol *volume.Volume, destDir *volume.Directory, fullName string, version uint16, attr ondisk.RecAttr, destBm *volume.Bitmap, destIb *volume.IndexBitmap) (*volume.File, error) {
+	if err := createAllowed(who, destVol, destDir, fullName, version); err != nil {
+		return nil, err
+	}
+
 	profile, err := newFileProfile(who, destVol, destDir, fullName)
 	if err != nil {
 		return nil, fmt.Errorf("creating %s: %w", fullName, err)
@@ -1308,4 +1342,9 @@ func hostBaseNameType(path string) (name, typ string) {
 	}
 
 	return strings.ToUpper(base), ""
+}
+
+// fullSpecOf is m's whole name on spec's device: "DUA1:[A]B.DAT;1".
+func fullSpecOf(spec filespec.Spec, m filespec.Match) string {
+	return filespec.Spec{Device: spec.Device, Dirs: m.Dirs, Name: m.Name, Type: m.Type, Version: fmt.Sprint(m.Version)}.String()
 }

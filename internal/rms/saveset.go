@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
@@ -127,14 +126,26 @@ func (s *Session) OpenSaveSet(loc FileLocation) (*SaveSetFile, error) {
 	var set *SaveSetFile
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
+		if _, denied := IsDenied(err); denied {
+			return err
+		}
+
 		if err != nil || len(matches) == 0 {
 			return &NotFoundError{Spec: loc.Name}
 		}
 
 		m := matches[0]
 
-		a, err := s.Mounts.ACPAccessWith(r.Spec.Device, fileIDFrom(m.Fid), ACPAccessMode{NoWrite: true})
+		// Reading a save set needs R, as any input does (unconfirmed:
+		// the probe read none it couldn't).
+		creds := s.Identity()
+
+		a, err := s.Mounts.ACPAccessWith(r.Spec.Device, fileIDFrom(m.Fid), ACPAccessMode{NoWrite: true, Credentials: &creds})
+		if errors.Is(err, ErrNoPrivilege) {
+			return &DeniedError{Name: r.shownFile(m)}
+		}
+
 		if err != nil {
 			return err
 		}
@@ -160,6 +171,9 @@ func (s *Session) OpenSaveSet(loc FileLocation) (*SaveSetFile, error) {
 		return nil, s.NotFound(loc.Name)
 	case errors.Is(err, ErrACPAccessConflict):
 		return nil, newDCLFileError(fullName(s, loc.Name), rmsFileLocked)
+	case s.DeniedFileError(err, loc.Name, false) != nil:
+		// BACKUP's OPENIN with RMS's reason under it.
+		return nil, s.DeniedFileError(err, loc.Name, false)
 	}
 
 	return nil, fmt.Errorf("rms: opening %s: %w", loc.Name, err)

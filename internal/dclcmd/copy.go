@@ -8,8 +8,12 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// rmsFEX is RMS$_FEX, "file already exists, not superseded".
-var rmsFEX = vmsdef.Symbols["RMS$_FEX"]
+// rmsFEX is RMS$_FEX, "file already exists, not superseded"; rmsPRV
+// RMS$_PRV, "insufficient privilege or file protection violation".
+var (
+	rmsFEX = vmsdef.Symbols["RMS$_FEX"]
+	rmsPRV = vmsdef.Symbols["RMS$_PRV"]
+)
 
 // This file implements the console COPY command (docs/planning/PHASE-23.md,
 // subtasks 9 and 10) — the operator-facing half of "copy one or more
@@ -114,6 +118,27 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			text := "COPY-E-OPENOUT, error opening " + exists.Spec + " as output\n" + ConditionLine(rmsFEX)
 
 			return vmserrors.ConditionError{Status: rmsFEX, Text: text}
+		}
+
+		// A refusal by the process's protection (docs/planning/PHASE-93 -
+		// file protection.md, A.4): VMS 7.1's COPY said OPENOUT over
+		// RMS$_PRV for an output it may not make, then NOTCOPIED for the
+		// input. A directory it may not search is SEARCHFAIL, as TYPE's
+		// is (unconfirmed: the probe didn't copy from one).
+		if denied, ok := rms.IsDenied(err); ok && denied != nil {
+			switch {
+			case denied.Output:
+				text := "COPY-E-OPENOUT, error opening " + denied.Name + " as output\n" + ConditionLine(rmsPRV)
+				if denied.Source != "" {
+					text += "\n%COPY-W-NOTCOPIED, " + denied.Source + " not copied"
+				}
+
+				return vmserrors.ConditionError{Status: rmsPRV, Text: text}
+			case denied.Search:
+				text := "COPY-E-SEARCHFAIL, error searching for " + c.expandedName(sourceText) + "\n" + ConditionLine(rmsPRV)
+
+				return vmserrors.ConditionError{Status: rmsPRV, Text: text}
+			}
 		}
 
 		var input *rms.InputOpenError

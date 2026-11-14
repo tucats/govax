@@ -129,7 +129,11 @@ type linkInputs struct {
 }
 
 // Link links object modules into an executable image.
-func (c *Context) Link(opts LinkOptions) error {
+func (c *Context) Link(opts LinkOptions) (err error) {
+	// A file its process's protection refused is LINK-F-OPENIN or
+	// OPENOUT, VMS 7.1's (openFailure).
+	defer func() { err = openFailure(err, "LINK-F", false) }()
+
 	s := c.ContainerSession
 
 	files := make([]link.InputFile, 0, len(opts.Objects)+len(opts.Files))

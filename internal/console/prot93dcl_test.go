@@ -289,14 +289,15 @@ func TestSetProcessPrivileges(t *testing.T) {
 // TestCreateDirectoryOwnerOracle: an account without privileges may not
 // give a new directory another's UIC, by /OWNER_UIC=uic or =PARENT under
 // another's directory, and nothing is made (subtask 7; round 2's PROT93C,
-// [300,1], under PROT93A's [PROT93.OWN]).
+// [300,1], under PROT93A's [PROT93.OWN], which gives everyone RWE, as the
+// probe's did).
 func TestCreateDirectoryOwnerOracle(t *testing.T) {
 	log := prot93Log(t, filepath.Join("round2", "prot93v_prot93c.log"))
 
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA1")
 
-	for _, line := range []string{"DEFINE PROT93$DISK DUA1:", "CREATE/DIRECTORY/OWNER_UIC=[200,1] DUA1:[PROT93.OWN]"} {
+	for _, line := range []string{"DEFINE PROT93$DISK DUA1:", "CREATE/DIRECTORY/OWNER_UIC=[200,1]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) DUA1:[PROT93.OWN]"} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
 		}

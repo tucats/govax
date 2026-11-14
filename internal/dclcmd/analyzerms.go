@@ -39,7 +39,11 @@ type AnalyzeRMSOptions struct {
 }
 
 // AnalyzeRMSFile runs one ANALYZE/RMS_FILE command.
-func (c *Context) AnalyzeRMSFile(opts AnalyzeRMSOptions) error {
+func (c *Context) AnalyzeRMSFile(opts AnalyzeRMSOptions) (err error) {
+	// A file its process's protection refused is ANALYZE-E-OPENIN or
+	// OPENOUT, VMS 7.1's (openFailure).
+	defer func() { err = openFailure(err, "ANALYZE-E", false) }()
+
 	s := c.ContainerSession
 
 	toTerminal := opts.HasOutput && strings.EqualFold(opts.OutputFile, "SYS$OUTPUT")

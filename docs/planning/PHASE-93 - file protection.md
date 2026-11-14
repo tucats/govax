@@ -1004,7 +1004,7 @@ Each is one commit, with tests, stopping for review.
    (small enough to go with this subtask rather than one of its own; the
    DCL utilities' checks trace through it once subtask 9 moves them onto
    the layer).
-9. **Checking the DCL utilities**: every `OpenFID` and directory site in
+9. **Checking the DCL utilities** (done 2026-11-14): every `OpenFID` and directory site in
    A.2 moved onto the layer, `TestNoUncheckedAccess`, and each utility's
    messages held to the probe's DCL logs, SYSTEM's and the accounts'.
 10. **The ACL services**: `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
@@ -1476,3 +1476,73 @@ The author accepted the plan and answered its questions:
   `TestCreateFileHonorsDirectoryRecordVersionLimit`; govax's
   `TestNewVersionPastLimit` purges L.DAT;1). Subtask 9, checking the DCL
   utilities, is next.
+- **2026-11-14** Subtask 9 done. `rms/utilaccess.go` is the utilities'
+  half of the checked layer: `globChecked` in place of `filespec.Glob`
+  (the levels above looked up with a check, the directory searched listed,
+  R, when the name or type has a wildcard, else looked in, R or E; a
+  wildcard directory's matches only in directories the process may reach
+  and search, the rest passed over without a message, unconfirmed),
+  `openChecked` in place of `OpenFID`, `createAllowed` (the directory's R
+  and W, the next version's W on the highest and D past the limit, now
+  in `createVersion`, so every utility's new file is checked there),
+  `pathAllowed` (in `resolveVolumeDest`), and `DeniedError` (a file, a
+  search, or an output, with the name to show and COPY's input), which
+  `dclcmd`'s `FileFailure` turns into a `DeniedFailure` and each utility
+  into its own message (`openFailure`: MACRO-E, LINK-F, LIBRAR-F, the last
+  naming its input without the version as VMS's did, ANALYZE-E, and FORT-F,
+  unconfirmed). On it: TYPE (OPENIN, SEARCHFAIL), DUMP, COPY (OPENIN;
+  OPENOUT then NOTCOPIED; to a host file too), DCL's OPEN/WRITE
+  (`createDCLFile`), `@` (`Session.ReadProcedure`: R or E, OPENIN with the
+  name expanded), the record files MACRO, LINK, LIBRARY, FORTRAN, and
+  CREATE read and write (`ReadRecordFile`, `readRaw`, `RewriteRecordFile`
+  needing R and W, `createVolumeRecordsAllocated`; CREATE asks
+  `CreateAllowed` before it reads SYS$INPUT), F$FILE_ATTRIBUTES (R:
+  SS$_NOPRIV with the name as its segment; RMS$_PRV for a directory it may
+  not search, unconfirmed), DIRECTORY (OPENIN over RMS$_PRV,
+  `DirectoryName`'s "*.*;*" form; /FULL and the other columns of a file
+  the process may neither read nor control give SS$_NOPRIV's text in their
+  place and count no blocks, `readable`), F$SEARCH (nothing) and F$PARSE
+  (the levels above the last, as `$PARSE`; nothing for a path it can't
+  walk, unconfirmed), DELETE and PURGE (a file without D, or in a directory
+  without R and W, passed over and the rest deleted, then FILNOTDEL or
+  FILNOTPUR over RMS$_PRV for each, `NotDeletedError`; PURGE now deletes
+  version by version), CREATE/DIRECTORY (the deepest existing level's R and
+  W and the path to it: DIRNOTCRE over SS$_NOPRIV), ANALYZE/RMS_FILE,
+  CONVERT (its input named with its version, as VMS's was), BACKUP's save
+  (OPENIN over SS$_NOPRIV, then NOFILES, its input now named with ";*" as
+  VMS 7.1's was, which changed `TestBackupSaveMessages`'s /SINCE case from
+  ";"; a subdirectory it may not list not gone into, unconfirmed), a save
+  set's read, a restore (the path, `createVersion`, an overlaid file's W and
+  a replaced one's D; OPENOUT over SS$_NOPRIV, unconfirmed), EDIT, LBR's
+  hold (`HoldFile`), and RENAME's search (RMS$_PRV). `searchAccess` no
+  longer counts a version wildcard alone as a listing: VMS 7.1's DIRECTORY
+  [.UDE]A.DAT, a search of A.DAT;*, listed it in a directory giving E alone.
+  Found along the way and fixed: ANALYZE's /OUTPUT=NL: was "not mounted"
+  (`writeAnalysis` now takes the null device), F$FILE_ATTRIBUTES' PRO wrote
+  a category with no access as "WORLD=" where VMS writes "WORLD"
+  (`TestLexicalFileAttributes` now wants VMS's form), and EDIT
+  forced the old version's owner on its new version, which
+  `newFileProfile`'s owner rule now decides. `TestNoUncheckedAccess`
+  (`rms/uncheckedaccess_test.go`) scans `internal/rms` for the ods2 calls
+  (OpenFID, OpenDirectory, ResolveDirectory, Glob, Insert, Remove, Rename,
+  UpdateHeader, SetACL) and fails on a function not in its list, each
+  entry with its reason (the layer, the services' and the ACP's inline
+  checks, a utility's own new file, and Decision 6's exceptions: MOUNT and
+  SET DEFAULT's existence test, the page file, verification). Tests: `rms`'s
+  `utilaccess_test.go`, and the console's `TestProt93UtilitiesOracle`
+  (`prot93util_test.go`), which replays Part B as SYSTEM without its four
+  privileges and as each account, and the accounts' ACL'd files and new
+  files in others' directories, from the logs on the VMS-written volume
+  (local only), 446 commands compared; a command that changes the volume
+  is compared only where VMS refused it, the probe's names are compared as
+  their UICs (govax's rights database has none of the accounts), and three
+  differences are expected (A0's listings of [.UDN], which holds the later
+  passes' files, and B0's TYPE of FACLCTL, changed since). Left for later,
+  or not in govax: DUMP/HEADER, SEARCH, DIFFERENCES, and APPEND aren't
+  govax commands; round 2's account DCL is owners and display (subtasks 7,
+  11, 12); a restore still gives a file its saved owner whatever the
+  process's privilege (unconfirmed what VMS's BACKUP does without it).
+  `TestCreateDirectoryOwnerOracle`'s [PROT93.OWN] now gives everyone RWE,
+  as the probe's did: with the parent checked, its default protection kept
+  [300,1] from making a directory there at all. Subtask 10, the ACL
+  services, is next.

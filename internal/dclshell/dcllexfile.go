@@ -465,6 +465,22 @@ func lexFileAttributes(e *dclExpression, args []lexicalArg) (dclValue, error) {
 
 	attrs, err := c.ContainerSession.FileAttributes(spec)
 	if err != nil {
+		// A file the process's protection keeps it from opening is
+		// SS$_NOPRIV, with the name as its segment, as VMS 7.1 said it
+		// (the probe's A.4, answer 12); a directory it may not search,
+		// RMS$_PRV (unconfirmed).
+		if denied, ok := rms.IsDenied(err); ok {
+			status := ssNoPriv
+			if denied != nil && denied.Search {
+				status = vmsdef.Symbols["RMS$_PRV"]
+			}
+
+			return dclValue{}, vmserrors.ConditionError{
+				Status: status,
+				Text:   c.statusText(status) + "\n" + vmserrors.SegmentLine(strings.ToUpper(spec)),
+			}
+		}
+
 		var fe *rms.DCLFileError
 		if errors.As(err, &fe) {
 			return dclValue{}, c.statusFailure(fe.Status)
@@ -503,6 +519,9 @@ func init() {
 // subprocess).
 // ssIvDevNam is SS$_IVDEVNAM.
 var ssIvDevNam = vmsdef.Symbols["SS$_IVDEVNAM"]
+
+// ssNoPriv is SS$_NOPRIV.
+var ssNoPriv = vmsdef.Symbols["SS$_NOPRIV"]
 
 func lexGetDVI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	env, err := e.console.lexicalEnvironment()

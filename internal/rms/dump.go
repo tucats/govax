@@ -3,11 +3,12 @@ package rms
 import (
 	"errors"
 	"fmt"
-	"github.com/tucats/govax/internal/isam"
 	"io"
 	"strings"
 
-	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/govax/internal/isam"
+	"github.com/tucats/govax/internal/security"
+
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
@@ -152,7 +153,11 @@ func (s *Session) OpenDump(spec string) (*DumpFile, error) {
 	var dump *DumpFile
 
 	err := s.firstSpec(spec, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
+		if _, denied := IsDenied(err); denied {
+			return err
+		}
+
 		if err != nil || len(matches) == 0 {
 			return &NotFoundError{Spec: spec}
 		}
@@ -163,7 +168,7 @@ func (s *Session) OpenDump(spec string) (*DumpFile, error) {
 
 		m := matches[0]
 
-		f, err := vol.OpenFID(m.Fid)
+		f, err := s.openChecked(vol, m, security.Read, r.shownFile(m))
 		if err != nil {
 			return err
 		}
@@ -186,6 +191,8 @@ func (s *Session) OpenDump(spec string) (*DumpFile, error) {
 		return dump, nil
 	case errors.As(err, &notFound):
 		return nil, s.NotFound(spec)
+	case s.DeniedFileError(err, spec, false) != nil:
+		return nil, s.DeniedFileError(err, spec, false)
 	case err != nil:
 		return nil, fmt.Errorf("dump: %w", err)
 	}

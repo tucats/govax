@@ -243,7 +243,11 @@ func (c *Context) MacroList(sources []MacroSource, opts MacroOptions) error {
 
 // Macro assembles one MACRO-32 source file and, unless opts.NoObject,
 // writes its object module; with opts.List, it writes the listing too.
-func (c *Context) Macro(opts MacroOptions) error {
+func (c *Context) Macro(opts MacroOptions) (err error) {
+	// A file its process's protection refused is MACRO-E-OPENIN or
+	// OPENOUT, VMS 7.1's (openFailure).
+	defer func() { err = openFailure(err, "MACRO-E", false) }()
+
 	// Everything before the assembler is called (finding and reading the
 	// source, opening the libraries) is the listing's command processing
 	// phase.

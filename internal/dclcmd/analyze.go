@@ -64,7 +64,11 @@ type AnalyzeOptions struct {
 // read stops the command; a file the analysis finds errors in doesn't,
 // and the command then ends with CLI_ANALYZEERRORS once every file's
 // report is written.
-func (c *Context) AnalyzeObject(opts AnalyzeOptions) error {
+func (c *Context) AnalyzeObject(opts AnalyzeOptions) (err error) {
+	// A file its process's protection refused is ANALYZE-E-OPENIN or
+	// OPENOUT, ANALYZE/OBJECT's (unconfirmed: the probe ran ANALYZE/RMS_FILE) (openFailure).
+	defer func() { err = openFailure(err, "ANALYZE-E", false) }()
+
 	return c.analyzeFiles(opts, "OBJ", "ANL", anl.TitleObject, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
 		records, found, err := c.analyzeRecords(loc, opts)
 		if err != nil {
@@ -80,7 +84,11 @@ func (c *Context) AnalyzeObject(opts AnalyzeOptions) error {
 // AnalyzeImage runs one ANALYZE/IMAGE command (docs/planning/PHASE-40.md), as
 // AnalyzeObject runs ANALYZE/OBJECT: the default input type is EXE, and
 // the default output NAME.ANI.
-func (c *Context) AnalyzeImage(opts AnalyzeOptions) error {
+func (c *Context) AnalyzeImage(opts AnalyzeOptions) (err error) {
+	// A file its process's protection refused is ANALYZE-E-OPENIN or
+	// OPENOUT, ANALYZE/IMAGE's (unconfirmed: the probe ran ANALYZE/RMS_FILE) (openFailure).
+	defer func() { err = openFailure(err, "ANALYZE-E", false) }()
+
 	return c.analyzeFiles(opts, "EXE", "ANI", anl.TitleImage, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
 		data, found, err := c.ContainerSession.ReadRawFile(loc)
 		if err != nil {
@@ -261,7 +269,15 @@ func (c *Context) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][
 
 // writeAnalysis writes a report to the output file name (or NAME.typ
 // beside input), one record per line.
+//
+// The null device, NL:, takes the report and keeps nothing, as VMS's
+// ANALYZE/RMS_FILE/OUTPUT=NL: did (docs/planning/PHASE-93 - file
+// protection.md's probe, Part B); it was a "not mounted" error before.
 func (c *Context) writeAnalysis(name string, input rms.FileLocation, typ string, text []byte) error {
+	if nullDevice(name) {
+		return nil
+	}
+
 	s := c.ContainerSession
 
 	out, err := outputLocation(s, name, input, typ)
@@ -340,4 +356,15 @@ func AnalyzeRecordTypes(selected func(qualifier string) bool) []obj.RecordType {
 	}
 
 	return types
+}
+
+// nullDevice reports whether name is the null device, NL: (or NLA0:, with
+// or without the "_" of a physical name).
+func nullDevice(name string) bool {
+	switch strings.TrimPrefix(strings.ToUpper(strings.TrimSpace(name)), "_") {
+	case "NL:", "NLA0:", "NL", "NLA0":
+		return true
+	}
+
+	return false
 }

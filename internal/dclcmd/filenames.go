@@ -81,9 +81,25 @@ func defaultOutputLocation(s *rms.Session, source rms.FileLocation, typ string) 
 // FileFailure turns an error finding, reading, or creating a file into
 // the console's status for it, as TYPE and COPY report the same
 // failures.
+//
+// A refusal by the process's protection is a *DeniedFailure, which the
+// utility running turns into its own OPENIN or OPENOUT (openFailure).
 func FileFailure(err error, spec string) error {
 	if lnmErr := logicalNameFailure(err); lnmErr != nil {
 		return lnmErr
+	}
+
+	if denied, ok := rms.IsDenied(err); ok {
+		f := &DeniedFailure{Name: strings.ToUpper(spec), err: err}
+		if denied != nil {
+			f.Output = denied.Output
+
+			if denied.Name != "" {
+				f.Name = denied.Name
+			}
+		}
+
+		return f
 	}
 
 	var notMounted *rms.NotMountedError
@@ -102,4 +118,66 @@ func FileFailure(err error, spec string) error {
 	}
 
 	return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, spec)
+}
+
+// expandedName is specText as RMS's $PARSE expands it ("DUA1:[A]B.DAT;"),
+// which a utility's message names a file by when it couldn't find the
+// file itself; the text uppercased if it can't be expanded.
+func (c *Context) expandedName(specText string) string {
+	name, err := c.ContainerSession.ExpandName(specText)
+	if err != nil {
+		return strings.ToUpper(specText)
+	}
+
+	return name
+}
+
+// DeniedFailure is a file a utility's process may not open, read, or make
+// (docs/planning/PHASE-93 - file protection.md, subtask 9): Name is the
+// file's whole name, with its version if it was found, and Output says it
+// was one the utility was making. A utility reports it with its own
+// facility's message (openFailure); one that doesn't shows RMS$_PRV.
+type DeniedFailure struct {
+	Name   string
+	Output bool
+	err    error
+}
+
+func (e *DeniedFailure) Error() string {
+	return strings.TrimPrefix(ConditionLine(rmsPRV), "-")
+}
+
+func (e *DeniedFailure) Unwrap() error { return e.err }
+
+// openFailure is err as the utility whose message prefix is prefix
+// ("MACRO-E", "LINK-F") reports a file its process's protection refused,
+// as VMS 7.1's did (the probe's A.4, "Statuses and messages"):
+//
+//	%MACRO-E-OPENIN, error opening DUA1:[A]B.MAR;1 as input
+//	-RMS-E-PRV, insufficient privilege or file protection violation
+//
+// OPENOUT and "as output" for a file it was making. With bare, an input's
+// name is shown without its version number, as LIBRARY's was
+// ("ULIBNONE.OLB;"). Any other err is returned as it is.
+func openFailure(err error, prefix string, bare bool) error {
+	var denied *DeniedFailure
+	if !errors.As(err, &denied) {
+		return err
+	}
+
+	name, what, as := denied.Name, "OPENIN", "input"
+
+	switch {
+	case denied.Output:
+		what, as = "OPENOUT", "output"
+	case bare:
+		if i := strings.LastIndexByte(name, ';'); i >= 0 {
+			name = name[:i+1]
+		}
+	}
+
+	return vmserrors.ConditionError{
+		Status: rmsPRV,
+		Text:   prefix + "-" + what + ", error opening " + name + " as " + as + "\n" + ConditionLine(rmsPRV),
+	}
 }

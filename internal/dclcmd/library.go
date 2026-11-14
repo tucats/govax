@@ -158,7 +158,11 @@ type library struct {
 }
 
 // Library runs one LIBRARY command.
-func (c *Context) Library(opts LibraryOptions) error {
+func (c *Context) Library(opts LibraryOptions) (err error) {
+	// A file its process's protection refused is LIBRAR-F-OPENIN or
+	// OPENOUT, VMS 7.1's, an input named without its version (openFailure).
+	defer func() { err = openFailure(err, "LIBRAR-F", true) }()
+
 	l := &library{c: c, opts: opts, now: vmsdef.Time(time.Now())}
 
 	if err := l.run(); err != nil {

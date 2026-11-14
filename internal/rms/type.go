@@ -3,10 +3,11 @@ package rms
 import (
 	"bytes"
 	"fmt"
-	"github.com/tucats/govax/internal/isam"
 	"io"
 
-	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/govax/internal/isam"
+	"github.com/tucats/govax/internal/security"
+
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
@@ -84,7 +85,7 @@ func (s *Session) Type(specText string) (string, error) {
 
 	// A search list types the first file found (User's Manual §11.7).
 	err := s.firstSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -108,7 +109,7 @@ func (s *Session) Type(specText string) (string, error) {
 
 		defer claim.release()
 
-		f, err := vol.OpenFID(matches[0].Fid)
+		f, err := s.openChecked(vol, matches[0], security.Read, r.shownFile(matches[0]))
 		if err != nil {
 			return err
 		}

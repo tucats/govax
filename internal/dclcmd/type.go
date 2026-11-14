@@ -154,6 +154,18 @@ func (c *Context) typeFailure(err error, specText string, loc rms.FileLocation) 
 		return TypeOpenFailure(locked.Name, vmsdef.Symbols["RMS$_FLK"])
 	}
 
+	// A file or directory the process's protection refused: VMS 7.1's
+	// TYPE said OPENIN for the file, SEARCHFAIL for a directory it may
+	// not search, each over RMS$_PRV (docs/planning/PHASE-93 - file
+	// protection.md, A.4).
+	if denied, ok := rms.IsDenied(err); ok && denied != nil {
+		if denied.Search {
+			return typeMissing(c.expandedName(specText), vmsdef.Symbols["RMS$_PRV"], 0)
+		}
+
+		return TypeOpenFailure(denied.Name, vmsdef.Symbols["RMS$_PRV"])
+	}
+
 	var bad *rms.NameError
 	if errors.As(err, &bad) {
 		return typeMissing(strings.ToUpper(bad.Spec), bad.Status, 0)

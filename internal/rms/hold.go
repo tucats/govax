@@ -1,7 +1,6 @@
 package rms
 
 import (
-	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -17,10 +16,16 @@ func (s *Session) HoldFile(loc FileLocation, update bool) (*ACPFile, error) {
 		mode = ACPAccessMode{Write: true, NoRead: true, NoWrite: true}
 	}
 
+	// The process must be able to find the library and have the access
+	// it holds it with (R, and W to update): ErrNoPrivilege if not, as
+	// LBR$OPEN's own RMS open would be refused.
+	creds := s.Identity()
+	mode.Credentials = &creds
+
 	var held *ACPFile
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}

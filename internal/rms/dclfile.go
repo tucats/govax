@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -336,7 +335,17 @@ func createDCLFile(ctx *Context, fac, shr byte, attr ondisk.RecAttr, p parsedNam
 		return nil, found, rmsFileNameError
 	}
 
-	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	// The process must be able to look its way to the directory and make
+	// a file there, as $CREATE checks (access.go): VMS 7.1's OPEN/WRITE
+	// was refused with RMS$_PRV where a new version was (the probe's
+	// Part B).
+	creds := ctx.Identity()
+
+	dir, err := resolveChecked(creds, vol, spec.Dirs)
+	if errors.Is(err, ErrNoPrivilege) {
+		return nil, found, ctx.denied()
+	}
+
 	if err != nil {
 		return nil, found, rmsDirNotFound
 	}
@@ -346,6 +355,10 @@ func createDCLFile(ctx *Context, fac, shr byte, attr ondisk.RecAttr, p parsedNam
 	version, ok := parseOpenVersion(spec.Version)
 	if !ok {
 		return nil, found, rmsInvalidVersion
+	}
+
+	if createAllowed(ctx.creator(ExplicitProfile{}), vol, dir, name, version) != nil {
+		return nil, found, ctx.denied()
 	}
 
 	if version == 0 {

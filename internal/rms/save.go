@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/backup"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -54,6 +55,9 @@ type SaveFile struct {
 	device string
 	vol    *volume.Volume
 	fid    ondisk.Fid
+
+	// creds are the saving process's, which Read checks the file gives R.
+	creds security.Credentials
 }
 
 // Read reads the file's used blocks, VBN 1 up to its end of file (all
@@ -62,7 +66,16 @@ type SaveFile struct {
 // to write it, so a file some process has open for writing is
 // ErrACPAccessConflict (VMS's ACCONFLICT); with ignoreInterlock (BACKUP's
 // /IGNORE=INTERLOCK) it's read as it stands, and conflict says so.
+//
+// The file must give the process R: a *DeniedError if not, as VMS 7.1's
+// BACKUP said OPENIN over SS$_NOPRIV (the probe's A.4).
 func (f *SaveFile) Read(ignoreInterlock bool) (data []byte, conflict bool, err error) {
+	if !unchecked(f.creds) {
+		if h, err := f.vol.OpenFID(f.fid); err == nil && !may(f.creds, f.vol, &h.Header, security.Read) {
+			return nil, false, &DeniedError{Name: f.Name}
+		}
+	}
+
 	a, err := f.mounts.ACPAccessWith(f.device, fileIDFrom(f.fid), ACPAccessMode{NoWrite: true})
 
 	switch {
@@ -131,12 +144,19 @@ func (s *Session) SaveSearch(spec string, visit func(*SaveFile) error) error {
 			pattern.Version = "*"
 		}
 
-		matches, err := filespec.Glob(vol, pattern)
+		matches, err := s.globChecked(vol, pattern)
+		if _, denied := IsDenied(err); denied {
+			return err
+		}
+
 		if err != nil || len(matches) == 0 && !pattern.Recursive {
 			return &NotFoundError{Spec: spec}
 		}
 
-		search := &saveSearch{mounts: s.Mounts, device: r.Spec.Device, vol: vol, name: r, recursive: pattern.Recursive, visit: visit, matched: map[string]bool{}}
+		search := &saveSearch{
+			mounts: s.Mounts, device: r.Spec.Device, vol: vol, name: r, recursive: pattern.Recursive, visit: visit, matched: map[string]bool{},
+			creds: s.Identity(),
+		}
 		for _, m := range matches {
 			search.matched[matchKey(m.Dirs, m.Name+"."+m.Type, m.Version)] = true
 		}
@@ -227,6 +247,7 @@ type saveSearch struct {
 	recursive bool
 	visit     func(*SaveFile) error
 	matched   map[string]bool
+	creds     security.Credentials
 }
 
 // matchKey names a file by its directory, name, and version.
@@ -259,8 +280,10 @@ func (s *saveSearch) directory(path []string, dir *volume.Directory) error {
 
 		var sub *volume.Directory
 
+		// A subdirectory the process may not list isn't gone into
+		// (unconfirmed: the probe saved no tree with one).
 		if s.recursive && e.Version == 1 && strings.HasSuffix(strings.ToUpper(e.Name), ".DIR") && !e.Fid.Equal(dir.Header.Fid) {
-			if d, err := s.vol.OpenDirectory(e.Fid); err == nil {
+			if d, err := s.vol.OpenDirectory(e.Fid); err == nil && needList.allows(s.creds, s.vol, d) {
 				sub = d
 			}
 		}
@@ -282,6 +305,7 @@ func (s *saveSearch) directory(path []string, dir *volume.Directory) error {
 			device:     s.device,
 			vol:        s.vol,
 			fid:        e.Fid,
+			creds:      s.creds,
 		}
 
 		if err := s.visit(saved); err != nil {
@@ -456,7 +480,7 @@ func (s *Session) CreateSaveSet(loc FileLocation, opts SaveSetOptions) (*SaveSet
 		return nil, fmt.Errorf("rms: %s: version %q: want 1 to %d", loc.Name, spec.Version, MaxVersionLimit)
 	}
 
-	dir, bm, ib, err := resolveVolumeDest(vol, spec)
+	dir, bm, ib, err := resolveVolumeDest(s.Identity(), vol, spec)
 	if err != nil {
 		return nil, s.NotFound(loc.Name)
 	}

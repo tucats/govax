@@ -254,7 +254,7 @@ func TestBackupSaveMessages(t *testing.T) {
 		{"BACKUP [B69]NONE.* [SETS]X.BCK/SAVE_SET",
 			"%BACKUP-E-SEARCHFAIL, error searching for DUA1:[B69]NONE.*;\n-RMS-E-FNF, file not found", "%X10A3FFA2"},
 		{"BACKUP [B69]*.*/SINCE=TOMORROW [SETS]X.BCK/SAVE_SET",
-			"%BACKUP-W-NOFILES, no files selected from DUA1:[B69]*.*;", "%X10A38400"},
+			"%BACKUP-W-NOFILES, no files selected from DUA1:[B69]*.*;*", "%X10A38400"},
 		{"BACKUP [B69]*.* [NOPE]X.BCK/SAVE_SET",
 			"%BACKUP-E-OPENOUT, error opening DUA1:[NOPE]X.BCK; as output\n-RMS-E-DNF, directory not found\n-SYSTEM-W-NOSUCHFILE, no such file",
 			"%X10A38012"},

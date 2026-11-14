@@ -159,6 +159,19 @@ type backupSave struct {
 
 	// any is set once a file is written.
 	any bool
+
+	// refused is set once a file is passed over for the process's
+	// protection: NOFILES still ends a save that saved nothing, as VMS
+	// 7.1's did after OPENIN.
+	refused bool
+}
+
+// isDeniedErr reports whether err is a refusal by the process's
+// protection.
+func isDeniedErr(err error) bool {
+	_, denied := rms.IsDenied(err)
+
+	return denied
 }
 
 // queuedFile is a file waiting for its block to be written: its name
@@ -222,6 +235,15 @@ func (s *backupSave) file(f *rms.SaveFile) error {
 			s.messageWith(vmsdef.BackupOpenIn&^7|2, []uint32{vmsdef.Symbols["SS$_ACCONFLICT"]}, f.Name)
 
 			return nil
+
+		// One the process's protection keeps it from reading: OPENIN
+		// over SS$_NOPRIV, not saved (VMS 7.1: docs/planning/PHASE-93 -
+		// file protection.md, A.4).
+		case isDeniedErr(err):
+			s.messageWith(vmsdef.BackupOpenIn&^7|2, []uint32{vmsdef.Symbols["SS$_NOPRIV"]}, f.Name)
+			s.refused = true
+
+			return nil
 		case err != nil:
 			return err
 		case conflict:
@@ -272,11 +294,19 @@ func (s *backupSave) note(code uint32) {
 }
 
 // finish ends a save: NOFILES when the searches found files and none
-// was saved (/SINCE=TOMORROW), naming the first input specifier as
-// expanded, then the status.
+// was saved (/SINCE=TOMORROW, or the process may read none of them),
+// naming the first input specifier as expanded, then the status.
 func (s *backupSave) finish() error {
-	if !s.any && s.status == 0 {
-		s.message(vmsdef.BackupNoFiles, saveSetDisplayName(s.c.ContainerSession, rms.FileLocation{Name: s.cmd.Inputs[0]}))
+	// The input is named with every version, ";*", as a save takes
+	// them: VMS 7.1's "no files selected from DUA1:[PROT93.U]UNONE.DAT;*"
+	// (docs/planning/PHASE-93 - file protection.md's probe, Part B).
+	if !s.any && (s.status == 0 || s.refused) {
+		name := saveSetDisplayName(s.c.ContainerSession, rms.FileLocation{Name: s.cmd.Inputs[0]})
+		if strings.HasSuffix(name, ";") {
+			name += "*"
+		}
+
+		s.message(vmsdef.BackupNoFiles, name)
 	}
 
 	if s.status == 0 {

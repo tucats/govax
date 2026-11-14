@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -46,6 +47,21 @@ import (
 //     bucket.
 func (c *Context) Purge(specText string, keep uint16, log bool) error {
 	purged, err := c.ContainerSession.Purge(specText, keep)
+
+	// Versions the process's protection kept it from deleting are passed
+	// over, the others purged, and each is FILNOTPUR over RMS$_PRV after
+	// them, as VMS 7.1 said it (docs/planning/PHASE-93 - file
+	// protection.md, A.4):
+	//
+	//	%PURGE-W-FILNOTPUR, error deleting DUA1:[A]B.DAT;1
+	//	-RMS-E-PRV, insufficient privilege or file protection violation
+	var notDeleted *rms.NotDeletedError
+	if errors.As(err, &notDeleted) {
+		c.showPurged(purged, log)
+
+		return notDeletedFailure("PURGE-W-FILNOTPUR", notDeleted.Names, purgeFilNotPur)
+	}
+
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
 			return lnmErr
@@ -61,9 +77,28 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 			return vmserrors.Wrap(vmserrors.CLI_BADLIMIT, err, badLimit.Limit)
 		}
 
+		if _, denied := rms.IsDenied(err); denied {
+			text := "PURGE-W-SEARCHFAIL, error searching for " + c.expandedName(specText) + "\n" + ConditionLine(rmsPRV)
+
+			return vmserrors.ConditionError{Status: purgeFilNotPur&^0xFFFF | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"] | stsInhibitMsg, Text: text}
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
 	}
 
+	c.showPurged(purged, log)
+
+	return nil
+}
+
+// purgeFilNotPur is PURGE's FILNOTPUR condition value, a warning, in
+// DELETE's facility, which PURGE is part of (unconfirmed: no probe showed
+// its $STATUS).
+var purgeFilNotPur = deleteSearchFail&^0xFFFF | vmsdef.LibrarySymbols["SHR$_FILNOTPUR"]
+
+// showPurged writes what PURGE says of the files it purged: with log, each
+// with its blocks and a total.
+func (c *Context) showPurged(purged []rms.DeletedFile, log bool) {
 	var blocks uint32
 
 	for _, d := range purged {
@@ -81,6 +116,4 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 	if log && len(purged) > 1 {
 		c.Printf("%%PURGE-I-TOTAL, %d files deleted (%d block%s)\n", len(purged), blocks, plural(blocks))
 	}
-
-	return nil
 }

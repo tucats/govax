@@ -207,7 +207,21 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 	// inherited owner at every level).
 	who := s.creator(ExplicitProfile{})
 
-	if first := deepestExisting(vol, spec.Dirs); first != nil {
+	//
+	// So is a directory the process may not make: it must be able to look
+	// its way to the deepest level that exists (R or E on each above it)
+	// and change that one (R and W), as for a file (access.go); VMS 7.1
+	// said DIRNOTCRE over SS$_NOPRIV in a parent giving neither (the
+	// probe's Part B).
+	if first, depth := deepestExisting(vol, spec.Dirs); first != nil {
+		if err := pathAllowed(who.creds, vol, spec.Dirs[:depth]); err != nil {
+			return nil, fmt.Errorf("create directory: %w", err)
+		}
+
+		if !needChange.allows(who.creds, vol, first) {
+			return nil, fmt.Errorf("create directory: %w", ErrNoPrivilege)
+		}
+
 		if _, err := opts.forParent(who, vol, first); err != nil {
 			return nil, fmt.Errorf("create directory: %w", err)
 		}
@@ -245,8 +259,9 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 
 // deepestExisting is the directory the first level of dirs that doesn't
 // exist would be made in: the deepest existing level (the MFD for none),
-// or nil when every level exists already, or the path can't be resolved.
-func deepestExisting(vol *volume.Volume, dirs []string) *volume.Directory {
+// with how many levels of dirs it is, or nil when every level exists
+// already, or the path can't be resolved.
+func deepestExisting(vol *volume.Volume, dirs []string) (*volume.Directory, int) {
 	for i := len(dirs); i >= 0; i-- {
 		d, err := filespec.ResolveDirectory(vol, dirs[:i])
 		if err != nil {
@@ -254,13 +269,13 @@ func deepestExisting(vol *volume.Volume, dirs []string) *volume.Directory {
 		}
 
 		if i == len(dirs) {
-			return nil
+			return nil, 0
 		}
 
-		return d
+		return d, i
 	}
 
-	return nil
+	return nil, 0
 }
 
 // forParent is the options of a directory who makes in parent: VMS's

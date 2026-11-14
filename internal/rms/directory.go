@@ -3,10 +3,12 @@ package rms
 import (
 	"encoding/binary"
 	"fmt"
-	"sort"
 	"slices"
+	"sort"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/vmstime"
@@ -137,7 +139,7 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 
 	cols := opts.columns()
 
-	l := directoryListing{opts: opts, cols: cols}
+	l := directoryListing{opts: opts, cols: cols, creds: s.Identity()}
 	l.brief = newBriefColumns(&l.b)
 
 	// A list of names (DIRECTORY [R3...],[R4...]), like a search list,
@@ -157,7 +159,10 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 				spec.Version = "*"
 			}
 
-			matches, err := filespec.Glob(vol, spec)
+			// A directory the process may not search is OPENIN over
+			// RMS$_PRV (VMS 7.1: the probe's Part B), which the caller
+			// names (DirectoryName).
+			matches, err := s.globChecked(vol, spec)
 			if err != nil {
 				return err
 			}
@@ -224,6 +229,17 @@ func (s *Session) DirectoryMissing(specText string) *DCLFileError {
 	return newDCLFileError(names[0].String(), rmsDirNotFound)
 }
 
+// DirectoryName is specText as DIRECTORY names it in a message, its
+// fields filled in from "*.*;*": "DUA1:[A]*.*;*".
+func (s *Session) DirectoryName(specText string) string {
+	names, err := expandText(s.Logicals, s.Default, nameInputs{Primary: specText, Default: "*.*;*", ThroughPermanent: true})
+	if err != nil || len(names) == 0 {
+		return strings.ToUpper(specText)
+	}
+
+	return names[0].String()
+}
+
 // directoryListing is DIRECTORY's listing as it's written: the text so
 // far, the directory being listed (dir, "" before the first) with its
 // file count and blocks, and the totals of the directories done.
@@ -236,6 +252,10 @@ type directoryListing struct {
 	dir         string
 	count       int
 	used, alloc uint32
+
+	// creds are the process's, whose access to each file decides whether
+	// its header's facts are shown (readable).
+	creds security.Credentials
 
 	dirs, files           int
 	totalUsed, totalAlloc uint32
@@ -276,6 +296,25 @@ func (l *directoryListing) list(vol *volume.Volume, dirName string, listed []fil
 
 		if opts.brief() {
 			fmt.Fprintln(&l.b, name)
+
+			continue
+		}
+
+		// A file the process may neither read nor control has its name
+		// and the reason, and no blocks counted, as VMS 7.1's /FULL
+		// showed it (the probe's A.4, answer 12; the other columns' form
+		// unconfirmed). The brief form above lists it.
+		if !readable(l.creds, vol, m) {
+			width := directoryNameWidth
+			if opts.Full {
+				width++
+			}
+
+			fmt.Fprintf(&l.b, "%-*s%s\n", width, name, noPrivilegeText)
+
+			if opts.Full {
+				l.b.WriteString("\n") // as every /FULL entry ends
+			}
 
 			continue
 		}
@@ -402,6 +441,28 @@ func (c *briefColumns) end() {
 		c.b.WriteString("\n")
 		c.used = 0
 	}
+}
+
+// noPrivilegeText is SS$_NOPRIV's message, which DIRECTORY shows in place
+// of a file's facts when the process may not read them.
+var noPrivilegeText = func() string {
+	m, _ := vmsdef.LookupMessage(ssNoPriv)
+
+	return m.Text
+}()
+
+// readable reports whether creds let a utility show the facts in the
+// header of the file m found on vol: R or C, as the ACP's read of
+// attributes needs (VMS 7.1: the probe's A.4, "The check"). A header that
+// can't be read is left to matchAttributes to report.
+func readable(creds security.Credentials, vol *volume.Volume, m filespec.Match) bool {
+	if unchecked(creds) {
+		return true
+	}
+
+	f, err := vol.OpenFID(m.Fid)
+
+	return err != nil || mayEither(creds, vol, &f.Header, security.Read, security.Control)
 }
 
 // matchAttributes reads the header of the file m found on vol.

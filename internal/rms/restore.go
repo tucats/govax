@@ -11,6 +11,7 @@ import (
 
 	"github.com/tucats/govax/internal/backup"
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
@@ -213,13 +214,13 @@ func (s *Session) restoreToVolume(text string, file *backup.File, opts RestoreOp
 // volumeRestore is one file being restored onto a volume: where it goes,
 // and the volume's bitmaps.
 type volumeRestore struct {
-	vol     *volume.Volume
-	dev     *volume.Device
-	bm      *volume.Bitmap
-	ib      *volume.IndexBitmap
-	name    resolvedSpec // the output name, which says how a file is shown
-	file    *backup.File
-	who     creator // the restoring process, whose files and directories they are until the saved profile is laid over them
+	vol  *volume.Volume
+	dev  *volume.Device
+	bm   *volume.Bitmap
+	ib   *volume.IndexBitmap
+	name resolvedSpec // the output name, which says how a file is shown
+	file *backup.File
+	who  creator // the restoring process, whose files and directories they are until the saved profile is laid over them
 }
 
 // outputExists gives an *OutputExistsError in err out's name as the user
@@ -229,6 +230,11 @@ func (w *volumeRestore) outputExists(err error, out filespec.Spec) error {
 	if errors.As(err, &exists) {
 		out.Version = exists.version
 		exists.Spec = w.shown(out)
+	}
+
+	var denied *DeniedError
+	if errors.As(err, &denied) && denied.Name == "" {
+		denied.Name = w.shown(out)
 	}
 
 	return err
@@ -243,6 +249,11 @@ func (w *volumeRestore) shown(out filespec.Spec) string {
 // restore makes w's file as spec names it, at version (0 for the next).
 func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts RestoreOptions) (RestoreResult, error) {
 	var result RestoreResult
+
+	// The levels that are there must let the process look its way down.
+	if err := pathAllowed(w.who.creds, w.vol, spec.Dirs); err != nil {
+		return result, err
+	}
 
 	made, err := w.makeDirectories(spec.Dirs)
 	result.Directories = made
@@ -381,6 +392,22 @@ func (w *volumeRestore) existing(parent *volume.Directory, fullName string, vers
 	case ExistingOverlay, ExistingReplace:
 		if w.vol.Accessed(entry.Fid) {
 			return version, nil, fmt.Errorf("%s;%d: %w", fullName, version, ErrACPAccessConflict)
+		}
+
+		// Overlaying writes the file that's there, replacing deletes it:
+		// the process needs W, or D and the directory's R and W
+		// (access.go; unconfirmed for BACKUP, which the probe didn't
+		// restore over another's file).
+		want := security.Read | security.Write
+		if rule == ExistingReplace {
+			want = security.Delete
+		}
+
+		if creds := w.who.creds; !unchecked(creds) {
+			old, err := w.vol.OpenFID(entry.Fid)
+			if err == nil && (!may(creds, w.vol, &old.Header, want) || rule == ExistingReplace && !needChange.allows(creds, w.vol, parent)) {
+				return version, nil, &DeniedError{Output: true}
+			}
 		}
 	default:
 		return version, nil, exists

@@ -42,7 +42,7 @@ func (s *Session) AccessImage(loc FileLocation) (*ACPFile, []byte, FileLocation,
 	)
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}

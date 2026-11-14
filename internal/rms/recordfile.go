@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
@@ -105,6 +106,20 @@ var hostRecordTypes = map[string]RecordKind{
 // specification with its version. A volume specification must name one
 // file; with no version, it's the highest.
 func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, FileLocation, error) {
+	return s.readRecords(loc, kind, false)
+}
+
+// ReadProcedure is ReadRecordFile for DCL's @, of a command procedure,
+// which the file must give R or E: VMS 7.1's @ opened a procedure giving
+// either alone, and refused one giving neither (the probe's A.4, answer
+// 4). Whether DCL runs the lines of one giving E alone is open (A.4's
+// "Open for a later round"); govax runs them.
+func (s *Session) ReadProcedure(loc FileLocation) ([][]byte, FileLocation, error) {
+	return s.readRecords(loc, TextRecords, true)
+}
+
+// readRecords is ReadRecordFile, the file needing R, or with run R or E.
+func (s *Session) readRecords(loc FileLocation, kind RecordKind, run bool) ([][]byte, FileLocation, error) {
 	if loc.Host {
 		records, err := s.readHostRecords(loc.Name, kind)
 
@@ -117,7 +132,7 @@ func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, F
 	)
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -132,7 +147,11 @@ func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, F
 
 		m := matches[0]
 
-		f, err := vol.OpenFID(m.Fid)
+		f, err := s.openChecked(vol, m, security.Read, r.shownFile(m))
+		if _, denied := IsDenied(err); denied && run {
+			f, err = s.openChecked(vol, m, security.Execute, r.shownFile(m))
+		}
+
 		if err != nil {
 			return err
 		}
@@ -183,7 +202,7 @@ func (s *Session) readRaw(loc FileLocation, allowed func(*volume.Volume, filespe
 	)
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -196,15 +215,19 @@ func (s *Session) readRaw(loc FileLocation, allowed func(*volume.Volume, filespe
 			return &AmbiguousError{Spec: loc.Name, Count: len(matches)}
 		}
 
-		f, err := vol.OpenFID(matches[0].Fid)
-		if err != nil {
-			return err
-		}
+		// An image needs R or E (allowed), anything else R.
+		var f *volume.File
 
 		if allowed != nil {
+			if f, err = vol.OpenFID(matches[0].Fid); err != nil {
+				return err
+			}
+
 			if err := allowed(vol, matches[0], &f.Header); err != nil {
 				return err
 			}
+		} else if f, err = s.openChecked(vol, matches[0], security.Read, r.shownFile(matches[0])); err != nil {
+			return err
 		}
 
 		if err := copyRawTo(&buf, f); err != nil {
@@ -240,7 +263,7 @@ func (s *Session) RevisionDate(loc FileLocation) (time.Time, error) {
 	var revised time.Time
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -313,7 +336,7 @@ func (s *Session) SourceAttributesOf(loc FileLocation) (SourceAttributes, error)
 	var attrs SourceAttributes
 
 	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -472,6 +495,38 @@ func (s *Session) CreateRecordFile(loc FileLocation, kind RecordKind, records []
 	return created, nil
 }
 
+// CreateAllowed reports whether the session's process may make the file
+// at loc, as CreateRecordFile would check it when it made it, for a
+// utility that asks before it reads what the file is to hold (CREATE,
+// from SYS$INPUT): a *DeniedError if not. A host file, a name that
+// doesn't resolve, and a directory that isn't there are CreateRecordFile's
+// to report.
+func (s *Session) CreateAllowed(loc FileLocation) error {
+	if loc.Host {
+		return nil
+	}
+
+	vol, spec, err := s.resolveVolume(loc.Name)
+	if err != nil {
+		return nil //nolint:nilerr // CreateRecordFile reports it
+	}
+
+	creds := s.Identity()
+
+	if err := pathAllowed(creds, vol, spec.Dirs); err != nil {
+		return outputDenied(err, spec, "")
+	}
+
+	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	if err != nil {
+		return nil //nolint:nilerr // CreateRecordFile reports it
+	}
+
+	version, _ := parseOpenVersion(spec.Version)
+
+	return outputDenied(createAllowed(s.creator(ExplicitProfile{}), vol, dir, spec.Name+"."+spec.Type, version), spec, "")
+}
+
 // rewriteTempName is the file RewriteRecordFile keeps its safe copy in,
 // beside the file it rewrites.
 const rewriteTempName, rewriteTempType = "GOVAX$REWRITE", "TMP"
@@ -511,6 +566,23 @@ func (s *Session) RewriteRecordFile(loc FileLocation, kind RecordKind, records [
 	version, ok := parseOpenVersion(spec.Version)
 	if !ok || version == 0 {
 		return failed(fmt.Errorf("the file's version must be given"))
+	}
+
+	// Rewriting is writing the file: it must give R and W (the directory's
+	// R and W, for the new file in place of it, are createVolumeRecords').
+	if err := s.firstSpec(spec.String(), func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := s.globChecked(vol, r.Spec)
+		if err != nil || len(matches) != 1 {
+			return err
+		}
+
+		_, err = s.openChecked(vol, matches[0], security.Read|security.Write, r.shownFile(matches[0]))
+
+		return err
+	}); err != nil {
+		if _, denied := IsDenied(err); denied {
+			return failed(err)
+		}
 	}
 
 	// The file's version limit, which the new file would otherwise take
@@ -566,7 +638,7 @@ func (s *Session) versionLimit(text string, limit uint16, set bool) (uint16, err
 
 	version, _ := parseOpenVersion(spec.Version)
 
-	dir, _, _, err := resolveVolumeDest(vol, spec)
+	dir, _, _, err := resolveVolumeDest(s.Identity(), vol, spec)
 	if err != nil {
 		return 0, err
 	}
@@ -603,7 +675,7 @@ func (s *Session) deleteVersion(text string) error {
 		return fmt.Errorf("%s: no version to delete", text)
 	}
 
-	dir, bm, ib, err := resolveVolumeDest(vol, spec)
+	dir, bm, ib, err := resolveVolumeDest(s.Identity(), vol, spec)
 	if err != nil {
 		return err
 	}
@@ -706,7 +778,7 @@ func (s *Session) allocatedBlocks(text string) (uint32, error) {
 	var blocks uint32
 
 	err := s.firstSpec(text, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -755,12 +827,16 @@ func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, rec
 		version = v
 	}
 
-	dir, bm, ib, err := resolveVolumeDest(vol, spec)
+	dir, bm, ib, err := resolveVolumeDest(s.Identity(), vol, spec)
 	if err != nil {
-		return FileLocation{}, err
+		return FileLocation{}, outputDenied(err, spec, "")
 	}
 
 	fullName := spec.Name + "." + spec.Type
+
+	if err := createAllowed(s.creator(ExplicitProfile{}), vol, dir, fullName, version); err != nil {
+		return FileLocation{}, outputDenied(err, spec, "")
+	}
 
 	profile, err := newFileProfile(s.creator(ExplicitProfile{}), vol, dir, fullName)
 	if err != nil {

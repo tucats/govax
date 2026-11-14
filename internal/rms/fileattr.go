@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/vmstime"
 	"github.com/tucats/ods2/volume"
@@ -165,7 +165,11 @@ func (s *Session) FileAttributes(spec string) (FileAttributes, error) {
 	)
 
 	err = s.firstSpec(spec, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
+		if _, denied := IsDenied(err); denied {
+			return err
+		}
+
 		if err != nil {
 			return &NotFoundError{Spec: spec}
 		}
@@ -175,7 +179,10 @@ func (s *Session) FileAttributes(spec string) (FileAttributes, error) {
 				continue
 			}
 
-			f, err := vol.OpenFID(m.Fid)
+			// F$FILE_ATTRIBUTES opens the file, so it must give R: VMS
+			// 7.1's said SS$_NOPRIV for every item of one that didn't
+			// (the probe's A.4, answer 12).
+			f, err := s.openChecked(vol, m, security.Read, r.shownFile(m))
 			if err != nil {
 				return err
 			}
@@ -206,13 +213,19 @@ func (s *Session) FileAttributes(spec string) (FileAttributes, error) {
 
 // ProtectionText is the file's protection as F$FILE_ATTRIBUTES's PRO
 // writes it: each category's access, "SYSTEM=RWED, OWNER=RWED, GROUP=RE,
-// WORLD=".
+// WORLD".
 func (a FileAttributes) ProtectionText() string {
 	categories := []string{"SYSTEM", "OWNER", "GROUP", "WORLD"}
 	parts := make([]string, len(categories))
 
+	// A category with no access is its name alone, "WORLD", as VMS 7.1's
+	// showed it (docs/planning/PHASE-93 - file protection.md, A.4).
 	for i, name := range categories {
-		parts[i] = name + "=" + ondisk.ProtectionAccess(a.Protection, i)
+		parts[i] = name
+
+		if access := ondisk.ProtectionAccess(a.Protection, i); access != "" {
+			parts[i] += "=" + access
+		}
 	}
 
 	return strings.Join(parts, ", ")

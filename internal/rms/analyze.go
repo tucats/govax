@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/isam"
-	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -51,7 +51,11 @@ func (s *Session) AnalyzeSearch(spec string, host bool, visit func(*AnalyzedFile
 	found := false
 
 	err = s.firstSpec(spec, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
+		if _, denied := IsDenied(err); denied {
+			return err
+		}
+
 		if err != nil {
 			return &NotFoundError{Spec: spec}
 		}
@@ -70,7 +74,9 @@ func (s *Session) AnalyzeSearch(spec string, host bool, visit func(*AnalyzedFile
 
 			seen[name] = true
 
-			f, err := vol.OpenFID(m.Fid)
+			// ANALYZE/RMS_FILE opens the file: it must give R (VMS 7.1:
+			// the probe's A.4).
+			f, err := s.openChecked(vol, m, security.Read, r.shownFile(m))
 			if err != nil {
 				return err
 			}

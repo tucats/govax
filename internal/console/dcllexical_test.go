@@ -444,7 +444,7 @@ func TestLexicalFileAttributes(t *testing.T) {
 		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "UIC")`, want: c.RTL.IdentifierText(0x00010004)},
 		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "GRP")`, integer: true, want: "1"},
 		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "MBM")`, integer: true, want: "4"},
-		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "PRO")`, want: "SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD="},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "PRO")`, want: "SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD"},
 		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT;1", "FID")`, want: "(" + fidOf(t, c, "[WORK]QUEST.DAT;1") + ")"},
 		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "DID")`, want: "(" + fidOf(t, c, "[000000]WORK.DIR;1") + ")"},
 		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "DVI")`, want: "_" + c.RTL.NodeName + "$DUA0"},

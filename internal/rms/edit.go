@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -81,11 +81,8 @@ type EditFile struct {
 	// bytes, so that the new version can't keep them (see control).
 	MixedControl bool
 
-	host       bool
-	attr       ondisk.RecAttr
-	inherit    bool // protection and owner are the old version's
-	protection uint16
-	owner      ondisk.Uic
+	host bool
+	attr ondisk.RecAttr
 
 	// control is what every new record of a VFC file gets: the bytes the old
 	// records all had, or the usual ones for a file of its kind.
@@ -164,7 +161,7 @@ func (s *Session) openVolumeForEdit(name string) (*EditFile, error) {
 	var file *EditFile
 
 	err := s.firstSpec(name, func(vol *volume.Volume, r resolvedSpec) error {
-		matches, err := filespec.Glob(vol, r.Spec)
+		matches, err := s.globChecked(vol, r.Spec)
 		if err != nil {
 			return err
 		}
@@ -183,7 +180,9 @@ func (s *Session) openVolumeForEdit(name string) (*EditFile, error) {
 			return &ReadOnlyError{Spec: spec}
 		}
 
-		f, err := vol.OpenFID(matches[0].Fid)
+		// Reading it needs R; its new version is createVersion's to
+		// check (W on this one, R and W on the directory).
+		f, err := s.openChecked(vol, matches[0], security.Read, spec)
 		if err != nil {
 			return err
 		}
@@ -209,7 +208,7 @@ func (s *Session) newVolumeFileForEdit(name string, notFound error) (*EditFile, 
 		return nil, notFound
 	}
 
-	if _, err := filespec.ResolveDirectory(vol, spec.Dirs); err != nil {
+	if _, err := resolveChecked(s.Identity(), vol, spec.Dirs); err != nil {
 		return nil, fmt.Errorf("rms: editing %s: %w", name, err)
 	}
 
@@ -244,13 +243,10 @@ func readForEdit(f *volume.File, spec string) (*EditFile, error) {
 		return nil, err
 	}
 
-	file := &EditFile{
-		Spec:       spec,
-		attr:       attr,
-		inherit:    true,
-		protection: f.Header.FileProtection,
-		owner:      f.Header.Owner,
-	}
+	// The new version's owner and protection are newFileProfile's: the
+	// old version's protection, and its owner for a creator with
+	// privilege (profile.go).
+	file := &EditFile{Spec: spec, attr: attr}
 
 	var text bytes.Buffer
 
@@ -387,8 +383,8 @@ func (e *EditFile) Records(text []byte) ([][]byte, error) {
 
 // SaveEdit makes the edited text the file's new version, and returns the file as
 // it now is and the number of its lines: on a volume, the next version, with the
-// attributes, protection, and owner of the version edited; on the host, the file
-// replaced. A line that can't be a record (Records) means no new version.
+// attributes and protection of the version edited, and its owner for a process
+// with privilege (newFileProfile); on the host, the file replaced. A line that can't be a record (Records) means no new version.
 func (s *Session) SaveEdit(e *EditFile, text []byte) (FileLocation, int, error) {
 	if e.host {
 		if err := replaceHostFile(e.Spec, text); err != nil {
@@ -419,7 +415,7 @@ func (s *Session) writeNewVersion(e *EditFile, records [][]byte) (FileLocation, 
 		return FileLocation{}, err
 	}
 
-	dir, bm, ib, err := resolveVolumeDest(vol, spec)
+	dir, bm, ib, err := resolveVolumeDest(s.Identity(), vol, spec)
 	if err != nil {
 		return FileLocation{}, err
 	}
@@ -442,16 +438,6 @@ func (s *Session) writeNewVersion(e *EditFile, records [][]byte) (FileLocation, 
 		_ = s.deleteVersion(spec.String())
 
 		return FileLocation{}, err
-	}
-
-	if e.inherit {
-		err := volume.UpdateHeader(f, func(h *ondisk.FileHeader, _ *ondisk.Ident) {
-			h.FileProtection = e.protection
-			h.Owner = e.owner
-		})
-		if err != nil {
-			return FileLocation{}, err
-		}
 	}
 
 	return FileLocation{Name: spec.String()}, nil

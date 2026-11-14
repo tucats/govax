@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
@@ -106,7 +107,7 @@ func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
 	specText = nullVersion(specText)
 
 	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
-		files, err := deleteOnVolume(vol, r, specText)
+		files, err := s.deleteOnVolume(vol, r, specText)
 		deleted = append(deleted, files...)
 
 		return err
@@ -212,7 +213,12 @@ func (s *Session) listSticky(text string) *defaultName {
 
 // deleteOnVolume is Delete for one resolved spec on one volume, returning
 // the files it removed (even when it fails partway).
-func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (deleted []DeletedFile, err error) {
+//
+// Each file needs D, and its directory R and W (access.go); one the
+// process may not delete is passed over, and the others deleted, as VMS
+// 7.1's DELETE did, and the files passed over are a *NotDeletedError at
+// the end (the probe's A.4).
+func (s *Session) deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (deleted []DeletedFile, err error) {
 	spec := r.Spec
 
 	if spec.Version == "" {
@@ -223,7 +229,7 @@ func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (delete
 		return nil, fmt.Errorf("%s is a %d-device volume set; DELETE only supports a single-device volume", spec.Device, len(vol.Devices))
 	}
 
-	matches, err := filespec.Glob(vol, spec)
+	matches, err := s.globChecked(vol, spec)
 	if err != nil {
 		return nil, err
 	}
@@ -231,6 +237,16 @@ func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (delete
 	if len(matches) == 0 {
 		return nil, &NotFoundError{Spec: specText}
 	}
+
+	creds := s.Identity()
+
+	var refused []string
+
+	defer func() {
+		if err == nil && len(refused) > 0 {
+			err = &NotDeletedError{Names: refused}
+		}
+	}()
 
 	dev := vol.Devices[0]
 
@@ -268,12 +284,22 @@ func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (delete
 			return deleted, dirErr
 		}
 
+		dirAllowed := needChange.allows(creds, vol, dir)
+
 		for _, m := range group.matches {
 			fullName := m.Name + "." + m.Type
 
 			var blocks uint32
-			if f, openErr := vol.OpenFID(m.Fid); openErr == nil {
+
+			f, openErr := vol.OpenFID(m.Fid)
+			if openErr == nil {
 				blocks = f.Header.RecordAttributes.HighestBlock
+			}
+
+			if !dirAllowed || openErr == nil && !unchecked(creds) && !may(creds, vol, &f.Header, security.Delete) {
+				refused = append(refused, r.shownFile(m))
+
+				continue
 			}
 
 			if delErr := volume.DeleteFile(dir, fullName, m.Version, bm, ib); delErr != nil {
@@ -290,3 +316,17 @@ func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (delete
 
 	return deleted, nil
 }
+
+// NotDeletedError is the files a DELETE or PURGE passed over because the
+// process may not delete them (the files' full names, in the order met):
+// each is VMS's FILNOTDEL or FILNOTPUR over RMS$_PRV.
+type NotDeletedError struct {
+	Names []string
+}
+
+func (e *NotDeletedError) Error() string {
+	return "rms: not deleted: " + strings.Join(e.Names, ", ") + ": " + ErrNoPrivilege.Error()
+}
+
+// Unwrap makes a NotDeletedError ErrNoPrivilege.
+func (e *NotDeletedError) Unwrap() error { return ErrNoPrivilege }

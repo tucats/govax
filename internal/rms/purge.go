@@ -1,10 +1,11 @@
 package rms
 
 import (
-	"slices"
 	"fmt"
+	"slices"
 	"sort"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
@@ -63,7 +64,7 @@ func (s *Session) Purge(specText string, keep uint16) (purged []DeletedFile, err
 	// A search list purges in each of its elements (User's Manual
 	// §11.7.1).
 	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
-		files, err := purgeOnVolume(vol, r, keep)
+		files, err := s.purgeOnVolume(vol, r, keep)
 		purged = append(purged, files...)
 
 		return err
@@ -77,7 +78,12 @@ func (s *Session) Purge(specText string, keep uint16) (purged []DeletedFile, err
 
 // purgeOnVolume is Purge for one resolved spec on one volume, returning
 // the files it purged (even when it fails partway).
-func purgeOnVolume(vol *volume.Volume, r resolvedSpec, keep uint16) (purged []DeletedFile, err error) {
+//
+// Each version purged needs D, and its directory R and W (access.go): one
+// the process may not delete is passed over, and the others purged, as
+// VMS 7.1's PURGE did, and the versions passed over are a
+// *NotDeletedError at the end (the probe's A.4).
+func (s *Session) purgeOnVolume(vol *volume.Volume, r resolvedSpec, keep uint16) (purged []DeletedFile, err error) {
 	spec := r.Spec
 	spec.Version = "*"
 
@@ -87,10 +93,20 @@ func purgeOnVolume(vol *volume.Volume, r resolvedSpec, keep uint16) (purged []De
 
 	dev := vol.Devices[0]
 
-	matches, err := filespec.Glob(vol, spec)
+	matches, err := s.globChecked(vol, spec)
 	if err != nil {
 		return nil, err
 	}
+
+	creds := s.Identity()
+
+	var refused []string
+
+	defer func() {
+		if err == nil && len(refused) > 0 {
+			err = &NotDeletedError{Names: refused}
+		}
+	}()
 
 	bm, err := dev.Bitmap()
 	if err != nil {
@@ -123,33 +139,41 @@ func purgeOnVolume(vol *volume.Volume, r resolvedSpec, keep uint16) (purged []De
 			return purged, dirErr
 		}
 
+		dirAllowed := needChange.allows(creds, vol, dir)
+
 		for _, name := range distinctNames(group.matches) {
 			doomed := excessVersions(group.matches, name, keep)
 			if len(doomed) == 0 {
 				continue
 			}
 
-			// The blocks go with the files, so they're read first.
-			files := make([]DeletedFile, 0, len(doomed))
-
-			for _, m := range group.matches {
-				if m.Name+"."+m.Type != name || !slices.Contains(doomed, m.Version) {
-					continue
-				}
+			// Each version is deleted in turn, oldest first, as
+			// volume.PurgeVersions would, its blocks read first.
+			for _, version := range doomed {
+				i := slices.IndexFunc(group.matches, func(m filespec.Match) bool {
+					return m.Name+"."+m.Type == name && m.Version == version
+				})
+				m := group.matches[i]
 
 				d := DeletedFile{Name: m.Name, Type: m.Type, Version: m.Version, Full: r.shownFile(m)}
-				if f, openErr := vol.OpenFID(m.Fid); openErr == nil {
+
+				f, openErr := vol.OpenFID(m.Fid)
+				if openErr == nil {
 					d.Blocks = f.Header.RecordAttributes.HighestBlock
 				}
 
-				files = append(files, d)
-			}
+				if !dirAllowed || openErr == nil && !unchecked(creds) && !may(creds, vol, &f.Header, security.Delete) {
+					refused = append(refused, d.Full)
 
-			if purgeErr := volume.PurgeVersions(dir, name, keep, bm, ib); purgeErr != nil {
-				return purged, purgeErr
-			}
+					continue
+				}
 
-			purged = append(purged, files...)
+				if delErr := volume.DeleteFile(dir, name, version, bm, ib); delErr != nil {
+					return purged, fmt.Errorf("volume: purging %s: %w", name, delErr)
+				}
+
+				purged = append(purged, d)
+			}
 		}
 	}
 

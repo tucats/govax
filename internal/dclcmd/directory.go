@@ -77,6 +77,12 @@ func (c *Context) DirectoryTo(specText string, opts rms.DirectoryOptions, output
 			return directoryOpenFailure(strings.ToUpper(bad.Spec), bad.Status, 0)
 		}
 
+		// A directory the process's protection keeps it from searching
+		// (docs/planning/PHASE-93 - file protection.md, A.4).
+		if _, denied := rms.IsDenied(err); denied {
+			return directoryOpenFailure(c.ContainerSession.DirectoryName(specText), rmsPRV, 0)
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
 	}
 
