@@ -27,8 +27,25 @@ COPY DUA1:[000000]R7_LOCK.OBJ "testdata/mp/macros/vax/r7_lock.obj"/HOST/BINARY/Q
 COPY DUA1:[000000]R7_LOCK.ANL "testdata/mp/macros/vax/r7_lock.anl"/HOST/QUIET
 COPY DUA1:[000000]R8_PURGWS.OBJ "testdata/mp/macros/vax/r8_purgws.obj"/HOST/BINARY/QUIET
 COPY DUA1:[000000]R8_PURGWS.ANL "testdata/mp/macros/vax/r8_purgws.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_CHANGE_ACL.OBJ "testdata/mp/macros/vax/r9_change_acl.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_CHANGE_ACL.ANL "testdata/mp/macros/vax/r9_change_acl.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_PARSE_ACL.OBJ "testdata/mp/macros/vax/r9_parse_acl.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_PARSE_ACL.ANL "testdata/mp/macros/vax/r9_parse_acl.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_FORMAT_ACL.OBJ "testdata/mp/macros/vax/r9_format_acl.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_FORMAT_ACL.ANL "testdata/mp/macros/vax/r9_format_acl.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_CHKPRO.OBJ "testdata/mp/macros/vax/r9_chkpro.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_CHKPRO.ANL "testdata/mp/macros/vax/r9_chkpro.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_CHECK_ACCESS.OBJ "testdata/mp/macros/vax/r9_check_access.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_CHECK_ACCESS.ANL "testdata/mp/macros/vax/r9_check_access.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_GET_SECURITY.OBJ "testdata/mp/macros/vax/r9_get_security.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_GET_SECURITY.ANL "testdata/mp/macros/vax/r9_get_security.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_SET_SECURITY.OBJ "testdata/mp/macros/vax/r9_set_security.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_SET_SECURITY.ANL "testdata/mp/macros/vax/r9_set_security.anl"/HOST/QUIET
+COPY DUA1:[000000]R9_SETDFPROT.OBJ "testdata/mp/macros/vax/r9_setdfprot.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R9_SETDFPROT.ANL "testdata/mp/macros/vax/r9_setdfprot.anl"/HOST/QUIET
 COPY DUA1:[000000]MACROS5.LOG "testdata/mp/macros/vax/macros5.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS6.LOG "testdata/mp/macros/vax/macros6.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS7.LOG "testdata/mp/macros/vax/macros7.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS8.LOG "testdata/mp/macros/vax/macros8.log"/HOST/QUIET
+COPY DUA1:[000000]MACROS9.LOG "testdata/mp/macros/vax/macros9.log"/HOST/QUIET
 DISMOUNT DUA1

@@ -389,7 +389,7 @@ func main() {
 	}
 
 	// Round 5: what round 4 left open.
-	var round5, round6, round7, round8 []string
+	var round5, round6, round7, round8, round9 []string
 
 	{
 		text, calls := r5Probe()
@@ -433,7 +433,20 @@ func main() {
 		round8 = append(round8, name)
 	}
 
-	names = append(append(append(append(names, round5...), round6...), round7...), round8...)
+	// Round 9 (docs/planning/PHASE-93 - file protection.md, subtask 10): the
+	// security services, which govax's STARLET has no macros for, by round
+	// 4's method. It runs from Phase 93's round 3 volume (testdata/prot93's
+	// SEC93.COM).
+	for _, s := range r9Services {
+		name := "r9_" + strings.ToLower(s.name)
+		text, calls := r4Probe(s, "R9")
+		write(name+".mar", text)
+		write(name+".calls", strings.Join(calls, "\n")+"\n")
+
+		round9 = append(round9, name)
+	}
+
+	names = append(append(append(append(append(names, round5...), round6...), round7...), round8...), round9...)
 
 	// The command procedures: one per round, each with its own log, and
 	// MACROS.COM, which runs both.
@@ -459,18 +472,20 @@ func main() {
 	roundProcedure(6, round6)
 	roundProcedure(7, round7)
 	roundProcedure(8, round8)
+	roundProcedure(9, round9)
 
-	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 8
+	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 9
 $ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the
 $ ! exchange volume as the default directory:
 $ !
 $ !     @MACROS
 $ !
-$ ! Rounds 5 to 7 have run (MACROS5.COM to MACROS7.COM, logs in vax/);
-$ ! round 8 writes MACROS8.LOG. (Phase 63's probe, testdata/pg63, runs
-$ ! MACROS8.COM itself.)
+$ ! Rounds 5 to 8 have run (MACROS5.COM to MACROS8.COM, logs in vax/);
+$ ! round 9 writes MACROS9.LOG. (Phase 63's probe, testdata/pg63, ran
+$ ! MACROS8.COM itself, and Phase 93's round 3, testdata/prot93's
+$ ! SEC93.COM, runs MACROS9.COM.)
 $ !
-$ @MACROS8/OUTPUT=MACROS8.LOG
+$ @MACROS9/OUTPUT=MACROS9.LOG
 $ EXIT
 `)
 
@@ -498,7 +513,7 @@ $ EXIT
 		fmt.Fprintf(&o, "COPY DUA1:[000000]%s.ANL \"%s/vax/%s.anl\"/HOST/QUIET\n", up, dir, n)
 	}
 
-	for _, n := range []string{"macros.com", "macros5.com", "macros6.com", "macros7.com", "macros8.com"} {
+	for _, n := range []string{"macros.com", "macros5.com", "macros6.com", "macros7.com", "macros8.com", "macros9.com"} {
 		fmt.Fprintf(&x, "COPY \"%s/%s\"/HOST DUA1:[000000]%s\n", dir, n, strings.ToUpper(n))
 	}
 
@@ -507,6 +522,7 @@ $ EXIT
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS6.LOG \"%s/vax/macros6.log\"/HOST/QUIET\n", dir)
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS7.LOG \"%s/vax/macros7.log\"/HOST/QUIET\n", dir)
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS8.LOG \"%s/vax/macros8.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS9.LOG \"%s/vax/macros9.log\"/HOST/QUIET\n", dir)
 	o.WriteString("DISMOUNT DUA1\n")
 
 	write("exchange.cmd", x.String())
@@ -708,6 +724,23 @@ var r6Services = []r4Service{
 // whose one argument is the manual's.
 var r8Services = []r4Service{
 	{"PURGWS", []arg{a("INADR")}, nil, nil},
+}
+
+// r9Services is round 9's (docs/planning/PHASE-93 - file protection.md):
+// the security services, with the arguments of the VMS 5.0 System Services
+// manual and VSI's pages. Those VSI adds ($CHKPRO's OBJPRO and USRPRO,
+// $CHECK_ACCESS's last four) may be later than 7.1's macros; a keyword the
+// macro lacks shows as a reference to a symbol of that name. $SETDFPROT is
+// here to confirm that it has no macro, as both manuals say.
+var r9Services = []r4Service{
+	{"CHANGE_ACL", []arg{w("CHAN"), a("OBJTYP"), a("OBJNAM"), a("ITMLST"), a("ACMODE"), a("CONTXT")}, []string{"NULLARG"}, nil},
+	{"PARSE_ACL", []arg{a("ACLSTR"), a("ACLENT"), a("ERRPOS"), a("ACCNAM")}, []string{"NULLARG"}, nil},
+	{"FORMAT_ACL", []arg{a("ACLENT"), a("ACLLEN"), a("ACLSTR"), a("WIDTH"), a("TRMDSC"), a("INDENT"), a("ACCNAM")}, []string{"NULLARG"}, nil},
+	{"CHKPRO", []arg{a("ITMLST"), a("OBJPRO"), a("USRPRO")}, nil, nil},
+	{"CHECK_ACCESS", []arg{a("OBJTYP"), a("OBJNAM"), a("USRNAM"), a("ITMLST"), a("CONTXT"), a("CLSNAM"), a("OBJPRO"), a("USRPRO")}, nil, nil},
+	{"GET_SECURITY", []arg{a("CLSNAM"), a("OBJNAM"), a("OBJHAN"), v("FLAGS"), a("ITMLST"), a("CONTXT"), a("ACMODE")}, nil, nil},
+	{"SET_SECURITY", []arg{a("CLSNAM"), a("OBJNAM"), a("OBJHAN"), v("FLAGS"), a("ITMLST"), a("CONTXT"), a("ACMODE")}, nil, nil},
+	{"SETDFPROT", []arg{a("PRVPRT"), a("CURPRT")}, nil, nil},
 }
 
 // r4Probe writes one service's round 4 program (and round 6's: round is

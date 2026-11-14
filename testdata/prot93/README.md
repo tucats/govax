@@ -25,6 +25,12 @@ forms change them; how they are shown; and what the messages are.
 | `prot93f.dat`, `prot93g.dat` | Round 2's cases: a directory without execute, and the new changing cases |
 | `exchange2.cmd`, `copyout2.cmd` | Round 2's govax scripts: its files onto round 1's volume, and its logs back |
 | `vax/round2/` | What round 2 leaves: its five logs |
+| `gen3.go` | Round 3's generator, which writes the files below: `go run testdata/prot93/gen3.go` from the repository root |
+| `sec93.mar` | Round 3's program: 588 cases of the security services, each a routine of its own under a handler |
+| `sec93.com`, `sec93u.com`, `sec93y.com` | Round 3: SYSTEM's run, PROT93C's, and the end |
+| `sec93t.dat` | The text of every file round 3's tree copies |
+| `exchange-r3.cmd`, `copyout-r3.cmd` | Round 3's govax scripts: a new volume, and its results back |
+| `vax/round3/` | What round 3 leaves: its three logs, the program's map, object, and image |
 
 ## The identities
 
@@ -250,6 +256,102 @@ no longer test an execute-only procedure; that question stays open.
 If round 2 stops partway, run `@PROT93$DISK:[000000]PROT93Y` as SYSTEM,
 copy `prot93-round1.dsk` back over `prot93-exchange.dsk`, and start again
 from step 1's second command.
+
+## Round 3
+
+Round 3 asks VMS 7.1 about the security services (the phase doc's subtasks
+10 and 13): `$PARSE_ACL` and `$FORMAT_ACL` (an ACE's text both ways, the
+forms each accepts, its errors and their positions, widths, terminators,
+indentation, and access names), `$CHANGE_ACL` (adding, finding, matching,
+reading, and deleting ACEs, contexts, channels, errors), `$CHKPRO` (a third
+party's check by item list: categories, privileges, rights, ACLs, modes,
+and what it reports), `$CHECK_ACCESS` (a named user's access to a file),
+`$GET_SECURITY` and `$SET_SECURITY` (every item, contexts, handles, class
+names, object names), and `$SETDFPROT`. It also asks the question rounds 1
+and 2 left open: whether an execute-only command procedure's lines run, and
+with what verification (`[SEC93.EXO]`, run by PROT93C). And it runs round 9
+of the system service macro probes (`testdata/mp/macros`, the security
+services' macros) on the same volume.
+
+`gen3.go` writes it all. The program's cases are data and code it writes
+itself, as `testdata/lib53`'s are: each ACE a case gives a service is
+written in bytes by the layouts rounds 1 and 2 found, so no case depends on
+`$PARSE_ACL` but its own. Each case prints `== n part title`, then each
+service's R0 and what it returned: an output's return length and bytes in
+hex, an ACL's ACEs each in hex and as `$FORMAT_ACL` writes it, and, after a
+change, the file's profile through RMS's `$DISPLAY` (`file owner=...`). A
+condition a case signals is caught and shown (`signal`), and the next case
+runs. `SEC93_PART` picks the parts, a letter each (`sec93.mar`'s opening
+comment lists them).
+
+Round 3 runs on a volume of its own, not round 1's, with the accounts made
+again (PROT93_TEAM at round 1's value, which the cases' ACEs hold). The
+cases' files are made by `SEC93.COM` on the VAX, each with its owner,
+protection, and ACL. No procedure waits for input.
+
+1. **Build the exchange volume**, from the repository root:
+
+       rm -f testdata/disks/sec93-exchange.dsk
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/exchange-r3.cmd
+
+2. **Attach it** to the simh VAX on a free unit (`attach rq1
+   testdata/disks/sec93-exchange.dsk`).
+
+3. **As SYSTEM:**
+
+       $ MOUNT/SYSTEM DUA1: SEC93
+       $ @DUA1:[000000]SEC93
+
+   Its log is `PROT93$DISK:[PROT93LOG]SEC93.LOG`, ending `SEC93 FINISHED`.
+   It makes the accounts, assembles and links the program (with a full
+   map, which shows where each service is: some may be in SECURESHR.EXE
+   rather than the system service vector), makes the tree, runs the
+   program's parts with every privilege and again without READALL,
+   GRPPRV, SYSPRV, and BYPASS, and assembles round 9 of the macro probes in
+   `[SEC93MAC]`. The program is long (some 26,000 lines), so MACRO takes a
+   while.
+
+4. **Log in as PROT93C** (password `PROT93PW`), a new login, then:
+
+       $ @PROT93$DISK:[000000]SEC93U
+       $ LOGOUT
+
+   Its log is `SEC93U.LOG`, ending `SEC93U FINISHED`: the program's part
+   U as the world, then the execute-only procedures with verification on
+   and off, nested, reading data, failing, with `/OUTPUT`, and read as files.
+
+5. **As SYSTEM:**
+
+       $ @PROT93$DISK:[000000]SEC93Y
+       $ DISMOUNT DUA1:
+
+       sim> detach rq1
+
+   It lists the tree, removes the accounts, PROT93_TEAM, and PROT93, and
+   deassigns `PROT93$DISK`.
+
+6. **Copy the results back**, from the repository root:
+
+       mkdir -p testdata/prot93/vax/round3
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/prot93/copyout-r3.cmd
+
+   It writes `vax/round3/` (the three logs, `sec93.map`, `sec93.obj`,
+   `sec93.exe`) and round 9's objects, analyses, and log in
+   `testdata/mp/macros/vax/`.
+
+If round 3 stops partway, run `@PROT93$DISK:[000000]SEC93Y` as SYSTEM, then
+start again from step 1.
+
+**On govax** the round was rehearsed before the VAX run: the program
+assembles and links with govax's MACRO and LINK (`SYS$PARSE_ACL`,
+`SYS$FORMAT_ACL`, `SYS$CHANGE_ACL`, and `SYS$CHECK_ACCESS` undefined, so
+their cases end in an access violation, and the services govax lacks
+signal `SS$_UNSUPPORTED`), every case runs, and each procedure runs to its
+end. What fails there is what this phase has yet to do (SET SECURITY, SHOW
+SECURITY, SET VOLUME, the services), and AUTHORIZE, SEARCH, and the
+security services' macros. The rehearsal found that govax's MACRO writes
+its object beside its source where VMS writes it in the current default
+directory, so `SEC93.COM` names the object.
 
 ## What the run is expected to show
 

@@ -149,3 +149,15 @@ list.
 govax's own macros and requires the same object. govax's macros are written
 first from the manual, and changed, probe by probe, until every object
 matches.
+
+## Round 9
+
+Round 9 (`r9_*`, `macros9.com`; Phase 93's subtask 10) is the security
+services, by round 4's method: `$CHANGE_ACL`, `$PARSE_ACL`, `$FORMAT_ACL`,
+`$CHKPRO`, `$CHECK_ACCESS`, `$GET_SECURITY`, `$SET_SECURITY`, and
+`$SETDFPROT` (which both manuals say has no macro: its program is there to
+confirm it). The keywords are the VMS 5.0 System Services manual's and
+VSI's; one 7.1's macro lacks shows as a reference to a symbol of that
+name. It runs from Phase 93's round 3 volume (`testdata/prot93`'s
+`SEC93.COM`, README.md's "Round 3"), whose `copyout-r3.cmd` brings its
+objects, analyses, and log back to `vax/`.

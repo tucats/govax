@@ -1009,7 +1009,10 @@ Each is one commit, with tests, stopping for review.
    messages held to the probe's DCL logs, SYSTEM's and the accounts'.
 10. **The ACL services**: `$PARSE_ACL`, `$FORMAT_ACL`, and `$CHANGE_ACL`
     (Decision 13), the ACE text both ways, held to the probe. Its VMS round
-    also asks A.4's "Open for a later round" questions.
+    also asks A.4's "Open for a later round" questions. In two parts:
+    10a, round 3 of the probe (Part D's "Round 3"; written and rehearsed
+    2026-11-14, waiting for the VAX run), which asks for subtask 13's
+    services too; 10b, the services.
 11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
     BACKUP's `/PROTECTION` (Decision 10).
@@ -1130,6 +1133,37 @@ through CONTROL, CREATE/OWNER_UIC, CREATE/DIRECTORY/OWNER_UIC), a new file
 under the default protection ACE, the NOPROPAGATE file's versions, and the
 procedures. `PROT93Y.COM` lists the tree and removes the accounts, and the
 group identifier PROT93 that round 1 left on the VAX.
+
+**Round 3** (subtasks 10 and 13; `testdata/prot93`'s README, "Round 3"):
+`gen3.go` writes `sec93.mar`, 588 cases each a routine of its own under a
+handler, as `testdata/lib53`'s are, in parts by `SEC93_PART`: `$PARSE_ACL`
+(87: every ACE form and option, abbreviations, case, blanks, names and
+numbers, errors and where they stop, buffer sizes, access names),
+`$FORMAT_ACL` (88: every ACE type and option, unknown types, malformed
+ACEs, width, terminators, indentation, short buffers, access names),
+`$CHANGE_ACL` (69: adding at the top, the bottom, and a found place, the
+matching rules, reading by pieces with a context, finding, changing,
+deleting, locks, a channel, every argument's errors), `$CHKPRO` (55: each
+category, privilege, rights list, ACL, mode, and output, with and without
+the caller's own privileges), `$CHECK_ACCESS` (64: four files, four users,
+three accesses, and the errors), `$GET_SECURITY` (78: every `OSS$` item,
+contexts, ACL positions, class and object names, devices and volumes,
+handles), `$SET_SECURITY` (42: owners, protections, every ACL item, local
+changes through a context, handles, classes), `$SETDFPROT`, and the cases a
+process without privileges runs, SYSTEM's (`M`) and PROT93C's (`U`), each on
+files of its own. Every ACE a case hands a service is written in bytes by
+A.4's layouts, so nothing depends on `$PARSE_ACL` but its own cases. On a
+volume of its own, `SEC93.COM` (SYSTEM) makes the accounts again, links the
+program with a full map (to show which services are in the system vector
+and which in a shareable image: govax's tables lack `SYS$PARSE_ACL`,
+`SYS$FORMAT_ACL`, `SYS$CHANGE_ACL`, and `SYS$CHECK_ACCESS`), makes each
+case's file, runs the parts with every privilege and without the four, and
+runs round 9 of `testdata/mp/macros` (the services' macros); `SEC93U.COM`
+(PROT93C, a new login) runs part U and A.4's first open question, five
+execute-only procedures in `[SEC93.EXO]` owned by PROT93A, `(S:E,O:RWED,
+G:E,W:E)`, with verification on and off, nested, reading data, failing,
+with `/OUTPUT`, and read as files; `SEC93Y.COM` lists the tree and removes
+the accounts.
 
 **On govax**, the accounts' runs are replayed in detached processes made
 by `$CREPRC` of LOGINOUT with the account's UIC (Decision 2), the
@@ -1546,3 +1580,21 @@ The author accepted the plan and answered its questions:
   as the probe's did: with the parent checked, its default protection kept
   [300,1] from making a directory there at all. Subtask 10, the ACL
   services, is next.
+- **2026-11-14** Subtask 10a, round 3 of the probe, written: `testdata/prot93`'s
+  `gen3.go` writes `sec93.mar` (588 cases of `$PARSE_ACL`, `$FORMAT_ACL`,
+  `$CHANGE_ACL`, `$CHKPRO`, `$CHECK_ACCESS`, `$GET_SECURITY`,
+  `$SET_SECURITY`, and `$SETDFPROT`, from the VMS 5.0 System Services
+  manual's descriptions and VSI's pages), `sec93.com`, `sec93u.com`,
+  `sec93y.com`, and the scripts (Part D's "Round 3"); `testdata/mp/macros`'s
+  `gen.go` writes round 9, the services' macros, which the same run
+  assembles. Subtask 13's services are in the round, so one VAX run serves
+  both subtasks, as Part D planned. Rehearsed on govax: the program
+  assembles, links (the four services govax's tables lack undefined), and
+  runs every case, the services govax lacks failing in the way each case
+  reports, and each procedure runs to its end. The rehearsal found two
+  things outside protection: govax's MACRO writes its object beside its
+  source where VMS writes it in the current default directory (left as it
+  is; `SEC93.COM` names its object), and a SET VERIFY or SET NOVERIFY in a
+  procedure lasts after it returns on govax, which round 3's logs will
+  show VMS's answer to (`SEC93.COM` sets verification again after each
+  `@`). Waiting for the VAX run.
