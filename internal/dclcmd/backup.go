@@ -101,6 +101,15 @@ type BackupCommand struct {
 	Comment     string
 	OutputOwner *string
 
+	// Protection is the output save set's /PROTECTION, its categories as
+	// the grammar gave them ("S:RWED", "W:R"; nil without it), merged
+	// into the protection a save set file on a volume would otherwise get
+	// (the previous version's, the directory's default protection ACE, or
+	// the process default), as the DCL Dictionary describes it. A
+	// restore's files keep their saved protection; /PROTECTION is only a
+	// save's (unconfirmed: the probe didn't ask).
+	Protection []string
+
 	// Existing is the output file qualifiers' choice.
 	Existing BackupExisting
 }
@@ -118,6 +127,10 @@ func (c *Context) Backup(cmd BackupCommand) error {
 		return backupOperationFailure(err)
 	}
 
+	if _, err := qualifierProtection(cmd.Protection, backupSyntax); err != nil {
+		return err
+	}
+
 	switch op {
 	case BackupList:
 		return c.listSaveSet(cmd)
@@ -128,6 +141,15 @@ func (c *Context) Backup(cmd BackupCommand) error {
 	}
 
 	return c.saveSaveSet(cmd)
+}
+
+// backupSyntax is BACKUP's refusal of a /PROTECTION code's letters,
+// "%BACKUP-F-SYNTAX, error parsing 'Z'", as CREATE's is: the shared
+// message in BACKUP's facility (unconfirmed: the probe gave BACKUP none).
+func backupSyntax(part string) error {
+	status := uint32(vmsdef.BackupFacility<<16) | vmsdef.LibrarySymbols["SHR$_SYNTAX"]&^7 | 4
+
+	return vmserrors.ConditionError{Status: status, Text: "BACKUP-F-SYNTAX, error parsing '" + part + "'"}
 }
 
 // backupOperationErrors are BACKUP's messages for the /SAVE_SET rule's

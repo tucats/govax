@@ -41,6 +41,8 @@ func backupCommand(r *dcl.Result, line string) (dclcmd.BackupCommand, error) {
 
 		WriteCRC: r.ParamPresent(out, "CRC") && !r.ParamNegated(out, "CRC"),
 		Comment:  r.ParamString(out, "COMMENT"),
+
+		Protection: r.ParamList(out, "PROTECTION"),
 	}
 
 	for _, kw := range r.List("IGNORE") {

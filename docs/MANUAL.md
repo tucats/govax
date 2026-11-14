@@ -1259,6 +1259,7 @@ knows the file's type.
 ```text
 COPY source[/HOST] destination[/HOST]
     /BINARY  /LOG  /QUIET  /VERBOSE  /TEST
+    (to a volume only) /PROTECTION=(...)
     (to the host only) /CRLF  /LF  /TIME  /STREAM  /DIRS  /IGNORE
     (from the host only) /RECORD_FORMAT=format  /RECORD_SIZE=n
                          /CARRIAGE_CONTROL=kind  /CONTROL_FIELD_SIZE=n
@@ -1303,7 +1304,7 @@ VAX> COPY "report.txt"/HOST REPORT.LIS/RECORD_FORMAT=VFC
 #### CREATE
 
 ```text
-CREATE [/LOG] file-spec[/HOST]
+CREATE [/LOG] [/OWNER_UIC=uic] [/PROTECTION=(...)] file-spec[/HOST]
 CREATE/DIRECTORY [/LOG] [/OWNER_UIC=uic] [/PROTECTION=(...)]
                  [/VERSION_LIMIT=n] [/ALLOCATION=n] directory[,...]
 CREATE/FDL=fdl-file [/LOG] [file-spec]
@@ -1319,6 +1320,12 @@ ITEM ONE
 ITEM TWO
 $ TYPE SETUP.DAT
 ```
+
+A new file's protection is its previous version's, else what its
+directory's default protection ACE gives, else your default protection
+(`SHOW PROTECTION`); `/PROTECTION` changes only the categories it names,
+on `CREATE` and on `COPY`'s output alike. `/OWNER_UIC` names the owner,
+which only a process with privilege may make another's UIC.
 
 `CREATE/DIRECTORY` makes a directory and any missing ones above it.
 `CREATE/NAME_TABLE` makes a logical name table.
@@ -1533,7 +1540,7 @@ qualifier (`/LIST`, `/FULL`, `/LOG`, `/COMPARE`). After the input
 specifier it's about the input: `/SELECT`, `/EXCLUDE`, `/CRC` for a save
 set, or `/SINCE`, `/BEFORE`, `/BY_OWNER`, `/EXCLUDE` for the files being
 saved. After the output specifier it's about the output: `/BLOCK_SIZE`,
-`/GROUP_SIZE`, `/CRC`, `/COMMENT` for a new save set, or `/NEW_VERSION`,
+`/GROUP_SIZE`, `/CRC`, `/COMMENT`, `/PROTECTION` for a new save set, or `/NEW_VERSION`,
 `/OVERLAY`, `/REPLACE`, `/BY_OWNER` for restored files. `HELP BACKUP`
 lists them all.
 

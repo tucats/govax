@@ -57,12 +57,11 @@ var prot93UtilRuns = []prot93UtilRun{
 	{"round2/prot93v_prot93c.log", "C0", "PROT93C", prot93OwnersSection},
 }
 
-// prot93UtilLater are the commands later subtasks bring (showing
-// profiles, 12; CREATE/OWNER_UIC, 11b) and those govax hasn't (SEARCH,
-// DIFFERENCES, APPEND): their lines are run, if govax has them, but not
-// compared.
+// prot93UtilLater are the commands a later subtask brings (showing
+// profiles, 12) and those govax hasn't (SEARCH, DIFFERENCES, APPEND):
+// their lines are run, if govax has them, but not compared.
 var prot93UtilLater = []string{
-	"SHOW SECURITY", "DIRECTORY/SECURITY", "CREATE/OWNER_UIC",
+	"SHOW SECURITY", "DIRECTORY/SECURITY",
 	"SEARCH ", "DIFFERENCES ", "APPEND ", "DUMP/HEADER",
 }
 
@@ -180,7 +179,7 @@ func TestProt93UtilitiesOracle(t *testing.T) {
 
 			// A CREATE VMS allowed read its data line (the log's
 			// "RECORD"): it isn't run, there being no data here for it.
-			if strings.HasPrefix(cmd.line, "CREATE ") && !prot93UtilRefused(cmd) {
+			if prot93CreateAllowed(cmd.line, cmd.output) {
 				continue
 			}
 
@@ -191,7 +190,7 @@ func TestProt93UtilitiesOracle(t *testing.T) {
 			}
 
 			key := r.tag + " " + strings.ReplaceAll(cmd.line, r.tag, "@")
-			gl, wl := prot93UtilNormal(got), prot93UtilNormal(cmd.output)
+			gl, wl := prot93UtilNormal(got), prot93UtilNormal(prot93CreateWanted(cmd.output))
 			compared++
 
 			if why, ok := prot93UtilDifferences[key]; ok {

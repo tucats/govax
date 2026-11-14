@@ -41,6 +41,29 @@
 
    Shows the file created, with its version.
 
+/OWNER_UIC
+
+      /OWNER_UIC=uic
+
+   The file's owner: a UIC, [group,member] in octal, or [name] or
+   [group,name] by identifier names.  A UIC other than your own needs
+   privilege (SYSPRV, BYPASS, or a system UIC); without it the file
+   isn't made, and CREATE says so before reading any lines.  Without
+   /OWNER_UIC the owner is you, or with privilege the owner of the
+   file's previous version or of its directory.
+
+/PROTECTION
+
+      /PROTECTION=(category[:access][,...])
+
+   The file's protection: for each of SYSTEM, OWNER, GROUP, and WORLD
+   (or S, O, G, and W), the access granted, any of R, W, E, and D, or
+   none.  A category not given keeps what the file would have without
+   /PROTECTION: the previous version's protection, else the directory's
+   default protection ACE, else your default protection (SHOW
+   PROTECTION).  A code giving no category any access is taken as none
+   given; SET SECURITY/PROTECTION makes such a file.
+
 2 Examples
 
    1.$ CREATE NOTES.TXT

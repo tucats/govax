@@ -96,7 +96,10 @@ func (c *Context) saveSaveSet(cmd BackupCommand) error {
 		return err
 	}
 
-	out, err := c.ContainerSession.CreateSaveSet(loc, rms.SaveSetOptions{BlockSize: int(summary.BlockSize), Owner: &owner})
+	// Backup has checked the code.
+	protection, _ := qualifierProtection(cmd.Protection, backupSyntax)
+
+	out, err := c.ContainerSession.CreateSaveSet(loc, rms.SaveSetOptions{BlockSize: int(summary.BlockSize), Owner: &owner, Protection: protection})
 	if err != nil {
 		return backupMessageWith(vmsdef.BackupOpenOut, fileErrorCauses(err), saveSetDisplayName(c.ContainerSession, loc))
 	}

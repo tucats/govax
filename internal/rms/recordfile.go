@@ -483,11 +483,19 @@ func readVolumeRecords(f *volume.File, kind RecordKind) ([][]byte, error) {
 // first and then renamed, so a failure never leaves a partial file or
 // replaces a good one.
 func (s *Session) CreateRecordFile(loc FileLocation, kind RecordKind, records [][]byte) (FileLocation, error) {
+	return s.CreateRecordFileAs(loc, kind, records, ExplicitProfile{})
+}
+
+// CreateRecordFileAs is CreateRecordFile with explicit, what the creator
+// asks for of a volume file's profile (CREATE's /OWNER_UIC and
+// /PROTECTION): an owner the process may not give is a *DeniedError, and
+// nothing is made. A host file has no profile.
+func (s *Session) CreateRecordFileAs(loc FileLocation, kind RecordKind, records [][]byte, explicit ExplicitProfile) (FileLocation, error) {
 	if loc.Host {
 		return loc, writeHostRecords(loc.Name, kind, records)
 	}
 
-	created, err := s.createVolumeRecords(loc.Name, kind, records)
+	created, err := s.createVolumeRecordsAllocated(loc.Name, kind, records, 0, explicit)
 	if err != nil {
 		return FileLocation{}, fmt.Errorf("rms: creating %s: %w", loc.Name, err)
 	}
@@ -502,6 +510,14 @@ func (s *Session) CreateRecordFile(loc FileLocation, kind RecordKind, records []
 // doesn't resolve, and a directory that isn't there are CreateRecordFile's
 // to report.
 func (s *Session) CreateAllowed(loc FileLocation) error {
+	return s.CreateAllowedAs(loc, ExplicitProfile{})
+}
+
+// CreateAllowedAs is CreateAllowed for a creator asking for explicit: an
+// owner the process may not give the file is refused too, as VMS 7.1's
+// CREATE/OWNER_UIC of another's UIC was (A.4, round 2:
+// %CREATE-E-OPENOUT over RMS$_PRV, before any input was read).
+func (s *Session) CreateAllowedAs(loc FileLocation, explicit ExplicitProfile) error {
 	if loc.Host {
 		return nil
 	}
@@ -523,8 +539,18 @@ func (s *Session) CreateAllowed(loc FileLocation) error {
 	}
 
 	version, _ := parseOpenVersion(spec.Version)
+	name := spec.Name + "." + spec.Type
+	who := s.creator(explicit)
 
-	return outputDenied(createAllowed(s.creator(ExplicitProfile{}), vol, dir, spec.Name+"."+spec.Type, version), spec, "")
+	if err := createAllowed(who, vol, dir, name, version); err != nil {
+		return outputDenied(err, spec, "")
+	}
+
+	if _, err := newFileProfile(who, vol, dir, name); errors.Is(err, ErrNoPrivilege) {
+		return outputDenied(&DeniedError{Output: true}, spec, "")
+	}
+
+	return nil
 }
 
 // rewriteTempName is the file RewriteRecordFile keeps its safe copy in,
@@ -612,7 +638,7 @@ func (s *Session) RewriteRecordFile(loc FileLocation, kind RecordKind, records [
 		return failed(err)
 	}
 
-	created, err := s.createVolumeRecordsAllocated(spec.String(), kind, records, alloc)
+	created, err := s.createVolumeRecordsAllocated(spec.String(), kind, records, alloc, ExplicitProfile{})
 	if err != nil {
 		return failed(fmt.Errorf("%w (the new contents are in %s)", err, tempLoc.Name))
 	}
@@ -741,7 +767,7 @@ func writeHostRecords(path string, kind RecordKind, records [][]byte) error {
 
 // createVolumeRecords creates a volume file holding records.
 func (s *Session) createVolumeRecords(text string, kind RecordKind, records [][]byte) (FileLocation, error) {
-	return s.createVolumeRecordsAllocated(text, kind, records, 0)
+	return s.createVolumeRecordsAllocated(text, kind, records, 0, ExplicitProfile{})
 }
 
 // CreateRecordFileAllocated is CreateRecordFile with at least alloc blocks
@@ -754,7 +780,7 @@ func (s *Session) CreateRecordFileAllocated(loc FileLocation, kind RecordKind, r
 		return loc, writeHostRecords(loc.Name, kind, records)
 	}
 
-	created, err := s.createVolumeRecordsAllocated(loc.Name, kind, records, alloc)
+	created, err := s.createVolumeRecordsAllocated(loc.Name, kind, records, alloc, ExplicitProfile{})
 	if err != nil {
 		return FileLocation{}, fmt.Errorf("rms: creating %s: %w", loc.Name, err)
 	}
@@ -800,7 +826,10 @@ func (s *Session) allocatedBlocks(text string) (uint32, error) {
 	return blocks, err
 }
 
-func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, records [][]byte, alloc uint32) (FileLocation, error) {
+// createVolumeRecordsAllocated creates a volume file holding records, with
+// at least alloc blocks, its profile by VMS's rules and explicit
+// (profile.go).
+func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, records [][]byte, alloc uint32, explicit ExplicitProfile) (FileLocation, error) {
 	vol, spec, err := s.resolveVolume(text)
 	if err != nil {
 		return FileLocation{}, err
@@ -834,11 +863,17 @@ func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, rec
 
 	fullName := spec.Name + "." + spec.Type
 
-	if err := createAllowed(s.creator(ExplicitProfile{}), vol, dir, fullName, version); err != nil {
+	who := s.creator(explicit)
+
+	if err := createAllowed(who, vol, dir, fullName, version); err != nil {
 		return FileLocation{}, outputDenied(err, spec, "")
 	}
 
-	profile, err := newFileProfile(s.creator(ExplicitProfile{}), vol, dir, fullName)
+	profile, err := newFileProfile(who, vol, dir, fullName)
+	if errors.Is(err, ErrNoPrivilege) {
+		return FileLocation{}, outputDenied(&DeniedError{Output: true}, spec, "")
+	}
+
 	if err != nil {
 		return FileLocation{}, err
 	}

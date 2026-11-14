@@ -550,6 +550,8 @@ func (d *Dispatcher) bindGrammar() {
 			Dirs:    r.Present("DIRS"),
 			Stream:  r.Present("STREAM"),
 			CRLF:    r.Present("CRLF"),
+
+			Protection: strings.Join(r.List("PROTECTION"), ","),
 			Records: rms.HostRecords{
 				Format:          r.String("RECORD_FORMAT"),
 				Size:            r.Int("RECORD_SIZE"),

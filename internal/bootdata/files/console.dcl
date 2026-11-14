@@ -76,12 +76,16 @@ grammar console
     !
     ! CREATE with neither /NAME_TABLE nor /DIRECTORY makes a text file
     ! from SYS$INPUT (internal/dclcmd/createfile.go): the terminal up to
-    ! Ctrl/Z, or a command procedure's data lines.
+    ! Ctrl/Z, or a command procedure's data lines. /OWNER_UIC names its
+    ! owner, /PROTECTION is merged into the protection it would otherwise
+    ! get (docs/planning/PHASE-93 - file protection.md, subtask 11b).
     !
     verb create
         parameter file/id=1511/type=$string/prompt="File"
         qualifier host/id=1512/parameter=file
         qualifier log/id=1513
+        qualifier owner_uic/id=1517/type=$uic
+        qualifier protection/id=1518/type=$protection
         qualifier name_table/syntax=create_name_table
         qualifier directory/syntax=create_directory
         qualifier fdl/id=1514/type=$string/syntax=create_fdl
@@ -637,6 +641,8 @@ grammar console
         qualifier   new_version/id=2228/parameter=output
         qualifier   overlay/id=2229/parameter=output
         qualifier   replace/id=2230/parameter=output
+        qualifier   protection/id=2231/parameter=output -
+                    /type=$protection
 
         qualifier   list/id=2240                -
                     /type=$string               -
@@ -744,6 +750,10 @@ grammar console
         qualifier   stream/id=1262
         qualifier   vfc/id=1263
         qualifier   log/id=1270
+        ! /PROTECTION is merged into what a volume output would otherwise
+        ! get (docs/planning/PHASE-93 - file protection.md, subtask 11b).
+        qualifier   protection/id=1271          -
+                    /type=$protection
         qualifier   crlf/id=1264
         qualifier   lf/id=1265
         ! govax's (docs/PHASE-86; rms/copyformat.go): what a host file is to be

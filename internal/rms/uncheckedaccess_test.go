@@ -112,17 +112,17 @@ func uncheckedCallers(t *testing.T, name string) []string {
 // each with why.
 var checkedAccess = map[string]string{
 	// The checked layer itself.
-	"access.go:resolveChecked":     "the layer: a lookup check before each level",
-	"access.go:mayOpenFID":         "the layer: reads the header it checks",
-	"access.go:newVersionAllowed":  "the layer: reads the versions it checks",
-	"utilaccess.go:globChecked":    "the layer: the directories checked first",
-	"utilaccess.go:openChecked":    "the layer: reads the header it checks",
-	"directory.go:readable":        "the layer's question for DIRECTORY: reads the header it checks",
-	"recordfile.go:readRaw":        "an image's read (paging off): imageAllowed checks it; any other read is openChecked's",
-	"profile.go:newFileProfile":    "reads the previous version's profile for the creator, not the creator's access",
-	"createdir.go:deepestExisting": "finds the level CreateDirectory then checks (pathAllowed, needChange)",
-	"copy.go:resolveVolumeDest":    "pathAllowed checks the levels first; createVersion the directory",
-	"recordfile.go:CreateAllowed":  "pathAllowed checks the levels first; createAllowed the directory",
+	"access.go:resolveChecked":      "the layer: a lookup check before each level",
+	"access.go:mayOpenFID":          "the layer: reads the header it checks",
+	"access.go:newVersionAllowed":   "the layer: reads the versions it checks",
+	"utilaccess.go:globChecked":     "the layer: the directories checked first",
+	"utilaccess.go:openChecked":     "the layer: reads the header it checks",
+	"directory.go:readable":         "the layer's question for DIRECTORY: reads the header it checks",
+	"recordfile.go:readRaw":         "an image's read (paging off): imageAllowed checks it; any other read is openChecked's",
+	"profile.go:newFileProfile":     "reads the previous version's profile for the creator, not the creator's access",
+	"createdir.go:deepestExisting":  "finds the level CreateDirectory then checks (pathAllowed, needChange)",
+	"copy.go:resolveVolumeDest":     "pathAllowed checks the levels first; createVersion the directory",
+	"recordfile.go:CreateAllowedAs": "pathAllowed checks the levels first; createAllowed the directory",
 
 	// RMS's services and the ACP check in the service (subtask 8).
 	"acp.go:ACPLookupAs":              "the ACP: needLookup on the directory",

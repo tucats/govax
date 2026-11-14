@@ -67,6 +67,23 @@ func WholeProtection(p uint16) func(security.Protection) security.Protection {
 	return func(security.Protection) security.Protection { return security.Protection(p) }
 }
 
+// MergedProtection is an ExplicitProfile.Protection laying code, a DCL
+// /PROTECTION's code ("S:RWED,W:RE"), over the base: the categories it
+// names take its letters, the others keep the base's (A.4: VMS 7.1's
+// CREATE/PROTECTION=(W:RE) in a directory whose default protection ACE
+// gave (RWED,RWED,R,E) made (RWED,RWED,R,RE)). The caller has checked
+// code (security.ParseProtection); a code that fails here leaves the base.
+func MergedProtection(code string) func(security.Protection) security.Protection {
+	return func(base security.Protection) security.Protection {
+		p, err := security.ParseProtection(code, base)
+		if err != nil {
+			return base
+		}
+
+		return p
+	}
+}
+
 // creator is who is making a file and what they asked for its profile.
 type creator struct {
 	creds    security.Credentials

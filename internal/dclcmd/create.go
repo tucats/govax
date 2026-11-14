@@ -138,12 +138,15 @@ func (c *Context) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Creat
 		opts.Owner = &ondisk.Uic{Group: uint16(uic.Group()), Member: uint16(uic.Member())}
 	}
 
-	if len(req.Protection) > 0 {
-		text := strings.Join(req.Protection, ",")
-		if _, err := security.ParseProtection(text, 0); err != nil {
-			return syntax(protectionFault(err, text), 0)
-		}
+	text, err := qualifierProtection(req.Protection, func(part string) error {
+		_, err := syntax(part, 0)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
 
+	if text != "" {
 		opts.Protection = "(" + text + ")"
 	}
 

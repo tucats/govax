@@ -144,15 +144,15 @@ func prot93SetCompared(line string) (run, show bool) {
 	case strings.HasPrefix(line, "SHOW ACL "):
 		return false, true
 	case strings.HasPrefix(line, "SET "), strings.HasPrefix(line, "SHOW PROTECTION"),
-		strings.HasPrefix(line, "CREATE/DIRECTORY "),
+		strings.HasPrefix(line, "CREATE/"), strings.HasPrefix(line, "COPY/PROTECTION="),
 		strings.HasPrefix(line, "COPY PROT93$DISK:[PROT93LOG]T.DAT "),
 		strings.HasPrefix(line, "COPY PROT93$DISK:[PROT93.ACE]"),
 		strings.HasPrefix(line, "WRITE SYS$OUTPUT ") && strings.Contains(line, "[PROT93.SEC]") && !prot93Unshown(line):
 		return true, false
 	}
 
-	// CREATE and COPY with /PROTECTION are subtask 11b's; DIRECTORY/SECURITY
-	// and /ACL, and SHOW SECURITY of a list, subtask 12's.
+	// DIRECTORY/SECURITY and /ACL, and SHOW SECURITY of a list, are
+	// subtask 12's.
 	return false, false
 }
 
@@ -212,6 +212,9 @@ func TestSetSecurityOracle(t *testing.T) {
 				got = strings.Split(out, "\n")
 			}
 
+			// The sections' CREATEs of files are all refused, so none
+			// reads its data line.
+			want = prot93CreateWanted(want)
 			compared++
 		default:
 			continue

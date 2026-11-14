@@ -129,6 +129,13 @@ type CopyOptions struct {
 	// is to be on the volume (copyformat.go). Only from a host file to a volume.
 	Records HostRecords
 
+	// Protection is /PROTECTION's code, "S:RWED,W:R", laid over the
+	// protection a volume output would otherwise get (MergedProtection;
+	// VMS 7.1's COPY/PROTECTION=(W:R) made (RWED,RWED,RE,R) where the
+	// process default was (RWED,RWED,RE,)); "" for none. A host output
+	// has no protection to give.
+	Protection string
+
 	// Quiet suppresses the per-file "%COPY-S-COPIED" (or
 	// "...materialized as directory...") confirmation line Console.Copy
 	// would otherwise print. Never read by this file -- see this type's
@@ -309,6 +316,15 @@ func (e *HostToHostError) Error() string {
 	return "copy: /HOST on both SOURCE and DESTINATION has no container endpoint; COPY always needs at least one file on a mounted volume"
 }
 
+// explicit is what the options ask for of a volume output's profile.
+func (o CopyOptions) explicit() ExplicitProfile {
+	if o.Protection == "" {
+		return ExplicitProfile{}
+	}
+
+	return ExplicitProfile{Protection: MergedProtection(o.Protection)}
+}
+
 // Copy copies one or more files from source to destination, in whichever
 // of the four directions sourceHost/destHost select:
 //
@@ -431,7 +447,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 
 	// The output's profile is its own, never the input's (profile.go;
 	// VMS 7.1, A.4's answer 9).
-	who := s.creator(ExplicitProfile{})
+	who := s.creator(opts.explicit())
 
 	for _, m := range matches {
 		if strings.EqualFold(m.Type, "DIR") {
@@ -564,7 +580,7 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	who := s.creator(ExplicitProfile{})
+	who := s.creator(opts.explicit())
 
 	switch kind, ok := hostRecordTypes[hostType]; {
 	case opts.Records.Given():

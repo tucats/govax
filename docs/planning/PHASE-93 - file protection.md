@@ -1276,11 +1276,12 @@ Each is one commit, with tests, stopping for review.
     10a, round 3 of the probe (Part D's "Round 3"; done 2026-11-14, with
     round 3b; A.4's "Round 3"), which asked for subtask 13's services too;
     10b, the services (done 2026-11-14).
-11. **Changing profiles**: SET SECURITY with `/ACL` and its positional
+11. **Changing profiles** (done 2026-11-14): SET SECURITY with `/ACL` and its positional
     qualifiers, SET FILE, SET PROTECTION, SET ACL, CREATE, COPY, and
     BACKUP's `/PROTECTION` (Decision 10). In two parts: 11a, the SET
     commands (done 2026-11-14); 11b, CREATE's `/PROTECTION` and
-    `/OWNER_UIC`, COPY's `/PROTECTION`, and BACKUP's `/PROTECTION`.
+    `/OWNER_UIC`, COPY's `/PROTECTION`, and BACKUP's `/PROTECTION`
+    (done 2026-11-14).
 12. **Showing profiles**: SHOW SECURITY, SHOW ACL, DIRECTORY/SECURITY,
     /ACL, and the others, F$FILE_ATTRIBUTES; held to the probe.
 13. **The other security services**: `$CHKPRO`, `$CHECK_ACCESS`,
@@ -2035,3 +2036,33 @@ The author accepted the plan and answered its questions:
   prompt's text) and the date selectors (no other govax DCL command but
   BACKUP has them). The F$FILE_ATTRIBUTES UIC item's named form is subtask
   12's. Subtask 11b, CREATE's, COPY's, and BACKUP's qualifiers, is next.
+- **2026-11-14** Subtask 11b done, and with it subtask 11: CREATE's
+  `/PROTECTION` and `/OWNER_UIC`, COPY's `/PROTECTION`, and BACKUP's.
+  Each is the creator's `rms.ExplicitProfile` (profile.go), so
+  `newFileProfile` lays it over VMS's rules: a code by
+  `rms.MergedProtection`, changing only the categories it names (the
+  probe's `CREATE/PROTECTION=(W:RE)` in `[.DP]` and
+  `COPY/PROTECTION=(W:R)`). CREATE's are `dclcmd`'s `CreateFileRequest`,
+  through `rms.Session.CreateAllowedAs` and `CreateRecordFileAs`; an owner
+  the process may not give is refused before any input is read,
+  `%CREATE-E-OPENOUT` over RMS$_PRV (round 2's CA_ files), as
+  `createVolumeRecordsAllocated` now refuses it too. COPY's code is
+  `CopyOptions.Protection`, BACKUP's the output save set's
+  (`SaveSetOptions.Protection`). The three share `dclcmd/uic.go`'s
+  `qualifierProtection`: an unknown category is DCL's IVKEYW (the probe's
+  `CREATE/PROTECTION=(Q:R)`; CREATE/DIRECTORY now too), other bad letters
+  the utility's `-F-SYNTAX` naming them. `TestCreateProfilesOracle`
+  (`internal/console/prot93create_test.go`) builds the probe's [PROT93.F],
+  [.OWN], [.DP], and [.PRF] on a new volume and replays SYSTEM's
+  "PROFILES OF NEW FILES" section, 37 commands, every CREATE, COPY, and
+  CREATE/DIRECTORY and their DIRECTORY/SECURITY and SHOW SECURITY reports
+  (made in Go until subtask 12; APPEND's P6.DAT left out, govax having no
+  APPEND); `TestSetSecurityOracle` now compares the malformed CREATE and
+  COPY lines (176 commands), and `TestProt93UtilitiesOracle` the
+  accounts' refused CREATE/OWNER_UIC (521). HELP CREATE, COPY, and BACKUP
+  have the qualifiers. Unconfirmed and chosen: a code giving no category
+  any access is taken as none given (the DCL Dictionary's note on CREATE),
+  for CREATE only; COPY's facility number (103) and COPY-F-SYNTAX and
+  BACKUP-F-SYNTAX for bad letters; BACKUP's `/PROTECTION` is the save
+  set's alone, a restore's files keeping their saved protection, and
+  ignored without a save set output. Subtask 12, showing profiles, is next.

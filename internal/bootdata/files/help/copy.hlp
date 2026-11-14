@@ -111,6 +111,17 @@
    Shows each file copied by its full name, the output file's too, with
    the number of blocks copied, in place of the short confirmation.
 
+/PROTECTION
+
+      /PROTECTION=(category[:access][,...])
+
+   The output file's protection, on a volume: for each of SYSTEM,
+   OWNER, GROUP, and WORLD (or S, O, G, and W), the access granted, any
+   of R, W, E, and D, or none.  A category not given keeps what the
+   output would have without it: the previous version's protection,
+   else its directory's default protection ACE, else your default
+   protection.  The input's protection is never copied.
+
 /QUIET
 
    Leaves out the %COPY-S-COPIED message for each file.

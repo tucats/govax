@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // A command's UICs and protection codes (docs/planning/PHASE-93 - file
@@ -56,4 +57,29 @@ func protectionFault(err error, code string) string {
 	}
 
 	return code
+}
+
+// qualifierProtection reads a utility's /PROTECTION, code as the
+// grammar's $PROTECTION gave its categories ("S:RWED", "W:RE"), into the
+// one text rms.MergedProtection lays over a new file's protection; "" for
+// none. A category that isn't S, O, G, or W is DCL's IVKEYW naming it, as
+// VMS 7.1's CREATE/PROTECTION=(Q:R) was (A.4, "Forms and their errors");
+// any other fault is the utility's own refusal, syntax, of the part
+// protectionFault names (CREATE/DIRECTORY's 'Z' of (S:Z)).
+func qualifierProtection(code []string, syntax func(part string) error) (string, error) {
+	text := codeText(code)
+	if text == "" {
+		return "", nil
+	}
+
+	if _, err := security.ParseProtection(text, 0); err != nil {
+		var unknown security.ErrUnknownCategory
+		if errors.As(err, &unknown) {
+			return "", vmserrors.NewSegment(vmserrors.CLI_IVKEYW, unknown.Name)
+		}
+
+		return "", syntax(protectionFault(err, text))
+	}
+
+	return text, nil
 }

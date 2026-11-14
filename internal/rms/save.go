@@ -424,6 +424,11 @@ type SaveSetOptions struct {
 	// Owner is the file's owner (the output's /BY_OWNER, or the
 	// process's UIC); nil leaves what the file system gives it.
 	Owner *ondisk.Uic
+
+	// Protection is the output's /PROTECTION code, "S:RWED,W:R", laid
+	// over the protection a volume file would otherwise get
+	// (MergedProtection); "" for none.
+	Protection string
 }
 
 // SaveSetOutput is a save set's file, made and waiting for its blocks.
@@ -492,7 +497,12 @@ func (s *Session) CreateSaveSet(loc FileLocation, opts SaveSetOptions) (*SaveSet
 		MaxRecordSize: uint16(opts.BlockSize),
 	}
 
-	f, err := createVersion(s.creator(ExplicitProfile{}), vol, dir, fullName, version, attr, bm, ib)
+	var explicit ExplicitProfile
+	if opts.Protection != "" {
+		explicit.Protection = MergedProtection(opts.Protection)
+	}
+
+	f, err := createVersion(s.creator(explicit), vol, dir, fullName, version, attr, bm, ib)
 	if err != nil {
 		return nil, err
 	}

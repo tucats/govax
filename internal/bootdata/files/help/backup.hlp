@@ -198,6 +198,16 @@
 
    Output file (a restore): writes over a file that exists, in place.
 
+/PROTECTION
+
+      /PROTECTION=(category[:access][,...])
+
+   Output save set: the save set file's protection, on a volume.  A
+   category not given keeps what the file would have without it: the
+   previous version's protection, else its directory's default
+   protection ACE, else your default protection.  A restore's files
+   keep the protection they were saved with.
+
 /REPLACE
 
    Output file (a restore): deletes a file that exists, and restores it

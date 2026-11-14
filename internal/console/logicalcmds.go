@@ -50,7 +50,10 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 	// /FDL (createfdl.go), /DIRECTORY (create.go), and /NAME_TABLE are
 	// below.
 	g.Bind("CREATE", func(id int64, r *dcl.Result) error {
-		return c.cmd().CreateFile(r.String("FILE"), r.ParamPresent("FILE", "HOST"), r.Present("LOG") && !r.Negated("LOG"))
+		return c.cmd().CreateFile(dclcmd.CreateFileRequest{
+			File: r.String("FILE"), Host: r.ParamPresent("FILE", "HOST"), Log: r.Present("LOG") && !r.Negated("LOG"),
+			OwnerUIC: r.String("OWNER_UIC"), Protection: r.List("PROTECTION"),
+		})
 	})
 
 	g.Bind("CREATE_FDL", func(id int64, r *dcl.Result) error {

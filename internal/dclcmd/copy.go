@@ -90,6 +90,13 @@ var (
 //     CLI_BADFILESPEC, matching Context.Type/Context.Delete/Context.
 //     Directory's own catch-all bucket.
 func (c *Context) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) error {
+	// /PROTECTION's code, checked before anything is copied: a category
+	// that isn't S, O, G, or W is DCL's IVKEYW, other bad letters
+	// COPY-F-SYNTAX.
+	if _, err := qualifierProtection([]string{opts.Protection}, copySyntax); err != nil {
+		return err
+	}
+
 	results, err := c.copyFiles(sourceText, sourceHost, destText, destHost, opts)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
@@ -186,6 +193,19 @@ func (c *Context) copyFiles(sourceText string, sourceHost bool, destText string,
 	}
 
 	return c.ContainerSession.Copy(sourceText, source.Host, destText, dest.Host, opts)
+}
+
+// copyFacility is COPY's facility number, which its own condition values
+// carry (unconfirmed: the probe shows COPY's messages, not their values).
+const copyFacility = 103
+
+// copySyntax is COPY's refusal of a /PROTECTION code's letters,
+// "%COPY-F-SYNTAX, error parsing 'Z'", as CREATE's is (unconfirmed: the
+// probe gave COPY none).
+func copySyntax(part string) error {
+	status := uint32(copyFacility<<16) | vmsdef.LibrarySymbols["SHR$_SYNTAX"]&^7 | 4
+
+	return vmserrors.ConditionError{Status: status, Text: "COPY-F-SYNTAX, error parsing '" + part + "'"}
 }
 
 // printCopyResult prints whichever of the four "%COPY-..." line shapes
