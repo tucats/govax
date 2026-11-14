@@ -2,9 +2,12 @@ package rms
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -18,6 +21,9 @@ import (
 // open the image as a process-permanent file without saying with what
 // sharing; read sharing only is govax's choice, which testdata/pg66's
 // probe checks.)
+//
+// The process's protection is checked as VMS's activator checks it: a
+// lookup in each directory, and R or E on the image (ErrNoPrivilege).
 //
 // It returns the accessed file, its bytes up to its end of file (what
 // ReadRawFile would read: the header, the ISDs, and the debug symbols
@@ -49,8 +55,18 @@ func (s *Session) AccessImage(loc FileLocation) (*ACPFile, []byte, FileLocation,
 			return &AmbiguousError{Spec: loc.Name, Count: len(matches)}
 		}
 
+		// The image's directories must let the process look it up, and
+		// the file give it R or E (access.go): VMS 7.1 ran an image with
+		// either alone, and refused one with neither (the probe's A.4,
+		// answer 4).
 		f, err := s.Mounts.ACPAccessWith(r.Spec.Device, fileIDFrom(matches[0].Fid), ACPAccessMode{NoWrite: true})
 		if err != nil {
+			return err
+		}
+
+		if err := s.imageAllowed(vol, matches[0], &f.file.Header); err != nil {
+			_ = f.Deaccess()
+
 			return err
 		}
 
@@ -70,4 +86,22 @@ func (s *Session) AccessImage(loc FileLocation) (*ACPFile, []byte, FileLocation,
 	}
 
 	return a, buf.Bytes(), found, nil
+}
+
+// imageAllowed reports whether the session's process may run the image
+// m on vol, whose header is h: a lookup in each of its directories, and
+// R or E on the file, else ErrNoPrivilege. VMS 7.1 ran an image giving
+// either alone and refused one giving neither (the probe's A.4, answer 4).
+func (s *Session) imageAllowed(vol *volume.Volume, m filespec.Match, h *ondisk.FileHeader) error {
+	creds := s.Identity()
+
+	if _, err := directoryFor(creds, vol, m.Dirs, needLookup); errors.Is(err, ErrNoPrivilege) {
+		return err
+	}
+
+	if !mayEither(creds, vol, h, security.Read, security.Execute) {
+		return ErrNoPrivilege
+	}
+
+	return nil
 }

@@ -60,6 +60,10 @@
      LOGICALS     Debug logical name operations.
      MEMORY       Debug memory operations.
      PROCESSES    Debug process operations (PROCESS is the same).
+     PROTECTION   Show each access check: which UIC asked for what
+                  access to which file, directory, mailbox, or global
+                  section, its owner, protection code, and ACL, and
+                  whether it was granted and by what.
      REGISTERS    Show changed registers after each STEP (on by
                   default).
      RMS          Show each RMS service's FAB or RAB as the service left

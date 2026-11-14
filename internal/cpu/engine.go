@@ -187,6 +187,7 @@ var debugConfig = map[string]registers.DebugFlags{
 	"vax.debug.process":    registers.DebugProcess,
 	"vax.debug.libinit":    registers.DebugLibinit,
 	"vax.debug.rms":        registers.DebugRMS,
+	"vax.debug.protection": registers.DebugProtection,
 	"vax.debug.userstep":   registers.DebugUserStep,
 }
 

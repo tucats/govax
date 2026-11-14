@@ -1882,6 +1882,7 @@ var debugShowEntries = []debugShowEntry{
 	{registers.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images"},
 	{registers.DebugLogicals, "LOGICALS", "Debug logical name operations"},
 	{registers.DebugProcess, "PROCESSES", "Debug process operations"},
+	{registers.DebugProtection, "PROTECTION", "Debug file and object protection checks"},
 	{registers.DebugRegisters, "REGISTERS", "Display changed registers on STEP"},
 	{registers.DebugRMS, "RMS", "Debug RMS operations"},
 	{registers.DebugServices, "SERVICES", "Debug P1 system service calls"},

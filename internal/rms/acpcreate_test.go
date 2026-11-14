@@ -12,6 +12,11 @@ import (
 func TestACPCreate_inDirectory(t *testing.T) {
 	m := newACPFixture(t)
 
+	// The MFD lets everyone make files in it (Phase 93's checks).
+	if err := m.ACPWriteAttributes("DUA0", mfd, func(a *ACPAttributes) { a.Protection = 0 }); err != nil {
+		t.Fatal(err)
+	}
+
 	got, err := m.ACPCreate("DUA0", ACPCreateRequest{
 		Directory: mfd,
 		Name:      "new.dat",

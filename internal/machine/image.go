@@ -937,7 +937,7 @@ func (m *Machine) readImage(fn string, main bool) ([]byte, imageSpec, error) {
 		}
 
 		if !loc.Host {
-			data, found, err := s.ReadRawFile(s.ImageLocation(loc))
+			data, found, err := s.ReadImageFile(s.ImageLocation(loc))
 
 			var notFound *rms.NotFoundError
 			if errors.As(err, &notFound) {

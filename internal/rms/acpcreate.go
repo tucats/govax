@@ -174,6 +174,25 @@ func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated,
 
 	result.FID = fileIDFrom(f.Header.Fid)
 
+	// The attribute list may name another owner (ATR$C_UIC), which the
+	// creator must be able to give (attributeChangeAllowed): a refused one
+	// undoes the create, as a XABPRO's owner refused makes nothing.
+	if req.Attributes != nil {
+		if err := attributeChangeAllowed(req.creator().creds, vol, f, req.Attributes, true); err != nil {
+			var entry *acpEntry
+
+			if result.Name != "" {
+				base, version, _ := splitACPName(result.Name)
+				entry = &acpEntry{dir: req.Directory, name: base, version: version}
+			}
+
+			_ = f.Close()
+			_ = m.deleteNow(result.FID, entry)
+
+			return ACPCreated{}, err
+		}
+	}
+
 	if err := finishCreate(f, req, bm, ib); err != nil {
 		return ACPCreated{}, err
 	}
@@ -181,7 +200,7 @@ func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated,
 	result.Blocks = f.Blocks()
 
 	var entry *acpEntry
-	
+
 	if result.Name != "" {
 		base, version, _ := splitACPName(result.Name)
 		entry = &acpEntry{dir: req.Directory, name: base, version: version}
@@ -225,8 +244,19 @@ func createInDirectory(vol *volume.Volume, req ACPCreateRequest, bm *volume.Bitm
 		return nil, result, ErrACPBadDirectory
 	}
 
+	// The directory's entries change (R and W, access.go): VMS 7.1's ACP
+	// refused a create in a directory giving W and E alone, as RMS did
+	// (the probe's [.DW]). A supersede needs W and D on the file it
+	// replaces, a new version what RMS's does (newVersionAllowed).
+	creds := req.creator().creds
+	if !needChange.allows(creds, vol, dir) {
+		return nil, result, ErrNoPrivilege
+	}
+
+	superseding := false
+
 	if version != 0 {
-		_, err := dir.Lookup(base, version)
+		existing, err := dir.Lookup(base, version)
 
 		switch {
 		case errors.Is(err, volume.ErrNotFound):
@@ -234,6 +264,12 @@ func createInDirectory(vol *volume.Volume, req ACPCreateRequest, bm *volume.Bitm
 		case err != nil:
 			return nil, result, err
 		case req.Supersede:
+			if f, err := vol.OpenFID(existing.Fid); err == nil && !may(creds, vol, &f.Header, security.Write|security.Delete) {
+				return nil, result, ErrNoPrivilege
+			}
+
+			superseding = true
+
 			if err := volume.DeleteFile(dir, base, version, bm, ib); err != nil {
 				return nil, result, fmt.Errorf("rms: superseding %s;%d: %w", base, version, err)
 			}
@@ -244,6 +280,10 @@ func createInDirectory(vol *volume.Volume, req ACPCreateRequest, bm *volume.Bitm
 		default:
 			return nil, result, ErrACPDuplicate
 		}
+	}
+
+	if !superseding && !newVersionAllowed(creds, vol, dir, base) {
+		return nil, result, ErrNoPrivilege
 	}
 
 	if version == 0 {
@@ -318,6 +358,12 @@ func finishCreate(f *volume.File, req ACPCreateRequest, bm *volume.Bitmap, ib *v
 // explicit version already there can't be superseded (only newVersion
 // applies).
 func (t *MountTable) ACPEnter(device string, did FileID, name string, fid FileID, newVersion bool) (string, error) {
+	return t.ACPEnterAs(security.SystemCredentials(), device, did, name, fid, newVersion)
+}
+
+// ACPEnterAs is ACPEnter for the process with credentials creds, which
+// the directory must give R and W (access.go): ErrNoPrivilege otherwise.
+func (t *MountTable) ACPEnterAs(creds security.Credentials, device string, did FileID, name string, fid FileID, newVersion bool) (string, error) {
 	vol, ok := t.Lookup(device)
 	if !ok {
 		return "", ErrACPNotMounted
@@ -339,6 +385,10 @@ func (t *MountTable) ACPEnter(device string, did FileID, name string, fid FileID
 
 	if _, err := vol.OpenFID(fid.toOds2()); err != nil {
 		return "", ErrACPNoSuchFile
+	}
+
+	if !needChange.allows(creds, vol, dir) {
+		return "", ErrNoPrivilege
 	}
 
 	if version != 0 {

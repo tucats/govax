@@ -275,7 +275,7 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	if name != "" && f.did != (rms.FileID{}) {
-		found, full, err := env.Mounts.ACPLookup(diskDevice(req), f.did, name)
+		found, full, err := env.Mounts.ACPLookupAs(env.Credentials(), diskDevice(req), f.did, name)
 
 		if errors.Is(err, rms.ErrACPNoSuchFile) && req.modified(ioModCreate) {
 			// Create it: accessed below, like a file found.
@@ -304,7 +304,7 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	if open {
-		a, err := env.Mounts.ACPAccessWith(diskDevice(req), fid, fibAccessMode(f.acctl))
+		a, err := env.Mounts.ACPAccessWith(diskDevice(req), fid, env.fibAccessMode(f.acctl))
 		if err != nil {
 			return ioStatus{status: acpStatus(err)}, 0
 		}
@@ -321,7 +321,7 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		if open {
 			values = c.acp.Attributes()
 		} else {
-			values, err = env.Mounts.ACPReadAttributes(diskDevice(req), fid)
+			values, err = env.Mounts.ACPReadAttributesAs(env.Credentials(), diskDevice(req), fid)
 		}
 
 		if err != nil {
@@ -453,10 +453,21 @@ func diskModify(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		err = c.acp.WriteAttributes(change)
 	case env.Mounts == nil:
 		return ioStatus{status: ssDevNotMnt}, 0
-	case f.fid == (rms.FileID{}):
-		return ioStatus{status: ssBadParam}, 0
 	default:
-		err = env.Mounts.ACPWriteAttributes(diskDevice(req), f.fid, change)
+		// The file is the one the FIB's directory ID and p2's name find,
+		// as IO$_ACCESS finds it (the probe's QM cases), else the FIB's
+		// file ID.
+		fid, st := env.modifyTarget(req, f)
+
+		switch st {
+		case ssNormal:
+		case ssAccVio:
+			return ioStatus{}, ssAccVio
+		default:
+			return ioStatus{status: st}, 0
+		}
+
+		err = env.Mounts.ACPWriteAttributesAs(env.Credentials(), diskDevice(req), fid, change)
 	}
 
 	if err != nil {
@@ -464,6 +475,39 @@ func diskModify(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	return ioStatus{status: ssNormal}, 0
+}
+
+// modifyTarget is the file an IO$_MODIFY with no file accessed changes:
+// the one p2's name finds in the directory the FIB's FIB$W_DID names
+// (looked up as IO$_ACCESS looks it up, the directory's protection
+// checked, its file ID stored in the FIB), or else the FIB's FIB$W_FID.
+// The status is SS$_NORMAL, or why there's none.
+func (env *Environment) modifyTarget(req *ioRequest, f *fib) (rms.FileID, uint32) {
+	name, ok := env.diskFileName(req)
+	if !ok {
+		return rms.FileID{}, ssAccVio
+	}
+
+	if name != "" && f.did != (rms.FileID{}) {
+		fid, full, err := env.Mounts.ACPLookupAs(env.Credentials(), diskDevice(req), f.did, name)
+		if err != nil {
+			return rms.FileID{}, acpStatus(err)
+		}
+
+		env.storeFID(f, fibFID, fid)
+
+		if !env.storeResultName(req, full) {
+			return rms.FileID{}, ssAccVio
+		}
+
+		return fid, ssNormal
+	}
+
+	if f.fid == (rms.FileID{}) {
+		return rms.FileID{}, ssBadParam
+	}
+
+	return f.fid, ssNormal
 }
 
 // diskReadVirtual is IO$_READVBLK: p2 bytes (up to 65,535) from virtual
@@ -539,12 +583,17 @@ func (env *Environment) deaccessChannel(c *channel) {
 
 // fibAccessMode is the access FIB$L_ACCTL asks for: writing
 // (FIB$M_WRITE), and keeping others from reading (FIB$M_NOREAD) or
-// writing (FIB$M_NOWRITE) the file while it's accessed. An access that
-// conflicts with the file's other accessors' fails with SS$_ACCONFLICT.
-func fibAccessMode(acctl uint32) rms.ACPAccessMode {
+// writing (FIB$M_NOWRITE) the file while it's accessed, by the process
+// (its credentials, which the file's protection must give R, and W for
+// writing). An access that conflicts with the file's other accessors'
+// fails with SS$_ACCONFLICT.
+func (env *Environment) fibAccessMode(acctl uint32) rms.ACPAccessMode {
+	creds := env.Credentials()
+
 	return rms.ACPAccessMode{
-		Write:   acctl&fibMWrite != 0,
-		NoRead:  acctl&fibMNoRead != 0,
-		NoWrite: acctl&fibMNoWrite != 0,
+		Write:       acctl&fibMWrite != 0,
+		NoRead:      acctl&fibMNoRead != 0,
+		NoWrite:     acctl&fibMNoWrite != 0,
+		Credentials: &creds,
 	}
 }

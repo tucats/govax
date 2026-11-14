@@ -52,6 +52,10 @@ var (
 	// these apart if it cares to.
 	rmsCreated = vmsConst("RMS$_CREATED")
 
+	// rmsSupersede is RMS$_SUPERSEDE, another success: $CREATE with FOP
+	// SUP replaced an existing file of the same name and version.
+	rmsSupersede = vmsConst("RMS$_SUPERSEDE")
+
 	// rmsEOF is RMS$_EOF: SYS$GET returns this once a sequential file's
 	// records have all been read — the RMS equivalent of Go's io.EOF.
 	rmsEOF = vmsConst("RMS$_EOF")

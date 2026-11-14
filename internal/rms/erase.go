@@ -3,7 +3,8 @@ package rms
 import (
 	"errors"
 
-	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/govax/internal/security"
+
 	"github.com/tucats/ods2/volume"
 )
 
@@ -75,7 +76,7 @@ func SysErase(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if sts != 0 {
-		return fabStatus(ctx, fabAddr, sts, stvFor(sts))
+		return fabStatus(ctx, fabAddr, sts, ctx.failureSTV(sts))
 	}
 
 	ctx.countIO(1, 0)
@@ -110,14 +111,26 @@ func eraseOnVolume(ctx *Context, p parsedName) (foundFile, uint32, error) {
 		return found, rmsPrivilegeViolation, nil
 	}
 
-	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	// An erase changes the directory's entries (R and W, access.go), and
+	// needs D on the file.
+	creds := ctx.Identity()
+
+	dir, err := resolveChecked(creds, vol, spec.Dirs)
 	if err != nil {
-		return found, rmsDirNotFound, nil
+		return found, ctx.directoryStatus(err), nil
+	}
+
+	if !needLookup.allows(creds, vol, dir) {
+		return found, ctx.denied(), nil
 	}
 
 	entry, sts := lookupVersion(dir, specFileName(spec), spec.Version)
 	if sts != 0 {
 		return found, sts, nil
+	}
+
+	if !needChange.allows(creds, vol, dir) || !ctx.mayOpenFID(vol, entry.Fid, security.Delete) {
+		return found, ctx.denied(), nil
 	}
 
 	name, typ := splitEntryName(entry.Name)

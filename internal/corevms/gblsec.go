@@ -1141,7 +1141,7 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 		want |= accessWrite
 	}
 
-	if !env.Process.uicAccess(s.Owner, s.Protection, want) {
+	if !env.uicAccess("global section "+s.Name, s.Owner, s.Protection, want) {
 		_ = env.storeRetadr(a.retadr, nil)
 
 		return ssNoPriv

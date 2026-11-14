@@ -376,7 +376,7 @@ func (env *Environment) namedMailbox(table, name string) (*iodev.Device, bool) {
 func (env *Environment) mailboxAccess(d *iodev.Device, want uint32) bool {
 	m, ok := env.Mailboxes.For(d)
 
-	return !ok || env.Process.uicAccess(d.OwnUIC, uint16(m.Protection), want)
+	return !ok || env.uicAccess(d.Name, d.OwnUIC, uint16(m.Protection), want)
 }
 
 // mayAssign reports whether env's process may assign a channel to d: for

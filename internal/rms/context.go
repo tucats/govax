@@ -28,6 +28,10 @@ type Context struct {
 	// has no STV (stvFor).
 	lockedByOpener bool
 
+	// noPrivilege says an RMS$_PRV was the process's credentials refusing
+	// an access (access.go's denied), whose STV is SS$_NOPRIV.
+	noPrivilege bool
+
 	// Mem/CPU are how a handler reads and writes VAX memory directly —
 	// FAB/RAB fields, file-specification strings, and record buffers all
 	// live in emulated VAX memory, addressed exactly the same way every
@@ -211,12 +215,16 @@ func (ctx *Context) loadBytes(addr uint32, n int) ([]byte, error) {
 }
 
 // Identity returns the credentials of the process making the call: the
-// Credentials function's, or SYSTEM's when there is none. Each access
-// asks again; nothing keeps a decision.
+// Credentials function's, else the Session's (a DCL utility's call of a
+// service's code, Session.Rename's), else SYSTEM's. Each access asks
+// again; nothing keeps a decision.
 func (c *Context) Identity() security.Credentials {
-	if c.Credentials == nil {
-		return security.SystemCredentials()
+	switch {
+	case c.Credentials != nil:
+		return c.Credentials()
+	case c.Session != nil:
+		return c.Session.Identity()
 	}
 
-	return c.Credentials()
+	return security.SystemCredentials()
 }

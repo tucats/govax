@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -81,6 +82,14 @@ var (
 // volume mounted on device, returning its file ID and its full name with
 // version.
 func (t *MountTable) ACPLookup(device string, did FileID, name string) (FileID, string, error) {
+	return t.ACPLookupAs(security.SystemCredentials(), device, did, name)
+}
+
+// ACPLookupAs is ACPLookup for the process with credentials creds, which
+// the directory must let look a name up (R or E, access.go):
+// ErrNoPrivilege otherwise. VMS 7.1's ACP refused a lookup in a directory
+// giving W alone or nothing (the probe's [.DN] and [.DWO]).
+func (t *MountTable) ACPLookupAs(creds security.Credentials, device string, did FileID, name string) (FileID, string, error) {
 	vol, ok := t.Lookup(device)
 	if !ok {
 		return FileID{}, "", ErrACPNotMounted
@@ -96,6 +105,10 @@ func (t *MountTable) ACPLookup(device string, did FileID, name string) (FileID, 
 		// The ID is stale or unknown, or names a file that isn't a
 		// directory: either way, not a directory to look in.
 		return FileID{}, "", ErrACPBadDirectory
+	}
+
+	if !needLookup.allows(creds, vol, dir) {
+		return FileID{}, "", ErrNoPrivilege
 	}
 
 	entry, err := dir.Lookup(base, version)
@@ -170,6 +183,11 @@ type ACPFile struct {
 	// a file opened by RMS for the user (FAB$V_UFO, ufo.go): the access
 	// keeps the open's sharing until it ends. nil for IO$_ACCESS.
 	claim *openerClaim
+
+	// creds are the credentials of the process that accessed the file,
+	// which a change of its protection or owner is checked against
+	// (acpattr.go); nil for SYSTEM's.
+	creds *security.Credentials
 }
 
 // ACPAccessMode is how an IO$_ACCESS uses the file: FIB$L_ACCTL's
@@ -177,6 +195,11 @@ type ACPFile struct {
 // FIB$M_NOWRITE (no one else may write it).
 type ACPAccessMode struct {
 	Write, NoRead, NoWrite bool
+
+	// Credentials, if not nil, are the accessing process's, which the
+	// file's protection must give R, and W too for Write (access.go):
+	// ErrNoPrivilege otherwise. nil accesses as SYSTEM.
+	Credentials *security.Credentials
 }
 
 // ACPAccess opens the file with ID fid on the volume mounted on device,
@@ -208,6 +231,17 @@ func (t *MountTable) ACPAccessWith(device string, fid FileID, mode ACPAccessMode
 		return nil, ErrACPWriteLocked
 	}
 
+	if mode.Credentials != nil {
+		want := security.Read
+		if mode.Write {
+			want |= security.Write
+		}
+
+		if f, err := vol.OpenFID(fid.toOds2()); err == nil && !may(*mode.Credentials, vol, &f.Header, want) {
+			return nil, ErrNoPrivilege
+		}
+	}
+
 	a, err := vol.Access(fid.toOds2(), volume.AccessMode{Write: mode.Write, NoRead: mode.NoRead, NoWrite: mode.NoWrite})
 	if errors.Is(err, volume.ErrAccessConflict) {
 		return nil, ErrACPAccessConflict
@@ -219,7 +253,7 @@ func (t *MountTable) ACPAccessWith(device string, fid FileID, mode ACPAccessMode
 
 	f := a.File
 
-	return &ACPFile{file: f, fid: fid, writable: mode.Write, access: a, usedAtAccess: f.UsedBlocks(), mount: m}, nil
+	return &ACPFile{file: f, fid: fid, writable: mode.Write, access: a, usedAtAccess: f.UsedBlocks(), mount: m, creds: mode.Credentials}, nil
 }
 
 // FileID is the accessed file's ID.

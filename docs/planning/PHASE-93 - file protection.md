@@ -3,8 +3,9 @@
 **Status:** planned 2026-11-14; the plan accepted by the author the same
 day, with the answers in "The review". Subtasks 1 (the survey, Part A),
 2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), 5
-(identity and defaults), 6 (the grammar types), and 7 (new files'
-profiles) are done.
+(identity and defaults), 6 (the grammar types), 7 (new files'
+profiles), and 8 (checking RMS's services and the ACP, with SET DEBUG
+PROTECTION) are done.
 
 ## Goal
 
@@ -994,10 +995,15 @@ Each is one commit, with tests, stopping for review.
 7. **New files' profiles** (done 2026-11-14): `newFileProfile` (Decision 4) and every
    creator on it, ACLs inherited, XABPRO applied and written back, the home
    block's default no longer used; CREATE/DIRECTORY's owner per A.4.
-8. **Checking RMS's services and the ACP**: the checked layer (Decision 6)
-   under `$OPEN`, `$CREATE`, `$ERASE`, `$RENAME`, `$SEARCH`, `$PARSE`,
-   `$DISPLAY`, and IO$_ACCESS, CREATE, DELETE, and MODIFY; the image
-   activator; held to the probe's program runs under each identity.
+8. **Checking RMS's services and the ACP** (done 2026-11-14): the checked
+   layer (Decision 6) under `$OPEN`, `$CREATE`, `$ERASE`, `$RENAME`,
+   `$SEARCH`, `$PARSE`, `$DISPLAY`, and IO$_ACCESS, CREATE, DELETE, and
+   MODIFY; the image activator; held to the probe's program runs under
+   each identity. With it, at the author's request (2026-11-14), a SET
+   DEBUG class, PROTECTION, tracing every access check and its outcome
+   (small enough to go with this subtask rather than one of its own; the
+   DCL utilities' checks trace through it once subtask 9 moves them onto
+   the layer).
 9. **Checking the DCL utilities**: every `OpenFID` and directory site in
    A.2 moved onto the layer, `TestNoUncheckedAccess`, and each utility's
    messages held to the probe's DCL logs, SYSTEM's and the accounts'.
@@ -1399,3 +1405,68 @@ The author accepted the plan and answered its questions:
   directories keep their UIC as VMS 7.3's probe had it, where 7.1's
   CREATE/DIRECTORY gives none (A.4, answer 7). Subtask 8, checking RMS's
   services and the ACP, is next.
+- **2026-11-14** Subtask 8 done. `rms/access.go` is the checked layer:
+  `headerProfile` (a header's owner, code, and ACL, and its name for
+  tracing), `may`/`mayEither` over `security.Check`, `dirNeed` (a lookup
+  R or E, a listing R, a change R and W), `fileAccess` (R, and W for any
+  write FAC), `resolveChecked` (ods2's `ResolveDirectory` with a lookup
+  check before each level: the MFD and every level but the last; no
+  directory cache, as Decision 5 says), `directoryFor`, `newVersionAllowed`
+  (W on the highest version, D on each version the limit would take, the
+  limit the name's directory record's, as VMS keeps it), and
+  `supersedeTarget`; a refusal is `RMS$_PRV` with an STV of `SS$_NOPRIV`
+  through `Context.denied` and `failureSTV` (a write to a read-only volume
+  keeps its PRV with no STV). On it: `$OPEN` (by name, by DID, by FID:
+  `openFID` checks the file), `$CREATE` (the directory's R and W, CIF's
+  open a lookup; FOP SUP, which RMS hadn't had, now supersedes, needing W
+  and D, returning `RMS$_SUPERSEDE`, the new file's profile from the old;
+  a new version's rules), `$ERASE` (R and W on the directory, D on the
+  file), `$RENAME` (`RMS$_RMV` or `RMS$_ENT` with `SS$_NOPRIV`, the old
+  NAM told the file's name, as VMS's was), `$PARSE` (the levels above the
+  last), `$SEARCH` (R for a wildcard name, type, or version, R or E for a
+  name; the walk follows only the levels the process may look in or
+  list; a refused directory of a context's search is PRV and the next call
+  goes on), and `$DISPLAY` (a XABPRO's ACL buffer now filled, whole ACEs,
+  `XAB$W_ACLLEN`, `SS$_ACLEMPTY` for none). `Context.Identity` falls back
+  to the Session's credentials, so DCL's RENAME acts as its process. The
+  ACP: `ACPLookupAs`, `ACPReadAttributesAs` (R or C), `ACPWriteAttributesAs`
+  and `ACPFile.WriteAttributes` (`attributeChangeAllowed`: a new protection
+  or owner needs control and an owner the owner rule, other attributes
+  write), `ACPAccessMode.Credentials`, `ACPEnterAs`, `ACPDeleteRequest.
+  Credentials`, and `ACPCreate`'s directory, supersede, new version, and
+  attribute list (an ATR$C_UIC the creator may not give undoes the
+  create); corevms's disk driver passes each process's credentials, reads
+  ATR$C_ACLLENGTH, and does IO$_MODIFY by name (`modifyTarget`), both of
+  which the probe found missing. The image activator: `Session.AccessImage`
+  (paging on) and the new `ReadImageFile` (paging off) check a lookup in
+  each directory and R or E on the image (`imageAllowed`), and DCL's
+  `activationFailure` shows VMS's ACTIMAGE, IMGNAME, and `-RMS-E-PRV`,
+  `$STATUS` `%X1001829A`. A probe finding outside protection fixed too: an
+  open by FID keeps the expanded string's length a `$PARSE` left (VMS
+  7.1's I cases). SET DEBUG PROTECTION (the author's request):
+  `security.Credentials.Trace`, called by `security.Check` with a line per
+  check (who, what, the object's name, owner, code, and ACL count, granted
+  or denied, and by what); corevms's `Environment.Credentials` sets it
+  while `registers.DebugProtection` is on, so RMS, the ACP, the sessions
+  of DCL's utilities, and corevms's own checks (mailboxes and global
+  sections, `uicAccess` now on the Environment with the object's name)
+  all trace, `DEBUG(PROTECTION): ...`; RMS's BYPASS shortcut (`unchecked`)
+  is skipped while tracing so SYSTEM's checks show; `vax.debug.protection`,
+  HELP SET DEBUG, SHOW DEBUG, MANUAL.md's keys. Tests: `rms`'s
+  `access_test.go` (Decision 5's table on fresh volumes: directory access,
+  path levels, file access, new versions past a limit, supersede, rename,
+  the ACP, the trace), and the console's `TestProt93ProgramOracle`, which
+  runs VMS's own PROT93.EXE on a copy of the VMS-written exchange volume
+  (local only) as each identity of every run in both rounds and matches
+  3,825 case reports to VMS's; the cases that change the volume or name a pass's
+  own files are compared only where VMS refused them (the volume is as the
+  run left it), and the expected differences are three kinds, each
+  explained (`prot93Differences`: L_@.DAT's ;1 since removed; FACLCTL
+  changed between round 1 and the end; B3's and C3's PX1 and PX2, which
+  VMS's directory cache let through). `TestProt93ActivationOracle` holds
+  RUN's refusal to round 1's (on that round's volume, both paging modes).
+  Found and left: ods2 enforces a version limit from the header's
+  `VersionLimit`, which a VMS volume's headers don't have (VMS keeps it in
+  the directory record), so a new version on a VMS-made volume never purges
+  the oldest past the limit; govax's own volumes have both. Subtask 9,
+  checking the DCL utilities, is next.

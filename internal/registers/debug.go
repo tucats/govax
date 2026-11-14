@@ -35,6 +35,7 @@ const (
 	DebugProcess    DebugFlags = 0x00100000 // DBG_PROCESS
 	DebugFullDisasm DebugFlags = 0x00200000 // DBG_FULLDISASM
 	DebugRMS        DebugFlags = 0x00400000 // DBG_RMS
+	DebugProtection DebugFlags = 0x00800000 // access checks (Phase 93), govax's own
 	DebugP1         DebugFlags = 0x01000000 // DBG_P1 (no consumer, settable only)
 	DebugP2         DebugFlags = 0x02000000 // DBG_P2 (no consumer, settable only)
 	DebugP3         DebugFlags = 0x04000000 // DBG_P3 (no consumer, settable only)

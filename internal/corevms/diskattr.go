@@ -135,6 +135,10 @@ var diskAttributes = map[uint32]diskAttribute{
 		get: func(a *rms.ACPAttributes) []byte { return longBytes(a.HighWater) },
 		max: int(atrCode("ATR$S_HIGHWATER")),
 	},
+	atrCode("ATR$C_ACLLENGTH"): {
+		get: func(a *rms.ACPAttributes) []byte { return longBytes(a.ACLLength) },
+		max: int(atrCode("ATR$S_ACLLENGTH")),
+	},
 }
 
 // ssBadAttrib is SS$_BADATTRIB: an attribute list entry govax can't do.

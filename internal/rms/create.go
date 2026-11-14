@@ -3,7 +3,6 @@ package rms
 import (
 	"errors"
 
-	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -139,9 +138,10 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	var (
-		ifi     uint16
-		created bool
-		device  string
+		ifi        uint16
+		created    bool
+		superseded bool
+		device     string
 	)
 
 	devIFI, isDevice, devStatus, devSTV, err := ctx.openRecordDevice(fabAddr, p.Lookup, fac)
@@ -177,7 +177,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 
 		if failStatus != 0 {
 			if failSTV == 0 {
-				failSTV = stvFor(failStatus)
+				failSTV = ctx.failureSTV(failStatus)
 			}
 
 			return fabStatus(ctx, fabAddr, failStatus, failSTV)
@@ -276,6 +276,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 
 		ifi = newIFI
 		created = !opened
+		superseded = found.Superseded
 		device = found.Device
 	}
 
@@ -286,7 +287,11 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	// RMS$_CREATED says FAB$V_CIF made a new file; an ordinary create
 	// is RMS$_NORMAL (the oracle's CREATE case 1).
 	status := uint32(rmsNormal)
-	if created && fop&fopCIF != 0 {
+
+	switch {
+	case superseded:
+		status = rmsSupersede
+	case created && fop&fopCIF != 0:
 		status = rmsCreated
 	}
 
@@ -420,9 +425,11 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	// A name with neither a name nor a type is made as ".;1": VMS 7.1's
 	// CREATE/FDL with no file named and no FILE NAME made DUA1:[R3].;1
 	// (testdata/idx88's round 3, C2.C).
-	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	creds := who.creds
+
+	dir, err := resolveChecked(creds, vol, spec.Dirs)
 	if err != nil {
-		return 0, found, false, nil, rmsDirNotFound, 0, nil
+		return 0, found, false, nil, ctx.directoryStatus(err), 0, nil
 	}
 
 	name := specFileName(spec)
@@ -432,8 +439,9 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, nil, rmsInvalidVersion, 0, nil
 	}
 
-	// FAB$V_CIF: a file that's already there is opened instead.
-	if cif {
+	// FAB$V_CIF: a file that's already there is opened instead, which
+	// needs only a lookup in the directory.
+	if cif && needLookup.allows(creds, vol, dir) {
 		if entry, sts := lookupVersion(dir, name, spec.Version); sts == 0 {
 			ifi, sts, err := openFID(ctx, fac, shr, spec.Device, vol, entry.Fid)
 			if err != nil || sts != 0 {
@@ -458,6 +466,22 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	fopIn, err := ctx.loadLongword(fabAddr + fabFOP)
 	if err != nil {
 		return 0, found, false, nil, 0, 0, err
+	}
+
+	// Anything else makes an entry in the directory, and a new version
+	// asks more of the versions already there (newVersionAllowed); FOP
+	// SUP replaces the version named, if it's there (supersede).
+	if !needChange.allows(creds, vol, dir) {
+		return 0, found, false, nil, ctx.denied(), 0, nil
+	}
+
+	replaced, sts := ctx.supersedeTarget(creds, vol, dir, name, version, fopIn)
+	if sts != 0 {
+		return 0, found, false, nil, sts, 0, nil
+	}
+
+	if replaced == nil && !newVersionAllowed(creds, vol, dir, name) {
+		return 0, found, false, nil, ctx.denied(), 0, nil
 	}
 
 	if version == 0 || fopIn&fopMXV != 0 {
@@ -509,6 +533,14 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, nil, rmsPrivilegeViolation, ssNoPriv, nil
 	}
 
+	// The file superseded goes once the new one's profile, which may come
+	// from it, has been chosen.
+	if replaced != nil {
+		if err := volume.DeleteFile(dir, replaced.Name, replaced.Version, bm, ib); err != nil {
+			return 0, found, false, nil, rmsDeviceError, 0, nil
+		}
+	}
+
 	f, err := vol.CreateFileVersionWith(dir, name, version, recAttr, profile, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
 		return 0, found, false, nil, rmsFileExists, 0, nil
@@ -546,6 +578,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		FID: f.Header.Fid, DID: dir.Header.Fid,
 	}
 	found.HighVer, found.LowVer = versionsAround(dir, name, version)
+	found.Superseded = replaced != nil
 
 	// FAB$V_TMP and FAB$V_TMD: the file has no directory entry, and its name
 	// no version (fop.go).

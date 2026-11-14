@@ -1,8 +1,10 @@
 package corevms
 
 import (
+	"fmt"
 	"slices"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/security"
 )
 
@@ -49,14 +51,25 @@ func (p *Process) Credentials() security.Credentials {
 }
 
 // Credentials are the credentials of env's process, for RMS and the DCL
-// utilities (rms.Context.Credentials, rms.Session.Credentials).
-func (env *Environment) Credentials() security.Credentials { return env.Process.Credentials() }
+// utilities (rms.Context.Credentials, rms.Session.Credentials). While SET
+// DEBUG PROTECTION is on they trace each check made with them to the
+// debug output, a "DEBUG(PROTECTION):" line each (security.Check).
+func (env *Environment) Credentials() security.Credentials {
+	creds := env.Process.Credentials()
 
-// uicAccess reports whether process p may have every access in want
-// (accessRead, accessWrite, ...) to an object owned by owner (a UIC)
-// with protection mask mask.
-func (p *Process) uicAccess(owner uint32, mask uint16, want uint32) bool {
-	profile := security.Profile{Owner: security.UIC(owner), Protection: security.Protection(mask)}
+	if env.System != nil && env.cpu != nil && env.cpu.DebugEnabled(registers.DebugProtection) {
+		w := env.cpu.DebugWriter()
+		creds.Trace = func(line string) { fmt.Fprintf(w, "DEBUG(PROTECTION): %s\n", line) }
+	}
 
-	return security.Check(p.Credentials(), profile, security.Access(want)).Granted
+	return creds
+}
+
+// uicAccess reports whether env's process may have every access in want
+// (accessRead, accessWrite, ...) to the object called name, owned by
+// owner (a UIC) with protection mask mask.
+func (env *Environment) uicAccess(name string, owner uint32, mask uint16, want uint32) bool {
+	profile := security.Profile{Owner: security.UIC(owner), Protection: security.Protection(mask), Name: name}
+
+	return security.Check(env.Credentials(), profile, security.Access(want)).Granted
 }

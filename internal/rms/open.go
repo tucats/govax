@@ -3,7 +3,6 @@ package rms
 import (
 	"strconv"
 
-	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -191,12 +190,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if failStatus != 0 {
-		stv := stvFor(failStatus)
-		if ctx.lockedByOpener {
-			stv, ctx.lockedByOpener = 0, false
-		}
-
-		return fabStatus(ctx, fabAddr, failStatus, stv)
+		return fabStatus(ctx, fabAddr, failStatus, ctx.failureSTV(failStatus))
 	}
 
 	if ok {
@@ -255,9 +249,9 @@ func openOnVolume(ctx *Context, fac, shr byte, p parsedName) (ifi uint16, found 
 		return 0, found, rmsFileNotFound, nil
 	}
 
-	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	dir, err := directoryFor(ctx.Identity(), vol, spec.Dirs, needLookup)
 	if err != nil {
-		return 0, found, rmsDirNotFound, nil
+		return 0, found, ctx.directoryStatus(err), nil
 	}
 
 	entry, sts := lookupVersion(dir, specFileName(spec), spec.Version)
@@ -280,9 +274,11 @@ func openOnVolume(ctx *Context, fac, shr byte, p parsedName) (ifi uint16, found 
 }
 
 // openFID opens the file whose ID is fid on vol (mounted as device) for
-// access fac with sharing shr, and allocates its IFI. The file system
-// access (sharing.go) arms the file for writing when fac asks to write,
-// and fails with RMS$_FLK if another opener's access or sharing conflicts.
+// access fac with sharing shr, and allocates its IFI. The file's
+// protection must give the process the access fac asks for (access.go's
+// fileAccess: RMS$_PRV, SS$_NOPRIV). The file system access (sharing.go)
+// arms the file for writing when fac asks to write, and fails with
+// RMS$_FLK if another opener's access or sharing conflicts.
 func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid ondisk.Fid) (uint16, uint32, error) {
 	// Real RMS lets a program SYS$OPEN a file read-only even on a
 	// read-only-mounted device — only actually asking to write is a
@@ -291,6 +287,11 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 	wantsWrite := fac&facWrite != 0
 	if wantsWrite && !ctx.Mounts.Writable(device) {
 		return 0, rmsPrivilegeViolation, nil
+	}
+
+	// A file ID that names no file is RMS$_FNF below, from the access.
+	if !ctx.mayOpenFID(vol, fid, fileAccess(fac)) {
+		return 0, ctx.denied(), nil
 	}
 
 	mode := accessMode(fac, shr)

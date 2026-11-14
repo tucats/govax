@@ -721,8 +721,8 @@ file quota 40960.
 DEBUG` switch `NAME`: `vm`, `tb`, `symbols`, `exceptions`, `interrupts`,
 `chm`, `registers`, `fulldisasm`, `userhalt`, `keyboard`, `images`,
 `services`, `dcl`, `command`, `logicals`, `devices`, `process`,
-`libinit`, `rms`, or `userstep`. These trace govax's own workings, and
-are mainly for govax's developers.
+`libinit`, `rms`, `protection`, or `userstep`. These trace govax's own
+workings, and are mainly for govax's developers.
 
 ---
 

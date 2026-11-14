@@ -46,6 +46,10 @@ type foundFile struct {
 	// HighVer and LowVer are FNB's HIGHVER and LOWVER: higher and lower
 	// versions of the file exist ($CREATE only).
 	HighVer, LowVer bool
+
+	// Superseded says $CREATE's FOP SUP replaced a file of the same name
+	// and version (RMS$_SUPERSEDE).
+	Superseded bool
 }
 
 // resultant is f's resultant string's fields.

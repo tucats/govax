@@ -98,9 +98,10 @@ func (m *Machine) SetPSLField(field string, value uint32) error {
 	return nil
 }
 
-// debugFlagNames (the 25 names SET DEBUG accepts) — see docs/planning/PHASE-17.md.
+// debugFlagNames (the 26 names SET DEBUG accepts) — see docs/planning/PHASE-17.md.
 var debugFlagNames = map[string]registers.DebugFlags{
 	"RMS":        registers.DebugRMS,
+	"PROTECTION": registers.DebugProtection,
 	"FULLDISASM": registers.DebugFullDisasm,
 	"DEBUG":      registers.DebugNative,
 	"KEYBOARD":   registers.DebugKeyboard,

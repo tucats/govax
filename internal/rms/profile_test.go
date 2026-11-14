@@ -341,6 +341,9 @@ func TestSysCreateXABPRO(t *testing.T) {
 	f := newCreateFixture(t, true)
 	vol, _ := f.ctx.Mounts.Lookup("DUA0")
 
+	// The accounts may make files in the MFD (subtask 8's checks).
+	changeHeader(t, vol, nil, "", func(h *ondisk.FileHeader) { h.FileProtection = 0 })
+
 	if r0 := create(t, f, account(uicC, 0), "DUA0:REFUSED.DAT", other); r0 != rmsPrivilegeViolation {
 		t.Errorf("another's owner without privilege: %#x, want RMS$_PRV", r0)
 	}

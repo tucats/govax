@@ -25,6 +25,12 @@ type Credentials struct {
 	// a previous version nor its directory gives one. A zero code gives
 	// everyone every access, as it would on VMS.
 	DefaultProtection Protection
+
+	// Trace, if not nil, is told of every access check made with these
+	// credentials: a line saying who asked for what of which object, and
+	// whether it was granted and by what (Check). It is SET DEBUG
+	// PROTECTION's, which corevms fills in while the class is on.
+	Trace func(line string)
 }
 
 // Identifier is a rights identifier a process holds, with the attributes

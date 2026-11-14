@@ -158,6 +158,19 @@ func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, F
 // way. It returns the location of the file actually read, as
 // ReadRecordFile does.
 func (s *Session) ReadRawFile(loc FileLocation) ([]byte, FileLocation, error) {
+	return s.readRaw(loc, nil)
+}
+
+// ReadImageFile is ReadRawFile for the image activator with paging off:
+// the image's directories must let the process look it up, and the file
+// give it R or E (imageAllowed), as AccessImage checks with paging on.
+func (s *Session) ReadImageFile(loc FileLocation) ([]byte, FileLocation, error) {
+	return s.readRaw(loc, s.imageAllowed)
+}
+
+// readRaw is ReadRawFile, with allowed, if not nil, asked of the volume
+// file found before it's read.
+func (s *Session) readRaw(loc FileLocation, allowed func(*volume.Volume, filespec.Match, *ondisk.FileHeader) error) ([]byte, FileLocation, error) {
 	if loc.Host {
 		data, err := s.readHostFile(loc.Name)
 
@@ -186,6 +199,12 @@ func (s *Session) ReadRawFile(loc FileLocation) ([]byte, FileLocation, error) {
 		f, err := vol.OpenFID(matches[0].Fid)
 		if err != nil {
 			return err
+		}
+
+		if allowed != nil {
+			if err := allowed(vol, matches[0], &f.Header); err != nil {
+				return err
+			}
 		}
 
 		if err := copyRawTo(&buf, f); err != nil {
@@ -726,7 +745,7 @@ func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, rec
 	}
 
 	var version uint16
-	
+
 	if spec.Version != "" {
 		v, ok := parseOpenVersion(spec.Version)
 		if !ok || v > 32767 {

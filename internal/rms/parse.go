@@ -1,7 +1,8 @@
 package rms
 
 import (
-	"github.com/tucats/ods2/filespec"
+	"errors"
+
 	"github.com/tucats/ods2/ondisk"
 )
 
@@ -192,14 +193,21 @@ func (ctx *Context) checkParsed(p parsedName) (did ondisk.Fid, sts, stv uint32) 
 	}
 
 	if p.FNB&fnbWildDir != 0 {
-		if dirs := searchDirs(vol, p); len(dirs) > 0 {
+		if dirs := searchDirs(ctx.Identity(), vol, p); len(dirs) > 0 {
 			did = dirs[0].Dir.Header.Fid
 		}
 
 		return did, 0, 0
 	}
 
-	dir, err := filespec.ResolveDirectory(vol, p.volumeDir().names())
+	// Each level above the directory is looked up, with a check (VMS 7.1
+	// refused $PARSE a path an upper level of which gave no access, and
+	// allowed one whose last level gave none: the probe's PX1 to PX3).
+	dir, err := resolveChecked(ctx.Identity(), vol, p.volumeDir().names())
+	if errors.Is(err, ErrNoPrivilege) {
+		return did, rmsPrivilegeViolation, ssNoPriv
+	}
+
 	if err != nil {
 		return did, rmsDirNotFound, ssNoSuchFile
 	}

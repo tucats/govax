@@ -42,7 +42,8 @@ func diskDelete(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		return ioStatus{}, ssAccVio
 	}
 
-	del := rms.ACPDeleteRequest{FID: f.fid, DeleteFile: req.modified(ioModDelete)}
+	creds := env.Credentials()
+	del := rms.ACPDeleteRequest{FID: f.fid, DeleteFile: req.modified(ioModDelete), Credentials: &creds}
 
 	switch {
 	case f.did != (rms.FileID{}) && name != "":

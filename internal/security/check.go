@@ -1,5 +1,10 @@
 package security
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Profile is an object's security profile: what an access check looks at.
 type Profile struct {
 	Owner      UIC
@@ -12,6 +17,10 @@ type Profile struct {
 	// volume's own protection is out of this phase's scope.
 	OnVolume    bool
 	VolumeOwner UIC
+
+	// Name names the object for SET DEBUG PROTECTION's lines (a file's
+	// "NAME.TYP;1"); it decides nothing.
+	Name string
 }
 
 // Source says what gave a process some of its access.
@@ -19,15 +28,15 @@ type Source uint
 
 // The sources, as Decision.Sources bits.
 const (
-	FromACE     Source = 1 << iota // an identifier ACE
-	FromSystem                     // the protection code's SYSTEM field
-	FromOwner                      // its OWNER field
-	FromGroup                      // its GROUP field
-	FromWorld                      // its WORLD field
-	FromUnowned                    // an object owned by [0,0] with no identifier ACEs
-	FromBYPASS                     // the BYPASS privilege
-	FromREADALL                    // the READALL privilege (Check's only)
-	FromOwnership                  // control: being the owner or a system user
+	FromACE       Source = 1 << iota // an identifier ACE
+	FromSystem                       // the protection code's SYSTEM field
+	FromOwner                        // its OWNER field
+	FromGroup                        // its GROUP field
+	FromWorld                        // its WORLD field
+	FromUnowned                      // an object owned by [0,0] with no identifier ACEs
+	FromBYPASS                       // the BYPASS privilege
+	FromREADALL                      // the READALL privilege (Check's only)
+	FromOwnership                    // control: being the owner or a system user
 )
 
 // Decision is the outcome of an access check.
@@ -65,7 +74,87 @@ func Check(c Credentials, p Profile, want Access) Decision {
 		d.Sources |= FromREADALL
 	}
 
+	if c.Trace != nil {
+		c.Trace(traceLine(c, p, want, d))
+	}
+
 	return d
+}
+
+// traceLine is SET DEBUG PROTECTION's line for a check: who, what it
+// asked for, the object (its name, owner, code, and how many ACEs), and
+// the outcome with what gave the access:
+//
+//	[200,2] wants RW of FR.DAT;1 owner [200,1] (S:RWED,O:RWED,G:R,W:R) ACL 0: denied, has R (group,world)
+func traceLine(c Credentials, p Profile, want Access, d Decision) string {
+	name := p.Name
+	if name == "" {
+		name = "object"
+	}
+
+	outcome := "denied"
+	if d.Granted {
+		outcome = "granted"
+	}
+
+	return fmt.Sprintf("%v wants %s of %s owner %v %s ACL %d: %s, has %s (%s)",
+		c.UIC, accessText(want), name, p.Owner, codeText(p.Protection), len(p.ACL), outcome, accessText(d.Access), sourceText(d))
+}
+
+// accessText is a's letters, or "none".
+func accessText(a Access) string {
+	if s := a.String(); s != "" {
+		return s
+	}
+
+	return "none"
+}
+
+// codeText is p as a protection code, "(S:RWED,O:RWED,G:RE,W)".
+func codeText(p Protection) string {
+	parts := make([]string, len(categoryNames))
+
+	for c, n := range categoryNames {
+		parts[c] = n[:1]
+		if letters := p.Allows(Category(c)).String(); letters != "" {
+			parts[c] += ":" + letters
+		}
+	}
+
+	return "(" + strings.Join(parts, ",") + ")"
+}
+
+// sourceText names what gave d's access, the matching ACE by its index.
+func sourceText(d Decision) string {
+	var names []string
+
+	for _, s := range []struct {
+		bit  Source
+		name string
+	}{
+		{FromACE, "ACE"}, {FromSystem, "system"}, {FromOwner, "owner"}, {FromGroup, "group"},
+		{FromWorld, "world"}, {FromUnowned, "[0,0]"}, {FromBYPASS, "BYPASS"},
+		{FromREADALL, "READALL"}, {FromOwnership, "ownership"},
+	} {
+		if d.Sources&s.bit != 0 {
+			name := s.name
+			if s.bit == FromACE {
+				name = fmt.Sprintf("ACE %d", d.ACE+1)
+			}
+
+			names = append(names, name)
+		}
+	}
+
+	if d.ACE >= 0 && d.Sources&FromACE == 0 {
+		names = append(names, fmt.Sprintf("ACE %d denies", d.ACE+1))
+	}
+
+	if len(names) == 0 {
+		return "nothing"
+	}
+
+	return strings.Join(names, ",")
 }
 
 // Evaluate finds every access the ACL, the protection code, ownership,

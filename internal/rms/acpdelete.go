@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -67,6 +68,12 @@ type ACPDeleteRequest struct {
 	// DeleteFile is IO$M_DELETE: delete the file too, not just the
 	// entry.
 	DeleteFile bool
+
+	// Credentials, if not nil, are the deleting process's (access.go):
+	// removing the entry needs R and W on the directory, deleting the
+	// file D on it, as VMS 7.1's ACP wanted (the probe's QD cases);
+	// ErrNoPrivilege otherwise. nil deletes as SYSTEM.
+	Credentials *security.Credentials
 }
 
 // ACPDeleted is ACPDelete's result.
@@ -112,6 +119,10 @@ func (t *MountTable) ACPDelete(device string, req ACPDeleteRequest) (ACPDeleted,
 			return result, ErrACPBadDirectory
 		}
 
+		if req.Credentials != nil && !needLookup.allows(*req.Credentials, vol, dir) {
+			return result, ErrNoPrivilege
+		}
+
 		found, err := dir.Lookup(base, version)
 
 		switch {
@@ -119,6 +130,10 @@ func (t *MountTable) ACPDelete(device string, req ACPDeleteRequest) (ACPDeleted,
 			return result, ErrACPNoSuchFile
 		case err != nil:
 			return result, err
+		}
+
+		if req.Credentials != nil && !needChange.allows(*req.Credentials, vol, dir) {
+			return result, ErrNoPrivilege
 		}
 
 		result.FID = fileIDFrom(found.Fid)
@@ -130,6 +145,12 @@ func (t *MountTable) ACPDelete(device string, req ACPDeleteRequest) (ACPDeleted,
 
 	if err := m.checkDeletable(result.FID, req.DeleteFile); err != nil {
 		return result, err
+	}
+
+	if req.DeleteFile && req.Credentials != nil {
+		if f, err := vol.OpenFID(result.FID.toOds2()); err == nil && !may(*req.Credentials, vol, &f.Header, security.Delete) {
+			return result, ErrNoPrivilege
+		}
 	}
 
 	bm, ib, err := deviceBitmaps(vol.Devices[0])

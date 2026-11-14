@@ -953,6 +953,9 @@ func (c *Interpreter) endCLIImage(cli *subprocessCLI) {
 // there.
 var rmsFNF = vmsdef.Symbols["RMS$_FNF"]
 
+// rmsPRV is RMS$_PRV: an image the process may not run.
+var rmsPRV = vmsdef.Symbols["RMS$_PRV"]
+
 // fixupFailed reports whether an activation failed fixing up an image
 // that loaded (vmserrors.CLI_FIXUP), rather than loading it.
 func fixupFailed(err error) bool {
@@ -1076,6 +1079,16 @@ func (c *Interpreter) activationFailure(env *corevms.Environment, image string, 
 	}
 
 	say("%%DCL-W-ACTIMAGE, error activating image %s", strings.ToUpper(image))
+
+	// An image the process's protection refuses: DCL names its file, and
+	// RMS's PRV (VMS 7.1: the probe's accounts running PROT93.EXE, round
+	// 1, and HELLON.EXE).
+	if errors.Is(err, rms.ErrNoPrivilege) {
+		say("-CLI-E-IMGNAME, image file %s", c.imageFileSpec(env, image))
+		say("-%s", strings.TrimPrefix(env.StatusText(rmsPRV), "%"))
+
+		return rmsPRV | stsInhibitMsg
+	}
 
 	status := corevms.StartupStatus(err)
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -133,6 +134,21 @@ func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error
 	}
 
 	done, sts, stv := renameSpecs(ctx, resolvedNames(oldNames), resolvedNames(newNames))
+
+	// A rename the protection refused found the old file: its NAM has
+	// the file's resultant name, the new one's none.
+	if sts != rmsNormal && stv == ssNoPriv && done.OldName != "" && oldNam != 0 {
+		name, typ := splitEntryName(done.OldName)
+		found := foundFile{
+			Parsed: oldNames[done.oldIndex], Device: done.oldDevice,
+			Name: name, Type: typ, Version: done.OldVersion, FID: done.Fid, DID: done.oldDID,
+		}
+
+		if s, err := ctx.fillNAM(oldFAB, oldNam, found, namOutputs{Resultant: true}); err != nil || s != 0 {
+			return s, 0, err
+		}
+	}
+
 	if sts != rmsNormal {
 		return sts, stv, nil
 	}
@@ -215,6 +231,10 @@ func renameText(ctx *Context, oldText, newText string) (r renameDone, sts, stv u
 func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r renameDone, sts, stv uint32) {
 	// Steps 2 and 3: the old name, and the old file.
 	oldSide, oldDir, oldVersion, sts := findRenameSource(ctx, oldSpecs)
+	if sts == rmsPrivilegeViolation {
+		return r, sts, ssNoPriv
+	}
+
 	if sts != 0 {
 		return r, sts, sts
 	}
@@ -240,7 +260,13 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r renameDone,
 	}
 
 	// Step 6: the new directory. (The loop check is volume.Rename's.)
-	newDir, err := filespec.ResolveDirectory(newSide.vol, newSide.spec.Dirs)
+	creds := ctx.Identity()
+
+	newDir, err := resolveChecked(creds, newSide.vol, newSide.spec.Dirs)
+	if errors.Is(err, ErrNoPrivilege) {
+		return r, rmsPrivilegeViolation, ssNoPriv
+	}
+
 	if err != nil {
 		return r, rmsDirNotFound, rmsDirNotFound
 	}
@@ -248,6 +274,27 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r renameDone,
 	// Step 7.
 	if !ctx.Mounts.Writable(oldSide.spec.Device) {
 		return r, rmsRemoveFailed, ssWriteLocked
+	}
+
+	// The protection (access.go): taking the old entry out needs R and W
+	// on its directory and D on the file, RMS$_RMV; making the new one R
+	// and W on its directory, RMS$_ENT; each with SS$_NOPRIV, as VMS 7.1
+	// refused them (the probe's A.4, answer 2). When both are refused,
+	// RMS$_RMV is the one reported (unconfirmed).
+	//
+	// The old file was found, so its NAM is told its name (VMS 7.1: the
+	// probe's RB to RE).
+	if entry, err := oldDir.Lookup(specFileName(oldSide.spec), oldVersion); err == nil {
+		r.OldName, r.OldVersion, r.Fid = entry.Name, entry.Version, entry.Fid
+		r.oldIndex, r.oldDevice, r.oldDID = oldSide.index, oldSide.spec.Device, oldDir.Header.Fid
+
+		if !needChange.allows(creds, oldSide.vol, oldDir) || !ctx.mayOpenFID(oldSide.vol, entry.Fid, security.Delete) {
+			return r, rmsRemoveFailed, ssNoPriv
+		}
+	}
+
+	if !needChange.allows(creds, newSide.vol, newDir) {
+		return r, rmsEnterFailed, ssNoPriv
 	}
 
 	bm, ib, err := deviceBitmaps(newDir.Device)
@@ -289,6 +336,7 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r renameDone,
 // §11.7), as SYS$OPEN does.
 func findRenameSource(ctx *Context, specs []resolvedSpec) (renameSide, *volume.Directory, uint16, uint32) {
 	sts := rmsFileNotFound
+	creds := ctx.Identity()
 
 	for i, r := range specs {
 		if sts = checkRenameSpec(r.Spec); sts != 0 {
@@ -307,7 +355,15 @@ func findRenameSource(ctx *Context, specs []resolvedSpec) (renameSide, *volume.D
 			continue
 		}
 
-		dir, err := filespec.ResolveDirectory(vol, r.Spec.Dirs)
+		dir, err := resolveChecked(creds, vol, r.Spec.Dirs)
+		if err == nil && !needLookup.allows(creds, vol, dir) {
+			err = ErrNoPrivilege
+		}
+
+		if errors.Is(err, ErrNoPrivilege) {
+			return renameSide{}, nil, 0, rmsPrivilegeViolation
+		}
+
 		if err != nil {
 			sts = rmsDirNotFound
 

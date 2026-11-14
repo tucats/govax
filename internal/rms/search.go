@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -173,12 +174,12 @@ func resumeAfter(entries []ondisk.DirEntry, last ondisk.DirEntry, p parsedName) 
 
 // openRoot opens the directory p's directory is relative to: its root, or
 // the volume's MFD. A root that names no directory (scanRoot) has none.
-func openRoot(vol *volume.Volume, p parsedName) (*volume.Directory, bool) {
+func openRoot(creds security.Credentials, vol *volume.Volume, p parsedName) (*volume.Directory, bool) {
 	if p.RootSpec.Relative {
 		return nil, false
 	}
 
-	dir, err := filespec.ResolveDirectory(vol, p.RootSpec.names())
+	dir, err := resolveChecked(creds, vol, p.RootSpec.names())
 
 	return dir, err == nil
 }
@@ -190,8 +191,14 @@ func openRoot(vol *volume.Volume, p parsedName) (*volume.Directory, bool) {
 // keeps that as its first level, as VMS shows it ([000000.SUB], VMS 7.1:
 // testdata/lnm91); the probe has no such search on a plain device, where
 // govax goes on showing [SUB] (unconfirmed).
-func searchDirs(vol *volume.Volume, p parsedName) []searchDir {
-	top, ok := openRoot(vol, p)
+//
+// The walk follows only the levels creds may: a level written out needs
+// a lookup in the directory above (R or E), a wildcard or an ellipsis a
+// listing (R); a directory that gives neither leads nowhere, and no
+// message is given for it (unconfirmed). The directories reached are the
+// caller's to check, by what the search does there (searchAccess).
+func searchDirs(creds security.Credentials, vol *volume.Volume, p parsedName) []searchDir {
+	top, ok := openRoot(creds, vol, p)
 	if !ok {
 		return nil
 	}
@@ -207,7 +214,7 @@ func searchDirs(vol *volume.Volume, p parsedName) []searchDir {
 		}
 	}
 
-	return walkSearch(vol, node, elems)
+	return walkSearch(creds, vol, node, elems)
 }
 
 // depth is how many levels below the MFD or root d is.
@@ -216,7 +223,7 @@ func (d *searchDir) depth() int {
 }
 
 // walkSearch returns the directories below node that elems lead to.
-func walkSearch(vol *volume.Volume, node searchDir, elems []string) []searchDir {
+func walkSearch(creds security.Credentials, vol *volume.Volume, node searchDir, elems []string) []searchDir {
 	if len(elems) == 0 {
 		return []searchDir{node}
 	}
@@ -227,17 +234,26 @@ func walkSearch(vol *volume.Volume, node searchDir, elems []string) []searchDir 
 
 	switch {
 	case e == ellipsis:
-		for _, below := range descendants(vol, node) {
-			out = append(out, walkSearch(vol, below, rest)...)
+		for _, below := range descendants(creds, vol, node) {
+			out = append(out, walkSearch(creds, vol, below, rest)...)
 		}
 
 	default:
 		wild := strings.ContainsAny(e, "*%")
 
+		need := needLookup
+		if wild {
+			need = needList
+		}
+
+		if !need.allows(creds, vol, node.Dir) {
+			return nil
+		}
+
 		for _, child := range subdirectories(vol, node) {
 			if wildMatch(e, child.Path[len(child.Path)-1]) {
 				child.Wild[len(child.Wild)-1] = wild
-				out = append(out, walkSearch(vol, child, rest)...)
+				out = append(out, walkSearch(creds, vol, child, rest)...)
 			}
 		}
 	}
@@ -249,16 +265,16 @@ func walkSearch(vol *volume.Volume, node searchDir, elems []string) []searchDir 
 // the levels below node marked as wild. An ellipsis goes no further than
 // maxDirDepth levels from the MFD or root, whatever the volume holds (VMS
 // 7.1: testdata/lnm91's round 2).
-func descendants(vol *volume.Volume, node searchDir) []searchDir {
+func descendants(creds security.Credentials, vol *volume.Volume, node searchDir) []searchDir {
 	out := []searchDir{node}
 
-	if node.depth() >= maxDirDepth {
+	if node.depth() >= maxDirDepth || !needList.allows(creds, vol, node.Dir) {
 		return out
 	}
 
 	for _, child := range subdirectories(vol, node) {
 		child.Wild[len(child.Wild)-1] = true
-		out = append(out, descendants(vol, child)...)
+		out = append(out, descendants(creds, vol, child)...)
 	}
 
 	return out
@@ -298,6 +314,19 @@ func subdirectories(vol *volume.Volume, node searchDir) []searchDir {
 	}
 
 	return out
+}
+
+// searchAccess is what a search of p needs of each directory it looks
+// in: a listing (R) when the name, type, or version has a wildcard, else
+// a lookup (R or E). VMS 7.1 refused a wildcard search of a directory
+// giving E alone, and allowed a search of a name in it (the probe's A.4,
+// "Directories").
+func searchAccess(p parsedName) dirNeed {
+	if p.FNB&(fnbWildName|fnbWildType|fnbWildVer) != 0 {
+		return needList
+	}
+
+	return needLookup
 }
 
 // wildMatch reports whether s matches pattern, where "*" matches any run
@@ -480,7 +509,7 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 	var dir *volume.Directory
 
 	if did.IsZero() {
-		dirs := searchDirs(vol, p)
+		dirs := searchDirs(ctx.Identity(), vol, p)
 		if len(dirs) > 0 {
 			dir = dirs[0].Dir
 		}
@@ -496,6 +525,14 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 		}
 
 		return rmsDirNotFound, ssNoSuchFile, nil
+	}
+
+	if !searchAccess(p).allows(ctx.Identity(), vol, dir) {
+		if err := ctx.storeResultant(nam, p.fileName); err != nil {
+			return 0, 0, err
+		}
+
+		return rmsPrivilegeViolation, ssNoPriv, nil
 	}
 
 	if wcc != wccDone {
@@ -605,7 +642,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 		if st.Dirs == nil {
 			vol, ok := ctx.Mounts.Lookup(p.Lookup)
 			if ok {
-				st.Dirs = searchDirs(vol, p)
+				st.Dirs = searchDirs(ctx.Identity(), vol, p)
 
 				// The directory above the wildcard isn't there: RMS$_DNF
 				// at once ("[NODIR...]", VMS 7.1: testdata/lib58).
@@ -638,6 +675,21 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 
 			if d.depth() >= maxDirDepth {
 				st.AtLimit = matchFNB(0, *d) &^ fnbDirLvlsMask
+			}
+
+			// A directory the search may not look in is RMS$_PRV, and the
+			// next call goes on with the next directory (unconfirmed: the
+			// probe searched no such tree).
+			if d.Vol != nil && !searchAccess(p).allows(ctx.Identity(), d.Vol, d.Dir) {
+				f := fileName{Dev: p.Dev, Dir: p.shownDir(d.Path), Name: p.Name, Type: p.Type, Ver: p.Ver}
+				st.HaveLast = false
+				ctx.nextDir(st, p)
+
+				if err := ctx.storeResultant(nam, f); err != nil {
+					return 0, 0, err
+				}
+
+				return rmsPrivilegeViolation, ssNoPriv, nil
 			}
 
 			// The directory as it is now: its header and map read
@@ -894,7 +946,7 @@ func (ctx *Context) nextDir(st *searchState, p parsedName) {
 	st.Dir++
 
 	if vol, ok := ctx.Mounts.Lookup(p.Lookup); ok {
-		fresh := searchDirs(vol, p)
+		fresh := searchDirs(ctx.Identity(), vol, p)
 
 		for i, d := range fresh {
 			if d.key() == cur {

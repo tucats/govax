@@ -14,8 +14,9 @@ import (
 // With neither, or no DVI, done is false and $OPEN goes by the file name
 // as usual.
 //
-// Opened by FID, the NAM keeps its FID and DVI and gets nothing else: its
-// DID is cleared. Opened by DID, it gets the resultant string, made of the
+// Opened by FID, the NAM keeps its FID and DVI, and the expanded string's
+// length a $PARSE left (VMS 7.1: testdata/prot93's I cases), and gets
+// nothing else: its DID is cleared. Opened by DID, it gets the resultant string, made of the
 // DVI and the expanded name's directory (not the directory's own path),
 // and no expanded string or FNB.
 func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSts, xabSTV uint32) (sts uint32, done bool, err error) {
@@ -46,8 +47,21 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 
 	byFID := !fid.IsZero()
 
+	// An open by file ID leaves the expanded string a $PARSE wrote (VMS
+	// 7.1: the probe's I cases, a $PARSE then a $OPEN by FID).
+	esl, err := ctx.loadByte(nam + namESL)
+	if err != nil {
+		return 0, true, err
+	}
+
 	if err := ctx.clearNAMOutputs(nam); err != nil {
 		return 0, true, err
+	}
+
+	if byFID {
+		if err := ctx.storeByte(nam+namESL, esl); err != nil {
+			return 0, true, err
+		}
 	}
 
 	if err := ctx.storeFid(nam+namFID, fid); err != nil {
@@ -65,7 +79,7 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 	}
 
 	fail := func(sts uint32) (uint32, bool, error) {
-		sts, err := fabStatus(ctx, fab, sts, stvFor(sts))
+		sts, err := fabStatus(ctx, fab, sts, ctx.failureSTV(sts))
 
 		return sts, true, err
 	}
@@ -116,6 +130,12 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 		dir, err := vol.OpenDirectory(did)
 		if err != nil {
 			return fail(rmsDirNotFound)
+		}
+
+		// A name looked up in a directory given by its ID: the directory
+		// must let the process look it up (access.go), the path to it not.
+		if !needLookup.allows(ctx.Identity(), vol, dir) {
+			return fail(ctx.denied())
 		}
 
 		spec := p.spec()

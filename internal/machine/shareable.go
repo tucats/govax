@@ -132,7 +132,7 @@ func (p *ImageProcess) readShareable(found rms.FoundImage) ([]byte, imageSpec, e
 		return data, hostImageSpec(loc.Name), err
 	}
 
-	data, located, err := p.session().ReadRawFile(loc)
+	data, located, err := p.session().ReadImageFile(loc)
 
 	return data, imageSpec{Name: located.Physical}, err
 }

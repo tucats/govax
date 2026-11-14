@@ -156,7 +156,7 @@ func (env *Environment) enterFile(req *ioRequest, f *fib, name string, change fu
 
 	dev := diskDevice(req)
 
-	full, err := env.Mounts.ACPEnter(dev, f.did, name, f.fid, f.nmctl&fibMNewVer != 0)
+	full, err := env.Mounts.ACPEnterAs(env.Credentials(), dev, f.did, name, f.fid, f.nmctl&fibMNewVer != 0)
 	if err != nil {
 		return ioStatus{status: acpStatus(err)}, 0
 	}
@@ -166,13 +166,13 @@ func (env *Environment) enterFile(req *ioRequest, f *fib, name string, change fu
 	}
 
 	if change != nil {
-		if err := env.Mounts.ACPWriteAttributes(dev, f.fid, change); err != nil {
+		if err := env.Mounts.ACPWriteAttributesAs(env.Credentials(), dev, f.fid, change); err != nil {
 			return ioStatus{status: acpStatus(err)}, 0
 		}
 	}
 
 	if access {
-		a, err := env.Mounts.ACPAccessWith(dev, f.fid, fibAccessMode(f.acctl))
+		a, err := env.Mounts.ACPAccessWith(dev, f.fid, env.fibAccessMode(f.acctl))
 		if err != nil {
 			return ioStatus{status: acpStatus(err)}, 0
 		}

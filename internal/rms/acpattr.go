@@ -3,6 +3,7 @@ package rms
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/vmstime"
 	"github.com/tucats/ods2/volume"
@@ -87,6 +88,11 @@ type ACPAttributes struct {
 	// HighWater is the high-water mark: the first virtual block never
 	// written (ATR$C_HIGHWATER).
 	HighWater uint32
+
+	// ACLLength is the length in bytes of the file's access control list
+	// (ATR$C_ACLLENGTH): 0 for none, 24 for two identifier ACEs (VMS
+	// 7.1: the probe's FACLTWO).
+	ACLLength uint32
 }
 
 // protectedCharacteristics are the characteristics bits only the ACP
@@ -102,6 +108,10 @@ func attributesOf(h ondisk.FileHeader) ACPAttributes {
 		Owner:           uint32(h.Owner.Group)<<16 | uint32(h.Owner.Member),
 		Backlink:        fileIDFrom(h.Backlink),
 		HighWater:       h.HighWaterMark,
+	}
+
+	if acl, err := h.ACL(); err == nil {
+		a.ACLLength = uint32(len(acl))
 	}
 
 	copy(a.RecordAttributes[:], ondisk.EncodeRecAttr(h.RecordAttributes))
@@ -146,6 +156,15 @@ func updateAttributes(f *volume.File, change func(*ACPAttributes)) error {
 // volume mounted on device, without accessing it (IO$_ACCESS without
 // IO$M_ACCESS: how DIRECTORY/FULL reads a file's details).
 func (t *MountTable) ACPReadAttributes(device string, fid FileID) (ACPAttributes, error) {
+	return t.ACPReadAttributesAs(security.SystemCredentials(), device, fid)
+}
+
+// ACPReadAttributesAs is ACPReadAttributes for the process with
+// credentials creds, which the file must give R or C (ErrNoPrivilege):
+// VMS 7.1's ACP refused the probe's accounts the attributes of files
+// giving them neither, and gave an owner those of a file giving it no
+// access, its control enough (the probe's A.4, "The check").
+func (t *MountTable) ACPReadAttributesAs(creds security.Credentials, device string, fid FileID) (ACPAttributes, error) {
 	vol, ok := t.Lookup(device)
 	if !ok {
 		return ACPAttributes{}, ErrACPNotMounted
@@ -156,6 +175,10 @@ func (t *MountTable) ACPReadAttributes(device string, fid FileID) (ACPAttributes
 		return ACPAttributes{}, ErrACPNoSuchFile
 	}
 
+	if !mayEither(creds, vol, &f.Header, security.Read, security.Control) {
+		return ACPAttributes{}, ErrNoPrivilege
+	}
+
 	return attributesOf(f.Header), nil
 }
 
@@ -163,6 +186,12 @@ func (t *MountTable) ACPReadAttributes(device string, fid FileID) (ACPAttributes
 // the volume mounted on device, without accessing it (IO$_MODIFY on a
 // channel with no file accessed). The volume must be mounted writable.
 func (t *MountTable) ACPWriteAttributes(device string, fid FileID, change func(*ACPAttributes)) error {
+	return t.ACPWriteAttributesAs(security.SystemCredentials(), device, fid, change)
+}
+
+// ACPWriteAttributesAs is ACPWriteAttributes for the process with
+// credentials creds, by attributeChangeAllowed's rules.
+func (t *MountTable) ACPWriteAttributesAs(creds security.Credentials, device string, fid FileID, change func(*ACPAttributes)) error {
 	vol, ok := t.Lookup(device)
 	if !ok {
 		return ErrACPNotMounted
@@ -177,7 +206,50 @@ func (t *MountTable) ACPWriteAttributes(device string, fid FileID, change func(*
 		return ErrACPNoSuchFile
 	}
 
+	if err := attributeChangeAllowed(creds, vol, f, change, false); err != nil {
+		return err
+	}
+
 	return updateAttributes(f, change)
+}
+
+// attributeChangeAllowed reports whether creds let a process make change
+// to the attributes of the file f on vol: ErrNoPrivilege if not. A new
+// protection or owner needs control of the file, and a new owner one the
+// process may give (security.CanChangeOwner); VMS 7.1's ACP refused both
+// to the probe's accounts without control (the probe's A.4, "Changing
+// profiles"). Any other attribute needs write access, which a file
+// accessed for writing (accessed) already has (unconfirmed: the probe
+// changed no other attribute of a file not accessed).
+func attributeChangeAllowed(creds security.Credentials, vol *volume.Volume, f *volume.File, change func(*ACPAttributes), accessed bool) error {
+	if unchecked(creds) {
+		return nil
+	}
+
+	before := attributesOf(f.Header)
+	after := before
+	change(&after)
+
+	profile := headerProfile(vol, &f.Header)
+
+	if after.Protection != before.Protection || after.Owner != before.Owner {
+		if !security.Check(creds, profile, security.Control).Granted {
+			return ErrNoPrivilege
+		}
+
+		if after.Owner != before.Owner && !security.CanChangeOwner(creds, profile, security.UIC(after.Owner)) {
+			return ErrNoPrivilege
+		}
+	}
+
+	others := after
+	others.Protection, others.Owner = before.Protection, before.Owner
+
+	if !accessed && others != before && !security.Check(creds, profile, security.Write).Granted {
+		return ErrNoPrivilege
+	}
+
+	return nil
 }
 
 // Attributes returns the accessed file's attributes.
@@ -190,6 +262,17 @@ func (a *ACPFile) Attributes() ACPAttributes {
 func (a *ACPFile) WriteAttributes(change func(*ACPAttributes)) error {
 	if !a.writable {
 		return ErrACPReadOnly
+	}
+
+	if a.creds != nil {
+		var vol *volume.Volume
+		if a.mount != nil {
+			vol = a.mount.Volume
+		}
+
+		if err := attributeChangeAllowed(*a.creds, vol, a.file, change, true); err != nil {
+			return err
+		}
 	}
 
 	return updateAttributes(a.file, change)

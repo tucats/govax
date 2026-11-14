@@ -70,6 +70,9 @@ var (
 	xabUIC    = vmsConst("XAB$L_UIC")
 	xabMTACC  = vmsConst("XAB$B_MTACC")
 	xabACLSTS = vmsConst("XAB$L_ACLSTS")
+	xabACLBUF = vmsConst("XAB$L_ACLBUF")
+	xabACLSIZ = vmsConst("XAB$W_ACLSIZ")
+	xabACLLEN = vmsConst("XAB$W_ACLLEN")
 
 	// XABALL.
 	xabALQ = vmsConst("XAB$L_ALQ")
@@ -258,6 +261,15 @@ func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File, mode xabMode) err
 			}
 
 			if mode != xabCreate {
+				sts, err := ctx.storeXABACL(a, &h)
+				if err != nil {
+					return err
+				}
+
+				if sts != 0 {
+					aclsts = sts
+				}
+
 				stores = append(stores,
 					func() error { return ctx.storeWord(a+xabPROw, h.FileProtection) },
 					func() error { return ctx.storeByte(a+xabMTACC, mtaccDefault) },
@@ -554,4 +566,41 @@ func applyCloseXABs(f *volume.File, in xabInputs, now vmstime.VMSTime) error {
 			}
 		}
 	})
+}
+
+// storeXABACL gives the XABPRO at a the file's access control list, from
+// its header h, when the XABPRO has a buffer for it (XAB$L_ACLBUF, of
+// XAB$W_ACLSIZ bytes): as many whole ACEs as fit, and the whole list's
+// length in XAB$W_ACLLEN. It returns the XAB$L_ACLSTS to report, SS$_NORMAL
+// or, for a file with no ACL, SS$_ACLEMPTY (VMS 7.1: the probe's A cases,
+// prot93e.dat's ACE dumps), or 0 when there's no buffer. ACEs that don't
+// fit are left out (unconfirmed: the probe's buffer held them all).
+func (ctx *Context) storeXABACL(a uint32, h *ondisk.FileHeader) (uint32, error) {
+	buf, err := ctx.loadLongword(a + xabACLBUF)
+	if err != nil || buf == 0 {
+		return 0, err
+	}
+
+	size, err := ctx.loadWord(a + xabACLSIZ)
+	if err != nil {
+		return 0, err
+	}
+
+	raw, _ := h.ACL()
+
+	if err := ctx.storeWord(a+xabACLLEN, uint16(len(raw))); err != nil {
+		return 0, err
+	}
+
+	if len(raw) == 0 {
+		return ssACLEmpty, nil
+	}
+
+	// Whole ACEs only: each starts with its length.
+	n := 0
+	for n < len(raw) && raw[n] != 0 && n+int(raw[n]) <= int(size) && n+int(raw[n]) <= len(raw) {
+		n += int(raw[n])
+	}
+
+	return ssNormal, ctx.storeBytes(buf, raw[:n])
 }

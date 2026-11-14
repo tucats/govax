@@ -47,13 +47,13 @@ func TestUICAccess(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		p := &Process{UIC: c.uic, CurrentPrivileges: c.privs}
-		if got := p.uicAccess(owner, mask, c.want); got != c.ok {
+		env := &Environment{Process: &Process{UIC: c.uic, CurrentPrivileges: c.privs}}
+		if got := env.uicAccess("MBA1:", owner, mask, c.want); got != c.ok {
 			t.Errorf("%s: %v, want %v", c.name, got, c.ok)
 		}
 	}
 
-	if !(&Process{UIC: uic(0o200, 1)}).uicAccess(owner, 0, accessRead|accessWrite|accessLogical|accessPhysical) {
+	if !(&Environment{Process: &Process{UIC: uic(0o200, 1)}}).uicAccess("MBA1:", owner, 0, accessRead|accessWrite|accessLogical|accessPhysical) {
 		t.Error("a mask of 0 denied something")
 	}
 }
