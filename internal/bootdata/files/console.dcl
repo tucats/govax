@@ -1467,6 +1467,9 @@ grammar console
         ! process's default file protection, and SET PROCESS/PRIVILEGES.
         keyword     protection          /syntax=set_protection/nonegatable/value
         keyword     process             /syntax=set_process/nonegatable
+        ! TERMINAL (docs/planning/PHASE-94 - privileges.md, subtask 6): a
+        ! terminal's characteristics, /PERMANENT with LOG_IO or PHY_IO.
+        keyword     terminal            /syntax=set_terminal/nonegatable
         ! SECURITY, FILE, and ACL (docs/planning/PHASE-93 - file
         ! protection.md, subtask 11): a file's owner, protection, and ACL,
         ! and VMS's obsolete forms of the same changes.
@@ -1589,6 +1592,58 @@ grammar console
     syntax set_process/id=2710
         qualifier   privileges/id=2711/nonegatable  -
                     /type=$any/list
+
+    ! SET TERMINAL [device]: the terminal's characteristics the qualifiers
+    ! name, the rest unchanged (internal/dclcmd/terminal.go); the device is
+    ! SYS$COMMAND's when none is given. /PERMANENT needs LOG_IO or PHY_IO.
+    ! Each characteristic's qualifier is a bit of the terminal's
+    ! characteristics (dclcmd.TerminalSwitches); UPPERCASE and HARDCOPY are
+    ! LOWERCASE's and SCOPE's opposites.
+    syntax set_terminal/id=2800
+        parameter   device/id=2801              -
+                    /type=$string
+        qualifier   width/id=2802/nonegatable   -
+                    /type=$integer
+        qualifier   page/id=2803/nonegatable    -
+                    /type=$integer
+        qualifier   device_type/id=2804/nonegatable -
+                    /type=$any
+        qualifier   permanent/id=2805
+        qualifier   advanced_video/id=2806
+        qualifier   altypeahd/id=2807
+        qualifier   ansi_crt/id=2808
+        qualifier   application_keypad/id=2809
+        qualifier   block_mode/id=2810
+        qualifier   brdcstmbx/id=2811
+        qualifier   broadcast/id=2812
+        qualifier   dec_crt/id=2813
+        qualifier   dec_crt2/id=2814
+        qualifier   disconnect/id=2815
+        qualifier   dma/id=2816
+        qualifier   echo/id=2817
+        qualifier   edit_mode/id=2818
+        qualifier   eight_bit/id=2819
+        qualifier   escape/id=2820
+        qualifier   form/id=2821
+        qualifier   hangup/id=2822
+        qualifier   hardcopy/id=2823/nonegatable
+        qualifier   hostsync/id=2824
+        qualifier   insert/id=2825
+        qualifier   line_editing/id=2826
+        qualifier   local_echo/id=2827
+        qualifier   lowercase/id=2828
+        qualifier   modem/id=2829
+        qualifier   pasthru/id=2830
+        qualifier   printer_port/id=2831
+        qualifier   readsync/id=2832
+        qualifier   regis/id=2833
+        qualifier   scope/id=2834
+        qualifier   sixel_graphics/id=2835
+        qualifier   tab/id=2836
+        qualifier   ttsync/id=2837
+        qualifier   type_ahead/id=2838
+        qualifier   uppercase/id=2839/nonegatable
+        qualifier   wrap/id=2840
 
     ! SET EDITOR [/COMMAND="host command"] [/SCRATCH="host directory"]: the
     ! editor EDIT runs, and where it works (internal/dclcmd/edit.go).

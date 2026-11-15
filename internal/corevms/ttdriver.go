@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 
+	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -488,11 +489,24 @@ func ttSenseMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 // returns them (12 bytes if p2 is at least 12, else 8). The device class
 // in byte 0 can't be changed and is ignored. p1 of 0 changes nothing.
 //
+// IO$_SETCHAR sets the terminal's permanent characteristics, which needs
+// LOG_IO or PHY_IO, from every access mode (the phase 94 probe's cases 278
+// to 283); IO$_SETMODE, the current ones, needs nothing. The privilege is
+// checked before the request is queued, so a refusal is $QIO's R0,
+// SS$_NOPRIV, with the IOSB untouched, as VMS 7.1 gave it. govax keeps one
+// set of characteristics, so both functions change the same ones.
+//
 // With a modifier, p1 means something else. IO$M_CTRLCAST and
 // IO$M_CTRLYAST enable a CTRL/C or CTRL/Y AST (ttAttentionAST); other
 // modifiers (IO$M_OUTBAND, IO$M_HANGUP, ...) succeed without doing
 // anything: see this file's opening comment.
 func ttSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
+	if req.function == ioSetChar {
+		if st := env.requirePrivilege(ruleTerminalSetChar); st != 0 {
+			return ioStatus{}, st
+		}
+	}
+
 	switch {
 	case req.modified(ioModCtrlCAST):
 		return env.ttAttentionAST(req, AttentionCtrlC)
@@ -519,20 +533,29 @@ func ttSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		return ioStatus{}, ssAccVio
 	}
 
+	setTerminalCharacteristics(req.channel.Device, data)
+
+	return ioStatus{status: ssNormal}, 0
+}
+
+// ioSetChar is IO$_SETCHAR's function code.
+var ioSetChar = ioCode("IO$_SETCHAR")
+
+// setTerminalCharacteristics stores data, a characteristics buffer in
+// IO$_SENSEMODE's layout of 8 or 12 bytes (this file's opening comment),
+// in the terminal's device record. Byte 0, the device class, is ignored.
+func setTerminalCharacteristics(d *iodev.Device, data []byte) {
 	long := func(i int) uint32 {
 		return uint32(data[i]) | uint32(data[i+1])<<8 | uint32(data[i+2])<<16 | uint32(data[i+3])<<24
 	}
 
-	d := req.channel.Device
 	d.DevType = uint32(data[1])
 	d.DevBufSize = uint32(data[2]) | uint32(data[3])<<8
 	d.DevDepend = long(4)
 
-	if size == 12 {
+	if len(data) >= 12 {
 		d.DevDepend2 = long(8)
 	}
-
-	return ioStatus{status: ssNormal}, 0
 }
 
 // ttAttentionAST is IO$_SETMODE with IO$M_CTRLCAST or IO$M_CTRLYAST:

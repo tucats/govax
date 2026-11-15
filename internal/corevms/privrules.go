@@ -171,8 +171,8 @@ var (
 	// Mailboxes.
 	ruleCrembxTemporary = newRule("$CREMBX temporary", "TMPMBX", "SSRM $CREMBX; probe 80, 81")
 	ruleCrembxPermanent = newRule("$CREMBX permanent", "PRMMBX", "SSRM $CREMBX; probe 83, 84")
-	ruleDelmbx         = newRule("$DELMBX", "PRMMBX", "SSRM $DELMBX; probe 88 to 91", exempt(exemptKernel))
-	ruleMailboxSetProt = newRule("mailbox IO$_SETPROTECTION, not the owner", "BYPASS SYSPRV",
+	ruleDelmbx          = newRule("$DELMBX", "PRMMBX", "SSRM $DELMBX; probe 88 to 91", exempt(exemptKernel))
+	ruleMailboxSetProt  = newRule("mailbox IO$_SETPROTECTION, not the owner", "BYPASS SYSPRV",
 		"probe 92 to 97", anyOf)
 
 	// Common event flag clusters.
@@ -232,8 +232,10 @@ var (
 	ruleSndoprOperator = newRule("$SNDOPR an operator's function", "OPER", "SSRM $SNDOPR; probe 247 to 252")
 	ruleBrkthruUser    = newRule("$BRKTHRU to another user", "OPER", "probe 257 to 260",
 		refusedWith("SS$_NOOPER"))
-	ruleBrkthruAll     = newRule("$BRKTHRU to every terminal or user", "OPER", "SSRM $BRKTHRU; probe 253 to 256, 261",
+	ruleBrkthruAll = newRule("$BRKTHRU to every terminal or user", "OPER", "SSRM $BRKTHRU; probe 253 to 256, 261",
 		refusedWith("SS$_NOOPER"))
+	ruleTerminalSetChar = newRule("terminal IO$_SETCHAR", "LOG_IO PHY_IO", "I/O User's Reference; probe 278 to 283",
+		anyOf)
 
 	// Disk I/O.
 	ruleDiskLogical  = newRule("disk logical block I/O", "LOG_IO PHY_IO", "I/O User's Reference; probe 271 to 273, 277", anyOf)
@@ -245,7 +247,7 @@ var (
 var serviceRules = func() map[string][]*PrivilegeRule {
 	lnmWrite := []*PrivilegeRule{ruleLnmSystemTable, ruleLnmGroupTable, ruleLnmInnerMode}
 	affects := []*PrivilegeRule{ruleProcessInGroup, ruleProcessOtherGroup}
-	qio := []*PrivilegeRule{ruleDiskLogical, ruleDiskPhysical, ruleMailboxSetProt}
+	qio := []*PrivilegeRule{ruleDiskLogical, ruleDiskPhysical, ruleMailboxSetProt, ruleTerminalSetChar}
 
 	m := map[string][]*PrivilegeRule{
 		"SYS$CRELNM": lnmWrite,

@@ -565,6 +565,299 @@
 
      Gives every .DAT file in the default directory to [200,1].
 
+2 TERMINAL
+
+   Changes a terminal's characteristics: those its qualifiers name, the
+   rest left as they are.  govax's terminal is its console, TTA0:, and
+   its characteristics are what programs read (IO$_SENSEMODE, F$GETDVI,
+   SHOW DEVICES/FULL); changing them changes nothing about the host's
+   terminal window.
+
+   Each characteristic's qualifier sets one bit of the terminal's
+   characteristics, the TT$M_ or TT2$M_ bit its description names, and
+   with NO clears it.
+
+   Format
+
+     SET TERMINAL [device-name[:]]
+
+3 Parameter
+
+   device-name[:]
+
+   The terminal.  The default is SYS$COMMAND's.  A device that isn't a
+   terminal is refused with %SET-W-NOTSET.
+
+3 Qualifiers
+/ADVANCED_VIDEO
+
+      /[NO]ADVANCED_VIDEO
+
+   The terminal has the advanced video option (TT2$M_AVO).
+
+/ALTYPEAHD
+
+      /[NO]ALTYPEAHD
+
+   The terminal's type-ahead buffer is the alternate, larger one
+   (TT2$M_ALTYPEAHD).
+
+/ANSI_CRT
+
+      /[NO]ANSI_CRT
+
+   The terminal follows the ANSI standard for video terminals
+   (TT2$M_ANSICRT).
+
+/APPLICATION_KEYPAD
+
+      /[NO]APPLICATION_KEYPAD
+
+   The keypad sends application sequences rather than digits
+   (TT2$M_APP_KEYPAD).
+
+/BLOCK_MODE
+
+      /[NO]BLOCK_MODE
+
+   The terminal can send a screen at a time (TT2$M_BLOCK).
+
+/BRDCSTMBX
+
+      /[NO]BRDCSTMBX
+
+   Broadcast messages also go to the terminal's associated mailbox
+   (TT2$M_BRDCSTMBX).
+
+/BROADCAST
+
+      /[NO]BROADCAST
+
+   The terminal takes broadcast messages ($BRKTHRU's); /NOBROADCAST sets
+   TT$M_NOBRDCST.
+
+/DEC_CRT
+
+      /[NO]DEC_CRT
+
+   The terminal is a DIGITAL video terminal (TT2$M_DECCRT).
+
+/DEC_CRT2
+
+      /[NO]DEC_CRT2
+
+   The terminal is a DIGITAL VT200-level terminal (TT2$M_DECCRT2).
+
+/DEVICE_TYPE
+
+      /DEVICE_TYPE=type
+
+   The terminal type, by its name in $TTDEF without TT$_: VT52, VT100,
+   VT200_SERIES, LA120, and the rest.  Only the type is set; the
+   characteristics that go with it on VMS are left as they are.
+
+/DISCONNECT
+
+      /[NO]DISCONNECT
+
+   A process stays when its line hangs up, for a later reconnection
+   (TT2$M_DISCONNECT).
+
+/DMA
+
+      /[NO]DMA
+
+   The terminal's controller transfers by DMA (TT2$M_DMA).
+
+/ECHO
+
+      /[NO]ECHO
+
+   The terminal driver echoes what is typed; /NOECHO sets TT$M_NOECHO.
+
+/EDIT_MODE
+
+      /[NO]EDIT_MODE
+
+   The terminal has the ANSI editing functions (TT2$M_EDIT).
+
+/EIGHT_BIT
+
+      /[NO]EIGHT_BIT
+
+   The terminal uses 8-bit characters (TT$M_EIGHTBIT).
+
+/ESCAPE
+
+      /[NO]ESCAPE
+
+   Escape sequences typed are validated as such (TT$M_ESCAPE).
+
+/FORM
+
+      /[NO]FORM
+
+   The terminal has mechanical form feeds (TT$M_MECHFORM).
+
+/HANGUP
+
+      /[NO]HANGUP
+
+   The line hangs up when its process logs out (TT2$M_HANGUP).
+
+/HARDCOPY
+
+      /HARDCOPY
+
+   The terminal is a printing one: the opposite of /SCOPE.  It takes no
+   NO.
+
+/HOSTSYNC
+
+      /[NO]HOSTSYNC
+
+   The system stops the terminal's input with XOFF when it can't keep up
+   (TT$M_HOSTSYNC).
+
+/INSERT
+
+      /[NO]INSERT
+
+   Line editing starts in insert mode (TT2$M_INSERT).
+
+/LINE_EDITING
+
+      /[NO]LINE_EDITING
+
+   The terminal driver's line editing is on (TT2$M_EDITING).
+
+/LOCAL_ECHO
+
+      /[NO]LOCAL_ECHO
+
+   The terminal echoes what is typed itself (TT2$M_LOCALECHO).
+
+/LOWERCASE
+
+      /[NO]LOWERCASE
+
+   The terminal has lowercase letters (TT$M_LOWER); /NOLOWERCASE is
+   /UPPERCASE.
+
+/MODEM
+
+      /[NO]MODEM
+
+   The terminal is on a modem line (TT$M_MODEM).
+
+/PAGE
+
+      /PAGE=n
+
+   The page length, from 0 to 255 lines.
+
+/PASTHRU
+
+      /[NO]PASTHRU
+
+   Everything typed is passed to the program unread, but XON and XOFF
+   (TT2$M_PASTHRU).
+
+/PERMANENT
+
+      /[NO]PERMANENT
+
+   Changes the terminal's permanent characteristics, those it has when a
+   process logs in on it, as well as its current ones.  This needs
+   LOG_IO or PHY_IO; without one, the command changes nothing and says
+
+     %SET-W-NOTSET, error modifying TTA0:
+     -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+
+   govax keeps one set of characteristics for a terminal, so the
+   permanent and current ones are the same.
+
+/PRINTER_PORT
+
+      /[NO]PRINTER_PORT
+
+   The terminal has a printer port (TT2$M_PRINTER).
+
+/READSYNC
+
+      /[NO]READSYNC
+
+   The system asks the terminal for input with XON and stops it with
+   XOFF (TT$M_READSYNC).
+
+/REGIS
+
+      /[NO]REGIS
+
+   The terminal understands ReGIS graphics (TT2$M_REGIS).
+
+/SCOPE
+
+      /[NO]SCOPE
+
+   The terminal is a video one (TT$M_SCOPE).
+
+/SIXEL_GRAPHICS
+
+      /[NO]SIXEL_GRAPHICS
+
+   The terminal understands sixel graphics (TT2$M_SIXEL).
+
+/TAB
+
+      /[NO]TAB
+
+   The terminal has mechanical tabs (TT$M_MECHTAB).
+
+/TTSYNC
+
+      /[NO]TTSYNC
+
+   The terminal stops output with XOFF and starts it with XON
+   (TT$M_TTSYNC).
+
+/TYPE_AHEAD
+
+      /[NO]TYPE_AHEAD
+
+   What is typed before a program reads is kept; /NOTYPE_AHEAD sets
+   TT$M_NOTYPEAHD.
+
+/UPPERCASE
+
+      /UPPERCASE
+
+   The terminal has no lowercase letters: the opposite of /LOWERCASE.
+   It takes no NO.
+
+/WIDTH
+
+      /WIDTH=n
+
+   The page width, from 1 to 511 columns.
+
+/WRAP
+
+      /[NO]WRAP
+
+   A line longer than the width goes on to the next line (TT$M_WRAP).
+
+3 Examples
+
+   1.$ SET TERMINAL/WIDTH=132/PAGE=48
+
+     A wide screen of 48 lines.
+
+   2.$ SET PROCESS/PRIVILEGES=LOG_IO
+     $ SET TERMINAL/PERMANENT/NOBROADCAST
+
+     Turns broadcast messages off for good, which needs LOG_IO.
+
 2 VERBOSE
 
    Turns the console's verbose messages on or off: PRINT's output, and

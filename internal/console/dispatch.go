@@ -203,6 +203,32 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().SetProcessPrivileges(r.List("PRIVILEGES"))
 	})
 
+	// SET TERMINAL (docs/planning/PHASE-94 - privileges.md, subtask 6): the
+	// terminal's characteristics, through the terminal driver's rules.
+	g.Bind("SET_TERMINAL", func(id int64, r *dcl.Result) error {
+		opts := dclcmd.TerminalOptions{
+			Device:     r.String("DEVICE"),
+			DeviceType: r.String("DEVICE_TYPE"),
+			Permanent:  r.Present("PERMANENT") && !r.Negated("PERMANENT"),
+			Switches:   map[string]bool{},
+		}
+
+		for name, field := range map[string]**int{"WIDTH": &opts.Width, "PAGE": &opts.Page} {
+			if r.Present(name) {
+				v := int(r.Int(name))
+				*field = &v
+			}
+		}
+
+		for _, sw := range dclcmd.TerminalSwitches {
+			if r.Present(sw.Qualifier) {
+				opts.Switches[sw.Qualifier] = !r.Negated(sw.Qualifier)
+			}
+		}
+
+		return d.Console.cmd().SetTerminal(opts)
+	})
+
 	// SET WORKING_SET and SHOW WORKING_SET (docs/planning/PHASE-63, subtask 9):
 	// the values of the process whose DCL runs the command.
 	g.Bind("SET_WORKING_SET", func(id int64, r *dcl.Result) error {

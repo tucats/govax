@@ -496,6 +496,7 @@ access to a table, with no rule of their own.
 | $SNDOPR an operator's function | OPER | none | SS$_NOPRIV | SSRM $SNDOPR; probe 247 to 252 |
 | $BRKTHRU to another user | OPER | none | SS$_NOOPER | probe 257 to 260 |
 | $BRKTHRU to every terminal or user | OPER | none | SS$_NOOPER | SSRM $BRKTHRU; probe 253 to 256, 261 |
+| terminal IO$_SETCHAR | LOG_IO or PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 278 to 283 |
 | disk logical block I/O | LOG_IO or PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 271 to 273, 277 |
 | disk physical block I/O | PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 274 to 276 |
 
@@ -635,7 +636,7 @@ Each is one commit, with tests, stopping for review.
    `$DELLNM`, `$CRELNT`, and `$TRNLNM`; SHOW SECURITY and
    `$GET_SECURITY` of tables matching the probe; DEVIATIONS.md's Phase
    26 entry's first two items resolved.
-6. **The terminal driver** (Decision 7): its functions' privileges, SET
+6. **The terminal driver** (done 2026-11-15; Decision 7): its functions' privileges, SET
    TERMINAL/PERMANENT's message, held to the probe.
 7. **DCL's commands** (Decisions 5 and 10): DEFINE, ASSIGN, DEASSIGN,
    CREATE/NAME_TABLE, STOP, and govax's MOUNT, DISMOUNT, and
@@ -928,3 +929,29 @@ The answers:
   table and job table owner with `lnm.Database.SetUIC`. DCL's own
   DEFINE, ASSIGN, DEASSIGN, and CREATE/NAME_TABLE (which still makes a
   table with no promsk) are subtask 7's.
+- **2026-11-15** Subtask 6, the terminal driver: IO$_SETCHAR needs LOG_IO
+  or PHY_IO, from every mode, a new rule ("terminal IO$_SETCHAR", among
+  `$QIO`'s), asked before the request is queued, so a refusal is R0
+  SS$_NOPRIV with the IOSB untouched (`ttdriver.go`'s `ttSetMode`; its
+  store is now `setTerminalCharacteristics`); IO$_SETMODE needs nothing,
+  as before. Part T of `TestPriv94Oracle` matches VMS's logs case for
+  case, with one masked word: a terminal IOSB's second word is VMS's
+  transmit speed (6, TT$C_BAUD_300, the VAX's OPA0), which govax's
+  console doesn't have and reports as 0 (`priv94LineSpeed`). DCL's SET
+  TERMINAL is new (`dclcmd/terminal.go`, over `corevms/ttsettings.go`'s
+  `TerminalSettings` and `SetTerminalSettings`, which ask the same rule
+  at supervisor mode): `[device]` (SYS$COMMAND's by default), `/WIDTH`,
+  `/PAGE`, `/DEVICE_TYPE` (a `TT$_` name), `/[NO]PERMANENT`, and a
+  qualifier per characteristic bit (`dclcmd.TerminalSwitches`, 35, from
+  the DCL Dictionary; UPPERCASE and HARDCOPY the opposites of LOWERCASE
+  and SCOPE). Without the privilege `/PERMANENT` changes nothing and says
+  `%SET-W-NOTSET, error modifying TTA0:` and `-SYSTEM-F-NOPRIV`, as VMS
+  7.1 did: `TestPriv94Terminal` replays the probe's TERMINAL sections as
+  each identity (`priv94dcl_test.go`'s `replayPriv94DCL`, for subtask 7's
+  sections too), and `TestSetTerminal` the qualifiers. HELP SET TERMINAL
+  has every qualifier. Choices, unconfirmed: govax keeps one set of
+  characteristics, so a permanent change is a current one too, and a
+  refused `/PERMANENT` changes nothing (whether VMS's SETMODE went first
+  isn't in the logs); SET's NOTSET is a warning of SET's facility with a
+  number of govax's (`setNotSet`); a device that isn't a terminal is
+  NOTSET with SS$_IVDEVNAM; /WIDTH is 1 to 511, /PAGE 0 to 255.

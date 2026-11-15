@@ -219,8 +219,7 @@ type priv94Difference struct {
 	why   string
 }
 
-// priv94Differences are the cases the oracle doesn't hold govax to: the
-// terminal's (part T) wait for the phase's subtask 6, and these.
+// priv94Differences are the cases the oracle doesn't hold govax to.
 var priv94Differences = []priv94Difference{
 	{"SYSTEM PRIV94", []int{106, 108}, "VMS 7.1's temporary page-file section outlived " +
 		"its only mapping, so the undo's $DGBLSC found it; govax's goes with the mapping (unconfirmed)"},
@@ -228,16 +227,15 @@ var priv94Differences = []priv94Difference{
 		"is the VAX's (32); govax's one terminal takes it"},
 }
 
-// priv94Deferred is the parts later subtasks hold to VMS.
-const priv94Deferred = "T"
+// priv94LineSpeed is a terminal case's IOSB (part T): its second word is
+// the terminal's transmit speed on VMS (6, TT$C_BAUD_300, the VAX's
+// OPA0), which govax's console doesn't have and reports as 0
+// (ttdriver.go's ttSenseMode), so the oracle doesn't compare it.
+var priv94LineSpeed = regexp.MustCompile(`^(  iosb [0-9A-F]{4}) [0-9A-F]{4} `)
 
 // priv94Excused reports whether case n of who's run is one the oracle
 // doesn't compare.
 func priv94Excused(who string, n int, part string) bool {
-	if strings.Contains(priv94Deferred, part) {
-		return true
-	}
-
 	for _, d := range priv94Differences {
 		if slices.Contains(strings.Fields(d.who), who) && slices.Contains(d.cases, n) {
 			return true
@@ -302,6 +300,14 @@ func TestPriv94Oracle(t *testing.T) {
 			}
 
 			gl, wl := priv94Normalize(g.lines), priv94Normalize(w.lines)
+
+			if strings.Fields(w.lines[0])[2] == "T" {
+				for _, lines := range [][]string{gl, wl} {
+					for i, line := range lines {
+						lines[i] = priv94LineSpeed.ReplaceAllString(line, "$1 speed ")
+					}
+				}
+			}
 
 			if strings.Join(gl, "\n") != strings.Join(wl, "\n") {
 				t.Errorf("%s case %d:\n got %s\nwant %s", cmp.name, n,
