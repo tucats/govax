@@ -45,6 +45,29 @@ func runPriv94Each(t *testing.T, programs []string, runs []string,
 		return strings.ReplaceAll(buf.String(), "\r", "")
 	}
 
+	buildPriv94(t, dispatch, programs)
+
+	for i, parts := range runs {
+		if before != nil {
+			before(i, c)
+		}
+
+		if parts == "" {
+			dispatch("DEASSIGN PRIV94_PART")
+		} else {
+			dispatch(`DEFINE PRIV94_PART "` + parts + `"`)
+		}
+
+		each(dispatch("RUN " + programs[0]))
+	}
+}
+
+// buildPriv94 makes the probe's volume as PRIV94.COM does: a container
+// mounted on DUA1 and named PRIV94$DISK, the default directory, and the
+// programs assembled, linked, and protected so the accounts can run them.
+func buildPriv94(t *testing.T, dispatch func(string) string, programs []string) {
+	t.Helper()
+
 	dsk := filepath.Join(t.TempDir(), "priv94.dsk")
 
 	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD53 PRIV94`)
@@ -72,20 +95,6 @@ func runPriv94Each(t *testing.T, programs []string, runs []string,
 		if out := dispatch("SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) " + name + ".EXE"); out != "" {
 			t.Fatalf("SET SECURITY %s: %s", name, out)
 		}
-	}
-
-	for i, parts := range runs {
-		if before != nil {
-			before(i, c)
-		}
-
-		if parts == "" {
-			dispatch("DEASSIGN PRIV94_PART")
-		} else {
-			dispatch(`DEFINE PRIV94_PART "` + parts + `"`)
-		}
-
-		each(dispatch("RUN " + programs[0]))
 	}
 }
 

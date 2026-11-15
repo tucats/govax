@@ -205,11 +205,15 @@ func TestEveryPrivilegeRuleUsed(t *testing.T) {
 		}
 	}
 
+	for _, r := range commandRules {
+		listed[r] = true
+	}
+
 	names := map[string]bool{}
 
 	for _, r := range privilegeRules {
 		if !listed[r] {
-			t.Errorf("rule %q is in no service's list in serviceRules", r.Name)
+			t.Errorf("rule %q is in no service's list in serviceRules, nor in commandRules", r.Name)
 		}
 
 		if names[r.Name] {

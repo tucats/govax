@@ -240,6 +240,16 @@ var (
 	// Disk I/O.
 	ruleDiskLogical  = newRule("disk logical block I/O", "LOG_IO PHY_IO", "I/O User's Reference; probe 271 to 273, 277", anyOf)
 	ruleDiskPhysical = newRule("disk physical block I/O", "PHY_IO", "I/O User's Reference; probe 274 to 276")
+
+	// govax's own volume commands (Decision 10, the review's question 4):
+	// MOUNT and DISMOUNT make a volume known to, or unknown to, every
+	// process, as VMS's MOUNT/SYSTEM does; INITIALIZE/CONTAINER of a
+	// container that exists writes over another's volume, as INITIALIZE
+	// does without VOLPRO on VMS. Making a new container needs nothing.
+	ruleMountVolume    = newRule("MOUNT a volume for every process", "SYSNAM", "DCL Dictionary MOUNT/SYSTEM; the review, 4")
+	ruleDismountVolume = newRule("DISMOUNT a volume every process knows", "SYSNAM", "DCL Dictionary MOUNT/SYSTEM; the review, 4")
+	ruleInitContainer  = newRule("INITIALIZE/CONTAINER an existing container", "VOLPRO",
+		"DCL Dictionary INITIALIZE; the review, 4")
 )
 
 // serviceRules is, for every system service govax registers, the rules
@@ -387,12 +397,23 @@ func (env *Environment) privilegeGranted(r *PrivilegeRule, mode registers.Access
 		why = "refused, " + statusIdent(r.Status)
 	}
 
-	if env.System != nil && env.cpu != nil && env.cpu.DebugEnabled(registers.DebugPrivileges) {
-		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PRIVILEGES): %08X %s mode: %s (needs %s): %s\n",
-			env.Process.PID, modeNames[mode&3], r.Name, r.needs(), why)
-	}
+	env.tracePrivileges(mode, "%s (needs %s): %s", r.Name, r.needs(), why)
 
 	return granted
+}
+
+// tracePrivileges writes a line of SET DEBUG PRIVILEGES's trace, for a
+// caller in mode: "DEBUG(PRIVILEGES): pid mode mode: " and the text. The
+// gate writes one for each decision; an operation an object's protection
+// may grant before any privilege is asked (a logical name table) writes
+// one for the protection's answer too, so the trace tells the whole story.
+func (env *Environment) tracePrivileges(mode registers.AccessMode, format string, args ...any) {
+	if env.System == nil || env.cpu == nil || !env.cpu.DebugEnabled(registers.DebugPrivileges) {
+		return
+	}
+
+	fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PRIVILEGES): %08X %s mode: %s\n",
+		env.Process.PID, modeNames[mode&3], fmt.Sprintf(format, args...))
 }
 
 // needs is r's privileges as the trace and the table show them:

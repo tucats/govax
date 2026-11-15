@@ -430,16 +430,21 @@ func (env *Environment) processTargetBy(pidadr uint32, readName func() (string, 
 // in its UIC group with the GROUP privilege, and any process with WORLD.
 // It returns 0, or SS$_NOPRIV.
 func (env *Environment) mayAffect(target *Environment) uint32 {
+	return env.mayAffectAt(target, env.callerMode())
+}
+
+// mayAffectAt is mayAffect for a caller in mode.
+func (env *Environment) mayAffectAt(target *Environment, mode registers.AccessMode) uint32 {
 	p, t := env.Process, target.Process
 
 	switch {
 	case target == env, t.UIC == p.UIC:
 		return 0
 	case t.UICGroup() == p.UICGroup():
-		return env.requirePrivilege(ruleProcessInGroup)
+		return env.requirePrivilegeAt(ruleProcessInGroup, mode)
 	}
 
-	return env.requirePrivilege(ruleProcessOtherGroup)
+	return env.requirePrivilegeAt(ruleProcessOtherGroup, mode)
 }
 
 func registerJPIServices(t *ServiceTable) {

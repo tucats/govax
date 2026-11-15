@@ -40,6 +40,8 @@ grammar console
     syntax create_name_table
         parameter table/id=241/type=$any/prompt="Table"
         qualifier parent_table/id=242/type=$any
+        qualifier protection/id=247/type=$protection
+        qualifier quota/id=248/type=$integer
         qualifier user_mode/id=243
         qualifier supervisor_mode/id=244
         qualifier executive_mode/id=245

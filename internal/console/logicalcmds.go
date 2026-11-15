@@ -98,12 +98,10 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 	})
 
 	g.Bind("CREATE_NAME_TABLE", func(id int64, r *dcl.Result) error {
-		parent := r.String("PARENT_TABLE")
-		if parent == "" {
-			parent = lnm.ProcessDirectoryName
-		}
-
-		return c.cmd().CreateNameTable(r.String("TABLE"), parent, logicalModeQualifier(r), !r.Negated("LOG"))
+		return c.cmd().CreateNameTable(dclcmd.CreateNameTableRequest{
+			Table: r.String("TABLE"), Parent: r.String("PARENT_TABLE"), Mode: logicalModeQualifier(r),
+			Protection: r.List("PROTECTION"), Quota: uint32(r.Int("QUOTA")), Log: !r.Negated("LOG"),
+		})
 	})
 
 	g.Bind("SHOW_LOGICAL", func(id int64, r *dcl.Result) error {

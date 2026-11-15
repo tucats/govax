@@ -19,6 +19,12 @@
    Deleting a table's name from LNM$PROCESS_DIRECTORY or
    LNM$SYSTEM_DIRECTORY deletes the table and every table below it.
 
+   Deleting a name from a shareable table takes write access to it, as
+   DEFINE does: its protection, or SYSNAM for the system table, GRPNAM
+   for the group table, or SYSPRV.  A name not defined at the mode asked
+   for is %SYSTEM-F-NOLOGNAM, even if it is defined at an outer mode.
+   Without SYSNAM, /EXECUTIVE_MODE deletes at supervisor mode.
+
 2 Qualifiers
 /ALL
 

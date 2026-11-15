@@ -638,7 +638,7 @@ Each is one commit, with tests, stopping for review.
    26 entry's first two items resolved.
 6. **The terminal driver** (done 2026-11-15; Decision 7): its functions' privileges, SET
    TERMINAL/PERMANENT's message, held to the probe.
-7. **DCL's commands** (Decisions 5 and 10): DEFINE, ASSIGN, DEASSIGN,
+7. **DCL's commands** (done 2026-11-15; Decisions 5 and 10): DEFINE, ASSIGN, DEASSIGN,
    CREATE/NAME_TABLE, STOP, and govax's MOUNT, DISMOUNT, and
    INITIALIZE/CONTAINER through the gate, with VMS's messages,
    held to the probe's DCL logs under each privilege set.
@@ -955,3 +955,49 @@ The answers:
   isn't in the logs); SET's NOTSET is a warning of SET's facility with a
   number of govax's (`setNotSet`); a device that isn't a terminal is
   NOTSET with SS$_IVDEVNAM; /WIDTH is 1 to 511, /PAGE 0 to 255.
+- **2026-11-15** Subtask 7, DCL's commands: DEFINE, ASSIGN, DEASSIGN, and
+  CREATE/NAME_TABLE are the services' work from supervisor mode, with
+  their checks (`corevms/dcllogicals.go`: `DefineName`, `DeassignName`,
+  `CreateNameTable`, over `writeModeAt` and `lnmTableAccessAt`, the
+  mode-explicit forms of `writeMode` and `lnmTableAccess`): a shareable
+  table's protection, or SYSNAM or GRPNAM past it, an executive-mode name
+  made supervisor without SYSNAM, and a shareable table's name written to
+  LNM$SYSTEM_DIRECTORY; a refusal is `%SYSTEM-F-NOPRIV` alone. DEFINE
+  looks its table up from supervisor mode (`lnm.Database.DefineIn`), so a
+  user-mode table is NOLOGTAB, as on VMS. SHOW LOGICAL passes over a table
+  the process may not read with `%SYSTEM-W-IVLOGTAB` (then NOTRAN, even
+  for a wildcard), and F$TRNLNM of a name only such a table could have is
+  `%SYSTEM-F-NOPRIV` (`Environment.MayReadTable`, `TranslateName`). STOP
+  of another process takes `$DELPRC`'s rule (`Environment.MayAffect`,
+  from supervisor mode), the operator's path gone; by name it looks only
+  in the process's own group. SHOW LOGICAL/FULL shows a table entry as
+  VMS 7.1 did, `[super,table] = "" [terminal]`, and a shareable table's
+  header its attributes and profile (`[shareable,directory]`,
+  `[Protection=(RWC,RWC,R,R)]  [Owner=[SYSTEM]]`). CREATE/NAME_TABLE has
+  `/PROTECTION` (C for create) and `/QUOTA`. govax's MOUNT and DISMOUNT
+  need SYSNAM, INITIALIZE/CONTAINER of an existing container VOLPRO
+  (Decision 10): three rules in `commandRules`, asked through
+  `Environment.CommandPrivilege`; `TestEveryPrivilegeRuleUsed` accepts a
+  rule listed there. Before INITIALIZE/MEMORY (STARTUP.COM's first
+  lines) there is no process, and nothing is checked.
+  `TestPriv94Names` replays the NAMES and STOP sections as each identity,
+  on the fixtures and holders part FH makes (`priv94Holders`; the VMS PIDs
+  in the commands replaced by govax's), `TestPriv94Tables` round 2's
+  TABLES sections, and `TestVolumeCommandPrivileges` Decision 10; all
+  match VMS's logs but the STOP sections' F$GETJPI line, subtask 8's.
+  Choices, unconfirmed: CREATE/NAME_TABLE's `/PROTECTION` gives a
+  category not named no access, and without it the mask is 0; MOUNT's,
+  DISMOUNT's, and INITIALIZE's refusal is `%SYSTEM-F-NOPRIV` alone; a
+  shareable table's header for a table that isn't a directory, and a
+  category with no access in it (nothing between commas). The DETACH
+  sections (RUN/DETACH, which govax lacks) are left out, as A.2 noted.
+  At the author's request, SET DEBUG PRIVILEGES tells the whole story of
+  a logical name table check: the table's protection is asked first, and
+  its answer is a trace line of its own (`lnmTableAccessAt`, through
+  `tracePrivileges`, the gate's line writer): `logical name: write
+  LNM$SYSTEM_TABLE: by its protection [1,4] (S:RWC,O:RWC,G:R,W:R),
+  granted, has RWC (system,...); no privilege asked`, or `denied, ...;
+  asking the privilege` before the gate's own line, or `no privilege
+  overrides it` for a table no privilege rule covers
+  (`TestPrivilegeTraceOfTables`; `security.Decision.From` names what gave
+  the access).

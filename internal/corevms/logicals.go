@@ -3,9 +3,11 @@ package corevms
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -128,11 +130,17 @@ func (env *Environment) lnmWriteMode(ptr uint32) (lnm.Mode, uint32) {
 // mode itself if it isn't inner to the caller's or the caller holds
 // SYSNAM, else the caller's mode.
 func (env *Environment) writeMode(mode lnm.Mode) lnm.Mode {
-	if uint32(mode) >= uint32(env.callerMode()) || env.holdsPrivilege(ruleLnmInnerMode) {
+	return env.writeModeAt(mode, env.callerMode())
+}
+
+// writeModeAt is writeMode for a caller in mode caller: DCL's commands
+// ask from supervisor mode.
+func (env *Environment) writeModeAt(mode lnm.Mode, caller registers.AccessMode) lnm.Mode {
+	if uint32(mode) >= uint32(caller) || env.privilegeGranted(ruleLnmInnerMode, caller) {
 		return mode
 	}
 
-	return env.maximizedMode(uint32(mode))
+	return lnm.Mode(caller)
 }
 
 // lnmTableAccess checks that the process may have want (accessRead or
@@ -145,24 +153,101 @@ func (env *Environment) writeMode(mode lnm.Mode) lnm.Mode {
 // It returns SS$_NOPRIV, or 0; a nil t passes, leaving the error to the
 // operation.
 func (env *Environment) lnmTableAccess(t *lnm.Table, want uint32) uint32 {
+	return env.lnmTableAccessAt(t, want, env.callerMode())
+}
+
+// lnmTableAccessAt is lnmTableAccess for a caller in mode caller.
+func (env *Environment) lnmTableAccessAt(t *lnm.Table, want uint32, caller registers.AccessMode) uint32 {
 	if t == nil || !t.Shareable {
 		return 0
 	}
 
-	if env.uicAccess(t.Name, t.Owner, t.Protection, want) {
-		return 0
+	// The protection's answer goes in SET DEBUG PRIVILEGES's trace too:
+	// a process in the system UIC category writes the system table by
+	// its protection, and no privilege is asked (VMS 7.1, testdata/priv94's
+	// case 4).
+	what := "read"
+	if want == accessWrite {
+		what = "write"
 	}
+
+	d := env.uicDecision(t.Name, t.Owner, t.Protection, want)
+
+	var rule *PrivilegeRule
 
 	if want == accessWrite {
 		switch t.Name {
 		case lnm.SystemTableName:
-			return env.requirePrivilege(ruleLnmSystemTable)
+			rule = ruleLnmSystemTable
 		case env.Logicals.GroupTableName:
-			return env.requirePrivilege(ruleLnmGroupTable)
+			rule = ruleLnmGroupTable
 		}
 	}
 
+	switch {
+	case d.Granted:
+		env.tracePrivileges(caller, "logical name: %s %s: by its protection %s, %s; no privilege asked",
+			what, t.Name, tableProtectionText(t), tableOutcome(d))
+
+		return 0
+
+	case rule != nil:
+		env.tracePrivileges(caller, "logical name: %s %s: by its protection %s, %s; asking the privilege",
+			what, t.Name, tableProtectionText(t), tableOutcome(d))
+
+		return env.requirePrivilegeAt(rule, caller)
+	}
+
+	env.tracePrivileges(caller, "logical name: %s %s: by its protection %s, %s; no privilege overrides it: refused, SS$_NOPRIV",
+		what, t.Name, tableProtectionText(t), tableOutcome(d))
+
 	return ssNoPriv
+}
+
+// tableOutcome is a protection check's answer for the trace: "granted,
+// has RWC (system)" or "denied, has R (group,world)", in a table's
+// letters.
+func tableOutcome(d security.Decision) string {
+	outcome := "denied"
+	if d.Granted {
+		outcome = "granted"
+	}
+
+	return fmt.Sprintf("%s, has %s (%s)", outcome, tableLetters(uint16(^d.Access)&0xF), d.From())
+}
+
+// tableLetters is a protection field's letters, R, W, C (create), and D,
+// for the access bits clear in denied; "none" for no access.
+func tableLetters(denied uint16) string {
+	letters := ""
+
+	for bit, letter := range "RWCD" {
+		if denied&(1<<bit) == 0 {
+			letters += string(letter)
+		}
+	}
+
+	if letters == "" {
+		return "none"
+	}
+
+	return letters
+}
+
+// tableProtectionText is t's owner and protection for the trace:
+// "[1,4] (S:RWC,O:RWC,G:R,W:R)", with a table's letters (C for create).
+func tableProtectionText(t *lnm.Table) string {
+	parts := make([]string, 4)
+
+	for c, name := range []string{"S", "O", "G", "W"} {
+		parts[c] = name
+
+		if letters := tableLetters(t.Protection >> (4 * c)); letters != "none" {
+			parts[c] += ":" + letters
+		}
+	}
+
+	return fmt.Sprintf("%v (%s)", security.UIC(t.Owner), strings.Join(parts, ","))
 }
 
 // firstTable is the first table tabnam designates, or nil when it

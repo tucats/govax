@@ -1,6 +1,8 @@
 package dclcmd
 
 import (
+	"os"
+
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -50,4 +52,20 @@ func (c *Context) InitializeContainer(path string, blocks uint32, label string, 
 	}
 
 	return nil
+}
+
+// InitializeContainerCommand is the console's INITIALIZE/CONTAINER:
+// InitializeContainer, but a container that already exists, whose volume
+// it writes over, needs VOLPRO, as INITIALIZE of another's volume does
+// on VMS (docs/planning/PHASE-94 - privileges.md, Decision 10; the
+// message, %SYSTEM-F-NOPRIV, is govax's choice). Making a new one needs
+// nothing.
+func (c *Context) InitializeContainerCommand(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+	if _, err := os.Stat(path); err == nil {
+		if err := c.commandPrivilege("INITIALIZE/CONTAINER"); err != nil {
+			return err
+		}
+	}
+
+	return c.InitializeContainer(path, blocks, label, clusterSize, devType)
 }

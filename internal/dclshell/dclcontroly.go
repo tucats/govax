@@ -657,28 +657,37 @@ func stopExitMode(value string) (stopExit, error) {
 	return 0, vmserrors.NewSegment(vmserrors.CLI_IVKEYW, key)
 }
 
-// stopTarget is the process STOP names, by name (in process 1's UIC
-// group) or by /IDENTIFICATION (hexadecimal; the PID wins if both are
+// stopTarget is the process STOP names, by name (in the process's own
+// UIC group) or by /IDENTIFICATION (hexadecimal; the PID wins if both are
 // given): SS$_IVIDENT for a PID that can't be read, SS$_NONEXPR for a
-// process that isn't there.
+// process that isn't there, and SS$_NOPRIV for one the process may not
+// affect ($DELPRC's and $FORCEX's rule: GROUP for another process in its
+// group, WORLD for any; corevms.Environment.MayAffect). VMS 7.1's STOP
+// said %SYSTEM-F-NOPRIV alone (testdata/priv94's STOP sections), and by
+// name found only its own group's processes.
 func (c *Interpreter) stopTarget(name, pid string) (*corevms.Environment, error) {
+	var (
+		env   *corevms.Environment
+		found bool
+	)
+
 	if pid != "" {
 		v, err := strconv.ParseUint(strings.TrimSpace(pid), 16, 32)
 		if err != nil {
 			return nil, vmserrors.New(vmserrors.SS_IVIDENT)
 		}
 
-		env, found := c.RTL.FindProcess(uint32(v))
-		if !found {
-			return nil, vmserrors.New(vmserrors.SS_NONEXPR)
-		}
-
-		return env, nil
+		env, found = c.RTL.FindProcess(uint32(v))
+	} else {
+		env, found = c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name)
 	}
 
-	env, found := c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name)
 	if !found {
 		return nil, vmserrors.New(vmserrors.SS_NONEXPR)
+	}
+
+	if st := c.RTL.MayAffect(env); st != 0 {
+		return nil, vmserrors.New(st)
 	}
 
 	return env, nil
@@ -757,10 +766,10 @@ func (c *Interpreter) stopProcess(name, pid string, exit stopExit) error {
 }
 
 // StopProcess is STOP: it deletes a process and its subprocesses at once,
-// as the operator with every privilege would. The process is named, as
-// for SHOW PROCESS, by name (in process 1's UIC group) or by /IDENTIFICATION
-// (hexadecimal; the PID wins if both are given). A process that isn't
-// there is %SYSTEM-W-NONEXPR. Process 1 is the console's own, so STOP
+// if the process running STOP may affect it (stopTarget). The process is
+// named, as for SHOW PROCESS, by name (in the process's own UIC group) or
+// by /IDENTIFICATION (hexadecimal; the PID wins if both are given). A
+// process that isn't there is %SYSTEM-W-NONEXPR. Process 1 is the console's own, so STOP
 // of it is refused (%SYSTEM-F-NOPRIV): govax has no logging out, and
 // EXIT ends the session. (STOP with neither a name nor an
 // identification ends command procedures instead: stopCommand.)

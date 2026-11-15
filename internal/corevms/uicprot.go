@@ -62,7 +62,13 @@ func (env *Environment) Credentials() security.Credentials {
 // (accessRead, accessWrite, ...) to the object called name, owned by
 // owner (a UIC) with protection mask mask.
 func (env *Environment) uicAccess(name string, owner uint32, mask uint16, want uint32) bool {
+	return env.uicDecision(name, owner, mask, want).Granted
+}
+
+// uicDecision is uicAccess's whole decision: whether it's granted, and
+// what the process has and what gave it.
+func (env *Environment) uicDecision(name string, owner uint32, mask uint16, want uint32) security.Decision {
 	profile := security.Profile{Owner: security.UIC(owner), Protection: security.Protection(mask), Name: name}
 
-	return security.Check(env.Credentials(), profile, security.Access(want)).Granted
+	return security.Check(env.Credentials(), profile, security.Access(want))
 }

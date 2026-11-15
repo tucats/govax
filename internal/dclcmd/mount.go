@@ -113,7 +113,17 @@ func (c *Context) Mount(device, path string, write bool) error {
 // A device given as a controller alone (MOUNT DUA "foo.dsk") is that
 // controller's lowest unit with nothing mounted on it (ResolveUnit), and
 // the message names the unit chosen.
+//
+// A volume mounted is known to every process, as VMS's MOUNT/SYSTEM makes
+// it, so the command needs SYSNAM (docs/planning/PHASE-94 -
+// privileges.md, Decision 10); without it MOUNT says %SYSTEM-F-NOPRIV
+// (govax's choice of message). STARTUP.COM's mounts, before
+// INITIALIZE/MEMORY makes process 1, aren't checked.
 func (c *Context) MountCommand(device, path string, write, log bool) error {
+	if err := c.commandPrivilege("MOUNT"); err != nil {
+		return err
+	}
+
 	device = c.ResolveUnit(device)
 
 	if err := c.Mount(device, path, write); err != nil {
@@ -173,6 +183,32 @@ func (c *Context) volumeLogicalName(device string) (string, bool) {
 	}
 
 	return "DISK$" + strings.ToUpper(label), true
+}
+
+// commandPrivilege asks the privilege gate about one of govax's own
+// commands (corevms.Environment.CommandPrivilege): nil, or the refusal's
+// status as the command's error. Without a process (before
+// INITIALIZE/MEMORY) there's nothing to ask, and nothing is refused.
+func (c *Context) commandPrivilege(command string) error {
+	if c.RTL == nil {
+		return nil
+	}
+
+	if st := c.RTL.CommandPrivilege(command); st != 0 {
+		return vmserrors.New(st)
+	}
+
+	return nil
+}
+
+// DismountCommand is the console's DISMOUNT command: Dismount, if the
+// process holds SYSNAM, as MountCommand needs it.
+func (c *Context) DismountCommand(device string) error {
+	if err := c.commandPrivilege("DISMOUNT"); err != nil {
+		return err
+	}
+
+	return c.Dismount(device)
 }
 
 // Dismount detaches whatever container is currently mounted on device,

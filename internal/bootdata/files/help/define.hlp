@@ -24,11 +24,14 @@
 2 Qualifiers
 /EXECUTIVE_MODE
 
-   Defines the name at executive mode.
+   Defines the name at executive mode.  Without the SYSNAM privilege
+   the name is defined at supervisor mode instead, without a message.
 
 /GROUP
 
-   Defines the name in the group table, LNM$GROUP.
+   Defines the name in the group table, LNM$GROUP.  Writing it takes
+   the table's protection (the system UIC category), or the GRPNAM or
+   SYSPRV privilege.
 
 /JOB
 
@@ -52,14 +55,19 @@
 
 /SYSTEM
 
-   Defines the name in the system table, LNM$SYSTEM.
+   Defines the name in the system table, LNM$SYSTEM.  Writing it takes
+   the table's protection (the system UIC category), or the SYSNAM or
+   SYSPRV privilege.
 
 /TABLE
 
       /TABLE=name
 
    Defines the name in the table named, or the table a logical name
-   such as LNM$PROCESS translates to.
+   such as LNM$PROCESS translates to.  The table is looked up from
+   supervisor mode, so a table made at user mode isn't found
+   (%SYSTEM-F-NOLOGTAB).  A shareable table is written by its
+   protection, or with the SYSPRV privilege.
 
 /TRANSLATION_ATTRIBUTES
 

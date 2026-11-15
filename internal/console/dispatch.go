@@ -348,7 +348,7 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	g.Bind("DISMOUNT", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().Dismount(r.String("DEVICE"))
+		return d.Console.cmd().DismountCommand(r.String("DEVICE"))
 	})
 
 	// Phase 23 (docs/planning/PHASE-23.md, subtask 1): INITIALIZE/VAX carries
@@ -384,7 +384,7 @@ func (d *Dispatcher) bindGrammar() {
 	// "use the default" already, so no explicit r.Present check is needed
 	// for either).
 	g.Bind("INITIALIZE_CONTAINER", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().InitializeContainer(
+		return d.Console.cmd().InitializeContainerCommand(
 			r.String("PATH"),
 			uint32(r.Int("SIZE")),
 			r.String("LABEL"),

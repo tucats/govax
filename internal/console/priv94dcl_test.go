@@ -26,7 +26,8 @@ type priv94DCLCommand struct {
 }
 
 // priv94DCLSections reads the sections called name (the heading's second
-// word, "TERMINAL") from the VMS log file, in their order.
+// word, "TERMINAL") from the VMS log file, in their order: PRIV94D.COM's
+// ("######## D") or round 2's PRIV94E.COM's ("######## E").
 func priv94DCLSections(t *testing.T, file, name string) []priv94DCLSection {
 	t.Helper()
 
@@ -41,7 +42,7 @@ func priv94DCLSections(t *testing.T, file, name string) []priv94DCLSection {
 	)
 
 	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r", ""), "\n") {
-		if strings.HasPrefix(line, "######## D ") {
+		if strings.HasPrefix(line, "######## D ") || strings.HasPrefix(line, "######## E ") {
 			cur = nil
 
 			if f := strings.Fields(line); len(f) > 3 && f[2] == name {
@@ -83,6 +84,18 @@ func priv94DCLSections(t *testing.T, file, name string) []priv94DCLSection {
 func replayPriv94DCL(t *testing.T, id priv94Identity, sections []priv94DCLSection, symbols map[string]string) {
 	t.Helper()
 
+	replayPriv94DCLWith(t, id, sections, symbols, nil)
+}
+
+// replayPriv94DCLWith is replayPriv94DCL with setup run on the console
+// first, as SYSTEM, before it becomes id: the fixtures the sections need,
+// made through dispatch, which runs a line and returns what it wrote.
+// setup returns strings of VMS's log (the holders' PIDs) and what govax's
+// run has in their place, replaced in the commands and the lines VMS showed.
+func replayPriv94DCLWith(t *testing.T, id priv94Identity, sections []priv94DCLSection, symbols map[string]string,
+	setup func(c *console.Console, dispatch func(string) string) map[string]string) {
+	t.Helper()
+
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) []string {
@@ -104,6 +117,20 @@ func replayPriv94DCL(t *testing.T, id priv94Identity, sections []priv94DCLSectio
 	terminal, _ := c.RTL.DVIItem("TT:", "DVI$_DEVNAM")
 	terminal = strings.TrimPrefix(terminal, "_")
 
+	var replace map[string]string
+	if setup != nil {
+		replace = setup(c, func(line string) string { return strings.Join(dispatch(line), "\n") })
+	}
+
+	rewrite := func(line string) string {
+		line = strings.ReplaceAll(line, "OPA0:", terminal)
+		for from, to := range replace {
+			line = strings.ReplaceAll(line, from, to)
+		}
+
+		return line
+	}
+
 	id.become(c)
 
 	for name, value := range symbols {
@@ -112,15 +139,16 @@ func replayPriv94DCL(t *testing.T, id priv94Identity, sections []priv94DCLSectio
 
 	for _, s := range sections {
 		for _, cmd := range s.commands {
-			got := dispatch(cmd.line)
+			line := rewrite(cmd.line)
+			got := dispatch(line)
 
 			want := make([]string, len(cmd.out))
-			for i, line := range cmd.out {
-				want[i] = strings.ReplaceAll(line, "OPA0:", terminal)
+			for i, out := range cmd.out {
+				want[i] = rewrite(out)
 			}
 
 			if strings.Join(got, "\n") != strings.Join(want, "\n") {
-				t.Errorf("%s: %s:\n got %q\nwant %q", s.heading, cmd.line, got, want)
+				t.Errorf("%s: %s:\n got %q\nwant %q", s.heading, line, got, want)
 			}
 		}
 	}

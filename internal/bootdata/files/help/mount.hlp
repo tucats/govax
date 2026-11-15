@@ -31,6 +31,9 @@
    A device that already has a volume mounted must be dismounted before
    another can be mounted on it.
 
+   A volume mounted is known to every process, as VMS's MOUNT/SYSTEM
+   makes it, so MOUNT needs the SYSNAM privilege.
+
    As VMS's MOUNT does, MOUNT defines the logical name DISK$label in the
    system table (DISK$USERDISK for a volume labeled USERDISK), so the
    volume's files can be named by its label: DISK$USERDISK:[DIR]FILE.

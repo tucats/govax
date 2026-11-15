@@ -1396,7 +1396,8 @@ CREATE [/LOG] [/OWNER_UIC=uic] [/PROTECTION=(...)] file-spec[/HOST]
 CREATE/DIRECTORY [/LOG] [/OWNER_UIC=uic] [/PROTECTION=(...)]
                  [/VERSION_LIMIT=n] [/ALLOCATION=n] directory[,...]
 CREATE/FDL=fdl-file [/LOG] [file-spec]
-CREATE/NAME_TABLE [/PARENT_TABLE=table] table-name
+CREATE/NAME_TABLE [/PARENT_TABLE=table] [/PROTECTION=(...)] [/QUOTA=n]
+                  table-name
 ```
 
 `CREATE` makes a text file from what follows: at the terminal, the lines
@@ -1416,7 +1417,10 @@ on `CREATE` and on `COPY`'s output alike. `/OWNER_UIC` names the owner,
 which only a process with privilege may make another's UIC.
 
 `CREATE/DIRECTORY` makes a directory and any missing ones above it.
-`CREATE/NAME_TABLE` makes a logical name table.
+`CREATE/NAME_TABLE` makes a logical name table. A shareable table's
+`/PROTECTION` gives each category read (R), write (W), create (C), and
+delete (D) access; its name goes in `LNM$SYSTEM_DIRECTORY`, so making one
+takes the system UIC category or `SYSPRV`.
 
 `CREATE/FDL` makes an empty file from a description in the File
 Definition Language: a sequential, relative, or indexed file, with its
@@ -1823,7 +1827,8 @@ INITIALIZE/CONTAINER "file" [label] [/DEVICE=type | /SIZE=blocks] [/CLUSTER=n]
 ```
 
 Creates a new, empty ODS-2 volume in a host file. It isn't mounted; use
-`MOUNT`.
+`MOUNT`. Writing over a container that already exists needs the `VOLPRO`
+privilege.
 
 #### MOUNT and DISMOUNT
 
@@ -1835,7 +1840,9 @@ DISMOUNT device
 `MOUNT` attaches a container to a device (creating the device if it's
 new). A controller with no unit number, `MOUNT DUA "file"`, picks that
 controller's first unit with nothing mounted on it, and the
-`%MOUNT-I-MOUNTED` message names it. `DISMOUNT` writes pending changes
+`%MOUNT-I-MOUNTED` message names it. A mounted volume is known to every
+process, as VMS's `MOUNT/SYSTEM` makes it, so `MOUNT` and `DISMOUNT` need
+the `SYSNAM` privilege. `DISMOUNT` writes pending changes
 and detaches it; it refuses a volume with files open (a process still
 using them, say), and the system volume:
 
@@ -1868,15 +1875,21 @@ DEASSIGN [/table qualifiers] [/mode] name
 DEASSIGN/ALL [/table qualifiers]
 SHOW LOGICAL [/table qualifiers] [/FULL] [/STRUCTURE] [name[,...]]
 SHOW TRANSLATION [/TABLE=t] name
-CREATE/NAME_TABLE [/PARENT_TABLE=t] [/mode] table
+CREATE/NAME_TABLE [/PARENT_TABLE=t] [/PROTECTION=(...)] [/QUOTA=n] [/mode] table
 ```
 
 These follow VMS exactly. The default table is the process table, and
 the default mode supervisor. The job table is shared by the console's
 process and its subprocesses. A user-mode process name is deleted when
 the next image exits: one you `RUN`, or a command VMS runs as an image, as it
-does `MACRO`, `LINK`, and `TYPE`, though not `DEFINE` or `SHOW TRANSLATION`. `SHOW LOGICAL` follows a name through
-each level of translation:
+does `MACRO`, `LINK`, and `TYPE`, though not `DEFINE` or `SHOW TRANSLATION`.
+A shareable table (the system and group tables among them) is written by
+its protection, which lets the system UIC category in, or past it with
+`SYSNAM` for the system table, `GRPNAM` for the group table, or `SYSPRV`;
+otherwise `DEFINE` and `DEASSIGN` say `%SYSTEM-F-NOPRIV`. Without `SYSNAM`,
+`/EXECUTIVE_MODE` quietly makes a supervisor-mode name. `SHOW LOGICAL`
+passes over a table you may not read with `%SYSTEM-W-IVLOGTAB`.
+`SHOW LOGICAL` follows a name through each level of translation:
 
 ```text
 VAX> DEFINE MYDISK WORK4

@@ -231,7 +231,8 @@
 3 Qualifiers
 /EXECUTIVE_MODE
 
-   Makes the table an executive-mode table.
+   Makes the table an executive-mode table.  Without the SYSNAM
+   privilege the table is made a supervisor-mode table instead.
 
 /LOG
 
@@ -245,7 +246,26 @@
 
    The new table's parent.  The default, LNM$PROCESS_DIRECTORY, makes a
    table private to the process; a shareable parent such as
-   LNM$SYSTEM_DIRECTORY makes a shareable table.
+   LNM$SYSTEM_DIRECTORY makes a shareable table.  A shareable table's
+   name goes in LNM$SYSTEM_DIRECTORY, so making one needs write access
+   to it: the system UIC category, or the SYSPRV privilege.
+
+/PROTECTION
+
+      /PROTECTION=(category[:access][,...])
+
+   The protection of a shareable table: for each category, System,
+   Owner, Group, or World, the access it has, Read, Write, Create, and
+   Delete.  A category not named has no access.  Without /PROTECTION
+   everyone has every access.  The process making the table owns it.
+
+/QUOTA
+
+      /QUOTA=bytes
+
+   The table's quota, taken out of its parent's.  Each name put in the
+   table takes its size out of the quota.  0, the default, is no quota
+   of the table's own.
 
 /SUPERVISOR_MODE
 

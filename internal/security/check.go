@@ -101,6 +101,12 @@ func traceLine(c Credentials, p Profile, want Access, d Decision) string {
 		c.UIC, accessText(want), name, p.Owner, codeText(p.Protection), len(p.ACL), outcome, accessText(d.Access), sourceText(d))
 }
 
+// From is what gave a decision's access, for a trace: "system",
+// "group,world", or "none".
+func (d Decision) From() string {
+	return sourceText(d)
+}
+
 // accessText is a's letters, or "none".
 func accessText(a Access) string {
 	if s := a.String(); s != "" {

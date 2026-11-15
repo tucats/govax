@@ -30,26 +30,8 @@ import "github.com/tucats/govax/internal/vmserrors"
 // strings, more than 128, or an attribute bit that doesn't belong, and
 // those of ResolveTables.
 func (db *Database) Define(tabnam, lognam string, mode Mode, attr uint32, eqv []Equivalence) (superseded bool, err error) {
-	if lognam == "" || len(lognam) > MaxNameLength {
-		return false, status(vmserrors.SS_IVLOGNAM)
-	}
-
-	if attr&^(AttrNoAlias|AttrConfine|AttrCrelog) != 0 {
-		return false, status(vmserrors.SS_BADPARAM)
-	}
-
-	if len(eqv) == 0 || len(eqv) > MaxEquivalences {
-		return false, status(vmserrors.SS_BADPARAM)
-	}
-
-	for _, q := range eqv {
-		if q.Value == "" || len(q.Value) > MaxNameLength {
-			return false, status(vmserrors.SS_IVLOGNAM)
-		}
-
-		if q.Attrs&^(AttrConcealed|AttrTerminal) != 0 {
-			return false, status(vmserrors.SS_BADPARAM)
-		}
+	if err := checkDefinition(lognam, attr, eqv); err != nil {
+		return false, err
 	}
 
 	tables, err := db.ResolveTables(tabnam, User)
@@ -57,7 +39,17 @@ func (db *Database) Define(tabnam, lognam string, mode Mode, attr uint32, eqv []
 		return false, err
 	}
 
-	t := tables[0]
+	return db.DefineIn(tables[0], lognam, mode, attr, eqv)
+}
+
+// DefineIn is Define in table t, which the caller has found itself: DCL's
+// DEFINE looks its table up from supervisor mode (ResolveTables with
+// Supervisor), where Define looks from user mode. The checks and errors
+// are Define's, but for those of ResolveTables.
+func (db *Database) DefineIn(t *Table, lognam string, mode Mode, attr uint32, eqv []Equivalence) (superseded bool, err error) {
+	if err := checkDefinition(lognam, attr, eqv); err != nil {
+		return false, err
+	}
 
 	if t.Directory && !validTableName(lognam) {
 		return false, status(vmserrors.SS_IVLOGNAM)
@@ -91,6 +83,36 @@ func (db *Database) Define(tabnam, lognam string, mode Mode, attr uint32, eqv []
 	db.tracef("define %s [%s] in %s = %v (superseded=%v)", lognam, mode, t.Name, eqv, superseded)
 
 	return superseded, nil
+}
+
+// checkDefinition checks Define's arguments before any table is looked
+// at: SS$_IVLOGNAM for a name or string that is empty or too long,
+// SS$_BADPARAM for an attribute that doesn't belong, or no strings or
+// too many.
+func checkDefinition(lognam string, attr uint32, eqv []Equivalence) error {
+	if lognam == "" || len(lognam) > MaxNameLength {
+		return status(vmserrors.SS_IVLOGNAM)
+	}
+
+	if attr&^(AttrNoAlias|AttrConfine|AttrCrelog) != 0 {
+		return status(vmserrors.SS_BADPARAM)
+	}
+
+	if len(eqv) == 0 || len(eqv) > MaxEquivalences {
+		return status(vmserrors.SS_BADPARAM)
+	}
+
+	for _, q := range eqv {
+		if q.Value == "" || len(q.Value) > MaxNameLength {
+			return status(vmserrors.SS_IVLOGNAM)
+		}
+
+		if q.Attrs&^(AttrConcealed|AttrTerminal) != 0 {
+			return status(vmserrors.SS_BADPARAM)
+		}
+	}
+
+	return nil
 }
 
 // clearForNewName makes room in t for a new entry named name at mode:

@@ -125,6 +125,9 @@
      PRIVILEGES   Show each privilege check: which process asked for
                   which operation, at which access mode, the privileges
                   the operation's rule needs, and whether it was granted.
+                  Where a logical name table's protection can grant the
+                  operation first, its answer is shown too, and whether
+                  a privilege was then asked.
      PROTECTION   Show each access check: which UIC asked for what
                   access to which file, directory, mailbox, or global
                   section, its owner, protection code, and ACL, and

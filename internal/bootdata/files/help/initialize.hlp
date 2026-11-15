@@ -17,7 +17,8 @@
 
    Makes a new, empty ODS-2 volume in a host file: a real Files-11
    volume, which VMS and other emulators such as simh can use too.  The
-   volume isn't mounted; use MOUNT.
+   volume isn't mounted; use MOUNT.  Initializing a container that
+   already exists, writing over its volume, needs the VOLPRO privilege.
 
    Format
 

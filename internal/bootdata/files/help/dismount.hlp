@@ -23,6 +23,8 @@
    The system volume can't be dismounted, nor the page file's volume.
    When govax exits, every volume is dismounted.
 
+   As MOUNT does, DISMOUNT needs the SYSNAM privilege.
+
 2 Examples
 
    1.$ DISMOUNT DUA1

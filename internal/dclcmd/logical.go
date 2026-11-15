@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -22,6 +23,10 @@ const dclLogicalName = "LNM$DCL_LOGICAL"
 // DefineLogicalName implements DEFINE and ASSIGN: it defines name in the
 // first table designated, at mode, with one equivalence string per
 // element of values, each carrying attrs (AttrConcealed, AttrTerminal).
+// It is $CRELNM's work from supervisor mode, with its checks
+// (corevms.Environment.DefineName): the table looked up from supervisor
+// mode, its protection or SYSNAM or GRPNAM, and an executive-mode name
+// made supervisor without SYSNAM; a refusal is %SYSTEM-F-NOPRIV alone.
 // When log is set and an existing definition was replaced, it prints
 // DCL's %DCL-I-SUPERSEDE message. A new name leaves $STATUS SS$_NORMAL,
 // $CRELNM's, as VMS 7.1's DEFINE did (testdata/ppf71; a superseding
@@ -33,7 +38,14 @@ func (c *Context) DefineLogicalName(table, name string, values []string, mode ln
 		eqv[i] = lnm.Equivalence{Value: v, Attrs: attrs}
 	}
 
-	superseded, err := c.Logicals.Define(table, name, mode, 0, eqv)
+	define := c.RTL.DefineName
+	if c.RTL == nil {
+		define = func(table, name string, mode lnm.Mode, eqv []lnm.Equivalence) (bool, error) {
+			return c.Logicals.Define(table, name, mode, 0, eqv)
+		}
+	}
+
+	superseded, err := define(table, name, mode, eqv)
 	if err != nil {
 		return err
 	}
@@ -54,8 +66,9 @@ func (c *Context) DefineLogicalName(table, name string, values []string, mode ln
 // with all set every such name in that table. Process-permanent names
 // are executive mode, so a default (supervisor-mode) DEASSIGN leaves
 // them alone, as on VMS. A table name in a directory table deletes that
-// table (DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX). It leaves $STATUS
-// SS$_NORMAL.
+// table (DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX). It is $DELLNM's
+// work from supervisor mode, with its checks
+// (corevms.Environment.DeassignName). It leaves $STATUS SS$_NORMAL.
 func (c *Context) DeassignLogicalName(table, name string, mode lnm.Mode, all bool) error {
 	switch {
 	case all && name != "":
@@ -65,7 +78,11 @@ func (c *Context) DeassignLogicalName(table, name string, mode lnm.Mode, all boo
 		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "LOG_NAME")
 	}
 
-	if _, err := c.Logicals.Delete(table, name, mode); err != nil {
+	if c.RTL == nil {
+		if _, err := c.Logicals.Delete(table, name, mode); err != nil {
+			return err
+		}
+	} else if err := c.RTL.DeassignName(table, name, mode); err != nil {
 		return err
 	}
 
@@ -76,22 +93,103 @@ func (c *Context) DeassignLogicalName(table, name string, mode lnm.Mode, all boo
 	return nil
 }
 
-// CreateNameTable implements CREATE/NAME_TABLE: it creates table as a
-// child of the first table parent designates (LNM$PROCESS_DIRECTORY, for
-// a process-private table, unless the caller says otherwise). When log
-// is set and an existing table of that name was replaced, it prints
-// %DCL-I-SUPERSEDE.
-func (c *Context) CreateNameTable(table, parent string, mode lnm.Mode, log bool) error {
-	_, result, err := c.Logicals.CreateTable(table, parent, mode, 0)
+// CreateNameTableRequest is CREATE/NAME_TABLE's parameter and
+// qualifiers.
+type CreateNameTableRequest struct {
+	// Table is the new table's name, Parent the table it goes under
+	// (LNM$PROCESS_DIRECTORY, for a process-private table, when empty).
+	Table, Parent string
+
+	// Mode is the table's access mode.
+	Mode lnm.Mode
+
+	// Protection is /PROTECTION's categories, "S:RWCD" and so on, for a
+	// shareable table; Quota is /QUOTA, in bytes, 0 for none.
+	Protection []string
+	Quota      uint32
+
+	// Log is /LOG.
+	Log bool
+}
+
+// CreateNameTable implements CREATE/NAME_TABLE: it creates the table as
+// a child of the first table its parent designates. It is $CRELNT's work
+// from supervisor mode, with its checks
+// (corevms.Environment.CreateNameTable): a shareable table needs write
+// access to LNM$SYSTEM_DIRECTORY. When Log is set and an existing table
+// of that name was replaced, it prints %DCL-I-SUPERSEDE.
+func (c *Context) CreateNameTable(req CreateNameTableRequest) error {
+	parent := req.Parent
+	if parent == "" {
+		parent = lnm.ProcessDirectoryName
+	}
+
+	protection, err := tableProtection(req.Protection)
 	if err != nil {
 		return err
 	}
 
-	if result == lnm.TableSuperseded && log {
-		c.Printf("%%DCL-I-SUPERSEDE, previous value of %s has been superseded\n", table)
+	var result lnm.CreateResult
+
+	if c.RTL == nil {
+		_, result, err = c.Logicals.CreateTableWith(req.Table, parent, req.Mode, 0,
+			lnm.TableProfile{Owner: c.Logicals.UIC(), Protection: protection, Quota: req.Quota})
+	} else {
+		result, err = c.RTL.CreateNameTable(req.Table, parent, req.Mode, protection, req.Quota)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if result == lnm.TableSuperseded && req.Log {
+		c.Printf("%%DCL-I-SUPERSEDE, previous value of %s has been superseded\n", req.Table)
 	}
 
 	return nil
+}
+
+// tableProtection reads CREATE/NAME_TABLE's /PROTECTION, code as the
+// grammar's $PROTECTION gave its categories ("S:RWCD", "G"), into a
+// table's protection mask: a table's access letters are R, W, C (create,
+// a file's E bit), and D. A category the code doesn't name has no access,
+// and with no /PROTECTION the mask is 0, every access to everyone, as
+// $CRELNT's omitted promsk (both unconfirmed: the probe gave every
+// category). A category that isn't S, O, G, or W is DCL's IVKEYW, other
+// letters CLI$_IVVALU.
+func tableProtection(code []string) (uint16, error) {
+	if codeText(code) == "" {
+		return 0, nil
+	}
+
+	fileCode := make([]string, len(code))
+
+	for i, part := range code {
+		name, letters, found := strings.Cut(strings.Replace(part, "=", ":", 1), ":")
+		if found {
+			if strings.ContainsAny(strings.ToUpper(letters), "E") {
+				return 0, vmserrors.NewSegment(vmserrors.CLI_IVVALU, part)
+			}
+
+			part = name + ":" + strings.ReplaceAll(strings.ReplaceAll(letters, "C", "E"), "c", "e")
+		}
+
+		fileCode[i] = part
+	}
+
+	text, err := qualifierProtection(fileCode, func(part string) error {
+		return vmserrors.NewSegment(vmserrors.CLI_IVVALU, part)
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	p, err := security.ParseProtection(text, security.Protection(0xFFFF))
+	if err != nil {
+		return 0, vmserrors.NewSegment(vmserrors.CLI_IVVALU, text)
+	}
+
+	return uint16(p), nil
 }
 
 // logicalTables resolves each of specs (table names, or logical names
@@ -146,7 +244,18 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 // translation, each with STS$M_INHIB_MSG set, as VMS's SHOW image
 // returned them (testdata/mp/probe4 and probe5).
 func (c *Context) ShowLogical(names, tables []string, full bool) error {
-	untranslated, err := logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
+	display := logicalDisplay{
+		db: c.Logicals, out: c.Printf,
+		owner: func(uic uint32) string { return security.IdentifierText(uic, rightsNames{c}) },
+	}
+
+	// Before INITIALIZE/MEMORY there's no process to ask, and every
+	// table is read.
+	if c.RTL != nil {
+		display.may = c.RTL.MayReadTable
+	}
+
+	untranslated, err := display.show(names, tables, full)
 	if err != nil {
 		return err
 	}
@@ -171,6 +280,13 @@ const showNotran = 0x00788019
 type logicalDisplay struct {
 	db  *lnm.Database
 	out func(format string, args ...any)
+
+	// may says whether the process may read a table's names; nil for
+	// every table.
+	may func(*lnm.Table) bool
+
+	// owner names a table's owner UIC, [SYSTEM]; nil shows the UIC.
+	owner func(uint32) string
 }
 
 // show is SHOW LOGICAL (see Context.ShowLogical). untranslated reports
@@ -185,6 +301,8 @@ func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bo
 		return false, err
 	}
 
+	searched = d.readable(searched)
+
 	if len(names) == 0 {
 		d.listLogicalTables(searched, "*", full)
 
@@ -192,7 +310,7 @@ func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bo
 	}
 
 	for _, name := range names {
-		if lnm.HasWildcards(name) {
+		if lnm.HasWildcards(name) && len(searched) > 0 {
 			d.listLogicalTables(searched, name, full)
 
 			continue
@@ -208,6 +326,48 @@ func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bo
 	return untranslated, nil
 }
 
+// tableAccessLetters is a table's protection as SHOW LOGICAL/FULL's
+// header writes it: each category's letters, system's first, R, W, C,
+// and D for read, write, create, and delete, separated by commas.
+func tableAccessLetters(mask uint16) string {
+	parts := make([]string, 4)
+
+	for c := range parts {
+		denied := mask >> (4 * c)
+
+		for bit, letter := range "RWCD" {
+			if denied&(1<<bit) == 0 {
+				parts[c] += string(letter)
+			}
+		}
+	}
+
+	return strings.Join(parts, ",")
+}
+
+// readable is tables less those the process may not read, each of
+// which is passed over with "%SYSTEM-W-IVLOGTAB, invalid logical name
+// table" (a warning), as VMS 7.1's SHOW LOGICAL/TABLE= of a table closed
+// to the process said before its NOTRAN (testdata/priv94's PRIV94_PT);
+// with every table passed over, even a wildcard is NOTRAN.
+func (d logicalDisplay) readable(tables []*lnm.Table) []*lnm.Table {
+	if d.may == nil {
+		return tables
+	}
+
+	var out []*lnm.Table
+
+	for _, t := range tables {
+		if d.may(t) {
+			out = append(out, t)
+		} else {
+			d.out("%%%s\n", ConditionLine(vmserrors.SS_IVLOGTAB&^7|vmserrors.StatusWarning)[1:])
+		}
+	}
+
+	return out
+}
+
 // listLogicalTables prints each table's header after a blank line, as
 // VMS's SHOW LOGICAL has it (testdata/mp/probe4/vax/probe4.log), and its
 // names that match pattern after another blank line; a table with none
@@ -216,13 +376,34 @@ func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bo
 // access mode and a line about its protection, as VMS 7.3's SHOW
 // LOGICAL/FULL of the process table did (testdata/mp/probe5/vax, step
 // 12): "(LNM$PROCESS_TABLE)<tab>[kernel]", then three tabs and "[no
-// protection information]". (govax keeps no table protection, so every
-// table says so; unconfirmed for the shareable tables.)
+// protection information]". A shareable table's header has its
+// attributes and profile, as VMS 7.1's of LNM$SYSTEM_DIRECTORY did
+// (testdata/priv94, round 2):
+//
+//	(LNM$SYSTEM_DIRECTORY)<tab>[kernel]  [shareable,directory]
+//	<tab><tab><tab>[Protection=(RWC,RWC,R,R)]  [Owner=[SYSTEM]]
+//
+// (unconfirmed for a shareable table that isn't a directory, and for a
+// category with no access, shown as nothing between its commas).
 func (d logicalDisplay) listLogicalTables(tables []*lnm.Table, pattern string, full bool) {
 	for _, t := range tables {
-		if full {
+		switch {
+		case full && t.Shareable:
+			attrs := "shareable"
+			if t.Directory {
+				attrs += ",directory"
+			}
+
+			owner := security.UIC(t.Owner).String()
+			if d.owner != nil {
+				owner = d.owner(t.Owner)
+			}
+
+			d.out("\n(%s)\t[%s]  [%s]\n\t\t\t[Protection=(%s)]  [Owner=%s]\n",
+				t.Name, t.Mode, attrs, tableAccessLetters(t.Protection), owner)
+		case full:
 			d.out("\n(%s)\t[%s]\n\t\t\t[no protection information]\n", t.Name, t.Mode)
-		} else {
+		default:
 			d.out("\n(%s)\n", t.Name)
 		}
 
@@ -328,7 +509,9 @@ func (d logicalDisplay) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, lev
 // (lnm.DisplayValue), as VMS shows it.
 // showMode adds the "[mode]" tag, showAttrs the equivalence attributes,
 // and table (when not "") the trailing "(TABLE)". A table-name entry,
-// which has no equivalence strings, shows as [table] = "".
+// which has no equivalence strings, shows as [table] = "", or with its
+// mode as VMS 7.1's SHOW LOGICAL/FULL showed one, [super,table] = ""
+// [terminal] (testdata/priv94's NAMES sections).
 func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode, showAttrs bool, table string) {
 	var b strings.Builder
 
@@ -336,20 +519,24 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 
 	if showMode {
 		tags := []string{e.Mode.String()}
+		if e.IsTable() {
+			tags = append(tags, "table")
+		}
+
 		if showAttrs {
 			tags = append(tags, nameAttrTags(e.Attrs)...)
 		}
 
 		fmt.Fprintf(&b, " [%s]", strings.Join(tags, ","))
-	}
-
-	if e.IsTable() {
+	} else if e.IsTable() {
 		b.WriteString(" [table]")
 	}
 
 	first := lnm.Equivalence{}
 	if len(e.Equivalences) > 0 {
 		first = e.Equivalences[0]
+	} else if e.IsTable() {
+		first.Attrs = lnm.AttrTerminal
 	}
 
 	fmt.Fprintf(&b, " = %q%s", lnm.DisplayValue(first.Value), attrTags(first.Attrs, showAttrs))

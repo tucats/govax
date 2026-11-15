@@ -1,9 +1,11 @@
 package dclshell
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // The lexical functions on logical names and messages (docs/planning/PHASE-50 -
@@ -126,9 +128,25 @@ func lexTrnlnm(e *dclExpression, args []lexicalArg) (dclValue, error) {
 		table = strings.TrimSpace(args[1].str())
 	}
 
-	entry, err := e.console.Logicals.Translate(table, args[0].str(), mode, attr)
+	// $TRNLNM's lookup, passing over the tables the process may not read:
+	// a name only such a table could have had is %SYSTEM-F-NOPRIV, as
+	// VMS 7.1's F$TRNLNM said (testdata/priv94's PRIV94_PT); any other
+	// failure is no translation.
+	// Before INITIALIZE/MEMORY there's no process to ask (STARTUP.COM's
+	// first lines), and every table is read.
+	translate := e.console.Logicals.Translate
+	if e.console.RTL != nil {
+		translate = e.console.RTL.TranslateName
+	}
+
+	entry, err := translate(table, args[0].str(), mode, attr)
 	if err != nil {
-		return dclString(""), nil //nolint:nilerr // no such name: ""
+		var ve vmserrors.VMSError
+		if errors.As(err, &ve) && ve.Status == vmserrors.SS_NOPRIV {
+			return dclValue{}, err
+		}
+
+		return dclString(""), nil
 	}
 
 	var eqv *lnm.Equivalence
