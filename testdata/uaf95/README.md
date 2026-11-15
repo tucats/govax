@@ -248,6 +248,16 @@ UAF95D isn't needed again.
        mkdir -p testdata/uaf95/vax/round3
        go run ./cmd/govax --profile tbprobe --system-file none console < testdata/uaf95/copyout3.cmd
 
+## Round 3's results
+
+Round 3 ran on VMS V7.1 on 2026-11-15, to the end; `vax/round3/` holds
+its logs and `terminal.log`. SYLOGIN ran first, then LOGIN.COM (UAF95)
+or the LGICMD (UAF95L), never both, the account's procedure at depth 1
+and SYLOGIN at depth 2 above it. UAF95X.COM's warning let it go on and
+its error ended it; at the terminal the login went on, while UAF95L's
+batch job ended there (so it has no `uaf95i_uaf95l_batch.log`). The phase
+doc's A.5 has every round's answers.
+
 ## The rehearsal
 
 `TestUAF95Probe` (`internal/console/uaf95_test.go`) runs the login

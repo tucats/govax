@@ -1,0 +1,49 @@
+$ ! UAF95S.COM - Phase 95's probe: SYS$SYLOGIN while the probe runs.
+$ ! Written by testdata/uaf95/gen.go. For the probe's accounts it records
+$ ! what it sees; for every other user it runs the VAX's own SYLOGIN,
+$ ! whose name UAF95ACCT.COM kept in UAF95$OLD_SYLOGIN.
+$ !
+$ IF F$EXTRACT(0,5,F$GETJPI("","USERNAME")) .NES. "UAF95" THEN GOTO OTHERS
+$ IF F$TYPE(UAF95_ORDER) .EQS. "" THEN UAF95_ORDER == ""
+$ UAF95_ORDER == UAF95_ORDER + ",SYLOGIN"
+$ UAF95_SYLOGIN_VERIFY == F$VERIFY()
+$ UAF95_SYLOGIN_PROCEDURE == F$ENVIRONMENT("PROCEDURE")
+$ UAF95_SYLOGIN_DEPTH == F$ENVIRONMENT("DEPTH")
+$ UAF95_SYLOGIN_MODE == F$MODE()
+$ UAF95_SYLOGIN_DEFAULT == F$ENVIRONMENT("DEFAULT")
+$ UAF95_SYLOGIN_SYS_LOGIN == F$TRNLNM("SYS$LOGIN")
+$ UAF95_SYLOGIN_PRIVS == F$GETJPI("","CURPRIV")
+$ UAF95_SYLOGIN_P1 == P1
+$ UAF95_SYLOGIN_STATUS == $STATUS
+$ EXIT
+$ ! UAF95X.COM - Phase 95's probe: UAF95L's LGICMD. Written by
+$ ! testdata/uaf95/gen.go. After recording, it runs a command that fails
+$ ! with a warning, then one that fails with an error, to show what a
+$ ! failing login procedure does to the login.
+$ !
+$ IF F$TYPE(UAF95_ORDER) .EQS. "" THEN UAF95_ORDER == ""
+$ UAF95_ORDER == UAF95_ORDER + ",LGICMD"
+$ UAF95_LGICMD_VERIFY == F$VERIFY()
+$ UAF95_LGICMD_PROCEDURE == F$ENVIRONMENT("PROCEDURE")
+$ UAF95_LGICMD_DEPTH == F$ENVIRONMENT("DEPTH")
+$ UAF95_LGICMD_MODE == F$MODE()
+$ UAF95_LGICMD_DEFAULT == F$ENVIRONMENT("DEFAULT")
+$ UAF95_LGICMD_SYS_LOGIN == F$TRNLNM("SYS$LOGIN")
+$ UAF95_LGICMD_PRIVS == F$GETJPI("","CURPRIV")
+$ UAF95_LGICMD_P1 == P1
+$ UAF95_LGICMD_STATUS == $STATUS
+$ UAF95_LGICMD_BEFORE == "YES"
+$ NOSUCHVERB
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \NOSUCHVERB\
+$ UAF95_LGICMD_AFTER_WARNING == "YES"
+$ OPEN UAF95_NOFILE UAF95$DISK:[UAF95]NOSUCH.FILE
+%DCL-E-OPENIN, error opening DUA1:[UAF95]NOSUCH.FILE; as input
+-RMS-E-FNF, file not found
+  UAF95L       job terminated at 15-NOV-2026 17:34:07.43
+
+  Accounting information:
+  Buffered I/O count:              29         Peak working set size:     377
+  Direct I/O count:                11         Peak page file size:      3112
+  Page faults:                    476         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.02   Elapsed time:     0 00:00:00.03

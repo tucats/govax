@@ -1,0 +1,285 @@
+$ ! UAF95I.COM - Phase 95's probe: a process's state after logging in.
+$ ! Written by testdata/uaf95/gen.go. The batch jobs run it, and each
+$ ! account runs it by hand after logging in (README.md):
+$ !
+$ !     $ @UAF95$DISK:[000000]UAF95I
+$ !
+$ ! It writes UAF95$DISK:[UAF95LOG]UAF95I_user_mode.LOG (NOLOG: to
+$ ! SYS$OUTPUT, as UAF95.COM uses it for SYSTEM).
+$ !
+$ IF P1 .EQS. "LOGGED" .OR. P1 .EQS. "NOLOG" THEN GOTO BEGIN
+$ BEGIN:
+$ SET NOON
+$ STARTED_IN = F$ENVIRONMENT("DEFAULT")
+$ WRITE SYS$OUTPUT "######## WHAT THE LOGIN PROCEDURES SAW"
+######## WHAT THE LOGIN PROCEDURES SAW
+$ SHOW SYMBOL/GLOBAL UAF95_*
+  UAF95_LOGIN_DEFAULT == "UAF95$DISK:[UAF95]"
+  UAF95_LOGIN_DEPTH == 1   Hex = 00000001  Octal = 00000000001
+  UAF95_LOGIN_MODE == "BATCH"
+  UAF95_LOGIN_P1 == ""
+  UAF95_LOGIN_PRIVS == "TMPMBX,NETMBX"
+  UAF95_LOGIN_PROCEDURE == "DUA1:[UAF95]LOGIN.COM;1"
+  UAF95_LOGIN_STATUS == "%X00030001"
+  UAF95_LOGIN_SYS_LOGIN == "UAF95$DISK:[UAF95]"
+  UAF95_LOGIN_VERIFY == 1   Hex = 00000001  Octal = 00000000001
+  UAF95_ORDER == ",SYLOGIN,LOGIN"
+  UAF95_SYLOGIN_DEFAULT == "UAF95$DISK:[UAF95]"
+  UAF95_SYLOGIN_DEPTH == 2   Hex = 00000002  Octal = 00000000002
+  UAF95_SYLOGIN_MODE == "BATCH"
+  UAF95_SYLOGIN_P1 == ""
+  UAF95_SYLOGIN_PRIVS == "TMPMBX,NETMBX"
+  UAF95_SYLOGIN_PROCEDURE == "DUA1:[000000]UAF95S.COM;1"
+  UAF95_SYLOGIN_STATUS == "%X00030001"
+  UAF95_SYLOGIN_SYS_LOGIN == "UAF95$DISK:[UAF95]"
+  UAF95_SYLOGIN_VERIFY == 1   Hex = 00000001  Octal = 00000000001
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## PROCESS"
+######## PROCESS
+$ WRITE SYS$OUTPUT F$GETJPI("","USERNAME"), " ", F$GETJPI("","UIC"), " ", F$MODE()
+UAF95        [PROT93,UAF95] BATCH
+$ SHOW DEFAULT
+  UAF95$DISK:[UAF95]
+$ WRITE SYS$OUTPUT F$ENVIRONMENT("DEFAULT"), " ", F$ENVIRONMENT("PROTECTION")
+UAF95$DISK:[UAF95] SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD
+$ SHOW PROCESS
+
+15-NOV-2026 17:34:07.01   User: UAF95            Process ID:   00000168
+                          Node: SIMVAX           Process name: "BATCH_16"
+
+Terminal:           
+User Identifier:    [PROT93,UAF95]
+Base priority:      4
+Default file spec:  UAF95$DISK:[UAF95]
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 17:34:07.03   User: UAF95            Process ID:   00000168
+                          Node: SIMVAX           Process name: "BATCH_16"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ UAF95_ID                          
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ SHOW PROCESS/RIGHTS
+
+15-NOV-2026 17:34:07.04   User: UAF95            Process ID:   00000168
+                          Node: SIMVAX           Process name: "BATCH_16"
+ 
+Process rights:
+ BATCH                             
+ UAF95_ID                          
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ SHOW PROCESS/QUOTAS
+
+15-NOV-2026 17:34:07.04   User: UAF95            Process ID:   00000168
+                          Node: SIMVAX           Process name: "BATCH_16"
+
+Process Quotas:
+ Account name: GOVAX   
+ CPU limit:                      Infinite  Direct I/O limit:        40
+ Buffered I/O byte count quota:     31872  Buffered I/O limit:      40
+ Timer queue entry quota:              39  Open file quota:        296
+ Paging file quota:                 31278  Subprocess quota:         2
+ Default page fault cluster:           16  AST quota:               39
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+$ WRITE SYS$OUTPUT "######## LOGICAL NAMES"
+######## LOGICAL NAMES
+$ SHOW LOGICAL/FULL SYS$LOGIN
+   "SYS$LOGIN" [exec] = "UAF95$DISK:[UAF95]" (LNM$JOB_81C36F40)
+$ SHOW LOGICAL/FULL SYS$LOGIN_DEVICE
+   "SYS$LOGIN_DEVICE" [exec] = "UAF95$DISK:" (LNM$JOB_81C36F40)
+1  "UAF95$DISK" [exec] = "DUA1:" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYS$SCRATCH
+   "SYS$SCRATCH" [exec] = "UAF95$DISK:[UAF95]" (LNM$JOB_81C36F40)
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "UAF95$DISK:[000000]UAF95S.COM" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYS$DISK
+   "SYS$DISK" [exec] = "UAF95$DISK:" (LNM$PROCESS_TABLE)
+1  "UAF95$DISK" [exec] = "DUA1:" (LNM$SYSTEM_TABLE)
+   "SYS$DISK" [exec] = "SIMVAX$DUA0:" [concealed,terminal] (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/JOB/FULL
+
+(LNM$JOB_81C36F40)	[kernel]  [shareable]  [Quota=(3904,4096)]
+			[Protection=(RWCD,RWCD,,)]  [Owner=[PROT93,UAF95]]
+
+  "SYS$LOGIN" [exec] = "UAF95$DISK:[UAF95]"
+  "SYS$LOGIN_DEVICE" [exec] = "UAF95$DISK:"
+  "SYS$SCRATCH" [exec] = "UAF95$DISK:[UAF95]"
+$ SHOW LOGICAL/PROCESS/FULL
+
+(LNM$PROCESS_TABLE)	[kernel]
+			[no protection information]
+
+  "SYS$COMMAND" [exec] = "_SIMVAX$DUA1:" [terminal]
+  "SYS$DISK" [exec] = "UAF95$DISK:"
+  "SYS$ERROR" [exec] = "_SIMVAX$DUA1:" [terminal]
+  "SYS$INPUT" [super,confine] = "_SIMVAX$DUA1:" [concealed,terminal]
+  "SYS$INPUT" [exec] = "_SIMVAX$DUA1:" [terminal]
+  "SYS$OUTPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal]
+  "SYS$OUTPUT" [exec] = "_SIMVAX$DUA1:" [terminal]
+  "TT" [exec] = "_NLA0:"
+$ WRITE SYS$OUTPUT "######## F$GETJPI"
+######## F$GETJPI
+$ SET NOVERIFY
+  ACCOUNT = GOVAX   
+  APTCNT = 0
+  ASTACT = 0
+  ASTCNT = 39
+  ASTEN = 15
+  ASTLM = 40
+  AUTHPRI = 4
+  AUTHPRIV = TMPMBX,NETMBX
+  BIOCNT = 40
+  BIOLM = 40
+  BUFIO = 92
+  BYTCNT = 31872
+  BYTLM = 31872
+  CLINAME = DCL
+  CPULIM = 0
+  CPUTIM = 10
+  CREPRC_FLAGS = 16
+  CURPRIV = TMPMBX,NETMBX
+  DFPFC = 16
+  DFWSCNT = 512
+  DIOCNT = 40
+  DIOLM = 40
+  DIRIO = 19
+  EFCS = 1610612737
+  EFCU = -2147483648
+  EFWM = -1073741825
+  ENQCNT = 200
+  ENQLM = 200
+  EXCVEC = 7FFEFE34
+  FILCNT = 296
+  FILLM = 300
+  FINALEXC = 7FFEFF28
+  FREP0VA = 
+  FREP1VA = 7FED5600
+  FREPTECNT = 63140
+  GPGCNT = 77
+  GRP = 128
+  IMAGECOUNT = 12
+  IMAGNAME = 
+  IMAGPRIV = 
+  JOBPRCCNT = 0
+  JOBTYPE = 2
+  LAST_LOGIN_I = 17-NOV-1858 00:00:00.00
+  LAST_LOGIN_N = 17-NOV-1858 00:00:00.00
+  LOGINTIM = 15-NOV-2026 17:34:06.98
+  LOGIN_FAILURES = 0
+  LOGIN_FLAGS = 0
+  MASTER_PID = 00000168
+  MAXDETACH = 0
+  MAXJOBS = 0
+  MEM = 5
+  MODE = BATCH
+  MSGMASK = 15
+  NODENAME = SIMVAX
+  NODE_CSID = 
+  NODE_VERSION = V7.1
+  OWNER = 
+  PAGEFLTS = 1718
+  PAGFILCNT = 31607
+  PAGFILLOC = 03000000
+  PGFLQUOTA = 32768
+  PHDFLAGS = 132
+  PID = 00000168
+  PPGCNT = 204
+  PRCCNT = 0
+  PRCLM = 2
+  PRCNAM = BATCH_16
+  PRI = 4
+  PRIB = 4
+  PROCPRIV = TMPMBX,NETMBX
+  SHRFILLM = 0
+  SITESPEC = 0
+  STATE = CUR
+  STS = 278529
+  STS2 = 0
+  SWPFILLOC = 
+  TERMINAL = 
+  TMBU = 0
+  TQCNT = 39
+  TQLM = 40
+  UAF_FLAGS = 0
+  UIC = [PROT93,UAF95]
+  USERNAME = UAF95       
+  VIRTPEAK = 6652
+  VOLUMES = 0
+  WSAUTH = 1024
+  WSAUTHEXT = 16400
+  WSEXTENT = 16400
+  WSPEAK = 457
+  WSQUOTA = 1024
+  WSSIZE = 512
+$ WRITE SYS$OUTPUT "######## AUTHORIZE AND THE UAF"
+######## AUTHORIZE AND THE UAF
+$ DIRECTORY/SECURITY SYS$SYSTEM:SYSUAF.DAT
+
+Directory SYS$COMMON:[SYSEXE]
+
+SYSUAF.DAT;1       insufficient privilege or object protection violation
+
+Total of 1 file.
+$ MCR AUTHORIZE SHOW UAF95
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE SHOW UAF95
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-PRV, insufficient privilege or file protection violation
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SET DEFAULT UAF95$DISK:[UAF95]
+$ WRITE SYS$OUTPUT "######## THE SYSTEM'S FILES"
+######## THE SYSTEM'S FILES
+$ DIRECTORY/SECURITY SYS$MANAGER:SYLOGIN.COM
+
+Directory SYS$COMMON:[SYSMGR]
+
+SYLOGIN.COM;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ OPEN/READ/ERROR=NOREAD F SYS$MANAGER:SYLOGIN.COM
+$ READ F LINE
+$ CLOSE F
+$ WRITE SYS$OUTPUT "read SYLOGIN.COM"
+read SYLOGIN.COM
+$ NOREAD:
+$ OPEN/APPEND/ERROR=NOWRITE F SYS$MANAGER:SYLOGIN.COM
+$ NOWRITE:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1001829A"
+$ DIRECTORY/SECURITY SYS$LIBRARY:STARLET.OLB
+
+Directory SYS$COMMON:[SYSLIB]
+
+STARLET.OLB;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ CREATE SYS$SCRATCH:UAF95I.TMP
+$ DIRECTORY/SECURITY SYS$SCRATCH:UAF95I.TMP
+
+Directory DUA1:[UAF95]
+
+UAF95I.TMP;1         [PROT93,UAF95]                   (RWED,RWED,RE,)
+
+Total of 1 file.
+$ DELETE SYS$SCRATCH:UAF95I.TMP;*
+$ WRITE SYS$OUTPUT "UAF95I FINISHED"
+UAF95I FINISHED
+$ EXIT

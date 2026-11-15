@@ -1,0 +1,374 @@
+$ ! UAF95B.COM - Phase 95's probe, round 3: the login procedures.
+$ ! Written by testdata/uaf95/gen.go. Run it as SYSTEM, from a fresh
+$ ! exchange volume, mounted /SYSTEM (README.md, "Round 3"):
+$ !
+$ !     @DUA1:[000000]UAF95B
+$ !
+$ ! It defines UAF95$DISK, lists identifiers and rights from scratch files,
+$ ! makes the accounts (UAF95ACCT.COM), and runs the batch jobs. Its log is
+$ ! UAF95$DISK:[UAF95LOG]UAF95B.LOG.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ BEGIN:
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## VOLUME"
+######## VOLUME
+$ SET VOLUME/PROTECTION=(S:RWCD,O:RWCD,G:RWCD,W:RWCD) UAF95$DISK:
+$ SET SECURITY/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) UAF95$DISK:[000000]000000.DIR
+$ SET SECURITY/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) UAF95$DISK:[000000]UAF95LOG.DIR
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) UAF95$DISK:[000000]*.COM;*
+$ DIRECTORY/SECURITY UAF95$DISK:[000000]
+
+Directory DUA1:[000000]
+
+000000.DIR;1         [SYSTEM]                         (RWE,RWE,RWE,RWE)
+BACKUP.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+BADBLK.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+BADLOG.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+BITMAP.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+CONTIN.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+CORIMG.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+INDEXF.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+SECURITY.SYS;1       [SYSTEM]                         (RWED,RWED,RE,)
+UAF95.COM;1          [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95.DIR;1          [SYSTEM]                         (RWE,RWE,RE,E)
+UAF95ACCT.COM;1      [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95B.COM;1         [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95DROP.COM;1      [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95I.COM;1         [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95LOG.DIR;1       [SYSTEM]                         (RWE,RWE,RWE,RWE)
+UAF95S.COM;1         [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95SCR.DIR;1       [SYSTEM]                         (RWE,RWE,,)
+VOLSET.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+
+Total of 19 files.
+$ !
+$ WRITE SYS$OUTPUT "######## SCRATCH FILES"
+######## SCRATCH FILES
+$ SET DEFAULT UAF95$DISK:[UAF95SCR]
+$ DEFINE/PROCESS/EXECUTIVE_MODE SYSUAF UAF95$DISK:[UAF95SCR]SYSUAF.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE RIGHTSLIST UAF95$DISK:[UAF95SCR]RIGHTSLIST.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE NETPROXY UAF95$DISK:[UAF95SCR]NETPROXY.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE NET$PROXY UAF95$DISK:[UAF95SCR]NET$PROXY.DAT
+$ MCR AUTHORIZE
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+YES
+CREATE/RIGHTS
+%UAF-I-RDBCREMSG, rights database created
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ IF F$SEARCH("UAF95$DISK:[UAF95SCR]SYSUAF.DAT") .EQS. "" THEN GOTO NO_SCRATCH
+$ IF F$SEARCH("UAF95$DISK:[UAF95SCR]RIGHTSLIST.DAT") .EQS. "" THEN GOTO NO_SCRATCH
+$ GOTO SCRATCH_MADE
+$ SCRATCH_MADE:
+$ WRITE SYS$OUTPUT "######## LIST"
+######## LIST
+$ WRITE SYS$OUTPUT "== L1"
+== L1
+$ MCR AUTHORIZE ADD UAFA/UIC=[300,1]
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFA value [000300,000001] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L2"
+== L2
+$ MCR AUTHORIZE ADD UAFB/UIC=[300,2]
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFB value [000300,000002] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L3"
+== L3
+$ MCR AUTHORIZE ADD/IDENTIFIER PROJX
+%UAF-I-RDBADDMSG, identifier PROJX value %X80010000 added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L4"
+== L4
+$ MCR AUTHORIZE ADD/IDENTIFIER PROJY/ATTRIBUTES=RESOURCE
+%UAF-I-RDBADDMSG, identifier PROJY value %X80010001 added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L5"
+== L5
+$ MCR AUTHORIZE GRANT/IDENTIFIER PROJX UAFA
+%UAF-I-GRANTMSG, identifier PROJX granted to UAFA
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L6"
+== L6
+$ MCR AUTHORIZE GRANT/IDENTIFIER/ATTRIBUTES=RESOURCE PROJY UAFA
+%UAF-I-GRANTMSG, identifier PROJY granted to UAFA
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L7"
+== L7
+$ MCR AUTHORIZE GRANT/IDENTIFIER PROJX UAFB
+%UAF-I-GRANTMSG, identifier PROJX granted to UAFB
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== L8"
+== L8
+$ MCR AUTHORIZE LIST/IDENTIFIER *
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-RLSTMSG, listing file RIGHTSLIST.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+  Name                             Value           Attributes
+  BATCH                            %X80000001      
+  DECWINDOWS                       %X80000007      
+  DIALUP                           %X80000002      
+  INTERACTIVE                      %X80000003      
+  LOCAL                            %X80000004      
+  NETWORK                          %X80000005      
+  PROJX                            %X80010000      
+    Holder                           Attributes
+    UAFA                             
+    UAFB                             
+  PROJY                            %X80010001      RESOURCE 
+    Holder                           Attributes
+    UAFA                             RESOURCE 
+  REMOTE                           %X80000006      
+  UAFA                             [000300,000001] 
+  UAFB                             [000300,000002] 
+  VMS$BUFFER_OBJECT_USER           %X80000008      
+$ WRITE SYS$OUTPUT "== L9"
+== L9
+$ MCR AUTHORIZE LIST/IDENTIFIER PROJX
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-RLSTMSG, listing file RIGHTSLIST.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+  Name                             Value           Attributes
+  PROJX                            %X80010000      
+    Holder                           Attributes
+    UAFA                             
+    UAFB                             
+$ WRITE SYS$OUTPUT "== L10"
+== L10
+$ MCR AUTHORIZE LIST/IDENTIFIER/FULL *
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-RLSTMSG, listing file RIGHTSLIST.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+  Name                             Value           Attributes
+  BATCH                            %X80000001      
+  DECWINDOWS                       %X80000007      
+  DIALUP                           %X80000002      
+  INTERACTIVE                      %X80000003      
+  LOCAL                            %X80000004      
+  NETWORK                          %X80000005      
+  PROJX                            %X80010000      
+    Holder                           Attributes
+    UAFA                             
+    UAFB                             
+  PROJY                            %X80010001      RESOURCE 
+    Holder                           Attributes
+    UAFA                             RESOURCE 
+  REMOTE                           %X80000006      
+  UAFA                             [000300,000001] 
+  UAFB                             [000300,000002] 
+  VMS$BUFFER_OBJECT_USER           %X80000008      
+$ WRITE SYS$OUTPUT "== L11"
+== L11
+$ MCR AUTHORIZE LIST/RIGHTS UAFA
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-RLSTMSG, listing file RIGHTSLIST.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+Identifier                         Value           Attributes
+  PROJX                            %X80010000      
+  PROJY                            %X80010001      RESOURCE 
+$ WRITE SYS$OUTPUT "== L12"
+== L12
+$ MCR AUTHORIZE LIST/RIGHTS *
+%UAF-I-LSTMSG1, writing listing file
+%UAF-E-LSTERR, error generating listing file
+-SYSTEM-F-IVIDENT, invalid identifier format
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+Identifier                         Value           Attributes
+  PROJX                            %X80010000      
+  PROJY                            %X80010001      RESOURCE 
+$ WRITE SYS$OUTPUT "== L13"
+== L13
+$ MCR AUTHORIZE LIST/IDENTIFIER/VALUE=UIC=[300,1]
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-RLSTMSG, listing file RIGHTSLIST.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+  Name                             Value           Attributes
+  UAFA                             [000300,000001] 
+$ ACCOUNTS:
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE NETPROXY
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE NET$PROXY
+$ SET DEFAULT UAF95$DISK:[000000]
+$ !
+$ @UAF95$DISK:[000000]UAF95ACCT
+$ ! UAF95ACCT.COM - Phase 95's probe: the accounts, in the VAX's own
+$ ! SYSUAF. Written by testdata/uaf95/gen.go. UAF95.COM runs it as SYSTEM;
+$ ! UAF95DROP.COM undoes everything it does.
+$ !
+$ !   UAF95   [200,5]  TMPMBX, NETMBX; home UAF95$DISK:[UAF95], so its
+$ !                    login runs SYS$LOGIN:LOGIN.COM
+$ !   UAF95L  [200,7]  the same, with LGICMD UAF95$DISK:[UAF95]UAF95X.COM
+$ !   UAF95D  [200,6]  the same, DISUSER
+$ !
+$ ! Each has the password UAF95PW, not expiring. UAF95 is granted the
+$ ! identifier UAF95_ID. SYS$SYLOGIN is pointed at the probe's
+$ ! UAF95$DISK:[000000]UAF95S.COM, which records what it sees for the
+$ ! probe's accounts and runs the VAX's own SYLOGIN for everyone else;
+$ ! the old translation is kept in UAF95$OLD_SYLOGIN for UAF95DROP.COM.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## ACCOUNTS"
+######## ACCOUNTS
+$ ! The VAX's own files: no scratch names left over.
+$ IF F$TRNLNM("SYSUAF","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ IF F$TRNLNM("RIGHTSLIST","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE
+ADD UAF95/UIC=[200,5]/PASSWORD=UAF95PW/NOPWDEXPIRED/PWDLIFETIME=NONE/FLAGS=NODISUSER
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAF95 value [000200,000005] added to rights database
+MODIFY UAF95/DEVICE=UAF95$DISK:/DIRECTORY=[UAF95]/ACCOUNT=GOVAX/OWNER="GOVAX PROBE"
+%UAF-I-MDFYMSG, user record(s) updated
+MODIFY UAF95/PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX)
+%UAF-I-MDFYMSG, user record(s) updated
+MODIFY UAF95/LGICMD=""
+%UAF-I-MDFYMSG, user record(s) updated
+COPY UAF95 UAF95L/UIC=[200,7]/PASSWORD=UAF95PW/NOPWDEXPIRED
+%UAF-I-COPMSG, user record copied
+%UAF-I-RDBADDMSGU, identifier UAF95L value [000200,000007] added to rights database
+MODIFY UAF95L/LGICMD=UAF95$DISK:[UAF95]UAF95X.COM
+%UAF-I-MDFYMSG, user record(s) updated
+COPY UAF95 UAF95D/UIC=[200,6]/PASSWORD=UAF95PW/NOPWDEXPIRED/FLAGS=DISUSER
+%UAF-I-COPMSG, user record copied
+%UAF-I-RDBADDMSGU, identifier UAF95D value [000200,000006] added to rights database
+ADD/IDENTIFIER UAF95_ID
+%UAF-I-RDBADDMSG, identifier UAF95_ID value %X80010003 added to rights database
+GRANT/IDENTIFIER UAF95_ID UAF95
+%UAF-I-GRANTMSG, identifier UAF95_ID granted to UAF95
+SHOW UAF95/FULL
+
+Username: UAF95                            Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,5] ([PROT93,UAF95])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:34 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010003      
+SHOW UAF95L/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+GOVAX PROBE          UAF95L          [200,7]      GOVAX    Normal  4 UAF95$DISK:[UAF95]
+SHOW UAF95D/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+GOVAX PROBE          UAF95D          [200,6]      GOVAX    Normal  4 Disuser
+SHOW/RIGHTS UAF95
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010003      
+SHOW/IDENTIFIER/VALUE=UIC=[200,*]
+  Name                             Value           Attributes
+  PROT93                           [000200,177777] 
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SET DEFAULT UAF95$DISK:[000000]
+$ !
+$ ! The home directory, owned by UAF95, and its procedures.
+$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWE,O:RWE,G:RWE,W) UAF95$DISK:[000000]UAF95.DIR
+$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWED,O:RWED,G:RE,W) UAF95$DISK:[UAF95]*.*;*
+$ DIRECTORY/SECURITY UAF95$DISK:[UAF95]
+
+Directory DUA1:[UAF95]
+
+LOGIN.COM;1          [PROT93,UAF95]                   (RWED,RWED,RE,)
+UAF95X.COM;1         [PROT93,UAF95]                   (RWED,RWED,RE,)
+
+Total of 2 files.
+$ !
+$ ! SYS$SYLOGIN, kept and replaced at the mode it was defined in.
+$ OLD = F$TRNLNM("SYS$SYLOGIN","LNM$SYSTEM_TABLE")
+$ MODE = F$TRNLNM("SYS$SYLOGIN","LNM$SYSTEM_TABLE",,,,"ACCESS_MODE")
+$ IF MODE .EQS. "" THEN MODE = "EXECUTIVE"
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN" (LNM$SYSTEM_TABLE)
+$ IF OLD .NES. "" THEN DEFINE/SYSTEM/EXECUTIVE_MODE UAF95$OLD_SYLOGIN "SYS$MANAGER:SYLOGIN"
+$ DEFINE/SYSTEM/EXECUTIVE_MODE UAF95$OLD_SYLOGIN_MODE "EXECUTIVE"
+$ DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SYLOGIN UAF95$DISK:[000000]UAF95S.COM
+%DCL-I-SUPERSEDE, previous value of SYS$SYLOGIN has been superseded
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "UAF95$DISK:[000000]UAF95S.COM" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL UAF95$OLD_SYLOGIN*
+
+(LNM$PROCESS_TABLE)	[kernel]
+			[no protection information]
+
+(LNM$JOB_81C38B00)	[kernel]  [shareable]  [Quota=(3904,4096)]
+			[Protection=(RWCD,RWCD,,)]  [Owner=[SYSTEM]]
+
+(LNM$GROUP_000001)	[kernel]  [shareable,group]
+			[Protection=(RWCD,R,R,)]  [Owner=[1,*]]
+
+(LNM$SYSTEM_TABLE)	[kernel]  [shareable,system]
+			[Protection=(RWC,RWC,R,R)]  [Owner=[SYSTEM]]
+
+  "UAF95$OLD_SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN"
+  "UAF95$OLD_SYLOGIN_MODE" [exec] = "EXECUTIVE"
+$ EXIT
+$ !
+$ WRITE SYS$OUTPUT "######## BATCH"
+######## BATCH
+$ SHOW QUEUE/BATCH/ALL
+Batch queue SYS$BATCH, idle, on SIMVAX::
+$ SUBMIT/USER=UAF95/NOPRINTER/KEEP/NAME=UAF95J/LOG_FILE=UAF95$DISK:[UAF95LOG]UAF95J_UAF95.LOG UAF95$DISK:[000000]UAF95I.COM
+Job UAF95J (queue SYS$BATCH, entry 16) started on SYS$BATCH
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY=16
+$ SUBMIT/USER=UAF95L/NOPRINTER/KEEP/NAME=UAF95LJ/LOG_FILE=UAF95$DISK:[UAF95LOG]UAF95J_UAF95L.LOG UAF95$DISK:[000000]UAF95I.COM
+Job UAF95LJ (queue SYS$BATCH, entry 17) started on SYS$BATCH
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY=17
+%JBC-E-NOSUCHENT, no such entry
+$ DIRECTORY UAF95$DISK:[UAF95LOG]
+
+Directory DUA1:[UAF95LOG]
+
+UAF95B.LOG;1        UAF95I_UAF95_BATCH.LOG;1                UAF95J_UAF95.LOG;1 
+UAF95J_UAF95L.LOG;1 
+
+Total of 4 files.
+$ WRITE SYS$OUTPUT "UAF95B FINISHED"
+UAF95B FINISHED
+$ EXIT

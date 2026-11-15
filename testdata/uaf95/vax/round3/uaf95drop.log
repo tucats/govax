@@ -1,0 +1,148 @@
+$ IF F$TRNLNM("SYSUAF","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ IF F$TRNLNM("RIGHTSLIST","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ !
+$ WRITE SYS$OUTPUT "######## SYLOGIN"
+######## SYLOGIN
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "UAF95$DISK:[000000]UAF95S.COM" (LNM$SYSTEM_TABLE)
+$ OLD = F$TRNLNM("UAF95$OLD_SYLOGIN","LNM$SYSTEM_TABLE")
+$ MODE = F$TRNLNM("UAF95$OLD_SYLOGIN_MODE","LNM$SYSTEM_TABLE")
+$ IF MODE .EQS. "" THEN GOTO SYLOGIN_DONE
+$ IF OLD .NES. "" THEN DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SYLOGIN "SYS$MANAGER:SYLOGIN"
+%DCL-I-SUPERSEDE, previous value of SYS$SYLOGIN has been superseded
+$ IF OLD .EQS. "" THEN DEASSIGN/SYSTEM/EXECUTIVE_MODE SYS$SYLOGIN
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE UAF95$OLD_SYLOGIN_MODE
+$ IF OLD .NES. "" THEN DEASSIGN/SYSTEM/EXECUTIVE_MODE UAF95$OLD_SYLOGIN
+$ SYLOGIN_DONE:
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN" (LNM$SYSTEM_TABLE)
+$ !
+$ WRITE SYS$OUTPUT "######## ACCOUNTS"
+######## ACCOUNTS
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE
+SHOW UAF95/FULL
+
+Username: UAF95                            Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,5] ([PROT93,UAF95])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:34 
+Last Login: 15-NOV-2026 17:34 (interactive), 15-NOV-2026 17:34 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010003      
+SHOW UAF95L/FULL
+
+Username: UAF95L                           Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,7] ([PROT93,UAF95L])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   UAF95$DISK:[UAF95]UAF95X.COM
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:34 
+Last Login: 15-NOV-2026 17:36 (interactive), 15-NOV-2026 17:34 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+SHOW UAF95D/FULL
+
+Username: UAF95D                           Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,6] ([PROT93,UAF95D])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:34 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+REMOVE UAF95
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier UAF95 value [000200,000005] removed from rights database
+REMOVE UAF95L
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier UAF95L value [000200,000007] removed from rights database
+REMOVE UAF95D
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier UAF95D value [000200,000006] removed from rights database
+REMOVE/IDENTIFIER UAF95_ID
+%UAF-I-RDBREMMSG, identifier UAF95_ID value %X80010003 removed from rights database
+REMOVE/IDENTIFIER GOVAX
+%UAF-E-RDBREMERR, unable to remove GOVAX from rights database
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+SHOW UAF95*
+%UAF-W-BADSPC, no user matches specification
+SHOW/IDENTIFIER/VALUE=UIC=[200,*]
+  Name                             Value           Attributes
+  PROT93                           [000200,177777] 
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SET DEFAULT SYS$SYSROOT:[SYSMGR]
+$ !
+$ WRITE SYS$OUTPUT "######## SCRATCH FILES"
+######## SCRATCH FILES
+$ DELETE UAF95$DISK:[UAF95SCR]*.DAT;*
+$ DIRECTORY UAF95$DISK:[UAF95SCR]
+
+Directory DUA1:[UAF95SCR]
+
+RIGHTSLIST.LIS;5    RIGHTSLIST.LIS;4    RIGHTSLIST.LIS;3    RIGHTSLIST.LIS;2   
+RIGHTSLIST.LIS;1    
+
+Total of 5 files.
+$ DIRECTORY UAF95$DISK:[UAF95LOG]
+
+Directory DUA1:[UAF95LOG]
+
+UAF95B.LOG;1        UAF95DROP.LOG;1     UAF95I_UAF95L_INTERACTIVE.LOG;1
+UAF95I_UAF95_BATCH.LOG;1                UAF95I_UAF95_INTERACTIVE.LOG;1
+UAF95J_UAF95.LOG;1  UAF95J_UAF95L.LOG;1 
+
+Total of 7 files.
+$ WRITE SYS$OUTPUT "UAF95DROP FINISHED"
+UAF95DROP FINISHED
+$ EXIT

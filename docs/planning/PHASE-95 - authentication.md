@@ -188,6 +188,96 @@ they are missing.
    MAXDETACH, SHRFILLM, JTQUOTA?): the probe lists every item code's
    answer for the probe account.
 
+### A.5 The probe's answers (2026-11-15)
+
+Three rounds on VMS 7.1 (`testdata/uaf95`, its README's "Round 1" to
+"Round 3"; logs in `vax/`, `vax/round1/`, `vax/round3/`).
+
+**AUTHORIZE** (round 2's 134 cases and round 3's 13, all on scratch files):
+
+- **The files.** SYSUAF is found through a supervisor-mode logical name,
+  but RIGHTSLIST only through an executive-mode one (round 1 used the
+  VAX's own rights database). A missing SYSUAF.DAT is `%UAF-E-NAOFIL`
+  with RMS's FNF, then the question whether to make one; the new file
+  holds SYSTEM and DEFAULT. A user without access gets NAOFIL with
+  RMS-E-PRV; SYSUAF.DAT is (S:RWED,O:RWED,G:,W:) on that VAX.
+- **The new file's records.** SYSTEM: owner SYSTEM MANAGER, account
+  SYSTEM, `[1,4]`, `SYS$SYSROOT:[SYSMGR]`, every privilege, PRCLM 10,
+  ASTLM 50, TQELM 30, ENQLM 300, WSEXTENT 2048, PGFLQUOTA 40960, password
+  pre-expired. DEFAULT: `[200,200]`, DISUSER, directory `[USER]`, CLI DCL,
+  TMPMBX and NETMBX, PRCLM 2, ASTLM 40, BIOLM and DIOLM 40, BYTLM 32768,
+  FILLM 300, JTQUOTA 4096, WSDEFAULT 256, WSQUOTA 512, WSEXTENT 1024,
+  PGFLQUOTA 32768, ENQLM 200, TQELM 40, PRIO and QUEPRIO 4, password
+  lifetime 90 days, minimum 6, pre-expired. (The VAX's own DEFAULT had
+  LGICMD `LOGIN`; a new file's is empty.)
+- **ADD** copies DEFAULT, needs no /UIC (DEFAULT's is taken), and adds
+  the username as a UIC identifier (`%UAF-I-RDBADDMSGU, identifier X
+  value [000300,000001] added to rights database`); an identifier that
+  exists (a UIC another account has, `[200,200]` from DEFAULT) is
+  `%UAF-E-RDBADDERRU` with `-SYSTEM-F-DUPIDENT`, the record added anyway.
+  ADD makes a group identifier from /ACCOUNT when the group has none
+  (`CASED [000300,177777]`). A UIC's numbers are **octal** (`[300,8]` is
+  UICERR); `[300]` and `[400000,1]` are UICERR too. A username over 12
+  characters is NAMETOOBIG, a bad character INVUSERNAME, a duplicate
+  UAEERR, a bad number BADVALUE, a priority of 99 VALTOOBIG.
+- **COPY and RENAME** need a new password (`%UAF-W-DEFPWD`); COPY with
+  the same UIC is `%UAF-W-SAMEUIC`; a missing source is BADUSR. RENAME
+  renames the UIC identifier (`%UAF-I-RDBMDFYMSG`). REMOVE removes it.
+- **MODIFY** of a wildcard (`UAF%`, `UAF*`) updates each match, one
+  MDFYMSG; of a missing user BADUSR; a changed /CLI warns CLIWARNMSG.
+- **SHOW**'s full layout (the record's fields in two columns, the
+  quotas in three, the privileges eight to a line, the identifiers held
+  under `Identifier  Value  Attributes`), `/BRIEF`'s one line per account,
+  and a username matching nothing `%UAF-W-BADSPC` (or SHOWERR with no
+  username). `/FULL` adds the identifiers held.
+- **Identifiers.** ADD/IDENTIFIER gives the next `%X8001nnnn` value;
+  GRANT, REVOKE, RENAME, MODIFY, and REMOVE with their messages
+  (GRANTMSG, GRANTERR, GRANTUSR, REVOKEMSG, REVOKEERR, RDBMDFYERR,
+  RDBREMERR, ...). LIST/IDENTIFIER and LIST/RIGHTS need a name
+  (`%UAF-I-NOIDNAME`); with one, they write RIGHTSLIST.LIS.
+- **LIST** writes SYSUAF.LIS in the default directory (LSTMSG1,
+  LSTMSG2): `/BRIEF` (the default) a heading and a line per account,
+  `/FULL` SHOW's layout per account.
+- **Exit messages.** A session ends, at EXIT or at the end of its input,
+  with DONEMSG or NOMODS for SYSUAF and RDBDONEMSG or RDBNOMODS for the
+  rights database. A one-command run (`MCR AUTHORIZE ADD ...`) prints only
+  its command's messages.
+- **`$STATUS`** after a one-command run follows no one rule: some errors
+  leave %X00000001 (UICERR, VALTOOBIG, DEFPWD), some give AUTHORIZE's own
+  condition (UAEERR %X13F1943A, NAMETOOBIG %X13F19352, INVUSERNAME
+  %X13F1931A), and some the underlying system status with the inhibit
+  bit (GRANTERR, SHOWERR, RDBMDFYERR %X100021EC). The same message can
+  differ by command (BADSPC: %X00000001, %X100182B2, %X13F18C80). The
+  oracle test (subtask 5) holds each case to its log.
+
+**Logging in** (rounds 2 and 3, by batch job and at the terminal):
+
+- **The order.** SYLOGIN (`SYS$SYLOGIN`), then the account's LGICMD if it
+  has one, else `SYS$LOGIN:LOGIN.COM`, never both. DCL puts the account's
+  procedure at level 1 and runs SYLOGIN above it first:
+  `F$ENVIRONMENT("DEPTH")` is 2 in SYLOGIN when a login procedure
+  follows, 1 when none can run.
+- **A missing or unreadable login procedure** is skipped with no message
+  (round 2).
+- **Failures.** A login procedure follows DCL's default ON action: a
+  warning goes on, an error ends the procedure. At the terminal the
+  login continues to the prompt; in a batch job the error ends the job.
+- **Verify** is off in both interactively, on in batch. P1 is empty.
+- **Names.** `SYS$LOGIN`, `SYS$LOGIN_DEVICE`, and `SYS$SCRATCH` are
+  executive-mode names in the job table (SYS$SCRATCH the home directory);
+  `SYS$DISK` is an executive-mode process name; the default directory is
+  the home directory. The job table is owned by the account's UIC.
+- **The process** gets the record's username, account, UIC, privileges
+  (authorized and default), priority, and quotas; its rights are
+  INTERACTIVE and LOCAL (or BATCH), and the system rights hold
+  SYS$NODE_node. The login banner says `Last interactive login on ...`
+  or `Last non-interactive login on ...`.
+- **DISUSER** is `%LOGIN-F-DISUSER, account is disabled` at the terminal,
+  and the same for a batch job; OPCOM shows a security alarm.
+- **F$GETJPI** answered every item it was asked, among them LAST_LOGIN_I,
+  LAST_LOGIN_N (17-NOV-1858 when none), LOGIN_FAILURES, LOGIN_FLAGS,
+  MAXDETACH, MAXJOBS, SHRFILLM, and UAF_FLAGS, which govax lacks.
+
 ## Part B — decisions
 
 **Decision 1 — `internal/uaf`, a leaf package.** The authorization file
@@ -296,7 +386,7 @@ in the SYSTEM process. The one-shot subcommands (`govax run`, `macro`,
 ...) honor `--user` too, so a privilege or protection can be tried from
 the shell.
 
-**Decision 7 — logging in, one routine.** `corevms.Environment.LogIn(rec
+**Decision 7 — logging in, one routine** (held to A.5's answers). `corevms.Environment.LogIn(rec
 uaf.Record)` does what LOGINOUT does for a process, and is the one place
 an account becomes a process: username, account, owner, UIC (and the
 logical name database's, `SetUIC`), authorized privileges, process and
@@ -305,18 +395,26 @@ priority, the quotas govax has (`LoginQuotas` taking the record), the
 rights (the record's identifiers plus the environmental ones),
 LOGINTIM, and the record's last-login time written back. DCL's side,
 `dclshell`, defines `SYS$LOGIN`, `SYS$LOGIN_DEVICE`, and `SYS$SCRATCH`
-(job table, executive mode, unless the probe says otherwise), sets the
-default directory to them, and runs the login procedures (Decision 8).
+(job table, executive mode, SYS$SCRATCH the home directory, as A.5
+found), sets the default directory to them, and runs the login
+procedures (Decision 8). The record keeps the last interactive and
+non-interactive logins apart, as VMS's does; `$GETJPI` gains the items
+A.5 lists (LAST_LOGIN_I, LAST_LOGIN_N, LOGIN_FAILURES, LOGIN_FLAGS,
+MAXDETACH, MAXJOBS, SHRFILLM, UAF_FLAGS); and process 1's login prints
+VMS's `Last interactive login on ...` line.
 `$CREPRC` of LOGINOUT and LIB$SPAWN keep today's rules (a subprocess
 takes its owner's identity); a detached LOGINOUT process looked up by
 username waits for the remote-login phase.
 
-**Decision 8 — the login procedures.** After STARTUP.COM (and
-SYSTARTUP_VMS.COM), process 1's DCL runs `SYS$SYLOGIN` if that name is
-defined and the file exists, else `SYS$MANAGER:SYLOGIN.COM` if it
-exists; then the account's LGICMD, or `SYS$LOGIN:LOGIN.COM`, if it
-exists. Each at level 1, as a login procedure, its failures its own;
-Ctrl/Y in one ends it. STARTUP.COM defines `SYS$SYLOGIN` as VMS's
+**Decision 8 — the login procedures** (held to A.5's answers). After
+STARTUP.COM (and SYSTARTUP_VMS.COM), process 1's DCL runs `SYS$SYLOGIN`
+if that name is defined, then the account's LGICMD, or
+`SYS$LOGIN:LOGIN.COM` when it has none, as VMS does: the account's
+procedure at level 1 and SYLOGIN above it at level 2, run first (so
+`F$ENVIRONMENT("DEPTH")` is VMS's in each). A procedure that is missing
+or can't be read is skipped with no message. Each follows DCL's default
+ON action (a warning goes on, an error ends that procedure) and the
+login goes on to the prompt; Ctrl/Y in one ends it. Verify is off. STARTUP.COM defines `SYS$SYLOGIN` as VMS's
 does. They run for every login, SYSTEM's too, in an interactive
 session; the one-shot subcommands skip them (they run one command, and
 their output must stay predictable). There is no option to skip them
@@ -387,10 +485,9 @@ home writable), its LOGIN.COM run, `F$GETJPI` showing its values.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe** (written and rehearsed 2026-11-15; awaiting the VAX
-   run): `testdata/uaf95`, as in Part D, written and rehearsed
-   where govax can; run on the VAX by the author; A.4 answered and Part
-   B adjusted.
+2. **The probe** (done 2026-11-15): `testdata/uaf95`, as in Part D,
+   written and rehearsed where govax can; run on the VAX by the author in
+   three rounds; A.4 answered (A.5) and Part B adjusted.
 3. **The authorization file** (Decisions 1 to 5): `internal/uaf`
    (records, identifiers, JSON, locking, the hash, validation, the
    default file), `vax.authorization.file`, the file made at startup;
@@ -554,3 +651,9 @@ The answers (2026-11-15):
   `TestProtectionErrors`). Round 3 (`uaf95b.com`, `copyout3.cmd`) makes
   the accounts again with that fixed and UAF95's LGICMD empty, and lists
   identifiers and rights by name; waiting for the VAX.
+- **2026-11-15** Round 3 on VMS 7.1 settled the login procedures: SYLOGIN,
+  then the LGICMD or LOGIN.COM (never both), the account's at level 1 and
+  SYLOGIN above it at level 2; a warning goes on, an error ends the
+  procedure, the interactive login goes on and a batch job ends; and the
+  LIST cases by name. A.5 is the three rounds' answers; Decisions 7 and 8
+  now follow them. Subtask 2 is done.

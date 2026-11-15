@@ -1,0 +1,40 @@
+
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1    
+
+Username: uaf95
+Password: 
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1
+    Last non-interactive login on Sunday, 15-NOV-2026 17:34
+$ @UAF95$DISK:[000000]UAF95I
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-PRV, insufficient privilege or file protection violation
+$ WRITE SYS$OUTPUT "UAF95I finished; the log is ", LOGFILE
+UAF95I finished; the log is UAF95$DISK:[UAF95LOG]UAF95I_UAF95_INTERACTIVE.LOG
+$ EXIT
+$ logo
+  UAF95        logged out at 15-NOV-2026 17:34:43.12
+
+
+
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1    
+
+Username: uaf95l
+Password: 
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1
+    Last non-interactive login on Sunday, 15-NOV-2026 17:34
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \NOSUCHVERB\
+%DCL-E-OPENIN, error opening DUA1:[UAF95]NOSUCH.FILE; as input
+-RMS-E-FNF, file not found
+$ @UAF95$DISK:[000000]UAF95I
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-PRV, insufficient privilege or file protection violation
+$ WRITE SYS$OUTPUT "UAF95I finished; the log is ", LOGFILE
+UAF95I finished; the log is UAF95$DISK:[UAF95LOG]UAF95I_UAF95L_INTERACTIVE.LOG
+$ EXIT
+$ logo
+  UAF95L       logged out at 15-NOV-2026 17:37:02.59
