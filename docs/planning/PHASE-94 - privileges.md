@@ -703,3 +703,10 @@ The answers:
   VAX's system table (the sweep's mode), and group 200's table is owned
   by Phase 93's identifier PROT93, which is still there; AUTHORIZE made
   no PRIV94G.
+- **2026-11-15** Subtask 2, round 2 written: `testdata/priv94`'s
+  `priv94b.mar` (40 cases: permanent mailboxes and their names, `$ULKPAG`,
+  `$CRELNT` under shareable tables, `$DELLNM` across modes) and its
+  procedures (`priv94r.com`, `priv94v.com`, `priv94e.com`, `priv94y.com`),
+  on round 1's volume, for A.4's open questions; its end also removes the
+  three names round 1 left. `TestPriv94BProbe` rehearses it. Waiting for
+  the author's VAX run.

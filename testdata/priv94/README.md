@@ -154,3 +154,66 @@ refuses (`%DCL-W-NOCCAT`), and part Z's sweep deleted names at kernel
 mode, which leaves user-mode names alone, so PRIV94_L21, L49, and L51
 stayed in the VAX's system table (`$ DEASSIGN/SYSTEM/USER_MODE` removes
 them).
+
+## Round 2
+
+Round 2 asks what round 1 left open (the phase doc's A.4, "Open"), on
+round 1's exchange volume, as SYSTEM and PRIV94 only. `PRIV94B.MAR`
+(written by `gen.go` too, 40 cases on the same machinery) has four parts:
+
+- **M**: permanent mailboxes with PRMMBX, with and without a logical
+  name, and with SYSNAM, SYSPRV, or TMPMBX beside it;
+- **U**: `$ULKPAG` of a page the program locked, with and without retadr,
+  at user mode, in the same body as the lock, with every privilege, and of
+  a page never locked;
+- **N**: `$CRELNT` under an open shareable table (with quotas 100 and 2000
+  and none), a group table, and LNM$SYSTEM_TABLE, under each privilege;
+- **D**: which names `$DELLNM` deletes when names of the same name exist at
+  several modes, shown by translating at each mode after it.
+
+F makes round 1's fixtures again, and Z removes them, round 1's three
+leftover names (PRIV94_L21, L49, L51; NOLOGNAM if they're already gone),
+and every name round 2 may have left, at every mode. `PRIV94E.COM` is
+DCL's side: DEFINE, SHOW LOGICAL, DEASSIGN, F$TRNLNM, and SHOW SECURITY on
+two tables made at supervisor mode (round 1's, made at user mode, DCL
+couldn't see), under several privileges, and SET PROCESS/PRIORITY done
+right. `TestPriv94BProbe` rehearses the program.
+
+| File | What it holds |
+| ---- | ------------- |
+| `priv94b.mar` | Round 2's program |
+| `priv94r.com` | SYSTEM's run: the account PRIV94 again, the build, the fixtures, SYSTEM's parts, DCL's side |
+| `priv94v.com` | PRIV94's run |
+| `priv94e.com` | DCL's side |
+| `priv94y.com` | The end: the fixtures, the tables, and the account removed |
+| `exchange2.cmd`, `copyout2.cmd` | Round 2's files onto round 1's volume, and its logs back into `vax/round2/` |
+
+1. **Add round 2's files** to round 1's volume, from the repository root:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/priv94/exchange2.cmd
+
+2. **Attach it** (`attach rq1 testdata/disks/priv94-exchange.dsk`) and, **as
+   SYSTEM**:
+
+       $ MOUNT/SYSTEM DUA1: PRIV94
+       $ @DUA1:[000000]PRIV94R
+
+   Its log is `PRIV94$DISK:[PRIV94LOG]PRIV94R.LOG`, ending `PRIV94R
+   FINISHED`.
+
+3. **Log in as PRIV94** (password `PRIV94PW`):
+
+       $ @PRIV94$DISK:[000000]PRIV94V
+       $ LOGOUT
+
+4. **As SYSTEM**:
+
+       $ @PRIV94$DISK:[000000]PRIV94Y
+       $ DISMOUNT DUA1:
+
+       sim> detach rq1
+
+5. **Copy the results back**:
+
+       mkdir -p testdata/priv94/vax/round2
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/priv94/copyout2.cmd

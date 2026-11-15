@@ -11,14 +11,13 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// TestPriv94Probe rehearses testdata/priv94's program on govax, so that the
-// probe the author runs on the VAX can't lose a round to a mistake of ours
-// (docs/planning/PHASE-94 - privileges.md, subtask 2): the three programs
-// must assemble and link with no message, and the program must run every
-// case: the fixtures and holders (parts F and H), every default part, and
-// parts K and R, and the end (parts H and Z), each case's line printed, with no condition
-// reaching a case's handler but $SETSWM's, a service govax doesn't have yet.
-func TestPriv94Probe(t *testing.T) {
+// runPriv94 builds testdata/priv94's programs (names, without .MAR) on a
+// fresh volume named PRIV94$DISK, as the VAX's exchange volume is, then runs
+// the first of them once for each set of parts ("" for the default), and
+// returns the runs' output. MACRO and LINK must say nothing.
+func runPriv94(t *testing.T, programs []string, runs []string) string {
+	t.Helper()
+
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {
@@ -39,7 +38,7 @@ func TestPriv94Probe(t *testing.T) {
 	dispatch("DEFINE/SYSTEM/EXECUTIVE_MODE PRIV94$DISK DUA1:")
 	dispatch("SET DEFAULT DUA1:[000000]")
 
-	for _, name := range []string{"PRIV94", "PRIV94H", "PRIV94I"} {
+	for _, name := range programs {
 		src, err := filepath.Abs(filepath.Join("..", "..", "testdata", "priv94", strings.ToLower(name)+".mar"))
 		if err != nil {
 			t.Fatal(err)
@@ -58,35 +57,65 @@ func TestPriv94Probe(t *testing.T) {
 
 	var out strings.Builder
 
-	for _, parts := range []string{"FH", "", "K", "R", "HZ"} {
+	for _, parts := range runs {
 		if parts == "" {
 			dispatch("DEASSIGN PRIV94_PART")
 		} else {
 			dispatch(`DEFINE PRIV94_PART "` + parts + `"`)
 		}
 
-		out.WriteString(dispatch("RUN PRIV94"))
+		out.WriteString(dispatch("RUN " + programs[0]))
 	}
 
-	text := out.String()
+	return out.String()
+}
 
-	// Every case ran, H twice.
+// checkPriv94Run fails the test for each of cases 1 to n that didn't run,
+// each wanted line missing, and each condition that reached a case's handler
+// but the one allowed (a status's hex, or "" for none).
+func checkPriv94Run(t *testing.T, text string, n int, want []string, allowed string) {
+	t.Helper()
+
 	ran := map[int]int{}
 
 	for _, line := range strings.Split(text, "\n") {
-		var n int
-		if _, err := fmt.Sscanf(line, "== %d ", &n); err == nil {
-			ran[n]++
+		var k int
+		if _, err := fmt.Sscanf(line, "== %d ", &k); err == nil {
+			ran[k]++
 		}
 	}
 
-	for n := 1; n <= 289; n++ {
-		if ran[n] == 0 {
-			t.Errorf("case %d didn't run", n)
+	for k := 1; k <= n; k++ {
+		if ran[k] == 0 {
+			t.Errorf("case %d didn't run", k)
 		}
 	}
 
-	for _, want := range []string{
+	for _, w := range want {
+		if !strings.Contains(text, w) {
+			t.Errorf("no %q in the run's output", w)
+		}
+	}
+
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, "  signal ") && (allowed == "" || !strings.HasPrefix(line, "  signal "+allowed+" ")) {
+			t.Errorf("a condition reached a case's handler: %s", line)
+		}
+	}
+}
+
+// TestPriv94Probe rehearses testdata/priv94's round 1 program on govax, so
+// that the probe the author runs on the VAX can't lose a round to a mistake
+// of ours (docs/planning/PHASE-94 - privileges.md, subtask 2): the three
+// programs must assemble and link with no message, and the program must run
+// every case: the fixtures and holders (parts F and H), every default part,
+// parts K and R, and the end (parts H and Z), with no condition reaching a
+// case's handler but $SETSWM's, a service govax doesn't have yet (subtask 4
+// adds it).
+func TestPriv94Probe(t *testing.T) {
+	text := runPriv94(t, []string{"PRIV94", "PRIV94H", "PRIV94I"}, []string{"FH", "", "K", "R", "HZ"})
+
+	checkPriv94Run(t, text, 289, []string{
 		"== 1 F fixtures",
 		"  PRIV94_PMBX 00000001",
 		"== 5 L user [SYSNAM] $CRELNM LNM$SYSTEM_TABLE user-mode name",
@@ -94,17 +123,21 @@ func TestPriv94Probe(t *testing.T) {
 		"== 289 X user [CMEXEC] $CMEXEC of a routine that returns 1",
 		"== 3 Z the end",
 		"end of cases",
-	} {
-		if !strings.Contains(text, want) {
-			t.Errorf("no %q in the run's output", want)
-		}
-	}
+	}, "00000E4A")
+}
 
-	// $SETSWM is the one service the probe calls that govax lacks; its
-	// cases signal (subtask 4 adds it). Nothing else may.
-	for _, line := range strings.Split(text, "\n") {
-		if strings.HasPrefix(line, "  signal ") && !strings.HasPrefix(line, "  signal 00000E4A ") {
-			t.Errorf("a condition reached a case's handler: %s", line)
-		}
-	}
+// TestPriv94BProbe rehearses round 2's program, PRIV94B, the same way: its
+// fixtures, every default part, and its end.
+func TestPriv94BProbe(t *testing.T) {
+	text := runPriv94(t, []string{"PRIV94B"}, []string{"F", "", "Z"})
+
+	checkPriv94Run(t, text, 40, []string{
+		"== 1 F fixtures",
+		"== 3 M user [PRMMBX] $CREMBX prmflg 1 with no logical name",
+		"== 17 U user [ALL] $ULKPAG of a page it locked",
+		"  at 0: ",
+		"== 2 Z the end",
+		"  PRIV94_L21 ",
+		"end of cases",
+	}, "")
 }

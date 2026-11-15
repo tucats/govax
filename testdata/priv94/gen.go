@@ -97,6 +97,9 @@ type kase struct {
 	// plain is a case run with the process's own privileges, untouched:
 	// parts F, H, and Z, which set the run up and take it down.
 	plain bool
+
+	// all is a case whose body runs with every privilege (round 2).
+	all bool
 }
 
 var cases []*kase
@@ -989,15 +992,30 @@ func setupCases() {
 // ---------------------------------------------------------------------
 // The program.
 
-func program() string {
+// round is what tells the two rounds' programs apart: round 1's is
+// PRIV94, round 2's PRIV94B, each with its own default parts and, for
+// round 2, routines of its own after the shared ones.
+type round struct {
+	title, parts string
+	extra        string
+}
+
+func program(r round) string {
 	var b strings.Builder
 
-	b.WriteString(programHead)
+	head := strings.Replace(programHead, ".TITLE\tPRIV94\t", ".TITLE\t"+r.title+"\t", 1)
+	head = strings.Replace(head, "DEFPART: .ASCII\t/LMEGQPCSOWDTX/\nDEFLEN\t= 13",
+		fmt.Sprintf("DEFPART: .ASCII\t/%s/\nDEFLEN\t= %d", r.parts, len(r.parts)), 1)
+	b.WriteString(head)
 
 	for i, k := range cases {
 		n := i + 1
 		pre := fmt.Sprintf("C%d_", n)
 		title := fmt.Sprintf("== %d %c %s %s %s", n, k.part, modeText(k.mode), privText(k.privs), k.title)
+
+		if k.all {
+			title = fmt.Sprintf("== %d %c %s [ALL] %s", n, k.part, modeText(k.mode), k.title)
+		}
 
 		if k.plain {
 			title = fmt.Sprintf("== %d %c %s", n, k.part, k.title)
@@ -1014,6 +1032,10 @@ func program() string {
 			inner = mask(p("CMEXEC"))
 		case 'K':
 			inner = mask(p("CMKRNL"))
+		}
+
+		if k.all {
+			m = ^uint64(0)
 		}
 
 		fmt.Fprintf(&b, "%sXM:\t%s\n", pre, quad(m|inner))
@@ -1034,6 +1056,7 @@ func program() string {
 	b.WriteString("\t.LONG\t0,0\n")
 	b.WriteString(sweep())
 	b.WriteString(programCode)
+	b.WriteString(r.extra)
 
 	lines := func(list []string, pre string) {
 		for _, l := range list {
@@ -2262,6 +2285,565 @@ $ SET NOVERIFY
 $ EXIT
 `
 
+// ---------------------------------------------------------------------
+// Round 2 (README.md's "Round 2"): what round 1 left open. PRIV94B.MAR
+// runs on the same machinery as PRIV94.MAR, with cases of its own:
+// permanent mailboxes with and without a logical name (M), $ULKPAG (U),
+// $CRELNT under shareable tables (N), and which modes $DELLNM deletes (D);
+// F and Z make and remove the fixtures, and Z also removes the names
+// round 1 left in the system table.
+
+func round2MailboxCases() {
+	for _, c := range []struct {
+		privs []string
+		perm  int
+		lnm   bool
+	}{
+		{p("PRMMBX"), 1, false},
+		{p("PRMMBX"), 1, true},
+		{p("PRMMBX", "SYSNAM"), 1, true},
+		{p("PRMMBX", "SYSPRV"), 1, true},
+		{p("PRMMBX", "TMPMBX"), 1, true},
+		{p("PRMMBX", "TMPMBX"), 1, false},
+		{p("TMPMBX"), 0, true},
+		{none, 0, false},
+	} {
+		title := fmt.Sprintf("$CREMBX prmflg %d", c.perm)
+		if c.lnm {
+			title += " with a logical name"
+		} else {
+			title += " with no logical name"
+		}
+
+		k := add('M', "U", c.privs, "%s", title)
+
+		if c.lnm {
+			k.ascid("%N", name("MB"))
+			k.b("$CREMBX_S PRMFLG=#%d,CHAN=CHAN,MAXMSG=#64,BUFQUO=#256,ACMODE=#3,LOGNAM=%%N", c.perm)
+			k.w("PUSHAQ\t%%N")
+			k.w("PUSHAQ\tFILEDEV")
+			k.w("CALLS\t#2,LNMSHOW")
+		} else {
+			k.b("$CREMBX_S PRMFLG=#%d,CHAN=CHAN,MAXMSG=#64,BUFQUO=#256,ACMODE=#3", c.perm)
+		}
+
+		k.u("CALLS\t#0,DROPMBX")
+	}
+}
+
+func round2UnlockCases() {
+	locked := func(k *kase) {
+		k.s("$LCKPAG_S INADR=PAGEADR")
+		k.s("SAY\t</  made !XL/>,R0")
+	}
+	undo := func(k *kase) {
+		k.w("SAY\t</  retadr !XL !XL/>,RANGE,RANGE+4")
+		k.u("$ULKPAG_S INADR=PAGEADR")
+		k.u("SAY\t</  undo ulkpag !XL/>,R0")
+		k.u("CLRQ\tRANGE")
+	}
+
+	k := add('U', "U", none, "$ULKPAG of a page it locked, as round 1")
+	locked(k)
+	k.b("CLRQ\tRANGE")
+	k.b("$ULKPAG_S INADR=PAGEADR")
+	undo(k)
+
+	k = add('U', "U", none, "$ULKPAG of a page it locked, with retadr")
+	locked(k)
+	k.b("CLRQ\tRANGE")
+	k.b("$ULKPAG_S INADR=PAGEADR,RETADR=RANGE")
+	undo(k)
+
+	k = add('U', "U", p("PSWAPM"), "$ULKPAG of a page it locked, with retadr")
+	locked(k)
+	k.b("CLRQ\tRANGE")
+	k.b("$ULKPAG_S INADR=PAGEADR,RETADR=RANGE")
+	undo(k)
+
+	k = add('U', "U", none, "$ULKPAG of a page it locked, acmode user")
+	locked(k)
+	k.b("CLRQ\tRANGE")
+	k.b("$ULKPAG_S INADR=PAGEADR,RETADR=RANGE,ACMODE=#3")
+	undo(k)
+
+	k = add('U', "U", none, "$ULKPAG of a page it never locked")
+	k.b("CLRQ\tRANGE")
+	k.b("$ULKPAG_S INADR=PAGEADR,RETADR=RANGE")
+	undo(k)
+
+	k = add('U', "U", p("PSWAPM"), "$LCKPAG then $ULKPAG in the same body")
+	k.b("CLRQ\tRANGE")
+	k.b("$LCKPAG_S INADR=PAGEADR")
+	k.b("MOVL\tR0,RES1")
+	k.b("$ULKPAG_S INADR=PAGEADR,RETADR=RANGE")
+	k.w("SAY\t</  lckpag !XL/>,RES1")
+	undo(k)
+
+	k = add('U', "U", nil, "$ULKPAG of a page it locked")
+	k.all = true
+	locked(k)
+	k.b("CLRQ\tRANGE")
+	k.b("$ULKPAG_S INADR=PAGEADR,RETADR=RANGE")
+	undo(k)
+}
+
+func round2TableCases() {
+	type tc struct {
+		parent string
+		privs  []string
+		quota  string // "" for none
+	}
+
+	for _, c := range []tc{
+		{"PRIV94_OT", none, "100"},
+		{"PRIV94_OT", p("SYSPRV"), "100"},
+		{"PRIV94_OT", p("SYSNAM"), "100"},
+		{"PRIV94_OT", p("GRPNAM"), "100"},
+		{"PRIV94_OT", none, "2000"},
+		{"PRIV94_OT", none, ""},
+		{"LNM$GROUP", none, "100"},
+		{"LNM$GROUP", p("GRPNAM"), "100"},
+		{"LNM$GROUP", p("SYSPRV"), "100"},
+		{"LNM$SYSTEM_TABLE", none, "100"},
+		{"LNM$SYSTEM_TABLE", p("SYSNAM"), "100"},
+		{"LNM$SYSTEM_TABLE", p("SYSPRV"), "100"},
+	} {
+		q := "no quota"
+		if c.quota != "" {
+			q = "quota " + c.quota
+		}
+
+		k := add('N', "U", c.privs, "$CRELNT under %s, %s", c.parent, q)
+		k.ascid("%N", name("TB"))
+
+		if c.quota != "" {
+			k.d("%%Q:\t.LONG\t%s", c.quota)
+			k.b("$CRELNT_S TABNAM=%%N,PARTAB=%s,QUOTA=%%Q", tables[c.parent])
+		} else {
+			k.b("$CRELNT_S TABNAM=%%N,PARTAB=%s", tables[c.parent])
+		}
+
+		k.w("PUSHAQ\t%%N")
+		k.w("PUSHAQ\t%s", tables[c.parent])
+		k.w("CALLS\t#2,LNMSHOW")
+		k.u("$DELLNM_S TABNAM=%s,LOGNAM=%%N,ACMODE=MODEU", tables[c.parent])
+	}
+}
+
+func round2DeleteCases() {
+	type dc struct {
+		table string
+		make  []int
+		del   int // -1: no acmode argument
+		privs []string
+	}
+
+	for _, c := range []dc{
+		{"LNM$PROCESS_TABLE", []int{1}, 3, p("SYSNAM")},
+		{"LNM$PROCESS_TABLE", []int{1}, 3, none},
+		{"LNM$PROCESS_TABLE", []int{3}, 1, p("SYSNAM")},
+		{"LNM$PROCESS_TABLE", []int{3}, 0, p("SYSNAM")},
+		{"LNM$PROCESS_TABLE", []int{3, 1}, 3, p("SYSNAM")},
+		{"LNM$PROCESS_TABLE", []int{3, 1}, 1, p("SYSNAM")},
+		{"LNM$PROCESS_TABLE", []int{3, 1}, 3, none},
+		{"LNM$PROCESS_TABLE", []int{1}, -1, p("SYSNAM")},
+		{"LNM$PROCESS_TABLE", []int{3, 2, 1, 0}, 2, p("SYSNAM")},
+		{"LNM$SYSTEM_TABLE", []int{3}, 1, p("SYSNAM")},
+		{"LNM$SYSTEM_TABLE", []int{3, 1}, 3, p("SYSNAM")},
+	} {
+		var made []string
+		for _, m := range c.make {
+			made = append(made, modeNames[m])
+		}
+
+		del := "no acmode"
+		if c.del >= 0 {
+			del = "acmode " + modeNames[c.del]
+		}
+
+		k := add('D', "U", c.privs, "$DELLNM %s, %s, of names at %s", c.table, del, strings.Join(made, " and "))
+		k.ascid("%N", name("LB"))
+		tab := tables[c.table]
+
+		for _, m := range c.make {
+			k.s("$CRELNM_S TABNAM=%s,LOGNAM=%%N,ACMODE=%s,ITMLST=EQVLST", tab, modeCell[m])
+			k.s("SAY\t</  made %s !XL/>,R0", modeNames[m])
+		}
+
+		if c.del >= 0 {
+			k.b("$DELLNM_S TABNAM=%s,LOGNAM=%%N,ACMODE=%s", tab, modeCell[c.del])
+		} else {
+			k.b("$DELLNM_S TABNAM=%s,LOGNAM=%%N", tab)
+		}
+
+		k.w("PUSHAQ\t%%N")
+		k.w("PUSHAQ\t%s", tab)
+		k.w("CALLS\t#2,LNMMODES")
+
+		for _, m := range []int{3, 2, 1, 0} {
+			k.u("$DELLNM_S TABNAM=%s,LOGNAM=%%N,ACMODE=%s", tab, modeCell[m])
+		}
+	}
+}
+
+func round2SetupCases() {
+	k := add('F', "U", nil, "fixtures")
+	k.plain = true
+	k.b("CALLS\t#0,FIXTURES")
+
+	k = add('Z', "U", nil, "the end")
+	k.plain = true
+	k.b("CALLS\t#0,THEEND2")
+}
+
+// round2Code is PRIV94B's own routines.
+const round2Code = `
+; LNMMODES table, name: the name's translation asked for at each mode in
+; turn (user, supervisor, executive, kernel), with the mode found.
+	.ENTRY	LNMMODES,^M<R2,R3,R4,R5>
+	MOVAB	MODEU,R4
+	MOVL	#4,R5
+1$:	CLRW	TRNLEN
+	CLRW	TABLEN
+	CLRB	TRNMODE
+	$TRNLNM_S TABNAM=@4(AP),LOGNAM=@8(AP),ACMODE=(R4),ITMLST=TRNLST
+	MOVZBL	(R4),R1
+	BLBS	R0,2$
+	SAY	</  at !UL: lnm !XL/>,R1,R0
+	BRB	3$
+2$:	MOVZBL	TRNMODE,R2
+	SAY	</  at !UL: mode !UL/>,R1,R2
+3$:	DECL	R4
+	DECL	R5
+	BLEQ	4$
+	BRW	1$
+4$:	RET
+
+; THEEND2 (part Z of round 2): the fixtures, round 1's three names left in
+; the system table, and every name round 2's cases may have left, at
+; every mode.
+	.ENTRY	THEEND2,^M<R2,R3,R4,R5>
+	$ASSIGN_S DEVNAM=PMBXNAM,CHAN=CHAN
+	BLBC	R0,1$
+	$DELMBX_S CHAN=CHAN
+	SAY	</  PRIV94_PMBX !XL/>,R0
+	$DASSGN_S CHAN=CHAN
+	CLRL	CHAN
+1$:	$DELLNM_S TABNAM=SYSDIR,LOGNAM=OTTAB
+	SAY	</  PRIV94_OT !XL/>,R0
+	$DELLNM_S TABNAM=SYSDIR,LOGNAM=PTTAB
+	SAY	</  PRIV94_PT !XL/>,R0
+	MOVAB	ROUND1,R2
+2$:	MOVL	(R2)+,R3
+	BEQL	3$
+	$DELLNM_S TABNAM=SYSTAB,LOGNAM=(R3),ACMODE=MODEU
+	SAY	</  !AS !XL/>,R3,R0
+	BRB	2$
+3$:	CLRL	R4
+	MOVAB	SWEEPN,R2
+10$:	MOVL	(R2)+,R3
+	BEQL	19$
+	MOVAB	SWEEPT,R5
+11$:	TSTL	(R5)
+	BEQL	10$
+	PUSHL	R3
+	PUSHL	(R5)+
+	CALLS	#2,DELALL
+	ADDL2	R0,R4
+	BRB	11$
+19$:	SAY	</  ~ swept !UL/>,R4
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; DELALL table, name: delete the name at each mode, returning how many
+; it deleted.
+	.ENTRY	DELALL,^M<R2,R3>
+	CLRL	R3
+	MOVAB	MODEU,R2
+1$:	$DELLNM_S TABNAM=@4(AP),LOGNAM=@8(AP),ACMODE=(R2)
+	BLBC	R0,2$
+	INCL	R3
+2$:	CMPL	R2,#MODEK
+	BEQL	3$
+	DECL	R2
+	BRB	1$
+3$:	MOVL	R3,R0
+	RET
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+	.ALIGN	LONG
+ROUND1:	.ADDRESS R1L21,R1L49,R1L51
+	.LONG	0
+R1L21:	.ASCID	/PRIV94_L21/
+R1L49:	.ASCID	/PRIV94_L49/
+R1L51:	.ASCID	/PRIV94_L51/
+SWEEPT:	.ADDRESS SYSTAB,G200TAB,G001TAB,SYSDIR,OTTAB,PRCTAB
+	.LONG	0
+
+	.PSECT	CODE,NOWRT,EXE,LONG
+`
+
+// round2 writes PRIV94B.MAR and round 2's procedures.
+func round2() {
+	cases, names, counter = nil, nil, map[string]int{}
+
+	round2SetupCases()
+	round2MailboxCases()
+	round2UnlockCases()
+	round2TableCases()
+	round2DeleteCases()
+
+	write("priv94b.mar", program(round{title: "PRIV94B", parts: "MUND", extra: round2Code}))
+	write("priv94r.com", round2System)
+	write("priv94v.com", round2User)
+	write("priv94e.com", round2DCL)
+	write("priv94y.com", round2End)
+	write("exchange2.cmd", round2Exchange)
+	write("copyout2.cmd", round2Copyout)
+
+	fmt.Printf("round 2: %d cases\n", len(cases))
+}
+
+const round2System = `$ ! PRIV94R.COM - Phase 94's probe, round 2: SYSTEM's run.
+$ ! Written by testdata/priv94/gen.go. Run it as SYSTEM, from round 1's
+$ ! exchange volume with round 2's files added, mounted /SYSTEM
+$ ! (README.md's "Round 2"):
+$ !
+$ !     @DUA1:[000000]PRIV94R
+$ !
+$ ! It defines PRIV94$DISK again, makes the account PRIV94 again, builds
+$ ! PRIV94B, makes the fixtures and two DCL tables, and runs SYSTEM's
+$ ! parts. Its log is PRIV94$DISK:[PRIV94LOG]PRIV94R.LOG.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ DEV = F$PARSE(HERE,,,"DEVICE")
+$ DEFINE/SYSTEM/EXECUTIVE_MODE PRIV94$DISK 'DEV'
+$ LOGFILE = DEV + "[PRIV94LOG]PRIV94R.LOG"
+$ @'HERE'/OUTPUT='LOGFILE' LOGGED
+$ WRITE SYS$OUTPUT "PRIV94R finished; the log is ", LOGFILE
+$ EXIT
+$ BEGIN:
+$ SET NOON
+$ SET VERIFY
+$ !
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("NODENAME")
+$ SHOW LOGICAL/SYSTEM PRIV94*
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) PRIV94$DISK:[000000]PRIV94B.MAR
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) PRIV94$DISK:[000000]PRIV94V.COM
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) PRIV94$DISK:[000000]PRIV94E.COM
+$ !
+$ WRITE SYS$OUTPUT "######## ACCOUNTS"
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ RUN SYS$SYSTEM:AUTHORIZE
+ADD PRIV94/UIC=[200,3]/PASSWORD=PRIV94PW/NOPWDEXPIRED/PWDLIFETIME=NONE/FLAGS=NODISUSER/DEVICE=PRIV94$DISK:/DIRECTORY=[PRIV94LOG]/PRIVILEGES=ALL/DEFPRIVILEGES=(TMPMBX,NETMBX)/ACCOUNT=PRIV94G/OWNER="PHASE 94 PROBE"
+SHOW PRIV94/BRIEF
+EXIT
+$ SET DEFAULT 'HOME'
+$ !
+$ WRITE SYS$OUTPUT "######## BUILD"
+$ SET DEFAULT PRIV94$DISK:[000000]
+$ DEFINE/USER_MODE SYS$OUTPUT PRIV94B.MLG
+$ MACRO/NOLIST PRIV94B
+$ SHOW SYMBOL $STATUS
+$ DEFINE/USER_MODE SYS$OUTPUT PRIV94B.LLG
+$ LINK/NOMAP PRIV94B
+$ SHOW SYMBOL $STATUS
+$ IF F$SEARCH("PRIV94B.EXE") .EQS. "" THEN EXIT
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) PRIV94B.EXE
+$ !
+$ WRITE SYS$OUTPUT "######## FIXTURES"
+$ DEFINE/USER_MODE PRIV94_PART "F"
+$ RUN PRIV94$DISK:[000000]PRIV94B
+$ CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY/PROTECTION=(S:RWCD,O:RWCD,G:RWCD,W:RWCD) PRIV94_DO
+$ CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY/PROTECTION=(S:RWCD,O:RWCD,G,W) PRIV94_DP
+$ DEFINE/TABLE=PRIV94_DP PRIV94_DPN "P"
+$ SHOW LOGICAL/FULL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_D*
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_DO
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_DP
+$ !
+$ WRITE SYS$OUTPUT "######## PROGRAM SYSTEM"
+$ RUN PRIV94$DISK:[000000]PRIV94B
+$ !
+$ @PRIV94$DISK:[000000]PRIV94E SYSTEM
+$ !
+$ WRITE SYS$OUTPUT "PRIV94R FINISHED"
+$ SET NOVERIFY
+$ EXIT
+`
+
+const round2User = `$ ! PRIV94V.COM - Phase 94's probe, round 2: PRIV94's run. Run it logged
+$ ! in as PRIV94:
+$ !
+$ !     @PRIV94$DISK:[000000]PRIV94V
+$ !
+$ ! Its log is PRIV94$DISK:[PRIV94LOG]PRIV94V.LOG.
+$ ! Written by testdata/priv94/gen.go.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ LOGFILE = "PRIV94$DISK:[PRIV94LOG]PRIV94V.LOG"
+$ @'HERE'/OUTPUT='LOGFILE' LOGGED
+$ WRITE SYS$OUTPUT "PRIV94V finished; the log is ", LOGFILE
+$ EXIT
+$ BEGIN:
+$ SET NOON
+$ SET VERIFY
+$ !
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+$ WRITE SYS$OUTPUT F$GETJPI("","USERNAME"), " ", F$GETJPI("","UIC")
+$ SHOW PROCESS/PRIVILEGES
+$ !
+$ WRITE SYS$OUTPUT "######## PROGRAM PRIV94"
+$ RUN PRIV94$DISK:[000000]PRIV94B
+$ !
+$ @PRIV94$DISK:[000000]PRIV94E PRIV94
+$ !
+$ WRITE SYS$OUTPUT "PRIV94V FINISHED"
+$ SET NOVERIFY
+$ EXIT
+`
+
+// round2DCL is PRIV94E.COM: DCL on tables made at supervisor mode, which
+// round 1's user-mode fixtures couldn't show, and SET PROCESS/PRIORITY,
+// which round 1's procedure wrote wrongly.
+var round2DCL = func() string {
+	var b strings.Builder
+
+	w := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
+
+	w(`$ ! PRIV94E.COM - Phase 94's probe, round 2: DCL's side. P1 is the
+$ ! identity (SYSTEM or PRIV94). Written by testdata/priv94/gen.go.
+$ !
+$ SET NOON
+$ WHO = P1
+$ P = F$GETJPI("","PRIB")
+$ HIGHER = P + 2`)
+
+	for _, s := range [][]string{none, p("SYSPRV"), p("SYSNAM"), p("GRPNAM"), p("READALL")} {
+		set := "TMPMBX,NETMBX"
+		if len(s) > 0 {
+			set += "," + strings.Join(s, ",")
+		}
+
+		w(`$ !
+$ WRITE SYS$OUTPUT "######## E TABLES %s ''WHO'"
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("%s")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+$ DEFINE/TABLE=PRIV94_DO PRIV94_EO "O"
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_DO PRIV94_EO
+$ DEASSIGN/TABLE=PRIV94_DO PRIV94_EO
+$ DEFINE/TABLE=PRIV94_DP PRIV94_EP "P"
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_DP PRIV94_EP
+$ DEASSIGN/TABLE=PRIV94_DP PRIV94_EP
+$ SHOW LOGICAL/TABLE=PRIV94_DP *
+$ WRITE SYS$OUTPUT F$TRNLNM("PRIV94_DPN","PRIV94_DP")
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_DP`, privText(s), set)
+	}
+
+	for _, s := range [][]string{none, p("ALTPRI")} {
+		set := "TMPMBX,NETMBX"
+		if len(s) > 0 {
+			set += "," + strings.Join(s, ",")
+		}
+
+		w(`$ !
+$ WRITE SYS$OUTPUT "######## E PRIORITY %s ''WHO'"
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("%s")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+$ SET PROCESS/PRIORITY='HIGHER'
+$ WRITE SYS$OUTPUT F$GETJPI("","PRI"), " ", F$GETJPI("","PRIB")
+$ SET PROCESS/PRIORITY='P'
+$ WRITE SYS$OUTPUT F$GETJPI("","PRI"), " ", F$GETJPI("","PRIB")`, privText(s), set)
+	}
+
+	w(`$ !
+$ X = F$SETPRV("NOALL")
+$ IF WHO .EQS. "SYSTEM" THEN SET PROCESS/PRIVILEGES=ALL
+$ IF WHO .NES. "SYSTEM" THEN X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT "######## E END ''WHO'"
+$ EXIT`)
+
+	return b.String()
+}()
+
+const round2End = `$ ! PRIV94Y.COM - Phase 94's probe, round 2: the end. Run it as SYSTEM
+$ ! after PRIV94's run:
+$ !
+$ !     @PRIV94$DISK:[000000]PRIV94Y
+$ !
+$ ! It removes the fixtures, the DCL tables, round 1's three leftover
+$ ! names, and every name round 2 may have left, removes the account, and
+$ ! deassigns PRIV94$DISK. Its log is PRIV94$DISK:[PRIV94LOG]PRIV94Y.LOG.
+$ ! Written by testdata/priv94/gen.go.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ DEV = F$PARSE(HERE,,,"DEVICE")
+$ LOGFILE = DEV + "[PRIV94LOG]PRIV94Y.LOG"
+$ @'HERE'/OUTPUT='LOGFILE' LOGGED
+$ WRITE SYS$OUTPUT "PRIV94Y finished; the log is ", LOGFILE
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PRIV94$DISK
+$ EXIT
+$ BEGIN:
+$ SET NOON
+$ SET VERIFY
+$ !
+$ WRITE SYS$OUTPUT "######## THE END"
+$ DEFINE/USER_MODE PRIV94_PART "Z"
+$ RUN PRIV94$DISK:[000000]PRIV94B
+$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DO
+$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DP
+$ SHOW LOGICAL/SYSTEM PRIV94*
+$ SHOW LOGICAL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94*
+$ SHOW LOGICAL/TABLE=LNM$GROUP_000200 PRIV94*
+$ !
+$ WRITE SYS$OUTPUT "######## REMOVING THE ACCOUNT"
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ RUN SYS$SYSTEM:AUTHORIZE
+REMOVE PRIV94
+EXIT
+$ SET DEFAULT 'HOME'
+$ WRITE SYS$OUTPUT "PRIV94Y FINISHED"
+$ SET NOVERIFY
+$ EXIT
+`
+
+const round2Exchange = `! EXCHANGE2.CMD - adds round 2 of Phase 94's probe to round 1's exchange
+! volume. Written by testdata/priv94/gen.go. Run from the repository root:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/priv94/exchange2.cmd
+!
+MOUNT/WRITE DUA5 "testdata/disks/priv94-exchange.dsk"
+COPY "testdata/priv94/priv94b.mar"/HOST DUA5:[000000]PRIV94B.MAR
+COPY "testdata/priv94/priv94r.com"/HOST DUA5:[000000]PRIV94R.COM
+COPY "testdata/priv94/priv94v.com"/HOST DUA5:[000000]PRIV94V.COM
+COPY "testdata/priv94/priv94e.com"/HOST DUA5:[000000]PRIV94E.COM
+COPY "testdata/priv94/priv94y.com"/HOST DUA5:[000000]PRIV94Y.COM
+DIRECTORY/OWNER/PROTECTION DUA5:[000000]PRIV94*.*
+DISMOUNT DUA5
+`
+
+const round2Copyout = `! COPYOUT2.CMD - copies round 2's results off priv94-exchange.dsk into
+! testdata/priv94/vax/round2 (README.md). Written by testdata/priv94/gen.go.
+! Run from the repository root after the VAX runs:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/priv94/copyout2.cmd
+!
+MOUNT DUA5 "testdata/disks/priv94-exchange.dsk"
+COPY DUA5:[PRIV94LOG]PRIV94R.LOG "testdata/priv94/vax/round2/priv94r.log"/HOST/QUIET
+COPY DUA5:[PRIV94LOG]PRIV94V.LOG "testdata/priv94/vax/round2/priv94v.log"/HOST/QUIET
+COPY DUA5:[PRIV94LOG]PRIV94Y.LOG "testdata/priv94/vax/round2/priv94y.log"/HOST/QUIET
+COPY/BINARY DUA5:[000000]PRIV94B.EXE "testdata/priv94/vax/round2/priv94b.exe"/HOST/QUIET
+DISMOUNT DUA5
+`
+
 // files are the files the exchange volume holds, by name.
 var files = []string{
 	"priv94.mar", "priv94h.mar", "priv94i.mar", "priv94.com",
@@ -2333,7 +2915,7 @@ func main() {
 	terminalCases()
 	modeCases()
 
-	write("priv94.mar", program())
+	write("priv94.mar", program(round{title: "PRIV94", parts: "LMEGQPCSOWDTX"}))
 	write("priv94h.mar", holder)
 	write("priv94i.mar", installed)
 	write("priv94.com", systemProc)
@@ -2345,4 +2927,6 @@ func main() {
 	write("copyout.cmd", copyout)
 
 	fmt.Printf("%d cases\n", len(cases))
+
+	round2()
 }
