@@ -1,0 +1,12 @@
+	.TITLE	PRIV94H	Phase 94's holder process
+	.IDENT	/V1.0/
+;
+; Written by testdata/priv94/gen.go: do not edit. The program the probe's
+; holder processes run: it hibernates, and goes on hibernating whenever
+; it is woken, until it is deleted or forced to exit.
+;
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	START,^M<>
+1$:	$HIBER_S
+	BRB	1$
+	.END	START

@@ -359,7 +359,7 @@ Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-15): Part A, this plan.
 2. **The probe**: `testdata/priv94`, as in Part D, written and rehearsed
-   on govax; run on the VAX by the author; A.4 filled in and Part B
+   on govax (2026-11-15); run on the VAX by the author; A.4 filled in and Part B
    adjusted to its answers. Later rounds as later subtasks find gaps.
 3. **The gate and the table** (Decisions 1 and 2): every existing check
    moved onto rules, with no change in behavior; SET DEBUG PRIVILEGES;
@@ -392,47 +392,56 @@ Each is one commit, with tests, stopping for review.
 
 ## Part D — the probe (subtask 2)
 
-`testdata/priv94/` (its README to have the files and the steps for the
-VAX run), on an exchange volume mounted `/SYSTEM` and named by a system
+`testdata/priv94/` (its README has the files and the steps for the VAX
+run), on an exchange volume mounted `/SYSTEM` and named by a system
 logical name, `PRIV94$DISK`, as Phase 93's was. Nothing it does outlives
-the run but its logs: every name, table, mailbox, section, and process it
-makes is removed at the end.
+the run but its logs: every name, table, mailbox, cluster, section, and
+process it makes is removed, by the case that made it or at the end.
+`gen.go` writes every file.
 
-**The identities.** SYSTEM, `[1,4]`, with privileges turned off by
-`$SETPRV` a case at a time; Phase 93's PROT93A `[200,1]` and PROT93C
-`[300,1]`, with their default privileges, as targets and as plain users;
-and one new account (the review, question 2, accepted), PRIV94 `[200,3]`,
-authorized for every privilege but with only TMPMBX and NETMBX as
-defaults, so a case can enable exactly the privileges it means to test
-from a non-system UIC.
+**The identities.** SYSTEM, `[1,4]`; PRIV94, `[200,3]`, authorized for
+every privilege but holding only TMPMBX and NETMBX (the review, question
+2); and PRIV94N, `[200,4]`, authorized for only those two, the plain
+user `$SETPRV` and DCL refuse. (The plan named Phase 93's PROT93A and
+PROT93C as plain users; their accounts were removed at Phase 93's end,
+and a plain account in PRIV94's own group serves better.) Each case's
+privileges are set with `$SETPRV`, so SYSTEM and PRIV94 run the same
+cases from a system UIC and from a group UIC.
 
-**`priv94.mar`**, one program taking its cases from SYS$INPUT, as
-`prot93.mar` does. Each case names a service and its arguments, the
-privileges to enable for it (all others off), and the mode to call it
-from: user, or executive and kernel through `$CMEXEC` and `$CMKRNL`
-(CMEXEC and CMKRNL are enabled to get there, then turned off before the
-call, and the program reports both). It prints the status, and what the
-service did (the name's table and mode, the process's new priority,
-whether the target woke). The targets are a holder subprocess in the
-same group (SPAWN/NOWAIT of a program that hibernates) and a detached
-process in another group (RUN/DETACH/UIC from SYSTEM's part), each
-reporting what reached it through a mailbox.
+**The holders.** Two detached processes the program makes with `$CREPRC`
+(part H), running `priv94h.mar`, which hibernates: PRIV94_G in group 200
+(`[200,1]`, PRIV94's group) and PRIV94_W in group 300 (`[300,1]`). Their
+PIDs are system logical names. No account is needed for their UICs.
 
-The cases cover every row of A.1's table that govax implements, each
-with the privilege on, off, and (where A.3, 1 asks) from each inner
-mode; `$SETPRV`'s combinations (A.3, 10); `$CREPRC`'s privileges (A.3,
-7); and the terminal functions (A.3, 9).
+**`priv94.mar`**: 289 cases, each a routine under a handler, in parts by
+`PRIV94_PART`: logical names ($CRELNM, $DELLNM, $CRELNT, $TRNLNM, $CRELOG,
+$DELLOG, into the system, group, job, and process tables and two fixture
+tables, one open and one closed to the group and world), mailboxes
+($CREMBX, $DELMBX, IO$_SETPROTECTION on SYSTEM's fixture mailbox), common
+event flag clusters, global sections (SYSGBL, PRMGBL), locks (SYSLCK),
+other processes ($WAKE to $GETJPI on each holder, and a wildcard
+$GETJPI's view), $FORCEX and $DELPRC (part K, which ends the holders),
+$CREPRC (privileges, AUTHPRIV, DETACH, PSWAPM, NOACNT, ALTPRI), $SETPRV
+(every combination A.3, 10 asks), rundown (part R), $SNDOPR and
+$BRKTHRU, $LCKPAG, $ULKPAG, $LKWSET, $SETSWM, disk logical and physical
+I/O, terminal SETMODE and SETCHAR, and $CMKRNL and $CMEXEC. A case's body
+runs with exactly its privileges, from user mode or from executive or
+kernel mode (CMEXEC or CMKRNL enabled to get there, then turned off), and
+everything around it with every privilege the process is authorized for,
+so it can show what the body did and undo it.
 
-**`priv94.com`**, the DCL side, run once per identity: SHOW
-PROCESS/PRIVILEGES first, then DEFINE, ASSIGN, and DEASSIGN in each
-table and mode, CREATE/NAME_TABLE, SHOW SECURITY of the logical name
-tables (A.3, 3), STOP and STOP/IDENTIFICATION of the holders, SHOW
-SYSTEM, SHOW PROCESS/IDENTIFICATION, F$GETJPI, F$PID's walk, and SET
-TERMINAL/PERMANENT, each under SET PROCESS/PRIVILEGES's privilege sets.
+**`priv94d.com`**, DCL's side, run by each identity: DEFINE, ASSIGN, and
+DEASSIGN in each table and mode, CREATE/NAME_TABLE, SHOW SECURITY of the
+tables (A.3, 3), SHOW SYSTEM, SHOW PROCESS/IDENTIFICATION, F$GETJPI and
+F$PID of the holders, SET PROCESS/PRIORITY, /SUSPEND, and /RESUME of
+them, SET TERMINAL/PERMANENT, RUN/DETACH, and STOP, each under one
+privilege set after another.
 
-**`priv94i.mar`** and **`priv94i.com`** (installed images, Decision 9): an image that reports its CURPRIV and IMAGPRIV and calls a
-guarded service, run plain, then after INSTALL ADD/PRIVILEGED, then after
-REMOVE.
+**`priv94i.mar`** (installed images, Decision 9): shows its masks and
+puts a name in the system table. SYSTEM runs it plain, installs it
+`/PRIVILEGED=(SYSNAM,OPER)`, and runs it with and without its own
+privileges; each account runs it, and tries INSTALL without CMKRNL; the
+end removes it and runs it plain again.
 
 ## The review
 
@@ -484,3 +493,25 @@ The answers:
   recommendation. Decision 9 (installed images) is in, Decision 10
   (govax's MOUNT, DISMOUNT, and INITIALIZE/CONTAINER) added, subtasks 7
   and 9 and Part D adjusted to them.
+- **2026-11-15** Subtask 2, the probe, written: `testdata/priv94`
+  (`gen.go` writes the program, the holder, the installed image, the
+  procedures, and the exchange scripts; README.md has the VAX steps), a
+  second account, PRIV94N, in place of Phase 93's removed ones (Part D).
+  Rehearsed on govax: `TestPriv94Probe` assembles and links the programs
+  and runs every part; the procedures ran to their end as SYSTEM. What
+  the rehearsal found in govax, for the later subtasks:
+  - A service govax lacks called from kernel mode (`$SETSWM`, case 270)
+    signals there, and the condition reaches the program's user-mode
+    handler, whose unwind leaves the kernel stack 4 bytes off: every
+    later `$CMKRNL` in the process faults (ACCVIO near `7FBFFFFC`, lower
+    each time). VMS searches only the signaling mode's frames. Subtask 4
+    adds `$SETSWM`; the condition search across modes is to be fixed
+    with it.
+  - `$GETMSG` of `SS$_WASSET` (9, `$ULKPAG`'s answer) gives ACCVIO's
+    text: the message is found by its number alone, and 9 and 12 share
+    one. To be settled by VMS's log.
+  - DCL lacks INSTALL, AUTHORIZE (no image), RUN/DETACH, SET VOLUME, SET
+    TERMINAL, SET PROCESS/PRIORITY, /SUSPEND, and /RESUME of another
+    process, and SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE; and with no
+    privileges, F$PID and SHOW SYSTEM show every process (A.3, 5).
+  Waiting for the author's VAX run.
