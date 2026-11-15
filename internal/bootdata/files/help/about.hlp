@@ -2,15 +2,7 @@
    govax is a project of Forest Edge Software.  The emulator is an
    effort to emulate the behavior of a VAX 8600 class processor.
 
-   For more information, write:
-
-       Forest Edge Software
-       112 Forest Edge Drive
-       Cary NC 27518
-
-   or email
-
-      tom.cole@forest-edge.net
+   For more information, email tom.cole@forest-edge.net
 
    govax is Open Source, you are free to download the source from
    https://github.com/tucats/govax. IF you find bugs, please open
