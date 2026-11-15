@@ -83,11 +83,25 @@ var (
 func (env *Environment) rightsDatabase() []rightsIdentifier {
 	db := append([]rightsIdentifier{{name: env.Process.Username, value: env.Process.UIC}}, environmentalIdentifiers...)
 
+	add := func(r rightsIdentifier) {
+		if !slices.ContainsFunc(db, func(have rightsIdentifier) bool { return have.name == r.name || have.value == r.value }) {
+			db = append(db, r)
+		}
+	}
+
 	if env.System != nil {
 		for _, r := range env.System.identifiers {
-			if !slices.ContainsFunc(db, func(have rightsIdentifier) bool { return have.name == r.name }) {
-				db = append(db, r)
-			}
+			add(r)
+		}
+
+		// Each account's UIC is an identifier named for it, as AUTHORIZE's
+		// ADD makes one, SYSTEM's among them: a process logged in as
+		// another account still names [1,4] SYSTEM (VMS 7.1's PROT93C
+		// formatted an ACE for [1,4] as [SYSTEM], case 518).
+		add(rightsIdentifier{name: systemAccount.Name, value: systemAccount.UIC})
+
+		for _, u := range env.System.users {
+			add(rightsIdentifier{name: u.Name, value: u.UIC})
 		}
 	}
 

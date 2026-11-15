@@ -135,7 +135,7 @@ func changeACL(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return ssNoPriv, nil
 	}
 
-	e := &aclEditor{env: env, target: target, acl: splitACL(target.ACL())}
+	e := &aclEditor{ACLEdit: security.NewACLEdit(target.ACL()), env: env, target: target}
 
 	ctxAddr := arg(argv, 6)
 	if ctxAddr != 0 {
@@ -145,7 +145,7 @@ func changeACL(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 
 		// -1 is the bottom, its found bit no find's.
-		e.pos, e.found = int(v&positionMask), v&contextFound != 0 && v != 0xFFFFFFFF
+		e.Pos, e.Found = int(v&positionMask), v&contextFound != 0 && v != 0xFFFFFFFF
 	}
 
 	status = ssNormal
@@ -156,19 +156,19 @@ func changeACL(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if e.changed {
-		if err := target.SetACL(joinACL(e.acl)); err != nil {
+	if e.Changed {
+		if err := target.SetACL(e.Bytes()); err != nil {
 			return ssACLFull, nil
 		}
 	}
 
 	if ctxAddr != 0 {
-		v := uint32(e.pos & positionMask)
+		v := uint32(e.Pos & positionMask)
 
 		switch {
-		case status == ssNoEntry, e.zeroContext:
+		case status == ssNoEntry, e.ZeroContext:
 			v = 0
-		case e.found:
+		case e.Found:
 			v |= contextFound
 		}
 
@@ -255,26 +255,6 @@ func wholeACEs(b []byte) ([][]byte, bool) {
 	return aces, len(aces) > 0
 }
 
-// splitACL is an ACL's entries.
-func splitACL(raw []byte) [][]byte {
-	var acl [][]byte
-
-	for off := 0; off < len(raw); {
-		n := int(raw[off])
-		if n == 0 || off+n > len(raw) {
-			break
-		}
-
-		acl = append(acl, slices.Clone(raw[off:off+n]))
-		off += n
-	}
-
-	return acl
-}
-
-// joinACL is the entries one after another.
-func joinACL(acl [][]byte) []byte { return slices.Concat(acl...) }
-
 // findTarget is the object the call names: a file by channel or name, or a
 // device.
 func findTarget(env *corevms.Environment, objtyp, chanNumber, objnam uint32) (aclTarget, uint32) {
@@ -331,47 +311,39 @@ func (deviceTarget) Profile() security.Profile { return security.Profile{} }
 
 // aclEditor works the items on the ACL.
 type aclEditor struct {
+	*security.ACLEdit
+
 	env    *corevms.Environment
 	target aclTarget
-	acl    [][]byte
-
-	pos     int // 1 the first ACE, 0 the top, past the last the bottom
-	found   bool
-	changed bool
-
-	// zeroContext is set by an alarm or audit ACE's addition: VMS 7.1
-	// left a context of 0 after each (A.4).
-	zeroContext bool
 }
-
-// current is the position as the index of an ACE, 1 for the top.
-func (e *aclEditor) current() int { return max(e.pos, 1) }
-
-// insertAt is where an ACE added at the position goes, 1 to len+1.
-func (e *aclEditor) insertAt() int { return min(e.current(), len(e.acl)+1) }
 
 // do works one item, returning its status.
 func (e *aclEditor) do(it aclItem) uint32 {
 	switch it.code {
 	case aclAdd:
 		for _, ace := range it.aces {
-			e.add(ace)
+			e.Add(ace)
 		}
 
 	case aclDel:
-		return e.delete(it)
+		var want []byte
+		if it.aces != nil {
+			want = it.aces[0]
+		}
 
-	case aclMod:
-		cur := e.current()
-		if cur > len(e.acl) {
+		if !e.Delete(want) {
 			return ssNoEntry
 		}
 
-		e.acl[cur-1] = it.aces[0]
-		e.pos, e.changed = cur+1, true
+	case aclMod:
+		if !e.Modify(it.aces[0]) {
+			return ssNoEntry
+		}
 
 	case aclFind:
-		return e.find(e.current(), func(ace []byte) bool { return security.MatchACE(ace, it.aces[0]) })
+		if !e.FindMatching(e.Current(), it.aces[0]) {
+			return ssNoEntry
+		}
 
 	case aclFindType:
 		typ := byte(0)
@@ -382,32 +354,31 @@ func (e *aclEditor) do(it aclItem) uint32 {
 		// The search starts after the position: VMS 7.1's FNDACETYP of
 		// identifier ACEs from a context of 0 found the second ACE, both
 		// being identifier ACEs.
-		return e.find(e.current()+1, func(ace []byte) bool { return ace[1] == typ })
+		if !e.FindType(e.Current()+1, typ) {
+			return ssNoEntry
+		}
 
 	case aclDeleteACL:
-		e.acl = slices.DeleteFunc(e.acl, func(ace []byte) bool {
-			return binary.LittleEndian.Uint16(ace[2:])&security.OptionProtected == 0
-		})
-		e.pos, e.found, e.changed = 0, false, true
+		e.DeleteUnprotected()
 
 	case aclDeleteAll:
-		e.acl, e.pos, e.found, e.changed = nil, 0, false, true
+		e.DeleteAll()
 
 	case aclRead:
 		return e.read(it)
 
 	case aclReadACE:
-		cur := e.current()
-		if cur > len(e.acl) {
+		cur := e.Current()
+		if cur > len(e.ACL) {
 			return ssNoMoreACE
 		}
 
-		return e.copyOut(it, e.acl[cur-1])
+		return e.copyOut(it, e.ACL[cur-1])
 
 	case aclLength:
 		var b [4]byte
 
-		binary.LittleEndian.PutUint32(b[:], uint32(len(joinACL(e.acl))))
+		binary.LittleEndian.PutUint32(b[:], uint32(len(e.Bytes())))
 
 		if writeBytes(e.env, it.buffer, b[:min(int(it.length), 4)]) != nil {
 			return ssAccVio
@@ -415,14 +386,14 @@ func (e *aclEditor) do(it aclItem) uint32 {
 
 	case aclGrantACE:
 		d := security.Evaluate(e.env.Credentials(), e.target.Profile())
-		if d.ACE < 0 || d.ACE >= len(e.acl) {
+		if d.ACE < 0 || d.ACE >= len(e.ACL) {
 			return ssNoEntry
 		}
 
-		return e.copyOut(it, e.acl[d.ACE])
+		return e.copyOut(it, e.ACL[d.ACE])
 
 	case aclNextACE:
-		e.pos++
+		e.Pos++
 
 	case aclRLock, aclWLock, aclUnlock:
 		// ACL locks interlock other processes' changes; govax changes an
@@ -432,105 +403,29 @@ func (e *aclEditor) do(it aclItem) uint32 {
 	return ssNormal
 }
 
-// add adds ace at the position, by $CHANGE_ACL's matching
-// (security.MatchACE): a matching ACE above the position makes the
-// addition do nothing, one at or below it is replaced. An alarm or audit
-// ACE replaces a match wherever it is (VMS 7.1 dropped
-// (ALARM...READ+SUCCESS) above the bottom for (ALARM...WRITE+SUCCESS)
-// added there; unconfirmed elsewhere than the bottom).
-func (e *aclEditor) add(ace []byte) {
-	alarm := security.AlarmLike(ace)
-	at := e.insertAt()
-
-	if !alarm {
-		for i, have := range e.acl {
-			if i+1 < at && security.MatchACE(have, ace) {
-				return
-			}
-		}
-	}
-
-	for i := len(e.acl) - 1; i >= 0; i-- {
-		if (alarm || i+1 >= at) && security.MatchACE(e.acl[i], ace) {
-			e.acl = slices.Delete(e.acl, i, i+1)
-		}
-	}
-
-	at = min(e.insertAt(), at)
-	e.acl = slices.Insert(e.acl, at-1, ace)
-	e.pos, e.changed = at+1, true
-	e.zeroContext = e.zeroContext || alarm
-}
-
-// delete is DELACLENT: the first ACE matching the item's (from the top),
-// or with no buffer the ACE at the position; SS$_NOENTRY if there is none.
-func (e *aclEditor) delete(it aclItem) uint32 {
-	at := -1
-
-	if it.aces == nil {
-		if cur := e.current(); cur <= len(e.acl) {
-			at = cur - 1
-		}
-	} else {
-		at = slices.IndexFunc(e.acl, func(ace []byte) bool { return security.MatchACE(ace, it.aces[0]) })
-	}
-
-	if at < 0 {
-		return ssNoEntry
-	}
-
-	e.acl = slices.Delete(e.acl, at, at+1)
-	e.changed = true
-
-	if at+1 < e.pos {
-		e.pos--
-	}
-
-	return ssNormal
-}
-
-// find moves the position to the first ACE from start that matches,
-// setting the found bit; SS$_NOENTRY, the context then 0, if none does.
-func (e *aclEditor) find(start int, match func([]byte) bool) uint32 {
-	for i := start - 1; i < len(e.acl); i++ {
-		if i >= 0 && match(e.acl[i]) {
-			e.pos, e.found = i+1, true
-
-			return ssNormal
-		}
-	}
-
-	e.pos, e.found = 0, false
-
-	return ssNoEntry
-}
-
 // read is READACL: the whole ACEs from the position that fit in the
 // buffer, the position moved past them. Past the last ACE is
 // SS$_NOMOREACE; a buffer too small for the next is SS$_IVBUFLEN, with
 // what fitted of it written (VMS 7.1's wrote 8 of 12 bytes).
 func (e *aclEditor) read(it aclItem) uint32 {
-	cur := e.current()
-	if cur > len(e.acl) {
+	// An object with no ACL at all is SS$_ACLEMPTY (VMS 7.1's PROT93C,
+	// reading the ACL of a file it couldn't add to, case 535).
+	if len(e.ACL) == 0 {
+		return ssACLEmpty
+	}
+
+	out, none, short := e.ReadFitting(int(it.length))
+
+	switch {
+	case none:
 		return ssNoMoreACE
-	}
-
-	var out []byte
-
-	next := cur
-	for ; next <= len(e.acl) && len(out)+len(e.acl[next-1]) <= int(it.length); next++ {
-		out = append(out, e.acl[next-1]...)
-	}
-
-	if next == cur {
-		return e.copyOut(it, e.acl[cur-1])
+	case short:
+		return e.copyOut(it, out)
 	}
 
 	if writeBytes(e.env, it.buffer, out) != nil {
 		return ssAccVio
 	}
-
-	e.pos = next
 
 	return ssNormal
 }

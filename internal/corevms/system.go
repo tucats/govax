@@ -80,6 +80,11 @@ type System struct {
 	// $CHECK_ACCESS reads (users.go). SYSTEM is always there.
 	users []UserAccount
 
+	// deviceProfiles are the devices' security profiles $SET_SECURITY
+	// has changed, by device name (secobjects.go); a device not here has
+	// the default.
+	deviceProfiles map[string]*deviceProfile
+
 	// sectionFiles counts the sections using each file (filesec.go).
 	sectionFiles map[PageSource]*sectionFile
 

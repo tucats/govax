@@ -30,6 +30,7 @@ var (
 	ssNoMoreACE  = vmsdef.Symbols["SS$_NOMOREACE"]
 	ssIvBufLen   = vmsdef.Symbols["SS$_IVBUFLEN"]
 	ssACLFull    = vmsdef.Symbols["SS$_ACLFULL"]
+	ssACLEmpty   = vmsdef.Symbols["SS$_ACLEMPTY"]
 	aceHeaderLen = int(vmsdef.Symbols["ACE$C_LENGTH"])
 )
 

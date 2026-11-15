@@ -62,6 +62,14 @@ var (
 func (s *Session) FindSecurityObject(spec string) (*SecurityObject, error) {
 	loc, err := s.Locate(spec, false)
 	if err != nil {
+		// A device no volume is mounted on, or none at all, is RMS$_DEV
+		// (VMS 7.1's $GET_SECURITY of NOSUCHDEV:[SEC93.GET]G1.DAT, case
+		// 410).
+		var notMounted *NotMountedError
+		if errors.As(err, &notMounted) {
+			return nil, newDCLFileError(strings.ToUpper(spec), rmsDeviceError)
+		}
+
 		return nil, newDCLFileError(strings.ToUpper(spec), rmsFileNotFound)
 	}
 

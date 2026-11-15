@@ -1290,7 +1290,7 @@ Each is one commit, with tests, stopping for review.
     `$GET_SECURITY`, and `$SET_SECURITY` (Decision 13), their macros, held to
     the probe. In three parts: 13a, `$CHKPRO` and `$CHECK_ACCESS` (done
     2026-11-14); 13b, `$GET_SECURITY` and `$SET_SECURITY`, with parts M's
-    and U's other cases; 13c, the services' macros in govax's STARLET,
+    and U's other cases (done 2026-11-14); 13c, the services' macros in govax's STARLET,
     held to round 9 of the macro probes.
 14. **The VMS round** (the review, answer 7): VMS reads a volume of files
     govax made under several identities, protections, and ACLs, and its
@@ -2177,3 +2177,56 @@ The author accepted the plan and answered its questions:
   $CHECK_ACCESS's caller needs; a device's profile owner [0,0] with no ACL;
   the audit items accepted and ignored, govax having no auditing.
   Subtask 13b, `$GET_SECURITY` and `$SET_SECURITY`, is next.
+- **2026-11-14** Subtask 13b done: `$GET_SECURITY` and `$SET_SECURITY`,
+  system services in `corevms/getsecurity.go`. `$CHANGE_ACL`'s ACL editor
+  moved to `internal/security` (`acledit.go`'s `ACLEdit`: the position,
+  Add by the services' matching, Delete, Modify, Find, ReadFitting), and
+  both `securertl`'s `$CHANGE_ACL` and the new services work on it. An
+  object is a class (any abbreviation of DEVICE, FILE, VOLUME,
+  LOGICAL_NAME_TABLE, or SECURITY_CLASS; none, or another, NOCLASS) and a
+  name, or a file's channel through objhan (a handle of 0 BADPARAM, a name
+  beside it ignored); no name NOSUCHOBJECT. Files are found as
+  `$CHANGE_ACL` finds them (`FindSecurityObject`, which now gives RMS$_DEV
+  for a device that isn't there, case 410); devices by the device part of
+  any name, through logical names, their OBJECT_NAME the full name, their
+  profile [1,4] and (S:RWPL,O:RWPL,G:R,W) until `$SET_SECURITY` changes it
+  (`secobjects.go`, kept in the System by device; `Environment.DeviceProfile`);
+  volumes by `Session.VolumeProfile`, logical name tables (a shareable one
+  [1,4] and %XEE88), and security classes (FILE's FIRST_TEMPLATE DEFAULT,
+  NEXT_OBJECT VOLUME) are read only. Items: every code checked first (one
+  the service doesn't take ACCVIO, as VMS 7.1's item 99; an OWNER not 4
+  bytes or a PROTECTION not 2 IVBUFLEN; ACE buffers whole ACEs or IVACL),
+  then the access (read or control to get, control for a change; NOPRIV),
+  then each in order; only the text items, ACCESS_NAMES, DAMAGED_ACL, and
+  IN_TRANSITION write return lengths; the category items and
+  TRANQUILITY_COUNT INVCLSITM for govax's classes; ACL_READ the whole ACL
+  (IVBUFLEN when short, ACLEMPTY for a file with none, a device's NORMAL)
+  or through a context the ACEs that fit. Contexts are Go state per
+  process (`Environment.securityContexts`) whose handles are VMS 7.1's P1
+  address, %X7FFBEF10, and the next 16 on; RELCTX releases one, applying
+  OSS$M_LOCAL's held changes; without LOCAL a call's changes are made at
+  its end. The position rules, read from cases 377 to 388 and 440 to 449:
+  FIND_ENTRY searches from the top; FIND_TYPE from the position (a byte, or
+  an ACE's header's second); a find that finds nothing is NOMOREACE
+  ($GET_SECURITY) or NOENTRY ($SET_SECURITY) and leaves the position
+  "lost", where a read has nothing and a FIND_TYPE starts at the second ACE
+  (which is what makes case 386 find what VMS found; unconfirmed beyond
+  these cases); FIND_NEXT moves on one ACE. Two fixes the M and U passes
+  found: `$CHANGE_ACL`'s READACL of an object with no ACL is ACLEMPTY
+  (case 535), and every account's UIC is an identifier named for it, so
+  PROT93C formats [1,4] as [SYSTEM] (case 518; `rights.go`). Tests:
+  `TestSec93SecurityOracle` (`internal/console/sec93security_test.go`)
+  runs parts G and S, part X's eight cases of the two services, and the
+  whole of parts M and U (their `$CHANGE_ACL`, `$PARSE_ACL`,
+  `$FORMAT_ACL`, and `$SETDFPROT` cases too), 224 cases held to VMS 7.1's
+  reports, ACCESS_NAMES's descriptor addresses masked (VMS's point into
+  system space, govax's at the copies in the buffer), with three listed
+  differences: 415 and 416, the system disk, and 458, where VMS refused a
+  UFO open with FAC=PUT and SHR=GET with RMS$_SHR, so its `$SET_SECURITY`
+  had no channel; govax opens such a file (its own paging tests open
+  FAC=GET+PUT, SHR=GET), and how far VMS's refusal reaches is a question
+  for subtask 14. Unconfirmed and chosen: the order of the classes after
+  FILE and VOLUME; other devices' default profiles; the volume, table, and
+  class objects' read-only answers (a change NOPRIV); a process table's
+  owner the process's UIC; what WLOCK does (nothing). Subtask 13c, the
+  services' macros, is next.

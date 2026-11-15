@@ -71,6 +71,10 @@ type Environment struct {
 	// the master file directory.
 	Session *rms.Session
 
+	// securityContexts are the contexts $GET_SECURITY and $SET_SECURITY
+	// have handed the process, by handle (getsecurity.go).
+	securityContexts map[uint32]*securityContext
+
 	// files is internal/rms's own "internal file index" table — unlike
 	// Mounts, this really is one-per-process state (a
 	// freshly opened file has no business surviving a VMInit/Zero that

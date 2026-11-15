@@ -226,6 +226,7 @@ func sec93Console(t *testing.T) (*Console, func(string) string) {
 		`MOUNT/WRITE DUA1 "` + disk + `"`,
 		"DEFINE PROT93$DISK DUA1:",
 		"DEFINE SEC93$CHG PROT93$DISK:[SEC93.CHG]",
+		"DEFINE SEC93$GET PROT93$DISK:[SEC93.GET]",
 	} {
 		if out := run(line); strings.Contains(out, "%") && !strings.Contains(out, "-I-") {
 			t.Fatalf("%s: %s", line, out)
@@ -247,6 +248,8 @@ func sec93Console(t *testing.T) (*Console, func(string) string) {
 	sec93Tree(t, c, run, data, "sec93b.com", "[SEC93.CHG")
 	sec93Tree(t, c, run, data, "sec93.com", "[SEC93.CHK")
 	sec93Tree(t, c, run, data, "sec93.com", "[SEC93.NP")
+	sec93Tree(t, c, run, data, "sec93.com", "[SEC93.GET")
+	sec93Tree(t, c, run, data, "sec93.com", "[SEC93.SET")
 
 	return c, run
 }

@@ -439,4 +439,5 @@ func (env *Environment) CheckAccessItems(itmlst uint32, creds security.Credentia
 
 func registerCheckProtectionServices(t *ServiceTable) {
 	t.Register("SYS$CHKPRO", serviceSysChkpro)
+	registerSecurityServices(t)
 }
