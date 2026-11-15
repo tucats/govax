@@ -1295,6 +1295,8 @@ Each is one commit, with tests, stopping for review.
 14. **The VMS round** (the review, answer 7): VMS reads a volume of files
     govax made under several identities, protections, and ACLs, and its
     DIRECTORY/SECURITY, SHOW SECURITY, and accesses agree with govax's.
+    (Prepared and rehearsed 2026-11-14, `testdata/vms93`; waiting for the
+    author's run on the VAX.)
 15. **The close-out**: MANUAL.md (a section on file protection, the new
     commands and services, the configuration key), HELP for every new
     command and qualifier (`TestEveryVerbHasHelp`,
@@ -2252,3 +2254,21 @@ The author accepted the plan and answered its questions:
   made without an error matching byte for byte, and confirms govax refuses
   `$SETDFPROT_S` as real MACRO did (`noMacroProbes`). Subtask 13 is done;
   subtask 14, the VMS round, is next.
+- **2026-11-14** Subtask 14 prepared: round 4, the VMS round,
+  `testdata/vms93` (its README). govax makes a volume (`exchange.cmd`): 17
+  files in `[V93]`, each with an owner ([200,1], [200,2], [300,1], [0,0],
+  [1,4]) and protection govax set, nine with ACLs (identifier ACEs by UIC,
+  `[200,*]` and `[*,1]`, PROT93_TEAM by value, two in order, PROTECTED and
+  NOPROPAGATE, INTERACTIVE, a [0,0] file); `[V93.DEF]`, whose default
+  protection, DEFAULT, and creator ACEs a file and a directory govax made
+  there inherited; `[V93.D0]`, closed to the world; and VMS93C built by
+  govax's MACRO and LINK. `vms93.com`, as SYSTEM on the VAX, makes the
+  three accounts again, lists the tree with DIRECTORY/SECURITY, SHOW
+  SECURITY, and F$FILE_ATTRIBUTES, and runs `vms93c.mar` (each account's
+  `$CHECK_ACCESS` of each file for each access, a line of letters), govax's
+  image of it, and `vms93u.mar` (UFO opens by FAC and SHR, for case 458's
+  question), then ANALYZE/DISK_STRUCTURE. `TestVMS93Procedure` rehearses it
+  on govax with the accounts in the System's table and, once
+  `vax/vms93.log` is back, holds govax's sections to VMS's. The round waits
+  for the author's run; its answers become a section of A.4 and the
+  differences, if any, fixes or `vms93Differences`.
