@@ -30,12 +30,11 @@ type entry struct {
 // SEC93.EXE, whose fixup vector gave $FORMAT_ACL %X48, $PARSE_ACL %X50,
 // $CHANGE_ACL %X58, and $CHECK_ACCESS %X78. A program linked by govax's
 // LINK gets these offsets, and one VMS's LINK made runs the same routines.
-// $CHECK_ACCESS is subtask 13's.
 var entries = []entry{
 	{name: "SYS$FORMAT_ACL", offset: 0x48, fn: formatACL},
 	{name: "SYS$PARSE_ACL", offset: 0x50, fn: parseACL},
 	{name: "SYS$CHANGE_ACL", offset: 0x58, fn: changeACL},
-	{name: "SYS$CHECK_ACCESS", offset: 0x78},
+	{name: "SYS$CHECK_ACCESS", offset: 0x78, fn: checkAccess},
 }
 
 // Register installs every entry's routine in t, NOTIMPL for an entry with

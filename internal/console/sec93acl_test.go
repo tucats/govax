@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/bootdata"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/security"
@@ -33,6 +34,19 @@ var sec93Identifiers = []struct {
 	{"PROT93A", 0x00800001}, {"PROT93", 0x0080FFFF}, {"PROT93B", 0x00800002},
 	{"PROT93C", 0x00C00001}, {"PROT93_TEAM", 0x80010001},
 }
+
+// sec93Users are the accounts SEC93.COM's AUTHORIZE made (the README's
+// "The identities"), for $CHECK_ACCESS: PROT93A with no privileges,
+// PROT93B and PROT93C with READALL, GRPPRV, SYSPRV, and BYPASS authorized,
+// PROT93C holding PROT93_TEAM.
+var sec93Users = []corevms.UserAccount{
+	{Name: "PROT93A", UIC: 0x00800001},
+	{Name: "PROT93B", UIC: 0x00800002, Privileges: sec93Authorized},
+	{Name: "PROT93C", UIC: 0x00C00001, Privileges: sec93Authorized, Rights: []security.Identifier{{Value: 0x80010001}}},
+}
+
+// sec93Authorized are PROT93B's and PROT93C's authorized privileges.
+var sec93Authorized = security.PrivREADALL | security.PrivGRPPRV | security.PrivSYSPRV | security.PrivBYPASS
 
 // sec93XCases are part X's cases of $CHANGE_ACL, each run alone as
 // SEC93X.COM ran them: an unknown item, no items, a short ACLLENGTH buffer,
@@ -224,18 +238,27 @@ func sec93Console(t *testing.T) (*Console, func(string) string) {
 		}
 	}
 
-	sec93Tree(t, c, run, data)
+	for _, u := range sec93Users {
+		if status := c.RTL.AddUser(u); status != 1 {
+			t.Fatalf("AddUser %s: %#x", u.Name, status)
+		}
+	}
+
+	sec93Tree(t, c, run, data, "sec93b.com", "[SEC93.CHG")
+	sec93Tree(t, c, run, data, "sec93.com", "[SEC93.CHK")
+	sec93Tree(t, c, run, data, "sec93.com", "[SEC93.NP")
 
 	return c, run
 }
 
-// sec93Tree makes SEC93B.COM's [SEC93.CHG] files: its CREATE/DIRECTORY and
-// COPY lines through DCL, and its SET SECURITY lines in Go (SET SECURITY
-// is subtask 11's), the ACEs read by $PARSE_ACL's grammar.
-func sec93Tree(t *testing.T, c *Console, run func(string) string, data string) {
+// sec93Tree makes the files in a directory of round 3's tree, those of
+// procedure proc's lines that name dir ("[SEC93.CHG"): its CREATE/DIRECTORY
+// and COPY lines through DCL, and its SET SECURITY lines in Go (SET
+// SECURITY is subtask 11's), the ACEs read by $PARSE_ACL's grammar.
+func sec93Tree(t *testing.T, c *Console, run func(string) string, data, proc, dir string) {
 	t.Helper()
 
-	proc, err := os.ReadFile(filepath.Join(sec93Dir, "sec93b.com"))
+	text, err := os.ReadFile(filepath.Join(sec93Dir, proc))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,8 +268,8 @@ func sec93Tree(t *testing.T, c *Console, run func(string) string, data string) {
 	acl := regexp.MustCompile(`/ACL=(\(.*\)) \S+$`)
 	names := consoleNames{c}
 
-	for _, line := range strings.Split(string(proc), "\n") {
-		if !strings.Contains(line, "[SEC93.CHG") {
+	for _, line := range strings.Split(string(text), "\n") {
+		if !strings.Contains(line, dir) {
 			continue
 		}
 
@@ -379,7 +402,8 @@ func sec93Build(t *testing.T, c *Console) string {
 // against SECURESHR and SECURESHRP by VMS's LINK) on govax: it activates,
 // and its calls reach securertl's routines through the transfer vector
 // offsets its fixup vector holds. Cases 1 ($PARSE_ACL), 88 ($FORMAT_ACL),
-// and 176 ($CHANGE_ACL) are held to round 3b's reports.
+// and 176 ($CHANGE_ACL) are held to round 3b's reports, and 259 ($CHKPRO,
+// a system service) and 304 ($CHECK_ACCESS) to round 3's.
 func TestSec93VMSImage(t *testing.T) {
 	_, run := sec93Console(t)
 
@@ -389,8 +413,13 @@ func TestSec93VMSImage(t *testing.T) {
 	}
 
 	want := sec93Cases(sec93Log(t, "round3b/sec93b.log"))
+	privileged, _ := sec93Passes(t)
 
-	for _, n := range []int{1, 88, 176} {
+	for _, n := range []int{259, 304} {
+		want[n] = privileged[n]
+	}
+
+	for _, n := range []int{1, 88, 176, 259, 304} {
 		run(fmt.Sprintf("DEFINE SEC93_ONLY %d", n))
 		out := run(`RUN "` + image + `"`)
 

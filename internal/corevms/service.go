@@ -69,6 +69,7 @@ func registerServices(t *ServiceTable) {
 	registerSuspendServices(t)
 	registerPrivilegeServices(t)
 	registerDefaultProtectionServices(t)
+	registerCheckProtectionServices(t)
 	registerRightsServices(t)
 	registerEventFlagServices(t)
 	registerJPIServices(t)

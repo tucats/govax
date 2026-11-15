@@ -2056,7 +2056,10 @@ expect adjustment as phases land):
 - `internal/securertl` — SECURESHR.EXE's routines (Phase 93, subtask 10),
   beside `internal/lbrrtl`: the security services VMS keeps in a
   shareable image, `$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, and
-  `$CHECK_ACCESS` (NOTIMPL until subtask 13), at the transfer vector
+  `$CHECK_ACCESS` (subtask 13a: a user of the System's table of accounts,
+  `corevms.UserAccount`, `AddUser`, checked by `$CHKPRO`'s items,
+  `corevms.CheckAccessItems`; `$CHKPRO` itself is `corevms/chkpro.go`, and
+  both rest on `security.ThirdParty`), at the transfer vector
   offsets VMS 7.1's SEC93.EXE held, codes from 6000; SECURESHRP is among
   the machine's `runtimeLibraries`. An ACE's text both ways, the line
   layout, and `$CHANGE_ACL`'s matching are `internal/security`'s

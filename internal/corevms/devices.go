@@ -470,6 +470,26 @@ func registerDeviceServices(t *ServiceTable) {
 	t.Register("SYS$DASSGN", serviceSysDassgn)
 }
 
+// DeviceNamed reports whether name, a device's name with its colon and
+// perhaps a logical name, is a device the system has: an object of class
+// DEVICE for the security services (internal/securertl). A name with
+// anything after its device, a file's, isn't one.
+func (env *Environment) DeviceNamed(name string) bool {
+	name = strings.TrimSpace(name)
+	if !strings.HasSuffix(name, ":") || strings.ContainsAny(name, "[]<>;") || strings.Count(name, ":") != 1 {
+		return false
+	}
+
+	device, st := env.deviceName(name)
+	if st != 0 {
+		return false
+	}
+
+	_, found := env.Devices.Find(strings.TrimPrefix(device, "_"))
+
+	return found
+}
+
 // deviceName translates a $ASSIGN/$GETDVI device name through its logical
 // names (SYS$OUTPUT becomes TTA0, as on VMS) into a physical device name
 // for Devices.Find; a leading "_" suppresses translation

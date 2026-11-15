@@ -76,6 +76,10 @@ type System struct {
 	// System's, so INIT/VMINIT/ZERO start with none.
 	identifiers []rightsIdentifier
 
+	// users are the accounts AddUser has made, the authorization file
+	// $CHECK_ACCESS reads (users.go). SYSTEM is always there.
+	users []UserAccount
+
 	// sectionFiles counts the sections using each file (filesec.go).
 	sectionFiles map[PageSource]*sectionFile
 

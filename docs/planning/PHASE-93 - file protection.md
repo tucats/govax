@@ -891,7 +891,8 @@ with it undefined today.
   code BADPARAM; an ACE of size 3 IVACL.
 - Outputs: `CHP$_MATCHEDACE` the ACE that decided (return length 0 for
   none; a short buffer `SS$_BUFFEROVF`), `CHP$_PRIVUSED` a longword of
-  `CHP$M_` bits (SYSPRV 1 when SYSPRV or BYPASS was held, GRPPRV `%X10`),
+  `CHP$M_` bits (SYSPRV 1 when the SYSTEM category gave the access, by
+  SYSPRV or a system UIC, as case 503 showed; GRPPRV `%X10`),
   `CHP$_ALARMNAME` the alarm ACE's journal name, `CHP$_AUDITNAME` none
   here. Refused is `SS$_NOPRIV`. Three arguments are accepted.
 
@@ -1287,7 +1288,10 @@ Each is one commit, with tests, stopping for review.
     the probe.
 13. **The other security services**: `$CHKPRO`, `$CHECK_ACCESS`,
     `$GET_SECURITY`, and `$SET_SECURITY` (Decision 13), their macros, held to
-    the probe.
+    the probe. In three parts: 13a, `$CHKPRO` and `$CHECK_ACCESS` (done
+    2026-11-14); 13b, `$GET_SECURITY` and `$SET_SECURITY`, with parts M's
+    and U's other cases; 13c, the services' macros in govax's STARLET,
+    held to round 9 of the macro probes.
 14. **The VMS round** (the review, answer 7): VMS reads a volume of files
     govax made under several identities, protections, and ACLs, and its
     DIRECTORY/SECURITY, SHOW SECURITY, and accesses agree with govax's.
@@ -2115,3 +2119,61 @@ The author accepted the plan and answered its questions:
   /SECURITY's line for a file it may not read is /SECURITY's, the name in
   19 columns and the reason. Subtask 13, the other security services, is
   next.
+- **2026-11-14** Subtask 13a done: `$CHKPRO` and `$CHECK_ACCESS`. Subtask 13
+  is now three parts, as 10 and 11 were: 13a these two, 13b `$GET_SECURITY`
+  and `$SET_SECURITY`, 13c their macros. Both services rest on one check,
+  `internal/security`'s `ThirdParty` (`thirdparty.go`): Check's sequence in
+  steps (what the accessor has without privileges, then the SYSTEM category,
+  then BYPASS, then READALL), the step that granted the access being the
+  privileges it needed, CHP$_PRIVUSED's answer; and two ways of reading the
+  access bits, `Interpreted` (a file's, held to `Check` over the probe's
+  matrix by `TestThirdPartyInterpreted`) and `Compared` ($CHKPRO's, the
+  manual's "does not interpret the bits": a category's field denies only the
+  low four, so the group got CONTROL with a one-word code, case 252, and an
+  identifier ACE gives the bits it holds). `$CHKPRO` is a system service,
+  `corevms/chkpro.go`: the items in order (CHP$_RIGHTS's first entry the
+  UIC, a later CHP$_UIC replacing it, CHP$_ADDRIGHTS added to the process's
+  rights or CHP$_RIGHTS'; ACL segments, at most 20, whole ACEs or IVACL; at
+  most 11 ADDRIGHTS, RIGHTSFULL; an item code past CHP$_MAX_CODE BADPARAM),
+  what's not given the process's (UIC, rights, current privileges) or zero
+  (owner, protection, ACL), the access modes (CHP$_ACMODE against CHP$_MODE
+  and each asked-for bit's CHP$_MODES field, only when CHP$_ACMODE is given,
+  the manual's rule), and the answers: MATCHEDACE (BUFFEROVF when short and
+  granted, IVBUFLEN refused, the manual's), PRIVUSED, and ALARMNAME and
+  AUDITNAME (the journal name of the first alarm or audit ACE whose access
+  meets the request and whose SUCCESS or FAILURE fits the outcome).
+  `$CHECK_ACCESS` is securertl's `checkaccess.go`, at SECURESHR's %X78: the
+  caller must be able to read SYSUAF.DAT ((S:RWED,O:RWED,G,W), [1,4]) or
+  it's NOCALLPRIV; the class by objtyp or clsnam, not both (BADPARAM), one
+  (INSFARG), FILE and DEVICE (any abbreviation of clsnam, NOCLASS
+  otherwise); the user from the System's new table of accounts
+  (`corevms/users.go`: `UserAccount`, `AddUser`, `User`, SYSTEM always
+  there; govax has no SYSUAF or AUTHORIZE, so the tests make the probe's
+  three accounts as they make its identifiers), RMS$_RNF if not there; the
+  file by `$CHANGE_ACL`'s `findTarget`, a device by name
+  (`corevms.Environment.DeviceNamed`, a file's name NOPRIV); then
+  `corevms.CheckAccessItems` with the account's UIC, authorized privileges,
+  and granted identifiers, by `Interpreted` rules, the access read when the
+  list doesn't say (VSI's page; VMS 7.1's case 336 needed SYSPRV with no
+  CHP$_ACCESS). Writing it to the cases corrected A.4's PRIVUSED line:
+  CHP$M_SYSPRV means the SYSTEM category gave the access, which a system UIC
+  gets without SYSPRV (case 503, SYSTEM without privileges, PRIVUSED 1); and
+  the M pass's case 284 shows that with no CHP$_RIGHTS the process's own
+  rights are the accessor's though CHP$_UIC names another. Tests:
+  `TestSec93CheckOracle` (`internal/console/sec93check_test.go`) runs parts
+  K, H, and Q as SYSTEM, Q and M without READALL, GRPPRV, SYSPRV, and
+  BYPASS, U as PROT93C, and part X's four $CHKPRO cases, every $CHKPRO and
+  $CHECK_ACCESS case of them, 135, held to VMS 7.1's reports with nothing
+  masked; the test volume now also has SEC93.COM's [SEC93.CHK] and
+  [SEC93.NP] (`sec93Tree` by directory); `TestSec93VMSImage` runs VMS's own
+  SEC93.EXE's cases 259 ($CHKPRO) and 304 ($CHECK_ACCESS) too;
+  `TestThirdPartyCompared` and `TestUsers`. Unconfirmed and chosen: only
+  CHP$_PROT's first word is read (VMS 7.1 granted CONTROL with a second word
+  denying it, cases 254 and 255, where the VSI manual says that word holds
+  the next four bits); with SYSPRV and GRPPRV both able to give the SYSTEM
+  category, PRIVUSED names SYSPRV, and BYPASS's own bit (CHP$M_BYPASS) when
+  BYPASS alone gave it (the probe held BYPASS only beside SYSPRV); the
+  SYSTEM category through the volume owner reported as SYSPRV; the privilege
+  $CHECK_ACCESS's caller needs; a device's profile owner [0,0] with no ACL;
+  the audit items accepted and ignored, govax having no auditing.
+  Subtask 13b, `$GET_SECURITY` and `$SET_SECURITY`, is next.

@@ -18,7 +18,9 @@
 //   - $CHANGE_ACL reads and changes a file's ACL, found by name or by the
 //     channel it is accessed on (rms.SecurityObject), by an item list
 //     that works on one position in the ACL (change.go).
-//   - $CHECK_ACCESS is subtask 13's, and signals NOTIMPL until then.
+//   - $CHECK_ACCESS asks whether a user, named, may access a file or a
+//     device, by the user's account (corevms.UserAccount) and $CHKPRO's
+//     item list (checkaccess.go).
 //
 // VMS 7.1 also linked SECURESHRP, a protected image SECURESHR uses; govax
 // stands for it too (machine's runtimeLibraries), so an image VMS's LINK
