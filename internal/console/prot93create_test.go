@@ -1,7 +1,6 @@
 package console
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -14,10 +13,10 @@ import (
 // (prot93.log) on a new volume made as PROT93.COM made the VAX's
 // [PROT93.F], [PROT93.OWN], [PROT93.DP], and [PROT93.PRF].
 //
-// DIRECTORY/SECURITY and SHOW SECURITY are subtask 12's: until then their
-// reports are made in Go from each file's profile (prot93DirectoryLines,
-// prot93Profiles). govax has no APPEND, so the section's P6.DAT, made by
-// APPEND/NEW_VERSION, is left out of VMS's listing.
+// The section's DIRECTORY/SECURITY and SHOW SECURITY (subtask 12) hold
+// what the commands did to VMS's reports. govax has no APPEND, so the
+// section's P6.DAT, made by APPEND/NEW_VERSION, is left out of VMS's
+// listing.
 
 // prot93ProfileSetup is what PROT93.COM's TREE section did that the
 // section depends on.
@@ -37,61 +36,9 @@ var prot93ProfileSetup = []string{
 	"SET SECURITY/OWNER=[200,1]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) PROT93$DISK:[PROT93]PRF.DIR",
 }
 
-// prot93DirectoryLines is DIRECTORY/SECURITY's listing of spec as VMS 7.1
-// laid it out: the heading, a line per file (its name and version, owner,
-// and protection in columns), and the total. DIRECTORY shows every
-// version, so a spec with no version is given ";*".
-func prot93DirectoryLines(t *testing.T, c *Console, spec string) []string {
-	t.Helper()
-
-	full := spec
-	if !strings.Contains(full[strings.LastIndexByte(full, ']')+1:], ";") {
-		if strings.HasSuffix(full, "]") {
-			full += "*.*"
-		}
-
-		full += ";*"
-	}
-
-	objects, err := c.RTL.Session.SecurityObjects(full)
-	if err != nil {
-		t.Fatalf("SecurityObjects %s: %v", full, err)
-	}
-
-	names := consoleNames{c}
-	heading := ""
-
-	var out []string
-
-	for _, o := range objects {
-		dir, name := o.Name[:strings.LastIndexByte(o.Name, ']')+1], o.Name[strings.LastIndexByte(o.Name, ']')+1:]
-		if dir != heading {
-			heading = dir
-			out = append(out, "", "Directory "+dir, "")
-		}
-
-		p := o.Profile()
-		out = append(out, strings.TrimRight(fmt.Sprintf("%-21s%-33s%s", name,
-			security.IdentifierText(uint32(p.Owner), names), prot93ShortProtection(p.Protection)), " "))
-	}
-
-	files := "files"
-	if len(objects) == 1 {
-		files = "file"
-	}
-
-	return append(out, "", fmt.Sprintf("Total of %d %s.", len(objects), files))
-}
-
-// prot93ShortProtection is a protection code as DIRECTORY/SECURITY shows
-// it: "(RWED,RWED,RE,)".
-func prot93ShortProtection(p security.Protection) string {
-	parts := make([]string, 4)
-	for c := range parts {
-		parts[c] = p.Allows(security.Category(c)).String()
-	}
-
-	return "(" + strings.Join(parts, ",") + ")"
+// prot93DirectoryLines is DIRECTORY/SECURITY's listing of spec.
+func prot93DirectoryLines(run func(string) string, spec string) []string {
+	return prot93Lines(run, "DIRECTORY/SECURITY "+spec)
 }
 
 // prot93CreateWanted is VMS's output for a CREATE (or COPY) as compared:
@@ -135,7 +82,7 @@ func prot93CreateAllowed(command string, want []string) bool {
 // TestCreateProfilesOracle replays the probe's "PROFILES OF NEW FILES"
 // section as SYSTEM.
 func TestCreateProfilesOracle(t *testing.T) {
-	c, run := prot93SetConsole(t)
+	_, run := prot93SetConsole(t)
 
 	for _, line := range prot93ProfileSetup {
 		if out := run(line); strings.Contains(out, "-E-") || strings.Contains(out, "-F-") || strings.Contains(out, "-W-") {
@@ -166,7 +113,7 @@ func TestCreateProfilesOracle(t *testing.T) {
 		case strings.HasPrefix(command, "APPEND"):
 			continue // govax has no APPEND
 		case strings.HasPrefix(command, "DIRECTORY/SECURITY "):
-			got = prot93DirectoryLines(t, c, strings.TrimPrefix(command, "DIRECTORY/SECURITY "))
+			got = prot93Lines(run, command)
 
 			var kept []string
 			for _, l := range want {
@@ -181,11 +128,13 @@ func TestCreateProfilesOracle(t *testing.T) {
 
 			want = kept
 		case strings.HasPrefix(command, "SHOW SECURITY "):
-			if strings.Contains(command, ",") {
-				continue // a list, DCL's NOLIST: subtask 12's
-			}
+			got = prot93Lines(run, command)
 
-			got = prot93Profiles(t, c, command[strings.LastIndexByte(command, ' ')+1:])
+			// VMS's log has a NUL where DCL's segment ends with a blank
+			// (NOLIST's).
+			for k := range want {
+				want[k] = strings.ReplaceAll(want[k], "\x00", " ")
+			}
 		default:
 			out := ""
 			if prot93CreateAllowed(command, want) {
@@ -269,7 +218,7 @@ func TestCreateOwnerAndProtection(t *testing.T) {
 		{"PROT93$DISK:[PROT93.SEC]NONE.DAT", "(RWED,RWED,RE,)"},
 		{"PROT93$DISK:[PROT93.SEC]S.BCK", "(RWED,RWED,RWED,R)"},
 	} {
-		lines := prot93DirectoryLines(t, c, tc.spec)
+		lines := prot93DirectoryLines(run, tc.spec)
 		if len(lines) < 4 || !strings.HasSuffix(lines[3], tc.want) {
 			t.Errorf("%s: %q, want its protection %s", tc.spec, lines, tc.want)
 		}
@@ -293,7 +242,7 @@ func TestCreateOwnerAndProtection(t *testing.T) {
 	p.UIC, p.Username = uint32(security.SystemUIC), "SYSTEM"
 	p.ProcessPrivileges, p.CurrentPrivileges = security.AllPrivileges, security.AllPrivileges
 
-	got := strings.Join(prot93DirectoryLines(t, c, "PROT93$DISK:[PROT93.OWN]C*.DAT"), "\n")
+	got := strings.Join(prot93DirectoryLines(run, "PROT93$DISK:[PROT93.OWN]C*.DAT"), "\n")
 	if !strings.Contains(got, "CM.DAT;1             [PROT93C]") || strings.Contains(got, "CA.DAT") {
 		t.Errorf("[PROT93.OWN]:\n%s", got)
 	}

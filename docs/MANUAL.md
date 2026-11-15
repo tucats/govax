@@ -1138,13 +1138,18 @@ General rules, as in VMS's DCL:
 
 ```text
 DIRECTORY [file-spec[,...]]   (or file-spec+file-spec)
-    /SIZE[=USED|ALLOCATION|ALL]  /DATE  /OWNER  /PROTECTION  /FILE
-    /FULL  /TOTAL  /VERSIONS=n  /[NO]HEADING  /[NO]TRAILING  /OUTPUT[=file]
+    /SIZE[=USED|ALLOCATION|ALL]  /DATE  /OWNER  /PROTECTION  /SECURITY  /ACL
+    /FILE  /FULL  /TOTAL  /VERSIONS=n  /[NO]HEADING  /[NO]TRAILING  /OUTPUT[=file]
 ```
 
 Lists files on a volume, laid out as VMS lays them out. With no file
 spec, every version of every file in the default directory. Wildcards `*`
 and `%` work in every field, and `[...]` searches a directory tree.
+`/SECURITY` shows each file's owner, protection, and access control list,
+`/ACL` the list alone; a file you may neither read nor control is listed
+with the reason in place of its details. `SHOW SECURITY file` shows the
+same profile in VMS's report form (`SHOW ACL file`, its older form, the
+list alone).
 
 A list of specs is listed in order, as on VMS. Each spec takes the
 device and directory of the one before it unless it gives its own (`[]`

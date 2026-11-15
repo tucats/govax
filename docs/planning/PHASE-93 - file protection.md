@@ -5,8 +5,8 @@ day, with the answers in "The review". Subtasks 1 (the survey, Part A),
 2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), 5
 (identity and defaults), 6 (the grammar types), 7 (new files'
 profiles), 8 (checking RMS's services and the ACP, with SET DEBUG
-PROTECTION), 9 (the DCL utilities), 10 (the ACL services), and 11a
-(the SET commands) are done.
+PROTECTION), 9 (the DCL utilities), 10 (the ACL services), 11
+(changing profiles), and 12 (showing profiles) are done.
 
 ## Goal
 
@@ -1282,8 +1282,9 @@ Each is one commit, with tests, stopping for review.
     commands (done 2026-11-14); 11b, CREATE's `/PROTECTION` and
     `/OWNER_UIC`, COPY's `/PROTECTION`, and BACKUP's `/PROTECTION`
     (done 2026-11-14).
-12. **Showing profiles**: SHOW SECURITY, SHOW ACL, DIRECTORY/SECURITY,
-    /ACL, and the others, F$FILE_ATTRIBUTES; held to the probe.
+12. **Showing profiles** (done 2026-11-14): SHOW SECURITY, SHOW ACL,
+    DIRECTORY/SECURITY, /ACL, and the others, F$FILE_ATTRIBUTES; held to
+    the probe.
 13. **The other security services**: `$CHKPRO`, `$CHECK_ACCESS`,
     `$GET_SECURITY`, and `$SET_SECURITY` (Decision 13), their macros, held to
     the probe.
@@ -2066,3 +2067,51 @@ The author accepted the plan and answered its questions:
   BACKUP-F-SYNTAX for bad letters; BACKUP's `/PROTECTION` is the save
   set's alone, a restore's files keeping their saved protection, and
   ignored without a save set output. Subtask 12, showing profiles, is next.
+- **2026-11-14** Subtask 12 done: showing profiles. SHOW SECURITY and SHOW
+  ACL are `dclcmd/showsecurity.go`, on SET SECURITY's
+  `rms.Session.SecurityObjects` (wildcards, a name with no version its
+  highest version), each file shown only if the process may read or control
+  it (`SecurityObject.MayRead`), VMS's `%SHOW-F-READERR` over
+  `-SYSTEM-F-NOPRIV` otherwise; `/CLASS=VOLUME` shows the home block's
+  label, owner, and protection in a volume's letters, RWCD
+  (`rms.Session.VolumeProfile`; the volume's protection is shown, not
+  enforced, the review's answer 4). DIRECTORY has `/SECURITY` (the owner and
+  protection columns with each ACE after the file's line, indented ten) and
+  `/ACL` (the name in its 19 columns, then the ACEs), and every ACE in
+  `/ACL`, `/SECURITY`, and `/FULL` is `$FORMAT_ACL`'s text
+  (`DirectoryOptions.ACEText`, `security.FormatACE`), so options, default
+  protection, creator, alarm, and audit entries show as VMS's did, where
+  `/FULL` showed only plain identifier ACEs before. Owners in DIRECTORY,
+  SHOW SECURITY, and F$FILE_ATTRIBUTES' UIC are A.4's named form,
+  `[PROT93,PROT93A]` (`security.IdentifierText` over the rights database,
+  `corevms.Environment.OwnerText`), where DIRECTORY and the lexical
+  function wrote `$FAO`'s `[PROT93A]`. The grammar has a parameter switch,
+  `/single` (`dcl.Parameter.Single`): a comma in such a value is DCL's
+  `%DCL-W-NOLIST`, its segment the value to the comma and the name after
+  it, as VMS's; SET SECURITY, SET ACL, SHOW SECURITY, and SHOW ACL take
+  their file that way, so SET SECURITY's list, which went to RMS as one
+  name before, is now refused as Decision 10 says. Tests: the Go-made
+  reports of subtask 11's oracles are gone, `TestSetSecurityOracle` (229
+  commands, the section now through DIRECTORY/ACL and /SECURITY of
+  [PROT93.ACE]) and `TestCreateProfilesOracle` (38, its SHOW SECURITY of a
+  list too) running the commands; `TestProt93UtilitiesOracle` compares the
+  accounts' SHOW SECURITY and DIRECTORY/SECURITY (596 commands), and no
+  longer runs a COPY or OPEN/WRITE VMS allowed (its new version is on the
+  volume already, and a listing after it showed one fewer), which settled
+  its A0 DIRECTORY difference and left three of its own (each account's
+  file shown just after CREATE, its later protection on the volume);
+  `TestProt93TreeOracle` (`prot93show_test.go`) holds PROT93Z's
+  DIRECTORY/SECURITY of the whole tree, `[000000]`, and the UIC-named
+  directories, and SYSTEM's DIRECTORY/SECURITY, /ACL, and /FULL and SHOW
+  SECURITY of [PROT93.F] and of the volume, to VMS's on round 1's volume
+  (local only; 1,631 lines, /FULL's "Revised:" lines masked and FACLCTL's
+  later world RE applied); `TestShowSecurityCases` the choices below. HELP
+  SHOW has ACL and SECURITY, HELP DIRECTORY `/ACL` and `/SECURITY`;
+  MANUAL.md's DIRECTORY has them. Unconfirmed and chosen: SHOW's facility
+  number (120); a missing file is `%SHOW-E-OPENIN` over RMS's status (no
+  probe showed one); READERR ends the command, a wildcard's later files
+  unshown; SHOW ACL of a file with no entries is its heading alone;
+  `/CLASS` other than FILE and VOLUME is IVKEYW; DIRECTORY/ACL's or
+  /SECURITY's line for a file it may not read is /SECURITY's, the name in
+  19 columns and the reason. Subtask 13, the other security services, is
+  next.

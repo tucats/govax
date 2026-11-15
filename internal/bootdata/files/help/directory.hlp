@@ -28,6 +28,11 @@
    finds no file is %DIRECT-W-NOFILES.
 
 2 Qualifiers
+/ACL
+
+   Shows each file's access control list under its name, an entry to a
+   line.
+
 /DATE
 
    Shows each file's creation date.
@@ -59,12 +64,20 @@
 
 /OWNER
 
-   Shows each file's owner, as [SYSTEM] or [group,member].
+   Shows each file's owner, by the rights database's names where it has
+   them ([SYSTEM], [ACCOUNTS,SMITH]), else as [group,member] in octal.
 
 /PROTECTION
 
    Shows each file's protection: the access the system, the owner, the
    group, and the world have, in that order, as (RWED,RWED,RE,).
+
+/SECURITY
+
+   Shows each file's owner and protection, as /OWNER and /PROTECTION
+   do, and its access control list under it, an entry to a line.  A
+   file the process may neither read nor control is listed with the
+   reason in their place.
 
 /SIZE
 

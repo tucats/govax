@@ -337,6 +337,10 @@ grammar console
         ! PROTECTION (docs/planning/PHASE-93 - file protection.md,
         ! subtask 5): the process's default file protection.
         keyword         protection      /syntax=show_protection
+        ! SECURITY and ACL (docs/planning/PHASE-93 - file protection.md,
+        ! subtask 12): a file's owner, protection, and ACL.
+        keyword         security        /syntax=show_security
+        keyword         acl             /syntax=show_acl
                 
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
@@ -396,6 +400,19 @@ grammar console
                         /type=$string
             qualifier   privileges/id=1942
         syntax          show_protection/id=2720
+        ! SHOW SECURITY file [/CLASS=FILE|VOLUME] and SHOW ACL file: one
+        ! specification (wildcards allowed; a list is DCL's NOLIST, as on
+        ! VMS 7.1), internal/dclcmd/showsecurity.go.
+        syntax          show_security/id=2770
+            parameter   file/id=2771                -
+                        /type=$string/single        -
+                        /prompt="Object"
+            qualifier   class/id=2772/nonegatable   -
+                        /type=$any
+        syntax          show_acl/id=2775
+            parameter   file/id=2776                -
+                        /type=$string/single        -
+                        /prompt="Object"
         syntax          show_working_set/id=166
         syntax          show_editor/id=167
 
@@ -533,6 +550,11 @@ grammar console
         qualifier   heading/id=909
         qualifier   trailing/id=910
         qualifier   total/id=912
+        ! /SECURITY and /ACL (docs/planning/PHASE-93 - file protection.md,
+        ! subtask 12): the owner and protection with each file's ACEs, and
+        ! the ACEs alone.
+        qualifier   security/id=913
+        qualifier   acl/id=914
         qualifier   output/id=911               -
                     /type=$string               -
                     /default=""
@@ -1501,7 +1523,7 @@ grammar console
     ! deletes them. /EXCLUDE and /BY_OWNER choose among the files.
     syntax set_security/id=2730
         parameter   file/id=2731                -
-                    /type=$string               -
+                    /type=$string/single        -
                     /prompt="Object"
         qualifier   protection/id=2732/nonegatable  -
                     /type=$protection
@@ -1545,7 +1567,7 @@ grammar console
     ! SECURITY/ACL, with its /AFTER, /REPLACE, /DELETE, /LIKE, and /DEFAULT.
     syntax set_acl/id=2760
         parameter   file/id=2761                -
-                    /type=$string               -
+                    /type=$string/single        -
                     /prompt="Object"
         qualifier   acl/id=2762/nonegatable     -
                     /type=$acl/default=""

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -57,8 +58,17 @@ func (c *Context) Directory(specText string, opts rms.DirectoryOptions) error {
 // console when output is "". DIRECTORY/OUTPUT with no file is
 // DIRECTORY.LIS (the DCL Dictionary), which the caller passes.
 func (c *Context) DirectoryTo(specText string, opts rms.DirectoryOptions, output string) error {
-	if opts.OwnerName == nil && c.RTL != nil {
-		opts.OwnerName = c.RTL.IdentifierText
+	// Owners and ACEs are named from the rights database, as VMS 7.1's
+	// DIRECTORY named them ("[PROT93,PROT93A]": docs/planning/PHASE-93 -
+	// file protection.md, A.4's "Display").
+	names := rightsNames{c}
+
+	if opts.OwnerName == nil {
+		opts.OwnerName = func(uic uint32) string { return security.IdentifierText(uic, names) }
+	}
+
+	if opts.ACEText == nil {
+		opts.ACEText = func(ace []byte) string { return security.FormatACE(ace, names, nil) }
 	}
 
 	text, found, err := c.ContainerSession.Directory(specText, opts)

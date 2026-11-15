@@ -52,6 +52,14 @@ type DirectoryOptions struct {
 	Owner      bool
 	Protection bool
 
+	// Security and ACL (docs/planning/PHASE-93 - file protection.md,
+	// subtask 12) are DIRECTORY/SECURITY, the owner and protection columns
+	// with each ACE after a file's line, and DIRECTORY/ACL, the name alone
+	// with its ACEs, each entry on its own line indented ten, as VMS 7.1
+	// laid them out (A.4, "Display").
+	Security bool
+	ACL      bool
+
 	// SizeMode is /SIZE's value: SizeUsed (the default, and /SIZE=USED),
 	// SizeAllocation, or SizeAll ("used/allocated").
 	SizeMode SizeMode
@@ -71,6 +79,11 @@ type DirectoryOptions struct {
 	// OwnerName writes an owner's UIC (group in the high word) as /OWNER
 	// and /FULL show it, "[SYSTEM]"; nil writes it as numbers, "[1,4]".
 	OwnerName func(uic uint32) string
+
+	// ACEText writes an access control entry (its bytes) as /ACL,
+	// /SECURITY, and /FULL show it, $FORMAT_ACL's text; nil shows an
+	// identifier ACE with no options by aceText's own rule.
+	ACEText func(ace []byte) string
 }
 
 // SizeMode is which of a file's sizes DIRECTORY/SIZE shows.
@@ -90,13 +103,17 @@ func (o DirectoryOptions) columns() DirectoryOptions {
 		o.SizeMode = SizeAll
 	}
 
+	if o.Security {
+		o.Owner, o.Protection, o.ACL = true, true, true
+	}
+
 	return o
 }
 
 // brief reports whether the listing is DIRECTORY's brief one: names
 // alone, in columns.
 func (o DirectoryOptions) brief() bool {
-	return !o.Full && !o.File && !o.Size && !o.Date && !o.Owner && !o.Protection
+	return !o.Full && !o.File && !o.Size && !o.Date && !o.Owner && !o.Protection && !o.Security && !o.ACL
 }
 
 // The brief layout's columns: each name is padded to a column's width,
@@ -479,9 +496,15 @@ func matchAttributes(vol *volume.Volume, m filespec.Match) (FileAttributes, erro
 // for: the name (on a line of its own when it's too long for its field),
 // then the file ID, size, date, owner, and protection.
 func writeColumnsEntry(b *strings.Builder, name string, m filespec.Match, a FileAttributes, cols, opts DirectoryOptions) {
-	if len(name) > directoryNameWidth {
+	more := cols.File || cols.Size || cols.Date || cols.Owner || cols.Protection
+
+	switch {
+	case !more:
+		// /ACL alone: the name in its field, the entries below it.
+		fmt.Fprintf(b, "%-*s", directoryNameWidth, name)
+	case len(name) > directoryNameWidth:
 		fmt.Fprintf(b, "%s\n%-*s", name, directoryNameWidth, "")
-	} else {
+	default:
 		fmt.Fprintf(b, "%-*s", directoryNameWidth, name)
 	}
 
@@ -513,6 +536,14 @@ func writeColumnsEntry(b *strings.Builder, name string, m filespec.Match, a File
 	}
 
 	b.WriteString("\n")
+
+	// /ACL's and /SECURITY's entries, each on a line of its own indented
+	// ten, after the file's line (VMS 7.1: the probe's [PROT93.ACE]).
+	if cols.ACL {
+		for _, ace := range aclEntries(a.ACL) {
+			fmt.Fprintf(b, "%10s%s\n", "", entryText(ace, opts))
+		}
+	}
 }
 
 // writeFullEntry writes one file's DIRECTORY/FULL block, as VMS 7.3 laid
@@ -595,14 +626,8 @@ var aceAccessWords = []struct {
 func aclText(acl []byte, opts DirectoryOptions) string {
 	var entries []string
 
-	for len(acl) > 0 {
-		size := int(acl[0])
-		if size == 0 || size > len(acl) {
-			break
-		}
-
-		entries = append(entries, aceText(acl[:size], opts))
-		acl = acl[size:]
+	for _, ace := range aclEntries(acl) {
+		entries = append(entries, entryText(ace, opts))
 	}
 
 	if len(entries) == 0 {
@@ -610,6 +635,34 @@ func aclText(acl []byte, opts DirectoryOptions) string {
 	}
 
 	return strings.Join(entries, "\n"+strings.Repeat(" ", len("Access Cntrl List:  ")))
+}
+
+// aclEntries are the entries of an ACL as its header holds them, each
+// entry's bytes by its length byte; a length of 0, or past the end, ends
+// the list.
+func aclEntries(acl []byte) [][]byte {
+	var entries [][]byte
+
+	for len(acl) > 0 {
+		size := int(acl[0])
+		if size == 0 || size > len(acl) {
+			break
+		}
+
+		entries = append(entries, acl[:size])
+		acl = acl[size:]
+	}
+
+	return entries
+}
+
+// entryText is one ACE's text, by opts.ACEText when the caller gave one.
+func entryText(ace []byte, opts DirectoryOptions) string {
+	if opts.ACEText != nil {
+		return opts.ACEText(ace)
+	}
+
+	return aceText(ace, opts)
 }
 
 // aceText is one access control entry as aclText shows it.

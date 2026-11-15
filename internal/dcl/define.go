@@ -147,6 +147,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 			_, p.List = switches[listTOKEN]
 			_, p.Joinable = switches[joinableTOKEN]
+			_, p.Single = switches[singleTOKEN]
 
 			if sep, ok := switches[separatorTOKEN]; ok {
 				if len(sep) != 1 {

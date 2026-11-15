@@ -227,6 +227,23 @@
 
      SHOW PROTECTION
 
+2 ACL
+
+   Shows a file's access control list: a heading with the file's name
+   and the time, then each entry, VMS's older form of SHOW SECURITY.
+   It needs read or control access to the file.
+
+   Format
+
+     SHOW ACL file
+
+3 Parameter
+
+ file
+
+   The file, one specification; wildcards are allowed, and a name with
+   no version is its highest version.
+
 2 RADIX
 
    Shows the console's radix, as a number (10, 16, or 8), which SET RADIX
@@ -298,6 +315,42 @@
        N = 42   Hex = 0000002A  Octal = 00000000052
 
      Shows every symbol.
+
+2 SECURITY
+
+   Shows a file's security profile: its owner, its protection code, and
+   its access control list.  It needs read or control access to the file
+   (%SHOW-F-READERR otherwise).  SET SECURITY changes the profile.
+
+   Format
+
+     SHOW SECURITY[/CLASS=class] object
+
+3 Parameter
+
+ object
+
+   The file, one specification; wildcards are allowed, and a name with
+   no version is its highest version.  With /CLASS=VOLUME, a device.
+
+3 Qualifiers
+/CLASS
+
+      /CLASS=class
+
+   The object's class: FILE, the default, or VOLUME, a mounted volume's
+   owner and protection (its own, which govax shows but doesn't
+   enforce).
+
+3 Examples
+
+   1.$ SHOW SECURITY LEDGER.DAT
+
+     DUA1:[ACCOUNTS]LEDGER.DAT;1 object of class FILE
+          Owner: [ACCOUNTS,SMITH]
+          Protection: (System: RWED, Owner: RWED, Group: R, World)
+          Access Control List:
+               (IDENTIFIER=[ACCOUNTS,JONES],ACCESS=READ+WRITE)
 
 2 SYSTEM
 

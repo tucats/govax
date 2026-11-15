@@ -18,9 +18,8 @@ import (
 // 2's "OBSOLETE FORMS WITH NO VALUE") on a new volume made as PROT93.COM
 // made the VAX's [PROT93.SEC] and [PROT93.ACE].
 //
-// SHOW SECURITY and SHOW ACL are subtask 12's: until then each one's
-// profile is read in Go and laid out as VMS's report (prot93Profiles), so
-// what the commands did is held to VMS's report of it.
+// The sections' SHOW SECURITY, SHOW ACL, DIRECTORY/SECURITY, and
+// DIRECTORY/ACL (subtask 12) hold what the commands did to VMS's reports.
 
 // prot93SetConsole is a console with a new volume on DUA1 holding the
 // probe's [PROT93LOG]T.DAT, [PROT93.SEC], and [PROT93.ACE], the MFD and
@@ -80,95 +79,50 @@ func prot93SetConsole(t *testing.T) (*Console, func(string) string) {
 	return c, run
 }
 
-// prot93Profiles is SHOW SECURITY's report of the files spec names, as
-// VMS 7.1 laid it out: a blank line, the name, and the owner, protection,
-// and ACL, each entry indented ten.
-func prot93Profiles(t *testing.T, c *Console, spec string) []string {
-	t.Helper()
-
-	objects, err := c.RTL.Session.SecurityObjects(spec)
-	if err != nil {
-		t.Fatalf("SecurityObjects %s: %v", spec, err)
+// prot93Lines is a command's output as lines, the last newline dropped.
+func prot93Lines(run func(string) string, command string) []string {
+	out := strings.TrimSuffix(run(command), "\n")
+	if out == "" {
+		return nil
 	}
 
-	names := consoleNames{c}
-
-	var out []string
-
-	for _, o := range objects {
-		p := o.Profile()
-		out = append(out, "", o.Name+" object of class FILE",
-			"     Owner: "+security.IdentifierText(uint32(p.Owner), names),
-			"     Protection: "+prot93ProtectionText(p.Protection))
-
-		acl, _ := security.DecodeACL(o.ACL())
-		if len(acl) == 0 {
-			out = append(out, "     Access Control List: <empty>")
-
-			continue
-		}
-
-		out = append(out, "     Access Control List:")
-
-		for _, a := range acl {
-			out = append(out, "          "+security.FormatACE(a.Data, names, nil))
-		}
-	}
-
-	return out
+	return strings.Split(out, "\n")
 }
 
-// prot93ProtectionText is a protection code as SHOW SECURITY writes it:
-// "(System: RWED, Owner: RWED, Group: R, World)".
-func prot93ProtectionText(p security.Protection) string {
-	var parts []string
-
-	for c, name := range []string{"System", "Owner", "Group", "World"} {
-		if letters := p.Allows(security.Category(c)).String(); letters != "" {
-			parts = append(parts, name+": "+letters)
-		} else {
-			parts = append(parts, name)
-		}
-	}
-
-	return "(" + strings.Join(parts, ", ") + ")"
+// prot93Profiles is SHOW SECURITY's report of the files spec names.
+func prot93Profiles(run func(string) string, spec string) []string {
+	return prot93Lines(run, "SHOW SECURITY "+spec)
 }
 
-// prot93SetCompared reports whether a command of the sections is this
-// subtask's to run and compare, and whether it is SHOW SECURITY or SHOW
-// ACL, whose report prot93Profiles makes.
-func prot93SetCompared(line string) (run, show bool) {
+// prot93SetCompared reports whether a command of the sections is one
+// to run and compare.
+func prot93SetCompared(line string) bool {
 	switch {
-	case strings.HasPrefix(line, "SHOW SECURITY ") && !strings.Contains(line, ","):
-		return false, true
-	case strings.HasPrefix(line, "SHOW ACL "):
-		return false, true
-	case strings.HasPrefix(line, "SET "), strings.HasPrefix(line, "SHOW PROTECTION"),
+	case strings.HasPrefix(line, "SHOW SECURITY "), strings.HasPrefix(line, "SHOW ACL "),
+		strings.HasPrefix(line, "DIRECTORY/SECURITY "), strings.HasPrefix(line, "DIRECTORY/ACL "),
+		strings.HasPrefix(line, "SET "), strings.HasPrefix(line, "SHOW PROTECTION"),
 		strings.HasPrefix(line, "CREATE/"), strings.HasPrefix(line, "COPY/PROTECTION="),
 		strings.HasPrefix(line, "COPY PROT93$DISK:[PROT93LOG]T.DAT "),
 		strings.HasPrefix(line, "COPY PROT93$DISK:[PROT93.ACE]"),
 		strings.HasPrefix(line, "WRITE SYS$OUTPUT ") && strings.Contains(line, "[PROT93.SEC]") && !prot93Unshown(line):
-		return true, false
+		return true
 	}
 
-	// DIRECTORY/SECURITY and /ACL, and SHOW SECURITY of a list, are
-	// subtask 12's.
-	return false, false
+	return false
 }
 
-// prot93Unshown reports whether a lexical function's item is one this
-// subtask doesn't compare: UIC's named form is subtask 12's, and FID and
-// DID are where the volume put the file.
+// prot93Unshown reports whether a lexical function's item is one not
+// compared: FID and DID are where the volume put the file.
 func prot93Unshown(line string) bool {
-	return strings.Contains(line, `"UIC")`) || strings.Contains(line, `"FID")`) || strings.Contains(line, `"DID")`)
+	return strings.Contains(line, `"FID")`) || strings.Contains(line, `"DID")`)
 }
 
 // TestSetSecurityOracle replays the probe's sections as SYSTEM.
 func TestSetSecurityOracle(t *testing.T) {
-	c, run := prot93SetConsole(t)
+	_, run := prot93SetConsole(t)
 
 	log := prot93Log(t, "prot93.log")
-	lines := logSection(t, log, `$ WRITE SYS$OUTPUT "######## SET SECURITY"`, `$ DIRECTORY/ACL`)
+	lines := logSection(t, log, `$ WRITE SYS$OUTPUT "######## SET SECURITY"`, `$ ! The ACLs'bytes`)
 	lines = append(lines, logSection(t, prot93Log(t, "round2/prot93r.log"),
 		`$ WRITE SYS$OUTPUT "######## OBSOLETE FORMS WITH NO VALUE"`, `$ SHOW SECURITY PROT93$DISK:[PROT93.ACE]L2.DAT`)...)
 
@@ -186,39 +140,36 @@ func TestSetSecurityOracle(t *testing.T) {
 			want = append(want, lines[i])
 		}
 
-		doRun, show := prot93SetCompared(command)
-
-		var got []string
-
-		switch {
-		case show:
-			spec := command[strings.LastIndexByte(command, ' ')+1:]
-			got = prot93Profiles(t, c, spec)
-			shown++
-
-			if strings.HasPrefix(command, "SHOW ACL ") {
-				// Its heading has the time; the entries are compared.
-				want, got = want[1:], prot93ACLOnly(got)
-			}
-		case doRun:
-			out := strings.TrimSuffix(run(command), "\n")
-
-			// govax's COPY says what it copied, where VMS's says nothing
-			// without /LOG: a difference of COPY's, not this subtask's.
-			if strings.HasPrefix(command, "COPY ") && strings.HasPrefix(out, "%COPY-S-COPIED") && !strings.Contains(out, "\n") {
-				out = ""
-			}
-			if out != "" {
-				got = strings.Split(out, "\n")
-			}
-
-			// The sections' CREATEs of files are all refused, so none
-			// reads its data line.
-			want = prot93CreateWanted(want)
-			compared++
-		default:
+		if !prot93SetCompared(command) {
 			continue
 		}
+
+		out := strings.TrimSuffix(run(command), "\n")
+
+		// govax's COPY says what it copied, where VMS's says nothing
+		// without /LOG: a difference of COPY's, not this subtask's.
+		if strings.HasPrefix(command, "COPY ") && strings.HasPrefix(out, "%COPY-S-COPIED") && !strings.Contains(out, "\n") {
+			out = ""
+		}
+
+		var got []string
+		if out != "" {
+			got = strings.Split(out, "\n")
+		}
+
+		// SHOW ACL's heading has the time it ran.
+		if strings.HasPrefix(command, "SHOW ACL ") {
+			got, want = prot93MaskTimes(got), prot93MaskTimes(want)
+		}
+
+		if strings.HasPrefix(command, "SHOW SECURITY ") || strings.HasPrefix(command, "SHOW ACL ") {
+			shown++
+		}
+
+		// The sections' CREATEs of files are all refused, so none reads
+		// its data line.
+		want = prot93CreateWanted(want)
+		compared++
 
 		// VMS's log has a NUL where DCL's segment ends with a blank
 		// (NOPAREN's).
@@ -238,15 +189,11 @@ func TestSetSecurityOracle(t *testing.T) {
 	}
 }
 
-// prot93ACLOnly is a profile report's ACL entries alone, as SHOW ACL
-// lists them.
-func prot93ACLOnly(report []string) []string {
-	var out []string
-
-	for _, l := range report {
-		if strings.HasPrefix(l, "          (") {
-			out = append(out, l)
-		}
+// prot93MaskTimes is lines with each date and time made "<time>".
+func prot93MaskTimes(lines []string) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = prot93Times.ReplaceAllString(l, "<time>")
 	}
 
 	return out
@@ -309,7 +256,7 @@ func TestSetSecurityIdentities(t *testing.T) {
 	p.UIC, p.Username = uint32(security.SystemUIC), "SYSTEM"
 	p.ProcessPrivileges, p.CurrentPrivileges = security.AllPrivileges, security.AllPrivileges
 
-	got := prot93Profiles(t, c, "PROT93$DISK:[PROT93.SEC]*.DAT")
+	got := prot93Profiles(run, "PROT93$DISK:[PROT93.SEC]*.DAT")
 	want := []string{
 		"", "DUA1:[PROT93.SEC]CTL.DAT;1 object of class FILE",
 		"     Owner: [PROT93,PROT93A]",

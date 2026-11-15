@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -85,6 +86,30 @@ func (env *Environment) IdentifierText(id uint32) string {
 		return fmt.Sprintf("%%X%08X", id)
 	}
 }
+
+// OwnerText is an owner's UIC, or an ACE's identifier, as the security
+// displays write it (SHOW SECURITY, DIRECTORY/OWNER, F$FILE_ATTRIBUTES'
+// UIC): the group's identifier and the member's in brackets when the
+// group has one, "[PROT93,PROT93A]", else as IdentifierText
+// (docs/planning/PHASE-93 - file protection.md, A.4's "Display";
+// security.IdentifierText).
+func (env *Environment) OwnerText(id uint32) string {
+	return security.IdentifierText(id, RightsNames{env})
+}
+
+// RightsNames is a process's rights database as security.Names, for
+// reading and writing identifiers in ACEs and owners.
+type RightsNames struct{ Env *Environment }
+
+// IdentifierValue is the value of the identifier called name.
+func (n RightsNames) IdentifierValue(name string) (uint32, bool) {
+	v, status := n.Env.IdentifierValue(name)
+
+	return v, status == 0
+}
+
+// IdentifierName is the name of the identifier with value id.
+func (n RightsNames) IdentifierName(id uint32) (string, bool) { return n.Env.IdentifierName(id) }
 
 // DeviceScan returns the names of the devices whose names match pattern,
 // as $DEVICE_SCAN finds them for F$DEVICE: each written with the node's

@@ -133,6 +133,12 @@ type Parameter struct {
 	// element followed by "+" reports Joined.
 	Joinable bool
 
+	// Single marks a parameter declared with /single: one value, where a
+	// list is DCL's %DCL-W-NOLIST, as VMS 7.1's SET SECURITY and SHOW
+	// SECURITY refused one (docs/planning/PHASE-93 - file protection.md,
+	// A.4). Without it a value's commas are its own.
+	Single bool
+
 	// Separator, when nonzero, is a character that ends this parameter's
 	// value (the grammar's /separator="c"): one is skipped, with blanks
 	// around it, before the next parameter, so DEPOSIT X=5 reads as

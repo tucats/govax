@@ -193,6 +193,12 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SET_ACL", func(id int64, r *dcl.Result) error {
 		return d.Console.cmd().SetSecurity(securityOptions(r, dclcmd.FormACL, []string{r.String("FILE")}))
 	})
+	// SHOW SECURITY and SHOW ACL (docs/planning/PHASE-93 - file
+	// protection.md, subtask 12): a file's profile shown.
+	g.Bind("SHOW_SECURITY", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().ShowSecurity(r.String("FILE"), r.String("CLASS"))
+	})
+	g.Bind("SHOW_ACL", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowACL(r.String("FILE")) })
 	g.Bind("SET_PROCESS", func(id int64, r *dcl.Result) error {
 		return d.Console.cmd().SetProcessPrivileges(r.List("PRIVILEGES"))
 	})
@@ -378,6 +384,8 @@ func (d *Dispatcher) bindGrammar() {
 
 			Owner:      r.Present("OWNER"),
 			Protection: r.Present("PROTECTION"),
+			Security:   r.Present("SECURITY"),
+			ACL:        r.Present("ACL"),
 
 			NoHeading:  r.Negated("HEADING"),
 			NoTrailing: r.Negated("TRAILING"),

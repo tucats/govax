@@ -404,7 +404,7 @@ var fileItems = map[string]fileItem{
 	"STORED_SEMANTICS": func(*Interpreter, rms.FileAttributes) dclValue { return dclString("") },
 
 	"UIC": func(c *Interpreter, a rms.FileAttributes) dclValue {
-		return dclString(c.RTL.IdentifierText(a.Owner))
+		return dclString(c.RTL.OwnerText(a.Owner))
 	},
 	"VERLIMIT": func(_ *Interpreter, a rms.FileAttributes) dclValue {
 		if a.VersionLimit == 0 {

@@ -327,3 +327,19 @@ func (o *SecurityObject) SetOwnerProtection(owner security.UIC, protection secur
 		a.Owner, a.Protection = uint32(owner), uint16(protection)
 	})
 }
+
+// VolumeProfile is the profile of the volume on spec's device: its label,
+// its owner, and its protection (the home block's, which govax shows but
+// doesn't enforce: docs/planning/PHASE-93 - file protection.md, the
+// review's answer 4), for SHOW SECURITY/CLASS=VOLUME. A device with
+// nothing mounted is a *NotMountedError.
+func (s *Session) VolumeProfile(spec string) (label string, owner security.UIC, protection security.Protection, err error) {
+	vol, _, err := s.resolveVolume(spec)
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	home := vol.Devices[0].Home
+
+	return strings.TrimRight(home.VolumeName, " "), uicOf(home.VolumeOwner), security.Protection(home.Protection), nil
+}

@@ -57,11 +57,10 @@ var prot93UtilRuns = []prot93UtilRun{
 	{"round2/prot93v_prot93c.log", "C0", "PROT93C", prot93OwnersSection},
 }
 
-// prot93UtilLater are the commands a later subtask brings (showing
-// profiles, 12) and those govax hasn't (SEARCH, DIFFERENCES, APPEND):
-// their lines are run, if govax has them, but not compared.
+// prot93UtilLater are the commands govax hasn't (SEARCH, DIFFERENCES,
+// APPEND, DUMP/HEADER): their lines are run, if govax has them, but not
+// compared.
 var prot93UtilLater = []string{
-	"SHOW SECURITY", "DIRECTORY/SECURITY",
 	"SEARCH ", "DIFFERENCES ", "APPEND ", "DUMP/HEADER",
 }
 
@@ -134,8 +133,12 @@ var prot93UtilDifferences = map[string]string{
 	// PROT93A owns [.UDN] and lists it; the files the passes after A0's
 	// made there (N_M0.DAT, SM0.DIR, ...) are on the volume now.
 	"A0 DIRECTORY PROT93$DISK:[PROT93.UDN]": "later passes' files in [.UDN]",
-	"A0 DIRECTORY":                          "later passes' files in [.UDN], the default directory",
 
+	// Each account's file shown right after CREATE made it: on the volume
+	// it has the protection SET SECURITY gave it next.
+	"A0 SHOW SECURITY PROT93$DISK:[PROT93LOG]OWN_@.DAT": "shown before the change already on the volume",
+	"B0 SHOW SECURITY PROT93$DISK:[PROT93LOG]OWN_@.DAT": "shown before the change already on the volume",
+	"C0 SHOW SECURITY PROT93$DISK:[PROT93LOG]OWN_@.DAT": "shown before the change already on the volume",
 }
 
 // TestProt93UtilitiesOracle replays Part B as each identity.
@@ -172,6 +175,8 @@ func TestProt93UtilitiesOracle(t *testing.T) {
 		p.UIC, p.Username, p.Rights = uint32(account.uic), r.user, append(prot93InteractiveRights(), account.rights...)
 		p.ProcessPrivileges, p.CurrentPrivileges = privileges, privileges
 
+		writing := false
+
 		for _, cmd := range prot93UtilCommands(t, r) {
 			if strings.HasPrefix(cmd.line, "!") || cmd.line == "EXIT" || strings.HasPrefix(cmd.line, "@PROT93$DISK:[000000]PROT93B") {
 				continue
@@ -180,6 +185,16 @@ func TestProt93UtilitiesOracle(t *testing.T) {
 			// A CREATE VMS allowed read its data line (the log's
 			// "RECORD"): it isn't run, there being no data here for it.
 			if prot93CreateAllowed(cmd.line, cmd.output) {
+				continue
+			}
+
+			// A new version VMS made (COPY's, OPEN/WRITE's) is on the
+			// volume already: making it again would add a version the
+			// listings after it don't show. The file OPEN/WRITE opened
+			// isn't written or closed either.
+			if skipFU, ok := prot93UtilNewVersion(cmd, writing); ok {
+				writing = skipFU
+
 				continue
 			}
 
@@ -243,4 +258,25 @@ func prot93UtilSkipped(cmd prot93UtilCommand) bool {
 // a refusal, for the commands the probe made to be refused.
 func prot93UtilRefused(cmd prot93UtilCommand) bool {
 	return strings.Contains(strings.Join(cmd.output, "\n"), "%")
+}
+
+// prot93UtilNewVersion reports whether cmd is not to be run because it
+// makes a new version of a file VMS allowed it to (an allowed COPY or
+// OPEN/WRITE), or writes or closes the file such an OPEN/WRITE opened
+// (writing says one did); skipFU is whether one still has.
+func prot93UtilNewVersion(cmd prot93UtilCommand, writing bool) (skipFU, skip bool) {
+	switch {
+	case prot93UtilRefused(cmd):
+		return writing, false
+	case strings.HasPrefix(cmd.line, "COPY "):
+		return writing, true
+	case strings.HasPrefix(cmd.line, "OPEN/WRITE FU "):
+		return true, true
+	case writing && strings.HasPrefix(cmd.line, "WRITE FU"):
+		return true, true
+	case writing && strings.HasPrefix(cmd.line, "CLOSE FU"):
+		return false, true
+	}
+
+	return writing, false
 }

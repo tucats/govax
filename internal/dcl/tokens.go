@@ -21,6 +21,7 @@ const (
 	promptTOKEN      = "PROMPT"
 	qualifierTOKEN   = "QUALIFIER"
 	separatorTOKEN   = "SEPARATOR"
+	singleTOKEN      = "SINGLE"
 	syntaxTOKEN      = "SYNTAX"
 	typeTOKEN        = "TYPE"
 	valueTOKEN       = "VALUE"

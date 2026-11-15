@@ -547,6 +547,12 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 			return nil, nil, err
 		}
 
+		if p.Single {
+			if err := singleValue(token); err != nil {
+				return nil, nil, err
+			}
+		}
+
 		pos = skipSeparator(rem, p.Separator)
 
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
@@ -1351,4 +1357,40 @@ func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest s
 	item.set(q.Name, q.ID, negated, val)
 
 	return rem, nil
+}
+
+// singleValue refuses a /single parameter's value that is a list: a comma
+// outside quotes is DCL's %DCL-W-NOLIST, its segment the value up to the
+// comma and the name that follows it, as VMS 7.1 showed one:
+//
+//	%DCL-W-NOLIST, list of parameter values not allowed - check use of comma (,)
+//	 \PROT93$DISK:[PROT93.ACE]L1.DAT,PROT93$DISK\
+func singleValue(token string) error {
+	quoted := false
+
+	for i := 0; i < len(token); i++ {
+		switch token[i] {
+		case '"':
+			quoted = !quoted
+		case ',':
+			if quoted {
+				continue
+			}
+
+			end := i + 1
+			for end < len(token) && isSymbolChar(token[end]) {
+				end++
+			}
+
+			return vmserrors.NewSegment(vmserrors.CLI_NOLIST, strings.ToUpper(token[:end]))
+		}
+	}
+
+	return nil
+}
+
+// isSymbolChar reports whether c can be part of a name in DCL's segment
+// of a value: a letter, a digit, "$", or "_".
+func isSymbolChar(c byte) bool {
+	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '$' || c == '_'
 }
