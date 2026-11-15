@@ -533,3 +533,12 @@ The answers (2026-11-15):
   showed govax lacks SHOW PROCESS/RIGHTS and /QUOTAS, and that a DCL
   element over 255 characters (a privilege list) is TKNOVF in WRITE, which
   the VAX run will settle. Waiting for the VAX run.
+- **2026-11-15** Round 1 on VMS 7.1 stopped at AUTHORIZE case 21, before
+  the accounts: the case's ADD was a 504-character record, which DCL
+  refused (RMS-W-RTB). It also found that AUTHORIZE ignores a
+  supervisor-mode RIGHTSLIST name (SYSUAF's was honored) and used the
+  VAX's rights database, leaving the identifier UAFA there, which the
+  author removed. Round 2: executive-mode process names, a guard on both
+  scratch files, no line over 200 characters (`gen.go` refuses one), UIC
+  members in octal. Round 1's log is `vax/round1/uaf95.log`; the
+  README's "Round 1" lists what it answered.

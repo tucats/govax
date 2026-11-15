@@ -47,17 +47,16 @@ To make them by hand instead, as SYSTEM, with the volume mounted and
 
     $ SET DEFAULT SYS$SYSTEM
     $ MCR AUTHORIZE
-    UAF> ADD UAF95/UIC=[200,5]/PASSWORD=UAF95PW/NOPWDEXPIRED/PWDLIFETIME=NONE -
-         /FLAGS=NODISUSER/DEVICE=UAF95$DISK:/DIRECTORY=[UAF95] -
-         /PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX) -
-         /ACCOUNT=GOVAX/OWNER="GOVAX PROBE"
-    UAF> ADD UAF95L/UIC=[200,7]/ ... the same ... /LGICMD=UAF95$DISK:[UAF95]UAF95X.COM
-    UAF> ADD UAF95D/UIC=[200,6]/ ... the same, with /FLAGS=DISUSER
+    UAF> ADD UAF95/UIC=[200,5]/PASSWORD=UAF95PW/NOPWDEXPIRED/PWDLIFETIME=NONE/FLAGS=NODISUSER
+    UAF> MODIFY UAF95/DEVICE=UAF95$DISK:/DIRECTORY=[UAF95]/ACCOUNT=GOVAX/OWNER="GOVAX PROBE"
+    UAF> MODIFY UAF95/PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX)
+    UAF> COPY UAF95 UAF95L/UIC=[200,7]/PASSWORD=UAF95PW/NOPWDEXPIRED
+    UAF> MODIFY UAF95L/LGICMD=UAF95$DISK:[UAF95]UAF95X.COM
+    UAF> COPY UAF95 UAF95D/UIC=[200,6]/PASSWORD=UAF95PW/NOPWDEXPIRED/FLAGS=DISUSER
     UAF> ADD/IDENTIFIER UAF95_ID
     UAF> GRANT/IDENTIFIER UAF95_ID UAF95
     UAF> EXIT
 
-(AUTHORIZE doesn't take `-` continuations; type each ADD on one line.)
 The home directory must then be owned by `[200,5]`, with protection
 (S:RWE,O:RWE,G:RWE,W:), and its two files owned by `[200,5]` too;
 `UAF95ACCT.COM`'s SET SECURITY lines do that. UIC group 200 was Phase
@@ -155,6 +154,34 @@ through `UAF95S.COM`. Three batch jobs run on SYS$BATCH, kept
 If a run stops partway, run `@UAF95$DISK:[000000]UAF95DROP` as SYSTEM
 (it can run more than once), then start again from step 1 with a new
 volume.
+
+## Round 1
+
+Round 1 ran on VMS V7.1 on 2026-11-15 and stopped at AUTHORIZE case 21,
+before the accounts were made; its log is `vax/round1/uaf95.log`. Two
+mistakes of the probe's own:
+
+- **Case 21's ADD was 504 characters**, and DCL refused to read the
+  record (`%RMS-W-RTB, 504 byte record too large for user's buffer`),
+  which ended the procedure. Round 2 splits it into an ADD and three
+  MODIFYs, and `gen.go` refuses any line over 200 characters (the
+  accounts' ADDs and the F$GETJPI item list are split too).
+- **AUTHORIZE ignored the supervisor-mode RIGHTSLIST name** and used the
+  VAX's own rights database: CREATE/RIGHTS said the file existed,
+  SHOW/IDENTIFIER listed the VAX's identifiers, and case 8's `ADD UAFA`
+  left the identifier UAFA `[300,1]` in it (removed by hand afterward,
+  `MCR AUTHORIZE REMOVE/IDENTIFIER UAFA`). The supervisor-mode SYSUAF
+  name was honored. Round 2 defines all four names as executive-mode
+  process names, and runs no case unless both scratch files exist.
+
+What round 1 answered before it stopped: a new SYSUAF.DAT holds SYSTEM
+(`SYS$SYSROOT:[SYSMGR]`, owner SYSTEM MANAGER) and DEFAULT (`[200,200]`,
+DISUSER, directory `[USER]`); SHOW's full and brief layouts; ADD's
+defaults (DEFAULT's values, password pre-expired, its UIC identifier
+added to the rights database); a UIC's member is octal (`[300,9]` is
+`%UAF-E-UICERR`, so round 2's cases use octal members, with one case of
+`[300,8]` kept to show it); and the messages UAEERR, UICERR, BADSPC,
+RDBADDERRU with DUPIDENT, NAOFIL, RDBCREERR.
 
 ## The rehearsal
 
