@@ -499,6 +499,10 @@ access to a table, with no rule of their own.
 | terminal IO$_SETCHAR | LOG_IO or PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 278 to 283 |
 | disk logical block I/O | LOG_IO or PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 271 to 273, 277 |
 | disk physical block I/O | PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 274 to 276 |
+| MOUNT a volume for every process | SYSNAM | none | SS$_NOPRIV | DCL Dictionary MOUNT/SYSTEM; the review, 4 |
+| DISMOUNT a volume every process knows | SYSNAM | none | SS$_NOPRIV | DCL Dictionary MOUNT/SYSTEM; the review, 4 |
+| INITIALIZE/CONTAINER an existing container | VOLPRO | none | SS$_NOPRIV | DCL Dictionary INITIALIZE; the review, 4 |
+| INSTALL ADD or REMOVE a known file | CMKRNL | none | SS$_NOCMKRNL | probe's INSTALLED sections; Decision 9 |
 
 A.1 stays as the survey found things; this table replaces its last
 column.
@@ -644,7 +648,7 @@ Each is one commit, with tests, stopping for review.
    held to the probe's DCL logs under each privilege set.
 8. **Seeing other processes** (done 2026-11-15; Decision 6): F$GETJPI, F$PID, F$CONTEXT,
    SHOW PROCESS/IDENTIFICATION, and SHOW SYSTEM by the probe's answers.
-9. **Installed images** (Decision 9), with a probe round of its own if subtask 2's doesn't cover them.
+9. **Installed images** (done 2026-11-15; Decision 9), with a probe round of its own if subtask 2's doesn't cover them (it did).
 10. **The close-out**: MANUAL.md (a section on privileges: the masks,
     what each privilege guards in govax, SET DEBUG PRIVILEGES, INSTALL if
     it's in), HELP for every new command, qualifier, and debug class,
@@ -1036,3 +1040,47 @@ The answers:
   PROCESS has its default directory, as before, and no closing blank
   line, as another's; a LIB$SPAWN subprocess has its creator's
   terminal (`Spawn` sets it after `$CREPRC`'s code clears it).
+- **2026-11-15** Subtask 9, installed images: round 1's INSTALL sections
+  covered them, so no new round. The known file list is the System's
+  (`corevms/knownfiles.go`: `KnownFileList`, an entry per file by its
+  physical name without the version, `KnownFileKey`), and the image
+  activator's last step is now `Environment.StartImage` (in
+  `machine/run.go`'s `ActivateImage`, both loaders): JPI$_IMAGNAME as
+  before, and for a file on the list at its installed version IMAGPRIV
+  the entry's privileges and CURPRIV = PROCPRIV | IMAGPRIV, the entry's
+  access count raised; rundown clears IMAGPRIV with CURPRIV
+  (`resetImagePrivileges`). `$SETPRV` may enable the running image's
+  privileges again temporarily, not permanently (the System Services
+  manual's "Required Access or Privileges"). DCL's INSTALL is new
+  (`dclcmd/install.go`, grammar `install_add`, `install_remove`,
+  `install_list`): ADD (CREATE) with `/PRIVILEGED=(list)` and `/OPEN`,
+  `/HEADER_RESIDENT`, `/SHARED`, `/PROTECTED`, `/WRITEABLE`,
+  `/ACCOUNTING`, `/EXECUTE_ONLY`, `/RESIDENT`, `/PURGE` recorded; REMOVE
+  (DELETE); LIST `[file]` `/FULL`, in VMS 7.1's layout (a blank line and
+  `DISK$PRIV94:<000000>.EXE`, the name and version in 17 columns, the
+  attribute columns `Open Hdr Shar Prv` up to the last present, and
+  /FULL's counts, privileges, and blank line). ADD and REMOVE take a new
+  rule, "INSTALL ADD or REMOVE a known file", CMKRNL refused with
+  SS$_NOCMKRNL (`commandRules`); its $STATUS is an image's, with
+  STS$M_INHIB_MSG set: `%X10000001`, `%X10002804`. A file has to be on a
+  mounted volume (`rms.Session.LocateImageFile`, AccessImage's search
+  without the access). `TestPriv94Install` replays the INSTALL sections
+  of SYSTEM's run, of PRIV94's and PRIV94N's (PRIV94I installed in
+  setup), and of the end's (REMOVE, then LIST's
+  `%INSTALL-W-FAIL, failed to LIST entry for
+  DISK$PRIV94:<000000>PRIV94I.EXE` and `-INSTALL-E-NOKFEFND`): all match
+  VMS's logs, SHOW PROCESS/PRIVILEGES left out (its time, PID, and
+  rights are the VAX's; PRIV94I's lines show the masks).
+  `TestKnownFileList`, `TestInstalledImagePrivileges`, and
+  `TestSetprvImagePrivileges` are corevms's. A.5's table is regenerated
+  (subtask 7's three rules were missing from it). HELP INSTALL is new;
+  MANUAL.md's section is the close-out's. Choices, unconfirmed: an entry
+  is for the version installed, so a later version runs unprivileged
+  until reinstalled; ADD of an installed file is `%INSTALL-W-FAIL,
+  failed to CREATE entry for ...` and `-INSTALL-E-KFEXISTS, Known File
+  Entry already exists`; REMOVE's failure names DELETE, VMS's own name for
+  the subcommand; a file not found is FAIL over RMS's message, and a host
+  file RMS$_DEV; INSTALL's facility number and message values are
+  govax's; LIST's columns after Prv (`Prot Wrt Acnt Exe Resid`) and
+  "Current / Maximum shared" (1 for an open file, over 0) for anything but
+  the probe's open, unshared image; the list lasts for the session.

@@ -12,6 +12,7 @@ var commandRules = map[string]*PrivilegeRule{
 	"MOUNT":                ruleMountVolume,
 	"DISMOUNT":             ruleDismountVolume,
 	"INITIALIZE/CONTAINER": ruleInitContainer,
+	"INSTALL":              ruleInstall,
 }
 
 // CommandPrivilege is the gate for one of govax's own DCL commands (a

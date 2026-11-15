@@ -522,9 +522,16 @@ changed as a result.
     system table without SYSNAM as on VMS; and `$DELLNM` checks the table
     the name is found in. Mailboxes, sections, and clusters already used
     the protection rule since Phase 93.)
-  - No installed images: `IMAGPRIV` is always empty.
-  - Services govax doesn't have (`$CREPRC`'s DETACH, `$MOUNT`'s MOUNT,
-    ...) and devices (LOG_IO, PHY_IO, SHARE) check nothing.
+  - (Resolved in Phase 94's subtask 9: INSTALL ADD, REMOVE, and LIST
+    keep a known file list, and an image installed `/PRIVILEGED` runs
+    with `IMAGPRIV` its privileges and CURPRIV = PROCPRIV | IMAGPRIV.)
+  - (Resolved in Phase 94's subtasks 4 and 6: `$CREPRC`'s DETACH rules,
+    disk logical and physical I/O's LOG_IO and PHY_IO, and the terminal's
+    IO$_SETCHAR are checked.)
+  - Services govax doesn't have (`$MOUNT`'s MOUNT, the rights and UAF
+    services; out of scope by Phase 94's review, question 5) check
+    nothing, and SHARE (assigning a channel to a device another process
+    has allocated) isn't checked: govax has no device allocation.
 - **Status**: open, by design.
 
 ### [Phase 26] Operator and broadcast simplifications

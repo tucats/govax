@@ -106,6 +106,7 @@ func privilegeReaders(t *testing.T, path string) []string {
 var managedPrivileges = map[string]string{
 	"internal/corevms/privrules.go:privilegeGranted":        "the gate",
 	"internal/corevms/privilege.go:resetImagePrivileges":    "image rundown sets the mask",
+	"internal/corevms/knownfiles.go:StartImage":             "image activation adds an installed image's privileges",
 	"internal/corevms/privilege.go:serviceSysSetprv":        "$SETPRV returns the previous mask",
 	"internal/corevms/privilege.go:setPrivileges":           "$SETPRV changes the mask",
 	"internal/corevms/lexical.go:SetProcessPrivileges":      "SET PROCESS/PRIVILEGES returns the previous mask",

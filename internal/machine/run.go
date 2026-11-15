@@ -231,8 +231,9 @@ func (p *ImageProcess) ActivateImage(fn string) (*ICB, error) {
 		p.setImageProtection(icb, true)
 	}
 
+	// The image's name and, if it's an installed image, its privileges.
 	if env := p.process(); env != nil {
-		env.SetImageName(main.Spec.Name)
+		env.StartImage(main.Spec.Name)
 	}
 
 	return main, nil

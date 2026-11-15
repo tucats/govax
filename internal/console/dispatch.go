@@ -217,6 +217,33 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().SetProcess(opts)
 	})
 
+	// INSTALL (docs/planning/PHASE-94 - privileges.md, Decision 9): the
+	// known file list. Each subcommand is a syntax of its own.
+	install := func(sub string) func(int64, *dcl.Result) error {
+		return func(id int64, r *dcl.Result) error {
+			opts := dclcmd.InstallOptions{
+				Subcommand: sub,
+				File:       r.String("FILE"),
+				Full:       r.Present("FULL"),
+				Attributes: map[string]bool{},
+			}
+			if r.Present("PRIVILEGED") && !r.Negated("PRIVILEGED") {
+				opts.Privileges = append([]string{}, r.List("PRIVILEGED")...)
+			}
+
+			for _, a := range append(dclcmd.InstallAttributes, struct{ Qualifier, Column string }{"PURGE", ""}) {
+				if a.Qualifier != "" && r.Present(a.Qualifier) {
+					opts.Attributes[a.Qualifier] = !r.Negated(a.Qualifier)
+				}
+			}
+
+			return d.Console.cmd().Install(opts)
+		}
+	}
+	g.Bind("INSTALL_ADD", install("ADD"))
+	g.Bind("INSTALL_REMOVE", install("REMOVE"))
+	g.Bind("INSTALL_LIST", install("LIST"))
+
 	// SET TERMINAL (docs/planning/PHASE-94 - privileges.md, subtask 6): the
 	// terminal's characteristics, through the terminal driver's rules.
 	g.Bind("SET_TERMINAL", func(id int64, r *dcl.Result) error {

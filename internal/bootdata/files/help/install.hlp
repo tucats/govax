@@ -1,0 +1,155 @@
+1 INSTALL
+
+   Makes images known to the system, and forgets them: the known file
+   list.  An image installed with privileges runs with them, whoever
+   runs it.
+
+   Format
+
+     INSTALL subcommand [file-spec]
+
+2 Description
+
+   The known file list holds the images INSTALL has made known.  An image
+   installed /PRIVILEGED=(priv[,...]) runs with those privileges as its
+   image privileges (F$GETJPI's IMAGPRIV), enabled in the process's
+   current privileges (CURPRIV) while it runs, though the process isn't
+   authorized for them; when the image exits they're gone, and the
+   process has its permanent privileges again.  It's how a program a
+   system manager trusts does, for any user, what needs a privilege
+   that user hasn't got.  While it runs, $SETPRV may enable its
+   privileges again after the program disabled them, but not
+   permanently.
+
+   An entry is for one version of one file on a mounted volume: the
+   version found when it was installed.  A later version of the file
+   runs without the entry's privileges until the old entry is removed
+   and the new version installed.
+
+   ADD and REMOVE need the CMKRNL privilege
+   (%SYSTEM-F-NOCMKRNL); LIST needs none.  INSTALL's $STATUS is an
+   image's, with the bit that says its message has been shown set
+   (%X10000001 when it succeeds).  govax's known file list lasts as
+   long as the session.
+
+2 ADD
+
+   Installs an image.  CREATE is the same subcommand.
+
+   Format
+
+     INSTALL ADD file-spec
+
+   The file's type is .EXE by default.  A file already installed is
+   %INSTALL-W-FAIL with -INSTALL-E-KFEXISTS.  Only /PRIVILEGED changes
+   how govax runs the image; the other qualifiers are recorded and
+   shown by LIST.
+
+3 Qualifiers
+/ACCOUNTING
+
+      /[NO]ACCOUNTING
+
+   Records that the image's runs are to be accounted for (Acnt).
+
+/EXECUTE_ONLY
+
+      /[NO]EXECUTE_ONLY
+
+   Records that the image may be run with execute access alone (Exe).
+
+/HEADER_RESIDENT
+
+      /[NO]HEADER_RESIDENT
+
+   Records that the image's header is to stay in memory (Hdr).
+
+/OPEN
+
+      /[NO]OPEN
+
+   Records that the image's file is to stay open (Open).
+
+/PRIVILEGED
+
+      /PRIVILEGED=(priv-name[,...])
+
+   The privileges the image runs with, by name (SYSNAM, OPER, ...), or
+   ALL (Prv).
+
+/PROTECTED
+
+      /[NO]PROTECTED
+
+   Records that the image is a protected one (Prot).
+
+/PURGE
+
+      /[NO]PURGE
+
+   Accepted and recorded; not shown.
+
+/RESIDENT
+
+      /[NO]RESIDENT
+
+   Records that the image's code is to stay in memory (Resid).
+
+/SHARED
+
+      /[NO]SHARED
+
+   Records that the image's pages are to be shared (Shar).
+
+/WRITEABLE
+
+      /[NO]WRITEABLE
+
+   Records that a shared image's writable pages are shared (Wrt).
+
+2 LIST
+
+   Shows the known file list, or the entry for one file.
+
+   Format
+
+     INSTALL LIST [file-spec]
+
+   The entries are listed under a heading for each volume, directory,
+   and type ("DISK$WORK:<WORK>.EXE"), each the file's name and version
+   and the abbreviations of its attributes.  A file with no entry is
+   %INSTALL-W-FAIL with -INSTALL-E-NOKFEFND.
+
+3 Qualifiers
+/FULL
+
+   Shows each entry's access count (the times it has been run since
+   it was installed), its open and shared counts, and its privileges.
+
+2 REMOVE
+
+   Forgets an image: it runs with no privileges of its own afterward.
+   DELETE is the same subcommand.
+
+   Format
+
+     INSTALL REMOVE file-spec
+
+2 Examples
+
+   1.$ INSTALL ADD DUA1:[TOOLS]SETNAME/OPEN/PRIVILEGED=SYSNAM
+
+     Lets every user run SETNAME, which puts names in the system
+     logical name table, with SYSNAM.
+
+   2.$ INSTALL LIST/FULL DUA1:[TOOLS]SETNAME
+
+     DISK$WORK:<TOOLS>.EXE
+        SETNAME;1        Open          Prv
+             Entry access count         = 0
+             Current / Maximum shared   = 1 / 0
+             Privileges = SYSNAM
+
+   3.$ INSTALL REMOVE DUA1:[TOOLS]SETNAME
+
+     Takes SETNAME's entry, and its privileges, away.

@@ -250,6 +250,12 @@ var (
 	ruleDismountVolume = newRule("DISMOUNT a volume every process knows", "SYSNAM", "DCL Dictionary MOUNT/SYSTEM; the review, 4")
 	ruleInitContainer  = newRule("INITIALIZE/CONTAINER an existing container", "VOLPRO",
 		"DCL Dictionary INITIALIZE; the review, 4")
+
+	// INSTALL's ADD and REMOVE change the known file list every process's
+	// image activator reads (Decision 9); LIST needs nothing. VMS 7.1
+	// refused ADD with SS$_NOCMKRNL (PRIV94U, the INSTALLED sections).
+	ruleInstall = newRule("INSTALL ADD or REMOVE a known file", "CMKRNL", "probe's INSTALLED sections; Decision 9",
+		refusedWith("SS$_NOCMKRNL"))
 )
 
 // serviceRules is, for every system service govax registers, the rules

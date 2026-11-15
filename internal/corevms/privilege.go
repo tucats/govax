@@ -28,7 +28,8 @@ import (
 //   - PROCPRIV, its *permanent* privileges: enabled whenever no image is
 //     running, and after one exits.
 //   - IMAGPRIV, the privileges of the running image, if it was installed
-//     with some. govax has no installed images, so this is always empty.
+//     with some (INSTALL ADD file/PRIVILEGED=..., knownfiles.go): enabled
+//     in CURPRIV while it runs.
 //   - CURPRIV, the privileges *enabled right now*: the ones every
 //     service checks.
 //
@@ -70,10 +71,11 @@ var allPrivileges = security.AllPrivileges
 var ssNotAllPriv = vmsdef.Symbols["SS$_NOTALLPRIV"]
 
 // resetImagePrivileges is image rundown's privilege step: the privileges
-// the image enabled temporarily go, as the permanent ones are copied
-// back to the current mask.
+// the image enabled temporarily go, and an installed image's own, as the
+// permanent ones are copied back to the current mask.
 func (env *Environment) resetImagePrivileges() {
 	env.Process.CurrentPrivileges = env.Process.ProcessPrivileges
+	env.Process.ImagePrivileges = 0
 }
 
 // serviceSysSetprv is SYS$SETPRV:
@@ -138,7 +140,8 @@ func serviceSysSetprv(env *Environment, argv []uint32) (uint32, error) {
 // setPrivileges is $SETPRV's change: it enables (or, without enable,
 // disables) the privileges in mask, in the current privileges and, with
 // permanent, the process's permanent ones too, for a caller in mode.
-// Privileges the process isn't authorized for are enabled only by the
+// Privileges the process isn't authorized for (nor, for a temporary
+// change, the running installed image has) are enabled only by the
 // gate's rule (SETPRV held now, or a caller in an inner mode); otherwise they're left out and the
 // status is SS$_NOTALLPRIV, a success. Otherwise SS$_NORMAL.
 func (env *Environment) setPrivileges(mask uint64, enable, permanent bool, mode registers.AccessMode) uint32 {
@@ -156,8 +159,17 @@ func (env *Environment) setPrivileges(mask uint64, enable, permanent bool, mode 
 	status := uint32(ssNormal)
 	allowed := mask
 
-	if mask&^p.AuthorizedPrivileges != 0 && !env.privilegeGranted(ruleSetprvUnauthorized, mode) {
-		allowed &= p.AuthorizedPrivileges
+	// A temporary change may also enable the running image's installed
+	// privileges (the System Services manual's $SETPRV, "Required Access
+	// or Privileges"; unconfirmed by the probe), a permanent one only
+	// those the process is authorized for.
+	permitted := p.AuthorizedPrivileges
+	if !permanent {
+		permitted |= p.ImagePrivileges
+	}
+
+	if mask&^permitted != 0 && !env.privilegeGranted(ruleSetprvUnauthorized, mode) {
+		allowed &= permitted
 		status = ssNotAllPriv
 	}
 

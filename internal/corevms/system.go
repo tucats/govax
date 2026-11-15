@@ -124,6 +124,11 @@ type System struct {
 	// outstanding operator requests (operator.go).
 	Operator *operatorState
 
+	// KnownFiles is the known file list INSTALL keeps and the image
+	// activator reads (knownfiles.go; docs/planning/PHASE-94 -
+	// privileges.md, Decision 9).
+	KnownFiles *KnownFileList
+
 	// Clock returns the current system time in VMS format (100ns units
 	// since 17-Nov-1858), what $SETIMR's timers run on. NewSystem sets it
 	// to the host clock; the console replaces it with its Engine's
@@ -246,6 +251,7 @@ func NewSystem(cpu *registers.CPU, mem *vm.Memory, devices *iodev.DeviceTable, m
 		Sections:          NewGlobalSections(),
 		Locks:             lck.NewManager(),
 		Operator:          newOperatorState(),
+		KnownFiles:        NewKnownFileList(),
 		Clock:             wallClock,
 		NodeName:          nominalNodeName,
 		ProcessSettings:   DefaultProcessSettings(),

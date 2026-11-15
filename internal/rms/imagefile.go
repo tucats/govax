@@ -105,3 +105,42 @@ func (s *Session) imageAllowed(vol *volume.Volume, m filespec.Match, h *ondisk.F
 
 	return nil
 }
+
+// LocateImageFile finds the volume file at loc as AccessImage does, without
+// accessing or reading it: INSTALL's way to the file an entry of the
+// known file list is for (docs/planning/PHASE-94 - privileges.md,
+// Decision 9). It returns the file's location, Physical its full
+// specification with its physical device and version, the name the image
+// activator records when it runs the file. A file not there is a
+// *NotFoundError; a wildcard matching more than one, an *AmbiguousError.
+func (s *Session) LocateImageFile(loc FileLocation) (FileLocation, error) {
+	if loc.Host {
+		return FileLocation{}, fmt.Errorf("rms: %s is a host file", loc.Name)
+	}
+
+	var found FileLocation
+
+	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := s.globChecked(vol, r.Spec)
+		if err != nil {
+			return err
+		}
+
+		switch len(matches) {
+		case 0:
+			return &NotFoundError{Spec: loc.Name}
+		case 1:
+		default:
+			return &AmbiguousError{Spec: loc.Name, Count: len(matches)}
+		}
+
+		found = FileLocation{Name: r.shownFile(matches[0]), Physical: r.name.physicalFile(matches[0].Dirs, matches[0].ShortName(';'))}
+
+		return nil
+	})
+	if err != nil {
+		return FileLocation{}, fmt.Errorf("rms: finding %s: %w", loc.Name, err)
+	}
+
+	return found, nil
+}

@@ -1195,6 +1195,50 @@ grammar console
         parameter   process_name/id=1607        -
                     /type=$string
 
+    ! INSTALL subcommand [file] (docs/planning/PHASE-94 - privileges.md,
+    ! Decision 9; internal/dclcmd/install.go): the known file list. ADD
+    ! (CREATE) makes an image known, with privileges of its own by
+    ! /PRIVILEGED; REMOVE (DELETE) forgets it; LIST shows the list or one
+    ! entry. ADD's other qualifiers are recorded and shown. ADD and REMOVE
+    ! need CMKRNL.
+    type install_types
+        keyword     add                 /syntax=install_add/nonegatable
+        keyword     create              /syntax=install_add/nonegatable
+        keyword     remove              /syntax=install_remove/nonegatable
+        keyword     delete              /syntax=install_remove/nonegatable
+        keyword     list                /syntax=install_list/nonegatable
+
+    verb install/id=2850
+        parameter   subcommand/id=2851          -
+                    /type=install_types         -
+                    /prompt="Subcommand"
+
+    syntax install_add/id=2852
+        parameter   file/id=2853                -
+                    /type=$string               -
+                    /prompt="File"
+        qualifier   privileged/id=2854          -
+                    /type=$any/list
+        qualifier   open/id=2855
+        qualifier   header_resident/id=2856
+        qualifier   shared/id=2857
+        qualifier   protected/id=2858
+        qualifier   writeable/id=2859
+        qualifier   accounting/id=2860
+        qualifier   execute_only/id=2861
+        qualifier   resident/id=2862
+        qualifier   purge/id=2863
+
+    syntax install_remove/id=2864
+        parameter   file/id=2865                -
+                    /type=$string               -
+                    /prompt="File"
+
+    syntax install_list/id=2866
+        parameter   file/id=2867                -
+                    /type=$string
+        qualifier   full/id=2868/nonegatable
+
     verb rom/id=1602
 
     ! TIME runs a command and reports how long it took; with none, it
