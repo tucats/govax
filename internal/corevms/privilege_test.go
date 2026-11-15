@@ -41,8 +41,8 @@ func TestPrivilegeBits(t *testing.T) {
 		}
 	}
 
-	if allPrivileges != 1<<39-1 {
-		t.Errorf("allPrivileges = %#x, want 39 bits", allPrivileges)
+	if allPrivileges != ^uint64(0) {
+		t.Errorf("allPrivileges = %#x, want all 64 bits, as VMS's ALL", allPrivileges)
 	}
 
 	p := NewProcess()
@@ -136,10 +136,15 @@ func TestSetprv_authorization(t *testing.T) {
 	setMode(env, registers.Executive, registers.User, 0x9000)
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privCMKRNL)), ssNormal)
 
-	// So may a process authorized for SETPRV.
+	// So may a process holding SETPRV; being authorized for it isn't
+	// enough (testdata/priv94's part S, the phase doc's A.4).
 	setMode(env, registers.User, registers.User, 0x9000)
 
 	p.AuthorizedPrivileges |= privSETPRV
+
+	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privSYSNAM)), ssNotAllPriv)
+
+	p.CurrentPrivileges |= privSETPRV
 
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privSYSNAM)), ssNormal)
 
@@ -222,7 +227,7 @@ func TestPrivilegeChecks(t *testing.T) {
 
 	wantR0(t, r0, ssNoPriv)
 
-	without(privSYSNAM)
+	without(privSYSNAM | privSYSPRV)
 
 	r0, _ = crembx(t, env, a, 1, 0, 0, "PERMBOX")
 
@@ -231,8 +236,12 @@ func TestPrivilegeChecks(t *testing.T) {
 	r0, ch := crembx(t, env, a, 1, 0, 0, "") // permanent, no name: fine
 	wantR0(t, r0, ssNormal)
 
+	// $DELMBX needs PRMMBX but from kernel mode (testdata/priv94's cases
+	// 88 to 91).
 	without(privPRMMBX)
+	setMode(env, registers.Executive, registers.Executive, 0x9000)
 	wantR0(t, callLNM(t, env, serviceSysDelmbx, ch), ssNoPriv)
+	setMode(env, registers.Kernel, registers.Kernel, 0x9000)
 
 	// Common event flag clusters.
 	without(privPRMCEB)

@@ -231,7 +231,8 @@ var jpiItems = func() map[uint16]func(*Environment) itemValue {
 // The process is picked as the manual's Table SYS-5 says: pidadr's PID if
 // it's nonzero (and then prcnam is ignored), else prcnam, else the caller.
 // A zero PID at pidadr is replaced by the PID found. -1 starts a wildcard
-// scan, which returns this process and then SS$_NOMOREPROC.
+// scan: each call goes on to the next process, SS$_NOPRIV for one the
+// caller may not see, and SS$_NOMOREPROC after the last.
 //
 // The request completes at once, so $GETJPI and $GETJPIW behave the same:
 // the event flag (efn, default 0) is cleared and then set, iosb gets the
@@ -376,13 +377,14 @@ func (env *Environment) processTargetBy(pidadr uint32, readName func() (string, 
 			index = 1
 		}
 
+		// Every process, seen or not: the caller's privilege check
+		// refuses one it may not see (SS$_NOPRIV), and the scan goes on
+		// past it at the next call, as VMS 7.1's did (testdata/priv94's
+		// cases 190 to 192).
 		for ; index <= MaxProcesses; index++ {
-			next := env.procs.slots[index]
-			if next == nil || env.mayAffect(next) != 0 {
-				continue
+			if next := env.procs.slots[index]; next != nil {
+				return writeBack(next, jpiContext|index)
 			}
-
-			return writeBack(next, jpiContext|index)
 		}
 
 		return nil, ssNoMoreProc

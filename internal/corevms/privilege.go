@@ -2,6 +2,7 @@ package corevms
 
 import (
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -17,7 +18,8 @@ import (
 // guarded by a *privilege* (CMKRNL, PRMMBX, SYSNAM, ALTPRI, ...), and a
 // process may use it only while the privilege is enabled. There are 39;
 // each is a bit in a quadword (64-bit) mask, numbered by $PRVDEF
-// (PRV$V_CMKRNL is bit 0, ...), generated as vmsdef.Symbols.
+// (PRV$V_CMKRNL is bit 0, ...), generated as vmsdef.Symbols. The other 25
+// bits name nothing, but a mask keeps them: ALL is every bit.
 //
 // A process has four such masks:
 //
@@ -34,8 +36,8 @@ import (
 // alike. $SETPRV enables or disables privileges in CURPRIV (temporarily:
 // until the image exits, when PROCPRIV is copied back) or in both CURPRIV
 // and PROCPRIV (permanently). It can only enable privileges the process
-// is authorized for, unless the process is authorized for SETPRV itself
-// (which allows any) or the caller is in kernel or executive mode.
+// is authorized for, unless the process holds SETPRV (which allows any)
+// or the caller is in kernel or executive mode.
 //
 // govax's process is the SYSTEM account's, which is authorized for, and
 // starts with, every privilege: so programs that don't use $SETPRV see
@@ -57,9 +59,11 @@ func privilegeBit(name string) uint64 {
 // The other privileges' bits are the rules' (privrules.go).
 var privSETPRV = privilegeBit("SETPRV")
 
-// allPrivileges is every privilege's bit: the first PRV$K_NUMBER_OF_PRIVS
-// bits of the mask.
-var allPrivileges = uint64(1)<<vmsdef.Symbols["PRV$K_NUMBER_OF_PRIVS"] - 1
+// allPrivileges is every bit of a mask. There are 39 privileges, but VMS
+// keeps all 64 bits: AUTHORIZE's /PRIVILEGES=ALL is FFFFFFFFFFFFFFFF, and
+// $SETPRV of an all-ones mask sets every bit (testdata/priv94, the phase
+// doc's A.4), so govax does too.
+var allPrivileges = security.AllPrivileges
 
 // ssNotAllPriv is SS$_NOTALLPRIV, $SETPRV's "done, but not every
 // privilege you asked for" (a success status).
@@ -76,22 +80,31 @@ func (env *Environment) resetImagePrivileges() {
 //
 //	SYS$SETPRV [enbflg] ,[prvadr] ,[prmflg] ,[prvprv]
 //
-// It enables (enbflg 1) or disables (0, the default) the privileges in
-// the quadword mask at prvadr, in CURPRIV only (prmflg 0, the default:
-// until the image exits) or in both CURPRIV and PROCPRIV (prmflg 1). The
-// previous mask — CURPRIV's, or PROCPRIV's for a permanent change — is
-// stored at prvprv if given. With prvadr omitted nothing changes, so a
-// program can just read its privileges.
+// It enables (enbflg's low bit set) or disables (clear, the default) the
+// privileges in the quadword mask at prvadr, in CURPRIV only (prmflg 0,
+// the default: until the image exits) or in both CURPRIV and PROCPRIV
+// (prmflg 1); any other prmflg is SS$_IVSTSFLG, with nothing changed or
+// stored. The previous mask — CURPRIV's, or PROCPRIV's for a permanent
+// change — is stored at prvprv if given. With prvadr omitted nothing
+// changes, so a program can just read its privileges.
 //
 // A privilege can be enabled only if the process is authorized for it,
-// or for SETPRV, or the caller is in kernel or executive mode; any others
-// asked for are left alone and the status is SS$_NOTALLPRIV (a success).
-// Disabling is always allowed. It returns SS$_NORMAL, SS$_NOTALLPRIV, or
-// SS$_ACCVIO if prvadr can't be read or prvprv written (nothing changes).
+// or holds SETPRV now, or the caller is in kernel or executive mode; any
+// others asked for are left alone and the status is SS$_NOTALLPRIV (a
+// success). Disabling is always allowed. It returns SS$_NORMAL,
+// SS$_NOTALLPRIV, SS$_IVSTSFLG, or SS$_ACCVIO if prvadr can't be read or
+// prvprv written (nothing changes). VMS 7.1's answers to each
+// combination are testdata/priv94's part S (the phase doc's A.4).
 func serviceSysSetprv(env *Environment, argv []uint32) (uint32, error) {
-	enable := optArg(argv, 0)&0xFF != 0
-	prvadr, permanent, prvprv := optArg(argv, 1), optArg(argv, 2)&0xFF != 0, optArg(argv, 3)
+	enable := optArg(argv, 0)&1 != 0
+	prvadr, prmflg, prvprv := optArg(argv, 1), optArg(argv, 2), optArg(argv, 3)
 	p := env.Process
+
+	if prmflg > 1 {
+		return ssIvStsFlg, nil
+	}
+
+	permanent := prmflg == 1
 
 	previous := p.CurrentPrivileges
 	if permanent {
@@ -106,7 +119,7 @@ func serviceSysSetprv(env *Environment, argv []uint32) (uint32, error) {
 			return ssAccVio, nil
 		}
 
-		mask = v & allPrivileges
+		mask = v
 	}
 
 	if prvprv != 0 {
@@ -119,16 +132,16 @@ func serviceSysSetprv(env *Environment, argv []uint32) (uint32, error) {
 		return ssNormal, nil
 	}
 
-	return env.setPrivileges(mask, enable, permanent, env.cpu.PSL().CurMod() <= registers.Executive), nil
+	return env.setPrivileges(mask, enable, permanent, env.callerMode()), nil
 }
 
 // setPrivileges is $SETPRV's change: it enables (or, without enable,
 // disables) the privileges in mask, in the current privileges and, with
-// permanent, the process's permanent ones too. Unless inner (a caller in
-// kernel or executive mode) or the process is authorized for SETPRV, only
-// privileges it is authorized for are enabled, and the status is then
-// SS$_NOTALLPRIV if that leaves some out; otherwise SS$_NORMAL.
-func (env *Environment) setPrivileges(mask uint64, enable, permanent, inner bool) uint32 {
+// permanent, the process's permanent ones too, for a caller in mode.
+// Privileges the process isn't authorized for are enabled only by the
+// gate's rule (SETPRV held now, or a caller in an inner mode); otherwise they're left out and the
+// status is SS$_NOTALLPRIV, a success. Otherwise SS$_NORMAL.
+func (env *Environment) setPrivileges(mask uint64, enable, permanent bool, mode registers.AccessMode) uint32 {
 	p := env.Process
 
 	if !enable {
@@ -143,12 +156,9 @@ func (env *Environment) setPrivileges(mask uint64, enable, permanent, inner bool
 	status := uint32(ssNormal)
 	allowed := mask
 
-	if !inner && p.AuthorizedPrivileges&privSETPRV == 0 {
+	if mask&^p.AuthorizedPrivileges != 0 && !env.privilegeGranted(ruleSetprvUnauthorized, mode) {
 		allowed &= p.AuthorizedPrivileges
-
-		if allowed != mask {
-			status = ssNotAllPriv
-		}
+		status = ssNotAllPriv
 	}
 
 	p.CurrentPrivileges |= allowed

@@ -230,5 +230,8 @@ func TestBrkthru_errors(t *testing.T) {
 
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, brkAllUsers), ssNoOper)
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, brkAllTerms), ssNoOper)
-	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, a.desc("SYSTEM"), brkUsername), ssNoPriv)
+	// The caller's own user needs nothing; another needs OPER, not WORLD
+	// (testdata/priv94's cases 257 to 259).
+	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, a.desc("SYSTEM"), brkUsername), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, a.desc("OTHER"), brkUsername), ssNoOper)
 }

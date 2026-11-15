@@ -607,7 +607,7 @@ func (env *Environment) nextHandler(d *conditionDispatch) (uint32, error) {
 			// The bottom of the stack: the catch-all is the outermost
 			// frame's handler.
 			frame, depth := d.fp, d.depth
-			if frame == 0 || frame == consoleCallSentinel {
+			if frame == 0 || frame == consoleCallSentinel || d.leftStack(frame) {
 				d.stage = stageCatchAll
 
 				continue
@@ -652,6 +652,21 @@ func (env *Environment) nextHandler(d *conditionDispatch) (uint32, error) {
 			return env.catchAll(d)
 		}
 	}
+}
+
+// leftStack reports whether frame is past the end of the stack d's
+// condition is searched on: a condition raised in an inner mode, on that
+// mode's stack in S0, is searched for in its own frames only, and a
+// saved FP leading out of S0, to the user stack (as the frame of a
+// routine $CMKRNL or $CMEXEC called leads, to its caller's), ends the
+// search as a saved FP of 0 does. So a user-mode handler is never called
+// in kernel mode for a kernel-mode condition, nor does its unwind take
+// the kernel stack's frames away from under it (testdata/priv94's
+// rehearsal found the kernel stack left 4 bytes off). The Internals
+// book's search (4.3.2) is of "the stack of the access mode" the
+// condition is reported to; where VMS ends it is unconfirmed.
+func (d *conditionDispatch) leftStack(frame uint32) bool {
+	return d.mode < registers.User && d.startFP >= s0Base && frame < s0Base
 }
 
 // pastSearchedFrames returns the frame a search goes on to after

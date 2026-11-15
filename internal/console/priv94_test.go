@@ -18,6 +18,20 @@ import (
 func runPriv94(t *testing.T, programs []string, runs []string) string {
 	t.Helper()
 
+	var out strings.Builder
+
+	runPriv94Each(t, programs, runs, nil, func(s string) { out.WriteString(s) })
+
+	return out.String()
+}
+
+// runPriv94Each is runPriv94 calling before (if not nil) ahead of each run,
+// with the run's index and the console, and each with the run's output.
+func runPriv94Each(t *testing.T, programs []string, runs []string,
+	before func(int, *console.Console), each func(string),
+) {
+	t.Helper()
+
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {
@@ -53,21 +67,26 @@ func runPriv94(t *testing.T, programs []string, runs []string) string {
 		if out := dispatch("LINK/NOMAP " + name); out != "" {
 			t.Fatalf("LINK %s: %s", name, out)
 		}
+
+		// As PRIV94.COM does, so the accounts can run the images.
+		if out := dispatch("SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) " + name + ".EXE"); out != "" {
+			t.Fatalf("SET SECURITY %s: %s", name, out)
+		}
 	}
 
-	var out strings.Builder
+	for i, parts := range runs {
+		if before != nil {
+			before(i, c)
+		}
 
-	for _, parts := range runs {
 		if parts == "" {
 			dispatch("DEASSIGN PRIV94_PART")
 		} else {
 			dispatch(`DEFINE PRIV94_PART "` + parts + `"`)
 		}
 
-		out.WriteString(dispatch("RUN " + programs[0]))
+		each(dispatch("RUN " + programs[0]))
 	}
-
-	return out.String()
 }
 
 // checkPriv94Run fails the test for each of cases 1 to n that didn't run,
@@ -110,8 +129,7 @@ func checkPriv94Run(t *testing.T, text string, n int, want []string, allowed str
 // programs must assemble and link with no message, and the program must run
 // every case: the fixtures and holders (parts F and H), every default part,
 // parts K and R, and the end (parts H and Z), with no condition reaching a
-// case's handler but $SETSWM's, a service govax doesn't have yet (subtask 4
-// adds it).
+// case's handler. TestPriv94Oracle holds the cases' answers to VMS's.
 func TestPriv94Probe(t *testing.T) {
 	text := runPriv94(t, []string{"PRIV94", "PRIV94H", "PRIV94I"}, []string{"FH", "", "K", "R", "HZ"})
 
@@ -123,7 +141,7 @@ func TestPriv94Probe(t *testing.T) {
 		"== 289 X user [CMEXEC] $CMEXEC of a routine that returns 1",
 		"== 3 Z the end",
 		"end of cases",
-	}, "00000E4A")
+	}, "")
 }
 
 // TestPriv94BProbe rehearses round 2's program, PRIV94B, the same way: its

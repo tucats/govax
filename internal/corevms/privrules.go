@@ -153,9 +153,10 @@ func newRule(name, privileges, source string, options ...ruleOption) *PrivilegeR
 // The rules. Sources: "SSRM" is the VMS 5.0 System Services Reference
 // Manual's entry for the service; "probe n" is testdata/priv94's case n
 // (round 1's priv94.mar, or "round 2" priv94b.mar), whose answers the
-// phase doc's A.4 gives. Where the probe disagrees with what govax does
-// today, the rule still says what govax does: subtasks 4 to 9 change
-// them.
+// phase doc's A.4 gives. The services' rules follow the probe since
+// subtask 4 (TestPriv94Oracle holds them to it); the logical name rules
+// still say what govax did before, until subtask 5 adds the tables'
+// protection.
 var (
 	// Logical names ($CRELNM, $DELLNM, $CRELNT, $CRELOG, $DELLOG,
 	// LIB$SET_LOGICAL, LIB$DELETE_LOGICAL).
@@ -173,9 +174,9 @@ var (
 	// Mailboxes.
 	ruleCrembxTemporary = newRule("$CREMBX temporary", "TMPMBX", "SSRM $CREMBX; probe 80, 81")
 	ruleCrembxPermanent = newRule("$CREMBX permanent", "PRMMBX", "SSRM $CREMBX; probe 83, 84")
-	ruleCrembxName      = newRule("$CREMBX permanent with a logical name", "SYSNAM",
-		"probe round 2's 3 to 8")
-	ruleDelmbx         = newRule("$DELMBX", "PRMMBX", "SSRM $DELMBX; probe 88 to 91")
+	ruleCrembxName      = newRule("$CREMBX permanent with a logical name", "SYSNAM SYSPRV",
+		"probe round 2's 3 to 8", anyOf)
+	ruleDelmbx         = newRule("$DELMBX", "PRMMBX", "SSRM $DELMBX; probe 88 to 91", exempt(exemptKernel))
 	ruleMailboxSetProt = newRule("mailbox IO$_SETPROTECTION, not the owner", "BYPASS SYSPRV",
 		"probe 92 to 97", anyOf)
 
@@ -220,16 +221,22 @@ var (
 	ruleCreprcHigherPriority = newRule("$CREPRC base priority above the creator's", "ALTPRI",
 		"SSRM $CREPRC; probe 224, 225")
 
+	// Privileges.
+	ruleSetprvUnauthorized = newRule("$SETPRV a privilege not authorized", "SETPRV",
+		"SSRM $SETPRV; probe 229 to 241", exempt(exemptInner), refusedWith("SS$_NOTALLPRIV"))
+
 	// Change mode.
 	ruleCmkrnl = newRule("$CMKRNL", "CMKRNL", "SSRM $CMKRNL; probe 284 to 289", exempt(exemptInner))
-	ruleCmexec = newRule("$CMEXEC", "CMEXEC", "SSRM $CMEXEC; probe 284 to 289", exempt(exemptInner))
+	ruleCmexec = newRule("$CMEXEC", "CMEXEC CMKRNL", "SSRM $CMEXEC; probe 284 to 289", anyOf, exempt(exemptInner))
 
 	// Pages.
 	ruleLckpag = newRule("$LCKPAG", "PSWAPM", "SSRM $LCKPAG; probe 262 to 264")
+	ruleSetswm = newRule("$SETSWM", "PSWAPM", "SSRM $SETSWM; probe 268 to 270")
 
 	// Operators and terminals.
 	ruleSndoprOperator = newRule("$SNDOPR an operator's function", "OPER", "SSRM $SNDOPR; probe 247 to 252")
-	ruleBrkthruUser    = newRule("$BRKTHRU to a user", "WORLD", "SSRM $BRKTHRU; probe 257 to 260")
+	ruleBrkthruUser    = newRule("$BRKTHRU to another user", "OPER", "probe 257 to 260",
+		refusedWith("SS$_NOOPER"))
 	ruleBrkthruAll     = newRule("$BRKTHRU to every terminal or user", "OPER", "SSRM $BRKTHRU; probe 253 to 256, 261",
 		refusedWith("SS$_NOOPER"))
 
@@ -272,9 +279,12 @@ var serviceRules = func() map[string][]*PrivilegeRule {
 			ruleCreprcNOACNT, ruleCreprcIndependent, ruleCreprcPrivileges, ruleCreprcHigherPriority,
 		},
 
+		"SYS$SETPRV": {ruleSetprvUnauthorized},
+
 		"SYS$CMKRNL": {ruleCmkrnl},
 		"SYS$CMEXEC": {ruleCmexec},
 		"SYS$LCKPAG": {ruleLckpag},
+		"SYS$SETSWM": {ruleSetswm},
 
 		"SYS$SNDOPR":   {ruleSndoprOperator},
 		"SYS$BRKTHRU":  {ruleBrkthruUser, ruleBrkthruAll},
@@ -307,8 +317,7 @@ var affectingServices = []string{
 // privileges count through the protection rule, whose credentials carry
 // the ones that override protection (BYPASS, SYSPRV, GRPPRV, READALL):
 // RMS's services, $ASSIGN of a mailbox, $MGBLSC, $CHKPRO, and the
-// security services. $SETPRV manages the masks rather than checking
-// them (privilege.go). $ALLOC has no spooled devices to need ALLSPOOL.
+// security services. $ALLOC has no spooled devices to need ALLSPOOL.
 var unprivilegedServices = []string{
 	"SYS$ADJSTK", "SYS$ADJWSL", "SYS$ALLOC", "SYS$ASCTIM", "SYS$ASCTOID", "SYS$ASSIGN",
 	"SYS$BINTIM", "SYS$CANCEL", "SYS$CANEXH", "SYS$CANTIM", "SYS$CHKPRO", "SYS$CLI",
@@ -322,7 +331,7 @@ var unprivilegedServices = []string{
 	"SYS$OPEN", "SYS$PARSE", "SYS$PURGWS", "SYS$PUT", "SYS$PUTMSG", "SYS$READ",
 	"SYS$READEF", "SYS$RELEASE", "SYS$RENAME", "SYS$REWIND", "SYS$SEARCH", "SYS$SETAST",
 	"SYS$SETDFPROT", "SYS$SETEF", "SYS$SETEXV", "SYS$SETIMR", "SYS$SETPRN", "SYS$SETPRT",
-	"SYS$SETPRV", "SYS$SETRWM", "SYS$SETSFM", "SYS$SET_SECURITY", "SYS$SRCHANDLER", "SYS$SYNCH",
+	"SYS$SETRWM", "SYS$SETSFM", "SYS$SET_SECURITY", "SYS$SRCHANDLER", "SYS$SYNCH",
 	"SYS$TRNLNM", "SYS$TRNLOG", "SYS$TRUNCATE", "SYS$ULKPAG", "SYS$ULWSET", "SYS$UNWIND",
 	"SYS$UPDATE", "SYS$UPDSEC", "SYS$UPDSECW", "SYS$WAIT", "SYS$WAITFR", "SYS$WFLAND",
 	"SYS$WFLOR", "SYS$WRITE",

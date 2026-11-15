@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -204,8 +205,8 @@ func PrivilegeMask(name string) (uint64, bool) {
 	return 1 << n, true
 }
 
-// AllPrivileges is every privilege's bit.
-const AllPrivileges = ^uint64(0)
+// AllPrivileges is every bit of a privilege mask.
+const AllPrivileges = security.AllPrivileges
 
 // SetProcessPrivileges enables (or, without enable, disables) the
 // privileges in mask, both current and permanent, as $SETPRV with prmflg
@@ -215,7 +216,7 @@ const AllPrivileges = ^uint64(0)
 func (env *Environment) SetProcessPrivileges(mask uint64, enable bool) (previous uint64, status uint32) {
 	previous = env.Process.CurrentPrivileges
 
-	return previous, env.setPrivileges(mask&allPrivileges, enable, true, false)
+	return previous, env.setPrivileges(mask, enable, true, registers.Supervisor)
 }
 
 // FAOValue is one of F$FAO's arguments: an integer or a string. Num is

@@ -444,16 +444,17 @@ creator's) and prvadr cut; the 64-bit masks; `$BRKTHRU` to a user;
 IO$_SETCHAR; `$CMKRNL` and `$CMEXEC`; `$SETSWM`. Subtasks 3 to 9 make
 them VMS's.
 
-### A.5 The rules (subtask 3)
+### A.5 The rules (subtasks 3 and 4)
 
 The gate's rules as `corevms/privrules.go` holds them, printed by `go test
 -run TestPrivilegeRuleTable -v ./internal/corevms`: the table A.1's
 "govax today" column describes, now one place in the code. Each row is a
 rule a check names; `serviceRules` says which services can ask about it.
 "SSRM" is the 5.0 System Services Reference Manual's entry, "probe n"
-`priv94.mar`'s case (round 2's are `priv94b.mar`'s). The rules say what
-govax does at subtask 3, which is what it did before: where A.4 differs,
-subtasks 4 to 9 change the row.
+`priv94.mar`'s case (round 2's are `priv94b.mar`'s). Since subtask 4 the
+services' rows are A.4's answers, which `TestPriv94Oracle` holds govax
+to; the logical name rows still say what govax did before, until subtask
+5 gives the tables their protection.
 
 | Operation | Needs | Exempt modes | Refusal | Source |
 | --- | --- | --- | --- | --- |
@@ -464,8 +465,8 @@ subtasks 4 to 9 change the row.
 | logical name: a mode inner to the caller's | SYSNAM | none | SS$_NOPRIV | SSRM $CRELNM (the mode is maximized); probe 22 to 24 |
 | $CREMBX temporary | TMPMBX | none | SS$_NOPRIV | SSRM $CREMBX; probe 80, 81 |
 | $CREMBX permanent | PRMMBX | none | SS$_NOPRIV | SSRM $CREMBX; probe 83, 84 |
-| $CREMBX permanent with a logical name | SYSNAM | none | SS$_NOPRIV | probe round 2's 3 to 8 |
-| $DELMBX | PRMMBX | none | SS$_NOPRIV | SSRM $DELMBX; probe 88 to 91 |
+| $CREMBX permanent with a logical name | SYSNAM or SYSPRV | none | SS$_NOPRIV | probe round 2's 3 to 8 |
+| $DELMBX | PRMMBX | kernel | SS$_NOPRIV | SSRM $DELMBX; probe 88 to 91 |
 | mailbox IO$_SETPROTECTION, not the owner | BYPASS or SYSPRV | none | SS$_NOPRIV | probe 92 to 97 |
 | $ASCEFC permanent | PRMCEB | none | SS$_NOPRIV | SSRM $ASCEFC; probe 99, 100 |
 | $DLCEFC another creator's cluster | PRMCEB | none | SS$_NOPRIV | SSRM $DLCEFC; probe 103 to 105 |
@@ -487,11 +488,13 @@ subtasks 4 to 9 change the row.
 | $CREPRC detached quotas of its own | DETACH | none | SS$_NOPRIV | SSRM $CREPRC |
 | $CREPRC privileges beyond the creator's | SETPRV | none | SS$_NOPRIV | SSRM $CREPRC; probe 207 to 211 |
 | $CREPRC base priority above the creator's | ALTPRI | none | SS$_NOPRIV | SSRM $CREPRC; probe 224, 225 |
+| $SETPRV a privilege not authorized | SETPRV | kernel, executive | SS$_NOTALLPRIV | SSRM $SETPRV; probe 229 to 241 |
 | $CMKRNL | CMKRNL | kernel, executive | SS$_NOPRIV | SSRM $CMKRNL; probe 284 to 289 |
-| $CMEXEC | CMEXEC | kernel, executive | SS$_NOPRIV | SSRM $CMEXEC; probe 284 to 289 |
+| $CMEXEC | CMEXEC or CMKRNL | kernel, executive | SS$_NOPRIV | SSRM $CMEXEC; probe 284 to 289 |
 | $LCKPAG | PSWAPM | none | SS$_NOPRIV | SSRM $LCKPAG; probe 262 to 264 |
+| $SETSWM | PSWAPM | none | SS$_NOPRIV | SSRM $SETSWM; probe 268 to 270 |
 | $SNDOPR an operator's function | OPER | none | SS$_NOPRIV | SSRM $SNDOPR; probe 247 to 252 |
-| $BRKTHRU to a user | WORLD | none | SS$_NOPRIV | SSRM $BRKTHRU; probe 257 to 260 |
+| $BRKTHRU to another user | OPER | none | SS$_NOOPER | probe 257 to 260 |
 | $BRKTHRU to every terminal or user | OPER | none | SS$_NOOPER | SSRM $BRKTHRU; probe 253 to 256, 261 |
 | disk logical block I/O | LOG_IO or PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 271 to 273, 277 |
 | disk physical block I/O | PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 274 to 276 |
@@ -622,7 +625,7 @@ Each is one commit, with tests, stopping for review.
    moved onto rules, with no change in behavior; SET DEBUG PRIVILEGES;
    `TestNoUncheckedPrivileges`, `TestEveryServiceHasPrivilegeRules`,
    `TestEveryPrivilegeRuleUsed`; A.1's table regenerated from the rules.
-4. **The services held to the probe** (Decisions 3 and 7): each rule's
+4. **The services held to the probe** (done 2026-11-15; Decisions 3 and 7): each rule's
    inner-mode exemption and status from A.4; `$SETSWM`; `$ULKPAG`,
    `$DLCEFC`, `$SNDOPR`'s SECURITY class, and IO$_SETPROTECTION settled;
    `$CREPRC`'s AUTHPRIV and omitted prvadr; `$SETPRV`'s fine points;
@@ -839,3 +842,50 @@ The answers:
     registered services both ways, `TestEveryPrivilegeRuleUsed` finds each
     rule variable named outside the table and in some service's list, and
     `TestPrivilegeGate` checks the gate's answers and its trace.
+- **2026-11-15** Subtask 4, the services held to the probe:
+  `TestPriv94Oracle` (`internal/console/priv94oracle_test.go`) runs round
+  1's program on govax as each identity (process 1 made SYSTEM, PRIV94,
+  or PRIV94N: `priv94Identity.become`; the images given PRIV94.COM's
+  protection so the accounts can run them), parts FH, the default parts
+  as SYSTEM and PRIV94, SPX as PRIV94N, then part R and a run after it
+  for image rundown, and holds each case to VMS's logs; `TestPriv94BOracle`
+  does the same for round 2's parts M and U. What varies is masked (PIDs,
+  job tables, mailbox units, a process's current priority, which VMS's
+  scheduler boosts, and a wildcard `$GETJPI`'s NOPRIV count, which on VMS
+  includes its own processes; govax's must be the holders it didn't
+  see), and OPCOM's and the broadcasts' lines on govax's terminal are
+  dropped. Parts L and T wait for subtasks 5 and 6; `priv94Differences`
+  lists the rest (cases 106 and 108, a temporary page-file section VMS
+  kept past its last mapping, in DEVIATIONS.md; SYSTEM's 84 and round
+  2's 4 and 7, a permanent mailbox named by the system category,
+  subtask 5's; 254, the VAX's IOSB count of terminals refusing a
+  broadcast). Changed to VMS's answers:
+  - The masks are 64 bits: `allPrivileges` and `security.AllPrivileges`
+    are every bit, process 1 starts with them, `$SETPRV` and `$CREPRC`
+    keep every bit asked for.
+  - `$SETPRV`: enabling an unauthorized privilege is a rule,
+    "`$SETPRV` a privilege not authorized" (SETPRV in CURPRIV, inner
+    modes exempt, SS$_NOTALLPRIV), where it was SETPRV in AUTHPRIV;
+    enbflg is its low bit; prmflg above 1 is SS$_IVSTSFLG, before prvprv
+    is stored. `setPrivileges` takes the caller's mode (DCL's is
+    supervisor).
+  - `$CREPRC`: the new process's AUTHPRIV is the privileges it gets.
+  - `$SETSWM` (`process.go`, PSWAPM from every mode, `Process.SwappingDisabled`,
+    also set by PRC$M_PSWAPM).
+  - `$CMEXEC` takes CMEXEC or CMKRNL; `$DELMBX` exempts kernel mode;
+    a permanent mailbox's name takes SYSNAM or SYSPRV.
+  - `$DGBLSC` takes SEC$M_GBL beside SEC$M_SYSGBL.
+  - `$BRKTHRU` to one's own user needs nothing, to another OPER
+    (SS$_NOOPER; the rule is "`$BRKTHRU` to another user"), and a user
+    with no terminal is SS$_DEVOFFLINE in the IOSB.
+  - A wildcard `$GETJPI` (and LIB$GETJPI) returns SS$_NOPRIV for each
+    process the caller may not see, and goes on past it at the next call.
+  - The rehearsal's kernel stack fault: a condition raised in an inner
+    mode on a stack in S0 is searched for in that stack's frames alone,
+    a saved FP leading out of S0 ending the search as 0 does
+    (`condition.go`'s `leftStack`, `TestInnerModeConditionSearch`;
+    unconfirmed, in DEVIATIONS.md).
+  `$ULKPAG`, `$DLCEFC`, `$SNDOPR`'s classes, IO$_SETPROTECTION, `$ENQ`,
+  the sections' and clusters' rules, disk I/O, and `$LCKPAG` already
+  gave VMS's answers. `TestPriv94Probe` now allows no condition at a
+  case's handler. A.5 is regenerated.

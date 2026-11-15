@@ -57,9 +57,9 @@ var (
 	PrivREADALL = privilege("READALL")
 )
 
-// AllPrivileges is every privilege's bit: the first PRV$K_NUMBER_OF_PRIVS
-// bits of the mask.
-var AllPrivileges = uint64(1)<<vmsdef.Symbols["PRV$K_NUMBER_OF_PRIVS"] - 1
+// AllPrivileges is every bit of a privilege mask: VMS's ALL is all 64
+// bits, though only the first PRV$K_NUMBER_OF_PRIVS name privileges.
+const AllPrivileges = ^uint64(0)
 
 // SystemUIC is the SYSTEM account's UIC, [1,4].
 var SystemUIC = NewUIC(1, 4)

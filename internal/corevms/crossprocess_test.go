@@ -334,8 +334,14 @@ func TestGetjpi_wildcard(t *testing.T) {
 				return pids
 			}
 
+			// A process the caller may not see is SS$_NOPRIV, and the
+			// scan goes on past it (testdata/priv94's cases 190 to 192).
+			if r0 == ssNoPriv {
+				continue
+			}
+
 			wantR0(t, r0, ssNormal)
-			
+
 			pids = append(pids, a.readLong(pidBuf))
 		}
 
@@ -352,7 +358,7 @@ func TestGetjpi_wildcard(t *testing.T) {
 		t.Errorf("scan = %08X, want %08X", got, want)
 	}
 
-	// Without WORLD or GROUP, the other group's process is skipped.
+	// Without WORLD or GROUP, the other group's process isn't seen.
 	parent.Process.CurrentPrivileges &^= privGROUP | privWORLD
 
 	if got = scan(); len(got) != 2 || got[1] != child.Process.PID {

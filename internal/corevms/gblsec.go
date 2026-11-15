@@ -972,14 +972,16 @@ func serviceSysMgblsc(env *Environment, argv []uint32) (uint32, error) {
 //	SYS$DGBLSC [flags] ,gsdnam ,[ident]
 //
 // It deletes the name of the section gsdnam whose ident matches (a
-// group section, or with SEC$M_SYSGBL, the only flag allowed, a system
-// one): no later $MGBLSC finds it, and the section goes when its last
+// group section, or with SEC$M_SYSGBL a system one): no later $MGBLSC
+// finds it, and the section goes when its last
 // mapping does (at once if nothing maps it). A system section needs
 // SYSGBL, a permanent one PRMGBL (SS$_NOPRIV). SS$_NOSUCHSEC if there's
-// no such section.
+// no such section. Its flags may be SEC$M_SYSGBL and SEC$M_GBL (VMS 7.1
+// took SEC$M_GBL!SEC$M_SYSGBL, testdata/priv94's cases 117 to 122); any
+// other is SS$_IVSECFLG (unconfirmed).
 func serviceSysDgblsc(env *Environment, argv []uint32) (uint32, error) {
 	flags := optArg(argv, 0)
-	if flags&^secSYSGBL != 0 {
+	if flags&^(secSYSGBL|secGBL) != 0 {
 		return ssIvSecFlg, nil
 	}
 

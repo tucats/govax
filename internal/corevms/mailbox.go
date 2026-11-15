@@ -395,8 +395,9 @@ func (env *Environment) storeNewChannel(chanAdr uint32, name string, d *iodev.De
 // caller's own channel isn't deassigned. (A temporary mailbox is deleted
 // that way anyway.) SS$_IVCHAN for 0, SS$_NOPRIV if the channel isn't
 // assigned or was assigned from a more privileged mode than the caller's
-// or the caller lacks the PRMMBX privilege, SS$_DEVNOTMBX if its device
-// isn't a mailbox.
+// or the caller lacks the PRMMBX privilege (even for its own mailbox;
+// a kernel-mode caller needs none, testdata/priv94's cases 88 to 91),
+// SS$_DEVNOTMBX if its device isn't a mailbox.
 func serviceSysDelmbx(env *Environment, argv []uint32) (uint32, error) {
 	number := optArg(argv, 0) & 0xFFFF
 	if number == 0 {
@@ -446,8 +447,12 @@ func registerMailboxServices(t *ServiceTable) {
 }
 
 // mailboxCreatePrivileges is $CREMBX's privilege check: TMPMBX for a
-// temporary mailbox, PRMMBX for a permanent one, and SYSNAM too for a
-// permanent one with a logical name, which goes in the system table.
+// temporary mailbox, PRMMBX for a permanent one, and SYSNAM or SYSPRV
+// too for a permanent one with a logical name, which goes in the system
+// table. No mode is exempt (testdata/priv94's cases 80 to 87; round 2's
+// 3 to 8). VMS also lets a process in the system UIC category name one,
+// by the system table's protection, which govax doesn't yet check (the
+// phase doc's subtask 5).
 func (env *Environment) mailboxCreatePrivileges(permanent, named bool) uint32 {
 	if !permanent {
 		return env.requirePrivilege(ruleCrembxTemporary)

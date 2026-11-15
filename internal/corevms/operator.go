@@ -413,8 +413,13 @@ const (
 	defaultBreakthroughCC  = 32    // carcon: a space, "new line, text, return"
 )
 
-// ssNoOper is SS$_NOOPER, a broadcast to several terminals without OPER.
-var ssNoOper = vmsdef.Symbols["SS$_NOOPER"]
+// ssNoOper is SS$_NOOPER, a broadcast to several terminals or another
+// user without OPER; ssDevOffline is the IOSB's status for a user with no
+// terminal.
+var (
+	ssNoOper     = vmsdef.Symbols["SS$_NOOPER"]
+	ssDevOffline = vmsdef.Symbols["SS$_DEVOFFLINE"]
+)
 
 // serviceSysBrkthru is SYS$BRKTHRU:
 //
@@ -427,7 +432,8 @@ var ssNoOper = vmsdef.Symbols["SS$_NOOPER"]
 //
 //	BRK$C_DEVICE    the terminal sendto names (SS$_NOSUCHDEV if it isn't
 //	                a terminal)
-//	BRK$C_USERNAME  the terminals of the user sendto names; needs WORLD
+//	BRK$C_USERNAME  the terminals of the user sendto names; another
+//	                user's needs OPER (SS$_NOOPER)
 //	BRK$C_ALLUSERS  every logged-in user's terminal; needs OPER
 //	BRK$C_ALLTERMS  every terminal; needs OPER
 //
@@ -501,7 +507,14 @@ func (env *Environment) breakthrough(argv []uint32) (uint32, error) {
 
 	if iosb != 0 {
 		// Status, terminals sent to, timed out (0), set NOBROADCAST (0).
-		_ = env.mem.StoreLongword(env.cpu, iosb, uint32(ssNormal)|uint32(terminals)<<16)
+		// A user with no terminal is SS$_DEVOFFLINE in the IOSB, as VMS
+		// 7.1 gave it (testdata/priv94's case 259, as PRIV94).
+		status := uint32(ssNormal)
+		if terminals == 0 && sndtyp == brkUsername {
+			status = ssDevOffline
+		}
+
+		_ = env.mem.StoreLongword(env.cpu, iosb, status|uint32(terminals)<<16)
 		_ = env.mem.StoreLongword(env.cpu, iosb+4, 0)
 	}
 
@@ -541,18 +554,20 @@ func (env *Environment) breakthroughTerminals(sndtyp, sendto uint32) (int, uint3
 		return 1, 0
 
 	case brkUsername:
-		if st := env.requirePrivilege(ruleBrkthruUser); st != 0 {
-			return 0, st
-		}
-
 		name, st := env.breakthroughName(sendto)
 		if st != 0 {
 			return 0, st
 		}
 
-		// Only this process's user is logged in, at one terminal.
+		// The caller's own user needs nothing; another needs OPER, not
+		// WORLD (testdata/priv94's cases 257 to 259). Only this process's
+		// user is logged in, at one terminal.
 		if strings.EqualFold(strings.TrimSpace(name), p.Username) {
 			return 1, 0
+		}
+
+		if st := env.requirePrivilege(ruleBrkthruUser); st != 0 {
+			return 0, st
 		}
 
 		return 0, 0

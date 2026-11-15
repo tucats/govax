@@ -174,6 +174,12 @@ type Process struct {
 	// resource wait mode enabled.
 	ResourceWaitDisabled bool
 
+	// SwappingDisabled is set while the process has turned its swap mode
+	// off, with $SETSWM or $CREPRC's PRC$M_PSWAPM (PCB$V_PSWAPM): it may
+	// not be swapped out of the balance set. govax never swaps a process,
+	// so it's only recorded.
+	SwappingDisabled bool
+
 	// WakePending is the process's wakeup request flag (PCB$V_WAKEPEN):
 	// set by $WAKE or an expiring $SCHDWK, consumed by the next $HIBER
 	// (hibernate.go). It's a flag, not a count: several wakeups before a
@@ -686,6 +692,32 @@ func serviceSysSetrwm(env *Environment, argv []uint32) (uint32, error) {
 	return status, nil
 }
 
+// serviceSysSetswm is SYS$SETSWM (docs/planning/PHASE-94 - privileges.md,
+// Decision 7):
+//
+//	SYS$SETSWM [swpflg]
+//
+// It sets the process's swap mode: swpflg 0 (the default) enables it, so
+// the process may be swapped out of the balance set, and 1 disables it.
+// It needs PSWAPM, from every mode (SS$_NOPRIV; VMS 7.1 refused a
+// kernel-mode caller too, testdata/priv94's case 270), and returns
+// SS$_WASCLR if swapping was enabled before, SS$_WASSET if it was
+// disabled. govax never swaps, so it only records the mode.
+func serviceSysSetswm(env *Environment, argv []uint32) (uint32, error) {
+	if st := env.requirePrivilege(ruleSetswm); st != 0 {
+		return st, nil
+	}
+
+	status := uint32(ssWasClr)
+	if env.Process.SwappingDisabled {
+		status = ssWasSet
+	}
+
+	env.Process.SwappingDisabled = optArg(argv, 0)&1 != 0
+
+	return status, nil
+}
+
 // serviceSysDelprc is SYS$DELPRC:
 //
 //	SYS$DELPRC [pidadr] ,[prcnam]
@@ -777,5 +809,6 @@ func registerProcessServices(t *ServiceTable) {
 	t.Register("SYS$FORCEX", serviceSysForcex)
 	t.Register("SYS$DELPRC", serviceSysDelprc)
 	t.Register("SYS$SETRWM", serviceSysSetrwm)
+	t.Register("SYS$SETSWM", serviceSysSetswm)
 	t.Register("SYS$CREPRC", serviceSysCreprc)
 }

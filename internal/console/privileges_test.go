@@ -23,12 +23,12 @@ func TestPrivileges_assembledProgram(t *testing.T) {
 		return getRange(t, c, a)
 	}
 
-	if lo, hi := quad("CURPRIV"); lo != 0xFFFFFFFF || hi != 0x7F {
-		t.Errorf("CURPRIV %#x %#x, want all 39 privileges", lo, hi)
+	if lo, hi := quad("CURPRIV"); lo != 0xFFFFFFFF || hi != 0xFFFFFFFF {
+		t.Errorf("CURPRIV %#x %#x, want every bit", lo, hi)
 	}
 
-	if lo, hi := quad("PRVPRV"); lo != 0xFFFFFFFF || hi != 0x7F {
-		t.Errorf("PRVPRV %#x %#x, want all 39 privileges", lo, hi)
+	if lo, hi := quad("PRVPRV"); lo != 0xFFFFFFFF || hi != 0xFFFFFFFF {
+		t.Errorf("PRVPRV %#x %#x, want every bit", lo, hi)
 	}
 
 	checks := []struct {

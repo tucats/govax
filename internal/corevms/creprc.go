@@ -401,6 +401,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	p.CreateFlags = req.Flags
 	p.TerminationMailbox = req.TerminationMailbox
 	p.ResourceWaitDisabled = req.Flags&prcSSRWAIT != 0
+	p.SwappingDisabled = req.Flags&prcPSWAPM != 0
 	p.failureExceptions[registers.User] = req.Flags&prcSSFEXCU != 0
 
 	applyQuotas(p, quotas, detached)
@@ -424,10 +425,9 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 
 	// Privileges: those asked for (or, if none were, the creator's
 	// current ones), but only the creator's own unless it may give any
-	// (SETPRV). They are the new process's permanent and current
-	// privileges; it is authorized for them and for whatever its creator
-	// is authorized for. (Unconfirmed: what VMS gives an omitted prvadr,
-	// and the new process's authorized mask.)
+	// (SETPRV). They are all three of the new process's masks: it is
+	// authorized for them alone, as VMS 7.1 gave them
+	// (testdata/priv94's cases 203 to 211, the phase doc's A.4).
 	privileges := creator.CurrentPrivileges
 	if req.HasPrivileges {
 		privileges = req.Privileges
@@ -437,9 +437,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 		privileges &= creator.CurrentPrivileges
 	}
 
-	privileges &= allPrivileges
-	p.AuthorizedPrivileges = creator.AuthorizedPrivileges | privileges
-	p.ProcessPrivileges, p.CurrentPrivileges = privileges, privileges
+	p.AuthorizedPrivileges, p.ProcessPrivileges, p.CurrentPrivileges = privileges, privileges, privileges
 
 	// The base priority: baspri's low five bits, as $SETPRI takes them,
 	// no higher than the creator's own without ALTPRI. (An omitted

@@ -1922,3 +1922,24 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **Status**: kept until a probe shows otherwise. `testdata/vms93` (Phase 93's subtask 14, 2026-11-15) agreed with
   govax on every file's listing and access, and settled the user file open's sharing rule, which govax now follows
   (round 3's case 458, once listed here).
+
+### [Phase 94] A temporary page-file section after its last mapping
+
+- **Where**: `internal/corevms/gblsec.go`; `TestPriv94Oracle`'s `priv94Differences` (testdata/priv94's cases 106
+  and 108).
+- **What**: a program creates a temporary global page-file section, deletes the pages that map it (`$DELTVA`), then
+  calls `$DGBLSC` for it. VMS 7.1 found the section (`SS$_NORMAL`): it outlived its only mapping. govax deletes a
+  temporary section when its last mapping goes, so `$DGBLSC` is `SS$_NOSUCHSEC`. When VMS deletes such a section (at
+  image rundown, or when the creator's process goes) is unconfirmed, and nothing is changed until a probe asks.
+- **Status**: open.
+
+### [Phase 94] The end of an inner mode's handler search
+
+- **Where**: `internal/corevms/condition.go`'s `leftStack`; `TestInnerModeConditionSearch`.
+- **What**: a condition raised in kernel or executive mode, in a routine `$CMKRNL` or `$CMEXEC` called, is searched
+  for in the frames on that mode's stack (in S0) alone: the first saved FP leading out of S0 ends the search as a
+  saved FP of 0 does, and the catch-all takes the condition. The Internals book (4.3.2) has the search on "the stack
+  of the access mode" the condition is reported to, but not where VMS ends it; an unhandled kernel-mode condition is
+  a bugcheck on VMS, so no probe asks. govax used to call the program's user-mode handlers in kernel mode, and their
+  unwind left the kernel stack 4 bytes off (testdata/priv94's rehearsal).
+- **Status**: kept, unconfirmed.
