@@ -488,7 +488,7 @@ Each is one commit, with tests, stopping for review.
 2. **The probe** (done 2026-11-15): `testdata/uaf95`, as in Part D,
    written and rehearsed where govax can; run on the VAX by the author in
    three rounds; A.4 answered (A.5) and Part B adjusted.
-3. **The authorization file** (Decisions 1 to 5): `internal/uaf`
+3. **The authorization file** (done 2026-11-15) (Decisions 1 to 5): `internal/uaf`
    (records, identifiers, JSON, locking, the hash, validation, the
    default file), `vax.authorization.file`, the file made at startup;
    `corevms`'s user table and `SystemAccount` onto it, with no change in
@@ -657,3 +657,42 @@ The answers (2026-11-15):
   procedure, the interactive login goes on and a batch job ends; and the
   LIST cases by name. A.5 is the three rounds' answers; Decisions 7 and 8
   now follow them. Subtask 2 is done.
+- **2026-11-15** Subtask 3: `internal/uaf`, a leaf package (standard
+  library, `vmsdef`, `hostlock`, and `golang.org/x/crypto/argon2`, the new
+  dependency, v0.52.0, the newest whose own requirements govax's
+  `golang.org/x/net` and `sys` already meet): `File` (version, accounts,
+  identifiers), `Record` (the A.3 fields, `Quotas` with every AUTHORIZE
+  quota, PBYTLM too, which the probe's SHOW listed), `Held`, `Identifier`;
+  JSON names for a UIC (`"[1,4]"`, octal, [37776,177776] the largest),
+  privileges (`["ALL"]`, or names; IMPERSONATE and ACNT written, as 7.1's
+  SHOW of SYSTEM had them, both names of a bit read), flags (`$GETUAI`'s
+  UAI$_FLAGS bits in order, the order SHOW lists them in, case 26),
+  identifier values (`"%X80010000"`), and attributes (`$KGBDEF`'s);
+  `Load`/`Parse` (unknown fields refused; every error a `ParseError` with
+  the line: encoding/json's offset, or the line of the bad value's text),
+  `Check`, `Save` (a temporary file and a rename, mode 0600), `Update`
+  (under a lock on `sysuaf.json.lock`, since `Save` replaces the file
+  itself; `hostlock.Wait`, new, takes a lock that waits), `Ensure`,
+  `Default` (SYSTEM with process 1's values, `SystemRecord`; DEFAULT with
+  7.1's, `DefaultRecord`; SYSTEM's UIC identifier), and `HashPassword`/
+  `CheckPassword` (Argon2id's PHC string, RFC 9106's second option; the
+  password uppercased and trimmed, as VMS's aren't case-sensitive). There
+  is no "next free identifier value" stored: `NextGeneral` computes it from
+  the file, starting at %X80010000 (case 76 gave PROJX that value).
+  `corevms`: the System's `authorization` (`authorization.go`: a host file
+  read again only when its size or time changes, or one in memory starting
+  as `uaf.Default`'s) replaces the `users` and `identifiers` tables; `User`,
+  `AddUser` (a new account is DEFAULT's without DISUSER, and gets a UIC
+  identifier unless its name or UIC has one, as ADD does; DEFAULT has none,
+  as on 7.1, where case 12's ADD took [200,200]), `AddIdentifier`, and the
+  rights database read it; SYSTEM is still found when the file has lost it.
+  `Account` is gone: `SystemAccount` is `uaf.SystemRecord().Quotas`, and
+  `LoginQuotas` gives a process every quota govax has from the record
+  (ASTLM, BIOLM, DIOLM, and the job's PRCLM and pooled quotas too), with
+  `TestSystemAccountIsProcessOne` holding them to `NewProcess`'s and
+  `newJob`'s. `machine.Machine.AuthorizationFile` reaches each new System;
+  `cmd/govax` makes the file before `Init` (`authorization.go`;
+  `vax.authorization.file`, default `~/.govax/sysuaf.json`, in
+  `validConfigs` and HELP CONFIGURATION KEYS), a file it can't read
+  stopping startup; `TestMain` gives the package's tests a temporary file.
+  Nothing a process gets has changed: login from the record is subtask 4.

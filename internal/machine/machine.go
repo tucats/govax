@@ -52,6 +52,12 @@ type Machine struct {
 	CPU    *registers.CPU
 	Mem    *vm.Memory
 
+	// AuthorizationFile is the authorization file's host path, which each
+	// new System reads (corevms's authorization.go; docs/planning/PHASE-95
+	// - authentication.md): cmd/govax's, made before Init. "" gives each
+	// System one of its own in memory, as the tests have.
+	AuthorizationFile string
+
 	Symbols *SymbolTable
 
 	Radix       int // 8, 10, or 16
@@ -437,6 +443,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	sys.SetProcessSettings(processSettings())
 	sys.SetSysgen(sysgenSettings(m.paging))
+	sys.SetAuthorizationFile(m.AuthorizationFile)
 
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/planning/PHASE-45.md, subtask 5).

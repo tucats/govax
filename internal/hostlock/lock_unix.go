@@ -18,3 +18,14 @@ func lockFile(f *os.File) error {
 
 	return err
 }
+
+// waitFile takes flock(2)'s exclusive lock on f, waiting while another
+// open file holds it.
+func waitFile(f *os.File) error {
+	for {
+		err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX)
+		if !errors.Is(err, syscall.EINTR) {
+			return err
+		}
+	}
+}

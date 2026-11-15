@@ -15,11 +15,24 @@ import (
 // (docs/planning/PHASE-87 - system volume.md): run would otherwise mount, and the
 // first time make, the user's own ~/.govax/govax-system.dsk, or one a
 // profile's vax.default.system.file names. A test of the system volume
-// sets systemOptions itself (withSystemVolume).
+// sets systemOptions itself (withSystemVolume). Nor do they use the
+// user's authorization file (docs/planning/PHASE-95 - authentication.md):
+// each run of the package's tests has a temporary one.
 func TestMain(m *testing.M) {
 	systemOptions = systemFlags{file: "none"}
 
-	os.Exit(m.Run())
+	dir, err := os.MkdirTemp("", "govax-uaf")
+	if err != nil {
+		panic(err)
+	}
+
+	authorizationFile = filepath.Join(dir, "sysuaf.json")
+
+	status := m.Run()
+
+	_ = os.RemoveAll(dir)
+
+	os.Exit(status)
 }
 
 // withSystemVolume gives one test the system volume options flags, put

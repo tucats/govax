@@ -51,6 +51,26 @@ func TryLock(path string) (*Lock, error) {
 	return &Lock{f: f}, nil
 }
 
+// Wait takes an exclusive lock on the file at path, creating it (empty,
+// mode 0600) if it doesn't exist, and waits for as long as another Lock
+// holds it. It is for a short change many sessions may make, such as an
+// update of the authorization file (internal/uaf), where waiting is
+// right and mounting read-only isn't an answer.
+func Wait(path string) (*Lock, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0o600)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := waitFile(f); err != nil {
+		_ = f.Close()
+
+		return nil, err
+	}
+
+	return &Lock{f: f}, nil
+}
+
 // Close lets the lock go. A nil Lock, or one already closed, is
 // nothing to close.
 func (l *Lock) Close() error {

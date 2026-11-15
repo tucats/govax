@@ -92,6 +92,19 @@
                                      host file takes only the space its
                                      files use).
 
+   The authorization file
+
+       govax's accounts and rights identifiers are kept in a host file
+       of its own, its SYSUAF.DAT and RIGHTSLIST.DAT in one, as JSON.
+       The first time govax starts it makes the file with two accounts,
+       SYSTEM and DEFAULT.  A file govax can't read stops it at startup,
+       with the file's name and the line that is wrong.  The file is
+       readable and writable only by you (mode 0600).
+
+       vax.authorization.file        The file's host path.  A leading
+                                     ~/ is your home directory.
+                                     Default ~/.govax/sysuaf.json.
+
    The default volume
 
        When vax.default.volume.file is set, govax mounts that ODS-2

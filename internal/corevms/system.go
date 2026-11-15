@@ -70,15 +70,9 @@ type System struct {
 	// system state like the mailboxes.
 	Sections *GlobalSections
 
-	// identifiers are the rights database's identifiers beyond those every
-	// process has (rights.go): AddIdentifier's, as AUTHORIZE's ADD
-	// /IDENTIFIER would make them. Like the mailboxes they're the
-	// System's, so INIT/VMINIT/ZERO start with none.
-	identifiers []rightsIdentifier
-
-	// users are the accounts AddUser has made, the authorization file
-	// $CHECK_ACCESS reads (users.go). SYSTEM is always there.
-	users []UserAccount
+	// auth is the authorization file: the accounts and the rights
+	// database's identifiers (authorization.go, users.go, rights.go).
+	auth authorization
 
 	// deviceProfiles are the devices' security profiles $SET_SECURITY
 	// has changed, by device name (secobjects.go); a device not here has

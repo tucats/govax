@@ -1,9 +1,12 @@
 package corevms
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/uaf"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // TestUsers: the authorization file's accounts, found in any case and
@@ -47,5 +50,71 @@ func TestUsers(t *testing.T) {
 
 	if u, _ := s.User("SYSTEM"); u.Privileges != 0 {
 		t.Errorf("SYSTEM not replaced: %+v", u)
+	}
+}
+
+// TestAuthorizationFile: with a host file, AddUser and AddIdentifier
+// write it, another System reads what they wrote, a change made to the
+// file outside is seen, and an account gets a UIC identifier unless its
+// UIC or name has one.
+func TestAuthorizationFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sysuaf.json")
+	if _, err := uaf.Ensure(path); err != nil {
+		t.Fatal(err)
+	}
+
+	s := &System{}
+	s.SetAuthorizationFile(path)
+
+	if status := s.AddIdentifier("TEAM", 0x80010005, 0); status != ssNormal {
+		t.Fatalf("AddIdentifier: %#x", status)
+	}
+
+	if status := s.AddIdentifier("team", 0x80010006, 0); status != vmsdef.Symbols["SS$_DUPIDENT"] {
+		t.Errorf("a second TEAM: %#x", status)
+	}
+
+	if status := s.AddUser(UserAccount{Name: "smith", UIC: 0x00C00002, Rights: []security.Identifier{{Value: 0x80010005}}}); status != ssNormal {
+		t.Fatalf("AddUser: %#x", status)
+	}
+
+	other := &System{}
+	other.SetAuthorizationFile(path)
+
+	u, ok := other.User("SMITH")
+	if !ok || u.UIC != 0x00C00002 || len(u.Rights) != 1 || u.Rights[0].Value != 0x80010005 {
+		t.Fatalf("SMITH from the file: %+v %v", u, ok)
+	}
+
+	f, err := uaf.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	smith, _ := f.Find("SMITH")
+	if smith.Identifiers[0].Name != "TEAM" || smith.Flags&uaf.FlagDISUSER != 0 || smith.Quotas.PRCLM != 2 {
+		t.Errorf("SMITH's record %+v", smith)
+	}
+
+	if id, ok := f.IdentifierNamed("SMITH"); !ok || id.Value != 0x00C00002 {
+		t.Errorf("SMITH's UIC identifier %+v %v", id, ok)
+	}
+
+	// A change by someone else (another session's AUTHORIZE) is seen.
+	if err := uaf.Update(path, func(f *uaf.File) error { f.Remove("SMITH"); return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := s.User("SMITH"); ok {
+		t.Error("SMITH still found after the file lost it")
+	}
+
+	// SYSTEM is found even when the file has lost it.
+	if err := uaf.Update(path, func(f *uaf.File) error { f.Remove("SYSTEM"); return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	if u, ok := s.User("SYSTEM"); !ok || u.Privileges != security.AllPrivileges {
+		t.Errorf("SYSTEM without its record: %+v %v", u, ok)
 	}
 }

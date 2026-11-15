@@ -3,6 +3,8 @@ package corevms
 import (
 	"bytes"
 	"testing"
+
+	"github.com/tucats/govax/internal/uaf"
 )
 
 // TestSysgenPQLDefault: $CREPRC's default for a quota is the configured
@@ -97,5 +99,37 @@ func TestNewEnvironmentLogsIn(t *testing.T) {
 
 	if p := env.Process; p.WSDefault != 256 || p.WSLimit != 256 || p.MinWSCount != 30 {
 		t.Errorf("process 1: WSDEFAULT %d, WSLIMIT %d, MINWSCNT %d; want 256, 256, 30", p.WSDefault, p.WSLimit, p.MinWSCount)
+	}
+}
+
+// TestSystemAccountIsProcessOne: the authorization file's SYSTEM record
+// (uaf.SystemRecord) gives process 1 exactly what NewProcess and newJob
+// always gave it (docs/planning/PHASE-95 - authentication.md, Decision 3).
+func TestSystemAccountIsProcessOne(t *testing.T) {
+	want, wantJob := NewProcess(), newJob(1)
+
+	p := NewProcess()
+	p.Job = newJob(1)
+	p.Job.Pooled, p.Job.SubprocessLimit = PooledQuotas{}, 0
+	p.ASTLimit, p.BufferedIOLimit, p.DirectIOLimit = 0, 0, 0
+
+	sg := DefaultSysgen()
+	sg.MinWSCount = nominalMinWSCount
+	sg.LoginQuotas(p, SystemAccount())
+
+	if p.ASTLimit != want.ASTLimit || p.BufferedIOLimit != want.BufferedIOLimit || p.DirectIOLimit != want.DirectIOLimit ||
+		p.WSDefault != want.WSDefault || p.WSQuota != want.WSQuota || p.WSExtent != want.WSExtent {
+		t.Errorf("process: %+v", p)
+	}
+
+	if p.Job.Pooled != wantJob.Pooled || p.Job.SubprocessLimit != wantJob.SubprocessLimit {
+		t.Errorf("job: %+v %d, want %+v %d", p.Job.Pooled, p.Job.SubprocessLimit, wantJob.Pooled, wantJob.SubprocessLimit)
+	}
+
+	rec := uaf.SystemRecord()
+	if rec.Username != want.Username || rec.Account != want.Account || uint32(rec.UIC) != want.UIC ||
+		uint64(rec.Privileges) != want.AuthorizedPrivileges || uint64(rec.DefaultPrivileges) != want.ProcessPrivileges ||
+		rec.Priority != uint32(want.BasePriority) || rec.CLI != want.CLIName {
+		t.Errorf("SYSTEM's record %+v differs from NewProcess's %+v", rec, want)
 	}
 }

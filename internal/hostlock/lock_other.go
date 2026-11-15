@@ -11,3 +11,8 @@ import "os"
 func lockFile(*os.File) error {
 	return nil
 }
+
+// waitFile locks nothing, as lockFile doesn't.
+func waitFile(*os.File) error {
+	return nil
+}

@@ -5,20 +5,19 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/uaf"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The authorization file, as far as govax keeps one (docs/planning/
-// PHASE-93 - file protection.md, subtask 13).
+// The accounts (docs/planning/PHASE-93 - file protection.md, subtask 13;
+// since Phase 95 the authorization file's, authorization.go).
 //
-// On VMS each account is a record of SYSUAF.DAT (its UIC, its privileges,
-// its quotas, ...), and the identifiers granted to it are records of
-// RIGHTSLIST.DAT. govax has neither file, and no AUTHORIZE: every process
-// is SYSTEM's unless something makes it another's. But $CHECK_ACCESS asks
-// about a user by name, so the System keeps a table of accounts, which
-// AddUser fills in as AUTHORIZE's ADD and GRANT/IDENTIFIER would, and
-// which the tests use to stand for a probe's VAX. SYSTEM is always in it:
-// UIC [1,4], every privilege authorized, no identifiers granted.
+// $CHECK_ACCESS asks about a user by name, and $IDTOASC names a UIC by
+// its account's username. A UserAccount is what they need of an account:
+// its name, UIC, authorized privileges, and the identifiers it holds.
+// AddUser puts one in the authorization file, as AUTHORIZE's ADD and
+// GRANT/IDENTIFIER would, which is how the tests stand for a probe's VAX.
+// SYSTEM is always found: if the file has lost it, uaf.SystemRecord's.
 
 // UserAccount is one account: what $CHECK_ACCESS needs of its SYSUAF
 // record and its rights.
@@ -37,24 +36,57 @@ type UserAccount struct {
 	Rights []security.Identifier
 }
 
-// systemAccount is the SYSTEM account every System has.
-var systemAccount = UserAccount{Name: nominalUsername, UIC: uint32(security.SystemUIC), Privileges: security.AllPrivileges}
-
-// AddUser puts u in the System's authorization file, replacing an account
-// of the same name (SYSTEM's too). A name that can't be a username (1 to
-// 12 letters, digits, "$", and "_") is SS$_IVIDENT.
+// AddUser puts u in the System's authorization file: a new account is
+// the DEFAULT record's (without DISUSER) with u's name, UIC, authorized
+// privileges, and identifiers; an account of the same name, SYSTEM's too,
+// gets u's in place of its own. As AUTHORIZE's ADD does, it adds a UIC
+// identifier named for the account, unless the name or the UIC already
+// has one. A name that can't be a username (1 to 12
+// letters, digits, "$", and "_") is SS$_IVIDENT. An identifier the file
+// doesn't name is held by its value.
 func (s *System) AddUser(u UserAccount) uint32 {
-	u.Name = strings.ToUpper(strings.TrimSpace(u.Name))
-	if !validUsername(u.Name) {
+	name := strings.ToUpper(strings.TrimSpace(u.Name))
+	if !uaf.ValidUsername(name) {
 		return vmsdef.Symbols["SS$_IVIDENT"]
 	}
 
-	u.Rights = slices.Clone(u.Rights)
+	err := s.UpdateAuthorization(func(f *uaf.File) error {
+		r, ok := f.Find(name)
+		if !ok {
+			def := uaf.DefaultRecord()
+			if have, ok := f.Find("DEFAULT"); ok {
+				def = *have
+			}
 
-	if i := slices.IndexFunc(s.users, func(have UserAccount) bool { return have.Name == u.Name }); i >= 0 {
-		s.users[i] = u
-	} else {
-		s.users = append(s.users, u)
+			def.Username, def.Flags = name, def.Flags&^uaf.FlagDISUSER
+			def.Identifiers = slices.Clone(def.Identifiers)
+			f.Accounts = append(f.Accounts, def)
+			r = &f.Accounts[len(f.Accounts)-1]
+		}
+
+		r.UIC, r.Privileges = uaf.UIC(u.UIC), uaf.Privileges(u.Privileges)
+		r.Identifiers = []uaf.Held{}
+
+		for _, id := range u.Rights {
+			held := uaf.Held{Name: uaf.IdentifierValue(id.Value).String(), Attributes: uaf.Attributes(id.Attributes)}
+			if named, ok := f.IdentifierWithValue(uaf.IdentifierValue(id.Value)); ok {
+				held.Name = named.Name
+			}
+
+			r.Identifiers = append(r.Identifiers, held)
+		}
+
+		_, named := f.IdentifierNamed(name)
+		_, valued := f.IdentifierWithValue(uaf.IdentifierValue(u.UIC))
+
+		if !named && !valued {
+			f.Identifiers = append(f.Identifiers, uaf.Identifier{Name: name, Value: uaf.IdentifierValue(u.UIC)})
+		}
+
+		return nil
+	})
+	if err != nil {
+		return vmsdef.Symbols["SS$_IVIDENT"]
 	}
 
 	return ssNormal
@@ -66,17 +98,31 @@ func (s *System) AddUser(u UserAccount) uint32 {
 func (s *System) User(name string) (UserAccount, bool) {
 	name = strings.ToUpper(strings.TrimRight(name, " "))
 
-	for _, u := range s.users {
-		if u.Name == name {
-			return u, true
+	if f, err := s.Authorization(); err == nil {
+		if r, ok := f.Find(name); ok {
+			return userAccount(f, r), true
 		}
 	}
 
-	if name == systemAccount.Name {
-		return systemAccount, true
+	if sys := uaf.SystemRecord(); name == sys.Username {
+		return userAccount(uaf.Default(), &sys), true
 	}
 
 	return UserAccount{}, false
+}
+
+// userAccount is the UserAccount of f's record r: the identifiers it
+// holds by value, any f can't name left out.
+func userAccount(f *uaf.File, r *uaf.Record) UserAccount {
+	u := UserAccount{Name: r.Username, UIC: uint32(r.UIC), Privileges: uint64(r.Privileges)}
+
+	for _, h := range r.Identifiers {
+		if v, ok := f.HeldValue(h); ok {
+			u.Rights = append(u.Rights, security.Identifier{Value: uint32(v), Attributes: uint32(h.Attributes)})
+		}
+	}
+
+	return u
 }
 
 // AccountCredentials are what an access check on the account's behalf
@@ -93,21 +139,4 @@ func (u UserAccount) AccountCredentials(maxSysGroup uint32) security.Credentials
 		Rights:      slices.Clone(u.Rights),
 		MaxSysGroup: maxSysGroup,
 	}
-}
-
-// validUsername reports whether name has a username's form.
-func validUsername(name string) bool {
-	if name == "" || len(name) > 12 {
-		return false
-	}
-
-	for _, ch := range name {
-		switch {
-		case ch >= 'A' && ch <= 'Z', ch >= '0' && ch <= '9', ch == '$', ch == '_':
-		default:
-			return false
-		}
-	}
-
-	return true
 }

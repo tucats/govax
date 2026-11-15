@@ -1,11 +1,13 @@
 package corevms
 
 import (
+	"errors"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/uaf"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -34,10 +36,10 @@ import (
 //
 // # How govax does it
 //
-// govax has no rights database file. The database is built in memory
-// from what the emulated process knows: its own UIC identifier (its
-// username and UIC) and the six environmental identifiers. None has
-// attribute bits (KGB$M_RESOURCE, KGB$M_DYNAMIC) set.
+// govax's rights database is the authorization file's identifiers
+// (authorization.go, internal/uaf), with each account's UIC identifier,
+// the process's own (its username and UIC), and the six environmental
+// identifiers, which every system has and the file doesn't hold.
 
 // rightsIdentifier is one rights database record.
 type rightsIdentifier struct {
@@ -90,19 +92,22 @@ func (env *Environment) rightsDatabase() []rightsIdentifier {
 	}
 
 	if env.System != nil {
-		for _, r := range env.System.identifiers {
-			add(r)
+		f, err := env.System.Authorization()
+		if err != nil {
+			f = uaf.Default() // a file that can't be read names SYSTEM only
 		}
 
-		// Each account's UIC is an identifier named for it, as AUTHORIZE's
-		// ADD makes one, SYSTEM's among them: a process logged in as
+		for _, id := range f.Identifiers {
+			add(rightsIdentifier{name: id.Name, value: uint32(id.Value), attrib: uint32(id.Attributes)})
+		}
+
+		// The file holds each account's UIC identifier, as AUTHORIZE's ADD
+		// makes one (AddUser), SYSTEM's among them: a process logged in as
 		// another account still names [1,4] SYSTEM (VMS 7.1's PROT93C
-		// formatted an ACE for [1,4] as [SYSTEM], case 518).
-		add(rightsIdentifier{name: systemAccount.Name, value: systemAccount.UIC})
-
-		for _, u := range env.System.users {
-			add(rightsIdentifier{name: u.Name, value: u.UIC})
-		}
+		// formatted an ACE for [1,4] as [SYSTEM], case 518), even with a
+		// file that has lost it.
+		sys := uaf.SystemRecord()
+		add(rightsIdentifier{name: sys.Username, value: uint32(sys.UIC)})
 	}
 
 	sort.Slice(db, func(i, j int) bool { return db[i].name < db[j].name })
@@ -111,10 +116,10 @@ func (env *Environment) rightsDatabase() []rightsIdentifier {
 }
 
 // AddIdentifier puts an identifier called name, with value and attribute
-// bits attrib, in the System's rights database, as AUTHORIZE's ADD
-// /IDENTIFIER (and ADD's UIC identifier for a new user) would on VMS:
-// govax has no AUTHORIZE yet, so tests make the identifiers a probe's VAX
-// had this way (docs/planning/PHASE-93 - file protection.md, subtask 10).
+// bits attrib, in the System's authorization file, as AUTHORIZE's ADD
+// /IDENTIFIER (and ADD's UIC identifier for a new user) would: the tests
+// make the identifiers a probe's VAX had this way (docs/planning/PHASE-93
+// - file protection.md, subtask 10).
 // A name that can't be an identifier's is SS$_IVIDENT, and one already
 // there, or a value already named, SS$_DUPIDENT.
 func (s *System) AddIdentifier(name string, value, attrib uint32) uint32 {
@@ -123,16 +128,41 @@ func (s *System) AddIdentifier(name string, value, attrib uint32) uint32 {
 		return ssIvIdent
 	}
 
-	for _, r := range append(slices.Clone(environmentalIdentifiers), s.identifiers...) {
-		if r.name == name || r.value == value {
-			return vmsdef.Symbols["SS$_DUPIDENT"]
+	status := uint32(ssNormal)
+
+	err := s.UpdateAuthorization(func(f *uaf.File) error {
+		taken := func(n string, v uint32) bool { return n == name || v == value }
+
+		for _, r := range environmentalIdentifiers {
+			if taken(r.name, r.value) {
+				status = vmsdef.Symbols["SS$_DUPIDENT"]
+
+				return errDuplicate
+			}
 		}
+
+		for _, id := range f.Identifiers {
+			if taken(id.Name, uint32(id.Value)) {
+				status = vmsdef.Symbols["SS$_DUPIDENT"]
+
+				return errDuplicate
+			}
+		}
+
+		f.Identifiers = append(f.Identifiers, uaf.Identifier{Name: name, Value: uaf.IdentifierValue(value), Attributes: uaf.Attributes(attrib)})
+
+		return nil
+	})
+	if err != nil && status == ssNormal {
+		status = ssIvIdent
 	}
 
-	s.identifiers = append(s.identifiers, rightsIdentifier{name: name, value: value, attrib: attrib})
-
-	return ssNormal
+	return status
 }
+
+// errDuplicate stops AddIdentifier's change of the file: the name or
+// value is taken.
+var errDuplicate = errors.New("identifier exists")
 
 // identifierByValue returns the identifier with value id.
 func (env *Environment) identifierByValue(id uint32) (rightsIdentifier, bool) {

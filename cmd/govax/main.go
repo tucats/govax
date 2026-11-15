@@ -163,7 +163,17 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		consoleOut = output
 	}
 
+	// The authorization file, made the first time with the SYSTEM and
+	// DEFAULT accounts (docs/planning/PHASE-95 - authentication.md). One
+	// govax can't read stops it here, rather than starting as SYSTEM with
+	// the file's accounts silently lost.
+	uafPath, err := ensureAuthorizationFile()
+	if err != nil {
+		return err
+	}
+
 	c := console.New(consoleOut)
+	c.AuthorizationFile = uafPath
 
 	c.Paths = resolver
 	c.Verbose = (console.CommandLineString == "")
@@ -757,6 +767,9 @@ var validConfigs = map[string]bool{
 	"vax.default.system.file":   true,
 	"vax.default.system.device": true,
 	"vax.default.system.type":   true,
+
+	// The authorization file (docs/planning/PHASE-95 - authentication.md).
+	"vax.authorization.file": true,
 
 	"vax.default.volume.file":      true,
 	"vax.default.volume.label":     true,

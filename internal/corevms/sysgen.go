@@ -17,7 +17,10 @@ package corevms
 // copied into the process when it's created, so a later change for one
 // process (SET WORKING_SET, a quota list) changes only that process.
 
-import "github.com/tucats/govax/internal/security"
+import (
+	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/uaf"
+)
 
 // DefaultMinWSCount is MINWSCNT's default: the smallest working set a
 // process may have, and the least $ADJWSL can shrink one to.
@@ -183,40 +186,27 @@ func (sg *Sysgen) pqlDefault(rule *quotaRule) uint32 {
 	return rule.def
 }
 
-// Account holds the quotas an authorization record gives a user's
-// process when it logs in: on VMS, the user's entry in SYSUAF.DAT, the
-// authorization file. govax has no authorization file yet, so its one
-// account is SYSTEM, the console's (SystemAccount). A later SYSUAF would
-// supply an Account for each user and each detached job it starts, and
-// LoginQuotas would be given that one instead.
-type Account struct {
-	WSDefault, WSQuota, WSExtent uint32
-	PGFLQUOTA                    uint32
+// SystemAccount is the SYSTEM account's quotas, a new authorization
+// file's (uaf.SystemRecord, docs/planning/PHASE-95 - authentication.md,
+// Decision 3): process 1's, as it has always had them. Its working set
+// values and ASTLM are SYSTEM's as $GETJPI reported them on a VMS 7.1 run
+// (testdata/mp/probe1/vax); the rest are the nominal ones in the range
+// VMS's SYSTEM account has.
+func SystemAccount() uaf.Quotas {
+	return uaf.SystemRecord().Quotas
 }
 
-// SystemAccount is the SYSTEM account's quotas: process 1's, as $GETJPI
-// reported them for SYSTEM on a VMS 7.1 run (testdata/mp/probe1/vax), and
-// the nominal paging file quota of a job (job.go).
-func SystemAccount() Account {
-	return Account{
-		WSDefault: nominalWSDefault,
-		WSQuota:   nominalWSQuota,
-		WSExtent:  nominalWSExtent,
-		PGFLQUOTA: nominalPGFLQUOTA,
-	}
-}
-
-// LoginQuotas gives p, a process logging in as the user acct describes
-// and the master process of its own job, its working set sizes and its
-// job's paging file quota, its default file protection (RMS_FILEPROT),
-// and MAXSYSGROUP. A PQL_Dxxx parameter the configuration set
-// replaces the account's value: with no authorization file, the
-// configuration is how the author sets every process's starting values
-// (docs/planning/PHASE-62, Decision 11). The working-set default can't exceed the
-// quota, the limit starts at the default, the quota and extent are the
-// ones the process is authorized for (WSAuth, WSAuthExt), and the
-// smallest working set is MINWSCNT.
-func (sg *Sysgen) LoginQuotas(p *Process, acct Account) {
+// LoginQuotas gives p, a process logging in as an account with the quotas
+// acct and the master process of its own job, the quotas govax's
+// processes have: its working set sizes, ASTLM, BIOLM, and DIOLM, and its
+// job's PRCLM, BYTLM, FILLM, PGFLQUOTA, TQELM, ENQLM, and JTQUOTA; and
+// its default file protection (RMS_FILEPROT) and MAXSYSGROUP. A PQL_Dxxx
+// parameter the configuration set replaces the account's value
+// (docs/planning/PHASE-62, Decision 11; Phase 95's Decision 3 keeps it).
+// The working-set default can't exceed the quota, the limit starts at the
+// default, the quota and extent are the ones the process is authorized
+// for (WSAuth, WSAuthExt), and the smallest working set is MINWSCNT.
+func (sg *Sysgen) LoginQuotas(p *Process, acct uaf.Quotas) {
 	pick := func(name string, v uint32) uint32 {
 		if c, ok := sg.PQL[name]; ok {
 			return c
@@ -225,16 +215,21 @@ func (sg *Sysgen) LoginQuotas(p *Process, acct Account) {
 		return v
 	}
 
-	p.WSQuota = pick("WSQUOTA", acct.WSQuota)
-	p.WSDefault = min(pick("WSDEFAULT", acct.WSDefault), p.WSQuota)
-	p.WSExtent = pick("WSEXTENT", acct.WSExtent)
+	p.WSQuota = pick("WSQUOTA", acct.WSQUOTA)
+	p.WSDefault = min(pick("WSDEFAULT", acct.WSDEFAULT), p.WSQuota)
+	p.WSExtent = pick("WSEXTENT", acct.WSEXTENT)
 	p.WSLimit = p.WSDefault
 	p.WSAuth, p.WSAuthExt = p.WSQuota, p.WSExtent
 	p.MinWSCount = sg.MinWSCount
 	p.DefaultProtection = sg.FileProtection
 	p.MaxSysGroup = sg.MaxSysGroup
+	p.ASTLimit, p.BufferedIOLimit, p.DirectIOLimit = acct.ASTLM, acct.BIOLM, acct.DIOLM
 
-	if p.Job != nil {
-		p.Job.Pooled.PGFLQUOTA = pick("PGFLQUOTA", acct.PGFLQUOTA)
+	if j := p.Job; j != nil {
+		j.SubprocessLimit = acct.PRCLM
+		j.Pooled = PooledQuotas{
+			BYTLM: acct.BYTLM, FILLM: acct.FILLM, PGFLQUOTA: pick("PGFLQUOTA", acct.PGFLQUOTA),
+			TQELM: acct.TQELM, ENQLM: acct.ENQLM, JTQUOTA: acct.JTQUOTA,
+		}
 	}
 }
