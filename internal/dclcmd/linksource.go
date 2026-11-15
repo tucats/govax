@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,10 +66,10 @@ import (
 func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 	src := &link.TableSource{Symbols: map[string]link.Definition{}, Images: map[string]link.SharedImage{}}
 
-	for name, i := range vmsdef.SharedImages {
+	for name, i := range mergedImages() {
 		src.Images[name] = link.SharedImage{
 			Name: name, Pages: i.Pages, MajorID: i.MajorID, MinorID: i.MinorID, Match: link.Match(i.Match),
-			Symbols: i.Symbols, Psects: i.Psects, Sections: i.Sections,
+			Symbols: i.Symbols, Psects: i.Psects, Sections: i.Sections, Uses: vmsdef.ImageUses[name],
 		}
 
 		for _, sec := range vmsdef.SharedImageSections[name] {
@@ -99,6 +100,16 @@ func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 	}
 
 	return src
+}
+
+// mergedImages are the shareable images govax knows the headers of: those
+// gen captured (vmsdef.SharedImages) and those kept by hand from VMS's
+// output (vmsdef.KnownImages).
+func mergedImages() map[string]vmsdef.SharedImage {
+	images := maps.Clone(vmsdef.SharedImages)
+	maps.Copy(images, vmsdef.KnownImages)
+
+	return images
 }
 
 // LinkSources returns LINK's symbol sources: the system libraries, unless

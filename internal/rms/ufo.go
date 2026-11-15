@@ -35,17 +35,35 @@ var (
 	rmsSharing = vmsConst("RMS$_SHR")
 )
 
-// ufoSharing checks a user file open's FAB$B_SHR (fop its FAB$L_FOP):
-// the RMS manual (FAB$V_UFO, FAB$V_UPI) requires FAB$V_UPI when the file
-// is write shared (SHRPUT, SHRUPD, or SHRDEL), and VMS 7.3 refused such
-// an open without it with RMS$_SHR (testdata/probe49, round 2, step 7).
+// ufoSharing checks a user file open's FAB$B_SHR (fop its FAB$L_FOP, fac
+// its FAB$B_FAC): the RMS manual (FAB$V_UFO, FAB$V_UPI) requires
+// FAB$V_UPI when the file is write shared (SHRPUT, SHRUPD, or SHRDEL),
+// and VMS 7.3 refused such an open without it with RMS$_SHR
+// (testdata/probe49, round 2, step 7). VMS 7.1 went further
+// (testdata/vms93's UFO section, every FAC with every SHR): without UPI,
+// an open asking for any write access may share neither writes nor reads,
+// and only a read-only open may give SHRGET; SHRNIL, or anything with UPI,
+// always opens. A block I/O access (FAB$V_BIO, BIO+PUT in the probe) is
+// refused with RMS$_UPI rather than RMS$_SHR (BRO's alike, unconfirmed).
 // It returns that status, or 0.
-func ufoSharing(fop uint32, shr byte) uint32 {
-	if fop&fopUFO != 0 && shr&(shrPut|shrUpd|shrDel) != 0 && shr&shrUPI == 0 {
-		return rmsSharing
+func ufoSharing(fop uint32, fac, shr byte) uint32 {
+	if fop&fopUFO == 0 || shr&shrUPI != 0 {
+		return 0
 	}
 
-	return 0
+	writeShared := shr&(shrPut|shrUpd|shrDel) != 0
+	readShared := shr&shrGet != 0
+	writes := fac&(facRequests&^facGet) != 0
+
+	if !writeShared && !(readShared && writes) {
+		return 0
+	}
+
+	if fac&(facBIO|facBRO) != 0 {
+		return rmsNeedsUPI
+	}
+
+	return rmsSharing
 }
 
 // ufoEndOfFile is a user file open's $CREATE's end of file: the RMS

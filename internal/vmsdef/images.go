@@ -72,4 +72,57 @@ var SharedImageSections = map[string][]SharedImageSection{
 		{Offset: 0, Pages: 264, Flags: 3 << 24},
 		{Offset: 0x21000, Pages: 15, Flags: 4<<24 | 0x0C},
 	},
+	// KnownImages' two, from VMS 7.1's map of SEC93.EXE
+	// (testdata/prot93/vax/round3/sec93.map): READ WRITE is ISD$V_WRT,
+	// COPY ON REF ISD$V_CRF, FIXUP VECTORS ISD$V_FIXUPVEC, and a
+	// protected section (P) ISD$V_PROTECT.
+	"SECURESHR": {
+		{Offset: 0, Pages: 2, Flags: 3 << 24},
+		{Offset: 0x400, Pages: 18, Flags: 3<<24 | isdWRT | isdCRF},
+		{Offset: 0x2800, Pages: 82, Flags: 3 << 24},
+		{Offset: 0xCC00, Pages: 1, Flags: 2<<24 | isdWRT | isdCRF},
+		{Offset: 0xCE00, Pages: 14, Flags: 4<<24 | isdWRT | isdCRF},
+		{Offset: 0xEA00, Pages: 6, Flags: 2<<24 | isdWRT | isdFixupVec},
+	},
+	"SECURESHRP": {
+		{Offset: 0, Pages: 1, Flags: 3<<24 | isdProtect},
+		{Offset: 0x200, Pages: 1, Flags: 3<<24 | isdProtect},
+		{Offset: 0x400, Pages: 1, Flags: 2<<24 | isdProtect | isdWRT | isdCRF},
+		{Offset: 0x600, Pages: 13, Flags: 3<<24 | isdProtect | isdWRT | isdCRF},
+		{Offset: 0x2000, Pages: 80, Flags: 3<<24 | isdProtect},
+		{Offset: 0xC000, Pages: 1, Flags: 2<<24 | isdProtect | isdWRT | isdCRF},
+		{Offset: 0xC200, Pages: 13, Flags: 4<<24 | isdProtect | isdWRT | isdCRF},
+		{Offset: 0xDC00, Pages: 4, Flags: 2<<24 | isdProtect | isdWRT | isdFixupVec},
+	},
+}
+
+// The ISD flags SharedImageSections uses.
+const (
+	isdCRF      = 1 << 1
+	isdWRT      = 1 << 3
+	isdFixupVec = 1 << 10
+	isdProtect  = 1 << 18
+)
+
+// KnownImages are shareable images whose headers gen hasn't captured
+// (govax has no copy of their files) but whose facts VMS's own output
+// gives, so that an image linked against them by govax's LINK names them
+// as VMS's LINK would and runs on VMS. Without an entry here, an image
+// the shims stand for is recorded by name only, with no pages, which VMS
+// 7.1's image activator refuses (SS$_BADISD; testdata/vms93's VMS93CG).
+// SECURESHR and SECURESHRP are from VMS 7.1's map of SEC93.EXE
+// (testdata/prot93/vax/round3/sec93.map) and its image (VMS93C.EXE,
+// testdata/vms93): LINK of a program that calls SECURESHR lists
+// SECURESHRP after it, which SECURESHR uses. Their symbols are the
+// shims' (internal/securertl).
+var KnownImages = map[string]SharedImage{
+	"SECURESHR":  {Pages: 2, MajorID: 1, MinorID: 2, Match: 2, Sections: 6},
+	"SECURESHRP": {Pages: 1, MajorID: 1, MinorID: 1, Match: 2, Sections: 8},
+}
+
+// ImageUses names, for a shareable image in SharedImages or KnownImages,
+// the shareable images it uses itself, in its list's order; an image
+// linked against it lists them too. gen doesn't capture them.
+var ImageUses = map[string][]string{
+	"SECURESHR": {"SECURESHRP"},
 }

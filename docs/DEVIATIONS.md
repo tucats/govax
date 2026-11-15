@@ -1910,8 +1910,6 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **What**: the protection rule, new files' profiles, the DCL commands, and the security services are held to VMS 7.1's
   answers in three rounds of `testdata/prot93`. What those answers couldn't settle was chosen and is listed in each
   subtask's log as unconfirmed; the differences a program could notice:
-  - **A user file open** (FOP=UFO) for writing shared with readers (FAC=PUT, SHR=GET) is opened; VMS 7.1 refused one
-    with `RMS$_SHR` (round 3's case 458). `testdata/vms93`'s VMS93U asks VMS which combinations it refuses.
   - **`$CHKPRO`** reads only CHP$_PROT's first word; VMS 7.1 granted CONTROL with a second word denying it.
   - **`$GET_SECURITY`'s position** after a find that found nothing is govax's reading of four cases (385 to 388);
     FIND_NEXT moves one ACE on. Its contexts are handles, not memory a program could look at.
@@ -1921,4 +1919,6 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     a logical name table's, and a security class's can be read and not changed.
   - **No auditing**: alarm and audit ACEs are kept, shown, and matched as VMS 7.1 matches them, and do nothing; and no
     volume protection: a volume's code is shown and decides nothing.
-- **Status**: kept until a probe shows otherwise; `testdata/vms93` (Phase 93's subtask 14) is the next one.
+- **Status**: kept until a probe shows otherwise. `testdata/vms93` (Phase 93's subtask 14, 2026-11-15) agreed with
+  govax on every file's listing and access, and settled the user file open's sharing rule, which govax now follows
+  (round 3's case 458, once listed here).

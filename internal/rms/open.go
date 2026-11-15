@@ -81,7 +81,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, rmsPrivilegeViolation, 0)
 	}
 
-	if sts := ufoSharing(fop, shr); sts != 0 {
+	if sts := ufoSharing(fop, fac, shr); sts != 0 {
 		return fabStatus(ctx, fabAddr, sts, 0)
 	}
 

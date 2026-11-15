@@ -682,16 +682,16 @@ func (l *linker) placedImage(name string) *cluster {
 // imageOrder puts the shareable images the image refers to in the order
 // of their clusters: those an options file named (whose clusters come
 // before the default cluster), in its order, before those found in
-// libraries, which keep the order they were first referred to in (the
-// probe's MAIN1: SHR1 before LIBRTL).
+// libraries (the probe's MAIN1: SHR1 before LIBRTL), which come in their
+// clusters' order too, the order their symbols were first referred to in
+// the modules' global symbol directories, not in their code:
+// testdata/vms93's VMS93C calls $CHECK_ACCESS before LIB$PUT_OUTPUT,
+// whose reference comes first in its GSD, and VMS 7.1's LINK listed
+// LIBRTL before SECURESHR.
 func (l *linker) imageOrder() {
 	position := map[string]int{}
 
 	for i, c := range l.clusters {
-		if c == l.defaultCluster {
-			break
-		}
-
 		if c.image != "" {
 			position[c.image] = i + 1
 		}

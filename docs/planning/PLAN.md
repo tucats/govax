@@ -142,7 +142,7 @@ questions, and a progress log extended as that phase is worked.
 | 90 | [PHASE-90 - VMS help](PHASE-90%20-%20VMS%20help.md) | HELP as VMS's: help libraries (HELPLIB.HLB, DBG$HELP.HLB) built from VMS-format modules, LIBRARY/HELP, prompting and navigation, HLP$LIBRARY, the LBR$ routines that read and write libraries, and govax's help rewritten — planned 2026-11-07, the survey accepted the same day; done 2026-11-08 |
 | 91 | [PHASE-91 - concealed logical names](PHASE-91%20-%20concealed%20logical%20names.md) | Concealed logical names and rooted directories (`DEV:[ROOT.]`), RMS's two name processors made one, and the system names on the root `_DUA0:[SYSTEM.]` — planned 2026-11-09, the plan accepted the same day; done 2026-11-09 |
 | 92 | [PHASE-92 - documentation](PHASE-92%20-%20documentation.md) | Standalone guides to govax's internals, a document per part: Part A is `VAX-VMS-INTERNALS.md`, how govax is a VAX and how it gives a program VMS — planned and done 2026-11-11 |
-| 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day; done 2026-11-14 but for subtask 14, the VMS round, prepared and waiting for the VAX |
+| 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day; done 2026-11-15, with the VMS round |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -692,4 +692,6 @@ on the VAX), Part B the decisions with the author's review, and its log the work
   for `$CHECK_ACCESS` (no AUTHORIZE yet).
 
 MANUAL.md's "File protection" (section 5) is the user's side, and VAX-VMS-INTERNALS.md's 9.13 the developer's. What
-the phase left, the VMS round among it, is its doc's "Where things stand".
+the phase left is its doc's "Where things stand". The VMS round (`testdata/vms93`) found VMS reading govax's files and
+judging every access as govax does; it also found LINK naming SECURESHR with no pages, which VMS refused, and settled
+which user file opens RMS refuses, both fixed.

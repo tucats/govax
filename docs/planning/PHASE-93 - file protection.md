@@ -1,10 +1,9 @@
 # Phase 93 — file protection
 
 **Status:** planned 2026-11-14; the plan accepted by the author the same
-day, with the answers in "The review". Every subtask is done but 14, the
-VMS round, which is prepared and rehearsed (`testdata/vms93`) and waits
-for the author's run on the VAX; "Where things stand" is the follow-up
-list, and PLAN.md summarizes the phase.
+day, with the answers in "The review"; done 2026-11-15, when the VMS
+round (subtask 14) came back from the VAX. "Where things stand" is the
+follow-up list, and PLAN.md summarizes the phase.
 
 ## Goal
 
@@ -986,6 +985,40 @@ procedure lasts after it returns (MACROS9.COM's), as govax has it.
 program assembled to an object; the macros' keywords and argument lists
 are subtask 13's to read.
 
+**Round 4, the VMS round** (subtask 14, `testdata/vms93`, run on VMS 7.1
+2026-11-15; `vax/vms93.log`, `disk.lis`, and VMS's images of VMS93C and
+VMS93U):
+
+- **DIRECTORY/SECURITY, SHOW SECURITY, F$FILE_ATTRIBUTES**: VMS read every
+  header govax wrote as govax shows it, line for line: owners (by
+  identifier name, [0,0] as itself), protection codes, every ACE kind
+  (PROTECTED and NOPROPAGATE, wildcards, a general and an environmental
+  identifier), and what `[V93.DEF]`'s file and directory inherited.
+- **`$CHECK_ACCESS`** of each of PROT93A, PROT93B (with its privileges
+  authorized only), PROT93C, and SYSTEM to each of the 24 files, for READ,
+  WRITE, EXECUTE, DELETE, and CONTROL: VMS's 96 lines are govax's.
+- **govax's image of VMS93C** was refused, `SS$_BADISD`: govax's LINK knew
+  SECURESHR only by its shims, so it named it with no pages, GSMATCH 0,0,
+  MATALL. VMS's own VMS93C gives SECURESHR 2 pages at 1,2 LEQUAL, and
+  SECURESHRP after it (1 page, 1,1 LEQUAL, a protected section), which
+  SECURESHR uses; and it lists LIBRTL before SECURESHR, though the code
+  calls `$CHECK_ACCESS` first: the images come in their clusters' order,
+  which follows the order of the object's GSD (LIB$PUT_OUTPUT before
+  SYS$CHECK_ACCESS), not of its code. Both fixed (the log, 2026-11-15);
+  govax's image of the program is now VMS's but for its header's name,
+  time, and linker. The CHECKG section stays VMS's refusal until a run of
+  the fixed image.
+- **User file opens** (VMS93U, six FACs by seven SHRs; NIL is %X20, UPI
+  %X40): SHR=NIL, and anything with UPI, always opens. Without UPI, any
+  write sharing (PUT) is refused, and so is read sharing (SHR=GET) for an
+  open asking for any write access (PUT, UPD, DEL); a read-only open may
+  give SHR=GET. The refusal is `RMS$_SHR`, but `RMS$_UPI` for block I/O
+  (FAC=BIO+PUT). This settles round 3's case 458.
+- **ANALYZE/DISK_STRUCTURE** found nothing wrong with govax's headers and
+  ACLs; it warned of the two files govax owned as [0,0] (`BADOWNER`), as
+  it would of any such file (the probe asked for that owner; SET SECURITY
+  takes it on both systems), and of no QUOTA.SYS.
+
 ## Part B — decisions
 
 **Decision 1 — one rule, in a leaf package.** `internal/security` (plain
@@ -1293,8 +1326,9 @@ Each is one commit, with tests, stopping for review.
 14. **The VMS round** (the review, answer 7): VMS reads a volume of files
     govax made under several identities, protections, and ACLs, and its
     DIRECTORY/SECURITY, SHOW SECURITY, and accesses agree with govax's.
-    (Prepared and rehearsed 2026-11-14, `testdata/vms93`; waiting for the
-    author's run on the VAX.)
+    (Prepared and rehearsed 2026-11-14, `testdata/vms93`; done 2026-11-15:
+    VMS agreed on every file, and its run found a LINK bug and settled
+    the UFO sharing rule, A.4's "Round 4".)
 15. **The close-out** (done 2026-11-14): MANUAL.md (a section on file protection, the new
     commands and services, the configuration key), HELP for every new
     command and qualifier (`TestEveryVerbHasHelp`,
@@ -2283,16 +2317,41 @@ The author accepted the plan and answered its questions:
   DEVIATIONS.md's Phase 93 entry; PLAN.md's section; CLAUDE.md. HELP had
   every command and qualifier already (subtasks 5, 11, and 12), held by
   `TestEveryVerbHasHelp` and `TestEveryQualifierHasHelp`.
+- **2026-11-15** Subtask 14 done: the author ran `vms93.com` on VMS 7.1
+  and copied the log, ANALYZE's listing, and VMS's VMS93C.EXE and
+  VMS93U.EXE back (`copyout.cmd` now copies the images). VMS agreed on
+  every DIRECTORY, SHOW, and CHECK line (A.4's "Round 4"). Two fixes came
+  of it. LINK: govax's image of VMS93C was refused (`SS$_BADISD`) because
+  LINK named SECURESHR with no pages; `vmsdef.KnownImages` now has
+  SECURESHR's and SECURESHRP's headers and `vmsdef.ImageUses` SECURESHR's
+  use of SECURESHRP, from VMS's map and image, which `dclcmd`'s
+  `GovaxSymbols` merges with the captured ones (`mergedImages`); and
+  `link`'s `imageOrder` puts the images found in libraries in their
+  clusters' order, the GSD's, as VMS's LINK did, not in the order the
+  code first refers to them (`TestLinkSharedReferences` changed with it:
+  its order was govax's guess). `TestVMS93Procedure` now holds govax's
+  image to VMS's (`vms93SameImage`: the ISDs, the fixups, and every page).
+  RMS: `rms/ufo.go`'s `ufoSharing` is VMS 7.1's table (A.4), taking FAC
+  too; round 3's case 458 now matches and is off
+  `sec93SecurityDifferences`. Three paging tests' programs opened a
+  section file FAC=GET+PUT, SHR=GET with UFO, which VMS refuses; they now
+  give SHR=<GET,UPI>, and `TestPermanent_names`' FAB sets SHR 0, as the
+  probe's did. The test splits the log at whole header lines
+  (`vms93Sections`), so ACCOUNTS REMOVED is a section of its own.
 
 ## Where things stand
 
 What Phase 93 left, for later phases:
 
-- **The VMS round** (subtask 14): `testdata/vms93`'s README has the
-  steps. When `vax/vms93.log` is back, `TestVMS93Procedure` compares it;
-  each difference is a fix or a line in `vms93Differences`, and the
-  answers a section of A.4. Its UFO section settles case 458 (which
-  user file opens VMS refuses with RMS$_SHR, `rms/ufo.go`).
+- **CHECKG on VMS** (optional): the VMS round's CHECKG section is VMS
+  refusing govax's old image of VMS93C. The fixed image is VMS's own but
+  for its header, which `TestVMS93Procedure` checks; a second run of
+  `vms93.com` would show it running, and the test would then compare the
+  section.
+- **Shareable images govax knows only by its shims**: SECURESHR's and
+  SECURESHRP's headers are kept by hand (`vmsdef.KnownImages`,
+  `ImageUses`); any other image a shim stands for and gen hasn't captured
+  (DECC$SHR, say) is still named with no pages, which VMS refuses.
 - **Identities other than SYSTEM** (the phase's purpose): a user
   authorization file and AUTHORIZE, LOGINOUT using them, and logins;
   until then `corevms.AddUser` and `AddIdentifier` stand for AUTHORIZE in

@@ -2,9 +2,15 @@ package console
 
 import (
 	"os"
+	"bytes"
 	"path/filepath"
+	"reflect"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // Phase 93's VMS round (docs/planning/PHASE-93 - file protection.md, subtask 14;
@@ -19,8 +25,8 @@ import (
 var vms93Differences = map[string]string{}
 
 // runVMS93 makes the exchange volume as exchange.cmd does and runs VMS93.COM on it,
-// the volume on DUA1, and returns the log.
-func runVMS93(t *testing.T) string {
+// the volume on DUA1, and returns the log and govax's VMS93CG.EXE.
+func runVMS93(t *testing.T) (string, []byte) {
 	t.Helper()
 
 	d, c, buf := shareFindConsole(t, false)
@@ -86,15 +92,37 @@ func runVMS93(t *testing.T) string {
 	shareFindRun(t, d, "@VMS93/OUTPUT=VMS93.LOG")
 	buf.Reset()
 
-	return ftn86Log(t, d, "VMS93.LOG")
+	image := filepath.Join(t.TempDir(), "vms93cg.exe")
+	shareFindRun(t, d, `COPY DUA1:[000000]VMS93CG.EXE "`+image+`"/HOST/BINARY/QUIET`)
+
+	data, err := os.ReadFile(image)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return ftn86Log(t, d, "VMS93.LOG"), data
+}
+
+// vms93Sections splits a log at its "==== NAME" lines, a name being the
+// rest of the line ("ACCOUNTS REMOVED"), into each section's text by name.
+func vms93Sections(log string) map[string]string {
+	header := regexp.MustCompile(`(?m)^==== (.+)\n`)
+	parts, names := header.Split(log, -1), header.FindAllStringSubmatch(log, -1)
+	sections := map[string]string{}
+
+	for i, name := range names {
+		sections[name[1]] = parts[i+1]
+	}
+
+	return sections
 }
 
 // vms93Files are the files under [V93...], as VMS93C reaches them.
 const vms93Files = 24
 
 func TestVMS93Procedure(t *testing.T) {
-	log := runVMS93(t)
-	sections := ftn86Sections(log)
+	log, image := runVMS93(t)
+	sections := vms93Sections(log)
 
 	for _, name := range []string{"ENVIRONMENT", "ACCOUNTS", "DIRECTORY", "SHOW", "BUILD", "CHECK", "CHECKG", "UFO", "DISK", "END"} {
 		if _, ok := sections[name]; !ok {
@@ -141,9 +169,21 @@ func TestVMS93Procedure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vms := ftn86Sections(strings.ReplaceAll(string(data), "\r", ""))
+	vms := vms93Sections(strings.ReplaceAll(string(data), "\r", ""))
 
-	for _, name := range []string{"DIRECTORY", "SHOW", "CHECK", "CHECKG", "UFO"} {
+	vms93SameImage(t, image)
+
+	compared := []string{"DIRECTORY", "SHOW", "CHECK", "CHECKG", "UFO"}
+
+	// The round's first run: VMS refused govax's image then (SS$_BADISD), as
+	// LINK named SECURESHR with no pages. Until a run of the fixed image, its
+	// matching VMS's own VMS93C stands for the section, and CHECKG is held to
+	// CHECK above.
+	if strings.Contains(vms["CHECKG"], "BADISD") {
+		compared = slices.DeleteFunc(compared, func(name string) bool { return name == "CHECKG" })
+	}
+
+	for _, name := range compared {
 		got, want := strings.Split(sections[name], "\n"), strings.Split(vms[name], "\n")
 
 		for i := range max(len(got), len(want)) {
@@ -162,5 +202,44 @@ func TestVMS93Procedure(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// vms93SameImage holds govax's VMS93CG.EXE (govax's MACRO and LINK) to VMS's
+// VMS93C.EXE, built by VMS 7.1's MACRO and LINK from the same source: the same
+// image sections, global sections and their idents among them, the same
+// fixups, and the same pages. Only the header's name, link time, and linker
+// differ. The round's first run found govax's image naming SECURESHR with no
+// pages, which VMS refused (SS$_BADISD), and its shareable images in the order
+// of its code, not its symbols'.
+func vms93SameImage(t *testing.T, govax []byte) {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join("testdata", "vms93", "vax", "vms93c.exe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want, err := vmsimage.ReadImage(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := vmsimage.ReadImage(govax)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got.ISDs, want.ISDs) {
+		t.Errorf("VMS93CG's image sections:\n%+v\nVMS's VMS93C:\n%+v", got.ISDs, want.ISDs)
+	}
+
+	if !reflect.DeepEqual(got.Fixups, want.Fixups) {
+		t.Errorf("VMS93CG's fixups:\n%+v\nVMS's VMS93C:\n%+v", got.Fixups, want.Fixups)
+	}
+
+	const block = 512
+	if len(govax) != len(data) || !bytes.Equal(govax[block:], data[block:]) {
+		t.Errorf("VMS93CG's pages (%d bytes) differ from VMS's VMS93C's (%d)", len(govax), len(data))
 	}
 }

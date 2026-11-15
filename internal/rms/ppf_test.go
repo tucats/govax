@@ -80,6 +80,7 @@ func (f *ppfFixture) openFAB(service func(*Context, []uint32) (uint32, error), s
 	putByte(f.t, ctx, testFabAddr+fabBID, fabBIDValue)
 	putByte(f.t, ctx, testFabAddr+fabBLN, fabBLNValue)
 	putByte(f.t, ctx, testFabAddr+fabFAC, fac)
+	putByte(f.t, ctx, testFabAddr+fabSHR, 0) // the probe's SETUPR's FAB, SHR 0
 	putByte(f.t, ctx, testFabAddr+fabRFM, rfmVAR)
 	putByte(f.t, ctx, testFabAddr+fabRAT, ratCR)
 	putWord(f.t, ctx, testFabAddr+fabIFI, 0)

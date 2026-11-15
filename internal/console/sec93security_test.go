@@ -33,7 +33,6 @@ var sec93SecurityMasks = []struct {
 // sec93SecurityDifferences are the cases whose reports differ from VMS
 // 7.1's, and why.
 var sec93SecurityDifferences = map[int]string{
-	458: "VMS 7.1 refused the UFO open with FAC=PUT and SHR=GET (RMS$_SHR), so its $SET_SECURITY had no channel; govax opens it, and the change through the write channel is made. Which UFO opens VMS refuses that way is open (subtask 14's round)",
 	415: "the system disk: VMS's DUA0 is OPENVMS071, govax's the system volume",
 	416: "the system disk's volume: VMS's OPENVMS071 owned by [1,1]",
 }

@@ -57,7 +57,7 @@ l:
 	.endm	ok
 	.psect	data,noexe,wrt,page
 buf:	.blkb	512*80
-fab:	$fab	fnm=<DUA0:[000000]PAGES.DAT>,fac=<get,put>,fop=ufo,shr=get
+fab:	$fab	fnm=<DUA0:[000000]PAGES.DAT>,fac=<get,put>,fop=ufo,shr=<get,upi>
 inadr:	.long	^x200,^x200
 range:	.blkl	2
 	.psect	code,exe,nowrt

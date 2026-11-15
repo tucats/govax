@@ -1,0 +1,416 @@
+==== ENVIRONMENT
+V7.1     VAX 8600
+SYSTEM       [SYSTEM]
+==== ACCOUNTS
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier PROT93A value [000200,000001] added to rights database
+%UAF-I-RDBADDMSGU, identifier PROT93 value [000200,177777] added to rights database
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier PROT93B value [000200,000002] added to rights database
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier PROT93C value [000300,000001] added to rights database
+%UAF-I-RDBADDMSG, identifier PROT93_TEAM value %X80010001 added to rights database
+%UAF-I-GRANTMSG, identifier PROT93_TEAM granted to PROT93C
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+-2147418111
+==== DIRECTORY
+
+Directory DUA1:[V93]
+
+A1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ+WRITE)
+A2.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=NONE)
+A3.DAT;1             [PROT93,PROT93A]                 (,RWED,,)
+          (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
+A4.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,,)
+          (IDENTIFIER=[PROT93,*],ACCESS=READ)
+A5.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,,)
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ+EXECUTE)
+A6.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,,)
+          (IDENTIFIER=[PROT93C],ACCESS=NONE)
+          (IDENTIFIER=[*,1],ACCESS=READ)
+A7.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,,)
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=PROTECTED+NOPROPAGATE,ACCESS=READ+DELETE)
+A8.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,,)
+          (IDENTIFIER=INTERACTIVE,ACCESS=READ)
+A9.DAT;1             [0,0]                            (,,,)
+          (IDENTIFIER=[SYSTEM],ACCESS=READ)
+          (IDENTIFIER=[PROT93C],ACCESS=READ+WRITE+CONTROL)
+D0.DIR;1             [PROT93C]                        (RWE,RWE,,)
+DEF.DIR;1            [PROT93,PROT93A]                 (RWE,RWE,RWE,RE)
+          (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:R,WORLD:)
+          (IDENTIFIER=[PROT93C],OPTIONS=DEFAULT,ACCESS=READ)
+          (CREATOR,ACCESS=READ+WRITE)
+O1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RE,)
+O2.DAT;1             [PROT93,PROT93B]                 (RWED,RWED,,)
+O3.DAT;1             [PROT93C]                        (,RWED,,R)
+O4.DAT;1             [0,0]                            (RWED,,,)
+O5.DAT;1             [SYSTEM]                         (RWED,RWED,,)
+P1.DAT;1             [PROT93,PROT93A]                 (R,W,E,D)
+P2.DAT;1             [PROT93,PROT93A]                 (,,,)
+P3.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,RWED,RWED)
+UFO.DAT;1            [SYSTEM]                         (RWED,RWED,RWED,RWED)
+
+Total of 20 files.
+
+Directory DUA1:[V93.D0]
+
+W1.DAT;1             [PROT93C]                        (RWED,RWED,R,R)
+
+Total of 1 file.
+
+Directory DUA1:[V93.DEF]
+
+N1.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,R,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+SUB.DIR;1            [PROT93,PROT93A]                 (RWE,RWE,RWE,RE)
+          (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:R,WORLD:)
+          (IDENTIFIER=[PROT93C],OPTIONS=DEFAULT,ACCESS=READ)
+          (CREATOR,ACCESS=READ+WRITE)
+
+Total of 2 files.
+
+Directory DUA1:[V93.DEF.SUB]
+
+N2.DAT;1             [PROT93,PROT93A]                 (RWED,RWED,R,)
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+
+Total of 1 file.
+
+Grand total of 4 directories, 24 files.
+==== SHOW
+
+DUA1:[V93]A1.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93C],ACCESS=READ+WRITE)
+A1.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A2.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group: RE, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93,PROT93B],ACCESS=NONE)
+A2.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD
+
+DUA1:[V93]A3.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93C],ACCESS=CONTROL)
+A3.DAT [PROT93,PROT93A] SYSTEM, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A4.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93,*],ACCESS=READ)
+A4.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A5.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=PROT93_TEAM,ACCESS=READ+EXECUTE)
+A5.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A6.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93C],ACCESS=NONE)
+          (IDENTIFIER=[*,1],ACCESS=READ)
+A6.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A7.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93,PROT93B],OPTIONS=PROTECTED+NOPROPAGATE,ACCESS=READ+DELETE)
+A7.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A8.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List:
+          (IDENTIFIER=INTERACTIVE,ACCESS=READ)
+A8.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]A9.DAT;1 object of class FILE
+     Owner: [0,0]
+     Protection: (System, Owner, Group, World)
+     Access Control List:
+          (IDENTIFIER=[SYSTEM],ACCESS=READ)
+          (IDENTIFIER=[PROT93C],ACCESS=READ+WRITE+CONTROL)
+A9.DAT [0,0] SYSTEM, OWNER, GROUP, WORLD
+
+DUA1:[V93]D0.DIR;1 object of class FILE
+     Owner: [PROT93C]
+     Protection: (System: RWE, Owner: RWE, Group, World)
+     Access Control List: <empty>
+D0.DIR [PROT93C] SYSTEM=RWE, OWNER=RWE, GROUP, WORLD
+
+DUA1:[V93]DEF.DIR;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWE, Owner: RWE, Group: RWE, World: RE)
+     Access Control List:
+          (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:R,WORLD:)
+          (IDENTIFIER=[PROT93C],OPTIONS=DEFAULT,ACCESS=READ)
+          (CREATOR,ACCESS=READ+WRITE)
+DEF.DIR [PROT93,PROT93A] SYSTEM=RWE, OWNER=RWE, GROUP=RWE, WORLD=RE
+
+DUA1:[V93]O1.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group: RE, World)
+     Access Control List: <empty>
+O1.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD
+
+DUA1:[V93]O2.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93B]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List: <empty>
+O2.DAT [PROT93,PROT93B] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]O3.DAT;1 object of class FILE
+     Owner: [PROT93C]
+     Protection: (System, Owner: RWED, Group, World: R)
+     Access Control List: <empty>
+O3.DAT [PROT93C] SYSTEM, OWNER=RWED, GROUP, WORLD=R
+
+DUA1:[V93]O4.DAT;1 object of class FILE
+     Owner: [0,0]
+     Protection: (System: RWED, Owner, Group, World)
+     Access Control List: <empty>
+O4.DAT [0,0] SYSTEM=RWED, OWNER, GROUP, WORLD
+
+DUA1:[V93]O5.DAT;1 object of class FILE
+     Owner: [SYSTEM]
+     Protection: (System: RWED, Owner: RWED, Group, World)
+     Access Control List: <empty>
+O5.DAT [SYSTEM] SYSTEM=RWED, OWNER=RWED, GROUP, WORLD
+
+DUA1:[V93]P1.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: R, Owner: W, Group: E, World: D)
+     Access Control List: <empty>
+P1.DAT [PROT93,PROT93A] SYSTEM=R, OWNER=W, GROUP=E, WORLD=D
+
+DUA1:[V93]P2.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System, Owner, Group, World)
+     Access Control List: <empty>
+P2.DAT [PROT93,PROT93A] SYSTEM, OWNER, GROUP, WORLD
+
+DUA1:[V93]P3.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group: RWED, World: RWED)
+     Access Control List: <empty>
+P3.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=RWED
+
+DUA1:[V93]UFO.DAT;1 object of class FILE
+     Owner: [SYSTEM]
+     Protection: (System: RWED, Owner: RWED, Group: RWED, World: RWED)
+     Access Control List: <empty>
+UFO.DAT [SYSTEM] SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=RWED
+
+DUA1:[V93.D0]W1.DAT;1 object of class FILE
+     Owner: [PROT93C]
+     Protection: (System: RWED, Owner: RWED, Group: R, World: R)
+     Access Control List: <empty>
+W1.DAT [PROT93C] SYSTEM=RWED, OWNER=RWED, GROUP=R, WORLD=R
+
+DUA1:[V93.DEF]N1.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group: R, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+N1.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP=R, WORLD
+
+DUA1:[V93.DEF]SUB.DIR;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWE, Owner: RWE, Group: RWE, World: RE)
+     Access Control List:
+          (DEFAULT_PROTECTION,SYSTEM:RWED,OWNER:RWED,GROUP:R,WORLD:)
+          (IDENTIFIER=[PROT93C],OPTIONS=DEFAULT,ACCESS=READ)
+          (CREATOR,ACCESS=READ+WRITE)
+SUB.DIR [PROT93,PROT93A] SYSTEM=RWE, OWNER=RWE, GROUP=RWE, WORLD=RE
+
+DUA1:[V93.DEF.SUB]N2.DAT;1 object of class FILE
+     Owner: [PROT93,PROT93A]
+     Protection: (System: RWED, Owner: RWED, Group: R, World)
+     Access Control List:
+          (IDENTIFIER=[PROT93C],ACCESS=READ)
+N2.DAT [PROT93,PROT93A] SYSTEM=RWED, OWNER=RWED, GROUP=R, WORLD
+==== BUILD
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+==== CHECK
+PROT93A    RWEDC DUA1:[V93]A1.DAT;1
+PROT93B    RWEDC DUA1:[V93]A1.DAT;1
+PROT93C    RW--- DUA1:[V93]A1.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A1.DAT;1
+PROT93A    RWEDC DUA1:[V93]A2.DAT;1
+PROT93B    RWEDC DUA1:[V93]A2.DAT;1
+PROT93C    ----- DUA1:[V93]A2.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A2.DAT;1
+PROT93A    RWEDC DUA1:[V93]A3.DAT;1
+PROT93B    RWEDC DUA1:[V93]A3.DAT;1
+PROT93C    ----C DUA1:[V93]A3.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A3.DAT;1
+PROT93A    RWEDC DUA1:[V93]A4.DAT;1
+PROT93B    RWEDC DUA1:[V93]A4.DAT;1
+PROT93C    ----- DUA1:[V93]A4.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A4.DAT;1
+PROT93A    RWEDC DUA1:[V93]A5.DAT;1
+PROT93B    RWEDC DUA1:[V93]A5.DAT;1
+PROT93C    R-E-- DUA1:[V93]A5.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A5.DAT;1
+PROT93A    RWEDC DUA1:[V93]A6.DAT;1
+PROT93B    RWEDC DUA1:[V93]A6.DAT;1
+PROT93C    ----- DUA1:[V93]A6.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A6.DAT;1
+PROT93A    RWEDC DUA1:[V93]A7.DAT;1
+PROT93B    RWEDC DUA1:[V93]A7.DAT;1
+PROT93C    ----- DUA1:[V93]A7.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A7.DAT;1
+PROT93A    RWEDC DUA1:[V93]A8.DAT;1
+PROT93B    RWEDC DUA1:[V93]A8.DAT;1
+PROT93C    ----- DUA1:[V93]A8.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A8.DAT;1
+PROT93A    ----- DUA1:[V93]A9.DAT;1
+PROT93B    RWEDC DUA1:[V93]A9.DAT;1
+PROT93C    RW--C DUA1:[V93]A9.DAT;1
+SYSTEM     RWEDC DUA1:[V93]A9.DAT;1
+PROT93A    ----- DUA1:[V93]D0.DIR;1
+PROT93B    RWEDC DUA1:[V93]D0.DIR;1
+PROT93C    RWE-C DUA1:[V93]D0.DIR;1
+SYSTEM     RWEDC DUA1:[V93]D0.DIR;1
+PROT93A    RWE-C DUA1:[V93]DEF.DIR;1
+PROT93B    RWEDC DUA1:[V93]DEF.DIR;1
+PROT93C    R-E-- DUA1:[V93]DEF.DIR;1
+SYSTEM     RWEDC DUA1:[V93]DEF.DIR;1
+PROT93A    RWEDC DUA1:[V93]O1.DAT;1
+PROT93B    RWEDC DUA1:[V93]O1.DAT;1
+PROT93C    ----- DUA1:[V93]O1.DAT;1
+SYSTEM     RWEDC DUA1:[V93]O1.DAT;1
+PROT93A    ----- DUA1:[V93]O2.DAT;1
+PROT93B    RWEDC DUA1:[V93]O2.DAT;1
+PROT93C    ----- DUA1:[V93]O2.DAT;1
+SYSTEM     RWEDC DUA1:[V93]O2.DAT;1
+PROT93A    R---- DUA1:[V93]O3.DAT;1
+PROT93B    RWEDC DUA1:[V93]O3.DAT;1
+PROT93C    RWEDC DUA1:[V93]O3.DAT;1
+SYSTEM     RWEDC DUA1:[V93]O3.DAT;1
+PROT93A    RWED- DUA1:[V93]O4.DAT;1
+PROT93B    RWEDC DUA1:[V93]O4.DAT;1
+PROT93C    RWED- DUA1:[V93]O4.DAT;1
+SYSTEM     RWEDC DUA1:[V93]O4.DAT;1
+PROT93A    ----- DUA1:[V93]O5.DAT;1
+PROT93B    RWEDC DUA1:[V93]O5.DAT;1
+PROT93C    ----- DUA1:[V93]O5.DAT;1
+SYSTEM     RWEDC DUA1:[V93]O5.DAT;1
+PROT93A    -WEDC DUA1:[V93]P1.DAT;1
+PROT93B    RWEDC DUA1:[V93]P1.DAT;1
+PROT93C    ---D- DUA1:[V93]P1.DAT;1
+SYSTEM     RWEDC DUA1:[V93]P1.DAT;1
+PROT93A    ----C DUA1:[V93]P2.DAT;1
+PROT93B    RWEDC DUA1:[V93]P2.DAT;1
+PROT93C    ----- DUA1:[V93]P2.DAT;1
+SYSTEM     RWEDC DUA1:[V93]P2.DAT;1
+PROT93A    RWEDC DUA1:[V93]P3.DAT;1
+PROT93B    RWEDC DUA1:[V93]P3.DAT;1
+PROT93C    RWED- DUA1:[V93]P3.DAT;1
+SYSTEM     RWEDC DUA1:[V93]P3.DAT;1
+PROT93A    RWED- DUA1:[V93]UFO.DAT;1
+PROT93B    RWEDC DUA1:[V93]UFO.DAT;1
+PROT93C    RWED- DUA1:[V93]UFO.DAT;1
+SYSTEM     RWEDC DUA1:[V93]UFO.DAT;1
+PROT93A    R---- DUA1:[V93.D0]W1.DAT;1
+PROT93B    RWEDC DUA1:[V93.D0]W1.DAT;1
+PROT93C    RWEDC DUA1:[V93.D0]W1.DAT;1
+SYSTEM     RWEDC DUA1:[V93.D0]W1.DAT;1
+PROT93A    RWEDC DUA1:[V93.DEF]N1.DAT;1
+PROT93B    RWEDC DUA1:[V93.DEF]N1.DAT;1
+PROT93C    R---- DUA1:[V93.DEF]N1.DAT;1
+SYSTEM     RWEDC DUA1:[V93.DEF]N1.DAT;1
+PROT93A    RWE-C DUA1:[V93.DEF]SUB.DIR;1
+PROT93B    RWEDC DUA1:[V93.DEF]SUB.DIR;1
+PROT93C    R-E-- DUA1:[V93.DEF]SUB.DIR;1
+SYSTEM     RWEDC DUA1:[V93.DEF]SUB.DIR;1
+PROT93A    RWEDC DUA1:[V93.DEF.SUB]N2.DAT;1
+PROT93B    RWEDC DUA1:[V93.DEF.SUB]N2.DAT;1
+PROT93C    R---- DUA1:[V93.DEF.SUB]N2.DAT;1
+SYSTEM     RWEDC DUA1:[V93.DEF.SUB]N2.DAT;1
+==== CHECKG
+%DCL-W-ACTIMAGE, error activating image VMS93CG
+-CLI-E-IMGNAME, image file DUA1:[000000]VMS93CG.EXE;1
+-SYSTEM-F-BADISD, illegal image section descriptor
+==== UFO
+fac=02 shr=20 sts=00010001
+fac=02 shr=02 sts=00010001
+fac=02 shr=01 sts=000186B4
+fac=02 shr=03 sts=000186B4
+fac=02 shr=42 sts=00010001
+fac=02 shr=43 sts=00010001
+fac=02 shr=40 sts=00010001
+fac=01 shr=20 sts=00010001
+fac=01 shr=02 sts=000186B4
+fac=01 shr=01 sts=000186B4
+fac=01 shr=03 sts=000186B4
+fac=01 shr=42 sts=00010001
+fac=01 shr=43 sts=00010001
+fac=01 shr=40 sts=00010001
+fac=03 shr=20 sts=00010001
+fac=03 shr=02 sts=000186B4
+fac=03 shr=01 sts=000186B4
+fac=03 shr=03 sts=000186B4
+fac=03 shr=42 sts=00010001
+fac=03 shr=43 sts=00010001
+fac=03 shr=40 sts=00010001
+fac=0A shr=20 sts=00010001
+fac=0A shr=02 sts=000186B4
+fac=0A shr=01 sts=000186B4
+fac=0A shr=03 sts=000186B4
+fac=0A shr=42 sts=00010001
+fac=0A shr=43 sts=00010001
+fac=0A shr=40 sts=00010001
+fac=06 shr=20 sts=00010001
+fac=06 shr=02 sts=000186B4
+fac=06 shr=01 sts=000186B4
+fac=06 shr=03 sts=000186B4
+fac=06 shr=42 sts=00010001
+fac=06 shr=43 sts=00010001
+fac=06 shr=40 sts=00010001
+fac=21 shr=20 sts=00010001
+fac=21 shr=02 sts=000187AC
+fac=21 shr=01 sts=000187AC
+fac=21 shr=03 sts=000187AC
+fac=21 shr=42 sts=00010001
+fac=21 shr=43 sts=00010001
+fac=21 shr=40 sts=00010001
+==== ACCOUNTS REMOVED
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PROT93A value [000200,000001] removed from rights database
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PROT93B value [000200,000002] removed from rights database
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PROT93C value [000300,000001] removed from rights database
+%UAF-I-RDBREMMSG, identifier PROT93_TEAM value %X80010001 removed from rights database
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+==== DISK
+%ANALDISK-I-OPENQUOTA, error opening QUOTA.SYS
+-SYSTEM-W-NOSUCHFILE, no such file
+%ANALDISK-W-BADOWNER, file (19,1,1) [V93]O4.DAT;1
+	invalid file owner [0,0]
+%ANALDISK-W-BADOWNER, file (32,1,1) [V93]A9.DAT;1
+	invalid file owner [0,0]
+%ANALDISK-W-BADOWNERSUM, some files had invalid file owner field [0,0]
+	use SET SECURITY to change file owner
+  $STATUS == "%X00000001"
+==== END

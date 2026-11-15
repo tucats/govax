@@ -84,7 +84,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 
 	if shr, err := ctx.loadByte(fabAddr + fabSHR); err != nil {
 		return 0, err
-	} else if sts := ufoSharing(fop, shr); sts != 0 {
+	} else if sts := ufoSharing(fop, fac, shr); sts != 0 {
 		return fabStatus(ctx, fabAddr, sts, 0)
 	} else if sts := blockSharing(fac, shr); sts != 0 {
 		return fabStatus(ctx, fabAddr, sts, 0)

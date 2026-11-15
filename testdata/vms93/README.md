@@ -13,13 +13,23 @@ on the volume is DIGITAL's.
 | `vms93c.mar` | For each file under `[V93...]` and each of PROT93A, PROT93B, PROT93C, and SYSTEM, `$CHECK_ACCESS` for READ, WRITE, EXECUTE, DELETE, and CONTROL: a line of letters, `-` for refused, `?` for another status |
 | `vms93u.mar` | `$OPEN` of `UFO.DAT` with FOP=UFO, each of six FACs with each of seven SHRs, and the status: round 3's case 458 found VMS 7.1 refusing FAC=PUT with SHR=GET (RMS$_SHR), where govax opens it |
 | `t.txt` | The files' text |
-| `copyout.cmd` | Copies the log and ANALYZE's listing to `vax/` |
+| `copyout.cmd` | Copies the log, ANALYZE's listing, and VMS's VMS93C.EXE and VMS93U.EXE to `vax/` |
 
-`TestVMS93Procedure` (`internal/console/vms93_test.go`) rehearses all of it
+`TestVMS93Procedure` (`internal/console/vms93_test.go`) runs all of it
 on govax, with the accounts in the System's table as AUTHORIZE would make
-them, and once `vax/vms93.log` exists holds govax's DIRECTORY, SHOW, CHECK,
-CHECKG, and UFO sections to VMS's, line for line, but for
-`vms93Differences`.
+them, and holds govax's DIRECTORY, SHOW, CHECK, CHECKG, and UFO sections to
+VMS's, line for line, but for `vms93Differences`, and govax's image of
+VMS93C to VMS's (`vms93SameImage`).
+
+## What VMS 7.1 said (2026-11-15)
+
+VMS read every file as govax shows it, and its `$CHECK_ACCESS` agreed with
+govax on all 96 lines. It refused govax's VMS93CG.EXE (`SS$_BADISD`: govax's
+LINK named SECURESHR with no pages), since fixed, so the log's CHECKG section
+is that refusal, which the test passes over while it is; a second run would
+show the fixed image. VMS93U's table is now govax's UFO rule. ANALYZE's only
+warnings are the two files owned by [0,0] and the missing QUOTA.SYS. The
+phase doc's A.4, "Round 4", has the details.
 
 ## Running it
 

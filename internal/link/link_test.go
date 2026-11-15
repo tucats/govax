@@ -490,8 +490,10 @@ func TestLinkPsectContributions(t *testing.T) {
 
 // TestLinkSharedReferences checks the fixup section for several targets:
 // one cell per target, even when it's called twice, a G^ fixup list per
-// shareable image in the order first referred to, and a global section
-// ISD for each, after the user stack's.
+// shareable image in the order its symbols first appear in the module's
+// global symbol directory (A$ONE's before B$ONE's, as MACRO writes them,
+// though the code calls B$ONE first; testdata/vms93's VMS93C), and a
+// global section ISD for each, after the user stack's.
 func TestLinkSharedReferences(t *testing.T) {
 	src := &TableSource{
 		Symbols: map[string]Definition{
@@ -519,8 +521,8 @@ func TestLinkSharedReferences(t *testing.T) {
 	le := binary.LittleEndian
 	fix := img.Bytes[2*blockSize:] // header, C, then the fixup section at 0x400
 
-	// B's list (1 cell), then A's (2 cells), then the zero count.
-	wantLists := []uint32{1, 1, 0x30, 2, 2, 0x10, 0x20, 0}
+	// A's list (2 cells), then B's (1 cell), then the zero count.
+	wantLists := []uint32{2, 1, 0x10, 0x20, 1, 2, 0x30, 0}
 	for i, w := range wantLists {
 		if got := le.Uint32(fix[iafFixedLength+4*i:]); got != w {
 			t.Errorf("G^ lists longword %d = %X, want %X", i, got, w)
@@ -532,7 +534,8 @@ func TestLinkSharedReferences(t *testing.T) {
 	}
 
 	// Each CALLS's operand is FF and a displacement to its cell: the 1st
-	// call reaches B$ONE's cell, and the 2nd and 4th share A$ONE's.
+	// call reaches B$ONE's cell, after A's two, and the 2nd and 4th share
+	// A$ONE's.
 	code := img.Bytes[blockSize:]
 	cell := func(call int) uint32 {
 		field := uint32(0x200 + 2 + 7*call + 3) // the displacement, after FB 00 FF
@@ -544,14 +547,14 @@ func TestLinkSharedReferences(t *testing.T) {
 		return field + 4 + le.Uint32(code[2+7*call+3:])
 	}
 
-	cells := []uint32{0x400 + iafFixedLength + 8, 0x400 + iafFixedLength + 20, 0x400 + iafFixedLength + 24, 0x400 + iafFixedLength + 20}
+	cells := []uint32{0x400 + iafFixedLength + 24, 0x400 + iafFixedLength + 8, 0x400 + iafFixedLength + 12, 0x400 + iafFixedLength + 8}
 	for i, w := range cells {
 		if got := cell(i); got != w {
 			t.Errorf("call %d reaches %X, want %X", i, got, w)
 		}
 	}
 
-	// The global section ISDs follow the stack's, B first.
+	// The global section ISDs follow the stack's, A first.
 	p := isdOffset
 	for n := 0; n < 3; n++ { // C, fixup, stack
 		p += int(le.Uint16(img.Bytes[p:]))
@@ -563,8 +566,8 @@ func TestLinkSharedReferences(t *testing.T) {
 		flags uint32
 		ident uint32
 	}{
-		{"BIMG_001", 3, isdGBL | uint32(MatchEqual)<<isdMatchShift | isdTypeSharedPIC, 2<<24 | 5},
 		{"AIMG_001", 0, isdGBL | uint32(MatchAlways)<<isdMatchShift | isdTypeSharedPIC, 0},
+		{"BIMG_001", 3, isdGBL | uint32(MatchEqual)<<isdMatchShift | isdTypeSharedPIC, 2<<24 | 5},
 	} {
 		isd := img.Bytes[p:]
 		size := int(le.Uint16(isd))

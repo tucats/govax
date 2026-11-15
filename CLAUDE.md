@@ -824,8 +824,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   close-out; Decision 6, bugs the writing found were fixed in the same
   subtask). A further guide would be its Part B.
   Phase 93 (planned 2026-11-14, the plan accepted by the author the same
-  day, its "The review"; done 2026-11-14 but for subtask 14, the VMS
-  round, prepared in `testdata/vms93` and waiting for the author's run;
+  day, its "The review"; done 2026-11-15 with subtask 14, the VMS
+  round, `testdata/vms93`, which found a LINK bug (SECURESHR's ISD; now
+  `vmsdef.KnownImages`) and settled the UFO sharing rule;
   its "Where things stand" is the follow-up list, and PLAN.md summarizes
   it) is file protection, a precursor to identities other than SYSTEM:
   owners, protection codes, and ACLs checked on every access by the
@@ -1164,7 +1165,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `TestFTN86Procedure` rehearses it on govax, and `TestFTN86Oracle` holds that run to VMS's log (`vax/`) but for `ftn86VMSDifferences`.
 - `testdata/for88/` — Phase 88's round 2, FORRTL on indexed files (README.md, which has FOR$OPEN's KEY= block and FOR$READ_KU's arguments): `gen.go` writes `for88.mar` (310 cases), `for88.com`, `exchange.cmd`, and `copyout.cmd`; `vax/` is VMS V7.1's run and the files it made. `TestFor88Oracle` runs it on FORRTL over govax's RMS and holds its output and files to them but for `for88Differences`. `for88f.mar` (by hand) passes all the program's `FOR$` calls to FTNRTL for `TestFor88OnFTNRTL`.
 - `testdata/prot93/` — Phase 93's probe of file protection (README.md), three rounds on VMS 7.1 with test accounts PROT93A [200,1], PROT93B [200,2], and PROT93C [300,1]: `prot93.mar` and its procedures (rounds 1 and 2: RMS, the ACP, and DCL under each identity and privilege pass), and `gen3.go`'s `sec93.mar` (round 3: every security service, parts by `SEC93_PART`), with `vax/`'s logs; `TestSec93ACLOracle`, `TestSec93CheckOracle`, `TestSec93SecurityOracle`, and the `prot93*_test.go` oracles hold govax to them. Round 9 of `testdata/mp/macros` is the services' macros.
-- `testdata/vms93/` — Phase 93's VMS round (README.md): `exchange.cmd` makes a volume of files govax gave owners, protections, and ACLs, and `vms93.com` has VMS list them and check each account's access (`vms93c.mar`, and govax's image of it) and UFO opens (`vms93u.mar`); `TestVMS93Procedure` rehearses it and holds govax to `vax/vms93.log` once it exists.
+- `testdata/vms93/` — Phase 93's VMS round (README.md): `exchange.cmd` makes a volume of files govax gave owners, protections, and ACLs, and `vms93.com` has VMS list them and check each account's access (`vms93c.mar`, and govax's image of it) and UFO opens (`vms93u.mar`); `TestVMS93Procedure` runs it on govax, holds it to VMS 7.1's `vax/vms93.log`, and holds govax's image of VMS93C to VMS's (`vax/vms93c.exe`).
 - `testdata/lnm91/` — Phase 91's probe of concealed and rooted logical names (README.md): `lnm91.mar`, a program that takes its RMS cases from data lines, and `gen.go`'s `lnm91.com`, the cases and DCL's commands on a tree the procedure makes; `vax/` is VMS V7.1's runs; `lnm91b.com` is round 2, names with plain directories, 15 levels, and angle brackets.
 - `testdata/rms88/` — indexed files end to end (Phase 88, subtask 14; README.md): `phones.mar` makes a file by every RMS record service, `phonesl.mar` and `phonesc.mar` share it between two processes, `phonesf.for` and `phones.com` are FORTRAN and DCL on it (`TestIndexedPhones`), and `load.for` is a load big enough for two index levels (`TestIndexedLoad`); expected output by hand, `load.out` from `make_load_out.py`'s model.
 - `testdata/vms88/` — Phase 88's VMS round (README.md): `exchange.cmd` makes a volume of files govax made (`[G88]`, `[F88]`, `[R88]`), and `vms88.com` has VMS's ANALYZE/RMS_FILE and RMS judge them (`vms88w.mar` walks a file's keys, `vms88m.mar` changes it), asks what's still open (`vms88l.mar`), and runs `testdata/rms88`'s programs; `TestVMS88Procedure` rehearses it.
@@ -2220,7 +2221,8 @@ expect adjustment as phases land):
   `$CREATE` hand the file, as an `ACPFile`, to a channel
   (`Context.AssignFileChannel`), its number in FAB$L_STV; `ACPFile`'s
   `ReadPage`/`WritePage` are a section's page I/O. A write-shared UFO
-  needs FAB$V_UPI (RMS$_SHR), a UFO `$CREATE` ends the file at block
+  needs FAB$V_UPI (RMS$_SHR), as does a UFO asking for write access
+  shared with readers (VMS 7.1's table, `testdata/vms93`), a UFO `$CREATE` ends the file at block
   ALQ, and a UFO of a device that holds no files is a plain channel to
   it. A stream file's `$UPDATE` may change a record's length (written
   over the bytes there, as VMS does). RMS's share of the I/O counts is
