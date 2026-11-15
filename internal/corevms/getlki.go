@@ -205,14 +205,17 @@ func (env *Environment) lockAccess(l *lck.Lock) uint32 {
 		return ssIvMode
 	}
 
-	if l.Resource.Group == 0 && caller > uint32(registers.Executive) && !p.hasPrivilege(privSYSLCK) {
-		return ssNoSysLck
+	if l.Resource.Group == 0 {
+		if st := env.requirePrivilegeAt(ruleGetlkiSystem, registers.AccessMode(caller)); st != 0 {
+			return st
+		}
 	}
 
-	if uint32(l.Owner) != p.PID && !p.hasPrivilege(privWORLD) {
-		owner, ok := env.FindProcess(uint32(l.Owner))
-		if !ok || owner.Process.UICGroup() != p.UICGroup() {
-			return ssNoWorld
+	if uint32(l.Owner) != p.PID {
+		if owner, ok := env.FindProcess(uint32(l.Owner)); !ok || owner.Process.UICGroup() != p.UICGroup() {
+			if st := env.requirePrivilege(ruleGetlkiOtherGroup); st != 0 {
+				return st
+			}
 		}
 	}
 

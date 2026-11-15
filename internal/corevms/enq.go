@@ -54,8 +54,6 @@ var (
 	lckInvValBlk = vmsdef.Symbols["LCK$M_INVVALBLK"]
 )
 
-var privSYSLCK = privilegeBit("SYSLCK")
-
 // lockBoost is the priority boost a granted lock gives its waiting owner:
 // the book's "Resource Available" (unconfirmed: $ENQ completes through
 // an event flag, which govax otherwise boosts as an I/O completion).
@@ -242,8 +240,8 @@ func (env *Environment) enqueue(argv []uint32) (uint32, *enqRequest) {
 		group := uint16(env.Process.UICGroup())
 		
 		if flags&lckSystem != 0 {
-			if caller > uint32(registers.Executive) && !env.Process.hasPrivilege(privSYSLCK) {
-				return ssNoSysLck, nil
+			if st := env.requirePrivilegeAt(ruleEnqSystem, registers.AccessMode(caller)); st != 0 {
+				return st, nil
 			}
 
 			group = 0

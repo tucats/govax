@@ -297,17 +297,8 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	priv := privTMPMBX
-	if prmflg == 1 {
-		priv = privPRMMBX
-
-		if name != "" {
-			priv |= privSYSNAM
-		}
-	}
-
-	if !env.Process.hasPrivilege(priv) {
-		return ssNoPriv, nil
+	if st := env.mailboxCreatePrivileges(prmflg == 1, name != ""); st != 0 {
+		return st, nil
 	}
 
 	unit := env.Mailboxes.nextUnit(env.Devices)
@@ -422,8 +413,8 @@ func serviceSysDelmbx(env *Environment, argv []uint32) (uint32, error) {
 		return ssDevNotMbx, nil
 	}
 
-	if !env.Process.hasPrivilege(privPRMMBX) {
-		return ssNoPriv, nil
+	if st := env.requirePrivilege(ruleDelmbx); st != 0 {
+		return st, nil
 	}
 
 	m.DeletePending = true
@@ -452,4 +443,23 @@ func (env *Environment) releaseMailbox(d *iodev.Device) {
 func registerMailboxServices(t *ServiceTable) {
 	t.Register("SYS$CREMBX", serviceSysCrembx)
 	t.Register("SYS$DELMBX", serviceSysDelmbx)
+}
+
+// mailboxCreatePrivileges is $CREMBX's privilege check: TMPMBX for a
+// temporary mailbox, PRMMBX for a permanent one, and SYSNAM too for a
+// permanent one with a logical name, which goes in the system table.
+func (env *Environment) mailboxCreatePrivileges(permanent, named bool) uint32 {
+	if !permanent {
+		return env.requirePrivilege(ruleCrembxTemporary)
+	}
+
+	if st := env.requirePrivilege(ruleCrembxPermanent); st != 0 {
+		return st
+	}
+
+	if named {
+		return env.requirePrivilege(ruleCrembxName)
+	}
+
+	return 0
 }

@@ -594,8 +594,8 @@ func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
 	pri, prvpri := optArg(argv, 2)&maxPriority, optArg(argv, 3)
 
 	// Without ALTPRI, no higher than the caller's authorized priority.
-	if !caller.hasPrivilege(privALTPRI) {
-		pri = min(pri, caller.AuthorizedPriority)
+	if pri > caller.AuthorizedPriority && !env.holdsPrivilege(ruleSetpriAbove) {
+		pri = caller.AuthorizedPriority
 	}
 
 	if prvpri != 0 {

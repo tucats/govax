@@ -444,6 +444,61 @@ creator's) and prvadr cut; the 64-bit masks; `$BRKTHRU` to a user;
 IO$_SETCHAR; `$CMKRNL` and `$CMEXEC`; `$SETSWM`. Subtasks 3 to 9 make
 them VMS's.
 
+### A.5 The rules (subtask 3)
+
+The gate's rules as `corevms/privrules.go` holds them, printed by `go test
+-run TestPrivilegeRuleTable -v ./internal/corevms`: the table A.1's
+"govax today" column describes, now one place in the code. Each row is a
+rule a check names; `serviceRules` says which services can ask about it.
+"SSRM" is the 5.0 System Services Reference Manual's entry, "probe n"
+`priv94.mar`'s case (round 2's are `priv94b.mar`'s). The rules say what
+govax does at subtask 3, which is what it did before: where A.4 differs,
+subtasks 4 to 9 change the row.
+
+| Operation | Needs | Exempt modes | Refusal | Source |
+| --- | --- | --- | --- | --- |
+| logical name: write the system table | SYSNAM or SYSPRV | none | SS$_NOPRIV | SSRM $CRELNM; probe 5, 7 |
+| logical name: write the group table | GRPNAM or SYSPRV | none | SS$_NOPRIV | SSRM $CRELNM; probe 9 to 11 |
+| logical name: write the system directory | SYSPRV | none | SS$_NOPRIV | SSRM $CRELNT; probe 52 to 55 |
+| $CRELNT shareable table | SYSPRV | none | SS$_NOPRIV | SSRM $CRELNT; probe round 2's 18 to 29 |
+| logical name: a mode inner to the caller's | SYSNAM | none | SS$_NOPRIV | SSRM $CRELNM (the mode is maximized); probe 22 to 24 |
+| $CREMBX temporary | TMPMBX | none | SS$_NOPRIV | SSRM $CREMBX; probe 80, 81 |
+| $CREMBX permanent | PRMMBX | none | SS$_NOPRIV | SSRM $CREMBX; probe 83, 84 |
+| $CREMBX permanent with a logical name | SYSNAM | none | SS$_NOPRIV | probe round 2's 3 to 8 |
+| $DELMBX | PRMMBX | none | SS$_NOPRIV | SSRM $DELMBX; probe 88 to 91 |
+| mailbox IO$_SETPROTECTION, not the owner | BYPASS or SYSPRV | none | SS$_NOPRIV | probe 92 to 97 |
+| $ASCEFC permanent | PRMCEB | none | SS$_NOPRIV | SSRM $ASCEFC; probe 99, 100 |
+| $DLCEFC another creator's cluster | PRMCEB | none | SS$_NOPRIV | SSRM $DLCEFC; probe 103 to 105 |
+| $CRMPSC system section | SYSGBL | none | SS$_NOPRIV | SSRM $CRMPSC; probe 106 to 113 |
+| $CRMPSC permanent section | PRMGBL | none | SS$_NOPRIV | SSRM $CRMPSC; probe 106 to 113 |
+| $DGBLSC system section | SYSGBL | none | SS$_NOPRIV | SSRM $DGBLSC; probe 117 to 122 |
+| $DGBLSC permanent section | PRMGBL | none | SS$_NOPRIV | SSRM $DGBLSC; probe 117 to 122 |
+| $ENQ system-wide resource | SYSLCK | kernel, executive | SS$_NOSYSLCK | SSRM $ENQ; probe 124 to 127 |
+| $GETLKI system-wide lock | SYSLCK | kernel, executive | SS$_NOSYSLCK | SSRM $GETLKI |
+| $GETLKI another group's lock | WORLD | none | SS$_NOWORLD | SSRM $GETLKI |
+| another process in the group | GROUP or WORLD | none | SS$_NOPRIV | SSRM $DELPRC and the rest; probe 128 to 202 |
+| a process in another group | WORLD | none | SS$_NOPRIV | SSRM $DELPRC and the rest; probe 128 to 202 |
+| $SETPRI above the authorized priority | ALTPRI | none | SS$_NOPRIV | SSRM $SETPRI; probe 149, 150, 179, 186, 187 |
+| $CREPRC detached with another UIC | DETACH or CMKRNL | none | SS$_NOPRIV | SSRM $CREPRC; probe 212 to 219, 226, 227 |
+| $CREPRC batch or network process | DETACH or CMKRNL | none | SS$_NOPRIV | SSRM $CREPRC |
+| $CREPRC network process | NETMBX | none | SS$_NOPRIV | SSRM $CREPRC |
+| $CREPRC PRC$M_PSWAPM | PSWAPM | none | SS$_NOPRIV | SSRM $CREPRC; probe 220, 221 |
+| $CREPRC PRC$M_NOACNT | ACNT | none | SS$_NOPRIV | SSRM $CREPRC; probe 222, 223 |
+| $CREPRC detached quotas of its own | DETACH | none | SS$_NOPRIV | SSRM $CREPRC |
+| $CREPRC privileges beyond the creator's | SETPRV | none | SS$_NOPRIV | SSRM $CREPRC; probe 207 to 211 |
+| $CREPRC base priority above the creator's | ALTPRI | none | SS$_NOPRIV | SSRM $CREPRC; probe 224, 225 |
+| $CMKRNL | CMKRNL | kernel, executive | SS$_NOPRIV | SSRM $CMKRNL; probe 284 to 289 |
+| $CMEXEC | CMEXEC | kernel, executive | SS$_NOPRIV | SSRM $CMEXEC; probe 284 to 289 |
+| $LCKPAG | PSWAPM | none | SS$_NOPRIV | SSRM $LCKPAG; probe 262 to 264 |
+| $SNDOPR an operator's function | OPER | none | SS$_NOPRIV | SSRM $SNDOPR; probe 247 to 252 |
+| $BRKTHRU to a user | WORLD | none | SS$_NOPRIV | SSRM $BRKTHRU; probe 257 to 260 |
+| $BRKTHRU to every terminal or user | OPER | none | SS$_NOOPER | SSRM $BRKTHRU; probe 253 to 256, 261 |
+| disk logical block I/O | LOG_IO or PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 271 to 273, 277 |
+| disk physical block I/O | PHY_IO | none | SS$_NOPRIV | I/O User's Reference; probe 274 to 276 |
+
+A.1 stays as the survey found things; this table replaces its last
+column.
+
 ## Part B — decisions
 
 **Decision 1 — one gate.** Every privilege check goes through one
@@ -563,7 +618,7 @@ Each is one commit, with tests, stopping for review.
 2. **The probe** (done 2026-11-15): `testdata/priv94`, as in Part D, written and rehearsed
    on govax; run on the VAX by the author; A.4 filled in and Part B
    adjusted to its answers. Later rounds as later subtasks find gaps.
-3. **The gate and the table** (Decisions 1 and 2): every existing check
+3. **The gate and the table** (done 2026-11-15; Decisions 1 and 2): every existing check
    moved onto rules, with no change in behavior; SET DEBUG PRIVILEGES;
    `TestNoUncheckedPrivileges`, `TestEveryServiceHasPrivilegeRules`,
    `TestEveryPrivilegeRuleUsed`; A.1's table regenerated from the rules.
@@ -735,3 +790,52 @@ The answers:
 - **2026-11-15** Subtask 2, round 2: the author ran it on VMS V7.1; its
   logs and image are in `testdata/priv94/vax/round2/`, and A.4 has its
   answers. Subtask 2 is done.
+- **2026-11-15** Subtask 3, the gate and the table: `corevms/privrules.go`
+  has the gate (`requirePrivilege`, `requirePrivilegeAt` for the services
+  that judge by a mode argument, `$ENQ` and `$GETLKI`, and `holdsPrivilege`
+  for the quiet answers) and the 38 rules (A.5), each a package variable
+  made by `newRule`, which names its privileges by `$PRVDEF` name. Every
+  check in `corevms` names a rule: the logical name services
+  (`lnmTablePrivilege`, `lnmWriteMode`, `$CRELNT`'s shareable parent),
+  `$CREMBX` (`mailboxCreatePrivileges`), `$DELMBX`, the mailbox's
+  IO$_SETPROTECTION, `$ASCEFC`, `$DLCEFC`, `$CRMPSC`, `$DGBLSC`, `$ENQ`,
+  `$GETLKI`, `mayAffect`, `$SETPRI`, `$CREPRC` (`checkCreatePrivileges`,
+  now an `Environment` method, and its three quiet answers), `$CMKRNL`
+  and `$CMEXEC`, `$LCKPAG`, `$SNDOPR`, `$BRKTHRU`, and disk block I/O.
+  `hasPrivilege` and `hasAnyPrivilege` are gone, and the `priv*` bits
+  with them, but for `privSETPRV`; the tests' copies are
+  `privbits_test.go`. No behavior changed: each rewritten check gives
+  the answer it gave, and asks the gate only where the privilege
+  matters (a quiet answer is asked about only when the request goes past
+  what the caller has), so the trace shows the decisions that count.
+  Choices:
+  - A rule several services share is named for the operation, not a
+    service ("logical name: write the system table", "another process in
+    the group"); `serviceRules` maps every registered service to its rules,
+    and `affectingServices` and `unprivilegedServices` are the services
+    with only `mayAffect`'s rules or none. `$SETPRN` doesn't reach another
+    process in govax, so it has none.
+  - `mayAffect`'s WORLD-or-GROUP test is two rules, "another process in
+    the group" (GROUP or WORLD) and "a process in another group" (WORLD),
+    the same answers, so the trace says which applied. `$GETLKI`'s WORLD
+    is asked only when the lock's owner is in another group, as before.
+  - `$SETPRV`'s own test (SETPRV in AUTHPRIV, or an inner mode) stays in
+    `setPrivileges`: it manages the masks, and A.4 says VMS's test is
+    SETPRV in CURPRIV, which subtask 4 makes a rule.
+  - Three bits have two `$PRVDEF` names; the gate's names are AUTHORIZE's,
+    ACNT, ALTPRI, and DETACH (`privilegeNamesByBit`), so `$CREPRC`'s
+    PRC$M_NOACNT rule needs ACNT.
+  - SET DEBUG PRIVILEGES (`registers.DebugPrivileges`, bit 29;
+    `vax.debug.privileges`) traces every decision: `DEBUG(PRIVILEGES):
+    pid mode mode: rule (needs ...): holds ... | exempt in its mode |
+    refused, SS$_...`. HELP SET DEBUG and the configuration keys' help
+    say so.
+  - `TestNoUncheckedPrivileges` scans `internal` and `cmd` for any function
+    or package variable that mentions `CurrentPrivileges`, against
+    `managedPrivileges` (the gate, `$SETPRV`, SET PROCESS/PRIVILEGES, image
+    rundown, `$CREPRC`'s and LIB$SPAWN's copies, JPI$_CURPRIV, the
+    protection rule's credentials, SHOW PROCESS/PRIVILEGES).
+    `TestEveryServiceHasPrivilegeRules` holds `serviceRules` to the
+    registered services both ways, `TestEveryPrivilegeRuleUsed` finds each
+    rule variable named outside the table and in some service's list, and
+    `TestPrivilegeGate` checks the gate's answers and its trace.

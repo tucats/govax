@@ -376,8 +376,10 @@ func mbxSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 
 	if req.modified(ioModSetProt) {
 		p := env.Process
-		if p.UIC != m.Device.OwnUIC && !p.hasAnyPrivilege(privBYPASS|privSYSPRV) {
-			return ioStatus{}, ssNoPriv
+		if p.UIC != m.Device.OwnUIC {
+			if st := env.requirePrivilege(ruleMailboxSetProt); st != 0 {
+				return ioStatus{}, st
+			}
 		}
 
 		m.Protection = req.p[1] & 0xFFFF

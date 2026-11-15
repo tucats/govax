@@ -97,12 +97,6 @@ var (
 	secMatLeq = vmsdef.LibrarySymbols["SEC$K_MATLEQ"]
 )
 
-// The privileges the section services check.
-var (
-	privSYSGBL = privilegeBit("SYSGBL")
-	privPRMGBL = privilegeBit("PRMGBL")
-)
-
 // maxSectionNameLength is the longest global section name.
 const maxSectionNameLength = 43
 
@@ -821,8 +815,16 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 		return env.mapSection(s, a, r), nil
 	}
 
-	if system && !p.hasPrivilege(privSYSGBL) || flags&secPERM != 0 && !p.hasPrivilege(privPRMGBL) {
-		return env.failRetadr(argv, ssNoPriv)
+	if system {
+		if st := env.requirePrivilege(ruleCrmpscSystem); st != 0 {
+			return env.failRetadr(argv, st)
+		}
+	}
+
+	if flags&secPERM != 0 {
+		if st := env.requirePrivilege(ruleCrmpscPermanent); st != 0 {
+			return env.failRetadr(argv, st)
+		}
 	}
 
 	s := &GlobalSection{
@@ -998,8 +1000,16 @@ func serviceSysDgblsc(env *Environment, argv []uint32) (uint32, error) {
 		return ssNoSuchSec, nil
 	}
 
-	if s.System && !p.hasPrivilege(privSYSGBL) || s.Permanent && !p.hasPrivilege(privPRMGBL) {
-		return ssNoPriv, nil
+	if s.System {
+		if st := env.requirePrivilege(ruleDgblscSystem); st != 0 {
+			return st, nil
+		}
+	}
+
+	if s.Permanent {
+		if st := env.requirePrivilege(ruleDgblscPermanent); st != 0 {
+			return st, nil
+		}
 	}
 
 	g.sections = slices.DeleteFunc(g.sections, func(x *GlobalSection) bool { return x == s })

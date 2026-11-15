@@ -431,13 +431,13 @@ func (env *Environment) mayAffect(target *Environment) uint32 {
 	p, t := env.Process, target.Process
 
 	switch {
-	case target == env, t.UIC == p.UIC, p.hasPrivilege(privWORLD):
+	case target == env, t.UIC == p.UIC:
 		return 0
-	case t.UICGroup() == p.UICGroup() && p.hasPrivilege(privGROUP):
-		return 0
+	case t.UICGroup() == p.UICGroup():
+		return env.requirePrivilege(ruleProcessInGroup)
 	}
 
-	return ssNoPriv
+	return env.requirePrivilege(ruleProcessOtherGroup)
 }
 
 func registerJPIServices(t *ServiceTable) {

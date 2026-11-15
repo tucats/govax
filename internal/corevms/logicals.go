@@ -107,7 +107,7 @@ func (env *Environment) lnmMode(ptr uint32) (lnm.Mode, uint32) {
 // caller's.
 func (env *Environment) lnmWriteMode(ptr uint32) (lnm.Mode, uint32) {
 	mode, st := env.lnmMode(ptr)
-	if st != 0 || env.Process.hasPrivilege(privSYSNAM) {
+	if st != 0 || uint32(mode) >= uint32(env.callerMode()) || env.holdsPrivilege(ruleLnmInnerMode) {
 		return mode, st
 	}
 
@@ -125,21 +125,13 @@ func (env *Environment) lnmTablePrivilege(tabnam string) uint32 {
 		return 0
 	}
 
-	var need uint64
-
 	switch tables[0].Name {
 	case lnm.SystemTableName:
-		need = privSYSNAM | privSYSPRV
+		return env.requirePrivilege(ruleLnmSystemTable)
 	case env.Logicals.GroupTableName:
-		need = privGRPNAM | privSYSPRV
+		return env.requirePrivilege(ruleLnmGroupTable)
 	case lnm.SystemDirectoryName:
-		need = privSYSPRV
-	default:
-		return 0
-	}
-
-	if !env.Process.hasAnyPrivilege(need) {
-		return ssNoPriv
+		return env.requirePrivilege(ruleLnmSystemDirectory)
 	}
 
 	return 0
@@ -670,9 +662,10 @@ func serviceSysCrelnt(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	// A table under a shareable parent is shareable: that takes SYSPRV.
-	if parents, err := env.Logicals.ResolveTables(partab, lnm.User); err == nil && len(parents) > 0 &&
-		parents[0].Shareable && !env.Process.hasPrivilege(privSYSPRV) {
-		return ssNoPriv, nil
+	if parents, err := env.Logicals.ResolveTables(partab, lnm.User); err == nil && len(parents) > 0 && parents[0].Shareable {
+		if st := env.requirePrivilege(ruleLnmShareableTable); st != 0 {
+			return st, nil
+		}
 	}
 
 	t, result, err := env.Logicals.CreateTable(tabnam, partab, mode, attr)

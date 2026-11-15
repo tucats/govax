@@ -61,7 +61,7 @@ func TestSetprv(t *testing.T) {
 	// Disable CMKRNL for the image only.
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 0, quadArg(a, privCMKRNL), 0, prvprv), ssNormal)
 
-	if p.hasPrivilege(privCMKRNL) || p.ProcessPrivileges&privCMKRNL == 0 {
+	if p.CurrentPrivileges&privCMKRNL != 0 || p.ProcessPrivileges&privCMKRNL == 0 {
 		t.Error("a temporary disable should change only the current mask")
 	}
 
@@ -72,26 +72,26 @@ func TestSetprv(t *testing.T) {
 	// Image rundown restores it.
 	env.ImageRundown()
 
-	if !p.hasPrivilege(privCMKRNL) {
+	if p.CurrentPrivileges&privCMKRNL == 0 {
 		t.Error("rundown should restore the permanent privileges")
 	}
 
 	// Permanently: both masks; prvprv is the permanent mask's old value.
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 0, quadArg(a, privOPER|privWORLD), 1, prvprv), ssNormal)
 
-	if p.hasAnyPrivilege(privOPER|privWORLD) || p.ProcessPrivileges&(privOPER|privWORLD) != 0 {
+	if p.CurrentPrivileges&(privOPER|privWORLD) != 0 || p.ProcessPrivileges&(privOPER|privWORLD) != 0 {
 		t.Error("a permanent disable should change both masks")
 	}
 
 	env.ImageRundown()
 
-	if p.hasAnyPrivilege(privOPER | privWORLD) {
+	if p.CurrentPrivileges&(privOPER|privWORLD) != 0 {
 		t.Error("a permanent disable should survive rundown")
 	}
 
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privOPER), 1), ssNormal)
 
-	if !p.hasPrivilege(privOPER) || p.ProcessPrivileges&privOPER == 0 {
+	if p.CurrentPrivileges&privOPER == 0 || p.ProcessPrivileges&privOPER == 0 {
 		t.Error("a permanent enable should change both masks")
 	}
 
@@ -143,7 +143,7 @@ func TestSetprv_authorization(t *testing.T) {
 
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privSYSNAM)), ssNormal)
 
-	if !p.hasPrivilege(privCMKRNL | privSYSNAM | privTMPMBX) {
+	if p.CurrentPrivileges&(privCMKRNL|privSYSNAM|privTMPMBX) != privCMKRNL|privSYSNAM|privTMPMBX {
 		t.Errorf("mask %#x", p.CurrentPrivileges)
 	}
 }

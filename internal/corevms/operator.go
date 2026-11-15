@@ -178,8 +178,8 @@ func serviceSysSndopr(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	// The rest are the operator's own functions.
-	if !env.Process.hasPrivilege(privOPER) {
-		return ssNoPriv, nil
+	if st := env.requirePrivilege(ruleSndoprOperator); st != 0 {
+		return st, nil
 	}
 
 	switch b[0] {
@@ -541,8 +541,8 @@ func (env *Environment) breakthroughTerminals(sndtyp, sendto uint32) (int, uint3
 		return 1, 0
 
 	case brkUsername:
-		if !p.hasPrivilege(privWORLD) {
-			return 0, ssNoPriv
+		if st := env.requirePrivilege(ruleBrkthruUser); st != 0 {
+			return 0, st
 		}
 
 		name, st := env.breakthroughName(sendto)
@@ -558,8 +558,8 @@ func (env *Environment) breakthroughTerminals(sndtyp, sendto uint32) (int, uint3
 		return 0, 0
 
 	case brkAllUsers, brkAllTerms:
-		if !p.hasPrivilege(privOPER) {
-			return 0, ssNoOper
+		if st := env.requirePrivilege(ruleBrkthruAll); st != 0 {
+			return 0, st
 		}
 
 		if sndtyp == brkAllUsers {

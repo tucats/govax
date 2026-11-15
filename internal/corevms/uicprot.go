@@ -28,13 +28,6 @@ var (
 	accessLogical  = uint32(security.Logical)
 )
 
-// The privileges protection checks look at.
-var (
-	privBYPASS  = privilegeBit("BYPASS")
-	privGRPPRV  = privilegeBit("GRPPRV")
-	privREADALL = privilegeBit("READALL")
-)
-
 // Credentials are what process p brings to an access check: its UIC, its
 // current privileges, the rights identifiers it holds, and MAXSYSGROUP.
 // Nothing keeps a copy: each check asks again, so a privilege turned off

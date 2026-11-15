@@ -290,8 +290,10 @@ func serviceSysAscefc(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	if !found {
-		if perm && !p.hasPrivilege(privPRMCEB) {
-			return ssNoPriv, nil
+		if perm {
+			if st := env.requirePrivilege(ruleAscefcPermanent); st != 0 {
+				return st, nil
+			}
 		}
 
 		c = &EventFlagCluster{
@@ -363,8 +365,10 @@ func serviceSysDlcefc(env *Environment, argv []uint32) (uint32, error) {
 	table := env.EventFlagClusters
 	if c, found := table.Lookup(env.Process.UICGroup(), name); found {
 		// Deleting takes PRMCEB, or being the creator.
-		if c.CreatorUIC != env.Process.UIC && !env.Process.hasPrivilege(privPRMCEB) {
-			return ssNoPriv, nil
+		if c.CreatorUIC != env.Process.UIC {
+			if st := env.requirePrivilege(ruleDlcefcOthers); st != 0 {
+				return st, nil
+			}
 		}
 
 		c.DeletePending = true

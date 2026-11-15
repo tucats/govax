@@ -122,6 +122,9 @@
      LOGICALS     Debug logical name operations.
      MEMORY       Debug memory operations.
      PROCESSES    Debug process operations (PROCESS is the same).
+     PRIVILEGES   Show each privilege check: which process asked for
+                  which operation, at which access mode, the privileges
+                  the operation's rule needs, and whether it was granted.
      PROTECTION   Show each access check: which UIC asked for what
                   access to which file, directory, mailbox, or global
                   section, its owner, protection code, and ACL, and

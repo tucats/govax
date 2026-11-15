@@ -116,13 +116,13 @@ func (env *Environment) changeMode(mode registers.AccessMode, argv []uint32) (ui
 
 	// A new call (step 1). The caller needs the privilege, unless it's
 	// in executive or kernel mode already.
-	priv := privCMKRNL
+	rule := ruleCmkrnl
 	if mode == registers.Executive {
-		priv = privCMEXEC
+		rule = ruleCmexec
 	}
 
-	if psl.CurMod() > registers.Executive && !p.hasPrivilege(priv) {
-		return ssNoPriv, nil
+	if st := env.requirePrivilegeAt(rule, psl.CurMod()); st != 0 {
+		return st, nil
 	}
 
 	// The target is the more privileged (smaller) of the requested mode

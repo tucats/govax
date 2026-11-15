@@ -499,4 +499,5 @@
                                      userhalt, keyboard, images,
                                      services, dcl, command, logicals,
                                      devices, process, libinit, rms,
-                                     protection, or userstep.
+                                     protection, privileges, or
+                                     userstep.

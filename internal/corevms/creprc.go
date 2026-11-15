@@ -335,7 +335,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 		uic = req.UIC
 	}
 
-	if st := creator.checkCreatePrivileges(req, uic, detached); st != 0 {
+	if st := env.checkCreatePrivileges(req, uic, detached); st != 0 {
 		return nil, st
 	}
 
@@ -348,7 +348,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 
 	// With DETACH, a detached process's quotas are what it asks for;
 	// anything else is held to its creator's.
-	independent := detached && creator.hasPrivilege(privDETACH)
+	independent := detached && env.holdsPrivilege(ruleCreprcIndependent)
 
 	quotas, cpuDeducted, st := resolveQuotas(&env.Sysgen, creator, req.Quotas, detached, independent)
 	if st != 0 {
@@ -433,7 +433,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 		privileges = req.Privileges
 	}
 
-	if !creator.hasPrivilege(privSETPRV) {
+	if privileges&^creator.CurrentPrivileges != 0 && !env.holdsPrivilege(ruleCreprcPrivileges) {
 		privileges &= creator.CurrentPrivileges
 	}
 
@@ -445,8 +445,8 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	// no higher than the creator's own without ALTPRI. (An omitted
 	// baspri is 0, the lowest.)
 	pri := req.BasePriority & maxPriority
-	if !creator.hasPrivilege(privALTPRI) {
-		pri = min(pri, creator.BasePriority)
+	if pri > creator.BasePriority && !env.holdsPrivilege(ruleCreprcHigherPriority) {
+		pri = creator.BasePriority
 	}
 
 	// The authorized priority is the creator's, or the base priority if
@@ -462,7 +462,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	return child, ssNormal
 }
 
-// checkCreatePrivileges returns SS$_NOPRIV if p may not create the
+// checkCreatePrivileges returns SS$_NOPRIV if env may not create the
 // process req asks for, with UIC uic, detached or not; 0 if it may. The
 // manual's rules:
 //
@@ -473,18 +473,28 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 //   - PSWAPM to disable swapping (PRC$M_PSWAPM), and NOACNT to disable
 //     accounting (PRC$M_NOACNT).
 //
-// The rules for privileges and priority beyond p's own (SETPRV, ALTPRI)
+// The rules for privileges and priority beyond its own (SETPRV, ALTPRI)
 // don't refuse: what's asked for is reduced instead.
-func (p *Process) checkCreatePrivileges(req CreateRequest, uic uint32, detached bool) uint32 {
-	detachOrKernel := p.hasAnyPrivilege(privDETACH | privCMKRNL)
+func (env *Environment) checkCreatePrivileges(req CreateRequest, uic uint32, detached bool) uint32 {
+	checks := []struct {
+		applies bool
+		rule    *PrivilegeRule
+	}{
+		{detached && uic != env.Process.UIC, ruleCreprcOtherUIC},
+		{req.Flags&(prcBATCH|prcNETWRK) != 0, ruleCreprcBatchNetwork},
+		{req.Flags&prcNETWRK != 0, ruleCreprcNetwork},
+		{req.Flags&prcPSWAPM != 0, ruleCreprcPSWAPM},
+		{req.Flags&prcNOACNT != 0, ruleCreprcNOACNT},
+	}
 
-	switch {
-	case detached && uic != p.UIC && !detachOrKernel,
-		req.Flags&(prcBATCH|prcNETWRK) != 0 && !detachOrKernel,
-		req.Flags&prcNETWRK != 0 && !p.hasPrivilege(privNETMBX),
-		req.Flags&prcPSWAPM != 0 && !p.hasPrivilege(privPSWAPM),
-		req.Flags&prcNOACNT != 0 && !p.hasPrivilege(privNOACNT):
-		return ssNoPriv
+	for _, c := range checks {
+		if !c.applies {
+			continue
+		}
+
+		if st := env.requirePrivilege(c.rule); st != 0 {
+			return st
+		}
 	}
 
 	return 0

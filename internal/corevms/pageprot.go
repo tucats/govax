@@ -166,8 +166,8 @@ var ssLkwsetFul = vmsdef.Symbols["SS$_LKWSETFUL"]
 //
 // Locking pages in memory needs the PSWAPM privilege (SS$_NOPRIV).
 func serviceSysLckpag(env *Environment, argv []uint32) (uint32, error) {
-	if !env.Process.hasPrivilege(privPSWAPM) {
-		return ssNoPriv, nil
+	if st := env.requirePrivilege(ruleLckpag); st != 0 {
+		return st, nil
 	}
 
 	return env.lockPages(argv, paging.LockedInMemory, true)

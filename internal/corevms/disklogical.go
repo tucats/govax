@@ -30,37 +30,31 @@ import (
 // a disk's blocks only through its mounted image. The work is
 // internal/rms's (acplogical.go).
 
-// The block I/O privileges.
-var (
-	privLOGIO = privilegeBit("LOG_IO")
-	privPHYIO = privilegeBit("PHY_IO")
-)
-
 // diskReadLogical is IO$_READLBLK.
 func diskReadLogical(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	return env.diskBlockRead(req, privLOGIO|privPHYIO)
+	return env.diskBlockRead(req, ruleDiskLogical)
 }
 
 // diskWriteLogical is IO$_WRITELBLK.
 func diskWriteLogical(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	return env.diskBlockWrite(req, privLOGIO|privPHYIO)
+	return env.diskBlockWrite(req, ruleDiskLogical)
 }
 
 // diskReadPhysical is IO$_READPBLK.
 func diskReadPhysical(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	return env.diskBlockRead(req, privPHYIO)
+	return env.diskBlockRead(req, ruleDiskPhysical)
 }
 
 // diskWritePhysical is IO$_WRITEPBLK.
 func diskWritePhysical(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	return env.diskBlockWrite(req, privPHYIO)
+	return env.diskBlockWrite(req, ruleDiskPhysical)
 }
 
 // diskBlockRead reads p2 bytes from block p3 into the buffer at p1, for a
-// process with at least one of the privileges in privs.
-func (env *Environment) diskBlockRead(req *ioRequest, privs uint64) (ioStatus, uint32) {
-	if !env.Process.hasAnyPrivilege(privs) {
-		return ioStatus{}, ssNoPriv
+// process that may by rule.
+func (env *Environment) diskBlockRead(req *ioRequest, rule *PrivilegeRule) (ioStatus, uint32) {
+	if st := env.requirePrivilege(rule); st != 0 {
+		return ioStatus{}, st
 	}
 
 	size := req.p[1] & 0xFFFF
@@ -85,10 +79,10 @@ func (env *Environment) diskBlockRead(req *ioRequest, privs uint64) (ioStatus, u
 }
 
 // diskBlockWrite writes p2 bytes from the buffer at p1 to block p3, for a
-// process with at least one of the privileges in privs.
-func (env *Environment) diskBlockWrite(req *ioRequest, privs uint64) (ioStatus, uint32) {
-	if !env.Process.hasAnyPrivilege(privs) {
-		return ioStatus{}, ssNoPriv
+// process that may by rule.
+func (env *Environment) diskBlockWrite(req *ioRequest, rule *PrivilegeRule) (ioStatus, uint32) {
+	if st := env.requirePrivilege(rule); st != 0 {
+		return ioStatus{}, st
 	}
 
 	size := req.p[1] & 0xFFFF

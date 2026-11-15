@@ -740,6 +740,7 @@ var validConfigs = map[string]bool{
 	"vax.debug.libinit":    true,
 	"vax.debug.rms":        true,
 	"vax.debug.protection": true,
+	"vax.debug.privileges": true,
 	"vax.debug.userstep":   true,
 	"vax.hardware.clock":   true,
 	"vax.library":          true,

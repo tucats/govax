@@ -6,7 +6,8 @@ import (
 )
 
 // Privileges (docs/planning/PHASE-26.md subtask 38): the process's privilege
-// masks, $SETPRV, and the check the other services make.
+// masks and $SETPRV. The checks the other services make go through the
+// gate, privrules.go.
 //
 // # What a privilege is
 //
@@ -52,26 +53,9 @@ func privilegeBit(name string) uint64 {
 	return 1 << n
 }
 
-// The privileges services check.
-var (
-	privCMKRNL = privilegeBit("CMKRNL")
-	privCMEXEC = privilegeBit("CMEXEC")
-	privSYSNAM = privilegeBit("SYSNAM")
-	privGRPNAM = privilegeBit("GRPNAM")
-	privSYSPRV = privilegeBit("SYSPRV")
-	privPRMCEB = privilegeBit("PRMCEB")
-	privPRMMBX = privilegeBit("PRMMBX")
-	privTMPMBX = privilegeBit("TMPMBX")
-	privPSWAPM = privilegeBit("PSWAPM")
-	privALTPRI = privilegeBit("ALTPRI")
-	privSETPRV = privilegeBit("SETPRV")
-	privOPER   = privilegeBit("OPER")
-	privWORLD  = privilegeBit("WORLD")
-	privGROUP  = privilegeBit("GROUP")
-	privDETACH = privilegeBit("DETACH")
-	privNETMBX = privilegeBit("NETMBX")
-	privNOACNT = privilegeBit("NOACNT")
-)
+// privSETPRV is the privilege that lets $SETPRV enable any privilege.
+// The other privileges' bits are the rules' (privrules.go).
+var privSETPRV = privilegeBit("SETPRV")
 
 // allPrivileges is every privilege's bit: the first PRV$K_NUMBER_OF_PRIVS
 // bits of the mask.
@@ -80,19 +64,6 @@ var allPrivileges = uint64(1)<<vmsdef.Symbols["PRV$K_NUMBER_OF_PRIVS"] - 1
 // ssNotAllPriv is SS$_NOTALLPRIV, $SETPRV's "done, but not every
 // privilege you asked for" (a success status).
 var ssNotAllPriv = vmsdef.Symbols["SS$_NOTALLPRIV"]
-
-// hasPrivilege reports whether every privilege in mask is enabled
-// (CURPRIV).
-func (p *Process) hasPrivilege(mask uint64) bool {
-	return p.CurrentPrivileges&mask == mask
-}
-
-// hasAnyPrivilege reports whether at least one privilege in mask is
-// enabled, for the operations VMS allows with either of two privileges
-// (SYSNAM or SYSPRV, ...).
-func (p *Process) hasAnyPrivilege(mask uint64) bool {
-	return p.CurrentPrivileges&mask != 0
-}
 
 // resetImagePrivileges is image rundown's privilege step: the privileges
 // the image enabled temporarily go, as the permanent ones are copied
