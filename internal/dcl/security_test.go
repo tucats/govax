@@ -207,6 +207,10 @@ func TestProtectionErrors(t *testing.T) {
 		"SET F/BY_OWNER=[1,2,3]":    "DIRECT",
 		"SET F/BY_OWNER=1,2":        "NOLIST",
 		"SET/PROTECTION=(GROUPS) F": "IVKEYW",
+		// testdata/uaf95's round 2: VMS 7.1 refused "W:" with VALREQ.
+		"SET/PROTECTION=(S:RWE,W:) F": "VALREQ",
+		"SET/PROTECTION=(G=,W) F":     "VALREQ",
+		"SET/PROTECTION=W: F":         "VALREQ",
 	} {
 		_, err := g.Parse(line)
 		if err == nil || !strings.Contains(err.Error(), want) {
@@ -295,7 +299,7 @@ func TestACLValues(t *testing.T) {
 	}
 
 	for line, want := range map[string]string{
-		"SETSEC/ACL=(IDENTIFIER=[200,1],ACCESS=READ) F":                   "(IDENTIFIER=[200,1],ACCESS=READ)",
+		"SETSEC/ACL=(IDENTIFIER=[200,1],ACCESS=READ) F":                      "(IDENTIFIER=[200,1],ACCESS=READ)",
 		"SETSEC/ACL=((ID=a,ACCESS=READ),(ID=B,ACCESS=WRITE))/AFTER=(ID=C) F": "((ID=A,ACCESS=READ),(ID=B,ACCESS=WRITE))",
 		"SETSEC/ACL F": "",
 	} {

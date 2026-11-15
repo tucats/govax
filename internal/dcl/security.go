@@ -83,9 +83,17 @@ func readProtection(s string) ([]Value, string, error) {
 			return nil, "", vmserrors.NewSegment(vmserrors.CLI_VALREQ, "")
 		}
 
-		name, _, _ := strings.Cut(strings.Replace(item, "=", ":", 1), ":")
+		name, letters, valued := strings.Cut(strings.Replace(item, "=", ":", 1), ":")
 		if !isProtectionCategory(name) {
 			return nil, "", vmserrors.NewSegment(vmserrors.CLI_IVKEYW, name)
+		}
+
+		// A category with no access is its name alone ("W"); a name
+		// with ":" or "=" and nothing after it ("W:") is %DCL-W-VALREQ,
+		// with no segment, as VMS 7.1's SET SECURITY showed it
+		// (testdata/uaf95's round 2).
+		if valued && letters == "" {
+			return nil, "", vmserrors.NewSegment(vmserrors.CLI_VALREQ, "")
 		}
 
 		vals = append(vals, Value{IsString: true, Str: item})

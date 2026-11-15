@@ -19,6 +19,7 @@ These fixtures are `docs/planning/PHASE-95 - authentication.md`'s subtask
 | File | What it holds |
 | ---- | ------------- |
 | `gen.go` | Writes everything below: `go run testdata/uaf95/gen.go` from the repository root |
+| `uaf95b.com` | Round 3's SYSTEM run: LIST by name, the accounts again, the batch jobs |
 | `uaf95.com` | SYSTEM's run: the environment, the scratch files and AUTHORIZE's cases, the accounts (by `uaf95acct.com`), the batch jobs, SYSTEM's own state |
 | `uaf95acct.com` | Makes the probe's accounts in the VAX's SYSUAF, their home directory, and points SYS$SYLOGIN at `uaf95s.com` |
 | `uaf95drop.com` | The end: puts SYS$SYLOGIN back, removes the accounts and identifiers, deletes the scratch files |
@@ -27,6 +28,7 @@ These fixtures are `docs/planning/PHASE-95 - authentication.md`'s subtask
 | `login.com` | UAF95's `SYS$LOGIN:LOGIN.COM`, in `[UAF95]` |
 | `uaf95x.com` | UAF95L's LGICMD, in `[UAF95]`: records, then fails with a warning, then with an error |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring the results back |
+| `copyout3.cmd` | Round 3's results into `vax/round3/` |
 
 ## The accounts
 
@@ -182,6 +184,69 @@ added to the rights database); a UIC's member is octal (`[300,9]` is
 `%UAF-E-UICERR`, so round 2's cases use octal members, with one case of
 `[300,8]` kept to show it); and the messages UAEERR, UICERR, BADSPC,
 RDBADDERRU with DUPIDENT, NAOFIL, RDBCREERR.
+
+## Round 2
+
+Round 2 ran on VMS V7.1 on 2026-11-15, to the end; `vax/` holds its
+logs, LIST's listings, and `terminal.log`, the logins by hand. All 134
+AUTHORIZE cases ran on the scratch files (the executive-mode names were
+honored: SHOW/IDENTIFIER listed only a new rights database's
+environmental identifiers). The logins showed SYLOGIN and the process's
+state, DISUSER's message (`%LOGIN-F-DISUSER, account is disabled`, at the
+terminal, in OPCOM's security alarm, and for the batch job), and every
+F$GETJPI item. Two things it couldn't show, through a mistake of the
+probe's own:
+
+- `UAF95ACCT.COM`'s SET SECURITY lines wrote `W:` for no world access,
+  which VMS refuses (`%DCL-W-VALREQ`; it is `W` alone). So the home
+  directory and its procedures stayed SYSTEM's, with no world access,
+  and the accounts (group 200, world to `[1,4]`) couldn't read LOGIN.COM
+  or UAF95X.COM: VMS skipped them **with no message**, and only SYLOGIN
+  ran. (govax took `W:` as no access; it now refuses it as VMS does.)
+- The VAX's own DEFAULT record has `LGICMD: LOGIN`, which COPY and ADD
+  gave the accounts.
+
+Group 200's group identifier is still Phase 93's PROT93
+(`[000200,177777]`), so the UICs show as `[PROT93,UAF95]` and ADD made no
+GOVAX identifier. LIST/IDENTIFIER and LIST/RIGHTS without a name say
+`%UAF-I-NOIDNAME` and list nothing.
+
+## Round 3
+
+Round 3 is the login procedures again, with the protection fixed, and
+UAF95's LGICMD empty (`MODIFY UAF95/LGICMD=""`) so its login uses
+SYS$LOGIN:LOGIN.COM, as govax's accounts will. `uaf95b.com` lists
+identifiers and rights by name from scratch files (13 cases), makes the
+accounts with `UAF95ACCT.COM`, and runs the UAF95 and UAF95L batch jobs.
+UAF95D isn't needed again.
+
+1. **Build a fresh exchange volume** (round 2's results are already in
+   `vax/`), from the repository root:
+
+       rm -f testdata/disks/uaf95-exchange.dsk
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/uaf95/exchange.cmd
+
+2. **Attach it** (`attach rq1 testdata/disks/uaf95-exchange.dsk`) and, **as
+   SYSTEM**:
+
+       $ MOUNT/SYSTEM DUA1: UAF95
+       $ @DUA1:[000000]UAF95B
+
+   Its log is `UAF95$DISK:[UAF95LOG]UAF95B.LOG`, ending `UAF95B FINISHED`.
+
+3. **Log in by hand** as UAF95 and as UAF95L (password `UAF95PW`), and in
+   each run `$ @UAF95$DISK:[000000]UAF95I`, then `$ LOGOUT`. Keep the
+   terminal's text from `Username:` to the logout message: UAF95L's
+   LGICMD should now show its warning and error at login. Paste it into
+   `testdata/uaf95/vax/round3/terminal.log`.
+
+4. **As SYSTEM**, `@UAF95$DISK:[000000]UAF95DROP`, then `DISMOUNT DUA1:`
+   and `detach rq1`.
+
+5. **Copy the results back**:
+
+       mkdir -p testdata/uaf95/vax/round3
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/uaf95/copyout3.cmd
 
 ## The rehearsal
 

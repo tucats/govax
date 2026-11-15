@@ -1,0 +1,66 @@
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1    
+
+Username: uaf95
+Password: 
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1
+    Last non-interactive login on Sunday, 15-NOV-2026 17:19
+$ @UAF95$DISK:[000000]UAF95I 
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-PRV, insufficient privilege or file protection violation
+%CREATE-E-OPENOUT, error opening DUA1:[UAF95]UAF95I.TMP; as output
+-RMS-E-PRV, insufficient privilege or file protection violation
+%DIRECT-W-NOFILES, no files found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[UAF95]UAF95I.TMP;*
+-RMS-E-FNF, file not found
+$ WRITE SYS$OUTPUT "UAF95I finished; the log is ", LOGFILE
+UAF95I finished; the log is UAF95$DISK:[UAF95LOG]UAF95I_UAF95_INTERACTIVE.LOG
+$ EXIT
+$ logout
+  UAF95        logged out at 15-NOV-2026 17:21:19.70
+
+
+
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1    
+
+Username: uaf95l
+Password: 
+%LICENSE-I-NOLICENSE, no license is active for this software product
+%LOGIN-S-LOGOPRCON, login allowed from OPA0:
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1
+    Last non-interactive login on Sunday, 15-NOV-2026 17:19
+$  @UAF95$DISK:[000000]UAF95I 
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-PRV, insufficient privilege or file protection violation
+%CREATE-E-OPENOUT, error opening DUA1:[UAF95]UAF95I.TMP; as output
+-RMS-E-PRV, insufficient privilege or file protection violation
+%DIRECT-W-NOFILES, no files found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[UAF95]UAF95I.TMP;*
+-RMS-E-FNF, file not found
+$ WRITE SYS$OUTPUT "UAF95I finished; the log is ", LOGFILE
+UAF95I finished; the log is UAF95$DISK:[UAF95LOG]UAF95I_UAF95L_INTERACTIVE.LOG
+$ EXIT
+$ logo
+  UAF95L       logged out at 15-NOV-2026 17:23:06.14
+
+
+
+	Welcome to OpenVMS (TM) VAX Operating System, Version V7.1    
+
+Username: uaf95d
+Password: 
+%%%%%%%%%%%  OPCOM  15-NOV-2026 17:23:27.46  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Local interactive login failure
+Event time:               15-NOV-2026 17:23:27.46
+PID:                      00000166        
+Process name:             _OPA0:          
+Username:                 UAF95D          
+Terminal name:            OPA0:, _OPA0:
+Status:                   %LOGIN-F-DISUSER, account is disabled
+
+User authorization failure

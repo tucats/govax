@@ -1,0 +1,12 @@
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+                     UAFA            [300,1]               Normal  4 Disuser
+                     UAFB            [200,200]             Normal  4 Disuser
+                     UAFC            [300,1]               Normal  4 Disuser
+                     UAFE            [300,5]               Normal  4 Disuser
+NEW OWNER            UAFG            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFL            [300,10]              Normal  4 Disuser
+NEW OWNER            UAFM            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFN            [300,13]              Normal  4 Disuser

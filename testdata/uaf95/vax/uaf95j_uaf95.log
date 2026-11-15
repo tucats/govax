@@ -1,0 +1,51 @@
+$ ! UAF95S.COM - Phase 95's probe: SYS$SYLOGIN while the probe runs.
+$ ! Written by testdata/uaf95/gen.go. For the probe's accounts it records
+$ ! what it sees; for every other user it runs the VAX's own SYLOGIN,
+$ ! whose name UAF95ACCT.COM kept in UAF95$OLD_SYLOGIN.
+$ !
+$ IF F$EXTRACT(0,5,F$GETJPI("","USERNAME")) .NES. "UAF95" THEN GOTO OTHERS
+$ IF F$TYPE(UAF95_ORDER) .EQS. "" THEN UAF95_ORDER == ""
+$ UAF95_ORDER == UAF95_ORDER + ",SYLOGIN"
+$ UAF95_SYLOGIN_VERIFY == F$VERIFY()
+$ UAF95_SYLOGIN_PROCEDURE == F$ENVIRONMENT("PROCEDURE")
+$ UAF95_SYLOGIN_DEPTH == F$ENVIRONMENT("DEPTH")
+$ UAF95_SYLOGIN_MODE == F$MODE()
+$ UAF95_SYLOGIN_DEFAULT == F$ENVIRONMENT("DEFAULT")
+$ UAF95_SYLOGIN_SYS_LOGIN == F$TRNLNM("SYS$LOGIN")
+$ UAF95_SYLOGIN_PRIVS == F$GETJPI("","CURPRIV")
+$ UAF95_SYLOGIN_P1 == P1
+$ UAF95_SYLOGIN_STATUS == $STATUS
+$ EXIT
+$ ! UAF95I.COM - Phase 95's probe: a process's state after logging in.
+$ ! Written by testdata/uaf95/gen.go. The batch jobs run it, and each
+$ ! account runs it by hand after logging in (README.md):
+$ !
+$ !     $ @UAF95$DISK:[000000]UAF95I
+$ !
+$ ! It writes UAF95$DISK:[UAF95LOG]UAF95I_user_mode.LOG (NOLOG: to
+$ ! SYS$OUTPUT, as UAF95.COM uses it for SYSTEM).
+$ !
+$ IF P1 .EQS. "LOGGED" .OR. P1 .EQS. "NOLOG" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ WHO = F$EDIT(F$GETJPI("","USERNAME"),"TRIM")
+$ LOGFILE = "UAF95$DISK:[UAF95LOG]UAF95I_" + WHO + "_" + F$MODE() + ".LOG"
+$ @DISK$UAF95:[000000]UAF95I.COM;1/OUTPUT=UAF95$DISK:[UAF95LOG]UAF95I_UAF95_BATCH.LOG LOGGED
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-PRV, insufficient privilege or file protection violation
+%CREATE-E-OPENOUT, error opening DUA1:[UAF95]UAF95I.TMP; as output
+-RMS-E-PRV, insufficient privilege or file protection violation
+%DIRECT-W-NOFILES, no files found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[UAF95]UAF95I.TMP;*
+-RMS-E-FNF, file not found
+$ WRITE SYS$OUTPUT "UAF95I finished; the log is ", LOGFILE
+UAF95I finished; the log is UAF95$DISK:[UAF95LOG]UAF95I_UAF95_BATCH.LOG
+$ EXIT
+  UAF95        job terminated at 15-NOV-2026 17:19:48.42
+
+  Accounting information:
+  Buffered I/O count:             230         Peak working set size:     551
+  Direct I/O count:                33         Peak page file size:      6652
+  Page faults:                   3304         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.35   Elapsed time:     0 00:00:00.39

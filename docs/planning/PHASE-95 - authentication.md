@@ -542,3 +542,15 @@ The answers (2026-11-15):
   scratch files, no line over 200 characters (`gen.go` refuses one), UIC
   members in octal. Round 1's log is `vax/round1/uaf95.log`; the
   README's "Round 1" lists what it answered.
+- **2026-11-15** Round 2 on VMS 7.1 ran to the end: all 134 AUTHORIZE
+  cases on the scratch files (the executive-mode names honored), SYLOGIN
+  and the process's state for each account in batch and at the terminal,
+  DISUSER's `%LOGIN-F-DISUSER`, and every F$GETJPI item (`vax/`). The
+  accounts' LOGIN.COM and LGICMD didn't run: the probe's SET SECURITY
+  wrote `W:`, which VMS refuses with `%DCL-W-VALREQ`, so the procedures
+  stayed closed to the accounts, and VMS skipped an unreadable login
+  procedure without a message. govax took `W:` as no access; it now
+  refuses it (`dcl/security.go`'s `readProtection`, with cases in
+  `TestProtectionErrors`). Round 3 (`uaf95b.com`, `copyout3.cmd`) makes
+  the accounts again with that fixed and UAF95's LGICMD empty, and lists
+  identifiers and rights by name; waiting for the VAX.

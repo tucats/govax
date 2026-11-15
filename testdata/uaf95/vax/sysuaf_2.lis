@@ -1,0 +1,192 @@
+
+Username: UAFA                             Owner:  
+Account:                                   UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFB                             Owner:  
+Account:                                   UIC:    [200,200] ([UAFB])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFC                             Owner:  
+Account:                                   UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFE                             Owner:  
+Account:                                   UIC:    [300,5] ([CASED,UAFE])
+CLI:      NOSUCHCLI                        Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFG                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+
+Username: UAFL                             Owner:  
+Account:                                   UIC:    [300,10] ([CASED,UAFL])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA3:[USER]
+LGICMD:   
+Flags:  DisCtlY DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        77  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFM                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+
+Username: UAFN                             Owner:  
+Account:                                   UIC:    [300,13] ([CASED,UAFN])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX

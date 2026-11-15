@@ -1,0 +1,2707 @@
+$ !
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+######## ENVIRONMENT
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME"), " ", F$GETSYI("NODENAME")
+V7.1     VAX 8600 SIMVAX
+$ WRITE SYS$OUTPUT "MAXSYSGROUP ", F$GETSYI("MAXSYSGROUP")
+MAXSYSGROUP 8
+$ WRITE SYS$OUTPUT F$GETJPI("","USERNAME"), " ", F$GETJPI("","UIC")
+SYSTEM       [SYSTEM]
+$ SHOW LOGICAL UAF95$DISK
+   "UAF95$DISK" = "DUA1:" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYSUAF
+%SHOW-S-NOTRAN, no translation for logical name SYSUAF
+$ SHOW LOGICAL/FULL RIGHTSLIST
+%SHOW-S-NOTRAN, no translation for logical name RIGHTSLIST
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYS$LOGIN
+   "SYS$LOGIN" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_81C71500)
+$ SHOW LOGICAL/FULL SYS$LOGIN_DEVICE
+   "SYS$LOGIN_DEVICE" [exec] = "SYS$SYSROOT:" (LNM$JOB_81C71500)
+1  "SYS$SYSROOT" [exec] = "SIMVAX$DUA0:[SYS0.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+	= "SYS$COMMON:"
+2  "SYS$COMMON" [exec] = "SIMVAX$DUA0:[SYS0.SYSCOMMON.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYS$SCRATCH
+   "SYS$SCRATCH" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_81C71500)
+$ DIRECTORY/SECURITY SYS$SYSTEM:SYSUAF.DAT
+
+Directory SYS$COMMON:[SYSEXE]
+
+SYSUAF.DAT;1         [SYSTEM]                         (RWE,RWE,,)
+
+Total of 1 file.
+$ DIRECTORY/SECURITY SYS$SYSTEM:RIGHTSLIST.DAT
+
+Directory SYS$COMMON:[SYSEXE]
+
+RIGHTSLIST.DAT;1     [SYSTEM]                         (RWED,RWED,,)
+
+Total of 1 file.
+$ DIRECTORY/SECURITY SYS$SYSTEM:AUTHORIZE.EXE
+
+Directory SYS$COMMON:[SYSEXE]
+
+AUTHORIZE.EXE;1      [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ DIRECTORY/SECURITY SYS$MANAGER:SYLOGIN.COM
+
+Directory SYS$COMMON:[SYSMGR]
+
+SYLOGIN.COM;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ DIRECTORY/SECURITY SYS$SYSROOT:[000000]SYSMGR.DIR
+
+Directory SYS$SYSROOT:[000000]
+
+SYSMGR.DIR;1         [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+
+Directory SYS$COMMON:[000000]
+
+SYSMGR.DIR;1         [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+
+Grand total of 2 directories, 2 files.
+$ DIRECTORY/SECURITY SYS$SYSROOT:[000000]SYSEXE.DIR
+
+Directory SYS$SYSROOT:[000000]
+
+SYSEXE.DIR;1         [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+
+Directory SYS$COMMON:[000000]
+
+SYSEXE.DIR;1         [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+
+Grand total of 2 directories, 2 files.
+$ DIRECTORY/SECURITY SYS$SYSROOT:[000000]SYSLIB.DIR
+
+Directory SYS$SYSROOT:[000000]
+
+SYSLIB.DIR;1         [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+
+Directory SYS$COMMON:[000000]
+
+SYSLIB.DIR;1         [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+
+Grand total of 2 directories, 2 files.
+$ DIRECTORY/SECURITY SYS$SYSROOT:[SYSLIB]STARLET.OLB
+
+Directory SYS$COMMON:[SYSLIB]
+
+STARLET.OLB;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ DIRECTORY/SECURITY SYS$SYSROOT:[SYSHLP]HELPLIB.HLB
+
+Directory SYS$COMMON:[SYSHLP]
+
+HELPLIB.HLB;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ DIRECTORY/SECURITY SYS$SYSDEVICE:[000000]SYS0.DIR
+
+Directory SYS$SYSDEVICE:[000000]
+
+SYS0.DIR;1           [SYSTEM]                         (RWE,RWE,RE,RE)
+
+Total of 1 file.
+$ !
+$ WRITE SYS$OUTPUT "######## VOLUME"
+######## VOLUME
+$ SET VOLUME/PROTECTION=(S:RWCD,O:RWCD,G:RWCD,W:RWCD) UAF95$DISK:
+$ SET SECURITY/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) UAF95$DISK:[000000]000000.DIR
+$ SET SECURITY/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) UAF95$DISK:[000000]UAF95LOG.DIR
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) UAF95$DISK:[000000]*.COM;*
+$ DIRECTORY/SECURITY UAF95$DISK:[000000]
+
+Directory DUA1:[000000]
+
+000000.DIR;1         [SYSTEM]                         (RWE,RWE,RWE,RWE)
+BACKUP.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+BADBLK.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+BADLOG.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+BITMAP.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+CONTIN.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+CORIMG.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+INDEXF.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+SECURITY.SYS;1       [SYSTEM]                         (RWED,RWED,RE,)
+UAF95.COM;1          [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95.DIR;1          [SYSTEM]                         (RWE,RWE,RE,E)
+UAF95ACCT.COM;1      [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95DROP.COM;1      [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95I.COM;1         [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95LOG.DIR;1       [SYSTEM]                         (RWE,RWE,RWE,RWE)
+UAF95S.COM;1         [SYSTEM]                         (RWED,RWED,RE,RE)
+UAF95SCR.DIR;1       [SYSTEM]                         (RWE,RWE,,)
+VOLSET.SYS;1         [SYSTEM]                         (RWED,RWED,RE,)
+
+Total of 18 files.
+$ !
+$ ! The scratch files. With SYSUAF and RIGHTSLIST naming files that don't
+$ ! exist yet, AUTHORIZE offers to make a new SYSUAF.DAT (the data line
+$ ! YES answers it) holding its own DEFAULT and SYSTEM records, and
+$ ! CREATE/RIGHTS makes RIGHTSLIST.DAT. The names are executive-mode
+$ ! process names: round 1's supervisor-mode RIGHTSLIST was ignored, and
+$ ! AUTHORIZE used the VAX's own rights database. Nothing below may run
+$ ! unless both scratch files are there, so the VAX's are never changed.
+$ !
+$ WRITE SYS$OUTPUT "######## SCRATCH FILES"
+######## SCRATCH FILES
+$ SET DEFAULT UAF95$DISK:[UAF95SCR]
+$ DEFINE/PROCESS/EXECUTIVE_MODE SYSUAF UAF95$DISK:[UAF95SCR]SYSUAF.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE RIGHTSLIST UAF95$DISK:[UAF95SCR]RIGHTSLIST.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE NETPROXY UAF95$DISK:[UAF95SCR]NETPROXY.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE NET$PROXY UAF95$DISK:[UAF95SCR]NET$PROXY.DAT
+$ SHOW LOGICAL/FULL SYSUAF
+   "SYSUAF" [exec] = "UAF95$DISK:[UAF95SCR]SYSUAF.DAT" (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/FULL RIGHTSLIST
+   "RIGHTSLIST" [exec] = "UAF95$DISK:[UAF95SCR]RIGHTSLIST.DAT" (LNM$PROCESS_TABLE)
+$ MCR AUTHORIZE
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+YES
+CREATE/RIGHTS
+%UAF-I-RDBCREMSG, rights database created
+SHOW DEFAULT/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ IF F$SEARCH("UAF95$DISK:[UAF95SCR]SYSUAF.DAT") .EQS. "" THEN GOTO NO_SCRATCH
+$ IF F$SEARCH("UAF95$DISK:[UAF95SCR]RIGHTSLIST.DAT") .EQS. "" THEN GOTO NO_SCRATCH
+$ GOTO SCRATCH_MADE
+$ SCRATCH_MADE:
+$ DIRECTORY/FULL UAF95$DISK:[UAF95SCR]
+
+Directory DUA1:[UAF95SCR]
+
+RIGHTSLIST.DAT;1              File ID:  (23,1,0)              
+Size:           15/15         Owner:    [1,4]
+Created:   15-NOV-2026 17:19:44.63
+Revised:   15-NOV-2026 17:19:44.64 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Variable length, maximum 64 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:, World:
+Access Cntrl List:  None
+
+SYSUAF.DAT;1                  File ID:  (22,1,0)              
+Size:           36/36         Owner:    [1,4]
+Created:   15-NOV-2026 17:19:44.61
+Revised:   15-NOV-2026 17:19:44.64 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 4 keys
+Shelved state:      Online 
+File attributes:    Allocation: 36, Extend: 10, Maximum bucket size: 3, Global buffer count: 0, No version limit
+                    Contiguous best try
+Record format:      Variable length, maximum 1412 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:, World:
+Access Cntrl List:  None
+
+Total of 2 files, 51/51 blocks.
+$ !
+$ ! A session: commands from the procedure's data lines, errors among
+$ ! them, ended by EXIT; then one ended by the end of its data.
+$ !
+$ WRITE SYS$OUTPUT "######## A SESSION"
+######## A SESSION
+$ MCR AUTHORIZE
+SHOW NOSUCH
+%UAF-W-BADSPC, no user matches specification
+FROB
+%CLI-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROB\
+ADD UAFS/UIC=[300,40]
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFS value [000300,000040] added to rights database
+SHOW UAFS/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     UAFS            [300,40]              Normal  4 Disuser
+REMOVE UAFS
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier UAFS value [000300,000040] removed from rights database
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ MCR AUTHORIZE
+SHOW SYSTEM/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+%UAF-I-NOMODS, no modifications made to system authorization file
+%UAF-I-RDBNOMODS, no modifications made to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## THE NEW FILE'S RECORDS"
+######## THE NEW FILE'S RECORDS
+$ WRITE SYS$OUTPUT "== 1"
+== 1
+$ MCR AUTHORIZE SHOW DEFAULT
+
+Username: DEFAULT                          Owner:  
+Account:                                   UIC:    [200,200] ([200,200])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 2"
+== 2
+$ MCR AUTHORIZE SHOW SYSTEM
+
+Username: SYSTEM                           Owner:  SYSTEM MANAGER
+Account:  SYSTEM                           UIC:    [1,4] ([1,4])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  SYS$SYSROOT:[SYSMGR]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  8   Login Fails:     0
+Pwdlifetime:         30 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:          10  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        50  WSquo:          512
+Queprio:         0  TQElm:        30  WSextent:      2048
+CPU:        (none)  Enqlm:       300  Pgflquo:      40960
+Authorized Privileges: 
+  ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+  IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+  LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+  PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+  SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+Default Privileges: 
+  ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+  IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+  LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+  PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+  SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 3"
+== 3
+$ MCR AUTHORIZE SHOW SYSTEM/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 4"
+== 4
+$ MCR AUTHORIZE SHOW SYSTEM/FULL
+
+Username: SYSTEM                           Owner:  SYSTEM MANAGER
+Account:  SYSTEM                           UIC:    [1,4] ([1,4])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  SYS$SYSROOT:[SYSMGR]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  8   Login Fails:     0
+Pwdlifetime:         30 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:          10  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        50  WSquo:          512
+Queprio:         0  TQElm:        30  WSextent:      2048
+CPU:        (none)  Enqlm:       300  Pgflquo:      40960
+Authorized Privileges: 
+  ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+  IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+  LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+  PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+  SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+Default Privileges: 
+  ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+  IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+  LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+  PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+  SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 5"
+== 5
+$ MCR AUTHORIZE SHOW */BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 6"
+== 6
+$ MCR AUTHORIZE SHOW/IDENTIFIER *
+  Name                             Value           Attributes
+  BATCH                            %X80000001      
+  DECWINDOWS                       %X80000007      
+  DIALUP                           %X80000002      
+  INTERACTIVE                      %X80000003      
+  LOCAL                            %X80000004      
+  NETWORK                          %X80000005      
+  REMOTE                           %X80000006      
+  VMS$BUFFER_OBJECT_USER           %X80000008      
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 7"
+== 7
+$ MCR AUTHORIZE SHOW/IDENTIFIER/FULL *
+  Name                             Value           Attributes
+  BATCH                            %X80000001      
+  DECWINDOWS                       %X80000007      
+  DIALUP                           %X80000002      
+  INTERACTIVE                      %X80000003      
+  LOCAL                            %X80000004      
+  NETWORK                          %X80000005      
+  REMOTE                           %X80000006      
+  VMS$BUFFER_OBJECT_USER           %X80000008      
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## ADD"
+######## ADD
+$ WRITE SYS$OUTPUT "== 8"
+== 8
+$ MCR AUTHORIZE ADD UAFA/UIC=[300,1]
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFA value [000300,000001] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 9"
+== 9
+$ MCR AUTHORIZE SHOW UAFA
+
+Username: UAFA                             Owner:  
+Account:                                   UIC:    [300,1] ([UAFA])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 10"
+== 10
+$ MCR AUTHORIZE SHOW/IDENTIFIER UAFA
+  Name                             Value           Attributes
+  UAFA                             [000300,000001] 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 11"
+== 11
+$ MCR AUTHORIZE ADD UAFA/UIC=[300,2]
+%UAF-E-UAEERR, invalid user name, user name already exists
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X13F1943A"
+$ WRITE SYS$OUTPUT "== 12"
+== 12
+$ MCR AUTHORIZE ADD UAFB
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFB value [000200,000200] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 13"
+== 13
+$ MCR AUTHORIZE ADD TOOLONGUSERNAM/UIC=[300,3]
+%UAF-E-NAMETOOBIG, user name too long
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X13F19352"
+$ WRITE SYS$OUTPUT "== 14"
+== 14
+$ MCR AUTHORIZE ADD BAD-NAME/UIC=[300,3]
+%UAF-E-INVUSERNAME, user name syntax error
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X13F1931A"
+$ WRITE SYS$OUTPUT "== 15"
+== 15
+$ MCR AUTHORIZE ADD UAFC/UIC=[300]
+%UAF-E-UICERR, error in UIC specification \[300]\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 16"
+== 16
+$ MCR AUTHORIZE ADD UAFC/UIC=[400000,1]
+%UAF-E-UICERR, error in UIC specification \[400000,1]\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 17"
+== 17
+$ MCR AUTHORIZE ADD UAFC/UIC=[300,1]
+%UAF-I-ADDMSG, user record successfully added
+%UAF-E-RDBADDERRU, unable to add UAFC value [000300,000001] to rights database
+-SYSTEM-F-DUPIDENT, duplicate identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 18"
+== 18
+$ MCR AUTHORIZE SHOW UAFC/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     UAFC            [300,1]               Normal  4 Disuser
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 19"
+== 19
+$ MCR AUTHORIZE ADD UAFQ/UIC=[300,8]
+%UAF-E-UICERR, error in UIC specification \[300,8]\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 20"
+== 20
+$ MCR AUTHORIZE ADD UAFN/UIC=[300,13]/PASSWORD=UAFNPW1
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFN value [000300,000013] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 21"
+== 21
+$ MCR AUTHORIZE SHOW UAFN
+
+Username: UAFN                             Owner:  
+Account:                                   UIC:    [300,13] ([UAFN])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 22"
+== 22
+$ MCR AUTHORIZE ADD UAFD/UIC=[300,4]/OWNER="GOVAX CASE D"/ACCOUNT=CASED/DEVICE=DUA1:/DIRECTORY=[UAFD]/CLI=DCL/LGICMD=MYLOGIN/PRIORITY=3/PASSWORD=UAFDPW1
+%UAF-I-ADDMSG, user record successfully added
+%UAF-W-CLIWARNMSG, /CLITABLES field may need to reflect changes to /CLI field
+%UAF-I-RDBADDMSGU, identifier UAFD value [000300,000004] added to rights database
+%UAF-I-RDBADDMSGU, identifier CASED value [000300,177777] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 23"
+== 23
+$ MCR AUTHORIZE MODIFY UAFD/FLAGS=(DISUSER,DISCTLY,DEFCLI,LOCKPWD,CAPTIVE,DISNEWMAIL,DISWELCOME)/PRIVILEGES=(TMPMBX,NETMBX,SYSPRV)/DEFPRIVILEGES=(TMPMBX,NETMBX)
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 24"
+== 24
+$ MCR AUTHORIZE MODIFY UAFD/ASTLM=31/BIOLM=32/BYTLM=33000/DIOLM=34/ENQLM=35/FILLM=36/JTQUOTA=3700/PGFLQUOTA=38000/PRCLM=9/TQELM=11
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 25"
+== 25
+$ MCR AUTHORIZE MODIFY UAFD/WSDEFAULT=301/WSQUOTA=601/WSEXTENT=1201/MAXJOBS=2/MAXACCTJOBS=3/MAXDETACH=4/SHRFILLM=5/QUEPRIO=6/CPUTIME=0-00:10:00
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 26"
+== 26
+$ MCR AUTHORIZE SHOW UAFD
+
+Username: UAFD                             Owner:  GOVAX CASE D
+Account:  CASED                            UIC:    [300,4] ([CASED,UAFD])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA1:[UAFD]
+LGICMD:   MYLOGIN
+Flags:  DisCtlY DefCLI LockPwd DisUser DisWelcome DisNewMail Captive
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        32  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            3  ASTlm:        31  WSquo:          601
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    SYSPRV    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 27"
+== 27
+$ MCR AUTHORIZE SHOW UAFD/FULL
+
+Username: UAFD                             Owner:  GOVAX CASE D
+Account:  CASED                            UIC:    [300,4] ([CASED,UAFD])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA1:[UAFD]
+LGICMD:   MYLOGIN
+Flags:  DisCtlY DefCLI LockPwd DisUser DisWelcome DisNewMail Captive
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        32  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            3  ASTlm:        31  WSquo:          601
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    SYSPRV    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 28"
+== 28
+$ MCR AUTHORIZE SHOW UAFD/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+GOVAX CASE D         UAFD            [300,4]      CASED    All     3 Disuser
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 29"
+== 29
+$ MCR AUTHORIZE ADD UAFE/UIC=[300,5]/PRIVILEGES=NOSUCHPRIV
+%CLI-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \NOSUCHPRIV\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038060"
+$ WRITE SYS$OUTPUT "== 30"
+== 30
+$ MCR AUTHORIZE ADD UAFE/UIC=[300,5]/FLAGS=NOSUCHFLAG
+%CLI-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \NOSUCHFLAG\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038060"
+$ WRITE SYS$OUTPUT "== 31"
+== 31
+$ MCR AUTHORIZE ADD UAFE/UIC=[300,5]/PRIORITY=99
+%UAF-E-VALTOOBIG, value too large for field \99\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 32"
+== 32
+$ MCR AUTHORIZE ADD UAFE/UIC=[300,5]/CLI=NOSUCHCLI
+%UAF-I-ADDMSG, user record successfully added
+%UAF-W-CLIWARNMSG, /CLITABLES field may need to reflect changes to /CLI field
+%UAF-I-RDBADDMSGU, identifier UAFE value [000300,000005] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 33"
+== 33
+$ MCR AUTHORIZE ADD UAFE/UIC=[300,5]/PRIVILEGES=ALL/DEFPRIVILEGES=NOALL
+%UAF-E-UAEERR, invalid user name, user name already exists
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X13F1943A"
+$ WRITE SYS$OUTPUT "== 34"
+== 34
+$ MCR AUTHORIZE SHOW UAFE
+
+Username: UAFE                             Owner:  
+Account:                                   UIC:    [300,5] ([CASED,UAFE])
+CLI:      NOSUCHCLI                        Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## MODIFY"
+######## MODIFY
+$ WRITE SYS$OUTPUT "== 35"
+== 35
+$ MCR AUTHORIZE MODIFY UAFD/UIC=[300,44]
+%UAF-I-RDBMDFYMSG, identifier UAFD modified
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 36"
+== 36
+$ MCR AUTHORIZE MODIFY UAFD/OWNER="NEW OWNER"/ACCOUNT=NEWACCT
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 37"
+== 37
+$ MCR AUTHORIZE MODIFY UAFD/DEVICE=DUA2:/DIRECTORY=[NEWDIR]
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 38"
+== 38
+$ MCR AUTHORIZE MODIFY UAFD/FLAGS=NODISUSER
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 39"
+== 39
+$ MCR AUTHORIZE MODIFY UAFD/FLAGS=(NOCAPTIVE,NOLOCKPWD)
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 40"
+== 40
+$ MCR AUTHORIZE MODIFY UAFD/PRIVILEGES=(NOSYSPRV,OPER)
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 41"
+== 41
+$ MCR AUTHORIZE MODIFY UAFD/DEFPRIVILEGES=OPER
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 42"
+== 42
+$ MCR AUTHORIZE MODIFY UAFD/PRIORITY=5/WSQUOTA=700/ASTLM=41
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 43"
+== 43
+$ MCR AUTHORIZE MODIFY UAFD/LGICMD=""
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 44"
+== 44
+$ MCR AUTHORIZE MODIFY UAFD/PASSWORD=UAFDPW2
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 45"
+== 45
+$ MCR AUTHORIZE MODIFY UAFD/NOPASSWORD
+%UAF-I-PWDLESSMIN, new password is shorter than minimum password length
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 46"
+== 46
+$ MCR AUTHORIZE SHOW UAFD/FULL
+
+Username: UAFD                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,44] ([CASED,UAFD])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        32  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        41  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 47"
+== 47
+$ MCR AUTHORIZE MODIFY UAF%/ASTLM=60
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 48"
+== 48
+$ MCR AUTHORIZE MODIFY UAF*/BIOLM=61
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 49"
+== 49
+$ MCR AUTHORIZE SHOW */BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+                     UAFA            [300,1]               Normal  4 Disuser
+                     UAFB            [200,200]             Normal  4 Disuser
+                     UAFC            [300,1]               Normal  4 Disuser
+NEW OWNER            UAFD            [300,44]     NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFE            [300,5]               Normal  4 Disuser
+                     UAFN            [300,13]              Normal  4 Disuser
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 50"
+== 50
+$ MCR AUTHORIZE MODIFY NOSUCH/ASTLM=1
+%UAF-W-BADSPC, no user matches specification
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X13F18C80"
+$ WRITE SYS$OUTPUT "== 51"
+== 51
+$ MCR AUTHORIZE MODIFY UAFD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 52"
+== 52
+$ MCR AUTHORIZE MODIFY UAFD/UIC=[300,1]
+%UAF-E-RDBMDFYERR, unable to modify identifier UAFD
+-SYSTEM-F-DUPIDENT, duplicate identifier
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 53"
+== 53
+$ MCR AUTHORIZE SHOW UAFD/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+NEW OWNER            UAFD            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## COPY, RENAME, AND REMOVE"
+######## COPY, RENAME, AND REMOVE
+$ WRITE SYS$OUTPUT "== 54"
+== 54
+$ MCR AUTHORIZE COPY UAFD UAFF/UIC=[300,6]
+%UAF-I-COPMSG, user record copied
+%UAF-W-DEFPWD, copied or renamed records must receive new password
+%UAF-I-RDBADDMSGU, identifier UAFF value [000300,000006] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 55"
+== 55
+$ MCR AUTHORIZE SHOW UAFF
+
+Username: UAFF                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,6] ([CASED,UAFF])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 56"
+== 56
+$ MCR AUTHORIZE COPY UAFD UAFG
+%UAF-I-COPMSG, user record copied
+%UAF-W-DEFPWD, copied or renamed records must receive new password
+%UAF-W-SAMEUIC, new user record has the same UIC as the source record
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 57"
+== 57
+$ MCR AUTHORIZE COPY NOSUCH UAFH/UIC=[300,7]
+%UAF-W-BADUSR, user name does not exist \NOSUCH\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000000"
+$ WRITE SYS$OUTPUT "== 58"
+== 58
+$ MCR AUTHORIZE COPY UAFD UAFA/UIC=[300,14]
+%UAF-E-UAEERR, invalid user name, user name already exists
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X13F1943A"
+$ WRITE SYS$OUTPUT "== 59"
+== 59
+$ MCR AUTHORIZE RENAME UAFF UAFI
+%UAF-I-RENMSG, user record renamed
+%UAF-W-DEFPWD, copied or renamed records must receive new password
+%UAF-I-RDBMDFYMSG, identifier UAFF modified
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 60"
+== 60
+$ MCR AUTHORIZE SHOW UAFI/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+NEW OWNER            UAFI            [300,6]      NEWACCT  System  5 DUA2:[NEWDIR]
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 61"
+== 61
+$ MCR AUTHORIZE SHOW/IDENTIFIER UAFI
+  Name                             Value           Attributes
+  UAFI                             [000300,000006] 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 62"
+== 62
+$ MCR AUTHORIZE SHOW/IDENTIFIER UAFF
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 63"
+== 63
+$ MCR AUTHORIZE RENAME UAFF UAFJ
+%UAF-W-BADUSR, user name does not exist \UAFF\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 64"
+== 64
+$ MCR AUTHORIZE RENAME UAFI UAFA
+%UAF-E-UAEERR, invalid user name, user name already exists
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 65"
+== 65
+$ MCR AUTHORIZE REMOVE UAFI
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier UAFI value [000300,000006] removed from rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 66"
+== 66
+$ MCR AUTHORIZE SHOW/IDENTIFIER UAFI
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 67"
+== 67
+$ MCR AUTHORIZE REMOVE UAFI
+%UAF-W-BADUSR, user name does not exist \UAFI\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 68"
+== 68
+$ MCR AUTHORIZE REMOVE SYSTEM2
+%UAF-W-BADUSR, user name does not exist \SYSTEM2\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## DEFAULT"
+######## DEFAULT
+$ WRITE SYS$OUTPUT "== 69"
+== 69
+$ MCR AUTHORIZE DEFAULT/ASTLM=77/FLAGS=DISCTLY/DEVICE=DUA3:
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 70"
+== 70
+$ MCR AUTHORIZE SHOW DEFAULT
+
+Username: DEFAULT                          Owner:  
+Account:                                   UIC:    [200,200] ([UAFB])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA3:[USER]
+LGICMD:   
+Flags:  DisCtlY DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        77  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 71"
+== 71
+$ MCR AUTHORIZE ADD UAFL/UIC=[300,10]
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFL value [000300,000010] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 72"
+== 72
+$ MCR AUTHORIZE SHOW UAFL
+
+Username: UAFL                             Owner:  
+Account:                                   UIC:    [300,10] ([CASED,UAFL])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA3:[USER]
+LGICMD:   
+Flags:  DisCtlY DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        77  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 73"
+== 73
+$ MCR AUTHORIZE DEFAULT/ASTLM=24/FLAGS=NODISCTLY/DEVICE=SYS$SYSDEVICE:
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 74"
+== 74
+$ MCR AUTHORIZE MODIFY DEFAULT/BIOLM=18
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 75"
+== 75
+$ MCR AUTHORIZE SHOW DEFAULT/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## IDENTIFIERS"
+######## IDENTIFIERS
+$ WRITE SYS$OUTPUT "== 76"
+== 76
+$ MCR AUTHORIZE ADD/IDENTIFIER PROJX
+%UAF-I-RDBADDMSG, identifier PROJX value %X80010000 added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 77"
+== 77
+$ MCR AUTHORIZE ADD/IDENTIFIER PROJY/VALUE=IDENTIFIER=%X80011234/ATTRIBUTES=RESOURCE
+%UAF-E-BADVALUE, error in value specification \-2147413452\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000000"
+$ WRITE SYS$OUTPUT "== 78"
+== 78
+$ MCR AUTHORIZE ADD/IDENTIFIER PROJX
+%UAF-E-RDBADDERRU, unable to add PROJX value [000000,000000] to rights database
+-SYSTEM-F-DUPLNAM, duplicate name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000094"
+$ WRITE SYS$OUTPUT "== 79"
+== 79
+$ MCR AUTHORIZE ADD/IDENTIFIER UAFUIC/VALUE=UIC=[300,77]
+%UAF-I-RDBADDMSGU, identifier UAFUIC value [000300,000077] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 80"
+== 80
+$ MCR AUTHORIZE ADD/IDENTIFIER PROJW/VALUE=IDENTIFIER=%X80011234
+%UAF-E-BADVALUE, error in value specification \-2147413452\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000000"
+$ WRITE SYS$OUTPUT "== 81"
+== 81
+$ MCR AUTHORIZE ADD/IDENTIFIER BAD-ID
+%UAF-E-RDBADDERRU, unable to add BAD-ID value [000000,000000] to rights database
+-SYSTEM-F-IVIDENT, invalid identifier format
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10002224"
+$ WRITE SYS$OUTPUT "== 82"
+== 82
+$ MCR AUTHORIZE ADD/IDENTIFIER 1PROJ
+%UAF-I-RDBADDMSG, identifier 1PROJ value %X80010001 added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 83"
+== 83
+$ MCR AUTHORIZE SHOW/IDENTIFIER PROJX
+  Name                             Value           Attributes
+  PROJX                            %X80010000      
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 84"
+== 84
+$ MCR AUTHORIZE SHOW/IDENTIFIER/FULL PROJY
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 85"
+== 85
+$ MCR AUTHORIZE SHOW/IDENTIFIER/VALUE=IDENTIFIER=%X80011234
+%UAF-E-BADVALUE, error in value specification \-2147413452\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000000"
+$ WRITE SYS$OUTPUT "== 86"
+== 86
+$ MCR AUTHORIZE SHOW/IDENTIFIER/VALUE=UIC=[300,4]
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 87"
+== 87
+$ MCR AUTHORIZE SHOW/IDENTIFIER PROJ*
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-IVIDENT, invalid identifier format
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10002224"
+$ WRITE SYS$OUTPUT "== 88"
+== 88
+$ MCR AUTHORIZE SHOW/IDENTIFIER NOSUCH
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 89"
+== 89
+$ MCR AUTHORIZE GRANT/IDENTIFIER PROJX UAFD
+%UAF-I-GRANTMSG, identifier PROJX granted to UAFD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 90"
+== 90
+$ MCR AUTHORIZE GRANT/IDENTIFIER PROJX UAFD
+%UAF-E-GRANTERR, unable to grant identifier PROJX to UAFD
+-SYSTEM-F-DUPIDENT, duplicate identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000222C"
+$ WRITE SYS$OUTPUT "== 91"
+== 91
+$ MCR AUTHORIZE GRANT/IDENTIFIER/ATTRIBUTES=RESOURCE PROJY UAFD
+%UAF-E-GRANTERR, unable to grant identifier PROJY to UAFD
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 92"
+== 92
+$ MCR AUTHORIZE GRANT/IDENTIFIER PROJX NOSUCH
+%UAF-E-GRANTUSR, user identifier NOSUCH does not exist; PROJX could not be granted
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 93"
+== 93
+$ MCR AUTHORIZE GRANT/IDENTIFIER NOSUCH UAFD
+%UAF-E-GRANTERR, unable to grant identifier NOSUCH to UAFD
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 94"
+== 94
+$ MCR AUTHORIZE GRANT/IDENTIFIER PROJX UAFA
+%UAF-I-GRANTMSG, identifier PROJX granted to UAFA
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 95"
+== 95
+$ MCR AUTHORIZE SHOW/RIGHTS UAFD
+Identifier                         Value           Attributes
+  PROJX                            %X80010000      
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100381F0"
+$ WRITE SYS$OUTPUT "== 96"
+== 96
+$ MCR AUTHORIZE SHOW/RIGHTS/FULL UAFD
+%CLI-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+ \FULL\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038240"
+$ WRITE SYS$OUTPUT "== 97"
+== 97
+$ MCR AUTHORIZE SHOW/IDENTIFIER/FULL PROJX
+  Name                             Value           Attributes
+  PROJX                            %X80010000      
+    Holder                           Attributes
+    UAFD                             
+    UAFA                             
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 98"
+== 98
+$ MCR AUTHORIZE SHOW UAFD/FULL
+
+Username: UAFD                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFA])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+Identifier                         Value           Attributes
+  PROJX                            %X80010000      
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 99"
+== 99
+$ MCR AUTHORIZE REVOKE/IDENTIFIER PROJX UAFD
+%UAF-I-REVOKEMSG, identifier PROJX revoked from UAFD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 100"
+== 100
+$ MCR AUTHORIZE REVOKE/IDENTIFIER PROJX UAFD
+%UAF-E-REVOKEERR, unable to revoke identifier PROJX from UAFD
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 101"
+== 101
+$ MCR AUTHORIZE SHOW/RIGHTS UAFD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100381F0"
+$ WRITE SYS$OUTPUT "== 102"
+== 102
+$ MCR AUTHORIZE RENAME/IDENTIFIER PROJY PROJZ
+%UAF-E-RDBMDFYERR, unable to modify identifier PROJY
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 103"
+== 103
+$ MCR AUTHORIZE RENAME/IDENTIFIER PROJY PROJV
+%UAF-E-RDBMDFYERR, unable to modify identifier PROJY
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 104"
+== 104
+$ MCR AUTHORIZE RENAME/IDENTIFIER PROJZ PROJX
+%UAF-E-RDBMDFYERR, unable to modify identifier PROJZ
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 105"
+== 105
+$ MCR AUTHORIZE MODIFY/IDENTIFIER PROJZ/VALUE=IDENTIFIER=%X80011235
+%UAF-E-RDBMDFYERR, unable to modify identifier PROJZ
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 106"
+== 106
+$ MCR AUTHORIZE MODIFY/IDENTIFIER PROJZ/ATTRIBUTES=NORESOURCE
+%UAF-E-RDBMDFYERR, unable to modify identifier PROJZ
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 107"
+== 107
+$ MCR AUTHORIZE MODIFY/IDENTIFIER PROJZ/NAME=PROJU
+%UAF-E-RDBMDFYERR, unable to modify identifier PROJZ
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 108"
+== 108
+$ MCR AUTHORIZE SHOW/IDENTIFIER/FULL PROJU
+%UAF-E-SHOWERR, unable to complete SHOW command
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 109"
+== 109
+$ MCR AUTHORIZE SHOW/RIGHTS UAFD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100381F0"
+$ WRITE SYS$OUTPUT "== 110"
+== 110
+$ MCR AUTHORIZE REMOVE/IDENTIFIER PROJX
+%UAF-I-RDBREMMSG, identifier PROJX value %X80010000 removed from rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 111"
+== 111
+$ MCR AUTHORIZE SHOW/RIGHTS UAFA
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100381F0"
+$ WRITE SYS$OUTPUT "== 112"
+== 112
+$ MCR AUTHORIZE REMOVE/IDENTIFIER PROJX
+%UAF-E-RDBREMERR, unable to remove PROJX from rights database
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100021EC"
+$ WRITE SYS$OUTPUT "== 113"
+== 113
+$ MCR AUTHORIZE REMOVE/IDENTIFIER UAFD
+%UAF-I-RDBREMMSGU, identifier UAFD value [000300,000044] removed from rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 114"
+== 114
+$ MCR AUTHORIZE RENAME UAFD UAFM
+%UAF-I-RENMSG, user record renamed
+%UAF-W-DEFPWD, copied or renamed records must receive new password
+%UAF-I-RDBMDFYMSG, identifier UAFA modified
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 115"
+== 115
+$ MCR AUTHORIZE SHOW/IDENTIFIER UAFM
+  Name                             Value           Attributes
+  UAFM                             [000300,000001] 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 116"
+== 116
+$ MCR AUTHORIZE SHOW/RIGHTS UAFM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100381F0"
+$ !
+$ WRITE SYS$OUTPUT "######## LIST"
+######## LIST
+$ WRITE SYS$OUTPUT "== 117"
+== 117
+$ MCR AUTHORIZE LIST
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-LSTMSG2, listing file SYSUAF.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]SYSUAF.LIS
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+                     UAFA            [300,1]               Normal  4 Disuser
+                     UAFB            [200,200]             Normal  4 Disuser
+                     UAFC            [300,1]               Normal  4 Disuser
+                     UAFE            [300,5]               Normal  4 Disuser
+NEW OWNER            UAFG            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFL            [300,10]              Normal  4 Disuser
+NEW OWNER            UAFM            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFN            [300,13]              Normal  4 Disuser
+$ WRITE SYS$OUTPUT "== 118"
+== 118
+$ MCR AUTHORIZE LIST/FULL UAF*
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-LSTMSG2, listing file SYSUAF.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]SYSUAF.LIS
+
+Username: UAFA                             Owner:  
+Account:                                   UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFB                             Owner:  
+Account:                                   UIC:    [200,200] ([UAFB])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFC                             Owner:  
+Account:                                   UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFE                             Owner:  
+Account:                                   UIC:    [300,5] ([CASED,UAFE])
+CLI:      NOSUCHCLI                        Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFG                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+
+Username: UAFL                             Owner:  
+Account:                                   UIC:    [300,10] ([CASED,UAFL])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA3:[USER]
+LGICMD:   
+Flags:  DisCtlY DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        77  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFM                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+
+Username: UAFN                             Owner:  
+Account:                                   UIC:    [300,13] ([CASED,UAFN])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ WRITE SYS$OUTPUT "== 119"
+== 119
+$ MCR AUTHORIZE LIST/BRIEF
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-LSTMSG2, listing file SYSUAF.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]SYSUAF.LIS
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     DEFAULT         [200,200]             Normal  4 Disuser
+SYSTEM MANAGER       SYSTEM            [1,4]      SYSTEM   All     4 SYS$SYSROOT:[SYSMGR]
+                     UAFA            [300,1]               Normal  4 Disuser
+                     UAFB            [200,200]             Normal  4 Disuser
+                     UAFC            [300,1]               Normal  4 Disuser
+                     UAFE            [300,5]               Normal  4 Disuser
+NEW OWNER            UAFG            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFL            [300,10]              Normal  4 Disuser
+NEW OWNER            UAFM            [300,1]      NEWACCT  System  5 DUA2:[NEWDIR]
+                     UAFN            [300,13]              Normal  4 Disuser
+$ WRITE SYS$OUTPUT "== 120"
+== 120
+$ MCR AUTHORIZE LIST/IDENTIFIER
+%UAF-I-NOIDNAME, no ID name was specified
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+$ WRITE SYS$OUTPUT "== 121"
+== 121
+$ MCR AUTHORIZE LIST/RIGHTS UAFM
+%UAF-I-LSTMSG1, writing listing file
+%UAF-I-RLSTMSG, listing file RIGHTSLIST.LIS complete
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+$ WRITE SYS$OUTPUT "== 122"
+== 122
+$ MCR AUTHORIZE LIST/RIGHTS
+%UAF-I-NOIDNAME, no ID name was specified
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ TYPE UAF95$DISK:[UAF95SCR]RIGHTSLIST.LIS
+$ !
+$ WRITE SYS$OUTPUT "######## WHAT GOVAX WON'T KEEP"
+######## WHAT GOVAX WON'T KEEP
+$ WRITE SYS$OUTPUT "== 123"
+== 123
+$ MCR AUTHORIZE ADD UAFO/UIC=[300,11]/ACCESS=(PRIMARY,9-17)/PRIMEDAYS=(NOSATURDAY)/PWDLIFETIME=30-/PWDMINIMUM=8/EXPIRATION=31-DEC-2030
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAFO value [000300,000011] added to rights database
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 124"
+== 124
+$ MCR AUTHORIZE SHOW UAFO/FULL
+
+Username: UAFO                             Owner:  
+Account:                                   UIC:    [300,11] ([CASED,UAFO])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  SYS$SYSDEVICE:[USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+Primary   000000000011111111112222  Secondary 000000000011111111112222
+Day Hours 012345678901234567890123  Day Hours 012345678901234567890123
+Network:  ---------#########------            -----  No access  ------
+Batch:    ---------#########------            -----  No access  ------
+Local:    ---------#########------            -----  No access  ------
+Dialup:   ---------#########------            -----  No access  ------
+Remote:   ---------#########------            -----  No access  ------
+Expiration: 31-DEC-2030 00:00    Pwdminimum:  8   Login Fails:     0
+Pwdlifetime:         30 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        18  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        24  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 125"
+== 125
+$ MCR AUTHORIZE MODIFY UAFO/NOACCESS/PWDEXPIRED
+%UAF-I-MDFYMSG, user record(s) updated
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 126"
+== 126
+$ MCR AUTHORIZE SHOW UAFO/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+                     UAFO            [300,11]              Normal  4 Disuser
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## BAD COMMANDS"
+######## BAD COMMANDS
+$ WRITE SYS$OUTPUT "== 127"
+== 127
+$ MCR AUTHORIZE FROB
+%CLI-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROB\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038090"
+$ WRITE SYS$OUTPUT "== 128"
+== 128
+$ MCR AUTHORIZE SHOW
+%CLI-W-INSFPRM, missing command parameters - supply all required parameters
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038048"
+$ WRITE SYS$OUTPUT "== 129"
+== 129
+$ MCR AUTHORIZE SHOW NOSUCH
+%UAF-W-BADSPC, no user matches specification
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100182B2"
+$ WRITE SYS$OUTPUT "== 130"
+== 130
+$ MCR AUTHORIZE SHOW UAFA/BOGUS
+%CLI-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+ \BOGUS\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038240"
+$ WRITE SYS$OUTPUT "== 131"
+== 131
+$ MCR AUTHORIZE ADD
+%CLI-W-INSFPRM, missing command parameters - supply all required parameters
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038048"
+$ WRITE SYS$OUTPUT "== 132"
+== 132
+$ MCR AUTHORIZE ADD UAFP/UIC=[300,12]/ASTLM=ABC
+%UAF-E-BADVALUE, error in value specification \ABC\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "== 133"
+== 133
+$ MCR AUTHORIZE REMOVE
+%CLI-W-INSFPRM, missing command parameters - supply all required parameters
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038048"
+$ WRITE SYS$OUTPUT "== 134"
+== 134
+$ MCR AUTHORIZE SHOW UAF*
+
+Username: UAFA                             Owner:  
+Account:                                   UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFB                             Owner:  
+Account:                                   UIC:    [200,200] ([UAFB])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFC                             Owner:  
+Account:                                   UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFE                             Owner:  
+Account:                                   UIC:    [300,5] ([CASED,UAFE])
+CLI:      NOSUCHCLI                        Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFG                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+
+Username: UAFL                             Owner:  
+Account:                                   UIC:    [300,10] ([CASED,UAFL])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA3:[USER]
+LGICMD:   
+Flags:  DisCtlY DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        77  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFM                             Owner:  NEW OWNER
+Account:  NEWACCT                          UIC:    [300,1] ([CASED,UAFM])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  DUA2:[NEWDIR]
+LGICMD:   
+Flags:  DisCtlY DefCLI DisWelcome DisNewMail
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         2  Fillm:        36  Bytlm:        33000
+Maxacctjobs:     3  Shrfillm:      5  Pbytlm:           0
+Maxdetach:       4  BIOlm:        61  JTquota:       3700
+Prclm:           9  DIOlm:        34  WSdef:          301
+Prio:            5  ASTlm:        60  WSquo:          700
+Queprio:         6  TQElm:        11  WSextent:      1201
+CPU:    0 00:10:00  Enqlm:        35  Pgflquo:      38000
+Authorized Privileges: 
+  NETMBX    OPER      TMPMBX
+Default Privileges: 
+  NETMBX    OPER      TMPMBX
+
+Username: UAFN                             Owner:  
+Account:                                   UIC:    [300,13] ([CASED,UAFN])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  [USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        61  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        60  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+
+Username: UAFO                             Owner:  
+Account:                                   UIC:    [300,11] ([CASED,UAFO])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  SYS$SYSDEVICE:[USER]
+LGICMD:   
+Flags:  DisUser
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+Primary   000000000011111111112222  Secondary 000000000011111111112222
+Day Hours 012345678901234567890123  Day Hours 012345678901234567890123
+Network:  -----  No access  ------            -----  No access  ------
+Batch:    -----  No access  ------            -----  No access  ------
+Local:    -----  No access  ------            -----  No access  ------
+Dialup:   -----  No access  ------            -----  No access  ------
+Remote:   -----  No access  ------            -----  No access  ------
+Expiration: 31-DEC-2030 00:00    Pwdminimum:  8   Login Fails:     0
+Pwdlifetime:         30 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        18  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        24  WSquo:          512
+Queprio:         4  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ WRITE SYS$OUTPUT "######## SCRATCH FILES AT THE END"
+######## SCRATCH FILES AT THE END
+$ DIRECTORY/FULL UAF95$DISK:[UAF95SCR]
+
+Directory DUA1:[UAF95SCR]
+
+RIGHTSLIST.DAT;1              File ID:  (23,1,0)              
+Size:           21/21         Owner:    [1,4]
+Created:   15-NOV-2026 17:19:44.63
+Revised:   15-NOV-2026 17:19:47.64 (27)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Variable length, maximum 64 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:, World:
+Access Cntrl List:  None
+
+RIGHTSLIST.LIS;2              File ID:  (28,1,0)              
+Size:            0/0          Owner:    [1,4]
+Created:   15-NOV-2026 17:19:47.57
+Revised:   15-NOV-2026 17:19:47.58 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 256 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWD, Owner:RWD, Group:RW, World:
+Access Cntrl List:  None
+
+RIGHTSLIST.LIS;1              File ID:  (27,1,0)              
+Size:            0/0          Owner:    [1,4]
+Created:   15-NOV-2026 17:19:47.54
+Revised:   15-NOV-2026 17:19:47.55 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 256 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWD, Owner:RWD, Group:RW, World:
+Access Cntrl List:  None
+
+SYSUAF.DAT;1                  File ID:  (22,1,0)              
+Size:           36/36         Owner:    [1,4]
+Created:   15-NOV-2026 17:19:44.61
+Revised:   15-NOV-2026 17:19:47.87 (137)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 4 keys
+Shelved state:      Online 
+File attributes:    Allocation: 36, Extend: 10, Maximum bucket size: 3, Global buffer count: 0, No version limit
+                    Contiguous best try
+Record format:      Variable length, maximum 1412 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:, World:
+Access Cntrl List:  None
+
+SYSUAF.LIS;3                  File ID:  (26,1,0)              
+Size:            2/3          Owner:    [1,4]
+Created:   15-NOV-2026 17:19:47.51
+Revised:   15-NOV-2026 17:19:47.52 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 256 bytes, longest 89 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWD, Owner:RWD, Group:RW, World:
+Access Cntrl List:  None
+
+SYSUAF.LIS;2                  File ID:  (25,1,0)              
+Size:           18/18         Owner:    [1,4]
+Created:   15-NOV-2026 17:19:47.47
+Revised:   15-NOV-2026 17:19:47.49 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 18, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 256 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWD, Owner:RWD, Group:RW, World:
+Access Cntrl List:  None
+
+SYSUAF.LIS;1                  File ID:  (24,1,0)              
+Size:            2/3          Owner:    [1,4]
+Created:   15-NOV-2026 17:19:47.44
+Revised:   15-NOV-2026 17:19:47.45 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 256 bytes, longest 89 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWD, Owner:RWD, Group:RW, World:
+Access Cntrl List:  None
+
+Total of 7 files, 79/81 blocks.
+$ ACCOUNTS:
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE NETPROXY
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE NET$PROXY
+$ SET DEFAULT UAF95$DISK:[000000]
+$ !
+$ @UAF95$DISK:[000000]UAF95ACCT
+$ ! UAF95ACCT.COM - Phase 95's probe: the accounts, in the VAX's own
+$ ! SYSUAF. Written by testdata/uaf95/gen.go. UAF95.COM runs it as SYSTEM;
+$ ! UAF95DROP.COM undoes everything it does.
+$ !
+$ !   UAF95   [200,5]  TMPMBX, NETMBX; home UAF95$DISK:[UAF95], so its
+$ !                    login runs SYS$LOGIN:LOGIN.COM
+$ !   UAF95L  [200,7]  the same, with LGICMD UAF95$DISK:[UAF95]UAF95X.COM
+$ !   UAF95D  [200,6]  the same, DISUSER
+$ !
+$ ! Each has the password UAF95PW, not expiring. UAF95 is granted the
+$ ! identifier UAF95_ID. SYS$SYLOGIN is pointed at the probe's
+$ ! UAF95$DISK:[000000]UAF95S.COM, which records what it sees for the
+$ ! probe's accounts and runs the VAX's own SYLOGIN for everyone else;
+$ ! the old translation is kept in UAF95$OLD_SYLOGIN for UAF95DROP.COM.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## ACCOUNTS"
+######## ACCOUNTS
+$ ! The VAX's own files: no scratch names left over.
+$ IF F$TRNLNM("SYSUAF","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ IF F$TRNLNM("RIGHTSLIST","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE
+ADD UAF95/UIC=[200,5]/PASSWORD=UAF95PW/NOPWDEXPIRED/PWDLIFETIME=NONE/FLAGS=NODISUSER
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier UAF95 value [000200,000005] added to rights database
+MODIFY UAF95/DEVICE=UAF95$DISK:/DIRECTORY=[UAF95]/ACCOUNT=GOVAX/OWNER="GOVAX PROBE"
+%UAF-I-MDFYMSG, user record(s) updated
+MODIFY UAF95/PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX)
+%UAF-I-MDFYMSG, user record(s) updated
+COPY UAF95 UAF95L/UIC=[200,7]/PASSWORD=UAF95PW/NOPWDEXPIRED
+%UAF-I-COPMSG, user record copied
+%UAF-I-RDBADDMSGU, identifier UAF95L value [000200,000007] added to rights database
+MODIFY UAF95L/LGICMD=UAF95$DISK:[UAF95]UAF95X.COM
+%UAF-I-MDFYMSG, user record(s) updated
+COPY UAF95 UAF95D/UIC=[200,6]/PASSWORD=UAF95PW/NOPWDEXPIRED/FLAGS=DISUSER
+%UAF-I-COPMSG, user record copied
+%UAF-I-RDBADDMSGU, identifier UAF95D value [000200,000006] added to rights database
+ADD/IDENTIFIER UAF95_ID
+%UAF-I-RDBADDMSG, identifier UAF95_ID value %X80010002 added to rights database
+GRANT/IDENTIFIER UAF95_ID UAF95
+%UAF-I-GRANTMSG, identifier UAF95_ID granted to UAF95
+SHOW UAF95/FULL
+
+Username: UAF95                            Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,5] ([PROT93,UAF95])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   LOGIN
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:19 
+Last Login:            (none) (interactive),            (none) (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010002      
+SHOW UAF95L/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+GOVAX PROBE          UAF95L          [200,7]      GOVAX    Normal  4 UAF95$DISK:[UAF95]
+SHOW UAF95D/BRIEF
+       Owner         Username           UIC       Account  Privs Pri Directory
+
+GOVAX PROBE          UAF95D          [200,6]      GOVAX    Normal  4 Disuser
+SHOW/RIGHTS UAF95
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010002      
+SHOW/IDENTIFIER/VALUE=UIC=[200,*]
+  Name                             Value           Attributes
+  PROT93                           [000200,177777] 
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SET DEFAULT UAF95$DISK:[000000]
+$ !
+$ ! The home directory, owned by UAF95, and its procedures.
+$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:) UAF95$DISK:[000000]UAF95.DIR
+%DCL-W-VALREQ, missing qualifier or keyword value - supply all required values
+$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWED,O:RWED,G:RE,W:) UAF95$DISK:[UAF95]*.*;*
+%DCL-W-VALREQ, missing qualifier or keyword value - supply all required values
+$ DIRECTORY/SECURITY UAF95$DISK:[UAF95]
+
+Directory DUA1:[UAF95]
+
+LOGIN.COM;1          [SYSTEM]                         (RWED,RWED,RE,)
+UAF95X.COM;1         [SYSTEM]                         (RWED,RWED,RE,)
+
+Total of 2 files.
+$ !
+$ ! SYS$SYLOGIN, kept and replaced at the mode it was defined in.
+$ OLD = F$TRNLNM("SYS$SYLOGIN","LNM$SYSTEM_TABLE")
+$ MODE = F$TRNLNM("SYS$SYLOGIN","LNM$SYSTEM_TABLE",,,,"ACCESS_MODE")
+$ IF MODE .EQS. "" THEN MODE = "EXECUTIVE"
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN" (LNM$SYSTEM_TABLE)
+$ IF OLD .NES. "" THEN DEFINE/SYSTEM/EXECUTIVE_MODE UAF95$OLD_SYLOGIN "SYS$MANAGER:SYLOGIN"
+$ DEFINE/SYSTEM/EXECUTIVE_MODE UAF95$OLD_SYLOGIN_MODE "EXECUTIVE"
+$ DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SYLOGIN UAF95$DISK:[000000]UAF95S.COM
+%DCL-I-SUPERSEDE, previous value of SYS$SYLOGIN has been superseded
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "UAF95$DISK:[000000]UAF95S.COM" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL UAF95$OLD_SYLOGIN*
+
+(LNM$PROCESS_TABLE)	[kernel]
+			[no protection information]
+
+(LNM$JOB_81C71500)	[kernel]  [shareable]  [Quota=(3904,4096)]
+			[Protection=(RWCD,RWCD,,)]  [Owner=[SYSTEM]]
+
+(LNM$GROUP_000001)	[kernel]  [shareable,group]
+			[Protection=(RWCD,R,R,)]  [Owner=[1,*]]
+
+(LNM$SYSTEM_TABLE)	[kernel]  [shareable,system]
+			[Protection=(RWC,RWC,R,R)]  [Owner=[SYSTEM]]
+
+  "UAF95$OLD_SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN"
+  "UAF95$OLD_SYLOGIN_MODE" [exec] = "EXECUTIVE"
+$ EXIT
+$ !
+$ ! The batch jobs: UAF95 (SYS$LOGIN:LOGIN.COM) and UAF95L (its LGICMD),
+$ ! each running UAF95I.COM, which writes its own log. The batch logs
+$ ! show the login itself. SYNCHRONIZE waits for each.
+$ !
+$ WRITE SYS$OUTPUT "######## BATCH"
+######## BATCH
+$ SHOW QUEUE/BATCH/ALL
+Batch queue SYS$BATCH, idle, on SIMVAX::
+$ SUBMIT/USER=UAF95/NOPRINTER/KEEP/NAME=UAF95J/LOG_FILE=UAF95$DISK:[UAF95LOG]UAF95J_UAF95.LOG UAF95$DISK:[000000]UAF95I.COM
+Job UAF95J (queue SYS$BATCH, entry 13) started on SYS$BATCH
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY=13
+$ SUBMIT/USER=UAF95L/NOPRINTER/KEEP/NAME=UAF95LJ/LOG_FILE=UAF95$DISK:[UAF95LOG]UAF95J_UAF95L.LOG UAF95$DISK:[000000]UAF95I.COM
+Job UAF95LJ (queue SYS$BATCH, entry 14) started on SYS$BATCH
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY=14
+$ SUBMIT/USER=UAF95D/NOPRINTER/KEEP/NAME=UAF95DJ/LOG_FILE=UAF95$DISK:[UAF95LOG]UAF95J_UAF95D.LOG UAF95$DISK:[000000]UAF95I.COM
+Job UAF95DJ (queue SYS$BATCH, entry 15) started on SYS$BATCH
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY=15
+%LOGIN-F-DISUSER, account is disabled
+$ DIRECTORY UAF95$DISK:[UAF95LOG]
+
+Directory DUA1:[UAF95LOG]
+
+UAF95.LOG;1         UAF95I_UAF95L_BATCH.LOG;1               UAF95I_UAF95_BATCH.LOG;1
+UAF95J_UAF95.LOG;1  UAF95J_UAF95L.LOG;1 
+
+Total of 5 files.
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE SHOW UAF95/FULL
+
+Username: UAF95                            Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,5] ([PROT93,UAF95])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   LOGIN
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:19 
+Last Login:            (none) (interactive), 15-NOV-2026 17:19 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010002      
+$ MCR AUTHORIZE SHOW UAF95L/FULL
+
+Username: UAF95L                           Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,7] ([PROT93,UAF95L])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   UAF95$DISK:[UAF95]UAF95X.COM
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:19 
+Last Login:            (none) (interactive), 15-NOV-2026 17:19 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+$ SET DEFAULT UAF95$DISK:[000000]
+$ !
+$ WRITE SYS$OUTPUT "######## STATE SYSTEM"
+######## STATE SYSTEM
+$ @UAF95$DISK:[000000]UAF95I NOLOG
+$ ! UAF95I.COM - Phase 95's probe: a process's state after logging in.
+$ ! Written by testdata/uaf95/gen.go. The batch jobs run it, and each
+$ ! account runs it by hand after logging in (README.md):
+$ !
+$ !     $ @UAF95$DISK:[000000]UAF95I
+$ !
+$ ! It writes UAF95$DISK:[UAF95LOG]UAF95I_user_mode.LOG (NOLOG: to
+$ ! SYS$OUTPUT, as UAF95.COM uses it for SYSTEM).
+$ !
+$ IF P1 .EQS. "LOGGED" .OR. P1 .EQS. "NOLOG" THEN GOTO BEGIN
+$ BEGIN:
+$ SET NOON
+$ STARTED_IN = F$ENVIRONMENT("DEFAULT")
+$ WRITE SYS$OUTPUT "######## WHAT THE LOGIN PROCEDURES SAW"
+######## WHAT THE LOGIN PROCEDURES SAW
+$ SHOW SYMBOL/GLOBAL UAF95_*
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## PROCESS"
+######## PROCESS
+$ WRITE SYS$OUTPUT F$GETJPI("","USERNAME"), " ", F$GETJPI("","UIC"), " ", F$MODE()
+SYSTEM       [SYSTEM] INTERACTIVE
+$ SHOW DEFAULT
+  UAF95$DISK:[000000]
+$ WRITE SYS$OUTPUT F$ENVIRONMENT("DEFAULT"), " ", F$ENVIRONMENT("PROTECTION")
+UAF95$DISK:[000000] SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD
+$ SHOW PROCESS
+
+15-NOV-2026 17:19:48.97   User: SYSTEM           Process ID:   00000160
+                          Node: SIMVAX           Process name: "SYSTEM"
+
+Terminal:           OPA0:
+User Identifier:    [SYSTEM]
+Base priority:      4
+Default file spec:  UAF95$DISK:[000000]
+
+Devices allocated:  SIMVAX$OPA0:
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 17:19:48.97   User: SYSTEM           Process ID:   00000160
+                          Node: SIMVAX           Process name: "SYSTEM"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ ACNT                 may suppress accounting messages
+ ALLSPOOL             may allocate spooled device
+ ALTPRI               may set any priority value
+ AUDIT                may direct audit to system security audit log
+ BUGCHK               may make bug check log entries
+ BYPASS               may bypass all object access controls
+ CMEXEC               may change mode to exec
+ CMKRNL               may change mode to kernel
+ IMPERSONATE          may impersonate another user
+ DIAGNOSE             may diagnose devices
+ DOWNGRADE            may downgrade object secrecy
+ EXQUOTA              may exceed disk quota
+ GROUP                may affect other processes in same group
+ GRPNAM               may insert in group logical name table
+ GRPPRV               may access group objects via system protection
+ IMPORT               may set classification for unlabeled object
+ LOG_IO               may do logical i/o
+ MOUNT                may execute mount acp function
+ NETMBX               may create network device
+ OPER                 may perform operator functions
+ PFNMAP               may map to specific physical pages
+ PHY_IO               may do physical i/o
+ PRMCEB               may create permanent common event clusters
+ PRMGBL               may create permanent global sections
+ PRMMBX               may create permanent mailbox
+ PSWAPM               may change process swap mode
+ READALL              may read anything as the owner
+ SECURITY             may perform security administration functions
+ SETPRV               may set any privilege bit
+ SHARE                may assign channels to non-shared devices
+ SHMEM                may create/delete objects in shared memory
+ SYSGBL               may create system wide global sections
+ SYSLCK               may lock system wide resources
+ SYSNAM               may insert in system logical name table
+ SYSPRV               may access objects via system protection
+ TMPMBX               may create temporary mailbox
+ UPGRADE              may upgrade object integrity
+ VOLPRO               may override volume protection
+ WORLD                may affect other processes in the world
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ NET$MANAGE                        
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ SHOW PROCESS/RIGHTS
+
+15-NOV-2026 17:19:48.98   User: SYSTEM           Process ID:   00000160
+                          Node: SIMVAX           Process name: "SYSTEM"
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ NET$MANAGE                        
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ SHOW PROCESS/QUOTAS
+
+15-NOV-2026 17:19:48.99   User: SYSTEM           Process ID:   00000160
+                          Node: SIMVAX           Process name: "SYSTEM"
+
+Process Quotas:
+ Account name: SYSTEM  
+ CPU limit:                      Infinite  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              30  Open file quota:        298
+ Paging file quota:                 39470  Subprocess quota:        10
+ Default page fault cluster:           16  AST quota:               48
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+$ WRITE SYS$OUTPUT "######## LOGICAL NAMES"
+######## LOGICAL NAMES
+$ SHOW LOGICAL/FULL SYS$LOGIN
+   "SYS$LOGIN" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_81C71500)
+$ SHOW LOGICAL/FULL SYS$LOGIN_DEVICE
+   "SYS$LOGIN_DEVICE" [exec] = "SYS$SYSROOT:" (LNM$JOB_81C71500)
+1  "SYS$SYSROOT" [exec] = "SIMVAX$DUA0:[SYS0.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+	= "SYS$COMMON:"
+2  "SYS$COMMON" [exec] = "SIMVAX$DUA0:[SYS0.SYSCOMMON.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYS$SCRATCH
+   "SYS$SCRATCH" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_81C71500)
+$ SHOW LOGICAL/FULL SYS$SYLOGIN
+   "SYS$SYLOGIN" [exec] = "UAF95$DISK:[000000]UAF95S.COM" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/FULL SYS$DISK
+   "SYS$DISK" [super,crelog] = "UAF95$DISK:" (LNM$PROCESS_TABLE)
+1  "UAF95$DISK" [exec] = "DUA1:" (LNM$SYSTEM_TABLE)
+   "SYS$DISK" [exec] = "SIMVAX$DUA0:" [concealed,terminal] (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL/JOB/FULL
+
+(LNM$JOB_81C71500)	[kernel]  [shareable]  [Quota=(3904,4096)]
+			[Protection=(RWCD,RWCD,,)]  [Owner=[SYSTEM]]
+
+  "SYS$LOGIN" [exec] = "SYS$SYSROOT:[SYSMGR]"
+  "SYS$LOGIN_DEVICE" [exec] = "SYS$SYSROOT:"
+  "SYS$SCRATCH" [exec] = "SYS$SYSROOT:[SYSMGR]"
+$ SHOW LOGICAL/PROCESS/FULL
+
+(LNM$PROCESS_TABLE)	[kernel]
+			[no protection information]
+
+  "SYS$COMMAND" [exec] = "_SIMVAX$OPA0:" [concealed,terminal]
+  "SYS$DISK" [super,crelog] = "UAF95$DISK:"
+  "SYS$DISK" [exec] = "SYS$SYSROOT:"
+  "SYS$ERROR" [exec] = "_SIMVAX$OPA0:" [concealed,terminal]
+  "SYS$INPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal]
+  "SYS$INPUT" [exec] = "_SIMVAX$OPA0:" [concealed,terminal]
+  "SYS$OUTPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal]
+  "SYS$OUTPUT" [exec] = "_SIMVAX$OPA0:" [concealed,terminal]
+  "TT" [exec] = "OPA0:" [concealed,terminal]
+$ WRITE SYS$OUTPUT "######## F$GETJPI"
+######## F$GETJPI
+$ SET NOVERIFY
+  ACCOUNT = SYSTEM  
+  APTCNT = 0
+  ASTACT = 0
+  ASTCNT = 48
+  ASTEN = 15
+  ASTLM = 50
+  AUTHPRI = 4
+  AUTHPRIV = CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,S
+    ETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,
+    BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,IMPORT,AUDIT,SECURITY
+  BIOCNT = 40
+  BIOLM = 40
+  BUFIO = 4299
+  BYTCNT = 32256
+  BYTLM = 32256
+  CLINAME = DCL
+  CPULIM = 0
+  CPUTIM = 96
+  CREPRC_FLAGS = 1024
+  CURPRIV = CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,S
+    ETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,
+    BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,IMPORT,AUDIT,SECURITY
+  DFPFC = 16
+  DFWSCNT = 512
+  DIOCNT = 40
+  DIOLM = 40
+  DIRIO = 712
+  EFCS = 1677721601
+  EFCU = -2147483648
+  EFWM = -1073741825
+  ENQCNT = 200
+  ENQLM = 200
+  EXCVEC = 7FFEFE34
+  FILCNT = 298
+  FILLM = 300
+  FINALEXC = 7FFEFF28
+  FREP0VA = 
+  FREP1VA = 7FED5600
+  FREPTECNT = 63140
+  GPGCNT = 86
+  GRP = 1
+  IMAGECOUNT = 201
+  IMAGNAME = 
+  IMAGPRIV = 
+  JOBPRCCNT = 0
+  JOBTYPE = 3
+  LAST_LOGIN_I = 15-NOV-2026 17:15:04.27
+  LAST_LOGIN_N = 27-SEP-2026 11:41:56.22
+  LOGINTIM = 15-NOV-2026 17:17:32.72
+  LOGIN_FAILURES = 1
+  LOGIN_FLAGS = 0
+  MASTER_PID = 00000160
+  MAXDETACH = 0
+  MAXJOBS = 0
+  MEM = 4
+  MODE = INTERACTIVE
+  MSGMASK = 15
+  NODENAME = SIMVAX
+  NODE_CSID = 
+  NODE_VERSION = V7.1
+  OWNER = 
+  PAGEFLTS = 52931
+  PAGFILCNT = 39799
+  PAGFILLOC = 03000000
+  PGFLQUOTA = 40960
+  PHDFLAGS = 128
+  PID = 00000160
+  PPGCNT = 232
+  PRCCNT = 0
+  PRCLM = 10
+  PRCNAM = SYSTEM
+  PRI = 4
+  PRIB = 4
+  PROCPRIV = CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,S
+    ETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,
+    BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,IMPORT,AUDIT,SECURITY
+  SHRFILLM = 0
+  SITESPEC = 0
+  STATE = CUR
+  STS = 33816577
+  STS2 = 1
+  SWPFILLOC = 
+  TERMINAL = OPA0:
+  TMBU = 0
+  TQCNT = 30
+  TQLM = 30
+  UAF_FLAGS = 0
+  UIC = [SYSTEM]
+  USERNAME = SYSTEM      
+  VIRTPEAK = 6652
+  VOLUMES = 1
+  WSAUTH = 1024
+  WSAUTHEXT = 16400
+  WSEXTENT = 16400
+  WSPEAK = 616
+  WSQUOTA = 1024
+  WSSIZE = 512
+$ WRITE SYS$OUTPUT "######## AUTHORIZE AND THE UAF"
+######## AUTHORIZE AND THE UAF
+$ DIRECTORY/SECURITY SYS$SYSTEM:SYSUAF.DAT
+
+Directory SYS$COMMON:[SYSEXE]
+
+SYSUAF.DAT;1         [SYSTEM]                         (RWE,RWE,,)
+
+Total of 1 file.
+$ MCR AUTHORIZE SHOW UAF95
+%UAF-E-NAOFIL, unable to open system authorization file (SYSUAF.DAT)
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE SHOW UAF95
+
+Username: UAF95                            Owner:  GOVAX PROBE
+Account:  GOVAX                            UIC:    [200,5] ([PROT93,UAF95])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  UAF95$DISK:[UAF95]
+LGICMD:   LOGIN
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:           (none)    Pwdchange:  15-NOV-2026 17:19 
+Last Login:            (none) (interactive), 15-NOV-2026 17:19 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+Identifier                         Value           Attributes
+  UAF95_ID                         %X80010002      
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SET DEFAULT UAF95$DISK:[000000]
+$ WRITE SYS$OUTPUT "######## THE SYSTEM'S FILES"
+######## THE SYSTEM'S FILES
+$ DIRECTORY/SECURITY SYS$MANAGER:SYLOGIN.COM
+
+Directory SYS$COMMON:[SYSMGR]
+
+SYLOGIN.COM;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ OPEN/READ/ERROR=NOREAD F SYS$MANAGER:SYLOGIN.COM
+$ READ F LINE
+$ CLOSE F
+$ WRITE SYS$OUTPUT "read SYLOGIN.COM"
+read SYLOGIN.COM
+$ NOREAD:
+$ OPEN/APPEND/ERROR=NOWRITE F SYS$MANAGER:SYLOGIN.COM
+$ CLOSE F
+$ WRITE SYS$OUTPUT "SYLOGIN.COM opened for append"
+SYLOGIN.COM opened for append
+$ NOWRITE:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ DIRECTORY/SECURITY SYS$LIBRARY:STARLET.OLB
+
+Directory SYS$COMMON:[SYSLIB]
+
+STARLET.OLB;1        [SYSTEM]                         (RWED,RWED,RWED,RE)
+
+Total of 1 file.
+$ CREATE SYS$SCRATCH:UAF95I.TMP
+$ DIRECTORY/SECURITY SYS$SCRATCH:UAF95I.TMP
+
+Directory SYS$SYSROOT:[SYSMGR]
+
+UAF95I.TMP;1         [SYSTEM]                         (RWED,RWED,RE,)
+
+Total of 1 file.
+$ DELETE SYS$SCRATCH:UAF95I.TMP;*
+$ WRITE SYS$OUTPUT "UAF95I FINISHED"
+UAF95I FINISHED
+$ EXIT
+$ WRITE SYS$OUTPUT "UAF95 FINISHED"
+UAF95 FINISHED
+$ EXIT

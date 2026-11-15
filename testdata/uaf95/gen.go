@@ -44,7 +44,7 @@ const (
 // files are the procedures exchange.cmd copies to the volume's [000000],
 // and homeFiles those it copies to [UAF95], the accounts' home.
 var (
-	files     = []string{"uaf95.com", "uaf95acct.com", "uaf95drop.com", "uaf95i.com", "uaf95s.com"}
+	files     = []string{"uaf95.com", "uaf95b.com", "uaf95acct.com", "uaf95drop.com", "uaf95i.com", "uaf95s.com"}
 	homeFiles = []string{"login.com", "uaf95x.com"}
 )
 
@@ -427,6 +427,7 @@ $ MCR AUTHORIZE
 ADD UAF95/UIC=[200,5]/PASSWORD=` + password + `/NOPWDEXPIRED/PWDLIFETIME=NONE/FLAGS=NODISUSER
 MODIFY UAF95/DEVICE=UAF95$DISK:/DIRECTORY=[UAF95]/ACCOUNT=GOVAX/OWNER="GOVAX PROBE"
 MODIFY UAF95/PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX)
+MODIFY UAF95/LGICMD=""
 COPY UAF95 UAF95L/UIC=[200,7]/PASSWORD=` + password + `/NOPWDEXPIRED
 MODIFY UAF95L/LGICMD=UAF95$DISK:[UAF95]UAF95X.COM
 COPY UAF95 UAF95D/UIC=[200,6]/PASSWORD=` + password + `/NOPWDEXPIRED/FLAGS=DISUSER
@@ -441,8 +442,8 @@ EXIT
 $ SET DEFAULT 'HOME'
 $ !
 $ ! The home directory, owned by UAF95, and its procedures.
-$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:) UAF95$DISK:[000000]UAF95.DIR
-$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWED,O:RWED,G:RE,W:) UAF95$DISK:[UAF95]*.*;*
+$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWE,O:RWE,G:RWE,W) UAF95$DISK:[000000]UAF95.DIR
+$ SET SECURITY/OWNER=[200,5]/PROTECTION=(S:RWED,O:RWED,G:RE,W) UAF95$DISK:[UAF95]*.*;*
 $ DIRECTORY/SECURITY UAF95$DISK:[UAF95]
 $ !
 $ ! SYS$SYLOGIN, kept and replaced at the mode it was defined in.
@@ -723,6 +724,128 @@ $ EXIT
 }
 
 // ---------------------------------------------------------------------
+// uaf95b.com, round 3: what round 2's logins couldn't show. Round 2's
+// SET SECURITY lines wrote "W:" (VMS 7.1: %DCL-W-VALREQ), so the home
+// directory and its procedures stayed SYSTEM's, closed to the accounts,
+// and only SYLOGIN ran. Round 3 makes the accounts again with that fixed
+// (UAF95's LGICMD empty, so SYS$LOGIN:LOGIN.COM; UAF95L's UAF95X.COM),
+// runs the two batch jobs, and lists identifiers and rights with names.
+
+// listCases are round 3's AUTHORIZE cases on the scratch files: round 2's
+// LIST/IDENTIFIER and LIST/RIGHTS named nothing, and listed nothing.
+var listCases = []string{
+	"ADD UAFA/UIC=[300,1]",
+	"ADD UAFB/UIC=[300,2]",
+	"ADD/IDENTIFIER PROJX",
+	"ADD/IDENTIFIER PROJY/ATTRIBUTES=RESOURCE",
+	"GRANT/IDENTIFIER PROJX UAFA",
+	"GRANT/IDENTIFIER/ATTRIBUTES=RESOURCE PROJY UAFA",
+	"GRANT/IDENTIFIER PROJX UAFB",
+	"LIST/IDENTIFIER *",
+	"LIST/IDENTIFIER PROJX",
+	"LIST/IDENTIFIER/FULL *",
+	"LIST/RIGHTS UAFA",
+	"LIST/RIGHTS *",
+	"LIST/IDENTIFIER/VALUE=UIC=[300,1]",
+}
+
+func roundThreeProc() string {
+	var b strings.Builder
+
+	b.WriteString(`$ ! UAF95B.COM - Phase 95's probe, round 3: the login procedures.
+$ ! Written by testdata/uaf95/gen.go. Run it as SYSTEM, from a fresh
+$ ! exchange volume, mounted /SYSTEM (README.md, "Round 3"):
+$ !
+$ !     @DUA1:[000000]UAF95B
+$ !
+$ ! It defines UAF95$DISK, lists identifiers and rights from scratch files,
+$ ! makes the accounts (UAF95ACCT.COM), and runs the batch jobs. Its log is
+$ ! UAF95$DISK:[UAF95LOG]UAF95B.LOG.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ DEV = F$PARSE(HERE,,,"DEVICE")
+$ DEFINE/SYSTEM/EXECUTIVE_MODE UAF95$DISK 'DEV'
+$ LOGFILE = DEV + "[UAF95LOG]UAF95B.LOG"
+$ @'HERE'/OUTPUT='LOGFILE' LOGGED
+$ WRITE SYS$OUTPUT "UAF95B finished; the log is ", LOGFILE
+$ EXIT
+$ BEGIN:
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## VOLUME"
+$ SET VOLUME/PROTECTION=(S:RWCD,O:RWCD,G:RWCD,W:RWCD) UAF95$DISK:
+$ SET SECURITY/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) UAF95$DISK:[000000]000000.DIR
+$ SET SECURITY/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE) UAF95$DISK:[000000]UAF95LOG.DIR
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) UAF95$DISK:[000000]*.COM;*
+$ DIRECTORY/SECURITY UAF95$DISK:[000000]
+$ !
+$ WRITE SYS$OUTPUT "######## SCRATCH FILES"
+$ SET DEFAULT ` + scratch + `
+$ DEFINE/PROCESS/EXECUTIVE_MODE SYSUAF ` + scratch + `SYSUAF.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE RIGHTSLIST ` + scratch + `RIGHTSLIST.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE NETPROXY ` + scratch + `NETPROXY.DAT
+$ DEFINE/PROCESS/EXECUTIVE_MODE NET$PROXY ` + scratch + `NET$PROXY.DAT
+$ MCR AUTHORIZE
+YES
+CREATE/RIGHTS
+EXIT
+$ IF F$SEARCH("` + scratch + `SYSUAF.DAT") .EQS. "" THEN GOTO NO_SCRATCH
+$ IF F$SEARCH("` + scratch + `RIGHTSLIST.DAT") .EQS. "" THEN GOTO NO_SCRATCH
+$ GOTO SCRATCH_MADE
+$ NO_SCRATCH:
+$ WRITE SYS$OUTPUT "NO SCRATCH SYSUAF.DAT OR RIGHTSLIST.DAT: AUTHORIZE'S CASES NOT RUN"
+$ GOTO ACCOUNTS
+$ SCRATCH_MADE:
+$ WRITE SYS$OUTPUT "######## LIST"
+`)
+
+	for i, c := range listCases {
+		fmt.Fprintf(&b, "$ WRITE SYS$OUTPUT \"== L%d\"\n", i+1)
+		fmt.Fprintf(&b, "$ MCR AUTHORIZE %s\n", c)
+		b.WriteString("$ SHOW SYMBOL $STATUS\n")
+
+		if strings.HasPrefix(c, "LIST") {
+			fmt.Fprintf(&b, "$ TYPE %sRIGHTSLIST.LIS\n", scratch)
+		}
+	}
+
+	b.WriteString(`$ ACCOUNTS:
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE NETPROXY
+$ DEASSIGN/PROCESS/EXECUTIVE_MODE NET$PROXY
+$ SET DEFAULT UAF95$DISK:[000000]
+$ !
+$ @UAF95$DISK:[000000]UAF95ACCT
+$ !
+$ WRITE SYS$OUTPUT "######## BATCH"
+$ SHOW QUEUE/BATCH/ALL
+$ SUBMIT/USER=UAF95/NOPRINTER/KEEP/NAME=UAF95J/LOG_FILE=` + logs + `UAF95J_UAF95.LOG UAF95$DISK:[000000]UAF95I.COM
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY='$ENTRY'
+$ SUBMIT/USER=UAF95L/NOPRINTER/KEEP/NAME=UAF95LJ/LOG_FILE=` + logs + `UAF95J_UAF95L.LOG UAF95$DISK:[000000]UAF95I.COM
+$ IF F$TYPE($ENTRY) .NES. "" THEN SYNCHRONIZE/ENTRY='$ENTRY'
+$ DIRECTORY ` + logs + `
+$ WRITE SYS$OUTPUT "UAF95B FINISHED"
+$ EXIT
+`)
+
+	return b.String()
+}
+
+// copied3 are round 3's results, for copyout3.cmd.
+var copied3 = []struct{ from, to string }{
+	{"[UAF95LOG]UAF95B.LOG", "uaf95b.log"},
+	{"[UAF95LOG]UAF95DROP.LOG", "uaf95drop.log"},
+	{"[UAF95LOG]UAF95J_UAF95.LOG", "uaf95j_uaf95.log"},
+	{"[UAF95LOG]UAF95J_UAF95L.LOG", "uaf95j_uaf95l.log"},
+	{"[UAF95LOG]UAF95I_UAF95_BATCH.LOG", "uaf95i_uaf95_batch.log"},
+	{"[UAF95LOG]UAF95I_UAF95L_BATCH.LOG", "uaf95i_uaf95l_batch.log"},
+	{"[UAF95LOG]UAF95I_UAF95_INTERACTIVE.LOG", "uaf95i_uaf95_interactive.log"},
+	{"[UAF95LOG]UAF95I_UAF95L_INTERACTIVE.LOG", "uaf95i_uaf95l_interactive.log"},
+}
+
+// ---------------------------------------------------------------------
 // The console scripts.
 
 func exchange() string {
@@ -736,7 +859,7 @@ func exchange() string {
 INITIALIZE/CONTAINER "testdata/disks/uaf95-exchange.dsk" /DEVICE=RD53 UAF95
 MOUNT/WRITE DUA5 "testdata/disks/uaf95-exchange.dsk"
 CREATE/DIRECTORY DUA5:[UAF95LOG]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE)
-CREATE/DIRECTORY DUA5:[UAF95SCR]/PROTECTION=(S:RWE,O:RWE,G:,W:)
+CREATE/DIRECTORY DUA5:[UAF95SCR]/PROTECTION=(S:RWE,O:RWE,G,W)
 CREATE/DIRECTORY DUA5:[UAF95]
 `)
 
@@ -773,22 +896,23 @@ var copied = []struct{ from, to string }{
 	{"[UAF95SCR]RIGHTSLIST.LIS;3", "rightslist_3.lis"},
 }
 
-func copyout() string {
+func copyout(script, into string, files []struct{ from, to string }) string {
 	var b strings.Builder
 
-	b.WriteString(`! COPYOUT.CMD - copies Phase 95's probe results off uaf95-exchange.dsk
-! into testdata/uaf95/vax (README.md). Written by testdata/uaf95/gen.go.
+	fmt.Fprintf(&b, `! %[1]s - copies Phase 95's probe results off uaf95-exchange.dsk
+! into testdata/uaf95/%[2]s (README.md). Written by testdata/uaf95/gen.go.
 ! Run from the repository root after the VAX runs:
 !
-!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/uaf95/copyout.cmd
-!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/uaf95/%[3]s
+!`, strings.ToUpper(script), into, script)
+	b.WriteString(`
 ! A file the run didn't make is a message, and the rest go on.
 MOUNT DUA5 "testdata/disks/uaf95-exchange.dsk"
 DIRECTORY DUA5:[UAF95LOG],[UAF95SCR]
 `)
 
-	for _, c := range copied {
-		fmt.Fprintf(&b, "COPY DUA5:%s \"testdata/uaf95/vax/%s\"/HOST/QUIET\n", c.from, c.to)
+	for _, c := range files {
+		fmt.Fprintf(&b, "COPY DUA5:%s \"testdata/uaf95/%s/%s\"/HOST/QUIET\n", c.from, into, c.to)
 	}
 
 	b.WriteString("DISMOUNT DUA5\n")
@@ -823,7 +947,9 @@ func main() {
 	write("login.com", loginProc())
 	write("uaf95x.com", lgicmdProc())
 	write("exchange.cmd", exchange())
-	write("copyout.cmd", copyout())
+	write("copyout.cmd", copyout("copyout.cmd", "vax", copied))
+	write("uaf95b.com", roundThreeProc())
+	write("copyout3.cmd", copyout("copyout3.cmd", "vax/round3", copied3))
 
 	n := 0
 	for _, s := range sections {
