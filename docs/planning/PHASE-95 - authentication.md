@@ -1,7 +1,8 @@
 # Phase 95 — authentication
 
-**Status:** planned 2026-11-15 (subtask 1, the survey and this plan),
-awaiting the author's review. This document is the development plan; as
+**Status:** planned 2026-11-15 (subtask 1, the survey and this plan);
+the plan reviewed and accepted by the author the same day, with the
+answers in "The review". This document is the development plan; as
 the subtasks are done it becomes the implementation record, with a
 progress log and, at the end, "Where things stand".
 
@@ -246,10 +247,21 @@ use a temporary file (`cmd/govax`'s `TestMain` sets one, as it sets
 record holds `NewProcess`'s values (privileges all, priority 4, ASTLM
 50, BIOLM and DIOLM 40, WSDEFAULT 512, WSQUOTA 1024, WSEXTENT 16400,
 the nominal PGFLQUOTA, ...), its CLI DCL, its LGICMD empty (so
-`SYS$LOGIN:LOGIN.COM`). Its DEVICE and DIRECTORY are the default
-volume's when one is configured (`vax.default.volume.device` and
-`.directory`, today's starting place), else `SYS$SYSROOT:` and
-`[SYSMGR]`, VMS's SYSTEM home. The `PQL_D*` configuration keeps laying
+`SYS$LOGIN:LOGIN.COM`). Its home is SYS$MANAGER, as on VMS: DEVICE
+`SYS$SYSROOT:` and DIRECTORY `[SYSMGR]`. The one exception
+(the review, question 2): when the configuration sets
+`vax.default.volume.directory` explicitly, SYSTEM's home is that
+directory on the default volume's device, so a configured starting
+place still wins. (No new key: that one already names a default
+directory. Its built-in default, `[WORK]`, doesn't count; only a value
+the configuration gives.) So by default process 1 now starts in
+SYS$MANAGER, where it started in the default volume's `[WORK]` before;
+the default volume is still mounted. With no system volume
+(`--system-file none`, as the tests run), SYS$SYSROOT doesn't exist, and
+SYSTEM's home falls back to the default volume's directory, then to the
+host's current directory, as today. The home is resolved at login, not
+written into the record as a physical name, so the record stays right
+when the volume moves. The `PQL_D*` configuration keeps laying
 over the record's quotas, as it lays over `SystemAccount`'s today
 (Phase 62's Decision 11), so a configured value still wins.
 
@@ -307,8 +319,9 @@ exists. Each at level 1, as a login procedure, its failures its own;
 Ctrl/Y in one ends it. STARTUP.COM defines `SYS$SYLOGIN` as VMS's
 does. They run for every login, SYSTEM's too, in an interactive
 session; the one-shot subcommands skip them (they run one command, and
-their output must stay predictable), and `--no-login` (Decision 6's
-sibling) skips them in a session. The system volume supplies a
+their output must stay predictable). There is no option to skip them
+in a session yet (the review, question 4); a configuration key can be
+added if one turns out to be needed. The system volume supplies a
 SYLOGIN.COM that is *seeded* (written once, never replaced, the user's
 to edit, as SYSTARTUP_VMS.COM is), with comments and nothing else.
 
@@ -433,8 +446,19 @@ file.
   SHOW LOGICAL of SYS$LOGIN, SYS$LOGIN_DEVICE, SYS$SCRATCH, and
   SYS$SYLOGIN with /FULL, SHOW DEFAULT, F$MODE, the order the
   procedures ran in, and F$GETJPI of every item code for the job.
-- **By hand** (the README's table): logging in to a DISUSER account
-  and to one whose LOGIN.COM fails, to see the messages.
+- **`uaf95acct.com`** and **`uaf95drop.com`**, run by SYSTEM on the
+  VAX before and after the probe (the review, question 6): the first
+  makes the UAF95 account in the real SYSUAF (`ADD UAF95/UIC=[200,5]
+  /OWNER="GOVAX PROBE"/ACCOUNT=GOVAX/PASSWORD=` a password the README
+  gives`/NOPWDEXPIRED/DEVICE=` the exchange volume`/DIRECTORY=[UAF95]
+  /PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX)
+  /LGICMD=` the probe's LOGIN procedure`/FLAGS=NODISUSER`), makes its
+  home directory owned by `[200,5]`, and a second account, UAF95D
+  `[200,6]`, `/FLAGS=DISUSER`, for the refused login; the second removes
+  both accounts and their identifiers. The README gives each command, so
+  the author can also make the accounts by hand.
+- **By hand** (the README's table): logging in to UAF95D (DISUSER) and
+  to UAF95 with a LOGIN.COM that fails, to see the messages.
 
 ## The review
 
@@ -459,6 +483,18 @@ Questions for the author:
 6. **The probe** (Part D): may the UAF95 account `[200,5]` be made on
    the simh VAX for the batch job?
 
+The answers (2026-11-15):
+
+1. Argon2id, with `golang.org/x/crypto` (Decision 4).
+2. SYSTEM's home is SYS$MANAGER, as VMS's, unless the configuration sets
+   `vax.default.volume.directory` (Decision 3).
+3. VMS's protection for the system volume (Decision 9).
+4. The one-shot subcommands skip the login procedures; no option to skip
+   them in a session until one is needed (Decision 8).
+5. Identifiers are in (Decision 11).
+6. The probe's accounts are made by a script, `uaf95acct.com`, with
+   the README giving the commands in detail too (Part D).
+
 ## Progress log
 
 - **2026-11-15** Subtask 1: read `corevms`'s accounts (`users.go`,
@@ -468,3 +504,8 @@ Questions for the author:
   qualifiers, and `cmd/govax`'s options; found no AUTHORIZE manual among
   the references and no UAF definitions in `vmsdef`; wrote Part A and
   this plan.
+- **2026-11-15** The review: the author accepted the plan and answered
+  the six questions. Decision 3 now gives SYSTEM SYS$MANAGER as its home
+  unless `vax.default.volume.directory` is configured; Decision 8 drops
+  `--no-login`; Part D adds `uaf95acct.com` and `uaf95drop.com`, and
+  UAF95D, a DISUSER account.
