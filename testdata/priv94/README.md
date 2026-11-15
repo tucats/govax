@@ -217,3 +217,12 @@ right. `TestPriv94BProbe` rehearses the program.
 
        mkdir -p testdata/priv94/vax/round2
        go run ./cmd/govax --profile tbprobe --system-file none console < testdata/priv94/copyout2.cmd
+
+## Round 2's results
+
+Round 2 ran on VMS V7.1 on 2026-11-15; `vax/round2/` holds its three logs
+and VMS's image of PRIV94B. The phase doc's A.4 has its answers. Its undo
+of `$CRELNT` deleted each table in its parent, where it isn't (a
+shareable table's name is in LNM$SYSTEM_DIRECTORY), so PRIV94_TB7 to TB12
+stayed in the VAX's system directory (`$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY`
+removes them).

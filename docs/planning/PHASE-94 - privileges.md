@@ -287,9 +287,13 @@ override the protection:
 | another shareable table | SYSPRV only; not SYSNAM or GRPNAM (16 to 19) | SYSPRV, READALL, or BYPASS; not SYSNAM (61 to 65) |
 | LNM$SYSTEM_DIRECTORY (`$CRELNT`) | SYSPRV; not SYSNAM (52 to 55) | |
 
-`$TRNLNM` of a table its protection closes is NOPRIV (61). A table
-under a shareable table other than the directory: SYSTEM got
-EXLNMQUOTA, PRIV94 NOPRIV (59, 60). The tables' profiles, from SHOW
+`$TRNLNM` of a table its protection closes is NOPRIV (61). A shareable
+table's name goes in LNM$SYSTEM_DIRECTORY whatever its parent, so making
+one needs SYSPRV (or the system category) under any parent, even one
+whose protection lets the caller write it (round 2's 18 to 29: SYSNAM
+and GRPNAM don't help); its quota comes out of the parent's (EXLNMQUOTA
+when it asks for the parent's whole quota, round 1's 59 and 60, round
+2's 22). The tables' profiles, from SHOW
 SECURITY: LNM$SYSTEM_TABLE and LNM$SYSTEM_DIRECTORY owner `[SYSTEM]`,
 `(S:RWC,O:RWC,G:R,W:R)`; LNM$GROUP_000001 owner `[1,*]` and
 LNM$GROUP_000200 owner `[PROT93,*]` (the group's identifier),
@@ -303,28 +307,36 @@ with SYSNAM, and otherwise lowered to the caller's without complaint
 (22, 23, 24: SYSTEM's exec-mode name in the system table went in at user
 mode); from an inner mode, the caller's mode is allowed (30). DEFINE
 /EXECUTIVE_MODE without SYSNAM makes a supervisor-mode name, silently.
-`$DELLNM` deletes the name at the mode it is given (maximized) and no
-other: a user-mode caller without SYSNAM gets NOLOGNAM for an exec-mode
-name (48), and the end's sweep, at kernel mode, deleted no user-mode
-name (so `PRIV94_L21`, `L49`, and `L51`, user-mode names whose undo
-asked for exec mode, were left in the VAX's system table). `$CRELOG`
+`$DELLNM` with a name (round 2's 30 to 40): if the name exists at the
+mode given (maximized; the caller's mode when acmode is omitted), it and
+the same name at every outer mode are deleted; if not, nothing is
+(NOLOGNAM), even when the name exists at an outer mode. So a user-mode
+caller without SYSNAM gets NOLOGNAM for an exec-mode name (48), and round
+1's sweep, at kernel mode, deleted no user-mode name (`PRIV94_L21`,
+`L49`, and `L51`, which round 2's end removed). `$TRNLNM` with an acmode
+looks only at that mode and inner ones, and of those finds the
+outermost. `$CRELOG`
 into the system table with SYSNAM makes an executive-mode name, user
 mode without it (68, 69, 75).
 
 DCL looks a `/TABLE=` table up from supervisor mode and doesn't see a
-table made at user mode: DEFINE/TABLE=PRIV94_OT is NOLOGTAB for everyone,
-and SHOW LOGICAL/TABLE= of a closed one IVLOGTAB (the fixtures were made
-at user mode). Otherwise DCL's messages are the service's: DEFINE,
+table made at user mode: DEFINE/TABLE=PRIV94_OT is NOLOGTAB for everyone
+(the fixtures were made at user mode). On tables made at supervisor mode
+(round 2's PRIV94E.COM) DCL follows the tables' rule: PRIV94 writes an
+open table with no privilege and a closed one only with SYSPRV, and reads
+the closed one with SYSPRV or READALL; without them SHOW LOGICAL/TABLE=
+says `%SYSTEM-W-IVLOGTAB, invalid logical name table`, and SYSNAM and
+GRPNAM do nothing for either. Otherwise DCL's messages are the service's: DEFINE,
 ASSIGN, DEASSIGN, CREATE/NAME_TABLE, and F$TRNLNM say
 `%SYSTEM-F-NOPRIV, insufficient privilege or object protection
 violation` alone.
 
 **Mailboxes.** `$CREMBX`: a temporary mailbox needs TMPMBX (80, 81), a
 permanent one PRMMBX (83, 84); TMPMBX doesn't give a permanent one. A
-permanent mailbox with a logical name: SYSTEM with PRMMBX succeeded,
-PRIV94 with PRMMBX alone got NOPRIV (84), most likely the name's table
-(LNM$PERMANENT_MAILBOX is in the system table), which a second round
-could settle. A temporary mailbox's name goes in the job table
+permanent mailbox with a logical name also needs to put the name in the
+system table (LNM$PERMANENT_MAILBOX is LNM$SYSTEM_TABLE): SYSNAM or
+SYSPRV, or the system category; TMPMBX doesn't help, and without a name
+PRMMBX alone does (84; round 2's 3 to 8). A temporary mailbox's name goes in the job table
 (LNM$JOB_...), a permanent one's in LNM$SYSTEM_TABLE. `$DELMBX` needs
 PRMMBX, even for the caller's own mailbox (88, 89). IO$_SETPROTECTION
 (IO$_SETMODE!IO$M_SETPROT) is the owner's (SYSTEM's own mailbox, and any
@@ -389,10 +401,13 @@ INSTALL LIST/FULL's layout and INSTALL REMOVE's and LIST's messages
 request needs no privilege, to any class, SECURITY too (247 to 252).
 `$BRKTHRU` to every terminal or every user needs OPER (NOOPER), to
 another user's terminals OPER as well, not WORLD (257 to 259), to one's
-own user or terminal nothing. `$LCKPAG` needs PSWAPM; `$ULKPAG` returned
-SS$_ACCVIO in both of the probe's cases, with and without PSWAPM (265,
-266: not understood; a second round could find why); `$LKWSET` needs
-nothing; `$SETSWM` needs PSWAPM (268, 269). Disk logical I/O needs LOG_IO
+own user or terminal nothing. `$LCKPAG` needs PSWAPM; `$ULKPAG` needs nothing.
+(`$ULKPAG` of a locked page unlocked it and returned `%X0000000C`,
+SS$_ACCVIO's value, whenever a case's body called it, with any
+privileges, with or without retadr, which it filled in; from a case's
+undo it returned SS$_WASSET, and of a page not locked SS$_NORMAL: round
+1's 265 and 266, round 2's 11 to 17. Not understood, and not a matter of
+privilege; govax keeps WASSET and WASCLR.) `$LKWSET` needs nothing; `$SETSWM` needs PSWAPM (268, 269). Disk logical I/O needs LOG_IO
 or PHY_IO, physical PHY_IO, as govax has it. A terminal's IO$_SETMODE
 needs nothing, IO$_SETCHAR LOG_IO or PHY_IO (278 to 283); SET
 TERMINAL/PERMANENT without them says `%SET-W-NOTSET, error modifying
@@ -407,10 +422,17 @@ the privileges of most of part P's and X's sets (`setprv 00000681`,
 NOTALLPRIV), as intended. `$TRNLNM`'s value line shows the last
 translation when the call failed.
 
-**Open, for a second round if wanted.** Why PRIV94's permanent mailbox
-with PRMMBX failed (the name's table, or something else); `$ULKPAG`'s
-ACCVIO; `$CRELNT` under a shareable table other than the directory;
-whether `$DELLNM` deletes inner-mode names too.
+**Round 2** (2026-11-15, `testdata/priv94/vax/round2/`, SYSTEM and
+PRIV94) settled what round 1 left open: the permanent mailbox's name, the
+shareable table's directory, `$DELLNM`'s modes, and DCL on
+supervisor-mode tables, above; `$ULKPAG`'s status stays unexplained. It
+also gave SET PROCESS/PRIORITY's own message above the base without
+ALTPRI, `%SET-E-NOTSET, need ALTPRI privilege to elevate above base
+priority` (DCL checks before calling `$SETPRI`, which would lower the
+priority quietly). Its undo of `$CRELNT` deleted the table in its parent
+rather than the directory, so it left PRIV94_TB7 to TB12 in the VAX's
+LNM$SYSTEM_DIRECTORY, and PRIV94's SYSPRV cases found SYSTEM's and got
+SS$_SUPERSEDE.
 
 **govax against it.** The rehearsal's SYSTEM run (`TestPriv94Probe`)
 differs from SYSTEM's VMS run in: every table write SYSTEM makes by
@@ -710,3 +732,6 @@ The answers:
   on round 1's volume, for A.4's open questions; its end also removes the
   three names round 1 left. `TestPriv94BProbe` rehearses it. Waiting for
   the author's VAX run.
+- **2026-11-15** Subtask 2, round 2: the author ran it on VMS V7.1; its
+  logs and image are in `testdata/priv94/vax/round2/`, and A.4 has its
+  answers. Subtask 2 is done.
