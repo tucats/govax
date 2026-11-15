@@ -240,6 +240,24 @@ func TestDCLFile_branches(t *testing.T) {
 	}
 }
 
+// TestDCLFile_openErrorBeforeRMS: an OPEN that fails before RMS opens
+// anything, here a name whose logical device isn't mounted, still goes to
+// its /ERROR label, with no message (Phase 95's probe rehearsal found it
+// going on to the next line).
+func TestDCLFile_openErrorBeforeRMS(t *testing.T) {
+	out, _ := runFileProcedure(t, false, "",
+		`$ DEFINE NOTMOUNTED DUA7:`,
+		`$ OPEN/READ/ERROR=NOFILE IN NOTMOUNTED:[X]Y.DAT`,
+		`$ WRITE SYS$OUTPUT "not here"`,
+		`$ NOFILE:`,
+		`$ WRITE SYS$OUTPUT "branched"`,
+	)
+
+	if out != "branched\n" {
+		t.Errorf("the procedure wrote:\n%s\nwant:\nbranched", out)
+	}
+}
+
 // TestDCLFile_statuses: what OPEN, WRITE, CLOSE, READ, and INQUIRE leave
 // in $STATUS, as VMS 7.3 showed it (testdata/dcl50's F1, F10, and Q1):
 // %X00000001, RMS$_NORMAL, RMS$_NORMAL, CLI$_NORMAL, %X00000001.

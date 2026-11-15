@@ -387,7 +387,8 @@ home writable), its LOGIN.COM run, `F$GETJPI` showing its values.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe**: `testdata/uaf95`, as in Part D, written and rehearsed
+2. **The probe** (written and rehearsed 2026-11-15; awaiting the VAX
+   run): `testdata/uaf95`, as in Part D, written and rehearsed
    where govax can; run on the VAX by the author; A.4 answered and Part
    B adjusted.
 3. **The authorization file** (Decisions 1 to 5): `internal/uaf`
@@ -440,22 +441,32 @@ file.
   identifier command, a qualifier govax won't keep (to see 7.1's
   words for it), and AUTHORIZE run by an account without SYSPRV against
   the real SYSUAF (refused, the message).
-- **`uaf95j.com`**, login's side: a batch job submitted `/USER=UAF95`
-  (the probe account, `[200,5]`, made by the author for the run, with
-  SYLOGIN and LOGIN.COM of the probe's own reached through its LGICMD):
-  SHOW LOGICAL of SYS$LOGIN, SYS$LOGIN_DEVICE, SYS$SCRATCH, and
-  SYS$SYLOGIN with /FULL, SHOW DEFAULT, F$MODE, the order the
-  procedures ran in, and F$GETJPI of every item code for the job.
+- **`uaf95i.com`**, login's side, run by batch jobs submitted
+  `/USER=` each probe account and by each account by hand after logging
+  in: what the login procedures recorded, SHOW LOGICAL/FULL of
+  SYS$LOGIN, SYS$LOGIN_DEVICE, SYS$SCRATCH, and SYS$SYLOGIN, the job and
+  process tables, SHOW DEFAULT, SHOW PROCESS (/PRIVILEGES, /RIGHTS,
+  /QUOTAS), F$MODE, F$GETJPI of every item the 7.3-1 dictionary lists,
+  AUTHORIZE without SYSPRV, and what the account can read and write of
+  the system's files.
+- **The login procedures**: `uaf95s.com` is SYS$SYLOGIN while the probe
+  runs (`uaf95acct.com` keeps the old translation and mode, and
+  `uaf95drop.com` puts it back): for the probe's accounts it records
+  what it sees in global symbols, and for everyone else it runs the
+  VAX's own SYLOGIN. `login.com` (UAF95's SYS$LOGIN:LOGIN.COM) and
+  `uaf95x.com` (UAF95L's LGICMD, which fails with a warning, then with
+  an error) record the same.
 - **`uaf95acct.com`** and **`uaf95drop.com`**, run by SYSTEM on the
   VAX before and after the probe (the review, question 6): the first
   makes the UAF95 account in the real SYSUAF (`ADD UAF95/UIC=[200,5]
   /OWNER="GOVAX PROBE"/ACCOUNT=GOVAX/PASSWORD=` a password the README
   gives`/NOPWDEXPIRED/DEVICE=` the exchange volume`/DIRECTORY=[UAF95]
   /PRIVILEGES=(TMPMBX,NETMBX)/DEFPRIVILEGES=(TMPMBX,NETMBX)
-  /LGICMD=` the probe's LOGIN procedure`/FLAGS=NODISUSER`), makes its
-  home directory owned by `[200,5]`, and a second account, UAF95D
-  `[200,6]`, `/FLAGS=DISUSER`, for the refused login; the second removes
-  both accounts and their identifiers. The README gives each command, so
+  /FLAGS=NODISUSER`, no LGICMD), UAF95L `[200,7]` (the same with
+  LGICMD `UAF95X.COM`), and UAF95D `[200,6]` (`/FLAGS=DISUSER`, for the
+  refused login), grants UAF95 the identifier UAF95_ID, and makes their
+  shared home directory owned by `[200,5]`; the second removes the
+  accounts and identifiers. The README gives each command, so
   the author can also make the accounts by hand.
 - **By hand** (the README's table): logging in to UAF95D (DISUSER) and
   to UAF95 with a LOGIN.COM that fails, to see the messages.
@@ -509,3 +520,16 @@ The answers (2026-11-15):
   unless `vax.default.volume.directory` is configured; Decision 8 drops
   `--no-login`; Part D adds `uaf95acct.com` and `uaf95drop.com`, and
   UAF95D, a DISUSER account.
+- **2026-11-15** Subtask 2, written and rehearsed: `testdata/uaf95`
+  (`gen.go` writes 130 AUTHORIZE cases in `uaf95.com`, the accounts and
+  the end, the state procedure, the three login procedures, and the
+  exchange and copy-out scripts; the README has the VAX steps and the
+  accounts in detail). The exchange volume builds on govax, and
+  `TestUAF95Probe` runs the login procedures and `UAF95I.COM` there;
+  `UAF95.COM` and `UAF95DROP.COM` ran on govax to their ends. The
+  rehearsal found a govax bug, fixed: an OPEN failing before RMS opened
+  anything (a device not mounted) ignored `/ERROR`
+  (`dclshell/dclfile.go`, `TestDCLFile_openErrorBeforeRMS`). It also
+  showed govax lacks SHOW PROCESS/RIGHTS and /QUOTAS, and that a DCL
+  element over 255 characters (a privilege list) is TKNOVF in WRITE, which
+  the VAX run will settle. Waiting for the VAX run.

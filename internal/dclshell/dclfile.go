@@ -415,7 +415,10 @@ func (c *Interpreter) openCommand(id int64, r *dcl.Result) error {
 			return c.failOrBranch(label, fe.Status|stsInhibitMsg, openFailure(fe, access))
 		}
 
-		return err
+		// A name that fails before RMS opens anything (a device that isn't
+		// mounted, a bad specification) still takes /ERROR, as READ's
+		// failures do.
+		return c.failOrBranch(label, ConditionValue(err), err)
 	}
 
 	attrs := lnm.AttrTerminal
