@@ -143,3 +143,14 @@ what govax lacks of them (AUTHORIZE, INSTALL, RUN/DETACH, SET VOLUME,
 SET TERMINAL, SET PROCESS/PRIORITY and /SUSPEND of another process, SHOW
 SECURITY of logical name tables, `$SETSWM`) shows as messages, and is
 the later subtasks' work.
+
+## Round 1's results
+
+Round 1 ran on VMS V7.1 on 2026-11-15, with no crash; `vax/` holds its
+four logs and the three images VMS built. The phase doc's A.4 is written
+from them. Its procedures are left as they ran, with two mistakes of
+their own: `PRIV94D.COM`'s PRIORITY sections wrote `'P+2'`, which DCL
+refuses (`%DCL-W-NOCCAT`), and part Z's sweep deleted names at kernel
+mode, which leaves user-mode names alone, so PRIV94_L21, L49, and L51
+stayed in the VAX's system table (`$ DEASSIGN/SYSTEM/USER_MODE` removes
+them).

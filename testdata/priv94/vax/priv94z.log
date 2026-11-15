@@ -1,0 +1,96 @@
+$ !
+$ WRITE SYS$OUTPUT "######## INSTALL"
+######## INSTALL
+$ INSTALL REMOVE PRIV94$DISK:[000000]PRIV94I
+$ INSTALL LIST PRIV94$DISK:[000000]PRIV94I
+%INSTALL-W-FAIL, failed to LIST entry for DISK$PRIV94:<000000>PRIV94I.EXE
+-INSTALL-E-NOKFEFND, Known File Entry not found
+$ RUN PRIV94$DISK:[000000]PRIV94I
+PRIV94I auth FFFFFFFFFFFFFFFF proc FFFFFFFFFFFFFFFF
+PRIV94I cur  FFFFFFFFFFFFFFFF imag 0000000000000000
+PRIV94I crelnm 00000001 dellnm 00000001
+$ !
+$ WRITE SYS$OUTPUT "######## THE END"
+######## THE END
+$ DEFINE/USER_MODE PRIV94_PART "Z"
+$ RUN PRIV94$DISK:[000000]PRIV94
+user SYSTEM       uic [1,4] base priority 4
+  auth FFFFFFFFFFFFFFFF proc FFFFFFFFFFFFFFFF
+  cur  FFFFFFFFFFFFFFFF imag 0000000000000000
+parts Z
+== 3 Z the end
+  PRIV94_G 00000001
+  PRIV94_W 00000001
+  PRIV94_PMBX 00000001
+  PRIV94_OT 00000001
+  PRIV94_PT 00000001
+  ~ swept 0
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+end of cases
+  auth FFFFFFFFFFFFFFFF proc FFFFFFFFFFFFFFFF
+  cur  FFFFFFFFFFFFFFFF imag 0000000000000000
+$ SHOW LOGICAL/SYSTEM PRIV94*
+
+(LNM$SYSTEM_TABLE)
+
+  "PRIV94$DISK" = "DUA1:"
+  "PRIV94_L21" = "PRIV94"
+  "PRIV94_L49" = "PRIV94"
+  "PRIV94_L51" = "PRIV94"
+$ SHOW LOGICAL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94*
+
+(LNM$SYSTEM_DIRECTORY)
+%SHOW-S-NOTRAN, no translation for logical name PRIV94*
+$ SHOW LOGICAL/TABLE=LNM$GROUP_000200 PRIV94*
+
+(LNM$GROUP_000200)
+%SHOW-S-NOTRAN, no translation for logical name PRIV94*
+$ SHOW SYSTEM
+OpenVMS V7.1  on node SIMVAX  15-NOV-2026 09:22:23.63  Uptime  0 13:56:22
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000101 SWAPPER         HIB     16        0   0 00:00:00.02         0      0   
+00000105 CONFIGURE       HIB      8        5   0 00:00:00.02       112    167   
+00000107 IPCACP          HIB     10        7   0 00:00:00.00        96    169   
+00000108 ERRFMT          HIB      8      399   0 00:00:00.00       141    234   
+00000109 OPCOM           HIB      9      705   0 00:00:00.04       346    172   
+0000010A AUDIT_SERVER    HIB      9      229   0 00:00:00.02       740    522   
+0000010B JOB_CONTROL     HIB      9      118   0 00:00:00.00       227    337   
+0000010C QUEUE_MANAGER   HIB     10       47   0 00:00:00.01       682    989   
+0000010D SECURITY_SERVER HIB     10       37   0 00:00:00.01      1038   1028   
+0000010E DNS$ADVER       LEF      5     4404   0 00:00:00.23     25097   2324   
+0000010F LES$ACP_V30     HIB      9      106   0 00:00:00.01       206    276   
+00000110 REMACP          HIB      8        8   0 00:00:00.00        82     48   
+00000111 NET$ACP         HIB      6       43   0 00:00:00.00       880    516   
+00000112 NET$EVD         HIB      6       15   0 00:00:00.03      1250    666   
+00000113 DTSS$CLERK      LEF     12      379   0 00:00:00.01       630    516   
+0000014F SYSTEM          CUR      4      111   0 00:00:00.01      1270    292   
+$ !
+$ WRITE SYS$OUTPUT "######## REMOVING THE ACCOUNTS"
+######## REMOVING THE ACCOUNTS
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ RUN SYS$SYSTEM:AUTHORIZE
+REMOVE PRIV94
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PRIV94 value [000200,000003] removed from rights database
+REMOVE PRIV94N
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier PRIV94N value [000200,000004] removed from rights database
+REMOVE/IDENTIFIER PRIV94G
+%UAF-E-RDBREMERR, unable to remove PRIV94G from rights database
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SET DEFAULT SYS$SYSROOT:[SYSMGR]
+$ DIRECTORY PRIV94$DISK:[PRIV94LOG]
+
+Directory DUA1:[PRIV94LOG]
+
+PRIV94.LOG;1        PRIV94U_PRIV94.LOG;1                    PRIV94U_PRIV94N.LOG;1
+PRIV94Z.LOG;1       
+
+Total of 4 files.
+$ WRITE SYS$OUTPUT "PRIV94Z FINISHED"
+PRIV94Z FINISHED
+$ SET NOVERIFY

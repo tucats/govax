@@ -1,0 +1,1320 @@
+$ !
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+######## ENVIRONMENT
+$ WRITE SYS$OUTPUT F$GETJPI("","USERNAME"), " ", F$GETJPI("","UIC")
+PRIV94N      [PROT93,PRIV94N]
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:01.42   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ !
+$ @PRIV94$DISK:[000000]PRIV94P PRIV94N
+$ ! PRIV94P.COM - Phase 94's probe: what each identity runs. P1 is the
+$ ! identity: SYSTEM (from PRIV94.COM), PRIV94, or PRIV94N (from
+$ ! PRIV94U.COM). Written by testdata/priv94/gen.go.
+$ !
+$ SET NOON
+$ WHO = P1
+$ WRITE SYS$OUTPUT "######## PROGRAM PRIV94N"
+######## PROGRAM PRIV94N
+$ IF WHO .EQS. "PRIV94N" THEN DEFINE/USER_MODE PRIV94_PART "SPX"
+$ RUN PRIV94$DISK:[000000]PRIV94
+user PRIV94N      uic [200,4] base priority 4
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+parts SPX
+== 128 P user [] $WAKE holder G
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 129 P user [] $SCHDWK holder G
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 130 P user [] $CANWAK holder G
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 131 P user [] $SUSPND holder G
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  undo resume 00000024
+== 132 P user [] $RESUME holder G (not suspended)
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 133 P user [] $SETPRI holder G to 3 (below its base)
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 134 P user [] $GETJPIW holder G
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prcnam 
+== 135 P user [GROUP] $WAKE holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 136 P user [GROUP] $SCHDWK holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 137 P user [GROUP] $CANWAK holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 138 P user [GROUP] $SUSPND holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  undo resume 00000024
+== 139 P user [GROUP] $RESUME holder G (not suspended)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 140 P user [GROUP] $SETPRI holder G to 3 (below its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 141 P user [GROUP] $GETJPIW holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prcnam 
+== 142 P user [WORLD] $WAKE holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 143 P user [WORLD] $SCHDWK holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 144 P user [WORLD] $CANWAK holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 145 P user [WORLD] $SUSPND holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  undo resume 00000024
+== 146 P user [WORLD] $RESUME holder G (not suspended)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 147 P user [WORLD] $SETPRI holder G to 3 (below its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 148 P user [WORLD] $GETJPIW holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prcnam 
+== 149 P user [GROUP,ALTPRI] $SETPRI holder G to 6 (above its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 150 P user [WORLD] $SETPRI holder G to 6 (above its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 151 P exec [] $WAKE holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+== 152 P exec [] $SETPRI holder G to 3
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvpri -1
+  jpi 00000024
+== 153 P exec [] $SUSPND holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  undo resume 00000024
+== 154 P kernel [] $WAKE holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+== 155 P kernel [] $SETPRI holder G to 3
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvpri -1
+  jpi 00000024
+== 156 P kernel [] $SUSPND holder G
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  undo resume 00000024
+== 157 P user [] $WAKE holder W
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 158 P user [] $SCHDWK holder W
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 159 P user [] $CANWAK holder W
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 160 P user [] $SUSPND holder W
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  undo resume 00000024
+== 161 P user [] $RESUME holder W (not suspended)
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 162 P user [] $SETPRI holder W to 3 (below its base)
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 163 P user [] $GETJPIW holder W
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prcnam 
+== 164 P user [GROUP] $WAKE holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 165 P user [GROUP] $SCHDWK holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 166 P user [GROUP] $CANWAK holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 167 P user [GROUP] $SUSPND holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  undo resume 00000024
+== 168 P user [GROUP] $RESUME holder W (not suspended)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 169 P user [GROUP] $SETPRI holder W to 3 (below its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 170 P user [GROUP] $GETJPIW holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prcnam 
+== 171 P user [WORLD] $WAKE holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 172 P user [WORLD] $SCHDWK holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 173 P user [WORLD] $CANWAK holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 174 P user [WORLD] $SUSPND holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  undo resume 00000024
+== 175 P user [WORLD] $RESUME holder W (not suspended)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 176 P user [WORLD] $SETPRI holder W to 3 (below its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 177 P user [WORLD] $GETJPIW holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prcnam 
+== 178 P user [GROUP,ALTPRI] $SETPRI holder W to 6 (above its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 179 P user [WORLD] $SETPRI holder W to 6 (above its base)
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  prvpri -1
+  jpi 00000024
+== 180 P exec [] $WAKE holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+== 181 P exec [] $SETPRI holder W to 3
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvpri -1
+  jpi 00000024
+== 182 P exec [] $SUSPND holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  undo resume 00000024
+== 183 P kernel [] $WAKE holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+== 184 P kernel [] $SETPRI holder W to 3
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvpri -1
+  jpi 00000024
+== 185 P kernel [] $SUSPND holder W
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  undo resume 00000024
+== 186 P user [] $SETPRI itself to its base + 2
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvpri 4
+  pri 4 prib 4
+== 187 P user [ALTPRI] $SETPRI itself to its base + 2
+  setprv 00000681
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvpri 4
+  pri 4 prib 4
+== 188 P user [] $SETPRI itself to its base - 1
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvpri 4
+  pri 3 prib 3
+== 189 P kernel [] $SETPRI itself to its base + 2
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvpri 4
+  pri 4 prib 4
+== 190 P user [] $GETJPIW wildcard walk
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  self 1 G 0 W 0 nopriv 17 last 000009A8
+  ~ others 0
+== 191 P user [GROUP] $GETJPIW wildcard walk
+  setprv 00000681
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  self 1 G 0 W 0 nopriv 17 last 000009A8
+  ~ others 0
+== 192 P user [WORLD] $GETJPIW wildcard walk
+  setprv 00000681
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  self 1 G 0 W 0 nopriv 17 last 000009A8
+  ~ others 0
+== 229 S user [] $SETPRV enable OPER
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 230 S user [] $SETPRV enable SETPRV
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 231 S user [] $SETPRV enable OPER and TMPMBX
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000008000 imag 0000000000000000
+== 232 S user [] $SETPRV enable every privilege
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+== 233 S user [] $SETPRV enable OPER permanently
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 234 S user [] $SETPRV enable TMPMBX permanently
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000008000 imag 0000000000000000
+== 235 S user [] $SETPRV disable TMPMBX permanently
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000100000
+  cur  0000000000000000 imag 0000000000000000
+== 236 S user [] $SETPRV disable every privilege permanently
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000000000
+  cur  0000000000000000 imag 0000000000000000
+== 237 S user [] $SETPRV no prvadr, enable
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 238 S user [] $SETPRV no prvadr, enable permanently
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 239 S user [] $SETPRV enbflg 2
+  R0 00000001 %SYSTEM-S-NORMAL, normal successful completion
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 240 S user [] $SETPRV prmflg 2
+  R0 0000017C %SYSTEM-F-IVSTSFLG, invalid status flag
+  prvprv FFFFFFFFFFFFFFFF
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 241 S user [SETPRV] $SETPRV enable OPER
+  setprv 00000681
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000000000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+== 242 S user [SETPRV] $SETPRV enable every privilege permanently
+  setprv 00000681
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+== 243 S exec [] $SETPRV enable OPER
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+== 244 S exec [] $SETPRV enable OPER permanently
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+== 245 S kernel [] $SETPRV enable every privilege
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  inner cur 0000000000000000
+  prvprv 0000000000108000
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+== 284 X user [] $CMKRNL of a routine that returns 1
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 285 X user [] $CMEXEC of a routine that returns 1
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 286 X user [CMKRNL] $CMKRNL of a routine that returns 1
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 287 X user [CMKRNL] $CMEXEC of a routine that returns 1
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 288 X user [CMEXEC] $CMKRNL of a routine that returns 1
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+== 289 X user [CMEXEC] $CMEXEC of a routine that returns 1
+  setprv 00000681
+  R0 00000024 %SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+end of cases
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+$ !
+$ WRITE SYS$OUTPUT "######## RUNDOWN PRIV94N"
+######## RUNDOWN PRIV94N
+$ SET PROCESS/PRIVILEGES=(NOALL,TMPMBX,NETMBX)
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:01.44   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ DEFINE/USER_MODE PRIV94_PART "R"
+$ RUN PRIV94$DISK:[000000]PRIV94
+user PRIV94N      uic [200,4] base priority 4
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+parts R
+== 246 R user [] $SETPRV OPER permanently and ALTPRI for the image, left so
+  R0 00000681 %SYSTEM-S-NOTALLPRIV, not all requested privileges authorized
+  first 00000681
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+end of cases
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000000000 imag 0000000000000000
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:01.45   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ WRITE SYS$OUTPUT F$GETJPI("","PROCPRIV")
+TMPMBX,NETMBX
+$ DEFINE/USER_MODE PRIV94_PART "-"
+$ RUN PRIV94$DISK:[000000]PRIV94
+user PRIV94N      uic [200,4] base priority 4
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+parts -
+end of cases
+  auth 0000000000108000 proc 0000000000108000
+  cur  0000000000108000 imag 0000000000000000
+$ IF WHO .EQS. "SYSTEM" THEN SET PROCESS/PRIVILEGES=ALL
+$ IF WHO .NES. "SYSTEM" THEN SET PROCESS/PRIVILEGES=(NOALL,TMPMBX,NETMBX)
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:01.46   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ !
+$ @PRIV94$DISK:[000000]PRIV94D PRIV94N
+$ ! PRIV94D.COM - Phase 94's probe: DCL's side, for each identity. P1 is
+$ ! the identity (SYSTEM, PRIV94, or PRIV94N). Each section runs under one
+$ ! privilege set after another; the commands'own messages are what it
+$ ! asks VMS for. Written by testdata/priv94/gen.go.
+$ !
+$ SET NOON
+$ WHO = P1
+$ GPID = F$TRNLNM("PRIV94_G_PID","LNM$SYSTEM_TABLE")
+$ WPID = F$TRNLNM("PRIV94_W_PID","LNM$SYSTEM_TABLE")
+$ WRITE SYS$OUTPUT "holders: 0000014A 0000014B"
+holders: 0000014A 0000014B
+$ GRPTABLE = F$FAO("LNM$GROUP_!6OL", F$GETJPI("","GRP"))
+$ TTW = F$GETDVI("TT:","DEVBUFSIZ")
+$ !
+$ WRITE SYS$OUTPUT "######## D NAMES [] PRIV94N"
+######## D NAMES [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ DEFINE/SYSTEM PRIV94_DS "S"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DS
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DS
+$ DEASSIGN/SYSTEM PRIV94_DS
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ ASSIGN/SYSTEM "A" PRIV94_DA
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ DEASSIGN/SYSTEM PRIV94_DA
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/GROUP PRIV94_DG "G"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/GROUP PRIV94_DG
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DG
+$ DEASSIGN/GROUP PRIV94_DG
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/EXECUTIVE_MODE PRIV94_DE "E"
+$ SHOW LOGICAL/FULL/PROCESS PRIV94_DE
+   "PRIV94_DE" [super] = "E" (LNM$PROCESS_TABLE)
+$ DEASSIGN/EXECUTIVE_MODE PRIV94_DE
+$ DEASSIGN PRIV94_DE
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/SYSTEM/EXECUTIVE_MODE PRIV94_DX "X"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DX
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DX
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEASSIGN/SYSTEM PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_OT PRIV94_DO "O"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_OT PRIV94_DO
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DO
+$ DEASSIGN/TABLE=PRIV94_OT PRIV94_DO
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_PT PRIV94_DP "P"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DP
+$ DEASSIGN/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ SHOW LOGICAL/TABLE=PRIV94_PT *
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name *
+$ WRITE SYS$OUTPUT F$TRNLNM("PRIV94_PTN","PRIV94_PT")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DT
+$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ CREATE/NAME_TABLE PRIV94_DQ
+$ SHOW LOGICAL/FULL/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+   "PRIV94_DQ" [super,table] = "" [terminal] (LNM$PROCESS_DIRECTORY)
+$ DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+$ !
+$ WRITE SYS$OUTPUT "######## D NAMES [SYSNAM] PRIV94N"
+######## D NAMES [SYSNAM] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,SYSNAM")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ DEFINE/SYSTEM PRIV94_DS "S"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DS
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DS
+$ DEASSIGN/SYSTEM PRIV94_DS
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ ASSIGN/SYSTEM "A" PRIV94_DA
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ DEASSIGN/SYSTEM PRIV94_DA
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/GROUP PRIV94_DG "G"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/GROUP PRIV94_DG
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DG
+$ DEASSIGN/GROUP PRIV94_DG
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/EXECUTIVE_MODE PRIV94_DE "E"
+$ SHOW LOGICAL/FULL/PROCESS PRIV94_DE
+   "PRIV94_DE" [super] = "E" (LNM$PROCESS_TABLE)
+$ DEASSIGN/EXECUTIVE_MODE PRIV94_DE
+$ DEASSIGN PRIV94_DE
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/SYSTEM/EXECUTIVE_MODE PRIV94_DX "X"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DX
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DX
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEASSIGN/SYSTEM PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_OT PRIV94_DO "O"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_OT PRIV94_DO
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DO
+$ DEASSIGN/TABLE=PRIV94_OT PRIV94_DO
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_PT PRIV94_DP "P"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DP
+$ DEASSIGN/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ SHOW LOGICAL/TABLE=PRIV94_PT *
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name *
+$ WRITE SYS$OUTPUT F$TRNLNM("PRIV94_PTN","PRIV94_PT")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DT
+$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ CREATE/NAME_TABLE PRIV94_DQ
+$ SHOW LOGICAL/FULL/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+   "PRIV94_DQ" [super,table] = "" [terminal] (LNM$PROCESS_DIRECTORY)
+$ DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+$ !
+$ WRITE SYS$OUTPUT "######## D NAMES [GRPNAM] PRIV94N"
+######## D NAMES [GRPNAM] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,GRPNAM")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ DEFINE/SYSTEM PRIV94_DS "S"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DS
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DS
+$ DEASSIGN/SYSTEM PRIV94_DS
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ ASSIGN/SYSTEM "A" PRIV94_DA
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ DEASSIGN/SYSTEM PRIV94_DA
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/GROUP PRIV94_DG "G"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/GROUP PRIV94_DG
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DG
+$ DEASSIGN/GROUP PRIV94_DG
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/EXECUTIVE_MODE PRIV94_DE "E"
+$ SHOW LOGICAL/FULL/PROCESS PRIV94_DE
+   "PRIV94_DE" [super] = "E" (LNM$PROCESS_TABLE)
+$ DEASSIGN/EXECUTIVE_MODE PRIV94_DE
+$ DEASSIGN PRIV94_DE
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/SYSTEM/EXECUTIVE_MODE PRIV94_DX "X"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DX
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DX
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEASSIGN/SYSTEM PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_OT PRIV94_DO "O"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_OT PRIV94_DO
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DO
+$ DEASSIGN/TABLE=PRIV94_OT PRIV94_DO
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_PT PRIV94_DP "P"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DP
+$ DEASSIGN/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ SHOW LOGICAL/TABLE=PRIV94_PT *
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name *
+$ WRITE SYS$OUTPUT F$TRNLNM("PRIV94_PTN","PRIV94_PT")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DT
+$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ CREATE/NAME_TABLE PRIV94_DQ
+$ SHOW LOGICAL/FULL/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+   "PRIV94_DQ" [super,table] = "" [terminal] (LNM$PROCESS_DIRECTORY)
+$ DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+$ !
+$ WRITE SYS$OUTPUT "######## D NAMES [SYSPRV] PRIV94N"
+######## D NAMES [SYSPRV] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,SYSPRV")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ DEFINE/SYSTEM PRIV94_DS "S"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DS
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DS
+$ DEASSIGN/SYSTEM PRIV94_DS
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ ASSIGN/SYSTEM "A" PRIV94_DA
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ DEASSIGN/SYSTEM PRIV94_DA
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/GROUP PRIV94_DG "G"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/GROUP PRIV94_DG
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DG
+$ DEASSIGN/GROUP PRIV94_DG
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/EXECUTIVE_MODE PRIV94_DE "E"
+$ SHOW LOGICAL/FULL/PROCESS PRIV94_DE
+   "PRIV94_DE" [super] = "E" (LNM$PROCESS_TABLE)
+$ DEASSIGN/EXECUTIVE_MODE PRIV94_DE
+$ DEASSIGN PRIV94_DE
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/SYSTEM/EXECUTIVE_MODE PRIV94_DX "X"
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/SYSTEM PRIV94_DX
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DX
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEASSIGN/SYSTEM PRIV94_DX
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_OT PRIV94_DO "O"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_OT PRIV94_DO
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DO
+$ DEASSIGN/TABLE=PRIV94_OT PRIV94_DO
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEFINE/TABLE=PRIV94_PT PRIV94_DP "P"
+%SYSTEM-F-NOLOGTAB, no logical name table name match
+$ SHOW LOGICAL/FULL/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DP
+$ DEASSIGN/TABLE=PRIV94_PT PRIV94_DP
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ SHOW LOGICAL/TABLE=PRIV94_PT *
+%SYSTEM-W-IVLOGTAB, invalid logical name table
+%SHOW-S-NOTRAN, no translation for logical name *
+$ WRITE SYS$OUTPUT F$TRNLNM("PRIV94_PTN","PRIV94_PT")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW LOGICAL/FULL/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SHOW-S-NOTRAN, no translation for logical name PRIV94_DT
+$ DEASSIGN/TABLE=LNM$SYSTEM_DIRECTORY PRIV94_DT
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ CREATE/NAME_TABLE PRIV94_DQ
+$ SHOW LOGICAL/FULL/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+   "PRIV94_DQ" [super,table] = "" [terminal] (LNM$PROCESS_DIRECTORY)
+$ DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY PRIV94_DQ
+$ !
+$ WRITE SYS$OUTPUT "######## D SECURITY [] PRIV94N"
+######## D SECURITY [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE LNM$SYSTEM_TABLE
+
+LNM$SYSTEM_TABLE object of class LOGICAL_NAME_TABLE
+     Owner: [SYSTEM]
+     Protection: (System: RWC, Owner: RWC, Group: R, World: R)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE LNM$SYSTEM_DIRECTORY
+
+LNM$SYSTEM_DIRECTORY object of class LOGICAL_NAME_TABLE
+     Owner: [SYSTEM]
+     Protection: (System: RWC, Owner: RWC, Group: R, World: R)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE LNM$GROUP_000200
+
+LNM$GROUP_000200 object of class LOGICAL_NAME_TABLE
+     Owner: [PROT93,*]
+     Protection: (System: RWCD, Owner: R, Group: R, World)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_OT
+
+PRIV94_OT object of class LOGICAL_NAME_TABLE
+     Owner: [SYSTEM]
+     Protection: (System: RWCD, Owner: RWCD, Group: RWCD, World: RWCD)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_PT
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D SECURITY [SECURITY] PRIV94N"
+######## D SECURITY [SECURITY] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,SECURITY")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE LNM$SYSTEM_TABLE
+
+LNM$SYSTEM_TABLE object of class LOGICAL_NAME_TABLE
+     Owner: [SYSTEM]
+     Protection: (System: RWC, Owner: RWC, Group: R, World: R)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE LNM$SYSTEM_DIRECTORY
+
+LNM$SYSTEM_DIRECTORY object of class LOGICAL_NAME_TABLE
+     Owner: [SYSTEM]
+     Protection: (System: RWC, Owner: RWC, Group: R, World: R)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE LNM$GROUP_000200
+
+LNM$GROUP_000200 object of class LOGICAL_NAME_TABLE
+     Owner: [PROT93,*]
+     Protection: (System: RWCD, Owner: R, Group: R, World)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_OT
+
+PRIV94_OT object of class LOGICAL_NAME_TABLE
+     Owner: [SYSTEM]
+     Protection: (System: RWCD, Owner: RWCD, Group: RWCD, World: RWCD)
+     Access Control List: <empty>
+$ SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE PRIV94_PT
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D SEE [] PRIV94N"
+######## D SEE [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SHOW SYSTEM
+OpenVMS V7.1  on node SIMVAX  15-NOV-2026 09:22:01.81  Uptime  0 13:56:00
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000101 SWAPPER         HIB     16        0   0 00:00:00.02         0      0   
+00000105 CONFIGURE       HIB      8        5   0 00:00:00.02       112    167   
+00000107 IPCACP          HIB     10        7   0 00:00:00.00        96    169   
+00000108 ERRFMT          HIB      8      399   0 00:00:00.00       141    234   
+00000109 OPCOM           HIB      9      705   0 00:00:00.04       346    172   
+0000010A AUDIT_SERVER    HIB      9      229   0 00:00:00.02       740    522   
+0000010B JOB_CONTROL     HIB      8      107   0 00:00:00.00       227    337   
+0000010C QUEUE_MANAGER   HIB     10       47   0 00:00:00.01       682    989   
+0000010D SECURITY_SERVER HIB     10       35   0 00:00:00.01      1038   1028   
+0000010E DNS$ADVER       LEF      5     4404   0 00:00:00.23     25097   2324   
+0000010F LES$ACP_V30     HIB      9      106   0 00:00:00.01       206    276   
+00000110 REMACP          HIB      8        8   0 00:00:00.00        82     48   
+00000111 NET$ACP         HIB      6       43   0 00:00:00.00       880    516   
+00000112 NET$EVD         HIB      5       15   0 00:00:00.03      1250    666   
+00000113 DTSS$CLERK      LEF     12      379   0 00:00:00.01       630    516   
+0000014A PRIV94_G        HIB      7        2   0 00:00:00.00        76    109   
+0000014B PRIV94_W        HIB      7        2   0 00:00:00.00        76    109   
+0000014C PRIV94N         CUR      4      414   0 00:00:00.10      6801    326   
+$ SHOW PROCESS/IDENTIFICATION=0000014A
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW PROCESS/IDENTIFICATION=0000014B
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT "G: ", F$GETJPI(GPID,"PRCNAM"), " W: ", F$GETJPI(WPID,"PRCNAM")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRCNAM\
+$ GOSUB WALK
+$ WALK:
+$ CTX = ""
+$ N = 0
+$ SEEN = ""
+$ ME = F$GETJPI("","PID")
+$ WALK_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO WALK_DONE
+$ N = N + 1
+$ IF PID .EQS. GPID THEN SEEN = SEEN + " G"
+$ IF PID .EQS. WPID THEN SEEN = SEEN + " W"
+$ IF PID .EQS. ME THEN SEEN = SEEN + " SELF"
+$ IF N .LT. 500 THEN GOTO WALK_LOOP
+$ WALK_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO WALK_DONE
+$ WALK_DONE:
+$ WRITE SYS$OUTPUT "F$PID saw SELF"
+F$PID saw SELF
+$ WRITE SYS$OUTPUT "  ~ F$PID count ", N
+  ~ F$PID count 1
+$ RETURN
+$ SET PROCESS/PRIORITY=3/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(GPID,"PRI")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRI\
+$ SET PROCESS/PRIORITY=3/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(WPID,"PRI")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRI\
+$ SET PROCESS/SUSPEND/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/RESUME/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/SUSPEND/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/RESUME/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D SEE [GROUP] PRIV94N"
+######## D SEE [GROUP] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,GROUP")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SHOW SYSTEM
+OpenVMS V7.1  on node SIMVAX  15-NOV-2026 09:22:01.86  Uptime  0 13:56:00
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000101 SWAPPER         HIB     16        0   0 00:00:00.02         0      0   
+00000105 CONFIGURE       HIB      8        5   0 00:00:00.02       112    167   
+00000107 IPCACP          HIB     10        7   0 00:00:00.00        96    169   
+00000108 ERRFMT          HIB      8      399   0 00:00:00.00       141    234   
+00000109 OPCOM           HIB      9      705   0 00:00:00.04       346    172   
+0000010A AUDIT_SERVER    HIB      9      229   0 00:00:00.02       740    522   
+0000010B JOB_CONTROL     HIB      8      107   0 00:00:00.00       227    337   
+0000010C QUEUE_MANAGER   HIB     10       47   0 00:00:00.01       682    989   
+0000010D SECURITY_SERVER HIB     10       35   0 00:00:00.01      1038   1028   
+0000010E DNS$ADVER       LEF      5     4404   0 00:00:00.23     25097   2324   
+0000010F LES$ACP_V30     HIB      9      106   0 00:00:00.01       206    276   
+00000110 REMACP          HIB      8        8   0 00:00:00.00        82     48   
+00000111 NET$ACP         HIB      6       43   0 00:00:00.00       880    516   
+00000112 NET$EVD         HIB      5       15   0 00:00:00.03      1250    666   
+00000113 DTSS$CLERK      LEF     12      379   0 00:00:00.01       630    516   
+0000014A PRIV94_G        HIB      7        2   0 00:00:00.00        76    109   
+0000014B PRIV94_W        HIB      7        2   0 00:00:00.00        76    109   
+0000014C PRIV94N         CUR      4      480   0 00:00:00.10      7998    355   
+$ SHOW PROCESS/IDENTIFICATION=0000014A
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW PROCESS/IDENTIFICATION=0000014B
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT "G: ", F$GETJPI(GPID,"PRCNAM"), " W: ", F$GETJPI(WPID,"PRCNAM")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRCNAM\
+$ GOSUB WALK
+$ WALK:
+$ CTX = ""
+$ N = 0
+$ SEEN = ""
+$ ME = F$GETJPI("","PID")
+$ WALK_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO WALK_DONE
+$ N = N + 1
+$ IF PID .EQS. GPID THEN SEEN = SEEN + " G"
+$ IF PID .EQS. WPID THEN SEEN = SEEN + " W"
+$ IF PID .EQS. ME THEN SEEN = SEEN + " SELF"
+$ IF N .LT. 500 THEN GOTO WALK_LOOP
+$ WALK_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO WALK_DONE
+$ WALK_DONE:
+$ WRITE SYS$OUTPUT "F$PID saw SELF"
+F$PID saw SELF
+$ WRITE SYS$OUTPUT "  ~ F$PID count ", N
+  ~ F$PID count 1
+$ RETURN
+$ SET PROCESS/PRIORITY=3/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(GPID,"PRI")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRI\
+$ SET PROCESS/PRIORITY=3/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(WPID,"PRI")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRI\
+$ SET PROCESS/SUSPEND/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/RESUME/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/SUSPEND/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/RESUME/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D SEE [WORLD] PRIV94N"
+######## D SEE [WORLD] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,WORLD")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SHOW SYSTEM
+OpenVMS V7.1  on node SIMVAX  15-NOV-2026 09:22:01.92  Uptime  0 13:56:00
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000101 SWAPPER         HIB     16        0   0 00:00:00.02         0      0   
+00000105 CONFIGURE       HIB      8        5   0 00:00:00.02       112    167   
+00000107 IPCACP          HIB     10        7   0 00:00:00.00        96    169   
+00000108 ERRFMT          HIB      8      399   0 00:00:00.00       141    234   
+00000109 OPCOM           HIB      9      705   0 00:00:00.04       346    172   
+0000010A AUDIT_SERVER    HIB      9      229   0 00:00:00.02       740    522   
+0000010B JOB_CONTROL     HIB      8      107   0 00:00:00.00       227    337   
+0000010C QUEUE_MANAGER   HIB     10       47   0 00:00:00.01       682    989   
+0000010D SECURITY_SERVER HIB     10       35   0 00:00:00.01      1038   1028   
+0000010E DNS$ADVER       LEF      5     4404   0 00:00:00.23     25097   2324   
+0000010F LES$ACP_V30     HIB      9      106   0 00:00:00.01       206    276   
+00000110 REMACP          HIB      8        8   0 00:00:00.00        82     48   
+00000111 NET$ACP         HIB      6       43   0 00:00:00.00       880    516   
+00000112 NET$EVD         HIB      5       15   0 00:00:00.03      1250    666   
+00000113 DTSS$CLERK      LEF     12      379   0 00:00:00.01       630    516   
+0000014A PRIV94_G        HIB      7        2   0 00:00:00.00        76    109   
+0000014B PRIV94_W        HIB      7        2   0 00:00:00.00        76    109   
+0000014C PRIV94N         CUR      4      548   0 00:00:00.10      9153    359   
+$ SHOW PROCESS/IDENTIFICATION=0000014A
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SHOW PROCESS/IDENTIFICATION=0000014B
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT "G: ", F$GETJPI(GPID,"PRCNAM"), " W: ", F$GETJPI(WPID,"PRCNAM")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRCNAM\
+$ GOSUB WALK
+$ WALK:
+$ CTX = ""
+$ N = 0
+$ SEEN = ""
+$ ME = F$GETJPI("","PID")
+$ WALK_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO WALK_DONE
+$ N = N + 1
+$ IF PID .EQS. GPID THEN SEEN = SEEN + " G"
+$ IF PID .EQS. WPID THEN SEEN = SEEN + " W"
+$ IF PID .EQS. ME THEN SEEN = SEEN + " SELF"
+$ IF N .LT. 500 THEN GOTO WALK_LOOP
+$ WALK_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO WALK_DONE
+$ WALK_DONE:
+$ WRITE SYS$OUTPUT "F$PID saw SELF"
+F$PID saw SELF
+$ WRITE SYS$OUTPUT "  ~ F$PID count ", N
+  ~ F$PID count 1
+$ RETURN
+$ SET PROCESS/PRIORITY=3/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(GPID,"PRI")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRI\
+$ SET PROCESS/PRIORITY=3/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(WPID,"PRI")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRI\
+$ SET PROCESS/SUSPEND/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/RESUME/IDENTIFICATION=0000014A
+%SET-E-NOTSET, error modifying 0000014A
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/SUSPEND/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ SET PROCESS/RESUME/IDENTIFICATION=0000014B
+%SET-E-NOTSET, error modifying 0000014B
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D PRIORITY [] PRIV94N"
+######## D PRIORITY [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ P = F$GETJPI("","PRIB")
+$ SET PROCESS/PRIORITY=4+2
+%DCL-W-NOCCAT, parameter concatenation not allowed - check use of plus (+)
+ \4+2\
+$ WRITE SYS$OUTPUT F$GETJPI("","PRI"), " ", F$GETJPI("","PRIB")
+7 4
+$ SET PROCESS/PRIORITY=4
+$ !
+$ WRITE SYS$OUTPUT "######## D PRIORITY [ALTPRI] PRIV94N"
+######## D PRIORITY [ALTPRI] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,ALTPRI")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SET PROCESS/PRIORITY=4+2
+%DCL-W-NOCCAT, parameter concatenation not allowed - check use of plus (+)
+ \4+2\
+$ WRITE SYS$OUTPUT F$GETJPI("","PRI"), " ", F$GETJPI("","PRIB")
+7 4
+$ SET PROCESS/PRIORITY=4
+$ !
+$ WRITE SYS$OUTPUT "######## D TERMINAL [] PRIV94N"
+######## D TERMINAL [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SET TERMINAL/WIDTH=207
+$ SET TERMINAL/PERMANENT/WIDTH=207
+%SET-W-NOTSET, error modifying OPA0:
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D TERMINAL [LOG_IO] PRIV94N"
+######## D TERMINAL [LOG_IO] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,LOG_IO")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SET TERMINAL/WIDTH=207
+$ SET TERMINAL/PERMANENT/WIDTH=207
+%SET-W-NOTSET, error modifying OPA0:
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D TERMINAL [PHY_IO] PRIV94N"
+######## D TERMINAL [PHY_IO] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,PHY_IO")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ SET TERMINAL/WIDTH=207
+$ SET TERMINAL/PERMANENT/WIDTH=207
+%SET-W-NOTSET, error modifying OPA0:
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ !
+$ WRITE SYS$OUTPUT "######## D DETACH [] PRIV94N"
+######## D DETACH [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ RUN/DETACH/PROCESS_NAME=PRIV94_DD PRIV94$DISK:[000000]PRIV94H
+%RUN-S-PROC_ID, identification of created process is 0000014D
+$ RUN/DETACH/UIC=[300,1]/PROCESS_NAME=PRIV94_DU PRIV94$DISK:[000000]PRIV94H
+%RUN-F-CREPRC, process creation failed
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ GOSUB STOP_DETACHED
+$ STOP_DETACHED:
+$ Y = F$SETPRV("WORLD,GROUP")
+$ CTX = ""
+$ M = 0
+$ STOP_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO STOP_DONE
+$ M = M + 1
+$ IF M .GT. 500 THEN GOTO STOP_DONE
+$ NAME = F$GETJPI(PID,"PRCNAM")
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN STOP/IDENTIFICATION=0000014C
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN WRITE SYS$OUTPUT "stopped ", NAME
+$ GOTO STOP_LOOP
+$ STOP_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO STOP_DONE
+$ M = M + 1
+$ IF M .GT. 500 THEN GOTO STOP_DONE
+$ NAME = F$GETJPI(PID,"PRCNAM")
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN STOP/IDENTIFICATION=0000014D
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN WRITE SYS$OUTPUT "stopped ", NAME
+stopped PRIV94_DD
+$ GOTO STOP_LOOP
+$ STOP_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO STOP_DONE
+$ STOP_DONE:
+$ Y = F$SETPRV(Y)
+$ RETURN
+$ !
+$ WRITE SYS$OUTPUT "######## D DETACH [DETACH] PRIV94N"
+######## D DETACH [DETACH] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX,DETACH")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ RUN/DETACH/PROCESS_NAME=PRIV94_DD PRIV94$DISK:[000000]PRIV94H
+%RUN-S-PROC_ID, identification of created process is 0000014E
+$ RUN/DETACH/UIC=[300,1]/PROCESS_NAME=PRIV94_DU PRIV94$DISK:[000000]PRIV94H
+%RUN-F-CREPRC, process creation failed
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ GOSUB STOP_DETACHED
+$ STOP_DETACHED:
+$ Y = F$SETPRV("WORLD,GROUP")
+$ CTX = ""
+$ M = 0
+$ STOP_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO STOP_DONE
+$ M = M + 1
+$ IF M .GT. 500 THEN GOTO STOP_DONE
+$ NAME = F$GETJPI(PID,"PRCNAM")
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN STOP/IDENTIFICATION=0000014C
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN WRITE SYS$OUTPUT "stopped ", NAME
+$ GOTO STOP_LOOP
+$ STOP_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO STOP_DONE
+$ M = M + 1
+$ IF M .GT. 500 THEN GOTO STOP_DONE
+$ NAME = F$GETJPI(PID,"PRCNAM")
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN STOP/IDENTIFICATION=0000014E
+$ IF NAME .EQS. "PRIV94_DD" .OR. NAME .EQS. "PRIV94_DU" THEN WRITE SYS$OUTPUT "stopped ", NAME
+stopped PRIV94_DD
+$ GOTO STOP_LOOP
+$ STOP_LOOP:
+$ PID = F$PID(CTX)
+$ IF PID .EQS. "" THEN GOTO STOP_DONE
+$ STOP_DONE:
+$ Y = F$SETPRV(Y)
+$ RETURN
+$ !
+$ WRITE SYS$OUTPUT "######## D STOP [] PRIV94N"
+######## D STOP [] PRIV94N
+$ X = F$SETPRV("NOALL")
+$ X = F$SETPRV("TMPMBX,NETMBX")
+$ WRITE SYS$OUTPUT F$GETJPI("","CURPRIV")
+TMPMBX,NETMBX
+$ STOP/IDENTIFICATION=0000014A
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ STOP/IDENTIFICATION=0000014B
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ STOP PRIV94_G
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+$ WRITE SYS$OUTPUT F$GETJPI(GPID,"PRCNAM")
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+ \PRCNAM\
+$ !
+$ X = F$SETPRV("NOALL")
+$ IF WHO .EQS. "SYSTEM" THEN SET PROCESS/PRIVILEGES=ALL
+$ IF WHO .NES. "SYSTEM" THEN X = F$SETPRV("TMPMBX,NETMBX")
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:02.05   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ WRITE SYS$OUTPUT "######## D END PRIV94N"
+######## D END PRIV94N
+$ EXIT
+$ !
+$ IF WHO .EQS. "PRIV94N" THEN GOTO INSTALLED
+$ INSTALLED:
+$ IF WHO .EQS. "SYSTEM" THEN EXIT
+$ WRITE SYS$OUTPUT "######## INSTALLED PRIV94N"
+######## INSTALLED PRIV94N
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:02.05   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ RUN PRIV94$DISK:[000000]PRIV94I
+PRIV94I auth 0000000000108000 proc 0000000000108000
+PRIV94I cur  0000000000148004 imag 0000000000040004
+PRIV94I crelnm 00000001 dellnm 00000001
+$ SHOW PROCESS/PRIVILEGES
+
+15-NOV-2026 09:22:02.06   User: PRIV94N          Process ID:   0000014C
+                          Node: SIMVAX           Process name: "PRIV94N"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ INTERACTIVE                       
+ LOCAL                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+$ INSTALL LIST PRIV94$DISK:[000000]PRIV94I
+
+DISK$PRIV94:<000000>.EXE
+   PRIV94I;1        Open Hdr      Prv 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ INSTALL ADD PRIV94$DISK:[000000]PRIV94H
+%SYSTEM-F-NOCMKRNL, operation requires CMKRNL privilege
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10002804"
+$ EXIT
+$ !
+$ WRITE SYS$OUTPUT "PRIV94U FINISHED"
+PRIV94U FINISHED
+$ SET NOVERIFY

@@ -243,7 +243,184 @@ These go to the probe (Part D).
 
 ### A.4 The probe's answers
 
-(Filled in by subtask 2, after the author's run on the VAX.)
+Round 1 ran on VMS V7.1 on 2026-11-15 (`testdata/priv94/vax/`: SYSTEM's
+log, PRIV94's, PRIV94N's, and the end's). No case crashed VMS. The
+numbers below are `priv94.mar`'s cases. "SYSTEM", "PRIV94", and
+"PRIV94N" are the three identities (Part D); SYSTEM's UIC `[1,4]` is in
+the system category, PRIV94's `[200,3]` is not.
+
+**The masks.** A mask is all 64 bits: AUTHORIZE's `/PRIVILEGES=ALL` gives
+AUTHPRIV `FFFFFFFFFFFFFFFF`, and `$SETPRV` of an all-ones mask (or
+`$CREPRC` with SETPRV) sets every bit, not only the 39 privileges'. govax
+keeps 39 (`allPrivileges`, `7FFFFFFFFF`).
+
+**Statuses.** Almost every refusal is `SS$_NOPRIV`. The exceptions:
+`$ENQ`'s system-wide resource is `SS$_NOSYSLCK`; `$BRKTHRU` is
+`SS$_NOOPER`; INSTALL ADD is `%SYSTEM-F-NOCMKRNL`; `$SETPRV` of an
+unauthorized privilege is `SS$_NOTALLPRIV` (the authorized ones are
+done). Some services do less instead of failing (below: `$SETPRI`,
+`$CREPRC`'s base priority, `$CRELNM`'s and DEFINE's modes).
+
+**Inner modes (A.3, 1).** No service exempts an executive- or
+kernel-mode caller from its privilege, but two: `$ENQ` of a system-wide
+resource (SYSLCK) from either inner mode (126, 127), and `$DELMBX`
+(PRMMBX) from kernel mode only, not executive (90, 91). Everything else
+the probe tried from an inner mode was refused as from user mode: the
+logical name services, `$CREMBX`, `$ASCEFC`, `$CRMPSC`, the process
+services (`$WAKE`, `$SETPRI`, `$SUSPND`, `$DELPRC`, `$CREPRC`),
+`$BRKTHRU`, `$LCKPAG`, `$SETSWM`, disk logical I/O, and terminal
+IO$_SETCHAR. (`$SETPRV` from an inner mode enabling an unauthorized
+privilege couldn't be tried: PRIV94N can't reach an inner mode.)
+
+**Logical names (A.3, 3; Decision 4).** Writing a shareable table is
+the table's protection or a privilege, and the system category gets in
+by protection: SYSTEM, with no privileges at all, makes and deletes
+names in LNM$SYSTEM_TABLE, its group table, and a table closed to the
+group and world (4, 8, 16, 38, 43), and makes tables in
+LNM$SYSTEM_DIRECTORY (52); PRIV94 can't (NOPRIV). The privileges that
+override the protection:
+
+| Table | Write | Read |
+| --- | --- | --- |
+| LNM$SYSTEM_TABLE | SYSNAM or SYSPRV (5, 7) | everyone (its protection) |
+| a group table | GRPNAM or SYSPRV; not SYSNAM (9 to 11) | |
+| another shareable table | SYSPRV only; not SYSNAM or GRPNAM (16 to 19) | SYSPRV, READALL, or BYPASS; not SYSNAM (61 to 65) |
+| LNM$SYSTEM_DIRECTORY (`$CRELNT`) | SYSPRV; not SYSNAM (52 to 55) | |
+
+`$TRNLNM` of a table its protection closes is NOPRIV (61). A table
+under a shareable table other than the directory: SYSTEM got
+EXLNMQUOTA, PRIV94 NOPRIV (59, 60). The tables' profiles, from SHOW
+SECURITY: LNM$SYSTEM_TABLE and LNM$SYSTEM_DIRECTORY owner `[SYSTEM]`,
+`(S:RWC,O:RWC,G:R,W:R)`; LNM$GROUP_000001 owner `[1,*]` and
+LNM$GROUP_000200 owner `[PROT93,*]` (the group's identifier),
+`(S:RWCD,O:R,G:R,W)`; a table `$CRELNT` makes with a promsk takes it as
+its protection (0 is `(S:RWCD,O:RWCD,G:RWCD,W:RWCD)`), owner the
+creator. SHOW SECURITY of a table needs read access to it; SECURITY
+doesn't help.
+
+A name's mode: a mode more privileged than the caller's is kept only
+with SYSNAM, and otherwise lowered to the caller's without complaint
+(22, 23, 24: SYSTEM's exec-mode name in the system table went in at user
+mode); from an inner mode, the caller's mode is allowed (30). DEFINE
+/EXECUTIVE_MODE without SYSNAM makes a supervisor-mode name, silently.
+`$DELLNM` deletes the name at the mode it is given (maximized) and no
+other: a user-mode caller without SYSNAM gets NOLOGNAM for an exec-mode
+name (48), and the end's sweep, at kernel mode, deleted no user-mode
+name (so `PRIV94_L21`, `L49`, and `L51`, user-mode names whose undo
+asked for exec mode, were left in the VAX's system table). `$CRELOG`
+into the system table with SYSNAM makes an executive-mode name, user
+mode without it (68, 69, 75).
+
+DCL looks a `/TABLE=` table up from supervisor mode and doesn't see a
+table made at user mode: DEFINE/TABLE=PRIV94_OT is NOLOGTAB for everyone,
+and SHOW LOGICAL/TABLE= of a closed one IVLOGTAB (the fixtures were made
+at user mode). Otherwise DCL's messages are the service's: DEFINE,
+ASSIGN, DEASSIGN, CREATE/NAME_TABLE, and F$TRNLNM say
+`%SYSTEM-F-NOPRIV, insufficient privilege or object protection
+violation` alone.
+
+**Mailboxes.** `$CREMBX`: a temporary mailbox needs TMPMBX (80, 81), a
+permanent one PRMMBX (83, 84); TMPMBX doesn't give a permanent one. A
+permanent mailbox with a logical name: SYSTEM with PRMMBX succeeded,
+PRIV94 with PRMMBX alone got NOPRIV (84), most likely the name's table
+(LNM$PERMANENT_MAILBOX is in the system table), which a second round
+could settle. A temporary mailbox's name goes in the job table
+(LNM$JOB_...), a permanent one's in LNM$SYSTEM_TABLE. `$DELMBX` needs
+PRMMBX, even for the caller's own mailbox (88, 89). IO$_SETPROTECTION
+(IO$_SETMODE!IO$M_SETPROT) is the owner's (SYSTEM's own mailbox, and any
+process's temporary one), or BYPASS or SYSPRV; not GRPPRV or OPER (92 to
+97), as govax has it.
+
+**Event flag clusters, sections, locks.** A permanent common event flag
+cluster needs PRMCEB (99, 100); `$DLCEFC` of one's own needs nothing
+(103). A system global section needs SYSGBL, a permanent one PRMGBL, a
+permanent system one both (106 to 113); `$DGBLSC` of a permanent section
+needs PRMGBL, of a permanent system one both (117 to 122).
+`$ENQ` of a system-wide resource needs SYSLCK from user mode,
+SS$_NOSYSLCK (124).
+
+**Other processes (A.3, 5 and 6).** `$WAKE`, `$SCHDWK`, `$CANWAK`,
+`$SUSPND`, `$RESUME`, `$SETPRI`, `$GETJPI`, `$FORCEX`, and `$DELPRC` of
+another process: GROUP for one in the caller's own group, WORLD for any;
+the system category gets nothing from its UIC (SYSTEM with GROUP can't
+touch either holder: group 1 isn't theirs). A wildcard `$GETJPI` returns
+NOPRIV for each process it may not see, and goes on (190 to 192).
+`$SETPRI` of another process above the caller's own base priority is
+done at the caller's base, without complaint, unless ALTPRI (149, 150,
+179); its own priority above its base, the same (186, 187). From DCL:
+SHOW SYSTEM lists every process to everyone (it is installed with
+WORLD); SHOW PROCESS/IDENTIFICATION, F$GETJPI, F$PID (which skips what
+it may not see), and SET PROCESS/PRIORITY, /SUSPEND, /RESUME
+/IDENTIFICATION follow the services' rule; SET PROCESS says `%SET-E-NOTSET,
+error modifying 00000130` and `-SYSTEM-F-NOPRIV`; STOP/IDENTIFICATION
+says `%SYSTEM-F-NOPRIV` alone, and STOP by name finds only the caller's
+group (NONEXPR for SYSTEM).
+
+**`$CREPRC` (A.3, 7).** The new process's AUTHPRIV, PROCPRIV, and
+CURPRIV are all the privileges it is given: with no prvadr, the
+creator's CURPRIV (203 to 206); with a prvadr, that mask, cut to the
+creator's CURPRIV unless it holds SETPRV (207 to 211). A UIC other than
+the creator's needs DETACH or CMKRNL (212 to 217); the creator's own UIC
+or PRC$M_DETACH alone needs nothing (218, 219). PRC$M_PSWAPM needs
+PSWAPM and PRC$M_NOACNT ACNT (NOPRIV, 220 to 223). A base priority
+above the creator's is lowered to it, without complaint, unless ALTPRI
+(224, 225). RUN/DETACH/UIC without DETACH says `%RUN-F-CREPRC, process
+creation failed` and `-SYSTEM-F-NOPRIV`.
+
+**`$SETPRV` (A.3, 10).** Disabling always works. Enabling a privilege
+not in AUTHPRIV without SETPRV in CURPRIV enables the others and
+returns NOTALLPRIV (PRIV94N, 229 to 233). prvprv is the previous
+CURPRIV, or the previous PROCPRIV when prmflg is set (233); a permanent
+enable sets both masks. With no prvadr it changes nothing and returns
+prvprv (237, 238). prmflg 2 is SS$_IVSTSFLG (240); enbflg 2 changed
+nothing (239). After image rundown CURPRIV is PROCPRIV exactly: a
+permanent enable stays, an image's is gone (part R and the procedure's
+SHOW PROCESS/PRIVILEGES).
+
+**Installed images (Decision 9).** While PRIV94I, installed
+`/PRIVILEGED=(SYSNAM,OPER)`, runs, IMAGPRIV is those two and CURPRIV is
+PROCPRIV plus them, for any user, and the image's SYSNAM works; rundown
+takes them away. INSTALL LIST needs no privilege; INSTALL ADD without
+CMKRNL is `%SYSTEM-F-NOCMKRNL, operation requires CMKRNL privilege`.
+INSTALL LIST/FULL's layout and INSTALL REMOVE's and LIST's messages
+(`%INSTALL-W-FAIL`, `-INSTALL-E-NOKFEFND`) are in the logs.
+
+**Operators, pages, I/O, modes (A.3, 8 and 9).** `$SNDOPR` of a
+request needs no privilege, to any class, SECURITY too (247 to 252).
+`$BRKTHRU` to every terminal or every user needs OPER (NOOPER), to
+another user's terminals OPER as well, not WORLD (257 to 259), to one's
+own user or terminal nothing. `$LCKPAG` needs PSWAPM; `$ULKPAG` returned
+SS$_ACCVIO in both of the probe's cases, with and without PSWAPM (265,
+266: not understood; a second round could find why); `$LKWSET` needs
+nothing; `$SETSWM` needs PSWAPM (268, 269). Disk logical I/O needs LOG_IO
+or PHY_IO, physical PHY_IO, as govax has it. A terminal's IO$_SETMODE
+needs nothing, IO$_SETCHAR LOG_IO or PHY_IO (278 to 283); SET
+TERMINAL/PERMANENT without them says `%SET-W-NOTSET, error modifying
+OPA0:` and `-SYSTEM-F-NOPRIV`. `$CMKRNL` needs CMKRNL, `$CMEXEC` CMEXEC
+or CMKRNL (284 to 289): govax checks neither.
+
+**The probe's own mistakes.** DCL's PRIORITY sections wrote
+`'P+2'`, which substitutes only P (`%DCL-W-NOCCAT`), so they tested
+nothing; the program's `$SETPRI` cases cover it. The end's sweep asked
+for kernel mode and so deleted nothing (above). PRIV94N couldn't enable
+the privileges of most of part P's and X's sets (`setprv 00000681`,
+NOTALLPRIV), as intended. `$TRNLNM`'s value line shows the last
+translation when the call failed.
+
+**Open, for a second round if wanted.** Why PRIV94's permanent mailbox
+with PRMMBX failed (the name's table, or something else); `$ULKPAG`'s
+ACCVIO; `$CRELNT` under a shareable table other than the directory;
+whether `$DELLNM` deletes inner-mode names too.
+
+**govax against it.** The rehearsal's SYSTEM run (`TestPriv94Probe`)
+differs from SYSTEM's VMS run in: every table write SYSTEM makes by
+protection (govax refuses it); the group table and `$CRELNT` rules;
+`$CRELNM`'s mode lowering (govax refuses); `$CREMBX` (govax lets TMPMBX
+make a permanent mailbox, and an inner mode create without privileges);
+`$DELMBX` from executive mode; `$CREPRC`'s AUTHPRIV (govax gives the
+creator's) and prvadr cut; the 64-bit masks; `$BRKTHRU` to a user;
+IO$_SETCHAR; `$CMKRNL` and `$CMEXEC`; `$SETSWM`. Subtasks 3 to 9 make
+them VMS's.
 
 ## Part B — decisions
 
@@ -283,11 +460,13 @@ SHOW PRIVILEGE_RULES is not added. The table is for the code, the tests,
 and this document's A.1 table, which subtask 3 regenerates from it.
 
 **Decision 3 — inner modes by the probe.** Each rule says which caller
-modes it exempts: kernel and executive for `$CMKRNL`, `$CMEXEC`, `$ENQ`,
-and `$SETPRV`'s authorization, which the manuals state; for the rest,
-the probe's answers (A.3, 1). Until then a rule exempts no mode, which is
-the current behavior. DCL's own checks are made at supervisor mode,
-DCL's mode, so DCL gets no inner-mode exemption.
+modes it exempts. By the probe (A.4), only two do: `$ENQ`'s SYSLCK
+(executive and kernel) and `$DELMBX`'s PRMMBX (kernel only); with
+`$CMKRNL`'s and `$CMEXEC`'s own, which an inner-mode caller doesn't
+need, and `$SETPRV`'s authorization, which the manual gives to inner
+modes (the probe couldn't try it). Every other rule exempts no mode.
+DCL's own checks are made at supervisor mode, DCL's mode, so DCL gets no
+inner-mode exemption. (Settled 2026-11-15.)
 
 **Decision 4 — privilege or protection, one rule.** Where VMS lets
 either grant an operation (logical name tables, mailboxes, sections,
@@ -311,10 +490,11 @@ lexical functions that see other processes. STOP's "as the operator"
 path goes away: STOP of another process is `$DELPRC`'s or `$FORCEX`'s
 rule.
 
-**Decision 6 — seeing other processes follows the probe.** If VMS 7.1's
-SHOW SYSTEM shows every process to an unprivileged user (SHOW installed
-with WORLD), govax's does too, and the rule says so (an exemption naming
-the installed privilege). F$GETJPI, F$PID, and SHOW PROCESS/ID take
+**Decision 6 — seeing other processes follows the probe.** VMS 7.1's
+SHOW SYSTEM shows every process to everyone (SHOW is installed with
+WORLD), so govax's does too, and the rule says so (an exemption naming
+the installed privilege). The system category gets nothing over other
+groups' processes from its UIC (A.4). F$GETJPI, F$PID, and SHOW PROCESS/ID take
 `$GETJPI`'s rule. The DEVIATIONS.md note ("No privilege is asked for to
 see other processes") is then resolved.
 
@@ -358,8 +538,8 @@ operator's: process 1 only, as now, with no privilege check.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-15): Part A, this plan.
-2. **The probe**: `testdata/priv94`, as in Part D, written and rehearsed
-   on govax (2026-11-15); run on the VAX by the author; A.4 filled in and Part B
+2. **The probe** (done 2026-11-15): `testdata/priv94`, as in Part D, written and rehearsed
+   on govax; run on the VAX by the author; A.4 filled in and Part B
    adjusted to its answers. Later rounds as later subtasks find gaps.
 3. **The gate and the table** (Decisions 1 and 2): every existing check
    moved onto rules, with no change in behavior; SET DEBUG PRIVILEGES;
@@ -515,3 +695,11 @@ The answers:
     process, and SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE; and with no
     privileges, F$PID and SHOW SYSTEM show every process (A.3, 5).
   Waiting for the author's VAX run.
+- **2026-11-15** Subtask 2: the author ran round 1 on VMS V7.1, with no
+  crash; its logs and images are in `testdata/priv94/vax/`, and A.4 is
+  written from them, with Decisions 3 and 6 settled. Besides what A.4's
+  last paragraph lists, the probe found the masks are 64 bits wide on
+  VMS. It left three user-mode names, PRIV94_L21, L49, and L51, in the
+  VAX's system table (the sweep's mode), and group 200's table is owned
+  by Phase 93's identifier PROT93, which is still there; AUTHORIZE made
+  no PRIV94G.
