@@ -1,7 +1,8 @@
 # Phase 94 — privileges
 
-**Status:** planned 2026-11-15 (subtask 1, the survey and this plan),
-waiting for the author's review. This document is the development plan;
+**Status:** planned 2026-11-15 (subtask 1, the survey and this plan);
+the plan reviewed and accepted by the author the same day, with every
+recommendation in "The review" taken. This document is the development plan;
 as the subtasks are done it becomes the implementation record, with a
 progress log and, at the end, "Where things stand".
 
@@ -187,7 +188,7 @@ do privileged things without going through a service:
 | SHOW PROCESS/IDENTIFICATION, SHOW SYSTEM | GROUP or WORLD (unless SHOW is installed with WORLD: A.3) | unchecked |
 | F$GETJPI, F$PID, F$CONTEXT | GROUP or WORLD | unchecked (DEVIATIONS.md: "No privilege is asked for to see other processes") |
 | SET PROCESS/PRIVILEGES | SETPRV, or authorization | checked (Phase 93's subtask 5) |
-| MOUNT, DISMOUNT, INITIALIZE/CONTAINER | govax-native; VMS's system-wide MOUNT needs SYSNAM | unchecked (the review, question 4) |
+| MOUNT, DISMOUNT, INITIALIZE/CONTAINER | govax-native; VMS's system-wide MOUNT needs SYSNAM | unchecked (Decision 10) |
 | The machine's commands (DEPOSIT, ASM, INITIALIZE/MEMORY, LOAD, SAVE, ROM, SET QUANTUM, ...) | not VMS's | process 1 only (VAX_NOTSUBPROC); unchecked (question 4) |
 
 LIBRTL's routines that change the system's state go through the
@@ -334,13 +335,23 @@ processes built in Go. A helper makes a process authorized for every
 privilege but holding only TMPMBX and NETMBX, the shape of the probe's
 account (Part D), so a test can enable one privilege at a time.
 
-**Decision 9 — installed images: pending the review** (question 1). If
-accepted: INSTALL with ADD, REMOVE, and LIST, and `/PRIVILEGED` and
+**Decision 9 — installed images, in this phase** (the review, question
+1): INSTALL with ADD, REMOVE, and LIST, and `/PRIVILEGED` and
 `/OPEN` (other qualifiers accepted and recorded); the known file list in
 the System; the image activator setting IMAGPRIV and CURPRIV = PROCPRIV
 | IMAGPRIV for an image on the list, with rundown already dropping it;
 JPI$_IMAGPRIV answering. INSTALL itself needs CMKRNL. This resolves "No
 installed images: IMAGPRIV is always empty".
+
+**Decision 10 — govax's own commands** (the review, question 4). MOUNT
+and DISMOUNT, which make a volume known to every process, take VMS's
+MOUNT/SYSTEM rule, SYSNAM; INITIALIZE/CONTAINER of a container that
+already exists takes VOLPRO, as INITIALIZE of a volume another owns does
+on VMS; making a new container needs nothing. They go through the gate
+(Decision 1) with rules of their own in the table, and are done in
+subtask 7 with DCL's other commands. The machine's commands (DEPOSIT,
+ASM, INITIALIZE/MEMORY, LOAD, SAVE, ROM, SET QUANTUM, ...) stay the
+operator's: process 1 only, as now, with no privilege check.
 
 ## Part C — subtasks
 
@@ -366,13 +377,13 @@ Each is one commit, with tests, stopping for review.
    26 entry's first two items resolved.
 6. **The terminal driver** (Decision 7): its functions' privileges, SET
    TERMINAL/PERMANENT's message, held to the probe.
-7. **DCL's commands** (Decision 5): DEFINE, ASSIGN, DEASSIGN,
-   CREATE/NAME_TABLE, and STOP through the gate, with VMS's messages,
+7. **DCL's commands** (Decisions 5 and 10): DEFINE, ASSIGN, DEASSIGN,
+   CREATE/NAME_TABLE, STOP, and govax's MOUNT, DISMOUNT, and
+   INITIALIZE/CONTAINER through the gate, with VMS's messages,
    held to the probe's DCL logs under each privilege set.
 8. **Seeing other processes** (Decision 6): F$GETJPI, F$PID, F$CONTEXT,
    SHOW PROCESS/IDENTIFICATION, and SHOW SYSTEM by the probe's answers.
-9. **Installed images** (Decision 9), if the review accepts them, with a
-   probe round of its own if subtask 2's doesn't cover them.
+9. **Installed images** (Decision 9), with a probe round of its own if subtask 2's doesn't cover them.
 10. **The close-out**: MANUAL.md (a section on privileges: the masks,
     what each privilege guards in govax, SET DEBUG PRIVILEGES, INSTALL if
     it's in), HELP for every new command, qualifier, and debug class,
@@ -390,7 +401,7 @@ makes is removed at the end.
 **The identities.** SYSTEM, `[1,4]`, with privileges turned off by
 `$SETPRV` a case at a time; Phase 93's PROT93A `[200,1]` and PROT93C
 `[300,1]`, with their default privileges, as targets and as plain users;
-and one new account (the review, question 2), PRIV94 `[200,3]`,
+and one new account (the review, question 2, accepted), PRIV94 `[200,3]`,
 authorized for every privilege but with only TMPMBX and NETMBX as
 defaults, so a case can enable exactly the privileges it means to test
 from a non-system UIC.
@@ -419,14 +430,14 @@ tables (A.3, 3), STOP and STOP/IDENTIFICATION of the holders, SHOW
 SYSTEM, SHOW PROCESS/IDENTIFICATION, F$GETJPI, F$PID's walk, and SET
 TERMINAL/PERMANENT, each under SET PROCESS/PRIVILEGES's privilege sets.
 
-**`priv94i.mar`** and **`priv94i.com`** (if the review accepts installed
-images): an image that reports its CURPRIV and IMAGPRIV and calls a
+**`priv94i.mar`** and **`priv94i.com`** (installed images, Decision 9): an image that reports its CURPRIV and IMAGPRIV and calls a
 guarded service, run plain, then after INSTALL ADD/PRIVILEGED, then after
 REMOVE.
 
 ## The review
 
-Questions for the author, to be answered before subtask 2:
+Questions for the author, answered 2026-11-15: the plan was accepted,
+and with it the recommendation (or the plan's default) on each question.
 
 1. **Installed images** (Decision 9): in this phase, or with the
    identities phase? *Recommendation:* in this phase, small. It is the one
@@ -448,6 +459,16 @@ Questions for the author, to be answered before subtask 2:
 5. **`$MOUNT`, `$DISMOU`, the rights and UAF services**: out of scope,
    for the identities phase?
 
+The answers:
+
+1. Installed images are in this phase (Decision 9, subtask 9).
+2. The PRIV94 account may be made on the VAX for the probe.
+3. `$SETIME` and SET TIME are out, logged for later.
+4. MOUNT and DISMOUNT need SYSNAM, INITIALIZE/CONTAINER of an existing
+   container VOLPRO; the machine's commands are unchecked (Decision 10).
+5. `$MOUNT`, `$DISMOU`, and the rights and UAF services wait for the
+   identities phase.
+
 ## Progress log
 
 - **2026-11-15** Subtask 1: read the 5.0 System Services manual (as
@@ -459,3 +480,7 @@ Questions for the author, to be answered before subtask 2:
   (DEFINE and DEASSIGN of system, group, and executive-mode names,
   CREATE/NAME_TABLE, STOP, SHOW PROCESS and SHOW SYSTEM, the process
   lexical functions); wrote Part A and this plan.
+- **2026-11-15** The review: the author accepted the plan and every
+  recommendation. Decision 9 (installed images) is in, Decision 10
+  (govax's MOUNT, DISMOUNT, and INITIALIZE/CONTAINER) added, subtasks 7
+  and 9 and Part D adjusted to them.
