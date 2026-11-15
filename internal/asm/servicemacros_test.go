@@ -285,6 +285,8 @@ func macroErrors(t *testing.T, name string) []int {
 		logName = "macros7.log"
 	case strings.HasPrefix(name, "r8_"):
 		logName = "macros8.log"
+	case strings.HasPrefix(name, "r9_"):
+		logName = "macros9.log"
 	}
 
 	data, err := os.ReadFile(filepath.Join(serviceDir, "vax", logName))
@@ -406,6 +408,9 @@ var (
 	markerRE    = regexp.MustCompile(`^\t\.LONG\t\^X7A7A([0-9A-F]{4})$`)
 )
 
+// noMacroProbes are the probes for services with no macro.
+var noMacroProbes = map[string]bool{"r9_setdfprot": true}
+
 // TestServiceMacroObjects compares, for every probe, the code of each
 // short-form call real MACRO made without an error with the code govax's
 // macros make for the same call.
@@ -418,9 +423,9 @@ func TestServiceMacroObjects(t *testing.T) {
 	// The argument-list and CALLG forms (round 3), the other services (round
 	// 3's, with keywords that are partly wrong, and round 4's), what round 4
 	// left open (round 5), the global section and lock services (round
-	// 6), what round 6 left open (round 7), and $PURGWS (round 8, Phase
-	// 63).
-	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_", "r7_", "r8_"} {
+	// 6), what round 6 left open (round 7), $PURGWS (round 8, Phase 63),
+	// and the security services (round 9, Phase 93).
+	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_", "r7_", "r8_", "r9_"} {
 		more, _ := filepath.Glob(filepath.Join(serviceDir, prefix+"*.mar"))
 		probes = append(probes, more...)
 	}
@@ -432,6 +437,20 @@ func TestServiceMacroObjects(t *testing.T) {
 			src, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			// A service with no macro (round 9's $SETDFPROT, Phase 93):
+			// real MACRO took every call for an unknown directive, and so
+			// must govax's.
+			if noMacroProbes[name] {
+				a := macroAssembler()
+				a.SetMacroLibraries(govaxStarlet(t))
+
+				if _, err := a.Assemble(string(src)); err == nil || !strings.Contains(err.Error(), "BADOPCODE") {
+					t.Errorf("assembling %s: %v, want every call refused", name, err)
+				}
+
+				return
 			}
 
 			callList, err := os.ReadFile(filepath.Join(serviceDir, name+".calls"))

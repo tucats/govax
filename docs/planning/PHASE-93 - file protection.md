@@ -1291,7 +1291,7 @@ Each is one commit, with tests, stopping for review.
     the probe. In three parts: 13a, `$CHKPRO` and `$CHECK_ACCESS` (done
     2026-11-14); 13b, `$GET_SECURITY` and `$SET_SECURITY`, with parts M's
     and U's other cases (done 2026-11-14); 13c, the services' macros in govax's STARLET,
-    held to round 9 of the macro probes.
+    held to round 9 of the macro probes (done 2026-11-14).
 14. **The VMS round** (the review, answer 7): VMS reads a volume of files
     govax made under several identities, protections, and ACLs, and its
     DIRECTORY/SECURITY, SHOW SECURITY, and accesses agree with govax's.
@@ -2230,3 +2230,25 @@ The author accepted the plan and answered its questions:
   class objects' read-only answers (a change NOPRIV); a process table's
   owner the process's UIC; what WLOCK does (nothing). Subtask 13c, the
   services' macros, is next.
+- **2026-11-14** Subtask 13c done: the security services' macros in
+  `internal/bootdata/files/starlet.mar`, `_S`, argument-list, and `_G`
+  forms for `$CHANGE_ACL`, `$CHECK_ACCESS`, `$CHKPRO`, `$FORMAT_ACL`,
+  `$GET_SECURITY`, `$PARSE_ACL`, and `$SET_SECURITY`, read from round 9's
+  objects (`testdata/mp/macros/vax/r9_*`): every argument pushed alone, an
+  omitted one a longword of 0 (none paired into a CLRQ); `$CHANGE_ACL`'s
+  CHAN a word by value (MOVZWL) and its nine arguments the manual's,
+  IOSB, ROUTIN, and ORBADR after ACMODE; `$PARSE_ACL`'s and `$FORMAT_ACL`'s
+  last argument a fifth and eighth longword, NULLARG (a name real MACRO
+  refused, so unconfirmed); the sizes of the addresses round 9's
+  autodecrement calls showed (CLSNAM, OBJNAM, ACLENT, ACLSTR, TRMDSC,
+  OBJPRO, USRPRO quadwords; ERRPOS, WIDTH, INDENT words; the rest
+  longwords), and for the arguments no call settled the manuals' types,
+  unconfirmed; required are those whose omission real MACRO refused
+  (`$CHANGE_ACL`'s OBJTYP and ITMLST, `$PARSE_ACL`'s ACLSTR and ACLENT,
+  `$FORMAT_ACL`'s ACLENT and ACLSTR, ITMLST of `$CHKPRO` and
+  `$CHECK_ACCESS`; none of `$GET_SECURITY`'s or `$SET_SECURITY`'s).
+  `$SETDFPROT` has no macro, as both manuals say. `TestServiceMacroObjects`
+  now runs round 9 too (`macros9.log`'s errors), every call real MACRO
+  made without an error matching byte for byte, and confirms govax refuses
+  `$SETDFPROT_S` as real MACRO did (`noMacroProbes`). Subtask 13 is done;
+  subtask 14, the VMS round, is next.
