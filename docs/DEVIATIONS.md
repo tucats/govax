@@ -1902,3 +1902,23 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **What**: `CALL FOR$IMVBITS` with a position of 65535 writes bit 7 of a byte in a read-only page. VMS 7.1's signal names `00002B44`, a longword's start, and govax's, with
   FTNRTL's `INSV` on the same image layout, names that byte, `00002B45`. One case, on a simh MicroVAX, and FORRTL's own instruction is unknown, so whether the VAX
   reports the longword for every field is unconfirmed. Nothing is changed: the page and the reason are the same, and a handler has no use for the difference.
+
+### [Phase 93] File protection beside VMS 7.1's
+
+- **Where**: `internal/security`, `internal/rms/access.go` and `utilaccess.go`, `internal/corevms/chkpro.go` and
+  `getsecurity.go`, `internal/securertl`; `docs/planning/PHASE-93 - file protection.md`, A.4 and the log.
+- **What**: the protection rule, new files' profiles, the DCL commands, and the security services are held to VMS 7.1's
+  answers in three rounds of `testdata/prot93`. What those answers couldn't settle was chosen and is listed in each
+  subtask's log as unconfirmed; the differences a program could notice:
+  - **A user file open** (FOP=UFO) for writing shared with readers (FAC=PUT, SHR=GET) is opened; VMS 7.1 refused one
+    with `RMS$_SHR` (round 3's case 458). `testdata/vms93`'s VMS93U asks VMS which combinations it refuses.
+  - **`$CHKPRO`** reads only CHP$_PROT's first word; VMS 7.1 granted CONTROL with a second word denying it.
+  - **`$GET_SECURITY`'s position** after a find that found nothing is govax's reading of four cases (385 to 388);
+    FIND_NEXT moves one ACE on. Its contexts are handles, not memory a program could look at.
+  - **ACCESS_NAMES**' descriptors point at copies of the names in the caller's buffer, where VMS's point into system
+    space.
+  - **A device's profile** is VMS 7.1's disks' ([1,4], `(S:RWPL,O:RWPL,G:R,W)`) for every device; a volume's,
+    a logical name table's, and a security class's can be read and not changed.
+  - **No auditing**: alarm and audit ACEs are kept, shown, and matched as VMS 7.1 matches them, and do nothing; and no
+    volume protection: a volume's code is shown and decides nothing.
+- **Status**: kept until a probe shows otherwise; `testdata/vms93` (Phase 93's subtask 14) is the next one.

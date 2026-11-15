@@ -839,6 +839,89 @@ VAX> SHOW DEFAULT
 `DIRECTORY` lists files; `PURGE` removes old versions; `DELETE` needs a
 version (`;`, `;3`, or `;*`), as on VMS.
 
+### File protection
+
+Every file on a volume has a security profile, as on VMS: an owner (a
+UIC, such as `[200,1]`), a protection code, and an optional access
+control list (ACL). govax checks it on every access, by the rules of
+DIGITAL's *Guide to System Security*: RMS's services, the ACP's I/O
+functions, the image activator, and every DCL utility go through one
+check. Host files have no profile, and a volume's own protection is
+shown but not enforced.
+
+A protection code gives each of four categories some of read (R),
+write (W), execute (E), and delete (D) access:
+
+```text
+(S:RWED,O:RWED,G:RE,W)      ! SYSTEM, OWNER, GROUP, WORLD
+```
+
+A process is in the SYSTEM category if its UIC's group is a system group
+(up to `vax.sysgen.maxsysgroup`, octal 10) or it owns the volume, OWNER if
+its UIC is the file's, GROUP if its group is the file's, and WORLD
+always; it gets what every category it is in gives. An ACL comes first:
+the first identifier entry that matches the process decides, whatever the
+code says, but for the SYSTEM and OWNER categories, which keep theirs.
+SYSTEM and OWNER also always have control access, which is what changing
+a profile needs (but nobody has it of a file owned by `[0,0]` unless an
+ACL gives it). Privileges get past the code: SYSPRV puts a process in the
+SYSTEM category, GRPPRV does for a file of its own group, READALL gives
+read access, and BYPASS gives everything.
+
+The console's process is `SYSTEM`, UIC `[1,4]`, with every privilege, so
+nothing is refused it until it turns privileges off. `SET
+PROCESS/PRIVILEGES` does that, and shows what someone without them would
+be refused (SYSTEM's UIC still puts it in the SYSTEM category):
+
+```text
+VAX> SET DEFAULT DUA1:[PROJECT]
+VAX> SET SECURITY/OWNER=[200,1]/PROTECTION=(S:RWED,O:RWED,G:R,W) NOTES.TXT
+VAX> SET SECURITY/ACL=(IDENTIFIER=[300,1],ACCESS=READ+WRITE) NOTES.TXT
+VAX> DIRECTORY/SECURITY
+
+Directory DUA1:[PROJECT]
+
+NOTES.TXT;1          [200,1]                          (RWED,RWED,R,)
+          (IDENTIFIER=[300,1],ACCESS=READ+WRITE)
+
+Total of 1 file.
+VAX> SHOW SECURITY NOTES.TXT
+
+DUA1:[PROJECT]NOTES.TXT;1 object of class FILE
+     Owner: [200,1]
+     Protection: (System: RWED, Owner: RWED, Group: R, World)
+     Access Control List:
+          (IDENTIFIER=[300,1],ACCESS=READ+WRITE)
+VAX> SET SECURITY/PROTECTION=(S) NOTES.TXT
+VAX> SET PROCESS/PRIVILEGES=(NOREADALL,NOGRPPRV,NOSYSPRV,NOBYPASS)
+VAX> TYPE NOTES.TXT
+%TYPE-W-OPENIN, error opening DUA1:[PROJECT]NOTES.TXT;1 as input
+-RMS-E-PRV, insufficient privilege or file protection violation
+VAX> SET PROCESS/PRIVILEGES=(READALL,GRPPRV,SYSPRV,BYPASS)
+VAX> TYPE NOTES.TXT
+These are the notes.
+```
+
+A new file's protection is its previous version's, else what its
+directory's default protection ACE gives, else the process's default
+(`SHOW PROTECTION`; `SET PROTECTION=(code)/DEFAULT` changes it, and
+`vax.sysgen.rms_fileprot` sets the one a process starts with). Its owner
+is the process's UIC, or the directory's owner where VMS's rules say so,
+and it gets the directory's ACEs marked `OPTIONS=DEFAULT`. A program can
+give its own owner and protection with a XABPRO.
+
+The commands: `SET SECURITY` (and its older forms `SET FILE/OWNER_UIC`,
+`SET FILE/PROTECTION`, `SET PROTECTION`, and `SET ACL`), `SHOW SECURITY`
+and `SHOW ACL`, `DIRECTORY/SECURITY` and `/ACL`, `CREATE`'s and `COPY`'s
+`/PROTECTION` and `/OWNER_UIC`, `SHOW PROTECTION`, and `SET
+PROCESS/PRIVILEGES` (sections 6.1 and 6.6). A program has the services:
+`$CHKPRO`, `$CHECK_ACCESS`, `$GET_SECURITY`, `$SET_SECURITY`,
+`$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, and `$SETDFPROT` (Appendix A),
+with their macros in govax's system macro library. There is no
+AUTHORIZE: the only account is SYSTEM, and identifiers other than UICs
+and the environmental ones (`INTERACTIVE`, `BATCH`, ...) can't be made.
+Alarm and audit entries are kept and shown, and do nothing.
+
 ### Moving files between the host and a volume
 
 `COPY` copies between the host and a volume, or between two volume
@@ -1670,6 +1753,40 @@ input specifier has `/CRC`, as in VMS V7.1, whose default is `/NOCRC`.
 A file the save set holds only part of (one cut short, say) is restored
 with zeros for the blocks missing, and a VBNMISSING message.
 
+#### SET SECURITY, SET ACL, SET FILE, and SET PROTECTION
+
+```text
+SET SECURITY [/OWNER=uic] [/PROTECTION=(code)] [/ACL[=(ace[,...])]]
+             [/AFTER=(ace)] [/DELETE[=ALL]] [/REPLACE=(ace[,...])]
+             [/LIKE=NAME=file] [/DEFAULT] [/BY_OWNER=uic] [/EXCLUDE=(...)] file
+SET ACL /ACL=(ace[,...]) file                 ! SET SECURITY/ACL's older form
+SET FILE /OWNER_UIC[=uic] /PROTECTION[=(code)] file
+SET PROTECTION[=(code)] file
+SET PROTECTION[=(code)]/DEFAULT
+```
+
+Change a file's owner, protection code, and ACL ([File
+protection](#file-protection) in section 5). A protection code names the
+categories it changes; the others keep what they had. An ACE is
+`(IDENTIFIER=id[+id...][,OPTIONS=...][,ACCESS=...])`,
+`(DEFAULT_PROTECTION,code)`, `(CREATOR,ACCESS=...)`, or an alarm or
+audit entry, written as `SHOW SECURITY` writes them. Changing a profile
+needs control access; giving a file another owner needs a system UIC,
+SYSPRV, BYPASS, or for an owner in your group GRPPRV. `HELP SET
+SECURITY` has every qualifier.
+
+#### SHOW SECURITY, SHOW ACL, and SHOW PROTECTION
+
+```text
+SHOW SECURITY [/CLASS=FILE|VOLUME] file
+SHOW ACL file
+SHOW PROTECTION
+```
+
+Show a file's owner, protection, and ACL in VMS's layout (needing read
+or control access), a volume's owner and protection, the ACL alone, and
+the process's default protection for new files.
+
 #### SET DEFAULT and SHOW DEFAULT
 
 ```text
@@ -1954,6 +2071,17 @@ SHOW PROCESS [process-name] [/IDENTIFICATION=pid]
 
 List the processes, with their states, priorities, CPU time, and page
 use, and show one process's details.
+
+#### SET PROCESS/PRIVILEGES
+
+```text
+SET PROCESS/PRIVILEGES=(privilege[,...])     ! NOname turns one off
+SHOW PROCESS/PRIVILEGES
+```
+
+Turns the process's privileges on and off (`ALL`, `NOALL`). SYSTEM is
+authorized for every one; turning off BYPASS, SYSPRV, GRPPRV, and
+READALL makes file protection apply to it.
 
 #### WAIT
 
@@ -7317,6 +7445,7 @@ side effects follow DIGITAL's *System Services Reference Manual*.
 | Sections | `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, `$UPDSEC(W)` |
 | Locks | `$ENQ`, `$ENQW`, `$DEQ` |
 | Command language | `$CLI` |
+| Security | `$CHKPRO`, `$GET_SECURITY`, `$SET_SECURITY`, `$SETDFPROT`; and SECURESHR's `$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, `$CHECK_ACCESS` |
 | RMS | `$OPEN`, `$CREATE`, `$CLOSE`, `$CONNECT`, `$DISCONNECT`, `$GET`, `$PUT`, `$FIND`, `$UPDATE`, `$DELETE`, `$TRUNCATE`, `$REWIND`, `$READ`, `$WRITE`, `$FLUSH`, `$FREE`, `$RELEASE`, `$WAIT`, `$ERASE`, `$RENAME`, `$PARSE`, `$SEARCH`, `$DISPLAY` |
 
 Other VMS services aren't available yet.
@@ -7439,8 +7568,10 @@ The main differences, gathered from the rest of the manual:
 
 - No VMS boot, executive, or compilers; MACRO-32 and govax's own FORTRAN are
   the languages you can build in (sections 1 and 14).
-- One user, `SYSTEM`, with all privileges; no login, batch, print
-  queues, networking, or clusters.
+- One user, `SYSTEM`, with all privileges (which `SET PROCESS/PRIVILEGES`
+  can turn off); no login, AUTHORIZE, batch, print queues, networking, or
+  clusters. File protection and ACLs are enforced on volume files, but a
+  volume's own protection isn't, and alarms and audits do nothing.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
   not host files (section 5). Indexed files are Prolog 3 only: a lower
   prolog is `RMS$_PLV`. VMS 7.1's ANALYZE/RMS_FILE/CHECK and RMS read and change govax's

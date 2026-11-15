@@ -1,12 +1,10 @@
 # Phase 93 — file protection
 
 **Status:** planned 2026-11-14; the plan accepted by the author the same
-day, with the answers in "The review". Subtasks 1 (the survey, Part A),
-2 (the probe), 3 (the rule, `internal/security`), 4 (ods2), 5
-(identity and defaults), 6 (the grammar types), 7 (new files'
-profiles), 8 (checking RMS's services and the ACP, with SET DEBUG
-PROTECTION), 9 (the DCL utilities), 10 (the ACL services), 11
-(changing profiles), and 12 (showing profiles) are done.
+day, with the answers in "The review". Every subtask is done but 14, the
+VMS round, which is prepared and rehearsed (`testdata/vms93`) and waits
+for the author's run on the VAX; "Where things stand" is the follow-up
+list, and PLAN.md summarizes the phase.
 
 ## Goal
 
@@ -1297,7 +1295,7 @@ Each is one commit, with tests, stopping for review.
     DIRECTORY/SECURITY, SHOW SECURITY, and accesses agree with govax's.
     (Prepared and rehearsed 2026-11-14, `testdata/vms93`; waiting for the
     author's run on the VAX.)
-15. **The close-out**: MANUAL.md (a section on file protection, the new
+15. **The close-out** (done 2026-11-14): MANUAL.md (a section on file protection, the new
     commands and services, the configuration key), HELP for every new
     command and qualifier (`TestEveryVerbHasHelp`,
     `TestEveryQualifierHasHelp`), `VAX-VMS-INTERNALS.md`'s RMS and
@@ -2272,3 +2270,39 @@ The author accepted the plan and answered its questions:
   `vax/vms93.log` is back, holds govax's sections to VMS's. The round waits
   for the author's run; its answers become a section of A.4 and the
   differences, if any, fixes or `vms93Differences`.
+- **2026-11-14** Subtask 15 done, the close-out (before subtask 14's
+  run, which waits for the VAX): MANUAL.md's "File protection" in section
+  5 (the profile, the rule, the privileges, an example run on govax, new
+  files' profiles, the commands and services, what isn't there), entries
+  in section 6 for SET SECURITY and its older forms, SHOW SECURITY, SHOW
+  ACL, SHOW PROTECTION, and SET PROCESS/PRIVILEGES, Appendix A's security
+  services, and Appendix C; VAX-VMS-INTERNALS.md's new 9.13, "Who may do
+  what to a file" (the rule, the checked layer, new files, the services),
+  a paragraph in 7.3 on a process's credentials, 9.14's list corrected
+  (it said no file protection was checked), and the map's rows;
+  DEVIATIONS.md's Phase 93 entry; PLAN.md's section; CLAUDE.md. HELP had
+  every command and qualifier already (subtasks 5, 11, and 12), held by
+  `TestEveryVerbHasHelp` and `TestEveryQualifierHasHelp`.
+
+## Where things stand
+
+What Phase 93 left, for later phases:
+
+- **The VMS round** (subtask 14): `testdata/vms93`'s README has the
+  steps. When `vax/vms93.log` is back, `TestVMS93Procedure` compares it;
+  each difference is a fix or a line in `vms93Differences`, and the
+  answers a section of A.4. Its UFO section settles case 458 (which
+  user file opens VMS refuses with RMS$_SHR, `rms/ufo.go`).
+- **Identities other than SYSTEM** (the phase's purpose): a user
+  authorization file and AUTHORIZE, LOGINOUT using them, and logins;
+  until then `corevms.AddUser` and `AddIdentifier` stand for AUTHORIZE in
+  the tests, and `$CHECK_ACCESS` reads that table.
+- **Out of scope by the review**: volume protection (shown, not
+  enforced), the ACL editor, auditing and alarms (their ACEs kept and
+  shown), and protection of devices, queues, and logical name tables
+  beyond what `$GET_SECURITY` and `$SET_SECURITY` read and keep.
+- **Unconfirmed choices**, each in its subtask's log and gathered in
+  DEVIATIONS.md's Phase 93 entry: `$CHKPRO`'s second protection word,
+  `$GET_SECURITY`'s position after a failed find and FIND_NEXT, the class
+  order after FILE and VOLUME, other devices' default profiles, and the
+  privilege `$CHECK_ACCESS`'s caller needs.

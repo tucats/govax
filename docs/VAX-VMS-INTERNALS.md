@@ -2315,6 +2315,15 @@ for a process that runs DCL, its DCL state. None of it is in VAX memory,
 so a program can reach it only through the services, as a VMS program
 must.
 
+A process's identity, as protection sees it, is `Process.Credentials()`:
+its UIC (SYSTEM's `[1,4]` for process 1; a created process's from
+`$CREPRC`, a subprocess's its creator's), its rights identifiers (its
+UIC's identifier, the environmental ones such as `INTERACTIVE`, and those
+granted it), and its current privileges, of which `SET PROCESS/PRIVILEGES`
+and `$SETPRV` turn on only those its authorized mask holds. A new process
+inherits its creator's default file protection. The rule these feed is
+section 9.13's.
+
 ### 7.4 Switching the CPU
 
 The VAX defines what a process's registers look like at rest: the
@@ -4155,7 +4164,65 @@ kin through the console's `EXE$OPEN` shim (arbitrated between processes by
 RMS's sharing rule, by host file identity: `rms/hostshare.go`), and RUN of
 an image, which may be a host file.
 
-### 9.13 What's VMS's and what isn't
+### 9.13 Who may do what to a file
+
+Every file and directory on a volume has a **security profile** in its
+header: an owner UIC, a 16-bit protection code (four categories, SYSTEM,
+OWNER, GROUP, and WORLD, each four bits, a set bit *denying* read, write,
+execute, or delete), and an access control list of ACEs in the header's
+ACL area. Three packages share the work of deciding whether a process may
+do something to one.
+
+**The rule** is `internal/security`, plain Go knowing nothing of files:
+`Check(creds, profile, want)` takes a process's `Credentials` (its UIC,
+its rights identifiers, its privileges, MAXSYSGROUP) and an object's
+`Profile`, and returns a `Decision`: what the process has and what gave it.
+It is the *Guide to System Security*'s sequence as VMS 7.1 was found to
+apply it: the first identifier ACE the process holds every identifier of
+decides (but for the SYSTEM and OWNER fields, which still count); with no
+ACE, every category the process is in adds its field; SYSTEM and OWNER
+get control, but never of an object owned by `[0,0]`; then BYPASS,
+SYSPRV, GRPPRV, and READALL. Mailboxes, global sections, and common event
+flag clusters use the same function (section 7.9). `CanChangeOwner` is
+the rule for giving an object a new owner. `acetext.go` turns ACEs into
+VMS's text and back, and `acledit.go` is the list editing the ACL services
+share (a position, matching, adding, deleting).
+
+**Which access each operation needs** is RMS's, `rms/access.go`: an open
+for reading needs R on the file, one for writing R and W, an erase D; to
+reach `[A.B]X.DAT` each directory on the way needs R or E (a lookup), a
+wildcard search R (a listing), and a create, erase, or rename R and W on
+the directory changed. The services (`$OPEN`, `$CREATE`, `$ERASE`,
+`$RENAME`, `$SEARCH`, `$PARSE`, `$DISPLAY`) and the ACP's functions
+(`IO$_ACCESS`, `IO$_CREATE`, `IO$_DELETE`, `IO$_MODIFY`) check there, and
+the image activator asks for R or E. The DCL utilities find files with
+ods2's own search and open them by file ID, so they go through
+`rms/utilaccess.go` instead (`globChecked`, `openChecked`; a refusal is a
+`DeniedError` each utility words its own way), and
+`TestNoUncheckedAccess` keeps any new code from reaching ods2 around the
+layer. A process with BYPASS is never refused, so its checks are skipped
+unless `SET DEBUG PROTECTION` is tracing them.
+
+**A new file's profile** is `newFileProfile`'s: the previous version's
+protection, else the directory's default protection ACE's, else the
+process's default (`Process.DefaultProtection`, from
+`vax.sysgen.rms_fileprot` and `$SETDFPROT`); a XABPRO's owner and
+protection over those; the directory's `OPTIONS=DEFAULT` ACEs copied in.
+
+**The security services** reach the same profiles from a program. A file
+as they see it is an `rms.SecurityObject` (`rms/secobject.go`, found by
+name or by the channel it's accessed on), which knows whether its process
+may read or change its profile. `$CHKPRO` (`corevms/chkpro.go`) checks a
+profile the caller describes entirely by items; `$GET_SECURITY` and
+`$SET_SECURITY` (`corevms/getsecurity.go`, with devices, volumes, logical
+name tables, and security classes as objects in `secobjects.go`) read and
+change a profile through items, a context carrying an ACL position from
+call to call. `$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, and
+`$CHECK_ACCESS` are SECURESHR.EXE's on VMS, so here they are a shareable
+image's routines, `internal/securertl`, at the transfer vector offsets a
+program linked on VMS holds.
+
+### 9.14 What's VMS's and what isn't
 
 - **RMS is Go, not VAX code in executive mode.** There are no RMS
   structures in P1 space (no IFABs or IRABs, no I/O segment), no RMS
@@ -4171,9 +4238,10 @@ an image, which may be a host file.
   "record stream currently active".
 - **One stream per open file**: a second RAB on a FAB continues the first's
   stream, where VMS can keep several (FAB$V_MSE).
-- **No file protection is checked**: a file's owner and protection mask,
-  and its ACL, are kept and shown, and any process may open any file. A
-  mailbox's protection is checked (section 7.9).
+- **File protection is checked, but no volume's**: a file's and a
+  directory's owner, code, and ACL are enforced (9.13); a volume's
+  protection is kept and shown and decides nothing. Alarm and audit ACEs
+  are kept and shown and do nothing, there being no auditing.
 - **No network files** (a node name is `RMS$_SYN`), no journaling, no
   magnetic tape.
 - **Indexed files are Prolog 3 only**, and the file system is a single
@@ -5464,6 +5532,9 @@ doesn't cover.
 | `rms/sharing.go`, `rms/recordlock.go` | sharing a file, and record locks |
 | `rms/blockio.go`, `rms/ufo.go`, `rms/acp.go` | block I/O, user file open, and the ACP's file operations |
 | `rms/location.go`, `rms/hostfile.go` | where a name points, host or volume |
+| `security/check.go`, `security/acl.go`, `security/acetext.go`, `security/acledit.go` | the protection rule, ACEs, their text, and editing an ACL |
+| `rms/access.go`, `rms/utilaccess.go`, `rms/secobject.go` | which access each operation needs, and a file as the security services see it |
+| `corevms/chkpro.go`, `corevms/getsecurity.go`, `securertl/` | the security services |
 
 **From VAX code to Go** (section 10).
 

@@ -142,7 +142,7 @@ questions, and a progress log extended as that phase is worked.
 | 90 | [PHASE-90 - VMS help](PHASE-90%20-%20VMS%20help.md) | HELP as VMS's: help libraries (HELPLIB.HLB, DBG$HELP.HLB) built from VMS-format modules, LIBRARY/HELP, prompting and navigation, HLP$LIBRARY, the LBR$ routines that read and write libraries, and govax's help rewritten — planned 2026-11-07, the survey accepted the same day; done 2026-11-08 |
 | 91 | [PHASE-91 - concealed logical names](PHASE-91%20-%20concealed%20logical%20names.md) | Concealed logical names and rooted directories (`DEV:[ROOT.]`), RMS's two name processors made one, and the system names on the root `_DUA0:[SYSTEM.]` — planned 2026-11-09, the plan accepted the same day; done 2026-11-09 |
 | 92 | [PHASE-92 - documentation](PHASE-92%20-%20documentation.md) | Standalone guides to govax's internals, a document per part: Part A is `VAX-VMS-INTERNALS.md`, how govax is a VAX and how it gives a program VMS — planned and done 2026-11-11 |
-| 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day |
+| 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day; done 2026-11-14 but for subtask 14, the VMS round, prepared and waiting for the VAX |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -669,3 +669,27 @@ its decisions, and the outline; its log is the work, a section per subtask.
   `$DCLCMH`, `$SETSFM` and `SS$_SSFAIL`, CHMS and CHMU, PROBE's mode, and the SCB vector's bits.
 
 What the phase left is its doc's "Where things stand"; a further guide would be its Part B.
+
+## File protection (Phase 93)
+
+Phase 93 (2026-11-14) gave files on govax's volumes VMS's protection, as a precursor to identities other than SYSTEM.
+Its doc's Part A is the survey and the probe's answers (`testdata/prot93`, three rounds on VMS 7.1, with test accounts
+on the VAX), Part B the decisions with the author's review, and its log the work.
+
+- **The rule:** `internal/security`, the *Guide to System Security*'s sequence as VMS 7.1 applies it: ACLs, the four
+  categories, control, BYPASS, SYSPRV, GRPPRV, and READALL, and who may give a new owner; mailboxes, sections, and
+  common event flag clusters on it too.
+- **Checked everywhere:** RMS's services, the ACP's functions, the image activator, and every DCL utility go through
+  one checked layer (`rms/access.go`, `utilaccess.go`; `TestNoUncheckedAccess`), each refusal VMS's status and
+  message; `SET DEBUG PROTECTION` traces each check.
+- **Identity and defaults:** a process's credentials (UIC, rights, privileges), `SET PROCESS/PRIVILEGES`, the
+  default protection (`vax.sysgen.rms_fileprot`, `SET PROTECTION/DEFAULT`, `$SETDFPROT`), `vax.sysgen.maxsysgroup`;
+  new files' profiles by VMS's inheritance, XABPRO, and DEFAULT and default protection ACEs.
+- **DCL:** the `$PROTECTION` and `$UIC` grammar types; SET SECURITY and its older forms, SHOW SECURITY and SHOW ACL,
+  DIRECTORY/SECURITY and `/ACL`, CREATE's, COPY's, and BACKUP's `/PROTECTION`.
+- **The services:** `$CHKPRO`, `$GET_SECURITY`, `$SET_SECURITY`, `$SETDFPROT`, and SECURESHR's `$PARSE_ACL`,
+  `$FORMAT_ACL`, `$CHANGE_ACL`, and `$CHECK_ACCESS` (`internal/securertl`), with their macros; a table of accounts
+  for `$CHECK_ACCESS` (no AUTHORIZE yet).
+
+MANUAL.md's "File protection" (section 5) is the user's side, and VAX-VMS-INTERNALS.md's 9.13 the developer's. What
+the phase left, the VMS round among it, is its doc's "Where things stand".
