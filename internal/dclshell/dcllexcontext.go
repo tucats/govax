@@ -453,7 +453,8 @@ func containsString(list []string, s string) bool {
 }
 
 // nextContextPID is F$PID's next process for the context numbered id:
-// the next one in the process table that meets every criterion, as
+// the next one in the process table the process may see (corevms's
+// MaySee, $GETJPI's rule) that meets every criterion, as
 // hexadecimal, or "" after the last, when the context is deleted and
 // the symbol called name made "".
 func (c *Interpreter) nextContextPID(symbols *dclSymbolTable, name string, id int32, ctx *processContext) dclValue {
@@ -465,7 +466,7 @@ func (c *Interpreter) nextContextPID(symbols *dclSymbolTable, name string, id in
 		env := procs[ctx.next]
 		ctx.next++
 
-		if contextMeets(env, ctx.criteria) {
+		if c.RTL.MaySee(env) == 0 && contextMeets(env, ctx.criteria) {
 			return dclString(fmt.Sprintf("%08X", env.Process.PID))
 		}
 	}

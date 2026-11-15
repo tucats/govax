@@ -113,9 +113,9 @@ func newOperatorState() *operatorState {
 }
 
 // operatorTerminal is the operator terminal's full name, as OPCOM shows
-// it: _NODE$TTA0:.
+// it: _NODE$TTA0:, the console's terminal, whichever process asks.
 func (env *Environment) operatorTerminal() string {
-	return "_" + env.NodeName + "$" + strings.Trim(env.Process.Terminal, "_:") + ":"
+	return "_" + env.NodeName + "$" + strings.Trim(nominalTerminal, "_:") + ":"
 }
 
 // opcomMessage writes lines to the operator terminal under OPCOM's

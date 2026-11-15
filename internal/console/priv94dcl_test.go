@@ -96,6 +96,19 @@ func replayPriv94DCLWith(t *testing.T, id priv94Identity, sections []priv94DCLSe
 	setup func(c *console.Console, dispatch func(string) string) map[string]string) {
 	t.Helper()
 
+	replayPriv94DCLMasked(t, id, sections, symbols, setup, nil)
+}
+
+// replayPriv94DCLMasked is replayPriv94DCLWith with mask (if not nil) applied
+// to what govax showed for each command and to what VMS did, before they
+// are compared: given the command (rewritten) and its lines, it returns the
+// lines to compare, so what can't be the same on two systems (times, other
+// processes, priorities a scheduler boosts) can be left out of both.
+func replayPriv94DCLMasked(t *testing.T, id priv94Identity, sections []priv94DCLSection, symbols map[string]string,
+	setup func(c *console.Console, dispatch func(string) string) map[string]string,
+	mask func(line string, out []string) []string) {
+	t.Helper()
+
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) []string {
@@ -145,6 +158,10 @@ func replayPriv94DCLWith(t *testing.T, id priv94Identity, sections []priv94DCLSe
 			want := make([]string, len(cmd.out))
 			for i, out := range cmd.out {
 				want[i] = rewrite(out)
+			}
+
+			if mask != nil {
+				got, want = mask(line, got), mask(line, want)
 			}
 
 			if strings.Join(got, "\n") != strings.Join(want, "\n") {

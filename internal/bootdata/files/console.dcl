@@ -1589,11 +1589,23 @@ grammar console
 
     ! SET PROCESS/PRIVILEGES=(name[,...]): privileges enabled, or with NO
     ! before a name disabled, for the process, as $SETPRV makes them
-    ! permanent (internal/dclcmd/privileges.go). SET PROCESS's other
-    ! qualifiers are for a later phase.
+    ! permanent (internal/dclcmd/privileges.go). SET PROCESS [name]
+    ! [/IDENTIFICATION=pid] /PRIORITY=n, /SUSPEND, /RESUME: another
+    ! process changed as $SETPRI, $SUSPND, and $RESUME change it, by their
+    ! rule, GROUP or WORLD (internal/dclcmd/setprocess.go,
+    ! docs/planning/PHASE-94 - privileges.md, subtask 8).
     syntax set_process/id=2710
+        parameter   process_name/id=2716            -
+                    /type=$string
         qualifier   privileges/id=2711/nonegatable  -
                     /type=$any/list
+        qualifier   identification/id=2712/nonegatable -
+                    /type=$string
+        qualifier   priority/id=2713/nonegatable    -
+                    /type=$integer
+        qualifier   suspend/id=2714/nonegatable
+        qualifier   resume/id=2715/nonegatable
+        disallow    suspend and resume
 
     ! SET TERMINAL [device]: the terminal's characteristics the qualifiers
     ! name, the rest unchanged (internal/dclcmd/terminal.go); the device is

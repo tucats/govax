@@ -159,6 +159,11 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 
 	child.Startup.CLI = &CLIStartup{Command: req.Command, Prompt: req.Prompt}
 
+	// A spawned subprocess shares its creator's terminal, where a process
+	// $CREPRC makes has none (unconfirmed: VMS 7.1's SHOW PROCESS of a
+	// spawned one wasn't probed).
+	child.Process.Terminal = p.Terminal
+
 	if req.Output == "" {
 		child.Startup.SharedOutput = env.procedureOutput()
 	}

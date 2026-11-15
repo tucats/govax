@@ -309,6 +309,10 @@
    FREP0VA is "" with no P0 pages), FREPTECNT, VIRTPEAK, and the quotas
    and limits.
 
+   Another process's items need GROUP for a process in the current
+   process's UIC group, WORLD for any other, unless it has the current
+   process's UIC; without them F$GETJPI fails with %SYSTEM-F-NOPRIV.
+
    Example:
 
      $ ME = F$GETJPI("", "PRCNAM")
@@ -449,7 +453,9 @@
      F$PID(context-symbol)
 
    The context symbol, set to "" before the first call, keeps the
-   place; F$CONTEXT can make it choose only some processes.
+   place; F$CONTEXT can make it choose only some processes.  A process
+   the current process may not see, by F$GETJPI's rule (GROUP for its
+   group, WORLD for any other), is passed over.
 
    Example:
 

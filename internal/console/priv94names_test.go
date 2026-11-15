@@ -3,7 +3,6 @@ package console_test
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -74,14 +73,6 @@ func TestPriv94Names(t *testing.T) {
 	} {
 		t.Run(run.id.name, func(t *testing.T) {
 			sections := append(priv94DCLSections(t, run.file, "NAMES"), priv94DCLSections(t, run.file, "STOP")...)
-
-			// F$GETJPI of a holder is subtask 8's (seeing other processes).
-			for i := range sections {
-				sections[i].commands = slices.DeleteFunc(sections[i].commands, func(c priv94DCLCommand) bool {
-					return strings.Contains(c.line, "F$GETJPI(GPID")
-				})
-			}
-
 			replayPriv94DCLWith(t, run.id, sections, nil, priv94Holders(t, run.file))
 		})
 	}

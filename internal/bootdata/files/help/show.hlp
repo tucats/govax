@@ -188,7 +188,11 @@
    Shows a process's details: its user, process ID and name, terminal,
    user identification code (UIC), base priority, and default device and
    directory.  With no name or /IDENTIFICATION, it shows the current
-   process.
+   process.  Another process is shown, without its default directory,
+   only to a process that may see it: one with its UIC, GROUP for a
+   process in the UIC group, WORLD for any other; others are told
+   %SYSTEM-F-NOPRIV.  SHOW SYSTEM lists every process to everyone, as
+   VMS's does.
 
    Format
 

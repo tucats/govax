@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -30,10 +31,11 @@ func (c *Context) ShowSystem() error {
 
 // ShowProcess is SHOW PROCESS: one process's details. With neither a name
 // nor /IDENTIFICATION it is the console's own process, process 1, as
-// DCL's SHOW PROCESS is the process typing it. A name is looked up in
-// process 1's UIC group, as VMS looks up process names; pid is
-// hexadecimal, as SHOW SYSTEM shows it, and wins if both are given. A
-// process that isn't there is %SYSTEM-W-NONEXPR.
+// DCL's SHOW PROCESS is the process typing it. The process is found by
+// findProcess. Another process is shown only to a process that may see
+// it, as $GETJPI's rule says (corevms's MaySee: its own UIC, GROUP for
+// its group, WORLD for any; docs/planning/PHASE-94 - privileges.md,
+// subtask 8), else %SYSTEM-F-NOPRIV.
 //
 // With /PRIVILEGES (privileges true) its heading is followed by the
 // process's privileges and rights (processPrivilegesReport) instead of
@@ -43,28 +45,16 @@ func (c *Context) ShowProcess(name, pid string, privileges bool) error {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
 
-	env := c.RTL
-
-	switch {
-	case pid != "":
-		v, err := strconv.ParseUint(strings.TrimSpace(pid), 16, 32)
-		if err != nil {
-			return vmserrors.New(vmserrors.SS_IVIDENT)
-		}
-
-		var found bool
-		if env, found = c.RTL.FindProcess(uint32(v)); !found {
-			return vmserrors.New(vmserrors.SS_NONEXPR)
-		}
-
-	case name != "":
-		var found bool
-		if env, found = c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name); !found {
-			return vmserrors.New(vmserrors.SS_NONEXPR)
-		}
+	env, err := c.findProcess(name, pid)
+	if err != nil {
+		return err
 	}
 
-	lines := env.ProcessReport(hostNode())
+	if st := c.RTL.MaySee(env); st != 0 {
+		return vmserrors.New(vmserrors.SS_NOPRIV)
+	}
+
+	lines := env.ProcessReport(hostNode(), env != c.RTL)
 	if privileges {
 		lines = append(lines[:processHeadingLines:processHeadingLines], processPrivilegesReport(env)...)
 	}
@@ -74,6 +64,36 @@ func (c *Context) ShowProcess(name, pid string, privileges bool) error {
 	}
 
 	return nil
+}
+
+// findProcess is the process SHOW PROCESS and SET PROCESS name: the one
+// whose PID is pid, hexadecimal, as SHOW SYSTEM shows it; else the one
+// called name in the process's own UIC group, as VMS looks up process
+// names; else the process itself. pid wins if both are given. A process
+// that isn't there is %SYSTEM-W-NONEXPR.
+func (c *Context) findProcess(name, pid string) (*corevms.Environment, error) {
+	switch {
+	case pid != "":
+		v, err := strconv.ParseUint(strings.TrimSpace(pid), 16, 32)
+		if err != nil {
+			return nil, vmserrors.New(vmserrors.SS_IVIDENT)
+		}
+
+		if env, found := c.RTL.FindProcess(uint32(v)); found {
+			return env, nil
+		}
+
+		return nil, vmserrors.New(vmserrors.SS_NONEXPR)
+
+	case name != "":
+		if env, found := c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name); found {
+			return env, nil
+		}
+
+		return nil, vmserrors.New(vmserrors.SS_NONEXPR)
+	}
+
+	return c.RTL, nil
 }
 
 // processHeadingLines is how many of ProcessReport's lines are its

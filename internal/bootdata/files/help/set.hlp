@@ -300,23 +300,56 @@
 
 2 PROCESS
 
-   Changes the current process's privileges.  A privilege the process
-   is not authorized for (SHOW PROCESS/PRIVILEGES lists those it is) is
-   not enabled, and the command says so with %SYSTEM-W-NOTALLPRIV,
-   unless the process is authorized for SETPRV.  A change lasts until
-   the next one, past each image's exit.
+   Changes a process: the current process's privileges, or the
+   priority of a process, the current one or another, or suspends or
+   resumes another process.
 
-   SYSTEM is authorized for every privilege, and holds them all, so
-   every file protection check passes; turning off BYPASS, SYSPRV,
+   A privilege the process is not authorized for (SHOW
+   PROCESS/PRIVILEGES lists those it is) is not enabled, and the command
+   says so with %SYSTEM-W-NOTALLPRIV, unless the process is authorized
+   for SETPRV.  A change lasts until the next one, past each image's
+   exit.  SYSTEM is authorized for every privilege, and holds them all,
+   so every file protection check passes; turning off BYPASS, SYSPRV,
    GRPPRV, and READALL shows what a process without them would be
    refused, though SYSTEM's UIC, [1,4], keeps it in the SYSTEM category
    of every protection code.
 
+   Another process is changed as $SETPRI, $SUSPND, and $RESUME would
+   change it: one with the process's own UIC freely, one in its UIC
+   group with GROUP or WORLD, any other with WORLD.  A refusal is
+
+     %SET-E-NOTSET, error modifying 00000302
+     -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+
    Format
 
-     SET PROCESS/PRIVILEGES=(privilege[,...])
+     SET PROCESS [process-name]
+
+3 Parameter
+
+   process-name
+
+   The name of the process to change, looked up among the processes of
+   the current process's UIC group.  /IDENTIFICATION names a process by
+   its PID instead.  With neither, the current process is changed.
 
 3 Qualifiers
+/IDENTIFICATION
+
+      /IDENTIFICATION=pid
+
+   The process to change, by its PID, in hexadecimal, as SHOW SYSTEM
+   shows it.  It overrides the process-name parameter.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The process's base priority, 0 to 31.  A priority above the current
+   process's own base priority needs ALTPRI:
+
+     %SET-E-NOTSET, need ALTPRI privilege to elevate above base priority
+
 /PRIVILEGES
 
       /PRIVILEGES=(privilege[,...])
@@ -324,12 +357,26 @@
    The privileges to enable, each by its name (BYPASS, SYSPRV, ...), and
    to disable, each with NO before its name (NOBYPASS).  ALL is every
    privilege, NOALL none.  The parentheses may be left out for one.
+   Only the current process's privileges are changed.
+
+/RESUME
+
+   Lets a suspended process run again.
+
+/SUSPEND
+
+   Stops a process from running until SET PROCESS/RESUME (or $RESUME)
+   lets it go on.  The current process isn't suspended.
 
 3 Examples
 
    1.$ SET PROCESS/PRIVILEGES=(NOREADALL,NOGRPPRV,NOSYSPRV,NOBYPASS)
 
      Turns off the four privileges that bear on file protection.
+
+   2.$ SET PROCESS/PRIORITY=3/IDENTIFICATION=00000302
+
+     Lowers process 00000302's base priority to 3.
 
 2 PROMPT
 

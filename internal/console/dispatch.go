@@ -199,8 +199,22 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().ShowSecurity(r.String("FILE"), r.String("CLASS"))
 	})
 	g.Bind("SHOW_ACL", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowACL(r.String("FILE")) })
+	// SET PROCESS's /PRIORITY, /SUSPEND, and /RESUME (docs/planning/PHASE-94 -
+	// privileges.md, subtask 8): the process itself or another.
 	g.Bind("SET_PROCESS", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().SetProcessPrivileges(r.List("PRIVILEGES"))
+		opts := dclcmd.ProcessOptions{
+			Name:           r.String("PROCESS_NAME"),
+			Identification: r.String("IDENTIFICATION"),
+			HasPriority:    r.Present("PRIORITY"),
+			Priority:       int(r.Int("PRIORITY")),
+			Suspend:        r.Present("SUSPEND"),
+			Resume:         r.Present("RESUME"),
+		}
+		if r.Present("PRIVILEGES") {
+			opts.Privileges = append([]string{}, r.List("PRIVILEGES")...)
+		}
+
+		return d.Console.cmd().SetProcess(opts)
 	})
 
 	// SET TERMINAL (docs/planning/PHASE-94 - privileges.md, subtask 6): the

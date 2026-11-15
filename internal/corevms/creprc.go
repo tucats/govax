@@ -399,6 +399,10 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	p.UIC = uic
 	p.Name = req.Name
 	p.CreateFlags = req.Flags
+
+	// A process $CREPRC makes has no terminal: VMS 7.1's SHOW PROCESS of
+	// one showed none (testdata/priv94's SEE sections).
+	p.Terminal = ""
 	p.TerminationMailbox = req.TerminationMailbox
 	p.ResourceWaitDisabled = req.Flags&prcSSRWAIT != 0
 	p.SwappingDisabled = req.Flags&prcPSWAPM != 0

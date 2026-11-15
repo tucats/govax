@@ -228,8 +228,10 @@ func lexProcess(e *dclExpression, _ []lexicalArg) (dclValue, error) {
 // lexPID is F$PID(context-symbol): the PID of the next process, in the
 // process table's order, and "" after the last (15.3.3). The context
 // symbol, set to "" before the first call, keeps the place: govax keeps
-// in it how many processes have been returned, and puts "" back after
-// the last, so the next call starts again. An undefined context symbol
+// in it the table position after the last process returned, and puts ""
+// back after the last, so the next call starts again. A process the
+// caller may not see ($GETJPI's rule, corevms's MaySee) is passed over,
+// as VMS 7.1's F$PID passed over it (testdata/priv94's SEE sections). An undefined context symbol
 // is CLI_UNDSYM. A symbol F$CONTEXT made a context symbol returns only
 // the processes that meet its criteria (nextContextPID,
 // dcllexcontext.go).
@@ -258,15 +260,20 @@ func lexPID(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	next := int(sym.dclValue().Int())
 	procs := env.Processes()
 
-	if next < 0 || next >= len(procs) {
-		e.symbols.replaceValue(name, dclString(""))
+	for next >= 0 && next < len(procs) {
+		p := procs[next]
+		next++
 
-		return dclString(""), nil
+		if env.MaySee(p) == 0 {
+			e.symbols.replaceValue(name, dclInteger(int32(next)))
+
+			return dclString(fmt.Sprintf("%08X", p.Process.PID)), nil
+		}
 	}
 
-	e.symbols.replaceValue(name, dclInteger(int32(next+1)))
+	e.symbols.replaceValue(name, dclString(""))
 
-	return dclString(fmt.Sprintf("%08X", procs[next].Process.PID)), nil
+	return dclString(""), nil
 }
 
 // replaceValue gives the symbol word names a new value, in the table it
@@ -346,7 +353,8 @@ func PrivilegeList(mask uint64) string { return corevms.PrivilegeList(mask) }
 
 // lexGetJPI is F$GETJPI(pid, item): the item (jpiItems) for the process
 // whose PID is pid, in hexadecimal, or the console's own for "". A PID
-// that names no process is SS$_NONEXPR.
+// that names no process is SS$_NONEXPR, one the process may not see
+// (corevms's MaySee) SS$_NOPRIV.
 func lexGetJPI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	env, err := e.console.lexicalEnvironment()
 	if err != nil {
@@ -364,6 +372,14 @@ func lexGetJPI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 		target, found := env.FindProcess(uint32(n))
 		if perr != nil || !found {
 			return dclValue{}, e.console.statusFailure(vmsdef.Symbols["SS$_NONEXPR"])
+		}
+
+		// Another process's items are seen by $GETJPI's rule (MaySee):
+		// VMS 7.1 refused F$GETJPI of a process the caller couldn't
+		// see with NOPRIV, shown with the item (testdata/priv94's SEE
+		// sections).
+		if target != env && env.MaySee(target) != 0 {
+			return dclValue{}, vmserrors.NewSegment(vmserrors.SS_NOPRIV, strings.ToUpper(strings.TrimSpace(args[1].str())))
 		}
 
 		env = target

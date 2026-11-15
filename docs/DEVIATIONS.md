@@ -1742,7 +1742,9 @@ choices no fixture has confirmed yet.
     missing value or qualifier CLI$_ARGREQ. A list's values are split at
     commas outside brackets, so "[1,4]" is one UIC; UIC also takes an
     identifier's name. HW_MODEL, HW_NAME, and STS aren't supported
-    (IVKEYW). No privilege is asked for to see other processes.
+    (IVKEYW). (Resolved, Phase 94's subtask 8: F$PID passes over, and
+    F$GETJPI refuses with NOPRIV, a process $GETJPI's rule doesn't let
+    the caller see, as VMS 7.1 did.)
   - F$DEVICE returns names with the node's, "_GOVAX$DUA0:" (VMS 7.3
     equated OPEN's logical name to "_SIMVAX$DUA1"), in SHOW DEVICE's
     order (by class, then name and unit number; 2026-11-03); the

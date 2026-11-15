@@ -134,27 +134,34 @@ func (sys *System) SystemReport(system, node string) []string {
 	return lines
 }
 
-// ProcessReport is SHOW PROCESS's display for env. The layout is VMS's
-// as best remembered (unconfirmed; a VMS 7.3 probe would settle it):
+// ProcessReport is SHOW PROCESS's display for env, as VMS 7.1 showed
+// another process's (testdata/priv94's SEE sections):
 //
-//	 7-OCT-2026 11:37:42.07   User: SYSTEM           Process ID:   00000301
-//	                          Node: mymac            Process name: "SYSTEM"
+//
+//	15-NOV-2026 09:21:24.18   User: SYSTEM           Process ID:   00000130
+//	                          Node: SIMVAX           Process name: "PRIV94_G"
 //
 //	Terminal:           TTA0:
-//	User Identifier:    [1,4]
+//	User Identifier:    [200,1]
 //	Base priority:      4
-//	Default file spec:  DUA0:[WORK]
+//	Default file spec:  Not available
 //
 // The UIC is shown numerically ([group,member], octal): govax has no
-// rights database to name it. node is the node to name, as for
+// rights database to name it. A process with no terminal (one $CREPRC
+// made) shows none. Another process's default directory is "Not
+// available" (other true); the process's own is its default (unconfirmed:
+// the probe showed only other processes). node is the node to name, as for
 // SystemReport.
-func (env *Environment) ProcessReport(node string) []string {
+func (env *Environment) ProcessReport(node string, other bool) []string {
 	date, _ := formatVMSTime(env.Clock(), false)
 	p := env.Process
 
-	defaultSpec := ""
-	if env.Session != nil {
-		defaultSpec = env.Session.DefaultString()
+	defaultSpec := "Not available"
+	if !other {
+		defaultSpec = ""
+		if env.Session != nil {
+			defaultSpec = env.Session.DefaultString()
+		}
 	}
 
 	return []string{
@@ -166,6 +173,5 @@ func (env *Environment) ProcessReport(node string) []string {
 		fmt.Sprintf("User Identifier:    [%o,%o]", p.UIC>>16, p.UIC&0xFFFF),
 		fmt.Sprintf("Base priority:      %d", p.BasePriority),
 		fmt.Sprintf("Default file spec:  %s", defaultSpec),
-		"",
 	}
 }

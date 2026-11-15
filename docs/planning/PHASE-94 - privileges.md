@@ -642,7 +642,7 @@ Each is one commit, with tests, stopping for review.
    CREATE/NAME_TABLE, STOP, and govax's MOUNT, DISMOUNT, and
    INITIALIZE/CONTAINER through the gate, with VMS's messages,
    held to the probe's DCL logs under each privilege set.
-8. **Seeing other processes** (Decision 6): F$GETJPI, F$PID, F$CONTEXT,
+8. **Seeing other processes** (done 2026-11-15; Decision 6): F$GETJPI, F$PID, F$CONTEXT,
    SHOW PROCESS/IDENTIFICATION, and SHOW SYSTEM by the probe's answers.
 9. **Installed images** (Decision 9), with a probe round of its own if subtask 2's doesn't cover them.
 10. **The close-out**: MANUAL.md (a section on privileges: the masks,
@@ -1001,3 +1001,38 @@ The answers:
   overrides it` for a table no privilege rule covers
   (`TestPrivilegeTraceOfTables`; `security.Decision.From` names what gave
   the access).
+- **2026-11-15** Subtask 8, seeing other processes: what DCL shows of
+  another process follows `$GETJPI`'s rule (`mayAffectAt` from supervisor
+  mode, `corevms.Environment.MaySee`): the process's own UIC freely,
+  GROUP for its group, WORLD for any other; SYSTEM's UIC gets nothing
+  over other groups. SHOW PROCESS/IDENTIFICATION (and by name) of a
+  process it may not see is `%SYSTEM-F-NOPRIV`; F$GETJPI of one is
+  `%SYSTEM-F-NOPRIV` with the item as the segment (` \PRCNAM\`); F$PID,
+  with or without an F$CONTEXT context, passes over it. SHOW SYSTEM asks
+  nothing: VMS's SHOW is installed with WORLD, so it listed every process
+  to every user (`dclprocess.go`'s comment says so; no rule, since nothing
+  is asked). SET PROCESS is new beyond `/PRIVILEGES`
+  (`dclcmd/setprocess.go`, over `corevms/dclprocess.go`): a process-name
+  parameter, `/IDENTIFICATION`, `/PRIORITY`, `/SUSPEND`, and `/RESUME`,
+  each the service's work after `MayAffect`; a refusal is `%SET-E-NOTSET,
+  error modifying 00000130` and `-SYSTEM-F-NOPRIV`, and a priority above
+  the process's authorized one without ALTPRI is refused first by DCL,
+  `%SET-E-NOTSET, need ALTPRI privilege to elevate above base priority`
+  (round 2), where `$SETPRI` lowers it quietly. SHOW PROCESS's layout is
+  the probe's: no blank line at its end, and another process's default
+  directory `Not available`; a process `$CREPRC` makes has no terminal
+  (`Terminal:` empty), and OPCOM's operator terminal is the console's
+  whichever process asks. `TestPriv94See` replays the SEE sections as
+  each identity (the WALK subroutine run as a procedure of its own,
+  `priv94Walks`; SHOW SYSTEM compared by the holders' lines, current
+  priorities and F$PID's count and order masked, `priv94SeeMask`),
+  `TestPriv94Priority` round 2's PRIORITY sections, and `TestPriv94Names`
+  now its STOP sections' F$GETJPI line: all match VMS's logs. DEVIATIONS.md's
+  Phase 51 note ("No privilege is asked for to see other processes") is
+  resolved. HELP SET PROCESS, SHOW PROCESS, F$GETJPI, and F$PID say so.
+  Choices, unconfirmed: SET PROCESS/SUSPEND of the process itself does
+  nothing (VMS would suspend it and the terminal would wait); the NOTSET
+  status's value is govax's (SET's 6, severity E); the process's own SHOW
+  PROCESS has its default directory, as before, and no closing blank
+  line, as another's; a LIB$SPAWN subprocess has its creator's
+  terminal (`Spawn` sets it after `$CREPRC`'s code clears it).
