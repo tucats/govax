@@ -1,8 +1,9 @@
 # Phase 94 — privileges
 
-**Status:** planned 2026-11-15 (subtask 1, the survey and this plan);
-the plan reviewed and accepted by the author the same day, with every
-recommendation in "The review" taken. This document is the development plan;
+**Status:** done 2026-11-15 (subtask 10, the close-out). Planned
+2026-11-15 (subtask 1, the survey and this plan); the plan reviewed and
+accepted by the author the same day, with every recommendation in "The
+review" taken. This document is the development plan;
 as the subtasks are done it becomes the implementation record, with a
 progress log and, at the end, "Where things stand".
 
@@ -649,7 +650,7 @@ Each is one commit, with tests, stopping for review.
 8. **Seeing other processes** (done 2026-11-15; Decision 6): F$GETJPI, F$PID, F$CONTEXT,
    SHOW PROCESS/IDENTIFICATION, and SHOW SYSTEM by the probe's answers.
 9. **Installed images** (done 2026-11-15; Decision 9), with a probe round of its own if subtask 2's doesn't cover them (it did).
-10. **The close-out**: MANUAL.md (a section on privileges: the masks,
+10. **The close-out** (done 2026-11-15): MANUAL.md (a section on privileges: the masks,
     what each privilege guards in govax, SET DEBUG PRIVILEGES, INSTALL if
     it's in), HELP for every new command, qualifier, and debug class,
     `VAX-VMS-INTERNALS.md`'s processes section, DEVIATIONS.md, PLAN.md,
@@ -1084,3 +1085,51 @@ The answers:
   govax's; LIST's columns after Prv (`Prot Wrt Acnt Exe Resid`) and
   "Current / Maximum shared" (1 for an open file, over 0) for anything but
   the probe's open, unshared image; the list lasts for the session.
+- **2026-11-15** Subtask 10, the close-out: MANUAL.md has a section on
+  privileges in section 11 ("Privileges": the four masks, SYSTEM and its
+  UIC's category, a table of what each privilege guards in govax, inner
+  modes, installed images, SET DEBUG PRIVILEGES, each example run on
+  govax), entries for SET PROCESS's new qualifiers, INSTALL, and SET
+  TERMINAL in section 6.6, STOP's and SHOW PROCESS's rules, `$SETSWM` in
+  Appendix A, and section 1's, 7's, and Appendix C's lists of what govax
+  lacks corrected (INSTALL, SET TERMINAL, and SET PROCESS are there now;
+  RUN/DETACH isn't). VAX-VMS-INTERNALS.md's processes chapter has 7.14,
+  "Privileges" (the masks, the gate and its three tests, protection
+  first, another process, installed images), its "What's VMS's" now
+  7.15. DEVIATIONS.md gathers the phase's unconfirmed choices in "[Phase
+  94] Privileges beside VMS 7.1's". PLAN.md has the phase's row and
+  section, CLAUDE.md the phase and `testdata/priv94`. HELP already had
+  every new command, qualifier, and debug class (subtasks 3 to 9, held by
+  `TestEveryVerbHasHelp` and `TestEveryQualifierHasHelp`). One fix: SET
+  DEBUG PRIVILEGES showed a group table's owner `[1,177777]`; it is
+  `[1,*]`, as VMS writes it (`tableOwnerText`).
+
+## Where things stand
+
+What Phase 94 left, for later phases:
+
+- **Identities other than SYSTEM** (the purpose of Phases 93 and 94): a
+  user authorization file and AUTHORIZE, LOGINOUT using them, and logins,
+  so a process's AUTHPRIV comes from its account. Until then a process
+  of another UIC comes from `$CREPRC` (or the tests' `priv94Identity`),
+  with the privileges it's given as its authorized ones.
+- **Out of scope by the review**: `$SETIME` and SET TIME (question 3;
+  govax's clock is the host's or counts instructions, so setting it means
+  keeping an offset); `$MOUNT`, `$DISMOU`, and the rights and UAF
+  services (question 5), with their privileges; SHARE, there being no
+  device allocation.
+- **RUN/DETACH**: govax's RUN has no `/DETACH` or `/UIC`, so the probe's
+  DETACH sections weren't replayed; `$CREPRC`'s rules for them are held
+  to the program's cases.
+- **Installed images beyond privileges**: the known file list lasts for
+  the session, and `/OPEN`, `/SHARED`, `/HEADER_RESIDENT`, and the rest
+  are recorded and listed but change nothing; INSTALL's other
+  subcommands (REPLACE, PURGE) aren't there.
+- **`$ULKPAG`'s status** of a locked page, `SS$_ACCVIO`'s value on VMS
+  7.1 from a case's body, is unexplained (A.4); a probe that varies how
+  the page was locked might settle it.
+- **A temporary page-file section after its last mapping**, and the end
+  of an inner mode's handler search, are DEVIATIONS.md's two other Phase
+  94 entries, each waiting on a probe.
+- **Unconfirmed choices**, each in its subtask's log and gathered in
+  DEVIATIONS.md's "[Phase 94] Privileges beside VMS 7.1's".

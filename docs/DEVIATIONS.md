@@ -1949,3 +1949,29 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   a bugcheck on VMS, so no probe asks. govax used to call the program's user-mode handlers in kernel mode, and their
   unwind left the kernel stack 4 bytes off (testdata/priv94's rehearsal).
 - **Status**: kept, unconfirmed.
+
+### [Phase 94] Privileges beside VMS 7.1's
+
+- **Where**: `internal/corevms/privrules.go` (the gate and its rules), `logicals.go`, `dcllogicals.go`,
+  `dclprocess.go`, `knownfiles.go`; `internal/dclcmd`'s `setprocess.go`, `terminal.go`, `install.go`;
+  `docs/planning/PHASE-94 - privileges.md`, A.4 and the log.
+- **What**: every privilege check is held to VMS 7.1's answers in `testdata/priv94`'s two rounds. What those answers
+  couldn't settle was chosen and is listed in each subtask's log as unconfirmed; the differences a program or a user
+  could notice:
+  - **Logical name tables**: a job table is owned by the job's UIC, `(S:RWCD,O:RWCD,G,W)`; a process-private table
+    isn't checked; a search list's `$TRNLNM` passes over a table it may not read, NOPRIV only if no other has the
+    name; a name's size against a table's quota is govax's model (32 bytes, the name, 8 and the text per string,
+    rounded to 16); CREATE/NAME_TABLE's `/PROTECTION` gives a category not named no access, and without it the mask
+    is 0.
+  - **The terminal**: govax keeps one set of characteristics, so SET TERMINAL/PERMANENT changes the current ones too,
+    and a refused one changes nothing; a device that isn't a terminal is NOTSET with SS$_IVDEVNAM.
+  - **Other processes**: SET PROCESS/SUSPEND of the process itself does nothing; SHOW PROCESS of the process itself
+    shows its default directory.
+  - **Messages**: SET's NOTSET and INSTALL's messages have govax's facility and message numbers; MOUNT's,
+    DISMOUNT's, and INITIALIZE/CONTAINER's refusal is `%SYSTEM-F-NOPRIV` alone.
+  - **Installed images**: an entry is for the version installed, so a later version runs unprivileged until
+    reinstalled; ADD of an installed file is `-INSTALL-E-KFEXISTS`; LIST's columns past `Prv` and its shared counts
+    are govax's reading; the list lasts for the session, and the qualifiers but `/PRIVILEGED` change nothing.
+  - **`$ULKPAG`** of a locked page returned `SS$_ACCVIO`'s value on VMS 7.1 whenever a probe case called it; govax
+    returns SS$_WASSET, which VMS gave from the case's undo. Not a matter of privilege, and not understood.
+- **Status**: kept until a probe shows otherwise.

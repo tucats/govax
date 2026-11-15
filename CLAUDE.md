@@ -840,6 +840,26 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `$GET_SECURITY`, `$SET_SECURITY` in `corevms`; SECURESHR's `$PARSE_ACL`,
   `$FORMAT_ACL`, `$CHANGE_ACL`, `$CHECK_ACCESS` in `internal/securertl`)
   with their macros; held to VMS 7.1 by `testdata/prot93`'s three rounds.
+  Phase 94 (planned 2026-11-15, the plan accepted by the author the same
+  day, its "The review"; done 2026-11-15; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is privileges, the second
+  precursor to identities other than SYSTEM: every operation VMS guards
+  with a privilege is a `PrivilegeRule` in `corevms/privrules.go` (its
+  privileges, all or any, exempt modes, status, source), and every check
+  names one through the gate (`requirePrivilege`, `requirePrivilegeAt`,
+  `holdsPrivilege`; DCL's own commands through `CommandPrivilege` and
+  `commandRules`, another process through `mayAffect`/`MayAffect`), traced
+  by SET DEBUG PRIVILEGES; `TestNoUncheckedPrivileges` (nothing else reads
+  `CurrentPrivileges` but the mask managers), `TestEveryServiceHasPrivilegeRules`
+  (`serviceRules`), and `TestEveryPrivilegeRuleUsed`. Masks are 64 bits;
+  logical name tables have owners and protections (`lnm/profile.go`),
+  asked before SYSNAM or GRPNAM (`lnmTableAccess`); DEFINE, ASSIGN,
+  DEASSIGN, and CREATE/NAME_TABLE are the services' work from supervisor
+  mode (`corevms/dcllogicals.go`); SET PROCESS (`dclcmd/setprocess.go`),
+  SET TERMINAL (`dclcmd/terminal.go`), and INSTALL (`dclcmd/install.go`;
+  the known file list, `corevms/knownfiles.go`, and
+  `Environment.StartImage`, the activator's last step, giving an installed
+  image's IMAGPRIV); held to VMS 7.1 by `testdata/priv94`'s two rounds.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1165,6 +1185,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `TestFTN86Procedure` rehearses it on govax, and `TestFTN86Oracle` holds that run to VMS's log (`vax/`) but for `ftn86VMSDifferences`.
 - `testdata/for88/` — Phase 88's round 2, FORRTL on indexed files (README.md, which has FOR$OPEN's KEY= block and FOR$READ_KU's arguments): `gen.go` writes `for88.mar` (310 cases), `for88.com`, `exchange.cmd`, and `copyout.cmd`; `vax/` is VMS V7.1's run and the files it made. `TestFor88Oracle` runs it on FORRTL over govax's RMS and holds its output and files to them but for `for88Differences`. `for88f.mar` (by hand) passes all the program's `FOR$` calls to FTNRTL for `TestFor88OnFTNRTL`.
 - `testdata/prot93/` — Phase 93's probe of file protection (README.md), three rounds on VMS 7.1 with test accounts PROT93A [200,1], PROT93B [200,2], and PROT93C [300,1]: `prot93.mar` and its procedures (rounds 1 and 2: RMS, the ACP, and DCL under each identity and privilege pass), and `gen3.go`'s `sec93.mar` (round 3: every security service, parts by `SEC93_PART`), with `vax/`'s logs; `TestSec93ACLOracle`, `TestSec93CheckOracle`, `TestSec93SecurityOracle`, and the `prot93*_test.go` oracles hold govax to them. Round 9 of `testdata/mp/macros` is the services' macros.
+- `testdata/priv94/` — Phase 94's probe of privileges (README.md), two rounds on VMS 7.1 with test accounts PRIV94 [200,3] (authorized for every privilege, holding TMPMBX and NETMBX) and PRIV94N [200,4] (authorized for those two): `gen.go` writes `priv94.mar` (289 cases, parts by `PRIV94_PART`, each body run with exactly its privileges from user, executive, or kernel mode), `priv94h.mar` (the holder processes in groups 200 and 300), `priv94i.mar` (an installed image), `priv94d.com` (DCL's side, each identity), and round 2's `priv94b.mar` and `priv94e.com`; `vax/` is VMS's logs. `TestPriv94Oracle`, `TestPriv94BOracle`, and `internal/console`'s other `priv94*_test.go` replay them as each identity.
 - `testdata/vms93/` — Phase 93's VMS round (README.md): `exchange.cmd` makes a volume of files govax gave owners, protections, and ACLs, and `vms93.com` has VMS list them and check each account's access (`vms93c.mar`, and govax's image of it) and UFO opens (`vms93u.mar`); `TestVMS93Procedure` runs it on govax, holds it to VMS 7.1's `vax/vms93.log`, and holds govax's image of VMS93C to VMS's (`vax/vms93c.exe`).
 - `testdata/lnm91/` — Phase 91's probe of concealed and rooted logical names (README.md): `lnm91.mar`, a program that takes its RMS cases from data lines, and `gen.go`'s `lnm91.com`, the cases and DCL's commands on a tree the procedure makes; `vax/` is VMS V7.1's runs; `lnm91b.com` is round 2, names with plain directories, 15 levels, and angle brackets.
 - `testdata/rms88/` — indexed files end to end (Phase 88, subtask 14; README.md): `phones.mar` makes a file by every RMS record service, `phonesl.mar` and `phonesc.mar` share it between two processes, `phonesf.for` and `phones.com` are FORTRAN and DCL on it (`TestIndexedPhones`), and `load.for` is a load big enough for two index levels (`TestIndexedLoad`); expected output by hand, `load.out` from `make_load_out.py`'s model.

@@ -2894,7 +2894,87 @@ order:
 
 At govax's own `$ ` prompt, Ctrl/C cancels the line and Ctrl/Y ends govax.
 
-### 7.14 What's VMS's and what isn't
+### 7.14 Privileges
+
+A process's privileges are four 64-bit masks in its `Process` record, a
+bit per privilege by `$PRVDEF`'s numbering: `AuthorizedPrivileges`
+(AUTHPRIV, what it may turn on), `ProcessPrivileges` (PROCPRIV, what it
+has between images), `ImagePrivileges` (IMAGPRIV, the running image's
+installed ones), and `CurrentPrivileges` (CURPRIV, what it has now).
+Only the current mask decides anything. Process 1 starts with every bit
+of all but the image's set, and a created process gets its creator's
+current mask, or the mask `$CREPRC` names, cut to the creator's unless
+the creator holds SETPRV (7.10).
+
+**The gate.** Every operation VMS guards with a privilege is a
+`PrivilegeRule` in `corevms/privrules.go`, a package variable made by
+`newRule`: the operation's name ("`$CREMBX` permanent", "a process in
+another group"), the privileges it needs, all of them or any one, the
+caller modes it exempts, the status it refuses with, and where the rule
+came from (the System Services manual's page, a probe case run on VMS
+7.1). A service doesn't look at the mask; it names a rule and asks:
+
+```go
+if st := env.requirePrivilege(ruleDelmbx); st != 0 {
+    return st, nil
+}
+```
+
+`requirePrivilege` judges by the caller's current mode (the CPU's PSL),
+`requirePrivilegeAt` by a mode the caller passes (a service whose mode
+argument decides, and DCL's commands, which ask from supervisor mode,
+`dclMode`), and `holdsPrivilege` answers true or false for the services
+whose answer to a missing privilege isn't a failure: `$SETPRI` and
+`$CREPRC` lower a priority to the caller's base, `$CREPRC` cuts a mask, a
+logical name at an inner mode is made at the caller's. All three come down
+to `privilegeGranted`, which is a few lines: exempt by the caller's mode,
+or holding the rule's bits, or refused. Each decision is a line of `SET
+DEBUG PRIVILEGES`'s trace (`tracePrivileges`).
+
+The point of one gate is that the coverage can be tested. Three tests do:
+`TestNoUncheckedPrivileges` reads every Go file under `internal` and `cmd`
+and fails if a function outside a short list of mask managers (`$SETPRV`,
+image rundown, `$CREPRC`'s copy, JPI$_CURPRIV, the protection rule's
+credentials) mentions `CurrentPrivileges`;
+`TestEveryServiceHasPrivilegeRules` holds `serviceRules`, a map from every
+registered service to the rules it can ask about, to the service table
+both ways, so a new service must decide; and `TestEveryPrivilegeRuleUsed`
+fails on a rule nothing names. DCL's commands that act in Go with no
+service of their own (MOUNT, DISMOUNT, INITIALIZE/CONTAINER, INSTALL) ask
+through `CommandPrivilege` with a name from `commandRules`; STOP and SET
+PROCESS of another process through `MayAffect`, the same test `$DELPRC`
+makes.
+
+**Protection first.** Where VMS lets either an object's protection or a
+privilege grant an operation, the protection is asked first, through
+`internal/security`'s rule (9.13) with the process's credentials, which
+carry its privileges, so BYPASS, SYSPRV, GRPPRV, and READALL count there.
+A logical name table has an owner and protection (`lnm.Table`; the
+system table `[1,4]` `(S:RWC,O:RWC,G:R,W:R)`, VMS 7.1's), so a process in
+a system group writes the system table with no privilege, and only when
+the protection refuses is SYSNAM, or GRPNAM for the group table, asked
+(`lnmTableAccess`, `corevms/logicals.go`). Mailboxes, global sections, and
+common event flag clusters are the same, through their own protections
+(7.9).
+
+**Another process.** `mayAffect` is VMS's rule for every service that
+reaches another process (`$WAKE`, `$SUSPND`, `$SETPRI`, `$GETJPI`,
+`$FORCEX`, `$DELPRC`, and the rest): its own UIC freely, GROUP or WORLD
+for one in its group, WORLD for any other. Its system UIC gives process 1
+nothing over other groups' processes; VMS 7.1 gave SYSTEM nothing either.
+
+**Installed images.** The System keeps a known file list
+(`corevms/knownfiles.go`, `KnownFileList`), an entry per installed image
+by its physical name without the version (`KnownFileKey`) holding the
+version installed, its privileges, and INSTALL's other attributes. The
+image activator's last step, in both loaders, is
+`Environment.StartImage`: it sets JPI$_IMAGNAME, and for an image on the
+list at its installed version sets IMAGPRIV to the entry's privileges and
+CURPRIV to PROCPRIV | IMAGPRIV. Image rundown's `resetImagePrivileges`
+copies PROCPRIV back to CURPRIV and clears IMAGPRIV, which also takes away
+whatever the image enabled temporarily with `$SETPRV`.
+
+### 7.15 What's VMS's and what isn't
 
 - **The scheduler is Go**, called between instructions, not a software
   interrupt at IPL 3; ASTLVL and the AST delivery interrupt aren't used
@@ -2913,6 +2993,12 @@ At govax's own `$ ` prompt, Ctrl/C cancels the line and Ctrl/Y ends govax.
   own; there is no CLI image in P1, and LOGINOUT is a name, not an image.
 - **At most 255 processes**, and the PID's layout is govax's choice in
   VMS 7's form (7.2).
+- **One account, SYSTEM**, with no AUTHORIZE or logins: a process of
+  another UIC comes from `$CREPRC`, and its authorized privileges are the
+  ones it was given. The privilege checks are VMS 7.1's (7.14), but
+  `$SETIME`, `$MOUNT`, `$DISMOU`, and the rights and UAF services aren't
+  there to make theirs; the known file list lasts for the session, and of
+  INSTALL's attributes only the privileges do anything.
 
 ## 8. I/O
 

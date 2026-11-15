@@ -247,7 +247,18 @@ func tableProtectionText(t *lnm.Table) string {
 		}
 	}
 
-	return fmt.Sprintf("%v (%s)", security.UIC(t.Owner), strings.Join(parts, ","))
+	return fmt.Sprintf("%s (%s)", tableOwnerText(security.UIC(t.Owner)), strings.Join(parts, ","))
+}
+
+// tableOwnerText is a table's owner in the trace: [group,member] in
+// octal, with a wildcard member, which a group table's owner has, shown
+// as VMS shows it, [1,*].
+func tableOwnerText(owner security.UIC) string {
+	if owner.Member() == security.WildMember {
+		return fmt.Sprintf("[%o,*]", owner.Group())
+	}
+
+	return owner.String()
 }
 
 // firstTable is the first table tabnam designates, or nil when it

@@ -143,6 +143,7 @@ questions, and a progress log extended as that phase is worked.
 | 91 | [PHASE-91 - concealed logical names](PHASE-91%20-%20concealed%20logical%20names.md) | Concealed logical names and rooted directories (`DEV:[ROOT.]`), RMS's two name processors made one, and the system names on the root `_DUA0:[SYSTEM.]` — planned 2026-11-09, the plan accepted the same day; done 2026-11-09 |
 | 92 | [PHASE-92 - documentation](PHASE-92%20-%20documentation.md) | Standalone guides to govax's internals, a document per part: Part A is `VAX-VMS-INTERNALS.md`, how govax is a VAX and how it gives a program VMS — planned and done 2026-11-11 |
 | 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day; done 2026-11-15, with the VMS round |
+| 94 | [PHASE-94 - privileges](PHASE-94%20-%20privileges.md) | Every operation VMS guards with a privilege guarded by the same privilege, through one table-driven gate (`corevms/privrules.go`) traced by SET DEBUG PRIVILEGES; logical name tables' protection; DCL's commands, the terminal driver, and seeing other processes by VMS's rules; SET PROCESS, SET TERMINAL, and INSTALL with installed images' privileges; a precursor to identities other than SYSTEM — planned 2026-11-15, the plan accepted the same day; done 2026-11-15 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -695,3 +696,26 @@ MANUAL.md's "File protection" (section 5) is the user's side, and VAX-VMS-INTERN
 the phase left is its doc's "Where things stand". The VMS round (`testdata/vms93`) found VMS reading govax's files and
 judging every access as govax does; it also found LINK naming SECURESHR with no pages, which VMS refused, and settled
 which user file opens RMS refuses, both fixed.
+
+## Privileges (Phase 94)
+
+Phase 94 (2026-11-15) made every operation VMS guards with a privilege guarded in govax by the same privilege, checked
+against the process's current mask when it's asked for, as the second precursor to identities other than SYSTEM. Its
+doc's Part A is the survey and the probe's answers (`testdata/priv94`, two rounds on VMS 7.1, with test accounts on the
+VAX), Part B the decisions with the author's review, and its log the work.
+
+- **One gate:** each guarded operation is a `PrivilegeRule` in `corevms/privrules.go` (its privileges, the caller
+  modes it exempts, its status, its source), and every check names one; `TestNoUncheckedPrivileges`,
+  `TestEveryServiceHasPrivilegeRules`, and `TestEveryPrivilegeRuleUsed` keep the coverage whole, and `SET DEBUG
+  PRIVILEGES` traces each decision.
+- **Held to VMS:** the services' rules, inner-mode exemptions, and quieter answers (`$SETPRI`, `$CREPRC`, `$SETPRV`'s
+  NOTALLPRIV, 64-bit masks); `$SETSWM`; logical name tables with owners and protections asked before SYSNAM and GRPNAM;
+  the terminal's IO$_SETCHAR; another process by GROUP and WORLD, the system UIC getting nothing extra.
+- **DCL:** DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE, SHOW LOGICAL, STOP, SHOW PROCESS, F$GETJPI, and F$PID by the
+  services' rules from supervisor mode; SET PROCESS's `/PRIORITY`, `/SUSPEND`, and `/RESUME`; SET TERMINAL; govax's
+  MOUNT and DISMOUNT needing SYSNAM, INITIALIZE/CONTAINER over a container VOLPRO.
+- **Installed images:** INSTALL ADD, REMOVE, and LIST and the known file list; an image installed `/PRIVILEGED` runs
+  with CURPRIV = PROCPRIV | IMAGPRIV.
+
+MANUAL.md's section 11, "Privileges", is the user's side, and VAX-VMS-INTERNALS.md's 7.14 the developer's. What the
+phase left is its doc's "Where things stand".

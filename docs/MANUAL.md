@@ -120,7 +120,7 @@ replays those VMS runs to keep it that way.
   privileges. There is no login, no user authorization file, no batch
   or print queues, no networking (DECnet or TCP/IP), and no cluster.
 - **Some things VMS does are missing or simplified.** For example,
-  there is no `INSTALL`, and there is no swapping. Where
+  there is no `RUN/DETACH`, and there is no swapping. Where
   govax knowingly differs from VMS, this manual says so, and
   `docs/DEVIATIONS.md` keeps the detailed list.
 
@@ -920,7 +920,8 @@ PROCESS/PRIVILEGES` (sections 6.1 and 6.6). A program has the services:
 with their macros in govax's system macro library. There is no
 AUTHORIZE: the only account is SYSTEM, and identifiers other than UICs
 and the environmental ones (`INTERACTIVE`, `BATCH`, ...) can't be made.
-Alarm and audit entries are kept and shown, and do nothing.
+Alarm and audit entries are kept and shown, and do nothing. What else
+each privilege guards is section 11's [Privileges](#privileges).
 
 ### Moving files between the host and a volume
 
@@ -2077,7 +2078,9 @@ STOP [process-name] [/IDENTIFICATION=pid] [/IMAGE] [/EXIT[=mode] | /NOEXIT]
 With a process, deletes it (and its subprocesses), or with `/IMAGE` ends
 only the image it's running. Without one, in a command procedure, ends
 every procedure and returns to the prompt. The console's own process
-(PID `00000301`) can't be stopped.
+(PID `00000301`) can't be stopped. Stopping another process needs GROUP
+for one in your group and WORLD for any other (`%SYSTEM-F-NOPRIV`), and a
+process name is looked for only in your own group.
 
 #### SHOW SYSTEM and SHOW PROCESS
 
@@ -2087,18 +2090,50 @@ SHOW PROCESS [process-name] [/IDENTIFICATION=pid]
 ```
 
 List the processes, with their states, priorities, CPU time, and page
-use, and show one process's details.
+use, and show one process's details. `SHOW SYSTEM` lists every process to
+everyone, as VMS's does; showing another process needs GROUP or WORLD, as
+for `STOP`, and `F$GETJPI` and `F$PID` follow the same rule (`F$PID`
+passes over a process you may not see).
 
-#### SET PROCESS/PRIVILEGES
+#### SET PROCESS
 
 ```text
 SET PROCESS/PRIVILEGES=(privilege[,...])     ! NOname turns one off
+SET PROCESS [process-name] [/IDENTIFICATION=pid] [/PRIORITY=n] [/SUSPEND] [/RESUME]
 SHOW PROCESS/PRIVILEGES
 ```
 
-Turns the process's privileges on and off (`ALL`, `NOALL`). SYSTEM is
-authorized for every one; turning off BYPASS, SYSPRV, GRPPRV, and
-READALL makes file protection apply to it.
+`/PRIVILEGES` turns your own process's privileges on and off (`ALL`,
+`NOALL`). SYSTEM is authorized for every one; turning off BYPASS, SYSPRV,
+GRPPRV, and READALL makes file protection apply to it. The other
+qualifiers change a process's priority, or suspend or resume it, yours
+by default. Another process needs GROUP or WORLD (`%SET-E-NOTSET, error
+modifying 00000130` and `-SYSTEM-F-NOPRIV`), and a priority above your
+base needs ALTPRI. Section 11's [Privileges](#privileges) has the whole
+story.
+
+#### INSTALL
+
+```text
+INSTALL ADD file [/PRIVILEGED=(privilege[,...])] [/OPEN] [/SHARED] [/HEADER_RESIDENT] ...
+INSTALL LIST [file] [/FULL]
+INSTALL REMOVE file
+```
+
+Keeps the known file list: an image installed `/PRIVILEGED` runs with
+those privileges, whoever runs it. ADD and REMOVE need CMKRNL. See
+[Privileges](#privileges) and `HELP INSTALL`.
+
+#### SET TERMINAL
+
+```text
+SET TERMINAL [device] [/WIDTH=n] [/PAGE=n] [/DEVICE_TYPE=type] [/[NO]PERMANENT] [/[NO]characteristic ...]
+```
+
+Changes the terminal's characteristics as programs see them
+(`IO$_SENSEMODE`, `F$GETDVI`, `SHOW DEVICES/FULL`), not the host's
+window. `/PERMANENT` needs LOG_IO or PHY_IO. `HELP SET TERMINAL` lists
+the characteristics.
 
 #### WAIT
 
@@ -2766,7 +2801,7 @@ behaves as VMS's in the cases they cover. The differences to know about:
 - Commands that aren't VMS's: the machine commands of section 6.9, `PRINT`,
   `TIME`, and `F$CONFIG`.
 - Commands VMS has that govax doesn't include `SUBMIT`, `PRINT` (VMS's,
-  for queues), `SET TERMINAL`, `SET PROCESS` (but for `/PRIVILEGES`), `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `DIFFERENCES`, `SEARCH`, `EDIT`, `INSTALL`, `ANALYZE/DISK`, and
+  for queues), `RUN/DETACH`, `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `DIFFERENCES`, `SEARCH`, `ANALYZE/DISK`, and
   the compilers.
 - `F$MODE()` is always `INTERACTIVE`; there's no batch.
 - govax's `@` reads a procedure from a host file as well as a volume.
@@ -4213,6 +4248,122 @@ They communicate through mailboxes, common event flags, global sections,
 the lock manager, and shared files, as on VMS. `SHOW SYSTEM` lists them,
 `STOP` deletes one, and the debugger's `SET PROCESS` lets you look at
 one. Section 13 describes how they're scheduled.
+
+### Privileges
+
+A VMS process holds a set of *privileges*, each letting it do one kind of
+thing VMS otherwise refuses: put names in the system logical name table
+(SYSNAM), create a permanent mailbox (PRMMBX), affect another group's
+processes (WORLD), and so on, 39 in all. govax checks every one VMS
+checks, for system services, `$QIO` functions, run-time library routines,
+lexical functions, and DCL commands alike, against the process's privileges
+at the moment it asks.
+
+A process has four privilege masks, each 64 bits, a bit per privilege:
+
+| Mask | What it is |
+| --- | --- |
+| Authorized (AUTHPRIV) | The privileges the process may turn on. |
+| Permanent (PROCPRIV) | The ones it has between images. |
+| Image (IMAGPRIV) | The ones the running image was installed with (below). |
+| Current (CURPRIV) | The ones it has now, and the only ones checked. |
+
+`SHOW PROCESS/PRIVILEGES` shows the authorized and current masks,
+`F$GETJPI` all four (`AUTHPRIV`, `PROCPRIV`, `IMAGPRIV`, `CURPRIV`), and
+`F$PRIVILEGE` tests the current one. `SET PROCESS/PRIVILEGES=(name,...)`
+and `F$SETPRV` turn privileges on and off for the process (`NOname` turns one
+off, `ALL` and `NOALL` every one), and a program does it with `$SETPRV`:
+temporarily, until its image exits, or permanently. A privilege the
+process isn't authorized for isn't turned on unless it holds SETPRV:
+`$SETPRV` turns on the others and returns `SS$_NOTALLPRIV`. When an image
+exits, the current mask becomes the permanent mask again.
+
+The console's process is `SYSTEM`, UIC `[1,4]`, authorized for every
+privilege and holding them all, so nothing is refused it until it turns
+some off. Its UIC also puts it in the SYSTEM category of every object's
+protection, which grants some things with no privilege at all: SYSTEM
+writes the system logical name table by the table's protection, without
+SYSNAM. What it keeps without a privilege is what an account in a system
+group keeps on VMS.
+
+```text
+VAX> SET PROCESS/PRIVILEGES=(NOSYSNAM,NOSYSPRV,NOLOG_IO,NOPHY_IO)
+VAX> DEFINE/SYSTEM/EXECUTIVE_MODE GREETING "HELLO"
+VAX> SHOW LOGICAL/FULL GREETING
+   "GREETING" [super] = "HELLO" (LNM$SYSTEM_TABLE)
+VAX> SET TERMINAL/PERMANENT/WIDTH=80
+%SET-W-NOTSET, error modifying TTA0:
+-SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+```
+
+The name went in by the table's protection, but at supervisor mode:
+an executive-mode name needs SYSNAM, and without it VMS quietly makes
+a name of the caller's mode. `/PERMANENT` needs LOG_IO or PHY_IO.
+
+**What each privilege guards in govax.** A refusal is
+`SS$_NOPRIV` ("insufficient privilege or object protection violation")
+unless the table says otherwise; a DCL command shows it under its own
+message, or alone.
+
+| Privilege | Guards |
+| --- | --- |
+| SYSNAM | Writing the system logical name table past its protection; any logical name at a mode inner to the caller's (else made at the caller's mode, silently); `MOUNT` and `DISMOUNT` (every volume govax mounts is known to every process) |
+| GRPNAM | Writing your group's logical name table past its protection |
+| SYSPRV | Every object's SYSTEM category: files, logical name tables (shareable ones are made in `LNM$SYSTEM_DIRECTORY`, so making one needs it, or a system UIC), mailboxes, sections; the name of a permanent mailbox |
+| BYPASS, READALL, GRPPRV | File protection (section 5) and other objects' protection; BYPASS or SYSPRV for another's mailbox's `IO$_SETPROTECTION` |
+| GROUP, WORLD | Another process: `$WAKE`, `$SCHDWK`, `$CANWAK`, `$SUSPND`, `$RESUME`, `$SETPRI`, `$GETJPI`, `$FORCEX`, `$DELPRC`, and from DCL `STOP`, `SET PROCESS`, `SHOW PROCESS`, `F$GETJPI`, and `F$PID`. GROUP (or WORLD) for one in your own group, WORLD for any other; a system UIC gets nothing extra. `$GETLKI` of another group's lock needs WORLD (`SS$_NOWORLD`) |
+| ALTPRI | A priority above your base: `$SETPRI` and `$CREPRC` lower it to your base without complaint, and `SET PROCESS/PRIORITY` says `%SET-E-NOTSET, need ALTPRI privilege to elevate above base priority` |
+| TMPMBX, PRMMBX | `$CREMBX` of a temporary or permanent mailbox; PRMMBX for `$DELMBX`, from any mode but kernel |
+| PRMCEB | A permanent common event flag cluster, and `$DLCEFC` of one another process made |
+| SYSGBL, PRMGBL | A system-wide, or permanent, global section: `$CRMPSC` and `$DGBLSC` |
+| SYSLCK | `$ENQ` and `$GETLKI` of a system-wide resource from user or supervisor mode (`SS$_NOSYSLCK`) |
+| DETACH, CMKRNL | `$CREPRC` with a UIC other than yours, or a batch or network process |
+| SETPRV | `$CREPRC` giving the new process privileges you lack (else cut to yours); `$SETPRV` of one you aren't authorized for (`SS$_NOTALLPRIV`) |
+| PSWAPM | `$LCKPAG`, `$SETSWM`, and `$CREPRC`'s `PRC$M_PSWAPM` |
+| ACNT | `$CREPRC`'s `PRC$M_NOACNT` |
+| NETMBX | `$CREPRC` of a network process |
+| OPER | `$SNDOPR`'s operator functions, `$BRKTHRU` to another user or to every terminal (`SS$_NOOPER`) |
+| LOG_IO, PHY_IO | A disk's logical block I/O (either) and physical block I/O (PHY_IO); a terminal's `IO$_SETCHAR` and `SET TERMINAL/PERMANENT` (either) |
+| CMKRNL, CMEXEC | `$CMKRNL` (CMKRNL), `$CMEXEC` (either); `INSTALL ADD` and `REMOVE` (CMKRNL, `%SYSTEM-F-NOCMKRNL`) |
+| VOLPRO | `INITIALIZE/CONTAINER` over a container that already exists |
+
+A caller already in an inner mode needs no privilege for `$CMKRNL`,
+`$CMEXEC`, `$SETPRV`, `$ENQ`'s and `$GETLKI`'s SYSLCK (executive and
+kernel), and `$DELMBX` (kernel only); every other check applies from
+every mode, as VMS 7.1 was found to apply it. `SHOW SYSTEM` lists every
+process to everyone, as VMS's does: there, SHOW is installed with WORLD.
+The machine's own commands (section 6.9) ask for no privilege, but only
+the console's process may use them.
+
+**Installed images.** `INSTALL ADD file/PRIVILEGED=(name,...)` puts an
+image on the *known file list*: whoever runs it, its privileges are its
+image privileges, turned on in the current mask while it runs and gone
+when it exits. That's how a program a system manager trusts does for any
+user what needs a privilege the user hasn't got. `INSTALL LIST [/FULL]`
+shows the list and `INSTALL REMOVE` takes an entry away; ADD and REMOVE
+need CMKRNL. An entry is for the version of the file installed, on a
+mounted volume, and the list lasts as long as the session. The other
+qualifiers (`/OPEN`, `/SHARED`, `/HEADER_RESIDENT`, ...) are recorded and
+listed, and change nothing. `HELP INSTALL` has the details.
+
+**Watching the checks.** `SET DEBUG PRIVILEGES` (or `vax.debug.privileges`)
+writes a line for each decision: the process, the caller's mode, the
+operation, what it needs, and the answer. Where a logical name table's
+protection may grant the operation first, its answer is a line too:
+
+```text
+VAX> SET DEBUG PRIVILEGES
+VAX> DEFINE/GROUP/EXECUTIVE_MODE COLOR "BLUE"
+DEBUG(PRIVILEGES): 00000301 SUPERVISOR mode: logical name: a mode inner to the caller's (needs SYSNAM): refused, SS$_NOPRIV
+DEBUG(PRIVILEGES): 00000301 SUPERVISOR mode: logical name: write LNM$GROUP_000001: by its protection [1,*] (S:RWCD,O:R,G:R,W), granted, has RWCD (system,group,ownership); no privilege asked
+VAX> SET DEBUG NOPRIVILEGES
+```
+
+The name was made at supervisor mode, DCL's: the first line is why.
+There is still only one account, `SYSTEM`; without AUTHORIZE and logins,
+a process with another UIC comes from `$CREPRC` (section 11's
+[Processes](#processes)). `$SETIME`, `$MOUNT`, `$DISMOU`, and the rights
+and UAF services aren't there to check.
 
 ### Limits
 
@@ -7455,7 +7606,7 @@ side effects follow DIGITAL's *System Services Reference Manual*.
 | Event flags | `$SETEF`, `$CLREF`, `$READEF`, `$WAITFR`, `$WFLOR`, `$WFLAND`, `$ASCEFC`, `$DACEFC`, `$DLCEFC` |
 | ASTs and synchronization | `$DCLAST`, `$SETAST`, `$SYNCH` |
 | Conditions and exit | `$EXIT`, `$DCLEXH`, `$CANEXH`, `$UNWIND`, `$SETEXV`, `$SETSFM`, `$DCLCMH`, `$GETMSG`, `$PUTMSG`, `$FAO`, `$FAOL` |
-| Processes | `$CREPRC`, `$DELPRC`, `$HIBER`, `$WAKE`, `$SUSPND`, `$RESUME`, `$FORCEX`, `$SETPRI`, `$SETPRN`, `$SETPRV`, `$SETRWM`, `$CMKRNL`, `$CMEXEC` |
+| Processes | `$CREPRC`, `$DELPRC`, `$HIBER`, `$WAKE`, `$SUSPND`, `$RESUME`, `$FORCEX`, `$SETPRI`, `$SETPRN`, `$SETPRV`, `$SETRWM`, `$SETSWM`, `$CMKRNL`, `$CMEXEC` |
 | Information | `$GETJPI(W)`, `$GETSYI(W)`, `$GETDVI(W)`, `$GETLKI(W)`, `$ASCTOID`, `$IDTOASC` |
 | Mailboxes | `$CREMBX`, `$DELMBX` |
 | Memory | `$EXPREG`, `$CRETVA`, `$DELTVA`, `$CNTREG`, `$ADJSTK`, `$SETPRT`, `$ADJWSL`, `$PURGWS`, `$LKWSET`, `$ULWSET`, `$LCKPAG`, `$ULKPAG` |
@@ -7586,8 +7737,9 @@ The main differences, gathered from the rest of the manual:
 - No VMS boot, executive, or compilers; MACRO-32 and govax's own FORTRAN are
   the languages you can build in (sections 1 and 14).
 - One user, `SYSTEM`, with all privileges (which `SET PROCESS/PRIVILEGES`
-  can turn off); no login, AUTHORIZE, batch, print queues, networking, or
-  clusters. File protection and ACLs are enforced on volume files, but a
+  can turn off; every privilege VMS checks is checked, section 11); no
+  login, AUTHORIZE, batch, print queues, networking, or clusters. Installed
+  images' qualifiers but `/PRIVILEGED` are recorded and do nothing. File protection and ACLs are enforced on volume files, but a
   volume's own protection isn't, and alarms and audits do nothing.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
   not host files (section 5). Indexed files are Prolog 3 only: a lower
