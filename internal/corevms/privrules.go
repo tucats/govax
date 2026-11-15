@@ -153,29 +153,24 @@ func newRule(name, privileges, source string, options ...ruleOption) *PrivilegeR
 // The rules. Sources: "SSRM" is the VMS 5.0 System Services Reference
 // Manual's entry for the service; "probe n" is testdata/priv94's case n
 // (round 1's priv94.mar, or "round 2" priv94b.mar), whose answers the
-// phase doc's A.4 gives. The services' rules follow the probe since
-// subtask 4 (TestPriv94Oracle holds them to it); the logical name rules
-// still say what govax did before, until subtask 5 adds the tables'
-// protection.
+// phase doc's A.4 gives. The rules follow the probe since subtasks 4 and
+// 5 (TestPriv94Oracle holds them to it). Where an object's protection
+// can grant an operation too (a logical name table, a mailbox), the
+// protection is asked first, and the rule is only the privilege that
+// overrides it: SYSPRV's part is the protection's (lnmTableAccess).
 var (
 	// Logical names ($CRELNM, $DELLNM, $CRELNT, $CRELOG, $DELLOG,
 	// LIB$SET_LOGICAL, LIB$DELETE_LOGICAL).
-	ruleLnmSystemTable = newRule("logical name: write the system table", "SYSNAM SYSPRV",
-		"SSRM $CRELNM; probe 5, 7", anyOf)
-	ruleLnmGroupTable = newRule("logical name: write the group table", "GRPNAM SYSPRV",
-		"SSRM $CRELNM; probe 9 to 11", anyOf)
-	ruleLnmSystemDirectory = newRule("logical name: write the system directory", "SYSPRV",
-		"SSRM $CRELNT; probe 52 to 55")
-	ruleLnmShareableTable = newRule("$CRELNT shareable table", "SYSPRV",
-		"SSRM $CRELNT; probe round 2's 18 to 29")
+	ruleLnmSystemTable = newRule("logical name: write the system table past its protection", "SYSNAM",
+		"SSRM $CRELNM; probe 4 to 7")
+	ruleLnmGroupTable = newRule("logical name: write the group table past its protection", "GRPNAM",
+		"SSRM $CRELNM; probe 8 to 11")
 	ruleLnmInnerMode = newRule("logical name: a mode inner to the caller's", "SYSNAM",
 		"SSRM $CRELNM (the mode is maximized); probe 22 to 24")
 
 	// Mailboxes.
 	ruleCrembxTemporary = newRule("$CREMBX temporary", "TMPMBX", "SSRM $CREMBX; probe 80, 81")
 	ruleCrembxPermanent = newRule("$CREMBX permanent", "PRMMBX", "SSRM $CREMBX; probe 83, 84")
-	ruleCrembxName      = newRule("$CREMBX permanent with a logical name", "SYSNAM SYSPRV",
-		"probe round 2's 3 to 8", anyOf)
 	ruleDelmbx         = newRule("$DELMBX", "PRMMBX", "SSRM $DELMBX; probe 88 to 91", exempt(exemptKernel))
 	ruleMailboxSetProt = newRule("mailbox IO$_SETPROTECTION, not the owner", "BYPASS SYSPRV",
 		"probe 92 to 97", anyOf)
@@ -248,18 +243,18 @@ var (
 // serviceRules is, for every system service govax registers, the rules
 // it can ask the gate about; nil for none. $QIO's are its drivers'.
 var serviceRules = func() map[string][]*PrivilegeRule {
-	lnmWrite := []*PrivilegeRule{ruleLnmSystemTable, ruleLnmGroupTable, ruleLnmSystemDirectory, ruleLnmInnerMode}
+	lnmWrite := []*PrivilegeRule{ruleLnmSystemTable, ruleLnmGroupTable, ruleLnmInnerMode}
 	affects := []*PrivilegeRule{ruleProcessInGroup, ruleProcessOtherGroup}
 	qio := []*PrivilegeRule{ruleDiskLogical, ruleDiskPhysical, ruleMailboxSetProt}
 
 	m := map[string][]*PrivilegeRule{
 		"SYS$CRELNM": lnmWrite,
 		"SYS$DELLNM": lnmWrite,
-		"SYS$CRELNT": append([]*PrivilegeRule{ruleLnmShareableTable}, lnmWrite...),
-		"SYS$CRELOG": lnmWrite[:2],
-		"SYS$DELLOG": lnmWrite[:2],
+		"SYS$CRELNT": {ruleLnmInnerMode},
+		"SYS$CRELOG": lnmWrite,
+		"SYS$DELLOG": lnmWrite,
 
-		"SYS$CREMBX": {ruleCrembxTemporary, ruleCrembxPermanent, ruleCrembxName},
+		"SYS$CREMBX": {ruleCrembxTemporary, ruleCrembxPermanent, ruleLnmSystemTable},
 		"SYS$DELMBX": {ruleDelmbx},
 
 		"SYS$ASCEFC": {ruleAscefcPermanent},

@@ -58,6 +58,7 @@ func TimeFormatName(n int) string { return fmt.Sprintf("LIB$TIME_FORMAT_%03d", n
 func (db *Database) newDTFormatTable() {
 	t := newTable(DTFormatTableName, Executive, db.SystemDirectory)
 	t.permanent = true
+	t.Owner, t.Protection = SystemUIC, SystemTableProtection
 
 	db.catalog(t, db.SystemDirectory, Executive, 0)
 

@@ -388,7 +388,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	// process is sure to exist; the table goes when the process is
 	// deleted (endJob).
 	if detached {
-		table := env.Logicals.NewJobTable()
+		table := env.Logicals.NewJobTable(uic)
 		child.Logicals = env.Logicals.NewProcessView(uic, table)
 		child.Process.Job.LogicalTable = table
 	}

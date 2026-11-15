@@ -27,6 +27,13 @@ type Entry struct {
 
 	// Target is the table a table-name entry names; nil otherwise.
 	Target *Table
+
+	// charge is how many bytes of a table's quota this entry holds, and
+	// chargedTo that table (nil when nothing is charged): a name's own
+	// size, charged to its table, or a table's quota, charged to its
+	// parent (quota.go). Removing the entry gives them back.
+	charge    uint32
+	chargedTo *Table
 }
 
 // IsTable reports whether e is the name of a logical name table.
@@ -53,6 +60,21 @@ type Table struct {
 
 	// Attrs holds AttrConfine when set.
 	Attrs uint32
+
+	// Owner and Protection are the table's security profile: a UIC
+	// (group in the high word) and a VMS protection mask, four bits per
+	// category (system, owner, group, world, from the low bits), each
+	// bit set denying read, write, create, or delete. Only a shareable
+	// table's are checked (corevms's logical name services); the
+	// defaults are VMS 7.1's (profile.go).
+	Owner      uint32
+	Protection uint16
+
+	// Quota is how many bytes of names and child tables' quotas the
+	// table may hold, 0 for no limit, and Used how many it holds
+	// (quota.go).
+	Quota uint32
+	Used  uint32
 
 	// catalog is the directory entry that names this table.
 	catalog *Entry
@@ -147,6 +169,8 @@ func (t *Table) add(e *Entry) {
 }
 
 func (t *Table) remove(e *Entry) {
+	refund(e)
+
 	list := t.names[e.Name]
 	for i, x := range list {
 		if x == e {

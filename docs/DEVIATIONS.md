@@ -517,14 +517,11 @@ changed as a result.
 
 - **Where**: `internal/corevms/privilege.go` and the services that check.
 - **What**:
-  - No UIC-based object protection: VMS lets a process write a logical
-    name table (or delete a cluster, a mailbox, ...) the object's
-    protection grants it, whatever its privileges, and a system-UIC
-    process such as SYSTEM gets system access to most objects. govax
-    checks only the privileges, so disabling SYSNAM stops SYSTEM writing
-    the system table where VMS wouldn't.
-  - `$DELLNM`'s table check looks at the first table `tabnam` resolves
-    to, not the table the name is eventually found in.
+  - (Resolved in Phase 94's subtask 5: logical name tables have owners
+    and protections, checked before the privileges, so SYSTEM writes the
+    system table without SYSNAM as on VMS; and `$DELLNM` checks the table
+    the name is found in. Mailboxes, sections, and clusters already used
+    the protection rule since Phase 93.)
   - No installed images: `IMAGPRIV` is always empty.
   - Services govax doesn't have (`$CREPRC`'s DETACH, `$MOUNT`'s MOUNT,
     ...) and devices (LOG_IO, PHY_IO, SHARE) check nothing.

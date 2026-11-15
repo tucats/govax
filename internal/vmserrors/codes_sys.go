@@ -38,6 +38,7 @@ const (
 	sysTooManyLNam uint32 = 110  // SS$_TOOMANYLNAM: 884 >> 3
 	sysSupersede   uint32 = 198  // SS$_SUPERSEDE:  1585 >> 3
 	sysLNMCreated  uint32 = 214  // SS$_LNMCREATED: 1713 >> 3
+	sysExLnmQuota  uint32 = 1097 // SS$_EXLNMQUOTA: 8780 >> 3
 	sysParentDel   uint32 = 1098 // SS$_PARENT_DEL: 8788 >> 3
 	sysNoLogTab    uint32 = 1106 // SS$_NOLOGTAB:   8852 >> 3
 
@@ -105,6 +106,7 @@ const (
 	SS_TOOMANYLNAM = SYSFacility<<FacilityPosition | sysTooManyLNam<<MessagePosition | StatusSevere
 	SS_SUPERSEDE   = SYSFacility<<FacilityPosition | sysSupersede<<MessagePosition | StatusSuccess
 	SS_LNMCREATED  = SYSFacility<<FacilityPosition | sysLNMCreated<<MessagePosition | StatusSuccess
+	SS_EXLNMQUOTA  = SYSFacility<<FacilityPosition | sysExLnmQuota<<MessagePosition | StatusSevere
 	SS_PARENT_DEL  = SYSFacility<<FacilityPosition | sysParentDel<<MessagePosition | StatusSevere
 	SS_NOLOGTAB    = SYSFacility<<FacilityPosition | sysNoLogTab<<MessagePosition | StatusSevere
 
@@ -132,6 +134,7 @@ func init() {
 	DefineMessage(SS_TOOMANYLNAM, SYSFacility, "TOOMANYLNAM", "logical name translation exceeded allowed depth")
 	DefineMessage(SS_SUPERSEDE, SYSFacility, "SUPERSEDE", "logical name superseded")
 	DefineMessage(SS_LNMCREATED, SYSFacility, "LNMCREATED", "logical name table did not exist; has been created")
+	DefineMessage(SS_EXLNMQUOTA, SYSFacility, "EXLNMQUOTA", "logical name table is full")
 	DefineMessage(SS_PARENT_DEL, SYSFacility, "PARENT_DEL", "illegal attempt to delete parent logical name table")
 	DefineMessage(SS_NOLOGTAB, SYSFacility, "NOLOGTAB", "no logical name table name match")
 	DefineMessage(SS_NONEXPR, SYSFacility, "NONEXPR", "nonexistent process")

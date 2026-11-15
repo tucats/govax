@@ -451,21 +451,21 @@ The gate's rules as `corevms/privrules.go` holds them, printed by `go test
 "govax today" column describes, now one place in the code. Each row is a
 rule a check names; `serviceRules` says which services can ask about it.
 "SSRM" is the 5.0 System Services Reference Manual's entry, "probe n"
-`priv94.mar`'s case (round 2's are `priv94b.mar`'s). Since subtask 4 the
-services' rows are A.4's answers, which `TestPriv94Oracle` holds govax
-to; the logical name rows still say what govax did before, until subtask
-5 gives the tables their protection.
+`priv94.mar`'s case (round 2's are `priv94b.mar`'s). Since subtasks 4 and
+5 the rows are A.4's answers, which `TestPriv94Oracle` holds govax to.
+Since subtask 5 a logical name table's protection is asked first
+(Decision 4), so its rows are only the privileges that override it:
+SYSPRV's part, and the system category's, are the protection's, and
+`$CRELNT` of a shareable table and a permanent mailbox's name are write
+access to a table, with no rule of their own.
 
 | Operation | Needs | Exempt modes | Refusal | Source |
 | --- | --- | --- | --- | --- |
-| logical name: write the system table | SYSNAM or SYSPRV | none | SS$_NOPRIV | SSRM $CRELNM; probe 5, 7 |
-| logical name: write the group table | GRPNAM or SYSPRV | none | SS$_NOPRIV | SSRM $CRELNM; probe 9 to 11 |
-| logical name: write the system directory | SYSPRV | none | SS$_NOPRIV | SSRM $CRELNT; probe 52 to 55 |
-| $CRELNT shareable table | SYSPRV | none | SS$_NOPRIV | SSRM $CRELNT; probe round 2's 18 to 29 |
+| logical name: write the system table past its protection | SYSNAM | none | SS$_NOPRIV | SSRM $CRELNM; probe 4 to 7 |
+| logical name: write the group table past its protection | GRPNAM | none | SS$_NOPRIV | SSRM $CRELNM; probe 8 to 11 |
 | logical name: a mode inner to the caller's | SYSNAM | none | SS$_NOPRIV | SSRM $CRELNM (the mode is maximized); probe 22 to 24 |
 | $CREMBX temporary | TMPMBX | none | SS$_NOPRIV | SSRM $CREMBX; probe 80, 81 |
 | $CREMBX permanent | PRMMBX | none | SS$_NOPRIV | SSRM $CREMBX; probe 83, 84 |
-| $CREMBX permanent with a logical name | SYSNAM or SYSPRV | none | SS$_NOPRIV | probe round 2's 3 to 8 |
 | $DELMBX | PRMMBX | kernel | SS$_NOPRIV | SSRM $DELMBX; probe 88 to 91 |
 | mailbox IO$_SETPROTECTION, not the owner | BYPASS or SYSPRV | none | SS$_NOPRIV | probe 92 to 97 |
 | $ASCEFC permanent | PRMCEB | none | SS$_NOPRIV | SSRM $ASCEFC; probe 99, 100 |
@@ -630,7 +630,7 @@ Each is one commit, with tests, stopping for review.
    `$DLCEFC`, `$SNDOPR`'s SECURITY class, and IO$_SETPROTECTION settled;
    `$CREPRC`'s AUTHPRIV and omitted prvadr; `$SETPRV`'s fine points;
    held to the probe's program runs by an oracle test.
-5. **Logical name tables' protection** (Decision 4): table profiles and
+5. **Logical name tables' protection** (done 2026-11-15; Decision 4): table profiles and
    their defaults, the protection-or-privilege check in `$CRELNM`,
    `$DELLNM`, `$CRELNT`, and `$TRNLNM`; SHOW SECURITY and
    `$GET_SECURITY` of tables matching the probe; DEVIATIONS.md's Phase
@@ -889,3 +889,42 @@ The answers:
   the sections' and clusters' rules, disk I/O, and `$LCKPAG` already
   gave VMS's answers. `TestPriv94Probe` now allows no condition at a
   case's handler. A.5 is regenerated.
+- **2026-11-15** Subtask 5, logical name tables' protection:
+  `lnm.Table` has an owner, a protection, and a quota (`lnm/profile.go`,
+  `quota.go`), VMS 7.1's defaults (the system table and directory
+  `[1,4]` `(S:RWC,O:RWC,G:R,W:R)`, a group table `[g,*]`
+  `(S:RWCD,O:R,G:R,W)`, a `$CRELNT` table its promsk and its maker);
+  `corevms`'s `lnmTableAccess` asks `internal/security`'s rule for a
+  shareable table, then SYSNAM (the system table) or GRPNAM (the
+  process's group table), for `$CRELNM`, `$DELLNM`, `$CRELOG`,
+  `$DELLOG`, LIB$SET_LOGICAL and LIB$DELETE_LOGICAL; `$TRNLNM` needs
+  read access (`lnm.Database.TranslateWhere`); `$CRELNT` of a shareable
+  table write access to LNM$SYSTEM_DIRECTORY, and a permanent mailbox's
+  name write access to the system table. Part L of `TestPriv94Oracle`
+  and round 2's parts N and D of `TestPriv94BOracle` match VMS's logs
+  case for case; SYSTEM's case 84 and round 2's 4 and 7 are no longer
+  differences. SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE is new
+  (`dclcmd/showsecurity.go`, `TestShowSecurityTables`), and
+  `$GET_SECURITY` of a table shows its own profile. DEVIATIONS.md's
+  Phase 26 entry loses its first two items. Changed to VMS's answers:
+  - `$DELLNM` (so DEASSIGN and LIB$DELETE_LOGICAL) deletes from the
+    first table that has the name at the mode asked for, and nothing
+    when no table has it there, even at an outer mode (NOLOGNAM, before
+    the protection is asked: case 76); `lnm.Database.DeletionTable` is
+    the table it works in, which the access check looks at.
+  - `$CRELOG` and `$DELLOG` of the system table work at executive mode,
+    kept with SYSNAM and otherwise maximized (cases 68 to 77).
+  - `$CRELNT`'s quota: a child's comes out of its parent's, a name's
+    size out of its table's, SS$_EXLNMQUOTA past it (round 1's 59 and
+    60, round 2's 22). A name's size is govax's model (32 bytes, the
+    name, 8 and the text per string, to 16), unconfirmed.
+  - `$CRELNT`'s promsk is the table's protection, its maker its owner.
+  Choices, unconfirmed: a job table is owned by the job's UIC,
+  `(S:RWCD,O:RWCD,G,W)` (`lnm.Database.NewJobTable` takes the owner); a
+  process-private table isn't checked; a search list's `$TRNLNM` passes
+  over a table it may not read, NOPRIV only if no other has the name;
+  SHOW SECURITY of a table no one has is SS$_NOSUCHOBJECT, as
+  `$GET_SECURITY`'s. The tests' identities change process 1's group
+  table and job table owner with `lnm.Database.SetUIC`. DCL's own
+  DEFINE, ASSIGN, DEASSIGN, and CREATE/NAME_TABLE (which still makes a
+  table with no promsk) are subtask 7's.

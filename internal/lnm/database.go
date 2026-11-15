@@ -41,6 +41,10 @@ type Database struct {
 	// information block; govax numbers the job tables (NewJobTable).
 	JobTableName string
 
+	// uic is the process's UIC (SetUIC), the owner of the tables it
+	// makes.
+	uic uint32
+
 	// Trace, when non-nil, receives a line for each define, delete, and
 	// translation (the console wires it to SET DEBUG LOGICALS).
 	Trace func(format string, args ...any)
@@ -104,12 +108,14 @@ func NewDatabase(uic uint32) *Database {
 	sys.Directory = true
 	sys.Shareable = true
 	sys.permanent = true
+	sys.Owner, sys.Protection = SystemUIC, SystemTableProtection
 
 	// The system directory names itself.
 	(&Database{SystemDirectory: sys, shared: sh}).catalog(sys, sys, Kernel, 0)
 
 	db := &Database{SystemDirectory: sys, shared: sh}
-	db.newPermanentTable(SystemTableName, sys)
+	systab := db.newPermanentTable(SystemTableName, sys)
+	systab.Owner, systab.Protection = SystemUIC, SystemTableProtection
 
 	for _, n := range []struct {
 		name string
@@ -137,9 +143,9 @@ func NewDatabase(uic uint32) *Database {
 
 	// The first process's group table, then its job's, so the system
 	// directory lists them in that order.
-	db.newPermanentTable(groupTableName(uic), sys)
+	db.newGroupTable(uic)
 
-	view := db.NewProcessView(uic, db.NewJobTable())
+	view := db.NewProcessView(uic, db.NewJobTable(uic))
 
 	// The date and time formats LIBRTL reads, and the system's names
 	// for the standard ones (dtformat.go).
@@ -160,14 +166,16 @@ const jobTablePrefix = "LNM$JOB_"
 
 // NewJobTable creates a new job's logical name table in the system
 // directory, kernel mode and permanent (no user deletes it: it lasts as
-// long as its job), and returns its name, LNM$JOB_xxxxxxxx. The number
-// stands for the job information block's address that VMS uses; govax's
-// are 80000100, 80000200, and so on (a choice, not VMS's).
-func (db *Database) NewJobTable() string {
+// long as its job), owned by owner, the job's UIC, and returns its name,
+// LNM$JOB_xxxxxxxx. The number stands for the job information block's
+// address that VMS uses; govax's are 80000100, 80000200, and so on (a
+// choice, not VMS's).
+func (db *Database) NewJobTable(owner uint32) string {
 	db.shared.nextJob++
 
 	name := fmt.Sprintf("%s%08X", jobTablePrefix, 0x80000000+db.shared.nextJob<<8)
-	db.newPermanentTable(name, db.SystemDirectory)
+	t := db.newPermanentTable(name, db.SystemDirectory)
+	t.Owner, t.Protection = owner, OwnerProtection
 
 	return name
 }
@@ -207,17 +215,20 @@ func (db *Database) NewProcessView(uic uint32, jobTable string) *Database {
 		JobTableName:    jobTable,
 		Trace:           db.Trace,
 		shared:          db.shared,
+		uic:             uic,
 	}
 
 	v.ProcessDirectory = newTable(ProcessDirectoryName, Kernel, nil)
 	v.ProcessDirectory.Directory = true
 	v.ProcessDirectory.permanent = true
+	v.ProcessDirectory.Owner, v.ProcessDirectory.Protection = uic, OwnerProtection
 	v.catalog(v.ProcessDirectory, v.ProcessDirectory, Kernel, 0)
 
-	v.newPermanentTable(ProcessTableName, v.ProcessDirectory)
+	prc := v.newPermanentTable(ProcessTableName, v.ProcessDirectory)
+	prc.Owner, prc.Protection = uic, OwnerProtection
 
 	if !v.SystemDirectory.hasName(v.GroupTableName) {
-		v.newPermanentTable(v.GroupTableName, v.SystemDirectory)
+		v.newGroupTable(uic)
 	}
 
 	for _, n := range []struct{ name, eqv string }{
@@ -242,11 +253,15 @@ func directoryName(name string, eqv []string) *Entry {
 	return e
 }
 
-func (db *Database) newPermanentTable(name string, parent *Table) {
+// newPermanentTable makes a table that can't be deleted, kernel mode,
+// cataloged in parent's directory; its caller gives it its profile.
+func (db *Database) newPermanentTable(name string, parent *Table) *Table {
 	t := newTable(name, Kernel, parent)
 	t.permanent = true
 
 	db.catalog(t, db.directoryFor(parent), Kernel, 0)
+
+	return t
 }
 
 // catalog records t in its table list, the shared one for a shareable
@@ -406,6 +421,17 @@ func (db *Database) resolveTableName(name string, mode Mode, depth int, out *[]*
 // lognam, SS$_BADPARAM for an attr bit other than AttrCaseBlind, and
 // SS$_NOLOGNAM when no table has the name.
 func (db *Database) Translate(tabnam, lognam string, mode Mode, attr uint32) (*Entry, error) {
+	return db.TranslateWhere(tabnam, lognam, mode, attr, nil)
+}
+
+// TranslateWhere is Translate searching only the tables may allows (all
+// of them when may is nil): $TRNLNM's, which a table's protection may
+// keep from a process. A table may refuses is passed over; if no table
+// has the name and one was passed over, the error is SS$_NOPRIV (VMS
+// 7.1's for a table closed to the caller, testdata/priv94's case 61).
+// Whether a search list's later table is searched after an earlier one
+// is refused is unconfirmed.
+func (db *Database) TranslateWhere(tabnam, lognam string, mode Mode, attr uint32, may func(*Table) bool) (*Entry, error) {
 	if lognam == "" || len(lognam) > MaxNameLength {
 		return nil, status(vmserrors.SS_IVLOGNAM)
 	}
@@ -419,7 +445,15 @@ func (db *Database) Translate(tabnam, lognam string, mode Mode, attr uint32) (*E
 		return nil, err
 	}
 
+	refused := false
+
 	for _, t := range tables {
+		if may != nil && !may(t) {
+			refused = true
+
+			continue
+		}
+
 		if e := t.lookup(lognam, mode, attr&AttrCaseBlind != 0); e != nil {
 			db.tracef("translate %s in %s: found in %s [%s]", lognam, tabnam, t.Name, e.Mode)
 
@@ -428,6 +462,10 @@ func (db *Database) Translate(tabnam, lognam string, mode Mode, attr uint32) (*E
 	}
 
 	db.tracef("translate %s in %s: no match", lognam, tabnam)
+
+	if refused {
+		return nil, status(vmserrors.SS_NOPRIV)
+	}
 
 	return nil, status(vmserrors.SS_NOLOGNAM)
 }

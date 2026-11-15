@@ -331,16 +331,19 @@
  object
 
    The file, one specification; wildcards are allowed, and a name with
-   no version is its highest version.  With /CLASS=VOLUME, a device.
+   no version is its highest version.  With /CLASS=VOLUME, a device;
+   with /CLASS=LOGICAL_NAME_TABLE, a table's name.
 
 3 Qualifiers
 /CLASS
 
       /CLASS=class
 
-   The object's class: FILE, the default, or VOLUME, a mounted volume's
+   The object's class: FILE, the default; VOLUME, a mounted volume's
    owner and protection (its own, which govax shows but doesn't
-   enforce).
+   enforce); or LOGICAL_NAME_TABLE, a logical name table's owner and
+   protection, which decide who may read and write a shareable table's
+   names.  A table you may not read is %SYSTEM-F-NOPRIV.
 
 3 Examples
 

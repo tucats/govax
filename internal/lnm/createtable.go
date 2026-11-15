@@ -52,6 +52,14 @@ const (
 // more privileged than the parent's; and those of ResolveTables for
 // partab.
 func (db *Database) CreateTable(tabnam, partab string, mode Mode, attr uint32) (*Table, CreateResult, error) {
+	return db.CreateTableWith(tabnam, partab, mode, attr, TableProfile{Owner: db.uic})
+}
+
+// CreateTableWith is CreateTable giving the new table prof's owner,
+// protection, and quota. A quota is charged to the parent's
+// (quota.go): SS$_EXLNMQUOTA if the parent hasn't that much left.
+func (db *Database) CreateTableWith(tabnam, partab string, mode Mode, attr uint32,
+	prof TableProfile) (*Table, CreateResult, error) {
 	if attr&^(AttrCreateIf|AttrNoAlias|AttrConfine) != 0 {
 		return nil, 0, status(vmserrors.SS_BADPARAM)
 	}
@@ -89,6 +97,10 @@ func (db *Database) CreateTable(tabnam, partab string, mode Mode, attr uint32) (
 		}
 	}
 
+	if err := parent.room(prof.Quota, dir.chargeAt(tabnam, mode, parent)); err != nil {
+		return nil, 0, err
+	}
+
 	superseded, err := db.clearForNewName(dir, tabnam, mode, attr&AttrNoAlias != 0, parent)
 	if err != nil {
 		return nil, 0, err
@@ -99,7 +111,10 @@ func (db *Database) CreateTable(tabnam, partab string, mode Mode, attr uint32) (
 		t.Attrs = (parent.Attrs | attr) & AttrConfine
 	}
 
+	t.Owner, t.Protection, t.Quota = prof.Owner, prof.Protection, prof.Quota
+
 	db.catalog(t, dir, mode, attr&AttrNoAlias)
+	chargeEntry(t.catalog, parent, prof.Quota)
 
 	result := TableCreated
 	if superseded {

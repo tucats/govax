@@ -1778,14 +1778,18 @@ SECURITY` has every qualifier.
 #### SHOW SECURITY, SHOW ACL, and SHOW PROTECTION
 
 ```text
-SHOW SECURITY [/CLASS=FILE|VOLUME] file
+SHOW SECURITY [/CLASS=FILE|VOLUME|LOGICAL_NAME_TABLE] object
 SHOW ACL file
 SHOW PROTECTION
 ```
 
 Show a file's owner, protection, and ACL in VMS's layout (needing read
-or control access), a volume's owner and protection, the ACL alone, and
-the process's default protection for new files.
+or control access), a volume's or a logical name table's owner and
+protection, the ACL alone, and the process's default protection for new
+files. A shareable logical name table's protection is checked: writing a
+name in it takes write access (the system UIC category and SYSPRV have
+the system's), or SYSNAM for the system table and GRPNAM for your
+group's; reading one, or seeing its profile, read access.
 
 #### SET DEFAULT and SHOW DEFAULT
 

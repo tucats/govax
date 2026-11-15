@@ -196,7 +196,7 @@ func detached(t *testing.T, env *Environment) *Environment {
 	t.Helper()
 
 	other := newProcess(t, env)
-	other.Logicals = env.Logicals.NewProcessView(other.Process.UIC, env.Logicals.NewJobTable())
+	other.Logicals = env.Logicals.NewProcessView(other.Process.UIC, env.Logicals.NewJobTable(other.Process.UIC))
 
 	return other
 }

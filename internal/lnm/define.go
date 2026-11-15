@@ -67,6 +67,11 @@ func (db *Database) Define(tabnam, lognam string, mode Mode, attr uint32, eqv []
 		return false, status(vmserrors.SS_NOPRIV)
 	}
 
+	charge := nameCharge(lognam, eqv)
+	if err := t.room(charge, t.chargeAt(lognam, mode, t)); err != nil {
+		return false, err
+	}
+
 	superseded, err = db.clearForNewName(t, lognam, mode, attr&AttrNoAlias != 0, nil)
 	if err != nil {
 		return false, err
@@ -74,12 +79,14 @@ func (db *Database) Define(tabnam, lognam string, mode Mode, attr uint32, eqv []
 
 	attr |= t.Attrs & AttrConfine
 
-	t.add(&Entry{
+	e := &Entry{
 		Name:         lognam,
 		Mode:         mode,
 		Attrs:        attr,
 		Equivalences: append([]Equivalence(nil), eqv...),
-	})
+	}
+	t.add(e)
+	chargeEntry(e, t, charge)
 
 	db.tracef("define %s [%s] in %s = %v (superseded=%v)", lognam, mode, t.Name, eqv, superseded)
 
@@ -133,9 +140,12 @@ func (db *Database) clearForNewName(t *Table, name string, mode Mode, noAlias bo
 // (less privileged) modes are deleted.
 //
 //   - With lognam, the tables are searched in order for the first one
-//     containing lognam at any mode, and that table's definitions of it
-//     at mode or outer are deleted. SS$_NOLOGNAM if no table has the
-//     name, or the one that does has it only at inner modes.
+//     that has lognam at mode itself, and that table's definitions of it
+//     at mode and outer modes are deleted. SS$_NOLOGNAM if no table has
+//     the name at mode, even when one has it at an outer mode: VMS 7.1
+//     deleted nothing then (testdata/priv94, round 2's cases 30 to 40).
+//     Which table a search list's deletion looks in when an earlier one
+//     has the name only at another mode is unconfirmed.
 //   - With lognam empty, every name at mode or outer is deleted from the
 //     first table. The manual limits this to "the first table in the list
 //     whose access mode is equal to or less privileged than the caller's",
@@ -152,7 +162,7 @@ func (db *Database) clearForNewName(t *Table, name string, mode Mode, noAlias bo
 // Other errors: SS$_IVLOGNAM for a lognam longer than 255 characters, and
 // those of ResolveTables.
 func (db *Database) Delete(tabnam, lognam string, mode Mode) (int, error) {
-	return db.deleteMatching(tabnam, lognam, func(m Mode) bool { return m >= mode })
+	return db.deleteMatching(tabnam, lognam, mode, func(m Mode) bool { return m >= mode })
 }
 
 // DeleteExact is Delete for the definitions at mode alone, not those at
@@ -160,17 +170,45 @@ func (db *Database) Delete(tabnam, lognam string, mode Mode) (int, error) {
 // user-mode name of the same name (VMS V7.1, testdata/lib57). A name
 // with no definition at mode is SS$_NOLOGNAM.
 func (db *Database) DeleteExact(tabnam, lognam string, mode Mode) (int, error) {
-	return db.deleteMatching(tabnam, lognam, func(m Mode) bool { return m == mode })
+	return db.deleteMatching(tabnam, lognam, mode, func(m Mode) bool { return m == mode })
 }
 
-// deleteMatching is Delete and DeleteExact: it deletes the definitions
-// whose mode doomed accepts.
-func (db *Database) deleteMatching(tabnam, lognam string, doomedMode func(Mode) bool) (int, error) {
+// DeletionTable is the table a deletion of lognam at mode from the
+// tables tabnam designates works in (Delete's rule): the first that has
+// lognam at mode, or with lognam empty the first table. The logical name
+// services check the caller's access to it before they delete. The
+// errors are Delete's.
+func (db *Database) DeletionTable(tabnam, lognam string, mode Mode) (*Table, error) {
+	if len(lognam) > MaxNameLength {
+		return nil, status(vmserrors.SS_IVLOGNAM)
+	}
+
+	tables, err := db.ResolveTables(tabnam, User)
+	if err != nil {
+		return nil, err
+	}
+
+	if lognam == "" {
+		return tables[0], nil
+	}
+
+	for _, t := range tables {
+		if t.atMode(lognam, mode) != nil {
+			return t, nil
+		}
+	}
+
+	return nil, status(vmserrors.SS_NOLOGNAM)
+}
+
+// deleteMatching is Delete and DeleteExact: it deletes, from the table
+// DeletionTable finds, the definitions whose mode doomedMode accepts.
+func (db *Database) deleteMatching(tabnam, lognam string, mode Mode, doomedMode func(Mode) bool) (int, error) {
 	if len(lognam) > MaxNameLength {
 		return 0, status(vmserrors.SS_IVLOGNAM)
 	}
 
-	tables, err := db.ResolveTables(tabnam, User)
+	t, err := db.DeletionTable(tabnam, lognam, mode)
 	if err != nil {
 		return 0, err
 	}
@@ -178,29 +216,17 @@ func (db *Database) deleteMatching(tabnam, lognam string, doomedMode func(Mode) 
 	var doomed []*Entry
 
 	if lognam != "" {
-		for _, t := range tables {
-			if !t.hasName(lognam) {
-				continue
-			}
-
-			for _, e := range t.names[lognam] {
-				if doomedMode(e.Mode) {
-					doomed = append(doomed, e)
-				}
-			}
-
-			break
-		}
-	} else {
-		for _, e := range tables[0].Entries() {
+		for _, e := range t.names[lognam] {
 			if doomedMode(e.Mode) {
 				doomed = append(doomed, e)
 			}
 		}
-	}
-
-	if lognam != "" && len(doomed) == 0 {
-		return 0, status(vmserrors.SS_NOLOGNAM)
+	} else {
+		for _, e := range t.Entries() {
+			if doomedMode(e.Mode) {
+				doomed = append(doomed, e)
+			}
+		}
 	}
 
 	for _, e := range doomed {

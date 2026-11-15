@@ -198,7 +198,7 @@ func TestJob_logicalNames(t *testing.T) {
 
 	// A detached process is in a job of its own.
 	other := newProcess(t, parent)
-	other.Logicals = parent.Logicals.NewProcessView(other.Process.UIC, parent.Logicals.NewJobTable())
+	other.Logicals = parent.Logicals.NewProcessView(other.Process.UIC, parent.Logicals.NewJobTable(other.Process.UIC))
 	wantR0(t, translate(other, "WHOLE_JOB"), vmserrors.SS_NOLOGNAM)
 
 	r0, ch := crembx(t, parent, a, 0, 0, 0, "PARENT_MBX")

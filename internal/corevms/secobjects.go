@@ -164,12 +164,9 @@ func findVolumeObject(env *Environment, name string) (securityObject, string, ui
 	return readOnlyObject{security.Profile{Owner: owner, Protection: protection}}, label, ssNormal
 }
 
-// sharedTableProfile is a shareable logical name table's profile: VMS
-// 7.1's LNM$SYSTEM_TABLE, [1,4] and (S:RWC,O:RWC,G:R,W:R) (case 417); a
-// process table's is the process's, with every access (unconfirmed).
-const sharedTableProtection = security.Protection(0xEE88)
-
-// findTableObject is the logical name table called name.
+// findTableObject is the logical name table called name, with its own
+// owner and protection (lnm's profile.go: VMS 7.1's LNM$SYSTEM_TABLE was
+// [1,4] and (S:RWC,O:RWC,G:R,W:R), case 417).
 func findTableObject(env *Environment, name string) (securityObject, string, uint32) {
 	if env.Logicals == nil {
 		return nil, "", ssNoSuchObj
@@ -182,10 +179,7 @@ func findTableObject(env *Environment, name string) (securityObject, string, uin
 			continue
 		}
 
-		p := security.Profile{Owner: security.UIC(env.Process.UIC)}
-		if t.Shareable {
-			p = security.Profile{Owner: security.SystemUIC, Protection: sharedTableProtection}
-		}
+		p := security.Profile{Owner: security.UIC(t.Owner), Protection: security.Protection(t.Protection), Name: t.Name}
 
 		return readOnlyObject{p}, t.Name, ssNormal
 	}

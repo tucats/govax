@@ -56,6 +56,7 @@ func (id priv94Identity) become(c *console.Console) {
 	p.UIC = uint32(id.uic)
 	p.AuthorizedPrivileges = id.authorized
 	p.ProcessPrivileges, p.CurrentPrivileges = id.holds, id.holds
+	c.RTL.Logicals.SetUIC(p.UIC)
 }
 
 // priv94Run is one run of the program: who runs it, and its parts. With
@@ -219,19 +220,16 @@ type priv94Difference struct {
 }
 
 // priv94Differences are the cases the oracle doesn't hold govax to: the
-// logical name cases (part L) and the terminal's (part T) wait for the
-// phase's subtasks 5 and 6, and these.
+// terminal's (part T) wait for the phase's subtask 6, and these.
 var priv94Differences = []priv94Difference{
 	{"SYSTEM PRIV94", []int{106, 108}, "VMS 7.1's temporary page-file section outlived " +
 		"its only mapping, so the undo's $DGBLSC found it; govax's goes with the mapping (unconfirmed)"},
-	{"SYSTEM", []int{84}, "SYSTEM names a permanent mailbox in the system table by the table's " +
-		"protection, as the system category (subtask 5)"},
 	{"SYSTEM PRIV94", []int{254}, "the IOSB's count of terminals that refused the broadcast " +
 		"is the VAX's (32); govax's one terminal takes it"},
 }
 
 // priv94Deferred is the parts later subtasks hold to VMS.
-const priv94Deferred = "LT"
+const priv94Deferred = "T"
 
 // priv94Excused reports whether case n of who's run is one the oracle
 // doesn't compare.
@@ -339,13 +337,15 @@ func TestPriv94Oracle(t *testing.T) {
 }
 
 // TestPriv94BOracle is TestPriv94Oracle for round 2's program, PRIV94B:
-// its permanent mailboxes (part M) and $ULKPAG (part U), as SYSTEM and as
-// PRIV94; its logical name parts (N and D) are subtask 5's.
+// its permanent mailboxes (part M), $ULKPAG (part U), $CRELNT under
+// shareable tables (N), and the modes $DELLNM deletes (D), as SYSTEM and
+// then as PRIV94, who finds the tables SYSTEM's undo left (as VMS's
+// PRIV94 did: SS$_SUPERSEDE).
 func TestPriv94BOracle(t *testing.T) {
 	outs := runPriv94As(t, []string{"PRIV94B"}, []priv94Run{
 		{priv94System, "F", false},
-		{priv94System, "MU", false},
-		{priv94Account, "MU", false},
+		{priv94System, "MUND", false},
+		{priv94Account, "MUND", false},
 		{priv94System, "Z", false},
 	})
 
@@ -355,13 +355,7 @@ func TestPriv94BOracle(t *testing.T) {
 
 		for n := 1; n <= 40; n++ {
 			w, ok := want[n]
-			if !ok || !strings.ContainsAny(strings.Fields(w.lines[0])[2], "MU") {
-				continue
-			}
-
-			// SYSTEM names a permanent mailbox in the system table by the
-			// table's protection, as the system category (subtask 5).
-			if i == 0 && (n == 4 || n == 7) {
+			if !ok {
 				continue
 			}
 

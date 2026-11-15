@@ -447,12 +447,11 @@ func registerMailboxServices(t *ServiceTable) {
 }
 
 // mailboxCreatePrivileges is $CREMBX's privilege check: TMPMBX for a
-// temporary mailbox, PRMMBX for a permanent one, and SYSNAM or SYSPRV
-// too for a permanent one with a logical name, which goes in the system
-// table. No mode is exempt (testdata/priv94's cases 80 to 87; round 2's
-// 3 to 8). VMS also lets a process in the system UIC category name one,
-// by the system table's protection, which govax doesn't yet check (the
-// phase doc's subtask 5).
+// temporary mailbox, PRMMBX for a permanent one, and for a permanent one
+// with a logical name, write access to the table LNM$PERMANENT_MAILBOX
+// leads to, the system table: its protection (the system category, or
+// SYSPRV) or SYSNAM (lnmTableAccess). No mode is exempt
+// (testdata/priv94's cases 80 to 87; round 2's 3 to 8).
 func (env *Environment) mailboxCreatePrivileges(permanent, named bool) uint32 {
 	if !permanent {
 		return env.requirePrivilege(ruleCrembxTemporary)
@@ -463,7 +462,7 @@ func (env *Environment) mailboxCreatePrivileges(permanent, named bool) uint32 {
 	}
 
 	if named {
-		return env.requirePrivilege(ruleCrembxName)
+		return env.lnmWritable("LNM$PERMANENT_MAILBOX")
 	}
 
 	return 0

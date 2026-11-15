@@ -20,16 +20,25 @@ import (
 //     whose table numbers 0/1/2 select the system, group and process
 //     tables.
 //
-// Privileges (docs/planning/PHASE-26.md subtask 38): $CRELNM, $DELLNM and $CRELNT
-// use an explicitly given access mode as-is only if the caller holds
-// SYSNAM; otherwise they "maximize" it with the caller's mode (the less
-// privileged of the two), and an omitted one is the caller's. The old
-// services take their mode by value, where 0 can't be told from
-// "omitted", so they always maximize it. Putting a name in (or deleting
-// one from) the system table takes SYSNAM or SYSPRV, the group table
-// GRPNAM or SYSPRV, and the system directory SYSPRV (lnmTablePrivilege);
-// creating a shareable table takes SYSPRV. VMS also checks each table's
-// UIC-based protection, which govax doesn't have.
+// Modes (docs/planning/PHASE-26.md subtask 38): $CRELNM, $DELLNM and
+// $CRELNT use an explicitly given access mode as-is only if the caller
+// holds SYSNAM; otherwise they "maximize" it with the caller's mode (the
+// less privileged of the two), without complaint, and an omitted one is
+// the caller's. The old services take their mode by value, where 0 can't
+// be told from "omitted", so they always maximize it; but a name they put
+// in the system table asks for executive mode (VMS 7.1, testdata/priv94's
+// cases 68 to 77).
+//
+// Tables (docs/planning/PHASE-94 - privileges.md, Decision 4): a
+// shareable table has an owner and a protection (lnm's profile.go), and
+// putting a name in it or deleting one takes write access by
+// internal/security's rule, which gives a process in the system UIC
+// category the system's access and SYSPRV that too, BYPASS everything;
+// failing that, SYSNAM for the system table or GRPNAM for the process's
+// group table (lnmTableAccess). $TRNLNM needs read access to a table it
+// searches. Making a shareable table takes write access to
+// LNM$SYSTEM_DIRECTORY, where its name goes, whatever its parent.
+// A process-private table is the process's own, and isn't checked.
 
 // Status codes these services return themselves (lnm's own failures come
 // back as VMSErrors carrying their $SSDEF status).
@@ -39,6 +48,7 @@ var (
 	ssNoTran     = vmsdef.Symbols["SS$_NOTRAN"]
 	ssSupersede  = vmsdef.Symbols["SS$_SUPERSEDE"]
 	ssLnmCreated = vmsdef.Symbols["SS$_LNMCREATED"]
+	ssExLnmQuota = vmsdef.Symbols["SS$_EXLNMQUOTA"]
 )
 
 // $LNMDEF item codes.
@@ -107,34 +117,69 @@ func (env *Environment) lnmMode(ptr uint32) (lnm.Mode, uint32) {
 // caller's.
 func (env *Environment) lnmWriteMode(ptr uint32) (lnm.Mode, uint32) {
 	mode, st := env.lnmMode(ptr)
-	if st != 0 || uint32(mode) >= uint32(env.callerMode()) || env.holdsPrivilege(ruleLnmInnerMode) {
+	if st != 0 {
 		return mode, st
 	}
 
-	return env.maximizedMode(uint32(mode)), 0
+	return env.writeMode(mode), 0
 }
 
-// lnmTablePrivilege checks that the process may create or delete names
-// in the table tabnam designates (the first, for a search list): the
-// system table takes SYSNAM or SYSPRV, a group table GRPNAM or SYSPRV,
-// and the system directory SYSPRV. It returns SS$_NOPRIV, or 0. A tabnam
-// that doesn't resolve passes, leaving the error to the operation.
-func (env *Environment) lnmTablePrivilege(tabnam string) uint32 {
-	tables, err := env.Logicals.ResolveTables(tabnam, lnm.User)
-	if err != nil || len(tables) == 0 {
+// writeMode is the mode a name asked for at mode is made or deleted at:
+// mode itself if it isn't inner to the caller's or the caller holds
+// SYSNAM, else the caller's mode.
+func (env *Environment) writeMode(mode lnm.Mode) lnm.Mode {
+	if uint32(mode) >= uint32(env.callerMode()) || env.holdsPrivilege(ruleLnmInnerMode) {
+		return mode
+	}
+
+	return env.maximizedMode(uint32(mode))
+}
+
+// lnmTableAccess checks that the process may have want (accessRead or
+// accessWrite) to table t: a process-private table always, a shareable
+// one by its protection (the system category and SYSPRV get the
+// system's access, READALL reads, BYPASS does anything), or, to write
+// it, by SYSNAM for the system table or GRPNAM for the process's own
+// group table (VMS 7.1, testdata/priv94's cases 4 to 65: SYSNAM doesn't
+// write a group table or another shareable one, GRPNAM only the group's).
+// It returns SS$_NOPRIV, or 0; a nil t passes, leaving the error to the
+// operation.
+func (env *Environment) lnmTableAccess(t *lnm.Table, want uint32) uint32 {
+	if t == nil || !t.Shareable {
 		return 0
 	}
 
-	switch tables[0].Name {
-	case lnm.SystemTableName:
-		return env.requirePrivilege(ruleLnmSystemTable)
-	case env.Logicals.GroupTableName:
-		return env.requirePrivilege(ruleLnmGroupTable)
-	case lnm.SystemDirectoryName:
-		return env.requirePrivilege(ruleLnmSystemDirectory)
+	if env.uicAccess(t.Name, t.Owner, t.Protection, want) {
+		return 0
 	}
 
-	return 0
+	if want == accessWrite {
+		switch t.Name {
+		case lnm.SystemTableName:
+			return env.requirePrivilege(ruleLnmSystemTable)
+		case env.Logicals.GroupTableName:
+			return env.requirePrivilege(ruleLnmGroupTable)
+		}
+	}
+
+	return ssNoPriv
+}
+
+// firstTable is the first table tabnam designates, or nil when it
+// designates none (the operation then reports why).
+func (env *Environment) firstTable(tabnam string) *lnm.Table {
+	tables, err := env.Logicals.ResolveTables(tabnam, lnm.User)
+	if err != nil || len(tables) == 0 {
+		return nil
+	}
+
+	return tables[0]
+}
+
+// lnmWritable is lnmTableAccess's write check of the first table tabnam
+// designates, where a new name goes.
+func (env *Environment) lnmWritable(tabnam string) uint32 {
+	return env.lnmTableAccess(env.firstTable(tabnam), accessWrite)
 }
 
 // maximizedMode is the less privileged of mode and the caller's mode.
@@ -242,7 +287,9 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	e, err := env.Logicals.Translate(tabnam, lognam, mode, attr)
+	e, err := env.Logicals.TranslateWhere(tabnam, lognam, mode, attr, func(t *lnm.Table) bool {
+		return env.lnmTableAccess(t, accessRead) == 0
+	})
 	if err != nil {
 		env.traceLogicals("$TRNLNM(%s,%s), %v", tabnam, lognam, err)
 
@@ -442,12 +489,12 @@ func (env *Environment) crelnmItems(itmlst uint32) ([]lnm.Equivalence, []itemLis
 
 // createName is $CRELNM's work once its arguments are read: lognam is
 // defined at mode in the first table tabnam designates, if the process
-// may put names there (lnmTablePrivilege), and tableItems get that
+// may put names there (lnmWritable), and tableItems get that
 // table's name. It returns SS$_NORMAL, SS$_SUPERSEDE, SS$_BUFFEROVF (a
 // table name cut short), or the failure.
 func (env *Environment) createName(tabnam, lognam string, mode lnm.Mode, attr uint32,
 	eqv []lnm.Equivalence, tableItems []itemListEntry) (uint32, error) {
-	if st := env.lnmTablePrivilege(tabnam); st != 0 {
+	if st := env.lnmWritable(tabnam); st != 0 {
 		return st, nil
 	}
 
@@ -554,10 +601,13 @@ func serviceSysDellnm(env *Environment, argv []uint32) (uint32, error) {
 
 // deleteNames is $DELLNM's work once its arguments are read: lognam (or,
 // when it's empty, every name) at mode and outer modes is deleted from
-// the tables tabnam designates, if the process may delete names there.
+// the table of those tabnam designates that has it at mode, if the
+// process may delete names there. A name not at mode is SS$_NOLOGNAM
+// before the table's protection is asked (VMS 7.1, testdata/priv94's
+// case 76: a process that can't write the system table got NOLOGNAM).
 func (env *Environment) deleteNames(tabnam, lognam string, mode lnm.Mode) (uint32, error) {
-	if st := env.lnmTablePrivilege(tabnam); st != 0 {
-		return st, nil
+	if st, err := env.deletable(tabnam, lognam, mode); st != 0 || err != nil {
+		return st, err
 	}
 
 	if _, err := env.Logicals.Delete(tabnam, lognam, mode); err != nil {
@@ -567,6 +617,20 @@ func (env *Environment) deleteNames(tabnam, lognam string, mode lnm.Mode) (uint3
 	}
 
 	return ssNormal, nil
+}
+
+// deletable checks a deletion of lognam at mode from the tables tabnam
+// designates: the table lnm's DeletionTable finds, and the process's
+// write access to it. It returns the failure's status, or 0.
+func (env *Environment) deletable(tabnam, lognam string, mode lnm.Mode) (uint32, error) {
+	t, err := env.Logicals.DeletionTable(tabnam, lognam, mode)
+	if err != nil {
+		env.traceLogicals("$DELLNM(%s,%s), %v", tabnam, lognam, err)
+
+		return lnmStatus(err)
+	}
+
+	return env.lnmTableAccess(t, accessWrite), nil
 }
 
 // SetSupervisorLogical defines lognam in the first table tabnam
@@ -615,8 +679,8 @@ func (env *Environment) DeleteSupervisorLogical(tabnam, lognam string) (uint32, 
 		return ssIvLogNam, nil
 	}
 
-	if st := env.lnmTablePrivilege(tabnam); st != 0 {
-		return st, nil
+	if st, err := env.deletable(tabnam, lognam, lnm.Supervisor); st != 0 || err != nil {
+		return st, err
 	}
 
 	if _, err := env.Logicals.DeleteExact(tabnam, lognam, lnm.Supervisor); err != nil {
@@ -631,8 +695,10 @@ func (env *Environment) DeleteSupervisorLogical(tabnam, lognam string) (uint32, 
 // serviceSysCrelnt is SYS$CRELNT(attr, resnam, reslen, quota, promsk,
 // tabnam, partab, acmode): creates a logical name table under partab,
 // named tabnam or (when omitted) a unique LNM$xxxx name, returned through
-// resnam/reslen. quota and promsk are accepted and ignored: govax has no
-// logical-name quotas or table protection.
+// resnam/reslen. quota (a longword) is the table's quota in bytes, 0 or
+// omitted for none, charged to the parent's (lnm's quota.go); promsk (a
+// word) is its protection, 0 or omitted for every access to everyone.
+// The caller owns it.
 func serviceSysCrelnt(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 8 {
 		return ssInsfArg, nil
@@ -661,14 +727,34 @@ func serviceSysCrelnt(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	// A table under a shareable parent is shareable: that takes SYSPRV.
-	if parents, err := env.Logicals.ResolveTables(partab, lnm.User); err == nil && len(parents) > 0 && parents[0].Shareable {
-		if st := env.requirePrivilege(ruleLnmShareableTable); st != 0 {
+	quota, st := env.lnmAttr(argv[3])
+	if st != 0 {
+		return st, nil
+	}
+
+	var promsk uint16
+
+	if argv[4] != 0 {
+		w, err := env.mem.LoadWord(env.cpu, argv[4])
+		if err != nil {
+			return ssAccVio, nil
+		}
+
+		promsk = w
+	}
+
+	// A table under a shareable parent is shareable, and its name goes in
+	// the system directory, whatever the parent: making one takes write
+	// access to the directory (testdata/priv94, round 2's cases 18 to 29:
+	// SYSNAM and GRPNAM didn't help, SYSPRV did).
+	if parent := env.firstTable(partab); parent != nil && parent.Shareable {
+		if st := env.lnmTableAccess(env.Logicals.SystemDirectory, accessWrite); st != 0 {
 			return st, nil
 		}
 	}
 
-	t, result, err := env.Logicals.CreateTable(tabnam, partab, mode, attr)
+	t, result, err := env.Logicals.CreateTableWith(tabnam, partab, mode, attr,
+		lnm.TableProfile{Owner: env.Process.UIC, Protection: promsk, Quota: quota})
 	if err != nil {
 		env.traceLogicals("$CRELNT(%s,%s), %v", tabnam, partab, err)
 
@@ -733,13 +819,13 @@ func serviceSysCrelog(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	if st := env.lnmTablePrivilege(table); st != 0 {
+	if st := env.lnmWritable(table); st != 0 {
 		return st, nil
 	}
 
 	eqv := []lnm.Equivalence{{Value: eqlnam}}
 
-	superseded, err := env.Logicals.Define(table, lognam, env.maximizedMode(argv[3]), lnm.AttrCrelog, eqv)
+	superseded, err := env.Logicals.Define(table, lognam, env.oldMode(table, argv[3]), lnm.AttrCrelog, eqv)
 	if err != nil {
 		return lnmStatus(err)
 	}
@@ -749,6 +835,20 @@ func serviceSysCrelog(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	return ssNormal, nil
+}
+
+// oldMode is the mode $CRELOG and $DELLOG work at in table, given the
+// acmode argument: in the system table executive mode, kept with SYSNAM
+// and otherwise maximized with the caller's (VMS 7.1 made a user-mode
+// caller's name at user mode, and with SYSNAM, or from kernel mode, at
+// executive: testdata/priv94's cases 68, 69, 75); elsewhere acmode
+// maximized, since by value it can't be told from omitted.
+func (env *Environment) oldMode(table string, acmode uint32) lnm.Mode {
+	if table == lnm.SystemTableName {
+		return env.writeMode(lnm.Executive)
+	}
+
+	return env.maximizedMode(acmode)
 }
 
 // serviceSysDellog is the pre-V4 SYS$DELLOG(tblflg, lognam, acmode):
@@ -772,11 +872,13 @@ func serviceSysDellog(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if st := env.lnmTablePrivilege(table); st != 0 {
-		return st, nil
+	mode := env.oldMode(table, argv[2])
+
+	if st, err := env.deletable(table, lognam, mode); st != 0 || err != nil {
+		return st, err
 	}
 
-	if _, err := env.Logicals.Delete(table, lognam, env.maximizedMode(argv[2])); err != nil {
+	if _, err := env.Logicals.Delete(table, lognam, mode); err != nil {
 		return lnmStatus(err)
 	}
 

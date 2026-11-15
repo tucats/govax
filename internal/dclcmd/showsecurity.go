@@ -42,14 +42,19 @@ var (
 )
 
 // ShowSecurity is SHOW SECURITY spec, with /CLASS's object class: FILE
-// (the default) or VOLUME; another is DCL's IVKEYW (VMS 7.1 has more
-// classes, which govax doesn't).
+// (the default), VOLUME, or LOGICAL_NAME_TABLE; another is DCL's IVKEYW
+// (VMS 7.1 has more classes, which govax doesn't).
 func (c *Context) ShowSecurity(spec, class string) error {
+	class = strings.ToUpper(strings.TrimSpace(class))
+	if class != "" && strings.HasPrefix("LOGICAL_NAME_TABLE", class) {
+		return c.showTableSecurity(spec)
+	}
+
 	if c.ContainerSession == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
 
-	switch class = strings.ToUpper(strings.TrimSpace(class)); {
+	switch {
 	case class == "" || strings.HasPrefix("FILE", class):
 	case strings.HasPrefix("VOLUME", class):
 		return c.showVolumeSecurity(spec)
@@ -178,6 +183,56 @@ func (c *Context) showVolumeSecurity(spec string) error {
 	c.Printf("     Access Control List: <empty>\n")
 
 	return nil
+}
+
+// showTableSecurity is SHOW SECURITY/CLASS=LOGICAL_NAME_TABLE table: the
+// table's owner and protection, its letters a table's (RWCD), as VMS
+// 7.1's (testdata/priv94's DCL logs):
+//
+//	LNM$GROUP_000001 object of class LOGICAL_NAME_TABLE
+//	     Owner: [1,*]
+//	     Protection: (System: RWCD, Owner: R, Group: R, World)
+//	     Access Control List: <empty>
+//
+// A shareable table the process may not read is SS$_NOPRIV alone; the
+// SECURITY privilege doesn't help (VMS 7.1). A name no table has is
+// SS$_NOSUCHOBJECT, $GET_SECURITY's answer (unconfirmed for DCL). govax
+// keeps no ACL for a table.
+func (c *Context) showTableSecurity(spec string) error {
+	if c.Logicals == nil {
+		return vmserrors.New(vmserrors.SS_NOPRIV)
+	}
+
+	name := strings.ToUpper(strings.TrimSpace(spec))
+
+	for _, t := range c.Logicals.Tables() {
+		if t.Name != name {
+			continue
+		}
+
+		profile := security.Profile{Owner: security.UIC(t.Owner), Protection: security.Protection(t.Protection), Name: t.Name}
+
+		if t.Shareable && !security.Check(c.credentials(), profile, security.Read).Granted {
+			return vmserrors.New(vmserrors.SS_NOPRIV)
+		}
+
+		c.Printf("\n%s object of class LOGICAL_NAME_TABLE\n", t.Name)
+		c.Printf("     Owner: %s\n", security.IdentifierText(t.Owner, rightsNames{c}))
+		c.Printf("     Protection: %s\n", ProtectionDisplay(profile.Protection, "RWCD"))
+		c.Printf("     Access Control List: <empty>\n")
+
+		return nil
+	}
+
+	code := vmsdef.Symbols["SS$_NOSUCHOBJECT"]
+
+	return vmserrors.ConditionError{Status: code | stsInhibitMsg, Text: vmsdef.FormatMessage(code)}
+}
+
+// credentials are the credentials of the process running the command:
+// its session's, SYSTEM's without one.
+func (c *Context) credentials() security.Credentials {
+	return c.ContainerSession.Identity()
 }
 
 // ProtectionDisplay is a protection code as SHOW SECURITY writes it,

@@ -829,7 +829,7 @@ func TestProcessView_jobsAndGroups(t *testing.T) {
 
 	const otherUIC = 0o200<<16 | 1
 
-	detached := first.NewProcessView(otherUIC, first.NewJobTable())
+	detached := first.NewProcessView(otherUIC, first.NewJobTable(testUIC))
 	if detached.JobTableName != "LNM$JOB_80000200" || detached.GroupTableName != "LNM$GROUP_000200" {
 		t.Fatalf("second job: %s, %s", detached.JobTableName, detached.GroupTableName)
 	}
@@ -874,7 +874,7 @@ func TestProcessView_jobsAndGroups(t *testing.T) {
 // tables alone.
 func TestDeleteJobTable(t *testing.T) {
 	first := NewDatabase(testUIC)
-	second := first.NewProcessView(testUIC, first.NewJobTable())
+	second := first.NewProcessView(testUIC, first.NewJobTable(testUIC))
 
 	mustDefine(t, second, "LNM$JOB", "JOBNAME", Supervisor, "SECOND")
 	mustDefine(t, first, "LNM$JOB", "JOBNAME", Supervisor, "FIRST")
@@ -931,7 +931,7 @@ func TestDTFormatTable(t *testing.T) {
 		}
 	}
 
-	other := db.NewProcessView(testUIC, db.NewJobTable())
+	other := db.NewProcessView(testUIC, db.NewJobTable(testUIC))
 	if _, err := other.Translate(DTFormatTableName, "LIB$TIME_FORMAT_011", Executive, 0); err != nil {
 		t.Errorf("another process: %v", err)
 	}

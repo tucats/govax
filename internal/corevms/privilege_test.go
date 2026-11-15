@@ -227,11 +227,16 @@ func TestPrivilegeChecks(t *testing.T) {
 
 	wantR0(t, r0, ssNoPriv)
 
-	without(privSYSNAM | privSYSPRV)
+	// A permanent mailbox's name goes in the system table: a process
+	// outside the system category needs SYSNAM or SYSPRV.
+	without(privSYSNAM | privSYSPRV | privBYPASS)
+	p.UIC = 0x00800003 // [200,3]
 
 	r0, _ = crembx(t, env, a, 1, 0, 0, "PERMBOX")
 
 	wantR0(t, r0, ssNoPriv)
+
+	p.UIC = NominalUIC
 
 	r0, ch := crembx(t, env, a, 1, 0, 0, "") // permanent, no name: fine
 	wantR0(t, r0, ssNormal)
@@ -269,9 +274,10 @@ func TestPrivilegeChecks(t *testing.T) {
 	}
 }
 
-// TestPrivilegeChecks_logicalNames checks the logical-name rules: the
-// tables that need SYSNAM, GRPNAM, or SYSPRV, and SYSNAM's access mode
-// rule.
+// TestPrivilegeChecks_logicalNames checks the logical-name rules: a
+// shareable table's protection, the privileges past it (SYSNAM for the
+// system table, GRPNAM for the group's, SYSPRV as the system category),
+// and SYSNAM's access mode rule.
 func TestPrivilegeChecks_logicalNames(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
@@ -282,20 +288,39 @@ func TestPrivilegeChecks_logicalNames(t *testing.T) {
 		return callLNM(t, env, serviceSysCrelnm, 0, a.desc(table), a.desc("NAME"), a.byteArg(mode), one)
 	}
 
-	p.CurrentPrivileges = allPrivileges &^ (privSYSNAM | privSYSPRV | privGRPNAM)
+	// SYSTEM, [1,4], writes the system and group tables by their
+	// protection, with no privilege at all.
+	p.CurrentPrivileges = 0
+
+	wantR0(t, crelnm("LNM$SYSTEM", 3), ssNormal)
+	wantR0(t, crelnm("LNM$GROUP", 3), ssNormal)
+
+	// [200,3] is outside the system category.
+	p.UIC = 0x00800003
+	env.Logicals.SetUIC(p.UIC)
+	p.CurrentPrivileges = allPrivileges &^ (privSYSNAM | privSYSPRV | privGRPNAM | privBYPASS | privGRPPRV)
 
 	wantR0(t, crelnm("LNM$SYSTEM", 0), ssNoPriv)
 	wantR0(t, crelnm("LNM$GROUP", 0), ssNoPriv)
 	wantR0(t, callLNM(t, env, serviceSysCrelog, 0, a.desc("NAME"), a.desc("X"), 0), ssNoPriv)
-	wantR0(t, callLNM(t, env, serviceSysDellnm, a.desc("LNM$SYSTEM"), a.desc("NAME"), 0), ssNoPriv)
+	wantR0(t, callLNM(t, env, serviceSysDellnm, a.desc("LNM$SYSTEM"), a.desc("NAME"), a.byteArg(3)), ssNoPriv)
 
-	// Either of two privileges will do.
+	// A name not at the mode asked for is NOLOGNAM, before the protection.
+	wantR0(t, callLNM(t, env, serviceSysDellnm, a.desc("LNM$SYSTEM"), a.desc("NAME"), a.byteArg(2)), ssNoLogNam)
+
+	// SYSPRV is the system category; SYSNAM writes the system table, not
+	// a group table; GRPNAM the group's.
 	p.CurrentPrivileges |= privSYSPRV
 
 	wantR0(t, crelnm("LNM$SYSTEM", 0), ssNormal)
+	wantR0(t, crelnm("LNM$GROUP", 3), ssNormal)
 
-	p.CurrentPrivileges = allPrivileges &^ (privSYSNAM | privSYSPRV)
-	p.CurrentPrivileges |= privGRPNAM
+	p.CurrentPrivileges = allPrivileges &^ (privSYSPRV | privGRPNAM | privBYPASS | privGRPPRV)
+
+	wantR0(t, crelnm("LNM$SYSTEM", 0), ssSupersede)
+	wantR0(t, crelnm("LNM$GROUP", 0), ssNoPriv)
+
+	p.CurrentPrivileges = allPrivileges &^ (privSYSNAM | privSYSPRV | privBYPASS | privGRPPRV)
 
 	wantR0(t, crelnm("LNM$GROUP", 0), ssNormal)
 
@@ -320,8 +345,70 @@ func TestPrivilegeChecks_logicalNames(t *testing.T) {
 		t.Errorf("mode %v, %v; want executive (SYSNAM)", e, err)
 	}
 
-	// A shareable table takes SYSPRV.
-	p.CurrentPrivileges = allPrivileges &^ privSYSPRV
+	// A shareable table takes write access to the system directory:
+	// SYSPRV, outside the system category, whatever its parent.
+	p.CurrentPrivileges = allPrivileges &^ (privSYSPRV | privBYPASS | privGRPPRV)
 	r0 := callLNM(t, env, serviceSysCrelnt, 0, 0, 0, 0, 0, a.desc("SHARED_TAB"), a.desc("LNM$SYSTEM_DIRECTORY"), 0)
 	wantR0(t, r0, ssNoPriv)
+	r0 = callLNM(t, env, serviceSysCrelnt, 0, 0, 0, 0, 0, a.desc("SHARED_TAB"), a.desc("LNM$GROUP"), 0)
+	wantR0(t, r0, ssNoPriv)
+
+	// A table SYSTEM makes closed to the world: SYSPRV or READALL reads
+	// it, nothing else; SYSPRV alone writes it.
+	p.CurrentPrivileges = allPrivileges
+	p.UIC = NominalUIC
+	shut := a.alloc(2)
+	_ = env.mem.StoreWord(env.cpu, shut, 0xFF00)
+	r0 = callLNM(t, env, serviceSysCrelnt, 0, 0, 0, 0, shut, a.desc("SHUT_TAB"), a.desc("LNM$SYSTEM_DIRECTORY"), 0)
+	wantR0(t, r0, ssLnmCreated)
+	wantR0(t, crelnm("SHUT_TAB", 3), ssNormal)
+	p.UIC = 0x00800003
+
+	trn := a.items(item{code: lnmString, buflen: 8, buf: a.alloc(8)})
+	trnlnm := func() uint32 {
+		return callLNM(t, env, serviceSysTrnlnm, 0, a.desc("SHUT_TAB"), a.desc("NAME"), 0, trn)
+	}
+
+	p.CurrentPrivileges = allPrivileges &^ (privSYSPRV | privREADALL | privBYPASS)
+	wantR0(t, trnlnm(), ssNoPriv)
+	wantR0(t, crelnm("SHUT_TAB", 3), ssNoPriv)
+
+	p.CurrentPrivileges |= privREADALL
+	wantR0(t, trnlnm(), ssNormal)
+	wantR0(t, crelnm("SHUT_TAB", 3), ssNoPriv)
+
+	p.CurrentPrivileges |= privSYSPRV
+	wantR0(t, crelnm("SHUT_TAB", 3), ssSupersede)
+}
+
+// TestTableQuota checks $CRELNT's quota: a child's quota comes out of
+// its parent's, and a name's size out of its table's.
+func TestTableQuota(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+
+	quota := func(n uint32) uint32 {
+		q := a.alloc(4)
+		_ = env.mem.StoreLongword(env.cpu, q, n)
+
+		return q
+	}
+
+	crelnt := func(name, parent string, q uint32) uint32 {
+		return callLNM(t, env, serviceSysCrelnt, 0, 0, 0, q, 0, a.desc(name), a.desc(parent), 0)
+	}
+
+	wantR0(t, crelnt("QUOTA_TAB", "LNM$SYSTEM_DIRECTORY", quota(200)), ssLnmCreated)
+
+	// The whole quota is too much once a name is in it; less is not.
+	one := a.items(item{code: lnmString, buflen: 1, buf: a.str("X")})
+	wantR0(t, callLNM(t, env, serviceSysCrelnm, 0, a.desc("QUOTA_TAB"), a.desc("NAME"), 0, one), ssNormal)
+	wantR0(t, crelnt("CHILD_A", "QUOTA_TAB", quota(200)), ssExLnmQuota)
+	wantR0(t, crelnt("CHILD_B", "QUOTA_TAB", quota(100)), ssLnmCreated)
+	wantR0(t, crelnt("CHILD_C", "QUOTA_TAB", quota(100)), ssExLnmQuota)
+	wantR0(t, crelnt("CHILD_D", "QUOTA_TAB", 0), ssLnmCreated) // no quota of its own
+
+	// Deleting the child gives its quota back.
+	wantR0(t, callLNM(t, env, serviceSysDellnm, a.desc("LNM$SYSTEM_DIRECTORY"), a.desc("CHILD_B"), 0), ssNormal)
+	wantR0(t, crelnt("CHILD_C", "QUOTA_TAB", quota(100)), ssLnmCreated)
 }

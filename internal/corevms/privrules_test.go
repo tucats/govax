@@ -285,14 +285,14 @@ func TestPrivilegeGate(t *testing.T) {
 	env.cpu.SetDebug(registers.DebugPrivileges)
 	setMode(env, registers.User, registers.User, 0x9000)
 
-	// Any of: SYSPRV alone writes the system table.
+	// Any of: SYSPRV alone sets another's mailbox's protection.
 	p.CurrentPrivileges = privSYSPRV
-	if st := env.requirePrivilege(ruleLnmSystemTable); st != 0 {
+	if st := env.requirePrivilege(ruleMailboxSetProt); st != 0 {
 		t.Errorf("SYSPRV alone: %#x", st)
 	}
 
 	p.CurrentPrivileges = privTMPMBX
-	if st := env.requirePrivilege(ruleLnmSystemTable); st != ssNoPriv {
+	if st := env.requirePrivilege(ruleMailboxSetProt); st != ssNoPriv {
 		t.Errorf("neither: %#x, want SS$_NOPRIV", st)
 	}
 
@@ -318,8 +318,8 @@ func TestPrivilegeGate(t *testing.T) {
 	// The trace: a line a decision.
 	lines := strings.Split(strings.TrimSpace(trace.String()), "\n")
 	want := []string{
-		"USER mode: logical name: write the system table (needs SYSNAM or SYSPRV): holds SYSPRV",
-		"USER mode: logical name: write the system table (needs SYSNAM or SYSPRV): refused, SS$_NOPRIV",
+		"USER mode: mailbox IO$_SETPROTECTION, not the owner (needs BYPASS or SYSPRV): holds SYSPRV",
+		"USER mode: mailbox IO$_SETPROTECTION, not the owner (needs BYPASS or SYSPRV): refused, SS$_NOPRIV",
 		"USER mode: $ENQ system-wide resource (needs SYSLCK): refused, SS$_NOSYSLCK",
 		"EXECUTIVE mode: $ENQ system-wide resource (needs SYSLCK): exempt in its mode",
 		"USER mode: $CMKRNL (needs CMKRNL): refused, SS$_NOPRIV",

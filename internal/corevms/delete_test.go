@@ -117,7 +117,7 @@ func TestDeleteProcess_jobTable(t *testing.T) {
 	a := newArena(t, parent)
 
 	detached := newProcess(t, parent)
-	table := parent.Logicals.NewJobTable()
+	table := parent.Logicals.NewJobTable(detached.Process.UIC)
 	detached.Logicals = parent.Logicals.NewProcessView(detached.Process.UIC, table)
 	detached.Process.Job.LogicalTable = table
 

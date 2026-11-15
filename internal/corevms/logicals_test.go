@@ -445,8 +445,15 @@ func TestOldStyleServices(t *testing.T) {
 	} {
 		wantR0(t, callLNM(t, env, serviceSysCrelog, tt.tblflg, a.desc(tt.name), a.desc("DUA0:"), 3), ssNormal)
 
+		// A system name is executive mode (with SYSNAM), the others the
+		// mode asked for.
+		want := lnm.User
+		if tt.tblflg == 0 {
+			want = lnm.Executive
+		}
+
 		e, err := env.Logicals.Translate(tt.table, tt.name, lnm.User, 0)
-		if err != nil || e.Attrs != lnm.AttrCrelog || e.Mode != lnm.User {
+		if err != nil || e.Attrs != lnm.AttrCrelog || e.Mode != want {
 			t.Errorf("%s = %+v, %v", tt.name, e, err)
 		}
 	}
