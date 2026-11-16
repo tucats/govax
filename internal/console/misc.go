@@ -40,11 +40,19 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 		return nil
 	}
 
-	startCount := c.Engine.InstructionCount()
+	// The engine's count only grows, so the difference is the command's.
+	// A command that makes a new engine (INITIALIZE/MEMORY) is counted
+	// from the new engine's start.
+	engine := c.Engine
+	startCount := engine.InstructionCount()
 	start := time.Now()
 	err := dispatch(cmd)
 	elapsed := time.Since(start)
-	executed := c.Engine.InstructionCount() - startCount
+
+	executed := c.Engine.InstructionCount()
+	if c.Engine == engine {
+		executed -= startCount
+	}
 
 	// Only a command that ran VAX instructions has a count and a rate.
 	if executed > 0 && elapsed > 0 {

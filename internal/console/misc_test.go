@@ -67,6 +67,40 @@ func TestTime_runsCommandAndReportsElapsed(t *testing.T) {
 	}
 }
 
+// TestTime_countsAcrossANewRun is TIME of a command that starts a run
+// (RUN, GO, CALL), which begins the engine's per-run budget again: the
+// count TIME reports is still the command's own instructions.
+func TestTime_countsAcrossANewRun(t *testing.T) {
+	c, buf := newTestConsole(t)
+
+	// Instructions before the command, so a count that went back to 0 at
+	// the run's start would come out below where it began.
+	c.Engine.BeginRun()
+
+	for range 5 {
+		_ = c.Engine.Step()
+	}
+
+	buf.Reset()
+
+	err := c.Time("RUN", func(string) error {
+		c.Engine.BeginRun()
+
+		for range 3 {
+			_ = c.Engine.Step()
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Time: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), ", 3 instructions,") {
+		t.Errorf("output = %q, want the command's 3 instructions", buf.String())
+	}
+}
+
 func TestRunProcedure_dispatchesEachLine(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "script.com")

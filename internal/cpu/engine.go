@@ -137,10 +137,15 @@ type Engine struct {
 	// from the clock's own reading by a write to it (SetTODR, clock.go).
 	todrOffset uint32
 
+	// instrCount is every instruction this engine has begun, never reset;
+	// runStart is what it was at the last BeginRun, so instrCount-runStart
+	// is the current run's share.
+	instrCount int
+	runStart   int
+
 	// Per-run instruction/time budget -- see limits.go. Both zero-valued
 	// (no limit) on a freshly constructed Engine.
 	instrLimit  int
-	instrCount  int
 	timeLimit   time.Duration
 	runDeadline time.Time
 
@@ -319,10 +324,18 @@ func (e *Engine) StoppedBy() byte { return e.stoppedBy }
 // value if Step has never been called.
 func (e *Engine) LastDecoded() Decoded { return e.decoded[e.current&1] }
 
-// InstructionCount returns the number of instructions that have been decoded
-// and executed by the emulation engine.
+// InstructionCount returns the number of instructions this engine has
+// decoded and executed since it was made. It only grows: the console's
+// TIME and --stats take differences of it, or report it whole.
 func (e *Engine) InstructionCount() int {
 	return e.instrCount
+}
+
+// RunInstructionCount returns the number of instructions executed since
+// the last BeginRun: the current (or last) top-level run's alone, the
+// count the instruction limit is measured against.
+func (e *Engine) RunInstructionCount() int {
+	return e.instrCount - e.runStart
 }
 
 // InterruptCount returns the number of interrupts that have been processed

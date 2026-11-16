@@ -93,9 +93,9 @@ func countedRun(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, imag
 
 	_, r1, w1, mr1, mw1 := c.Engine.Memory().Stats()
 
-	// Each run starts the engine's count again (Engine.BeginRun), so this is the
-	// image's alone.
-	return out, runCounts{int64(c.Engine.InstructionCount()), r1 - r0 + mr1 - mr0, w1 - w0 + mw1 - mw0}
+	// Each run starts a new run count (Engine.BeginRun), so this is the image's
+	// alone.
+	return out, runCounts{int64(c.Engine.RunInstructionCount()), r1 - r0 + mr1 - mr0, w1 - w0 + mw1 - mw0}
 }
 
 // logGain logs what /OPTIMIZE did for one program (go test -v shows it), the

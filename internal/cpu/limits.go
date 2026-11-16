@@ -58,7 +58,7 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 // positive. Turn -time-limit off (or use -instruction-limit instead, which
 // has no such issue) when debugging govax's own Go code with a debugger.
 func (e *Engine) BeginRun() {
-	e.instrCount = 0
+	e.runStart = e.instrCount
 	e.stoppedBy = 0
 
 	// A CTRL/Y waiting is kept (see Attention).
@@ -73,7 +73,7 @@ func (e *Engine) BeginRun() {
 // once either configured budget is exhausted, leaving the machine exactly
 // as the last successful instruction left it.
 func (e *Engine) checkLimits() error {
-	if e.instrLimit > 0 && e.instrCount >= e.instrLimit {
+	if e.instrLimit > 0 && e.instrCount-e.runStart >= e.instrLimit {
 		return ErrInstructionLimitExceeded
 	}
 
@@ -81,7 +81,7 @@ func (e *Engine) checkLimits() error {
 	// time limit is checked only every hostClockPollInterval instructions
 	// (clock.go), always including a run's first. That can overrun the
 	// limit by that many instructions: a few microseconds.
-	if e.timeLimit > 0 && e.instrCount&hostClockPollMask == 0 && !time.Now().Before(e.runDeadline) {
+	if e.timeLimit > 0 && (e.instrCount-e.runStart)&hostClockPollMask == 0 && !time.Now().Before(e.runDeadline) {
 		return ErrTimeLimitExceeded
 	}
 	

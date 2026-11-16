@@ -91,6 +91,17 @@ func TestEngineBeginRunResetsInstructionCountBetweenRuns(t *testing.T) {
 			t.Fatalf("second run, step %d: %v", i, err)
 		}
 	}
+
+	// The budget is the run's, but the engine's own count goes on growing
+	// (the refused step began nothing): the console's TIME and --stats
+	// take differences of it.
+	if got := e.RunInstructionCount(); got != 2 {
+		t.Errorf("RunInstructionCount() = %d, want 2", got)
+	}
+
+	if got := e.InstructionCount(); got != 4 {
+		t.Errorf("InstructionCount() = %d, want 4 (both runs)", got)
+	}
 }
 
 func TestEngineTimeLimitStopsRun(t *testing.T) {
