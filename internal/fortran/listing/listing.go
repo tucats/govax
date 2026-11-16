@@ -389,7 +389,7 @@ func (p *pager) newPage() {
 
 	p.out = append(p.out,
 		fmt.Sprintf("\f%-*s%-*s %-*sPage %d", titleColumn, cut(title), dateWidth, dateTime(p.in.Compiled),
-			versionWidth, "govax FORTRAN V"+p.in.Version, p.page),
+			versionWidth, "GOVAX FORTRAN V"+p.in.Version, p.page),
 		fmt.Sprintf("%-*s%s", titleColumn, cut(p.subtitle), p.file),
 		"")
 	p.used = headingLines

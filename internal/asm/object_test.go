@@ -83,7 +83,7 @@ func TestObjectHeaders(t *testing.T) {
 	requireDump(t, dump,
 		`HDR MHD: module "HELLO", version "X-1"`,
 		`created "29-SEP-2026 12:34", structure level 0, maximum record size 512`,
-		`HDR LNM: "govax MACRO"`,
+		`HDR LNM: "GOVAX MACRO"`,
 		`HDR SRC: "MACRO HELLO"`,
 		`HDR TTL: "Says hello"`,
 		"EOM: severity SUCCESS")

@@ -15,7 +15,7 @@ type ObjectOptions struct {
 	// Created is the module's creation time; the zero time means now.
 	Created time.Time
 	// Language is the LNM header's text, naming the language processor;
-	// "" means "govax MACRO".
+	// "" means "GOVAX MACRO".
 	Language string
 	// Source, when not "", is the SRC header's text. Real MACRO puts its
 	// command line there.
@@ -31,7 +31,7 @@ type ObjectOptions struct {
 const noTitleText = "\x01 "
 
 // defaultLanguage names the language processor when ObjectOptions doesn't.
-const defaultLanguage = "govax MACRO"
+const defaultLanguage = "GOVAX MACRO"
 
 // Object returns the object module for a finished MACRO-dialect assembly
 // (see Assemble). It writes the records real MACRO writes, in the same

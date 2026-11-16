@@ -316,7 +316,7 @@ func TestLink_imageHeaderNames(t *testing.T) {
 		t.Errorf("image ID = %q, want the module's V1.0", id)
 	}
 
-	if id := string(ihi[65 : 65+ihi[64]]); id != "govax V1.0-118" {
+	if id := string(ihi[65 : 65+ihi[64]]); id != "GOVAX V1.0-118" {
 		t.Errorf("linker ID = %q", id)
 	}
 }

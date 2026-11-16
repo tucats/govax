@@ -47,6 +47,10 @@ import (
 
 const platformName = "govax"
 
+// defaultLinkerID is the image header's linker name when Options gives
+// none, upper case as VMS's utilities name themselves.
+const defaultLinkerID = "GOVAX"
+
 // Input is one object module to link, and the file it came from (for
 // messages).
 type Input struct {
@@ -75,7 +79,7 @@ type Options struct {
 	Time time.Time
 	// LinkerID identifies the linker in the image header, as real LINK
 	// writes its version ("V11-39"). At most 15 characters; "" means
-	// "govax".
+	// "GOVAX".
 	LinkerID string
 	// Traceback makes SYS$IMGSTA the image's first transfer address, as
 	// LINK/TRACEBACK (the default) does.
@@ -211,7 +215,7 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 	}
 
 	if opts.LinkerID == "" {
-		opts.LinkerID = platformName
+		opts.LinkerID = defaultLinkerID
 	}
 
 	if opts.StackPages == 0 {

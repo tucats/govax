@@ -75,8 +75,8 @@ func TestMacro_listHost(t *testing.T) {
 		t.Fatalf("first line = %q, want a form feed and the module's name", lines[0])
 	}
 
-	if !strings.Contains(lines[0], "govax MACRO V"+dclcmd.BuildVersion) {
-		t.Errorf("heading = %q, want it to name govax MACRO", lines[0])
+	if !strings.Contains(lines[0], "GOVAX MACRO V"+dclcmd.BuildVersion) {
+		t.Errorf("heading = %q, want it to name GOVAX MACRO", lines[0])
 	}
 
 	abs, _ := filepath.Abs(src)
@@ -93,7 +93,7 @@ func TestMacro_listHost(t *testing.T) {
 		t.Errorf("statistics line = %q, want the object's records counted", l)
 	}
 
-	if l := lineWith(lines, "govax STARLET.MLB"); l == "" {
+	if l := lineWith(lines, "GOVAX STARLET.MLB"); l == "" {
 		t.Error("the library statistics don't name govax's own system library")
 	}
 }

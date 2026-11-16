@@ -162,7 +162,7 @@ func TestMacro_headers(t *testing.T) {
 		t.Errorf("main header = %+v, want SMALL V1.0", mhd)
 	}
 
-	want := []string{"govax MACRO V1.2-34", `MACRO "small.mar"`, "a small module"}
+	want := []string{"GOVAX MACRO V1.2-34", `MACRO "small.mar"`, "a small module"}
 	for _, w := range want {
 		found := false
 

@@ -144,7 +144,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	for _, want := range []string{
 		"no module matches NONE%",
 		"Directory of MACRO library " + libFile.Name + " on ",
-		"Creator:  govax Librarian",
+		"Creator:  GOVAX Librarian",
 		"Number of modules:      1                 Max. key length:  31",
 		"Preallocated index blocks:      9",
 		"CLEAR            inserted ",

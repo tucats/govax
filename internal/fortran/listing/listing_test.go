@@ -33,7 +33,7 @@ func testInput(list []*source.Line) Input {
 
 // heading is a page's first heading line.
 func heading(title string, page int) string {
-	return fmt.Sprintf("\f%-41s2-NOV-2026 14:05:11  %-30sPage %d", title, "govax FORTRAN V1.0-1", page)
+	return fmt.Sprintf("\f%-41s2-NOV-2026 14:05:11  %-30sPage %d", title, "GOVAX FORTRAN V1.0-1", page)
 }
 
 func compare(t *testing.T, got, want []string) {

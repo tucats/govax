@@ -342,7 +342,7 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 
 	got := a.Listing(ListingOptions{
 		Assembled: time.Now(),
-		Assembler: "govax MACRO V0.0-0",
+		Assembler: "GOVAX MACRO V0.0-0",
 		Source:    strings.ToUpper(filepath.Base(source)) + ";1",
 		Revised:   time.Now(),
 		Command:   realPath[len(realPath)-1],

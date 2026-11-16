@@ -496,7 +496,7 @@ func (c *Context) writeListing(a *asm.Assembler, opts MacroOptions, found rms.Fi
 // the listing's heading name the assembler, where real MACRO's say "VAX
 // MACRO V5.4-3".
 func macroAssemblerName() string {
-	return "govax MACRO V" + BuildVersion
+	return "GOVAX MACRO V" + BuildVersion
 }
 
 // openMacroLibrary reads the macro library name, a /LIBRARY= or .LIBRARY
@@ -585,7 +585,7 @@ func (c *Context) openStarlet() (asm.MacroLibrary, error) {
 	}
 
 	if data == nil {
-		name = "govax STARLET.MLB"
+		name = "GOVAX STARLET.MLB"
 
 		if data, err = fs.ReadFile(bootdata.FS, bootdata.StarletLibrary); err != nil {
 			return nil, fmt.Errorf("%s: %w", name, err)

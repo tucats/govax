@@ -17,7 +17,7 @@ func sampleModule(t *testing.T) *Module {
 	b := &Builder{
 		Name:     "HELLO",
 		Version:  "V1.0",
-		Language: "govax MACRO V1.0",
+		Language: "GOVAX MACRO V1.0",
 		Created:  time.Date(2026, 9, 30, 9, 5, 0, 0, time.UTC),
 		Title:    "Say hello",
 	}
@@ -560,7 +560,7 @@ func TestDump(t *testing.T) {
 	for _, want := range []string{
 		`1. HDR MHD: module "HELLO", version "V1.0"`,
 		`created "30-SEP-2026 09:05", structure level 0, maximum record size 512`,
-		`2. HDR LNM: "govax MACRO V1.0"`,
+		`2. HDR LNM: "GOVAX MACRO V1.0"`,
 		`3. HDR TTL: "Say hello"`,
 		`PSC 0: "$CODE", alignment LONG, PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,NOVEC, 12 bytes`,
 		`PSC 1: "$DATA"`,

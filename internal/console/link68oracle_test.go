@@ -483,10 +483,10 @@ type link68Mask struct {
 // total bytes in ANALYZE/OBJECT, which follow from MACRO's name).
 var link68Masks = []link68Mask{
 	{link68Dates, "<date>"},
-	{regexp.MustCompile(`(VAX|govax) MACRO V[^\s"]* *`), "<macro> "},
-	{regexp.MustCompile(`Linker (V11-39|govax) *`), "<linker> "},
-	{regexp.MustCompile(`"(V11-39|govax)"`), `"<linker>"`},
-	{regexp.MustCompile(`Librarian T09-20|govax Librarian`), "<librarian>"},
+	{regexp.MustCompile(`(GOVAX|govax|VAX) MACRO V[^\s"]* *`), "<macro> "},
+	{regexp.MustCompile(`Linker (V11-39|GOVAX|govax) *`), "<linker> "},
+	{regexp.MustCompile(`"(V11-39|GOVAX|govax)"`), `"<linker>"`},
+	{regexp.MustCompile(`Librarian T09-20|(GOVAX|govax) Librarian`), "<librarian>"},
 	{regexp.MustCompile(`\(OBJ\$C_HDR_LNM\), \d+ bytes`), "(OBJ$$C_HDR_LNM), <n> bytes"},
 	{regexp.MustCompile(`^(OBJ\$C_HDR|Totals)(\t+ +\d+\t +)\d+$`), "$1$2<n>"},
 }

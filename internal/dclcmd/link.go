@@ -380,7 +380,7 @@ func imageName(exe rms.FileLocation) string {
 // linkerID names govax's LINK in an image header, as real LINK records
 // its version ("V11-39"): at most 15 characters.
 func linkerID() string {
-	id := "govax"
+	id := "GOVAX"
 	if BuildVersion != "" {
 		id += " V" + BuildVersion
 	}

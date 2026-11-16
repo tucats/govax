@@ -134,7 +134,7 @@ func TestFortran_header(t *testing.T) {
 
 	text := strings.Join(readMACRO(t, c, rms.FileLocation{Host: true, Name: strings.TrimSuffix(src, ".for") + ".mar"}), "\n")
 
-	for _, want := range []string{"; Compiled by govax FORTRAN V1.0-200 on ", "; from " + src, "; by the command FORTRAN SQ"} {
+	for _, want := range []string{"; Compiled by GOVAX FORTRAN V1.0-200 on ", "; from " + src, "; by the command FORTRAN SQ"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the header lacks %q:\n%s", want, text)
 		}

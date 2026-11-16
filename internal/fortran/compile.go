@@ -301,7 +301,7 @@ func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident st
 	w.Statement("", ".IDENT", identOperand(ident), "")
 	opts.Debug.writeDirectives(w)
 	w.Comment("")
-	w.Comment("Compiled by govax FORTRAN V" + opts.Version + " on " + vmsTime(opts.Compiled))
+	w.Comment("Compiled by GOVAX FORTRAN V" + opts.Version + " on " + vmsTime(opts.Compiled))
 
 	for _, file := range files {
 		w.Comment("from " + file.Spec)

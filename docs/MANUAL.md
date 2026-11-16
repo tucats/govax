@@ -3419,7 +3419,7 @@ Build the macro library, then the program:
 VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC
 VAX> LIBRARY/LIST MYMAC.MLB
 Directory of MACRO library DUA1:[DEMO]MYMAC.MLB;1 on 20-OCT-2026 10:09:28
-Creation date:  20-OCT-2026 10:09:28      Creator:  govax Librarian
+Creation date:  20-OCT-2026 10:09:28      Creator:  GOVAX Librarian
 ...
 CHECK
 PRINT
@@ -3647,7 +3647,7 @@ vector entry gives three traces on both, but at different offsets
 of `HELLO.LIS`:
 
 ```text
-HELLO                           Fixture 9: hello, world                  20-OCT-2026 09:56:08  govax MACRO V0.0-0          Page   1
+HELLO                           Fixture 9: hello, world                  20-OCT-2026 09:56:08  GOVAX MACRO V0.0-0          Page   1
 V1.0                                                                     20-OCT-2026 09:56:08  DUA1:[HELLO]HELLO.MAR;1           (1)
 
                                      0000     1         .TITLE  HELLO   Fixture 9: hello, world
@@ -3892,8 +3892,8 @@ VAX> TYPE MAIN3.MAP
 
 Module Name     Ident              Bytes      File                                Creation Date      Creator
 -----------     -----              -----      -----                               -------------      -------
-MAIN            0                     198 DUA1:[SHR]MAIN.OBJ;1                 20-OCT-2026 09:59  govax MACRO V0.0-0
-ROUTINES        0                      18 DUA1:[SHR]MATHLIB.OLB;1              20-OCT-2026 09:59  govax MACRO V0.0-0
+MAIN            0                     198 DUA1:[SHR]MAIN.OBJ;1                 20-OCT-2026 09:59  GOVAX MACRO V0.0-0
+ROUTINES        0                      18 DUA1:[SHR]MATHLIB.OLB;1              20-OCT-2026 09:59  GOVAX MACRO V0.0-0
 ...
                                                  +----------------+
                                                  ! Image Synopsis !
@@ -4144,7 +4144,7 @@ VAX> LIBRARY/CREATE/LOG MATHLIB ROUTINES
 %LIBRAR-S-INSERTED, module ROUTINES inserted in DUA1:[SHR]MATHLIB.OLB;1
 VAX> LIBRARY/LIST/FULL/NAMES MATHLIB
 Directory of OBJECT library DUA1:[SHR]MATHLIB.OLB;1 on 20-OCT-2026 10:10:06
-Creation date:  20-OCT-2026 10:10:06      Creator:  govax Librarian
+Creation date:  20-OCT-2026 10:10:06      Creator:  GOVAX Librarian
 Revision date:  20-OCT-2026 10:10:06      Library format:   3.0
 Number of modules:      1                 Max. key length:  31
 Other entries:          2                 Preallocated index blocks:     49
@@ -6322,7 +6322,7 @@ program unit starts a page. After the whole source come the units' storage maps,
 the same words as the MACRO file's.
 
 ```text
-SQUARES                                  2-NOV-2026 14:42:20  govax FORTRAN V1.0-115        Page 1
+SQUARES                                  2-NOV-2026 14:42:20  GOVAX FORTRAN V1.0-115        Page 1
                                          DUA1:[WORK]SQUARES.FOR;1
 
     1        PROGRAM SQUARES
@@ -6659,7 +6659,7 @@ C     Squares of the first N integers
 	.TITLE	SQUARES
 	.IDENT	/01/
 ;
-; Compiled by govax FORTRAN V1.0-712 on  2-NOV-2026 09:14:22.05
+; Compiled by GOVAX FORTRAN V1.0-712 on  2-NOV-2026 09:14:22.05
 ; from DUA1:[WORK]SQUARES.FOR;1
 ; by the command FORTRAN/NOOPTIMIZE SQUARES
 ;

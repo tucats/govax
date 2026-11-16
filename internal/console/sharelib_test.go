@@ -129,7 +129,7 @@ func TestShareableImageLibrary(t *testing.T) {
 		}
 
 		g, w = listingDate.ReplaceAllString(g, "<date>"), listingDate.ReplaceAllString(w, "<date>")
-		g, w = strings.Replace(g, "govax Librarian", "<creator>", 1), strings.Replace(w, "Librarian T09-20", "<creator>", 1)
+		g, w = strings.Replace(g, "GOVAX Librarian", "<creator>", 1), strings.Replace(w, "Librarian T09-20", "<creator>", 1)
 
 		if g != w {
 			t.Errorf("MYSHR.LIS line %d:\n got %q\nwant %q", i+1, g, w)

@@ -45,7 +45,7 @@ func TestCompileSquares(t *testing.T) {
 		"\t.TITLE\tSQUARES",
 		"\t.IDENT\t/01/",
 		";",
-		"; Compiled by govax FORTRAN V1.0-1 on 29-OCT-2026 14:05:11.20",
+		"; Compiled by GOVAX FORTRAN V1.0-1 on 29-OCT-2026 14:05:11.20",
 		"; from DUA0:[WORK]SQUARES.FOR;1",
 		"; by the command FORTRAN SQUARES",
 		";",

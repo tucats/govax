@@ -657,7 +657,7 @@ choices no fixture has confirmed yet.
     symbol is reported.
   - `.INCLUDE` isn't MACRO-32. It's kept as an extension, and resolves
     names across host and ODS-2 files.
-  - The object's language processor header is `govax MACRO V<build>`,
+  - The object's language processor header is `GOVAX MACRO V<build>`,
     and its SRC header is the command line as typed, as real MACRO
     records its own.
   - A host `.OBJ` is kept in ODS-2's on-disk variable-length record

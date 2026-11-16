@@ -46,8 +46,8 @@ var (
 
 	// assembler names the language processor in each module's header,
 	// and linker the linker in the image header (15 characters at most).
-	assembler = "govax MACRO"
-	linker    = "govax"
+	assembler = "GOVAX MACRO"
+	linker    = "GOVAX"
 )
 
 // Build builds FTNRTL.EXE from the sources in fsys (laid out as

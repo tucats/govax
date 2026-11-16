@@ -100,7 +100,7 @@ var typeDefaults = map[Type]struct {
 
 const (
 	// LibrarianName is what govax puts in LHD$T_LBRVER.
-	LibrarianName = "govax Librarian"
+	LibrarianName = "GOVAX Librarian"
 
 	defaultHistory = 20  // LIB$C_DEFLUHREC
 	defaultModules = 128 // /CREATE's MODULES

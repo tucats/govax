@@ -17,7 +17,7 @@ import (
 func sourcePageLines(a *Assembler) []string {
 	var out []string
 
-	lines := a.Listing(ListingOptions{Assembled: time.Now(), Assembler: "govax MACRO V0.0-0"})
+	lines := a.Listing(ListingOptions{Assembled: time.Now(), Assembler: "GOVAX MACRO V0.0-0"})
 
 	for i := 0; i < len(lines); i++ {
 		if strings.HasPrefix(lines[i], "\f") {

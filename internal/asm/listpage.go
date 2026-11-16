@@ -55,7 +55,7 @@ type ListingOptions struct {
 	// Assembled is when the assembly ran.
 	Assembled time.Time
 	// Assembler names the assembler and its version, as the object's
-	// language processor header does: "govax MACRO V1.2-34".
+	// language processor header does: "GOVAX MACRO V1.2-34".
 	Assembler string
 	// Source is the source file's full file specification, and Revised
 	// when the file was last revised.
