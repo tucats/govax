@@ -218,6 +218,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		if vmsMode {
 			keys = newTerminalInput(int(os.Stdin.Fd()))
 			input = keys
+			c.TerminalEcho = terminalEcho(int(os.Stdin.Fd()))
 		}
 
 		attn = newAttentionStdin(input, out, vmsMode, func() *cpu.Engine { return c.Engine }, forceExit)

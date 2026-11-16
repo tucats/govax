@@ -149,6 +149,7 @@ func Files() []File {
 		{Directory: SysMgr, Name: "STARTUP.COM", Format: Text, read: boot("startup.com")},
 		{Directory: SysMgr, Name: "SYSTARTUP_VMS.COM", Format: Text, Kind: Seeded, read: boot("systartup_vms.com")},
 		{Directory: SysMgr, Name: "SYLOGIN.COM", Format: Text, Kind: Seeded, read: boot("sylogin.com")},
+		{Directory: SysMgr, Name: "ADDUSER.COM", Format: Text, read: boot("adduser.com")},
 		{Directory: SysMgr, Name: "CONSOLE.DCL", Format: Text, read: boot("console.dcl")},
 		{Directory: SysMgr, Name: "DEBUG.DCL", Format: Text, read: boot("debug.dcl")},
 

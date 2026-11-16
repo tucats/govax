@@ -24,3 +24,8 @@ func (*terminalInput) Read(p []byte) (int, error) { return os.Stdin.Read(p) }
 func (*terminalInput) pause() {}
 
 func (*terminalInput) resume() {}
+
+// terminalEcho is nil where govax doesn't know how to change the
+// terminal's echo: SET TERMINAL/NOECHO then changes only the
+// characteristic programs see.
+func terminalEcho(int) func(on bool) (restore func()) { return nil }

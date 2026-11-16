@@ -33,6 +33,13 @@ type Interpreter struct {
 	// and it's nil when there's no terminal to lend, as in tests.
 	LendTerminal func(cmd *exec.Cmd) error
 
+	// TerminalEcho turns the host terminal's echo off (on false) for one
+	// of DCL's terminal reads while SET TERMINAL/NOECHO is in effect, and
+	// returns what turns it back on: cmd/govax's, which knows the terminal.
+	// It's nil when there's no terminal, as in tests, and a read then
+	// echoes as the host does.
+	TerminalEcho func(on bool) (restore func())
+
 	// hostJobs are the SPAWN/HOST/NOWAIT programs not yet finished up
 	// (spawnhost.go), whichever process's DCL started them.
 	hostJobs []*hostJob

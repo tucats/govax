@@ -529,7 +529,7 @@ Each is one commit, with tests, stopping for review.
    the probe's batch log; the password asked at login for an account that
    has one, `GOVAX_PASSWORD` when standard input isn't a terminal
    (Decision 6's "The password").
-9. **ADDUSER.COM** (Decision 12), with SET TERMINAL/NOECHO if missing,
+9. **ADDUSER.COM** (done 2026-11-15) (Decision 12), with SET TERMINAL/NOECHO if missing,
    and the end-to-end tests (Decision 13).
 10. **The close-out**: README.md (you log in as SYSTEM by default, and
     can make accounts to model privileges and protection), MANUAL.md (a
@@ -955,3 +955,38 @@ The answers (2026-11-15):
   name alone as a logical name (`@SYS$SYLOGIN` looks for
   `SYS$SYLOGIN.COM`), which VMS's RMS does for a name with no
   punctuation.
+- **2026-11-15** Subtask 9: ADDUSER.COM. `bootdata/files/adduser.com`,
+  supplied (not seeded) in SYS$MANAGER (`sysvol.Files`): it refuses a
+  process without SYSPRV outside the system groups
+  (`vax.sysgen.maxsysgroup`, 8 unless set) before asking anything,
+  `%ADDUSER-E-NOPRIV`; asks the username (12 characters at most, not an
+  identifier already, `F$IDENTIFIER`'s NAME_TO_NUMBER), the owner, the UIC
+  group in octal (200 offered) and member (the first the rights database
+  has no identifier for, found by NUMBER_TO_NAME, offered; one in use
+  refused by `F$FAO("!%I")`), the password twice with SET
+  TERMINAL/NOECHO (none allowed), the home device (the default volume's
+  when one is configured and mounted, else SYS$SYSDEVICE:) and directory
+  (`[username]`), and the privileges (TMPMBX and NETMBX, or a list); runs
+  `AUTHORIZE ADD .../FLAGS=NODISUSER/PRIVILEGES=(NOALL,...)` (NOALL, since
+  AUTHORIZE adds named privileges to DEFAULT's); makes the home directory
+  owned by the account, (S:RWE,O:RWE,G,W), or gives an existing one to it
+  (its directory file, `[A]B.DIR` for `[A.B]`); and writes a starter
+  LOGIN.COM there, the account's, (S:RWED,O:RWED,G,W), unless one is there.
+  Ctrl/Z or Ctrl/Y at a question adds nothing. The protection is written
+  `G,W` rather than Decision 12's `G:, W:`, which DCL now refuses (round
+  2's lesson). SET TERMINAL/NOECHO now does something at the host: DCL's
+  terminal reads in process 1 (`readTerminal`: INQUIRE, READ SYS$COMMAND)
+  call `Interpreter.TerminalEcho` while SYS$COMMAND has TT$M_NOECHO, which
+  `cmd/govax` sets to a termios change at a real terminal
+  (`terminal_unix.go`'s `terminalEcho`: ECHO off, ECHONL on, put back
+  after the read; nil elsewhere). Tests: `TestAddUser` (SYSTEM runs it,
+  answering at the terminal; the record, the hash, the directory's and
+  LOGIN.COM's owner and protection; then process 1 logged in as SMITH: its
+  F$GETJPI values, its home, its LOGIN.COM run, SYS$MANAGER readable and
+  not deletable, its home writable, ADDUSER refused),
+  `TestAddUserExistingHome`, and `TestTerminalNoEcho`. Noticed, not changed:
+  in a `cmd/govax` session whose input is a pipe, readline and DCL's
+  terminal reads share one reader and readline reads ahead, so an INQUIRE
+  gets end of file; at a terminal they share `attentionStdin` and work, so
+  the end-to-end test is in `internal/console`, where the terminal is a
+  plain reader.

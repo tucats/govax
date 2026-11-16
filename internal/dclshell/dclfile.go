@@ -338,7 +338,25 @@ func (c *Interpreter) readTerminal(prompt string) (string, bool) {
 		fmt.Fprint(out, prompt)
 	}
 
+	// SET TERMINAL/NOECHO keeps what is typed off the screen, as for a
+	// password (ADDUSER.COM's).
+	if c.TerminalEcho != nil && c.terminalNoEcho() {
+		defer c.TerminalEcho(false)()
+	}
+
 	return c.ReadReply()
+}
+
+// terminalNoEcho reports whether SYS$COMMAND, process 1's terminal, has
+// the NOECHO characteristic SET TERMINAL/NOECHO gives it.
+func (c *Interpreter) terminalNoEcho() bool {
+	if c.RTL == nil {
+		return false
+	}
+
+	s, st := c.RTL.TerminalSettings("SYS$COMMAND")
+
+	return st == 0 && s.Characteristics&vmsdef.Symbols["TT$M_NOECHO"] != 0
 }
 
 // readRecord reads the procedure's next record, whatever it is: READ

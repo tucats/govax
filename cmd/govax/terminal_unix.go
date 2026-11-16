@@ -189,3 +189,31 @@ func (t *terminalInput) resume() {
 		close(t.resumed)
 	}
 }
+
+// terminalEcho is DCL's Interpreter.TerminalEcho for the terminal on fd:
+// it turns the terminal driver's echo off (or on), keeping the Return's
+// echo so the next output starts on a line of its own, and returns what
+// puts the terminal back as it was. A terminal it can't change is left
+// alone.
+func terminalEcho(fd int) func(on bool) (restore func()) {
+	return func(on bool) (restore func()) {
+		saved, err := unix.IoctlGetTermios(fd, ioctlGetTermios)
+		if err != nil {
+			return func() {}
+		}
+
+		t := *saved
+		if on {
+			t.Lflag |= unix.ECHO
+		} else {
+			t.Lflag &^= unix.ECHO
+			t.Lflag |= unix.ECHONL
+		}
+
+		if err := unix.IoctlSetTermios(fd, ioctlSetTermios, &t); err != nil {
+			return func() {}
+		}
+
+		return func() { _ = unix.IoctlSetTermios(fd, ioctlSetTermios, saved) }
+	}
+}
