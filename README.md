@@ -18,7 +18,10 @@ DIGITAL.**
 A VAX-11/780 executed about half a million instructions a second, and a
 whole department shared it. On a current laptop govax executes 10 to 20
 million, all of them yours. You're logged in as `SYSTEM`, with every
-privilege, and nobody from operations is going to call.
+privilege, and nobody from operations is going to call. (When you want to
+see what a user without privileges is refused, `@SYS$MANAGER:ADDUSER`
+makes an account, and `govax --user NAME` logs in as it: file protection,
+ACLs, and privileges are all checked.)
 
 ## Hello, VAX
 

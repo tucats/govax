@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -39,6 +40,11 @@ type Interpreter struct {
 	// It's nil when there's no terminal, as in tests, and a read then
 	// echoes as the host does.
 	TerminalEcho func(on bool) (restore func())
+
+	// AuthorizeHelp opens AUTHORIZE's help library for its HELP command
+	// (authorize.go): the console's, SYS$HELP:UAFHELP.HLB or govax's own
+	// copy. Nil, as in DCL's own tests, AUTHORIZE has no HELP.
+	AuthorizeHelp func() (help.Library, error)
 
 	// hostJobs are the SPAWN/HOST/NOWAIT programs not yet finished up
 	// (spawnhost.go), whichever process's DCL started them.

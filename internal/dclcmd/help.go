@@ -411,6 +411,13 @@ func (c *Context) DebuggerHelpLibrary(builtin string) (help.Library, error) {
 	return c.OpenHelpLibrary(spec, builtin)
 }
 
+// UAFHelpLibrary is AUTHORIZE's help library: SYS$HELP:UAFHELP.HLB, or
+// govax's own copy (builtin, bootdata's embedded name) when there is
+// none (docs/planning/PHASE-95 - authentication.md, Decision 10).
+func (c *Context) UAFHelpLibrary(builtin string) (help.Library, error) {
+	return c.OpenHelpLibrary("SYS$HELP:UAFHELP", builtin)
+}
+
 // builtinHelpLibrary is govax's own copy of a help library, by its
 // embedded name. It's opened afresh each time: a Library keeps the modules
 // it has parsed, and HELP may run in several processes' DCL at once.

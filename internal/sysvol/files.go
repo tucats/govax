@@ -35,15 +35,17 @@ const (
 )
 
 // HelpSources holds HELPLIB.HLB's help files, and DebugHelpSources, below
-// it, DBG$HELP.HLB's (BUILDHELP.COM builds the libraries from them).
+// it, DBG$HELP.HLB's, and UAFHelpSources UAFHELP.HLB's (BUILDHELP.COM
+// builds the libraries from them).
 const (
 	HelpSources      = "[SYSTEM.SYSHLP.SOURCES]"
 	DebugHelpSources = "[SYSTEM.SYSHLP.SOURCES.DEBUG]"
+	UAFHelpSources   = "[SYSTEM.SYSHLP.SOURCES.AUTHORIZE]"
 )
 
 // Directories lists every directory on the volume, each after its parent,
 // the order they are made in.
-var Directories = []string{Root, SysExe, SysMgr, SysHlp, HelpSources, DebugHelpSources, SysLib, Sources}
+var Directories = []string{Root, SysExe, SysMgr, SysHlp, HelpSources, DebugHelpSources, UAFHelpSources, SysLib, Sources}
 
 // PageFile is the default page file's place on the volume, by directory
 // and name (Decision 8). It isn't one of Files(): the page file's own
@@ -155,6 +157,7 @@ func Files() []File {
 
 		{Directory: SysHlp, Name: bootdata.HelpLibraryName(bootdata.HelpLibrary), Format: Binary, HelpLibrary: true, read: boot(bootdata.HelpLibrary)},
 		{Directory: SysHlp, Name: bootdata.HelpLibraryName(bootdata.DebugHelpLibrary), Format: Binary, HelpLibrary: true, read: boot(bootdata.DebugHelpLibrary)},
+		{Directory: SysHlp, Name: bootdata.HelpLibraryName(bootdata.UAFHelpLibrary), Format: Binary, HelpLibrary: true, read: boot(bootdata.UAFHelpLibrary)},
 
 		{Directory: SysLib, Name: strings.ToUpper(bootdata.StarletLibrary), Format: Binary, read: boot(bootdata.StarletLibrary)},
 		{Directory: SysLib, Name: "FTNRTL.EXE", Format: Binary, read: ftnrtlFile(ftnrtl.ImageFile)},
@@ -166,6 +169,7 @@ func Files() []File {
 	// The help libraries' sources, which BUILDHELP.COM builds them from.
 	files = append(files, helpSources(HelpSources, bootdata.HelpSourceDir)...)
 	files = append(files, helpSources(DebugHelpSources, bootdata.DebugHelpSourceDir)...)
+	files = append(files, helpSources(UAFHelpSources, bootdata.UAFHelpSourceDir)...)
 
 	// FTNRTL's sources: every module, then the options that link them, and
 	// the procedure that builds the library from them.

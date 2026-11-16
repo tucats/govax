@@ -44,6 +44,8 @@
                          /FULL with the identifiers they hold
      LIST [username]     The same into SYSUAF.LIS in the default
                          directory (every account, brief, by default)
+     HELP [topic]        AUTHORIZE's own help, SYS$HELP:UAFHELP.HLB,
+                         with a topic for each command
      EXIT                End the session
 
    The rights identifiers:
@@ -88,6 +90,23 @@
    lifetimes, or expiration dates, so /ACCESS, /PRIMEDAYS,
    /PWDLIFETIME, /PWDMINIMUM, /PWDEXPIRED, /EXPIRATION, and
    /GENERATE_PASSWORD are not accepted.
+
+2 Accounts
+
+   An account is logged into with govax's --user option (-u): govax
+   --user SMITH.  Without it, process 1 is SYSTEM.  An account with a
+   password must give it: govax asks for it at a terminal, and reads the
+   GOVAX_PASSWORD environment variable when standard input isn't one.
+   DISUSER refuses the login (%LOGIN-F-DISUSER).
+
+   At the login the account's DEVICE and DIRECTORY become SYS$LOGIN,
+   SYS$LOGIN_DEVICE, SYS$SCRATCH, and the default directory, and in a
+   session DCL runs SYS$SYLOGIN and then the account's LGICMD, or
+   SYS$LOGIN:LOGIN.COM when it has none.
+
+   @SYS$MANAGER:ADDUSER adds an account by asking for its facts: it runs
+   AUTHORIZE ADD, makes the home directory owned by the account, and
+   writes a starter LOGIN.COM there.
 
 2 Examples
 

@@ -23,12 +23,16 @@ import (
 // sources, and a test rebuilds them and checks that they match.
 //
 // The debugger's library has one module, DEBUG, with each command a level-2
-// topic below it, as VMS's DBG$HELP.HLB has.
+// topic below it, as VMS's DBG$HELP.HLB has. AUTHORIZE's, UAFHELP.HLB, has
+// a module for each of its commands (docs/planning/PHASE-95 -
+// authentication.md, Decision 10).
 const (
 	HelpLibrary          = "helplib.hlb"
 	HelpSourceDir        = "help"
 	DebugHelpLibrary     = "dbghelp.hlb"
 	DebugHelpSourceDir   = "dbghelp"
+	UAFHelpLibrary       = "uafhelp.hlb"
+	UAFHelpSourceDir     = "uafhelp"
 	helpSourceType       = ".hlp"
 	debugHelpLibraryName = "DBG$HELP.HLB"
 )
@@ -49,6 +53,7 @@ func HelpLibraryName(embedded string) string {
 var HelpLibraries = map[string]string{
 	HelpLibrary:      HelpSourceDir,
 	DebugHelpLibrary: DebugHelpSourceDir,
+	UAFHelpLibrary:   UAFHelpSourceDir,
 }
 
 // helpTime is the help libraries' creation, revision, and insertion time,

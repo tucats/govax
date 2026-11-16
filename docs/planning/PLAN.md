@@ -144,7 +144,7 @@ questions, and a progress log extended as that phase is worked.
 | 92 | [PHASE-92 - documentation](PHASE-92%20-%20documentation.md) | Standalone guides to govax's internals, a document per part: Part A is `VAX-VMS-INTERNALS.md`, how govax is a VAX and how it gives a program VMS — planned and done 2026-11-11 |
 | 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day; done 2026-11-15, with the VMS round |
 | 94 | [PHASE-94 - privileges](PHASE-94%20-%20privileges.md) | Every operation VMS guards with a privilege guarded by the same privilege, through one table-driven gate (`corevms/privrules.go`) traced by SET DEBUG PRIVILEGES; logical name tables' protection; DCL's commands, the terminal driver, and seeing other processes by VMS's rules; SET PROCESS, SET TERMINAL, and INSTALL with installed images' privileges; a precursor to identities other than SYSTEM — planned 2026-11-15, the plan accepted the same day; done 2026-11-15 |
-| 95 | [PHASE-95 - authentication](PHASE-95%20-%20authentication.md) | User accounts: the authorization file (JSON, `vax.authorization.file`), `--user`, AUTHORIZE as a DCL verb with VMS's grammar, SYS$LOGIN and the login procedures (SYLOGIN.COM, LOGIN.COM), the system volume's owners and protections, and SYS$MANAGER:ADDUSER.COM — planned 2026-11-15, the plan accepted the same day |
+| 95 | [PHASE-95 - authentication](PHASE-95%20-%20authentication.md) | User accounts: the authorization file (JSON, `vax.authorization.file`), `--user`, AUTHORIZE as a DCL verb with VMS's grammar, SYS$LOGIN and the login procedures (SYLOGIN.COM, LOGIN.COM), the system volume's owners and protections, and SYS$MANAGER:ADDUSER.COM — planned 2026-11-15, the plan accepted the same day; done 2026-11-16 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -720,3 +720,25 @@ VAX), Part B the decisions with the author's review, and its log the work.
 
 MANUAL.md's section 11, "Privileges", is the user's side, and VAX-VMS-INTERNALS.md's 7.14 the developer's. What the
 phase left is its doc's "Where things stand".
+
+## Authentication (Phase 95)
+
+Phase 95 (2026-11-15 to 2026-11-16) gave govax user accounts, so that the file protection and privileges of Phases 93
+and 94 can be tried as someone other than SYSTEM. Its doc's Part A is the survey and the probe's answers
+(`testdata/uaf95`, three rounds on VMS 7.1 with probe accounts on the VAX), Part B the decisions with the author's
+review, and its log the work.
+
+- **The authorization file:** `internal/uaf`, govax's SYSUAF and rights database as one JSON host file
+  (`~/.govax/sysuaf.json`, `vax.authorization.file`), made with SYSTEM and DEFAULT, read and written whole under a host
+  lock; passwords as Argon2id hashes.
+- **Logging in:** `--user`/`-u`, the password asked at a terminal or taken from `GOVAX_PASSWORD`;
+  `Environment.LogIn` gives process 1 the account's UIC, privileges, quotas, and rights; SYS$LOGIN and its kin and the
+  default directory; in a session, SYS$SYLOGIN and then the LGICMD or SYS$LOGIN:LOGIN.COM, nested as VMS 7.1's.
+- **AUTHORIZE:** `internal/authorize`, a grammar of its own, the account and identifier commands, SHOW's and LIST's
+  reports, its statuses and messages held to the probe's 147 cases; HELP from `SYS$HELP:UAFHELP.HLB`.
+- **The system volume:** every file and directory owned by `[1,4]`, readable by all and writable only by the system;
+  SYLOGIN.COM seeded; SYS$MANAGER:ADDUSER.COM, which makes an account and its home.
+
+MANUAL.md's section 5, "Accounts and logging in", is the user's side, and VAX-VMS-INTERNALS.md's 7.15 the developer's.
+What the phase left is its doc's "Where things stand".
+

@@ -4,8 +4,10 @@ $!
 $!  SYS$HELP:HELPLIB.HLB, DCL's HELP, is built from the help files in
 $!  SYS$HELP:[.SOURCES], a file for each topic. SYS$HELP:DBG$HELP.HLB, the
 $!  debugger's HELP, is built from SYS$HELP:[.SOURCES.DEBUG]DEBUG.HLP, one
-$!  module, DEBUG, with each debugger command a topic below it. Each build
-$!  is a new version of the library.
+$!  module, DEBUG, with each debugger command a topic below it.
+$!  SYS$HELP:UAFHELP.HLB, AUTHORIZE's HELP, is built from
+$!  SYS$HELP:[.SOURCES.AUTHORIZE]AUTHORIZE.HLP, a module for each of its
+$!  commands. Each build is a new version of the library.
 $!
 $!  To change govax's help, edit a help file and run this procedure. To
 $!  add help of your own, LIBRARY/HELP/INSERT a module into HELPLIB.HLB,
@@ -20,8 +22,9 @@ $ saved_default = f$environment("DEFAULT")
 $ set default sys$help
 $ library/create/help helplib.hlb [.sources]*.hlp
 $ library/create/help dbg$help.hlb [.sources.debug]*.hlp
+$ library/create/help uafhelp.hlb [.sources.authorize]*.hlp
 $ set default 'saved_default'
-$ write sys$output "HELPLIB.HLB and DBG$HELP.HLB built in SYS$HELP"
+$ write sys$output "HELPLIB.HLB, DBG$HELP.HLB, and UAFHELP.HLB built in SYS$HELP"
 $ exit
 $!
 $ failed:

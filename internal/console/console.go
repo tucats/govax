@@ -4,7 +4,9 @@ import (
 	"io"
 	"time"
 
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/dclshell"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 )
 
@@ -66,6 +68,9 @@ func New(out io.Writer) *Console {
 	// RUN looks for a shareable image in the host library directory LINK
 	// and MACRO use (HostLibrary, or else the settings).
 	m.Hooks.LibraryDir = func() string { return c.cmd().HostLibraryDir() }
+
+	// AUTHORIZE's HELP reads SYS$HELP:UAFHELP.HLB, or govax's own copy.
+	c.AuthorizeHelp = func() (help.Library, error) { return c.cmd().UAFHelpLibrary(bootdata.UAFHelpLibrary) }
 
 	return c
 }

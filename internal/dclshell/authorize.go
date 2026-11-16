@@ -1,9 +1,12 @@
 package dclshell
 
 import (
+	"fmt"
+	"io"
 	"strings"
 
 	"github.com/tucats/govax/internal/authorize"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/rms"
 )
 
@@ -38,9 +41,45 @@ func (c *Interpreter) Authorize(command string) error {
 		WriteListing: c.writeListing,
 	}
 
+	if c.AuthorizeHelp != nil {
+		u.Help = c.authorizeHelp
+	}
+
 	c.SetCommandStatus(u.Run(command), nil)
 
 	return nil
+}
+
+// authorizeHelpWidth is the width AUTHORIZE's HELP lays its lists out at.
+const authorizeHelpWidth = 80
+
+// authorizeHelp is AUTHORIZE's HELP: topic looked up in its help library,
+// whose modules are its commands, prompting "Topic?" for more as VMS's
+// HELP does, the responses read as DCL's HELP reads them (a procedure's
+// data lines, or the terminal).
+func (c *Interpreter) authorizeHelp(topic string) error {
+	lib, err := c.AuthorizeHelp()
+	if err != nil {
+		return err
+	}
+
+	s := &help.Session{
+		Library: lib,
+		Write:   func(line string) { fmt.Fprintf(c.Out, "%s\n", line) },
+		Read: func(prompt string) (string, error) {
+			line, ok := c.ReadHelpResponse(prompt)
+			if !ok {
+				return "", io.EOF
+			}
+
+			return line, nil
+		},
+		Width:   authorizeHelpWidth,
+		Options: help.Options{Instructions: true},
+		Prompt:  true,
+	}
+
+	return s.Run(help.Split(topic))
 }
 
 // writeListing writes LIST's file, name, in the default directory (a

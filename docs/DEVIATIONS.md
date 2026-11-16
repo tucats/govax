@@ -1975,3 +1975,30 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   - **`$ULKPAG`** of a locked page returned `SS$_ACCVIO`'s value on VMS 7.1 whenever a probe case called it; govax
     returns SS$_WASSET, which VMS gave from the case's undo. Not a matter of privilege, and not understood.
 - **Status**: kept until a probe shows otherwise.
+
+### [Phase 95] Accounts beside VMS 7.1's
+
+- **Where**: `internal/uaf`, `internal/authorize`, `internal/corevms/login.go` and `authorization.go`,
+  `internal/dclshell/dcllogin.go` and `dclloginproc.go`, `cmd/govax/authorization.go`;
+  `docs/planning/PHASE-95 - authentication.md`, A.5 and the log.
+- **What**: AUTHORIZE, the login, and the login procedures are held to `testdata/uaf95`'s three rounds on VMS 7.1.
+  What differs, by design or unconfirmed:
+  - **The file**: SYSUAF.DAT and RIGHTSLIST.DAT are one JSON host file, `~/.govax/sysuaf.json`, outside the volumes;
+    its protection is SYSUAF.DAT's, applied in Go. A new file's SYSTEM record is govax's process 1's (every
+    privilege, govax's quotas, no password), not 7.1's; its UIC identifier is made, where 7.1's CREATE/RIGHTS made
+    none.
+  - **Not kept**: password lifetimes, minimums, expiration and pre-expired passwords, generated passwords, access
+    times and primary days, login failure counts, proxies; their qualifiers are IVQUAL. Of the flags only DISUSER
+    does anything. ADD without `/PASSWORD` leaves no password rather than a pre-expired one.
+  - **Passwords**: Argon2id hashes, not VMS's Purdy polynomial; asked only at govax's start, three times, or taken from
+    `GOVAX_PASSWORD`, govax's own rule.
+  - **Logins**: only process 1's, interactive; no batch, detached, or remote logins, and no security alarm on a
+    refused one. NOSUCHUSER's and CLIFAIL's texts, and a day under 10 in the last-login banner written with its zero,
+    are unconfirmed. `$GETJPI` by code refuses the new account items (LAST_LOGIN_I and the rest), which F$GETJPI
+    answers by name, until a probe gives their `$JPIDEF` codes.
+  - **The login procedures**: Ctrl/Y in one gives DCL's Ctrl/Y level, where EXIT ends both, as EXIT ends every
+    procedure there; VMS's behavior at login wasn't probed. A one-shot command runs neither.
+  - **AUTHORIZE**: the unconfirmed choices each subtask's log lists (value limits, `/PRIVILEGES` and `/FLAGS` changing
+    only the bits named, messages and statuses no case showed, the brief line's categories).
+- **Status**: kept until a probe shows otherwise.
+

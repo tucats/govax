@@ -2974,7 +2974,63 @@ CURPRIV to PROCPRIV | IMAGPRIV. Image rundown's `resetImagePrivileges`
 copies PROCPRIV back to CURPRIV and clears IMAGPRIV, which also takes away
 whatever the image enabled temporarily with `$SETPRV`.
 
-### 7.15 What's VMS's and what isn't
+### 7.15 Accounts and logging in
+
+An account is a `uaf.Record` (`internal/uaf`, a leaf package): a
+username, owner, account name, UIC, device and directory, LGICMD, flags,
+the authorized and default privilege masks, priority, every AUTHORIZE
+quota, a password hash, and the last logins. The records and the rights
+identifiers (each a `uaf.Identifier` with its holders, by UIC, as VMS's
+rights database keeps them) are a `uaf.File`, kept on the host as JSON
+(`~/.govax/sysuaf.json`, or `vax.authorization.file`). `uaf.Load` reads it
+whole, refusing a field it doesn't know with the line; `uaf.Update` changes
+it under a host lock, writing a temporary file and renaming it, so two
+sessions sharing the file don't lose each other's changes. A password is an
+Argon2id hash in its PHC string (`uaf.HashPassword`, `CheckPassword`), of
+the password in capitals, since VMS's passwords ignore case.
+
+The System holds the file (`corevms/authorization.go`): read again only
+when its size or time changes, or kept in memory when there is no file, as
+in the tests. `$CHECK_ACCESS`, `$CHKPRO`'s items, `F$IDENTIFIER`, and the
+logins read it there.
+
+**A login** is two steps. `System.BeginLogin` is LOGINOUT's check and
+bookkeeping: the record (`LoginRecord` refuses one missing, DISUSER, or
+with a CLI other than DCL, as `%LOGIN-F-...`), the identifiers its UIC
+holds, the time, written back as the last interactive or non-interactive
+login, and a `Login` holding the record as it was before. Then
+`Environment.LogIn` makes the process the account's: username and process
+name, account, UIC (and the logical name tables' owner, `SetUIC`), the
+authorized privileges and the defaults as process and current ones,
+priority, the quotas govax's processes have (`LoginQuotas`, the
+`vax.sysgen.pql_*` keys laid over them), the rights (INTERACTIVE and
+LOCAL, or BATCH, then the identifiers held), and LOGINTIM. The machine
+keeps the `Login`, so the process 1 an INITIALIZE/MEMORY makes is the same
+account. Process 1 logs in once, after STARTUP.COM, as SYSTEM or the
+account `--user` names; `cmd/govax` checks the account (and asks for its
+password) before anything else runs.
+
+DCL's half is `dclshell`'s. `SetLoginDirectory` defines `SYS$LOGIN`,
+`SYS$LOGIN_DEVICE`, and `SYS$SCRATCH` in the job table at executive mode,
+the record's text untranslated, and makes the home the default directory,
+with an executive-mode `SYS$DISK`. In a session, `RunLoginProcedures` then
+runs the login procedures as VMS 7.1 nests them: it opens the account's
+procedure (LGICMD, or `SYS$LOGIN:LOGIN.COM`) and runs it at level 1, and
+before its first line, through the level's `before` hook, runs
+`SYS$SYLOGIN:` above it at level 2; one that can't be opened is passed over
+silently, and SYLOGIN then runs at level 1. A subprocess takes its owner's
+account (7.10), as on VMS.
+
+**AUTHORIZE** is `internal/authorize`: a grammar of its own
+(`authorize.dcl`, parsed apart from the console's), commands that change
+the File through `UpdateAuthorization`, and SHOW's and LIST's reports laid
+out as VMS 7.1's. The file's profile is SYSUAF.DAT's, owner `[1,4]`,
+`(S:RWE,O:RWE,G,W)`, held to `internal/security`'s rule with the process's
+credentials, so only a system UIC or SYSPRV may use it. DCL runs it for
+the verb `AUTHORIZE`, and for `MCR` or `RUN` of `SYS$SYSTEM:AUTHORIZE`,
+which name no image: `builtinUtility` claims them.
+
+### 7.16 What's VMS's and what isn't
 
 - **The scheduler is Go**, called between instructions, not a software
   interrupt at IPL 3; ASTLVL and the AST delivery interrupt aren't used
@@ -2993,9 +3049,9 @@ whatever the image enabled temporarily with `$SETPRV`.
   own; there is no CLI image in P1, and LOGINOUT is a name, not an image.
 - **At most 255 processes**, and the PID's layout is govax's choice in
   VMS 7's form (7.2).
-- **One account, SYSTEM**, with no AUTHORIZE or logins: a process of
-  another UIC comes from `$CREPRC`, and its authorized privileges are the
-  ones it was given. The privilege checks are VMS 7.1's (7.14), but
+- **Accounts without the rest of LOGINOUT** (7.15): no remote or batch
+  logins, no password lifetimes, access times, or login failure counts,
+  and of the flags only DISUSER does anything. The privilege checks are VMS 7.1's (7.14), but
   `$SETIME`, `$MOUNT`, `$DISMOU`, and the rights and UAF services aren't
   there to make theirs; the known file list lasts for the session, and of
   INSTALL's attributes only the privileges do anything.
@@ -4973,8 +5029,8 @@ read, edit, and rebuild with DCL's own commands
 | Directory | Logical name | What |
 | --- | --- | --- |
 | `[SYSTEM.SYSEXE]` | SYS$SYSTEM | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the default page file (made by the pager, not supplied) |
-| `[SYSTEM.SYSMGR]` | SYS$MANAGER | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, the grammars `CONSOLE.DCL` and `DEBUG.DCL` |
-| `[SYSTEM.SYSHLP]` | SYS$HELP | `HELPLIB.HLB`, `DBG$HELP.HLB`, and their `.HLP` sources below it |
+| `[SYSTEM.SYSMGR]` | SYS$MANAGER | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, `ADDUSER.COM`, the grammars `CONSOLE.DCL` and `DEBUG.DCL` |
+| `[SYSTEM.SYSHLP]` | SYS$HELP | `HELPLIB.HLB`, `DBG$HELP.HLB`, `UAFHELP.HLB`, and their `.HLP` sources below it |
 | `[SYSTEM.SYSLIB]` | SYS$LIBRARY, SYS$SHARE | `STARLET.MLB`, `FTNRTL.EXE`, `FORSYSDEF.TLB` |
 | `[SYSTEM.SOURCES]` | SYS$SOURCES | `KERNEL.ASM` and `SSDEF.ASM`, FTNRTL's and STARLET's sources, and the procedures that rebuild them |
 
@@ -5343,17 +5399,22 @@ With the procedure done, `run` goes on in Go:
 2. **The user's procedure.** If the configuration names one in
    `vax.startup.procedure`, it's run, a volume file or a host file by the
    name's form; one that isn't there is passed over without a message.
-3. **The one-shot command.** A command left on govax's command line
+3. **The login.** `Console.LogIn` logs process 1 in as its account
+   (section 7.15) and makes its home the default directory; at a
+   terminal the banner says when the account last logged in. In a
+   session, not for a one-shot command, `RunLoginProcedures` runs
+   `SYS$SYLOGIN` and the account's own procedure.
+4. **The one-shot command.** A command left on govax's command line
    (`Console.RunCommandLine`) is level 0's input in place of the terminal,
    and the session ends after it. The console is quiet for it: no banner,
    no kernel message.
-4. **The prompt.** Otherwise govax reads the terminal, one line at a time,
+5. **The prompt.** Otherwise govax reads the terminal, one line at a time,
    with the prompt of whichever reader has it: DCL's `$ `, the debugger's
    `DBG> `, or the assembler's `ASM> `. While a line is typed, the other
    processes run (section 7.12).
 
 The `--instruction-limit` and `--time-limit` options apply only from step
-3, so a limit meant for a runaway program doesn't stop the system's own
+4, so a limit meant for a runaway program doesn't stop the system's own
 start. When the session ends, `Console.EndSession` closes what process 1
 left open and the mount table dismounts every volume, so that each
 container has all its blocks, its bitmaps included.
@@ -5507,8 +5568,8 @@ routine (section 7.10).
 - **SYSGEN parameters come from the configuration** (`vax.sysgen.*`),
   read when a `System` is made; there's no SYSGEN utility or parameter
   file.
-- **No LOGINOUT or SYSUAF for process 1.** Its UIC, privileges, and quotas
-  are govax's.
+- **The authorization file is JSON on the host**, not an indexed file on
+  the system volume, and LOGINOUT is Go (section 7.15).
 - **One system root.** `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` are
   the same root, `[SYSTEM.]`.
 - **No installed images.** A shareable image is mapped privately into each
@@ -5601,6 +5662,8 @@ doesn't cover.
 | `corevms/mailbox.go`, `lck/`, `corevms/enq.go` | mailboxes and the lock manager |
 | `corevms/creprc.go`, `corevms/startup.go`, `corevms/delete.go`, `corevms/termmsg.go` | a process made, started, and deleted |
 | `corevms/spawn.go`, `corevms/cliprocess.go` | subprocesses, and processes that run DCL |
+| `uaf/`, `corevms/authorization.go`, `corevms/login.go`, `dclshell/dcllogin.go`, `dclshell/dclloginproc.go` | accounts, the authorization file, and a login, with its home and login procedures |
+| `authorize/`, `dclshell/authorize.go` | AUTHORIZE |
 | `corevms/terminal.go`, `corevms/lend.go` | the shared terminal, and lending the CPU while DCL waits |
 | `cpu/attention.go`, `corevms/ctrlast.go` | Ctrl/C and Ctrl/Y |
 

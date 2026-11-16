@@ -860,6 +860,30 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   the known file list, `corevms/knownfiles.go`, and
   `Environment.StartImage`, the activator's last step, giving an installed
   image's IMAGPRIV); held to VMS 7.1 by `testdata/priv94`'s two rounds.
+  Phase 95 (planned 2026-11-15, the plan accepted by the author the same
+  day, its "The review"; done 2026-11-16; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is authentication: the
+  authorization file (`internal/uaf`, below; `vax.authorization.file`,
+  default `~/.govax/sysuaf.json`, made by `cmd/govax/authorization.go`
+  before anything runs, `TestMain` giving tests a temporary one), held by
+  the System (`corevms/authorization.go`); logging in (`--user`/`-u`;
+  `corevms/login.go`'s `LoginRecord`, `System.BeginLogin`,
+  `Environment.LogIn`, kept by the machine across INITIALIZE/MEMORY;
+  `console.LogIn` picks the home, SYSTEM's SYS$MANAGER unless
+  `vax.default.volume.directory` is configured; `dclshell/dcllogin.go`'s
+  SYS$LOGIN, SYS$LOGIN_DEVICE, SYS$SCRATCH; the password, `checkPassword`,
+  asked at a terminal or from `GOVAX_PASSWORD`); the login procedures in a
+  session (`dclshell/dclloginproc.go`: the account's at level 1, SYLOGIN
+  above it at level 2 through `procedureCommand.before`); AUTHORIZE
+  (`internal/authorize`, below; the verb, MCR and RUN of
+  SYS$SYSTEM:AUTHORIZE through `dclshell/authorize.go`'s
+  `builtinUtility`; HELP from SYS$HELP:UAFHELP.HLB,
+  `bootdata/files/uafhelp`); the system volume's owners and protections
+  (`sysvol/profile.go`, set by Populate and Refresh, recorded in the
+  manifest); SYLOGIN.COM (seeded) and ADDUSER.COM (supplied) in
+  SYS$MANAGER; SET TERMINAL/NOECHO turning the host's echo off for DCL's
+  terminal reads (`Interpreter.TerminalEcho`); held to VMS 7.1 by
+  `testdata/uaf95`'s three rounds.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1185,6 +1209,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `TestFTN86Procedure` rehearses it on govax, and `TestFTN86Oracle` holds that run to VMS's log (`vax/`) but for `ftn86VMSDifferences`.
 - `testdata/for88/` — Phase 88's round 2, FORRTL on indexed files (README.md, which has FOR$OPEN's KEY= block and FOR$READ_KU's arguments): `gen.go` writes `for88.mar` (310 cases), `for88.com`, `exchange.cmd`, and `copyout.cmd`; `vax/` is VMS V7.1's run and the files it made. `TestFor88Oracle` runs it on FORRTL over govax's RMS and holds its output and files to them but for `for88Differences`. `for88f.mar` (by hand) passes all the program's `FOR$` calls to FTNRTL for `TestFor88OnFTNRTL`.
 - `testdata/prot93/` — Phase 93's probe of file protection (README.md), three rounds on VMS 7.1 with test accounts PROT93A [200,1], PROT93B [200,2], and PROT93C [300,1]: `prot93.mar` and its procedures (rounds 1 and 2: RMS, the ACP, and DCL under each identity and privilege pass), and `gen3.go`'s `sec93.mar` (round 3: every security service, parts by `SEC93_PART`), with `vax/`'s logs; `TestSec93ACLOracle`, `TestSec93CheckOracle`, `TestSec93SecurityOracle`, and the `prot93*_test.go` oracles hold govax to them. Round 9 of `testdata/mp/macros` is the services' macros.
+- `testdata/uaf95/` — Phase 95's probe of accounts (README.md), three rounds on VMS 7.1 with probe accounts UAF95 [200,5], UAF95L [200,7] (an LGICMD), and UAF95D [200,6] (DISUSER), made and removed by `uaf95acct.com` and `uaf95drop.com`: `gen.go` writes `uaf95.com` (134 AUTHORIZE cases on scratch SYSUAF and RIGHTSLIST files) and round 3's `uaf95b.com`, `uaf95i.com` (a process's state after login), the login procedures (`uaf95s.com` as SYS$SYLOGIN, `login.com`, `uaf95x.com`), and the exchange and copy-out scripts; `vax/` is VMS's logs and listings. `internal/authorize`'s `TestUAF95Oracle` and `TestUAF95Round3Oracle`, and `internal/console`'s `TestUAF95LoginOracle`, replay them.
 - `testdata/priv94/` — Phase 94's probe of privileges (README.md), two rounds on VMS 7.1 with test accounts PRIV94 [200,3] (authorized for every privilege, holding TMPMBX and NETMBX) and PRIV94N [200,4] (authorized for those two): `gen.go` writes `priv94.mar` (289 cases, parts by `PRIV94_PART`, each body run with exactly its privileges from user, executive, or kernel mode), `priv94h.mar` (the holder processes in groups 200 and 300), `priv94i.mar` (an installed image), `priv94d.com` (DCL's side, each identity), and round 2's `priv94b.mar` and `priv94e.com`; `vax/` is VMS's logs. `TestPriv94Oracle`, `TestPriv94BOracle`, and `internal/console`'s other `priv94*_test.go` replay them as each identity.
 - `testdata/vms93/` — Phase 93's VMS round (README.md): `exchange.cmd` makes a volume of files govax gave owners, protections, and ACLs, and `vms93.com` has VMS list them and check each account's access (`vms93c.mar`, and govax's image of it) and UFO opens (`vms93u.mar`); `TestVMS93Procedure` runs it on govax, holds it to VMS 7.1's `vax/vms93.log`, and holds govax's image of VMS93C to VMS's (`vax/vms93c.exe`).
 - `testdata/lnm91/` — Phase 91's probe of concealed and rooted logical names (README.md): `lnm91.mar`, a program that takes its RMS cases from data lines, and `gen.go`'s `lnm91.com`, the cases and DCL's commands on a tree the procedure makes; `vax/` is VMS V7.1's runs; `lnm91b.com` is round 2, names with plain directories, 15 levels, and angle brackets.
@@ -2093,6 +2118,19 @@ expect adjustment as phases land):
   library's file held while it's open (an ACP access, `rms.Session.HoldFile`),
   another process's open waiting for it (`corevms.Environment.WaitFor`).
   Strings through `librtl/export.go`.
+- `internal/uaf` — the authorization file (Phase 95): a leaf package
+  (standard library, `vmsdef`, `hostlock`, `golang.org/x/crypto/argon2`).
+  `File` (accounts and identifiers, each identifier's holders by UIC),
+  `Record` (an account), JSON names for UICs, privileges, flags, and
+  attributes; `Load`/`Parse` (an error names the line), `Save`, `Update`
+  (under a host lock), `Ensure`, `Default` (SYSTEM with process 1's values,
+  DEFAULT with VMS 7.1's), `HashPassword`/`CheckPassword` (Argon2id).
+- `internal/authorize` — AUTHORIZE (Phase 95): a `Utility` run over a
+  `Store` (the System's authorization file) with the process's
+  credentials; `authorize.dcl` its grammar; accounts (`accounts.go`,
+  `fields.go`), identifiers (`identifiers.go`), SHOW and LIST
+  (`show.go`, `report.go`), the UAF messages (`messages.go`); the file's
+  profile SYSUAF.DAT's. HELP through `Utility.Help`.
 - `internal/securertl` — SECURESHR.EXE's routines (Phase 93, subtask 10),
   beside `internal/lbrrtl`: the security services VMS keeps in a
   shareable image, `$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, and

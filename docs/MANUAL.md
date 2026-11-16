@@ -335,8 +335,15 @@ Each time govax starts, it:
 6. Runs your own startup procedure, if `vax.startup.procedure` names one.
    Like STARTUP.COM, it runs as SYSTEM, with every privilege.
 7. Logs process 1 in as its account: SYSTEM, or the account `--user`
-   names, whose UIC, privileges, and quotas it has from here on.
-8. Runs the command given on govax's command line and exits, or else
+   names, whose UIC, privileges, and quotas it has from here on. An
+   account with a password must give it first. The account's home
+   directory becomes `SYS$LOGIN` and the default directory, and at a
+   terminal govax says when the account last logged in.
+8. In a session (not for a one-shot command), runs the login procedures:
+   `SYS$SYLOGIN`, then the account's own, `SYS$LOGIN:LOGIN.COM` unless
+   the account names another ([Accounts and logging
+   in](#accounts-and-logging-in)).
+9. Runs the command given on govax's command line and exits, or else
    shows the `VAX>` prompt.
 
 The memory sizes STARTUP.COM uses can be changed with configuration
@@ -457,6 +464,7 @@ Global options go before the subcommand or command.
 | `--mount-write DEV=FILE` | Mount it for reading and writing. May be repeated. |
 | `--system-file FILE` | The system volume's container, for this run, instead of `vax.default.system.file`'s (by default `~/.govax/govax-system.dsk`). `none` starts govax with no system volume, from its built-in files. |
 | `--system-device DEV` | The device to mount the system volume on (by default `DUA0`). |
+| `--user NAME`, `-u` | Log process 1 in as the account `NAME` instead of SYSTEM ([Accounts and logging in](#accounts-and-logging-in)). An account with a password must give it: govax asks for it at a terminal, and reads the environment variable `GOVAX_PASSWORD` otherwise. |
 | `--system-initialize` | Make the system volume again from govax's own files, keeping the old container beside it as `FILE.old`. |
 | `--path DIR,...` | Host directories to search for files govax and its commands name (its grammars, `@` procedures, MACRO sources, ...), after the name as given and before the system volume's copies. govax's built-in copies of its startup files are always searched last. |
 | `--profile NAME` | Use the configuration profile `NAME` instead of the default one (section 4). |
@@ -603,7 +611,8 @@ these for one run.
 | `vax.default.volume.label` | The label a new container gets. When set, an existing container's label must match or it isn't used. | `WORK` |
 | `vax.default.volume.device` | The device to mount it on. A device with no unit number is that controller's first unit with nothing mounted on it. (Before the system volume, the default was `DUA0:`; a configuration that names `DUA0:` now gets `%MOUNT-W-NODEFAULT`, since the system volume is there.) | `DUA`: `DUA1:` |
 | `vax.default.volume.type` | The disk type that sizes a new container (`RX50`, `RD54`, `RA81`, ...; see [Disk types](#disk-types)). | `RD54` (311,200 blocks) |
-| `vax.default.volume.directory` | The default directory, created in a new container. | `[WORK]` |
+| `vax.default.volume.directory` | The default directory, created in a new container. When set, it is also SYSTEM's home directory, in place of `SYS$SYSROOT:[SYSMGR]`. | `[WORK]` |
+| `vax.authorization.file` | The authorization file, govax's SYSUAF: a JSON host file of accounts and identifiers, made with SYSTEM and DEFAULT the first time govax starts. A leading `~/` is your home directory. | `~/.govax/sysuaf.json` |
 
 If the volume can't be used, govax says why (`%MOUNT-W-NODEFAULT`) and
 starts without it. A container that can only be read is mounted
@@ -920,11 +929,125 @@ and `SHOW ACL`, `DIRECTORY/SECURITY` and `/ACL`, `CREATE`'s and `COPY`'s
 PROCESS/PRIVILEGES` (sections 6.1 and 6.6). A program has the services:
 `$CHKPRO`, `$CHECK_ACCESS`, `$GET_SECURITY`, `$SET_SECURITY`,
 `$PARSE_ACL`, `$FORMAT_ACL`, `$CHANGE_ACL`, and `$SETDFPROT` (Appendix A),
-with their macros in govax's system macro library. There is no
-AUTHORIZE: the only account is SYSTEM, and identifiers other than UICs
-and the environmental ones (`INTERACTIVE`, `BATCH`, ...) can't be made.
-Alarm and audit entries are kept and shown, and do nothing. What else
+with their macros in govax's system macro library. Accounts other than
+SYSTEM, and the identifiers an ACL can name, are made with AUTHORIZE
+([Accounts and logging in](#accounts-and-logging-in)). Alarm and audit
+entries are kept and shown, and do nothing. What else
 each privilege guards is section 11's [Privileges](#privileges).
+
+### Accounts and logging in
+
+govax has VMS's accounts, so that file protection and privileges can be
+tried as someone other than SYSTEM. An account is a username with a UIC,
+privileges, quotas, a home directory, and optionally a password, kept in
+the **authorization file**, govax's SYSUAF.DAT: a JSON file on the host,
+`~/.govax/sysuaf.json` unless `vax.authorization.file` names another. The
+first time govax starts it makes the file with two accounts: SYSTEM,
+`[1,4]`, with every privilege, the account process 1 has always been, and
+DEFAULT, the record new accounts are copied from. The file is readable
+JSON, but use AUTHORIZE to change it; govax refuses to start if it can't
+parse the file, naming the line.
+
+**Logging in.** Process 1 logs in after STARTUP.COM, as SYSTEM unless
+`--user` (`-u`) names another account:
+
+```text
+% govax --user smith
+    Last interactive login on Monday, 16-NOV-2026 09:12
+$ SHOW DEFAULT
+  DUA1:[SMITH]
+$ WRITE SYS$OUTPUT F$GETJPI("","USERNAME"), F$GETJPI("","CURPRIV")
+SMITH       TMPMBX,NETMBX
+```
+
+The process takes the account's username, UIC, privileges (authorized,
+and the defaults as its current ones), priority, quotas, and the
+identifiers its UIC holds. Its home, the account's device and directory,
+becomes `SYS$LOGIN`, `SYS$LOGIN_DEVICE`, and `SYS$SCRATCH` (executive-mode
+names in the job table, as on VMS) and the default directory. SYSTEM's
+home is `SYS$SYSROOT:[SYSMGR]`, as on VMS, unless the configuration sets
+`vax.default.volume.directory`, which then wins; without a system volume
+it stays where govax used to start. An account flagged DISUSER, or one the
+file doesn't have, stops govax before anything runs (`%LOGIN-F-DISUSER,
+account is disabled`), with exit status 1. The one-shot subcommands log in
+the same way, so `govax --user smith run PROG` runs a program as SMITH.
+
+**Passwords.** An account with no password (SYSTEM's, at first) logs in
+asked for nothing. One with a password must give it: at a terminal govax
+asks `Password:`, with echo off, three times, each wrong answer `User
+authorization failure`. When standard input isn't a terminal (a script, a
+pipe), govax never reads the password from it, which would take the
+session's commands: it takes the environment variable `GOVAX_PASSWORD`, and
+without it stops, saying the account needs one. Passwords are kept only as
+Argon2id hashes, and, as on VMS, their case doesn't matter.
+
+**The login procedures.** In a session, after the login, DCL runs
+`SYS$SYLOGIN` (STARTUP.COM defines it as `SYS$MANAGER:SYLOGIN.COM`, a file
+govax makes once and leaves to you), then the account's own procedure: the
+one its LGICMD names, or `SYS$LOGIN:LOGIN.COM`. As on VMS 7.1, the
+account's procedure is at command level 1 and SYLOGIN runs above it first,
+at level 2. One that is missing, or the account can't read, is passed over
+silently; a warning in one goes on and an error ends that procedure, the
+login going on to the prompt. Verification is off. A one-shot command
+runs neither, so its output stays the same whoever logs in.
+
+**AUTHORIZE** makes and changes accounts, as VMS's does: `AUTHORIZE` alone
+prompts `UAF>` until EXIT or Ctrl/Z, `AUTHORIZE command` runs one command,
+and `MCR AUTHORIZE` and `RUN SYS$SYSTEM:AUTHORIZE` are the same. Its
+commands are ADD, COPY, MODIFY, DEFAULT, REMOVE, RENAME, SHOW, LIST, and
+the identifier commands (ADD/IDENTIFIER, GRANT/IDENTIFIER, SHOW/RIGHTS,
+...); HELP inside it reads its own library, `SYS$HELP:UAFHELP.HLB`. Only a
+process that may write SYSUAF.DAT may change the file: SYSTEM, any
+system-group UIC, or a process with SYSPRV. govax keeps no password
+lifetimes, access times, or expiration dates, so those qualifiers aren't
+accepted; of the flags only DISUSER does anything.
+
+```text
+$ AUTHORIZE ADD SMITH/UIC=[200,1]/DEVICE=DUA1:/DIRECTORY=[SMITH] -
+      /FLAGS=NODISUSER/PRIVILEGES=(NOALL,TMPMBX,NETMBX) -
+      /DEFPRIVILEGES=(NOALL,TMPMBX,NETMBX)/PASSWORD=SECRET
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier SMITH value [000200,000001] added to rights database
+```
+
+New accounts copy DEFAULT, which is DISUSER, so `/FLAGS=NODISUSER` is
+needed before the account can log in, and AUTHORIZE adds the privileges
+it names to DEFAULT's, so `NOALL` first gives exactly the ones listed.
+AUTHORIZE doesn't make the home directory.
+
+**ADDUSER.COM** does all of it: `@SYS$MANAGER:ADDUSER`, as SYSTEM, asks
+for the username, owner, UIC (offering the first free member of the group),
+password (typed twice, not shown), home device and directory (offering the
+default volume and `[username]`), and privileges; runs `AUTHORIZE ADD`;
+makes the home directory owned by the account, (S:RWE,O:RWE,G,W), or gives
+an existing one to it; writes a starter LOGIN.COM there; and says how to
+log in.
+
+```text
+$ @SYS$MANAGER:ADDUSER
+Username: smith
+Owner (the user's full name): John Smith
+UIC group number, octal [200]:
+UIC member number, octal [1]:
+Password (Return for none):
+Password again:
+Home device [DUA1:]:
+Home directory [[SMITH]]:
+Privileges:
+  1  a plain user: TMPMBX and NETMBX
+  2  a list of your own
+Which [1]:
+%UAF-I-ADDMSG, user record successfully added
+%UAF-I-RDBADDMSGU, identifier SMITH value [000200,000001] added to rights database
+
+Added SMITH, [200,1], at home in DUA1:[SMITH].
+To log in as SMITH, start govax with:  govax --user smith
+```
+
+Logged in as SMITH, the system volume's files can be read but not changed,
+SMITH's home can be written, and every privilege and protection check is
+made with SMITH's UIC and privileges. Subprocesses take their owner's
+account, as on VMS.
 
 ### Moving files between the host and a volume
 
@@ -1062,8 +1185,8 @@ sparse host file, taking only the space its files use.
 | Directory | Logical name | Files |
 | --- | --- | --- |
 | `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the page file, with paging on |
-| `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
-| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB` and `DBG$HELP.HLB`, DCL's and the debugger's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`) |
+| `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, `ADDUSER.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
+| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB`, `DBG$HELP.HLB`, and `UAFHELP.HLB`, DCL's, the debugger's, and AUTHORIZE's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`, AUTHORIZE's `AUTHORIZE.HLP` in `[.SOURCES.AUTHORIZE]`) |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
 | `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM`; `BUILDHELP.COM`, which rebuilds the help libraries |
 | `[SYSTEM]` | `SYS$SYSROOT:[000000]` | `GOVAX$FILES.DAT`, the list of files govax supplied; `GOVAX$UPDATE.LOG`, the log of what each start updated |
@@ -3969,9 +4092,10 @@ VAX> HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
 With no `/LIBRARY`, HELP reads `SYS$HELP:HELPLIB.HLB`, the system
 volume's, or govax's own copy when there's no system volume; the
 debugger's HELP reads the library the logical name `DBG$HELP` names, or
-`SYS$HELP:DBG$HELP.HLB`, the same way.
-`@SYS$SOURCES:BUILDHELP` rebuilds both from their help files in
-`SYS$HELP:[.SOURCES]`. A module you add to `HELPLIB.HLB` with
+`SYS$HELP:DBG$HELP.HLB`, the same way, and AUTHORIZE's HELP reads
+`SYS$HELP:UAFHELP.HLB`, a module for each of its commands.
+`@SYS$SOURCES:BUILDHELP` rebuilds all three from their help files in
+`SYS$HELP:[.SOURCES]`. `HELP GOVAX` says what govax is, and who wrote it. A module you add to `HELPLIB.HLB` with
 `LIBRARY/HELP`, or change there, is kept when a newer govax refreshes the
 library with its own modules; a changed one it would have replaced is
 reported once, with `%MOUNT-I-SYSKEPT` naming the module.
@@ -4306,8 +4430,9 @@ process isn't authorized for isn't turned on unless it holds SETPRV:
 `$SETPRV` turns on the others and returns `SS$_NOTALLPRIV`. When an image
 exits, the current mask becomes the permanent mask again.
 
-The console's process is `SYSTEM`, UIC `[1,4]`, authorized for every
-privilege and holding them all, so nothing is refused it until it turns
+The console's process is `SYSTEM`, UIC `[1,4]` (unless `--user` logs it
+in as another account), authorized for every privilege and holding them
+all, so nothing is refused it until it turns
 some off. Its UIC also puts it in the SYSTEM category of every object's
 protection, which grants some things with no privilege at all: SYSTEM
 writes the system logical name table by the table's protection, without
@@ -4388,8 +4513,9 @@ VAX> SET DEBUG NOPRIVILEGES
 ```
 
 The name was made at supervisor mode, DCL's: the first line is why.
-There is still only one account, `SYSTEM`; without AUTHORIZE and logins,
-a process with another UIC comes from `$CREPRC` (section 11's
+An account of your own (section 5's [Accounts and logging
+in](#accounts-and-logging-in)) shows what an unprivileged user is refused;
+a process with another UIC also comes from `$CREPRC` (section 11's
 [Processes](#processes)). `$SETIME`, `$MOUNT`, `$DISMOU`, and the rights
 and UAF services aren't there to check.
 
@@ -7764,9 +7890,11 @@ The main differences, gathered from the rest of the manual:
 
 - No VMS boot, executive, or compilers; MACRO-32 and govax's own FORTRAN are
   the languages you can build in (sections 1 and 14).
-- One user, `SYSTEM`, with all privileges (which `SET PROCESS/PRIVILEGES`
-  can turn off; every privilege VMS checks is checked, section 11); no
-  login, AUTHORIZE, batch, print queues, networking, or clusters. Installed
+- Process 1 logs in as SYSTEM, with all privileges, or as an account
+  `--user` names (section 5); AUTHORIZE keeps no password lifetimes,
+  access times, or expiration dates, of its flags only DISUSER does
+  anything, and there are no remote logins. Every privilege VMS checks is
+  checked (section 11). No batch, print queues, networking, or clusters. Installed
   images' qualifiers but `/PRIVILEGED` are recorded and do nothing. File protection and ACLs are enforced on volume files, but a
   volume's own protection isn't, and alarms and audits do nothing.
 - A program's RMS calls reach only files on mounted Files-11 volumes,

@@ -17,14 +17,14 @@ import (
 // the debugger's, BUILDHELP.COM rebuilds them from their sources in
 // SYS$HELP:[.SOURCES], and a newer govax refreshes them module by module.
 
-// TestSystemHelpLibraries: BUILDHELP.COM builds both libraries as new
+// TestSystemHelpLibraries: BUILDHELP.COM builds the three libraries as new
 // versions in SYS$HELP, each byte for byte govax's built at LIBRARY's time;
 // with a topic edited in its source, the library it builds is the one HELP
 // reads.
 func TestSystemHelpLibraries(t *testing.T) {
 	c, run := libraryConsole(t, false)
 
-	const built = "HELPLIB.HLB and DBG$HELP.HLB built in SYS$HELP\n"
+	const built = "HELPLIB.HLB, DBG$HELP.HLB, and UAFHELP.HLB built in SYS$HELP\n"
 
 	if out := run("@SYS$SOURCES:BUILDHELP"); !strings.HasSuffix(out, built) {
 		t.Fatalf("BUILDHELP:\n%s", out)

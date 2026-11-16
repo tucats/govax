@@ -1,10 +1,10 @@
 # Phase 95 — authentication
 
-**Status:** planned 2026-11-15 (subtask 1, the survey and this plan);
-the plan reviewed and accepted by the author the same day, with the
-answers in "The review". This document is the development plan; as
-the subtasks are done it becomes the implementation record, with a
-progress log and, at the end, "Where things stand".
+**Status:** done 2026-11-16. Planned 2026-11-15 (subtask 1, the survey
+and this plan); the plan reviewed and accepted by the author the same
+day, with the answers in "The review". This document was the development
+plan and is now the implementation record: the progress log, and at the
+end "Where things stand".
 
 ## Goal
 
@@ -531,7 +531,7 @@ Each is one commit, with tests, stopping for review.
    (Decision 6's "The password").
 9. **ADDUSER.COM** (done 2026-11-15) (Decision 12), with SET TERMINAL/NOECHO if missing,
    and the end-to-end tests (Decision 13).
-10. **The close-out**: README.md (you log in as SYSTEM by default, and
+10. **The close-out** (done 2026-11-16): README.md (you log in as SYSTEM by default, and
     can make accounts to model privileges and protection), MANUAL.md (a
     section on accounts: the file, `--user`, AUTHORIZE, the login
     procedures, ADDUSER.COM; SYS$LOGIN no longer missing; the options
@@ -990,3 +990,64 @@ The answers (2026-11-15):
   gets end of file; at a terminal they share `attentionStdin` and work, so
   the end-to-end test is in `internal/console`, where the terminal is a
   plain reader.
+- **2026-11-16** Subtask 10: the close-out. AUTHORIZE's HELP: a verb in
+  `authorize.dcl`, `Utility.Help`, run by DCL (`dclshell/authorize.go`'s
+  `authorizeHelp`, a `help.Session` prompting as HELP does, responses read
+  as DCL's HELP reads them) on `Interpreter.AuthorizeHelp`, which the
+  console sets to `dclcmd.Context.UAFHelpLibrary`: SYS$HELP:UAFHELP.HLB,
+  or govax's own copy. UAFHELP.HLB is built like DBG$HELP.HLB
+  (`bootdata.UAFHelpLibrary`, its source `files/uafhelp/authorize.hlp`, a
+  module per command, each qualifier a qualifier line, the account
+  qualifiers repeated under ADD, COPY, MODIFY, and DEFAULT as VMS's
+  UAFHELP has them; `go generate`), on the system volume in SYS$HELP with
+  its source in `[SYSTEM.SYSHLP.SOURCES.AUTHORIZE]`, and BUILDHELP.COM
+  builds it too. Tests: `internal/authorize`'s
+  `TestEveryAuthorizeQualifierHasHelp` (every verb a module, every
+  qualifier, its identifier forms' too, a line), the console's
+  `TestAuthorizeHelp` (one command, and a session from a procedure).
+  By the author's request, DCL's help topic AUTHOR is now GOVAX, a short
+  account of what govax is with the old text as its CREDITS subtopic, so
+  `HELP AUTH` finds AUTHORIZE alone (`TestHelpAuthAbbreviated`); an
+  existing system volume's HELPLIB.HLB loses AUTHOR at the next refresh,
+  as a module govax no longer supplies. HELP AUTHORIZE (accounts,
+  passwords, the login procedures, ADDUSER, HELP) and HELP STARTUP (the
+  password and the login procedures as steps). Documents: README.md (how
+  to make and use an account), MANUAL.md (section 5's "Accounts and
+  logging in", the startup sequence, `--user`, `vax.authorization.file`
+  and `vax.default.volume.directory`'s new meaning, the system volume's
+  table, HELP's libraries, and the places that said SYSTEM was the only
+  account, Appendix C among them), VAX-VMS-INTERNALS.md (7.15, "Accounts
+  and logging in"; 11.9's login step; 7.16 and 11.11's differences; the
+  map), DEVIATIONS.md ("Accounts beside VMS 7.1's"), PLAN.md, CLAUDE.md.
+
+## Where things stand
+
+What Phase 95 left, for later phases:
+
+- **Remote and other logins**: only process 1 logs in, once, at govax's
+  start. A detached LOGINOUT process by username, batch jobs (SUBMIT),
+  and logins over a network wait for the remote-login phase, which
+  `uaf.CheckPassword` and the password rule were made ready for. An
+  account with no password can't then be allowed in remotely.
+- **What AUTHORIZE doesn't keep** (A.3): password lifetimes and minimums,
+  expiration, pre-expired and generated passwords, access times and
+  primary days, login failure counts, proxies. Their qualifiers are
+  IVQUAL; the flags but DISUSER are kept and do nothing.
+- **`$GETJPI` by code** of LAST_LOGIN_I, LAST_LOGIN_N, LOGIN_FAILURES,
+  LOGIN_FLAGS, MAXDETACH, MAXJOBS, SHRFILLM, and UAF_FLAGS is BADPARAM:
+  F$GETJPI answers them by name, and a probe round assembling `$JPIDEF
+  GLOBAL` on VMS would give their codes. `$GETUAI` and `$SETUAI`, and the
+  rights services (`$ADD_HOLDER`, `$ASCTOID`, ...), aren't there; AUTHORIZE
+  and the lexical functions use the file in Go.
+- **SHOW PROCESS/RIGHTS and /QUOTAS**, which the probe's logs show, aren't
+  there (subtask 2's rehearsal).
+- **RMS translating a bare file name as a logical name**: VMS's RMS
+  translates a name with no punctuation (`@SYS$SYLOGIN`); govax's
+  translates only a field ending in a colon (subtask 8).
+- **Terminal reads in a piped session**: with `cmd/govax`'s input a pipe,
+  readline reads ahead of DCL's terminal reads, so an INQUIRE or READ
+  SYS$COMMAND (ADDUSER.COM's questions) gets end of file; at a terminal
+  they work (subtask 9).
+- **The unconfirmed choices** each subtask's log lists, gathered in
+  DEVIATIONS.md's "Accounts beside VMS 7.1's".
+

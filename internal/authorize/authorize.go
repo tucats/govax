@@ -47,6 +47,11 @@ type Utility struct {
 	// line. Without it LIST fails with LSTERR.
 	WriteListing func(name string, lines []string) error
 
+	// Help runs HELP with topic, the rest of its line, from AUTHORIZE's
+	// help library (SYS$HELP:UAFHELP.HLB, or govax's own copy), prompting
+	// for more as HELP does. Without it HELP says there is no help.
+	Help func(topic string) error
+
 	grammar *dcl.Grammar
 
 	// What the command being run has done: the status it leaves, and
@@ -268,6 +273,7 @@ func (u *Utility) bind() {
 	g := u.grammar
 
 	g.Bind("EXIT", func(int64, *dcl.Result) error { return nil })
+	g.Bind("HELP", func(_ int64, r *dcl.Result) error { return u.help(r.String("TOPIC")) })
 	g.Bind("ADD", func(_ int64, r *dcl.Result) error { return u.add(r) })
 	g.Bind("COPY", func(_ int64, r *dcl.Result) error { return u.copyAccount(r) })
 	g.Bind("MODIFY", func(_ int64, r *dcl.Result) error { return u.modify(r, r.String("USERNAME")) })
@@ -287,4 +293,20 @@ func (u *Utility) bind() {
 	g.Bind("SHOW_RIGHTS", func(_ int64, r *dcl.Result) error { return u.showRights(r) })
 	g.Bind("LIST_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.listIdentifier(r) })
 	g.Bind("LIST_RIGHTS", func(_ int64, r *dcl.Result) error { return u.listRightsCommand(r) })
+}
+
+// help is HELP: the topic looked up in AUTHORIZE's help library, whose
+// modules are its commands.
+func (u *Utility) help(topic string) error {
+	if u.Help == nil {
+		_, _ = io.WriteString(u.Out, "%GOVAX-W-NOHELP, AUTHORIZE has no help library here\n")
+
+		return nil
+	}
+
+	if err := u.Help(topic); err != nil {
+		fmt.Fprintf(u.Out, "%%%s\n", err)
+	}
+
+	return nil
 }

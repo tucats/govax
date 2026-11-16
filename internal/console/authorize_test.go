@@ -134,3 +134,48 @@ Identifier                         Value           Attributes
 		t.Errorf("SMITH's login holds %+v", l.Rights)
 	}
 }
+
+// TestAuthorizeHelp: AUTHORIZE's HELP reads UAFHELP.HLB (govax's own copy
+// without a system volume), as one command and in a session, where its
+// prompts read the procedure's data lines and Return goes back to UAF>.
+func TestAuthorizeHelp(t *testing.T) {
+	d, _, buf := newCommandDispatcher(t)
+
+	mustDispatch(t, d, "AUTHORIZE HELP SHOW /BRIEF")
+
+	if out := buf.String(); !strings.Contains(out, "SHOW") || !strings.Contains(out, "A line for each account") {
+		t.Errorf("AUTHORIZE HELP SHOW /BRIEF:\n%s", out)
+	}
+
+	proc := writeProcedure(t, t.TempDir(), "uafhelp.com",
+		"$ AUTHORIZE", "HELP", "GRANT", "", "", "EXIT")
+
+	buf.Reset()
+	mustDispatch(t, d, "@"+proc)
+
+	out := buf.String()
+	for _, want := range []string{"Additional information available:", "REVOKE", "GRANT/IDENTIFIER lets", "%UAF-I-NOMODS"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the session lacks %q:\n%s", want, out)
+		}
+	}
+}
+
+// TestHelpAuthAbbreviated: HELP AUTH is AUTHORIZE's topic alone, since the
+// topic that told who wrote govax is GOVAX now, with its credits.
+func TestHelpAuthAbbreviated(t *testing.T) {
+	d, _, buf := newCommandDispatcher(t)
+
+	mustDispatch(t, d, "HELP/NOPROMPT AUTH")
+
+	if out := buf.String(); !strings.Contains(out, "Makes and changes the accounts") || strings.Contains(out, "Forest Edge") {
+		t.Errorf("HELP AUTH:\n%s", out)
+	}
+
+	buf.Reset()
+	mustDispatch(t, d, "HELP/NOPROMPT GOVAX CREDITS")
+
+	if out := buf.String(); !strings.Contains(out, "Forest Edge Software") {
+		t.Errorf("HELP GOVAX CREDITS:\n%s", out)
+	}
+}

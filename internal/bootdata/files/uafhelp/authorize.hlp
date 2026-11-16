@@ -1,0 +1,1258 @@
+1 ADD
+
+   Adds an account: a copy of the DEFAULT record with the fields the
+   qualifiers give, and an identifier, the username, for its UIC.
+   ADD/IDENTIFIER adds a rights identifier instead.
+
+   Format
+
+     ADD username [/qualifier...]
+
+2 Parameters
+
+ username
+
+   1 to 12 letters, digits, dollar signs, and underscores.
+
+2 Description
+
+   DEFAULT's record has DISUSER set, so a new account can't log in until
+   /FLAGS=NODISUSER clears it.  Without /UIC the account takes DEFAULT's,
+   [200,200].  When another identifier has the UIC already, the account
+   is added without one (%UAF-E-RDBADDERRU).
+
+2 Qualifiers
+/ACCOUNT
+
+      /ACCOUNT=name
+
+   The account name, up to 8 characters, for the accounting records.
+   ADD makes it an identifier for the UIC's group, [g,*], when the group
+   has none.
+
+/ASTLM
+
+      /ASTLM=n
+
+   The most asynchronous system traps the process may have queued
+   (AST limit).
+
+/BIOLM
+
+      /BIOLM=n
+
+   The most buffered I/O requests the process may have outstanding.
+
+/BYTLM
+
+      /BYTLM=n
+
+   The bytes the process's buffered I/O may use at once.
+
+/CLI
+
+      /CLI=name
+
+   The command interpreter.  govax has only DCL; another name is kept,
+   with a warning, and refused at login.
+
+/CLITABLES
+
+      /CLITABLES=name
+
+   The command tables.  Kept and shown; govax has one set.
+
+/CPUTIME
+
+      /CPUTIME=delta
+
+   The processor time a process may use, as a delta time
+   ([d-]hh:mm:ss.cc), 0 for no limit.  Kept and shown; not enforced.
+
+/DEFPRIVILEGES
+
+      /DEFPRIVILEGES=(privilege[,...])
+
+   The privileges a process of the account starts with, of those
+   authorized.  A privilege's name sets it, NO and its name clears it, and
+   ALL and NOALL set or clear every one; the others are left as they are.
+
+/DEVICE
+
+      /DEVICE=device
+
+   The device of the home directory, SYS$LOGIN_DEVICE at login.
+
+/DIOLM
+
+      /DIOLM=n
+
+   The most direct I/O requests the process may have outstanding.
+
+/DIRECTORY
+
+      /DIRECTORY=[directory]
+
+   The home directory: SYS$LOGIN, SYS$SCRATCH, and the default directory
+   at login.
+
+/ENQLM
+
+      /ENQLM=n
+
+   The most locks the process may hold.
+
+/FILLM
+
+      /FILLM=n
+
+   The most files the process may have open.
+
+/FLAGS
+
+      /FLAGS=([NO]flag[,...])
+
+   The login flags, each named to set it or with NO to clear it:
+   DISCTLY, DEFCLI, LOCKPWD, RESTRICTED, DISUSER, DISWELCOME,
+   DISNEWMAIL, DISMAIL, GENPWD, PWD_EXPIRED, PWD2_EXPIRED, AUDIT,
+   DISREPORT, DISRECONNECT, AUTOLOGIN, DISFORCE_PWD_CHANGE, CAPTIVE,
+   DISIMAGE, DISPWDDIC, and DISPWDHIS.  Only DISUSER does anything in
+   govax: it refuses the account's login.  The rest are kept and shown.
+
+/JTQUOTA
+
+      /JTQUOTA=n
+
+   The bytes of the job's logical name table.
+
+/LGICMD
+
+      /LGICMD=filespec
+
+   The account's login command procedure, run at login after
+   SYS$SYLOGIN.  Without one, SYS$LOGIN:LOGIN.COM is run.
+
+/MAXACCTJOBS
+
+      /MAXACCTJOBS=n
+
+   The most jobs the account's name may have at once.  Kept and shown.
+
+/MAXDETACH
+
+      /MAXDETACH=n
+
+   The most detached processes the user may have.  Kept and shown.
+
+/MAXJOBS
+
+      /MAXJOBS=n
+
+   The most jobs the user may have at once.  Kept and shown.
+
+/OWNER
+
+      /OWNER="name"
+
+   The person the account belongs to, up to 31 characters.
+
+/PASSWORD
+
+      /[NO]PASSWORD=text
+
+   The account's password, which govax keeps only as an Argon2id hash.
+   Case doesn't matter.  /NOPASSWORD removes it.  An account with a
+   password must give it at login (govax asks, or reads GOVAX_PASSWORD
+   when standard input isn't a terminal); one without logs in asked for
+   nothing.
+
+/PBYTLM
+
+      /PBYTLM=n
+
+   The paged buffered I/O byte limit.  Kept and shown.
+
+/PGFLQUOTA
+
+      /PGFLQUOTA=n
+
+   The pages of the page file the job may use.
+
+/PRCLM
+
+      /PRCLM=n
+
+   The most subprocesses the process may have at once.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The base priority, 0 to 31.
+
+/PRIVILEGES
+
+      /PRIVILEGES=(privilege[,...])
+
+   The privileges the account is authorized to hold.  A privilege's name
+   sets it, NO and its name clears it, and ALL and NOALL set or clear
+   every one; the others are left as they are.
+
+/QUEPRIO
+
+      /QUEPRIO=n
+
+   The priority of the user's jobs in queues.  Kept and shown.
+
+/SHRFILLM
+
+      /SHRFILLM=n
+
+   The most shared files the process may have open.  Kept and shown.
+
+/TQELM
+
+      /TQELM=n
+
+   The most timer requests the process may have queued.
+
+/UIC
+
+      /UIC=[group,member]
+
+   The user identification code, both numbers octal: the group 1 to
+   37776, the member 1 to 177776.  Groups up to MAXSYSGROUP (octal 10) are
+   system groups.
+
+/WSDEFAULT
+
+      /WSDEFAULT=n
+
+   The working set's default size, in pages.
+
+/WSEXTENT
+
+      /WSEXTENT=n
+
+   The most pages the working set may grow to.
+
+/WSQUOTA
+
+      /WSQUOTA=n
+
+   The pages of working set the process is guaranteed.
+
+/IDENTIFIER
+
+      ADD/IDENTIFIER name [/VALUE=IDENTIFIER=n | /VALUE=UIC=[g,m]] [/ATTRIBUTES=(attribute[,...])]
+
+   Adds a rights identifier, not an account.  Its value is the next free
+   general identifier (%X80010000 and up), or /VALUE=IDENTIFIER=n (65536
+   to 268435455), or /VALUE=UIC=[g,m] for a UIC identifier.  The
+   attributes are RESOURCE, DYNAMIC, NOACCESS, SUBSYSTEM, IMPERSONATE,
+   and HOLDER_HIDDEN.
+
+/ATTRIBUTES
+
+      /ATTRIBUTES=(attribute[,...])
+
+   With /IDENTIFIER: the new identifier's attributes.
+
+/VALUE
+
+      /VALUE=IDENTIFIER=n or /VALUE=UIC=[g,m]
+
+   With /IDENTIFIER: the new identifier's value, in place of the next
+   free general one.
+
+2 Examples
+
+   1.UAF> ADD SMITH/UIC=[200,1]/OWNER="JOHN SMITH"/FLAGS=NODISUSER -
+        /DEVICE=DUA1:/DIRECTORY=[SMITH]/PASSWORD=SECRET
+
+     Adds SMITH, who logs in to DUA1:[SMITH].
+
+   2.UAF> ADD/IDENTIFIER PROJX
+
+     Adds the identifier PROJX, with the next general value.
+
+1 COPY
+
+   Adds an account that is a copy of another, with the fields the
+   qualifiers give.
+
+   Format
+
+     COPY old-username new-username [/qualifier...]
+
+2 Parameters
+
+ old-username
+
+   The account to copy.
+
+ new-username
+
+   The new account's username.
+
+2 Description
+
+   The copy has no password unless /PASSWORD gives one (%UAF-W-DEFPWD),
+   and holds no identifiers.  Copied with the same UIC, it is
+   %UAF-W-SAMEUIC.
+
+2 Qualifiers
+/ACCOUNT
+
+      /ACCOUNT=name
+
+   The account name, up to 8 characters, for the accounting records.
+   ADD makes it an identifier for the UIC's group, [g,*], when the group
+   has none.
+
+/ASTLM
+
+      /ASTLM=n
+
+   The most asynchronous system traps the process may have queued
+   (AST limit).
+
+/BIOLM
+
+      /BIOLM=n
+
+   The most buffered I/O requests the process may have outstanding.
+
+/BYTLM
+
+      /BYTLM=n
+
+   The bytes the process's buffered I/O may use at once.
+
+/CLI
+
+      /CLI=name
+
+   The command interpreter.  govax has only DCL; another name is kept,
+   with a warning, and refused at login.
+
+/CLITABLES
+
+      /CLITABLES=name
+
+   The command tables.  Kept and shown; govax has one set.
+
+/CPUTIME
+
+      /CPUTIME=delta
+
+   The processor time a process may use, as a delta time
+   ([d-]hh:mm:ss.cc), 0 for no limit.  Kept and shown; not enforced.
+
+/DEFPRIVILEGES
+
+      /DEFPRIVILEGES=(privilege[,...])
+
+   The privileges a process of the account starts with, of those
+   authorized.  A privilege's name sets it, NO and its name clears it, and
+   ALL and NOALL set or clear every one; the others are left as they are.
+
+/DEVICE
+
+      /DEVICE=device
+
+   The device of the home directory, SYS$LOGIN_DEVICE at login.
+
+/DIOLM
+
+      /DIOLM=n
+
+   The most direct I/O requests the process may have outstanding.
+
+/DIRECTORY
+
+      /DIRECTORY=[directory]
+
+   The home directory: SYS$LOGIN, SYS$SCRATCH, and the default directory
+   at login.
+
+/ENQLM
+
+      /ENQLM=n
+
+   The most locks the process may hold.
+
+/FILLM
+
+      /FILLM=n
+
+   The most files the process may have open.
+
+/FLAGS
+
+      /FLAGS=([NO]flag[,...])
+
+   The login flags, each named to set it or with NO to clear it:
+   DISCTLY, DEFCLI, LOCKPWD, RESTRICTED, DISUSER, DISWELCOME,
+   DISNEWMAIL, DISMAIL, GENPWD, PWD_EXPIRED, PWD2_EXPIRED, AUDIT,
+   DISREPORT, DISRECONNECT, AUTOLOGIN, DISFORCE_PWD_CHANGE, CAPTIVE,
+   DISIMAGE, DISPWDDIC, and DISPWDHIS.  Only DISUSER does anything in
+   govax: it refuses the account's login.  The rest are kept and shown.
+
+/JTQUOTA
+
+      /JTQUOTA=n
+
+   The bytes of the job's logical name table.
+
+/LGICMD
+
+      /LGICMD=filespec
+
+   The account's login command procedure, run at login after
+   SYS$SYLOGIN.  Without one, SYS$LOGIN:LOGIN.COM is run.
+
+/MAXACCTJOBS
+
+      /MAXACCTJOBS=n
+
+   The most jobs the account's name may have at once.  Kept and shown.
+
+/MAXDETACH
+
+      /MAXDETACH=n
+
+   The most detached processes the user may have.  Kept and shown.
+
+/MAXJOBS
+
+      /MAXJOBS=n
+
+   The most jobs the user may have at once.  Kept and shown.
+
+/OWNER
+
+      /OWNER="name"
+
+   The person the account belongs to, up to 31 characters.
+
+/PASSWORD
+
+      /[NO]PASSWORD=text
+
+   The account's password, which govax keeps only as an Argon2id hash.
+   Case doesn't matter.  /NOPASSWORD removes it.  An account with a
+   password must give it at login (govax asks, or reads GOVAX_PASSWORD
+   when standard input isn't a terminal); one without logs in asked for
+   nothing.
+
+/PBYTLM
+
+      /PBYTLM=n
+
+   The paged buffered I/O byte limit.  Kept and shown.
+
+/PGFLQUOTA
+
+      /PGFLQUOTA=n
+
+   The pages of the page file the job may use.
+
+/PRCLM
+
+      /PRCLM=n
+
+   The most subprocesses the process may have at once.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The base priority, 0 to 31.
+
+/PRIVILEGES
+
+      /PRIVILEGES=(privilege[,...])
+
+   The privileges the account is authorized to hold.  A privilege's name
+   sets it, NO and its name clears it, and ALL and NOALL set or clear
+   every one; the others are left as they are.
+
+/QUEPRIO
+
+      /QUEPRIO=n
+
+   The priority of the user's jobs in queues.  Kept and shown.
+
+/SHRFILLM
+
+      /SHRFILLM=n
+
+   The most shared files the process may have open.  Kept and shown.
+
+/TQELM
+
+      /TQELM=n
+
+   The most timer requests the process may have queued.
+
+/UIC
+
+      /UIC=[group,member]
+
+   The user identification code, both numbers octal: the group 1 to
+   37776, the member 1 to 177776.  Groups up to MAXSYSGROUP (octal 10) are
+   system groups.
+
+/WSDEFAULT
+
+      /WSDEFAULT=n
+
+   The working set's default size, in pages.
+
+/WSEXTENT
+
+      /WSEXTENT=n
+
+   The most pages the working set may grow to.
+
+/WSQUOTA
+
+      /WSQUOTA=n
+
+   The pages of working set the process is guaranteed.
+
+1 CREATE
+
+   CREATE/RIGHTS makes the rights database on VMS.  govax's authorization
+   file always has one, so the command is accepted and does nothing.
+
+   Format
+
+     CREATE/RIGHTS
+
+2 Qualifiers
+/RIGHTS
+
+   The rights database, the only thing CREATE makes.
+
+1 DEFAULT
+
+   Changes the DEFAULT record, which ADD copies for each new account.
+
+   Format
+
+     DEFAULT /qualifier...
+
+2 Qualifiers
+/ACCOUNT
+
+      /ACCOUNT=name
+
+   The account name, up to 8 characters, for the accounting records.
+   ADD makes it an identifier for the UIC's group, [g,*], when the group
+   has none.
+
+/ASTLM
+
+      /ASTLM=n
+
+   The most asynchronous system traps the process may have queued
+   (AST limit).
+
+/BIOLM
+
+      /BIOLM=n
+
+   The most buffered I/O requests the process may have outstanding.
+
+/BYTLM
+
+      /BYTLM=n
+
+   The bytes the process's buffered I/O may use at once.
+
+/CLI
+
+      /CLI=name
+
+   The command interpreter.  govax has only DCL; another name is kept,
+   with a warning, and refused at login.
+
+/CLITABLES
+
+      /CLITABLES=name
+
+   The command tables.  Kept and shown; govax has one set.
+
+/CPUTIME
+
+      /CPUTIME=delta
+
+   The processor time a process may use, as a delta time
+   ([d-]hh:mm:ss.cc), 0 for no limit.  Kept and shown; not enforced.
+
+/DEFPRIVILEGES
+
+      /DEFPRIVILEGES=(privilege[,...])
+
+   The privileges a process of the account starts with, of those
+   authorized.  A privilege's name sets it, NO and its name clears it, and
+   ALL and NOALL set or clear every one; the others are left as they are.
+
+/DEVICE
+
+      /DEVICE=device
+
+   The device of the home directory, SYS$LOGIN_DEVICE at login.
+
+/DIOLM
+
+      /DIOLM=n
+
+   The most direct I/O requests the process may have outstanding.
+
+/DIRECTORY
+
+      /DIRECTORY=[directory]
+
+   The home directory: SYS$LOGIN, SYS$SCRATCH, and the default directory
+   at login.
+
+/ENQLM
+
+      /ENQLM=n
+
+   The most locks the process may hold.
+
+/FILLM
+
+      /FILLM=n
+
+   The most files the process may have open.
+
+/FLAGS
+
+      /FLAGS=([NO]flag[,...])
+
+   The login flags, each named to set it or with NO to clear it:
+   DISCTLY, DEFCLI, LOCKPWD, RESTRICTED, DISUSER, DISWELCOME,
+   DISNEWMAIL, DISMAIL, GENPWD, PWD_EXPIRED, PWD2_EXPIRED, AUDIT,
+   DISREPORT, DISRECONNECT, AUTOLOGIN, DISFORCE_PWD_CHANGE, CAPTIVE,
+   DISIMAGE, DISPWDDIC, and DISPWDHIS.  Only DISUSER does anything in
+   govax: it refuses the account's login.  The rest are kept and shown.
+
+/JTQUOTA
+
+      /JTQUOTA=n
+
+   The bytes of the job's logical name table.
+
+/LGICMD
+
+      /LGICMD=filespec
+
+   The account's login command procedure, run at login after
+   SYS$SYLOGIN.  Without one, SYS$LOGIN:LOGIN.COM is run.
+
+/MAXACCTJOBS
+
+      /MAXACCTJOBS=n
+
+   The most jobs the account's name may have at once.  Kept and shown.
+
+/MAXDETACH
+
+      /MAXDETACH=n
+
+   The most detached processes the user may have.  Kept and shown.
+
+/MAXJOBS
+
+      /MAXJOBS=n
+
+   The most jobs the user may have at once.  Kept and shown.
+
+/OWNER
+
+      /OWNER="name"
+
+   The person the account belongs to, up to 31 characters.
+
+/PASSWORD
+
+      /[NO]PASSWORD=text
+
+   The account's password, which govax keeps only as an Argon2id hash.
+   Case doesn't matter.  /NOPASSWORD removes it.  An account with a
+   password must give it at login (govax asks, or reads GOVAX_PASSWORD
+   when standard input isn't a terminal); one without logs in asked for
+   nothing.
+
+/PBYTLM
+
+      /PBYTLM=n
+
+   The paged buffered I/O byte limit.  Kept and shown.
+
+/PGFLQUOTA
+
+      /PGFLQUOTA=n
+
+   The pages of the page file the job may use.
+
+/PRCLM
+
+      /PRCLM=n
+
+   The most subprocesses the process may have at once.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The base priority, 0 to 31.
+
+/PRIVILEGES
+
+      /PRIVILEGES=(privilege[,...])
+
+   The privileges the account is authorized to hold.  A privilege's name
+   sets it, NO and its name clears it, and ALL and NOALL set or clear
+   every one; the others are left as they are.
+
+/QUEPRIO
+
+      /QUEPRIO=n
+
+   The priority of the user's jobs in queues.  Kept and shown.
+
+/SHRFILLM
+
+      /SHRFILLM=n
+
+   The most shared files the process may have open.  Kept and shown.
+
+/TQELM
+
+      /TQELM=n
+
+   The most timer requests the process may have queued.
+
+/UIC
+
+      /UIC=[group,member]
+
+   The user identification code, both numbers octal: the group 1 to
+   37776, the member 1 to 177776.  Groups up to MAXSYSGROUP (octal 10) are
+   system groups.
+
+/WSDEFAULT
+
+      /WSDEFAULT=n
+
+   The working set's default size, in pages.
+
+/WSEXTENT
+
+      /WSEXTENT=n
+
+   The most pages the working set may grow to.
+
+/WSQUOTA
+
+      /WSQUOTA=n
+
+   The pages of working set the process is guaranteed.
+
+1 EXIT
+
+   Ends an AUTHORIZE session, saying whether the accounts and the rights
+   database changed.  Ctrl/Z does the same.
+
+   Format
+
+     EXIT
+
+1 GRANT
+
+   GRANT/IDENTIFIER lets an account's UIC hold a rights identifier.  Every
+   account with the UIC holds it, and has it among its rights at login.
+
+   Format
+
+     GRANT/IDENTIFIER identifier username [/ATTRIBUTES=(attribute[,...])]
+
+2 Parameters
+
+ identifier
+
+   The identifier to grant.
+
+ username
+
+   The account, by its UIC identifier's name.
+
+2 Qualifiers
+/IDENTIFIER
+
+   Required: GRANT has only this form.
+
+/ATTRIBUTES
+
+      /ATTRIBUTES=(attribute[,...])
+
+   The holder's attributes, only those the identifier has.
+
+1 HELP
+
+   Shows AUTHORIZE's help, from SYS$HELP:UAFHELP.HLB.
+
+   Format
+
+     HELP [topic [subtopic...]]
+
+2 Description
+
+   With no topic it lists the commands and asks for one.  At each
+   prompt, a topic shows it, ? shows the list again, and Return goes up a
+   level, back to the UAF> prompt at the top.
+
+1 LIST
+
+   Writes SHOW's report of accounts into SYSUAF.LIS in the default
+   directory: every account, a line each, by default.  LIST/IDENTIFIER and
+   LIST/RIGHTS write RIGHTSLIST.LIS.
+
+   Format
+
+     LIST [username] [/BRIEF | /FULL]
+
+2 Parameters
+
+ username
+
+   The accounts to list; % and * match several.  Every one when left out.
+
+2 Qualifiers
+/BRIEF
+
+   A line for each account, the default.
+
+/FULL
+
+   Each account's whole record, with the identifiers it holds.
+
+/IDENTIFIER
+
+      LIST/IDENTIFIER name
+
+   The identifier, with its holders, into RIGHTSLIST.LIS.  A name is
+   required (%UAF-I-NOIDNAME without one).
+
+/VALUE
+
+      /VALUE=IDENTIFIER=n or /VALUE=UIC=[g,m]
+
+   With /IDENTIFIER: the identifier to list, by its value.
+
+/RIGHTS
+
+      LIST/RIGHTS username
+
+   The identifiers the account's UIC holds, into RIGHTSLIST.LIS.
+
+1 MODIFY
+
+   Changes accounts: the fields the qualifiers give, the rest left alone.
+   MODIFY/IDENTIFIER changes a rights identifier instead.
+
+   Format
+
+     MODIFY username [/qualifier...]
+
+2 Parameters
+
+ username
+
+   The accounts to change; % and * match several, each changed.
+
+2 Description
+
+   A changed /UIC changes the account's UIC identifier too.
+
+2 Qualifiers
+/ACCOUNT
+
+      /ACCOUNT=name
+
+   The account name, up to 8 characters, for the accounting records.
+   ADD makes it an identifier for the UIC's group, [g,*], when the group
+   has none.
+
+/ASTLM
+
+      /ASTLM=n
+
+   The most asynchronous system traps the process may have queued
+   (AST limit).
+
+/BIOLM
+
+      /BIOLM=n
+
+   The most buffered I/O requests the process may have outstanding.
+
+/BYTLM
+
+      /BYTLM=n
+
+   The bytes the process's buffered I/O may use at once.
+
+/CLI
+
+      /CLI=name
+
+   The command interpreter.  govax has only DCL; another name is kept,
+   with a warning, and refused at login.
+
+/CLITABLES
+
+      /CLITABLES=name
+
+   The command tables.  Kept and shown; govax has one set.
+
+/CPUTIME
+
+      /CPUTIME=delta
+
+   The processor time a process may use, as a delta time
+   ([d-]hh:mm:ss.cc), 0 for no limit.  Kept and shown; not enforced.
+
+/DEFPRIVILEGES
+
+      /DEFPRIVILEGES=(privilege[,...])
+
+   The privileges a process of the account starts with, of those
+   authorized.  A privilege's name sets it, NO and its name clears it, and
+   ALL and NOALL set or clear every one; the others are left as they are.
+
+/DEVICE
+
+      /DEVICE=device
+
+   The device of the home directory, SYS$LOGIN_DEVICE at login.
+
+/DIOLM
+
+      /DIOLM=n
+
+   The most direct I/O requests the process may have outstanding.
+
+/DIRECTORY
+
+      /DIRECTORY=[directory]
+
+   The home directory: SYS$LOGIN, SYS$SCRATCH, and the default directory
+   at login.
+
+/ENQLM
+
+      /ENQLM=n
+
+   The most locks the process may hold.
+
+/FILLM
+
+      /FILLM=n
+
+   The most files the process may have open.
+
+/FLAGS
+
+      /FLAGS=([NO]flag[,...])
+
+   The login flags, each named to set it or with NO to clear it:
+   DISCTLY, DEFCLI, LOCKPWD, RESTRICTED, DISUSER, DISWELCOME,
+   DISNEWMAIL, DISMAIL, GENPWD, PWD_EXPIRED, PWD2_EXPIRED, AUDIT,
+   DISREPORT, DISRECONNECT, AUTOLOGIN, DISFORCE_PWD_CHANGE, CAPTIVE,
+   DISIMAGE, DISPWDDIC, and DISPWDHIS.  Only DISUSER does anything in
+   govax: it refuses the account's login.  The rest are kept and shown.
+
+/JTQUOTA
+
+      /JTQUOTA=n
+
+   The bytes of the job's logical name table.
+
+/LGICMD
+
+      /LGICMD=filespec
+
+   The account's login command procedure, run at login after
+   SYS$SYLOGIN.  Without one, SYS$LOGIN:LOGIN.COM is run.
+
+/MAXACCTJOBS
+
+      /MAXACCTJOBS=n
+
+   The most jobs the account's name may have at once.  Kept and shown.
+
+/MAXDETACH
+
+      /MAXDETACH=n
+
+   The most detached processes the user may have.  Kept and shown.
+
+/MAXJOBS
+
+      /MAXJOBS=n
+
+   The most jobs the user may have at once.  Kept and shown.
+
+/OWNER
+
+      /OWNER="name"
+
+   The person the account belongs to, up to 31 characters.
+
+/PASSWORD
+
+      /[NO]PASSWORD=text
+
+   The account's password, which govax keeps only as an Argon2id hash.
+   Case doesn't matter.  /NOPASSWORD removes it.  An account with a
+   password must give it at login (govax asks, or reads GOVAX_PASSWORD
+   when standard input isn't a terminal); one without logs in asked for
+   nothing.
+
+/PBYTLM
+
+      /PBYTLM=n
+
+   The paged buffered I/O byte limit.  Kept and shown.
+
+/PGFLQUOTA
+
+      /PGFLQUOTA=n
+
+   The pages of the page file the job may use.
+
+/PRCLM
+
+      /PRCLM=n
+
+   The most subprocesses the process may have at once.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The base priority, 0 to 31.
+
+/PRIVILEGES
+
+      /PRIVILEGES=(privilege[,...])
+
+   The privileges the account is authorized to hold.  A privilege's name
+   sets it, NO and its name clears it, and ALL and NOALL set or clear
+   every one; the others are left as they are.
+
+/QUEPRIO
+
+      /QUEPRIO=n
+
+   The priority of the user's jobs in queues.  Kept and shown.
+
+/SHRFILLM
+
+      /SHRFILLM=n
+
+   The most shared files the process may have open.  Kept and shown.
+
+/TQELM
+
+      /TQELM=n
+
+   The most timer requests the process may have queued.
+
+/UIC
+
+      /UIC=[group,member]
+
+   The user identification code, both numbers octal: the group 1 to
+   37776, the member 1 to 177776.  Groups up to MAXSYSGROUP (octal 10) are
+   system groups.
+
+/WSDEFAULT
+
+      /WSDEFAULT=n
+
+   The working set's default size, in pages.
+
+/WSEXTENT
+
+      /WSEXTENT=n
+
+   The most pages the working set may grow to.
+
+/WSQUOTA
+
+      /WSQUOTA=n
+
+   The pages of working set the process is guaranteed.
+
+/IDENTIFIER
+
+      MODIFY/IDENTIFIER name [/VALUE=...] [/ATTRIBUTES=(...)] [/NAME=new-name]
+
+   Changes a rights identifier: its value, its attributes, or its name.
+   A UIC identifier's new value takes its holders along.
+
+/ATTRIBUTES
+
+      /ATTRIBUTES=([NO]attribute[,...])
+
+   With /IDENTIFIER: the attributes to set, or with NO to clear.
+
+/NAME
+
+      /NAME=new-name
+
+   With /IDENTIFIER: the identifier's new name.
+
+/VALUE
+
+      /VALUE=IDENTIFIER=n or /VALUE=UIC=[g,m]
+
+   With /IDENTIFIER: the identifier's new value.
+
+1 REMOVE
+
+   Removes an account, and the identifier for its UIC.  REMOVE/IDENTIFIER
+   removes a rights identifier and who holds it.
+
+   Format
+
+     REMOVE username
+
+2 Parameters
+
+ username
+
+   The account to remove.
+
+2 Qualifiers
+/IDENTIFIER
+
+      REMOVE/IDENTIFIER name
+
+   Removes the identifier, and every UIC's holding of it.
+
+1 RENAME
+
+   Changes an account's username, and its UIC identifier's name with it.
+   RENAME/IDENTIFIER renames a rights identifier.
+
+   Format
+
+     RENAME old-username new-username
+
+2 Parameters
+
+ old-username
+
+   The account.
+
+ new-username
+
+   Its new username.
+
+2 Description
+
+   The account keeps its fields but its password, which must be given
+   again (%UAF-W-DEFPWD).
+
+2 Qualifiers
+/IDENTIFIER
+
+      RENAME/IDENTIFIER old-name new-name
+
+   Renames a rights identifier.
+
+1 REVOKE
+
+   REVOKE/IDENTIFIER takes a rights identifier away from an account's UIC.
+
+   Format
+
+     REVOKE/IDENTIFIER identifier username
+
+2 Parameters
+
+ identifier
+
+   The identifier.
+
+ username
+
+   The account, by its UIC identifier's name.
+
+2 Qualifiers
+/IDENTIFIER
+
+   Required: REVOKE has only this form.
+
+1 SHOW
+
+   Shows accounts: each whole record by default.  SHOW/IDENTIFIER and
+   SHOW/RIGHTS show the rights database.
+
+   Format
+
+     SHOW username [/BRIEF | /FULL]
+
+2 Parameters
+
+ username
+
+   The accounts to show; % and * match several, in username order.
+
+2 Qualifiers
+/BRIEF
+
+   A line for each account: owner, username, UIC, account, privileges,
+   priority, and home directory.
+
+/FULL
+
+   The whole record, and the identifiers the account holds.
+
+/IDENTIFIER
+
+      SHOW/IDENTIFIER name [/FULL] [/VALUE=...]
+
+   An identifier (* for every one), its value and attributes; /FULL
+   adds its holders, and /VALUE finds it by value.
+
+/VALUE
+
+      /VALUE=IDENTIFIER=n or /VALUE=UIC=[g,m]
+
+   With /IDENTIFIER: the identifier to show, by its value.
+
+/RIGHTS
+
+      SHOW/RIGHTS username
+
+   The identifiers the account's UIC holds.
+
+2 Examples
+
+   1.UAF> SHOW SMITH/BRIEF
+
+     SMITH's line.
+
+   2.UAF> SHOW/IDENTIFIER */FULL
+
+     Every identifier and its holders.

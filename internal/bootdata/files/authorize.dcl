@@ -140,6 +140,11 @@ grammar authorize
     ! EXIT ends a session at the UAF> prompt.
     verb exit/id=1
 
+    ! HELP [topic]: AUTHORIZE's help, SYS$HELP:UAFHELP.HLB.
+    verb help/id=27
+        parameter   topic/id=28                  -
+                    /type=$rest_of_line
+
     ! ADD username [/qualifiers]: a new account, DEFAULT's record with the
     ! qualifiers' fields, and its UIC identifier.
     verb add/id=2
