@@ -174,14 +174,19 @@ Until `vax/r10_*.obj` exist, `TestServiceMacroObjects` only rehearses the
 probes: each assembles with govax's macros, refusing exactly the calls that
 leave out FUNC.
 
-To run it, build this directory's exchange volume (`exchange.cmd`, above),
-attach it to the simh VAX, and as any user with the volume as the default
-directory:
+To run it, build this directory's exchange volume from the repository
+root (`exchange.cmd`; delete an old `testdata/disks/mp-macros.dsk` first):
+
+    go run ./cmd/govax --profile tbprobe --system-file none console < testdata/mp/macros/exchange.cmd
+
+attach it to the simh VAX, and as any user, with the volume mounted and
+its `[000000]` the default directory:
 
     $ @MACROS
 
-which writes `MACROS10.LOG`. Then `copyout.cmd` brings the objects,
-analyses, and log back to `vax/`. **Audit `vax/macros10.log` before
+which writes `MACROS10.LOG`. Then `copyout10.cmd` brings round 10's
+objects, analyses, and log back to `vax/`, leaving the earlier rounds'
+results alone (`copyout.cmd` copies every round's). **Audit `vax/macros10.log` before
 committing it**, as rounds 5 to 9's were: MACRO's messages may quote a line
 of a macro's expansion. The clean-room hook refuses tool calls naming it
 until the author takes it out of the hook's `unaudited` list.

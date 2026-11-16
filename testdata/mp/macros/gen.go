@@ -541,6 +541,25 @@ $ EXIT
 
 	write("exchange.cmd", x.String())
 	write("copyout.cmd", o.String())
+
+	// Round 10's own copy-out: only its objects, analyses, and log, so
+	// the earlier rounds' results in vax/ are left alone.
+	var o10 strings.Builder
+
+	o10.WriteString("! COPYOUT10.CMD - copies round 10's results off mp-macros.dsk into\n")
+	o10.WriteString("! testdata/mp/macros/vax/ (README.md, \"Round 10\"). Written by gen.go.\n! Run from the repository root:\n!\n")
+	o10.WriteString("!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/mp/macros/copyout10.cmd\n!\n")
+	o10.WriteString("MOUNT DUA1 \"testdata/disks/mp-macros.dsk\"\n")
+
+	for _, n := range round10 {
+		up := strings.ToUpper(n)
+		fmt.Fprintf(&o10, "COPY DUA1:[000000]%s.OBJ \"%s/vax/%s.obj\"/HOST/BINARY/QUIET\n", up, dir, n)
+		fmt.Fprintf(&o10, "COPY DUA1:[000000]%s.ANL \"%s/vax/%s.anl\"/HOST/QUIET\n", up, dir, n)
+	}
+
+	fmt.Fprintf(&o10, "COPY DUA1:[000000]MACROS10.LOG \"%s/vax/macros10.log\"/HOST/QUIET\n", dir)
+	o10.WriteString("DISMOUNT DUA1\n")
+	write("copyout10.cmd", o10.String())
 }
 
 func write(name, text string) {
