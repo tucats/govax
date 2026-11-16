@@ -241,11 +241,17 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	// Volumes still mounted when the session ends are dismounted, so
 	// their pending writes reach their containers, after the files
-	// process 1 left open are closed.
+	// process 1 left open are closed. Then the RAM disks' memory is let
+	// go (docs/planning/PHASE-96 - RAM disk.md): the process's end would
+	// free it anyway, but tests that start many sessions shouldn't hold it.
 	defer func() {
 		c.EndSession()
 
 		if err := c.Mounts.DismountAll(); err != nil {
+			fmt.Fprintln(out, "%"+err.Error())
+		}
+
+		if err := c.Mounts.ReleaseMemory(); err != nil {
 			fmt.Fprintln(out, "%"+err.Error())
 		}
 	}()

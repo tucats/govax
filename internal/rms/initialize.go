@@ -97,12 +97,7 @@ func InitializeContainer(path string, blocks uint32, label string, clusterSize u
 	// was writing" behavior.
 	defer func() { _ = c.Close() }()
 
-	opts := volume.InitializeOptions{
-		Label:       label,
-		ClusterSize: clusterSize,
-	}
-
-	if err := volume.Initialize(c, opts); err != nil {
+	if err := volume.Initialize(c, initializeOptions(label, clusterSize)); err != nil {
 		return fmt.Errorf("rms: initializing %s: %w", path, err)
 	}
 

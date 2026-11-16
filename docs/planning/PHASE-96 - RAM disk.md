@@ -437,7 +437,7 @@ Each is one commit, with tests, stopping for review.
    documentation (`diskimage/doc.go`), and a line in ods2's README.
    Committed in ods2 with no attribution lines, for the author to tag
    and push as v0.1.31.
-3. **RMS's RAM disks** (Decision 3): `ramDisks`, `DefineMemory`,
+3. **RMS's RAM disks** (done 2026-11-16) (Decision 3): `ramDisks`, `DefineMemory`,
    `MountMemory`, `mountContainer`, `MemoryVolume`, `IsMemory`,
    `MemoryInUse`, `MemoryTotal`, `ReleaseMemory`, the shared
    `initializeOptions`, and `cmd/govax`'s release at the session's end.
@@ -534,3 +534,31 @@ The answers (2026-11-16):
   permission. govax's `go.mod` now pins v0.1.31, a step the plan gave
   subtask 3, taken here to check the tag: `GOWORK=off go build ./...` and
   `internal/rms`'s tests pass on it.
+- **2026-11-16** Subtask 3: RMS's RAM disks, `internal/rms/ramdisk.go`,
+  as Decision 3 has them. `MountTable.ramDisks` keeps each disk's
+  `MemoryImage`, its size, and whether a first mount has put a volume on
+  it. `DefineMemory` refuses a mounted device (`ErrMounted`), a disk under
+  `MinimumMemoryBlocks` (100; `ErrMemoryTooSmall`), and a total over the
+  limit (`*MemoryLimitError`, with the total and the limit for
+  RAMLIMIT's text), counting a redefined disk at its new size only; a
+  redefinition releases the old image. `MountMemory` initializes a view
+  on the first mount (`ErrMemoryNoWrite` for a read-only one), with the
+  label, cluster size, owner, and volume protection of `MemoryVolume`,
+  and then mounts a fresh view through `mountContainer`, the part of
+  `Mount` after its container file is open. ods2 decides whether a volume
+  is writable by whether its container has `WriteBlock`, so a read-only
+  later mount gets the view wrapped without it (`readOnlyContainer`).
+  `ErrNotMemory` is a device DefineMemory hasn't made. The plan's methods
+  are there (`IsMemory`, `MemoryInUse`, `MemoryTotal`), with
+  `MemorySize` added for DEFINE's and SHOW's use. `ReleaseMemory`
+  dismounts any RAM disk still mounted and frees every image; `cmd/govax`
+  calls it after `DismountAll`. INITIALIZE/CONTAINER and a first mount
+  share `initializeOptions`. Checking a later mount's label is left to
+  MOUNT (subtask 5), through `VolumeLabel`, as for any disk. Tests:
+  `ramdisk_test.go`'s four (a volume outliving DISMOUNT, with the first
+  mount's options in its home block, a file written through RMS read back
+  after remounting, VerifyVolume clean, the image sparse; the definition
+  rules and the total; the mount rules and a read-only later mount;
+  DismountAll keeping images and ReleaseMemory freeing them). `go.mod`
+  already pins ods2 v0.1.31 (subtask 2); `GOWORK=off go build ./...`
+  passes.

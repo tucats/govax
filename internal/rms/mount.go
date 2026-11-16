@@ -44,6 +44,11 @@ type mountedVolume struct {
 	// on the system volume's container (internal/hostlock), so that a
 	// later session can mount it for writing.
 	hold io.Closer
+
+	// memory is set for a RAM disk's volume (ramdisk.go): its container
+	// is a view of an image the device keeps, which DISMOUNT closes
+	// without freeing.
+	memory bool
 }
 
 // MountTable tracks which VAX device names currently have an ODS-2 volume
@@ -78,6 +83,11 @@ type MountTable struct {
 	// system is the device the system volume is mounted on (SetSystem),
 	// normalized, or "" (docs/planning/PHASE-87 - system volume.md).
 	system string
+
+	// ramDisks is the RAM disks, by normalized device name, mounted or
+	// not (ramdisk.go). It outlives each mount, as a RAM disk's contents
+	// do; nil until the first is defined.
+	ramDisks map[string]*ramDisk
 }
 
 // SetSystem records that the volume mounted on device is the system
@@ -178,6 +188,19 @@ func (t *MountTable) Mount(device, path string, writable bool) error {
 		return fmt.Errorf("rms: mounting %s on %s: %w", path, key, err)
 	}
 
+	if err := t.mountContainer(key, container, writable); err != nil {
+		return fmt.Errorf("rms: mounting %s on %s: %w", path, key, err)
+	}
+
+	return nil
+}
+
+// mountContainer mounts the ODS-2 volume on container on the device whose
+// normalized name is key: Mount's work once its container file is open,
+// and MountMemory's with a view of a RAM disk. If the mount fails the
+// container is closed, and ods2's error returned for the caller to
+// wrap.
+func (t *MountTable) mountContainer(key string, container diskimage.Container, writable bool) error {
 	vol, err := volume.Mount(container)
 	if err != nil {
 		// volume.Mount failed after the container was already
@@ -185,7 +208,7 @@ func (t *MountTable) Mount(device, path string, writable bool) error {
 		// — otherwise the open file handle would simply leak.
 		_ = container.Close()
 
-		return fmt.Errorf("rms: mounting %s on %s: %w", path, key, err)
+		return err
 	}
 
 	t.mounts[key] = &mountedVolume{Volume: vol, Writable: writable}
