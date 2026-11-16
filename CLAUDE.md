@@ -903,8 +903,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   asking for it through `Context.AskParameter`. By the author's choice the
   supplied SYSTARTUP_VMS.COM makes MDA0: (SCRATCH) and SYLOGIN.COM each
   account's MDA0:[username] as SYS$SCRATCH (`TestScratchRecipe`).
-  Phase 97 (planned 2026-11-16, awaiting the author's review) is host
-  file access: `vax.console.host.sysprv`, when true, lets only a process
+  Phase 97 (planned 2026-11-16, the plan accepted by the author the same
+  day, its "The review") is host
+  file access: `vax.host.sysprv`, when true, lets only a process
   whose current privileges include SYSPRV reach host files, checked in
   `rms.Session.Locate` and on the paths that bypass it through one
   privilege rule; off (the default), govax behaves as before.

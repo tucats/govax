@@ -1,7 +1,8 @@
 # Phase 97 — host file access
 
-**Status:** planned 2026-11-16 (subtask 1, the survey and this plan),
-awaiting the author's review. This document is the development plan; as
+**Status:** planned 2026-11-16 (subtask 1, the survey and this plan).
+The author reviewed it and accepted it the same day, with the answers
+recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
 and at the end "Where things stand".
 
@@ -9,7 +10,7 @@ and at the end "Where things stand".
 
 A site can stop unprivileged users and their programs from reaching the
 host's files through govax. A new configuration key,
-**`vax.console.host.sysprv`** (boolean), turns the rule on:
+**`vax.host.sysprv`** (boolean), turns the rule on:
 
 - **Off** (the key missing or false, the default): govax behaves exactly
   as it always has. No check is made and nothing is traced.
@@ -112,22 +113,23 @@ credentials.
 
 ## Part B — decisions
 
-1. **The key.** `vax.console.host.sysprv`, a boolean in `cmd/govax`'s
+1. **The key.** `vax.host.sysprv`, a boolean in `cmd/govax`'s
    `validConfigs` and HELP CONFIGURATION KEYS, read once at startup into
    the `corevms.System` (`HostRequiresSYSPRV`). Off, the gate isn't
    asked, so nothing is traced and every path behaves as before.
 
 2. **What counts as a host file.** A file a process names, or a program
    a process runs, that ends up on the host: every Locate result with
-   `Host` set; a file the resolver finds in a `--path` directory for such
-   a name; EXE$OPEN; SAVE and LOAD of ROM and NVRAM; the debugger's log;
-   a shareable image found on the host by step 3 of the locator; a
-   container file named in MOUNT, INITIALIZE/CONTAINER, or
-   DEFINE/DEVICE; and SPAWN/HOST's program. Not counted (A.4): what
-   govax opens for itself by configuration or command line, the system
-   volume, and the embedded files. EDIT of a volume file is not a host
-   access (its scratch copy is govax's own); EDIT of a host file is,
-   through Locate.
+   `Host` set; EXE$OPEN; SAVE and LOAD of ROM and NVRAM; the debugger's
+   log; a container file named in MOUNT, INITIALIZE/CONTAINER, or
+   DEFINE/DEVICE (beside the privileges they already need); and
+   SPAWN/HOST, which needs SYSPRV to run at all. Not counted (A.4, and
+   the review's answers 3 and 4): what govax opens for itself by
+   configuration or command line, files found in directories the
+   configuration names (`--path`, `vax.library`, SET SHARE_PREFIX), the
+   system volume, the embedded files, and EDIT's host editor and scratch
+   copy. EDIT of a file named as a host file is still checked, through
+   Locate, like any other host file name.
 
 3. **One rule, one gate.** A `PrivilegeRule`, `ruleHostFile` ("host
    file: open, create, or run"), SYSPRV, no exempt modes, SS$_NOPRIV.
@@ -186,10 +188,11 @@ Each is one commit, with tests, stopping for review.
    command's message for the refusal; console tests per command with the
    key on, as an account without SYSPRV, then with SYSPRV turned on, then
    with the key off.
-4. **The other paths** (Decisions 2, 8): A.3's table (EXE$OPEN, ROM and
-   NVRAM, the debugger's log, the shareable image locator's host step,
-   the resolver's `--path` directories, SPAWN/HOST, the container
-   commands), and `TestNoUncheckedHostAccess`.
+4. **The other paths** (Decisions 2, 8): A.3's table as Decision 2 has
+   it (EXE$OPEN, ROM and NVRAM, the debugger's log, SPAWN/HOST, the
+   container commands; not the resolver's directories, the shareable
+   image locator's host step, or EDIT's editor), and
+   `TestNoUncheckedHostAccess`.
 5. **The close-out**: MANUAL.md (the key in the configuration chapter, a
    section on host files and who may reach them, `/HOST`'s and SPAWN/HOST's
    descriptions), HELP CONFIGURATION KEYS, HELP SPAWN `/HOST` and HELP
@@ -218,6 +221,16 @@ Questions for the author:
 5. **The key's name**: `vax.console.host.sysprv`, as asked, though it
    applies to programs and subprocesses too, not only the console?
 
+The answers (2026-11-16):
+
+1. Yes: with the key on, MOUNT, INITIALIZE/CONTAINER, and DEFINE/DEVICE
+   of a container file also need SYSPRV (Decision 2).
+2. SPAWN/HOST needs SYSPRV too, the same rule (Decision 2).
+3. EDIT's editor runs without SYSPRV for now (Decision 2).
+4. Not checked: the user configured those directories, which permits
+   them (Decision 2).
+5. The key is `vax.host.sysprv`, the more general name (Decision 1).
+
 ## Progress log
 
 - **2026-11-16** Subtask 1: read `rms/location.go` and its 55 callers,
@@ -226,3 +239,7 @@ Questions for the author:
   EXE$OPEN, ROM and NVRAM, the debugger's log, the shareable image
   locator, SPAWN/HOST, the container commands, and Phase 94's gate and
   command rules. Wrote Part A and this plan.
+- **2026-11-16** The review: the author accepted the plan and answered
+  the five questions. The key is `vax.host.sysprv`; the container
+  commands and SPAWN/HOST are checked; EDIT's editor and the
+  configured directories are not (Decision 2 and subtask 4 changed).
