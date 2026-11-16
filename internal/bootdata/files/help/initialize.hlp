@@ -19,6 +19,8 @@
    volume, which VMS and other emulators such as simh can use too.  The
    volume isn't mounted; use MOUNT.  Initializing a container that
    already exists, writing over its volume, needs the VOLPRO privilege.
+   When the configuration key vax.host.sysprv is true, any container,
+   a host file, needs the SYSPRV privilege (%SYSTEM-F-NOPRIV).
 
    Format
 

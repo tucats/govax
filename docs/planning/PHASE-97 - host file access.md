@@ -1,7 +1,8 @@
 # Phase 97 — host file access
 
 **Status:** planned 2026-11-16 (subtask 1, the survey and this plan);
-subtasks 2, 3, and 4 done 2026-11-16.
+done 2026-11-16 (subtasks 2 to 5). "Where things stand", at the end, is
+what it left.
 The author reviewed it and accepted it the same day, with the answers
 recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
@@ -197,7 +198,7 @@ Each is one commit, with tests, stopping for review.
    container commands; not the resolver's directories, the shareable
    image locator's host step, or EDIT's editor), and
    `TestNoUncheckedHostAccess`.
-5. **The close-out**: MANUAL.md (the key in the configuration chapter, a
+5. **The close-out** (done 2026-11-16): MANUAL.md (the key in the configuration chapter, a
    section on host files and who may reach them, `/HOST`'s and SPAWN/HOST's
    descriptions), HELP CONFIGURATION KEYS, HELP SPAWN `/HOST` and HELP
    HOST_FILES if there is one, VAX-VMS-INTERNALS.md (host files in the
@@ -376,3 +377,49 @@ The answers (2026-11-16):
   (INITIALIZE/CONTAINER new and existing, MOUNT, SPAWN/HOST, SAVE/ROM
   three ways, as PRIV94 with SYSNAM and VOLPRO so that only SYSPRV is
   missing; nothing made on the host while refused).
+- **2026-11-16** Subtask 5: the close-out. MANUAL.md: the key in
+  section 4's new "Host files" table; section 5's "Who may use host
+  files" (what is checked, the messages, when the privilege counts, what
+  isn't checked), with a pointer from the name rules' `/HOST`; and the
+  rule in INITIALIZE/CONTAINER, MOUNT and DISMOUNT, and SPAWN/HOST.
+  HELP: SPAWN `/HOST`, MOUNT's Description, INITIALIZE `/CONTAINER`, and
+  SAVE's parameter (the help library regenerated); there is no
+  HOST_FILES topic, and CONFIGURATION KEYS (subtask 4) says the rest.
+  VAX-VMS-INTERNALS.md: 9.12's "Who may" (the gate through the session,
+  `Locate`, `LocateOutput`, and `Side`, the paths that ask themselves,
+  the test), 7.14's "The host", and a sentence in 8.8. PLAN.md's table
+  row and its "Host file access" section; CLAUDE.md.
+
+## Where things stand
+
+Done: with `vax.host.sysprv` true, every way a process reaches the host
+that the survey found asks one rule, SYSPRV, and a refusal is shown as
+each command shows a protection refusal (or `%SYSTEM-F-NOPRIV`, or a
+failed open for a program); with it false nothing changes and nothing is
+traced. `TestNoUncheckedHostAccess` keeps new host opens from slipping
+past.
+
+Left, by choice or for later:
+
+- **EDIT's editor** runs a host program, and its scratch copy is a host
+  file, without SYSPRV (the review's answer 3). A site that turns the key
+  on and doesn't trust its users with the configured editor would want
+  this checked too; it would be one `HostCommandAllowed` in
+  `dclcmd/edit.go`.
+- **Configured places** (`--path`, `vax.path`, `vax.library`, SET
+  SHARE_PREFIX) aren't checked (the review's answer 4). SET SHARE_PREFIX
+  is a command any process may give; with the key on it lets a process
+  name a host directory whose shareable images RUN will then read. It
+  could need SYSPRV itself under the key.
+- **A bare name with the default directory on the host** is refused
+  even where govax's built-in copy would have been found
+  (LIBRARY/LIST of a built-in macro library by its bare name, `@` of a
+  procedure only built in), subtask 3's log. Only a session with no
+  system or work volume has its default directory on the host.
+- **SAVE/NVRAM** with nothing to save says `%RMS-E-NOIMAGE` before the
+  privilege is asked, as SAVE/ROM does; `TestHostPathsNeedSYSPRV` covers
+  SAVE/ROM only, its console having no NVRAM.
+- **DEFINE/DEVICE**, which Decision 2 and the review's answer 1 listed,
+  names no container file, so there was nothing to check (subtask 4).
+- **No VMS probe**: VMS has no host. The rule and its messages are
+  govax's own, chosen in Part B.

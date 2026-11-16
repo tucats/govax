@@ -48,7 +48,9 @@
    another can be mounted on it.
 
    A volume mounted is known to every process, as VMS's MOUNT/SYSTEM
-   makes it, so MOUNT needs the SYSNAM privilege.
+   makes it, so MOUNT needs the SYSNAM privilege.  A container file is a
+   host file, so when the configuration key vax.host.sysprv is true,
+   MOUNT of one needs the SYSPRV privilege too (%SYSTEM-F-NOPRIV).
 
    As VMS's MOUNT does, MOUNT defines the logical name DISK$label in the
    system table (DISK$USERDISK for a volume labeled USERDISK), so the

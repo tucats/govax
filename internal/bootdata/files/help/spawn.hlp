@@ -65,6 +65,10 @@
 
    A program that can't run or ends with a failure gives %VAX-E-HOSTCMD.
 
+   When the configuration key vax.host.sysprv is true, /HOST needs the
+   SYSPRV privilege (%SYSTEM-F-NOPRIV without it); see CONFIGURATION
+   KEYS.
+
 /INPUT
 
       /INPUT=filespec

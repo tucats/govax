@@ -904,11 +904,21 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   supplied SYSTARTUP_VMS.COM makes MDA0: (SCRATCH) and SYLOGIN.COM each
   account's MDA0:[username] as SYS$SCRATCH (`TestScratchRecipe`).
   Phase 97 (planned 2026-11-16, the plan accepted by the author the same
-  day, its "The review") is host
+  day, its "The review"; done 2026-11-16; its "Where things stand" is
+  the follow-up list, and PLAN.md summarizes it) is host
   file access: `vax.host.sysprv`, when true, lets only a process
-  whose current privileges include SYSPRV reach host files, checked in
-  `rms.Session.Locate` and on the paths that bypass it through one
-  privilege rule; off (the default), govax behaves as before.
+  whose current privileges include SYSPRV reach host files; off (the
+  default), govax behaves as before and nothing is asked. One rule,
+  `ruleHostFile` (`corevms/hostaccess.go`: `Environment.HostAllowed`,
+  `HostCommandAllowed`); RMS asks it through `Session.HostAccess`, set by
+  `UseSession`: `Locate` refuses a host location with a `DeniedError`
+  marked `Host` (shown as a protection refusal), `LocateOutput` the same
+  for a file made, `Side` places a name unchecked, `MayUseHost` is the
+  check alone. EXE$OPEN, SAVE/ROM and NVRAM, SPAWN/HOST, MOUNT, and
+  INITIALIZE/CONTAINER ask it themselves; `TestNoUncheckedHostAccess`
+  (`corevms/hostunchecked_test.go`) holds every host open, create, or run
+  under `internal` to a list of reasons. Configured places (`--path`,
+  `vax.library`, the system's own files) and EDIT's editor aren't checked.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

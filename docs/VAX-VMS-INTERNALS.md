@@ -2974,6 +2974,15 @@ CURPRIV to PROCPRIV | IMAGPRIV. Image rundown's `resetImagePrivileges`
 copies PROCPRIV back to CURPRIV and clears IMAGPRIV, which also takes away
 whatever the image enabled temporarily with `$SETPRV`.
 
+**The host.** One rule is govax's alone: `ruleHostFile`, "host file:
+open, create, or run", SYSPRV, asked only while `vax.host.sysprv` is on
+(`System.HostRequiresSYSPRV`; `corevms/hostaccess.go`). A program's access
+asks it from the program's mode through `HostAllowed`, DCL's commands
+from supervisor mode through `HostCommandAllowed` (`commandRules`'
+`HOST_FILE`); RMS asks through its session (9.12). The privileges are the
+current ones at the moment of the access, so SET PROCESS/PRIVILEGES and an
+installed image's IMAGPRIV count at once.
+
 ### 7.15 Accounts and logging in
 
 An account is a `uaf.Record` (`internal/uaf`, a leaf package): a
@@ -3630,7 +3639,9 @@ ODS-2 volume block for block (section 9), except a RAM disk's, which is
 held in govax's own memory and never reaches the host (section 9.2). And to govax's own commands, a
 file name in quotes, or one with no volume to go to, names a host file
 directly, read and written as a VMS file of its own record format; a
-program's RMS reaches only volumes (section 9.12).
+program's RMS reaches only volumes (section 9.12). A site can keep all of
+this, and SPAWN/HOST's host programs, to processes holding SYSPRV
+(`vax.host.sysprv`; 7.14, 9.12).
 
 ### 8.9 What's VMS's and what isn't
 
@@ -4330,6 +4341,33 @@ Two things a program runs do reach the host: the C library's `open` and its
 kin through the console's `EXE$OPEN` shim (arbitrated between processes by
 RMS's sharing rule, by host file identity: `rms/hostshare.go`), and RUN of
 an image, which may be a host file.
+
+**Who may.** VMS has no host, so no VMS rule says who may reach it; with
+the configuration key `vax.host.sysprv` true, govax's own rule is that
+only a process holding SYSPRV may. It is one privilege rule (7.14), and
+RMS reaches it as it reaches the process's credentials: `Environment.UseSession`
+sets the session's `HostAccess`, a function over `Environment.HostAllowed`.
+`Locate` is `Side`, the four rules above, then that question for a host
+result; a refusal is a `*DeniedError` with `Host` set, so every command
+that shows a volume file's protection refusal (`rms.IsDenied`; OPENIN or
+OPENOUT, then `-RMS-E-PRV`) shows this one with no code of its own.
+Callers fall into three kinds. One that opens what it places calls
+`Locate`, one that makes a file `LocateOutput` (the same, with the
+refusal marked as an output's), and one that only asks which side a name
+is on, or refuses a host file whoever asks (DUMP, INSTALL, SET SECURITY),
+calls `Side`, so a question is never refused. A path that reaches the
+host without a name RMS places asks `Session.MayUseHost` or the gate
+itself: `EXE$OPEN`, SAVE/ROM, and DCL's SPAWN/HOST, MOUNT, and
+INITIALIZE/CONTAINER (`Environment.HostCommandAllowed`). ASM and LOAD, which
+fall back to the console's search path for a bare name, read only the places
+the configuration names when the process may not use the host
+(`respath.Resolver.ReadConfigured`). `TestNoUncheckedHostAccess`
+(`corevms/hostunchecked_test.go`) holds every function under `internal`
+that opens, creates, or runs something on the host to a list, each with
+its reason: it asks, or is handed a placed location, or it is a file govax
+reaches for itself (the system volume, the authorization file, the page
+file, the configured library directories, EDIT's editor and scratch copy).
+With the key off, nothing is asked and nothing is traced.
 
 ### 9.13 Who may do what to a file
 

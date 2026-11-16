@@ -146,7 +146,7 @@ questions, and a progress log extended as that phase is worked.
 | 94 | [PHASE-94 - privileges](PHASE-94%20-%20privileges.md) | Every operation VMS guards with a privilege guarded by the same privilege, through one table-driven gate (`corevms/privrules.go`) traced by SET DEBUG PRIVILEGES; logical name tables' protection; DCL's commands, the terminal driver, and seeing other processes by VMS's rules; SET PROCESS, SET TERMINAL, and INSTALL with installed images' privileges; a precursor to identities other than SYSTEM — planned 2026-11-15, the plan accepted the same day; done 2026-11-15 |
 | 95 | [PHASE-95 - authentication](PHASE-95%20-%20authentication.md) | User accounts: the authorization file (JSON, `vax.authorization.file`), `--user`, AUTHORIZE as a DCL verb with VMS's grammar, SYS$LOGIN and the login procedures (SYLOGIN.COM, LOGIN.COM), the system volume's owners and protections, and SYS$MANAGER:ADDUSER.COM — planned 2026-11-15, the plan accepted the same day; done 2026-11-16 |
 | 96 | [PHASE-96 - RAM disk](PHASE-96%20-%20RAM%20disk.md) | RAM disks: ODS-2 volumes in govax's own memory, DECram's MDcu names, through ods2's `MemoryImage`; DEFINE/DEVICE MDA, MOUNT with a label, contents kept until govax ends, a limit on their total (`vax.ramdisk.limit`), and a scratch volume (MDA0:, SYS$SCRATCH) made by the startup and login procedures govax supplies — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
-| 97 | [PHASE-97 - host file access](PHASE-97%20-%20host%20file%20access.md) | Host file access: `vax.host.sysprv`, when true, lets only a process with SYSPRV reach host files (a host path, a bare name on the host, `/HOST`, and the paths that don't go through `rms.Session.Locate`), through one privilege rule — planned 2026-11-16, the plan accepted the same day |
+| 97 | [PHASE-97 - host file access](PHASE-97%20-%20host%20file%20access.md) | Host file access: `vax.host.sysprv`, when true, lets only a process with SYSPRV reach host files (a host path, a bare name on the host, `/HOST`, and the paths that don't go through `rms.Session.Locate`), through one privilege rule — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -766,3 +766,26 @@ the behavior is govax's own, in DEVIATIONS.md), Part B the decisions with the au
 
 MANUAL.md's section 5, "RAM disks", is the user's side, and VAX-VMS-INTERNALS.md's 9.2 the developer's. What the
 phase left is its doc's "Where things stand".
+
+## Host file access (Phase 97)
+
+Phase 97 (2026-11-16) lets a site keep host files to privileged users: with `vax.host.sysprv` true, only a process
+whose current privileges include SYSPRV may use a host file, run a host program, or name a container file. Off, the
+default, govax behaves as before and nothing is asked. VMS has no host, so the rule is govax's own; its doc's Part A
+is the survey of every way govax reaches the host, Part B the decisions with the author's review.
+
+- **The gate:** one privilege rule, `ruleHostFile` (`corevms/privrules.go`, `commandRules`' `HOST_FILE`), asked by
+  `Environment.HostAllowed` from the caller's mode and `HostCommandAllowed` from DCL's (`corevms/hostaccess.go`).
+- **RMS:** `Session.HostAccess`, set by `UseSession`; `Locate` (and `LocateOutput` for a file made) refuses a host
+  location with a `DeniedError` marked `Host`, shown as each command shows a protection refusal; `Side` is the
+  unchecked question of which side a name is on, and `MayUseHost` the check alone.
+- **The callers:** each of Locate's 55 an access, an output, or a question; ASM and LOAD read only the configured
+  places (`respath.Resolver.ReadConfigured`) for a process that may not use the host; EXE$OPEN, SAVE/ROM and
+  SAVE/NVRAM, SPAWN/HOST, MOUNT, and INITIALIZE/CONTAINER ask the gate themselves.
+- **Not checked:** what govax opens for itself by configuration or command line, the directories the configuration
+  names (`--path`, `vax.library`, SET SHARE_PREFIX), and EDIT's host editor, by the author's answers.
+- **Tests:** `TestNoUncheckedHostAccess`, every host open, create, or run under `internal` by function, each with
+  its reason; `TestHostFileCommands` (28 commands) and `TestHostPathsNeedSYSPRV`, each three ways.
+
+MANUAL.md's section 5, "Who may use host files", is the user's side, and VAX-VMS-INTERNALS.md's 9.12 and 7.14 the
+developer's. What the phase left is its doc's "Where things stand".

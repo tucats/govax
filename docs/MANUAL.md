@@ -644,6 +644,12 @@ read-only.
 | `vax.library` | A host directory holding VMS's own `STARLET.MLB`, `STARLET.OLB`, `IMAGELIB.OLB`, and shareable images, if you have them. `MACRO` and `LINK` look there when `SYS$LIBRARY` and `SYS$SHARE` don't lead to the files. With a system volume, `SYS$LIBRARY` holds govax's own macro library, which comes first (see [Using VMS's own libraries](#using-vmss-own-libraries)). |
 | `vax.link.library` | The older name for `vax.library`. |
 
+#### Host files
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.host.sysprv` | true: only a process holding the `SYSPRV` privilege may use host files, run host programs, or name a container file ([Who may use host files](#who-may-use-host-files)). false: any process may. | false |
+
 #### The console
 
 | Key | Meaning | Default |
@@ -792,7 +798,8 @@ program that reads or writes files with RMS needs a volume.
 Each console command applies the same rules to a file name, in order:
 
 1. A name followed by the qualifier `/HOST` is a host file:
-   `TYPE "notes.txt"/HOST`.
+   `TYPE "notes.txt"/HOST`. (A site may keep host files to privileged
+   users; see [Who may use host files](#who-may-use-host-files).)
 2. A name with a directory in brackets (`[SRC]PROG.MAR`), or with a
    device or logical name of two or more characters and a colon
    (`DUA1:PROG.MAR`, `SRC:PROG.MAR`), is a volume file.
@@ -850,6 +857,57 @@ directory, the one govax was started in, whether or not your default
 directory is on a volume: `MACRO "src/hello.mar"`, or `govax macro
 src/hello.mar` from the shell, writes `hello.obj` there, as a Unix
 compiler does.
+
+### Who may use host files
+
+Host files are outside the emulated system's protection: an account
+that can't read a volume file might still read anything on your host
+through govax. A site that gives govax accounts to others can keep them
+in by setting `vax.host.sysprv` true. Then a process may use a host
+file only while its current privileges include `SYSPRV`, the VMS
+privilege for access to objects as the system. That covers
+
+- every file name that turns out to be a host file by the rules above,
+  whether by `/HOST`, a `/` in it, a logical name that translates to one,
+  or a bare name while the default directory is on the host, for every
+  command that reads or writes it (`TYPE`, `COPY`, `MACRO`, `LINK`, `@`,
+  `OPEN`, `RUN`, `BACKUP`, ...), and a utility's output that would land
+  on the host;
+- a program's own host file I/O (`EXE$OPEN`) and its library's
+  (`LBR$OPEN`), and a created process's input and output;
+- `SPAWN/HOST`, which runs a host program;
+- the container file of `INITIALIZE/CONTAINER` and `MOUNT`, beside the
+  privileges they already need;
+- `SAVE/ROM`, `SAVE/NVRAM`, `LOAD`, `ASM`, and the debugger's log.
+
+Without `SYSPRV` a file is refused as a volume file's protection refuses
+it, with `$STATUS` set the same way; the other commands say
+`%SYSTEM-F-NOPRIV`:
+
+```text
+$ TYPE "/tmp/notes.txt"
+%TYPE-W-OPENIN, error opening /tmp/notes.txt as input
+-RMS-E-PRV, insufficient privilege or file protection violation
+$ SPAWN/HOST ls
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+```
+
+The privilege counts when the access is made: `SET
+PROCESS/PRIVILEGES=SYSPRV` (for an account authorized for it) allows
+the next command, an installed image with `SYSPRV` may use host files
+while it runs, and a file opened before the privilege was turned off
+stays open. `SYSTEM` holds `SYSPRV`, so STARTUP.COM and a session
+without `--user` are unchanged.
+
+Not checked are the files govax reads or writes for itself by the
+configuration or the command line: the system volume, `--mount` and
+`vax.default.volume.file` containers, the authorization file, the page
+file, and the files found in the directories `--path`, `vax.path`,
+`vax.library`, and `SET SHARE_PREFIX` name (a bare name `ASM`, `LOAD`,
+or `HELP` finds there, or a shareable image). `EDIT`'s host editor and
+its scratch copy aren't checked either, though `EDIT` of a host file is.
+`SET DEBUG PRIVILEGES` traces each decision, as
+"host file: open, create, or run".
 
 ### Containers
 
@@ -2178,7 +2236,8 @@ INITIALIZE/CONTAINER "file" [label] [/DEVICE=type | /SIZE=blocks] [/CLUSTER=n]
 
 Creates a new, empty ODS-2 volume in a host file. It isn't mounted; use
 `MOUNT`. Writing over a container that already exists needs the `VOLPRO`
-privilege.
+privilege, and with `vax.host.sysprv` on any container needs `SYSPRV`
+([Who may use host files](#who-may-use-host-files)).
 
 #### MOUNT and DISMOUNT
 
@@ -2196,7 +2255,8 @@ disks](#ram-disks)). A controller with no unit number, `MOUNT DUA "file"`, picks
 controller's first unit with nothing mounted on it, and the
 `%MOUNT-I-MOUNTED` message names it. A mounted volume is known to every
 process, as VMS's `MOUNT/SYSTEM` makes it, so `MOUNT` and `DISMOUNT` need
-the `SYSNAM` privilege. `DISMOUNT` writes pending changes
+the `SYSNAM` privilege; with `vax.host.sysprv` on, `MOUNT` of a container
+file needs `SYSPRV` too. `DISMOUNT` writes pending changes
 and detaches it; it refuses a volume with files open (a process still
 using them, say), and the system volume:
 
@@ -2422,7 +2482,8 @@ output, a host file or a volume file. Only if given, `/SYMBOLS` and
 `/LOGICAL_NAMES` add `GOVAX_SYM_name` and `GOVAX_LOG_name` to its
 environment for each symbol and process logical name, a `$` in the name
 becoming `_`: `PARTS$DATA` is `GOVAX_LOG_PARTS_DATA`. A failure is
-`%VAX-E-HOSTCMD`.
+`%VAX-E-HOSTCMD`. With `vax.host.sysprv` on, `SPAWN/HOST` needs
+`SYSPRV` ([Who may use host files](#who-may-use-host-files)).
 
 `ATTACH` gives the terminal to another process of your job that's
 waiting for it. `LOGOUT` ends a subprocess's DCL; in the console's own

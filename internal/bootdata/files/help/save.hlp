@@ -16,7 +16,9 @@
  filespec
 
    A host file, which is replaced if it's there.  (SAVE doesn't write
-   volume files; COPY one there afterward.)
+   volume files; COPY one there afterward.)  When the configuration key
+   vax.host.sysprv is true, it needs the SYSPRV privilege
+   (%SYSTEM-F-NOPRIV).
 
 2 Description
 
