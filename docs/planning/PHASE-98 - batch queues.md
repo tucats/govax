@@ -1,7 +1,8 @@
 # Phase 98 — batch queues
 
-**Status:** planned 2026-11-16 (subtask 1, the survey and this plan),
-waiting for the author's review. This document is the development plan;
+**Status:** planned 2026-11-16 (subtask 1, the survey and this plan);
+the plan reviewed and accepted by the author the same day, with the
+answers recorded in "The review". This document is the development plan;
 as the work goes on it becomes the implementation record: the progress
 log, and at the end "Where things stand".
 
@@ -281,7 +282,8 @@ The probe (Part D) answers these:
 terminal queues, no generic queues, no forms or characteristics, no
 autostart, no clusters (one queue manager, `SYS$QUEUE_MANAGER`, on node
 GOVAX). VMS's PRINT stays out (govax's `PRINT` verb is its own), so
-`SUBMIT/PRINTER` can't print (Decision 7). A qualifier VMS has that
+`SUBMIT/PRINTER` can't print (Decision 7). Retiring govax's `PRINT` and
+adding VMS's PRINT with print queues is a later phase (the review). A qualifier VMS has that
 govax doesn't keep is refused by the grammar (`%CLI-W-IVQUAL`), and HELP
 says so, as Phase 95 did for AUTHORIZE.
 
@@ -304,21 +306,21 @@ a temporary file and a rename under `internal/hostlock`, mode 0600. The
 reasons are Phase 95's: it must survive the system volume being
 rebuilt (`--system-initialize`) and be shared safely by two sessions.
 START/QUEUE/MANAGER's directory parameter is accepted and recorded (SHOW
-QUEUE/MANAGER shows it), but doesn't move the file. (The alternative, a
-file on the system volume as VMS's, is the review's question 1.)
-`cmd/govax`'s `TestMain` gives tests a temporary file, as it does the
+QUEUE/MANAGER shows it), but doesn't move the file. (Accepted, the
+review's answer 1.) `cmd/govax`'s `TestMain` gives tests a temporary file, as it does the
 authorization file.
 
 **Decision 4 — one session runs the manager.** The queue manager runs in
 the first session that starts with the manager's state "started" in the
 database (or that gives START/QUEUE/MANAGER), holding a host lock beside
-the file for as long as it runs. A second session while the lock is held
+the file for as long as it runs: that session is the batch initiator
+(the review's answer 2). A second session while the lock is held
 may show queues and entries (read from the file), but every other
 operation, and starting a manager, is refused with the JBC status VMS
 gives when the manager isn't running here (the probe's
 `%JBC-E-QMANNOTSTARTED` or the like). Running another session's jobs
 would mean running them against that session's mounts and terminal,
-which govax can't do. (The review's question 2.)
+which govax can't do.
 
 **Decision 5 — the queue manager in Go.** The manager is Go code in
 `corevms` (`System.Queues`), not a VAX process, as the modified page
@@ -370,7 +372,8 @@ nothing is ever printed: `/PRINTER` (the default) with no SYS$PRINT
 behaves as the probe shows VMS behaving when the print can't be queued,
 and `/PRINTER=queue` naming a queue that doesn't exist is that error.
 `/KEEP` and `/NOKEEP` are honored for the case the probe shows the log
-being deleted. (The review's question 4.)
+being deleted. In practice a batch job's `.LOG` file lands on the disk
+for the user to read (the review's answer 4).
 
 **Decision 8 — protection and privileges.** A queue is a protected
 object of a new security class, QUEUE, in `securityClasses`, with access
@@ -403,7 +406,7 @@ code; `LIB$GETQUI` is the probe's to settle (Decision 10).
 
 **Decision 10 — the commands and qualifiers.** The author's minimum,
 and what the plan recommends adding because a queue is hard to use
-without it (each marked; the review's question 6):
+without it (each marked; all accepted, the review's answer 6):
 
 | Command | Qualifiers |
 | --- | --- |
@@ -432,15 +435,38 @@ out.
 **Decision 11 — the session's start and end.** At startup, after
 STARTUP.COM and before the login procedures, govax starts the manager if
 the database says it was running (Decision 4's lock permitting), as VMS
-starts it at boot; queues come back in the state they were left in
-(the review's question 3 asks whether they should come back stopped, as
-VMS's non-autostart queues do). A job that was executing when the last
+starts it at boot. Every queue comes back **stopped**, as VMS's
+non-autostart queues do: the user decides which to start again (the
+review's answer 3), usually in SYSTARTUP_VMS.COM.
+
+No queue exists until a user makes one. The seeded SYSTARTUP_VMS.COM
+(written once, the user's to edit) gains a commented block that, when
+uncommented, starts the queue manager, creates SYS$BATCH if
+`F$GETQUI` finds none, and starts it:
+
+    $! $ START/QUEUE/MANAGER
+    $! $ IF F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME","SYS$BATCH") .EQS. "" -
+    $!      THEN INITIALIZE/QUEUE/BATCH SYS$BATCH
+    $! $ START/QUEUE SYS$BATCH
+
+(the exact lines are the probe's to confirm). A volume whose
+SYSTARTUP_VMS.COM was seeded before this phase doesn't get the block,
+since seeded files are never replaced; HELP and MANUAL.md give it to
+copy. This needs `F$GETQUI`, so it comes with subtask 10. (The review
+allowed a SYS$BATCH supplied by default if this proved impractical; it
+doesn't.)
+
+A job that was executing when the last
 session ended is treated as after a system crash: requeued if it was
 `/RESTART`, with `$RESTART` true and `BATCH$RESTART` its last restart
 value, and otherwise ended with the probe's status (and retained as
 `/RETAIN` says). Pending, holding, and timed jobs simply wait. When
-process 1 logs out with jobs executing, govax says so once and asks for
-confirmation, then ends them that way (the review's question 5). The
+the user asks govax to end (LOGOUT, EXIT at level 0, QUIT, Ctrl/Y's
+end) while jobs are executing, govax says how many and asks for
+confirmation; on yes it ends them that way, on no it goes back to the
+prompt (the review's answer 5). With no terminal to ask at (input from
+a pipe or a test) it doesn't ask: it says so and ends them, as the
+password rule does without a terminal (Phase 95's Decision 6). The
 one-shot subcommands don't start the manager.
 
 **Decision 12 — tests.** `internal/jobqueue`'s unit tests for every
@@ -485,8 +511,9 @@ Each is one commit, with tests, stopping for review.
    probe makes it simple; SHOW QUEUE and SHOW ENTRY moved onto
    `$GETQUI`'s code if they aren't already.
 10. **Restart and the session's end** (Decision 11): the manager at
-    startup, executing jobs at the end, `/RESTART`, SET RESTART_VALUE,
-    `/RETAIN`, a second session's refusals.
+    startup, queues back stopped, executing jobs at the end and the
+    confirmation, `/RESTART`, SET RESTART_VALUE, `/RETAIN`, a second
+    session's refusals, SYSTARTUP_VMS.COM's commented block.
 11. **End to end**: a scenario as two accounts (ADDUSER.COM's), each
     submitting jobs to queues with different protections, a nightly job
     by `/AFTER`, a job that fails, and one that's restarted after govax
@@ -576,6 +603,29 @@ Questions for the author:
    BAT98_B queues be made on the simh VAX, by scripts, as Phase 95's
    accounts were?
 
+The answers (2026-11-16):
+
+1. JSON on the host, `vax.queue.file` (Decision 3).
+2. Yes: the first session to run the manager is the batch initiator;
+   another only shows queues (Decision 4).
+3. Queues come back stopped; the user decides which to restart. No
+   SYS$BATCH by default, provided the site's startup can create one if
+   it doesn't exist (it can, with `F$GETQUI`, so the seeded
+   SYSTARTUP_VMS.COM gets a commented block); otherwise one would have
+   been supplied (Decision 11).
+4. Yes: there are no print queues, so a job's `.LOG` file lands on the
+   disk for the user to read (Decision 7).
+5. When asked to exit with batch jobs running, ask for confirmation
+   before quitting (Decision 11).
+6. Yes, the recommended qualifiers too (Decision 10).
+7. Yes, the queue management services (Decision 9).
+8. Yes, a probe script may create accounts and queues on the simh VAX
+   (Part D).
+
+The author also agreed to the scope (Decision 1): batch queues only.
+Retiring govax's own `PRINT` command and adding VMS's PRINT with print
+queues is a future phase.
+
 ## Progress log
 
 - **2026-11-16** Subtask 1: read Phases 93 to 97 for the model; looked
@@ -587,3 +637,12 @@ Questions for the author:
   read the DCL Dictionary's SUBMIT and the queue commands' "Requires"
   lines, and Phase 95's batch logs from the VAX; wrote Part A and this
   plan.
+- **2026-11-16** The review: the author accepted the plan and answered
+  the eight questions. Decision 4 names the manager's session the batch
+  initiator; Decision 7 says logs simply land on the disk; Decision 11
+  now brings every queue back stopped, gives the seeded
+  SYSTARTUP_VMS.COM a commented create-if-missing block for SYS$BATCH
+  (with `F$GETQUI`, so in subtask 10), and asks for confirmation when
+  govax is asked to end with jobs executing (ending them without asking
+  when there is no terminal); Decision 1 notes VMS's PRINT as a later
+  phase.
