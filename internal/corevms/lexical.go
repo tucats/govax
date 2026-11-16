@@ -27,6 +27,10 @@ import (
 func (env *Environment) JPIItem(name string) (data string, ok bool) {
 	item, ok := jpiItemsByName[name]
 	if !ok {
+		item, ok = jpiNamedItems[name]
+	}
+
+	if !ok {
 		return "", false
 	}
 

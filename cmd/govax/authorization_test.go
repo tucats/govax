@@ -71,3 +71,115 @@ func TestRun_authorizationFile(t *testing.T) {
 		t.Errorf("startup went on:\n%s", buf.String())
 	}
 }
+
+// withUser gives one test --user's account, put back when it ends.
+func withUser(t *testing.T, name string) {
+	t.Helper()
+
+	saved := loginUser
+	loginUser = name
+
+	t.Cleanup(func() { loginUser = saved })
+}
+
+// oneShot runs command as govax's one-shot command and returns its
+// output, failing the test if it fails.
+func oneShot(t *testing.T, command string) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
+		t.Fatalf("%s: %v\n%s", command, err, buf.String())
+	}
+
+	return buf.String()
+}
+
+// TestRun_logIn: with a system volume SYSTEM's home is SYS$MANAGER,
+// SYS$LOGIN and its kin in the job table and the default directory
+// there; --user logs in as another account, with its UIC and privileges
+// and the time of the login before; a disabled or missing account stops
+// govax with LOGINOUT's message; and with no system volume SYSTEM stays
+// where it was, as before accounts.
+func TestRun_logIn(t *testing.T) {
+	dir := t.TempDir()
+	withAuthorizationFile(t, filepath.Join(dir, "sysuaf.json"))
+
+	// No system volume (TestMain's): the host's directory, no SYS$LOGIN.
+	if out := oneShot(t, "SHOW LOGICAL SYS$LOGIN"); !strings.Contains(out, "NOTRAN") {
+		t.Errorf("SYS$LOGIN with no home:\n%s", out)
+	}
+
+	withSystemVolume(t, systemFlags{file: filepath.Join(dir, "govax-system.dsk")})
+
+	if out := oneShot(t, "SHOW DEFAULT"); !strings.Contains(out, "SYS$SYSROOT:[SYSMGR]") {
+		t.Errorf("SYSTEM's default directory:\n%s", out)
+	}
+
+	for name, want := range map[string]string{
+		"SYS$LOGIN":        `"SYS$LOGIN" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_`,
+		"SYS$LOGIN_DEVICE": `"SYS$LOGIN_DEVICE" [exec] = "SYS$SYSROOT:" (LNM$JOB_`,
+		"SYS$SCRATCH":      `"SYS$SCRATCH" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_`,
+		"SYS$DISK":         `"SYS$DISK" [exec] = "SYS$SYSROOT:" (LNM$PROCESS_TABLE)`,
+	} {
+		if out := oneShot(t, "SHOW LOGICAL/FULL "+name); !strings.Contains(out, want) {
+			t.Errorf("no %s in:\n%s", want, out)
+		}
+	}
+
+	var out string
+
+	err := uaf.Update(authorizationFile, func(f *uaf.File) error {
+		smith := uaf.DefaultRecord()
+		smith.Username, smith.Flags, smith.Account = "SMITH", 0, "GOVAX"
+		smith.UIC = uaf.NewUIC(0o300, 1)
+		smith.Device, smith.Directory = "SYS$SYSROOT:", "[SYSMGR]"
+		f.Put(smith)
+
+		disabled := uaf.DefaultRecord()
+		disabled.Username = "OFF"
+		f.Put(disabled)
+
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	withUser(t, "smith")
+
+	out = oneShot(t, `WRITE SYS$OUTPUT F$GETJPI("","USERNAME"),"/",F$GETJPI("","UIC"),"/",F$GETJPI("","ACCOUNT"),"/",F$GETJPI("","CURPRIV"),"/",F$GETJPI("","PRCLM")`)
+	if !strings.Contains(out, "SMITH       /[SMITH]/GOVAX   /TMPMBX,NETMBX/2") {
+		t.Errorf("SMITH's process:\n%s", out)
+	}
+
+	// The first login was recorded: the second reports it.
+	out = oneShot(t, `WRITE SYS$OUTPUT F$GETJPI("","LAST_LOGIN_I")`)
+	if strings.Contains(out, "1858") {
+		t.Errorf("the last login wasn't recorded:\n%s", out)
+	}
+
+	f, err := uaf.Load(authorizationFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r, _ := f.Find("SMITH"); r.LastInteractive.IsZero() {
+		t.Error("no login time in SMITH's record")
+	}
+
+	for user, want := range map[string]string{"OFF": "%LOGIN-F-DISUSER, account is disabled", "NOBODY": "%LOGIN-F-NOSUCHUSER"} {
+		withUser(t, user)
+
+		var buf bytes.Buffer
+
+		err := run(nil, 0, 0, &buf, emptyStdin(), []string{"SHOW DEFAULT"})
+		if err == nil || !strings.Contains(buf.String(), want) || strings.Contains(buf.String(), "SYSROOT") {
+			t.Errorf("--user %s: %v\n%s", user, err, buf.String())
+		}
+
+		if reportFailure(&buf, err) != 1 {
+			t.Errorf("--user %s's exit status", user)
+		}
+	}
+}

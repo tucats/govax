@@ -493,7 +493,7 @@ Each is one commit, with tests, stopping for review.
    default file), `vax.authorization.file`, the file made at startup;
    `corevms`'s user table and `SystemAccount` onto it, with no change in
    what process 1 gets.
-4. **Logging in** (Decisions 6 and 7): `--user`/`-u`, `Environment.LogIn`,
+4. **Logging in** (done 2026-11-15) (Decisions 6 and 7): `--user`/`-u`, `Environment.LogIn`,
    SYS$LOGIN and its kin, the default directory, DISUSER's refusal, the
    new `$GETJPI` and F$GETJPI items the probe lists, LOGINTIM and the
    last-login time.
@@ -696,3 +696,45 @@ The answers (2026-11-15):
   `validConfigs` and HELP CONFIGURATION KEYS), a file it can't read
   stopping startup; `TestMain` gives the package's tests a temporary file.
   Nothing a process gets has changed: login from the record is subtask 4.
+- **2026-11-15** Subtask 4: `corevms/login.go`. `LoginRecord` is
+  LOGINOUT's check (`%LOGIN-F-NOSUCHUSER`, `%LOGIN-F-DISUSER, account is
+  disabled`, `%LOGIN-F-CLIFAIL` for a CLI not DCL; the LGI$_ statuses from
+  `vmsdef.LibrarySymbols`; NOSUCHUSER's and CLIFAIL's texts unconfirmed);
+  `System.BeginLogin` reads the file, resolves the identifiers held, takes
+  the time, and writes it back as the last interactive or non-interactive
+  login, returning a `Login` (the record as it was before, so its times are
+  the logins before this one); `Environment.LogIn` gives a process a Login:
+  username and process name, account, UIC and the logical names' UIC
+  (`SetUIC`), authorized privileges and the defaults as process and
+  current, priority, `LoginQuotas`, the rights (INTERACTIVE and LOCAL, or
+  BATCH alone as the probe's batch jobs had, then the identifiers held),
+  LOGINTIM, and `Process.LastLogin` (`LastLoginText` is the banner's
+  `    Last interactive login on Sunday, 15-NOV-2026 17:19` lines, one per
+  kind that has happened; a day under 10 is written with its zero,
+  unconfirmed). `machine.Machine.LogIn` keeps the Login and gives it to each
+  new process 1 a VMINIT makes, recording no second login
+  (`TestLogInSurvivesVMInit`). `dclshell/dcllogin.go`'s
+  `SetLoginDirectory` defines SYS$LOGIN, SYS$LOGIN_DEVICE, and SYS$SCRATCH
+  in the job table at executive mode, the record's text untranslated as on
+  7.1, sets the default directory, and replaces SET DEFAULT's
+  supervisor-mode SYS$DISK with an executive-mode one. `console.LogIn` picks
+  the home: the record's; for SYSTEM the configured default volume's
+  directory when `vax.default.volume.directory` is set, and when the home
+  isn't there (no system volume) the default as it was, SYS$LOGIN then
+  naming the volume's directory if the default is on one and nothing if
+  it's the host's. `cmd/govax`: `--user NAME`/`-u` (`authorization.go`'s
+  `loginUser`, `checkLogin` before anything runs, exit status 1 with
+  LOGINOUT's message), and the login after STARTUP.COM and the page file,
+  before `vax.startup.procedure`, in every session and one-shot command;
+  the banner only at a terminal (`Console.Verbose`). F$GETJPI's
+  LAST_LOGIN_I, LAST_LOGIN_N (17-NOV-1858 for none), LOGIN_FAILURES and
+  LOGIN_FLAGS (0: no passwords asked), MAXDETACH, MAXJOBS, SHRFILLM, and
+  UAF_FLAGS are answered by name (`getjpi.go`'s `jpiNamedItems`): their
+  `$JPIDEF` codes are in no source govax may read, so `$GETJPI` by code
+  still refuses them, BADPARAM, until a probe round assembles `$JPIDEF
+  GLOBAL` on VMS. `TestLogIn`, `TestLoginItems`, `TestRun_logIn` (SYSTEM's
+  home on the system volume, the names' modes and tables, `--user SMITH`'s
+  process and its recorded login, DISUSER and a missing account refused).
+  Behavior change, as Decision 3 planned: with a system volume and no
+  `vax.default.volume.directory` configured, a session now starts in
+  SYS$SYSROOT:[SYSMGR] rather than the default volume's `[WORK]`.

@@ -58,6 +58,10 @@ type Machine struct {
 	// System one of its own in memory, as the tests have.
 	AuthorizationFile string
 
+	// login is process 1's login (LogIn), given again to each new process
+	// 1 so that a VMINIT doesn't make it SYSTEM again; nil until then.
+	login *corevms.Login
+
 	Symbols *SymbolTable
 
 	Radix       int // 8, 10, or 16
@@ -516,6 +520,12 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	env := m.Hooks.NewProcessOne(sys)
 	m.processOne = env
+
+	// The user process 1 logged in as is the new one's too, with no new
+	// login recorded.
+	if m.login != nil {
+		env.LogIn(m.login)
+	}
 
 	// LOGINOUT's step: the console terminal as process 1's SYS$INPUT,
 	// SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND, process-permanent files

@@ -116,8 +116,13 @@ type Process struct {
 
 	// LoginTime is when the process was created, in VMS system time
 	// (CTL$GQ_LOGIN): $GETJPI's JPI$_LOGINTIM, and the termination
-	// message's ACC$Q_LOGIN. The process table sets it (addProcess).
+	// message's ACC$Q_LOGIN. The process table sets it (addProcess), and
+	// a login (LogIn) sets it again.
 	LoginTime uint64
+
+	// LastLogin is what $GETJPI reports of the account the process logged
+	// in as (login.go): zero until LogIn.
+	LastLogin LastLogin
 
 	// Priority and BasePriority are the process's current and base
 	// scheduling priorities (PCB$B_PRI, PCB$B_PRIB, as the user sees

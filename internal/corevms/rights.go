@@ -69,6 +69,12 @@ var interactiveRights = []security.Identifier{
 	{Value: vmsdef.Symbols["KGB$K_LOCAL_ID"]},
 }
 
+// batchRights are the rights a batch job's login holds: BATCH alone (the
+// probe's batch jobs, docs/planning/PHASE-95 - authentication.md, A.5).
+var batchRights = []security.Identifier{
+	{Value: vmsdef.Symbols["KGB$K_BATCH_ID"]},
+}
+
 // maxIdentifierName is the longest identifier name.
 const maxIdentifierName = 31
 

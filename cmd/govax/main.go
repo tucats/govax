@@ -172,6 +172,11 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		return err
 	}
 
+	// The account --user names must be one that may log in.
+	if err := checkLogin(uafPath, out); err != nil {
+		return err
+	}
+
 	c := console.New(consoleOut)
 	c.AuthorizationFile = uafPath
 
@@ -287,6 +292,16 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		Directory: settings.Get("vax.default.volume.directory"),
 	})
 
+	// A directory the configuration names for the default volume is
+	// SYSTEM's home (docs/planning/PHASE-95 - authentication.md, Decision
+	// 3): where SET DEFAULT has just put the console.
+	systemHome := ""
+	if strings.TrimSpace(settings.Get("vax.default.volume.directory")) != "" {
+		if device, directory, ok := c.VolumeDefault(); ok {
+			systemHome = device + directory
+		}
+	}
+
 	// The limits are recorded now but applied only to the user's commands:
 	// the one-shot command and the interactive prompt below. See this
 	// function's doc comment.
@@ -311,6 +326,18 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// system's from the start (unless vax.sysgen.paging.defer leaves it
 	// for the pager's first need).
 	c.StartPageFile()
+
+	// Then process 1 logs in as its account, SYSTEM unless --user names
+	// another (docs/planning/PHASE-95 - authentication.md, Decision 7). At
+	// a terminal the banner says when the account last logged in.
+	login, err := c.LogIn(loginAccount(), systemHome)
+	if err != nil {
+		return err
+	}
+
+	if c.Verbose {
+		fmt.Fprint(out, login.Previous().LastLoginText())
+	}
 
 	// If a startup procedure of the user's own is configured, run it: a
 	// volume file or a host file, by the form of its name. One that isn't

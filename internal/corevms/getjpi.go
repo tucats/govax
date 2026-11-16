@@ -121,6 +121,25 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_LOGINTIM":     func(env *Environment) itemValue { return itemQuad(env.Process.LoginTime) },
 }
 
+// jpiNamedItems are $GETJPI items govax answers by name but not yet by
+// code: the account's facts a login gives the process (login.go's
+// LastLogin), which F$GETJPI answered for every account in Phase 95's
+// probe. Their $JPIDEF codes are in no source govax may read (no
+// manual gives them, and no probe has defined them), so $GETJPI still
+// gives SS$_BADPARAM for them; F$GETJPI reaches them by name
+// (JPIItem). A probe round assembling $JPIDEF GLOBAL on VMS would let
+// them join jpiItemsByName.
+var jpiNamedItems = map[string]func(env *Environment) itemValue{
+	"JPI$_LAST_LOGIN_I":   func(env *Environment) itemValue { return itemQuad(env.Process.LastLogin.Interactive) },
+	"JPI$_LAST_LOGIN_N":   func(env *Environment) itemValue { return itemQuad(env.Process.LastLogin.NonInteractive) },
+	"JPI$_LOGIN_FAILURES": func(*Environment) itemValue { return itemLong(0) },
+	"JPI$_LOGIN_FLAGS":    func(*Environment) itemValue { return itemLong(0) },
+	"JPI$_MAXDETACH":      func(env *Environment) itemValue { return itemLong(env.Process.LastLogin.MaxDetach) },
+	"JPI$_MAXJOBS":        func(env *Environment) itemValue { return itemLong(env.Process.LastLogin.MaxJobs) },
+	"JPI$_SHRFILLM":       func(env *Environment) itemValue { return itemLong(env.Process.LastLogin.SharedFiles) },
+	"JPI$_UAF_FLAGS":      func(env *Environment) itemValue { return itemLong(env.Process.LastLogin.UAFFlags) },
+}
+
 // SetImageName records name, the file the image activator found the
 // process's main image in, as the process's JPI$_IMAGNAME: the file's
 // physical name, its device as the name's translation wrote it and any

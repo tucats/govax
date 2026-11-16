@@ -224,6 +224,18 @@ var grammar = []cli.Option{
 		Action:               func(c *cli.Context) error { return addMount(c, "mount-write", true) },
 	},
 	{
+		LongName:             "user",
+		ShortName:            "u",
+		Description:          "The account to log in as (default SYSTEM)",
+		ParameterDescription: "name",
+		OptionType:           cli.StringType,
+		Action: func(c *cli.Context) error {
+			loginUser, _ = c.String("user")
+
+			return nil
+		},
+	},
+	{
 		LongName:             "system-file",
 		Description:          "The system volume's container, or none (default ~/.govax/govax-system.dsk)",
 		ParameterDescription: "file",

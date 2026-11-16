@@ -1,11 +1,48 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"strings"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/uaf"
+	"github.com/tucats/govax/internal/vmserrors"
 )
+
+// loginUser is --user's account, "" for SYSTEM (docs/planning/PHASE-95 -
+// authentication.md, Decision 6).
+var loginUser string
+
+// loginAccount is the account process 1 logs in as: --user's, in
+// capitals, or SYSTEM.
+func loginAccount() string {
+	if name := strings.ToUpper(strings.TrimSpace(loginUser)); name != "" {
+		return name
+	}
+
+	return uaf.SystemRecord().Username
+}
+
+// checkLogin is LOGINOUT's check of the account before anything runs:
+// one the file doesn't have, or one with DISUSER, is its message on out
+// ("%LOGIN-F-DISUSER, account is disabled") and an error already shown,
+// which makes govax exit with status 1.
+func checkLogin(path string, out io.Writer) error {
+	f, err := uaf.Load(path)
+	if err != nil {
+		return err
+	}
+
+	if _, err := corevms.LoginRecord(f, loginAccount()); err != nil {
+		fmt.Fprintln(out, "%"+err.Error())
+
+		return vmserrors.InhibitMessage(err)
+	}
+
+	return nil
+}
 
 // authorizationFile, when set, is the authorization file's path in place
 // of vax.authorization.file's and the default: the tests' (TestMain
