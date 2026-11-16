@@ -1,6 +1,6 @@
 1 INITIALIZE
 
-   Does one of three things, chosen by its qualifier, which must be given:
+   Does one of four things, chosen by its qualifier, which must be given:
 
      INITIALIZE/CONTAINER   Makes a new, empty ODS-2 volume in a host
                             file, for MOUNT.
@@ -9,6 +9,8 @@
      INITIALIZE/MEMORY      Lays out virtual memory: the regions, the
                             privileged modes' stacks, and their page
                             tables.
+     INITIALIZE/QUEUE       Makes a batch queue, or changes one that is
+                            stopped.
 
    INITIALIZE with none of them is an error.  INIT is short for
    INITIALIZE.
@@ -257,3 +259,116 @@
      $ INITIALIZE/MEMORY /P0=16384 /P1=8192 /S0=8192 /KSP=20
 
      Gives the machine 8 MB of memory and lays it out.
+
+2 /QUEUE
+
+   Makes a batch queue, stopped unless /START is given, or changes the
+   attributes of a queue that exists and is stopped (a started queue is
+   %JBC-I-QUENOTMOD, and nothing changes).  The queue manager must be
+   running (START/QUEUE/MANAGER).  Making a queue needs the OPER
+   privilege (%JBC-E-NOOPER); changing one needs manage access to it
+   (%JBC-E-NOPRIV).  govax has only batch queues: /BATCH must be given
+   to make one (VMS makes a printer queue without it).
+
+   Format
+
+     INITIALIZE/QUEUE/BATCH queue-name
+
+3 Parameter
+
+ queue-name
+
+   The queue's name, 1 to 31 letters, digits, dollar signs, and
+   underscores.
+
+3 Qualifiers
+/BATCH
+
+   Makes a batch queue, the only kind govax has.
+
+/QUEUE
+
+   Selects INITIALIZE/QUEUE.
+
+/START
+
+   Starts the queue once it is made.
+
+/BASE_PRIORITY
+
+      /BASE_PRIORITY=n
+
+   The base priority, 0 to 31, of the queue's jobs' processes.  The
+   default is 4.
+
+/CPUDEFAULT
+
+      /[NO]CPUDEFAULT=hh:mm:ss
+
+   The CPU time limit a job gets when it gives none.  INFINITE is no
+   limit.
+
+/CPUMAXIMUM
+
+      /[NO]CPUMAXIMUM=hh:mm:ss
+
+   The most CPU time a job may ask for.
+
+/DESCRIPTION
+
+      /[NO]DESCRIPTION="text"
+
+   A line of text describing the queue, which SHOW QUEUE shows.
+
+/JOB_LIMIT
+
+      /JOB_LIMIT=n
+
+   How many jobs the queue runs at once, 1 to 255.  The default is 1.
+
+/OWNER_UIC
+
+      /OWNER_UIC=uic
+
+   The queue's owner, a UIC or an identifier.  The default is [SYSTEM].
+
+/PROTECTION
+
+      /PROTECTION=(category:access[,...])
+
+   The queue's protection code.  A queue's kinds of access are R (read:
+   see its jobs), S (submit), M (manage), and D (delete: change or
+   delete one's own jobs).  The default is (S:M,O:D,G:R,W:S).  SET
+   SECURITY/CLASS=QUEUE changes it too, and the queue's ACL.
+
+/RETAIN
+
+      /[NO]RETAIN[=option]
+
+   Which ended jobs the queue keeps: ALL (the default option) or ERROR,
+   those that didn't succeed.  /NORETAIN keeps none.
+
+/WSDEFAULT
+
+      /[NO]WSDEFAULT=n
+
+   The queue's working-set default for its jobs, in pages.  govax keeps
+   and shows the working-set values; a job's process has its account's.
+
+/WSEXTENT
+
+      /[NO]WSEXTENT=n
+
+   The queue's working-set extent for its jobs, in pages.
+
+/WSQUOTA
+
+      /[NO]WSQUOTA=n
+
+   The queue's working-set quota for its jobs, in pages.
+
+3 Examples
+
+   1.$ INITIALIZE/QUEUE/BATCH/JOB_LIMIT=2/START SYS$BATCH
+
+     Makes and starts SYS$BATCH, which runs two jobs at once.

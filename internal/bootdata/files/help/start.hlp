@@ -1,0 +1,132 @@
+1 START
+
+   Starts a batch queue, or the queue manager.
+
+2 /QUEUE
+
+   Starts a batch queue on this node, so that it runs its jobs, or lets
+   a queue that STOP/QUEUE paused go on.  START/QUEUE takes
+   INITIALIZE/QUEUE's attributes, and changes them as it starts the
+   queue.  A queue already started is %JBC-E-STARTED.  It needs manage
+   access to the queue (%JBC-E-NOPRIV).
+
+   Format
+
+     START/QUEUE queue-name
+
+3 Parameter
+
+ queue-name
+
+   The queue to start.
+
+3 Qualifiers
+/QUEUE
+
+   Selects START/QUEUE.
+
+/BASE_PRIORITY
+
+      /BASE_PRIORITY=n
+
+   The base priority, 0 to 31, of the queue's jobs' processes.  The
+   default is 4.
+
+/CPUDEFAULT
+
+      /[NO]CPUDEFAULT=hh:mm:ss
+
+   The CPU time limit a job gets when it gives none.  INFINITE is no
+   limit.
+
+/CPUMAXIMUM
+
+      /[NO]CPUMAXIMUM=hh:mm:ss
+
+   The most CPU time a job may ask for.
+
+/DESCRIPTION
+
+      /[NO]DESCRIPTION="text"
+
+   A line of text describing the queue, which SHOW QUEUE shows.
+
+/JOB_LIMIT
+
+      /JOB_LIMIT=n
+
+   How many jobs the queue runs at once, 1 to 255.  The default is 1.
+
+/OWNER_UIC
+
+      /OWNER_UIC=uic
+
+   The queue's owner, a UIC or an identifier.  The default is [SYSTEM].
+
+/PROTECTION
+
+      /PROTECTION=(category:access[,...])
+
+   The queue's protection code.  A queue's kinds of access are R (read:
+   see its jobs), S (submit), M (manage), and D (delete: change or
+   delete one's own jobs).  The default is (S:M,O:D,G:R,W:S).  SET
+   SECURITY/CLASS=QUEUE changes it too, and the queue's ACL.
+
+/RETAIN
+
+      /[NO]RETAIN[=option]
+
+   Which ended jobs the queue keeps: ALL (the default option) or ERROR,
+   those that didn't succeed.  /NORETAIN keeps none.
+
+/WSDEFAULT
+
+      /[NO]WSDEFAULT=n
+
+   The queue's working-set default for its jobs, in pages.  govax keeps
+   and shows the working-set values; a job's process has its account's.
+
+/WSEXTENT
+
+      /[NO]WSEXTENT=n
+
+   The queue's working-set extent for its jobs, in pages.
+
+/WSQUOTA
+
+      /[NO]WSQUOTA=n
+
+   The queue's working-set quota for its jobs, in pages.
+
+3 Examples
+
+   1.$ START/QUEUE SYS$BATCH
+
+     Starts SYS$BATCH.
+
+3 /MANAGER
+
+   Starts the queue manager, which keeps the queues and runs their
+   jobs.  The queue database is a host file (the configuration key
+   vax.queue.file, by default ~/.govax/qman.json), which the first start
+   makes.  The manager runs in one govax session at a time: another
+   session may show the queues but not change them.  Once started, the
+   manager starts again with each session until STOP/QUEUE/MANAGER.  It
+   needs the OPER and SYSNAM privileges (%JBC-E-NOPRIV).
+
+   Format
+
+     START/QUEUE/MANAGER [directory]
+
+4 Parameter
+
+ directory
+
+   VMS's directory for the database's files.  govax records it, and
+   SHOW QUEUE/MANAGER/FULL shows it, but the database stays the host
+   file.
+
+4 Qualifiers
+/MANAGER
+
+   Selects START/QUEUE/MANAGER.

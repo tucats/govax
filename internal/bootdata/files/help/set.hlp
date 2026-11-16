@@ -456,6 +456,102 @@
 
      SET QUANTUM count
 
+2 QUEUE
+
+   Changes a batch queue's attributes, in any state.  It takes
+   INITIALIZE/QUEUE's attributes, and needs manage access to the queue
+   (%JBC-E-NOPRIV).
+
+   Format
+
+     SET QUEUE queue-name
+
+3 Parameter
+
+ queue-name
+
+   The queue to change.
+
+3 Qualifiers
+/BASE_PRIORITY
+
+      /BASE_PRIORITY=n
+
+   The base priority, 0 to 31, of the queue's jobs' processes.  The
+   default is 4.
+
+/CPUDEFAULT
+
+      /[NO]CPUDEFAULT=hh:mm:ss
+
+   The CPU time limit a job gets when it gives none.  INFINITE is no
+   limit.
+
+/CPUMAXIMUM
+
+      /[NO]CPUMAXIMUM=hh:mm:ss
+
+   The most CPU time a job may ask for.
+
+/DESCRIPTION
+
+      /[NO]DESCRIPTION="text"
+
+   A line of text describing the queue, which SHOW QUEUE shows.
+
+/JOB_LIMIT
+
+      /JOB_LIMIT=n
+
+   How many jobs the queue runs at once, 1 to 255.  The default is 1.
+
+/OWNER_UIC
+
+      /OWNER_UIC=uic
+
+   The queue's owner, a UIC or an identifier.  The default is [SYSTEM].
+
+/PROTECTION
+
+      /PROTECTION=(category:access[,...])
+
+   The queue's protection code.  A queue's kinds of access are R (read:
+   see its jobs), S (submit), M (manage), and D (delete: change or
+   delete one's own jobs).  The default is (S:M,O:D,G:R,W:S).  SET
+   SECURITY/CLASS=QUEUE changes it too, and the queue's ACL.
+
+/RETAIN
+
+      /[NO]RETAIN[=option]
+
+   Which ended jobs the queue keeps: ALL (the default option) or ERROR,
+   those that didn't succeed.  /NORETAIN keeps none.
+
+/WSDEFAULT
+
+      /[NO]WSDEFAULT=n
+
+   The queue's working-set default for its jobs, in pages.  govax keeps
+   and shows the working-set values; a job's process has its account's.
+
+/WSEXTENT
+
+      /[NO]WSEXTENT=n
+
+   The queue's working-set extent for its jobs, in pages.
+
+/WSQUOTA
+
+      /[NO]WSQUOTA=n
+
+   The queue's working-set quota for its jobs, in pages.
+
+3 Examples
+
+   1.$ SET QUEUE/JOB_LIMIT=4/DESCRIPTION="Nightly work" SYS$BATCH
+
+     Lets SYS$BATCH run four jobs at once, and describes it.
+
 2 RADIX
 
    Sets the console's radix: the base of numbers PRINT and the console's

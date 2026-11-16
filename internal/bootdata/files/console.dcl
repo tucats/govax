@@ -356,6 +356,9 @@ grammar console
         ! subtask 12): a file's owner, protection, and ACL.
         keyword         security        /syntax=show_security
         keyword         acl             /syntax=show_acl
+        ! QUEUE (docs/planning/PHASE-98 - batch queues.md): batch queues,
+        ! and with /MANAGER the queue manager.
+        keyword         queue           /syntax=show_queue
                 
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
@@ -486,6 +489,8 @@ grammar console
         qualifier   vax/id=801/syntax=initialize_vax
         qualifier   container/id=802/syntax=initialize_container
         qualifier   memory/id=811/syntax=initialize_memory
+        ! INITIALIZE/QUEUE (Phase 98): a batch queue made or changed.
+        qualifier   queue/id=813/syntax=initialize_queue
 
     ! No /prompt= on PAGES: cmdInit's original CLI_NEEDPAGES error (a
     ! specific wording, not a formal interactive re-prompt) is preserved by
@@ -603,6 +608,8 @@ grammar console
                     /type=$string/list          -
                     /prompt="File specification"
         qualifier   log/id=1102
+        ! DELETE/QUEUE (Phase 98): a stopped queue and its jobs.
+        qualifier   queue/id=1103/syntax=delete_queue
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
@@ -1214,6 +1221,110 @@ grammar console
                     /type=$string/default=EXECUTIVE_MODE
         parameter   process_name/id=1607        -
                     /type=$string
+        ! STOP/QUEUE (Phase 98): a queue, or with /MANAGER its manager.
+        qualifier   queue/id=3101/syntax=stop_queue
+
+    ! The queue commands (docs/planning/PHASE-98 - batch queues.md,
+    ! Decision 10; internal/dclcmd/queues.go and showqueue.go): batch
+    ! queues and their manager. INITIALIZE/QUEUE, START/QUEUE, STOP/QUEUE,
+    ! SET QUEUE, DELETE/QUEUE, and SHOW QUEUE are each a syntax of its
+    ! own, reached by /QUEUE (or SET's and SHOW's QUEUE keyword), and
+    ! /MANAGER switches START's, STOP's, and SHOW's to the manager's. The
+    ! queue's attributes are the same qualifiers in INITIALIZE/QUEUE,
+    ! START/QUEUE, and SET QUEUE. A qualifier VMS has that govax doesn't
+    ! keep is DCL's IVQUAL (Decision 1).
+    syntax initialize_queue/id=3000
+        parameter   queue_name/id=3001          -
+                    /type=$string               -
+                    /prompt="Queue name"
+        qualifier   batch/id=3002
+        qualifier   start/id=3003
+        qualifier   job_limit/id=3004/type=$integer
+        qualifier   base_priority/id=3005/type=$integer
+        qualifier   owner_uic/id=3006/type=$uic
+        qualifier   protection/id=3007/type=$protection
+        qualifier   wsdefault/id=3008/type=$integer
+        qualifier   wsquota/id=3009/type=$integer
+        qualifier   wsextent/id=3010/type=$integer
+        qualifier   cpudefault/id=3011/type=$string
+        qualifier   cpumaximum/id=3012/type=$string
+        qualifier   retain/id=3013/type=$string
+        qualifier   description/id=3014/type=$string
+
+    verb start/id=3020
+        qualifier   queue/id=3021/syntax=start_queue
+
+    syntax start_queue/id=3022
+        parameter   queue_name/id=3023          -
+                    /type=$string               -
+                    /prompt="Queue name"
+        qualifier   manager/id=3024/syntax=start_queue_manager
+        qualifier   job_limit/id=3025/type=$integer
+        qualifier   base_priority/id=3026/type=$integer
+        qualifier   owner_uic/id=3027/type=$uic
+        qualifier   protection/id=3028/type=$protection
+        qualifier   wsdefault/id=3029/type=$integer
+        qualifier   wsquota/id=3030/type=$integer
+        qualifier   wsextent/id=3031/type=$integer
+        qualifier   cpudefault/id=3032/type=$string
+        qualifier   cpumaximum/id=3033/type=$string
+        qualifier   retain/id=3034/type=$string
+        qualifier   description/id=3035/type=$string
+
+    ! START/QUEUE/MANAGER [directory]: the directory is recorded and
+    ! shown; the database is the host file (Decision 3).
+    syntax start_queue_manager/id=3040
+        parameter   directory/id=3041           -
+                    /type=$string
+
+    syntax stop_queue/id=3050
+        parameter   queue_name/id=3051          -
+                    /type=$string               -
+                    /prompt="Queue name"
+        qualifier   next/id=3052
+        qualifier   reset/id=3053
+        qualifier   manager/id=3054/syntax=stop_queue_manager
+        disallow    next and reset
+
+    syntax stop_queue_manager/id=3055
+        qualifier   cluster/id=3056
+
+    syntax delete_queue/id=3060
+        parameter   queue_name/id=3061          -
+                    /type=$string               -
+                    /prompt="Queue name"
+
+    syntax set_queue/id=3070
+        parameter   queue_name/id=3071          -
+                    /type=$string               -
+                    /prompt="Queue name"
+        qualifier   job_limit/id=3072/type=$integer
+        qualifier   base_priority/id=3073/type=$integer
+        qualifier   owner_uic/id=3074/type=$uic
+        qualifier   protection/id=3075/type=$protection
+        qualifier   wsdefault/id=3076/type=$integer
+        qualifier   wsquota/id=3077/type=$integer
+        qualifier   wsextent/id=3078/type=$integer
+        qualifier   cpudefault/id=3079/type=$string
+        qualifier   cpumaximum/id=3080/type=$string
+        qualifier   retain/id=3081/type=$string
+        qualifier   description/id=3082/type=$string
+
+    ! SHOW QUEUE [name]: VMS 7.1's has no /USER_NAME (the probe's A.4).
+    syntax show_queue/id=3090
+        parameter   queue_name/id=3091          -
+                    /type=$string
+        qualifier   batch/id=3092
+        qualifier   all_jobs/id=3093
+        qualifier   full/id=3094
+        qualifier   brief/id=3095
+        qualifier   summary/id=3096
+        qualifier   by_job_status/id=3097       -
+                    /type=$string/list
+        qualifier   manager/id=3098/syntax=show_queue_manager
+
+    syntax show_queue_manager/id=3099
+        qualifier   full/id=3100
 
     ! INSTALL subcommand [file] (docs/planning/PHASE-94 - privileges.md,
     ! Decision 9; internal/dclcmd/install.go): the known file list. ADD
@@ -1542,6 +1653,9 @@ grammar console
         keyword     security            /syntax=set_security/nonegatable
         keyword     file                /syntax=set_file/nonegatable
         keyword     acl                 /syntax=set_acl/nonegatable
+        ! QUEUE (docs/planning/PHASE-98 - batch queues.md): a batch
+        ! queue's attributes.
+        keyword     queue               /syntax=set_queue/nonegatable
 
 
     verb set/id=1760

@@ -93,4 +93,5 @@ func registerServices(t *ServiceTable) {
 	registerLogicalServices(t)
 	registerCLIService(t)
 	registerRMSServices(t)
+	registerQueueServices(t)
 }

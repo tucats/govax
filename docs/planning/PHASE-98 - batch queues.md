@@ -693,7 +693,7 @@ Each is one commit, with tests, stopping for review.
 5. **Queue protection** (Decision 8; done 2026-11-16): the QUEUE security class, the
    access rule's queue and job types, the privilege rules, SET and SHOW
    SECURITY/CLASS=QUEUE; held to the probe's protection matrix.
-6. **The manager and queues** (Decisions 4, 5, 10): `System.Queues`,
+6. **The manager and queues** (Decisions 4, 5, 10; done 2026-11-16): `System.Queues`,
    `$SNDJBC`'s queue functions, START/STOP/SHOW QUEUE/MANAGER,
    INITIALIZE/QUEUE, START/QUEUE, STOP/QUEUE (`/NEXT`, `/RESET`), SET
    QUEUE, DELETE/QUEUE, SHOW QUEUE; held to the probe.
@@ -1036,3 +1036,58 @@ queues is a future phase.
   SYNTAX; `/LIKE`, `/EXCLUDE`, and `/BY_OWNER` with a queue are CONFLICT.
   MANUAL.md and HELP SET SECURITY and SHOW SECURITY say the class.
   Subtask 6, the manager and queues, is next.
+- **2026-11-16** Subtask 6, the manager and queues. The manager is
+  `corevms/queues.go`'s `QueueManager`, the session's: the machine makes
+  one for its queue file and gives it to each System it makes
+  (`System.SetQueueManager`), so an INITIALIZE/MEMORY keeps it running and
+  keeps its lock; tests give a System one of its own (`SetQueueFile`). It
+  runs here while the session holds `jobqueue.LockManager`'s lock
+  (`managerHere`): with no database or the database saying it stopped, a
+  request is JBC$_JOBQUEDIS; with another session holding the lock,
+  JBC$_QMANNOTSTARTED (Decision 4); a database saying it was started, in a
+  session not yet running it, starts it at the first request that needs it
+  (subtask 10 moves that to startup). START/QUEUE/MANAGER (OPER and SYSNAM,
+  the new `ruleQueueManager`, JBC$_NOPRIV) takes the lock and records the
+  directory; a manager already running is started again silently
+  (unconfirmed: a site's startup says it at every boot); STOP/QUEUE/MANAGER
+  lets it go. The queue operations are `corevms/queueops.go`
+  (`CreateQueue`, `StartQueue`, `StopQueue` by `QueueStop`, `SetQueue`,
+  `DeleteQueue`, `QueueViews`), each checking in VMS 7.1's order: the
+  manager, the name, the queue's existence, access (OPER to create,
+  NOOPER; manage access to change, NOPRIV), then the state's rule from
+  `jobqueue`; subtask 5's `changeQueues` now needs the manager here too.
+  `$SNDJBC` and `$SNDJBCW` are `corevms/sndjbc.go`: a table of functions
+  (the manager's and the queues'), an item table for the queue items,
+  SS$_BADPARAM in R0 and the IOSB for a code past the function or item
+  range, JBC$_NOTSUPPORTED for a function or item govax lacks (the job
+  functions until subtask 7, a printer queue), MISREQPAR without
+  SJC$_QUEUE, INVPARLEN for a name over 31 characters; held to round 2's
+  queue cases by `TestSndjbcQueueFunctions`. The JBC texts no run showed
+  (JOBQUEDIS, INVPARVAL, NOTSUPPORTED, QMANNOTSTARTED) are worded from
+  VSI's $SNDJBC page, unconfirmed. DCL: the grammar's
+  `initialize_queue`, START (a new verb) with `start_queue` and
+  `start_queue_manager`, `stop_queue` and `stop_queue_manager` (/CLUSTER
+  accepted), `delete_queue`, SET's and SHOW's QUEUE keywords, and
+  `show_queue_manager`; `dclcmd/queues.go` reads the attribute
+  qualifiers into a change (QUEMAN-F-INVQUAVAL for a value out of range,
+  checked before the manager is asked), and DELETE/QUEUE's refusals are
+  DELETE's SEARCHFAIL and NOTDELETED with the reason under them;
+  `dclcmd/showqueue.go` is SHOW QUEUE's layout (the heading with its node
+  once started, the description, /FULL's attributes in order of name
+  wrapped at 132 columns with a blank left at the wrap, the ACL indented
+  nine, or "Access to security information denied.", /SUMMARY's empty
+  queue) and SHOW QUEUE/MANAGER's (/FULL's master file is the host file).
+  `TestQueueCommandsOracle` replays BAT98.LOG's QUEUES section, all 68
+  cases, against VMS's output but for the three of INITIALIZE/QUEUE
+  without /BATCH (a printer queue; govax refuses, JBC$_NOTSUPPORTED);
+  `TestQueueCommandsMatrix` holds the queue commands of the protection
+  matrix's state A, as BAT98, BAT98W, and BAT98O with OPER, to their logs.
+  HELP START (new), INITIALIZE /QUEUE, STOP /QUEUE, DELETE /QUEUE, SET
+  QUEUE, and SHOW QUEUE. Unconfirmed: SHOW QUEUE's wrap width (between 120
+  and 132), "stopped" for a manager not running, SHOW QUEUE with the
+  manager stopped JBC$_JOBQUEDIS and a wildcard matching nothing
+  NOSUCHQUE, INITIALIZE/QUEUE of an existing queue without /BATCH allowed,
+  /PROTECTION's unnamed categories kept, and the INVQUAVAL refusals of
+  values the probe gave none of. The queue's jobs in SHOW QUEUE, and what a
+  pause or reset does to executing jobs' processes, are subtasks 7 and 8.
+  Subtask 7, jobs not yet run, is next.

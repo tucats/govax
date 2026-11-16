@@ -65,6 +65,10 @@ type Machine struct {
 	// as the tests have.
 	QueueFile string
 
+	// queues is the session's queue manager, for QueueFile; made by the
+	// first newRTL.
+	queues *corevms.QueueManager
+
 	// login is process 1's login (LogIn), given again to each new process
 	// 1 so that a VMINIT doesn't make it SYSTEM again; nil until then.
 	login *corevms.Login
@@ -456,7 +460,15 @@ func (m *Machine) newRTL() *corevms.Environment {
 	sys.SetSysgen(sysgenSettings(m.paging))
 	sys.HostRequiresSYSPRV = settings.GetBool(corevms.HostSYSPRVSetting)
 	sys.SetAuthorizationFile(m.AuthorizationFile)
-	sys.SetQueueFile(m.QueueFile)
+	// The queue manager is the session's, kept across the Systems an
+	// INITIALIZE/MEMORY makes, so that it keeps running (and keeps its
+	// lock) through them.
+	if m.queues == nil || m.queues.Path() != m.QueueFile {
+		m.queues.Close()
+		m.queues = corevms.NewQueueManager(m.QueueFile)
+	}
+
+	sys.SetQueueManager(m.queues)
 
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/planning/PHASE-45.md, subtask 5).

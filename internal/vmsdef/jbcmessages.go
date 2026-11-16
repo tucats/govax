@@ -37,4 +37,12 @@ var jbcMessages = map[uint32]Message{
 	0x00048220: {Facility: "JBC", Ident: "QUENOTMOD", Text: "modifications not made to running queue"},
 	0x00048248: {Facility: "JBC", Ident: "JOBNOTEXEC", Text: "specified job is not executing"},
 	0x00048278: {Facility: "JBC", Ident: "PRIOSMALL", Text: "scheduling priority has smaller value than requested"},
+
+	// No run showed these; their texts are worded from the System
+	// Services manual's descriptions (VSI's $SNDJBC page), unconfirmed
+	// (Phase 98, subtask 6).
+	0x00048078: {Facility: "JBC", Ident: "JOBQUEDIS", Text: "system job queue manager is not running"},
+	0x00048110: {Facility: "JBC", Ident: "INVPARVAL", Text: "invalid parameter value"},
+	0x000481F0: {Facility: "JBC", Ident: "NOTSUPPORTED", Text: "item code or function code is not supported"},
+	0x000482B8: {Facility: "JBC", Ident: "QMANNOTSTARTED", Text: "queue manager could not be started"},
 }

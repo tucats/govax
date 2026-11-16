@@ -94,3 +94,31 @@
    2.$ DELETE/SYMBOL/GLOBAL/ALL
 
      Deletes every global symbol.
+
+2 /QUEUE
+
+   Deletes a batch queue, which must be stopped (%JBC-E-QUENOTSTOP),
+   and the jobs in it.  It needs manage access to the queue
+   (%JBC-E-NOPRIV).
+
+   Format
+
+     DELETE/QUEUE queue-name
+
+3 Parameter
+
+ queue-name
+
+   The queue to delete.
+
+3 Qualifiers
+/QUEUE
+
+   Selects DELETE/QUEUE.
+
+3 Examples
+
+   1.$ STOP/QUEUE/NEXT TESTQ
+     $ DELETE/QUEUE TESTQ
+
+     Stops TESTQ and deletes it.

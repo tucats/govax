@@ -90,15 +90,11 @@ func (env *Environment) readQueues() (*jobqueue.Database, error) {
 }
 
 // changeQueues applies change to the queue database and saves it, under
-// the file's lock, so that the change is made to what is there now.
-// With no database it is JBC$_NOSUCHQUE: there are no queues to change.
+// the file's lock, so that the change is made to what is there now. The
+// queue manager must run in this session (managerHere): another session
+// may only read the queues (Decision 4).
 func (env *Environment) changeQueues(change func(*jobqueue.Database) error) error {
-	path := env.System.QueueFile()
-	if path == "" {
-		return queueStatus(jbcNoSuchQue)
-	}
-
-	return jobqueue.Update(path, change)
+	return env.changeQueuesHere(change)
 }
 
 // queueStatusError is a refusal that is a condition value of its own.

@@ -292,6 +292,66 @@
    The file, one specification; wildcards are allowed, and a name with
    no version is its highest version.
 
+2 QUEUE
+
+   Shows batch queues: each one's name, state (stopped, idle,
+   available, busy, paused, or stopping), node, and description.  The
+   queue manager must have been started.
+
+   Format
+
+     SHOW QUEUE [queue-name]
+
+3 Parameter
+
+ queue-name
+
+   The queues to show, with the wildcards * and %.  Without one, every
+   queue.
+
+3 Qualifiers
+/ALL_JOBS
+
+   Shows every job in the queues.
+
+/BATCH
+
+   Shows batch queues, the only kind govax has.
+
+/BRIEF
+
+   Shows each queue and job on a line.
+
+/BY_JOB_STATUS
+
+      /BY_JOB_STATUS=(status[,...])
+
+   Shows only the jobs of these states.
+
+/FULL
+
+   Adds each queue's attributes, its owner, protection, and ACL (if the
+   queue's protection lets you read it: otherwise "Access to security
+   information denied.").
+
+/MANAGER
+
+      SHOW QUEUE/MANAGER[/FULL]
+
+   Shows the queue manager and whether it is running; /FULL adds its
+   master file, govax's host file, and the database location
+   START/QUEUE/MANAGER recorded.
+
+/SUMMARY
+
+   Adds a count of each queue's jobs by state.
+
+3 Examples
+
+   1.$ SHOW QUEUE/FULL SYS$BATCH
+     Batch queue SYS$BATCH, idle, on GOVAX::
+       /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S)
+
 2 RADIX
 
    Shows the console's radix, as a number (10, 16, or 8), which SET RADIX

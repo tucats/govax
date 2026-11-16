@@ -2,6 +2,7 @@ package console
 
 import (
 	"github.com/tucats/govax/internal/anl"
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
@@ -244,6 +245,44 @@ func (d *Dispatcher) bindGrammar() {
 			return d.Console.cmd().Install(opts)
 		}
 	}
+	// The queue commands (docs/planning/PHASE-98 - batch queues.md,
+	// subtask 6): batch queues and their manager.
+	g.Bind("START_QUEUE_MANAGER", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().StartQueueManager(r.String("DIRECTORY"))
+	})
+	g.Bind("STOP_QUEUE_MANAGER", func(id int64, r *dcl.Result) error { return d.Console.cmd().StopQueueManager() })
+	g.Bind("SHOW_QUEUE_MANAGER", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().ShowQueueManager(r.Present("FULL"))
+	})
+	g.Bind("INITIALIZE_QUEUE", func(id int64, r *dcl.Result) error {
+		opts := queueOptions(r)
+		opts.Batch = r.Present("BATCH") && !r.Negated("BATCH")
+		opts.Start = r.Present("START") && !r.Negated("START")
+
+		return d.Console.cmd().InitializeQueue(r.String("QUEUE_NAME"), opts)
+	})
+	g.Bind("START_QUEUE", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().StartQueue(r.String("QUEUE_NAME"), queueOptions(r))
+	})
+	g.Bind("STOP_QUEUE", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().StopQueue(r.String("QUEUE_NAME"), r.Present("NEXT"), r.Present("RESET"))
+	})
+	g.Bind("SET_QUEUE", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().SetQueue(r.String("QUEUE_NAME"), queueOptions(r))
+	})
+	g.Bind("DELETE_QUEUE", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().DeleteQueue(r.String("QUEUE_NAME"))
+	})
+	g.Bind("SHOW_QUEUE", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().ShowQueue(r.String("QUEUE_NAME"), dclcmd.ShowQueueOptions{
+			Full:    r.Present("FULL"),
+			All:     r.Present("ALL_JOBS"),
+			Brief:   r.Present("BRIEF"),
+			Summary: r.Present("SUMMARY"),
+			Batch:   r.Present("BATCH"),
+		})
+	})
+
 	g.Bind("INSTALL_ADD", install("ADD"))
 	g.Bind("INSTALL_REMOVE", install("REMOVE"))
 	g.Bind("INSTALL_LIST", install("LIST"))
@@ -937,4 +976,29 @@ func securityOptions(r *dcl.Result, form dclcmd.SecurityForm, files []string) dc
 // given reports whether the qualifier name was on the command line: one
 // whose value is optional has a grammar default, so is present (but
 // defaulted) when it wasn't.
+// queueOptions reads a queue's attribute qualifiers, those the command
+// line gave, for INITIALIZE/QUEUE, START/QUEUE, and SET QUEUE.
+func queueOptions(r *dcl.Result) dclcmd.QueueOptions {
+	var opts dclcmd.QueueOptions
+
+	for _, name := range dclcmd.QueueAttributeQualifiers {
+		if !r.Present(name) {
+			continue
+		}
+
+		q := dclcmd.QueueQualifier{Name: name, Negated: r.Negated(name), Value: r.String(name), List: nonEmpty(r.List(name))}
+
+		switch name {
+		case "JOB_LIMIT", "BASE_PRIORITY", "WSDEFAULT", "WSQUOTA", "WSEXTENT":
+			if !q.Negated {
+				q.Value = strconv.FormatInt(r.Int(name), 10)
+			}
+		}
+
+		opts.Attributes = append(opts.Attributes, q)
+	}
+
+	return opts
+}
+
 func given(r *dcl.Result, name string) bool { return r.Present(name) && !r.Defaulted(name) }

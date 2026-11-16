@@ -937,7 +937,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   jobs, an ACE's every job), `corevms/queueaccess.go` (the QUEUE security
   class, `QueueAccess`, `JobAccess`, `ruleQueueOperator`), SET and SHOW
   SECURITY/CLASS=QUEUE (`dclcmd/queuesecurity.go`), held to the probe's
-  matrix by `TestBat98ProtectionMatrix`.
+  matrix by `TestBat98ProtectionMatrix`;
+  subtask 6 (2026-11-16) the manager and queues: `corevms/queues.go`'s
+  `QueueManager` (the session's, kept across Systems by the machine; it
+  runs here while the session holds the manager's lock, `managerHere`),
+  `queueops.go` (create, start, stop, set, delete, and SHOW's views, each
+  checked in VMS's order), `$SNDJBC`'s queue functions (`sndjbc.go`), and
+  DCL's START/STOP/SHOW QUEUE/MANAGER, INITIALIZE/QUEUE, START, STOP, SET,
+  DELETE, and SHOW QUEUE (`dclcmd/queues.go`, `showqueue.go`), held to
+  the probe's QUEUES section by `TestQueueCommandsOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

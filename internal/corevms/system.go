@@ -74,9 +74,8 @@ type System struct {
 	// database's identifiers (authorization.go, users.go, rights.go).
 	auth authorization
 
-	// queueFile is the queue database's host path, "" for none
-	// (queues.go).
-	queueFile string
+	// queues is the session's queue manager, nil for none (queues.go).
+	queues *QueueManager
 
 	// deviceProfiles are the devices' security profiles $SET_SECURITY
 	// has changed, by device name (secobjects.go); a device not here has

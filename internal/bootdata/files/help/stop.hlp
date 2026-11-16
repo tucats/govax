@@ -1,6 +1,7 @@
 1 STOP
 
-   Ends every command procedure, or deletes a process.
+   Ends every command procedure, or deletes a process; with /QUEUE,
+   stops a batch queue or the queue manager.
 
    Format
 
@@ -74,3 +75,60 @@
 
      Runs the user-mode exit handlers of LIBRA's image, then deletes
      LIBRA.
+
+2 /QUEUE
+
+   Stops a batch queue.  Without a qualifier the queue pauses, its
+   executing jobs suspended until START/QUEUE; with /NEXT it starts no
+   more jobs, and stops when those executing end; with /RESET it stops at
+   once, its executing jobs ended with %JBC-F-QUERESET.  A stopped queue
+   is left as it is.  It needs manage access to the queue
+   (%JBC-E-NOPRIV).
+
+   Format
+
+     STOP/QUEUE[/NEXT|/RESET] queue-name
+
+3 Parameter
+
+ queue-name
+
+   The queue to stop.
+
+3 Qualifiers
+/NEXT
+
+   Stops the queue after its executing jobs end.
+
+/QUEUE
+
+   Selects STOP/QUEUE.
+
+/RESET
+
+   Stops the queue at once, ending its executing jobs.
+
+3 Examples
+
+   1.$ STOP/QUEUE/NEXT SYS$BATCH
+
+     Stops SYS$BATCH once its jobs have ended.
+
+3 /MANAGER
+
+   Stops the queue manager, so that no session runs it until
+   START/QUEUE/MANAGER.  It needs the OPER and SYSNAM privileges.
+
+   Format
+
+     STOP/QUEUE/MANAGER[/CLUSTER]
+
+4 Qualifiers
+/CLUSTER
+
+   VMS's: stops the manager on every node.  govax has one node, and
+   accepts it.
+
+/MANAGER
+
+   Selects STOP/QUEUE/MANAGER.

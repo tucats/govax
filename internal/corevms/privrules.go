@@ -278,6 +278,12 @@ var (
 	// every other privilege.
 	ruleQueueOperator = newRule("queue: any access to any queue or job, and creating one", "OPER",
 		"Guide to System Security 4.6.3; probe's protection matrix", refusedWith("JBC$_NOOPER"))
+
+	// START and STOP/QUEUE/MANAGER (the DCL Dictionary's "Requires"
+	// lines): OPER and SYSNAM, JBC$_NOPRIV without them (unconfirmed:
+	// the probe's accounts never tried).
+	ruleQueueManager = newRule("queue manager: start or stop it", "OPER SYSNAM",
+		"DCL Dictionary, START/QUEUE/MANAGER", refusedWith("JBC$_NOPRIV"))
 )
 
 // serviceRules is, for every system service govax registers, the rules
@@ -296,6 +302,8 @@ var serviceRules = func() map[string][]*PrivilegeRule {
 
 		"SYS$GET_SECURITY": {ruleQueueOperator},
 		"SYS$SET_SECURITY": {ruleQueueOperator},
+		"SYS$SNDJBC":       {ruleQueueOperator, ruleQueueManager},
+		"SYS$SNDJBCW":      {ruleQueueOperator, ruleQueueManager},
 
 		"SYS$CREMBX": {ruleCrembxTemporary, ruleCrembxPermanent, ruleLnmSystemTable},
 		"SYS$DELMBX": {ruleDelmbx},

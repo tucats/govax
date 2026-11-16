@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/jobqueue"
 	"github.com/tucats/govax/internal/security"
@@ -14,8 +15,8 @@ import (
 // SHOW SECURITY/CLASS=QUEUE and SET SECURITY/CLASS=QUEUE
 // (docs/planning/PHASE-98 - batch queues.md, subtask 5), held to VMS
 // 7.1's run of the probe (testdata/bat98/vax/bat98.log, cases 9 and 34
-// to 43). The queues are made in the database directly: INITIALIZE/QUEUE
-// and SET QUEUE are subtask 6's.
+// to 43). The queues are made in the database directly, as they stood
+// at each case.
 
 // queueSecurityConsole is a console whose System has a queue database
 // holding BAT98_A (VMS's defaults) and BAT98_D (owner [200,10],
@@ -28,6 +29,10 @@ func queueSecurityConsole(t *testing.T) (*Console, func(string) string) {
 	path := filepath.Join(t.TempDir(), "qman.json")
 
 	err := jobqueue.Update(path, func(d *jobqueue.Database) error {
+		// The manager started: changing a queue needs it running in
+		// this session, which takes it up from here (subtask 6).
+		d.StartManager("", time.Now())
+
 		if _, _, err := d.CreateQueue("BAT98_A", nil); err != nil {
 			return err
 		}
@@ -117,7 +122,7 @@ BAT98_D object of class QUEUE
 		}
 	}
 
-	// Case 39's SET QUEUE, in the database (subtask 6's command).
+	// Case 39's SET QUEUE, in the database.
 	err := jobqueue.Update(c.QueueFile, func(d *jobqueue.Database) error {
 		return d.SetQueue("BAT98_D", func(q *jobqueue.Queue) {
 			q.Owner = jobqueue.SystemUIC
