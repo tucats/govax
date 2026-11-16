@@ -386,6 +386,22 @@ in the SYSTEM process. The one-shot subcommands (`govax run`, `macro`,
 ...) honor `--user` too, so a privilege or protection can be tried from
 the shell.
 
+*The password* (added 2026-11-15 by the author, after subtask 6): an
+account with a password must be given it before it logs in, so the
+remote logins to come start from the same rule. When the account `--user`
+names has a non-empty password, or SYSTEM has one and `--user` isn't
+given, govax asks `Password: ` with echo off and checks the answer with
+`uaf.CheckPassword` before anything runs; three tries at a terminal, each
+failure VMS's `User authorization failure` (which never says whether the
+username or the password was wrong), then exit nonzero. When standard
+input isn't a terminal (a pipe, a script) govax doesn't read the password
+from it, which would take the commands meant for the session: it uses
+the `GOVAX_PASSWORD` environment variable if that is set, and otherwise
+fails at once with a message saying the account needs a password. The
+one-shot subcommands follow the same rule. An account with no password
+logs in as before, asked for nothing. No `--password-file` option (not
+yet needed).
+
 **Decision 7 — logging in, one routine** (held to A.5's answers). `corevms.Environment.LogIn(rec
 uaf.Record)` does what LOGINOUT does for a process, and is the one place
 an account becomes a process: username, account, owner, UIC (and the
@@ -508,9 +524,11 @@ Each is one commit, with tests, stopping for review.
    protections in `sysvol`, set by Populate and Refresh, existing
    volumes corrected once; SYLOGIN.COM seeded; `SYS$SYLOGIN` in
    STARTUP.COM.
-8. **The login procedures** (Decision 8): SYLOGIN then LGICMD or
-   LOGIN.COM, `--no-login`, their order, failures, and Ctrl/Y, held to
-   the probe's batch log.
+8. **The login procedures and the password** (Decisions 6 and 8): SYLOGIN
+   then LGICMD or LOGIN.COM, their order, failures, and Ctrl/Y, held to
+   the probe's batch log; the password asked at login for an account that
+   has one, `GOVAX_PASSWORD` when standard input isn't a terminal
+   (Decision 6's "The password").
 9. **ADDUSER.COM** (Decision 12), with SET TERMINAL/NOECHO if missing,
    and the end-to-end tests (Decision 13).
 10. **The close-out**: README.md (you log in as SYSTEM by default, and
@@ -861,3 +879,8 @@ The answers (2026-11-15):
   identifier not found REVOKEERR with NOSUCHID; the environmental
   identifiers refused to REMOVE, RENAME, MODIFY, and GRANT with NOPRIV.
   HELP AUTHORIZE lists the new commands.
+- **2026-11-15** By the author's choice, after subtask 6: logging in to an
+  account with a password asks for it (Decision 6's "The password"),
+  `GOVAX_PASSWORD` giving it when standard input isn't a terminal and a
+  graceful failure otherwise; it is part of subtask 8. Subtask 8's line no
+  longer names `--no-login`, which the review dropped.
