@@ -538,9 +538,23 @@
 
 /CLASS
 
-      /CLASS=FILE
+      /CLASS=class
 
-   The class of object; only FILE is supported.
+   The class of object: FILE, the default, or QUEUE, a batch queue's
+   profile.  A queue's protection code gives R (read: see the queue's
+   security and jobs), S (submit), M (manage: start, stop, change, or
+   delete the queue, and do anything to its jobs; M implies R, S, and
+   D), and D (delete: change or delete a job).  The code's R and D reach
+   only the user's own jobs; an ACE's reach every job in the queue.  An
+   ACE's access words are READ, SUBMIT, MANAGE, DELETE, and CONTROL.
+   Changing a queue's profile needs control access (its owner, the
+   SYSTEM category, an ACE's CONTROL, BYPASS) or OPER; a refusal is
+   %SYSTEM-F-NOPRIV.  /DEFAULT gives the queue the class's template,
+   [SYSTEM] and (S:M,O:D,G:R,W:S), with no ACL; /LIKE, /EXCLUDE, and
+   /BY_OWNER are for files.
+
+     $ SET SECURITY/CLASS=QUEUE -
+       /ACL=(IDENTIFIER=PAYROLL,ACCESS=READ+SUBMIT) SYS$BATCH
 
 /COPY_ATTRIBUTE
 

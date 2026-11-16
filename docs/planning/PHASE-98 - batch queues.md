@@ -368,7 +368,11 @@ six states, BAT98O once per privilege):
   job's owner** as the owner; M on the queue allows anything on any job in
   it. So one's own job needs the O field's D (no D, as with (S,O,G,W) and
   an ACL of READ+SUBMIT, refuses SET ENTRY and DELETE/ENTRY of one's own
-  job); another's needs D by its categories or the ACL. SYNCHRONIZE of
+  job); another's needs D by the ACL or M on the queue. (Corrected in
+  subtask 5: this first said "by its categories or the ACL". Every case
+  fits the Guide to System Security's 4.8.7.2 instead: read and delete
+  given by the protection code reach only one's own jobs, given by an ACE
+  every job; and M implies R, S, and D, 4.6.3.) SYNCHRONIZE of
   another's job needs **R** on it (READALL suffices), not D as the DCL
   Dictionary says.
 - Without R, SHOW QUEUE and SHOW ENTRY list another's job as `no
@@ -565,7 +569,9 @@ INITIALIZE/QUEUE's and SET QUEUE's `/OWNER_UIC` and `/PROTECTION`.
 - a job operation asks the same protection and ACL **with the job's owner
   as the owner**, and M on the queue allows anything on any job in it: D
   to change, delete, or stop a job (one's own included, through the O
-  field), R to see it or SYNCHRONIZE with it;
+  field), R to see it or SYNCHRONIZE with it; the code's R and D reach
+  only one's own jobs, an ACE's every job, and M implies R, S, and D
+  (subtask 5, from the Guide to System Security and the matrix);
 - privileges as the rule has them: BYPASS everything, SYSPRV the system
   category, GRPPRV the system category in the owner's group, READALL R;
   and **OPER everything** (`ruleQueueOperator`).
@@ -684,7 +690,7 @@ Each is one commit, with tests, stopping for review.
 4. **The database** (Decisions 2, 3; done 2026-11-16): `internal/jobqueue`, its JSON file
    and locking, `vax.queue.file` (`validConfigs`, HELP CONFIGURATION
    KEYS), `TestMain`'s temporary file.
-5. **Queue protection** (Decision 8): the QUEUE security class, the
+5. **Queue protection** (Decision 8; done 2026-11-16): the QUEUE security class, the
    access rule's queue and job types, the privilege rules, SET and SHOW
    SECURITY/CLASS=QUEUE; held to the probe's protection matrix.
 6. **The manager and queues** (Decisions 4, 5, 10): `System.Queues`,
@@ -982,3 +988,51 @@ queues is a future phase.
   `Machine.QueueFile`, `System.SetQueueFile` (`corevms/queues.go`, which
   subtask 6's manager will use); `TestMain` gives the tests a temporary
   one; `TestRun_queueFile`. Subtask 5, queue protection, is next.
+- **2026-11-16** Subtask 4, after its commit: `TestNoUncheckedHostAccess`
+  listed `jobqueue`'s `Load` and `LockManager`; both are in
+  `hostAccessReasons` now (the queue database is govax's own configured
+  file, like the authorization file).
+- **2026-11-16** Subtask 5, queue protection. The rule is
+  `internal/security/queue.go`: `CheckQueue` (Evaluate's access with what
+  M implies, R, S, and D; READALL's read) and `CheckJob`, with
+  `QueueAccessNames` (READ, SUBMIT, MANAGE, DELETE, CONTROL) and a queue's
+  letters for SET DEBUG PROTECTION's lines. Tabulating the matrix's 90
+  passes showed A.4's summary of the job rule was too wide: VMS 7.1 fits
+  the Guide to System Security's 4.8.7.2, the code's read and delete
+  reaching only the process's own jobs (the code read with the job's owner
+  as the owner), an ACE's every job, and M on the queue every job. A.4 and
+  Decision 8 are corrected. `corevms/queueaccess.go` is the one place the
+  decisions are made: `QueueAccess`, `JobAccess`, `QueueSecurityVisible`
+  (R or control: SHOW SECURITY, SHOW QUEUE/FULL's owner and protection,
+  F$GETQUI's, which all went together in the logs), `QueueControl`,
+  `MayCreateQueue` (JBC$_NOOPER), each letting OPER through by
+  `ruleQueueOperator`; the QUEUE class in `securityClasses`
+  (`queueObject`, for `$GET_SECURITY` and `$SET_SECURITY`, which now list
+  the rule in `serviceRules`); `QueueProfile` and `ChangeQueueSecurity`,
+  which change the database under its lock through `changeQueues`, where
+  subtask 6 will ask whether the manager runs here. DCL:
+  `dclcmd/queuesecurity.go`, SHOW SECURITY/CLASS=QUEUE and SET
+  SECURITY/CLASS=QUEUE (`/PROTECTION` in a queue's letters, `/OWNER`,
+  `/ACL` with `/AFTER`, `/REPLACE`, `/DELETE`, `/DEFAULT` the template
+  profile, `/LOG`), on SET SECURITY's own ACL editing; a refusal is
+  SS$_NOPRIV alone and success leaves SS$_NORMAL, as VMS's.
+  `TestBat98ProtectionMatrix` (corevms) reads the 18 logs and holds 2,044
+  cases to the rule (it fails 150 of them under A.4's first reading, and
+  37 if M implies nothing); `TestQueueSecurityAsSystem` and
+  `TestQueueSecurityRefused` (console) replay BAT98.LOG's cases 9 and 35
+  to 42 and the matrix's 23 and 24. Left for the subtasks that check them,
+  because `serviceRules` may name only registered services and a rule must
+  be used: `ruleQueueManager` (OPER and SYSNAM; subtask 6), `ruleSubmitUser`
+  and `ruleQueuePriority` (subtask 7). Found for subtask 7: SUBMIT/USER's
+  submit access is the named user's, not the submitter's (state E let
+  BAT98O submit as BAT98W only through BAT98W's ACE; in state F the
+  submitter's SYSPRV didn't help), and STOP/QUEUE/ENTRY of a job that
+  isn't executing is JOBNOTEXEC before any protection check. Unconfirmed:
+  a job's owner may always see it (in every state where an account had a
+  job its categories gave it R or D); SHOW or SET SECURITY of a queue that
+  isn't there is JBC$_NOSUCHQUE; another owner by SET SECURITY needs
+  `CanChangeOwner`'s rule or OPER; QUEUE's place in SECURITY_CLASS's walk
+  (after LOGICAL_NAME_TABLE); a bad letter in a queue's code is SET's
+  SYNTAX; `/LIKE`, `/EXCLUDE`, and `/BY_OWNER` with a queue are CONFLICT.
+  MANUAL.md and HELP SET SECURITY and SHOW SECURITY say the class.
+  Subtask 6, the manager and queues, is next.

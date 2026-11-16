@@ -42,12 +42,17 @@ var (
 )
 
 // ShowSecurity is SHOW SECURITY spec, with /CLASS's object class: FILE
-// (the default), VOLUME, or LOGICAL_NAME_TABLE; another is DCL's IVKEYW
-// (VMS 7.1 has more classes, which govax doesn't).
+// (the default), VOLUME, LOGICAL_NAME_TABLE, or QUEUE (queuesecurity.go);
+// another is DCL's IVKEYW (VMS 7.1 has more classes, which govax
+// doesn't).
 func (c *Context) ShowSecurity(spec, class string) error {
 	class = strings.ToUpper(strings.TrimSpace(class))
 	if class != "" && strings.HasPrefix("LOGICAL_NAME_TABLE", class) {
 		return c.showTableSecurity(spec)
+	}
+
+	if isQueueClass(class) {
+		return c.showQueueSecurity(spec)
 	}
 
 	if c.ContainerSession == nil {

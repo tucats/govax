@@ -268,6 +268,16 @@ var (
 	// Decision 3): govax's own rule, VMS having no host. No mode is
 	// exempt.
 	ruleHostFile = newRule("host file: open, create, or run", "SYSPRV", "Phase 97, Decision 3; the review, 1 and 2")
+
+	// Queues (docs/planning/PHASE-98 - batch queues.md, Decision 8): an
+	// operator has every access to every queue and every job, over its
+	// protection (the Guide to System Security, 4.6.3; the probe's
+	// protection matrix, where OPER alone did everything but SUBMIT/USER,
+	// testdata/bat98). It is also the only way to create a queue: VMS
+	// 7.1 refused INITIALIZE/QUEUE of a new queue with JBC$_NOOPER to
+	// every other privilege.
+	ruleQueueOperator = newRule("queue: any access to any queue or job, and creating one", "OPER",
+		"Guide to System Security 4.6.3; probe's protection matrix", refusedWith("JBC$_NOOPER"))
 )
 
 // serviceRules is, for every system service govax registers, the rules
@@ -283,6 +293,9 @@ var serviceRules = func() map[string][]*PrivilegeRule {
 		"SYS$CRELNT": {ruleLnmInnerMode},
 		"SYS$CRELOG": lnmWrite,
 		"SYS$DELLOG": lnmWrite,
+
+		"SYS$GET_SECURITY": {ruleQueueOperator},
+		"SYS$SET_SECURITY": {ruleQueueOperator},
 
 		"SYS$CREMBX": {ruleCrembxTemporary, ruleCrembxPermanent, ruleLnmSystemTable},
 		"SYS$DELMBX": {ruleDelmbx},
@@ -352,11 +365,11 @@ var unprivilegedServices = []string{
 	"SYS$ERASE", "SYS$EXIT", "SYS$EXPREG", "SYS$EXTEND", "SYS$FAO", "SYS$FAOL",
 	"SYS$FILESCAN", "SYS$FIND", "SYS$FINISH_RDB", "SYS$FLUSH", "SYS$FREE", "SYS$GET",
 	"SYS$GETDVI", "SYS$GETDVIW", "SYS$GETMSG", "SYS$GETSYI", "SYS$GETSYIW", "SYS$GETTIM",
-	"SYS$GET_SECURITY", "SYS$HIBER", "SYS$IDTOASC", "SYS$LKWSET", "SYS$MGBLSC", "SYS$NUMTIM",
+	"SYS$HIBER", "SYS$IDTOASC", "SYS$LKWSET", "SYS$MGBLSC", "SYS$NUMTIM",
 	"SYS$OPEN", "SYS$PARSE", "SYS$PURGWS", "SYS$PUT", "SYS$PUTMSG", "SYS$READ",
 	"SYS$READEF", "SYS$RELEASE", "SYS$RENAME", "SYS$REWIND", "SYS$SEARCH", "SYS$SETAST",
 	"SYS$SETDFPROT", "SYS$SETEF", "SYS$SETEXV", "SYS$SETIMR", "SYS$SETPRN", "SYS$SETPRT",
-	"SYS$SETRWM", "SYS$SETSFM", "SYS$SET_SECURITY", "SYS$SRCHANDLER", "SYS$SYNCH",
+	"SYS$SETRWM", "SYS$SETSFM", "SYS$SRCHANDLER", "SYS$SYNCH",
 	"SYS$TRNLNM", "SYS$TRNLOG", "SYS$TRUNCATE", "SYS$ULKPAG", "SYS$ULWSET", "SYS$UNWIND",
 	"SYS$UPDATE", "SYS$UPDSEC", "SYS$UPDSECW", "SYS$WAIT", "SYS$WAITFR", "SYS$WFLAND",
 	"SYS$WFLOR", "SYS$WRITE",

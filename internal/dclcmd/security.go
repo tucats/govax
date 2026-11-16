@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/tucats/govax/internal/jobqueue"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -192,6 +193,13 @@ type securityChange struct {
 	replace  [][]byte // /REPLACE's entries
 	like     *rms.SecurityObject
 	copyOwner bool // /LIKE copies the owner too
+
+	// access names the access bits in an ACE's text: nil for a file's
+	// (READ, WRITE, EXECUTE, DELETE, CONTROL), a queue's for /CLASS=QUEUE.
+	// queue says the object is a queue, whose code's letters are R, S, M,
+	// and D.
+	access security.AccessNames
+	queue  bool
 }
 
 // SetSecurity is SET SECURITY, and with opts.Form its obsolete forms:
@@ -199,13 +207,18 @@ type securityChange struct {
 // command can't read stops it before any file is changed; a file it may
 // not change (or can't find) is reported, and the others are changed.
 func (c *Context) SetSecurity(opts SecurityOptions) error {
+	if isQueueClass(opts.Class) {
+		return c.setQueueSecurity(opts)
+	}
+
 	if c.ContainerSession == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
 
 	if opts.Class != "" && !strings.HasPrefix("FILE", strings.ToUpper(opts.Class)) {
-		// Only files have profiles here (Decision 10; other classes
-		// unconfirmed: VMS 7.1 has them).
+		// Files and queues have profiles SET changes here (Phase 93's
+		// Decision 10, Phase 98's Decision 8; other classes unconfirmed:
+		// VMS 7.1 has them).
 		return vmserrors.NewSegment(vmserrors.CLI_IVKEYW, strings.ToUpper(opts.Class))
 	}
 
@@ -241,7 +254,12 @@ func (ch *securityChange) read(c *Context) error {
 	opts := ch.opts
 
 	if code := codeText(opts.Protection); code != "" {
-		if _, err := security.ParseProtection(code, 0); err != nil {
+		if ch.queue {
+			// A queue's letters (unconfirmed: the probe gave no bad one).
+			if _, err := jobqueue.ParseProtection(code, 0); err != nil {
+				return syntaxError(code, libSyntaxErr)
+			}
+		} else if _, err := security.ParseProtection(code, 0); err != nil {
 			return protectionSyntax(err, code)
 		}
 	}
@@ -359,7 +377,7 @@ func (ch *securityChange) entries(value string) ([][]byte, error) {
 	var aces [][]byte
 
 	for _, text := range splitEntries(value) {
-		ace, err := security.ParseACE(text, ch.names, nil)
+		ace, err := security.ParseACE(text, ch.names, ch.access)
 		if err != nil {
 			var bad *security.ACEError
 			if !errors.As(err, &bad) {

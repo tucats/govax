@@ -151,8 +151,8 @@ func TestShowSecurityCases(t *testing.T) {
 	for _, tc := range []struct{ command, want string }{
 		{"SHOW SECURITY PROT93$DISK:[PROT93.SEC]NOSUCH.DAT",
 			"%SHOW-E-OPENIN, error opening DUA1:[PROT93.SEC]NOSUCH.DAT; as input\n-RMS-E-FNF, file not found"},
-		{"SHOW SECURITY/CLASS=QUEUE PROT93$DISK:[PROT93.SEC]A.DAT",
-			"%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling\n \\QUEUE\\"},
+		{"SHOW SECURITY/CLASS=CAPABILITY PROT93$DISK:[PROT93.SEC]A.DAT",
+			"%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling\n \\CAPABILITY\\"},
 		{"SHOW ACL PROT93$DISK:[PROT93.SEC]A.DAT,B.DAT",
 			"%DCL-W-NOLIST, list of parameter values not allowed - check use of comma (,)\n \\PROT93$DISK:[PROT93.SEC]A.DAT,B\\"},
 		{"SHOW ACL PROT93$DISK:[PROT93.SEC]A.DAT",

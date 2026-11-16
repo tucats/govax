@@ -931,7 +931,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   of `testdata/mp/macros`; subtask 4 (2026-11-16) the database,
   `internal/jobqueue` (below), `vax.queue.file` (default
   `~/.govax/qman.json`, checked by `cmd/govax/queuefile.go` before
-  startup, its path `Machine.QueueFile` and `System.QueueFile`).
+  startup, its path `Machine.QueueFile` and `System.QueueFile`); subtask 5
+  (2026-11-16) queue protection: `security/queue.go`'s `CheckQueue` and
+  `CheckJob` (M implies R, S, D; the code's R and D reach only one's own
+  jobs, an ACE's every job), `corevms/queueaccess.go` (the QUEUE security
+  class, `QueueAccess`, `JobAccess`, `ruleQueueOperator`), SET and SHOW
+  SECURITY/CLASS=QUEUE (`dclcmd/queuesecurity.go`), held to the probe's
+  matrix by `TestBat98ProtectionMatrix`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

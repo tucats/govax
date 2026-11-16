@@ -380,7 +380,8 @@
 
    The file, one specification; wildcards are allowed, and a name with
    no version is its highest version.  With /CLASS=VOLUME, a device;
-   with /CLASS=LOGICAL_NAME_TABLE, a table's name.
+   with /CLASS=LOGICAL_NAME_TABLE, a table's name; with /CLASS=QUEUE, a
+   batch queue's name.
 
 3 Qualifiers
 /CLASS
@@ -391,7 +392,10 @@
    owner and protection (its own, which govax shows but doesn't
    enforce); or LOGICAL_NAME_TABLE, a logical name table's owner and
    protection, which decide who may read and write a shareable table's
-   names.  A table you may not read is %SYSTEM-F-NOPRIV.
+   names.  A table you may not read is %SYSTEM-F-NOPRIV.  QUEUE is a
+   batch queue's owner, protection (letters R, S, M, D), and ACL; it
+   needs read or control access to the queue, or OPER (HELP SET
+   SECURITY /CLASS).
 
 3 Examples
 

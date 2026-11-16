@@ -2168,17 +2168,26 @@ needs control access; giving a file another owner needs a system UIC,
 SYSPRV, BYPASS, or for an owner in your group GRPPRV. `HELP SET
 SECURITY` has every qualifier.
 
+With `/CLASS=QUEUE` the object is a batch queue. Its code's letters are
+R (read: see the queue's security and jobs), S (submit), M (manage the
+queue and every job in it; M implies the others), and D (delete: change
+or delete a job), and an ACE's access words READ, SUBMIT, MANAGE,
+DELETE, and CONTROL. The code's R and D reach only your own jobs; an
+ACE's reach every job in the queue. Changing a queue's profile needs
+control access or OPER, which gives every access to every queue.
+
 #### SHOW SECURITY, SHOW ACL, and SHOW PROTECTION
 
 ```text
-SHOW SECURITY [/CLASS=FILE|VOLUME|LOGICAL_NAME_TABLE] object
+SHOW SECURITY [/CLASS=FILE|VOLUME|LOGICAL_NAME_TABLE|QUEUE] object
 SHOW ACL file
 SHOW PROTECTION
 ```
 
 Show a file's owner, protection, and ACL in VMS's layout (needing read
 or control access), a volume's or a logical name table's owner and
-protection, the ACL alone, and the process's default protection for new
+protection, a batch queue's owner, protection, and ACL (needing read or
+control access to the queue, or OPER), the ACL alone, and the process's default protection for new
 files. A shareable logical name table's protection is checked: writing a
 name in it takes write access (the system UIC category and SYSPRV have
 the system's), or SYSNAM for the system table and GRPNAM for your

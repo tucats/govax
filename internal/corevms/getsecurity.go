@@ -136,6 +136,7 @@ func init() {
 		{name: "FILE", access: []string{"READ", "WRITE", "EXECUTE", "DELETE", "CONTROL"}, find: findFileObject},
 		{name: "VOLUME", access: []string{"READ", "WRITE", "CREATE", "DELETE", "CONTROL"}, find: findVolumeObject},
 		{name: "LOGICAL_NAME_TABLE", access: []string{"READ", "WRITE", "CREATE", "DELETE", "CONTROL"}, find: findTableObject},
+		{name: "QUEUE", access: security.QueueAccessNames, find: findQueueObject},
 		{name: "SECURITY_CLASS", access: []string{"READ", "WRITE", "", "", "CONTROL"}, find: findClassObject},
 	}
 }
@@ -367,6 +368,10 @@ func (c *securityCall) apply() uint32 {
 func securityError(err error) uint32 {
 	if errors.Is(err, rms.ErrNoPrivilege) {
 		return ssNoPrivilege
+	}
+
+	if st := QueueErrorStatus(err); st != 0 {
+		return st
 	}
 
 	return ssACLFull
