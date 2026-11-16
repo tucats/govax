@@ -322,6 +322,11 @@ type procedureCommand struct {
 	output    string
 	hasOutput bool
 	params    []string
+
+	// before, when set, runs once the new level is there and before its
+	// first line: a login's SYLOGIN, run above the account's own login
+	// procedure (dclloginproc.go).
+	before func()
 }
 
 // parseProcedureCommand reads an @ command's text after the "@". The file
@@ -626,6 +631,10 @@ func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, di
 		}
 
 		locals[name] = dclSymbol{name: name, minLength: len(name), value: value}
+	}
+
+	if cmd.before != nil {
+		cmd.before()
 	}
 
 	// skipping is set while DCL skips a run of data lines.
@@ -981,6 +990,16 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 		}
 
 		return nil, dclcmd.FileFailure(firstErr, file)
+	}
+
+	// A name that is a device alone, a logical name such as SYS$SYLOGIN:,
+	// takes its file's name and type from the translation, so the default
+	// type is RMS's default name there, not text added to the name (which
+	// would put a type on both sides of the translation).
+	if strings.HasSuffix(loc.Name, ":") {
+		if p, _, err := c.ContainerSession.Parse(loc.Name, ".COM", "", true, false); err == nil {
+			loc.Name = p.String()
+		}
 	}
 
 	loc = loc.WithDefaultType("COM")

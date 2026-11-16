@@ -14,8 +14,9 @@ import (
 // the VAX round can't be lost to a mistake in the probe's own DCL: the
 // login procedures record what they see in global symbols, and UAF95I.COM
 // shows them, the process, and every F$GETJPI item, a long value in
-// 100-character lines. govax has no AUTHORIZE, SUBMIT, or logging in yet;
-// those lines fail with messages and the procedures go on to their ends.
+// 100-character lines. Here SYSTEM runs them by @, without logging in
+// (TestUAF95LoginOracle logs in as the probe's accounts); govax has no
+// SUBMIT, and those lines fail with messages and the procedures go on.
 func TestUAF95Probe(t *testing.T) {
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))

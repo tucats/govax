@@ -173,7 +173,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	// The account --user names must be one that may log in.
-	if err := checkLogin(uafPath, out); err != nil {
+	if err := checkLogin(uafPath, out, in == nil); err != nil {
 		return err
 	}
 
@@ -366,6 +366,16 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	if c.Verbose {
 		fmt.Fprint(out, login.Previous().LastLoginText())
+	}
+
+	// In a session, DCL runs the login procedures, SYS$SYLOGIN and then the
+	// account's LGICMD or SYS$LOGIN:LOGIN.COM (docs/planning/PHASE-95 -
+	// authentication.md, Decision 8). A one-shot command runs without them,
+	// so its output stays predictable.
+	if console.CommandLineString == "" && c.Running() {
+		if err := c.RunLoginProcedures(login.Record.LGICMD, d.Dispatch); err != nil {
+			fmt.Fprintln(out, "%"+err.Error())
+		}
 	}
 
 	// Then the command interpreter reads level 0's input: the one-shot

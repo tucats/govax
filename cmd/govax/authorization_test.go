@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -218,5 +219,155 @@ func TestRun_startupProcedureAsSystem(t *testing.T) {
 
 	if !strings.Contains(out, "THEN SMITH       FALSE") {
 		t.Errorf("the command didn't run as SMITH:\n%s", out)
+	}
+}
+
+// session runs govax as an interactive session whose input is typed (not
+// a terminal) and returns its output.
+func session(t *testing.T, typed string) (string, error) {
+	t.Helper()
+
+	var buf bytes.Buffer
+	err := run(nil, 0, 0, &buf, io.NopCloser(strings.NewReader(typed)), nil)
+
+	return buf.String(), err
+}
+
+// TestRun_loginProcedures: a session runs the login procedures after
+// the login, SYS$SYLOGIN and then SYS$LOGIN:LOGIN.COM; a one-shot command
+// runs neither (docs/planning/PHASE-95 - authentication.md, Decision 8).
+func TestRun_loginProcedures(t *testing.T) {
+	dir := t.TempDir()
+	withAuthorizationFile(t, filepath.Join(dir, "sysuaf.json"))
+	withSystemVolume(t, systemFlags{file: filepath.Join(dir, "govax-system.dsk")})
+
+	for name, text := range map[string]string{
+		"sylogin.com": "$ LOGGED == \"SYLOGIN \" + F$STRING(F$ENVIRONMENT(\"DEPTH\"))\n",
+		"login.com":   "$ LOGGED == LOGGED + \", LOGIN \" + F$STRING(F$ENVIRONMENT(\"DEPTH\"))\n",
+	} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		oneShot(t, `COPY "`+path+`"/HOST SYS$MANAGER:`+strings.ToUpper(name))
+	}
+
+	out, err := session(t, "SHOW SYMBOL/GLOBAL LOGGED\n")
+	if err != nil || !strings.Contains(out, `LOGGED == "SYLOGIN 2, LOGIN 1"`) {
+		t.Errorf("the session's login procedures: %v\n%s", err, out)
+	}
+
+	var buf bytes.Buffer
+
+	err = run(nil, 0, 0, &buf, emptyStdin(), []string{"SHOW SYMBOL/GLOBAL LOGGED"})
+	if err == nil || !strings.Contains(err.Error()+buf.String(), "UNDSYM") {
+		t.Errorf("a one-shot command ran the login procedures: %v\n%s", err, buf.String())
+	}
+}
+
+// TestRun_password: an account with a password logs in only when it is
+// given: GOVAX_PASSWORD when standard input isn't a terminal, refused
+// with LOGINOUT's message when wrong, and a message saying what to do
+// when it isn't set. Its case doesn't matter, as on VMS.
+func TestRun_password(t *testing.T) {
+	dir := t.TempDir()
+	withAuthorizationFile(t, filepath.Join(dir, "sysuaf.json"))
+
+	hash, err := uaf.HashPassword("Secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = uaf.Update(authorizationFile, func(f *uaf.File) error {
+		smith := uaf.DefaultRecord()
+		smith.Username, smith.Flags, smith.UIC, smith.Password = "SMITH", 0, uaf.NewUIC(0o300, 1), hash
+		f.Put(smith)
+
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	withUser(t, "smith")
+
+	for _, tc := range []struct {
+		set, value, want string
+	}{
+		{"", "", "%GOVAX-F-PASSWORD, account SMITH has a password"},
+		{"set", "wrong", "User authorization failure"},
+	} {
+		if tc.set != "" {
+			t.Setenv(passwordVariable, tc.value)
+		}
+
+		var buf bytes.Buffer
+
+		err := run(nil, 0, 0, &buf, emptyStdin(), []string{"SHOW DEFAULT"})
+		if err == nil || !strings.Contains(buf.String(), tc.want) || reportFailure(&buf, err) != 1 {
+			t.Errorf("%q: %v\n%s", tc.value, err, buf.String())
+		}
+	}
+
+	t.Setenv(passwordVariable, "SECRET")
+
+	if out := oneShot(t, `WRITE SYS$OUTPUT F$GETJPI("","USERNAME")`); !strings.Contains(out, "SMITH") {
+		t.Errorf("with the password:\n%s", out)
+	}
+}
+
+// TestCheckPassword_terminal: at a terminal govax asks three times, each
+// wrong answer LOGINOUT's message, and never looks at GOVAX_PASSWORD.
+func TestCheckPassword_terminal(t *testing.T) {
+	hash, err := uaf.HashPassword("SECRET")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := uaf.DefaultRecord()
+	r.Username, r.Password = "SMITH", hash
+
+	t.Setenv(passwordVariable, "SECRET")
+
+	for _, tc := range []struct {
+		typed    []string
+		failures int
+		ok       bool
+	}{
+		{[]string{"secret"}, 0, true},
+		{[]string{"no", "nope", "secret"}, 2, true},
+		{[]string{"no", "nope", "never", "secret"}, 3, false},
+	} {
+		typed := tc.typed
+
+		saved := passwordInput
+		passwordInput = func(io.Writer) (passwordReader, bool) {
+			return func() (string, error) {
+				next := typed[0]
+				typed = typed[1:]
+
+				return next, nil
+			}, true
+		}
+
+		var buf bytes.Buffer
+
+		err := checkPassword(r, &buf, true)
+		passwordInput = saved
+
+		out := buf.String()
+		if (err == nil) != tc.ok || strings.Count(out, "User authorization failure") != tc.failures ||
+			strings.Count(out, "Password: ") != min(len(tc.typed), passwordTries) {
+			t.Errorf("%v: %v\n%s", tc.typed, err, out)
+		}
+	}
+
+	// An account with no password is asked for nothing.
+	r.Password = ""
+
+	var buf bytes.Buffer
+	if err := checkPassword(r, &buf, true); err != nil || buf.Len() != 0 {
+		t.Errorf("no password: %v, %q", err, buf.String())
 	}
 }

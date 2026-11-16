@@ -524,7 +524,7 @@ Each is one commit, with tests, stopping for review.
    protections in `sysvol`, set by Populate and Refresh, existing
    volumes corrected once; SYLOGIN.COM seeded; `SYS$SYLOGIN` in
    STARTUP.COM.
-8. **The login procedures and the password** (Decisions 6 and 8): SYLOGIN
+8. **The login procedures and the password** (done 2026-11-15) (Decisions 6 and 8): SYLOGIN
    then LGICMD or LOGIN.COM, their order, failures, and Ctrl/Y, held to
    the probe's batch log; the password asked at login for an account that
    has one, `GOVAX_PASSWORD` when standard input isn't a terminal
@@ -922,3 +922,36 @@ The answers (2026-11-15):
   changed: CREATE's and COPY's OPENOUT name a new file on the system volume
   by its physical directory (`DUA0:[SYSTEM.SYSMGR]MINE.COM;`) where DELETE
   shows the concealed `SYS$SYSROOT:[SYSEXE]`.
+- **2026-11-15** Subtask 8: the login procedures and the password.
+  `dclshell/dclloginproc.go`'s `RunLoginProcedures`: the account's
+  procedure (its LGICMD, or `SYS$LOGIN:LOGIN.COM` when it has none and
+  SYS$LOGIN is defined) opened first and run at level 1, SYLOGIN run above
+  it at level 2 before its first line (`procedureCommand.before`, called
+  by `runLevel` once the level is there), or at level 1 when the account's
+  can't be opened; a procedure missing or unreadable passed over with no
+  message; verify off; each with DCL's default ON action, the login going
+  on. SYLOGIN is opened as `SYS$SYLOGIN:`, and only when the name is
+  defined. `cmd/govax` runs them after the banner in a session, never for
+  a one-shot command. Ctrl/Y in one is DCL's Ctrl/Y level as in any
+  procedure: CONTINUE goes on, EXIT ends the login procedures (EXIT there
+  ends every procedure, the User's Manual's 13.7.1). The password:
+  `cmd/govax/authorization.go`'s `checkPassword`, after `checkLogin`'s
+  record check: an account with a password is asked `Password: ` with echo
+  off (`golang.org/x/term`'s `ReadPassword`) three times at a terminal,
+  each failure `User authorization failure`; elsewhere `GOVAX_PASSWORD`
+  gives it, and without that govax stops with `%GOVAX-F-PASSWORD, account
+  SMITH has a password; ...` (its text govax's own); both exit 1. Tests:
+  `TestUAF95LoginOracle` holds both accounts' logins to round 3's
+  interactive logs (every symbol the procedures recorded, and UAF95X's
+  IVVERB and OPENIN messages as `terminal.log` has them),
+  `TestLoginProceduresSkipped`, `TestLoginProceduresControlY`,
+  `cmd/govax`'s `TestRun_loginProcedures` (a session's, not a one-shot
+  command's), `TestRun_password`, and `TestCheckPassword_terminal`.
+  Fixed on the way: `@` of a logical name with a colon and nothing after
+  it (`@SYS$SYLOGIN:`) added `.COM` to the text and then refused a type on
+  both sides of the translation; `openProcedure` now takes the default
+  type as RMS's default name for such a name (`Session.Parse` with
+  `.COM`). Noticed, not changed: govax's RMS doesn't translate a file
+  name alone as a logical name (`@SYS$SYLOGIN` looks for
+  `SYS$SYLOGIN.COM`), which VMS's RMS does for a name with no
+  punctuation.
