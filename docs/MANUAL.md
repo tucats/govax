@@ -333,7 +333,10 @@ Each time govax starts, it:
      own startup commands.
 5. Installs the page file, if paging is on.
 6. Runs your own startup procedure, if `vax.startup.procedure` names one.
-7. Runs the command given on govax's command line and exits, or else
+   Like STARTUP.COM, it runs as SYSTEM, with every privilege.
+7. Logs process 1 in as its account: SYSTEM, or the account `--user`
+   names, whose UIC, privileges, and quotas it has from here on.
+8. Runs the command given on govax's command line and exits, or else
    shows the `VAX>` prompt.
 
 The memory sizes STARTUP.COM uses can be changed with configuration

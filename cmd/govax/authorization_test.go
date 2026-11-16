@@ -183,3 +183,40 @@ func TestRun_logIn(t *testing.T) {
 		}
 	}
 }
+
+// TestRun_startupProcedureAsSystem: vax.startup.procedure is part of the
+// system's startup, run as SYSTEM before process 1 logs in as --user's
+// account, so a privileged command in it works whoever logs in.
+func TestRun_startupProcedureAsSystem(t *testing.T) {
+	dir := t.TempDir()
+	withAuthorizationFile(t, filepath.Join(dir, "sysuaf.json"))
+
+	err := uaf.Update(authorizationFile, func(f *uaf.File) error {
+		smith := uaf.DefaultRecord()
+		smith.Username, smith.Flags, smith.UIC = "SMITH", 0, uaf.NewUIC(0o300, 1)
+		f.Put(smith)
+
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proc := filepath.Join(dir, "mystart.com")
+	if err := os.WriteFile(proc, []byte(`$ WRITE SYS$OUTPUT "STARTUP AS ",F$GETJPI("","USERNAME"),F$PRIVILEGE("CMKRNL")`+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	setConfig(t, "vax.startup.procedure", proc)
+	withUser(t, "smith")
+
+	out := oneShot(t, `WRITE SYS$OUTPUT "THEN ",F$GETJPI("","USERNAME"),F$PRIVILEGE("CMKRNL")`)
+
+	if !strings.Contains(out, "STARTUP AS SYSTEM      TRUE") {
+		t.Errorf("the startup procedure didn't run as SYSTEM:\n%s", out)
+	}
+
+	if !strings.Contains(out, "THEN SMITH       FALSE") {
+		t.Errorf("the command didn't run as SMITH:\n%s", out)
+	}
+}

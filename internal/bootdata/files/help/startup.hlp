@@ -15,8 +15,12 @@
         starts it, defines TTA0: and NLA0:, and last runs
         SYS$MANAGER:SYSTARTUP_VMS.COM.
      4. Installs the page file, with paging on.
-     5. Runs vax.startup.procedure, if that names a procedure.
-     6. Runs the command on govax's command line and exits, or else
+     5. Runs vax.startup.procedure, if that names a procedure.  Like
+        STARTUP.COM, it runs as SYSTEM, with every privilege.
+     6. Logs process 1 in as its account: SYSTEM, or the account the
+        --user option names, whose UIC, privileges, and quotas it takes
+        from here on.
+     7. Runs the command on govax's command line and exits, or else
         shows the VAX> prompt.
 
    Your own startup commands belong in SYS$MANAGER:SYSTARTUP_VMS.COM:

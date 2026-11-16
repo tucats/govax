@@ -174,9 +174,11 @@
 
        vax.startup.procedure         If specified, the name of a DCL
                                      command procedure run automatically
-                                     during startup processing.  If the
-                                     procedure name does not exist, or
-                                     is empty, there is no error.
+                                     during startup processing, as
+                                     SYSTEM, before the --user account
+                                     logs in.  If the procedure name
+                                     does not exist, or is empty, there
+                                     is no error.
 
        vax.console.prompt            The console's prompt.  Default
                                      "VAX> ".  SET PROMPT changes it.

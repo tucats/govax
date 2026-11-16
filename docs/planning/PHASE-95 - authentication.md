@@ -785,3 +785,13 @@ The answers (2026-11-15):
   and every account's grant of it. Also fixed: subtask 4 left
   `TestNoUncheckedPrivileges` failing, `corevms/login.go`'s `LogIn` setting
   the current privileges unlisted; it is now among `managedPrivileges`.
+- **2026-11-15** By the author's choice, `vax.startup.procedure` is now
+  part of the system's startup: `cmd/govax` runs it after STARTUP.COM and
+  the page file and before process 1 logs in, so it runs as SYSTEM and a
+  MOUNT or another privileged command in it works whatever `--user` names
+  (it had run after the login, as the account). Two consequences: the
+  login's default directory (SYS$LOGIN) now replaces any SET DEFAULT the
+  procedure does, and the last-login banner follows the procedure's
+  output. `TestRun_startupProcedureAsSystem`; HELP STARTUP, HELP
+  CONFIGURATION KEYS, and MANUAL.md's startup sequence say so, with the
+  login as its own step.

@@ -327,20 +327,11 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// for the pager's first need).
 	c.StartPageFile()
 
-	// Then process 1 logs in as its account, SYSTEM unless --user names
-	// another (docs/planning/PHASE-95 - authentication.md, Decision 7). At
-	// a terminal the banner says when the account last logged in.
-	login, err := c.LogIn(loginAccount(), systemHome)
-	if err != nil {
-		return err
-	}
-
-	if c.Verbose {
-		fmt.Fprint(out, login.Previous().LastLoginText())
-	}
-
 	// If a startup procedure of the user's own is configured, run it: a
-	// volume file or a host file, by the form of its name. One that isn't
+	// volume file or a host file, by the form of its name. It is part of
+	// the system's startup, as STARTUP.COM is, so it runs as SYSTEM,
+	// before process 1 logs in as --user's account: a MOUNT or another
+	// privileged command in it works whoever logs in. One that isn't
 	// there is passed over without a message; one that is runs as a
 	// command procedure, and its failure is reported.
 	if startup := settings.Get("vax.startup.procedure"); startup != "" {
@@ -363,6 +354,18 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 				}
 			}
 		}
+	}
+
+	// Then process 1 logs in as its account, SYSTEM unless --user names
+	// another (docs/planning/PHASE-95 - authentication.md, Decision 7). At
+	// a terminal the banner says when the account last logged in.
+	login, err := c.LogIn(loginAccount(), systemHome)
+	if err != nil {
+		return err
+	}
+
+	if c.Verbose {
+		fmt.Fprint(out, login.Previous().LastLoginText())
 	}
 
 	// Then the command interpreter reads level 0's input: the one-shot
