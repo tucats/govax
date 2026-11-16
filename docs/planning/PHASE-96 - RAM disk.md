@@ -432,7 +432,7 @@ top. If so, the fix is made in the same subtask.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-16): Part A, this plan.
-2. **ods2's memory image** (Decisions 1 and 2): `diskimage/memory.go`
+2. **ods2's memory image** (done 2026-11-16) (Decisions 1 and 2): `diskimage/memory.go`
    (the image, views, `Release`) and its tests, ods2's package
    documentation (`diskimage/doc.go`), and a line in ods2's README.
    Committed in ods2 with no attribution lines, for the author to tag
@@ -515,3 +515,22 @@ The answers (2026-11-16):
   3, and 4 reworked: views, RMS's `ramDisks`, redefinition to start
   over). The limit is on the total. The scratch volume is a DCL recipe
   (Decision 9), not configuration keys. There is no probe.
+- **2026-11-16** Subtask 2: ods2's `diskimage/memory.go`, as Decision 1
+  has it. `NewMemory` returns a `MemoryImage`, whose blocks are 64 KB
+  chunks in a map, allocated by the first write of a block that isn't all
+  zeros. `View` returns a `WritableContainer` whose `Close` ends only that
+  view. `Release` frees the chunks, and every later call on the image or
+  its views gives `ErrClosed`. `Resident` is the bytes held. The image is
+  itself a `WritableContainer`, its `Close` the same as `Release`. A mutex
+  guards it. `diskimage/memory_test.go` covers zeros, writes across
+  chunks, overwriting with zeros, sparseness, the argument errors, views,
+  and release; `volume/memory_test.go` initializes a 20,000-block image,
+  makes a directory, dismounts, mounts a new view, finds the directory,
+  and checks that the image holds under a quarter of its size. ods2's
+  tests pass, with `-race` for `diskimage`. The package documentation
+  and README name the third kind of container. Committed in ods2 as
+  `e3f96d4` (no attribution lines, per ods2's CLAUDE.md), with the build
+  number at 1.0-31, then tagged v0.1.31 and pushed with the author's
+  permission. govax's `go.mod` now pins v0.1.31, a step the plan gave
+  subtask 3, taken here to check the tag: `GOWORK=off go build ./...` and
+  `internal/rms`'s tests pass on it.

@@ -10,6 +10,8 @@ github.com/tucats/gopackages v0.1.4 h1:VUD39w6UaDFnpECx6Fyh4MLad7o9wgbasengmmkmX
 github.com/tucats/gopackages v0.1.4/go.mod h1:w66+nBxN7z+ab3wzWe0MJVQ3/TSeSkzRIknD7nNDoy4=
 github.com/tucats/ods2 v0.1.30 h1:WB31sDVzBgOMDnkw4Z9OPJ9x2+Xs2EhKhvKhiFDdo9o=
 github.com/tucats/ods2 v0.1.30/go.mod h1:8gg/Z6UrtuxomU1KlQNam+nB47KGEdfy5QkizQWqUxU=
+github.com/tucats/ods2 v0.1.31 h1:k1PskH3Qu5zqy4JPgIVWEN/UW6XT0E/3iFXULjAjMt0=
+github.com/tucats/ods2 v0.1.31/go.mod h1:8gg/Z6UrtuxomU1KlQNam+nB47KGEdfy5QkizQWqUxU=
 golang.org/x/crypto v0.52.0 h1:RMs7fP2rXdep0CftQlK8Uf+kibLm7qkCcradZWYz988=
 golang.org/x/crypto v0.52.0/go.mod h1:1QgfPxDqh0T2M/elOJtp9RvuR95kVjir0e6/BvEmGbc=
 golang.org/x/net v0.0.0-20181220203305-927f97764cc3/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
