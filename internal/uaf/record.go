@@ -1,9 +1,12 @@
 package uaf
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // Version is the file format's version, the "version" key every file
@@ -21,8 +24,9 @@ type File struct {
 	Accounts []Record `json:"accounts"`
 
 	// Identifiers are the rights database's identifiers, general and
-	// UIC both, as RIGHTSLIST.DAT has them. The environmental ones every
-	// system has (INTERACTIVE, BATCH, ...) aren't here.
+	// UIC both, as RIGHTSLIST.DAT has them, each with its holders. The
+	// environmental ones every system has (INTERACTIVE, BATCH, ...) aren't
+	// here (Environmental).
 	Identifiers []Identifier `json:"identifiers"`
 }
 
@@ -74,9 +78,11 @@ type Record struct {
 	// Password is the password's hash (HashPassword), "" for none.
 	Password string `json:"password"`
 
-	// Identifiers are the identifiers the account holds, RIGHTSLIST.DAT's
-	// holder records.
-	Identifiers []Held `json:"identifiers"`
+	// Legacy is what files written before holders moved to the
+	// identifiers (2026-11-15) kept here: the identifiers the account
+	// held. Parse moves them to the identifiers' Holders, by the account's
+	// UIC, and the field is never written again.
+	Legacy []Held `json:"identifiers,omitempty"`
 
 	// LastInteractive and LastNonInteractive are the times of the last
 	// interactive and non-interactive logins, and PasswordChanged of the
@@ -112,19 +118,43 @@ type Quotas struct {
 	MAXDETACH   uint32 `json:"maxdetach"`
 }
 
-// Held is an identifier an account holds: its name (an Identifier's
-// name in the file, or its value, "%X80010001", when it has none) and the
-// attributes it's held with.
+// Held is how files before 2026-11-15 said an account held an
+// identifier: its name (or its value, "%X80010001") and the attributes it
+// was held with. Parse turns each into a Holder.
 type Held struct {
 	Name       string     `json:"name"`
 	Attributes Attributes `json:"attributes,omitzero"`
 }
 
-// Identifier is a rights identifier: its name, value, and attributes.
+// Identifier is a rights identifier: its name, value, and attributes, and
+// who holds it.
 type Identifier struct {
 	Name       string          `json:"name"`
 	Value      IdentifierValue `json:"value"`
 	Attributes Attributes      `json:"attributes,omitzero"`
+
+	// Holders hold the identifier, in the order it was granted to them
+	// (AUTHORIZE's SHOW/IDENTIFIER/FULL lists them so).
+	Holders []Holder `json:"holders,omitempty"`
+}
+
+// Holder is a holder record: a UIC that holds an identifier, and the
+// attributes it holds it with. On VMS a holder is a UIC, not an account:
+// every account with the UIC holds what it holds, and GRANT/IDENTIFIER
+// names the holder by its UIC identifier (VMS 7.1's GRANTUSR, "user
+// identifier NOSUCH does not exist", the phase doc's A.5). When a UIC
+// identifier's value changes, its holder records change with it
+// ($MOD_IDENT), and when it is removed they go ($REM_IDENT).
+type Holder struct {
+	UIC        UIC        `json:"uic"`
+	Attributes Attributes `json:"attributes,omitzero"`
+}
+
+// HeldIdentifier is an identifier a UIC holds, and the attributes it
+// holds it with: the identifier's own, and the holder record's.
+type HeldIdentifier struct {
+	Identifier Identifier
+	Attributes Attributes
 }
 
 // The SYSTEM account's values: what process 1 has always had (corevms's
@@ -150,7 +180,7 @@ func SystemRecord() Record {
 		UIC: NewUIC(1, 4), CLI: "DCL", CLITables: "DCLTABLES",
 		Device: "SYS$SYSROOT:", Directory: "[SYSMGR]",
 		Priority: 4, Privileges: AllPrivileges, DefaultPrivileges: AllPrivileges,
-		Quotas: systemQuotas(), Identifiers: []Held{},
+		Quotas: systemQuotas(),
 	}
 }
 
@@ -172,7 +202,6 @@ func DefaultRecord() Record {
 			PGFLQUOTA: 32768, PRCLM: 2, TQELM: 40, ENQLM: 200,
 			WSDEFAULT: 256, WSQUOTA: 512, WSEXTENT: 1024,
 		},
-		Identifiers: []Held{},
 	}
 }
 
@@ -265,28 +294,113 @@ func (f *File) NextGeneral() IdentifierValue {
 	return next
 }
 
-// HeldValue returns the value of the identifier h names, and whether the
-// file has one: an identifier's name, or a value's text.
-func (f *File) HeldValue(h Held) (IdentifierValue, bool) {
-	if id, ok := f.IdentifierNamed(h.Name); ok {
-		return id.Value, true
+// HeldBy returns the identifiers uic holds, in the file's order, each
+// with the attributes its holder record gives.
+func (f *File) HeldBy(uic UIC) []HeldIdentifier {
+	var held []HeldIdentifier
+
+	for _, id := range f.Identifiers {
+		for _, h := range id.Holders {
+			if h.UIC == uic {
+				held = append(held, HeldIdentifier{Identifier: id, Attributes: h.Attributes})
+
+				break
+			}
+		}
 	}
 
-	if v, err := ParseIdentifierValue(h.Name); err == nil {
-		return v, true
+	return held
+}
+
+// DropHolder takes uic's holder records out of every identifier, as
+// $REM_IDENT does when uic's own identifier is removed.
+func (f *File) DropHolder(uic UIC) {
+	for i := range f.Identifiers {
+		f.Identifiers[i].Holders = slices.DeleteFunc(f.Identifiers[i].Holders, func(h Holder) bool { return h.UIC == uic })
+	}
+}
+
+// MoveHolder makes every holder record of from one of to, as $MOD_IDENT
+// does when a UIC identifier's value changes.
+func (f *File) MoveHolder(from, to UIC) {
+	for i := range f.Identifiers {
+		for j := range f.Identifiers[i].Holders {
+			if h := &f.Identifiers[i].Holders[j]; h.UIC == from {
+				h.UIC = to
+			}
+		}
+	}
+}
+
+// migrate moves what records of an older file held (Legacy) to their
+// identifiers' holders, and reports an identifier the file doesn't have.
+func (f *File) migrate() error {
+	for i := range f.Accounts {
+		r := &f.Accounts[i]
+
+		for _, h := range r.Legacy {
+			id, ok := f.IdentifierNamed(h.Name)
+			if !ok {
+				if v, err := ParseIdentifierValue(h.Name); err == nil {
+					id, ok = f.IdentifierWithValue(v)
+				}
+			}
+
+			if !ok {
+				return &valueError{text: h.Name, err: fmt.Errorf("account %s holds %s, which is no identifier in the file", r.Username, h.Name)}
+			}
+
+			if !slices.ContainsFunc(id.Holders, func(have Holder) bool { return have.UIC == r.UIC }) {
+				id.Holders = append(id.Holders, Holder{UIC: r.UIC, Attributes: h.Attributes})
+			}
+		}
+
+		r.Legacy = nil
 	}
 
-	return 0, false
+	return nil
 }
 
 // Clone returns a copy of the file that shares nothing with it.
 func (f *File) Clone() *File {
-	c := &File{Version: f.Version, Identifiers: slices.Clone(f.Identifiers)}
+	c := &File{Version: f.Version, Accounts: slices.Clone(f.Accounts), Identifiers: slices.Clone(f.Identifiers)}
 
-	for _, r := range f.Accounts {
-		r.Identifiers = slices.Clone(r.Identifiers)
-		c.Accounts = append(c.Accounts, r)
+	for i := range c.Accounts {
+		c.Accounts[i].Legacy = slices.Clone(c.Accounts[i].Legacy)
+	}
+
+	for i := range c.Identifiers {
+		c.Identifiers[i].Holders = slices.Clone(c.Identifiers[i].Holders)
 	}
 
 	return c
+}
+
+// Environmental are the identifiers every rights database has, which VMS
+// 7.1's CREATE/RIGHTS made in a new one (the probe's case 6): how a
+// process logged in, and two its software uses. They aren't in the
+// file: the system gives them, and AUTHORIZE shows them among the file's.
+var Environmental = []Identifier{
+	{Name: "BATCH", Value: IdentifierValue(vmsdef.Symbols["KGB$K_BATCH_ID"])},
+	{Name: "DIALUP", Value: IdentifierValue(vmsdef.Symbols["KGB$K_DIALUP_ID"])},
+	{Name: "INTERACTIVE", Value: IdentifierValue(vmsdef.Symbols["KGB$K_INTERACTIVE_ID"])},
+	{Name: "LOCAL", Value: IdentifierValue(vmsdef.Symbols["KGB$K_LOCAL_ID"])},
+	{Name: "NETWORK", Value: IdentifierValue(vmsdef.Symbols["KGB$K_NETWORK_ID"])},
+	{Name: "REMOTE", Value: IdentifierValue(vmsdef.Symbols["KGB$K_REMOTE_ID"])},
+	{Name: "DECWINDOWS", Value: IdentifierValue(vmsdef.Symbols["KGB$K_DECWINDOWS_ID"])},
+	{Name: "VMS$BUFFER_OBJECT_USER", Value: IdentifierValue(vmsdef.Symbols["KGB$K_BOBUSER_ID"])},
+}
+
+// EnvironmentalNamed returns the environmental identifier called name, or
+// whose value is v when name is "".
+func EnvironmentalNamed(name string, v IdentifierValue) (Identifier, bool) {
+	name = strings.ToUpper(strings.TrimSpace(name))
+
+	for _, id := range Environmental {
+		if name != "" && id.Name == name || name == "" && id.Value == v {
+			return id, true
+		}
+	}
+
+	return Identifier{}, false
 }

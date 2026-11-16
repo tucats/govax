@@ -30,7 +30,7 @@ func loginSystem(t *testing.T) *Environment {
 	sysprv, _ := uaf.PrivilegeBit("SYSPRV")
 
 	err = sys.UpdateAuthorization(func(f *uaf.File) error {
-		f.Identifiers = append(f.Identifiers, uaf.Identifier{Name: "PROJX", Value: uaf.FirstGeneral})
+		f.Identifiers = append(f.Identifiers, uaf.Identifier{Name: "PROJX", Value: uaf.FirstGeneral, Holders: []uaf.Holder{{UIC: uaf.NewUIC(0o300, 1)}}})
 
 		smith := uaf.DefaultRecord()
 		smith.Username, smith.Account, smith.Flags = "SMITH", "GOVAX", 0
@@ -39,7 +39,6 @@ func loginSystem(t *testing.T) *Environment {
 		smith.Privileges = uaf.Privileges(1<<tmpmbx | 1<<sysprv)
 		smith.DefaultPrivileges = uaf.Privileges(1 << tmpmbx)
 		smith.Quotas.ASTLM, smith.Quotas.MAXJOBS = 33, 7
-		smith.Identifiers = []uaf.Held{{Name: "PROJX"}}
 		smith.LastNonInteractive = time.Date(2026, 11, 15, 17, 19, 48, 0, time.Local)
 		f.Put(smith)
 

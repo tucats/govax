@@ -25,7 +25,10 @@
 // with the process's credentials (Decision 5). Without it AUTHORIZE says
 // NAOFIL with RMS's PRV, as VMS 7.1 did for an account without SYSPRV.
 //
-// This subtask (5) has the account commands: ADD, COPY, DEFAULT,
-// MODIFY, REMOVE, RENAME, and EXIT. SHOW, LIST, and the identifier
-// commands are subtask 6's.
+// The account commands (ADD, COPY, DEFAULT, MODIFY, REMOVE, RENAME, and
+// EXIT) are accounts.go, with the qualifiers they share in fields.go; the
+// reports (SHOW and LIST of accounts, identifiers, and rights) are show.go,
+// laid out by report.go; the identifier commands (ADD, REMOVE, RENAME,
+// MODIFY, GRANT, and REVOKE/IDENTIFIER) are identifiers.go. LIST writes its
+// file through the Utility's WriteListing, which DCL gives it.
 package authorize

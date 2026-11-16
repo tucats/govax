@@ -101,11 +101,7 @@ func (s *System) BeginLogin(username string, interactive bool) (*Login, error) {
 
 	l := &Login{Record: r, Interactive: interactive, Time: s.now()}
 
-	for _, h := range r.Identifiers {
-		if v, ok := f.HeldValue(h); ok {
-			l.Rights = append(l.Rights, security.Identifier{Value: uint32(v), Attributes: uint32(h.Attributes)})
-		}
-	}
+	l.Rights = heldRights(f, r.UIC)
 
 	when := goTime(l.Time)
 

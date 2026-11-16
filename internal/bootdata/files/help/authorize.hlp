@@ -40,9 +40,30 @@
      MODIFY username     Change accounts; % and * match several
      REMOVE username     Delete an account and its UIC identifier
      RENAME old new      Change an account's username
+     SHOW username       Show accounts in full, /BRIEF a line each, or
+                         /FULL with the identifiers they hold
+     LIST [username]     The same into SYSUAF.LIS in the default
+                         directory (every account, brief, by default)
      EXIT                End the session
 
-   SHOW, LIST, and the identifier commands are still to come.
+   The rights identifiers:
+
+     ADD/IDENTIFIER name        A new identifier: the next general
+                                value, or /VALUE=IDENTIFIER=n or
+                                /VALUE=UIC=[g,m]; /ATTRIBUTES=(..)
+     REMOVE/IDENTIFIER name     Delete it and who holds it
+     RENAME/IDENTIFIER old new  Change its name
+     MODIFY/IDENTIFIER name     /VALUE, /ATTRIBUTES, or /NAME
+     GRANT/IDENTIFIER id user   Let the user's UIC hold it
+     REVOKE/IDENTIFIER id user  Take it away
+     SHOW/IDENTIFIER name       Show it (* for all), /FULL its holders
+     SHOW/RIGHTS user           What the user's UIC holds
+     LIST/IDENTIFIER, LIST/RIGHTS   The same into RIGHTSLIST.LIS
+
+   Identifiers are held by a UIC, as on VMS: every account with the UIC
+   holds what it holds, and a process logged in as one of them has them
+   among its rights.  The environmental identifiers (INTERACTIVE, BATCH,
+   LOCAL, and the rest) are the system's and can't be changed.
 
 2 Qualifiers
 

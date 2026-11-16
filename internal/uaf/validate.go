@@ -62,7 +62,7 @@ func nameChar(ch rune) bool {
 // Check reports the first thing wrong with the file: a version it can't
 // read, a username or identifier name that can't be one, one used twice,
 // a field too long, a priority over 31, two identifiers with one value,
-// or an account holding an identifier the file doesn't have. Each error
+// or an identifier held twice by one UIC. Each error
 // names the account or identifier, so Load can find its line.
 func (f *File) Check() error {
 	if f.Version != Version {
@@ -100,11 +100,24 @@ func (f *File) Check() error {
 		names[id.Name], values[id.Value] = true, true
 	}
 
-	for _, r := range f.Accounts {
-		for _, h := range r.Identifiers {
-			if _, ok := f.HeldValue(h); !ok {
-				return &valueError{text: h.Name, err: fmt.Errorf("account %s holds %s, which is no identifier in the file", r.Username, h.Name)}
+	for _, id := range f.Identifiers {
+		holders := map[UIC]bool{}
+
+		for _, h := range id.Holders {
+			switch {
+			case h.UIC.Group() > MaxGroup || h.UIC.Member() > MaxMember:
+				return &valueError{text: id.Value.String(), err: fmt.Errorf("identifier %s's holder %s is out of range", id.Name, h.UIC)}
+			case holders[h.UIC]:
+				return &valueError{text: id.Value.String(), err: fmt.Errorf("identifier %s is held by %s twice", id.Name, h.UIC)}
 			}
+
+			holders[h.UIC] = true
+		}
+	}
+
+	for _, r := range f.Accounts {
+		if len(r.Legacy) > 0 {
+			return &valueError{text: r.Username, err: fmt.Errorf("account %s still holds identifiers itself", r.Username)}
 		}
 	}
 

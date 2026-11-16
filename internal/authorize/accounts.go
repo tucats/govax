@@ -123,7 +123,6 @@ func (u *Utility) add(r *dcl.Result) error {
 		rec.Username = name
 		rec.Password, rec.PasswordChanged = "", time.Time{}
 		rec.LastInteractive, rec.LastNonInteractive = time.Time{}, time.Time{}
-		rec.Identifiers = []uaf.Held{}
 		e.apply(&rec)
 		f.Accounts = append(f.Accounts, rec)
 
@@ -194,8 +193,8 @@ func (u *Utility) addGroupIdentifier(f *uaf.File, say *sayings, account string, 
 
 // copyAccount is COPY old new [/qualifiers]: a new account, old's record
 // with the qualifiers' fields. It has no password unless /PASSWORD gives
-// one (DEFPWD: VMS's password hash includes the username), no
-// identifiers held, and no logins. Its UIC gets an identifier, or if it
+// one (DEFPWD: VMS's password hash includes the username) and no logins;
+// what it holds is what its UIC holds. Its UIC gets an identifier, or if it
 // is old's, SAMEUIC (cases 54 and 56). A missing old is BADUSR, leaving
 // %X10000000 (case 57).
 func (u *Utility) copyAccount(r *dcl.Result) error {
@@ -235,7 +234,6 @@ func (u *Utility) copyAccount(r *dcl.Result) error {
 		rec.Username = newName
 		rec.Password, rec.PasswordChanged = "", time.Time{}
 		rec.LastInteractive, rec.LastNonInteractive = time.Time{}, time.Time{}
-		rec.Identifiers = []uaf.Held{}
 		e.apply(&rec)
 		f.Accounts = append(f.Accounts, rec)
 
@@ -331,7 +329,8 @@ func (u *Utility) modify(r *dcl.Result, pattern string) error {
 }
 
 // moveUICIdentifier gives the UIC identifier called name the value of
-// uic, an account's new UIC.
+// uic, an account's new UIC, and its holder records go with it, as
+// $MOD_IDENT moves them.
 func (u *Utility) moveUICIdentifier(f *uaf.File, say *sayings, name string, uic uaf.UIC) {
 	id, ok := f.IdentifierNamed(name)
 	if !ok || id.Value&uaf.GeneralBit != 0 {
@@ -345,14 +344,16 @@ func (u *Utility) moveUICIdentifier(f *uaf.File, say *sayings, name string, uic 
 		return
 	}
 
+	f.MoveHolder(uaf.UIC(id.Value), uic)
 	id.Value = uaf.IdentifierValue(uic)
 	say.message("RDBMDFYMSG", "", id.Name)
 	u.changedRights = true
 }
 
 // remove is REMOVE username: the account, and the UIC identifier named
-// for it (RDBREMMSGU), which every account holding it loses too (case
-// 65). A missing account is BADUSR, leaving SS$_NORMAL (case 67).
+// for it (RDBREMMSGU, case 65) with its holder records and those of its
+// UIC ($REM_IDENT's rule). A missing account is BADUSR, leaving
+// SS$_NORMAL (case 67).
 func (u *Utility) remove(r *dcl.Result) error {
 	if !u.mayWrite() {
 		return nil
@@ -377,12 +378,7 @@ func (u *Utility) remove(r *dcl.Result) error {
 
 		gone := *id
 		f.Identifiers = slices.DeleteFunc(f.Identifiers, func(i uaf.Identifier) bool { return i.Name == gone.Name })
-
-		for i := range f.Accounts {
-			f.Accounts[i].Identifiers = slices.DeleteFunc(f.Accounts[i].Identifiers, func(h uaf.Held) bool {
-				return strings.EqualFold(h.Name, gone.Name) || h.Name == gone.Value.String()
-			})
-		}
+		f.DropHolder(uaf.UIC(gone.Value))
 
 		say.message("RDBREMMSGU", "", gone.Name, identifierValue(gone.Value))
 		u.changedRights = true
@@ -447,14 +443,6 @@ func (u *Utility) rename(r *dcl.Result) error {
 
 		was := id.Name
 		id.Name = newName
-
-		for i := range f.Accounts {
-			for j := range f.Accounts[i].Identifiers {
-				if h := &f.Accounts[i].Identifiers[j]; strings.EqualFold(h.Name, was) {
-					h.Name = newName
-				}
-			}
-		}
 
 		say.message("RDBMDFYMSG", "", was)
 		u.changedRights = true

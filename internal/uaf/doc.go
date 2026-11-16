@@ -18,10 +18,12 @@
 // govax keeps both in one host file of its own format, JSON, so a person
 // can read it and, carefully, edit it: by default ~/.govax/sysuaf.json,
 // or the file vax.authorization.file names. A File is the whole of it:
-// its accounts (Record), its identifiers (Identifier), and the next free
-// general identifier value. Names are names in the file (privileges,
-// flags, attributes), a UIC is "[group,member]" in octal as VMS writes
-// it, and an identifier's value is "%X80010001". Load reads a file whole
+// its accounts (Record) and its identifiers (Identifier), each identifier
+// with its holders (Holder). A holder is a UIC, as RIGHTSLIST.DAT's holder
+// records are: every account with the UIC holds the identifier (HeldBy).
+// Names are names in the file (privileges, flags, attributes), a UIC is
+// "[group,member]" in octal as VMS writes it, and an identifier's value
+// is "%X80010001". Load reads a file whole
 // and checks it, naming the line of anything wrong; Save writes it whole,
 // through a temporary file and a rename, so a reader never sees half of
 // one; Update does a read, a change, and a write under a lock

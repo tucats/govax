@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/authorize"
+	"github.com/tucats/govax/internal/rms"
 )
 
 // This file is how DCL runs AUTHORIZE (docs/planning/PHASE-95 -
@@ -30,15 +31,38 @@ func (c *Interpreter) Authorize(command string) error {
 	defer c.EndHelpInput()
 
 	u := &authorize.Utility{
-		Store:       env.System,
-		Credentials: env.Credentials(),
-		Out:         c.Out,
-		Read:        c.ReadHelpResponse,
+		Store:        env.System,
+		Credentials:  env.Credentials(),
+		Out:          c.Out,
+		Read:         c.ReadHelpResponse,
+		WriteListing: c.writeListing,
 	}
 
 	c.SetCommandStatus(u.Run(command), nil)
 
 	return nil
+}
+
+// writeListing writes LIST's file, name, in the default directory (a
+// volume's or the host's, as Locate decides a bare name), a record per
+// line: a new version on a volume, owned by the process as any file it
+// makes.
+func (c *Interpreter) writeListing(name string, lines []string) error {
+	session := c.ContainerSession
+
+	loc, err := session.Locate(name, false)
+	if err != nil {
+		return err
+	}
+
+	records := make([][]byte, len(lines))
+	for i, line := range lines {
+		records[i] = []byte(line)
+	}
+
+	_, err = session.CreateRecordFile(loc, rms.TextRecords, records)
+
+	return err
 }
 
 // builtinUtility reports whether spec, an image MCR, RUN, or a foreign

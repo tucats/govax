@@ -501,7 +501,7 @@ Each is one commit, with tests, stopping for review.
    `internal/authorize`, the `UAF>` session and the one-command form, MCR
    and RUN; ADD, COPY, DEFAULT, MODIFY, REMOVE, RENAME, EXIT; the access
    check (Decision 5); the UAF messages; held to the probe.
-6. **AUTHORIZE's reports and identifiers** (Decision 11): SHOW
+6. **AUTHORIZE's reports and identifiers** (done 2026-11-15) (Decision 11): SHOW
    (`/BRIEF`, `/FULL`, wildcards), LIST (SYSUAF.LIS, RIGHTSLIST.LIS),
    the identifier commands, rights given at login; held to the probe.
 7. **The system volume's protection** (Decision 9): owners and
@@ -795,3 +795,69 @@ The answers (2026-11-15):
   output. `TestRun_startupProcedureAsSystem`; HELP STARTUP, HELP
   CONFIGURATION KEYS, and MANUAL.md's startup sequence say so, with the
   login as its own step.
+- **2026-11-15** Subtask 6: AUTHORIZE's reports and identifiers.
+  The rights database's model first: on VMS a holder record is a UIC's,
+  not an account's (case 97 listed holders UAFD and UAFA, both granted by
+  their UIC identifiers' names, and GRANTUSR says "user identifier ...
+  does not exist"), so `uaf.Identifier` now carries its `Holders` (a UIC
+  and attributes, in grant order) and a `Record` holds nothing itself;
+  `File.HeldBy(uic)` is what an account holds, so every account with the
+  UIC holds it, and `MoveHolder` and `DropHolder` are the System Services
+  manual's $MOD_IDENT and $REM_IDENT rules (a UIC identifier's new value
+  takes its holder records along; removing it drops them and its UIC's
+  own). A file written before this keeps its accounts' lists under
+  `"identifiers"` (`Record.Legacy`), which `Parse` moves to holder
+  records and never writes again. corevms's login (`heldRights`), `User`,
+  and `AddUser` read and write holders; `AddUser` of a right no identifier
+  in the file has is now SS$_NOSUCHID. `uaf.Environmental` is the eight
+  identifiers 7.1's CREATE/RIGHTS made (DECWINDOWS and
+  VMS$BUFFER_OBJECT_USER beside corevms's six), which AUTHORIZE lists but
+  doesn't keep in the file. In `authorize.dcl` each identifier command is
+  its verb's `/IDENTIFIER` (or SHOW's and LIST's `/RIGHTS`) switching to a
+  syntax of its own, so SHOW/RIGHTS/FULL is IVQUAL (case 96); new verbs
+  SHOW, LIST, GRANT, REVOKE, and CREATE (`/RIGHTS`, accepted, nothing done).
+  `internal/authorize`: `report.go` lays out SHOW's full report (columns
+  measured from cases 1, 2, 26, 98; the UIC named by its identifiers,
+  `[CASED,UAFD]`, `[UAFA]`, or the numbers again; privileges sorted with
+  IMPERSONATE in DETACH's place, cut to ten characters; the identifiers
+  held under /FULL) and the brief line (the comma of the UIC in column 41;
+  the Guide to System Security's Table 5-5 categories, the highest shown);
+  `show.go` is SHOW, SHOW/IDENTIFIER (with holders under /FULL; `*` alone
+  is every identifier, `PROJ*` IVIDENT), SHOW/RIGHTS (always CLI$_ABSENT),
+  and LIST, LIST/IDENTIFIER (always with holders), and LIST/RIGHTS (RMS$_NORMAL
+  every time, LSTERR for a wildcard), the files written by the Utility's
+  `WriteListing`, which DCL gives as a text file in the default directory
+  (`dclshell/authorize.go`); `identifiers.go` is ADD, REMOVE, RENAME, and
+  MODIFY/IDENTIFIER, GRANT and REVOKE (a holder named by its UIC
+  identifier; the holder's attributes only those the identifier has,
+  $ADD_HOLDER's rule), and `/VALUE` (IDENTIFIER=n from 65,536 to
+  268,435,455 with bit 31 set by AUTHORIZE, BADVALUE showing a number out of
+  range as a signed longword, case 77; UIC=[g,*] the group's identifier).
+  Held to the probe: `TestUAF95Oracle` now runs all 134 round 2 cases,
+  comparing 128 (and LIST's four files) with VMS's; the six it doesn't are
+  SYSTEM's own record (Decision 3, cases 2 and 4) and UAFO, which A.3's
+  refused qualifiers never added (123 to 126); SYSTEM's UIC identifier,
+  which govax's new file has and 7.1's CREATE/RIGHTS didn't make, is taken
+  out of SHOW/IDENTIFIER * before comparing, and so are the full report's
+  password minimum, lifetime, and change (govax keeps none, and ADD leaves
+  no pre-expired password). `TestUAF95Round3Oracle` is round 3's 13 cases
+  and five listing files; `TestSession` the probe's session with its SHOWs;
+  `TestHoldersByUIC`, `TestPrivilegeCategory`; the console's
+  `TestAuthorizeListAndRights` (LIST on a volume, a granted identifier in a
+  login's rights). Unconfirmed choices: what 7.1's brief line says for the
+  Group, Devour, and Objects categories, and "None" (Table 5-5's words);
+  an owner over 20 characters cut there; the full report's flag words
+  beyond the seven case 26 showed; CPU time shown without hundredths;
+  "(none)" as the password change of an account without one; LIST of a
+  username matching nothing writing an empty file; SHOW/IDENTIFIER and
+  SHOW/RIGHTS with no name NOIDNAME, as LIST's are; SHOW/RIGHTS of a name
+  that is no UIC identifier SHOWERR with NOSUCHID; a holder with no UIC
+  identifier shown by its numbers; holders listed in grant order and an
+  account's rights in the file's order of identifiers; ADD/IDENTIFIER of a
+  value in use DUPIDENT; RENAME/IDENTIFIER's success RDBMDFYMSG with the
+  old name; MODIFY/IDENTIFIER's bad value after the lookup (case 105 found
+  the missing identifier first); GRANT of an identifier the UIC holds
+  checked after the identifier and the holder; REVOKE of a holder or
+  identifier not found REVOKEERR with NOSUCHID; the environmental
+  identifiers refused to REMOVE, RENAME, MODIFY, and GRANT with NOPRIV.
+  HELP AUTHORIZE lists the new commands.

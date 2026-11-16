@@ -42,6 +42,11 @@ type Utility struct {
 	// the input (Ctrl/Z), which ends the session as EXIT does.
 	Read func(prompt string) (line string, ok bool)
 
+	// WriteListing writes LIST's file, name (SYSUAF.LIS or
+	// RIGHTSLIST.LIS), in the process's default directory, a record per
+	// line. Without it LIST fails with LSTERR.
+	WriteListing func(name string, lines []string) error
+
 	grammar *dcl.Grammar
 
 	// What the command being run has done: the status it leaves, and
@@ -269,4 +274,17 @@ func (u *Utility) bind() {
 	g.Bind("DEFAULT", func(_ int64, r *dcl.Result) error { return u.modify(r, "DEFAULT") })
 	g.Bind("REMOVE", func(_ int64, r *dcl.Result) error { return u.remove(r) })
 	g.Bind("RENAME", func(_ int64, r *dcl.Result) error { return u.rename(r) })
+	g.Bind("SHOW", func(_ int64, r *dcl.Result) error { return u.show(r) })
+	g.Bind("LIST", func(_ int64, r *dcl.Result) error { return u.list(r) })
+	g.Bind("CREATE", func(int64, *dcl.Result) error { return nil })
+	g.Bind("ADD_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.addIdentifier(r) })
+	g.Bind("REMOVE_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.removeIdentifier(r) })
+	g.Bind("RENAME_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.renameIdentifier(r) })
+	g.Bind("MODIFY_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.modifyIdentifierCommand(r) })
+	g.Bind("GRANT_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.grant(r) })
+	g.Bind("REVOKE_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.revoke(r) })
+	g.Bind("SHOW_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.showIdentifier(r) })
+	g.Bind("SHOW_RIGHTS", func(_ int64, r *dcl.Result) error { return u.showRights(r) })
+	g.Bind("LIST_IDENTIFIER", func(_ int64, r *dcl.Result) error { return u.listIdentifier(r) })
+	g.Bind("LIST_RIGHTS", func(_ int64, r *dcl.Result) error { return u.listRightsCommand(r) })
 }

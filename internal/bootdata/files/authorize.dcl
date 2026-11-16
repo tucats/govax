@@ -17,8 +17,125 @@
 !   The four verbs that take them repeat the list, since a grammar's
 !   qualifiers belong to one verb.
 !
+!   The identifier commands are the verbs' /IDENTIFIER (and SHOW's and
+!   LIST's /RIGHTS) switching to a syntax of their own, as CREATE/DIRECTORY
+!   does in console.dcl, so a qualifier one form lacks is IVQUAL there
+!   (SHOW/RIGHTS/FULL, the probe's case 96).
+!
 
 grammar authorize
+
+    ! ADD/IDENTIFIER name [/VALUE=IDENTIFIER=n | /VALUE=UIC=[g,m]]
+    ! [/ATTRIBUTES=(...)]: a new identifier.
+    syntax add_identifier
+        parameter   id_name/id=600               -
+                    /type=$any                   -
+                    /prompt="Identifier"
+        qualifier   value/id=601/nonegatable     -
+                    /type=$any
+        qualifier   attributes/id=602/nonegatable -
+                    /type=$any/list
+
+    ! REMOVE/IDENTIFIER name: the identifier and its holder records.
+    syntax remove_identifier
+        parameter   id_name/id=610               -
+                    /type=$any                   -
+                    /prompt="Identifier"
+
+    ! RENAME/IDENTIFIER old new.
+    syntax rename_identifier
+        parameter   old/id=620                   -
+                    /type=$any                   -
+                    /prompt="Identifier"
+        parameter   new/id=621                   -
+                    /type=$any                   -
+                    /prompt="New identifier"
+
+    ! MODIFY/IDENTIFIER name [/VALUE=...] [/ATTRIBUTES=(...)] [/NAME=new].
+    syntax modify_identifier
+        parameter   id_name/id=630               -
+                    /type=$any                   -
+                    /prompt="Identifier"
+        qualifier   value/id=631/nonegatable     -
+                    /type=$any
+        qualifier   attributes/id=632/nonegatable -
+                    /type=$any/list
+        qualifier   name/id=633/nonegatable      -
+                    /type=$any
+
+    ! GRANT/IDENTIFIER name holder [/ATTRIBUTES=(...)], REVOKE/IDENTIFIER
+    ! name holder: a holder record of the holder's UIC, which the holder,
+    ! a UIC identifier's name, gives.
+    syntax grant_identifier
+        parameter   id_name/id=640               -
+                    /type=$any                   -
+                    /prompt="Identifier"
+        parameter   holder/id=641                -
+                    /type=$any                   -
+                    /prompt="Holder"
+        qualifier   attributes/id=642/nonegatable -
+                    /type=$any/list
+    syntax revoke_identifier
+        parameter   id_name/id=650               -
+                    /type=$any                   -
+                    /prompt="Identifier"
+        parameter   holder/id=651                -
+                    /type=$any                   -
+                    /prompt="Holder"
+
+    ! SHOW/IDENTIFIER [name] [/VALUE=...] [/FULL], LIST/IDENTIFIER the same
+    ! into RIGHTSLIST.LIS; SHOW/RIGHTS name and LIST/RIGHTS name, what a UIC
+    ! identifier's UIC holds.
+    syntax show_identifier
+        parameter   id_name/id=660               -
+                    /type=$any
+        qualifier   full/id=661
+        qualifier   value/id=662/nonegatable     -
+                    /type=$any
+    syntax show_rights
+        parameter   id_name/id=670               -
+                    /type=$any
+    syntax list_identifier
+        parameter   id_name/id=680               -
+                    /type=$any
+        qualifier   full/id=681
+        qualifier   value/id=682/nonegatable     -
+                    /type=$any
+    syntax list_rights
+        parameter   id_name/id=690               -
+                    /type=$any
+
+    ! SHOW username [/BRIEF | /FULL]: the accounts the username matches (%
+    ! and * wildcards), in username order.
+    verb show/id=15
+        parameter   username/id=16               -
+                    /type=$any                   -
+                    /prompt="Username"
+        qualifier   brief/id=17
+        qualifier   full/id=18
+        qualifier   identifier/syntax=show_identifier
+        qualifier   rights/syntax=show_rights
+
+    ! LIST [username] [/BRIEF | /FULL]: SHOW's report, of every account by
+    ! default, into SYSUAF.LIS in the default directory.
+    verb list/id=19
+        parameter   username/id=20               -
+                    /type=$any
+        qualifier   brief/id=21
+        qualifier   full/id=22
+        qualifier   identifier/syntax=list_identifier
+        qualifier   rights/syntax=list_rights
+
+    ! GRANT and REVOKE have only their /IDENTIFIER forms.
+    verb grant/id=23
+        qualifier   identifier/syntax=grant_identifier
+    verb revoke/id=24
+        qualifier   identifier/syntax=revoke_identifier
+
+    ! CREATE/RIGHTS makes the rights database, which govax's file always
+    ! has: it is accepted and does nothing.
+    verb create/id=25
+        qualifier   rights/id=26
 
     ! EXIT ends a session at the UAF> prompt.
     verb exit/id=1
@@ -95,6 +212,7 @@ grammar authorize
                     /type=$any
         qualifier   wsquota/id=132/nonegatable   -
                     /type=$any
+        qualifier   identifier/syntax=add_identifier
 
     ! COPY old new [/qualifiers]: a new account, a copy of old's record.
     verb copy/id=4
@@ -243,6 +361,7 @@ grammar authorize
                     /type=$any
         qualifier   wsquota/id=332/nonegatable   -
                     /type=$any
+        qualifier   identifier/syntax=modify_identifier
 
     ! DEFAULT [/qualifiers] is MODIFY DEFAULT: the record ADD copies.
     verb default/id=9
@@ -318,6 +437,7 @@ grammar authorize
         parameter   username/id=11               -
                     /type=$any                   -
                     /prompt="Username"
+        qualifier   identifier/syntax=remove_identifier
 
     ! RENAME old new: the account's username, and its UIC identifier's.
     verb rename/id=12
@@ -327,3 +447,4 @@ grammar authorize
         parameter   new/id=14                    -
                     /type=$any                   -
                     /prompt="New username"
+        qualifier   identifier/syntax=rename_identifier

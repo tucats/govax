@@ -95,6 +95,10 @@ func Parse(data []byte) (*File, error) {
 		f.Identifiers = []Identifier{}
 	}
 
+	if err := f.migrate(); err != nil {
+		return nil, err
+	}
+
 	if err := f.Check(); err != nil {
 		return nil, err
 	}

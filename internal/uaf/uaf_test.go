@@ -52,7 +52,8 @@ func TestDefault(t *testing.T) {
 // the same, and checks the text uses names.
 func TestRoundTrip(t *testing.T) {
 	f := Default()
-	team := Identifier{Name: "PROJECTX", Value: f.NextGeneral(), Attributes: mustAttr(t, "RESOURCE")}
+	team := Identifier{Name: "PROJECTX", Value: f.NextGeneral(), Attributes: mustAttr(t, "RESOURCE"),
+		Holders: []Holder{{UIC: NewUIC(0o300, 0o10), Attributes: mustAttr(t, "RESOURCE")}}}
 	f.Identifiers = append(f.Identifiers, team)
 
 	r := DefaultRecord()
@@ -60,7 +61,6 @@ func TestRoundTrip(t *testing.T) {
 	r.UIC = NewUIC(0o300, 0o10)
 	r.Flags = 0
 	r.LastInteractive = time.Date(2026, 11, 15, 10, 30, 0, 0, time.UTC)
-	r.Identifiers = []Held{{Name: "PROJECTX", Attributes: mustAttr(t, "RESOURCE")}, {Name: "%X80020001"}}
 	f.Put(r)
 
 	data, err := f.Marshal()
@@ -69,7 +69,7 @@ func TestRoundTrip(t *testing.T) {
 	}
 
 	text := string(data)
-	for _, want := range []string{`"uic": "[300,10]"`, `"ALL"`, `"value": "%X80010000"`, `"RESOURCE"`, `"DISUSER"`, `"TMPMBX"`, `"version": 1`} {
+	for _, want := range []string{`"holders"`, `"uic": "[300,10]"`, `"ALL"`, `"value": "%X80010000"`, `"RESOURCE"`, `"DISUSER"`, `"TMPMBX"`, `"version": 1`} {
 		if !strings.Contains(text, want) {
 			t.Errorf("file lacks %s:\n%s", want, text)
 		}
@@ -90,8 +90,75 @@ func TestRoundTrip(t *testing.T) {
 	}
 
 	smith, _ := back.Find("SMITH")
-	if v, ok := back.HeldValue(smith.Identifiers[1]); !ok || v != 0x80020001 {
-		t.Errorf("held by value = %s, %v", v, ok)
+	if held := back.HeldBy(smith.UIC); len(held) != 1 || held[0].Identifier.Name != "PROJECTX" || held[0].Attributes != mustAttr(t, "RESOURCE") {
+		t.Errorf("SMITH holds %+v", held)
+	}
+}
+
+// TestLegacyHolders reads a file written before holders moved to the
+// identifiers: each account's list becomes holder records by its UIC, by
+// an identifier's name or value, and is gone when the file is written.
+func TestLegacyHolders(t *testing.T) {
+	f := Default()
+	f.Identifiers = append(f.Identifiers, Identifier{Name: "PROJX", Value: FirstGeneral}, Identifier{Name: "PROJY", Value: FirstGeneral + 1})
+	r := DefaultRecord()
+	r.Username, r.UIC = "SMITH", NewUIC(0o300, 1)
+	r.Legacy = []Held{{Name: "PROJX"}, {Name: "%X80010001", Attributes: mustAttr(t, "RESOURCE")}}
+	f.Put(r)
+
+	data, err := f.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	back, err := Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	held := back.HeldBy(NewUIC(0o300, 1))
+	if len(held) != 2 || held[0].Identifier.Name != "PROJX" || held[1].Identifier.Name != "PROJY" || held[1].Attributes != mustAttr(t, "RESOURCE") {
+		t.Errorf("SMITH holds %+v", held)
+	}
+
+	again, _ := back.Marshal()
+	if strings.Contains(string(again), `"identifiers": [
+        {`) || strings.Count(string(again), `"identifiers"`) != 1 {
+		t.Errorf("an account's list was written:\n%s", again)
+	}
+
+	r.Legacy = []Held{{Name: "NOSUCH"}}
+	f.Put(r)
+	data, _ = f.Marshal()
+
+	if _, err := Parse(data); err == nil || !strings.Contains(err.Error(), "NOSUCH") {
+		t.Errorf("an unknown identifier held: %v", err)
+	}
+}
+
+// TestHolders: a UIC's holder records move with it and go with it.
+func TestHolders(t *testing.T) {
+	f := Default()
+	a, b := NewUIC(0o300, 1), NewUIC(0o300, 2)
+	f.Identifiers = append(f.Identifiers, Identifier{Name: "PROJX", Value: FirstGeneral, Holders: []Holder{{UIC: a}, {UIC: b}}})
+
+	f.MoveHolder(a, NewUIC(0o300, 3))
+
+	if len(f.HeldBy(a)) != 0 || len(f.HeldBy(NewUIC(0o300, 3))) != 1 {
+		t.Error("MoveHolder")
+	}
+
+	f.DropHolder(b)
+
+	if id, _ := f.IdentifierNamed("PROJX"); len(id.Holders) != 1 || id.Holders[0].UIC != NewUIC(0o300, 3) {
+		t.Errorf("DropHolder left %+v", id.Holders)
+	}
+
+	id, _ := f.IdentifierNamed("PROJX")
+	id.Holders = append(id.Holders, id.Holders[0])
+
+	if err := f.Check(); err == nil {
+		t.Error("a holder twice passed Check")
 	}
 }
 
@@ -125,7 +192,8 @@ func TestParseErrors(t *testing.T) {
 		{"username", `"username": "DEFAULT"`, `"username": "BAD-NAME"`, "can't be a username"},
 		{"twice", `"username": "DEFAULT"`, `"username": "SYSTEM"`, "twice"},
 		{"version", `"version": 1`, `"version": 2`, "version 2"},
-		{"held", `"identifiers": []`, `"identifiers": [{"name": "NOSUCHID"}]`, "no identifier"},
+		{"held", `"password": ""`, `"password": "", "identifiers": [{"name": "NOSUCHID"}]`, "no identifier"},
+		{"holder", `"value": "%X00010004"`, `"value": "%X00010004", "holders": [{"uic": "[1,4]"}, {"uic": "[1,4]"}]`, "twice"},
 	}
 
 	for _, c := range cases {

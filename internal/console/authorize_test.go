@@ -92,3 +92,45 @@ func TestAuthorizeNeedsAccess(t *testing.T) {
 		t.Errorf("got\n%s", got)
 	}
 }
+
+// TestAuthorizeListAndRights: LIST writes SYSUAF.LIS and RIGHTSLIST.LIS in
+// the default directory, a volume's here, and an identifier granted to an
+// account's UIC is among the rights its login gives (Decision 11).
+func TestAuthorizeListAndRights(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA1:")
+
+	for _, line := range []string{
+		"SET DEFAULT DUA1:[000000]",
+		"AUTHORIZE ADD SMITH/UIC=[200,1]/OWNER=\"JOE SMITH\"/FLAGS=NODISUSER",
+		"AUTHORIZE ADD/IDENTIFIER PROJX",
+		"AUTHORIZE GRANT/IDENTIFIER PROJX SMITH",
+		"AUTHORIZE LIST SMITH",
+		"AUTHORIZE LIST/RIGHTS SMITH",
+	} {
+		mustDispatch(t, d, line)
+	}
+
+	buf.Reset()
+	mustDispatch(t, d, "TYPE SYSUAF.LIS")
+	mustDispatch(t, d, "TYPE RIGHTSLIST.LIS")
+
+	want := `       Owner         Username           UIC       Account  Privs Pri Directory
+
+JOE SMITH            SMITH           [200,1]               Normal  4 [USER]
+Identifier                         Value           Attributes
+  PROJX                            %X80010000      
+`
+	if got := buf.String(); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	l, err := c.RTL.System.BeginLogin("SMITH", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(l.Rights) != 1 || l.Rights[0].Value != uaf.FirstGeneral {
+		t.Errorf("SMITH's login holds %+v", l.Rights)
+	}
+}

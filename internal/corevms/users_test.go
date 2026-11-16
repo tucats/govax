@@ -22,6 +22,14 @@ func TestUsers(t *testing.T) {
 
 	team := security.Identifier{Value: 0x80010001}
 
+	if status := s.AddUser(UserAccount{Name: "prot93c", UIC: 0x00C00001, Rights: []security.Identifier{team}}); status != ssNoSuchID {
+		t.Errorf("a right no identifier has: %#x", status)
+	}
+
+	if status := s.AddIdentifier("PROT93_TEAM", team.Value, 0); status != ssNormal {
+		t.Fatalf("AddIdentifier: %#x", status)
+	}
+
 	if status := s.AddUser(UserAccount{Name: "prot93c", UIC: 0x00C00001, Privileges: security.PrivSYSPRV, Rights: []security.Identifier{team}}); status != ssNormal {
 		t.Fatalf("AddUser: %#x", status)
 	}
@@ -92,7 +100,7 @@ func TestAuthorizationFile(t *testing.T) {
 	}
 
 	smith, _ := f.Find("SMITH")
-	if smith.Identifiers[0].Name != "TEAM" || smith.Flags&uaf.FlagDISUSER != 0 || smith.Quotas.PRCLM != 2 {
+	if held := f.HeldBy(smith.UIC); len(held) != 1 || held[0].Identifier.Name != "TEAM" || smith.Flags&uaf.FlagDISUSER != 0 || smith.Quotas.PRCLM != 2 {
 		t.Errorf("SMITH's record %+v", smith)
 	}
 

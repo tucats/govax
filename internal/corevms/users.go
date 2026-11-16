@@ -1,6 +1,7 @@
 package corevms
 
 import (
+	"errors"
 	"slices"
 	"strings"
 
@@ -42,8 +43,10 @@ type UserAccount struct {
 // gets u's in place of its own. As AUTHORIZE's ADD does, it adds a UIC
 // identifier named for the account, unless the name or the UIC already
 // has one. A name that can't be a username (1 to 12
-// letters, digits, "$", and "_") is SS$_IVIDENT. An identifier the file
-// doesn't name is held by its value.
+// letters, digits, "$", and "_") is SS$_IVIDENT, and a right whose value
+// no identifier in the file has SS$_NOSUCHID. Rights are holder records
+// of the account's UIC, so every account with the UIC holds them, as on
+// VMS; the UIC's old holder records are dropped first.
 func (s *System) AddUser(u UserAccount) uint32 {
 	name := strings.ToUpper(strings.TrimSpace(u.Name))
 	if !uaf.ValidUsername(name) {
@@ -59,21 +62,21 @@ func (s *System) AddUser(u UserAccount) uint32 {
 			}
 
 			def.Username, def.Flags = name, def.Flags&^uaf.FlagDISUSER
-			def.Identifiers = slices.Clone(def.Identifiers)
 			f.Accounts = append(f.Accounts, def)
 			r = &f.Accounts[len(f.Accounts)-1]
 		}
 
+		f.DropHolder(r.UIC)
 		r.UIC, r.Privileges = uaf.UIC(u.UIC), uaf.Privileges(u.Privileges)
-		r.Identifiers = []uaf.Held{}
+		f.DropHolder(r.UIC)
 
 		for _, id := range u.Rights {
-			held := uaf.Held{Name: uaf.IdentifierValue(id.Value).String(), Attributes: uaf.Attributes(id.Attributes)}
-			if named, ok := f.IdentifierWithValue(uaf.IdentifierValue(id.Value)); ok {
-				held.Name = named.Name
+			named, ok := f.IdentifierWithValue(uaf.IdentifierValue(id.Value))
+			if !ok {
+				return errNoSuchRight
 			}
 
-			r.Identifiers = append(r.Identifiers, held)
+			named.Holders = append(named.Holders, uaf.Holder{UIC: r.UIC, Attributes: uaf.Attributes(id.Attributes)})
 		}
 
 		_, named := f.IdentifierNamed(name)
@@ -85,12 +88,19 @@ func (s *System) AddUser(u UserAccount) uint32 {
 
 		return nil
 	})
+	if errors.Is(err, errNoSuchRight) {
+		return ssNoSuchID
+	}
+
 	if err != nil {
 		return vmsdef.Symbols["SS$_IVIDENT"]
 	}
 
 	return ssNormal
 }
+
+// errNoSuchRight is AddUser's right whose value no identifier has.
+var errNoSuchRight = errors.New("no identifier has the value")
 
 // User returns the account called name, in any case and with trailing
 // blanks (VMS 7.1's $CHECK_ACCESS took "prot93b" and "PROT93B   ", the
@@ -111,18 +121,22 @@ func (s *System) User(name string) (UserAccount, bool) {
 	return UserAccount{}, false
 }
 
-// userAccount is the UserAccount of f's record r: the identifiers it
-// holds by value, any f can't name left out.
+// userAccount is the UserAccount of f's record r: the identifiers its
+// UIC holds, by value.
 func userAccount(f *uaf.File, r *uaf.Record) UserAccount {
-	u := UserAccount{Name: r.Username, UIC: uint32(r.UIC), Privileges: uint64(r.Privileges)}
+	return UserAccount{Name: r.Username, UIC: uint32(r.UIC), Privileges: uint64(r.Privileges), Rights: heldRights(f, r.UIC)}
+}
 
-	for _, h := range r.Identifiers {
-		if v, ok := f.HeldValue(h); ok {
-			u.Rights = append(u.Rights, security.Identifier{Value: uint32(v), Attributes: uint32(h.Attributes)})
-		}
+// heldRights are the identifiers uic holds in f, with the attributes of
+// its holder records.
+func heldRights(f *uaf.File, uic uaf.UIC) []security.Identifier {
+	var rights []security.Identifier
+
+	for _, h := range f.HeldBy(uic) {
+		rights = append(rights, security.Identifier{Value: uint32(h.Identifier.Value), Attributes: uint32(h.Attributes)})
 	}
 
-	return u
+	return rights
 }
 
 // AccountCredentials are what an access check on the account's behalf
