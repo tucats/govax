@@ -484,8 +484,8 @@ Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
 2. **The probe**: `testdata/bat98`, as in Part D, written and rehearsed
-   where govax can; run on the VAX by the author; A.3 answered (as A.4)
-   and Part B adjusted.
+   where govax can (written 2026-11-16; waiting for the VAX run); run on
+   the VAX by the author; A.3 answered (as A.4) and Part B adjusted.
 3. **Definitions** (Decision 9): `SJC$_`, `QUI$_`, `JBC$_`, and the
    flags in `vmsdef` from the probe's decoded objects; the JBC and QMAN
    messages; `$SJCDEF`, `$QUIDEF`, and the service macros in bootdata.
@@ -526,49 +526,67 @@ Each is one commit, with tests, stopping for review.
 ## Part D — the probe (subtask 2)
 
 `testdata/bat98/`, on an exchange volume as the earlier probes were;
-`gen.go` writes every file. It uses queues of its own, BAT98_A and
-BAT98_B, made and deleted by the procedures; it reads SYS$BATCH but
-never changes it, and needs the queue manager running (the README says
-how to check, as `testdata/uaf95`'s does).
+`gen.go` writes every file but the README and `decode.go`, and the
+README has the run's steps. It works on queues of its own (`BAT98_A`,
+`BAT98_B`, `BAT98_P`, `BAT98_D1` to `BAT98_D13`, and a few a case makes
+and deletes), never changes SYS$BATCH or any other of the VAX's queues,
+and needs the queue manager running. Every wait is bounded: a job SYSTEM
+waits for ends by itself, and a wait for a job to start looks for a
+marker file the job writes, a limited number of times.
 
 - **Accounts.** `bat98acct.com` and `bat98drop.com` (as Phase 95's), run
-  by SYSTEM before and after: BAT98 `[200,10]` (TMPMBX and NETMBX,
-  a LOGIN.COM that records what it sees), BAT98O `[200,11]` (also
-  authorized and defaulted OPER), and BAT98W `[300,10]` (another group,
-  for the G and W categories). The README gives each command, so the
-  author can also make them by hand.
-- **`bat98.com`**, SYSTEM's run: INITIALIZE/QUEUE with each attribute,
-  SHOW QUEUE in each form, START, STOP (`/NEXT`, `/RESET`), SET QUEUE,
-  DELETE/QUEUE of a queue with jobs and of an empty one, SUBMIT with
-  each qualifier (Decision 10's list), `$ENTRY` and `$STATUS` after each,
-  SHOW ENTRY, SET ENTRY, DELETE/ENTRY, SYNCHRONIZE, and each error
-  (a missing queue, a stopped queue, a missing entry, a bad
-  `/PARAMETERS`, a ninth parameter, a past `/AFTER`).
-- **`bat98p.com`**, the protection matrix, run as each account (by
-  SUBMIT/USER from SYSTEM, its log the result, and by hand at the
-  terminal): every command against BAT98_A with the default protection,
-  then with SET SECURITY/CLASS=QUEUE giving and taking each access type
-  and an ACL entry, each with the privileges turned on and off one by
-  one (OPER, ALTPRI, CMKRNL, SYSNAM, BYPASS, SYSPRV, GRPPRV, READALL), so
-  each refusal's message is seen; SUBMIT/USER without CMKRNL; DELETE/ENTRY
-  of one's own job and another's.
-- **`bat98j.com`**, run as a batch job by each account: everything A.3, 3
-  lists (`F$GETJPI` of every item, SHOW PROCESS/ALL, SHOW LOGICAL/FULL
-  of the SYS$ names and the job and process tables, `F$ENVIRONMENT`,
-  `F$MODE`, P1 to P8, `F$GETQUI` of its own entry); several files in one
-  job, the second ending with an error; EXIT with a status; a job that
-  runs past `/CPUTIME`; a job aborted by STOP/QUEUE/ENTRY and one by
-  DELETE/ENTRY while it runs (each log's tail); `/LOG_FILE` in each form
-  and its default; `/KEEP` and `/PRINTER` combinations.
-- **`bat98q.mar`** (and `gen.go`'s `def_sjc.mar`, `def_qui.mar`,
-  `def_jbc.mar`, `GLOBAL`, values only, with `decode.go` making
-  `defined.txt`): `$SNDJBC` and `$GETQUI` called directly, each function
-  and the items Decision 1 keeps, their statuses and IOSBs, wildcard
-  contexts, and the JBC and QMAN messages by `$GETMSG`.
-- **By hand** (the README's table): `/NOTIFY` at a terminal, SYNCHRONIZE
-  interrupted by Ctrl/Y, and, if the author is willing, a reboot of the
-  simh VAX with a `/RESTART` job and a plain one executing, to see what
-  each becomes (Decision 11).
+  by SYSTEM before and after: BAT98 `[200,10]` (TMPMBX and NETMBX; holds
+  the identifier BAT98_ID), BAT98O `[200,11]` (authorized for every
+  privilege, TMPMBX and NETMBX by default, so the matrix can turn each
+  on), and BAT98W `[300,10]` (another group), each with a home and a
+  LOGIN.COM that says when it ran. Their AUTHORIZE commands are govax's
+  as well as VMS's (no `/NOPWDEXPIRED`: nothing logs in with a password),
+  so the later oracle tests can make the same accounts.
+- **`bat98.com`**, SYSTEM's run, 387 cases in sections: the queue
+  commands with each attribute and error; SUBMIT's qualifiers on a
+  stopped queue (each `/AFTER` form, `/PARAMETERS` with nine and with a
+  260-character one, `/USER`, `/PRINTER=missing`, several files with `,`
+  and `+`, a wildcard, a missing file) and SHOW, SET, and DELETE/ENTRY of
+  the jobs; running jobs (several files ending with each severity and an
+  unknown command, `/NOTIFY`, `/CPUTIME`); endings (STOP/QUEUE/ENTRY,
+  DELETE/ENTRY, STOP of the process, STOP/QUEUE, `/NEXT`, `/RESET`, SET
+  ENTRY of an executing job); the job limit; retained jobs; SYNCHRONIZE;
+  `/DELETE`; `/AFTER` on a running queue; where the log goes, in twelve
+  forms (three more with the default `/PRINTER`, only when the VAX has no
+  SYS$PRINT); the order jobs run in, by priority and time; `/RESTART`
+  with STOP/QUEUE/REQUEUE (and `/HOLD`), so SET RESTART_VALUE,
+  `BATCH$RESTART`, and `$RESTART` show without a reboot; BAT98J.COM as
+  SYSTEM and each account; the services; the protection matrix.
+- **`bat98p.com`**, the protection matrix, run by SUBMIT/USER as each
+  account against `BAT98_P` in six states (A.3, 2): owned by `[1,4]` with
+  the default protection; owned by `[200,10]` (BAT98's) with the default,
+  with none, with W:M, with none and two ACL entries (BAT98_ID and
+  `[300,10]`), and with (S:M,O:R,G:D,W). Each pass tries 31 commands:
+  SHOW QUEUE and SHOW ENTRY of SYSTEM's held and retained jobs, F$GETQUI,
+  SUBMIT of its own (and with `/PRIORITY=200` and `/USER`), SET ENTRY and
+  DELETE/ENTRY of its own and SYSTEM's, SYNCHRONIZE, STOP/QUEUE/ENTRY,
+  STOP and START, SET QUEUE, INITIALIZE/QUEUE of a new queue and of its
+  own stopped queue `BAT98_Dn`, SET and SHOW SECURITY on it, and
+  DELETE/QUEUE of it. BAT98O runs 13 passes: none, then OPER, ALTPRI,
+  CMKRNL, CMKRNL with SYSPRV, SYSNAM, BYPASS, SYSPRV, GRPPRV, READALL,
+  SECURITY, WORLD, and GROUP enabled.
+- **`bat98j.com`**, a batch job's view of itself (A.3, 3): P1 to P8,
+  F$MODE, verify, `$RESTART`, every F$ENVIRONMENT and F$GETJPI item,
+  F$GETQUI of its own job and queue, the SYS$ names, the job and process
+  tables, SHOW PROCESS/ALL, /PRIVILEGES, /RIGHTS, /QUOTAS, the symbols,
+  and a line to SYS$ERROR.
+- **`bat98q.mar`** (and `def_sjc.mar`, `def_qui.mar`, `def_jbc.mar`,
+  `GLOBAL`, values only, with `decode.go` making `defined.txt`): 59 calls
+  of `$SNDJBCW` and `$GETQUIW`, each showing R0, the IOSB, and every
+  output item's length and bytes (queue and job functions, wildcard and
+  nested contexts, CREATE_JOB/ADD_FILE/CLOSE_JOB, a short buffer, bad
+  function and item codes, no IOSB), then the JBC facility's messages by
+  `$GETMSG`. It uses only codes VMS 5.0's System Services manual already
+  had, so no name 7.1 lacks can stop its assembly.
+- **By hand** (the README's step 4): SYNCHRONIZE interrupted by Ctrl/Y,
+  and, if the author is willing, a reboot of the simh VAX with a
+  `/RESTART` job and a plain one executing, to see what each becomes
+  (Decision 11). `/NOTIFY`'s messages reach the terminal during the run.
 
 ## The review
 
@@ -646,3 +664,21 @@ queues is a future phase.
   govax is asked to end with jobs executing (ending them without asking
   when there is no terminal); Decision 1 notes VMS's PRINT as a later
   phase.
+- **2026-11-16** Subtask 2, written: `testdata/bat98` (Part D, now
+  rewritten to match what was made) and `TestBat98Probe`
+  (`internal/console/bat98_test.go`), which runs BAT98J.COM and
+  BAT98P.COM at govax's terminal and BAT98.COM to its end with every
+  queue command a message, checking that the probe's own DCL is right.
+  The rehearsal found three mistakes of the probe's own, fixed before
+  any VAX run: waits for a job to start took a minute of real time each
+  when the SUBMIT made no entry (each wait now takes the entry, and
+  returns at once without one); a symbol was left undefined when
+  F$GETQUI failed; and `/NOPWDEXPIRED` and `/PWDLIFETIME`, which govax's
+  AUTHORIZE doesn't keep, stopped the accounts being made on govax
+  (dropped: nothing logs in with a password). BAT98Q.MAR was assembled
+  and linked by govax with stand-in values for the definition macros,
+  which govax lacks until subtask 3; it uses only codes the 5.0 manual
+  has. F$GETQUI's DISPLAY_ENTRY sees only the caller's own jobs (the
+  DCL Dictionary), so SYSTEM can't poll a `/USER` job by it: the probe's
+  waits use marker files instead. The exchange volume is built
+  (`testdata/disks/bat98-exchange.dsk`); the VAX run is the author's.

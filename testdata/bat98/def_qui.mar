@@ -1,0 +1,4 @@
+	.TITLE	DEF_QUI	$QUIDEF's values, in the object's global symbols
+; Written by testdata/bat98/gen.go.
+	$QUIDEF	GLOBAL
+	.END
