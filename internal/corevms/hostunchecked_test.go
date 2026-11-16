@@ -173,5 +173,7 @@ var hostAccessReasons = map[string]string{
 	"hostlock/hostlock.go:Wait":                    "lock files beside the system's own files",
 	"respath/respath.go:Resolver.search":           "--path directories; callers ask MayUseHost for the current directory (ReadConfigured)",
 	"rms/pagefile.go:openHostPageFile":             "the page file, vax.sysgen.paging.file",
+	"jobqueue/file.go:Load":                        "the queue database, vax.queue.file",
+	"jobqueue/file.go:LockManager":                 "the queue manager's lock beside the queue database",
 	"uaf/file.go:Load":                             "the authorization file, vax.authorization.file",
 }
