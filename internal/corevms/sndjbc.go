@@ -1,7 +1,12 @@
 package corevms
 
 import (
+	"errors"
+	"slices"
+	"time"
+
 	"github.com/tucats/govax/internal/jobqueue"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -20,11 +25,14 @@ import (
 // which is SS$_BADPARAM in R0 and the IOSB alike.
 //
 // The functions are a table, sjcFunctions, a function code to its
-// routine; subtask 6 has the queue manager's and the queues'. A function
-// VMS has that isn't in the table (the jobs' until subtask 7, and the
-// forms, characteristics, and printers Decision 1 leaves out) is
+// routine: the queue manager's and the queues' (subtask 6), and the jobs'
+// (subtask 7; ABORT_JOB and SYNCHRONIZE_JOB, which need a job that runs,
+// are subtask 8's). A function VMS has that isn't in the table (those,
+// and the forms, characteristics, and printers Decision 1 leaves out) is
 // JBC$_NOTSUPPORTED; so is an item VMS has that the function doesn't
-// take.
+// take. The queue functions read their items from sjcItems, the job
+// functions from sjcJobItems: an item such as SJC$_WSDEFAULT means a
+// queue's attribute to one and a job's limit to the other.
 
 // sjcRequest is a $SNDJBC request's items, as read from its item list.
 type sjcRequest struct {
@@ -35,6 +43,26 @@ type sjcRequest struct {
 	directory string
 	sets      []QueueSet
 	status    uint32 // a refusal found while reading: NOTSUPPORTED, INVPARLEN
+
+	// The job functions': the job's fields, an entry number (hasEntry),
+	// hold or release (NO_HOLD), a new /AFTER, the changes ALTER_JOB
+	// makes, and the output items, written when the function succeeds.
+	job        JobRequest
+	entry      int
+	hasEntry   bool
+	noHold     bool
+	after      *time.Time
+	jobSets    []func(*jobqueue.Job)
+	outputs    []sjcOutput
+	r0         uint32 // R0 when it isn't SS$_NORMAL (a file RMS couldn't open)
+	priority   bool   // a PRIORITY item was given
+	parameters bool   // a PARAMETER_n item was given
+}
+
+// sjcOutput is an output item: where to write it, and which.
+type sjcOutput struct {
+	entry itemListEntry
+	code  uint16
 }
 
 // set is the request's attribute changes as one.
@@ -99,6 +127,18 @@ var sjcFunctions = map[uint16]sjcFunction{
 	sjcCode("DELETE_QUEUE"): queueFunction(func(env *Environment, r *sjcRequest) error {
 		return env.DeleteQueue(r.queue)
 	}),
+	sjcCode("ENTER_FILE"): sjcEnterFile,
+	sjcCode("CREATE_JOB"): sjcCreateJob,
+	sjcCode("ADD_FILE"):   sjcAddFile,
+	sjcCode("CLOSE_JOB"):  sjcCloseJob,
+	sjcCode("ALTER_JOB"):  sjcAlterJob,
+	sjcCode("DELETE_JOB"): sjcDeleteJob,
+}
+
+// sjcJobFunctions are the functions that read sjcJobItems.
+var sjcJobFunctions = map[uint16]bool{
+	sjcCode("ENTER_FILE"): true, sjcCode("CREATE_JOB"): true, sjcCode("ADD_FILE"): true,
+	sjcCode("CLOSE_JOB"): true, sjcCode("ALTER_JOB"): true, sjcCode("DELETE_JOB"): true,
 }
 
 // sjcStatus is an operation's error as the IOSB's status: JBC$_NORMAL
@@ -209,14 +249,454 @@ var sjcItems = map[uint16]func(env *Environment, e itemListEntry, r *sjcRequest)
 	sjcCode("NO_QUEUE_DESCRIPTION"): sjcFlag(func(q *jobqueue.Queue) { q.Description = "" }),
 }
 
+// jobItem makes a job item that changes the job ALTER_JOB changes, and
+// the job ENTER_FILE and CREATE_JOB make.
+func jobItem(apply func(r *JobRequest, j *jobqueue.Job, v uint32)) func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+	return func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+		v, st := env.itemNumber(e, 4)
+		if st != 0 {
+			return st
+		}
+
+		apply(&r.job, nil, uint32(v))
+		r.jobSets = append(r.jobSets, func(j *jobqueue.Job) { apply(nil, j, uint32(v)) })
+
+		return 0
+	}
+}
+
+// jobText makes a job item of a string.
+func jobText(apply func(r *JobRequest, j *jobqueue.Job, text string)) func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+	return func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+		data, st := env.itemBytes(e)
+		if st != 0 {
+			return st
+		}
+
+		text := string(data)
+		apply(&r.job, nil, text)
+		r.jobSets = append(r.jobSets, func(j *jobqueue.Job) { apply(nil, j, text) })
+
+		return 0
+	}
+}
+
+// jobFlag makes a job item with no value.
+func jobFlag(apply func(r *JobRequest, j *jobqueue.Job)) func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+	return func(_ *Environment, _ itemListEntry, r *sjcRequest) uint32 {
+		apply(&r.job, nil)
+		r.jobSets = append(r.jobSets, func(j *jobqueue.Job) { apply(nil, j) })
+
+		return 0
+	}
+}
+
+// either sets a field of whichever of r and j isn't nil.
+func either[T any](r *JobRequest, j *jobqueue.Job, ofRequest func(*JobRequest) *T, ofJob func(*jobqueue.Job) *T, v T) {
+	if r != nil {
+		*ofRequest(r) = v
+	}
+
+	if j != nil {
+		*ofJob(j) = v
+	}
+}
+
+// parameterItem is PARAMETER_n: the job's nth parameter, the list padded
+// with empty ones before it.
+func parameterItem(n int) func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+	set := func(list []string, text string) []string {
+		for len(list) < n {
+			list = append(list, "")
+		}
+
+		list[n-1] = text
+
+		return list
+	}
+
+	// The job's list is changed whole, by sjcAlterJob: VMS 7.1's ALTER_JOB
+	// with PARAMETER_2 alone left PARAMETER_1 empty (round 2's case 11).
+	return func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+		data, st := env.itemBytes(e)
+		if st != 0 {
+			return st
+		}
+
+		r.job.Parameters, r.parameters = set(r.job.Parameters, string(data)), true
+
+		return 0
+	}
+}
+
+// sjcJobItems are the items the job functions take.
+var sjcJobItems = func() map[uint16]func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+	m := map[uint16]func(env *Environment, e itemListEntry, r *sjcRequest) uint32{
+		sjcCode("QUEUE"): sjcItems[sjcCode("QUEUE")],
+		sjcCode("FILE_SPECIFICATION"): func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+			data, st := env.itemBytes(e)
+			r.job.Files = append(r.job.Files, string(data))
+
+			return st
+		},
+		sjcCode("ENTRY_NUMBER"): func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+			v, st := env.itemNumber(e, 4)
+			r.entry, r.hasEntry = signed(uint32(v)), true
+
+			return st
+		},
+		sjcCode("USERNAME"): func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+			data, st := env.itemBytes(e)
+			r.job.User = string(data)
+
+			return st
+		},
+		sjcCode("HOLD"):    func(_ *Environment, _ itemListEntry, r *sjcRequest) uint32 { r.job.Hold = true; return 0 },
+		sjcCode("NO_HOLD"): func(_ *Environment, _ itemListEntry, r *sjcRequest) uint32 { r.noHold = true; return 0 },
+		sjcCode("AFTER_TIME"): func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+			v, ok := env.loadQuad(e.BuffAddr)
+			if !ok {
+				return ssAccVio
+			}
+
+			t := goTime(v)
+			r.job.After, r.after = t, &t
+
+			return 0
+		},
+		sjcCode("NO_AFTER_TIME"): func(_ *Environment, _ itemListEntry, r *sjcRequest) uint32 {
+			r.after = &time.Time{}
+
+			return 0
+		},
+		sjcCode("PRIORITY"): func(env *Environment, e itemListEntry, r *sjcRequest) uint32 {
+			v, st := env.itemNumber(e, 4)
+			r.job.Priority, r.priority = signed(uint32(v)), true
+
+			return st
+		},
+		sjcCode("ENTRY_NUMBER_OUTPUT"): sjcOutputItem,
+		sjcCode("JOB_STATUS_OUTPUT"):   sjcOutputItem,
+		sjcCode("JOB_NAME"): jobText(func(r *JobRequest, j *jobqueue.Job, t string) {
+			either(r, j, func(r *JobRequest) *string { return &r.Name }, func(j *jobqueue.Job) *string { return &j.Name }, t)
+		}),
+		sjcCode("NOTE"): jobText(func(r *JobRequest, j *jobqueue.Job, t string) {
+			either(r, j, func(r *JobRequest) *string { return &r.Note }, func(j *jobqueue.Job) *string { return &j.Note }, t)
+		}),
+		sjcCode("NO_NOTE"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *string { return &r.Note }, func(j *jobqueue.Job) *string { return &j.Note }, "")
+		}),
+		sjcCode("LOG_SPECIFICATION"): jobText(func(r *JobRequest, j *jobqueue.Job, t string) {
+			either(r, j, func(r *JobRequest) *string { return &r.LogFile }, func(j *jobqueue.Job) *string { return &j.LogFile }, t)
+		}),
+		sjcCode("NO_LOG_SPECIFICATION"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.NoLog }, func(j *jobqueue.Job) *bool { return &j.NoLog }, true)
+		}),
+		sjcCode("LOG_SPOOL"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.NoPrinter }, func(j *jobqueue.Job) *bool { return &j.NoPrinter }, false)
+		}),
+		sjcCode("NO_LOG_SPOOL"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.NoPrinter }, func(j *jobqueue.Job) *bool { return &j.NoPrinter }, true)
+		}),
+		sjcCode("LOG_DELETE"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.NoKeep }, func(j *jobqueue.Job) *bool { return &j.NoKeep }, true)
+		}),
+		sjcCode("NO_LOG_DELETE"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.NoKeep }, func(j *jobqueue.Job) *bool { return &j.NoKeep }, false)
+		}),
+		sjcCode("NOTIFY"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.Notify }, func(j *jobqueue.Job) *bool { return &j.Notify }, true)
+		}),
+		sjcCode("NO_NOTIFY"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.Notify }, func(j *jobqueue.Job) *bool { return &j.Notify }, false)
+		}),
+		sjcCode("RESTART"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.Restart }, func(j *jobqueue.Job) *bool { return &j.Restart }, true)
+		}),
+		sjcCode("NO_RESTART"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.Restart }, func(j *jobqueue.Job) *bool { return &j.Restart }, false)
+		}),
+		sjcCode("DELETE_FILE"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.Delete }, func(j *jobqueue.Job) *bool { return &j.Delete }, true)
+		}),
+		sjcCode("NO_DELETE_FILE"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *bool { return &r.Delete }, func(j *jobqueue.Job) *bool { return &j.Delete }, false)
+		}),
+		sjcCode("CPU_LIMIT"): jobItem(func(r *JobRequest, j *jobqueue.Job, v uint32) {
+			either(r, j, func(r *JobRequest) *jobqueue.CPUTime { return &r.CPUTime },
+				func(j *jobqueue.Job) *jobqueue.CPUTime { return &j.CPUTime }, jobqueue.CPUTime(signed(v)))
+		}),
+		sjcCode("NO_CPU_LIMIT"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *jobqueue.CPUTime { return &r.CPUTime },
+				func(j *jobqueue.Job) *jobqueue.CPUTime { return &j.CPUTime }, 0)
+		}),
+		sjcCode("NO_PARAMETERS"): jobFlag(func(r *JobRequest, j *jobqueue.Job) {
+			either(r, j, func(r *JobRequest) *[]string { return &r.Parameters }, func(j *jobqueue.Job) *[]string { return &j.Parameters }, nil)
+		}),
+	}
+
+	for _, ws := range []struct {
+		name  string
+		field func(*JobRequest) *int
+		job   func(*jobqueue.Job) *int
+	}{
+		{"WSDEFAULT", func(r *JobRequest) *int { return &r.WSDefault }, func(j *jobqueue.Job) *int { return &j.WSDefault }},
+		{"WSQUOTA", func(r *JobRequest) *int { return &r.WSQuota }, func(j *jobqueue.Job) *int { return &j.WSQuota }},
+		{"WSEXTENT", func(r *JobRequest) *int { return &r.WSExtent }, func(j *jobqueue.Job) *int { return &j.WSExtent }},
+	} {
+		m[sjcCode(ws.name)] = jobItem(func(r *JobRequest, j *jobqueue.Job, v uint32) { either(r, j, ws.field, ws.job, signed(v)) })
+		m[sjcCode("NO_"+ws.name)] = jobFlag(func(r *JobRequest, j *jobqueue.Job) { either(r, j, ws.field, ws.job, 0) })
+	}
+
+	for n := 1; n <= jobqueue.MaxParameters; n++ {
+		m[sjcCode("PARAMETER_"+string(rune('0'+n)))] = parameterItem(n)
+	}
+
+	return m
+}()
+
+// sjcOutputItem records an output item, written when the function
+// succeeds. ENTRY_NUMBER_OUTPUT is a longword, whose buffer must be 4
+// bytes long (JBC$_INVPARLEN, VMS 7.1's answer to round 1's 256).
+func sjcOutputItem(_ *Environment, e itemListEntry, r *sjcRequest) uint32 {
+	if e.ItemCode == sjcCode("ENTRY_NUMBER_OUTPUT") && e.BuffLen != 4 && r.status == 0 {
+		r.status = jbcInvParLen
+	}
+
+	r.outputs = append(r.outputs, sjcOutput{entry: e, code: e.ItemCode})
+
+	return 0
+}
+
+// writeOutputs writes the job function's output items for job s: its
+// entry number, and SUBMIT's message as text, cut to the buffer (VMS
+// 7.1's "Job QJOB (queue BAT98_Q, entry 419) holding", round 2's case 6).
+func (env *Environment) writeOutputs(r *sjcRequest, s *Submitted) uint32 {
+	for _, o := range r.outputs {
+		var v itemValue
+
+		switch o.code {
+		case sjcCode("ENTRY_NUMBER_OUTPUT"):
+			v = itemLong(uint32(s.Job.Entry))
+		default:
+			v = itemString(s.Message()[0])
+		}
+
+		if st := env.storeItem(o.entry, v); st != 0 {
+			return st
+		}
+	}
+
+	return 0
+}
+
+// submitStatus is a job function's error as R0 and the IOSB's status: a
+// file RMS couldn't find or open is RMS's status in both (VMS 7.1's
+// RMS$_FNF, round 2's case 18); another refusal is sjcStatus's in the
+// IOSB, R0 SS$_NORMAL; a /USER account that isn't there or can't be read
+// is JBC$_INVPARVAL (unconfirmed: the probe named none to $SNDJBC).
+func submitStatus(err error) (r0, status uint32) {
+	var file *rms.DCLFileError
+	if errors.As(err, &file) {
+		return file.Status, file.Status
+	}
+
+	var user *JobUserError
+	if errors.As(err, &user) {
+		return ssNormal, jbcInvParVal
+	}
+
+	return ssNormal, sjcStatus(err)
+}
+
+// sjcSubmit enters r.job and writes the outputs.
+func (env *Environment) sjcSubmit(r *sjcRequest) (r0, status uint32) {
+	if !r.priority {
+		r.job.Priority = -1
+	}
+
+	r.job.Queue = r.queue
+
+	s, err := env.SubmitJob(r.job)
+	if err != nil {
+		return submitStatus(err)
+	}
+
+	if st := env.writeOutputs(r, &s); st != 0 {
+		return st, st
+	}
+
+	if s.PriorityLowered {
+		return ssNormal, jbcPrioSmall
+	}
+
+	return ssNormal, jbcNormal
+}
+
+// sjcEnterFile is ENTER_FILE: a job of the request's files, entered at
+// once. With no file it is JBC$_MISREQPAR (round 2's case 15).
+func sjcEnterFile(env *Environment, r *sjcRequest) uint32 {
+	if !r.hasQueue || len(r.job.Files) == 0 {
+		return jbcMisReqPar
+	}
+
+	r0, status := env.sjcSubmit(r)
+	r.r0 = r0
+
+	return status
+}
+
+// sjcCreateJob is CREATE_JOB: a job opened in the process, its files to
+// come by ADD_FILE, entered by CLOSE_JOB. Its entry number is the one the
+// job will have (round 2's case 44 gave one at CREATE_JOB): govax gives
+// it at CLOSE_JOB, and CREATE_JOB's ENTRY_NUMBER_OUTPUT is the number the
+// next job is expected to take (unconfirmed).
+func sjcCreateJob(env *Environment, r *sjcRequest) uint32 {
+	if !r.hasQueue {
+		return jbcMisReqPar
+	}
+
+	if st, err := env.managerHere(); err != nil || st != 0 {
+		return sjcStatus(queueResult(st, err))
+	}
+
+	d, err := jobqueue.Read(env.System.queues.path)
+	if err != nil {
+		return ssAbort
+	}
+
+	if d.Queue(queueName(r.queue)) == nil {
+		return jbcNoSuchQue
+	}
+
+	job := r.job
+	job.Queue = r.queue
+
+	if !r.priority {
+		job.Priority = -1
+	}
+
+	env.openJob = &job
+
+	s := Submitted{Job: jobqueue.Job{Entry: d.NextEntry, Name: job.Name, Queue: queueName(r.queue)}}
+	if st := env.writeOutputs(r, &s); st != 0 {
+		return st
+	}
+
+	return jbcNormal
+}
+
+// sjcAddFile is ADD_FILE: the request's files added to the open job
+// (JBC$_NOSUCHJOB with none open).
+func sjcAddFile(env *Environment, r *sjcRequest) uint32 {
+	if env.openJob == nil {
+		return jbcNoSuchJob
+	}
+
+	if len(r.job.Files) == 0 {
+		return jbcMisReqPar
+	}
+
+	env.openJob.Files = append(env.openJob.Files, r.job.Files...)
+
+	return jbcNormal
+}
+
+// sjcCloseJob is CLOSE_JOB: the open job entered (JBC$_NOSUCHJOB with
+// none open, round 2's case 49).
+func sjcCloseJob(env *Environment, r *sjcRequest) uint32 {
+	job := env.openJob
+	if job == nil {
+		return jbcNoSuchJob
+	}
+
+	env.openJob = nil
+
+	open := &sjcRequest{job: *job, outputs: r.outputs}
+
+	s, err := env.SubmitJob(open.job)
+	if err != nil {
+		r0, status := submitStatus(err)
+		r.r0 = r0
+
+		return status
+	}
+
+	if st := env.writeOutputs(open, &s); st != 0 {
+		return st
+	}
+
+	return jbcNormal
+}
+
+// sjcAlterJob is ALTER_JOB: the job ENTRY_NUMBER names (in QUEUE, if
+// given) changed by the request's job items, held by HOLD, released by
+// NO_HOLD (round 2's cases 10 and 12).
+func sjcAlterJob(env *Environment, r *sjcRequest) uint32 {
+	if !r.hasEntry {
+		return jbcMisReqPar
+	}
+
+	c := JobChange{Hold: r.job.Hold, Release: r.noHold, After: r.after, Priority: -1}
+
+	if r.priority {
+		c.Priority = r.job.Priority
+	}
+
+	if r.parameters {
+		params := r.job.Parameters
+		r.jobSets = append(r.jobSets, func(j *jobqueue.Job) { j.Parameters = slices.Clone(params) })
+	}
+
+	if len(r.jobSets) > 0 {
+		c.Set = func(j *jobqueue.Job) {
+			for _, set := range r.jobSets {
+				set(j)
+			}
+		}
+	}
+
+	queue := ""
+	if r.hasQueue {
+		queue = r.queue
+	}
+
+	lowered, err := env.AlterJob(r.entry, queue, c)
+	if err == nil && lowered {
+		return jbcPrioSmall
+	}
+
+	return sjcStatus(err)
+}
+
+// sjcDeleteJob is DELETE_JOB: the job ENTRY_NUMBER names (in QUEUE, if
+// given) deleted (round 2's cases 19, 42, 43, 50).
+func sjcDeleteJob(env *Environment, r *sjcRequest) uint32 {
+	if !r.hasEntry {
+		return jbcMisReqPar
+	}
+
+	queue := ""
+	if r.hasQueue {
+		queue = r.queue
+	}
+
+	return sjcStatus(env.DeleteJob(r.entry, queue))
+}
+
 // readSjcItems reads the item list at itmlst into r: SS$_BADPARAM for a
 // code past SJC$K_MAX_ITEM, or SS$_ACCVIO. An item VMS has that the queue
 // functions don't take leaves JBC$_NOTSUPPORTED in r.status, and a queue
 // name longer than 31 characters JBC$_INVPARLEN, as VMS 7.1 answered
 // (BAT98Q's case 23).
-func (env *Environment) readSjcItems(itmlst uint32, r *sjcRequest) uint32 {
+func (env *Environment) readSjcItems(itmlst uint32, function uint32, r *sjcRequest) uint32 {
 	if itmlst == 0 {
 		return 0
+	}
+
+	items := sjcItems
+	if sjcJobFunctions[uint16(function)] {
+		items = sjcJobItems
 	}
 
 	return env.walkItemList(itmlst, func(e itemListEntry) uint32 {
@@ -224,7 +704,7 @@ func (env *Environment) readSjcItems(itmlst uint32, r *sjcRequest) uint32 {
 			return ssBadParam
 		}
 
-		read, ok := sjcItems[e.ItemCode]
+		read, ok := items[e.ItemCode]
 		if !ok {
 			if r.status == 0 {
 				r.status = jbcNotSupported
@@ -265,7 +745,7 @@ func serviceSysSndjbc(env *Environment, argv []uint32) (uint32, error) {
 
 	var r sjcRequest
 
-	status := env.readSjcItems(itmlst, &r)
+	status := env.readSjcItems(itmlst, function, &r)
 
 	fn, ok := sjcFunctions[uint16(function)]
 
@@ -280,6 +760,10 @@ func serviceSysSndjbc(env *Environment, argv []uint32) (uint32, error) {
 		status = r.status
 	default:
 		status = fn(env, &r)
+
+		if r.r0 != 0 {
+			r0 = r.r0
+		}
 	}
 
 	if iosb != 0 {

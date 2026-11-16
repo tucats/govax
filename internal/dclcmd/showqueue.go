@@ -23,7 +23,8 @@ import (
 // order of name and its ACL, or, to a process that may not see its
 // security (corevms's QueueSecurityVisible), the attributes without
 // /OWNER and /PROTECTION and "Access to security information denied.".
-// Queues are separated by a blank line. The jobs in each are subtask 7's.
+// Queues are separated by a blank line, and each queue's jobs follow it
+// (jobs.go's showQueueJobs); /BRIEF leaves out the description.
 
 // showQueueWidth is the widest line /FULL's attributes make: VMS 7.1
 // wrapped a line of 120 characters before an attribute of 13 and kept one
@@ -37,6 +38,9 @@ type ShowQueueOptions struct {
 	Brief   bool
 	Summary bool
 	Batch   bool
+
+	// ByStatus is /BY_JOB_STATUS's statuses, nil for every job.
+	ByStatus map[jobqueue.JobStatus]bool
 }
 
 // ShowQueue is SHOW QUEUE [name]: the queues whose names match name
@@ -76,7 +80,7 @@ func (c *Context) showOneQueue(v corevms.QueueView, opts ShowQueueOptions) {
 
 	c.Printf("%s\n", head)
 
-	if q.Description != "" {
+	if q.Description != "" && !opts.Brief {
 		c.Printf("  <%s>\n", q.Description)
 	}
 
@@ -84,9 +88,15 @@ func (c *Context) showOneQueue(v corevms.QueueView, opts ShowQueueOptions) {
 		c.showQueueAttributes(v)
 	}
 
-	if opts.Summary && v.JobsCount == 0 {
-		c.Printf("\n    Job summary:  queue is empty\n")
+	if opts.Summary {
+		if v.JobsCount == 0 {
+			c.Printf("\n    Job summary:  queue is empty\n")
+		}
+
+		return
 	}
+
+	c.showQueueJobs(v.Jobs, opts)
 }
 
 // showQueueAttributes is /FULL's lines: the attributes, wrapped at

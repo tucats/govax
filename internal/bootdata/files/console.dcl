@@ -359,6 +359,8 @@ grammar console
         ! QUEUE (docs/planning/PHASE-98 - batch queues.md): batch queues,
         ! and with /MANAGER the queue manager.
         keyword         queue           /syntax=show_queue
+        ! ENTRY (Phase 98, subtask 7): jobs, by entry number or user.
+        keyword         entry           /syntax=show_entry
                 
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
@@ -610,6 +612,9 @@ grammar console
         qualifier   log/id=1102
         ! DELETE/QUEUE (Phase 98): a stopped queue and its jobs.
         qualifier   queue/id=1103/syntax=delete_queue
+        ! DELETE/ENTRY=(n,...) [queue] (Phase 98, subtask 7): jobs.
+        qualifier   entry/id=1104/syntax=delete_entry -
+                    /type=$string/list
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
@@ -1326,6 +1331,68 @@ grammar console
     syntax show_queue_manager/id=3099
         qualifier   full/id=3100
 
+    ! The job commands (docs/planning/PHASE-98 - batch queues.md, subtask
+    ! 7; internal/dclcmd/jobs.go): SUBMIT enters a job, SET ENTRY changes
+    ! one, DELETE/ENTRY deletes one, SHOW ENTRY shows them. SUBMIT's files
+    ! are a list, "," between jobs' files and "+" within one, which VMS
+    ! takes alike: every file is one job's.
+    verb submit/id=3110
+        parameter   files/id=3111               -
+                    /type=$string/list          -
+                    /prompt="File"
+        qualifier   queue/id=3112/type=$string
+        qualifier   after/id=3113/type=$string
+        qualifier   user/id=3114/type=$string
+        qualifier   parameters/id=3115/type=$string/list
+        qualifier   hold/id=3116
+        qualifier   log_file/id=3117/type=$string
+        qualifier   name/id=3118/type=$string
+        qualifier   keep/id=3119
+        qualifier   printer/id=3120/type=$string
+        qualifier   notify/id=3121
+        qualifier   priority/id=3122/type=$integer
+        qualifier   cputime/id=3123/type=$string
+        qualifier   wsdefault/id=3124/type=$integer
+        qualifier   wsquota/id=3125/type=$integer
+        qualifier   wsextent/id=3126/type=$integer
+        qualifier   restart/id=3127
+        qualifier   retain/id=3128/type=$string
+        qualifier   note/id=3129/type=$string
+        qualifier   identify/id=3130
+        qualifier   delete/id=3131
+
+    ! SET ENTRY n: a job's options. /REQUEUE moves a job not executing to
+    ! another queue.
+    syntax set_entry/id=3140
+        parameter   entry/id=3141               -
+                    /type=$string/list          -
+                    /prompt="Entry"
+        qualifier   hold/id=3142
+        qualifier   release/id=3143
+        qualifier   after/id=3144/type=$string
+        qualifier   parameters/id=3145/type=$string/list
+        qualifier   name/id=3146/type=$string
+        qualifier   priority/id=3147/type=$integer
+        qualifier   note/id=3148/type=$string
+        qualifier   log_file/id=3149/type=$string
+        qualifier   cputime/id=3150/type=$string
+        qualifier   requeue/id=3151/type=$string
+        disallow    hold and release
+
+    ! DELETE/ENTRY=(n,...) [queue]: the entries, in queue if it is given.
+    syntax delete_entry/id=3160
+        parameter   queue_name/id=3161          -
+                    /type=$string
+        qualifier   entry/id=3162/type=$string/list
+
+    ! SHOW ENTRY [n,...]: jobs by number, or the user's.
+    syntax show_entry/id=3170
+        parameter   entry/id=3171               -
+                    /type=$string/list
+        qualifier   full/id=3172
+        qualifier   brief/id=3173
+        qualifier   user_name/id=3174/type=$string
+
     ! INSTALL subcommand [file] (docs/planning/PHASE-94 - privileges.md,
     ! Decision 9; internal/dclcmd/install.go): the known file list. ADD
     ! (CREATE) makes an image known, with privileges of its own by
@@ -1656,6 +1723,9 @@ grammar console
         ! QUEUE (docs/planning/PHASE-98 - batch queues.md): a batch
         ! queue's attributes.
         keyword     queue               /syntax=set_queue/nonegatable
+        ! ENTRY (docs/planning/PHASE-98 - batch queues.md, subtask 7): a
+        ! job's options, held or released.
+        keyword     entry               /syntax=set_entry/nonegatable
 
 
     verb set/id=1760

@@ -145,12 +145,7 @@ func TestSndjbcQueueFunctions(t *testing.T) {
 		t.Errorf("no IOSB: R0 %#x", r0)
 	}
 
-	// A job function waits for subtask 7, and a printer queue is left
-	// out (Decision 1): JBC$_NOTSUPPORTED.
-	if _, st := sndjbc(t, env, a, "ENTER_FILE", queue("BAT98_Q"), true); st != jbcNotSupported {
-		t.Errorf("ENTER_FILE: %#x", st)
-	}
-
+	// A printer queue is left out (Decision 1): JBC$_NOTSUPPORTED.
 	if _, st := sndjbc(t, env, a, "CREATE_QUEUE", a.items(sjcItem(a, "QUEUE", "PRINTQ")), true); st != jbcNotSupported {
 		t.Errorf("CREATE_QUEUE without BATCH: %#x", st)
 	}

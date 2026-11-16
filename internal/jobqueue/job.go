@@ -79,7 +79,9 @@ var (
 // JOBNOTEXEC; DELETE/ENTRY and STOP/QUEUE/ENTRY of an executing job end
 // it with JOBABORT, the deleted one gone afterwards, the stopped one
 // retained if its /RETAIN says (BAT98R11 and BAT98R10); a /HOLD/AFTER job
-// is holding. govax's choices, unconfirmed: /RELEASE of a timed job
+// is holding, and /RELEASE makes a held job pending, its /AFTER time or
+// not (BAT98.LOG's case 132: a /HOLD/AFTER job released was pending).
+// govax's choices, unconfirmed: /RELEASE of a timed job
 // starts it now, of a retained job requeues it (the DCL Dictionary's
 // "held or retained"), and /HOLD of a retained job requeues it held;
 // /REQUEUE of a job not executing is JOBNOTEXEC.
@@ -93,7 +95,7 @@ var jobRules = [numJobOps][5]jobCell{
 	},
 	OpReleaseJob: {
 		JobPending:   keepJob,
-		JobHolding:   byTime,
+		JobHolding:   toJob(JobPending),
 		JobTimed:     toJob(JobPending),
 		JobExecuting: refuseJob("JBC$_EXECUTING"),
 		JobRetained:  byTime,
@@ -502,6 +504,10 @@ func keeps(j *Job, q *Queue, cond uint32) bool {
 	switch mode {
 	case RetainAlways:
 		return true
+	case RetainUntil:
+		// Kept until its time; letting it go then is the manager's
+		// (unconfirmed: the probe's /RETAIN=UNTIL job never ran).
+		return true
 	case RetainError:
 		return cond&1 == 0
 	}
@@ -613,4 +619,60 @@ func (d *Database) Recover(now time.Time) (requeued, ended []*Job) {
 	}
 
 	return requeued, ended
+}
+
+// MoveJob is SET ENTRY/REQUEUE=queue of a job not executing: entry moved
+// to the queue named to, where it keeps its status and its place among
+// jobs of its priority (its Sequence). An executing job is JBC$_EXECUTING
+// (it is STOP/QUEUE/REQUEUE's), a queue that isn't there JBC$_NOSUCHQUE.
+// VMS 7.1 moved a pending job to a stopped queue that had never been
+// started (BAT98.LOG's case 141).
+func (d *Database) MoveJob(entry int, to string, now time.Time) error {
+	j, err := d.job(entry, "")
+	if err != nil {
+		return err
+	}
+
+	q, err := d.queue(to)
+	if err != nil {
+		return err
+	}
+
+	if _, err := d.applyJob(j, OpAlterJob, now); err != nil {
+		return err
+	}
+
+	j.Queue = q.Name
+
+	return nil
+}
+
+// statusRank is the order SHOW QUEUE lists a queue's jobs in, by status:
+// executing, pending, held until a time, holding, retained (VMS 7.1's
+// listings, BAT98.LOG's cases 107 and 220, and the protection matrix's,
+// where a holding job came before a retained one).
+var statusRank = [...]int{JobExecuting: 0, JobPending: 1, JobTimed: 2, JobHolding: 3, JobRetained: 4}
+
+// Order returns the jobs in the queue named name in the order SHOW QUEUE
+// lists them: by status (statusRank); pending jobs by priority, highest
+// first, then in the order submitted (the order NextJob takes them in);
+// the rest in the order submitted (unconfirmed for every status but
+// pending: in the probe's listings the order submitted was also the order
+// of the jobs' /AFTER times, starts, and completions).
+func (d *Database) Order(name string) []*Job {
+	jobs := d.QueueJobs(name)
+
+	slices.SortStableFunc(jobs, func(a, b *Job) int {
+		if r := statusRank[a.Status] - statusRank[b.Status]; r != 0 {
+			return r
+		}
+
+		if a.Status == JobPending && a.Priority != b.Priority {
+			return b.Priority - a.Priority
+		}
+
+		return int(a.Sequence - b.Sequence)
+	})
+
+	return jobs
 }

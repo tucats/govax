@@ -95,6 +95,36 @@
 
      Deletes every global symbol.
 
+2 /ENTRY
+
+   Deletes batch jobs by entry number.  A job you didn't submit needs
+   delete access to it by an ACE, or manage access to its queue
+   (-JBC-E-NOPRIV); an entry that isn't there (or isn't in the queue
+   named) is -JBC-E-NOSUCHJOB, after %DELETE-E-NOTDELETED.
+
+   Format
+
+     DELETE/ENTRY=(entry[,...]) [queue-name]
+
+3 Parameter
+
+ queue-name
+
+   The queue the jobs must be in; without one, any.
+
+3 Qualifiers
+/ENTRY
+
+      /ENTRY=(entry[,...])
+
+   The entry numbers of the jobs to delete.
+
+3 Examples
+
+   1.$ DELETE/ENTRY=(19,20)
+
+     Deletes jobs 19 and 20.
+
 2 /QUEUE
 
    Deletes a batch queue, which must be stopped (%JBC-E-QUENOTSTOP),

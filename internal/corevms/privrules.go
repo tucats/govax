@@ -284,6 +284,18 @@ var (
 	// the probe's accounts never tried).
 	ruleQueueManager = newRule("queue manager: start or stop it", "OPER SYSNAM",
 		"DCL Dictionary, START/QUEUE/MANAGER", refusedWith("JBC$_NOPRIV"))
+
+	// SUBMIT/USER (and $SNDJBC's USERNAME): a job that runs as another
+	// account. VMS 7.1 refused it with JBC$_NOCMKRNL to every privilege
+	// but CMKRNL, OPER included (the protection matrix's case 12).
+	ruleSubmitUser = newRule("queue: a job for another user (SUBMIT/USER)", "CMKRNL",
+		"probe's protection matrix, case 12", refusedWith("JBC$_NOCMKRNL"))
+
+	// A job's /PRIORITY above MAXQUEPRI: lowered to it, with
+	// JBC$_PRIOSMALL, unless the process holds OPER or ALTPRI (the
+	// matrix's case 10).
+	ruleQueuePriority = newRule("queue: a job's /PRIORITY above MAXQUEPRI", "OPER ALTPRI",
+		"probe's protection matrix, case 10", anyOf)
 )
 
 // serviceRules is, for every system service govax registers, the rules
@@ -302,8 +314,8 @@ var serviceRules = func() map[string][]*PrivilegeRule {
 
 		"SYS$GET_SECURITY": {ruleQueueOperator},
 		"SYS$SET_SECURITY": {ruleQueueOperator},
-		"SYS$SNDJBC":       {ruleQueueOperator, ruleQueueManager},
-		"SYS$SNDJBCW":      {ruleQueueOperator, ruleQueueManager},
+		"SYS$SNDJBC":       {ruleQueueOperator, ruleQueueManager, ruleSubmitUser, ruleQueuePriority},
+		"SYS$SNDJBCW":      {ruleQueueOperator, ruleQueueManager, ruleSubmitUser, ruleQueuePriority},
 
 		"SYS$CREMBX": {ruleCrembxTemporary, ruleCrembxPermanent, ruleLnmSystemTable},
 		"SYS$DELMBX": {ruleDelmbx},

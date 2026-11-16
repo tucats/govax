@@ -456,6 +456,87 @@
 
      SET QUANTUM count
 
+2 ENTRY
+
+   Changes a batch job that isn't executing (%JBC-E-EXECUTING): holds or
+   releases it, gives it another time, or changes its options.  A job
+   you didn't submit needs delete access to it by an ACE, or manage
+   access to its queue (%JBC-E-NOPRIV).
+
+   Format
+
+     SET ENTRY entry[,...]
+
+3 Parameter
+
+ entry
+
+   The entry numbers of the jobs to change.
+
+3 Qualifiers
+/AFTER
+
+      /[NO]AFTER=time
+
+   Holds the job until the time, as SUBMIT/AFTER; /NOAFTER makes it
+   pending now.
+
+/CPUTIME
+
+      /CPUTIME=limit
+
+   The job's CPU time limit, as SUBMIT/CPUTIME.
+
+/HOLD
+
+   Holds the job until SET ENTRY/RELEASE.
+
+/LOG_FILE
+
+      /LOG_FILE=file-spec
+
+   The job's log file, as SUBMIT/LOG_FILE.
+
+/NAME
+
+      /NAME=job-name
+
+   The job's name.
+
+/NOTE
+
+      /NOTE="text"
+
+   The job's note.
+
+/PARAMETERS
+
+      /PARAMETERS=(p1[,...])
+
+   The job's parameters, all of them replaced.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The job's place in its queue, as SUBMIT/PRIORITY.
+
+/RELEASE
+
+   Releases a held job: it is pending, whatever its /AFTER time.
+
+/REQUEUE
+
+      /REQUEUE=queue-name
+
+   Moves the job to another queue.
+
+3 Examples
+
+   1.$ SET ENTRY 19/RELEASE
+
+     Releases job 19.
+
 2 QUEUE
 
    Changes a batch queue's attributes, in any state.  It takes

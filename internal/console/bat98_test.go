@@ -158,6 +158,14 @@ func TestBat98Probe(t *testing.T) {
 func bat98Clean(t *testing.T, name, log string) {
 	t.Helper()
 
+	// Case 83's /PARAMETERS value of 260 characters is DCL's TKNOVF on
+	// purpose, as it was on VMS 7.1 (govax gives it since subtask 7).
+	if i := strings.Index(log, strings.Repeat("X", 260)+") "); i >= 0 {
+		if j := strings.Index(log[i:], "TKNOVF"); j >= 0 && j < 400 {
+			log = log[:i+j] + log[i+j+len("TKNOVF"):]
+		}
+	}
+
 	for _, bad := range []string{"UNDSYM", "USGOTO", "NOLBLS", "TKNOVF", "RTB,"} {
 		if strings.Contains(log, bad) {
 			t.Errorf("%s has %s:\n%s", name, bad, around(log, bad))

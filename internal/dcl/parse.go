@@ -700,6 +700,17 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 			r.setParamList(scopeParam.Name, q.Name, q.ID, negated, vals)
 		}
 
+		// A list qualifier may switch to another syntax once its values
+		// are recorded, as a single value's does (DELETE/ENTRY=(19,20)).
+		if q.Syntax != "" {
+			target, ok := g.entries[q.Syntax]
+			if !ok {
+				return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, q.Syntax)
+			}
+
+			return target, 0, nil, rem, nil
+		}
+
 		return active, nextParam, lastParam, rem, nil
 	}
 

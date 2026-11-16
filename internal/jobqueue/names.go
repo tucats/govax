@@ -512,9 +512,12 @@ const (
 	RetainAlways
 	// RetainError is /RETAIN=ERROR: keep a job that didn't succeed.
 	RetainError
+	// RetainUntil is a job's /RETAIN=UNTIL=time: keep it, until its
+	// RetainUntil time (a queue has no such choice).
+	RetainUntil
 )
 
-var retainNames = []string{"DEFAULT", "NEVER", "ALWAYS", "ERROR"}
+var retainNames = []string{"DEFAULT", "NEVER", "ALWAYS", "ERROR", "UNTIL"}
 
 // String is the choice as /RETAIN writes it.
 func (r Retain) String() string {

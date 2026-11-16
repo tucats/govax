@@ -296,6 +296,17 @@ func parseCombinationTime(text string, now time.Time) (time.Time, bool) {
 		return now, true
 	}
 
+	// A delta alone after "+" is that long from now: VMS 7.1's
+	// F$CVTIME("+1-00:00","ABSOLUTE") was this time tomorrow, and SUBMIT's
+	// /AFTER="+0:30" half an hour from now (testdata/bat98's BAT98.LOG).
+	if rest, ok := strings.CutPrefix(text, "+"); ok {
+		if ticks, ok := parseDeltaTime(rest); ok {
+			return now.Add(time.Duration(ticks) * 100), true
+		}
+
+		return time.Time{}, false
+	}
+
 	if t, ok := parseAbsoluteTime(text, now); ok {
 		return t, true
 	}

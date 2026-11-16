@@ -1,0 +1,181 @@
+1 SUBMIT
+
+   Enters one or more command procedures in a batch queue as a job.  The
+   job runs, as a detached process logged in to your account (or the one
+   /USER names), when its time comes and the queue has room.  SUBMIT
+   says what it did, and defines the local symbol $ENTRY as the job's
+   entry number.
+
+   Format
+
+     SUBMIT file-spec[,...]
+
+2 Parameter
+
+ file-spec[,...]
+
+   The command procedures the job runs, in order; the default type is
+   .COM, and a wildcard enters every file it finds.  Files separated by
+   commas or plus signs are all one job's.  The job holds each file by
+   its file ID, so a later version doesn't take its place.
+
+2 Description
+
+   The queue must exist and you need submit access to it (S, by its
+   protection or ACL; %SUBMIT-F-CREJOB with -JBC-E-NOPRIV).  A missing
+   file is %SUBMIT-F-OPENIN, a missing queue -JBC-E-NOSUCHQUE.
+
+   SUBMIT's report is one of
+
+     Job name (queue q, entry n) pending
+          pending status caused by queue stopped state
+     Job name (queue q, entry n) holding
+     Job name (queue q, entry n) holding until dd-mmm-yyyy hh:mm
+
+   SHOW ENTRY and SHOW QUEUE show the job; SET ENTRY changes it, and
+   DELETE/ENTRY deletes it.  govax has no print queues, so a job's log
+   file is kept on disk.
+
+2 Qualifiers
+/AFTER
+
+      /AFTER=time
+
+   Holds the job until the time: an absolute time, TODAY, TOMORROW, a
+   delta from now ("+0:30"), or a combination ("TOMORROW+12:00").  A
+   time already past makes the job pending at once.
+
+/CPUTIME
+
+      /CPUTIME=limit
+
+   The job's CPU time limit: hh:mm:ss, NONE (the queue's default), or
+   INFINITE.  It may not be more than the queue's /CPUMAXIMUM.
+
+/DELETE
+
+   Deletes the files when the job has run them.
+
+/HOLD
+
+   Holds the job until SET ENTRY/RELEASE.  With /AFTER the job is
+   holding, and its release makes it pending at once.
+
+/IDENTIFY
+
+      /[NO]IDENTIFY
+
+   Says what SUBMIT did (the default); /NOIDENTIFY says nothing.
+
+/KEEP
+
+      /[NO]KEEP
+
+   Keeps the job's log file after the job (the default, since govax has
+   no print queues); /NOKEEP deletes it.
+
+/LOG_FILE
+
+      /[NO]LOG_FILE[=file-spec]
+
+   The job's log file.  The default is SYS$LOGIN:jobname.LOG; a
+   directory alone takes the job's name, a name alone goes in
+   SYS$LOGIN.  The directory must exist (%SUBMIT-F-INVLOGFIL).
+   /NOLOG_FILE keeps no log.
+
+/NAME
+
+      /NAME=job-name
+
+   The job's name; the default is the first file's name.
+
+/NOTE
+
+      /NOTE="text"
+
+   A note SHOW ENTRY/FULL shows with the job.
+
+/NOTIFY
+
+   Tells you at your terminal when the job ends.
+
+/PARAMETERS
+
+      /PARAMETERS=(p1[,...])
+
+   Up to eight values, P1 to P8 in each of the job's files.  An
+   unquoted value is uppercased; a quoted one keeps its case.
+
+/PRINTER
+
+      /[NO]PRINTER[=queue]
+
+   VMS prints the log on a print queue.  govax has none: /PRINTER=queue
+   is %SUBMIT-F-CREJOB with -JBC-E-NODSTQUE, and /NOPRINTER (or no
+   /PRINTER) keeps the log.
+
+/PRIORITY
+
+      /PRIORITY=n
+
+   The job's place in its queue, 0 to 255 (default 100), not its
+   process's priority.  Above 100 needs OPER or ALTPRI; without them the
+   priority is lowered to 100 with %JBC-I-PRIOSMALL.
+
+/QUEUE
+
+      /QUEUE=queue-name
+
+   The queue; the default is SYS$BATCH.
+
+/RESTART
+
+   Restarts the job, rather than ending it, if govax stops while it
+   runs.
+
+/RETAIN
+
+      /[NO]RETAIN[=option]
+
+   Keeps the job in its queue when it ends: ALWAYS (the default
+   option), ERROR (if it fails), or UNTIL=time.  /NORETAIN keeps it
+   whatever the queue says.
+
+/USER
+
+      /USER=username
+
+   Runs the job as another account.  It needs CMKRNL (-JBC-E-NOCMKRNL)
+   and read access to the authorization file; an account that isn't
+   there, or a file you can't read, is %SUBMIT-F-INVQUAVAL.
+
+/WSDEFAULT
+
+      /WSDEFAULT=n
+
+   The job's working-set default, in pages: kept and shown.
+
+/WSEXTENT
+
+      /WSEXTENT=n
+
+   The job's working-set extent, in pages: kept and shown.
+
+/WSQUOTA
+
+      /WSQUOTA=n
+
+   The job's working-set quota, in pages: kept and shown.
+
+2 Examples
+
+   1.$ SUBMIT/QUEUE=SYS$BATCH/AFTER=TOMORROW/PARAMETERS=(FULL) NIGHTLY
+     Job NIGHTLY (queue SYS$BATCH, entry 21) holding until 17-NOV-2026 00:00
+
+     Enters NIGHTLY.COM to run at midnight, with P1 FULL.
+
+   2.$ SUBMIT/HOLD/NAME=BUILD STEP1,STEP2
+     Job BUILD (queue SYS$BATCH, entry 22) holding
+     $ SET ENTRY '$ENTRY'/RELEASE
+
+     Enters a job of two files, held, then releases it.

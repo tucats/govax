@@ -945,7 +945,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   checked in VMS's order), `$SNDJBC`'s queue functions (`sndjbc.go`), and
   DCL's START/STOP/SHOW QUEUE/MANAGER, INITIALIZE/QUEUE, START, STOP, SET,
   DELETE, and SHOW QUEUE (`dclcmd/queues.go`, `showqueue.go`), held to
-  the probe's QUEUES section by `TestQueueCommandsOracle`.
+  the probe's QUEUES section by `TestQueueCommandsOracle`;
+  subtask 7 (2026-11-16) jobs not yet run: `corevms/jobops.go`
+  (`SubmitJob`, `AlterJob`, `DeleteJob`, `EntryViews`; the job's files by
+  `rms/jobfiles.go`'s `Session.JobFiles`), `$SNDJBC`'s job functions
+  (`sjcJobItems`), and DCL's SUBMIT, SET ENTRY, SHOW ENTRY, DELETE/ENTRY,
+  and SHOW QUEUE's jobs (`dclcmd/jobs.go`), held to the probe's JOBS ON
+  A STOPPED QUEUE by `TestJobCommandsOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

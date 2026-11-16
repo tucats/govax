@@ -274,12 +274,43 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().DeleteQueue(r.String("QUEUE_NAME"))
 	})
 	g.Bind("SHOW_QUEUE", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().ShowQueue(r.String("QUEUE_NAME"), dclcmd.ShowQueueOptions{
+		opts := dclcmd.ShowQueueOptions{
 			Full:    r.Present("FULL"),
 			All:     r.Present("ALL_JOBS"),
 			Brief:   r.Present("BRIEF"),
 			Summary: r.Present("SUMMARY"),
 			Batch:   r.Present("BATCH"),
+		}
+
+		if r.Present("BY_JOB_STATUS") {
+			by, err := dclcmd.JobStatusSelection(nonEmpty(r.List("BY_JOB_STATUS")))
+			if err != nil {
+				return err
+			}
+
+			opts.ByStatus = by
+		}
+
+		return d.Console.cmd().ShowQueue(r.String("QUEUE_NAME"), opts)
+	})
+
+	// The job commands (docs/planning/PHASE-98 - batch queues.md,
+	// subtask 7): SUBMIT, SET ENTRY, DELETE/ENTRY, and SHOW ENTRY.
+	g.Bind("SUBMIT", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().Submit(submitOptions(r), func(entry string) {
+			_ = d.Console.AssignSymbol("$ENTRY", "=", entry)
+		})
+	})
+	g.Bind("SET_ENTRY", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().SetEntry(nonEmpty(r.List("ENTRY")), entryOptions(r))
+	})
+	g.Bind("DELETE_ENTRY", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().DeleteEntry(nonEmpty(r.List("ENTRY")), r.String("QUEUE_NAME"))
+	})
+	g.Bind("SHOW_ENTRY", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().ShowEntry(nonEmpty(r.List("ENTRY")), dclcmd.ShowEntryOptions{
+			Full: r.Present("FULL") && !r.Negated("FULL"),
+			User: r.String("USER_NAME"),
 		})
 	})
 
@@ -999,6 +1030,83 @@ func queueOptions(r *dcl.Result) dclcmd.QueueOptions {
 	}
 
 	return opts
+}
+
+// submitOptions reads SUBMIT's parameters and qualifiers.
+func submitOptions(r *dcl.Result) dclcmd.SubmitOptions {
+	present := func(name string) bool { return r.Present(name) && !r.Negated(name) }
+	negated := func(name string) bool { return r.Present(name) && r.Negated(name) }
+
+	o := dclcmd.SubmitOptions{
+		Files:      nonEmpty(r.List("FILES")),
+		Queue:      r.String("QUEUE"),
+		After:      r.String("AFTER"),
+		User:       r.String("USER"),
+		Parameters: r.List("PARAMETERS"),
+		Hold:       present("HOLD"),
+		LogFile:    r.String("LOG_FILE"),
+		LogGiven:   present("LOG_FILE"),
+		NoLog:      negated("LOG_FILE"),
+		Name:       r.String("NAME"),
+		Keep:       present("KEEP"),
+		NoKeep:     negated("KEEP"),
+		Printer:    r.String("PRINTER"),
+		PrinterSet: present("PRINTER"),
+		NoPrinter:  negated("PRINTER"),
+		Notify:     present("NOTIFY"),
+		CPUTime:    r.String("CPUTIME"),
+		CPUGiven:   present("CPUTIME"),
+		Restart:    present("RESTART"),
+		Retain:     r.String("RETAIN"),
+		NoRetain:   negated("RETAIN"),
+		Note:       r.String("NOTE"),
+		NoIdent:    negated("IDENTIFY"),
+		Delete:     present("DELETE"),
+	}
+
+	if present("RETAIN") && o.Retain == "" {
+		o.Retain = "ALWAYS"
+	}
+
+	if present("PRIORITY") {
+		o.Priority, o.PriorityGiven = int(r.Int("PRIORITY")), true
+	}
+
+	for name, field := range map[string]*int{"WSDEFAULT": &o.WSDefault, "WSQUOTA": &o.WSQuota, "WSEXTENT": &o.WSExtent} {
+		if present(name) {
+			*field = int(r.Int(name))
+		}
+	}
+
+	return o
+}
+
+// entryOptions reads SET ENTRY's qualifiers.
+func entryOptions(r *dcl.Result) dclcmd.EntryOptions {
+	present := func(name string) bool { return r.Present(name) && !r.Negated(name) }
+
+	o := dclcmd.EntryOptions{
+		Hold:            present("HOLD"),
+		Release:         present("RELEASE"),
+		After:           r.String("AFTER"),
+		NoAfter:         r.Present("AFTER") && r.Negated("AFTER"),
+		Parameters:      r.List("PARAMETERS"),
+		ParametersGiven: present("PARAMETERS"),
+		Name:            r.String("NAME"),
+		Note:            r.String("NOTE"),
+		NoteGiven:       r.Present("NOTE"),
+		LogFile:         r.String("LOG_FILE"),
+		LogGiven:        present("LOG_FILE"),
+		CPUTime:         r.String("CPUTIME"),
+		CPUGiven:        present("CPUTIME"),
+		Requeue:         r.String("REQUEUE"),
+	}
+
+	if present("PRIORITY") {
+		o.Priority, o.PriorityGiven = int(r.Int("PRIORITY")), true
+	}
+
+	return o
 }
 
 func given(r *dcl.Result, name string) bool { return r.Present(name) && !r.Defaulted(name) }

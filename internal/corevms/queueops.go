@@ -195,6 +195,9 @@ type QueueView struct {
 	State     string
 	Security  bool
 	JobsCount int
+
+	// Jobs are the queue's jobs as SHOW QUEUE lists them.
+	Jobs []JobView
 }
 
 // QueueViews is SHOW QUEUE's reading of the database: the queues whose
@@ -236,6 +239,7 @@ func (env *Environment) QueueViews(pattern string) ([]QueueView, error) {
 			State:     d.StateText(q),
 			Security:  env.QueueSecurityVisible(q),
 			JobsCount: len(d.QueueJobs(q.Name)),
+			Jobs:      env.queueJobViews(d, q),
 		}
 		v.Queue.ACL = append([]jobqueue.ACE(nil), q.ACL...)
 

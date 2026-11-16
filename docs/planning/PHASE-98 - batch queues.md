@@ -697,7 +697,7 @@ Each is one commit, with tests, stopping for review.
    `$SNDJBC`'s queue functions, START/STOP/SHOW QUEUE/MANAGER,
    INITIALIZE/QUEUE, START/QUEUE, STOP/QUEUE (`/NEXT`, `/RESET`), SET
    QUEUE, DELETE/QUEUE, SHOW QUEUE; held to the probe.
-7. **Jobs, not yet run**: `$SNDJBC`'s job functions, SUBMIT and `$ENTRY`,
+7. **Jobs, not yet run** (done 2026-11-16): `$SNDJBC`'s job functions, SUBMIT and `$ENTRY`,
    SHOW ENTRY, SET ENTRY, DELETE/ENTRY, `/AFTER` and `/HOLD` states, on a
    stopped queue; held to the probe.
 8. **The batch job** (Decisions 6, 7): the manager starting jobs, the
@@ -1091,3 +1091,51 @@ queues is a future phase.
   values the probe gave none of. The queue's jobs in SHOW QUEUE, and what a
   pause or reset does to executing jobs' processes, are subtasks 7 and 8.
   Subtask 7, jobs not yet run, is next.
+- **2026-11-16** Subtask 7, jobs not yet run. The operations are
+  `corevms/jobops.go`: `SubmitJob` (a `JobRequest`; its checks in VMS
+  7.1's order: the manager here, /USER's account, the files, /PRINTER,
+  the queue, submit access as the job's user), `AlterJob` (a
+  `JobChange`: hold, release, /REQUEUE to another queue, /AFTER, the
+  other fields), `DeleteJob`, and `EntryViews` and each `QueueView`'s
+  `Jobs` (`JobView`: visible by read access, the process's own, the
+  queue's state); `Submitted.Message` is SUBMIT's report (and $SNDJBC's
+  JOB_STATUS_OUTPUT). The files are `rms/jobfiles.go`'s
+  `Session.JobFiles` (`.COM` the default type, every match, each
+  readable, a job's file named `_GOVAX$DUA1:[...]` with its file ID).
+  The rules `ruleSubmitUser` (CMKRNL, JBC$_NOCMKRNL) and
+  `ruleQueuePriority` (OPER or ALTPRI; MAXQUEPRI taken as 100, VMS's
+  default, unconfirmed). SUBMIT/USER reads the authorization file with
+  the process's authorized SYSPRV (so BAT98 got INVQUAVAL with RMS$_PRV
+  and BAT98O, authorized for SYSPRV, NOCMKRNL), even naming its own
+  account, as BAT98W's case 12 showed. `jobqueue` gained `MoveJob`,
+  `Order` (SHOW QUEUE's: executing, pending by priority, timed, holding,
+  retained, each else by submission; the timed ones' order by time or
+  submission was the same in the probe, so submission is govax's,
+  unconfirmed), `RetainUntil`, and a correction: /RELEASE of a held job
+  makes it pending whatever its /AFTER (case 132). `$SNDJBC`'s job
+  functions (`sndjbc.go`: ENTER_FILE, CREATE_JOB, ADD_FILE, CLOSE_JOB,
+  ALTER_JOB, DELETE_JOB, from `sjcJobItems`; ABORT_JOB and
+  SYNCHRONIZE_JOB wait for subtask 8): R0 RMS's status for a file it
+  can't open, ENTRY_NUMBER_OUTPUT a longword (INVPARLEN), ALTER_JOB's
+  parameters replaced whole (case 11), held to round 2 by
+  `TestSndjbcJobFunctions`. DCL: SUBMIT (a new verb), SET ENTRY, SHOW
+  ENTRY, and DELETE/ENTRY (`dclcmd/jobs.go`), and SHOW QUEUE's jobs
+  (own jobs only without /ALL_JOBS, "(n intervening jobs)" between them,
+  "no privilege" for a job without read access, /FULL's options in VMS's
+  order wrapped as SHOW QUEUE's attributes, /BRIEF without the
+  description, /BY_JOB_STATUS); $ENTRY a local symbol; a /PARAMETERS
+  value over 255 characters DCL's TKNOVF (checked by SUBMIT, as WRITE
+  checks its items). The grammar engine now lets a list qualifier switch
+  syntax (`DELETE/ENTRY=(19,20)`), and DCL reads a time of "+delta" as
+  that long from now (F$CVTIME("+1-00:00") had been today at 01:00).
+  `TestJobCommandsOracle` replays BAT98.LOG's QUEUES section and then
+  holds every step of JOBS ON A STOPPED QUEUE (cases 69 to 155) to VMS's
+  output, times masked; `TestJobCommandsMatrix` holds state A's job
+  cases as BAT98 and BAT98W. HELP SUBMIT (new), SET ENTRY, SHOW ENTRY,
+  DELETE /ENTRY. Unconfirmed: SHOW ENTRY of a user with no jobs shows
+  nothing; a run of hidden jobs before the first or after the last
+  shown job isn't counted; a DELETE/ENTRY list goes on past a refusal;
+  CREATE_JOB's ENTRY_NUMBER_OUTPUT is the number the job is expected to
+  take; $SNDJBC's USERNAME of a missing account JBC$_INVPARVAL; /PRINT
+  isn't shown for a job without /NOPRINTER. Subtask 8, the batch job, is
+  next.

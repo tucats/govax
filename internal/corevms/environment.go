@@ -35,6 +35,10 @@ type Environment struct {
 	// System shares them; env.System names the System itself.
 	*System
 
+	// openJob is the job $SNDJBC's CREATE_JOB opened, which ADD_FILE adds
+	// to and CLOSE_JOB enters (sndjbc.go); nil when none is open.
+	openJob *JobRequest
+
 	// KeepP0 makes image rundown leave P0's pages, and the sections
 	// mapped there, where they are (DeleteP0): the machine sets it while a debugger session holds the
 	// image, whose memory VMS's debugger still shows after the image has

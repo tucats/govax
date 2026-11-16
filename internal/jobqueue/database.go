@@ -218,8 +218,10 @@ type Job struct {
 	// it ends.
 	Restart bool `json:"restart,omitempty"`
 
-	// Retain is the job's /RETAIN, RetainDefault for its queue's.
-	Retain Retain `json:"retain,omitzero"`
+	// Retain is the job's /RETAIN, RetainDefault for its queue's, and
+	// RetainUntil /RETAIN=UNTIL's time.
+	Retain      Retain    `json:"retain,omitzero"`
+	RetainUntil time.Time `json:"retain_until,omitzero"`
 
 	// Notify is /NOTIFY, Note /NOTE's text, Delete /DELETE (the files
 	// deleted after the job).

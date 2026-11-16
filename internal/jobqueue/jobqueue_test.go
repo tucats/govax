@@ -705,7 +705,9 @@ func TestTimedJobs(t *testing.T) {
 		t.Errorf("/HOLD/AFTER: %s", held.Status)
 	}
 
-	if _ = d.ReleaseJob(held.Entry, t0); held.Status != JobTimed {
+	// VMS 7.1 made a /HOLD/AFTER job pending when it was released, its
+	// time to come or not (BAT98.LOG's case 132).
+	if _ = d.ReleaseJob(held.Entry, t0); held.Status != JobPending {
 		t.Errorf("released before its time: %s", held.Status)
 	}
 }

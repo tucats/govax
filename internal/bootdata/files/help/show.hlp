@@ -292,11 +292,51 @@
    The file, one specification; wildcards are allowed, and a name with
    no version is its highest version.
 
+2 ENTRY
+
+   Shows batch jobs: by entry number, or every job of yours (or
+   /USER_NAME's), each with its status and queue.  A job you may not
+   read is shown as "no privilege".
+
+   Format
+
+     SHOW ENTRY [entry[,...]]
+
+3 Parameter
+
+ entry
+
+   The entry numbers of the jobs to show.
+
+3 Qualifiers
+/BRIEF
+
+   Shows each job on a line and its queue (the default).
+
+/FULL
+
+   Adds when each job was submitted, its options, and its files.
+
+/USER_NAME
+
+      /USER_NAME=username
+
+   Shows that user's jobs.
+
+3 Examples
+
+   1.$ SHOW ENTRY 18
+       Entry  Jobname         Username     Blocks  Status
+       -----  -------         --------     ------  ------
+          18  BAT98OK         SYSTEM               Pending
+              On stopped batch queue BAT98_B
+
 2 QUEUE
 
    Shows batch queues: each one's name, state (stopped, idle,
-   available, busy, paused, or stopping), node, and description.  The
-   queue manager must have been started.
+   available, busy, paused, or stopping), node, and description, and
+   your jobs in each (with /ALL_JOBS, everyone's).  The queue manager
+   must have been started.
 
    Format
 
@@ -312,7 +352,9 @@
 3 Qualifiers
 /ALL_JOBS
 
-   Shows every job in the queues.
+   Shows every job in the queues, a job you may not read as "no
+   privilege". Without it, others' jobs between yours are counted
+   ("(2 intervening jobs)").
 
 /BATCH
 
@@ -320,13 +362,14 @@
 
 /BRIEF
 
-   Shows each queue and job on a line.
+   Shows each queue and job on a line, without the queue's description.
 
 /BY_JOB_STATUS
 
       /BY_JOB_STATUS=(status[,...])
 
-   Shows only the jobs of these states.
+   Shows only the jobs of these states: EXECUTING, HOLDING, PENDING,
+   RETAINED, TIMED_RELEASE.
 
 /FULL
 
