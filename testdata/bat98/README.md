@@ -268,3 +268,10 @@ when its SUBMIT made no entry. BAT98Q.MAR was assembled and linked by
 govax's MACRO and LINK with stand-in values for the three definition
 macros, which govax lacks until subtask 3, so it has no mistake MACRO
 can find.
+
+## Round 2's results
+
+Round 2 ran on VMS V7.1 on 2026-11-16 (`vax/bat98b.log`): all 59 cases,
+every job function working with 4-byte buffers for the longword outputs.
+SJC$_JOB_STATUS_OUTPUT turned out to be text (SUBMIT's message), so its 4
+bytes held only `Job `; the phase doc's A.4 has the rest.

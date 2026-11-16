@@ -279,8 +279,8 @@ The probe (Part D) answers these:
 ### A.4 The probe's answers (2026-11-16)
 
 Round 1 on VMS 7.1 (`testdata/bat98/vax`, the README's "Round 1"), with
-the steps by hand and a reboot. Round 2, `$SNDJBC`'s job functions,
-which round 1's BAT98Q couldn't reach, is to come.
+the steps by hand and a reboot; round 2 (`vax/bat98b.log`) is BAT98Q again,
+corrected, for `$SNDJBC`'s job functions.
 
 **Messages and statuses** (A.3, 1):
 
@@ -421,7 +421,17 @@ INVITMCOD) and a missing file (RMS$_FNF in R0). `$SNDJBC`'s longword output
 items must have 4-byte buffers (INVPARLEN); `$GETQUI` takes any length,
 truncating. CREATE_QUEUE of an existing queue succeeds; a wildcard
 DISPLAY_QUEUE gives NOMOREQUE after the last match and then starts again.
-`$GETMSG` matches a JBC code whatever its severity bits, and knows the
+Round 2's job functions all work: ENTER_FILE returns the
+entry in ENTRY_NUMBER_OUTPUT, and JOB_STATUS_OUTPUT is **text**, SUBMIT's
+own message (`Job QJOB (queue BAT98_Q, entry n) holding`, cut to the
+buffer); ALTER_JOB changes a held job and releases it (NO_HOLD);
+SYNCHRONIZE_JOB returns the job's own status in the IOSB (SS$_NORMAL);
+CREATE_JOB, ADD_FILE, and CLOSE_JOB make one job of several files, and
+CLOSE_JOB with none open is NOSUCHJOB. `$GETQUI`'s items have their own
+sizes (PRIORITY one byte, UIC and counts a longword, times a quadword,
+names their length); DISPLAY_FILE straight after a DISPLAY_ENTRY without
+a wildcard is NOJOBCTX; a nested DISPLAY_JOB walk gives NOMOREJOB after the
+last job, then NOSUCHJOB. `$GETMSG` matches a JBC code whatever its severity bits, and knows the
 system messages the facility shares; the JBC messages proper are
 `defined.txt`'s values.
 
@@ -665,9 +675,9 @@ All with the quantum clock, so `/AFTER` is deterministic.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe**: `testdata/bat98`, as in Part D, written and rehearsed
-   where govax can (written 2026-11-16; waiting for the VAX run); run on
-   the VAX by the author; A.3 answered (as A.4) and Part B adjusted.
+2. **The probe** (done 2026-11-16): `testdata/bat98`, as in Part D,
+   written and rehearsed where govax can; run on the VAX by the author in
+   two rounds; A.3 answered (as A.4) and Part B adjusted.
 3. **Definitions** (Decision 9): `SJC$_`, `QUI$_`, `JBC$_`, and the
    flags in `vmsdef` from the probe's decoded objects; the JBC and QMAN
    messages; `$SJCDEF`, `$QUIDEF`, and the service macros in bootdata.
@@ -891,3 +901,8 @@ queues is a future phase.
   the volume; `defined.txt` (982 values) is in. Added to Decision 10:
   STOP/QUEUE/REQUEUE (and `/HOLD`), which `/RESTART` needs, and SHOW
   QUEUE/SUMMARY; dropped: SHOW QUEUE/USER_NAME, which VMS 7.1 lacks.
+- **2026-11-16** Subtask 2, round 2 on VMS 7.1 (`vax/bat98b.log`): every
+  `$SNDJBC` job function works with 4-byte longword outputs, and A.4 has
+  what it showed (JOB_STATUS_OUTPUT is SUBMIT's message as text;
+  SYNCHRONIZE_JOB's IOSB the job's status; `$GETQUI`'s items at their own
+  sizes). Subtask 2 is done; subtask 3, the definitions, is next.
