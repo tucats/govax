@@ -4973,7 +4973,7 @@ read, edit, and rebuild with DCL's own commands
 | Directory | Logical name | What |
 | --- | --- | --- |
 | `[SYSTEM.SYSEXE]` | SYS$SYSTEM | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the default page file (made by the pager, not supplied) |
-| `[SYSTEM.SYSMGR]` | SYS$MANAGER | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, the grammars `CONSOLE.DCL` and `DEBUG.DCL` |
+| `[SYSTEM.SYSMGR]` | SYS$MANAGER | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, the grammars `CONSOLE.DCL` and `DEBUG.DCL` |
 | `[SYSTEM.SYSHLP]` | SYS$HELP | `HELPLIB.HLB`, `DBG$HELP.HLB`, and their `.HLP` sources below it |
 | `[SYSTEM.SYSLIB]` | SYS$LIBRARY, SYS$SHARE | `STARLET.MLB`, `FTNRTL.EXE`, `FORSYSDEF.TLB` |
 | `[SYSTEM.SOURCES]` | SYS$SOURCES | `KERNEL.ASM` and `SSDEF.ASM`, FTNRTL's and STARLET's sources, and the procedures that rebuild them |
@@ -5014,7 +5014,7 @@ needs no grammar: it's RMS's and `ods2`'s work in Go. In order:
 **The refresh** is how a newer govax gets its files onto an older volume
 without losing the user's changes. Each file is either *supplied*, govax's
 to keep current, or *seeded*, written once as a starting point and the
-user's from then on (`SYSTARTUP_VMS.COM` is the one seeded file). The
+user's from then on (`SYSTARTUP_VMS.COM` and `SYLOGIN.COM` are the seeded files). The
 volume keeps a manifest, `[SYSTEM]GOVAX$FILES.DAT`, with a SHA-256 digest of
 each supplied file as govax last wrote it, and the refresh decides by
 comparing three things, the file on the volume, the manifest's digest, and
@@ -5033,6 +5033,19 @@ this govax's copy:
 A help library is compared module by module, so the user's own module in
 `HELPLIB.HLB` doesn't stop the rest of it from being refreshed. What a
 refresh writes is logged in `[SYSTEM]GOVAX$UPDATE.LOG`.
+
+The refresh also gives every directory and file its owner and protection
+(`sysvol/profile.go`): owner `[1,4]`, files (S:RWED,O:RWED,G:RE,W:RE),
+directories the same without delete, so any account can read the system's
+files and only SYSTEM can change them. Each profile it sets goes in the
+manifest beside the digest (`OWNER=[1,4] PROTECTION=(...)`, a directory's
+record holding nothing else), and a profile the manifest already records
+isn't set again: an older volume is corrected once, and the user's later
+`SET SECURITY` stays. A new version of a file takes its previous version's
+protection (RMS's rule), so an update keeps it too; only a file made where
+there was none gets govax's profile again. The `Volume` interface's
+`SetProfile` is the RMS side, through the same `SecurityObject` code that
+`SET SECURITY` uses.
 
 Nothing about the system volume can stop govax from starting. A container
 that can't be made, opened, or mounted, or has the wrong label, is

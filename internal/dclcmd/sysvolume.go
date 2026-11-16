@@ -245,7 +245,8 @@ func (c *Context) refreshSystemVolume(device string, created bool) {
 // the system volume on device (sysvol.UpdateLogSpec), each with the time
 // now, the action, and the file or LIBNAME(MODULE): the log is made, a
 // text file of variable-length records, if it isn't there, and otherwise
-// added to at its end, as DCL's OPEN/APPEND adds to a file. With nothing
+// added to at its end, as DCL's OPEN/APPEND adds to a file. A new log
+// gets the system volume's file profile (sysvol.FileProfile). With nothing
 // to log, the log isn't touched.
 func (c *Context) logSystemUpdates(device string, updates []sysvol.Update, now time.Time) error {
 	if len(updates) == 0 {
@@ -279,7 +280,15 @@ func (c *Context) logSystemUpdates(device string, updates []sysvol.Update, now t
 		}
 	}
 
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	if !exists {
+		return c.systemFiles(device).SetProfile(sysvol.UpdateLogSpec, sysvol.FileProfile)
+	}
+
+	return nil
 }
 
 // systemContainer is what openSystemContainer found or made.
@@ -410,6 +419,25 @@ func (v systemFiles) WriteFile(spec string, records [][]byte, f sysvol.Format) e
 	_, err := v.c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: v.device + spec}, kind, records)
 
 	return err
+}
+
+// SetProfile gives every version of spec its owner and protection, by SET
+// SECURITY's own code (rms.Session.SecurityObjects): a directory's spec is
+// its directory file's ("[SYSTEM]SYSLIB.DIR"). The volume is set up before
+// any account logs in, as SYSTEM, which may change any file's profile.
+func (v systemFiles) SetProfile(spec string, p sysvol.Profile) error {
+	objects, err := v.c.ContainerSession.SecurityObjects(v.device + spec + ";*")
+	if err != nil {
+		return err
+	}
+
+	for _, o := range objects {
+		if err := o.SetOwnerProtection(p.Owner, p.Protection); err != nil {
+			return fmt.Errorf("%s: %w", o.Name, err)
+		}
+	}
+
+	return nil
 }
 
 // ReadFile reads the highest version of spec, if there is one.

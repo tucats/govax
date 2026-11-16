@@ -1062,7 +1062,7 @@ sparse host file, taking only the space its files use.
 | Directory | Logical name | Files |
 | --- | --- | --- |
 | `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the page file, with paging on |
-| `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
+| `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
 | `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB` and `DBG$HELP.HLB`, DCL's and the debugger's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`) |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
 | `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM`; `BUILDHELP.COM`, which rebuilds the help libraries |
@@ -1106,6 +1106,31 @@ $ EXIT
 
 (The second line makes `SYS$SHARE` a search list, so `RUN` finds
 shareable images of your own on `DUA1:` as well as govax's `FTNRTL.EXE`.)
+
+`SYS$MANAGER:SYLOGIN.COM` is the same kind of file, made once and yours
+from then on: the system's login procedure, which STARTUP.COM names
+`SYS$SYLOGIN`, as VMS's does, and which is the place for commands every
+account should run when it logs in.
+
+#### Who owns the system's files
+
+Everything on the system volume is owned by `[SYSTEM]` (`[1,4]`), as VMS's
+system files are. Every file is (S:RWED,O:RWED,G:RE,W:RE) and every
+directory (S:RWE,O:RWE,G:RE,W:RE): any account can read the files (and so
+run SYLOGIN.COM, or assemble with the macro library), and only SYSTEM can
+change, add to, or delete them. The page file is (S:RWED,O:RWED,G,W):
+nobody else may read it.
+
+```text
+$ DELETE SYS$SYSTEM:DEFAULT.ROM;*
+%DELETE-W-FILNOTDEL, error deleting SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1
+-RMS-E-PRV, insufficient privilege or file protection violation
+```
+
+govax sets these when it makes the volume, and once on a volume an older
+govax made. It records each one in `GOVAX$FILES.DAT`, and doesn't set it
+again, so a protection you change with `SET SECURITY` stays; a new version
+of a file takes its previous version's protection, as on VMS.
 
 #### When govax is upgraded
 

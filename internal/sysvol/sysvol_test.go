@@ -14,15 +14,57 @@ type mapVolume struct {
 	dirs  []string
 	files map[string][]mapFile
 	fail  string // a specification WriteFile refuses, for the error paths
+
+	// dirProfiles are the directories' profiles, by directory file
+	// ("[SYSTEM]SYSLIB.DIR"); profileSets counts SetProfile's calls.
+	dirProfiles map[string]Profile
+	profileSets int
 }
 
 type mapFile struct {
 	records [][]byte
 	format  Format
+	profile Profile // the zero Profile until one is set or inherited
 }
 
 func newMapVolume() *mapVolume {
-	return &mapVolume{files: map[string][]mapFile{}}
+	return &mapVolume{files: map[string][]mapFile{}, dirProfiles: map[string]Profile{}}
+}
+
+// SetProfile sets every version's profile, as SET SECURITY of FILE;* does,
+// or a directory's.
+func (v *mapVolume) SetProfile(spec string, p Profile) error {
+	v.profileSets++
+
+	k := strings.ToUpper(spec)
+
+	if versions := v.files[k]; len(versions) > 0 {
+		for i := range versions {
+			versions[i].profile = p
+		}
+
+		return nil
+	}
+
+	for _, d := range v.dirs {
+		if DirectoryFile(d) == k {
+			v.dirProfiles[k] = p
+
+			return nil
+		}
+	}
+
+	return errors.New("no file " + spec)
+}
+
+// profile returns the highest version's profile.
+func (v *mapVolume) profile(spec string) Profile {
+	versions := v.files[strings.ToUpper(spec)]
+	if len(versions) == 0 {
+		return Profile{}
+	}
+
+	return versions[len(versions)-1].profile
 }
 
 func (v *mapVolume) CreateDirectory(dir string) error {
@@ -67,8 +109,15 @@ func (v *mapVolume) WriteFile(spec string, records [][]byte, f Format) error {
 		copied[i] = append([]byte(nil), r...)
 	}
 
+	// A new version takes its previous version's profile, as RMS's do.
 	k := strings.ToUpper(spec)
-	v.files[k] = append(v.files[k], mapFile{records: copied, format: f})
+
+	var inherited Profile
+	if n := len(v.files[k]); n > 0 {
+		inherited = v.files[k][n-1].profile
+	}
+
+	v.files[k] = append(v.files[k], mapFile{records: copied, format: f, profile: inherited})
 
 	return nil
 }
@@ -140,8 +189,8 @@ func TestFileTable(t *testing.T) {
 		}
 	}
 
-	if seeded != 1 || !seen[SysMgr+"SYSTARTUP_VMS.COM"] {
-		t.Errorf("want SYSTARTUP_VMS.COM the one seeded file; %d seeded", seeded)
+	if seeded != 2 || !seen[SysMgr+"SYSTARTUP_VMS.COM"] || !seen[SysMgr+"SYLOGIN.COM"] {
+		t.Errorf("want SYSTARTUP_VMS.COM and SYLOGIN.COM the seeded files; %d seeded", seeded)
 	}
 
 	for _, want := range []string{

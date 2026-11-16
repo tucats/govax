@@ -22,10 +22,14 @@ const UpdateLogSpec = Root + "GOVAX$UPDATE.LOG"
 
 // The words a manifest record may have after its specification, beside a
 // digest: keptWord starts the digest of a newer govax copy the user has
-// been told about (KEPT=3f5a...), and seededWord marks a seeded file.
+// been told about (KEPT=3f5a...), seededWord marks a seeded file, and
+// ownerWord and protectionWord, always together and last, are the profile
+// govax gave the file or directory (profile.go).
 const (
-	keptWord   = "KEPT="
-	seededWord = "SEEDED"
+	keptWord       = "KEPT="
+	seededWord     = "SEEDED"
+	ownerWord      = "OWNER="
+	protectionWord = "PROTECTION="
 )
 
 // manifestHeader is the comment the manifest starts with, for a user who
@@ -37,7 +41,9 @@ var manifestHeader = []string{
 	"! contents still match its digest is replaced by govax's own copy if that",
 	"! has changed; a file that doesn't match was changed here, and is kept.",
 	"! KEPT= is the digest of the newer copy govax last said it didn't install;",
-	"! SEEDED marks a file govax made once and leaves to you.",
+	"! SEEDED marks a file govax made once and leaves to you. OWNER= and",
+	"! PROTECTION= are the owner and protection govax gave a file or directory;",
+	"! govax sets them again only when it wants others, so SET SECURITY's stay.",
 	"! govax keeps this file up to date; changing it changes which files govax",
 	"! treats as yours.",
 }
@@ -58,6 +64,11 @@ type entry struct {
 	// seeded is whether this is a seeded file govax has made (or found
 	// made), so it is never made again.
 	seeded bool
+
+	// profile is the owner and protection govax last gave the file or
+	// directory, if hasProfile.
+	profile    Profile
+	hasProfile bool
 }
 
 // Manifest is the volume's record of the files govax supplied (Decision 3):
@@ -71,6 +82,11 @@ type entry struct {
 //	[SYSTEM.SYSLIB]FTNRTL.EXE 3f5a...                  (64 hexadecimal digits)
 //	[SYSTEM.SYSMGR]CONSOLE.DCL 81c0... KEPT=d2e4...    (a newer copy not installed)
 //	[SYSTEM.SYSMGR]SYSTARTUP_VMS.COM SEEDED            (made once, the user's)
+//
+// and each record, a directory's too ([SYSTEM.SYSLIB], with nothing else),
+// ends with the profile govax gave it (profile.go):
+//
+//	[SYSTEM.SYSLIB]FTNRTL.EXE 3f5a... OWNER=[1,4] PROTECTION=(S:RWED,O:RWED,G:RE,W:RE)
 type Manifest struct {
 	entries map[string]entry
 }
@@ -132,6 +148,22 @@ func (m *Manifest) SetSeeded(spec string) {
 	m.entries[key(spec)] = e
 }
 
+// Profile returns the profile govax last gave the file or directory spec,
+// and whether there is one.
+func (m *Manifest) Profile(spec string) (Profile, bool) {
+	e := m.entries[key(spec)]
+
+	return e.profile, e.hasProfile
+}
+
+// SetProfile records that govax gave the file or directory spec the
+// profile p.
+func (m *Manifest) SetProfile(spec string, p Profile) {
+	e := m.entries[key(spec)]
+	e.profile, e.hasProfile = p, true
+	m.entries[key(spec)] = e
+}
+
 // Delete forgets the file spec: govax no longer supplies it.
 func (m *Manifest) Delete(spec string) {
 	delete(m.entries, key(spec))
@@ -175,6 +207,10 @@ func (m *Manifest) Records() [][]byte {
 			fields = append(fields, seededWord)
 		}
 
+		if e.hasProfile {
+			fields = append(fields, e.profile.String())
+		}
+
 		records = append(records, []byte(strings.Join(fields, " ")))
 	}
 
@@ -209,13 +245,29 @@ func ParseManifest(records [][]byte) (*Manifest, error) {
 }
 
 // parseEntry reads one manifest record's fields: the specification,
-// then a digest, a KEPT= digest, or both, in that order, or SEEDED. A
-// KEPT= note alone is a file never govax's (one there before the manifest
-// was), whose newer govax copy the user has been told about.
+// then a digest, a KEPT= digest, or both, in that order, or SEEDED; then,
+// last, the OWNER= and PROTECTION= words of its profile, which may stand
+// alone (a directory's record). A KEPT= note alone is a file never govax's
+// (one there before the manifest was), whose newer govax copy the user has
+// been told about.
 func parseEntry(fields []string) (entry, error) {
 	var e entry
 
 	bad := fmt.Errorf("%q is not a file and a digest", strings.Join(fields, " "))
+
+	if n := len(fields); n >= 3 && hasWord(fields[n-2], ownerWord) && hasWord(fields[n-1], protectionWord) {
+		p, err := parseProfile(fields[n-2], fields[n-1])
+		if err != nil {
+			return e, err
+		}
+
+		e.profile, e.hasProfile = p, true
+		fields = fields[:n-2]
+
+		if len(fields) == 1 {
+			return e, nil
+		}
+	}
 
 	if len(fields) == 2 && strings.EqualFold(fields[1], seededWord) {
 		e.seeded = true
@@ -259,5 +311,11 @@ func parseEntry(fields []string) (entry, error) {
 
 // hasKeptWord returns whether a manifest field is a KEPT= note.
 func hasKeptWord(field string) bool {
-	return len(field) >= len(keptWord) && strings.EqualFold(field[:len(keptWord)], keptWord)
+	return hasWord(field, keptWord)
+}
+
+// hasWord returns whether a manifest field starts with the keyword word
+// ("KEPT=", "OWNER="), in any case.
+func hasWord(field, word string) bool {
+	return len(field) >= len(word) && strings.EqualFold(field[:len(word)], word)
 }

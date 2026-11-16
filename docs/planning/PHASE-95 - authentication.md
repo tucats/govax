@@ -520,7 +520,7 @@ Each is one commit, with tests, stopping for review.
 6. **AUTHORIZE's reports and identifiers** (done 2026-11-15) (Decision 11): SHOW
    (`/BRIEF`, `/FULL`, wildcards), LIST (SYSUAF.LIS, RIGHTSLIST.LIS),
    the identifier commands, rights given at login; held to the probe.
-7. **The system volume's protection** (Decision 9): owners and
+7. **The system volume's protection** (done 2026-11-15) (Decision 9): owners and
    protections in `sysvol`, set by Populate and Refresh, existing
    volumes corrected once; SYLOGIN.COM seeded; `SYS$SYLOGIN` in
    STARTUP.COM.
@@ -884,3 +884,41 @@ The answers (2026-11-15):
   `GOVAX_PASSWORD` giving it when standard input isn't a terminal and a
   graceful failure otherwise; it is part of subtask 8. Subtask 8's line no
   longer names `--no-login`, which the review dropped.
+- **2026-11-15** Subtask 7: the system volume's protection.
+  `sysvol/profile.go`: a `Profile` (owner and protection code),
+  `FileProfile` ([1,4], (S:RWED,O:RWED,G:RE,W:RE)) and `DirectoryProfile`
+  ((S:RWE,O:RWE,G:RE,W:RE)), `File.Profile`, and `DirectoryFile` (a
+  directory's directory file, `[SYSTEM]SYSLIB.DIR`, `[000000]SYSTEM.DIR`).
+  The `Volume` interface gains `SetProfile` (every version of a file);
+  `dclcmd`'s is SET SECURITY's own code, `rms.Session.SecurityObjects` and
+  `SetOwnerProtection`, run as SYSTEM before any login. `Refresh` sets each
+  directory's and file's profile and records it in the manifest, two words
+  at a record's end (`OWNER=[1,4] PROTECTION=(...)`; a directory's record,
+  `[SYSTEM.SYSLIB]`, holds nothing else): a profile the manifest already
+  records isn't set again, so an older volume is corrected once and a
+  later SET SECURITY stays; a new version takes its previous version's
+  protection (RMS's rule), so an update keeps it, and only a file made
+  where there was none (a missing supplied file, a seeded one's first
+  writing) gets govax's again. The manifest gets its own profile when it
+  is first written with profiles; the update log when DCL makes it (the
+  refresh before records that profile, so the start after doesn't write a
+  manifest for it), or at the next refresh if it is there unrecorded. The page file keeps rms's
+  (S:RWED,O:RWED,G,W), and Decision 9's W:RE for SYS$MANAGER's procedures
+  is every file's. SYLOGIN.COM (`bootdata/files/sylogin.com`, comments
+  only) is a second seeded file in SYS$MANAGER, and STARTUP.COM defines
+  `SYS$SYLOGIN` as VMS 7.1's was (system table, executive mode,
+  `"SYS$MANAGER:SYLOGIN"`, as `vax/uaf95.log` shows it); nothing runs it until subtask 8.
+  Tests: `sysvol`'s `TestProfiles`, `TestManifestProfiles`,
+  `TestPopulateProfiles`, `TestRefreshProfiles` (the map volume keeps a
+  profile per version and inherits it); the console's
+  `TestSystemVolumeProtection` (every file and directory on a new volume;
+  DIRECTORY/SECURITY), `TestSystemVolumeProtectionCorrected` (an older
+  volume, its manifest without profiles, corrected at the next start, the
+  user's change kept at the one after), and `TestSystemVolumeAsUser`
+  (SMITH, [300,1], reads SYS$SYLOGIN's file; DELETE, CREATE, COPY, and SET
+  SECURITY in the system's directories are RMS-E-PRV or SYSTEM-F-NOPRIV).
+  MANUAL.md's "Who owns the system's files", HELP SYSTEM_VOLUME
+  PROTECTION, and VAX-VMS-INTERNALS.md's refresh say so. Noticed, not
+  changed: CREATE's and COPY's OPENOUT name a new file on the system volume
+  by its physical directory (`DUA0:[SYSTEM.SYSMGR]MINE.COM;`) where DELETE
+  shows the concealed `SYS$SYSROOT:[SYSEXE]`.

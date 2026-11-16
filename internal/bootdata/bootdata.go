@@ -15,7 +15,8 @@
 // docs/planning/PHASE-87 - system volume.md), where govax copies them: startup.com
 // is the volume's SYS$MANAGER:STARTUP.COM, which govax runs from there,
 // and from here only when there is no system volume. Some only the volume
-// uses: systartup_vms.com, the user's site-specific startup, written once;
+// uses: systartup_vms.com, the user's site-specific startup, and
+// sylogin.com, the system's login procedure, each written once;
 // buildftn.com and buildstarlet.com, which rebuild FTNRTL.EXE and
 // STARLET.MLB from the volume's sources.
 //

@@ -31,6 +31,12 @@ $    define/system/executive_mode sys$help    sys$sysroot:[syshlp]
 $    define/system/executive_mode sys$library sys$sysroot:[syslib]
 $    define/system/executive_mode sys$share   sys$sysroot:[syslib]
 $    define/system/executive_mode sys$sources sys$sysroot:[sources]
+$!
+$!   The system's login procedure, which DCL runs first at each login,
+$!   before the account's own (SYS$MANAGER:SYLOGIN.COM, a file govax
+$!   creates once and never replaces).
+$!
+$    define/system/executive_mode sys$sylogin "SYS$MANAGER:SYLOGIN"
 $ endif
 $!
 $!  The microkernel and the console ROM. On the system volume they are

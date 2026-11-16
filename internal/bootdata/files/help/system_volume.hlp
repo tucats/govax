@@ -9,7 +9,8 @@
 
      [SYSTEM.SYSEXE]   SYS$SYSTEM     DEFAULT.ROM, PAGEFILE.SYS
      [SYSTEM.SYSMGR]   SYS$MANAGER    STARTUP.COM, SYSTARTUP_VMS.COM,
-                                      CONSOLE.DCL, DEBUG.DCL
+                                      SYLOGIN.COM, CONSOLE.DCL,
+                                      DEBUG.DCL
      [SYSTEM.SYSHLP]   SYS$HELP       HELPLIB.HLB, DBG$HELP.HLB
      [.SOURCES]                       the help libraries' .HLP files
      [.SOURCES.DEBUG]                 the debugger's DEBUG.HLP
@@ -48,8 +49,9 @@
 
 2 Updates
 
-   SYS$MANAGER:SYSTARTUP_VMS.COM is yours: govax makes it once and never
-   changes it.  Every other file is govax's: when a newer govax has a new
+   SYS$MANAGER:SYSTARTUP_VMS.COM and SYS$MANAGER:SYLOGIN.COM (the system's
+   login procedure, SYS$SYLOGIN) are yours: govax makes them once and
+   never changes them.  Every other file is govax's: when a newer govax has a new
    copy of a file you haven't changed, it writes its copy as a new
    version (the old one stays); a file you have changed is kept, and
    %MOUNT-I-SYSKEPT says so once for each new copy.  The help libraries
@@ -60,6 +62,16 @@
    module it inserts, replaces, or removes (as LIBNAME(MODULE)), is a
    line in SYS$SYSROOT:[000000]GOVAX$UPDATE.LOG with the time.  The log is made
    when first needed and added to at its end after that.
+
+2 Protection
+
+   Every directory and file on the volume is owned by [SYSTEM], [1,4].
+   Files are (S:RWED,O:RWED,G:RE,W:RE) and directories
+   (S:RWE,O:RWE,G:RE,W:RE): any account can read them, and only SYSTEM
+   can change them.  The page file is (S:RWED,O:RWED,G,W).  govax sets
+   these when it makes the volume, and once on an older volume; it
+   records them in GOVAX$FILES.DAT and never sets them again, so a
+   protection you change with SET SECURITY stays.
 
 2 Sharing
 

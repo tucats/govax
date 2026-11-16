@@ -21,6 +21,11 @@ type Volume interface {
 	// ReadFile returns the records of the highest version of the file
 	// spec, and true, or false (and no error) if there is no such file.
 	ReadFile(spec string) (records [][]byte, found bool, err error)
+
+	// SetProfile gives every version of the file spec, which exists, the
+	// owner and protection p (profile.go). A directory's is set on its
+	// directory file (DirectoryFile).
+	SetProfile(spec string, p Profile) error
 }
 
 // Action is what Refresh did with one file.
@@ -199,6 +204,11 @@ func (r *Report) Updates() []Update {
 //   - a seeded file is written only if the manifest doesn't say it was
 //     made before and it isn't there (Written); otherwise it is Left.
 //
+// Each directory and file is also given its owner and protection
+// (profile.go, docs/planning/PHASE-95 - authentication.md's Decision 9):
+// a new one always, an existing one once, when the manifest doesn't
+// record that profile, so the user's later SET SECURITY stays.
+//
 // A manifest record for a file govax no longer supplies is kept, so a
 // later govax that supplies the file again still knows whether the user
 // changed it. The manifest is written last, and only if it changed.
@@ -226,6 +236,21 @@ func refreshFiles(v Volume, files []File) (*Report, error) {
 		return nil, err
 	}
 
+	// Each directory's profile (Decision 9), recorded under its own
+	// specification ("[SYSTEM.SYSLIB]"): set on a new volume, and once on
+	// an existing one made before govax gave its volume profiles.
+	for _, dir := range Directories {
+		if recorded, ok := m.Profile(dir); ok && recorded == DirectoryProfile {
+			continue
+		}
+
+		if err := v.SetProfile(DirectoryFile(dir), DirectoryProfile); err != nil {
+			return nil, fmt.Errorf("%s: %w", dir, err)
+		}
+
+		m.SetProfile(dir, DirectoryProfile)
+	}
+
 	// The manifest's records as they are, to tell at the end whether it
 	// changed; a volume without one always gets one.
 	var before []byte
@@ -244,6 +269,18 @@ func refreshFiles(v Volume, files []File) (*Report, error) {
 		report.Changes = append(report.Changes, change)
 	}
 
+	// The manifest and the update log are govax's files too. A new version
+	// of either takes its previous version's profile, so each needs one
+	// set only when it is first made or govax wants another; the
+	// manifest's is recorded before it is written, so that it is in it.
+	manifestProfile, recorded := m.Profile(ManifestSpec)
+	setManifest := !found || !recorded || manifestProfile != FileProfile
+	m.SetProfile(ManifestSpec, FileProfile)
+
+	if err := profileExtra(v, m, UpdateLogSpec); err != nil {
+		return nil, err
+	}
+
 	if !found || !bytes.Equal(before, bytes.Join(m.Records(), []byte{'\n'})) {
 		if err := WriteManifest(v, m); err != nil {
 			return nil, err
@@ -252,19 +289,76 @@ func refreshFiles(v Volume, files []File) (*Report, error) {
 		report.ManifestWritten = true
 	}
 
+	if setManifest {
+		if err := v.SetProfile(ManifestSpec, FileProfile); err != nil {
+			return nil, fmt.Errorf("%s: %w", ManifestSpec, err)
+		}
+	}
+
 	return report, nil
+}
+
+// profileExtra gives spec, a file of govax's that isn't one of Files() (the
+// update log), its profile if it exists and the manifest doesn't record
+// it. One that isn't there yet gets its profile from whatever makes it
+// (the update log's maker, after this refresh, gives it FileProfile), so
+// the manifest records that now: else the next start would record it, and
+// write a manifest for nothing.
+func profileExtra(v Volume, m *Manifest, spec string) error {
+	if recorded, ok := m.Profile(spec); ok && recorded == FileProfile {
+		return nil
+	}
+
+	_, exists, err := v.ReadFile(spec)
+	if err != nil {
+		return fmt.Errorf("%s: %w", spec, err)
+	}
+
+	if !exists {
+		m.SetProfile(spec, FileProfile)
+
+		return nil
+	}
+
+	return applyProfile(v, m, spec, FileProfile, false)
 }
 
 // refreshFile does Refresh's work for one file f, recording in m what it
 // did, and returns the change.
 func refreshFile(v Volume, m *Manifest, f File) (Change, error) {
+	change, existed, err := refreshContents(v, m, f)
+	if err != nil {
+		return change, err
+	}
+
+	// The file's profile (profile.go): one made where there was none gets
+	// it, and so does one whose profile the manifest doesn't record, once.
+	// A seeded file the user deleted is still gone, and has none.
+	if change.Action == Left && !existed {
+		return change, nil
+	}
+
+	return change, applyProfile(v, m, f.Spec(), f.Profile(), change.Action == Written)
+}
+
+// refreshContents is what Refresh does with f's contents, recorded in m:
+// the change, and whether the file existed before.
+func refreshContents(v Volume, m *Manifest, f File) (Change, bool, error) {
+	records, exists, err := v.ReadFile(f.Spec())
+	if err != nil {
+		return Change{File: f}, false, fmt.Errorf("%s: %w", f.Spec(), err)
+	}
+
+	change, err := refreshRecords(v, m, f, records, exists)
+
+	return change, exists, err
+}
+
+// refreshRecords is refreshContents's work on the file f, whose highest
+// version has records if it exists.
+func refreshRecords(v Volume, m *Manifest, f File, records [][]byte, exists bool) (Change, error) {
 	change := Change{File: f}
 	spec := f.Spec()
-
-	records, exists, err := v.ReadFile(spec)
-	if err != nil {
-		return change, fmt.Errorf("%s: %w", spec, err)
-	}
 
 	if f.Kind == Seeded {
 		change.Action = Left
