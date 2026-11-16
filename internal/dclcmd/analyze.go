@@ -25,7 +25,8 @@ import (
 // the rules MACRO, LINK, and LIBRARY use (rms.Session.Locate), with the
 // default type OBJ (EXE for an image); a file's bare name is found beside
 // the file before it. The report goes to the console, or with /OUTPUT to a
-// text file, by default NAME.ANL (NAME.ANI) beside the first input. Each input file's report is
+// text file, by default NAME.ANL (NAME.ANI) in the default directory
+// (filenames.go's outputLocation). Each input file's report is
 // paged on its own, one after another.
 
 // AnalyzeOptions is one ANALYZE/OBJECT or ANALYZE/IMAGE command.
@@ -35,8 +36,8 @@ type AnalyzeOptions struct {
 	Files []string
 	Host  bool
 
-	// Output is /OUTPUT, to OutputFile, or to NAME.ANL beside the first
-	// input when OutputFile is empty.
+	// Output is /OUTPUT, to OutputFile, or to NAME.ANL (the first
+	// input's name) in the default directory when OutputFile is empty.
 	Output     bool
 	OutputFile string
 
@@ -267,8 +268,8 @@ func (c *Context) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][
 	return records, found, nil
 }
 
-// writeAnalysis writes a report to the output file name (or NAME.typ
-// beside input), one record per line.
+// writeAnalysis writes a report to the output file name (or NAME.typ,
+// input's name, in the default directory), one record per line.
 //
 // The null device, NL:, takes the report and keeps nothing, as VMS's
 // ANALYZE/RMS_FILE/OUTPUT=NL: did (docs/planning/PHASE-93 - file

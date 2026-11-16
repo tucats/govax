@@ -77,8 +77,9 @@ func dirNames(t *testing.T, dir string) []string {
 }
 
 // TestMacro_hostDefaultObjectName checks the default object name: the
-// source's, next to it, with an OBJ extension in the case of the
-// source's.
+// source's, with an OBJ extension in the case of the source's, in the
+// default directory (for a host source, the host's current directory),
+// not beside the source.
 func TestMacro_hostDefaultObjectName(t *testing.T) {
 	cases := []struct{ source, typed, want string }{
 		{"hello.mar", "hello.mar", "hello.obj"},
@@ -91,7 +92,8 @@ func TestMacro_hostDefaultObjectName(t *testing.T) {
 
 	for _, tc := range cases {
 		c, _ := newTestConsole(t)
-		dir := t.TempDir()
+		dir, current := t.TempDir(), t.TempDir()
+		t.Chdir(current)
 		writeHostFile(t, filepath.Join(dir, tc.source), macroSource)
 
 		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, tc.typed)}); err != nil {
@@ -100,14 +102,17 @@ func TestMacro_hostDefaultObjectName(t *testing.T) {
 			continue
 		}
 
-		names := dirNames(t, dir)
-		if len(names) != 2 || !contains(names, tc.want) {
-			t.Errorf("%s: directory holds %v, want %s beside the source", tc.typed, names, tc.want)
+		if names := dirNames(t, dir); len(names) != 1 {
+			t.Errorf("%s: the source's directory holds %v, want only the source", tc.typed, names)
+		}
+
+		if names := dirNames(t, current); len(names) != 1 || names[0] != tc.want {
+			t.Errorf("%s: the current directory holds %v, want %s", tc.typed, names, tc.want)
 
 			continue
 		}
 
-		readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(dir, tc.want)})
+		readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(current, tc.want)})
 	}
 }
 
@@ -134,7 +139,7 @@ func TestMacro_headers(t *testing.T) {
 
 	defer func() { dclcmd.BuildVersion = saved }()
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, CommandLine: `MACRO "small.mar"`}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, CommandLine: `MACRO "small.mar"`, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -182,7 +187,7 @@ func TestMacro_errorsWriteNothing(t *testing.T) {
 	writeHostFile(t, src, "\t.PSECT\tCODE\n\tBOGUS\n\tRSB\n\tALSO_BOGUS\n")
 	writeHostFile(t, objPath, "old object")
 
-	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src})
+	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Fatalf("Macro error = %v, want CLI_ASMERRORS", err)
 	}
@@ -209,7 +214,7 @@ func TestMacro_warningsStillWrite(t *testing.T) {
 	src := filepath.Join(dir, "warn.mar")
 	writeHostFile(t, src, "\t.ENABLE\tTRUNCATION\n\t.PSECT\tCODE\n\tRSB\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -237,11 +242,13 @@ func TestMacro_noObject(t *testing.T) {
 	}
 }
 
-// TestMacro_namedObject checks /OBJECT=: a bare name goes next to the
-// source, a host path goes where it says.
+// TestMacro_namedObject checks /OBJECT=: a bare name goes to the default
+// directory, as on VMS (for a host source, the host's current directory),
+// not next to the source; a host path goes where it says.
 func TestMacro_namedObject(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "src", "small.mar")
 	writeHostFile(t, src, macroSource)
 
@@ -249,7 +256,7 @@ func TestMacro_namedObject(t *testing.T) {
 		t.Fatalf("Macro: %v", err)
 	}
 
-	readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(dir, "src", "other.obj")})
+	readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(dir, "other.obj")})
 
 	elsewhere := filepath.Join(dir, "out.obj")
 	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: elsewhere}); err != nil {
@@ -289,9 +296,68 @@ func TestMacro_missingSource(t *testing.T) {
 	}
 }
 
+// TestMacro_defaultDirectory: the outputs of MACRO, LINK, and FORTRAN take
+// only their name and type from the input, as RMS's output file parse
+// does; their device and directory are the default's, as on VMS, so
+// MACRO [SRC]SMALL writes SMALL.OBJ in the default directory, [WORK], not
+// in [SRC], and so does /OBJECT= with a bare name. A name with a directory
+// goes where it says.
+func TestMacro_defaultDirectory(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	for _, dir := range []string{"DUA0:[SRC]", "DUA0:[WORK]"} {
+		if _, err := c.ContainerSession.CreateDirectory(dir, rms.CreateDirectoryOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := c.ContainerSession
+	if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA0:[SRC]SMALL.MAR"}, rms.TextRecords, splitSource(macroSource)); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA0:[SRC]SQUARES.FOR"}, rms.TextRecords, splitSource(fortranSource)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.cmd().SetDefault("DUA0:[WORK]"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{
+		"MACRO/LIST DUA0:[SRC]SMALL",
+		"MACRO DUA0:[SRC]SMALL/OBJECT=NAMED",
+		"MACRO DUA0:[SRC]SMALL/OBJECT=[SRC]",
+		"LINK/MAP SMALL",
+		"FORTRAN DUA0:[SRC]SQUARES",
+	} {
+		if err := d.Dispatch(command); err != nil {
+			t.Fatalf("%s: %v", command, err)
+		}
+	}
+
+	for _, name := range []string{"SMALL.OBJ", "SMALL.LIS", "NAMED.OBJ", "SMALL.EXE", "SMALL.MAP", "SQUARES.MAR"} {
+		if _, _, err := s.ReadRawFile(rms.FileLocation{Name: "DUA0:[WORK]" + name}); err != nil {
+			t.Errorf("%s isn't in the default directory: %v", name, err)
+		}
+	}
+
+	if _, _, err := s.ReadRawFile(rms.FileLocation{Name: "DUA0:[SRC]SMALL.OBJ;1"}); err != nil {
+		t.Errorf("/OBJECT=[SRC]: %v", err)
+	}
+
+	for _, name := range []string{"SMALL.LIS", "NAMED.OBJ", "SMALL.EXE", "SMALL.MAP", "SQUARES.MAR", "SMALL.OBJ;2"} {
+		if _, _, err := s.ReadRawFile(rms.FileLocation{Name: "DUA0:[SRC]" + name}); err == nil {
+			t.Errorf("%s is beside the source", name)
+		}
+	}
+}
+
 // TestMacro_volume assembles a source on a mounted volume: the object
-// goes beside it, each assembly makes the next version, and the source's
-// type defaults to MAR.
+// goes to the default directory (TestMacro_defaultDirectory has one apart
+// from the source's), each assembly makes the next version, and the
+// source's type defaults to MAR.
 func TestMacro_volume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -301,16 +367,17 @@ func TestMacro_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]SMALL.OBJ;1"})
 
-	// A bare name, with the default on the volume.
-	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
-		t.Fatal(err)
-	}
+	// A bare name.
 
 	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "SMALL.MAR"}); err != nil {
 		t.Fatalf("Macro: %v", err)
@@ -387,7 +454,7 @@ func TestMacro_include(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -407,7 +474,7 @@ func TestMacro_include(t *testing.T) {
 
 	_ = os.Remove(filepath.Join(dir, "main.obj"))
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err == nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err == nil {
 		t.Error("Macro with a missing include succeeded")
 	}
 
@@ -443,6 +510,7 @@ func TestMacro_fixtureLadder(t *testing.T) {
 func TestDispatch_macroViaDCL(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "small.mar")
 	writeHostFile(t, src, macroSource)
 

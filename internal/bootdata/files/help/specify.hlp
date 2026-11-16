@@ -35,3 +35,21 @@
    DCL makes unquoted text uppercase, so quote a host path to keep its
    case: TYPE "notes/todo.txt".  Relative host paths are from the
    directory govax was started in.
+
+2 Output_files
+
+   A file a utility makes from another (MACRO's object and listing,
+   FORTRAN's MACRO file and listing, LINK's image and map, LIBRARY's
+   output and listing, ANALYZE's report) is named by default for its
+   input, with the output's own type, in the default directory (see SET
+   DEFAULT), as on VMS.  With the default DUA1:[WORK], MACRO [SRC]HELLO
+   writes DUA1:[WORK]HELLO.OBJ, not DUA1:[SRC]HELLO.OBJ.  Only the
+   input's name and type carry over, so /OBJECT=OTHER is
+   DUA1:[WORK]OTHER.OBJ too.  A name with a device or directory, such as
+   /OBJECT=[SRC], goes where it says, and one that is only a directory
+   gets the default name in it.
+
+   An output made from a host file is a host file in the host's current
+   directory, the one govax was started in: MACRO "src/hello.mar", or
+   govax macro src/hello.mar, writes hello.obj there, as a Unix compiler
+   does, whether or not the default directory is on a volume.

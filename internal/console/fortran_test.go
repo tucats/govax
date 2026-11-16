@@ -76,8 +76,8 @@ func checkMACRO(t *testing.T, c *Console, buf interface {
 	}
 }
 
-// TestFortran_host compiles a host source: the MACRO file goes beside it,
-// named for it with the type MAR in the source's case, and the source's
+// TestFortran_host compiles a host source: the MACRO file goes to the
+// host's current directory (here the source's own), named for it with the type MAR in the source's case, and the source's
 // type defaults to FOR. The module is named for the program, whatever
 // the file's name.
 func TestFortran_host(t *testing.T) {
@@ -91,6 +91,7 @@ func TestFortran_host(t *testing.T) {
 	for _, tc := range cases {
 		c, buf := newTestConsole(t)
 		dir := t.TempDir()
+		t.Chdir(dir) // where default outputs go
 		writeHostFile(t, filepath.Join(dir, tc.source), fortranSource)
 
 		buf.Reset()
@@ -125,6 +126,7 @@ func TestFortran_header(t *testing.T) {
 	c, _ := newTestConsole(t)
 	src := filepath.Join(t.TempDir(), "squares.for")
 	writeHostFile(t, src, fortranSource)
+	t.Chdir(filepath.Dir(src)) // where the MACRO file goes
 
 	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(src), CommandLine: "FORTRAN SQ"}); err != nil {
 		t.Fatal(err)
@@ -140,11 +142,16 @@ func TestFortran_header(t *testing.T) {
 }
 
 // TestFortran_volume compiles sources on a mounted volume: the MACRO
-// file goes beside the source, each compilation makes its next version,
+// file goes to the default directory, each compilation makes its next version,
 // /MACRO= names it, and a host MACRO file can come from a volume source.
 func TestFortran_volume(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
+
+	// Outputs go to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
 
 	s := c.ContainerSession
 	if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]SQUARES.FOR"}, rms.TextRecords, splitSource(fortranSource)); err != nil {
@@ -157,11 +164,7 @@ func TestFortran_volume(t *testing.T) {
 
 	checkMACRO(t, c, buf, rms.FileLocation{Name: "DUA0:[000000]SQUARES.MAR;1"}, "SQUARES")
 
-	// A bare name with the default on the volume, compiled again.
-	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
-		t.Fatal(err)
-	}
-
+	// A bare name, compiled again.
 	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("SQUARES.FOR")}); err != nil {
 		t.Fatalf("Fortran: %v", err)
 	}
@@ -209,6 +212,7 @@ func TestFortran_noMacro(t *testing.T) {
 func TestFortran_failures(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 
 	err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(filepath.Join(dir, "none"))})
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
@@ -244,6 +248,7 @@ func TestFortran_failures(t *testing.T) {
 func TestDispatch_fortran(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	a := filepath.Join(dir, "a.for")
 	b := filepath.Join(dir, "b.for")
 	writeHostFile(t, a, fortranSource)
@@ -293,6 +298,7 @@ func TestDispatch_fortran(t *testing.T) {
 func TestFortran_include(t *testing.T) {
 	c, buf := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "squares.for")
 
 	writeHostFile(t, src, "      PROGRAM SQUARES\n      INCLUDE 'inc/limits/LIST'\n      END\n")
@@ -354,6 +360,11 @@ func TestFortran_includeVolume(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
+	// Outputs go to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
 	s := c.ContainerSession
 	for name, text := range map[string]string{
 		"DUA0:[000000]SQUARES.FOR": "      PROGRAM SQUARES\n      INCLUDE 'LIMITS/LIST'\n      INCLUDE 'DUA0:[000000]OTHER.INC/LIST'\n      END\n",
@@ -388,6 +399,7 @@ func TestFortran_includeVolume(t *testing.T) {
 func TestDispatch_fortranAlign(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "al.for")
 	mar := filepath.Join(dir, "al.mar")
 
@@ -446,6 +458,7 @@ func TestDispatch_fortranAlign(t *testing.T) {
 func TestDispatch_fortranSource(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "cont.for")
 
 	// A statement with 20 continuation lines: one more than the default.
@@ -514,6 +527,7 @@ func TestDispatch_fortranSource(t *testing.T) {
 func TestFortran_list(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 
 	const included = "      PARAMETER (LIMIT = 1)\n"
 
@@ -633,6 +647,11 @@ func TestFortran_list(t *testing.T) {
 func TestFortran_listVolume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
+
+	// Outputs go to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
 
 	s := c.ContainerSession
 	if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]SQUARES.FOR"}, rms.TextRecords, splitSource(fortranSource)); err != nil {

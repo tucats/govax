@@ -390,11 +390,11 @@ func sec93Build(t *testing.T, c *Console) string {
 	path := filepath.Join(t.TempDir(), "sec93")
 	writeHostFile(t, path+".mar", string(src))
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: path + ".mar"}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: path + ".mar", Object: path + ".obj"}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{path}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{path}, Executable: path + ".exe"}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

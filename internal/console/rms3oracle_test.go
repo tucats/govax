@@ -157,7 +157,7 @@ func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []prob
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, probe)}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, probe)}, Executable: filepath.Join(dir, probe+".exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

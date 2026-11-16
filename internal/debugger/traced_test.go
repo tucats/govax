@@ -67,7 +67,10 @@ func tracedSession(t *testing.T, source string) *console.Console {
 
 	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 
-	path := filepath.Join(t.TempDir(), "traced")
+	dir := t.TempDir()
+	t.Chdir(dir) // the object goes to the default directory, as on VMS
+
+	path := filepath.Join(dir, "traced")
 	if err := os.WriteFile(path+".mar", []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}

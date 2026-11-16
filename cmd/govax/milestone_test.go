@@ -132,6 +132,7 @@ func TestRun_milestone(t *testing.T) {
 // prompt comes back.
 func TestRun_spawnAtThePrompt(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	src := filepath.Join(dir, "hello.mar")
 
 	if err := os.WriteFile(src, []byte(`	.title	hello

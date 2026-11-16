@@ -258,22 +258,24 @@
 
    Writes a listing: the source's lines with their numbers, each message
    under its line, and each unit's storage map.  By default it is the
-   source's name with the type LIS, beside the source, and it is written
-   after errors too.  The default is /NOLIST.  CDEC$ TITLE and SUBTITLE
-   set the heading of the page after the one they are on; with no
-   TITLE, a page's title is its unit's name.
+   source's name with the type LIS, in the default directory (see
+   SPECIFY Output_files), and it is written after errors too.  The default
+   is /NOLIST.  CDEC$ TITLE and SUBTITLE set the heading of the page after
+   the one they are on; with no TITLE, a page's title is its unit's name.
 
 /MACRO
 
       /[NO]MACRO[=filespec]
 
    Writes the MACRO file (the default).  Without a file name, it has the
-   source's name and location, with the type MAR in the same case as
-   the source's type: squares.for gives squares.mar.  A name is placed
+   source's name, with the type MAR in the same case as the source's
+   type (squares.for gives squares.mar), in the default directory, not
+   beside the source (see SPECIFY Output_files).  A name is placed
    as MACRO's /OBJECT places its object, and a VMS name without a type
    gets MAR.  On a volume, the file is the next version of its name.  A
-   host source whose type is already MAR is refused unless /MACRO names
-   another file, since its MACRO file would replace it.  /NOMACRO
+   host source whose type is already MAR, in the current directory, is
+   refused unless /MACRO names another file, since its MACRO file would
+   replace it.  /NOMACRO
    compiles the source and reports any errors, but writes no MACRO file.
 
 /OBJECT

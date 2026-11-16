@@ -13,6 +13,7 @@
 !
 INITIALIZE/CONTAINER "testdata/disks/round-exchange.dsk" /DEVICE=RD51 ROUNDXCHG
 MOUNT/WRITE DUA1 "testdata/disks/round-exchange.dsk"
+SET DEFAULT DUA1:[000000]
 !
 ! The sources, and ROUND.COM.
 !

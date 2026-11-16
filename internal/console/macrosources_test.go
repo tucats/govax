@@ -159,6 +159,7 @@ func TestMacroListVolume(t *testing.T) {
 func TestMacroListHost(t *testing.T) {
 	d, c, buf := shareFindConsole(t, false)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 
 	path := func(name string) string { return filepath.Join(dir, name) }
 

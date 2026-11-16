@@ -133,7 +133,7 @@ $ !
 			d := name + v.suffix
 			fmt.Fprintf(&ex, "CREATE/DIRECTORY %s[%s]\n", device, d)
 			fmt.Fprintf(&ex, "COPY/QUIET \"%s\"/HOST %s[%s]%s.FOR\n", source, device, d, name)
-			fmt.Fprintf(&ex, "FORTRAN%s %s[%s]%s\n", v.qualifier, device, d, name)
+			fmt.Fprintf(&ex, "FORTRAN%s/MACRO=%s[%s] %s[%s]%s\n", v.qualifier, device, d, device, d, name)
 
 			input := strings.TrimSuffix(source, ".for") + ".in"
 			if _, err := os.Stat(input); err == nil {
@@ -167,7 +167,7 @@ $ !
 			}
 
 			for _, file := range glob(filepath.Join(program, "*.for")) {
-				fmt.Fprintf(&ex, "FORTRAN%s %s[%s]%s\n", v.qualifier, device, d, stem(file))
+				fmt.Fprintf(&ex, "FORTRAN%s/MACRO=%s[%s] %s[%s]%s\n", v.qualifier, device, d, device, d, stem(file))
 			}
 
 			fmt.Fprintf(&com, "$ CALL ONE %s %s %s\n", d, name, link)

@@ -109,6 +109,7 @@ func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
 // be cut short by them (the run would never start if it were).
 func TestRun_limitsStopAOneShotRun(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	src := filepath.Join(dir, "spin.mar")
 
 	// A program whose main routine branches to itself forever.
@@ -282,6 +283,7 @@ func TestRun_bareAsmStartsAtX200(t *testing.T) {
 // message's unformatted text).
 func TestReportFailure_shownOnce(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	source := filepath.Join(dir, "crash.mar")
 
 	program := "\t.ENTRY\tCRASH, ^M<>\n\tCLRL\tR1\n\tMOVL\t(R1), R0\n\tRET\n\t.END\tCRASH\n"

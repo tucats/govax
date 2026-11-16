@@ -78,8 +78,9 @@ type MacroOptions struct {
 	NoObject bool
 
 	// List is /LIST: write a listing, to ListFile, or by default to the
-	// source's name with the type LIS, beside the source as the object
-	// is (docs/planning/PHASE-29.md subtask 5).
+	// source's name with the type LIS, in the default directory as the
+	// object is (docs/planning/PHASE-29.md subtask 5; filenames.go's
+	// outputLocation).
 	List     bool
 	ListFile string
 

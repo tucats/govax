@@ -11,42 +11,60 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file holds the file naming rules MACRO and LINK share: an input's
-// default file type, an output's default name (the input's, with the
-// output's type, in the case of the input's type), and how a failure to
-// find or read a file is reported.
+// This file holds the file naming rules MACRO, LINK, and the other
+// utilities share: an input's default file type, an output's default name
+// (the input's, with the output's type, in the case of the input's type,
+// in the default directory), and how a failure to find or read a file is
+// reported.
 
 // outputLocation is where an output file goes: the name given (MACRO's
 // /OBJECT=, LINK's /EXECUTABLE=), or by default the input's name with the
-// type typ, next to the input. A name that is only a directory (an
-// existing host directory, or a VMS specification with no name or type)
-// gets the default name in it, and a VMS name with no type gets typ.
+// type typ, in the process's default directory. A name that is only a
+// directory (an existing host directory, or a VMS specification with no
+// name or type) gets the default name in it, and a VMS name with no type
+// gets typ.
+//
+// The input is a related file only for the name and type, as RMS's output
+// file parse (FAB$V_OFP) uses one: its device and directory never carry
+// over, so MACRO [SRC]A and MACRO [SRC]A/OBJECT=B both write into the
+// default directory, as VMS's utilities do, not into [SRC].
+//
+// A host input's default directory is the host's current directory, by
+// the author's choice: a host file in, a host file out, as a Unix compiler
+// writes src/a.c's object in the current directory, so that a one-shot
+// build from host files works whether or not the session's default
+// directory is on a volume. A bare output name given for a host input
+// goes there too.
 func outputLocation(s *rms.Session, name string, input rms.FileLocation, typ string) (rms.FileLocation, error) {
 	if name == "" {
 		return defaultOutputLocation(s, input, typ)
 	}
 
-	loc, err := s.LocateRelated(name, false, input)
+	loc, err := s.Locate(name, false)
 	if err != nil {
 		return loc, err
 	}
 
+	// A bare name (not a logical name, which stands for its translation)
+	// given for a host input is in the host's current directory.
+	if input.Host && rms.BareName(name) && loc.Name == name {
+		loc = rms.FileLocation{Host: true, Name: inCurrentDirectory(name)}
+	}
+
 	if loc.Host {
 		if info, err := os.Stat(loc.Name); err == nil && info.IsDir() {
-			def, err := defaultOutputLocation(s, input, typ)
-			loc.Name = filepath.Join(loc.Name, filepath.Base(def.Name))
+			loc.Name = filepath.Join(loc.Name, outputFileName(input, typ))
 
-			return loc, err
+			return loc, nil
 		}
 
 		return loc, nil
 	}
 
 	if rest, _ := rms.SplitVersion(loc.Name); rms.NameType(rest) == "" {
-		def, err := defaultOutputLocation(s, input, typ)
-		loc.Name = rest + rms.NameType(def.Name)
+		loc.Name = rest + strings.ToUpper(outputFileName(input, typ))
 
-		return loc, err
+		return loc, nil
 	}
 
 	// A VMS name without a type gets typ, as VMS gives /OBJECT=NAME the
@@ -54,20 +72,46 @@ func outputLocation(s *rms.Session, name string, input rms.FileLocation, typ str
 	return loc.WithDefaultType(typ), nil
 }
 
-// defaultOutputLocation is the input's name with the type typ, next to
-// the input, with the type in the case of the input's type.
+// defaultOutputLocation is the input's name with the type typ, in the
+// default directory: for a volume input the process's (on the default
+// volume if there is one, otherwise the host's current directory), and
+// for a host input the host's current directory.
 func defaultOutputLocation(s *rms.Session, source rms.FileLocation, typ string) (rms.FileLocation, error) {
+	name := outputFileName(source, typ)
+
+	if source.Host || !s.DefaultOnVolume() {
+		return rms.FileLocation{Host: true, Name: inCurrentDirectory(name)}, nil
+	}
+
+	return rms.FileLocation{Name: strings.ToUpper(name)}, nil
+}
+
+// inCurrentDirectory is name, a host file's, in the host's current
+// directory as a whole path, so that what names the file (a map's "in
+// file" line, a message) says where it is, as a VMS file specification
+// would; name as it is if there's no current directory to be had.
+func inCurrentDirectory(name string) string {
+	if path, err := filepath.Abs(name); err == nil {
+		return path
+	}
+
+	return name
+}
+
+// outputFileName is the input's name with the type typ and no directory or
+// version: "A.OBJ" for DUA1:[SRC]A.MAR;3. A host input's type is given in
+// the case of its own ("a.obj" for "src/a.mar"), so that a host directory
+// of lowercase names stays one.
+func outputFileName(source rms.FileLocation, typ string) string {
 	if source.Host {
 		base := filepath.Base(source.Name)
 		ext := filepath.Ext(base)
 		stem := strings.TrimSuffix(base, ext)
 		ext = strings.TrimPrefix(ext, ".")
 
-		return rms.FileLocation{Host: true, Name: filepath.Join(filepath.Dir(source.Name), stem+"."+rms.MatchCase(ext, typ, base))}, nil
+		return stem + "." + rms.MatchCase(ext, typ, base)
 	}
 
-	// The version is dropped, so the output gets the next version of its
-	// own name.
 	name, _ := rms.SplitVersion(source.Name)
 	nameType := rms.NameType(name)
 
@@ -75,7 +119,7 @@ func defaultOutputLocation(s *rms.Session, source rms.FileLocation, typ string) 
 		nameType = nameType[:i]
 	}
 
-	return s.LocateRelated(nameType+"."+typ, false, source)
+	return nameType + "." + typ
 }
 
 // FileFailure turns an error finding, reading, or creating a file into

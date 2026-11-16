@@ -38,7 +38,8 @@ import (
 // with its source and object, the source and the MACRO file can each be
 // a host file or a file on a mounted volume (rms.Session.Locate's rules),
 // a source named without a type is .FOR, and the MACRO file is by default
-// the source's name with the type MAR, beside the source. /LIST writes a
+// the source's name with the type MAR, in the default directory
+// (filenames.go's outputLocation). /LIST writes a
 // listing the same way, of type LIS, even after errors (docs/planning/PHASE-85).
 //
 // The compiler prints its own messages. A compilation with errors writes

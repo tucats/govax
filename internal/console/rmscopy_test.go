@@ -29,7 +29,7 @@ func TestRMSCopy_govaxStarlet(t *testing.T) {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "rmscopy")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "rmscopy")}, Executable: filepath.Join(dir, "rmscopy.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

@@ -26,7 +26,7 @@ func TestRun_imageOnVolume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]MAIN"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]MAIN"}, Executable: "DUA0:[000000]MAIN.EXE"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +100,7 @@ func TestDispatch_runHost(t *testing.T) {
 
 	exe := filepath.Join(dir, "entry.exe")
 	
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "entry")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "entry")}, Executable: filepath.Join(dir, "entry.exe")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -130,7 +130,7 @@ func TestRun_recordUpdates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}, Executable: "DUA0:[000000]UPDATE.EXE"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,7 +152,7 @@ func TestRun_fileSections(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}, Executable: "DUA0:[000000]MAPFILE.EXE"}); err != nil {
 		t.Fatal(err)
 	}
 

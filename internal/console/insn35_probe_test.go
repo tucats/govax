@@ -109,7 +109,7 @@ func runInsn35Probe(t *testing.T, name string) []insn35Record {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, lower)}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, lower)}, Executable: filepath.Join(dir, lower+".exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

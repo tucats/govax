@@ -47,8 +47,8 @@ import (
 // Every file can be a host file or a file on a mounted ODS-2 volume, by
 // the rules MACRO and LINK use (rms.Session.Locate): an input file's bare
 // name is found beside the input before it, and /OUTPUT= and a /LIST= file
-// beside the library, with the types OBJ or MAR (by the library's type)
-// and LIS.
+// are named for the library, with the types OBJ or MAR (by the library's
+// type) and LIS, in the default directory (filenames.go's outputLocation).
 //
 // A new library (/CREATE) is laid out whole by an lbr.Builder, as
 // LIBRARIAN lays one out, and given /CREATE=BLOCKS's allocation. An

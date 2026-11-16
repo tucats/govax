@@ -42,8 +42,9 @@ import (
 // source and object (rms.Session.Locate). A file named without a type gets
 // its kind's, and a later file's bare name is found beside the one before
 // it; a file an options file names, beside the options file. The image and
-// map are named after the first file, with the types EXE and MAP, unless
-// /EXECUTABLE or /MAP names them.
+// map are named after the first file, with the types EXE and MAP, in the
+// default directory (filenames.go's outputLocation), unless /EXECUTABLE or
+// /MAP names them.
 //
 // Symbols the objects don't define come from the shareable images the
 // options files name, then the libraries named, in order, then the default

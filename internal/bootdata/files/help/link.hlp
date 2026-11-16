@@ -182,8 +182,8 @@
       /[NO]EXECUTABLE[=filespec]
 
    Writes the image (the default).  Without a file name, the image has
-   the first object's name and location, with the type EXE in the same
-   case as the object's type.  A name that is only a directory gets that
+   the first object's name, with the type EXE in the same case as the
+   object's type, in the default directory (see SPECIFY Output_files).  A name that is only a directory gets that
    name in it.  /NOEXECUTABLE links and reports any errors, but writes
    no image.
 
@@ -221,8 +221,8 @@
    Writes a link map, laid out as VMS LINK lays out its default map: the
    object modules, the program sections and each module's part of them,
    the global symbols the objects define, and the image synopsis.
-   Without a file name, the map has the first object's name and
-   location, with the type MAP.  /NOMAP, the default, writes none.
+   Without a file name, the map has the first object's name, with the
+   type MAP, in the default directory.  /NOMAP, the default, writes none.
 
 /OPTIONS
 

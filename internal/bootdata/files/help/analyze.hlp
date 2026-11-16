@@ -52,7 +52,8 @@
       /OUTPUT[=filespec]
 
    Writes the report to a file instead of the terminal: by default the
-   first file's name with the type .ANI, beside it.
+   first file's name with the type .ANI, in the default directory (see
+   SPECIFY Output_files).
 
 3 Examples
 
@@ -123,7 +124,8 @@
       /OUTPUT[=filespec]
 
    Writes the report to a file instead of the terminal: by default the
-   first file's name with the type .ANL, beside it.
+   first file's name with the type .ANL, in the default directory (see
+   SPECIFY Output_files).
 
 /TBT
 

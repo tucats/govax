@@ -124,7 +124,7 @@ func runLibcrdProbe(t *testing.T) *Console {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "libcrd")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "libcrd")}, Executable: filepath.Join(dir, "libcrd.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

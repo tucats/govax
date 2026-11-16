@@ -38,6 +38,7 @@ func linkMap(t *testing.T, c *Console, dir string, opts dclcmd.LinkOptions) stri
 func TestLink_optionsFile(t *testing.T) {
 	c := newBootableConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 
 	writeHostFile(t, filepath.Join(dir, "main.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,SUB\n\tRET\n\t.END\tSTART\n")
@@ -48,7 +49,7 @@ func TestLink_optionsFile(t *testing.T) {
 		"NAME=PROGRAM\nSYMBOL=LIMIT,%X29\n")
 
 	for _, name := range []string{"main", "sub"} {
-		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar"), Object: filepath.Join(dir, name+".obj")}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -91,6 +92,7 @@ func TestLink_optionsFile(t *testing.T) {
 func TestLink_clusters(t *testing.T) {
 	c := newBootableConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 
 	writeHostFile(t, filepath.Join(dir, "main.mar"), "\t.PSECT\tDATA,WRT,NOEXE\nVALUE:\t.LONG\t41\n"+
 		"\t.PSECT\tCODE,NOWRT,EXE\n\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,SUB\n\tADDL2\tVALUE,R0\n\tRET\n\t.END\tSTART\n")
@@ -101,7 +103,7 @@ func TestLink_clusters(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "clash.opt"), "BASE=%X10000\nCLUSTER=SUBS,%X10000,,sub\n")
 
 	for _, name := range []string{"main", "sub"} {
-		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar"), Object: filepath.Join(dir, name+".obj")}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -191,11 +193,12 @@ func TestLink_userLibraries(t *testing.T) {
 
 	c := newBootableConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 
 	writeHostFile(t, filepath.Join(dir, "exit.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tPUSHL\t#1\n\tCALLS\t#1,G^SYS$EXIT\n\tRET\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "exit.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "exit.mar"), Object: filepath.Join(dir, "exit.obj")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,7 +220,7 @@ func TestLink_userLibraries(t *testing.T) {
 		return data
 	}
 
-	own := image(dclcmd.LinkOptions{Objects: []string{exit}, NoSysLib: true})
+	own := image(dclcmd.LinkOptions{Objects: []string{exit}, NoSysLib: true, Executable: beside(exit, "exe")})
 
 	if lib := image(dclcmd.LinkOptions{Files: []link.InputFile{{Name: exit}, {Name: starlet, Library: true}}, NoSysLib: true}); !sameImage(own, lib) {
 		t.Error("the image linked with STARLET/LIBRARY differs from govax's tables'")
@@ -251,6 +254,7 @@ func TestLink_userLibraries(t *testing.T) {
 func TestDispatch_linkPositionalQualifiers(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	entry := assembleFixture(t, c, "entry", dir)
 	assembleFixture(t, c, "data", dir)
 
@@ -283,13 +287,13 @@ func TestLink_warnings(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "notfr.mar"), "\t.PSECT\tDATA,NOEXE\n\t.LONG\t1\n\t.END\n")
 
 	for _, name := range []string{"undef", "notfr"} {
-		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar"), Object: filepath.Join(dir, name+".obj")}); err != nil {
 			t.Fatal(err)
 		}
 
 		out.Reset()
 
-		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}, Executable: filepath.Join(dir, name+".exe")}); err != nil {
 			t.Fatalf("LINK %s: %v", name, err)
 		}
 

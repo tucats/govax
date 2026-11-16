@@ -142,11 +142,11 @@ func runLib59(t *testing.T) (uint32, string) {
 	path := filepath.Join(dir, "lib59")
 	writeHostFile(t, path+".mar", string(src))
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: path + ".mar"}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: path + ".mar", Object: path + ".obj"}); err != nil {
 		t.Fatalf("MACRO: %v\n%s", err, out.String())
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{path}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{path}, Executable: path + ".exe"}); err != nil {
 		t.Fatalf("LINK: %v\n%s", err, out.String())
 	}
 

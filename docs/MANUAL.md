@@ -786,6 +786,31 @@ qualifier.
 Without a default volume, your default directory is the host's current
 directory, and a bare `HELLO.MAR` means the host file `HELLO.MAR`.
 
+### Where a utility's output goes
+
+A file a utility makes from another (MACRO's object and listing, FORTRAN's
+MACRO file and listing, LINK's image and map, LIBRARY's output and listing,
+ANALYZE's report) is named for its input, with the output's own type, and
+goes in your **default directory**, not beside the input, as on VMS:
+
+```text
+VAX> SET DEFAULT DUA1:[WORK]
+VAX> MACRO [SRC]HELLO                ! writes DUA1:[WORK]HELLO.OBJ
+VAX> MACRO [SRC]HELLO/OBJECT=OTHER   ! DUA1:[WORK]OTHER.OBJ
+VAX> MACRO [SRC]HELLO/OBJECT=[SRC]   ! DUA1:[SRC]HELLO.OBJ
+VAX> LINK HELLO                      ! DUA1:[WORK]HELLO.EXE
+```
+
+Only the input's name and type carry over (RMS's "output file parse"). A
+name you give with a device or directory goes where it says, and one that
+is only a directory gets the default name in it.
+
+An output made from a **host** file is a host file in the host's current
+directory, the one govax was started in, whether or not your default
+directory is on a volume: `MACRO "src/hello.mar"`, or `govax macro
+src/hello.mar` from the shell, writes `hello.obj` there, as a Unix
+compiler does.
+
 ### Containers
 
 A container is a host file that holds a complete ODS-2 volume, block for
@@ -2111,7 +2136,7 @@ source files, which MACRO assembles and LINK links. It compiles the whole langua
 but DICTIONARY, which draws the message below ([section 14.7](#147-differences-from-vax-fortran)). The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
-with the type `MAR`, beside the source, unless `/MACRO=` names another;
+with the type `MAR`, in the default directory ([Where a utility's output goes](#where-a-utilitys-output-goes)), unless `/MACRO=` names another;
 `/NOMACRO` writes none. Names joined by `+` are one compilation, to one MACRO file named for
 the first, and one followed by `/LIBRARY` is a text library for its `INCLUDE` statements. `/EXTEND_SOURCE` lets fixed-format statements
 run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
@@ -3021,7 +3046,7 @@ qualifiers.
 
 | Qualifier | Meaning |
 | --- | --- |
-| `/OBJECT[=file]` | Write the object module (the default). It's named after the source, with type `.OBJ`, beside it. |
+| `/OBJECT[=file]` | Write the object module (the default). It's named after the source, with type `.OBJ`, in the default directory ([Where a utility's output goes](#where-a-utilitys-output-goes)). |
 | `/NOOBJECT` | Check the source without writing an object. |
 | `/LIST[=file]` | Write a listing (`.LIS`): the source with the generated code, the symbol table, the psect synopsis, and statistics. |
 | `/SHOW=(...)`, `/NOSHOW=(...)` | Listing options: `BINARY`, `CALLS`, `CONDITIONALS`, `DEFINITIONS`, `EXPANSIONS`. By default all but `BINARY` and `EXPANSIONS` are on. `/SHOW=EXPANSIONS` lists every line macros generate. |
@@ -3755,7 +3780,7 @@ file:   object[.OBJ]
 
 | Qualifier | Meaning |
 | --- | --- |
-| `/EXECUTABLE[=file]` | Write an executable image (the default), named after the first object, type `.EXE`. |
+| `/EXECUTABLE[=file]` | Write an executable image (the default), named after the first object, type `.EXE`, in the default directory. |
 | `/SHAREABLE[=file]` | Write a shareable image instead. |
 | `/NOEXECUTABLE` | Link and report errors, without writing an image. |
 | `/MAP[=file]` | Write a link map (`.MAP`). `/BRIEF` makes it short; `/FULL` adds the image sections and what each library contributed. |
@@ -6240,7 +6265,7 @@ host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]
 `/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, `--object-file file`, and `--recursive` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, `/OBJECT=file`, and `/RECURSIVE`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
-type `.LIS`, beside the source; `/LIST=file` names another. It is written after
+type `.LIS`, in the default directory; `/LIST=file` names another. It is written after
 errors too, without maps, since that's when it's wanted. Its layout is govax's own,
 in MACRO's manner: 132 columns and 66 lines to a page, with a two-line heading. Each
 line of the source has its number, one from an `INCLUDE` file its include depth before
@@ -6366,7 +6391,7 @@ beside a number in a common block aren't flagged, and neither is a bare `X`, or 
 
 **Objects in one step.** `FORTRAN/OBJECT` runs MACRO on the MACRO file it wrote, so that `FORTRAN/OBJECT`, `LINK`, `RUN`
 works as it does on VMS. The MACRO file is kept, so `/OBJECT/NOMACRO` is refused. The object is the source's name with
-type `OBJ` unless `/OBJECT=file` says otherwise, whatever `/MACRO=` calls the MACRO file. MACRO's messages appear as they
+type `OBJ`, in the default directory, unless `/OBJECT=file` says otherwise, whatever `/MACRO=` calls the MACRO file. MACRO's messages appear as they
 do when it's run by hand, and a compilation with errors assembles nothing. The default is `/NOOBJECT`, unlike VAX
 FORTRAN's.
 

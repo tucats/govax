@@ -6,6 +6,7 @@ import (
 	"errors"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
@@ -283,3 +284,28 @@ func withSettings(t *testing.T, values map[string]string) {
 		settings.Set(key, v)
 	}
 }
+
+// beside is path with its file type replaced by typ ("dir/prog.mar" and
+// "obj" make "dir/prog.obj"; "dir/prog" makes "dir/prog.obj"). An output
+// a utility names by default goes to the default directory, as on VMS, so
+// a test that builds in a temporary directory names its outputs there
+// with this, rather than leaving them in the package's own directory.
+func beside(path, typ string) string {
+	if i := strings.LastIndexAny(path, `.]>:/\`); i >= 0 && path[i] == '.' {
+		path = path[:i]
+	}
+
+	return path + "." + typ
+}
+
+// testdataDir is the repository's testdata directory as an absolute path,
+// so that a test may change to a directory of its own (t.Chdir), where the
+// utilities' default outputs go, and still find its fixtures.
+var testdataDir = func() string {
+	dir, err := filepath.Abs(filepath.Join("..", "..", "testdata"))
+	if err != nil {
+		panic(err)
+	}
+
+	return dir
+}()

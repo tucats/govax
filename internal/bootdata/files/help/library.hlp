@@ -91,7 +91,8 @@
       /EXTRACT=(module[,...])
 
    Copies modules out of the library, to the file /OUTPUT names (by
-   default, the library's name with the type .MAR, .OBJ, .TXT, or .HLP).
+   default, the library's name with the type .MAR, .OBJ, .TXT, or .HLP,
+   in the default directory; see SPECIFY Output_files).
    Names may hold * and %.  /OUTPUT=SYS$OUTPUT shows a text, macro, or
    help module.
 

@@ -69,7 +69,15 @@ func TestAnalyzeImage_hostFile(t *testing.T) {
 	dir := t.TempDir()
 	exe := copyFixture(t, imageFixtureExe, dir)
 
-	// /OUTPUT with no file: ADDR.ANI beside the image.
+	want, err := os.ReadFile(imageFixtureAni)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// /OUTPUT with no file: ADDR.ANI in the default directory, the host's
+	// current one for a host image.
+	t.Chdir(t.TempDir())
+
 	if err := d.Dispatch(`ANALYZE/IMAGE/OUTPUT "` + exe + `"`); err != nil {
 		t.Fatalf("ANALYZE: %v", err)
 	}
@@ -79,16 +87,11 @@ func TestAnalyzeImage_hostFile(t *testing.T) {
 		t.Errorf("ANALYZE/OUTPUT wrote to the console: %q", buf.String())
 	}
 
-	got, err := os.ReadFile(filepath.Join(dir, "addr.ani"))
+	got, err := os.ReadFile("addr.ani")
 	if err != nil {
-		got, err = os.ReadFile(filepath.Join(dir, "ADDR.ANI"))
+		got, err = os.ReadFile("ADDR.ANI")
 	}
 
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want, err := os.ReadFile(imageFixtureAni)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,6 +154,11 @@ func TestAnalyzeImage_volume(t *testing.T) {
 	}
 
 	if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]ADDR.EXE"}, rms.ImageBlocks, blocks); err != nil {
+		t.Fatal(err)
+	}
+
+	// The analysis goes to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 

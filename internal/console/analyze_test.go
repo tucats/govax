@@ -123,6 +123,11 @@ func TestAnalyze_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// The analysis goes to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := d.Dispatch("ANALYZE/OBJECT/OUTPUT DUA0:[000000]HELLO"); err != nil {
 		t.Fatalf("ANALYZE: %v", err)
 	}

@@ -132,7 +132,7 @@ func runRMS3Probe(t *testing.T, c *Console, name string) []probeRecord {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}, Executable: filepath.Join(dir, name+".exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

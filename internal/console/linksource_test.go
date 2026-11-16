@@ -18,7 +18,7 @@ import (
 
 // vmsLibDir is testdata/vmslib, where files copied from a VAX are kept
 // (only its README is in git).
-var vmsLibDir = filepath.Join("..", "..", "testdata", "vmslib")
+var vmsLibDir = filepath.Join(testdataDir, "vmslib")
 
 // vmsLibFile reads a file from testdata/vmslib, or skips the test.
 func vmsLibFile(t *testing.T, name string) []byte {
@@ -132,7 +132,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "getin.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tCALLS\t#0,G^LIB$GET_INPUT\n\tMOVL\t#SS$_NORMAL,R0\n\tRET\n\t.END\tGO\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "getin.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "getin.mar"), Object: filepath.Join(dir, "getin.obj")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -141,7 +141,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 
 		out.Reset()
 
-		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "getin")}}); err != nil {
+		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "getin")}, Executable: filepath.Join(dir, "getin.exe")}); err != nil {
 			t.Fatalf("LINK: %v", err)
 		}
 
@@ -179,6 +179,8 @@ func linkHello(t *testing.T, c *Console, opts dclcmd.LinkOptions) []byte {
 	assembleFixture(t, c, "hello", dir)
 
 	opts.Objects = []string{filepath.Join(dir, "hello")}
+	opts.Executable = filepath.Join(dir, "hello.exe")
+
 	if err := c.cmd().Link(opts); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
@@ -229,6 +231,7 @@ func TestLink_libraryDirectory(t *testing.T) {
 	}
 
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	exe := filepath.Join(dir, "hello.exe")
 
 	if err := os.WriteFile(exe, withLibs, 0o644); err != nil {
@@ -245,6 +248,7 @@ func TestLink_libraryDirectory(t *testing.T) {
 // no file and no shim is an error naming the image.
 func TestLink_libraryMissingImage(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	if err := os.WriteFile(filepath.Join(dir, "IMAGELIB.OLB"), vmsLibFile(t, "imagelib.olb"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -260,11 +264,11 @@ func TestLink_libraryMissingImage(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "smg.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tCALLS\t#0,G^SMG$CREATE_PASTEBOARD\n\tRET\n\t.END\tGO\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "smg.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "smg.mar"), Object: filepath.Join(dir, "smg.obj")}); err != nil {
 		t.Fatal(err)
 	}
 
-	err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "smg")}})
+	err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "smg")}, Executable: filepath.Join(dir, "smg.exe")})
 	if err == nil || !strings.Contains(err.Error(), "SMGSHR.EXE") {
 		t.Errorf("err = %v, want one naming SMGSHR.EXE", err)
 	}

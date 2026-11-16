@@ -45,7 +45,7 @@ func forthConsole(t *testing.T, typed string, files map[string]string) (*Console
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "forth")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "forth")}, Executable: filepath.Join(dir, "forth.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

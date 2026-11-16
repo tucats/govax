@@ -96,6 +96,7 @@ func buildCompiled(t *testing.T, commands func(file func(string) string) []strin
 	}
 
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	file := func(name string) string { return filepath.Join(dir, name) }
 
 	if err := os.WriteFile(file("dbg85.for"), src, 0o600); err != nil {
@@ -204,6 +205,7 @@ func fortranSessionOf(t *testing.T, source, at string) *console.Console {
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	file := func(name string) string { return filepath.Join(dir, name) }
 
 	if err := os.WriteFile(file("fv.for"), []byte(source), 0o600); err != nil {
@@ -399,6 +401,7 @@ func TestFortranLoopRegister(t *testing.T) {
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	file := func(name string) string { return filepath.Join(dir, name) }
 
 	source := `      PROGRAM LR
@@ -443,6 +446,7 @@ func TestFortranShowModule(t *testing.T) {
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	file := func(name string) string { return filepath.Join(dir, name) }
 
 	if err := os.WriteFile(file("rt.for"), []byte("      PRINT *, 1\n      END\n"), 0o600); err != nil {

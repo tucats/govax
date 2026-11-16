@@ -10,6 +10,7 @@
 !
 INITIALIZE/CONTAINER "testdata/disks/dbg89-exchange.dsk" /DEVICE=RD51 DBG89
 MOUNT/WRITE DUA2 "testdata/disks/dbg89-exchange.dsk"
+SET DEFAULT DUA2:[000000]
 COPY "testdata/dbg89/dbg89.mar"/HOST DUA2:[000000]DBG89.MAR
 COPY "testdata/dbg89/dbg89b.mar"/HOST DUA2:[000000]DBG89B.MAR
 COPY "testdata/dbg89/dbg89f.for"/HOST DUA2:[000000]DBG89F.FOR

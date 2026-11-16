@@ -71,6 +71,7 @@ func moduleText(t *testing.T, l *lbr.Library, name string) string {
 func TestLibrary_macroHost(t *testing.T) {
 	c, out := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "macros.mar")
 	writeHostFile(t, src, libMacros)
 
@@ -190,7 +191,7 @@ func TestLibrary_objectLink(t *testing.T) {
 	for name, text := range map[string]string{"main": libMain, "sub": libSub} {
 		writeHostFile(t, filepath.Join(dir, name+".mar"), text)
 
-		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar"), Object: filepath.Join(dir, name+".obj")}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -248,6 +249,11 @@ func TestLibrary_objectLink(t *testing.T) {
 func TestLibrary_volume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
+
+	// Outputs go to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
 
 	src := filepath.Join(t.TempDir(), "macros.mar")
 	writeHostFile(t, src, libMacros)

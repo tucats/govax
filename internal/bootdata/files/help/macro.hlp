@@ -148,10 +148,12 @@
       /[NO]OBJECT[=filespec]
 
    Writes the object module (the default).  Without a file name, the
-   object has the source's name and location, with the type OBJ in the
-   same case as the source's type: hello.mar gives hello.obj, HELLO.MAR
-   gives HELLO.OBJ.  A bare file name also goes beside the source; a host
-   path or a VMS file specification goes where it says.  On a volume,
+   object has the source's name, with the type OBJ in the same case as
+   the source's type (hello.mar gives hello.obj, HELLO.MAR gives
+   HELLO.OBJ), in the default directory, not beside the source (see
+   SPECIFY Output_files).  A bare file name also goes in the default
+   directory; a host path or a VMS file specification goes where it
+   says.  On a volume,
    the object is the next version of its name, and the volume must be
    mounted /WRITE.  /NOOBJECT assembles the source and reports any
    errors, but writes no object.

@@ -65,7 +65,7 @@ func TestMacro_govaxStarlet(t *testing.T) {
 	src := filepath.Join(dir, "exit.mar")
 	writeHostFile(t, src, "\t.ENTRY\tSTART,^M<>\n\t$EXIT_S\tR0\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestMacro_librarySearchOrder(t *testing.T) {
 	for _, tc := range cases {
 		writeHostFile(t, src, tc.directives+"\tWHICH\n\t.END\n")
 
-		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: tc.libraries}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: tc.libraries, Object: beside(src, "obj")}); err != nil {
 			t.Errorf("%s: Macro: %v", tc.name, err)
 
 			continue
@@ -119,7 +119,7 @@ func TestMacro_librarySearchOrder(t *testing.T) {
 
 	writeHostFile(t, src, "\t$EXIT_S\n\t.END\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"exit"}}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"exit"}, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("$EXIT_S from exit.mlb: %v", err)
 	}
 
@@ -135,7 +135,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 	src := filepath.Join(dir, "prog.mar")
 	writeHostFile(t, src, "\tNOP\n\t.END\n")
 
-	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"none"}})
+	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"none"}, Object: beside(src, "obj")})
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("missing /LIBRARY file: %v, want SS_NOSUCHFILE", err)
 	}
@@ -144,7 +144,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 	objSrc := filepath.Join(dir, "sub.mar")
 	writeHostFile(t, objSrc, "\t.ENTRY\tSUB,^M<>\n\tRET\n\t.END\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: objSrc}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: objSrc, Object: beside(objSrc, "obj")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,7 +152,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"objs.olb"}})
+	err = c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"objs.olb"}, Object: beside(src, "obj")})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_LIBRARY)) {
 		t.Errorf("object library as /LIBRARY: %v, want CLI_LIBRARY", err)
 	}
@@ -160,7 +160,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 	// A .LIBRARY file that isn't there is an assembly error.
 	writeHostFile(t, src, "\t.LIBRARY\t/none/\n\t.END\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Errorf("missing .LIBRARY file: %v, want CLI_ASMERRORS", err)
 	}
 }
@@ -177,7 +177,7 @@ func TestMacro_starletReadWhenNeeded(t *testing.T) {
 	src := filepath.Join(dir, "prog.mar")
 	writeHostFile(t, src, "\tNOP\n\t.END\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("a program without library macros: %v", err)
 	}
 
@@ -186,7 +186,7 @@ func TestMacro_starletReadWhenNeeded(t *testing.T) {
 	var out strings.Builder
 	c.Out = &out
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Fatalf("$EXIT_S with a bad STARLET.MLB: %v, want CLI_ASMERRORS", err)
 	}
 
@@ -209,7 +209,7 @@ func TestMacro_starletSources(t *testing.T) {
 
 	writeHostFile(t, src, "\tWHICH\n\t.END\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("host STARLET.MLB: %v", err)
 	}
 
@@ -238,7 +238,7 @@ func TestMacro_starletSources(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("SYS$LIBRARY:STARLET.MLB: %v", err)
 	}
 
@@ -267,7 +267,7 @@ func TestMacro_realStarlet(t *testing.T) {
 		"\t$QIOW_S\tCHAN=#1,FUNC=#IO$_WRITEVBLK,P1=MSG,P2=#3\n"+
 		"\t$EXIT_S\tR0\nMSG:\t.ASCII\t/HI!/\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -322,6 +322,7 @@ func TestDispatch_macroLibraryQualifier(t *testing.T) {
 	d.Console.HostLibrary = t.TempDir()
 
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	makeMacroLibrary(t, d.Console, filepath.Join(dir, "a.mlb"), whichMacro("1"))
 	makeMacroLibrary(t, d.Console, filepath.Join(dir, "b.mlb"), whichMacro("2"))
 

@@ -51,6 +51,7 @@ func lineWith(lines []string, s string) string {
 func TestMacro_listHost(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "small.mar")
 	writeHostFile(t, src, macroSource)
 
@@ -60,7 +61,7 @@ func TestMacro_listHost(t *testing.T) {
 	}
 
 	command := `MACRO "` + src + `"/LIST`
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, List: true, CommandLine: command}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, List: true, CommandLine: command, Object: beside(src, "obj")}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -103,6 +104,7 @@ func TestMacro_listHost(t *testing.T) {
 func TestMacro_listNamed(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "small.mar")
 	writeHostFile(t, src, macroSource)
 
@@ -138,10 +140,11 @@ func TestMacro_listNamed(t *testing.T) {
 func TestMacro_listAfterErrors(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "bad.mar")
 	writeHostFile(t, src, "\t.PSECT\tCODE\n\tBOGUS\n\tRSB\n\t.END\n")
 
-	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, List: true})
+	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, List: true, Object: beside(src, "obj")})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Fatalf("Macro error = %v, want CLI_ASMERRORS", err)
 	}
@@ -167,6 +170,11 @@ func TestMacro_listVolume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
+	// Outputs go to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
 	s := c.ContainerSession
 
 	srcLoc := rms.FileLocation{Name: "DUA0:[000000]SMALL.MAR"}
@@ -179,7 +187,7 @@ func TestMacro_listVolume(t *testing.T) {
 		t.Fatalf("RevisionDate = %v, %v; want the header's date", revised, err)
 	}
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL", List: true}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL", List: true, Object: "DUA0:[000000]SMALL.OBJ"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -190,7 +198,7 @@ func TestMacro_listVolume(t *testing.T) {
 		t.Errorf("second heading line = %q, want %s and the source's specification", lines[1], date)
 	}
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL", List: true, ListFile: "OTHER"}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL", List: true, ListFile: "OTHER", Object: "DUA0:[000000]SMALL.OBJ"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -202,6 +210,7 @@ func TestMacro_listVolume(t *testing.T) {
 func TestMacro_listLibraryNames(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	lib := filepath.Join(dir, "mine.mlb")
 	makeMacroLibrary(t, c, lib, whichMacro("1"))
 
@@ -229,6 +238,7 @@ func TestMacro_listLibraryNames(t *testing.T) {
 func TestDispatch_macroList(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "small.mar")
 	writeHostFile(t, src, macroSource)
 
@@ -267,6 +277,7 @@ func TestDispatch_macroList(t *testing.T) {
 func TestDispatch_macroCrossReference(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "xr.mar")
 
 	writeHostFile(t, src, "\t.TITLE\tXR\n\t.PSECT\tD\nVAL = 1\n\t.LONG\tVAL\n\t.END\n")
@@ -312,6 +323,7 @@ func TestDispatch_macroCrossReference(t *testing.T) {
 func TestDispatch_macroShow(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	src := filepath.Join(dir, "show.mar")
 	
 	writeHostFile(t, src, "\t.TITLE\tSHOW\n\t.PSECT\tD\n\t.MACRO\tONE\n\t.BYTE\t^X5A\n\t.ENDM\tONE\n\tONE\t\t; the call\n\t.END\n")

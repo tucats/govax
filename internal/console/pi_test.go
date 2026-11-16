@@ -24,7 +24,7 @@ func piRun(t *testing.T, command string) (string, uint32) {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "pi")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "pi")}, Executable: filepath.Join(dir, "pi.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

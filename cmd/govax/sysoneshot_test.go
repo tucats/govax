@@ -77,6 +77,7 @@ func TestRun_oneShotsOnSystemVolume(t *testing.T) {
 	withSystemVolume(t, systemFlags{file: system})
 
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	src := hostFile(t, dir, "ftnver.mar", ftnVersionCaller)
 	prog := filepath.Join(dir, "ftnver")
 

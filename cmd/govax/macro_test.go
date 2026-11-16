@@ -85,6 +85,7 @@ func TestLinkCommand(t *testing.T) {
 // three one-shot commands, as govax macro, link, and run would.
 func TestRun_macroLinkRunOneShot(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	src := filepath.Join(dir, "prog.mar")
 
 	if err := os.WriteFile(src, []byte("\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n\tMOVL\t#1,R0\n\tRET\n\t.END\tGO\n"), 0o644); err != nil {
@@ -104,6 +105,7 @@ func TestRun_macroLinkRunOneShot(t *testing.T) {
 // runs it, all as one-shot commands.
 func TestRun_macroLibrariesOneShot(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	macros := filepath.Join(dir, "mine.mar")
 	src := filepath.Join(dir, "prog.mar")
 
@@ -137,6 +139,7 @@ func TestRun_macroLibrariesOneShot(t *testing.T) {
 // one-shot command: a host source, keeping the case of its path.
 func TestRun_macroOneShot(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	src := filepath.Join(dir, "Small.Mar")
 
 	if err := os.WriteFile(src, []byte(smallSource), 0o644); err != nil {
@@ -157,6 +160,7 @@ func TestRun_macroOneShot(t *testing.T) {
 // that fails ends the session and run returns its failure.
 func TestRun_failedOneShotEndsWithItsError(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	src := filepath.Join(dir, "bad.mar")
 
 	if err := os.WriteFile(src, []byte("\tBOGUS\n"), 0o644); err != nil {
@@ -214,7 +218,7 @@ func TestRun_mountWrite(t *testing.T) {
 		mountRequests = []mountRequest{{device: "DUA0", path: disk, write: true}}
 
 		var buf bytes.Buffer
-		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{macroCommand("DUA0:[000000]SMALL", macroFlags{})}); err != nil {
+		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{macroCommand("DUA0:[000000]SMALL", macroFlags{object: "DUA0:[000000]"})}); err != nil {
 			t.Fatalf("run %d: %v\n%s", i, err, buf.String())
 		}
 	}
@@ -292,6 +296,7 @@ func TestFortranCommand(t *testing.T) {
 // beside the source, and MACRO assembles it without a message.
 func TestFortranThenMacro(t *testing.T) {
 	dir := t.TempDir()
+	t.Chdir(dir) // outputs go to the default directory, as on VMS
 	source := filepath.Join(dir, "squares.for")
 
 	program := "      PROGRAM SQUARES\n      INCLUDE 'limits'\n      DO 10 I = 1, N\n10    PRINT *, I, I*I\n      END\n"

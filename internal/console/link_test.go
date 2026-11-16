@@ -18,7 +18,7 @@ import (
 
 // marFixture is testdata/mar/name.mar.
 func marFixture(name string) string {
-	return filepath.Join("..", "..", "testdata", "mar", name+".mar")
+	return filepath.Join(testdataDir, "mar", name+".mar")
 }
 
 // assembleFixture assembles a testdata/mar fixture with MACRO into dir,
@@ -104,7 +104,7 @@ func TestLink_macroLinkRun(t *testing.T) {
 			assembleFixture(t, c, name, dir)
 
 			// No type: the object is .OBJ, and the image .EXE beside it.
-			if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+			if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}, Executable: filepath.Join(dir, name+".exe")}); err != nil {
 				t.Fatalf("LINK: %v", err)
 			}
 
@@ -140,12 +140,12 @@ func TestLink_runsRelocatedCode(t *testing.T) {
 		"\t.ENTRY\tGETVAL,^M<>\n\tMOVL\tVALUE,R0\n\tRET\n\t.END\n")
 
 	for _, name := range []string{"main", "sub"} {
-		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar"), Object: filepath.Join(dir, name+".obj")}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "main"), "sub"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "main"), "sub"}, Executable: filepath.Join(dir, "main.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func TestLink_hello(t *testing.T) {
 	dir := t.TempDir()
 	assembleFixture(t, c, "hello", dir)
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "hello")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "hello")}, Executable: filepath.Join(dir, "hello.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -188,7 +188,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 
 	exe := filepath.Join(dir, "hello.exe")
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "hello")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "hello")}, Executable: filepath.Join(dir, "hello.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -262,11 +262,11 @@ func TestLink_systemService(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "svc.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tPUSHL\t#9\n\tCALLS\t#1,G^SYS$EXIT\n\tRET\n\t.END\tGO\n")
 
-	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "svc.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "svc.mar"), Object: filepath.Join(dir, "svc.obj")}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "svc")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "svc")}, Executable: filepath.Join(dir, "svc.exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -330,7 +330,7 @@ func TestLink_severalObjects(t *testing.T) {
 	assembleFixture(t, c, "data", dir)
 
 	// A later object's bare name is found beside the one before it.
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{entry, "data"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{entry, "data"}, Executable: beside(entry, "exe")}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -355,7 +355,7 @@ func TestLink_errors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{bad}}); !errors.Is(err, vmserrors.New(vmserrors.CLI_LINKING)) {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{bad}, Executable: beside(bad, "exe")}); !errors.Is(err, vmserrors.New(vmserrors.CLI_LINKING)) {
 		t.Errorf("not an object: error = %v", err)
 	}
 
@@ -382,7 +382,7 @@ func TestLink_noTraceback(t *testing.T) {
 	obj := assembleFixture(t, c, "entry", dir)
 
 	for _, tb := range []bool{false, true} {
-		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{obj}, NoTraceback: !tb}); err != nil {
+		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{obj}, NoTraceback: !tb, Executable: beside(obj, "exe")}); err != nil {
 			t.Fatal(err)
 		}
 
@@ -410,7 +410,7 @@ func TestLink_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]PSECTS"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]PSECTS"}, Executable: "DUA0:[000000]PSECTS.EXE"}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -442,6 +442,7 @@ func TestLink_volume(t *testing.T) {
 func TestDispatch_linkViaDCL(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	entry := assembleFixture(t, c, "entry", dir)
 	data := assembleFixture(t, c, "data", dir)
 	exe := filepath.Join(dir, "both.exe")
@@ -497,9 +498,10 @@ func TestDispatch_linkViaDCL(t *testing.T) {
 func TestLink_map(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
+	t.Chdir(dir) // where default outputs go
 	obj := assembleFixture(t, c, "psects", dir)
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{obj}, Map: true}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{obj}, Map: true, Executable: beside(obj, "exe")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -539,11 +541,16 @@ func TestLink_map(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
+	// The map goes to the default directory.
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: marFixture("psects"), Object: "DUA0:[000000]PSECTS.OBJ"}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]PSECTS"}, Map: true}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]PSECTS"}, Map: true, Executable: "DUA0:[000000]PSECTS.EXE"}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
