@@ -13,7 +13,10 @@
 // $DCDEF; from global symbol directories); and, since Phase 90,
 // testdata/help90/defined.txt ($LBRDEF, $HLPDEF, $CREDEF, and $LHIDEF:
 // the values VMS 7.1 printed for the probe's LBR90.MAR, and the offsets
-// the Utility Routines manual gives). The macros are generated from those
+// the Utility Routines manual gives); and, since Phase 98,
+// testdata/bat98/defined.txt ($SJCDEF, $QUIDEF, and $JBCMSGDEF, the
+// queue services' codes and the job controller's conditions, from the
+// probe's objects). The macros are generated from those
 // lists, not written from VMS's own.
 //
 // A few families real MACRO's probes never covered come instead from
@@ -44,6 +47,7 @@ var defined = []string{
 	filepath.Join("..", "..", "testdata", "mar", "rms", "defined.txt"),
 	filepath.Join("..", "..", "testdata", "mp", "defs", "defined.txt"),
 	filepath.Join("..", "..", "testdata", "help90", "defined.txt"),
+	filepath.Join("..", "..", "testdata", "bat98", "defined.txt"),
 }
 
 // libraryFamilies are the families taken from STARLET.OLB's definition

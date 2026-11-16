@@ -25,11 +25,16 @@ COPY "testdata/mp/macros/r9_check_access.mar"/HOST DUA1:[000000]R9_CHECK_ACCESS.
 COPY "testdata/mp/macros/r9_get_security.mar"/HOST DUA1:[000000]R9_GET_SECURITY.MAR
 COPY "testdata/mp/macros/r9_set_security.mar"/HOST DUA1:[000000]R9_SET_SECURITY.MAR
 COPY "testdata/mp/macros/r9_setdfprot.mar"/HOST DUA1:[000000]R9_SETDFPROT.MAR
+COPY "testdata/mp/macros/r10_sndjbc.mar"/HOST DUA1:[000000]R10_SNDJBC.MAR
+COPY "testdata/mp/macros/r10_sndjbcw.mar"/HOST DUA1:[000000]R10_SNDJBCW.MAR
+COPY "testdata/mp/macros/r10_getqui.mar"/HOST DUA1:[000000]R10_GETQUI.MAR
+COPY "testdata/mp/macros/r10_getquiw.mar"/HOST DUA1:[000000]R10_GETQUIW.MAR
 COPY "testdata/mp/macros/macros.com"/HOST DUA1:[000000]MACROS.COM
 COPY "testdata/mp/macros/macros5.com"/HOST DUA1:[000000]MACROS5.COM
 COPY "testdata/mp/macros/macros6.com"/HOST DUA1:[000000]MACROS6.COM
 COPY "testdata/mp/macros/macros7.com"/HOST DUA1:[000000]MACROS7.COM
 COPY "testdata/mp/macros/macros8.com"/HOST DUA1:[000000]MACROS8.COM
 COPY "testdata/mp/macros/macros9.com"/HOST DUA1:[000000]MACROS9.COM
+COPY "testdata/mp/macros/macros10.com"/HOST DUA1:[000000]MACROS10.COM
 DIRECTORY DUA1:[000000]
 DISMOUNT DUA1

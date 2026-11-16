@@ -678,7 +678,7 @@ Each is one commit, with tests, stopping for review.
 2. **The probe** (done 2026-11-16): `testdata/bat98`, as in Part D,
    written and rehearsed where govax can; run on the VAX by the author in
    two rounds; A.3 answered (as A.4) and Part B adjusted.
-3. **Definitions** (Decision 9): `SJC$_`, `QUI$_`, `JBC$_`, and the
+3. **Definitions** (Decision 9; done 2026-11-16): `SJC$_`, `QUI$_`, `JBC$_`, and the
    flags in `vmsdef` from the probe's decoded objects; the JBC and QMAN
    messages; `$SJCDEF`, `$QUIDEF`, and the service macros in bootdata.
 4. **The database** (Decisions 2, 3): `internal/jobqueue`, its JSON file
@@ -906,3 +906,27 @@ queues is a future phase.
   what it showed (JOB_STATUS_OUTPUT is SUBMIT's message as text;
   SYNCHRONIZE_JOB's IOSB the job's status; `$GETQUI`'s items at their own
   sizes). Subtask 2 is done; subtask 3, the definitions, is next.
+- **2026-11-16** Subtask 3, the definitions: `defined.txt`'s 982 values
+  merged into `vmsdef.Symbols` (`gen -values`; `symbols.go` describes the
+  SJC$, QUI$, and JBC$_ families), and `mkdefs` makes `$SJCDEF`,
+  `$QUIDEF`, and `$JBCMSGDEF` of them in govax's macro library. The JBC
+  messages: `vmsdef/jbcmessages.go` has the 22 facility-specific ones
+  round 1 printed (`JBCFacility`; `TestJBCMessagesAsVMS` holds every JBC
+  message line of `testdata/bat98/vax`'s logs to `LookupMessage`). The
+  probe's `$GETMSG` dump reached only message numbers 0 to 1,023, the
+  facility's shared part, and showed VMS's rule there: a shared number is
+  the system message of that number under the facility's name, whatever
+  the severity (JBC$_NOOPER, %X42892, is SS$_NOOPER's text as
+  `%JBC-E-NOOPER`). `sharedMessage` now does that for every facility it
+  can name (`otherFacilities` adds JBC). The rest of `$JBCMSGDEF`'s 142
+  conditions have no text yet: a later subtask that needs one VMS never
+  printed words it from the System Services manual's description and
+  logs it as unconfirmed. The service macros `$SNDJBC`, `$SNDJBCW`,
+  `$GETQUI`, and `$GETQUIW` (with their argument-list and `_G` forms) are
+  in `starlet.mar`, written from the manuals on `$GETJPI`'s model; round
+  10 of `testdata/mp/macros` (`r10_*`, `macros10.com`, its README's
+  "Round 10") is their probe, for the author to run on the VAX. Until its
+  objects come back, `TestServiceMacroObjects` rehearses it (each program
+  assembles with govax's macros, refusing exactly the calls without
+  FUNC), and the clean-room hook lists its log, `vax/macros10.log`, as
+  unaudited. Subtask 4, the database, is next.

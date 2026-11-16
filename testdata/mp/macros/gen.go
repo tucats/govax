@@ -389,7 +389,7 @@ func main() {
 	}
 
 	// Round 5: what round 4 left open.
-	var round5, round6, round7, round8, round9 []string
+	var round5, round6, round7, round8, round9, round10 []string
 
 	{
 		text, calls := r5Probe()
@@ -446,7 +446,19 @@ func main() {
 		round9 = append(round9, name)
 	}
 
-	names = append(append(append(append(append(names, round5...), round6...), round7...), round8...), round9...)
+	// Round 10 (docs/planning/PHASE-98 - batch queues.md, subtask 3): the
+	// queue services, $SNDJBC(W) and $GETQUI(W), by round 4's method. It
+	// runs from this directory's own exchange volume (MACROS.COM).
+	for _, s := range r10Services {
+		name := "r10_" + strings.ToLower(s.name)
+		text, calls := r4Probe(s, "R10")
+		write(name+".mar", text)
+		write(name+".calls", strings.Join(calls, "\n")+"\n")
+
+		round10 = append(round10, name)
+	}
+
+	names = append(append(append(append(append(append(names, round5...), round6...), round7...), round8...), round9...), round10...)
 
 	// The command procedures: one per round, each with its own log, and
 	// MACROS.COM, which runs both.
@@ -473,19 +485,20 @@ func main() {
 	roundProcedure(7, round7)
 	roundProcedure(8, round8)
 	roundProcedure(9, round9)
+	roundProcedure(10, round10)
 
-	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 9
+	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 10
 $ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the
 $ ! exchange volume as the default directory:
 $ !
 $ !     @MACROS
 $ !
-$ ! Rounds 5 to 8 have run (MACROS5.COM to MACROS8.COM, logs in vax/);
-$ ! round 9 writes MACROS9.LOG. (Phase 63's probe, testdata/pg63, ran
+$ ! Rounds 5 to 9 have run (MACROS5.COM to MACROS9.COM, logs in vax/);
+$ ! round 10 writes MACROS10.LOG. (Phase 63's probe, testdata/pg63, ran
 $ ! MACROS8.COM itself, and Phase 93's round 3, testdata/prot93's
-$ ! SEC93.COM, runs MACROS9.COM.)
+$ ! SEC93.COM, ran MACROS9.COM.)
 $ !
-$ @MACROS9/OUTPUT=MACROS9.LOG
+$ @MACROS10/OUTPUT=MACROS10.LOG
 $ EXIT
 `)
 
@@ -513,7 +526,7 @@ $ EXIT
 		fmt.Fprintf(&o, "COPY DUA1:[000000]%s.ANL \"%s/vax/%s.anl\"/HOST/QUIET\n", up, dir, n)
 	}
 
-	for _, n := range []string{"macros.com", "macros5.com", "macros6.com", "macros7.com", "macros8.com", "macros9.com"} {
+	for _, n := range []string{"macros.com", "macros5.com", "macros6.com", "macros7.com", "macros8.com", "macros9.com", "macros10.com"} {
 		fmt.Fprintf(&x, "COPY \"%s/%s\"/HOST DUA1:[000000]%s\n", dir, n, strings.ToUpper(n))
 	}
 
@@ -523,6 +536,7 @@ $ EXIT
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS7.LOG \"%s/vax/macros7.log\"/HOST/QUIET\n", dir)
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS8.LOG \"%s/vax/macros8.log\"/HOST/QUIET\n", dir)
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS9.LOG \"%s/vax/macros9.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS10.LOG \"%s/vax/macros10.log\"/HOST/QUIET\n", dir)
 	o.WriteString("DISMOUNT DUA1\n")
 
 	write("exchange.cmd", x.String())
@@ -741,6 +755,16 @@ var r9Services = []r4Service{
 	{"GET_SECURITY", []arg{a("CLSNAM"), a("OBJNAM"), a("OBJHAN"), v("FLAGS"), a("ITMLST"), a("CONTXT"), a("ACMODE")}, nil, nil},
 	{"SET_SECURITY", []arg{a("CLSNAM"), a("OBJNAM"), a("OBJHAN"), v("FLAGS"), a("ITMLST"), a("CONTXT"), a("ACMODE")}, nil, nil},
 	{"SETDFPROT", []arg{a("PRVPRT"), a("CURPRT")}, nil, nil},
+}
+
+// r10Services is round 10's (docs/planning/PHASE-98 - batch queues.md): the
+// queue services, with the arguments of the VMS 5.0 System Services manual
+// and VSI's pages. func is a word by value, as both manuals give it.
+var r10Services = []r4Service{
+	{"SNDJBC", []arg{v("EFN"), w("FUNC"), v("NULLARG"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, nil, nil},
+	{"SNDJBCW", []arg{v("EFN"), w("FUNC"), v("NULLARG"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, nil, nil},
+	{"GETQUI", []arg{v("EFN"), w("FUNC"), a("CONTEXT"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, []string{"CONTXT"}, nil},
+	{"GETQUIW", []arg{v("EFN"), w("FUNC"), a("CONTEXT"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, []string{"CONTXT"}, nil},
 }
 
 // r4Probe writes one service's round 4 program (and round 6's: round is

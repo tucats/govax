@@ -1,11 +1,14 @@
 package asm
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -287,6 +290,8 @@ func macroErrors(t *testing.T, name string) []int {
 		logName = "macros8.log"
 	case strings.HasPrefix(name, "r9_"):
 		logName = "macros9.log"
+	case strings.HasPrefix(name, "r10_"):
+		logName = "macros10.log"
 	}
 
 	data, err := os.ReadFile(filepath.Join(serviceDir, "vax", logName))
@@ -408,6 +413,58 @@ var (
 	markerRE    = regexp.MustCompile(`^\t\.LONG\t\^X7A7A([0-9A-F]{4})$`)
 )
 
+// unconfirmedRequired names, for each probe whose round hasn't run on the
+// VAX, the keyword govax's macro requires: a call without it must be
+// refused, and every other call assemble.
+var unconfirmedRequired = map[string]string{
+	"r10_sndjbc":  "FUNC",
+	"r10_sndjbcw": "FUNC",
+	"r10_getqui":  "FUNC",
+	"r10_getquiw": "FUNC",
+}
+
+// rehearseProbe assembles a probe with govax's macros, as its author does
+// before the VAX run: a line refused must be a call that leaves out the
+// required keyword (by name, or by position: fewer than two positional
+// arguments, the required one being the second), and every such call must
+// be refused.
+func rehearseProbe(t *testing.T, src, required string) {
+	t.Helper()
+
+	if required == "" {
+		t.Fatal("no required keyword recorded for this unrun probe")
+	}
+
+	a := macroAssembler()
+	a.SetMacroLibraries(govaxStarlet(t))
+
+	refused := map[int]bool{}
+
+	if _, err := a.Assemble(src); err != nil {
+		for _, m := range regexp.MustCompile(`(?m)^\s*line (\d+):`).FindAllStringSubmatch(err.Error(), -1) {
+			n, _ := strconv.Atoi(m[1])
+			refused[n] = true
+		}
+	}
+
+	for i, line := range strings.Split(src, "\n") {
+		if !shortCallRE.MatchString(line) {
+			continue
+		}
+
+		args := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), strings.Fields(line)[0]))
+		missing := !strings.Contains(args, required+"=")
+
+		if missing && args != "" && !strings.Contains(args, "=") {
+			missing = len(strings.Split(args, ",")) < 2
+		}
+
+		if missing != refused[i+1] {
+			t.Errorf("line %d %q: refused %v, want %v", i+1, strings.TrimSpace(line), refused[i+1], missing)
+		}
+	}
+}
+
 // noMacroProbes are the probes for services with no macro.
 var noMacroProbes = map[string]bool{"r9_setdfprot": true}
 
@@ -424,8 +481,9 @@ func TestServiceMacroObjects(t *testing.T) {
 	// 3's, with keywords that are partly wrong, and round 4's), what round 4
 	// left open (round 5), the global section and lock services (round
 	// 6), what round 6 left open (round 7), $PURGWS (round 8, Phase 63),
-	// and the security services (round 9, Phase 93).
-	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_", "r7_", "r8_", "r9_"} {
+	// the security services (round 9, Phase 93), and the queue services
+	// (round 10, Phase 98).
+	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_", "r7_", "r8_", "r9_", "r10_"} {
 		more, _ := filepath.Glob(filepath.Join(serviceDir, prefix+"*.mar"))
 		probes = append(probes, more...)
 	}
@@ -456,6 +514,16 @@ func TestServiceMacroObjects(t *testing.T) {
 			callList, err := os.ReadFile(filepath.Join(serviceDir, name+".calls"))
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			// A round the VAX hasn't run yet (round 10, Phase 98's queue
+			// services, until its objects come back): the probe must
+			// assemble with govax's macros, refusing only the calls that
+			// leave out an argument govax's macro requires.
+			if _, err := os.Stat(filepath.Join(serviceDir, "vax", name+".obj")); errors.Is(err, fs.ErrNotExist) {
+				rehearseProbe(t, string(src), unconfirmedRequired[name])
+
+				return
 			}
 
 			calls := strings.Split(strings.TrimRight(string(callList), "\n"), "\n")

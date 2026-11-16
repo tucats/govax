@@ -161,3 +161,27 @@ VSI's; one 7.1's macro lacks shows as a reference to a symbol of that
 name. It runs from Phase 93's round 3 volume (`testdata/prot93`'s
 `SEC93.COM`, README.md's "Round 3"), whose `copyout-r3.cmd` brings its
 objects, analyses, and log back to `vax/`.
+
+## Round 10
+
+Round 10 (`r10_*`, `macros10.com`; Phase 98's subtask 3) is the queue
+services, by round 4's method: `$SNDJBC`, `$SNDJBCW`, `$GETQUI`, and
+`$GETQUIW`, with the VMS 5.0 System Services manual's and VSI's argument
+lists (efn, func, nullarg or context, itmlst, iosb, astadr, astprm; func a
+word by value). govax's macros for them (`starlet.mar`'s last section) were
+written first, on `$GETJPI`'s model, and are unconfirmed until it runs.
+Until `vax/r10_*.obj` exist, `TestServiceMacroObjects` only rehearses the
+probes: each assembles with govax's macros, refusing exactly the calls that
+leave out FUNC.
+
+To run it, build this directory's exchange volume (`exchange.cmd`, above),
+attach it to the simh VAX, and as any user with the volume as the default
+directory:
+
+    $ @MACROS
+
+which writes `MACROS10.LOG`. Then `copyout.cmd` brings the objects,
+analyses, and log back to `vax/`. **Audit `vax/macros10.log` before
+committing it**, as rounds 5 to 9's were: MACRO's messages may quote a line
+of a macro's expansion. The clean-room hook refuses tool calls naming it
+until the author takes it out of the hook's `unaudited` list.

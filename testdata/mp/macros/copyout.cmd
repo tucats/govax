@@ -43,9 +43,18 @@ COPY DUA1:[000000]R9_SET_SECURITY.OBJ "testdata/mp/macros/vax/r9_set_security.ob
 COPY DUA1:[000000]R9_SET_SECURITY.ANL "testdata/mp/macros/vax/r9_set_security.anl"/HOST/QUIET
 COPY DUA1:[000000]R9_SETDFPROT.OBJ "testdata/mp/macros/vax/r9_setdfprot.obj"/HOST/BINARY/QUIET
 COPY DUA1:[000000]R9_SETDFPROT.ANL "testdata/mp/macros/vax/r9_setdfprot.anl"/HOST/QUIET
+COPY DUA1:[000000]R10_SNDJBC.OBJ "testdata/mp/macros/vax/r10_sndjbc.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R10_SNDJBC.ANL "testdata/mp/macros/vax/r10_sndjbc.anl"/HOST/QUIET
+COPY DUA1:[000000]R10_SNDJBCW.OBJ "testdata/mp/macros/vax/r10_sndjbcw.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R10_SNDJBCW.ANL "testdata/mp/macros/vax/r10_sndjbcw.anl"/HOST/QUIET
+COPY DUA1:[000000]R10_GETQUI.OBJ "testdata/mp/macros/vax/r10_getqui.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R10_GETQUI.ANL "testdata/mp/macros/vax/r10_getqui.anl"/HOST/QUIET
+COPY DUA1:[000000]R10_GETQUIW.OBJ "testdata/mp/macros/vax/r10_getquiw.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R10_GETQUIW.ANL "testdata/mp/macros/vax/r10_getquiw.anl"/HOST/QUIET
 COPY DUA1:[000000]MACROS5.LOG "testdata/mp/macros/vax/macros5.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS6.LOG "testdata/mp/macros/vax/macros6.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS7.LOG "testdata/mp/macros/vax/macros7.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS8.LOG "testdata/mp/macros/vax/macros8.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS9.LOG "testdata/mp/macros/vax/macros9.log"/HOST/QUIET
+COPY DUA1:[000000]MACROS10.LOG "testdata/mp/macros/vax/macros10.log"/HOST/QUIET
 DISMOUNT DUA1

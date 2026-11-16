@@ -919,6 +919,16 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (`corevms/hostunchecked_test.go`) holds every host open, create, or run
   under `internal` to a list of reasons. Configured places (`--path`,
   `vax.library`, the system's own files) and EDIT's editor aren't checked.
+  Phase 98 (planned 2026-11-16, the plan accepted by the author the same
+  day, its "The review"; in progress) is batch queues: a queue manager in
+  Go, batch queues, SUBMIT, and batch jobs as detached processes, with
+  `$SNDJBC` and `$GETQUI`; subtask 2 is the probe, `testdata/bat98`, two
+  rounds on VMS 7.1 (its doc's A.4), and subtask 3 (2026-11-16) the
+  definitions: `SJC$`, `QUI$`, and `JBC$_` in `vmsdef` and the macro
+  library, the JBC messages (`vmsdef/jbcmessages.go`; a facility's shared
+  message numbers are the system messages under its name,
+  `sharedMessage`), and the four service macros, whose probe is round 10
+  of `testdata/mp/macros`, not yet run.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

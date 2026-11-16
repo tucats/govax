@@ -74,6 +74,15 @@ import (
 //   - OPC$: $OPCDEF's $SNDOPR request block: its field offsets, operator
 //     classes, and request types, from real MACRO's output for Phase 83's
 //     probe (testdata/for83).
+//   - SJC$: $SJCDEF's $SNDJBC function and item codes, and the
+//     SJC$K_/SJC$M_ values of their arguments.
+//   - QUI$: $QUIDEF's $GETQUI function and item codes, and the flag
+//     bits (QUI$M_/QUI$V_) of the queue, job, and file status items and
+//     search flags.
+//   - JBC$_: $JBCMSGDEF's job controller condition values (JBC$_NOSUCHQUE
+//     and the rest), facility 4.
+//     These three came from real MACRO's output for Phase 98's probe
+//     (testdata/bat98, defined.txt).
 //   - OBJ$, MHD$, GSD$, GPS$, GSY$, SDF$, SRF$, EPM$, TIR$, EOM$, and the
 //     rest of the VAX object language ($OBJRECDEF through $TIRDEF): record
 //     and subrecord types, TIR commands, flag bits, and field offsets. Only

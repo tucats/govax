@@ -1,0 +1,18 @@
+$ ! MACROS10.COM - round 10 of the system service macro probes
+$ ! (testdata/mp/macros/README.md). Written by gen.go. MACROS.COM runs it.
+$ !
+$ ! Each program is assembled with /NOLIST, so no listing of a macro
+$ ! expansion is made, and its object is analyzed.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ MACRO/NOLIST R10_SNDJBC
+$ ANALYZE/OBJECT/OUTPUT=R10_SNDJBC.ANL R10_SNDJBC.OBJ
+$ MACRO/NOLIST R10_SNDJBCW
+$ ANALYZE/OBJECT/OUTPUT=R10_SNDJBCW.ANL R10_SNDJBCW.OBJ
+$ MACRO/NOLIST R10_GETQUI
+$ ANALYZE/OBJECT/OUTPUT=R10_GETQUI.ANL R10_GETQUI.OBJ
+$ MACRO/NOLIST R10_GETQUIW
+$ ANALYZE/OBJECT/OUTPUT=R10_GETQUIW.ANL R10_GETQUIW.OBJ
+$ SET NOVERIFY
+$ EXIT

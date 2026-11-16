@@ -63,6 +63,10 @@ func LookupMessage(code uint32) (Message, bool) {
 	}
 
 	if !ok {
+		m, ok = jbcMessages[code&messageKeyMask]
+	}
+
+	if !ok {
 		m, ok = govaxMessages[code&messageKeyMask]
 	}
 
@@ -90,19 +94,45 @@ var sharedMessages = map[uint32]Message{
 }
 
 // sharedMessage returns the shared message code names, with the
-// facility's name the code's (SYSTEM for facility 0).
+// facility's name the code's (SYSTEM for facility 0). A number the shared
+// messages don't have is the system message of that number: VMS 7.1's
+// $GETMSG gave JBC$_NOOPER (%X42892) as %JBC-E-NOOPER, SS$_NOOPER's
+// text, and every message number from 0 to 1,023 of the JBC facility as
+// the system message with JBC's name, whatever the severity
+// (testdata/bat98/vax/bat98b.log's JBC MESSAGES).
 func sharedMessage(code uint32) (Message, bool) {
-	m, ok := sharedMessages[code&0x7FF8]
+	fac := code >> 16 & 0xFFF
+
+	name, ok := MessageFacilities[fac]
+	if !ok {
+		name, ok = otherFacilities[fac]
+	}
+
 	if !ok {
 		return Message{}, false
 	}
 
-	fac := code >> 16 & 0xFFF
-	if m.Facility, ok = MessageFacilities[fac]; !ok {
+	m, ok := sharedMessages[code&0x7FF8]
+	if !ok && fac != 0 {
+		if m, ok = vaxMessages[code&0x7FF8]; !ok {
+			m, ok = Messages[code&0x7FF8]
+		}
+	}
+
+	if !ok {
 		return Message{}, false
 	}
 
+	m.Facility = name
+
 	return m, true
+}
+
+// otherFacilities are facilities' names the system message file govax's
+// tables were made from doesn't give (MessageFacilities), for the
+// messages they share.
+var otherFacilities = map[uint32]string{
+	JBCFacility: "JBC",
 }
 
 // vaxMessages are messages VMS on a VAX words differently from the
