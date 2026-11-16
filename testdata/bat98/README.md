@@ -37,7 +37,7 @@ These fixtures are `docs/planning/PHASE-98 - batch queues.md`'s subtask
 | `bat98q.mar` | `$SNDJBCW` and `$GETQUIW` called directly, 59 cases, then the JBC messages by `$GETMSG` |
 | `def_sjc.mar`, `def_qui.mar`, `def_jbc.mar` | `$SJCDEF`, `$QUIDEF`, `$JBCMSGDEF` each called `GLOBAL`: their values from the object, no listing |
 | `decode.go` | Turns `vax/def_*.obj` into `defined.txt`, names and values only |
-| `bat98b.com` | Round 2's SYSTEM run: what round 1 didn't reach (README's "Round 2") |
+| `bat98b.com` | Round 2's SYSTEM run: BAT98Q again, corrected (README's "Round 2") |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring round 1's results back |
 | `exchange2.cmd`, `copyout2.cmd` | Round 2's: its files added to the same volume, and its results back |
 
@@ -222,23 +222,39 @@ waits only for a job its ALTER_JOB released, so a run from scratch
 won't stall there. BAT98.COM as committed is that fixed version; round 1
 ran the one before (git history).
 
-## Round 2 (not needed)
+## Round 1's results
 
-`bat98b.com` was written when round 1 looked to have stopped at the
-stall: it runs the held case again (as BAT98X3B), the job views, the
-services, and the matrix. Round 1 reached all of them, so it hasn't run;
-it stays for a rerun of those sections alone. `exchange2.cmd` put it on
-the volume, harmlessly.
+Every log and the definition objects came back (`vax/`; `copyout.cmd`,
+then `copyout2.cmd`'s first form for BAT98DROP.LOG, the steps by hand,
+and the objects); `defined.txt` is the objects' 982 values. The phase
+doc's A.4 has what they settled.
 
-What's left of the VAX run: the steps by hand (round 1's step 4), the end
-(`@BAT98$DISK:[000000]BAT98DROP`, `DISMOUNT DUA1:`, `det rq1`), and then
+One part of BAT98Q failed by the probe's own mistake: it gave `$SNDJBC`'s
+longword output items (ENTRY_NUMBER_OUTPUT, JOB_STATUS_OUTPUT) 256-byte
+buffers, and `$SNDJBC` wants exactly 4 (`%JBC-F-INVPARLEN`), so every
+ENTER_FILE and CREATE_JOB failed and the job cases after them had no job.
 
-    go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout2.cmd
-    go run testdata/bat98/decode.go
+## Round 2
 
-`copyout2.cmd` brings back BAT98DROP.LOG, the steps by hand's logs, and
-the definition probes' objects (its round 2 logs are missing, and say
-so).
+Round 2, BAT98B.COM, is BAT98Q again with 4-byte buffers for those items
+(and its USERNAME case naming SYSTEM, the accounts being gone). It needs
+nothing of round 1's; `exchange2.cmd` has already put it on the volume.
+
+1. **Attach the volume** (`attach rq1 testdata/disks/bat98-exchange.dsk`)
+   and, **as SYSTEM**, with the queue manager running:
+
+       $ MOUNT/SYSTEM DUA1: BAT98
+       $ @DUA1:[000000]BAT98B
+
+   It takes a minute or two. Its log is `[BAT98LOG]BAT98B.LOG`, ending
+   `BAT98B FINISHED`; it deletes its queues and deassigns `BAT98$DISK` as
+   it ends.
+
+2. `DISMOUNT DUA1:` and `det rq1`, then on the host:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout2.cmd
+
+   which brings back `vax/bat98b.log`.
 
 ## The rehearsal
 

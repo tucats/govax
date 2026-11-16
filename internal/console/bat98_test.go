@@ -144,7 +144,8 @@ func TestBat98Probe(t *testing.T) {
 		t.Fatalf("BAT98B didn't finish:\n%s", out)
 	}
 
-	log = dispatch("TYPE BAT98$DISK:[BAT98LOG]BAT98B.LOG")
+	// BAT98B.COM deassigns BAT98$DISK as it ends.
+	log = dispatch("TYPE DUA1:[BAT98LOG]BAT98B.LOG")
 	if !strings.Contains(log, "BAT98B FINISHED") {
 		t.Errorf("BAT98B.LOG doesn't reach its end:\n%s", log)
 	}

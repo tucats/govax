@@ -847,20 +847,19 @@ func protectionCases(d *dcl) {
 }
 
 // ---------------------------------------------------------------------
-// bat98b.com, round 2: what round 1 didn't reach. Round 1's SYNCHRONIZE
-// waited on a job requeued /HOLD, which its release had found still
-// executing; a Ctrl/Y there (README.md, "Round 1") ended the procedure,
-// and the job views, the services, and the protection matrix never ran.
-// Round 2 runs them, and the requeued job's case again with its release
-// retried. It needs round 1's accounts and BAT98_A.
+// bat98b.com, round 2: BAT98Q again. Round 1's BAT98Q gave $SNDJBC's
+// longword output items 256-byte buffers, and every job function asking
+// for one (ENTER_FILE, CREATE_JOB) failed, JBC-F-INVPARLEN, so the job
+// cases after them had no job. Round 2 runs the corrected program alone;
+// it needs neither the accounts nor round 1's queues.
 
 func roundTwoProc() string {
 	d := &dcl{}
 
-	d.raw(`$ ! BAT98B.COM - Phase 98's probe of batch queues: round 2, SYSTEM's run.
-$ ! Written by testdata/bat98/gen.go. Run it as SYSTEM, from the exchange
-$ ! volume, mounted /SYSTEM, after round 1 and before BAT98DROP.COM
-$ ! (README.md, "Round 2"):
+	d.raw(`$ ! BAT98B.COM - Phase 98's probe of batch queues: round 2, SYSTEM's run,
+$ ! BAT98Q again with its output items corrected. Written by
+$ ! testdata/bat98/gen.go. Run it as SYSTEM, from the exchange volume,
+$ ! mounted /SYSTEM (README.md, "Round 2"):
 $ !
 $ !     @DUA1:[000000]BAT98B
 $ !
@@ -873,41 +872,25 @@ $ DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK 'DEV'
 $ LOGFILE = DEV + "[BAT98LOG]BAT98B.LOG"
 $ @'HERE'/OUTPUT='LOGFILE' LOGGED
 $ WRITE SYS$OUTPUT "BAT98B finished; the log is ", LOGFILE
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE BAT98$DISK
 $ EXIT
 $ BEGIN:
 $ SET NOON
 $ SET VERIFY
-$ !
-$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
 $ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("NODENAME"), " ", F$TIME()
-$ SHOW QUEUE/MANAGER/FULL
-$ SHOW QUEUE/FULL/ALL BAT98*
-$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) BAT98$DISK:[000000]*.COM;*
-$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) BAT98$DISK:[000000]*.MAR;*
-$ DIRECTORY/SECURITY BAT98$DISK:[000000]
-$ MCR AUTHORIZE SHOW BAT98*/BRIEF
-$ INITIALIZE/QUEUE/BATCH/JOB_LIMIT=3/BASE_PRIORITY=3/RETAIN=ERROR/START BAT98_A
-$ SHOW QUEUE/FULL BAT98_A
-$ SET DEFAULT BAT98$DISK:[BAT98SCR]
+$ SHOW QUEUE/MANAGER
+$ @BAT98$DISK:[000000]BAT98Z BAT98_Q
+$ @BAT98$DISK:[000000]BAT98Z BAT98_Q2
 `)
 
-	d.section("RESTART")
-	d.line("DELETE %s*.RUN;*", scratch)
-	heldRestart(d, "BAT98X3B")
-	viewCases(d)
 	serviceCases(d)
-	protectionCases(d)
 
 	lastCaseB = d.n
 
-	d.raw(`$ !
-$ WRITE SYS$OUTPUT "######## AT THE END"
-$ SHOW QUEUE/FULL/ALL BAT98*
-$ DIRECTORY/SIZE/OWNER ` + logs + `
+	d.raw(`$ SHOW QUEUE BAT98*
 $ WRITE SYS$OUTPUT "BAT98B FINISHED"
 $ EXIT
 `)
-	d.raw(subroutines())
 
 	return d.b.String()
 }
@@ -1470,9 +1453,19 @@ func qcases() []qcase {
 	queue := s("SJC$_QUEUE", "BAT98_Q")
 	entry := cell("SJC$_ENTRY_NUMBER", "QENTRY")
 
+	// $SNDJBC's output items are longwords, and a buffer of any other
+	// length is JBC-F-INVPARLEN (round 1 gave them 256 bytes, and every
+	// job function that asked for one failed). $GETQUI takes any length.
 	saveOut := func(code, into string) item {
 		i := out(code)
 		i.save = into
+		i.size = 4
+
+		return i
+	}
+	long := func(code string) item {
+		i := out(code)
+		i.size = 4
 
 		return i
 	}
@@ -1496,7 +1489,7 @@ func qcases() []qcase {
 		sj("ENTER_FILE held", "ENTER_FILE", queue, s("SJC$_FILE_SPECIFICATION", okFile), flag("SJC$_HOLD"),
 			s("SJC$_JOB_NAME", "QJOB"), s("SJC$_PARAMETER_1", "P1VAL"), s("SJC$_NOTE", "QNOTE"),
 			s("SJC$_LOG_SPECIFICATION", logs+"QJOB.LOG"), flag("SJC$_NO_LOG_SPOOL"),
-			saveOut("SJC$_ENTRY_NUMBER_OUTPUT", "QENTRY"), out("SJC$_JOB_STATUS_OUTPUT")),
+			saveOut("SJC$_ENTRY_NUMBER_OUTPUT", "QENTRY"), long("SJC$_JOB_STATUS_OUTPUT")),
 		gq("DISPLAY_ENTRY", "DISPLAY_ENTRY", append([]item{cell("QUI$_SEARCH_NUMBER", "QENTRY")},
 			outs("ENTRY_NUMBER", "JOB_NAME", "JOB_STATUS", "JOB_FLAGS", "USERNAME", "ACCOUNT_NAME", "UIC",
 				"AFTER_TIME", "SUBMISSION_TIME", "PARAMETER_1", "NOTE", "LOG_SPECIFICATION", "PRIORITY",
@@ -1525,8 +1518,10 @@ func qcases() []qcase {
 		sj("START_QUEUE with item 9999", "START_QUEUE", queue, l("9999", "0")),
 		sj("CREATE_QUEUE with a 32-character name", "CREATE_QUEUE",
 			s("SJC$_QUEUE", "BAT98_QUEUE_NAME_OF_32_CHARACTER"), flag("SJC$_BATCH")),
-		sj("ENTER_FILE held, as BAT98", "ENTER_FILE", queue, s("SJC$_FILE_SPECIFICATION", okFile), flag("SJC$_HOLD"),
-			s("SJC$_USERNAME", "BAT98"), saveOut("SJC$_ENTRY_NUMBER_OUTPUT", "QE2")),
+		// Round 2 runs after the probe's accounts are gone: SYSTEM names
+		// itself.
+		sj("ENTER_FILE held, by USERNAME", "ENTER_FILE", queue, s("SJC$_FILE_SPECIFICATION", okFile), flag("SJC$_HOLD"),
+			s("SJC$_USERNAME", "SYSTEM"), saveOut("SJC$_ENTRY_NUMBER_OUTPUT", "QE2")),
 		sj("ENTER_FILE held, second", "ENTER_FILE", queue, s("SJC$_FILE_SPECIFICATION", okFile), flag("SJC$_HOLD"),
 			s("SJC$_JOB_NAME", "QJOB3"), saveOut("SJC$_ENTRY_NUMBER_OUTPUT", "QE3")),
 		gq("CANCEL_OPERATION", "CANCEL_OPERATION"),
@@ -1557,7 +1552,7 @@ func qcases() []qcase {
 		gq("DISPLAY_QUEUE with no name", "DISPLAY_QUEUE", out("QUI$_QUEUE_NAME")),
 		gq("DISPLAY_QUEUE of a missing queue", "DISPLAY_QUEUE", s("QUI$_SEARCH_NAME", "NOSUCHQ98"), out("QUI$_QUEUE_NAME")),
 		gq("TRANSLATE_QUEUE SYS$BATCH", "TRANSLATE_QUEUE", s("QUI$_SEARCH_NAME", "SYS$BATCH"), out("QUI$_QUEUE_NAME")),
-		sj("DELETE_JOB of BAT98's job", "DELETE_JOB", queue, cell("SJC$_ENTRY_NUMBER", "QE2")),
+		sj("DELETE_JOB of the USERNAME job", "DELETE_JOB", queue, cell("SJC$_ENTRY_NUMBER", "QE2")),
 		sj("DELETE_JOB of the second", "DELETE_JOB", queue, cell("SJC$_ENTRY_NUMBER", "QE3")),
 		sj("CREATE_JOB", "CREATE_JOB", queue, flag("SJC$_HOLD"), s("SJC$_JOB_NAME", "MULTI"),
 			saveOut("SJC$_ENTRY_NUMBER_OUTPUT", "QE4")),
@@ -2001,7 +1996,7 @@ func main() {
 	jobLogs = nil
 	write("bat98b.com", roundTwoProc())
 	// The logs of the README's steps by hand come back too, if they ran.
-	roundTwo := append([]string{"BAT98B.LOG", "BAT98DROP.LOG", "HAND1.LOG", "BOOTR.LOG", "BOOTN.LOG"}, jobLogs...)
+	roundTwo := append([]string{"BAT98B.LOG"}, jobLogs...)
 
 	write("bat98z.com", dropQueues())
 	write("bat98acct.com", accountProc())
@@ -2032,7 +2027,7 @@ func main() {
 	write("exchange.cmd", exchange())
 	write("copyout.cmd", copyout("copyout.cmd", roundOne, false))
 	write("exchange2.cmd", exchangeTwo())
-	write("copyout2.cmd", copyout("copyout2.cmd", roundTwo, true))
+	write("copyout2.cmd", copyout("copyout2.cmd", roundTwo, false))
 
 	fmt.Printf("%d cases in BAT98.COM, %d in BAT98B.COM, %d in BAT98P.COM's pass, %d in BAT98Q\n",
 		lastCase, lastCaseB, len(passCommands), len(qcases()))
