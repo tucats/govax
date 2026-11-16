@@ -126,7 +126,10 @@
    vax.ramdisk.limit blocks (512000 unless it's set).  Defining one needs
    CMKRNL, and a RAM disk that is mounted can't be defined again;
    defining an unmounted one again discards what it holds.  /CLUSTER and
-   /VOLNAME are its first mount's cluster size and label.
+   /VOLNAME are its first mount's cluster size and label.  MOUNT mounts
+   it, with a label in place of a container file.  The startup procedure
+   govax supplies (SYSTARTUP_VMS.COM) defines MDA0, 40000 blocks, and
+   mounts it as SCRATCH, the volume of each account's SYS$SCRATCH.
 
    Format
 
@@ -287,6 +290,7 @@
      characteristics).
 
    2.$ DEFINE/DEVICE MDA /MAXBLOCK=20000
-     %VAX-I-RAMDISK, _MDA0: defined, 20000 blocks
+     %VAX-I-RAMDISK, _MDA1: defined, 20000 blocks
 
-     Defines a RAM disk of 20000 blocks, MDA0, which MOUNT can mount.
+     Defines a RAM disk of 20000 blocks, MDA1 (MDA0, the scratch
+     volume, being defined already), which MOUNT can mount.

@@ -1,6 +1,6 @@
 # Phase 96 — RAM disks
 
-**Status:** planned 2026-11-16 (subtask 1, the survey and this plan).
+**Status:** done 2026-11-16 (planned the same day, subtask 1, the survey and this plan).
 The author reviewed it and accepted it the same day, with the answers
 recorded in "The review". This document is the development plan; as the
 work goes on it becomes the implementation record: the progress log, and
@@ -467,7 +467,7 @@ Each is one commit, with tests, stopping for review.
    bootdata's `systartup_vms.com` and `sylogin.com` (and the system
    volume's manifest for the supplied side, if either is supplied), and
    `TestScratchRecipe`, with any fix it needs.
-7. **The close-out**: MANUAL.md (section 5's volumes: "RAM disks" and
+7. **The close-out** (done 2026-11-16): MANUAL.md (section 5's volumes: "RAM disks" and
    the scratch recipe; DEFINE/DEVICE and MOUNT; the two keys), HELP
    DEFINE `/DEVICE`, HELP MOUNT, and HELP CONFIGURATION KEYS,
    VAX-VMS-INTERNALS.md's I/O and RMS sections (a container need not be
@@ -507,6 +507,29 @@ The answers (2026-11-16):
    (Decision 9), and the `vax.scratch.*` keys are dropped.
 6. The simh VAX has no DECram, so there is no probe and A.4 stays
    unconfirmed.
+
+## Where things stand
+
+Phase 96 is done (2026-11-16). govax has RAM disks: DEFINE/DEVICE MDA
+makes one in govax's own memory, MOUNT gives it a volume and keeps it
+across DISMOUNT until the unit is defined again or govax ends, their
+total is held to `vax.ramdisk.limit`, and the startup and login
+procedures govax supplies make MDA0: a scratch volume with each account's
+SYS$SCRATCH on it (Decision 9, revised by the author). Left for later:
+
+- **DECram itself.** Nothing was probed (no DECram on the simh VAX); A.4's
+  points are in DEVIATIONS.md. If a VMS with DECram turns up, its SHOW
+  DEVICE type name, DEVCHAR, MOUNT's messages, and its utility's commands
+  are the probe.
+- **Existing system volumes** keep their SYSTARTUP_VMS.COM and SYLOGIN.COM
+  (both seeded), so they have no scratch volume until the user adds the
+  blocks, which the manual's "The scratch volume" gives.
+- **`--mount` on the command line** takes a container file, so it can't
+  mount a RAM disk; a RAM disk is made in DCL, at startup or later.
+- **SAVE and LOAD** of the machine's state don't include RAM disks
+  (Decision 7), and a page file on one is allowed but gains nothing.
+- **Memory is not given back** while a disk exists, even after its files
+  are deleted (Decision 1); only defining the unit again frees it.
 
 ## Progress log
 
@@ -662,3 +685,14 @@ The answers (2026-11-16):
   unprivileged account's directory at the volume's top is its own
   already. A run of govax on a new system volume shows MDA0: mounted and
   SYS$SCRATCH MDA0:[SYSTEM].
+- **2026-11-16** Subtask 7, the close-out: MANUAL.md's section 5 has "RAM
+  disks" and "The scratch volume" (and the Devices, STARTUP.COM, and
+  accounts passages mention them), 6.2's MOUNT and DEFINE/DEVICE their
+  RAM disk forms, and section 4's keys a "RAM disks" table; the examples
+  were run on govax. HELP MOUNT has the RAM disk form, the label
+  parameter, the prompt, and an example; HELP DEFINE `/DEVICE` the
+  scratch volume (its example now MDA1, MDA0 being taken); the help
+  library rebuilt. VAX-VMS-INTERNALS.md's 8.8 and 9.2 say a container
+  need not be a file and how RAM disks are kept, and 11.9 their release.
+  DEVIATIONS.md has A.4's points ("RAM disks beside DECram"); PLAN.md
+  and CLAUDE.md the phase; "Where things stand" above.

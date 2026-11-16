@@ -145,6 +145,7 @@ questions, and a progress log extended as that phase is worked.
 | 93 | [PHASE-93 - file protection](PHASE-93%20-%20file%20protection.md) | VMS file protection: owners, protection codes, and ACLs checked on every access by the process's identity, new files' profiles by VMS's inheritance rules, SET SECURITY and its relatives, the process default protection, and `$PROTECTION`/`$UIC` grammar types; a precursor to identities other than SYSTEM, with ACLs and the security services — planned 2026-11-14, the plan accepted the same day; done 2026-11-15, with the VMS round |
 | 94 | [PHASE-94 - privileges](PHASE-94%20-%20privileges.md) | Every operation VMS guards with a privilege guarded by the same privilege, through one table-driven gate (`corevms/privrules.go`) traced by SET DEBUG PRIVILEGES; logical name tables' protection; DCL's commands, the terminal driver, and seeing other processes by VMS's rules; SET PROCESS, SET TERMINAL, and INSTALL with installed images' privileges; a precursor to identities other than SYSTEM — planned 2026-11-15, the plan accepted the same day; done 2026-11-15 |
 | 95 | [PHASE-95 - authentication](PHASE-95%20-%20authentication.md) | User accounts: the authorization file (JSON, `vax.authorization.file`), `--user`, AUTHORIZE as a DCL verb with VMS's grammar, SYS$LOGIN and the login procedures (SYLOGIN.COM, LOGIN.COM), the system volume's owners and protections, and SYS$MANAGER:ADDUSER.COM — planned 2026-11-15, the plan accepted the same day; done 2026-11-16 |
+| 96 | [PHASE-96 - RAM disk](PHASE-96%20-%20RAM%20disk.md) | RAM disks: ODS-2 volumes in govax's own memory, DECram's MDcu names, through ods2's `MemoryImage`; DEFINE/DEVICE MDA, MOUNT with a label, contents kept until govax ends, a limit on their total (`vax.ramdisk.limit`), and a scratch volume (MDA0:, SYS$SCRATCH) made by the startup and login procedures govax supplies — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -745,3 +746,22 @@ Its doc's "Revisions" (2026-11-16) are two fixes after the close-out: a file nam
 for its translation (`@SYS$SYLOGIN`), and a session's input given to `run` is shared a byte at a time by readline and
 DCL's terminal reads, so a script can answer ADDUSER's questions.
 
+## RAM disks (Phase 96)
+
+Phase 96 (2026-11-16) gave govax RAM disks: ODS-2 volumes whose blocks are in govax's own memory, named as VMS's
+DECram disks are (MDA0, MDA1, ...). Its doc's Part A is the survey (there was no DECram on the simh VAX to probe, so
+the behavior is govax's own, in DEVIATIONS.md), Part B the decisions with the author's review, and its log the work.
+
+- **ods2:** `diskimage.MemoryImage` (v0.1.31), a sparse container in 64 KB chunks, with views whose `Close` leaves
+  the image, so a volume outlives its dismount.
+- **RMS:** `rms/ramdisk.go`, the mount table's RAM disks by device: `DefineMemory` against a limit on the total,
+  `MountMemory` (a new volume at the first mount, the same one after), `ReleaseMemory` at the session's end.
+- **DCL:** DEFINE/DEVICE of an MD name (CMKRNL; `/MAXBLOCK`, `vax.ramdisk.size`; RAMLIMIT), MOUNT with a label in
+  place of a container (INCVOLLABEL on a later mount; MOUNT asks for a container file itself now), SHOW DEVICE/FULL's
+  host memory, DT$_RAM_DISK.
+- **The scratch volume:** by the author's choice made the default during the work, SYSTARTUP_VMS.COM makes and mounts
+  MDA0: as SCRATCH and SYLOGIN.COM gives each account MDA0:[username] as SYS$SCRATCH; both are marked so a user can
+  comment them out.
+
+MANUAL.md's section 5, "RAM disks", is the user's side, and VAX-VMS-INTERNALS.md's 9.2 the developer's. What the
+phase left is its doc's "Where things stand".

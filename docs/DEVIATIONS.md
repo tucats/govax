@@ -2006,3 +2006,20 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     qualifiers are combined, a nonzero CPU limit's form, and no rights section for a process holding none.
 - **Status**: kept until a probe shows otherwise.
 
+
+### [Phase 96] RAM disks beside DECram
+
+- **Where**: `internal/rms/ramdisk.go`, `internal/dclcmd/ramdisk.go`, `mount.go`, and `device.go`, ods2's
+  `diskimage/memory.go`; `docs/planning/PHASE-96 - RAM disk.md`, A.4.
+- **What**: govax's RAM disks take DECram's device names (MDcu) and DT$_RAM_DISK (58), but the simh VAX has no
+  DECram, so no probe settled anything else; this is govax's own design. Unconfirmed against DECram:
+  - **SHOW DEVICE** names the type `RAM_DISK`, from the symbol's name; DECram's name for it is unknown. `/FULL`'s
+    "Host memory in use" and "RAM disks total" line is govax's own.
+  - **DEVCHAR** is an ordinary disk's (FOD, DIR, RND, AVL, SHR, IDV, ODV, and MNT while mounted); DECram may set
+    others.
+  - **MOUNT**: a later mount with another label is `%MOUNT-F-INCVOLLABEL`, MOUNT's rule for any disk; an MD unit not
+    defined is `%SYSTEM-W-NOSUCHDEV`, SS$_NOSUCHDEV's own severity, as DECram's MOUNT words it unknown.
+  - **Defining one**: DEFINE/DEVICE makes it (DECram has its own utility, DECRAM or SYSGEN CONNECT), with CMKRNL,
+    the CONNECT's privilege; the first MOUNT initializes it, where on VMS INITIALIZE does. The total limit
+    (`vax.ramdisk.limit`) and the `%VAX-` messages are govax's.
+- **Status**: kept; govax's own design, there being no DECram to probe.

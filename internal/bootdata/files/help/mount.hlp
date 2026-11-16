@@ -2,11 +2,14 @@
 
    Mounts a container, a host file holding an ODS-2 volume, on a disk
    device, so that its files can be used: by DCL's commands, and by
-   programs through RMS.
+   programs through RMS.  Or mounts a RAM disk, a volume held in govax's
+   own memory, which has no container.
 
    Format
 
      MOUNT device-name container-file
+
+     MOUNT MDcu: [volume-label]
 
 2 Parameters
 
@@ -18,13 +21,26 @@
    number (DUA) is its first unit with nothing mounted on it, which the
    %MOUNT-I-MOUNTED message names: with the system volume on DUA0, MOUNT
    DUA "foo.dsk" mounts it on DUA1.  A device govax doesn't know yet is
-   made, as a disk.
+   made, as a disk.  An MD device (MDA0) is a RAM disk, which
+   DEFINE/DEVICE must have made; MDA alone is its lowest RAM disk with
+   nothing mounted on it.
 
  container-file
 
    The container's host file name.  Quote it if the host's file names
    are case sensitive, or if it has blanks.  INITIALIZE/CONTAINER makes
-   a new one.
+   a new one.  If it's left out, MOUNT asks for it (_Container file:)
+   when the command was typed at the terminal; in a command procedure
+   it's required.
+
+ volume-label
+
+   For a RAM disk, the second parameter is the volume's label, not a
+   file.  Its first mount gives the disk a new, empty volume with this
+   label (or DEFINE/DEVICE's /VOLNAME, or the device's name).  A later
+   mount finds the volume as the last DISMOUNT left it, and a label
+   given must be the volume's (%MOUNT-F-INCVOLLABEL); with none, the
+   volume mounts whatever its label.
 
 2 Description
 
@@ -43,6 +59,14 @@
    for RMS's file sharing and record locking: an open whose access or
    sharing conflicts with another opener's fails with RMS$_FLK, and a
    file deleted while it's open goes when its last opener closes it.
+
+   A RAM disk's first mount makes a volume owned by the process
+   mounting it, with no volume protection, so each directory's own
+   protection decides who may use it; that mount must be writable
+   (%VAX-W-RAMNOWRITE).  DISMOUNT keeps what's on a RAM disk until
+   DEFINE/DEVICE defines it again or govax ends.  The startup procedure
+   govax supplies mounts one, MDA0:, labeled SCRATCH, as SYS$SCRATCH's
+   volume.  See DEFINE /DEVICE.
 
 2 Qualifiers
 /LOG
@@ -77,3 +101,11 @@
 
      Mounts a container read-only; its name has a blank, so it is
      quoted.
+
+   3.$ DEFINE/DEVICE MDA /MAXBLOCK=20000
+     %VAX-I-RAMDISK, _MDA1: defined, 20000 blocks
+     $ MOUNT MDA1: WORKAREA
+     %MOUNT-I-MOUNTED, WORKAREA mounted on _MDA1:
+
+     Makes a RAM disk of 20000 blocks and mounts it with a new volume
+     labeled WORKAREA.

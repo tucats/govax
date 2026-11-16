@@ -3626,7 +3626,8 @@ line editor's own writer, which takes the prompt and the half-typed line
 off the screen, writes, and puts them back below.
 
 **Volumes** are host files too, the *containers* MOUNT names, holding an
-ODS-2 volume block for block (section 9). And to govax's own commands, a
+ODS-2 volume block for block (section 9), except a RAM disk's, which is
+held in govax's own memory and never reaches the host (section 9.2). And to govax's own commands, a
 file name in quotes, or one with no volume to go to, names a host file
 directly, read and written as a VMS file of its own record format; a
 program's RMS reaches only volumes (section 9.12).
@@ -3700,9 +3701,14 @@ being changed.
 
 **Containers.** A volume lives in a *container*, a host file whose bytes
 are the disk's logical blocks, block 0 first (`diskimage`). A container can
-also be a raw CD-ROM sector dump, which is read-only. Every read and write
-of the volume is a whole 512-byte block of the container, numbered by
-*logical block number* (LBN).
+also be a raw CD-ROM sector dump, which is read-only, or no file at all:
+ods2's `MemoryImage` keeps the blocks in Go memory, the host's and not the
+VAX's, in 64 KB chunks made by the first write of a block that isn't all
+zeros, so an empty disk costs nothing and a block never written reads as
+zeros. Every read and write of the volume is a whole 512-byte block of the
+container, numbered by *logical block number* (LBN). Nothing above
+`diskimage` can tell the kinds apart: a volume sees only a `Container`,
+and is writable if its container has a `WriteBlock` method.
 
 **Mounting** (`volume.Mount`) reads the *home block*, near the start of the
 disk, which gives the volume's label, cluster size, and where its index
@@ -3808,6 +3814,21 @@ altogether; the page file's volume says so in its refusal.
 
 A volume mounted read-only takes `$OPEN`s that only read; a `$CREATE`, or
 an `$OPEN` asking to write, is `RMS$_PRV`.
+
+**RAM disks**, VMS's DECram names, `MDA0` and up, are volumes with a
+`MemoryImage` for a container (`rms/ramdisk.go`). Their memory belongs to
+the device, not to a mount, so the mount table keeps a second map, from
+device to image: `DefineMemory` (DCL's `DEFINE/DEVICE MDA`) makes one,
+holding every disk's defined size to `vax.ramdisk.limit`, and
+`MountMemory` mounts it. Each mount is given a *view* of the image, a
+container whose `Close` ends only the view, so `Volume.Dismount` closes it
+as it would close a file and the blocks stay for the next mount, bitmaps
+and all. The first mount initializes a view first, as `INITIALIZE` would a
+file (`initializeOptions`, shared by both); a read-only mount's view is
+wrapped so that it has no `WriteBlock`. The images are freed when the unit
+is defined again and at the session's end (`ReleaseMemory`, after
+`DismountAll`). The startup procedure govax supplies makes one, MDA0, for
+SYS$SCRATCH.
 
 ### 9.3 From a service call to Go
 
@@ -5421,7 +5442,8 @@ The `--instruction-limit` and `--time-limit` options apply only from step
 4, so a limit meant for a runaway program doesn't stop the system's own
 start. When the session ends, `Console.EndSession` closes what process 1
 left open and the mount table dismounts every volume, so that each
-container has all its blocks, its bitmaps included.
+container has all its blocks, its bitmaps included; then it frees the RAM
+disks, whose blocks were never anywhere else.
 
 ### 11.10 Running an image
 

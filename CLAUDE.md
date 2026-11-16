@@ -888,6 +888,21 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   translation (`rms`'s `locateLogical`, so `@SYS$SYLOGIN` gets `.COM` on
   the translation), and `cmd/govax`'s `byteReader` shares a session's
   input between readline and DCL's terminal reads.
+  Phase 96 (planned 2026-11-16, the plan accepted by the author the same
+  day, its "The review"; done 2026-11-16; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is RAM disks: ODS-2 volumes in
+  govax's own Go memory, DECram's MDcu names, no VMS probe (no DECram on the
+  simh VAX; DEVIATIONS.md). ods2's `diskimage.MemoryImage` (v0.1.31: sparse
+  64 KB chunks, views whose `Close` leaves the image); `rms/ramdisk.go`
+  (`MountTable.ramDisks`: `DefineMemory` against a total limit,
+  `MountMemory`, the volume kept across DISMOUNT, `ReleaseMemory` at the
+  session's end); `dclcmd/ramdisk.go` (DEFINE/DEVICE of an MD name, CMKRNL,
+  `vax.ramdisk.size` and `vax.ramdisk.limit`; MOUNT's `mountRAMDisk`, the
+  label as MOUNT's second parameter, INCVOLLABEL; SHOW DEVICE/FULL's host
+  memory); MOUNT's FILE no longer required by the grammar, the handler
+  asking for it through `Context.AskParameter`. By the author's choice the
+  supplied SYSTARTUP_VMS.COM makes MDA0: (SCRATCH) and SYLOGIN.COM each
+  account's MDA0:[username] as SYS$SCRATCH (`TestScratchRecipe`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

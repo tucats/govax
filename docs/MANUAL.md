@@ -701,6 +701,18 @@ The defaults suit most programs. A program that needs more than about
 8 MB of P0 space needs a larger `vax.memory.p0` (and, without paging,
 more physical memory). Section 13 explains the regions.
 
+#### RAM disks
+
+These are read each time `DEFINE/DEVICE` makes a RAM disk ([RAM
+disks](#ram-disks)), so a change takes effect at once. Each is a count of
+512-byte blocks, decimal or `%X` hexadecimal, at least 100; govax warns of
+another value at startup and uses the default.
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.ramdisk.size` | A RAM disk's size when `DEFINE/DEVICE` gives no `/MAXBLOCK`. | 65536 (32 MB) |
+| `vax.ramdisk.limit` | The most blocks all RAM disks together may be defined with. Lowering it affects only disks defined after. | 512000 (250 MB) |
+
 #### Processes
 
 | Key | Meaning | Default |
@@ -890,6 +902,107 @@ that type (or give `/SIZE=blocks`). Some useful ones:
 
 `docs/DISK-DEVICES.md` lists them all.
 
+### RAM disks
+
+A *RAM disk* is a volume with no container: its blocks are kept in
+govax's own memory (the host's, not the VAX's), named as VMS's DECram
+disks are, `MDA0:`, `MDA1:`, and so on. It's quick, it's empty when it's
+made, and it's gone when govax ends: the place for scratch files. govax
+makes one at startup, `MDA0:`, labeled `SCRATCH`, and gives each account
+a directory on it ([The scratch volume](#the-scratch-volume)).
+
+`DEFINE/DEVICE` makes one, of `/MAXBLOCK` blocks, and `MOUNT` mounts it.
+The second parameter of `MOUNT` is the volume's label, not a container:
+
+```text
+$ DEFINE/DEVICE MDA /MAXBLOCK=20000
+%VAX-I-RAMDISK, _MDA1: defined, 20000 blocks
+$ MOUNT MDA1: WORKAREA
+%MOUNT-I-MOUNTED, WORKAREA mounted on _MDA1:
+$ CREATE/DIRECTORY MDA1:[TEMP]
+$ COPY BIG.DAT MDA1:[TEMP]
+```
+
+- `MDA` alone is the controller's lowest unit not yet defined; `MDA3`
+  names the unit. Defining one needs the `CMKRNL` privilege, since it
+  takes the host's memory.
+- With no `/MAXBLOCK` a disk is `vax.ramdisk.size` blocks, or 65,536
+  (32 MB). It must have at least 100.
+- The first `MOUNT` gives the disk a new, empty volume, owned by you,
+  that every account may use (each directory's own protection then
+  decides), labeled as `MOUNT` says, or by `DEFINE/DEVICE`'s `/VOLNAME`,
+  or with the device's name. `/CLUSTER` on `DEFINE/DEVICE` is its cluster
+  size. That first mount can't be `/NOWRITE`.
+- `DISMOUNT` keeps what's on the disk, and the next `MOUNT` finds it as
+  you left it. A label given to that `MOUNT` must be the volume's
+  (`%MOUNT-F-INCVOLLABEL`). `MOUNT MDA` mounts the lowest RAM disk with
+  nothing mounted on it.
+- Defining a unit again (when it isn't mounted) throws its volume away
+  and gives it its new size: `%VAX-I-RAMDISK, _MDA1: defined, 20000
+  blocks, previous contents discarded`. That's how to start over.
+- The disks are held to a total: all of them together may be no more than
+  `vax.ramdisk.limit` blocks, 512,000 (250 MB) unless it's set. A disk
+  counts at the size it was defined with, whatever is on it, so it can't
+  grow past what was allowed. A definition that would go over is refused:
+
+  ```text
+  %VAX-E-RAMLIMIT, RAM disks would total 540000 blocks, over the limit of 512000
+  -VAX-I-RAMKEY, the limit is configuration key vax.ramdisk.limit
+  ```
+
+The memory is taken only as blocks are written, in pieces of 64 KB, so a
+large disk with little on it costs little; deleting files doesn't give
+memory back, but defining the disk again does. `SHOW DEVICE/FULL MDA0`
+shows what a disk holds, and the total against the limit:
+
+```text
+    Host memory in use               256 KB    RAM disks total            40000 of 512000 blocks
+```
+
+Its device type is `RAM_DISK` (`F$GETDVI`'s `DEVTYPE` is 58). Nothing on a
+RAM disk is ever written to the host; copy what you want to keep to
+another volume before you leave govax.
+
+#### The scratch volume
+
+The startup and login procedures govax supplies make a RAM disk for
+scratch files, as a VMS system manager might. `SYS$MANAGER:SYSTARTUP_VMS.COM`
+defines and mounts it:
+
+```text
+$ set noon
+$ define/device/nolog mda0 /maxblock=40000
+$ if $status then mount/nolog mda0: scratch
+$ if f$getdvi("MDA0","MNT") then -
+      set security/protection=(s:rwe,o:rwe,g:rwe,w:rwe) mda0:[000000]000000.dir
+$ set on
+```
+
+and `SYS$MANAGER:SYLOGIN.COM` gives each account that logs in a directory
+there, `MDA0:[username]`, that only it (and the system) can use, and
+points `SYS$SCRATCH` at it:
+
+```text
+$ if f$getdvi("MDA0","EXISTS")
+$ then
+$     if f$getdvi("MDA0","MNT")
+$     then
+$         user = f$edit(f$getjpi("","USERNAME"),"TRIM")
+$         if f$search("MDA0:[000000]''user'.DIR") .eqs. "" then -
+              create/directory/protection=(s:rwed,o:rwed,g,w) mda0:['user']
+$         define/job/nolog sys$scratch mda0:['user']
+$     endif
+$ endif
+```
+
+So after logging in, `SYS$SCRATCH:` is a directory of your own in memory.
+Both blocks lie between `-- begin --` and `-- end --` comment lines; to
+do without them, put `$!` in front of each line, or change the size or
+the device. The two files are yours ([STARTUP.COM and
+SYSTARTUP_VMS.COM](#startupcom-and-systartup_vmscom)): a system volume made
+before govax had RAM disks keeps the copies it has, and you can add the
+blocks to them by hand.
+
 ### Directories, versions, and the default directory
 
 Volume files have VMS's names: `device:[directory.subdirectory]name.type;version`.
@@ -1022,7 +1135,9 @@ The process takes the account's username, UIC, privileges (authorized,
 and the defaults as its current ones), priority, quotas, and the
 identifiers its UIC holds. Its home, the account's device and directory,
 becomes `SYS$LOGIN`, `SYS$LOGIN_DEVICE`, and `SYS$SCRATCH` (executive-mode
-names in the job table, as on VMS) and the default directory. SYSTEM's
+names in the job table, as on VMS) and the default directory; SYLOGIN.COM
+then points `SYS$SCRATCH` at the account's directory on the scratch
+volume, if there is one ([The scratch volume](#the-scratch-volume)). SYSTEM's
 home is `SYS$SYSROOT:[SYSMGR]`, as on VMS, unless the configuration sets
 `vax.default.volume.directory`, which then wins; without a system volume
 it stays where govax used to start. An account flagged DISUSER, or one the
@@ -1221,13 +1336,16 @@ executive mode ([The system volume](#the-system-volume)). There is no
 
 `SHOW DEVICES` lists the devices: the terminal `TTA0:`, the null device
 `NLA0:` (writes vanish, reads are at end of file), and each disk you've
-mounted. `MOUNT` creates a disk device the first time it's named; any
-disk name works (`DUA0`, `DUA1`, `DKA0`). Programs can also create mailboxes
+mounted, the RAM disks among them ([RAM disks](#ram-disks)). `MOUNT`
+creates a disk device the first time it's named; any disk name works
+(`DUA0`, `DUA1`, `DKA0`), but an `MD` name is a RAM disk, which
+`DEFINE/DEVICE` must make first. Programs can also create mailboxes
 (`$CREMBX`), which appear as `MBAn:`. `SHOW DEVICE/FULL DUA1` shows a
 disk's details, read from the volume.
 
 `DEFINE/DEVICE` defines a device with given characteristics; STARTUP.COM
-uses it for `TTA0:` and `NLA0:`. You won't normally need it.
+uses it for `TTA0:` and `NLA0:`, and SYSTARTUP_VMS.COM for the RAM disk
+`MDA0:`. You won't normally need it, except to make a RAM disk.
 
 ### The system volume
 
@@ -1273,9 +1391,10 @@ on the volume is what govax uses.
 startup](#what-happens-at-startup)). Its last command runs
 `SYS$MANAGER:SYSTARTUP_VMS.COM`, which, as on VMS, is the place for your
 own startup commands: logical names, volumes to mount, symbols, `SET`
-commands. govax makes a SYSTARTUP_VMS.COM of comments once, when it makes
-the volume, and never changes or replaces it (if you delete it, it stays
-deleted):
+commands. govax makes a SYSTARTUP_VMS.COM once, when it makes the volume,
+and never changes or replaces it (if you delete it, it stays deleted). It
+holds comments, and the commands that make the scratch volume ([The
+scratch volume](#the-scratch-volume)). Yours might add:
 
 ```text
 $! SYS$MANAGER:SYSTARTUP_VMS.COM
@@ -1291,7 +1410,8 @@ shareable images of your own on `DUA1:` as well as govax's `FTNRTL.EXE`.)
 `SYS$MANAGER:SYLOGIN.COM` is the same kind of file, made once and yours
 from then on: the system's login procedure, which STARTUP.COM names
 `SYS$SYLOGIN`, as VMS's does, and which is the place for commands every
-account should run when it logs in.
+account should run when it logs in. govax's gives each account its
+scratch directory.
 
 #### Who owns the system's files
 
@@ -2064,11 +2184,15 @@ privilege.
 
 ```text
 MOUNT [/NOWRITE] [/NOLOG] device "file"
+MOUNT [/NOWRITE] [/NOLOG] MDcu: [label]
 DISMOUNT device
 ```
 
 `MOUNT` attaches a container to a device (creating the device if it's
-new). A controller with no unit number, `MOUNT DUA "file"`, picks that
+new). With no file it asks for one (`_Container file:`) at the terminal;
+in a procedure the file is required. For a RAM disk (`MDA0:`), the second
+parameter is the volume's label, and there is no file ([RAM
+disks](#ram-disks)). A controller with no unit number, `MOUNT DUA "file"`, picks that
 controller's first unit with nothing mounted on it, and the
 `%MOUNT-I-MOUNTED` message names it. A mounted volume is known to every
 process, as VMS's `MOUNT/SYSTEM` makes it, so `MOUNT` and `DISMOUNT` need
@@ -2092,8 +2216,14 @@ Lists devices, or those whose names begin with `name`.
 
 #### DEFINE/DEVICE
 
+```text
+DEFINE/DEVICE [/NOLOG] MDc[u] [/MAXBLOCK=blocks] [/CLUSTER=n] [/VOLNAME=label]
+```
+
 Defines a pseudodevice and its characteristics (`/DEVCLASS`, `/DEVTYPE`,
 `/DEVCHAR`, ...). STARTUP.COM uses it for the terminal and null device.
+An `MD` name makes a RAM disk ([RAM disks](#ram-disks)), which needs
+`CMKRNL`; the console says which unit it made unless you give `/NOLOG`.
 
 ### 6.3 Logical names
 
