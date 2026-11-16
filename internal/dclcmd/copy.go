@@ -141,6 +141,12 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 				}
 
 				return vmserrors.ConditionError{Status: rmsPRV, Text: text}
+			case denied.Host:
+				// A host input the process may not use (vax.host.sysprv),
+				// shown as a volume file it may not read is.
+				text := "COPY-E-OPENIN, error opening " + denied.Name + " as input\n" + ConditionLine(rmsPRV)
+
+				return vmserrors.ConditionError{Status: rmsPRV, Text: text}
 			case denied.Search:
 				text := "COPY-E-SEARCHFAIL, error searching for " + c.expandedName(sourceText) + "\n" + ConditionLine(rmsPRV)
 
@@ -187,8 +193,18 @@ func (c *Context) copyFiles(sourceText string, sourceHost bool, destText string,
 		return nil, err
 	}
 
-	dest, err := c.ContainerSession.Locate(destText, destHost)
+	dest, err := c.ContainerSession.LocateOutput(destText, destHost)
 	if err != nil {
+		// A host output the process may not make (vax.host.sysprv) is
+		// shown as a volume one it may not make is, with the input not
+		// copied.
+		if denied, ok := rms.IsDenied(err); ok && denied != nil && denied.Host {
+			denied.Source = sourceText
+			if !source.Host {
+				denied.Source = c.expandedName(sourceText)
+			}
+		}
+
 		return nil, err
 	}
 

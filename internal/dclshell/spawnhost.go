@@ -212,7 +212,7 @@ func (c *Interpreter) hostOutput(cmd *exec.Cmd, name string) (func() error, erro
 	// may be another process's.
 	session := c.ContainerSession
 
-	loc, err := session.Locate(name, false)
+	loc, err := session.LocateOutput(name, false)
 	if err != nil {
 		return nil, dclcmd.FileFailure(err, name)
 	}

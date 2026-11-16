@@ -86,7 +86,11 @@ func (c *Context) saveSaveSet(cmd BackupCommand) error {
 		return err
 	}
 
-	loc, err := c.ContainerSession.Locate(cmd.Output.Text, cmd.Output.Host)
+	loc, err := c.ContainerSession.LocateOutput(cmd.Output.Text, cmd.Output.Host)
+	if denied := hostDenied(err); denied != nil {
+		return backupMessageWith(vmsdef.BackupOpenOut, []uint32{rmsPRV}, denied.Name)
+	}
+
 	if err != nil {
 		return FileFailure(err, cmd.Output.Text)
 	}
@@ -186,7 +190,8 @@ type queuedFile struct {
 
 // search saves the files input names.
 func (s *backupSave) search(input string) {
-	loc, err := s.c.ContainerSession.Locate(input, s.cmd.Input.Host)
+	// Side: a host input is refused whoever asks (ErrSaveFromHost).
+	loc, err := s.c.ContainerSession.Side(input, s.cmd.Input.Host)
 	if err == nil && loc.Host {
 		err = rms.ErrSaveFromHost
 	}

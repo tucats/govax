@@ -75,3 +75,65 @@ func TestLocateVolumeNotAsked(t *testing.T) {
 		t.Errorf("volume name: %v", err)
 	}
 }
+
+// TestLocateOutputHostAccess: LocateOutput's refusal is marked as an
+// output, so a command shows OPENOUT, and a volume name or an allowed
+// host name is Locate's.
+func TestLocateOutputHostAccess(t *testing.T) {
+	s := NewSession(NewMountTable())
+	s.HostAccess = func() bool { return false }
+
+	if s.MayUseHost() {
+		t.Error("MayUseHost with HostAccess refusing")
+	}
+
+	_, err := s.LocateOutput("/tmp/out.txt", false)
+
+	var denied *DeniedError
+	if !errors.As(err, &denied) || !denied.Host || !denied.Output {
+		t.Errorf("LocateOutput: %v, want a host output DeniedError", err)
+	}
+
+	s.HostAccess = nil
+
+	if !s.MayUseHost() {
+		t.Error("MayUseHost refused with no HostAccess")
+	}
+
+	if loc, err := s.LocateOutput("/tmp/out.txt", false); err != nil || !loc.Host {
+		t.Errorf("allowed: %+v, %v", loc, err)
+	}
+}
+
+// TestLocateRelatedHostAccess: a bare name beside a host file is a host
+// file too, refused like any other, where it was once returned unasked.
+func TestLocateRelatedHostAccess(t *testing.T) {
+	s := NewSession(NewMountTable())
+	s.HostAccess = func() bool { return false }
+
+	_, err := s.LocateRelated("B.OPT", false, FileLocation{Host: true, Name: "/tmp/src/a.obj"})
+	if d, ok := IsDenied(err); !ok || d == nil || !d.Host || d.Name != "/tmp/src/B.OPT" {
+		t.Errorf("LocateRelated: %v, want a host DeniedError for /tmp/src/B.OPT", err)
+	}
+}
+
+// TestLocateLogicalToHost: a logical name that translates to a host path
+// is refused by Locate as that path, and Side places it there unasked.
+// (Before, the translation went through Locate, whose refusal made the
+// name a bare name instead, placed by the default directory's side.)
+func TestLocateLogicalToHost(t *testing.T) {
+	s := newLocateSession(t)
+	defineLogical(t, s, "NOTES", "/tmp/notes.txt")
+
+	asked := 0
+	s.HostAccess = func() bool { asked++; return false }
+
+	if loc, err := s.Side("NOTES", false); err != nil || !loc.Host || loc.Name != "/tmp/notes.txt" || asked != 0 {
+		t.Errorf("Side: %+v, %v (asked %d)", loc, err, asked)
+	}
+
+	_, err := s.Locate("NOTES", false)
+	if d, ok := IsDenied(err); !ok || d == nil || d.Name != "/tmp/notes.txt" {
+		t.Errorf("Locate: %v, want a refusal of /tmp/notes.txt", err)
+	}
+}

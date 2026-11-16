@@ -48,13 +48,17 @@ func (m *Machine) readConsoleFile(name string, text bool) (consoleFile, error) {
 		return readResolved(m.Paths, name)
 	}
 
-	loc, err := s.Locate(name, false)
+	loc, err := s.Side(name, false)
 	if err != nil {
 		return consoleFile{}, volumeFileFailure(s, err, name)
 	}
 
 	if loc.Host {
-		return readResolved(m.Paths, loc.Name)
+		if s.MayUseHost() {
+			return readResolved(m.Paths, loc.Name)
+		}
+
+		return readConfigured(m.Paths, name, loc)
 	}
 
 	f, err := readVolumeFile(s, loc, text)
@@ -64,7 +68,14 @@ func (m *Machine) readConsoleFile(name string, text bool) (consoleFile, error) {
 
 	var notFound *rms.NotFoundError
 	if errors.As(err, &notFound) && rms.BareName(name) {
-		if f, rerr := readResolved(m.Paths, name); rerr == nil {
+		read := readResolved
+		if !s.MayUseHost() {
+			read = func(paths *respath.Resolver, name string) (consoleFile, error) {
+				return readConfigured(paths, name, rms.FileLocation{Host: true, Name: name})
+			}
+		}
+
+		if f, rerr := read(m.Paths, name); rerr == nil {
 			return f, nil
 		}
 	}
@@ -81,6 +92,22 @@ func readResolved(paths *respath.Resolver, name string) (consoleFile, error) {
 	}
 
 	return consoleFile{data: data, name: name, loc: rms.FileLocation{Host: true, Name: name}}, nil
+}
+
+// readConfigured is readResolved for a process that may not use a host
+// file (vax.host.sysprv: docs/planning/PHASE-97 - host file access.md,
+// Decision 2): a bare name is still looked for in the places the
+// configuration named (the --path directories, the system volume, and
+// govax's built-in files), but not in the host's current directory, and
+// any other host name is refused, SS$_NOPRIV.
+func readConfigured(paths *respath.Resolver, name string, loc rms.FileLocation) (consoleFile, error) {
+	if rms.BareName(name) {
+		if data, err := paths.ReadConfigured(name); err == nil {
+			return consoleFile{data: data, name: name, loc: rms.FileLocation{Host: true, Name: name}}, nil
+		}
+	}
+
+	return consoleFile{}, vmserrors.Wrap(vmserrors.SS_NOPRIV, &rms.DeniedError{Name: loc.Name, Host: true})
 }
 
 // readVolumeFile reads the file at loc on a mounted volume.
@@ -150,6 +177,10 @@ func (m *Machine) includeReader(parent rms.FileLocation) func(string) (string, e
 		if s != nil && (!parent.Host || !rms.BareName(name)) {
 			loc, err := s.LocateRelated(name, false, parent)
 			if err != nil {
+				if _, denied := rms.IsDenied(err); denied {
+					return "", vmserrors.Wrap(vmserrors.SS_NOPRIV, err)
+				}
+
 				return "", volumeFileFailure(s, err, name)
 			}
 
@@ -164,12 +195,29 @@ func (m *Machine) includeReader(parent rms.FileLocation) func(string) (string, e
 					return "", volumeFileFailure(s, err, loc.Name)
 				}
 
-				if b, rerr := paths.ReadFile(name); rerr == nil {
+				read := paths.ReadFile
+				if !s.MayUseHost() {
+					read = m.Paths.ReadConfigured
+				}
+
+				if b, rerr := read(name); rerr == nil {
 					return string(b), nil
 				}
 
 				return "", volumeFileFailure(s, err, loc.Name)
 			}
+		}
+
+		// A bare name beside a host file, or for interactive ASM: a
+		// process that may not use a host file finds it only where the
+		// configuration said to look (readConfigured).
+		if s != nil && !s.MayUseHost() {
+			b, err := m.Paths.ReadConfigured(name)
+			if err != nil {
+				return "", vmserrors.Wrap(vmserrors.SS_NOPRIV, &rms.DeniedError{Name: name, Host: true})
+			}
+
+			return string(b), nil
 		}
 
 		b, err := paths.ReadFile(name)

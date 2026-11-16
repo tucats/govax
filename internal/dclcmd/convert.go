@@ -180,6 +180,8 @@ func (conv *conversion) readInputs() ([]*rms.ConvertInput, error) {
 			return nil, vmserrors.ConditionError{Status: convNoKey, Text: "CONVERT-E-NOKEY, no such key"}
 		case errors.As(err, &open):
 			return nil, convertOpenFailure(convOpenIn, "OPENIN", open.Name, "input", open.Status, open.STV)
+		case hostDenied(err) != nil:
+			return nil, convertOpenFailure(convOpenIn, "OPENIN", hostDenied(err).Name, "input", rmsPRV, 0)
 		case err != nil:
 			return nil, FileFailure(err, name)
 		}
@@ -587,6 +589,10 @@ func (conv *conversion) openExceptions() error {
 	s := c.ContainerSession
 
 	loc, err := s.Locate(conv.req.ExceptionsFile, false)
+	if denied := hostDenied(err); denied != nil {
+		return convertOpenFailure(convOpenOut, "OPENOUT", denied.Name, "output", rmsPRV, 0)
+	}
+
 	if err != nil {
 		return FileFailure(err, conv.req.ExceptionsFile)
 	}

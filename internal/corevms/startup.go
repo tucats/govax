@@ -46,6 +46,9 @@ var (
 	// rmsFNF is RMS$_FNF, "file not found": the image doesn't exist.
 	rmsFNF = vmsdef.Symbols["RMS$_FNF"]
 
+	// rmsPRV is RMS$_PRV: a file the process may not use.
+	rmsPRV = vmsdef.Symbols["RMS$_PRV"]
+
 	// ssAbort is SS$_ABORT, for any other failure to activate the image
 	// that has no VMS status of its own (a govax-only error).
 	ssAbort = vmsdef.Symbols["SS$_ABORT"]

@@ -63,7 +63,7 @@ func (c *Context) CreateFile(req CreateFileRequest) error {
 		return err
 	}
 
-	loc, err := s.Locate(req.File, req.Host)
+	loc, err := s.LocateOutput(req.File, req.Host)
 	if err != nil {
 		return FileFailure(err, req.File)
 	}

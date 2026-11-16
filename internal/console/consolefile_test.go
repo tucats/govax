@@ -3,6 +3,7 @@ package console
 import (
 	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -197,4 +198,43 @@ func TestBootFromEditedKernel(t *testing.T) {
 	if got, want := c.Engine.Memory().ROMFile, "SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1"; got != want {
 		t.Errorf("ROM file = %q, want %q", got, want)
 	}
+}
+
+// TestASMHostRefused checks ASM for a process that may not use a host
+// file (vax.host.sysprv: docs/planning/PHASE-97 - host file access.md,
+// Decision 2): a host path is SS$_NOPRIV, and so is a bare name found
+// only in the host's current directory, but a bare name the configured
+// places hold (govax's built-in ssdef.asm) is still read.
+func TestASMHostRefused(t *testing.T) {
+	c, d, buf := volumeFileConsole(t)
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	if err := os.WriteFile(filepath.Join(dir, "mine.asm"), []byte("mine$label:     .long   3\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c.ContainerSession.HostAccess = func() bool { return false }
+
+	for _, line := range []string{`ASM "` + filepath.Join(dir, "mine.asm") + `"`, `ASM "mine.asm"`} {
+		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.SS_NOPRIV)) {
+			t.Errorf("%s: err = %v, want NOPRIV\n%s", line, err, buf)
+		}
+	}
+
+	mustDispatch(t, d, `ASM "ssdef.asm"`)
+	machineSymbol(t, c, "SS$_ACCVIO")
+
+	// A volume file's .INCLUDE of a bare name not beside it: the
+	// configured places, not the host's current directory.
+	writeText(t, c, "[SYSTEM.SOURCES]INC.ASM", `                .include "mine.asm"`)
+
+	if err := d.Dispatch("ASM SYS$SYSDEVICE:[SYSTEM.SOURCES]INC.ASM"); err == nil {
+		t.Errorf("an .INCLUDE of mine.asm from the host's directory was read\n%s", buf)
+	}
+
+	c.ContainerSession.HostAccess = nil
+	mustDispatch(t, d, `ASM "mine.asm"`)
+	machineSymbol(t, c, "MINE$LABEL")
 }

@@ -89,7 +89,7 @@ func (c *Interpreter) authorizeHelp(topic string) error {
 func (c *Interpreter) writeListing(name string, lines []string) error {
 	session := c.ContainerSession
 
-	loc, err := session.Locate(name, false)
+	loc, err := session.LocateOutput(name, false)
 	if err != nil {
 		return err
 	}

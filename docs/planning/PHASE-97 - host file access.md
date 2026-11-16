@@ -1,6 +1,7 @@
 # Phase 97 — host file access
 
-**Status:** planned 2026-11-16 (subtask 1, the survey and this plan).
+**Status:** planned 2026-11-16 (subtask 1, the survey and this plan);
+subtasks 2 and 3 done 2026-11-16.
 The author reviewed it and accepted it the same day, with the answers
 recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
@@ -186,7 +187,7 @@ Each is one commit, with tests, stopping for review.
    `DeniedError.Host`, the check in Locate and `Session.Side`; unit tests
    in `rms` and `corevms` (key off, on with and without SYSPRV, the
    trace), and one end-to-end test through DCL.
-3. **Locate's callers** (Decisions 4, 5): each of A.2's 55 calls audited
+3. **Locate's callers** (done 2026-11-16) (Decisions 4, 5): each of A.2's 55 calls audited
    (an access or a question), the questions moved to `Side`, each
    command's message for the refusal; console tests per command with the
    key on, as an account without SYSPRV, then with SYSPRV turned on, then
@@ -269,3 +270,68 @@ The answers (2026-11-16):
   audits each, moving the ones that only ask the side to `Side`. The
   HELP text says only what this subtask does; subtask 4 adds the
   container commands and SPAWN/HOST.
+- **2026-11-16** Subtask 3: Locate's callers. Each of A.2's calls is now
+  one of three kinds:
+  - *A question* (opens nothing on the host, or refuses a host file
+    whoever asks), moved to `Side`: RUN in a subprocess's
+    `foundImageFile` and `imageFileSpec` (`subcli.go`), INSTALL's
+    `knownFileFor` (a host file is RMS$_DEV), DUMP (a host file is
+    BADFILESPEC), BACKUP's save input (`ErrSaveFromHost`), SET and SHOW
+    SECURITY's `FindSecurityObject` and `SecurityObjects` (a host file is
+    SS$_UNSUPPORTED), and the page file (named by configuration, A.4).
+    `locateLogical`'s placing of a translation is `Side` too: through
+    Locate a refused translation became a bare name, placed by the
+    default directory's side instead.
+  - *An output*, now `Session.LocateOutput` (a refusal with `Output`
+    set too, so OPENOUT and "as output"): COPY's destination, BACKUP's
+    save set, LIBRARY/CREATE, @'s `/OUTPUT`, HELP's `/OUTPUT`,
+    DIRECTORY's `/OUTPUT`, CREATE, AUTHORIZE's LIST file, SPAWN/HOST's
+    `/OUTPUT`, and LBR$OPEN's create. `dclcmd`'s `outputLocation`
+    (MACRO's, LINK's, FORTRAN's, LIBRARY's, and ANALYZE's outputs) now
+    places a name with `Side` (`placeOutput`) and asks once about where
+    it ends up, which closes a gap: a volume input's default output with
+    the default directory on the host went to the host's current
+    directory unasked.
+  - *An access* (everything else), left on Locate.
+
+  `Session.MayUseHost` is the question alone, for the paths that don't
+  go through Locate. `LocateRelated`'s bare name beside a host file, once
+  returned unasked, is asked about too.
+
+  Messages (Decision 5): a refusal is shown as the command shows a volume
+  file its protection refuses. Most already were; fixed were COPY (was
+  BADFILESPEC; now OPENIN, or OPENOUT and NOTCOPIED), CONVERT's input and
+  exceptions file, BACKUP's save set, restore target (OPENOUT), and
+  compare target (OPENIN), MACRO's `/OBJECT` and `/LIST` and
+  LIBRARY/CREATE ("as input" before), HELP/LIBRARY (was FNF with no
+  name), @ and its `/OUTPUT`, and OPEN (bare `%RMS-E-PRV` before;
+  `dclshell`'s `hostDeniedFile`, `dclcmd`'s `hostDenied`). Commands whose
+  volume refusal is a bare `%RMS-E-PRV` (DIRECTORY/OUTPUT, CREATE/FDL,
+  HELP/OUTPUT) show the same. LBR$OPEN returns RMS$_PRV for a host
+  library (`hostRefused`), a created process's command file RMS$_PRV
+  (`cliprocess.go`); a created process's SYS$INPUT or SYS$OUTPUT that
+  is a refused host file is not opened, as any it can't open. CONVERT's
+  output and exceptions file are made by `$CREATE`, which takes no host
+  name (FNM) with the key off too, so no change.
+
+  ASM and LOAD (`machine/consolefile.go`): a host name is placed with
+  `Side`; a process that may use the host reads through the resolver as
+  before, and one that may not gets a bare name only from the places the
+  configuration names (`respath.Resolver.ReadConfigured`: the `--path`
+  directories, the system volume, govax's built-in files, never the
+  host's current directory; Decision 2), anything else SS$_NOPRIV; the
+  same for `.INCLUDE`.
+
+  Left as it is, by choice: a bare name with the default directory on
+  the host is a host file, refused, even where `HostFallback` or the
+  resolver would then have found govax's own copy (LIBRARY/LIST of a
+  built-in macro library by its bare name, `@` of a procedure only built
+  in); such a user has no host to work in, and the name says the host.
+  The debugger's source lines of a host file are just not shown.
+
+  Tests: `rms`'s `TestLocateOutputHostAccess`,
+  `TestLocateRelatedHostAccess`, `TestLocateLogicalToHost`; `console`'s
+  `TestASMHostRefused` and `TestHostFileCommands` (28 commands, each
+  refused as PRIV94 with the key on with its message and nothing made on
+  the host, allowed after SET PROCESS/PRIVILEGES=SYSPRV, and allowed with
+  the key off).

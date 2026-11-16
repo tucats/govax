@@ -160,7 +160,10 @@ func (s *Session) OpenPageFile(spec string, size uint32) (*PageFileStore, error)
 		return nil, errors.New("rms: a page file needs a size")
 	}
 
-	loc, err := s.Locate(text, quoted)
+	// Side, not Locate: the page file is the system's, named by the
+	// configuration, so a host page file needs no SYSPRV under
+	// vax.host.sysprv (docs/planning/PHASE-97 - host file access.md, A.4).
+	loc, err := s.Side(text, quoted)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -169,11 +170,34 @@ func (s *Session) Locate(name string, host bool) (FileLocation, error) {
 	return loc, nil
 }
 
+// LocateOutput is Locate for a file the caller is about to make or write:
+// a refusal of a host file is a *DeniedError with Output set as well, so
+// a command shows it as it shows a volume file it may not make (OPENOUT,
+// "as output").
+func (s *Session) LocateOutput(name string, host bool) (FileLocation, error) {
+	loc, err := s.Locate(name, host)
+
+	var denied *DeniedError
+	if errors.As(err, &denied) && denied.Host {
+		denied.Output = true
+	}
+
+	return loc, err
+}
+
+// MayUseHost reports whether the session's process may use a host file
+// now: true with no HostAccess (the key off, or a session with no
+// process) or when it allows the access. A caller that reaches a host
+// file some way other than Locate asks it first.
+func (s *Session) MayUseHost() bool {
+	return s.HostAccess == nil || s.HostAccess()
+}
+
 // checkHostAccess asks the session's HostAccess about the host file
 // name: nil when there is no HostAccess or it allows the access, a
 // *DeniedError with Host set when it doesn't.
 func (s *Session) checkHostAccess(name string) error {
-	if s.HostAccess == nil || s.HostAccess() {
+	if s.MayUseHost() {
 		return nil
 	}
 
@@ -265,7 +289,9 @@ func (s *Session) locateLogical(name string) (FileLocation, bool) {
 		return FileLocation{Name: eqv, Host: !s.DefaultOnVolume()}, true
 	}
 
-	loc, err := s.Locate(eqv, false)
+	// Side, not Locate: the question here is only where the translation
+	// is. Locate's caller asks whether the process may use it.
+	loc, err := s.Side(eqv, false)
 	if err != nil {
 		return FileLocation{}, false
 	}
@@ -302,7 +328,12 @@ func (s *Session) LocateRelated(name string, host bool, related FileLocation) (F
 	}
 
 	if related.Host {
-		return FileLocation{Host: true, Name: filepath.Join(filepath.Dir(related.Name), name)}, nil
+		path := filepath.Join(filepath.Dir(related.Name), name)
+		if err := s.checkHostAccess(path); err != nil {
+			return FileLocation{}, err
+		}
+
+		return FileLocation{Host: true, Name: path}, nil
 	}
 
 	// A bare name that is a logical name stands for its translation,

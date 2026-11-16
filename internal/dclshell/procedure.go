@@ -966,6 +966,10 @@ func (c *Interpreter) Exit(status *uint32) error {
 // A file that isn't there is DCL's OPENIN (procedureNotFound).
 func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, error) {
 	loc, err := c.ContainerSession.Locate(file, host)
+	if fe := hostDeniedFile(err); fe != nil {
+		return nil, procedureNotFound(fe)
+	}
+
 	if err != nil {
 		return nil, dclcmd.FileFailure(err, file)
 	}
@@ -1104,7 +1108,11 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 		return &procedureOutput{Writer: io.Discard, close: func() error { return nil }}, nil
 	}
 
-	loc, err := c.ContainerSession.Locate(name, false)
+	loc, err := c.ContainerSession.LocateOutput(name, false)
+	if fe := hostDeniedFile(err); fe != nil {
+		return nil, openFailure(fe, rms.DCLAccess{Write: true})
+	}
+
 	if err != nil {
 		return nil, dclcmd.FileFailure(err, name)
 	}

@@ -95,7 +95,7 @@ func ParseDumpRange(value string) (DumpRange, error) {
 // time with records, over the range span (see this file's opening
 // comment).
 func (c *Context) Dump(spec string, records bool, span DumpRange) error {
-	loc, err := c.ContainerSession.Locate(spec, false)
+	loc, err := c.ContainerSession.Side(spec, false) // only a volume file is dumped
 	if err != nil {
 		return FileFailure(err, spec)
 	}

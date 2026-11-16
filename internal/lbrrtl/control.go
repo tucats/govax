@@ -19,6 +19,7 @@ const (
 	ssNormal = 0x00000001 // SS$_NORMAL
 	rmsEOF   = 0x0001827A // RMS$_EOF
 	rmsFNF   = 0x00018292 // RMS$_FNF
+	rmsPRV   = 0x0001829A // RMS$_PRV
 	ssNoFile = 0x00000910 // SS$_NOSUCHFILE, RMS$_FNF's status value
 
 	rmsFLK   = 0x0001828A // RMS$_FLK
@@ -333,6 +334,15 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	if readErr != nil {
 		delete(st.controls, n)
+
+		// A host file the process may not use (vax.host.sysprv) is
+		// RMS$_PRV, as a program's RMS sees it.
+		if hostRefused(readErr) {
+			st.stv = 0
+
+			return rmsPRV, nil
+		}
+
 		st.stv = ssNoFile
 
 		return rmsFNF, nil
@@ -444,9 +454,13 @@ func openCreate(env *corevms.Environment, argv []uint32, c *control, n uint32) (
 		}
 	}
 
-	loc, err := env.Session.Locate(spec, false)
+	loc, err := env.Session.LocateOutput(spec, false)
 	if err != nil {
 		delete(st.controls, n)
+
+		if hostRefused(err) {
+			return rmsPRV, nil
+		}
 
 		return lbrNoFilNam, nil
 	}
@@ -522,6 +536,9 @@ func readLibraryFile(s *rms.Session, spec, dns string) ([]byte, rms.FileLocation
 	}
 
 	loc, err := s.Locate(spec, false)
+	if hostRefused(err) {
+		return nil, rms.FileLocation{Name: spec}, err
+	}
 
 	if err != nil || !loc.Host {
 		found, tried, ferr := s.FindImageFile(spec, dns)
@@ -691,4 +708,13 @@ func setMode(env *corevms.Environment, argv []uint32, locate bool) (uint32, erro
 // retRMSSTV is LBR$RET_RMSSTV: the RMS status value of the last LBR$OPEN.
 func retRMSSTV(env *corevms.Environment, _ []uint32) (uint32, error) {
 	return stateOf(env).stv, nil
+}
+
+// hostRefused reports whether err is a refusal of a host file: with
+// vax.host.sysprv on, a process without SYSPRV may use none
+// (docs/planning/PHASE-97 - host file access.md).
+func hostRefused(err error) bool {
+	denied, ok := rms.IsDenied(err)
+
+	return ok && denied != nil && denied.Host
 }

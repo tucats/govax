@@ -60,7 +60,8 @@ var (
 // *DeniedError for a directory the process may not look in (unconfirmed:
 // the probe gave the services no such name).
 func (s *Session) FindSecurityObject(spec string) (*SecurityObject, error) {
-	loc, err := s.Locate(spec, false)
+	// Side: a host file has no profile, SS$_UNSUPPORTED whoever asks.
+	loc, err := s.Side(spec, false)
 	if err != nil {
 		// A device no volume is mounted on, or none at all, is RMS$_DEV
 		// (VMS 7.1's $GET_SECURITY of NOSUCHDEV:[SEC93.GET]G1.DAT, case
@@ -143,7 +144,8 @@ func (s *Session) FindSecurityObject(spec string) (*SecurityObject, error) {
 // *DeniedError; a host file SS$_UNSUPPORTED (Decision 12: a host file has
 // no profile).
 func (s *Session) SecurityObjects(spec string) ([]*SecurityObject, error) {
-	loc, err := s.Locate(spec, false)
+	// Side: a host file has no profile, SS$_UNSUPPORTED whoever asks.
+	loc, err := s.Side(spec, false)
 	if err != nil {
 		return nil, newDCLFileError(strings.ToUpper(spec), rmsFileNotFound)
 	}

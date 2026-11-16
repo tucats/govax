@@ -982,7 +982,8 @@ func (c *Interpreter) foundImageFile(env *corevms.Environment, image string) (st
 		return "", false
 	}
 
-	loc, err := s.Locate(image, false)
+	// Side: only a volume file is read here.
+	loc, err := s.Side(image, false)
 	if err != nil || loc.Host {
 		return "", false
 	}
@@ -1003,7 +1004,7 @@ func (c *Interpreter) imageFileSpec(env *corevms.Environment, image string) stri
 	name := strings.ToUpper(image)
 
 	if s := env.Session; s != nil {
-		if loc, err := s.Locate(image, false); err == nil && !loc.Host {
+		if loc, err := s.Side(image, false); err == nil && !loc.Host {
 			if spec, err := s.PhysicalName(s.ImageLocation(loc).Name); err == nil {
 				return spec
 			}

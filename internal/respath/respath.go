@@ -113,9 +113,17 @@ func (r *Resolver) OpenFrom(name string) (fs.File, Origin, error) {
 
 // open is Open's search, returning the file's origin with it.
 func (r *Resolver) open(name string) (fs.File, Origin, error) {
+	return r.search(name, true)
+}
+
+// search is Open's search, with or without its first step, the name as
+// given (literal).
+func (r *Resolver) search(name string, literal bool) (fs.File, Origin, error) {
 	var tried []string
 
-	if f, err := os.Open(name); err == nil {
+	if !literal {
+		// Nothing to try first.
+	} else if f, err := os.Open(name); err == nil {
 		return f, Host, nil
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return nil, Host, err
@@ -179,6 +187,27 @@ func (r *Resolver) ReadFileFrom(name string) ([]byte, Origin, error) {
 	data, err := io.ReadAll(f)
 
 	return data, origin, err
+}
+
+// ReadConfigured is ReadFile without its first step: name is looked for
+// only in the places govax's configuration named (the search
+// directories, the system volume, and the fallback), never as given, in
+// the host's current directory. It is how a process that may not use a
+// host file (vax.host.sysprv: docs/planning/PHASE-97 - host file
+// access.md) still finds govax's own files and the configured ones.
+func (r *Resolver) ReadConfigured(name string) ([]byte, error) {
+	if r == nil {
+		return nil, &NotFoundError{Name: name}
+	}
+
+	f, _, err := r.search(name, false)
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
+
+	return io.ReadAll(f)
 }
 
 // ReadEmbedded returns the fallback's copy of name, govax's own, whatever

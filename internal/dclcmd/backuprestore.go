@@ -69,6 +69,10 @@ func (c *Context) restoreSaveSet(cmd BackupCommand) error {
 	}
 
 	target, err := c.restoreTarget(*cmd.Output)
+	if denied := hostDenied(err); denied != nil {
+		return backupMessageWith(vmsdef.BackupOpenOut, []uint32{rmsPRV}, denied.Name)
+	}
+
 	if err != nil {
 		return FileFailure(err, cmd.Output.Text)
 	}

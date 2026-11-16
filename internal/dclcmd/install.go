@@ -186,7 +186,9 @@ func (c *Context) knownFileFor(spec string) (corevms.KnownFile, error) {
 		return corevms.KnownFile{}, rmsStatusError(vmsdef.Symbols["RMS$_DEV"])
 	}
 
-	loc, err := s.Locate(spec, false)
+	// Side: a host file is refused here whoever asks, so the question is
+	// only which side the name is on.
+	loc, err := s.Side(spec, false)
 	if err != nil {
 		return corevms.KnownFile{}, err
 	}

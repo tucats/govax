@@ -43,6 +43,10 @@ func (c *Context) compareSaveSet(cmd BackupCommand) error {
 	}
 
 	target, err := c.restoreTarget(*cmd.Output)
+	if denied := hostDenied(err); denied != nil {
+		return backupMessageWith(vmsdef.BackupOpenIn, []uint32{rmsPRV}, denied.Name)
+	}
+
 	if err != nil {
 		return FileFailure(err, cmd.Output.Text)
 	}

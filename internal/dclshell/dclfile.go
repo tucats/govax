@@ -473,6 +473,10 @@ func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) 
 	}
 
 	loc, err := c.ContainerSession.Locate(spec, host)
+	if fe := hostDeniedFile(err); fe != nil {
+		return nil, openFailure(fe, access)
+	}
+
 	if err != nil {
 		return nil, dclcmd.FileFailure(err, spec)
 	}
@@ -543,6 +547,18 @@ func (c *Interpreter) physicalDevice(device string) string {
 	}
 
 	return "_" + c.RTL.NodeName + "$" + device
+}
+
+// hostDeniedFile is err, a refusal of a host file (vax.host.sysprv:
+// docs/planning/PHASE-97 - host file access.md), as a file RMS$_PRV
+// refused, so that @, its /OUTPUT, and OPEN show it as they show a volume
+// file the process's protection refuses; nil for any other err.
+func hostDeniedFile(err error) *rms.DCLFileError {
+	if denied, ok := rms.IsDenied(err); ok && denied != nil && denied.Host {
+		return &rms.DCLFileError{Name: denied.Name, Status: rmsPRV}
+	}
+
+	return nil
 }
 
 // openFailure is OPEN's message for a file it couldn't open, as DCL

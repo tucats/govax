@@ -35,12 +35,27 @@ import (
 // build from host files works whether or not the session's default
 // directory is on a volume. A bare output name given for a host input
 // goes there too.
+//
+// An output that ends up on the host, by any of these rules, is one the
+// process must be allowed to make there (vax.host.sysprv): a refusal is
+// an *rms.DeniedError with Host and Output set.
 func outputLocation(s *rms.Session, name string, input rms.FileLocation, typ string) (rms.FileLocation, error) {
+	loc, err := placeOutput(s, name, input, typ)
+	if err == nil && loc.Host && !s.MayUseHost() {
+		return rms.FileLocation{}, &rms.DeniedError{Name: loc.Name, Host: true, Output: true}
+	}
+
+	return loc, err
+}
+
+// placeOutput is outputLocation's rules, without its question of whether
+// the process may make a host file.
+func placeOutput(s *rms.Session, name string, input rms.FileLocation, typ string) (rms.FileLocation, error) {
 	if name == "" {
 		return defaultOutputLocation(s, input, typ)
 	}
 
-	loc, err := s.Locate(name, false)
+	loc, err := s.Side(name, false)
 	if err != nil {
 		return loc, err
 	}
@@ -174,6 +189,17 @@ func (c *Context) expandedName(specText string) string {
 	}
 
 	return name
+}
+
+// hostDenied is err's *rms.DeniedError if err is a refusal of a host file
+// (vax.host.sysprv: docs/planning/PHASE-97 - host file access.md), nil
+// otherwise: for a command that shows that refusal in its own words.
+func hostDenied(err error) *rms.DeniedError {
+	if denied, ok := rms.IsDenied(err); ok && denied != nil && denied.Host {
+		return denied
+	}
+
+	return nil
 }
 
 // DeniedFailure is a file a utility's process may not open, read, or make

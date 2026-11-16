@@ -135,7 +135,7 @@ func directoryOpenFailure(name string, status, stv uint32) error {
 func (c *Context) writeDirectoryListing(name, text string) error {
 	s := c.ContainerSession
 
-	out, err := s.Locate(name, false)
+	out, err := s.LocateOutput(name, false)
 	if err != nil {
 		return FileFailure(err, name)
 	}

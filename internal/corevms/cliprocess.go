@@ -171,6 +171,10 @@ func (env *Environment) OpenCommandInput() (CommandInput, uint32) {
 	}
 
 	loc, err := env.Session.Locate(name, false)
+	if denied, ok := rms.IsDenied(err); ok && denied != nil && denied.Host {
+		return nil, rmsPRV // a host file it may not use (vax.host.sysprv)
+	}
+
 	if err != nil {
 		return nil, rmsFNF
 	}

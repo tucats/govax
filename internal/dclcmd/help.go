@@ -214,7 +214,7 @@ func (c *Context) helpOutput(opts HelpOptions, toFile bool) (io.Writer, int, fun
 	case opts.OutputGiven && opts.Output != "":
 		spec := opts.Output
 
-		loc, err := c.ContainerSession.Locate(spec, false)
+		loc, err := c.ContainerSession.LocateOutput(spec, false)
 		if err != nil {
 			return nil, 0, nil, FileFailure(err, spec)
 		}
@@ -347,6 +347,9 @@ func (c *Context) openHelpLibrary(spec string) (helpLibrary, error) {
 	s := c.ContainerSession
 
 	loc, err := s.Locate(spec, false)
+	if denied := hostDenied(err); denied != nil {
+		return helpLibrary{}, helpOpenFailure(denied.Name, ConditionLine(rmsPRV))
+	}
 
 	if err != nil || !loc.Host {
 		found, tried, ferr := s.FindImageFile(spec, helpDefault)

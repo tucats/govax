@@ -205,7 +205,12 @@ func (l *library) run() error {
 		return vmserrors.NewSegment(vmserrors.CLI_CONFLICT, "NAMES")
 	}
 
-	loc, err := s.Locate(opts.Library, opts.LibraryHost)
+	locate := s.Locate
+	if opts.Create {
+		locate = s.LocateOutput
+	}
+
+	loc, err := locate(opts.Library, opts.LibraryHost)
 	if err != nil {
 		return FileFailure(err, opts.Library)
 	}
