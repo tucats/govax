@@ -276,6 +276,160 @@ The probe (Part D) answers these:
    `def_*.mar` and `decode.go` did), and the JBC and QMAN messages'
    texts by `$GETMSG`.
 
+### A.4 The probe's answers (2026-11-16)
+
+Round 1 on VMS 7.1 (`testdata/bat98/vax`, the README's "Round 1"), with
+the steps by hand and a reboot. Round 2, `$SNDJBC`'s job functions,
+which round 1's BAT98Q couldn't reach, is to come.
+
+**Messages and statuses** (A.3, 1):
+
+- **SUBMIT** says `Job NAME (queue Q, entry n) started on Q`, or `...
+  pending` with a second line (indented five spaces) `pending status
+  caused by queue stopped state`, or `... holding`, or `... holding until 17-NOV-2026
+  00:00`; `$STATUS` `%X10000001`; `/NOIDENTIFY` says nothing; `$ENTRY` is
+  set. A past `/AFTER` (TODAY, a past date) is simply pending;
+  `/AFTER=TOMORROW` is midnight; `/HOLD/AFTER` is holding. Its failures:
+  a ninth parameter `%SUBMIT-F-INVQUAVAL, value 'I' invalid for
+  /PARAMETERS qualifier`; one longer than 255 is DCL's own TKNOVF; a
+  missing queue `%SUBMIT-F-CREJOB` `-JBC-E-NOSUCHQUE`; `/PRINTER` naming
+  no queue (or SYS$PRINT missing) `-JBC-E-NODSTQUE`; a missing file
+  `%SUBMIT-F-OPENIN, error opening DUA1:[000000]X.COM; as input` `-RMS-E-FNF`;
+  a missing user `%SUBMIT-F-INVQUAVAL, value 'X' invalid for /USER
+  qualifier`; a missing log directory `%SUBMIT-F-INVLOGFIL, invalid log
+  file specification` `-RMS-E-DNF` `-SYSTEM-W-NOSUCHFILE`.
+- **The queue commands' statuses**: success `%X10040001` (JBC$_NORMAL with
+  the inhibit bit); SHOW `%X10000001`; SET SECURITY `%X00000001`;
+  `%JBC-E-NOSUCHQUE` `%X1004803A`; START of a started queue
+  `%JBC-E-STARTED, queue already started`; STOP of a stopped queue
+  succeeds silently; INITIALIZE of a started queue `%JBC-I-QUENOTMOD,
+  modifications not made to running queue` and changes nothing; DELETE
+  of a started queue `%DELETE-E-NOTDELETED, error deleting Q`
+  `-JBC-E-QUENOTSTOP`, of a missing one `%DELETE-W-SEARCHFAIL, error
+  searching for Q` `-JBC-E-NOSUCHQUE`; DELETE/QUEUE takes its jobs with it.
+  A 32-character name is `%JBC-F-INVPARLEN`, a bad character
+  `%JBC-F-INVQUENAM`, `/JOB_LIMIT=0` or `256` and `/BASE_PRIORITY=99`
+  `%QUEMAN-F-INVQUAVAL, value '0' invalid for /JOB_LIMIT qualifier`.
+  INITIALIZE/QUEUE without `/BATCH` makes a *printer* queue. SHOW QUEUE
+  has no `/USER_NAME` (IVQUAL); SHOW ENTRY has.
+- **Queue states**: `stopped` (a new queue, with no node until first
+  started: `Batch queue BAT98_A, stopped`), `idle`, `available` (jobs
+  running, room for more), `busy` (at its job limit), `paused` (STOP/QUEUE
+  without `/NEXT`, which **suspends** the executing jobs: a 20-second job
+  took 25 when paused for 5), `available, stop pending` (`/NEXT` with a job
+  running), then `stopped`. The heading is `Batch queue NAME, state, on
+  SIMVAX::`, then `  <description>`, then `/FULL`'s attributes in a fixed
+  order (BASE_PRIORITY, CPUDEFAULT, CPUMAXIMUM, JOB_LIMIT, OWNER, PROTECTION,
+  RETAIN, WSDEFAULT, WSEXTENT, WSQUOTA), wrapped. SHOW QUEUE/MANAGER/FULL
+  names `SYS$SYSROOT:[SYSEXE]QMAN$MASTER.DAT`.
+- **Entries**: `Entry Jobname Username Blocks Status`; Pending, `Pending
+  (queue stopped)`, Holding, `Holding until ...`, Executing, `Retained on
+  completion`, `Retained on error` with the condition under it, and
+  `Completed date on queue Q`; `/FULL` adds `Submitted date /KEEP /LOG=...
+  /PARAM=("A","B") /NOPRINT /PRIORITY=100`, `File: _SIMVAX$DUA1:[dir]f;1`,
+  and for a requeued job `/RESTART=Q /RESTART_VALUE="STEP2"` and
+  `(checkpointed)`. The default job priority is 100. Jobs run by priority,
+  highest first, then in the order submitted; a timed job when its time
+  comes. SET ENTRY of an executing job is `%JBC-E-EXECUTING, job executing
+  on queue prevents requested operation`; STOP/QUEUE/ENTRY of a job not
+  executing `%JBC-E-JOBNOTEXEC`; a missing entry is NOSUCHENT to SHOW ENTRY
+  and SYNCHRONIZE, NOSUCHJOB to SET ENTRY and DELETE/ENTRY
+  (`%DELETE-E-NOTDELETED, error deleting n` `-JBC-E-NOSUCHJOB`), and to DELETE/ENTRY
+  naming another queue.
+- **SYNCHRONIZE** returns the job's final status with the inhibit bit
+  (`%X10000001`, `%X10018292`, `%X100020AC` for EXCPUTIM, `%X10048084`
+  JOBABORT, `%X100480EC` QUERESET, `%X10000000` for a stopped process); a
+  job already gone is NOSUCHENT; Ctrl/Y interrupts it.
+- **How a job ends**: STOP/QUEUE/ENTRY and DELETE/ENTRY of a running job
+  `%JBC-F-JOBABORT`; STOP/QUEUE/RESET (and SHUTDOWN) `%JBC-F-QUERESET`;
+  STOP of the process status 0, "Retained on completion"; `/CPUTIME` run
+  out `%SYSTEM-F-EXCPUTIM`; a file ending with an error or severe status
+  ends the job, a warning (or DCL's IVVERB) goes on; the job's status is
+  the last file's. `/NOTIFY` writes `Job NAME (queue Q, entry n) completed`
+  at the user's terminal, or `terminated with error status` and the
+  condition. `/RETAIN=ERROR` (queue or job) keeps a job that failed.
+- **STOP/QUEUE/REQUEUE/ENTRY** restarts a running job whether or not it
+  was `/RESTART`: `$RESTART` "TRUE", `BATCH$RESTART` the last SET
+  RESTART_VALUE, and a new version of its log. With `/HOLD` it is held
+  only once its run has ended (`%JBC-E-EXECUTING` to a release before).
+
+**Protection and privileges** (A.3, 2), from the matrix (three accounts,
+six states, BAT98O once per privilege):
+
+- A queue's access is Phase 93's rule on its owner, protection (R, S, M,
+  D), and ACL (READ, SUBMIT, MANAGE, DELETE, CONTROL): BYPASS grants
+  everything; SYSPRV the system category's access; GRPPRV the same, but
+  only in the queue owner's group; READALL R. **OPER** grants everything,
+  and is the only way to create a queue (`%JBC-E-NOOPER, operation
+  requires OPER privilege`); SET SECURITY needs ownership or CONTROL.
+- Manage (STOP, START, SET QUEUE, INITIALIZE of an existing queue,
+  DELETE/QUEUE) needs M; SUBMIT S (`%SUBMIT-F-CREJOB` `-SYSTEM-F-NOPRIV`).
+- A **job** is checked against the same protection and ACL with **the
+  job's owner** as the owner; M on the queue allows anything on any job in
+  it. So one's own job needs the O field's D (no D, as with (S,O,G,W) and
+  an ACL of READ+SUBMIT, refuses SET ENTRY and DELETE/ENTRY of one's own
+  job); another's needs D by its categories or the ACL. SYNCHRONIZE of
+  another's job needs **R** on it (READALL suffices), not D as the DCL
+  Dictionary says.
+- Without R, SHOW QUEUE and SHOW ENTRY list another's job as `no
+  privilege` in place of its name and user, and `/FULL` says `Access to
+  security information denied.` in place of the owner and protection.
+- `/PRIORITY` above MAXQUEPRI is `%JBC-I-PRIOSMALL, scheduling priority has
+  smaller value than requested` without OPER or ALTPRI.
+  `/USER` needs CMKRNL (`-JBC-E-NOCMKRNL`), and the UAF readable: an
+  account authorized for SYSPRV could, one not was `%SUBMIT-F-INVQUAVAL`
+  with `-RMS-E-PRV` (unconfirmed which privilege SUBMIT turns on).
+
+**The batch job's process** (A.3, 3), the same for SYSTEM and each
+account: process name `BATCH_n`; JOBTYPE 2 (BATCH), MODE BATCH,
+CREPRC_FLAGS 16 (PRC$M_BATCH); no owner, its own master, no terminal; PRIB
+the queue's base priority, and AUTHPRI too (PRI one higher, boosted); its
+CPU limit the queue's `/CPUDEFAULT`; the working-set values the account's
+(the queue's smaller `/WSDEFAULT`, `/WSQUOTA`, `/WSEXTENT` didn't lower
+them: unconfirmed); its rights BATCH (Phase 95); SYS$INPUT, SYS$COMMAND,
+SYS$OUTPUT, and SYS$ERROR process-permanent names of the job's disk (the
+command file, and the log); TT `_NLA0:`; SYS$LOGIN, SYS$LOGIN_DEVICE, and
+SYS$SCRATCH executive-mode names in the job table, SYS$DISK in the
+process table, the default directory SYS$LOGIN. **Its files run at
+command level 0** (`F$ENVIRONMENT("DEPTH")` 0, the job's own command
+stream, not `@`); SYLOGIN and LOGIN.COM run first (LOGIN.COM at depth 1);
+the first file is verified as the login procedures leave verify (off on
+that VAX), each later file is verified; `$RESTART` is a global "FALSE"
+(BATCH$RESTART undefined) until a restart. F$GETQUI of its own job
+(DISPLAY_JOB with THIS_JOB) answers every item; DISPLAY_QUEUE with THIS_JOB
+needs an object-id (ARGREQ). The log ends with LOGOUT's report (`BAT98 job terminated at date`,
+indented, and the accounting lines), and has no heading.
+
+**The log file** (A.3, 4): by default `SYS$LOGIN:jobname.LOG`; a
+directory alone takes `jobname.LOG`; a name alone goes in SYS$LOGIN with
+type `.LOG`; it is the job's user's, with that user's default protection.
+With no SYS$PRINT queue, the default (implied) `/PRINTER` keeps the log;
+an explicit `/PRINTER` fails at SUBMIT (NODSTQUE); `/NOPRINTER` keeps it
+too, and `/NOKEEP` deletes it. A log the user can't create ends the job at
+login, retained on error with `%RMS-E-PRV` and OPCOM's "Batch process login
+failure".
+
+**Restarts** (Decision 11): after a reboot each queue was **stopped**; a
+`/RESTART` job that was running was requeued, `Pending (queue stopped)`,
+`(checkpointed)`, with its restart value, and ran from it at START/QUEUE; a
+plain one was "Retained on error", `%JBC-F-QUERESET`.
+
+**The services** (A.3, 7): `defined.txt` has 982 `SJC$`, `QUI$`, and `JBC$`
+values. R0 is SS$_NORMAL and the status is in the IOSB, but for an unknown
+function or item code (`SS$_BADPARAM` in R0, not JBC's INVFUNCOD or
+INVITMCOD) and a missing file (RMS$_FNF in R0). `$SNDJBC`'s longword output
+items must have 4-byte buffers (INVPARLEN); `$GETQUI` takes any length,
+truncating. CREATE_QUEUE of an existing queue succeeds; a wildcard
+DISPLAY_QUEUE gives NOMOREQUE after the last match and then starts again.
+`$GETMSG` matches a JBC code whatever its severity bits, and knows the
+system messages the facility shares; the JBC messages proper are
+`defined.txt`'s values.
+
+**DCL** (not queues): a Ctrl/Y in a procedure at command level 2, then
+SPAWN and CONTINUE, went on with the procedure, where the *User's Manual*
+(13.8.1) says it exits; govax's `dclcontroly.go` follows the manual, and
+is to be checked.
+
 ## Part B — decisions
 
 **Decision 1 — scope.** Batch queues only: no printer, server, or
@@ -318,7 +472,7 @@ the file for as long as it runs: that session is the batch initiator
 may show queues and entries (read from the file), but every other
 operation, and starting a manager, is refused with the JBC status VMS
 gives when the manager isn't running here (the probe's
-`%JBC-E-QMANNOTSTARTED` or the like). Running another session's jobs
+`JBC$_QMANNOTSTARTED`, which VMS 7.1 has). Running another session's jobs
 would mean running them against that session's mounts and terminal,
 which govax can't do.
 
@@ -335,74 +489,101 @@ nothing). `$SNDJBC` and `$GETQUI` are system services that call it
 (Decision 9), and DCL's commands use the services' own Go code from
 supervisor mode, as Phase 94's DEFINE uses `$CRELNM`'s.
 
-**Decision 6 — the batch job's process.** The manager starts a job by
-creating a detached process in Go through `$CREPRC`'s code (no owner,
-`PRC$M_BATCH`, its own job), named `BATCH_n`, with SYS$OUTPUT and
-SYS$ERROR the log file (process-permanent files, Phase 71) and SYS$INPUT
-NL:. It is logged in by `Environment.LogIn` with a non-interactive
-`Login` for the job's user (DISUSER refused as LOGINOUT refuses it, the
-job ending with that status and the message in the log, as the probe
-shows), then:
+**Decision 6 — the batch job's process** (held to A.4). The manager
+starts a job by creating a detached process in Go through `$CREPRC`'s
+code: no owner, its own job and master, no terminal, `PRC$M_BATCH`
+(CREPRC_FLAGS 16), named `BATCH_n` for its entry. Its SYS$INPUT and
+SYS$COMMAND are a process-permanent entry for the job's command stream
+(the files), and SYS$OUTPUT and SYS$ERROR one for the log (Phase 71's
+entries); TT is NL:. It is logged in by `Environment.LogIn` with a
+non-interactive `Login` for the job's user (DISUSER refused as LOGINOUT
+refuses it, the job ending with that status in the log), and then:
 
 - its rights BATCH plus the account's identifiers (today's
   `batchRights`), so an ACE naming BATCH works for it;
-- its base priority the queue's `/BASE_PRIORITY`, not the account's;
-- its working-set values the account's, limited by the job's and the
-  queue's `/WSDEFAULT`, `/WSQUOTA`, `/WSEXTENT`, and its CPU limit by
-  `/CPUTIME` and the queue's `/CPUDEFAULT` and `/CPUMAXIMUM` (CPU time is
-  already counted per process; exceeding it ends the job with
-  SS$_EXCPUTIM, if the probe confirms);
+- its base priority **and its authorized priority** the queue's
+  `/BASE_PRIORITY`;
+- its CPU limit the job's `/CPUTIME`, else the queue's `/CPUDEFAULT`, at
+  most the queue's `/CPUMAXIMUM`; running out ends it with
+  SS$_EXCPUTIM;
+- its working-set values the account's: the probe's smaller queue values
+  didn't lower them, so govax doesn't apply the queue's or the job's
+  working-set qualifiers to the process yet (kept and shown; unconfirmed,
+  DEVIATIONS.md);
 - JPI$_JOBTYPE and JPI$_MODE BATCH (`jobType`, `jobMode`), `F$MODE()`
-  "BATCH", and the probe's other answers (A.3, 3);
-- SYS$LOGIN, SYS$LOGIN_DEVICE, SYS$SCRATCH, SYS$DISK, and the default
-  directory as an interactive login's (Phase 95's Decision 7).
+  "BATCH", OWNER empty, MASTER_PID its own, TERMINAL empty;
+- SYS$LOGIN, SYS$LOGIN_DEVICE, and SYS$SCRATCH in the job table and
+  SYS$DISK in the process table, executive mode, the default directory
+  SYS$LOGIN (Phase 95's Decision 7).
 
-DCL then runs as a batch CLI (a new `CLIStartup.Batch`): verify on, the
-login procedures (Phase 95's `RunLoginProcedures`, made to work for any
-process's Shell), then each of the job's files in turn as
-`@file p1 ... p8`, a file ending with an error or severe status ending the job, then
-LOGOUT's report. The job's final status is the last file's.
+DCL then runs as a batch CLI (a new `CLIStartup.Batch`): the login
+procedures first (Phase 95's `RunLoginProcedures`, made to work for any
+process's Shell; LOGIN.COM at depth 1), then the job's files **at command
+level 0, each as the job's own command stream** (F$ENVIRONMENT("DEPTH") 0,
+P1 to P8 the job's parameters, no `@`). The first file keeps the verify
+state the login procedures leave; each later one starts verified. A file
+ending with an error or severe status ends the job; a warning goes on. The
+global `$RESTART` is "FALSE", and on a restart "TRUE" with `BATCH$RESTART`
+the last SET RESTART_VALUE, from which the restarted file goes on.
+LOGOUT's report ends the log; the job's status is its last file's.
 
-**Decision 7 — the log file.** Its default name and directory are the
-probe's answer (A.3, 4); `/LOG_FILE=spec` fills in the rest from the
-default, and `/NOLOG_FILE` is NL:. It is created by the job's process as
-its user, so Phase 93's protection applies (an unwritable directory ends
-the job with the probe's status). With no output queues (Decision 1),
-nothing is ever printed: `/PRINTER` (the default) with no SYS$PRINT
-behaves as the probe shows VMS behaving when the print can't be queued,
-and `/PRINTER=queue` naming a queue that doesn't exist is that error.
-`/KEEP` and `/NOKEEP` are honored for the case the probe shows the log
-being deleted. In practice a batch job's `.LOG` file lands on the disk
-for the user to read (the review's answer 4).
+**Decision 7 — the log file** (held to A.4). By default
+`SYS$LOGIN:jobname.LOG`; `/LOG_FILE` fills in the rest from that (a
+directory alone takes the job's name, a name alone SYS$LOGIN); its
+directory is checked at SUBMIT (INVLOGFIL); `/NOLOG_FILE` is NL:. It is
+created by the job's process as its user, with the user's default
+protection, so Phase 93's protection applies: a log the user can't create
+ends the job at login, retained on error with RMS$_PRV. With no output
+queues (Decision 1) nothing is printed, as on a VAX with no SYS$PRINT: the
+implied `/PRINTER` keeps the log, an explicit `/PRINTER` is NODSTQUE at
+SUBMIT, `/NOPRINTER` keeps it, and `/NOKEEP` deletes it. In practice a
+batch job's `.LOG` file lands on the disk for the user to read (the
+review's answer 4).
 
-**Decision 8 — protection and privileges.** A queue is a protected
-object of a new security class, QUEUE, in `securityClasses`, with access
-types READ, SUBMIT, MANAGE, DELETE, and CONTROL; owner `[SYSTEM]` (that
-is, `[1,4]`) and protection `(S:M,O:D,G:R,W:S)` by default; an ACL. SET
+**Decision 8 — protection and privileges** (held to A.4). A queue is a
+protected object of a new security class, QUEUE, in `securityClasses`, with
+access types READ, SUBMIT, MANAGE, DELETE, and CONTROL; owner `[SYSTEM]`
+(`[1,4]`) and protection `(S:M,O:D,G:R,W:S)` by default; an ACL. SET
 SECURITY/CLASS=QUEUE and SHOW SECURITY/CLASS=QUEUE (and
 `$GET_SECURITY`/`$SET_SECURITY` with class QUEUE) reach it, and so do
 INITIALIZE/QUEUE's and SET QUEUE's `/OWNER_UIC` and `/PROTECTION`.
-Access is decided by `internal/security`'s rule, extended with the
-queue's access types and with the job's own rule: a job's owner holds D
-access to it (A.3, 2 says exactly how). Privileges are rules in
-`privrules.go`, through the gate: `ruleQueueManager` (OPER and SYSNAM),
-`ruleCreateQueue` (OPER), `ruleQueueOverride` (OPER, and whatever else
-the probe shows overrides the protection), `ruleSubmitUser` (CMKRNL,
-then the UAF's access by Phase 95's Decision 5), `ruleQueuePriority`
-(OPER or ALTPRI above MAXQUEPRI). A refusal is the JBC status the probe
-shows (`JBC$_NOPRIV` from the services), shown by DCL as VMS shows it.
+`internal/security`'s rule decides, with the queue's access types:
 
-**Decision 9 — the services.** `$SNDJBC`, `$SNDJBCW`, `$GETQUI`, and
-`$GETQUIW` are system services (`corevms/sndjbc.go`, `getqui.go`) taking
-VMS's function codes and item lists for what Decision 1 keeps; an item
-or function for what it leaves out is `JBC$_INVFUNCOD` or `JBC$_INVITMCOD`
-(or the probe's status). Their definitions (`SJC$_`, `QUI$_`, `JBC$_`,
-the `QUI$` flags) come from the probe's decoded objects into `vmsdef`,
-and their macros (`$SJCDEF`, `$QUIDEF`, `$JBCMSGDEF`) into
-`starletdef.mar`, with `$SNDJBC` and `$GETQUI` service macros in
-`starlet.mar`, checked against real MACRO's objects as earlier service
-macros were. `F$GETQUI` stops being LEXNOTIMPL and uses `$GETQUI`'s
-code; `LIB$GETQUI` is the probe's to settle (Decision 10).
+- a queue operation asks the queue: S to SUBMIT, M to manage (START, STOP,
+  SET QUEUE, INITIALIZE of an existing queue, DELETE/QUEUE), R to see it;
+  ownership or CONTROL for its security;
+- a job operation asks the same protection and ACL **with the job's owner
+  as the owner**, and M on the queue allows anything on any job in it: D
+  to change, delete, or stop a job (one's own included, through the O
+  field), R to see it or SYNCHRONIZE with it;
+- privileges as the rule has them: BYPASS everything, SYSPRV the system
+  category, GRPPRV the system category in the owner's group, READALL R;
+  and **OPER everything** (`ruleQueueOperator`).
+
+The rules in `privrules.go`, through the gate: `ruleQueueOperator` (OPER,
+over any queue's or job's protection, and to create a queue: NOOPER
+otherwise), `ruleQueueManager` (OPER and SYSNAM, START and STOP
+/QUEUE/MANAGER), `ruleSubmitUser` (CMKRNL for `/USER`, NOCMKRNL; reading
+the UAF by Phase 95's Decision 5), `ruleQueuePriority` (OPER or ALTPRI,
+`/PRIORITY` above MAXQUEPRI, PRIOSMALL). A refusal is `JBC$_NOPRIV` (or
+the rule's own status), shown as A.4 shows it; without R, SHOW lists a job
+as `no privilege` and `/FULL` omits the security.
+
+**Decision 9 — the services** (held to A.4). `$SNDJBC`, `$SNDJBCW`,
+`$GETQUI`, and `$GETQUIW` are system services (`corevms/sndjbc.go`,
+`getqui.go`) taking VMS's function codes and item lists for what
+Decision 1 keeps. As VMS's: R0 is SS$_NORMAL and the status is in the
+IOSB, but for an unknown function or item code (SS$_BADPARAM in R0) and a
+file that can't be opened (RMS's status in R0); `$SNDJBC`'s longword
+outputs must be 4 bytes long (INVPARLEN); `$GETQUI` truncates to any
+buffer; a wildcard search gives NOMOREQUE after its last match. A function
+or item Decision 1 leaves out (forms, characteristics, printers) is
+`JBC$_NOTSUPPORTED`. The definitions come from `testdata/bat98/defined.txt`
+into `vmsdef`, the JBC messages' texts from round 1's `$GETMSG` dump, and
+the macros `$SJCDEF`, `$QUIDEF`, and `$JBCMSGDEF` into `starletdef.mar`,
+with `$SNDJBC` and `$GETQUI` service macros in `starlet.mar`, checked
+against real MACRO's objects as earlier service macros were. `F$GETQUI`
+stops being LEXNOTIMPL and uses `$GETQUI`'s code. `LIB$GETQUI` waits.
 
 **Decision 10 — the commands and qualifiers.** The author's minimum,
 and what the plan recommends adding because a queue is hard to use
@@ -413,21 +594,22 @@ without it (each marked; all accepted, the review's answer 6):
 | START/QUEUE/MANAGER | (directory parameter) |
 | STOP/QUEUE/MANAGER | `/CLUSTER` accepted |
 | SHOW QUEUE/MANAGER | `/FULL` |
-| INITIALIZE/QUEUE | `/BATCH`, `/START`, `/JOB_LIMIT`, `/BASE_PRIORITY`, `/OWNER_UIC`, `/PROTECTION`, `/WSDEFAULT`, `/WSQUOTA`, `/WSEXTENT`, `/CPUDEFAULT`, `/CPUMAXIMUM`, `/RETAIN`, `/DESCRIPTION` |
+| INITIALIZE/QUEUE | `/BATCH` (without it VMS makes a printer queue; govax refuses, NOTSUPPORTED), `/START`, `/JOB_LIMIT`, `/BASE_PRIORITY`, `/OWNER_UIC`, `/PROTECTION`, `/WSDEFAULT`, `/WSQUOTA`, `/WSEXTENT`, `/CPUDEFAULT`, `/CPUMAXIMUM`, `/RETAIN`, `/DESCRIPTION` |
 | START/QUEUE | the same attributes, as VMS allows |
-| STOP/QUEUE | `/NEXT`, `/RESET`, `/ENTRY=n` (abort a job) |
+| STOP/QUEUE | `/NEXT`, `/RESET`, `/ENTRY=n` (abort a job), `/REQUEUE` (restart it) and `/HOLD`; without `/NEXT` the queue pauses, suspending its jobs |
 | DELETE/QUEUE | |
 | SET QUEUE | the attributes (recommended) |
 | DELETE/ENTRY | `/QUEUE` |
 | SET ENTRY | `/HOLD`, `/RELEASE`, `/AFTER`, `/PARAMETERS`, `/NAME`, `/PRIORITY`, `/LOG_FILE` (recommended) |
-| SHOW QUEUE | `/BATCH`, `/ALL_JOBS`, `/FULL`, `/BRIEF`, `/BY_JOB_STATUS`, `/USER_NAME` |
+| SHOW QUEUE | `/BATCH`, `/ALL_JOBS`, `/FULL`, `/BRIEF`, `/BY_JOB_STATUS`, `/SUMMARY` (no `/USER_NAME`: VMS 7.1's has none) |
 | SHOW ENTRY | `/FULL`, `/USER_NAME` (recommended) |
 | SUBMIT | `/AFTER`, `/USER`, `/PARAMETERS`, `/HOLD`, `/LOG_FILE` (the minimum); `/QUEUE`, `/NAME`, `/KEEP`, `/PRINTER`, `/NOTIFY`, `/PRIORITY`, `/CPUTIME`, `/WSDEFAULT`, `/WSQUOTA`, `/WSEXTENT`, `/RESTART`, `/RETAIN`, `/NOTE`, `/IDENTIFY`, `/DELETE` (recommended) |
 | SYNCHRONIZE | `/ENTRY`, `/QUEUE` (recommended) |
 | SET RESTART_VALUE | with `BATCH$RESTART` and `$RESTART` (recommended, for `/RESTART`) |
 
-`/NOTIFY` writes the probe's completion message to the user's terminal
-through `$BRKTHRU`'s code when the user is logged in at the console.
+`/NOTIFY` writes A.4's completion message to the user's terminal through
+`$BRKTHRU`'s code when the user is logged in at the console. Every
+message, layout, and status is A.4's.
 SUBMIT's file selection qualifiers (`/BEFORE`, `/SINCE`, `/CONFIRM`,
 `/EXCLUDE`, ...) and `/CLI`, `/REMOTE`, `/CHARACTERISTICS` are left
 out.
@@ -456,11 +638,11 @@ copy. This needs `F$GETQUI`, so it comes with subtask 10. (The review
 allowed a SYS$BATCH supplied by default if this proved impractical; it
 doesn't.)
 
-A job that was executing when the last
-session ended is treated as after a system crash: requeued if it was
-`/RESTART`, with `$RESTART` true and `BATCH$RESTART` its last restart
-value, and otherwise ended with the probe's status (and retained as
-`/RETAIN` says). Pending, holding, and timed jobs simply wait. When
+A job that was executing when the last session ended is treated as VMS
+treats one at a shutdown (A.4): requeued if it was `/RESTART`, pending,
+checkpointed, with `$RESTART` true and `BATCH$RESTART` its last restart
+value; otherwise ended with `JBC$_QUERESET` (and retained as `/RETAIN`
+says). Pending, holding, and timed jobs simply wait. When
 the user asks govax to end (LOGOUT, EXIT at level 0, QUIT, Ctrl/Y's
 end) while jobs are executing, govax says how many and asks for
 confirmation; on yes it ends them that way, on no it goes back to the
@@ -698,3 +880,14 @@ queues is a future phase.
   condition, and a job whose process was stopped "Retained on
   completion". Left: the steps by hand, BAT98DROP.COM, and
   `copyout2.cmd` for its log and the definition objects.
+- **2026-11-16** Subtask 2, the analysis: A.4 written from round 1's logs
+  (every queue command's words and status; the protection matrix, which
+  shows a job checked against its queue's protection with the job's owner
+  as owner, OPER over everything and alone able to create, SYNCHRONIZE
+  needing R; the batch process's identity, its files at command level 0,
+  verify, the log's place; a reboot's effect), and Decisions 6 to 11
+  revised to it. Round 2, BAT98Q again with `$SNDJBC`'s longword outputs
+  in 4-byte buffers (round 1's were 256, JBC-F-INVPARLEN), is written and on
+  the volume; `defined.txt` (982 values) is in. Added to Decision 10:
+  STOP/QUEUE/REQUEUE (and `/HOLD`), which `/RESTART` needs, and SHOW
+  QUEUE/SUMMARY; dropped: SHOW QUEUE/USER_NAME, which VMS 7.1 lacks.
