@@ -37,10 +37,9 @@ func (c *Context) ShowSystem() error {
 // its group, WORLD for any; docs/planning/PHASE-94 - privileges.md,
 // subtask 8), else %SYSTEM-F-NOPRIV.
 //
-// With /PRIVILEGES (privileges true) its heading is followed by the
-// process's privileges and rights (processPrivilegesReport) instead of
-// its details.
-func (c *Context) ShowProcess(name, pid string, privileges bool) error {
+// The qualifiers choose what follows the report's heading in place of
+// the process's details (ProcessSections).
+func (c *Context) ShowProcess(name, pid string, show ProcessSections) error {
 	if c.RTL == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
@@ -55,8 +54,19 @@ func (c *Context) ShowProcess(name, pid string, privileges bool) error {
 	}
 
 	lines := env.ProcessReport(hostNode(), env != c.RTL)
-	if privileges {
-		lines = append(lines[:processHeadingLines:processHeadingLines], processPrivilegesReport(env)...)
+	if show.Privileges || show.Rights || show.Quotas {
+		lines = lines[:processHeadingLines:processHeadingLines]
+
+		if show.Quotas {
+			lines = append(lines, processQuotasReport(env)...)
+		}
+
+		switch {
+		case show.Privileges:
+			lines = append(lines, processPrivilegesReport(env)...)
+		case show.Rights:
+			lines = append(lines, processRightsReport(env)...)
+		}
 	}
 
 	for _, line := range lines {
@@ -64,6 +74,16 @@ func (c *Context) ShowProcess(name, pid string, privileges bool) error {
 	}
 
 	return nil
+}
+
+// ProcessSections are SHOW PROCESS's qualifiers that choose its report's
+// sections: /PRIVILEGES (the privileges, then the rights), /RIGHTS (the
+// rights alone), and /QUOTAS (what is left of each quota). With none of
+// them the report is the process's details. With more than one, each
+// section is shown once, the quotas first, as VMS's /ALL orders them
+// (unconfirmed: the probe ran each qualifier alone).
+type ProcessSections struct {
+	Privileges, Rights, Quotas bool
 }
 
 // findProcess is the process SHOW PROCESS and SET PROCESS name: the one

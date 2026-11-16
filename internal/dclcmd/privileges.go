@@ -99,10 +99,8 @@ const privilegesPerLine = 8
 // processPrivilegesReport is SHOW PROCESS/PRIVILEGES' text for env's
 // process after its first lines (ProcessReport's heading): the
 // privileges it is authorized for, the ones enabled now with their
-// descriptions, and the rights it holds. VMS 7.1 also listed "System
-// rights" (its SYS$NODE_ identifier), which govax has none of, so the
-// section is left out (unconfirmed: whether VMS shows a section with no
-// rights). Its blank lines are a space, as VMS's were.
+// descriptions, and the rights it holds (processRightsReport). Its blank
+// lines are a space, as VMS's were.
 func processPrivilegesReport(env *corevms.Environment) []string {
 	p := env.Process
 	lines := []string{" ", "Authorized privileges:"}
@@ -140,17 +138,32 @@ func processPrivilegesReport(env *corevms.Environment) []string {
 		}
 	}
 
-	if len(p.Rights) > 0 {
-		lines = append(lines, " ", "Process rights:")
+	return append(lines, processRightsReport(env)...)
+}
 
-		for _, r := range p.Rights {
-			name, ok := env.IdentifierName(r.Value)
-			if !ok {
-				name = fmt.Sprintf("%%X%08X", r.Value)
-			}
+// processRightsReport is the "Process rights" section SHOW PROCESS's
+// /PRIVILEGES and /RIGHTS end with: a space line, the heading, and each
+// identifier the process holds, by name (or %X and its value when the
+// rights database has no name for it), in 34 columns after a space, as
+// VMS 7.1 wrote them (testdata/uaf95). A process holding no rights has
+// no section (unconfirmed). VMS 7.1 then listed "System rights" (its
+// SYS$NODE_ identifier), which govax has none of, so that section is
+// left out.
+func processRightsReport(env *corevms.Environment) []string {
+	p := env.Process
+	if len(p.Rights) == 0 {
+		return nil
+	}
 
-			lines = append(lines, fmt.Sprintf(" %-34s", name))
+	lines := []string{" ", "Process rights:"}
+
+	for _, r := range p.Rights {
+		name, ok := env.IdentifierName(r.Value)
+		if !ok {
+			name = fmt.Sprintf("%%X%08X", r.Value)
 		}
+
+		lines = append(lines, fmt.Sprintf(" %-34s", name))
 	}
 
 	return lines

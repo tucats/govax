@@ -166,7 +166,11 @@ func (d *Dispatcher) bindGrammar() {
 	// SHOW SYSTEM and SHOW PROCESS (docs/planning/PHASE-44.md, subtask 10).
 	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowSystem() })
 	g.Bind("SHOW_PROCESS", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"), r.Present("PRIVILEGES"))
+		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"), dclcmd.ProcessSections{
+			Privileges: r.Present("PRIVILEGES"),
+			Rights:     r.Present("RIGHTS"),
+			Quotas:     r.Present("QUOTAS"),
+		})
 	})
 
 	// SET and SHOW PROTECTION, and SET PROCESS/PRIVILEGES (docs/planning/PHASE-93 -

@@ -2000,5 +2000,9 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     procedure there; VMS's behavior at login wasn't probed. A one-shot command runs neither.
   - **AUTHORIZE**: the unconfirmed choices each subtask's log lists (value limits, `/PRIVILEGES` and `/FLAGS` changing
     only the bits named, messages and statuses no case showed, the brief line's categories).
+  - **SHOW PROCESS/RIGHTS and /QUOTAS** (`internal/dclcmd/showquotas.go`, `privileges.go`): no "System rights"
+    section (govax has no `SYS$NODE_` identifier); the quotas govax doesn't charge (BYTLM, FILLM, TQELM, BIOLM,
+    DIOLM) show their limits where VMS shows what is left. Unconfirmed: the order and sharing of sections when the
+    qualifiers are combined, a nonzero CPU limit's form, and no rights section for a process holding none.
 - **Status**: kept until a probe shows otherwise.
 

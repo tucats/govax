@@ -2242,7 +2242,7 @@ process name is looked for only in your own group.
 
 ```text
 SHOW SYSTEM
-SHOW PROCESS [process-name] [/IDENTIFICATION=pid]
+SHOW PROCESS [process-name] [/IDENTIFICATION=pid] [/PRIVILEGES] [/RIGHTS] [/QUOTAS]
 ```
 
 List the processes, with their states, priorities, CPU time, and page
@@ -2250,6 +2250,36 @@ use, and show one process's details. `SHOW SYSTEM` lists every process to
 everyone, as VMS's does; showing another process needs GROUP or WORLD, as
 for `STOP`, and `F$GETJPI` and `F$PID` follow the same rule (`F$PID`
 passes over a process you may not see).
+
+`/PRIVILEGES` (below, with SET PROCESS), `/RIGHTS`, and `/QUOTAS` show
+something else after the report's heading. `/RIGHTS` is the identifiers
+the process holds: those its login gave it (INTERACTIVE and LOCAL) and
+those its UIC holds in the rights database (AUTHORIZE's
+GRANT/IDENTIFIER). `/QUOTAS` is the account name and what is left of each
+quota, laid out as VMS 7.1's:
+
+```text
+$ SHOW PROCESS/QUOTAS
+
+16-NOV-2026 10:12:40.11   User: UAF95            Process ID:   00000301
+                          Node: SIMVAX           Process name: "UAF95"
+
+Process Quotas:
+ Account name: GOVAX
+ CPU limit:                      Infinite  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32768  Buffered I/O limit:      40
+ Timer queue entry quota:              40  Open file quota:        300
+ Paging file quota:                 32768  Subprocess quota:         2
+ Default page fault cluster:           32  AST quota:               40
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+```
+
+govax charges the AST, enqueue, paging file (with paging on), and
+subprocess quotas, so those show what is left; the others it records but
+doesn't charge, and they show the whole limit. VMS also lists "System
+rights" (its `SYS$NODE_` identifier) after the process's, which govax
+doesn't have.
 
 #### SET PROCESS
 

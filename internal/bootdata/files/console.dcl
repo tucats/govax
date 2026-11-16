@@ -401,7 +401,9 @@ grammar console
         syntax          show_default/id=163
 
         ! SHOW SYSTEM and SHOW PROCESS [name] [/IDENTIFICATION=pid]
-        ! (docs/PHASE-44.md, subtask 10); internal/dclcmd/showsys.go.
+        ! [/PRIVILEGES] [/RIGHTS] [/QUOTAS] (docs/PHASE-44.md, subtask 10;
+        ! /RIGHTS and /QUOTAS docs/planning/PHASE-95 - authentication.md);
+        ! internal/dclcmd/showsys.go.
         syntax          show_system/id=164
         syntax          show_process/id=165
             qualifier   identification/id=1940      -
@@ -409,6 +411,8 @@ grammar console
             parameter   process_name/id=1941        -
                         /type=$string
             qualifier   privileges/id=1942
+            qualifier   rights/id=1943
+            qualifier   quotas/id=1944
         syntax          show_protection/id=2720
         ! SHOW SECURITY file [/CLASS=FILE|VOLUME] and SHOW ACL file: one
         ! specification (wildcards allowed; a list is DCL's NOLIST, as on

@@ -1084,6 +1084,29 @@ Supplemental entries, after the phase was done.
   `TestRun_scriptedAnswers` (ADDUSER from a session's reader, its record
   in the authorization file, no IVVERB for the answers, the password not
   shown) and `TestRun_pipedAnswers` (the same through a pipe).
+- **2026-11-16** SHOW PROCESS/RIGHTS and /QUOTAS, which subtask 2's
+  rehearsal found missing and the probe's round 3 logs show
+  (`vax/round3/uaf95i_*.log`). Both replace the report's details after
+  its heading, as /PRIVILEGES does (`dclcmd/showsys.go`'s
+  `ProcessSections`; more than one qualifier shows each section once,
+  the quotas first, as VMS's /ALL orders them: unconfirmed). /RIGHTS is
+  /PRIVILEGES' "Process rights" section alone (`dclcmd/privileges.go`'s
+  `processRightsReport`, now shared), and VMS's "System rights" (its
+  `SYS$NODE_` identifier) is left out as before. /QUOTAS is
+  `dclcmd/showquotas.go`: the account name, then seven lines of two cells
+  (40 and 27 columns, each value right-aligned), each number a `$GETJPI`
+  item, matched to the log's F$GETJPI section: ASTCNT, ENQCNT, PAGFILCNT,
+  and PRCLM less PRCCNT, what is left of the quotas govax charges; DIOLM,
+  BIOLM, BYTLM, TQLM, and FILLM, whose counts VMS showed and govax
+  doesn't keep; DFPFC as PFCDEFAULT (the probe's VAX had 16 for both,
+  `testdata/pg64/vax/pg64.log`); SHRFILLM, MAXDETACH, and MAXJOBS; a CPU
+  limit of 0 "Infinite", another a delta time (unconfirmed).
+  `TestShowProcessRightsAndQuotas` logs in as UAF95, holding UAF95_ID as
+  on the VAX, and holds both reports to VMS's log line for line, but for
+  the heading's time, PID, and node and four quota lines (BYTLM and
+  FILLM uncharged, the paging file uncharged with paging off, an AST
+  VMS's DCL had outstanding). HELP SHOW PROCESS and MANUAL.md's SHOW
+  PROCESS have them.
 
 ## Where things stand
 
@@ -1104,8 +1127,6 @@ What Phase 95 left, for later phases:
   GLOBAL` on VMS would give their codes. `$GETUAI` and `$SETUAI`, and the
   rights services (`$ADD_HOLDER`, `$ASCTOID`, ...), aren't there; AUTHORIZE
   and the lexical functions use the file in Go.
-- **SHOW PROCESS/RIGHTS and /QUOTAS**, which the probe's logs show, aren't
-  there (subtask 2's rehearsal).
 - **A bare search list name with a default type**: a name with no
   punctuation that is a search list stays whole, and a default type a
   command adds to it as text is lost (Revisions, the first entry).

@@ -221,6 +221,45 @@
    now with what each allows, and the rights identifiers it holds, in
    place of its details.  SET PROCESS/PRIVILEGES changes them.
 
+/QUOTAS
+
+      /QUOTAS
+
+   Shows the process's account name and what is left of each of its
+   quotas, in place of its details: the CPU limit, direct and buffered
+   I/O, the buffered I/O byte count, timer queue entries, open files, the
+   paging file, subprocesses, the default page fault cluster, ASTs,
+   enqueues, shared files, and the account's detached process and job
+   limits.  A quota govax records but doesn't charge (the I/O limits,
+   the byte count, timer queue entries, open files) shows its whole
+   limit.  The quotas come from the account the process logged in to
+   (AUTHORIZE).
+
+     $ SHOW PROCESS/QUOTAS
+
+     16-NOV-2026 10:12:40.11   User: UAF95            Process ID:   00000301
+                               Node: SIMVAX           Process name: "UAF95"
+
+     Process Quotas:
+      Account name: GOVAX
+      CPU limit:                      Infinite  Direct I/O limit:        40
+      Buffered I/O byte count quota:     32768  Buffered I/O limit:      40
+      Timer queue entry quota:              40  Open file quota:        300
+      Paging file quota:                 32768  Subprocess quota:         2
+      Default page fault cluster:           32  AST quota:               40
+      Enqueue quota:                       200  Shared file limit:        0
+      Max detached processes:                0  Max active jobs:          0
+
+/RIGHTS
+
+      /RIGHTS
+
+   Shows the rights identifiers the process holds, in place of its
+   details: the environmental ones a login gives (INTERACTIVE and LOCAL,
+   or BATCH) and those the account's UIC holds in the rights database
+   (AUTHORIZE's GRANT/IDENTIFIER).  VMS also lists "System rights", its
+   SYS$NODE_ identifier, which govax doesn't have.
+
 2 PROTECTION
 
    Shows the current process's default file protection, the protection a
