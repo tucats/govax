@@ -1,0 +1,404 @@
+######## BAT98J SYSTEM      
+MODE BATCH
+VERIFY 0
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+  $RESTART == "FALSE"
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+P1 [ALPHA] 5
+P2 [two words] 9
+P3 [3] 1
+P4 [] 0
+P5 [E] 1
+P6 [F] 1
+P7 [G] 1
+P8 [H h] 3
+######## F$ENVIRONMENT
+  CAPTIVE = FALSE
+  CONTROL = 
+  DEFAULT = SYS$SYSROOT:[SYSMGR]
+  DEPTH = 0
+  INTERACTIVE = FALSE
+  MAX_DEPTH = 32
+  MESSAGE = /FACILITY/SEVERITY/IDENTIFICATION/TEXT
+  NOCONTROL = T,Y
+  ON_CONTROL_Y = FALSE
+  ON_SEVERITY = NONE
+  OUTPUT_RATE =    0 00:01:00.00
+  PROCEDURE = DISK$BAT98:[000000]BAT98J.COM;1
+  PROMPT = $ 
+  PROMPT_CONTROL = TRUE
+  PROTECTION = SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD
+  SYMBOL_SCOPE = LOCAL,GLOBAL
+  VERB_SCOPE = LOCAL,GLOBAL
+  VERIFY_IMAGE = FALSE
+  VERIFY_PROCEDURE = FALSE
+######## F$GETJPI
+  ACCOUNT = SYSTEM  
+  APTCNT = 0
+  ASTACT = 0
+  ASTCNT = 49
+  ASTEN = 15
+  ASTLM = 50
+  AUTHPRI = 3
+%DCL-W-TKNOVF, command element is too long - shorten
+ \CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,SETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,
+  BIOCNT = 40
+  BIOLM = 40
+  BUFIO = 29
+  BYTCNT = 32256
+  BYTLM = 32256
+  CLINAME = DCL
+  CPULIM = 30000
+  CPUTIM = 0
+  CREPRC_FLAGS = 16
+%DCL-W-TKNOVF, command element is too long - shorten
+ \CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,SETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,
+  DFPFC = 16
+  DFWSCNT = 512
+  DIOCNT = 40
+  DIOLM = 40
+  DIRIO = 11
+  EFCS = 1610612737
+  EFCU = -2147483648
+  EFWM = -536870913
+  ENQCNT = 200
+  ENQLM = 200
+  EXCVEC = 7FFEFE34
+  FILCNT = 298
+  FILLM = 300
+  FINALEXC = 7FFEFF28
+  FREP0VA = 
+  FREP1VA = 7FED5600
+  FREPTECNT = 63140
+  GPGCNT = 98
+  GRP = 1
+  IMAGECOUNT = 1
+  IMAGNAME = 
+  IMAGPRIV = 
+  JOBPRCCNT = 0
+  JOBTYPE = 2
+  LAST_LOGIN_I = 15-NOV-2026 17:37:33.01
+  LAST_LOGIN_N = 16-NOV-2026 13:02:55.60
+  LOGINTIM = 16-NOV-2026 13:03:10.93
+  LOGIN_FAILURES = 0
+  LOGIN_FLAGS = 0
+  MASTER_PID = 000001A1
+  MAXDETACH = 0
+  MAXJOBS = 0
+  MEM = 4
+  MODE = BATCH
+  MSGMASK = 15
+  NODENAME = SIMVAX
+  NODE_CSID = 
+  NODE_VERSION = V7.1
+  OWNER = 
+  PAGEFLTS = 436
+  PAGFILCNT = 39799
+  PAGFILLOC = 03000000
+  PGFLQUOTA = 40960
+  PHDFLAGS = 132
+  PID = 000001A1
+  PPGCNT = 246
+  PRCCNT = 0
+  PRCLM = 10
+  PRCNAM = BATCH_94
+  PRI = 4
+  PRIB = 3
+%DCL-W-TKNOVF, command element is too long - shorten
+ \CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,SETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,
+  SHRFILLM = 0
+  SITESPEC = 0
+  STATE = CUR
+  STS = 278537
+  STS2 = 0
+  SWPFILLOC = 
+  TERMINAL = 
+  TMBU = 0
+  TQCNT = 29
+  TQLM = 30
+  UAF_FLAGS = 0
+  UIC = [SYSTEM]
+  USERNAME = SYSTEM      
+  VIRTPEAK = 3112
+  VOLUMES = 0
+  WSAUTH = 1024
+  WSAUTHEXT = 16400
+  WSEXTENT = 16400
+  WSPEAK = 383
+  WSQUOTA = 1024
+  WSSIZE = 512
+######## F$GETQUI
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+  ACCOUNT_NAME = SYSTEM
+  AFTER_TIME = 16-NOV-2026 13:03:10.92
+  CHECKPOINT_DATA = 
+  CLI = 
+  CPU_LIMIT =    0 00:00:00.00
+  ENTRY_NUMBER = 94
+  FILE_COUNT = 1
+  JOB_FLAGS = 0
+  JOB_NAME = BAT98V_SYSTEM
+  JOB_PID = 000001A1
+  JOB_SIZE = 0
+  JOB_STATUS = 2
+  LOG_QUEUE = 
+  LOG_SPECIFICATION = DUA1:[BAT98LOG]BAT98V_SYSTEM.LOG;
+  NOTE = 
+  PARAMETER_1 = ALPHA
+  PARAMETER_2 = two words
+  PARAMETER_8 = H h
+  PENDING_JOB_REASON = 0
+  PRIORITY = 100
+  QUEUE_NAME = BAT98_A
+  SUBMISSION_TIME = 16-NOV-2026 13:03:10.92
+  UIC = [SYSTEM]
+  USERNAME = SYSTEM
+  WSDEFAULT = 0
+  WSEXTENT = 0
+  WSQUOTA = 0
+  FILE = _SIMVAX$DUA1:[000000]BAT98J.COM;1
+######## NAMES
+   "SYS$INPUT" [exec] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$OUTPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$ERROR" [exec] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$COMMAND" [exec] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$DISK" [exec] = "SYS$SYSROOT:" (LNM$PROCESS_TABLE)
+1  "SYS$SYSROOT" [exec] = "SIMVAX$DUA0:[SYS0.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+	= "SYS$COMMON:"
+2  "SYS$COMMON" [exec] = "SIMVAX$DUA0:[SYS0.SYSCOMMON.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+   "SYS$DISK" [exec] = "SIMVAX$DUA0:" [concealed,terminal] (LNM$SYSTEM_TABLE)
+   "SYS$LOGIN" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_81C6AD80)
+   "SYS$LOGIN_DEVICE" [exec] = "SYS$SYSROOT:" (LNM$JOB_81C6AD80)
+1  "SYS$SYSROOT" [exec] = "SIMVAX$DUA0:[SYS0.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+	= "SYS$COMMON:"
+2  "SYS$COMMON" [exec] = "SIMVAX$DUA0:[SYS0.SYSCOMMON.]" [concealed,terminal] (LNM$SYSTEM_TABLE)
+   "SYS$SCRATCH" [exec] = "SYS$SYSROOT:[SYSMGR]" (LNM$JOB_81C6AD80)
+%SHOW-S-NOTRAN, no translation for logical name SYS$NODE
+   "TT" [exec] = "_NLA0:" (LNM$PROCESS_TABLE)
+%SHOW-S-NOTRAN, no translation for logical name SYS$NET
+%SHOW-S-NOTRAN, no translation for logical name SYS$PRINT
+%SHOW-S-NOTRAN, no translation for logical name SYS$BATCH
+   "SYS$SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN" (LNM$SYSTEM_TABLE)
+
+(LNM$JOB_81C6AD80)
+
+  "SYS$LOGIN" = "SYS$SYSROOT:[SYSMGR]"
+  "SYS$LOGIN_DEVICE" = "SYS$SYSROOT:"
+  "SYS$SCRATCH" = "SYS$SYSROOT:[SYSMGR]"
+
+(LNM$PROCESS_TABLE)
+
+  "SYS$COMMAND" = "_SIMVAX$DUA1:"
+  "SYS$DISK" = "SYS$SYSROOT:"
+  "SYS$ERROR" = "_SIMVAX$DUA1:"
+  "SYS$INPUT" = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [exec] = "_SIMVAX$DUA1:"
+  "TT" = "_NLA0:"
+  SYS$OUTPUT DEVICE _DUA1:
+  SYS$INPUT DEVICE _DUA1:
+  SYS$COMMAND DEVICE _DUA1:
+  SYS$SYSROOT:[SYSMGR]
+  =   SYS$SYSROOT:[SYSMGR]
+  =   SYS$COMMON:[SYSMGR]
+######## THE PROCESS
+
+16-NOV-2026 13:03:11.09   User: SYSTEM           Process ID:   000001A1
+                          Node: SIMVAX           Process name: "BATCH_94"
+
+Terminal:           
+User Identifier:    [SYSTEM]
+Base priority:      3
+Default file spec:  SYS$SYSROOT:[SYSMGR]
+
+Process Quotas:
+ Account name: SYSTEM  
+ CPU limit:                 0 00:05:00.00  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              29  Open file quota:        298
+ Paging file quota:                 39470  Subprocess quota:        10
+ Default page fault cluster:           16  AST quota:               49
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+
+Accounting information:
+ Buffered I/O count:        79  Peak working set size:        437
+ Direct I/O count:          26  Peak virtual size:           6071
+ Page faults:             1757  Mounted volumes:                0
+ Images activated:          17
+ Elapsed CPU time:       17-NOV-1858 00:00:00.00
+ Connect time:              0 00:00:00.17
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ ACNT                 may suppress accounting messages
+ ALLSPOOL             may allocate spooled device
+ ALTPRI               may set any priority value
+ AUDIT                may direct audit to system security audit log
+ BUGCHK               may make bug check log entries
+ BYPASS               may bypass all object access controls
+ CMEXEC               may change mode to exec
+ CMKRNL               may change mode to kernel
+ IMPERSONATE          may impersonate another user
+ DIAGNOSE             may diagnose devices
+ DOWNGRADE            may downgrade object secrecy
+ EXQUOTA              may exceed disk quota
+ GROUP                may affect other processes in same group
+ GRPNAM               may insert in group logical name table
+ GRPPRV               may access group objects via system protection
+ IMPORT               may set classification for unlabeled object
+ LOG_IO               may do logical i/o
+ MOUNT                may execute mount acp function
+ NETMBX               may create network device
+ OPER                 may perform operator functions
+ PFNMAP               may map to specific physical pages
+ PHY_IO               may do physical i/o
+ PRMCEB               may create permanent common event clusters
+ PRMGBL               may create permanent global sections
+ PRMMBX               may create permanent mailbox
+ PSWAPM               may change process swap mode
+ READALL              may read anything as the owner
+ SECURITY             may perform security administration functions
+ SETPRV               may set any privilege bit
+ SHARE                may assign channels to non-shared devices
+ SHMEM                may create/delete objects in shared memory
+ SYSGBL               may create system wide global sections
+ SYSLCK               may lock system wide resources
+ SYSNAM               may insert in system logical name table
+ SYSPRV               may access objects via system protection
+ TMPMBX               may create temporary mailbox
+ UPGRADE              may upgrade object integrity
+ VOLPRO               may override volume protection
+ WORLD                may affect other processes in the world
+ 
+Process rights:
+ BATCH                             
+ NET$MANAGE                        
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+ 
+Auto-unshelve: on
+ 
+Image Dump: off
+
+Process Dynamic Memory Area  
+    Current Size (bytes)         51200    Current Total Size (pages)     100
+    Free Space (bytes)           48144    Space in Use (bytes)          3056
+    Size of Largest Block        47264    Size of Smallest Block          56
+    Number of Free Blocks            7    Free Blocks LEQU 64 Bytes        2
+
+There is 1 process in this job: 
+
+  BATCH_94 (*)
+
+16-NOV-2026 13:03:11.10   User: SYSTEM           Process ID:   000001A1
+                          Node: SIMVAX           Process name: "BATCH_94"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ ACNT                 may suppress accounting messages
+ ALLSPOOL             may allocate spooled device
+ ALTPRI               may set any priority value
+ AUDIT                may direct audit to system security audit log
+ BUGCHK               may make bug check log entries
+ BYPASS               may bypass all object access controls
+ CMEXEC               may change mode to exec
+ CMKRNL               may change mode to kernel
+ IMPERSONATE          may impersonate another user
+ DIAGNOSE             may diagnose devices
+ DOWNGRADE            may downgrade object secrecy
+ EXQUOTA              may exceed disk quota
+ GROUP                may affect other processes in same group
+ GRPNAM               may insert in group logical name table
+ GRPPRV               may access group objects via system protection
+ IMPORT               may set classification for unlabeled object
+ LOG_IO               may do logical i/o
+ MOUNT                may execute mount acp function
+ NETMBX               may create network device
+ OPER                 may perform operator functions
+ PFNMAP               may map to specific physical pages
+ PHY_IO               may do physical i/o
+ PRMCEB               may create permanent common event clusters
+ PRMGBL               may create permanent global sections
+ PRMMBX               may create permanent mailbox
+ PSWAPM               may change process swap mode
+ READALL              may read anything as the owner
+ SECURITY             may perform security administration functions
+ SETPRV               may set any privilege bit
+ SHARE                may assign channels to non-shared devices
+ SHMEM                may create/delete objects in shared memory
+ SYSGBL               may create system wide global sections
+ SYSLCK               may lock system wide resources
+ SYSNAM               may insert in system logical name table
+ SYSPRV               may access objects via system protection
+ TMPMBX               may create temporary mailbox
+ UPGRADE              may upgrade object integrity
+ VOLPRO               may override volume protection
+ WORLD                may affect other processes in the world
+ 
+Process rights:
+ BATCH                             
+ NET$MANAGE                        
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+
+16-NOV-2026 13:03:11.11   User: SYSTEM           Process ID:   000001A1
+                          Node: SIMVAX           Process name: "BATCH_94"
+ 
+Process rights:
+ BATCH                             
+ NET$MANAGE                        
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+
+16-NOV-2026 13:03:11.12   User: SYSTEM           Process ID:   000001A1
+                          Node: SIMVAX           Process name: "BATCH_94"
+
+Process Quotas:
+ Account name: SYSTEM  
+ CPU limit:                 0 00:05:00.00  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              29  Open file quota:        298
+ Paging file quota:                 39470  Subprocess quota:        10
+ Default page fault cluster:           16  AST quota:               49
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+  $RESTART == "FALSE"
+  $SEVERITY == "1"
+  $STATUS == "%X10000001"
+  I = 9   Hex = 00000009  Octal = 00000000011
+  P1 = "ALPHA"
+  P2 = "two words"
+  P3 = "3"
+  P4 = ""
+  P5 = "E"
+  P6 = "F"
+  P7 = "G"
+  P8 = "H h"
+  V = "H h"
+  X = ""
+BAT98J WROTE THIS TO SYS$ERROR
+BAT98J FINISHED
+  SYSTEM       job terminated at 16-NOV-2026 13:03:11.12
+
+  Accounting information:
+  Buffered I/O count:             104         Peak working set size:     437
+  Direct I/O count:                49         Peak page file size:      6071
+  Page faults:                   2222         Mounted volumes:             0
+  Charged CPU time:        17-NOV-1858 00:00:00.00   Elapsed time:     0 00:00:00.19

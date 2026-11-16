@@ -1,0 +1,8 @@
+BAT98ERR RAN, P1=, P2=, DEPTH 0
+  SYSTEM       job terminated at 16-NOV-2026 11:26:37.58
+
+  Accounting information:
+  Buffered I/O count:              30         Peak working set size:     383
+  Direct I/O count:                 7         Peak page file size:      3112
+  Page faults:                    448         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.04   Elapsed time:     0 00:00:00.05

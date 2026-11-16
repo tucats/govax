@@ -1,0 +1,1423 @@
+$ show queue/manager
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+$ $ MOUNT/SYSTEM DUA1: BAT98
+%MOUNT-I-MOUNTED, BAT98 mounted on _SIMVAX$DUA1:
+$ $ @DUA1:[000000]BAT98
+$ ! BAT98.COM - Phase 98's probe of batch queues: SYSTEM's run.
+$ ! Written by testdata/bat98/gen.go. Run it as SYSTEM, from the exchange
+$ ! volume, mounted /SYSTEM, with the queue manager running (README.md):
+$ !
+$ !     @DUA1:[000000]BAT98
+$ !
+$ ! It defines BAT98$DISK in the system table for the volume, makes the
+$ ! probe's accounts (BAT98ACCT.COM), and works on queues of its own,
+$ ! BAT98_*; it never changes the VAX's own queues. Its log is
+$ ! BAT98$DISK:[BAT98LOG]BAT98.LOG.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ DEV = F$PARSE(HERE,,,"DEVICE")
+$ DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK DUA1:
+$ LOGFILE = DEV + "[BAT98LOG]BAT98.LOG"
+$ @DUA1:[000000]BAT98.COM;1/OUTPUT=DUA1:[BAT98LOG]BAT98.LOG LOGGED
+%UAF-I-ADDMSG, user record successfully added
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.69  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record addition
+Event time:               16-NOV-2026 11:24:41.69
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98                           
+Flags:                    New:      (none)
+                          Original: DISUSER
+UIC:                      New:      [200,10]
+                          Original: [200,200]
+Password Date:            New:      (pre-expired)    
+                          Original: (pre-expired)    
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.69  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier added
+Event time:               16-NOV-2026 11:24:41.69
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98                           
+Identifier value:         %X00800008      
+Attributes:               none
+
+%UAF-I-RDBADDMSGU, identifier BAT98 value [000200,000010] added to rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.70  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record modification
+Event time:               16-NOV-2026 11:24:41.70
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98                           
+Account:                  New:      GOVAX98                         
+                          Original:                                 
+Default Device:           New:      BAT98$DISK:
+                          Original: SYS$SYSDEVICE:
+Default Directory:        New:      [BAT98]
+                          Original: [USER]
+Owner:                    New:      GOVAX PROBE
+                          Original: <none>
+
+%UAF-I-MDFYMSG, user record(s) updated
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.70  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record modification
+Event time:               16-NOV-2026 11:24:41.70
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98                           
+Default privileges:       New:      TMPMBX,NETMBX
+                          Original: TMPMBX,NETMBX
+LGICMD:                   New:      <none>
+                          Original: LOGIN
+Privileges:               New:      TMPMBX,NETMBX
+                          Original: TMPMBX,NETMBX
+
+%UAF-I-MDFYMSG, user record(s) updated
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.71  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record copied
+Event time:               16-NOV-2026 11:24:41.71
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              New:      BAT98O                          
+                          Original: BAT98                           
+UIC:                      New:      [200,11]
+                          Original: [200,10]
+Password Date:            New:      (pre-expired)    
+                          Original: (pre-expired)    
+
+%UAF-I-COPMSG, user record copied
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.72  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier added
+Event time:               16-NOV-2026 11:24:41.72
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98O                          
+Identifier value:         %X00800009      
+Attributes:               none
+
+%UAF-I-RDBADDMSGU, identifier BAT98O value [000200,000011] added to rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.72  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record modification
+Event time:               16-NOV-2026 11:24:41.72
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98O                          
+Default privileges:       New:      TMPMBX,NETMBX
+                          Original: TMPMBX,NETMBX
+Default Directory:        New:      [BAT98O]
+                          Original: [BAT98]
+Privileges:               New:      CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,IMPERSONATE,DIAGNOSE,LOG_IO,GROUP,NOACNT,PRMCEB,PRMMBX,PSWAPM,SETPRI,SETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCH
+K,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,IMPORT,AUDIT,SECURITY
+                          Original: TMPMBX,NETMBX
+
+%UAF-I-MDFYMSG, user record(s) updated
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.73  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record copied
+Event time:               16-NOV-2026 11:24:41.73
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              New:      BAT98W                          
+                          Original: BAT98                           
+UIC:                      New:      [300,10]
+                          Original: [200,10]
+Password Date:            New:      (pre-expired)    
+                          Original: (pre-expired)    
+
+%UAF-I-COPMSG, user record copied
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.73  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier added
+Event time:               16-NOV-2026 11:24:41.73
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98W                          
+Identifier value:         %X00C00008      
+Attributes:               none
+
+%UAF-I-RDBADDMSGU, identifier BAT98W value [000300,000010] added to rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.74  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier added
+Event time:               16-NOV-2026 11:24:41.74
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          GOVAX98                         
+Identifier value:         %X00C0FFFF      
+Attributes:               none
+
+%UAF-I-RDBADDMSGU, identifier GOVAX98 value [000300,177777] added to rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.74  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record modification
+Event time:               16-NOV-2026 11:24:41.74
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98W                          
+Default Directory:        New:      [BAT98W]
+                          Original: [BAT98]
+
+%UAF-I-MDFYMSG, user record(s) updated
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.74  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier added
+Event time:               16-NOV-2026 11:24:41.74
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98_ID                        
+Identifier value:         %X80010004      
+Attributes:               none
+
+%UAF-I-RDBADDMSG, identifier BAT98_ID value %X80010004 added to rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:24:41.75  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier granted
+Event time:               16-NOV-2026 11:24:41.75
+PID:                      0000016C        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98_ID                        
+Identifier value:         %X80010004      
+Attributes:               none
+Holder name:              BAT98                           
+Holder owner:             [PROT93,BAT98]
+
+%UAF-I-GRANTMSG, identifier BAT98_ID granted to BAT98
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+%JBC-I-QUENOTMOD, modifications not made to running queue
+%JBC-E-STARTED, queue already started
+%DELETE-E-NOTDELETED, error deleting BAT98_B
+-JBC-E-QUENOTSTOP, queue must be stopped to perform operation
+%JBC-E-NOSUCHQUE, no such queue
+%DELETE-W-SEARCHFAIL, error searching for BAT98_D
+-JBC-E-NOSUCHQUE, no such queue
+%JBC-F-INVPARLEN, invalid parameter length
+%JBC-F-INVQUENAM, invalid queue name
+%QUEMAN-F-INVQUAVAL, value '0' invalid for /JOB_LIMIT qualifier
+%QUEMAN-F-INVQUAVAL, value '256' invalid for /JOB_LIMIT qualifier
+%QUEMAN-F-INVQUAVAL, value '99' invalid for /BASE_PRIORITY qualifier
+%JBC-E-NOSUCHQUE, no such queue
+%JBC-E-NOSUCHQUE, no such queue
+%DELETE-W-SEARCHFAIL, error searching for NOSUCHQ98
+-JBC-E-NOSUCHQUE, no such queue
+%JBC-E-NOSUCHQUE, no such queue
+%JBC-E-NOSUCHQUE, no such queue
+%SUBMIT-F-INVQUAVAL, value 'I' invalid for /PARAMETERS qualifier
+%DCL-W-TKNOVF, command element is too long - shorten
+ \XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NODSTQUE, no such destination queue
+%SUBMIT-F-INVQUAVAL, value 'NOSUCH98' invalid for /USER qualifier
+%SUBMIT-F-OPENIN, error opening DUA1:[000000]NOSUCH98.COM; as input
+-RMS-E-FNF, file not found
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOSUCHQUE, no such queue
+%SUBMIT-F-OPENIN, error opening DUA1:[000000]BAT98OK.; as input
+-RMS-E-FNF, file not found
+%DCL-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+ \USER_NAME\
+%DCL-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+ \USER_NAME\
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-NOSUCHJOB, no such job
+%DELETE-E-NOTDELETED, error deleting 21
+-JBC-E-NOSUCHJOB, no such job
+%DELETE-E-NOTDELETED, error deleting 99999
+-JBC-E-NOSUCHJOB, no such job
+%DELETE-E-NOTDELETED, error deleting 21
+-JBC-E-NOSUCHJOB, no such job
+
+Job BAT98OK (queue BAT98_B, entry 34) terminated with error status
+%JBC-F-JOBDELETE, job deleted before execution
+%JBC-E-NOSUCHQUE, no such queue
+%RMS-E-FNF, file not found
+%SYSTEM-F-ABORT, abort
+
+Job BAT98R7 (queue BAT98_A, entry 52) completed
+%SYSTEM-F-EXCPUTIM, CPU time limit expired
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R10.RUN;*
+-RMS-E-FNF, file not found
+%JBC-F-JOBABORT, job aborted during execution
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R11.RUN;*
+-RMS-E-FNF, file not found
+%JBC-F-JOBABORT, job aborted during execution
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R12.RUN;*
+-RMS-E-FNF, file not found
+%NONAME-W-NOMSG, Message number 00000000
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R13.RUN;*
+-RMS-E-FNF, file not found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R14.RUN;*
+-RMS-E-FNF, file not found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R15.RUN;*
+-RMS-E-FNF, file not found
+%JBC-F-QUERESET, job aborted during execution because queue was reset
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]BAT98R16.RUN;*
+-RMS-E-FNF, file not found
+%JBC-E-EXECUTING, job executing on queue prevents requested operation
+%JBC-E-EXECUTING, job executing on queue prevents requested operation
+%JBC-E-EXECUTING, job executing on queue prevents requested operation
+%JBC-F-JOBABORT, job aborted during execution
+%JBC-E-NOSUCHENT, no such entry
+%RMS-E-FNF, file not found
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-NOSUCHJOB, no such job
+%JBC-E-NOSUCHENT, no such entry
+%DIRECT-W-NOFILES, no files found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]DELME.COM;*
+-RMS-E-FNF, file not found
+%SUBMIT-F-INVLOGFIL, invalid log file specification
+-RMS-E-DNF, directory not found
+-SYSTEM-W-NOSUCHFILE, no such file
+%%%%%%%%%%%  OPCOM  16-NOV-2026 11:26:58.49  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Batch process login failure
+Event time:               16-NOV-2026 11:26:58.49
+PID:                      0000018D        
+Process name:             BATCH_78        
+Username:                 BAT98W          
+Process owner:            [GOVAX98,BAT98W]
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]LOGINOUT.EXE
+Status:                   %RMS-E-PRV, insufficient privilege or file protection violation
+
+%RMS-E-PRV, insufficient privilege or file protection violation
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NODSTQUE, no such destination queue
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[BAT98SCR]ORDER.TXT;*
+-RMS-E-FNF, file not found
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-NOSUCHENT, no such entry
+%JBC-E-EXECUTING, job executing on queue prevents requested operation
+
+SIMVAX::SYSTEM 12:59:56 QUEMAN    CPU=00:00:01.86 PF=69986 IO=5248 MEM=77
+SIMVAX::SYSTEM 13:00:02 QUEMAN    CPU=00:00:01.86 PF=69992 IO=5249 MEM=83
+SIMVAX::SYSTEM 13:00:10 QUEMAN    CPU=00:00:01.86 PF=69992 IO=5250 MEM=83
+SIMVAX::SYSTEM 13:00:16 QUEMAN    CPU=00:00:01.86 PF=69992 IO=5251 MEM=83
+ Interrupt 
+
+$ spawn
+$ show queue/all bat98_a
+Batch queue BAT98_A, idle, on SIMVAX::
+  <GOVAX PROBE A>
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+     93  BAT98X3         SYSTEM               Holding
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+     56  BAT98R12        SYSTEM               Retained on completion
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+$ set entry 93/release
+$ show queue/all bat98_a
+Batch queue BAT98_A, idle, on SIMVAX::
+  <GOVAX PROBE A>
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+     56  BAT98R12        SYSTEM               Retained on completion
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+$ logout
+  Process SYSTEM_1 logged out at 16-NOV-2026 13:03:09.63
+$ continue
+$ WRITE SYS$OUTPUT "BAT98 finished; the log is ", LOGFILE
+BAT98 finished; the log is DUA1:[BAT98LOG]BAT98.LOG
+$ EXIT
+$ 
+
+----
+
+This is the console from the interactive tests is step 4:
+
+
+$ MOUNT/SYSTEM DUA1: BAT98
+%MOUNT-I-MOUNTED, BAT98 mounted on _SIMVAX$DUA1:
+$ DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK DUA1:
+%DCL-I-SUPERSEDE, previous value of BAT98$DISK has been superseded
+$ $ SUBMIT/QUEUE=BAT98_A/NOPRINTER/KEEP/NAME=HAND1/LOG_FILE=BAT98$DISK:[BAT98LOG]HAND1.LOG/PARAMETERS=(HAND1,60) BAT98$DISK:[000000]BAT98W
+Job HAND1 (queue BAT98_A, entry 416) started on BAT98_A
+$ $ SYNCHRONIZE/ENTRY='$ENTRY'
+ Interrupt 
+
+$ $ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ $ SHOW QUEUE/ALL BAT98_A
+Batch queue BAT98_A, available, on SIMVAX::
+  <GOVAX PROBE A>
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    416  HAND1           SYSTEM               Executing
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+     56  BAT98R12        SYSTEM               Retained on completion
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+$ $ SUBMIT/QUEUE=BAT98_A/RESTART/NOPRINTER/KEEP/NAME=BOOTR/LOG_FILE=BAT98$DISK:[BAT98LOG]BOOTR.LOG/PARAMETERS=BOOTR BAT98$DISK:[000000]BAT98R
+Job BOOTR (queue BAT98_A, entry 417) started on BAT98_A
+$ $ SUBMIT/QUEUE=BAT98_A/NOPRINTER/KEEP/NAME=BOOTN/LOG_FILE=BAT98$DISK:[BAT98LOG]BOOTN.LOG/PARAMETERS=(BOOTN,600) BAT98$DISK:[000000]BAT98W
+Job BOOTN (queue BAT98_A, entry 418) started on BAT98_A
+$ $ SHOW QUEUE/FULL/ALL BAT98_A
+Batch queue BAT98_A, busy, on SIMVAX::
+  <GOVAX PROBE A>
+  /BASE_PRIORITY=3 /CPUDEFAULT=00:05:00 /CPUMAXIMUM=00:10:00 /JOB_LIMIT=3 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S) 
+  /RETAIN=ERROR /WSDEFAULT=200 /WSEXTENT=800 /WSQUOTA=400
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    416  HAND1           SYSTEM               Executing
+         Submitted 16-NOV-2026 13:10:56.07 /KEEP /LOG=DUA1:[BAT98LOG]HAND1.LOG; /PARAM=("HAND1","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1 (executing)
+
+    417  BOOTR           SYSTEM               Executing
+         Submitted 16-NOV-2026 13:11:28.11 /KEEP /LOG=DUA1:[BAT98LOG]BOOTR.LOG; /PARAM=("BOOTR") /NOPRINT /PRIORITY=100 
+         /RESTART=BAT98_A /RESTART_VALUE="STEP2"
+         File: _SIMVAX$DUA1:[000000]BAT98R.COM;1 (executing)
+
+    418  BOOTN           SYSTEM               Executing
+         Submitted 16-NOV-2026 13:11:29.49 /KEEP /LOG=DUA1:[BAT98LOG]BOOTN.LOG; /PARAM=("BOOTN","600") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1 (executing)
+
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Submitted 16-NOV-2026 11:24:43.39 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R3.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98ERR.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Submitted 16-NOV-2026 11:24:43.45 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R4.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98FAT.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Submitted 16-NOV-2026 11:24:43.70 /CPU=00:00:03 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R8.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98C.COM;1
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:24:56.95 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R10.LOG; /PARAM=("BAT98R10","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+
+     56  BAT98R12        SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 11:25:11.04 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R12.LOG; /PARAM=("BAT98R12","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 11:25:58.21 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R15.LOG; /PARAM=("BAT98R15","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:26:00.28 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R16.LOG; /PARAM=("BAT98R16","30") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Submitted 16-NOV-2026 11:26:58.45 /KEEP /LOG=DUA1:[BAT98]BAT98G9.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+$ 
+
+----
+
+Here is the console for the instructions before and after the reboot (including the reboot itself).
+
+
+
+$ MOUNT/SYSTEM DUA1: BAT98
+%MOUNT-I-MOUNTED, BAT98 mounted on _SIMVAX$DUA1:
+$ DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK DUA1:
+%DCL-I-SUPERSEDE, previous value of BAT98$DISK has been superseded
+$ $ SUBMIT/QUEUE=BAT98_A/NOPRINTER/KEEP/NAME=HAND1/LOG_FILE=BAT98$DISK:[BAT98LOG]HAND1.LOG/PARAMETERS=(HAND1,60) BAT98$DISK:[000000]BAT98W
+Job HAND1 (queue BAT98_A, entry 416) started on BAT98_A
+$ $ SYNCHRONIZE/ENTRY='$ENTRY'
+ Interrupt 
+
+$ $ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ $ SHOW QUEUE/ALL BAT98_A
+Batch queue BAT98_A, available, on SIMVAX::
+  <GOVAX PROBE A>
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    416  HAND1           SYSTEM               Executing
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+     56  BAT98R12        SYSTEM               Retained on completion
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+$ $ SUBMIT/QUEUE=BAT98_A/RESTART/NOPRINTER/KEEP/NAME=BOOTR/LOG_FILE=BAT98$DISK:[BAT98LOG]BOOTR.LOG/PARAMETERS=BOOTR BAT98$DISK:[000000]BAT98R
+Job BOOTR (queue BAT98_A, entry 417) started on BAT98_A
+$ $ SUBMIT/QUEUE=BAT98_A/NOPRINTER/KEEP/NAME=BOOTN/LOG_FILE=BAT98$DISK:[BAT98LOG]BOOTN.LOG/PARAMETERS=(BOOTN,600) BAT98$DISK:[000000]BAT98W
+Job BOOTN (queue BAT98_A, entry 418) started on BAT98_A
+$ $ SHOW QUEUE/FULL/ALL BAT98_A
+Batch queue BAT98_A, busy, on SIMVAX::
+  <GOVAX PROBE A>
+  /BASE_PRIORITY=3 /CPUDEFAULT=00:05:00 /CPUMAXIMUM=00:10:00 /JOB_LIMIT=3 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S) 
+  /RETAIN=ERROR /WSDEFAULT=200 /WSEXTENT=800 /WSQUOTA=400
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    416  HAND1           SYSTEM               Executing
+         Submitted 16-NOV-2026 13:10:56.07 /KEEP /LOG=DUA1:[BAT98LOG]HAND1.LOG; /PARAM=("HAND1","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1 (executing)
+
+    417  BOOTR           SYSTEM               Executing
+         Submitted 16-NOV-2026 13:11:28.11 /KEEP /LOG=DUA1:[BAT98LOG]BOOTR.LOG; /PARAM=("BOOTR") /NOPRINT /PRIORITY=100 
+         /RESTART=BAT98_A /RESTART_VALUE="STEP2"
+         File: _SIMVAX$DUA1:[000000]BAT98R.COM;1 (executing)
+
+    418  BOOTN           SYSTEM               Executing
+         Submitted 16-NOV-2026 13:11:29.49 /KEEP /LOG=DUA1:[BAT98LOG]BOOTN.LOG; /PARAM=("BOOTN","600") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1 (executing)
+
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Submitted 16-NOV-2026 11:24:43.39 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R3.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98ERR.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Submitted 16-NOV-2026 11:24:43.45 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R4.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98FAT.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Submitted 16-NOV-2026 11:24:43.70 /CPU=00:00:03 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R8.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98C.COM;1
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:24:56.95 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R10.LOG; /PARAM=("BAT98R10","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+
+     56  BAT98R12        SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 11:25:11.04 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R12.LOG; /PARAM=("BAT98R12","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 11:25:58.21 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R15.LOG; /PARAM=("BAT98R15","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:26:00.28 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R16.LOG; /PARAM=("BAT98R16","30") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Submitted 16-NOV-2026 11:26:58.45 /KEEP /LOG=DUA1:[BAT98]BAT98G9.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+$ 
+$ shutdown
+$!  Copyright (c) 1996 Digital Equipment Corporation.  All rights reserved.
+$if f$trnlnm("SHUTDOWN$VERIFY") .eqs. "" then set noverify
+
+
+	SHUTDOWN -- Perform an Orderly System Shutdown
+	            on node SIMVAX
+
+
+%SHUTDOWN-I-OPERATOR, this terminal is now an operator's console
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:12:28.08  %%%%%%%%%%%
+Operator status for operator _SIMVAX$OPA0:
+CENTRAL, PRINTER, TAPES, DISKS, DEVICES, CARDS, NETWORK, CLUSTER, SECURITY,
+LICENSE, OPER1, OPER2, OPER3, OPER4, OPER5, OPER6, OPER7, OPER8, OPER9, OPER10,
+OPER11, OPER12
+
+%SHUTDOWN-I-DISLOGINS, interactive logins will now be disabled
+%SET-I-INTSET, login interactive limit = 0, current interactive value = 1
+%SHUTDOWN-I-STOPQUEUES, the queues on this node will now be stopped
+
+SHUTDOWN message on SIMVAX from user SYSTEM at _SIMVAX$OPA0:   13:12:38
+SIMVAX will shut down in 0 minutes; back up LATER.  Please log off node SIMVAX.
+SHUTDOWN
+
+1 terminal has been notified on SIMVAX.
+
+%SHUTDOWN-I-STOPUSER, all user processes will now be stopped
+%SHUTDOWN-I-STOPAUDIT, the security auditing subsystem will now be shut down
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:12:38.16  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Audit server shutting down
+Event time:               16-NOV-2026 13:12:38.16
+PID:                      0000016C        
+Username:                 SYSTEM          
+
+%SHUTDOWN-I-REMOVE, all installed images will now be removed
+%SHUTDOWN-I-DISMOUNT, all volumes will now be dismounted
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:12:38.28  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+_SIMVAX$OPA0:, SIMVAX shutdown was requested by the operator.
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:12:38.28  %%%%%%%%%%%
+Logfile was closed by operator _SIMVAX$OPA0:
+Logfile was SIMVAX::SYS$SYSROOT:[SYSMGR]OPERATOR.LOG;24
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:12:38.29  %%%%%%%%%%%
+Operator _SIMVAX$OPA0: has been disabled, username SYSTEM
+
+	SYSTEM SHUTDOWN COMPLETE - use console to halt system
+Infinite loop, PC: 8185DAD3 (BRB 8185DAD3)
+sim> boot
+%SIM-ERROR: Missing boot device/unit specifier
+sim> boot rq0
+%SIM-INFO: Loading boot code from internal vmb.exe
+
+%SYSBOOT-I-SYSBOOT Mapping the SYSDUMP.DMP on the System Disk
+%SYSBOOT-W-SYSBOOT Can not map SYSDUMP.DMP on the System Disk
+%SYSBOOT-I-SYSBOOT Mapping PAGEFILE.SYS on the System Disk
+%SYSBOOT-I-SYSBOOT SAVEDUMP parameter not set to protect the PAGEFILE.SYS
+   OpenVMS (TM) VAX Version V7.1     Major version id = 1 Minor version id = 0
+%DECnet-I-LOADED, network base image loaded, version = 05.0C.00
+
+$!  Copyright (c) 1996 Digital Equipment Corporation.  All rights reserved.
+
+%STDRV-I-STARTUP, OpenVMS startup begun at 16-NOV-2026 13:13:20.24
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.65  %%%%%%%%%%%
+Operator _SIMVAX$OPA0: has been enabled, username SYSTEM
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.66  %%%%%%%%%%%
+Operator status for operator _SIMVAX$OPA0:
+CENTRAL, PRINTER, TAPES, DISKS, DEVICES, CARDS, NETWORK, CLUSTER, SECURITY,
+LICENSE, OPER1, OPER2, OPER3, OPER4, OPER5, OPER6, OPER7, OPER8, OPER9, OPER10,
+OPER11, OPER12
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.66  %%%%%%%%%%%
+Logfile has been initialized by operator _SIMVAX$OPA0:
+Logfile is SIMVAX::SYS$SYSROOT:[SYSMGR]OPERATOR.LOG;25
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.66  %%%%%%%%%%%
+Operator status for operator SIMVAX::SYS$SYSROOT:[SYSMGR]OPERATOR.LOG;25
+CENTRAL, PRINTER, TAPES, DISKS, DEVICES, CARDS, NETWORK, CLUSTER, SECURITY,
+LICENSE, OPER1, OPER2, OPER3, OPER4, OPER5, OPER6, OPER7, OPER8, OPER9, OPER10,
+OPER11, OPER12
+
+%SET-I-NEWAUDSRV, identification of new audit server process is 0000010A
+%LICENSE-F-EMTLDB, license database contains no license records
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.76  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%SECSRV-E-NOPROXYDB, cannot find proxy database file NET$PROXY.DAT
+%RMS-E-FNF, file not found
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.76  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%SECSRV-E-NOPROXYDB, cannot find proxy database file NET$PROXY.DAT
+%RMS-E-FNF, file not found
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.76  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%SECSRV-I-SERVERSTARTINGU, security server starting up
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.76  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%SECSRV-I-CIASTARTINGUP, breakin detection and evasion processing now starting up
+
+Copyright (c) Digital Equipment Corporation 1996. All rights reserved.
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:22.91  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%DTSS-I-NOMSG, Message number 02958403
+
+%NET-I-LOADED, executive image LES$LES_V30.EXE loaded
+%NET-I-LOADED, executive image NET$ALIAS.EXE loaded
+%NET-I-LOADED, executive image NET$SESSION_CONTROL.EXE loaded
+%NET$STARTUP-I-STARTPROCESS, starting process DNS
+%NET-I-LOADED, executive image SYS$NAME_SERVICES.EXE loaded
+%RUN-S-PROC_ID, identification of created process is 0000010E
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$NODE_STARTUP.NCL;
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$SESSION_STARTUP.NCL;
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:28.72  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%LES-S-ACPSTARTED, LES$ACP_V30 started running LES$ACP V3.0
+
+%LES-S-PROC_ID, identification of created process is 0000010F
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:28.75  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%LES-I-LOADING, loading NET$ component NETMANPPI from SYS$COMMON:[SYS$LDR]LES$NETMAN.EXE;1
+
+%LES-I-LOADING, loading NET$ component NETMANPPI from SYS$COMMON:[SYS$LDR]LES$NETMAN.EXE;1
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:28.75  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%LES-I-LOADING, loading NET$ component NETMANLDR from SYS$COMMON:[SYS$LDR]LES$NETMANLDR.EXE;1
+
+%LES-I-LOADING, loading NET$ component NETMANLDR from SYS$COMMON:[SYS$LDR]LES$NETMANLDR.EXE;1
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:28.76  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%LES-I-LOADING, loading NET$ component LES$ROUTING from SYS$COMMON:[SYS$LDR]NET$ROUTING_ES.EXE;1
+
+%LES-I-LOADING, loading NET$ component LES$ROUTING from SYS$COMMON:[SYS$LDR]NET$ROUTING_ES.EXE;1
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$ROUTING_STARTUP.NCL;
+%NCL-E-INVALIDSIMPLENA, invalid syntax for SimpleName string
+CREATE NODE 0 ROUTING CIRCUIT \:\ TYPE = Reserved
+%NCL-E-INVALIDSIMPLENA, invalid syntax for SimpleName string
+SET NODE 0 ROUTING CIRCUIT \:\ DATA LINK ENTITY = Reserved LINK : LOGICAL STATION :
+%NCL-E-INVALIDSIMPLENA, invalid syntax for SimpleName string
+ENABLE NODE 0 ROUTING CIRCUIT \:\
+%NET-I-LOADED, executive image NET$TRANSPORT_NSP.EXE loaded
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$NSP_TRANSPORT_STARTUP.NCL;
+%NET-I-LOADED, executive image NET$TPCONS.EXE loaded
+%NET-I-LOADED, executive image NET$TRANSPORT_OSI.EXE loaded
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$OSI_TRANSPORT_STARTUP.NCL;
+%NET-I-LOADED, executive image NET$OSVCM.EXE loaded
+%RUN-S-PROC_ID, identification of created process is 00000110
+%NET$STARTUP-I-STARTPROCESS, starting process ACP
+%RUN-S-PROC_ID, identification of created process is 00000111
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:29.09  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%NET$ACP-I-STARTUP, DECnet-Plus for OpenVMS ACP starting execution
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:29.10  %%%%%%%%%%%
+Message from user TPCONS on SIMVAX
+-- TPCONS: No valid DECnet License
+
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$SEARCHPATH_STARTUP.NCL;
+%NET$STARTUP-I-STARTPROCESS, starting process EVD
+%RUN-S-PROC_ID, identification of created process is 00000112
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$EVENT_STARTUP.NCL;
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:30.34  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+Event: Change Filter from: Node LOCAL:.SIMVAX Event Dispatcher SINK local_sink,
+        at: 2026-11-16-13:13:30.340-05:00Iinf
+        Old Specific Filter=
+       {
+          [
+          EventCode = (Node LOCAL:.SIMVAX , All) ,
+          Filter Action = Ignore
+          ] ,
+          [
+          EventCode = (Node LOCAL:.SIMVAX Event Dispatcher, All) ,
+          Filter Action = Ignore
+          ] ,
+          [
+          EventCode = (Node LOCAL:.SIMVAX Event Dispatcher SINK local_sink, All) ,
+          Filter Action = Pass
+          ]
+       }, 
+
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:30.34  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+        Old Global Filter=
+       {
+          [
+          EventCode = ((Node), All) ,
+          Filter Action = Ignore
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher), All) ,
+          Filter Action = Block
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher, SINK), All) ,
+          Filter Action = Block
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher, Outbound Stream), All) ,
+          Filter Action = Block
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher, SINK, Inbound Stream), All) ,
+          Filter Action = Block
+          ]
+       }, 
+        Old Catch All=Pass, 
+        New Specific Filter=
+       {
+          [
+          EventCode = (Node LOCAL:.SIMVAX , All) ,
+          Filter Action = Ignore
+          ] ,
+          [
+          EventCode = (Node LOCAL:.SIMVAX Event Dispatcher, All) ,
+          Filter Action = Ignore
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:30.35  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+
+          ] ,
+          [
+          EventCode = (Node LOCAL:.SIMVAX Event Dispatcher SINK local_sink, All) ,
+          Filter Action = Pass
+          ]
+       }, 
+
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:30.35  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+        New Global Filter=
+       {
+          [
+          EventCode = ((Node), All) ,
+          Filter Action = Ignore
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher), All) ,
+          Filter Action = Block
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher, SINK), All) ,
+          Filter Action = Block
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher, Outbound Stream), All) ,
+          Filter Action = Block
+          ] ,
+          [
+          EventCode = ((Node, Event Dispatcher, SINK, Inbound Stream), All) ,
+          Filter Action = Block
+          ]
+       }, 
+        New catch All Filter=Pass
+        eventUid   84835A41-E1BF-11F1-8004-AA0004003204
+        entityUid  8481D3A0-E1BF-11F1-8004-AA0004003204
+        streamUid  8481D3A0-E1BF-11F1-8004-AA0004003204
+
+
+%NET$STARTUP-I-STARTPROCESS, starting process DTSS
+%RUN-S-PROC_ID, identification of created process is 00000113
+%NET$STARTUP-I-EXECUTESCRIPT, executing NCL script SYS$SYSROOT:[SYSMGR]NET$APPLICATION_STARTUP.NCL;
+%NET-I-LOADED, executive image NET$LOOP_APPLICATION.EXE loaded
+%NET$STARTUP-I-OPERSTATUS, DECnet-Plus for OpenVMS operational status is RUNNING-ALL
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:30.81  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+%LICENSE-E-NOAUTH, DEC VAX-VMS use is not authorized on this node
+-LICENSE-F-NOLICENSE, no license is active for this software product
+-LICENSE-I-SYSMGR, please see your system manager
+
+
+%LICENSE-E-NOAUTH, DEC VAX-VMS use is not authorized on this node
+-LICENSE-F-NOLICENSE, no license is active for this software product
+-LICENSE-I-SYSMGR, please see your system manager
+Startup processing continuing...
+
+%DECdtm-F-NODECnet, the TP_SERVER process was not started because either:
+
+o  DECnet-Plus is not started or is not configured, or
+
+o  The SYS$NODE_FULLNAME logical name is not defined
+
+   This could be because when you installed DECnet-Plus and were prompted 
+   for the system's full name, you specified a local name instead of a 
+   DECdns or Domain name.
+
+If you want to use DECdtm services, make sure that DECnet-Plus is started and 
+configured and that SYS$NODE_FULLNAME is defined, then use the following 
+command to start the TP_SERVER process:
+
+    $ @SYS$STARTUP:DECDTM$STARTUP.COM
+
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:13:30.84  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Audit server starting up
+Event time:               16-NOV-2026 13:13:30.83
+PID:                      00000103        
+Username:                 SYSTEM          
+
+%SET-I-INTSET, login interactive limit = 64, current interactive value = 0
+  SYSTEM       job terminated at 16-NOV-2026 13:13:30.88
+
+  Accounting information:
+  Buffered I/O count:            2629         Peak working set size:     816
+  Direct I/O count:               822         Peak page file size:     32800
+  Page faults:                  34585         Mounted volumes:             0
+  Charged CPU time:           0 00:00:02.29   Elapsed time:     0 00:00:10.65
+
+        Welcome to OpenVMS (TM) VAX Operating System, Version V7.1    
+
+Username: system
+Password: 
+%LICENSE-I-NOLICENSE, no license is active for this software product
+%LOGIN-S-LOGOPRCON, login allowed from OPA0:
+        Welcome to OpenVMS (TM) VAX Operating System, Version V7.1
+    Last interactive login on Sunday, 15-NOV-2026 17:37
+    Last non-interactive login on Monday, 16-NOV-2026 13:11
+$ 
+Simulation stopped, PC: 8193B94D (TSTL @#800053DC)
+sim> att rq1 /Users/tom/go/src/github.com/tucats/govax/testdata/disks/bat98-exchange.dsk
+%SIM-INFO: RQ1: ../../../go/src/github.com/tucats/govax/testdata/disks/bat98-exchange.dsk Contains ODS2 File system
+%SIM-INFO: RQ1: Volume Name: BAT98        Format: DECFILE11B   Sectors In Volume: 138672
+sim> cont
+
+$ $ MOUNT/SYSTEM DUA1: BAT98
+%MOUNT-I-MOUNTED, BAT98 mounted on _SIMVAX$DUA1:
+$ $ DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK DUA1:
+$ $ SHOW QUEUE/FULL/ALL BAT98_A
+Batch queue BAT98_A, stopped, on SIMVAX::
+  <GOVAX PROBE A>
+  /BASE_PRIORITY=3 /CPUDEFAULT=00:05:00 /CPUMAXIMUM=00:10:00 /JOB_LIMIT=3 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S) 
+  /RETAIN=ERROR /WSDEFAULT=200 /WSEXTENT=800 /WSQUOTA=400
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    417  BOOTR           SYSTEM               Pending (queue stopped)
+         Submitted 16-NOV-2026 13:11:28.11 /KEEP /LOG=DUA1:[BAT98LOG]BOOTR.LOG; /PARAM=("BOOTR") /NOPRINT /PRIORITY=100 
+         /RESTART=BAT98_A /RESTART_VALUE="STEP2"
+         File: _SIMVAX$DUA1:[000000]BAT98R.COM;1 (checkpointed)
+
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Submitted 16-NOV-2026 11:24:43.39 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R3.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98ERR.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Submitted 16-NOV-2026 11:24:43.45 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R4.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98FAT.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Submitted 16-NOV-2026 11:24:43.70 /CPU=00:00:03 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R8.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98C.COM;1
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:24:56.95 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R10.LOG; /PARAM=("BAT98R10","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+
+     56  BAT98R12        SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 11:25:11.04 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R12.LOG; /PARAM=("BAT98R12","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 11:25:58.21 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R15.LOG; /PARAM=("BAT98R15","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:26:00.28 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R16.LOG; /PARAM=("BAT98R16","30") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Submitted 16-NOV-2026 11:26:58.45 /KEEP /LOG=DUA1:[BAT98]BAT98G9.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+
+    418  BOOTN           SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 13:11:29.49 /KEEP /LOG=DUA1:[BAT98LOG]BOOTN.LOG; /PARAM=("BOOTN","600") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 13:12:33.10 on queue BAT98_A
+$ $ START/QUEUE BAT98_A
+$ $ SHOW QUEUE/FULL/ALL BAT98_A
+Batch queue BAT98_A, idle, on SIMVAX::
+  <GOVAX PROBE A>
+  /BASE_PRIORITY=3 /CPUDEFAULT=00:05:00 /CPUMAXIMUM=00:10:00 /JOB_LIMIT=3 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S) 
+  /RETAIN=ERROR /WSDEFAULT=200 /WSEXTENT=800 /WSQUOTA=400
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Submitted 16-NOV-2026 11:24:43.39 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R3.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98ERR.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Submitted 16-NOV-2026 11:24:43.45 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R4.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98FAT.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Submitted 16-NOV-2026 11:24:43.70 /CPU=00:00:03 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R8.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98C.COM;1
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:24:56.95 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R10.LOG; /PARAM=("BAT98R10","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+
+     56  BAT98R12        SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 11:25:11.04 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R12.LOG; /PARAM=("BAT98R12","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 11:25:58.21 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R15.LOG; /PARAM=("BAT98R15","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:26:00.28 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R16.LOG; /PARAM=("BAT98R16","30") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Submitted 16-NOV-2026 11:26:58.45 /KEEP /LOG=DUA1:[BAT98]BAT98G9.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+
+    418  BOOTN           SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 13:11:29.49 /KEEP /LOG=DUA1:[BAT98LOG]BOOTN.LOG; /PARAM=("BOOTN","600") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 13:12:33.10 on queue BAT98_A
+$ SHOW QUEUE/FULL/ALL BAT98_A
+Batch queue BAT98_A, idle, on SIMVAX::
+  <GOVAX PROBE A>
+  /BASE_PRIORITY=3 /CPUDEFAULT=00:05:00 /CPUMAXIMUM=00:10:00 /JOB_LIMIT=3 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S) 
+  /RETAIN=ERROR /WSDEFAULT=200 /WSEXTENT=800 /WSQUOTA=400
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Submitted 16-NOV-2026 11:24:43.39 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R3.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98ERR.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Submitted 16-NOV-2026 11:24:43.45 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R4.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98FAT.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Submitted 16-NOV-2026 11:24:43.70 /CPU=00:00:03 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R8.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98C.COM;1
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:24:56.95 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R10.LOG; /PARAM=("BAT98R10","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+
+     56  BAT98R12        SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 11:25:11.04 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R12.LOG; /PARAM=("BAT98R12","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 11:25:58.21 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R15.LOG; /PARAM=("BAT98R15","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:26:00.28 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R16.LOG; /PARAM=("BAT98R16","30") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Submitted 16-NOV-2026 11:26:58.45 /KEEP /LOG=DUA1:[BAT98]BAT98G9.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+
+    418  BOOTN           SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 13:11:29.49 /KEEP /LOG=DUA1:[BAT98LOG]BOOTN.LOG; /PARAM=("BOOTN","600") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 13:12:33.10 on queue BAT98_A
+$ 
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:30.35  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+Event: Enable Completed from: Node LOCAL:.SIMVAX DTSS,
+        at: 2026-11-16-13:13:30.650-05:00Iinf
+        Clock Set=True
+        eventUid   84B2A7A0-E1BF-11F1-8006-AA0004003204
+        entityUid  84AF9A60-E1BF-11F1-8006-AA0004003204
+        streamUid  8484E0E0-E1BF-11F1-8004-AA0004003204
+
+
+$ 
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:30.35  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+Event: Too Few Servers Detected from: Node LOCAL:.SIMVAX DTSS,
+        at: 2026-11-16-13:13:45.650-05:00Iinf
+        Number Detected=0, 
+        Number Required=1
+        eventUid   8DA37920-E1BF-11F1-8007-AA0004003204
+        entityUid  84AF9A60-E1BF-11F1-8006-AA0004003204
+        streamUid  8484E0E0-E1BF-11F1-8004-AA0004003204
+
+
+$ $ @BAT98$DISK:[000000]BAT98DROP
+%JBC-E-NOSUCHQUE, no such queue
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.33  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record deletion
+Event time:               16-NOV-2026 13:15:47.32
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98                           
+
+%UAF-I-REMMSG, record removed from system authorization file
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.33  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier removed
+Event time:               16-NOV-2026 13:15:47.33
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98                           
+Identifier value:         %X00800008      
+Attributes:               none
+
+%UAF-I-RDBREMMSGU, identifier BAT98 value [000200,000010] removed from rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.33  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record deletion
+Event time:               16-NOV-2026 13:15:47.33
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98O                          
+
+%UAF-I-REMMSG, record removed from system authorization file
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.34  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier removed
+Event time:               16-NOV-2026 13:15:47.34
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98O                          
+Identifier value:         %X00800009      
+Attributes:               none
+
+%UAF-I-RDBREMMSGU, identifier BAT98O value [000200,000011] removed from rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.34  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          System UAF record deletion
+Event time:               16-NOV-2026 13:15:47.34
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Object class name:        FILE
+Object name:              SYS$COMMON:[SYSEXE]SYSUAF.DAT;1
+User record:              BAT98W                          
+
+%UAF-I-REMMSG, record removed from system authorization file
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.34  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier removed
+Event time:               16-NOV-2026 13:15:47.34
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98W                          
+Identifier value:         %X00C00008      
+Attributes:               none
+
+%UAF-I-RDBREMMSGU, identifier BAT98W value [000300,000010] removed from rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.34  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier removed
+Event time:               16-NOV-2026 13:15:47.34
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          GOVAX98                         
+Identifier value:         %X00C0FFFF      
+Attributes:               none
+
+%UAF-I-RDBREMMSGU, identifier GOVAX98 value [000300,177777] removed from rights database
+%%%%%%%%%%%  OPCOM  16-NOV-2026 13:15:47.35  %%%%%%%%%%%
+Message from user AUDIT$SERVER on SIMVAX
+Security alarm (SECURITY) and security audit (SECURITY) on SIMVAX, system id: 1074
+Auditable event:          Identifier removed
+Event time:               16-NOV-2026 13:15:47.35
+PID:                      00000114        
+Process name:             SYSTEM          
+Username:                 SYSTEM          
+Process owner:            [SYSTEM]
+Terminal name:            OPA0:
+Image name:               SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]AUTHORIZE.EXE
+Identifier name:          BAT98_ID                        
+Identifier value:         %X80010004      
+Attributes:               none
+
+%UAF-I-RDBREMMSG, identifier BAT98_ID value %X80010004 removed from rights database
+%UAF-E-RDBREMERR, unable to remove GOVAX98 from rights database
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+%UAF-W-BADSPC, no user matches specification
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ WRITE SYS$OUTPUT "BAT98DROP finished; the log is ", LOGFILE
+BAT98DROP finished; the log is DUA1:[BAT98LOG]BAT98DROP.LOG
+$ DEASSIGN/SYSTEM/EXECUTIVE_MODE BAT98$DISK
+$ EXIT
+$ dism dua1
+$ 
+Simulation stopped, PC: 8193B947 (BBC #3,26C(R3),8193B99B)
+sim> det rq1
+sim> cont
+
+$ 

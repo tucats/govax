@@ -1,0 +1,312 @@
+LOGIN.COM OF BAT98W AT DEPTH 1, MODE BATCH
+######## BAT98J BAT98W      
+MODE BATCH
+VERIFY 0
+  BAT98_LOGIN == "1 BATCH"
+  $RESTART == "FALSE"
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+P1 [ALPHA] 5
+P2 [two words] 9
+P3 [3] 1
+P4 [] 0
+P5 [E] 1
+P6 [F] 1
+P7 [G] 1
+P8 [H h] 3
+######## F$ENVIRONMENT
+  CAPTIVE = FALSE
+  CONTROL = 
+  DEFAULT = BAT98$DISK:[BAT98W]
+  DEPTH = 0
+  INTERACTIVE = FALSE
+  MAX_DEPTH = 32
+  MESSAGE = /FACILITY/SEVERITY/IDENTIFICATION/TEXT
+  NOCONTROL = T,Y
+  ON_CONTROL_Y = FALSE
+  ON_SEVERITY = NONE
+  OUTPUT_RATE =    0 00:01:00.00
+  PROCEDURE = DISK$BAT98:[000000]BAT98J.COM;1
+  PROMPT = $ 
+  PROMPT_CONTROL = TRUE
+  PROTECTION = SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD
+  SYMBOL_SCOPE = LOCAL,GLOBAL
+  VERB_SCOPE = LOCAL,GLOBAL
+  VERIFY_IMAGE = FALSE
+  VERIFY_PROCEDURE = FALSE
+######## F$GETJPI
+  ACCOUNT = GOVAX98 
+  APTCNT = 0
+  ASTACT = 0
+  ASTCNT = 39
+  ASTEN = 15
+  ASTLM = 40
+  AUTHPRI = 3
+  AUTHPRIV = TMPMBX,NETMBX
+  BIOCNT = 40
+  BIOLM = 40
+  BUFIO = 29
+  BYTCNT = 32256
+  BYTLM = 32256
+  CLINAME = DCL
+  CPULIM = 30000
+  CPUTIM = 2
+  CREPRC_FLAGS = 16
+  CURPRIV = TMPMBX,NETMBX
+  DFPFC = 16
+  DFWSCNT = 512
+  DIOCNT = 40
+  DIOLM = 40
+  DIRIO = 10
+  EFCS = 1610612737
+  EFCU = -2147483648
+  EFWM = -536870913
+  ENQCNT = 200
+  ENQLM = 200
+  EXCVEC = 7FFEFE34
+  FILCNT = 298
+  FILLM = 300
+  FINALEXC = 7FFEFF28
+  FREP0VA = 
+  FREP1VA = 7FED5600
+  FREPTECNT = 63140
+  GPGCNT = 99
+  GRP = 192
+  IMAGECOUNT = 1
+  IMAGNAME = 
+  IMAGPRIV = 
+  JOBPRCCNT = 0
+  JOBTYPE = 2
+  LAST_LOGIN_I = 17-NOV-1858 00:00:00.00
+  LAST_LOGIN_N = 17-NOV-1858 00:00:00.00
+  LOGINTIM = 16-NOV-2026 13:03:11.59
+  LOGIN_FAILURES = 0
+  LOGIN_FLAGS = 0
+  MASTER_PID = 000001A4
+  MAXDETACH = 0
+  MAXJOBS = 0
+  MEM = 8
+  MODE = BATCH
+  MSGMASK = 15
+  NODENAME = SIMVAX
+  NODE_CSID = 
+  NODE_VERSION = V7.1
+  OWNER = 
+  PAGEFLTS = 436
+  PAGFILCNT = 31607
+  PAGFILLOC = 03000000
+  PGFLQUOTA = 32768
+  PHDFLAGS = 132
+  PID = 000001A4
+  PPGCNT = 244
+  PRCCNT = 0
+  PRCLM = 2
+  PRCNAM = BATCH_97
+  PRI = 4
+  PRIB = 3
+  PROCPRIV = TMPMBX,NETMBX
+  SHRFILLM = 0
+  SITESPEC = 0
+  STATE = CUR
+  STS = 278529
+  STS2 = 0
+  SWPFILLOC = 
+  TERMINAL = 
+  TMBU = 0
+  TQCNT = 39
+  TQLM = 40
+  UAF_FLAGS = 0
+  UIC = [GOVAX98,BAT98W]
+  USERNAME = BAT98W      
+  VIRTPEAK = 3112
+  VOLUMES = 0
+  WSAUTH = 1024
+  WSAUTHEXT = 16400
+  WSEXTENT = 16400
+  WSPEAK = 380
+  WSQUOTA = 1024
+  WSSIZE = 512
+######## F$GETQUI
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+  ACCOUNT_NAME = GOVAX98
+  AFTER_TIME = 16-NOV-2026 13:03:11.57
+  CHECKPOINT_DATA = 
+  CLI = 
+  CPU_LIMIT =    0 00:00:00.00
+  ENTRY_NUMBER = 97
+  FILE_COUNT = 1
+  JOB_FLAGS = 0
+  JOB_NAME = BAT98V_BAT98W
+  JOB_PID = 000001A4
+  JOB_SIZE = 0
+  JOB_STATUS = 2
+  LOG_QUEUE = 
+  LOG_SPECIFICATION = DUA1:[BAT98LOG]BAT98V_BAT98W.LOG;
+  NOTE = 
+  PARAMETER_1 = ALPHA
+  PARAMETER_2 = two words
+  PARAMETER_8 = H h
+  PENDING_JOB_REASON = 0
+  PRIORITY = 100
+  QUEUE_NAME = BAT98_A
+  SUBMISSION_TIME = 16-NOV-2026 13:03:11.57
+  UIC = [GOVAX98,BAT98W]
+  USERNAME = BAT98W
+  WSDEFAULT = 0
+  WSEXTENT = 0
+  WSQUOTA = 0
+  FILE = _SIMVAX$DUA1:[000000]BAT98J.COM;1
+######## NAMES
+   "SYS$INPUT" [exec] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$OUTPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$ERROR" [exec] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$COMMAND" [exec] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+   "SYS$DISK" [exec] = "BAT98$DISK:" (LNM$PROCESS_TABLE)
+1  "BAT98$DISK" [exec] = "DUA1:" (LNM$SYSTEM_TABLE)
+   "SYS$DISK" [exec] = "SIMVAX$DUA0:" [concealed,terminal] (LNM$SYSTEM_TABLE)
+   "SYS$LOGIN" [exec] = "BAT98$DISK:[BAT98W]" (LNM$JOB_81CACEC0)
+   "SYS$LOGIN_DEVICE" [exec] = "BAT98$DISK:" (LNM$JOB_81CACEC0)
+1  "BAT98$DISK" [exec] = "DUA1:" (LNM$SYSTEM_TABLE)
+   "SYS$SCRATCH" [exec] = "BAT98$DISK:[BAT98W]" (LNM$JOB_81CACEC0)
+%SHOW-S-NOTRAN, no translation for logical name SYS$NODE
+   "TT" [exec] = "_NLA0:" (LNM$PROCESS_TABLE)
+%SHOW-S-NOTRAN, no translation for logical name SYS$NET
+%SHOW-S-NOTRAN, no translation for logical name SYS$PRINT
+%SHOW-S-NOTRAN, no translation for logical name SYS$BATCH
+   "SYS$SYLOGIN" [exec] = "SYS$MANAGER:SYLOGIN" (LNM$SYSTEM_TABLE)
+
+(LNM$JOB_81CACEC0)
+
+  "SYS$LOGIN" = "BAT98$DISK:[BAT98W]"
+  "SYS$LOGIN_DEVICE" = "BAT98$DISK:"
+  "SYS$SCRATCH" = "BAT98$DISK:[BAT98W]"
+
+(LNM$PROCESS_TABLE)
+
+  "SYS$COMMAND" = "_SIMVAX$DUA1:"
+  "SYS$DISK" = "BAT98$DISK:"
+  "SYS$ERROR" = "_SIMVAX$DUA1:"
+  "SYS$INPUT" = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [exec] = "_SIMVAX$DUA1:"
+  "TT" = "_NLA0:"
+  SYS$OUTPUT DEVICE _DUA1:
+  SYS$INPUT DEVICE _DUA1:
+  SYS$COMMAND DEVICE _DUA1:
+  BAT98$DISK:[BAT98W]
+######## THE PROCESS
+
+16-NOV-2026 13:03:11.75   User: BAT98W           Process ID:   000001A4
+                          Node: SIMVAX           Process name: "BATCH_97"
+
+Terminal:           
+User Identifier:    [GOVAX98,BAT98W]
+Base priority:      3
+Default file spec:  BAT98$DISK:[BAT98W]
+
+Process Quotas:
+ Account name: GOVAX98 
+ CPU limit:                 0 00:05:00.00  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              39  Open file quota:        298
+ Paging file quota:                 31278  Subprocess quota:         2
+ Default page fault cluster:           16  AST quota:               39
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+
+Accounting information:
+ Buffered I/O count:        78  Peak working set size:        429
+ Direct I/O count:          20  Peak virtual size:           6071
+ Page faults:             1745  Mounted volumes:                0
+ Images activated:          17
+ Elapsed CPU time:          0 00:00:00.04
+ Connect time:              0 00:00:00.17
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+ 
+Auto-unshelve: on
+ 
+Image Dump: off
+
+Process Dynamic Memory Area  
+    Current Size (bytes)         51200    Current Total Size (pages)     100
+    Free Space (bytes)           48144    Space in Use (bytes)          3056
+    Size of Largest Block        47264    Size of Smallest Block          56
+    Number of Free Blocks            7    Free Blocks LEQU 64 Bytes        2
+
+There is 1 process in this job: 
+
+  BATCH_97 (*)
+
+16-NOV-2026 13:03:11.76   User: BAT98W           Process ID:   000001A4
+                          Node: SIMVAX           Process name: "BATCH_97"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+
+16-NOV-2026 13:03:11.77   User: BAT98W           Process ID:   000001A4
+                          Node: SIMVAX           Process name: "BATCH_97"
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+
+16-NOV-2026 13:03:11.77   User: BAT98W           Process ID:   000001A4
+                          Node: SIMVAX           Process name: "BATCH_97"
+
+Process Quotas:
+ Account name: GOVAX98 
+ CPU limit:                 0 00:05:00.00  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              39  Open file quota:        298
+ Paging file quota:                 31278  Subprocess quota:         2
+ Default page fault cluster:           16  AST quota:               39
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+  $RESTART == "FALSE"
+  $SEVERITY == "1"
+  $STATUS == "%X10000001"
+  BAT98_LOGIN == "1 BATCH"
+  I = 9   Hex = 00000009  Octal = 00000000011
+  P1 = "ALPHA"
+  P2 = "two words"
+  P3 = "3"
+  P4 = ""
+  P5 = "E"
+  P6 = "F"
+  P7 = "G"
+  P8 = "H h"
+  V = "H h"
+  X = ""
+BAT98J WROTE THIS TO SYS$ERROR
+BAT98J FINISHED
+  BAT98W       job terminated at 16-NOV-2026 13:03:11.78
+
+  Accounting information:
+  Buffered I/O count:             102         Peak working set size:     429
+  Direct I/O count:                32         Peak page file size:      6071
+  Page faults:                   2212         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.04   Elapsed time:     0 00:00:00.19

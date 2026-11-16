@@ -1,0 +1,16 @@
+BAT98OK RAN, P1=, P2=, DEPTH 0
+$ ! BAT98WRN.COM - Phase 98's probe: a procedure that ends with a warning. Written by testdata/bat98/gen.go.
+$ WRITE SYS$OUTPUT "BAT98WRN RAN, P1=", P1, ", P2=", P2, ", DEPTH ", F$ENVIRONMENT("DEPTH")
+BAT98WRN RAN, P1=, P2=, DEPTH 0
+$ EXIT %X10000000
+$ ! BAT98OK.COM - Phase 98's probe: a procedure that succeeds. Written by testdata/bat98/gen.go.
+$ WRITE SYS$OUTPUT "BAT98OK RAN, P1=", P1, ", P2=", P2, ", DEPTH ", F$ENVIRONMENT("DEPTH")
+BAT98OK RAN, P1=, P2=, DEPTH 0
+$ EXIT 1
+  SYSTEM       job terminated at 16-NOV-2026 11:24:43.37
+
+  Accounting information:
+  Buffered I/O count:              40         Peak working set size:     383
+  Direct I/O count:                 9         Peak page file size:      3112
+  Page faults:                    624         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.04   Elapsed time:     0 00:00:00.04

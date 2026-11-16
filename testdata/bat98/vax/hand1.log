@@ -1,0 +1,9 @@
+BAT98W HAND1 STARTED
+BAT98W HAND1 DONE
+  SYSTEM       job terminated at 16-NOV-2026 13:11:56.09
+
+  Accounting information:
+  Buffered I/O count:              35         Peak working set size:     384
+  Direct I/O count:                28         Peak page file size:      3112
+  Page faults:                    480         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.01   Elapsed time:     0 00:01:00.02

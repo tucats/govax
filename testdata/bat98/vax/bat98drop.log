@@ -1,0 +1,564 @@
+$ WRITE SYS$OUTPUT "######## QUEUES"
+######## QUEUES
+$ SHOW QUEUE/FULL/ALL BAT98*
+Batch queue BAT98_A, idle, on SIMVAX::
+  <GOVAX PROBE A>
+  /BASE_PRIORITY=3 /CPUDEFAULT=00:05:00 /CPUMAXIMUM=00:10:00 /JOB_LIMIT=3 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S) 
+  /RETAIN=ERROR /WSDEFAULT=200 /WSEXTENT=800 /WSQUOTA=400
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+     48  BAT98R3         SYSTEM               Retained on error
+       %RMS-E-FNF, file not found
+         Submitted 16-NOV-2026 11:24:43.39 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R3.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98ERR.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.43 on queue BAT98_A
+
+     49  BAT98R4         SYSTEM               Retained on error
+       %SYSTEM-F-ABORT, abort
+         Submitted 16-NOV-2026 11:24:43.45 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R4.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98FAT.COM;1
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:24:43.49 on queue BAT98_A
+
+     53  BAT98R8         SYSTEM               Retained on error
+       %SYSTEM-F-EXCPUTIM, CPU time limit expired
+         Submitted 16-NOV-2026 11:24:43.70 /CPU=00:00:03 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R8.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98C.COM;1
+         Completed 16-NOV-2026 11:24:56.94 on queue BAT98_A
+
+     54  BAT98R10        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:24:56.95 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R10.LOG; /PARAM=("BAT98R10","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:04.00 on queue BAT98_A
+
+     56  BAT98R12        SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 11:25:11.04 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R12.LOG; /PARAM=("BAT98R12","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:25:13.04 on queue BAT98_A
+
+     59  BAT98R15        SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 11:25:58.21 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R15.LOG; /PARAM=("BAT98R15","60") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:00.22 on queue BAT98_A
+
+     60  BAT98R16        SYSTEM               Retained on error
+       %JBC-F-JOBABORT, job aborted during execution
+         Submitted 16-NOV-2026 11:26:00.28 /KEEP /LOG=DUA1:[BAT98LOG]BAT98R16.LOG; /PARAM=("BAT98R16","30") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 11:26:07.32 on queue BAT98_A
+
+     78  BAT98G9         BAT98W               Retained on error
+       %RMS-E-PRV, insufficient privilege or file protection violation
+       -RMS-E-PRV, insufficient privilege or file protection violation
+       -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+         Submitted 16-NOV-2026 11:26:58.45 /KEEP /LOG=DUA1:[BAT98]BAT98G9.LOG; /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 11:26:58.49 on queue BAT98_A
+
+    418  BOOTN           SYSTEM               Retained on error
+       %JBC-F-QUERESET, job aborted during execution because queue was reset
+         Submitted 16-NOV-2026 13:11:29.49 /KEEP /LOG=DUA1:[BAT98LOG]BOOTN.LOG; /PARAM=("BOOTN","600") /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98W.COM;1
+         Completed 16-NOV-2026 13:12:33.10 on queue BAT98_A
+
+Batch queue BAT98_B, stopped, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[SYSTEM] /PROTECTION=(S:M,O:D,G:R,W:S)
+
+Batch queue BAT98_D1, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D10, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D11, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D12, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D13, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D3, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D4, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_D6, stopped
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+Batch queue BAT98_P, stopped, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:R,G:D,W)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    412  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:38.76 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    411  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:38.71 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:38.74 on queue BAT98_P
+$ @BAT98$DISK:[000000]BAT98Z
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_A
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_A
+$ DELETE/QUEUE BAT98_A
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_B
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_B
+$ DELETE/QUEUE BAT98_B
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_E
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_P
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_P
+$ DELETE/QUEUE BAT98_P
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_X
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_Q
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_Q2
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D1
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D1
+$ DELETE/QUEUE BAT98_D1
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D2
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D3
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D3
+$ DELETE/QUEUE BAT98_D3
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D4
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D4
+$ DELETE/QUEUE BAT98_D4
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D5
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D6
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D6
+$ DELETE/QUEUE BAT98_D6
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D7
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D8
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D9
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D10
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D10
+$ DELETE/QUEUE BAT98_D10
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D11
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D11
+$ DELETE/QUEUE BAT98_D11
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D12
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D12
+$ DELETE/QUEUE BAT98_D12
+$ EXIT
+$ @DUA1:[000000]BAT98Z.COM;1 BAT98_D13
+$ ! BAT98Z.COM - Phase 98's probe: its queues taken away. Written by
+$ ! testdata/bat98/gen.go. With a queue's name as P1, that queue; with
+$ ! none, every queue the probe makes. Each is reset (its executing jobs
+$ ! aborted) and deleted, with its jobs.
+$ !
+$ SET NOON
+$ IF P1 .NES. "" THEN GOTO ONE
+$ ONE:
+$ X = F$GETQUI("CANCEL_OPERATION")
+$ Q = ""
+$ Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME",P1)
+$ IF Q .EQS. "" THEN EXIT
+$ STOP/QUEUE/RESET BAT98_D13
+$ DELETE/QUEUE BAT98_D13
+$ EXIT
+$ EXIT
+$ SHOW QUEUE BAT98*
+%JBC-E-NOSUCHQUE, no such queue
+$ !
+$ WRITE SYS$OUTPUT "######## ACCOUNTS"
+######## ACCOUNTS
+$ IF F$TRNLNM("SYSUAF","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE SYSUAF
+$ IF F$TRNLNM("RIGHTSLIST","LNM$PROCESS") .NES. "" THEN DEASSIGN/PROCESS/EXECUTIVE_MODE RIGHTSLIST
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT SYS$SYSTEM
+$ MCR AUTHORIZE
+SHOW BAT98/FULL
+
+Username: BAT98                            Owner:  GOVAX PROBE
+Account:  GOVAX98                          UIC:    [200,10] ([PROT93,BAT98])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  BAT98$DISK:[BAT98]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive), 16-NOV-2026 13:03 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+Identifier                         Value           Attributes
+  BAT98_ID                         %X80010004      
+SHOW BAT98O/FULL
+
+Username: BAT98O                           Owner:  GOVAX PROBE
+Account:  GOVAX98                          UIC:    [200,11] ([PROT93,BAT98O])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  BAT98$DISK:[BAT98O]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive), 16-NOV-2026 13:03 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+  IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+  LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+  PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+  SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+Default Privileges: 
+  NETMBX    TMPMBX
+SHOW BAT98W/FULL
+
+Username: BAT98W                           Owner:  GOVAX PROBE
+Account:  GOVAX98                          UIC:    [300,10] ([GOVAX98,BAT98W])
+CLI:      DCL                              Tables: DCLTABLES
+Default:  BAT98$DISK:[BAT98W]
+LGICMD:   
+Flags: 
+Primary days:   Mon Tue Wed Thu Fri        
+Secondary days:                     Sat Sun
+No access restrictions
+Expiration:            (none)    Pwdminimum:  6   Login Fails:     0
+Pwdlifetime:         90 00:00    Pwdchange:      (pre-expired) 
+Last Login:            (none) (interactive), 16-NOV-2026 13:03 (non-interactive)
+Maxjobs:         0  Fillm:       300  Bytlm:        32768
+Maxacctjobs:     0  Shrfillm:      0  Pbytlm:           0
+Maxdetach:       0  BIOlm:        40  JTquota:       4096
+Prclm:           2  DIOlm:        40  WSdef:          256
+Prio:            4  ASTlm:        40  WSquo:          512
+Queprio:         0  TQElm:        40  WSextent:      1024
+CPU:        (none)  Enqlm:       200  Pgflquo:      32768
+Authorized Privileges: 
+  NETMBX    TMPMBX
+Default Privileges: 
+  NETMBX    TMPMBX
+REMOVE BAT98
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier BAT98 value [000200,000010] removed from rights database
+REMOVE BAT98O
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier BAT98O value [000200,000011] removed from rights database
+REMOVE BAT98W
+%UAF-I-REMMSG, record removed from system authorization file
+%UAF-I-RDBREMMSGU, identifier BAT98W value [000300,000010] removed from rights database
+%UAF-I-RDBREMMSGU, identifier GOVAX98 value [000300,177777] removed from rights database
+REMOVE/IDENTIFIER BAT98_ID
+%UAF-I-RDBREMMSG, identifier BAT98_ID value %X80010004 removed from rights database
+REMOVE/IDENTIFIER GOVAX98
+%UAF-E-RDBREMERR, unable to remove GOVAX98 from rights database
+-SYSTEM-F-NOSUCHID, unknown rights identifier
+SHOW BAT98*
+%UAF-W-BADSPC, no user matches specification
+EXIT
+%UAF-I-DONEMSG, system authorization file modified
+%UAF-I-RDBDONEMSG, rights database modified
+$ SET DEFAULT SYS$SYSROOT:[SYSMGR]
+$ DIRECTORY BAT98$DISK:[BAT98LOG]
+
+Directory DUA1:[BAT98LOG]
+
+BAT98.LOG;1         BAT98DROP.LOG;1     BAT98L1.LOG;1       BAT98L2.LOG;1      
+BAT98L3.LOG;1       BAT98L4.LOG;1       BAT98P_A_BAT98.LOG;1
+BAT98P_A_BAT98O.LOG;1                   BAT98P_A_BAT98W.LOG;1
+BAT98P_B_BAT98.LOG;1                    BAT98P_B_BAT98O.LOG;1
+BAT98P_B_BAT98W.LOG;1                   BAT98P_C_BAT98.LOG;1
+BAT98P_C_BAT98O.LOG;1                   BAT98P_C_BAT98W.LOG;1
+BAT98P_D_BAT98.LOG;1                    BAT98P_D_BAT98O.LOG;1
+BAT98P_D_BAT98W.LOG;1                   BAT98P_E_BAT98.LOG;1
+BAT98P_E_BAT98O.LOG;1                   BAT98P_E_BAT98W.LOG;1
+BAT98P_F_BAT98.LOG;1                    BAT98P_F_BAT98O.LOG;1
+BAT98P_F_BAT98W.LOG;1                   BAT98R1.LOG;1       BAT98R10.LOG;1     
+BAT98R11.LOG;1      BAT98R12.LOG;1      BAT98R13.LOG;1      BAT98R14.LOG;1     
+BAT98R15.LOG;1      BAT98R16.LOG;1      BAT98R17.LOG;1      BAT98R18.LOG;1     
+BAT98R19.LOG;1      BAT98R2.LOG;1       BAT98R21.LOG;1      BAT98R22.LOG;1     
+BAT98R3.LOG;1       BAT98R4.LOG;1       BAT98R5.LOG;1       BAT98R6.LOG;1      
+BAT98R7.LOG;1       BAT98R8.LOG;1       BAT98V_BAT98.LOG;1  BAT98V_BAT98O.LOG;1
+BAT98V_BAT98W.LOG;1 BAT98V_SYSTEM.LOG;1 BAT98X1.LOG;2       BAT98X1.LOG;1      
+BAT98X2.LOG;2       BAT98X2.LOG;1       BAT98X3.LOG;2       BAT98X3.LOG;1      
+BOOTN.LOG;1         BOOTR.LOG;2         BOOTR.LOG;1         HAND1.LOG;1        
+
+Total of 58 files.
+$ WRITE SYS$OUTPUT "BAT98DROP FINISHED"
+BAT98DROP FINISHED
+$ EXIT

@@ -1,0 +1,145 @@
+LOGIN.COM OF BAT98 AT DEPTH 1, MODE BATCH
+######## BAT98P STATE C AS BAT98
+######## PASS NONE AS BAT98 STATE C HELD 205 RETAINED 204 QUEUE BAT98_D1
+
+16-NOV-2026 13:03:21.88   User: BAT98            Process ID:   000001B2
+                          Node: SIMVAX           Process name: "BATCH_206"
+ 
+Authorized privileges:
+ NETMBX    TMPMBX
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ BAT98_ID                          
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== NONE 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== NONE 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S,O,G,W)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    205  no privilege                         Holding
+
+    204  no privilege                         Retained on completion
+  $STATUS == "%X10000001"
+== NONE 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    204  no privilege                         Retained on completion
+  $STATUS == "%X10000001"
+== NONE 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    205  no privilege                         Holding
+  $STATUS == "%X10000001"
+== NONE 5
+  GETQUI PROTECTION SYSTEM, OWNER, GROUP, WORLD
+  $STATUS == "%X00010001"
+== NONE 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== NONE 7
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10C1800C"
+  OWN = 
+== NONE 8
+  NO OWN
+  $STATUS == "%X00010001"
+== NONE 9
+  NO OWN
+  $STATUS == "%X00010001"
+== NONE 10
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10C1800C"
+  HI = 
+== NONE 11
+  NO HI
+  $STATUS == "%X00010001"
+== NONE 12
+%SUBMIT-F-INVQUAVAL, value 'BAT98W' invalid for /USER qualifier
+-RMS-E-PRV, insufficient privilege or file protection violation
+  $STATUS == "%X10C1132C"
+  OTH = 
+== NONE 13
+  NO OTH
+  $STATUS == "%X00010001"
+== NONE 14
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 15
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== NONE 17
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 18
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 19
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 20
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== NONE 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== NONE 23
+  $STATUS == "%X00000001"
+== NONE 24
+
+BAT98_D1 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System, Owner, Group, World)
+     Access Control List:
+          (IDENTIFIER=[GOVAX98,BAT98W],ACCESS=READ)
+  $STATUS == "%X00000001"
+== NONE 25
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 26
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 27
+%JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X10048022"
+== NONE 28
+%DELETE-E-NOTDELETED, error deleting BAT98_D1
+-JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X1093137A"
+== NONE 29
+  NO OWN
+  $STATUS == "%X00010001"
+== NONE 30
+%DELETE-E-NOTDELETED, error deleting 205
+-JBC-E-NOPRIV, insufficient privilege or queue protection violation
+  $STATUS == "%X1093137A"
+== NONE 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+BAT98P FINISHED
+  BAT98        job terminated at 16-NOV-2026 13:03:22.09
+
+  Accounting information:
+  Buffered I/O count:             247         Peak working set size:     431
+  Direct I/O count:                18         Peak page file size:      3460
+  Page faults:                   4819         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.11   Elapsed time:     0 00:00:00.24

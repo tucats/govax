@@ -1,0 +1,12 @@
+BAT98OK RAN, P1=, P2=, DEPTH 0
+$ ! BAT98FAT.COM - Phase 98's probe: a procedure that ends with a severe error (SS$_ABORT). Written by testdata/bat98/gen.go.
+$ WRITE SYS$OUTPUT "BAT98FAT RAN, P1=", P1, ", P2=", P2, ", DEPTH ", F$ENVIRONMENT("DEPTH")
+BAT98FAT RAN, P1=, P2=, DEPTH 0
+$ EXIT %X0000002C
+  SYSTEM       job terminated at 16-NOV-2026 11:24:43.49
+
+  Accounting information:
+  Buffered I/O count:              35         Peak working set size:     383
+  Direct I/O count:                 8         Peak page file size:      3112
+  Page faults:                    538         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.02   Elapsed time:     0 00:00:00.03

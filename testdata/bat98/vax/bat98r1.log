@@ -1,0 +1,8 @@
+BAT98OK RAN, P1=, P2=, DEPTH 0
+  SYSTEM       job terminated at 16-NOV-2026 11:24:43.30
+
+  Accounting information:
+  Buffered I/O count:              30         Peak working set size:     383
+  Direct I/O count:                12         Peak page file size:      3112
+  Page faults:                    464         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.02   Elapsed time:     0 00:00:00.03

@@ -1,0 +1,2068 @@
+LOGIN.COM OF BAT98O AT DEPTH 1, MODE BATCH
+######## BAT98P STATE D AS BAT98O
+######## PASS NONE AS BAT98O STATE D HELD 263 RETAINED 262 QUEUE BAT98_D1
+
+16-NOV-2026 13:03:26.86   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== NONE 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== NONE 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    263  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.41 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    264  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.43 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    265  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.44 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    266  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.48 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    267  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.51 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    268  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== NONE 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== NONE 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    263  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.41 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== NONE 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== NONE 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== NONE 7
+Job OWN98 (queue BAT98_P, entry 277) holding
+  $STATUS == "%X10000001"
+  OWN = 277
+== NONE 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    277  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== NONE 9
+  $STATUS == "%X10040001"
+== NONE 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 278) holding
+  $STATUS == "%X10000001"
+  HI = 278
+== NONE 11
+  $STATUS == "%X10040001"
+== NONE 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== NONE 13
+  NO OTH
+  $STATUS == "%X00010001"
+== NONE 14
+  $STATUS == "%X10040001"
+== NONE 15
+  $STATUS == "%X10000001"
+== NONE 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== NONE 17
+  $STATUS == "%X10040001"
+== NONE 18
+  $STATUS == "%X10040001"
+== NONE 19
+  $STATUS == "%X10040001"
+== NONE 20
+  $STATUS == "%X10040001"
+== NONE 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== NONE 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== NONE 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== NONE 24
+
+BAT98_D1 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== NONE 25
+  $STATUS == "%X10040001"
+== NONE 26
+  $STATUS == "%X10040001"
+== NONE 27
+  $STATUS == "%X10040001"
+== NONE 28
+  $STATUS == "%X10040001"
+== NONE 29
+  $STATUS == "%X10040001"
+== NONE 30
+  $STATUS == "%X10040001"
+== NONE 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS OPER AS BAT98O STATE D HELD 264 RETAINED 262 QUEUE BAT98_D2
+
+16-NOV-2026 13:03:27.12   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ OPER                 may perform operator functions
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== OPER 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== OPER 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    264  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.43 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    265  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.44 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    266  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.48 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    267  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.51 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    268  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== OPER 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== OPER 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    264  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.43 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== OPER 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== OPER 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== OPER 7
+Job OWN98 (queue BAT98_P, entry 279) holding
+  $STATUS == "%X10000001"
+  OWN = 279
+== OPER 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    279  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== OPER 9
+  $STATUS == "%X10040001"
+== OPER 10
+Job BAT98OK (queue BAT98_P, entry 280) holding
+  $STATUS == "%X10000001"
+  HI = 280
+== OPER 11
+  $STATUS == "%X10040001"
+== OPER 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== OPER 13
+  NO OTH
+  $STATUS == "%X00010001"
+== OPER 14
+  $STATUS == "%X10040001"
+== OPER 15
+  $STATUS == "%X10000001"
+== OPER 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== OPER 17
+  $STATUS == "%X10040001"
+== OPER 18
+  $STATUS == "%X10040001"
+== OPER 19
+  $STATUS == "%X10040001"
+== OPER 20
+  $STATUS == "%X10040001"
+== OPER 21
+  $STATUS == "%X10040001"
+== OPER 22
+  $STATUS == "%X10040001"
+== OPER 23
+  $STATUS == "%X00000001"
+== OPER 24
+
+BAT98_D2 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List:
+          (IDENTIFIER=[GOVAX98,BAT98W],ACCESS=READ)
+  $STATUS == "%X00000001"
+== OPER 25
+  $STATUS == "%X10040001"
+== OPER 26
+  $STATUS == "%X10040001"
+== OPER 27
+  $STATUS == "%X10040001"
+== OPER 28
+  $STATUS == "%X10040001"
+== OPER 29
+  $STATUS == "%X10040001"
+== OPER 30
+  $STATUS == "%X10040001"
+== OPER 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS ALTPRI AS BAT98O STATE D HELD 265 RETAINED 262 QUEUE BAT98_D3
+
+16-NOV-2026 13:03:27.36   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ ALTPRI               may set any priority value
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== ALTPRI 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== ALTPRI 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    265  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.44 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    266  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.48 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    267  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.51 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    268  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== ALTPRI 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== ALTPRI 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    265  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.44 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== ALTPRI 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== ALTPRI 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== ALTPRI 7
+Job OWN98 (queue BAT98_P, entry 281) holding
+  $STATUS == "%X10000001"
+  OWN = 281
+== ALTPRI 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    281  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== ALTPRI 9
+  $STATUS == "%X10040001"
+== ALTPRI 10
+Job BAT98OK (queue BAT98_P, entry 282) holding
+  $STATUS == "%X10000001"
+  HI = 282
+== ALTPRI 11
+  $STATUS == "%X10040001"
+== ALTPRI 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== ALTPRI 13
+  NO OTH
+  $STATUS == "%X00010001"
+== ALTPRI 14
+  $STATUS == "%X10040001"
+== ALTPRI 15
+  $STATUS == "%X10000001"
+== ALTPRI 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== ALTPRI 17
+  $STATUS == "%X10040001"
+== ALTPRI 18
+  $STATUS == "%X10040001"
+== ALTPRI 19
+  $STATUS == "%X10040001"
+== ALTPRI 20
+  $STATUS == "%X10040001"
+== ALTPRI 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== ALTPRI 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== ALTPRI 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== ALTPRI 24
+
+BAT98_D3 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== ALTPRI 25
+  $STATUS == "%X10040001"
+== ALTPRI 26
+  $STATUS == "%X10040001"
+== ALTPRI 27
+  $STATUS == "%X10040001"
+== ALTPRI 28
+  $STATUS == "%X10040001"
+== ALTPRI 29
+  $STATUS == "%X10040001"
+== ALTPRI 30
+  $STATUS == "%X10040001"
+== ALTPRI 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS CMKRNL AS BAT98O STATE D HELD 266 RETAINED 262 QUEUE BAT98_D4
+
+16-NOV-2026 13:03:27.60   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ CMKRNL               may change mode to kernel
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== CMKRNL 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== CMKRNL 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    266  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.48 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    267  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.51 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    268  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== CMKRNL 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== CMKRNL 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    266  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.48 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== CMKRNL 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== CMKRNL 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== CMKRNL 7
+Job OWN98 (queue BAT98_P, entry 283) holding
+  $STATUS == "%X10000001"
+  OWN = 283
+== CMKRNL 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    283  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== CMKRNL 9
+  $STATUS == "%X10040001"
+== CMKRNL 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 284) holding
+  $STATUS == "%X10000001"
+  HI = 284
+== CMKRNL 11
+  $STATUS == "%X10040001"
+== CMKRNL 12
+Job BAT98OK (queue BAT98_P, entry 285) holding
+  $STATUS == "%X10000001"
+  OTH = 285
+== CMKRNL 13
+  $STATUS == "%X10040001"
+== CMKRNL 14
+  $STATUS == "%X10040001"
+== CMKRNL 15
+  $STATUS == "%X10000001"
+== CMKRNL 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== CMKRNL 17
+  $STATUS == "%X10040001"
+== CMKRNL 18
+  $STATUS == "%X10040001"
+== CMKRNL 19
+  $STATUS == "%X10040001"
+== CMKRNL 20
+  $STATUS == "%X10040001"
+== CMKRNL 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== CMKRNL 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== CMKRNL 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== CMKRNL 24
+
+BAT98_D4 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== CMKRNL 25
+  $STATUS == "%X10040001"
+== CMKRNL 26
+  $STATUS == "%X10040001"
+== CMKRNL 27
+  $STATUS == "%X10040001"
+== CMKRNL 28
+  $STATUS == "%X10040001"
+== CMKRNL 29
+  $STATUS == "%X10040001"
+== CMKRNL 30
+  $STATUS == "%X10040001"
+== CMKRNL 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS CMKRNL+SYSPRV AS BAT98O STATE D HELD 267 RETAINED 262 QUEUE BAT98_D5
+
+16-NOV-2026 13:03:27.85   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ CMKRNL               may change mode to kernel
+ NETMBX               may create network device
+ SYSPRV               may access objects via system protection
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== CMKRNL+SYSPRV 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== CMKRNL+SYSPRV 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    267  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.51 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    268  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== CMKRNL+SYSPRV 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== CMKRNL+SYSPRV 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    267  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.51 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== CMKRNL+SYSPRV 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== CMKRNL+SYSPRV 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== CMKRNL+SYSPRV 7
+Job OWN98 (queue BAT98_P, entry 286) holding
+  $STATUS == "%X10000001"
+  OWN = 286
+== CMKRNL+SYSPRV 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    286  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== CMKRNL+SYSPRV 9
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 287) holding
+  $STATUS == "%X10000001"
+  HI = 287
+== CMKRNL+SYSPRV 11
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 12
+Job BAT98OK (queue BAT98_P, entry 288) holding
+  $STATUS == "%X10000001"
+  OTH = 288
+== CMKRNL+SYSPRV 13
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 14
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 15
+  $STATUS == "%X10000001"
+== CMKRNL+SYSPRV 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== CMKRNL+SYSPRV 17
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 18
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 19
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 20
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== CMKRNL+SYSPRV 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== CMKRNL+SYSPRV 23
+  $STATUS == "%X00000001"
+== CMKRNL+SYSPRV 24
+
+BAT98_D5 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List:
+          (IDENTIFIER=[GOVAX98,BAT98W],ACCESS=READ)
+  $STATUS == "%X00000001"
+== CMKRNL+SYSPRV 25
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 26
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 27
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 28
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 29
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 30
+  $STATUS == "%X10040001"
+== CMKRNL+SYSPRV 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS SYSNAM AS BAT98O STATE D HELD 268 RETAINED 262 QUEUE BAT98_D6
+
+16-NOV-2026 13:03:28.10   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ SYSNAM               may insert in system logical name table
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== SYSNAM 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== SYSNAM 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    268  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== SYSNAM 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== SYSNAM 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    268  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.54 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== SYSNAM 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== SYSNAM 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== SYSNAM 7
+Job OWN98 (queue BAT98_P, entry 289) holding
+  $STATUS == "%X10000001"
+  OWN = 289
+== SYSNAM 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    289  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== SYSNAM 9
+  $STATUS == "%X10040001"
+== SYSNAM 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 290) holding
+  $STATUS == "%X10000001"
+  HI = 290
+== SYSNAM 11
+  $STATUS == "%X10040001"
+== SYSNAM 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== SYSNAM 13
+  NO OTH
+  $STATUS == "%X00010001"
+== SYSNAM 14
+  $STATUS == "%X10040001"
+== SYSNAM 15
+  $STATUS == "%X10000001"
+== SYSNAM 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== SYSNAM 17
+  $STATUS == "%X10040001"
+== SYSNAM 18
+  $STATUS == "%X10040001"
+== SYSNAM 19
+  $STATUS == "%X10040001"
+== SYSNAM 20
+  $STATUS == "%X10040001"
+== SYSNAM 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== SYSNAM 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== SYSNAM 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== SYSNAM 24
+
+BAT98_D6 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== SYSNAM 25
+  $STATUS == "%X10040001"
+== SYSNAM 26
+  $STATUS == "%X10040001"
+== SYSNAM 27
+  $STATUS == "%X10040001"
+== SYSNAM 28
+  $STATUS == "%X10040001"
+== SYSNAM 29
+  $STATUS == "%X10040001"
+== SYSNAM 30
+  $STATUS == "%X10040001"
+== SYSNAM 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS BYPASS AS BAT98O STATE D HELD 269 RETAINED 262 QUEUE BAT98_D7
+
+16-NOV-2026 13:03:28.33   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ BYPASS               may bypass all object access controls
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== BYPASS 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== BYPASS 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    269  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== BYPASS 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== BYPASS 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    269  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.57 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== BYPASS 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== BYPASS 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== BYPASS 7
+Job OWN98 (queue BAT98_P, entry 291) holding
+  $STATUS == "%X10000001"
+  OWN = 291
+== BYPASS 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    291  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== BYPASS 9
+  $STATUS == "%X10040001"
+== BYPASS 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 292) holding
+  $STATUS == "%X10000001"
+  HI = 292
+== BYPASS 11
+  $STATUS == "%X10040001"
+== BYPASS 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== BYPASS 13
+  NO OTH
+  $STATUS == "%X00010001"
+== BYPASS 14
+  $STATUS == "%X10040001"
+== BYPASS 15
+  $STATUS == "%X10000001"
+== BYPASS 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== BYPASS 17
+  $STATUS == "%X10040001"
+== BYPASS 18
+  $STATUS == "%X10040001"
+== BYPASS 19
+  $STATUS == "%X10040001"
+== BYPASS 20
+  $STATUS == "%X10040001"
+== BYPASS 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== BYPASS 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== BYPASS 23
+  $STATUS == "%X00000001"
+== BYPASS 24
+
+BAT98_D7 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List:
+          (IDENTIFIER=[GOVAX98,BAT98W],ACCESS=READ)
+  $STATUS == "%X00000001"
+== BYPASS 25
+  $STATUS == "%X10040001"
+== BYPASS 26
+  $STATUS == "%X10040001"
+== BYPASS 27
+  $STATUS == "%X10040001"
+== BYPASS 28
+  $STATUS == "%X10040001"
+== BYPASS 29
+  $STATUS == "%X10040001"
+== BYPASS 30
+  $STATUS == "%X10040001"
+== BYPASS 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS SYSPRV AS BAT98O STATE D HELD 270 RETAINED 262 QUEUE BAT98_D8
+
+16-NOV-2026 13:03:28.57   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ SYSPRV               may access objects via system protection
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== SYSPRV 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== SYSPRV 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    270  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== SYSPRV 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== SYSPRV 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    270  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.59 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== SYSPRV 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== SYSPRV 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== SYSPRV 7
+Job OWN98 (queue BAT98_P, entry 293) holding
+  $STATUS == "%X10000001"
+  OWN = 293
+== SYSPRV 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    293  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== SYSPRV 9
+  $STATUS == "%X10040001"
+== SYSPRV 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 294) holding
+  $STATUS == "%X10000001"
+  HI = 294
+== SYSPRV 11
+  $STATUS == "%X10040001"
+== SYSPRV 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== SYSPRV 13
+  NO OTH
+  $STATUS == "%X00010001"
+== SYSPRV 14
+  $STATUS == "%X10040001"
+== SYSPRV 15
+  $STATUS == "%X10000001"
+== SYSPRV 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== SYSPRV 17
+  $STATUS == "%X10040001"
+== SYSPRV 18
+  $STATUS == "%X10040001"
+== SYSPRV 19
+  $STATUS == "%X10040001"
+== SYSPRV 20
+  $STATUS == "%X10040001"
+== SYSPRV 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== SYSPRV 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== SYSPRV 23
+  $STATUS == "%X00000001"
+== SYSPRV 24
+
+BAT98_D8 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List:
+          (IDENTIFIER=[GOVAX98,BAT98W],ACCESS=READ)
+  $STATUS == "%X00000001"
+== SYSPRV 25
+  $STATUS == "%X10040001"
+== SYSPRV 26
+  $STATUS == "%X10040001"
+== SYSPRV 27
+  $STATUS == "%X10040001"
+== SYSPRV 28
+  $STATUS == "%X10040001"
+== SYSPRV 29
+  $STATUS == "%X10040001"
+== SYSPRV 30
+  $STATUS == "%X10040001"
+== SYSPRV 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS GRPPRV AS BAT98O STATE D HELD 271 RETAINED 262 QUEUE BAT98_D9
+
+16-NOV-2026 13:03:28.81   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ GRPPRV               may access group objects via system protection
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== GRPPRV 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== GRPPRV 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    271  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== GRPPRV 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== GRPPRV 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    271  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.62 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== GRPPRV 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== GRPPRV 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== GRPPRV 7
+Job OWN98 (queue BAT98_P, entry 295) holding
+  $STATUS == "%X10000001"
+  OWN = 295
+== GRPPRV 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    295  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== GRPPRV 9
+  $STATUS == "%X10040001"
+== GRPPRV 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 296) holding
+  $STATUS == "%X10000001"
+  HI = 296
+== GRPPRV 11
+  $STATUS == "%X10040001"
+== GRPPRV 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== GRPPRV 13
+  NO OTH
+  $STATUS == "%X00010001"
+== GRPPRV 14
+  $STATUS == "%X10040001"
+== GRPPRV 15
+  $STATUS == "%X10000001"
+== GRPPRV 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== GRPPRV 17
+  $STATUS == "%X10040001"
+== GRPPRV 18
+  $STATUS == "%X10040001"
+== GRPPRV 19
+  $STATUS == "%X10040001"
+== GRPPRV 20
+  $STATUS == "%X10040001"
+== GRPPRV 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== GRPPRV 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== GRPPRV 23
+  $STATUS == "%X00000001"
+== GRPPRV 24
+
+BAT98_D9 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List:
+          (IDENTIFIER=[GOVAX98,BAT98W],ACCESS=READ)
+  $STATUS == "%X00000001"
+== GRPPRV 25
+  $STATUS == "%X10040001"
+== GRPPRV 26
+  $STATUS == "%X10040001"
+== GRPPRV 27
+  $STATUS == "%X10040001"
+== GRPPRV 28
+  $STATUS == "%X10040001"
+== GRPPRV 29
+  $STATUS == "%X10040001"
+== GRPPRV 30
+  $STATUS == "%X10040001"
+== GRPPRV 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS READALL AS BAT98O STATE D HELD 272 RETAINED 262 QUEUE BAT98_D10
+
+16-NOV-2026 13:03:29.03   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ READALL              may read anything as the owner
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== READALL 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== READALL 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    272  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== READALL 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== READALL 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    272  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.66 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== READALL 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== READALL 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== READALL 7
+Job OWN98 (queue BAT98_P, entry 297) holding
+  $STATUS == "%X10000001"
+  OWN = 297
+== READALL 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    297  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== READALL 9
+  $STATUS == "%X10040001"
+== READALL 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 298) holding
+  $STATUS == "%X10000001"
+  HI = 298
+== READALL 11
+  $STATUS == "%X10040001"
+== READALL 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== READALL 13
+  NO OTH
+  $STATUS == "%X00010001"
+== READALL 14
+  $STATUS == "%X10040001"
+== READALL 15
+  $STATUS == "%X10000001"
+== READALL 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== READALL 17
+  $STATUS == "%X10040001"
+== READALL 18
+  $STATUS == "%X10040001"
+== READALL 19
+  $STATUS == "%X10040001"
+== READALL 20
+  $STATUS == "%X10040001"
+== READALL 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== READALL 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== READALL 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== READALL 24
+
+BAT98_D10 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== READALL 25
+  $STATUS == "%X10040001"
+== READALL 26
+  $STATUS == "%X10040001"
+== READALL 27
+  $STATUS == "%X10040001"
+== READALL 28
+  $STATUS == "%X10040001"
+== READALL 29
+  $STATUS == "%X10040001"
+== READALL 30
+  $STATUS == "%X10040001"
+== READALL 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS SECURITY AS BAT98O STATE D HELD 273 RETAINED 262 QUEUE BAT98_D11
+
+16-NOV-2026 13:03:29.27   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ SECURITY             may perform security administration functions
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== SECURITY 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== SECURITY 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    273  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== SECURITY 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== SECURITY 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    273  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.69 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== SECURITY 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== SECURITY 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== SECURITY 7
+Job OWN98 (queue BAT98_P, entry 299) holding
+  $STATUS == "%X10000001"
+  OWN = 299
+== SECURITY 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    299  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== SECURITY 9
+  $STATUS == "%X10040001"
+== SECURITY 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 300) holding
+  $STATUS == "%X10000001"
+  HI = 300
+== SECURITY 11
+  $STATUS == "%X10040001"
+== SECURITY 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== SECURITY 13
+  NO OTH
+  $STATUS == "%X00010001"
+== SECURITY 14
+  $STATUS == "%X10040001"
+== SECURITY 15
+  $STATUS == "%X10000001"
+== SECURITY 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== SECURITY 17
+  $STATUS == "%X10040001"
+== SECURITY 18
+  $STATUS == "%X10040001"
+== SECURITY 19
+  $STATUS == "%X10040001"
+== SECURITY 20
+  $STATUS == "%X10040001"
+== SECURITY 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== SECURITY 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== SECURITY 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== SECURITY 24
+
+BAT98_D11 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== SECURITY 25
+  $STATUS == "%X10040001"
+== SECURITY 26
+  $STATUS == "%X10040001"
+== SECURITY 27
+  $STATUS == "%X10040001"
+== SECURITY 28
+  $STATUS == "%X10040001"
+== SECURITY 29
+  $STATUS == "%X10040001"
+== SECURITY 30
+  $STATUS == "%X10040001"
+== SECURITY 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS WORLD AS BAT98O STATE D HELD 274 RETAINED 262 QUEUE BAT98_D12
+
+16-NOV-2026 13:03:29.49   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ WORLD                may affect other processes in the world
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== WORLD 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== WORLD 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    274  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== WORLD 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== WORLD 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    274  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.72 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== WORLD 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== WORLD 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== WORLD 7
+Job OWN98 (queue BAT98_P, entry 301) holding
+  $STATUS == "%X10000001"
+  OWN = 301
+== WORLD 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    301  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== WORLD 9
+  $STATUS == "%X10040001"
+== WORLD 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 302) holding
+  $STATUS == "%X10000001"
+  HI = 302
+== WORLD 11
+  $STATUS == "%X10040001"
+== WORLD 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== WORLD 13
+  NO OTH
+  $STATUS == "%X00010001"
+== WORLD 14
+  $STATUS == "%X10040001"
+== WORLD 15
+  $STATUS == "%X10000001"
+== WORLD 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== WORLD 17
+  $STATUS == "%X10040001"
+== WORLD 18
+  $STATUS == "%X10040001"
+== WORLD 19
+  $STATUS == "%X10040001"
+== WORLD 20
+  $STATUS == "%X10040001"
+== WORLD 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== WORLD 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== WORLD 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== WORLD 24
+
+BAT98_D12 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== WORLD 25
+  $STATUS == "%X10040001"
+== WORLD 26
+  $STATUS == "%X10040001"
+== WORLD 27
+  $STATUS == "%X10040001"
+== WORLD 28
+  $STATUS == "%X10040001"
+== WORLD 29
+  $STATUS == "%X10040001"
+== WORLD 30
+  $STATUS == "%X10040001"
+== WORLD 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+######## PASS GROUP AS BAT98O STATE D HELD 275 RETAINED 262 QUEUE BAT98_D13
+
+16-NOV-2026 13:03:29.72   User: BAT98O           Process ID:   000001BA
+                          Node: SIMVAX           Process name: "BATCH_276"
+ 
+Authorized privileges:
+ ACNT      ALLSPOOL  ALTPRI    AUDIT     BUGCHK    BYPASS    CMEXEC    CMKRNL
+ IMPERSONATDIAGNOSE  DOWNGRADE EXQUOTA   GROUP     GRPNAM    GRPPRV    IMPORT
+ LOG_IO    MOUNT     NETMBX    OPER      PFNMAP    PHY_IO    PRMCEB    PRMGBL
+ PRMMBX    PSWAPM    READALL   SECURITY  SETPRV    SHARE     SHMEM     SYSGBL
+ SYSLCK    SYSNAM    SYSPRV    TMPMBX    UPGRADE   VOLPRO    WORLD
+ 
+Process privileges:
+ GROUP                may affect other processes in same group
+ NETMBX               may create network device
+ TMPMBX               may create temporary mailbox
+ 
+Process rights:
+ BATCH                             
+ 
+System rights:
+ SYS$NODE_SIMVAX                   
+== GROUP 1
+Batch queue BAT98_P, idle, on SIMVAX::
+  $STATUS == "%X10000001"
+== GROUP 2
+Batch queue BAT98_P, idle, on SIMVAX::
+  /BASE_PRIORITY=4 /JOB_LIMIT=1 /OWNER=[PROT93,BAT98] /PROTECTION=(S:M,O:D,G:R,W:M)
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+    275  SYSHELD         SYSTEM               Holding
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+
+    262  SYSRET          SYSTEM               Retained on completion
+         Submitted 16-NOV-2026 13:03:26.37 /KEEP /NOLOG /NOPRINT /PRIORITY=100 /RETAIN=ALWAYS
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== GROUP 3
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    262  SYSRET          SYSTEM               Retained on completion
+         On idle batch queue BAT98_P
+         Completed 16-NOV-2026 13:03:26.40 on queue BAT98_P
+  $STATUS == "%X10000001"
+== GROUP 4
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    275  SYSHELD         SYSTEM               Holding
+         On idle batch queue BAT98_P
+         Submitted 16-NOV-2026 13:03:26.75 /KEEP /NOLOG /NOPRINT /PRIORITY=100
+         File: _SIMVAX$DUA1:[000000]BAT98OK.COM;1
+  $STATUS == "%X10000001"
+== GROUP 5
+  GETQUI PROTECTION SYSTEM=E, OWNER=D, GROUP=R, WORLD=E
+  $STATUS == "%X00010001"
+== GROUP 6
+  GETQUI OWNER [PROT93,BAT98]
+  $STATUS == "%X00010001"
+== GROUP 7
+Job OWN98 (queue BAT98_P, entry 303) holding
+  $STATUS == "%X10000001"
+  OWN = 303
+== GROUP 8
+  Entry  Jobname         Username     Blocks  Status
+  -----  -------         --------     ------  ------
+    303  OWN98           BAT98O               Holding
+         On idle batch queue BAT98_P
+  $STATUS == "%X10000001"
+== GROUP 9
+  $STATUS == "%X10040001"
+== GROUP 10
+%JBC-I-PRIOSMALL, scheduling priority has smaller value than requested
+Job BAT98OK (queue BAT98_P, entry 304) holding
+  $STATUS == "%X10000001"
+  HI = 304
+== GROUP 11
+  $STATUS == "%X10040001"
+== GROUP 12
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOCMKRNL, operation requires CMKRNL privilege
+  $STATUS == "%X10C1800C"
+  OTH = 
+== GROUP 13
+  NO OTH
+  $STATUS == "%X00010001"
+== GROUP 14
+  $STATUS == "%X10040001"
+== GROUP 15
+  $STATUS == "%X10000001"
+== GROUP 16
+%JBC-E-JOBNOTEXEC, specified job is not executing
+  $STATUS == "%X1004824A"
+== GROUP 17
+  $STATUS == "%X10040001"
+== GROUP 18
+  $STATUS == "%X10040001"
+== GROUP 19
+  $STATUS == "%X10040001"
+== GROUP 20
+  $STATUS == "%X10040001"
+== GROUP 21
+%JBC-E-NOOPER, operation requires OPER privilege
+  $STATUS == "%X10042892"
+== GROUP 22
+%DELETE-W-SEARCHFAIL, error searching for BAT98_X
+-JBC-E-NOSUCHQUE, no such queue
+  $STATUS == "%X10931238"
+== GROUP 23
+%SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
+  $STATUS == "%X10000024"
+== GROUP 24
+
+BAT98_D13 object of class QUEUE
+     Owner: [PROT93,BAT98]
+     Protection: (System: M, Owner: D, Group: R, World: M)
+     Access Control List: <empty>
+  $STATUS == "%X00000001"
+== GROUP 25
+  $STATUS == "%X10040001"
+== GROUP 26
+  $STATUS == "%X10040001"
+== GROUP 27
+  $STATUS == "%X10040001"
+== GROUP 28
+  $STATUS == "%X10040001"
+== GROUP 29
+  $STATUS == "%X10040001"
+== GROUP 30
+  $STATUS == "%X10040001"
+== GROUP 31
+Queue manager SYS$QUEUE_MANAGER, running, on SIMVAX::
+  $STATUS == "%X10000001"
+BAT98P FINISHED
+  BAT98O       job terminated at 16-NOV-2026 13:03:29.95
+
+  Accounting information:
+  Buffered I/O count:            3122         Peak working set size:     459
+  Direct I/O count:               225         Peak page file size:      3468
+  Page faults:                  58326         Mounted volumes:             0
+  Charged CPU time:           0 00:00:01.81   Elapsed time:     0 00:00:03.13

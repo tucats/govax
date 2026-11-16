@@ -1,0 +1,11 @@
+BAT98R BAT98X2 STARTED
+  $RESTART == "TRUE"
+  BATCH$RESTART == "STEP2"
+BAT98R AT STEP2
+  SYSTEM       job terminated at 16-NOV-2026 11:27:28.14
+
+  Accounting information:
+  Buffered I/O count:              30         Peak working set size:     385
+  Direct I/O count:                 8         Peak page file size:      3112
+  Page faults:                    478         Mounted volumes:             0
+  Charged CPU time:        17-NOV-1858 00:00:00.00   Elapsed time:     0 00:00:00.03
