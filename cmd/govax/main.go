@@ -195,8 +195,12 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	)
 
 	if in != nil {
-		c.In = in
-		rlStdin = in
+		// A byte at a time, so that readline's buffered reader never
+		// takes more than the command line it's reading: the lines after
+		// it may be answers to a procedure's INQUIRE, which reads c.In.
+		shared := &byteReader{r: in}
+		c.In = shared
+		rlStdin = shared
 	} else {
 		restoreTerminal, hostMode, vmsMode := vmsTerminalMode(int(os.Stdin.Fd()))
 		defer restoreTerminal()

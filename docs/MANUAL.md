@@ -768,7 +768,12 @@ Each console command applies the same rules to a file name, in order:
    (`DUA1:PROG.MAR`, `SRC:PROG.MAR`), is a volume file.
 3. A name with `/` or `\` in it, or a Windows drive letter (`C:`), is a
    host file: `"./prog.mar"`, `"/Users/me/prog.mar"`.
-4. Any other name (`PROG.MAR`, `PROG`) is a volume file in your default
+4. A name with no punctuation at all that is a logical name stands for
+   its translation, as RMS takes it on VMS, and is on the side the
+   translation is on. After `DEFINE BUILD SYS$LOGIN:BUILD`, `@BUILD`
+   runs `SYS$LOGIN:BUILD.COM`: the command's default type goes on the
+   translation.
+5. Any other name (`PROG.MAR`, `PROG`) is a volume file in your default
    directory if `SET DEFAULT` names a mounted volume, and a host file in
    the host's current directory otherwise.
 

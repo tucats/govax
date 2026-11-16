@@ -27,9 +27,9 @@ import (
 // error ends that procedure, and the login goes on to the prompt.
 // Verification is off in both.
 
-// The names the login procedures are found by. SYLOGIN is opened as
-// "SYS$SYLOGIN:", the name a device, so that RMS translates it: govax's
-// RMS translates a name only in a field that ends with a colon.
+// The names the login procedures are found by. SYLOGIN is opened by the
+// logical name alone, which RMS translates whole, as a name with no
+// punctuation (rms.Session.Locate), before @ gives it its default type.
 const (
 	syloginName    = "SYS$SYLOGIN"
 	loginProcedure = "SYS$LOGIN:LOGIN.COM"
@@ -47,7 +47,7 @@ func (c *Interpreter) RunLoginProcedures(lgicmd string, dispatch func(string) er
 			return
 		}
 
-		if _, err := c.loginProcedure(syloginName+":", nil, dispatch); err != nil && !vmserrors.MessageInhibited(err) {
+		if _, err := c.loginProcedure(syloginName, nil, dispatch); err != nil && !vmserrors.MessageInhibited(err) {
 			c.Printf("%%%s\n", err.Error())
 		}
 	}

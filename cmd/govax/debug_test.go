@@ -15,6 +15,9 @@ func TestRun_debugSession(t *testing.T) {
 	script := strings.Join([]string{
 		"DEBUG",
 		"HELP EXIT",
+		"",          // HELP prompts "DEBUG EXIT Subtopic?": up a level,
+		"",          // "DEBUG Subtopic?": up again,
+		"",          // "Topic?": out of HELP
 		"DIRECTORY", // a console command at DBG>
 		"EXIT",      // the debugger's: back to the console
 		"EXIT",      // the console's: leaves govax

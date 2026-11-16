@@ -650,3 +650,36 @@ func (k *promptKeys) endOfFile(err error) bool {
 // eofPending reports, once, whether the read about to start is end of
 // file because CTRL/Z ended the last line.
 func (k *promptKeys) eofPending() bool { return k.eofNext.Swap(false) }
+
+// byteReader is the input a caller of run gives it in place of the
+// terminal (a test's script), shared by readline and the programs' reads
+// (Console.In) as attentionStdin is: each Read delivers one byte. readline
+// reads through a bufio.Reader, which would otherwise take the whole
+// script in its first read, leaving nothing for a procedure's INQUIRE or
+// READ SYS$COMMAND; a byte at a time, readline takes only the command line
+// it's reading, since it stops reading at the line's end until the next
+// prompt.
+type byteReader struct {
+	mu sync.Mutex
+	r  io.Reader
+}
+
+func (b *byteReader) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.r.Read(p[:1])
+}
+
+// Close closes the underlying reader, if it can be closed.
+func (b *byteReader) Close() error {
+	if c, ok := b.r.(io.Closer); ok {
+		return c.Close()
+	}
+
+	return nil
+}

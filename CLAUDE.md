@@ -883,7 +883,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   manifest); SYLOGIN.COM (seeded) and ADDUSER.COM (supplied) in
   SYS$MANAGER; SET TERMINAL/NOECHO turning the host's echo off for DCL's
   terminal reads (`Interpreter.TerminalEcho`); held to VMS 7.1 by
-  `testdata/uaf95`'s three rounds.
+  `testdata/uaf95`'s three rounds. Its doc's "Revisions" (2026-11-16):
+  a name with no punctuation that is a logical name stands for its
+  translation (`rms`'s `locateLogical`, so `@SYS$SYLOGIN` gets `.COM` on
+  the translation), and `cmd/govax`'s `byteReader` shares a session's
+  input between readline and DCL's terminal reads.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

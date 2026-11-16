@@ -4291,7 +4291,11 @@ rest take file names a user types, which may mean the host
    name of two or more characters before a colon, is a volume file (a
    logical name that leads to no mounted volume is an error, not a host
    file);
-3. a bare name, `HELLO.MAR`, is a volume file when a SET DEFAULT onto a
+3. a name with no punctuation that is a logical name stands for its
+   translation, as RMS takes it (`locateLogical`), placed by these rules,
+   so that a default type the command adds as text, @'s `.COM`, goes on
+   the translation and not on the logical name;
+4. a bare name, `HELLO.MAR`, is a volume file when a SET DEFAULT onto a
    volume is in effect, and a host file otherwise.
 
 `rms/recordfile.go` reads and writes records on either side

@@ -1,10 +1,14 @@
-# Phase 95 — authentication
+# Phase 95 — authentication (Revised)
 
 **Status:** done 2026-11-16. Planned 2026-11-15 (subtask 1, the survey
 and this plan); the plan reviewed and accepted by the author the same
 day, with the answers in "The review". This document was the development
 plan and is now the implementation record: the progress log, and at the
 end "Where things stand".
+
+**Revised 2026-11-16:** two problems the progress log noticed and left
+(subtasks 8 and 9) were fixed after the close-out; "Revisions" after the
+progress log records them, and "Where things stand" no longer lists them.
 
 ## Goal
 
@@ -1020,6 +1024,67 @@ The answers (2026-11-15):
   and logging in"; 11.9's login step; 7.16 and 11.11's differences; the
   map), DEVIATIONS.md ("Accounts beside VMS 7.1's"), PLAN.md, CLAUDE.md.
 
+## Revisions
+
+Supplemental entries, after the phase was done.
+
+- **2026-11-16** A bare logical name as a file name. Subtask 8 noticed
+  that `@SYS$SYLOGIN` looked for `SYS$SYLOGIN.COM`, where VMS's RMS
+  translates a name with no punctuation as a logical name (the *Guide to
+  OpenVMS File Applications*, 6.2.2: a specification that "contains only
+  a name (without a terminating period or colon)" is translated, and a
+  failed translation leaves it the file name). The translation itself was
+  never the trouble: `lnm.TranslateFileSpec` already takes a spec with no
+  colon whole. Two things in front of RMS were. The commands add a default
+  type to a name as text (`FileLocation.WithDefaultType`, in 34 places:
+  @'s `.COM`, MACRO's `.MAR`, ...), so `SYS$SYLOGIN` reached RMS as
+  `SYS$SYLOGIN.COM`, which isn't a logical name; and `Session.Locate`
+  sent a bare name to the host whenever the default directory wasn't on a
+  volume, whatever the name translated to. Now `Locate` asks first
+  (`rms/location.go`'s `locateLogical`): a name of only a logical name's
+  characters (`plainName`) that is defined stands for its translation, as
+  its user sees it (`FileSpec.Display`, a concealed device by its logical
+  name), placed by the usual rules, so the default type goes on the file
+  the name stands for: `DEFINE BUILD SYS$LOGIN:BUILD`, then `@BUILD`, runs
+  `SYS$LOGIN:BUILD.COM`. Left as the name: a process-permanent file's
+  (SYS$INPUT and the rest, which have their own paths), a search list
+  (kept whole for RMS, on the side of its first element; a default type
+  added as text is then lost, where VMS's default name would apply to each
+  element: unconfirmed, and no command has needed it), a translation that
+  is still a logical name through a terminal translation, and one `Locate`
+  can't place (a terminal's device), which goes on as a bare name as
+  before. A translation that is itself a bare file name is that name. The
+  login procedures now open SYLOGIN as `SYS$SYLOGIN`, as LOGINOUT does,
+  not subtask 8's `SYS$SYLOGIN:` (`dclshell/dclloginproc.go`);
+  `openProcedure`'s handling of a name ending in a colon stays, for
+  `@SYS$SYLOGIN:` typed. MANUAL.md's "How govax decides which kind a name
+  is" has the rule. Tests: `rms`'s `TestLocate_bareLogicalName`, and
+  `cmd/govax`'s `TestRun_scriptedAnswers` and `TestRun_pipedAnswers`
+  (`@TELLME`, TELLME naming `SYS$MANAGER:TELL` without its type);
+  `TestRun_loginProcedures` and the console's login tests now run SYLOGIN
+  by the bare name.
+- **2026-11-16** ADDUSER's answers from a script. Subtask 9 noticed that
+  a `cmd/govax` session whose input was a pipe gave ADDUSER's INQUIREs end
+  of file, and put its end-to-end test in `internal/console` for that
+  reason. Run again, a real pipe (`govax < script`, or `os.Pipe` as
+  standard input) works and always did: `attentionStdin` hands readline
+  one byte per read, and readline's terminal loop stops reading at a
+  line's end until the next prompt kicks it, so nothing past the command
+  line is taken. What failed was the other way in, a reader given to
+  `run` (every `cmd/govax` session test's): it went to readline as it
+  was, and readline reads through a `bufio.Reader`, whose first read took
+  the whole script, leaving DCL's terminal reads (`Console.In`, the same
+  reader) nothing. Now such a reader is wrapped in `byteReader`
+  (`cmd/govax/attention.go`), shared by readline and `Console.In`, a byte
+  per read under a lock, as `attentionStdin` is. One test had leaned on
+  the old behavior: `TestRun_debugSession`'s `HELP EXIT` at `DBG>`
+  prompts for a subtopic, as the debugger's HELP has since Phase 90, and
+  its prompts once got end of file; they now read the script, so the
+  script answers them with three empty lines. Tests:
+  `TestRun_scriptedAnswers` (ADDUSER from a session's reader, its record
+  in the authorization file, no IVVERB for the answers, the password not
+  shown) and `TestRun_pipedAnswers` (the same through a pipe).
+
 ## Where things stand
 
 What Phase 95 left, for later phases:
@@ -1041,13 +1106,9 @@ What Phase 95 left, for later phases:
   and the lexical functions use the file in Go.
 - **SHOW PROCESS/RIGHTS and /QUOTAS**, which the probe's logs show, aren't
   there (subtask 2's rehearsal).
-- **RMS translating a bare file name as a logical name**: VMS's RMS
-  translates a name with no punctuation (`@SYS$SYLOGIN`); govax's
-  translates only a field ending in a colon (subtask 8).
-- **Terminal reads in a piped session**: with `cmd/govax`'s input a pipe,
-  readline reads ahead of DCL's terminal reads, so an INQUIRE or READ
-  SYS$COMMAND (ADDUSER.COM's questions) gets end of file; at a terminal
-  they work (subtask 9).
+- **A bare search list name with a default type**: a name with no
+  punctuation that is a search list stays whole, and a default type a
+  command adds to it as text is lost (Revisions, the first entry).
 - **The unconfirmed choices** each subtask's log lists, gathered in
   DEVIATIONS.md's "Accounts beside VMS 7.1's".
 

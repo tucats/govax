@@ -194,6 +194,59 @@ func TestLocate_bareNameFollowsSetDefault(t *testing.T) {
 	}
 }
 
+// TestLocate_bareLogicalName: a name with no punctuation that is a logical
+// name stands for its translation (the Guide to OpenVMS File Applications,
+// 6.2.2), even with the default directory on the host, so that a default
+// type goes on the translation (@SYS$SYLOGIN's .COM).
+func TestLocate_bareLogicalName(t *testing.T) {
+	s := newLocateSession(t)
+	defineLogical(t, s, "SYLOGIN", "DUA0:[MGR]SYLOGIN.COM")
+	defineLogical(t, s, "PROC", "DUA0:[MGR]PROC")
+	defineLogical(t, s, "ALIAS", "SYLOGIN")
+	defineLogical(t, s, "SHORT", "OTHER")
+	defineLogical(t, s, "AWAY", "DUB0:[X]Y.COM")
+
+	cases := []struct {
+		name, want string
+		host       bool
+	}{
+		{"SYLOGIN", "DUA0:[MGR]SYLOGIN.COM", false},
+		{"sylogin", "DUA0:[MGR]SYLOGIN.COM", false}, // a logical name's case doesn't matter
+		{"ALIAS", "DUA0:[MGR]SYLOGIN.COM", false},   // through two names
+		{"PROC", "DUA0:[MGR]PROC", false},           // a default type is still the caller's
+		{"SHORT", "OTHER", true},                    // a bare file name: the host, with no default there
+		{"AWAY", "AWAY", true},                      // a device not mounted: a bare name, as before
+		{"SYLOGIN.COM", "SYLOGIN.COM", true},        // punctuation: not a logical name
+		{"NOSUCH", "NOSUCH", true},
+	}
+
+	for _, c := range cases {
+		loc, err := s.Locate(c.name, false)
+		if err != nil || loc.Name != c.want || loc.Host != c.host {
+			t.Errorf("Locate(%q) = %+v, %v; want Name=%q Host=%v", c.name, loc, err, c.want, c.host)
+		}
+	}
+
+	if got := (FileLocation{Name: "DUA0:[MGR]PROC"}).WithDefaultType("COM").Name; got != "DUA0:[MGR]PROC.COM" {
+		t.Errorf("PROC's default type: %q", got)
+	}
+
+	// A search list stays the name, on its first element's side.
+	if _, err := s.Logicals.Define(lnm.ProcessTableName, "LIST", lnm.Supervisor, 0,
+		[]lnm.Equivalence{{Value: "DUA0:[A]"}, {Value: "DUA0:[B]"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if loc, err := s.Locate("LIST", false); err != nil || loc.Host || loc.Name != "LIST" {
+		t.Errorf("Locate(LIST) = %+v, %v; want the volume, as LIST", loc, err)
+	}
+
+	// /HOST is still a host name.
+	if loc, _ := s.Locate("SYLOGIN", true); !loc.Host || loc.Name != "SYLOGIN" {
+		t.Errorf("Locate(SYLOGIN, /HOST) = %+v", loc)
+	}
+}
+
 func TestLocateRelated(t *testing.T) {
 	s := newLocateSession(t)
 	defineLogical(t, s, "FORRTL", "DUA0:[SYSLIB]FORRTL.EXE")

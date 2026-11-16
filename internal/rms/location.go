@@ -27,6 +27,9 @@ import (
 //     not a quiet fall back to the host.
 //  3. A name that is obviously a host path means a host file: one with a
 //     "/" or "\", or a one-letter Windows drive prefix ("C:x").
+//     Before rules 2 to 4, a name with no punctuation that is a logical
+//     name stands for its translation, as RMS takes it, and the rules
+//     place that (locateLogical).
 //  4. Anything else (a bare "HELLO.MAR") means a file in the default
 //     directory of a mounted volume when a SET DEFAULT onto one is in
 //     effect, and a host file otherwise. A name given alongside another
@@ -132,6 +135,10 @@ func (s *Session) Locate(name string, host bool) (FileLocation, error) {
 		return FileLocation{Host: true, Name: name}, nil
 	}
 
+	if loc, ok := s.locateLogical(name); ok {
+		return loc, nil
+	}
+
 	switch s.classify(name) {
 	case nameHost:
 		return FileLocation{Host: true, Name: name}, nil
@@ -149,6 +156,81 @@ func (s *Session) Locate(name string, host bool) (FileLocation, error) {
 	}
 
 	return FileLocation{Host: true, Name: name}, nil
+}
+
+// locateLogical is Locate for a name with no punctuation that is a
+// logical name: RMS translates such a name whole, before it applies any
+// default (the Guide to OpenVMS File Applications, 6.2.2), so it stands
+// for its translation, not for a file of its own name. Where the name is
+// follows from the translation, not from where a bare name would be (a
+// host file when the default directory is on the host).
+//
+// A single translation is returned as itself (as its user sees it, a
+// concealed device by its logical name), so that a default type a caller
+// adds (@'s .COM, MACRO's .MAR) goes on the file the name stands for, not
+// on the logical name, which with a type added would no longer translate:
+// DEFINE SYS$SYLOGIN SYS$MANAGER:SYLOGIN.COM, then @SYS$SYLOGIN. A search
+// list is left as the name, on the side of its first element, for RMS to
+// search (a default type a caller adds as text is then lost, unconfirmed
+// on VMS, where the default name applies to each element). A
+// process-permanent file's name (SYS$INPUT) is left alone, as is a name
+// whose translation Locate can't place (a terminal), which goes on as a
+// bare name.
+func (s *Session) locateLogical(name string) (FileLocation, bool) {
+	if s.Logicals == nil || !plainName(name) || !s.definesName(strings.ToUpper(name)) {
+		return FileLocation{}, false
+	}
+
+	fs, err := translateSpec(s.Logicals, name)
+	if err != nil || len(fs) == 0 || fs[0].Permanent != nil {
+		return FileLocation{}, false
+	}
+
+	if len(fs) > 1 {
+		if s.classify(fs[0].Spec) != nameVolume || s.checkMounted(name) != nil {
+			return FileLocation{}, false
+		}
+
+		return FileLocation{Name: name}, true
+	}
+
+	eqv := fs[0].Display
+
+	if plainName(eqv) {
+		// A name that translates to another bare name, a file's name, is
+		// that name, wherever a bare name goes; one that is still a
+		// logical name (through a terminal translation) is left alone.
+		if s.definesName(strings.ToUpper(eqv)) {
+			return FileLocation{}, false
+		}
+
+		return FileLocation{Name: eqv, Host: !s.DefaultOnVolume()}, true
+	}
+
+	loc, err := s.Locate(eqv, false)
+	if err != nil {
+		return FileLocation{}, false
+	}
+
+	return loc, true
+}
+
+// plainName reports whether name has no punctuation: only the characters
+// a logical name in a file specification may have (the User's Manual,
+// 11.3.3), so that RMS takes it whole as a logical name.
+func plainName(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '$' || c == '_' || c == '-') {
+			return false
+		}
+	}
+
+	return true
 }
 
 // LocateRelated is Locate for a name given alongside another file,

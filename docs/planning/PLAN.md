@@ -741,4 +741,7 @@ review, and its log the work.
 
 MANUAL.md's section 5, "Accounts and logging in", is the user's side, and VAX-VMS-INTERNALS.md's 7.15 the developer's.
 What the phase left is its doc's "Where things stand".
+Its doc's "Revisions" (2026-11-16) are two fixes after the close-out: a file name that is a logical name alone stands
+for its translation (`@SYS$SYLOGIN`), and a session's input given to `run` is shared a byte at a time by readline and
+DCL's terminal reads, so a script can answer ADDUSER's questions.
 
