@@ -73,6 +73,17 @@ const (
 	// "SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=RWED" in DCL's
 	// (ProtectionText).
 	FormProtection
+
+	// FormDelta is a CPU time in 10-millisecond units ($GETQUI's
+	// CPU_LIMIT and CPU_DEFAULT), written as a delta time,
+	// "   0 00:05:00.00".
+	FormDelta
+
+	// FormOwnerUIC is a UIC as the security displays write an owner
+	// (OwnerText): "[SYSTEM]", "[PROT93,BAT98]" when the group has an
+	// identifier, "[0,0]" for none. VMS 7.1's F$GETQUI wrote its UIC and
+	// OWNER_UIC items so (testdata/bat98).
+	FormOwnerUIC
 )
 
 // Style is which caller's conventions an item's text follows.
@@ -250,6 +261,10 @@ func (env *Environment) ItemText(form ItemForm, data string, s Style) string {
 		return acpName(ItemLongword(data), s)
 	case FormProtection:
 		return ProtectionText(ItemLongword(data), s)
+	case FormDelta:
+		return deltaTicks(ItemLongword(data))
+	case FormOwnerUIC:
+		return env.OwnerText(ItemLongword(data))
 	}
 
 	if s == StyleLIB {

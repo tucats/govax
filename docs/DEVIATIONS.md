@@ -1737,9 +1737,9 @@ choices no fixture has confirmed yet.
   (`Session.FileAttributes`); `internal/corevms/lexical.go`
   (`DeviceScan`, `IdentifierValue`, `IdentifierName`).
 - **What**: the four functions follow the DCL Dictionary (7.3-1).
-  F$CSID, F$GETQUI, and F$LICENSE stay CLI$_LEXNOTIMPL by choice: govax
-  has no cluster, queues, or licenses for them to report. Chosen without
-  VMS:
+  F$CSID and F$LICENSE stay CLI$_LEXNOTIMPL by choice: govax has no
+  cluster or licenses for them to report (F$GETQUI came with Phase 98's
+  batch queues, subtask 9). Chosen without VMS:
   - F$CONTEXT's symbol's value is the context's number, an integer; once
     F$PID's "" or CANCEL ends the context it is "", a string. A symbol
     that names no live context is CLI$_NOTCTX, a criterion added after

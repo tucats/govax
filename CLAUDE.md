@@ -964,7 +964,14 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   counted as 0, `Shell.batchBase`, verify, the end), SYNCHRONIZE
   (`dclshell/dclsync.go`), STOP/QUEUE/ENTRY, F$MODE and JPI$_MODE BATCH,
   TYPE of a wildcard under headings; held to the probe's RUNNING JOBS to
-  ORDER and THE JOB'S VIEW by `internal/console/batch_test.go`.
+  ORDER and THE JOB'S VIEW by `internal/console/batch_test.go`;
+  subtask 9 (2026-11-16) `$GETQUI` and `F$GETQUI`: `corevms/getqui.go`
+  (the functions, each access mode's context, the items by object at
+  their sizes; `Job.Account`), `getquitext.go` (F$GETQUI's item names,
+  forms, and Booleans; `FormDelta`, `FormOwnerUIC`), and
+  `dclshell/dcllexqueue.go`; held to round 2 by `TestGetquiOracle`
+  (BAT98Q run on govax) and to THE JOB'S VIEW and the matrix's cases 5
+  and 6.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

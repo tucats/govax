@@ -165,12 +165,12 @@ func (e *JobUserError) Error() string { return "no account " + e.User }
 // matrix's case 12; which privilege VMS's SUBMIT turns on is
 // unconfirmed). Another user's job needs CMKRNL (ruleSubmitUser), asked
 // after the account is found.
-func (env *Environment) jobAccount(user string) (name string, owner jobqueue.UIC, creds security.Credentials, err error) {
+func (env *Environment) jobAccount(user string) (name, account string, owner jobqueue.UIC, creds security.Credentials, err error) {
 	p := env.Process
 	user = strings.ToUpper(strings.TrimSpace(user))
 
 	if user == "" {
-		return strings.ToUpper(p.Username), jobqueue.UIC(p.UIC), env.Credentials(), nil
+		return strings.ToUpper(p.Username), p.Account, jobqueue.UIC(p.UIC), env.Credentials(), nil
 	}
 
 	// /USER naming the process's own account still reads the file: VMS
@@ -180,23 +180,23 @@ func (env *Environment) jobAccount(user string) (name string, owner jobqueue.UIC
 	reader.Privileges |= p.AuthorizedPrivileges & sysprvBit
 
 	if !security.Check(reader, authorizationProfile, security.Read).Granted {
-		return "", 0, creds, &JobUserError{User: user, Status: rmsPrivilege}
+		return "", "", 0, creds, &JobUserError{User: user, Status: rmsPrivilege}
 	}
 
 	u, ok := env.System.User(user)
 	if !ok {
-		return "", 0, creds, &JobUserError{User: user}
+		return "", "", 0, creds, &JobUserError{User: user}
 	}
 
 	if u.Name == strings.ToUpper(p.Username) {
-		return u.Name, jobqueue.UIC(p.UIC), env.Credentials(), nil
+		return u.Name, p.Account, jobqueue.UIC(p.UIC), env.Credentials(), nil
 	}
 
 	if st := env.requirePrivilege(ruleSubmitUser); st != 0 {
-		return "", 0, creds, queueStatus(st)
+		return "", "", 0, creds, queueStatus(st)
 	}
 
-	return u.Name, jobqueue.UIC(u.UIC), u.AccountCredentials(env.Process.MaxSysGroup), nil
+	return u.Name, u.Account, jobqueue.UIC(u.UIC), u.AccountCredentials(env.Process.MaxSysGroup), nil
 }
 
 // authorizationProfile is the authorization file's security profile,
@@ -262,7 +262,7 @@ func (env *Environment) SubmitJob(r JobRequest) (Submitted, error) {
 		return Submitted{}, queueResult(st, err)
 	}
 
-	user, owner, creds, err := env.jobAccount(r.User)
+	user, account, owner, creds, err := env.jobAccount(r.User)
 	if err != nil {
 		return Submitted{}, err
 	}
@@ -281,7 +281,7 @@ func (env *Environment) SubmitJob(r JobRequest) (Submitted, error) {
 	}
 
 	j := &jobqueue.Job{
-		Name: r.Name, Queue: queueName(r.Queue), User: user, Owner: owner,
+		Name: r.Name, Queue: queueName(r.Queue), User: user, Owner: owner, Account: account,
 		Files: files, Parameters: slices.Clone(r.Parameters),
 		LogFile: r.LogFile, NoLog: r.NoLog, Keep: r.Keep, NoKeep: r.NoKeep, NoPrinter: r.NoPrinter,
 		After: r.After, Priority: r.Priority, CPUTime: r.CPUTime,

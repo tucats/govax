@@ -316,6 +316,8 @@ var serviceRules = func() map[string][]*PrivilegeRule {
 		"SYS$SET_SECURITY": {ruleQueueOperator},
 		"SYS$SNDJBC":       {ruleQueueOperator, ruleQueueManager, ruleSubmitUser, ruleQueuePriority},
 		"SYS$SNDJBCW":      {ruleQueueOperator, ruleQueueManager, ruleSubmitUser, ruleQueuePriority},
+		"SYS$GETQUI":       {ruleQueueOperator},
+		"SYS$GETQUIW":      {ruleQueueOperator},
 
 		"SYS$CREMBX": {ruleCrembxTemporary, ruleCrembxPermanent, ruleLnmSystemTable},
 		"SYS$DELMBX": {ruleDelmbx},

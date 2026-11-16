@@ -138,10 +138,8 @@ func itemByte(v uint8) itemValue  { return itemValue{data: string([]byte{v})} }
 func itemLong(v uint32) itemValue { return itemValue{data: littleEndian(uint64(v), 4)} }
 func itemQuad(v uint64) itemValue { return itemValue{data: littleEndian(v, 8)} }
 
-/*
+// itemWord is a 2-byte numeric item ($GETQUI's QUI$_PROTECTION).
 func itemWord(v uint16) itemValue { return itemValue{data: string([]byte{byte(v), byte(v >> 8)})} }
-itemWork is here for future expansion, noc currently used.
-*/
 
 // padded returns s blank-padded on the right to width characters.
 func padded(s string, width int) string { return fmt.Sprintf("%-*s", width, s) }

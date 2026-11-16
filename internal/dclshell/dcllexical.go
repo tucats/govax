@@ -28,7 +28,8 @@ import (
 // The functions are grouped by what they work on, each group in a file
 // of its own: strings and data types (dcllexstring.go), the process and
 // its command environment (dcllexprocess.go; F$CONTEXT's selections in
-// dcllexcontext.go), files and devices (dcllexfile.go),
+// dcllexcontext.go), the queues (dcllexqueue.go), files and devices
+// (dcllexfile.go),
 // logical names and messages (dcllexname.go), and time
 // (dcllextime.go). Many take a keyword naming what to return, such as
 // F$GETJPI's item or F$PARSE's field: each function's keywords are a
@@ -37,9 +38,9 @@ import (
 // CLI_IVKEYW, with the keyword as its segment (unconfirmed against VMS:
 // whether DCL takes abbreviations of these keywords).
 //
-// The functions VMS 7.3 has that govax doesn't (F$CSID, F$GETQUI,
-// F$LICENSE: govax has no cluster, queues, or licenses for them to
-// report) are CLI_LEXNOTIMPL. So, in a command interpreter with no
+// The functions VMS 7.3 has that govax doesn't (F$CSID, F$LICENSE:
+// govax has no cluster or licenses for them to report) are
+// CLI_LEXNOTIMPL. So, in a command interpreter with no
 // console to ask, is a function that asks about the system.
 //
 // F$CONFIG is govax's own, not VMS's (dcllexconfig.go): it reads govax's
@@ -121,6 +122,9 @@ var lexicalFunctions = map[string]lexicalFunction{
 	"F$SETPRV":      {minArgs: 1, maxArgs: 1, console: true, call: lexSetPrv},
 	"F$USER":        {minArgs: 0, maxArgs: 0, console: true, call: lexUser},
 	"F$VERIFY":      {minArgs: 0, maxArgs: 2, console: true, call: lexVerify},
+
+	// The queues (dcllexqueue.go).
+	"F$GETQUI": {minArgs: 1, maxArgs: 4, console: true, call: lexGetQUI},
 
 	// Files and devices (dcllexfile.go).
 	"F$DEVICE": {minArgs: 0, maxArgs: 4, console: true, call: lexDevice},

@@ -319,8 +319,51 @@
 
 2 F$GETQUI
 
-   Not in govax: it reports batch and print queues, and govax has none.
-   It is DCL-W-LEXNOTIMPL.
+   Returns information about the queue manager, the batch queues, the
+   jobs in them, and the jobs' files, as $GETQUI does.
+
+   Format
+
+     F$GETQUI(function [,item] [,object-id] [,flags])
+
+   The functions are $GETQUI's: CANCEL_OPERATION (or ""), DISPLAY_QUEUE,
+   DISPLAY_JOB, DISPLAY_ENTRY, DISPLAY_FILE, DISPLAY_MANAGER, and
+   TRANSLATE_QUEUE (DISPLAY_FORM and DISPLAY_CHARACTERISTIC return "":
+   govax has no forms or characteristics).  DISPLAY_QUEUE,
+   DISPLAY_MANAGER, and TRANSLATE_QUEUE need an object-id, the queue's
+   name; for DISPLAY_ENTRY it is an entry number.
+
+   The item is one of $GETQUI's, without QUI$_: QUEUE_NAME, JOB_LIMIT,
+   JOB_NAME, ENTRY_NUMBER, USERNAME, PARAMETER_1 to PARAMETER_8,
+   AFTER_TIME, FILE_SPECIFICATION, ...  Counts and flags are integers,
+   times and CPU limits strings, and the bits of the status and flags
+   items have names of their own that return TRUE or FALSE:
+   QUEUE_STOPPED, QUEUE_BUSY, JOB_HOLDING, JOB_EXECUTING, JOB_RETAINED,
+   and the rest.  With no item, the function is done and "" returned.
+
+   The flags are $GETQUI's search flags, separated by commas: WILDCARD,
+   ALL_JOBS, THIS_JOB, FREEZE_CONTEXT, BATCH, EXECUTING_JOBS,
+   HOLDING_JOBS, PENDING_JOBS, RETAINED_JOBS, TIMED_RELEASE_JOBS.
+
+   A name with "*" or "%" (or WILDCARD) is a wildcard search: each call
+   returns the next queue, and "" after the last.  DISPLAY_JOB walks the
+   jobs of the queue the last DISPLAY_QUEUE found, the process's own
+   unless ALL_JOBS; THIS_JOB, in a batch job, is the job itself.  Any
+   error (no such queue, no more queues, ...) returns "".  DCL's searches
+   are its own, apart from a program's $GETQUI.
+
+   Examples:
+
+     $ IF F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME","SYS$BATCH") .EQS. "" -
+          THEN INITIALIZE/QUEUE/BATCH SYS$BATCH
+
+     $ TEMP = F$GETQUI("CANCEL_OPERATION")
+     $ QLOOP:
+     $   Q = F$GETQUI("DISPLAY_QUEUE","QUEUE_NAME","*")
+     $   IF Q .EQS. "" THEN EXIT
+     $   WRITE SYS$OUTPUT Q, " stopped: ", -
+          F$GETQUI("DISPLAY_QUEUE","QUEUE_STOPPED","*","FREEZE_CONTEXT")
+     $   GOTO QLOOP
 
 2 F$GETSYI
 

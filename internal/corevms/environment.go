@@ -42,6 +42,10 @@ type Environment struct {
 	// pendingSync is the SYNCHRONIZE_JOB a $SNDJBCW waits for (sndjbc.go).
 	pendingSync *syncWait
 
+	// quiContexts are $GETQUI's contexts, one per access mode (getqui.go):
+	// an image's, user mode's, and DCL's F$GETQUI, supervisor mode's.
+	quiContexts [4]*quiContext
+
 	// KeepP0 makes image rundown leave P0's pages, and the sections
 	// mapped there, where they are (DeleteP0): the machine sets it while a debugger session holds the
 	// image, whose memory VMS's debugger still shows after the image has

@@ -210,10 +210,13 @@ func passCases(t *testing.T, log, pass string) map[string]string {
 // probe's protection matrix in state A (BAT98_P and BAT98_Dn owned by
 // [SYSTEM], (S:M,O:D,G:R,W:S)): BAT98 and BAT98W with no privilege, who
 // may manage neither queue and create none, and BAT98O with OPER, who may
-// do everything. Each pass's queue commands are its cases 17 to 22, 25 to
-// 28, and 31 (testdata/bat98/bat98p.com).
+// do everything. Each pass's queue commands are its cases 5 and 6
+// (F$GETQUI of the queue's protection and owner, which BAT98 and BAT98W
+// may not see), 17 to 22, 25 to 28, and 31 (testdata/bat98/bat98p.com).
 func TestQueueCommandsMatrix(t *testing.T) {
 	commands := map[string]string{
+		"5":  `WRITE SYS$OUTPUT "  GETQUI PROTECTION ", F$GETQUI("DISPLAY_QUEUE","PROTECTION","BAT98_P")`,
+		"6":  `WRITE SYS$OUTPUT "  GETQUI OWNER ", F$GETQUI("DISPLAY_QUEUE","OWNER_UIC","BAT98_P")`,
 		"17": "STOP/QUEUE/NEXT BAT98_P",
 		"18": "START/QUEUE BAT98_P",
 		"19": "SET QUEUE/JOB_LIMIT=2 BAT98_P",
@@ -226,18 +229,19 @@ func TestQueueCommandsMatrix(t *testing.T) {
 		"28": "DELETE/QUEUE D",
 		"31": "SHOW QUEUE/MANAGER",
 	}
-	order := []string{"17", "18", "19", "20", "21", "22", "25", "26", "27", "28", "31"}
+	order := []string{"5", "6", "17", "18", "19", "20", "21", "22", "25", "26", "27", "28", "31"}
 
 	passes := []struct {
 		log, pass string
+		user      string
 		group     uint32
 		member    uint32
 		privilege []string
 		queue     string
 	}{
-		{"bat98p_a_bat98w.log", "NONE", 0o300, 0o10, nil, "BAT98_D1"},
-		{"bat98p_a_bat98.log", "NONE", 0o200, 0o10, nil, "BAT98_D1"},
-		{"bat98p_a_bat98o.log", "OPER", 0o200, 0o11, []string{"OPER"}, "BAT98_D2"},
+		{"bat98p_a_bat98w.log", "NONE", "BAT98W", 0o300, 0o10, nil, "BAT98_D1"},
+		{"bat98p_a_bat98.log", "NONE", "BAT98", 0o200, 0o10, nil, "BAT98_D1"},
+		{"bat98p_a_bat98o.log", "OPER", "BAT98O", 0o200, 0o11, []string{"OPER"}, "BAT98_D2"},
 	}
 
 	for _, p := range passes {
@@ -254,7 +258,7 @@ func TestQueueCommandsMatrix(t *testing.T) {
 			}
 
 			proc := c.RTL.Process
-			proc.UIC = p.group<<16 | p.member
+			proc.Username, proc.UIC = p.user, p.group<<16|p.member
 			proc.ProcessPrivileges = privilegeMask("NETMBX", "TMPMBX")
 
 			for _, name := range p.privilege {

@@ -705,7 +705,7 @@ Each is one commit, with tests, stopping for review.
    procedures, the files and parameters, the end), the job limit and
    ordering, `/AFTER`'s timer, STOP/QUEUE/ENTRY, SYNCHRONIZE, `/NOTIFY`;
    held to the probe's job logs.
-9. **`$GETQUI` and `F$GETQUI`** (Decision 9), and `LIB$GETQUI` if the
+9. **`$GETQUI` and `F$GETQUI`** (Decision 9; done 2026-11-16), and `LIB$GETQUI` if the
    probe makes it simple; SHOW QUEUE and SHOW ENTRY moved onto
    `$GETQUI`'s code if they aren't already.
 10. **Restart and the session's end** (Decision 11): the manager at
@@ -1222,3 +1222,71 @@ queues is a future phase.
   10: STOP/QUEUE/REQUEUE, SET RESTART_VALUE, and what a session's end does
   to running jobs; THE JOB'S VIEW's F$GETQUI waits for subtask 9.
   Subtask 9, `$GETQUI` and `F$GETQUI`, is next.
+- **2026-11-16** Subtask 9, `$GETQUI` and `F$GETQUI`. The service is
+  `corevms/getqui.go`: `SYS$GETQUI` and `SYS$GETQUIW` (the same: every
+  function completes at once), R0 SS$_BADPARAM for a function or item code
+  out of range, the status in the IOSB; the request's input items into a
+  `QueueQuery`, the function's object found in the database (`readJobs`,
+  so JOBQUEDIS with the manager stopped), each output item from a table by
+  object (`quiQueueItems`, `quiJobItems`, `quiInaccessibleItems`,
+  `quiFileItems`), at its own size (PRIORITY, JOB_LIMIT, BASE_PRIORITY a
+  byte, PROTECTION a word, times quadwords; `itemWord` back in use),
+  truncated to the buffer. The functions: DISPLAY_QUEUE (by name; a
+  wildcard or WILDCARD a search in order of name, FREEZE_CONTEXT the last
+  queue again, NOMOREQUE and then a new search; THIS_JOB the caller's
+  batch job's queue), DISPLAY_JOB (the queue context's jobs in SHOW
+  QUEUE's order, own unless ALL_JOBS, by the job state flags, NOMOREJOB
+  then NOSUCHJOB, NOQUECTX without a queue; THIS_JOB), DISPLAY_ENTRY (by
+  number, no context kept; a wildcard walk of a user's jobs by entry
+  number, NOMOREENT), DISPLAY_FILE (the job context's files, NOMOREFILE
+  then NOSUCHFILE; THIS_JOB the file the job runs), DISPLAY_MANAGER
+  (SYS$QUEUE_MANAGER), TRANSLATE_QUEUE (through LNM$FILE_DEV), and
+  CANCEL_OPERATION; DISPLAY_FORM, DISPLAY_CHARACTERISTIC, and DISPLAY_QMAN
+  JBC$_NOTSUPPORTED. The statuses and flags as round 2 showed them:
+  QUEUE_FLAGS a batch queue's GENERIC_SELECTION and SWAP with a bit for
+  each attribute (case 4's %X000A0401), JOB_STATUS a state's bit
+  (SUSPENDED on a paused queue, ABORTING being ended, INACCESSIBLE), the
+  CONDITION_VECTOR three longwords, AFTER_TIME the submission time for a
+  job with no /AFTER. A job the caller may not read gives only the DCL
+  Dictionary's seven items; a queue whose security the caller may not see
+  gives owner 0 and protection %XFFFF (F$GETQUI's "[0,0]" and "SYSTEM,
+  OWNER, GROUP, WORLD", the matrix) and SECURITY_INACCESSIBLE. Each access
+  mode of a process has a context (`Environment.quiContexts`), so an
+  image's (user mode) and DCL's F$GETQUI (supervisor) are apart; the
+  service's context argument (5.0's nullarg) is ignored. QUI$_ACCOUNT_NAME
+  is the job's account, now kept with it (`Job.Account`, from the process
+  or the /USER account's `UserAccount.Account`). A job $SNDJBC makes no
+  longer spools its log unless LOG_SPOOL says so (case 7's JOB_FLAGS 0),
+  so SHOW ENTRY/FULL shows it /NOPRINT. `F$GETQUI` is
+  `dclshell/dcllexqueue.go`, on `Environment.QueueInformation`, with the
+  names and forms of `corevms/getquitext.go` (`QueueItemNamed`: Table
+  DCLI-9's items, the Booleans each a bit of its status or flags item;
+  `QueueFunctionCode`, `QueueSearchFlag`); new item forms `FormDelta` (a
+  CPU limit, "   0 00:05:00.00") and `FormOwnerUIC` (the security
+  displays' owner, "[PROT93,BAT98]" as VMS 7.1's F$GETQUI wrote it); an
+  object-id required for DISPLAY_QUEUE and the like (ARGREQ, BAT98J's two
+  lines), "" for any error. `SYS$GETQUI[W]`'s privilege rule is
+  `ruleQueueOperator`. Tests: `TestGetquiOracle` (`internal/console/getqui_test.go`) runs BAT98Q
+  itself on govax, MACRO, LINK, and RUN, and holds its 59 cases to round
+  2's log line for line, the times masked (its JBC MESSAGES dump left out:
+  govax's system messages are VMS 7.3's file's, `TestJBCSharedMessages`);
+  `TestBatchJobViewOracle` now holds BAT98J's F$GETQUI section to VMS's,
+  as SYSTEM and BAT98 (the test's accounts now have BAT98ACCT.COM's
+  account, GOVAX98); `TestQueueCommandsMatrix` has the matrix's cases 5 and
+  6 (and each pass its username); `TestGetquiSearches` the walks,
+  FREEZE_CONTEXT, an unreadable job, TRANSLATE_QUEUE, DISPLAY_MANAGER, and
+  the modes' contexts. HELP LEXICALS F$GETQUI written, MANUAL.md's and
+  DEVIATIONS.md's "not provided" corrected. Not done, by choice:
+  SHOW QUEUE and SHOW ENTRY still read the database through
+  `QueueViews` and `EntryViews`, not `$GETQUI`'s code, which shares their
+  access rules (`QueueSecurityVisible`, `JobAccess`) and database reading,
+  so the two can't disagree on who sees what; `LIB$GETQUI` stays NOTIMPL,
+  the probe having asked nothing of it. Unconfirmed: a DISPLAY_QUEUE
+  without a wildcard looks the queue up afresh each call; a new wildcard
+  pattern starts a new search; DISPLAY_ENTRY's and DISPLAY_FILE's ends; the
+  QUEUE_STATUS bits of a started or paused queue (the probe's $GETQUI saw
+  only stopped ones); an item with no value (a time not set, a form's) is
+  returned with length 0; THIS_JOB outside a batch job is NOSUCHJOB;
+  TRANSLATE_QUEUE of a name that names no queue NOSUCHQUE; DCL's queue
+  commands leave F$GETQUI's context alone (the Dictionary says VMS's SHOW
+  QUEUE destroys it). Subtask 10, restart and the session's end, is next.

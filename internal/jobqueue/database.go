@@ -177,6 +177,10 @@ type Job struct {
 	User  string `json:"user"`
 	Owner UIC    `json:"owner"`
 
+	// Account is that user's account name, the authorization file's
+	// (JIB$T_ACCOUNT; $GETQUI's QUI$_ACCOUNT_NAME).
+	Account string `json:"account,omitempty"`
+
 	// Status is the job's state.
 	Status JobStatus `json:"status"`
 

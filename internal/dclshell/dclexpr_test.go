@@ -236,7 +236,8 @@ func TestLexicalAbbreviation(t *testing.T) {
 		{"F$S", vmserrors.CLI_ABFNAM},
 		{"F$LENGTHY", vmserrors.CLI_IVFNAM},
 		{"F$TRNLNM", 0},
-		{"F$GETQUI", vmserrors.CLI_LEXNOTIMPL},
+		{"F$GETQUI", 0},
+		{"F$CSID", vmserrors.CLI_LEXNOTIMPL},
 	} {
 		_, err := findLexicalFunction(tc.name)
 		if (tc.code == 0 && err != nil) || (tc.code != 0 && !hasStatus(err, tc.code)) {

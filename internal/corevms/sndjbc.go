@@ -806,7 +806,13 @@ func serviceSysSndjbc(env *Environment, argv []uint32, wait bool) (uint32, error
 
 	r0 := uint32(ssNormal)
 
+	// A job $SNDJBC makes doesn't spool its log unless LOG_SPOOL says so:
+	// VMS 7.1's held job of ENTER_FILE had no JOB_LOG_SPOOL flag ($GETQUI's
+	// JOB_FLAGS 0, round 2's case 7), where SUBMIT's default /PRINTER asks
+	// for it.
 	var r sjcRequest
+
+	r.job.NoPrinter = true
 
 	status := env.readSjcItems(itmlst, function, &r)
 
@@ -859,4 +865,6 @@ func serviceSysSndjbc(env *Environment, argv []uint32, wait bool) (uint32, error
 func registerQueueServices(t *ServiceTable) {
 	t.Register("SYS$SNDJBC", func(env *Environment, argv []uint32) (uint32, error) { return serviceSysSndjbc(env, argv, false) })
 	t.Register("SYS$SNDJBCW", func(env *Environment, argv []uint32) (uint32, error) { return serviceSysSndjbc(env, argv, true) })
+	t.Register("SYS$GETQUI", serviceSysGetqui)
+	t.Register("SYS$GETQUIW", serviceSysGetqui)
 }

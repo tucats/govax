@@ -3098,8 +3098,10 @@ while unique (`F$LEN` is `F$LENGTH`).
 | `F$TIME()` | the date and time now |
 | `F$CVTIME([time] [,format] [,field])` | a time converted to `COMPARISON`, `ABSOLUTE`, or `DELTA` form, or one field: `DATE`, `TIME`, `YEAR`, `WEEKDAY`, ... |
 
-`F$CSID`, `F$GETQUI`, and `F$LICENSE` aren't provided (no cluster,
-queues, or licenses). Here is a procedure that tours some of them:
+`F$GETQUI(function [,item] [,object-id] [,flags])` returns information
+about the batch queues, their jobs, and the queue manager, as `$GETQUI`
+does (HELP LEXICALS F$GETQUI). `F$CSID` and `F$LICENSE` aren't provided
+(no cluster or licenses). Here is a procedure that tours some of them:
 
 ```text
 $ ! LEX.COM -- a tour of lexical functions

@@ -29,6 +29,9 @@ type UserAccount struct {
 	// UIC is the account's UIC.
 	UIC uint32
 
+	// Account is its account name (UAF$T_ACCOUNT).
+	Account string
+
 	// Privileges are its authorized privileges (UAF$Q_PRIV), PRV$V_ bits.
 	Privileges uint64
 
@@ -124,7 +127,7 @@ func (s *System) User(name string) (UserAccount, bool) {
 // userAccount is the UserAccount of f's record r: the identifiers its
 // UIC holds, by value.
 func userAccount(f *uaf.File, r *uaf.Record) UserAccount {
-	return UserAccount{Name: r.Username, UIC: uint32(r.UIC), Privileges: uint64(r.Privileges), Rights: heldRights(f, r.UIC)}
+	return UserAccount{Name: r.Username, UIC: uint32(r.UIC), Account: r.Account, Privileges: uint64(r.Privileges), Rights: heldRights(f, r.UIC)}
 }
 
 // heldRights are the identifiers uic holds in f, with the attributes of

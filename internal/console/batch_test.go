@@ -140,6 +140,7 @@ func batchConsole(t *testing.T) (*console.Console, func(string) string) {
 			r, _ := f.Find(name)
 			r.Device, r.Directory = "DUA1:", "["+name+"]"
 			r.DefaultPrivileges = r.Privileges
+			r.Account = "GOVAX98"
 		}
 
 		return nil
@@ -701,6 +702,49 @@ func TestBatchJobViewOracle(t *testing.T) {
 
 			if !slices.Contains(log, " BATCH                             ") {
 				t.Errorf("no rights identifier BATCH in the job's SHOW PROCESS/RIGHTS")
+			}
+
+			// F$GETQUI of the job's own job and file (subtask 9), line
+			// for line: its two DISPLAY_QUEUE lines with no object-id are
+			// DCL's ARGREQ. The times, the entry number, and the PID are
+			// the run's; the node is govax's.
+			getqui := func(lines []string) []string {
+				var kept []string
+
+				in := false
+
+				for _, line := range lines {
+					switch {
+					case line == "######## F$GETQUI":
+						in = true
+					case strings.HasPrefix(line, "######## "):
+						in = false
+					}
+
+					if !in {
+						continue
+					}
+
+					for _, skip := range []string{"  AFTER_TIME = ", "  SUBMISSION_TIME = ", "  ENTRY_NUMBER = ", "  JOB_PID = "} {
+						if strings.HasPrefix(line, skip) {
+							line = skip
+						}
+					}
+
+					line = strings.Replace(line, "_SIMVAX$", "_GOVAX$", 1)
+					line = strings.Replace(line, "[PROT93,", "[", 1)
+					kept = append(kept, line)
+				}
+
+				return kept
+			}
+
+			if g, w := strings.Join(getqui(log), "\n"), strings.Join(getqui(vax), "\n"); g != w {
+				t.Errorf("the job's F$GETQUI:\n got %s\nwant %s", g, w)
+			}
+
+			if pid := item(log, "JOB_PID"); pid != item(log, "PID") {
+				t.Errorf("F$GETQUI's JOB_PID %q, the job's PID %q", pid, item(log, "PID"))
 			}
 		})
 	}
