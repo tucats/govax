@@ -447,7 +447,7 @@ Each is one commit, with tests, stopping for review.
    `RAM_DISK` and `deviceTypeNames`, the CMKRNL rule, the configuration
    keys `vax.ramdisk.size` and `vax.ramdisk.limit` in `validConfigs`, and
    the messages.
-5. **MOUNT, DISMOUNT, and SHOW** (Decisions 4, 6, and 7): first and later
+5. **MOUNT, DISMOUNT, and SHOW** (done 2026-11-16) (Decisions 4, 6, and 7): first and later
    mounts of an MD device, the label parameter and INCVOLLABEL, the FILE
    parameter's prompt moved into the handler, owner and protection,
    `/NOWRITE`; SHOW DEVICE's type name and memory lines; `$GETDVI`
@@ -599,3 +599,35 @@ The answers (2026-11-16):
   CMKRNL; DEFINE/DEVICE of a DK device still needing nothing);
   `dclcmd`'s `TestParseRAMDiskBlocks` and `TestRAMDiskName`; `io`'s
   `TestRedefine`.
+- **2026-11-16** Subtask 5: MOUNT, DISMOUNT, and SHOW of RAM disks, as
+  Decisions 4, 6, and 7 have them. `MountCommand` translates the device
+  and sends an MD unit to `mountRAMDisk` (`dclcmd/ramdisk.go`), whose
+  FILE parameter is the label: a unit that isn't a RAM disk is
+  `%SYSTEM-W-NOSUCHDEV` (new, SS$_NOSUCHDEV's value, so a warning, where
+  the plan said F), a mounted one DEVMOUNT; the first mount's volume is
+  labeled by the parameter, the record's `/VOLNAME`, or the unit's name,
+  with the record's `/CLUSTER`, the process's UIC as owner, and no volume
+  protection, and `/NOWRITE` there is RAMNOWRITE; a later mount with a
+  label checks it once mounted and, if it isn't the volume's, dismounts
+  and says `%MOUNT-F-INCVOLLABEL` (new, MOUNT facility, SS$_INCVOLLABEL's
+  text). DISK$label and MOUNTED are any volume's (`defineVolumeName`,
+  split out of `Mount`). `MOUNT MDA` takes the lowest unit that is a RAM
+  disk with nothing mounted (`ResolveUnit`'s `freeRAMDisk`), a choice
+  the plan left open; with none, NOSUCHDEV. The grammar's FILE lost its
+  `/prompt=`, and MOUNT asks "_Container file: " itself for other devices
+  (`askContainerFile`) through `Context.AskParameter`, the console's
+  `Interpreter.ParameterPrompter`: by DCL's rule, only for a command typed
+  at the terminal, again while the reply is empty, a reply read as the
+  grammar reads a `$string` (`parameterText`), Ctrl/Z dropping the command
+  with $STATUS %X10000001, and INSFPRM in a procedure. SHOW DEVICE/FULL
+  of a RAM disk adds the memory lines (`showRAMDiskMemory`), and an MD
+  device's record now has a default buffer size of 512, as a disk's.
+  DISMOUNT needed nothing. Tests: `internal/console/ramdiskmount_test.go`'s
+  `TestRAMDisk` (the Goal's session; DISK$label; F$GETDVI's MNT, VOLNAM,
+  DEVTYPE, MAXBLOCK; the refusals; INCVOLLABEL leaving the unit
+  unmounted; MDA's unit choice; RAMNOWRITE; a read-only later mount
+  refusing a write; a redefinition's empty volume; SHOW DEVICE in both
+  forms and the limit read as it changes; the volume's owner and
+  protection by SHOW SECURITY; a FORTRAN program writing a file that
+  outlives a DISMOUNT) and `TestMountPrompt`; `internal/dcl`'s two MOUNT
+  grammar tests now hold FILE optional.

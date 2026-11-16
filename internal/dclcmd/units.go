@@ -3,6 +3,7 @@ package dclcmd
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
@@ -16,6 +17,10 @@ import (
 // which units are left. It names the controller alone instead, DUA, and
 // gets the lowest unit nothing is mounted on: DUA1, beside the system
 // volume.
+
+// ResolveUnit also chooses an MD controller's unit for MOUNT: a RAM disk
+// has to be defined before it's mounted, so MOUNT MDA takes the lowest
+// unit that is a RAM disk with nothing mounted on it.
 
 // controllerName is a device name with no unit: two letters of device
 // type and a controller letter.
@@ -43,10 +48,46 @@ func (c *Context) ResolveUnit(device string) string {
 		}
 	}
 
+	// An MD controller's unit must be a RAM disk already: the lowest one
+	// that is, with nothing mounted (docs/planning/PHASE-96 - RAM
+	// disk.md, Decision 6). With none, the rule below gives a unit MOUNT
+	// will find isn't one (NOSUCHDEV).
+	if unit, ok := c.freeRAMDisk(bare); ok {
+		return unit
+	}
+
 	for unit := 0; ; unit++ {
 		candidate := fmt.Sprintf("%s%d", bare, unit)
 		if _, mounted := c.Mounts.Lookup(candidate); !mounted {
 			return candidate
 		}
 	}
+}
+
+// freeRAMDisk returns the lowest unit of the MD controller controller
+// ("MDA") that is a RAM disk with nothing mounted on it, and false when
+// controller isn't an MD controller or has no such unit.
+func (c *Context) freeRAMDisk(controller string) (string, bool) {
+	if _, ok := RAMDiskName(controller); !ok || c.Devices == nil {
+		return "", false
+	}
+
+	best, found := 0, false
+
+	for _, d := range c.Devices.All() {
+		number, err := strconv.Atoi(strings.TrimPrefix(d.Name, controller))
+		if !strings.HasPrefix(d.Name, controller) || err != nil || number < 0 {
+			continue
+		}
+
+		if _, mounted := c.Mounts.Lookup(d.Name); mounted || !c.Mounts.IsMemory(d.Name) {
+			continue
+		}
+
+		if !found || number < best {
+			best, found = number, true
+		}
+	}
+
+	return fmt.Sprintf("%s%d", controller, best), found
 }

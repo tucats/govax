@@ -92,14 +92,20 @@ func (c *Context) Mount(device, path string, write bool) error {
 		c.Devices.Define(device, iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
 	}
 
+	c.defineVolumeName(device)
+
+	return nil
+}
+
+// defineVolumeName defines DISK$label in the system table for the volume
+// just mounted on device, as VMS's MOUNT does. A label that isn't a
+// usable name just goes without one; the mount itself has already
+// succeeded.
+func (c *Context) defineVolumeName(device string) {
 	if name, ok := c.volumeLogicalName(device); ok {
-		// A label that isn't a usable name just goes without one; the
-		// mount itself has already succeeded.
 		eqv := []lnm.Equivalence{{Value: "_" + device + ":", Attrs: lnm.AttrConcealed | lnm.AttrTerminal}}
 		_, _ = c.Logicals.Define(lnm.SystemTableName, name, lnm.Executive, 0, eqv)
 	}
-
-	return nil
 }
 
 // MountCommand is the console's MOUNT command: Mount, then, when log is
@@ -119,14 +125,39 @@ func (c *Context) Mount(device, path string, write bool) error {
 // privileges.md, Decision 10); without it MOUNT says %SYSTEM-F-NOPRIV
 // (govax's choice of message). STARTUP.COM's mounts, before
 // INITIALIZE/MEMORY makes process 1, aren't checked.
-func (c *Context) MountCommand(device, path string, write, log bool) error {
+//
+// For an MD device, a RAM disk, file is the volume label, and there is no
+// container file (mountRAMDisk; docs/planning/PHASE-96 - RAM disk.md,
+// Decision 6). For any other device a missing file is asked for at the
+// terminal ("_Container file: "), as DCL asked for it when the grammar
+// required it; a command not typed at the terminal gets DCL's
+// %DCL-W-INSFPRM instead, and Ctrl/Z at the prompt drops the command.
+func (c *Context) MountCommand(device, file string, write, log bool) error {
 	if err := c.commandPrivilege("MOUNT"); err != nil {
 		return err
 	}
 
 	device = c.ResolveUnit(device)
 
-	if err := c.Mount(device, path, write); err != nil {
+	physical, err := c.mountDevice(device)
+	if err != nil {
+		return err
+	}
+
+	if unit, ok := RAMDiskName(physical); ok {
+		return c.mountRAMDisk(unit, file, write, log)
+	}
+
+	if strings.TrimSpace(file) == "" {
+		reply, err := c.askContainerFile()
+		if err != nil || reply == "" {
+			return err
+		}
+
+		file = reply
+	}
+
+	if err := c.Mount(device, file, write); err != nil {
 		return err
 	}
 
@@ -135,6 +166,44 @@ func (c *Context) MountCommand(device, path string, write, log bool) error {
 	}
 
 	return nil
+}
+
+// askContainerFile asks for MOUNT's container file at the terminal, again
+// while the reply is empty, as DCL asks for a required parameter. It
+// returns "" with no error when Ctrl/Z ends the prompt, which drops the
+// command with $STATUS SS$_NORMAL, shown, as DCL does
+// (dclshell.parseCommand). With no terminal to ask, the parameter is
+// missing: %DCL-W-INSFPRM.
+func (c *Context) askContainerFile() (string, error) {
+	if c.AskParameter == nil {
+		return "", vmserrors.New(vmserrors.CLI_INSFPRM)
+	}
+
+	for {
+		reply, ok := c.AskParameter("_Container file: ")
+		if !ok {
+			if c.SetStatus != nil {
+				c.SetStatus(ssNormal | stsInhibitMsg)
+			}
+
+			return "", nil
+		}
+
+		if reply = strings.TrimSpace(reply); reply != "" {
+			return parameterText(reply), nil
+		}
+	}
+}
+
+// parameterText is a reply to a parameter prompt as the grammar reads a
+// $string parameter typed on the line: a quoted string without its quotes
+// (and "" in it one "), anything else uppercased.
+func parameterText(reply string) string {
+	if len(reply) >= 2 && reply[0] == '"' && reply[len(reply)-1] == '"' {
+		return strings.ReplaceAll(reply[1:len(reply)-1], `""`, `"`)
+	}
+
+	return strings.ToUpper(reply)
 }
 
 // reportMounted shows, when the console is verbose, the MOUNTED message

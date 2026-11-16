@@ -11,6 +11,7 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/security"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -182,6 +183,11 @@ func (c *Context) defineRAMDisk(name string, opts iodev.DeviceOptions, log bool)
 	opts.DevType = iodev.DeviceTypeRAMDisk
 	opts.DevChar |= ramDiskChar
 	opts.MaxBlock = size
+
+	// A disk's buffer is a block, unless /DEVBUFSIZ said otherwise.
+	if opts.DevBufSize == 0 {
+		opts.DevBufSize = 512
+	}
 	c.Devices.Redefine(unit, opts)
 
 	if log {
@@ -235,4 +241,78 @@ func (c *Context) ramDiskRefusal(err error, unit string) error {
 	}
 
 	return vmserrors.Wrap(vmserrors.SS_NOMOUNT, err, unit)
+}
+
+// mountRAMDisk is MOUNT of the MD device unit, a RAM disk
+// (docs/planning/PHASE-96 - RAM disk.md, Decisions 4 and 6). label is
+// MOUNT's second parameter, which for a RAM disk is the volume label:
+//
+//   - a unit DEFINE/DEVICE hasn't made a RAM disk is %SYSTEM-W-NOSUCHDEV
+//     (MOUNT makes no MD device, as it would a DU one: it wouldn't know
+//     the size), and one mounted already %SYSTEM-F-DEVMOUNT;
+//   - the first mount gives the disk a new, empty volume, labeled label,
+//     or the record's /VOLNAME, or the unit's name, with the record's
+//     /CLUSTER, owned by the mounting process's UIC, and with no volume
+//     protection (S:RWED,O:RWED,G:RWED,W:RWED), so each directory's own
+//     protection decides; it must be writable (%VAX-W-RAMNOWRITE);
+//   - a later mount finds the volume as the last DISMOUNT left it; a label
+//     given must be the volume's (%MOUNT-F-INCVOLLABEL), and with none any
+//     volume mounts.
+//
+// The rest is any volume's: DISK$label, and the MOUNTED message unless
+// log is false.
+func (c *Context) mountRAMDisk(unit, label string, write, log bool) error {
+	if !c.Mounts.IsMemory(unit) {
+		return vmserrors.New(vmserrors.SS_NOSUCHDEV)
+	}
+
+	if _, mounted := c.Mounts.Lookup(unit); mounted {
+		return vmserrors.New(vmserrors.SS_DEVMOUNT, unit)
+	}
+
+	label = strings.ToUpper(strings.TrimSpace(label))
+	first := !c.Mounts.MemoryHasVolume(unit)
+
+	opts := rms.MemoryVolume{Label: label, Owner: security.UIC(c.processUIC())}
+
+	if first {
+		if !write {
+			return vmserrors.New(vmserrors.VAX_RAMNOWRITE, "_"+unit+":")
+		}
+
+		if d, found := c.Devices.Find(unit); found {
+			if opts.Label == "" {
+				opts.Label = strings.ToUpper(strings.TrimSpace(d.VolName))
+			}
+
+			opts.ClusterSize = uint16(d.Cluster)
+		}
+
+		if opts.Label == "" {
+			opts.Label = unit
+		}
+	}
+
+	if err := c.Mounts.MountMemory(unit, write, opts); err != nil {
+		return vmserrors.Wrap(vmserrors.SS_NOMOUNT, err, unit)
+	}
+
+	// A later mount's label is checked against the volume's, which can
+	// only be read once it's mounted.
+	if !first && label != "" {
+		have, _ := c.Mounts.VolumeLabel(unit)
+		if strings.ToUpper(strings.TrimSpace(have)) != label {
+			_ = c.Mounts.Dismount(unit)
+
+			return vmserrors.New(vmserrors.MOUNT_INCVOLLABEL)
+		}
+	}
+
+	c.defineVolumeName(unit)
+
+	if log {
+		c.reportMounted(unit, false)
+	}
+
+	return nil
 }

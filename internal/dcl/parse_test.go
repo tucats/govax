@@ -271,11 +271,19 @@ func TestParse_dismount(t *testing.T) {
 	}
 }
 
+// TestParse_mountMissingFile: MOUNT's FILE parameter is optional in the
+// grammar, since a RAM disk's MOUNT (MOUNT MDA0:) has none; MOUNT asks
+// for another device's container file itself (Phase 96).
 func TestParse_mountMissingFile(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	if _, err := g.Parse("MOUNT DUA0"); err == nil {
-		t.Error("expected error for missing required FILE parameter")
+	r, err := g.Parse("MOUNT DUA0")
+	if err != nil {
+		t.Fatalf("MOUNT DUA0: %v", err)
+	}
+
+	if r.Present("FILE") {
+		t.Errorf("FILE present in %q", "MOUNT DUA0")
 	}
 }
 

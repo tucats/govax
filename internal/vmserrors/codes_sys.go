@@ -25,6 +25,7 @@ const (
 	sysDevNotMount uint32 = 15   // real SS$_DEVNOTMOUNT's message field: 124 >> 3
 	sysNoMount     uint32 = 1297 // real SS$_NOMOUNT's message field: 10380 >> 3
 	sysNoSuchFile  uint32 = 290  // real SS$_NOSUCHFILE's message field: 2320 >> 3
+	sysNoSuchDev   uint32 = 289  // real SS$_NOSUCHDEV's message field: 2312 >> 3
 
 	// Logical-name service codes (docs/planning/PHASE-25.md). Values and message
 	// texts are from the real VMS 7.3 SYSMSG source listing
@@ -95,6 +96,12 @@ const (
 	// expected outcome rather than a hard failure.
 	SS_NOSUCHFILE = SYSFacility<<FacilityPosition | sysNoSuchFile<<MessagePosition | StatusWarning
 
+	// SS_NOSUCHDEV is real VMS's SS$_NOSUCHDEV (2312), "no such device
+	// available", a warning as $SSDEF has it: MOUNT of an MD device no
+	// DEFINE/DEVICE has made a RAM disk (docs/planning/PHASE-96 - RAM
+	// disk.md, Decision 6).
+	SS_NOSUCHDEV = SYSFacility<<FacilityPosition | sysNoSuchDev<<MessagePosition | StatusWarning
+
 	// Logical-name service codes (internal/lnm, docs/planning/PHASE-25.md). The two
 	// success codes are returned by $CRELNM/$CRELNT rather than as errors,
 	// but are defined here so their messages are registered too.
@@ -126,6 +133,7 @@ func init() {
 	DefineMessage(SS_DEVNOTMOUNT, SYSFacility, "DEVNOTMOUNT", "Device !S not mounted")
 	DefineMessage(SS_NOMOUNT, SYSFacility, "NOMOUNT", "Unable to complete MOUNT/DISMOUNT operation on device !S")
 	DefineMessage(SS_NOSUCHFILE, SYSFacility, "NOSUCHFILE", "File !S not found")
+	DefineMessage(SS_NOSUCHDEV, SYSFacility, "NOSUCHDEV", "no such device available")
 	DefineMessage(SS_NOPRIV, SYSFacility, "NOPRIV", "insufficient privilege or object protection violation")
 	DefineMessage(SS_DUPLNAM, SYSFacility, "DUPLNAM", "duplicate name")
 	DefineMessage(SS_IVLOGNAM, SYSFacility, "IVLOGNAM", "invalid logical name")

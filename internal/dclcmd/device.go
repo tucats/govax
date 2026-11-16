@@ -221,6 +221,26 @@ func (c *Context) showDiskDeviceFull(d *iodev.Device) {
 	c.Printf("\n")
 	c.statRow("Volume label", fmt.Sprintf("%q", volLabel), "Cluster size", clusterSize)
 	c.statRow("Number of files", fileCount, "Maximum files allowed", maxFiles)
+
+	if c.Mounts.IsMemory(d.Name) {
+		c.showRAMDiskMemory(d.Name)
+	}
+}
+
+// showRAMDiskMemory adds govax's own lines to a RAM disk's SHOW
+// DEVICE/FULL (docs/planning/PHASE-96 - RAM disk.md, Decision 7): the
+// host memory the disk holds now, and every RAM disk's defined size
+// against the limit (vax.ramdisk.limit), read now as DEFINE/DEVICE reads
+// it:
+//
+//	Host memory in use          10240 KB    RAM disks total     20000 of 512000 blocks
+func (c *Context) showRAMDiskMemory(device string) {
+	defined, _ := c.Mounts.MemoryTotal()
+	limit := ramDiskSetting(RAMDiskLimitSetting, DefaultRAMDiskLimit)
+
+	c.Printf("\n")
+	c.statRow("Host memory in use", fmt.Sprintf("%d KB", c.Mounts.MemoryInUse(device)/1024),
+		"RAM disks total", fmt.Sprintf("%d of %d blocks", defined, limit))
 }
 
 // statRow prints one line of SHOW DEVICE/FULL's two-column stat block:

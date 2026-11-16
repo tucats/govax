@@ -452,9 +452,12 @@ grammar console
         parameter   device/id=701               -
                     /type=$name                 -
                     /prompt="Device"
+        ! FILE is a container file, or for an MD device (a RAM disk) the
+        ! volume label. It has no /prompt=, since a RAM disk needs none:
+        ! MOUNT asks for "Container file" itself for other devices
+        ! (internal/dclcmd/mount.go, Phase 96).
         parameter   file/id=702                 -
-                    /type=$string               -
-                    /prompt="Container file"
+                    /type=$string
         qualifier   write/id=703
         qualifier   log/id=704
 

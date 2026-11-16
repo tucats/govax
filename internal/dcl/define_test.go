@@ -157,8 +157,10 @@ func TestLoadEvaxGrammar_mountDismount(t *testing.T) {
 		t.Errorf("MOUNT parameter 0 = %+v, want required DEVICE", mount.Parameters[0])
 	}
 
-	if mount.Parameters[1].Name != "FILE" || !mount.Parameters[1].required() {
-		t.Errorf("MOUNT parameter 1 = %+v, want required FILE", mount.Parameters[1])
+	// FILE is optional: a RAM disk's is its label, and MOUNT asks for a
+	// container file itself (Phase 96).
+	if mount.Parameters[1].Name != "FILE" || mount.Parameters[1].required() {
+		t.Errorf("MOUNT parameter 1 = %+v, want optional FILE", mount.Parameters[1])
 	}
 
 	if _, _, err := mount.qualifier("WRITE"); err != nil {

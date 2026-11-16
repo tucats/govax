@@ -239,6 +239,18 @@ func (c *Interpreter) parseCommand(line string) (*dcl.Result, error) {
 	return r, err
 }
 
+// ParameterPrompter returns what asks at the terminal for a parameter a
+// command's handler finds missing (dclcmd.Context.AskParameter), by the
+// rule parseCommand prompts by: nil for a command not read from the
+// terminal, or with no terminal input to read.
+func (c *Interpreter) ParameterPrompter() func(prompt string) (string, bool) {
+	if !c.readingTerminal() || (c.subCLI == nil && c.In == nil) {
+		return nil
+	}
+
+	return c.readTerminal
+}
+
 // readingTerminal says whether the command being run was read from the
 // terminal: at command level 0, or typed at the Ctrl/Y level (which
 // leaves the interrupted procedure's levels in place), not in a

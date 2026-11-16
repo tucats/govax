@@ -16,6 +16,7 @@ const (
 	mountSysFiles
 	mountSysKept
 	mountSysUpdated
+	mountIncVolLabel
 )
 
 // MOUNT facility status codes.
@@ -56,6 +57,10 @@ const (
 	// MOUNT_SYSUPDATED reports the files the refresh wrote on a system
 	// volume that was there already: newer copies, and missing files.
 	MOUNT_SYSUPDATED = MOUNTFacility<<FacilityPosition | mountSysUpdated<<MessagePosition | StatusInfo
+	// MOUNT_INCVOLLABEL reports a MOUNT whose label isn't the volume's,
+	// with SS$_INCVOLLABEL's text: a RAM disk mounted again under another
+	// label (docs/planning/PHASE-96 - RAM disk.md, Decision 6).
+	MOUNT_INCVOLLABEL = MOUNTFacility<<FacilityPosition | mountIncVolLabel<<MessagePosition | StatusSevere
 )
 
 func init() {
@@ -70,5 +75,6 @@ func init() {
 	DefineMessage(MOUNT_SYSINIT, MOUNTFacility, "SYSINIT", "system volume !S initialized again; the old one is !S")
 	DefineMessage(MOUNT_SYSFILES, MOUNTFacility, "SYSFILES", "system volume !S could not be brought up to date")
 	DefineMessage(MOUNT_SYSKEPT, MOUNTFacility, "SYSKEPT", "!S was changed, govax's new version not installed")
+	DefineMessage(MOUNT_INCVOLLABEL, MOUNTFacility, "INCVOLLABEL", "incorrect volume label")
 	DefineMessage(MOUNT_SYSUPDATED, MOUNTFacility, "SYSUPDATED", "!S on system volume !S updated by this govax")
 }

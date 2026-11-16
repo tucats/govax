@@ -65,6 +65,14 @@ type Context struct {
 	// RETURN"); ok is false at its end.
 	ReadReply func() (line string, ok bool)
 
+	// AskParameter asks at the terminal for a parameter a command was
+	// given without, as DCL asks for a required one: it shows prompt and
+	// reads the reply, ok false at the terminal's end of file (Ctrl/Z). It
+	// is nil when the command wasn't typed at the terminal (a procedure's,
+	// or a test's with no input), which DCL never prompts for (MOUNT's
+	// container file).
+	AskParameter func(prompt string) (reply string, ok bool)
+
 	// TypeDCL types spec if it names something only DCL has (SYS$INPUT
 	// in a procedure, a file DCL's OPEN opened), reporting whether it
 	// did.

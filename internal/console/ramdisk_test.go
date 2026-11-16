@@ -39,7 +39,7 @@ func ramDiskConsole(t *testing.T) (*console.Console, func(string) string) {
 
 	t.Cleanup(func() {
 		_ = c.Mounts.DismountAll()
-		c.Mounts.ReleaseMemory()
+		_ = c.Mounts.ReleaseMemory()
 	})
 
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
