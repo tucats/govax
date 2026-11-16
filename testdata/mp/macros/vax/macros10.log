@@ -1,0 +1,309 @@
+$ ! MACROS10.COM - round 10 of the system service macro probes
+$ ! (testdata/mp/macros/README.md). Written by gen.go. MACROS.COM runs it.
+$ !
+$ ! Each program is assembled with /NOLIST, so no listing of a macro
+$ ! expansion is made, and its object is analyzed.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ MACRO/NOLIST R10_SNDJBC
+                                 3C  000A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     000B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0086       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0087       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  015E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     015F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0174       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0175       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01BA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01D0       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01D1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01EA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01EB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0200       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0201       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  021A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     021B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0230       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0231       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  024C       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     024D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0264       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0265       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0280       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0281       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0298       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0299       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  02AE       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02AF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  03DA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     03DB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0402       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0403       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R10_SNDJBC.ANL R10_SNDJBC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R10_SNDJBC.OBJ;1                           0 errors
+$ MACRO/NOLIST R10_SNDJBCW
+                                 3C  000A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     000B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0086       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0087       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  015E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     015F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0174       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0175       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01BA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01D0       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01D1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01EA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01EB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0200       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0201       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  021A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     021B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0230       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0231       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  024C       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     024D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0264       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0265       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0280       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0281       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0298       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0299       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  02AE       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02AF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  03DA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     03DB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0402       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0403       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R10_SNDJBCW.ANL R10_SNDJBCW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R10_SNDJBCW.OBJ;1                          0 errors
+$ MACRO/NOLIST R10_GETQUI
+                                 3C  000A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     000B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0092       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0093       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  017A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     017B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0190       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0191       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01DA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01DB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01F0       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01F1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  020A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     020B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0220       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0221       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  023A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     023B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     024A       
+%MACRO-E-ASGNMNTSYN, Assignment syntax error                             !
+                                 3C  024E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error    !
+                                     024F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  026A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     026B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0282       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0283       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  029E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     029F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  02B6       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02B7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  02CC       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02CD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                   00000000'EF   DD  02CD       
+%MACRO-E-OPRNDSYNX, Operand syntax error                      !
+                                 3C  02E6       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02E7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0416       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0417       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  043E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     043F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R10_GETQUI.ANL R10_GETQUI.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R10_GETQUI.OBJ;1                           0 errors
+$ MACRO/NOLIST R10_GETQUIW
+                                 3C  000A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     000B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0092       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0093       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  017A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     017B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0190       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0191       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01DA       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01DB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  01F0       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     01F1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  020A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     020B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0220       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0221       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  023A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     023B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     024A       
+%MACRO-E-ASGNMNTSYN, Assignment syntax error                            !
+                                 3C  024E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error    !
+                                     024F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  026A       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     026B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0282       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0283       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  029E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     029F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  02B6       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02B7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  02CC       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02CD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                   00000000'EF   DD  02CD       
+%MACRO-E-OPRNDSYNX, Operand syntax error                      !
+                                 3C  02E6       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     02E7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  0416       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0417       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  043E       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     043F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R10_GETQUIW.ANL R10_GETQUIW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R10_GETQUIW.OBJ;1                          0 errors
+$ SET NOVERIFY

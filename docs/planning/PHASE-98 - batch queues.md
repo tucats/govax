@@ -930,3 +930,10 @@ queues is a future phase.
   assembles with govax's macros, refusing exactly the calls without
   FUNC), and the clean-room hook lists its log, `vax/macros10.log`, as
   unaudited. Subtask 4, the database, is next.
+- **2026-11-16** Subtask 3, round 10 on VMS 7.1 (`testdata/mp/macros/vax`,
+  its log audited by the author: clean, and out of the hook's list): real
+  MACRO refused every call without FUNC, and only those, as govax's macros
+  do, and govax's match the 80 calls it accepted (keywords and order,
+  NULLARG a longword by value, FUNC a word, ASTPRM and ASTADR paired). The
+  address arguments' sizes stay unconfirmed: every call that would have
+  shown one also left out FUNC.

@@ -4558,15 +4558,14 @@ LABEL:
 
 ; The queue services (docs/planning/PHASE-98 - batch queues.md, subtask
 ; 3): $SNDJBC, $SNDJBCW, $GETQUI, and $GETQUIW, written from the System
-; Services manuals' argument lists on $GETJPI's model, which round 4 of
-; testdata/mp/macros confirmed: efn a longword by value; func a word by
-; value (MOVZWL); the third argument, $SNDJBC's nullarg (a longword by
-; value) and $GETQUI's context (a longword, by reference); itmlst; iosb
-; (a quadword); and astprm and astadr pushed as a pair. Round 10 of
-; testdata/mp/macros (r10_*) is to check them against real MACRO's
-; objects; until it runs, the pairings, the sizes, and which arguments
-; are required are unconfirmed. func is the one argument both manuals
-; require.
+; Services manuals' argument lists on $GETJPI's model, and held to real
+; MACRO's objects for testdata/mp/macros's round 10: efn a longword by
+; value; func a word by value (MOVZWL), the one required argument (a call
+; without it is refused, as real MACRO's was); the third argument,
+; $SNDJBC's nullarg (a longword by value) and $GETQUI's context (by
+; reference); itmlst; iosb; and astprm and astadr pushed as a pair. Every
+; call that showed an address argument's size left out func, so the sizes
+; here (iosb a quadword, the rest longwords) are unconfirmed.
 ;
 ; $GETQUI's macros name their sizes by position ($PUSHADR IOSB,Q): a
 ; formal argument called CONTEXT would replace the helpers' keyword of the

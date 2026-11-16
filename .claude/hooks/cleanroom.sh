@@ -64,8 +64,9 @@ fi
 # 2026-10-09: empty. Phase 63's probe's MACRO build log (testdata/pg63/vax)
 # and macro round 8's log (testdata/mp/macros/vax) were audited on
 # 2026-10-16: no macro text. Macro round 10's log (Phase 98, the queue
-# services) waits for its VAX run and the author's audit.
-unaudited='testdata/mp/macros/vax/macros10\.log'
+# services) was audited by the author on 2026-11-16: clean. Nothing waits
+# now.
+unaudited=''
 if [ -n "$unaudited" ] && printf '%s' "$text" | grep -Eq "$unaudited"; then
 	refuse "this names real-MACRO output that may show STARLET macro text and hasn't been audited"
 fi

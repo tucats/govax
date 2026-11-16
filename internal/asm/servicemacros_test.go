@@ -416,12 +416,8 @@ var (
 // unconfirmedRequired names, for each probe whose round hasn't run on the
 // VAX, the keyword govax's macro requires: a call without it must be
 // refused, and every other call assemble.
-var unconfirmedRequired = map[string]string{
-	"r10_sndjbc":  "FUNC",
-	"r10_sndjbcw": "FUNC",
-	"r10_getqui":  "FUNC",
-	"r10_getquiw": "FUNC",
-}
+// (Round 10's ran on 2026-11-16, Phase 98; none waits now.)
+var unconfirmedRequired = map[string]string{}
 
 // rehearseProbe assembles a probe with govax's macros, as its author does
 // before the VAX run: a line refused must be a call that leaves out the
@@ -516,8 +512,8 @@ func TestServiceMacroObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// A round the VAX hasn't run yet (round 10, Phase 98's queue
-			// services, until its objects come back): the probe must
+			// A round the VAX hasn't run yet (as round 10, Phase 98's
+			// queue services, was until its objects came back): the probe must
 			// assemble with govax's macros, refusing only the calls that
 			// leave out an argument govax's macro requires.
 			if _, err := os.Stat(filepath.Join(serviceDir, "vax", name+".obj")); errors.Is(err, fs.ErrNotExist) {

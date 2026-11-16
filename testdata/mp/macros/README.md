@@ -169,10 +169,18 @@ services, by round 4's method: `$SNDJBC`, `$SNDJBCW`, `$GETQUI`, and
 `$GETQUIW`, with the VMS 5.0 System Services manual's and VSI's argument
 lists (efn, func, nullarg or context, itmlst, iosb, astadr, astprm; func a
 word by value). govax's macros for them (`starlet.mar`'s last section) were
-written first, on `$GETJPI`'s model, and are unconfirmed until it runs.
-Until `vax/r10_*.obj` exist, `TestServiceMacroObjects` only rehearses the
-probes: each assembles with govax's macros, refusing exactly the calls that
-leave out FUNC.
+written first, on `$GETJPI`'s model; before the run,
+`TestServiceMacroObjects` rehearsed the probes (each assembling with govax's
+macros, refusing exactly the calls that leave out FUNC).
+
+It ran on VMS V7.1 on 2026-11-16 (`vax/r10_*`, log `vax/macros10.log`,
+audited by the author: clean). Real MACRO refused every call without FUNC
+(its MOVZWL left with no operand), and only those; govax's macros refuse
+the same calls and match the other 80 (20 a program), keywords, order,
+pairs, and the word FUNC included. Two refused calls had a second error:
+`CONTEXT=-(R6)` an assignment syntax error, and the misspelled `CONTXT=`
+taken for FUNC's text. Every call that showed an address argument's size
+(`-(R6)` alone) also left out FUNC, so those sizes stay unconfirmed.
 
 To run it, build this directory's exchange volume from the repository
 root (`exchange.cmd`; delete an old `testdata/disks/mp-macros.dsk` first):
