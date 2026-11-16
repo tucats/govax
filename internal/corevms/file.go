@@ -56,6 +56,12 @@ func shimExeOpen(env *Environment, argv []uint32) (uint32, error) {
 
 	flags := posixFlagsToGo(argv[1])
 
+	// Every EXE$OPEN names a host file, which with vax.host.sysprv on
+	// needs SYSPRV (hostaccess.go); a refusal is a failed open.
+	if env.HostAllowed() != 0 {
+		return 0xFFFFFFFF, nil
+	}
+
 	// The open shares the file with other processes' opens by RMS's rule
 	// (rms/hostshare.go), as the access its flags ask for: a read-only
 	// open is FAB$M_GET (sharing reading, the default), any other a

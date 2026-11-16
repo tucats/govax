@@ -228,9 +228,12 @@
                                      may use a host file: a name with a
                                      "/" in it, a bare name when the
                                      default directory is on the host, a
-                                     name with /HOST.  Others are
-                                     refused with
-                                     insufficient privilege.  Files in
+                                     name with /HOST, a program's
+                                     EXE$OPEN, SAVE/ROM and SAVE/NVRAM,
+                                     and the container file of MOUNT and
+                                     INITIALIZE/CONTAINER; SPAWN/HOST
+                                     needs it too.  Others are refused
+                                     with insufficient privilege.  Files in
                                      directories the configuration names
                                      (vax.path, vax.library) and EDIT's
                                      editor are not checked.  When false,

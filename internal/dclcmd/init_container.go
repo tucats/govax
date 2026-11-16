@@ -59,8 +59,14 @@ func (c *Context) InitializeContainer(path string, blocks uint32, label string, 
 // it writes over, needs VOLPRO, as INITIALIZE of another's volume does
 // on VMS (docs/planning/PHASE-94 - privileges.md, Decision 10; the
 // message, %SYSTEM-F-NOPRIV, is govax's choice). Making a new one needs
-// nothing.
+// nothing. The container is a host file, so with vax.host.sysprv on
+// either needs SYSPRV first (hostCommandPrivilege; docs/planning/PHASE-97
+// - host file access.md, Decision 2).
 func (c *Context) InitializeContainerCommand(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+	if err := c.hostCommandPrivilege(); err != nil {
+		return err
+	}
+
 	if _, err := os.Stat(path); err == nil {
 		if err := c.commandPrivilege("INITIALIZE/CONTAINER"); err != nil {
 			return err

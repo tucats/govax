@@ -66,6 +66,15 @@ func (c *Interpreter) spawnHost(o SpawnOptions) error {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)
 	}
 
+	// A host program is the host itself: with vax.host.sysprv on it
+	// needs SYSPRV (docs/planning/PHASE-97 - host file access.md,
+	// Decision 2; the review's answer 2).
+	if c.RTL != nil {
+		if st := c.RTL.HostCommandAllowed(); st != 0 {
+			return vmserrors.New(st)
+		}
+	}
+
 	o.Command = hostCommandText(c.line, o.Command)
 
 	words, err := dclcmd.SplitCommand(o.Command)

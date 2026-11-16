@@ -123,7 +123,9 @@ func (c *Context) defineVolumeName(device string) {
 // A volume mounted is known to every process, as VMS's MOUNT/SYSTEM makes
 // it, so the command needs SYSNAM (docs/planning/PHASE-94 -
 // privileges.md, Decision 10); without it MOUNT says %SYSTEM-F-NOPRIV
-// (govax's choice of message). STARTUP.COM's mounts, before
+// (govax's choice of message). A container file is a host file, so with
+// vax.host.sysprv on it needs SYSPRV too (hostCommandPrivilege); a RAM
+// disk has none. STARTUP.COM's mounts, before
 // INITIALIZE/MEMORY makes process 1, aren't checked.
 //
 // For an MD device, a RAM disk, file is the volume label, and there is no
@@ -146,6 +148,10 @@ func (c *Context) MountCommand(device, file string, write, log bool) error {
 
 	if unit, ok := RAMDiskName(physical); ok {
 		return c.mountRAMDisk(unit, file, write, log)
+	}
+
+	if err := c.hostCommandPrivilege(); err != nil {
+		return err
 	}
 
 	if strings.TrimSpace(file) == "" {
@@ -264,6 +270,23 @@ func (c *Context) commandPrivilege(command string) error {
 	}
 
 	if st := c.RTL.CommandPrivilege(command); st != 0 {
+		return vmserrors.New(st)
+	}
+
+	return nil
+}
+
+// hostCommandPrivilege asks the gate about a command that reaches a host
+// file of its own, a container file (corevms.Environment.HostCommandAllowed;
+// docs/planning/PHASE-97 - host file access.md, Decision 2): nil, or
+// %SYSTEM-F-NOPRIV when vax.host.sysprv is on and the process lacks
+// SYSPRV. Without a process nothing is refused.
+func (c *Context) hostCommandPrivilege() error {
+	if c.RTL == nil {
+		return nil
+	}
+
+	if st := c.RTL.HostCommandAllowed(); st != 0 {
 		return vmserrors.New(st)
 	}
 

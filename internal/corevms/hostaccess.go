@@ -34,3 +34,16 @@ func (env *Environment) HostAllowed() uint32 {
 
 	return env.requirePrivilege(ruleHostFile)
 }
+
+// HostCommandAllowed is HostAllowed for one of DCL's own commands that
+// reach the host without a file name RMS places (SPAWN/HOST, and MOUNT
+// and INITIALIZE/CONTAINER of a container file): the same rule, asked
+// from supervisor mode, DCL's, as CommandPrivilege asks it ("HOST_FILE").
+// With the key off it is 0, and nothing is traced.
+func (env *Environment) HostCommandAllowed() uint32 {
+	if env.System == nil || !env.HostRequiresSYSPRV {
+		return 0
+	}
+
+	return env.CommandPrivilege("HOST_FILE")
+}

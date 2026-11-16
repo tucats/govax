@@ -1,7 +1,7 @@
 # Phase 97 — host file access
 
 **Status:** planned 2026-11-16 (subtask 1, the survey and this plan);
-subtasks 2 and 3 done 2026-11-16.
+subtasks 2, 3, and 4 done 2026-11-16.
 The author reviewed it and accepted it the same day, with the answers
 recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
@@ -192,7 +192,7 @@ Each is one commit, with tests, stopping for review.
    command's message for the refusal; console tests per command with the
    key on, as an account without SYSPRV, then with SYSPRV turned on, then
    with the key off.
-4. **The other paths** (Decisions 2, 8): A.3's table as Decision 2 has
+4. **The other paths** (done 2026-11-16) (Decisions 2, 8): A.3's table as Decision 2 has
    it (EXE$OPEN, ROM and NVRAM, the debugger's log, SPAWN/HOST, the
    container commands; not the resolver's directories, the shareable
    image locator's host step, or EDIT's editor), and
@@ -335,3 +335,44 @@ The answers (2026-11-16):
   refused as PRIV94 with the key on with its message and nothing made on
   the host, allowed after SET PROCESS/PRIVILEGES=SYSPRV, and allowed with
   the key off).
+- **2026-11-16** Subtask 4: the other paths (A.3). Each now asks the
+  gate before it touches the host, and a refusal is SS$_NOPRIV
+  (Decision 5):
+  - EXE$OPEN (`corevms/file.go`) asks `HostAllowed` from the program's
+    mode and returns -1, as for any failed open, before it claims or
+    makes the file.
+  - SAVE/ROM and SAVE/NVRAM (`machine/rom.go`'s `mayCreateHostFile`,
+    the session's `MayUseHost`), after the check that there is an image
+    to save. LOAD/ROM and LOAD/NVRAM already read through
+    `readConsoleFile` (subtask 3).
+  - SPAWN/HOST, MOUNT of a container file (not a RAM disk; before a
+    missing file is asked for, so a refused user isn't prompted), and
+    INITIALIZE/CONTAINER (before VOLPRO's question) ask the
+    new `Environment.HostCommandAllowed`: `CommandPrivilege("HOST_FILE")`
+    from supervisor mode, or 0 without asking while the key is off
+    (`dclcmd`'s `hostCommandPrivilege`). STARTUP.COM's and the command
+    line's mounts, which have no process yet, aren't asked (A.4).
+  - DEFINE/DEVICE names no container file (its grammar has no file
+    parameter; MOUNT makes the device record), so there is nothing to
+    check; Decision 2 counted it by mistake.
+  - The debugger's SET LOG already went through Locate; it now uses
+    `LocateOutput`, so a refusal says "as output", as an output does.
+
+  `TestNoUncheckedHostAccess` (`corevms/hostunchecked_test.go`) scans
+  every non-main package under `internal` for `os.Open`, `os.OpenFile`,
+  `os.Create`, `os.ReadFile`, `os.WriteFile`, and `exec.Command`, by
+  function, and holds them to `hostAccessReasons`: 29 functions, each
+  one that asks the gate itself, one given a location Locate or
+  LocateOutput placed (subtask 3's audit), or one of govax's own files
+  (A.4; EDIT's editor and scratch copy; the locator's configured
+  directories, the review's answers 3 and 4). A name no longer making a
+  call fails too. Build tools (package main) aren't scanned.
+
+  HELP CONFIGURATION KEYS now names EXE$OPEN, SAVE, the container
+  commands, and SPAWN/HOST (the help library regenerated).
+
+  Tests: `corevms`'s `TestExeOpenHostAccess` (refused and nothing made,
+  SYSPRV, the key off); `console`'s `TestHostPathsNeedSYSPRV`
+  (INITIALIZE/CONTAINER new and existing, MOUNT, SPAWN/HOST, SAVE/ROM
+  three ways, as PRIV94 with SYSNAM and VOLPRO so that only SYSPRV is
+  missing; nothing made on the host while refused).

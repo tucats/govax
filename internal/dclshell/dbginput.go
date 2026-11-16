@@ -68,7 +68,7 @@ func (c *Interpreter) ReadDebuggerFile(file string) (string, []string, error) {
 // default log is DEBUG.LOG). What is written to it is split into
 // records at each newline; a line not yet ended goes out at Close.
 func (c *Interpreter) CreateDebuggerLog(file string) (io.WriteCloser, string, error) {
-	loc, err := c.ContainerSession.Locate(file, false)
+	loc, err := c.ContainerSession.LocateOutput(file, false)
 	if err != nil {
 		return nil, "", dclcmd.FileFailure(err, file)
 	}

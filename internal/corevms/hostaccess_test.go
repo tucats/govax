@@ -3,6 +3,7 @@ package corevms
 import (
 	"bytes"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -95,4 +96,51 @@ func TestUseSessionHostAccess(t *testing.T) {
 	if loc, err := s.Locate("/tmp/notes.txt", false); err != nil || !loc.Host {
 		t.Errorf("key on, SYSPRV: %+v, %v", loc, err)
 	}
+}
+
+// TestExeOpenHostAccess: EXE$OPEN names a host file, so with the key on
+// a process without SYSPRV gets -1, a failed open, and nothing is made
+// (docs/planning/PHASE-97 - host file access.md, subtask 4); with
+// SYSPRV, or the key off, it opens as before.
+func TestExeOpenHostAccess(t *testing.T) {
+	env, _ := fixture()
+	p := env.Process
+	fn := t.TempDir() + "/made.txt"
+
+	nameAddr := uint32(0x1000)
+	putString(t, env, nameAddr, fn)
+
+	create := []uint32{nameAddr, posixOWronly | posixOCreat | posixOTrunc}
+
+	setMode(env, registers.User, registers.User, 0x9000)
+
+	p.CurrentPrivileges = privTMPMBX
+	env.HostRequiresSYSPRV = true
+
+	if fid, err := shimExeOpen(env, create); err != nil || fid != 0xFFFFFFFF {
+		t.Fatalf("key on, no SYSPRV: %#x, %v, want -1", fid, err)
+	}
+
+	if _, err := os.Stat(fn); err == nil {
+		t.Fatal("key on, no SYSPRV: the file was made")
+	}
+
+	p.CurrentPrivileges |= privSYSPRV
+
+	fid, err := shimExeOpen(env, create)
+	if err != nil || fid == 0xFFFFFFFF {
+		t.Fatalf("key on, SYSPRV: %#x, %v", fid, err)
+	}
+
+	env.closeHostFile(fid)
+
+	p.CurrentPrivileges = privTMPMBX
+	env.HostRequiresSYSPRV = false
+
+	fid, err = shimExeOpen(env, []uint32{nameAddr, 0})
+	if err != nil || fid == 0xFFFFFFFF {
+		t.Fatalf("key off: %#x, %v", fid, err)
+	}
+
+	env.closeHostFile(fid)
 }

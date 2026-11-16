@@ -29,6 +29,10 @@ func (m *Machine) SaveROM(path string) error {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
 	}
 
+	if err := m.mayCreateHostFile(); err != nil {
+		return err
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -162,6 +166,10 @@ func (m *Machine) SaveNVRAM(path string) error {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "NVRAM")
 	}
 
+	if err := m.mayCreateHostFile(); err != nil {
+		return err
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -253,4 +261,17 @@ func readBE32(r io.Reader) (uint32, error) {
 	}
 
 	return binary.BigEndian.Uint32(buf[:]), nil
+}
+
+// mayCreateHostFile asks whether the running process may create a host
+// file, SAVE/ROM's and SAVE/NVRAM's (docs/planning/PHASE-97 - host file
+// access.md, Decision 2): nil, or %SYSTEM-F-NOPRIV when vax.host.sysprv
+// is on and it lacks SYSPRV. LOAD reads through readConsoleFile, which
+// asks too.
+func (m *Machine) mayCreateHostFile() error {
+	if s := m.Hooks.Session(); s != nil && !s.MayUseHost() {
+		return vmserrors.New(vmserrors.SS_NOPRIV)
+	}
+
+	return nil
 }
