@@ -8,10 +8,6 @@
 MOUNT DUA5 "testdata/disks/bat98-exchange.dsk"
 DIRECTORY DUA5:[BAT98LOG],[BAT98SCR],[000000]*.OBJ
 COPY DUA5:[BAT98LOG]BAT98.LOG "testdata/bat98/vax/bat98.log"/HOST/QUIET
-COPY DUA5:[BAT98LOG]BAT98DROP.LOG "testdata/bat98/vax/bat98drop.log"/HOST/QUIET
-COPY DUA5:[BAT98LOG]HAND1.LOG "testdata/bat98/vax/hand1.log"/HOST/QUIET
-COPY DUA5:[BAT98LOG]BOOTR.LOG "testdata/bat98/vax/bootr.log"/HOST/QUIET
-COPY DUA5:[BAT98LOG]BOOTN.LOG "testdata/bat98/vax/bootn.log"/HOST/QUIET
 COPY DUA5:[BAT98LOG]BAT98R1.LOG "testdata/bat98/vax/bat98r1.log"/HOST/QUIET
 COPY DUA5:[BAT98LOG]BAT98R2.LOG "testdata/bat98/vax/bat98r2.log"/HOST/QUIET
 COPY DUA5:[BAT98LOG]BAT98R3.LOG "testdata/bat98/vax/bat98r3.log"/HOST/QUIET
@@ -61,7 +57,4 @@ COPY DUA5:[BAT98LOG]BAT98P_E_BAT98W.LOG "testdata/bat98/vax/bat98p_e_bat98w.log"
 COPY DUA5:[BAT98LOG]BAT98P_F_BAT98.LOG "testdata/bat98/vax/bat98p_f_bat98.log"/HOST/QUIET
 COPY DUA5:[BAT98LOG]BAT98P_F_BAT98O.LOG "testdata/bat98/vax/bat98p_f_bat98o.log"/HOST/QUIET
 COPY DUA5:[BAT98LOG]BAT98P_F_BAT98W.LOG "testdata/bat98/vax/bat98p_f_bat98w.log"/HOST/QUIET
-COPY DUA5:[000000]DEF_SJC.OBJ "testdata/bat98/vax/def_sjc.obj"/HOST/BINARY/QUIET
-COPY DUA5:[000000]DEF_QUI.OBJ "testdata/bat98/vax/def_qui.obj"/HOST/BINARY/QUIET
-COPY DUA5:[000000]DEF_JBC.OBJ "testdata/bat98/vax/def_jbc.obj"/HOST/BINARY/QUIET
 DISMOUNT DUA5

@@ -682,3 +682,16 @@ queues is a future phase.
   DCL Dictionary), so SYSTEM can't poll a `/USER` job by it: the probe's
   waits use marker files instead. The exchange volume is built
   (`testdata/disks/bat98-exchange.dsk`); the VAX run is the author's.
+- **2026-11-16** Subtask 2, round 1 on VMS 7.1: BAT98.COM ran through
+  RESTART's third case in about three minutes, then waited on a job it
+  had requeued `/HOLD` and released at once: the release was refused
+  (`%JBC-E-EXECUTING`, the run not yet ended), and the requeue then left
+  the job holding. A Ctrl/Y to release it ended the procedure, being
+  below command level 1 (the *User's Manual*, 13.8.1). Round 2,
+  `bat98b.com`, runs what round 1 didn't reach (the job views, the
+  services, the matrix) and the held case again, with the release
+  retried until it takes (the `RELEASE` subroutine) and BAT98Q's
+  SYNCHRONIZE_JOB made only after a release that took; `exchange2.cmd`
+  and `copyout2.cmd` carry it. Round 1's queue listing already shows
+  `/RETAIN=ERROR`'s retained jobs with each one's condition, and a job
+  whose process was stopped "Retained on completion".

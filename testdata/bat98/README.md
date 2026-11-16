@@ -37,7 +37,9 @@ These fixtures are `docs/planning/PHASE-98 - batch queues.md`'s subtask
 | `bat98q.mar` | `$SNDJBCW` and `$GETQUIW` called directly, 59 cases, then the JBC messages by `$GETMSG` |
 | `def_sjc.mar`, `def_qui.mar`, `def_jbc.mar` | `$SJCDEF`, `$QUIDEF`, `$JBCMSGDEF` each called `GLOBAL`: their values from the object, no listing |
 | `decode.go` | Turns `vax/def_*.obj` into `defined.txt`, names and values only |
-| `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring the results back |
+| `bat98b.com` | Round 2's SYSTEM run: what round 1 didn't reach (README's "Round 2") |
+| `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring round 1's results back |
+| `exchange2.cmd`, `copyout2.cmd` | Round 2's: its files added to the same volume, and its results back |
 
 Every wait in the run is bounded. A job SYSTEM waits for with
 SYNCHRONIZE always ends by itself (the longest runs a minute), and a wait
@@ -97,7 +99,11 @@ prints. A few cases write a log in SYSTEM's own login directory
 (SYS$LOGIN) by default; `FINDLOG` deletes each one it finds after typing
 it into the log.
 
-## The VAX run
+## The VAX run (round 1)
+
+Round 1 ran on 2026-11-16; "Round 1" below says how it ended. Round 2's
+steps follow it; a new run from scratch would be these steps, then
+round 2's.
 
 1. **Build the exchange volume**, from the repository root on the host:
 
@@ -194,10 +200,66 @@ can run more than once), then start again from step 1 with a new volume.
 BAT98.COM can also be run again as it is: it deletes its queues before
 making them.
 
+## Round 1
+
+Round 1 ran on VMS V7.1 on 2026-11-16 (`vax/bat98.log`, the job logs, and
+`vax/terminal.log`) through RESTART's third case, in about three
+minutes, and stopped there. That case requeued a running job `/HOLD`
+and released it at once; the release was refused (`%JBC-E-EXECUTING`:
+the job's run hadn't ended yet), and the requeue then left it holding,
+so the next SYNCHRONIZE waited for a job that would never run. A Ctrl/Y
+and a SPAWN released it (`terminal.log`), but a Ctrl/Y in a procedure
+below command level 1 ends that procedure (the *User's Manual*, 13.8.1),
+so BAT98.COM's level 2 ended there and its log closed. The job views,
+the services, and the protection matrix never ran.
+
+`gen.go` now retries such a release until it takes, deleting the job if
+it never does (BAT98.COM's and BAT98B.COM's `RELEASE` subroutine), and
+BAT98Q's SYNCHRONIZE_JOB waits only for a job its ALTER_JOB released.
+BAT98.COM as committed is that fixed version; round 1 ran the one before
+(git history).
+
+## Round 2
+
+Round 2 is BAT98B.COM: the requeued-and-held case again (as BAT98X3B),
+the job views, the services, and the protection matrix, on round 1's
+accounts and queues, so **BAT98DROP.COM must not have run**.
+
+1. **Copy round 1's results back and add round 2's files**, with the
+   volume detached, from the repository root:
+
+       mkdir -p testdata/bat98/vax
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout.cmd
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/exchange2.cmd
+
+2. **Attach it again** (`attach rq1 testdata/disks/bat98-exchange.dsk`)
+   and, **as SYSTEM**:
+
+       $ MOUNT/SYSTEM DUA1: BAT98
+       $ @DUA1:[000000]BAT98B
+
+   Its log is `BAT98$DISK:[BAT98LOG]BAT98B.LOG`, ending `BAT98B
+   FINISHED`. Most of its time is the matrix's 18 jobs; Ctrl/T shows
+   QUEMAN or DCL with moving counts while it works. **Don't press Ctrl/Y
+   during it**: that ends the procedure. If Ctrl/T's counts stop moving
+   for several minutes, note the image and say so.
+
+3. **By hand**, then: README step 4 of round 1 (SYNCHRONIZE and Ctrl/Y
+   typed at the terminal, which is command level 0, where CONTINUE does
+   go on; and the optional reboot).
+
+4. **The end**: `@BAT98$DISK:[000000]BAT98DROP`, `DISMOUNT DUA1:`, and
+   `det rq1`.
+
+5. **Copy round 2's results back**:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout2.cmd
+       go run testdata/bat98/decode.go
+
 ## The rehearsal
 
 `TestBat98Probe` (`internal/console/bat98_test.go`) runs BAT98J.COM and
-BAT98P.COM at govax's terminal and BAT98.COM to its end, so the probe
+BAT98P.COM at govax's terminal and BAT98.COM and BAT98B.COM to their ends, so the probe
 can't lose a VAX round to a mistake in its own DCL: every symbol it uses
 is defined, every label it goes to is there, and BAT98ACCT.COM's
 AUTHORIZE commands are govax's as well as VMS's. govax has no queues yet,

@@ -231,7 +231,15 @@ $ DIRECTORY/SIZE/OWNER ` + logs + `
 $ DIRECTORY/SIZE/OWNER ` + scratch + `
 $ WRITE SYS$OUTPUT "BAT98 FINISHED"
 $ EXIT
-$ !
+`)
+	d.raw(subroutines())
+
+	return d.b.String()
+}
+
+// subroutines are the CALL targets BAT98.COM and BAT98B.COM share.
+func subroutines() string {
+	return `$ !
 $ ! AWAIT name entry: wait until the job called name, queued as entry,
 $ ! has written its marker, [BAT98SCR]name.RUN, looking 30 times, 2
 $ ! seconds apart; at once if the SUBMIT made no entry.
@@ -322,9 +330,28 @@ $ SHOW SYMBOL RET
 $ SHOW SYMBOL HELD
 $ SHOW QUEUE/FULL/ALL BAT98_P
 $ ENDSUBROUTINE
-`)
-
-	return d.b.String()
+$ !
+$ ! RELEASE entry: SET ENTRY/RELEASE until it takes, 15 times 2 seconds
+$ ! apart (a job requeued /HOLD while it runs is refused, JBC-E-EXECUTING,
+$ ! until its run has ended and it holds), and the job deleted if it never
+$ ! takes, so that nothing waits on a held job. Round 1 waited on one.
+$ RELEASE: SUBROUTINE
+$ IF P1 .EQS. "" THEN EXIT
+$ N = 0
+$ RL_LOOP:
+$ N = N + 1
+$ SET ENTRY 'P1'/RELEASE
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "  RELEASE ", N, " ", S
+$ IF S THEN GOTO RL_DONE
+$ IF N .GE. 15 THEN GOTO RL_GIVE_UP
+$ WAIT 0:0:2
+$ GOTO RL_LOOP
+$ RL_GIVE_UP:
+$ DELETE/ENTRY='P1'
+$ RL_DONE:
+$ ENDSUBROUTINE
+`
 }
 
 // queueCases are the queue commands, on queues that never run a job.
@@ -726,13 +753,21 @@ func restartCases(d *dcl) {
 	d.sync("X2")
 	d.showLog("BAT98X2")
 
-	d.submit("X3", "/QUEUE=BAT98_A/NOPRINTER/KEEP/NAME=BAT98X3/LOG_FILE="+logs+"BAT98X3.LOG/RESTART/PARAMETERS=BAT98X3 "+top+"BAT98R")
-	d.line("CALL AWAIT BAT98X3 'X3'")
+	heldRestart(d, "BAT98X3")
+}
+
+// heldRestart is a job requeued /HOLD while it runs, then released: name
+// is its job name and log.
+func heldRestart(d *dcl, name string) {
+	d.submit("X3", "/QUEUE=BAT98_A/NOPRINTER/KEEP/NAME="+name+"/LOG_FILE="+logs+name+".LOG/RESTART/PARAMETERS="+name+" "+top+"BAT98R")
+	d.line("CALL AWAIT %s 'X3'", name)
 	d.c("STOP/QUEUE/REQUEUE/HOLD/ENTRY='X3' BAT98_A")
 	d.c("SHOW ENTRY/FULL 'X3'")
 	d.c("SET ENTRY 'X3'/RELEASE")
+	d.line("CALL RELEASE 'X3'")
+	d.c("SHOW ENTRY/FULL 'X3'")
 	d.sync("X3")
-	d.showLog("BAT98X3")
+	d.showLog(name)
 }
 
 // viewCases run BAT98J.COM as each account.
@@ -810,6 +845,75 @@ func protectionCases(d *dcl) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------
+// bat98b.com, round 2: what round 1 didn't reach. Round 1's SYNCHRONIZE
+// waited on a job requeued /HOLD, which its release had found still
+// executing; a Ctrl/Y there (README.md, "Round 1") ended the procedure,
+// and the job views, the services, and the protection matrix never ran.
+// Round 2 runs them, and the requeued job's case again with its release
+// retried. It needs round 1's accounts and BAT98_A.
+
+func roundTwoProc() string {
+	d := &dcl{}
+
+	d.raw(`$ ! BAT98B.COM - Phase 98's probe of batch queues: round 2, SYSTEM's run.
+$ ! Written by testdata/bat98/gen.go. Run it as SYSTEM, from the exchange
+$ ! volume, mounted /SYSTEM, after round 1 and before BAT98DROP.COM
+$ ! (README.md, "Round 2"):
+$ !
+$ !     @DUA1:[000000]BAT98B
+$ !
+$ ! Its log is BAT98$DISK:[BAT98LOG]BAT98B.LOG.
+$ !
+$ IF P1 .EQS. "LOGGED" THEN GOTO BEGIN
+$ HERE = F$ENVIRONMENT("PROCEDURE")
+$ DEV = F$PARSE(HERE,,,"DEVICE")
+$ DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK 'DEV'
+$ LOGFILE = DEV + "[BAT98LOG]BAT98B.LOG"
+$ @'HERE'/OUTPUT='LOGFILE' LOGGED
+$ WRITE SYS$OUTPUT "BAT98B finished; the log is ", LOGFILE
+$ EXIT
+$ BEGIN:
+$ SET NOON
+$ SET VERIFY
+$ !
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("NODENAME"), " ", F$TIME()
+$ SHOW QUEUE/MANAGER/FULL
+$ SHOW QUEUE/FULL/ALL BAT98*
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) BAT98$DISK:[000000]*.COM;*
+$ SET SECURITY/PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) BAT98$DISK:[000000]*.MAR;*
+$ DIRECTORY/SECURITY BAT98$DISK:[000000]
+$ MCR AUTHORIZE SHOW BAT98*/BRIEF
+$ INITIALIZE/QUEUE/BATCH/JOB_LIMIT=3/BASE_PRIORITY=3/RETAIN=ERROR/START BAT98_A
+$ SHOW QUEUE/FULL BAT98_A
+$ SET DEFAULT BAT98$DISK:[BAT98SCR]
+`)
+
+	d.section("RESTART")
+	d.line("DELETE %s*.RUN;*", scratch)
+	heldRestart(d, "BAT98X3B")
+	viewCases(d)
+	serviceCases(d)
+	protectionCases(d)
+
+	lastCaseB = d.n
+
+	d.raw(`$ !
+$ WRITE SYS$OUTPUT "######## AT THE END"
+$ SHOW QUEUE/FULL/ALL BAT98*
+$ DIRECTORY/SIZE/OWNER ` + logs + `
+$ WRITE SYS$OUTPUT "BAT98B FINISHED"
+$ EXIT
+`)
+	d.raw(subroutines())
+
+	return d.b.String()
+}
+
+// lastCaseB is BAT98B.COM's case count.
+var lastCaseB int
 
 // ---------------------------------------------------------------------
 // bat98z.com: the probe's queues taken away.
@@ -1330,6 +1434,8 @@ type qcase struct {
 	fn     string // the function code
 	items  []item
 	noIOSB bool
+	keep   string // a cell to keep the IOSB's status in
+	onlyIf string // a cell whose status must be a success, or the case is passed over
 }
 
 func s(code, text string) item    { return item{kind: 's', code: code, arg: text} }
@@ -1401,8 +1507,12 @@ func qcases() []qcase {
 		sj("ALTER_JOB", "ALTER_JOB", queue, entry, s("SJC$_NOTE", "CHANGED"), s("SJC$_PARAMETER_2", "P2VAL")),
 		gq("DISPLAY_ENTRY after ALTER_JOB", "DISPLAY_ENTRY", append([]item{cell("QUI$_SEARCH_NUMBER", "QENTRY")},
 			outs("NOTE", "PARAMETER_1", "PARAMETER_2", "JOB_STATUS")...)...),
-		sj("ALTER_JOB NO_HOLD", "ALTER_JOB", queue, entry, flag("SJC$_NO_HOLD")),
-		sj("SYNCHRONIZE_JOB", "SYNCHRONIZE_JOB", queue, entry),
+		// SYNCHRONIZE_JOB waits for the job to end, so it is made only if
+		// the job was released: a held job never ends.
+		qcase{title: "ALTER_JOB NO_HOLD", fn: "SJC$_ALTER_JOB", keep: "RELEASED",
+			items: []item{queue, entry, flag("SJC$_NO_HOLD")}},
+		qcase{title: "SYNCHRONIZE_JOB", fn: "SJC$_SYNCHRONIZE_JOB", onlyIf: "RELEASED",
+			items: []item{queue, entry}},
 		gq("DISPLAY_ENTRY after the job", "DISPLAY_ENTRY", cell("QUI$_SEARCH_NUMBER", "QENTRY"), out("QUI$_JOB_STATUS")),
 		sj("ENTER_FILE with no file", "ENTER_FILE", queue),
 		sj("ENTER_FILE to a missing queue", "ENTER_FILE", s("SJC$_QUEUE", "NOSUCHQ98"), s("SJC$_FILE_SPECIFICATION", okFile)),
@@ -1522,6 +1632,7 @@ QENTRY:	.LONG	0		; the first job's entry
 QE2:	.LONG	0		; BAT98's held job
 QE3:	.LONG	0		; the second held job
 QE4:	.LONG	0		; the job made by CREATE_JOB
+RELEASED: .LONG	0		; ALTER_JOB NO_HOLD's IOSB status
 OUTD:	.LONG	300
 	.ADDRESS OUTBUF
 OUTLEN:	.WORD	0
@@ -1601,6 +1712,10 @@ ASCLINE: .BLKB	32
 
 		fmt.Fprintf(&code, "\n; %d: %s\n\t.ENTRY\tC%d,^M<R2,R3,R4,R5,R6,R7,R8,R9>\n", c, k.title, c)
 		fmt.Fprintf(&code, "\tPUSHAQ\t%sT\n\tCALLS\t#1,SAYR\n", pre)
+
+		if k.onlyIf != "" {
+			fmt.Fprintf(&code, "\tBLBS\t%s,1$\n\tSAY\t</  passed over: %s failed/>\n\tRET\n1$:\n", k.onlyIf, k.onlyIf)
+		}
 		code.WriteString("\tCLRQ\tIOSB\n\tCLRL\t-(SP)\t\t; astprm\n\tCLRL\t-(SP)\t\t; astadr\n")
 
 		if k.noIOSB {
@@ -1618,6 +1733,10 @@ ASCLINE: .BLKB	32
 		code.WriteString("\tCLRL\t-(SP)\t\t; nullarg or context\n")
 		fmt.Fprintf(&code, "\tPUSHL\t#%s\n\tCLRL\t-(SP)\t\t; efn\n\tCALLS\t#7,G^SYS$%s\n", k.fn, svc)
 		code.WriteString("\tPUSHL\tR0\n\tCALLS\t#1,SHOWST\n")
+
+		if k.keep != "" {
+			fmt.Fprintf(&code, "\tMOVL\tIOSB,%s\n", k.keep)
+		}
 
 		for i, it := range k.items {
 			if it.kind != 'o' {
@@ -1799,22 +1918,22 @@ CREATE/DIRECTORY DUA5:[BAT98SCR]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE)
 	return b.String()
 }
 
-func copyout() string {
+// copyout is a round's copyout script, script, bringing back names (the
+// round's own log first) and, with objects, the definition probes' objects.
+func copyout(script string, names []string, objects bool) string {
 	var b strings.Builder
 
-	b.WriteString(`! COPYOUT.CMD - copies Phase 98's probe results off bat98-exchange.dsk
+	fmt.Fprintf(&b, `! %s - copies Phase 98's probe results off bat98-exchange.dsk
 ! into testdata/bat98/vax (README.md). Written by testdata/bat98/gen.go.
 ! Run from the repository root after the VAX runs:
 !
-!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout.cmd
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/%s
 !
 ! A file the run didn't make is a message, and the rest go on.
 MOUNT DUA5 "testdata/disks/bat98-exchange.dsk"
 DIRECTORY DUA5:[BAT98LOG],[BAT98SCR],[000000]*.OBJ
-`)
+`, strings.ToUpper(script), script)
 
-	// The logs of the README's steps by hand come back too, if they ran.
-	names := append([]string{"BAT98.LOG", "BAT98DROP.LOG", "HAND1.LOG", "BOOTR.LOG", "BOOTN.LOG"}, jobLogs...)
 	seen := map[string]bool{}
 
 	for _, n := range names {
@@ -1827,6 +1946,10 @@ DIRECTORY DUA5:[BAT98LOG],[BAT98SCR],[000000]*.OBJ
 	}
 
 	for _, m := range []string{"SJC", "QUI", "JBC"} {
+		if !objects {
+			break
+		}
+
 		fmt.Fprintf(&b, "COPY DUA5:[000000]DEF_%s.OBJ \"%s/vax/def_%s.obj\"/HOST/BINARY/QUIET\n", m, dir, strings.ToLower(m))
 	}
 
@@ -1853,8 +1976,33 @@ func write(name, text string) {
 	}
 }
 
+// exchangeTwo adds round 2's files to round 1's volume, which still has
+// round 1's logs.
+func exchangeTwo() string {
+	return `! EXCHANGE2.CMD - adds round 2's files to Phase 98's probe exchange
+! volume (README.md, "Round 2"). Written by testdata/bat98/gen.go. Run from
+! the repository root, with the volume detached from the VAX:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/exchange2.cmd
+!
+MOUNT/WRITE DUA5 "testdata/disks/bat98-exchange.dsk"
+COPY "` + dir + `/bat98b.com"/HOST DUA5:[000000]BAT98B.COM
+COPY "` + dir + `/bat98q.mar"/HOST DUA5:[000000]BAT98Q.MAR
+DIRECTORY/OWNER/PROTECTION DUA5:[000000]BAT98B.COM,BAT98Q.MAR
+DISMOUNT DUA5
+`
+}
+
 func main() {
+	jobLogs = nil
 	write("bat98.com", systemProc())
+	roundOne := append([]string{"BAT98.LOG"}, jobLogs...)
+
+	jobLogs = nil
+	write("bat98b.com", roundTwoProc())
+	// The logs of the README's steps by hand come back too, if they ran.
+	roundTwo := append([]string{"BAT98B.LOG", "BAT98DROP.LOG", "HAND1.LOG", "BOOTR.LOG", "BOOTN.LOG"}, jobLogs...)
+
 	write("bat98z.com", dropQueues())
 	write("bat98acct.com", accountProc())
 	write("bat98drop.com", dropProc())
@@ -1882,9 +2030,12 @@ func main() {
 	}
 
 	write("exchange.cmd", exchange())
-	write("copyout.cmd", copyout())
+	write("copyout.cmd", copyout("copyout.cmd", roundOne, false))
+	write("exchange2.cmd", exchangeTwo())
+	write("copyout2.cmd", copyout("copyout2.cmd", roundTwo, true))
 
-	fmt.Printf("%d cases in BAT98.COM, %d in BAT98P.COM's pass, %d in BAT98Q\n", lastCase, len(passCommands), len(qcases()))
+	fmt.Printf("%d cases in BAT98.COM, %d in BAT98B.COM, %d in BAT98P.COM's pass, %d in BAT98Q\n",
+		lastCase, lastCaseB, len(passCommands), len(qcases()))
 }
 
 // lastCase is BAT98.COM's case count, for main's report.

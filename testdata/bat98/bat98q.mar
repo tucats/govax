@@ -36,6 +36,7 @@ QENTRY:	.LONG	0		; the first job's entry
 QE2:	.LONG	0		; BAT98's held job
 QE3:	.LONG	0		; the second held job
 QE4:	.LONG	0		; the job made by CREATE_JOB
+RELEASED: .LONG	0		; ALTER_JOB NO_HOLD's IOSB status
 OUTD:	.LONG	300
 	.ADDRESS OUTBUF
 OUTLEN:	.WORD	0
@@ -1768,12 +1769,17 @@ C59_IL:
 	CALLS	#7,G^SYS$SNDJBCW
 	PUSHL	R0
 	CALLS	#1,SHOWST
+	MOVL	IOSB,RELEASED
 	RET
 
 ; 13: SYNCHRONIZE_JOB
 	.ENTRY	C13,^M<R2,R3,R4,R5,R6,R7,R8,R9>
 	PUSHAQ	C13_T
 	CALLS	#1,SAYR
+	BLBS	RELEASED,1$
+	SAY	</  passed over: RELEASED failed/>
+	RET
+1$:
 	CLRQ	IOSB
 	CLRL	-(SP)		; astprm
 	CLRL	-(SP)		; astadr

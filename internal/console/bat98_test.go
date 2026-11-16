@@ -14,7 +14,7 @@ import (
 // bat98Files are testdata/bat98's procedures and sources, and where the
 // exchange volume has them (exchange.cmd).
 var bat98Files = []struct{ name, dir string }{
-	{"bat98.com", "[000000]"}, {"bat98acct.com", "[000000]"}, {"bat98drop.com", "[000000]"},
+	{"bat98.com", "[000000]"}, {"bat98b.com", "[000000]"}, {"bat98acct.com", "[000000]"}, {"bat98drop.com", "[000000]"},
 	{"bat98z.com", "[000000]"}, {"bat98j.com", "[000000]"}, {"bat98p.com", "[000000]"},
 	{"bat98ok.com", "[000000]"}, {"bat98wrn.com", "[000000]"}, {"bat98err.com", "[000000]"},
 	{"bat98fat.com", "[000000]"}, {"bat98bad.com", "[000000]"}, {"bat98w.com", "[000000]"},
@@ -136,11 +136,30 @@ func TestBat98Probe(t *testing.T) {
 		}
 	}
 
-	// The probe's own lines: no symbol it uses is undefined, no label it
-	// goes to is missing, and no line is too long.
+	bat98Clean(t, "BAT98.LOG", log)
+
+	// Round 2, after round 1, as on the VAX.
+	out = dispatch("@BAT98$DISK:[000000]BAT98B")
+	if !strings.Contains(out, "BAT98B finished; the log is") {
+		t.Fatalf("BAT98B didn't finish:\n%s", out)
+	}
+
+	log = dispatch("TYPE BAT98$DISK:[BAT98LOG]BAT98B.LOG")
+	if !strings.Contains(log, "BAT98B FINISHED") {
+		t.Errorf("BAT98B.LOG doesn't reach its end:\n%s", log)
+	}
+
+	bat98Clean(t, "BAT98B.LOG", log)
+}
+
+// bat98Clean checks the probe's own lines in a log: no symbol it uses is
+// undefined, no label it goes to is missing, and no line is too long.
+func bat98Clean(t *testing.T, name, log string) {
+	t.Helper()
+
 	for _, bad := range []string{"UNDSYM", "USGOTO", "NOLBLS", "TKNOVF", "RTB,"} {
 		if strings.Contains(log, bad) {
-			t.Errorf("BAT98.LOG has %s:\n%s", bad, around(log, bad))
+			t.Errorf("%s has %s:\n%s", name, bad, around(log, bad))
 		}
 	}
 }
