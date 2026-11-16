@@ -1,0 +1,53 @@
+1 SYNCHRONIZE
+
+   Waits for a batch job to end.  The job's final status becomes
+   $STATUS (with its message shown, if it isn't a success), so a
+   procedure can submit a job and act on how it ended.  The other
+   processes run while it waits; Ctrl/Y or Ctrl/C ends the wait.
+
+   Format
+
+     SYNCHRONIZE [job-name] [/ENTRY=n] [/QUEUE=queue-name]
+
+2 Parameter
+
+ job-name
+
+   The name of one of your own jobs, in /QUEUE's queue (SYS$BATCH by
+   default).  Give it or /ENTRY.
+
+2 Description
+
+   A job that isn't there is %JBC-E-NOSUCHENT by entry number and
+   %JBC-E-NOSUCHJOB by name.  Another user's job needs read access to it
+   (%JBC-E-NOPRIV).  A job already retained gives its status at once.  A
+   job that has ended and gone gives its status to the first SYNCHRONIZE
+   that asks for it, and is NOSUCHENT afterwards.
+
+   $STATUS is the job's status with its message bit (%X10000000) set:
+   %X10000001 for a job that succeeded, %X10048084 for one STOP/QUEUE/ENTRY
+   or DELETE/ENTRY ended (JOBABORT), %X100480EC for one STOP/QUEUE/RESET
+   ended (QUERESET).
+
+2 Qualifiers
+/ENTRY
+
+   /ENTRY=n
+
+   The job's entry number, as SUBMIT gave it in $ENTRY.
+
+/QUEUE
+
+   /QUEUE=queue-name
+
+   The queue to find job-name in; SYS$BATCH by default.
+
+2 Examples
+
+   1.$ SUBMIT/NOPRINTER BUILD
+     Job BUILD (queue SYS$BATCH, entry 12) started on SYS$BATCH
+     $ SYNCHRONIZE/ENTRY='$ENTRY'
+     $ SHOW SYMBOL $STATUS
+       $STATUS == "%X10000001"
+
+     Runs BUILD.COM as a job and waits for it to end.

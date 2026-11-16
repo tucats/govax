@@ -26,8 +26,7 @@ import (
 //
 // The functions are a table, sjcFunctions, a function code to its
 // routine: the queue manager's and the queues' (subtask 6), and the jobs'
-// (subtask 7; ABORT_JOB and SYNCHRONIZE_JOB, which need a job that runs,
-// are subtask 8's). A function VMS has that isn't in the table (those,
+// (subtask 7), with ABORT_JOB and SYNCHRONIZE_JOB (subtask 8, batch.go). A function VMS has that isn't in the table (those,
 // and the forms, characteristics, and printers Decision 1 leaves out) is
 // JBC$_NOTSUPPORTED; so is an item VMS has that the function doesn't
 // take. The queue functions read their items from sjcItems, the job
@@ -133,12 +132,16 @@ var sjcFunctions = map[uint16]sjcFunction{
 	sjcCode("CLOSE_JOB"):  sjcCloseJob,
 	sjcCode("ALTER_JOB"):  sjcAlterJob,
 	sjcCode("DELETE_JOB"): sjcDeleteJob,
+	sjcCode("ABORT_JOB"):  sjcAbortJob,
+	// SYNCHRONIZE_JOB completes when its job ends: serviceSysSndjbc's
+	// syncJob, not a table routine.
 }
 
 // sjcJobFunctions are the functions that read sjcJobItems.
 var sjcJobFunctions = map[uint16]bool{
 	sjcCode("ENTER_FILE"): true, sjcCode("CREATE_JOB"): true, sjcCode("ADD_FILE"): true,
 	sjcCode("CLOSE_JOB"): true, sjcCode("ALTER_JOB"): true, sjcCode("DELETE_JOB"): true,
+	sjcCode("ABORT_JOB"): true, sjcCode("SYNCHRONIZE_JOB"): true,
 }
 
 // sjcStatus is an operation's error as the IOSB's status: JBC$_NORMAL
@@ -684,6 +687,53 @@ func sjcDeleteJob(env *Environment, r *sjcRequest) uint32 {
 	return sjcStatus(env.DeleteJob(r.entry, queue))
 }
 
+// sjcAbortJob is ABORT_JOB: the executing job ENTRY_NUMBER names, in
+// QUEUE, ended with JBC$_JOBABORT (AbortJob).
+func sjcAbortJob(env *Environment, r *sjcRequest) uint32 {
+	if !r.hasEntry || !r.hasQueue {
+		return jbcMisReqPar
+	}
+
+	return sjcStatus(env.AbortJob(r.entry, r.queue))
+}
+
+// syncJob is SYNCHRONIZE_JOB: it completes when the job ENTRY_NUMBER (or
+// the process's job JOB_NAME in QUEUE) ends, its IOSB the job's status
+// (round 2's case 13: SS$_NORMAL), its event flag set and its AST queued
+// then. It returns 0 when the request waits, or the status to complete it
+// with now: a job that isn't there (JBC$_NOSUCHENT, JBC$_NOSUCHJOB), or one
+// already ended. w is the wait, for $SNDJBCW to wait on.
+func (env *Environment) syncJob(r *sjcRequest, efn, iosb, astadr, astprm uint32) (status uint32, w *syncWait) {
+	since := env.System.JobEndMark()
+
+	entry := 0
+	if r.hasEntry {
+		entry = r.entry
+	}
+
+	queue := ""
+	if r.hasQueue {
+		queue = r.queue
+	}
+
+	found, st, done, err := env.SyncTarget(entry, r.job.Name, queue)
+
+	switch {
+	case err != nil:
+		return sjcStatus(err), nil
+	case done:
+		env.System.ConsumeJobEnd(found)
+
+		return st, nil
+	}
+
+	w = &syncWait{env: env, entry: found, since: since, efn: efn, iosb: iosb,
+		astadr: astadr, astprm: astprm, mode: uint32(env.cpu.PSL().CurMod())}
+	env.System.syncWaits = append(env.System.syncWaits, w)
+
+	return 0, w
+}
+
 // readSjcItems reads the item list at itmlst into r: SS$_BADPARAM for a
 // code past SJC$K_MAX_ITEM, or SS$_ACCVIO. An item VMS has that the queue
 // functions don't take leaves JBC$_NOTSUPPORTED in r.status, and a queue
@@ -721,10 +771,23 @@ func (env *Environment) readSjcItems(itmlst uint32, function uint32, r *sjcReque
 	})
 }
 
-// serviceSysSndjbc is SYS$SNDJBC and SYS$SNDJBCW.
-func serviceSysSndjbc(env *Environment, argv []uint32) (uint32, error) {
+// serviceSysSndjbc is SYS$SNDJBC and SYS$SNDJBCW (wait): every function
+// completes at once but SYNCHRONIZE_JOB, which completes when its job ends
+// (syncJob), and which $SNDJBCW waits for.
+func serviceSysSndjbc(env *Environment, argv []uint32, wait bool) (uint32, error) {
 	if len(argv) < 2 {
 		return ssInsfArg, nil
+	}
+
+	// $SNDJBCW's XFC run again while its SYNCHRONIZE_JOB waits.
+	if w := env.pendingSync; w != nil {
+		if !w.done && !env.Deleted {
+			return 0, env.waitOnFlag(w.efn, func() bool { return w.done })
+		}
+
+		env.pendingSync = nil
+
+		return ssNormal, nil
 	}
 
 	efn, function, itmlst := argv[0], argv[1], optArg(argv, 3)
@@ -754,6 +817,18 @@ func serviceSysSndjbc(env *Environment, argv []uint32) (uint32, error) {
 		r0 = status
 	case function < uint32(sjcMinFunc) || function > uint32(sjcMaxFunc):
 		r0, status = ssBadParam, ssBadParam
+	case uint16(function) == sjcCode("SYNCHRONIZE_JOB") && r.status == 0:
+		var w *syncWait
+
+		if status, w = env.syncJob(&r, efn, iosb, astadr, astprm); w != nil {
+			if wait {
+				env.pendingSync = w
+
+				return 0, env.waitOnFlag(efn, func() bool { return w.done })
+			}
+
+			return r0, nil
+		}
 	case !ok:
 		status = jbcNotSupported
 	case r.status != 0:
@@ -782,6 +857,6 @@ func serviceSysSndjbc(env *Environment, argv []uint32) (uint32, error) {
 }
 
 func registerQueueServices(t *ServiceTable) {
-	t.Register("SYS$SNDJBC", serviceSysSndjbc)
-	t.Register("SYS$SNDJBCW", serviceSysSndjbc)
+	t.Register("SYS$SNDJBC", func(env *Environment, argv []uint32) (uint32, error) { return serviceSysSndjbc(env, argv, false) })
+	t.Register("SYS$SNDJBCW", func(env *Environment, argv []uint32) (uint32, error) { return serviceSysSndjbc(env, argv, true) })
 }

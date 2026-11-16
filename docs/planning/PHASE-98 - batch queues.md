@@ -700,7 +700,7 @@ Each is one commit, with tests, stopping for review.
 7. **Jobs, not yet run** (done 2026-11-16): `$SNDJBC`'s job functions, SUBMIT and `$ENTRY`,
    SHOW ENTRY, SET ENTRY, DELETE/ENTRY, `/AFTER` and `/HOLD` states, on a
    stopped queue; held to the probe.
-8. **The batch job** (Decisions 6, 7): the manager starting jobs, the
+8. **The batch job** (Decisions 6, 7; done 2026-11-16): the manager starting jobs, the
    process and its login, the log file, DCL's batch CLI (verify, login
    procedures, the files and parameters, the end), the job limit and
    ordering, `/AFTER`'s timer, STOP/QUEUE/ENTRY, SYNCHRONIZE, `/NOTIFY`;
@@ -1139,3 +1139,86 @@ queues is a future phase.
   take; $SNDJBC's USERNAME of a missing account JBC$_INVPARVAL; /PRINT
   isn't shown for a job without /NOPRINTER. Subtask 8, the batch job, is
   next.
+- **2026-11-16** Subtask 8, the batch job. The job controller is
+  `corevms/batch.go`: every change to the database in this session goes
+  through `System.updateJobs` (`changeQueuesHere` and `SubmitJob` now use
+  it), which after the change runs `settleJobs` in the same update: jobs
+  whose /AFTER time has come are released, an executing job being ended or
+  requeued has its process marked for deletion, one on a paused queue is
+  suspended (resumed when it starts again), and each queue starts what
+  `NextJob` gives it. So SUBMIT to a started queue with room says "started
+  on" itself, as VMS 7.1's did. `startBatchJob` logs the account in
+  (`BeginLogin`, non-interactive; a refusal is the job's status) and makes
+  the process through `$CREPRC`'s code as the job controller
+  (`CreateRequest.jobController`: no privilege asked of the creator,
+  process 1, and nothing held to its own): detached, BATCH_n, PRC$M_BATCH
+  alone (CREPRC_FLAGS 16), the account's UIC, SYS$INPUT and SYS$COMMAND the
+  first file (its device "_GOVAX$DUA1:", as VMS's), TT NL:, SYS$OUTPUT and
+  SYS$ERROR the log, then `LogIn`, the queue's base priority as base and
+  authorized priority, the CPU limit (`batchCPULimit`: /CPUTIME, else
+  /CPUDEFAULT, no more than /CPUMAXIMUM). The log (`batchLog`: NL: for
+  /NOLOG_FILE, the job's name in a directory-only /LOG_FILE, the account's
+  home by default) is made by the process's startup as its user, so a log
+  it can't make ends the job with RMS$_PRV (`prepareImage`; BAT98G9). The
+  process's deletion finishes the job (`completeBatchJob`: `Finish` with
+  its final status or the reason it was ended), deletes the log for
+  /NOKEEP and the files for /DELETE, and tells the console's terminal for
+  /NOTIFY (`notifyJob`, A.4's words; a /NOTIFY job deleted before it ran
+  too, JBC$_JOBDELETE, as terminal.log showed). The manager's next /AFTER
+  time is in `nextTimer` and polled by `pollQueueTimer` (and by `PollJobs`
+  when process 1 waits with nobody to lend to). `checkCPULimit` ends a
+  batch job that has used its limit with SS$_EXCPUTIM (BAT98R8; other
+  processes' limits still aren't enforced, DEVIATIONS.md). JPI$_JOBTYPE and
+  JPI$_MODE are BATCH for PRC$M_BATCH; F$MODE() is JPI$_MODE's name and
+  F$ENVIRONMENT("INTERACTIVE") follows it; OUTPUT_RATE is a minute.
+  DCL's batch mode is `dclshell/dclbatch.go` (`CLIStartup.Batch`): the
+  home's names and default directory (`Shell.setLoginDirectory`, process
+  1's code for any Shell), `$RESTART` "FALSE" (global), Ctrl/T and Ctrl/Y
+  disabled, the prompt "$ ", the login procedures (`RunLoginProcedures`,
+  now the current Shell's), then each file at a command level of its own
+  counted as level 0 (`Shell.batchBase`, so DEPTH is 0 and labels, GOTO,
+  and the ON action are a procedure's), P1 to P8 the job's, the first file
+  verified as the login procedures leave it and each later one verified;
+  an error or severe status ends the job, its message not shown; LOGOUT's
+  report ends the log (`cliCommand`). SYNCHRONIZE is `dclshell/dclsync.go`
+  (`SyncTarget`: by entry or by name among the process's own jobs in
+  /QUEUE's queue; read access; a retained job's status at once; waiting as
+  WAIT does, process 1 lending the CPU or, with nobody to lend to, the host
+  idling with the quantum clock moving to the next timer, `HostIdle`);
+  its status the job's with the message bit, the message shown for a
+  failure. The probe settled when a job that has ended is still there for
+  SYNCHRONIZE: on the VAX it is gone a moment after it ends (cases 216,
+  296 to 299, 303 NOSUCHENT), and case 159's SYNCHRONIZE came within that
+  moment; govax's jobs end sooner, between process 1's commands, so it
+  keeps an end until a SYNCHRONIZE completes (`jobEnd`), which answers as
+  the VAX did but for case 303, a race (unconfirmed model). STOP/QUEUE/ENTRY
+  (`AbortJob`: JOBNOTEXEC before access, then delete access), and
+  `$SNDJBC`'s ABORT_JOB and SYNCHRONIZE_JOB (`syncJob`: completes when the
+  job ends, `pollSyncWaits`; $SNDJBCW waits for it, `pendingSync`). SHOW
+  QUEUE and SHOW ENTRY: "(executing)" after the file a job runs
+  (`SetBatchFile`), "Suspended" on a paused queue, "Pending (queue busy)"
+  with /FULL, a retained job's Completed line without /FULL too, and the
+  condition line's "%"; SUBMIT's "pending status caused by queue busy
+  state". Found on the way: VMS 7.1's TYPE of a wildcard types every file
+  under a heading (" ", the name, " "), where govax refused with
+  AMBIGUOUS (`rms/type.go`); STOP of a process leaves RMS$_NORMAL
+  (%X00010001, case 183); /LOG_FILE and /PRINTER may be given without a
+  value (the grammar's empty default, `Defaulted`); a /USER job's default
+  log is its own SYS$LOGIN, not the submitter's (BAT98G2). Tests:
+  `internal/console/batch_test.go` replays the probe's sections before
+  each and holds RUNNING JOBS (cases 156 to 173), ENDINGS (174 to 208:
+  BAT98W's one-second waits shortened, its AWAIT subroutine done in Go),
+  THE JOB LIMIT to AFTER ON A RUNNING QUEUE, and ORDER (209 to 242, 285 to
+  305) to VMS's output, times and accounting counts masked, but for
+  `endingsDifferences` and `laterDifferences` (the reset job's log, COPY's
+  and DIRECTORY's older differences, case 303); LOG FILES (243 to 275) by
+  where each log went (`TestBatchLogFilesOracle`); and THE JOB'S VIEW, as
+  SYSTEM and as BAT98 with its LOGIN.COM, by the job's first sections line
+  for line and the items that say what a batch process is
+  (`TestBatchJobViewOracle`). `TestSndjbcJobFunctions` now finds a job
+  released on a started queue started (round 2's case 13 ran it), and has
+  ABORT_JOB's and SYNCHRONIZE_JOB's refusals. HELP SYNCHRONIZE (new), STOP
+  /QUEUE's /ENTRY, SUBMIT's description of a job's run. Left for subtask
+  10: STOP/QUEUE/REQUEUE, SET RESTART_VALUE, and what a session's end does
+  to running jobs; THE JOB'S VIEW's F$GETQUI waits for subtask 9.
+  Subtask 9, `$GETQUI` and `F$GETQUI`, is next.

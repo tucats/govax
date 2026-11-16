@@ -131,6 +131,11 @@ type CreateRequest struct {
 	// has PRC$M_DETACH); TerminationMailbox is mbxunt, a mailbox unit
 	// number (0: none); Flags is stsflg.
 	BasePriority, UIC, TerminationMailbox, Flags uint32
+
+	// jobController says the job controller asks (batch.go): it may give
+	// the process anything, so no privilege is asked of the creator and
+	// nothing asked for is held to the creator's.
+	jobController bool
 }
 
 // serviceSysCreprc is SYS$CREPRC. It reads the arguments (SS$_ACCVIO for
@@ -335,8 +340,10 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 		uic = req.UIC
 	}
 
-	if st := env.checkCreatePrivileges(req, uic, detached); st != 0 {
-		return nil, st
+	if !req.jobController {
+		if st := env.checkCreatePrivileges(req, uic, detached); st != 0 {
+			return nil, st
+		}
 	}
 
 	// A subprocess's name is qualified by its creator's group, a
@@ -348,7 +355,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 
 	// With DETACH, a detached process's quotas are what it asks for;
 	// anything else is held to its creator's.
-	independent := detached && env.holdsPrivilege(ruleCreprcIndependent)
+	independent := detached && (req.jobController || env.holdsPrivilege(ruleCreprcIndependent))
 
 	quotas, cpuDeducted, st := resolveQuotas(&env.Sysgen, creator, req.Quotas, detached, independent)
 	if st != 0 {

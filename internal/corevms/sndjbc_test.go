@@ -29,7 +29,7 @@ func sndjbc(t *testing.T, env *Environment, a *arena, function string, itmlst ui
 		block = a.alloc(8)
 	}
 
-	r0, err := serviceSysSndjbc(env, []uint32{0, code, 0, itmlst, block, 0, 0})
+	r0, err := serviceSysSndjbc(env, []uint32{0, code, 0, itmlst, block, 0, 0}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

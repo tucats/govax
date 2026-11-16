@@ -131,10 +131,11 @@ func TestConsoleType_notFound(t *testing.T) {
 	}
 }
 
-// TestConsoleType_ambiguous confirms a file spec matching more than one
-// file is reported as CLI_AMBIGUOUS.
-func TestConsoleType_ambiguous(t *testing.T) {
-	c, _ := newTestConsole(t)
+// TestConsoleType_wildcard confirms a file spec with a wildcard types
+// every file it matches, each under a heading of its name, as VMS 7.1's
+// TYPE did (testdata/bat98, Phase 98).
+func TestConsoleType_wildcard(t *testing.T) {
+	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
 	if err := c.cmd().SetDefault("DUA0:"); err != nil {
@@ -149,13 +150,15 @@ func TestConsoleType_ambiguous(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "BAR.TXT")
 
-	err := c.cmd().Type("*.TXT", false, false)
-	if err == nil {
-		t.Fatal("Type with a wildcard matching several files = nil error, want CLI_AMBIGUOUS")
+	buf.Reset()
+
+	if err := c.cmd().Type("*.TXT", false, false); err != nil {
+		t.Fatalf("Type(*.TXT): %v", err)
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_AMBIGUOUS)) {
-		t.Errorf("Type error = %v, want CLI_AMBIGUOUS", err)
+	got := buf.String()
+	if !strings.Contains(got, " \nDUA0:[000000]BAR.TXT;1\n \n") || !strings.Contains(got, " \nDUA0:[000000]FOO.TXT;1\n \n") {
+		t.Errorf("TYPE *.TXT = %q, want each file under its heading", got)
 	}
 }
 

@@ -322,6 +322,16 @@ func (c *Context) StopQueue(name string, next, reset bool) error {
 	return c.queueDone(c.RTL.StopQueue(name, how))
 }
 
+// AbortJob is STOP/QUEUE/ENTRY=entry name: the executing job ended with
+// JBC$_JOBABORT (corevms's AbortJob).
+func (c *Context) AbortJob(entry int, name string) error {
+	if c.RTL == nil {
+		return noQueues()
+	}
+
+	return c.queueDone(c.RTL.AbortJob(entry, name))
+}
+
 // SetQueue is SET QUEUE name: the queue's attributes changed.
 func (c *Context) SetQueue(name string, opts QueueOptions) error {
 	if c.RTL == nil {

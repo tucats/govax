@@ -85,9 +85,16 @@
    is left as it is.  It needs manage access to the queue
    (%JBC-E-NOPRIV).
 
+   With /ENTRY=n it ends the job n, executing in the queue, instead: its
+   process is stopped, and the job ends with %JBC-F-JOBABORT, kept if its
+   /RETAIN (or the queue's) says.  A job that isn't executing is
+   %JBC-E-JOBNOTEXEC.  It needs delete access to the job (your own
+   through the queue's owner field) or manage access to the queue.
+
    Format
 
      STOP/QUEUE[/NEXT|/RESET] queue-name
+     STOP/QUEUE/ENTRY=n queue-name
 
 3 Parameter
 
@@ -96,6 +103,13 @@
    The queue to stop.
 
 3 Qualifiers
+/ENTRY
+
+   /ENTRY=n
+
+   Ends the executing job n (%JBC-F-JOBABORT), leaving the queue as it
+   is.
+
 /NEXT
 
    Stops the queue after its executing jobs end.
@@ -113,6 +127,10 @@
    1.$ STOP/QUEUE/NEXT SYS$BATCH
 
      Stops SYS$BATCH once its jobs have ended.
+
+   2.$ STOP/QUEUE/ENTRY=54 SYS$BATCH
+
+     Ends job 54, which SYS$BATCH runs.
 
 3 /MANAGER
 

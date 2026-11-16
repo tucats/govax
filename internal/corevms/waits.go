@@ -212,6 +212,8 @@ func (sys *System) pollEvents() {
 
 	sys.checkDeadlocks()
 	sys.serviceTerminal()
+	sys.pollQueueTimer()
+	sys.pollSyncWaits()
 
 	if sys.wakeWaiters() {
 		sys.idleSpinning = false

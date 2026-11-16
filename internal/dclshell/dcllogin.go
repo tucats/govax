@@ -35,7 +35,12 @@ const (
 // defines. A home SET DEFAULT can't take is its error, nothing changed
 // but the names.
 func (c *Interpreter) SetLoginDirectory(device, directory string) error {
-	sh := c.home
+	return c.home.setLoginDirectory(device, directory)
+}
+
+// setLoginDirectory is SetLoginDirectory for sh, any process's DCL (a
+// batch job's too, dclbatch.go).
+func (sh *Shell) setLoginDirectory(device, directory string) error {
 	device = strings.ToUpper(strings.TrimSpace(device))
 	directory = strings.ToUpper(strings.TrimSpace(directory))
 

@@ -53,6 +53,7 @@ var (
 	CLINormal = vmsdef.LibrarySymbols["CLI$_NORMAL"]
 	ssNormal  = vmsdef.Symbols["SS$_NORMAL"]
 	ssAbort   = vmsdef.Symbols["SS$_ABORT"]
+	rmsNormal = vmsdef.Symbols["RMS$_NORMAL"]
 )
 
 // conditionPrefixes are the prefixes of VMS's names for the condition

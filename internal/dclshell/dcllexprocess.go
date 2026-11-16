@@ -42,12 +42,20 @@ var environmentItems = map[string]func(c *Interpreter) dclValue{
 
 	// DEPTH is the command level: 0 at the terminal (13.7). MAX_DEPTH is
 	// the limit, the terminal's level among them.
-	"DEPTH":     func(c *Interpreter) dclValue { return dclInteger(int32(c.CommandLevel())) },
+	"DEPTH":     func(c *Interpreter) dclValue { return dclInteger(int32(c.CommandLevel() - c.batchBase)) },
 	"MAX_DEPTH": func(c *Interpreter) dclValue { return dclInteger(MaxCommandLevels + 1) },
 
-	"INTERACTIVE": func(c *Interpreter) dclValue { return dclTrueFalse(true) },
-	"KEY_STATE":   func(c *Interpreter) dclValue { return dclString("DEFAULT") },
-	"MESSAGE":     func(c *Interpreter) dclValue { return dclString("/FACILITY/SEVERITY/IDENTIFICATION/TEXT") },
+	"INTERACTIVE": func(c *Interpreter) dclValue {
+		return dclTrueFalse(c.RTL == nil || c.RTL.JobModeName() == "INTERACTIVE")
+	},
+	"KEY_STATE": func(c *Interpreter) dclValue { return dclString("DEFAULT") },
+	"MESSAGE":   func(c *Interpreter) dclValue { return dclString("/FACILITY/SEVERITY/IDENTIFICATION/TEXT") },
+
+	// OUTPUT_RATE is how often a batch job's log is written out, as SET
+	// OUTPUT_RATE sets it: VMS 7.1's job showed a minute, its default
+	// (Phase 98; govax writes each record through, and keeps the default
+	// for any process, unconfirmed for an interactive one).
+	"OUTPUT_RATE": func(c *Interpreter) dclValue { return dclString("   0 00:01:00.00") },
 
 	// ON_CONTROL_Y says an ON CONTROL_Y is in effect at this level, and
 	// ON_SEVERITY is the severity ON acts at, NONE after SET NOON or at
@@ -149,10 +157,15 @@ func lexVerify(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	return was, nil
 }
 
-// lexMode is F$MODE(): the mode the process runs in. govax's is always
-// an interactive one.
-func lexMode(_ *dclExpression, _ []lexicalArg) (dclValue, error) {
-	return dclString("INTERACTIVE"), nil
+// lexMode is F$MODE(): the mode the process runs in, JPI$_MODE's name:
+// INTERACTIVE for the console's job, BATCH for a batch job, OTHER for
+// another detached job.
+func lexMode(e *dclExpression, _ []lexicalArg) (dclValue, error) {
+	if e.console == nil || e.console.RTL == nil {
+		return dclString("INTERACTIVE"), nil
+	}
+
+	return dclString(e.console.RTL.JobModeName()), nil
 }
 
 // lexDirectory is F$DIRECTORY(): the default directory, "[WORK]".

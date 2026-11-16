@@ -1289,7 +1289,8 @@ grammar console
         qualifier   next/id=3052
         qualifier   reset/id=3053
         qualifier   manager/id=3054/syntax=stop_queue_manager
-        disallow    next and reset
+        qualifier   entry/id=3057/type=$integer
+        disallow    any2(next, reset, entry)
 
     syntax stop_queue_manager/id=3055
         qualifier   cluster/id=3056
@@ -1336,6 +1337,15 @@ grammar console
     ! one, DELETE/ENTRY deletes one, SHOW ENTRY shows them. SUBMIT's files
     ! are a list, "," between jobs' files and "+" within one, which VMS
     ! takes alike: every file is one job's.
+    ! SYNCHRONIZE [job-name] [/ENTRY=n] [/QUEUE=name] (Phase 98, subtask 8;
+    ! internal/dclshell/dclsync.go): wait for a job to end, its status the
+    ! command's.
+    verb synchronize/id=3180
+        parameter   job_name/id=3181            -
+                    /type=$string
+        qualifier   entry/id=3182/type=$integer
+        qualifier   queue/id=3183/type=$string
+
     verb submit/id=3110
         parameter   files/id=3111               -
                     /type=$string/list          -
@@ -1345,10 +1355,10 @@ grammar console
         qualifier   user/id=3114/type=$string
         qualifier   parameters/id=3115/type=$string/list
         qualifier   hold/id=3116
-        qualifier   log_file/id=3117/type=$string
+        qualifier   log_file/id=3117/type=$string/default=""
         qualifier   name/id=3118/type=$string
         qualifier   keep/id=3119
-        qualifier   printer/id=3120/type=$string
+        qualifier   printer/id=3120/type=$string/default=""
         qualifier   notify/id=3121
         qualifier   priority/id=3122/type=$integer
         qualifier   cputime/id=3123/type=$string

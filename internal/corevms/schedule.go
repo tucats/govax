@@ -72,6 +72,7 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 	s := sys.sched
 	s.Charge(ran)
 	sys.accountTime()
+	sys.checkCPULimit()
 
 	// Every process's due timers expire, and a waiting process whose
 	// wait is over becomes computable now, which may preempt the

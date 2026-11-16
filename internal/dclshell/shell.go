@@ -15,6 +15,11 @@ import (
 // whose commands run now, so its fields read as the console's: c.RTL,
 // c.Out, c.levels.
 type Shell struct {
+	// batchBase is the command levels a batch job's DCL doesn't count:
+	// 1 while one of the job's files runs, at a level of its own that is
+	// the job's level 0 (dclbatch.go); 0 otherwise.
+	batchBase int
+
 	// RTL is the process the commands act for: Phase 10's SYS$/LIB$
 	// calling-convention environment, which also backs the console's
 	// cpu.SystemServices (services.go). Process 1's is created fresh

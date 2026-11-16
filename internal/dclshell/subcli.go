@@ -240,6 +240,9 @@ type subprocessCLI struct {
 	// once a LOGOUT command has logged it out.
 	login, reported, logoutCommand bool
 
+	// batch is the batch job a batch job's CLI runs (dclbatch.go).
+	batch *corevms.BatchJob
+
 	// input is its SYS$INPUT, opened at the first read.
 	input corevms.CommandInput
 
@@ -379,6 +382,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	cli.command, cli.hasCommand = start.Command, start.Command != ""
 	cli.prompt = start.Prompt
 	cli.login = start.Login
+	cli.batch = start.Batch
 
 	if cli.prompt == "" {
 		cli.prompt = "$ "
@@ -546,6 +550,12 @@ func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, 
 		// for LOGOUT (VMS 7.3, testdata/mp/probe4 and probe5), then the
 		// final status.
 		switch {
+		case cli.login && !cli.reported && cli.batch != nil:
+			cli.reported = true
+			cli.output = append(cli.output, cli.env.LogoutReport(false)...)
+
+			continue
+
 		case cli.login && !cli.reported && cli.input != nil:
 			cli.reported = true
 			cli.output = append(cli.output, cli.env.LogoutReport(cli.input.Interactive())...)
@@ -647,7 +657,11 @@ func (cli *subprocessCLI) runInterpreter() {
 
 	c.setStatus(ssNormal, nil)
 
-	for c.Running() {
+	if cli.batch != nil {
+		cli.runBatch()
+	}
+
+	for c.Running() && cli.batch == nil {
 		line, ok := cli.nextCommand()
 		if !ok {
 			break

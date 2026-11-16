@@ -50,7 +50,7 @@ func (env *Environment) changeQueuesHere(change func(*jobqueue.Database) error) 
 		return queueResult(st, err)
 	}
 
-	return jobqueue.Update(env.System.queues.path, change)
+	return env.System.updateJobs(change)
 }
 
 // managedQueue is the queue called name in d, if the process may manage

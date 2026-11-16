@@ -301,11 +301,14 @@ func (c *Context) Submit(o SubmitOptions, defineEntry func(string)) error {
 		if r.LogFile, err = c.logSpec(o.LogFile); err != nil {
 			return err
 		}
-	case r.Name != "" && !o.NoLog && c.ContainerSession != nil:
+	case r.Name != "" && !o.NoLog && c.ContainerSession != nil && r.User == "":
 		// A job named by /NAME keeps its default log's name, which is no
 		// longer its file's (VMS 7.1 showed HELD98's as
 		// SYS$LOGIN:HELD98.LOG expanded). Its directory is the job's to
 		// find (unconfirmed: the probe's SYS$LOGIN was always there).
+		// Another user's job (/USER) keeps the default, the job's own
+		// SYS$LOGIN: VMS 7.1 put BAT98G2's log in BAT98's home (case
+		// 245).
 		if p, _, err := c.ContainerSession.Parse(r.Name, "SYS$LOGIN:.LOG", "", true, false); err == nil {
 			r.LogFile = p.String()
 		}
@@ -614,6 +617,10 @@ func jobStatusText(v corevms.JobView, full bool) string {
 	case jobqueue.JobTimed:
 		return "Holding until " + corevms.QueueTime(j.After, false)
 	case jobqueue.JobExecuting:
+		if v.Paused {
+			return "Suspended"
+		}
+
 		return "Executing"
 	case jobqueue.JobRetained:
 		if j.RetainedOnError() {
@@ -625,6 +632,11 @@ func jobStatusText(v corevms.JobView, full bool) string {
 
 	if full && v.Stopped {
 		return "Pending (queue stopped)"
+	}
+
+	// A started queue at its job limit (VMS 7.1's BAT98L4, case 213).
+	if full && v.Busy {
+		return "Pending (queue busy)"
 	}
 
 	return "Pending"
@@ -646,7 +658,7 @@ func (c *Context) showJob(v corevms.JobView, full, entry bool) {
 	c.Printf("%7d  %-15s %-20s %s\n", j.Entry, j.Name, j.User, jobStatusText(v, full))
 
 	if j.Status == jobqueue.JobRetained && j.RetainedOnError() {
-		c.Printf("       %s\n", vmsdef.FormatMessage(j.Condition))
+		c.Printf("       %%%s\n", vmsdef.FormatMessage(j.Condition))
 	}
 
 	if entry {
@@ -654,6 +666,12 @@ func (c *Context) showJob(v corevms.JobView, full, entry bool) {
 	}
 
 	if !full {
+		// A retained job's completion shows without /FULL too (VMS
+		// 7.1's SHOW QUEUE/ALL, BAT98.LOG's case 218).
+		if j.Status == jobqueue.JobRetained {
+			c.Printf("         Completed %s on queue %s\n", corevms.QueueTime(j.Completed, false), j.CompletedQueue)
+		}
+
 		return
 	}
 
@@ -663,6 +681,10 @@ func (c *Context) showJob(v corevms.JobView, full, entry bool) {
 		line := "         File: " + f.Spec
 		if j.Delete && i == len(j.Files)-1 {
 			line += " /DELETE"
+		}
+
+		if i == v.Running {
+			line += " (executing)"
 		}
 
 		c.Printf("%s\n", line)

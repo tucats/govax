@@ -265,6 +265,10 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().StartQueue(r.String("QUEUE_NAME"), queueOptions(r))
 	})
 	g.Bind("STOP_QUEUE", func(id int64, r *dcl.Result) error {
+		if r.Present("ENTRY") {
+			return d.Console.cmd().AbortJob(int(r.Int("ENTRY")), r.String("QUEUE_NAME"))
+		}
+
 		return d.Console.cmd().StopQueue(r.String("QUEUE_NAME"), r.Present("NEXT"), r.Present("RESET"))
 	})
 	g.Bind("SET_QUEUE", func(id int64, r *dcl.Result) error {
@@ -1034,7 +1038,10 @@ func queueOptions(r *dcl.Result) dclcmd.QueueOptions {
 
 // submitOptions reads SUBMIT's parameters and qualifiers.
 func submitOptions(r *dcl.Result) dclcmd.SubmitOptions {
-	present := func(name string) bool { return r.Present(name) && !r.Negated(name) }
+	// /LOG_FILE and /PRINTER may be given without a value (VMS's default
+	// log, and SYS$PRINT): the grammar's default value, which isn't the
+	// qualifier given when the command line leaves it out.
+	present := func(name string) bool { return r.Present(name) && !r.Negated(name) && !r.Defaulted(name) }
 	negated := func(name string) bool { return r.Present(name) && r.Negated(name) }
 
 	o := dclcmd.SubmitOptions{

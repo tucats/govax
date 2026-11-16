@@ -80,6 +80,7 @@ func (sys *System) DeleteProcess(env *Environment) {
 	sys.sendTerminationMessage(env)
 	sys.returnTerminal(env)
 	sys.completeSpawn(env)
+	sys.completeBatchJob(env)
 
 	if env.waiting != nil {
 		env.waiting = nil

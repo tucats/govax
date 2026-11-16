@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/jobqueue"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // $SNDJBC's job functions (docs/planning/PHASE-98 - batch queues.md,
@@ -127,8 +128,12 @@ func TestSndjbcJobFunctions(t *testing.T) {
 		t.Errorf("case 12: %#x", st)
 	}
 
-	if j := job(); j.Status != jobqueue.JobPending {
-		t.Errorf("case 12's job: %s", j.Status)
+	// Released on a started queue, the job starts at once, as VMS 7.1's
+	// did (case 13 SYNCHRONIZEd it; case 14 found it gone). With no
+	// scheduler in this fixture its process can't be made
+	// (SS$_UNSUPPORTED), so it ends at once, and is removed.
+	if j := job(); j != nil {
+		t.Errorf("case 12's job: %s, want it started and gone", j.Status)
 	}
 
 	for _, c := range []struct {
@@ -145,7 +150,15 @@ func TestSndjbcJobFunctions(t *testing.T) {
 		{"case 19", "DELETE_JOB", a.items(sjcItem(a, "QUEUE", "BAT98_Q"),
 			item{code: sjcCode("ENTRY_NUMBER"), buflen: 4, buf: a.long(999)}), ssNormal, noSuchJob},
 		{"case 49", "CLOSE_JOB", 0, ssNormal, noSuchJob},
-		{"the job", "DELETE_JOB", a.items(sjcItem(a, "QUEUE", "BAT98_Q"), entryItem), ssNormal, normal},
+		// SYNCHRONIZE_JOB and ABORT_JOB of a job that isn't there, and
+		// ABORT_JOB without its queue (subtask 8).
+		{"no job to wait for", "SYNCHRONIZE_JOB", a.items(item{code: sjcCode("ENTRY_NUMBER"), buflen: 4, buf: a.long(999)}),
+			ssNormal, 0x000481DA},
+		{"no job to abort", "ABORT_JOB", a.items(sjcItem(a, "QUEUE", "BAT98_Q"),
+			item{code: sjcCode("ENTRY_NUMBER"), buflen: 4, buf: a.long(999)}), ssNormal, noSuchJob},
+		{"no queue to abort in", "ABORT_JOB", a.items(item{code: sjcCode("ENTRY_NUMBER"), buflen: 4, buf: a.long(999)}),
+			ssNormal, misReqPar},
+		{"the job, gone", "DELETE_JOB", a.items(sjcItem(a, "QUEUE", "BAT98_Q"), entryItem), ssNormal, noSuchJob},
 	} {
 		if r0, st := sndjbc(t, env, a, c.function, c.itmlst, true); r0 != c.r0 || st != c.iosb {
 			t.Errorf("%s, %s: R0 %#x IOSB %#x, want %#x %#x", c.what, c.function, r0, st, c.r0, c.iosb)
@@ -181,5 +194,11 @@ func TestSndjbcJobFunctions(t *testing.T) {
 	entry = a.readLong(created.buf)
 	if j := job(); j == nil || j.Name != "MULTI" || len(j.Files) != 2 || j.Status != jobqueue.JobHolding {
 		t.Errorf("case 48's job (entry %d): %+v", entry, j)
+	}
+
+	// ABORT_JOB of a job that isn't executing: JOBNOTEXEC (subtask 8).
+	if _, st := sndjbc(t, env, a, "ABORT_JOB", a.items(sjcItem(a, "QUEUE", "BAT98_Q"),
+		item{code: sjcCode("ENTRY_NUMBER"), buflen: 4, buf: a.long(entry)}), true); st != vmsdef.Symbols["JBC$_JOBNOTEXEC"] {
+		t.Errorf("ABORT_JOB of a held job: %#x", st)
 	}
 }

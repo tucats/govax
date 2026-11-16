@@ -13,6 +13,11 @@ const DefaultPrompt = "VAX> "
 // DefaultPrompt when it isn't set. The run loop (cmd/govax) asks for it
 // before each line it reads, so a SET PROMPT takes effect at once.
 func (c *Interpreter) Prompt() string {
+	// A subprocess's or a job's DCL has its own ("$ ").
+	if cli := c.subCLI; cli != nil {
+		return cli.prompt
+	}
+
 	if s := settings.Get(PromptSetting); s != "" {
 		return s
 	}

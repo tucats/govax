@@ -92,6 +92,13 @@ type Submitted struct {
 	PriorityLowered bool
 }
 
+// busy reports whether the job waits on a started queue: one at its job
+// limit (VMS 7.1's BAT98L4, case 212, "pending status caused by queue busy
+// state").
+func (s Submitted) busy() bool {
+	return s.QueueState == jobqueue.QueueStarted && s.Job.Status == jobqueue.JobPending
+}
+
 // Message is SUBMIT's report of the job, as VMS 7.1 wrote it (BAT98.LOG's
 // cases 69 to 107): its name, queue, and entry, and what it is waiting
 // for, a second line saying why a pending job waits on a stopped queue.
@@ -115,6 +122,10 @@ func (s Submitted) Message() []string {
 
 	if s.QueueState == jobqueue.QueueStopped {
 		return []string{head + "pending", "     pending status caused by queue stopped state"}
+	}
+
+	if s.busy() {
+		return []string{head + "pending", "     pending status caused by queue busy state"}
 	}
 
 	return []string{head + "pending"}
@@ -295,7 +306,7 @@ func (env *Environment) SubmitJob(r JobRequest) (Submitted, error) {
 
 	now := env.queueNow()
 
-	err = jobqueue.Update(env.System.queues.path, func(d *jobqueue.Database) error {
+	err = env.System.updateJobs(func(d *jobqueue.Database) error {
 		q := d.Queue(j.Queue)
 		if q == nil {
 			return queueStatus(jbcNoSuchQue)
@@ -318,6 +329,7 @@ func (env *Environment) SubmitJob(r JobRequest) (Submitted, error) {
 	}
 
 	s.Job = *j
+	env.System.forgetJobEnd(j.Entry)
 
 	return s, nil
 }
@@ -417,31 +429,56 @@ func (env *Environment) deletableJob(d *jobqueue.Database, entry int, queue stri
 // when queue isn't "" (a job elsewhere is JBC$_NOSUCHJOB), with delete
 // access to it (JBC$_NOPRIV). An executing job is marked to end with
 // JBC$_JOBABORT and go (subtask 8 stops its process).
+//
+// A /NOTIFY job deleted before it ran tells its user so, as VMS 7.1 told
+// BAT98.LOG's case 99's (terminal.log): "terminated with error status",
+// JBC$_JOBDELETE.
 func (env *Environment) DeleteJob(entry int, queue string) error {
 	now := env.queueNow()
 
-	return env.changeQueuesHere(func(d *jobqueue.Database) error {
+	var gone *jobqueue.Job
+
+	err := env.changeQueuesHere(func(d *jobqueue.Database) error {
 		j, err := env.deletableJob(d, entry, queue)
 		if err != nil {
 			return err
 		}
 
-		_, err = d.DeleteJob(j.Entry, "", now)
+		was := *j
+
+		running, err := d.DeleteJob(j.Entry, "", now)
+		if err == nil && running == nil {
+			gone = &was
+		}
 
 		return err
 	})
+
+	if err == nil && gone != nil && gone.Notify {
+		env.System.notifyJob(gone, vmsdef.Symbols["JBC$_JOBDELETE"])
+	}
+
+	return err
 }
 
 // JobView is one job as SHOW QUEUE and SHOW ENTRY show it to the process:
 // a copy of the job, whether the process may see it (read access, else
 // "no privilege"), and its queue's state as "On stopped batch queue"
 // words it.
+//
+// For an executing job, Running is the index of the file its process
+// runs (SHOW QUEUE/FULL's "(executing)"), -1 when no process here runs it;
+// Paused says its queue is paused, so it is suspended; Busy that its
+// queue is started and at its job limit (a pending job's "(queue busy)").
 type JobView struct {
 	Job        jobqueue.Job
 	Visible    bool
 	Own        bool
 	QueueState string
 	Stopped    bool
+	Running    int
+	Paused     bool
+	Busy       bool
 }
 
 // jobView is j as the process may see it.
@@ -454,6 +491,13 @@ func (env *Environment) jobView(d *jobqueue.Database, j *jobqueue.Job) JobView {
 		Own:        strings.EqualFold(j.User, env.Process.Username),
 		QueueState: d.StateText(q),
 		Stopped:    q.State == jobqueue.QueueStopped,
+		Running:    -1,
+		Paused:     q.State == jobqueue.QueuePaused,
+		Busy:       q.State == jobqueue.QueueStarted && d.Executing(q.Name) >= q.JobLimit,
+	}
+
+	if run := env.System.batch[j.Entry]; run != nil && j.Status == jobqueue.JobExecuting {
+		v.Running = run.file
 	}
 	v.Job.Files = slices.Clone(j.Files)
 	v.Job.Parameters = slices.Clone(j.Parameters)

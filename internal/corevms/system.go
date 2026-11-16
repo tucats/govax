@@ -77,6 +77,14 @@ type System struct {
 	// queues is the session's queue manager, nil for none (queues.go).
 	queues *QueueManager
 
+	// batch are the executing batch jobs' processes, by entry number;
+	// jobEnds each job's last end, numbered by endSeq, for SYNCHRONIZE;
+	// syncWaits the $SNDJBC SYNCHRONIZE_JOBs not yet complete (batch.go).
+	batch     map[int]*batchRun
+	jobEnds   map[int]jobEnd
+	endSeq    uint64
+	syncWaits []*syncWait
+
 	// deviceProfiles are the devices' security profiles $SET_SECURITY
 	// has changed, by device name (secobjects.go); a device not here has
 	// the default.

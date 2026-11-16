@@ -60,6 +60,11 @@ type CLIStartup struct {
 	// each command (DCL's verify, on in a job that isn't interactive),
 	// and it ends with LOGOUT's report (LogoutReport).
 	Login bool
+
+	// Batch, when set, is the batch job a LOGINOUT CLI runs (batch.go):
+	// the login procedures, then the job's files, each at command level
+	// 0, and LOGOUT's report.
+	Batch *BatchJob
 }
 
 // isLoginout reports whether image names LOGINOUT.EXE, the image

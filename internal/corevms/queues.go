@@ -33,6 +33,10 @@ type QueueManager struct {
 	mu   sync.Mutex
 	path string
 	lock *hostlock.Lock
+
+	// next is the database's next /AFTER time, in VMS time, 0 for none,
+	// as the job controller last saw it (batch.go's noteNext).
+	next uint64
 }
 
 // NewQueueManager returns the manager of the queue database at path, a

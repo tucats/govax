@@ -736,9 +736,18 @@ func (c *Interpreter) StopImage(name, pid string) error {
 // its procedures ended, stopAfterImage). A process running no image is
 // deleted at once. Every other mode, and /NOEXIT, deletes the process at
 // once (StopProcess).
+//
+// Its status is RMS$_NORMAL, %X00010001, as VMS 7.1's STOP BATCH_56 left
+// it (testdata/bat98's case 183).
 func (c *Interpreter) stopProcess(name, pid string, exit stopExit) error {
 	if exit != stopExitUser {
-		return c.StopProcess(name, pid)
+		if err := c.StopProcess(name, pid); err != nil {
+			return err
+		}
+
+		c.SetCommandStatus(rmsNormal, nil)
+
+		return nil
 	}
 
 	if err := c.machine.RequireInit(); err != nil {

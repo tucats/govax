@@ -39,6 +39,9 @@ type Environment struct {
 	// to and CLOSE_JOB enters (sndjbc.go); nil when none is open.
 	openJob *JobRequest
 
+	// pendingSync is the SYNCHRONIZE_JOB a $SNDJBCW waits for (sndjbc.go).
+	pendingSync *syncWait
+
 	// KeepP0 makes image rundown leave P0's pages, and the sections
 	// mapped there, where they are (DeleteP0): the machine sets it while a debugger session holds the
 	// image, whose memory VMS's debugger still shows after the image has
@@ -273,6 +276,11 @@ type Environment struct {
 	// this process waits for (spawn.go).
 	spawn     *spawnCompletion
 	spawnWait *Environment
+
+	// batch is set for a batch job's process: its job (batch.go); and
+	// batchLog is the log file's name its SYS$OUTPUT was opened by.
+	batch    *batchRun
+	batchLog string
 
 	// awaitingTerminal is set while the process has given its job's
 	// terminal away (a waiting SPAWN, or ATTACH) and waits for it to come

@@ -3,6 +3,7 @@ package corevms
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
@@ -113,7 +114,24 @@ func (env *Environment) prepareImage(st *ProcessStartup) (uint32, error) {
 		return 0, err
 	}
 
-	if err := env.defineTerminalName(st.Input); err != nil {
+	// A batch job's log is made by its process, as its user (batch.go):
+	// one it can't make ends the job, as VMS 7.1 retained a job whose log
+	// its user couldn't create with RMS$_PRV (the probe's A.4). NL:, a
+	// job's /NOLOG_FILE, may be missing from a system without one.
+	if env.batch != nil && !strings.EqualFold(st.Output, "NLA0:") {
+		if _, ok := env.permanentEntry("SYS$OUTPUT"); !ok {
+			return 0, vmserrors.New(rmsPRV)
+		}
+	}
+
+	// A batch job's TT is NL:, its input being its command file (VMS
+	// 7.1's job showed TT "_NLA0:").
+	terminal := st.Input
+	if env.batch != nil {
+		terminal = "NLA0:"
+	}
+
+	if err := env.defineTerminalName(terminal); err != nil {
 		return 0, err
 	}
 

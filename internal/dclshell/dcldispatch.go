@@ -356,6 +356,7 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 	g.Bind("WRITE", c.writeCommand)
 	g.Bind("INQUIRE", c.inquireCommand)
 	g.Bind("WAIT", c.waitCommand)
+	g.Bind("SYNCHRONIZE", c.synchronizeCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return c.continueCommand() })
 	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return c.logoutCommand() })
 	g.Bind("MCR", func(id int64, r *dcl.Result) error {

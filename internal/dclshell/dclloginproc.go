@@ -35,7 +35,8 @@ const (
 	loginProcedure = "SYS$LOGIN:LOGIN.COM"
 )
 
-// RunLoginProcedures runs process 1's login procedures, SYLOGIN and then
+// RunLoginProcedures runs the login procedures of the process whose DCL
+// runs now (process 1's, or a batch job's), SYLOGIN and then
 // lgicmd (an account's LGICMD; "" for SYS$LOGIN:LOGIN.COM), sending their
 // lines to dispatch. A failure the procedures have already shown isn't
 // returned again; any other error is.
@@ -99,7 +100,7 @@ func (c *Interpreter) loginProcedure(file string, before func(), dispatch func(s
 // be translated: SYS$SYLOGIN, which a system without a system volume
 // doesn't define, or SYS$LOGIN, which a login with no home doesn't.
 func (c *Interpreter) loginNameDefined(name string) bool {
-	_, err := c.home.Logicals.Translate(lnm.FileDevName, name, lnm.User, 0)
+	_, err := c.Logicals.Translate(lnm.FileDevName, name, lnm.User, 0)
 
 	return err == nil
 }

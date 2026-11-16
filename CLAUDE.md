@@ -951,7 +951,20 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `rms/jobfiles.go`'s `Session.JobFiles`), `$SNDJBC`'s job functions
   (`sjcJobItems`), and DCL's SUBMIT, SET ENTRY, SHOW ENTRY, DELETE/ENTRY,
   and SHOW QUEUE's jobs (`dclcmd/jobs.go`), held to the probe's JOBS ON
-  A STOPPED QUEUE by `TestJobCommandsOracle`.
+  A STOPPED QUEUE by `TestJobCommandsOracle`;
+  subtask 8 (2026-11-16) the batch job: `corevms/batch.go` (the job
+  controller in Go: `settleJobs` after every change, `updateJobs`, starting
+  a job as a detached process logged in by `BeginLogin`/`LogIn` through
+  `$CREPRC`'s code, `CreateRequest.jobController`; its log made by the
+  process as its user; `completeBatchJob` at its deletion, Finish,
+  /NOKEEP, /DELETE, /NOTIFY; the /AFTER timer in `nextTimer` and
+  `pollQueueTimer`; `checkCPULimit`, SS$_EXCPUTIM; SYNCHRONIZE's `jobEnd`s;
+  `AbortJob`, `$SNDJBC`'s ABORT_JOB and SYNCHRONIZE_JOB), DCL's batch mode
+  (`dclshell/dclbatch.go`: the login procedures, then each file at a level
+  counted as 0, `Shell.batchBase`, verify, the end), SYNCHRONIZE
+  (`dclshell/dclsync.go`), STOP/QUEUE/ENTRY, F$MODE and JPI$_MODE BATCH,
+  TYPE of a wildcard under headings; held to the probe's RUNNING JOBS to
+  ORDER and THE JOB'S VIEW by `internal/console/batch_test.go`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

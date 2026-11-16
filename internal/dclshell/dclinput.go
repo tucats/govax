@@ -110,6 +110,7 @@ var dclOwnCommands = map[string]bool{
 	"SUBROUTINE":       true,
 	"THEN":             true,
 	"WAIT":             true,
+	"SYNCHRONIZE":      true,
 	"WRITE":            true,
 }
 

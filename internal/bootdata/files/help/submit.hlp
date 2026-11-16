@@ -27,14 +27,33 @@
 
    SUBMIT's report is one of
 
+     Job name (queue q, entry n) started on q
      Job name (queue q, entry n) pending
           pending status caused by queue stopped state
      Job name (queue q, entry n) holding
      Job name (queue q, entry n) holding until dd-mmm-yyyy hh:mm
 
-   SHOW ENTRY and SHOW QUEUE show the job; SET ENTRY changes it, and
-   DELETE/ENTRY deletes it.  govax has no print queues, so a job's log
-   file is kept on disk.
+   SHOW ENTRY and SHOW QUEUE show the job; SET ENTRY changes it,
+   DELETE/ENTRY deletes it (ending it if it runs), and SYNCHRONIZE waits
+   for it to end.  govax has no print queues, so a job's log file is kept
+   on disk.
+
+   A started queue runs its pending jobs while it runs fewer than its
+   /JOB_LIMIT, the highest /PRIORITY first, then in the order submitted.
+   Each job is a detached process named BATCH_n, n its entry, logged in
+   to the job's account: the account's privileges and quotas, the
+   queue's base priority, and the rights identifier BATCH; F$MODE() is
+   "BATCH".  Its SYS$OUTPUT and SYS$ERROR are the log file, which it
+   creates as its user (a log it can't create ends the job with
+   %RMS-E-PRV).  It runs SYS$SYLOGIN and the account's login procedure,
+   then each of the job's files as its command stream, at command level
+   0 (F$ENVIRONMENT("DEPTH") is 0), with the job's parameters as P1 to
+   P8.  The first file is verified as the login procedures leave
+   verification (off); each later one is verified.  A file ending with an
+   error or severe error ends the job; a warning goes on to the next
+   file.  The log ends with LOGOUT's accounting report, and the job's
+   status is its last file's.  A /CPUTIME (or the queue's /CPUDEFAULT)
+   that runs out ends the job with %SYSTEM-F-EXCPUTIM.
 
 2 Qualifiers
 /AFTER

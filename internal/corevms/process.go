@@ -98,7 +98,8 @@ type Process struct {
 	// once. CPULimit is the CPULM quota, the CPU time the process may
 	// use, in 10-millisecond units, 0 meaning no limit. They're recorded
 	// ($CREPRC sets a new process's from its creator's; creprc.go) and
-	// reported by $GETJPI, but not enforced.
+	// reported by $GETJPI, but not enforced, but for a batch job's CPU
+	// limit (batch.go's checkCPULimit).
 	BufferedIOLimit, DirectIOLimit, CPULimit uint32
 
 	// cpuDeducted is how much of its creator's CPU time limit the

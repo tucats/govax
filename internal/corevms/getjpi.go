@@ -23,6 +23,7 @@ var (
 	jpiLocal       = vmsdef.Symbols["JPI$K_LOCAL"]
 	jpiDetached    = vmsdef.Symbols["JPI$K_DETACHED"]
 	jpiOther       = vmsdef.Symbols["JPI$K_OTHER"]
+	jpiBatch       = vmsdef.Symbols["JPI$K_BATCH"]
 )
 
 // Wildcard $GETJPI contexts, the longword at pidadr. VMS starts a
@@ -160,6 +161,10 @@ func (env *Environment) inConsoleJob() bool {
 // jobType is JPI$_JOBTYPE: LOCAL for the console's job, DETACHED for
 // any other (unconfirmed against VMS for subprocesses).
 func (env *Environment) jobType() uint32 {
+	if env.Process.CreateFlags&prcBATCH != 0 {
+		return jpiBatch
+	}
+
 	if env.inConsoleJob() {
 		return jpiLocal
 	}
@@ -170,11 +175,28 @@ func (env *Environment) jobType() uint32 {
 // jobMode is JPI$_MODE: INTERACTIVE for the console's job, OTHER for
 // any other.
 func (env *Environment) jobMode() uint32 {
+	if env.Process.CreateFlags&prcBATCH != 0 {
+		return jpiBatch
+	}
+
 	if env.inConsoleJob() {
 		return jpiInteractive
 	}
 
 	return jpiOther
+}
+
+// JobModeName is JPI$_MODE's name, as F$MODE returns it: INTERACTIVE,
+// BATCH, or OTHER.
+func (env *Environment) JobModeName() string {
+	switch env.jobMode() {
+	case jpiBatch:
+		return "BATCH"
+	case jpiInteractive:
+		return "INTERACTIVE"
+	}
+
+	return "OTHER"
 }
 
 // schedulingState is JPI$_STATE: the scheduler's state code for the

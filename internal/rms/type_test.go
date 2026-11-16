@@ -2,6 +2,7 @@ package rms
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/ods2/ondisk"
@@ -167,24 +168,23 @@ func TestSession_typeNotFound(t *testing.T) {
 	}
 }
 
-// TestSession_typeAmbiguousWildcard confirms a name/type pattern matching
-// more than one distinct file surfaces as an *AmbiguousError -- TYPE never
-// accepts wildcards, matching ods2's own cmdType.
-func TestSession_typeAmbiguousWildcard(t *testing.T) {
+// TestSession_typeWildcard: a wildcard types every file it matches, each
+// under a heading of its name between lines of one blank, as VMS 7.1's
+// TYPE did (testdata/bat98, Phase 98).
+func TestSession_typeWildcard(t *testing.T) {
 	s, _ := newTypeTestSession(t)
 
-	_, err := s.Type("*.TXT")
-	if err == nil {
-		t.Fatal("Type with a wildcard matching several files = nil error, want an error")
+	text, err := s.Type("*.TXT")
+	if err != nil {
+		t.Fatalf("Type(*.TXT): %v", err)
 	}
 
-	var ambiguous *AmbiguousError
-	if !errors.As(err, &ambiguous) {
-		t.Fatalf("Type error = %v, want a *AmbiguousError", err)
+	if n := strings.Count(text, " \n"); n < 4 {
+		t.Errorf("Type(*.TXT) = %q, want a heading for each of several files", text)
 	}
 
-	if ambiguous.Count < 2 {
-		t.Errorf("AmbiguousError.Count = %d, want at least 2", ambiguous.Count)
+	if !strings.HasPrefix(text, " \n") || !strings.Contains(text, ".TXT;") {
+		t.Errorf("Type(*.TXT) = %q, want each file under a heading of its name", text)
 	}
 }
 

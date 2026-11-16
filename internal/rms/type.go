@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/isam"
 	"github.com/tucats/govax/internal/security"
 
+	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
@@ -72,14 +73,13 @@ var typeSharing = shrGet | shrPut | shrUpd | shrDel
 // -- the same "rms computes, console prints" split Session.Directory/
 // Session.DefaultString already established.
 //
-// specText must resolve to exactly one file: an empty or omitted version
-// defaults to the highest surviving version (filespec.Parse's own ordinary
-// rule, the same default DIRECTORY relies on), but a name/type pattern
-// matching more than one file fails with an *AmbiguousError rather than
-// picking one arbitrarily or typing all of them -- TYPE never accepts
-// wildcards, matching ods2's own cmdType. A pattern matching nothing at all
-// fails with a *NotFoundError, the same failure Session.Delete already
-// reports this way.
+// A specification without a wildcard names one file: an empty or omitted
+// version is the highest surviving version (filespec.Parse's own ordinary
+// rule, the same default DIRECTORY relies on). One with a wildcard types
+// every file it matches, each under a heading, as VMS 7.1's TYPE did
+// (Phase 98); a name that still matches several files without one is an
+// *AmbiguousError. A pattern matching nothing at all fails with a
+// *NotFoundError, the same failure Session.Delete already reports this way.
 func (s *Session) Type(specText string) (string, error) {
 	var buf bytes.Buffer
 
@@ -90,45 +90,68 @@ func (s *Session) Type(specText string) (string, error) {
 			return err
 		}
 
-		switch len(matches) {
-		case 0:
+		if len(matches) == 0 {
 			return &NotFoundError{Spec: specText}
-		case 1:
-			// Exactly one match -- proceed.
-		default:
-			return &AmbiguousError{Spec: specText, Count: len(matches), Verb: "TYPE"}
 		}
 
-		// TYPE is one of the file's RMS openers while it reads
-		// (sharing.go): a file another opener keeps readers out of is
-		// RMS$_FLK.
-		claim := s.Mounts.claimOpen(r.Spec.Device, fileIDFrom(matches[0].Fid), facGet, typeSharing)
-		if claim == nil {
-			return &LockedError{Name: fullSpec(r.Spec.Device, matches[0])}
+		// A wildcard types every file it matches, each under a heading
+		// of its name between lines of one blank, as VMS 7.1's TYPE did
+		// (testdata/bat98's TYPE BAT98$DISK:[BAT98LOG]BAT98R1.LOG;*):
+		//
+		//	 (a blank)
+		//	DUA1:[BAT98LOG]BAT98R1.LOG;1
+		//	 (a blank)
+		if !hasWildcard(r.Spec) {
+			if len(matches) > 1 {
+				return &AmbiguousError{Spec: specText, Count: len(matches), Verb: "TYPE"}
+			}
+
+			return s.typeMatch(&buf, vol, r, matches[0])
 		}
 
-		defer claim.release()
+		for _, m := range matches {
+			fmt.Fprintf(&buf, " \n%s\n \n", r.shownFile(m))
 
-		f, err := s.openChecked(vol, matches[0], security.Read, r.shownFile(matches[0]))
-		if err != nil {
-			return err
+			if err := s.typeMatch(&buf, vol, r, m); err != nil {
+				return err
+			}
 		}
 
-		if isIndexed(f) {
-			return writeIndexedRecords(&buf, f)
-		}
-
-		if f.Header.RecordAttributes.Attributes&ondisk.AttrFortranCC != 0 {
-			return writeFortranRecords(&buf, f)
-		}
-
-		return writeRecords(&buf, f, lfLineEnding)
+		return nil
 	})
 	if err != nil {
 		return "", fmt.Errorf("type: %w", err)
 	}
 
 	return buf.String(), nil
+}
+
+// typeMatch writes the file m's records to buf as TYPE shows them.
+func (s *Session) typeMatch(buf *bytes.Buffer, vol *volume.Volume, r resolvedSpec, m filespec.Match) error {
+	// TYPE is one of the file's RMS openers while it reads
+	// (sharing.go): a file another opener keeps readers out of is
+	// RMS$_FLK.
+	claim := s.Mounts.claimOpen(r.Spec.Device, fileIDFrom(m.Fid), facGet, typeSharing)
+	if claim == nil {
+		return &LockedError{Name: fullSpec(r.Spec.Device, m)}
+	}
+
+	defer claim.release()
+
+	f, err := s.openChecked(vol, m, security.Read, r.shownFile(m))
+	if err != nil {
+		return err
+	}
+
+	if isIndexed(f) {
+		return writeIndexedRecords(buf, f)
+	}
+
+	if f.Header.RecordAttributes.Attributes&ondisk.AttrFortranCC != 0 {
+		return writeFortranRecords(buf, f)
+	}
+
+	return writeRecords(buf, f, lfLineEnding)
 }
 
 // writeIndexedRecords writes an indexed file's records to w as TYPE shows

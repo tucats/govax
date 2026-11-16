@@ -72,6 +72,11 @@ func (sys *System) nextTimer() (uint64, bool) {
 		next, found = d, true
 	}
 
+	// A batch job held until a time (batch.go).
+	if d, ok := sys.queues.nextJobTime(); ok && d < next {
+		next, found = d, true
+	}
+
 	return next, found
 }
 

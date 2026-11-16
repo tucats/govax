@@ -2023,3 +2023,27 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     the CONNECT's privilege; the first MOUNT initializes it, where on VMS INITIALIZE does. The total limit
     (`vax.ramdisk.limit`) and the `%VAX-` messages are govax's.
 - **Status**: kept; govax's own design, there being no DECram to probe.
+
+### [Phase 98] Batch jobs beside VMS 7.1's
+
+- **Where**: `internal/corevms/batch.go`, `internal/dclshell/dclbatch.go` and `dclsync.go`;
+  `docs/planning/PHASE-98 - batch queues.md`, A.4 and subtask 8's log.
+- **What**: a batch job runs as VMS 7.1's did in the probe (`testdata/bat98`), but for these, each a choice where the
+  probe showed nothing or where govax's machinery differs:
+  - **The job controller is Go** (Decision 5): no QUEUE_MANAGER or JOB_CONTROL process; jobs start when the
+    database changes in the session running the manager, and at their /AFTER times.
+  - **A job's files run at a command level of their own**, counted as level 0 (`Shell.batchBase`): DEPTH is 0, and
+    labels, GOTO, and the error action are a procedure's, as on VMS. The level defines a supervisor-mode SYS$INPUT
+    for the file, where VMS's job has only the executive-mode one.
+  - **The CPU limit is enforced for batch jobs only** (`checkCPULimit`, SS$_EXCPUTIM); other processes' CPULM is
+    recorded and reported, not enforced, as before.
+  - **The working-set qualifiers** (the queue's and the job's) are kept and shown but not applied to the process:
+    the probe's smaller queue values didn't lower the account's (unconfirmed which wins).
+  - **SYNCHRONIZE of a job that has ended**: on the VAX a job is gone a moment after it ends, and a SYNCHRONIZE
+    within that moment had its status (case 159) where one after it was NOSUCHENT (cases 216, 296, 303). govax runs
+    jobs between process 1's commands, so its jobs end sooner; it keeps an end until a SYNCHRONIZE completes
+    (corevms's `jobEnd`), which answers as the VAX did but for case 303, a race.
+  - **The log is written a record at a time**, where VMS's RMS buffered it: a job ended by STOP/QUEUE/RESET left a
+    0-block log on the VAX (case 201), and a line in govax's.
+  - **A DISUSER account's job** ends with LOGIN-F-DISUSER and no log written (unconfirmed what VMS's log says).
+- **Status**: kept; the rest of the probe's job sections are held to VMS by `internal/console/batch_test.go`.
