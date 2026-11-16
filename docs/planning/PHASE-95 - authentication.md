@@ -497,7 +497,7 @@ Each is one commit, with tests, stopping for review.
    SYS$LOGIN and its kin, the default directory, DISUSER's refusal, the
    new `$GETJPI` and F$GETJPI items the probe lists, LOGINTIM and the
    last-login time.
-5. **AUTHORIZE's account commands** (Decision 10): `authorize.dcl`,
+5. **AUTHORIZE's account commands** (done 2026-11-15) (Decision 10): `authorize.dcl`,
    `internal/authorize`, the `UAF>` session and the one-command form, MCR
    and RUN; ADD, COPY, DEFAULT, MODIFY, REMOVE, RENAME, EXIT; the access
    check (Decision 5); the UAF messages; held to the probe.
@@ -738,3 +738,50 @@ The answers (2026-11-15):
   Behavior change, as Decision 3 planned: with a system volume and no
   `vax.default.volume.directory` configured, a session now starts in
   SYS$SYSROOT:[SYSMGR] rather than the default volume's `[WORK]`.
+- **2026-11-15** Subtask 5: `internal/authorize`, AUTHORIZE's account
+  commands. `authorize.dcl` (bootdata) is its grammar, parsed apart from
+  `console.dcl` as `debug.dcl` is: EXIT, ADD, COPY, MODIFY, DEFAULT,
+  REMOVE, RENAME, every account qualifier govax keeps a value `$any` that
+  the package reads itself (UICERR, BADVALUE, VALTOOBIG; flag and privilege
+  names CLI's IVKEYW), the A.3 qualifiers it doesn't keep left out, so
+  IVQUAL. A `Utility` is one run (`Run`): a Store (corevms's System, its
+  `Authorization` and `UpdateAuthorization`), the process's credentials,
+  SYS$OUTPUT, and a reader for a session's commands. One command prints
+  only its messages and returns its $STATUS, each command's as VMS 7.1's
+  (A.5: UAEERR's own condition in ADD and COPY, SS$_NORMAL in RENAME;
+  BADUSR %X10000000 in COPY, SS$_NORMAL in RENAME and REMOVE; BADSPC's own
+  in MODIFY; CLI's conditions with the inhibit bit); a session prompts
+  `UAF> `, ends at EXIT (abbreviated) or the end of input, and says DONEMSG
+  or NOMODS and RDBDONEMSG or RDBNOMODS by what its commands changed. The
+  UAF messages are `vmsdef.UAFMessages` (the facility, %X3F1, and the three
+  codes the probe showed). The file's profile is SYSUAF.DAT's, owner [1,4],
+  (S:RWE,O:RWE,G,W), checked by `security.Check`: read at a session's start
+  or for one command, write for each command that changes the file; refused,
+  NAOFIL with RMS's PRV, SS$_NORMAL (govax's file is always found, so never
+  VMS's FNF from a default directory without SYSUAF.DAT). DCL:
+  `dclshell/authorize.go`'s `Interpreter.Authorize`, the `AUTHORIZE
+  [command]` verb (console.dcl, bound in `console/commands.go`), and
+  `builtinUtility`: MCR (and a foreign command) of AUTHORIZE or
+  SYS$SYSTEM:AUTHORIZE[.EXE], RUN only of the latter; a session reads as
+  HELP's responses do (`ReadHelpResponse`). HELP AUTHORIZE is a short
+  topic for now (subtask 10 writes it out, and UAFHELP.HLB).
+  `TestUAF95Oracle` replays the probe's 134 one-command cases in order on a
+  file of govax's own, comparing the 54 that are this subtask's (SHOW,
+  LIST, and the identifier commands skipped until subtask 6) line for line
+  with their $STATUS, all VMS's but cases 123 and 125 (/ACCESS and
+  /NOACCESS, IVQUAL by A.3); `TestUAF95FinalState` holds the file they
+  leave to VMS's LIST (case 119), case 134's fields, and the identifiers
+  SHOW/IDENTIFIER found. Unconfirmed choices, which no case settled: a
+  text value too long is VALTOOBIG (owner 31, account 8, device, CLI, and
+  tables 31, directory and LGICMD 63), QUEPRIO's largest 255; /PRIVILEGES
+  and /FLAGS change the bits they name, NO clearing them (VMS's SHOW of
+  UAFD in case 46 listed no privileges at all, its brief listing "System");
+  MODIFY's CLIWARNMSG after MDFYMSG (ADD's came after ADDMSG); /ACCOUNT
+  makes a group identifier only on ADD, and only when the group has none
+  and the name is a free identifier name; COPY's new account holds no
+  identifiers and has no password unless /PASSWORD gives one (then no
+  DEFPWD); RENAME's new name already an identifier's is RDBMDFYERR with
+  DUPLNAM; REMOVE takes out only the UIC identifier named for the account,
+  and every account's grant of it. Also fixed: subtask 4 left
+  `TestNoUncheckedPrivileges` failing, `corevms/login.go`'s `LogIn` setting
+  the current privileges unlisted; it is now among `managedPrivileges`.

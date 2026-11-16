@@ -1,0 +1,85 @@
+1 AUTHORIZE
+
+   Makes and changes the accounts in govax's authorization file, its
+   SYSUAF.DAT: a JSON file on the host, ~/.govax/sysuaf.json unless the
+   configuration key vax.authorization.file names another.  AUTHORIZE
+   alone prompts UAF> for commands until EXIT or Ctrl/Z; with a command
+   it runs that one.  MCR AUTHORIZE and RUN SYS$SYSTEM:AUTHORIZE are the
+   same.  In a command procedure a session reads its commands from the
+   data lines after it.
+
+   Format
+
+     AUTHORIZE [command]
+
+2 Parameter
+
+ command
+
+   One of AUTHORIZE's commands, with its parameters and qualifiers.
+   Without one, AUTHORIZE prompts for them.
+
+2 Description
+
+   The file is protected as VMS protects SYSUAF.DAT: owned by [1,4],
+   (S:RWE,O:RWE,G,W).  A process in a system group, or with SYSPRV or
+   BYPASS, may use it; others get %UAF-E-NAOFIL.
+
+   A session ends with a message for each of the two parts of the file,
+   the accounts (DONEMSG or NOMODS) and the rights database (RDBDONEMSG
+   or RDBNOMODS).  One command prints only its own messages, and leaves
+   $STATUS as VMS's AUTHORIZE did.
+
+   The commands are:
+
+     ADD username        A new account, a copy of DEFAULT's record with
+                         the qualifiers' fields, and an identifier for
+                         its UIC
+     COPY old new        A new account, a copy of another's
+     DEFAULT             Change the DEFAULT record new accounts copy
+     MODIFY username     Change accounts; % and * match several
+     REMOVE username     Delete an account and its UIC identifier
+     RENAME old new      Change an account's username
+     EXIT                End the session
+
+   SHOW, LIST, and the identifier commands are still to come.
+
+2 Qualifiers
+
+   ADD, COPY, MODIFY, and DEFAULT take the fields of an account:
+
+     /ACCOUNT=name       /ASTLM=n            /BIOLM=n
+     /BYTLM=n            /CLI=name           /CLITABLES=name
+     /CPUTIME=delta      /DEFPRIVILEGES=(..) /DEVICE=device
+     /DIOLM=n            /DIRECTORY=[dir]    /ENQLM=n
+     /FILLM=n            /FLAGS=(..)         /JTQUOTA=n
+     /LGICMD=file        /MAXACCTJOBS=n      /MAXDETACH=n
+     /MAXJOBS=n          /OWNER="name"       /[NO]PASSWORD=text
+     /PBYTLM=n           /PGFLQUOTA=n        /PRCLM=n
+     /PRIORITY=n         /PRIVILEGES=(..)    /QUEPRIO=n
+     /SHRFILLM=n         /TQELM=n            /UIC=[group,member]
+     /WSDEFAULT=n        /WSEXTENT=n         /WSQUOTA=n
+
+   A UIC's numbers are octal.  /FLAGS and the privilege lists name what
+   they set, and NO before a name clears it (/FLAGS=NODISUSER,
+   /PRIVILEGES=(NOALL,TMPMBX)).  Of the flags only DISUSER does anything
+   yet: it refuses a login.  govax keeps no login times, password
+   lifetimes, or expiration dates, so /ACCESS, /PRIMEDAYS,
+   /PWDLIFETIME, /PWDMINIMUM, /PWDEXPIRED, /EXPIRATION, and
+   /GENERATE_PASSWORD are not accepted.
+
+2 Examples
+
+   1.$ AUTHORIZE ADD SMITH/UIC=[200,1]/DEVICE=DUA1:/DIRECTORY=[SMITH]-
+         /FLAGS=NODISUSER/PRIVILEGES=(TMPMBX,NETMBX)
+     %UAF-I-ADDMSG, user record successfully added
+     %UAF-I-RDBADDMSGU, identifier SMITH value [000200,000001] added to rights database
+
+     Adds SMITH, who can then log in with govax --user SMITH.
+
+   2.$ MCR AUTHORIZE
+     UAF> MODIFY SMITH/ASTLM=60
+     %UAF-I-MDFYMSG, user record(s) updated
+     UAF> EXIT
+     %UAF-I-DONEMSG, system authorization file modified
+     %UAF-I-RDBNOMODS, no modifications made to rights database

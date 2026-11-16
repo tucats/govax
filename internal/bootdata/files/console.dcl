@@ -268,6 +268,14 @@ grammar console
     ! subtask 19); in process 1 it ends govax.
     verb logout
 
+    ! AUTHORIZE [command]: govax's account utility (internal/authorize,
+    ! docs/planning/PHASE-95 - authentication.md, Decision 10), a session
+    ! at its UAF> prompt, or the one command given. MCR AUTHORIZE and RUN
+    ! SYS$SYSTEM:AUTHORIZE reach it too (dclshell/authorize.go).
+    verb authorize/id=2900
+        parameter   command/id=2901             -
+                    /type=$rest_of_line
+
     ! MCR image [text]: runs the image, with the text for
     ! LIB$GET_FOREIGN, as a foreign command does.
     verb mcr/id=1670

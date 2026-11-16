@@ -40,6 +40,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 	})
 
 	g.Bind(runTOKEN, d.runCommand)
+	g.Bind("AUTHORIZE", func(id int64, r *dcl.Result) error { return d.Console.Authorize(r.String("COMMAND")) })
 
 	g.Bind(asmTOKEN, d.asmCommand)
 	g.Bind("SAVE", d.saveCommand)

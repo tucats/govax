@@ -166,6 +166,11 @@ func (c *Interpreter) Run(fn string, opts machine.RunOptions) error {
 		return err
 	}
 
+	// RUN SYS$SYSTEM:AUTHORIZE is govax's AUTHORIZE, in Go (authorize.go).
+	if builtinUtility(fn, false) {
+		return c.Authorize(opts.CommandLine)
+	}
+
 	// Whatever an earlier image left to chain and nobody ran (one run
 	// outside DCL's command loop) is forgotten (dclchain.go).
 	c.chained = nil

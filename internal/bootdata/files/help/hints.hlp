@@ -63,6 +63,7 @@
 2 Processes
 
      ATTACH          Give the terminal to another process
+     AUTHORIZE       Make and change accounts
      LOGOUT          End a subprocess
      SPAWN           Make a subprocess
      STOP            End procedures, or delete a process

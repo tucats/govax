@@ -34,6 +34,7 @@ func TestGrammarSplit(t *testing.T) {
 		// Verbs the console keeps: the VMS commands and the machine's
 		// life cycle.
 		{"ASSIGN A B", consoleOnly},
+		{"AUTHORIZE SHOW SYSTEM", consoleOnly},
 		{"BOOT", neither},
 		{"COPY A B", consoleOnly},
 		{"CREATE/DIRECTORY [A]", consoleOnly},

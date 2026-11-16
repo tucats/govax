@@ -111,6 +111,7 @@ var managedPrivileges = map[string]string{
 	"internal/corevms/privilege.go:setPrivileges":           "$SETPRV changes the mask",
 	"internal/corevms/lexical.go:SetProcessPrivileges":      "SET PROCESS/PRIVILEGES returns the previous mask",
 	"internal/corevms/creprc.go:CreateProcess":              "$CREPRC copies the creator's mask to the new process",
+	"internal/corevms/login.go:LogIn":                       "logging in sets the mask from the account's default privileges",
 	"internal/corevms/spawn.go:Spawn":                       "LIB$SPAWN asks $CREPRC for the creator's mask",
 	"internal/corevms/getjpi.go:jpiItemsByName":             "JPI$_CURPRIV returns the mask",
 	"internal/corevms/uicprot.go:Credentials":               "the protection rule's credentials carry the privileges that override protection",

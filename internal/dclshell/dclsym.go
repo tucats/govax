@@ -294,6 +294,11 @@ func (c *Interpreter) runForeign(spec, rest string) error {
 		return err
 	}
 
+	// MCR AUTHORIZE is govax's AUTHORIZE, in Go (authorize.go).
+	if builtinUtility(spec, true) {
+		return c.Authorize(rest)
+	}
+
 	opts := machine.RunOptions{RunInits: c.machine.DefaultRunInits(), CommandLine: dclText(rest, true)}
 
 	defer func() { c.imageRan = true }()

@@ -130,9 +130,9 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// Phase 51 adds DUMP, Phase 57 ATTACH, Phase 69 BACKUP, Phase 74
 	// FORTRAN, and Phase 88 CONVERT, and EDIT is govax's own. QUIT, TEST,
 	// CLEAR, VMINIT (now INITIALIZE/MEMORY), ZERO, and BOOT went
-	// (2026-11-08). Phase 94 adds INSTALL.
-	if len(g.verbOrder) != 63 {
-		t.Errorf("got %d verbs, want 63: %v", len(g.verbOrder), verbNames(g))
+	// (2026-11-08). Phase 94 adds INSTALL, and Phase 95 AUTHORIZE.
+	if len(g.verbOrder) != 64 {
+		t.Errorf("got %d verbs, want 64: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
