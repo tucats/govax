@@ -681,7 +681,7 @@ Each is one commit, with tests, stopping for review.
 3. **Definitions** (Decision 9; done 2026-11-16): `SJC$_`, `QUI$_`, `JBC$_`, and the
    flags in `vmsdef` from the probe's decoded objects; the JBC and QMAN
    messages; `$SJCDEF`, `$QUIDEF`, and the service macros in bootdata.
-4. **The database** (Decisions 2, 3): `internal/jobqueue`, its JSON file
+4. **The database** (Decisions 2, 3; done 2026-11-16): `internal/jobqueue`, its JSON file
    and locking, `vax.queue.file` (`validConfigs`, HELP CONFIGURATION
    KEYS), `TestMain`'s temporary file.
 5. **Queue protection** (Decision 8): the QUEUE security class, the
@@ -937,3 +937,48 @@ queues is a future phase.
   NULLARG a longword by value, FUNC a word, ASTPRM and ASTADR paired). The
   address arguments' sizes stay unconfirmed: every call that would have
   shown one also left out FUNC.
+- **2026-11-16** Subtask 4, the database: `internal/jobqueue`, a leaf
+  package (`doc.go` explains it). `Database` (the manager's state, the
+  queues, the jobs, the next entry number and submission sequence),
+  `Queue` (NewQueue's defaults: job limit 1, base priority 4, owner
+  [1,4], `(S:M,O:D,G:R,W:S)`, stopped; `Profile` for `internal/security`'s
+  rule), `Job` (files by name and file ID, parameters, the log and
+  printing options, `/AFTER`, priority, limits, `/RESTART`, `/RETAIN`,
+  times, the condition it ended with, a pending end or requeue, the
+  restart value). The JSON file shows VMS's forms: a UIC `[g,m]`, a
+  queue's code with its letters R, S, M, D (the file bits read, write,
+  execute, delete), CPU times `hh:mm:ss`, a file ID `(n,s,r)`, ACEs in
+  hexadecimal (so no identifier table is needed to read the file), states
+  by name; `Load` names a bad value's line, `Save` writes through a
+  temporary file and a rename, mode 0600; `Update` and `Read` work under
+  a `hostlock` beside the file; `LockManager` is Decision 4's manager
+  lock, a second file's `TryLock`. The rules are two tables,
+  `queueRules` (START, STOP's pause, `/NEXT`, `/RESET`, DELETE,
+  INITIALIZE of an existing queue, by state) and `jobRules` (`/HOLD`,
+  `/RELEASE`, SET ENTRY's other changes, DELETE/ENTRY, STOP/QUEUE/ENTRY,
+  `/REQUEUE`, the manager's start, by status), each refusal a `Refusal`
+  naming its JBC$_ condition; `TestQueueRules` and `TestJobRules` run
+  every cell against expectations written apart from the tables. Entry
+  numbers run 1 to 999 and wrap past numbers in use (NOQUESPACE when all
+  are); `NextJob` is A.4's order (priority, then submission, so a wrap
+  doesn't reorder); `ReleaseDue` and `NextTime` are `/AFTER`'s timer;
+  `Finish` requeues, retains, or removes (from the probe: under the
+  queue's `/RETAIN=ERROR` BAT98R12's warning was kept "on completion", so
+  ERROR keeps any status whose low bit is clear and "on error" is a
+  severity of error or severe, `RetainedOnError`; DELETE/ENTRY's running
+  BAT98R11 was gone, STOP/QUEUE/ENTRY's BAT98R10 retained); `Recover` is
+  Decision 11's start (queues stopped, `/RESTART` jobs requeued with
+  their restart values, the rest QUERESET). Choices not settled by the
+  probe are in the tables' comments, unconfirmed: START of a paused or
+  stopping queue continues it; `/NEXT` of a paused one leaves it
+  stopping; SET ENTRY/RELEASE of a timed job starts it now and of a
+  retained one requeues it; `/HOLD` of a retained one requeues it held;
+  "busy, stop pending" for a stopping queue at its limit. The file:
+  `vax.queue.file` (default `~/.govax/qman.json`) in `validConfigs`, HELP
+  CONFIGURATION KEYS, and MANUAL.md's table; `cmd/govax/queuefile.go`'s
+  `ensureQueueFile` checks it before startup (a bad file stops govax, as
+  a bad authorization file does; a missing one is an empty database, not
+  written until a queue is made) and hands the path to
+  `Machine.QueueFile`, `System.SetQueueFile` (`corevms/queues.go`, which
+  subtask 6's manager will use); `TestMain` gives the tests a temporary
+  one; `TestRun_queueFile`. Subtask 5, queue protection, is next.

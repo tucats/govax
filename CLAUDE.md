@@ -927,8 +927,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   definitions: `SJC$`, `QUI$`, and `JBC$_` in `vmsdef` and the macro
   library, the JBC messages (`vmsdef/jbcmessages.go`; a facility's shared
   message numbers are the system messages under its name,
-  `sharedMessage`), and the four service macros, whose probe is round 10
-  of `testdata/mp/macros`, not yet run.
+  `sharedMessage`), and the four service macros, held to VMS by round 10
+  of `testdata/mp/macros`; subtask 4 (2026-11-16) the database,
+  `internal/jobqueue` (below), `vax.queue.file` (default
+  `~/.govax/qman.json`, checked by `cmd/govax/queuefile.go` before
+  startup, its path `Machine.QueueFile` and `System.QueueFile`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2170,6 +2173,15 @@ expect adjustment as phases land):
   attributes; `Load`/`Parse` (an error names the line), `Save`, `Update`
   (under a host lock), `Ensure`, `Default` (SYSTEM with process 1's values,
   DEFAULT with VMS 7.1's), `HashPassword`/`CheckPassword` (Argon2id).
+- `internal/jobqueue` — the queue database (Phase 98, subtask 4): a leaf
+  package (`security`, `vmsdef`, `hostlock`). `Database` (`Manager`,
+  `Queue`, `Job`), the JSON file in VMS's forms (`names.go`), `Load`,
+  `Save`, `Update`, `Read` under a host lock, and `LockManager`, the
+  session running the manager's lock. The rules are two tables,
+  `queueRules` and `jobRules` (an operation by state, a refusal a
+  `Refusal` naming its JBC$_ condition), with entry numbers, `NextJob`,
+  `ReleaseDue`/`NextTime`, `Finish` (requeued, retained, or removed), and
+  `Recover` (a new session's start). It checks no access: corevms does.
 - `internal/authorize` — AUTHORIZE (Phase 95): a `Utility` run over a
   `Store` (the System's authorization file) with the process's
   credentials; `authorize.dcl` its grammar; accounts (`accounts.go`,

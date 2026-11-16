@@ -105,6 +105,19 @@
                                      ~/ is your home directory.
                                      Default ~/.govax/sysuaf.json.
 
+   The queue database
+
+       govax's batch queues and the jobs in them are kept in a host file
+       of its own, as JSON, so that they outlast a session and a system
+       volume made again.  The file is made the first time a queue is
+       made.  A file govax can't read stops it at startup, with the
+       file's name and the line that is wrong.  The file is readable and
+       writable only by you (mode 0600).
+
+       vax.queue.file                The file's host path.  A leading
+                                     ~/ is your home directory.
+                                     Default ~/.govax/qman.json.
+
    The default volume
 
        When vax.default.volume.file is set, govax mounts that ODS-2

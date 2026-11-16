@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 	}
 
 	authorizationFile = filepath.Join(dir, "sysuaf.json")
+	queueFile = filepath.Join(dir, "qman.json")
 
 	status := m.Run()
 

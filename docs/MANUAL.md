@@ -631,6 +631,7 @@ these for one run.
 | `vax.default.volume.type` | The disk type that sizes a new container (`RX50`, `RD54`, `RA81`, ...; see [Disk types](#disk-types)). | `RD54` (311,200 blocks) |
 | `vax.default.volume.directory` | The default directory, created in a new container. When set, it is also SYSTEM's home directory, in place of `SYS$SYSROOT:[SYSMGR]`. | `[WORK]` |
 | `vax.authorization.file` | The authorization file, govax's SYSUAF: a JSON host file of accounts and identifiers, made with SYSTEM and DEFAULT the first time govax starts. A leading `~/` is your home directory. | `~/.govax/sysuaf.json` |
+| `vax.queue.file` | The queue database: a JSON host file of the batch queues and their jobs, made the first time a queue is made. A file govax can't read stops it at startup. A leading `~/` is your home directory. | `~/.govax/qman.json` |
 
 If the volume can't be used, govax says why (`%MOUNT-W-NODEFAULT`) and
 starts without it. A container that can only be read is mounted

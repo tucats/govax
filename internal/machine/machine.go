@@ -59,6 +59,12 @@ type Machine struct {
 	// System one of its own in memory, as the tests have.
 	AuthorizationFile string
 
+	// QueueFile is the queue database's host path (internal/jobqueue;
+	// docs/planning/PHASE-98 - batch queues.md, Decision 3), which each
+	// new System is given: cmd/govax's, checked before Init. "" is none,
+	// as the tests have.
+	QueueFile string
+
 	// login is process 1's login (LogIn), given again to each new process
 	// 1 so that a VMINIT doesn't make it SYSTEM again; nil until then.
 	login *corevms.Login
@@ -450,6 +456,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 	sys.SetSysgen(sysgenSettings(m.paging))
 	sys.HostRequiresSYSPRV = settings.GetBool(corevms.HostSYSPRVSetting)
 	sys.SetAuthorizationFile(m.AuthorizationFile)
+	sys.SetQueueFile(m.QueueFile)
 
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/planning/PHASE-45.md, subtask 5).

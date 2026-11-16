@@ -177,8 +177,16 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		return err
 	}
 
+	// The queue database (docs/planning/PHASE-98 - batch queues.md,
+	// Decision 3): checked here for the same reason.
+	queuePath, err := ensureQueueFile()
+	if err != nil {
+		return err
+	}
+
 	c := console.New(consoleOut)
 	c.AuthorizationFile = uafPath
+	c.QueueFile = queuePath
 
 	c.Paths = resolver
 	c.Verbose = (console.CommandLineString == "")
@@ -830,6 +838,9 @@ var validConfigs = map[string]bool{
 
 	// The authorization file (docs/planning/PHASE-95 - authentication.md).
 	"vax.authorization.file": true,
+
+	// The queue database (docs/planning/PHASE-98 - batch queues.md).
+	"vax.queue.file": true,
 
 	"vax.default.volume.file":      true,
 	"vax.default.volume.label":     true,
