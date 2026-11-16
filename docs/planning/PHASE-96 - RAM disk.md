@@ -442,7 +442,7 @@ Each is one commit, with tests, stopping for review.
    `MemoryInUse`, `MemoryTotal`, `ReleaseMemory`, the shared
    `initializeOptions`, and `cmd/govax`'s release at the session's end.
    `go.mod` is moved to ods2 v0.1.31 once it's tagged.
-4. **MD devices** (Decision 5): DEFINE/DEVICE's MD rule (unit choice,
+4. **MD devices** (done 2026-11-16) (Decision 5): DEFINE/DEVICE's MD rule (unit choice,
    size, the total limit, redefinition, the record, `/LOG`), `dev_type`'s
    `RAM_DISK` and `deviceTypeNames`, the CMKRNL rule, the configuration
    keys `vax.ramdisk.size` and `vax.ramdisk.limit` in `validConfigs`, and
@@ -562,3 +562,40 @@ The answers (2026-11-16):
   DismountAll keeping images and ReleaseMemory freeing them). `go.mod`
   already pins ods2 v0.1.31 (subtask 2); `GOWORK=off go build ./...`
   passes.
+- **2026-11-16** Subtask 4: MD devices in DEFINE/DEVICE, as Decision 5
+  has them, in `internal/dclcmd/ramdisk.go`. The console's DEFINE/DEVICE
+  is now `DefineDeviceCommand`, which sends a name `RAMDiskName` takes
+  (`^MD[A-Z][0-9]*$`, with `_` and `:` taken off) to `defineRAMDisk` and
+  any other to `DefineDevice` as before. `defineRAMDisk` asks the gate for
+  CMKRNL (`commandRules`' `DEFINE_DEVICE_MD`, `ruleDefineRAMDisk`),
+  refuses a `/DEVCLASS` other than DISK or a `/DEVTYPE` other than
+  RAM_DISK (`%DCL-W-CONFLICT`, as DCL shows the CLI facility), takes a
+  controller alone to its lowest unit not yet a device (`ramDiskUnit`),
+  sizes the disk from `/MAXBLOCK`, `vax.ramdisk.size`, or 65,536 blocks
+  (RAMSIZE under 100), refuses a mounted unit (DEVMOUNT), and calls
+  `rms.MountTable.DefineMemory` with `vax.ramdisk.limit` (512,000 unless
+  set), read at each definition. Over the limit it shows RAMLIMIT and
+  RAMKEY itself and returns RAMLIMIT inhibited, so `$STATUS` is still
+  RAMLIMIT. The device's record is made or changed in place by the new
+  `iodev.DeviceTable.Redefine`, so a unit defined again is still one
+  record and keeps its counts and allocation: class disk, type 58
+  (`iodev.DeviceTypeRAMDisk`), DEVCHAR an ordinary disk's (FOD, DIR, RND,
+  AVL, SHR, IDV, ODV), MAXBLOCK the size, `/CLUSTER` and `/VOLNAME` kept
+  for the first mount. A redefinition of a disk that had a volume says
+  "previous contents discarded" (`rms.MountTable.MemoryHasVolume`, new).
+  `define_device` has `/[NO]LOG`, `dev_type` the keyword RAM_DISK, and
+  `deviceTypeNames` 58, so SHOW DEVICE/FULL says "device type RAM_DISK".
+  The messages are `vmserrors`' VAX_RAMDISK, RAMLIMIT, RAMKEY, RAMSIZE,
+  and RAMNOWRITE (MOUNT's, for subtask 5). The two keys are in
+  `validConfigs`, and `auditConfig` warns of a value
+  `ParseRAMDiskBlocks` refuses (decimal or %X, at least 100). HELP DEFINE
+  `/DEVICE` has a paragraph on MD devices, `/LOG`, and an example, and
+  HELP CONFIGURATION KEYS a "RAM disks" section; the close-out finishes
+  them. Tests: `internal/console/ramdisk_test.go`'s `TestDefineRAMDisk`
+  (units, sizes, the limit at its default and set lower and higher, the
+  size key, the conflicts, DEVMOUNT, a redefinition discarding a volume,
+  one record, F$GETDVI, SHOW DEVICE/FULL, another device unchanged) and
+  `TestDefineRAMDiskPrivilege` (PRIV94 refused, then allowed with
+  CMKRNL; DEFINE/DEVICE of a DK device still needing nothing);
+  `dclcmd`'s `TestParseRAMDiskBlocks` and `TestRAMDiskName`; `io`'s
+  `TestRedefine`.

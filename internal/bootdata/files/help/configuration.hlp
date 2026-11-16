@@ -223,6 +223,22 @@
                                      the VMS manual's formula, so a seed
                                      repeats its sequence.  Default false.
 
+   RAM disks
+
+       DEFINE/DEVICE MDA makes a RAM disk, a volume held in govax's own
+       memory (see DEFINE /DEVICE).  Each is a number of blocks, in
+       decimal or %X for hex, at least 100.
+
+       vax.ramdisk.size              A RAM disk's size when DEFINE/DEVICE
+                                     gives no /MAXBLOCK.  Default 65536
+                                     (32 MB).
+
+       vax.ramdisk.limit             The most blocks all RAM disks may
+                                     total, counting each at the size it
+                                     was defined with.  A definition that
+                                     would go past it is refused.
+                                     Default 512000 (250 MB).
+
    The machine
 
        vax.hardware.clock            true or false: drive the interval

@@ -815,6 +815,11 @@ var validConfigs = map[string]bool{
 	"vax.editor.command":   true,
 	"vax.editor.scratch":   true,
 
+	// RAM disks (docs/planning/PHASE-96 - RAM disk.md): internal/dclcmd's
+	// ramdisk.go reads them.
+	"vax.ramdisk.size":  true,
+	"vax.ramdisk.limit": true,
+
 	"vax.default.system.file":   true,
 	"vax.default.system.device": true,
 	"vax.default.system.type":   true,
@@ -930,6 +935,16 @@ func auditConfig() {
 		if _, ok := machine.ParseMaxSysGroup(settings.Get(key)); !ok {
 			fmt.Printf("\nWarning, %s is %q; it must be a group number from 1 to %d, and its default will be used\n",
 				key, settings.Get(key), machine.MaxMaxSysGroup)
+		}
+	}
+
+	// So is a RAM disk key (docs/planning/PHASE-96 - RAM disk.md).
+	for _, key := range dclcmd.RAMDiskKeys() {
+		if settings.Exists(key) {
+			if _, ok := dclcmd.ParseRAMDiskBlocks(settings.Get(key)); !ok {
+				fmt.Printf("\nWarning, %s is %q; it must be a number of blocks, at least %d, and its default will be used\n",
+					key, settings.Get(key), rms.MinimumMemoryBlocks)
+			}
 		}
 	}
 

@@ -94,6 +94,7 @@ var deviceTypeNames = map[uint32]string{
 	38: "RA90",
 	39: "RA92",
 	40: "RA73",
+	58: "RAM_DISK", // DT$_RAM_DISK, a RAM disk (MD device; Phase 96)
 	96: "VT100",
 }
 
@@ -204,6 +205,10 @@ type DeviceOptions struct {
 // DeviceTypeNull is the device type of the null device NLA0:, which
 // VMS 7.1 gave class DC$_MAILBOX and type 3 (testdata/mp/probe2).
 const DeviceTypeNull = 3
+
+// DeviceTypeRAMDisk is DT$_RAM_DISK, the device type of a RAM disk, an MD
+// device (docs/planning/PHASE-96 - RAM disk.md).
+const DeviceTypeRAMDisk = 58
 
 // DeviceTable is the Go equivalent of devices.c's devices linked list.
 type DeviceTable struct {
@@ -422,6 +427,36 @@ func (t *DeviceTable) Define(name string, opts DeviceOptions) *Device {
 	}
 
 	t.devices = append([]*Device{d}, t.devices...)
+
+	return d
+}
+
+// Redefine gives the device named name opts' settings, as Define does,
+// but changes a device already in the table in place rather than adding
+// a second record that hides it: what the system has counted on it (its
+// reference count, operations, allocation, owner) is kept. A device not
+// in the table is Defined. It is how an MD device (a RAM disk) defined
+// again gets its new size (docs/planning/PHASE-96 - RAM disk.md,
+// Decision 5).
+func (t *DeviceTable) Redefine(name string, opts DeviceOptions) *Device {
+	d, ok := t.Find(name)
+	if !ok {
+		return t.Define(name, opts)
+	}
+
+	allocated := d.DevChar & devAllocated
+
+	d.Cluster, d.Cylinders, d.DevBufSize = opts.Cluster, opts.Cylinders, opts.DevBufSize
+	d.DevChar, d.DevChar2 = opts.DevChar|allocated, opts.DevChar2
+	d.DevClass, d.DevType = opts.DevClass, opts.DevType
+	d.DevDepend, d.DevDepend2 = opts.DevDepend, opts.DevDepend2
+	d.FreeBlocks, d.LockID, d.MaxBlock, d.MaxFiles = opts.FreeBlocks, opts.LockID, opts.MaxBlock, opts.MaxFiles
+	d.RecSize, d.Sectors, d.Serial = opts.RecSize, opts.Sectors, opts.Serial
+	d.VolName, d.MediaName, d.MediaType, d.RootDevName = opts.VolName, opts.MediaName, opts.MediaType, opts.RootDevName
+
+	if opts.OwnUIC != 0 {
+		d.OwnUIC = opts.OwnUIC
+	}
 
 	return d
 }

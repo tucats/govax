@@ -335,8 +335,10 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().ShowDevices(r.String("NAME"), r.Present("FULL"))
 	})
 
+	// DEFINE/DEVICE of an MD device makes a RAM disk (docs/planning/PHASE-96
+	// - RAM disk.md); /NOLOG keeps it from saying which unit.
 	g.Bind("DEFINE_DEVICE", func(id int64, r *dcl.Result) error {
-		d.Console.cmd().DefineDevice(r.String("NAME"), iodev.DeviceOptions{
+		return d.Console.cmd().DefineDeviceCommand(r.String("NAME"), iodev.DeviceOptions{
 			Cluster:     uint32(r.Int("CLUSTER")),
 			Cylinders:   uint32(r.Int("CYLINDERS")),
 			DevBufSize:  uint32(r.Int("DEVBUFSIZE")),
@@ -358,9 +360,7 @@ func (d *Dispatcher) bindGrammar() {
 			MediaName:   r.String("MEDIANAME"),
 			MediaType:   r.String("MEDIATYPE"),
 			RootDevName: r.String("ROOTDEVNAME"),
-		})
-
-		return nil
+		}, !r.Negated("LOG"))
 	})
 
 	// Phase 25: DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE, SHOW LOGICAL

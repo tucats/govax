@@ -139,6 +139,14 @@ const (
 
 	// internal/dclcmd: SET DEFAULT given a host directory.
 	vaxHostDef
+
+	// internal/dclcmd: RAM disks (docs/planning/PHASE-96 - RAM disk.md,
+	// Decision 8).
+	vaxRAMDisk
+	vaxRAMLimit
+	vaxRAMKey
+	vaxRAMSize
+	vaxRAMNoWrite
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -335,6 +343,18 @@ const (
 	// default directory is RMS's, on a mounted volume; a host directory
 	// can't be one, so a host file is named by a path or /HOST instead.
 	VAX_HOSTDEF = VAXFacility<<FacilityPosition | vaxHostDef<<MessagePosition | StatusError
+
+	// RAM disks (docs/planning/PHASE-96 - RAM disk.md, Decision 8), all
+	// govax's own: VAX_RAMDISK says which MD unit DEFINE/DEVICE made, its
+	// size, and whether a volume it held was thrown away; VAX_RAMLIMIT,
+	// followed by VAX_RAMKEY, a definition that would take the RAM disks
+	// past vax.ramdisk.limit; VAX_RAMSIZE a disk too small to hold a
+	// volume; VAX_RAMNOWRITE MOUNT/NOWRITE of a disk with no volume yet.
+	VAX_RAMDISK    = VAXFacility<<FacilityPosition | vaxRAMDisk<<MessagePosition | StatusInfo
+	VAX_RAMLIMIT   = VAXFacility<<FacilityPosition | vaxRAMLimit<<MessagePosition | StatusError
+	VAX_RAMKEY     = VAXFacility<<FacilityPosition | vaxRAMKey<<MessagePosition | StatusInfo
+	VAX_RAMSIZE    = VAXFacility<<FacilityPosition | vaxRAMSize<<MessagePosition | StatusError
+	VAX_RAMNOWRITE = VAXFacility<<FacilityPosition | vaxRAMNoWrite<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -449,6 +469,11 @@ func init() {
 	DefineMessage(VAX_SYSGRAMMAR, VAXFacility, "SYSGRAMMAR", "!S on the system volume not used; govax's own instead")
 	DefineMessage(VAX_HOSTDEF, VAXFacility, "HOSTDEF",
 		"!S is a host directory; the default must be on a mounted volume (name host files with a path such as \"./name\", or /HOST)")
+	DefineMessage(VAX_RAMDISK, VAXFacility, "RAMDISK", "!S defined, !UL blocks!S")
+	DefineMessage(VAX_RAMLIMIT, VAXFacility, "RAMLIMIT", "RAM disks would total !UL blocks, over the limit of !UL")
+	DefineMessage(VAX_RAMKEY, VAXFacility, "RAMKEY", "the limit is configuration key !S")
+	DefineMessage(VAX_RAMSIZE, VAXFacility, "RAMSIZE", "a RAM disk must have at least !UL blocks, not !UL")
+	DefineMessage(VAX_RAMNOWRITE, VAXFacility, "RAMNOWRITE", "!S has no volume yet; its first mount must be writable")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")
 	DefineMessage(VAX_READLINE, VAXFacility, "READLINE", "Initializing readline")
 }

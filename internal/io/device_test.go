@@ -132,3 +132,25 @@ func TestSortedOrdersByClassThenUnit(t *testing.T) {
 		t.Errorf("Sorted() = %v, want %v", got, want)
 	}
 }
+
+// TestRedefine: a device defined again is changed in place, keeping its
+// counts and allocation, and is still one record.
+func TestRedefine(t *testing.T) {
+	table := NewDeviceTable()
+	d := table.Define("MDA0", DeviceOptions{DevClass: DeviceClassDisk, MaxBlock: 100})
+	d.RefCnt = 2
+	d.Allocate(0x20, 3)
+
+	again := table.Redefine("mda0:", DeviceOptions{DevClass: DeviceClassDisk, DevType: DeviceTypeRAMDisk, MaxBlock: 500})
+	if again != d || len(table.All()) != 1 {
+		t.Fatalf("Redefine made a second record")
+	}
+
+	if d.MaxBlock != 500 || d.DevType != DeviceTypeRAMDisk || d.RefCnt != 2 || !d.Allocated() || d.PID != 0x20 {
+		t.Errorf("redefined device = %+v", d)
+	}
+
+	if n := table.Redefine("MDA1", DeviceOptions{MaxBlock: 7}); n.MaxBlock != 7 || len(table.All()) != 2 {
+		t.Errorf("Redefine of a new name didn't define it")
+	}
+}

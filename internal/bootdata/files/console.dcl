@@ -214,6 +214,8 @@ grammar console
         keyword RA90        /id=38
         keyword RA92        /id=39
         keyword RA73        /id=40
+        ! DT$_RAM_DISK, an MD device (Phase 96).
+        keyword RAM_DISK    /id=58
         keyword vt100		/id=96
         
     syntax define_device
@@ -239,6 +241,9 @@ grammar console
         qualifier medianame/id=421/type=$string
         qualifier mediatype/id=422/type=$string
         qualifier rootdevname/id=423/type=$string
+        ! /[NO]LOG: whether an MD device's definition says which unit it
+        ! made (docs/planning/PHASE-96 - RAM disk.md, Decision 5).
+        qualifier log/id=424
         
         
     verb define

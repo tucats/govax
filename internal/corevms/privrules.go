@@ -256,6 +256,12 @@ var (
 	// refused ADD with SS$_NOCMKRNL (PRIV94U, the INSTALLED sections).
 	ruleInstall = newRule("INSTALL ADD or REMOVE a known file", "CMKRNL", "probe's INSTALLED sections; Decision 9",
 		refusedWith("SS$_NOCMKRNL"))
+
+	// DEFINE/DEVICE of an MD device makes a RAM disk, whose blocks are the
+	// host's memory, a resource the whole system shares; VMS's SYSGEN
+	// CONNECT, which made a DECram device, needed CMKRNL
+	// (docs/planning/PHASE-96 - RAM disk.md, Decision 5; unconfirmed).
+	ruleDefineRAMDisk = newRule("DEFINE/DEVICE a RAM disk (MD device)", "CMKRNL", "Phase 96, Decision 5; the review, 3")
 )
 
 // serviceRules is, for every system service govax registers, the rules

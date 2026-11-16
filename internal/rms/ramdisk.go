@@ -232,6 +232,14 @@ func (t *MountTable) IsMemory(device string) bool {
 	return ok
 }
 
+// MemoryHasVolume reports whether device is a RAM disk a first mount has
+// put a volume on, which defining it again would discard.
+func (t *MountTable) MemoryHasVolume(device string) bool {
+	disk, ok := t.ramDisks[normalizeDeviceName(device)]
+
+	return ok && disk.formatted
+}
+
 // MemorySize returns device's RAM disk's size in blocks, and whether
 // device is a RAM disk.
 func (t *MountTable) MemorySize(device string) (uint32, bool) {

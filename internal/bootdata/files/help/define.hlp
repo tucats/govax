@@ -118,6 +118,16 @@
    characteristic not given is 0.  Defining a name again makes a new
    device of that name, which is found in place of the old one.
 
+   An MD device's name, MDA0 or MDA alone, makes a RAM disk: a disk
+   whose blocks are kept in govax's memory, until it is defined again or
+   govax ends.  MDA alone is the lowest unit of MDA not yet defined.  Its
+   size is /MAXBLOCK, or the configuration key vax.ramdisk.size, or
+   65536 blocks; all the RAM disks together may total no more than
+   vax.ramdisk.limit blocks (512000 unless it's set).  Defining one needs
+   CMKRNL, and a RAM disk that is mounted can't be defined again;
+   defining an unmounted one again discards what it holds.  /CLUSTER and
+   /VOLNAME are its first mount's cluster size and label.
+
    Format
 
      DEFINE/DEVICE device-name
@@ -185,14 +195,23 @@
 
       /DEVTYPE=keyword
 
-   The device type: a disk's model (RD54, RA92, RX50, ...), VT100 for a
-   terminal, or NULL for the null device.
+   The device type: a disk's model (RD54, RA92, RX50, ...), RAM_DISK
+   for an MD device, VT100 for a terminal, or NULL for the null device.
 
 /FREEBLOCKS
 
       /FREEBLOCKS=n
 
    The free blocks reported when no volume is mounted.
+
+/LOG
+
+      /[NO]LOG
+
+   For an MD device, /LOG (the default) says which unit was defined and
+   its size:
+
+     %VAX-I-RAMDISK, _MDA0: defined, 20000 blocks
 
 /LOCKID
 
@@ -266,3 +285,8 @@
 
      Defines a null device, as STARTUP.COM does (with more of its
      characteristics).
+
+   2.$ DEFINE/DEVICE MDA /MAXBLOCK=20000
+     %VAX-I-RAMDISK, _MDA0: defined, 20000 blocks
+
+     Defines a RAM disk of 20000 blocks, MDA0, which MOUNT can mount.
