@@ -148,7 +148,43 @@ func hasBracketDirectory(name string) bool {
 // explicit /HOST on the name. A VMS specification must resolve to a
 // mounted device (a *NotMountedError otherwise); whether the file exists
 // isn't checked.
+//
+// A name placed on the host is one the session's process is about to
+// use, so Locate asks the session's HostAccess whether the process may
+// (docs/planning/PHASE-97 - host file access.md, Decision 4): with the
+// configuration key vax.host.sysprv on, only a process holding SYSPRV
+// may. A refusal is a *DeniedError with Host set, so every command that
+// shows a protection refusal shows this one the same way. A caller that
+// only asks which side a name is on, and opens nothing, uses Side.
 func (s *Session) Locate(name string, host bool) (FileLocation, error) {
+	loc, err := s.Side(name, host)
+	if err != nil || !loc.Host {
+		return loc, err
+	}
+
+	if err := s.checkHostAccess(loc.Name); err != nil {
+		return FileLocation{}, err
+	}
+
+	return loc, nil
+}
+
+// checkHostAccess asks the session's HostAccess about the host file
+// name: nil when there is no HostAccess or it allows the access, a
+// *DeniedError with Host set when it doesn't.
+func (s *Session) checkHostAccess(name string) error {
+	if s.HostAccess == nil || s.HostAccess() {
+		return nil
+	}
+
+	return &DeniedError{Name: name, Host: true}
+}
+
+// Side is Locate without the question of whether the process may use a
+// host file: where name refers to, for a caller that only needs to know
+// which side a name is on (a volume's or the host's) and opens nothing
+// itself.
+func (s *Session) Side(name string, host bool) (FileLocation, error) {
 	if name == "" {
 		return FileLocation{}, fmt.Errorf("rms: no file name given")
 	}

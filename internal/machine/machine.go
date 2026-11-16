@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
@@ -447,6 +448,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	sys.SetProcessSettings(processSettings())
 	sys.SetSysgen(sysgenSettings(m.paging))
+	sys.HostRequiresSYSPRV = settings.GetBool(corevms.HostSYSPRVSetting)
 	sys.SetAuthorizationFile(m.AuthorizationFile)
 
 	// A process $CREPRC creates activates its image with the console's

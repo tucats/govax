@@ -104,6 +104,14 @@ type Session struct {
 	// corevms sets it when it gives a process its session
 	// (Environment.UseSession). nil is SYSTEM's; Identity reads it.
 	Credentials func() security.Credentials
+
+	// HostAccess, if set, reports whether the session's process may use
+	// a host file now (docs/planning/PHASE-97 - host file access.md,
+	// Decision 3): corevms sets it with Credentials (UseSession), asking
+	// its privilege gate, which says yes unless the configuration key
+	// vax.host.sysprv is on and the process doesn't hold SYSPRV. nil
+	// allows every access, as before the key existed. Locate asks it.
+	HostAccess func() bool
 }
 
 // Identity returns the credentials of the session's process: the

@@ -14,6 +14,7 @@ var commandRules = map[string]*PrivilegeRule{
 	"INITIALIZE/CONTAINER": ruleInitContainer,
 	"INSTALL":              ruleInstall,
 	"DEFINE_DEVICE_MD":     ruleDefineRAMDisk,
+	"HOST_FILE":            ruleHostFile,
 }
 
 // CommandPrivilege is the gate for one of govax's own DCL commands (a

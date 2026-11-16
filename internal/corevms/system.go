@@ -144,6 +144,11 @@ type System struct {
 	// (SetProcessSettings, which also gives the scheduler its quantum).
 	ProcessSettings ProcessSettings
 
+	// HostRequiresSYSPRV is the configuration key vax.host.sysprv
+	// (hostaccess.go): true makes every use of a host file need SYSPRV.
+	// NewSystem leaves it false; the machine sets it from the key.
+	HostRequiresSYSPRV bool
+
 	// Sysgen holds the system parameters (sysgen.go). NewSystem sets
 	// the defaults; the console replaces them with the vax.sysgen.*
 	// settings (SetSysgen).

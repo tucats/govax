@@ -389,6 +389,7 @@ func (env *Environment) UseSession(s *rms.Session) {
 
 	if s != nil {
 		s.Credentials = env.Credentials
+		s.HostAccess = func() bool { return env.HostAllowed() == 0 }
 	}
 }
 

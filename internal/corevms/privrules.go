@@ -262,6 +262,12 @@ var (
 	// CONNECT, which made a DECram device, needed CMKRNL
 	// (docs/planning/PHASE-96 - RAM disk.md, Decision 5; unconfirmed).
 	ruleDefineRAMDisk = newRule("DEFINE/DEVICE a RAM disk (MD device)", "CMKRNL", "Phase 96, Decision 5; the review, 3")
+
+	// Host files, when the configuration key vax.host.sysprv is on
+	// (hostaccess.go; docs/planning/PHASE-97 - host file access.md,
+	// Decision 3): govax's own rule, VMS having no host. No mode is
+	// exempt.
+	ruleHostFile = newRule("host file: open, create, or run", "SYSPRV", "Phase 97, Decision 3; the review, 1 and 2")
 )
 
 // serviceRules is, for every system service govax registers, the rules

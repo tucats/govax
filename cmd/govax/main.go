@@ -815,6 +815,10 @@ var validConfigs = map[string]bool{
 	"vax.editor.command":   true,
 	"vax.editor.scratch":   true,
 
+	// Host files need SYSPRV (docs/planning/PHASE-97 - host file
+	// access.md): internal/machine reads it into the System.
+	"vax.host.sysprv": true,
+
 	// RAM disks (docs/planning/PHASE-96 - RAM disk.md): internal/dclcmd's
 	// ramdisk.go reads them.
 	"vax.ramdisk.size":  true,

@@ -132,16 +132,18 @@ credentials.
    Locate, like any other host file name.
 
 3. **One rule, one gate.** A `PrivilegeRule`, `ruleHostFile` ("host
-   file: open, create, or run"), SYSPRV, no exempt modes, SS$_NOPRIV.
-   `Environment.HostAccess(name string) error` asks it (nil when the key
-   is off) and is the only way in: DCL's paths from supervisor mode, a
-   program's from its own. `UseSession` sets it on the session as
-   `rms.Session.HostAccess`, beside `Credentials`.
+   file: open, create, or run"), SYSPRV, no exempt modes, SS$_NOPRIV,
+   in `privrules.go` and listed in `commandRules` as `HOST_FILE` (for
+   SPAWN/HOST and the container commands through `CommandPrivilege`).
+   `Environment.HostAllowed()` asks it from the caller's mode (0 when the
+   key is off, without asking, so nothing is traced) and is the way in
+   for every other path. `UseSession` sets `rms.Session.HostAccess`, a
+   `func() bool` over it, beside `Credentials`.
 
 4. **Checked in Locate.** Locate asks `HostAccess` before returning a
-   host location, and a refusal is a `*rms.HostDeniedError{Name}`, which
-   is `ErrNoPrivilege` (`errors.Is`) and so already a denied open to
-   `IsDenied`. A caller that only asks which side a name is on uses a new
+   host location, and a refusal is an `*rms.DeniedError` with a new
+   `Host` field set and `Name` the host path, so every command's
+   existing `IsDenied` path shows it as a protection refusal. A caller that only asks which side a name is on uses a new
    `Session.Side` (Locate without the check), so a question isn't
    refused; each of A.2's callers is audited in subtask 3 and said to be
    one or the other.
@@ -178,11 +180,12 @@ credentials.
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The key and the gate** (Decisions 1, 3, 4): `validConfigs`, HELP
+2. **The key and the gate** (done 2026-11-16) (Decisions 1, 3, 4): `validConfigs`, HELP
    CONFIGURATION KEYS, `System.HostRequiresSYSPRV`, `ruleHostFile`,
-   `Environment.HostAccess`, `rms.Session.HostAccess`, `HostDeniedError`,
-   the check in Locate and `Session.Side`; unit tests in `rms` and
-   `corevms` (key off, on with and without SYSPRV, the trace).
+   `Environment.HostAllowed`, `rms.Session.HostAccess`,
+   `DeniedError.Host`, the check in Locate and `Session.Side`; unit tests
+   in `rms` and `corevms` (key off, on with and without SYSPRV, the
+   trace), and one end-to-end test through DCL.
 3. **Locate's callers** (Decisions 4, 5): each of A.2's 55 calls audited
    (an access or a question), the questions moved to `Side`, each
    command's message for the refusal; console tests per command with the
@@ -243,3 +246,26 @@ The answers (2026-11-16):
   the five questions. The key is `vax.host.sysprv`; the container
   commands and SPAWN/HOST are checked; EDIT's editor and the
   configured directories are not (Decision 2 and subtask 4 changed).
+- **2026-11-16** Subtask 2: the key and the gate. `vax.host.sysprv` is in
+  `validConfigs` and HELP CONFIGURATION KEYS (the help library
+  regenerated); the machine's `newRTL` reads it into
+  `System.HostRequiresSYSPRV`. `ruleHostFile` is in `privrules.go` and
+  `commandRules` (`HOST_FILE`); `corevms/hostaccess.go`'s
+  `Environment.HostAllowed` asks it from the caller's mode, or says 0
+  without asking while the key is off. `UseSession` sets the session's
+  `HostAccess`. In `rms`, Locate is now `Side` (the old body, unchecked)
+  followed by `checkHostAccess` for a host result, whose refusal is a
+  `*DeniedError` with `Host` set: simpler than a type of its own, and
+  every command that already shows a protection refusal shows this one
+  without change. Tests: `rms`'s `TestLocateHostAccess` (each rule that
+  places a name on the host, `Side` unrefused) and
+  `TestLocateVolumeNotAsked`; `corevms`'s `TestHostAllowed` (the key, the
+  privilege, the trace lines) and `TestUseSessionHostAccess`; and
+  `internal/console`'s `TestHostFileNeedsSYSPRV`, PRIV94 refused TYPE of
+  a host file by path and by /HOST with the key on (the Goal's
+  `%TYPE-W-OPENIN` and `-RMS-E-PRV`, as shown), allowed after SET
+  PROCESS/PRIVILEGES=SYSPRV, and allowed without it with the key off.
+  Most of Locate's callers are already covered by this; subtask 3
+  audits each, moving the ones that only ask the side to `Side`. The
+  HELP text says only what this subtask does; subtask 4 adds the
+  container commands and SPAWN/HOST.

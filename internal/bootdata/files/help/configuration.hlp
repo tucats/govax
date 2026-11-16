@@ -223,6 +223,19 @@
                                      the VMS manual's formula, so a seed
                                      repeats its sequence.  Default false.
 
+       vax.host.sysprv               When true, only a process whose
+                                     current privileges include SYSPRV
+                                     may use a host file: a name with a
+                                     "/" in it, a bare name when the
+                                     default directory is on the host, a
+                                     name with /HOST.  Others are
+                                     refused with
+                                     insufficient privilege.  Files in
+                                     directories the configuration names
+                                     (vax.path, vax.library) and EDIT's
+                                     editor are not checked.  When false,
+                                     any process may.  Default false.
+
    RAM disks
 
        DEFINE/DEVICE MDA makes a RAM disk, a volume held in govax's own

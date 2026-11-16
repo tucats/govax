@@ -30,17 +30,24 @@ import (
 // version it would have superseded or passed the version limit with,
 // refused it. Source is then the input it was making the file from, for a
 // utility that names it too (COPY's NOTCOPIED).
+//
+// Host says it was a host file, refused because the process doesn't
+// hold SYSPRV while the configuration key vax.host.sysprv is on
+// (Session.Locate; docs/planning/PHASE-97 - host file access.md).
 type DeniedError struct {
 	Name   string
 	Search bool
 	Output bool
 	Source string
+	Host   bool
 }
 
 func (e *DeniedError) Error() string {
 	what := "opening"
 
 	switch {
+	case e.Host:
+		what = "using the host file"
 	case e.Search:
 		what = "searching for"
 	case e.Output:
