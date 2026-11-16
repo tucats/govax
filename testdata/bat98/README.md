@@ -202,59 +202,43 @@ making them.
 
 ## Round 1
 
-Round 1 ran on VMS V7.1 on 2026-11-16 (`vax/bat98.log`, the job logs, and
-`vax/terminal.log`) through RESTART's third case, in about three
-minutes, and stopped there. That case requeued a running job `/HOLD`
-and released it at once; the release was refused (`%JBC-E-EXECUTING`:
-the job's run hadn't ended yet), and the requeue then left it holding,
-so the next SYNCHRONIZE waited for a job that would never run. A Ctrl/Y
-and a SPAWN released it (`terminal.log`), but a Ctrl/Y in a procedure
-below command level 1 ends that procedure (the *User's Manual*, 13.8.1),
-so BAT98.COM's level 2 ended there and its log closed. The job views,
-the services, and the protection matrix never ran.
+Round 1 ran on VMS V7.1 on 2026-11-16, to the end (`vax/bat98.log`, the
+job logs, and `vax/terminal.log`): every section, BAT98Q's 59 cases and
+the JBC messages, and all 18 matrix jobs (BAT98O's with 13 passes each).
+
+It stalled once, at RESTART's third case. That case requeued a running
+job `/HOLD` and released it at once; the release was refused
+(`%JBC-E-EXECUTING`: the job's run hadn't ended), and the requeue then
+left it holding, so the next SYNCHRONIZE waited on a job that would
+never run. At the terminal, Ctrl/Y, then SPAWN, `SET ENTRY n/RELEASE`
+in the subprocess, LOGOUT, and CONTINUE released it, and the procedure
+went on to its end (`terminal.log`). That CONTINUE resumed a procedure
+at command level 2 is itself a finding: the *User's Manual* (13.8.1)
+says a Ctrl/Y below level 1 ends the procedure by default.
 
 `gen.go` now retries such a release until it takes, deleting the job if
-it never does (BAT98.COM's and BAT98B.COM's `RELEASE` subroutine), and
-BAT98Q's SYNCHRONIZE_JOB waits only for a job its ALTER_JOB released.
-BAT98.COM as committed is that fixed version; round 1 ran the one before
-(git history).
+it never does (the `RELEASE` subroutine), and BAT98Q's SYNCHRONIZE_JOB
+waits only for a job its ALTER_JOB released, so a run from scratch
+won't stall there. BAT98.COM as committed is that fixed version; round 1
+ran the one before (git history).
 
-## Round 2
+## Round 2 (not needed)
 
-Round 2 is BAT98B.COM: the requeued-and-held case again (as BAT98X3B),
-the job views, the services, and the protection matrix, on round 1's
-accounts and queues, so **BAT98DROP.COM must not have run**.
+`bat98b.com` was written when round 1 looked to have stopped at the
+stall: it runs the held case again (as BAT98X3B), the job views, the
+services, and the matrix. Round 1 reached all of them, so it hasn't run;
+it stays for a rerun of those sections alone. `exchange2.cmd` put it on
+the volume, harmlessly.
 
-1. **Copy round 1's results back and add round 2's files**, with the
-   volume detached, from the repository root:
+What's left of the VAX run: the steps by hand (round 1's step 4), the end
+(`@BAT98$DISK:[000000]BAT98DROP`, `DISMOUNT DUA1:`, `det rq1`), and then
 
-       mkdir -p testdata/bat98/vax
-       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout.cmd
-       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/exchange2.cmd
+    go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout2.cmd
+    go run testdata/bat98/decode.go
 
-2. **Attach it again** (`attach rq1 testdata/disks/bat98-exchange.dsk`)
-   and, **as SYSTEM**:
-
-       $ MOUNT/SYSTEM DUA1: BAT98
-       $ @DUA1:[000000]BAT98B
-
-   Its log is `BAT98$DISK:[BAT98LOG]BAT98B.LOG`, ending `BAT98B
-   FINISHED`. Most of its time is the matrix's 18 jobs; Ctrl/T shows
-   QUEMAN or DCL with moving counts while it works. **Don't press Ctrl/Y
-   during it**: that ends the procedure. If Ctrl/T's counts stop moving
-   for several minutes, note the image and say so.
-
-3. **By hand**, then: README step 4 of round 1 (SYNCHRONIZE and Ctrl/Y
-   typed at the terminal, which is command level 0, where CONTINUE does
-   go on; and the optional reboot).
-
-4. **The end**: `@BAT98$DISK:[000000]BAT98DROP`, `DISMOUNT DUA1:`, and
-   `det rq1`.
-
-5. **Copy round 2's results back**:
-
-       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/bat98/copyout2.cmd
-       go run testdata/bat98/decode.go
+`copyout2.cmd` brings back BAT98DROP.LOG, the steps by hand's logs, and
+the definition probes' objects (its round 2 logs are missing, and say
+so).
 
 ## The rehearsal
 
