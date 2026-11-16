@@ -110,6 +110,28 @@ func BareName(name string) bool {
 	return classifyName(name) == nameBare
 }
 
+// HostPath reports whether name's syntax alone says it is a host path
+// (rule 3 above): one with "/" or "\\", or a Windows drive letter that
+// isn't a one-letter logical name. SET DEFAULT refuses such a name, since
+// the default directory can only be on a volume.
+func (s *Session) HostPath(name string) bool {
+	return s.classify(name) == nameHost
+}
+
+// DefaultOnHost reports whether no default device is set (SYS$DISK has no
+// translation), as when govax runs with neither a system volume nor a work
+// volume. A bare name is then a host file in the host's current directory
+// (rule 4), which SHOW DEFAULT says rather than showing a directory alone.
+func (s *Session) DefaultOnHost() bool {
+	if s.Logicals == nil {
+		return true
+	}
+
+	_, err := s.Logicals.Translate(lnm.FileDevName, sysDiskName, lnm.User, 0)
+
+	return err != nil
+}
+
 // hasBracketDirectory reports whether name has a directory in square or
 // angle brackets.
 func hasBracketDirectory(name string) bool {

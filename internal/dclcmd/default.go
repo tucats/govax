@@ -2,6 +2,7 @@ package dclcmd
 
 import (
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
@@ -37,6 +38,12 @@ import (
 // command that reports a bad argument this way (e.g. SET RADIX's
 // CLI_BADRADIXVAL, SET MODE's CLI_BADMODE — see setcommand.go).
 func (c *Context) SetDefault(text string) error {
+	// A host path can't be the default: the default directory is RMS's,
+	// on a mounted volume, and a host file is named by its path instead.
+	if c.ContainerSession.HostPath(text) {
+		return vmserrors.New(vmserrors.VAX_HOSTDEF, text)
+	}
+
 	if err := c.ContainerSession.SetDefault(text); err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
 			return lnmErr
@@ -68,7 +75,22 @@ func (c *Context) SetDefault(text string) error {
 // always something displayable, even before any SET DEFAULT has run. A
 // default that can't be used is shown, and then said to be so (VMS 7.1's
 // INVDEF: testdata/lnm91).
+//
+// With no default device at all (no system volume and no work volume), a
+// bare name is a host file in the host's current directory, so that is
+// what SHOW DEFAULT says, rather than a directory with no device.
 func (c *Context) ShowDefault() error {
+	if c.ContainerSession.DefaultOnHost() {
+		dir, err := os.Getwd()
+		if err != nil {
+			dir = "the directory govax was started in"
+		}
+
+		c.Printf("  No default volume: names without a device or\n  directory are host files in %s\n", dir)
+
+		return nil
+	}
+
 	text := c.ContainerSession.DefaultString()
 	c.Printf("  %s\n", text)
 

@@ -26,6 +26,11 @@
    When the default device is a search list, each place it stands for
    follows on a line beginning with "=".
 
+   With no default device at all (govax run with no system volume and no
+   work volume), names without a device or directory are host files in
+   the directory govax was started in, and SHOW DEFAULT says that
+   instead, naming the directory.
+
    Format
 
      SHOW DEFAULT

@@ -2,6 +2,7 @@ package console
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -47,8 +48,9 @@ func TestConsoleSetDefault_badFileSpec(t *testing.T) {
 }
 
 // TestConsoleShowDefault_initialState confirms SHOW DEFAULT on a freshly
-// constructed Console (no SET DEFAULT run yet) prints something
-// displayable rather than erroring or printing nothing at all.
+// constructed Console (no volume, no SET DEFAULT run yet) says where a
+// bare name goes, the host's current directory, rather than showing a
+// directory with no device.
 func TestConsoleShowDefault_initialState(t *testing.T) {
 	c, buf := newTestConsole(t)
 
@@ -56,8 +58,35 @@ func TestConsoleShowDefault_initialState(t *testing.T) {
 		t.Fatalf("ShowDefault: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "[000000]") {
-		t.Errorf("ShowDefault output on a fresh Console = %q, want it to contain [000000]", buf.String())
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "No default volume") || !strings.Contains(out, dir) {
+		t.Errorf("ShowDefault output on a fresh Console = %q, want the no-default-volume line naming %s", out, dir)
+	}
+}
+
+// TestConsoleSetDefault_hostPath confirms SET DEFAULT refuses a host path
+// with VAX-E-HOSTDEF, and leaves the default as it was.
+func TestConsoleSetDefault_hostPath(t *testing.T) {
+	c, _ := newTestConsole(t)
+
+	if err := c.cmd().SetDefault("DUA0:[MYDIR]"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	for _, path := range []string{"/tmp", "./src", `src\x`, "C:x"} {
+		err := c.cmd().SetDefault(path)
+		if err == nil || !strings.Contains(err.Error(), "VAX-E-HOSTDEF") {
+			t.Errorf("SetDefault(%q) = %v, want VAX-E-HOSTDEF", path, err)
+		}
+	}
+
+	if got, want := c.ContainerSession.DefaultString(), "DUA0:[MYDIR]"; got != want {
+		t.Errorf("DefaultString() after refused SET DEFAULTs = %q, want %q", got, want)
 	}
 }
 

@@ -810,7 +810,9 @@ you started govax in. Give a host file a `/` (`"./hello.mar"`) or
 command line alike: `govax macro ./hello.mar`, not `govax macro
 hello.mar`. Only when govax runs with no system volume
 (`--system-file none`) and no work volume is the default directory the
-host's, and a bare `HELLO.MAR` the host file `HELLO.MAR`.
+host's, and a bare `HELLO.MAR` the host file `HELLO.MAR`; SHOW DEFAULT
+then says so. `SET DEFAULT` can't make a host directory the default
+([SET DEFAULT and SHOW DEFAULT](#set-default-and-show-default)).
 
 ### Where a utility's output goes
 
@@ -2024,6 +2026,26 @@ VAX> SET DEFAULT DUA1:[NOSUCH]
 VAX> SHOW DEFAULT
   DUA1:[NOSUCH]
 %DCL-I-INVDEF, DUA1:[NOSUCH] does not exist
+```
+
+The default is always on a mounted volume: a host directory can't be
+one. A host path is refused, and a host file is named by its own path
+(`"./prog.mar"`) or with `/HOST` instead:
+
+```text
+VAX> SET DEFAULT "/Users/me/src"
+%VAX-E-HOSTDEF, /Users/me/src is a host directory; the default must be on a mounted volume (name host files with a path such as "./name", or /HOST)
+```
+
+With no default device at all, which happens only when govax runs with
+no system volume (`--system-file none`) and no work volume, bare names
+are host files in the directory govax was started in, and SHOW DEFAULT
+says so:
+
+```text
+VAX> SHOW DEFAULT
+  No default volume: names without a device or
+  directory are host files in /Users/me/project
 ```
 
 ### 6.2 Volumes and devices

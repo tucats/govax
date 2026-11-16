@@ -136,6 +136,9 @@ const (
 
 	// main.go: a system volume's file govax didn't use.
 	vaxSysGrammar
+
+	// internal/dclcmd: SET DEFAULT given a host directory.
+	vaxHostDef
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -327,6 +330,11 @@ const (
 	// lacks a command govax has. Its cause says why; govax uses its own
 	// built-in copy instead, so this is a warning.
 	VAX_SYSGRAMMAR = VAXFacility<<FacilityPosition | vaxSysGrammar<<MessagePosition | StatusWarning
+
+	// VAX_HOSTDEF is SET DEFAULT given a host path ("./src", "/tmp"). The
+	// default directory is RMS's, on a mounted volume; a host directory
+	// can't be one, so a host file is named by a path or /HOST instead.
+	VAX_HOSTDEF = VAXFacility<<FacilityPosition | vaxHostDef<<MessagePosition | StatusError
 )
 
 func init() {
@@ -439,6 +447,8 @@ func init() {
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_SYSGRAMMAR, VAXFacility, "SYSGRAMMAR", "!S on the system volume not used; govax's own instead")
+	DefineMessage(VAX_HOSTDEF, VAXFacility, "HOSTDEF",
+		"!S is a host directory; the default must be on a mounted volume (name host files with a path such as \"./name\", or /HOST)")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")
 	DefineMessage(VAX_READLINE, VAXFacility, "READLINE", "Initializing readline")
 }
