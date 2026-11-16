@@ -241,25 +241,43 @@ MSG:    .ASCID  /Hello, world!/         ; a string descriptor
 Assemble, link, and run it, either from your host shell:
 
 ```text
-$ govax macro hello.mar
-$ govax link hello.obj
-$ govax run hello.exe
+$ govax macro ./hello.mar
+$ govax link ./hello.obj
+$ govax run ./hello.exe
 Hello, world!
 ```
 
 or at the `VAX>` prompt:
 
 ```text
-VAX> MACRO "hello.mar"
-VAX> LINK "hello"
-VAX> RUN "hello.exe"
+VAX> MACRO "./hello.mar"
+VAX> LINK "./hello"
+VAX> RUN "./hello.exe"
 Hello, world!
 ```
 
-Notice the quotes at the `VAX>` prompt. DCL makes everything you type
-uppercase unless it's in quotes, and your host's file names are often
-lowercase (and on Linux, case-sensitive). Section 5 explains how govax
-decides whether a name means a host file or a file on a VAX disk.
+Notice the `./` in front of each name. govax is a VMS system, and a bare
+name like `hello.mar` is a Files-11 name: it means a file in your
+default directory on a VAX disk. With no work volume configured (see
+the next section), that's `SYS$SYSROOT:[SYSMGR]`, SYSTEM's home
+directory on the system volume, where `hello.mar` isn't:
+
+```text
+$ govax macro hello.mar
+govax: SYSTEM-W-NOSUCHFILE, File hello.mar not found: ...
+```
+
+A name with a `/` in it is always a host path, so `./hello.mar` means
+the file in the directory you started govax in. MACRO's object, LINK's
+image, and so on, made from a host file, are written to that directory
+too.
+
+Notice also the quotes at the `VAX>` prompt. DCL makes everything you
+type uppercase unless it's in quotes, and your host's file names are
+often lowercase (and on Linux, case-sensitive); the quotes also keep the
+`/` from being read as a qualifier. The host subcommands quote their
+file names for you. Section 5 explains how govax decides whether a name
+means a host file or a file on a VAX disk.
 
 ### Working on a VAX disk
 
@@ -448,9 +466,9 @@ govax analyze [--image [--header] [--fixup-section]]
 For example:
 
 ```text
-$ govax macro --list --cross-reference prog.mar
-$ govax link --map --full --options prog.opt prog.obj
-$ govax run echo.exe Hello there, '"Mixed Case"'
+$ govax macro --list --cross-reference ./prog.mar
+$ govax link --map --full --options ./prog.opt ./prog.obj
+$ govax run ./echo.exe Hello there, '"Mixed Case"'
 Hello there, "Mixed Case"
 ```
 
@@ -498,7 +516,7 @@ $ govax --instruction-limit 5000000 run "./loop.exe"
 So a makefile or shell script can use govax like any other tool:
 
 ```sh
-govax macro prog.mar && govax link prog.obj && govax run prog.exe
+govax macro ./prog.mar && govax link ./prog.obj && govax run ./prog.exe
 ```
 
 ### Control keys
@@ -778,13 +796,21 @@ Each console command applies the same rules to a file name, in order:
    the host's current directory otherwise.
 
 DCL makes unquoted text uppercase, so **quote a host name** whenever its
-case matters: `MACRO "hello.mar"`, not `MACRO hello.mar` (which looks for
-`HELLO.MAR`, and on a case-sensitive host file system doesn't find
-`hello.mar`). Quotes also keep a `/` in a host path from being read as a
+case matters: `MACRO "hello.mar"/HOST`, not `MACRO hello.mar/HOST` (which
+looks for `HELLO.MAR`, and on a case-sensitive host file system doesn't
+find `hello.mar`). Quotes also keep a `/` in a host path from being read as a
 qualifier.
 
-Without a default volume, your default directory is the host's current
-directory, and a bare `HELLO.MAR` means the host file `HELLO.MAR`.
+Your default directory is almost always on a volume: the work volume's
+directory when `vax.default.volume.file` is set, and otherwise SYSTEM's
+home, `SYS$SYSROOT:[SYSMGR]` on the system volume. So a bare `HELLO.MAR`
+is a volume file, even when the file you mean is in the host directory
+you started govax in. Give a host file a `/` (`"./hello.mar"`) or
+`/HOST` (`"hello.mar"/HOST`), at the `VAX>` prompt and on the host
+command line alike: `govax macro ./hello.mar`, not `govax macro
+hello.mar`. Only when govax runs with no system volume
+(`--system-file none`) and no work volume is the default directory the
+host's, and a bare `HELLO.MAR` the host file `HELLO.MAR`.
 
 ### Where a utility's output goes
 
@@ -3179,7 +3205,7 @@ RESULT: .LONG   0                       ; N!
 ```
 
 ```text
-$ govax macro fact.mar && govax link fact.obj && govax run fact.exe
+$ govax macro ./fact.mar && govax link ./fact.obj && govax run ./fact.exe
  1! = 1
  2! = 2
  3! = 6
@@ -3444,7 +3470,7 @@ DONE:   .ASCID  /Main: back from RISKY, R0 = SS$_ACCVIO/
 ```
 
 ```text
-$ govax run handler.exe
+$ govax run ./handler.exe
 Handler: caught an access violation, unwinding
 Main: back from RISKY, R0 = SS$_ACCVIO
 ```
@@ -3557,7 +3583,7 @@ LINE:   .ASCID  /                                        /
 ```
 
 ```text
-$ govax run tracer.exe
+$ govax run ./tracer.exe
 Sum 15, 12 instructions traced
 ```
 
@@ -4263,8 +4289,8 @@ This is an OpenVMS VAX object file
                 symbol: "DOUBLE"
 ```
 
-From the host: `govax analyze routines.obj`, `govax analyze --image
---header prog.exe`.
+From the host: `govax analyze ./routines.obj`, `govax analyze --image
+--header ./prog.exe`.
 
 ---
 

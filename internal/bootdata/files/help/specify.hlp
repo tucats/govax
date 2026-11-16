@@ -32,6 +32,12 @@
      - any other name (HELLO.MAR) is in the default directory when SET
        DEFAULT names a mounted volume, and a host file otherwise.
 
+   The default directory is on a volume unless govax runs with no system
+   volume and no work volume: without a work volume it is SYSTEM's home,
+   SYS$SYSROOT:[SYSMGR].  So a bare HELLO.MAR is not the file in the
+   directory govax was started in; name that one "./hello.mar" (or
+   "hello.mar"/HOST), from the host shell too: govax macro ./hello.mar.
+
    DCL makes unquoted text uppercase, so quote a host path to keep its
    case: TYPE "notes/todo.txt".  Relative host paths are from the
    directory govax was started in.
