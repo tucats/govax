@@ -405,6 +405,17 @@ show that the recipe needs something govax doesn't yet do, such as the
 directory's owner when a non-privileged user creates it at the volume's
 top. If so, the fix is made in the same subtask.
 
+*Revised 2026-11-16 by the author, during subtask 6:* the blocks are
+**active by default**, not comments, so that a new system volume shows a
+user a RAM disk and a scratch directory at once; a user who doesn't want
+them comments them out. The startup block runs under SET NOON, so a
+failure (a lower `vax.ramdisk.limit`) is reported and startup goes on,
+and makes the volume's top directory writable by every account
+(`SET SECURITY` of `000000.DIR`), which a non-privileged account's
+CREATE/DIRECTORY there needs. The login block checks `EXISTS` before
+`MNT`, so a system without MDA0: runs it silently, and defines
+SYS$SCRATCH `/NOLOG`, since login has already defined it.
+
 **Decision 10 — tests.**
 
 - ods2: the memory image's reads, writes, zeros, range and buffer
@@ -452,7 +463,7 @@ Each is one commit, with tests, stopping for review.
    parameter's prompt moved into the handler, owner and protection,
    `/NOWRITE`; SHOW DEVICE's type name and memory lines; `$GETDVI`
    checked; `TestRAMDisk`.
-6. **The scratch recipe** (Decision 9): the commented blocks in
+6. **The scratch recipe** (done 2026-11-16) (Decision 9): the commented blocks in
    bootdata's `systartup_vms.com` and `sylogin.com` (and the system
    volume's manifest for the supplied side, if either is supplied), and
    `TestScratchRecipe`, with any fix it needs.
@@ -631,3 +642,23 @@ The answers (2026-11-16):
   protection by SHOW SECURITY; a FORTRAN program writing a file that
   outlives a DISMOUNT) and `TestMountPrompt`; `internal/dcl`'s two MOUNT
   grammar tests now hold FILE optional.
+- **2026-11-16** Subtask 6: the scratch recipe, made the default by the
+  author while it was being written (Decision 9's revision). bootdata's
+  `systartup_vms.com` now defines MDA0: (40,000 blocks), mounts it as
+  SCRATCH, and opens its MFD to every account, between `-- scratch
+  volume: begin --` and `end` marks, under SET NOON; `sylogin.com` gives
+  each account `MDA0:[username]` (S:RWED,O:RWED,G,W) and SYS$SCRATCH
+  there, between its own marks. Both files are Seeded, so existing system
+  volumes keep their copies and no manifest changes. `TestScratchRecipe`
+  (`internal/console/scratchrecipe_test.go`) copies the two procedures as
+  bootdata has them to a volume and runs them over Phase 95's login
+  session: with no RAM disk SYLOGIN does nothing and says nothing; the
+  startup procedure mounts the disk silently; SYSTEM's and UAF95's logins
+  get MDA0:[SYSTEM] and MDA0:[UAF95] (owned by UAF95, the login run twice
+  to see the directory found the second time); each writes its own, and
+  UAF95 can't write SYSTEM's; a SPAWNed subprocess translates the same
+  SYS$SCRATCH. The test found one thing the recipe lacked, DEFINE's
+  `/NOLOG` (each login showed SUPERSEDE), and nothing govax lacked: an
+  unprivileged account's directory at the volume's top is its own
+  already. A run of govax on a new system volume shows MDA0: mounted and
+  SYS$SCRATCH MDA0:[SYSTEM].
