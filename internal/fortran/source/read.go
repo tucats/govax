@@ -61,6 +61,14 @@ type reader struct {
 // and their statements to the program. listed and library are each line's
 // Listed and Library.
 func (r *reader) readFile(file *File, depth int, listed, library bool) {
+	// Free source form has a reader of its own (free.go): its lines have no
+	// columns to split, and a line may hold several statements.
+	if file.Free {
+		r.readFree(file, depth, listed, library)
+
+		return
+	}
+
 	n := len(file.Lines)
 	lines := make([]*Line, n)
 
@@ -69,21 +77,6 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 	// themselves are worked out as each line is reached.
 	for i, text := range file.Lines {
 		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: r.form.split(text).kind, Listed: listed, Library: library}
-	}
-
-	// Free source form has a reader of its own to come (docs/planning/PHASE-99 -
-	// Fortran 90.md, subtask 3). Until then a free-form file's lines are kept, so
-	// a listing shows them, and the file is reported at its first line.
-	if file.Free {
-		r.add(lines...)
-
-		if n > 0 {
-			r.messages.Report("NOTIMPL", linePosition(lines[0], 0), "free source form")
-		} else {
-			r.messages.Report("NOTIMPL", diag.Position{File: file.Spec}, "free source form")
-		}
-
-		return
 	}
 
 	// Walk the lines, taking one line or one whole statement per turn. The
@@ -163,7 +156,7 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 	// (Statement.Position).
 	var (
 		text      strings.Builder
-		comments  commentScanner
+		comments  = commentScanner{doubleQuotes: r.form.F90}
 		continued int
 	)
 
@@ -209,13 +202,19 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 	}
 
 	s.Text = text.String()
+	r.complete(s)
+}
 
-	// An INCLUDE statement isn't a statement the later passes see: it is
-	// replaced here by the statements of the file it names, read at one
-	// include depth deeper.
+// complete hands on the statement s, whose lines are already the program's: an
+// INCLUDE statement isn't a statement the later passes see, and is replaced here
+// by the statements of the file it names, read at one include depth deeper; any
+// other is the program's next statement.
+func (r *reader) complete(s *Statement) {
+	initial := r.program.Lines[s.First]
+
 	if spec, ok := r.include(s); ok {
-		r.program.Includes = append(r.program.Includes, Mark{s.Position(0), "the INCLUDE statement", lines[0].Library})
-		r.includeFile(s, spec, depth, lines[0])
+		r.program.Includes = append(r.program.Includes, Mark{s.Position(0), "the INCLUDE statement", initial.Library})
+		r.includeFile(s, spec, s.Depth, initial)
 
 		return
 	}
@@ -227,7 +226,7 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 	r.followUnit(s)
 }
 
-// directive adds a CDEC$ line as a directive statement.
+// directive adds a CDEC$ (or !DEC$) line as a directive statement.
 func (r *reader) directive(line *Line, index int) {
 	fl := r.form.split(line.Text)
 
@@ -235,7 +234,7 @@ func (r *reader) directive(line *Line, index int) {
 		return
 	}
 
-	var comments commentScanner
+	comments := commentScanner{doubleQuotes: r.form.F90}
 
 	field := line.Text[fl.start:fl.end]
 	field = field[:comments.cut(field)]

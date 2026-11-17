@@ -1,0 +1,25 @@
+0|program squares
+    3:1 "program squares"
+0|integer :: i, total
+    4:3 "integer :: i, total"
+0|total = 0
+    5:3 "total = 0"
+0|do 10 i = 1, 5
+    6:3 "do 10 i = 1, 5"
+0|total = total + i*i
+    6:19 "total = total + i*i"
+10|continue
+    label at 7:1
+    7:4 "continue"
+0|print *, 'the sum of the squares ',            'of 1 to 5 is', total   
+    8:3 "print *, 'the sum of the squares ', "
+    9:1 "           'of 1 to 5 is', total   "
+0|print 20,  total
+    10:3 "print 20, "
+    11:7 " total"
+20|format (' TOTAL = ',           i5)
+    label at 12:1
+    12:4 "format (' TOTAL = ', "
+    13:1 "          i5)"
+0|end program squares
+    14:1 "end program squares"

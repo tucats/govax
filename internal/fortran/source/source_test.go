@@ -19,7 +19,8 @@ func (fs files) OpenInclude(name string, _ *File) (*File, error) {
 		return nil, errors.New("no such file")
 	}
 
-	return &File{Spec: name, Lines: lines}, nil
+	// A .F90 file is free form, as the FORTRAN command's opener decides.
+	return &File{Spec: name, Lines: lines, Free: strings.HasSuffix(name, ".F90")}, nil
 }
 
 // OpenModule finds a module as the key "(MODULE)" or "LIB(MODULE)".

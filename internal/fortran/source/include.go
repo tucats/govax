@@ -71,8 +71,10 @@ func (r *reader) include(s *Statement) (includeSpec, bool) {
 	// The statement's text here still has its blanks (the lexer, which
 	// takes them out, hasn't run yet), so the keyword is matched with
 	// blanks skipped.
+	// Under /F90 a character constant may be in quotation marks as well
+	// (INCLUDE "file.f90"), as it may anywhere else.
 	keyword, rest := squeezeKeyword(s.Text, "INCLUDE")
-	if keyword < 0 || !strings.HasPrefix(s.Text[rest:], "'") {
+	if keyword < 0 || rest >= len(s.Text) || !(s.Text[rest] == '\'' || s.Text[rest] == '"' && s.F90) {
 		return includeSpec{}, false
 	}
 
@@ -100,7 +102,7 @@ func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, line *Li
 		return // a malformed INCLUDE, already reported
 	}
 
-	pos := s.Position(strings.IndexByte(s.Text, '\''))
+	pos := s.Position(strings.IndexAny(s.Text, "'\""))
 
 	switch {
 	case depth+1 > MaxIncludeDepth:
@@ -185,23 +187,25 @@ func squeezeKeyword(text, keyword string) (int, int) {
 }
 
 // characterConstant reads the character constant starting with the
-// apostrophe at text[start]: its value (each doubled apostrophe made
-// one) and the index just past its closing apostrophe. ok is false if it
-// has no closing apostrophe.
+// apostrophe (or quotation mark) at text[start]: its value (each doubled
+// delimiter made one) and the index just past its closing delimiter. ok is
+// false if it has none.
 func characterConstant(text string, start int) (value string, end int, ok bool) {
 	var b strings.Builder
 
+	delimiter := text[start]
+
 	for i := start + 1; i < len(text); i++ {
-		if text[i] != '\'' {
+		if text[i] != delimiter {
 			b.WriteByte(text[i])
 
 			continue
 		}
 
 		// FORTRAN writes an apostrophe inside a quoted string as two:
-		// 'DON''T' is DON'T.
-		if i+1 < len(text) && text[i+1] == '\'' {
-			b.WriteByte('\'')
+		// 'DON''T' is DON'T. "SAY ""HI""" is the same with quotation marks.
+		if i+1 < len(text) && text[i+1] == delimiter {
+			b.WriteByte(delimiter)
 			i++
 
 			continue

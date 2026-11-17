@@ -57,11 +57,17 @@ func newFortranContext(t *testing.T, files map[string][]string) (*Context, *byte
 var (
 	fixedProgram = []string{"      PROGRAM P", "      INCLUDE 'INC'", "      END"}
 	fixedInclude = []string{"      I = 1"}
+
+	// Only free form reads these cleanly: in fixed form a statement starting in
+	// column 1 has letters in its label field.
+	freeProgram = []string{"program p; include 'INC'", "end"}
+	freeInclude = []string{"i = 1; j = 2"}
 )
 
-// notImplFree reports whether out says free form isn't implemented, in file.
-func notImplFree(out, file string) bool {
-	return strings.Contains(out, "free source form is not implemented yet") && strings.Contains(out, file)
+// readAsFixed reports whether out has the message fixed form gives a free-form
+// line, in file.
+func readAsFixed(out, file string) bool {
+	return strings.Contains(out, "BADLABEL") && strings.Contains(out, file)
 }
 
 // TestFortranSourceTypes checks the default types (.FOR, then .F90), the form a
@@ -76,12 +82,9 @@ func TestFortranSourceTypes(t *testing.T) {
 	})
 
 	t.Run(".F90 when there's no .FOR, free form", func(t *testing.T) {
-		c, out := newFortranContext(t, map[string][]string{"P.F90": fixedProgram, "INC.FOR": fixedInclude})
+		c, out := newFortranContext(t, map[string][]string{"P.F90": freeProgram, "INC.FOR": fixedInclude})
 
-		err := c.Fortran(FortranOptions{Sources: FortranSources("P")})
-
-		var vmsErr vmserrors.VMSError
-		if !errors.As(err, &vmsErr) || vmsErr.Status != vmserrors.CLI_FORERRORS || !notImplFree(out.String(), "P.F90") {
+		if err := c.Fortran(FortranOptions{Sources: FortranSources("P")}); err != nil || out.Len() != 0 {
 			t.Fatalf("err %v, output %q", err, out)
 		}
 	})
@@ -92,21 +95,36 @@ func TestFortranSourceTypes(t *testing.T) {
 		if err := c.Fortran(FortranOptions{Sources: FortranSources("P"), SourceForm: "FIXED"}); err != nil || out.Len() != 0 {
 			t.Fatalf("err %v, output %q", err, out)
 		}
+
+		c, out = newFortranContext(t, map[string][]string{"P.F90": freeProgram, "INC.FOR": fixedInclude})
+
+		err := c.Fortran(FortranOptions{Sources: FortranSources("P"), SourceForm: "FIXED"})
+
+		var vmsErr vmserrors.VMSError
+		if !errors.As(err, &vmsErr) || vmsErr.Status != vmserrors.CLI_FORERRORS || !readAsFixed(out.String(), "P.F90") {
+			t.Fatalf("err %v, output %q", err, out)
+		}
 	})
 
 	t.Run("an INCLUDE'd file's own type", func(t *testing.T) {
-		c, out := newFortranContext(t, map[string][]string{"P.FOR": fixedProgram, "INC.F90": fixedInclude})
+		c, out := newFortranContext(t, map[string][]string{"P.FOR": fixedProgram, "INC.F90": freeInclude})
 
-		if err := c.Fortran(FortranOptions{Sources: FortranSources("P"), SourceForm: "FIXED"}); err == nil || !notImplFree(out.String(), "INC.F90") {
+		if err := c.Fortran(FortranOptions{Sources: FortranSources("P"), SourceForm: "FIXED"}); err != nil || out.Len() != 0 {
 			t.Fatalf("err %v, output %q", err, out)
 		}
 	})
 
 	t.Run("/SOURCE_FORM=FREE", func(t *testing.T) {
-		c, out := newFortranContext(t, map[string][]string{"P.FOR": fixedProgram, "INC.FOR": fixedInclude})
+		c, out := newFortranContext(t, map[string][]string{"P.FOR": freeProgram, "INC.FOR": fixedInclude})
 
-		if err := c.Fortran(FortranOptions{Sources: FortranSources("P"), SourceForm: "free"}); err == nil || !notImplFree(out.String(), "P.FOR") {
+		if err := c.Fortran(FortranOptions{Sources: FortranSources("P"), SourceForm: "free"}); err != nil || out.Len() != 0 {
 			t.Fatalf("err %v, output %q", err, out)
+		}
+
+		c, out = newFortranContext(t, map[string][]string{"P.FOR": freeProgram, "INC.FOR": fixedInclude})
+
+		if err := c.Fortran(FortranOptions{Sources: FortranSources("P")}); err == nil || !readAsFixed(out.String(), "P.FOR") {
+			t.Fatalf("without /SOURCE_FORM: err %v, output %q", err, out)
 		}
 	})
 
@@ -135,14 +153,14 @@ func TestFortranSourceTypes(t *testing.T) {
 // form too.
 func TestFortranHostF90(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "p.f90"), []byte("program p\nend program p\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "p.f90"), []byte("program p; i = 1\nend\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	c, out := newFortranContext(t, nil)
 
 	err := c.Fortran(FortranOptions{Sources: FortranSources(filepath.Join(dir, "p")), SourceHost: true, NoMacro: true})
-	if err == nil || !notImplFree(out.String(), "p.f90") {
+	if err != nil || out.Len() != 0 {
 		t.Fatalf("err %v, output %q", err, out)
 	}
 }

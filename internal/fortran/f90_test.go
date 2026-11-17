@@ -1,7 +1,6 @@
 package fortran_test
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/tucats/govax/internal/fortran"
@@ -25,11 +24,11 @@ func TestNoF90Explicit(t *testing.T) {
 }
 
 // TestF90Default checks /F90's default: the first file's form, unless given.
-// Nothing reads it yet but the source pass, so a free-form file's NOTIMPL is all
-// there is to see of the form; /F90's effect on fixed form waits for subtask 4.
+// Nothing reads it yet but the source pass's " rule, which the lexer doesn't
+// share until subtask 4, so what there is to see is that both forms compile.
 func TestF90Default(t *testing.T) {
 	fixed := fortran.File{Spec: "A.FOR", Name: "A", Lines: []string{"      PROGRAM A", "      END"}}
-	free := fortran.File{Spec: "A.F90", Name: "A", Lines: []string{"program a", "end program a"}, Free: true}
+	free := fortran.File{Spec: "A.F90", Name: "A", Lines: []string{"program a; i = 1", "end"}, Free: true}
 
 	ids := func(r fortran.Result) []string {
 		var out []string
@@ -46,8 +45,8 @@ func TestF90Default(t *testing.T) {
 		t.Errorf("fixed form: %v", ids(r))
 	}
 
-	if r := fortran.Compile(opts, free); !slices.Equal(ids(r), []string{"NOTIMPL"}) || r.MACRO != nil {
-		t.Errorf("free form: %v, want only NOTIMPL", ids(r))
+	if r := fortran.Compile(opts, free); r.Errors != 0 || r.MACRO == nil {
+		t.Errorf("free form: %v", ids(r))
 	}
 
 	opts.F90, opts.F90Given = true, true

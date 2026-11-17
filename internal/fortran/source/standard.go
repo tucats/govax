@@ -68,7 +68,9 @@ func (p *Program) LineMarks() []Mark {
 		text := strings.TrimLeft(line.Text, " \t")
 
 		switch {
-		case line.Text == "":
+		case line.Text == "", line.File.Free:
+			// What FORTRAN-77 lacks in free form is all of it: /STANDARD's view of
+			// a free-form source waits for /STANDARD=F90 (Phase 110).
 		case line.Text[0] == 'D' || line.Text[0] == 'd':
 			marks = append(marks, Mark{linePosition(line, 1), "a debugging line", line.Library})
 		case line.Kind == Comment && strings.HasPrefix(text, "!"):

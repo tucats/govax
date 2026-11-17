@@ -48,7 +48,17 @@ func (f Form) split(text string) fields {
 			return fields{kind: Comment}
 		}
 
-	case '*', '!':
+	case '!':
+		// DEC's later compilers write a directive !DEC$, the form free source
+		// form needs, and take it in fixed form too (docs/planning/PHASE-99 -
+		// Fortran 90.md, Decision 3); any other ! line is a comment.
+		if hasTag(text, "!DEC$") {
+			return f.statementField(fields{kind: Directive}, text, statementColumn-1)
+		}
+
+		return fields{kind: Comment}
+
+	case '*':
 		return fields{kind: Comment}
 
 	case 'D', 'd':

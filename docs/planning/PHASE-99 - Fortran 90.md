@@ -4,7 +4,7 @@
 the same day, every recommendation taken ("The author's answers", after the
 questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
 to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done, and so is
-subtask 2 (`/F90` and `/SOURCE_FORM`); subtask 3 is next. Needs the FORTRAN program (Phases
+subtask 2 (`/F90` and `/SOURCE_FORM`) and subtask 3 (free source form); subtask 4 is next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -574,7 +574,7 @@ the work shows.
    statement with the positions of its blanks for the tokenizer; messages for
    a missing `&`, too many continuations, a `;` alone, a line past 132
    characters. Golden tests of statements and positions, both forms side by
-   side, and the old fixed-form tests untouched.
+   side, and the old fixed-form tests untouched (done 2026-11-17).
 4. **Fortran 90's lexical items** (`lex`): the new tokens (`::`, `=>`, `%`,
    `(/`, `/)`, `==`, `/=`, `<`, `<=`, `>`, `>=`, defined operators), kind
    parameters on constants (`1.5_8`, `2_k`, `.TRUE._1`, `k_'text'`), `"`
@@ -737,3 +737,62 @@ The author read the plan and accepted every recommendation:
     `TestFortranHostF90` (the command on a `Context` over a scratch volume,
     no console); `cmd/govax`'s `TestFortranCommand` cases. `HELP FORTRAN`
     has `/F90` and `/SOURCE_FORM` and the `.F90` type.
+- **2026-11-17, subtask 3 (done):** free source form, `source/free.go`, whose
+  comment works through the standard's 3.3.1.
+  - **The reader:** `readFile` sends a free-form file to `readFree`, a line at a
+    time: comment lines (blank, or `!` first), `!DEC$` directives (after any
+    blanks, a blank after the tag; never continued), and statement lines, each
+    read in segments ended by a `!` comment, a `;`, a continuing `&`, or the
+    line's end. The constants are followed by the fixed form's comment scanner,
+    refactored to be fed a character at a time (`commentScanner.outside` and
+    `feed`; `cut` is now a loop over them, its answers unchanged), with
+    `doubleQuotes` for `"` under `/F90` in both forms. A `"` constant is a
+    character context here; the lexer learns it in subtask 4, so until then a
+    `"` under `/F90` is still the octal constant to it.
+  - **Continuation:** an `&` ends a line's part if only blanks follow it, or
+    outside a character context blanks and a comment. The next line goes on
+    after its first `&`, or at its column 1, blanks and all; in a character
+    context the second `&` is required (`MISSINGAMP`, read as if there). A line
+    of only an `&` is `LONEAMP` (in a character context a `!` after it is the
+    constant's text), an `&` first on a line that continues nothing is
+    `NOINITIAL`, an `&` on a file's last statement line `CONTNOLINE`, a
+    directive among a statement's lines `DIRINSTMT`. 39 continuation lines by
+    default (`DefaultFreeContinuations`); `/CONTINUATIONS=n` still counts.
+    `X = AB&` with `C` in column 1 is read as `ABC`, by the standard's words:
+    nothing here can know a split token lacked its `&`.
+  - **`;`:** several in a row are one, one at a line's end is ignored, one
+    with no statement before it on its line is `EMPTYSEMI`. Each statement on
+    a line has its own label and its own pieces.
+  - **Labels:** digits first in a statement, 1 to 5 of them (`BADLABEL`, as
+    fixed form's), not all zeros (`ZEROLABEL`), a blank after (`LABELBLANK`,
+    and read as a label anyway).
+  - **132 characters:** anything but blanks past them is `LINETOOLONG`, fatal,
+    as `/EXTEND_SOURCE`'s; comment lines aren't checked (ours; the standard
+    says every line, gfortran checks only statements).
+  - **Blanks for the lexer:** `Statement.Free`. A free-form statement's Text
+    keeps every blank its lines had between its pieces and none where an `&`
+    joined two halves, so Text's blanks are the significant ones and subtask
+    4's tokenizer can read them from the squeezer's offsets; no separate list
+    is kept. `Statement.Initial` is the whole text in free form (section 5.5's
+    END rule is fixed form's), so `END &` / `PROGRAM P` is an END to
+    `options.go`'s unit following. Named ENDs (`END PROGRAM P`) don't end a
+    unit there yet: subtask 5 teaches `isEnd` them, with the parser.
+  - **Shared with fixed form:** `complete` (an INCLUDE replaced by its file,
+    or the next statement, and the unit followed), INCLUDE `"name"` under
+    `/F90` (`characterConstant` by the opening delimiter), and `!DEC$` in
+    column 1 of a fixed-form line as a directive, as Decision 3 says
+    (`TestNoF90Unchanged` holds: no corpus file has such a line).
+    `/STANDARD`'s line marks pass over free-form lines (Phase 110's
+    `/STANDARD=F90` will judge them).
+  - **Tests** (`source`): `free_test.go`'s table tests of each rule and message,
+    positions back to lines and columns across split tokens, INCLUDE between
+    the forms both ways, OPTIONS `/NOF90` followed, and `TestFreeFormGolden`:
+    `testdata/free`'s `squares` and `continued`, each `.f90` beside a `.for`
+    twin that must make the same statements once blanks are out, the free
+    form's statements and pieces held to a `.golden` (`-update`). `dclcmd`'s
+    `TestFortranSourceTypes` and `TestFortranHostF90`, and `fortran`'s
+    `TestF90Default`, now tell the forms apart by a text only free form reads
+    cleanly. `HELP FORTRAN` says free form is read, and `/CONTINUATIONS`'s
+    default is 39 there. A free-form program run end to end by hand (FORTRAN,
+    MACRO, LINK, RUN; `do 10 i = 1, &`, a label first, `;`, a constant
+    continued) printed what it should; the corpus is subtask 6's.

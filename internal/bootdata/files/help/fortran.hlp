@@ -19,8 +19,9 @@
    Without a file type a source is .FOR, or .F90 if there is no .FOR
    file.  A .F90 file is in free source form (Fortran 90's), any other
    in fixed form (VAX FORTRAN's), unless /SOURCE_FORM says otherwise.
-   Free form is not compiled yet: a free-form file gets
-   %FORT-E-NOTIMPL.  Files are found by MACRO's
+   Free form is read (statements anywhere on a line, ! comments, ;
+   between statements, & to continue), but Fortran 90's own statements
+   are still being added.  Files are found by MACRO's
    rules (see MACRO Parameter); quote a host path to keep its case.
 
 2 Description
@@ -179,7 +180,7 @@
       /CONTINUATIONS=n
 
    The most continuation lines one statement may have, from 0 to 99.
-   The default is 19.
+   The default is 19 in fixed form and 39 in free form.
 
 /CROSS_REFERENCE
 

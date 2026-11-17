@@ -1,0 +1,24 @@
+0|subroutine continued(argument)
+    5:1 "subroutine continued(arg"
+    6:7 "ument)"
+0|character*40 text
+    7:3 "character*40 text"
+0|text = 'a character constant over three lines, with a ! in it'
+    8:3 "text = 'a character constant "
+    9:11 "over three lines, "
+    11:11 "with a ! in it'"
+0|x = 1 +       2
+    12:3 "x = 1 + "
+    13:1 "      2"
+0|y = 3 
+    13:10 "y = 3 "
+0|z = 4 
+    13:19 "z = 4 "
+30|format (6h!;&ab!, i3) 
+    label at 14:1
+    14:4 "format (6h!;&ab!, i3) "
+0|call s ( 1, 2 )
+    15:3 "call s ( "
+    16:8 "1, 2 )"
+0|end
+    17:1 "end"

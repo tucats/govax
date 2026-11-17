@@ -7,6 +7,9 @@ package source
 // lines, since a constant may go on from one line to the next. A scanner
 // lives for one statement and is fed its lines' statement fields in turn.
 //
+// Free form (free.go) uses the same scanner a character at a time, since it
+// must also know where a ; or an & stands outside constants.
+//
 // FORTRAN has two kinds of constant to follow:
 //
 //   - A character constant is in apostrophes; an apostrophe inside it is
@@ -41,6 +44,7 @@ package source
 // parentheses as that separator, not as the start of a constant.
 type commentScanner struct {
 	quoted    bool // inside a character constant
+	delimiter byte // the ' or " that started it
 	hollerith int  // a Hollerith constant's characters still to come
 
 	depth int // how many parentheses are open
@@ -55,6 +59,13 @@ type commentScanner struct {
 	// start is the statement's first characters outside constants, in
 	// capitals: enough to know a type statement's length (CountMayFollow).
 	start []byte
+
+	// doubleQuotes says a " starts a character constant too, as under /F90
+	// (docs/planning/PHASE-99 - Fortran 90.md, Decision 2); otherwise "17 is VAX
+	// FORTRAN's octal constant, and " is nothing to the scanner. The constant
+	// ends at the same delimiter it started with: 'IT"S' and "IT'S" both hold
+	// the other one as text.
+	doubleQuotes bool
 
 	// lower is where the last cut found its field's first small letter outside
 	// constants, or -1 if it found none, for /STANDARD=SOURCE_FORM.
@@ -72,74 +83,92 @@ func (s *commentScanner) cut(field string) int {
 	s.lower = -1
 
 	for i := 0; i < len(field); i++ {
-		c := field[i]
-
-		if c >= 'a' && c <= 'z' && s.lower < 0 && s.hollerith == 0 && !s.quoted {
-			s.lower = i
-		}
-
-		switch {
-		case s.hollerith > 0:
-			s.hollerith--
-
-			continue
-
-		case s.quoted:
-			if c == '\'' {
-				s.quoted = false
-				s.note(c)
-			}
-
-			continue
-
-		case c == ' ' || c == '\t':
-			continue
-
-		case c == '!':
+		if field[i] == '!' && s.outside() {
 			return i
-
-		case c == '\'':
-			if s.depth > 0 && isNameChar(s.last) {
-				s.note(c) // READ (1'10): a record number follows
-			} else {
-				s.quoted = true
-			}
-
-			continue
-
-		case c >= '0' && c <= '9':
-			switch {
-			case s.counting:
-				s.count = min(s.count*10+int(c-'0'), maxHollerith)
-				s.last = c
-
-				continue
-
-			case s.countMayFollow():
-				s.note(c)
-				s.counting = true
-				s.count = int(c - '0')
-
-				continue
-			}
-
-		case (c == 'H' || c == 'h' || c == 'R' || c == 'r') && s.counting && s.count > 0:
-			s.hollerith = s.count
-			s.note(c)
-
-			continue
-
-		case c == '(':
-			s.depth++
-
-		case c == ')':
-			s.depth = max(s.depth-1, 0)
 		}
 
-		s.note(c)
+		s.feed(field[i], i)
 	}
 
 	return len(field)
+}
+
+// outside reports whether the next character is outside every constant: not
+// in a character constant, and not one of a Hollerith constant's characters.
+// Only there do !, and in free form ; and &, mean anything (the standard
+// calls the inside a "character context").
+func (s *commentScanner) outside() bool {
+	return !s.quoted && s.hollerith == 0
+}
+
+// feed moves the scanner on past c, the character at index i of the line's
+// field.
+func (s *commentScanner) feed(c byte, i int) {
+	if c >= 'a' && c <= 'z' && s.lower < 0 && s.hollerith == 0 && !s.quoted {
+		s.lower = i
+	}
+
+	switch {
+	case s.hollerith > 0:
+		s.hollerith--
+
+		return
+
+	case s.quoted:
+		if c == s.delimiter {
+			s.quoted = false
+			s.note(c)
+		}
+
+		return
+
+	case c == ' ' || c == '\t':
+		return
+
+	case c == '\'':
+		if s.depth > 0 && isNameChar(s.last) {
+			s.note(c) // READ (1'10): a record number follows
+		} else {
+			s.quoted, s.delimiter = true, c
+		}
+
+		return
+
+	case c == '"' && s.doubleQuotes:
+		s.quoted, s.delimiter = true, c
+
+		return
+
+	case c >= '0' && c <= '9':
+		switch {
+		case s.counting:
+			s.count = min(s.count*10+int(c-'0'), maxHollerith)
+			s.last = c
+
+			return
+
+		case s.countMayFollow():
+			s.note(c)
+			s.counting = true
+			s.count = int(c - '0')
+
+			return
+		}
+
+	case (c == 'H' || c == 'h' || c == 'R' || c == 'r') && s.counting && s.count > 0:
+		s.hollerith = s.count
+		s.note(c)
+
+		return
+
+	case c == '(':
+		s.depth++
+
+	case c == ')':
+		s.depth = max(s.depth-1, 0)
+	}
+
+	s.note(c)
 }
 
 // note records c as the last character seen outside a constant, which

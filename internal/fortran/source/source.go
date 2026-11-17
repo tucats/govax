@@ -202,6 +202,14 @@ type Statement struct {
 	// before its unit left it.
 	F90 bool
 
+	// Free says the statement is in free source form, where its blanks mean
+	// something: Text keeps every blank the lines had between the statement's
+	// tokens, and has none where an & joined a token's two halves (free.go).
+	// The lexer, which takes blanks out of every statement, looks at Text's
+	// blanks first for a free-form one, since a name or a constant there may
+	// not hold one.
+	Free bool
+
 	// pieces map Text back to the source: one for each line that gave
 	// the statement text, in order.
 	pieces []piece
@@ -244,8 +252,11 @@ func (s *Statement) Position(offset int) diag.Position {
 // line, before any continuation line's. The manual's section 5.5 needs
 // it: an initial line holding only END is an END statement, whatever
 // continuation lines follow it.
+//
+// Free form has no such rule (an END statement there may be continued, as
+// END &, PROGRAM P), so a free-form statement's Initial is all of it.
 func (s *Statement) Initial() string {
-	if len(s.pieces) < 2 {
+	if s.Free || len(s.pieces) < 2 {
 		return s.Text
 	}
 

@@ -62,6 +62,27 @@ var messages = map[string]kind{
 	// ZEROLABEL is a label of all zeros, which the manual forbids.
 	"ZEROLABEL": {Error, "statement label 0 is not allowed"},
 
+	// Free source form's (source/free.go; the standard's 3.3.1).
+
+	// LONEAMP is a line holding only an &, which 3.3.1.3 forbids.
+	"LONEAMP": {Error, "a line may not hold only an &"},
+
+	// MISSINGAMP is a character constant continued onto a line that doesn't
+	// start with the & that says where it goes on (3.3.1.3.2).
+	"MISSINGAMP": {Error, "a character constant continued from the line before must go on after an & on this line"},
+
+	// CONTNOLINE is a statement continued by an & on a file's last statement line.
+	"CONTNOLINE": {Error, "the & continues the statement, but the file has no line after it"},
+
+	// EMPTYSEMI is a ; with no statement before it on its line (3.3.1.2).
+	"EMPTYSEMI": {Error, "a ; must follow a statement"},
+
+	// LABELBLANK is a free-form label run into what follows it (3.3.1).
+	"LABELBLANK": {Error, "a blank must follow a statement label"},
+
+	// DIRINSTMT is a !DEC$ directive among a continued statement's lines.
+	"DIRINSTMT": {Error, "a directive may not come between the lines of a continued statement"},
+
 	// LINETOOLONG is text past column 132 with /EXTEND_SOURCE, which the
 	// manual makes a fatal error (section 1.3.5).
 	"LINETOOLONG": {Fatal, "line has text past column %d"},

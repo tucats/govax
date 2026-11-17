@@ -68,6 +68,20 @@
 //     here, not by the parser, since they change where the lines come
 //     from: the included statements take the INCLUDE statement's place.
 //
+// # Free source form
+//
+// Fortran 90 added a second layout, free source form (the standard's 3.3.1),
+// which a .F90 file has, or any file under /SOURCE_FORM=FREE. There columns
+// mean nothing: a statement may be anywhere on a line of up to 132
+// characters, ! starts a comment anywhere outside a character constant, ;
+// separates statements on one line, & at a line's end continues the statement
+// (and & first on the next line says where it goes on), and a label is the
+// statement's first token. free.go is its reader, and its comment works
+// through the rules. Each file is read in its own form, so a free-form program
+// may INCLUDE a fixed-form file and the other way round. A free-form
+// statement's blanks are significant, which is why Statement.Free tells the
+// lexer to look at them.
+//
 // # What this pass hands on
 //
 // Read returns a Program: every line it read, in order, from the source

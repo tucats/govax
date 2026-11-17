@@ -3,8 +3,6 @@ package source
 import (
 	"slices"
 	"testing"
-
-	"github.com/tucats/govax/internal/fortran/diag"
 )
 
 // TestStatementF90 checks that each statement records /F90 as the command gave it
@@ -50,30 +48,5 @@ func TestF90QualifierNames(t *testing.T) {
 		if got := OptionsQualifier(name); got != want {
 			t.Errorf("OptionsQualifier(%q) = %q, want %q", name, got, want)
 		}
-	}
-}
-
-// TestFreeFormNotYet checks that a free-form file is read as lines and reported
-// NOTIMPL at its first line, until subtask 3's reader; a fixed-form file it
-// includes, or one beside it, is unaffected.
-func TestFreeFormNotYet(t *testing.T) {
-	var messages diag.List
-
-	free := &File{Spec: "A.F90", Lines: []string{"program a", "end program a"}, Free: true}
-	fixed := &File{Spec: "B.FOR", Lines: []string{"      SUBROUTINE B", "      END"}}
-
-	p := ReadAll(Form{}, []*File{free, fixed}, nil, &messages)
-
-	got := messages.Messages()
-	if len(got) != 1 || got[0].Ident != "NOTIMPL" || got[0].Pos.File != "A.F90" || got[0].Pos.Line != 1 {
-		t.Fatalf("messages %v, want one NOTIMPL at A.F90's line 1", got)
-	}
-
-	if len(p.Lines) != 4 {
-		t.Errorf("%d lines kept, want 4", len(p.Lines))
-	}
-
-	if got := texts(p); !slices.Equal(got, []string{"0|SUBROUTINE B", "0|END"}) {
-		t.Errorf("statements %q, want B.FOR's only", got)
 	}
 }
