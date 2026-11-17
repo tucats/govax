@@ -2053,5 +2053,10 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     else ended with JBC$_QUERESET, as the VAX's reboot left them; govax asks first at a terminal. A restart begins with
     the file its run stopped in (unconfirmed: the probe's restarted jobs had one file each). SET RESTART_VALUE outside
     a batch job does nothing, and /RETAIN=UNTIL lets a job go at its time (both unconfirmed).
+  - **A job's status in SHOW QUEUE and /NOTIFY** is $GETMSG's text of it, unformatted: a DCL utility's status shows
+    its shared message's `!AS` (`%COPY-E-SEARCHFAIL, error searching for !AS`), as VMS's job controller, having no
+    arguments to give, is taken to show it (unconfirmed: the probe's jobs ended with system, RMS, and JBC statuses).
+    The utilities' facility names and shared messages are `vmsdef/messages.go`'s `otherFacilities` and
+    `sharedMessages` (subtask 11); COPY's facility number and its SEARCHFAIL's severity, an error, are unconfirmed.
 - **Status**: kept; the rest of the probe's job sections are held to VMS by `internal/console/batch_test.go`, and
   the reboot by `batchrestart_test.go`.

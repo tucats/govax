@@ -121,7 +121,7 @@ func (c *Interpreter) syncInterrupted(ended func() bool) bool {
 			c.RTL.HostIdle(c.machine.Engine, func() { time.Sleep(syncPoll) })
 		}
 
-		c.RTL.PollJobs()
+		c.RTL.PollJobs() // HostIdle's look, or the first without an engine
 	}
 
 	return attention()

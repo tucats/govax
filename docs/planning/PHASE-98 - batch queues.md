@@ -712,7 +712,7 @@ Each is one commit, with tests, stopping for review.
     startup, queues back stopped, executing jobs at the end and the
     confirmation, `/RESTART`, SET RESTART_VALUE, `/RETAIN`, a second
     session's refusals, SYSTARTUP_VMS.COM's commented block.
-11. **End to end**: a scenario as two accounts (ADDUSER.COM's), each
+11. **End to end** (done 2026-11-16): a scenario as two accounts (ADDUSER.COM's), each
     submitting jobs to queues with different protections, a nightly job
     by `/AFTER`, a job that fails, and one that's restarted after govax
     is stopped and started again.
@@ -1353,3 +1353,36 @@ queues is a future phase.
   cmd/govax's `TestRun_endWithJobs`. HELP STOP /QUEUE (/REQUEUE, /HOLD), SET
   RESTART_VALUE (new), SUBMIT /RESTART and /RETAIN. Subtask 11, end to end,
   is next.
+- **2026-11-16** Subtask 11, end to end: `cmd/govax/batche2e_test.go`'s
+  `TestRun_batchEndToEnd`, five whole govax sessions on one system volume,
+  authorization file, and queue database. SYSTEM adds ALICE [200,1] and BOB
+  [300,1] with ADDUSER.COM (its answers typed after it), and makes
+  SYS$BATCH and GROUP200_BATCH (/OWNER_UIC=[200,0]
+  /PROTECTION=(S:M,O:M,G:S,W)); the site's SYSTARTUP_VMS.COM is the seeded
+  one with its batch queue block taken out of comments, plus a START/QUEUE
+  of the group's queue, so every later session starts both. ALICE submits
+  NIGHTLY /AFTER a second from now (it resubmits itself /AFTER=TOMORROW:
+  entry 3 holding until midnight), FAILS /RETAIN=ERROR/NOTIFY (a COPY of a
+  missing file: the notice, SYNCHRONIZE's status, and "Retained on error"),
+  and STEPS /RESTART, in its first step (SET RESTART_VALUE=STEP2) when she
+  ends govax: JOBSEXECUTING, then requeued. Her next session's startup
+  starts the queues and STEPS goes on at STEP2 (`$RESTART`,
+  `BATCH$RESTART`), its second log beside the first. BOB's SUBMIT to the
+  group's queue is CREJOB/NOPRIV, its jobs are "no privilege" to his SHOW
+  QUEUE, DELETE/ENTRY and SET ENTRY of ALICE's are NOPRIV, and his job on
+  SYS$BATCH runs. Found on the way, and fixed: (1) an /AFTER time never
+  came while process 1's DCL WAITed with no other process: WAIT slept in
+  the host with the quantum clock standing still and no look at the job
+  controller; WAIT now waits through `HostIdle` as SYNCHRONIZE and the
+  prompt do, and `HostIdle` itself looks at the queue timer
+  (`pollQueueTimer`), so the prompt's idle time starts a due job too (the
+  test went from 42 s to 1.5 s); (2) COPY of a missing input was
+  `%SYSTEM-W-NOSUCHFILE` with Go's error text appended, a warning, so a
+  procedure went on past it: it is now `%COPY-E-SEARCHFAIL, error
+  searching for name` over `-RMS-E-FNF`, as DELETE's and TYPE's are
+  (unconfirmed: no probe copied a missing file); (3) a job ending with a
+  DCL utility's status showed `%NONAME-E-NOMSG` in /NOTIFY and SHOW QUEUE:
+  `vmsdef`'s `otherFacilities` now names the utilities' facilities (COPY,
+  SET, SHOW, DIRECT, DELETE, TYPE, SUBMIT, QUEMAN) and `sharedMessages`
+  has the shared messages they use, worded as the probes' logs show them
+  (DEVIATIONS.md). Subtask 12, the close-out, is next.

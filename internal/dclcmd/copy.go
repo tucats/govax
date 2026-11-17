@@ -71,9 +71,8 @@ var (
 //     reported as SS_DEVNOTMOUNT, matching Context.Type/Context.Delete's
 //     own translation for the same underlying condition.
 //   - sourceText matching no file at all on its volume surfaces as an
-//     *rms.NotFoundError and is reported as SS_NOSUCHFILE, matching
-//     Context.Type/Context.Delete's own translation for the same
-//     underlying condition.
+//     *rms.NotFoundError and is reported as COPY-E-SEARCHFAIL over
+//     RMS$_FNF (or RMS$_DNF), as DELETE and TYPE report theirs.
 //   - sourceText matching more than one file, against a destination that
 //     doesn't accept several, surfaces as an *rms.MultipleMatchesError
 //     and is reported as CLI_AMBIGUOUS, the same status Context.Type
@@ -108,9 +107,22 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
 		}
 
+		// An input that isn't there is SEARCHFAIL with the name expanded,
+		// then RMS$_FNF (RMS$_DNF for a directory that isn't there), as
+		// DELETE's and TYPE's are: an error, which ends a procedure or a
+		// batch job under DCL's default ON ERROR (unconfirmed: no probe
+		// copied a missing file; the severity is taken from VMS's own
+		// COPY sessions as remembered, not a log).
 		var notFound *rms.NotFoundError
 		if errors.As(err, &notFound) {
-			return vmserrors.Wrap(vmserrors.SS_NOSUCHFILE, err, notFound.Spec)
+			missing := c.ContainerSession.NotFound(sourceText)
+
+			text := "COPY-E-SEARCHFAIL, error searching for " + missing.Name + "\n" + ConditionLine(missing.Status)
+			if missing.STV != 0 {
+				text += "\n" + ConditionLine(missing.STV)
+			}
+
+			return vmserrors.ConditionError{Status: copySearchFail | stsInhibitMsg, Text: text}
 		}
 
 		var multiple *rms.MultipleMatchesError
@@ -214,6 +226,10 @@ func (c *Context) copyFiles(sourceText string, sourceHost bool, destText string,
 // copyFacility is COPY's facility number, which its own condition values
 // carry (unconfirmed: the probe shows COPY's messages, not their values).
 const copyFacility = 103
+
+// copySearchFail is COPY's SEARCHFAIL condition value, an error (the
+// shared message SHR$_SEARCHFAIL in COPY's facility).
+var copySearchFail = uint32(copyFacility<<16) | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]&^7 | 2
 
 // copySyntax is COPY's refusal of a /PROTECTION code's letters,
 // "%COPY-F-SYNTAX, error parsing 'Z'", as CREATE's is (unconfirmed: the

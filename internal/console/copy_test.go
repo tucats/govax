@@ -220,8 +220,8 @@ func TestConsoleCopy_notMounted(t *testing.T) {
 }
 
 // TestConsoleCopy_notFound confirms a source spec matching no file at all
-// is reported as SS_NOSUCHFILE, matching Console.Type/Console.Delete's own
-// translation for the same underlying condition.
+// is reported as DELETE and TYPE report theirs: COPY-E-SEARCHFAIL with the
+// name expanded, over RMS-E-FNF.
 func TestConsoleCopy_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -232,11 +232,12 @@ func TestConsoleCopy_notFound(t *testing.T) {
 
 	err := c.cmd().Copy("NOSUCH.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
-		t.Fatal("Copy of a nonexistent file = nil error, want SS_NOSUCHFILE")
+		t.Fatal("Copy of a nonexistent file = nil error, want SEARCHFAIL")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("Copy error = %v, want SS_NOSUCHFILE", err)
+	want := "COPY-E-SEARCHFAIL, error searching for DUA0:[000000]NOSUCH.TXT;\n-RMS-E-FNF, file not found"
+	if err.Error() != want {
+		t.Errorf("Copy error = %q, want %q", err.Error(), want)
 	}
 }
 

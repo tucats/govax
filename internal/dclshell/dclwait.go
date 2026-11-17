@@ -72,9 +72,17 @@ func (c *Interpreter) waitCommand(id int64, r *dcl.Result) error {
 		}
 
 		// The others run while process 1 waits; when none can, the
-		// host waits a while.
+		// host waits a while, the quantum clock moving on with it as far
+		// as the next timer (an /AFTER time among them), and the job
+		// controller looks at the time (HostIdle).
 		if ran, _ := c.lendCPU(func() bool { return done() || attention() }, c.machineDeadline(left)); !ran {
-			time.Sleep(min(time.Until(deadline), waitPoll))
+			pause := func() { time.Sleep(min(time.Until(deadline), waitPoll)) }
+
+			if c.machine.Engine == nil {
+				pause()
+			} else {
+				c.RTL.HostIdle(c.machine.Engine, pause)
+			}
 		}
 	}
 }

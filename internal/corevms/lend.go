@@ -108,7 +108,9 @@ func (sys *System) LendCPU(env *Environment, over func() bool, deadline uint64) 
 // took, but no further than the next timer of any process, so that a
 // timer comes due about when it would have with the host's clock. With
 // no timer pending, the clock stays where it was, as it does while the
-// prompt waits with no other process.
+// prompt waits with no other process. Then the job controller looks at
+// the time (pollQueueTimer), so a batch job held until a time that has
+// come starts while process 1 waits alone.
 func (sys *System) HostIdle(e *cpu.Engine, wait func()) {
 	sys.accountTime()
 
@@ -122,6 +124,8 @@ func (sys *System) HostIdle(e *cpu.Engine, wait func()) {
 	}
 
 	sys.lastCharge = sys.Clock()
+
+	sys.pollQueueTimer()
 }
 
 // ReclaimCPU gives env, which lent the CPU (LendCPU), the CPU back now,

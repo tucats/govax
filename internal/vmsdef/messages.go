@@ -88,9 +88,24 @@ const facilitySpecific = 0x8000
 // 3-14, the severity cleared), as VMS 7.1's $GETMSG showed them
 // (testdata/lib58): the system message file govax's tables were made
 // from doesn't have them.
+//
+// The rest are the shared messages govax's DCL utilities report, worded
+// as VMS 7.1 showed them in the probes' logs (testdata/prot93,
+// testdata/bat98, testdata/dcl50), so that $GETMSG, and a batch job's
+// status in SHOW QUEUE and /NOTIFY, can show a utility's status.
 var sharedMessages = map[uint32]Message{
+	0x1098: {Ident: "OPENIN", Text: "error opening !AS as input", FAOCount: 1},
+	0x10A0: {Ident: "OPENOUT", Text: "error opening !AS as output", FAOCount: 1},
+	0x10B0: {Ident: "READERR", Text: "error reading !AS", FAOCount: 1},
+	0x10F8: {Ident: "SYNTAX", Text: "error parsing '!AS'", FAOCount: 1},
 	0x1128: {Ident: "NOWILD", Text: "no wildcard permitted"},
+	0x11F0: {Ident: "FILNOTDEL", Text: "error deleting !AS", FAOCount: 1},
+	0x1230: {Ident: "FILNOTPUR", Text: "error deleting !AS", FAOCount: 1},
+	0x1238: {Ident: "SEARCHFAIL", Text: "error searching for !AS", FAOCount: 1},
 	0x1248: {Ident: "PARSEFAIL", Text: "error parsing !AS", FAOCount: 1},
+	0x1328: {Ident: "INVQUAVAL", Text: "value '!AS' invalid for /!AS qualifier", FAOCount: 2},
+	0x1330: {Ident: "NOFILES", Text: "no files found"},
+	0x1378: {Ident: "NOTDELETED", Text: "error deleting !AS", FAOCount: 1},
 }
 
 // sharedMessage returns the shared message code names, with the
@@ -131,8 +146,18 @@ func sharedMessage(code uint32) (Message, bool) {
 // otherFacilities are facilities' names the system message file govax's
 // tables were made from doesn't give (MessageFacilities), for the
 // messages they share.
+// The DCL utilities' are the facility numbers govax's commands put in
+// their statuses, from the probes' $STATUS values (COPY's unconfirmed).
 var otherFacilities = map[uint32]string{
 	JBCFacility: "JBC",
+	103:         "COPY",
+	119:         "SET",
+	120:         "SHOW",
+	146:         "DIRECT",
+	147:         "DELETE",
+	149:         "TYPE",
+	193:         "SUBMIT",
+	251:         "QUEMAN",
 }
 
 // vaxMessages are messages VMS on a VAX words differently from the
