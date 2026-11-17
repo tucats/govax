@@ -1012,6 +1012,19 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   named ENDs compiled, a FORMAT's `"…"` under `/F90` given to FTNRTL with
   apostrophes (`format.Apostrophes`), and the corpus, `testdata/fortran90`;
   MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 24.
+  Phase 100 (done 2026-11-17; its "Where things stand" is the follow-up
+  list) is declarations and kinds: sema's scope chain (`sema/scope.go`, a
+  statement function's definition a scope of its own), `::` declarations
+  with attributes and `=` values (`sema/attrtable.go`, the standard's
+  constraints as one table; INTENT, OPTIONAL, and TARGET recorded only),
+  kinds as byte sizes (`sema/kinds.go`, `Type.KindNumber`; selectors,
+  kinds on constants, IMPLICIT with kinds), INTEGER(1) and COMPLEX(16) as
+  new types (the IR's `Hexa`, FTNRTL's `FTN$DIVCH`, GSMATCH 1,20), the kind
+  and inquiry functions answered when compiling (`sema/inquiry.go`,
+  `vaxfloat/model.go`), KIND= on the conversions and keyword arguments to
+  intrinsics (`sema/intrinsickeys.go`); `testdata/fortran90`'s `precise.f90`
+  is a portable program, `forms.f90` every declaration form;
+  MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 25.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

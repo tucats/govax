@@ -145,7 +145,8 @@
    comparisons, and conversions are compiled, and INT, REAL, DBLE,
    QEXT, CMPLX, DCMPLX, AIMAG, and CONJG take one, but its I/O, its
    powers, and the other intrinsic functions of one are not there yet.
-   (1.0_16, 0.0) is a COMPLEX(16) constant.
+   (1.0_16, 0.0) is a COMPLEX(16) constant.  IMPLICIT takes kinds too:
+   IMPLICIT REAL(8) (A-H, O-Z).
 
    The kind functions KIND, SELECTED_INT_KIND, and SELECTED_REAL_KIND,
    and the numeric inquiries HUGE, TINY, EPSILON, DIGITS, PRECISION,

@@ -1,14 +1,13 @@
 # Phase 100 — Fortran 90: declarations and kinds
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and questions for the author), is done (2026-11-17), every recommendation
-accepted by the author ("The author's answers"); subtask 2, the scope
-chain, subtask 3, `::` declarations and attributes, subtask 4, kind
-selectors and kinds on constants, subtask 5, INTEGER(1), subtask 6,
-the kind and inquiry functions, subtask 7, COMPLEX(16), and subtask 8,
-programs end to end, are done (2026-11-17); subtask 9, the close-out, is
-next. Needs Phase 99.
+**Status:** done (2026-11-17). Planned 2026-11-17 with Phase 99
+(`PHASE-99 - Fortran 90.md`, Part C). Subtask 1, the survey (Part A, below,
+with a revised subtask list and questions for the author), was accepted by
+the author ("The author's answers"); subtasks 2 to 9 (the scope chain, `::`
+declarations and attributes, kind selectors and kinds on constants,
+INTEGER(1), the kind and inquiry functions, COMPLEX(16), programs end to
+end, and the close-out) are done (2026-11-17). "Where things stand", at the
+end, is what the phase left. Needs Phase 99.
 
 ## Goal
 
@@ -312,7 +311,7 @@ and 7), and COMPLEX(16) by question 1's answer.
    program portable to gfortran using `SELECTED_REAL_KIND` and `KIND=`) (done
    2026-11-17).
 9. **Close-out**: FORTRAN-INTERNALS.md's section 25 (scopes and kinds),
-   MANUAL.md's 14.13, HELP FORTRAN.
+   MANUAL.md's 14.13, HELP FORTRAN (done 2026-11-17).
 
 ## A.5 Questions for the author
 
@@ -589,3 +588,36 @@ The author accepted every recommendation:
   ran as written but for two forms of later phases, which the programs no
   longer use: a DO with no control and EXIT (Phase 101) and an assignment to
   a whole array (Phase 102). No compiler change was needed.
+- **2026-11-17, subtask 9 (done):** the close-out. FORTRAN-INTERNALS.md's
+  section 25, "Fortran 90: scopes, declarations, and kinds" (the scope chain,
+  the attribute table, kinds as byte counts, INTEGER(1) and COMPLEX(16), the
+  inquiry functions and keyword arguments, what the programs found), its
+  introduction, and section 21's map. MANUAL.md: 14.13's "Writing for any
+  processor" (its example run on govax), and the chapter's overview, table,
+  and 14.7's row naming declarations and kinds; HELP FORTRAN's IMPLICIT with
+  kinds (the help library regenerated). PLAN.md's table row and Fortran 90
+  section. The phase is done; Phase 101, control constructs, is next.
+
+## Where things stand
+
+What Phase 100 left, each for the phase named:
+
+- **POINTER and ALLOCATABLE** are NOTIMPL (Phases 107 and 104); **INTENT,
+  OPTIONAL, and TARGET** are recorded on the `Symbol` and change nothing:
+  INTENT's checks and PRESENT are Phase 103's, TARGET's meaning Phase 107's.
+  **PUBLIC and PRIVATE** are NOTINMODULE until modules (Phase 106).
+- **Arrays:** array constructors as initial values, array PARAMETERs, and
+  assumed- or deferred-shape bounds (`A(:)`) are NOTIMPL (Phases 102 and 104).
+- **CHARACTER** of length zero, or of a length that isn't constant in a
+  non-dummy's declaration, is NOTIMPL (Phase 108, answer 3).
+- **COMPLEX(16)'s** I/O (Phase 109), powers, and intrinsic functions other
+  than the conversions and parts (Phase 108). A REAL(16) beside a COMPLEX(4)
+  or COMPLEX(8) gives COMPLEX\*16, VAX FORTRAN's rule, where the standard's
+  7.1.4.2 gives COMPLEX(16) (MANUAL.md's 14.13).
+- **SELECTED_INT_KIND and SELECTED_REAL_KIND of a value** that isn't constant
+  are NOTIMPL (Phase 108).
+- **Keyword arguments** to intrinsic functions whose rows don't name their
+  dummies (Phase 108), and to a program's own procedures (Phase 103).
+- **The scope chain** has hosts only for statement functions; internal and
+  module procedures give it its use (Phase 103).
+- **`/STANDARD`** judges nothing new (finding 14; Phase 110).

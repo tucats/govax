@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), and its declarations and kinds (section 25). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -41,7 +41,8 @@ then how the compiler is tested, what it tells the debugger, its listings and
 run-time checks, and what a real program and a real VAX found. Section 21 is a
 map of the files, with what building this one suggests about building another.
 Sections 22 and 23 are later additions: indexed files, and recursive routines. Section 24
-begins Fortran 90: free source form and the new tokens and statements.
+begins Fortran 90: free source form and the new tokens and statements; section 25 is its
+declarations, attributes, and kinds.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -2627,6 +2628,7 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Indexed files under FTNRTL | `ftn_open.mar`'s `KEYS`, `ftn_keyed.mar`, `ftn_units.mar`'s `UB_KEYED`; RMS's `internal/rms/indexed*.go`, `internal/isam` |
 | Recursive storage: the rule; one constructor for cells | `sema/storage.go`'s `recursiveStorage`; `ir/lower.go`'s `Routine.NewCell` |
 | Free form; Fortran 90's tokens and statements | `source/free.go`; `lex/tokenize.go`, `lex/f90stmt.go`, `parse/f90.go`, `sema/notimpl.go` |
+| Scopes; attributes; kinds; the inquiry functions | `sema/scope.go`; `sema/attrtable.go`; `sema/kinds.go`; `sema/inquiry.go`, `sema/intrinsickeys.go`, `vaxfloat/model.go` |
 | Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, `PHASE-89` for recursion, and `PHASE-99` on for Fortran 90, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
@@ -2949,3 +2951,143 @@ apostrophes doubled, before sema stores the text FTNRTL gets. FTNRTL is unchange
 at run time, from a character constant or a variable, can't be adjusted at compile time, so it waits
 for the I/O phase. The lesson: when a language has two halves compiled at different times, each new
 rule has to be placed in one half, and sometimes the compile-time half can translate it away.
+
+## 25. Fortran 90: scopes, declarations, and kinds (Phase 100)
+
+The second part of Fortran 90 is the way it declares things: `::` and attribute lists, values
+given with `=`, and a *kind* for every type. Most of it says again, in new words, what VAX FORTRAN
+already says (`REAL(KIND=8)` is `REAL*8`), so the work was mostly in sema, mapping new forms onto
+old meanings, and in two new types that have no old meaning to map onto.
+
+### A scope chain before there is anything to chain
+
+Fortran 90's internal and module procedures see their host's names (host association, the
+standard's 12.1.2.2.1). They come in Phase 103, but every name sema reads goes through the table
+they change, so the table changed first, when nothing else did and every old test could say
+whether it had broken. Section 7's per-unit map became a `scope` (`sema/scope.go`): its own names,
+the list it keeps them in (`Unit.Symbols`, whose order is `$LOCAL`'s), its implicit rules, and a
+`host`. `find` walks outward and enters nothing; `enter` puts a new name in the nearest scope that
+keeps a list; `define` makes a name a scope's own, hiding the host's.
+
+A program unit's scope has no host yet. One thing did gain one: a statement function. Section 12
+described its dummy arguments swapped into the unit's table during its expression and out again;
+now the definition is a scope of its own whose host is the unit's, each dummy defined in it, and
+every other name found, or entered, in the unit. The swap's two halves were the kind of code that
+breaks when a third thing touches the table; a scope has none. COMMON blocks, namelists, and
+structures stay the unit's: they are other classes of names, and host association doesn't reach
+them.
+
+### One table for the attributes
+
+A type statement with `::` may list attributes, `REAL, DIMENSION(10), SAVE :: X`, and each has an
+old statement that did the same: `DIMENSION X(10)`, `SAVE X`. The parser reads the list
+(`parse/f90.go`'s `attrSpec`), and sema gives each entity each attribute *by running its old
+statement's code* (`giveAttributes`): DIMENSION through `dimension`, SAVE, VOLATILE, AUTOMATIC, and
+STATIC as one-name statements read with the unit's. So every old check applies to the new form, and
+the meaning can't drift: SAVE on a dummy argument is SAVEDUMMY whichever way it's written.
+
+What *is* new is the standard's list of which attributes may go together (5.1's constraints). It
+is a table, `sema/attrtable.go`, a row per attribute with the set it excludes and its *fate* in
+this phase:
+
+```go
+attrSave:   {"SAVE", attrExternal | attrIntrinsic | attrIntent | attrOptional | attrAutomatic, attrCompiled},
+attrIntent: {"INTENT", attrPointer, attrRecorded},
+attrPointer: {"POINTER", attrAllocatable, attrNotYet},
+attrPublic: {"PUBLIC", attrPrivate, attrModuleOnly},
+```
+
+A pair is excluded if either row names the other, and the fate says whether the attribute is
+compiled, recorded on the `Symbol` for a later phase (INTENT, OPTIONAL, TARGET: a program written
+for Fortran 90 nearly always says INTENT, and refusing it would refuse nearly every program),
+NOTIMPL, or a module's only. A name's attributes are gathered from wherever they were given, old
+statements included (`attrsOf`), but only a Fortran 90 form is checked against the table, so a
+program of old statements hears nothing new.
+
+A value after `=` is DATA's work with two differences: one value fills a whole array (`broadcast`),
+and it's checked as an assignment would be, not as DATA's looser rules (INITTYPE). Both are flags on
+section 8's `dataSet`, not a second path. An initialized name gets SAVE (the standard's 5.1), which
+matters only to section 23's storage rule, and that rule already kept initialized locals static.
+
+### A kind is a byte count
+
+Fortran 90 leaves a kind's numbers to the processor. govax takes the HP compiler's: a kind is a
+size in bytes, so it names a `Type` that VAX FORTRAN's lengths already name, `Type{Kind, Size}`
+with the size the kind. The one wrinkle is COMPLEX, whose kind is its *parts'* size, so
+`COMPLEX(8)` is `COMPLEX*16` (`Type.KindNumber` halves it). `sema/kinds.go`'s `typeKinds` lists the
+kinds each keyword has, and `kindType` turns a keyword and a kind into a type or a reason it can't
+(NOSUCHKIND, NOKIND for `DOUBLE PRECISION`, which names a size already).
+
+A kind is any constant integer expression, so it goes through section 8's evaluator, and a
+PARAMETER can name it: `INTEGER, PARAMETER :: DP = SELECTED_REAL_KIND(12)`, then `REAL(DP)` and
+`1.0_DP`. The parser had one ambiguity to settle: `IMPLICIT REAL (A-H)` is VAX FORTRAN's letters,
+and `IMPLICIT REAL(8) (A-H)` Fortran 90's kind and letters. `kindBeforeLetters` looks past the first
+parenthesis: if another follows the one it closes, the first was a kind.
+
+A constant's kind changes how it is *read*, not only its type. `1.1_8` is `1.1D0`, the digits read
+at D's precision (`realAs`, split from the reading of `1.1`), not `1.1` read as F and widened;
+`kinds.f90` prints both, `1.100000023841858` and `1.100000000000000`, to show the difference.
+
+### Two types with nothing to map onto
+
+`INTEGER(1)` and `COMPLEX(16)` are the kinds VAX FORTRAN lacks. They taught opposite lessons.
+
+**INTEGER(1)** needed almost nothing below sema. The IR already had a `Byte` type (for `LOGICAL*1`
+and `BYTE`), and codegen's suffix rule (section 11) already wrote `ADDB3`, `CVTBW`, and `CMPB` for
+it. The work was rules: where a byte ranks in a mixed expression (below `INTEGER*2`), and what the
+intrinsic functions do with one. The intrinsic table (section 11's Table D-3) has no byte rows, and
+adding a row to every generic function would have been a large, error-prone edit. Instead
+`selectForm` takes a byte argument to the `INTEGER*2` row, and `byteResult` converts the result back
+when every `INTEGER*2` row of that function gives an `INTEGER*2`: `ABS` and `MOD` of bytes are bytes,
+`INT` of one is the default integer. FTNRTL's list-directed output was the one place below sema that
+refused the type, and now writes it as it writes a `BYTE`.
+
+**COMPLEX(16)** needed a type the IR had never had. Its parts are H values, which the VAX handles,
+but the whole value is 32 bytes, and no instruction moves 32 bytes. So the IR's `Hexa` is a type
+that is only addressed: lowering moves one as two octawords (`moveHexa`), and `ir.Check` refuses a
+`Load` or an `Assign` of one, so a later change can't create an instruction that doesn't exist.
+Sums, products, and comparisons are done on the parts, as section 11 does COMPLEX\*16's; the
+quotient is a new FTNRTL routine, `FTN$DIVCH`, since neither the OTS$ routines nor MTHRTL have an H
+complex one. And as with section 11's F products, the constant folder must compute what the code
+would: `vaxfloat.ComplexDivSteps` does `FTN$DIVCH`'s steps in its order, each rounded to H, so a
+folded `(1.0_16, 0.0) / 3` equals the one computed at run time, to the bit.
+
+### Questions answered while compiling
+
+`HUGE(X)`, `EPSILON(X)`, `DIGITS(X)` and the rest of the standard's 13.7.1 ask about `X`'s *type*,
+never its value, so sema answers them (`sema/inquiry.go`) and the code holds a constant. The answers
+come from the VAX formats' models, in `vaxfloat/model.go` beside the formats themselves (24 bits and
+exponents -127 to 127 for F, and so on); the phase doc's survey computed the table by hand first, and
+`TestModel` holds the code to it. Since only the type matters, an argument is analyzed for its type
+alone (`inquiryArgType`): `HUGE(N)` must not enter `N` as a variable, or `$LOCAL` would gain a cell
+because a program asked a question.
+
+`SELECTED_REAL_KIND(P, R)` is the one place the VAX's arithmetic shows. D_floating has 56 bits of
+precision but F's exponent range, so a range above 38 needs H. The common idiom
+`SELECTED_REAL_KIND(15, 307)`, meaning "double" on an IEEE machine, gives 16 here unless the program
+is compiled `/G_FLOATING`. That is correct, since the program asked for a range D can't hold, but
+slow, and the manual says so. gfortran disagrees, of course, and `compare.py` lists the lines where
+it does.
+
+`SELECTED_REAL_KIND(R=40)` brought keyword arguments. The intrinsic table gained two optional
+columns, a function's class and its dummies' names (`?` after an optional one), and
+`sema/intrinsickeys.go`'s `intrinsicSlots` puts a reference's arguments in the dummies' order by the
+standard's 12.4.1 before a row is chosen. `KIND=` is taken out there too, and `resultKind` converts
+the result: `INT(X, KIND=2)` is the row for `INT` and a conversion after it. Only the functions whose
+rows name their dummies take keywords; the rest wait for Phase 108, and a program's own procedures
+for Phase 103's interfaces.
+
+### What the programs found
+
+The corpus gained a program for each part (`declare`, `kinds`, `bytes`, `inquire`, `cplx16`), and
+two that use the whole phase. `forms.f90` writes every declaration form, Fortran 90's beside VAX
+FORTRAN's, in one program: `REAL(8) :: X*4`, IMPLICIT with kinds, `/clist/` beside `=`, COMMON and
+EQUIVALENCE of names declared with `::`. `precise.f90` is the other side: a program that names no
+size at all, asking `SELECTED_REAL_KIND(P=12)` for its precision, and so prints the same lines on the
+VAX's D_floating and on gfortran's IEEE double. That is what kinds are *for*, and the witness agrees
+with no listed difference.
+
+`TestNoF90Unchanged` (section 24) ran at every subtask, and held: every fixed-form program in the
+repository compiles to the same bytes as before the phase. That was easier than it sounds only
+because each new form reached an old path (an attribute through its old statement, a kind through
+an old type) instead of a new one beside it.

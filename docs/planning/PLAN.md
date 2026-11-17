@@ -149,7 +149,7 @@ questions, and a progress log extended as that phase is worked.
 | 97 | [PHASE-97 - host file access](PHASE-97%20-%20host%20file%20access.md) | Host file access: `vax.host.sysprv`, when true, lets only a process with SYSPRV reach host files (a host path, a bare name on the host, `/HOST`, and the paths that don't go through `rms.Session.Locate`), through one privilege rule — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 | 98 | [PHASE-98 - batch queues](PHASE-98%20-%20batch%20queues.md) | Batch queues: a queue manager in Go over a JSON queue database (`vax.queue.file`), batch queues with VMS's protection, SUBMIT and the job commands, batch jobs as detached processes logged in to their accounts, `$SNDJBC`, `$GETQUI`, and `F$GETQUI`, and jobs restarted after a session ends — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 | 99 | [PHASE-99 - Fortran 90](PHASE-99%20-%20Fortran%2090.md) | The Fortran 90 program's plan (Phases 99–111): Fortran 90 joined to VAX FORTRAN in one compiler, `/F90` settling the few texts the two read differently, NCA descriptors for run-time arrays, module files of our own; its groundwork: `/F90` and `/SOURCE_FORM`, free source form, Fortran 90's lexical items, the new statements recognized, named END statements, the Fortran 90 corpus — planned 2026-11-17, the plan accepted the same day; done 2026-11-17 |
-| 100 | [PHASE-100 - Fortran 90 declarations and kinds](PHASE-100%20-%20Fortran%2090%20declarations%20and%20kinds.md) | `::` declarations, attributes, initialization, KIND= and LEN=, kinds on constants, the kind and numeric inquiry intrinsics; sema's scope chain — planned 2026-11-17 |
+| 100 | [PHASE-100 - Fortran 90 declarations and kinds](PHASE-100%20-%20Fortran%2090%20declarations%20and%20kinds.md) | `::` declarations, attributes, initialization, KIND= and LEN=, kinds on constants, the kind and numeric inquiry intrinsics; sema's scope chain; INTEGER(1) and COMPLEX(16) as new types; KIND= on the conversions and keyword arguments to intrinsics — planned 2026-11-17; done 2026-11-17 |
 | 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE, DO with no control, EXIT, CYCLE, construct names — planned 2026-11-17 |
 | 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17 |
 | 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17 |
@@ -854,4 +854,26 @@ any more of it:
   mode the old one runs, with gfortran as a witness; FORMAT statements' quotation marks under `/F90`.
 
 MANUAL.md's section 14.13 is the user's side, and FORTRAN-INTERNALS.md's section 24 the
-developer's. The next phase is 100, declarations and kinds.
+developer's.
+
+Phase 100 (done 2026-11-17) is declarations and kinds:
+
+- **The scope chain** (`sema/scope.go`): each scoping unit's names with a host, nil until Phase
+  103; a statement function's definition is a scope of its own.
+- **`::` declarations and attributes:** attribute lists, the attribute statements with `::`,
+  values with `=` (one value filling an array, implied SAVE), and the standard's constraints as
+  one table (`sema/attrtable.go`); INTENT, OPTIONAL, and TARGET recorded, POINTER and ALLOCATABLE
+  NOTIMPL.
+- **Kinds** (`sema/kinds.go`): a kind is a byte size, a COMPLEX's its parts'; selectors on every
+  type, kinds on constants (read at their kind's precision), kinds named by PARAMETERs, IMPLICIT
+  with kinds. INTEGER(1) is a new type, a signed byte; COMPLEX(16), two H parts, is a new type
+  whose arithmetic is in line and whose quotient is FTNRTL's `FTN$DIVCH` (its I/O, powers, and
+  intrinsics wait for Phases 108 and 109).
+- **The kind and inquiry functions** (`sema/inquiry.go`, `vaxfloat/model.go`), answered when
+  compiling from the VAX formats' models; KIND= on INT, NINT, REAL, CMPLX, AINT, ANINT, and
+  LOGICAL; keyword arguments to those functions (`sema/intrinsickeys.go`).
+- **Programs:** `testdata/fortran90`'s `declare`, `kinds`, `bytes`, `inquire`, `cplx16`,
+  `forms` (every declaration form), and `precise` (a portable program, the same on gfortran).
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 25 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 101, control constructs.

@@ -6113,7 +6113,7 @@ subroutines (section 14.8). The compiler optimizes what it writes by default
 recursive routines, which ASTs and handlers may also enter while they run (section
 14.12). The language's largest omission is DICTIONARY (section 14.7). Fortran 90 is being
 added to the same compiler, a part at a time; so far, programs in free source form with
-Fortran 90's spellings (section 14.13).
+Fortran 90's spellings, declarations, and kinds (section 14.13).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
@@ -6134,7 +6134,7 @@ compiler works.
 | The debugger | [14.10](#1410-debugging-a-compiled-program) |
 | A large program, and a program on VMS | [14.11](#1411-a-large-program-and-a-real-vms) |
 | Recursive routines, and routines ASTs can enter | [14.12](#1412-recursive-and-reentrant-routines) |
-| Fortran 90: free source form, `/F90`, what's there so far | [14.13](#1413-fortran-90) |
+| Fortran 90: free source form, `/F90`, declarations and kinds, what's there so far | [14.13](#1413-fortran-90) |
 
 ### 14.1 A first program
 
@@ -7367,7 +7367,7 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 | Parallel directives | `CPAR$` lines are comments, and `NWORKERS` is 1 |
 | Threads, HP Fortran's `/REENTRANCY` and `NON_RECURSIVE` | A RECURSIVE routine is safe under ASTs and handlers; there are no threads to be safe under, and `OPTIONS /NORECURSIVE` exempts a unit from `/RECURSIVE` |
 | Output identical to VAX FORTRAN's | Object code, messages, and listings are govax's own, by design |
-| Fortran 90, but for free form and its spellings | `%FORT-E-NOTIMPL` at each statement, until each part is added ([section 14.13](#1413-fortran-90)) |
+| Fortran 90, but for free form, its spellings, declarations, and kinds | `%FORT-E-NOTIMPL` at each statement, until each part is added ([section 14.13](#1413-fortran-90)) |
 
 What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
 
@@ -8491,6 +8491,24 @@ without a keyword can't follow one with (`KEYWORDORDER`); an unknown keyword is
 `MISSINGARG`. Keyword arguments to the other intrinsic functions, and to a program's own
 procedures, are not there yet. Under `/NOF90` these new names are a program's own functions,
 as in VAX FORTRAN, unless an `INTRINSIC` statement names them.
+
+**Writing for any processor.** A program that names its kinds by what it needs rather than
+by a size prints the same on govax and on an IEEE machine. Give each unit its kinds as
+PARAMETERs, put the kind on every constant, and say `KIND=` on every conversion:
+
+```fortran
+integer, parameter :: wp = selected_real_kind(p=12)   ! REAL(8) here and on IEEE
+integer, parameter :: ik = selected_int_kind(9)
+real(wp) :: pi
+integer(ik) :: n
+pi = 4 * atan(1.0_wp)
+n = nint(pi * 1.0e8_wp, kind=ik)
+```
+
+Ask for precision only, as here, unless the program needs a range: a range past 38 is
+`REAL(16)` without `/G_FLOATING` (above). `testdata/fortran90/precise.f90` is such a
+program, with Newton's method, Simpson's rule, and complex roots; it prints the same lines
+under gfortran.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
