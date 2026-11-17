@@ -1003,6 +1003,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `/NOF90` (`TestNoF90Unchanged`). Run-time arrays are VMS NCA descriptors;
   modules write `name.F90$MOD` files of our own form. No reference compiler:
   the standard is the target, gfortran a witness.
+  Phase 99 (done 2026-11-17) is the groundwork: `/[NO]F90` and
+  `/SOURCE_FORM` (`.F90` free form, INCLUDE files by their own type;
+  OPTIONS's `/F90` written in full), free source form (`source/free.go`),
+  the new tokens and free form's blank rules (`lex`: `checkBlanks`,
+  `keywordBlanks`), every new statement recognized and NOTIMPL by name
+  (`lex/f90stmt.go`, `parse/f90.go`'s `ast.PendingStmt`, `sema/notimpl.go`),
+  named ENDs compiled, a FORMAT's `"…"` under `/F90` given to FTNRTL with
+  apostrophes (`format.Apostrophes`), and the corpus, `testdata/fortran90`;
+  MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 24.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

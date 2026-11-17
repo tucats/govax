@@ -2394,9 +2394,11 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]CROSS_REFERENCE  /CHECK[=(keyword,...)] | /NOCHECK
     /WARNINGS[=(keyword,...)] | /NOWARNINGS  /STANDARD[=(keyword,...)] | /NOSTANDARD
     /DEBUG[=(keyword,...)] | /NODEBUG  /OBJECT[=file] | /NOOBJECT  /[NO]F77  /[NO]RECURSIVE
+    /[NO]F90  /SOURCE_FORM=FREE|FIXED
 ```
 
-Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default) into MACRO-32
+Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default, or `.F90` when there
+is no `.FOR` file, [section 14.13](#1413-fortran-90)) into MACRO-32
 source files, which MACRO assembles and LINK links. It compiles the whole language
 but DICTIONARY, which draws the message below ([section 14.7](#147-differences-from-vax-fortran)). The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
@@ -2409,7 +2411,7 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
 than D_floating, `/ALIGN` lays out structures and common blocks on
-natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds; `/CHECK` adds run-time checks, `/WARNINGS` and `/STANDARD` say what to report, `/DEBUG` what MACRO writes for the debugger, `/OBJECT` runs MACRO too, `/NOF77` reads a program as FORTRAN-66, and `/RECURSIVE` makes every subprogram recursive ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds; `/CHECK` adds run-time checks, `/WARNINGS` and `/STANDARD` say what to report, `/DEBUG` what MACRO writes for the debugger, `/OBJECT` runs MACRO too, `/NOF77` reads a program as FORTRAN-66, and `/RECURSIVE` makes every subprogram recursive ([section 14.3](#143-the-fortran-command)). A `.F90` file is in Fortran 90's free source form, any other in fixed form, unless `/SOURCE_FORM` says which; `/F90`, the default for free form, takes Fortran 90's reading where it and VAX FORTRAN read the same text differently ([section 14.13](#1413-fortran-90)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
@@ -6109,7 +6111,9 @@ subroutines (section 14.8). The compiler optimizes what it writes by default
 (section 14.9), and has listings, cross references, run-time checks (section
 14.3), and the debugger (section 14.10). From a later DEC FORTRAN it adds
 recursive routines, which ASTs and handlers may also enter while they run (section
-14.12). The language's largest omission is DICTIONARY (section 14.7).
+14.12). The language's largest omission is DICTIONARY (section 14.7). Fortran 90 is being
+added to the same compiler, a part at a time; so far, programs in free source form with
+Fortran 90's spellings (section 14.13).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
@@ -6130,6 +6134,7 @@ compiler works.
 | The debugger | [14.10](#1410-debugging-a-compiled-program) |
 | A large program, and a program on VMS | [14.11](#1411-a-large-program-and-a-real-vms) |
 | Recursive routines, and routines ASTs can enter | [14.12](#1412-recursive-and-reentrant-routines) |
+| Fortran 90: free source form, `/F90`, what's there so far | [14.13](#1413-fortran-90) |
 
 ### 14.1 A first program
 
@@ -6717,10 +6722,10 @@ The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, joined by `+` and with
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
-`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)); the others are described below. An `OPTIONS` statement before a unit may give `/I4`,
-`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, `/NOEXTEND_SOURCE`, `/F77`, `/NOF77`, `/RECURSIVE`, or `/NORECURSIVE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
+`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)); `/[NO]F90` and `/SOURCE_FORM` are in [section 14.13](#1413-fortran-90), and the others are described below. An `OPTIONS` statement before a unit may give `/I4`,
+`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, `/NOEXTEND_SOURCE`, `/F77`, `/NOF77`, `/F90`, `/NOF90`, `/RECURSIVE`, or `/NORECURSIVE` for that unit alone, each name cut short if it stands for only one of them (but `/F90` and `/NOF90` written in full: `/F` and `/NOF` are still `/F77` and `/NOF77`, as they were before there was a `/F90`); the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, `--object-file file`, and `--recursive` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, `/OBJECT=file`, and `/RECURSIVE`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, `--object-file file`, and `--recursive` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, `/OBJECT=file`, and `/RECURSIVE`, `--f90`, `--no-f90`, and `--source-form form` are `/F90`, `/NOF90`, and `/SOURCE_FORM=form`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, in the default directory; `/LIST=file` names another. It is written after
@@ -6916,7 +6921,8 @@ block declared alike but laid out differently the warning `COMMONLAYOUT`.
 ### 14.4 Source lines
 
 A FORTRAN source is laid out in columns, from its days on punched
-cards (the language manual's section 1.3):
+cards (the language manual's section 1.3). This is *fixed form*, every
+file's but a `.F90` file's, whose free form is in [section 14.13](#1413-fortran-90):
 
 | Columns | Field |
 | --- | --- |
@@ -7361,6 +7367,7 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 | Parallel directives | `CPAR$` lines are comments, and `NWORKERS` is 1 |
 | Threads, HP Fortran's `/REENTRANCY` and `NON_RECURSIVE` | A RECURSIVE routine is safe under ASTs and handlers; there are no threads to be safe under, and `OPTIONS /NORECURSIVE` exempts a unit from `/RECURSIVE` |
 | Output identical to VAX FORTRAN's | Object code, messages, and listings are govax's own, by design |
+| Fortran 90, but for free form and its spellings | `%FORT-E-NOTIMPL` at each statement, until each part is added ([section 14.13](#1413-fortran-90)) |
 
 What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
 
@@ -7368,7 +7375,7 @@ What a program can see of the optimizer is in [section 14.9](#149-what-optimize-
 No VAX FORTRAN compiler was available to check these, though many rest on VMS's
 FORTRAN run-time library, which could be run:
 
-- `/CONTINUATIONS` allows 0 to 99, and 19 without it.
+- `/CONTINUATIONS` allows 0 to 99, and 19 without it (39 in free form, [section 14.13](#1413-fortran-90)).
 - `/NOCHECK` is the default. The manuals at hand don't state VAX FORTRAN's, which
   may have had `OVERFLOW` on: a program that counts on that says `/CHECK=OVERFLOW`.
   What a check does when it fails, a dummy's `(1)` being open-ended, and
@@ -8263,6 +8270,126 @@ variables, arguments, and registers ([section 14.10](#1410-debugging-a-compiled-
 **On VMS.** The MACRO files of recursive routines assemble, link, and run on VMS 7.1 as they do
 on govax ([section 14.11](#1411-a-large-program-and-a-real-vms)). Two of govax's test programs
 compiled `/RECURSIVE` print differently there, by reading what FORTRAN-77 leaves undefined.
+
+### 14.13 Fortran 90
+
+Fortran 90 (ISO/IEC 1539:1991) is being added to govax's compiler, a part at a time.
+It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90 program
+may call VAX FORTRAN routines and the other way round, and an old program compiles as it
+always has. This section grows with each part; so far a program may be written in Fortran
+90's free source form and with its spellings, and everything else Fortran 90 adds is
+recognized and reported as not yet implemented.
+
+**The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
+([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
+files named on the command, whatever their types. A file an `INCLUDE` statement names
+always has its own type's form, so a free-form program can include an old `.FOR` file, and
+the other way round; a text library's module is fixed form. A name given without a type is
+looked for as `.FOR`, then `.F90`.
+
+**`/F90`.** A few texts mean one thing to VAX FORTRAN and another to Fortran 90. `/F90`
+takes Fortran 90's reading of them: `"..."` is a character constant, where VAX FORTRAN reads
+`"17` as an octal integer, and `TYPE name` alone starts a derived type's definition, where
+VAX FORTRAN reads it as an output statement. Everything else Fortran 90 adds needs no
+qualifier, since VAX FORTRAN gives it no meaning. `/F90` is the default for a free-form
+source, `/NOF90` for a fixed-form one, so an old `.FOR` file means what it always meant.
+`OPTIONS /F90` or `OPTIONS /NOF90` before a unit changes it for that unit. From the host
+shell, `govax fortran --f90`, `--no-f90`, and `--source-form free|fixed` are the same.
+
+**Free form** (the standard's section 3.3) gives the columns no meaning:
+
+```fortran
+! squares.f90: the squares of 1 to 3
+program squares
+  implicit none
+  integer i
+  do i = 1, 3; write (*, 10) i, i*i; end do     ! ; between statements
+10 format (1x, "square of", i2, " is", i3)
+  if (i == 4 .and. i /= 5) print *, "done, &
+                                    &it's ", i
+end program squares
+```
+
+```text
+$ FORTRAN SQUARES
+$ MACRO SQUARES
+$ LINK SQUARES
+$ RUN SQUARES
+square of 1 is  1
+square of 2 is  4
+square of 3 is  9
+done, it's            4
+```
+
+- A line holds up to 132 characters, and a statement may start anywhere on it.
+- `!` starts a comment, anywhere outside a character constant. A line that is blank, or
+  only a comment, is a comment line, and may stand among a statement's continuation lines.
+- `;` separates two statements on one line. One at a line's end is ignored.
+- `&` as a line's last character (before any comment) continues the statement on the next
+  line. If that line starts with `&` too, the statement goes on just after it, so a name, a
+  number, or a character constant may be split; otherwise it goes on with the line's first
+  character. A character constant split this way must have both `&`s, and the blanks after
+  the second are part of it (`"two&` then `&  blanks"` is `two  blanks`).
+- A statement may have 39 continuation lines, or as many as `/CONTINUATIONS=n` says.
+- A label is the statement's first token, one to five digits, followed by a blank.
+- A blank may not stand inside a name, a keyword, a constant, or an operator, and must stand
+  between two names or keywords: `CALL SUB`, not `CALLSUB`. The keywords the standard writes
+  as two words may have their blank or not: `GO TO` or `GOTO`, `END DO` or `ENDDO`, `ELSE IF`,
+  `END IF`, `DOUBLE PRECISION`, `BLOCK DATA`, and so on.
+- DEC's directives are written `!DEC$` at a line's start (after any blanks), where fixed form
+  has `CDEC$`.
+
+The compiler reports what breaks these rules where it stands:
+
+```text
+%FORT-E-BLANKINNAME, a blank may not stand inside a name in free source form
+  at line 3 of DUA1:[WORK]BAD.F90;1
+    to tal = 1
+  -----^
+%FORT-E-NEEDBLANK, a blank must separate CALL from SUB in free source form
+  at line 4 of DUA1:[WORK]BAD.F90;1
+    callsub
+  ------^
+```
+
+Other messages are `MISSINGAMP` (a continued character constant without its second `&`),
+`LONEAMP` (a line of only an `&`), `NOINITIAL` (an `&` starting a line that continues
+nothing), `CONTNOLINE` (an `&` on a file's last line), `EMPTYSEMI` (a `;` with no statement
+before it), `LABELBLANK`, `ZEROLABEL`, and `LINETOOLONG` (anything but blanks past column
+132, fatal). One thing the standard forbids is read rather than reported: a name split by
+an `&` with no `&` on the next line (`X = AB&` then `C`) is read as `ABC`, since the compiler
+can't tell that two names were meant.
+
+**Fortran 90's spellings**, in either form:
+
+| Written | Means |
+| --- | --- |
+| `==`, `/=`, `<`, `<=`, `>`, `>=` | `.EQ.`, `.NE.`, `.LT.`, `.LE.`, `.GT.`, `.GE.` |
+| `"it's"`, `'say "hi"'`, `"say ""hi"""` | Character constants between either mark (`"` under `/F90`), each doubled inside its own kind; in FORMAT statements too |
+| `B'101'`, `O'17'`, `Z'1F'` | Binary, octal, and hexadecimal constants, typeless as DEC's `'17'O` and `'1F'X` are, anywhere a typeless constant may be (the standard has them only in DATA) |
+| `END PROGRAM name`, `END SUBROUTINE name`, `END FUNCTION name`, `END BLOCK DATA name` | END, the kind and name optional, but each the unit's own (`ENDKIND`, `ENDNAME`, `ENDNONAME`) |
+
+A program may be of both forms, each file compiled on its own and linked together, as
+any FORTRAN program of several files is ([section 14.2](#142-what-the-compiler-accepts)).
+
+**Not there yet.** Every other Fortran 90 statement is recognized, and draws
+`%FORT-E-NOTIMPL` where it stands, naming what it is:
+
+```text
+%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+  at line 5 of DUA1:[WORK]BAD.F90;1
+    select case (total)
+  --^
+```
+
+That includes `::` declarations, kinds (`INTEGER(4)`, `1.5_8`), construct names, SELECT CASE,
+EXIT and CYCLE, array expressions and sections, WHERE, interface blocks and CONTAINS,
+modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
+90's new intrinsic functions aren't there yet either; under `/F90` their names are still
+taken as a program's own. A format given at run time (a character constant or variable as a
+READ's or WRITE's format) can't yet hold a `"..."` constant: FTNRTL refuses it with
+`%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write it with apostrophes, or as a
+FORMAT statement.
 
 ## 15. Appendices
 

@@ -189,7 +189,7 @@ func checkEnd(s ast.Stmt, o openUnit, messages *diag.List) {
 	case o.name == "" || o.header == nil:
 		messages.Report("ENDNONAME", end.NamePos, end.Name, o.what())
 	case end.Name != o.name:
-		messages.Report("ENDNAME", end.NamePos, end.Name, o.what(), o.name)
+		messages.Report("ENDNAME", end.NamePos, end.Name, o.what())
 	}
 }
 

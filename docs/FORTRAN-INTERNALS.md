@@ -27,7 +27,8 @@ records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
 and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
-too (section 23). It has no DICTIONARY. A real program, DUNGEON, builds and plays with it, and its
+too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
+free source form and Fortran 90's spellings, with its other statements recognized (section 24). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -39,7 +40,8 @@ instructions (section 11), and a fourth for control flow and subprograms
 then how the compiler is tested, what it tells the debugger, its listings and
 run-time checks, and what a real program and a real VAX found. Section 21 is a
 map of the files, with what building this one suggests about building another.
-Sections 22 and 23 are later additions: indexed files, and recursive routines.
+Sections 22 and 23 are later additions: indexed files, and recursive routines. Section 24
+begins Fortran 90: free source form and the new tokens and statements.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -2622,7 +2624,8 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Programs and expected output | `testdata/fortran`, `testdata/for80`, `testdata/for81`, `testdata/for88`, `testdata/ftn86` |
 | Indexed files under FTNRTL | `ftn_open.mar`'s `KEYS`, `ftn_keyed.mar`, `ftn_units.mar`'s `UB_KEYED`; RMS's `internal/rms/indexed*.go`, `internal/isam` |
 | Recursive storage: the rule; one constructor for cells | `sema/storage.go`'s `recursiveStorage`; `ir/lower.go`'s `Routine.NewCell` |
-| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, and `PHASE-89` for recursion, each with its decisions and log |
+| Free form; Fortran 90's tokens and statements | `source/free.go`; `lex/tokenize.go`, `lex/f90stmt.go`, `parse/f90.go`, `sema/notimpl.go` |
+| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, `PHASE-89` for recursion, and `PHASE-99` on for Fortran 90, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
 
@@ -2816,3 +2819,131 @@ agreed on every line but an IEEE `-0.0`, and refused a function's name used as a
 which govax accepts by the author's choice. VMS 7.1's MACRO and LINK built every program's MACRO file and ran
 it (`testdata/ftn86`'s fifth round). That round also found a bug far from FORTRAN, in ods2's index file
 growth, because a volume with half again as many files was the first to need an index file extension header.
+
+## 24. Fortran 90: two source forms and a bigger alphabet (Phase 99)
+
+Fortran 90 is a large language, and govax adds it a part at a time (`docs/planning/PHASE-99 -
+Fortran 90.md` lays out the program). The first part changes nothing a program can compute. It
+teaches the front of the compiler to *read* Fortran 90: a second source form, new tokens, and
+about thirty new statements, each recognized and then refused by name. That is less modest than it
+sounds. The two front passes, `source` and `lex`, are where FORTRAN's oddities live (sections 4 and
+5), and Fortran 90 changes the oddest of them: blanks.
+
+### One compiler, and one switch
+
+A Fortran 90 compiler could have been a second compiler. It isn't, for the reason most of the
+language's users had: their programs were mixtures, old routines called from new ones, and an
+`INCLUDE` file shared by both. So Fortran 90 joins VAX FORTRAN in one grammar, and the question
+becomes where the two read the same text differently. There are only a few such places: `"17`
+(VAX FORTRAN's octal integer, Fortran 90's character constant), `TYPE name` (VAX FORTRAN's output
+statement, Fortran 90's derived type), and the new intrinsic names, which an old program may use
+for its own routines. One qualifier, `/F90`, settles all of them, defaulting by the source's form.
+Everything else Fortran 90 adds was a syntax error to VAX FORTRAN, so it can be read always.
+
+"Nothing old changes" is a promise easy to break by accident, so it is a test.
+`TestNoF90Unchanged` (`internal/fortran/nof90_test.go`) compiles every fixed-form source in the
+repository, and DUNGEON where it is, three ways, and holds each MACRO file and its messages to a
+SHA-256 taken before the work began. Every subtask runs it; it takes a second and a half.
+
+### Free form in the source pass
+
+Section 4's reader answers "where does a statement start and end?" by columns. Free form
+(the standard's 3.3.1) answers it by characters: `!` starts a comment, `;` ends a statement, and an
+`&` at a line's end continues it. All three mean something else inside a character constant, so
+the reader must know, at each character, whether it is in one, across lines. Fixed form already had
+that question, for `!` comments, and its answer was a function that read a whole field at once.
+Free form needed it a character at a time, so that function became a scanner,
+`commentScanner`, with `feed` to move past one character and `outside` to ask where it is; the
+old function is now a loop over them, and gave the same answers. `source/free.go`'s `readFree` reads
+each line in segments ended by a comment, a `;`, an `&`, or the line's end, feeding the scanner as
+it goes.
+
+Continuation has one rule that decides what the next pass sees. If the next line starts with
+`&`, the statement goes on right after it, so a token may be split (`INTE&` then `&GER`); if not,
+it goes on with the line's first character, blanks and all. The reader joins the pieces into the
+statement's `Text` exactly so: blanks where the lines had them, none where an `&` joined two halves.
+So the blanks in `Text` are the significant ones, and the lexer needs no separate list of where
+they were. One case the reader can't judge is `AB&` followed by `C` in column 1: the standard forbids
+splitting a token without the second `&`, but nothing at this stage knows that `AB` and `C` were meant
+as two tokens, and the text is `ABC`. gfortran, which has a tokenizer at that point, refuses it.
+
+### Blanks that mean something
+
+Section 5 begins with FORTRAN's indifference to blanks: the lexer squeezes them out before it
+classifies a statement, and `G O T O 10` is a GO TO. Free form reverses that: a blank may not stand
+inside a name, and must stand between two. The tempting change, a second lexer for free form,
+would have doubled the trickiest code in the compiler. Instead the lexer still squeezes, so
+classification is the same in both forms (`END DO` and `ENDDO` squeeze alike), but it remembers where
+each blank was (`squeezed.gap`). After tokenizing, `checkBlanks` looks at those gaps against the
+tokens: a gap inside one is `BLANKINNAME`, two words with no gap between them, `CALLSUB`, are
+`NEEDBLANK`. The statement's keyword isn't a token, so `keywordBlanks` checks it apart, against the
+standard's list of keywords that may be written as two words (`GO TO`, `END DO`, `SELECT CASE`, ...).
+Fixed form never asks either question.
+
+### A bigger alphabet
+
+Fortran 90's new tokens are `::`, `=>`, `(/`, `/)`, `%`, and the relational operators `==`, `/=`,
+`<`, `<=`, `>`, `>=`. The two-character ones are entries in the tokenizer's table (`<`, `>`, and
+`%` were single characters it already knew):
+
+```go
+var operators = []string{
+	"**", "//",
+	"(/", "/)", "==", "/=", "<=", ">=", "::", "=>",
+}
+```
+
+None of them means anything to VAX FORTRAN, so each can be read whatever `/F90` says. The parser
+reads `==` as `.EQ.` and the rest as their dotted twins, so a program using them compiled the day
+they were added. The tokens keep their own text, so a message shows what was written. One smaller
+trap was in the `=` test that tells an assignment from everything else: an `=` inside `==` or
+`/=` is no assignment's, or `PRINT *, A == B` would be one.
+
+Three additions needed more care, because VAX FORTRAN reads the same characters:
+
+- **Kind parameters**, `1.5_8` and `K_'TEXT'`, and **letter-first constants**, `Z'1F'`. Inside
+  parentheses, an apostrophe after a name is `READ (1'10)`'s record separator. So `Z'1F'` there is
+  a constant only if only hexadecimal digits and an apostrophe follow, and the source pass and the
+  lexer share the one function that decides (`source.ApostropheStartsConstant`). Otherwise they could
+  disagree about where a constant is, and so about where a `!` comment starts.
+- **Defined operators**, `.CROSS.`, look like VAX FORTRAN's record fields, `A.B.C`. Where no field can
+  stand (an expression's start, after an operator or a constant) the lexer makes it an operator.
+  After a name it leaves the pieces apart, for the parser and the symbols to settle when derived
+  types arrive.
+- **Quotation marks** start a character constant only under `/F90`.
+
+### Statements recognized, and refused by name
+
+Most new statements start with a keyword no old statement starts with, so they join section 5's
+table and are found the same way. A few need tests of their own (`lex/f90stmt.go`): a `::` at
+level 0 makes a statement a declaration whatever `=` it holds; `=>` with no comma before it is a
+pointer assignment; WHERE is told apart as IF is; `TYPE` has three readings; a name and a colon
+first is a construct name, which no VAX FORTRAN statement can begin with.
+
+The parser reads each new statement only far enough to know what it is. It hands sema an
+`ast.PendingStmt` naming the form (`What`: "the SELECT CASE statement", "a kind parameter on a
+constant"), and sema's `notimpl.go` reports it, once, where it stands. This is section 21's advice,
+"name what isn't done", at a larger scale: the compiler's answer to every Fortran 90 program is
+either code or a list of what isn't compiled yet, never a confusing error. Statements that hold
+others (CONTAINS, an interface block, a derived type's definition) gather what they hold into the
+pending statement, so a module's procedures aren't mistaken for its own declarations. One kind
+compiles now, because it needs nothing else: the named END, `END SUBROUTINE SHOW`, whose name the
+parser checks against its unit.
+
+### First light, and where the compiler meets the run-time library
+
+The Fortran 90 corpus, `testdata/fortran90`, starts with programs that are FORTRAN-77 written in
+free form with Fortran 90's spellings. They run in every mode the old corpus runs (section 17), and
+gfortran is a witness again (`compare.py`'s `PROGRAMS90`, at `-std=f95`). Every expected output was
+worked out by hand first. gfortran found one line in the corpus that wasn't Fortran 90, a split token
+without its second `&`, and the reader above had accepted it.
+
+The first program found a gap at the edge of the compiler: `FORMAT (1X, "N =", I3)`. A FORMAT's
+text isn't FORTRAN; it goes to FTNRTL as written (section 14), and FTNRTL, like VMS's FORRTL,
+knows only apostrophes. FTNRTL can't be told about `/F90`, which is a fact about the source. So the
+compiler adjusts the text it hands over: `format.Options.Quotes` reads the quotation marks for the
+compile-time check, and `format.Apostrophes` rewrites each such constant between apostrophes, its own
+apostrophes doubled, before sema stores the text FTNRTL gets. FTNRTL is unchanged. A format given
+at run time, from a character constant or a variable, can't be adjusted at compile time, so it waits
+for the I/O phase. The lesson: when a language has two halves compiled at different times, each new
+rule has to be placed in one half, and sometimes the compile-time half can translate it away.

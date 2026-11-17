@@ -4,7 +4,7 @@
 the same day, every recommendation taken ("The author's answers", after the
 questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
 to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done, and so is
-subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), subtask 4 (Fortran 90's lexical items), subtask 5 (the new statements recognized), and subtask 6 (the Fortran 90 corpus and first light); subtask 7 is next. Needs the FORTRAN program (Phases
+subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), subtask 4 (Fortran 90's lexical items), subtask 5 (the new statements recognized), subtask 6 (the Fortran 90 corpus and first light), and subtask 7 (the close-out): the phase is done (2026-11-17), and Phase 100 is next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -598,7 +598,8 @@ the work shows.
    corpus (done 2026-11-17).
 7. **The close-out**: FORTRAN-INTERNALS.md's section 24 ("Fortran 90: two
    source forms and a bigger alphabet"), MANUAL.md's 14.13 begun (the
-   qualifiers, free form), HELP, CLAUDE.md's overview, PLAN.md.
+   qualifiers, free form), HELP, CLAUDE.md's overview, PLAN.md (done
+   2026-11-17).
 
 ## Not planned
 
@@ -969,3 +970,45 @@ The author read the plan and accepted every recommendation:
     a Hollerith's `"` left alone, the errors), `sema`'s `TestFormatQuotes` (the
     encoded text after a variable format expression; FMTSYNTAX without
     `/F90`), and the two harnesses.
+- **2026-11-17, subtask 7 (done): the close-out.** The phase is done.
+  - **MANUAL.md:** section 14.13, "Fortran 90" (the source's form and `/SOURCE_FORM`, `/F90`, free
+    form's rules with an example run on govax and its messages, the spellings, what draws NOTIMPL,
+    run-time formats with `"`); 6.5's FORTRAN syntax and text, chapter 14's introduction and table,
+    14.3 (OPTIONS `/F90`, written in full; `govax fortran`'s options), 14.4 (fixed form named as
+    such), and 14.7 (a row in "What isn't there", 39 continuations in free form).
+  - **FORTRAN-INTERNALS.md:** section 24, "Fortran 90: two source forms and a bigger alphabet"
+    (one compiler and one switch, free form in the source pass, significant blanks by remembering
+    the squeezed gaps, the new tokens and the three that needed care, statements refused by name,
+    the FORMAT's quotation marks at the compiler's edge with FTNRTL), and the tour's introduction
+    and map.
+  - **HELP FORTRAN:** a `Fortran_90` topic (what is compiled so far, with an example run on govax,
+    and what draws NOTIMPL), and `/F90`'s text brought up to date (it said nothing read it).
+  - **A message:** ENDNAME named the unit twice ("the main program BAD is named BAD"); it is now
+    "the END statement names GOOD, but it ends the main program BAD".
+  - **PLAN.md** (row 99 and a section for the program) and **CLAUDE.md**'s overview.
+
+## Where things stand
+
+Done: the compiler reads Fortran 90. A `.F90` file (or `/SOURCE_FORM=FREE`) is free source
+form, with every rule of the standard's 3.3.1 and messages for what breaks them; Fortran 90's
+tokens and spellings are read in either form, `"…"` constants under `/F90`; every Fortran 90
+statement is classified and parsed far enough to be reported NOTIMPL by name where it stands;
+named END statements compile and are checked. Programs that are FORTRAN-77 written this way
+compile and run in every mode (`testdata/fortran90`), gfortran agreeing, and the old corpus and
+DUNGEON compile to the same MACRO files as before (`TestNoF90Unchanged`).
+
+Left, for the phases named or by choice:
+
+- **Everything Fortran 90 adds to what a program computes**: Phases 100 to 111, in Part C's
+  order. Each starts with a survey that may change its skeletal doc.
+- **A `"…"` constant in a format given at run time** (a character constant or variable as the
+  format) is still FTNRTL's SYNERRFOR; listed in Phase 109's goal.
+- **Fortran 90's intrinsic names under `/F90`**: `/F90` is to make them intrinsic, but none is
+  in the table yet, so they are still a program's own names (Phase 108; some with Phases 100,
+  102, and 104).
+- **`/STANDARD`** flags none of Fortran 90's spellings or free form; Phase 110's
+  `/STANDARD=F90` is to judge both forms.
+- **A token split by `&` without the second `&`** is read as one token, not reported (subtask
+  3's choice): the source pass can't tell a split token, and gfortran can.
+- **Comment lines past 132 characters** aren't reported (subtask 3's choice; the standard says
+  every line).

@@ -146,7 +146,7 @@ var messages = map[string]kind{
 	"ENDKIND": {Error, "the END %s statement can't end %s"},
 
 	// ENDNAME is an END statement whose name isn't its unit's.
-	"ENDNAME": {Error, "the END statement names %s, but %s is named %s"},
+	"ENDNAME": {Error, "the END statement names %s, but it ends %s"},
 
 	// ENDNONAME is an END statement with a name, ending a unit that has none:
 	// a main program without a PROGRAM statement, or a BLOCK DATA without a

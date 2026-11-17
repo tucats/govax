@@ -96,7 +96,7 @@ func TestNamedEnds(t *testing.T) {
 		{"the wrong word", []string{"SUBROUTINE S", "END FUNCTION S"},
 			"ENDKIND: the END FUNCTION statement can't end the SUBROUTINE S"},
 		{"the wrong name", []string{"FUNCTION F()", "END FUNCTION G"},
-			"ENDNAME: the END statement names G, but the FUNCTION F is named F"},
+			"ENDNAME: the END statement names G, but it ends the FUNCTION F"},
 		{"a name for a main program with none", []string{"X = 1", "END PROGRAM X"},
 			"ENDNONAME: the END statement names X, but the main program has no name"},
 		{"a name for an unnamed block data", []string{"BLOCK DATA", "END BLOCK DATA B"},
@@ -104,9 +104,9 @@ func TestNamedEnds(t *testing.T) {
 		{"an inner procedure's plain END", []string{"SUBROUTINE S", "CONTAINS", "SUBROUTINE T", "END", "END"},
 			"ENDNOKIND: the END of the SUBROUTINE T, which is inside another unit, must be END SUBROUTINE"},
 		{"an inner procedure's wrong name", []string{"SUBROUTINE S", "CONTAINS", "SUBROUTINE T", "END SUBROUTINE U", "END"},
-			"ENDNAME: the END statement names U, but the SUBROUTINE T is named T"},
+			"ENDNAME: the END statement names U, but it ends the SUBROUTINE T"},
 		{"a module's", []string{"MODULE M", "END MODULE N"},
-			"ENDNAME: the END statement names N, but the MODULE M is named M"},
+			"ENDNAME: the END statement names N, but it ends the MODULE M"},
 	}
 
 	for _, c := range cases {

@@ -148,7 +148,7 @@ questions, and a progress log extended as that phase is worked.
 | 96 | [PHASE-96 - RAM disk](PHASE-96%20-%20RAM%20disk.md) | RAM disks: ODS-2 volumes in govax's own memory, DECram's MDcu names, through ods2's `MemoryImage`; DEFINE/DEVICE MDA, MOUNT with a label, contents kept until govax ends, a limit on their total (`vax.ramdisk.limit`), and a scratch volume (MDA0:, SYS$SCRATCH) made by the startup and login procedures govax supplies — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 | 97 | [PHASE-97 - host file access](PHASE-97%20-%20host%20file%20access.md) | Host file access: `vax.host.sysprv`, when true, lets only a process with SYSPRV reach host files (a host path, a bare name on the host, `/HOST`, and the paths that don't go through `rms.Session.Locate`), through one privilege rule — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 | 98 | [PHASE-98 - batch queues](PHASE-98%20-%20batch%20queues.md) | Batch queues: a queue manager in Go over a JSON queue database (`vax.queue.file`), batch queues with VMS's protection, SUBMIT and the job commands, batch jobs as detached processes logged in to their accounts, `$SNDJBC`, `$GETQUI`, and `F$GETQUI`, and jobs restarted after a session ends — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
-| 99 | [PHASE-99 - Fortran 90](PHASE-99%20-%20Fortran%2090.md) | The Fortran 90 program's plan (Phases 99–111): Fortran 90 joined to VAX FORTRAN in one compiler, `/F90` settling the few texts the two read differently, NCA descriptors for run-time arrays, module files of our own; its groundwork: `/F90` and `/SOURCE_FORM`, free source form, Fortran 90's lexical items, the new statements recognized, named END statements — planned 2026-11-17, the plan accepted the same day |
+| 99 | [PHASE-99 - Fortran 90](PHASE-99%20-%20Fortran%2090.md) | The Fortran 90 program's plan (Phases 99–111): Fortran 90 joined to VAX FORTRAN in one compiler, `/F90` settling the few texts the two read differently, NCA descriptors for run-time arrays, module files of our own; its groundwork: `/F90` and `/SOURCE_FORM`, free source form, Fortran 90's lexical items, the new statements recognized, named END statements, the Fortran 90 corpus — planned 2026-11-17, the plan accepted the same day; done 2026-11-17 |
 | 100 | [PHASE-100 - Fortran 90 declarations and kinds](PHASE-100%20-%20Fortran%2090%20declarations%20and%20kinds.md) | `::` declarations, attributes, initialization, KIND= and LEN=, kinds on constants, the kind and numeric inquiry intrinsics; sema's scope chain — planned 2026-11-17 |
 | 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE, DO with no control, EXIT, CYCLE, construct names — planned 2026-11-17 |
 | 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17 |
@@ -828,3 +828,30 @@ with the author's review, and its log the work.
 
 MANUAL.md's section 6.7, "Batch queues", is the user's side, and VAX-VMS-INTERNALS.md's 7.16 the developer's. What
 the phase left is its doc's "Where things stand".
+
+## Fortran 90 (Phases 99–111)
+
+The Fortran 90 program adds ISO/IEC 1539:1991 to govax's FORTRAN compiler a part at a time,
+joined to VAX FORTRAN in one compiler rather than beside it. `PHASE-99 - Fortran 90.md`'s Part A
+is the survey, Part B the decisions (accepted by the author 2026-11-17), Part C the phases, each
+later phase with a skeletal doc to be filled in by its own survey.
+
+Phase 99 (done 2026-11-17) is the groundwork, a front end that reads Fortran 90 without compiling
+any more of it:
+
+- **`/[NO]F90` and `/SOURCE_FORM`:** `/F90`, the default for free form, takes Fortran 90's reading
+  of the few texts the two languages read differently; `.F90` files are free form, others fixed,
+  INCLUDE files by their own type. `TestNoF90Unchanged` holds every old source's MACRO file to a
+  baseline taken before the work began.
+- **Free source form** (`source/free.go`): `!`, `;`, `&` continuation, 132-character lines, 39
+  continuations, labels as the first token, `!DEC$`.
+- **Lexical items** (`lex`): `::`, `=>`, `(/`, `/)`, `==` and the other relational spellings,
+  kind parameters, `B'…'`, `O'…'`, `Z'…'`, `"…"` under `/F90`, defined operators, and the blank
+  rules of free form.
+- **Statements:** every Fortran 90 statement classified and parsed far enough to draw
+  `%FORT-E-NOTIMPL` by name where it stands; named END statements compiled.
+- **The corpus** (`testdata/fortran90`, `TestFortran90Programs`, `TestFortran90Modules`), in every
+  mode the old one runs, with gfortran as a witness; FORMAT statements' quotation marks under `/F90`.
+
+MANUAL.md's section 14.13 is the user's side, and FORTRAN-INTERNALS.md's section 24 the
+developer's. The next phase is 100, declarations and kinds.

@@ -20,8 +20,8 @@
    file.  A .F90 file is in free source form (Fortran 90's), any other
    in fixed form (VAX FORTRAN's), unless /SOURCE_FORM says otherwise.
    Free form is read (statements anywhere on a line, ! comments, ;
-   between statements, & to continue), but Fortran 90's own statements
-   are still being added.  Files are found by MACRO's
+   between statements, & to continue); see Fortran_90 for what of
+   Fortran 90 is compiled so far.  Files are found by MACRO's
    rules (see MACRO Parameter); quote a host path to keep its case.
 
 2 Description
@@ -98,6 +98,39 @@
    handler (LIB$ESTABLISH), and a subroutine an AST routine or exit
    handler.  The system subroutines are there: DATE, TIME, IDATE, EXIT,
    SECNDS, RAN, MVBITS, and ERRSNS.
+
+2 Fortran_90
+
+   Fortran 90 (ISO/IEC 1539:1991) is being added to the same compiler,
+   a part at a time.  So far a program may be written in free form, by
+   a .F90 file's type or /SOURCE_FORM=FREE, and with Fortran 90's
+   spellings:
+
+     program squares                ! ! starts a comment anywhere
+       implicit none
+       integer i
+       do i = 1, 3; write (*, 10) i, i*i; end do   ! ; between statements
+     10 format (1x, "square of", i2, " is", i3)
+       if (i == 4 .and. i /= 5) print *, "done, &
+                                         &it's ", i  ! & continues
+     end program squares
+
+   That is: the relational operators ==, /=, <, <=, >, and >= (written
+   .EQ. and the rest in fixed form too); character constants between
+   quotation marks under /F90, in expressions and FORMAT statements;
+   B'101', O'17', and Z'1F'; END PROGRAM, END SUBROUTINE, and END
+   FUNCTION with or without the unit's name, which must be its own.  A
+   blank may not stand inside a name or a keyword in free form, and must
+   stand between two names (GOTO and GO TO are both allowed, as are the
+   standard's other compounds).  A statement may have 39 continuation
+   lines, and a line 132 characters.  Both forms may make up one
+   program, and an INCLUDE file is read in the form of its own type.
+
+   Fortran 90's other statements (:: declarations, SELECT CASE, MODULE,
+   array expressions, and the rest) are recognized and draw
+   %FORT-E-NOTIMPL until they are added.  A format given at run time
+   (a character constant or variable as the format) can't yet have a
+   "..." constant: FTNRTL refuses it, %FOR-F-SYNERRFOR.
 
 2 Programs
 
@@ -238,7 +271,9 @@
    other syntax needs no qualifier.  The default is /F90 for a free-form
    source and /NOF90 for a fixed-form one, so an old .FOR file compiles
    as it always has.  An OPTIONS statement before a unit may change it
-   for that unit.  (Nothing reads it yet: Fortran 90 is being added.)
+   for that unit, written in full (/F is still /F77).  So far "..."
+   constants are read, in FORMAT statements too; derived types and the
+   new intrinsics are being added (see Fortran_90).
 
 /G_FLOATING
 
