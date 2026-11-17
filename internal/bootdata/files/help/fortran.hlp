@@ -139,7 +139,9 @@
    parts' kind) is COMPLEX*16, and CHARACTER(LEN=10, KIND=1) is
    CHARACTER*10.  A constant may have one too, digits or a constant's
    name: 7_2, 1.5_DP (read at REAL*8's precision), .TRUE._1, 1_'TEXT'.
-   INTEGER(1) and COMPLEX(16) are not there yet.
+   INTEGER(1), also written INTEGER*1, is a signed byte, its
+   operations done in bytes; BYTE is still LOGICAL*1.  COMPLEX(16) is
+   not there yet.
 
    Fortran 90's other statements (the kind functions, SELECT CASE,
    MODULE, array expressions, POINTER, ALLOCATABLE, and the rest) are

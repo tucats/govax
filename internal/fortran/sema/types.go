@@ -142,33 +142,38 @@ func (t Type) letter() string {
 // rank is the type's rank in a mixed operation (section 2.3.1.2): the
 // operand of lower rank is converted to the other's type before the
 // operation, and the result has the higher rank's type. LOGICAL is
-// lowest, then INTEGER*2, INTEGER*4, REAL*4, REAL*8, REAL*16, COMPLEX*8,
-// and COMPLEX*16.
+// lowest, then INTEGER*1 (Fortran 90's INTEGER(1), which VAX FORTRAN
+// lacks: the standard's 7.1.4.2 gives two integers the kind of the
+// greater range), INTEGER*2, INTEGER*4, REAL*4, REAL*8, REAL*16,
+// COMPLEX*8, and COMPLEX*16.
 func (t Type) rank() int {
 	switch t.Kind {
 	case Logical:
 		return 1
 	case Integer:
-		if t.Size == 2 {
-			return 2
-		}
-
-		return 3
-	case Real:
 		switch t.Size {
-		case 8:
-			return 5
-		case 16:
-			return 6
+		case 1:
+			return 2
+		case 2:
+			return 3
 		}
 
 		return 4
-	case Complex:
-		if t.Size == 16 {
-			return 8
+	case Real:
+		switch t.Size {
+		case 8:
+			return 6
+		case 16:
+			return 7
 		}
 
-		return 7
+		return 5
+	case Complex:
+		if t.Size == 16 {
+			return 9
+		}
+
+		return 8
 	}
 
 	return 0
@@ -192,8 +197,9 @@ func higher(t, u Type) Type {
 // operationType is the type an arithmetic operation or a comparison on a t
 // and a u is done in. A logical ranks lowest (section 2.3.1.2), so it takes
 // any other operand's type. Two logicals are "treated as integers": of the
-// longer one's length, and for two LOGICAL*1s INTEGER*2, there being no
-// INTEGER*1 (our reading, unconfirmed).
+// longer one's length, and for two LOGICAL*1s INTEGER*2, VAX FORTRAN
+// having no INTEGER*1 (our reading, unconfirmed; Fortran 90's INTEGER(1)
+// leaves the rule as it was, so nothing old changes).
 func operationType(t, u Type) Type {
 	h := higher(t, u)
 	if h.Kind == Logical {
@@ -267,10 +273,13 @@ func (a *analyzer) format(t Type) vaxfloat.Format {
 	return vaxfloat.F
 }
 
-// intRange is the range of an INTEGER type's values: INTEGER*2's or
-// INTEGER*4's (section 2.2.1.1).
+// intRange is the range of an INTEGER type's values: INTEGER*1's,
+// INTEGER*2's, or INTEGER*4's (section 2.2.1.1).
 func (t Type) intRange() (lo, hi int64) {
-	if t.Size == 2 {
+	switch t.Size {
+	case 1:
+		return math.MinInt8, math.MaxInt8
+	case 2:
 		return math.MinInt16, math.MaxInt16
 	}
 

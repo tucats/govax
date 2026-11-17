@@ -563,6 +563,14 @@ func (a *analyzer) power(e *ast.Binary) Expr {
 
 	t, base, exponent := a.powerTypes(x, y)
 
+	if t == byteType {
+		// No OTS$ routine takes bytes: an INTEGER*1 power is done in
+		// INTEGER*2 and converted back, as an intrinsic is (byteResult).
+		w := Type{Integer, 2}
+
+		return a.convert(&Binary{exprBase{w, e.Pos}, ast.Pow, a.convert(x, w), a.convert(y, w)}, t)
+	}
+
 	return &Binary{exprBase{t, e.Pos}, ast.Pow, a.convert(x, base), a.convert(y, exponent)}
 }
 

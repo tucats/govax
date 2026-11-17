@@ -53,6 +53,7 @@ PROGRAMS = {
 # The Fortran 90 corpus's programs: their files, relative to testdata/fortran90, the main one
 # first, its directory searched for INCLUDE files.
 PROGRAMS90 = {
+    "bytes": ["bytes.f90"],
     "declare": ["declare.f90"],
     "kinds": ["kinds.f90"],
     "spellings": ["spellings.f90"],

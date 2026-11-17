@@ -4,9 +4,9 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17), every recommendation
 accepted by the author ("The author's answers"); subtask 2, the scope
-chain, subtask 3, `::` declarations and attributes, and subtask 4, kind
-selectors and kinds on constants, are done (2026-11-17); subtask 5,
-INTEGER(1), is next. Needs
+chain, subtask 3, `::` declarations and attributes, subtask 4, kind
+selectors and kinds on constants, and subtask 5, INTEGER(1), are done
+(2026-11-17); subtask 6, the kind and inquiry functions, is next. Needs
 Phase 99.
 
 ## Goal
@@ -300,7 +300,7 @@ and 7), and COMPLEX(16) by question 1's answer.
    messages for a kind the processor lacks (done 2026-11-17).
 5. **INTEGER(1)** (finding 1): sema's type and rules, the IR's and codegen's
    byte arithmetic and conversions, intrinsics through INTEGER(2), I/O, the
-   debugger table's type; `INTEGER*1`.
+   debugger table's type; `INTEGER*1` (done 2026-11-17).
 6. **The kind and inquiry functions**, folded (A.1's table, both
    `/G_FLOATING` settings, `/NOI4`), and **KIND= on the conversions**
    (finding 7), with the intrinsic table's keyword and optional columns
@@ -461,3 +461,30 @@ The author accepted every recommendation:
   that expected NOTIMPL for these forms, and `testdata/fortran90/kinds.f90`,
   run in every mode and the same on gfortran (`compare.py`). MANUAL.md's
   14.13 has a table of kinds, and HELP FORTRAN says what is compiled.
+- **2026-11-17, subtask 5 (done):** INTEGER(1). Sema: `{Integer, 1}` is a
+  type (`lengths` takes `INTEGER*1`, `typeKinds` no longer pends kind 1);
+  `rank` puts it between LOGICAL and INTEGER*2, so two bytes give a byte and
+  a byte beside a wider integer or a real takes that type (7.1.4.2);
+  `intRange` is -128 to 127. An integer constant without a kind stays a
+  longword beside a byte (`I + 5` is INTEGER): `mixedType`'s word rule for
+  INTEGER\*2 is VAX FORTRAN's and isn't extended to bytes, which is the
+  standard's reading. Two logicals are still "treated as integers" of at
+  least INTEGER\*2, and BYTE is still LOGICAL\*1, so nothing old changes. The
+  intrinsic table has no byte rows: `selectForm` takes INTEGER\*1 arguments
+  to the INTEGER\*2 rows, and `byteResult` converts a generic function's
+  result back to INTEGER\*1 when every INTEGER\*2 row of it gives an
+  INTEGER\*2 (ABS, MOD, MAX, IAND, ISHFT, ...), but not INT (the default
+  integer by footnote 10) or a specific name (IIABS's own INTEGER\*2). A
+  power of bytes is done in INTEGER\*2 (OTS$POWII, or multiplied out) and
+  converted back (`power`). A constant assigned to a byte may be -128 to 255,
+  as LOGICAL\*1's may (`assigned`, VAX FORTRAN's rule for short integers;
+  unchanged). Below sema nothing was missing: the IR's `Byte` type and
+  codegen's suffixes already wrote ADDB3, MULB3, DIVB3, CMPB, MNEGB, CVTBW,
+  CVTWB, CVTBL, CVTBF; the descriptor type is DSC$K_DTYPE_B (`ir.DTypeB`,
+  `dtypeOf`); the debugger reads a one-byte integer already. FTNRTL's
+  formatted and list-directed input took DTYPE_B; list-directed output (and
+  so namelist output) refused it with BADPARAM, and now writes it as I5, as
+  it writes a BYTE (`ftn_listout.mar`; no new entry, so GSMATCH stays). Tests:
+  the golden `f90bytes.for` in sema, ir, and codegen, and
+  `testdata/fortran90/bytes.f90`, run in every mode and the same on gfortran
+  (`compare.py`). MANUAL.md's 14.13 and HELP FORTRAN say so.

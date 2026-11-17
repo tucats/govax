@@ -57,7 +57,46 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return a.intrinsicValue(e, f, a.intrinsicArgs(f, args))
+	v := a.intrinsicValue(e, f, a.intrinsicArgs(f, args))
+	if v.Type().Kind != Invalid && a.byteResult(e.Name, forms, f, args) {
+		v = a.convert(v, byteType)
+	}
+
+	return v
+}
+
+// byteType is INTEGER*1, Fortran 90's INTEGER(1).
+var byteType = Type{Integer, 1}
+
+// byteResult reports whether a generic function's INTEGER*1 arguments give
+// an INTEGER*1 result. The table has no INTEGER*1 rows (VAX FORTRAN has no
+// such type), so such arguments select the INTEGER*2 row (selectForm) and
+// are converted to it; the standard's 13.13 makes ABS, MOD, MAX, IAND, and
+// the rest of a kind's arguments of that kind, so their result is converted
+// back. A function whose INTEGER*2 rows give other results too, INT by the
+// unit's default integer, keeps the row's, as does a specific name.
+func (a *analyzer) byteResult(name string, forms []form, f form, args []Expr) bool {
+	if f.arg != (Type{Integer, 2}) || f.result != f.arg || name != f.generic {
+		return false
+	}
+
+	byteArgs := false
+
+	for _, x := range args {
+		byteArgs = byteArgs || x.Type() == byteType
+	}
+
+	if !byteArgs {
+		return false
+	}
+
+	for _, g := range forms {
+		if g.arg == f.arg && g.result != f.result {
+			return false
+		}
+	}
+
+	return true
 }
 
 // argCountFits reports whether some row takes n arguments.
@@ -134,6 +173,17 @@ func (a *analyzer) selectForm(e *ast.Apply, forms []form, args []Expr) (form, bo
 	for _, f := range forms {
 		if takesType(f, t, len(args)) {
 			chosen = append(chosen, f)
+		}
+	}
+
+	if len(chosen) == 0 && t == byteType {
+		// No row takes INTEGER*1: it is done in INTEGER*2 (byteResult).
+		t = Type{Integer, 2}
+
+		for _, f := range forms {
+			if takesType(f, t, len(args)) {
+				chosen = append(chosen, f)
+			}
 		}
 	}
 

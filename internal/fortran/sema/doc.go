@@ -55,7 +55,9 @@
 // A Fortran 90 kind (kinds.go) is a byte size, so a kind names a Type that
 // VAX FORTRAN's lengths already name: REAL(KIND=8) is REAL*8, LOGICAL(1)
 // LOGICAL*1, and COMPLEX(8), whose kind is its parts', COMPLEX*16
-// (Type.KindNumber). A kind selector's expression and a constant's kind
+// (Type.KindNumber). INTEGER(1) is the one new type, INTEGER*1, a byte that
+// ranks below INTEGER*2; the intrinsic table has no rows for it, so a generic
+// function of bytes is done in INTEGER*2 and converted back (byteResult). A kind selector's expression and a constant's kind
 // parameter (1.5_8, 7_K) are constants evaluated here; a real constant with a
 // kind is read at that kind's precision, as if written with its exponent
 // letter.

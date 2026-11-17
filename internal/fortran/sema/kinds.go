@@ -39,7 +39,8 @@ func (t Type) KindNumber() int {
 
 // kindInfo is what kinds a type keyword has: the kind of type it makes,
 // the kinds a selector or a constant may name, as a message lists them, and
-// the kinds that are a later subtask's (a NOTIMPL naming the type).
+// the kinds that are a later subtask's (a NOTIMPL naming the type):
+// COMPLEX(16) until subtask 7.
 type kindInfo struct {
 	kind    Kind
 	allowed []int
@@ -51,7 +52,7 @@ type kindInfo struct {
 // DOUBLE PRECISION, DOUBLE COMPLEX, and BYTE name one type already
 // (NOKIND).
 var typeKinds = map[ast.BaseType]kindInfo{
-	ast.Integer:   {Integer, []int{1, 2, 4}, "1, 2, and 4", map[int]string{1: "INTEGER(1)"}},
+	ast.Integer:   {Integer, []int{1, 2, 4}, "1, 2, and 4", nil},
 	ast.Logical:   {Logical, []int{1, 2, 4}, "1, 2, and 4", nil},
 	ast.Real:      {Real, []int{4, 8, 16}, "4, 8, and 16", nil},
 	ast.Complex:   {Complex, []int{4, 8, 16}, "4, 8, and 16", map[int]string{16: "COMPLEX(16)"}},

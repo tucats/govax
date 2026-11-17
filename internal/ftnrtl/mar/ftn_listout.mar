@@ -17,6 +17,7 @@
 ; storage order. The formats are the manual's Table 7-1:
 ;
 ;	BYTE, LOGICAL*1	(DSC$K_DTYPE_BU)	I5		"   42"
+;	INTEGER*1	(DSC$K_DTYPE_B)		I5		"   42"
 ;	LOGICAL*2	(DSC$K_DTYPE_WU)	L2		" T" or " F"
 ;	LOGICAL*4	(DSC$K_DTYPE_LU)	L2		" T" or " F"
 ;	INTEGER*2	(DSC$K_DTYPE_W)		I7		"     42"
@@ -352,7 +353,7 @@ FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
 	.WORD	LOGICAL-10$		; 3: WU
 	.WORD	LOGICAL-10$		; 4: LU
 	.WORD	BAD_TYPE-10$		; 5
-	.WORD	BAD_TYPE-10$		; 6
+	.WORD	BYTE_I5-10$		; 6: B, Fortran 90's INTEGER(1)
 	.WORD	WORD_I7-10$		; 7: W
 	.WORD	LONG_I12-10$		; 8: L
 	.WORD	BAD_TYPE-10$		; 9

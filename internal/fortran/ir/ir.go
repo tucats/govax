@@ -342,6 +342,7 @@ const (
 	DTypeZ   DType = 0  // unspecified: a record's bytes
 	DTypeWU  DType = 3  // a word logical (unsigned): LOGICAL*2
 	DTypeLU  DType = 4  // a longword logical (unsigned): LOGICAL*4
+	DTypeB   DType = 6  // a byte integer: INTEGER*1, Fortran 90's INTEGER(1)
 	DTypeW   DType = 7  // a word integer: INTEGER*2
 	DTypeL   DType = 8  // a longword integer: INTEGER*4
 	DTypeF   DType = 10 // F_floating: REAL*4
@@ -355,7 +356,7 @@ const (
 	DTypeGC  DType = 29 // G_floating complex: COMPLEX*16 under /G_FLOATING
 )
 
-// String is the code's name after DSC$K_DTYPE_: BU, WU, LU, W, L, F, D,
+// String is the code's name after DSC$K_DTYPE_: BU, WU, LU, B, W, L, F, D,
 // FC, DC, G, H, GC, T, ZEM.
 func (d DType) String() string {
 	switch d {
@@ -365,6 +366,8 @@ func (d DType) String() string {
 		return "WU"
 	case DTypeLU:
 		return "LU"
+	case DTypeB:
+		return "B"
 	case DTypeW:
 		return "W"
 	case DTypeL:

@@ -299,7 +299,10 @@ func (l *lowerer) dtypeOf(t sema.Type) DType {
 		return DTypeZ
 	}
 
-	if t.Size == 2 {
+	switch t.Size {
+	case 1:
+		return DTypeB
+	case 2:
 		return DTypeW
 	}
 

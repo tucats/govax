@@ -8398,10 +8398,11 @@ argument (`ATTRDUMMY`) are errors.
 
 **Kinds** (the standard's 4.3 and 5.1.1). A type may be given a *kind* in parentheses
 after its keyword, where VAX FORTRAN writes a length after a `*`; a kind is the number of
-bytes, so each kind is a type VAX FORTRAN already has:
+bytes, so each kind but `INTEGER(1)` is a type VAX FORTRAN already has:
 
 | Written | Is |
 | --- | --- |
+| `INTEGER(1)` | `INTEGER*1`, a byte integer from -128 to 127 (new: VAX FORTRAN has none) |
 | `INTEGER(2)`, `INTEGER(KIND=4)` | `INTEGER*2`, `INTEGER*4` |
 | `LOGICAL(1)`, `LOGICAL(2)`, `LOGICAL(4)` | `LOGICAL*1`, `LOGICAL*2`, `LOGICAL*4` |
 | `REAL(4)`, `REAL(8)`, `REAL(16)` | `REAL*4`, `REAL*8` (D or G by `/G_FLOATING`), `REAL*16` |
@@ -8426,8 +8427,18 @@ with a `D` or `Q` exponent has its type already, and can't have a kind (`KINDEXP
 kind the type doesn't have is `NOSUCHKIND` (`REAL(3)`), and `DOUBLE PRECISION` and the other
 types that name one length take none (`NOKIND`). DEC's lengths go on working beside kinds,
 and a length after an entity's name replaces the statement's kind or length (`REAL(8) ::
-X*4`). `INTEGER(1)`, `COMPLEX(16)`, a `CHARACTER` length of zero, and a `CHARACTER` length
+X*4`). `COMPLEX(16)`, a `CHARACTER` length of zero, and a `CHARACTER` length
 that isn't constant (`CHARACTER(LEN=N)` with `N` a dummy argument) are not there yet.
+
+**INTEGER(1).** `INTEGER(1)`, which may also be written `INTEGER*1`, is a signed byte. An
+operation on two of them is done in a byte (`ADDB3`, `MULB3`, `CMPB`, ...); beside a wider
+integer or a real, as in any mixed operation, the byte is converted to the other's type, and
+an integer constant without a kind is a default `INTEGER`, so `I + 5` is an `INTEGER`. The
+generic functions of `INTEGER(1)` arguments (`ABS`, `MOD`, `MAX`, `IAND`, `ISHFT`, ...) are
+done in `INTEGER*2` and give an `INTEGER(1)`; `INT` gives the default integer, and a specific
+name (`IIABS`) its own type. `BYTE` is still `LOGICAL*1`, as in VAX FORTRAN, and a `LOGICAL*1`
+in arithmetic is still an `INTEGER*2`. List-directed output writes an `INTEGER(1)` as `I5`,
+as it writes a `BYTE`.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

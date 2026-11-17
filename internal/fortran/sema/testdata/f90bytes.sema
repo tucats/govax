@@ -1,0 +1,23 @@
+== main program F90BYTES
+  F90BYTES                program unit
+  I         INTEGER*1     variable         $LOCAL+0
+  J         INTEGER*1     variable         $LOCAL+1 saved
+  K         INTEGER*1     variable         $LOCAL+2
+  W         INTEGER*2     variable         $LOCAL+4
+  L         LOGICAL*1     variable         $LOCAL+6
+  $LOCAL is 8 bytes
+  initial $LOCAL+1 J INTEGER*1 = FB
+11          K = (+:I I J)
+12          K = (-:I (*:I I J) 3)
+13          W = (+:I (INTEGER*2 I) W)
+14          W = (INTEGER*2 (+:I (INTEGER I) 5))
+15          K = (INTEGER*1 (abs:INTEGER*2 IIABS (INTEGER*2 J)))
+16          K = (INTEGER*1 (max:INTEGER*2 IMAX0 (INTEGER*2 I) (INTEGER*2 J)))
+17          K = (INTEGER*1 (.AND.:I (INTEGER*2 I) (INTEGER*2 J)))
+18          W = (INTEGER*2 (INTEGER (INTEGER*2 J)))
+19          W = (abs:INTEGER*2 IIABS (INTEGER*2 J))
+20          K = (INTEGER*1 (**:I (INTEGER*2 J) (INTEGER*2 I)))
+21          K = (+:I (INTEGER*1 (INTEGER*2 L)) I)
+22          IF (.LT.:I I J) K = (-:I K)
+23          PRINT * I J K
+24          END

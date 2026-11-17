@@ -1,0 +1,71 @@
+routine F90BYTES main
+  cell  I       B  $LOCAL+0    variable I
+  cell  J       B  $LOCAL+1    variable J
+  cell  K       B  $LOCAL+2    variable K
+  cell  W       W  $LOCAL+4    variable W
+  cell  L       B  $LOCAL+6    variable L
+  cell  $T1     W  $LOCAL+8    temporary
+  cell  $T2     W  $LOCAL+12   temporary
+  $LOCAL is 16 bytes
+  init  $LOCAL+1 J = FB
+  datum $IO1    control
+  datum $D1     descriptor B S 1 I
+  datum $D2     descriptor B S 1 J
+  datum $D3     descriptor B S 1 K
+B1:
+  ; line 11
+  assign K = add.B(I, J)
+  ; line 12
+  assign K = sub.B(mul.B(I, J), 3)
+  ; line 13
+  assign W = add.W(cvt.BW(I), W)
+  ; line 14
+  assign W = cvt.LW(add.L(cvt.BL(I), 5))
+  ; line 15
+  assign $T1 = cvt.BW(J)
+  branch lt.W($T1, 0) B2 B3
+B2:
+  assign $T1 = neg.W($T1)
+  jump B3
+B3:
+  assign K = cvt.WB($T1)
+  ; line 16
+  assign $T1 = cvt.BW(I)
+  assign $T2 = cvt.BW(J)
+  branch gt.W($T2, $T1) B4 B5
+B4:
+  assign $T1 = $T2
+  jump B5
+B5:
+  assign K = cvt.WB($T1)
+  ; line 17
+  assign K = cvt.WB(and.W(cvt.BW(I), cvt.BW(J)))
+  ; line 18
+  assign W = cvt.LW(cvt.WL(cvt.BW(J)))
+  ; line 19
+  assign $T2 = cvt.BW(J)
+  branch lt.W($T2, 0) B6 B7
+B6:
+  assign $T2 = neg.W($T2)
+  jump B7
+B7:
+  assign W = $T2
+  ; line 20
+  call OTS$POWII(val cvt.WL(cvt.BW(J)), val cvt.WL(cvt.BW(I))) -> $T2
+  assign K = cvt.WB($T2)
+  ; line 21
+  assign K = add.B(cvt.WB(cvt.BW(L)), I)
+  ; line 22
+  branch lt.B(I, J) B8 B9
+B8:
+  assign K = neg.B(K)
+  jump B9
+B9:
+  ; line 23
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 24
+  return 1
