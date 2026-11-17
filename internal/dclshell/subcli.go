@@ -240,6 +240,10 @@ type subprocessCLI struct {
 	// once a LOGOUT command has logged it out.
 	login, reported, logoutCommand bool
 
+	// logoutForm is the LOGOUT command's /BRIEF or /FULL, once
+	// logoutCommand is set.
+	logoutForm logoutForm
+
 	// batch is the batch job a batch job's CLI runs (dclbatch.go).
 	batch *corevms.BatchJob
 
@@ -552,19 +556,20 @@ func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, 
 		switch {
 		case cli.login && !cli.reported && cli.batch != nil:
 			cli.reported = true
-			cli.output = append(cli.output, cli.env.LogoutReport(false)...)
+			cli.output = append(cli.output, cli.env.LogoutReport(false, cli.logoutForm.full(false))...)
 
 			continue
 
 		case cli.login && !cli.reported && cli.input != nil:
 			cli.reported = true
-			cli.output = append(cli.output, cli.env.LogoutReport(cli.input.Interactive())...)
+			interactive := cli.input.Interactive()
+			cli.output = append(cli.output, cli.env.LogoutReport(interactive, cli.logoutForm.full(interactive))...)
 
 			continue
 
 		case !cli.login && cli.logoutCommand && !cli.reported:
 			cli.reported = true
-			cli.output = append(cli.output, cli.env.SubprocessLogoutLine())
+			cli.output = append(cli.output, cli.env.SubprocessLogout(cli.logoutForm == logoutFull)...)
 
 			continue
 		}
@@ -914,20 +919,74 @@ func (c *Interpreter) cliActivate(cli *subprocessCLI, image, commandLine string)
 	return driver, 0
 }
 
+// logoutForm is what LOGOUT's report holds: what the process's kind
+// gives (logoutDefault), the first line alone (/BRIEF), or the
+// accounting information too (/FULL).
+type logoutForm int
+
+const (
+	logoutDefault logoutForm = iota
+	logoutBrief
+	logoutFull
+)
+
+// full says whether the report has its accounting information: by
+// default an interactive process's doesn't (VMS's /BRIEF) and any other's
+// does.
+func (f logoutForm) full(interactive bool) bool {
+	if f == logoutDefault {
+		return !interactive
+	}
+
+	return f == logoutFull
+}
+
 // logoutCommand is LOGOUT: in a subprocess, it logs the process out,
-// which says so (a spawned process's one line); in process 1 it ends govax.
-// It leaves $STATUS as it was, the process's final status.
-func (c *Interpreter) logoutCommand() error {
+// which says so (corevms's LogoutReport or SubprocessLogout, in form);
+// in process 1 it ends govax, the report written as the session ends
+// (WriteLogoutReport), once it's sure to (an end with batch jobs
+// executing may be taken back, Resume). It leaves $STATUS as it was, the
+// process's final status.
+func (c *Interpreter) logoutCommand(form logoutForm) error {
 	c.keepStatus()
 
 	if cli := c.subCLI; cli != nil {
 		cli.logoutCommand = true
+		cli.logoutForm = form
 		c.quit = true
 
 		return nil
 	}
 
-	return c.Quit()
+	if err := c.Quit(); err != nil {
+		return err
+	}
+
+	c.loggedOut, c.logoutForm = true, form
+
+	return nil
+}
+
+// WriteLogoutReport writes process 1's LOGOUT report, if a LOGOUT
+// command is ending the session: by default the one line ("SYSTEM
+// logged out at ..."), process 1 being interactive, or with /FULL the
+// accounting information too. EXIT, end of input, and Ctrl/Y end the
+// session silently. It writes the report once.
+func (c *Interpreter) WriteLogoutReport() {
+	if !c.loggedOut {
+		return
+	}
+
+	c.loggedOut = false
+
+	env := c.home.RTL
+	if env == nil || env.Process == nil {
+		return
+	}
+
+	for _, line := range env.LogoutReport(true, c.logoutForm.full(true)) {
+		fmt.Fprintln(c.home.Out, line)
+	}
 }
 
 // endCLIImage ends the image a CLI's command ran (see this file's

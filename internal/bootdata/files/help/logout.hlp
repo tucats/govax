@@ -1,12 +1,51 @@
 1 LOGOUT
 
-   Ends a subprocess's DCL and the process.
+   Ends a process's DCL and the process: a subprocess's, a batch job's,
+   or, in the console's own process, govax.
 
    Format
 
      LOGOUT
 
-   The process says so ("Process name logged out at ..."), and its final
-   status is $STATUS's.  In the console's own process LOGOUT ends
-   govax, from the terminal or from inside a command procedure: mounted
-   volumes are dismounted, and the other processes deleted.  See SPAWN.
+2 Description
+
+   The process says so, and its final status is $STATUS's.  A spawned
+   subprocess writes "Process name logged out at ...".  A login (an
+   interactive process, or the console's own) writes "username logged
+   out at ...", and a batch job "username job terminated at ...",
+   followed in its log by the accounting information: the process's I/O
+   counts, page faults, peak working set and page file sizes, CPU time,
+   and elapsed time.  /BRIEF and /FULL choose the short and long forms;
+   an interactive process's default is /BRIEF, any other's /FULL.
+
+   In the console's own process LOGOUT ends govax, from the terminal or
+   from inside a command procedure: the report is written, mounted
+   volumes are dismounted, and the other processes deleted.  EXIT at the
+   terminal ends govax with no report.  LO is LOGOUT, though other
+   verbs begin with it.  See SPAWN.
+
+2 Qualifiers
+
+/BRIEF
+
+   Writes only the line that says the process logged out.  The default
+   for an interactive process.
+
+/FULL
+
+   Writes the accounting information after that line.  The default for
+   a process that isn't interactive, such as a batch job.
+
+2 Examples
+
+   1.$ LOGOUT
+       SYSTEM       logged out at 16-NOV-2026 17:11:24.07
+
+   2.$ LOGOUT/FULL
+       SYSTEM       logged out at 16-NOV-2026 17:02:56.40
+
+       Accounting information:
+       Buffered I/O count:             121         Peak working set size:     662
+       Direct I/O count:                50         Peak page file size:      4493
+       Page faults:                   1700         Mounted volumes:             0
+       Charged CPU time:           0 00:00:00.05   Elapsed time:     0 00:00:44.20

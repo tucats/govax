@@ -18,14 +18,14 @@ import (
 //	  Page faults:                    284         Mounted volumes:             0
 //	  Charged CPU time:           0 00:00:00.01   Elapsed time:     0 00:00:00.01
 //
-// An interactive one gets one line, "  SYSTEM       logged out at
-// <time>" (unconfirmed: no probe has logged out an interactive
-// process). The I/O counts are the process's (iocount.go), and so are
-// its page faults and its working set's peak (accounting.go); govax has
-// no page file yet, and volumes are mounted for the whole system, so the
-// other counts are 0, as in the termination message (termmsg.go); the
-// CPU time is the process's, and the elapsed time runs from its
-// creation.
+// An interactive one logging out gets the same report with "logged out"
+// for "job terminated" when it asks for it (LOGOUT/FULL, VMS 7.3), and
+// otherwise the first line alone, which is also all LOGOUT/BRIEF writes.
+// The I/O counts are the process's (iocount.go), and so are its page
+// faults, its working set's peak (accounting.go), and its page file's
+// peak; volumes are mounted for the whole system, so the mounted volumes
+// count is 0, as in the termination message (termmsg.go); the CPU time
+// is the process's, and the elapsed time runs from its login.
 
 // SubprocessLogoutLine is what a spawned subprocess's LOGOUT command
 // writes, as VMS 7.3's DCL wrote it (testdata/mp/probe5/vax, step 9):
@@ -37,16 +37,41 @@ func (env *Environment) SubprocessLogoutLine() string {
 	return fmt.Sprintf("  Process %s logged out at %s", env.Process.Name, date)
 }
 
-// LogoutReport is the report for env's job logging out now: the full
-// one, or with interactive the one line.
-func (env *Environment) LogoutReport(interactive bool) []string {
-	now := env.Clock()
-	date, _ := formatVMSTime(now, false)
-	p := env.Process
-
-	if interactive {
-		return []string{fmt.Sprintf("  %-12s logged out at %s", p.Username, date)}
+// SubprocessLogout is a spawned subprocess's LOGOUT report: its one line,
+// and with full (LOGOUT/FULL) the accounting information after it.
+func (env *Environment) SubprocessLogout(full bool) []string {
+	lines := []string{env.SubprocessLogoutLine()}
+	if full {
+		lines = append(lines, env.logoutAccounting()...)
 	}
+
+	return lines
+}
+
+// LogoutReport is the report for env's job logging out now: its first
+// line ("logged out" for an interactive job, "job terminated" for one that
+// isn't), and with full the accounting information after it.
+func (env *Environment) LogoutReport(interactive, full bool) []string {
+	date, _ := formatVMSTime(env.Clock(), false)
+
+	verb := "job terminated at"
+	if interactive {
+		verb = "logged out at"
+	}
+
+	lines := []string{fmt.Sprintf("  %-12s %s %s", env.Process.Username, verb, date)}
+	if full {
+		lines = append(lines, env.logoutAccounting()...)
+	}
+
+	return lines
+}
+
+// logoutAccounting is the full report's accounting information, from the
+// blank line after its first line on.
+func (env *Environment) logoutAccounting() []string {
+	now := env.Clock()
+	p := env.Process
 
 	// counts is one line of two counts: the first ends in column 37, the
 	// second in column 76.
@@ -56,6 +81,10 @@ func (env *Environment) LogoutReport(interactive bool) []string {
 
 	// delta is a time in VMS's delta format, without its padding.
 	delta := func(t uint64) string {
+		if t == 0 {
+			return "0 00:00:00.00" // a delta time of 0 has no negative form
+		}
+
 		s, ok := formatVMSTime(uint64(-int64(t)), false)
 		if !ok {
 			return "****************"
@@ -70,7 +99,6 @@ func (env *Environment) LogoutReport(interactive bool) []string {
 	}
 
 	return []string{
-		fmt.Sprintf("  %-12s job terminated at %s", p.Username, date),
 		"",
 		"  Accounting information:",
 		counts("Buffered I/O count:", int(p.BufferedIO), "Peak working set size:", int(env.WorkingSetPeak(env))),

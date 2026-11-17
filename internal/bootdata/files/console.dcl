@@ -270,8 +270,16 @@ grammar console
                     /type=$rest_of_line
 
     ! LOGOUT ends a subprocess's DCL, and so the process (docs/PHASE-50,
-    ! subtask 19); in process 1 it ends govax.
-    verb logout
+    ! subtask 19); in process 1 it ends govax. /BRIEF is the one line,
+    ! /FULL the accounting report too; an interactive process's default
+    ! is /BRIEF, a batch job's /FULL.
+    verb logout/id=3186
+        qualifier   brief/id=3187/nonegatable
+        qualifier   full/id=3188/nonegatable
+        disallow    brief and full
+
+    ! LO is LOGOUT, as on VMS, though LOAD begins with it too.
+    verb lo/alias=logout
 
     ! AUTHORIZE [command]: govax's account utility (internal/authorize,
     ! docs/planning/PHASE-95 - authentication.md, Decision 10), a session

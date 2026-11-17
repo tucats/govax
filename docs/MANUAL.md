@@ -208,7 +208,20 @@ this manual cover the same ground; the help text is the place to look up
 a qualifier quickly.
 
 To leave govax, type `EXIT` (or `LOGOUT`) at the `VAX>`
-prompt, or press **Ctrl/Y**.
+prompt, or press **Ctrl/Y**. `EXIT` ends it silently; `LOGOUT` says so,
+as a VMS session does, and `LOGOUT/FULL` adds the accounting
+information:
+
+```text
+VAX> LOGOUT/FULL
+  SYSTEM       logged out at 16-NOV-2026 17:02:56.40
+
+  Accounting information:
+  Buffered I/O count:             121         Peak working set size:     662
+  Direct I/O count:                50         Peak page file size:      4493
+  Page faults:                   1700         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.05   Elapsed time:     0 00:00:44.20
+```
 
 The prompt has a line editor: the arrow keys move through the line and
 through earlier commands, which govax keeps between sessions in
@@ -2449,7 +2462,7 @@ SPAWN [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/PROCESS=name]
 SPAWN/HOST [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/SYMBOLS]
       [/LOGICAL_NAMES] command
 ATTACH process-name | ATTACH/IDENTIFICATION=pid
-LOGOUT
+LOGOUT [/BRIEF | /FULL]
 ```
 
 `SPAWN` creates a subprocess running DCL, with copies of your symbols and
@@ -2496,8 +2509,13 @@ becoming `_`: `PARTS$DATA` is `GOVAX_LOG_PARTS_DATA`. A failure is
 `SYSPRV` ([Who may use host files](#who-may-use-host-files)).
 
 `ATTACH` gives the terminal to another process of your job that's
-waiting for it. `LOGOUT` ends a subprocess's DCL; in the console's own
-process it ends govax.
+waiting for it. `LOGOUT` (or `LO`) ends a subprocess's DCL; in the
+console's own process it ends govax. It writes a line saying the process
+logged out, and with `/FULL` the process's accounting information after
+it (I/O counts, page faults, peak working set and page file sizes, CPU
+and elapsed time). `/BRIEF`, the line alone, is the default for an
+interactive process and for the console's own; a batch job's log ends
+with the full report, "job terminated" in place of "logged out".
 
 #### STOP
 
@@ -2623,7 +2641,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `OPEN`, `CLOSE`, `READ`, `WRITE`, `INQUIRE` | File and terminal I/O. |
 | `SET VERIFY`, `SET PREFIX` | Show a procedure's lines as they run. |
 | `SET CONTROL=Y`, `SET NOCONTROL=Y` | Turn Ctrl/Y on and off. |
-| `LOGOUT` | End govax, even from inside a procedure. |
+| `LOGOUT` | End govax, even from inside a procedure, saying so (`/FULL`: with accounting). |
 
 ### 6.8 Information
 

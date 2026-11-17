@@ -100,6 +100,12 @@ type Interpreter struct {
 	// mid-instruction and can't run others (dcllend.go).
 	lending         bool
 	consoleCommands int
+
+	// loggedOut is set when a LOGOUT command in process 1 ends the
+	// session, with its /BRIEF or /FULL in logoutForm, for the report the
+	// session's end writes (WriteLogoutReport).
+	loggedOut  bool
+	logoutForm logoutForm
 }
 
 // Printf writes to the output of the DCL running now.
@@ -248,4 +254,7 @@ func (c *Interpreter) Finish() { c.quit = true }
 // with batch jobs executing, answered No (cmd/govax; docs/planning/
 // PHASE-98 - batch queues.md, Decision 11). The console reads commands
 // again.
-func (c *Interpreter) Resume() { c.quit = false }
+func (c *Interpreter) Resume() {
+	c.quit = false
+	c.loggedOut = false
+}

@@ -230,7 +230,8 @@ func (c *Console) ResumeQueueManager() {
 	}
 }
 
-// EndSession ends the console's use of the machine as govax exits: the
+// EndSession ends the console's use of the machine as govax exits: a
+// LOGOUT command's report is written (WriteLogoutReport), the
 // batch jobs it runs are ended or requeued (EndBatchJobs), an image of
 // process 1's that never exited is run down, the other processes are
 // deleted (their files closed), SPAWN/HOST/NOWAIT programs are ended, and
@@ -238,6 +239,8 @@ func (c *Console) ResumeQueueManager() {
 // they wrote reaches the volumes before they're dismounted; so is the
 // page file.
 func (c *Console) EndSession() {
+	c.WriteLogoutReport()
+
 	if _, _, err := c.EndBatchJobs(); err != nil {
 		fmt.Fprintf(c.Out, "%%GOVAX-W-QUEUES, ending the batch jobs: %v\n", err)
 	}

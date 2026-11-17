@@ -358,7 +358,18 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 	g.Bind("WAIT", c.waitCommand)
 	g.Bind("SYNCHRONIZE", c.synchronizeCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return c.continueCommand() })
-	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return c.logoutCommand() })
+	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error {
+		form := logoutDefault
+
+		switch {
+		case r.Present("BRIEF"):
+			form = logoutBrief
+		case r.Present("FULL"):
+			form = logoutFull
+		}
+
+		return c.logoutCommand(form)
+	})
 	g.Bind("MCR", func(id int64, r *dcl.Result) error {
 		return c.runForeign(r.String("IMAGE"), r.String("TEXT"))
 	})

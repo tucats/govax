@@ -366,5 +366,17 @@ func TestCLI_probe5Answers(t *testing.T) {
 
 	if s := out.String(); !strings.Contains(s, "  Process SYSTEM_1 logged out at ") {
 		t.Errorf("SPAWN LOGOUT: %q, want the subprocess's logout line", s)
+	} else if strings.Contains(s, "Accounting information:") {
+		t.Errorf("SPAWN LOGOUT: %q, want no accounting information", s)
+	}
+
+	out.Reset()
+
+	if err := d.Dispatch("SPAWN LOGOUT/FULL"); err != nil {
+		t.Fatal(err)
+	}
+
+	if s := out.String(); !strings.Contains(s, " logged out at ") || !strings.Contains(s, "\n  Accounting information:\n") {
+		t.Errorf("SPAWN LOGOUT/FULL: %q, want the logout line and the accounting information", s)
 	}
 }
