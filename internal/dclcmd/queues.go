@@ -332,6 +332,33 @@ func (c *Context) AbortJob(entry int, name string) error {
 	return c.queueDone(c.RTL.AbortJob(entry, name))
 }
 
+// Requeue is STOP/QUEUE/REQUEUE's command line: the job (Entry, given if
+// HasEntry), its queue (Queue), the queue it goes to (To, "" for its
+// own), and /HOLD; Requeue says /REQUEUE was given.
+type Requeue struct {
+	Entry         int
+	HasEntry      bool
+	Queue, To     string
+	Requeue, Hold bool
+}
+
+// RequeueJob is STOP/QUEUE/REQUEUE[=queue]/ENTRY=n queue [/HOLD]: the
+// executing job stopped and requeued (corevms's RequeueJob). A batch
+// queue's needs /ENTRY (the DCL Dictionary), and /HOLD needs /REQUEUE:
+// without them it is CLI$_INSFPRM, which VMS's wording may differ from
+// (unconfirmed: the probe always gave both).
+func (c *Context) RequeueJob(r Requeue) error {
+	if c.RTL == nil {
+		return noQueues()
+	}
+
+	if !r.Requeue || !r.HasEntry {
+		return vmserrors.New(vmserrors.CLI_INSFPRM)
+	}
+
+	return c.queueDone(c.RTL.RequeueJob(r.Entry, r.Queue, strings.TrimSpace(r.To), r.Hold))
+}
+
 // SetQueue is SET QUEUE name: the queue's attributes changed.
 func (c *Context) SetQueue(name string, opts QueueOptions) error {
 	if c.RTL == nil {

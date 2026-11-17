@@ -375,6 +375,15 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 	}
 
+	// The queue manager starts here if the queue database says it was
+	// running, as VMS starts it at boot (docs/planning/PHASE-98 - batch
+	// queues.md, Decision 11): queues come back stopped, and a job the
+	// last session left executing is requeued (/RESTART) or ended. A
+	// one-shot command doesn't start it.
+	if console.CommandLineString == "" {
+		c.ResumeQueueManager()
+	}
+
 	// Then process 1 logs in as its account, SYSTEM unless --user names
 	// another (docs/planning/PHASE-95 - authentication.md, Decision 7). At
 	// a terminal the banner says when the account last logged in.
@@ -449,6 +458,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		// aborted is CTRL/Y's check (attentionStdin.abortRequested).
 		aborted := func() bool { return attn != nil && attn.abortRequested() }
 
+		// endConfirmed is govax's end at a terminal with batch jobs
+		// executing: true unless the user, asked, says No (confirmEnd).
+		endConfirmed := func() bool {
+			return attn == nil || !attn.vmsMode || confirmEnd(c, rl, out)
+		}
+
+	session:
 		for c.Running() && !aborted() {
 			// Switches between console, debugger, and mini-assembler prompts.
 			// The console prompt can be set via a SET PROMPT command.
@@ -483,6 +499,12 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			line, err := readCommandLine(rl, c, attn, output)
 
 			if aborted() {
+				if !endConfirmed() {
+					attn.forgetAbort()
+
+					continue
+				}
+
 				break
 			}
 
@@ -510,7 +532,22 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			if err := d.Dispatch(line); err != nil && !vmserrors.MessageInhibited(err) {
 				fmt.Fprintln(out, "%"+err.Error())
 			}
+
+			// EXIT, LOGOUT, or CTRL/Y with batch jobs executing asks
+			// first, at a terminal; No goes back to the prompt.
+			if (!c.Running() || aborted()) && !endConfirmed() {
+				c.Resume()
+				attn.forgetAbort()
+
+				continue session
+			}
 		}
+	}
+
+	// Ending with batch jobs still executing, and no terminal to ask at
+	// (a one-shot command, input from a pipe), says so and ends them.
+	if c.ExecutingJobs() > 0 {
+		confirmEnd(c, nil, out)
 	}
 
 	// See if we have trailing stats to print out here.
@@ -553,6 +590,46 @@ func readCommandLine(rl *readline.Instance, c *console.Console, attn *attentionS
 	attn.lineRead.Store(false)
 
 	return line, err
+}
+
+// confirmEnd is govax's end with batch jobs executing (docs/planning/
+// PHASE-98 - batch queues.md, Decision 11): it says how many, and, with
+// rl (a terminal), asks whether to end them; on No it returns false, and
+// govax goes on. Otherwise the jobs are ended as a VMS system's stop ends
+// them (requeued to restart if /RESTART, else ended with JBC$_QUERESET),
+// it says so, and it returns true. With none executing it returns true.
+func confirmEnd(c *console.Console, rl *readline.Instance, out io.Writer) bool {
+	n := c.ExecutingJobs()
+	if n == 0 {
+		return true
+	}
+
+	what, them := "1 batch job", "it"
+	if n > 1 {
+		what, them = fmt.Sprintf("%d batch jobs", n), "them"
+	}
+
+	fmt.Fprintln(out, "%"+vmserrors.New(vmserrors.VAX_JOBSEXECUTING, what, them).Error())
+
+	if rl != nil {
+		rl.SetPrompt("End " + them + " and exit? (Y or N) [N]: ")
+
+		answer, err := rl.Readline()
+		if err == nil && !strings.HasPrefix(strings.ToUpper(strings.TrimSpace(answer)), "Y") {
+			return false
+		}
+	}
+
+	requeued, ended, err := c.EndBatchJobs()
+	if err != nil {
+		fmt.Fprintln(out, "%"+err.Error())
+
+		return true
+	}
+
+	fmt.Fprintln(out, "%"+vmserrors.New(vmserrors.VAX_JOBSENDED, requeued, ended).Error())
+
+	return true
 }
 
 // endOfFile is CTRL/Z at a prompt. In the debugger it is EXIT, ending the

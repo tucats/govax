@@ -149,16 +149,21 @@
 
 /RESTART
 
-   Restarts the job, rather than ending it, if govax stops while it
-   runs.
+   Restarts the job, rather than ending it, if the govax session running
+   it ends while it runs (as VMS restarts one at a system's stop): the
+   job goes back to its queue, pending, and runs again when the queue is
+   next started, with $RESTART "TRUE" and BATCH$RESTART its last SET
+   RESTART_VALUE (HELP SET RESTART_VALUE), from the file it was in.
+   Without /RESTART such a job ends with %JBC-F-QUERESET.  govax asks
+   before it ends a session with jobs executing.
 
 /RETAIN
 
       /[NO]RETAIN[=option]
 
    Keeps the job in its queue when it ends: ALWAYS (the default
-   option), ERROR (if it fails), or UNTIL=time.  /NORETAIN keeps it
-   whatever the queue says.
+   option), ERROR (if it fails), or UNTIL=time, which lets it go at that
+   time.  /NORETAIN keeps it whatever the queue says.
 
 /USER
 

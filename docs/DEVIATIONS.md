@@ -2046,4 +2046,12 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   - **The log is written a record at a time**, where VMS's RMS buffered it: a job ended by STOP/QUEUE/RESET left a
     0-block log on the VAX (case 201), and a line in govax's.
   - **A DISUSER account's job** ends with LOGIN-F-DISUSER and no log written (unconfirmed what VMS's log says).
-- **Status**: kept; the rest of the probe's job sections are held to VMS by `internal/console/batch_test.go`.
+  - **A requeued job's process goes at once** (subtask 10): STOP/QUEUE/REQUEUE's job was still "Aborting" when the
+    VAX's next SHOW ran, and a /RELEASE then was EXECUTING (cases 309 to 318); govax ends the process between process
+    1's commands, so the job has been requeued (or has run again) by then.
+  - **A session's end is the system's stop** (Decision 11): its executing jobs are requeued as restarts if /RESTART,
+    else ended with JBC$_QUERESET, as the VAX's reboot left them; govax asks first at a terminal. A restart begins with
+    the file its run stopped in (unconfirmed: the probe's restarted jobs had one file each). SET RESTART_VALUE outside
+    a batch job does nothing, and /RETAIN=UNTIL lets a job go at its time (both unconfirmed).
+- **Status**: kept; the rest of the probe's job sections are held to VMS by `internal/console/batch_test.go`, and
+  the reboot by `batchrestart_test.go`.

@@ -195,13 +195,53 @@ func (c *Console) ReadDebuggerReply(prompt string) (string, bool) {
 	return c.ReadHelpResponse(prompt)
 }
 
-// EndSession ends the console's use of the machine as govax exits: an
-// image of process 1's that never exited is run down, the other processes
-// are deleted (their files closed), SPAWN/HOST/NOWAIT programs are ended,
-// and every file process 1 and DCL's
-// OPEN have open is closed, so that what they wrote reaches the volumes
-// before they're dismounted; so is the page file.
+// ExecutingJobs is how many batch jobs this session runs now, which
+// ending it would end (docs/planning/PHASE-98 - batch queues.md,
+// Decision 11): cmd/govax asks before it does.
+func (c *Console) ExecutingJobs() int {
+	if c.RTL == nil {
+		return 0
+	}
+
+	return c.RTL.System.ExecutingJobs()
+}
+
+// EndBatchJobs ends the batch jobs this session runs as a system's stop
+// ends them (corevms's EndSessionJobs): requeued as restarts if /RESTART,
+// else ended with JBC$_QUERESET. It returns how many of each.
+func (c *Console) EndBatchJobs() (requeued, ended int, err error) {
+	if c.RTL == nil {
+		return 0, 0, nil
+	}
+
+	return c.RTL.System.EndSessionJobs()
+}
+
+// ResumeQueueManager starts the queue manager in this session when the
+// queue database says it was running (Decision 11), as govax starts after
+// STARTUP.COM; a failure is shown, and the session goes on.
+func (c *Console) ResumeQueueManager() {
+	if c.RTL == nil {
+		return
+	}
+
+	if err := c.RTL.ResumeQueueManager(); err != nil {
+		fmt.Fprintf(c.Out, "%%GOVAX-W-QUEUES, starting the queue manager: %v\n", err)
+	}
+}
+
+// EndSession ends the console's use of the machine as govax exits: the
+// batch jobs it runs are ended or requeued (EndBatchJobs), an image of
+// process 1's that never exited is run down, the other processes are
+// deleted (their files closed), SPAWN/HOST/NOWAIT programs are ended, and
+// every file process 1 and DCL's OPEN have open is closed, so that what
+// they wrote reaches the volumes before they're dismounted; so is the
+// page file.
 func (c *Console) EndSession() {
+	if _, _, err := c.EndBatchJobs(); err != nil {
+		fmt.Fprintf(c.Out, "%%GOVAX-W-QUEUES, ending the batch jobs: %v\n", err)
+	}
+
 	c.EndHostJobs()
 	c.RunDownAbandonedImage()
 	c.EndOtherProcesses()

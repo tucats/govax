@@ -877,7 +877,7 @@ func TestRecover(t *testing.T) {
 	_, _ = d.DeleteJob(deleted.Entry, "", t0)
 	held := submit(t, d, testJob("HELD", "BAT98_A"), true)
 
-	requeued, ended := d.Recover(t0.Add(time.Hour))
+	requeued, ended := d.Recover(t0.Add(time.Hour), nil)
 
 	if q := d.Queue("BAT98_A"); q.State != QueueStopped {
 		t.Errorf("queue %s", q.State)
@@ -898,6 +898,124 @@ func TestRecover(t *testing.T) {
 
 	if held.Status != JobHolding {
 		t.Errorf("held job %s", held.Status)
+	}
+}
+
+// TestRecoverSparesLiveJobs: a session that stops and starts its manager
+// again recovers only the jobs whose processes are gone; one still
+// running here goes on, and its queue is stopped like the rest.
+func TestRecoverSparesLiveJobs(t *testing.T) {
+	d := withQueue(t)
+	_ = d.SetQueue("BAT98_A", func(q *Queue) { q.JobLimit = 5 })
+
+	live := submit(t, d, testJob("LIVE", "BAT98_A"), false)
+	gone := submit(t, d, testJob("GONE", "BAT98_A"), false)
+
+	for _, j := range []*Job{live, gone} {
+		if _, err := d.StartJob(j.Entry, t0); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	_, ended := d.Recover(t0, func(entry int) bool { return entry == live.Entry })
+
+	if live.Status != JobExecuting || len(ended) != 1 || ended[0] != gone {
+		t.Errorf("live %s, ended %v", live.Status, ended)
+	}
+
+	if d.Job(gone.Entry) != nil {
+		t.Error("the job without a process is still there (no /RETAIN)")
+	}
+}
+
+// TestRequeueKeepsFile: a job requeued in its second file restarts there,
+// checkpointed with its restart value; a job started afresh begins with
+// its first file.
+func TestRequeueKeepsFile(t *testing.T) {
+	d := withQueue(t)
+
+	j := testJob("TWO", "BAT98_A")
+	j.Files = append(j.Files, File{Spec: "_GOVAX$DUA1:[000000]B.COM;1", ID: FileID{Number: 24, Sequence: 1}})
+	submit(t, d, j, false)
+
+	if _, err := d.StartJob(j.Entry, t0); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.SetJobFile(j.Entry, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.SetJobFile(j.Entry, 7); err != nil || j.File != 1 {
+		t.Errorf("a file past the job's: %v, file %d", err, j.File)
+	}
+
+	_ = d.SetRestartValue(j.Entry, "STEP2")
+
+	if _, err := d.RequeueJob(j.Entry, "BAT98_A", Requeue{Hold: true}, t0); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := d.Finish(j.Entry, 0x10000004, t0); got != j || j.Status != JobHolding ||
+		!j.Restarted || !j.Checkpointed || j.File != 1 {
+		t.Fatalf("requeued: %+v", j)
+	}
+
+	if err := d.Check(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.ReleaseJob(j.Entry, t0); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := d.StartJob(j.Entry, t0); err != nil || j.File != 1 {
+		t.Errorf("restart begins with file %d: %v", j.File, err)
+	}
+
+	if err := d.SetJobFile(j.Entry+1, 0); !refusedWith(err, "JBC$_NOSUCHJOB") {
+		t.Errorf("SetJobFile of no job: %v", err)
+	}
+}
+
+// TestExpireRetained: a job its own /RETAIN=UNTIL kept goes at its time,
+// which NextTime gives; one its queue's /RETAIN kept stays.
+func TestExpireRetained(t *testing.T) {
+	d := withQueue(t)
+	_ = d.SetQueue("BAT98_A", func(q *Queue) { q.Retain, q.JobLimit = RetainAlways, 5 })
+
+	timed := testJob("TIMED", "BAT98_A")
+	timed.Retain, timed.RetainUntil = RetainUntil, t0.Add(time.Hour)
+	submit(t, d, timed, false)
+
+	kept := submit(t, d, testJob("KEPT", "BAT98_A"), false)
+
+	for _, j := range []*Job{timed, kept} {
+		if _, err := d.StartJob(j.Entry, t0); err != nil {
+			t.Fatal(err)
+		}
+
+		d.Finish(j.Entry, 1, t0)
+	}
+
+	if next, ok := d.NextTime(); !ok || !next.Equal(timed.RetainUntil) {
+		t.Errorf("next time %v, %v", next, ok)
+	}
+
+	if gone := d.ExpireRetained(t0.Add(time.Minute)); len(gone) != 0 {
+		t.Errorf("early: %v", gone)
+	}
+
+	if gone := d.ExpireRetained(t0.Add(time.Hour)); len(gone) != 1 || gone[0] != timed {
+		t.Errorf("expired %v", gone)
+	}
+
+	if d.Job(kept.Entry) == nil || d.Job(timed.Entry) != nil {
+		t.Errorf("jobs left: %v", d.Jobs)
+	}
+
+	if _, ok := d.NextTime(); ok {
+		t.Error("a next time with nothing waiting")
 	}
 }
 

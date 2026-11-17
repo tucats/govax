@@ -971,7 +971,18 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   forms, and Booleans; `FormDelta`, `FormOwnerUIC`), and
   `dclshell/dcllexqueue.go`; held to round 2 by `TestGetquiOracle`
   (BAT98Q run on govax) and to THE JOB'S VIEW and the matrix's cases 5
-  and 6.
+  and 6;
+  subtask 10 (2026-11-16) restart and the session's end: the manager
+  started as a session starts (`Console.ResumeQueueManager`), and taking
+  its lock recovers what the last session left (`System.startHere`,
+  `recoverQueues`, jobqueue's `Recover`/`EndRuns`: queues stopped, jobs
+  requeued as restarts if /RESTART, else QUERESET); a session's end ends
+  its jobs that way (`EndSessionJobs`, from `Console.EndSession`), cmd/govax
+  asking first at a terminal (`confirmEnd`); a new System's orphans
+  (`EndOrphanedJobs`); STOP/QUEUE/REQUEUE (`RequeueJob`), SET RESTART_VALUE,
+  a restart from its file (`Job.File`), /RETAIN=UNTIL's expiry, and the
+  SYSTARTUP_VMS.COM block; held to RESTART and the probe's reboot by
+  `internal/console/batchrestart_test.go` and `TestBatchLaterSectionsOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

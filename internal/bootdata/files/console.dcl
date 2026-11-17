@@ -1290,7 +1290,16 @@ grammar console
         qualifier   reset/id=3053
         qualifier   manager/id=3054/syntax=stop_queue_manager
         qualifier   entry/id=3057/type=$integer
+        ! /REQUEUE[=queue]/ENTRY=n [/HOLD] (subtask 10): the executing
+        ! job stopped and requeued, to its own queue or the one named; a
+        ! batch queue's needs /ENTRY, and /REQUEUE goes with neither /NEXT
+        ! nor /RESET, which the handler checks (the empty default, which
+        ! lets /REQUEUE go without a value, makes it present to a
+        ! disallow).
+        qualifier   requeue/id=3058/type=$string/default=""
+        qualifier   hold/id=3059
         disallow    any2(next, reset, entry)
+        disallow    any2(next, reset, hold)
 
     syntax stop_queue_manager/id=3055
         qualifier   cluster/id=3056
@@ -1736,6 +1745,9 @@ grammar console
         ! ENTRY (docs/planning/PHASE-98 - batch queues.md, subtask 7): a
         ! job's options, held or released.
         keyword     entry               /syntax=set_entry/nonegatable
+        ! RESTART_VALUE (subtask 10): SET RESTART_VALUE=string, the label
+        ! a batch job's restart goes on from.
+        keyword     restart_value       /syntax=set_restart_value/nonegatable/value
 
 
     verb set/id=1760
@@ -1968,6 +1980,13 @@ grammar console
     ! SET PROMPT="text", the console's prompt (and the vax.console.prompt
     ! setting). PROMPT takes its value after "=", so SET PROMPT="X" isn't
     ! an assignment to a symbol named PROMPT.
+    ! SET RESTART_VALUE=string (docs/planning/PHASE-98 - batch
+    ! queues.md, subtask 10): BATCH$RESTART for a batch job's restart.
+    syntax set_restart_value/id=3184
+        parameter   text/id=3185                -
+                    /type=$string               -
+                    /prompt="Value"
+
     syntax set_prompt/id=1810
         parameter   text/id=1811                -
                     /type=$string               -

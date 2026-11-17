@@ -80,7 +80,6 @@ func (sys *System) DeleteProcess(env *Environment) {
 	sys.sendTerminationMessage(env)
 	sys.returnTerminal(env)
 	sys.completeSpawn(env)
-	sys.completeBatchJob(env)
 
 	if env.waiting != nil {
 		env.waiting = nil
@@ -93,6 +92,11 @@ func (sys *System) DeleteProcess(env *Environment) {
 
 	sys.endJob(env)
 	sys.removeFromTable(env)
+
+	// The job controller's part comes once the process is out of the
+	// table, so that a requeued job's next run (STOP/QUEUE/REQUEUE), which
+	// it may start at once, can take the name BATCH_n again.
+	sys.completeBatchJob(env)
 
 	// Every service now finds the process gone. Its memory goes now, or,
 	// if the CPU is still running in it, once the CPU leaves it.

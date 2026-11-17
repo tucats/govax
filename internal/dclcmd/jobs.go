@@ -617,6 +617,12 @@ func jobStatusText(v corevms.JobView, full bool) string {
 	case jobqueue.JobTimed:
 		return "Holding until " + corevms.QueueTime(j.After, false)
 	case jobqueue.JobExecuting:
+		// Being ended or requeued, its process not yet gone (VMS 7.1's
+		// SHOW QUEUE straight after STOP/QUEUE/REQUEUE, case 309).
+		if j.Ending != 0 || j.Requeue != nil {
+			return "Aborting"
+		}
+
 		if v.Paused {
 			return "Suspended"
 		}
@@ -683,8 +689,13 @@ func (c *Context) showJob(v corevms.JobView, full, entry bool) {
 			line += " /DELETE"
 		}
 
-		if i == v.Running {
+		switch {
+		case i == v.Running:
 			line += " (executing)"
+		case v.Running < 0 && j.Checkpointed && i == j.File && j.Status != jobqueue.JobRetained:
+			// A requeued job with a restart value, waiting to go on from
+			// it (VMS 7.1's BOOTR after the reboot).
+			line += " (checkpointed)"
 		}
 
 		c.Printf("%s\n", line)
@@ -719,7 +730,7 @@ func (c *Context) writeWrapped(head string, items []string) {
 // jobOptions are a job's options as SHOW ENTRY/FULL lists them after its
 // submission time, in order of name as VMS 7.1 listed them: /CPU, /KEEP,
 // /LOG (or /NOLOG), /NOTE, /NOTIFY, /PARAM, /NOPRINT, /PRIORITY,
-// /RESTART, /RETAIN, and the working-set values.
+// /REQUEUE, /RESTART, /RESTART_VALUE, /RETAIN, and the working-set values.
 func jobOptions(j *jobqueue.Job) []string {
 	var items []string
 
@@ -763,8 +774,23 @@ func jobOptions(j *jobqueue.Job) []string {
 
 	add("/PRIORITY=%d", j.Priority)
 
+	// A job being requeued (STOP/QUEUE/REQUEUE), its restart, and its
+	// last SET RESTART_VALUE, as VMS 7.1 showed them (cases 307 and 309).
+	if r := j.Requeue; r != nil {
+		to := r.Queue
+		if to == "" {
+			to = j.Queue
+		}
+
+		add("/REQUEUE=%s", to)
+	}
+
 	if j.Restart {
 		add("/RESTART=%s", j.Queue)
+	}
+
+	if j.RestartValue != "" {
+		add("/RESTART_VALUE=%q", j.RestartValue)
 	}
 
 	switch j.Retain {

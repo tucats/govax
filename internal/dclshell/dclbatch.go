@@ -30,7 +30,8 @@ import (
 //     handling are a procedure's, and counts that level as level 0
 //     (Shell.batchBase);
 //   - the first file is verified as the login procedures leave verification
-//     (off), and each later one starts verified;
+//     (off), and each later one starts verified; a restart begins with the
+//     file its last run stopped in (BatchJob.First);
 //   - a file that ends with an error or a severe error ends the job (its
 //     EXIT's status, or a command's that DCL's ON action ended it on, with
 //     no message for it in the log); one ending with a warning goes on to
@@ -74,11 +75,16 @@ func (cli *subprocessCLI) runBatch() {
 	status := uint32(ssNormal)
 
 	for i, file := range b.Files {
+		// A restart goes on from the file its last run stopped in.
+		if i < b.First {
+			continue
+		}
+
 		if !c.Running() || c.stopping {
 			break
 		}
 
-		if i > 0 {
+		if i > b.First {
 			c.Verify = true
 		}
 
@@ -128,4 +134,22 @@ func errorStatus(err error) uint32 {
 	}
 
 	return ssAbort
+}
+
+// setRestartValue is SET RESTART_VALUE=value: in a batch job, the value
+// its restart finds in BATCH$RESTART, kept by the queue manager
+// (corevms's SetRestartValue); the run's own symbols are left as they are,
+// as VMS 7.1 left them (BAT98X1's log: BATCH$RESTART still undefined).
+// Elsewhere it does nothing. A value longer than 255 characters is DCL's
+// TKNOVF, the DCL Dictionary's limit.
+func (c *Interpreter) setRestartValue(value string) error {
+	if len(value) > maxWriteItem {
+		return vmserrors.NewSegment(vmserrors.CLI_TKNOVF, value[:maxWriteItem])
+	}
+
+	if c.RTL == nil {
+		return nil
+	}
+
+	return c.RTL.SetRestartValue(value)
 }

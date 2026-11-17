@@ -32,4 +32,23 @@ $ if f$getdvi("MDA0","MNT") then -
 $ set on
 $!  -- scratch volume: end --
 $!
+$!  A batch queue (HELP SUBMIT, HELP START /QUEUE). The queue manager
+$!  keeps its queues and jobs in a host file (vax.queue.file, by default
+$!  ~/.govax/qman.json) that outlives govax, and starts again by itself
+$!  when govax starts, but every queue comes back stopped: these lines,
+$!  once you take the "$! " from the front of each, start the manager the
+$!  first time, make the batch queue SYS$BATCH if there is none, and start
+$!  it, so that SUBMIT works without /QUEUE. They need a SYSTEM session
+$!  (OPER and SYSNAM). If another govax session runs the queue manager,
+$!  they say so, and startup goes on.
+$!
+$!  -- batch queue: begin --
+$! $ set noon
+$! $ start/queue/manager
+$! $ if f$getqui("DISPLAY_QUEUE","QUEUE_NAME","SYS$BATCH") .eqs. "" then -
+$!      initialize/queue/batch sys$batch
+$! $ start/queue sys$batch
+$! $ set on
+$!  -- batch queue: end --
+$!
 $ exit

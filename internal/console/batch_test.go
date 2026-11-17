@@ -2,6 +2,7 @@ package console_test
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,17 @@ var bat98VAXLog = filepath.Join("..", "..", "testdata", "bat98", "vax", "bat98.l
 func batchConsole(t *testing.T) (*console.Console, func(string) string) {
 	t.Helper()
 
+	return batchSession(t, filepath.Join(t.TempDir(), "bat98.dsk"), filepath.Join(t.TempDir(), "qman.json"), true)
+}
+
+// batchSession is batchConsole on the volume container dsk and the queue
+// database path: with fresh, both made new and the manager started, as
+// batchConsole's; otherwise a later session of the same govax, the volume
+// mounted as it was left and the manager started as a session starts it
+// (ResumeQueueManager), with whatever the database says.
+func batchSession(t *testing.T, dsk, path string, fresh bool) (*console.Console, func(string) string) {
+	t.Helper()
+
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
@@ -46,7 +58,6 @@ func batchConsole(t *testing.T) (*console.Console, func(string) string) {
 		return strings.ReplaceAll(out.String(), "\r", "")
 	}
 
-	path := filepath.Join(t.TempDir(), "qman.json")
 	c.QueueFile = path
 	c.RTL.System.SetQueueFile(path)
 
@@ -54,9 +65,7 @@ func batchConsole(t *testing.T) (*console.Console, func(string) string) {
 		t.Fatalf("AddIdentifier: %#x", status)
 	}
 
-	dsk := filepath.Join(t.TempDir(), "bat98.dsk")
-
-	for _, line := range []string{
+	setup := []string{
 		`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD53 BAT98`,
 		`MOUNT/WRITE DUA1 "` + dsk + `"`,
 		"CREATE/DIRECTORY DUA1:[BAT98LOG]",
@@ -68,16 +77,39 @@ func batchConsole(t *testing.T) (*console.Console, func(string) string) {
 		"DEFINE/JOB/EXECUTIVE_MODE SYS$LOGIN DUA1:[SYSMGR]",
 		"SET DEFAULT DUA1:[SYSMGR]",
 		"START/QUEUE/MANAGER",
-	} {
-		if got := dispatch(line); strings.Contains(got, "%") && !strings.Contains(got, "-I-") {
+	}
+
+	if !fresh {
+		setup = []string{
+			`MOUNT/WRITE DUA1 "` + dsk + `"`,
+			"DEFINE/SYSTEM/EXECUTIVE_MODE BAT98$DISK DUA1:",
+			"DEFINE/JOB/EXECUTIVE_MODE SYS$LOGIN DUA1:[SYSMGR]",
+			"SET DEFAULT DUA1:[SYSMGR]",
+		}
+	}
+
+	// A second session's START/QUEUE/MANAGER, while another runs the
+	// manager, is refused (TestBatchSecondSession checks it).
+	for _, line := range setup {
+		if got := dispatch(line); strings.Contains(got, "%") && !strings.Contains(got, "-I-") && !strings.Contains(got, "QMANNOTSTARTED") {
 			t.Fatalf("%s: %s", line, got)
 		}
 	}
 
-	for _, name := range []string{
+	if !fresh {
+		c.ResumeQueueManager()
+	}
+
+	procedures := []string{
 		"bat98ok.com", "bat98wrn.com", "bat98err.com", "bat98fat.com", "bat98bad.com",
 		"bat98w.com", "bat98c.com", "bat98o.com", "bat98r.com", "bat98j.com",
-	} {
+	}
+
+	if !fresh {
+		procedures = nil // on the volume already
+	}
+
+	for _, name := range procedures {
 		src, err := filepath.Abs(filepath.Join("..", "..", "testdata", "bat98", name))
 		if err != nil {
 			t.Fatal(err)
@@ -508,6 +540,91 @@ func TestBatchLaterSectionsOracle(t *testing.T) {
 
 	steps := probeSteps(probeLogSection(t, "ORDER", "RESTART"))
 	runSteps(t, dispatch, steps[:len(steps)-1], laterDifferences)
+
+	// RESTART's entries start at 91 (subtask 10).
+	if err := jobqueue.Update(c.QueueFile, func(d *jobqueue.Database) error {
+		d.NextEntry = 91
+
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	steps = probeSteps(probeLogSection(t, "RESTART", "THE JOB'S VIEW"))
+	runSteps(t, dispatch, steps[:len(steps)-1], restartDifferences(steps))
+}
+
+// restartDifferences are RESTART's steps (cases 306 to 319) where govax's
+// output isn't VMS's, made from VMS's own: laterDifferences, and these.
+//
+// On the VAX a requeued job's process took a moment to go, so the SHOW
+// straight after STOP/QUEUE/REQUEUE found it "Aborting" (cases 309, 313,
+// 317), and case 318's /RELEASE came while it still ran (EXECUTING), which
+// left it holding and stalled the probe until a release by hand (the
+// README's "Round 1"). govax ends the process between process 1's
+// commands, so the job has been requeued by then: X1 and X2 have run
+// again and gone (their queue keeps only failures), X3 is holding,
+// checkpointed, and the /RELEASE takes it. The queue is idle, and BAT98G9,
+// a LOG FILES job this test doesn't replay, isn't there.
+func restartDifferences(steps []probeStep) map[string]string {
+	diffs := maps.Clone(laterDifferences)
+
+	previous := ""
+	for _, s := range steps {
+		key := previous + "|" + s.command
+		previous = s.command
+
+		switch key {
+		case `WRITE SYS$OUTPUT "== 309"|SHOW QUEUE/FULL/ALL BAT98_A`,
+			`WRITE SYS$OUTPUT "== 313"|SHOW QUEUE/FULL/ALL BAT98_A`:
+			want := dropEntries(s.want, "91", "92", "78")
+			diffs[key] = strings.Replace(want, "BAT98_A, available,", "BAT98_A, idle,", 1)
+		}
+	}
+
+	diffs["SHOW ENTRY/FULL 93"] = strings.Join([]string{
+		"  Entry  Jobname         Username     Blocks  Status",
+		"  -----  -------         --------     ------  ------",
+		"     93  BAT98X3         SYSTEM               Holding",
+		"         On idle batch queue BAT98_A",
+		`         Submitted 16-NOV-2026 11:27:28.15 /KEEP /LOG=DUA1:[BAT98LOG]BAT98X3.LOG; /PARAM=("BAT98X3") /NOPRINT /PRIORITY=100 `,
+		`         /RESTART=BAT98_A /RESTART_VALUE="STEP2"`,
+		"         File: _GOVAX$DUA1:[000000]BAT98R.COM;1 (checkpointed)",
+		"",
+	}, "\n")
+	diffs["SET ENTRY 93/RELEASE"] = ""
+	diffs["SET ENTRY 93/RELEASE|SHOW SYMBOL $STATUS"] = "  $STATUS == \"%X10040001\"\n"
+	diffs[`IF X3 .NES. "" THEN SYNCHRONIZE/ENTRY=93`] = ""
+
+	return diffs
+}
+
+// dropEntries is SHOW QUEUE's output without the jobs entries: each a
+// row with its number and the lines after it, to the blank line that ends
+// its paragraph (and that blank line).
+func dropEntries(out string, entries ...string) string {
+	var kept []string
+
+	dropping := false
+
+	for _, line := range strings.SplitAfter(out, "\n") {
+		row := strings.TrimLeft(line, " ")
+		if slices.ContainsFunc(entries, func(e string) bool { return strings.HasPrefix(row, e+"  ") }) {
+			dropping = true
+
+			continue
+		}
+
+		if dropping {
+			dropping = line != "\n"
+
+			continue
+		}
+
+		kept = append(kept, line)
+	}
+
+	return strings.TrimRight(strings.Join(kept, ""), "\n") + "\n"
 }
 
 // TestBatchLogFilesOracle holds where each job's log went to BAT98.LOG's

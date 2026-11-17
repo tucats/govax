@@ -55,8 +55,11 @@ import (
 //
 // The processes the database's jobs run in are known only to this
 // System (System.batch, by entry): a job left executing by a session that
-// ended, or by an INITIALIZE/MEMORY, has none, and subtask 10's recovery
-// is what deals with it.
+// ended, or by an INITIALIZE/MEMORY, has none. A session's end ends its
+// jobs (EndSessionJobs), the next session to run the manager recovers
+// what a session that ended without doing so left (queues.go's
+// recoverQueues), and a new System ends the old one's (EndOrphanedJobs):
+// each requeued as a restart if /RESTART, else ended with JBC$_QUERESET.
 
 // BatchJob is what a batch job's CLI runs (CLIStartup.Batch).
 type BatchJob struct {
@@ -76,6 +79,10 @@ type BatchJob struct {
 	// RestartValue is BATCH$RESTART's value then.
 	Restarted    bool
 	RestartValue string
+
+	// First is the index in Files of the file the run begins with: 0, or
+	// for a restart the file its last run stopped in (jobqueue's Job.File).
+	First int
 
 	// LGICMD is the account's login procedure, "" for SYS$LOGIN:LOGIN.COM;
 	// Device and Directory its home, SYS$LOGIN.
@@ -99,9 +106,28 @@ type batchRun struct {
 
 // SetBatchFile records that env's batch job now runs its file with index
 // i, as SHOW QUEUE/FULL shows it ("File: ... (executing)").
+//
+// The database keeps it too (jobqueue's SetJobFile), so that a restart,
+// in this session or the next, begins with that file.
 func (env *Environment) SetBatchFile(i int) {
-	if env.batch != nil {
-		env.batch.file = i
+	if env.batch == nil {
+		return
+	}
+
+	if env.batch.file == i {
+		return
+	}
+
+	env.batch.file = i
+
+	// StartJob recorded the run's first file; only a move past it is
+	// written.
+	if m := env.System.queues; m.Running() {
+		entry := env.batch.entry
+
+		_ = jobqueue.Update(m.path, func(d *jobqueue.Database) error {
+			return d.SetJobFile(entry, i)
+		})
 	}
 }
 
@@ -187,6 +213,7 @@ func (sys *System) settleJobs(d *jobqueue.Database) []func() {
 	now := goTime(sys.now())
 
 	d.ReleaseDue(now)
+	d.ExpireRetained(now)
 
 	var after []func()
 
@@ -285,11 +312,11 @@ func (env *Environment) startBatchJob(q *jobqueue.Queue, j *jobqueue.Job) uint32
 
 	child.Startup.CLI = &CLIStartup{Login: true, Batch: &BatchJob{
 		Entry: j.Entry, Name: j.Name, Queue: j.Queue, Files: files, Parameters: j.Parameters,
-		Restarted: j.Restarted, RestartValue: j.RestartValue,
+		Restarted: j.Restarted, RestartValue: j.RestartValue, First: j.File,
 		LGICMD: r.LGICMD, Device: r.Device, Directory: r.Directory,
 	}}
 
-	run := &batchRun{entry: j.Entry, env: child}
+	run := &batchRun{entry: j.Entry, env: child, file: j.File}
 	child.batch = run
 	child.batchLog = log
 
@@ -608,6 +635,105 @@ func (env *Environment) AbortJob(entry int, queue string) error {
 
 		return err
 	})
+}
+
+// RequeueJob is STOP/QUEUE/REQUEUE[=to]/ENTRY=entry queue[/HOLD]
+// (the DCL Dictionary's STOP/QUEUE/REQUEUE): the executing job's process
+// stopped, and the job requeued when it has gone, to the queue to names
+// ("" for its own), held if hold says, its next run a restart ($RESTART
+// "TRUE", BATCH$RESTART its last SET RESTART_VALUE), whether or not it
+// was submitted /RESTART, as VMS 7.1 requeued BAT98X2. Its checks are
+// AbortJob's, with JBC$_NOSUCHQUE for a to that isn't there; the process
+// needs delete access to the job.
+func (env *Environment) RequeueJob(entry int, queue, to string, hold bool) error {
+	now := env.queueNow()
+
+	if st, err := env.managerHere(); err != nil || st != 0 {
+		return queueResult(st, err)
+	}
+
+	return env.System.updateJobs(func(d *jobqueue.Database) error {
+		j := d.Job(entry)
+		if j == nil || queue != "" && d.Queue(queueName(queue)) != d.Queue(j.Queue) {
+			return queueStatus(jbcNoSuchJob)
+		}
+
+		if j.Status != jobqueue.JobExecuting {
+			return queueStatus(vmsdef.Symbols["JBC$_JOBNOTEXEC"])
+		}
+
+		if _, err := env.deletableJob(d, entry, queue); err != nil {
+			return err
+		}
+
+		r := jobqueue.Requeue{Hold: hold}
+		if to != "" {
+			r.Queue = queueName(to)
+		}
+
+		_, err := d.RequeueJob(entry, "", r, now)
+
+		return err
+	})
+}
+
+// SetRestartValue is SET RESTART_VALUE=value in a batch job: the value
+// the job's next run, if it is a restart, finds in BATCH$RESTART, kept in
+// the database (and shown by SHOW ENTRY/FULL as /RESTART_VALUE). The
+// running job's own BATCH$RESTART isn't changed: VMS 7.1's SHOW SYMBOL
+// BATCH$RESTART after it was UNDSYM (BAT98X1's log). Outside a batch job
+// it does nothing (the DCL Dictionary: "meaningful only in command
+// procedures"; unconfirmed that VMS says nothing).
+func (env *Environment) SetRestartValue(value string) error {
+	if env.batch == nil {
+		return nil
+	}
+
+	if st, err := env.managerHere(); err != nil || st != 0 {
+		return queueResult(st, err)
+	}
+
+	entry := env.batch.entry
+
+	return jobqueue.Update(env.System.queues.path, func(d *jobqueue.Database) error {
+		return d.SetRestartValue(entry, value)
+	})
+}
+
+// ExecutingJobs is how many batch jobs this session runs now: those whose
+// processes its System has.
+func (sys *System) ExecutingJobs() int { return len(sys.batch) }
+
+// EndSessionJobs is what a session's end does with the batch jobs it runs
+// (Decision 11): each is ended as VMS's shutdown ends a job (the probe's
+// reboot), requeued and checkpointed if /RESTART, else ended with
+// JBC$_QUERESET and retained as /RETAIN says; nothing new is started, and
+// the session lets the manager's lock go, so another session may run it.
+// Their processes go with the session. It returns how many were requeued
+// and how many ended.
+func (sys *System) EndSessionJobs() (requeued, ended int, err error) {
+	m := sys.queues
+	if !m.Running() || len(sys.batch) == 0 {
+		return 0, 0, nil
+	}
+
+	now := goTime(sys.now())
+
+	err = jobqueue.Update(m.path, func(d *jobqueue.Database) error {
+		r, e := d.EndRuns(now, func(entry int) bool { return sys.batch[entry] == nil })
+		requeued, ended = len(r), len(e)
+
+		return nil
+	})
+
+	for entry, run := range sys.batch {
+		run.env.batch = nil
+		delete(sys.batch, entry)
+	}
+
+	m.Close()
+
+	return requeued, ended, err
 }
 
 // noteNext keeps the database's next /AFTER time for the scheduler

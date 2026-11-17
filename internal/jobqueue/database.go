@@ -268,6 +268,12 @@ type Job struct {
 	Restarted    bool `json:"restarted,omitempty"`
 	Checkpointed bool `json:"checkpointed,omitempty"`
 
+	// File is the index in Files of the file the job runs, or, after a
+	// run that was requeued, the file its restart begins with: a restart
+	// goes on from the file it stopped in (govax's choice, unconfirmed:
+	// the probe's restarted jobs had one file each).
+	File int `json:"file,omitempty"`
+
 	// PID is the executing job's process, known only to the session
 	// running it; it isn't saved.
 	PID uint32 `json:"-"`
@@ -501,6 +507,8 @@ func (j *Job) check() error {
 		return fmt.Errorf("no user")
 	case len(j.Files) == 0:
 		return fmt.Errorf("no files")
+	case j.File < 0 || j.File >= len(j.Files):
+		return fmt.Errorf("file %d is not one of its %d files", j.File, len(j.Files))
 	case len(j.Parameters) > MaxParameters:
 		return fmt.Errorf("%d parameters, more than %d", len(j.Parameters), MaxParameters)
 	case j.Priority < 0 || j.Priority > MaxJobPrio:

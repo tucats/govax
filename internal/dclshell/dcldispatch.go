@@ -404,6 +404,9 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 	})
 	g.Bind("SET_CONTROL", func(id int64, r *dcl.Result) error { return c.setControlCommand(r) })
 	g.Bind("SET_ON", func(id int64, r *dcl.Result) error { return c.SetOn(!r.Negated("WHAT")) })
+	// SET RESTART_VALUE=string: BATCH$RESTART for a batch job's restart
+	// (docs/planning/PHASE-98 - batch queues.md, subtask 10).
+	g.Bind("SET_RESTART_VALUE", func(id int64, r *dcl.Result) error { return c.setRestartValue(r.String("TEXT")) })
 	// SET PROMPT="text" changes the console's prompt.
 	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })
 }

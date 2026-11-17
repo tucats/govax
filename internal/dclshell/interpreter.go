@@ -243,3 +243,9 @@ func (c *Interpreter) SetRoute(route func(line string) error) { c.route = route 
 // Finish ends the session after the command running now: Running
 // reports false from then on.
 func (c *Interpreter) Finish() { c.quit = true }
+
+// Resume undoes an end the user took back: EXIT or LOGOUT at the prompt
+// with batch jobs executing, answered No (cmd/govax; docs/planning/
+// PHASE-98 - batch queues.md, Decision 11). The console reads commands
+// again.
+func (c *Interpreter) Resume() { c.quit = false }

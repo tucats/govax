@@ -450,8 +450,30 @@ func (d *Database) StartJob(entry int, now time.Time) (*Job, error) {
 	}
 
 	j.Started = now
+	if !j.Restarted {
+		j.File = 0
+	}
 
 	return j, nil
+}
+
+// SetJobFile records that the executing job entry runs its file with
+// index file, where a restart of it would begin (Job.File).
+func (d *Database) SetJobFile(entry, file int) error {
+	j, err := d.job(entry, "")
+	if err != nil {
+		return err
+	}
+
+	if j.Status != JobExecuting {
+		return refuse("JBC$_JOBNOTEXEC")
+	}
+
+	if file >= 0 && file < len(j.Files) {
+		j.File = file
+	}
+
+	return nil
 }
 
 // ReleaseDue makes every job held until a time that has come (now or
@@ -469,12 +491,24 @@ func (d *Database) ReleaseDue(now time.Time) []*Job {
 	return due
 }
 
-// NextTime is the earliest time a job is held until, the manager's next
-// timer; ok is false when no job waits for a time.
+// NextTime is the earliest time a job is held until, or a job retained
+// /RETAIN=UNTIL is to go (ExpireRetained), the manager's next timer; ok
+// is false when no job waits for a time.
 func (d *Database) NextTime() (t time.Time, ok bool) {
 	for _, j := range d.Jobs {
-		if j.Status == JobTimed && (!ok || j.After.Before(t)) {
-			t, ok = j.After, true
+		var at time.Time
+
+		switch {
+		case j.Status == JobTimed:
+			at = j.After
+		case j.Status == JobRetained && j.Retain == RetainUntil:
+			at = j.RetainUntil
+		default:
+			continue
+		}
+
+		if !ok || at.Before(t) {
+			t, ok = at, true
 		}
 	}
 
@@ -505,8 +539,7 @@ func keeps(j *Job, q *Queue, cond uint32) bool {
 	case RetainAlways:
 		return true
 	case RetainUntil:
-		// Kept until its time; letting it go then is the manager's
-		// (unconfirmed: the probe's /RETAIN=UNTIL job never ran).
+		// Kept until its time, when ExpireRetained lets it go.
 		return true
 	case RetainError:
 		return cond&1 == 0
@@ -581,22 +614,32 @@ func (d *Database) Finish(entry int, status uint32, now time.Time) *Job {
 
 // Recover is what a session starting the manager does with what the last
 // session left (Decision 11, held to the probe's reboot, A.4): every queue
-// stopped, as VMS's non-autostart queues come back; a job left executing
-// requeued, pending, a restart (checkpointed if it has a restart value),
-// if it was submitted /RESTART or STOP/QUEUE/REQUEUE had asked; any other
-// ended with JBC$_QUERESET (or the JBC$_JOBABORT it was already being
-// ended with), retained as /RETAIN says, or removed if DELETE/ENTRY had
-// asked. It returns the jobs
-// requeued and the jobs ended, in that order of interest to a report.
-func (d *Database) Recover(now time.Time) (requeued, ended []*Job) {
+// stopped, as VMS's non-autostart queues come back, and EndRuns for the
+// jobs left executing. alive, if not nil, says which executing jobs still
+// have a process in the session starting the manager (one that stopped
+// and started it again): those are left running.
+func (d *Database) Recover(now time.Time, alive func(entry int) bool) (requeued, ended []*Job) {
 	for _, q := range d.Queues {
 		q.State = QueueStopped
 	}
 
+	return d.EndRuns(now, alive)
+}
+
+// EndRuns ends every executing job whose run has gone with the session
+// that ran it (a session's end, or an INITIALIZE/MEMORY, whose processes
+// went with the System; alive, if not nil, names those that still run):
+// requeued, pending, a restart (checkpointed if it has a restart value),
+// if it was submitted /RESTART or STOP/QUEUE/REQUEUE had asked; any other
+// ended with JBC$_QUERESET (or the JBC$_JOBABORT it was already being
+// ended with), retained as /RETAIN says, or removed if DELETE/ENTRY had
+// asked. It returns the jobs requeued and the jobs ended, in that order
+// of interest to a report.
+func (d *Database) EndRuns(now time.Time, alive func(entry int) bool) (requeued, ended []*Job) {
 	reset := vmsdef.Symbols["JBC$_QUERESET"]
 
 	for _, j := range slices.Clone(d.Jobs) {
-		if j.Status != JobExecuting {
+		if j.Status != JobExecuting || alive != nil && alive(j.Entry) {
 			continue
 		}
 
@@ -619,6 +662,25 @@ func (d *Database) Recover(now time.Time) (requeued, ended []*Job) {
 	}
 
 	return requeued, ended
+}
+
+// ExpireRetained removes each job retained /RETAIN=UNTIL whose time has
+// come (now or before), as the DCL Dictionary says (SUBMIT/RETAIN: "the
+// job will automatically be deleted from the queue"), and returns them.
+// A job retained by its queue's /RETAIN is kept indefinitely; one whose
+// own /RETAIN=UNTIL kept it is let go. (Unconfirmed: the probe's
+// /RETAIN=UNTIL job never ran.)
+func (d *Database) ExpireRetained(now time.Time) []*Job {
+	var gone []*Job
+
+	for _, j := range slices.Clone(d.Jobs) {
+		if j.Status == JobRetained && j.Retain == RetainUntil && !j.RetainUntil.After(now) {
+			d.removeJob(j)
+			gone = append(gone, j)
+		}
+	}
+
+	return gone
 }
 
 // MoveJob is SET ENTRY/REQUEUE=queue of a job not executing: entry moved

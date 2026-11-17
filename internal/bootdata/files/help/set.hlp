@@ -653,6 +653,37 @@
 
      Prints 00000020.
 
+2 RESTART_VALUE
+
+   Sets the place a batch job goes on from if it is restarted: a label of
+   its command procedure.  A job is restarted when STOP/QUEUE/REQUEUE
+   stops it, or, if it was submitted /RESTART, when the govax session
+   running it ends (HELP SUBMIT /RESTART).  Its restarted run finds the
+   value in the global symbol BATCH$RESTART, and $RESTART is "TRUE";
+   otherwise $RESTART is "FALSE" and BATCH$RESTART isn't defined.  The
+   run that sets the value doesn't see it: BATCH$RESTART stays as it was.
+   SHOW ENTRY/FULL shows the job's value as /RESTART_VALUE.
+
+   Outside a batch job it does nothing.
+
+   Format
+
+     SET RESTART_VALUE=string
+
+   The string is up to 255 characters.
+
+3 Examples
+
+   1.$ IF $RESTART THEN GOTO 'BATCH$RESTART'
+     $ STEP1:
+     $ SET RESTART_VALUE=STEP1
+     $ RUN BUILD
+     $ STEP2:
+     $ SET RESTART_VALUE=STEP2
+     $ RUN TEST
+
+     A restartable procedure: a restart goes on with the step it was in.
+
 2 SECURITY
 
    Changes a file's security profile: its owner, its protection code,

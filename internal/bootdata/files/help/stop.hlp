@@ -91,10 +91,19 @@
    %JBC-E-JOBNOTEXEC.  It needs delete access to the job (your own
    through the queue's owner field) or manage access to the queue.
 
+   With /REQUEUE and /ENTRY=n it stops the executing job n and puts it
+   back in a queue, its own or the one /REQUEUE names, held there with
+   /HOLD.  Its next run is a restart, whether or not it was submitted
+   /RESTART: $RESTART is "TRUE" in it, BATCH$RESTART its last SET
+   RESTART_VALUE, and it begins with the file it was stopped in.  Until
+   its process has gone SHOW QUEUE shows it Aborting.  Its checks are
+   /ENTRY's.
+
    Format
 
      STOP/QUEUE[/NEXT|/RESET] queue-name
      STOP/QUEUE/ENTRY=n queue-name
+     STOP/QUEUE/REQUEUE[=queue-name]/ENTRY=n [/HOLD] queue-name
 
 3 Parameter
 
@@ -110,6 +119,11 @@
    Ends the executing job n (%JBC-F-JOBABORT), leaving the queue as it
    is.
 
+/HOLD
+
+   With /REQUEUE: holds the job in the queue it goes back to, until SET
+   ENTRY/RELEASE.
+
 /NEXT
 
    Stops the queue after its executing jobs end.
@@ -117,6 +131,14 @@
 /QUEUE
 
    Selects STOP/QUEUE.
+
+/REQUEUE
+
+   /REQUEUE[=queue-name]
+
+   With /ENTRY=n: stops the executing job n and requeues it, to its own
+   queue or the one named, for a restart.  It goes with neither /NEXT nor
+   /RESET.
 
 /RESET
 
@@ -131,6 +153,11 @@
    2.$ STOP/QUEUE/ENTRY=54 SYS$BATCH
 
      Ends job 54, which SYS$BATCH runs.
+
+   3.$ STOP/QUEUE/REQUEUE/HOLD/ENTRY=93 SYS$BATCH
+
+     Stops job 93 and holds it in SYS$BATCH; SET ENTRY 93/RELEASE starts
+     it again as a restart.
 
 3 /MANAGER
 

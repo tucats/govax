@@ -147,6 +147,11 @@ const (
 	vaxRAMKey
 	vaxRAMSize
 	vaxRAMNoWrite
+
+	// cmd/govax: batch jobs executing as govax ends (docs/planning/
+	// PHASE-98 - batch queues.md, Decision 11).
+	vaxJobsExecuting
+	vaxJobsEnded
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -355,6 +360,14 @@ const (
 	VAX_RAMKEY     = VAXFacility<<FacilityPosition | vaxRAMKey<<MessagePosition | StatusInfo
 	VAX_RAMSIZE    = VAXFacility<<FacilityPosition | vaxRAMSize<<MessagePosition | StatusError
 	VAX_RAMNOWRITE = VAXFacility<<FacilityPosition | vaxRAMNoWrite<<MessagePosition | StatusWarning
+
+	// Batch jobs as govax ends (docs/planning/PHASE-98 - batch queues.md,
+	// Decision 11), govax's own: VAX_JOBSEXECUTING says how many jobs the
+	// session runs, which ending it ends; VAX_JOBSENDED what became of
+	// them, requeued as restarts (/RESTART) or ended with JBC$_QUERESET,
+	// as a VMS system's stop leaves them.
+	VAX_JOBSEXECUTING = VAXFacility<<FacilityPosition | vaxJobsExecuting<<MessagePosition | StatusWarning
+	VAX_JOBSENDED     = VAXFacility<<FacilityPosition | vaxJobsEnded<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -474,6 +487,8 @@ func init() {
 	DefineMessage(VAX_RAMKEY, VAXFacility, "RAMKEY", "the limit is configuration key !S")
 	DefineMessage(VAX_RAMSIZE, VAXFacility, "RAMSIZE", "a RAM disk must have at least !UL blocks, not !UL")
 	DefineMessage(VAX_RAMNOWRITE, VAXFacility, "RAMNOWRITE", "!S has no volume yet; its first mount must be writable")
+	DefineMessage(VAX_JOBSEXECUTING, VAXFacility, "JOBSEXECUTING", "!S executing; ending govax ends !S")
+	DefineMessage(VAX_JOBSENDED, VAXFacility, "JOBSENDED", "batch jobs requeued to restart: !UL; ended (queue reset): !UL")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")
 	DefineMessage(VAX_READLINE, VAXFacility, "READLINE", "Initializing readline")
 }

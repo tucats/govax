@@ -24,8 +24,11 @@ import (
 // changed here. Another session holding it is the batch initiator, and
 // this one may only show queues.
 //
-// What the manager does with jobs (starting them, ending them) is subtask
-// 8's; here it keeps the queues.
+// What the manager does with jobs (starting them, ending them) is
+// batch.go's; here it keeps the queues, starts in a session
+// (ResumeQueueManager, startHere), and recovers what the session that last
+// ran it left (recoverQueues). A session's end, with jobs still executing,
+// is EndSessionJobs's (batch.go).
 
 // QueueManager is the session's queue manager: the database's host file,
 // and the manager's lock while the manager runs in this session.
@@ -83,27 +86,87 @@ func (m *QueueManager) Close() {
 }
 
 // takeLock takes the manager's lock if this session doesn't hold it:
-// 0, or JBC$_QMANNOTSTARTED when another session holds it.
-func (m *QueueManager) takeLock() (uint32, error) {
+// took says it was taken now; status is 0, or JBC$_QMANNOTSTARTED when
+// another session holds it.
+func (m *QueueManager) takeLock() (took bool, status uint32, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.lock != nil {
-		return 0, nil
+		return false, 0, nil
 	}
 
 	lock, err := jobqueue.LockManager(m.path)
 
 	switch {
 	case errors.Is(err, hostlock.ErrLocked):
-		return jbcQmanNotStarted, nil
+		return false, jbcQmanNotStarted, nil
 	case err != nil:
-		return 0, err
+		return false, 0, err
 	}
 
 	m.lock = lock
 
-	return 0, nil
+	return true, 0, nil
+}
+
+// startHere takes the manager's lock for this session and, when it is
+// taken now, recovers what the session that last ran the manager left
+// (recoverQueues). It returns 0 or JBC$_QMANNOTSTARTED.
+func (sys *System) startHere() (uint32, error) {
+	took, st, err := sys.queues.takeLock()
+	if err != nil || st != 0 || !took {
+		return st, err
+	}
+
+	return 0, sys.recoverQueues()
+}
+
+// recoverQueues is the manager's start in a session (Decision 11, held to
+// the probe's reboot): every queue stopped, and every job the database
+// says is executing, but that has no process in this System, ended as a
+// system's stop ends it (jobqueue's Recover): requeued if /RESTART (or
+// STOP/QUEUE/REQUEUE had asked), else ended with JBC$_QUERESET. VMS's
+// manager says nothing of it at boot, and neither does govax's.
+func (sys *System) recoverQueues() error {
+	now := goTime(sys.now())
+
+	return sys.updateJobs(func(d *jobqueue.Database) error {
+		d.Recover(now, func(entry int) bool { return sys.batch[entry] != nil })
+
+		return nil
+	})
+}
+
+// EndOrphanedJobs is a new System's look at a manager that runs here
+// already (the machine's INITIALIZE/MEMORY makes a new System and keeps
+// the session's manager): the old System's batch processes are gone, so
+// each job that was executing is ended as at a session's end
+// (jobqueue's EndRuns); the queues keep their states, and start what
+// they can once the new System has its first process.
+func (sys *System) EndOrphanedJobs() error {
+	if !sys.queues.Running() {
+		return nil
+	}
+
+	now := goTime(sys.now())
+
+	return sys.updateJobs(func(d *jobqueue.Database) error {
+		d.EndRuns(now, func(entry int) bool { return sys.batch[entry] != nil })
+
+		return nil
+	})
+}
+
+// ResumeQueueManager is the manager's start as the session starts
+// (Decision 11, after STARTUP.COM): when the database says the manager was
+// started, and no other session runs it, it runs here from now on, and
+// what the last session left is recovered; otherwise nothing is done
+// (with another session running it, this one may only show queues).
+func (env *Environment) ResumeQueueManager() error {
+	_, err := env.managerHere()
+
+	return err
 }
 
 // The queue manager's statuses.
@@ -148,9 +211,9 @@ func (env *Environment) queueNow() time.Time { return goTime(env.System.now()) }
 // is JBC$_JOBQUEDIS, as VMS refuses a request while its queue manager is
 // stopped; with another session running it, JBC$_QMANNOTSTARTED
 // (Decision 4). A database that says the manager was started, in a
-// session not yet running it, starts it here: VMS starts its manager at
-// boot (Decision 11; until subtask 10, at the first request that needs
-// it).
+// session not yet running it, starts it here (startHere): VMS starts its
+// manager at boot, and so does govax's session (ResumeQueueManager), but
+// the session that held it may have ended since.
 func (env *Environment) managerHere() (uint32, error) {
 	m := env.System.queues
 	if m.Path() == "" {
@@ -170,7 +233,7 @@ func (env *Environment) managerHere() (uint32, error) {
 		return jbcJobQueDis, nil
 	}
 
-	return m.takeLock()
+	return env.System.startHere()
 }
 
 // QueueManagerInfo is what SHOW QUEUE/MANAGER shows.
@@ -229,7 +292,7 @@ func (env *Environment) StartQueueManager(directory string) error {
 		return queueStatus(jbcJobQueDis)
 	}
 
-	if st, err := m.takeLock(); err != nil || st != 0 {
+	if st, err := env.System.startHere(); err != nil || st != 0 {
 		return queueResult(st, err)
 	}
 

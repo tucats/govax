@@ -708,7 +708,7 @@ Each is one commit, with tests, stopping for review.
 9. **`$GETQUI` and `F$GETQUI`** (Decision 9; done 2026-11-16), and `LIB$GETQUI` if the
    probe makes it simple; SHOW QUEUE and SHOW ENTRY moved onto
    `$GETQUI`'s code if they aren't already.
-10. **Restart and the session's end** (Decision 11): the manager at
+10. **Restart and the session's end** (Decision 11; done 2026-11-16): the manager at
     startup, queues back stopped, executing jobs at the end and the
     confirmation, `/RESTART`, SET RESTART_VALUE, `/RETAIN`, a second
     session's refusals, SYSTARTUP_VMS.COM's commented block.
@@ -1290,3 +1290,66 @@ queues is a future phase.
   TRANSLATE_QUEUE of a name that names no queue NOSUCHQUE; DCL's queue
   commands leave F$GETQUI's context alone (the Dictionary says VMS's SHOW
   QUEUE destroys it). Subtask 10, restart and the session's end, is next.
+- **2026-11-16** Subtask 10, restart and the session's end. The manager
+  starts in a session as VMS's starts at boot: cmd/govax calls
+  `Console.ResumeQueueManager` after STARTUP.COM and the configured startup
+  procedure, before the login (not for a one-shot command), and any
+  operation that finds the database saying the manager was started still
+  starts it then (`managerHere`). Whenever this session takes the manager's
+  lock (`System.startHere`), it recovers what the session that last held it
+  left (`recoverQueues`, jobqueue's `Recover`): every queue stopped, every
+  job executing without a process here requeued as a restart if /RESTART
+  (or STOP/QUEUE/REQUEUE had asked), else ended with JBC$_QUERESET and
+  retained as /RETAIN says; `Recover` now takes an `alive` test, so a
+  session that stops and starts its own manager leaves its running jobs
+  alone, and its job part is `EndRuns`. A new System from INITIALIZE/MEMORY,
+  whose old batch processes are gone, ends their jobs the same way without
+  stopping queues (`EndOrphanedJobs`, called by the machine's `newRTL`).
+  A session's end: `Console.EndSession` first calls `EndBatchJobs`
+  (corevms's `EndSessionJobs`: `EndRuns` for this session's jobs, their
+  processes detached from the database, the manager's lock let go), so the
+  jobs are left as the VAX's reboot left BOOTR and BOOTN, where before the
+  deleted processes finished them with their own statuses. cmd/govax asks
+  first at a terminal (`confirmEnd`: `%VAX-W-JOBSEXECUTING, 2 batch jobs
+  executing; ending govax ends them`, then `End them and exit? (Y or N)
+  [N]:`), after EXIT or LOGOUT at the prompt or a CTRL/Y; No goes back to
+  the prompt (`Interpreter.Resume`, `attentionStdin.forgetAbort`). Without
+  a terminal (a pipe, a test, a one-shot command) it says so and ends them,
+  with `%VAX-I-JOBSENDED` saying how many were requeued and ended.
+  STOP/QUEUE/REQUEUE[=queue]/ENTRY=n [/HOLD] (`RequeueJob`, AbortJob's checks
+  and JBC$_NOSUCHQUE for a queue that isn't there; /REQUEUE without /ENTRY,
+  or /HOLD without /REQUEUE, CLI$_INSFPRM, and /REQUEUE with /NEXT or /RESET
+  BADQUALIFIERCOMBO, checked by the handler since /REQUEUE's empty default
+  makes it present to a disallow; unconfirmed). SET RESTART_VALUE=string
+  (`dclbatch.go`'s `setRestartValue`, corevms's `SetRestartValue`): the
+  job's value in the database, the running job's own symbols unchanged (VMS
+  7.1's BATCH$RESTART stayed undefined after it, BAT98X1's log); outside a
+  batch job nothing; over 255 characters TKNOVF. A job's current file is
+  in the database (`Job.File`, jobqueue's `SetJobFile`, written by
+  `SetBatchFile` only when a run moves past its first, since a write at
+  every start slowed jobs enough to lose THE JOB LIMIT's race, case 216),
+  and a restart begins with it (`BatchJob.First`; unconfirmed, the probe's
+  restarted jobs had one file each). SHOW ENTRY and SHOW QUEUE: "Aborting"
+  for an executing job being ended or requeued, `/REQUEUE=q` and
+  `/RESTART_VALUE="v"` among /FULL's options, a file "(checkpointed)" for a
+  requeued job with a restart value. /RETAIN=UNTIL lets a job go at its
+  time (jobqueue's `ExpireRetained`, the time in `NextTime`; the DCL
+  Dictionary's words, unconfirmed). Found on the way: a requeued job's next
+  run, started from its old process's deletion, was DUPLNAM, its name
+  BATCH_n still in the process table; `completeBatchJob` now runs after
+  `removeFromTable`. The seeded SYSTARTUP_VMS.COM has the batch queue block,
+  commented (START/QUEUE/MANAGER, SYS$BATCH made if F$GETQUI finds none,
+  START/QUEUE, under SET NOON). Tests: jobqueue's `TestRecoverSparesLiveJobs`,
+  `TestRequeueKeepsFile`, and `TestExpireRetained`; `TestBatchLaterSectionsOracle`
+  now holds RESTART (cases 306 to 319) to VMS's output, the logs of both runs
+  of each job VMS's, but for `restartDifferences` (the "Aborting" SHOWs and
+  the refused /RELEASE, above); `internal/console/batchrestart_test.go`:
+  `TestBatchRestartAcrossSessions` (the reboot as two sessions on one volume
+  and database, the second's SHOW QUEUE/FULL/ALL VMS's after its boot and
+  BOOTR's restarted log VMS's), `TestBatchRecoverAfterCrash` (a session that
+  ended without ending its jobs), `TestBatchSecondSession` (QMANNOTSTARTED
+  to a second session's STOP/QUEUE, SUBMIT, and START/QUEUE/MANAGER; SHOW
+  works), `TestSystartupBatchBlock` (the block uncommented, run twice); and
+  cmd/govax's `TestRun_endWithJobs`. HELP STOP /QUEUE (/REQUEUE, /HOLD), SET
+  RESTART_VALUE (new), SUBMIT /RESTART and /RETAIN. Subtask 11, end to end,
+  is next.

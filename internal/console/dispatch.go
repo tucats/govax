@@ -265,6 +265,23 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().StartQueue(r.String("QUEUE_NAME"), queueOptions(r))
 	})
 	g.Bind("STOP_QUEUE", func(id int64, r *dcl.Result) error {
+		requeue := r.Present("REQUEUE") && !r.Defaulted("REQUEUE")
+
+		if requeue {
+			for _, other := range []string{"NEXT", "RESET"} {
+				if r.Present(other) {
+					return vmserrors.New(vmserrors.CLI_BADQUALIFIERCOMBO, other, "REQUEUE")
+				}
+			}
+		}
+
+		if requeue || r.Present("HOLD") {
+			return d.Console.cmd().RequeueJob(dclcmd.Requeue{
+				Entry: int(r.Int("ENTRY")), HasEntry: r.Present("ENTRY"), Queue: r.String("QUEUE_NAME"),
+				To: r.String("REQUEUE"), Requeue: requeue, Hold: r.Present("HOLD"),
+			})
+		}
+
 		if r.Present("ENTRY") {
 			return d.Console.cmd().AbortJob(int(r.Int("ENTRY")), r.String("QUEUE_NAME"))
 		}

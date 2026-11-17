@@ -347,6 +347,17 @@ func (s *attentionStdin) abortRequested() bool {
 	return false
 }
 
+// forgetAbort takes back a CTRL/Y's end of govax, when the user, asked
+// whether to end the batch jobs it would end, says No (main.go's
+// confirmEnd): the key is forgotten, here and in the engine.
+func (s *attentionStdin) forgetAbort() {
+	s.aborting.Store(false)
+
+	if e := s.getEngine(); e != nil {
+		e.ClearAttention()
+	}
+}
+
 // Read is the programs' read of the terminal (Console.In), delivering one
 // byte per call regardless of len(p), as Console.ConsoleReadByte reads
 // them. A read waiting for input ends with errReadInterrupted when CTRL/C

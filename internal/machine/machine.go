@@ -470,6 +470,12 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	sys.SetQueueManager(m.queues)
 
+	// A manager this session already runs had its jobs' processes in the
+	// old System, gone with it: they end as at a session's end.
+	if err := sys.EndOrphanedJobs(); err != nil {
+		fmt.Fprintf(m.Hooks.Output(), "%%GOVAX-W-QUEUES, ending the old system's batch jobs: %v\n", err)
+	}
+
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/planning/PHASE-45.md, subtask 5).
 	sys.ActivateImage = m.ActivateCreatedImage
