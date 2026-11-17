@@ -6,8 +6,9 @@ and questions for the author), is done (2026-11-17), every recommendation
 accepted by the author ("The author's answers"); subtask 2, the scope
 chain, subtask 3, `::` declarations and attributes, subtask 4, kind
 selectors and kinds on constants, subtask 5, INTEGER(1), subtask 6,
-the kind and inquiry functions, and subtask 7, COMPLEX(16), are done
-(2026-11-17); subtask 8, programs end to end, is next. Needs Phase 99.
+the kind and inquiry functions, subtask 7, COMPLEX(16), and subtask 8,
+programs end to end, are done (2026-11-17); subtask 9, the close-out, is
+next. Needs Phase 99.
 
 ## Goal
 
@@ -308,7 +309,8 @@ and 7), and COMPLEX(16) by question 1's answer.
 7. **COMPLEX(16)**, as far as question 1's answer takes it (done
    2026-11-17).
 8. **Programs end to end** (`testdata/fortran90`: declarations of every form, a
-   program portable to gfortran using `SELECTED_REAL_KIND` and `KIND=`).
+   program portable to gfortran using `SELECTED_REAL_KIND` and `KIND=`) (done
+   2026-11-17).
 9. **Close-out**: FORTRAN-INTERNALS.md's section 25 (scopes and kinds),
    MANUAL.md's 14.13, HELP FORTRAN.
 
@@ -568,3 +570,22 @@ The author accepted every recommendation:
   indexes, each address checked by hand), and `testdata/fortran90/cplx16.f90`,
   run in every mode and the same on gfortran (`compare.py`), its one third to
   33 digits. MANUAL.md's 14.13 and HELP FORTRAN say what is compiled.
+- **2026-11-17, subtask 8 (done):** programs end to end. Two programs in
+  `testdata/fortran90`, each worked by hand (the numbers by exact rational
+  arithmetic) and run by `TestFortran90Programs` in every mode, paging off and
+  on. `precise.f90` is portable: each unit asks for its precision by
+  SELECTED_REAL_KIND(P=12) and SELECTED_INT_KIND, every constant has its kind,
+  every conversion says KIND=; IMPLICIT REAL(SELECTED_REAL_KIND(P=12)), a kind
+  named by KIND of a dummy, a RESULT variable, a function passed as an
+  argument; Newton's square root, Simpson's rule for pi, a loan's payments, a
+  quadratic's complex roots. It prints the same on gfortran with no known
+  difference (`compare.py`'s PROGRAMS90): kind 8 is D_floating here and IEEE
+  double there, and nothing it prints tells them apart. `forms.f90` is every
+  declaration form the phase compiles in one program, Fortran 90's beside VAX
+  FORTRAN's (attributes both ways, `*n` after a name overriding a selector,
+  IMPLICIT with kinds, `/clist/`, DATA, and `=`, COMMON and EQUIVALENCE of
+  names declared with `::`, STATIC and AUTOMATIC, INTEGER\*1, BYTE, DOUBLE
+  COMPLEX, COMPLEX(16)); DEC's forms keep it from gfortran. Both compiled and
+  ran as written but for two forms of later phases, which the programs no
+  longer use: a DO with no control and EXIT (Phase 101) and an assignment to
+  a whole array (Phase 102). No compiler change was needed.

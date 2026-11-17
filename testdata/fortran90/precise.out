@@ -1,0 +1,18 @@
+Precise enough: T
+----------------------------
+SQRT(2) =  1.414213562373 after 6 tries
+Squares back: T
+PI =  3.141592654
+PI * 10**8 =  314159265
+----------------------------
+Payment:    88.85
+Month  4 owes cents:  67984
+Month  8 owes cents:  34668
+Month 12 owes cents:      0
+Paid off: T
+----------------------------
+Root 1:  -1.000   2.000
+Root 2:  -1.000  -2.000
+Their product:   5.000
+Half the months:  6
+  $STATUS == "%X00000001"

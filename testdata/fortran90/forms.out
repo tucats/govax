@@ -1,0 +1,14 @@
+FORMS  3  4 2
+Bytes:    7   -5  100 A
+Kinds:  4  8  8
+Reals: 1.500  2.2500  0.125
+Implicit REAL(8):  1.6250  8
+DOUBLE COMPLEX:  1.00 -1.00  8
+COMPLEX(16) squared: -3.750  2.000 16
+COMPLEX*8:  3.00 -3.00
+Logicals: T T 2
+Text: ABCD CD forms!
+COMMON:  11  1.0  5.5  2.0  2.0
+Tally:    3   45    7
+Twice:   14   5.0
+  $STATUS == "%X00000001"
