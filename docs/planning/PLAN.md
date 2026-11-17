@@ -150,7 +150,7 @@ questions, and a progress log extended as that phase is worked.
 | 98 | [PHASE-98 - batch queues](PHASE-98%20-%20batch%20queues.md) | Batch queues: a queue manager in Go over a JSON queue database (`vax.queue.file`), batch queues with VMS's protection, SUBMIT and the job commands, batch jobs as detached processes logged in to their accounts, `$SNDJBC`, `$GETQUI`, and `F$GETQUI`, and jobs restarted after a session ends — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 | 99 | [PHASE-99 - Fortran 90](PHASE-99%20-%20Fortran%2090.md) | The Fortran 90 program's plan (Phases 99–111): Fortran 90 joined to VAX FORTRAN in one compiler, `/F90` settling the few texts the two read differently, NCA descriptors for run-time arrays, module files of our own; its groundwork: `/F90` and `/SOURCE_FORM`, free source form, Fortran 90's lexical items, the new statements recognized, named END statements, the Fortran 90 corpus — planned 2026-11-17, the plan accepted the same day; done 2026-11-17 |
 | 100 | [PHASE-100 - Fortran 90 declarations and kinds](PHASE-100%20-%20Fortran%2090%20declarations%20and%20kinds.md) | `::` declarations, attributes, initialization, KIND= and LEN=, kinds on constants, the kind and numeric inquiry intrinsics; sema's scope chain; INTEGER(1) and COMPLEX(16) as new types; KIND= on the conversions and keyword arguments to intrinsics — planned 2026-11-17; done 2026-11-17 |
-| 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE, DO with no control, EXIT, CYCLE, construct names — planned 2026-11-17 |
+| 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE (a CASEL table, a binary search, or a chain), DO with no control, EXIT, CYCLE, construct names; jumps to END IF by Fortran 90's rule — planned 2026-11-17; done 2026-11-17 |
 | 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17 |
 | 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17 |
 | 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17 |
@@ -877,3 +877,25 @@ Phase 100 (done 2026-11-17) is declarations and kinds:
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 25 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 101, control constructs.
+
+Phase 101 (done 2026-11-17) is control constructs:
+
+- **Construct names** on DO, IF, and SELECT CASE, kept on sema's stack of open constructs
+  (`sema/constructs.go`) and checked by the standard's rules (WRONGNAME, MISSINGNAME, NAMEDEND,
+  DUPCONSTRUCT, NAMECLASH); listed by the cross reference.
+- **DO with no loop control, EXIT, and CYCLE:** a DO with no control is a `DoWhile` with no
+  condition; sema resolves each EXIT and CYCLE to its loop (`sema.LoopExit`), and the IR keeps each
+  loop's exit and next-pass blocks (`ir/lowerloops.go`), a counted DO's step code a block of its own
+  only when a CYCLE needs it, so old loops lower as before.
+- **SELECT CASE** on INTEGER, CHARACTER, and LOGICAL: sema's checks (`sema/selectcase.go`: overlaps
+  on the folded values, CASENEVER, CASEBYTE), and its code (`ir/lowerselect.go`): a LOGICAL branch;
+  for INTEGER a CASEL table, a binary search, or a chain, chosen by `caseForm`; for CHARACTER a chain
+  or a search of `CharCmp`s. The IR's `Switch` gained a `Base`.
+- **Jumps to END IF** from any block of the IF or from outside, Fortran 90's rule, under both `/F90`
+  settings; a format given as a character constant has its `"…"` strings given to FTNRTL between
+  apostrophes under `/F90`.
+- **Programs:** `testdata/fortran90`'s `selects`, `tokens`, `loops`, `cases`, and `examples` (the
+  standard's own examples of 8.1), the same on gfortran.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 26 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 102, array expressions.

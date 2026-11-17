@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), and its declarations and kinds (section 25). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), and its control constructs (section 26). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -42,7 +42,7 @@ run-time checks, and what a real program and a real VAX found. Section 21 is a
 map of the files, with what building this one suggests about building another.
 Sections 22 and 23 are later additions: indexed files, and recursive routines. Section 24
 begins Fortran 90: free source form and the new tokens and statements; section 25 is its
-declarations, attributes, and kinds.
+declarations, attributes, and kinds; section 26 its control constructs.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -3091,3 +3091,189 @@ with no listed difference.
 repository compiles to the same bytes as before the phase. That was easier than it sounds only
 because each new form reached an old path (an attribute through its old statement, a kind through
 an old type) instead of a new one beside it.
+
+## 26. Fortran 90: control constructs (Phase 101)
+
+The third part of Fortran 90 is the way a program says where control goes: named constructs,
+a DO with no loop control, EXIT and CYCLE, and SELECT CASE (the standard's 8.1). None of them
+needed anything new below the IR. EXIT and CYCLE are jumps a GO TO could already make, and
+SELECT CASE is comparisons and branches, or the CASEL that section 12 wrote for the computed
+GO TO. The work was in sema, which has to know what each statement belongs to, and in one
+lowering, where SELECT CASE chooses which code to write.
+
+### A name on the stack
+
+Section 12's stack of open constructs (`sema/stmt.go`'s `construct`) held IF blocks and loops,
+and a closing statement found its opener by looking down it. A construct name is one more field
+on each entry, given as the stack opens it (`sema/constructs.go`'s `nameConstruct`), and every
+statement that may repeat it checks it there (`checkName`): an END DO naming nothing when its DO
+was named is MISSINGNAME, one naming another WRONGNAME. Each message says one thing; the survey
+had proposed one for both, which would have had to explain two mistakes at once.
+
+The rule that a construct name can't also be a variable's (the standard's 14.1.2) is checked at
+the unit's *end*, not where the name appears (`checkConstructNames`). A name used later as a
+variable, `OUTER = 1` after `OUTER: DO`, is only a variable once that statement is read, so a check
+at the construct would miss it. By the end the symbol table holds every variable, PARAMETER,
+statement function, and procedure the unit mentions, and one walk over the construct names
+finds every clash.
+
+SELECT CASE is a third kind of construct on the same stack, and section 12's matching code became
+one function (`match`): ELSE IF, ELSE, and END IF look for the innermost IF, CASE and END SELECT
+for the innermost CASE construct, and whatever is still open inside it is DONEST and closed. A
+`sema.Case` embeds an `Arm`, the type an IF's block already was, so everything that walks an IF's
+blocks (adding a statement, giving a label its path for section 12's jump checks) walks a CASE's
+without knowing the difference.
+
+### EXIT and CYCLE belong to a loop, decided once
+
+The standard says which loop an EXIT belongs to: the innermost DO around it, or the one it names.
+That is a question about the stack at the moment the statement is read, so sema answers it
+(`loopExit`) and records the answer: a `sema.LoopExit` points at the `Do` or `DoWhile` it leaves or
+continues. A name not open around it is NOLOOPNAME, and a name that is open but belongs to an IF
+or SELECT CASE is NOTALOOP. Nothing below sema looks at names again.
+
+A DO with no loop control is a `sema.DoWhile` whose condition is nil. That isn't a shortcut: the
+standard *defines* DO WHILE as a DO with no control whose body starts with `IF (.NOT. e) EXIT`, so
+the two are one construct in sema, and `doWhile` in the IR writes the test only if there is one.
+
+### Where the jumps go
+
+The IR keeps a stack of the loops it is lowering (`ir/lowerloops.go`), each with two blocks: *exit*,
+the block after the loop, and *next*, where the next pass begins. EXIT jumps to the first and CYCLE
+to the second, found by looking for the `LoopExit`'s loop on the stack.
+
+*Next* differs by loop. For a DO WHILE it is the test, and for a DO with no control the body's first
+block, both of which exist anyway. For a counted DO it is the step code (the variable stepped, the
+count decreased, the branch back), which section 12 put at the end of the body's last block, so
+there is no block to jump to. A CYCLE makes one, and `endPass` lays it out when the body is done,
+so the step code lands in it. A loop with no CYCLE is lowered exactly as before, block for block.
+`TestNoF90Unchanged` and every golden IR dump depend on that. If the loop ends at a labeled END DO,
+that statement's block already exists, because a GO TO to it means "go on to the next pass", and
+CYCLE uses it.
+
+Because the count lives in a cell (section 12's `$Cn`), not recomputed from the variable, a CYCLE
+can neither lose a pass nor add one. And because these are ordinary jumps, the optimizer needed no
+change. The survey listed three shapes it worried about, and `testdata/fortran90/loops.f90` holds each
+one. A named EXIT out of two counted loops whose variables the allocator put in R6 and R9 leaves through
+a block of its own that stores both back (section 16's edges out of a loop):
+
+```text
+	CMPL	(R7)[R6],#43            ; if (grid(i, j) == 43) exit search
+	BNEQ	LOOPS.$8
+	BRW	LOOPS.$7
+	...
+LOOPS.$7:				; leaving the loop
+	MOVL	R6,LOOPS.I
+	MOVL	R9,LOOPS.J
+	BRW	LOOPS.$11
+```
+
+A CYCLE in a loop that `DoLimits` closes with AOBLEQ is a branch to the AOBLEQ. The standard's
+example 7, a CYCLE in a DO whose terminal statement is a CALL, passes over the CALL as the standard
+says, since the CALL is in the body and the step code comes after it.
+
+### SELECT CASE in sema: the overlap check
+
+A CASE construct's values are constants, so sema can check the one rule that matters most: no value
+of the expression may match two cases. Each range becomes a `caseSpan`. For an INTEGER expression
+that is an interval of int64s, an open end set to the limit of the *expression's* kind, so
+`CASE (100:)` on an `INTEGER(1)` is `[100, 127]`. For CHARACTER the span keeps the two constants,
+compared as a CHARACTER relation compares (blank-padded, in ASCII, which is CMPC's order at run time),
+and a LOGICAL value is its truth. Every range is checked against every one before it, and an overlap
+is CASEOVERLAP naming the other's line. That is quadratic, but a construct has a handful of cases,
+and an error should name *which* earlier case it collides with.
+
+The same clipping finds the ranges that can never match: `CASE (9:1)`, or `CASE (300)` on an
+`INTEGER(1)`. These are legal Fortran, so they draw a warning, CASENEVER, and overlap nothing.
+
+Two of the type rules are choices the author made (the phase doc's answers 1 and 2). INTEGER values
+of another kind than the expression's are accepted and compared by value, as the 1991 standard and
+gfortran allow. A `BYTE` selector, which VAX FORTRAN uses as a small integer, is `LOGICAL*1` and so
+LOGICAL by the standard's rule; selecting it by number is CASEBYTE, whose text says to declare it
+`INTEGER(1)`, the type section 25 added for exactly this.
+
+### SELECT CASE's code: three forms, one decision
+
+Because no two ranges overlap, the order in which the dispatch tests them changes only how fast it
+finds the match, never which match it finds. That freedom is what `ir/lowerselect.go` uses. The
+SELECT CASE statement's code is the whole dispatch, and each case's block follows in the order
+written, ending with a jump past END SELECT, as an IF's blocks end.
+
+A LOGICAL construct is one Branch. An INTEGER one widens its value to a longword first, so that the
+comparisons are CMPLs whatever the kind, and then one function, `caseForm`, chooses among three forms
+from two numbers: *tests*, the comparisons a chain would make (one per value, one per end of a
+range), and *span*, how many values lie between the lowest and highest bounded ends.
+
+- **A table** when tests ≥ 4 and span ≤ 4 × tests. CASEL takes the same time for every value, and
+  its table costs a word per value; a chain costs about six bytes per comparison and runs through
+  half of them on average. Four slots per test keeps the table about as small as the chain it
+  replaces. `cases.f90`'s TABLE16 has four tests over 16 values:
+
+  ```text
+  ;  103    select case (i)
+  	CASEL	@TABLE16.I(AP),#1,#15
+  TABLE16.$1:
+  	.WORD	TABLE16.$2-TABLE16.$1        ; 1
+  	.WORD	TABLE16.$3-TABLE16.$1        ; 2: DEFAULT
+  	.WORD	TABLE16.$3-TABLE16.$1        ; 3
+  	.WORD	TABLE16.$4-TABLE16.$1        ; 4 and 5, the range
+  	.WORD	TABLE16.$4-TABLE16.$1
+  	...
+  	.WORD	TABLE16.$5-TABLE16.$1        ; 16
+  	BRW	TABLE16.$3                   ; out of the table: DEFAULT
+  ```
+
+  CASEL's second operand is the table's lowest value, which section 12's computed GO TO always had
+  as 1; the IR's `Switch` gained a `Base` for it. `CHAIN17`, the same cases over 17 values, is one
+  value too sparse, and is a chain.
+- **A binary search** when there are at least eight tests. The ranges are sorted and the search
+  splits on the middle one's low end, carrying down what each comparison proved, so a leaf tests only
+  the ends that knowledge hasn't settled. In SEARCH8 (100, 200, ... 800) every value takes four
+  comparisons, where a chain takes up to eight:
+
+  ```text
+  	CMPL	@SEARCH8.I(AP),#500          ; below 500?
+  	BLSS	SEARCH8.$2
+  	...
+  SEARCH8.$5:                         ; known: 200 <= I < 300
+  	CMPL	@SEARCH8.I(AP),#200          ; so only I = 200 is left to test
+  ```
+- **A chain** otherwise, in the order the cases are written, since a programmer may well put the
+  commonest case first. A range with both ends is one Branch on an `.AND.`.
+
+Open ranges (`:-10`, `50:`) lie wholly beyond the bounded ones, since nothing overlaps, so they are
+tested before a table or a search, and the table's out-of-range exit goes to them. Clipping to the
+kind helps here too: on an `INTEGER(2)`, `-32768:-1` is one comparison, since nothing is below
+-32768.
+
+CHARACTER has no table (text has no index), so it is a chain or, from eight tests, a search of
+`CharCmp`s. Section 11 said `CharCmp` may stand only as a branch's condition, where no register is
+held, and a dispatch is exactly that. The selector is compared where it is when its place is fixed (a
+variable, a constant substring). Otherwise its address and length go in two temporaries once, and each
+comparison reaches it through `Mem.Ptr`, as a passed-length dummy is reached. One case needed more
+thought: a selector that is a dynamic string (section 11's class D, `S // 'x'` with `S` a
+passed-length dummy) must be freed after the comparisons and before any case's block runs, because
+a block may jump anywhere. So each match stores its case's number in a temporary and goes to one
+block, which frees the string and goes on by a `Switch` on the number.
+
+A constant selector (a PARAMETER, say) is decided while compiling: a jump to its case.
+
+### What the programs found
+
+Four programs in `testdata/fortran90` cover the phase, each worked by hand and run in all eight modes:
+`tokens.f90` (a tokenizer whose character classes are a twenty-test search), `loops.f90`, `cases.f90`
+(each of `caseForm`'s thresholds from both sides), and `examples.f90`, the standard's own examples of
+8.1 in its capitals, made to run. gfortran printed the same lines for all four.
+
+The examples found the one bug, and it was not in a construct. `WRITE (3, '("QED")')`, the standard's
+example of a named IF, gives its format as a character constant holding `"…"`. Section 24 had made the
+compiler give FTNRTL a FORMAT *statement's* quoted strings between apostrophes, because FTNRTL, like VMS's
+FORRTL, reads only apostrophes. But a format in a character constant is just a value to the compiler,
+passed to FTNRTL at run time, and FTNRTL refused it. Under `/F90` sema now rewrites such a constant the
+same way (`io.go`'s `constantFormat`). A format in a *variable* is still passed as it is, and is the
+run-time library's to read. Making FTNRTL accept `"` would also change what VAX FORTRAN programs get,
+and the rule since section 24 is that they get nothing new.
+
+The END IF rule changed under both settings. VAX FORTRAN let a GO TO reach an END IF only from the
+IF's last block; Fortran 90 allows any block, and outside. Since the change only accepts programs
+that were refused, `/NOF90` takes it too.

@@ -1025,6 +1025,23 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   intrinsics (`sema/intrinsickeys.go`); `testdata/fortran90`'s `precise.f90`
   is a portable program, `forms.f90` every declaration form;
   MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 25.
+  Phase 101 (done 2026-11-17; its "Where things stand" is the follow-up
+  list) is control constructs: construct names on DO, IF, and SELECT CASE
+  (`sema/constructs.go`: names on the stack of open constructs, WRONGNAME,
+  MISSINGNAME, NAMEDEND, DUPCONSTRUCT, NAMECLASH; cross reference rows),
+  DO with no loop control (a `sema.DoWhile` with no `Cond`), EXIT and
+  CYCLE resolved by sema to their loop (`sema.LoopExit`) and lowered to
+  each loop's exit and next-pass blocks (`ir/lowerloops.go`; a counted
+  DO's step code a block of its own only for a CYCLE), and SELECT CASE
+  (`sema/selectcase.go`: the `Select` node, CASEOVERLAP on folded values,
+  CASENEVER, CASEBYTE; `ir/lowerselect.go`: LOGICAL a branch, INTEGER a
+  CASEL table, binary search, or chain by `caseForm`, CHARACTER a chain
+  or search of `CharCmp`s; `ir.Switch.Base`); a jump to END IF from any
+  block or outside, under both `/F90` settings; a constant format's
+  `"…"` given to FTNRTL with apostrophes (`sema/io.go`'s
+  `constantFormat`); `testdata/fortran90`'s `selects`, `tokens`,
+  `loops`, `cases`, and `examples` (the standard's 8.1 examples);
+  MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 26.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -8278,8 +8278,8 @@ It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90
 may call VAX FORTRAN routines and the other way round, and an old program compiles as it
 always has. This section grows with each part; so far a program may be written in Fortran
 90's free source form and with its spellings, with its declarations and kinds, and with
-its named constructs, EXIT, and CYCLE; everything else Fortran 90 adds is recognized and
-reported as not yet implemented.
+its control constructs (construct names, EXIT, CYCLE, and SELECT CASE); everything else
+Fortran 90 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -8511,29 +8511,49 @@ Ask for precision only, as here, unless the program needs a range: a range past 
 program, with Newton's method, Simpson's rule, and complex roots; it prints the same lines
 under gfortran.
 
-**Construct names, EXIT, and CYCLE.** A DO loop or a block IF may be named, `OUTER:`
-before its first statement and the same name after its END (`END DO OUTER`, `END IF
-TEST`), and on ELSE IF and ELSE if you like; a named construct must be named at its end,
-and the name may not also be a variable's or anything else's in the unit. `DO` with no
-loop control runs until something leaves it. `EXIT` leaves a loop and `CYCLE` goes on to
-its next pass, the innermost loop around them or the one they name, as in `EXIT OUTER`;
-`IF (X < 0) EXIT` is one branch. The cross reference lists construct names.
+**Control constructs** (the standard's 8.1): construct names, DO with no loop control,
+EXIT and CYCLE, and SELECT CASE, in either source form and under either `/F90` setting.
+
+*Construct names.* A DO loop, a block IF, or a SELECT CASE construct may be named: a name
+and a colon before its first statement, and the same name after its END (`END DO OUTER`,
+`END IF TEST`, `END SELECT PICK`). ELSE IF, ELSE, and CASE may repeat the name, after their
+own text (`ELSE IF (X > 0) THEN TEST`, `CASE (1) PICK`, `CASE DEFAULT PICK`). A construct
+named at its start must be named at its end (`MISSINGNAME`), and no statement in it may give
+another name (`WRONGNAME`). A name may name only one construct in a unit (`DUPCONSTRUCT`),
+and nothing else there: not a variable, a constant, a procedure, a statement function, a
+namelist group, or the unit (`NAMECLASH`); a COMMON block may share it. A named DO with a
+label must end at an END DO naming it (`NAMEDEND`). The cross reference lists construct
+names with the lines that name them.
+
+*DO with no loop control*, `DO` alone or `DO 10`, runs until something leaves it: EXIT, a
+GO TO out of it, RETURN, or STOP. *EXIT* leaves a loop, going on after its END DO; *CYCLE*
+goes on to its next pass (a counted DO's variable stepped and its count tested, a DO
+WHILE's test, a DO with no control's first statement). Each belongs to the innermost loop
+around it, or to the loop it names, which may be any loop around it: `EXIT OUTER` leaves
+every loop inside OUTER too, and `CYCLE OUTER` abandons them. A loop's variable keeps the
+value it had when EXIT left it. In a DO ending at a labeled statement other than END DO,
+CYCLE passes over that statement, as the standard says. `IF (X < 0) EXIT` and `IF (X < 0)
+CYCLE` are a single branch. Outside every loop either is `NOTINLOOP`; a name that isn't an
+enclosing loop's `NOLOOPNAME`, or `NOTALOOP` if it names an IF or SELECT CASE; neither may
+end a labeled DO (`DOTERM`).
 
 ```fortran
 outer: do i = 1, n
    do j = 1, m
-      if (a(i, j) < 0) cycle outer
-      if (a(i, j) == target) exit outer
+      if (a(i, j) < 0) cycle outer          ! the next I
+      if (a(i, j) == target) exit outer     ! I and J say where
    end do
 end do outer
+
+do                                          ! read until the input ends
+   read (*, '(a)', iostat=ios) line
+   if (ios /= 0) exit
+   ...
+end do
 ```
 
-`SELECT CASE` chooses a block by an INTEGER, CHARACTER, or LOGICAL value: each `CASE`
-lists values and ranges (`CASE (1, 3:5, 10:)`, `CASE ('A':'Z')`), `CASE DEFAULT` takes
-what no other does, and with no match and no DEFAULT nothing runs. The compiler refuses
-ranges that overlap, and warns (CASENEVER) of one that can never match. An INTEGER
-construct becomes a CASEL table, a binary search, or a chain of comparisons, whichever
-suits its values.
+*SELECT CASE* chooses one block by the value of an INTEGER, CHARACTER, or LOGICAL
+expression, computed once:
 
 ```fortran
 select case (ch)
@@ -8541,10 +8561,58 @@ case ('a', 'e', 'i', 'o', 'u')
    vowels = vowels + 1
 case ('b':'d', 'f':'h', 'j':'n', 'p':'t', 'v':'z')
    consonants = consonants + 1
+case (' ')
+   blanks = blanks + 1
 case default
    others = others + 1
 end select
 ```
+
+Each CASE lists values and ranges: `v`, `low:high`, `low:` (everything from low up), and
+`:high`. A value is a constant expression of the selector's type: for CHARACTER any length,
+compared as a CHARACTER relation compares (the shorter padded with blanks, in ASCII order);
+for INTEGER any kind, compared by value. A LOGICAL selector is chosen by `.TRUE.` and
+`.FALSE.` alone. `CASE DEFAULT`, which may stand anywhere among the CASEs, takes every value
+no other takes; with no match and no DEFAULT, nothing runs and the program goes on after
+END SELECT. A GO TO may jump to a labeled END SELECT from inside its construct, never into
+the construct from outside (`INTOBLOCK`), and a CASE statement is no target.
+
+The compiler checks what the standard asks: a selector of another type (`CASEEXPR`), a value
+that isn't a constant expression (`CASEVALUE`) or is of another type (`CASETYPE`), a range of
+LOGICAL values (`CASERANGE`), a second DEFAULT (`TWODEFAULT`), a statement between SELECT
+CASE and the first CASE (`CASEFIRST`), a CASE outside any SELECT CASE (`NOSELECT`), a
+construct with no END SELECT (`NOENDSELECT`), and above all two ranges that one value could
+match (`CASEOVERLAP`). A range that can never match, empty or out of the selector's kind's
+reach, is a warning (`CASENEVER`). A `BYTE` (`LOGICAL*1`) selector is LOGICAL, as the
+standard has it, so a number can't select it (`CASEBYTE`): declare it `INTEGER(1)`.
+
+```text
+%FORT-E-CASEOVERLAP, this case value overlaps one at line 5: a value of the SELECT CASE expression would match both
+  at line 7 of DUA1:[WORK]BAD.F90;1
+    case (5, 20)
+  --------^
+%FORT-W-CASENEVER, this case value can never match, since its low end is above its high end
+  at line 9 of DUA1:[WORK]BAD.F90;1
+    case (9:1)
+  --------^
+%FORT-E-NOLOOPNAME, this EXIT statement names INNER, but it isn't in a DO loop of that name
+  at line 13 of DUA1:[WORK]BAD.F90;1
+       if (i == 2) exit inner
+  ----------------------^
+```
+
+What the construct becomes depends on its values, and only its speed depends on it, since
+no two ranges overlap. A LOGICAL construct is one branch. An INTEGER one is a `CASEL` table
+when it has at least four tests (a test for each value, two for each range with both ends)
+packed densely enough (no more slots than four times the tests), a binary search when it has
+eight tests or more, and otherwise a chain of comparisons in the order the cases are
+written, so put the commonest first. A CHARACTER one is a chain, or a binary search from eight
+tests. Under `/DEBUG` the dispatch is the SELECT CASE line's code; a CASE line has none.
+
+*Jumps to END IF.* As Fortran 90 allows, a GO TO may now jump to an END IF from any block of
+its IF construct, and from outside it, where VAX FORTRAN allowed only the last block. This
+holds under `/NOF90` too: it accepts programs that were refused, and changes none that
+compiled.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
@@ -8561,10 +8629,11 @@ PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), array
 expressions and sections, WHERE, interface blocks and CONTAINS,
 modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
 90's other new intrinsic functions aren't there yet either; under `/F90` their names are
-still taken as a program's own. A format given at run time (a character constant or variable as a
-READ's or WRITE's format) can't yet hold a `"..."` constant: FTNRTL refuses it with
-`%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write it with apostrophes, or as a
-FORMAT statement.
+still taken as a program's own. A format written as a character constant may hold `"..."` constants under `/F90`
+(`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as
+it does a FORMAT statement's. A format in a variable, known only at run time, can't yet:
+FTNRTL refuses it with `%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write that one
+with apostrophes.
 
 ## 15. Appendices
 

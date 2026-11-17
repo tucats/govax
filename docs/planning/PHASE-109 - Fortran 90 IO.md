@@ -24,14 +24,15 @@ and FTNRTL:
   rather than an element at a time (Phase 102's expansion kept for what can't);
 - **derived types** in lists, a component at a time (Phase 105), checked again
   here with the new edits and nonadvancing records.
-- **character constants between quotation marks in a run-time format**
-  (`WRITE (*, '(1X, "X =", I3)') X`, or the same text in a variable): Phase 99's
-  subtask 6 lets a FORMAT statement have them under `/F90`, giving FTNRTL the
-  format with apostrophes, but FTNRTL's interpreter still refuses a `"` at run
-  time (SYNERRFOR, as VMS's FORRTL does), and it can't know whether the program
-  was compiled `/F90`. A constant format could be rewritten by the compiler as a
-  FORMAT statement's is; a variable's needs FTNRTL to accept the mark (a new
-  entry, or a flag in the statement's control block).
+- **character constants between quotation marks in a run-time format held in
+  a variable**: Phase 99's subtask 6 lets a FORMAT statement have them under
+  `/F90`, giving FTNRTL the format with apostrophes, and Phase 101's subtask 5
+  does the same for a format written as a character constant or a PARAMETER
+  (`WRITE (*, '(1X, "X =", I3)') X`; sema's `constantFormat`). A variable's
+  text is known only at run time, and FTNRTL's interpreter still refuses a `"`
+  (SYNERRFOR, as VMS's FORRTL does), not knowing whether the program was
+  compiled `/F90`: it needs FTNRTL to accept the mark (a new entry, or a flag in
+  the statement's control block).
 
 ## What earlier phases leave in place
 

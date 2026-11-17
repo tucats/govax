@@ -1,13 +1,12 @@
 # Phase 101 — Fortran 90: control constructs
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and questions for the author), is done (2026-11-17) and was accepted by the
-author the same day ("The author's answers"); subtask 2 (construct names,
-DO with no loop control, EXIT, and CYCLE) is done (2026-11-17), and so are
-subtask 3 (SELECT CASE in sema, 2026-11-17), subtask 4 (SELECT CASE's
-code, 2026-11-17), and subtask 5 (programs end to end, 2026-11-17). Needs
-Phase 100 (done).
+**Status:** done (2026-11-17). Planned 2026-11-17 with Phase 99
+(`PHASE-99 - Fortran 90.md`, Part C). Subtask 1, the survey (Part A, below,
+with a revised subtask list and questions for the author), was accepted by
+the author ("The author's answers"); subtasks 2 to 6 (construct names, DO
+with no loop control, EXIT, and CYCLE; SELECT CASE in sema; SELECT CASE's
+code; programs end to end; and the close-out) are done (2026-11-17). "Where
+things stand", at the end, is what the phase left. Needs Phase 100 (done).
 
 ## Goal
 
@@ -289,7 +288,7 @@ codegen, and the optimizer do today.
    and `/RECURSIVE`, gfortran's witness (`compare.py`'s `PROGRAMS90`); the
    optimizer's cases of finding 10 (done 2026-11-17).
 6. **Close-out:** FORTRAN-INTERNALS.md's section 26, MANUAL.md's 14.13, HELP
-   FORTRAN.
+   FORTRAN (done 2026-11-17).
 
 ## A.5 Questions for the author
 
@@ -482,3 +481,30 @@ Every recommendation accepted:
   statement's (`io.go`'s `constantFormat`, `format.Apostrophes` with `RunTime`),
   held by `TestConstantFormatQuotes`. A format in a variable is still given as
   it is, so `"…"` there is still SYNERRFOR (for "Where things stand").
+- **2026-11-17:** Subtask 6, the close-out. FORTRAN-INTERNALS.md's section 26
+  (names on the construct stack, EXIT and CYCLE decided once in sema, the IR's
+  loop targets and why a loop without CYCLE lowers as before, the overlap
+  check, `caseForm`'s three forms with TABLE16's and SEARCH8's MACRO, the
+  dynamic-string selector, and what the programs found); MANUAL.md's 14.13
+  (the control constructs' full account: the rules, the code each form
+  becomes, every message, the END IF rule under both settings; and the
+  run-time format note narrowed to a variable's), HELP FORTRAN's Fortran_90
+  topic the same (and `helplib.hlb` regenerated), Phase 109's goal narrowed to
+  a variable's format, PLAN.md's summary, and CLAUDE.md's phase list. The
+  phase is done.
+
+## Where things stand
+
+What Phase 101 left, each for the phase named:
+
+- **A run-time format in a variable** holding `"…"` is still FTNRTL's
+  SYNERRFOR; a constant's is rewritten (subtask 5). Phase 109's goal lists it.
+- **`/STANDARD`** judges nothing new: construct names, EXIT, CYCLE, and
+  SELECT CASE are Fortran 90's, not FORTRAN-77's, and `/STANDARD=F90` is
+  Phase 110's (finding 12).
+- **`caseForm`'s thresholds** are the author's answer 6, unmeasured: the
+  programs of subtask 5 run too briefly for a difference to show. A program
+  that dispatches in a hot loop (Phase 111's milestone, perhaps) can measure
+  them; they are one function.
+- **SELECT CASE on a CHARACTER kind other than 1** can't arise yet: govax has
+  only kind 1.
