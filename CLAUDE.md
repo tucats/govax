@@ -992,7 +992,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   the close-out: MANUAL.md's 6.7 "Batch queues" (6.7 to 6.9 now 6.8 to
   6.10), VAX-VMS-INTERNALS.md's 7.16, FORTRAN's `$QUIDEF`, `$SJCDEF`, and
   `$JBCMSGDEF` (`TestFortranQueues`).
-  Phases 99–111 (planned 2026-11-17, for the author's review) are the
+  Phases 99–111 (planned 2026-11-17, the plan accepted by the author the same day; Phase 112, Fortran 95, optional) are the
   Fortran 90 program: `PHASE-99 - Fortran 90.md`'s Part A is the survey,
   Part B the decisions, Part C the phases, each later phase a skeletal doc.
   Fortran 90 (ISO/IEC 1539:1991; `Fortran90.txt` and `Fortran 90

@@ -1,10 +1,10 @@
 # Phase 99 — Fortran 90: the plan, the decisions, and the source forms
 
-**Status:** planned 2026-11-17, for review. Subtask 1 (this survey and plan,
-the skeletal docs of Phases 100 to 111, PLAN.md's rows, the Fortran 90
-Handbook's text) is written; nothing is implemented. The questions at the end
-("Questions for the author") wait for the author's answers, which may change
-the decisions and the later phases' docs. Needs the FORTRAN program (Phases
+**Status:** planned 2026-11-17; the plan reviewed and accepted by the author
+the same day, every recommendation taken ("The author's answers", after the
+questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
+to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done; subtask 2 is
+next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -559,7 +559,8 @@ the work shows.
 ## Phase 99 — subtasks (this phase)
 
 1. **The survey and plan** (this doc; the skeletal docs of Phases 100 to 111;
-   PLAN.md's rows; the Handbook's text): written 2026-11-17, for review.
+   PLAN.md's rows; the Handbook's text) (done 2026-11-17; accepted by the
+   author the same day).
 2. **`/F90` and `/SOURCE_FORM`.** The qualifiers in `console.dcl`, `govax
    fortran`, `fortran.Options`, and the OPTIONS statement's `/[NO]F90`; `.F90`
    as a source type (the command's default types, INCLUDE's, the FORTRAN
@@ -659,6 +660,29 @@ the work shows.
    arithmetic, and VAX FORTRAN had no INTEGER*8. It could be done with
    EMUL/EDIV and ADWC/SBWC sequences if wanted. **Recommendation:** out.
 
+## The author's answers (2026-11-17)
+
+The author read the plan and accepted every recommendation:
+
+1. `/F90`'s reach as planned (Decision 2): new syntax always, `/F90` settling
+   only the three conflicts, on by default for free form; a file with no type
+   looked for as `.FOR`, then `.F90`.
+2. Fortran 95's additions are an optional **Phase 112**, decided at Phase
+   111's close-out.
+3. Module files are our own readable text, `name.F90$MOD` (Decision 10).
+4. Allocatable locals are deallocated at return (Decision 8).
+5. NCA descriptors for every run-time array (Decision 7).
+6. Non-SEQUENCE derived types naturally aligned, SEQUENCE types packed
+   (Decision 9).
+7. **The milestone program:** the author will look for a Fortran 90 program;
+   otherwise we write our own of enough complexity to exercise every phase.
+   It isn't needed before Phase 111: each phase brings its own corpus. One
+   found earlier (by about Phase 105, since real programs lean on modules,
+   derived types, and allocatable arrays) is compiled as phases land, as
+   DUNGEON was from Phase 84, to find gaps the corpus misses.
+8. The thirteen phases stand as laid out.
+9. INTEGER(8) is out (Decision 1).
+
 ## Progress log
 
 - **2026-11-17:** Survey written (Part A), decisions proposed (Part B), and
@@ -667,3 +691,6 @@ the work shows.
   Handbook.txt`); the standard's text was already there (`Fortran90.txt`).
   The NCA descriptor checked in the Calling Standard's 5.7 (Decision 7).
   For review before any implementation.
+- **2026-11-17:** The author reviewed the plan and took every recommendation
+  ("The author's answers"); Phase 112 (Fortran 95's additions) is optional,
+  decided at Phase 111. Subtask 1 is done; subtask 2 is next.
