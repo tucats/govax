@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and questions for the author), is done (2026-11-17), for review. Needs
-Phase 100 (done).
+and questions for the author), is done (2026-11-17) and was accepted by the
+author the same day ("The author's answers"). Needs Phase 100 (done).
 
 ## Goal
 
@@ -264,7 +264,8 @@ codegen, and the optimizer do today.
 
 ## A.4 The subtasks, revised
 
-1. **Survey** (this Part A) (done 2026-11-17).
+1. **Survey** (this Part A) (done 2026-11-17; accepted by the author the
+   same day).
 2. **Construct names, DO with no control, EXIT, and CYCLE:** the parser's
    forms (findings 1 and 2), sema's names and their checks (finding 3),
    EXIT's and CYCLE's resolution (finding 4), the IR's loop stack and
@@ -319,6 +320,24 @@ codegen, and the optimizer do today.
    written order. **Recommendation:** these; they are one function and easy
    to change once the programs of subtask 5 can be measured.
 
+## The author's answers (2026-11-17)
+
+Every recommendation accepted:
+
+1. **BYTE selectors:** the standard's rule. A LOGICAL\*1 (BYTE) selector is
+   LOGICAL, so a colon or an INTEGER case value is an error, whose message
+   suggests INTEGER(1).
+2. **INTEGER case values of another kind** than the selector's are accepted
+   and compared by value.
+3. **Warnings:** CASENEVER for an empty range and for an INTEGER value the
+   selector's kind can't hold, under `/WARNINGS`; none for a SELECT CASE
+   without DEFAULT (open question 1 settled: no).
+4. **END IF as a branch target:** Fortran 90's rule (from any block of the
+   IF, and from outside it), under both `/F90` settings, in subtask 3.
+5. **Construct names in the cross reference:** yes, in subtask 2.
+6. **`caseForm`'s thresholds:** a table when tests ≥ 4 and span ≤ 4 ×
+   tests, a binary search when tests ≥ 8, else a chain in the written order.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -329,3 +348,5 @@ codegen, and the optimizer do today.
   optimizer sees no new shapes; SELECT CASE needs a base on the IR's
   `Switch`. Twelve findings, a revised list of six subtasks, and six
   questions for the author.
+- **2026-11-17:** The author accepted every recommendation of A.5 ("The
+  author's answers"); subtask 1 is done.
