@@ -356,9 +356,9 @@ type analyzer struct {
 	// unimplemented), so that only that statement is reported.
 	pendingOpen map[lex.Kind]int
 
-	// constructReported is set once a construct name has been reported
-	// NOTIMPL in the unit (constructName).
-	constructReported bool
+	// constructNames are the unit's construct names, in the order given
+	// (constructs.go).
+	constructNames []constructName
 
 	messages *diag.List
 	prog     *Program

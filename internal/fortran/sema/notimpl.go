@@ -22,7 +22,7 @@ func handled(s ast.Stmt) bool {
 		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt, *ast.ComputedGotoStmt,
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
-		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
+		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.LoopExitStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
 		*ast.EntryStmt, *ast.StructureStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.AttrStmt, *ast.DirectiveStmt, *ast.BadStmt:
 		return true
 
@@ -122,16 +122,6 @@ var (
 	}
 	pendingClosers = map[lex.Kind]bool{lex.EndSelect: true, lex.EndWhere: true}
 )
-
-// constructName reports Fortran 90's construct name on a statement, which
-// Phase 101 compiles (OUTER: DO, END DO OUTER): the unit's first, since the
-// rest would say the same.
-func (a *analyzer) constructName(s ast.Stmt) {
-	if b := s.Base(); b.Construct != "" && !a.constructReported {
-		a.notImplForm(b.ConstructPos, "a construct name")
-		a.constructReported = true
-	}
-}
 
 // formWhat names an expression's form that semantic analysis doesn't
 // compile yet, as a NOTIMPL message does ("an implied-DO list"), or ""

@@ -157,6 +157,10 @@ func DumpStmt(s Stmt) string {
 		return "END IF"
 
 	case *DoStmt:
+		if s.Forever() {
+			return strings.TrimRight("DO "+doLabel(s.Target), " ")
+		}
+
 		text := fmt.Sprintf("DO %s%s = %s, %s", doLabel(s.Target), s.Var.Name, DumpExpr(s.Start), DumpExpr(s.Limit))
 		if s.Step != nil {
 			text += ", " + DumpExpr(s.Step)
@@ -169,6 +173,9 @@ func DumpStmt(s Stmt) string {
 
 	case *EndDoStmt:
 		return "END DO"
+
+	case *LoopExitStmt:
+		return strings.TrimRight(s.Kind.String()+" "+s.Name, " ")
 
 	case *ContinueStmt:
 		return "CONTINUE"

@@ -49,6 +49,10 @@ type construct struct {
 	while    *DoWhile
 	label    int
 	reported bool
+
+	// name is the construct's Fortran 90 name (OUTER: DO), "" for none
+	// (constructs.go).
+	name string
 }
 
 // isDo reports whether c is a DO or DO WHILE loop.
@@ -116,6 +120,7 @@ func (a *analyzer) statements(body []ast.Stmt) {
 	// A unit whose END the parser didn't find (NOEND) still has its open
 	// constructs reported.
 	a.closeAll()
+	a.checkConstructNames()
 }
 
 // statement analyzes one statement in the unit's body.
@@ -150,8 +155,6 @@ func (a *analyzer) statement(s ast.Stmt) {
 		return
 	}
 
-	a.constructName(s)
-
 	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.NamelistStmt, *ast.DirectiveStmt:
@@ -177,6 +180,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 				a.report("ELSEORDER", s.Pos, "ELSE IF", c.elseAt.Position().Line)
 			}
 
+			a.checkName(c, s, false)
 			c.arm = &Arm{AST: s, Cond: a.condition(s.Cond)}
 
 			if c.ifs != nil {
@@ -190,6 +194,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 				a.report("ELSEORDER", s.Pos, "ELSE", c.elseAt.Position().Line)
 			}
 
+			a.checkName(c, s, false)
 			c.arm, c.elseAt = &Arm{AST: s}, s
 
 			if c.ifs != nil {
@@ -199,6 +204,8 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	case *ast.EndIfStmt:
 		if c := a.matchIf(s); c != nil {
+			a.checkName(c, s, true)
+
 			if c.ifs != nil {
 				c.ifs.EndIf = s
 			}
@@ -294,7 +301,7 @@ func labeledDo(s ast.Stmt) bool {
 func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
-		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt,
+		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt, *ast.LoopExitStmt,
 		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt:
 		return aStatement(s)
@@ -324,6 +331,7 @@ func (a *analyzer) path() []frame {
 func (a *analyzer) push(c *construct) {
 	a.nextID++
 	c.id = a.nextID
+	a.nameConstruct(c)
 	a.open = append(a.open, c)
 }
 
@@ -441,6 +449,12 @@ func (a *analyzer) endLoops(label int, s ast.Stmt) {
 	var ended []int
 
 	for c := a.top(); c != nil && c.isDo() && c.label == label; c = a.top() {
+		// A named loop must end at an END DO naming it (the standard's
+		// R825), which endDo checks.
+		if _, endDo := s.(*ast.EndDoStmt); c.name != "" && !endDo && !c.reported {
+			a.report("NAMEDEND", s.Position(), c.line(), c.name, aStatement(s))
+		}
+
 		ended = append(ended, c.id)
 		a.pop()
 	}
@@ -464,8 +478,15 @@ func (a *analyzer) endLoops(label int, s ast.Stmt) {
 }
 
 // doStatement analyzes DO s v = e1, e2, e3 (section 5.3.1) and opens its
-// loop.
+// loop. Fortran 90's DO with no loop control is a DoWhile with no
+// condition, as the standard defines DO WHILE by it (8.1.4.4.1).
 func (a *analyzer) doStatement(s *ast.DoStmt) {
+	if s.Forever() {
+		a.doForever(s)
+
+		return
+	}
+
 	d := &Do{stmtBase: stmtBase{s}, Label: s.Target.Label}
 	d.Var = a.doVariable(s.Var)
 
@@ -504,6 +525,23 @@ func (a *analyzer) doStatement(s *ast.DoStmt) {
 	}
 
 	a.push(&construct{do: d, label: d.Label})
+}
+
+// doForever analyzes DO s with no loop control and opens its loop.
+func (a *analyzer) doForever(s *ast.DoStmt) {
+	d := &DoWhile{stmtBase: stmtBase{s}, Label: s.Target.Label}
+
+	if d.Label != 0 {
+		a.noteLabel(d.Label, s.Target.Pos, RefUsed)
+	}
+
+	a.add(d)
+
+	if a.labelBehind(s, d.Label) {
+		return
+	}
+
+	a.push(&construct{while: d, label: d.Label})
 }
 
 // doWhile analyzes DO s WHILE (e) (section 5.3.2) and opens its loop.
@@ -570,6 +608,7 @@ func (a *analyzer) endDo(s *ast.EndDoStmt, label int) {
 		return
 	}
 
+	a.checkName(c, s, true)
 	c.endDo(s)
 	a.pop()
 

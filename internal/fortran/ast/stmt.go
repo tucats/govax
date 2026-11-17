@@ -457,7 +457,9 @@ type (
 
 	// DoStmt is DO [s[,]] v = e1, e2 [, e3] (section 5.3.1). Target's
 	// Label is 0 for a loop without a label, which END DO ends (5.4).
-	// Step is nil when e3 is left out (it is 1).
+	// Step is nil when e3 is left out (it is 1). Fortran 90's DO [s] with
+	// no loop control at all (the standard's R820) is a DoStmt with no Var,
+	// Start, or Limit: Forever says so.
 	DoStmt struct {
 		StmtBase
 		Target LabelRef
@@ -478,6 +480,17 @@ type (
 	// EndDoStmt is END DO (section 5.4).
 	EndDoStmt struct {
 		StmtBase
+	}
+
+	// LoopExitStmt is Fortran 90's EXIT [name] or CYCLE [name] (the
+	// standard's 8.1.4.4.3 and 8.1.4.4.4), told apart by Kind. Name is the
+	// DO construct's name it gives, "" for none, at NamePos: the loop it
+	// leaves or continues, not a construct name of its own (StmtBase's
+	// Construct stays "").
+	LoopExitStmt struct {
+		StmtBase
+		Name    string
+		NamePos diag.Position
 	}
 
 	// ContinueStmt is CONTINUE (section 5.2).
@@ -630,3 +643,8 @@ type PendingStmt struct {
 type BadStmt struct {
 	StmtBase
 }
+
+// Forever reports whether the DO statement has no loop control (Fortran
+// 90's DO, or DO 10, with nothing after it): it runs until something
+// leaves it.
+func (s *DoStmt) Forever() bool { return s.Var == nil }

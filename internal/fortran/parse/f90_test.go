@@ -72,7 +72,7 @@ func TestF90Nesting(t *testing.T) {
 		"19          DIMENSION :: A(10)",
 		"20          IMPLICIT REAL(KIND=8) (A-H), INTEGER (I-N)",
 		"21          OUTER: DO I = 1, 10",
-		"22          IF (.GT. I 3) not yet: EXIT",
+		"22          IF (.GT. I 3) EXIT OUTER",
 		"23          END DO OUTER",
 		"24          END PROGRAM P",
 		"",

@@ -157,7 +157,8 @@ type StmtBase struct {
 	// Construct is Fortran 90's construct name on the statement: the name
 	// before a DO, block IF, or SELECT CASE (OUTER: DO), or the one after
 	// END DO, END IF, ELSE, ELSE IF ... THEN, and the rest (END DO OUTER);
-	// "" for none. ConstructPos is where it is. Phase 101 compiles them.
+	// "" for none. ConstructPos is where it is (sema/constructs.go checks
+	// them). EXIT's and CYCLE's loop name isn't here: LoopExitStmt has it.
 	Construct    string
 	ConstructPos diag.Position
 }

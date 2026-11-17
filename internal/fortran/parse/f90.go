@@ -16,7 +16,8 @@ import (
 //   - MODULE name, a unit's header, so a module is one unit;
 //   - END PROGRAM name and the rest, checked against the unit they end
 //     (checkEnd);
-//   - construct names, read and kept for Phase 101 (StmtBase.Construct);
+//   - construct names (StmtBase.Construct), and Phase 101's EXIT, CYCLE,
+//     and DO with no loop control (stmt.go's parseLoopExit and parseDo);
 //   - Fortran 90's declarations (Phase 100): a type statement's :: form,
 //     with its attributes (attrSpec) and = values (entityValue), the
 //     attribute statements with ::, and INTENT, OPTIONAL, and TARGET, into

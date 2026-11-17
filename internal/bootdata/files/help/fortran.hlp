@@ -158,6 +158,10 @@
    keyword arguments: SELECTED_REAL_KIND(R=40), INT(X, KIND=2).  Under
    /NOF90 the new names are a program's own unless named INTRINSIC.
 
+   A DO loop or block IF may be named (OUTER: DO ... END DO OUTER), a DO
+   may have no loop control, and EXIT and CYCLE leave a loop or go on to
+   its next pass, the innermost one or the one they name (EXIT OUTER).
+
    Fortran 90's other statements (SELECT CASE,
    MODULE, array expressions, POINTER, ALLOCATABLE, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are added.  A format given at run time

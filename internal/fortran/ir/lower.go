@@ -40,6 +40,10 @@ type lowerer struct {
 	// while a reference is being expanded (lowerstmtfunc.go).
 	bound map[*sema.Symbol]*Mem
 
+	// loopStack is the DO loops being lowered, innermost last: where their
+	// EXIT and CYCLE statements go (lowerloops.go).
+	loopStack []*loopTargets
+
 	// cur is the block statements are being added to, or nil when the
 	// code being lowered can't be reached (after a GO TO, a STOP, a
 	// RETURN), until a block starts.

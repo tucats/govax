@@ -259,9 +259,14 @@ func parseEndIf(p *parser) ast.Stmt {
 // parseDo parses DO [s[,]] v = e1, e2 [, e3] (section 5.3.1); VAX
 // FORTRAN lets the label be left out, and END DO end the loop (5.4). The
 // lexer has made sure there is a comma after the =, or it would have
-// been an assignment (DO 10 I = 1.5 assigns to DO10I).
+// been an assignment (DO 10 I = 1.5 assigns to DO10I). Fortran 90's DO
+// with no loop control at all (DO, DO 10) is a DoStmt with no variable.
 func parseDo(p *parser) ast.Stmt {
 	s := &ast.DoStmt{StmtBase: p.base(), Target: p.doLabel()}
+
+	if p.atEnd() {
+		return s
+	}
 
 	s.Var = p.name("the DO variable")
 	p.expect("=")
@@ -306,6 +311,22 @@ func parseDoWhile(p *parser) ast.Stmt {
 func parseEndDo(p *parser) ast.Stmt {
 	s := &ast.EndDoStmt{StmtBase: p.base()}
 	p.constructAfter(s)
+	p.end()
+
+	return s
+}
+
+// parseLoopExit parses Fortran 90's EXIT [name] and CYCLE [name] (the
+// standard's R834 and R835). In fixed form EXIT OUTER is squeezed to
+// EXITOUTER, which the lexer has already split after the keyword.
+func parseLoopExit(p *parser) ast.Stmt {
+	s := &ast.LoopExitStmt{StmtBase: p.base()}
+
+	if p.atKind(lex.Name) {
+		t := p.next()
+		s.Name, s.NamePos = t.Text, p.pos(t)
+	}
+
 	p.end()
 
 	return s

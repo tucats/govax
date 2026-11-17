@@ -712,6 +712,25 @@ func TestCrossReferenceIncludes(t *testing.T) {
 		"I INTEGER 2A 1:1A 2:1A 1:1A")
 }
 
+// TestCrossReferenceConstructs: Fortran 90's construct names are rows of their own,
+// defined where the construct starts and used by each statement that names it.
+func TestCrossReferenceConstructs(t *testing.T) {
+	compareRows(t, crossReferenceOf(t, testOptions,
+		"      PROGRAM P",
+		"      OUTER: DO I = 1, 3",
+		"      TEST: IF (I .EQ. 2) THEN",
+		"      CYCLE OUTER",
+		"      ELSE TEST",
+		"      EXIT",
+		"      END IF TEST",
+		"      END DO OUTER",
+		"      END"),
+		"P:",
+		"I INTEGER 2A 3",
+		"OUTER construct 2D 4 8",
+		"TEST construct 3D 5 7")
+}
+
 // TestCrossReferenceKinds has each way of mentioning a name, and each kind of row in
 // the order they come. A DATA statement assigns; a line that does two things to a name
 // has it twice, and a statement function's dummy argument isn't a row.

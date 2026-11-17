@@ -567,7 +567,8 @@ type (
 
 	// DoWhile is DO Label WHILE (Cond) (section 5.3.2): Body runs while
 	// the LOGICAL Cond, tested before each pass, is true. Its body and
-	// end are a Do's.
+	// end are a Do's. Cond is nil for Fortran 90's DO with no loop control,
+	// which runs until something leaves it (EXIT, GO TO, RETURN, STOP).
 	DoWhile struct {
 		stmtBase
 		Label int
@@ -579,6 +580,16 @@ type (
 	// Continue is CONTINUE.
 	Continue struct {
 		stmtBase
+	}
+
+	// LoopExit is Fortran 90's EXIT, or CYCLE when Cycle is set (the
+	// standard's 8.1.4.4): EXIT leaves Loop, a *Do or *DoWhile, and every
+	// loop inside it; CYCLE goes on to Loop's next pass, as a jump to its
+	// END DO would.
+	LoopExit struct {
+		stmtBase
+		Cycle bool
+		Loop  Stmt
 	}
 
 	// Stop is STOP, or PAUSE when Pause is set, with the text it

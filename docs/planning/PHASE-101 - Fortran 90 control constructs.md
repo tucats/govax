@@ -3,7 +3,9 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17) and was accepted by the
-author the same day ("The author's answers"). Needs Phase 100 (done).
+author the same day ("The author's answers"); subtask 2 (construct names,
+DO with no loop control, EXIT, and CYCLE) is done (2026-11-17). Needs
+Phase 100 (done).
 
 ## Goal
 
@@ -270,7 +272,7 @@ codegen, and the optimizer do today.
    forms (findings 1 and 2), sema's names and their checks (finding 3),
    EXIT's and CYCLE's resolution (finding 4), the IR's loop stack and
    targets with `IF (e) EXIT` as a branch (finding 6), and the cross
-   reference's construct names if question 5 says so.
+   reference's construct names (question 5) (done 2026-11-17).
 3. **SELECT CASE in sema:** parsing, the `Select` node, the checks of
    findings 3, 5, 8, and 9, and branch targets; the code still NOTIMPL.
 4. **SELECT CASE's code:** `Switch.Base`, `caseForm` and its three forms for
@@ -350,3 +352,32 @@ Every recommendation accepted:
   questions for the author.
 - **2026-11-17:** The author accepted every recommendation of A.5 ("The
   author's answers"); subtask 1 is done.
+- **2026-11-17:** Subtask 2, construct names, DO with no loop control, EXIT,
+  and CYCLE. The parser: `DoStmt.Forever()` (a DO with nothing after its
+  label), and `ast.LoopExitStmt` for EXIT and CYCLE (`parseLoopExit`; fixed
+  form's `EXITOUTER` arrives already split after the keyword).
+  `sema/constructs.go`: each construct's name as the stack opens it
+  (`nameConstruct`, DUPCONSTRUCT), the names on ELSE IF, ELSE, END IF, and END
+  DO checked against it (`checkName`: WRONGNAME, MISSINGNAME), a named
+  labeled DO ending anywhere but an END DO (NAMEDEND, in `endLoops`), a
+  construct name that also names a variable, a constant, a procedure, a
+  statement function, a namelist group, or the unit (NAMECLASH, at the
+  unit's end, so a later mention counts), and EXIT and CYCLE resolved to
+  their loop (`loopExit`: NOTINLOOP, NOLOOPNAME, NOTALOOP) as a
+  `sema.LoopExit` pointing at its `Do` or `DoWhile`; EXIT and CYCLE may not
+  end a labeled loop (DOTERM). A DO with no control is a `DoWhile` with no
+  `Cond`. The survey proposed one message, CONSTRUCTNAME, for a name that
+  doesn't match; it became WRONGNAME and MISSINGNAME, whose texts each say
+  one thing. Construct names are cross reference rows (`whatConstruct`), and
+  sema's dump shows them. `ir/lowerloops.go`: a stack of the loops being
+  lowered, each with its exit block and next-pass block; a counted DO's step
+  code becomes a block of its own only when a CYCLE needs it (or is a
+  labeled END DO's block already), so a loop without CYCLE lowers block for
+  block as before; `IF (e) EXIT` and `IF (e) CYCLE` are one branch; a DO
+  with no control is its body and a jump back. Tests: `TestErrors`' 21 new
+  cases, `f90loops.for`'s sema and IR goldens (every kind of loop, in fixed
+  form), `TestCrossReferenceConstructs`, and the program run by hand on
+  govax both `/OPTIMIZE` and `/NOOPTIMIZE` (`4346 4`, as worked out); the
+  FORTRAN and Fortran 90 corpora and `TestNoF90Unchanged` pass. MANUAL.md's
+  14.13 and HELP FORTRAN no longer list these as not there yet (their full
+  account is subtask 6's).

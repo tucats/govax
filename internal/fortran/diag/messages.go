@@ -909,6 +909,37 @@ var messages = map[string]kind{
 	// (section 5.3.1.2).
 	"SHAREDENDDO": {Error, "the DO loop at line %d ends at this END DO statement too, and DO loops can't share an END DO"},
 
+	// Fortran 90's construct names, EXIT, and CYCLE (the standard's 8.1 and
+	// 14.1.2; sema/constructs.go).
+
+	// WRONGNAME is a construct name on ELSE IF, ELSE, END IF, or END DO
+	// that isn't the name of the construct the statement belongs to.
+	"WRONGNAME": {Error, "this %s statement names %s, but the %s at line %d %s"},
+
+	// MISSINGNAME is END IF or END DO without the name its construct was
+	// given: a named construct must be named at its end too.
+	"MISSINGNAME": {Error, "the %s at line %d is named %s, so this %s statement must name it too"},
+
+	// NAMEDEND is a named DO loop ending at a labeled statement other than
+	// END DO: a named loop must end at an END DO naming it (R825).
+	"NAMEDEND": {Error, "the DO loop at line %d is named %s, so it must end at an END DO statement naming it, not at %s"},
+
+	// DUPCONSTRUCT is a construct name given to two constructs of a unit.
+	"DUPCONSTRUCT": {Error, "%s is already the name of the construct at line %d"},
+
+	// NAMECLASH is a construct name that also names something else of the
+	// unit's: construct names are local names like variables' (14.1.2).
+	"NAMECLASH": {Error, "%s, the name of the construct at line %d, can't also be the name of %s"},
+
+	// NOTINLOOP is EXIT or CYCLE outside every DO loop.
+	"NOTINLOOP": {Error, "this %s statement is not in a DO loop"},
+
+	// NOLOOPNAME is EXIT or CYCLE naming no construct open around it.
+	"NOLOOPNAME": {Error, "this %s statement names %s, but it isn't in a DO loop of that name"},
+
+	// NOTALOOP is EXIT or CYCLE naming a construct that isn't a DO loop.
+	"NOTALOOP": {Error, "this %s statement names %s, the %s at line %d, which isn't a DO loop"},
+
 	// DOTERM is a statement that may not end a DO loop (section 5.3.1).
 	"DOTERM": {Error, "a DO loop can't end with %s"},
 

@@ -228,7 +228,12 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 			dumpEndDo(b, s.EndDo, depth)
 
 		case *DoWhile:
-			line(b, s.AST, depth, "DO "+loopLabel(s.Label)+"WHILE "+DumpExpr(s.Cond))
+			if s.Cond == nil {
+				line(b, s.AST, depth, strings.TrimRight("DO "+loopLabel(s.Label), " "))
+			} else {
+				line(b, s.AST, depth, "DO "+loopLabel(s.Label)+"WHILE "+DumpExpr(s.Cond))
+			}
+
 			dumpStmts(b, s.Body, depth+1)
 			dumpEndDo(b, s.EndDo, depth)
 
@@ -272,6 +277,17 @@ func line(b *strings.Builder, s ast.Stmt, depth int, text string) {
 		label = strconv.Itoa(n)
 	}
 
+	// A Fortran 90 construct name goes before the statement that opens the
+	// construct (OUTER: DO) and after the others (END DO OUTER).
+	if name := s.Base().Construct; name != "" {
+		switch s.Base().Kind {
+		case lex.Do, lex.DoWhile, lex.IfThen, lex.SelectCase:
+			text = name + ": " + text
+		default:
+			text += " " + name
+		}
+	}
+
 	fmt.Fprintf(b, "%-5d %-5s %s%s\n", s.Position().Line, label, strings.Repeat("  ", depth), text)
 }
 
@@ -312,6 +328,13 @@ func stmtText(list []Stmt) string {
 		return "IF (" + DumpExpr(s.Cond) + ") " + labelList(s.Labels[:])
 	case *Continue:
 		return "CONTINUE"
+	case *LoopExit:
+		verb := "EXIT"
+		if s.Cycle {
+			verb = "CYCLE"
+		}
+
+		return verb + " (loop of line " + strconv.Itoa(s.Loop.Source().Position().Line) + ")"
 	case *Stop:
 		verb := "STOP"
 		if s.Pause {

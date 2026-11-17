@@ -93,6 +93,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.Continue:
 		// Nothing to do: CONTINUE is there for its label.
 
+	case *sema.LoopExit:
+		l.terminate(&Jump{l.origin(), l.loopTarget(s)})
+
 	case *sema.Stop:
 		l.stop(s)
 
@@ -341,15 +344,25 @@ func (l *lowerer) blockIf(s *sema.If) {
 }
 
 // logicalIf lowers IF (e) st: a branch around st, or for IF (e) GO TO n
-// a branch to n.
+// a branch to n, and for Fortran 90's IF (e) EXIT and IF (e) CYCLE a branch
+// to where they go.
 func (l *lowerer) logicalIf(s *sema.If) {
 	arm := s.Arms[0]
 	cond := l.cond(arm.Cond)
 	next := l.newBlock()
 
 	if len(arm.Body) == 1 {
-		if g, ok := arm.Body[0].(*sema.Goto); ok {
-			l.branch(cond, l.labelBlock(g.Label), next)
+		var to *Block
+
+		switch st := arm.Body[0].(type) {
+		case *sema.Goto:
+			to = l.labelBlock(st.Label)
+		case *sema.LoopExit:
+			to = l.loopTarget(st)
+		}
+
+		if to != nil {
+			l.branch(cond, to, next)
 			l.begin(next)
 
 			return
@@ -383,8 +396,10 @@ func (l *lowerer) logicalIf(s *sema.If) {
 //	  branch gt.L($C1, 0) B2 B3
 //	B3: (after the loop)
 func (l *lowerer) do(d *sema.Do) {
-	l.countedLoop(loopName(d.Label, d.AST), d.Var, d.Start, d.Limit, d.Step, true, func() {
+	l.countedLoop(loopName(d.Label, d.AST), d.Var, d.Start, d.Limit, d.Step, true, func(exit *Block) {
+		l.openLoop(d, exit, nil)
 		l.stmts(d.Body)
+		l.endPass()
 		l.loopEnd(d.Label, d.EndDo)
 	})
 }
@@ -411,7 +426,7 @@ func (l *lowerer) do(d *sema.Do) {
 //
 // body is a function value: the caller passes in the code that lowers the
 // loop's body, so DO statements and implied-DO lists can share this.
-func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step sema.Expr, release bool, body func()) {
+func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step sema.Expr, release bool, body func(exit *Block)) {
 	l.loops++
 	n := l.loops
 
@@ -461,7 +476,7 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	}
 
 	l.begin(pass)
-	body()
+	body(exit)
 
 	advance := &Assign{origin: l.origin(), Dst: place, Src: arith(Add, t, &Load{place}, by)}
 	less := &Assign{origin: l.origin(), Dst: count, Src: arith(Sub, Long, &Load{count}, LongConst(1))}
@@ -489,23 +504,36 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 //	B2: (the body, ending with the terminal statement)
 //	  jump B1
 //	B3: (after the loop)
+//
+// Fortran 90's DO with no loop control (no Cond) is the body and the jump
+// back to it, which only EXIT, GO TO, RETURN, or STOP leaves:
+//
+//	B1: (the body)
+//	  jump B1
+//	B2: (after the loop, reached only by EXIT or a GO TO)
 func (l *lowerer) doWhile(d *sema.DoWhile) {
 	name := loopName(d.Label, d.AST)
 
-	test := l.newBlock()
-	test.Note = name + "'s test"
 	body := l.newBlock()
 	body.Note = name + "'s body"
 	exit := l.newBlock()
+	top := body
 
-	l.begin(test)
-	l.branch(l.cond(d.Cond), body, exit)
-	l.release()
+	if d.Cond != nil {
+		top = l.newBlock()
+		top.Note = name + "'s test"
+
+		l.begin(top)
+		l.branch(l.cond(d.Cond), body, exit)
+		l.release()
+	}
 
 	l.begin(body)
+	l.openLoop(d, exit, top)
 	l.stmts(d.Body)
+	l.endPass()
 	l.loopEnd(d.Label, d.EndDo)
-	l.jump(test)
+	l.jump(top)
 	l.begin(exit)
 }
 
@@ -532,6 +560,10 @@ func (l *lowerer) loopEnd(label int, endDo ast.Stmt) {
 // loopName names a loop for the notes on its blocks and cells: "DO 10"
 // for the loop ending at label 10, "DO (line 12)" for one END DO ends.
 func loopName(label int, s ast.Stmt) string {
+	if name := s.Base().Construct; name != "" {
+		return "DO " + name
+	}
+
 	if label != 0 {
 		return "DO " + strconv.Itoa(label)
 	}

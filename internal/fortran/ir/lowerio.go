@@ -303,7 +303,7 @@ func (l *lowerer) ioItems(items []*sema.Item) {
 func (l *lowerer) impliedDo(d *sema.ImpliedDo) {
 	name := "the implied DO (line " + strconv.Itoa(d.Pos.Line) + ")"
 
-	l.countedLoop(name, d.Var, d.Start, d.Limit, d.Step, false, func() {
+	l.countedLoop(name, d.Var, d.Start, d.Limit, d.Step, false, func(*Block) {
 		l.ioItems(d.Items)
 	})
 }

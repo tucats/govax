@@ -43,7 +43,7 @@ type Statement struct {
 	// CASE statement's text starts with (OUTER: DO I = 1, N; the standard's
 	// 8.1), or "" for none, and ConstructOffset is where it starts. The name
 	// a construct's other statements may end with (END DO OUTER) is among
-	// their tokens. Construct names are Phase 101's to compile.
+	// their tokens. Semantic analysis checks them (sema/constructs.go).
 	Construct       string
 	ConstructOffset int
 

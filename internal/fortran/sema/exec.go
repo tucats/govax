@@ -64,6 +64,9 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 	case *ast.ContinueStmt:
 		return &Continue{stmtBase{s}}
 
+	case *ast.LoopExitStmt:
+		return a.loopExit(s)
+
 	case *ast.StopStmt:
 		st := &Stop{stmtBase: stmtBase{s}, Pause: s.Kind == lex.Pause}
 

@@ -8277,8 +8277,9 @@ Fortran 90 (ISO/IEC 1539:1991) is being added to govax's compiler, a part at a t
 It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90 program
 may call VAX FORTRAN routines and the other way round, and an old program compiles as it
 always has. This section grows with each part; so far a program may be written in Fortran
-90's free source form and with its spellings, with its declarations and kinds, and
-everything else Fortran 90 adds is recognized and reported as not yet implemented.
+90's free source form and with its spellings, with its declarations and kinds, and with
+its named constructs, EXIT, and CYCLE; everything else Fortran 90 adds is recognized and
+reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -8510,6 +8511,23 @@ Ask for precision only, as here, unless the program needs a range: a range past 
 program, with Newton's method, Simpson's rule, and complex roots; it prints the same lines
 under gfortran.
 
+**Construct names, EXIT, and CYCLE.** A DO loop or a block IF may be named, `OUTER:`
+before its first statement and the same name after its END (`END DO OUTER`, `END IF
+TEST`), and on ELSE IF and ELSE if you like; a named construct must be named at its end,
+and the name may not also be a variable's or anything else's in the unit. `DO` with no
+loop control runs until something leaves it. `EXIT` leaves a loop and `CYCLE` goes on to
+its next pass, the innermost loop around them or the one they name, as in `EXIT OUTER`;
+`IF (X < 0) EXIT` is one branch. The cross reference lists construct names.
+
+```fortran
+outer: do i = 1, n
+   do j = 1, m
+      if (a(i, j) < 0) cycle outer
+      if (a(i, j) == target) exit outer
+   end do
+end do outer
+```
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
@@ -8521,8 +8539,8 @@ under gfortran.
 ```
 
 That includes array constructors and arrays that are
-PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), construct names, SELECT CASE,
-EXIT and CYCLE, array expressions and sections, WHERE, interface blocks and CONTAINS,
+PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), SELECT CASE, array
+expressions and sections, WHERE, interface blocks and CONTAINS,
 modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
 90's other new intrinsic functions aren't there yet either; under `/F90` their names are
 still taken as a program's own. A format given at run time (a character constant or variable as a
