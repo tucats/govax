@@ -2,7 +2,9 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and questions for the author), written 2026-11-17, for review. Needs Phase 99.
+and questions for the author), is done (2026-11-17), every recommendation
+accepted by the author ("The author's answers"); subtask 2 is next. Needs
+Phase 99.
 
 ## Goal
 
@@ -279,7 +281,8 @@ and FTNRTL do today.
 The provisional list gains INTEGER(1) and the conversions' KIND= (findings 1
 and 7), and COMPLEX(16) by question 1's answer.
 
-1. **Survey** (this Part A), for review.
+1. **Survey** (this Part A) (done 2026-11-17; accepted by the author the
+   same day).
 2. **The scope chain** in sema (finding 13): a refactoring, no change in what
    is compiled; every old test passes and `TestNoF90Unchanged` holds.
 3. **`::` declarations and attributes:** the parser's entity lists and
@@ -331,6 +334,24 @@ and 7), and COMPLEX(16) by question 1's answer.
    fits the unit's formats (open question 2, finding 9)? **Recommendation:**
    both as planned.
 
+## The author's answers (2026-11-17)
+
+The author accepted every recommendation:
+
+1. **COMPLEX(16)** as option (a): declarations, moves, `+`, `-`, `*`,
+   comparisons, and conversions in line, `/` by a new FTNRTL routine; its I/O
+   and the complex intrinsics NOTIMPL until Phases 108 and 109.
+2. **INTEGER(1)** is a full type in this phase, with `INTEGER*1`; BYTE stays
+   LOGICAL\*1.
+3. **Zero-length CHARACTER** is NOTIMPL until Phase 108.
+4. **KIND= on INT, REAL, CMPLX, NINT, AINT, ANINT, and LOGICAL** moves here
+   from Phase 108 (subtask 6).
+5. **INTENT, OPTIONAL, and TARGET** are recorded and compiled as nothing until
+   their phases; POINTER and ALLOCATABLE are NOTIMPL.
+6. **The plan's open questions:** DOUBLE PRECISION stays REAL(8), D or G by
+   `/G_FLOATING`; SELECTED_REAL_KIND gives 16 when only H fits the unit's
+   formats.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -342,3 +363,6 @@ and 7), and COMPLEX(16) by question 1's answer.
   that a COMPLEX's kind is half its size, and that the scope chain can make a
   statement function a scope; the subtasks revised (A.4) and six questions
   (A.5).
+- **2026-11-17:** The author reviewed the survey and accepted every
+  recommendation ("The author's answers"). Subtask 1 is done; subtask 2, the
+  scope chain, is next.

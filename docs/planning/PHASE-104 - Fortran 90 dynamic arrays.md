@@ -58,6 +58,10 @@ Arrays whose shape, or whose place, is known only at run time:
   is wanted later).
 - **FTNRTL's array movers** take NCA descriptors and an element size, so one
   routine serves every type.
+- **From Phase 100's survey** (2026-11-17): a dummy's CHARACTER length that
+  isn't constant (`CHARACTER(LEN=N) :: S`, N a dummy), not FORTRAN-77's, needs
+  the same computation at entry as an automatic object, and is NOTIMPL until
+  this phase.
 
 ## Open questions
 

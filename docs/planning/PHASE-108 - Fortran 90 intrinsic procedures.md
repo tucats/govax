@@ -42,6 +42,12 @@ on arrays where elemental:
 - **DATE_AND_TIME's zone** is the host's offset, as LIB$'s time routines see it.
 - **RANDOM_NUMBER** must give the same sequence for the same seed on every host
   (as `MTH$RANDOM` does).
+- **From Phase 100's survey** (2026-11-17): KIND= on INT, REAL, CMPLX, NINT,
+  AINT, ANINT, and LOGICAL moved to Phase 100, with the intrinsic table's
+  keyword and optional columns (Decision 14), filled there for its own
+  functions. Left here: zero-length CHARACTER entities (`LEN=0`, NOTIMPL
+  until this phase), and the complex intrinsics (ABS, SQRT, EXP, ...) of
+  COMPLEX(16), which Phase 100 declares and computes with in line.
 
 ## Open questions
 

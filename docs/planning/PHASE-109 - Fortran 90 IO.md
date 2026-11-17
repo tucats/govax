@@ -52,6 +52,9 @@ and FTNRTL:
   15).
 - **Teaching:** FORTRAN-INTERNALS.md's FTNRTL section gains how a record is kept
   open across statements.
+- **From Phase 100's survey** (2026-11-17): I/O of COMPLEX(16), which Phase
+  100 declares and computes with, is NOTIMPL until this phase (FTNRTL's
+  editing of H complex values).
 
 ## Open questions
 
