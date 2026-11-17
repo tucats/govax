@@ -164,3 +164,25 @@ func Leaves(e Expr) []Expr {
 
 	return list
 }
+
+// NewArray is an array of type t that no unit declared, with the given
+// extents, each dimension's lower bound 1: one of lowering's own, an array
+// temporary, which lowering gives a place.
+func NewArray(name string, t Type, extents []int) *Symbol {
+	s := &Symbol{Name: name, Class: Array, Type: t, Offset: -1}
+
+	for _, n := range extents {
+		s.Dims = append(s.Dims, Dim{Lower: 1, Upper: n})
+	}
+
+	return s
+}
+
+// NewArrayRef is the whole array s as an array-valued expression, with its
+// shape.
+func NewArrayRef(s *Symbol, pos diag.Position) *ArrayRef {
+	r := &ArrayRef{exprBase: exprBase{T: s.Type, Pos: pos}, Sym: s}
+	r.S = arrayShape(r)
+
+	return r
+}

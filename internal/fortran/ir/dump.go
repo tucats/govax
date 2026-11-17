@@ -180,6 +180,8 @@ func cellNote(c *Cell) string {
 		return c.Loop + "'s step"
 	case IndexCell:
 		return "an array statement's index"
+	case ArrayTempCell:
+		return fmt.Sprintf("an array temporary, %d bytes", c.Size)
 	case DescriptorCell:
 		return "descriptor " + descriptorText(c.Desc)
 	case ArgCell:

@@ -337,7 +337,7 @@ func stmtText(list []Stmt) string {
 
 	switch s := list[0].(type) {
 	case *Assign:
-		return DumpExpr(s.Target) + " = " + DumpExpr(s.Value)
+		return DumpExpr(s.Target) + " = " + DumpExpr(s.Value) + s.Order.String()
 	case *Call:
 		if s.Args == nil {
 			return "CALL " + s.Sub.Name

@@ -73,6 +73,13 @@ type lowerer struct {
 	freeIndex []*Cell
 	indexes   int
 
+	// freeArray are the array temporaries not in use, by element type and
+	// size, arrays how many the routine has, and boundArrays the symbols
+	// that stand for those the statement being lowered uses (lowerarray.go).
+	freeArray   map[arrayTempKey][]*Cell
+	arrays      int
+	boundArrays []*sema.Symbol
+
 	// after are statements to be done at the end of the statement being
 	// lowered, before its block's terminator if it has one: the freeing
 	// of its dynamic strings.
@@ -120,16 +127,17 @@ func lowerUnit(u *sema.Unit) *Routine {
 		Reentrant: u.Recursive}
 
 	l := &lowerer{
-		unit:     u,
-		r:        r,
-		cells:    map[*sema.Symbol]*Cell{},
-		params:   map[*sema.Symbol]*Param{},
-		bound:    map[*sema.Symbol]*Mem{},
-		labels:   map[int]*Block{},
-		free:     map[Type][]*Cell{},
-		freeDesc: map[string][]*Cell{},
-		freeText: map[int][]*Cell{},
-		data:     map[string]*Datum{},
+		unit:      u,
+		r:         r,
+		cells:     map[*sema.Symbol]*Cell{},
+		params:    map[*sema.Symbol]*Param{},
+		bound:     map[*sema.Symbol]*Mem{},
+		labels:    map[int]*Block{},
+		free:      map[Type][]*Cell{},
+		freeDesc:  map[string][]*Cell{},
+		freeText:  map[int][]*Cell{},
+		freeArray: map[arrayTempKey][]*Cell{},
+		data:      map[string]*Datum{},
 	}
 
 	// A function whose value doesn't fit in R0 and R1 (CHARACTER, REAL*16,
@@ -536,12 +544,21 @@ func (l *lowerer) release() {
 			l.freeText[c.Size] = append(l.freeText[c.Size], c)
 		case IndexCell:
 			l.freeIndex = append(l.freeIndex, c)
+		case ArrayTempCell:
+			key := arrayTempKey{c.T, c.Size}
+			l.freeArray[key] = append(l.freeArray[key], c)
 		default:
 			l.free[c.T] = append(l.free[c.T], c)
 		}
 	}
 
 	l.busy = l.busy[:0]
+
+	for _, sym := range l.boundArrays {
+		delete(l.bound, sym)
+	}
+
+	l.boundArrays = l.boundArrays[:0]
 }
 
 // loopCell is a DO loop's count ($Cn) or step ($Sn), loop n, named name

@@ -51,12 +51,16 @@ type arrayNest struct {
 	name string
 
 	// leaves are what the scalarizer knows of each array the statement reads
-	// or writes, by the sema expression that is it, and order those
+	// or writes, by the sema expression that is it, and prepared those
 	// expressions in the order they were prepared: the target's first, then
 	// the value's, left to right. (A map's order is Go's choice, and the code
 	// must come out the same every time.)
-	leaves map[sema.Expr]*arrayLeaf
-	order  []sema.Expr
+	leaves   map[sema.Expr]*arrayLeaf
+	prepared []sema.Expr
+
+	// order is how the loops run (nil: every one up), and which scalars must
+	// be computed once before them.
+	order *sema.ArrayOrder
 
 	// index is each loop's index, the leftmost dimension's first.
 	index []*sema.Symbol
@@ -95,11 +99,63 @@ type leafDim struct {
 }
 
 // arrayAssign lowers an array assignment, Target = Value (sema checked that
-// they conform, and that the value reads no element of the target that the
-// loops will have changed).
+// they conform, and said how the loops must run, s.Order: which run down, or
+// whether the value goes into a temporary first). With a temporary the
+// statement is two nests, the value into the temporary, then the temporary
+// into the target, each the same as an assignment of its own.
 func (l *lowerer) arrayAssign(s *sema.Assign) {
-	n := &arrayNest{l: l, name: "array (line " + strconv.Itoa(l.from.Position().Line) + ")", leaves: map[sema.Expr]*arrayLeaf{}}
-	rank := len(s.Target.Shape())
+	if s.Order != nil && s.Order.Temporary {
+		temp := l.arrayTemp(s.Value.Type(), s.Order.TempShape)
+
+		l.arrayNest(temp, s.Value, nil)
+		l.arrayNest(s.Target, temp, nil)
+
+		return
+	}
+
+	l.arrayNest(s.Target, s.Value, s.Order)
+}
+
+// arrayTemp is an array temporary of type t and the extents shape, for the
+// statement being lowered, as a whole array: a cell another statement used
+// and gave back, or a new one ($An).
+func (l *lowerer) arrayTemp(t sema.Type, shape []int) *sema.ArrayRef {
+	sym := sema.NewArray("$A", t, shape)
+	size := sym.Size()
+	key := arrayTempKey{l.typeOf(t), size}
+
+	var c *Cell
+
+	if free := l.freeArray[key]; len(free) > 0 {
+		c = free[len(free)-1]
+		l.freeArray[key] = free[:len(free)-1]
+	} else {
+		l.arrays++
+		c = l.newCell("$A"+strconv.Itoa(l.arrays), ArrayTempCell, key.t, size)
+	}
+
+	l.busy = append(l.busy, c)
+	l.bound[sym] = &Mem{Cell: c, T: key.t}
+	l.boundArrays = append(l.boundArrays, sym)
+
+	return sema.NewArrayRef(sym, l.from.Position())
+}
+
+// arrayTempKey is what array temporaries are pooled by: their element type and
+// size in bytes.
+type arrayTempKey struct {
+	t    Type
+	size int
+}
+
+// arrayNest lowers target = value as one nest of loops, run as order says
+// (nil: every loop up).
+func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder) {
+	n := &arrayNest{
+		l: l, name: "array (line " + strconv.Itoa(l.from.Position().Line) + ")",
+		leaves: map[sema.Expr]*arrayLeaf{}, order: order,
+	}
+	rank := len(target.Shape())
 
 	for range rank {
 		sym := sema.NewSymbol("$I", sema.IntegerType)
@@ -108,14 +164,14 @@ func (l *lowerer) arrayAssign(s *sema.Assign) {
 		n.kept = append(n.kept, sym)
 	}
 
-	leaves := append(sema.Leaves(s.Target), sema.Leaves(s.Value)...)
+	leaves := append(sema.Leaves(target), sema.Leaves(value)...)
 	for _, leaf := range leaves {
 		n.prepare(leaf)
 	}
 
 	n.extents = make([]sema.Expr, rank)
 	for d := range rank {
-		n.extents[d] = n.extent(d, s.Target, s.Value)
+		n.extents[d] = n.extent(d, target, value)
 	}
 
 	if l.unit.Checks.Bounds {
@@ -123,10 +179,10 @@ func (l *lowerer) arrayAssign(s *sema.Assign) {
 		n.checkSubscripts()
 	}
 
-	target := sema.Scalarize(s.Target, n.element, n.hoist)
-	value := sema.Scalarize(s.Value, n.element, n.hoist)
+	t := sema.Scalarize(target, n.element, n.hoist)
+	v := sema.Scalarize(value, n.element, n.hoist)
 
-	n.loops(rank-1, func() { l.assignScalar(target, value) })
+	n.loops(rank-1, func() { l.assignScalar(t, v) })
 
 	for _, sym := range n.kept {
 		delete(l.bound, sym)
@@ -160,10 +216,16 @@ func (n *arrayNest) loops(d int, body func()) {
 		return
 	}
 
-	one := sema.IntConstAt(1, n.l.from.Position())
+	pos := n.l.from.Position()
+	one := sema.IntConstAt(1, pos)
 	name := n.name + ", dimension " + strconv.Itoa(d+1)
+	var start, limit, step sema.Expr = one, n.extents[d], one
 
-	n.l.countedLoop(name, n.index[d], one, n.extents[d], one, false, func(*Block) {
+	if n.order != nil && n.order.Down[d] {
+		start, limit, step = n.extents[d], one, sema.IntConstAt(-1, pos)
+	}
+
+	n.l.countedLoop(name, n.index[d], start, limit, step, false, func(*Block) {
 		n.loops(d-1, body)
 	})
 }
@@ -207,10 +269,11 @@ func (n *arrayNest) bind(m *Mem, t sema.Type) sema.Expr {
 }
 
 // hoist is the scalar e as the loops use it: as it is if the loops compute it
-// at each element (sema.Inline: a constant, a variable, ...), or else computed
-// now into a temporary of its type.
+// at each element (sema.Inline: a constant, a variable, ...) and it reads
+// nothing the loops write (ArrayOrder.Hoisted), or else computed now into a
+// temporary of its type.
 func (n *arrayNest) hoist(e sema.Expr) sema.Expr {
-	if sema.Inline(e) {
+	if sema.Inline(e) && !n.order.Hoisted(e) {
 		return e
 	}
 
@@ -229,7 +292,7 @@ func (n *arrayNest) prepare(leaf sema.Expr) {
 
 	info := &arrayLeaf{}
 	n.leaves[leaf] = info
-	n.order = append(n.order, leaf)
+	n.prepared = append(n.prepared, leaf)
 
 	switch leaf := leaf.(type) {
 	case *sema.ArrayRef:
@@ -442,7 +505,7 @@ func (n *arrayNest) checkShapes(leaves []sema.Expr) {
 // bounds), and its fixed subscripts. A check of a constant in range is left
 // out (inRange).
 func (n *arrayNest) checkSubscripts() {
-	for _, leaf := range n.order {
+	for _, leaf := range n.prepared {
 		info := n.leaves[leaf]
 		if _, ok := leaf.(*sema.Section); !ok {
 			continue

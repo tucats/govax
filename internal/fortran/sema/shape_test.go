@@ -13,7 +13,7 @@ import (
 func TestShapes(t *testing.T) {
 	const notYet = ""
 
-	const overlap = "NOTIMPL: an array assignment whose value may read its target's changed elements is not implemented yet"
+	const unsized = "NOTIMPL: an array assignment that needs a temporary of a size not known when compiling (Phase 104) is not implemented yet"
 
 	cases := []struct {
 		name  string
@@ -29,21 +29,23 @@ func TestShapes(t *testing.T) {
 		{"a negative stride", []string{"DIMENSION A(10), B(10)", "A(10:1:-1) = B"}, notYet},
 		{"a bound not constant", []string{"DIMENSION A(10), B(10)", "A(1:N) = B(1:N)"}, notYet},
 		{"an extent not known with one known", []string{"DIMENSION A(10), B(10)", "A(1:N) = B"}, notYet},
-		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A = A * 2", "A(2:) = A(:N-1)"}, overlap},
+		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A = A * 2", "A(2:) = A(:N-1)"}, notYet},
 		{"character arrays", []string{"CHARACTER*4 C(3), D(3)*8", "D = C // 'XY'", "C(:)(2:3) = 'AB'"}, notYet},
 		{"a section of size zero", []string{"DIMENSION A(10)", "A(5:4) = 1"}, notYet},
 
-		// Overlap: the same elements, apart, or not known (subtask 5's).
+		// Overlap: the same elements, apart, ordered, or through a temporary
+		// (TestArrayOrder has which).
 		{"the same elements", []string{"DIMENSION A(10)", "A(1:N) = 2 * A(1:N) + A(1:N)"}, notYet},
 		{"different arrays", []string{"DIMENSION A(10), B(10)", "A = B * B"}, notYet},
 		{"two dummies", []string{"SUBROUTINE S(A, B)", "DIMENSION A(10), B(10)", "A = B"}, notYet},
 		{"a scalar computed first", []string{"DIMENSION A(10)", "A = A / A(1) ** 2"}, notYet},
-		{"the target's element read", []string{"DIMENSION A(10)", "A = A(1)"}, overlap},
-		{"a shifted section", []string{"DIMENSION A(10)", "A(2:10) = A(1:9)"}, overlap},
-		{"a reversed array", []string{"DIMENSION A(10)", "A(10:1:-1) = A"}, overlap},
-		{"EQUIVALENCE", []string{"DIMENSION A(10), B(10)", "EQUIVALENCE (A(2), B)", "A = B"}, overlap},
+		{"the target's element read", []string{"DIMENSION A(10)", "A = A(1)"}, notYet},
+		{"a shifted section", []string{"DIMENSION A(10)", "A(2:10) = A(1:9)"}, notYet},
+		{"a reversed array", []string{"DIMENSION A(10)", "A(10:1:-1) = A"}, notYet},
+		{"EQUIVALENCE", []string{"DIMENSION A(10), B(10)", "EQUIVALENCE (A(2), B)", "A = B"}, notYet},
 		{"one common block", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A, B", "A = B"}, notYet},
-		{"overlapping in common", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A", "EQUIVALENCE (A(5), B)", "A = B"}, overlap},
+		{"overlapping in common", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A", "EQUIVALENCE (A(5), B)", "A = B"}, notYet},
+		{"a temporary of unknown size", []string{"DIMENSION A(10)", "A(1:N) = A(N:1:-1)"}, unsized},
 		{"a CHARACTER function", []string{"CHARACTER*4 C(3), F", "C = F(1)"}, "NOTIMPL: a CHARACTER function's value in an array expression is not implemented yet"},
 		{"a concatenation of unknown length", []string{"SUBROUTINE S(C, D)", "CHARACTER*(*) C(3), D", "C = C // D"}, "NOTIMPL: a concatenation of a length not constant in an array expression is not implemented yet"},
 
@@ -97,6 +99,66 @@ func TestShapes(t *testing.T) {
 
 		if g := strings.Join(got, "\n"); g != c.want {
 			t.Errorf("%s: got\n%s\nwant\n%s", c.name, g, c.want)
+		}
+	}
+}
+
+// TestArrayOrder checks overlap's answers (docs/planning/PHASE-102 - Fortran
+// 90 array expressions.md, finding 6; subtask 5): each case is a main
+// program's declarations and one array assignment, and the order the dump
+// shows after it: "" for every loop up, "down in n", or "through a temporary".
+func TestArrayOrder(t *testing.T) {
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"apart", []string{"DIMENSION A(10), B(10)", "A = B + A"}, ""},
+		{"the same elements", []string{"DIMENSION A(10)", "A(1:N) = A(1:N) * 2"}, ""},
+		{"a whole array and its full section", []string{"DIMENSION A(10)", "A = A(1:10) + A(:)"}, ""},
+		{"read ahead", []string{"DIMENSION A(10)", "A(1:9) = A(2:10)"}, ""},
+		{"read behind", []string{"DIMENSION A(10)", "A(2:10) = A(1:9)"}, "down in 1"},
+		{"read behind, by bounds not constant", []string{"DIMENSION A(10)", "A(N+1:M+1) = A(N:M)"}, "down in 1"},
+		{"read behind, strides of 2", []string{"DIMENSION A(20)", "A(3:19:2) = A(1:17:2)"}, "down in 1"},
+		{"never meeting, strides of 2", []string{"DIMENSION A(20)", "A(2:20:2) = A(1:19:2)"}, ""},
+		{"a negative stride behind", []string{"DIMENSION A(10)", "A(9:1:-1) = A(10:2:-1)"}, "down in 1"},
+		{"different columns", []string{"DIMENSION A(4, 4)", "A(:, 1) = A(:, 2)"}, ""},
+		{"a column shifted", []string{"DIMENSION A(4, 4)", "A(2:4, 2) = A(1:3, 2)"}, "down in 1"},
+		{"the outer dimension decides", []string{"DIMENSION A(4, 4)", "A(1:3, 2:4) = A(2:4, 1:3)"}, "down in 2"},
+		{"both directions", []string{"DIMENSION A(10)", "A(2:9) = A(1:8) + A(3:10)"}, "through a temporary"},
+		{"a reversal", []string{"DIMENSION A(10)", "A(10:1:-1) = A"}, "through a temporary"},
+		{"a row into a column", []string{"DIMENSION A(4, 4)", "A(:, 1) = A(1, :)"}, "through a temporary"},
+		{"EQUIVALENCE", []string{"DIMENSION A(10), B(10)", "EQUIVALENCE (A(2), B)", "A = B"}, "through a temporary"},
+		{"the target's element", []string{"DIMENSION A(10)", "A = A(1) + A"}, ""},
+		{"a CHARACTER element of the target", []string{"CHARACTER*4 C(3)", "C = C(1)"}, "through a temporary"},
+		{"substrings of the same elements", []string{"CHARACTER*4 C(3)", "C(:)(2:3) = C(:)(1:2)"}, ""},
+	}
+
+	for _, c := range cases {
+		lines := make([]string, 0, len(c.lines)+1)
+		for _, l := range c.lines {
+			lines = append(lines, fixedLine(l))
+		}
+
+		lines = append(lines, fixedLine("END"))
+
+		prog, ms := analyzeLines(t, "T.FOR", lines...)
+		if len(ms) > 0 {
+			t.Errorf("%s: %s: %s", c.name, ms[0].Ident, ms[0].Text)
+
+			continue
+		}
+
+		var got string
+
+		for _, st := range prog.Units[0].Body {
+			if a, ok := st.(*Assign); ok && a.Order != nil {
+				got = strings.Trim(strings.TrimSpace(a.Order.String()), "[]")
+			}
+		}
+
+		if got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
 	}
 }

@@ -884,6 +884,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return c.Loop + "'s step"
 	case ir.IndexCell:
 		return "an array statement's loop index"
+	case ir.ArrayTempCell:
+		return fmt.Sprintf("an array temporary of %d bytes, for one statement", c.Size)
 	case ir.TextCell:
 		return "characters, for one statement"
 	case ir.ArgCell:

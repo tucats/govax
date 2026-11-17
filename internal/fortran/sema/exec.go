@@ -141,11 +141,20 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	if rankOf(target) > 0 && (!a.checkArrayParts(value) || !a.checkOverlap(s.Pos, target, value)) {
-		return nil
+	var order *ArrayOrder
+
+	if rankOf(target) > 0 {
+		if !a.checkArrayParts(value) {
+			return nil
+		}
+
+		var ok bool
+		if order, ok = a.arrayOrder(s.Pos, target, value); !ok {
+			return nil
+		}
 	}
 
-	return &Assign{stmtBase{s}, target, value}
+	return &Assign{stmtBase{s}, target, value, order}
 }
 
 // assignedShape checks an assignment's shapes (Fortran 90's 7.5.1.5): a

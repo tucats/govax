@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 4 are done (2026-11-17), and subtask 5 is next.
+author's answers"); subtasks 2 to 5 are done (2026-11-17), and subtask 6 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -407,7 +407,7 @@ and FTNRTL do today.
    golden dumps; runs under both optimizer settings (done
    2026-11-17).
 5. **Overlap and temporaries** (findings 6 and 7, question 2), each answer
-   held by a dump and a run.
+   held by a dump and a run (done 2026-11-17).
 6. **Vector subscripts** on either side, MANYONE (finding 13).
 7. **Constant arrays and constructors:** `ArrayConst`, array PARAMETERs,
    initialization, RESHAPE of constants and the constant inquiries,
@@ -600,3 +600,35 @@ shapes in Phase 104.
   `arrays.f90`, worked by hand, run in all eight modes and the same on
   gfortran (`compare.py`'s `PROGRAMS90`). Under `/OPTIMIZE` its first loop
   is `MULF3`, `ADDF3`, `AOBLEQ`. `TestNoF90Unchanged`'s digests didn't change.
+- **2026-11-17, subtask 5:** Overlap and temporaries. `sema/overlap.go`'s
+  `arrayOrder` replaces `checkOverlap` and gives every array assignment an
+  `ArrayOrder` (`Assign.Order`, nil for a scalar assignment; the sema dump
+  shows it after the statement, `[down in 1]` or `[through a temporary]`).
+  For each array the value reads that may share the target's storage
+  (`mayShare`, as before), `relate` compares the two sides' subscripts as
+  `slot`s (a whole array is a triplet per dimension from its lower bound by
+  1; a substring's characters don't count, an element's own characters being
+  moved as if through a temporary by MOVC3 and MOVC5): the same fixed
+  subscripts and the same triplet starts and strides are the same element; a
+  fixed subscript differing by a constant, or starts differing by a constant
+  that isn't a multiple of the stride, never meet (apart); starts differing
+  by a constant multiple of a constant stride are ordered, the outermost such
+  loop to run up if the leaf reads ahead, down if behind (`difference`,
+  `offsetForm`: `N+1` and `N` differ by 1); anything else is unknown. Two
+  leaves that need opposite directions in one loop, an unknown answer, or a
+  CHARACTER scalar of the target's storage read at each element, need a
+  temporary, whose extents (`TempShape`) must be known when compiling, else
+  NOTIMPL naming Phase 104 (`X(1:N) = X(N:1:-1)`). A numeric scalar the loops
+  would read at each element that reads the target's storage (`A = A / A(10)`)
+  is computed once before them instead (`ArrayOrder.Hoisted`, asked by the
+  scalarizer's `hoist`). In `ir/lowerarray.go`, `arrayAssign` is now
+  `arrayNest` run once, its loops counting down from the extent where `Down`
+  says, or twice through `arrayTemp`, a new `ArrayTempCell` (`$An`, pooled per
+  statement by element type and size, `Routine.NewCell`'s rule, so in the
+  frame in a reentrant routine), bound to a symbol of lowering's own
+  (`sema.NewArray`, `NewArrayRef`): the value into the temporary, then the
+  temporary into the target, each nest with its own `/CHECK=BOUNDS` checks.
+  Tests: `TestArrayOrder` (19 cases, each answer), `TestShapes`'s overlap
+  cases (now compiled, and the unknown size's NOTIMPL), `ir`'s
+  `f90overlap.for`, and `testdata/fortran90`'s `overlap.f90`, worked by hand,
+  run in all eight modes and the same on gfortran.

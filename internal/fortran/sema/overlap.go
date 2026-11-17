@@ -1,38 +1,144 @@
 package sema
 
-import "github.com/tucats/govax/internal/fortran/diag"
+import (
+	"strconv"
+	"strings"
+
+	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
+)
 
 // Overlap (docs/planning/PHASE-102 - Fortran 90 array expressions.md,
-// finding 6). An array assignment must act as if its whole right side were
-// computed before any element of its target is defined (Fortran 90's
+// findings 6 and 7). An array assignment must act as if its whole right side
+// were computed before any element of its target is defined (Fortran 90's
 // 7.5.1.5); the scalarizer computes it an element at a time, as it assigns, so
 // that is right only where no element the loops read was written by an
-// earlier pass. This is the test. So far it knows two answers: the sides are
-// apart (different storage), or they are the same element (the target's own
-// section read with the same subscripts, A = A + 1, A(1:N) = 2 * A(1:N)).
-// Anything else may overlap, and is NOTIMPL until the ordered answer and
-// temporaries come (subtask 5).
+// earlier pass. This is the test, and for each array the value reads it has
+// four answers:
+//
+//   - apart: different storage (different names not joined by COMMON or
+//     EQUIVALENCE, two dummy arguments), or the same array where a subscript
+//     shows the two never meet (A(:, 1) = A(:, 2));
+//   - the same element at each index of the loops (A = A + 1, A(1:N) =
+//     2 * A(1:N));
+//   - ordered: the same array, the same subscripts in every dimension but
+//     some, where the strides are the same constant and the starts differ by
+//     a constant. Then the element the leaf reads at the indexes k is the one
+//     the target writes at k + q, and running the outermost loop whose q isn't
+//     0 the right way (up if q is positive there, down if not) reads it before
+//     it is written: A(2:N) = A(1:N-1) runs down, A(1:N-1) = A(2:N) up;
+//   - unknown: anything else (different names that share storage, a section of
+//     another form). Then the value goes into a temporary first, an array of
+//     the assignment's shape, and the temporary is assigned to the target: two
+//     nests. A temporary's size must be known when compiling (finding 7); one
+//     that isn't is Phase 104's.
+//
+// Two arrays that need opposite directions in one dimension need a temporary
+// too. A scalar the loops compute at each element (Inline) that reads the
+// target's storage (A = A(1)) is computed once before them instead
+// (ArrayOrder.Hoisted), unless it is CHARACTER, whose text is read where it is:
+// then a temporary.
 
-// checkOverlap reports an array assignment whose value may read an element of
-// the target after the loops write it: false after NOTIMPL. Scalars computed
-// once before the loops (Inline false) are read before any element is written,
-// and can't.
-func (a *analyzer) checkOverlap(pos diag.Position, target, value Expr) bool {
+// ArrayOrder is how the scalarizer runs an array assignment (sema's answer to
+// whether its sides overlap): Down says, for each loop (the target's
+// dimensions, the leftmost first), whether it runs from the extent down to 1;
+// Temporary that the value goes into an array of the extents TempShape first.
+type ArrayOrder struct {
+	Down      []bool
+	Temporary bool
+	TempShape []int
+
+	// target is the array the assignment writes, for Hoisted.
+	target *Symbol
+}
+
+// Hoisted reports whether lowering must compute the scalar e, one it would
+// compute at each element (Inline), once before the loops: it reads storage
+// the target may share.
+func (o *ArrayOrder) Hoisted(e Expr) bool {
+	if o == nil || o.Temporary || e.Type().Kind == Character {
+		return false
+	}
+
+	for _, s := range readSymbols(e) {
+		if mayShare(o.target, s) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// String is the order as the dump shows it after an assignment: nothing for
+// loops all running up with no temporary.
+func (o *ArrayOrder) String() string {
+	if o == nil {
+		return ""
+	}
+
+	if o.Temporary {
+		return "  [through a temporary]"
+	}
+
+	var down []string
+
+	for i, d := range o.Down {
+		if d {
+			down = append(down, strconv.Itoa(i+1))
+		}
+	}
+
+	if down == nil {
+		return ""
+	}
+
+	return "  [down in " + strings.Join(down, ", ") + "]"
+}
+
+// overlapRelation is what overlap found between an assignment's target and one array
+// its value reads.
+type overlapRelation int
+
+const (
+	relApart   overlapRelation = iota // never the same element
+	relSame                    // the same element at each index
+	relOrdered                 // read before written, if one loop runs one way
+	relUnknown                 // anything else: a temporary
+)
+
+// arrayOrder is how the array assignment target = value is to run, or false
+// after NOTIMPL (a temporary whose size isn't known when compiling).
+func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrder, bool) {
+	rank := rankOf(target)
 	ts := baseSymbol(target)
+	o := &ArrayOrder{Down: make([]bool, rank), target: ts}
 
-	ok := true
+	// need is each loop's direction, 1 up, -1 down, 0 either.
+	need := make([]int, rank)
 
 	Scalarize(value, func(leaf Expr) Expr {
-		if s := baseSymbol(leaf); ok && mayShare(ts, s) && !sameElements(target, leaf) {
-			ok = false
+		if o.Temporary || !mayShare(ts, baseSymbol(leaf)) {
+			return leaf
+		}
+
+		switch rel, loop, dir := relate(target, leaf); rel {
+		case relOrdered:
+			if need[loop] == -dir {
+				o.Temporary = true
+			}
+
+			need[loop] = dir
+
+		case relUnknown:
+			o.Temporary = true
 		}
 
 		return leaf
 	}, func(x Expr) Expr {
-		if ok && Inline(x) {
+		if Inline(x) && x.Type().Kind == Character {
 			for _, s := range readSymbols(x) {
 				if mayShare(ts, s) {
-					ok = false
+					o.Temporary = true
 				}
 			}
 		}
@@ -40,11 +146,27 @@ func (a *analyzer) checkOverlap(pos diag.Position, target, value Expr) bool {
 		return x
 	})
 
-	if !ok {
-		a.notImplForm(pos, "an array assignment whose value may read its target's changed elements")
+	if !o.Temporary {
+		for i, d := range need {
+			o.Down[i] = d < 0
+		}
+
+		return o, true
 	}
 
-	return ok
+	shape, _ := a.conform(pos, target.Shape(), value.Shape())
+
+	if _, known := shape.Size(); !known || (value.Type().Kind == Character && value.Type().Size == 0) {
+		a.notImplForm(pos, "an array assignment that needs a temporary of a size not known when compiling (Phase 104)")
+
+		return nil, false
+	}
+
+	for _, e := range shape {
+		o.TempShape = append(o.TempShape, e.Size)
+	}
+
+	return o, true
 }
 
 // baseSymbol is the array an array-valued leaf or target is of.
@@ -81,32 +203,169 @@ func mayShare(x, y *Symbol) bool {
 	return x.group != nil && x.group == y.group
 }
 
-// sameElements reports whether leaf reads, at each index of the loops, the
-// element target writes there: the same array, whole on both sides, or a
-// section with the same subscripts written the same way on both. Their
-// values are computed once, before the loops, so the same text is the same
-// value.
-func sameElements(target, leaf Expr) bool {
-	if ts, ok := target.(*Substring); ok {
-		ls, ok := leaf.(*Substring)
+// slot is one subscript of an array leaf or target, as overlap compares them:
+// a fixed subscript, or a triplet's start and stride (its end doesn't matter:
+// the two sides conform). A nil lower is the dimension's own lower bound, an
+// adjustable array's, the same on both sides.
+type slot struct {
+	triplet       bool
+	index         Expr
+	lower, stride Expr
+}
 
-		return ok && DumpExpr(ts.Lower) == DumpExpr(ls.Lower) && DumpExpr(ts.Upper) == DumpExpr(ls.Upper) &&
-			sameElements(ts.X, ls.X)
-	}
+// slots are e's subscripts, e a whole array or a section (a substring's
+// characters don't matter: an element's own characters are moved as if
+// through a temporary, by MOVC3 and MOVC5).
+func slots(e Expr) []slot {
+	switch e := e.(type) {
+	case *Substring:
+		return slots(e.X)
 
-	switch t := target.(type) {
 	case *ArrayRef:
-		l, ok := leaf.(*ArrayRef)
+		list := make([]slot, len(e.Sym.Dims))
 
-		return ok && l.Sym == t.Sym
+		for i, d := range e.Sym.Dims {
+			list[i] = slot{triplet: true, stride: IntConstAt(1, e.Pos)}
+			if d.LowerExpr == nil {
+				list[i].lower = IntConstAt(d.Lower, e.Pos)
+			}
+		}
+
+		return list
 
 	case *Section:
-		l, ok := leaf.(*Section)
+		list := make([]slot, len(e.Subs))
 
-		return ok && l.Sym == t.Sym && DumpExpr(l) == DumpExpr(t)
+		for i, s := range e.Subs {
+			if s.Triplet() {
+				list[i] = slot{triplet: true, lower: s.Lower, stride: s.Stride}
+			} else {
+				list[i] = slot{index: s.Index}
+			}
+		}
+
+		return list
 	}
 
-	return false
+	return nil
+}
+
+// relate is how the array leaf the value reads stands to the target, which may
+// share its storage: for relOrdered also which loop must run which way (1 up,
+// -1 down).
+func relate(target, leaf Expr) (rel overlapRelation, loop, dir int) {
+	if baseSymbol(target) != baseSymbol(leaf) {
+		return relUnknown, 0, 0
+	}
+
+	t, l := slots(target), slots(leaf)
+	if len(t) != len(l) {
+		return relUnknown, 0, 0
+	}
+
+	rel, loop = relSame, -1
+	j := 0
+
+	for i := range t {
+		x, y := t[i], l[i]
+
+		switch {
+		case !x.triplet && !y.triplet:
+			if DumpExpr(x.index) == DumpExpr(y.index) {
+				continue
+			}
+
+			if c, ok := difference(y.index, x.index); ok && c != 0 {
+				return relApart, 0, 0
+			}
+
+			return relUnknown, 0, 0
+
+		case x.triplet && y.triplet:
+			if DumpExpr(x.stride) != DumpExpr(y.stride) {
+				return relUnknown, 0, 0
+			}
+
+			c, ok := difference(y.lower, x.lower)
+			if !ok {
+				return relUnknown, 0, 0
+			}
+
+			if c != 0 {
+				st, known := constantInt(x.stride)
+				if !known {
+					return relUnknown, 0, 0
+				}
+
+				if c%st != 0 {
+					return relApart, 0, 0
+				}
+
+				// The outermost loop with a difference decides (loops are
+				// numbered from the leftmost, the innermost).
+				rel, loop, dir = relOrdered, j, 1
+				if c/st < 0 {
+					dir = -1
+				}
+			}
+
+			j++
+
+		default:
+			return relUnknown, 0, 0
+		}
+	}
+
+	return rel, loop, dir
+}
+
+// difference is x - y when it is a constant: both constants, or the same
+// expression plus or minus constants (N+1 and N-1 differ by 2), or both nil
+// (the dimension's own bound).
+func difference(x, y Expr) (int, bool) {
+	if x == nil || y == nil {
+		return 0, x == nil && y == nil
+	}
+
+	xs, xc := offsetForm(x)
+	ys, yc := offsetForm(y)
+
+	if xs != ys {
+		return 0, false
+	}
+
+	return xc - yc, true
+}
+
+// offsetForm splits e into an expression's text and a constant added to it:
+// N+1 is "N" and 1, 3 is "" and 3.
+func offsetForm(e Expr) (string, int) {
+	if c, ok := constantInt(e); ok {
+		return "", c
+	}
+
+	if b, ok := e.(*Binary); ok {
+		if c, ok := constantInt(b.Y); ok {
+			switch b.Op {
+			case ast.Add:
+				s, k := offsetForm(b.X)
+
+				return s, k + c
+			case ast.Sub:
+				s, k := offsetForm(b.X)
+
+				return s, k - c
+			}
+		}
+
+		if c, ok := constantInt(b.X); ok && b.Op == ast.Add {
+			s, k := offsetForm(b.Y)
+
+			return s, k + c
+		}
+	}
+
+	return DumpExpr(e), 0
 }
 
 // Inline reports whether the scalarizer computes the scalar e in its loops,

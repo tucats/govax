@@ -239,6 +239,7 @@ const (
 	KeyListCell                    // what an OPEN's KEY= tells FTNRTL, filled in by the statement (lowerfile.go)
 	NamelistCell                   // a NAMELIST group's block, filled in by the statement, for a group with a frame variable (lowerio.go)
 	IndexCell                      // an array statement's loop index, for one statement's use (lowerarray.go)
+	ArrayTempCell                  // an array temporary, for one statement's use (lowerarray.go)
 )
 
 // Cell is a place in the routine's static storage, or, if Frame is set, in the

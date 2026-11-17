@@ -472,11 +472,14 @@ func (b *stmtBase) Source() ast.Stmt { return b.AST }
 // The statements.
 type (
 	// Assign is Target = Value. Target is a *Var or an *Elem, and Value
-	// has Target's type: semantic analysis converted it (Table 3-1).
+	// has Target's type: semantic analysis converted it (Table 3-1). An
+	// array assignment's target is a whole array or a section, and Order is
+	// how its loops run (overlap.go); a scalar assignment's Order is nil.
 	Assign struct {
 		stmtBase
 		Target Expr
 		Value  Expr
+		Order  *ArrayOrder
 	}
 
 	// Call is CALL Sub(Args).
