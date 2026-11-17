@@ -59,3 +59,63 @@ func TestFormatQuotes(t *testing.T) {
 		t.Errorf("without /F90: messages %v, want one FMTSYNTAX", messages)
 	}
 }
+
+// TestConstantFormatQuotes holds a format given as a CHARACTER constant to
+// what TestFormatQuotes holds a FORMAT statement to (Phase 101, subtask 5,
+// where examples.f90's WRITE (*, '(" QED")') found it): under /F90 its
+// character constants between quotation marks reach FTNRTL between
+// apostrophes, a PARAMETER's value too; text after the last parenthesis stays;
+// a variable's format, a format that doesn't read, and every format without
+// /F90 are left as written.
+func TestConstantFormatQuotes(t *testing.T) {
+	cases := []struct {
+		f90    bool
+		format string
+		want   string
+	}{
+		{true, `'(" QED")'`, `(' QED')`},
+		{true, `'(1X, "it''s ""so""", I3) and more'`, `(1X, 'it''s "so"', I3) and more`},
+		{true, `Q`, `(1X, 'from a PARAMETER')`},
+		{true, `V`, ``},
+		{true, `'(1X, "unended)'`, `(1X, "unended)`},
+		{true, `'(1X, ''plain'')'`, `(1X, 'plain')`},
+		{false, `'(" QED")'`, `(" QED")`},
+	}
+
+	for _, c := range cases {
+		lines := []string{"      PROGRAM P", "      CHARACTER*20 V", "      CHARACTER*(*) Q",
+			`      PARAMETER (Q = '(1X, "from a PARAMETER")')`, "      V = '(1X)'",
+			"      WRITE (6, " + c.format + ")", "      END"}
+		if c.f90 {
+			lines = append([]string{"      OPTIONS /F90"}, lines...)
+		}
+
+		prog, messages := analyzeOpts(t, Options{}, lines...)
+		if len(messages) != 0 {
+			t.Errorf("%s: messages %v", c.format, messages)
+
+			continue
+		}
+
+		var io *IO
+
+		for _, s := range prog.Units[0].Body {
+			if found, ok := s.(*IO); ok {
+				io = found
+			}
+		}
+
+		if io == nil {
+			t.Fatalf("%s: no WRITE", c.format)
+		}
+
+		got := ""
+		if k, ok := io.RunFormat.(*Const); ok {
+			got = k.Text
+		}
+
+		if got != c.want {
+			t.Errorf("%s (F90 %v): FTNRTL gets %q, want %q", c.format, c.f90, got, c.want)
+		}
+	}
+}

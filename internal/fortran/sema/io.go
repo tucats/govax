@@ -835,7 +835,7 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 		return false
 
 	case t.Kind == Character:
-		io.RunFormat = e
+		io.RunFormat = a.constantFormat(e)
 
 	case isArrayPlace(e) && t.Kind != Record:
 		if r, ok := e.(*ArrayRef); ok && r.Sym.AssumedSize() {
@@ -862,6 +862,28 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 	}
 
 	return true
+}
+
+// constantFormat is a format given as a CHARACTER constant (or a PARAMETER's
+// value), with each character constant in it between quotation marks put
+// between apostrophes under /F90, as a FORMAT statement's are (encodeFormat):
+// FTNRTL, like VMS's FORRTL, reads only apostrophes, and Fortran 90 programs
+// write WRITE (*, '("Total:", I5)') as often as a FORMAT statement. Any other
+// format is left as it is: a variable's text is known only at run time, and a
+// constant that doesn't read as a format is FTNRTL's to report there, as VAX
+// FORTRAN's run-time formats always were.
+func (a *analyzer) constantFormat(e Expr) Expr {
+	c, ok := e.(*Const)
+	if !ok || !a.f90 || !strings.Contains(c.Text, `"`) {
+		return e
+	}
+
+	f, err := format.Parse(c.Text, format.Options{Quotes: true, RunTime: true})
+	if err != nil {
+		return e
+	}
+
+	return charConst(format.Apostrophes(c.Text, f), c.Pos)
 }
 
 // isArrayPlace reports whether e is a whole array or an array element.

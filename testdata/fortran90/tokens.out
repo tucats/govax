@@ -1,0 +1,72 @@
+line 1: x = alpha_1 + 42
+  name     x
+  operator =
+  name     alpha_1
+  operator +
+  integer  42
+line 2: y = (x ** 2 - 3.25) / z  ! a comment
+  name     y
+  operator =
+  punct    (
+  name     x
+  operator **
+  integer  2
+  operator -
+  real     3.25
+  punct    )
+  operator /
+  name     z
+line 3: if (name == 'it''s') n = n // "end"
+  name     if
+  punct    (
+  name     name
+  operator ==
+  string   'it''s'
+  punct    )
+  name     n
+  operator =
+  name     n
+  operator //
+  string   "end"
+line 4: a <= b >= c /= d < e > f, g * h # 7
+  name     a
+  operator <=
+  name     b
+  operator >=
+  name     c
+  operator /=
+  name     d
+  operator <
+  name     e
+  operator >
+  name     f
+  punct    ,
+  name     g
+  operator *
+  name     h
+  unknown  #
+  integer  7
+line 5: call f((1, 2)
+  name     call
+  name     f
+  punct    (
+  punct    (
+  integer  1
+  punct    ,
+  integer  2
+  punct    )
+  unbalanced 1
+line 6: s = 'open
+  name     s
+  operator =
+  error    'open
+lines: 6
+name     20
+integer   5
+real      1
+string    2
+operator 16
+punct     9
+error     1
+unknown   1
+  $STATUS == "%X00000001"

@@ -5,8 +5,9 @@ Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17) and was accepted by the
 author the same day ("The author's answers"); subtask 2 (construct names,
 DO with no loop control, EXIT, and CYCLE) is done (2026-11-17), and so are
-subtask 3 (SELECT CASE in sema, 2026-11-17) and subtask 4 (SELECT CASE's
-code, 2026-11-17). Needs Phase 100 (done).
+subtask 3 (SELECT CASE in sema, 2026-11-17), subtask 4 (SELECT CASE's
+code, 2026-11-17), and subtask 5 (programs end to end, 2026-11-17). Needs
+Phase 100 (done).
 
 ## Goal
 
@@ -286,7 +287,7 @@ codegen, and the optimizer do today.
    CASE on CHARACTER, nested named loops with EXIT and CYCLE, every form of
    INTEGER selection, the standard's own examples), both optimizer settings
    and `/RECURSIVE`, gfortran's witness (`compare.py`'s `PROGRAMS90`); the
-   optimizer's cases of finding 10.
+   optimizer's cases of finding 10 (done 2026-11-17).
 6. **Close-out:** FORTRAN-INTERNALS.md's section 26, MANUAL.md's 14.13, HELP
    FORTRAN.
 
@@ -458,3 +459,26 @@ Every recommendation accepted:
   (`compare.py`'s `PROGRAMS90`). MANUAL.md's 14.13 and HELP FORTRAN say
   SELECT CASE is there (their full account is subtask 6's); the manual's
   NOTIMPL example is now WHERE's.
+- **2026-11-17:** Subtask 5, programs end to end. Four programs in
+  `testdata/fortran90`, each worked by hand and run by `TestFortran90Programs`
+  in all eight modes (paging off and on, `/NOOPTIMIZE` and `/OPTIMIZE`, each
+  also `/RECURSIVE`), and the same on gfortran (`compare.py`'s `PROGRAMS90`):
+  `tokens.f90`, a tokenizer by SELECT CASE on CHARACTER reading the terminal to
+  its end (`tokens.in`); `loops.f90`, nested and named loops with EXIT and CYCLE;
+  `cases.f90`, every INTEGER form with `caseForm`'s thresholds on both sides;
+  and `examples.f90`, the standard's own examples of 8.1.2.3, 8.1.3.3, and
+  8.1.4.5 in its capitals, made to run (unit IUN a scratch file). Finding 10's
+  cases were looked at in `loops.f90`'s `/OPTIMIZE` MACRO: the named EXIT out of
+  two counted loops whose variables are in R6 and R9 leaves through a block that
+  stores both back; the CYCLE in a loop closed by `AOBLEQ` is a branch to the
+  `AOBLEQ`; the loops with no control run as written. In `cases.f90`'s the
+  forms are the ones `caseForm` chooses (TABLE16 a CASEL, CHAIN17 a chain,
+  OPEN2's table based at -2). Example 7 (a CYCLE passing over a nonblock DO's
+  terminal CALL) and example 8 (CYCLE in loops sharing a CONTINUE) ran right
+  the first time. One fix: a format given as a CHARACTER constant, `WRITE (*,
+  '(" QED")')`, reached FTNRTL with its quotation marks, which it reads as
+  SYNERRFOR; under `/F90` sema now gives FTNRTL such a constant (or a
+  PARAMETER's value) with its quoted strings between apostrophes, as a FORMAT
+  statement's (`io.go`'s `constantFormat`, `format.Apostrophes` with `RunTime`),
+  held by `TestConstantFormatQuotes`. A format in a variable is still given as
+  it is, so `"…"` there is still SYNERRFOR (for "Where things stand").

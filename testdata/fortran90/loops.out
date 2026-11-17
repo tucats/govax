@@ -1,0 +1,13 @@
+found:   4  3
+odd sum:  25, i = 10
+down:   7  15  -1
+rows:  29, i, j =  3  5
+primes: 15
+  2  3  5  7 11 13 17 19 23 29 31 37 41 43 47
+power: 1024 10
+collatz 6:  6  2
+collatz 7: 11  5
+sieve:  226, i =  24
+triangle: 15
+nest:   9  4  2  3
+  $STATUS == "%X00000001"

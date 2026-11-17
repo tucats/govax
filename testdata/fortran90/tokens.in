@@ -1,0 +1,6 @@
+x = alpha_1 + 42
+y = (x ** 2 - 3.25) / z  ! a comment
+if (name == 'it''s') n = n // "end"
+a <= b >= c /= d < e > f, g * h # 7
+call f((1, 2)
+s = 'open
