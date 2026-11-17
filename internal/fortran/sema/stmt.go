@@ -22,12 +22,15 @@ import (
 // and DO WHILE push a loop, which the statement with its label pops (with
 // every other loop on top of the stack that ends there too: nested loops
 // may share a terminal statement, section 5.3.1.2), or for a loop without
-// a label, END DO (section 5.4). Anything else that
+// a label, END DO (section 5.4). Fortran 90's SELECT CASE pushes a CASE
+// construct, each CASE starts a new block of it, as ELSE IF does an IF's,
+// and END SELECT pops it (selectcase.go). Anything else that
 // would close a construct is an error of nesting: an END IF with a DO
 // loop still open inside its block, a DO's terminal statement inside an
 // IF block that started inside the loop (DONEST).
 
-// construct is an IF block or a DO loop open at the current statement.
+// construct is an IF block, a DO loop, or a CASE construct open at the
+// current statement.
 type construct struct {
 	id int
 
@@ -53,10 +56,29 @@ type construct struct {
 	// name is the construct's Fortran 90 name (OUTER: DO), "" for none
 	// (constructs.go).
 	name string
+
+	// For a CASE construct: its SELECT CASE statement, and the Select it
+	// makes (nil if the statement had an error). Its current block is
+	// arm, the current CASE's (Case embeds an Arm), nil until the first
+	// CASE; caseFirst is set once a statement before that CASE has been
+	// reported (CASEFIRST).
+	selStart  ast.Stmt
+	sel       *Select
+	caseFirst bool
+
+	// spans are the CASE construct's case value ranges so far, which each
+	// new one mustn't overlap (selectcase.go).
+	spans []caseSpan
 }
 
 // isDo reports whether c is a DO or DO WHILE loop.
 func (c *construct) isDo() bool { return c.do != nil || c.while != nil }
+
+// isSelect reports whether c is a CASE construct.
+func (c *construct) isSelect() bool { return c.selStart != nil }
+
+// isIf reports whether c is an IF block.
+func (c *construct) isIf() bool { return !c.isDo() && !c.isSelect() }
 
 // line is the line the construct starts on, for messages.
 func (c *construct) line() int {
@@ -65,6 +87,8 @@ func (c *construct) line() int {
 		return c.do.AST.Position().Line
 	case c.while != nil:
 		return c.while.AST.Position().Line
+	case c.selStart != nil:
+		return c.selStart.Position().Line
 	}
 
 	return c.ifStart.Position().Line
@@ -99,8 +123,11 @@ func (c *construct) endDo(s ast.Stmt) {
 
 // what names the construct for DONEST.
 func (c *construct) what() string {
-	if c.isDo() {
+	switch {
+	case c.isDo():
 		return "DO loop"
+	case c.isSelect():
+		return "SELECT CASE construct"
 	}
 
 	return "IF block"
@@ -129,7 +156,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 	label := s.Base().Label
 
 	if label != 0 {
-		a.defineLabel(label, s, path)
+		a.defineLabel(label, s, a.labelPath(s, path))
 
 		// A statement that may not end a DO loop (section 5.3.1) is
 		// reported here, and the loops it would end are left open.
@@ -148,6 +175,8 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 		return
 	}
+
+	a.beforeFirstCase(s)
 
 	if !handled(s) {
 		a.unimplemented(s)
@@ -201,6 +230,15 @@ func (a *analyzer) statement(s ast.Stmt) {
 				c.ifs.Else = c.arm
 			}
 		}
+
+	case *ast.SelectCaseStmt:
+		a.selectCase(s)
+
+	case *ast.CaseStmt:
+		a.caseStatement(s)
+
+	case *ast.EndSelectStmt:
+		a.endSelect(s)
 
 	case *ast.EndIfStmt:
 		if c := a.matchIf(s); c != nil {
@@ -264,6 +302,19 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 	case lex.End:
 		a.closeAll()
 
+	case lex.SelectCase:
+		a.push(&construct{selStart: s})
+
+	case lex.Case:
+		if c := a.quietMatchSelect(); c != nil {
+			c.arm = &Arm{AST: s}
+		}
+
+	case lex.EndSelect:
+		if c := a.quietMatchSelect(); c != nil {
+			a.pop()
+		}
+
 	case lex.Do, lex.DoWhile:
 		// A loop without a label is still opened, quietly, so its END DO
 		// isn't reported as well.
@@ -302,6 +353,7 @@ func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt, *ast.LoopExitStmt,
+		*ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt,
 		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt:
 		return aStatement(s)
@@ -321,7 +373,7 @@ func (a *analyzer) path() []frame {
 	path := make([]frame, len(a.open))
 
 	for i, c := range a.open {
-		path[i] = frame{id: c.id, arm: c.arm, do: c.isDo()}
+		path[i] = frame{id: c.id, arm: c.arm, do: c.isDo(), sel: c.isSelect()}
 	}
 
 	return path
@@ -365,18 +417,26 @@ func (a *analyzer) add(st Stmt) {
 }
 
 // matchIf finds the IF block an ELSE IF, ELSE, or END IF statement
-// belongs to: the innermost open construct, once any DO loop opened
-// inside the block has been closed with a message (DONEST: a loop must
-// lie wholly in one block, section 5.7.3.1). With no IF block open the
-// statement is NOIF.
+// belongs to: the innermost open IF block, once any DO loop or CASE
+// construct opened inside the block has been closed with a message
+// (DONEST: a loop must lie wholly in one block, section 5.7.3.1). With no
+// IF block open the statement is NOIF.
 func (a *analyzer) matchIf(s ast.Stmt) *construct {
+	return a.match(s, (*construct).isIf, "NOIF")
+}
+
+// match finds the innermost open construct of the kind is says, for a
+// statement s inside it: any construct opened inside that one and still
+// open is closed with a message (DONEST). With none open, s is reported as
+// none, and match returns nil.
+func (a *analyzer) match(s ast.Stmt, is func(*construct) bool, none string) *construct {
 	i := len(a.open) - 1
-	for i >= 0 && a.open[i].isDo() {
+	for i >= 0 && !is(a.open[i]) {
 		i--
 	}
 
 	if i < 0 {
-		a.report("NOIF", s.Position(), statementName(s))
+		a.report(none, s.Position(), statementName(s))
 
 		return nil
 	}
@@ -395,7 +455,7 @@ func (a *analyzer) matchIf(s ast.Stmt) *construct {
 // quietMatchIf is matchIf without messages, for a statement with an
 // error already reported.
 func (a *analyzer) quietMatchIf() *construct {
-	for c := a.top(); c != nil && c.isDo(); c = a.top() {
+	for c := a.top(); c != nil && !c.isIf(); c = a.top() {
 		a.pop()
 	}
 
@@ -413,6 +473,8 @@ func (a *analyzer) closeAll() {
 			a.report("NOENDDO", c.loopStart())
 		case c.isDo() && !c.reported:
 			a.report("NODO", c.loopStart(), c.label)
+		case c.isSelect():
+			a.report("NOENDSELECT", c.selStart.Position())
 		case !c.isDo():
 			a.report("NOENDIF", c.ifStart.Position())
 		}

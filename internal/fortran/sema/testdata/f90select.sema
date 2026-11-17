@@ -1,0 +1,70 @@
+== main program F90SELECT
+  F90SELECT               program unit
+  I         INTEGER       variable         $LOCAL+0
+  N         INTEGER       variable         $LOCAL+4
+  K         INTEGER*2     variable         $LOCAL+8
+  WORD      CHARACTER*8   variable         $LOCAL+10
+  L         LOGICAL       variable         $LOCAL+20
+  LIMIT     INTEGER       constant         = 10
+  $LOCAL is 24 bytes
+9           N = 0
+11          PICK: SELECT CASE I
+12          CASE (1, 3:5) PICK
+13            N = 1
+14          CASE DEFAULT PICK
+15            N = 2
+16          CASE (:0, 10:)
+17            N = 3
+18          END SELECT PICK
+20          SELECT CASE K
+21          CASE (-1)
+22          CASE (100000)
+23          END SELECT
+25          SELECT CASE WORD(1:1)
+26          CASE ('A':'M', 'Z')
+27            N = 4
+28          CASE ('N':'Y')
+29            SELECT CASE L
+30            CASE (.TRUE.)
+31              N = 5
+32            CASE (.FALSE.)
+33              N = 7
+34            END SELECT
+35          END SELECT
+37          SELECT CASE N
+38          CASE (1)
+39            IF L GO TO 10
+40            N = 6
+41    10    END SELECT
+42          PRINT * N
+43          END
+
+%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+  at line 11 of F90SELECT.FOR
+        PICK: SELECT CASE (I)
+  ------------^
+
+%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+  at line 20 of F90SELECT.FOR
+        SELECT CASE (K)
+  ------^
+
+%FORT-W-CASENEVER, this case value can never match, since the SELECT CASE expression is INTEGER*2, which can't hold it
+  at line 22 of F90SELECT.FOR
+        CASE (100000)
+  ------------^
+
+%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+  at line 25 of F90SELECT.FOR
+        SELECT CASE (WORD(1:1))
+  ------^
+
+%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+  at line 29 of F90SELECT.FOR
+          SELECT CASE (L)
+  --------^
+
+%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+  at line 37 of F90SELECT.FOR
+        SELECT CASE (N)
+  ------^

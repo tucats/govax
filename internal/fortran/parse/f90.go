@@ -9,15 +9,16 @@ import (
 // Fortran 90's statements (docs/planning/PHASE-99 - Fortran 90.md, subtask 5).
 // The lexer recognizes every one; the parser makes most of them a
 // PendingStmt, which semantic analysis reports NOTIMPL by name, so a program
-// using SELECT CASE hears "the SELECT CASE statement is not implemented
-// yet" where it is, not a syntax error. Each later phase gives its statements
+// using WHERE hears "the WHERE statement is not implemented yet" where it
+// is, not a syntax error. Each later phase gives its statements
 // real parsers. What is parsed now:
 //
 //   - MODULE name, a unit's header, so a module is one unit;
 //   - END PROGRAM name and the rest, checked against the unit they end
 //     (checkEnd);
 //   - construct names (StmtBase.Construct), and Phase 101's EXIT, CYCLE,
-//     and DO with no loop control (stmt.go's parseLoopExit and parseDo);
+//     DO with no loop control, and the CASE construct (stmt.go's
+//     parseLoopExit, parseDo, parseSelectCase, parseCase, parseEndSelect);
 //   - Fortran 90's declarations (Phase 100): a type statement's :: form,
 //     with its attributes (attrSpec) and = values (entityValue), the
 //     attribute statements with ::, and INTENT, OPTIONAL, and TARGET, into

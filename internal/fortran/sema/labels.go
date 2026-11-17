@@ -10,12 +10,21 @@ import (
 // executable statement's label, and never into a block from outside it.
 //
 // Where a statement is, as far as jumps are concerned, is the list of
-// constructs open at it (its path): for each, the IF block's arm or the
-// DO loop. A jump from statement R to statement T is into an IF block
-// when T's path holds an arm R's doesn't (section 5.7.3.1: control may
-// leave a block, never enter one, nor pass from one block of a
-// construct to another). END IF counts as in the block just before it,
-// so a jump to its label may come only from there (section 5.7.3).
+// constructs open at it (its path): for each, the IF block's or CASE
+// construct's current block (arm), or the DO loop. A jump from statement R
+// to statement T is into a block when T's path holds an arm R's doesn't
+// (section 5.7.3.1: control may leave a block, never enter one, nor pass
+// from one block of a construct to another).
+//
+// The ends of constructs are Fortran 90's (the standard's 8.2, and the
+// author's answer 4 in docs/planning/PHASE-101 - Fortran 90 control
+// constructs.md, under both /F90 settings): a jump to END IF may come from
+// any block of its IF and from outside it, so END IF is outside its IF
+// (VAX FORTRAN's 5.7.3 allowed only the last block); a jump to END SELECT
+// may come from any block of its construct, but not from outside it, so
+// END SELECT is in its construct in a frame any block matches (anyArm).
+// A CASE statement is no target at all (jumpTarget), nor are ELSE IF and
+// ELSE.
 //
 // A jump into a DO loop from outside it gets no message: section 5.3.1.4
 // allows one from the loop's extended range (code the loop jumped out
@@ -23,12 +32,16 @@ import (
 // mistake. A terminal statement that nested loops share is the
 // exception: only the innermost loop may jump to it (section 5.3.1.3).
 
-// frame is one construct in a statement's path: an IF block's arm, or a
-// DO loop (do set).
+// frame is one construct in a statement's path: an IF block's arm, a CASE
+// construct's block (sel set), or a DO loop (do set). anyArm is set for
+// END SELECT's frame, which a statement in any block of the construct is
+// in.
 type frame struct {
-	id  int
-	arm *Arm
-	do  bool
+	id     int
+	arm    *Arm
+	do     bool
+	sel    bool
+	anyArm bool
 }
 
 // labelRef is a reference to a label: a jump (GO TO's in every form, an
@@ -70,6 +83,11 @@ func (a *analyzer) checkLabels() {
 	for _, r := range a.refs {
 		l := a.unit.Labels[r.label]
 
+		var into *frame
+		if l != nil {
+			into = outside(r.path, l)
+		}
+
 		switch {
 		case l == nil:
 			a.report("UNDEFLBL", r.pos, r.label)
@@ -86,8 +104,13 @@ func (a *analyzer) checkLabels() {
 		case !a.jumpTarget(l.Stmt):
 			a.report("NOTEXEC", r.pos, r.label, aStatement(l.Stmt))
 
-		case !inBlocks(r.path, l):
-			a.report("INTOBLOCK", r.pos, r.label)
+		case into != nil:
+			what := "an IF block"
+			if into.sel {
+				what = "a SELECT CASE construct"
+			}
+
+			a.report("INTOBLOCK", r.pos, r.label, what)
 
 		case len(l.loops) > 1 && !inPath(r.path, frame{id: l.loops[0], do: true}):
 			a.report("SHAREDTERM", r.pos, r.label)
@@ -96,11 +119,11 @@ func (a *analyzer) checkLabels() {
 }
 
 // jumpTarget reports whether s is a statement a jump may go to: an
-// executable statement, but not ELSE IF or ELSE (section 5.7.3) nor a
-// statement function's definition.
+// executable statement, but not ELSE IF or ELSE (section 5.7.3), CASE (the
+// standard's 8.2), nor a statement function's definition.
 func (a *analyzer) jumpTarget(s ast.Stmt) bool {
 	switch s.(type) {
-	case *ast.ElseIfStmt, *ast.ElseStmt:
+	case *ast.ElseIfStmt, *ast.ElseStmt, *ast.CaseStmt:
 		return false
 	}
 
@@ -115,28 +138,61 @@ func (a *analyzer) isStmtFunc(s ast.Stmt) bool {
 	return ok
 }
 
-// inBlocks reports whether a jump from a statement at path stays out of
-// any IF block l is in that the jump isn't.
-func inBlocks(path []frame, l *Label) bool {
-	for _, f := range l.path {
+// outside is the first block l is in that a jump from a statement at path
+// isn't, which the jump would go into; nil if there is none.
+func outside(path []frame, l *Label) *frame {
+	for i, f := range l.path {
 		if !f.do && !inPath(path, f) {
-			return false
+			return &l.path[i]
 		}
 	}
 
-	return true
+	return nil
 }
 
 // inPath reports whether f is in path: the same construct and, for an
-// IF block, the same arm.
+// IF block or a CASE construct, the same arm (any arm for anyArm).
 func inPath(path []frame, f frame) bool {
 	for _, p := range path {
-		if p.id == f.id && p.arm == f.arm {
+		if p.id == f.id && (f.anyArm || p.arm == f.arm) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// labelPath is where a jump to statement s's label goes, given path, the
+// constructs open at s: path itself, but for END IF (outside its IF) and
+// END SELECT (in its construct, in no one block).
+func (a *analyzer) labelPath(s ast.Stmt, path []frame) []frame {
+	var is func(*construct) bool
+
+	switch s.(type) {
+	case *ast.EndIfStmt:
+		is = (*construct).isIf
+	case *ast.EndSelectStmt:
+		is = (*construct).isSelect
+	default:
+		return path
+	}
+
+	for i := len(a.open) - 1; i >= 0; i-- {
+		if !is(a.open[i]) {
+			continue
+		}
+
+		if a.open[i].isIf() {
+			return path[:i]
+		}
+
+		end := append([]frame(nil), path[:i+1]...)
+		end[i].arm, end[i].anyArm = nil, true
+
+		return end
+	}
+
+	return path
 }
 
 // statementName is what a statement is called in messages: GO TO, END

@@ -312,3 +312,67 @@ func TestKeywordArguments(t *testing.T) {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }
+
+// TestSelectCaseForms parses the CASE construct's statements in free form,
+// where CASE DEFAULT and a construct name after it are two names, and a
+// name that only begins with DEFAULT is no DEFAULT.
+func TestSelectCaseForms(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"program p",
+		"  pick: select case (i + 1)",
+		"  case (1, 3:5, :0, 10:) pick",
+		"  case ('a':'z')",
+		"  case default pick",
+		"  case default",
+		"  end select pick",
+		"  end select",
+		"end program p",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "S.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	want := strings.Join([]string{
+		"== main program P",
+		"1           PROGRAM P",
+		"2           PICK: SELECT CASE (+ I 1)",
+		"3           CASE (1, 3:5, :0, 10:) PICK",
+		"4           CASE ('a':'z')",
+		"5           CASE DEFAULT PICK",
+		"6           CASE DEFAULT",
+		"7           END SELECT PICK",
+		"8           END SELECT",
+		"9           END PROGRAM P",
+		"",
+	}, "\n")
+
+	if got := ast.Dump(file); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	errors := []struct{ line, want string }{
+		{"  case defaultx", "SYNTAX"},
+		{"  case (:)", "SYNTAX"},
+		{"  case ()", "SYNTAX"},
+		{"  case (1) a, b", "EXTRATEXT"},
+		{"  case default (1)", "EXTRATEXT"},
+		{"  select case i", "SYNTAX"},
+	}
+
+	for _, e := range errors {
+		var messages diag.List
+
+		program := source.Read(source.Form{}, &source.File{Spec: "E.F90", Lines: []string{e.line, "end"}, Free: true}, nil, &messages)
+		Parse(lex.Lex(program.Statements, &messages), &messages)
+
+		if got := strings.Join(idents(messages.Messages()), " "); got != e.want {
+			t.Errorf("%s: got %s, want %s", e.line, got, e.want)
+		}
+	}
+}

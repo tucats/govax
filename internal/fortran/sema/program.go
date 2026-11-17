@@ -592,6 +592,21 @@ type (
 		Loop  Stmt
 	}
 
+	// Select is Fortran 90's CASE construct (the standard's 8.1.3):
+	// SELECT CASE (Expr), an INTEGER, CHARACTER, or LOGICAL value computed
+	// once, then Cases in the order written, each a CASE statement and its
+	// block, DEFAULT among them wherever it was written (Default points at
+	// it, nil for none). At most one case matches Expr's value, since no
+	// two overlap; with none, Default's block runs, or nothing. EndSelect
+	// is the END SELECT statement, which a jump from any block may go to.
+	Select struct {
+		stmtBase
+		Expr      Expr
+		Cases     []*Case
+		Default   *Case
+		EndSelect ast.Stmt
+	}
+
 	// Stop is STOP, or PAUSE when Pause is set, with the text it
 	// displays if it has one.
 	Stop struct {
@@ -622,6 +637,25 @@ type Arm struct {
 	Cond Expr
 	Body []Stmt
 }
+
+// Case is a CASE statement and its block in a CASE construct: its Arm (AST
+// the CASE statement, no Cond, Body the block, so that the analyzer's
+// stack of blocks treats it as an IF's arm), and its Ranges, or Default.
+type Case struct {
+	Arm
+	Default bool
+	Ranges  []CaseRange
+}
+
+// CaseRange is one case value range, its ends constants of the selector's
+// type (an INTEGER one of any kind): a single value (Low and High the same
+// constant), low: (High nil), :high (Low nil), or low:high.
+type CaseRange struct {
+	Low, High *Const
+}
+
+// Single reports whether r is a single value, not a range.
+func (r CaseRange) Single() bool { return r.Low != nil && r.Low == r.High }
 
 // Expr is an expression with its type.
 type Expr interface {

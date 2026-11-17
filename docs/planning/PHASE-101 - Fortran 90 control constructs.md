@@ -4,8 +4,8 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17) and was accepted by the
 author the same day ("The author's answers"); subtask 2 (construct names,
-DO with no loop control, EXIT, and CYCLE) is done (2026-11-17). Needs
-Phase 100 (done).
+DO with no loop control, EXIT, and CYCLE) is done (2026-11-17), and so is
+subtask 3 (SELECT CASE in sema, 2026-11-17). Needs Phase 100 (done).
 
 ## Goal
 
@@ -274,7 +274,8 @@ codegen, and the optimizer do today.
    targets with `IF (e) EXIT` as a branch (finding 6), and the cross
    reference's construct names (question 5) (done 2026-11-17).
 3. **SELECT CASE in sema:** parsing, the `Select` node, the checks of
-   findings 3, 5, 8, and 9, and branch targets; the code still NOTIMPL.
+   findings 3, 5, 8, and 9, and branch targets; the code still NOTIMPL
+   (done 2026-11-17).
 4. **SELECT CASE's code:** `Switch.Base`, `caseForm` and its three forms for
    INTEGER, LOGICAL's branch, CHARACTER's chain and search with the
    selector's temporary (finding 7); each form held by IR golden dumps and a
@@ -381,3 +382,34 @@ Every recommendation accepted:
   FORTRAN and Fortran 90 corpora and `TestNoF90Unchanged` pass. MANUAL.md's
   14.13 and HELP FORTRAN no longer list these as not there yet (their full
   account is subtask 6's).
+- **2026-11-17:** Subtask 3, SELECT CASE in sema. The lexer makes DEFAULT
+  after CASE a keyword (`caseDefault`), so fixed form's `CASEDEFAULTPICK` is
+  DEFAULT and the name PICK, and free form's `CASE DEFAULTS` is no DEFAULT;
+  the parser's nodes are `ast.SelectCaseStmt`, `ast.CaseStmt` (its
+  `ast.CaseRange`s, or `Default`), and `ast.EndSelectStmt`. sema's node is
+  `Select` (its `Cases` in the order written, `Default` among them, and
+  `EndSelect`); a `Case` embeds an `Arm`, so the construct stack's blocks,
+  `add`, and labels' paths treat a CASE block as an IF's arm. The stack's
+  matching is one function now (`match`): ELSE IF, ELSE, and END IF find the
+  innermost IF block, CASE and END SELECT the innermost CASE construct
+  (NOSELECT), each closing what is open inside it (DONEST), and END DO passes
+  over a CASE construct as over an IF. `sema/selectcase.go` has the checks:
+  CASEFIRST, NOENDSELECT, CASEEXPR (a selector of another type, which leaves
+  the construct no type to check values against; a whole array is
+  NEEDSUBSCRIPT already), CASEVALUE (through the declarations' evaluator, so a
+  variable named in a case value isn't entered as one), CASETYPE, CASEBYTE
+  (answer 1), CASERANGE, TWODEFAULT, CASEOVERLAP (each range against every one
+  before it in the construct, INTEGER ones as intervals clipped to the
+  selector's kind, CHARACTER ones by `compareText`, LOGICAL ones by truth),
+  and CASENEVER, a warning (answer 3). The survey's one CASETYPE for both a
+  selector and a value became CASEEXPR and CASETYPE. Labels
+  (`labels.go`'s `labelPath`): END SELECT's frame matches any block of its
+  construct (`frame.anyArm`), so a jump to it from inside is good and from
+  outside INTOBLOCK, whose text now names the construct ("a SELECT CASE
+  construct"); a CASE statement is no target (NOTEXEC); and END IF is outside
+  its IF, so a jump to it may come from any block or from outside (answer 4,
+  under both `/F90` settings; `TestErrors`' case that held the old rule now
+  expects nothing). Every SELECT CASE is still NOTIMPL ("the SELECT CASE
+  statement"), until subtask 4. Tests: `TestSelectCase` (68 cases, NOTIMPL
+  left out), `TestIntoBlockWording`, `TestSelectCaseForms` (free form's
+  forms and syntax errors), and `f90select.for`'s sema golden.

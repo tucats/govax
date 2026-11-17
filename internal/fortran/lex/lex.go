@@ -336,7 +336,17 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		// A FORMAT statement's specification isn't made of FORTRAN's
 		// tokens (F8.2 is one edit descriptor, not a name and a number),
 		// so it isn't tokenized: its parser reads the text from Body.
-		if k != Format {
+		switch {
+		case k == Case && l.caseDefault(i+len(kw), j):
+			// CASE DEFAULT [name]: DEFAULT is a keyword, so a construct name
+			// after it is a name of its own, though fixed form's squeezing
+			// has run the two together (CASEDEFAULTPICK).
+			p := i + len(kw)
+			l.keywordBlanks(p, "DEFAULT")
+			st.Tokens = append(st.Tokens, Token{Kind: Keyword, Text: "DEFAULT", Offset: l.offset(p)})
+			st.Tokens = append(st.Tokens, l.tokenize(p+len("DEFAULT"), j, modeNone)...)
+
+		case k != Format:
 			st.Tokens = l.tokenize(i+len(kw), j, modeFor(k))
 		}
 

@@ -177,6 +177,33 @@ func DumpStmt(s Stmt) string {
 	case *LoopExitStmt:
 		return strings.TrimRight(s.Kind.String()+" "+s.Name, " ")
 
+	case *SelectCaseStmt:
+		return "SELECT CASE " + DumpExpr(s.Expr)
+
+	case *CaseStmt:
+		if s.Default {
+			return "CASE DEFAULT"
+		}
+
+		ranges := make([]string, len(s.Ranges))
+		for i, r := range s.Ranges {
+			low, high := "", ""
+			if r.Low != nil {
+				low = DumpExpr(r.Low)
+			}
+
+			if r.High != nil {
+				high = DumpExpr(r.High)
+			}
+
+			ranges[i] = CaseRangeText(low, high, r.Colon)
+		}
+
+		return "CASE (" + strings.Join(ranges, ", ") + ")"
+
+	case *EndSelectStmt:
+		return "END SELECT"
+
 	case *ContinueStmt:
 		return "CONTINUE"
 
@@ -814,4 +841,14 @@ func result(n *Name) string {
 	}
 
 	return " RESULT(" + n.Name + ")"
+}
+
+// CaseRangeText is a case value range as the dumps write it: low, low:,
+// :high, or low:high, from its ends' texts ("" for an end not given).
+func CaseRangeText(low, high string, colon bool) string {
+	if !colon {
+		return low
+	}
+
+	return low + ":" + high
 }

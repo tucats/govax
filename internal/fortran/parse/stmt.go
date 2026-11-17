@@ -332,6 +332,80 @@ func parseLoopExit(p *parser) ast.Stmt {
 	return s
 }
 
+// parseSelectCase parses Fortran 90's SELECT CASE (e) (the standard's
+// R809); a construct name before it is in the base already.
+func parseSelectCase(p *parser) ast.Stmt {
+	s := &ast.SelectCaseStmt{StmtBase: p.base(), Expr: p.condition()}
+	p.end()
+
+	return s
+}
+
+// parseCase parses CASE (range, ...) [name] and CASE DEFAULT [name] (the
+// standard's R810 to R814). The lexer has made DEFAULT a keyword, and a
+// construct name after it a name of its own, though fixed form squeezes CASE
+// DEFAULT PICK to CASEDEFAULTPICK.
+func parseCase(p *parser) ast.Stmt {
+	s := &ast.CaseStmt{StmtBase: p.base()}
+
+	if p.accept("DEFAULT") {
+		s.Default = true
+		p.constructAfter(s)
+		p.end()
+
+		return s
+	}
+
+	p.expect("(")
+
+	for {
+		s.Ranges = append(s.Ranges, p.caseRange())
+
+		if !p.accept(",") {
+			break
+		}
+	}
+
+	p.expect(")")
+	p.constructAfter(s)
+	p.end()
+
+	return s
+}
+
+// caseRange reads one case value range: v, low:, :high, or low:high.
+func (p *parser) caseRange() ast.CaseRange {
+	r := ast.CaseRange{Pos: p.here()}
+
+	if !p.at(":") {
+		r.Low = p.expr()
+	}
+
+	if p.accept(":") {
+		r.Colon = true
+
+		if !p.at(",") && !p.at(")") {
+			r.High = p.expr()
+		}
+	}
+
+	if r.Low == nil && r.High == nil {
+		// CASE (:) has neither end.
+		p.syntax("a case value")
+	}
+
+	return r
+}
+
+// parseEndSelect parses END SELECT [name].
+func parseEndSelect(p *parser) ast.Stmt {
+	s := &ast.EndSelectStmt{StmtBase: p.base()}
+	p.constructAfter(s)
+	p.end()
+
+	return s
+}
+
 // parseContinue parses CONTINUE (section 5.2).
 func parseContinue(p *parser) ast.Stmt {
 	p.end()

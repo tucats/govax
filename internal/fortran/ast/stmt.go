@@ -493,6 +493,26 @@ type (
 		NamePos diag.Position
 	}
 
+	// SelectCaseStmt is Fortran 90's SELECT CASE (Expr), the start of a
+	// CASE construct (the standard's 8.1.3).
+	SelectCaseStmt struct {
+		StmtBase
+		Expr Expr
+	}
+
+	// CaseStmt is CASE (range, ...) or CASE DEFAULT (Default set, no
+	// Ranges), each with the construct name it may repeat in its base.
+	CaseStmt struct {
+		StmtBase
+		Default bool
+		Ranges  []CaseRange
+	}
+
+	// EndSelectStmt is END SELECT.
+	EndSelectStmt struct {
+		StmtBase
+	}
+
 	// ContinueStmt is CONTINUE (section 5.2).
 	ContinueStmt struct {
 		StmtBase
@@ -642,6 +662,15 @@ type PendingStmt struct {
 // reported again, and an END IF with an error still closes its block.
 type BadStmt struct {
 	StmtBase
+}
+
+// CaseRange is one case value range of a CASE statement (the standard's
+// R814): a single value (Low, no Colon), low: (Low, Colon), :high (High,
+// Colon), or low:high (both). Pos is where it starts.
+type CaseRange struct {
+	Low, High Expr
+	Colon     bool
+	Pos       diag.Position
 }
 
 // Forever reports whether the DO statement has no loop control (Fortran

@@ -113,6 +113,23 @@ func (l *lexer) typeStatement(st *Statement, i, j int, declaration bool) *Statem
 // that BLOCKDATA isn't taken for something shorter.
 var endUnits = []string{"SUBROUTINE", "BLOCKDATA", "FUNCTION", "PROGRAM", "MODULE"}
 
+// caseDefault reports whether the text from p to j, after CASE, starts with
+// the keyword DEFAULT: DEFAULT alone, or followed by a construct name, which
+// in free form must have a blank before it (CASE DEFAULTS is no DEFAULT), or
+// by anything else, which the parser reports.
+func (l *lexer) caseDefault(p, j int) bool {
+	end := p + len("DEFAULT")
+
+	switch {
+	case !l.hasPrefix(p, j, "DEFAULT"):
+		return false
+	case end == j || !isNameChar(l.sq.text[end]):
+		return true
+	}
+
+	return l.src == nil || !l.src.Free || l.sq.gap[end]
+}
+
 // endStatement finishes an END statement starting at i: plain END, or
 // Fortran 90's END PROGRAM [name] and the rest. The word after END is a
 // Keyword token (BLOCKDATA for BLOCK DATA) and the name, if any, a Name

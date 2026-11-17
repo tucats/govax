@@ -221,6 +221,18 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 				line(b, s.EndIf, depth, "END IF")
 			}
 
+		case *Select:
+			line(b, s.AST, depth, "SELECT CASE "+DumpExpr(s.Expr))
+
+			for _, c := range s.Cases {
+				line(b, c.AST, depth, caseText(c))
+				dumpStmts(b, c.Body, depth+1)
+			}
+
+			if s.EndSelect != nil {
+				line(b, s.EndSelect, depth, "END SELECT")
+			}
+
 		case *Do:
 			line(b, s.AST, depth, fmt.Sprintf("DO %s%s = %s, %s, %s", loopLabel(s.Label), symName(s.Var),
 				DumpExpr(s.Start), DumpExpr(s.Limit), DumpExpr(s.Step)))
@@ -241,6 +253,31 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 			line(b, s.Source(), depth, stmtText([]Stmt{s}))
 		}
 	}
+}
+
+// caseText is a CASE statement as the dump writes it: CASE DEFAULT, or
+// CASE (ranges), each end its constant.
+func caseText(c *Case) string {
+	if c.Default {
+		return "CASE DEFAULT"
+	}
+
+	ranges := make([]string, len(c.Ranges))
+
+	for i, r := range c.Ranges {
+		low, high := "", ""
+		if r.Low != nil {
+			low = DumpExpr(r.Low)
+		}
+
+		if r.High != nil {
+			high = DumpExpr(r.High)
+		}
+
+		ranges[i] = ast.CaseRangeText(low, high, !r.Single())
+	}
+
+	return "CASE (" + strings.Join(ranges, ", ") + ")"
 }
 
 // loopLabel is a DO statement's terminal label and a blank, or nothing

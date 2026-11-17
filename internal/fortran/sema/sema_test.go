@@ -908,7 +908,12 @@ func TestErrors(t *testing.T) {
 		{"a jump to a statement with an error", []string{"10 READ (1, KEYLE=1.5) X", "GO TO 10", "END"}, "KEYEDVALUE@1:16"},
 		{"a jump into an IF block", []string{"GO TO 10", "IF (L) THEN", "10 CONTINUE", "END IF", "END"}, "INTOBLOCK@1:13"},
 		{"a jump between blocks", []string{"IF (L) THEN", "10 X = 1", "ELSE", "GO TO 10", "END IF", "END"}, "INTOBLOCK@4:13"},
-		{"a jump to END IF from an earlier block", []string{"IF (L) THEN", "GO TO 10", "ELSE", "X = 1", "10 END IF", "END"}, "INTOBLOCK@2:13"},
+		// Fortran 90's rule for END IF (the standard's 8.2; Phase 101's answer
+		// 4), under both /F90 settings: any block of its IF, or outside it.
+		{"a jump to END IF from an earlier block", []string{"IF (L) THEN", "GO TO 10", "ELSE", "X = 1", "10 END IF", "END"}, ""},
+		{"a jump to END IF from outside", []string{"GO TO 10", "IF (L) THEN", "X = 1", "10 END IF", "END"}, ""},
+		{"a jump to an outer END IF from an inner block", []string{"IF (L) THEN", "IF (M) THEN", "GO TO 10", "END IF", "10 END IF", "END"}, ""},
+		{"a jump to an inner END IF from outside its block", []string{"IF (L) THEN", "IF (M) THEN", "X = 1", "10 END IF", "ELSE", "GO TO 10", "END IF", "END"}, "INTOBLOCK@6:13"},
 		{"a jump to END IF from the last block", []string{"IF (L) THEN", "X = 2", "ELSE", "GO TO 10", "10 END IF", "END"}, ""},
 		{"a jump out of a block", []string{"IF (L) THEN", "GO TO 10", "END IF", "10 CONTINUE", "END"}, ""},
 		{"a jump into a loop", []string{"GO TO 10", "DO 20 I = 1, 2", "10 X = 1", "20 CONTINUE", "END"}, ""},

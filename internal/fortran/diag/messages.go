@@ -940,6 +940,51 @@ var messages = map[string]kind{
 	// NOTALOOP is EXIT or CYCLE naming a construct that isn't a DO loop.
 	"NOTALOOP": {Error, "this %s statement names %s, the %s at line %d, which isn't a DO loop"},
 
+	// Fortran 90's CASE construct (the standard's 8.1.3; sema/selectcase.go).
+
+	// NOSELECT is CASE or END SELECT outside any CASE construct.
+	"NOSELECT": {Error, "this %s statement is not in a SELECT CASE construct"},
+
+	// NOENDSELECT is a CASE construct the unit's END reaches before its END
+	// SELECT.
+	"NOENDSELECT": {Error, "this SELECT CASE construct has no END SELECT statement"},
+
+	// CASEFIRST is a statement between SELECT CASE and the construct's first
+	// CASE, where the standard's R808 has no place for one.
+	"CASEFIRST": {Error, "a SELECT CASE statement must be followed by a CASE statement, not %s"},
+
+	// CASEEXPR is a SELECT CASE expression that isn't INTEGER, CHARACTER, or
+	// LOGICAL (R812).
+	"CASEEXPR": {Error, "a SELECT CASE expression must be INTEGER, CHARACTER, or LOGICAL, and this one is %s"},
+
+	// CASEVALUE is a case value that isn't a constant expression (R815).
+	"CASEVALUE": {Error, "a case value must be a constant expression, and %s"},
+
+	// CASETYPE is a case value of another type than the SELECT CASE
+	// expression's (R814's constraint; INTEGER values of any kind may select
+	// an INTEGER expression, the author's answer 2).
+	"CASETYPE": {Error, "this case value is %s, but the SELECT CASE expression at line %d is %s"},
+
+	// CASEBYTE is an INTEGER case value for a LOGICAL*1 (BYTE) expression,
+	// which selects only by .TRUE. and .FALSE. (the author's answer 1).
+	"CASEBYTE": {Error, "the SELECT CASE expression at line %d is LOGICAL*1 (BYTE), which a number can't select; declare it INTEGER(1) to select it by number"},
+
+	// CASERANGE is a range of values (with a colon) selecting a LOGICAL
+	// expression (R814's constraint).
+	"CASERANGE": {Error, "a LOGICAL SELECT CASE expression is selected by .TRUE. or .FALSE., not by a range of values"},
+
+	// TWODEFAULT is a second CASE DEFAULT in one construct.
+	"TWODEFAULT": {Error, "the SELECT CASE construct already has a CASE DEFAULT, at line %d"},
+
+	// CASEOVERLAP is a case value range that some value would match beside
+	// one of an earlier CASE's (8.1.3.2: no value may match more than one).
+	"CASEOVERLAP": {Error, "this case value overlaps one at line %d: a value of the SELECT CASE expression would match both"},
+
+	// CASENEVER is a case value range no value of the expression can match:
+	// its low end above its high end, or past what the expression's INTEGER
+	// kind holds (the author's answer 3).
+	"CASENEVER": {Warning, "this case value can never match, since %s"},
+
 	// DOTERM is a statement that may not end a DO loop (section 5.3.1).
 	"DOTERM": {Error, "a DO loop can't end with %s"},
 
@@ -976,9 +1021,10 @@ var messages = map[string]kind{
 	// NOTEXEC is a jump to a statement that can't be jumped to.
 	"NOTEXEC": {Error, "statement label %d is on %s, which a jump can't go to"},
 
-	// INTOBLOCK is a jump into an IF block from outside it, or from one
-	// of its blocks to another (section 5.7.3.1).
-	"INTOBLOCK": {Error, "this jump to label %d goes into an IF block from outside it"},
+	// INTOBLOCK is a jump into an IF block or a CASE construct's block from
+	// outside it, or from one of its blocks to another (section 5.7.3.1;
+	// the standard's 8.1.1).
+	"INTOBLOCK": {Error, "this jump to label %d goes into %s from outside it"},
 
 	// SHAREDTERM is a jump to the terminal statement nested DO loops
 	// share from outside the innermost of them (section 5.3.1.3).

@@ -41,14 +41,16 @@ type constructName struct {
 	line int
 }
 
-// opener is the statement that opened the construct: its DO, DO WHILE, or
-// IF THEN.
+// opener is the statement that opened the construct: its DO, DO WHILE, IF
+// THEN, or SELECT CASE.
 func (c *construct) opener() ast.Stmt {
 	switch {
 	case c.do != nil:
 		return c.do.AST
 	case c.while != nil:
 		return c.while.AST
+	case c.selStart != nil:
+		return c.selStart
 	}
 
 	return c.ifStart
