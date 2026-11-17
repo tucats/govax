@@ -450,11 +450,17 @@ func DumpExpr(e Expr) string {
 	case *Radix50Const:
 		return strconv.Itoa(len(e.Value)) + "R" + e.Value
 	case *TypelessConst:
+		if e.Prefixed {
+			return map[int]string{2: "B", 8: "O", 16: "Z"}[e.Radix] + "'" + e.Digits + "'"
+		}
+
 		if e.Radix == 8 {
 			return "'" + e.Digits + "'O"
 		}
 
 		return "'" + e.Digits + "'X"
+	case *KindConst:
+		return "(kind " + DumpExpr(e.X) + " " + e.Kind + ")"
 	case *ComplexConst:
 		return "(complex " + DumpExpr(e.Re) + " " + DumpExpr(e.Im) + ")"
 	case *Substring:

@@ -66,10 +66,7 @@ func untypedWhat(e ast.Expr) string {
 func (ev *evaluator) typelessValue(e *ast.TypelessConst) (*big.Int, *constErr) {
 	v, ok := new(big.Int).SetString(e.Digits, e.Radix)
 	if !ok || v.Sign() < 0 {
-		what := "octal"
-		if e.Radix == 16 {
-			what = "hexadecimal"
-		}
+		what := map[int]string{2: "binary", 8: "octal", 16: "hexadecimal"}[e.Radix]
 
 		return nil, ev.report("BADDIGITS", e.Pos, what)
 	}

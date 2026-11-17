@@ -470,6 +470,10 @@ func describe(t *lex.Token) string {
 	case lex.HollerithConst:
 		return "a Hollerith constant"
 	case lex.TypelessConst:
+		if t.Prefixed {
+			return "a binary, octal, or hexadecimal constant"
+		}
+
 		return "an octal or hexadecimal constant"
 	case lex.Radix50Const:
 		return "a RADIX-50 constant"

@@ -100,9 +100,10 @@ var messages = map[string]kind{
 
 	// The lexer's messages (internal/fortran/lex).
 
-	// NOQUOTE is a character constant with no closing apostrophe before
+	// NOQUOTE is a character constant with no closing apostrophe (or, under
+	// /F90, quotation mark) before
 	// the statement ends.
-	"NOQUOTE": {Error, "character constant has no closing apostrophe"},
+	"NOQUOTE": {Error, "character constant has no closing %s"},
 
 	// HOLLEND is a Hollerith constant whose count runs past the end of
 	// the statement.
@@ -119,6 +120,19 @@ var messages = map[string]kind{
 
 	// BADCHAR is a character FORTRAN doesn't use, outside a constant.
 	"BADCHAR": {Error, "the character %q is not allowed here"},
+
+	// BLANKINNAME is a blank inside a name, keyword, constant, or operator of
+	// several characters in free source form, where blanks are significant
+	// (the standard's 3.3.1; docs/planning/PHASE-99 - Fortran 90.md, Decision 3).
+	"BLANKINNAME": {Error, "a blank may not stand inside %s in free source form"},
+
+	// NEEDBLANK is two names, keywords, constants, or labels written together
+	// in free source form, where a blank must separate them (3.3.1).
+	"NEEDBLANK": {Error, "a blank must separate %s from %s in free source form"},
+
+	// BADKIND is a kind parameter after an underscore that is neither digits
+	// nor a name (R404: 1.5_8, 2_K).
+	"BADKIND": {Error, "a kind parameter after _ must be digits or a name"},
 
 	// The parser's messages (internal/fortran/parse).
 

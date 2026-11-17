@@ -39,6 +39,8 @@ var binaryOps = map[string]binaryOp{
 	".AND.": {ast.And, 2},
 	".EQ.":  {ast.EQ, 4}, ".NE.": {ast.NE, 4}, ".LT.": {ast.LT, 4},
 	".LE.": {ast.LE, 4}, ".GT.": {ast.GT, 4}, ".GE.": {ast.GE, 4},
+	"==": {ast.EQ, 4}, "/=": {ast.NE, 4}, "<": {ast.LT, 4}, // Fortran 90's spellings
+	"<=": {ast.LE, 4}, ">": {ast.GT, 4}, ">=": {ast.GE, 4}, // of the same operators
 	"//": {ast.Concat, 5},
 	"+":  {ast.Add, precAdd}, "-": {ast.Sub, precAdd},
 	"*": {ast.Mul, precMul}, "/": {ast.Div, precMul},
@@ -216,7 +218,7 @@ func (p *parser) literal() ast.Expr {
 	case lex.HollerithConst:
 		e = &ast.HollerithConst{ExprBase: base, Value: t.Text}
 	case lex.TypelessConst:
-		e = &ast.TypelessConst{ExprBase: base, Digits: t.Text, Radix: t.Radix}
+		e = &ast.TypelessConst{ExprBase: base, Digits: t.Text, Radix: t.Radix, Prefixed: t.Prefixed}
 	case lex.Radix50Const:
 		e = &ast.Radix50Const{ExprBase: base, Value: t.Text}
 	default:
@@ -224,6 +226,10 @@ func (p *parser) literal() ast.Expr {
 	}
 
 	p.next()
+
+	if t.KindParam != "" {
+		return &ast.KindConst{ExprBase: base, X: e, Kind: t.KindParam}
+	}
 
 	return e
 }

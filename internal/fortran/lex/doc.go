@@ -96,6 +96,44 @@
 // (lex.Dump's form): the condition's tokens, then the PRINT statement it
 // controls, lexed as a statement of its own.
 //
+// # Fortran 90's lexical items
+//
+// Fortran 90 (docs/planning/PHASE-99 - Fortran 90.md, subtask 4) adds words to
+// the alphabet, each read with or without /F90, since VAX FORTRAN gives none
+// of them a meaning:
+//
+//   - operators of two characters, each one token: :: => (/ /) == /= <= >=,
+//     and < and > alone (tokenize.go's operators). The relational spellings
+//     keep their text; the parser reads == as .EQ., /= as .NE., and so on. An
+//     = inside one is no assignment's (findAssignment): PRINT *, A == B is a
+//     PRINT statement.
+//   - kind parameters after an underscore, on numbers and logical constants
+//     (1.5_8, 2_K, .TRUE._1), and before a character constant (K_'TEXT',
+//     1_'TEXT'): a token's KindParam, digits or a name.
+//   - binary, octal, and hexadecimal constants written letter first, B'101',
+//     O'17', Z'1F': TypelessConst tokens, Prefixed, beside DEC's '17'O and
+//     '1F'X.
+//   - defined operators, a dotted word that isn't FORTRAN's own (.CROSS.):
+//     an Operator token, where no record field can stand. After a name or a
+//     ), A.B.C may be VAX FORTRAN's field reference, so there the periods and
+//     the name stay apart, for the parser and the symbols to settle.
+//
+// Two need care where VAX FORTRAN reads the same characters otherwise. A
+// quotation mark starts a character constant only under /F90 ("IT'S");
+// without it, "17 is still appendix A.5's octal INTEGER. And inside
+// parentheses an apostrophe after a name is READ (1'10)'s record separator, so
+// K_'TEXT' and Z'1F' there are found by source.ApostropheStartsConstant, which
+// the source pass shares, so the two agree on where constants are.
+//
+// In free form blanks are significant. Squeezing still takes them out, which
+// keeps classification as it was (END DO and ENDDO squeeze alike), but it
+// remembers where they were (squeezed.gap), and the tokenizer applies the
+// standard's 3.3.1 (checkBlanks): a blank inside a name, constant, or
+// operator is BLANKINNAME, and two words written together, CALLSUB or GOTO10,
+// are NEEDBLANK. DOUBLE PRECISION and IN OUT, read as one name inside a
+// statement, may have their blank. The blanks inside a statement's keyword
+// aren't checked yet.
+//
 // # What this pass hands on
 //
 // Lex returns a Statement for each statement: its Kind, its Label, and
@@ -104,7 +142,8 @@
 // file, line, and column). The parser chooses a function by the Kind and
 // reads the tokens. The lexer reports only what it can see: a character
 // constant never closed (NOQUOTE), a Hollerith constant cut short
-// (HOLLEND), a character FORTRAN doesn't use (BADCHAR), and a statement
-// it can't classify (UNRECSTMT). A statement the compiler can't compile
+// (HOLLEND), a character FORTRAN doesn't use (BADCHAR), a statement it
+// can't classify (UNRECSTMT), a kind parameter that is no kind (BADKIND),
+// and in free form the blanks above (BLANKINNAME, NEEDBLANK). A statement the compiler can't compile
 // yet is the parser's to report, by its kind's name.
 package lex

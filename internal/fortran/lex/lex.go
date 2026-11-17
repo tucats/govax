@@ -96,7 +96,7 @@ func Lex(statements []*source.Statement, messages *diag.List) []*Statement {
 // always are. A FORMAT statement has no tokens, but a variable format
 // expression inside it (section 8.3.2) is an expression like any other.
 func Expression(src *source.Statement, from, to int, messages *diag.List) []Token {
-	sq, problems := squeeze(src.Text[from:to])
+	sq, problems := squeeze(src.Text[from:to], src.F90)
 	for _, p := range problems {
 		messages.Report(p.ident, src.Position(from+p.offset), p.args...)
 	}
@@ -125,7 +125,7 @@ type lexer struct {
 
 // statement lexes one statement.
 func (l *lexer) statement(src *source.Statement, unitStart bool) *Statement {
-	sq, problems := squeeze(src.Text)
+	sq, problems := squeeze(src.Text, src.F90)
 	for _, p := range problems {
 		l.messages.Report(p.ident, src.Position(p.offset), p.args...)
 	}
@@ -142,7 +142,7 @@ func (l *lexer) statement(src *source.Statement, unitStart bool) *Statement {
 	// Section 5.5: an initial line holding only END is an END statement,
 	// whatever continuation lines follow it.
 	if len(src.Initial()) < len(src.Text) {
-		if initial, _ := squeeze(src.Initial()); string(initial.text) == "END" {
+		if initial, _ := squeeze(src.Initial(), src.F90); string(initial.text) == "END" {
 			return &Statement{Kind: End, Label: src.Label, Offset: initial.at[0], Source: src}
 		}
 	}
@@ -198,7 +198,7 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 	// named DO10I. Only the comma tells them apart. (OPTIONS
 	// /CHECK=ALL has one, but no assignment's target is followed by a
 	// slash.)
-	if eq := l.findLevel0(i, j, '='); eq >= 0 && !l.hasPrefix(i, j, "OPTIONS/") {
+	if eq := l.findAssignment(i, j); eq >= 0 && !l.hasPrefix(i, j, "OPTIONS/") {
 		if l.hasPrefix(i, j, "DO") && l.findLevel0(eq+1, j, ',') >= 0 {
 			st.Kind = Do
 			st.Tokens = l.tokenize(i+2, j, modeLabel)
@@ -518,6 +518,26 @@ func (l *lexer) findLevel0(i, j int, c byte) int {
 	return -1
 }
 
+// findAssignment returns the index of the first = from i to j that is
+// outside every parenthesis and constant and isn't part of one of Fortran
+// 90's relational operators, == /= <= >= (PRINT *, A == B is no assignment),
+// or -1. VAX FORTRAN has none of them, so old programs find the = they
+// always did.
+func (l *lexer) findAssignment(i, j int) int {
+	text, lit := l.sq.text, l.sq.lit
+
+	for k := l.findLevel0(i, j, '='); k >= 0; k = l.findLevel0(k+1, j, '=') {
+		before := k > i && !lit[k-1] && strings.IndexByte("=/<>", text[k-1]) >= 0
+		after := k+1 < j && !lit[k+1] && text[k+1] == '='
+
+		if !before && !after {
+			return k
+		}
+	}
+
+	return -1
+}
+
 // offset is where the squeezed text's character i was in the statement's
 // text; the end of the text for i past it.
 func (l *lexer) offset(i int) int {
@@ -565,11 +585,18 @@ func Dump(s *Statement) string {
 
 // short is the token as Dump shows it: names, keywords, numbers, and
 // operators as written; a character constant in apostrophes; a Hollerith
-// constant as nH"text"; a typeless one as 'digits'X or 'digits'O.
+// constant as nH"text"; a typeless one as 'digits'X or 'digits'O, or B'digits',
+// O'digits', or Z'digits' as it was written; a kind parameter after its
+// constant, or before a character constant (K_'text').
 func (t Token) short() string {
 	switch t.Kind {
 	case CharConst:
-		return "'" + strings.ReplaceAll(t.Text, "'", "''") + "'"
+		text := "'" + strings.ReplaceAll(t.Text, "'", "''") + "'"
+		if t.KindParam != "" {
+			return t.KindParam + "_" + text
+		}
+
+		return text
 	case HollerithConst:
 		return strconv.Itoa(len(t.Text)) + `H"` + t.Text + `"`
 	case Radix50Const:
@@ -579,11 +606,19 @@ func (t Token) short() string {
 			return `"` + t.Text
 		}
 	case TypelessConst:
+		if t.Prefixed {
+			return map[int]string{2: "B", 8: "O", 16: "Z"}[t.Radix] + "'" + t.Text + "'"
+		}
+
 		if t.Radix == 8 {
 			return "'" + t.Text + "'O"
 		}
 
 		return "'" + t.Text + "'X"
+	}
+
+	if t.KindParam != "" {
+		return t.Text + "_" + t.KindParam
 	}
 
 	return t.Text

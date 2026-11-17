@@ -50,3 +50,46 @@ func TestF90QualifierNames(t *testing.T) {
 		}
 	}
 }
+
+// TestF90ConstantsInParentheses checks the apostrophes Fortran 90 adds after a
+// name character inside parentheses (ApostropheStartsConstant): a kind
+// parameter's and a binary, octal, or hexadecimal constant's start a constant,
+// so a ! after them starts a comment; READ (Z'10)'s is still the separator.
+func TestF90ConstantsInParentheses(t *testing.T) {
+	check(t, Form{}, []string{
+		"      CALL F(Z'1F') ! hexadecimal",
+		"      CALL F(K_'A!B', 1_'!') ! kind parameters",
+		"      CALL F(B'101', O'17') ! binary and octal",
+		"      READ (Z'10) X ! a record number",
+		"      READ (Z'1G') X ! not hexadecimal: both apostrophes separators",
+	},
+		"0|CALL F(Z'1F') ",
+		"0|CALL F(K_'A!B', 1_'!') ",
+		"0|CALL F(B'101', O'17') ",
+		"0|READ (Z'10) X ",
+		"0|READ (Z'1G') X ",
+	)
+
+	for _, c := range []struct {
+		last  byte
+		depth int
+		rest  string
+		want  bool
+	}{
+		{'(', 1, "A'", true},
+		{'X', 0, "A'", true},
+		{'X', 1, "10)", false},
+		{'_', 1, "A'", true},
+		{'Z', 1, "1F'", true},
+		{'z', 1, "1f'", true},
+		{'Z', 1, "'", false},
+		{'B', 1, "102'", false},
+		{'O', 1, "17'", true},
+		{'O', 1, "18'", false},
+		{'1', 1, "10)", false},
+	} {
+		if got := ApostropheStartsConstant(c.last, c.depth, c.rest); got != c.want {
+			t.Errorf("%q %d %q: got %v", c.last, c.depth, c.rest, got)
+		}
+	}
+}

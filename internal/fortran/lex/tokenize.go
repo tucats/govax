@@ -50,9 +50,16 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 	for i < j {
 		c := text[i]
 
+		// start and before are where this turn's token begins and how many
+		// tokens there were, for free form's checks of blanks after it.
+		start, before := i, len(tokens)
+
 		switch {
-		case c == '\'' && lit[i]:
-			i = l.character(&tokens, i, j)
+		case (c == '\'' || c == '"') && lit[i]:
+			// A character constant: in apostrophes, or under /F90 in
+			// quotation marks (squeeze marked which quotation marks start
+			// one).
+			i = l.character(&tokens, i, j, "")
 
 		case isLetter(c):
 			k := i
@@ -60,8 +67,22 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 				k++
 			}
 
-			add(Name, i, string(text[i:k]))
-			i = k
+			switch {
+			case l.quoteAt(k, j) && k == i+1 && strings.IndexByte("BOZ", c) >= 0:
+				// Fortran 90's B'101', O'17', Z'1F': a constant in a base,
+				// its letter first (the standard's R407).
+				i = l.prefixed(&tokens, i, j)
+
+			case l.quoteAt(k, j) && k > i+1 && text[k-1] == '_':
+				// K_'text': a character constant with a kind parameter
+				// named K before it (R420).
+				i = l.character(&tokens, k, j, string(text[i:k-1]))
+				tokens[len(tokens)-1].Offset = l.offset(start)
+
+			default:
+				add(Name, i, string(text[i:k]))
+				i = k
+			}
 
 		case isDigit(c), c == '.' && i+1 < j && isDigit(text[i+1]):
 			// A number, including one starting with a decimal point (.5).
@@ -73,18 +94,28 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 
 		case c == '.':
 			// FORTRAN's operators and logical constants that are words
-			// between periods: .EQ., .AND., .TRUE., and the rest.
-			if word, kind, end := l.dotted(i, j); word != "" {
+			// between periods: .EQ., .AND., .TRUE., and the rest; and
+			// Fortran 90's defined operators, .CROSS. (definedOperator).
+			switch word, kind, end := l.dotted(i, j); {
+			case word != "":
 				add(kind, i, "."+word+".")
+				i = l.kindAfter(&tokens, end, j)
+
+			case l.definedOperator(tokens, i, j) > i:
+				end := l.definedOperator(tokens, i, j)
+				add(Operator, i, string(text[i:end]))
 				i = end
-			} else {
+
+			default:
 				add(Operator, i, ".")
 				i++
 			}
 
 		case c == '"':
 			// Appendix A.5's octal integer constant, "17: an INTEGER
-			// written in octal, not a typeless constant like '17'O.
+			// written in octal, not a typeless constant like '17'O. (Under
+			// /F90 the quotation mark starts a character constant instead,
+			// which the first case took.)
 			k := i + 1
 			for k < j && text[k] >= '0' && text[k] <= '7' {
 				k++
@@ -93,29 +124,215 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 			tokens = append(tokens, Token{Kind: IntegerConst, Text: string(text[i+1 : k]), Radix: 8, Offset: l.offset(i)})
 			i = k
 
-		case c == '*' || c == '/':
-			if i+1 < j && text[i+1] == c && !lit[i+1] {
-				add(Operator, i, string([]byte{c, c})) // ** or //
-				i += 2
-			} else {
-				add(Operator, i, string(c))
-				i++
+		default:
+			if op := l.operator(i, j); op != "" {
+				add(Operator, i, op)
+				i += len(op)
+
+				break
 			}
 
-		case strings.IndexByte("+-(),=:%&'<>", c) >= 0:
-			add(Operator, i, string(c))
-			i++
-
-		default:
 			// Report the character and skip it, so the rest of the
 			// statement still gets tokens and the later passes can look
 			// for more errors.
 			l.messages.Report("BADCHAR", l.src.Position(l.offset(i)), string(c))
 			i++
 		}
+
+		if l.src != nil && l.src.Free && len(tokens) > before {
+			l.checkBlanks(tokens[len(tokens)-1], start, i)
+		}
 	}
 
 	return tokens
+}
+
+// operators are the operators of more than one character, longest first
+// within each first character, so that ** is found before *. The ones on
+// the second line are Fortran 90's (the standard's 3.2.3 and 3.2.5): the
+// relational operators' new spellings, the array constructor's (/ and /), the
+// declarations' ::, and the pointer assignment's =>. None of them means
+// anything in VAX FORTRAN, so reading them as one token changes no old
+// program (TestNoF90Unchanged).
+var operators = []string{
+	"**", "//",
+	"(/", "/)", "==", "/=", "<=", ">=", "::", "=>",
+}
+
+// operator returns the operator that starts at i, before j: one of operators,
+// or a single character FORTRAN uses; "" if the character is none of them.
+// Neither character may be inside a constant.
+func (l *lexer) operator(i, j int) string {
+	text, lit := l.sq.text, l.sq.lit
+
+	for _, op := range operators {
+		if i+1 < j && text[i] == op[0] && text[i+1] == op[1] && !lit[i+1] {
+			return op
+		}
+	}
+
+	if strings.IndexByte("+-*/(),=:%&'<>", text[i]) >= 0 {
+		return string(text[i])
+	}
+
+	return ""
+}
+
+// quoteAt reports whether a character constant starts at k (before j): an
+// apostrophe or quotation mark squeeze marked as a constant's.
+func (l *lexer) quoteAt(k, j int) bool {
+	return k < j && l.sq.lit[k] && (l.sq.text[k] == '\'' || l.sq.text[k] == '"')
+}
+
+// prefixed adds Fortran 90's binary, octal, or hexadecimal constant whose
+// letter, B, O, or Z, is at i: a TypelessConst, Prefixed, with its base. Its
+// digits are checked where it is given a value, as DEC's '1F'X are.
+func (l *lexer) prefixed(tokens *[]Token, i, j int) int {
+	value, k := l.quoted(i+1, j)
+
+	radix := map[byte]int{'B': 2, 'O': 8, 'Z': 16}[l.sq.text[i]]
+	*tokens = append(*tokens, Token{Kind: TypelessConst, Text: value, Radix: radix, Prefixed: true, Offset: l.offset(i)})
+
+	return k
+}
+
+// definedOperator returns where the defined operator starting with the period
+// at i ends (past its closing period), or i if there is none: a word of
+// letters between periods that isn't one of FORTRAN's own (the standard's
+// R704 and R724: .CROSS., .INVERSE.).
+//
+// After a name or a ), A.B.C is VAX FORTRAN's record field reference as
+// well as A .B. C (docs/planning/PHASE-99 - Fortran 90.md, "Where Fortran 90 and
+// VAX FORTRAN disagree"), and the lexer can't tell which: there it leaves the
+// periods and the name as separate tokens, as it always has, for the parser
+// and the symbols to settle (Phase 103). Anywhere else, at an expression's
+// start, after an operator, or after a constant, no field can follow, and the
+// word is the operator.
+func (l *lexer) definedOperator(tokens []Token, i, j int) int {
+	if n := len(tokens); n > 0 && (tokens[n-1].Kind == Name || tokens[n-1].Is(")")) {
+		return i
+	}
+
+	if end := l.dottedWord(i, j); end > 0 {
+		return end
+	}
+
+	return i
+}
+
+// dottedWord returns where a word of letters between periods, the first at i,
+// ends (past the second period), or 0 if there is no such word.
+func (l *lexer) dottedWord(i, j int) int {
+	text, lit := l.sq.text, l.sq.lit
+
+	k := i + 1
+	for k < j && isLetter(text[k]) && !lit[k] {
+		k++
+	}
+
+	if k == i+1 || k >= j || text[k] != '.' || lit[k] {
+		return 0
+	}
+
+	return k + 1
+}
+
+// kindAfter reads the kind parameter after the constant just added to tokens,
+// if an underscore follows it at i: digits or a name (the standard's R404:
+// 1.5_8, 2_K, .TRUE._1). It returns where the text after it starts.
+func (l *lexer) kindAfter(tokens *[]Token, i, j int) int {
+	text, lit := l.sq.text, l.sq.lit
+
+	if i >= j || text[i] != '_' || lit[i] {
+		return i
+	}
+
+	k := i + 1
+	for k < j && isNameChar(text[k]) && !lit[k] {
+		k++
+	}
+
+	kind := string(text[i+1 : k])
+	if !validKind(kind) {
+		l.messages.Report("BADKIND", l.src.Position(l.offset(i)))
+
+		return k
+	}
+
+	(*tokens)[len(*tokens)-1].KindParam = kind
+
+	return k
+}
+
+// validKind reports whether text can be a kind parameter: digits, or a name.
+func validKind(text string) bool {
+	if text == "" {
+		return false
+	}
+
+	if isLetter(text[0]) {
+		return true
+	}
+
+	for i := 0; i < len(text); i++ {
+		if !isDigit(text[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// compoundNames are the words that are two keywords written together, which
+// may have a blank between them in free form though they are read as one name
+// in a statement's tokens (the standard's 3.3.1.2): IMPLICIT DOUBLE PRECISION
+// (A-H), INTENT(IN OUT). The number is where the blank may be.
+var compoundNames = map[string]int{"DOUBLEPRECISION": 6, "DOUBLECOMPLEX": 6, "INOUT": 2}
+
+// checkBlanks applies free form's rules for blanks (the standard's 3.3.1) to
+// tok, which runs from start to end in the squeezed text: a blank inside it is
+// BLANKINNAME, and none between it and a name, keyword, constant, or label
+// just before it is NEEDBLANK. squeeze recorded where blanks were (gap).
+func (l *lexer) checkBlanks(tok Token, start, end int) {
+	text, lit, gap := l.sq.text, l.sq.lit, l.sq.gap
+
+	word := func(m int) bool { return isNameChar(text[m]) && !lit[m] }
+
+	if start > 0 && word(start-1) && word(start) && !gap[start] {
+		k := start - 1
+		for k > 0 && word(k-1) {
+			k--
+		}
+
+		l.messages.Report("NEEDBLANK", l.src.Position(l.offset(start)), string(text[k:start]), tok.Text)
+	}
+
+	allowed := -1
+	if split, ok := compoundNames[tok.Text]; ok && tok.Kind == Name {
+		allowed = start + split
+	}
+
+	for m := start + 1; m < end; m++ {
+		if gap[m] && m != allowed {
+			l.messages.Report("BLANKINNAME", l.src.Position(l.offset(m)), tokenWhat(tok))
+
+			return
+		}
+	}
+}
+
+// tokenWhat names what kind of word tok is, for BLANKINNAME.
+func tokenWhat(tok Token) string {
+	switch tok.Kind {
+	case Name:
+		return "a name"
+	case Keyword:
+		return "a keyword"
+	case Operator:
+		return "an operator"
+	}
+
+	return "a constant"
 }
 
 // afterLengthStar reports whether the next number is a type length: it
@@ -134,47 +351,26 @@ func afterLengthStar(tokens []Token) bool {
 	return n == 1 || tokens[n-2].Kind == Name || tokens[n-2].Kind == Keyword || tokens[n-2].Is(")")
 }
 
-// character adds the character constant whose opening apostrophe is at i,
-// and returns where the text after it starts. An apostrophe doubled inside
-// the constant is one apostrophe of its value. A constant followed at
-// once by X or O is a hexadecimal or octal constant ('1F'X).
+// character adds the character constant whose opening apostrophe (or
+// quotation mark) is at i, with the kind parameter kind ("" for none), and
+// returns where the text after it starts. A constant followed at once by X
+// or O is a hexadecimal or octal constant ('1F'X).
 //
 // tokens is a pointer to the caller's slice because append may have to
 // move a slice to a bigger array, giving back a new slice header. Writing
 // *tokens = append(*tokens, ...) puts that new header back in the
 // caller's variable, so the caller sees the token.
-func (l *lexer) character(tokens *[]Token, i, j int) int {
+func (l *lexer) character(tokens *[]Token, i, j int, kind string) int {
 	text, lit := l.sq.text, l.sq.lit
 
-	var value []byte
-
-	k := i + 1
-
-	for k < j {
-		if text[k] == '\'' {
-			if k+1 < j && text[k+1] == '\'' && lit[k+1] {
-				value = append(value, '\'')
-				k += 2
-
-				continue
-			}
-
-			k++ // the closing apostrophe
-
-			break
-		}
-
-		value = append(value, text[k])
-		k++
-	}
-
-	tok := Token{Kind: CharConst, Text: string(value), Offset: l.offset(i)}
+	value, k := l.quoted(i, j)
+	tok := Token{Kind: CharConst, Text: value, KindParam: kind, Offset: l.offset(i)}
 
 	// '1F'X and '17'O are VAX FORTRAN's typeless constants: bits written
 	// in hexadecimal or octal, which take on the type of whatever they are
 	// used with. The X or O must not begin a longer name ('A'XYZ isn't
 	// one), hence the check of the character after it.
-	if k < j && !lit[k] && (text[k] == 'X' || text[k] == 'O') && (k+1 == j || !isNameChar(text[k+1])) {
+	if kind == "" && k < j && !lit[k] && (text[k] == 'X' || text[k] == 'O') && (k+1 == j || !isNameChar(text[k+1])) {
 		tok.Kind, tok.Radix = TypelessConst, 16
 
 		if text[k] == 'O' {
@@ -187,6 +383,39 @@ func (l *lexer) character(tokens *[]Token, i, j int) int {
 	*tokens = append(*tokens, tok)
 
 	return k
+}
+
+// quoted reads the quoted text whose opening apostrophe or quotation mark is
+// at i, returning its value and where the text after the closing one starts.
+// The delimiter doubled inside the constant is one of it in the value
+// ('IT''S', "SAY ""HI""").
+func (l *lexer) quoted(i, j int) (string, int) {
+	text, lit := l.sq.text, l.sq.lit
+	delimiter := text[i]
+
+	var value []byte
+
+	k := i + 1
+
+	for k < j {
+		if text[k] == delimiter {
+			if k+1 < j && text[k+1] == delimiter && lit[k+1] {
+				value = append(value, delimiter)
+				k += 2
+
+				continue
+			}
+
+			k++ // the closing delimiter
+
+			break
+		}
+
+		value = append(value, text[k])
+		k++
+	}
+
+	return string(value), k
 }
 
 // number adds the number, or Hollerith or RADIX-50 constant, starting at i, and
@@ -234,8 +463,10 @@ func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 	// makes it a real. E is REAL*4's exponent letter, D REAL*8's, and Q
 	// REAL*16's: 1.5D0 is the REAL*8 value 1.5.
 	if !plain {
+		// A period followed by a word and a period starts an operator:
+		// .AND., or a defined operator (2.CROSS.X), so it ends an integer.
 		if k < j && text[k] == '.' && !lit[k] {
-			if word, _, _ := l.dotted(k, j); word == "" {
+			if l.dottedWord(k, j) == 0 {
 				kind = RealConst
 				k++
 
@@ -263,9 +494,23 @@ func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 		}
 	}
 
+	// An integer before _'text' is a character constant's kind parameter
+	// (1_'text'); otherwise an underscore after a number starts the number's
+	// own (1.5_8).
+	if !plain && kind == IntegerConst && k+1 < j && text[k] == '_' && !lit[k] && l.quoteAt(k+1, j) {
+		end := l.character(tokens, k+1, j, string(text[i:k]))
+		(*tokens)[len(*tokens)-1].Offset = l.offset(i)
+
+		return end
+	}
+
 	*tokens = append(*tokens, Token{Kind: kind, Text: string(text[i:k]), Offset: l.offset(i)})
 
-	return k
+	if plain {
+		return k
+	}
+
+	return l.kindAfter(tokens, k, j)
 }
 
 // dotted reads the dotted operator or logical constant whose first period

@@ -1,5 +1,7 @@
 package source
 
+import "strings"
+
 // commentScanner finds where an end-of-line comment starts in a
 // statement's text. A ! starts one, except inside a character constant
 // ('WHAT!') or a Hollerith constant (5HWHAT!), so finding it means
@@ -87,7 +89,7 @@ func (s *commentScanner) cut(field string) int {
 			return i
 		}
 
-		s.feed(field[i], i)
+		s.feed(field, i)
 	}
 
 	return len(field)
@@ -101,9 +103,12 @@ func (s *commentScanner) outside() bool {
 	return !s.quoted && s.hollerith == 0
 }
 
-// feed moves the scanner on past c, the character at index i of the line's
-// field.
-func (s *commentScanner) feed(c byte, i int) {
+// feed moves the scanner on past the character at index i of text, a line's
+// field (the rest of the field is there for ApostropheStartsConstant to look
+// ahead at).
+func (s *commentScanner) feed(text string, i int) {
+	c := text[i]
+
 	if c >= 'a' && c <= 'z' && s.lower < 0 && s.hollerith == 0 && !s.quoted {
 		s.lower = i
 	}
@@ -126,7 +131,7 @@ func (s *commentScanner) feed(c byte, i int) {
 		return
 
 	case c == '\'':
-		if s.depth > 0 && isNameChar(s.last) {
+		if !ApostropheStartsConstant(s.last, s.depth, text[i+1:]) {
 			s.note(c) // READ (1'10): a record number follows
 		} else {
 			s.quoted, s.delimiter = true, c
@@ -218,6 +223,43 @@ func CountMayFollow(last byte, start string) bool {
 	}
 
 	return false
+}
+
+// ApostropheStartsConstant reports whether an apostrophe outside every constant
+// starts a character constant, or is VAX FORTRAN's record separator, READ
+// (1'10). last is the last character before it outside constants (not a
+// blank), depth how many parentheses are open, and rest the text after it on
+// its line. The lexer asks the same question, so the two agree on where
+// constants are.
+//
+// The separator follows a unit, a name or a number, inside parentheses; a
+// constant follows anything else. Fortran 90 adds two places where an
+// apostrophe follows a name character and starts a constant all the same
+// (docs/planning/PHASE-99 - Fortran 90.md, subtask 4):
+//
+//   - after an underscore, a character constant's kind parameter: K_'text'
+//     (the standard's R420). No unit's name ends in one in practice, and the
+//     separator would make nonsense of the text after it anyway.
+//   - after B, O, or Z, a binary, octal, or hexadecimal constant, Z'1F'
+//     (R407), but only if what follows is digits of its base and a closing
+//     apostrophe, since READ (Z'10) X, with a unit named Z, is the separator.
+//     Such a constant is never split across lines.
+func ApostropheStartsConstant(last byte, depth int, rest string) bool {
+	if depth == 0 || !isNameChar(last) || last == '_' {
+		return true
+	}
+
+	digits := map[byte]string{'B': "01", 'O': "01234567", 'Z': "0123456789ABCDEFabcdef"}[last&^0x20]
+	if digits == "" {
+		return false
+	}
+
+	k := 0
+	for k < len(rest) && strings.IndexByte(digits, rest[k]) >= 0 {
+		k++
+	}
+
+	return k > 0 && k < len(rest) && rest[k] == '\''
 }
 
 // isNameChar reports whether c can be part of a FORTRAN name or number:

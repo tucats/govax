@@ -406,11 +406,25 @@ type (
 	}
 
 	// TypelessConst is an octal or hexadecimal constant, '17'O or '1F'X
-	// (section 2.2.1.4): its Digits, and Radix 8 or 16.
+	// (section 2.2.1.4): its Digits, and Radix 8 or 16. Prefixed is Fortran
+	// 90's form, its base's letter first, B'101', O'17', or Z'1F' (the
+	// standard's R407), whose Radix may also be 2. The two forms are given
+	// values alike, as DEC's later compilers do.
 	TypelessConst struct {
 		ExprBase
-		Digits string
-		Radix  int
+		Digits   string
+		Radix    int
+		Prefixed bool
+	}
+
+	// KindConst is a constant with a kind parameter, Fortran 90's 1.5_8, 2_K,
+	// .TRUE._1, or K_'text' (the standard's R404, R413, R420, R421): X is the
+	// constant without it, and Kind the parameter as written, digits or a
+	// name. Semantic analysis gives it a meaning in Phase 100.
+	KindConst struct {
+		ExprBase
+		X    Expr
+		Kind string
 	}
 
 	// Radix50Const is a RADIX-50 constant, nRtext (appendix B.3): Value is its

@@ -12,10 +12,17 @@ import "github.com/tucats/govax/internal/fortran/source"
 // constant's text, its apostrophes, and a Hollerith constant's H. The
 // later steps skip lit characters when they look for the = or ( that
 // decide a statement's kind, since '=' inside a constant is just text.
+//
+// gap says a blank (or tab) was taken out just before the character. In
+// fixed form that means nothing; in free form blanks are significant
+// (docs/planning/PHASE-99 - Fortran 90.md, Decision 3), and the tokenizer
+// reads them from gap: one inside a token is an error, and one is needed
+// between two words.
 type squeezed struct {
 	text []byte
 	at   []int
 	lit  []bool
+	gap  []bool
 }
 
 // squeezeProblem is something wrong found while squeezing: an unclosed
@@ -37,18 +44,22 @@ const maxHollerith = 1 << 20
 //
 //   - an apostrophe starts a character constant, and the next one ends it
 //     (a doubled apostrophe inside one ends it and starts another at
-//     once, which is as good: both are lit);
+//     once, which is as good: both are lit); under /F90 (f90) a quotation
+//     mark does the same, and a constant ends only at the mark it started
+//     with;
 //   - but an apostrophe after a name or number inside parentheses is the
-//     record separator of READ (1'10), not a constant;
+//     record separator of READ (1'10), not a constant, unless
+//     source.ApostropheStartsConstant finds Fortran 90's K_'text' or Z'1F';
 //   - digits where a value can go (source.CountMayFollow) followed by an H
 //     are a Hollerith count, and that many characters after the H, blanks
 //     and all, are the constant; followed by an R, a RADIX-50 constant's.
-func squeeze(text string) (*squeezed, []squeezeProblem) {
+func squeeze(text string, f90 bool) (*squeezed, []squeezeProblem) {
 	var (
 		s        = &squeezed{}
 		problems []squeezeProblem
 
 		quoted    bool // inside a character constant
+		delimiter byte // the ' or " that started it
 		quoteAt   int  // where it started
 		hollerith int  // a Hollerith constant's characters still to come
 		hollAt    int  // where its count started
@@ -61,15 +72,20 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 		counting bool // the digits ending at last may be a Hollerith count
 		countAt  int  // where they started
 		count    int
+
+		blank bool // a blank was taken out since the last character kept
 	)
 
 	// keep adds one character to the squeezed text, with where it came
-	// from and whether it's inside a constant. The three slices grow
-	// together, so index n of each is about the same character.
+	// from, whether it's inside a constant, and whether a blank came out
+	// before it. The four slices grow together, so index n of each is about
+	// the same character.
 	keep := func(c byte, at int, lit bool) {
 		s.text = append(s.text, c)
 		s.at = append(s.at, at)
 		s.lit = append(s.lit, lit)
+		s.gap = append(s.gap, blank)
+		blank = false
 	}
 
 	// note records the last character kept outside a constant, which the
@@ -100,7 +116,7 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 			// Inside 'text': kept as is, until the closing apostrophe.
 			keep(c, i, true)
 
-			if c == '\'' {
+			if c == delimiter {
 				quoted = false
 				note(c)
 			}
@@ -109,16 +125,27 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 
 		case c == ' ' || c == '\t':
 			// Outside constants, blanks are dropped: the point of squeezing.
+			blank = true
+
 			continue
 
 		case c == '\'':
-			if depth > 0 && isNameChar(last) {
+			if source.ApostropheStartsConstant(last, depth, text[i+1:]) {
+				keep(c, i, true)
+				quoted, delimiter, quoteAt = true, c, i
+			} else {
 				keep(c, i, false) // READ (1'10): a record number follows
 				note(c)
-			} else {
-				keep(c, i, true)
-				quoted, quoteAt = true, i
 			}
+
+			continue
+
+		case c == '"' && f90:
+			// Under /F90 "text" is a character constant (Decision 2);
+			// otherwise "17 is appendix A.5's octal constant, which the
+			// tokenizer reads.
+			keep(c, i, true)
+			quoted, delimiter, quoteAt = true, c, i
 
 			continue
 
@@ -167,7 +194,7 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 
 	switch {
 	case quoted:
-		problems = append(problems, squeezeProblem{ident: "NOQUOTE", offset: quoteAt})
+		problems = append(problems, squeezeProblem{ident: "NOQUOTE", offset: quoteAt, args: []any{quoteName(delimiter)}})
 	case hollerith > 0:
 		ident := "HOLLEND"
 		if radix {
@@ -179,6 +206,15 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 	}
 
 	return s, problems
+}
+
+// quoteName names a character constant's delimiter, for NOQUOTE.
+func quoteName(delimiter byte) string {
+	if delimiter == '"' {
+		return "quotation mark"
+	}
+
+	return "apostrophe"
 }
 
 // startOf is what source.CountMayFollow needs of the text kept so far.

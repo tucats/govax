@@ -4,7 +4,7 @@
 the same day, every recommendation taken ("The author's answers", after the
 questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
 to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done, and so is
-subtask 2 (`/F90` and `/SOURCE_FORM`) and subtask 3 (free source form); subtask 4 is next. Needs the FORTRAN program (Phases
+subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), and subtask 4 (Fortran 90's lexical items); subtask 5 is next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -581,7 +581,8 @@ the work shows.
    character constants under `/F90`, `B'…'`, `O'…'`, `Z'…'` (and DEC's
    `'…'O` and `'…'X` as now), and in free form a blank inside a name or
    constant an error (`BLANKINNAME`). The relational spellings parse as
-   `.EQ.` and the rest, so a program using `==` already compiles and runs.
+   `.EQ.` and the rest, so a program using `==` already compiles and runs
+   (done 2026-11-17).
 5. **The new statements recognized** (`lex/kinds.go`, `parse`, `sema/notimpl.go`):
    every Fortran 90 statement classified (the `::`, `=>`, and WHERE rules;
    TYPE's two readings; construct names before a colon), parsed far enough to
@@ -796,3 +797,55 @@ The author read the plan and accepted every recommendation:
     default is 39 there. A free-form program run end to end by hand (FORTRAN,
     MACRO, LINK, RUN; `do 10 i = 1, &`, a label first, `;`, a constant
     continued) printed what it should; the corpus is subtask 6's.
+- **2026-11-17, subtask 4 (done):** Fortran 90's lexical items, in `lex`; its
+  `doc.go` has a section on them.
+  - **Operators:** `::`, `=>`, `(/`, `/)`, `==`, `/=`, `<=`, `>=` are each one
+    token (`tokenize.go`'s `operators`), `<` and `>` as before. None means
+    anything to VAX FORTRAN, and `TestNoF90Unchanged` holds. The parser reads
+    `==` as `.EQ.` and the rest (`parse/expr.go`'s `binaryOps`); the tokens keep
+    their text, so dumps and messages show what was written. An `=` inside one
+    is no assignment's (`findAssignment`), so `PRINT *, A == B` is a PRINT.
+    `::`, `=>`, `(/`, and `/)` reach the parser as tokens it doesn't take yet
+    (a syntax error): their statements and expressions are subtask 5's and
+    Phase 100's and 102's.
+  - **Defined operators** are an operator token `.CROSS.` (`Token.DefinedOperator`)
+    only where no record field can stand: at an expression's start, after an
+    operator, after a constant (`2.CROSS.Y`, the integer now ended by any
+    dotted word). After a name or a `)`, `A.B.C` keeps today's tokens, `.`,
+    `B`, `.`: the parser and the symbols settle it in Phase 103, as Part A's
+    table says.
+  - **Kind parameters:** `Token.KindParam`, digits or a name, after a number
+    or a logical constant (`1.5_8`, `2_K`, `.TRUE._1`) or before a character
+    constant (`K_'text'`, `1_'text'`); `BADKIND` for `1.5_`. The parser wraps
+    the constant in the new `ast.KindConst`, which sema reports as NOTIMPL, "a
+    kind parameter on a constant", until Phase 100.
+  - **Letter-first constants:** `B'101'`, `O'17'`, `Z'1F'` (either case, either
+    quotation mark under `/F90`) are typeless constants like DEC's, `Prefixed`,
+    radix 2 allowed (`ast.TypelessConst.Prefixed`; `BADDIGITS` says "binary").
+    Fortran 90 allows them only in DATA, as integers; we give them DEC's
+    typeless meaning everywhere, as the HP compiler does (our choice).
+  - **`"`:** under `/F90` a quotation mark starts a character constant, ended
+    by the same mark, a doubled one inside it one of its characters; without
+    it, `"17` is still the octal INTEGER. `NOQUOTE` names the missing mark.
+  - **Apostrophes after a name inside parentheses** were always `READ (1'10)`'s
+    record separator. Now, in the source pass and the lexer alike
+    (`source.ApostropheStartsConstant`), one after `_` starts a constant (a kind
+    parameter's), and so does one after `B`, `O`, or `Z` when only that base's
+    digits and an apostrophe follow on the line; `READ (Z'10) X` is still unit
+    Z's record 10. No corpus file changes.
+  - **Blanks in free form:** squeezing records where it took a blank out
+    (`squeezed.gap`), and `checkBlanks` applies 3.3.1: a blank inside a name,
+    constant, or operator is `BLANKINNAME`; two words written together
+    (`CALLSUB`, `GOTO10`, `DO10 I`) are `NEEDBLANK`. `DOUBLE PRECISION`,
+    `DOUBLE COMPLEX`, and `IN OUT`, one name in a statement's tokens, may have
+    their blank. Left for subtask 5: the blanks inside a statement's keyword
+    (`G O T O` is still a GO TO in free form) and the keyword compounds the
+    standard allows with or without one; and a named END (`END PROGRAM P`),
+    which is `EXTRATEXT` as it always was and in free form `BLANKINNAME` too
+    (PROGRAMP is one name to the lexer) until then.
+  - **Tests:** `lex`'s `f90_test.go` (every new token in both forms, values,
+    quotation marks both ways, the blank rules and fixed form's silence about
+    them, `BADKIND`); `source`'s `TestF90ConstantsInParentheses`; `fortran`'s
+    `TestF90LexicalItems` (a free-form program with `==`, `/=`, `"it's "`,
+    `z'1f'` and `b'101'` in DATA, compiled to MACRO; a kind parameter's
+    NOTIMPL). `TestNoF90Unchanged` still matches its baseline.

@@ -306,7 +306,7 @@ func freeSegment(scanner *commentScanner, text string, pos int) (end int, contin
 			return i, true, false
 		}
 
-		scanner.feed(c, i)
+		scanner.feed(text, i)
 	}
 
 	return len(text), false, false
