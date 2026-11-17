@@ -763,6 +763,32 @@ type (
 		Elems []*Const
 	}
 
+	// ArrayFunc is a reference to one of Fortran 90's array functions that
+	// the compiler computes in line (arrayfuncs.go): Name; Array, its first
+	// argument (ARRAY, MASK of ALL, ANY, and COUNT, MATRIX_A, MATRIX); Other,
+	// MATRIX_B; Mask, MASK= of the others; Dim, a constant DIM= (0 for none),
+	// or DimExpr, one not constant of SIZE, LBOUND, or UBOUND. DOT_PRODUCT is
+	// a SUM or an ANY of a product.
+	ArrayFunc struct {
+		exprBase
+		Name    string
+		Array   Expr
+		Other   Expr
+		Mask    Expr
+		Dim     int
+		DimExpr Expr
+	}
+
+	// ArrayFuncAt is F's element at the indexes Index, the index variables of
+	// an array statement's loops, one per dimension of F: an element of a
+	// reduction with DIM= or of MATMUL, which lowering computes by a loop of
+	// its own.
+	ArrayFuncAt struct {
+		exprBase
+		F     *ArrayFunc
+		Index []*Symbol
+	}
+
 	// Constructor is an array constructor whose values aren't all constants
 	// (Fortran 90's 4.5): (/ X, A(2:3), (I * Y, I = 1, N) /), of rank one,
 	// its extent known when compiling only if every item's is.

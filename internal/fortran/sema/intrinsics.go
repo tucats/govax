@@ -378,6 +378,19 @@ CONJG              -  1   C32 C32 CONJG
 
 MERGE              -  3   *   *   MERGE E TSOURCE,FSOURCE,MASK
 
+SUM                -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
+PRODUCT            -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
+MAXVAL             -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
+MINVAL             -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
+ALL                -  1,2 *   *   REDUCE T MASK,DIM?
+ANY                -  1,2 *   *   REDUCE T MASK,DIM?
+COUNT              -  1,2 *   I4  REDUCE T MASK,DIM?
+DOT_PRODUCT        -  2   *   *   REDUCE T VECTOR_A,VECTOR_B
+MAXLOC             -  1,2 *   I4  REDUCE T ARRAY,MASK?
+MINLOC             -  1,2 *   I4  REDUCE T ARRAY,MASK?
+MATMUL             -  2   *   *   REDUCE T MATRIX_A,MATRIX_B
+TRANSPOSE          -  1   *   *   REDUCE T MATRIX
+
 RESHAPE            -  2,4 *   *   ARRAY T SOURCE,SHAPE,PAD?,ORDER?
 SHAPE              -  1   *   I4  ARRAY I SOURCE
 SIZE               -  1,2 *   I4  ARRAY I ARRAY,DIM?

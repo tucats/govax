@@ -74,6 +74,7 @@ PROGRAMS90 = {
     "vectors": ["vectors.f90"],
     "constants": ["constants.f90"],
     "elements": ["elements.f90"],
+    "reduce": ["reduce.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

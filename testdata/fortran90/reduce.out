@@ -1,0 +1,25 @@
+sum, masked:    78.   57.
+prod, max, min:  280.   12.    1.
+column sums:     6.   15.   24.   33.
+row sums:       22.   26.   30.
+row maxima:     10.   11.   12.
+count, any, all:     7  T  T  F
+any by column:  F  F  F  T
+maxloc:       3  4
+minloc:       1  1
+masked:       3  2
+none:         0  0
+empty sum, product:    0.    1.
+dot product:   32.
+complex dot:   15.    0.
+matmul a, c:   22.   26.   30.
+p(1,:):    1.    4.    7.   10.
+p(2,:):    5.   11.   17.   23.
+b(1,:):    1.    2.    3.
+b(2,:):    4.    5.    6.
+b(3,:):    7.    8.    9.
+b(4,:):   10.   11.   12.
+shares:  0.167  0.333  0.500
+size, shape, bounds:  12  3  4  0  1  2  4
+lower rows:    5.   11.   17.   23.
+  $STATUS == "%X00000001"

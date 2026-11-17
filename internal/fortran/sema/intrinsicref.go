@@ -69,11 +69,20 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.sizeOf(e)
 	}
 
-	if forms[0].how == "ARRAY" {
-		// One whose array's bounds are constants was folded (apply).
-		a.notImplForm(e.Pos, e.Name+" of an array whose bounds aren't constants")
+	switch forms[0].how {
+	case "ARRAY":
+		// One whose array's bounds are constants was folded (apply); RESHAPE
+		// of values not constant is Phase 104's.
+		if e.Name == "RESHAPE" {
+			a.notImplForm(e.Pos, "RESHAPE of values not constant (Phase 104)")
 
-		return a.bad(e.Pos)
+			return a.bad(e.Pos)
+		}
+
+		return a.arrayFunction(e, slots.args)
+
+	case "REDUCE":
+		return a.arrayFunction(e, slots.args)
 	}
 
 	array := false

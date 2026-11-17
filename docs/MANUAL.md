@@ -6793,8 +6793,8 @@ string changes nothing. So a directive on a program's first line doesn't head pa
 | --- | --- | --- |
 | `BOUNDS` | Each subscript against its dimension, and `1 <= first <= last <= length` for each substring | The `INDEX` instruction's trap, `%SYSTEM-F-SUBRNG` |
 | | An adjustable array's bounds at each entry point defining it, an upper below its lower being wrong | `%FOR-F-ADJARRDIM` |
-| | A Fortran 90 array section's first and last subscripts, once before its assignment's loops | `%SYSTEM-F-SUBRNG` |
-| | Two arrays' extents in one Fortran 90 array assignment, where they weren't known to be equal when compiling | `%FOR-F-NOTCONFOR` (govax's own, FOR number 300) |
+| | A Fortran 90 array section's first and last subscripts, once before its assignment's loops, and each of a vector subscript's values | `%SYSTEM-F-SUBRNG` |
+| | Two arrays' extents in one Fortran 90 array assignment, where they weren't known to be equal when compiling, and an array constructor's values against the section it is stored in | `%FOR-F-NOTCONFOR` (govax's own, FOR number 300) |
 | `OVERFLOW` | Integer arithmetic, each unit's entry masks setting the IV bit | `%SYSTEM-F-INTOVF` |
 | `UNDERFLOW` | Floating arithmetic, each entry point setting the PSW's FU bit | `%SYSTEM-F-FLTUND_F`, not a quiet zero |
 
@@ -8627,12 +8627,15 @@ compiled.
   --^
 ```
 
-That includes array constructors and arrays that are
-PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), array
-expressions and sections, WHERE, interface blocks and CONTAINS,
-modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
-90's other new intrinsic functions aren't there yet either; under `/F90` their names are
-still taken as a program's own. A format written as a character constant may hold `"..."` constants under `/F90`
+That includes assumed-shape and deferred-shape arrays (`A(:)`), WHERE, interface blocks and
+CONTAINS, modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
+Arrays as values are partly there (Phase 102, whose close-out will describe them here): whole
+arrays, sections, and vector subscripts in expressions and assignments, array constructors,
+array PARAMETERs and initial values, the elemental intrinsic functions on arrays and MERGE,
+RESHAPE of constants, and SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, COUNT, DOT_PRODUCT,
+MAXLOC, MINLOC, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND, and UBOUND. Fortran 90's other new
+intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
+own. A format written as a character constant may hold `"..."` constants under `/F90`
 (`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as
 it does a FORMAT statement's. A format in a variable, known only at run time, can't yet:
 FTNRTL refuses it with `%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write that one

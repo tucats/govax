@@ -151,6 +151,13 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 	o.Temporary = vectorsRead(value, ts)
 
 	Scalarize(value, func(leaf Expr) Expr {
+		// An array function computed at each element (a reduction with DIM=,
+		// MATMUL, TRANSPOSE) that reads the target needs a temporary; any
+		// other is computed before the loops.
+		if f, ok := leaf.(*ArrayFunc); ok && f.Element() && funcReads(f, ts) {
+			o.Temporary = true
+		}
+
 		if o.Temporary || !mayShare(ts, baseSymbol(leaf)) {
 			return leaf
 		}
@@ -278,11 +285,7 @@ func reads(c *Constructor, ts *Symbol) bool {
 		found = found || vectorsRead(e, ts)
 
 		Scalarize(e, func(leaf Expr) Expr {
-			if c, ok := leaf.(*Constructor); ok {
-				found = found || reads(c, ts)
-			} else {
-				found = found || mayShare(ts, baseSymbol(leaf))
-			}
+			found = found || leafReads(leaf, ts)
 
 			return leaf
 		}, func(x Expr) Expr {
@@ -310,6 +313,49 @@ func reads(c *Constructor, ts *Symbol) bool {
 	}
 
 	walk(c.Items)
+
+	return found
+}
+
+// leafReads reports whether the array leaf reads storage ts may share: a
+// constructor's or an array function's values, or an array's own storage.
+func leafReads(leaf Expr, ts *Symbol) bool {
+	switch leaf := leaf.(type) {
+	case *Constructor:
+		return reads(leaf, ts)
+	case *ArrayFunc:
+		return funcReads(leaf, ts)
+	case *ArrayConst:
+		return false
+	}
+
+	return mayShare(ts, baseSymbol(leaf))
+}
+
+// funcReads reports whether the array function f reads storage ts may share,
+// in any of its arguments.
+func funcReads(f *ArrayFunc, ts *Symbol) bool {
+	found := false
+
+	for _, x := range []Expr{f.Array, f.Other, f.Mask, f.DimExpr} {
+		switch {
+		case x == nil:
+		case rankOf(x) == 0:
+			found = found || readsAny(x, ts)
+		default:
+			found = found || vectorsRead(x, ts)
+
+			Scalarize(x, func(leaf Expr) Expr {
+				found = found || leafReads(leaf, ts)
+
+				return leaf
+			}, func(s Expr) Expr {
+				found = found || readsAny(s, ts)
+
+				return s
+			})
+		}
+	}
 
 	return found
 }
@@ -357,6 +403,8 @@ func readsAny(e Expr, ts *Symbol) bool {
 		case *Const, *Procedure:
 		case *ArrayRef, *Section:
 			found = found || mayShare(ts, baseSymbol(e))
+		case *ArrayFunc:
+			found = found || funcReads(e, ts)
 		case *IntrinsicRef:
 			for _, x := range e.Args {
 				walk(x)

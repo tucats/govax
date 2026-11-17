@@ -1,0 +1,256 @@
+routine F90RED main
+  cell  A       F  $LOCAL+0    array A, 48 bytes
+  cell  B       F  $LOCAL+48   array B, 16 bytes
+  cell  C       F  $LOCAL+64   array C, 32 bytes
+  cell  D       F  $LOCAL+96   array D, 24 bytes
+  cell  E       F  $LOCAL+120  array E, 48 bytes
+  cell  X       F  $LOCAL+168  variable X
+  cell  K       L  $LOCAL+172  array K, 8 bytes
+  cell  N       L  $LOCAL+180  variable N
+  cell  $I1     L  $LOCAL+184  an array statement's index
+  cell  $I2     L  $LOCAL+188  an array statement's index
+  cell  $T1     F  $LOCAL+192  temporary
+  cell  $C1     L  $LOCAL+196  array (line 9), dimension 2's count
+  cell  $C2     L  $LOCAL+200  array (line 9), dimension 1's count
+  cell  $C3     L  $LOCAL+204  array (line 10), dimension 1's count
+  cell  $C4     L  $LOCAL+208  array (line 10), dimension 1's count
+  cell  $T2     F  $LOCAL+212  temporary
+  cell  $T3     L  $LOCAL+216  temporary
+  cell  $C5     L  $LOCAL+220  array (line 11), dimension 2's count
+  cell  $C6     L  $LOCAL+224  array (line 11), dimension 1's count
+  cell  $A1     L  $LOCAL+228  an array temporary, 8 bytes
+  cell  $I3     L  $LOCAL+236  an array statement's index
+  cell  $T4     L  $LOCAL+240  temporary
+  cell  $T5     L  $LOCAL+244  temporary
+  cell  $C7     L  $LOCAL+248  array (line 12), dimension 2's count
+  cell  $C8     L  $LOCAL+252  array (line 12), dimension 1's count
+  cell  $C9     L  $LOCAL+256  array (line 12), dimension 1's count
+  cell  $C10    L  $LOCAL+260  array (line 13), dimension 1's count
+  cell  $C11    L  $LOCAL+264  array (line 14), dimension 2's count
+  cell  $C12    L  $LOCAL+268  array (line 14), dimension 1's count
+  cell  $C13    L  $LOCAL+272  array (line 14), dimension 1's count
+  cell  $C14    L  $LOCAL+276  array (line 15), dimension 2's count
+  cell  $C15    L  $LOCAL+280  array (line 15), dimension 1's count
+  $LOCAL is 284 bytes
+  datum $K1     L 4
+B1:
+  ; line 9
+  assign $T1 = 0.0
+  assign $C1 = 4
+  assign $I2 = 1
+  jump B2
+B2:  ; array (line 9), dimension 2's body
+  assign $C2 = 3
+  assign $I1 = 1
+  jump B3
+B3:  ; array (line 9), dimension 1's body
+  branch gt.F(A-16[add.L($I1, mul.L($I2, 3))], 0.0) B4 B5
+B4:
+  assign $T1 = add.F($T1, A-16[add.L($I1, mul.L($I2, 3))])
+  jump B5
+B5:
+  assign $I1 = add.L($I1, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B3 B6
+B6:
+  assign $I2 = add.L($I2, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B7
+B7:
+  assign X = $T1
+  ; line 10
+  assign $C3 = 4
+  assign $I2 = 1
+  jump B8
+B8:  ; array (line 10), dimension 1's body
+  assign $T1 = -1.7014117E+38
+  assign $C4 = 3
+  assign $I1 = 1
+  jump B9
+B9:  ; array (line 10), dimension 1's body
+  assign $T2 = A-16[add.L($I1, mul.L($I2, 3))]
+  branch gt.F($T2, $T1) B10 B11
+B10:
+  assign $T1 = $T2
+  jump B11
+B11:
+  assign $I1 = add.L($I1, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B9 B12
+B12:
+  assign B-4[$I2] = $T1
+  assign $I2 = add.L($I2, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B8 B13
+B13:
+  ; line 11
+  assign $T3 = 0
+  assign $C5 = 4
+  assign $I2 = 1
+  jump B14
+B14:  ; array (line 11), dimension 2's body
+  assign $C6 = 3
+  assign $I1 = 1
+  jump B15
+B15:  ; array (line 11), dimension 1's body
+  branch gt.F(A-16[add.L($I1, mul.L($I2, 3))], X) B16 B17
+B16:
+  assign $T3 = add.L($T3, 1)
+  jump B17
+B17:
+  assign $I1 = add.L($I1, 1)
+  assign $C6 = sub.L($C6, 1)
+  branch gt.L($C6, 0) B15 B18
+B18:
+  assign $I2 = add.L($I2, 1)
+  assign $C5 = sub.L($C5, 1)
+  branch gt.L($C5, 0) B14 B19
+B19:
+  assign N = $T3
+  ; line 12
+  assign $T3 = 0
+  assign $T4 = 0
+  assign $T5 = 0
+  assign $C7 = 4
+  assign $I3 = 1
+  jump B20
+B20:  ; array (line 12), dimension 2's body
+  assign $C8 = 3
+  assign $I1 = 1
+  jump B21
+B21:  ; array (line 12), dimension 1's body
+  assign $T1 = A-16[add.L($I1, mul.L($I3, 3))]
+  branch eq.L($T3, 0) B23 B22
+B22:
+  branch gt.F($T1, $T2) B23 B24
+B23:
+  assign $T2 = $T1
+  assign $T3 = 1
+  assign $T4 = $I1
+  assign $T5 = $I3
+  jump B24
+B24:
+  assign $I1 = add.L($I1, 1)
+  assign $C8 = sub.L($C8, 1)
+  branch gt.L($C8, 0) B21 B25
+B25:
+  assign $I3 = add.L($I3, 1)
+  assign $C7 = sub.L($C7, 1)
+  branch gt.L($C7, 0) B20 B26
+B26:
+  assign $A1 = $T4
+  assign $A1+4 = $T5
+  assign $C9 = 2
+  assign $I2 = 1
+  jump B27
+B27:  ; array (line 12), dimension 1's body
+  assign K-4[$I2] = $A1-4[$I2]
+  assign $I2 = add.L($I2, 1)
+  assign $C9 = sub.L($C9, 1)
+  branch gt.L($C9, 0) B27 B28
+B28:
+  ; line 13
+  assign $T1 = 0.0
+  assign $C10 = 4
+  assign $I3 = 1
+  jump B29
+B29:  ; array (line 13), dimension 1's body
+  assign $T1 = add.F($T1, mul.F(B-4[$I3], B-4[$I3]))
+  assign $I3 = add.L($I3, 1)
+  assign $C10 = sub.L($C10, 1)
+  branch gt.L($C10, 0) B29 B30
+B30:
+  assign X = $T1
+  ; line 14
+  assign $C11 = 2
+  assign $I1 = 1
+  jump B31
+B31:  ; array (line 14), dimension 2's body
+  assign $C12 = 3
+  assign $I3 = 1
+  jump B32
+B32:  ; array (line 14), dimension 1's body
+  assign $T1 = 0.0
+  assign $C13 = 4
+  assign $I2 = 1
+  jump B33
+B33:  ; array (line 14), dimension 1's body
+  assign $T1 = add.F($T1, mul.F(A-16[add.L($I3, mul.L($I2, 3))], C-20[add.L($I2, mul.L($I1, 4))]))
+  assign $I2 = add.L($I2, 1)
+  assign $C13 = sub.L($C13, 1)
+  branch gt.L($C13, 0) B33 B34
+B34:
+  assign D-16[add.L($I3, mul.L($I1, 3))] = $T1
+  assign $I3 = add.L($I3, 1)
+  assign $C12 = sub.L($C12, 1)
+  branch gt.L($C12, 0) B32 B35
+B35:
+  assign $I1 = add.L($I1, 1)
+  assign $C11 = sub.L($C11, 1)
+  branch gt.L($C11, 0) B31 B36
+B36:
+  ; line 15
+  assign $C14 = 3
+  assign $I1 = 1
+  jump B37
+B37:  ; array (line 15), dimension 2's body
+  assign $C15 = 4
+  assign $I2 = 1
+  jump B38
+B38:  ; array (line 15), dimension 1's body
+  assign E-20[add.L($I2, mul.L($I1, 4))] = A-16[add.L($I1, mul.L($I2, 3))]
+  assign $I2 = add.L($I2, 1)
+  assign $C15 = sub.L($C15, 1)
+  branch gt.L($C15, 0) B38 B39
+B39:
+  assign $I1 = add.L($I1, 1)
+  assign $C14 = sub.L($C14, 1)
+  branch gt.L($C14, 0) B37 B40
+B40:
+  ; line 16
+  call S(ref B, ref $K1)
+  ; line 17
+  return 1
+routine S subroutine
+  param V       F  argument 1
+  param M       L  argument 2
+  cell  N       L  $LOCAL+0    variable N
+  cell  $B1     L  $LOCAL+4    descriptor F A 4 (?)
+  cell  $I1     L  $LOCAL+36   an array statement's index
+  cell  $T1     L  $LOCAL+40   temporary
+  cell  $T2     L  $LOCAL+44   temporary
+  cell  $I2     L  $LOCAL+48   an array statement's index
+  cell  $T3     L  $LOCAL+52   temporary
+  cell  $T4     L  $LOCAL+56   temporary
+  cell  $T5     L  $LOCAL+60   temporary
+  $LOCAL is 64 bytes
+B1:
+  assign $B1+4 = addr(@V)
+  assign $B1+28 = @M
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@V-4)
+  assign $B1+12 = mul.L(4, $B1+20)
+  ; line 21
+  assign $T1 = $B1+20
+  branch lt.L($T1, 0) B2 B3
+B2:
+  assign $T1 = 0
+  jump B3
+B3:
+  assign $T2 = $T1
+  assign $T3 = $B1+20
+  branch lt.L($T3, 0) B4 B5
+B4:
+  assign $T3 = 0
+  jump B5
+B5:
+  assign $T5 = $B1+28
+  branch le.L($T3, 0) B6 B7
+B6:
+  assign $T5 = 0
+  jump B7
+B7:
+  assign $T4 = $T5
+  assign N = add.L($T2, $T4)
+  ; line 22
+  return

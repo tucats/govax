@@ -386,6 +386,19 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 		n.l.fillConstructor(temp, leaf)
 		whole(temp.Sym, leaf.Pos)
 
+	case *sema.ArrayFunc:
+		// An array function: its elements computed where they are used, or
+		// the whole of it now, into a temporary (lowerarrayfunc.go).
+		if leaf.Element() {
+			n.prepareFunc(info, leaf, loopOf)
+
+			break
+		}
+
+		temp := n.l.arrayTemp(leaf.T, constExtents(leaf))
+		n.l.precompute(leaf, temp)
+		whole(temp.Sym, leaf.Pos)
+
 	case *sema.Section:
 		info.sym = leaf.Sym
 		loop := 0
@@ -477,6 +490,13 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 		case *sema.ArrayConst, *sema.Constructor:
 			count = LongConst(int32(leaf.Shape()[i].Size))
 
+		case *sema.ArrayFunc:
+			if x := leaf.S[i]; x.Known {
+				count = LongConst(int32(x.Size))
+			} else {
+				count = n.leafExtent(x.Of, n.loopOf(x.Of, x.Dim))
+			}
+
 		case *sema.Section:
 			if d.vector != nil {
 				// A vector subscript's extent is the vector's: known, or one
@@ -559,6 +579,10 @@ func (n *arrayNest) loopOf(leaf sema.Expr, dim int) int {
 // its values is checked by /CHECK=BOUNDS where it is used, the others once,
 // before the loops.
 func (n *arrayNest) element(leaf sema.Expr) sema.Expr {
+	if f, ok := leaf.(*sema.ArrayFunc); ok && f.Element() {
+		return n.funcElement(f)
+	}
+
 	info := n.leaves[leaf]
 	subs := make([]sema.Expr, len(info.dims))
 	inBounds := make([]bool, len(info.dims))

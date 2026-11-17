@@ -103,7 +103,7 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 	walk := func(x Expr) Expr { return Scalarize(x, element, scalar) }
 
 	switch e := e.(type) {
-	case *ArrayRef, *Section, *ArrayConst, *Constructor:
+	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc:
 		return element(e)
 
 	case *Unary:

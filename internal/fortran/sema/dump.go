@@ -517,6 +517,32 @@ func DumpExpr(e Expr) string {
 		}
 
 		return "(/:" + e.T.letter() + shape + " " + strings.Join(parts, " ") + " /)"
+	case *ArrayFunc:
+		text := e.Name + "(" + DumpExpr(e.Array)
+		if e.Other != nil {
+			text += ", " + DumpExpr(e.Other)
+		}
+
+		if e.Dim > 0 {
+			text += ", DIM=" + strconv.Itoa(e.Dim)
+		}
+
+		if e.DimExpr != nil {
+			text += ", DIM=" + DumpExpr(e.DimExpr)
+		}
+
+		if e.Mask != nil {
+			text += ", MASK=" + DumpExpr(e.Mask)
+		}
+
+		return text + ")"
+	case *ArrayFuncAt:
+		names := make([]string, len(e.Index))
+		for i, s := range e.Index {
+			names[i] = s.Name
+		}
+
+		return DumpExpr(e.F) + "[" + strings.Join(names, ", ") + "]"
 	case *Constructor:
 		return "(/:" + e.T.letter() + " " + dumpCtorItems(e.Items) + " /)"
 	case *Section:

@@ -47,6 +47,9 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.IntrinsicRef:
 		return l.intrinsic(e)
 
+	case *sema.ArrayFunc, *sema.ArrayFuncAt:
+		return &Load{l.arrayFuncValue(e)}
+
 	case *sema.Loc:
 		return l.loc(e)
 

@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 8 are done (2026-11-17), and subtask 9 is next.
+author's answers"); subtasks 2 to 9 are done (2026-11-17), and subtask 10 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -418,7 +418,7 @@ and FTNRTL do today.
 8. **Elemental intrinsics on arrays:** the class column for Table D-3's rows,
    MERGE (finding 9) (done 2026-11-17).
 9. **Reductions and inquiries**, with MASK= and constant DIM=, DOT_PRODUCT,
-   MAXLOC and MINLOC, MATMUL and TRANSPOSE (finding 12).
+   MAXLOC and MINLOC, MATMUL and TRANSPOSE (finding 12) (done 2026-11-17).
 10. **WHERE** in both forms (finding 8).
 11. **Arrays in I/O lists** (finding 14).
 12. **Programs end to end** (a matrix and statistics program, smoothing with
@@ -735,3 +735,36 @@ shapes in Phase 104.
   `TestShapes`' changed case (`X = SQRT(A)` is NOTSCALAR), `ir`'s
   `f90elem.for`, and `testdata/fortran90`'s `elements.f90`, worked by hand, run
   in all eight modes and the same on gfortran.
+- **2026-11-17, subtask 9:** Reductions and inquiries. fortran90Table has REDUCE
+  rows for SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, COUNT, DOT_PRODUCT, MAXLOC,
+  MINLOC, MATMUL, and TRANSPOSE, and `intrinsicRef` sends them and the ARRAY rows
+  (SIZE, SHAPE, LBOUND, UBOUND, of an array whose bounds aren't constants; RESHAPE
+  of values not constant is NOTIMPL naming Phase 104) to `sema/arrayfuncs.go`'s
+  `arrayFunction`, which makes a `sema.ArrayFunc` (`Array`, `Other`, `Mask`, a
+  constant `Dim`, or for SIZE, LBOUND, and UBOUND a `DimExpr`): ARRAYARG,
+  ARRAYRANK (new), BADARG, DIMRANGE; a DIM= not constant with ARRAY of rank above
+  1 NOTIMPL naming Phase 104; a DIM= of a vector's reduction no DIM= at all.
+  DOT_PRODUCT is a SUM of the product, the first vector's CONJG for COMPLEX, or an
+  ANY of the .AND. for LOGICAL. MATMUL takes its three forms, the shared extent
+  conforming. In `ir/lowerarrayfunc.go` a scalar one (`arrayFuncValue`, from
+  `l.expr` and the COMPLEX paths) is a nest of its own: `reduce` (an accumulator
+  given the empty array's value, SUM 0, PRODUCT 1, MAXVAL the most negative
+  number, MINVAL the most positive, COUNT 0, ANY false, ALL true; each element
+  added where MASK holds, `masked`), or `boundValue` (`boundsOf`: a whole array's
+  bounds, 1 and 0 for an empty dimension, any other array's 1 and its extent; a
+  DIM= not constant chooses when the program runs). With DIM=, and MATMUL, an
+  element is computed where it is used: `prepareFunc` prepares the arguments'
+  arrays as leaves on the statement's loops (a reduced dimension on none, -1) so
+  extents and checks come from them, and `funcElement` gives an `ArrayFuncAt`
+  whose lowering is the same nest over the one dimension, the statement's index
+  variables standing for the others (`reduce`'s mapping; `matmulAt`). TRANSPOSE
+  is its argument's element with the loops swapped. MAXLOC and MINLOC (`locate`:
+  the first extreme in array element order, the loops' own indexes counting from
+  1, zeros for none) and SHAPE, LBOUND, and UBOUND without DIM= (`precompute`)
+  fill a small INTEGER temporary before the statement's loops. Overlap: an
+  element-wise one that reads the target's storage needs a temporary
+  (`funcReads`, `leafReads`); the others are computed before the loops. MERGE of
+  COMPLEX values, which `complexParts` had taken for CONJG, is `mergeComplex`.
+  MANUAL.md's "Not there yet" and `/CHECK` table say what now compiles. Tests:
+  `TestArrayFunctions`, `ir`'s `f90reduce.for`, and `testdata/fortran90`'s
+  `reduce.f90`, worked by hand, run in all eight modes and the same on gfortran.

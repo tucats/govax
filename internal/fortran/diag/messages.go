@@ -764,6 +764,7 @@ var messages = map[string]kind{
 	"DIMRANGE":      {Error, "%s's DIM, %s, isn't a dimension of an array of rank %d"},
 	"SHAPEVALUE":    {Error, "%s has %d elements, and its value %d"},
 	"MERGEARGS":     {Error, "the TSOURCE and FSOURCE of MERGE must have one type and length, and they are %s and %s"},
+	"ARRAYRANK":     {Error, "%s's %s must be of rank %s, not %d"},
 	"MANYONE":       {Error, "the vector subscript of %s names element %d more than once, so the section can't be assigned to"},
 
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.

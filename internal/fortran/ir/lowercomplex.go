@@ -96,6 +96,11 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 
 		return l.complexParts(e.Def.Value)
 
+	case *sema.ArrayFunc, *sema.ArrayFuncAt:
+		r, i := parts(l.arrayFuncValue(e), p)
+
+		return &Load{r}, &Load{i}
+
 	case *sema.IntrinsicRef:
 		// CMPLX(X, Y), its parts converted already; CONJG(Z); or a call of
 		// MTHRTL's (CSQRT, CDEXP).
@@ -104,6 +109,10 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 			return l.expr(e.Args[0]), l.expr(e.Args[1])
 		case sema.CallOp:
 			r, i := parts(l.callIntrinsic(e), p)
+
+			return &Load{r}, &Load{i}
+		case sema.MergeOp:
+			r, i := parts(l.mergeComplex(e), p)
 
 			return &Load{r}, &Load{i}
 		}
@@ -253,9 +262,15 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 		return l.complexValue(e.Def.Value)
 
 	case *sema.IntrinsicRef:
-		if e.Op == sema.CallOp {
+		switch e.Op {
+		case sema.CallOp:
 			return l.callIntrinsic(e)
+		case sema.MergeOp:
+			return l.mergeComplex(e)
 		}
+
+	case *sema.ArrayFunc, *sema.ArrayFuncAt:
+		return l.arrayFuncValue(e)
 	}
 
 	t := l.temp(l.typeOf(e.Type()))
@@ -376,4 +391,19 @@ func (l *lowerer) complexCompare(e *sema.Compare) Expr {
 	}
 
 	return arith(Or, Long, &Cmp{Ne, a, c}, &Cmp{Ne, b, d})
+}
+
+// mergeComplex is MERGE of COMPLEX values: FSOURCE in a temporary, which
+// TSOURCE replaces where MASK holds.
+func (l *lowerer) mergeComplex(e *sema.IntrinsicRef) *Mem {
+	v := l.temp(l.typeOf(e.T))
+	l.assignComplex(v, e.Args[1])
+
+	set, next := l.newBlock(), l.newBlock()
+	l.divert(l.cond(e.Args[2]), set, next)
+	l.begin(set)
+	l.assignComplex(v, e.Args[0])
+	l.begin(next)
+
+	return v
 }
