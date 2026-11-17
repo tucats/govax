@@ -503,9 +503,9 @@ func (p *parser) impliedDo() bool {
 
 	for _, t := range p.tokens[p.i:] {
 		switch {
-		case t.Is("("):
+		case t.Is("("), t.Is("(/"):
 			depth++
-		case t.Is(")"):
+		case t.Is(")"), t.Is("/)"):
 			if depth--; depth == 0 {
 				return false
 			}

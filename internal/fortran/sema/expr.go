@@ -23,7 +23,7 @@ func (a *analyzer) bad(pos diag.Position) Expr {
 // a value (NEEDSUBSCRIPT); a character constant is, of type CHARACTER,
 // for the caller to accept or not.
 func (a *analyzer) value(e ast.Expr) Expr {
-	switch e := e.(type) {
+	switch e := a.substringForm(e).(type) {
 	case *ast.IntConst, *ast.RealConst, *ast.TypelessConst, *ast.HollerithConst, *ast.Radix50Const, *ast.KindConst:
 		v, _ := a.folded(e)
 
@@ -175,6 +175,10 @@ func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
 // the unit hasn't classified that names one of FORTRAN's intrinsic
 // functions is that function (intrinsicRef).
 func (a *analyzer) apply(e *ast.Apply) Expr {
+	if sub, ok := a.substringForm(e).(*ast.Substring); ok {
+		return a.substring(sub)
+	}
+
 	s := a.scope.find(e.Name)
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
@@ -408,6 +412,12 @@ func constantInt(e Expr) (int, bool) {
 // dimension, each made INTEGER (a REAL one is truncated, section
 // 2.2.3.2).
 func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
+	if hasTriplet(e.Args) {
+		a.notImplForm(e.Pos, "an array section")
+
+		return a.bad(e.Pos)
+	}
+
 	if len(e.Args) != len(s.Dims) {
 		a.report("SUBSCRIPTS", e.Pos, e.Name, count(len(s.Dims), "subscript"), len(e.Args))
 

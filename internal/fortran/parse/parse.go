@@ -261,11 +261,11 @@ func init() {
 		lex.Contains:          parsePending,
 		lex.Cycle:             parseLoopExit,
 		lex.Deallocate:        parsePending,
-		lex.ElseWhere:         parsePending,
+		lex.ElseWhere:         parseElseWhere,
 		lex.EndInterface:      parsePending,
 		lex.EndSelect:         parseEndSelect,
 		lex.EndType:           parsePending,
-		lex.EndWhere:          parsePending,
+		lex.EndWhere:          parseEndWhere,
 		lex.Exit:              parseLoopExit,
 		lex.Interface:         parsePending,
 		lex.ModuleProcedure:   parsePending,
@@ -279,8 +279,8 @@ func init() {
 		lex.TypeDef:           parsePending,
 		lex.TypeDecl:          parsePending,
 		lex.Use:               parsePending,
-		lex.Where:             parsePending,
-		lex.WhereBlock:        parsePending,
+		lex.Where:             parseWhere,
+		lex.WhereBlock:        parseWhereBlock,
 	}
 }
 

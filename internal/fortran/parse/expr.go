@@ -2,6 +2,7 @@ package parse
 
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
 )
 
@@ -129,8 +130,8 @@ func (p *parser) unary(minPrec int) ast.Expr {
 
 // primary reads a constant, a reference (a name, an array element or
 // function reference, a substring, a record's field), a parenthesized
-// expression, a complex constant, or one of the built-in functions of
-// section 6.1.2.
+// expression, a complex constant, one of the built-in functions of
+// section 6.1.2, or a Fortran 90 array constructor.
 func (p *parser) primary() ast.Expr {
 	t := p.peek()
 	if t == nil {
@@ -166,6 +167,9 @@ func (p *parser) primary() ast.Expr {
 		p.expect(")")
 
 		return &ast.Paren{ExprBase: base, X: x}
+
+	case t.Is("(/"):
+		return p.arrayConstructor()
 
 	case t.Is("%"):
 		// %LOC, %VAL, %REF, %DESCR (section 6.1.2).
@@ -247,20 +251,21 @@ func (p *parser) reference(what string) ast.Expr {
 
 // referenceAfter reads what follows the name t in a reference: a
 // parenthesized list (an array element's subscripts or a function's
-// arguments, A(I, J), making an Apply; or a substring's bounds, C(1:3)),
-// a substring's bounds after an element, NAMES(1, 3)(:7), and record
-// fields, REC.FIELD, each of which may have subscripts and a substring
-// of its own.
+// arguments, A(I, J), making an Apply, whose list may hold Fortran 90's
+// subscript triplets, A(1:N:2), or a substring's bounds, C(1:3), which
+// only semantic analysis can tell apart), a substring's bounds after
+// that, NAMES(1, 3)(:7), and record fields, REC.FIELD, each of which may
+// have subscripts and a substring of its own.
+//
+// A field's list with a colon is still read as its substring: a section
+// of a record's array field is for a later phase (docs/planning/PHASE-102 -
+// Fortran 90 array expressions.md, finding 4).
 func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 	base := ast.ExprBase{Pos: p.pos(t)}
 
 	var x ast.Expr = &ast.Name{ExprBase: base, Name: t.Text}
 
 	if p.at("(") {
-		if p.substringAhead() {
-			return p.substring(x)
-		}
-
 		x = &ast.Apply{ExprBase: base, Name: t.Text, Args: p.subscripts()}
 	}
 
@@ -295,9 +300,9 @@ func (p *parser) substringAhead() bool {
 
 	for _, t := range p.tokens[p.i:] {
 		switch {
-		case t.Is("("):
+		case t.Is("("), t.Is("(/"):
 			depth++
-		case t.Is(")"):
+		case t.Is(")"), t.Is("/)"):
 			if depth--; depth == 0 {
 				return false
 			}
@@ -341,7 +346,8 @@ func (p *parser) substring(x ast.Expr) ast.Expr {
 // specifier is only for a CALL, where this isn't used. An argument may be
 // written with its dummy's name, KIND=2 (Fortran 90's keyword argument, an
 // ast.KeywordArg), which semantic analysis takes only in an intrinsic
-// function's reference so far.
+// function's reference so far. An item with a colon is a subscript triplet
+// (triplet).
 func (p *parser) subscripts() []ast.Expr {
 	p.expect("(")
 
@@ -353,6 +359,8 @@ func (p *parser) subscripts() []ast.Expr {
 
 	for {
 		switch {
+		case p.at(":"):
+			list = append(list, p.triplet(nil, p.here()))
 		case p.at(",") || p.at(")"):
 			list = append(list, nil)
 		case p.atKeyword():
@@ -361,7 +369,14 @@ func (p *parser) subscripts() []ast.Expr {
 
 			list = append(list, &ast.KeywordArg{ExprBase: ast.ExprBase{Pos: p.pos(t)}, Name: t.Text, X: p.expr()})
 		default:
-			list = append(list, p.expr())
+			pos := p.here()
+
+			e := p.expr()
+			if p.at(":") {
+				e = p.triplet(e, pos)
+			}
+
+			list = append(list, e)
 		}
 
 		if !p.accept(",") {
@@ -372,4 +387,56 @@ func (p *parser) subscripts() []ast.Expr {
 	p.expect(")")
 
 	return list
+}
+
+// triplet reads the rest of a subscript triplet, [l]:[u][:s] (the standard's
+// R619), whose lower bound, already read, is lower (nil if it was left out);
+// the colon is next. pos is where the triplet starts. The upper bound may be
+// left out; a stride, after a second colon, may not.
+func (p *parser) triplet(lower ast.Expr, pos diag.Position) ast.Expr {
+	t := &ast.Triplet{ExprBase: ast.ExprBase{Pos: pos}, Lower: lower}
+
+	p.expect(":")
+
+	if !p.at(",") && !p.at(")") && !p.at(":") {
+		t.Upper = p.expr()
+	}
+
+	if p.accept(":") {
+		t.Stride = p.expr()
+	}
+
+	return t
+}
+
+// arrayConstructor reads Fortran 90's (/ values /) (the standard's R431 to
+// R435): each value an expression or an implied-DO list, whose items are
+// values of the same kind, (I, I*I, I = 1, N). The parentheses' own tokens,
+// (/ and /), are the lexer's.
+func (p *parser) arrayConstructor() ast.Expr {
+	c := &ast.ArrayConstructor{ExprBase: ast.ExprBase{Pos: p.here()}}
+
+	p.expect("(/")
+
+	for {
+		c.Values = append(c.Values, p.constructorValue())
+
+		if !p.accept(",") {
+			break
+		}
+	}
+
+	p.expect("/)")
+
+	return c
+}
+
+// constructorValue reads one value of an array constructor: an implied-DO
+// list or an expression.
+func (p *parser) constructorValue() ast.Expr {
+	if p.impliedDo() {
+		return p.impliedDoList(p.constructorValue)
+	}
+
+	return p.expr()
 }

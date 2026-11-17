@@ -136,6 +136,20 @@ func TestErrors(t *testing.T) {
 		lines []string
 		want  string
 	}{
+		// Fortran 90's array forms, read by the parser (Phase 102, subtask 2):
+		// a substring is still one, and the rest is NOTIMPL.
+		{"a substring through a triplet", []string{"CHARACTER*8 C", "C(2:3) = C(1:2)", "PRINT *, C(:4), C(5:)", "END"}, ""},
+		{"a substring of an element", []string{"CHARACTER*8 C(3)", "C(1)(2:3) = 'AB'", "END"}, ""},
+		{"a substring read", []string{"CHARACTER*8 C", "READ *, C(1:2)", "END"}, ""},
+		{"a substring with a stride", []string{"CHARACTER*8 C", "C(1:4:2) = 'AB'", "END"}, "NOTARRAY@2:7"},
+		{"a section", []string{"DIMENSION A(10)", "A(1:5) = 0", "END"}, "NOTIMPL@2:7"},
+		{"a section's value", []string{"DIMENSION A(10)", "X = A(:)", "END"}, "NOTIMPL@2:11"},
+		{"a section with a stride", []string{"DIMENSION A(10,10)", "X = A(1:10:2, J)", "END"}, "NOTIMPL@2:11"},
+		{"a triplet to a function", []string{"X = F(1, 2:3)", "END"}, "NOTIMPL@1:16"},
+		{"an array constructor", []string{"X = SUM((/ 1.0, 2.0 /))", "END"}, "NOTIMPL@1:15"},
+		{"WHERE", []string{"DIMENSION A(3)", "WHERE (A .GT. 0) A = 1", "END"}, "NOTIMPL@2:7"},
+		{"a WHERE construct, once", []string{"DIMENSION A(3)", "WHERE (A .GT. 0)", "A(1) = 1", "ELSEWHERE", "A(2) = 2", "END WHERE", "END"}, "NOTIMPL@2:7"},
+
 		// CDEC$ OPTIONS and END OPTIONS (the HP manual's 14.14).
 		{"a group in a main program", []string{"CDEC$ OPTIONS /ALIGN", "COMMON /B/ X", "CDEC$ END OPTIONS", "X = 1", "END"}, ""},
 		{"blanks don't count", []string{"CDEC$ OPTIONS / ALIGN = RECO = NATU / WARN = NOALIGNMENT", "CDEC$ ENDOPTIONS", "END"}, ""},
@@ -1276,7 +1290,7 @@ func TestErrors(t *testing.T) {
 		{"a substring out of its variable", []string{"CHARACTER*8 S", "S(0:3) = 'A'", "S(5:9) = 'A'", "S(4:3) = 'A'", "END"}, "SUBRANGE@2:7 SUBRANGE@3:7 SUBRANGE@4:7"},
 		{"a substring's one bound out", []string{"CHARACTER*8 S", "S(I:9) = 'A'", "S(0:I) = 'A'", "END"}, "SUBBOUND@2:7 SUBBOUND@3:7"},
 		{"a substring of a constant", []string{"CHARACTER*8 S", "PARAMETER (S = 'ABC')", "PRINT *, S(1:2)", "END"}, "BADUSE@3:16"},
-		{"a substring of an array", []string{"CHARACTER*8 S(2)", "PRINT *, S(1:2)", "END"}, "NEEDSUBSCRIPT@2:16"},
+		{"a section, not yet", []string{"CHARACTER*8 S(2)", "PRINT *, S(1:2)", "END"}, "NOTIMPL@2:16"},
 		{"a field of a name that isn't a record", []string{"X = R.F + 1", "END"}, "NOTRECORD@1:11"},
 		{"an implied-DO list", []string{"PRINT *, (I, I = 1, 3)", "END"}, ""},
 		{"WRITE with ERR=", []string{"WRITE (*, *, ERR=10) X", "10 END"}, ""},
@@ -1377,7 +1391,7 @@ func TestErrors(t *testing.T) {
 		{"an assumed-size array", []string{"SUBROUTINE S(A)", "DIMENSION A(*)", "DATA A /1.0/", "END"}, "DATADUMMY@3:12"},
 		{"a substring of a number", []string{"DATA X(1:2) /'AB'/", "END"}, "DATASUBSTR@1:12"},
 		{"a substring out of range", []string{"CHARACTER*2 C", "DATA C(2:3) /'AB'/", "END"}, "DATASUBRANGE@2:12"},
-		{"a substring of a whole array", []string{"CHARACTER*2 C(2)", "DATA C(1:1) /'A'/", "END"}, "NEEDSUBSCRIPT@2:12"},
+		{"a section, not yet", []string{"CHARACTER*2 C(2)", "DATA C(1:1) /'A'/", "END"}, "NOTIMPL@2:12"},
 		{"a bare name in an implied DO", []string{"DATA (X, I=1,2) /2*1.0/", "END"}, "DATAFORM@1:13"},
 		{"a REAL implied-DO variable", []string{"DIMENSION A(3)", "DATA (A(X), X=1,3) /3*1.0/", "END"}, "DATADOVAR@2:19"},
 		{"an implied-DO variable reused", []string{"DIMENSION A(3,3)", "DATA ((A(I,I), I=1,3), I=1,3) /9*1.0/", "END"}, "DATADOVAR@2:22"},

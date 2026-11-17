@@ -750,7 +750,7 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 // it isn't one. A name that is a constant or a procedure isn't, and gets
 // no message here.
 func (a *analyzer) place(e ast.Expr, whole bool) Expr {
-	switch e := e.(type) {
+	switch e := a.substringForm(e).(type) {
 	case *ast.Name:
 		if s := a.scope.find(e.Name); s != nil && (s.Class == Constant || s.External || s.Class == Intrinsic ||
 			s.Class == Function || s.Class == Subroutine || s.Class == StmtFunction || s.Class == UnitName) {

@@ -224,6 +224,22 @@ func DumpStmt(s Stmt) string {
 	case *EndStmt:
 		return strings.TrimRight(strings.Join([]string{"END", s.Unit, s.Name}, " "), " ")
 
+	case *WhereStmt:
+		return "WHERE " + DumpExpr(s.Mask) + " " + DumpStmt(s.Then)
+
+	case *WhereBlockStmt:
+		return "WHERE " + DumpExpr(s.Mask)
+
+	case *ElseWhereStmt:
+		if s.Mask != nil {
+			return "ELSEWHERE " + DumpExpr(s.Mask)
+		}
+
+		return "ELSEWHERE"
+
+	case *EndWhereStmt:
+		return "END WHERE"
+
 	case *PendingStmt:
 		if s.What != "" {
 			return "not yet: " + s.Kind.String() + ", " + s.What
@@ -563,6 +579,15 @@ func DumpExpr(e Expr) string {
 		}
 
 		return text + ")"
+	case *Triplet:
+		text := DumpExpr(e.Lower) + ":" + DumpExpr(e.Upper)
+		if e.Stride != nil {
+			text += ":" + DumpExpr(e.Stride)
+		}
+
+		return text
+	case *ArrayConstructor:
+		return "(/ " + exprList(e.Values) + " /)"
 	case *KeyList:
 		keys := make([]string, len(e.Keys))
 		for i, k := range e.Keys {

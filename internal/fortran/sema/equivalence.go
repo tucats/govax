@@ -134,7 +134,7 @@ func (a *analyzer) mergeGroups(x, y *equivItem) {
 // substring bound an integer constant expression; records and their fields
 // aren't allowed, nor dummy arguments.
 func (a *analyzer) equivalenceItem(e ast.Expr) (equivItem, bool) {
-	switch e := e.(type) {
+	switch e := substringReading(e).(type) {
 	case *ast.Name:
 		s, ok := a.equivalenceName(e.Name, e.Pos)
 

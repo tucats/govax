@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtask 2 is next. Needs Phase 101 (done).
+author's answers"); subtasks 2 to 4 are done (2026-11-17), and subtask 5 is next.
+Needs Phase 101 (done).
 
 ## Goal
 
@@ -394,7 +395,8 @@ and FTNRTL do today.
 2. **The forms:** triplets in subscript lists with sema deciding substring
    or section, array constructors, and the WHERE nodes in the parser
    (finding 2); sema's substrings through the new form, everything new
-   still NOTIMPL; parser golden dumps, `TestNoF90Unchanged`.
+   still NOTIMPL; parser golden dumps, `TestNoF90Unchanged` (done
+   2026-11-17).
 3. **Shapes in sema:** `Shape` on expressions (question 1), sections, whole
    arrays in expressions, conformance when compiling, the two kinds of
    context (finding 4), assignment's checks; the code still NOTIMPL.
@@ -478,3 +480,29 @@ shapes in Phase 104.
   for the author (A.5). For review.
 - **2026-11-17:** The author accepted the survey and every recommendation
   ("The author's answers"). Subtask 1 is done; subtask 2 is next.
+- **2026-11-17, subtask 2:** The forms. The parser reads every parenthesized
+  list after a name as an `ast.Apply` whose items may be `ast.Triplet`s
+  (`subscripts`, `triplet`; `substringAhead` now looks only at a second list,
+  `C(I)(1:3)`, `B(:, J)(2:3)`, and a record field's list, whose sections are
+  Phase 105's); `primary` reads `(/ ... /)` into an `ast.ArrayConstructor`
+  (`arrayConstructor`, `constructorValue`: implied-DO lists nest, and
+  `impliedDo` and `substringAhead` count `(/` and `/)` as parentheses); WHERE,
+  ELSEWHERE (with Fortran 95's mask read, for sema to refuse), and END WHERE
+  are `ast.WhereStmt` (its assignment a `Then`, anything else BADWHERESTMT),
+  `WhereBlockStmt`, `ElseWhereStmt`, and `EndWhereStmt`. A declaration's
+  `= (/ ... /)` is still a `PendingStmt` until subtask 7. In sema,
+  `sections.go`'s `substringForm` turns an Apply of one stride-less triplet
+  after a name that isn't an array into the `ast.Substring` the parser used to
+  make, and every place that tells an element from a substring by its node
+  calls it first (`value`, `apply`, `target`, `place`, `dataItems`, the
+  constant evaluator); EQUIVALENCE reads such a list as a substring whatever
+  the name (`substringReading`: a section is never an equivalence object, so
+  `A(1:2)` of an array is still NEEDSUBSCRIPT there). An array section is
+  NOTIMPL ("an array section") in `element` and DATA, a stray triplet and a
+  constructor by `formWhat`; WHERE stays NOTIMPL once per construct, by kind,
+  as before. Two of `TestErrors`'s cases changed with it: `PRINT *, S(1:2)`
+  and `DATA C(1:1)` of an array were NEEDSUBSCRIPT and are now sections,
+  NOTIMPL until subtasks 3 and 11. The parser's golden dumps print a triplet
+  as the substring was printed, so none changed; `TestNoF90Unchanged`'s
+  digests didn't either. `parse`'s `TestArrayForms` and `TestErrors`'s new
+  cases hold the forms.

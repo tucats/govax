@@ -326,7 +326,7 @@ func constantText(e ast.Expr) string {
 // of the implied-DO lists e is inside. It returns false after an error,
 // reported.
 func (a *analyzer) dataItems(e ast.Expr, vars map[string]int32, vals *dataValues) bool {
-	switch e := e.(type) {
+	switch e := a.substringForm(e).(type) {
 	case *ast.Name:
 		s, ok := a.dataName(e.Name, e.Pos)
 		if !ok {
@@ -454,6 +454,13 @@ func (a *analyzer) dataElement(e *ast.Apply, vars map[string]int32) (*Symbol, in
 
 	if s.Class != Array {
 		a.report("NOTARRAY", e.Pos, e.Name)
+
+		return s, 0, false
+	}
+
+	if hasTriplet(e.Args) {
+		// Fortran 90's DATA may name a section (the standard's R537).
+		a.notImplForm(e.Pos, "an array section")
 
 		return s, 0, false
 	}

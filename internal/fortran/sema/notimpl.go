@@ -128,6 +128,10 @@ func formWhat(e ast.Expr) string {
 		return "a COMPLEX constant"
 	case *ast.ImpliedDo:
 		return "an implied-DO list"
+	case *ast.Triplet:
+		return "an array section"
+	case *ast.ArrayConstructor:
+		return "an array constructor"
 	case *ast.KeyList:
 		return "a KEY= list"
 	case *ast.KeywordArg:

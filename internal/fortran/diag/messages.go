@@ -182,6 +182,10 @@ var messages = map[string]kind{
 	// END, or a statement that isn't executable.
 	"BADIFSTMT": {Error, "a logical IF can't execute %s"},
 
+	// BADWHERESTMT is a WHERE statement whose statement isn't an assignment
+	// (Fortran 90's R740: only an assignment may be masked).
+	"BADWHERESTMT": {Error, "a WHERE statement can execute only an assignment, not %s"},
+
 	// BADSPECIFIER is a keyword specifier the statement doesn't take:
 	// WRITE (6, END=10).
 	"BADSPECIFIER": {Error, "%s= is not a specifier of the %s statement"},

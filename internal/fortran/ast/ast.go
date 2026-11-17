@@ -491,7 +491,8 @@ type (
 
 	// Apply is a name followed by a parenthesized list, A(I, J): an
 	// array element or a function reference, which only the
-	// declarations can tell apart.
+	// declarations can tell apart. A list holding a *Triplet is an array
+	// section or a substring, C(1:3), which only they can tell apart too.
 	Apply struct {
 		ExprBase
 		Name string
@@ -567,13 +568,33 @@ type (
 	}
 
 	// ImpliedDo is an implied-DO list, (Items, Var = Start, Limit[,
-	// Step]), in an I/O list (section 7.1.2.2) or a DATA statement
-	// (section 4.3). Step is nil when it is left out.
+	// Step]), in an I/O list (section 7.1.2.2), a DATA statement (section
+	// 4.3), or a Fortran 90 array constructor. Step is nil when it is left
+	// out.
 	ImpliedDo struct {
 		ExprBase
 		Items              []Expr
 		Var                *Name
 		Start, Limit, Step Expr
+	}
+
+	// Triplet is a subscript triplet, Fortran 90's [Lower]:[Upper][:Stride]
+	// in a parenthesized list after a name (the standard's R619). The parser
+	// can't tell an array section, A(1:N:2), from a substring, C(1:3): both
+	// are an Apply with a Triplet among its Args, and semantic analysis
+	// decides by what the name is (sema/sections.go). A bound or stride left
+	// out is nil.
+	Triplet struct {
+		ExprBase
+		Lower, Upper, Stride Expr
+	}
+
+	// ArrayConstructor is Fortran 90's (/ Values /) (the standard's R431):
+	// each value an expression or an *ImpliedDo, whose items may be any
+	// expressions, implied-DO lists among them.
+	ArrayConstructor struct {
+		ExprBase
+		Values []Expr
 	}
 
 	// KeyList is an OPEN statement's KEY=(kspec[,kspec]...) (section

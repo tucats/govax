@@ -144,7 +144,7 @@ func (ev *evaluator) realRange(pos diag.Position, what string, t Type) *constErr
 // the *constErr is nil, a common Go pattern for "a value or a reason why
 // not".
 func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
-	switch e := e.(type) {
+	switch e := ev.a.substringForm(e).(type) {
 	case *ast.IntConst:
 		// intValue reads the digits as an int64, so that a value too
 		// big for INTEGER*4 can be seen to be too big rather than

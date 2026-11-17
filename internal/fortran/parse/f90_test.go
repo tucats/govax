@@ -376,3 +376,82 @@ func TestSelectCaseForms(t *testing.T) {
 		}
 	}
 }
+
+// TestArrayForms checks Fortran 90's array forms (docs/planning/PHASE-102 -
+// Fortran 90 array expressions.md, subtask 2): subscript triplets in every
+// shape, in a list with subscripts and after a substring's list, a substring
+// still read as a triplet after a name (sema tells it from a section), a
+// second list after a section a substring, array constructors with nested
+// implied-DO lists, and the WHERE statements.
+func TestArrayForms(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"program p",
+		"  a(1:n:2) = b(:, j) + c(n:1:-1)",
+		"  a(:) = b(2:, :3)",
+		"  s = c(1:3)",
+		"  t(:, 1)(2:3) = 'ab'",
+		"  x = (/ 1, 2, (i, i*i, i = 3, n), ((k, k = 1, i), i = 1, 2) /)",
+		"  y = sum((/ a(1:2), 3.0 /))",
+		"  where (a > 0) a = sqrt(a)",
+		"  where (b(:, 1) /= 0)",
+		"    b(:, 1) = 1 / b(:, 1)",
+		"  elsewhere",
+		"    b(:, 1) = 0",
+		"  end where",
+		"  where (a > 0)",
+		"  elsewhere (a < 0)",
+		"  endwhere",
+		"end program p",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "A.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	want := strings.Join([]string{
+		"== main program P",
+		"1           PROGRAM P",
+		"2           A(1:N:2) = (+ B(:, J) C(N:1:(- 1)))",
+		"3           A(:) = B(2:, :3)",
+		"4           S = C(1:3)",
+		"5           T(:, 1)(2:3) = 'ab'",
+		"6           X = (/ 1, 2, (do I, (* I I); I = 3, N), (do (do K; K = 1, I); I = 1, 2) /)",
+		"7           Y = SUM((/ A(1:2), 3.0 /))",
+		"8           WHERE (.GT. A 0) A = SQRT(A)",
+		"9           WHERE (.NE. B(:, 1) 0)",
+		"10          B(:, 1) = (/ 1 B(:, 1))",
+		"11          ELSEWHERE",
+		"12          B(:, 1) = 0",
+		"13          END WHERE",
+		"14          WHERE (.GT. A 0)",
+		"15          ELSEWHERE (.LT. A 0)",
+		"16          END WHERE",
+		"17          END PROGRAM P",
+		"",
+	}, "\n")
+
+	if got := ast.Dump(file); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	errors := []struct{ line, want string }{
+		{"A(1:2:) = 0", "SYNTAX"},
+		{"X = (/ 1, 2 )", "SYNTAX"},
+		{"X = (/ /)", "SYNTAX"},
+		{"WHERE (A > 0) GO TO 10", "BADWHERESTMT"},
+		{"WHERE (A > 0) CALL S", "BADWHERESTMT"},
+		{"END WHERE X", "EXTRATEXT"},
+	}
+
+	for _, e := range errors {
+		_, ms := parseLines(t, "E.FOR", fixed(e.line), "   10 END")
+		if got := strings.Join(idents(ms), " "); got != e.want {
+			t.Errorf("%s: got %v, want %s", e.line, ms, e.want)
+		}
+	}
+}

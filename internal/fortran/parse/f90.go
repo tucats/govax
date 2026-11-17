@@ -451,3 +451,65 @@ func (p *parser) kindBeforeLetters() bool {
 
 	return false
 }
+
+// parseWhere parses the WHERE statement, WHERE (mask) assignment (Fortran
+// 90's R739). The lexer has lexed the assignment as a statement of its own
+// (the Then of the lex.Statement), as a logical IF's statement is, and
+// nothing but an assignment may be there (BADWHERESTMT).
+func parseWhere(p *parser) ast.Stmt {
+	s := &ast.WhereStmt{StmtBase: p.base(), Mask: p.condition()}
+	p.end()
+
+	then := p.st.Then
+	if then == nil {
+		p.syntax("an assignment after the mask")
+	}
+
+	switch then.Kind {
+	case lex.Assignment:
+	case lex.Unknown:
+		panic(bailout{}) // the lexer reported it
+	default:
+		p.messages.Report("BADWHERESTMT", then.Position(then.Offset), article(then.Kind.String())+" "+then.Kind.String()+" statement")
+		panic(bailout{})
+	}
+
+	s.Then = statement(then, p.messages)
+
+	if _, bad := s.Then.(*ast.BadStmt); bad {
+		panic(bailout{})
+	}
+
+	return s
+}
+
+// parseWhereBlock parses WHERE (mask) alone, which starts a WHERE construct
+// (R741).
+func parseWhereBlock(p *parser) ast.Stmt {
+	s := &ast.WhereBlockStmt{StmtBase: p.base(), Mask: p.condition()}
+	p.end()
+
+	return s
+}
+
+// parseElseWhere parses ELSEWHERE (R743), and Fortran 95's ELSEWHERE
+// (mask), for semantic analysis to refuse.
+func parseElseWhere(p *parser) ast.Stmt {
+	s := &ast.ElseWhereStmt{StmtBase: p.base()}
+
+	if p.at("(") {
+		s.Mask = p.condition()
+	}
+
+	p.end()
+
+	return s
+}
+
+// parseEndWhere parses END WHERE (R744).
+func parseEndWhere(p *parser) ast.Stmt {
+	s := &ast.EndWhereStmt{StmtBase: p.base()}
+	p.end()
+
+	return s
+}

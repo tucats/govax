@@ -644,6 +644,13 @@ func (x *extensions) expr(e ast.Expr) {
 	case *ast.ImpliedDo:
 		x.exprs(e.Items)
 		x.exprs([]ast.Expr{e.Start, e.Limit, e.Step})
+
+	case *ast.Triplet:
+		// A substring's bounds, or Fortran 90's section (finding 14).
+		x.exprs([]ast.Expr{e.Lower, e.Upper, e.Stride})
+
+	case *ast.ArrayConstructor:
+		x.exprs(e.Values)
 	}
 }
 

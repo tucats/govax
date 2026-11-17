@@ -232,7 +232,7 @@ func (a *analyzer) assigned(value Expr, t Type) Expr {
 func (a *analyzer) target(e ast.Expr) Expr {
 	var t Expr
 
-	switch e := e.(type) {
+	switch e := a.substringForm(e).(type) {
 	case *ast.Name:
 		if s := a.scope.find(e.Name); s != nil && s.Class == Constant {
 			if !s.broken {

@@ -636,6 +636,37 @@ type FileDef struct {
 	Pos     diag.Position
 }
 
+// The WHERE statements (Fortran 90's 7.5.3; docs/planning/PHASE-102 -
+// Fortran 90 array expressions.md).
+type (
+	// WhereStmt is the WHERE statement, WHERE (Mask) Then: Then is the
+	// assignment it masks, which has no label of its own.
+	WhereStmt struct {
+		StmtBase
+		Mask Expr
+		Then Stmt
+	}
+
+	// WhereBlockStmt is WHERE (Mask) alone, which starts a WHERE construct.
+	WhereBlockStmt struct {
+		StmtBase
+		Mask Expr
+	}
+
+	// ElseWhereStmt is ELSEWHERE. Mask is nil but for Fortran 95's
+	// ELSEWHERE (mask), which the parser reads for semantic analysis to
+	// refuse.
+	ElseWhereStmt struct {
+		StmtBase
+		Mask Expr
+	}
+
+	// EndWhereStmt is END WHERE.
+	EndWhereStmt struct {
+		StmtBase
+	}
+)
+
 // PendingStmt is a Fortran 90 statement, or a Fortran 90 form of an older
 // one, that the parser recognizes but doesn't parse yet
 // (docs/planning/PHASE-99 - Fortran 90.md, subtask 5): semantic analysis
