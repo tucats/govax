@@ -39,6 +39,11 @@ func parseFunction(p *parser) ast.Stmt {
 			s.Type.Len = p.lengthSpec(s.Type.Type == ast.Character)
 		}
 
+		if p.at("(") {
+			// INTEGER(4) FUNCTION F, Fortran 90's kind selector (Phase 100).
+			return p.pending("a kind or length selector", p.peek())
+		}
+
 		p.expect("FUNCTION")
 	}
 
@@ -198,6 +203,10 @@ func (p *parser) lengthSpec(character bool) ast.Len {
 // A; and its entities' lengths come after their bounds, A(10)*8, where a
 // numeric entity's come before, IVEC*4(10).
 func parseTypeStmt(p *parser) ast.Stmt {
+	if f90 := p.f90Declaration(); f90 != nil {
+		return f90
+	}
+
 	s := &ast.TypeStmt{StmtBase: p.base()}
 	s.Type = ast.TypeSpec{Type: ast.TypeKeywords[p.st.Kind], Pos: s.Pos}
 	character := s.Type.Type == ast.Character
@@ -233,6 +242,10 @@ func parseTypeStmt(p *parser) ast.Stmt {
 // parseDimension parses DIMENSION a(d) [,a(d)]... (section 4.5), and
 // VIRTUAL, the same statement: every entity must be an array declarator.
 func parseDimension(p *parser) ast.Stmt {
+	if t := p.doubleColon(); t != nil {
+		return p.pending("the :: form of "+p.st.Kind.String(), t)
+	}
+
 	s := &ast.DimensionStmt{StmtBase: p.base()}
 
 	for {
@@ -354,6 +367,12 @@ func parseImplicit(p *parser) ast.Stmt {
 		}
 
 		p.next()
+
+		// IMPLICIT REAL(8) (A-H): Fortran 90's kind selector, a parenthesis
+		// before the letters' (Phase 100).
+		if p.at("(") && p.kindBeforeLetters() {
+			return p.pending("a kind or length selector", p.peek())
+		}
 
 		r.Type = ast.TypeSpec{Type: ast.TypeNames[t.Text], Pos: p.pos(*t)}
 

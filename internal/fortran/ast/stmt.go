@@ -52,6 +52,13 @@ type (
 		Name string
 	}
 
+	// ModuleStmt is Fortran 90's MODULE name (the standard's 11.3), a
+	// module's header. Modules are Phase 106's to compile.
+	ModuleStmt struct {
+		StmtBase
+		Name string
+	}
+
 	// EntryStmt is ENTRY name [([p[,p]...])], an alternate entry point
 	// in a subprogram; its * dummies are as SubroutineStmt's.
 	EntryStmt struct {
@@ -449,9 +456,16 @@ type (
 		Alt Expr
 	}
 
-	// EndStmt is END (section 5.5), every unit's last statement.
+	// EndStmt is END (section 5.5), every unit's last statement, or
+	// Fortran 90's END PROGRAM [name], END FUNCTION [name], and the rest.
+	// Unit is the kind of unit it says it ends, "" for plain END, and
+	// BLOCK DATA written so; Name is the name it gives, "" for none. The
+	// parser checks both against the unit it ends.
 	EndStmt struct {
 		StmtBase
+		Unit    string
+		Name    string
+		NamePos diag.Position
 	}
 )
 
@@ -543,6 +557,27 @@ type FileDef struct {
 	Length  Expr
 	Var     *Name
 	Pos     diag.Position
+}
+
+// PendingStmt is a Fortran 90 statement, or a Fortran 90 form of an older
+// one, that the parser recognizes but doesn't parse yet
+// (docs/planning/PHASE-99 - Fortran 90.md, subtask 5): semantic analysis
+// reports it NOTIMPL, naming What ("the :: form of a type declaration"), or
+// the statement by its kind if What is "", at WhatPos (the statement's
+// start if zero). Each later phase replaces some of them with nodes of
+// their own.
+//
+// Inner holds the statements a Fortran 90 statement gathers, which would
+// mislead semantic analysis in the unit's own list: a CONTAINS statement's
+// procedures (up to its unit's END), an interface block's bodies (up to
+// END INTERFACE), and a derived type definition's components (up to END
+// TYPE). They are parsed, and their syntax errors reported, but not
+// analyzed.
+type PendingStmt struct {
+	StmtBase
+	What    string
+	WhatPos diag.Position
+	Inner   []Stmt
 }
 
 // BadStmt is a statement with an error the parser or the lexer reported.

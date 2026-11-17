@@ -31,6 +31,8 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 		last     *lex.Statement // the unit's last statement so far, for NOEND
 		prologue []ast.Stmt     // OPTIONS and directives waiting for a unit
 		blocks   = &blockStack{messages: messages}
+		nests    = &nesting{} // Fortran 90's statements holding others (f90.go)
+		current  openUnit     // what the unit's END is checked against
 	)
 
 	// One statement per turn. Each is parsed on its own (statement), then
@@ -53,11 +55,23 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 			continue
 		}
 
+		// Inside a Fortran 90 statement that holds others (CONTAINS's
+		// procedures, an interface block, a derived type), a statement goes
+		// into it, all but the unit's own END.
+		if nests.active() {
+			if nests.take(s, ls, messages) {
+				last = ls
+
+				continue
+			}
+		}
+
 		// A unit's END, or the next unit's header, ends any structure
 		// declaration left open; otherwise a statement inside one goes
 		// into it.
 		if ls.Kind == lex.End || isHeader(ls.Kind) {
 			blocks.closeAll()
+			nests.closeAll()
 		} else if blocks.take(s) {
 			last = ls
 
@@ -72,14 +86,18 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 			unit = &ast.Unit{Prologue: prologue, Header: s}
 			file.Units = append(file.Units, unit)
 			prologue = nil
+			current = unitOf(s, false)
 		} else {
 			if unit == nil {
 				unit = &ast.Unit{Prologue: prologue}
 				file.Units = append(file.Units, unit)
 				prologue = nil
+				current = unitOf(nil, false)
 			}
 
-			unit.Body = append(unit.Body, blocks.outside(s))
+			placed := blocks.outside(s)
+			unit.Body = append(unit.Body, placed)
+			nests.opens(placed)
 		}
 
 		last = ls
@@ -89,6 +107,8 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 		// did for the lexer (which looks for typed FUNCTION statements
 		// only at a unit's start).
 		if ls.Kind == lex.End {
+			checkEnd(s, current, messages)
+
 			unit = nil
 		}
 	}
@@ -106,7 +126,7 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 // isHeader reports whether statements of kind k start a program unit.
 func isHeader(k lex.Kind) bool {
 	switch k {
-	case lex.Program, lex.Function, lex.Subroutine, lex.BlockData:
+	case lex.Program, lex.Function, lex.Subroutine, lex.BlockData, lex.Module:
 		return true
 	}
 
@@ -224,6 +244,39 @@ func init() {
 		lex.Delete:     parseAuxIO,
 		lex.Find:       parseAuxIO,
 		lex.DefineFile: parseDefineFile,
+
+		// Fortran 90's statements (f90.go): recognized, and NOTIMPL until
+		// their phases parse them.
+		lex.Module:            parseModule,
+		lex.Allocatable:       parsePending,
+		lex.Allocate:          parsePending,
+		lex.Case:              parsePending,
+		lex.Contains:          parsePending,
+		lex.Cycle:             parsePending,
+		lex.Deallocate:        parsePending,
+		lex.ElseWhere:         parsePending,
+		lex.EndInterface:      parsePending,
+		lex.EndSelect:         parsePending,
+		lex.EndType:           parsePending,
+		lex.EndWhere:          parsePending,
+		lex.Exit:              parsePending,
+		lex.Intent:            parsePending,
+		lex.Interface:         parsePending,
+		lex.ModuleProcedure:   parsePending,
+		lex.Nullify:           parsePending,
+		lex.Optional:          parsePending,
+		lex.PointerAssignment: parsePending,
+		lex.Pointer:           parsePending,
+		lex.Private:           parsePending,
+		lex.Public:            parsePending,
+		lex.SelectCase:        parsePending,
+		lex.Sequence:          parsePending,
+		lex.Target:            parsePending,
+		lex.TypeDef:           parsePending,
+		lex.TypeDecl:          parsePending,
+		lex.Use:               parsePending,
+		lex.Where:             parsePending,
+		lex.WhereBlock:        parsePending,
 	}
 }
 
@@ -276,7 +329,13 @@ func statement(ls *lex.Statement, messages *diag.List) (s ast.Stmt) {
 // base is the statement's label and position, which every node made from
 // it starts with.
 func (p *parser) base() ast.StmtBase {
-	return ast.StmtBase{Pos: p.st.Position(p.st.Offset), Label: p.st.Label, Kind: p.st.Kind, Source: p.st.Source}
+	b := ast.StmtBase{Pos: p.st.Position(p.st.Offset), Label: p.st.Label, Kind: p.st.Kind, Source: p.st.Source}
+
+	if p.st.Construct != "" {
+		b.Construct, b.ConstructPos = p.st.Construct, p.st.Position(p.st.ConstructOffset)
+	}
+
+	return b
 }
 
 // peek is the next token, or nil at the end of the statement. It returns

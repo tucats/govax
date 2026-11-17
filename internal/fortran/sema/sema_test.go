@@ -283,7 +283,7 @@ func TestErrors(t *testing.T) {
 		{"a recursive unit's SAVE'd associated variable", []string{"RECURSIVE SUBROUTINE S", "SAVE N", "DEFINE FILE 1(10, 4, U, N)", "END"}, ""},
 		{"an adjustable AUTOMATIC array", []string{"SUBROUTINE S(N)", "AUTOMATIC A(N)", "END"}, "ADJNOTDUMMY@2:19"},
 		{"AUTOMATIC with dimensions twice", []string{"DIMENSION A(2)", "AUTOMATIC A(3)", "END"}, "DUPDIM@2:17"},
-		{"AUTOMATIC with a type", []string{"REAL, AUTOMATIC :: A", "END"}, "SYNTAX@1:11"},
+		{"AUTOMATIC with a type: Fortran 90's form, Phase 100's", []string{"REAL, AUTOMATIC :: A", "END"}, "NOTIMPL@1:23"},
 		{"AUTOMATIC in a block data subprogram", []string{"BLOCK DATA", "AUTOMATIC A", "END"}, "BLOCKSTMT@2:7"},
 		{"AUTOMATIC with no list", []string{"AUTOMATIC", "END"}, "SYNTAX@1:16"},
 

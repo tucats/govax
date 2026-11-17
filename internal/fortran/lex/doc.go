@@ -131,8 +131,42 @@
 // standard's 3.3.1 (checkBlanks): a blank inside a name, constant, or
 // operator is BLANKINNAME, and two words written together, CALLSUB or GOTO10,
 // are NEEDBLANK. DOUBLE PRECISION and IN OUT, read as one name inside a
-// statement, may have their blank. The blanks inside a statement's keyword
-// aren't checked yet.
+// statement, may have their blank. A statement's keyword, which is no token,
+// is checked by keywordBlanks: GO TO, END DO, SELECT CASE, and the other
+// compounds of the standard's 3.3.1.1 may have their blank, MODULE
+// PROCEDURE must, and G O T O is BLANKINNAME.
+//
+// # Fortran 90's statements
+//
+// Fortran 90 (subtask 5) adds about thirty statements. Most start with a
+// keyword no VAX FORTRAN statement starts with, so kinds.go's table finds
+// them as it finds the old ones, longest keyword first, and no old program
+// classifies differently. The rest need tests of their own (f90stmt.go):
+//
+//   - a name and a colon first is a construct name (OUTER: DO I = 1, N):
+//     no VAX FORTRAN statement has a colon at level 0. What follows is
+//     classified alone, and the name kept as the Statement's Construct.
+//   - a :: at level 0 makes the statement a declaration whatever else is in
+//     it, so INTEGER, PARAMETER :: N = 10 is no assignment.
+//   - a => at level 0 with no comma before it is a pointer assignment (P =>
+//     T); USE M, A => B has its comma.
+//   - WHERE (mask) is told apart like IF: = after the mask is an assignment
+//     to an array WHERE, nothing after it a WHERE construct's start, and
+//     anything else the assignment it masks, hung on it as Then.
+//   - TYPE has three readings: TYPE, or TYPE ::, starts a derived type's
+//     definition; TYPE (name) and a name, or with a ::, declares its objects;
+//     TYPE name alone is a definition under /F90 and VAX FORTRAN's output
+//     statement without it; anything else is the output statement.
+//   - END followed by PROGRAM, SUBROUTINE, FUNCTION, MODULE, or BLOCK DATA
+//     is a named END: the word a Keyword token, then the name, for the parser
+//     to check against its unit.
+//   - MODULE PROCEDURE is a statement only inside an interface block, which
+//     the lexer counts (interfaces); elsewhere MODULE starts a module.
+//
+// Typed FUNCTION statements are looked for after CONTAINS and INTERFACE as
+// at a unit's start, since procedures start there too, and with a kind
+// selector, INTEGER(4) FUNCTION F, which the parser reports NOTIMPL as a
+// header.
 //
 // # What this pass hands on
 //
@@ -144,6 +178,8 @@
 // constant never closed (NOQUOTE), a Hollerith constant cut short
 // (HOLLEND), a character FORTRAN doesn't use (BADCHAR), a statement it
 // can't classify (UNRECSTMT), a kind parameter that is no kind (BADKIND),
-// and in free form the blanks above (BLANKINNAME, NEEDBLANK). A statement the compiler can't compile
+// a construct name before a statement that starts no construct
+// (NOTCONSTRUCT), and in free form the blanks above (BLANKINNAME,
+// NEEDBLANK). A statement the compiler can't compile
 // yet is the parser's to report, by its kind's name.
 package lex

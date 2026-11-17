@@ -39,6 +39,14 @@ type Statement struct {
 	// reentrant FORTRAN.md). The keyword is no token.
 	Recursive bool
 
+	// Construct is the construct name a DO, DO WHILE, block IF, or SELECT
+	// CASE statement's text starts with (OUTER: DO I = 1, N; the standard's
+	// 8.1), or "" for none, and ConstructOffset is where it starts. The name
+	// a construct's other statements may end with (END DO OUTER) is among
+	// their tokens. Construct names are Phase 101's to compile.
+	Construct       string
+	ConstructOffset int
+
 	// Offset is where the statement (its keyword, or its first token)
 	// starts in the source statement's text, for messages about the
 	// statement as a whole.
@@ -81,10 +89,23 @@ func Lex(statements []*source.Statement, messages *diag.List) []*Statement {
 		switch st.Kind {
 		case End:
 			unitStart, l.specPart = true, true
+
+		case Contains, Interface, ModuleProcedure:
+			// Fortran 90's procedures inside others: after CONTAINS, and
+			// in an interface block, a FUNCTION or SUBROUTINE statement
+			// starts a procedure as a unit's header does.
+			unitStart, l.specPart = true, true
 		case Options, Directive, Empty:
 		default:
 			unitStart = false
 			l.specPart = l.specPart && !st.Kind.Executable()
+		}
+
+		switch st.Kind {
+		case Interface:
+			l.interfaces++
+		case EndInterface:
+			l.interfaces = max(l.interfaces-1, 0)
 		}
 	}
 
@@ -121,6 +142,11 @@ type lexer struct {
 	// only there is PARAMETER P=1 appendix A.4's PARAMETER statement
 	// rather than an assignment to PARAMETERP (oldParameter).
 	specPart bool
+
+	// interfaces counts the interface blocks open (INTERFACE, not yet
+	// END INTERFACE): only inside one is MODULE PROCEDURE a statement,
+	// and not a MODULE statement naming a module PROCEDUREx.
+	interfaces int
 }
 
 // statement lexes one statement.
@@ -172,11 +198,28 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		return st
 	}
 
+	// A construct name and its colon (OUTER: DO): no statement of VAX
+	// FORTRAN has a colon at level 0, so a name and one there can only be
+	// Fortran 90's construct name. What follows is classified on its own.
+	if colon := l.constructName(i, j); colon >= 0 {
+		inner := l.classify(colon+1, j, unitStart)
+		inner.Construct, inner.ConstructOffset = string(l.sq.text[i:colon]), st.Offset
+
+		switch inner.Kind {
+		case Do, DoWhile, IfThen, SelectCase, Unknown:
+		default:
+			l.messages.Report("NOTCONSTRUCT", l.src.Position(st.Offset), inner.Kind.String())
+			inner.Construct = ""
+		}
+
+		return inner
+	}
+
 	// The IF statements, and ELSE IF: what follows the condition's
 	// closing parenthesis says which. If it is =, the "IF" is an array
 	// named IF, and the statement is an assignment to one of its
-	// elements.
-	for _, kw := range []string{"IF(", "ELSEIF("} {
+	// elements. Fortran 90's WHERE is told apart the same way.
+	for _, kw := range []string{"IF(", "ELSEIF(", "WHERE("} {
 		if !l.hasPrefix(i, j, kw) {
 			continue
 		}
@@ -188,7 +231,28 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 			break // an assignment, found below
 		}
 
+		l.keywordBlanks(i, kw[:len(kw)-1])
+
+		if kw == "WHERE(" {
+			return l.whereStatement(st, open, close, j)
+		}
+
 		return l.ifStatement(st, kw == "ELSEIF(", open, close, j)
+	}
+
+	// A :: at level 0 is a Fortran 90 declaration's (INTEGER, PARAMETER ::
+	// N = 10), whatever else is in it: its = is an initial value's, and its
+	// keyword decides the kind, below.
+	declaration := l.findPair(i, j, ':', ':') >= 0
+
+	// A => at level 0 with no comma before it is a pointer assignment (P =>
+	// T, X%NEXT => Y); USE's renames (USE M, A => B) have a comma first.
+	if arrow := l.findPair(i, j, '=', '>'); arrow >= 0 && !declaration &&
+		l.findAssignment(i, j) < 0 && l.findLevel0(i, arrow, ',') < 0 {
+		st.Kind = PointerAssignment
+		st.Tokens = l.tokenize(i, j, modeNone)
+
+		return st
 	}
 
 	// An = outside parentheses: an assignment, or a DO statement if a
@@ -198,8 +262,9 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 	// named DO10I. Only the comma tells them apart. (OPTIONS
 	// /CHECK=ALL has one, but no assignment's target is followed by a
 	// slash.)
-	if eq := l.findAssignment(i, j); eq >= 0 && !l.hasPrefix(i, j, "OPTIONS/") {
+	if eq := l.findAssignment(i, j); eq >= 0 && !declaration && !l.hasPrefix(i, j, "OPTIONS/") {
 		if l.hasPrefix(i, j, "DO") && l.findLevel0(eq+1, j, ',') >= 0 {
+			l.keywordBlanks(i, "DO")
 			st.Kind = Do
 			st.Tokens = l.tokenize(i+2, j, modeLabel)
 
@@ -249,6 +314,22 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 			}
 		}
 
+		switch k {
+		case End:
+			return l.endStatement(st, i, j)
+		case Type:
+			return l.typeStatement(st, i, j, declaration)
+		case Module:
+			// In an interface block, MODULE PROCEDURE names module
+			// procedures; anywhere else MODULE starts a module, whose name
+			// may start with PROCEDURE.
+			if l.interfaces > 0 && l.hasPrefix(i, j, kinds[ModuleProcedure].keyword) {
+				k, kw = ModuleProcedure, kinds[ModuleProcedure].keyword
+			}
+		}
+
+		l.keywordBlanks(i, kw)
+
 		st.Kind = k
 		st.Body = l.offset(i + len(kw))
 
@@ -275,6 +356,8 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		if p < j && l.sq.text[p] == ',' {
 			p++
 		}
+
+		l.keywordBlanks(i, "DO")
 
 		if l.hasPrefix(p, j, "WHILE(") {
 			st.Kind = DoWhile
@@ -322,6 +405,11 @@ func (l *lexer) ifStatement(st *Statement, elseIf bool, open, close, j int) *Sta
 		}
 
 		st.Tokens = append(st.Tokens, Token{Kind: Keyword, Text: "THEN", Offset: l.offset(rest)})
+
+	case elseIf && l.hasPrefix(rest, j, "THEN") && l.isName(rest+len("THEN"), j):
+		// Fortran 90's ELSE IF (e) THEN name, the name its IF construct's.
+		st.Tokens = append(st.Tokens, Token{Kind: Keyword, Text: "THEN", Offset: l.offset(rest)})
+		st.Tokens = append(st.Tokens, l.tokenize(rest+len("THEN"), j, modeNone)...)
 
 	case elseIf, rest == j:
 		// ELSE IF without THEN, or an IF with nothing after its
@@ -387,6 +475,16 @@ const recursive = "RECURSIVE"
 // first statement, so only there is the text taken for one.
 func (l *lexer) typedFunction(st *Statement, k Kind, i, j int) *Statement {
 	p := i
+
+	// Fortran 90's kind or length selector, (...): INTEGER(4) FUNCTION F,
+	// which the parser reports NOTIMPL (Phase 100), but as a header.
+	if p < j && l.sq.text[p] == '(' && !l.sq.lit[p] {
+		if p = l.matchParen(p, j); p < 0 {
+			return nil
+		}
+
+		p++
+	}
 
 	// The type's length: *n or *(...).
 	if p < j && l.sq.text[p] == '*' {
@@ -521,14 +619,14 @@ func (l *lexer) findLevel0(i, j int, c byte) int {
 // findAssignment returns the index of the first = from i to j that is
 // outside every parenthesis and constant and isn't part of one of Fortran
 // 90's relational operators, == /= <= >= (PRINT *, A == B is no assignment),
-// or -1. VAX FORTRAN has none of them, so old programs find the = they
+// or of a pointer assignment's =>, or -1. VAX FORTRAN has none of them, so old programs find the = they
 // always did.
 func (l *lexer) findAssignment(i, j int) int {
 	text, lit := l.sq.text, l.sq.lit
 
 	for k := l.findLevel0(i, j, '='); k >= 0; k = l.findLevel0(k+1, j, '=') {
 		before := k > i && !lit[k-1] && strings.IndexByte("=/<>", text[k-1]) >= 0
-		after := k+1 < j && !lit[k+1] && text[k+1] == '='
+		after := k+1 < j && !lit[k+1] && (text[k+1] == '=' || text[k+1] == '>')
 
 		if !before && !after {
 			return k
@@ -548,9 +646,9 @@ func (l *lexer) offset(i int) int {
 	return len(l.src.Text)
 }
 
-// Dump shows a statement as one line, for tests: its label, its kind, its
-// tokens in short form, and after a / the statement a logical IF
-// executes.
+// Dump shows a statement as one line, for tests: its label, its construct
+// name, its kind, its tokens in short form, and after a / the statement a
+// logical IF or WHERE executes.
 //
 //	10 logical IF: ( X .GT. 0 ) / GO TO: 20
 func Dump(s *Statement) string {
@@ -558,6 +656,10 @@ func Dump(s *Statement) string {
 
 	if s.Label != 0 {
 		b.WriteString(strconv.Itoa(s.Label) + " ")
+	}
+
+	if s.Construct != "" {
+		b.WriteString(s.Construct + ": ")
 	}
 
 	b.WriteString(s.Kind.String())

@@ -150,6 +150,8 @@ func (a *analyzer) statement(s ast.Stmt) {
 		return
 	}
 
+	a.constructName(s)
+
 	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.NamelistStmt, *ast.DirectiveStmt:

@@ -4,7 +4,7 @@
 the same day, every recommendation taken ("The author's answers", after the
 questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
 to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done, and so is
-subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), and subtask 4 (Fortran 90's lexical items); subtask 5 is next. Needs the FORTRAN program (Phases
+subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), subtask 4 (Fortran 90's lexical items), and subtask 5 (the new statements recognized); subtask 6 is next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -589,7 +589,8 @@ the work shows.
    report `%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet`
    at the right place, and `TestEveryKindParses` extended. Named END
    statements (`END PROGRAM squares`, `END SUBROUTINE`, `END FUNCTION`) and
-   their name checks are compiled here: they need nothing else.
+   their name checks are compiled here: they need nothing else (done
+   2026-11-17).
 6. **The Fortran 90 corpus and first light**: `testdata/fortran90/` with its
    README and `TestFortran90Programs` (every mode, Decision 16); first programs
    that are FORTRAN-77 in free form using Fortran 90's spellings (`==`, `"`,
@@ -849,3 +850,77 @@ The author read the plan and accepted every recommendation:
     `TestF90LexicalItems` (a free-form program with `==`, `/=`, `"it's "`,
     `z'1f'` and `b'101'` in DATA, compiled to MACRO; a kind parameter's
     NOTIMPL). `TestNoF90Unchanged` still matches its baseline.
+- **2026-11-17, subtask 5 (done):** the new statements recognized, in every
+  pass, each NOTIMPL by name where it stands until its phase.
+  - **The lexer** (`lex/kinds.go`, `lex/f90stmt.go`; `doc.go`'s "Fortran 90's
+    statements"): 30 new kinds. ALLOCATABLE, ALLOCATE, CASE, CONTAINS, CYCLE,
+    DEALLOCATE, ELSEWHERE, END INTERFACE, END SELECT, END TYPE, END WHERE,
+    EXIT, INTENT, INTERFACE, MODULE, NULLIFY, OPTIONAL, POINTER, PRIVATE,
+    PUBLIC, SELECT CASE, SEQUENCE, TARGET, and USE are found by their
+    keywords, longest first as before; none is a prefix of a VAX FORTRAN
+    statement's text, so no old statement classifies differently
+    (`TestNoF90Unchanged` holds). The rest by tests of their own: a `::` at
+    level 0 makes a declaration whatever `=` it has; `=>` at level 0 with no
+    comma before it is a pointer assignment (`USE M, A => B` has its comma);
+    WHERE is told apart as IF is (an assignment to an array WHERE, the
+    statement form with its assignment as `Then`, or a block WHERE); a name
+    and a colon first is a construct name, kept as `Statement.Construct`
+    (`NOTCONSTRUCT` before anything but DO, DO WHILE, a block IF, or SELECT
+    CASE: no VAX FORTRAN statement has a colon at level 0); MODULE PROCEDURE
+    only inside an interface block, which the lexer counts (elsewhere MODULE
+    PROCEDURES is a module's header). TYPE's readings are the table's: `TYPE,`
+    and `TYPE ::` a derived type's definition (`TypeDef`), `TYPE (name)` and a
+    name or a `::` a declaration of its objects (`TypeDecl`), `TYPE name`
+    alone a definition under `/F90` and output without it, anything else the
+    output statement. A typed FUNCTION statement is looked for after CONTAINS
+    and INTERFACE too, and with a kind selector (`INTEGER(4) FUNCTION F`).
+  - **Named END:** END followed by PROGRAM, SUBROUTINE, FUNCTION, MODULE, or
+    BLOCK DATA is still kind END, the word a Keyword token and the name a Name
+    token; the parser keeps them (`ast.EndStmt.Unit`, `Name`) and checks them
+    against what the END ends (`parse/f90.go`'s `checkEnd`): `ENDKIND` (END
+    FUNCTION ending a SUBROUTINE), `ENDNAME`, `ENDNONAME` (a name for a main
+    program without a PROGRAM statement, or an unnamed BLOCK DATA), and
+    `ENDNOKIND`, a plain END of a procedure inside another (12.5.2.2). Named
+    ENDs compile and run.
+  - **Keyword blanks in free form** (left from subtask 4): `keywordBlanks`
+    checks the statement's keyword, which is no token: the standard's
+    3.3.1.1 compounds (GO TO, END DO, ELSE IF, SELECT CASE, BLOCK DATA, END
+    BLOCK DATA, ...) and DEC's (END STRUCTURE, DEFINE FILE) may have their
+    blank, ELSE WHERE too (ours: compilers accept it), MODULE PROCEDURE must
+    (`NEEDBLANK`), and any other blank is `BLANKINNAME`; a construct name's
+    too.
+  - **The parser** (`parse/f90.go`): a new `ast.PendingStmt` for each new
+    statement and for Fortran 90's forms of old ones (a type statement with
+    `::` or a kind or length selector, DIMENSION and the attribute statements
+    with `::`, IMPLICIT and FUNCTION with a kind selector), naming the form
+    (`What`, at the `::` or the selector); `ast.ModuleStmt` a unit's header
+    (`ast.ModuleUnit`); construct names after END DO, END IF, ELSE, and ELSE
+    IF ... THEN read into `StmtBase.Construct`, as the leading one is.
+    CONTAINS, an interface block, and a derived type's definition gather what
+    they hold into their `PendingStmt.Inner` (`nesting`): CONTAINS to its
+    unit's END, counting the procedures' own headers and ENDs, nested
+    CONTAINS and interface blocks inside; INTERFACE to END INTERFACE; TYPE to
+    END TYPE. Left in the unit's list they would be its own declarations.
+    `badIfStatement` refuses SELECT CASE, CASE, END SELECT, a block WHERE,
+    ELSEWHERE, and END WHERE after a logical IF; EXIT and CYCLE may follow
+    one.
+  - **sema** (`notimpl.go`): a `PendingStmt` is unhandled, reported by its
+    `What` or its kind; a module, or a header in a Fortran 90 form, is
+    reported at its header and the unit not analyzed (nor named among the
+    file's units, if its header is pending). A SELECT CASE or block WHERE is
+    reported once: its CASE, ELSEWHERE, and END statements say nothing more
+    (`pendingOpen`). A construct name is NOTIMPL once per unit.
+  - **The source pass** (`source/options.go`): unit following for OPTIONS's
+    `/EXTEND_SOURCE` knows named ENDs, and once a unit has a CONTAINS or an
+    INTERFACE, counts its procedures' headers (`isProcedureHeader`) against
+    their ENDs, so a module's form lasts to END MODULE.
+  - **Tests:** `lex`'s `f90stmt_test.go` (every statement in both forms, TYPE's
+    readings, MODULE PROCEDURE and typed functions by state, construct names'
+    and keywords' errors); `parse`'s `f90_test.go` (`TestF90Nesting`'s dump of
+    a module and a program, `TestNamedEnds`); `source`'s
+    `TestOptionsExtendSource` cases for named ENDs, a module's procedures,
+    and interface bodies; `fortran`'s `TestF90StatementsNotImplemented` (a
+    module and a program through every pass, each message where it stands;
+    named ENDs compiled); `TestEveryKindParses` covers the new kinds. One
+    old expectation changed: `REAL, AUTOMATIC :: A` is now NOTIMPL at its
+    `::` (Phase 100), not a syntax error.

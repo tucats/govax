@@ -107,6 +107,41 @@ const (
 	Volatile
 	Write
 
+	// Fortran 90's statements (docs/planning/PHASE-99 - Fortran 90.md,
+	// subtask 5): recognized, each NOTIMPL by name until its phase compiles
+	// it. Named END statements (END PROGRAM P) are END's, and a construct's
+	// name (OUTER: DO) is the statement's Construct, not a kind.
+	Allocatable
+	Allocate
+	Case
+	Contains
+	Cycle
+	Deallocate
+	ElseWhere
+	EndInterface
+	EndSelect
+	EndType
+	EndWhere
+	Exit
+	Intent
+	Interface
+	Module
+	ModuleProcedure
+	Nullify
+	Optional
+	PointerAssignment // p => t
+	Pointer
+	Private
+	Public
+	SelectCase
+	Sequence
+	Target
+	TypeDef  // TYPE [[, attr] ::] name: a derived type's definition
+	TypeDecl // TYPE (name) [[, attr] ::] entities: its objects' declaration
+	Use
+	Where      // WHERE (mask) assignment
+	WhereBlock // WHERE (mask), starting a WHERE construct
+
 	// numKinds isn't a kind: being last, its value is the number of kinds
 	// before it, which sizes the kinds table below.
 	numKinds
@@ -216,6 +251,37 @@ var kinds = [numKinds]kindInfo{
 	Virtual:         {name: "VIRTUAL", keyword: "VIRTUAL"},
 	Volatile:        {name: "VOLATILE", keyword: "VOLATILE"},
 	Write:           {name: "WRITE", keyword: "WRITE", executable: true},
+
+	Allocatable:       {name: "ALLOCATABLE", keyword: "ALLOCATABLE"},
+	Allocate:          {name: "ALLOCATE", keyword: "ALLOCATE", executable: true},
+	Case:              {name: "CASE", keyword: "CASE", executable: true},
+	Contains:          {name: "CONTAINS", keyword: "CONTAINS"},
+	Cycle:             {name: "CYCLE", keyword: "CYCLE", executable: true},
+	Deallocate:        {name: "DEALLOCATE", keyword: "DEALLOCATE", executable: true},
+	ElseWhere:         {name: "ELSEWHERE", keyword: "ELSEWHERE", executable: true},
+	EndInterface:      {name: "END INTERFACE", keyword: "ENDINTERFACE"},
+	EndSelect:         {name: "END SELECT", keyword: "ENDSELECT", executable: true},
+	EndType:           {name: "END TYPE", keyword: "ENDTYPE"},
+	EndWhere:          {name: "END WHERE", keyword: "ENDWHERE", executable: true},
+	Exit:              {name: "EXIT", keyword: "EXIT", executable: true},
+	Intent:            {name: "INTENT", keyword: "INTENT"},
+	Interface:         {name: "INTERFACE", keyword: "INTERFACE"},
+	Module:            {name: "MODULE", keyword: "MODULE"},
+	ModuleProcedure:   {name: "MODULE PROCEDURE", keyword: "MODULEPROCEDURE"},
+	Nullify:           {name: "NULLIFY", keyword: "NULLIFY", executable: true},
+	Optional:          {name: "OPTIONAL", keyword: "OPTIONAL"},
+	PointerAssignment: {name: "pointer assignment", executable: true},
+	Pointer:           {name: "POINTER", keyword: "POINTER"},
+	Private:           {name: "PRIVATE", keyword: "PRIVATE"},
+	Public:            {name: "PUBLIC", keyword: "PUBLIC"},
+	SelectCase:        {name: "SELECT CASE", keyword: "SELECTCASE", executable: true},
+	Sequence:          {name: "SEQUENCE", keyword: "SEQUENCE"},
+	Target:            {name: "TARGET", keyword: "TARGET"},
+	TypeDef:           {name: "derived TYPE"},
+	TypeDecl:          {name: "TYPE (type-name)"},
+	Use:               {name: "USE", keyword: "USE"},
+	Where:             {name: "WHERE", executable: true},
+	WhereBlock:        {name: "block WHERE", executable: true},
 }
 
 // String is the statement's name, as messages show it: "GO TO".
@@ -242,8 +308,8 @@ func (k Kind) TypeKeyword() bool {
 // byKeyword is the keyword statements, longest keyword first, which is
 // the order the lexer tries them in: ENDIF must be tried before END, or
 // END IF would be END followed by IF. The IF statements, DO and DO WHILE
-// (DO's tests come before this table's), and kinds with no keyword are
-// left out.
+// (DO's tests come before this table's), MODULE PROCEDURE (which MODULE's
+// entry finds, moduleStatement), and kinds with no keyword are left out.
 //
 // It's computed once, when the package is loaded: the value of the
 // variable is a function literal that's called at once (note the () after
@@ -253,7 +319,7 @@ var byKeyword = func() []Kind {
 
 	for k := Kind(0); k < numKinds; k++ {
 		switch {
-		case kinds[k].keyword == "", k == Do, k == DoWhile:
+		case kinds[k].keyword == "", k == Do, k == DoWhile, k == ModuleProcedure:
 			continue
 		}
 

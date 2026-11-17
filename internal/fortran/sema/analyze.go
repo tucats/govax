@@ -76,6 +76,16 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			continue
 		}
 
+		// A module, or a header in a Fortran 90 form not compiled yet
+		// (INTEGER(4) FUNCTION F), is reported where it starts, and the
+		// unit isn't analyzed (docs/planning/PHASE-99 - Fortran 90.md,
+		// subtask 5).
+		if pending := pendingHeader(au); pending != nil {
+			messages.Report("NOTIMPL", pendingPosition(pending), statementWhat(pending))
+
+			continue
+		}
+
 		defaultInt, defaultLogical := IntegerType, LogicalType
 		if unitOpts.NoI4 {
 			defaultInt, defaultLogical = Type{Integer, 2}, Type{Logical, 2}
@@ -90,6 +100,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			entryOf:        map[*ast.EntryStmt]*Entry{},
 			implicit:       defaultImplicit(defaultInt),
 			rejected:       map[ast.Stmt]bool{},
+			pendingOpen:    map[lex.Kind]int{},
 			boundVars:      map[*Symbol]diag.Position{},
 			defaultInt:     defaultInt,
 			defaultLogical: defaultLogical,
@@ -278,6 +289,10 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 	for _, au := range file.Units {
 		kind := au.Kind()
 
+		if _, pending := au.Header.(*ast.PendingStmt); pending {
+			continue // a header in a Fortran 90 form not compiled yet
+		}
+
 		if kind == ast.MainProgram {
 			if main != nil {
 				messages.Report("TWOMAINS", au.Position(), main.Position().Line)
@@ -337,6 +352,15 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 // (EQUIVALENCE, DATA, SAVE) can only be settled once every other is known,
 // so the first walk saves them in fields here for later.
 type analyzer struct {
+	// pendingOpen counts Fortran 90's constructs not compiled yet that are
+	// open, by the kind of their first statement (notimpl.go's
+	// unimplemented), so that only that statement is reported.
+	pendingOpen map[lex.Kind]int
+
+	// constructReported is set once a construct name has been reported
+	// NOTIMPL in the unit (constructName).
+	constructReported bool
+
 	messages *diag.List
 	prog     *Program
 	units    map[string]*fileUnit

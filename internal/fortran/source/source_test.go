@@ -684,6 +684,35 @@ func TestOptionsExtendSource(t *testing.T) {
 			},
 		},
 		{
+			name:  "Fortran 90's named END",
+			lines: []string{"      OPTIONS /EXTEND_SOURCE", "      PROGRAM P", line, "      END PROGRAM P", line, "      END"},
+			want:  []string{"0|OPTIONS /EXTEND_SOURCE", "0|PROGRAM P", whole, "0|END PROGRAM P", cut, "0|END"},
+		},
+		{
+			name: "a module's procedures, each with its END, to the module's",
+			lines: []string{
+				"      OPTIONS /EXTEND_SOURCE", "      MODULE M", "      CONTAINS", "      SUBROUTINE S", line,
+				"      END SUBROUTINE S", "      RECURSIVE INTEGER(4) FUNCTION F(X)", "      CONTAINS", "      SUBROUTINE T",
+				"      END SUBROUTINE", "      END FUNCTION F", line, "      END MODULE", line, "      END",
+			},
+			want: []string{
+				"0|OPTIONS /EXTEND_SOURCE", "0|MODULE M", "0|CONTAINS", "0|SUBROUTINE S", whole,
+				"0|END SUBROUTINE S", "0|RECURSIVE INTEGER(4) FUNCTION F(X)", "0|CONTAINS", "0|SUBROUTINE T",
+				"0|END SUBROUTINE", "0|END FUNCTION F", whole, "0|END MODULE", cut, "0|END",
+			},
+		},
+		{
+			name: "an interface block's bodies",
+			lines: []string{
+				"      OPTIONS /EXTEND_SOURCE", "      PROGRAM P", "      INTERFACE", "      SUBROUTINE S(A)", "      END SUBROUTINE",
+				"      FUNCTION F(X)", "      END", "      END INTERFACE", line, "      END", line, "      END",
+			},
+			want: []string{
+				"0|OPTIONS /EXTEND_SOURCE", "0|PROGRAM P", "0|INTERFACE", "0|SUBROUTINE S(A)", "0|END SUBROUTINE",
+				"0|FUNCTION F(X)", "0|END", "0|END INTERFACE", whole, "0|END", cut, "0|END",
+			},
+		},
+		{
 			name:  "END on an initial line, with a continuation line (section 5.5)",
 			lines: []string{"      OPTIONS /EXTEND_SOURCE", "      END", "     1 = 1", line, "      END"},
 			want:  []string{"0|OPTIONS /EXTEND_SOURCE", "0|END = 1", cut, "0|END"},

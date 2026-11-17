@@ -43,7 +43,7 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 
 	case *ast.IfStmt:
 		if !handled(s.Then) {
-			a.notImplForm(s.Then.Position(), statementWhat(s.Then))
+			a.notImplForm(pendingPosition(s.Then), statementWhat(s.Then))
 
 			return nil
 		}

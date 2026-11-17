@@ -1,6 +1,9 @@
 package source
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // An OPTIONS statement's /EXTEND_SOURCE says where the statement field ends on
 // the lines of the unit after it, until that unit's END (section 1.4.3):
@@ -70,11 +73,15 @@ func OptionsQualifier(name string) string {
 // no unit; any other does. END ends the unit, and with it what OPTIONS said.
 func (r *reader) followUnit(s *Statement) {
 	switch {
+	case r.inUnit && r.nested:
+		r.followNested(s)
+
 	case isEnd(s):
 		r.form = r.command
 		r.inUnit = false
 
 	case r.inUnit:
+		r.nested, r.depth = opensProcedures(s), 1
 
 	case isBlank(s.Text):
 
@@ -82,6 +89,7 @@ func (r *reader) followUnit(s *Statement) {
 		qualifiers, isOptions := optionsQualifiers(s.Text)
 		if !isOptions {
 			r.inUnit = true
+			r.nested, r.depth = opensProcedures(s), 1
 
 			return
 		}
@@ -101,15 +109,112 @@ func (r *reader) followUnit(s *Statement) {
 	}
 }
 
+// followNested follows a unit with procedures inside it (Fortran 90's CONTAINS
+// and interface blocks; docs/planning/PHASE-99 - Fortran 90.md, subtask 5),
+// where an END may be a procedure's: each procedure's header opens one more
+// level, each END closes one, and the unit ends with the END that closes its
+// own.
+func (r *reader) followNested(s *Statement) {
+	switch {
+	case isEnd(s):
+		if r.depth--; r.depth == 0 {
+			r.form = r.command
+			r.inUnit, r.nested = false, false
+		}
+
+	case isProcedureHeader(s):
+		r.depth++
+	}
+}
+
 // isEnd reports whether s is an END statement: only END on its initial line,
 // whatever continuation lines follow it (section 5.5), which covers a statement
-// that's only END. "END = 1" and "ENDIF" aren't.
+// that's only END. "END = 1" and "ENDIF" aren't. Fortran 90's END PROGRAM,
+// END SUBROUTINE, END FUNCTION, END MODULE, and END BLOCK DATA, each with or
+// without a name, are too (the lexer's endStatement).
 func isEnd(s *Statement) bool {
 	initial := s.Initial()
 
 	start, rest := squeezeKeyword(initial, "END")
+	if start < 0 {
+		return false
+	}
 
-	return start >= 0 && isBlank(initial[rest:])
+	if isBlank(initial[rest:]) {
+		return true
+	}
+
+	return namedEnd.MatchString(squeezedUpper(s.Text))
+}
+
+// namedEnd is Fortran 90's END statements that end a unit, squeezed:
+// ENDPROGRAMP, ENDSUBROUTINE, ENDBLOCKDATA.
+var namedEnd = regexp.MustCompile(`^END(PROGRAM|SUBROUTINE|FUNCTION|MODULE|BLOCKDATA)([A-Z][A-Z0-9_$]*)?$`)
+
+// procedureHeader is a FUNCTION or SUBROUTINE statement, squeezed: RECURSIVE
+// before or after the type, the type with a length or a kind selector, or
+// TYPE (name).
+var procedureHeader = regexp.MustCompile(`^(RECURSIVE)?((INTEGER|REAL|LOGICAL|COMPLEX|DOUBLEPRECISION|DOUBLECOMPLEX|CHARACTER|BYTE)` +
+	`(\*[0-9]+|\*\([^)]*\)|\([^)]*\))?|TYPE\([A-Z0-9_$]+\))?(RECURSIVE)?(FUNCTION|SUBROUTINE)[A-Z]`)
+
+// isProcedureHeader reports whether s is a FUNCTION or SUBROUTINE statement,
+// in a unit that has procedures inside it. An assignment has an = outside
+// parentheses (FUNCTIONX = 1); a header has none.
+func isProcedureHeader(s *Statement) bool {
+	text := squeezedUpper(s.Text)
+
+	return procedureHeader.MatchString(text) && !equalsAtLevel0(text)
+}
+
+// opensProcedures reports whether s is a statement after which a unit's
+// procedures have ENDs of their own: Fortran 90's CONTAINS, or INTERFACE (an
+// interface block, holding interface bodies). INTERFACE = 1 is an assignment.
+// The first statement of a unit counts too: a module or main program may hold
+// procedures from there on.
+func opensProcedures(s *Statement) bool {
+	text := squeezedUpper(s.Text)
+
+	switch {
+	case text == "CONTAINS":
+		return true
+	case strings.HasPrefix(text, "INTERFACE"):
+		return !equalsAtLevel0(text)
+	}
+
+	return false
+}
+
+// squeezedUpper is text without blanks and tabs, in capitals: enough to
+// recognize the few statements unit following needs, none of which has a
+// character constant.
+func squeezedUpper(text string) string {
+	return strings.Map(func(c rune) rune {
+		if isBlankRune(c) {
+			return -1
+		}
+
+		return c
+	}, strings.ToUpper(text))
+}
+
+// equalsAtLevel0 reports whether text has an = outside parentheses.
+func equalsAtLevel0(text string) bool {
+	depth := 0
+
+	for _, c := range text {
+		switch c {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		case '=':
+			if depth == 0 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // optionsQualifiers reports whether text is an OPTIONS statement and the names of

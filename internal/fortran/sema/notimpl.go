@@ -2,6 +2,8 @@ package sema
 
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // What semantic analysis can compile so far, and what it says about the
@@ -35,16 +37,87 @@ func handled(s ast.Stmt) bool {
 }
 
 // statementWhat names the statement s as a NOTIMPL message does: "the
-// DICTIONARY statement".
+// DICTIONARY statement"; for a Fortran 90 form of an old statement, the
+// form ("the :: form of a type declaration").
 func statementWhat(s ast.Stmt) string {
+	if p, ok := s.(*ast.PendingStmt); ok && p.What != "" {
+		return p.What
+	}
+
 	return "the " + s.Base().Kind.String() + " statement"
+}
+
+// pendingPosition is where a statement's NOTIMPL points: at the form it
+// names, for a PendingStmt that names one, or at the statement.
+func pendingPosition(s ast.Stmt) diag.Position {
+	if p, ok := s.(*ast.PendingStmt); ok && p.WhatPos.Line != 0 {
+		return p.WhatPos
+	}
+
+	return s.Position()
+}
+
+// pendingHeader is a unit's header if semantic analysis can't compile the
+// unit because of it: a module's (Phase 106), or a header in a Fortran 90
+// form not compiled yet (a PendingStmt). Otherwise nil.
+func pendingHeader(u *ast.Unit) ast.Stmt {
+	switch h := u.Header.(type) {
+	case *ast.ModuleStmt, *ast.PendingStmt:
+		return h
+	}
+
+	return nil
 }
 
 // unimplemented reports a statement semantic analysis doesn't compile
 // yet, and keeps its part in the unit's block structure.
+//
+// A Fortran 90 construct's statements are reported once, at the statement
+// that opens it: a CASE or END SELECT inside a SELECT CASE already
+// reported, or an ELSEWHERE or END WHERE inside a block WHERE, says
+// nothing more (pendingConstructs).
 func (a *analyzer) unimplemented(s ast.Stmt) {
-	a.notImplForm(s.Position(), statementWhat(s))
-	a.brokenStatement(s.Base().Kind, s)
+	kind := s.Base().Kind
+
+	if quiet, ok := pendingInner[kind]; ok && a.pendingOpen[quiet] > 0 {
+		if pendingClosers[kind] {
+			a.pendingOpen[quiet]--
+		}
+
+		a.brokenStatement(kind, s)
+
+		return
+	}
+
+	if _, opens := pendingOpeners[kind]; opens {
+		a.pendingOpen[kind]++
+	}
+
+	a.notImplForm(pendingPosition(s), statementWhat(s))
+	a.brokenStatement(kind, s)
+}
+
+// pendingOpeners, pendingInner, and pendingClosers are Fortran 90's
+// constructs not compiled yet, for unimplemented: the statement that opens
+// each, the statements inside it named by the one that opens their construct,
+// and of those the ones that close it.
+var (
+	pendingOpeners = map[lex.Kind]bool{lex.SelectCase: true, lex.WhereBlock: true}
+	pendingInner   = map[lex.Kind]lex.Kind{
+		lex.Case: lex.SelectCase, lex.EndSelect: lex.SelectCase,
+		lex.ElseWhere: lex.WhereBlock, lex.EndWhere: lex.WhereBlock,
+	}
+	pendingClosers = map[lex.Kind]bool{lex.EndSelect: true, lex.EndWhere: true}
+)
+
+// constructName reports Fortran 90's construct name on a statement, which
+// Phase 101 compiles (OUTER: DO, END DO OUTER): the unit's first, since the
+// rest would say the same.
+func (a *analyzer) constructName(s ast.Stmt) {
+	if b := s.Base(); b.Construct != "" && !a.constructReported {
+		a.notImplForm(b.ConstructPos, "a construct name")
+		a.constructReported = true
+	}
 }
 
 // formWhat names an expression's form that semantic analysis doesn't

@@ -57,7 +57,7 @@ func TestF90Tokens(t *testing.T) {
 		{"V = (/ 1, 2, 3 /)", "assignment: V = (/ 1 , 2 , 3 /)"},
 		{"V = (/ (I, I = 1, 3) /)", "assignment: V = (/ ( I , I = 1 , 3 ) /)"},
 		{"INTEGER :: I", "INTEGER: :: I"},
-		{"P => X", "assignment: P => X"},
+		{"P => X", "pointer assignment: P => X"},
 		{"Y = X%A", "assignment: Y = X % A"},
 
 		// Kind parameters.

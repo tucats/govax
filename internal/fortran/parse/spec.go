@@ -153,6 +153,10 @@ func (p *parser) dataName() ast.Expr {
 // EXTERNAL's *name form is appendix A.6's, under /NOF77 only, which is semantic
 // analysis's to check, since only it knows the unit's OPTIONS statements.
 func parseAttr(p *parser) ast.Stmt {
+	if t := p.doubleColon(); t != nil {
+		return p.pending("the :: form of "+p.st.Kind.String(), t)
+	}
+
 	s := &ast.AttrStmt{StmtBase: p.base()}
 	k := p.st.Kind
 	commons := k == lex.Save || k == lex.Volatile

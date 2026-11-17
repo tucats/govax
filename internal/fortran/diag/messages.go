@@ -134,7 +134,28 @@ var messages = map[string]kind{
 	// nor a name (R404: 1.5_8, 2_K).
 	"BADKIND": {Error, "a kind parameter after _ must be digits or a name"},
 
+	// NOTCONSTRUCT is a construct name (NAME:) before a statement that
+	// starts no construct: only DO, DO WHILE, a block IF, and SELECT CASE
+	// may have one (the standard's 8.1).
+	"NOTCONSTRUCT": {Error, "only a DO, block IF, or SELECT CASE statement may have a construct name, not this %s statement"},
+
 	// The parser's messages (internal/fortran/parse).
+
+	// ENDKIND is an END statement naming a kind of unit (END FUNCTION) other
+	// than the one it ends (the standard's R1103, R1218, R1222).
+	"ENDKIND": {Error, "the END %s statement can't end %s"},
+
+	// ENDNAME is an END statement whose name isn't its unit's.
+	"ENDNAME": {Error, "the END statement names %s, but %s is named %s"},
+
+	// ENDNONAME is an END statement with a name, ending a unit that has none:
+	// a main program without a PROGRAM statement, or a BLOCK DATA without a
+	// name.
+	"ENDNONAME": {Error, "the END statement names %s, but %s has no name"},
+
+	// ENDNOKIND is the plain END of a procedure inside another, which must say
+	// END FUNCTION or END SUBROUTINE (the standard's 12.5.2.2 and 12.5.2.3).
+	"ENDNOKIND": {Error, "the END of %s, which is inside another unit, must be END %s"},
 
 	// SYNTAX is a statement whose tokens don't follow its grammar: the
 	// first argument says what the parser expected, the second what it

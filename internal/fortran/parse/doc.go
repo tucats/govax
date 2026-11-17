@@ -85,7 +85,7 @@
 // # Program units and structures
 //
 // Parse also divides the file into program units. A PROGRAM, FUNCTION,
-// SUBROUTINE, or BLOCK DATA statement starts a unit; so does any other
+// SUBROUTINE, BLOCK DATA, or Fortran 90 MODULE statement starts a unit; so does any other
 // statement when no unit is open, which begins a main program without a
 // PROGRAM statement; END ends a unit. A unit with no END (the file ends,
 // or another unit's header comes first) is NOEND. An OPTIONS statement
@@ -98,6 +98,15 @@
 // Parse keeps a stack of the declarations open and puts each statement
 // into the innermost one's Body, so that INTEGER*2 YEAR inside a
 // structure is a field, never a variable.
+//
+// Fortran 90's statements that hold others are gathered the same way
+// (f90.go's nesting): CONTAINS holds the procedures after it, to its unit's
+// END; an interface block its interface bodies, to END INTERFACE; a derived
+// type's definition its components, to END TYPE. Until their phases compile
+// them, each is a PendingStmt, which semantic analysis reports NOTIMPL once,
+// and what it holds is parsed but not analyzed. An END PROGRAM, END
+// SUBROUTINE, and the rest are checked against the unit or procedure they
+// end (checkEnd: ENDKIND, ENDNAME, ENDNONAME, ENDNOKIND).
 //
 // The parser doesn't match IF with END IF, or a DO with the statement
 // whose label it names: a unit's statements are a flat list, and

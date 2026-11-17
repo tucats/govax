@@ -1,0 +1,316 @@
+package parse
+
+import (
+	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
+)
+
+// Fortran 90's statements (docs/planning/PHASE-99 - Fortran 90.md, subtask 5).
+// The lexer recognizes every one; the parser makes most of them a
+// PendingStmt, which semantic analysis reports NOTIMPL by name, so a program
+// using SELECT CASE hears "the SELECT CASE statement is not implemented
+// yet" where it is, not a syntax error. Each later phase gives its statements
+// real parsers. What is parsed now:
+//
+//   - MODULE name, a unit's header, so a module is one unit;
+//   - END PROGRAM name and the rest, checked against the unit they end
+//     (checkEnd);
+//   - construct names, read and kept for Phase 101 (StmtBase.Construct);
+//   - Fortran 90's forms of old statements (INTEGER :: N, REAL(8) X,
+//     DIMENSION :: A(10)), each a PendingStmt naming the form;
+//   - and the statements that hold others: CONTAINS's procedures, an
+//     interface block's bodies, a derived type's components. Left in the
+//     unit's list, they would be read as the unit's own declarations, so
+//     the parser gathers them into the PendingStmt that holds them
+//     (nesting).
+
+// parsePending makes a statement a PendingStmt, reported NOTIMPL by its kind.
+func parsePending(p *parser) ast.Stmt {
+	return &ast.PendingStmt{StmtBase: p.base()}
+}
+
+// pending makes the statement a PendingStmt naming what, at t (the
+// statement's start for nil): a Fortran 90 form of an old statement.
+func (p *parser) pending(what string, t *lex.Token) ast.Stmt {
+	s := &ast.PendingStmt{StmtBase: p.base(), What: what}
+	if t != nil {
+		s.WhatPos = p.pos(*t)
+	}
+
+	return s
+}
+
+// doubleColon is the statement's :: token at level 0, or nil: Fortran 90's
+// form of a declaration (INTEGER, SAVE :: X, DIMENSION :: A(10)).
+func (p *parser) doubleColon() *lex.Token {
+	depth := 0
+
+	for i := range p.tokens {
+		switch t := &p.tokens[i]; {
+		case t.Is("("), t.Is("(/"):
+			depth++
+		case t.Is(")"), t.Is("/)"):
+			depth--
+		case t.Is("::") && depth == 0:
+			return t
+		}
+	}
+
+	return nil
+}
+
+// f90Declaration is the Fortran 90 form of a type statement, if this one has
+// one: a :: (INTEGER, PARAMETER :: N = 10), or a kind or length selector after
+// the type keyword (REAL(8) X, CHARACTER(LEN=10) C, INTEGER(KIND=2) I). Both
+// are Phase 100's. VAX FORTRAN's type statements never have either: a length
+// follows a *.
+func (p *parser) f90Declaration() ast.Stmt {
+	if t := p.doubleColon(); t != nil {
+		return p.pending("the :: form of a type declaration", t)
+	}
+
+	if p.at("(") {
+		return p.pending("a kind or length selector", p.peek())
+	}
+
+	return nil
+}
+
+// parseModule parses Fortran 90's MODULE name (the standard's R1105).
+func parseModule(p *parser) ast.Stmt {
+	s := &ast.ModuleStmt{StmtBase: p.base(), Name: p.name("the module's name").Name}
+	p.end()
+
+	return s
+}
+
+// unitWords are what END's word is shown as: BLOCKDATA as two words.
+var unitWords = map[string]string{"BLOCKDATA": "BLOCK DATA"}
+
+// parseEnd parses END (section 5.5), and Fortran 90's END PROGRAM [name],
+// END SUBROUTINE [name], END FUNCTION [name], END BLOCK DATA [name], and END
+// MODULE [name], whose word the lexer made a Keyword token.
+func parseEnd(p *parser) ast.Stmt {
+	s := &ast.EndStmt{StmtBase: p.base()}
+
+	if t := p.peek(); t != nil && t.Kind == lex.Keyword {
+		p.next()
+
+		s.Unit = t.Text
+		if w, ok := unitWords[t.Text]; ok {
+			s.Unit = w
+		}
+
+		if p.atKind(lex.Name) {
+			n := p.next()
+			s.Name, s.NamePos = n.Text, p.pos(n)
+		}
+	}
+
+	p.end()
+
+	return s
+}
+
+// constructAfter reads the construct name a statement may end with (END DO
+// OUTER, ELSE OUTER), if there is one, into s's base.
+func (p *parser) constructAfter(s ast.Stmt) {
+	if p.atKind(lex.Name) && p.peekAt(1) == nil {
+		t := p.next()
+		b := s.Base()
+		b.Construct, b.ConstructPos = t.Text, p.pos(t)
+	}
+}
+
+// unitEnds is the word END needs to name each kind of unit.
+var unitEnds = map[ast.UnitKind]string{
+	ast.MainProgram:    "PROGRAM",
+	ast.FunctionUnit:   "FUNCTION",
+	ast.SubroutineUnit: "SUBROUTINE",
+	ast.BlockDataUnit:  "BLOCK DATA",
+	ast.ModuleUnit:     "MODULE",
+}
+
+// openUnit is a unit, or a procedure inside one, whose END hasn't come yet:
+// what checkEnd checks an END against.
+type openUnit struct {
+	kind   ast.UnitKind
+	name   string
+	header ast.Stmt // nil for a main program without a PROGRAM statement
+	inner  bool     // inside another unit: after CONTAINS, or in an interface block
+}
+
+// unitOf is the open unit header starts.
+func unitOf(header ast.Stmt, inner bool) openUnit {
+	u := &ast.Unit{Header: header}
+
+	return openUnit{kind: u.Kind(), name: u.Name(), header: header, inner: inner}
+}
+
+// what names the unit, for messages: "the SUBROUTINE S", "the main program".
+func (o openUnit) what() string {
+	switch {
+	case o.kind == ast.MainProgram && o.name != "":
+		return "the main program " + o.name
+	case o.kind == ast.MainProgram:
+		return "the main program"
+	case o.name != "":
+		return "the " + o.kind.String() + " " + o.name
+	}
+
+	return "the " + o.kind.String()
+}
+
+// checkEnd checks the END statement s against the unit it ends (the
+// standard's R1103 and the rest): the word after END must be the unit's
+// kind's, the name after it the unit's own, and a procedure inside another
+// must say which it is (END SUBROUTINE). A unit whose header had an error
+// isn't checked: its kind and name may be wrong.
+func checkEnd(s ast.Stmt, o openUnit, messages *diag.List) {
+	end, ok := s.(*ast.EndStmt)
+	if !ok {
+		return
+	}
+
+	switch o.header.(type) {
+	case *ast.BadStmt, *ast.PendingStmt:
+		return
+	}
+
+	word := unitEnds[o.kind]
+
+	switch {
+	case end.Unit != "" && end.Unit != word:
+		messages.Report("ENDKIND", end.Pos, end.Unit, o.what())
+	case end.Unit == "" && o.inner && (o.kind == ast.FunctionUnit || o.kind == ast.SubroutineUnit):
+		messages.Report("ENDNOKIND", end.Pos, o.what(), word)
+	case end.Name == "":
+	case o.name == "" || o.header == nil:
+		messages.Report("ENDNONAME", end.NamePos, end.Name, o.what())
+	case end.Name != o.name:
+		messages.Report("ENDNAME", end.NamePos, end.Name, o.what(), o.name)
+	}
+}
+
+// nesting gathers the statements a Fortran 90 statement holds into its
+// PendingStmt's Inner, instead of the unit's body: a CONTAINS statement's
+// procedures, up to its unit's END; an interface block's bodies, up to END
+// INTERFACE; a derived type's components, up to END TYPE. One may hold
+// another (a module procedure's own CONTAINS, an interface block in an
+// interface body), so they are a stack, innermost last.
+type nesting struct {
+	open []*nest
+
+	// units are the procedures open inside the nests (after CONTAINS, or
+	// interface bodies), innermost last, for END's checks.
+	units []openUnit
+}
+
+// nest is one open gathering statement.
+type nest struct {
+	stmt *ast.PendingStmt
+	kind lex.Kind // Contains, Interface, or TypeDef
+
+	// depth is how many of units belong to this nest: procedures opened
+	// inside it whose END hasn't come.
+	depth int
+}
+
+// active reports whether a nest is open.
+func (n *nesting) active() bool {
+	return len(n.open) > 0
+}
+
+// opens reports whether s starts a nest, and starts it: a CONTAINS, an
+// interface block, a derived type's definition. A CONTAINS in a unit or
+// procedure gathers up to that unit's END. Only a PendingStmt can.
+func (n *nesting) opens(s ast.Stmt) bool {
+	ps, ok := s.(*ast.PendingStmt)
+	if !ok {
+		return false
+	}
+
+	switch k := ps.Kind; k {
+	case lex.Contains, lex.Interface, lex.TypeDef:
+		n.open = append(n.open, &nest{stmt: ps, kind: k})
+
+		return true
+	}
+
+	return false
+}
+
+// take puts s, a statement inside the innermost nest, into it, closing nests
+// as their ends come, and checking ENDs. It reports false for the statement
+// that ends the outermost CONTAINS nest, the unit's own END, which the caller
+// places in the unit's body as usual.
+func (n *nesting) take(s ast.Stmt, ls *lex.Statement, messages *diag.List) bool {
+	top := n.open[len(n.open)-1]
+
+	switch {
+	case isHeader(ls.Kind) && ls.Kind != lex.Module:
+		// A procedure inside: after CONTAINS, or an interface body.
+		n.units = append(n.units, unitOf(s, true))
+		top.depth++
+
+	case ls.Kind == lex.End && top.depth > 0:
+		checkEnd(s, n.units[len(n.units)-1], messages)
+		n.units = n.units[:len(n.units)-1]
+		top.depth--
+
+	case ls.Kind == lex.End:
+		// The END of the unit the CONTAINS is in: the nest closes, and the
+		// END belongs to what holds the CONTAINS. (An interface block or a
+		// type definition an END reaches was never closed; its statement's
+		// NOTIMPL will fail the compilation anyway.)
+		n.open = n.open[:len(n.open)-1]
+
+		if !n.active() {
+			return false
+		}
+
+		return n.take(s, ls, messages)
+
+	case ls.Kind == lex.EndInterface && top.kind == lex.Interface && top.depth == 0,
+		ls.Kind == lex.EndType && top.kind == lex.TypeDef && top.depth == 0:
+		top.stmt.Inner = append(top.stmt.Inner, s)
+		n.open = n.open[:len(n.open)-1]
+
+		return true
+	}
+
+	top.stmt.Inner = append(top.stmt.Inner, s)
+	n.opens(s)
+
+	return true
+}
+
+// closeAll closes every nest, at a unit's end or the file's: their ENDs
+// never came, which the unit's NOEND, or the parse of what follows, reports.
+func (n *nesting) closeAll() {
+	n.open, n.units = nil, nil
+}
+
+// kindBeforeLetters reports whether the parenthesis next in an IMPLICIT
+// statement, after a type keyword, is Fortran 90's kind selector rather
+// than the letters: a parenthesis follows the one it closes (IMPLICIT REAL(8)
+// (A-H), IMPLICIT REAL (A-H) being VAX FORTRAN's).
+func (p *parser) kindBeforeLetters() bool {
+	depth := 0
+
+	for i := p.i; i < len(p.tokens); i++ {
+		switch t := &p.tokens[i]; {
+		case t.Is("("):
+			depth++
+		case t.Is(")"):
+			if depth--; depth == 0 {
+				next := p.peekAt(i + 1 - p.i)
+
+				return next != nil && next.Is("(")
+			}
+		}
+	}
+
+	return false
+}

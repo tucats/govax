@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // Dump writes the file one line per statement (see doc.go): before each
@@ -62,6 +64,8 @@ func dumpLines(b *strings.Builder, s Stmt, indent string) {
 		body = s.Body
 	case *MapStmt:
 		body = s.Body
+	case *PendingStmt:
+		body = s.Inner
 	}
 
 	for _, inner := range body {
@@ -77,7 +81,23 @@ func dumpLine(s Stmt, indent string) string {
 		label = strconv.Itoa(n)
 	}
 
-	return strings.TrimRight(fmt.Sprintf("%-5d %-5s %s%s", s.Position().Line, label, indent, DumpStmt(s)), " ")
+	return strings.TrimRight(fmt.Sprintf("%-5d %-5s %s%s", s.Position().Line, label, indent, withConstruct(s)), " ")
+}
+
+// withConstruct is DumpStmt with the statement's construct name: before a
+// construct's first statement (OUTER: DO ...), after any other (END DO
+// OUTER).
+func withConstruct(s Stmt) string {
+	text, name := DumpStmt(s), s.Base().Construct
+
+	switch {
+	case name == "":
+		return text
+	case s.Base().Kind == lex.Do, s.Base().Kind == lex.DoWhile, s.Base().Kind == lex.IfThen, s.Base().Kind == lex.SelectCase:
+		return name + ": " + text
+	}
+
+	return text + " " + name
 }
 
 // DumpStmt is one statement in the dump's form, without its line number
@@ -168,7 +188,14 @@ func DumpStmt(s Stmt) string {
 		return "RETURN " + DumpExpr(s.Alt)
 
 	case *EndStmt:
-		return "END"
+		return strings.TrimRight(strings.Join([]string{"END", s.Unit, s.Name}, " "), " ")
+
+	case *PendingStmt:
+		if s.What != "" {
+			return "not yet: " + s.Kind.String() + ", " + s.What
+		}
+
+		return "not yet: " + s.Kind.String()
 
 	case *BadStmt:
 		return "error: " + s.Kind.String()
@@ -184,6 +211,9 @@ func dumpSpec(s Stmt) (string, bool) {
 	switch s := s.(type) {
 	case *ProgramStmt:
 		return "PROGRAM " + s.Name, true
+
+	case *ModuleStmt:
+		return "MODULE " + s.Name, true
 
 	case *FunctionStmt:
 		text := "FUNCTION " + s.Name + names(s.Params) + result(s.Result)

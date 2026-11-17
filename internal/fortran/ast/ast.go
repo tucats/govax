@@ -29,11 +29,12 @@ const (
 	FunctionUnit
 	SubroutineUnit
 	BlockDataUnit
+	ModuleUnit
 )
 
 // String names the kind, for messages and dumps.
 func (k UnitKind) String() string {
-	return [...]string{"main program", "FUNCTION", "SUBROUTINE", "BLOCK DATA"}[k]
+	return [...]string{"main program", "FUNCTION", "SUBROUTINE", "BLOCK DATA", "MODULE"}[k]
 }
 
 // Unit is one program unit: its header statement and the statements
@@ -46,9 +47,10 @@ type Unit struct {
 	Prologue []Stmt
 
 	// Header is the unit's first statement: a *ProgramStmt, a
-	// *FunctionStmt, a *SubroutineStmt, a *BlockDataStmt, a *BadStmt for
-	// one of those with an error, or nil for a main program without a
-	// PROGRAM statement.
+	// *FunctionStmt, a *SubroutineStmt, a *BlockDataStmt, Fortran 90's
+	// *ModuleStmt, a *BadStmt for one of those with an error, a
+	// *PendingStmt for one in a Fortran 90 form not parsed yet (INTEGER(4)
+	// FUNCTION F), or nil for a main program without a PROGRAM statement.
 	Header Stmt
 
 	// Body is the statements after the header, in order. A unit the
@@ -70,6 +72,8 @@ func (u *Unit) Kind() UnitKind {
 		return SubroutineUnit
 	case lex.BlockData:
 		return BlockDataUnit
+	case lex.Module:
+		return ModuleUnit
 	}
 
 	return MainProgram
@@ -87,6 +91,8 @@ func (u *Unit) Name() string {
 	case *SubroutineStmt:
 		return h.Name
 	case *BlockDataStmt:
+		return h.Name
+	case *ModuleStmt:
 		return h.Name
 	}
 
@@ -147,6 +153,13 @@ type StmtBase struct {
 	// the source's lines it came from (its First and Last lines) and
 	// where its label is (LabelPosition).
 	Source *source.Statement
+
+	// Construct is Fortran 90's construct name on the statement: the name
+	// before a DO, block IF, or SELECT CASE (OUTER: DO), or the one after
+	// END DO, END IF, ELSE, ELSE IF ... THEN, and the rest (END DO OUTER);
+	// "" for none. ConstructPos is where it is. Phase 101 compiles them.
+	Construct    string
+	ConstructPos diag.Position
 }
 
 // Position is where the statement starts.

@@ -207,7 +207,8 @@ func badIfStatement(k lex.Kind) string {
 		return "another logical IF"
 	case lex.Unknown:
 		return "" // the lexer reported it
-	case lex.Do, lex.DoWhile, lex.EndDo, lex.IfThen, lex.ElseIf, lex.Else, lex.EndIf, lex.End:
+	case lex.Do, lex.DoWhile, lex.EndDo, lex.IfThen, lex.ElseIf, lex.Else, lex.EndIf, lex.End,
+		lex.SelectCase, lex.Case, lex.EndSelect, lex.WhereBlock, lex.ElseWhere, lex.EndWhere:
 		return article(k.String()) + " " + k.String() + " statement"
 	}
 
@@ -227,27 +228,32 @@ func parseIfThen(p *parser) ast.Stmt {
 	return s
 }
 
-// parseElseIf parses ELSE IF (e) THEN.
+// parseElseIf parses ELSE IF (e) THEN, and Fortran 90's ELSE IF (e) THEN name.
 func parseElseIf(p *parser) ast.Stmt {
 	s := &ast.ElseIfStmt{StmtBase: p.base(), Cond: p.condition()}
 	p.expect("THEN")
+	p.constructAfter(s)
 	p.end()
 
 	return s
 }
 
-// parseElse parses ELSE.
+// parseElse parses ELSE, and Fortran 90's ELSE name.
 func parseElse(p *parser) ast.Stmt {
+	s := &ast.ElseStmt{StmtBase: p.base()}
+	p.constructAfter(s)
 	p.end()
 
-	return &ast.ElseStmt{StmtBase: p.base()}
+	return s
 }
 
-// parseEndIf parses END IF.
+// parseEndIf parses END IF, and Fortran 90's END IF name.
 func parseEndIf(p *parser) ast.Stmt {
+	s := &ast.EndIfStmt{StmtBase: p.base()}
+	p.constructAfter(s)
 	p.end()
 
-	return &ast.EndIfStmt{StmtBase: p.base()}
+	return s
 }
 
 // parseDo parses DO [s[,]] v = e1, e2 [, e3] (section 5.3.1); VAX
@@ -296,11 +302,13 @@ func parseDoWhile(p *parser) ast.Stmt {
 	return s
 }
 
-// parseEndDo parses END DO (section 5.4).
+// parseEndDo parses END DO (section 5.4), and Fortran 90's END DO name.
 func parseEndDo(p *parser) ast.Stmt {
+	s := &ast.EndDoStmt{StmtBase: p.base()}
+	p.constructAfter(s)
 	p.end()
 
-	return &ast.EndDoStmt{StmtBase: p.base()}
+	return s
 }
 
 // parseContinue parses CONTINUE (section 5.2).
@@ -349,11 +357,4 @@ func parseReturn(p *parser) ast.Stmt {
 	p.end()
 
 	return s
-}
-
-// parseEnd parses END (section 5.5).
-func parseEnd(p *parser) ast.Stmt {
-	p.end()
-
-	return &ast.EndStmt{StmtBase: p.base()}
 }

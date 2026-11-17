@@ -46,6 +46,13 @@ type reader struct {
 	// inUnit is set from a unit's first statement to its END (options.go).
 	inUnit bool
 
+	// nested is set in a unit once a Fortran 90 CONTAINS or INTERFACE
+	// statement has been seen in it: from there, procedures inside it have
+	// ENDs of their own, and depth counts the procedures open, the unit
+	// itself 1 (options.go's followNested).
+	nested bool
+	depth  int
+
 	opener   Opener
 	messages *diag.List
 	program  *Program
