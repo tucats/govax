@@ -132,7 +132,7 @@ func (l *lowerer) returnFromRoutine() {
 	}
 
 	selector := &Load{&Mem{Cell: l.r.Selector, T: Long}}
-	l.terminate(&Switch{l.origin(), selector, targets, targets[0]})
+	l.terminate(&Switch{l.origin(), selector, 1, targets, targets[0]})
 }
 
 // returnBlockFor is the block that returns the value of the name s.

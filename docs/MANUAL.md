@@ -8528,18 +8528,36 @@ outer: do i = 1, n
 end do outer
 ```
 
+`SELECT CASE` chooses a block by an INTEGER, CHARACTER, or LOGICAL value: each `CASE`
+lists values and ranges (`CASE (1, 3:5, 10:)`, `CASE ('A':'Z')`), `CASE DEFAULT` takes
+what no other does, and with no match and no DEFAULT nothing runs. The compiler refuses
+ranges that overlap, and warns (CASENEVER) of one that can never match. An INTEGER
+construct becomes a CASEL table, a binary search, or a chain of comparisons, whichever
+suits its values.
+
+```fortran
+select case (ch)
+case ('a', 'e', 'i', 'o', 'u')
+   vowels = vowels + 1
+case ('b':'d', 'f':'h', 'j':'n', 'p':'t', 'v':'z')
+   consonants = consonants + 1
+case default
+   others = others + 1
+end select
+```
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
+%FORT-E-NOTIMPL, the WHERE statement is not implemented yet
   at line 5 of DUA1:[WORK]BAD.F90;1
-    select case (total)
+    where (total > 0) total = 0
   --^
 ```
 
 That includes array constructors and arrays that are
-PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), SELECT CASE, array
+PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), array
 expressions and sections, WHERE, interface blocks and CONTAINS,
 modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
 90's other new intrinsic functions aren't there yet either; under `/F90` their names are

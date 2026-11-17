@@ -4,8 +4,9 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17) and was accepted by the
 author the same day ("The author's answers"); subtask 2 (construct names,
-DO with no loop control, EXIT, and CYCLE) is done (2026-11-17), and so is
-subtask 3 (SELECT CASE in sema, 2026-11-17). Needs Phase 100 (done).
+DO with no loop control, EXIT, and CYCLE) is done (2026-11-17), and so are
+subtask 3 (SELECT CASE in sema, 2026-11-17) and subtask 4 (SELECT CASE's
+code, 2026-11-17). Needs Phase 100 (done).
 
 ## Goal
 
@@ -280,7 +281,7 @@ codegen, and the optimizer do today.
    INTEGER, LOGICAL's branch, CHARACTER's chain and search with the
    selector's temporary (finding 7); each form held by IR golden dumps and a
    run test, with the boundaries of `caseForm`'s thresholds tested on both
-   sides.
+   sides (done 2026-11-17).
 5. **Programs end to end** (`testdata/fortran90`: a tokenizer by SELECT
    CASE on CHARACTER, nested named loops with EXIT and CYCLE, every form of
    INTEGER selection, the standard's own examples), both optimizer settings
@@ -413,3 +414,47 @@ Every recommendation accepted:
   statement"), until subtask 4. Tests: `TestSelectCase` (68 cases, NOTIMPL
   left out), `TestIntoBlockWording`, `TestSelectCaseForms` (free form's
   forms and syntax errors), and `f90select.for`'s sema golden.
+- **2026-11-17:** Subtask 4, SELECT CASE's code. `ir.Switch` has a `Base`
+  (CASEL's second operand: 1 for the computed GO TO, alternate returns, and
+  ENTRY's returns), which codegen's `caseTable`, `opt/forward.go`'s folding,
+  and the dump (`switch I base -1 [...]`, the base shown when it isn't 1)
+  use. `ir/lowerselect.go` lowers a `sema.Select`: the dispatch in the SELECT
+  CASE statement, then each case's block in the order written, each ending
+  with a jump past END SELECT (a labeled END SELECT's block is that join, as
+  END IF's is). LOGICAL is one branch on the value (`cond`, so a CHARACTER
+  comparison stays in it), to the `.TRUE.` case's block and the `.FALSE.`
+  case's. INTEGER widens the value to a longword temporary, unless it is
+  already a longword variable with no index, and clips every range to the
+  selector's kind: an end at the kind's limit needs no test (so INTEGER(2)'s
+  `-32768:-1` is one comparison), and a range left empty (CASENEVER's) is
+  dropped. `caseForm(tests, span)` is the author's answer 6, `span` counting
+  only ranges with both ends; a table's out-of-range exit goes to a chain of
+  the open ranges, which lie wholly beyond the bounded ones. The binary search
+  (`selection.search`, `half`) sorts the ranges by their low ends and splits
+  on the middle one's, carrying what each comparison proved, so a leaf tests
+  only the ends that knowledge doesn't settle (`condition`, `below`). A chain
+  tests a range with both ends as one branch on an `.AND.`. CHARACTER is a
+  chain, or a search for 8 tests or more, of `CharCmp`s (no table); a
+  selector of constant length with no index is compared where it is (a
+  variable, a substring with constant bounds, a concatenation's static
+  temporary), any other has its address and length put in longword
+  temporaries once, and its comparisons reach it through `Mem.Ptr`. The
+  survey's "class D string freed after the construct" became `numbered`:
+  when the selector is a dynamic string, each match stores its case's number
+  in a temporary and goes to one block, which frees the string
+  (`LIB$SFREE1_DD`) and goes on by a `Switch` on the number; the statement's
+  `after` list is held back until then. A constant selector, of any type, is a
+  jump to its case. An INTEGER selector's `after` (a dynamic string a
+  function's argument used) is done once the value is in its temporary. sema
+  no longer reports SELECT CASE NOTIMPL. Tests: `TestCaseForm` (the
+  thresholds on both sides), `f90select.for`'s IR and codegen goldens (a
+  table with base -1 and an open range outside it, a chain one value too
+  sparse for a table, a chain of three tests, a search of eight tests and a
+  chain of seven, INTEGER\*2 clipped, an expression and a constant selector,
+  LOGICAL with DEFAULT, CHARACTER's chain, search, and run-time place, a jump
+  to END SELECT, and a dynamic string in a subroutine), and the run test,
+  `testdata/fortran90/selects.f90`, worked by hand, run in every mode
+  `TestFortran90Programs` has and printing gfortran's lines
+  (`compare.py`'s `PROGRAMS90`). MANUAL.md's 14.13 and HELP FORTRAN say
+  SELECT CASE is there (their full account is subtask 6's); the manual's
+  NOTIMPL example is now WHERE's.

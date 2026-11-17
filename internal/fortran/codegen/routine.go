@@ -555,8 +555,8 @@ func (g *routineGen) terminator(t ir.Terminator, next *ir.Block) {
 	}
 }
 
-// caseTable writes a computed GO TO: CASEL, which takes its index less
-// the base (1) and, if that is no more than the limit (one less than the
+// caseTable writes a Switch, a computed GO TO or a SELECT CASE's table:
+// CASEL, which takes its index less the base (1 for a computed GO TO) and, if that is no more than the limit (one less than the
 // number of targets), adds the table's word at that position to the
 // table's own address and goes there; otherwise it goes on past the
 // table. Each word is a target's distance from the table, which MACRO
@@ -576,7 +576,7 @@ func (g *routineGen) caseTable(t *ir.Switch, next *ir.Block) {
 		g.note = "the alternate return's number"
 	}
 
-	g.emit("CASEL", ir.None, index.text, "#1", "#"+strconv.Itoa(len(t.Targets)-1))
+	g.emit("CASEL", ir.None, index.text, "#"+strconv.Itoa(int(t.Base)), "#"+strconv.Itoa(len(t.Targets)-1))
 
 	table := g.newLabel()
 	g.label(table, "")

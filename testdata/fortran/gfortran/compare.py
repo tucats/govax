@@ -64,6 +64,7 @@ PROGRAMS90 = {
     "strings": ["strings.f90"],
     "layout": ["layout.f90"],
     "average": ["average.f90"],
+    "selects": ["selects.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

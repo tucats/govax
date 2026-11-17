@@ -144,7 +144,6 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 		"1:1 the MODULE statement",
 		"12:3 the USE statement",
 		"15:3 the TYPE (type-name) statement",
-		"17:5 the SELECT CASE statement",
 		"24:3 the WHERE statement",
 		"25:3 the block WHERE statement",
 		"30:3 the pointer assignment statement",

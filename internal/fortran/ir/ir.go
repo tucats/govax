@@ -774,12 +774,15 @@ type (
 		True, False *Block
 	}
 
-	// Switch goes to Targets[Index-1] when Index, a Long, is from 1 to
-	// the number of targets, and to Else otherwise: the computed GO TO
-	// (section 5.6.2 of the language manual), which is CASEL.
+	// Switch goes to Targets[Index-Base] when Index, a Long, is from Base
+	// to Base plus one less than the number of targets, and to Else
+	// otherwise, which is CASEL: the computed GO TO (section 5.6.2 of the
+	// language manual) with Base 1, and Fortran 90's SELECT CASE with the
+	// lowest value its table holds (lowerselect.go).
 	Switch struct {
 		origin
 		Index   Expr
+		Base    int32
 		Targets []*Block
 		Else    *Block
 	}

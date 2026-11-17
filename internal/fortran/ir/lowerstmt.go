@@ -90,6 +90,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.DoWhile:
 		l.doWhile(s)
 
+	case *sema.Select:
+		l.selectCase(s)
+
 	case *sema.Continue:
 		// Nothing to do: CONTINUE is there for its label.
 
@@ -154,7 +157,7 @@ func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
 	}
 
 	next := l.newBlock()
-	l.terminate(&Switch{l.origin(), index, l.labelBlocks(s.Labels), next})
+	l.terminate(&Switch{l.origin(), index, 1, l.labelBlocks(s.Labels), next})
 	l.begin(next)
 }
 
@@ -188,7 +191,7 @@ func (l *lowerer) call(s *sema.Call) {
 	l.emit(call)
 
 	next := l.newBlock()
-	l.terminate(&Switch{l.origin(), index, l.labelBlocks(s.AltReturns), next})
+	l.terminate(&Switch{l.origin(), index, 1, l.labelBlocks(s.AltReturns), next})
 	l.begin(next)
 }
 

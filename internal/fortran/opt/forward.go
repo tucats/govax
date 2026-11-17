@@ -533,8 +533,8 @@ func (f *forwarder) terminator(b *ir.Block) bool {
 
 		if c, ok := t.Index.(*ir.Const); ok {
 			to = t.Else
-			if n := int(c.Int()); n >= 1 && n <= len(t.Targets) {
-				to = t.Targets[n-1]
+			if n := int64(c.Int()) - int64(t.Base); n >= 0 && n < int64(len(t.Targets)) {
+				to = t.Targets[n]
 			}
 		}
 

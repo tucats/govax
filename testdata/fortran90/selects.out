@@ -1,0 +1,10 @@
+table:  00100020000000000200033
+search: 335515511155455255255222
+short:  330011
+logic:  TF
+words:  11010200
+letters:  3  7  2  3
+pick:    1 2 2 0
+mode two or more
+sum: 12, i =  6
+  $STATUS == "%X00000001"

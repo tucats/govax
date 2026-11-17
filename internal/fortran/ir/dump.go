@@ -333,7 +333,12 @@ func TerminatorText(t Terminator) string {
 
 		return "return " + ExprText(t.Value)
 	case *Switch:
-		return "switch " + ExprText(t.Index) + " [" + blockNames(t.Targets) + "] " + t.Else.Name
+		base := ""
+		if t.Base != 1 {
+			base = " base " + strconv.Itoa(int(t.Base))
+		}
+
+		return "switch " + ExprText(t.Index) + base + " [" + blockNames(t.Targets) + "] " + t.Else.Name
 	case *Sign:
 		return "sign " + ExprText(t.Value) + " " + t.Neg.Name + " " + t.Zero.Name + " " + t.Pos.Name
 	case *IndirectJump:

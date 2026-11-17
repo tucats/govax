@@ -39,32 +39,7 @@
 42          PRINT * N
 43          END
 
-%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
-  at line 11 of F90SELECT.FOR
-        PICK: SELECT CASE (I)
-  ------------^
-
-%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
-  at line 20 of F90SELECT.FOR
-        SELECT CASE (K)
-  ------^
-
 %FORT-W-CASENEVER, this case value can never match, since the SELECT CASE expression is INTEGER*2, which can't hold it
   at line 22 of F90SELECT.FOR
         CASE (100000)
   ------------^
-
-%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
-  at line 25 of F90SELECT.FOR
-        SELECT CASE (WORD(1:1))
-  ------^
-
-%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
-  at line 29 of F90SELECT.FOR
-          SELECT CASE (L)
-  --------^
-
-%FORT-E-NOTIMPL, the SELECT CASE statement is not implemented yet
-  at line 37 of F90SELECT.FOR
-        SELECT CASE (N)
-  ------^

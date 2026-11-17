@@ -39,8 +39,7 @@ import (
 // what the expression's INTEGER kind holds) overlaps nothing, and is
 // CASENEVER, a warning.
 //
-// The construct's code is subtask 4's: until then a SELECT CASE is analyzed
-// and checked, and reported NOTIMPL.
+// The construct's code is the IR's (ir/lowerselect.go).
 
 // caseSpan is a case value range as the overlap check compares it, with the
 // line of its CASE statement: for an INTEGER expression the interval
@@ -85,9 +84,6 @@ func (a *analyzer) selectCase(s *ast.SelectCaseStmt) {
 
 	a.add(sel)
 	a.push(&construct{sel: sel, selStart: s})
-
-	// The construct's code is subtask 4's.
-	a.notImplForm(s.Position(), statementWhat(s))
 }
 
 // matchSelect finds the CASE construct a CASE or END SELECT statement
