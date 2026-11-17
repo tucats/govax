@@ -154,7 +154,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 			return nil, ev.intRange(e.Pos, ast.DumpExpr(e), IntegerType)
 		}
 
-		return &Const{exprBase: exprBase{ev.a.constantType(v), e.Pos}, Int: int32(v)}, nil
+		return &Const{exprBase: exprBase{T: ev.a.constantType(v), Pos: e.Pos}, Int: int32(v)}, nil
 
 	case *ast.RealConst:
 		return ev.real(e)
@@ -188,7 +188,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 		// statement's list is walked, DATA (A(I), I = 1, 3) /.../: there
 		// I is a constant for each turn of the loop.
 		if v, ok := ev.vars[e.Name]; ok {
-			return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: v}, nil
+			return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: v}, nil
 		}
 
 		s := ev.a.scope.find(e.Name)
@@ -228,7 +228,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 
 // charConst is a CHARACTER constant.
 func charConst(text string, pos diag.Position) *Const {
-	return &Const{exprBase: exprBase{Type{Character, len(text)}, pos}, Text: text}
+	return &Const{exprBase: exprBase{T: Type{Character, len(text)}, Pos: pos}, Text: text}
 }
 
 // real is the constant a real literal writes (section 2.2.1.2): REAL*4,
@@ -261,7 +261,7 @@ func (ev *evaluator) realAs(e *ast.RealConst, t Type, text string) (*Const, *con
 		return nil, ev.realRange(e.Pos, e.Text, t)
 	}
 
-	return &Const{exprBase: exprBase{t, e.Pos}, Real: v, literal: true, exactRe: exact}, nil
+	return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Real: v, literal: true, exactRe: exact}, nil
 }
 
 // complex is a complex constant, (re, im) (section 2.2.1.3): each part
@@ -332,7 +332,7 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 		return nil, err
 	}
 
-	c := &Const{exprBase: exprBase{t, e.Pos}, Real: re.Real, Imag: im.Real, literal: true,
+	c := &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Real: re.Real, Imag: im.Real, literal: true,
 		exactRe: re.Real, exactIm: im.Real}
 
 	if re.literal {
@@ -368,7 +368,7 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 	// -2147483648 is INTEGER's smallest value, though 2147483648 alone is
 	// out of range: the sign and the digits are taken together.
 	if c, ok := e.X.(*ast.IntConst); ok && e.Op == ast.Sub && c.Text == "2147483648" && c.Radix == 0 {
-		return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: minInt}, nil
+		return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: minInt}, nil
 	}
 
 	x, err := ev.eval(e.X)
@@ -383,7 +383,7 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 	if e.Op == ast.Not {
 		switch x.T.Kind {
 		case Logical, Integer:
-			c := &Const{exprBase: exprBase{x.T, e.Pos}, Int: ^x.Int}
+			c := &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}, Int: ^x.Int}
 
 			return c, nil
 		}
@@ -400,7 +400,7 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 
 // negate is -x, x being an INTEGER, REAL, or COMPLEX constant.
 func (ev *evaluator) negate(x *Const, pos diag.Position) (*Const, *constErr) {
-	c := &Const{exprBase: exprBase{x.T, pos}}
+	c := &Const{exprBase: exprBase{T: x.T, Pos: pos}}
 
 	switch x.T.Kind {
 	case Integer:
@@ -524,7 +524,7 @@ func (ev *evaluator) concat(e *ast.Binary) (*Const, *constErr) {
 // type.
 func (ev *evaluator) operate(op ast.Op, x, y *Const, pos diag.Position) (*Const, *constErr) {
 	t := x.T
-	c := &Const{exprBase: exprBase{t, pos}}
+	c := &Const{exprBase: exprBase{T: t, Pos: pos}}
 
 	switch t.Kind {
 	case Integer:
@@ -697,7 +697,7 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	if x.T.Kind == Integer {
 		t := higher(x.T, y.T)
 		b := int64(x.Int)
-		c := &Const{exprBase: exprBase{t, e.Pos}}
+		c := &Const{exprBase: exprBase{T: t, Pos: e.Pos}}
 
 		var v int64
 
@@ -739,7 +739,7 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 
 	arith := func(op ast.Op) func(p, q *Const) (*Const, error) {
 		return func(p, q *Const) (*Const, error) {
-			r := &Const{exprBase: exprBase{t, e.Pos}}
+			r := &Const{exprBase: exprBase{T: t, Pos: e.Pos}}
 
 			var err error
 
@@ -753,7 +753,7 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 		}
 	}
 
-	one := &Const{exprBase: exprBase{t, e.Pos}, Real: vaxfloat.FromInt(1)}
+	one := &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Real: vaxfloat.FromInt(1)}
 
 	result, perr := vaxfloat.PowerBySquaring(x, one, n, arith(ast.Mul), arith(ast.Div))
 	if perr != nil {
@@ -876,7 +876,7 @@ func (ev *evaluator) logical(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 // bitwiseConst is x op y for the logical operators, bit by bit, x and y
 // being of one type.
 func bitwiseConst(op ast.Op, x, y *Const, pos diag.Position) *Const {
-	c := &Const{exprBase: exprBase{x.T, pos}}
+	c := &Const{exprBase: exprBase{T: x.T, Pos: pos}}
 
 	switch op {
 	case ast.And:
@@ -905,7 +905,7 @@ func (ev *evaluator) convert(c *Const, t Type, pos diag.Position) (*Const, *cons
 		return c, nil
 	}
 
-	r := &Const{exprBase: exprBase{t, pos}}
+	r := &Const{exprBase: exprBase{T: t, Pos: pos}}
 
 	switch t.Kind {
 	case Integer:

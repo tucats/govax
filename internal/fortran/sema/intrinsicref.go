@@ -71,7 +71,14 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 	args := make([]Expr, len(slots.args))
 	for i, x := range slots.args {
-		if args[i] = a.value(x); args[i].Type().Kind == Invalid {
+		if args[i] = a.arrayValue(x); args[i].Type().Kind == Invalid {
+			return a.bad(e.Pos)
+		}
+
+		if rankOf(args[i]) > 0 {
+			// The elemental intrinsics on arrays are subtask 8's.
+			a.notImplForm(x.Position(), "an array argument to the intrinsic function "+e.Name)
+
 			return a.bad(e.Pos)
 		}
 
@@ -453,11 +460,11 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 	}
 
 	ref := func(t Type, op IntrinsicOp) Expr {
-		return &IntrinsicRef{exprBase{t, e.Pos}, name, op, args, ""}
+		return &IntrinsicRef{exprBase{T: t, Pos: e.Pos}, name, op, args, ""}
 	}
 
 	call := func(routine string) Expr {
-		return &IntrinsicRef{exprBase{f.result, e.Pos}, name, CallOp, args, routine}
+		return &IntrinsicRef{exprBase{T: f.result, Pos: e.Pos}, name, CallOp, args, routine}
 	}
 
 	switch f.how {
@@ -486,13 +493,13 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 	case "DPROD":
 		t := f.result
 
-		return a.fold(&Binary{exprBase{t, e.Pos}, ast.Mul, a.convert(args[0], t), a.convert(args[1], t)})
+		return a.fold(&Binary{exprBase{T: t, Pos: e.Pos}, ast.Mul, a.convert(args[0], t), a.convert(args[1], t)})
 
 	case "AND", "OR", "XOR":
-		return a.fold(&Binary{exprBase{f.result, e.Pos}, bitOps[f.how], args[0], args[1]})
+		return a.fold(&Binary{exprBase{T: f.result, Pos: e.Pos}, bitOps[f.how], args[0], args[1]})
 
 	case "NOT":
-		return a.fold(&Unary{exprBase{f.result, e.Pos}, ast.Not, args[0]})
+		return a.fold(&Unary{exprBase{T: f.result, Pos: e.Pos}, ast.Not, args[0]})
 
 	case "SHIFT":
 		// A count that isn't constant may shift either way: MTH$JISHFT or
@@ -503,7 +510,7 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 
 	case "LEN":
 		if n := args[0].Type().Size; n > 0 {
-			return &Const{exprBase: exprBase{f.result, e.Pos}, Int: int32(n)}
+			return &Const{exprBase: exprBase{T: f.result, Pos: e.Pos}, Int: int32(n)}
 		}
 
 	case "INDEX":
@@ -511,7 +518,7 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 		y, oky := args[1].(*Const)
 
 		if okx && oky {
-			return &Const{exprBase: exprBase{f.result, e.Pos}, Int: int32(strings.Index(x.Text, y.Text) + 1)}
+			return &Const{exprBase: exprBase{T: f.result, Pos: e.Pos}, Int: int32(strings.Index(x.Text, y.Text) + 1)}
 		}
 
 	case "LLT", "LLE", "LGT", "LGE":
@@ -522,10 +529,10 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 			return logicalConst(relation(lexicalOps[f.how], compareText(x.Text, y.Text)), e.Pos)
 		}
 
-		return &Compare{exprBase{f.result, e.Pos}, lexicalOps[f.how], args[0], args[1]}
+		return &Compare{exprBase{T: f.result, Pos: e.Pos}, lexicalOps[f.how], args[0], args[1]}
 
 	case "ONE":
-		return &Const{exprBase: exprBase{f.result, e.Pos}, Int: 1}
+		return &Const{exprBase: exprBase{T: f.result, Pos: e.Pos}, Int: 1}
 	}
 
 	return ref(f.result, operations[f.how])
@@ -566,7 +573,7 @@ func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 			size = 0
 		case r.Sym.Adjustable() && r.Sym.Type.Size != 0:
 			// Known only when the program runs, once the bounds are.
-			return &IntrinsicRef{exprBase: exprBase{IntegerType, e.Pos}, Op: ArraySizeOp, Args: []Expr{x}}
+			return &IntrinsicRef{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Op: ArraySizeOp, Args: []Expr{x}}
 		case r.Sym.Adjustable():
 			size = 0
 		default:
@@ -580,7 +587,7 @@ func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: int32(size)}
+	return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: int32(size)}
 }
 
 // describeSize is what SIZEOF's argument is, when it has no size: an

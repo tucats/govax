@@ -740,6 +740,18 @@ var messages = map[string]kind{
 	// may be (section 2.2.3.5).
 	"NEEDSUBSCRIPT": {Error, "the array %s can't be used without subscripts here"},
 
+	// Fortran 90's array expressions (docs/planning/PHASE-102 - Fortran 90
+	// array expressions.md). NOTSCALAR is an array-valued expression where
+	// a scalar must be; NOTCONFORM two arrays of different shapes in one
+	// operation or assignment (the standard's 7.1.5); ZEROSTRIDE a
+	// triplet's stride of zero; SECTIONEND a section of an assumed-size
+	// array whose last dimension has no upper bound (6.2.2.3).
+	"NOTSCALAR":  {Error, "an array is used where a scalar is required"},
+	"NOTCONFORM": {Error, "the shapes %s and %s don't conform"},
+	"ZEROSTRIDE": {Error, "a subscript triplet's stride can't be zero"},
+	"NOSHAPE":    {Error, "the assumed-size array %s has no shape, so it can't be used as a whole here"},
+	"SECTIONEND": {Error, "a section of the assumed-size array %s needs an upper bound in its last dimension"},
+
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.
 	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},
 

@@ -119,12 +119,12 @@ func (a *analyzer) intAnswer(v int64, pos diag.Position) *Const {
 
 // intConst is the constant v of the INTEGER type t.
 func intConst(t Type, v int64, pos diag.Position) *Const {
-	return &Const{exprBase: exprBase{t, pos}, Int: int32(v)}
+	return &Const{exprBase: exprBase{T: t, Pos: pos}, Int: int32(v)}
 }
 
 // realConst is the constant v of the REAL type t.
 func realConst(t Type, v vaxfloat.Value, pos diag.Position) *Const {
-	return &Const{exprBase: exprBase{t, pos}, Real: v}
+	return &Const{exprBase: exprBase{T: t, Pos: pos}, Real: v}
 }
 
 // isInquiry reports whether the table's row for name is answered when

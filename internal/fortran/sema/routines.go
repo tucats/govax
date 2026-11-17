@@ -108,7 +108,7 @@ func (a *analyzer) procedure(n *ast.Name) Expr {
 
 	f := a.passedForm(n.Name)
 
-	return &Procedure{exprBase: exprBase{f.result, n.Pos}, Name: n.Name, Routine: a.routineOf(f)}
+	return &Procedure{exprBase: exprBase{T: f.result, Pos: n.Pos}, Name: n.Name, Routine: a.routineOf(f)}
 }
 
 // passedForm is the row of Table D-3 the name passed as an argument stands

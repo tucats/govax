@@ -36,7 +36,7 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		return Arg{Expr: a.nameArg(x)}
 
 	case *ast.Paren:
-		v := a.value(x)
+		v := a.arrayArg(a.arrayValue(x))
 
 		switch v.(type) {
 		case *Var, *Elem, *Substring, *StmtFuncRef, *FieldRef:
@@ -49,7 +49,7 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		return Arg{Expr: a.field(x, true)}
 
 	case *ast.HollerithConst:
-		c := &Const{exprBase: exprBase{Type{Character, len(x.Value)}, x.Pos}, Text: x.Value}
+		c := &Const{exprBase: exprBase{T: Type{Character, len(x.Value)}, Pos: x.Pos}, Text: x.Value}
 
 		return Arg{Expr: c, Mode: ByRef, Hollerith: true}
 
@@ -74,8 +74,10 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 	if ap, ok := e.(*ast.Apply); ok {
 		v = a.apply(ap)
 	} else {
-		v = a.value(e)
+		v = a.arrayValue(e)
 	}
+
+	v = a.arrayArg(v)
 
 	// A statement function may be only its dummy argument's name, the actual
 	// variable itself; what is passed is its value.
@@ -101,12 +103,12 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 		return a.procedure(n)
 
 	case s.DummyProcedure():
-		return &Procedure{exprBase: exprBase{s.Type, n.Pos}, Name: s.Name, Dummy: s}
+		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Dummy: s}
 
 	case s.External:
 		s.passed = true
 
-		return &Procedure{exprBase: exprBase{s.Type, n.Pos}, Name: s.Name, Routine: s.Name}
+		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Routine: s.Name}
 	}
 
 	return a.name(n, true)
@@ -217,7 +219,7 @@ func (a *analyzer) builtinValue(b *ast.BuiltinArg) Expr {
 	switch x.Expr.(type) {
 	case *Var, *Elem, *ArrayRef, *Substring, *Procedure, *FieldRef:
 		if !x.Copy {
-			return &Loc{exprBase{IntegerType, b.Pos}, x.Expr}
+			return &Loc{exprBase{T: IntegerType, Pos: b.Pos}, x.Expr}
 		}
 	case *bad:
 		return x.Expr
@@ -255,4 +257,19 @@ func constantArguments(r routineRef, fu *fileUnit, messages *diag.List) {
 			arg.Mode = ByRef
 		}
 	}
+}
+
+// arrayArg is v as an actual argument: a scalar, or a whole array (a Name,
+// which arg passes as itself). An array section or any other array-valued
+// expression goes to a procedure only through a copy or a descriptor of its
+// own, Phase 104's (docs/planning/PHASE-102 - Fortran 90 array
+// expressions.md, finding 4).
+func (a *analyzer) arrayArg(v Expr) Expr {
+	if rankOf(v) == 0 {
+		return v
+	}
+
+	a.notImplForm(v.Position(), "an array section or array expression as an actual argument")
+
+	return a.bad(v.Position())
 }

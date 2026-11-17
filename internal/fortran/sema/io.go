@@ -288,9 +288,9 @@ func (a *analyzer) checkNamelists() {
 			case s.Type == complex32:
 				a.notImplForm(n.Pos, complex32IO)
 			case s.Class == Array:
-				n.Refs = append(n.Refs, &ArrayRef{exprBase{s.Type, n.Pos}, s})
+				n.Refs = append(n.Refs, &ArrayRef{exprBase{T: s.Type, Pos: n.Pos}, s})
 			default:
-				n.Refs = append(n.Refs, &Var{exprBase{s.Type, n.Pos}, s})
+				n.Refs = append(n.Refs, &Var{exprBase{T: s.Type, Pos: n.Pos}, s})
 			}
 		}
 	}
@@ -772,16 +772,34 @@ func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 			return nil
 		}
 
-		return a.target(e)
+		return a.sectionPlace(a.target(e), whole)
 
 	case *ast.Substring:
-		return a.target(e)
+		return a.sectionPlace(a.target(e), whole)
 
 	case *ast.FieldRef:
 		return a.field(e, whole)
 	}
 
 	return nil
+}
+
+// sectionPlace is t, a place, unless it is an array section (or a section's
+// substring): not a place where a scalar must be (nil), and in an I/O list or
+// as an internal file not compiled yet (docs/planning/PHASE-102 - Fortran 90
+// array expressions.md, subtask 11).
+func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
+	if t == nil || rankOf(t) == 0 {
+		return t
+	}
+
+	if !whole {
+		return nil
+	}
+
+	a.notImplForm(t.Position(), "an array section in an I/O statement")
+
+	return a.bad(t.Position())
 }
 
 // namelistNamed is the NAMELIST group a format given by position names
@@ -1030,11 +1048,22 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 		return a.field(f, true)
 	}
 
+	var v Expr
 	if ap, ok := e.(*ast.Apply); ok {
-		return a.apply(ap)
+		v = a.apply(ap)
+	} else {
+		v = a.arrayValue(e)
 	}
 
-	return a.value(e)
+	if rankOf(v) > 0 {
+		// A whole array is an item as it always was (its Name, above); a
+		// section or an array-valued expression is subtask 11's.
+		a.notImplForm(v.Position(), "an array section or array expression in an I/O list")
+
+		return a.bad(v.Position())
+	}
+
+	return v
 }
 
 // inputItem analyzes an input list's item, a place: a variable, an array
@@ -1102,7 +1131,7 @@ func (a *analyzer) impliedDo(d *ast.ImpliedDo, read bool) (*ImpliedDo, bool) {
 			a.report("DOSTEP0", d.Step.Position())
 		}
 	} else {
-		loop.Step = a.convert(&Const{exprBase: exprBase{IntegerType, d.Pos}, Int: 1}, t)
+		loop.Step = a.convert(&Const{exprBase: exprBase{T: IntegerType, Pos: d.Pos}, Int: 1}, t)
 	}
 
 	items, ok := a.ioList(d.Items, read)

@@ -132,12 +132,42 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
+	if !a.assignedShape(s.Pos, target, value) {
+		return nil
+	}
+
 	value = a.assignedValue(s.Pos, target, value)
 	if value == nil {
 		return nil
 	}
 
+	if rankOf(target) > 0 {
+		// The scalarizer is subtask 4's.
+		a.notImplForm(s.Pos, "an array assignment")
+
+		return nil
+	}
+
 	return &Assign{stmtBase{s}, target, value}
+}
+
+// assignedShape checks an assignment's shapes (Fortran 90's 7.5.1.5): a
+// scalar target takes only a scalar (NOTSCALAR), and an array target a scalar,
+// which is assigned to every element, or an array of its shape (NOTCONFORM).
+func (a *analyzer) assignedShape(pos diag.Position, target, value Expr) bool {
+	switch {
+	case rankOf(value) == 0:
+		return true
+
+	case rankOf(target) == 0:
+		a.report("NOTSCALAR", value.Position())
+
+		return false
+	}
+
+	_, ok := a.conforms(pos, target, value)
+
+	return ok
 }
 
 // assignedValue is value as it is assigned to target, or nil after an error. A
@@ -224,7 +254,7 @@ func (a *analyzer) assigned(value Expr, t Type) Expr {
 		return a.bad(c.Pos)
 	}
 
-	return &Const{exprBase: exprBase{t, c.Pos}, Int: truncate(c.Int, t.Size)}
+	return &Const{exprBase: exprBase{T: t, Pos: c.Pos}, Int: truncate(c.Int, t.Size)}
 }
 
 // target analyzes an assignment's target: a variable, an array element,
@@ -251,9 +281,8 @@ func (a *analyzer) target(e ast.Expr) Expr {
 		t = a.name(e, true)
 
 		if r, ok := t.(*ArrayRef); ok {
-			a.report("BADTARGET", e.Pos, "the array "+r.Sym.Name+" as a whole")
-
-			return nil
+			// Fortran 90's array assignment (7.5.1.5): the whole array.
+			t = a.wholeArray(r.Sym, e)
 		}
 
 	case *ast.Substring:
@@ -291,7 +320,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 		return t
 
-	case *Elem, *Substring, *FieldRef:
+	case *Elem, *Substring, *FieldRef, *ArrayRef, *Section:
 		return t
 	}
 

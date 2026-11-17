@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtask 2 is done (2026-11-17), and subtask 3 is next.
+author's answers"); subtasks 2 and 3 are done (2026-11-17), and subtask 4 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -399,7 +399,8 @@ and FTNRTL do today.
    2026-11-17).
 3. **Shapes in sema:** `Shape` on expressions (question 1), sections, whole
    arrays in expressions, conformance when compiling, the two kinds of
-   context (finding 4), assignment's checks; the code still NOTIMPL.
+   context (finding 4), assignment's checks; the code still NOTIMPL (done
+   2026-11-17).
 4. **The scalarizer:** normalized loop nests, element maps for whole arrays,
    sections, elemental operations, and broadcast; fused assignment;
    `countedLoop` over a cell; `/CHECK=BOUNDS`'s checks (finding 15); IR
@@ -506,3 +507,43 @@ shapes in Phase 104.
   as the substring was printed, so none changed; `TestNoF90Unchanged`'s
   digests didn't either. `parse`'s `TestArrayForms` and `TestErrors`'s new
   cases hold the forms.
+- **2026-11-17, subtask 3:** Shapes in sema. `exprBase` has a third field,
+  `S Shape` (the `Expr` interface's `Shape()`); its literals were made keyed
+  first (`gofmt -r`, nothing else changed). `shape.go`: a `Shape` is an
+  `Extent` per dimension, `Known` with its `Size`, or else `Of` an
+  `*ArrayRef` or `*Section` and its `Dim`, for lowering to compute when the
+  statement starts; `conform` (NOTCONFORM naming both shapes, `(10, :)`, only
+  where two extents are known and differ, or the ranks do; a known extent wins
+  over an unknown one), `arrayShape`, `wholeArray` (NOSHAPE for an
+  assumed-size array, NOTIMPL for an array of records, Phase 105's), and
+  `scalarValue` (NOTSCALAR). `sections.go`'s `section` makes a `Section` of
+  `SectionSub`s (a subscript, or a triplet's INTEGER bounds and stride, a
+  bound left out the dimension's constant, or nil for an adjustable
+  dimension's, read from its bounds when the program runs; a stride of 1
+  when left out): ZEROSTRIDE, SECTIONEND (an assumed-size array's last
+  dimension needs an upper bound), and a constant triplet's first and last
+  subscripts checked as an element's are (`checks.go`'s new
+  `checkSubscript`, which `checkConstantSubscripts` now calls); `element`
+  hands it any list with a triplet. `value` is now the scalar context
+  (`scalarValue` of `arrayValue`; a bare array name still NEEDSUBSCRIPT), and
+  `arrayValue` the old body plus whole arrays and sections; the operations'
+  operands (`unary`, `operands`, `concat`) use it, each node taking
+  `conforms`'s shape, `convert` its operand's, a `Substring` its `X`'s (a
+  section's substring, `C(:)(2:3)`, allowed). Every other context says what
+  it does with an array: a subscript (`subscriptValue`; a vector subscript is
+  NOTIMPL until subtask 6), an actual argument (`arrayArg`: a whole array's
+  name as before, anything else NOTIMPL naming Phase 104's work), an
+  intrinsic's argument (NOTIMPL until subtask 8), an output item and an
+  input item (`sectionPlace`; NOTIMPL until subtask 11; a whole array as
+  before), a statement function's value (NOTSCALAR). An assignment's target
+  may be a whole array or a section (`target`), its value an array
+  (`assignedExpr`), checked by `assignedShape` (NOTSCALAR for a scalar
+  target, `conform` otherwise), and an array assignment is then NOTIMPL until
+  subtask 4. The sema dump shows a section as `A[1:N:2, J]`, a bound from an
+  adjustable array's own bounds as `*`. Changed messages, all in error
+  cases: `X = A` and `X = A + 1` of an array are NOTSCALAR (were
+  NEEDSUBSCRIPT; `errors.sema` updated), `A = 1` NOTIMPL until subtask 4 (was
+  BADTARGET), an array of records assigned to NOTIMPL (was BADTARGET), and
+  an array as a subscript a vector subscript. `TestNoF90Unchanged`'s digests
+  didn't change. `TestShapes` (`shape_test.go`) holds the shapes, the
+  messages' texts, and each context.

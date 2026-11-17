@@ -504,6 +504,29 @@ func DumpExpr(e Expr) string {
 		return text
 	case *ArrayRef:
 		return e.Sym.Name + "[]"
+	case *Section:
+		// A[1:N:2, J], a bound taken from an adjustable array's own bounds
+		// shown as *.
+		subs := make([]string, len(e.Subs))
+		for i, s := range e.Subs {
+			if !s.Triplet() {
+				subs[i] = DumpExpr(s.Index)
+
+				continue
+			}
+
+			bound := func(x Expr) string {
+				if x == nil {
+					return "*"
+				}
+
+				return DumpExpr(x)
+			}
+
+			subs[i] = bound(s.Lower) + ":" + bound(s.Upper) + ":" + DumpExpr(s.Stride)
+		}
+
+		return e.Sym.Name + "[" + strings.Join(subs, ", ") + "]"
 	case *Substring:
 		return DumpExpr(e.X) + "(" + DumpExpr(e.Lower) + ":" + DumpExpr(e.Upper) + ")"
 	case *Concat:

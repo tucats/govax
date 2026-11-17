@@ -577,7 +577,7 @@ func (a *analyzer) doStatement(s *ast.DoStmt) {
 			a.report("DOSTEP0", s.Step.Position())
 		}
 	} else {
-		d.Step = a.convert(&Const{exprBase: exprBase{IntegerType, s.Pos}, Int: 1}, t)
+		d.Step = a.convert(&Const{exprBase: exprBase{T: IntegerType, Pos: s.Pos}, Int: 1}, t)
 	}
 
 	a.add(d)

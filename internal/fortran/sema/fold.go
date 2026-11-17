@@ -64,7 +64,7 @@ func intValue(e *ast.IntConst) (int64, error) {
 
 // logicalConst is .TRUE. (-1) or .FALSE. (0).
 func logicalConst(value bool, pos diag.Position) *Const {
-	c := &Const{exprBase: exprBase{LogicalType, pos}}
+	c := &Const{exprBase: exprBase{T: LogicalType, Pos: pos}}
 	if value {
 		c.Int = -1
 	}
@@ -98,7 +98,7 @@ func (a *analyzer) fold(e Expr) Expr {
 		}
 
 		if e.Op == ast.Not {
-			c = &Const{exprBase: exprBase{e.T, e.Pos}, Int: ^x.Int}
+			c = &Const{exprBase: exprBase{T: e.T, Pos: e.Pos}, Int: ^x.Int}
 		} else {
 			c, err = ev.negate(x, e.Pos)
 		}

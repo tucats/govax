@@ -657,21 +657,29 @@ type CaseRange struct {
 // Single reports whether r is a single value, not a range.
 func (r CaseRange) Single() bool { return r.Low != nil && r.Low == r.High }
 
-// Expr is an expression with its type.
+// Expr is an expression with its type and shape.
 type Expr interface {
 	Type() Type
+	Shape() Shape
 	Position() diag.Position
 	exprNode()
 }
 
-// exprBase is what every expression has: its type and position.
+// exprBase is what every expression has: its type, its position, and its
+// shape. An array-valued expression's type is its elements' (Fortran 90's
+// shape is the expression's, not the type's: docs/planning/PHASE-102 -
+// Fortran 90 array expressions.md, finding 3), and S is nil for a scalar.
 type exprBase struct {
 	T   Type
 	Pos diag.Position
+	S   Shape
 }
 
-// Type is the expression's type.
+// Type is the expression's type: an array's elements'.
 func (b *exprBase) Type() Type { return b.T }
+
+// Shape is the expression's shape, nil for a scalar (shape.go).
+func (b *exprBase) Shape() Shape { return b.S }
 
 // Position is where the expression is in the source.
 func (b *exprBase) Position() diag.Position { return b.Pos }
@@ -724,11 +732,23 @@ type (
 		Subs []Expr
 	}
 
-	// ArrayRef is a whole array, which may be only an actual argument or
-	// an I/O list item (section 2.2.3.5). Its type is its elements'.
+	// ArrayRef is a whole array: an actual argument or an I/O list item
+	// (section 2.2.3.5), or since Fortran 90 an array-valued operand or
+	// assignment target. Its type is its elements', and its shape its
+	// dimensions' extents.
 	ArrayRef struct {
 		exprBase
 		Sym *Symbol
+	}
+
+	// Section is Fortran 90's array section, Sym(Subs) with a subscript
+	// triplet in at least one dimension (the standard's 6.2.2): a
+	// subscript per dimension of Sym. Its rank is the number of triplets,
+	// and its extent in each is its triplet's number of values (shape.go).
+	Section struct {
+		exprBase
+		Sym  *Symbol
+		Subs []SectionSub
 	}
 
 	// FuncRef is a reference to an external function.

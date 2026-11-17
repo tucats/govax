@@ -340,7 +340,7 @@ func (a *analyzer) subscripts(pos diag.Position, args []ast.Expr) ([]Expr, bool)
 	ok := true
 
 	for i, arg := range args {
-		subs[i] = a.convert(a.arithmetic(a.value(arg)), IntegerType)
+		subs[i] = a.convert(a.arithmetic(a.subscriptValue(arg)), IntegerType)
 		ok = ok && subs[i].Type().Kind != Invalid
 	}
 

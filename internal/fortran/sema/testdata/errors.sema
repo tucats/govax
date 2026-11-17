@@ -42,7 +42,7 @@
         INTEGER J
   ------^
 
-%FORT-E-NEEDSUBSCRIPT, the array A can't be used without subscripts here
+%FORT-E-NOTSCALAR, an array is used where a scalar is required
   at line 17 of ERRORS.FOR
         X = A
   ----------^

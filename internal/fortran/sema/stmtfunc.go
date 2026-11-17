@@ -51,7 +51,7 @@ func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 	}
 
 	a.defining = sym
-	value := a.assignedExpr(s.Value, sym.Type)
+	value := a.scalarValue(a.assignedExpr(s.Value, sym.Type))
 	a.defining = nil
 	a.scope = unitScope
 
@@ -60,7 +60,7 @@ func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 
 		ok = false
 	} else if value.Type().Kind != Invalid {
-		value = a.assignedValue(s.Pos, &Var{exprBase{sym.Type, s.Pos}, sym}, value)
+		value = a.assignedValue(s.Pos, &Var{exprBase{T: sym.Type, Pos: s.Pos}, sym}, value)
 	}
 
 	if value != nil {
@@ -159,7 +159,7 @@ func (a *analyzer) stmtFuncRef(s *Symbol, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return &StmtFuncRef{exprBase{s.Type, e.Pos}, s.StmtFunc, args}
+	return &StmtFuncRef{exprBase{T: s.Type, Pos: e.Pos}, s.StmtFunc, args}
 }
 
 // actualFor analyzes the actual argument for the statement function s's i-th

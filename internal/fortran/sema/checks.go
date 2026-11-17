@@ -102,13 +102,19 @@ func (a *analyzer) checkConstantSubscripts(s *Symbol, name string, dims []Dim, s
 			continue
 		}
 
-		d := dims[i]
+		a.checkSubscript(s, name, dims, i, v, sub.Position())
+	}
+}
 
-		switch {
-		case d.LowerExpr == nil && v < d.Lower:
-			a.report("SUBSCRIPTRANGE", sub.Position(), v, name, "lower", d.Lower)
-		case d.UpperExpr == nil && !OpenEnded(s, dims, i) && v > d.Upper:
-			a.report("SUBSCRIPTRANGE", sub.Position(), v, name, "upper", d.Upper)
-		}
+// checkSubscript warns of v, a constant subscript at pos in dimension i of
+// dims, outside the dimension (checkConstantSubscripts).
+func (a *analyzer) checkSubscript(s *Symbol, name string, dims []Dim, i, v int, pos diag.Position) {
+	d := dims[i]
+
+	switch {
+	case d.LowerExpr == nil && v < d.Lower:
+		a.report("SUBSCRIPTRANGE", pos, v, name, "lower", d.Lower)
+	case d.UpperExpr == nil && !OpenEnded(s, dims, i) && v > d.Upper:
+		a.report("SUBSCRIPTRANGE", pos, v, name, "upper", d.Upper)
 	}
 }

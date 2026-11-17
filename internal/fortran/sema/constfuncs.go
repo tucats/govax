@@ -248,7 +248,7 @@ func minMax(sign int) func(*evaluator, *ast.Apply, []*Const) (*Const, *constErr)
 // the parts' type.
 func constAbs(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	x := args[0]
-	c := &Const{exprBase: exprBase{x.T, e.Pos}}
+	c := &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}}
 
 	switch x.T.Kind {
 	case Integer:
@@ -294,7 +294,7 @@ func constMod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	}
 
 	x, y := args[0], args[1]
-	c := &Const{exprBase: exprBase{x.T, e.Pos}}
+	c := &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}}
 
 	if x.T.Kind == Integer {
 		if y.Int == 0 {
@@ -333,7 +333,7 @@ func constDim(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	}
 
 	if order(args[0], args[1]) <= 0 {
-		return &Const{exprBase: exprBase{args[0].T, e.Pos}}, nil
+		return &Const{exprBase: exprBase{T: args[0].T, Pos: e.Pos}}, nil
 	}
 
 	return ev.operate(ast.Sub, args[0], args[1], e.Pos)
@@ -346,7 +346,7 @@ func constIchar(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		return nil, ev.badArg(e, "CHARACTER*1", x)
 	}
 
-	return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: int32(x.Text[0])}, nil
+	return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: int32(x.Text[0])}, nil
 }
 
 // constNint is NINT(r): a REAL rounded to the nearest INTEGER, halves
@@ -366,7 +366,7 @@ func constNint(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 		return nil, ev.intRange(e.Pos, valueText, t)
 	}
 
-	return &Const{exprBase: exprBase{t, e.Pos}, Int: int32(i.Int64())}, nil
+	return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Int: int32(i.Int64())}, nil
 }
 
 // constInt is INT(a): an INTEGER as it is, a REAL's or a COMPLEX's real
@@ -400,7 +400,7 @@ func constInt(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 		return nil, ev.intRange(e.Pos, valueText, t)
 	}
 
-	return &Const{exprBase: exprBase{t, e.Pos}, Int: int32(v)}, nil
+	return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Int: int32(v)}, nil
 }
 
 // constDprod is DPROD(x, y): the REAL*8 product of two REAL*4 values,
@@ -419,7 +419,7 @@ func constDprod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		return nil, ev.realRange(e.Pos, valueText, t)
 	}
 
-	return &Const{exprBase: exprBase{t, e.Pos}, Real: v}, nil
+	return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Real: v}, nil
 }
 
 // constCmplx is CMPLX(x) or CMPLX(x, y): a COMPLEX*8 of one number (a
@@ -458,7 +458,7 @@ func constCmplx(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		return nil, err
 	}
 
-	return &Const{exprBase: exprBase{t, e.Pos}, Real: re.Real, Imag: im.Real}, nil
+	return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Real: re.Real, Imag: im.Real}, nil
 }
 
 // constConjg is CONJG(z): z with its imaginary part negated.
@@ -468,7 +468,7 @@ func constConjg(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		return nil, ev.badArg(e, "COMPLEX", x)
 	}
 
-	return &Const{exprBase: exprBase{x.T, e.Pos}, Real: x.Real, Imag: x.Imag.Neg()}, nil
+	return &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}, Real: x.Real, Imag: x.Imag.Neg()}, nil
 }
 
 // constImag is IMAG(z), AIMAG(z): z's imaginary part, a REAL of the
@@ -479,7 +479,7 @@ func constImag(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 		return nil, ev.badArg(e, "COMPLEX", x)
 	}
 
-	return &Const{exprBase: exprBase{x.T.part(), e.Pos}, Real: x.Imag}, nil
+	return &Const{exprBase: exprBase{T: x.T.part(), Pos: e.Pos}, Real: x.Imag}, nil
 }
 
 // bitwise is IAND, IOR, or IEOR of two INTEGERs, op bit by bit.
@@ -490,7 +490,7 @@ func bitwise(op func(x, y int32) int32) func(*evaluator, *ast.Apply, []*Const) (
 			return nil, err
 		}
 
-		return &Const{exprBase: exprBase{args[0].T, e.Pos}, Int: op(args[0].Int, args[1].Int)}, nil
+		return &Const{exprBase: exprBase{T: args[0].T, Pos: e.Pos}, Int: op(args[0].Int, args[1].Int)}, nil
 	}
 }
 
@@ -501,7 +501,7 @@ func constBitNot(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr)
 		return nil, ev.badArg(e, "INTEGER", x)
 	}
 
-	return &Const{exprBase: exprBase{x.T, e.Pos}, Int: ^x.Int}, nil
+	return &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}, Int: ^x.Int}, nil
 }
 
 // constIshft is ISHFT(i, n): i's bits shifted left n places, or right -n
@@ -534,7 +534,7 @@ func constIshft(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		bits >>= uint(-shift)
 	}
 
-	return &Const{exprBase: exprBase{x.T, e.Pos}, Int: truncate(int32(bits&mask), x.T.Size)}, nil
+	return &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}, Int: truncate(int32(bits&mask), x.T.Size)}, nil
 }
 
 // lexical is LGE, LGT, LLE, or LLT: two CHARACTER values compared in

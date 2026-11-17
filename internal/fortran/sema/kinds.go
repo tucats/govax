@@ -250,7 +250,7 @@ func (ev *evaluator) kindConst(e *ast.KindConst) (*Const, *constErr) {
 			return nil, ev.intRange(e.Pos, ast.DumpExpr(x)+"_"+e.Kind, t)
 		}
 
-		return &Const{exprBase: exprBase{t, e.Pos}, Int: int32(v)}, nil
+		return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Int: int32(v)}, nil
 
 	case *ast.RealConst:
 		return ev.realAs(x, t, x.Text)

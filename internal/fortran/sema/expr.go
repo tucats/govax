@@ -16,13 +16,31 @@ import (
 
 // bad is an expression whose error has been reported.
 func (a *analyzer) bad(pos diag.Position) Expr {
-	return &bad{exprBase{invalid, pos}}
+	return &bad{exprBase{T: invalid, Pos: pos}}
 }
 
-// value analyzes an expression whose value is used. A whole array isn't
-// a value (NEEDSUBSCRIPT); a character constant is, of type CHARACTER,
-// for the caller to accept or not.
+// value analyzes an expression whose value is used where a scalar must be
+// (a subscript, a DO's bounds, a condition, ...). A whole array's name isn't
+// one (NEEDSUBSCRIPT), nor any other array-valued expression (NOTSCALAR);
+// a character constant is, of type CHARACTER, for the caller to accept or
+// not.
+//
+// Fortran 90's array expressions are analyzed by arrayValue, which only the
+// places an array may stand call (docs/planning/PHASE-102 - Fortran 90 array
+// expressions.md, finding 4): an assignment, an elemental operation's
+// operands, and the rest, each saying what it does with an array.
 func (a *analyzer) value(e ast.Expr) Expr {
+	if n, ok := e.(*ast.Name); ok {
+		return a.name(n, false)
+	}
+
+	return a.scalarValue(a.arrayValue(e))
+}
+
+// arrayValue analyzes an expression whose value is used, a scalar or an
+// array: a whole array's name is an ArrayRef, a section a Section, and an
+// operation on arrays has their shape (shape.go).
+func (a *analyzer) arrayValue(e ast.Expr) Expr {
 	switch e := a.substringForm(e).(type) {
 	case *ast.IntConst, *ast.RealConst, *ast.TypelessConst, *ast.HollerithConst, *ast.Radix50Const, *ast.KindConst:
 		v, _ := a.folded(e)
@@ -33,9 +51,13 @@ func (a *analyzer) value(e ast.Expr) Expr {
 		return logicalConst(e.Value, e.Pos)
 
 	case *ast.CharConst:
-		return &Const{exprBase: exprBase{Type{Character, len(e.Value)}, e.Pos}, Text: e.Value}
+		return &Const{exprBase: exprBase{T: Type{Character, len(e.Value)}, Pos: e.Pos}, Text: e.Value}
 
 	case *ast.Name:
+		if s := a.scope.find(e.Name); s != nil && !s.broken && s.Class == Array {
+			return a.wholeArray(s, e)
+		}
+
 		return a.name(e, false)
 
 	case *ast.Apply:
@@ -44,7 +66,7 @@ func (a *analyzer) value(e ast.Expr) Expr {
 	case *ast.Paren:
 		// Parentheses group, and the tree's shape keeps the grouping;
 		// they matter beyond that only around an actual argument (args).
-		return a.value(e.X)
+		return a.arrayValue(e.X)
 
 	case *ast.Unary:
 		return a.unary(e)
@@ -130,11 +152,11 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 		fallthrough
 
 	case Variable:
-		return &Var{exprBase{s.Type, n.Pos}, s}
+		return &Var{exprBase{T: s.Type, Pos: n.Pos}, s}
 
 	case Array:
 		if wholeOK {
-			return &ArrayRef{exprBase{s.Type, n.Pos}, s}
+			return &ArrayRef{exprBase{T: s.Type, Pos: n.Pos}, s}
 		}
 
 		a.report("NEEDSUBSCRIPT", n.Pos, n.Name)
@@ -167,7 +189,7 @@ func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
 	args := a.args(e.Args)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
-	return &FuncRef{exprBase{t, e.Pos}, s, args}
+	return &FuncRef{exprBase{T: t, Pos: e.Pos}, s, args}
 }
 
 // apply analyzes Name(args): an array element if Name is an array, and
@@ -223,7 +245,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		args := a.args(e.Args)
 		a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
-		return &FuncRef{exprBase{s.Type, e.Pos}, s, args}
+		return &FuncRef{exprBase{T: s.Type, Pos: e.Pos}, s, args}
 
 	case Variable:
 		switch {
@@ -298,7 +320,9 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	t := x.Type()
 
 	switch x.(type) {
-	case *Var, *Elem, *FieldRef:
+	case *Var, *Elem, *FieldRef, *Section:
+		// A section of a CHARACTER array may have a substring range, the same
+		// part of each element (Fortran 90's R609).
 	default:
 		if t.Kind != Invalid {
 			// A function's value or a constant expression: section 2.2.4's
@@ -315,7 +339,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 		return a.bad(e.Pos)
 	}
 
-	lower := Expr(&Const{exprBase: exprBase{IntegerType, e.Pos}, Int: 1})
+	lower := Expr(&Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: 1})
 	if e.Lower != nil {
 		lower = a.convert(a.arithmetic(a.value(e.Lower)), IntegerType)
 	}
@@ -348,7 +372,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 			return a.bad(e.Pos)
 		}
 
-		return &Substring{exprBase{Type{Character, last - first + 1}, e.Pos}, x, lower, upper}
+		return &Substring{exprBase{T: Type{Character, last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 
 	case firstKnown && (first < 1 || first > t.Size):
 		a.report("SUBBOUND", e.Pos, first, name, t.Size)
@@ -361,7 +385,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return &Substring{exprBase{Type{Character, 0}, e.Pos}, x, lower, upper}
+	return &Substring{exprBase{T: Type{Character, 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 }
 
 // passedSubstring is a substring of a passed-length dummy argument, whose
@@ -393,10 +417,10 @@ func (a *analyzer) passedSubstring(e *ast.Substring, x, lower, upper Expr) Expr 
 		return a.bad(e.Pos)
 
 	case firstKnown && lastKnown:
-		return &Substring{exprBase{Type{Character, last - first + 1}, e.Pos}, x, lower, upper}
+		return &Substring{exprBase{T: Type{Character, last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 	}
 
-	return &Substring{exprBase{Type{Character, 0}, e.Pos}, x, lower, upper}
+	return &Substring{exprBase{T: Type{Character, 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 }
 
 // constantInt is e's value if it is an INTEGER constant.
@@ -413,9 +437,7 @@ func constantInt(e Expr) (int, bool) {
 // 2.2.3.2).
 func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 	if hasTriplet(e.Args) {
-		a.notImplForm(e.Pos, "an array section")
-
-		return a.bad(e.Pos)
+		return a.section(s, e)
 	}
 
 	if len(e.Args) != len(s.Dims) {
@@ -431,7 +453,7 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 
 	a.checkConstantSubscripts(s, e.Name, s.Dims, subs)
 
-	return &Elem{exprBase{s.Type, e.Pos}, s, subs}
+	return &Elem{exprBase{T: s.Type, Pos: e.Pos}, s, subs}
 }
 
 // arithmetic makes e an arithmetic operand: a LOGICAL value is used as
@@ -466,7 +488,7 @@ func (a *analyzer) convert(e Expr, t Type) Expr {
 		return e
 	}
 
-	return a.fold(&Convert{exprBase{t, e.Position()}, e})
+	return a.fold(&Convert{exprBase{T: t, Pos: e.Position(), S: e.Shape()}, e})
 }
 
 // unary analyzes -X, +X, and .NOT. X.
@@ -474,10 +496,10 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 	// -2147483648 is INTEGER's smallest value, but 2147483648 alone is
 	// out of range: the sign and the digits are taken together.
 	if c, ok := e.X.(*ast.IntConst); ok && e.Op == ast.Sub && c.Text == "2147483648" {
-		return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: minInt}
+		return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: minInt}
 	}
 
-	x := a.numericConst(a.value(e.X))
+	x := a.numericConst(a.arrayValue(e.X))
 
 	switch {
 	case x.Type().Kind == Invalid:
@@ -488,7 +510,7 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 		case Logical, Integer:
 			// On a LOGICAL, the logical negation; on an INTEGER, every
 			// bit's (section 2.3.4).
-			return a.fold(&Unary{exprBase{x.Type(), e.Pos}, ast.Not, x})
+			return a.fold(&Unary{exprBase{T: x.Type(), Pos: e.Pos, S: x.Shape()}, ast.Not, x})
 		case Character:
 			a.notCharacter(x)
 		default:
@@ -504,7 +526,7 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 		return x
 	}
 
-	return a.fold(&Unary{exprBase{x.Type(), e.Pos}, ast.Sub, x})
+	return a.fold(&Unary{exprBase{T: x.Type(), Pos: e.Pos, S: x.Shape()}, ast.Sub, x})
 }
 
 // binary analyzes X op Y.
@@ -533,12 +555,18 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		return a.bad(e.Pos)
 	}
 
+	// An elemental operation's shape is its array operands' (shape.go).
+	shape, ok := a.conforms(e.Pos, x, y)
+	if !ok {
+		return a.bad(e.Pos)
+	}
+
 	switch {
 	case e.Op.Relational():
-		return a.compare(e, x, y)
+		return a.compare(e, x, y, shape)
 
 	case e.Op == ast.And || e.Op == ast.Or || e.Op == ast.Eqv || e.Op == ast.Neqv || e.Op == ast.Xor:
-		return a.logical(e, x, y)
+		return a.logical(e, x, y, shape)
 	}
 
 	// FORTRAN's mixed-mode arithmetic: the operation is done in the
@@ -555,7 +583,7 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return a.fold(&Binary{exprBase{t, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
+	return a.fold(&Binary{exprBase{T: t, Pos: e.Pos, S: shape}, e.Op, a.convert(x, t), a.convert(y, t)})
 }
 
 // power analyzes X ** Y (section 2.3.1), which isn't folded: its operands
@@ -564,6 +592,11 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 func (a *analyzer) power(e *ast.Binary) Expr {
 	x, y := a.operands(e.X, e.Y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	shape, ok := a.conforms(e.Pos, x, y)
+	if !ok {
 		return a.bad(e.Pos)
 	}
 
@@ -586,10 +619,10 @@ func (a *analyzer) power(e *ast.Binary) Expr {
 		// INTEGER*2 and converted back, as an intrinsic is (byteResult).
 		w := Type{Integer, 2}
 
-		return a.convert(&Binary{exprBase{w, e.Pos}, ast.Pow, a.convert(x, w), a.convert(y, w)}, t)
+		return a.convert(&Binary{exprBase{T: w, Pos: e.Pos, S: shape}, ast.Pow, a.convert(x, w), a.convert(y, w)}, t)
 	}
 
-	return &Binary{exprBase{t, e.Pos}, ast.Pow, a.convert(x, base), a.convert(y, exponent)}
+	return &Binary{exprBase{T: t, Pos: e.Pos, S: shape}, ast.Pow, a.convert(x, base), a.convert(y, exponent)}
 }
 
 // powerTypes are the types of x ** y, its base, and its exponent, by the
@@ -641,8 +674,13 @@ func (a *analyzer) concat(e *ast.Binary) Expr {
 		}
 	}
 
-	x, y := a.value(e.X), a.value(e.Y)
+	x, y := a.arrayValue(e.X), a.arrayValue(e.Y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	shape, ok := a.conforms(e.Pos, x, y)
+	if !ok {
 		return a.bad(e.Pos)
 	}
 
@@ -684,7 +722,7 @@ func (a *analyzer) concat(e *ast.Binary) Expr {
 		size += p.Type().Size
 	}
 
-	return &Concat{exprBase{Type{Character, size}, e.Pos}, parts}
+	return &Concat{exprBase{T: Type{Character, size}, Pos: e.Pos, S: shape}, parts}
 }
 
 // lastConst is the last of parts if it is a constant.
@@ -733,7 +771,7 @@ func (a *analyzer) mixedType(x, y Expr) Type {
 // padded with blanks; a CHARACTER value can't be compared with any other
 // (COMPARETYPE), but for a character constant, which is a Hollerith
 // constant beside a number, and is one already (operands).
-func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
+func (a *analyzer) compare(e *ast.Binary, x, y Expr, shape Shape) Expr {
 	switch cx, cy := x.Type().Kind == Character, y.Type().Kind == Character; {
 	case cx && cy:
 		kx, okx := x.(*Const)
@@ -743,7 +781,7 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 			return logicalConst(relation(e.Op, compareText(kx.Text, ky.Text)), e.Pos)
 		}
 
-		return &Compare{exprBase{LogicalType, e.Pos}, e.Op, x, y}
+		return &Compare{exprBase{T: LogicalType, Pos: e.Pos, S: shape}, e.Op, x, y}
 
 	case cx || cy:
 		c, o := x, y
@@ -770,7 +808,7 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return a.fold(&Compare{exprBase{LogicalType, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
+	return a.fold(&Compare{exprBase{T: LogicalType, Pos: e.Pos, S: shape}, e.Op, a.convert(x, t), a.convert(y, t)})
 }
 
 // logical analyzes .AND., .OR., .EQV., .NEQV., and .XOR. (section 2.3.4):
@@ -778,7 +816,7 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 // each, the operation is done bit by bit and the result is INTEGER (of the
 // types' higher rank, and a constant beside a word is a word: mixedType).
 // Nothing else may be an operand.
-func (a *analyzer) logical(e *ast.Binary, x, y Expr) Expr {
+func (a *analyzer) logical(e *ast.Binary, x, y Expr, shape Shape) Expr {
 	for _, o := range []Expr{x, y} {
 		switch o.Type().Kind {
 		case Character:
@@ -798,7 +836,7 @@ func (a *analyzer) logical(e *ast.Binary, x, y Expr) Expr {
 		t = a.mixedType(x, y)
 	}
 
-	return a.fold(&Binary{exprBase{t, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
+	return a.fold(&Binary{exprBase{T: t, Pos: e.Pos, S: shape}, e.Op, a.convert(x, t), a.convert(y, t)})
 }
 
 // condition analyzes an IF statement's condition, a logical expression

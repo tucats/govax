@@ -140,7 +140,7 @@ func (ev *evaluator) numeric(x *Const) (*Const, *constErr) {
 // bytesConst is the constant of type t that memory holding b holds, lowest
 // address first. b is as long as t.
 func (ev *evaluator) bytesConst(b []byte, t Type, pos diag.Position) (*Const, *constErr) {
-	c := &Const{exprBase: exprBase{t, pos}}
+	c := &Const{exprBase: exprBase{T: t, Pos: pos}}
 
 	var err error
 
@@ -291,19 +291,19 @@ func (a *analyzer) operands(ex, ey ast.Expr) (x, y Expr) {
 
 	if (ux != nil) != (uy != nil) {
 		if uy != nil {
-			x = a.value(ex)
+			x = a.arrayValue(ex)
 			x, y = a.typedBeside(uy, x)
 
 			return x, y
 		}
 
-		y = a.value(ey)
+		y = a.arrayValue(ey)
 		y, x = a.typedBeside(ux, y)
 
 		return x, y
 	}
 
-	x, y = a.value(ex), a.value(ey)
+	x, y = a.arrayValue(ex), a.arrayValue(ey)
 
 	kx, okx := x.(*Const)
 	ky, oky := y.(*Const)
@@ -344,7 +344,7 @@ func (a *analyzer) assignedExpr(e ast.Expr, t Type) Expr {
 
 	switch {
 	case u == nil:
-		return a.value(e)
+		return a.arrayValue(e)
 
 	case t.Kind == Character:
 		a.report("NOCHARVALUE", u.Position(), untypedWhat(u))
