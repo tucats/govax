@@ -14,6 +14,7 @@ const (
 	ftnStop      = "FTN$STOP"
 	ftnPause     = "FTN$PAUSE"
 	ftnAdjArrDim = "FTN$ADJARRDIM"
+	ftnNotConfor = "FTN$NOTCONFOR"
 )
 
 // stmts lowers a list of statements.
@@ -248,19 +249,27 @@ func (l *lowerer) returnValue() Expr {
 // moved (CharMove), and a character comparison's value stored as it is
 // computed.
 func (l *lowerer) assign(s *sema.Assign) {
-	switch s.Target.Type().Kind {
-	case sema.Character:
-		l.emit(&CharMove{l.origin(), l.chars(s.Target), l.chars(s.Value)})
+	switch {
+	case s.Target.Shape() != nil:
+		l.arrayAssign(s)
 
-		return
-
-	case sema.Record:
+	case s.Target.Type().Kind == sema.Record:
 		l.moveRecord(s)
+
+	default:
+		l.assignScalar(s.Target, s.Value)
+	}
+}
+
+// assignScalar lowers target = value for a scalar target that isn't a record.
+func (l *lowerer) assignScalar(target, value sema.Expr) {
+	if target.Type().Kind == sema.Character {
+		l.emit(&CharMove{l.origin(), l.chars(target), l.chars(value)})
 
 		return
 	}
 
-	l.store(l.mem(s.Target), s.Value)
+	l.store(l.mem(target), value)
 }
 
 // store lowers dst = value, for a value that isn't CHARACTER, of dst's type.

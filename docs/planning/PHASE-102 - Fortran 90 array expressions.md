@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 and 3 are done (2026-11-17), and subtask 4 is next.
+author's answers"); subtasks 2 to 4 are done (2026-11-17), and subtask 5 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -404,7 +404,8 @@ and FTNRTL do today.
 4. **The scalarizer:** normalized loop nests, element maps for whole arrays,
    sections, elemental operations, and broadcast; fused assignment;
    `countedLoop` over a cell; `/CHECK=BOUNDS`'s checks (finding 15); IR
-   golden dumps; runs under both optimizer settings.
+   golden dumps; runs under both optimizer settings (done
+   2026-11-17).
 5. **Overlap and temporaries** (findings 6 and 7, question 2), each answer
    held by a dump and a run.
 6. **Vector subscripts** on either side, MANYONE (finding 13).
@@ -547,3 +548,55 @@ shapes in Phase 104.
   an array as a subscript a vector subscript. `TestNoF90Unchanged`'s digests
   didn't change. `TestShapes` (`shape_test.go`) holds the shapes, the
   messages' texts, and each context.
+- **2026-11-17, subtask 4:** The scalarizer, `ir/lowerarray.go`. An
+  `Assign` whose target has a shape is `arrayAssign`'s: a nest of counted
+  loops, the leftmost dimension innermost, each index running 1 to its
+  dimension's extent by 1. The loops and what they compute are in sema's
+  terms, over symbols of lowering's own (`sema.NewSymbol`) bound to places in
+  `lowerer.bound`, the statement functions' mechanism: an index to an
+  `IndexCell` (`$In`, a new kind, pooled per statement as temporaries are, a
+  dying cell to the optimizer), a value computed once to a temporary. So
+  `countedLoop` needed no new form (finding 5's "over a cell" is a bound
+  symbol), and an element of an adjustable array, a CHARACTER element, a
+  COMPLEX product, or a comparison into a LOGICAL array is lowered by the
+  code that lowers it anywhere. `sema/elements.go` has what lowering builds
+  them with: `NewVar`, `NewElem` (with the new `Elem.InBounds`, which turns
+  off its subscripts' checks), `IntSum`/`IntProduct`/`IntDifference` (folding
+  constants), `Scalarize` (an array expression made scalar: each leaf, an
+  `ArrayRef` or `Section`, by a callback, each scalar part by another, each
+  elemental node copied without its shape), and `Leaves`. Before the loops
+  `prepare` computes each leaf's subscripts as `k * stride + base`, `base =
+  lower - stride` (a whole array's `k + (lower - 1)`), every part not
+  constant in a temporary (an adjustable array's bounds from its
+  descriptor); each extent is a constant if the target's or the value's
+  shape knows it, else the target's computed (`leafExtent`: a descriptor's
+  multiplier, or a triplet's trip count, never below 0, `atLeastZero`); each
+  scalar part of the value not `sema.Inline` (a constant, a variable, an
+  element with constant subscripts, any CHARACTER value) goes to a temporary
+  by `store` (`hoist`), so a function is called once and 7.5.1.5's "before
+  any element is defined" holds. `assign` is split, `assignScalar` the
+  element's. Under `/CHECK=BOUNDS` (finding 15) each section's first and
+  last subscripts are checked once, under a test that it has elements, a
+  constant in range not at all (`checkSubscripts`), and every leaf's extent
+  not known when compiling to equal the loops' is compared
+  (`checkShapes`): a difference calls FTNRTL's new `FTN$NOTCONFOR` (vector
+  680, `ftn_control.mar`, GSMATCH 1,21), which signals `FOR$_NOTCONFOR`,
+  govax's own condition at FOR number 300 (`^X188964`, "array shapes do not
+  conform", `vmsdef/formessages.go`; MANUAL.md's `/CHECK` and FTNRTL tables).
+  Sema keeps the scalarizer to what it computes right: `sema/overlap.go`'s
+  `checkOverlap` is subtask 5's test with two answers so far, apart
+  (`mayShare`: the same name, a common block's overlapping places, an
+  EQUIVALENCE group; two dummies apart) and the same elements
+  (`sameElements`: the same whole array, or a section of the same text), an
+  inline scalar of the target's storage counting too (`A = A(1)`); anything
+  else is NOTIMPL until subtask 5. `checkArrayParts` refuses (NOTIMPL) a
+  CHARACTER function's value and a concatenation of a run-time length in an
+  array expression, which would be made at each element. The array
+  assignment's NOTIMPL of subtask 3 is gone. Index cells were first `$Kn`,
+  which MACRO refused: `$Kn` are the data's names. Tests: `ir`'s
+  `f90arrays.for` (every form, an adjustable array) and `f90arrchk.for`
+  (`/CHECK=BOUNDS`), `TestShapes`'s new overlap cases, `TestFortranCheck`'s
+  SECTION, STRIDE, EMPTY, and CONFORM programs, and `testdata/fortran90`'s
+  `arrays.f90`, worked by hand, run in all eight modes and the same on
+  gfortran (`compare.py`'s `PROGRAMS90`). Under `/OPTIMIZE` its first loop
+  is `MULF3`, `ADDF3`, `AOBLEQ`. `TestNoF90Unchanged`'s digests didn't change.

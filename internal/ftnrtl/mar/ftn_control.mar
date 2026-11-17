@@ -4,7 +4,8 @@
 ; The routines of FTNRTL that control a program as a whole: FTN$VERSION,
 ; which says which FTNRTL a program is running with, FTN$STOP, which is
 ; FORTRAN's STOP statement, FTN$PAUSE, its PAUSE statement, and
-; FTN$ADJARRDIM, /CHECK=BOUNDS finding an array's bounds wrong.
+; FTN$ADJARRDIM, /CHECK=BOUNDS finding an array's bounds wrong; and
+; FTN$NOTCONFOR, /CHECK=BOUNDS finding two arrays' shapes different.
 ;
 ; Like every FTNRTL routine, each is called with CALLS or CALLG, by the
 ; VAX calling standard: AP points at the argument list, whose first byte
@@ -131,6 +132,24 @@ PAUSE_LEN	= .-PAUSE_TEXT
 ;
 	.ENTRY	FTN$ADJARRDIM,^M<>
 	PUSHL	#FOR$_ADJARRDIM
+	CALLS	#1,G^LIB$STOP
+	RET
+
+;
+; FTN$NOTCONFOR
+;
+; Two arrays in one Fortran 90 array assignment have shapes that don't
+; conform, which a program compiled with /CHECK=BOUNDS finds before the
+; assignment's loops when the extents weren't known when compiling
+; (docs/planning/PHASE-102 - Fortran 90 array expressions.md, finding 15).
+; VAX FORTRAN has no such condition: this one is govax's, at FOR number
+; 300, past VAX FORTRAN's, in govax's own words (PHASE-99's Decision 15).
+; It is severe, so this doesn't come back.
+;
+FOR$_NOTCONFOR = ^X188964		; FOR number 300, severity F
+
+	.ENTRY	FTN$NOTCONFOR,^M<>
+	PUSHL	#FOR$_NOTCONFOR
 	CALLS	#1,G^LIB$STOP
 	RET
 

@@ -8,10 +8,12 @@ import (
 // TestShapes checks Fortran 90's shapes and the contexts arrays may stand in
 // (docs/planning/PHASE-102 - Fortran 90 array expressions.md, subtask 3): each
 // case is a main program's statements and its messages, "IDENT: text" each,
-// one per line; "" for none. The array assignments themselves are NOTIMPL
-// until the scalarizer (subtask 4), so a case that conforms says only that.
+// one per line; "" for none. Since the scalarizer (subtask 4) a case that
+// conforms says nothing, unless its sides may overlap, which is subtask 5's.
 func TestShapes(t *testing.T) {
-	const notYet = "NOTIMPL: an array assignment is not implemented yet"
+	const notYet = ""
+
+	const overlap = "NOTIMPL: an array assignment whose value may read its target's changed elements is not implemented yet"
 
 	cases := []struct {
 		name  string
@@ -27,9 +29,23 @@ func TestShapes(t *testing.T) {
 		{"a negative stride", []string{"DIMENSION A(10), B(10)", "A(10:1:-1) = B"}, notYet},
 		{"a bound not constant", []string{"DIMENSION A(10), B(10)", "A(1:N) = B(1:N)"}, notYet},
 		{"an extent not known with one known", []string{"DIMENSION A(10), B(10)", "A(1:N) = B"}, notYet},
-		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A = A * 2", "A(2:) = A(:N-1)"}, notYet + "\n" + notYet},
-		{"character arrays", []string{"CHARACTER*4 C(3), D(3)*8", "D = C // 'XY'", "C(:)(2:3) = 'AB'"}, notYet + "\n" + notYet},
+		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A = A * 2", "A(2:) = A(:N-1)"}, overlap},
+		{"character arrays", []string{"CHARACTER*4 C(3), D(3)*8", "D = C // 'XY'", "C(:)(2:3) = 'AB'"}, notYet},
 		{"a section of size zero", []string{"DIMENSION A(10)", "A(5:4) = 1"}, notYet},
+
+		// Overlap: the same elements, apart, or not known (subtask 5's).
+		{"the same elements", []string{"DIMENSION A(10)", "A(1:N) = 2 * A(1:N) + A(1:N)"}, notYet},
+		{"different arrays", []string{"DIMENSION A(10), B(10)", "A = B * B"}, notYet},
+		{"two dummies", []string{"SUBROUTINE S(A, B)", "DIMENSION A(10), B(10)", "A = B"}, notYet},
+		{"a scalar computed first", []string{"DIMENSION A(10)", "A = A / A(1) ** 2"}, notYet},
+		{"the target's element read", []string{"DIMENSION A(10)", "A = A(1)"}, overlap},
+		{"a shifted section", []string{"DIMENSION A(10)", "A(2:10) = A(1:9)"}, overlap},
+		{"a reversed array", []string{"DIMENSION A(10)", "A(10:1:-1) = A"}, overlap},
+		{"EQUIVALENCE", []string{"DIMENSION A(10), B(10)", "EQUIVALENCE (A(2), B)", "A = B"}, overlap},
+		{"one common block", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A, B", "A = B"}, notYet},
+		{"overlapping in common", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A", "EQUIVALENCE (A(5), B)", "A = B"}, overlap},
+		{"a CHARACTER function", []string{"CHARACTER*4 C(3), F", "C = F(1)"}, "NOTIMPL: a CHARACTER function's value in an array expression is not implemented yet"},
+		{"a concatenation of unknown length", []string{"SUBROUTINE S(C, D)", "CHARACTER*(*) C(3), D", "C = C // D"}, "NOTIMPL: a concatenation of a length not constant in an array expression is not implemented yet"},
 
 		// What doesn't conform.
 		{"extents", []string{"DIMENSION A(10), B(5)", "A = B"}, "NOTCONFORM: the shapes (10) and (5) don't conform"},
@@ -45,8 +61,8 @@ func TestShapes(t *testing.T) {
 		{"an assumed-size section", []string{"SUBROUTINE S(A)", "DIMENSION A(*)", "A(2:5) = 0"}, notYet},
 		{"an assumed-size whole array", []string{"SUBROUTINE S(A)", "DIMENSION A(*)", "A = 0"}, "NOSHAPE: the assumed-size array A has no shape, so it can't be used as a whole here"},
 		{"the subscripts used", []string{"DIMENSION A(10)", "A(3:11:7) = 1"}, notYet},
-		{"a subscript used past the end", []string{"DIMENSION A(10)", "A(3:12:3) = 1"}, "SUBSCRIPTRANGE: subscript 12 of A is past its upper bound, 10\n" + notYet},
-		{"a subscript used before the start", []string{"DIMENSION A(10)", "A(0:4) = 1"}, "SUBSCRIPTRANGE: subscript 0 of A is past its lower bound, 1\n" + notYet},
+		{"a subscript used past the end", []string{"DIMENSION A(10)", "A(3:12:3) = 1"}, "SUBSCRIPTRANGE: subscript 12 of A is past its upper bound, 10"},
+		{"a subscript used before the start", []string{"DIMENSION A(10)", "A(0:4) = 1"}, "SUBSCRIPTRANGE: subscript 0 of A is past its lower bound, 1"},
 		{"too few subscripts", []string{"DIMENSION A(10, 10)", "A(:) = 1"}, "SUBSCRIPTS: the array A takes 2 subscripts, not 1"},
 
 		// Where a scalar must be, and what isn't compiled yet.

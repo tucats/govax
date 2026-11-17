@@ -53,6 +53,50 @@ var checkPrograms = []struct {
       END`,
 	},
 	{
+		// A section's last subscript past its array (Phase 102, subtask 4):
+		// checked once, before the assignment's loop.
+		name: "SECTION", qualifier: "/CHECK=BOUNDS", checked: "%SYSTEM-F-SUBRNG", plain: "AFTER",
+		source: `
+      REAL A(10), PAD(10)
+      N = 12
+      A(1:N) = 0.0
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
+		// Only the subscripts a triplet uses need be in bounds: 1, 4, 7, 10.
+		name: "STRIDE", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
+		refused: "SUBRNG",
+		source: `
+      REAL A(10)
+      N = 12
+      A(1:N:3) = 0.0
+      PRINT *, 'FINE'
+      END`,
+	},
+	{
+		// A section with no elements has no subscripts to check.
+		name: "EMPTY", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
+		refused: "SUBRNG",
+		source: `
+      REAL A(10)
+      N = 0
+      A(20:N) = 0.0
+      PRINT *, 'FINE'
+      END`,
+	},
+	{
+		// Two extents known only when the program runs, which differ.
+		name: "CONFORM", qualifier: "/CHECK=BOUNDS", checked: "%FOR-F-NOTCONFOR", plain: "AFTER",
+		source: `
+      REAL A(10), B(10)
+      N = 5
+      M = 4
+      A(1:N) = B(1:M)
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
 		// The second operand of .AND. isn't reached, so neither is its check.
 		name: "GUARDED", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
 		refused: "SUBRNG",

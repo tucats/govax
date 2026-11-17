@@ -178,6 +178,8 @@ func cellNote(c *Cell) string {
 		return c.Loop + "'s limit"
 	case StepCell:
 		return c.Loop + "'s step"
+	case IndexCell:
+		return "an array statement's index"
 	case DescriptorCell:
 		return "descriptor " + descriptorText(c.Desc)
 	case ArgCell:

@@ -69,6 +69,7 @@ PROGRAMS90 = {
     "loops": ["loops.f90"],
     "cases": ["cases.f90"],
     "examples": ["examples.f90"],
+    "arrays": ["arrays.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

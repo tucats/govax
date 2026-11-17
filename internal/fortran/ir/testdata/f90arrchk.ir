@@ -1,0 +1,180 @@
+routine F90CHK main
+  cell  A       F  $LOCAL+0    array A, 40 bytes
+  cell  B       F  $LOCAL+40   array B, 40 bytes
+  cell  I       L  $LOCAL+80   variable I
+  cell  J       L  $LOCAL+84   variable J
+  cell  N       L  $LOCAL+88   variable N
+  cell  $I1     L  $LOCAL+92   an array statement's index
+  cell  $C1     L  $LOCAL+96   array (line 10), dimension 1's count
+  cell  $T1     L  $LOCAL+100  temporary
+  cell  $T2     L  $LOCAL+104  temporary
+  cell  $T3     L  $LOCAL+108  temporary
+  cell  $T4     L  $LOCAL+112  temporary
+  cell  $T5     L  $LOCAL+116  temporary
+  cell  $T6     L  $LOCAL+120  temporary
+  cell  $T7     L  $LOCAL+124  temporary
+  cell  $T8     L  $LOCAL+128  temporary
+  cell  $T9     L  $LOCAL+132  temporary
+  cell  $C2     L  $LOCAL+136  array (line 11), dimension 1's count
+  cell  $C3     L  $LOCAL+140  array (line 12), dimension 1's count
+  $LOCAL is 144 bytes
+B1:
+  ; line 10
+  assign $C1 = 8
+  assign $I1 = 1
+  jump B2
+B2:  ; array (line 10), dimension 1's body
+  assign A[$I1] = B-4[$I1]
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 11
+  assign $T1 = I
+  assign $T2 = J
+  assign $T3 = sub.L($T1, 1)
+  assign $T4 = N
+  assign $T5 = add.L(sub.L($T2, $T1), 1)
+  branch lt.L($T5, 0) B4 B5
+B4:
+  assign $T5 = 0
+  jump B5
+B5:
+  assign $T6 = $T4
+  branch lt.L($T6, 0) B6 B7
+B6:
+  assign $T6 = 0
+  jump B7
+B7:
+  branch ne.L($T6, $T5) B8 B9
+B8:
+  call FTN$NOTCONFOR()
+  noreturn
+B9:
+  branch gt.L($T5, 0) B10 B11
+B10:
+  assign $T7 = inrange($T1, 1, 10)
+  assign $T8 = inrange(sub.L(add.L($T1, $T5), 1), 1, 10)
+  jump B11
+B11:
+  branch gt.L($T6, 0) B12 B13
+B12:
+  assign $T9 = inrange($T6, 1, 10)
+  jump B13
+B13:
+  assign $C2 = $T5
+  assign $I1 = 1
+  branch le.L($C2, 0) B15 B14
+B14:  ; array (line 11), dimension 1's body
+  assign A-4[add.L($I1, $T3)] = B-4[$I1]
+  assign $I1 = add.L($I1, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B14 B15
+B15:
+  ; line 12
+  assign $T9 = N
+  assign $T8 = div.L(add.L($T9, 1), 2)
+  branch lt.L($T8, 0) B16 B17
+B16:
+  assign $T8 = 0
+  jump B17
+B17:
+  branch gt.L($T8, 0) B18 B19
+B18:
+  assign $T7 = inrange(add.L(mul.L(sub.L($T8, 1), 2), 1), 1, 10)
+  jump B19
+B19:
+  assign $C3 = $T8
+  assign $I1 = 1
+  branch le.L($C3, 0) B21 B20
+B20:  ; array (line 12), dimension 1's body
+  assign A-8[mul.L($I1, 2)] = 0.0
+  assign $I1 = add.L($I1, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B20 B21
+B21:
+  ; line 13
+  call S(ref A, ref B, ref N)
+  ; line 14
+  return 1
+routine S subroutine
+  param X       F  argument 1
+  param Y       F  argument 2
+  param M       L  argument 3
+  cell  $B1     L  $LOCAL+0    descriptor F A 4 (?)
+  cell  $B2     L  $LOCAL+32   descriptor F A 4 (?)
+  cell  $I1     L  $LOCAL+64   an array statement's index
+  cell  $T1     L  $LOCAL+68   temporary
+  cell  $T2     L  $LOCAL+72   temporary
+  cell  $T3     L  $LOCAL+76   temporary
+  cell  $T4     L  $LOCAL+80   temporary
+  cell  $T5     L  $LOCAL+84   temporary
+  cell  $T6     L  $LOCAL+88   temporary
+  cell  $T7     L  $LOCAL+92   temporary
+  cell  $T8     L  $LOCAL+96   temporary
+  cell  $C1     L  $LOCAL+100  array (line 18), dimension 1's count
+  $LOCAL is 104 bytes
+B1:
+  assign $B1+4 = addr(@X)
+  assign $B1+28 = @M
+  assign $B1+20 = $B1+28
+  branch lt.L($B1+28, 1) B2 B3
+B2:
+  call FTN$ADJARRDIM()
+  noreturn
+B3:
+  assign $B1+16 = addr(@X-4)
+  assign $B1+12 = mul.L(4, $B1+20)
+  assign $B2+4 = addr(@Y)
+  assign $B2+28 = @M
+  assign $B2+20 = $B2+28
+  branch lt.L($B2+28, 1) B4 B5
+B4:
+  call FTN$ADJARRDIM()
+  noreturn
+B5:
+  assign $B2+16 = addr(@Y-4)
+  assign $B2+12 = mul.L(4, $B2+20)
+  ; line 18
+  assign $T1 = $B1+28
+  assign $T2 = sub.L(@M, 2)
+  assign $T3 = sub.L($T1, 2)
+  branch lt.L($T3, 0) B6 B7
+B6:
+  assign $T3 = 0
+  jump B7
+B7:
+  assign $T4 = $T2
+  branch lt.L($T4, 0) B8 B9
+B8:
+  assign $T4 = 0
+  jump B9
+B9:
+  branch ne.L($T4, $T3) B10 B11
+B10:
+  call FTN$NOTCONFOR()
+  noreturn
+B11:
+  branch gt.L($T3, 0) B12 B13
+B12:
+  assign $T5 = inrange(3, 1, $B1+28)
+  assign $T6 = inrange(add.L($T3, 2), 1, $B1+28)
+  jump B13
+B13:
+  branch gt.L($T4, 0) B14 B15
+B14:
+  assign $T7 = inrange(1, 1, $B2+28)
+  assign $T8 = inrange($T4, 1, $B2+28)
+  jump B15
+B15:
+  assign $C1 = $T3
+  assign $I1 = 1
+  branch le.L($C1, 0) B17 B16
+B16:  ; array (line 18), dimension 1's body
+  assign @($B1+16)+8[$I1] = add.F(@($B2+16)[$I1], 1.0)
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B16 B17
+B17:
+  ; line 19
+  return

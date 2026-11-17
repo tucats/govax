@@ -69,4 +69,10 @@ var forMessages = map[uint32]Message{
 	0x001882F8: {Facility: "FOR", Ident: "FLOCONFAI", Text: "floating point conversion failed!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
 	0x00188830: {Facility: "FOR", Ident: "INVTEXREC", Text: "invalid text is \"!AS\" in record number !UL", FAOCount: 2},
 	0x00188838: {Facility: "FOR", Ident: "INVTEX", Text: "invalid text is \"!AS\"", FAOCount: 1},
+
+	// govax's own, past VAX FORTRAN's numbers and in govax's words
+	// (docs/planning/PHASE-99 - Fortran 90.md, Decision 15): FTNRTL's
+	// FTN$NOTCONFOR, /CHECK=BOUNDS finding two arrays of different shapes
+	// in a Fortran 90 array assignment (FOR number 300).
+	0x00188960: {Facility: "FOR", Ident: "NOTCONFOR", Text: "array shapes do not conform", FAOCount: 0},
 }

@@ -331,7 +331,13 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 
 		for i, sub := range e.Subs {
 			dim := e.Sym.Dims[i]
-			v, k := l.checkedSubscript(l.expr(sub), e.Sym, e.Sym.Dims, i)
+			x := l.expr(sub)
+
+			v, k := split(x)
+			if !e.InBounds {
+				v, k = l.checkedSubscript(x, e.Sym, e.Sym.Dims, i)
+			}
+
 			first += (int(k) - dim.Lower) * multiplier
 
 			if v != nil {

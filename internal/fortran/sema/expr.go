@@ -453,7 +453,7 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 
 	a.checkConstantSubscripts(s, e.Name, s.Dims, subs)
 
-	return &Elem{exprBase{T: s.Type, Pos: e.Pos}, s, subs}
+	return &Elem{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: subs}
 }
 
 // arithmetic makes e an arithmetic operand: a LOGICAL value is used as

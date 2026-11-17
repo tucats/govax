@@ -141,10 +141,7 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	if rankOf(target) > 0 {
-		// The scalarizer is subtask 4's.
-		a.notImplForm(s.Pos, "an array assignment")
-
+	if rankOf(target) > 0 && (!a.checkArrayParts(value) || !a.checkOverlap(s.Pos, target, value)) {
 		return nil
 	}
 

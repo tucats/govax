@@ -730,6 +730,11 @@ type (
 		exprBase
 		Sym  *Symbol
 		Subs []Expr
+
+		// InBounds says its subscripts needn't be checked by /CHECK=BOUNDS:
+		// an element the scalarizer made of a section, whose first and last
+		// subscripts are checked once, before its loops (ir/lowerarray.go).
+		InBounds bool
 	}
 
 	// ArrayRef is a whole array: an actual argument or an I/O list item

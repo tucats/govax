@@ -68,6 +68,11 @@ type lowerer struct {
 	freeText map[int][]*Cell
 	busy     []*Cell
 
+	// freeIndex are the array statements' loop indexes not in use, and
+	// indexes how many the routine has (lowerarray.go).
+	freeIndex []*Cell
+	indexes   int
+
 	// after are statements to be done at the end of the statement being
 	// lowered, before its block's terminator if it has one: the freeing
 	// of its dynamic strings.
@@ -529,6 +534,8 @@ func (l *lowerer) release() {
 			l.freeDesc[key] = append(l.freeDesc[key], c)
 		case TextCell:
 			l.freeText[c.Size] = append(l.freeText[c.Size], c)
+		case IndexCell:
+			l.freeIndex = append(l.freeIndex, c)
 		default:
 			l.free[c.T] = append(l.free[c.T], c)
 		}

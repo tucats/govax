@@ -583,4 +583,12 @@
 	.MASK	FTN$DIVCH
 	JMP	L^FTN$DIVCH+2
 
+;
+; /CHECK=BOUNDS's report of two arrays whose shapes don't conform in a
+; Fortran 90 array assignment (FTN_CONTROL).
+;
+	.TRANSFER FTN$NOTCONFOR	; 680: array shapes don't conform
+	.MASK	FTN$NOTCONFOR
+	JMP	L^FTN$NOTCONFOR+2
+
 	.END
