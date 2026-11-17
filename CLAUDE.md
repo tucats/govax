@@ -992,6 +992,17 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   the close-out: MANUAL.md's 6.7 "Batch queues" (6.7 to 6.9 now 6.8 to
   6.10), VAX-VMS-INTERNALS.md's 7.16, FORTRAN's `$QUIDEF`, `$SJCDEF`, and
   `$JBCMSGDEF` (`TestFortranQueues`).
+  Phases 99–111 (planned 2026-11-17, for the author's review) are the
+  Fortran 90 program: `PHASE-99 - Fortran 90.md`'s Part A is the survey,
+  Part B the decisions, Part C the phases, each later phase a skeletal doc.
+  Fortran 90 (ISO/IEC 1539:1991; `Fortran90.txt` and `Fortran 90
+  Handbook.txt` beside their PDFs in `~/Documents/Technical Doc/VMS/`)
+  joins VAX FORTRAN in the same compiler; `/F90` (default for free form,
+  `.F90` files) settles only the texts the two read differently (`"`,
+  `TYPE name`, the new intrinsic names), and nothing old changes under
+  `/NOF90` (`TestNoF90Unchanged`). Run-time arrays are VMS NCA descriptors;
+  modules write `name.F90$MOD` files of our own form. No reference compiler:
+  the standard is the target, gfortran a witness.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
