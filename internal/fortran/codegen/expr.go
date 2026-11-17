@@ -303,8 +303,25 @@ func deferrable(e ir.Expr) bool {
 // needs none. A dummy argument's place is @n(AP), the address in the
 // argument list, which has no room for an offset: its offset becomes
 // part of the index, in elements (@A-4[I], T(I) of T(1:10), is
-// @SUB.A(AP)[R0] with I-1 in R0).
+// @SUB.A(AP)[R0] with I-1 in R0). A COMPLEX*32's place, a Hexa, is only
+// ever addressed (MOVAO, PUSHAO: addressOp), and no instruction's index
+// counts 32-byte values, so its index is in octawords, twice its own.
 func index(m *ir.Mem) ir.Expr {
+	if m.T == ir.Hexa {
+		o := *m
+		o.T = ir.Octa
+
+		switch x := m.Index.(type) {
+		case nil:
+		case *ir.Const:
+			o.Index = ir.LongConst(2 * x.Int())
+		default:
+			o.Index = &ir.Op{Op: ir.Mul, T: ir.Long, X: x, Y: ir.LongConst(2)}
+		}
+
+		return index(&o)
+	}
+
 	if m.Offset == 0 || (m.Param == nil && !deferredIndex(m)) {
 		return m.Index
 	}
@@ -1057,6 +1074,9 @@ func addressOp(op string, m *ir.Mem) string {
 	switch m.T {
 	case ir.Byte, ir.Word, ir.Double, ir.GFloat, ir.HFloat, ir.Quad, ir.Octa:
 		return op + m.T.String()
+	case ir.Hexa:
+		// Its index is in octawords (index).
+		return op + "O"
 	}
 
 	return op + "L"

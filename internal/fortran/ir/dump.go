@@ -402,7 +402,7 @@ func ExprText(e Expr) string {
 			return rawText(e)
 		}
 
-		if e.T == Quad || e.T == Octa {
+		if e.T == Quad || e.T == Octa || e.T == Hexa {
 			re, im := e.Parts()
 
 			return "(" + floatText(re) + ", " + floatText(im) + ")"

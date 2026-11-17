@@ -120,6 +120,8 @@ func debugType(s *sema.Symbol, gFloating bool) string {
 		switch {
 		case s.Type.Size == 8:
 			return dbgtable.ComplxF
+		case s.Type.Size == 32:
+			return dbgtable.ComplxH
 		case gFloating:
 			return dbgtable.ComplxG
 		}

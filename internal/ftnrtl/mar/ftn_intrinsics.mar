@@ -330,4 +330,40 @@ BIT_TEST:
 	MOVL	#1,R0
 	RET
 
+;
+; CALL FTN$DIVCH(result, x, y)
+;
+; X / Y for two COMPLEX*32 values, Fortran 90's COMPLEX(16), whose parts
+; are H_floating: the quotient at RESULT. It isn't an intrinsic function
+; but the operator, which the compiler calls as it calls OTS$DIVC for a
+; COMPLEX*8, since OTS$ has no H complex routine (docs/planning/PHASE-100
+; - Fortran 90 declarations and kinds.md, subtask 7). Each value is two
+; H_floating octawords, the real part first. With X = (a, b) and
+; Y = (c, d), the quotient is the manual's
+;
+;	((a*c + b*d) / (c*c + d*d), (b*c - a*d) / (c*c + d*d))
+;
+; computed an instruction at a time, each result rounded, which is what
+; the compiler's folding of a constant quotient does too
+; (vaxfloat.ComplexDivSteps). A Y of (0, 0) divides by zero, SS$_FLTDIV_F,
+; and a part too large overflows, SS$_FLTOVF_F; a part too small is 0.
+; Everything is read before anything is written, so RESULT may be X or Y.
+;
+	.ENTRY	FTN$DIVCH,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVQ	8(AP),R8		; R8 -> X, (a, b); R9 -> Y, (c, d)
+	SUBL2	#32,SP			; two H_floating values, at 0(SP) and 16(SP)
+	MULH3	(R9),(R9),R0		; c*c
+	MULH3	16(R9),16(R9),R4	; d*d
+	ADDH3	R4,R0,(SP)		; the denominator, c*c + d*d
+	MULH3	(R8),(R9),R0		; a*c
+	MULH3	16(R8),16(R9),R4	; b*d
+	ADDH3	R4,R0,16(SP)		; the real part's numerator
+	MULH3	16(R8),(R9),R0		; b*c
+	MULH3	(R8),16(R9),R4		; a*d
+	SUBH2	R4,R0			; the imaginary part's, b*c - a*d
+	MOVL	4(AP),R8		; R8 -> RESULT
+	DIVH3	(SP),16(SP),(R8)	; the real part
+	DIVH3	(SP),R0,16(R8)		; the imaginary part
+	RET				; (RET puts SP back)
+
 	.END

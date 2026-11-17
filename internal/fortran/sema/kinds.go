@@ -39,14 +39,30 @@ func (t Type) KindNumber() int {
 
 // kindInfo is what kinds a type keyword has: the kind of type it makes,
 // the kinds a selector or a constant may name, as a message lists them, and
-// the kinds that are a later subtask's (a NOTIMPL naming the type):
-// COMPLEX(16) until subtask 7.
+// the kinds that are a later subtask's (a NOTIMPL naming the type; none now:
+// INTEGER(1) and COMPLEX(16) were until subtasks 5 and 7).
 type kindInfo struct {
 	kind    Kind
 	allowed []int
 	text    string
 	pending map[int]string
 }
+
+// complex32 is COMPLEX*32, Fortran 90's COMPLEX(16): two H_floating parts
+// (subtask 7). VAX FORTRAN has no such type, and neither MTHRTL nor the OTS$
+// routines have H complex routines, so by the author's answer 1 to the
+// survey its declarations, moves, sums, differences, products, comparisons,
+// and conversions are compiled in line, its quotient is FTNRTL's FTN$DIVCH,
+// and its I/O, powers, and intrinsic functions are NOTIMPL until Phases 108
+// and 109.
+var complex32 = Type{Complex, 32}
+
+// The forms of COMPLEX(16) that are NOTIMPL, as the messages name them.
+const (
+	complex32IO        = "I/O of a COMPLEX(16) value"
+	complex32Power     = "a power of a COMPLEX(16) value"
+	complex32Intrinsic = "an intrinsic function of a COMPLEX(16) argument"
+)
 
 // typeKinds are the type keywords that take a kind, and their kinds.
 // DOUBLE PRECISION, DOUBLE COMPLEX, and BYTE name one type already
@@ -55,7 +71,7 @@ var typeKinds = map[ast.BaseType]kindInfo{
 	ast.Integer:   {Integer, []int{1, 2, 4}, "1, 2, and 4", nil},
 	ast.Logical:   {Logical, []int{1, 2, 4}, "1, 2, and 4", nil},
 	ast.Real:      {Real, []int{4, 8, 16}, "4, 8, and 16", nil},
-	ast.Complex:   {Complex, []int{4, 8, 16}, "4, 8, and 16", map[int]string{16: "COMPLEX(16)"}},
+	ast.Complex:   {Complex, []int{4, 8, 16}, "4, 8, and 16", nil},
 	ast.Character: {Character, []int{1}, "1", nil},
 }
 

@@ -380,6 +380,19 @@ func (l *lowerer) value(x Expr) *Mem {
 		return ld.Mem
 	}
 
+	if x.Type() == Hexa {
+		// A COMPLEX*32's value is never moved whole (lowercomplex.go).
+		switch x := x.(type) {
+		case *Const:
+			return l.constant(x)
+		case *Load:
+			t := l.temp(Hexa)
+			l.moveHexa(t, x.Mem)
+
+			return t
+		}
+	}
+
 	t := l.temp(x.Type())
 	l.emit(&Assign{origin: l.origin(), Dst: t, Src: x})
 

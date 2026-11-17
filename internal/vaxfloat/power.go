@@ -106,6 +106,50 @@ func ComplexMulSteps(f Format, a, b, c, d Value) (Value, Value, error) {
 	return re, im, err
 }
 
+// ComplexDivSteps returns (a, b) / (c, d) in format f as the manual's formula
+// does it one instruction at a time, each result rounded to f: the denominator
+// c*c + d*d, then (a*c + b*d) / it and (b*c - a*d) / it, each product rounded
+// before it is added or subtracted. It is what FTNRTL's FTN$DIVCH computes, the
+// quotient of two Fortran 90 COMPLEX(16) values, which no OTS$ routine has, so
+// that a constant the compiler folds has the value the routine would compute.
+// A result too small for f is 0.0. Its errors are ErrOverflow, and
+// ErrDivideByZero if the denominator is 0.
+func ComplexDivSteps(f Format, a, b, c, d Value) (Value, Value, error) {
+	var err error
+
+	step := func(op func(Format, Value, Value) (Value, error), x, y Value) Value {
+		if err != nil {
+			return Value{}
+		}
+
+		v, e := op(f, x, y)
+		if errors.Is(e, ErrUnderflow) {
+			return Value{}
+		}
+
+		err = e
+
+		return v
+	}
+
+	denominator := step(Add, step(Mul, c, c), step(Mul, d, d))
+	re := step(Add, step(Mul, a, c), step(Mul, b, d))
+	im := step(Sub, step(Mul, b, c), step(Mul, a, d))
+
+	if err == nil && denominator.IsZero() {
+		return Value{}, Value{}, ErrDivideByZero
+	}
+
+	re = step(Div, re, denominator)
+	im = step(Div, im, denominator)
+
+	if err != nil {
+		return Value{}, Value{}, err
+	}
+
+	return re, im, nil
+}
+
 // ComplexDiv returns (a, b) / (c, d) in format f: the OTS$ manual's
 // ((ac + bd) / (c^2 + d^2), (bc - ad) / (c^2 + d^2)), each part computed exactly
 // and rounded once, a part too small for f being 0.0. Its errors are ErrOverflow,

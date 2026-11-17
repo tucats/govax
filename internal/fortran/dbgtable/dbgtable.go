@@ -30,7 +30,8 @@ import (
 // Prefix starts each of the table's lines.
 const Prefix = ";DBG$ "
 
-// The types, as a V line has them. A real's and a complex's second letter is its format.
+// The types, as a V line has them. A real's and a complex's second letter is its format
+// (an H complex's is CH16, since CH is CHARACTER's).
 const (
 	Integer = "I"
 	Logical = "L"
@@ -43,6 +44,7 @@ const (
 	ComplxF = "CF"
 	ComplxD = "CD"
 	ComplxG = "CG"
+	ComplxH = "CH16" // COMPLEX*32, Fortran 90's COMPLEX(16)
 )
 
 // PlaceKind says how to find a variable.

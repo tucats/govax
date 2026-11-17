@@ -131,6 +131,10 @@ func (c *checker) block(b *Block) error {
 				}
 			}
 
+			if err == nil && s.Dst.T == Hexa {
+				err = fmt.Errorf("%s moves a COMPLEX*32 value whole", StmtText(s))
+			}
+
 			if err == nil && s.Dst.T != s.Src.Type() {
 				err = fmt.Errorf("%s assigns a %s value to a %s place", StmtText(s), s.Src.Type(), s.Dst.T)
 			}
@@ -356,6 +360,10 @@ func (c *checker) text(t Text) error {
 func (c *checker) expr(e Expr) error {
 	switch e := e.(type) {
 	case *Load:
+		if e.Mem.T == Hexa {
+			return fmt.Errorf("%s loads a COMPLEX*32 value whole", ExprText(e))
+		}
+
 		return c.mem(e.Mem)
 
 	case *Addr:

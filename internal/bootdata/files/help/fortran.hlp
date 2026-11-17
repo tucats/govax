@@ -140,8 +140,12 @@
    CHARACTER*10.  A constant may have one too, digits or a constant's
    name: 7_2, 1.5_DP (read at REAL*8's precision), .TRUE._1, 1_'TEXT'.
    INTEGER(1), also written INTEGER*1, is a signed byte, its
-   operations done in bytes; BYTE is still LOGICAL*1.  COMPLEX(16) is
-   not there yet.
+   operations done in bytes; BYTE is still LOGICAL*1.  COMPLEX(16),
+   also written COMPLEX*32, has two REAL(16) parts: its arithmetic,
+   comparisons, and conversions are compiled, and INT, REAL, DBLE,
+   QEXT, CMPLX, DCMPLX, AIMAG, and CONJG take one, but its I/O, its
+   powers, and the other intrinsic functions of one are not there yet.
+   (1.0_16, 0.0) is a COMPLEX(16) constant.
 
    The kind functions KIND, SELECTED_INT_KIND, and SELECTED_REAL_KIND,
    and the numeric inquiries HUGE, TINY, EPSILON, DIGITS, PRECISION,

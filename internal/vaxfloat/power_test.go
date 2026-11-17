@@ -189,3 +189,38 @@ func TestComplexMulSteps(t *testing.T) {
 		t.Errorf("tiny * tiny = (%v, %v), %v, want parts of 0.0", re, im, err)
 	}
 }
+
+// TestComplexDivSteps checks the quotient an instruction at a time: each step
+// rounded as the instructions round, so a denominator whose square rounds is
+// used rounded; and its errors.
+func TestComplexDivSteps(t *testing.T) {
+	v := func(i int64) Value { return FromInt(i) }
+
+	// (1, 2) / (3, 4) = (11/25, 2/25), each step exact but the divisions.
+	re, im, err := ComplexDivSteps(H, v(1), v(2), v(3), v(4))
+	wantRe, _ := Div(H, v(11), v(25))
+	wantIm, _ := Div(H, v(2), v(25))
+
+	if err != nil || re.Cmp(wantRe) != 0 || im.Cmp(wantIm) != 0 {
+		t.Errorf("(1, 2) / (3, 4) = (%v, %v), %v", re, im, err)
+	}
+
+	// c = 1 + 2^-23 in F: c*c rounds to 1 + 2^-22, the denominator the real
+	// part is divided by.
+	c := FromBig(new(big.Float).SetMantExp(bigOf(1+1.0/(1<<23)), 0))
+	cc, _ := Mul(F, c, c)
+	want, _ := Div(F, cc, cc)
+
+	if re, _, err := ComplexDivSteps(F, c, v(0), c, v(0)); err != nil || re.Cmp(want) != 0 {
+		t.Errorf("c / c = %v, %v; want %v", re, err, want)
+	}
+
+	if _, _, err := ComplexDivSteps(H, v(1), v(1), v(0), v(0)); !errors.Is(err, ErrDivideByZero) {
+		t.Errorf("by (0, 0): %v", err)
+	}
+
+	huge := FromBig(bigOf(1e38))
+	if _, _, err := ComplexDivSteps(F, huge, v(0), huge, v(0)); !errors.Is(err, ErrOverflow) {
+		t.Errorf("huge / huge: %v (the denominator overflows)", err)
+	}
+}

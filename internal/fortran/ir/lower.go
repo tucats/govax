@@ -230,7 +230,8 @@ func lowerUnit(u *sema.Unit) *Routine {
 // byte, a word, or a longword by its size; a REAL*4 F_floating, a REAL*8
 // D_floating, or G_floating if the unit says so (/G_FLOATING), and a
 // REAL*16 H_floating. A COMPLEX value as a whole is a Quad or an Octa, which
-// only moves; its parts have the type partOf says. A CHARACTER value is
+// only moves, or a COMPLEX*32's a Hexa, which moves as two Octas; its parts
+// have the type partOf says. A CHARACTER value is
 // bytes, its place a Byte place (Text).
 func (l *lowerer) typeOf(t sema.Type) Type {
 	switch {
@@ -240,6 +241,8 @@ func (l *lowerer) typeOf(t sema.Type) Type {
 		return Byte
 	case t.Kind == sema.Complex && t.Size == 8:
 		return Quad
+	case t.Kind == sema.Complex && t.Size == 32:
+		return Hexa
 	case t.Kind == sema.Complex:
 		return Octa
 	case t.Kind == sema.Real && t.Size == 8 && l.unit.GFloating:
@@ -290,6 +293,8 @@ func (l *lowerer) dtypeOf(t sema.Type) DType {
 			return DTypeDC
 		case GFloat:
 			return DTypeGC
+		case HFloat:
+			return DTypeHC
 		}
 
 		return DTypeFC

@@ -27,6 +27,13 @@ import (
 // product calls OTS$MULCD_R3 or OTS$MULCG_R3, and every quotient OTS$DIVC,
 // OTS$DIVCD_R3, or OTS$DIVCG_R3, with the parts by value, and every power
 // one of the OTS$ powers (lowerpower.go).
+//
+// A COMPLEX*32, Fortran 90's COMPLEX(16), has two H_floating parts, and its
+// whole value is a Hexa, 32 bytes, which no instruction moves: it is moved
+// as two octawords (moveHexa). Its product is written in line as a
+// COMPLEX*8's is, there being no OTS$ routine for it, and its quotient is
+// FTNRTL's FTN$DIVCH, called as a function with a hidden result. It has no
+// powers yet (semantic analysis refuses them).
 
 // The OTS$ routines for a product or quotient, by the parts' type.
 var (
@@ -131,8 +138,11 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 
 // complexBinary lowers X op Y for COMPLEX operands, whose parts have type p.
 func (l *lowerer) complexBinary(e *sema.Binary, p Type) (re, im Expr) {
-	if e.Op == ast.Pow {
+	switch {
+	case e.Op == ast.Pow:
 		return l.complexPower(e, p)
+	case e.Op == ast.Div && p == HFloat:
+		return l.hexaQuotient(e)
 	}
 
 	a, b := l.complexParts(e.X)
@@ -172,6 +182,32 @@ func (l *lowerer) complexCall(routine string, t sema.Type, a, b, c, d Expr) (re,
 	r, i := parts(result, l.partOf(t))
 
 	return &Load{r}, &Load{i}
+}
+
+// hexaQuotient lowers X / Y for COMPLEX*32 operands: FTNRTL's FTN$DIVCH,
+// called as a function of two COMPLEX(16) arguments by reference is, the
+// quotient through a hidden first argument, a temporary whose parts it
+// returns.
+func (l *lowerer) hexaQuotient(e *sema.Binary) (re, im Expr) {
+	x, y := l.complexValue(e.X), l.complexValue(e.Y)
+	result := l.temp(Hexa)
+	args := []Arg{{Ref: result}, {Ref: x}, {Ref: y}}
+	l.emit(&Call{origin: l.origin(), Routine: "FTN$DIVCH", Args: args})
+
+	r, i := parts(result, HFloat)
+
+	return &Load{r}, &Load{i}
+}
+
+// moveHexa moves the COMPLEX*32 value at src to dst as two octawords, MOVO
+// and MOVO, which no reserved operand stops: the real part, then the
+// imaginary part.
+func (l *lowerer) moveHexa(dst, src *Mem) {
+	dr, di := parts(dst, Octa)
+	sr, si := parts(src, Octa)
+
+	l.emit(&Assign{origin: l.origin(), Dst: dr, Src: &Load{sr}})
+	l.emit(&Assign{origin: l.origin(), Dst: di, Src: &Load{si}})
 }
 
 // reusable is x, if using it twice costs nothing more than once (a constant,
@@ -232,6 +268,12 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 // element, a constant, a function's value, or the value of MTHRTL's routine
 // is moved whole, with MOVQ or MOVO; anything else is computed part by part.
 func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
+	if dst.T == Hexa {
+		l.assignHexa(dst, e)
+
+		return
+	}
+
 	if x, ok := e.(*sema.IntrinsicRef); ok && x.Op == sema.CallOp {
 		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: &Load{l.complexValue(e)}})
 
@@ -246,6 +288,27 @@ func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 
 	case *sema.Const:
 		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: l.expr(e)})
+
+	default:
+		l.assignParts(dst, e, false)
+	}
+}
+
+// assignHexa lowers dst = e, both COMPLEX*32: as assignComplex does, but a
+// whole value moved as two octawords (moveHexa), a constant's bits too.
+func (l *lowerer) assignHexa(dst *Mem, e sema.Expr) {
+	switch e := e.(type) {
+	case *sema.Var, *sema.Elem, *sema.FieldRef, *sema.FuncRef, *sema.StmtFuncRef:
+		l.moveHexa(dst, l.complexValue(e))
+
+	case *sema.Const:
+		c := l.constOf(e)
+		dr, di := parts(dst, Octa)
+		re := &Const{T: Octa, Bits: c.Bits, High: c.High, Part: HFloat, Raw: true}
+		im := &Const{T: Octa, Bits: c.ImBits, High: c.ImHigh, Part: HFloat, Raw: true}
+
+		l.emit(&Assign{origin: l.origin(), Dst: dr, Src: re})
+		l.emit(&Assign{origin: l.origin(), Dst: di, Src: im})
 
 	default:
 		l.assignParts(dst, e, false)

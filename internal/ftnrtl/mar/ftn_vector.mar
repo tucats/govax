@@ -575,4 +575,12 @@
 	.MASK	FTN$RAB
 	JMP	L^FTN$RAB+2
 
+;
+; The quotient of two COMPLEX*32 values, Fortran 90's COMPLEX(16), which
+; no OTS$ routine computes (FTN_INTRINSICS).
+;
+	.TRANSFER FTN$DIVCH	; 672: X / Y, both COMPLEX(16)
+	.MASK	FTN$DIVCH
+	JMP	L^FTN$DIVCH+2
+
 	.END

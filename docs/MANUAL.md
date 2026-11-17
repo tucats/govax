@@ -8398,7 +8398,7 @@ argument (`ATTRDUMMY`) are errors.
 
 **Kinds** (the standard's 4.3 and 5.1.1). A type may be given a *kind* in parentheses
 after its keyword, where VAX FORTRAN writes a length after a `*`; a kind is the number of
-bytes, so each kind but `INTEGER(1)` is a type VAX FORTRAN already has:
+bytes, so each kind but `INTEGER(1)` and `COMPLEX(16)` is a type VAX FORTRAN already has:
 
 | Written | Is |
 | --- | --- |
@@ -8407,6 +8407,7 @@ bytes, so each kind but `INTEGER(1)` is a type VAX FORTRAN already has:
 | `LOGICAL(1)`, `LOGICAL(2)`, `LOGICAL(4)` | `LOGICAL*1`, `LOGICAL*2`, `LOGICAL*4` |
 | `REAL(4)`, `REAL(8)`, `REAL(16)` | `REAL*4`, `REAL*8` (D or G by `/G_FLOATING`), `REAL*16` |
 | `COMPLEX(4)`, `COMPLEX(8)` | `COMPLEX*8`, `COMPLEX*16`: a COMPLEX's kind is its parts' |
+| `COMPLEX(16)` | `COMPLEX*32`, two H_floating parts (new: VAX FORTRAN has none) |
 | `CHARACTER(10)`, `CHARACTER(LEN=10)`, `CHARACTER(10, KIND=1)`, `CHARACTER(KIND=1, LEN=10)` | `CHARACTER*10` |
 | `CHARACTER(*)`, `CHARACTER(LEN=*)` | `CHARACTER*(*)` |
 
@@ -8427,8 +8428,8 @@ with a `D` or `Q` exponent has its type already, and can't have a kind (`KINDEXP
 kind the type doesn't have is `NOSUCHKIND` (`REAL(3)`), and `DOUBLE PRECISION` and the other
 types that name one length take none (`NOKIND`). DEC's lengths go on working beside kinds,
 and a length after an entity's name replaces the statement's kind or length (`REAL(8) ::
-X*4`). `COMPLEX(16)`, a `CHARACTER` length of zero, and a `CHARACTER` length
-that isn't constant (`CHARACTER(LEN=N)` with `N` a dummy argument) are not there yet.
+X*4`). A `CHARACTER` length of zero, and a `CHARACTER` length
+that isn't constant (`CHARACTER(LEN=N)` with `N` a dummy argument), are not there yet.
 
 **INTEGER(1).** `INTEGER(1)`, which may also be written `INTEGER*1`, is a signed byte. An
 operation on two of them is done in a byte (`ADDB3`, `MULB3`, `CMPB`, ...); beside a wider
@@ -8439,6 +8440,21 @@ done in `INTEGER*2` and give an `INTEGER(1)`; `INT` gives the default integer, a
 name (`IIABS`) its own type. `BYTE` is still `LOGICAL*1`, as in VAX FORTRAN, and a `LOGICAL*1`
 in arithmetic is still an `INTEGER*2`. List-directed output writes an `INTEGER(1)` as `I5`,
 as it writes a `BYTE`.
+
+**COMPLEX(16).** `COMPLEX(16)`, which may also be written `COMPLEX*32`, is a complex value
+of two `REAL(16)` parts, H_floating, 32 bytes. Its sums, differences, products, negations,
+comparisons (`==`, `/=`), and conversions to and from the other numeric types are written in
+line with the H instructions, and its quotient is FTNRTL's `FTN$DIVCH`, the manual's formula
+an instruction at a time; a constant expression is folded the same way, so it has the value
+the code would compute. A complex constant is `COMPLEX(16)` if a part has the kind 16,
+`(1.0_16, 0.0)`; a part written `1.0Q0` still makes a `COMPLEX*16`, as in VAX FORTRAN, and so
+does a `REAL(16)` beside a `COMPLEX(4)` or `COMPLEX(8)` in an operation, where the standard
+would give `COMPLEX(16)`: write `CMPLX(X, KIND=16)` for that. Of the intrinsic functions,
+`INT`, `REAL` (whose result is a `REAL(16)`, the real part, as the standard has it),
+`DBLE`, `QEXT`, `CMPLX` (with `KIND=16` to make one), `DCMPLX`, `AIMAG`, and `CONJG` take a
+`COMPLEX(16)`. Its I/O, its powers (`**`), and the other intrinsic functions of one (`ABS`,
+`SQRT`, `EXP`, ...) are not there yet (`%FORT-E-NOTIMPL`): print its parts, `REAL(Z)` and
+`AIMAG(Z)`.
 
 **The kind and inquiry functions** (the standard's 13.7.1 and 13.13). `KIND(X)` is the kind
 of `X`'s type, and `SELECTED_INT_KIND(R)` and `SELECTED_REAL_KIND(P, R)` the kind of least

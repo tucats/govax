@@ -74,6 +74,13 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		if args[i] = a.value(x); args[i].Type().Kind == Invalid {
 			return a.bad(e.Pos)
 		}
+
+		if args[i].Type() == complex32 && !takesComplex32(forms) {
+			// Only the conversions and parts have rows for one (complex32).
+			a.notImplForm(e.Pos, complex32Intrinsic)
+
+			return a.bad(e.Pos)
+		}
 	}
 
 	// KIND= makes the result that kind of the result's type.
@@ -105,6 +112,17 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 	}
 
 	return v
+}
+
+// takesComplex32 reports whether any of the rows takes a COMPLEX*32.
+func takesComplex32(forms []form) bool {
+	for _, f := range forms {
+		if f.arg == complex32 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // byteType is INTEGER*1, Fortran 90's INTEGER(1).

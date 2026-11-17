@@ -332,7 +332,9 @@ func TestErrors(t *testing.T) {
 		// Fortran 90's kinds (subtask 4).
 		{"a kind the type lacks", []string{"REAL(3) X", "END"}, "NOSUCHKIND@1:12"},
 		{"a CHARACTER kind the type lacks", []string{"CHARACTER(5, KIND=2) C", "END"}, "NOSUCHKIND@1:25"},
-		{"COMPLEX(16), subtask 7's", []string{"COMPLEX(16) Z", "END"}, "NOTIMPL@1:15"},
+		{"COMPLEX(16), subtask 7's", []string{"COMPLEX(16) Z", "END"}, ""},
+		{"COMPLEX*32, COMPLEX(16)'s old form", []string{"COMPLEX*32 Z", "END"}, ""},
+		{"COMPLEX*64", []string{"COMPLEX*64 Z", "END"}, "BADLENGTH@1:7"},
 		{"a kind on DOUBLE PRECISION", []string{"DOUBLE PRECISION(8) X", "END"}, "NOKIND@1:24"},
 		{"a kind that isn't constant", []string{"SUBROUTINE S(K)", "REAL(K) X", "END"}, "KINDNOTCONST@2:12"},
 		{"a negative kind", []string{"REAL(-4) X", "END"}, "KINDNOTCONST@1:12"},

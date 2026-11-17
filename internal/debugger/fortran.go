@@ -540,7 +540,7 @@ func fortranFloat(code string) vaxfloat.Format {
 		return vaxfloat.D
 	case dbgtable.RealG, dbgtable.ComplxG:
 		return vaxfloat.G
-	case dbgtable.RealH:
+	case dbgtable.RealH, dbgtable.ComplxH:
 		return vaxfloat.H
 	}
 
@@ -593,7 +593,7 @@ func (d *Debugger) fortranText(p fortranPlace, data []byte, radix int) string {
 	case dbgtable.RealF, dbgtable.RealD, dbgtable.RealG, dbgtable.RealH:
 		return formatFloat(fortranFloat(p.v.Type), data)
 
-	case dbgtable.ComplxF, dbgtable.ComplxD, dbgtable.ComplxG:
+	case dbgtable.ComplxF, dbgtable.ComplxD, dbgtable.ComplxG, dbgtable.ComplxH:
 		half := len(data) / 2
 		format := fortranFloat(p.v.Type)
 

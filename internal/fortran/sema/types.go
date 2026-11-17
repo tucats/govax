@@ -145,7 +145,7 @@ func (t Type) letter() string {
 // lowest, then INTEGER*1 (Fortran 90's INTEGER(1), which VAX FORTRAN
 // lacks: the standard's 7.1.4.2 gives two integers the kind of the
 // greater range), INTEGER*2, INTEGER*4, REAL*4, REAL*8, REAL*16,
-// COMPLEX*8, and COMPLEX*16.
+// COMPLEX*8, COMPLEX*16, and COMPLEX*32 (Fortran 90's COMPLEX(16)).
 func (t Type) rank() int {
 	switch t.Kind {
 	case Logical:
@@ -169,8 +169,11 @@ func (t Type) rank() int {
 
 		return 5
 	case Complex:
-		if t.Size == 16 {
+		switch t.Size {
+		case 16:
 			return 9
+		case 32:
+			return 10
 		}
 
 		return 8

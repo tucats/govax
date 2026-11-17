@@ -267,16 +267,24 @@ func (ev *evaluator) realAs(e *ast.RealConst, t Type, text string) (*Const, *con
 // complex is a complex constant, (re, im) (section 2.2.1.3): each part
 // an INTEGER or REAL constant, signed or not, or a constant's name
 // (section 4.11), anything else BADCOMPLEX. It is COMPLEX*16 if a part
-// is REAL*8 or REAL*16, else COMPLEX*8.
+// is REAL*8 or REAL*16, else COMPLEX*8; but a part written with the kind
+// 16, Fortran 90's (1.0_16, 0.0), makes it COMPLEX*32, Fortran 90's
+// COMPLEX(16) (4.3.1.3: the kind of the part of greater precision). Only
+// a kind on a constant says so, a form VAX FORTRAN hasn't, so (1.0Q0, 0.0)
+// is still COMPLEX*16 (docs/planning/PHASE-100 - Fortran 90 declarations and
+// kinds.md, subtask 7).
 func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
+	hKind := false
+
 	part := func(x ast.Expr) (*Const, *constErr) {
 		inner := x
 		if u, ok := x.(*ast.Unary); ok && (u.Op == ast.Add || u.Op == ast.Sub) {
 			inner = u.X
 		}
 
+		kinded := false
 		if k, ok := inner.(*ast.KindConst); ok {
-			inner = k.X
+			inner, kinded = k.X, true
 		}
 
 		switch inner.(type) {
@@ -294,6 +302,8 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 			return nil, ev.report("BADCOMPLEX", x.Position())
 		}
 
+		hKind = hKind || kinded && c.T == Type{Real, 16}
+
 		return c, nil
 	}
 
@@ -305,7 +315,11 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 	}
 
 	t := Type{Complex, 8}
-	if re.T.Kind == Real && re.T.Size > 4 || im.T.Kind == Real && im.T.Size > 4 {
+
+	switch {
+	case hKind:
+		t = Type{Complex, 32}
+	case re.T.Kind == Real && re.T.Size > 4 || im.T.Kind == Real && im.T.Size > 4:
 		t = Type{Complex, 16}
 	}
 
@@ -620,10 +634,16 @@ func realArith(op ast.Op, f vaxfloat.Format, x, y vaxfloat.Value) (vaxfloat.Valu
 // (OTS$MULCD_R3, OTS$DIVC, ...), vaxfloat's exact parts each rounded once,
 // the same code the routines use. An F product has no routine: the compiler
 // writes it in line, each product and sum rounded (vaxfloat.ComplexMulSteps;
-// the author's answer 1 in Phase 78's survey).
+// the author's answer 1 in Phase 78's survey). Neither has an H product, a
+// COMPLEX*32's (Fortran 90's COMPLEX(16)): it is written in line the same
+// way, and its quotient is FTNRTL's FTN$DIVCH, the manual's formula an
+// instruction at a time (vaxfloat.ComplexDivSteps).
 func complexArith(op ast.Op, f vaxfloat.Format, a, b, c, d vaxfloat.Value) (vaxfloat.Value, vaxfloat.Value, error) {
-	if op == ast.Mul && f == vaxfloat.F {
+	switch {
+	case op == ast.Mul && (f == vaxfloat.F || f == vaxfloat.H):
 		return vaxfloat.ComplexMulSteps(f, a, b, c, d)
+	case op == ast.Div && f == vaxfloat.H:
+		return vaxfloat.ComplexDivSteps(f, a, b, c, d)
 	}
 
 	return complexOTS(op, f, a, b, c, d)

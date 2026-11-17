@@ -151,7 +151,6 @@ func TestInquiryErrors(t *testing.T) {
 		"INT(KIND=2, X)":          "KEYWORDORDER",
 		"INT(KIND=2)":             "MISSINGARG: the intrinsic function INT needs its argument A",
 		"INT(X, 2, 3)":            "INTRINARGS: the intrinsic function INT takes 1 or 2 arguments, not 3",
-		"CMPLX(X, KIND=16)":       "NOTIMPL: COMPLEX(16)",
 		"SELECTED_REAL_KIND()":    "MISSINGARG: the intrinsic function SELECTED_REAL_KIND needs its argument P or R",
 		"SELECTED_INT_KIND(I)":    "NOTIMPL: SELECTED_INT_KIND of a value not constant",
 		"SELECTED_INT_KIND(1.5)":  "BADARG: the intrinsic function SELECTED_INT_KIND's arguments must be INTEGER, and this one is REAL",

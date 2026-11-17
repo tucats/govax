@@ -54,6 +54,7 @@ PROGRAMS = {
 # first, its directory searched for INCLUDE files.
 PROGRAMS90 = {
     "bytes": ["bytes.f90"],
+    "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],
     "kinds": ["kinds.f90"],

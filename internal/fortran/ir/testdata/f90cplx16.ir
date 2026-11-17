@@ -1,0 +1,123 @@
+routine F90CPLX16 main
+  cell  Z       X  $LOCAL+0    variable Z
+  cell  W       X  $LOCAL+32   variable W
+  cell  A       X  $LOCAL+64   array A, 96 bytes
+  cell  V       X  $LOCAL+160  variable V
+  cell  D       O  $LOCAL+192  variable D
+  cell  H       H  $LOCAL+208  variable H
+  cell  I       L  $LOCAL+224  variable I
+  cell  $T1     H  $LOCAL+228  temporary
+  cell  $T2     X  $LOCAL+244  temporary
+  cell  $T3     D  $LOCAL+276  temporary
+  cell  $T4     X  $LOCAL+284  temporary
+  $LOCAL is 316 bytes
+  init  $LOCAL+0 Z = 01 40 00 80 00 00 00 00 00 00 00 00 00 00 00 00 02 C0 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+B1:
+  ; line 12
+  assign $T1 = add.H(Z, 0.5Q0)
+  assign W+16 = add.H(Z+16, 1Q0)
+  assign W = $T1
+  ; line 13
+  assign $T1 = sub.H(sub.H(mul.H(Z, W), mul.H(Z+16, W+16)), A+32)
+  assign V+16 = sub.H(add.H(mul.H(Z, W+16), mul.H(Z+16, W)), A+48)
+  assign V = $T1
+  ; line 14
+  call FTN$DIVCH(ref $T2, ref Z, ref W)
+  assign V = $T2
+  assign V+16 = $T2+16
+  ; line 15
+  assign $T1 = neg.H(V)
+  assign V+16 = neg.H(V+16)
+  assign V = $T1
+  ; line 16
+  assign A+64 = V
+  assign A+80 = V+16
+  ; line 17
+  assign $T3 = cvt.HD(V)
+  assign D+8 = cvt.HD(V+16)
+  assign D = $T3
+  ; line 18
+  assign $T1 = cvt.DH(D)
+  assign V+16 = cvt.DH(D+8)
+  assign V = $T1
+  ; line 19
+  assign H = V
+  ; line 20
+  assign V = H
+  assign V+16 = 0Q0
+  ; line 21
+  assign $T1 = H
+  assign V+16 = H
+  assign V = $T1
+  ; line 22
+  assign H = add.H(V+16, V)
+  ; line 23
+  assign $T1 = V
+  assign V+16 = neg.H(V+16)
+  assign V = $T1
+  ; line 24
+  assign $T3 = cvt.HD(V)
+  assign D+8 = cvt.HD(V+16)
+  assign D = $T3
+  ; line 25
+  branch and.L(eq.H(Z, W), eq.H(Z+16, W+16)) B2 B3
+B2:
+  assign V = Z
+  assign V+16 = Z+16
+  jump B3
+B3:
+  ; line 26
+  branch or.L(ne.H(Z, W), ne.H(Z+16, W+16)) B4 B5
+B4:
+  call TWICE(ref $T2, ref Z)
+  assign V = $T2
+  assign V+16 = $T2+16
+  jump B5
+B5:
+  ; line 27
+  call TAKE(ref Z, ref A)
+  ; line 28
+  assign V = ^X00000000000000000000000000004002
+  assign V+16 = ^X00000000000000000000000080004002
+  ; line 29
+  assign A-32[mul.L(I, 2)] = V
+  assign A-16[mul.L(I, 2)] = V+16
+  ; line 30
+  assign $T1 = sub.H(mul.H(A-32[mul.L(I, 2)], A[mul.L(I, 2)]), mul.H(A-16[mul.L(I, 2)], A+16[mul.L(I, 2)]))
+  assign V+16 = add.H(mul.H(A-32[mul.L(I, 2)], A+16[mul.L(I, 2)]), mul.H(A-16[mul.L(I, 2)], A[mul.L(I, 2)]))
+  assign V = $T1
+  ; line 31
+  call FTN$DIVCH(ref $T4, ref V, ref A-32[I])
+  assign $T2 = $T4
+  assign $T2+16 = $T4+16
+  call TAKE(ref A-32[I], ref $T2)
+  ; line 32
+  return 1
+routine TWICE function
+  param TWICE   X  argument 1
+  param X       X  argument 2
+  cell  $T1     H  $LOCAL+0    temporary
+  $LOCAL is 16 bytes
+B1:
+  ; line 36
+  assign $T1 = add.H(@X, @X)
+  assign @TWICE+16 = add.H(@X+16, @X+16)
+  assign @TWICE = $T1
+  ; line 37
+  return
+routine TAKE subroutine
+  param X       X  argument 1
+  param Y       X  argument 2
+  cell  N       L  $LOCAL+0    variable N
+  cell  $T1     X  $LOCAL+4    temporary
+  $LOCAL is 36 bytes
+B1:
+  ; line 41
+  assign @Y-32[mul.L(N, 2)] = @X
+  assign @Y-16[mul.L(N, 2)] = @X+16
+  ; line 42
+  call FTN$DIVCH(ref $T1, ref @Y-64[N], ref @X)
+  assign @Y+32[mul.L(N, 2)] = $T1
+  assign @Y+48[mul.L(N, 2)] = $T1+16
+  ; line 43
+  return

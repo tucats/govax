@@ -272,7 +272,8 @@ func (a *analyzer) f90Entity(s *ast.TypeStmt, sym *Symbol, d *ast.Declarator, sp
 
 // lengths are the lengths each numeric type may be given (Table 2-1), as
 // a message lists them, and the type's own default. INTEGER*1 is Fortran
-// 90's INTEGER(1), which the HP manual also lets the old form name.
+// 90's INTEGER(1), and COMPLEX*32 its COMPLEX(16), which the HP manual also
+// lets the old form name.
 var lengths = map[ast.BaseType]struct {
 	def     Type
 	allowed []int
@@ -281,7 +282,7 @@ var lengths = map[ast.BaseType]struct {
 	ast.Integer: {IntegerType, []int{1, 2, 4}, "1, 2, and 4"},
 	ast.Logical: {LogicalType, []int{1, 2, 4}, "1, 2, and 4"},
 	ast.Real:    {RealType, []int{4, 8, 16}, "4, 8, and 16"},
-	ast.Complex: {Type{Complex, 8}, []int{8, 16}, "8 and 16"},
+	ast.Complex: {Type{Complex, 8}, []int{8, 16, 32}, "8, 16, and 32"},
 }
 
 // fixedTypes are the type keywords that name one length, and so may not

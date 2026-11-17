@@ -5,9 +5,9 @@ Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17), every recommendation
 accepted by the author ("The author's answers"); subtask 2, the scope
 chain, subtask 3, `::` declarations and attributes, subtask 4, kind
-selectors and kinds on constants, subtask 5, INTEGER(1), and subtask 6,
-the kind and inquiry functions, are done (2026-11-17); subtask 7,
-COMPLEX(16), is next. Needs Phase 99.
+selectors and kinds on constants, subtask 5, INTEGER(1), subtask 6,
+the kind and inquiry functions, and subtask 7, COMPLEX(16), are done
+(2026-11-17); subtask 8, programs end to end, is next. Needs Phase 99.
 
 ## Goal
 
@@ -305,7 +305,8 @@ and 7), and COMPLEX(16) by question 1's answer.
    `/G_FLOATING` settings, `/NOI4`), and **KIND= on the conversions**
    (finding 7), with the intrinsic table's keyword and optional columns
    (finding 8) (done 2026-11-17).
-7. **COMPLEX(16)**, as far as question 1's answer takes it.
+7. **COMPLEX(16)**, as far as question 1's answer takes it (done
+   2026-11-17).
 8. **Programs end to end** (`testdata/fortran90`: declarations of every form, a
    program portable to gfortran using `SELECTED_REAL_KIND` and `KIND=`).
 9. **Close-out**: FORTRAN-INTERNALS.md's section 25 (scopes and kinds),
@@ -528,3 +529,42 @@ The author accepted every recommendation:
   (`compare.py`, the seven lines of the real model in its KNOWN). MANUAL.md's
   14.13 has the model's table and finding 9's advice, and HELP FORTRAN says
   what is compiled.
+- **2026-11-17, subtask 7 (done):** COMPLEX(16), by the author's answer 1
+  (a). Sema: `{Complex, 32}`, COMPLEX*32 (`sema/kinds.go`'s `complex32`), is
+  a type: `typeKinds` no longer pends kind 16, `lengths` takes `COMPLEX*32`
+  (the HP manual's old form, as `INTEGER*1`), and `rank` puts it above
+  COMPLEX*16. A complex constant is COMPLEX*32 when a part has the kind 16,
+  `(1.0_16, 0.0)` (`evaluator.complex`'s `hKind`); since only a kind on a
+  constant says so, a form VAX FORTRAN hasn't, `(1.0Q0, 0.0)` is still
+  COMPLEX*16. Mixed operations keep VAX FORTRAN's rule, so a REAL(16) beside a
+  COMPLEX(4) or COMPLEX(8) gives COMPLEX*16 where the standard's 7.1.4.2 would
+  give COMPLEX(16) (a known difference, MANUAL.md's 14.13; `CMPLX(X, KIND=16)`
+  makes one). A power of one, an intrinsic function no row of which takes one,
+  and its I/O (an item, an implied-DO's, a namelist's) are NOTIMPL by name
+  (`complex32Power`, `complex32Intrinsic`, `complex32IO`). The conversions and
+  parts the IR writes in line have rows of their own in `fortran90Table`:
+  INT, REAL (a REAL(16), the real part, by the standard's 13.13.84, where
+  Table D-3's REAL of a COMPLEX*16 is REAL*4), DBLE, QEXT, CMPLX, DCMPLX,
+  CONJG, and AIMAG, made generic for it (its COMPLEX*8 row the specific
+  AIMAG's; nothing old changed). The folder does a product an instruction at a
+  time, as F's (`vaxfloat.ComplexMulSteps` for H too), and a quotient as
+  FTN$DIVCH does (`vaxfloat.ComplexDivSteps`, new: the denominator `c*c +
+  d*d`, then each numerator, then the divisions, each step rounded).
+  The IR: `Hexa`, 32 bytes, the whole value, which no instruction moves:
+  lowering moves it as two octawords (`moveHexa`; a constant's halves as raw
+  Octa constants, `assignHexa`; `value` for an argument copied), and `Check`
+  refuses a Load or an Assign of one. A Hexa constant's imaginary part is
+  `Const.ImBits` and `ImHigh`. Parts are H places as ever (`parts`), the
+  product in line (no OTS$ routine), the quotient `hexaQuotient`, a call of
+  FTN$DIVCH with a hidden result and both operands by reference;
+  `DSC$K_DTYPE_HC` for a descriptor. Codegen: a Hexa place is only addressed,
+  MOVAO or PUSHAO with its index doubled to octawords (`index`, `addressOp`).
+  FTNRTL: `FTN$DIVCH` (`ftn_intrinsics.mar`, at vector offset 672; GSMATCH
+  1,20), everything read before RESULT is written, so it may be an operand.
+  The debugger table's type is `CH16` (`dbgtable.ComplxH`), which the debugger
+  shows as a pair of H values. Tests: `vaxfloat`'s `TestComplexDivSteps`,
+  sema's `TestComplex16` and `TestComplex16NotImpl`, the golden
+  `f90cplx16.for` in sema, ir, and codegen (elements and dummy arrays with
+  indexes, each address checked by hand), and `testdata/fortran90/cplx16.f90`,
+  run in every mode and the same on gfortran (`compare.py`), its one third to
+  33 digits. MANUAL.md's 14.13 and HELP FORTRAN say what is compiled.

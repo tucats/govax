@@ -59,13 +59,15 @@
 // across a CALLS.
 //
 // A COMPLEX expression is split into two trees, one for its real part
-// and one for its imaginary part, over F, D, or G operations
+// and one for its imaginary part, over F, D, G, or H operations
 // (lowercomplex.go), so the code generator has no complex arithmetic. A
 // complex value as a whole is a Quad or an Octa, which is only moved
-// (MOVQ, MOVO), passed, or returned; a part is a Mem of its own, the
-// imaginary part 4 or 8 bytes past the real one. The products and
-// quotients VAX FORTRAN computes in the OTS$ routines are Calls whose
-// arguments are the parts by value.
+// (MOVQ, MOVO), passed, or returned, or for a COMPLEX*32 (Fortran 90's
+// COMPLEX(16)) a Hexa, which is only passed and is moved as two Octas; a
+// part is a Mem of its own, the imaginary part 4, 8, or 16 bytes past the
+// real one. The products and quotients VAX FORTRAN computes in the OTS$
+// routines are Calls whose arguments are the parts by value; a COMPLEX*32
+// quotient is FTNRTL's FTN$DIVCH, its operands by reference.
 //
 // A CHARACTER value is a Text: a Byte place (an element's index multiplied
 // by its length, since the VAX's indexed mode multiplies only by the

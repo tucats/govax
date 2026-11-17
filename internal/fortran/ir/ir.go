@@ -41,17 +41,27 @@ const (
 	HFloat      // H_floating: REAL*16; the H of ADDH3
 	Quad        // a quadword moved whole: COMPLEX*8; the Q of MOVQ
 	Octa        // an octaword moved whole: COMPLEX*16; the O of MOVO
+
+	// Hexa is 32 bytes, COMPLEX*32 (Fortran 90's COMPLEX(16)), two
+	// H_floating parts. No VAX instruction takes one: the value is a place,
+	// a constant, or an argument's address, but never loaded, moved, or
+	// stored whole (lowering moves it as two Octas, and Check refuses a
+	// Load or an Assign of one). An index into an array of them counts
+	// whole values, as any index does; the code generator gives an address
+	// of one with MOVAO and the index doubled.
+	Hexa
 )
 
 // String is the type's letter, the suffix of the VAX instructions that
-// work on it: L, F, B, W, D, G, H, Q, O.
+// work on it: L, F, B, W, D, G, H, Q, O; and X for Hexa, which no
+// instruction has.
 func (t Type) String() string {
-	return [...]string{"", "L", "F", "B", "W", "D", "G", "H", "Q", "O"}[t]
+	return [...]string{"", "L", "F", "B", "W", "D", "G", "H", "Q", "O", "X"}[t]
 }
 
 // Size is the type's size in bytes.
 func (t Type) Size() int {
-	return [...]int{0, 4, 4, 1, 2, 8, 8, 16, 8, 16}[t]
+	return [...]int{0, 4, 4, 1, 2, 8, 8, 16, 8, 16, 32}[t]
 }
 
 // Integer reports whether t is an integer type: Byte, Word, or Long.
@@ -354,10 +364,11 @@ const (
 	DTypeG   DType = 27 // G_floating: REAL*8 under /G_FLOATING
 	DTypeH   DType = 28 // H_floating: REAL*16
 	DTypeGC  DType = 29 // G_floating complex: COMPLEX*16 under /G_FLOATING
+	DTypeHC  DType = 30 // H_floating complex: COMPLEX*32, Fortran 90's COMPLEX(16)
 )
 
 // String is the code's name after DSC$K_DTYPE_: BU, WU, LU, B, W, L, F, D,
-// FC, DC, G, H, GC, T, ZEM.
+// FC, DC, G, H, GC, HC, T, ZEM.
 func (d DType) String() string {
 	switch d {
 	case DTypeBU:
@@ -386,6 +397,8 @@ func (d DType) String() string {
 		return "DC"
 	case DTypeGC:
 		return "GC"
+	case DTypeHC:
+		return "HC"
 	case DTypeT:
 		return "T"
 	case DTypeZEM:
@@ -988,17 +1001,20 @@ type (
 	// as a little-endian number (a Long's two's complement, an F_floating
 	// longword's bits, 1.0 being ^X00004080, a D_floating quadword's), and
 	// High the bytes of an H_floating value past its first eight. A
-	// complex constant is a Quad or an Octa, its real part first, and Part
-	// is its parts' type (Float, Double, or GFloat). Raw is set for a
+	// complex constant is a Quad, an Octa, or a Hexa, its real part first,
+	// and Part is its parts' type (Float, Double, GFloat, or HFloat); a
+	// Hexa's imaginary part is ImBits and ImHigh, as Bits and High hold its
+	// real part. Raw is set for a
 	// floating or complex constant whose bits needn't be a number (an octal,
 	// hexadecimal, or Hollerith constant given the type): it may only be moved,
 	// and only as an integer of its width, since a floating move faults on a
 	// reserved operand.
 	Const struct {
-		T          Type
-		Bits, High uint64
-		Part       Type
-		Raw        bool
+		T              Type
+		Bits, High     uint64
+		ImBits, ImHigh uint64
+		Part           Type
+		Raw            bool
 	}
 
 	// Load is the value at Mem.
@@ -1179,10 +1195,13 @@ func RealConst(t Type, v vaxfloat.Value) *Const {
 
 // ComplexConst is the complex constant whose parts are the constants re and
 // im, both of one floating type: a Quad for two F_floating parts, an Octa
-// for two D or G ones.
+// for two D or G ones, a Hexa for two H ones.
 func ComplexConst(re, im *Const) *Const {
-	if re.T == Float {
+	switch re.T {
+	case Float:
 		return &Const{T: Quad, Bits: re.Bits&0xFFFFFFFF | im.Bits<<32, Part: Float}
+	case HFloat:
+		return &Const{T: Hexa, Bits: re.Bits, High: re.High, ImBits: im.Bits, ImHigh: im.High, Part: HFloat}
 	}
 
 	return &Const{T: Octa, Bits: re.Bits, High: im.Bits, Part: re.T}
@@ -1193,12 +1212,10 @@ func ComplexConst(re, im *Const) *Const {
 func RawConst(t, part Type, b []byte) *Const {
 	c := &Const{T: t, Part: part, Raw: true}
 
+	words := []*uint64{&c.Bits, &c.High, &c.ImBits, &c.ImHigh}
+
 	for i, x := range b {
-		if i < 8 {
-			c.Bits |= uint64(x) << (8 * i)
-		} else {
-			c.High |= uint64(x) << (8 * (i - 8))
-		}
+		*words[i/8] |= uint64(x) << (8 * (i % 8))
 	}
 
 	return c
@@ -1206,8 +1223,11 @@ func RawConst(t, part Type, b []byte) *Const {
 
 // Parts are a complex constant's real and imaginary parts.
 func (c *Const) Parts() (re, im *Const) {
-	if c.T == Quad {
+	switch c.T {
+	case Quad:
 		return &Const{T: c.Part, Bits: c.Bits & 0xFFFFFFFF}, &Const{T: c.Part, Bits: c.Bits >> 32}
+	case Hexa:
+		return &Const{T: c.Part, Bits: c.Bits, High: c.High}, &Const{T: c.Part, Bits: c.ImBits, High: c.ImHigh}
 	}
 
 	return &Const{T: c.Part, Bits: c.Bits}, &Const{T: c.Part, Bits: c.High}
@@ -1234,18 +1254,14 @@ func (c *Const) Real() vaxfloat.Value {
 
 // Longwords are a floating or complex constant's bits as the longwords
 // memory holds, the lowest-addressed first: one for F, two for D, G, or a
-// Quad, four for H or an Octa.
+// Quad, four for H or an Octa, eight for a Hexa.
 func (c *Const) Longwords() []uint32 {
 	n := c.T.Width()
 	words := make([]uint32, n)
+	quads := []uint64{c.Bits, c.High, c.ImBits, c.ImHigh}
 
 	for i := range words {
-		b := c.Bits
-		if i >= 2 {
-			b = c.High
-		}
-
-		words[i] = uint32(b >> (32 * (i % 2)))
+		words[i] = uint32(quads[i/2] >> (32 * (i % 2)))
 	}
 
 	return words
@@ -1253,8 +1269,8 @@ func (c *Const) Longwords() []uint32 {
 
 // IsZero reports whether the constant is zero (0, 0.0, or (0.0, 0.0)).
 func (c *Const) IsZero() bool {
-	if c.Raw || c.T == Quad || c.T == Octa {
-		return c.Bits == 0 && c.High == 0
+	if c.Raw || c.T == Quad || c.T == Octa || c.T == Hexa {
+		return c.Bits == 0 && c.High == 0 && c.ImBits == 0 && c.ImHigh == 0
 	}
 
 	if c.T.Floating() {

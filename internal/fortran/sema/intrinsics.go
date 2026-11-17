@@ -334,6 +334,15 @@ ISHFTC JISHFTC 3 I4  I4  SHIFTC
 // Fortran 90.md), so an old program's own KIND or RANGE is still called. A
 // result of * is the argument's type. LOGICAL's rows give the default
 // LOGICAL, as INT's give the default INTEGER.
+//
+// The rows after the inquiries take a COMPLEX*32, Fortran 90's COMPLEX(16)
+// (subtask 7), which Table D-3 can't: each is a conversion or a part the
+// compiler writes in line. REAL of one is its real part, a REAL*16, as the
+// standard has it (13.13.84: of a COMPLEX, the real kind of its own kind),
+// where Table D-3's REAL of a COMPLEX*16 is REAL*4; AIMAG is made generic for
+// it, its COMPLEX*8 row the specific AIMAG's. The functions of a COMPLEX(16)
+// that MTHRTL would compute (ABS, SQRT, EXP, ...) are NOTIMPL until Phases
+// 108 and 109 (the author's answer 1 to the survey).
 const fortran90Table = `
 LOGICAL            -  1   L1  L2  CVT E L,KIND?
 LOGICAL            -  1   L1  L4  CVT E L,KIND?
@@ -355,6 +364,17 @@ RADIX              -  1   *   I4  INQ I X
 MAXEXPONENT        -  1   *   I4  INQ I X
 MINEXPONENT        -  1   *   I4  INQ I X
 BIT_SIZE           -  1   *   *   INQ I I
+
+INT                -  1   C32 I2  CVT E A,KIND?
+INT                -  1   C32 I4  CVT E A,KIND?
+REAL               -  1   C32 R16 CVT E A,KIND?
+DBLE               -  1   C32 R8  CVT
+QEXT               -  1   C32 R16 CVT
+CMPLX              -  1   C32 C8  CMPLX E X,Y?,KIND?
+DCMPLX             -  1   C32 C16 CMPLX
+AIMAG              -  1   C8  R4  IMAG
+AIMAG              -  1   C32 R16 IMAG
+CONJG              -  1   C32 C32 CONJG
 `
 
 // form is one row of the table.
