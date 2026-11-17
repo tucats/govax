@@ -17,8 +17,11 @@ import (
 //   - END PROGRAM name and the rest, checked against the unit they end
 //     (checkEnd);
 //   - construct names, read and kept for Phase 101 (StmtBase.Construct);
-//   - Fortran 90's forms of old statements (INTEGER :: N, REAL(8) X,
-//     DIMENSION :: A(10)), each a PendingStmt naming the form;
+//   - Fortran 90's declarations (Phase 100): a type statement's :: form,
+//     with its attributes (attrSpec) and = values (entityValue), the
+//     attribute statements with ::, and INTENT, OPTIONAL, and TARGET, into
+//     the old statements' nodes (decl.go, spec.go); a kind or length
+//     selector (REAL(8) X) is still a PendingStmt naming the form;
 //   - and the statements that hold others: CONTAINS's procedures, an
 //     interface block's bodies, a derived type's components. Left in the
 //     unit's list, they would be read as the unit's own declarations, so
@@ -60,18 +63,88 @@ func (p *parser) doubleColon() *lex.Token {
 	return nil
 }
 
-// f90Declaration is the Fortran 90 form of a type statement, if this one has
-// one: a :: (INTEGER, PARAMETER :: N = 10), or a kind or length selector after
-// the type keyword (REAL(8) X, CHARACTER(LEN=10) C, INTEGER(KIND=2) I). Both
-// are Phase 100's. VAX FORTRAN's type statements never have either: a length
-// follows a *.
-func (p *parser) f90Declaration() ast.Stmt {
-	if t := p.doubleColon(); t != nil {
-		return p.pending("the :: form of a type declaration", t)
-	}
-
+// kindSelector is the Fortran 90 kind or length selector after a type
+// keyword, if this statement has one (REAL(8) X, CHARACTER(LEN=10) C,
+// INTEGER(KIND=2) :: I): Phase 100's subtask 4, a PendingStmt until then.
+// VAX FORTRAN's type statements never have one: a length follows a *.
+func (p *parser) kindSelector() ast.Stmt {
 	if p.at("(") {
 		return p.pending("a kind or length selector", p.peek())
+	}
+
+	return nil
+}
+
+// attributes are the attribute keywords a Fortran 90 type declaration may
+// list before its :: (the standard's R503, and DEC's VOLATILE, AUTOMATIC, and
+// STATIC, as the HP manual allows them). Which may go together is semantic
+// analysis's question (sema/attrtable.go).
+var attributes = map[string]bool{
+	"PARAMETER": true, "DIMENSION": true, "SAVE": true, "EXTERNAL": true, "INTRINSIC": true,
+	"VOLATILE": true, "AUTOMATIC": true, "STATIC": true, "INTENT": true, "OPTIONAL": true,
+	"TARGET": true, "POINTER": true, "ALLOCATABLE": true, "PUBLIC": true, "PRIVATE": true,
+}
+
+// attrSpec reads one attribute of a type declaration's list: a keyword,
+// DIMENSION with its array specification, or INTENT with its spec.
+func (p *parser) attrSpec() *ast.AttrSpec {
+	n := p.name("an attribute")
+	a := &ast.AttrSpec{Name: n.Name, Pos: n.Pos}
+
+	switch {
+	case !attributes[n.Name]:
+		p.fail("BADATTR", n.Pos, n.Name)
+	case n.Name == "DIMENSION":
+		a.Dims = p.dimensions()
+	case n.Name == "INTENT":
+		a.Intent = p.intentSpec()
+	}
+
+	return a
+}
+
+// intentSpec reads INTENT's parenthesized spec, (IN), (OUT), or (INOUT),
+// which free form may write IN OUT (the standard's R512), and returns IN,
+// OUT, or INOUT.
+func (p *parser) intentSpec() string {
+	p.expect("(")
+
+	t := p.peek()
+	if t == nil || t.Kind != lex.Name || (t.Text != "IN" && t.Text != "OUT" && t.Text != "INOUT") {
+		p.syntax("IN, OUT, or INOUT")
+	}
+
+	p.next()
+
+	spec := t.Text
+	if spec == "IN" && p.atName("OUT") {
+		p.next()
+
+		spec = "INOUT"
+	}
+
+	p.expect(")")
+
+	return spec
+}
+
+// entityValue reads what may follow an entity of a Fortran 90 type
+// declaration: = and its initialization expression (R504). DEC's initial
+// values in slashes are VAX FORTRAN's form, without ::, and not allowed with
+// it (SLASHINIT; the HP manual's rule). An array constructor as the value is
+// Phase 102's.
+func (p *parser) entityValue(d *ast.Declarator) ast.Stmt {
+	switch {
+	case p.at("/"):
+		p.fail("SLASHINIT", p.here())
+
+	case p.accept("="):
+		if p.at("(/") {
+			return p.pending("an array constructor", p.peek())
+		}
+
+		d.ValuePos = p.here()
+		d.Value = p.expr()
 	}
 
 	return nil

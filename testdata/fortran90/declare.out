@@ -1,0 +1,7 @@
+tallies  4 12
+bin   tallies  4  2  4  2
+ticks: 12
+weighted:  3.00
+  11.  21.  12.  22.  13.  23.
+done: T 0.50
+  $STATUS == "%X00000001"

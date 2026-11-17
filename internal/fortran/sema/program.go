@@ -304,6 +304,20 @@ type Symbol struct {
 	// ask.
 	Volatile bool
 
+	// Intent is a dummy argument's INTENT, IN, OUT, or INOUT, and Optional
+	// and Target its OPTIONAL and TARGET attributes: recorded, and meaning
+	// nothing yet (docs/planning/PHASE-100 - Fortran 90 declarations and
+	// kinds.md, finding 11). attrs are the attributes statements have given the
+	// name, for attrtable.go's checks.
+	Intent   string
+	Optional bool
+	Target   bool
+	attrs    attribute
+
+	// f90Saved is set when a Fortran 90 form gave the name SAVE (an
+	// attribute, SAVE ::, or an initialization), for the dump.
+	f90Saved bool
+
 	// saved is set for a name in a SAVE statement's list. storageStmt is the
 	// AUTOMATIC or STATIC statement naming it, a name's only one.
 	saved       bool

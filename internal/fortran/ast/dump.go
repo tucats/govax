@@ -241,10 +241,19 @@ func dumpSpec(s Stmt) (string, bool) {
 		return "ENTRY " + s.Name + names(s.Params) + result(s.Result), true
 
 	case *TypeStmt:
+		if s.Colons {
+			text := s.Type.String()
+			for _, a := range s.Attrs {
+				text += ", " + a.String()
+			}
+
+			return text + " :: " + declarators(s.Entities), true
+		}
+
 		return s.Type.String() + " " + declarators(s.Entities), true
 
 	case *DimensionStmt:
-		return s.Kind.String() + " " + declarators(s.Entities), true
+		return s.Kind.String() + colons(s.Colons) + declarators(s.Entities), true
 
 	case *ImplicitStmt:
 		if s.None {
@@ -307,7 +316,12 @@ func dumpSpec(s Stmt) (string, bool) {
 			}
 		}
 
-		return strings.TrimSpace(s.Kind.String() + " " + strings.Join(items, ", ")), true
+		head := s.Kind.String()
+		if s.Intent != "" {
+			head += "(" + s.Intent + ")"
+		}
+
+		return strings.TrimSpace(head + colons(s.Colons) + strings.Join(items, ", ")), true
 
 	case *NamelistStmt:
 		groups := make([]string, len(s.Groups))
@@ -616,7 +630,21 @@ func (d *Declarator) String() string {
 		text += " " + values(d.Init)
 	}
 
+	if d.Value != nil {
+		text += " = " + DumpExpr(d.Value)
+	}
+
 	return text
+}
+
+// colons is what separates a declaration's keyword from its list in the dump:
+// " :: " for a statement written with ::, else a blank.
+func colons(set bool) string {
+	if set {
+		return " :: "
+	}
+
+	return " "
 }
 
 // bounds is an array declarator's bounds: (0:9, 3, *).
@@ -626,8 +654,14 @@ func bounds(dims []Bound) string {
 
 	for i, b := range dims {
 		upper := DumpExpr(b.Upper)
-		if b.Star {
+
+		switch {
+		case b.Star:
 			upper = "*"
+		case b.Colon && b.Lower == nil:
+			upper = ":"
+		case b.Colon:
+			upper = ""
 		}
 
 		if b.Lower != nil {

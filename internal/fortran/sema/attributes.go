@@ -23,7 +23,20 @@ import (
 // declarations walk, since what they say changes how every later statement
 // reads the name, and keeps a SAVE, VOLATILE, AUTOMATIC, or STATIC statement for
 // when every declaration is known (saves, storage.go).
+//
+// Fortran 90's INTENT, OPTIONAL, and TARGET statements are read here whole,
+// and every attribute statement's names checked and recorded for attrtable.go
+// (attributeItems), whose list of what remains the old reading goes on with.
 func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
+	if s.Items != nil {
+		items := a.attributeItems(s)
+		if items == nil {
+			return
+		}
+
+		s = &ast.AttrStmt{StmtBase: s.StmtBase, Colons: s.Colons, Items: items}
+	}
+
 	switch s.Kind {
 	case lex.Save:
 		a.saveStmts = append(a.saveStmts, s)

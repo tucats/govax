@@ -44,6 +44,14 @@
 // will), and a statement function's definition is a scope whose host is
 // the unit's.
 //
+// Fortran 90's declarations (REAL, DIMENSION(10), SAVE :: X = 0) are type
+// statements with attributes and values: each attribute is given as its old
+// statement would give it, after attrtable.go's table of the standard's
+// constraints has said which may go together; a value given with = is DATA's
+// (data.go), the one value every element's, stored as an assignment would
+// store it, and it gives the name SAVE; a PARAMETER's is parameter.go's.
+// INTENT, OPTIONAL, and TARGET are recorded on the Symbol for later phases.
+//
 // What a name *is* (its Class) comes from how it is used, since FORTRAN
 // has no declaration for most of that: REAL F declares only a type, and
 // F becomes a variable when the unit uses F alone, or an external

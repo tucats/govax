@@ -263,6 +263,12 @@ type Declarator struct {
 	// the opening slash is.
 	Init    []*DataValue
 	InitPos diag.Position
+
+	// Value is the initialization expression after = in a Fortran 90
+	// declaration (the standard's R504: REAL :: X = 1.0), or a PARAMETER's
+	// value there; nil if none. ValuePos is where the expression starts.
+	Value    Expr
+	ValuePos diag.Position
 }
 
 // Bound is one dimension's bounds in an array declarator, [dl:]du.
@@ -276,6 +282,11 @@ type Bound struct {
 	// Star is an upper bound of *: an assumed-size dummy array's last
 	// dimension.
 	Star bool
+
+	// Colon is a Fortran 90 bound with a colon and no upper bound: (:), a
+	// deferred-shape array's, or (lb:), an assumed-shape dummy's (the
+	// standard's R514 to R518). Lower is lb, or nil. Upper is nil.
+	Colon bool
 }
 
 // LabelRef is a statement label a statement refers to: GO TO 10, DO 10,

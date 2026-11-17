@@ -144,6 +144,25 @@ func dumpSymbol(s *Symbol) string {
 		where += " volatile"
 	}
 
+	// Fortran 90's recorded attributes (attrtable.go), and SAVE given by a
+	// Fortran 90 form or implied by an initialization, which no VAX FORTRAN
+	// program has (an old SAVE statement's isn't shown, as it never was).
+	if s.Intent != "" {
+		where += " intent(" + strings.ToLower(s.Intent) + ")"
+	}
+
+	if s.Optional {
+		where += " optional"
+	}
+
+	if s.Target {
+		where += " target"
+	}
+
+	if s.saved && s.f90Saved {
+		where += " saved"
+	}
+
 	return fmt.Sprintf("%-9s %-13s %-16s %s", s.Name, typ, class, where)
 }
 

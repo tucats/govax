@@ -65,15 +65,23 @@ type Initial struct {
 
 // dataSet is one list of names with its list of values: nlist/clist/ of a
 // DATA statement, or a type statement's name and values.
+//
+// A Fortran 90 declaration's = value is one too (initialValue), with two
+// differences: the one value is every element's, if the name is an array
+// (broadcast; the standard's 7.5.1.4), and it must be one an assignment
+// could store (assign), so REAL :: X = 'AB' is an error where DATA's
+// REAL X / 'AB' / isn't.
 type dataSet struct {
-	names  []ast.Expr
-	values []*ast.DataValue
+	names     []ast.Expr
+	values    []*ast.DataValue
+	broadcast bool
+	assign    bool
 }
 
 // dataStatement keeps a DATA statement's lists for dataSets.
 func (a *analyzer) dataStatement(s *ast.DataStmt) {
 	for _, set := range s.Sets {
-		a.dataSets = append(a.dataSets, dataSet{set.Names, set.Values})
+		a.dataSets = append(a.dataSets, dataSet{names: set.Names, values: set.Values})
 	}
 }
 
@@ -83,14 +91,38 @@ func (a *analyzer) dataStatement(s *ast.DataStmt) {
 // each element of an array follows from them.
 func (a *analyzer) initialValues(d *ast.Declarator) {
 	name := &ast.Name{ExprBase: ast.ExprBase{Pos: d.Pos}, Name: d.Name}
-	a.dataSets = append(a.dataSets, dataSet{[]ast.Expr{name}, d.Init})
+	a.dataSets = append(a.dataSets, dataSet{names: []ast.Expr{name}, values: d.Init})
+}
+
+// initialValue keeps the value a Fortran 90 declaration gives the name d
+// declares, sym, after its =, and notes that the name is initialized, which
+// gives it SAVE (impliedSaves).
+func (a *analyzer) initialValue(sym *Symbol, d *ast.Declarator) {
+	name := &ast.Name{ExprBase: ast.ExprBase{Pos: d.Pos}, Name: d.Name}
+	value := &ast.DataValue{Value: d.Value, Pos: d.ValuePos}
+
+	a.dataSets = append(a.dataSets, dataSet{[]ast.Expr{name}, []*ast.DataValue{value}, true, true})
+	a.initialized = append(a.initialized, sym)
+}
+
+// impliedSaves gives SAVE to each name a Fortran 90 declaration initialized
+// (the standard's 5.1: "initialization ... implies the SAVE attribute"), but
+// one in a common block, whose storage is the block's. The storage rule
+// already keeps an initialized name static (storage.go), so this changes
+// only what the name is said to be.
+func (a *analyzer) impliedSaves() {
+	for _, s := range a.initialized {
+		if !s.broken && s.Common == nil && !s.Automatic {
+			s.saved, s.f90Saved = true, true
+		}
+	}
 }
 
 // dataStatements works out every list's values, stopping a list at its first
 // error: its other items would only be counted wrong.
 func (a *analyzer) dataStatements() {
 	for _, set := range a.dataSets {
-		vals := &dataValues{a: a, list: set.values}
+		vals := &dataValues{a: a, list: set.values, broadcast: set.broadcast, assign: set.assign}
 		ok := true
 
 		for _, e := range set.names {
@@ -118,15 +150,25 @@ type dataValues struct {
 	i    int
 	left int64
 	cur  dataValue
+
+	// broadcast says the list's one value is every item's, and assign that
+	// it must be one an assignment could store: a Fortran 90 declaration's
+	// = value (initialValue).
+	broadcast, assign bool
 }
 
 // dataValue is one constant of a list. Exactly one of its fields says what it
 // is: a Hollerith or character constant's bytes (text, with isText set), an
 // octal or hexadecimal constant (typeless), a RADIX-50 constant's bytes (radix),
 // or a constant of any other type (c).
+//
+// character is set for a character constant's text, not a Hollerith
+// constant's, and assign for a value given with = (dataValues.assign).
 type dataValue struct {
-	text     string
-	isText   bool
+	text      string
+	isText    bool
+	character bool
+	assign    bool
 	typeless *ast.TypelessConst
 	radix    []byte
 	c        *Const
@@ -136,6 +178,10 @@ type dataValue struct {
 
 // more reports whether values are left, and where the next is.
 func (v *dataValues) more() (diag.Position, bool) {
+	if v.broadcast {
+		return diag.Position{}, false
+	}
+
 	if v.left > 0 {
 		return v.cur.pos, true
 	}
@@ -150,6 +196,11 @@ func (v *dataValues) more() (diag.Position, bool) {
 // next is the next constant. pos is the item it is for, where running out of
 // constants is reported. It returns false after an error, reported.
 func (v *dataValues) next(pos diag.Position) (*dataValue, bool) {
+	if v.left == 0 && v.broadcast && v.i > 0 {
+		// The one value again, for the next element.
+		v.left = 1
+	}
+
 	if v.left == 0 {
 		if v.i >= len(v.list) {
 			v.a.report("DATACOUNT", pos, "more names than values")
@@ -170,6 +221,8 @@ func (v *dataValues) next(pos diag.Position) (*dataValue, bool) {
 		if v.cur, ok = v.a.dataConstant(item); !ok {
 			return nil, false
 		}
+
+		v.cur.assign = v.assign
 	}
 
 	v.left--
@@ -244,7 +297,7 @@ func (a *analyzer) dataConstant(item *ast.DataValue) (dataValue, bool) {
 		return v, false
 
 	case c.T.Kind == Character:
-		v.text, v.isText = c.Text, true
+		v.text, v.isText, v.character = c.Text, true, true
 
 		return v, true
 	}
@@ -624,6 +677,17 @@ func (a *analyzer) dataInt(e ast.Expr, vars map[string]int32) (int32, bool) {
 // initialBytes is the bytes the constant v gives an item of type t, by section
 // 4.3's rules.
 func (a *analyzer) initialBytes(v *dataValue, t Type) ([]byte, bool) {
+	if v.assign && !assignable(v, t) {
+		what := "a CHARACTER"
+		if v.c != nil {
+			what = article(v.c.T.String())
+		}
+
+		a.report("INITTYPE", v.pos, what, article(t.String()))
+
+		return nil, false
+	}
+
 	switch {
 	case v.isText:
 		// On the right: blanks if it's short, cut if it's long, whichever
@@ -683,6 +747,22 @@ func (a *analyzer) initialBytes(v *dataValue, t Type) ([]byte, bool) {
 	}
 
 	return a.constBytes(c), true
+}
+
+// assignable reports whether an assignment could store v in an item of type
+// t, as a value given with = must be (the standard's 7.5.1.4): a character
+// constant only in a CHARACTER item, and a number or logical value only in
+// another. Hollerith, octal, hexadecimal, and RADIX-50 constants are DEC's,
+// typeless, and go anywhere DATA lets them.
+func assignable(v *dataValue, t Type) bool {
+	switch {
+	case v.character:
+		return t.Kind == Character
+	case v.c != nil:
+		return t.Kind != Character
+	}
+
+	return true
 }
 
 // littleEndian is v's low size bytes, lowest first: extended on the left with

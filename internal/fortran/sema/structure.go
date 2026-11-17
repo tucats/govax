@@ -332,7 +332,15 @@ func (b *structBuilder) body(list []ast.Stmt) {
 // typeStatement declares a typed field for each entity of a type
 // statement, with its initial values. A length after a name is that
 // field's, as in a type statement outside (CHARACTER*8 A, B*4).
+//
+// A field declaration in Fortran 90's form (REAL :: X = 1.0) may give an
+// initial value with =, the one value every element's, but no attributes
+// (FIELDATTR): a field has none of a variable's.
 func (b *structBuilder) typeStatement(s *ast.TypeStmt) {
+	if len(s.Attrs) > 0 {
+		b.a.report("FIELDATTR", s.Attrs[0].Pos)
+	}
+
 	for _, d := range s.Entities {
 		l := s.Type.Len
 		pos := s.Type.Pos
@@ -362,7 +370,7 @@ func (b *structBuilder) typeStatement(s *ast.TypeStmt) {
 
 		b.add(f)
 
-		if d.Init != nil && ok && dimsOK {
+		if (d.Init != nil || d.Value != nil) && ok && dimsOK {
 			b.initialValues(f, d)
 		}
 	}
@@ -500,7 +508,7 @@ func (b *structBuilder) fieldDims(f *Field, d *ast.Declarator) bool {
 	for i, bd := range d.Dims {
 		dim := Dim{Lower: 1}
 
-		if bd.Star {
+		if bd.Star || bd.Colon {
 			b.a.report("FIELDDIM", d.Pos, d.Name)
 
 			return false
@@ -601,12 +609,20 @@ func (b *structBuilder) initialValues(f *Field, d *ast.Declarator) {
 	a := b.a
 
 	if f.Name == "%FILL" {
-		a.report("FILLINIT", d.InitPos)
+		pos := d.InitPos
+		if d.Value != nil {
+			pos = d.ValuePos
+		}
+
+		a.report("FILLINIT", pos)
 
 		return
 	}
 
 	vals := &dataValues{a: a, list: d.Init}
+	if d.Value != nil {
+		vals = &dataValues{a: a, list: []*ast.DataValue{{Value: d.Value, Pos: d.ValuePos}}, broadcast: true, assign: true}
+	}
 
 	for n := range f.Elements() {
 		v, ok := vals.next(d.Pos)

@@ -4,7 +4,8 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17), every recommendation
 accepted by the author ("The author's answers"); subtask 2, the scope
-chain, is done (2026-11-17); subtask 3 is next. Needs
+chain, and subtask 3, `::` declarations and attributes, are done
+(2026-11-17); subtask 4 is next. Needs
 Phase 99.
 
 ## Goal
@@ -291,7 +292,7 @@ and 7), and COMPLEX(16) by question 1's answer.
    attribute specs, the attribute statements in both forms, sema's attribute
    table (finding 11), `= initialization` through `data.go` with scalars
    broadcast (finding 10), implied SAVE, PARAMETER with `::`, `CHARACTER(*)`
-   PARAMETERs.
+   PARAMETERs (done 2026-11-17).
 4. **Kind selectors and kinds on constants:** every type spec of R502 and
    R506, `Type.KindNumber`, `ast.KindConst` compiled, kinds named by
    PARAMETERs, IMPLICIT with kinds, FUNCTION with a kind selector, and the
@@ -385,3 +386,45 @@ The author accepted every recommendation:
   `TestNoF90Unchanged`), `dclcmd`, and the console's FORTRAN, Fortran 90, and
   DUNGEON tests pass; `TestScopeChain` checks the chain itself. sema's
   `doc.go` and FORTRAN-INTERNALS.md's statement function section say so.
+- **2026-11-17, subtask 3 (done):** `::` declarations and attributes.
+  The parser: a type statement with a `::` (`TypeStmt.Colons`) reads its
+  attribute list (`attrSpec`: a keyword from `parse/f90.go`'s `attributes`,
+  DIMENSION's bounds, INTENT's spec, IN OUT in free form; BADATTR) and each
+  entity's `= value` (`entityValue`, `Declarator.Value`); DEC's `/clist/`
+  after `::` is SLASHINIT, and an array constructor as the value NOTIMPL by
+  name. DIMENSION and every attribute statement take an optional `::`
+  (`DimensionStmt.Colons`, `AttrStmt.Colons`); INTENT, OPTIONAL, and TARGET
+  statements are `AttrStmt`s (`AttrStmt.Intent`; TARGET's items may have
+  bounds, as AUTOMATIC's); ALLOCATABLE, POINTER, PUBLIC, and PRIVATE stay
+  PendingStmts. A bound with a colon and no upper bound, `(:)` or `(lb:)`, is
+  read (`Bound.Colon`) and is NOTIMPL in sema, "an assumed-shape or
+  deferred-shape array". A kind or length selector is still the
+  PendingStmt it was (subtask 4). Sema: `sema/attrtable.go` is finding 11's
+  table, a row per attribute with the attributes it excludes and its fate
+  (compiled, recorded, NOTIMPL, module only); `attrSpecs` reads a list once
+  for the statement (ATTRTWICE, ATTRPAIR, NOTIMPL for POINTER and
+  ALLOCATABLE, NOTINMODULE for PUBLIC and PRIVATE), and `giveAttributes` gives
+  each entity each attribute as its old statement would (DIMENSION through
+  `dimension`, EXTERNAL and INTRINSIC through `external` and `intrinsic`,
+  SAVE, VOLATILE, AUTOMATIC, and STATIC as one-name statements read with the
+  unit's, `attributeLater`), so every old check applies (SAVE on a dummy is
+  SAVEDUMMY), after checking it against the attributes the name has already
+  (`attrsOf`, ATTRCONFLICT). INTENT, OPTIONAL, and TARGET are recorded
+  (`Symbol.Intent`, `Optional`, `Target`; ATTRDUMMY, ATTRAGAIN). Only a
+  Fortran 90 form is checked against the table, so two old statements keep
+  their old messages; an old statement records its attribute only on a
+  name already known (`attributeItems`), since a symbol made earlier would
+  change the order of `$LOCAL`. PARAMETER with `::` is `defineParameter`
+  (split from `parameter`) after the type, PARAMNOVALUE without `=`, and an
+  array that is a PARAMETER NOTIMPL (Phase 102). An `= value` is a `dataSet`
+  with `broadcast` (the one value every element's) and `assign` (INITTYPE:
+  a character value only for CHARACTER, a number only for the rest; DEC's
+  typeless and Hollerith constants as DATA takes them), and gives SAVE
+  (`impliedSaves`, after AUTOMATIC and STATIC are read, not in a common
+  block); a structure's field may have an `= value` too, but no attributes
+  (FIELDATTR). A PUBLIC or PRIVATE statement outside a module is NOTINMODULE.
+  The dump shows the recorded attributes and SAVE from a Fortran 90 form.
+  Tests: `parse`'s `TestF90Declarations`, sema's golden `f90decl.for` and 33
+  `TestErrors` cases, and `testdata/fortran90/declare.f90` (the same on
+  gfortran, `compare.py`), run in every mode. MANUAL.md's 14.13 and HELP
+  FORTRAN say what is compiled now; the full write-up is subtask 9's.

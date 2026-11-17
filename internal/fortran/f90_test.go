@@ -143,7 +143,6 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 	want := []string{
 		"1:1 the MODULE statement",
 		"12:3 the USE statement",
-		"13:11 the :: form of a type declaration",
 		"14:7 a kind or length selector",
 		"15:3 the TYPE (type-name) statement",
 		"16:3 a construct name",

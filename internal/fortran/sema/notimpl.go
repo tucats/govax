@@ -76,8 +76,21 @@ func pendingHeader(u *ast.Unit) ast.Stmt {
 // that opens it: a CASE or END SELECT inside a SELECT CASE already
 // reported, or an ELSEWHERE or END WHERE inside a block WHERE, says
 // nothing more (pendingConstructs).
+//
+// PUBLIC and PRIVATE statements belong in a module (the standard's R522's
+// constraint), and a module's statements never reach here (pendingHeader):
+// anywhere else they are an error, NOTINMODULE.
 func (a *analyzer) unimplemented(s ast.Stmt) {
 	kind := s.Base().Kind
+
+	if kind == lex.Public || kind == lex.Private {
+		// Reported as NOTIMPL is, whatever else the unit lacks: the
+		// statement makes the unit's declarations incomplete itself.
+		a.messages.Report("NOTINMODULE", s.Position(), "the "+kind.String()+" statement")
+		a.brokenStatement(kind, s)
+
+		return
+	}
 
 	if quiet, ok := pendingInner[kind]; ok && a.pendingOpen[quiet] > 0 {
 		if pendingClosers[kind] {

@@ -21,7 +21,13 @@ import (
 // (section 2.2.1.4: an assignment's other operand), or INTEGER*4 in the
 // old form.
 func (a *analyzer) parameter(s *ast.ParameterStmt, d *ast.ParamDef) {
-	sym := a.declare(d.Name.Name, d.Name.Pos)
+	a.defineParameter(a.declare(d.Name.Name, d.Name.Pos), s, d)
+}
+
+// defineParameter makes sym, d's name, the constant d defines: the PARAMETER
+// statement's work, and a Fortran 90 declaration's with the PARAMETER
+// attribute (decl.go's f90Entity), which gives the type first.
+func (a *analyzer) defineParameter(sym *Symbol, s *ast.ParameterStmt, d *ast.ParamDef) {
 	ev := a.declEval()
 
 	// keep is whether the name becomes this constant: not if it is one

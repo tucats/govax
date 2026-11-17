@@ -8372,6 +8372,30 @@ can't tell that two names were meant.
 A program may be of both forms, each file compiled on its own and linked together, as
 any FORTRAN program of several files is ([section 14.2](#142-what-the-compiler-accepts)).
 
+**Declarations with `::`** (the standard's 5.1 and 5.2), in either form. A type
+statement may list attributes before a `::` and give each name a value after `=`:
+
+```fortran
+integer, parameter :: n = 4, m = n * 3      ! constants
+character*(*), parameter :: title = "tallies"
+real, dimension(n), save :: weights = 0.25   ! one value for every element
+integer :: counts(n) = 0, total
+real, external :: sum4
+```
+
+The attributes are PARAMETER, DIMENSION, SAVE, EXTERNAL, INTRINSIC, and DEC's VOLATILE,
+AUTOMATIC, and STATIC, each doing what its statement does; INTENT, OPTIONAL, and TARGET,
+which are checked and recorded but change nothing yet (a dummy argument is passed as it
+always is); and POINTER and ALLOCATABLE, not there yet. PUBLIC and PRIVATE belong in a
+module (`NOTINMODULE`). Each has its statement too, with `::` or without: `DIMENSION ::
+Z(3)`, `SAVE :: TOTAL`, `INTENT(IN) :: A, B`, `OPTIONAL :: Q`, `TARGET :: T(4)`. A value
+given with `=` is a constant expression stored as an assignment would store it (so `REAL ::
+X = 'AB'` is `INITTYPE`, where DATA would take it), a scalar value fills a whole array,
+and it gives the name SAVE. DEC's values in slashes stay legal without `::`, and are
+`SLASHINIT` with it. Two attributes that can't go together (`ATTRPAIR`, `ATTRCONFLICT`),
+one given twice (`ATTRTWICE`), and INTENT or OPTIONAL on a name that isn't a dummy
+argument (`ATTRDUMMY`) are errors.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
@@ -8382,7 +8406,8 @@ any FORTRAN program of several files is ([section 14.2](#142-what-the-compiler-a
   --^
 ```
 
-That includes `::` declarations, kinds (`INTEGER(4)`, `1.5_8`), construct names, SELECT CASE,
+That includes kinds (`INTEGER(4)`, `1.5_8`), array constructors and arrays that are
+PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), construct names, SELECT CASE,
 EXIT and CYCLE, array expressions and sections, WHERE, interface blocks and CONTAINS,
 modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
 90's new intrinsic functions aren't there yet either; under `/F90` their names are still

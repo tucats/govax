@@ -454,6 +454,10 @@ type analyzer struct {
 	dataSets  []dataSet
 	saveStmts []*ast.AttrStmt
 
+	// initialized are the names Fortran 90 declarations give values with =,
+	// which have SAVE (impliedSaves).
+	initialized []*Symbol
+
 	// saveAll is set by a SAVE statement with no list, which saves every
 	// variable and array of the unit that can be saved (section 4.14).
 	saveAll bool
@@ -540,6 +544,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.checkCommonSizes()
 	a.saves()
 	a.storageStatements()
+	a.impliedSaves()
 	a.volatiles()
 	a.dataStatements()
 	a.statements(body)

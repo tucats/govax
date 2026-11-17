@@ -152,16 +152,23 @@ func (p *parser) dataName() ast.Expr {
 // AUTOMATIC and STATIC array specifications, and SAVE's list may be empty.
 // EXTERNAL's *name form is appendix A.6's, under /NOF77 only, which is semantic
 // analysis's to check, since only it knows the unit's OPTIONS statements.
+//
+// Fortran 90's attribute statements are read here too (the standard's 5.2):
+// any of them may have a :: before its list (a SAVE with :: must have one),
+// INTENT has its spec first, INTENT (IN) [::] A, B, and TARGET's items may
+// have array specifications, as AUTOMATIC's.
 func parseAttr(p *parser) ast.Stmt {
-	if t := p.doubleColon(); t != nil {
-		return p.pending("the :: form of "+p.st.Kind.String(), t)
-	}
-
 	s := &ast.AttrStmt{StmtBase: p.base()}
 	k := p.st.Kind
 	commons := k == lex.Save || k == lex.Volatile
 
-	if k == lex.Save && p.atEnd() {
+	if k == lex.Intent {
+		s.Intent = p.intentSpec()
+	}
+
+	s.Colons = p.accept("::")
+
+	if k == lex.Save && !s.Colons && p.atEnd() {
 		return s
 	}
 
@@ -177,7 +184,7 @@ func parseAttr(p *parser) ast.Stmt {
 			n := p.name("a subprogram's name")
 			s.Items = append(s.Items, &ast.AttrItem{Name: n.Name, Pos: n.Pos, Star: true})
 
-		case k == lex.Automatic || k == lex.Static:
+		case k == lex.Automatic || k == lex.Static || k == lex.Target:
 			d := p.declarator(declPlain, false)
 			s.Items = append(s.Items, &ast.AttrItem{Name: d.Name, Pos: d.Pos, Array: d})
 

@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
+	"github.com/tucats/govax/internal/fortran/source"
 )
 
 // TestF90Nesting checks the statements Fortran 90's statements gather
@@ -54,7 +57,7 @@ func TestF90Nesting(t *testing.T) {
 		"5             not yet: MODULE PROCEDURE",
 		"6             not yet: END INTERFACE",
 		"7           not yet: derived TYPE",
-		"8             not yet: REAL, the :: form of a type declaration",
+		"8             REAL :: X, Y",
 		"9             not yet: END TYPE",
 		"10          not yet: CONTAINS",
 		"11            SUBROUTINE A",
@@ -66,7 +69,7 @@ func TestF90Nesting(t *testing.T) {
 		"== main program P",
 		"17          PROGRAM P",
 		"18          not yet: REAL, a kind or length selector",
-		"19          not yet: DIMENSION, the :: form of DIMENSION",
+		"19          DIMENSION :: A(10)",
 		"20          not yet: IMPLICIT, a kind or length selector",
 		"21          OUTER: DO I = 1, 10",
 		"22          IF (.GT. I 3) not yet: EXIT",
@@ -124,6 +127,78 @@ func TestNamedEnds(t *testing.T) {
 
 		if got != c.want || len(ms) > 1 {
 			t.Errorf("%s: got %v, want %q", c.name, ms, c.want)
+		}
+	}
+}
+
+// TestF90Declarations checks Fortran 90's declarations (docs/planning/PHASE-100 -
+// Fortran 90 declarations and kinds.md, subtask 3): the :: form with attributes
+// and = values, the attribute statements with and without ::, INTENT's specs
+// (IN OUT in free form), and the bounds with a colon.
+func TestF90Declarations(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"subroutine s(p, q, r)",
+		"  integer, parameter :: n = 10, m = n*2",
+		"  real*8, dimension(n), save :: x, y(2) = 0",
+		"  character*(*), parameter :: name = 'xyz'",
+		"  character*8, volatile :: c = 'ab', d*2",
+		"  real, intent(in out), optional :: p",
+		"  intent(out) :: q",
+		"  intent (in) r",
+		"  optional q",
+		"  target :: t(4), u",
+		"  real, allocatable :: a(:, :), b(0:)",
+		"  dimension :: z(3)",
+		"  save :: k",
+		"  external :: f",
+		"end subroutine s",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "D.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	want := strings.Join([]string{
+		"== SUBROUTINE S",
+		"1           SUBROUTINE S(P, Q, R)",
+		"2           INTEGER, PARAMETER :: N = 10, M = (* N 2)",
+		"3           REAL*8, DIMENSION(N), SAVE :: X, Y(2) = 0",
+		"4           CHARACTER*(*), PARAMETER :: NAME = 'xyz'",
+		"5           CHARACTER*8, VOLATILE :: C = 'ab', D*2",
+		"6           REAL, INTENT(INOUT), OPTIONAL :: P",
+		"7           INTENT(OUT) :: Q",
+		"8           INTENT(IN) R",
+		"9           OPTIONAL Q",
+		"10          TARGET :: T(4), U",
+		"11          REAL, ALLOCATABLE :: A(:, :), B(0:)",
+		"12          DIMENSION :: Z(3)",
+		"13          SAVE :: K",
+		"14          EXTERNAL :: F",
+		"15          END SUBROUTINE S",
+		"",
+	}, "\n")
+
+	if got := ast.Dump(file); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	errors := []struct{ line, want string }{
+		{"REAL :: X /1.0/", "SLASHINIT"},
+		{"REAL, BOGUS :: X", "BADATTR"},
+		{"REAL, INTENT(UP) :: X", "SYNTAX"},
+		{"REAL, SAVE X", "SYNTAX"},
+		{"SAVE ::", "SYNTAX"},
+	}
+
+	for _, e := range errors {
+		_, ms := parseLines(t, "E.FOR", fixed(e.line), fixed("END"))
+		if got := strings.Join(idents(ms), " "); got != e.want {
+			t.Errorf("%s: got %q, want %q", e.line, got, e.want)
 		}
 	}
 }

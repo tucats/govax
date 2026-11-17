@@ -202,27 +202,48 @@ func (p *parser) lengthSpec(character bool) ast.Len {
 // declarator. CHARACTER's length may be followed by a comma, CHARACTER*8,
 // A; and its entities' lengths come after their bounds, A(10)*8, where a
 // numeric entity's come before, IVEC*4(10).
+//
+// Fortran 90's form (the standard's R501) has a :: before the entities, and
+// may have attributes before it, each after a comma, and an initialization
+// expression after an entity: REAL*8, DIMENSION(10), SAVE :: X = 0. Its type
+// may have a kind or length selector (subtask 4 of Phase 100).
 func parseTypeStmt(p *parser) ast.Stmt {
-	if f90 := p.f90Declaration(); f90 != nil {
+	if f90 := p.kindSelector(); f90 != nil {
 		return f90
 	}
 
-	s := &ast.TypeStmt{StmtBase: p.base()}
+	s := &ast.TypeStmt{StmtBase: p.base(), Colons: p.doubleColon() != nil}
 	s.Type = ast.TypeSpec{Type: ast.TypeKeywords[p.st.Kind], Pos: s.Pos}
 	character := s.Type.Type == ast.Character
 
 	if p.accept("*") {
 		s.Type.Len = p.lengthSpec(character)
 
-		if character {
+		// CHARACTER*8, A: the comma VAX FORTRAN allows. With :: a comma
+		// starts the attributes.
+		if character && !s.Colons {
 			p.accept(",")
 		}
+	}
+
+	if s.Colons {
+		for p.accept(",") {
+			s.Attrs = append(s.Attrs, p.attrSpec())
+		}
+
+		p.expect("::")
 	}
 
 	for {
 		d := p.declarator(declTyped, character)
 
-		if p.at("/") {
+		switch {
+		case s.Colons:
+			if pending := p.entityValue(d); pending != nil {
+				return pending
+			}
+
+		case p.at("/"):
 			d.InitPos = p.here()
 			d.Init = p.constantList()
 		}
@@ -241,12 +262,9 @@ func parseTypeStmt(p *parser) ast.Stmt {
 
 // parseDimension parses DIMENSION a(d) [,a(d)]... (section 4.5), and
 // VIRTUAL, the same statement: every entity must be an array declarator.
+// Fortran 90 allows a :: after DIMENSION (the standard's R525).
 func parseDimension(p *parser) ast.Stmt {
-	if t := p.doubleColon(); t != nil {
-		return p.pending("the :: form of "+p.st.Kind.String(), t)
-	}
-
-	s := &ast.DimensionStmt{StmtBase: p.base()}
+	s := &ast.DimensionStmt{StmtBase: p.base(), Colons: p.accept("::")}
 
 	for {
 		s.Entities = append(s.Entities, p.declarator(declArray, false))
@@ -308,19 +326,34 @@ func (p *parser) declarator(kind declKind, character bool) *ast.Declarator {
 // dimensions reads an array declarator's parenthesized bounds,
 // ([dl:]du [,[dl:]du]...), where the last du may be * (section
 // 2.2.3.1). Whether the bounds are constants, or a dummy's adjustable
-// bounds, is semantic analysis's question.
+// bounds, is semantic analysis's question. Fortran 90's bounds with a colon
+// and no upper bound, (:) and (dl:), are read too (Bound.Colon): a
+// deferred-shape or assumed-shape array, which semantic analysis reports
+// NOTIMPL until Phases 104 and 107.
 func (p *parser) dimensions() []ast.Bound {
 	p.expect("(")
 
 	var list []ast.Bound
 
 	for {
-		b := p.upperBound()
+		var b ast.Bound
 
-		if b.Upper != nil && p.accept(":") {
-			lower := b.Upper
+		if p.accept(":") {
+			b.Colon = true
+		} else {
 			b = p.upperBound()
-			b.Lower = lower
+
+			if b.Upper != nil && p.accept(":") {
+				lower := b.Upper
+
+				if p.at(",") || p.at(")") {
+					b = ast.Bound{Colon: true}
+				} else {
+					b = p.upperBound()
+				}
+
+				b.Lower = lower
+			}
 		}
 
 		list = append(list, b)

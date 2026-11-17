@@ -3,6 +3,7 @@ package sema
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // declarations is the first walk over a unit's statements: the type
@@ -165,6 +166,10 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		checked  bool
 	)
 
+	// A Fortran 90 declaration's attributes, read against the table once
+	// for the statement (attrtable.go).
+	specs := a.attrSpecs(s.Attrs)
+
 	for _, d := range s.Entities {
 		// declare finds the name's symbol in the unit's table, making one
 		// if this is the name's first mention.
@@ -206,9 +211,62 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 			sym.Type, sym.Typed, sym.TypePos, sym.broken = t, true, d.Pos, sym.broken || !ok
 		}
 
+		if s.Colons {
+			a.f90Entity(s, sym, d, specs)
+
+			continue
+		}
+
 		if d.Dims != nil {
 			a.dimension(sym, d)
 		}
+	}
+}
+
+// f90Entity finishes an entity of a Fortran 90 type declaration, typed
+// already: its bounds, its attributes (attrtable.go), and its value, a
+// PARAMETER's (parameter.go) or an initial value (data.go). An initialized
+// name has SAVE (the standard's 5.1), which impliedSaves gives it once every
+// declaration is known. An array that is a PARAMETER is Phase 102's.
+func (a *analyzer) f90Entity(s *ast.TypeStmt, sym *Symbol, d *ast.Declarator, specs []*ast.AttrSpec) {
+	parameter, array := false, d.Dims != nil
+
+	for _, spec := range specs {
+		parameter = parameter || spec.Name == "PARAMETER"
+		array = array || spec.Name == "DIMENSION"
+	}
+
+	if parameter && array {
+		a.notImplForm(d.Pos, "an array that is a PARAMETER")
+
+		sym.broken = true
+
+		return
+	}
+
+	if d.Dims != nil {
+		a.dimension(sym, d)
+	}
+
+	a.giveAttributes(s, sym, d, specs)
+
+	switch {
+	case parameter && d.Value == nil:
+		a.report("PARAMNOVALUE", d.Pos, d.Name)
+
+		sym.broken = true
+
+	case parameter:
+		if a.conflict(sym, attrParameter, d.Pos) {
+			return
+		}
+
+		st := &ast.ParameterStmt{StmtBase: s.StmtBase}
+		st.Kind = lex.Parameter
+		a.defineParameter(sym, st, &ast.ParamDef{Name: &ast.Name{ExprBase: ast.ExprBase{Pos: d.Pos}, Name: d.Name}, Value: d.Value})
+
+	case d.Value != nil:
+		a.initialValue(sym, d)
 	}
 }
 

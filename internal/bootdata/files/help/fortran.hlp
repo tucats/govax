@@ -126,8 +126,16 @@
    lines, and a line 132 characters.  Both forms may make up one
    program, and an INCLUDE file is read in the form of its own type.
 
-   Fortran 90's other statements (:: declarations, SELECT CASE, MODULE,
-   array expressions, and the rest) are recognized and draw
+   Type declarations may have Fortran 90's :: form, with attributes and
+   values given with =:  INTEGER, PARAMETER :: N = 10 and REAL,
+   DIMENSION(N), SAVE :: X = 0.  PARAMETER, DIMENSION, SAVE, EXTERNAL,
+   INTRINSIC, VOLATILE, AUTOMATIC, and STATIC are compiled; INTENT,
+   OPTIONAL, and TARGET are checked and recorded; each has its own
+   statement, with or without ::.  A value given with = fills a whole
+   array and gives the name SAVE.
+
+   Fortran 90's other statements (kinds, SELECT CASE, MODULE, array
+   expressions, POINTER, ALLOCATABLE, and the rest) are recognized and draw
    %FORT-E-NOTIMPL until they are added.  A format given at run time
    (a character constant or variable as the format) can't yet have a
    "..." constant: FTNRTL refuses it, %FOR-F-SYNERRFOR.

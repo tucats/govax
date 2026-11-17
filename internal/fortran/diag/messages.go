@@ -453,6 +453,32 @@ var messages = map[string]kind{
 	// another after its name (section 6.2.2.2).
 	"TWOLENGTHS": {Error, "the CHARACTER function %s has its length already"},
 
+	// Fortran 90's declarations (docs/planning/PHASE-100 - Fortran 90
+	// declarations and kinds.md, subtask 3). BADATTR is a word in a type
+	// declaration's attribute list that is no attribute; SLASHINIT DEC's
+	// initial values in slashes after a ::, where only = may give one (the HP
+	// manual's rule, and R504's). ATTRTWICE is an attribute a list gives
+	// twice, ATTRPAIR two a list gives that can't go together, and
+	// ATTRCONFLICT an attribute a name can't have with one it has already,
+	// all by the standard's 5.1 (sema/attrtable.go's table). ATTRAGAIN is
+	// INTENT, OPTIONAL, or TARGET given a name twice, ATTRDUMMY INTENT or
+	// OPTIONAL on a name that isn't a dummy argument; NOTINMODULE
+	// PUBLIC or PRIVATE outside a module (R510's constraint). PARAMNOVALUE is
+	// a PARAMETER attribute's name with no = value; INITTYPE a value given
+	// with = that an assignment couldn't store in the name (7.5.1.4); and
+	// FIELDATTR attributes on a structure's field declaration.
+	"BADATTR":      {Error, "%s is not an attribute a declaration can give"},
+	"SLASHINIT":    {Error, "after ::, an initial value is written = value, not in slashes"},
+	"ATTRTWICE":    {Error, "the %s attribute is in this list twice"},
+	"ATTRPAIR":     {Error, "the %s and %s attributes can't go together"},
+	"ATTRCONFLICT": {Error, "%s has the %s attribute, so it can't have the %s attribute too"},
+	"ATTRAGAIN":    {Error, "%s has the %s attribute already"},
+	"ATTRDUMMY":    {Error, "%s isn't a dummy argument, so it can't have the %s attribute"},
+	"NOTINMODULE":  {Error, "%s is allowed only in a module"},
+	"PARAMNOVALUE": {Error, "the constant %s needs a value: = and a constant expression"},
+	"INITTYPE":     {Error, "%s value can't initialize %s item, which an assignment couldn't store it in"},
+	"FIELDATTR":    {Error, "a structure's field declaration can't give attributes"},
+
 	// BADCHARLEN is a CHARACTER length that isn't an integer constant
 	// expression from 1 to 65535 (section 4.4.2).
 	"BADCHARLEN": {Error, "a CHARACTER length must be an integer constant expression from 1 to 65535, or (*)"},

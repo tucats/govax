@@ -1,0 +1,43 @@
+== main program F90DECL
+  F90DECL                 program unit
+  N         INTEGER       constant         = 3
+  M         INTEGER       constant         = 6
+  NAME      CHARACTER*3   constant         = 'XYZ'
+  X         REAL*8        array(1:3)       $LOCAL+0 saved
+  Y         REAL*8        array(1:2)       $LOCAL+24 saved
+  A         REAL          array(1:6)       $LOCAL+40 saved
+  K         INTEGER       variable         $LOCAL+64 saved
+  L         INTEGER       variable         $LOCAL+68 saved
+  C         CHARACTER*4   variable         $LOCAL+72 saved
+  D         CHARACTER*2   variable         $LOCAL+76 saved
+  FLAG      LOGICAL       variable         $LOCAL+80 volatile saved
+  Z         REAL          array(1:3)       $LOCAL+84
+  F         REAL          function
+  SQRT      REAL          intrinsic function
+  $LOCAL is 96 bytes
+  initial $LOCAL+40 A(1) REAL = C0 40 00 00
+  initial $LOCAL+44 A(2) REAL = C0 40 00 00
+  initial $LOCAL+48 A(3) REAL = C0 40 00 00
+  initial $LOCAL+52 A(4) REAL = C0 40 00 00
+  initial $LOCAL+56 A(5) REAL = C0 40 00 00
+  initial $LOCAL+60 A(6) REAL = C0 40 00 00
+  initial $LOCAL+64 K INTEGER = 04 00 00 00
+  initial $LOCAL+72 C CHARACTER*4 = 41 42 20 20
+  initial $LOCAL+76 D CHARACTER*2 = 50 51
+  initial $LOCAL+80 FLAG LOGICAL = FF FF FF FF
+17          L = (+:I K 3)
+18          Z[1] = (REAL (+:R (+:R (REAL*8 F((call:REAL*8 MTH$DSQRT X[1]))) Y[1]) (REAL*8 A[6])))
+19          IF FLAG PRINT * C D Z[1]
+20          END
+== SUBROUTINE S
+  S                       program unit
+  P         REAL          variable         argument 1 intent(in)
+  Q         REAL          variable         argument 2 intent(inout) optional
+  R         REAL          variable         argument 3 intent(out) optional
+  T         REAL          array(1:4)       $LOCAL+0 target
+  U         REAL          variable         $LOCAL+16 target
+  $LOCAL is 20 bytes
+28          R = (+:R P Q)
+29          T[1] = R
+30          U = T[1]
+31          END

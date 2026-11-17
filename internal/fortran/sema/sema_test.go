@@ -117,6 +117,12 @@ func structS(lines ...string) []string {
 		"END STRUCTURE", "END STRUCTURE"}, lines...)
 }
 
+// structF90 is a structure /F/ whose one field declaration is decl, and a
+// record of it.
+func structF90(decl string) []string {
+	return []string{"STRUCTURE /F/", decl, "END STRUCTURE", "RECORD /F/ R", "R.V = 1", "END"}
+}
+
 // recordArgs is a program that passes arg, in a unit with a record R of the
 // fields first and second, to a dummy record of the fields third and fourth.
 func recordArgs(first, second, third, fourth, arg string) []string {
@@ -283,9 +289,45 @@ func TestErrors(t *testing.T) {
 		{"a recursive unit's SAVE'd associated variable", []string{"RECURSIVE SUBROUTINE S", "SAVE N", "DEFINE FILE 1(10, 4, U, N)", "END"}, ""},
 		{"an adjustable AUTOMATIC array", []string{"SUBROUTINE S(N)", "AUTOMATIC A(N)", "END"}, "ADJNOTDUMMY@2:19"},
 		{"AUTOMATIC with dimensions twice", []string{"DIMENSION A(2)", "AUTOMATIC A(3)", "END"}, "DUPDIM@2:17"},
-		{"AUTOMATIC with a type: Fortran 90's form, Phase 100's", []string{"REAL, AUTOMATIC :: A", "END"}, "NOTIMPL@1:23"},
+		{"AUTOMATIC as an attribute", []string{"REAL, AUTOMATIC :: A", "END"}, ""},
 		{"AUTOMATIC in a block data subprogram", []string{"BLOCK DATA", "AUTOMATIC A", "END"}, "BLOCKSTMT@2:7"},
 		{"AUTOMATIC with no list", []string{"AUTOMATIC", "END"}, "SYNTAX@1:16"},
+
+		// Fortran 90's declarations (docs/planning/PHASE-100 - Fortran 90
+		// declarations and kinds.md, subtask 3).
+		{"a :: declaration", []string{"INTEGER :: N", "N = 1", "END"}, ""},
+		{"a PARAMETER with ::", []string{"INTEGER, PARAMETER :: N = 10", "REAL A(N)", "A(1) = N", "END"}, ""},
+		{"a passed-length PARAMETER", []string{"CHARACTER*(*), PARAMETER :: NAME = 'XYZ'", "PRINT *, NAME", "END"}, ""},
+		{"a PARAMETER with no value", []string{"INTEGER, PARAMETER :: N", "END"}, "PARAMNOVALUE@1:29"},
+		{"a PARAMETER's value not constant", []string{"INTEGER, PARAMETER :: N = K", "END"}, "NOTCONST@1:33"},
+		{"an array that is a PARAMETER", []string{"INTEGER, PARAMETER :: A(2) = 1", "END"}, "NOTIMPL@1:29"},
+		{"a PARAMETER and DIMENSION", []string{"INTEGER, DIMENSION(2), PARAMETER :: A = 1", "END"}, "NOTIMPL@1:43"},
+		{"a dummy that is a PARAMETER", []string{"SUBROUTINE S(N)", "INTEGER, PARAMETER :: N = 1", "END"}, "BADUSE@2:29"},
+		{"an attribute twice in a list", []string{"REAL, SAVE, SAVE :: X", "END"}, "ATTRTWICE@1:19"},
+		{"two attributes that can't go together", []string{"REAL, EXTERNAL, INTRINSIC :: X", "END"}, "ATTRPAIR@1:23"},
+		{"AUTOMATIC and STATIC", []string{"REAL, STATIC, AUTOMATIC :: X", "END"}, "ATTRPAIR@1:21"},
+		{"an attribute against a statement's", []string{"REAL, PARAMETER :: X = 1.0", "SAVE :: X", "END"}, "ATTRCONFLICT@2:15"},
+		{"a statement's attribute against a declaration's", []string{"EXTERNAL F", "REAL, SAVE :: F", "END"}, "ATTRCONFLICT@2:21"},
+		{"no such attribute", []string{"REAL, BOGUS :: X", "END"}, "BADATTR@1:13"},
+		{"INTENT on a name that isn't a dummy", []string{"SUBROUTINE S(A)", "REAL, INTENT(IN) :: A, B", "END"}, "ATTRDUMMY@2:30"},
+		{"OPTIONAL on a name that isn't a dummy", []string{"OPTIONAL X", "END"}, "ATTRDUMMY@1:16"},
+		{"INTENT and OPTIONAL statements", []string{"SUBROUTINE S(A)", "INTENT(INOUT) A", "OPTIONAL :: A", "A = 1", "END"}, ""},
+		{"INTENT twice", []string{"SUBROUTINE S(A)", "INTENT(IN) A", "INTENT(OUT) :: A", "END"}, "ATTRAGAIN@3:22"},
+		{"TARGET with bounds", []string{"TARGET :: T(4)", "T(1) = 1", "END"}, ""},
+		{"PUBLIC outside a module", []string{"REAL, PUBLIC :: X", "END"}, "NOTINMODULE@1:13"},
+		{"a PRIVATE statement outside a module", []string{"PRIVATE", "END"}, "NOTINMODULE@1:7"},
+		{"POINTER, Phase 107's", []string{"REAL, POINTER :: P", "END"}, "NOTIMPL@1:13"},
+		{"ALLOCATABLE with a deferred shape", []string{"REAL, ALLOCATABLE :: A(:)", "END"}, "NOTIMPL@1:13 NOTIMPL@1:28"},
+		{"an assumed-shape dummy", []string{"SUBROUTINE S(A)", "REAL A(0:)", "END"}, "NOTIMPL@2:12"},
+		{"initial values in slashes after ::", []string{"REAL :: X /1.0/", "END"}, "SLASHINIT@1:17"},
+		{"a character value for a REAL", []string{"REAL :: X = 'AB'", "END"}, "INITTYPE@1:19"},
+		{"a number for a CHARACTER", []string{"CHARACTER :: C = 7", "END"}, "INITTYPE@1:24"},
+		{"a dummy given a value", []string{"SUBROUTINE S(X)", "REAL :: X = 1.0", "END"}, "DATADUMMY@2:15"},
+		{"an array constructor, Phase 102's", []string{"INTEGER :: A(2) = (/1, 2/)", "END"}, "NOTIMPL@1:25"},
+		{"an AUTOMATIC name given a value", []string{"REAL, AUTOMATIC :: A = 1.0", "END"}, "AUTOINIT@1:26"},
+		{"a value twice", []string{"REAL :: X = 1.0", "DATA X /2.0/", "END"}, "DATATWICE@2:12"},
+		{"a field with a value", structF90("REAL :: V = 2.0"), ""},
+		{"a field with attributes", structF90("REAL, SAVE :: V"), "FIELDATTR@2:13"},
 
 		// Program units.
 		{"two units, one name", []string{"SUBROUTINE S", "END", "SUBROUTINE S", "END"}, "DUPUNIT@3:7"},

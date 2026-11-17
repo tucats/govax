@@ -109,6 +109,14 @@ func (a *analyzer) dimensionBounds(adj *adjustableArray, b ast.Bound, last bool,
 
 	var ok bool
 
+	if b.Colon {
+		// (:) or (lb:), Fortran 90's deferred and assumed shapes: Phases
+		// 104 and 107.
+		a.notImplForm(pos, "an assumed-shape or deferred-shape array")
+
+		return dim, false
+	}
+
 	if b.Lower != nil {
 		dim.Lower, dim.LowerExpr, ok = a.bound(adj, b.Lower)
 		if !ok {

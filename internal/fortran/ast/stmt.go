@@ -74,16 +74,24 @@ type (
 	// TypeStmt is a type declaration: INTEGER I, A(10); CHARACTER*8
 	// NAME, LINE*80 (sections 4.4.1, 4.4.2). It is also a field
 	// declaration in a structure.
+	//
+	// In Fortran 90's form (the standard's R501) Colons is set: the
+	// statement has a ::, and may have Attrs before it and an entity's
+	// = Value after it, INTEGER, PARAMETER :: N = 10.
 	TypeStmt struct {
 		StmtBase
 		Type     TypeSpec
+		Attrs    []*AttrSpec
+		Colons   bool
 		Entities []*Declarator
 	}
 
 	// DimensionStmt is DIMENSION a(d)[,a(d)]... (section 4.5), and
 	// VIRTUAL, which is the same statement under another name.
+	// Colons is set for Fortran 90's DIMENSION :: A(10).
 	DimensionStmt struct {
 		StmtBase
+		Colons   bool
 		Entities []*Declarator
 	}
 
@@ -130,9 +138,17 @@ type (
 	// EXTERNAL v[,v]... (4.7), INTRINSIC v[,v]... (4.9), VOLATILE nlist
 	// (4.16), and AUTOMATIC and STATIC (not in the 1988 manual: the HP
 	// manual's 5.3). SAVE with no list has Items nil: everything.
+	//
+	// Fortran 90's attribute statements are AttrStmts too (the standard's
+	// 5.2): INTENT (spec) [::] list, whose spec is Intent (IN, OUT, or
+	// INOUT), OPTIONAL [::] list, and TARGET [::] list, each item of which
+	// may have an array specification (Array, as AUTOMATIC's). Colons is set
+	// for a statement written with ::, SAVE :: X.
 	AttrStmt struct {
 		StmtBase
-		Items []*AttrItem
+		Colons bool
+		Intent string
+		Items  []*AttrItem
 	}
 
 	// NamelistStmt is NAMELIST /group/ list[[,]/group/ list]... (section
@@ -202,6 +218,29 @@ type ImplicitRule struct {
 type LetterRange struct {
 	First, Last byte
 	Pos         diag.Position
+}
+
+// AttrSpec is one attribute in a Fortran 90 type declaration's list, before
+// its :: (the standard's R503): its keyword (PARAMETER, DIMENSION, SAVE,
+// INTENT, ...), DIMENSION's array specification, and INTENT's spec, IN, OUT,
+// or INOUT.
+type AttrSpec struct {
+	Name   string
+	Dims   []Bound
+	Intent string
+	Pos    diag.Position
+}
+
+// String is the attribute as the dump shows it: DIMENSION(10), INTENT(IN).
+func (a *AttrSpec) String() string {
+	switch {
+	case a.Dims != nil:
+		return a.Name + bounds(a.Dims)
+	case a.Intent != "":
+		return a.Name + "(" + a.Intent + ")"
+	}
+
+	return a.Name
 }
 
 // ParamDef is one p=c of a PARAMETER statement.
