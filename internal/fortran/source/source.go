@@ -45,6 +45,13 @@ type Form struct {
 	// statement may have. 0 means the default, DefaultContinuations, and
 	// NoContinuations means none at all.
 	Continuations int
+
+	// F90 is /F90: Fortran 90's reading of the texts it and VAX FORTRAN read
+	// differently (docs/planning/PHASE-99 - Fortran 90.md, Decision 2). Like
+	// /EXTEND_SOURCE, a unit's OPTIONS statement may change it, and each
+	// statement records what it was (Statement.F90), since the lexer, which
+	// reads a statement before semantic analysis knows its unit, is to need it.
+	F90 bool
 }
 
 // continuationLimit is the number of continuation lines a statement may
@@ -77,6 +84,13 @@ type File struct {
 
 	// Lines are its records, without line terminators.
 	Lines []string
+
+	// Free says the file is in free source form (Fortran 90's, the standard's
+	// 3.3); otherwise it is in fixed form (VAX FORTRAN's, with tab format). The
+	// caller decides, from the file's type or /SOURCE_FORM, and an Opener for
+	// each included file from its own type (docs/planning/PHASE-99 - Fortran
+	// 90.md, Decision 3).
+	Free bool
 
 	// Handle is the Opener's own note of where the file is, so that it
 	// can find a file this one includes relative to it. This package
@@ -183,6 +197,10 @@ type Statement struct {
 	// Library says the statement came from a text library's module
 	// (Line.Library).
 	Library bool
+
+	// F90 is Form.F90 where the statement is: /F90, as the OPTIONS statement
+	// before its unit left it.
+	F90 bool
 
 	// pieces map Text back to the source: one for each line that gave
 	// the statement text, in order.

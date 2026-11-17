@@ -31,13 +31,14 @@ import (
 //	        [/WARNINGS[=(keyword,...)] | /NOWARNINGS]
 //	        [/STANDARD[=(keyword,...)] | /NOSTANDARD]
 //	        [/DEBUG[=(keyword,...)] | /NODEBUG] [/OBJECT[=file] | /NOOBJECT]
-//	        [/[NO]F77] [/[NO]RECURSIVE]
+//	        [/[NO]F77] [/[NO]RECURSIVE] [/[NO]F90] [/SOURCE_FORM={FREE|FIXED}]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
 // with its source and object, the source and the MACRO file can each be
 // a host file or a file on a mounted volume (rms.Session.Locate's rules),
-// a source named without a type is .FOR, and the MACRO file is by default
+// a source named without a type is .FOR (or, if there's none, .F90:
+// docs/planning/PHASE-99 - Fortran 90.md, Decision 3), and the MACRO file is by default
 // the source's name with the type MAR, in the default directory
 // (filenames.go's outputLocation). /LIST writes a
 // listing the same way, of type LIS, even after errors (docs/planning/PHASE-85).
@@ -56,10 +57,16 @@ import (
 // .INCLUDE finds them: relative to the file that includes them (on the
 // host, in its directory, for a bare name or a relative path; on a
 // volume, on its device and in its directory), with the default type FOR
-// (subtask 3). Whether VAX
+// (subtask 3), then F90. Whether VAX
 // FORTRAN looks beside the including file or in the default directory
 // isn't in the manuals to hand; for a source in the default directory
 // the two agree. govax's choice, unconfirmed.
+//
+// A file's form is its type's: .F90 is free form (Fortran 90's), any other
+// type fixed form (VAX FORTRAN's). /SOURCE_FORM=FREE or FIXED gives the files
+// the command names that form whatever their types; an INCLUDE'd file always
+// has its own type's (the HP Fortran manual's rule), and a text library's
+// module is fixed form. /F90 not given is the first file's form (fortran.Options).
 //
 // INCLUDE '(module)' searches, in order and unconfirmed (the VAX FORTRAN User
 // Manual isn't to hand; docs/planning/PHASE-83 - FORTRAN and VMS.md, Decision 2): the
@@ -94,6 +101,14 @@ type FortranOptions struct {
 
 	// NoF77 is /NOF77 (fortran.Options).
 	NoF77 bool
+
+	// F90 is /F90 or /NOF90, if F90Given says one was given (fortran.Options).
+	F90      bool
+	F90Given bool
+
+	// SourceForm is /SOURCE_FORM's value, FREE or FIXED; "" when not given,
+	// and each source's type decides.
+	SourceForm string
 
 	// Recursive is /RECURSIVE (fortran.Options).
 	Recursive bool
@@ -317,6 +332,7 @@ func (opts FortranOptions) debug() (fortran.Debug, error) {
 // searched by default.
 const (
 	defaultFortranType     = "FOR"
+	fortran90Type          = "F90"
 	defaultTextLibraryType = "TLB"
 	fortLibraryName        = "FORT$LIBRARY"
 	forSysDefFile          = "FORSYSDEF.TLB"
@@ -356,6 +372,10 @@ func (c *Context) Fortran(opts FortranOptions) (err error) {
 	}
 
 	if _, err := opts.debug(); err != nil {
+		return err
+	}
+
+	if _, err := opts.sourceForm(); err != nil {
 		return err
 	}
 
@@ -449,16 +469,25 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 			continue
 		}
 
-		loc = loc.WithDefaultType(defaultFortranType)
-
-		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
+		records, found, err := readFortranSource(s, loc)
 		if err != nil {
-			return FileFailure(err, loc.Name)
+			return FileFailure(err, found.Name)
 		}
 
 		prev = found
 
-		files = append(files, fortran.File{Spec: sourceSpec(found), Name: sourceStem(found), Lines: recordLines(records), Handle: found})
+		free, _ := opts.sourceForm() // checked by Fortran
+		if free == formByType {
+			free = formOfType(found)
+		}
+
+		files = append(files, fortran.File{
+			Spec:   sourceSpec(found),
+			Name:   sourceStem(found),
+			Lines:  recordLines(records),
+			Free:   free == formFree,
+			Handle: found,
+		})
 	}
 
 	if len(files) == 0 {
@@ -480,6 +509,8 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		DLines:         opts.DLines,
 		NoI4:           opts.NoI4,
 		NoF77:          opts.NoF77,
+		F90:            opts.F90,
+		F90Given:       opts.F90Given,
 		Recursive:      opts.Recursive,
 		GFloating:      opts.GFloating,
 		Align:          align,
@@ -752,22 +783,106 @@ func (fi *fortranIncludes) OpenInclude(name string, from *source.File) (*source.
 		return nil, err
 	}
 
-	loc = loc.WithDefaultType(defaultFortranType)
-
-	records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
+	records, found, err := readFortranSource(s, loc)
 	if err != nil {
 		// A missing file is the commonest failure: its message alone,
 		// without the reasons beneath it, reads best inside the
 		// compiler's.
-		var notFound *rms.NotFoundError
-		if errors.As(err, &notFound) || errors.Is(err, fs.ErrNotExist) {
-			return nil, vmserrors.New(vmserrors.SS_NOSUCHFILE, loc.Name)
+		if isMissingFile(err) {
+			return nil, vmserrors.New(vmserrors.SS_NOSUCHFILE, found.Name)
 		}
 
-		return nil, FileFailure(err, loc.Name)
+		return nil, FileFailure(err, found.Name)
 	}
 
-	return &source.File{Spec: sourceSpec(found), Lines: recordLines(records), Handle: found}, nil
+	return &source.File{Spec: sourceSpec(found), Lines: recordLines(records), Free: formOfType(found) == formFree, Handle: found}, nil
+}
+
+// readFortranSource reads the FORTRAN source file at loc. A name with no type
+// is looked for as .FOR, then as .F90 (docs/planning/PHASE-99 - Fortran 90.md,
+// Decision 3; the author's answer 1). When neither is there, the error is the
+// .FOR file's, so a missing source is reported as it always was; found is the
+// file read, or after an error the name the .FOR file was looked for by.
+func readFortranSource(s *rms.Session, loc rms.FileLocation) ([][]byte, rms.FileLocation, error) {
+	asFOR := loc.WithDefaultType(defaultFortranType)
+
+	records, found, err := s.ReadRecordFile(asFOR, rms.TextRecords)
+
+	switch {
+	case err == nil:
+		return records, found, nil
+	case !isMissingFile(err):
+		return nil, asFOR, err
+	}
+
+	// A name that has a type (or a host file that exists without one) is the
+	// same name both ways, and was the only file to look for.
+	asF90 := loc.WithDefaultType(fortran90Type)
+	if asF90.Name == asFOR.Name {
+		return nil, asFOR, err
+	}
+
+	records, found, err90 := s.ReadRecordFile(asF90, rms.TextRecords)
+	if err90 != nil {
+		return nil, asFOR, err
+	}
+
+	return records, found, nil
+}
+
+// isMissingFile reports whether err says a file isn't there.
+func isMissingFile(err error) bool {
+	var notFound *rms.NotFoundError
+
+	return errors.As(err, &notFound) || errors.Is(err, fs.ErrNotExist)
+}
+
+// sourceForm is a FORTRAN source's form: by its type, or as /SOURCE_FORM says.
+type sourceForm int
+
+const (
+	formByType sourceForm = iota
+	formFree
+	formFixed
+)
+
+// sourceForm is /SOURCE_FORM's form, or an error if its value is neither FREE
+// nor FIXED (the grammar's keywords allow only those, but govax fortran's
+// --source-form passes any text on).
+func (opts FortranOptions) sourceForm() (sourceForm, error) {
+	switch strings.ToUpper(opts.SourceForm) {
+	case "":
+		return formByType, nil
+	case "FREE":
+		return formFree, nil
+	case "FIXED":
+		return formFixed, nil
+	}
+
+	return formByType, vmserrors.New(vmserrors.CLI_FORSOURCEFORM, opts.SourceForm)
+}
+
+// formOfType is the form a file's type gives it: free for .F90, whatever the
+// case it is written in, fixed for any other (Decision 3).
+func formOfType(found rms.FileLocation) sourceForm {
+	var typ string
+
+	if found.Host {
+		typ = strings.TrimPrefix(filepath.Ext(found.Name), ".")
+	} else {
+		name, _ := rms.SplitVersion(found.Name)
+		name = rms.NameType(name)
+
+		if i := strings.LastIndexByte(name, '.'); i >= 0 {
+			typ = name[i+1:]
+		}
+	}
+
+	if strings.EqualFold(typ, fortran90Type) {
+		return formFree
+	}
+
+	return formFixed
 }
 
 // related finds the file named name, relative to the file from.

@@ -29,10 +29,16 @@ var optionsNames = []string{
 	"CHECK", "NOCHECK",
 	"EXTEND_SOURCE", "NOEXTEND_SOURCE",
 	"F77", "NOF77",
+	"F90", "NOF90",
 	"G_FLOATING", "NOG_FLOATING",
 	"I4", "NOI4",
 	"RECURSIVE", "NORECURSIVE",
 }
+
+// shortestForm is the fewest letters a qualifier added after VAX FORTRAN's may be
+// cut to: /F90 came after /F77 (docs/planning/PHASE-99 - Fortran 90.md), and
+// /F and /NOF still mean /F77 and /NOF77, as they always have.
+var shortestForm = map[string]int{"F90": len("F9"), "NOF90": len("NOF9")}
 
 // OptionsQualifier is the whole name of an OPTIONS qualifier written name, which
 // may be cut short so long as it stands for only one of them, as on the command line
@@ -46,7 +52,7 @@ func OptionsQualifier(name string) string {
 			return name
 		}
 
-		if strings.HasPrefix(candidate, name) {
+		if strings.HasPrefix(candidate, name) && len(name) >= shortestForm[candidate] {
 			whole = candidate
 			found++
 		}
@@ -86,6 +92,10 @@ func (r *reader) followUnit(s *Statement) {
 				r.form.ExtendSource = true
 			case "NOEXTEND_SOURCE":
 				r.form.ExtendSource = false
+			case "F90":
+				r.form.F90 = true
+			case "NOF90":
+				r.form.F90 = false
 			}
 		}
 	}

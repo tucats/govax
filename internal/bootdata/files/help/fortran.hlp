@@ -16,7 +16,11 @@
    own MACRO file.  Files joined by + are one compilation, to one MACRO
    file named for the first, and a file followed by /LIBRARY is a text
    library (.TLB by default) for that compilation's INCLUDE statements.
-   Without a file type a source is .FOR.  Files are found by MACRO's
+   Without a file type a source is .FOR, or .F90 if there is no .FOR
+   file.  A .F90 file is in free source form (Fortran 90's), any other
+   in fixed form (VAX FORTRAN's), unless /SOURCE_FORM says otherwise.
+   Free form is not compiled yet: a free-form file gets
+   %FORT-E-NOTIMPL.  Files are found by MACRO's
    rules (see MACRO Parameter); quote a host path to keep its case.
 
 2 Description
@@ -55,7 +59,7 @@
    --optimize, --no-optimize, --list, --list-file file, --show keywords,
    --cross-reference, --check keywords, --warnings keywords, --standard
    keywords, --debug keywords, --object, --object-file file, --no-f77,
-   and --recursive.
+   --recursive, --f90, --no-f90, and --source-form form.
 
 2 Language
 
@@ -222,6 +226,19 @@
    The default is /F77.  An OPTIONS statement before a unit may change it
    for that unit.
 
+/F90
+
+      /[NO]F90
+
+   Where Fortran 90 and VAX FORTRAN read the same text differently, /F90
+   takes Fortran 90's reading: "..." is a character constant (not an
+   octal number), TYPE name begins a derived type, and Fortran 90's new
+   intrinsic names (SUM, SIZE, TRIM, ...) are intrinsic.  Fortran 90's
+   other syntax needs no qualifier.  The default is /F90 for a free-form
+   source and /NOF90 for a fixed-form one, so an old .FOR file compiles
+   as it always has.  An OPTIONS statement before a unit may change it
+   for that unit.  (Nothing reads it yet: Fortran 90 is being added.)
+
 /G_FLOATING
 
       /[NO]G_FLOATING
@@ -312,6 +329,15 @@
    lines, whatever INCLUDE's own /LIST says), and [NO]MAP.  /SHOW alone
    is ALL and /NOSHOW NONE; with no /SHOW, a listing has the maps, and
    only the INCLUDE files that say /LIST.
+
+/SOURCE_FORM
+
+      /SOURCE_FORM=keyword
+
+   The form of the source files named, whatever their types say: FREE
+   (Fortran 90's free form) or FIXED (VAX FORTRAN's columns and tab
+   format).  Without it a .F90 file is free form and any other fixed.
+   A file named in an INCLUDE statement always has its own type's form.
 
 /STANDARD
 

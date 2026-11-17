@@ -3,8 +3,8 @@
 **Status:** planned 2026-11-17; the plan reviewed and accepted by the author
 the same day, every recommendation taken ("The author's answers", after the
 questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
-to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done; subtask 2 is
-next. Needs the FORTRAN program (Phases
+to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done, and so is
+subtask 2 (`/F90` and `/SOURCE_FORM`); subtask 3 is next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -567,7 +567,7 @@ the work shows.
    command's file search, Decision 3); the form chosen per file and per
    INCLUDE'd file; `HELP FORTRAN`. Nothing reads `/F90` yet but the
    `"` rule of subtask 4; `TestNoF90Unchanged` (Decision 16) starts here, with
-   the old corpus's MACRO files as its baseline.
+   the old corpus's MACRO files as its baseline (done 2026-11-17).
 3. **Free source form** (`source/free.go`): the standard's 3.3 (lines, `!`
    comments, `&` continuation on both lines, a character constant continued,
    `;`, 39 continuations, `!DEC$` directives, labels as the first token), each
@@ -694,3 +694,46 @@ The author read the plan and accepted every recommendation:
 - **2026-11-17:** The author reviewed the plan and took every recommendation
   ("The author's answers"); Phase 112 (Fortran 95's additions) is optional,
   decided at Phase 111. Subtask 1 is done; subtask 2 is next.
+- **2026-11-17, subtask 2 (done):** `/[NO]F90` and `/SOURCE_FORM=FREE|FIXED`.
+  - **The qualifiers:** `console.dcl` (`f90`, `source_form` of the new keyword
+    type `fortran_source_form`), `govax fortran`'s `--f90`, `--no-f90`, and
+    `--source-form`, `dclcmd.FortranOptions` (`F90`, `F90Given`, `SourceForm`;
+    a value neither FREE nor FIXED, which only `--source-form` can pass, is
+    the new `CLI_FORSOURCEFORM`), and `fortran.Options` (`F90`, `F90Given`).
+    Not given, `/F90` is the first file's form (`CompileAll`; files joined by
+    `+` share it, our choice). It reaches `source.Form.F90`, which a unit's
+    OPTIONS `/[NO]F90` changes as `/EXTEND_SOURCE` is followed, and each
+    `source.Statement.F90` records it for subtask 4's lexer; and
+    `sema.Options.F90`, OPTIONS's `/[NO]F90` in `prologue`, and `Unit.F90`.
+    Nothing reads it yet.
+  - **OPTIONS's abbreviations:** `/F` and `/NOF` were `/F77` and `/NOF77`,
+    and still are: `/F90` must be written with its 9 (`source/options.go`'s
+    `shortestForm`), so no old source changes. On the command line the
+    grammar has no such rule, so `FORTRAN/F` is now ambiguous between `/F77`
+    and `/F90`; nothing in the repository wrote it.
+  - **Types and forms** (Decision 3): `dclcmd`'s `readFortranSource` looks for
+    a name with no type as `.FOR`, then `.F90`, for the command's sources and
+    INCLUDE's files alike; with neither, the error is `.FOR`'s, as before.
+    `formOfType` makes `.F90` (any case) free form; `/SOURCE_FORM` overrides
+    it for the files named, never an INCLUDE'd file, and a text library's
+    module is fixed. The form travels as `fortran.File.Free` and
+    `source.File.Free`. Until subtask 3's reader, `source.readFile` keeps a
+    free-form file's lines and reports `NOTIMPL`, "free source form", at its
+    first line.
+  - **`TestNoF90Unchanged`** (`internal/fortran/nof90_test.go`): every `.for`
+    under `testdata` (159 files with DUNGEON's local kit, at `/CONTINUATIONS=40`
+    as its build has it) compiled `/NOOPTIMIZE`, `/OPTIMIZE`, and
+    `/OPTIMIZE/RECURSIVE` with a fixed header, each MACRO file's and messages'
+    SHA-256 held to `internal/fortran/testdata/nof90.sum`. The baseline was
+    made in a worktree at the commit before this subtask, and this subtask's
+    compiler gives the same file. `-nof90-update` rewrites it; DUNGEON's lines
+    are checked only where the kit is. It runs in about 1.5 seconds, in the
+    `fortran` package, not the console's. `TestNoF90Explicit` holds `/NOF90`
+    given to the default.
+  - **Tests outside the console**, by the author's wish to keep the
+    compiler's test cycle short: `source`'s `TestStatementF90`,
+    `TestF90QualifierNames`, `TestFreeFormNotYet`; `sema`'s `TestUnitF90`;
+    `fortran`'s `TestF90Default`; `dclcmd`'s `TestFortranSourceTypes` and
+    `TestFortranHostF90` (the command on a `Context` over a scratch volume,
+    no console); `cmd/govax`'s `TestFortranCommand` cases. `HELP FORTRAN`
+    has `/F90` and `/SOURCE_FORM` and the `.F90` type.

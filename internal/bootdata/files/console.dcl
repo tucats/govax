@@ -915,11 +915,20 @@ grammar console
     ! MACRO is to write for the debugger (fortran.Debug), and OBJECT is /[NO]OBJECT[=file], MACRO run on
     ! the result (empty default: the source's name with type OBJ), and F77 is /[NO]F77, FORTRAN-66's reading
     ! of what FORTRAN-77 changed, and RECURSIVE is /[NO]RECURSIVE, every
-    ! subprogram recursive, as if each said RECURSIVE (docs/PHASE-89). Elements joined by + are one compilation
+    ! subprogram recursive, as if each said RECURSIVE (docs/PHASE-89). F90 is
+    ! /[NO]F90, Fortran 90's reading of the texts it and VAX FORTRAN read
+    ! differently (docs/PHASE-99, Decision 2; the default is the source's form:
+    ! free form /F90, fixed /NOF90), and SOURCE_FORM is /SOURCE_FORM=FREE or
+    ! FIXED, the form of the files named whatever their types say (Decision 3).
+    ! Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY").
     !
+    type fortran_source_form
+        keyword free/id=1
+        keyword fixed/id=2
+
     verb fortran/id=1370
 
         parameter   sources/id=1371             -
@@ -940,6 +949,9 @@ grammar console
         qualifier   i4/id=1377
         qualifier   f77/id=1390
         qualifier   recursive/id=1391
+        qualifier   f90/id=1392
+        qualifier   source_form/id=1393         -
+                    /type=fortran_source_form
         qualifier   g_floating/id=1378
         qualifier   align/id=1379               -
                     /type=$any/list             -

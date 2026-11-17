@@ -26,6 +26,10 @@ type Options struct {
 	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (Program.NoF77).
 	NoF77 bool
 
+	// F90 is /F90: Fortran 90's reading of the texts it and VAX FORTRAN read
+	// differently (Unit.F90).
+	F90 bool
+
 	// Recursive is /RECURSIVE: every subprogram is recursive, as if its header
 	// said RECURSIVE (Unit.Recursive).
 	Recursive bool
@@ -91,6 +95,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			defaultLogical: defaultLogical,
 			gFloating:      unitOpts.GFloating,
 			noF77:          unitOpts.NoF77,
+			f90:            unitOpts.F90,
 			recursive:      unitOpts.Recursive,
 			align:          opts.Align,
 			warnings:       opts.Warnings,
@@ -171,6 +176,10 @@ func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List)
 					opts.NoF77 = false
 				case "NOF77":
 					opts.NoF77 = true
+				case "F90":
+					opts.F90 = true
+				case "NOF90":
+					opts.F90 = false
 				case "RECURSIVE":
 					opts.Recursive = true
 				case "NORECURSIVE":
@@ -386,6 +395,9 @@ type analyzer struct {
 	// noF77 is the unit's /NOF77.
 	noF77 bool
 
+	// f90 is the unit's /F90.
+	f90 bool
+
 	// recursive is the unit's /RECURSIVE: a subprogram is recursive whether its
 	// header says so or not (Unit.Recursive).
 	recursive bool
@@ -465,6 +477,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 
 		GFloating: a.gFloating,
 		NoF77:     a.noF77,
+		F90:       a.f90,
 	}
 	a.unit = u
 

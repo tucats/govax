@@ -70,6 +70,9 @@ type fortranFlags struct {
 	dLines       bool   // --d-lines
 	noI4         bool   // --no-i4
 	noF77        bool   // --no-f77
+	f90          bool   // --f90
+	noF90        bool   // --no-f90
+	sourceForm   string // --source-form: FREE or FIXED
 	recursive    bool   // --recursive
 	gFloating    bool   // --g-floating
 	align        string // --align: /ALIGN's value
@@ -405,6 +408,36 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.noF77 = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "f90",
+		Description: "Fortran 90's reading where it and VAX FORTRAN differ: /F90 (the default for free form)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.f90 = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-f90",
+		Description: "VAX FORTRAN's reading where it and Fortran 90 differ: /NOF90 (the default for fixed form)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.noF90 = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "source-form",
+		Description: "The source files' form whatever their types say: free or fixed (/SOURCE_FORM)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.sourceForm, _ = c.String("source-form")
 
 			return nil
 		},
@@ -1077,6 +1110,17 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.noF77 {
 		command += "/NOF77"
+	}
+
+	switch {
+	case f.noF90:
+		command += "/NOF90"
+	case f.f90:
+		command += "/F90"
+	}
+
+	if f.sourceForm != "" {
+		command += "/SOURCE_FORM=" + strings.ToUpper(f.sourceForm)
 	}
 
 	if f.noI4 {

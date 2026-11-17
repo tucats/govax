@@ -54,6 +54,13 @@ type Options struct {
 	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (sema.Unit.NoF77).
 	NoF77 bool
 
+	// F90 is /[NO]F90, if F90Given says it was given: where Fortran 90 and VAX
+	// FORTRAN read a text differently, Fortran 90's reading (sema.Unit.F90;
+	// docs/planning/PHASE-99 - Fortran 90.md, Decision 2). Not given, the first
+	// file's form decides: /F90 for free form, /NOF90 for fixed.
+	F90      bool
+	F90Given bool
+
 	// Recursive is /RECURSIVE: every subprogram may be active more than once at a
 	// time, as if each FUNCTION and SUBROUTINE statement said RECURSIVE
 	// (sema.Unit.Recursive; docs/planning/PHASE-89 - reentrant FORTRAN.md).
@@ -106,6 +113,10 @@ type File struct {
 
 	// Lines are the file's records, without line terminators.
 	Lines []string
+
+	// Free says the file is in free source form, which its type (.F90) or
+	// /SOURCE_FORM=FREE chose (source.File.Free).
+	Free bool
 
 	// Handle is the caller's note of where the file is, handed to
 	// Options.Includes to find the files it includes relative to it.
@@ -171,7 +182,14 @@ func CompileAll(opts Options, files []File) (result Result) {
 	// what it needs, so it doesn't depend on this package.
 	sources := make([]*source.File, len(files))
 	for i, f := range files {
-		sources[i] = &source.File{Spec: f.Spec, Lines: f.Lines, Handle: f.Handle}
+		sources[i] = &source.File{Spec: f.Spec, Lines: f.Lines, Free: f.Free, Handle: f.Handle}
+	}
+
+	// /F90 not given is the first file's form: a free-form source is Fortran 90,
+	// a fixed-form one VAX FORTRAN (Decision 2). Files joined with + share it.
+	f90 := file.Free
+	if opts.F90Given {
+		f90 = opts.F90
 	}
 
 	// The first pass: the source's lines into statements.
@@ -179,6 +197,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 		ExtendSource:  opts.ExtendSource,
 		DLines:        opts.DLines,
 		Continuations: opts.Continuations,
+		F90:           f90,
 	}, sources, opts.Includes, &messages)
 
 	// /STANDARD's complaints about the layout of lines (tab format, long
@@ -215,6 +234,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{
 			NoI4:      opts.NoI4,
 			NoF77:     opts.NoF77,
+			F90:       f90,
 			Recursive: opts.Recursive,
 			GFloating: opts.GFloating,
 			Align:     align,

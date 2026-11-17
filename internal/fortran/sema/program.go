@@ -112,6 +112,12 @@ type Unit struct {
 	// (9.1.3) and STATUS= to 'NEW' (9.1.25), and EXTERNAL takes appendix A.6's form.
 	NoF77 bool
 
+	// F90 is set when the unit is compiled with /F90 (the default for a free-form
+	// source), or its OPTIONS statement says /F90: where Fortran 90 and VAX FORTRAN
+	// read a text differently, it is read as Fortran 90 reads it
+	// (docs/planning/PHASE-99 - Fortran 90.md, Decision 2).
+	F90 bool
+
 	// LocalAlign is the alignment of the $LOCAL section, as a power of two, that
 	// the unit's aligned records need beyond a longword's (align.go), or 0.
 	LocalAlign int

@@ -71,6 +71,21 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: r.form.split(text).kind, Listed: listed, Library: library}
 	}
 
+	// Free source form has a reader of its own to come (docs/planning/PHASE-99 -
+	// Fortran 90.md, subtask 3). Until then a free-form file's lines are kept, so
+	// a listing shows them, and the file is reported at its first line.
+	if file.Free {
+		r.add(lines...)
+
+		if n > 0 {
+			r.messages.Report("NOTIMPL", linePosition(lines[0], 0), "free source form")
+		} else {
+			r.messages.Report("NOTIMPL", diag.Position{File: file.Spec}, "free source form")
+		}
+
+		return
+	}
+
 	// Walk the lines, taking one line or one whole statement per turn. The
 	// loop's post statement is empty because each case moves i on itself,
 	// by one line or by as many as the statement took.
@@ -134,7 +149,7 @@ func (r *reader) add(lines ...*Line) {
 // initial line and the rest its continuation lines and the comment lines
 // among them; first is the initial line's index in the program's lines.
 func (r *reader) statement(lines []*Line, first, depth int) {
-	s := &Statement{First: first, Last: first + len(lines) - 1, Depth: depth, Library: lines[0].Library}
+	s := &Statement{First: first, Last: first + len(lines) - 1, Depth: depth, Library: lines[0].Library, F90: r.form.F90}
 
 	// Only the initial line may have a label; a continuation's label field
 	// should be blank (CONTLABEL below).
