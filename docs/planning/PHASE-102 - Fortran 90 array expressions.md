@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 4 are done (2026-11-17), and subtask 5 is next.
+author's answers"); subtask 2 is done (2026-11-17), and subtask 3 is next.
 Needs Phase 101 (done).
 
 ## Goal
