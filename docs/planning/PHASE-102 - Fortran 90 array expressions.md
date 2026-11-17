@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
-questions for the author), written 2026-11-17, for review. Needs Phase 101
-(done).
+questions for the author), was accepted by the author 2026-11-17 ("The
+author's answers"); subtask 2 is next. Needs Phase 101 (done).
 
 ## Goal
 
@@ -65,7 +65,7 @@ entry):
 
 ## Subtasks (provisional)
 
-Replaced by Part A's A.4 once the author accepts it.
+Replaced by Part A's A.4.
 
 1. **Survey** (the standard's 6.2, 7.1.4, 7.5.1.5, 7.5.3, 13.10.13 to 13.10.19;
    the Handbook's chapters 6 and 7), for review.
@@ -389,7 +389,8 @@ and FTNRTL do today.
 
 ## A.4 The subtasks, revised
 
-1. **Survey** (this Part A).
+1. **Survey** (this Part A) (done 2026-11-17; accepted by the author the
+   same day).
 2. **The forms:** triplets in subscript lists with sema deciding substring
    or section, array constructors, and the WHERE nodes in the parser
    (finding 2); sema's substrings through the new form, everything new
@@ -443,6 +444,25 @@ and FTNRTL do today.
    false; processor dependent in Fortran 90). (a) **Zeros, Fortran 95's
    rule and gfortran's answer**; (b) leave the result unchanged.
 
+## The author's answers (2026-11-17)
+
+The author read the survey and accepted every recommendation:
+
+1. An expression's shape is on the expression (`exprBase.Shape`); `Type`
+   stays the element's type (finding 3).
+2. Array temporaries follow `Routine.NewCell`'s rule: `$LOCAL` in an
+   ordinary routine, the frame in a reentrant one (finding 7).
+3. MERGE comes into this phase, and RESHAPE of constants; the rest of
+   RESHAPE stays Phase 104's (findings 9 and 10).
+4. A `DIM=` that isn't constant, with ARRAY of rank above 1, is NOTIMPL
+   until Phase 104 (finding 12).
+5. MAXLOC and MINLOC with nothing to find give zeros (finding 12).
+
+The plan's open questions are settled the same way: the run-time overlap
+test stays Phase 110's, if measurements ask for it (finding 6 decides most
+cases when compiling), and MATMUL is in line here, FTNRTL's for run-time
+shapes in Phase 104.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -456,3 +476,5 @@ and FTNRTL do today.
   has an "ordered" answer that reverses a loop instead of copying (finding
   6); MAXLOC has no DIM= in Fortran 90 and counts from 1. Five questions
   for the author (A.5). For review.
+- **2026-11-17:** The author accepted the survey and every recommendation
+  ("The author's answers"). Subtask 1 is done; subtask 2 is next.
