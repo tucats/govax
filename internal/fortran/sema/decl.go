@@ -299,9 +299,21 @@ const maxCharLength = 65535
 // type's length must be one of its own (BADLENGTH; none for the types
 // that name a length, NOLENGTH), and a CHARACTER length is characterType's.
 // The length 4 (8 for COMPLEX) is the default.
+//
+// A Fortran 90 selector names the type by its kind (selectedType; kinds.go),
+// and a CHARACTER one its length as well, which a length written after an
+// entity, A*5, replaces; for a numeric type such a length replaces the kind.
 func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type, bool) {
 	if spec.Type == ast.Character {
-		return a.characterType(l, pos)
+		if spec.Selector && !a.characterKind(spec) {
+			return invalid, false
+		}
+
+		return a.characterType(l, pos, spec.Selector && l == spec.Len)
+	}
+
+	if spec.Selector && !l.HasLength() {
+		return a.selectedType(spec)
 	}
 
 	if t, ok := fixedTypes[spec.Type]; ok {
@@ -353,7 +365,11 @@ func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type
 // when none is written; a constant, or a parenthesized integer constant
 // expression, from 1 to 65535 (BADCHARLEN); or (*), a passed length,
 // which only some names may have (passedLengths).
-func (a *analyzer) characterType(l ast.Len, pos diag.Position) (Type, bool) {
+//
+// A Fortran 90 selector's length (selector: CHARACTER(LEN=N)) may be a
+// specification expression, a dummy's N, and zero or less, which means zero
+// (the standard's 5.1.1.5); both are NOTIMPL, named, until Phases 104 and 108.
+func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (Type, bool) {
 	n := int64(l.Length)
 
 	switch {
@@ -363,16 +379,26 @@ func (a *analyzer) characterType(l ast.Len, pos diag.Position) (Type, bool) {
 	case l.LenExpr != nil:
 		v, kind := a.constInt(l.LenExpr)
 
-		switch kind {
-		case constFailed:
+		switch {
+		case kind == constFailed:
 			return invalid, false
-		case constOK:
+		case kind == constOK:
 			n = int64(v)
+		case selector && kind == constNamed:
+			a.notImplForm(l.LenExpr.Position(), "a CHARACTER length that isn't constant")
+
+			return invalid, false
 		default:
 			n = 0
 		}
 
 		pos = l.LenExpr.Position()
+
+		if selector && kind == constOK && n < 1 {
+			a.notImplForm(pos, "a CHARACTER length of zero")
+
+			return invalid, false
+		}
 
 	case !l.HasLength():
 		n = 1

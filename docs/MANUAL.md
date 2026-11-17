@@ -8277,8 +8277,8 @@ Fortran 90 (ISO/IEC 1539:1991) is being added to govax's compiler, a part at a t
 It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90 program
 may call VAX FORTRAN routines and the other way round, and an old program compiles as it
 always has. This section grows with each part; so far a program may be written in Fortran
-90's free source form and with its spellings, and everything else Fortran 90 adds is
-recognized and reported as not yet implemented.
+90's free source form and with its spellings, with its declarations and kinds, and
+everything else Fortran 90 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -8396,6 +8396,39 @@ and it gives the name SAVE. DEC's values in slashes stay legal without `::`, and
 one given twice (`ATTRTWICE`), and INTENT or OPTIONAL on a name that isn't a dummy
 argument (`ATTRDUMMY`) are errors.
 
+**Kinds** (the standard's 4.3 and 5.1.1). A type may be given a *kind* in parentheses
+after its keyword, where VAX FORTRAN writes a length after a `*`; a kind is the number of
+bytes, so each kind is a type VAX FORTRAN already has:
+
+| Written | Is |
+| --- | --- |
+| `INTEGER(2)`, `INTEGER(KIND=4)` | `INTEGER*2`, `INTEGER*4` |
+| `LOGICAL(1)`, `LOGICAL(2)`, `LOGICAL(4)` | `LOGICAL*1`, `LOGICAL*2`, `LOGICAL*4` |
+| `REAL(4)`, `REAL(8)`, `REAL(16)` | `REAL*4`, `REAL*8` (D or G by `/G_FLOATING`), `REAL*16` |
+| `COMPLEX(4)`, `COMPLEX(8)` | `COMPLEX*8`, `COMPLEX*16`: a COMPLEX's kind is its parts' |
+| `CHARACTER(10)`, `CHARACTER(LEN=10)`, `CHARACTER(10, KIND=1)`, `CHARACTER(KIND=1, LEN=10)` | `CHARACTER*10` |
+| `CHARACTER(*)`, `CHARACTER(LEN=*)` | `CHARACTER*(*)` |
+
+A kind is any constant integer expression, so a PARAMETER may name it, and a constant may
+have one after an underscore, its digits or a constant's name:
+
+```fortran
+integer, parameter :: dp = 8, short = 2
+integer(short) :: small = 30000_short
+real(kind=dp) :: y = 1.1_dp        ! read as 1.1D0, not 1.1 widened
+logical(2) :: flag = .true._2
+character(kind=1, len=*), parameter :: title = 1_'kinded'
+real(kind=dp) function area(r)    ! and in IMPLICIT: implicit real(8) (a-h, o-z)
+```
+
+A real constant with a kind is read at that kind's precision, so `1.1_8` is `1.1D0`; one
+with a `D` or `Q` exponent has its type already, and can't have a kind (`KINDEXPONENT`). A
+kind the type doesn't have is `NOSUCHKIND` (`REAL(3)`), and `DOUBLE PRECISION` and the other
+types that name one length take none (`NOKIND`). DEC's lengths go on working beside kinds,
+and a length after an entity's name replaces the statement's kind or length (`REAL(8) ::
+X*4`). `INTEGER(1)`, `COMPLEX(16)`, a `CHARACTER` length of zero, and a `CHARACTER` length
+that isn't constant (`CHARACTER(LEN=N)` with `N` a dummy argument) are not there yet.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
@@ -8406,7 +8439,7 @@ argument (`ATTRDUMMY`) are errors.
   --^
 ```
 
-That includes kinds (`INTEGER(4)`, `1.5_8`), array constructors and arrays that are
+That includes the kind functions (`KIND`, `SELECTED_REAL_KIND`, ...), array constructors and arrays that are
 PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), construct names, SELECT CASE,
 EXIT and CYCLE, array expressions and sections, WHERE, interface blocks and CONTAINS,
 modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran

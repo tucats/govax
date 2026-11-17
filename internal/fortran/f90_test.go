@@ -60,7 +60,7 @@ func TestF90Default(t *testing.T) {
 // TestF90LexicalItems compiles Fortran 90's lexical items through every pass
 // (docs/planning/PHASE-99 - Fortran 90.md, subtask 4): the relational operators'
 // new spellings compile as .EQ. and the rest, a quoted character constant, and
-// Z'1F' and B'101' in DATA; a kind parameter is NOTIMPL until Phase 100.
+// Z'1F' and B'101' in DATA; and a kind parameter (Phase 100).
 func TestF90LexicalItems(t *testing.T) {
 	free := fortran.File{Spec: "A.F90", Name: "A", Free: true, Lines: []string{
 		"program a",
@@ -85,7 +85,7 @@ func TestF90LexicalItems(t *testing.T) {
 	kinded := fortran.File{Spec: "B.F90", Name: "B", Free: true, Lines: []string{"x = 1.5_8", "end"}}
 
 	r = fortran.Compile(noF90Options("B"), kinded)
-	if len(r.Messages) != 1 || r.Messages[0].Ident != "NOTIMPL" || !strings.Contains(r.Messages[0].Text, "a kind parameter on a constant") {
+	if len(r.Messages) != 0 {
 		t.Errorf("a kind parameter: %v", r.Messages)
 	}
 }
@@ -143,7 +143,6 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 	want := []string{
 		"1:1 the MODULE statement",
 		"12:3 the USE statement",
-		"14:7 a kind or length selector",
 		"15:3 the TYPE (type-name) statement",
 		"16:3 a construct name",
 		"17:5 the SELECT CASE statement",

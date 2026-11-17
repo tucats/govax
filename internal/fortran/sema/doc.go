@@ -52,6 +52,14 @@
 // store it, and it gives the name SAVE; a PARAMETER's is parameter.go's.
 // INTENT, OPTIONAL, and TARGET are recorded on the Symbol for later phases.
 //
+// A Fortran 90 kind (kinds.go) is a byte size, so a kind names a Type that
+// VAX FORTRAN's lengths already name: REAL(KIND=8) is REAL*8, LOGICAL(1)
+// LOGICAL*1, and COMPLEX(8), whose kind is its parts', COMPLEX*16
+// (Type.KindNumber). A kind selector's expression and a constant's kind
+// parameter (1.5_8, 7_K) are constants evaluated here; a real constant with a
+// kind is read at that kind's precision, as if written with its exponent
+// letter.
+//
 // What a name *is* (its Class) comes from how it is used, since FORTRAN
 // has no declaration for most of that: REAL F declares only a type, and
 // F becomes a variable when the unit uses F alone, or an external

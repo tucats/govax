@@ -49,8 +49,8 @@ type Unit struct {
 	// Header is the unit's first statement: a *ProgramStmt, a
 	// *FunctionStmt, a *SubroutineStmt, a *BlockDataStmt, Fortran 90's
 	// *ModuleStmt, a *BadStmt for one of those with an error, a
-	// *PendingStmt for one in a Fortran 90 form not parsed yet (INTEGER(4)
-	// FUNCTION F), or nil for a main program without a PROGRAM statement.
+	// *PendingStmt for one in a Fortran 90 form not compiled yet, or nil
+	// for a main program without a PROGRAM statement.
 	Header Stmt
 
 	// Body is the statements after the header, in order. A unit the
@@ -243,6 +243,18 @@ type TypeSpec struct {
 	Len
 
 	Pos diag.Position
+
+	// Selector reports a Fortran 90 kind or length selector in parentheses
+	// after the keyword (the standard's R502 and R506): REAL(8),
+	// INTEGER(KIND=2), CHARACTER(LEN=10, KIND=1), CHARACTER(*). A
+	// CHARACTER selector's length is in Len (LenExpr or LenStar), as
+	// CHARACTER*(...)'s is; its kind, and any other type's, in Kind.
+	Selector bool
+
+	// Kind is the selector's kind expression, or nil if none was written;
+	// KindPos is where it starts.
+	Kind    Expr
+	KindPos diag.Position
 }
 
 // Declarator is one entity a type, DIMENSION, COMMON, or RECORD
@@ -444,7 +456,8 @@ type (
 	// KindConst is a constant with a kind parameter, Fortran 90's 1.5_8, 2_K,
 	// .TRUE._1, or K_'text' (the standard's R404, R413, R420, R421): X is the
 	// constant without it, and Kind the parameter as written, digits or a
-	// name. Semantic analysis gives it a meaning in Phase 100.
+	// name. Semantic analysis reads the constant at the kind's type
+	// (sema/kinds.go).
 	KindConst struct {
 		ExprBase
 		X    Expr

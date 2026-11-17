@@ -168,6 +168,9 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 	case *ast.ComplexConst:
 		return ev.complex(e)
 
+	case *ast.KindConst:
+		return ev.kindConst(e)
+
 	case *ast.TypelessConst:
 		// "When the constant is used in any other context, an INTEGER*4
 		// data type is assumed" (section 2.2.1.4), and a Hollerith constant
@@ -242,6 +245,12 @@ func (ev *evaluator) real(e *ast.RealConst) (*Const, *constErr) {
 		t, text = Type{Real, 16}, strings.Replace(text, "Q", "E", 1)
 	}
 
+	return ev.realAs(e, t, text)
+}
+
+// realAs is the real literal e, whose digits (with an E exponent, if any) are
+// text, read as a constant of type t: its kind's, or its exponent letter's.
+func (ev *evaluator) realAs(e *ast.RealConst, t Type, text string) (*Const, *constErr) {
 	exact, err := vaxfloat.Parse(text)
 	if err != nil {
 		return nil, ev.realRange(e.Pos, e.Text, t)
@@ -264,6 +273,10 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 		inner := x
 		if u, ok := x.(*ast.Unary); ok && (u.Op == ast.Add || u.Op == ast.Sub) {
 			inner = u.X
+		}
+
+		if k, ok := inner.(*ast.KindConst); ok {
+			inner = k.X
 		}
 
 		switch inner.(type) {

@@ -479,6 +479,21 @@ var messages = map[string]kind{
 	"INITTYPE":     {Error, "%s value can't initialize %s item, which an assignment couldn't store it in"},
 	"FIELDATTR":    {Error, "a structure's field declaration can't give attributes"},
 
+	// Fortran 90's kinds (docs/planning/PHASE-100 - Fortran 90 declarations
+	// and kinds.md, subtask 4; sema/kinds.go). NOSUCHKIND is a kind its type
+	// doesn't have, NOKIND a selector on a type keyword that names one type
+	// (DOUBLE PRECISION), KINDNOTCONST a selector's kind that isn't a
+	// constant integer expression, at least 0 (R505). KINDNAME is a constant's
+	// kind parameter that names no INTEGER constant (R404), KINDEXPONENT one
+	// after a real constant with a D or Q exponent, which names its type
+	// already (R413), and KINDCONST one after a constant that can't have one.
+	"NOSUCHKIND":   {Error, "%s has no kind %d; its kinds are %s"},
+	"NOKIND":       {Error, "%s can't be given a kind"},
+	"KINDNOTCONST": {Error, "a kind must be a constant integer expression, 0 or more"},
+	"KINDNAME":     {Error, "the kind parameter %s must be digits or the name of an INTEGER constant"},
+	"KINDEXPONENT": {Error, "%s has a D or Q exponent, which gives it its type, so it can't have a kind parameter"},
+	"KINDCONST":    {Error, "a constant of this form can't have a kind parameter"},
+
 	// BADCHARLEN is a CHARACTER length that isn't an integer constant
 	// expression from 1 to 65535 (section 4.4.2).
 	"BADCHARLEN": {Error, "a CHARACTER length must be an integer constant expression from 1 to 65535, or (*)"},

@@ -477,7 +477,7 @@ func (l *lexer) typedFunction(st *Statement, k Kind, i, j int) *Statement {
 	p := i
 
 	// Fortran 90's kind or length selector, (...): INTEGER(4) FUNCTION F,
-	// which the parser reports NOTIMPL (Phase 100), but as a header.
+	// which the parser reads (typeSelector).
 	if p < j && l.sq.text[p] == '(' && !l.sq.lit[p] {
 		if p = l.matchParen(p, j); p < 0 {
 			return nil

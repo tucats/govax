@@ -35,13 +35,10 @@ func parseFunction(p *parser) ast.Stmt {
 	if k := p.st.FunctionType; k != lex.Unknown {
 		s.Type = &ast.TypeSpec{Type: ast.TypeKeywords[k], Pos: s.Pos}
 
-		if p.accept("*") {
+		// INTEGER(4) FUNCTION F, Fortran 90's kind selector, or VAX
+		// FORTRAN's length, INTEGER*4 FUNCTION F.
+		if p.typeSelector(s.Type); !s.Type.Selector && p.accept("*") {
 			s.Type.Len = p.lengthSpec(s.Type.Type == ast.Character)
-		}
-
-		if p.at("(") {
-			// INTEGER(4) FUNCTION F, Fortran 90's kind selector (Phase 100).
-			return p.pending("a kind or length selector", p.peek())
 		}
 
 		p.expect("FUNCTION")
@@ -206,17 +203,14 @@ func (p *parser) lengthSpec(character bool) ast.Len {
 // Fortran 90's form (the standard's R501) has a :: before the entities, and
 // may have attributes before it, each after a comma, and an initialization
 // expression after an entity: REAL*8, DIMENSION(10), SAVE :: X = 0. Its type
-// may have a kind or length selector (subtask 4 of Phase 100).
+// may have a kind or length selector in place of the *n, REAL(KIND=8) or
+// CHARACTER(LEN=10) (typeSelector).
 func parseTypeStmt(p *parser) ast.Stmt {
-	if f90 := p.kindSelector(); f90 != nil {
-		return f90
-	}
-
 	s := &ast.TypeStmt{StmtBase: p.base(), Colons: p.doubleColon() != nil}
 	s.Type = ast.TypeSpec{Type: ast.TypeKeywords[p.st.Kind], Pos: s.Pos}
 	character := s.Type.Type == ast.Character
 
-	if p.accept("*") {
+	if p.typeSelector(&s.Type); !s.Type.Selector && p.accept("*") {
 		s.Type.Len = p.lengthSpec(character)
 
 		// CHARACTER*8, A: the comma VAX FORTRAN allows. With :: a comma
@@ -401,15 +395,13 @@ func parseImplicit(p *parser) ast.Stmt {
 
 		p.next()
 
-		// IMPLICIT REAL(8) (A-H): Fortran 90's kind selector, a parenthesis
-		// before the letters' (Phase 100).
-		if p.at("(") && p.kindBeforeLetters() {
-			return p.pending("a kind or length selector", p.peek())
-		}
-
 		r.Type = ast.TypeSpec{Type: ast.TypeNames[t.Text], Pos: p.pos(*t)}
 
-		if p.accept("*") {
+		// IMPLICIT REAL(8) (A-H): Fortran 90's kind selector, a parenthesis
+		// before the letters'.
+		if p.at("(") && p.kindBeforeLetters() {
+			p.typeSelector(&r.Type)
+		} else if p.accept("*") {
 			r.Type.Len = p.lengthSpec(r.Type.Type == ast.Character)
 		}
 

@@ -1,0 +1,48 @@
+== main program F90KINDS
+  F90KINDS                program unit
+  DP        INTEGER       constant         = 8
+  SHORT     INTEGER       constant         = 2
+  I2        INTEGER*2     variable         $LOCAL+0 saved
+  I4        INTEGER       variable         $LOCAL+4
+  X         REAL*8        variable         $LOCAL+8 saved
+  Y         REAL*8        variable         $LOCAL+16 saved
+  Q         REAL*16       variable         $LOCAL+24
+  Z         COMPLEX*16    variable         $LOCAL+40 saved
+  C         COMPLEX       variable         $LOCAL+56
+  FLAG      LOGICAL*2     variable         $LOCAL+64 saved
+  S         CHARACTER*5   variable         $LOCAL+66
+  T         CHARACTER*3   variable         $LOCAL+71
+  U         CHARACTER*2   variable         $LOCAL+74 saved
+  V         CHARACTER*4   variable         $LOCAL+76
+  NAME      CHARACTER*5   constant         = 'KINDS'
+  R8F       REAL*8        function
+  D         REAL*8        variable         $LOCAL+80
+  LTRUE     LOGICAL*1     variable         $LOCAL+88
+  $LOCAL is 92 bytes
+  initial $LOCAL+0 I2 INTEGER*2 = 07 00
+  initial $LOCAL+8 X REAL*8 = 8C 40 CC CC CC CC CD CC
+  initial $LOCAL+16 Y REAL*8 = 8C 40 CC CC CC CC CD CC
+  initial $LOCAL+40 Z COMPLEX*16 = 80 40 00 00 00 00 00 00 00 41 00 00 00 00 00 00
+  initial $LOCAL+64 FLAG LOGICAL*2 = FF FF
+  initial $LOCAL+74 U CHARACTER*2 = 41 42
+21          I4 = (INTEGER (+:I I2 32767))
+22          Q = (*:R (REAL*16 X) 2.5Q0)
+23          C = (COMPLEX Z)
+24          D = (REAL*8 Q)
+25          LTRUE = (LOGICAL*1 FLAG)
+26          S = 'KINDS'
+27          T = S
+28          V = U
+29          PRINT * R8F(D) Y LTRUE T V
+30          END
+== FUNCTION R8F
+  R8F       REAL*8        result           $LOCAL+0
+  A         REAL*8        variable         argument 1
+  $LOCAL is 8 bytes
+33          R8F = A
+34          END
+== FUNCTION CF
+  CF        CHARACTER*(*) result
+  $LOCAL is 0 bytes
+36          CF = 'X'
+37          END

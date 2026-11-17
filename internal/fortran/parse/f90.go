@@ -63,16 +63,78 @@ func (p *parser) doubleColon() *lex.Token {
 	return nil
 }
 
-// kindSelector is the Fortran 90 kind or length selector after a type
-// keyword, if this statement has one (REAL(8) X, CHARACTER(LEN=10) C,
-// INTEGER(KIND=2) :: I): Phase 100's subtask 4, a PendingStmt until then.
-// VAX FORTRAN's type statements never have one: a length follows a *.
-func (p *parser) kindSelector() ast.Stmt {
-	if p.at("(") {
-		return p.pending("a kind or length selector", p.peek())
+// typeSelector reads the Fortran 90 kind or length selector after a type
+// keyword, if one is next, into spec (the standard's R502 and R506): for
+// every type but CHARACTER, ([KIND=] expr); for CHARACTER, a length, a kind,
+// or both: (len), (LEN=len), (len, [KIND=]kind), (LEN=len, KIND=kind),
+// (KIND=kind, LEN=len), and (KIND=kind), each len an expression or *. A kind
+// unnamed must follow a length unnamed. Whether the kind is one the type has
+// is semantic analysis's question. VAX FORTRAN's type statements never have a
+// selector: a length follows a *.
+func (p *parser) typeSelector(spec *ast.TypeSpec) {
+	if !p.accept("(") {
+		return
 	}
 
-	return nil
+	spec.Selector = true
+
+	if spec.Type != ast.Character {
+		if p.atName("KIND") && p.peekAt(1) != nil && p.peekAt(1).Is("=") {
+			p.next()
+			p.next()
+		}
+
+		spec.KindPos = p.here()
+		spec.Kind = p.expr()
+		p.expect(")")
+
+		return
+	}
+
+	positional := true // every item so far without its keyword
+
+	for i := 0; ; i++ {
+		word := ""
+
+		if t, eq := p.peek(), p.peekAt(1); t != nil && t.Kind == lex.Name && eq != nil && eq.Is("=") &&
+			(t.Text == "LEN" || t.Text == "KIND") {
+			word = t.Text
+
+			p.next()
+			p.next()
+		}
+
+		switch {
+		case word == "" && i == 0, word == "LEN" && !spec.HasLength():
+			spec.Len = p.selectorLength()
+
+		case word == "" && i == 1 && positional, word == "KIND" && spec.Kind == nil:
+			spec.KindPos = p.here()
+			spec.Kind = p.expr()
+
+		default:
+			p.syntax("LEN= or KIND=")
+		}
+
+		positional = positional && word == ""
+
+		if i == 1 || !p.accept(",") {
+			break
+		}
+	}
+
+	p.expect(")")
+}
+
+// selectorLength reads a CHARACTER selector's length: * or an expression.
+func (p *parser) selectorLength() ast.Len {
+	if p.at("*") && p.peekAt(1) != nil && (p.peekAt(1).Is(")") || p.peekAt(1).Is(",")) {
+		p.next()
+
+		return ast.Len{LenStar: true}
+	}
+
+	return ast.Len{LenExpr: p.expr()}
 }
 
 // attributes are the attribute keywords a Fortran 90 type declaration may

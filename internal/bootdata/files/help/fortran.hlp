@@ -134,9 +134,16 @@
    statement, with or without ::.  A value given with = fills a whole
    array and gives the name SAVE.
 
-   Fortran 90's other statements (kinds, SELECT CASE, MODULE, array
-   expressions, POINTER, ALLOCATABLE, and the rest) are recognized and draw
-   %FORT-E-NOTIMPL until they are added.  A format given at run time
+   A type may have a kind in parentheses, a number of bytes:
+   INTEGER(2) is INTEGER*2, REAL(KIND=8) is REAL*8, COMPLEX(8) (the
+   parts' kind) is COMPLEX*16, and CHARACTER(LEN=10, KIND=1) is
+   CHARACTER*10.  A constant may have one too, digits or a constant's
+   name: 7_2, 1.5_DP (read at REAL*8's precision), .TRUE._1, 1_'TEXT'.
+   INTEGER(1) and COMPLEX(16) are not there yet.
+
+   Fortran 90's other statements (the kind functions, SELECT CASE,
+   MODULE, array expressions, POINTER, ALLOCATABLE, and the rest) are
+   recognized and draw %FORT-E-NOTIMPL until they are added.  A format given at run time
    (a character constant or variable as the format) can't yet have a
    "..." constant: FTNRTL refuses it, %FOR-F-SYNERRFOR.
 

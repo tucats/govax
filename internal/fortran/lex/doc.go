@@ -165,8 +165,8 @@
 //
 // Typed FUNCTION statements are looked for after CONTAINS and INTERFACE as
 // at a unit's start, since procedures start there too, and with a kind
-// selector, INTEGER(4) FUNCTION F, which the parser reports NOTIMPL as a
-// header.
+// selector, INTEGER(4) FUNCTION F, which the parser reads into the
+// header's type.
 //
 // # What this pass hands on
 //

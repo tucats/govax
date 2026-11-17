@@ -24,7 +24,7 @@ func (a *analyzer) bad(pos diag.Position) Expr {
 // for the caller to accept or not.
 func (a *analyzer) value(e ast.Expr) Expr {
 	switch e := e.(type) {
-	case *ast.IntConst, *ast.RealConst, *ast.TypelessConst, *ast.HollerithConst, *ast.Radix50Const:
+	case *ast.IntConst, *ast.RealConst, *ast.TypelessConst, *ast.HollerithConst, *ast.Radix50Const, *ast.KindConst:
 		v, _ := a.folded(e)
 
 		return v

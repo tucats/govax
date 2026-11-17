@@ -4,8 +4,9 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17), every recommendation
 accepted by the author ("The author's answers"); subtask 2, the scope
-chain, and subtask 3, `::` declarations and attributes, are done
-(2026-11-17); subtask 4 is next. Needs
+chain, subtask 3, `::` declarations and attributes, and subtask 4, kind
+selectors and kinds on constants, are done (2026-11-17); subtask 5,
+INTEGER(1), is next. Needs
 Phase 99.
 
 ## Goal
@@ -296,7 +297,7 @@ and 7), and COMPLEX(16) by question 1's answer.
 4. **Kind selectors and kinds on constants:** every type spec of R502 and
    R506, `Type.KindNumber`, `ast.KindConst` compiled, kinds named by
    PARAMETERs, IMPLICIT with kinds, FUNCTION with a kind selector, and the
-   messages for a kind the processor lacks.
+   messages for a kind the processor lacks (done 2026-11-17).
 5. **INTEGER(1)** (finding 1): sema's type and rules, the IR's and codegen's
    byte arithmetic and conversions, intrinsics through INTEGER(2), I/O, the
    debugger table's type; `INTEGER*1`.
@@ -428,3 +429,35 @@ The author accepted every recommendation:
   `TestErrors` cases, and `testdata/fortran90/declare.f90` (the same on
   gfortran, `compare.py`), run in every mode. MANUAL.md's 14.13 and HELP
   FORTRAN say what is compiled now; the full write-up is subtask 9's.
+- **2026-11-17, subtask 4 (done):** kind selectors and kinds on constants.
+  The parser: `typeSelector` (`parse/f90.go`) reads a type's selector into
+  its `ast.TypeSpec` (`Selector`, `Kind`, `KindPos`; a CHARACTER selector's
+  length into `Len`, as `*(...)`'s is) in a type statement, before FUNCTION,
+  and in IMPLICIT (where `kindBeforeLetters` still tells it from the
+  letters): `([KIND=] k)` for every type, and R506's forms for CHARACTER,
+  `(len)`, `(LEN=len)`, `(len, [KIND=]k)`, `(LEN=len, KIND=k)`, `(KIND=k,
+  LEN=len)`, `(KIND=k)`, each len an expression or `*`; a kind unnamed only
+  after a length unnamed, and a selector and a `*n` not both (SYNTAX). The
+  PendingStmt "a kind or length selector" is gone. Sema: `sema/kinds.go` has
+  `Type.KindNumber` (a COMPLEX's kind half its size, CHARACTER's 1), the
+  table of each keyword's kinds (`typeKinds`; INTEGER(1) and COMPLEX(16)
+  NOTIMPL by name until subtasks 5 and 7), and `kindType`, which `typeOf`
+  (through `selectedType` and `characterKind`) and the evaluator share; a
+  selector's kind is a constant integer expression, 0 or more
+  (KINDNOTCONST), one its type has (NOSUCHKIND; NOKIND on DOUBLE PRECISION,
+  DOUBLE COMPLEX, and BYTE). A length after an entity's name replaces the
+  statement's kind or length (`REAL(8) :: X*4`), as it replaces a `*n`. A
+  CHARACTER selector's length that isn't constant (a dummy's N, finding 5)
+  and one of zero or less (finding 4) are NOTIMPL by name;
+  `characterType`'s `selector` says when, so an old `*(N)` keeps BADCHARLEN.
+  `ast.KindConst` is the evaluator's `kindConst`: the kind digits or an
+  INTEGER constant's name (KINDNAME); an integer in its kind's range
+  (INTRANGE), a real read at its kind's precision by `realAs` (split from
+  `real`), so `1.1_8` is `1.1D0`; KINDEXPONENT after a D or Q exponent;
+  logicals converted; CHARACTER's only kind 1; KINDCONST on any other
+  constant. A complex constant's parts may have kinds. Nothing changes
+  under `/STANDARD` (finding 14). Tests: `parse`'s `TestF90TypeSelectors`,
+  sema's golden `f90kinds.for` and 24 `TestErrors` cases, the Phase 99 tests
+  that expected NOTIMPL for these forms, and `testdata/fortran90/kinds.f90`,
+  run in every mode and the same on gfortran (`compare.py`). MANUAL.md's
+  14.13 has a table of kinds, and HELP FORTRAN says what is compiled.

@@ -68,9 +68,9 @@ func TestF90Nesting(t *testing.T) {
 		"16          END MODULE M",
 		"== main program P",
 		"17          PROGRAM P",
-		"18          not yet: REAL, a kind or length selector",
+		"18          REAL(KIND=8) X",
 		"19          DIMENSION :: A(10)",
-		"20          not yet: IMPLICIT, a kind or length selector",
+		"20          IMPLICIT REAL(KIND=8) (A-H), INTEGER (I-N)",
 		"21          OUTER: DO I = 1, 10",
 		"22          IF (.GT. I 3) not yet: EXIT",
 		"23          END DO OUTER",
@@ -193,6 +193,82 @@ func TestF90Declarations(t *testing.T) {
 		{"REAL, INTENT(UP) :: X", "SYNTAX"},
 		{"REAL, SAVE X", "SYNTAX"},
 		{"SAVE ::", "SYNTAX"},
+	}
+
+	for _, e := range errors {
+		_, ms := parseLines(t, "E.FOR", fixed(e.line), fixed("END"))
+		if got := strings.Join(idents(ms), " "); got != e.want {
+			t.Errorf("%s: got %q, want %q", e.line, got, e.want)
+		}
+	}
+}
+
+// TestF90TypeSelectors checks Fortran 90's kind and length selectors
+// (docs/planning/PHASE-100 - Fortran 90 declarations and kinds.md, subtask 4):
+// every type's ([KIND=] k), CHARACTER's lengths and kinds in each order the
+// standard's R506 allows, a selector before FUNCTION and in IMPLICIT, and
+// kinds on constants.
+func TestF90TypeSelectors(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"character(len=*) function f(n)",
+		"  implicit real(kind=8) (d), character(len=4) (c)",
+		"  integer(2) :: i = 7_2",
+		"  real(kind=dp) x",
+		"  complex(kind(0.0)) z",
+		"  logical(1), save :: l = .true._1",
+		"  character(10) a",
+		"  character(*) b",
+		"  character(len=*) e",
+		"  character(5, 1) g",
+		"  character(5, kind=1) h",
+		"  character(kind=1, len=n) o",
+		"  character(len=3, kind=1) :: p = 1_'abc'",
+		"  character(kind=1) q",
+		"  x = 1.5_dp",
+		"end function f",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "K.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	want := strings.Join([]string{
+		"== FUNCTION F",
+		"1           CHARACTER(LEN=*) FUNCTION F(N)",
+		"2           IMPLICIT REAL(KIND=8) (D), CHARACTER(LEN=4) (C)",
+		"3           INTEGER(KIND=2) :: I = (kind 7 2)",
+		"4           REAL(KIND=DP) X",
+		"5           COMPLEX(KIND=KIND(0.0)) Z",
+		"6           LOGICAL(KIND=1), SAVE :: L = (kind .TRUE. 1)",
+		"7           CHARACTER(LEN=10) A",
+		"8           CHARACTER(LEN=*) B",
+		"9           CHARACTER(LEN=*) E",
+		"10          CHARACTER(LEN=5, KIND=1) G",
+		"11          CHARACTER(LEN=5, KIND=1) H",
+		"12          CHARACTER(LEN=N, KIND=1) O",
+		"13          CHARACTER(LEN=3, KIND=1) :: P = (kind 'abc' 1)",
+		"14          CHARACTER(KIND=1) Q",
+		"15          X = (kind 1.5 DP)",
+		"16          END FUNCTION F",
+		"",
+	}, "\n")
+
+	if got := ast.Dump(file); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	errors := []struct{ line, want string }{
+		{"CHARACTER(LEN=3, 1) C", "SYNTAX"},
+		{"CHARACTER(KIND=1, 3) C", "SYNTAX"},
+		{"CHARACTER(LEN=3, LEN=4) C", "SYNTAX"},
+		{"CHARACTER(3, 1, 1) C", "SYNTAX"},
+		{"REAL(8)*4 X", "SYNTAX"},
+		{"REAL() X", "SYNTAX"},
 	}
 
 	for _, e := range errors {

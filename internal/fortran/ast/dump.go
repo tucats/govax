@@ -551,6 +551,23 @@ func (t TypeSpec) String() string {
 		return t.Len.String()
 	}
 
+	if t.Selector {
+		var parts []string
+
+		switch {
+		case t.LenStar:
+			parts = append(parts, "LEN=*")
+		case t.LenExpr != nil:
+			parts = append(parts, "LEN="+DumpExpr(t.LenExpr))
+		}
+
+		if t.Kind != nil {
+			parts = append(parts, "KIND="+DumpExpr(t.Kind))
+		}
+
+		return t.Type.String() + "(" + strings.Join(parts, ", ") + ")"
+	}
+
 	return t.Type.String() + t.Len.String()
 }
 

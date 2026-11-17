@@ -144,8 +144,6 @@ func formWhat(e ast.Expr) string {
 		return "an implied-DO list"
 	case *ast.KeyList:
 		return "a KEY= list"
-	case *ast.KindConst:
-		return "a kind parameter on a constant"
 	}
 
 	return ""
