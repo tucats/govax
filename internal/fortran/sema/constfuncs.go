@@ -39,6 +39,7 @@ var constFuncs = map[string]constFunc{
 	"DIM":   {2, 2, "2 arguments", constDim},
 	"ICHAR": {1, 1, "1 argument", constIchar},
 	"NINT":  {1, 1, "1 argument", constNint},
+	"INT":   {1, 1, "1 argument", constInt},
 	"DPROD": {2, 2, "2 arguments", constDprod},
 	"CMPLX": {1, 2, "1 or 2 arguments", constCmplx},
 	"CONJG": {1, 1, "1 argument", constConjg},
@@ -72,6 +73,18 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		return nil, named(e.Name+" is "+s.Class.String()+", not a constant", e.Pos)
 	}
 
+	if !ev.a.intrinsicNamed(e.Name) && f90Intrinsics[e.Name] {
+		// Fortran 90's name, not intrinsic under /NOF90 without an INTRINSIC
+		// statement: the program's own function.
+		return nil, named(e.Name+" is a function, not a constant", e.Pos)
+	}
+
+	forms := formsNamed(e.Name)
+
+	if inq, selected := isInquiry(e.Name); inq || selected {
+		return ev.inquiry(e, forms)
+	}
+
 	fn, ok := constFuncs[e.Name]
 	if !ok {
 		if intrinsics[e.Name] {
@@ -83,15 +96,24 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 
 	ev.a.noteIntrinsic(e.Name, e.Pos)
 
-	if n := len(e.Args); n < fn.min || fn.max >= 0 && n > fn.max {
+	// The arguments in the dummies' order, with KIND taken out
+	// (intrinsickeys.go); IMAG, not the table's, has none.
+	slots := intrinsicArgs{args: e.Args}
+	if len(forms) > 0 {
+		if slots, ok = ev.a.intrinsicSlots(e, forms, ev.quiet); !ok {
+			return nil, failed
+		}
+	}
+
+	if n := len(slots.args); n < fn.min || fn.max >= 0 && n > fn.max {
 		return nil, ev.report("INTRINARGS", e.Pos, e.Name, fn.takes, n)
 	}
 
-	args := make([]*Const, len(e.Args))
+	args := make([]*Const, len(slots.args))
 
 	var err *constErr
 
-	for i, arg := range e.Args {
+	for i, arg := range slots.args {
 		if arg == nil {
 			return nil, ev.report("NULLINTRINARG", e.Pos, e.Name)
 		}
@@ -106,7 +128,37 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		return nil, err
 	}
 
-	return fn.eval(ev, e, args)
+	c, err := fn.eval(ev, e, args)
+	if err != nil || slots.kind == nil {
+		return c, err
+	}
+
+	return ev.withKind(c, slots.kind)
+}
+
+// withKind is c, a function's value, converted to the kind of its type that
+// the reference's KIND= asks for (intrinsickeys.go): NINT(X, KIND=2), CMPLX(X,
+// Y, 8).
+func (ev *evaluator) withKind(c *Const, kind ast.Expr) (*Const, *constErr) {
+	k, err := ev.eval(kind)
+
+	switch {
+	case err != nil && err.kind == constFailed:
+		return nil, err
+	case err != nil, k.T.Kind != Integer, k.Int < 0:
+		return nil, ev.report("KINDNOTCONST", kind.Position())
+	}
+
+	t, problem := kindType(baseTypes[c.T.Kind], int(k.Int))
+	if problem != nil {
+		if !ev.quiet {
+			ev.a.reportKind(problem, kind.Position())
+		}
+
+		return nil, failed
+	}
+
+	return ev.convert(c, t, c.Pos)
 }
 
 // badArg reports an argument of a type or value the function doesn't
@@ -315,6 +367,40 @@ func constNint(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	}
 
 	return &Const{exprBase: exprBase{t, e.Pos}, Int: int32(i.Int64())}, nil
+}
+
+// constInt is INT(a): an INTEGER as it is, a REAL's or a COMPLEX's real
+// part's whole part, toward zero, of the unit's default integer type
+// (footnote 10). Section 4.11 hasn't INT, but Fortran 90's initialization
+// expressions have it of an INTEGER (the standard's 7.1.6.1), where KIND=
+// gives it a use: INT(7, KIND=2). A REAL's is taken too, as NINT's is
+// (docs/planning/PHASE-100 - Fortran 90 declarations and kinds.md, subtask 6).
+func constInt(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+	x := args[0]
+	t := ev.a.defaultInt
+	lo, hi := t.intRange()
+
+	var v int64
+
+	switch x.T.Kind {
+	case Integer:
+		v = int64(x.Int)
+	case Real, Complex:
+		i := x.Real.Int(false)
+		if !i.IsInt64() {
+			return nil, ev.intRange(e.Pos, valueText, t)
+		}
+
+		v = i.Int64()
+	default:
+		return nil, ev.badArg(e, "INTEGER, REAL, or COMPLEX", x)
+	}
+
+	if v < lo || v > hi {
+		return nil, ev.intRange(e.Pos, valueText, t)
+	}
+
+	return &Const{exprBase: exprBase{t, e.Pos}, Int: int32(v)}, nil
 }
 
 // constDprod is DPROD(x, y): the REAL*8 product of two REAL*4 values,

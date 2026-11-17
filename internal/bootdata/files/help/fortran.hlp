@@ -143,7 +143,17 @@
    operations done in bytes; BYTE is still LOGICAL*1.  COMPLEX(16) is
    not there yet.
 
-   Fortran 90's other statements (the kind functions, SELECT CASE,
+   The kind functions KIND, SELECTED_INT_KIND, and SELECTED_REAL_KIND,
+   and the numeric inquiries HUGE, TINY, EPSILON, DIGITS, PRECISION,
+   RANGE, RADIX, MINEXPONENT, MAXEXPONENT, and BIT_SIZE, are answered
+   when compiling, from the VAX formats' models, so they may name kinds
+   and PARAMETERs.  Without /G_FLOATING, SELECTED_REAL_KIND(15, 307) is
+   16 (H), since D's range is F's.  INT, NINT, REAL, CMPLX, AINT, ANINT,
+   and LOGICAL take a KIND for their result, and these functions take
+   keyword arguments: SELECTED_REAL_KIND(R=40), INT(X, KIND=2).  Under
+   /NOF90 the new names are a program's own unless named INTRINSIC.
+
+   Fortran 90's other statements (SELECT CASE,
    MODULE, array expressions, POINTER, ALLOCATABLE, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are added.  A format given at run time
    (a character constant or variable as the format) can't yet have a

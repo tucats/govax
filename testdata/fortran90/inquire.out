@@ -1,0 +1,26 @@
+Integer kinds:  1  2  4
+Real kinds:  4  8  8
+No such kind: -1
+KIND:  1  2  8  1
+HUGE:        127      32767 2147483647
+DIGITS:   7  15  31
+RANGE:   2   4   9
+BIT_SIZE:   8  16  32
+Real digits:  24  6
+Real range:  38
+Exponents: -127  127
+RADIX: 2
+EPSILON:  0.1192093E-06
+HUGE:  0.1701412E+39
+TINY:  0.2938736E-38
+Double:  56 16  38
+Its EPSILON:  0.2775558E-16
+INT and NINT:  2 -3
+Their kinds:  1  2  4
+REAL:  1.7500  8
+CMPLX:  1.50 -2.00  8
+LOGICAL:  1  4 T
+Wide enough: T
+Keywords:  4  4
+For 15 digits and 307: 16
+  $STATUS == "%X00000001"

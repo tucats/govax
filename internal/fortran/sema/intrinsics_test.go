@@ -140,21 +140,21 @@ func TestIntrinsicRefs(t *testing.T) {
 // TestIntrinsicErrors checks the messages of references the table refuses.
 func TestIntrinsicErrors(t *testing.T) {
 	cases := map[string]string{
-		"MOD(I)":           "INTRINARGS: the intrinsic function MOD takes 2 arguments, not 1",
-		"MAX(I)":           "INTRINARGS: the intrinsic function MAX takes 2 or more arguments, not 1",
-		"CMPLX(X, Y, X)":   "INTRINARGS: the intrinsic function CMPLX takes 1 or 2 arguments, not 3",
-		"NWORKERS(I)":      "INTRINARGS: the intrinsic function NWORKERS takes 0 arguments, not 1",
-		"MAX(I, X)":        "BADARG: the intrinsic function MAX's arguments must be INTEGER, like the first, and this one is REAL",
-		"IAND(I, X)":       "BADARG: the intrinsic function IAND's arguments must be INTEGER*2 or INTEGER, and this one is REAL",
-		"CHAR(I, J)":       "INTRINARGS: the intrinsic function CHAR takes 1 argument, not 2",
-		"MIN(X, D, I)":     "BADARG: the intrinsic function MIN's arguments must be REAL, like the first, and this one is INTEGER",
-		"IAND(X, I)":       "BADARG: the intrinsic function IAND's arguments must be INTEGER*2 or INTEGER, and this one is REAL",
-		"JIABS(I2)":        "BADARG: the intrinsic function JIABS's arguments must be INTEGER, and this one is INTEGER*2",
-		"ICHAR(I)":         "BADARG: the intrinsic function ICHAR's arguments must be CHARACTER, and this one is INTEGER",
-		"CMPLX(C, X)":      "BADARG: the intrinsic function CMPLX's arguments must be INTEGER or REAL, and this one is COMPLEX",
-		"SIZEOF(DA)":       "BADARG: the intrinsic function SIZEOF's arguments must be anything but an assumed-size array or a passed-length value, and this one is an assumed-size array",
-		"SIZEOF(S)":        "BADARG: the intrinsic function SIZEOF's arguments must be anything but an assumed-size array or a passed-length value, and this one is CHARACTER*(*)",
-		"MAX(I, 2) + I(1)": "NOTARRAY",
+		"MOD(I)":            "INTRINARGS: the intrinsic function MOD takes 2 arguments, not 1",
+		"MAX(I)":            "INTRINARGS: the intrinsic function MAX takes 2 or more arguments, not 1",
+		"CMPLX(X, Y, 4, X)": "INTRINARGS: the intrinsic function CMPLX takes 1 to 3 arguments, not 4",
+		"NWORKERS(I)":       "INTRINARGS: the intrinsic function NWORKERS takes 0 arguments, not 1",
+		"MAX(I, X)":         "BADARG: the intrinsic function MAX's arguments must be INTEGER, like the first, and this one is REAL",
+		"IAND(I, X)":        "BADARG: the intrinsic function IAND's arguments must be INTEGER*2 or INTEGER, and this one is REAL",
+		"CHAR(I, J)":        "INTRINARGS: the intrinsic function CHAR takes 1 argument, not 2",
+		"MIN(X, D, I)":      "BADARG: the intrinsic function MIN's arguments must be REAL, like the first, and this one is INTEGER",
+		"IAND(X, I)":        "BADARG: the intrinsic function IAND's arguments must be INTEGER*2 or INTEGER, and this one is REAL",
+		"JIABS(I2)":         "BADARG: the intrinsic function JIABS's arguments must be INTEGER, and this one is INTEGER*2",
+		"ICHAR(I)":          "BADARG: the intrinsic function ICHAR's arguments must be CHARACTER, and this one is INTEGER",
+		"CMPLX(C, X)":       "BADARG: the intrinsic function CMPLX's arguments must be INTEGER or REAL, and this one is COMPLEX",
+		"SIZEOF(DA)":        "BADARG: the intrinsic function SIZEOF's arguments must be anything but an assumed-size array or a passed-length value, and this one is an assumed-size array",
+		"SIZEOF(S)":         "BADARG: the intrinsic function SIZEOF's arguments must be anything but an assumed-size array or a passed-length value, and this one is CHARACTER*(*)",
+		"MAX(I, 2) + I(1)":  "NOTARRAY",
 	}
 
 	for text, want := range cases {

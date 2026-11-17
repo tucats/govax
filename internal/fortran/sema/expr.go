@@ -178,13 +178,14 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	s := a.scope.find(e.Name)
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
-		if _, ok := constFuncs[e.Name]; ok {
+		_, selected := isInquiry(e.Name)
+		if _, ok := constFuncs[e.Name]; ok || selected && a.intrinsicNamed(e.Name) {
 			if v, ok := a.folded(e); ok {
 				return v
 			}
 		}
 
-		if intrinsics[e.Name] {
+		if a.intrinsicNamed(e.Name) {
 			return a.intrinsicRef(e)
 		}
 

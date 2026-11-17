@@ -98,7 +98,9 @@ func (f form) uses(t Type) bool {
 // given as an actual argument (section 4.9): its routine, which the routine
 // called may call in its turn. SIZEOF has no routine (NOTPASSABLE).
 func (a *analyzer) procedure(n *ast.Name) Expr {
-	if n.Name == "SIZEOF" {
+	// Fortran 90's new functions in this table have no specific names, and
+	// none of them may be passed (the standard's 13.12).
+	if n.Name == "SIZEOF" || f90Intrinsics[n.Name] {
 		a.report("NOTPASSABLE", n.Pos, n.Name)
 
 		return a.bad(n.Pos)

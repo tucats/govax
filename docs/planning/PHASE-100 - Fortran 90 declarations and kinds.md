@@ -5,9 +5,9 @@ Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17), every recommendation
 accepted by the author ("The author's answers"); subtask 2, the scope
 chain, subtask 3, `::` declarations and attributes, subtask 4, kind
-selectors and kinds on constants, and subtask 5, INTEGER(1), are done
-(2026-11-17); subtask 6, the kind and inquiry functions, is next. Needs
-Phase 99.
+selectors and kinds on constants, subtask 5, INTEGER(1), and subtask 6,
+the kind and inquiry functions, are done (2026-11-17); subtask 7,
+COMPLEX(16), is next. Needs Phase 99.
 
 ## Goal
 
@@ -304,7 +304,7 @@ and 7), and COMPLEX(16) by question 1's answer.
 6. **The kind and inquiry functions**, folded (A.1's table, both
    `/G_FLOATING` settings, `/NOI4`), and **KIND= on the conversions**
    (finding 7), with the intrinsic table's keyword and optional columns
-   (finding 8).
+   (finding 8) (done 2026-11-17).
 7. **COMPLEX(16)**, as far as question 1's answer takes it.
 8. **Programs end to end** (`testdata/fortran90`: declarations of every form, a
    program portable to gfortran using `SELECTED_REAL_KIND` and `KIND=`).
@@ -488,3 +488,43 @@ The author accepted every recommendation:
   the golden `f90bytes.for` in sema, ir, and codegen, and
   `testdata/fortran90/bytes.f90`, run in every mode and the same on gfortran
   (`compare.py`). MANUAL.md's 14.13 and HELP FORTRAN say so.
+- **2026-11-17, subtask 6 (done):** the kind and inquiry functions, and
+  KIND= on the conversions. The parser: an argument in a reference's list
+  may be `name=expr` (`ast.KeywordArg`; `parse/expr.go`'s `subscripts`, by
+  `atKeyword`, so `==` is still a comparison). The table (Decision 14): a row
+  may have two more columns, its class (E, I, T) and its dummies' names, a
+  `?` after an optional one (`form.class`, `form.dummies`); INT, NINT, AINT,
+  ANINT, REAL, and CMPLX's generic rows name theirs, with KIND. A second
+  table, `fortran90Table`, has LOGICAL and the thirteen kind and inquiry
+  functions (how `INQ`, `SIK`, `SRK`); its new names are `f90Intrinsics`,
+  intrinsic under `/F90` or by an INTRINSIC statement (`intrinsicNamed`), and
+  not passable (NOTPASSABLE). `sema/intrinsickeys.go`'s `intrinsicSlots` puts
+  a reference's arguments in its dummies' order by the standard's 12.4.1
+  (KEYWORDNAME, KEYWORDTWICE, KEYWORDORDER, MISSINGARG; a keyword to a
+  function whose row names no dummies, or by a specific name, is NOTIMPL until
+  Phase 108, and to a program's own procedure until Phase 103) and takes KIND
+  out before the row is chosen; `resultKind` makes the result that kind of
+  its type (a conversion converts to it at once, NINT and AINT convert their
+  result; `selectForm` prefers a row already of that type, so `NINT(X,
+  KIND=2)` is ININT). The constant evaluator does the same for NINT and CMPLX
+  (`withKind`), and INT joins its functions (`constInt`: an integer's
+  value, a real's truncated), since Fortran 90's initialization expressions
+  have INT. `sema/inquiry.go`: the inquiries by name, each with the kinds of
+  argument it takes and its answer, from `vaxfloat`'s new model (`model.go`:
+  `Format.Digits`, `MinExponent`, `MaxExponent`, `Huge`, `Tiny`, `Epsilon`,
+  held to Part A's table); an argument is analyzed only for its type (the
+  evaluator's `inquiryArgType` reads a name without entering it, as declared
+  or by IMPLICIT), and an INTEGER or LOGICAL constant without a kind is of
+  the default kind, so `KIND(0)` is 2 under `/NOI4`. SELECTED_INT_KIND and
+  SELECTED_REAL_KIND fold constants; of a value they are NOTIMPL. Part A's
+  table held exactly but for H's HUGE and TINY, which it gave as "about": they
+  are 5.94865748E4931 and 8.40525786E-4933. Nothing changes under `/NOF90`
+  for a program that compiled before (`TestNoF90Unchanged`); `CMPLX(X, Y, X)`
+  is now KINDNOTCONST rather than INTRINARGS. Tests: `vaxfloat`'s
+  `TestModel`, `parse`'s `TestKeywordArguments`, sema's `TestInquiries` (every
+  answer in each format setting and `/NOI4`), `TestKindArguments`,
+  `TestInquiryErrors`, `TestF90NamesUnderNoF90`, and `TestKindsInDeclarations`,
+  and `testdata/fortran90/inquire.f90`, run in every mode and on gfortran
+  (`compare.py`, the seven lines of the real model in its KNOWN). MANUAL.md's
+  14.13 has the model's table and finding 9's advice, and HELP FORTRAN says
+  what is compiled.

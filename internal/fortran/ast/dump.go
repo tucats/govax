@@ -517,6 +517,8 @@ func DumpExpr(e Expr) string {
 		return DumpExpr(e.X) + "." + e.Field
 	case *BuiltinArg:
 		return "%" + e.Func + "(" + DumpExpr(e.X) + ")"
+	case *KeywordArg:
+		return e.Name + "=" + DumpExpr(e.X)
 	case *AltReturn:
 		return "*" + strconv.Itoa(e.Target.Label)
 	case *ImpliedDo:

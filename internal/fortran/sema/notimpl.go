@@ -144,6 +144,10 @@ func formWhat(e ast.Expr) string {
 		return "an implied-DO list"
 	case *ast.KeyList:
 		return "a KEY= list"
+	case *ast.KeywordArg:
+		// An intrinsic function's reference takes its keyword arguments
+		// (intrinsicSlots); a program's own procedure's are Phase 103's.
+		return "a keyword argument to a procedure that isn't intrinsic"
 	}
 
 	return ""

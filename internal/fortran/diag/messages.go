@@ -518,6 +518,15 @@ var messages = map[string]kind{
 	// an intrinsic function or a statement function, neither of which is
 	// called with an argument list a routine could look at.
 	"NULLINTRINARG": {Error, "an argument of the intrinsic function %s can't be left out"},
+
+	// Keyword arguments to an intrinsic function (docs/planning/PHASE-100 -
+	// Fortran 90 declarations and kinds.md, subtask 6; sema/intrinsickeys.go):
+	// a keyword the function hasn't, a dummy given twice, an argument without
+	// a keyword after one with, and a required argument left out.
+	"KEYWORDNAME":  {Error, "the intrinsic function %s has no argument %s; its arguments are %s"},
+	"KEYWORDTWICE": {Error, "the argument %s of the intrinsic function %s is given twice"},
+	"KEYWORDORDER": {Error, "an argument of %s without a keyword can't follow one with a keyword"},
+	"MISSINGARG":   {Error, "the intrinsic function %s needs its argument %s"},
 	"NULLSTMTARG":   {Error, "an argument of the statement function %s can't be left out"},
 
 	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT

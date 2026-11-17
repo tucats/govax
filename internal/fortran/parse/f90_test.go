@@ -278,3 +278,37 @@ func TestF90TypeSelectors(t *testing.T) {
 		}
 	}
 }
+
+// TestKeywordArguments checks keyword arguments in a reference's list (Phase
+// 100, subtask 6): a name and = before an expression, in either form, beside
+// arguments without one and null ones; == is still a comparison.
+func TestKeywordArguments(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"program k",
+		"  i = int(x, kind=2) + selected_real_kind(r = 40)",
+		"  j = f(a, , b=c(1), d=e == g)",
+		"end program k",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "K.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	want := strings.Join([]string{
+		"== main program K",
+		"1           PROGRAM K",
+		"2           I = (+ INT(X, KIND=2) SELECTED_REAL_KIND(R=40))",
+		"3           J = F(A, , B=C(1), D=(.EQ. E G))",
+		"4           END PROGRAM K",
+		"",
+	}, "\n")
+
+	if got := ast.Dump(file); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}

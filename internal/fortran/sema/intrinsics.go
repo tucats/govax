@@ -50,6 +50,23 @@ import (
 //	ONE      the constant 1: NWORKERS, which Decision 1 of docs/planning/PHASE-74 -
 //	         FORTRAN plan.md makes one process
 //	SIZEOF   the constant size of the argument
+//
+// Fortran 90's functions (fortran90Table, below) add three more:
+//
+//	INQ      an inquiry about the argument's type, answered when compiling
+//	         (inquiry.go): KIND, HUGE, DIGITS, and the rest of the numeric
+//	         model's
+//	SIK, SRK SELECTED_INT_KIND and SELECTED_REAL_KIND, of constants
+//
+// Two more columns may follow (Decision 14 of docs/planning/PHASE-99 - Fortran
+// 90.md): the function's class, E elemental, I inquiry, or T
+// transformational, and its dummy arguments' names, a ? after an optional one,
+// by which a reference may give its arguments as keywords, INT(A=X, KIND=2)
+// (intrinsickeys.go). A row without them takes its arguments by position only
+// (Phase 108 names the rest). Every row of a generic name names the same
+// dummies. KIND, the kind of the result (the standard's 13.13), is never
+// counted in the third column: a reference's KIND= is taken out before its
+// row is chosen, and makes the result that kind.
 const intrinsicTable = `
 SQRT   SQRT    1 R4  R4  MTH
 SQRT   DSQRT   1 R8  R8  MTH
@@ -135,43 +152,43 @@ ABS    CDABS   1 C16 R8  MTH
 IABS   IIABS   1 I2  I2  ABS
 IABS   JIABS   1 I4  I4  ABS
 
-INT    -       1 I2  I2  CVT
-INT    -       1 I2  I4  CVT
-INT    -       1 I4  I2  CVT
-INT    -       1 I4  I4  CVT
-INT    IINT    1 R4  I2  CVT
-INT    JINT    1 R4  I4  CVT
-INT    IIDINT  1 R8  I2  CVT
-INT    JIDINT  1 R8  I4  CVT
-INT    IIQINT  1 R16 I2  CVT
-INT    JIQINT  1 R16 I4  CVT
-INT    -       1 C8  I2  CVT
-INT    -       1 C8  I4  CVT
-INT    -       1 C16 I2  CVT
-INT    -       1 C16 I4  CVT
+INT    -       1 I2  I2  CVT E A,KIND?
+INT    -       1 I2  I4  CVT E A,KIND?
+INT    -       1 I4  I2  CVT E A,KIND?
+INT    -       1 I4  I4  CVT E A,KIND?
+INT    IINT    1 R4  I2  CVT E A,KIND?
+INT    JINT    1 R4  I4  CVT E A,KIND?
+INT    IIDINT  1 R8  I2  CVT E A,KIND?
+INT    JIDINT  1 R8  I4  CVT E A,KIND?
+INT    IIQINT  1 R16 I2  CVT E A,KIND?
+INT    JIQINT  1 R16 I4  CVT E A,KIND?
+INT    -       1 C8  I2  CVT E A,KIND?
+INT    -       1 C8  I4  CVT E A,KIND?
+INT    -       1 C16 I2  CVT E A,KIND?
+INT    -       1 C16 I4  CVT E A,KIND?
 IDINT  IIDINT  1 R8  I2  CVT
 IDINT  JIDINT  1 R8  I4  CVT
 IQINT  IIQINT  1 R16 I2  CVT
 IQINT  JIQINT  1 R16 I4  CVT
 IFIX   IIFIX   1 R4  I2  CVT
 IFIX   JIFIX   1 R4  I4  CVT
-AINT   AINT    1 R4  R4  MTH
-AINT   DINT    1 R8  R8  MTH
-AINT   QINT    1 R16 R16 MTH
+AINT   AINT    1 R4  R4  MTH E A,KIND?
+AINT   DINT    1 R8  R8  MTH E A,KIND?
+AINT   QINT    1 R16 R16 MTH E A,KIND?
 
-NINT   ININT   1 R4  I2  NINT
-NINT   JNINT   1 R4  I4  NINT
-NINT   IIDNNT  1 R8  I2  NINT
-NINT   JIDNNT  1 R8  I4  NINT
-NINT   IIQNNT  1 R16 I2  NINT
-NINT   JIQNNT  1 R16 I4  NINT
+NINT   ININT   1 R4  I2  NINT E A,KIND?
+NINT   JNINT   1 R4  I4  NINT E A,KIND?
+NINT   IIDNNT  1 R8  I2  NINT E A,KIND?
+NINT   JIDNNT  1 R8  I4  NINT E A,KIND?
+NINT   IIQNNT  1 R16 I2  NINT E A,KIND?
+NINT   JIQNNT  1 R16 I4  NINT E A,KIND?
 IDNINT IIDNNT  1 R8  I2  NINT
 IDNINT JIDNNT  1 R8  I4  NINT
 IQNINT IIQNNT  1 R16 I2  NINT
 IQNINT JIQNNT  1 R16 I4  NINT
-ANINT  ANINT   1 R4  R4  MTH
-ANINT  DNINT   1 R8  R8  MTH
-ANINT  QNINT   1 R16 R16 MTH
+ANINT  ANINT   1 R4  R4  MTH E A,KIND?
+ANINT  DNINT   1 R8  R8  MTH E A,KIND?
+ANINT  QNINT   1 R16 R16 MTH E A,KIND?
 
 ZEXT   IZEXT   1 L1  I2  ZEXT
 ZEXT   IZEXT   1 L2  I2  ZEXT
@@ -182,13 +199,13 @@ ZEXT   JZEXT   1 L4  I4  ZEXT
 ZEXT   JZEXT   1 I2  I4  ZEXT
 ZEXT   JZEXT   1 I4  I4  ZEXT
 
-REAL   FLOATI  1 I2  R4  CVT
-REAL   FLOATJ  1 I4  R4  CVT
-REAL   -       1 R4  R4  CVT
-REAL   SNGL    1 R8  R4  CVT
-REAL   SNGLQ   1 R16 R4  CVT
-REAL   REAL    1 C8  R4  CVT
-REAL   -       1 C16 R4  CVT
+REAL   FLOATI  1 I2  R4  CVT E A,KIND?
+REAL   FLOATJ  1 I4  R4  CVT E A,KIND?
+REAL   -       1 R4  R4  CVT E A,KIND?
+REAL   SNGL    1 R8  R4  CVT E A,KIND?
+REAL   SNGLQ   1 R16 R4  CVT E A,KIND?
+REAL   REAL    1 C8  R4  CVT E A,KIND?
+REAL   -       1 C16 R4  CVT E A,KIND?
 -      DREAL   1 C16 R8  CVT
 DBLE   -       1 I2  R8  CVT
 DBLE   -       1 I4  R8  CVT
@@ -211,13 +228,13 @@ DFLOAT DFLOTJ  1 I4  R8  CVT
 QFLOAT -       1 I2  R16 CVT
 QFLOAT -       1 I4  R16 CVT
 
-CMPLX  -       1,2 I2  C8  CMPLX
-CMPLX  -       1,2 I4  C8  CMPLX
-CMPLX  -       1,2 R4  C8  CMPLX
-CMPLX  -       1,2 R8  C8  CMPLX
-CMPLX  -       1,2 R16 C8  CMPLX
-CMPLX  -       1   C8  C8  CMPLX
-CMPLX  -       1   C16 C8  CMPLX
+CMPLX  -       1,2 I2  C8  CMPLX E X,Y?,KIND?
+CMPLX  -       1,2 I4  C8  CMPLX E X,Y?,KIND?
+CMPLX  -       1,2 R4  C8  CMPLX E X,Y?,KIND?
+CMPLX  -       1,2 R8  C8  CMPLX E X,Y?,KIND?
+CMPLX  -       1,2 R16 C8  CMPLX E X,Y?,KIND?
+CMPLX  -       1   C8  C8  CMPLX E X,Y?,KIND?
+CMPLX  -       1   C16 C8  CMPLX E X,Y?,KIND?
 DCMPLX -       1,2 I2  C16 CMPLX
 DCMPLX -       1,2 I4  C16 CMPLX
 DCMPLX -       1,2 R4  C16 CMPLX
@@ -308,51 +325,117 @@ ISHFTC JISHFTC 3 I4  I4  SHIFTC
 -      SIZEOF   1 *   I4  SIZEOF
 `
 
+// fortran90Table is Fortran 90's intrinsic functions (the standard's 13.13)
+// that Table D-3 hasn't, in the same columns, as far as the phases have
+// brought them: LOGICAL, and the kind and numeric inquiry functions
+// (docs/planning/PHASE-100 - Fortran 90 declarations and kinds.md, subtask
+// 6). Their names are intrinsic under /F90, and otherwise only when an
+// INTRINSIC statement names them (Decision 2 of docs/planning/PHASE-99 -
+// Fortran 90.md), so an old program's own KIND or RANGE is still called. A
+// result of * is the argument's type. LOGICAL's rows give the default
+// LOGICAL, as INT's give the default INTEGER.
+const fortran90Table = `
+LOGICAL            -  1   L1  L2  CVT E L,KIND?
+LOGICAL            -  1   L1  L4  CVT E L,KIND?
+LOGICAL            -  1   L2  L2  CVT E L,KIND?
+LOGICAL            -  1   L2  L4  CVT E L,KIND?
+LOGICAL            -  1   L4  L2  CVT E L,KIND?
+LOGICAL            -  1   L4  L4  CVT E L,KIND?
+
+KIND               -  1   *   I4  INQ I X
+SELECTED_INT_KIND  -  1   I4  I4  SIK T R
+SELECTED_REAL_KIND -  0,2 I4  I4  SRK T P?,R?
+HUGE               -  1   *   *   INQ I X
+TINY               -  1   *   *   INQ I X
+EPSILON            -  1   *   *   INQ I X
+DIGITS             -  1   *   I4  INQ I X
+PRECISION          -  1   *   I4  INQ I X
+RANGE              -  1   *   I4  INQ I X
+RADIX              -  1   *   I4  INQ I X
+MAXEXPONENT        -  1   *   I4  INQ I X
+MINEXPONENT        -  1   *   I4  INQ I X
+BIT_SIZE           -  1   *   *   INQ I I
+`
+
 // form is one row of the table.
 type form struct {
 	generic, specific string
 
-	// min and max are how many arguments it takes; max is -1 for any number.
+	// min and max are how many arguments it takes, KIND not counted; max is
+	// -1 for any number.
 	min, max int
 
 	// arg is each argument's type: Kind Character with Size 0 for any
 	// CHARACTER value, and the Invalid type for anything.
 	arg, result Type
 
-	// how is the table's last column.
+	// how is the table's sixth column.
 	how string
+
+	// class is the seventh, 'E', 'I', or 'T', and 0 for a row without one;
+	// dummies the eighth, the dummy arguments in order, nil for a row
+	// without one.
+	class   byte
+	dummies []dummyArg
 }
 
-// intrinsicForms are the table's rows, and intrinsics the names of VAX
-// FORTRAN's intrinsic functions, generic and specific, the table's names.
-var intrinsicForms, intrinsics = readIntrinsics()
+// dummyArg is an intrinsic function's dummy argument: its name, which a
+// keyword argument gives, and whether a reference may leave it out.
+type dummyArg struct {
+	name     string
+	optional bool
+}
 
-// readIntrinsics reads intrinsicTable.
-func readIntrinsics() ([]form, map[string]bool) {
+// intrinsicForms are the tables' rows; intrinsics the names of VAX FORTRAN's
+// intrinsic functions, generic and specific, Table D-3's names; and
+// f90Intrinsics the names only Fortran 90 has, fortran90Table's.
+var intrinsicForms, intrinsics, f90Intrinsics = readIntrinsics()
+
+// readIntrinsics reads intrinsicTable and fortran90Table.
+func readIntrinsics() ([]form, map[string]bool, map[string]bool) {
+	forms, names := readTable(intrinsicTable, nil)
+	more, newNames := readTable(fortran90Table, names)
+
+	return append(forms, more...), names, newNames
+}
+
+// readTable reads one table's rows, and the names in it that old (if not
+// nil) hasn't.
+func readTable(table string, old map[string]bool) ([]form, map[string]bool) {
 	var forms []form
 
 	names := map[string]bool{}
 
-	for line := range strings.SplitSeq(intrinsicTable, "\n") {
+	for line := range strings.SplitSeq(table, "\n") {
 		f := strings.Fields(line)
 		if len(f) == 0 {
 			continue
 		}
 
-		if len(f) != 6 {
+		if len(f) != 6 && len(f) != 8 {
 			panic("sema: an intrinsic table row of " + fmt.Sprint(len(f)) + " fields: " + line)
 		}
 
 		r := form{generic: f[0], specific: f[1], arg: tableType(f[3]), result: tableType(f[4]), how: f[5]}
 
-		switch f[2] {
-		case "1,2":
-			r.min, r.max = 1, 2
-		case "2+":
+		switch lo, hi, found := strings.Cut(f[2], ","); {
+		case found:
+			r.min, r.max = int(lo[0]-'0'), int(hi[0]-'0')
+		case f[2] == "2+":
 			r.min, r.max = 2, -1
 		default:
 			r.min = int(f[2][0] - '0')
 			r.max = r.min
+		}
+
+		if len(f) == 8 {
+			r.class = f[6][0]
+
+			for name := range strings.SplitSeq(f[7], ",") {
+				d := dummyArg{name: strings.TrimSuffix(name, "?")}
+				d.optional = d.name != name
+				r.dummies = append(r.dummies, d)
+			}
 		}
 
 		if r.generic == "-" {
@@ -364,7 +447,7 @@ func readIntrinsics() ([]form, map[string]bool) {
 		}
 
 		for _, name := range []string{r.generic, r.specific} {
-			if name != "" {
+			if name != "" && !old[name] {
 				names[name] = true
 			}
 		}
@@ -373,6 +456,25 @@ func readIntrinsics() ([]form, map[string]bool) {
 	}
 
 	return forms, names
+}
+
+// intrinsicNamed reports whether name, where the unit hasn't made it
+// something else, is an intrinsic function's: one of Table D-3's, or one of
+// Fortran 90's under /F90 or named in an INTRINSIC statement (Decision 2 of
+// docs/planning/PHASE-99 - Fortran 90.md).
+func (a *analyzer) intrinsicNamed(name string) bool {
+	switch {
+	case intrinsics[name]:
+		return true
+	case !f90Intrinsics[name]:
+		return false
+	case a.f90:
+		return true
+	}
+
+	s := a.scope.find(name)
+
+	return s != nil && s.Class == Intrinsic
 }
 
 // tableType is a type as the table writes it.

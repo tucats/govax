@@ -29,14 +29,38 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 	forms := formsNamed(e.Name)
 
-	if hasNull(e.Args) {
+	// The arguments in the dummies' order, with KIND taken out
+	// (intrinsickeys.go).
+	slots, ok := a.intrinsicSlots(e, forms, false)
+	if !ok {
+		return a.bad(e.Pos)
+	}
+
+	if hasNull(slots.args) && dummiesOf(e.Name, forms) == nil {
 		a.report("NULLINTRINARG", e.Pos, e.Name)
 
 		return a.bad(e.Pos)
 	}
 
-	if !argCountFits(forms, len(e.Args)) {
-		a.report("INTRINARGS", e.Pos, e.Name, takes(forms), len(e.Args))
+	if !argCountFits(forms, len(slots.args)) {
+		a.report("INTRINARGS", e.Pos, e.Name, takes(forms), len(slots.args))
+
+		return a.bad(e.Pos)
+	}
+
+	switch inq, selected := isInquiry(e.Name); {
+	case inq:
+		// Answered from the argument's type (inquiry.go).
+		t := a.inquiryArgType(slots.args[0])
+		if c, ok := a.inquire(e.Name, t, e.Pos, slots.args[0].Position(), false); ok {
+			return c
+		}
+
+		return a.bad(e.Pos)
+
+	case selected:
+		// A constant's was folded (apply); this is a value's.
+		a.notImplForm(e.Pos, e.Name+" of a value not constant")
 
 		return a.bad(e.Pos)
 	}
@@ -45,20 +69,38 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.sizeOf(e)
 	}
 
-	args := make([]Expr, len(e.Args))
-	for i, x := range e.Args {
+	args := make([]Expr, len(slots.args))
+	for i, x := range slots.args {
 		if args[i] = a.value(x); args[i].Type().Kind == Invalid {
 			return a.bad(e.Pos)
 		}
 	}
 
-	f, ok := a.selectForm(e, forms, args)
+	// KIND= makes the result that kind of the result's type.
+	want := invalid
+	if slots.kind != nil {
+		if want, ok = a.resultKind(slots.kind, forms[0].result); !ok {
+			return a.bad(e.Pos)
+		}
+	}
+
+	f, ok := a.selectForm(e, forms, args, want)
 	if !ok {
 		return a.bad(e.Pos)
 	}
 
+	if want.Kind != Invalid && (f.how == "CVT" || f.how == "CMPLX") {
+		// A conversion converts to the kind asked for at once.
+		f.result = want
+	}
+
 	v := a.intrinsicValue(e, f, a.intrinsicArgs(f, args))
-	if v.Type().Kind != Invalid && a.byteResult(e.Name, forms, f, args) {
+
+	switch {
+	case v.Type().Kind == Invalid:
+	case want.Kind != Invalid:
+		v = a.convert(v, want)
+	case a.byteResult(e.Name, forms, f, args):
 		v = a.convert(v, byteType)
 	}
 
@@ -158,11 +200,13 @@ func takes(forms []form) string {
 
 // selectForm is the row of forms that args select: the arguments' type
 // (argumentType) is the one the row takes. A generic name with two rows for
-// that type, differing only in their INTEGER result, takes the one of the
-// unit's default integer (footnote 10). An INTEGER constant may be given to an
-// INTEGER*2 argument if it fits one (section 2.2.1.1), so IIABS(5) is
-// IIABS of the word 5. Reports BADARG and returns false when no row takes them.
-func (a *analyzer) selectForm(e *ast.Apply, forms []form, args []Expr) (form, bool) {
+// that type, differing only in their INTEGER result, takes the one whose
+// result is want, the type a KIND= asks for, if one is; else the one of the
+// unit's default integer (footnote 10), or LOGICAL's default logical. An
+// INTEGER constant may be given to an INTEGER*2 argument if it fits one
+// (section 2.2.1.1), so IIABS(5) is IIABS of the word 5. Reports BADARG and
+// returns false when no row takes them.
+func (a *analyzer) selectForm(e *ast.Apply, forms []form, args []Expr, want Type) (form, bool) {
 	t, ok := a.argumentType(e, forms, args)
 	if !ok {
 		return form{}, false
@@ -206,9 +250,11 @@ func (a *analyzer) selectForm(e *ast.Apply, forms []form, args []Expr) (form, bo
 		return chosen[0], true
 	}
 
-	for _, f := range chosen {
-		if f.result == a.defaultInt {
-			return f, true
+	for _, preferred := range []Type{want, a.defaultInt, a.defaultLogical} {
+		for _, f := range chosen {
+			if f.result == preferred {
+				return f, true
+			}
 		}
 	}
 

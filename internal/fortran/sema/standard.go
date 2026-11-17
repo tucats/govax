@@ -637,6 +637,10 @@ func (x *extensions) expr(e ast.Expr) {
 		x.add(e.Pos, "the %"+e.Func+" built-in function")
 		x.expr(e.X)
 
+	case *ast.KeywordArg:
+		// Fortran 90's, which /STANDARD judges from Phase 110 (finding 14).
+		x.expr(e.X)
+
 	case *ast.ImpliedDo:
 		x.exprs(e.Items)
 		x.exprs([]ast.Expr{e.Start, e.Limit, e.Step})

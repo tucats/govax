@@ -547,6 +547,17 @@ type (
 		X    Expr
 	}
 
+	// KeywordArg is an actual argument written with its dummy argument's
+	// name, KIND=2 in INT(X, KIND=2) (Fortran 90's R1212). Only an intrinsic
+	// function's reference takes one so far (docs/planning/PHASE-100 -
+	// Fortran 90 declarations and kinds.md, subtask 6); a program's own
+	// procedures' are Phase 103's.
+	KeywordArg struct {
+		ExprBase
+		Name string
+		X    Expr
+	}
+
 	// AltReturn is an alternate return specifier among a CALL's actual
 	// arguments, *s or &s (section 6.1.1.5).
 	AltReturn struct {

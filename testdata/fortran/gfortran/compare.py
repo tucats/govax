@@ -55,6 +55,7 @@ PROGRAMS = {
 PROGRAMS90 = {
     "bytes": ["bytes.f90"],
     "declare": ["declare.f90"],
+    "inquire": ["inquire.f90"],
     "kinds": ["kinds.f90"],
     "spellings": ["spellings.f90"],
     "squares": ["squares.f90"],
@@ -66,6 +67,18 @@ PROGRAMS90 = {
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.
 KNOWN = {
+    "inquire": {
+        # The VAX's F, D, and H formats' models, where gfortran's are IEEE's: F's exponent
+        # field biased by 128 with no denormals, and REAL(8) D_floating, whose range is F's,
+        # so 15 digits and a range of 307 need REAL(16), H (Phase 100's finding 9).
+        "Real range:  38": "Real range:  37",
+        "Exponents: -127  127": "Exponents: -125  128",
+        "HUGE:  0.1701412E+39": "HUGE:  0.3402823E+39",
+        "TINY:  0.2938736E-38": "TINY:  0.1175494E-37",
+        "Double:  56 16  38": "Double:  53 15 307",
+        "Its EPSILON:  0.2775558E-16": "Its EPSILON:  0.2220446E-15",
+        "For 15 digits and 307: 16": "For 15 digits and 307:  8",
+    },
     "recursion": {
         # IEEE's negative zero, which the VAX's floating formats don't have.
         "I**7: ( 0.0, -1.0)": "I**7: (-0.0, -1.0)",

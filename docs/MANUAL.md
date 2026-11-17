@@ -8440,6 +8440,42 @@ name (`IIABS`) its own type. `BYTE` is still `LOGICAL*1`, as in VAX FORTRAN, and
 in arithmetic is still an `INTEGER*2`. List-directed output writes an `INTEGER(1)` as `I5`,
 as it writes a `BYTE`.
 
+**The kind and inquiry functions** (the standard's 13.7.1 and 13.13). `KIND(X)` is the kind
+of `X`'s type, and `SELECTED_INT_KIND(R)` and `SELECTED_REAL_KIND(P, R)` the kind of least
+range or precision that holds `R` decimal digits of range and `P` of precision, or -1 (no
+such precision), -2 (no such range), or -3 (neither). The numeric model's inquiries ask
+about a type, never a value: `HUGE`, `TINY`, `EPSILON`, `DIGITS`, `PRECISION`, `RANGE`,
+`RADIX`, `MINEXPONENT`, `MAXEXPONENT`, and `BIT_SIZE`. Each is answered when compiling, so
+it may name a kind in a declaration or give a PARAMETER its value, and the answers are the
+VAX's formats', not IEEE's:
+
+| Kind | `DIGITS` | `MINEXPONENT`, `MAXEXPONENT` | `HUGE` | `TINY` | `EPSILON` | `PRECISION` | `RANGE` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `INTEGER(1)` | 7 | | 127 | | | | 2 |
+| `INTEGER(2)` | 15 | | 32767 | | | | 4 |
+| `INTEGER(4)` | 31 | | 2147483647 | | | | 9 |
+| `REAL(4)`, F | 24 | -127, 127 | 1.70141173E38 | 2.93873588E-39 | 1.19209290E-7 | 6 | 38 |
+| `REAL(8)`, D | 56 | -127, 127 | 1.70141183E38 | 2.93873588E-39 | 2.77555756E-17 | 16 | 38 |
+| `REAL(8)`, G | 53 | -1023, 1023 | 8.98846567E307 | 5.56268465E-309 | 2.22044605E-16 | 15 | 307 |
+| `REAL(16)`, H | 113 | -16383, 16383 | 5.94865748E4931 | 8.40525786E-4933 | 1.92592994E-34 | 33 | 4931 |
+
+`RADIX` is 2, and `BIT_SIZE` 8, 16, or 32, of the argument's own kind. An integer or logical
+constant without a kind is of the default kind, so `KIND(0)` is 2 under `/NOI4`. D_floating's
+range is F's, so without `/G_FLOATING` a request for more than 38 digits of range is kind 16,
+H: the common `SELECTED_REAL_KIND(15, 307)`, meaning "double precision" on an IEEE machine,
+is `REAL(16)` here, correct but slower; compile such a program `/G_FLOATING`, where it is
+`REAL(8)`. A `SELECTED_` function of a value that isn't constant is not there yet.
+
+`INT`, `NINT`, `REAL`, `CMPLX`, `AINT`, `ANINT`, and the new `LOGICAL` take a `KIND`, the
+kind of their result: `INT(X, KIND=2)`, `REAL(N, 8)`, `CMPLX(X, Y, KIND=8)`, `LOGICAL(L, 1)`.
+These functions, and the kind and inquiry functions, take their arguments by keyword too,
+by the standard's names: `SELECTED_REAL_KIND(R=40)`, `INT(A=X, KIND=1)`. An argument
+without a keyword can't follow one with (`KEYWORDORDER`); an unknown keyword is
+`KEYWORDNAME`, one given twice `KEYWORDTWICE`, and a required argument left out
+`MISSINGARG`. Keyword arguments to the other intrinsic functions, and to a program's own
+procedures, are not there yet. Under `/NOF90` these new names are a program's own functions,
+as in VAX FORTRAN, unless an `INTRINSIC` statement names them.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
@@ -8450,12 +8486,12 @@ as it writes a `BYTE`.
   --^
 ```
 
-That includes the kind functions (`KIND`, `SELECTED_REAL_KIND`, ...), array constructors and arrays that are
+That includes array constructors and arrays that are
 PARAMETERs, assumed-shape and deferred-shape arrays (`A(:)`), construct names, SELECT CASE,
 EXIT and CYCLE, array expressions and sections, WHERE, interface blocks and CONTAINS,
 modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn. Fortran
-90's new intrinsic functions aren't there yet either; under `/F90` their names are still
-taken as a program's own. A format given at run time (a character constant or variable as a
+90's other new intrinsic functions aren't there yet either; under `/F90` their names are
+still taken as a program's own. A format given at run time (a character constant or variable as a
 READ's or WRITE's format) can't yet hold a `"..."` constant: FTNRTL refuses it with
 `%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write it with apostrophes, or as a
 FORMAT statement.

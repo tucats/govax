@@ -132,7 +132,7 @@ func (a *analyzer) intrinsic(item *ast.AttrItem) {
 	s := a.declare(item.Name, item.Pos)
 
 	switch {
-	case !intrinsics[item.Name]:
+	case !intrinsics[item.Name] && !f90Intrinsics[item.Name]:
 		a.report("BADINTRINSIC", item.Pos, item.Name)
 
 		s.broken = true

@@ -338,7 +338,10 @@ func (p *parser) substring(x ast.Expr) ast.Expr {
 // three arguments, the second null, and F(,) two. Whether the name is a
 // function or an array isn't known here, so semantic analysis refuses a null
 // where the name turns out to be one that can't have it. An alternate return
-// specifier is only for a CALL, where this isn't used.
+// specifier is only for a CALL, where this isn't used. An argument may be
+// written with its dummy's name, KIND=2 (Fortran 90's keyword argument, an
+// ast.KeywordArg), which semantic analysis takes only in an intrinsic
+// function's reference so far.
 func (p *parser) subscripts() []ast.Expr {
 	p.expect("(")
 
@@ -349,9 +352,15 @@ func (p *parser) subscripts() []ast.Expr {
 	}
 
 	for {
-		if p.at(",") || p.at(")") {
+		switch {
+		case p.at(",") || p.at(")"):
 			list = append(list, nil)
-		} else {
+		case p.atKeyword():
+			t := p.next()
+			p.next()
+
+			list = append(list, &ast.KeywordArg{ExprBase: ast.ExprBase{Pos: p.pos(t)}, Name: t.Text, X: p.expr()})
+		default:
 			list = append(list, p.expr())
 		}
 
