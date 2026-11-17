@@ -116,9 +116,11 @@ replays those VMS runs to keep it that way.
   VMS symbols are its own. If you have VMS's own library files you can
   point govax at them (see [`vax.library`](#files-and-libraries)), but
   you don't need them.
-- **It is a single-user system.** You are the user `SYSTEM`, with all
-  privileges. There is no login, no user authorization file, no batch
-  or print queues, no networking (DECnet or TCP/IP), and no cluster.
+- **It is a small, single-machine system.** One person uses it at a time,
+  as `SYSTEM` or as an account of its authorization file
+  ([Accounts and logging in](#accounts-and-logging-in)), with batch jobs
+  alongside ([6.7 Batch queues](#67-batch-queues)). There are no print
+  queues, no networking (DECnet or TCP/IP), and no cluster.
 - **Some things VMS does are missing or simplified.** For example,
   there is no `RUN/DETACH`, and there is no swapping. Where
   govax knowingly differs from VMS, this manual says so, and
@@ -1465,8 +1467,10 @@ startup](#what-happens-at-startup)). Its last command runs
 own startup commands: logical names, volumes to mount, symbols, `SET`
 commands. govax makes a SYSTARTUP_VMS.COM once, when it makes the volume,
 and never changes or replaces it (if you delete it, it stays deleted). It
-holds comments, and the commands that make the scratch volume ([The
-scratch volume](#the-scratch-volume)). Yours might add:
+holds comments, the commands that make the scratch volume ([The
+scratch volume](#the-scratch-volume)), and a commented-out block that
+starts the batch queue manager and `SYS$BATCH` ([6.7 Batch
+queues](#67-batch-queues)). Yours might add:
 
 ```text
 $! SYS$MANAGER:SYSTARTUP_VMS.COM
@@ -2621,7 +2625,189 @@ WAIT delta-time                  ! WAIT 00:00:05
 
 Waits; other processes run meanwhile. Ctrl/C or Ctrl/Y ends the wait.
 
-### 6.7 Command procedure control
+### 6.7 Batch queues
+
+A *batch job* is one or more command procedures run without a terminal:
+you `SUBMIT` them to a *batch queue*, and when the job's time comes and
+the queue has room it runs as a detached process logged in to your
+account, its output going to a log file. You can go on working, end your
+session, or log in as someone else; the job runs meanwhile, and you can
+wait for it, look at it, change it, or delete it.
+
+```text
+START/QUEUE/MANAGER                       STOP/QUEUE/MANAGER
+INITIALIZE/QUEUE/BATCH [/START] [/JOB_LIMIT=n] [/BASE_PRIORITY=n]
+      [/OWNER_UIC=uic] [/PROTECTION=code] [/RETAIN[=ERROR]]
+      [/CPUDEFAULT=t] [/CPUMAXIMUM=t] [/WSDEFAULT=n] ... queue
+START/QUEUE queue                         SET QUEUE [attributes] queue
+STOP/QUEUE [/NEXT | /RESET] queue         DELETE/QUEUE queue
+SHOW QUEUE [/FULL] [/ALL] [/BATCH] [queue]
+SUBMIT [/QUEUE=queue] [/AFTER=time] [/HOLD] [/PARAMETERS=(p1,...)]
+      [/NAME=name] [/LOG_FILE=file | /NOLOG_FILE] [/NOPRINTER]
+      [/USER=username] [/RESTART] [/RETAIN=...] [/NOTIFY] ... file[,...]
+SHOW ENTRY [n]                            SET ENTRY [qualifiers] n
+DELETE/ENTRY=n [queue]                    STOP/QUEUE/ENTRY=n queue
+SYNCHRONIZE [name] [/ENTRY=n] [/QUEUE=queue]
+SET RESTART_VALUE=string                  (in a job)
+```
+
+#### The queue manager and the queue database
+
+The queues and their jobs are kept in the *queue database*, a host file
+(`vax.queue.file`, `~/.govax/qman.json` unless you set it), so they last
+from one govax session to the next, as VMS's last across reboots.
+`START/QUEUE/MANAGER` (OPER and SYSNAM) starts the *queue manager*, the
+part of govax that decides which job runs when; once started, it starts
+again with every session, after STARTUP.COM, until `STOP/QUEUE/MANAGER`.
+Only one govax session at a time runs the manager: a second session
+started on the same database can show the queues, but anything that
+changes them is `%JBC-E-QMANNOTSTARTED` there.
+
+On VMS the queue manager and the job controller are processes of their
+own; in govax they are Go code in the session, which is why `SHOW SYSTEM`
+lists no `QUEUE_MANAGER` or `JOB_CONTROL`.
+
+A queue is made once, with `INITIALIZE/QUEUE/BATCH` (OPER), and
+started with `START/QUEUE` (or `/START` as it's made). A site normally
+starts the queue manager and its queues in SYSTARTUP_VMS.COM: the one
+govax makes has a block for that, commented out, which starts the manager
+and makes and starts `SYS$BATCH`, the queue `SUBMIT` uses by default. A
+queue's `/JOB_LIMIT` (1 unless set) is how many of its jobs run at once,
+its `/BASE_PRIORITY` its jobs' priority, and its `/CPUDEFAULT`,
+`/CPUMAXIMUM`, and `/WSDEFAULT`, `/WSQUOTA`, `/WSEXTENT` their CPU limits
+and working sets. `SET QUEUE` changes them. `STOP/QUEUE` *pauses* a
+queue (its jobs suspended until `START/QUEUE`); `/NEXT` stops it after
+the jobs running end, and `/RESET` at once, ending them. A queue must be
+stopped that way before `DELETE/QUEUE`.
+
+#### Submitting a job
+
+```text
+VAX> START/QUEUE/MANAGER
+VAX> INITIALIZE/QUEUE/BATCH/JOB_LIMIT=2/START SYS$BATCH
+VAX> SUBMIT/PARAMETERS=(ALPHA,"two words") BUILD
+Job BUILD (queue SYS$BATCH, entry 1) started on SYS$BATCH
+VAX> SUBMIT/AFTER=TOMORROW/HOLD/NAME=NIGHTLY BUILD
+Job NIGHTLY (queue SYS$BATCH, entry 2) holding
+VAX> SHOW QUEUE SYS$BATCH
+Batch queue SYS$BATCH, idle, on GOVAX::
+
+  Entry  Jobname         Username             Status
+  -----  -------         --------             ------
+      2  NIGHTLY         SYSTEM               Holding
+VAX> SYNCHRONIZE/ENTRY=1
+VAX> SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+VAX> TYPE SYS$LOGIN:BUILD.LOG
+Building ALPHA and two words
+  P2 = "two words"
+Mode: BATCH
+  SYSTEM       job terminated at 16-NOV-2026 20:23:10.68
+
+  Accounting information:
+  Buffered I/O count:               0         Peak working set size:       7
+  Direct I/O count:                 1         Peak page file size:         0
+  Page faults:                      1         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.01   Elapsed time:     0 00:00:00.01
+```
+
+`BUILD.COM` here is three lines: `WRITE SYS$OUTPUT "Building ", P1, " and ", P2`,
+`SHOW SYMBOL P2`, and `WRITE SYS$OUTPUT "Mode: ", F$MODE()`. The first job ran at once and
+was gone by the time `SHOW QUEUE` looked; `SYNCHRONIZE` waited for it (here it had already
+ended) and made its final status `$STATUS`, so a procedure can act on how a job ended.
+
+A job's parts:
+
+- **The files.** `SUBMIT` takes one or more procedures, run in order as
+  one job; the job holds each by its file ID, so a later version doesn't
+  take its place. `/PARAMETERS` gives them P1 to P8.
+- **When.** At once if the queue is started and has room; `/AFTER=time`
+  not before then (`TOMORROW` is the next midnight); `/HOLD` not until
+  `SET ENTRY/RELEASE` (which also lets a job go before its `/AFTER` time).
+  Jobs wait in order of `/PRIORITY`, then of submission.
+- **Who.** The job logs in to your account, with its privileges, quotas,
+  and login procedures (SYS$SYLOGIN, then the account's LOGIN.COM), as a
+  detached process named `BATCH_n`. It holds the rights identifier BATCH,
+  and `F$MODE()` is `BATCH` in it. `/USER` runs it as another account
+  (CMKRNL).
+- **The log.** By default `SYS$LOGIN:name.LOG` of the account it runs
+  as, a new version each run, ending with LOGOUT's accounting report;
+  `/LOG_FILE` names another, `/NOLOG_FILE` none. govax has no print queues,
+  so the log is never printed and `/NOPRINTER` changes nothing.
+- **The end.** A file ending with an error or severe status ends the job,
+  with that status. `/NOTIFY` writes a line at your terminal when the job
+  ends; `/RETAIN=ERROR` (or `/RETAIN=ALWAYS`) keeps it in the queue after
+  it ends, where `SHOW QUEUE` shows its status, until `DELETE/ENTRY`.
+
+`SHOW ENTRY` lists your jobs; `SHOW QUEUE/FULL/ALL` every job and its
+options. `SET ENTRY` changes a job that isn't running (holds, releases,
+times, parameters, name, priority, log); `DELETE/ENTRY` deletes a job,
+ending it if it runs, as `STOP/QUEUE/ENTRY` does. `SUBMIT` defines
+`$ENTRY` as the new job's entry number, and `F$GETQUI` lets a procedure
+look at queues and jobs as `$GETQUI` lets a program ([Lexical
+functions](#lexical-functions)).
+
+#### When govax stops: restarting jobs
+
+A job still running when you end govax can't go on, since its process
+goes with the session. govax asks first, at a terminal:
+
+```text
+VAX> EXIT
+%VAX-W-JOBSEXECUTING, 1 batch job executing; ending govax ends it
+End them and exit? (Y or N) [N]: Y
+%VAX-I-JOBSENDED, batch jobs requeued to restart: 1; ended (queue reset): 0
+```
+
+A job submitted `/RESTART` is put back in its queue and runs again when
+the next session starts the queue; any other ends with
+`%JBC-F-QUERESET`. A restarted job begins again with the file it was in,
+with `$RESTART` true and `BATCH$RESTART` the value it last gave `SET
+RESTART_VALUE`, so a procedure of several steps can go on at the step it
+had reached:
+
+```text
+$ IF $RESTART THEN GOTO 'BATCH$RESTART'
+$ @STEP1
+$ SET RESTART_VALUE=STEP2
+$ STEP2:
+$ @STEP2
+```
+
+`STOP/QUEUE/REQUEUE/ENTRY=n` does the same to one job while govax runs.
+
+#### Who may do what
+
+A queue is a protected object, like a file, with an owner (`/OWNER_UIC`,
+`[SYSTEM]` by default), a protection code (`/PROTECTION`, by default
+`(S:M,O:D,G:R,W:S)`), and an ACL. Its access types are **R**ead (see its
+jobs), **S**ubmit, **M**anage (start, stop, change, or delete the queue,
+and any job in it), and **D**elete (change or delete a job; through the
+owner category, one's own). So by default anyone may submit to a queue,
+and change or delete their own jobs; only its manager may do more, and
+another user's job shows as `no privilege` in `SHOW QUEUE`. OPER gives
+every access to every queue. `SET SECURITY/CLASS=QUEUE` changes a
+queue's profile ([SET SECURITY](#set-security-set-acl-set-file-and-set-protection)).
+For example, a queue only group 200 may use:
+
+```text
+VAX> INITIALIZE/QUEUE/BATCH/OWNER_UIC=[200,0]/PROTECTION=(S:M,O:M,G:S,W)/START GROUP200_BATCH
+```
+
+and a user of another group then gets
+
+```text
+$ SUBMIT/QUEUE=GROUP200_BATCH HELLO
+%SUBMIT-F-CREJOB, error creating job
+-JBC-E-NOPRIV, insufficient privilege or queue protection violation
+```
+
+`HELP SUBMIT`, `HELP START /QUEUE`, `HELP INITIALIZE /QUEUE`, and the
+others have every qualifier. A program uses the queues through
+`$SNDJBC` and `$GETQUI` (Appendix A), with `$SJCDEF` and `$QUIDEF` in
+MACRO-32 or FORTRAN.
+
+### 6.8 Command procedure control
 
 These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 
@@ -2643,7 +2829,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `SET CONTROL=Y`, `SET NOCONTROL=Y` | Turn Ctrl/Y on and off. |
 | `LOGOUT` | End govax, even from inside a procedure, saying so (`/FULL`: with accounting). |
 
-### 6.8 Information
+### 6.9 Information
 
 | Command | Shows |
 | --- | --- |
@@ -2659,7 +2845,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `SHOW DEBUG` | The debugging switches. |
 | `HELP [topic ...]` | The help text: govax's own, or with `/LIBRARY=` a help library's, as VMS's HELP shows it (`/[NO]PROMPT`, `/[NO]INSTRUCTIONS`, `/[NO]LIBLIST`, `/[NO]LIBRARY`, `/[NO]USERLIBRARY`, `/[NO]OUTPUT`, `/[NO]PAGE`). |
 
-### 6.9 The machine and the console
+### 6.10 The machine and the console
 
 These commands work on the emulated machine itself, rather than on VMS
 objects. Most of them are used by STARTUP.COM; you need them only to
@@ -3278,12 +3464,13 @@ behaves as VMS's in the cases they cover. The differences to know about:
 - The prompt is `VAX>` (change it with `SET PROMPT` or
   `vax.console.prompt`); a subprocess's is `$`.
 - At the terminal, `EXIT` ends govax, as `LOGOUT` would end a VMS session.
-- Commands that aren't VMS's: the machine commands of section 6.9, `PRINT`,
+- Commands that aren't VMS's: the machine commands of section 6.10, `PRINT`,
   `TIME`, and `F$CONFIG`.
-- Commands VMS has that govax doesn't include `SUBMIT`, `PRINT` (VMS's,
-  for queues), `RUN/DETACH`, `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `DIFFERENCES`, `SEARCH`, `ANALYZE/DISK`, and
+- Commands VMS has that govax doesn't include `PRINT` (VMS's,
+  for print queues), `RUN/DETACH`, `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `DIFFERENCES`, `SEARCH`, `ANALYZE/DISK`, and
   the compilers.
-- `F$MODE()` is always `INTERACTIVE`; there's no batch.
+- `F$MODE()` is `INTERACTIVE` or, in a batch job, `BATCH`; there is no
+  network mode.
 - govax's `@` reads a procedure from a host file as well as a volume.
 
 ---
@@ -3969,13 +4156,13 @@ contains:
   `$LKWSET`, `$ULWSET`, `$PURGWS`, `$CRMPSC`, `$MGBLSC`, `$DGBLSC`,
   `$UPDSEC(W)`, `$ENQ(W)`, `$DEQ`, `$GETLKI(W)`, `$CMKRNL`, `$CMEXEC`,
   `$SETEXV`, `$UNWIND`, `$SYNCH`, `$SETRWM`, `$ASCTOID`, `$IDTOASC`,
-  `$CANWAK`, `$DCLCMH`, `$SETSFM`.
+  `$CANWAK`, `$DCLCMH`, `$SETSFM`, `$SNDJBC(W)`, `$GETQUI(W)`.
 - **Definitions**: `$ACCDEF`, `$ATRDEF`, `$BRKDEF`, `$CLIDEF`, `$DCDEF`,
   `$DEVDEF`, `$DSCDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$FORDEF`,
   `$IODEF`, `$JPIDEF`, `$LCKDEF`, `$LIBDEF`, `$LKIDEF`, `$LNMDEF`,
   `$MSGDEF`, `$NAMDEF`, `$PQLDEF`, `$PRCDEF`, `$PRTDEF`, `$PRVDEF`,
   `$PSLDEF`, `$RABDEF`, `$RMSDEF`, `$SECDEF`, `$SSDEF`, `$SYIDEF`,
-  `$TTDEF`, and the XAB definitions.
+  `$TTDEF`, `$QUIDEF`, `$SJCDEF`, `$JBCMSGDEF`, and the XAB definitions.
 
 If you have VMS's own system macro library, govax uses it instead (see
 below), and every VMS system macro is available.
@@ -4723,7 +4910,9 @@ alongside it:
 
 - `SPAWN` and `LIB$SPAWN` create subprocesses that run DCL;
 - `$CREPRC` creates a subprocess or detached process that runs an image
-  (or, given `LOGINOUT.EXE` and an input file, DCL).
+  (or, given `LOGINOUT.EXE` and an input file, DCL);
+- `SUBMIT` queues a batch job, which runs as a detached process logged in
+  to an account ([6.7 Batch queues](#67-batch-queues)).
 
 They communicate through mailboxes, common event flags, global sections,
 the lock manager, and shared files, as on VMS. `SHOW SYSTEM` lists them,
@@ -4814,7 +5003,7 @@ A caller already in an inner mode needs no privilege for `$CMKRNL`,
 kernel), and `$DELMBX` (kernel only); every other check applies from
 every mode, as VMS 7.1 was found to apply it. `SHOW SYSTEM` lists every
 process to everyone, as VMS's does: there, SHOW is installed with WORLD.
-The machine's own commands (section 6.9) ask for no privilege, but only
+The machine's own commands (section 6.10) ask for no privilege, but only
 the console's process may use them.
 
 **Installed images.** `INSTALL ADD file/PRIVILEGED=(name,...)` puts an
@@ -6809,6 +6998,7 @@ name, with their values, as `INTEGER*4` and `PARAMETER` statements:
 | `$SYSSRVNAM` | Every system service as an `INTEGER*4` function named in `EXTERNAL` |
 | `$CHFDEF` | A handler's arrays: offsets, and the structures `CHFDEF`, `CHFDEF1`, and `CHFDEF2` |
 | `$JPIDEF`, `$SYIDEF`, `$DVIDEF`, `$LNMDEF`, `$LKIDEF` | Item codes |
+| `$QUIDEF`, `$SJCDEF`, `$JBCMSGDEF` | The batch queues: `$GETQUI`'s and `$SNDJBC`'s functions, items, and flags, and the job controller's condition values |
 | `$IODEF`, `$TTDEF`, `$TT2DEF`, `$DCDEF`, `$DEVDEF`, `$MSGDEF`, `$FIBDEF`, `$ATRDEF` | I/O functions, devices, and the disk ACP |
 | `$FABDEF`, `$RABDEF`, `$NAMDEF`, `$XABDEF` | RMS's blocks, as constants |
 | `$DSCDEF`, `$STSDEF`, `$PSLDEF`, `$PRVDEF`, `$PRTDEF`, `$STATEDEF` | Descriptors, condition fields, the PSL, privileges, protections, process states |
@@ -7504,8 +7694,8 @@ An item list is an array of records:
 
 A service govax doesn't have is still there to link against. Calling one signals
 `SS$_UNSUPPORTED` and `%GOVAX-E-NOTIMPL` with its name, as a missing RTL routine does.
-There is no queue manager, so `$GETQUI` and `$SNDJBC` are among them, and `$QUIDEF` and
-`$SJCDEF` aren't modules.
+`$SNDJBC(W)` and `$GETQUI(W)` work the batch queues ([6.7 Batch queues](#67-batch-queues)),
+with `$QUIDEF`, `$SJCDEF`, and `$JBCMSGDEF` for their codes and statuses.
 
 **Strings.** The `STR$` routines write any class of descriptor. A CHARACTER variable is a
 fixed string, padded with blanks or cut, and cutting it is the warning `STR$_TRU`. Those
@@ -8091,6 +8281,7 @@ side effects follow DIGITAL's *System Services Reference Manual*.
 | Conditions and exit | `$EXIT`, `$DCLEXH`, `$CANEXH`, `$UNWIND`, `$SETEXV`, `$SETSFM`, `$DCLCMH`, `$GETMSG`, `$PUTMSG`, `$FAO`, `$FAOL` |
 | Processes | `$CREPRC`, `$DELPRC`, `$HIBER`, `$WAKE`, `$SUSPND`, `$RESUME`, `$FORCEX`, `$SETPRI`, `$SETPRN`, `$SETPRV`, `$SETRWM`, `$SETSWM`, `$CMKRNL`, `$CMEXEC` |
 | Information | `$GETJPI(W)`, `$GETSYI(W)`, `$GETDVI(W)`, `$GETLKI(W)`, `$ASCTOID`, `$IDTOASC` |
+| Batch queues | `$SNDJBC(W)`, `$GETQUI(W)` |
 | Mailboxes | `$CREMBX`, `$DELMBX` |
 | Memory | `$EXPREG`, `$CRETVA`, `$DELTVA`, `$CNTREG`, `$ADJSTK`, `$SETPRT`, `$ADJWSL`, `$PURGWS`, `$LKWSET`, `$ULWSET`, `$LCKPAG`, `$ULKPAG` |
 | Sections | `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, `$UPDSEC(W)` |
@@ -8223,7 +8414,8 @@ The main differences, gathered from the rest of the manual:
   `--user` names (section 5); AUTHORIZE keeps no password lifetimes,
   access times, or expiration dates, of its flags only DISUSER does
   anything, and there are no remote logins. Every privilege VMS checks is
-  checked (section 11). No batch, print queues, networking, or clusters. Installed
+  checked (section 11). Batch queues only: no print, server, or generic
+  queues, and the queue manager is govax's own, not a process. No networking or clusters. Installed
   images' qualifiers but `/PRIVILEGED` are recorded and do nothing. File protection and ACLs are enforced on volume files, but a
   volume's own protection isn't, and alarms and audits do nothing.
 - A program's RMS calls reach only files on mounted Files-11 volumes,

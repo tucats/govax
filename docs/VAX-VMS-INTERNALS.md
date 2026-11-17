@@ -2180,7 +2180,8 @@ The subsections go from what a process is (7.1 to 7.3) to how the CPU
 moves between processes (7.4 to 7.6), then what a process can wait for
 and be interrupted by (7.7, 7.8), how processes talk (7.9), how they're
 made and ended (7.10, 7.11), and the console's place among them: the
-terminal they share, and the keys typed at it (7.12, 7.13).
+terminal they share, and the keys typed at it (7.12, 7.13); then
+privileges, accounts, and batch jobs (7.14 to 7.16).
 
 ### 7.1 Process 1 and the others
 
@@ -3039,7 +3040,78 @@ credentials, so only a system UIC or SYSPRV may use it. DCL runs it for
 the verb `AUTHORIZE`, and for `MCR` or `RUN` of `SYS$SYSTEM:AUTHORIZE`,
 which name no image: `builtinUtility` claims them.
 
-### 7.16 What's VMS's and what isn't
+### 7.16 Batch queues and jobs
+
+On VMS two processes run the batch system: the queue manager, which
+keeps the queue database and decides what runs, and the job controller,
+which creates the processes that run it. govax has neither process: both
+are Go code in the session, working on a database kept on the host. What
+a user or a program sees, the commands, `$SNDJBC` and `$GETQUI`, and the
+batch job itself, is VMS's.
+
+**The database** is `internal/jobqueue`, a leaf package: a `Database` of
+`Queue`s and `Job`s, saved as JSON (`vax.queue.file`,
+`~/.govax/qman.json`) and changed only through `Update`, which takes a
+host lock, reads the file, applies a change, and writes it back, so two
+sessions on one file never lose each other's work. Its rules are two
+tables, `queueRules` and `jobRules`: a row per operation (start, pause,
+stop, delete a queue; hold, release, alter, delete, abort, requeue a job)
+and a column per state, each cell either what the operation does or the
+`JBC$_` condition that refuses it. `NextJob` is the order jobs run in
+(highest `/PRIORITY`, then first submitted, in a started queue below its
+job limit), `ReleaseDue` and `NextTime` are `/AFTER`'s clock, `Finish`
+ends a job (retained by `/RETAIN`, or removed), and `Recover` and
+`EndRuns` are what a session does about jobs another left running. The
+package checks no access: that's `corevms`'s.
+
+**The queue manager** is `corevms.QueueManager` (`queues.go`), the
+session's, kept by the machine across the Systems INITIALIZE/MEMORY
+makes. It runs here only while this session holds the database's manager
+lock (`managerHere`, `startHere`); taking the lock recovers what the last
+holder left (`recoverQueues`: queues stopped, executing jobs requeued if
+`/RESTART`, else ended `QUERESET`). `queueops.go` and `jobops.go` are
+the operations, each checking privileges through the privilege gate
+(7.14) and access through `internal/security`'s `CheckQueue` and
+`CheckJob`, in VMS's order, before changing the database; `$SNDJBC`
+(`sndjbc.go`) and DCL's queue commands both call them, and `$GETQUI`
+(`getqui.go`) and `F$GETQUI` (`getquitext.go`) read the database as VMS's
+items lay it out.
+
+**The job controller** is `batch.go`. After every change to the
+database, `settleJobs` starts what can start. A job starts as VMS's does:
+`BeginLogin` checks the account as a non-interactive login (7.15), then
+`$CREPRC`'s own code (7.10), called as the job controller
+(`CreateRequest.jobController`, which may give anything), creates a
+detached process named `BATCH_n` with the batch flag, the account's UIC,
+`SYS$INPUT` NL:, and the log file as `SYS$OUTPUT` and `SYS$ERROR`,
+created by the new process as its user, so the user's file protection
+decides. `LogIn` makes it the account's, with the BATCH identifier
+rather than INTERACTIVE and LOCAL, the queue's base priority, and the
+job's or queue's CPU limit (`checkCPULimit` ends it `EXCPUTIM`). Its CLI
+is DCL in batch mode (`dclshell/dclbatch.go`'s `runBatch`): the login
+procedures, then each of the job's files at command level 0
+(`Shell.batchBase`), its parameters P1 to P8, and LOGOUT's full report
+at the end.
+
+However the process ends, its deletion calls `completeBatchJob` (after it
+has left the process table, so a requeued job's next run can take its
+name): the job is finished in the database with the process's status,
+`/NOKEEP`, `/DELETE`, and `/NOTIFY` are done, SYNCHRONIZE's waiters hear
+(`dclshell/dclsync.go`), and the jobs settle again. An `/AFTER` time is a
+timer like any other: the idle loop's `nextTimer` counts it, and
+`pollQueueTimer`, from each scheduling call and from `HostIdle` (7.12),
+releases what's due, so a job comes due at the prompt or during a WAIT.
+
+**A session's end** can't leave a job's process running, since the
+process goes with the session. `EndSessionJobs` ends this session's jobs
+as a reboot ends VMS's: requeued to restart if `/RESTART`, else ended
+`QUERESET`, and lets the manager's lock go; `cmd/govax` asks first at a
+terminal. The next session's `ResumeQueueManager`, after STARTUP.COM,
+starts the manager again if the database says it was started. A restarted
+job begins with the file it was in, with `$RESTART` true and
+`BATCH$RESTART` its last `SET RESTART_VALUE`.
+
+### 7.17 What's VMS's and what isn't
 
 - **The scheduler is Go**, called between instructions, not a software
   interrupt at IPL 3; ASTLVL and the AST delivery interrupt aren't used
@@ -3058,12 +3130,16 @@ which name no image: `builtinUtility` claims them.
   own; there is no CLI image in P1, and LOGINOUT is a name, not an image.
 - **At most 255 processes**, and the PID's layout is govax's choice in
   VMS 7's form (7.2).
-- **Accounts without the rest of LOGINOUT** (7.15): no remote or batch
+- **Accounts without the rest of LOGINOUT** (7.15): no remote
   logins, no password lifetimes, access times, or login failure counts,
   and of the flags only DISUSER does anything. The privilege checks are VMS 7.1's (7.14), but
   `$SETIME`, `$MOUNT`, `$DISMOU`, and the rights and UAF services aren't
   there to make theirs; the known file list lasts for the session, and of
   INSTALL's attributes only the privileges do anything.
+- **No QUEUE_MANAGER or JOB_CONTROL process** (7.16): the batch system
+  is Go code in the session that holds the queue database's lock, and its
+  jobs end with the session that runs them, to be restarted by the next.
+  Batch queues only: no print, server, terminal, or generic queues.
 
 ## 8. I/O
 
@@ -5728,6 +5804,8 @@ doesn't cover.
 | `corevms/spawn.go`, `corevms/cliprocess.go` | subprocesses, and processes that run DCL |
 | `uaf/`, `corevms/authorization.go`, `corevms/login.go`, `dclshell/dcllogin.go`, `dclshell/dclloginproc.go` | accounts, the authorization file, and a login, with its home and login procedures |
 | `authorize/`, `dclshell/authorize.go` | AUTHORIZE |
+| `jobqueue/`, `corevms/queues.go`, `corevms/queueops.go`, `corevms/jobops.go`, `security/queue.go` | the queue database, the queue manager, and queue protection |
+| `corevms/batch.go`, `corevms/sndjbc.go`, `corevms/getqui.go`, `dclshell/dclbatch.go`, `dclshell/dclsync.go` | batch jobs started and ended, `$SNDJBC`, `$GETQUI`, DCL in a batch job, SYNCHRONIZE |
 | `corevms/terminal.go`, `corevms/lend.go` | the shared terminal, and lending the CPU while DCL waits |
 | `cpu/attention.go`, `corevms/ctrlast.go` | Ctrl/C and Ctrl/Y |
 

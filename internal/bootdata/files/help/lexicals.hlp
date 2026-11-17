@@ -458,7 +458,9 @@
 
 2 F$MODE
 
-   Returns the process's mode, INTERACTIVE.
+   Returns the process's mode: BATCH in a batch job (see SUBMIT),
+   INTERACTIVE in the console's process and its subprocesses, and OTHER
+   in a detached process that is neither.
 
    Format
 

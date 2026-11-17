@@ -588,7 +588,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   text libraries and INCLUDE (LIBRARY/TEXT, `lbr.TextModule`, held to VMS by `TestFor83NewLibraries` and
   `TestFor83LibraryOracle`; `INCLUDE '(module)'` by `source.Opener`'s `OpenModule`, searching `dclcmd`'s `fortranIncludes`;
   `Line.Listed`; `FORTRAN A+B+LIB/LIBRARY`, a `/joinable` list and `fortran.CompileAll`), and subtask 4 govax's definition
-  modules (`internal/fortran/sysdef`: 47 modules from `vmsdef`, by each name's longest prefix, `$SYSSRVNAM`, `$CHFDEF`'s
+  modules (`internal/fortran/sysdef`: 47 modules from `vmsdef` (50 since Phase 98's `$QUIDEF`, `$SJCDEF`, `$JBCMSGDEF`), by each name's longest prefix, `$SYSSRVNAM`, `$CHFDEF`'s
   structures, searched last; a module's EXTERNAL is a `.EXTRN` only if used, `Line.Library`, `Symbol.Linked`; `mkforsysdef` writes a `.TLB`), and subtask 5 calling services and RTL routines (null arguments in function references, kept as nil by the parser and refused
   by sema where the name isn't a routine's; a missing service signals, `corevms/missingservice.go`; TYPE of an FTN file, `rms.writeFortranRecords`; a utility's end deletes
   user-mode names, `Interpreter.endUtility`; `testdata/fortran/services.for`, `rtlcalls.for`), and subtask 6 condition handlers
@@ -920,7 +920,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   under `internal` to a list of reasons. Configured places (`--path`,
   `vax.library`, the system's own files) and EDIT's editor aren't checked.
   Phase 98 (planned 2026-11-16, the plan accepted by the author the same
-  day, its "The review"; in progress) is batch queues: a queue manager in
+  day, its "The review"; done 2026-11-16; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is batch queues: a queue manager in
   Go, batch queues, SUBMIT, and batch jobs as detached processes, with
   `$SNDJBC` and `$GETQUI`; subtask 2 is the probe, `testdata/bat98`, two
   rounds on VMS 7.1 (its doc's A.4), and subtask 3 (2026-11-16) the
@@ -982,7 +983,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (`EndOrphanedJobs`); STOP/QUEUE/REQUEUE (`RequeueJob`), SET RESTART_VALUE,
   a restart from its file (`Job.File`), /RETAIN=UNTIL's expiry, and the
   SYSTARTUP_VMS.COM block; held to RESTART and the probe's reboot by
-  `internal/console/batchrestart_test.go` and `TestBatchLaterSectionsOracle`.
+  `internal/console/batchrestart_test.go` and `TestBatchLaterSectionsOracle`;
+  subtask 11 (2026-11-16) end to end, `cmd/govax/batche2e_test.go`'s
+  `TestRun_batchEndToEnd` (five sessions as SYSTEM and two ADDUSER.COM
+  accounts: a nightly job resubmitting itself, a failing one retained,
+  one restarted after govax ends, a group's protected queue), with WAIT
+  through `HostIdle` and `pollQueueTimer` there; subtask 12 (2026-11-16)
+  the close-out: MANUAL.md's 6.7 "Batch queues" (6.7 to 6.9 now 6.8 to
+  6.10), VAX-VMS-INTERNALS.md's 7.16, FORTRAN's `$QUIDEF`, `$SJCDEF`, and
+  `$JBCMSGDEF` (`TestFortranQueues`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1714,7 +1723,8 @@ expect adjustment as phases land):
   (F$CONTEXT's selections for F$PID in `dcllexcontext.go`: a
   PROCESS_CONTEXT symbol, `dclSymbol.context`, naming a context the
   Shell keeps), `dcllexfile.go`, `dcllexname.go`, and `dcllextime.go`;
-  F$CSID, F$GETQUI, and F$LICENSE are LEXNOTIMPL by choice; F$CONFIG,
+  F$CSID and F$LICENSE are LEXNOTIMPL by choice (F$GETQUI is
+  `dcllexqueue.go`, Phase 98); F$CONFIG,
   govax's own (not VMS's), reads the configuration (`dcllexconfig.go`). F$GETJPI,
   F$GETSYI, F$GETDVI, F$DEVICE (`DeviceScan`), F$IDENTIFIER, F$FAO, and
   F$SETPRV use the services' own code (`corevms/lexical.go`), F$PARSE

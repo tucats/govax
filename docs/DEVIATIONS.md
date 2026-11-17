@@ -1992,7 +1992,7 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     does anything. ADD without `/PASSWORD` leaves no password rather than a pre-expired one.
   - **Passwords**: Argon2id hashes, not VMS's Purdy polynomial; asked only at govax's start, three times, or taken from
     `GOVAX_PASSWORD`, govax's own rule.
-  - **Logins**: only process 1's, interactive; no batch, detached, or remote logins, and no security alarm on a
+  - **Logins**: process 1's, interactive, and since Phase 98 a batch job's; no detached or remote logins, and no security alarm on a
     refused one. NOSUCHUSER's and CLIFAIL's texts, and a day under 10 in the last-login banner written with its zero,
     are unconfirmed. `$GETJPI` by code refuses the new account items (LAST_LOGIN_I and the rest), which F$GETJPI
     answers by name, until a probe gives their `$JPIDEF` codes.
@@ -2032,6 +2032,11 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   probe showed nothing or where govax's machinery differs:
   - **The job controller is Go** (Decision 5): no QUEUE_MANAGER or JOB_CONTROL process; jobs start when the
     database changes in the session running the manager, and at their /AFTER times.
+  - **Batch queues only** (Decision 1): no printer, server, terminal, or generic queues, forms, characteristics,
+    or autostart; `/PRINTER=queue` is NODSTQUE, and a log is never printed.
+  - **The database is a JSON host file** (Decision 3, `vax.queue.file`), not `QMAN$MASTER.DAT` and the queue and
+    journal files; START/QUEUE/MANAGER's directory is recorded and shown but doesn't move it. One session at a time
+    runs the manager (Decision 4); a second may show the queues, and anything else is QMANNOTSTARTED there.
   - **A job's files run at a command level of their own**, counted as level 0 (`Shell.batchBase`): DEPTH is 0, and
     labels, GOTO, and the error action are a procedure's, as on VMS. The level defines a supervisor-mode SYS$INPUT
     for the file, where VMS's job has only the executive-mode one.

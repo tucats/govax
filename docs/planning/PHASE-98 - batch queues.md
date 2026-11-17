@@ -2,7 +2,8 @@
 
 **Status:** planned 2026-11-16 (subtask 1, the survey and this plan);
 the plan reviewed and accepted by the author the same day, with the
-answers recorded in "The review". This document is the development plan;
+answers recorded in "The review"; done 2026-11-16 (subtasks 2 to 12).
+"Where things stand", at the end, is what it left. This document is the development plan;
 as the work goes on it becomes the implementation record: the progress
 log, and at the end "Where things stand".
 
@@ -716,7 +717,7 @@ Each is one commit, with tests, stopping for review.
     submitting jobs to queues with different protections, a nightly job
     by `/AFTER`, a job that fails, and one that's restarted after govax
     is stopped and started again.
-12. **The close-out**: MANUAL.md (a section on batch queues), HELP for
+12. **The close-out** (done 2026-11-16): MANUAL.md (a section on batch queues), HELP for
     each new verb and form, `lexicals.hlp`'s F$GETQUI, VAX-VMS-INTERNALS.md
     (processes), DEVIATIONS.md (the manager in Go, Decision 5; anything
     unconfirmed), PLAN.md, CLAUDE.md.
@@ -1386,3 +1387,67 @@ queues is a future phase.
   SET, SHOW, DIRECT, DELETE, TYPE, SUBMIT, QUEMAN) and `sharedMessages`
   has the shared messages they use, worded as the probes' logs show them
   (DEVIATIONS.md). Subtask 12, the close-out, is next.
+- **2026-11-16** Subtask 12, the close-out. MANUAL.md: section 6.7,
+  "Batch queues" (the manager and database, a session submitting and
+  following jobs, as run on govax, a job's parts, restarts at a session's
+  end, who may do what), the old 6.7 to 6.9 now 6.8 to 6.10; the batch
+  block in "STARTUP.COM and SYSTARTUP_VMS.COM"; 1's "What it isn't" (it
+  still said there was no login), 11's processes, 7's differences (SUBMIT
+  and F$MODE), 8's system macros (`$SNDJBC`, `$GETQUI`, `$QUIDEF`,
+  `$SJCDEF`, `$JBCMSGDEF`), 14.8's modules and services, Appendices A and
+  C. FORTRAN's definition modules, by the author's direction: `$QUIDEF`,
+  `$SJCDEF`, and `$JBCMSGDEF` (`internal/fortran/sysdef`, the `QUI$`,
+  `SJC$`, and `JBC$_` names; `$SYSSRVNAM` already had the services), held
+  by `TestFortranQueues` (`internal/console/fortranqueues_test.go`: a
+  FORTRAN program creates and starts a queue by `SYS$SNDJBCW` and lists
+  every queue by `SYS$GETQUIW`'s wildcard search). HELP LEXICALS F$MODE
+  (BATCH and OTHER); the other verbs' and forms' help came with their
+  subtasks. VAX-VMS-INTERNALS.md 7.16, "Batch queues and jobs" (the old
+  7.16 now 7.17, with a bullet on the manager), and the source map.
+  DEVIATIONS.md: the Phase 98 entry's scope and database bullets, Phase
+  95's login bullet. PLAN.md's row and section; CLAUDE.md. Phase 98 is
+  done.
+
+## Where things stand
+
+Done: VMS's batch queues as a user and a program see them. A queue
+manager (Go code in the session holding the database's lock) keeps
+batch queues in a JSON database that outlasts the session; queues are
+protected objects with VMS's access types; SUBMIT and the job commands
+work as VMS 7.1's did in the probe; each job runs as a detached process
+logged in to its account, its DCL in batch mode, its log ending with
+LOGOUT's report; `$SNDJBC`, `$GETQUI`, and `F$GETQUI` read and change
+the same database; and a job running when a session ends is restarted
+by the next if it was submitted `/RESTART`. The probe's sections are
+held to VMS 7.1's logs by `internal/console`'s batch tests, and
+`TestRun_batchEndToEnd` runs five whole sessions as three accounts.
+
+Left, by choice or for later:
+
+- **Print queues and VMS's PRINT** (Decision 1): govax's own `PRINT`
+  verb is in the way; retiring it and adding printer, server, terminal,
+  and generic queues is a later phase (the review). `/PRINTER=queue` is
+  NODSTQUE until then.
+- **`LIB$GETQUI`** and the other queue jackets stay NOTIMPL (subtask 9);
+  `$GETQUI` and `F$GETQUI` cover what they'd give.
+- **Unconfirmed choices** are logged where they were made, the word
+  "unconfirmed" in this log and in DEVIATIONS.md's entry: among them the
+  queue's working-set values not lowering the account's, a restart
+  beginning with the file it stopped in, SET RESTART_VALUE outside a
+  job, /RETAIN=UNTIL's expiry, a utility's status shown with its `!AS`,
+  and the state-table cells no probe case reached. A third round of the
+  probe could settle most.
+- **The rest of `$JBCMSGDEF`'s texts** (subtask 3): conditions VMS never
+  printed in the probe have no text until something needs one.
+- **No system volume**: with `--system-file none` (tests, odd setups),
+  a job without `/NAME` or `/LOG_FILE` logs to its account's home,
+  SYSTEM's `SYS$SYSROOT:[SYSMGR]`, which isn't there, and ends with
+  `%RMS-E-PRV` before running (found writing the manual's example; a
+  `/NAME`d job's log goes to the session's SYS$LOGIN). A device that
+  isn't there would better be `%RMS-F-DEV`, and the home might fall back
+  to the session's SYS$LOGIN.
+- **SHOW QUEUE/FULL's file line** shows a file on a concealed rooted
+  device by its logical name after the node,
+  `_GOVAX$SYS$SYSROOT:[SYSMGR]BUILD.COM;1` (the probe's files were on a
+  plain device); what VMS shows for a concealed device there is
+  unconfirmed.

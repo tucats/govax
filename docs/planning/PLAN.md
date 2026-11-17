@@ -147,6 +147,7 @@ questions, and a progress log extended as that phase is worked.
 | 95 | [PHASE-95 - authentication](PHASE-95%20-%20authentication.md) | User accounts: the authorization file (JSON, `vax.authorization.file`), `--user`, AUTHORIZE as a DCL verb with VMS's grammar, SYS$LOGIN and the login procedures (SYLOGIN.COM, LOGIN.COM), the system volume's owners and protections, and SYS$MANAGER:ADDUSER.COM — planned 2026-11-15, the plan accepted the same day; done 2026-11-16 |
 | 96 | [PHASE-96 - RAM disk](PHASE-96%20-%20RAM%20disk.md) | RAM disks: ODS-2 volumes in govax's own memory, DECram's MDcu names, through ods2's `MemoryImage`; DEFINE/DEVICE MDA, MOUNT with a label, contents kept until govax ends, a limit on their total (`vax.ramdisk.limit`), and a scratch volume (MDA0:, SYS$SCRATCH) made by the startup and login procedures govax supplies — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 | 97 | [PHASE-97 - host file access](PHASE-97%20-%20host%20file%20access.md) | Host file access: `vax.host.sysprv`, when true, lets only a process with SYSPRV reach host files (a host path, a bare name on the host, `/HOST`, and the paths that don't go through `rms.Session.Locate`), through one privilege rule — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
+| 98 | [PHASE-98 - batch queues](PHASE-98%20-%20batch%20queues.md) | Batch queues: a queue manager in Go over a JSON queue database (`vax.queue.file`), batch queues with VMS's protection, SUBMIT and the job commands, batch jobs as detached processes logged in to their accounts, `$SNDJBC`, `$GETQUI`, and `F$GETQUI`, and jobs restarted after a session ends — planned 2026-11-16, the plan accepted the same day; done 2026-11-16 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -789,3 +790,28 @@ is the survey of every way govax reaches the host, Part B the decisions with the
 
 MANUAL.md's section 5, "Who may use host files", is the user's side, and VAX-VMS-INTERNALS.md's 9.12 and 7.14 the
 developer's. What the phase left is its doc's "Where things stand".
+
+## Batch queues (Phase 98)
+
+Phase 98 (2026-11-16) gave govax VMS's batch queues: a user submits command procedures to a queue, and they run as a
+detached process logged in to the user's account, with a log file, while the user goes on. Its doc's Part A is the
+survey and the probe's answers (`testdata/bat98`, two rounds on VMS 7.1 with probe accounts), Part B the decisions
+with the author's review, and its log the work.
+
+- **The database:** `internal/jobqueue`, a leaf package, the queues and jobs as one JSON host file
+  (`~/.govax/qman.json`, `vax.queue.file`) changed under a host lock; its rules two tables of operation by state.
+- **Definitions:** `SJC$`, `QUI$`, and `JBC$_` in `vmsdef`, the JBC messages, the service macros, and `$SJCDEF`,
+  `$QUIDEF`, and `$JBCMSGDEF` for MACRO-32 and FORTRAN.
+- **Protection:** the QUEUE security class (read, submit, manage, delete), `security/queue.go`, the privilege rules,
+  SET and SHOW SECURITY/CLASS=QUEUE, held to the probe's matrix.
+- **The manager:** `corevms.QueueManager`, Go code in the session holding the manager's lock (no QUEUE_MANAGER or
+  JOB_CONTROL process); START/STOP/SHOW QUEUE/MANAGER, INITIALIZE/QUEUE, START, STOP, SET, DELETE, and SHOW QUEUE.
+- **Jobs:** SUBMIT, SHOW ENTRY, SET ENTRY, DELETE/ENTRY, STOP/QUEUE/ENTRY and /REQUEUE, SYNCHRONIZE, and SET
+  RESTART_VALUE; each job a detached process `BATCH_n` started through `$CREPRC`'s code, logged in non-interactively,
+  running DCL in batch mode (login procedures, then its files at level 0), its log ending with LOGOUT's report.
+- **Services:** `$SNDJBC(W)`, `$GETQUI(W)`, and `F$GETQUI`, held to the probe's round 2.
+- **Restart:** the manager starts with each session; a session's end requeues `/RESTART` jobs and ends the rest
+  (asked first at a terminal), and the next session recovers what one that ended without asking left.
+
+MANUAL.md's section 6.7, "Batch queues", is the user's side, and VAX-VMS-INTERNALS.md's 7.16 the developer's. What
+the phase left is its doc's "Where things stand".
