@@ -1,0 +1,113 @@
+routine F90VEC main
+  cell  A       F  $LOCAL+0    array A, 40 bytes
+  cell  B       F  $LOCAL+40   array B, 12 bytes
+  cell  C       F  $LOCAL+52   array C, 160 bytes
+  cell  D       F  $LOCAL+212  array D, 48 bytes
+  cell  IV      L  $LOCAL+260  array IV, 12 bytes
+  cell  JV      L  $LOCAL+272  array JV, 20 bytes
+  cell  $I1     L  $LOCAL+292  an array statement's index
+  cell  $C1     L  $LOCAL+296  array (line 8), dimension 1's count
+  cell  $C2     L  $LOCAL+300  array (line 9), dimension 1's count
+  cell  $C3     L  $LOCAL+304  array (line 10), dimension 1's count
+  cell  $I2     L  $LOCAL+308  an array statement's index
+  cell  $C4     L  $LOCAL+312  array (line 11), dimension 2's count
+  cell  $C5     L  $LOCAL+316  array (line 11), dimension 1's count
+  cell  $C6     L  $LOCAL+320  array (line 12), dimension 1's count
+  $LOCAL is 324 bytes
+  datum $K1     L 3
+B1:
+  ; line 8
+  assign $C1 = 3
+  assign $I1 = 1
+  jump B2
+B2:  ; array (line 8), dimension 1's body
+  assign B-4[$I1] = A-4[IV-4[$I1]]
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 9
+  assign $C2 = 3
+  assign $I1 = 1
+  jump B4
+B4:  ; array (line 9), dimension 1's body
+  assign A-4[IV-4[$I1]] = add.F(B-4[$I1], 1.0)
+  assign $I1 = add.L($I1, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B4 B5
+B5:
+  ; line 10
+  assign $C3 = 3
+  assign $I1 = 1
+  jump B6
+B6:  ; array (line 10), dimension 1's body
+  assign B-4[$I1] = mul.F(A[IV-4[$I1]], A-4[sub.L(11, IV+12[mul.L($I1, -1)])])
+  assign $I1 = add.L($I1, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B6 B7
+B7:
+  ; line 11
+  assign $C4 = 3
+  assign $I2 = 1
+  jump B8
+B8:  ; array (line 11), dimension 2's body
+  assign $C5 = 4
+  assign $I1 = 1
+  jump B9
+B9:  ; array (line 11), dimension 1's body
+  assign D-20[add.L($I1, mul.L($I2, 4))] = C-20[add.L($I1, mul.L(IV-4[$I2], 4))]
+  assign $I1 = add.L($I1, 1)
+  assign $C5 = sub.L($C5, 1)
+  branch gt.L($C5, 0) B9 B10
+B10:
+  assign $I2 = add.L($I2, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B8 B11
+B11:
+  ; line 12
+  assign $C6 = 3
+  assign $I2 = 1
+  jump B12
+B12:  ; array (line 12), dimension 1's body
+  assign B-4[$I2] = A-4[IV-4[JV-4[$I2]]]
+  assign $I2 = add.L($I2, 1)
+  assign $C6 = sub.L($C6, 1)
+  branch gt.L($C6, 0) B12 B13
+B13:
+  ; line 13
+  call S(ref A, ref IV, ref $K1)
+  ; line 14
+  return 1
+routine S subroutine
+  param X       F  argument 1
+  param KV      L  argument 2
+  param M       L  argument 3
+  cell  $B1     L  $LOCAL+0    descriptor L A 4 (?)
+  cell  $I1     L  $LOCAL+32   an array statement's index
+  cell  $T1     L  $LOCAL+36   temporary
+  cell  $C1     L  $LOCAL+40   array (line 18), dimension 1's count
+  $LOCAL is 44 bytes
+B1:
+  assign $B1+4 = addr(@KV)
+  assign $B1+28 = @M
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@KV-4)
+  assign $B1+12 = mul.L(4, $B1+20)
+  ; line 18
+  assign $T1 = $B1+20
+  branch lt.L($T1, 0) B2 B3
+B2:
+  assign $T1 = 0
+  jump B3
+B3:
+  assign $C1 = $T1
+  assign $I1 = 1
+  branch le.L($C1, 0) B5 B4
+B4:  ; array (line 18), dimension 1's body
+  assign @X-4[@($B1+16)[$I1]] = 0.0
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B4 B5
+B5:
+  ; line 19
+  return

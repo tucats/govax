@@ -97,6 +97,20 @@ var checkPrograms = []struct {
       END`,
 	},
 	{
+		// A vector subscript's value past its array (Phase 102, subtask 6):
+		// each value checked where it is used.
+		name: "VECTOR", qualifier: "/CHECK=BOUNDS", checked: "%SYSTEM-F-SUBRNG", plain: "AFTER",
+		source: `
+      REAL A(10), B(3), PAD(10)
+      INTEGER IV(3)
+      IV(1) = 1
+      IV(2) = 11
+      IV(3) = 2
+      B = A(IV)
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
 		// The second operand of .AND. isn't reached, so neither is its check.
 		name: "GUARDED", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
 		refused: "SUBRNG",

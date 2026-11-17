@@ -80,11 +80,14 @@ func IntDifference(x, y Expr) Expr {
 	return &Binary{exprBase{T: IntegerType, Pos: x.Position()}, ast.Sub, x, y}
 }
 
-// NewElem is the element s(subs), whose subscripts are known to be within
-// s's bounds when inBounds is set (Elem.InBounds).
-func NewElem(s *Symbol, subs []Expr, inBounds bool, pos diag.Position) *Elem {
+// NewElem is the element s(subs), whose subscript i is known to be within
+// s's bounds when inBounds[i] is set (Elem.InBounds).
+func NewElem(s *Symbol, subs []Expr, inBounds []bool, pos diag.Position) *Elem {
 	return &Elem{exprBase: exprBase{T: s.Type, Pos: pos}, Sym: s, Subs: subs, InBounds: inBounds}
 }
+
+// Checked reports whether /CHECK=BOUNDS checks the element's subscript i.
+func (e *Elem) Checked(i int) bool { return i >= len(e.InBounds) || !e.InBounds[i] }
 
 // Scalarize is the array-valued expression e made a scalar one: each array it
 // reads (an *ArrayRef or a *Section, a leaf) replaced by element(leaf), each

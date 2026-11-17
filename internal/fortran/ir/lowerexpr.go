@@ -334,7 +334,7 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 			x := l.expr(sub)
 
 			v, k := split(x)
-			if !e.InBounds {
+			if e.Checked(i) {
 				v, k = l.checkedSubscript(x, e.Sym, e.Sym.Dims, i)
 			}
 

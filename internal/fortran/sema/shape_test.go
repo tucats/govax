@@ -68,7 +68,17 @@ func TestShapes(t *testing.T) {
 		{"too few subscripts", []string{"DIMENSION A(10, 10)", "A(:) = 1"}, "SUBSCRIPTS: the array A takes 2 subscripts, not 1"},
 
 		// Where a scalar must be, and what isn't compiled yet.
-		{"a subscript", []string{"DIMENSION A(10), I(2)", "X = A(I(1:1))"}, "NOTIMPL: a vector subscript is not implemented yet"},
+		{"a subscript", []string{"DIMENSION A(10), I(2)", "X = A(I(1:1))"}, "NOTSCALAR: an array is used where a scalar is required"},
+
+		// Vector subscripts (subtask 6).
+		{"a vector subscript read", []string{"DIMENSION A(10), B(3)", "INTEGER IV(3)", "B = A(IV)"}, ""},
+		{"a vector subscript assigned", []string{"DIMENSION A(10), B(3)", "INTEGER IV(3)", "A(IV) = B + 1"}, ""},
+		{"a vector expression", []string{"DIMENSION A(10), B(3)", "INTEGER IV(3)", "B = A(IV + 1) + A(2 * IV(3:1:-1))"}, ""},
+		{"a vector with a triplet", []string{"DIMENSION A(4, 10), B(4, 3)", "INTEGER IV(3)", "B = A(:, IV)"}, ""},
+		{"a vector's extent", []string{"DIMENSION A(10), B(5)", "INTEGER IV(3)", "B = A(IV)"}, "NOTCONFORM: the shapes (5) and (3) don't conform"},
+		{"a vector of rank 2", []string{"DIMENSION A(10), B(4)", "INTEGER IV(2, 2)", "B = A(IV)"}, "VECTORRANK: a vector subscript must be an array of rank one, not rank 2"},
+		{"a vector of the target", []string{"INTEGER IV(3)", "IV(IV) = 1"}, "NOTIMPL: a vector subscript in an assignment's target that reads the target's own array is not implemented yet"},
+		{"a vector where a scalar must be", []string{"DIMENSION A(10)", "INTEGER IV(3)", "IF (A(IV) .GT. 0) STOP"}, "NOTSCALAR: an array is used where a scalar is required"},
 		{"a condition", []string{"DIMENSION A(10)", "IF (A .GT. 0) STOP"}, "NOTSCALAR: an array is used where a scalar is required"},
 		{"a DO bound", []string{"DIMENSION A(10)", "DO 10 I = 1, A(1:2)", "10 CONTINUE"}, "NOTSCALAR: an array is used where a scalar is required"},
 		{"a bare name stays NEEDSUBSCRIPT", []string{"DIMENSION A(10)", "IF (A) STOP"}, "NEEDSUBSCRIPT: the array A can't be used without subscripts here"},
@@ -131,6 +141,10 @@ func TestArrayOrder(t *testing.T) {
 		{"EQUIVALENCE", []string{"DIMENSION A(10), B(10)", "EQUIVALENCE (A(2), B)", "A = B"}, "through a temporary"},
 		{"the target's element", []string{"DIMENSION A(10)", "A = A(1) + A"}, ""},
 		{"a CHARACTER element of the target", []string{"CHARACTER*4 C(3)", "C = C(1)"}, "through a temporary"},
+		{"the same vector subscript", []string{"DIMENSION A(10)", "INTEGER IV(3)", "A(IV) = A(IV) + 1"}, ""},
+		{"a vector subscript and the whole target", []string{"DIMENSION A(10), B(3)", "INTEGER IV(3)", "A(1:3) = A(IV)"}, "through a temporary"},
+		{"a vector reading the target", []string{"DIMENSION B(10)", "INTEGER IV(3), JV(10)", "IV = JV(IV)"}, "through a temporary"},
+		{"a vector of another array", []string{"DIMENSION A(10), B(10)", "INTEGER IV(10)", "A = B(IV)"}, ""},
 		{"substrings of the same elements", []string{"CHARACTER*4 C(3)", "C(:)(2:3) = C(:)(1:2)"}, ""},
 	}
 

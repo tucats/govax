@@ -116,6 +116,18 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 	// need is each loop's direction, 1 up, -1 down, 0 either.
 	need := make([]int, rank)
 
+	// The target's subscripts must be computed before any element is defined
+	// (7.5.1.5); a vector subscript's elements are read as the loops go.
+	if vectorsRead(target, ts) {
+		a.notImplForm(pos, "a vector subscript in an assignment's target that reads the target's own array")
+
+		return nil, false
+	}
+
+	// A vector subscript in the value that reads the target's storage is read
+	// as the loops go too: a temporary.
+	o.Temporary = vectorsRead(value, ts)
+
 	Scalarize(value, func(leaf Expr) Expr {
 		if o.Temporary || !mayShare(ts, baseSymbol(leaf)) {
 			return leaf
@@ -169,6 +181,51 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 	return o, true
 }
 
+// vectorsRead reports whether a vector subscript anywhere in the array
+// expression e (one of its sections', or theirs in turn) reads storage ts may
+// share: an array, or a scalar in it.
+func vectorsRead(e Expr, ts *Symbol) bool {
+	found := false
+
+	var vectors func(Expr)
+
+	reads := func(v Expr) {
+		Scalarize(v, func(leaf Expr) Expr {
+			if mayShare(ts, baseSymbol(leaf)) {
+				found = true
+			}
+
+			vectors(leaf)
+
+			return leaf
+		}, func(x Expr) Expr {
+			for _, s := range readSymbols(x) {
+				if mayShare(ts, s) {
+					found = true
+				}
+			}
+
+			return x
+		})
+	}
+
+	vectors = func(leaf Expr) {
+		if s, ok := leaf.(*Section); ok {
+			for _, sub := range s.Subs {
+				if sub.Vector != nil {
+					reads(sub.Vector)
+				}
+			}
+		}
+	}
+
+	for _, leaf := range Leaves(e) {
+		vectors(leaf)
+	}
+
+	return found
+}
+
 // baseSymbol is the array an array-valued leaf or target is of.
 func baseSymbol(e Expr) *Symbol {
 	switch e := e.(type) {
@@ -210,6 +267,7 @@ func mayShare(x, y *Symbol) bool {
 type slot struct {
 	triplet       bool
 	index         Expr
+	vector        Expr
 	lower, stride Expr
 }
 
@@ -237,9 +295,12 @@ func slots(e Expr) []slot {
 		list := make([]slot, len(e.Subs))
 
 		for i, s := range e.Subs {
-			if s.Triplet() {
+			switch {
+			case s.Vector != nil:
+				list[i] = slot{vector: s.Vector}
+			case s.Triplet():
 				list[i] = slot{triplet: true, lower: s.Lower, stride: s.Stride}
-			} else {
+			default:
 				list[i] = slot{index: s.Index}
 			}
 		}
@@ -270,6 +331,16 @@ func relate(target, leaf Expr) (rel overlapRelation, loop, dir int) {
 		x, y := t[i], l[i]
 
 		switch {
+		case x.vector != nil || y.vector != nil:
+			// The same vector subscript is the same subscript at each index
+			// (a vector with a value twice may not be assigned through:
+			// Fortran 90's 6.2.2.3.2); any other is anything.
+			if x.vector == nil || y.vector == nil || DumpExpr(x.vector) != DumpExpr(y.vector) {
+				return relUnknown, 0, 0
+			}
+
+			j++
+
 		case !x.triplet && !y.triplet:
 			if DumpExpr(x.index) == DumpExpr(y.index) {
 				continue

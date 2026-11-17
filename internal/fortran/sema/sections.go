@@ -71,28 +71,36 @@ func hasTriplet(list []ast.Expr) bool {
 }
 
 // SectionSub is one subscript of an array section: a subscript, Index, in a
-// dimension the section doesn't range over, or a triplet (Index nil), whose
-// Lower, Upper, and Stride are INTEGER. A bound left out is the dimension's:
-// a constant for a constant bound, or nil for an adjustable array's, which
-// lowering reads from the array's bounds as the program runs. Stride is 1 when
-// it is left out.
+// dimension the section doesn't range over; a vector subscript, Vector, an
+// INTEGER array of rank one whose elements are the subscripts the section
+// takes in turn (Fortran 90's 6.2.2.3.2); or a triplet (Index and Vector nil),
+// whose Lower, Upper, and Stride are INTEGER. A bound left out is the
+// dimension's: a constant for a constant bound, or nil for an adjustable
+// array's, which lowering reads from the array's bounds as the program runs.
+// Stride is 1 when it is left out.
 type SectionSub struct {
 	Index                Expr
+	Vector               Expr
 	Lower, Upper, Stride Expr
 }
 
 // Triplet reports whether the subscript is a triplet.
-func (s SectionSub) Triplet() bool { return s.Index == nil }
+func (s SectionSub) Triplet() bool { return s.Index == nil && s.Vector == nil }
 
-// section analyzes an array section, s(subscripts) with a triplet in at least
-// one dimension (Fortran 90's 6.2.2.3): one subscript or triplet per
-// dimension, each bound and stride made INTEGER, as an element's subscripts
-// are. Its shape has an extent per triplet, MAX((u - l + s) / s, 0) (Table
-// 6.1's note), known when l, u, and s are constants. Only the subscripts a
-// triplet uses need be within the dimension (B(3:11:7) of B(10) is fine), so
-// a constant triplet's first and last are checked as an element's constant
-// subscripts are (SUBSCRIPTRANGE). A vector subscript, an array-valued
-// subscript, is subtask 6's.
+// Ranges reports whether the section ranges over the subscript's dimension: a
+// triplet or a vector subscript, each a dimension of the section's shape.
+func (s SectionSub) Ranges() bool { return s.Index == nil }
+
+// section analyzes s(subscripts), an element or an array section (Fortran
+// 90's 6.2.2): one subscript, triplet, or vector subscript per dimension, each
+// bound, stride, and subscript made INTEGER, as an element's subscripts are.
+// With no triplet and no vector subscript it is an element, an *Elem. A
+// section's shape has an extent per triplet, MAX((u - l + s) / s, 0) (Table
+// 6.1's note), known when l, u, and s are constants, and per vector
+// subscript, the vector's. Only the subscripts a triplet uses need be within
+// the dimension (B(3:11:7) of B(10) is fine), so a constant triplet's first
+// and last are checked as an element's constant subscripts are
+// (SUBSCRIPTRANGE).
 func (a *analyzer) section(s *Symbol, e *ast.Apply) Expr {
 	if len(e.Args) != len(s.Dims) {
 		a.report("SUBSCRIPTS", e.Pos, e.Name, count(len(s.Dims), "subscript"), len(e.Args))
@@ -106,19 +114,37 @@ func (a *analyzer) section(s *Symbol, e *ast.Apply) Expr {
 
 	sec := &Section{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: make([]SectionSub, len(e.Args))}
 
+	// A subscript with an error doesn't stop the others' analysis, so each
+	// gets its messages.
+	failed := false
+
 	for i, arg := range e.Args {
 		t, ok := arg.(*ast.Triplet)
 		if !ok {
-			v := a.convert(a.arithmetic(a.subscriptValue(arg)), IntegerType)
+			v := a.convert(a.arithmetic(a.arrayValue(arg)), IntegerType)
 			if v.Type().Kind == Invalid {
-				return a.bad(e.Pos)
+				failed = true
+
+				continue
 			}
 
-			if c, ok := constantInt(v); ok {
-				a.checkSubscript(s, e.Name, s.Dims, i, c, v.Position())
-			}
+			switch rankOf(v) {
+			case 0:
+				if c, ok := constantInt(v); ok {
+					a.checkSubscript(s, e.Name, s.Dims, i, c, v.Position())
+				}
 
-			sec.Subs[i] = SectionSub{Index: v}
+				sec.Subs[i] = SectionSub{Index: v}
+
+			case 1:
+				sec.Subs[i] = SectionSub{Vector: v}
+				sec.S = append(sec.S, v.Shape()[0])
+
+			default:
+				a.report("VECTORRANK", v.Position(), rankOf(v))
+
+				failed = true
+			}
 
 			continue
 		}
@@ -132,7 +158,20 @@ func (a *analyzer) section(s *Symbol, e *ast.Apply) Expr {
 		sec.S = append(sec.S, a.tripletExtent(s, e.Name, sec, i))
 	}
 
-	return sec
+	if failed {
+		return a.bad(e.Pos)
+	}
+
+	if sec.S != nil {
+		return sec
+	}
+
+	subs := make([]Expr, len(sec.Subs))
+	for i, sub := range sec.Subs {
+		subs[i] = sub.Index
+	}
+
+	return &Elem{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: subs}
 }
 
 // triplet analyzes the triplet t, the section's subscript i of s.
@@ -216,8 +255,9 @@ func (a *analyzer) tripletExtent(s *Symbol, name string, sec *Section, i int) Ex
 	return Extent{Size: n, Known: true}
 }
 
-// subscriptValue analyzes a subscript: a scalar, or an INTEGER array of rank
-// one, a vector subscript (Fortran 90's 6.2.2.3.2), which is subtask 6's.
+// subscriptValue analyzes a subscript where only a scalar may be (an array
+// element's own subscripts are analyzed by section, which takes vector
+// subscripts too): a vector subscript of a record's array field is Phase 105's.
 func (a *analyzer) subscriptValue(e ast.Expr) Expr {
 	v := a.arrayValue(e)
 	if rankOf(v) == 0 {

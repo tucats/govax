@@ -734,10 +734,12 @@ type (
 		Sym  *Symbol
 		Subs []Expr
 
-		// InBounds says its subscripts needn't be checked by /CHECK=BOUNDS:
-		// an element the scalarizer made of a section, whose first and last
-		// subscripts are checked once, before its loops (ir/lowerarray.go).
-		InBounds bool
+		// InBounds says which of its subscripts needn't be checked by
+		// /CHECK=BOUNDS (nil: none): in an element the scalarizer made of a
+		// section, those whose first and last are checked once, before its
+		// loops, but not a vector subscript's, each of whose values is
+		// checked (ir/lowerarray.go).
+		InBounds []bool
 	}
 
 	// ArrayRef is a whole array: an actual argument or an I/O list item

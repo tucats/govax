@@ -274,18 +274,18 @@ func (l *lowerer) adjustableElement(e *sema.Elem, c *Cell) *Mem {
 		Volatile: e.Sym.Volatile,
 	}
 
-	return l.elementAt(a0, e.Sym, l.adjustableIndex(e.Subs, e.Sym, c, e.InBounds))
+	return l.elementAt(a0, e.Sym, l.adjustableIndex(e.Subs, e.Sym, c, e.Checked))
 }
 
 // adjustableIndex is an element's number from A0, the subscripts of the
-// adjustable array s whose descriptor is c; inBounds says they needn't be
-// checked (sema.Elem.InBounds).
-func (l *lowerer) adjustableIndex(list []sema.Expr, s *sema.Symbol, c *Cell, inBounds bool) Expr {
+// adjustable array s whose descriptor is c; checked says which are checked
+// (sema.Elem.Checked; nil: all).
+func (l *lowerer) adjustableIndex(list []sema.Expr, s *sema.Symbol, c *Cell, checked func(int) bool) Expr {
 	subs := make([]Expr, len(list))
 	for i, sub := range list {
 		subs[i] = l.expr(sub)
 
-		if l.unit.Checks.Bounds && !inBounds {
+		if l.unit.Checks.Bounds && (checked == nil || checked(i)) {
 			subs[i] = inRange(subs[i], l.lowerBound(s, c, i), l.upperBound(s, c, i))
 		}
 	}

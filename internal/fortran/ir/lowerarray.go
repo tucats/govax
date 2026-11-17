@@ -91,6 +91,7 @@ type arrayLeaf struct {
 type leafDim struct {
 	ranges        bool
 	loop          int
+	vector        sema.Expr
 	stride, base  sema.Expr
 	fixed         sema.Expr
 	lower, upper  Expr
@@ -285,9 +286,23 @@ func (n *arrayNest) hoist(e sema.Expr) sema.Expr {
 
 // prepare makes leaf ready for its elements: each dimension's stride and base,
 // or its fixed subscript, computed now where they aren't constants.
-func (n *arrayNest) prepare(leaf sema.Expr) {
+func (n *arrayNest) prepare(leaf sema.Expr) { n.prepareIn(leaf, nil) }
+
+// prepareIn is prepare for a leaf whose dimension k the nest's loop loops[k]
+// ranges over (nil: loop k). A vector subscript's arrays are leaves too,
+// ranging over the loop of the dimension the vector is in: in A(2, IV) with
+// IV(5), IV's one dimension is the nest's only loop.
+func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 	if n.leaves[leaf] != nil {
 		return
+	}
+
+	loopOf := func(k int) int {
+		if loops == nil {
+			return k
+		}
+
+		return loops[k]
 	}
 
 	info := &arrayLeaf{}
@@ -301,7 +316,7 @@ func (n *arrayNest) prepare(leaf sema.Expr) {
 		for i := range leaf.Sym.Dims {
 			lower := n.lowerBound(leaf.Sym, i)
 			info.dims = append(info.dims, leafDim{
-				ranges: true, loop: i,
+				ranges: true, loop: loopOf(i),
 				stride: sema.IntConstAt(1, leaf.Pos),
 				base:   n.keepIR(arith(Sub, Long, lower, LongConst(1))),
 				lower:  lower,
@@ -313,6 +328,18 @@ func (n *arrayNest) prepare(leaf sema.Expr) {
 		loop := 0
 
 		for i, sub := range leaf.Subs {
+			if sub.Vector != nil {
+				info.dims = append(info.dims, leafDim{ranges: true, loop: loopOf(loop), vector: sub.Vector})
+
+				for _, inner := range sema.Leaves(sub.Vector) {
+					n.prepareIn(inner, []int{loopOf(loop)})
+				}
+
+				loop++
+
+				continue
+			}
+
 			if !sub.Triplet() {
 				info.dims = append(info.dims, leafDim{fixed: n.keep(sub.Index)})
 
@@ -324,7 +351,7 @@ func (n *arrayNest) prepare(leaf sema.Expr) {
 			stride := n.keep(sub.Stride)
 
 			info.dims = append(info.dims, leafDim{
-				ranges: true, loop: loop,
+				ranges: true, loop: loopOf(loop),
 				stride: stride,
 				base:   n.keepIR(arith(Sub, Long, n.l.expr(lower), n.l.expr(stride))),
 				lower:  n.l.expr(lower),
@@ -384,6 +411,21 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 		var count Expr
 
 		switch leaf := leaf.(type) {
+		case *sema.Section:
+			if d.vector != nil {
+				// A vector subscript's extent is the vector's: known, or one
+				// of its own arrays'.
+				if e := d.vector.Shape()[0]; e.Known {
+					d.extent = LongConst(int32(e.Size))
+				} else {
+					d.extent = n.leafExtent(e.Of, n.loopOf(e.Of, e.Dim))
+				}
+
+				return d.extent
+			}
+
+			count = tripCount(Long, d.lower, d.upper, n.l.expr(d.stride))
+
 		case *sema.ArrayRef:
 			if c := n.l.adjustable[leaf.Sym]; c != nil {
 				count = n.l.extent(leaf.Sym, c, i)
@@ -446,12 +488,24 @@ func (n *arrayNest) loopOf(leaf sema.Expr, dim int) int {
 	return n.leaves[leaf].dims[dim].loop
 }
 
-// element is leaf's element at the loops' indexes.
+// element is leaf's element at the loops' indexes. A vector subscript is the
+// vector's element there, itself an array expression's (A(IV + 1)); each of
+// its values is checked by /CHECK=BOUNDS where it is used, the others once,
+// before the loops.
 func (n *arrayNest) element(leaf sema.Expr) sema.Expr {
 	info := n.leaves[leaf]
 	subs := make([]sema.Expr, len(info.dims))
+	inBounds := make([]bool, len(info.dims))
 
 	for i, d := range info.dims {
+		if d.vector != nil {
+			subs[i] = sema.Scalarize(d.vector, n.element, n.hoist)
+
+			continue
+		}
+
+		inBounds[i] = true
+
 		if !d.ranges {
 			subs[i] = d.fixed
 
@@ -462,7 +516,7 @@ func (n *arrayNest) element(leaf sema.Expr) sema.Expr {
 		subs[i] = sema.IntSum(sema.IntProduct(k, d.stride), d.base)
 	}
 
-	return sema.NewElem(info.sym, subs, true, leaf.Position())
+	return sema.NewElem(info.sym, subs, inBounds, leaf.Position())
 }
 
 // checkShapes compares, under /CHECK=BOUNDS, every leaf's extent in each
@@ -514,7 +568,10 @@ func (n *arrayNest) checkSubscripts() {
 		for i, d := range info.dims {
 			low, high := n.lowerBound(info.sym, i), n.checkedUpper(info.sym, i)
 
-			if !d.ranges {
+			switch {
+			case d.vector != nil:
+				continue
+			case !d.ranges:
 				n.check(inRange(n.l.expr(d.fixed), low, high))
 
 				continue

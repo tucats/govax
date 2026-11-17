@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 5 are done (2026-11-17), and subtask 6 is next.
+author's answers"); subtasks 2 to 6 are done (2026-11-17), and subtask 7 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -408,10 +408,12 @@ and FTNRTL do today.
    2026-11-17).
 5. **Overlap and temporaries** (findings 6 and 7, question 2), each answer
    held by a dump and a run (done 2026-11-17).
-6. **Vector subscripts** on either side, MANYONE (finding 13).
+6. **Vector subscripts** on either side (finding 13) (done 2026-11-17;
+   MANYONE moved to subtask 7, which makes the first constant vectors).
 7. **Constant arrays and constructors:** `ArrayConst`, array PARAMETERs,
    initialization, RESHAPE of constants and the constant inquiries,
-   constructors in expressions and assignment (finding 10).
+   constructors in expressions and assignment (finding 10); MANYONE for a
+   constant vector subscript with a value twice (finding 13).
 8. **Elemental intrinsics on arrays:** the class column for Table D-3's rows,
    MERGE (finding 9).
 9. **Reductions and inquiries**, with MASK= and constant DIM=, DOT_PRODUCT,
@@ -632,3 +634,30 @@ shapes in Phase 104.
   cases (now compiled, and the unknown size's NOTIMPL), `ir`'s
   `f90overlap.for`, and `testdata/fortran90`'s `overlap.f90`, worked by hand,
   run in all eight modes and the same on gfortran.
+- **2026-11-17, subtask 6:** Vector subscripts. `SectionSub` has a `Vector`
+  (an INTEGER array expression of rank one; `Triplet()` is now neither an index
+  nor a vector, `Ranges()` either a triplet or a vector), and `element` is now
+  `section`'s, which analyzes every subscript once with `arrayValue` and makes
+  an `Elem` when nothing ranges: a rank-1 subscript is a vector, its extent the
+  vector's, a higher rank VECTORRANK (new). A subscript with an error no longer
+  stops the others' analysis, as `subscripts` didn't. `subscriptValue` is now
+  only the record fields' (a vector there is Phase 105's). The sema dump shows
+  a vector as `<IV[]>`. In the scalarizer a leaf's dimension may be a
+  `vector`, and `prepareIn` prepares the vector's own arrays as leaves ranging
+  over the loop of the dimension the vector is in (`A(2, IV)`'s IV over the
+  nest's one loop; a vector of a vector maps through both); `element` makes the
+  subscript the vector's element there (`sema.Scalarize` of it), and
+  `leafExtent` takes a vector dimension's extent from the vector's shape.
+  `Elem.InBounds` is now per subscript (`Elem.Checked`): a vector's values
+  are each checked where they are used under `/CHECK=BOUNDS` (`inrange`), the
+  vector's own section once before the loops. Overlap: the same vector
+  subscript text on both sides is the same element (a many-one section may not
+  be assigned to), any other vector unknown; a vector subscript in the value
+  that reads the target's storage sends the value through a temporary
+  (`vectorsRead`), and one in the target that does (`IV(IV) = 1`, whose
+  subscripts would be read as the loops change them) is NOTIMPL. MANYONE needs
+  a constant vector, and there is none until subtask 7's constructors and array
+  PARAMETERs, so it moved there. Tests: `TestShapes`'s vector cases,
+  `TestArrayOrder`'s four, `ir`'s `f90vector.for` and `f90vecchk.for`,
+  `TestFortranCheck`'s VECTOR, and `testdata/fortran90`'s `vectors.f90`,
+  worked by hand, run in all eight modes and the same on gfortran.

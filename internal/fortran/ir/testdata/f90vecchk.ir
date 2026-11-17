@@ -1,0 +1,20 @@
+routine F90VCK main
+  cell  A       F  $LOCAL+0    array A, 40 bytes
+  cell  B       F  $LOCAL+40   array B, 12 bytes
+  cell  IV      L  $LOCAL+52   array IV, 20 bytes
+  cell  $I1     L  $LOCAL+72   an array statement's index
+  cell  $C1     L  $LOCAL+76   array (line 8), dimension 1's count
+  $LOCAL is 80 bytes
+B1:
+  ; line 8
+  assign $C1 = 3
+  assign $I1 = 1
+  jump B2
+B2:  ; array (line 8), dimension 1's body
+  assign B-4[$I1] = A-4[inrange(IV[$I1], 1, 10)]
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 9
+  return 1

@@ -751,6 +751,7 @@ var messages = map[string]kind{
 	"ZEROSTRIDE": {Error, "a subscript triplet's stride can't be zero"},
 	"NOSHAPE":    {Error, "the assumed-size array %s has no shape, so it can't be used as a whole here"},
 	"SECTIONEND": {Error, "a section of the assumed-size array %s needs an upper bound in its last dimension"},
+	"VECTORRANK": {Error, "a vector subscript must be an array of rank one, not rank %d"},
 
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.
 	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},

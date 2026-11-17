@@ -505,11 +505,16 @@ func DumpExpr(e Expr) string {
 	case *ArrayRef:
 		return e.Sym.Name + "[]"
 	case *Section:
-		// A[1:N:2, J], a bound taken from an adjustable array's own bounds
-		// shown as *.
+		// A[1:N:2, J, <IV[]>], a bound taken from an adjustable array's own
+		// bounds shown as *, a vector subscript in angle brackets.
 		subs := make([]string, len(e.Subs))
 		for i, s := range e.Subs {
-			if !s.Triplet() {
+			switch {
+			case s.Vector != nil:
+				subs[i] = "<" + DumpExpr(s.Vector) + ">"
+
+				continue
+			case !s.Triplet():
 				subs[i] = DumpExpr(s.Index)
 
 				continue

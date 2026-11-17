@@ -434,26 +434,10 @@ func constantInt(e Expr) (int, bool) {
 
 // element analyzes an array element, s(subscripts): one subscript per
 // dimension, each made INTEGER (a REAL one is truncated, section
-// 2.2.3.2).
+// 2.2.3.2). A list with a triplet or a vector subscript is an array section:
+// section analyzes both.
 func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
-	if hasTriplet(e.Args) {
-		return a.section(s, e)
-	}
-
-	if len(e.Args) != len(s.Dims) {
-		a.report("SUBSCRIPTS", e.Pos, e.Name, count(len(s.Dims), "subscript"), len(e.Args))
-
-		return a.bad(e.Pos)
-	}
-
-	subs, ok := a.subscripts(e.Pos, e.Args)
-	if !ok {
-		return a.bad(e.Pos)
-	}
-
-	a.checkConstantSubscripts(s, e.Name, s.Dims, subs)
-
-	return &Elem{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: subs}
+	return a.section(s, e)
 }
 
 // arithmetic makes e an arithmetic operand: a LOGICAL value is used as

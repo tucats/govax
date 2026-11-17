@@ -65,7 +65,7 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 
 	if c := l.adjustable[e.Sym]; c != nil && e.Subs != nil {
 		base = &Mem{Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}, T: Byte, Volatile: e.Sym.Volatile}
-		v, k := split(l.adjustableIndex(e.Subs, e.Sym, c, false))
+		v, k := split(l.adjustableIndex(e.Subs, e.Sym, c, nil))
 		offset += int(k) * e.Sym.Struct.Size
 
 		if v != nil {
