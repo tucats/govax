@@ -311,6 +311,11 @@ type (
 	}
 )
 
+// Quotes reports whether the FORMAT statement was written under /F90, where a
+// character constant in it may be between quotation marks
+// (internal/fortran/format's Options.Quotes).
+func (s *FormatStmt) Quotes() bool { return s.Source != nil && s.Source.F90 }
+
 // Qualifier is one qualifier of an OPTIONS statement, or one attribute of
 // a CDEC$ PSECT directive: its name as written (NOCHECK, G_FLOATING,
 // NOWRT) and its values, if it has any (CHECK=(BOUNDS,OVERFLOW) has two,

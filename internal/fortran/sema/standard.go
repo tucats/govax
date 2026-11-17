@@ -522,7 +522,7 @@ func (x *extensions) values(list []*ast.DataValue) {
 // format looks at a FORMAT statement's edit descriptors. A format with an error has
 // its message already, and nothing to look at.
 func (x *extensions) format(s *ast.FormatStmt) {
-	f, err := format.Parse(s.Text, format.Options{})
+	f, err := format.Parse(s.Text, format.Options{Quotes: s.Quotes()})
 	if err != nil {
 		return
 	}

@@ -4,7 +4,7 @@
 the same day, every recommendation taken ("The author's answers", after the
 questions). Subtask 1 (this survey and plan, the skeletal docs of Phases 100
 to 111, PLAN.md's rows, the Fortran 90 Handbook's text) is done, and so is
-subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), subtask 4 (Fortran 90's lexical items), and subtask 5 (the new statements recognized); subtask 6 is next. Needs the FORTRAN program (Phases
+subtask 2 (`/F90` and `/SOURCE_FORM`), subtask 3 (free source form), subtask 4 (Fortran 90's lexical items), subtask 5 (the new statements recognized), and subtask 6 (the Fortran 90 corpus and first light); subtask 7 is next. Needs the FORTRAN program (Phases
 74 to 86) and Phases 88 and 89 (indexed files; RECURSIVE, RESULT, and each
 activation's storage in its frame).
 
@@ -595,7 +595,7 @@ the work shows.
    README and `TestFortran90Programs` (every mode, Decision 16); first programs
    that are FORTRAN-77 in free form using Fortran 90's spellings (`==`, `"`,
    `!`, `;`, named END, `&`), and the gfortran witness extended to the new
-   corpus.
+   corpus (done 2026-11-17).
 7. **The close-out**: FORTRAN-INTERNALS.md's section 24 ("Fortran 90: two
    source forms and a bigger alphabet"), MANUAL.md's 14.13 begun (the
    qualifiers, free form), HELP, CLAUDE.md's overview, PLAN.md.
@@ -924,3 +924,48 @@ The author read the plan and accepted every recommendation:
     named ENDs compiled); `TestEveryKindParses` covers the new kinds. One
     old expectation changed: `REAL, AUTOMATIC :: A` is now NOTIMPL at its
     `::` (Phase 100), not a syntax error.
+- **2026-11-17, subtask 6 (done):** the Fortran 90 corpus and first light.
+  - **The corpus,** `testdata/fortran90/` (its README has a row per program):
+    `spellings`, `squares`, `strings`, `layout`, and `average` (with
+    `average.in`), FORTRAN-77 with DEC's END DO and DO WHILE in free form,
+    written with Fortran 90's spellings; and `modules/mixed`, a program of both
+    forms (two `.f90` files, a `.for`, and `limits.inc`, INCLUDEd by both and
+    written to read the same in either). Every expected output was worked by
+    hand first; where a run disagreed, twice, the hand-work was wrong
+    (`3 >= 4`, a reversed capital), never the compiler.
+  - **The harness:** `TestFortranPrograms`'s body is now `runFortranCorpus`
+    (any source's type goes to the volume with it, so a `.F90` is read in free
+    form), which `TestFortran90Programs` shares, in every mode the old corpus
+    runs (`/NOOPTIMIZE`, `/OPTIMIZE`, both `/RECURSIVE`, both paging modes:
+    `fortran90PagingPrograms` is all of them); `TestFortran90Modules` shares
+    `runFortranModules`, which now compiles `.F90` sources too. These are in
+    `internal/console` because each program is linked against FTNRTL and run on
+    the machine; they take under a second.
+  - **Found and fixed: quotation marks in a FORMAT statement.** Under `/F90` a
+    character constant in a FORMAT may be between quotation marks (the
+    standard's 10.2.1: the character string edit descriptor is a character
+    literal constant), which `format` refused (FMTSYNTAX). `format.Options.Quotes`
+    (set from `ast.FormatStmt.Quotes`, the statement's own `/F90`) reads them,
+    each doubled mark one character; `Item.Quote` and `Length` say which mark
+    and how much text; `format.Apostrophes` puts each such constant between
+    apostrophes, and sema's `encodeFormat` gives FTNRTL that text, after the
+    variable format expressions' numbers, so FTNRTL, which reads only
+    apostrophes as FORRTL does, is unchanged. Without `/F90` a `"` gives the
+    same message as before. A run-time format with a `"` (a constant or a
+    variable as the format) is still FTNRTL's SYNERRFOR: it can't know `/F90`,
+    so it is Phase 109's, whose doc now lists it. `/STANDARD` doesn't flag
+    quotation marks anywhere yet (Phase 110's `/STANDARD=F90`).
+  - **The witness:** `testdata/fortran/gfortran/compare.py` has a second table,
+    `PROGRAMS90`, built as written with `gfortran -std=f95` (each file in the
+    form its type says, INCLUDE files from the main file's directory, `name.in`
+    as input); all six print what their `.out` files say. gfortran found one
+    line of mine that wasn't Fortran 90: a name split by `&` with no `&` to take
+    it up on the next line, which the standard's 3.3.1.3.1 forbids and govax
+    reads as one name (subtask 3's choice, kept: the source pass can't tell a
+    split token); the program now continues between tokens there.
+  - **`TestNoF90Unchanged`** passes over `testdata/fortran90` (its `.for` files
+    are new); the old corpus's MACRO files still match the baseline.
+  - **Tests:** `format`'s `TestQuotes` (the mark, its doubling, the rewrite with
+    a Hollerith's `"` left alone, the errors), `sema`'s `TestFormatQuotes` (the
+    encoded text after a variable format expression; FMTSYNTAX without
+    `/F90`), and the two harnesses.

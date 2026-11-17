@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Run testdata/fortran's portable recursive programs on gfortran, and compare what they print
-with their .out files (docs/PHASE-89 - reentrant FORTRAN.md, subtask 11).
+"""Run testdata/fortran's portable recursive programs, and testdata/fortran90's programs, on
+gfortran, and compare what they print with their .out files (docs/planning/PHASE-89 - reentrant
+FORTRAN.md, subtask 11; docs/planning/PHASE-99 - Fortran 90.md, subtask 6 and Decision 16).
 
 The .out files are worked by hand from the language's rules, and govax is held to them by
 TestFortranPrograms and TestFortranModules. gfortran is a second opinion on the hand-worked
 outputs, never the reference: a line it prints differently is a question to look into, and the
 answers so far are in KNOWN below.
 
-    compare.py [--keep DIR] [program ...]      the programs below if none is named
+    compare.py [--keep DIR] [program ...]      every program below if none is named
 
 What's changed in gfortran's copy only says in its dialect what VAX FORTRAN says in its own:
 
@@ -16,6 +17,10 @@ What's changed in gfortran's copy only says in its dialect what VAX FORTRAN says
     argument list as a call (Fortran 90's rule for a scalar function, the phase's answer 2). In
     the unit, the name followed by ( is then a call and any other use the result variable.
   - OPTIONS /RECURSIVE is taken out, and every file compiled -frecursive.
+
+The Fortran 90 corpus (PROGRAMS90) is given to gfortran as it is, each file in the form its type
+says, with -std=f95: gfortran has no -std=f90, and the corpus keeps Fortran 95's additions out by
+review. Its programs read name.in, if there is one, as their input.
 
 What's normalized is only FORTRAN's carriage control: gfortran prints column 1 as text, and VMS
 acts on it; and the .out files' last line, SHOW SYMBOL's $STATUS.
@@ -32,7 +37,9 @@ import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 CORPUS = HERE.parent
+CORPUS90 = CORPUS.parent / "fortran90"
 FLAGS = "-std=legacy -fdec -frecursive -fno-range-check -w -O0".split()
+FLAGS90 = "-std=f95 -O0".split()
 
 # Each program: its source files, relative to testdata/fortran, the main one first.
 PROGRAMS = {
@@ -41,6 +48,17 @@ PROGRAMS = {
     "recurtree": ["recurtree.for"],
     "recurcalc": ["recurcalc.for"],
     "mutual": ["modules/mutual/mutual.for", "modules/mutual/fem.for", "modules/mutual/male.for"],
+}
+
+# The Fortran 90 corpus's programs: their files, relative to testdata/fortran90, the main one
+# first, its directory searched for INCLUDE files.
+PROGRAMS90 = {
+    "spellings": ["spellings.f90"],
+    "squares": ["squares.f90"],
+    "strings": ["strings.f90"],
+    "layout": ["layout.f90"],
+    "average": ["average.f90"],
+    "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.
@@ -108,10 +126,9 @@ def gfortran_copy(source):
     return with_results("\n".join(kept), len(kept) != len(lines))
 
 
-def expected(name, files):
-    """What the program prints, from its .out, less the $STATUS line."""
-    out = (CORPUS / files[0]).with_suffix(".out").read_text().splitlines()
-    return [line for line in out if not line.startswith("  $STATUS ==")]
+def expected(out):
+    """What the program prints, from its .out file, less the $STATUS line."""
+    return [line for line in out.read_text().splitlines() if not line.startswith("  $STATUS ==")]
 
 
 def printed(stdout):
@@ -120,25 +137,37 @@ def printed(stdout):
 
 
 def compare(name, work):
-    files = PROGRAMS[name]
+    """Builds one program on gfortran in work, runs it, and compares its output with the .out's."""
     work.mkdir()
-    sources = []
-    for i, file in enumerate(files):
-        target = work / f"{i}_{pathlib.Path(file).stem}.f"
-        target.write_text(gfortran_copy(CORPUS / file))
-        sources.append(target.name)
+    if name in PROGRAMS90:
+        files = PROGRAMS90[name]
+        main = CORPUS90 / files[0]
+        sources = [str(CORPUS90 / file) for file in files]
+        flags = [*FLAGS90, f"-I{main.parent}"]
+    else:
+        files = PROGRAMS[name]
+        main = CORPUS / files[0]
+        sources = []
+        for i, file in enumerate(files):
+            target = work / f"{i}_{pathlib.Path(file).stem}.f"
+            target.write_text(gfortran_copy(CORPUS / file))
+            sources.append(target.name)
+        flags = FLAGS
     env = dict(os.environ)
     if sys.platform == "darwin" and "SDKROOT" not in env:
         env["SDKROOT"] = subprocess.run(["xcrun", "--show-sdk-path"], capture_output=True, text=True,
                                         check=True).stdout.strip()
-    build = subprocess.run(["gfortran", *FLAGS, "-o", name, *sources], cwd=work, env=env,
+    build = subprocess.run(["gfortran", *flags, "-o", name, *sources], cwd=work, env=env,
                            capture_output=True, text=True)
     if build.returncode != 0:
         print(f"{name}: gfortran failed:\n{build.stderr}")
         return False
-    run = subprocess.run([str(work / name)], cwd=work, capture_output=True, text=True, timeout=60)
+    typed = main.with_suffix(".in")
+    stdin = typed.read_text() if typed.exists() else ""
+    run = subprocess.run([str(work / name)], cwd=work, input=stdin, capture_output=True, text=True,
+                         timeout=60)
     got = printed(run.stdout)
-    want = expected(name, files)
+    want = expected(main.with_suffix(".out"))
     known = KNOWN.get(name, {})
     want = [known.get(line, line) for line in want]
     if got == want:
@@ -152,7 +181,7 @@ def compare(name, work):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--keep", help="a directory to leave gfortran's copies and programs in")
-    parser.add_argument("programs", nargs="*", default=list(PROGRAMS))
+    parser.add_argument("programs", nargs="*", default=[*PROGRAMS, *PROGRAMS90])
     args = parser.parse_args()
     if shutil.which("gfortran") is None:
         sys.exit("no gfortran on the PATH")

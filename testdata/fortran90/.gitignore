@@ -1,0 +1,2 @@
+# The expected outputs are fixtures, not build output.
+!*.out

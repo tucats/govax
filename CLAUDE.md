@@ -1310,6 +1310,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `modules/` is programs of several files (Phase 76, subtask 8), a
   directory each, linked once per line of its `links.txt` and printing
   one output every time (`TestFortranModules`).
+- `testdata/fortran90/` — the Fortran 90 corpus (Phase 99, subtask 6;
+  README.md): free-form `name.f90` with `name.out` (and `name.in`), worked by
+  hand from the standard, run by `TestFortran90Programs` in every mode the old
+  corpus runs, and `modules/` by `TestFortran90Modules`; `testdata/fortran/
+  gfortran/compare.py`'s `PROGRAMS90` builds them with `gfortran -std=f95` as a
+  witness.
 - `testdata/for83/` — Phase 83's probe (README.md; `vax/` is VMS V7.1's run): `gen.go` writes `for83.mar`
   (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
   image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `for83e.mar` (what a handler can go on from, run on FORRTL over govax); `for83g.mar` (what's left of an unwound statement, on FORRTL over govax); `for83x.for`, `for83y.for`, and `for83t.for` (the same on FTNRTL, by hand); `decode.go` turns

@@ -212,3 +212,40 @@ func TestErrors(t *testing.T) {
 		t.Error("a run-time format's variable format expression was accepted")
 	}
 }
+
+// TestQuotes holds Options.Quotes (/F90): a character constant between
+// quotation marks, a doubled one inside it one character, and Apostrophes's
+// rewriting of the text for FTNRTL; without the option, the old message.
+func TestQuotes(t *testing.T) {
+	text := `(1X, "a ""b"" c's", 'd', 2(:, "e"), 3Hf"g)`
+
+	f, err := Parse(text, Options{Quotes: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	first := f.Items[1]
+	if first.Code != Text || first.Text != `a "b" c's` || first.Quote != '"' || first.Length != 14 {
+		t.Errorf("first constant: %+v", first)
+	}
+
+	want := `(1X, 'a "b" c''s', 'd', 2(:, 'e'), 3Hf"g)`
+	if got := Apostrophes(text, f); got != want {
+		t.Errorf("Apostrophes:\n%s\nwant\n%s", got, want)
+	}
+
+	if _, err := Parse(text, Options{}); err == nil || !strings.Contains(err.Error(), `"\"" is not an edit descriptor`) {
+		t.Errorf("without Quotes: %v", err)
+	}
+
+	for text, msg := range map[string]string{
+		`(1X, "abc)`:  "no closing quotation mark",
+		`(1X, 'abc)`:  "no closing apostrophe",
+		`(1X, 2"ab")`: "can't have a repeat count",
+		`(1X, "")`:    "at least one character",
+	} {
+		if _, err := Parse(text, Options{Quotes: true}); err == nil || !strings.Contains(err.Error(), msg) {
+			t.Errorf("%s: %v, want %q", text, err, msg)
+		}
+	}
+}

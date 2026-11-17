@@ -33,3 +33,29 @@ func TestUnitF90(t *testing.T) {
 		}
 	}
 }
+
+// TestFormatQuotes holds a FORMAT statement's character constants between
+// quotation marks to /F90 (Phase 99, subtask 6): accepted under it, and given
+// to FTNRTL between apostrophes, its own apostrophes doubled and its doubled
+// quotation marks made one, after a variable format expression's number;
+// without /F90 still FMTSYNTAX.
+func TestFormatQuotes(t *testing.T) {
+	format := `   10 FORMAT (1X, "N =", I<N>, " it's ""so""", 2('a', "b"))`
+
+	prog, messages := analyzeOpts(t, Options{}, "      OPTIONS /F90", "      PROGRAM P", "      N = 3",
+		"      WRITE (6, 10) N", format, "      END")
+	if len(messages) != 0 {
+		t.Fatalf("under /F90: messages %v", messages)
+	}
+
+	want := `(1X, 'N =', I<1>, ' it''s "so"', 2('a', 'b'))`
+	if got := prog.Units[0].Formats[10].Encoded; got != want {
+		t.Errorf("under /F90: encoded\n%s\nwant\n%s", got, want)
+	}
+
+	_, messages = analyzeOpts(t, Options{}, "      PROGRAM P", "      N = 3",
+		"      WRITE (6, 10) N", format, "      END")
+	if len(messages) != 1 || messages[0].Ident != "FMTSYNTAX" {
+		t.Errorf("without /F90: messages %v, want one FMTSYNTAX", messages)
+	}
+}

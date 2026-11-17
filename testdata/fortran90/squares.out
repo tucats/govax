@@ -1,0 +1,14 @@
+  n  n**2  n**3
+  1     1     1
+  2     4     8
+  3     9    27
+  4    16    64
+  5    25   125
+first square past 50:  8**2 =  64
+2 + 4 + ... + 10 =  30
+-1 is negative
+ 0 is zero
+ 1 is one
+ 2 is two or more
+sqrt(2) = 1.4142135624
+  $STATUS == "%X00000001"

@@ -1,0 +1,10 @@
+joined: [Fortran Ninety]
+length: 20
+Ninety starts at  9
+reversed: [yteniN nartroF]
+upper: [FORTRAN NINETY]
+vowels:  4
+ T T T F
+He said "it's"  3
+He said "it's"  4
+  $STATUS == "%X00000001"

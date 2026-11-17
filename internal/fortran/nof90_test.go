@@ -118,6 +118,10 @@ func noF90Sources(t *testing.T) []string {
 			return err
 		case d.IsDir() && d.Name() == "disks":
 			return filepath.SkipDir // local-only volumes and kits
+		case d.IsDir() && d.Name() == "fortran90":
+			// The Fortran 90 corpus (Phase 99, subtask 6), new with the
+			// program: its fixed-form files were never compiled before it.
+			return filepath.SkipDir
 		case !d.IsDir() && strings.EqualFold(filepath.Ext(path), ".for"):
 			paths = append(paths, path)
 		}

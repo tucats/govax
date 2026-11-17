@@ -93,6 +93,13 @@ type Item struct {
 	// one, or an H's.
 	Text string
 
+	// Quote is the mark a character constant is between: an apostrophe, or
+	// under Options.Quotes a quotation mark. Length is how many of the
+	// format's characters it takes from Offset, the blanks before it and both
+	// marks with them. An H's are 0.
+	Quote  byte
+	Length int
+
 	// Items are a group's.
 	Items []*Item
 
@@ -119,6 +126,14 @@ type Options struct {
 	// format expression and may have anything after its last parenthesis
 	// (VMS ignores it); a FORMAT statement may have only blanks there.
 	RunTime bool
+
+	// Quotes is set under /F90: a character constant may be between
+	// quotation marks too, a doubled one inside it one of its characters, as
+	// Fortran 90's character constants are (the standard's 10.2.1, where the
+	// character string edit descriptor is a character literal constant).
+	// VAX FORTRAN has no use for a quotation mark in a format, so nothing a
+	// format meant before changes.
+	Quotes bool
 }
 
 // Error is what's wrong with a format: Text, about the character at
@@ -277,19 +292,90 @@ func (p *parser) list(depth int) []*Item {
 			items = append(items, &Item{Code: map[byte]Code{'/': Slash, ':': Colon, '$': Dollar}[c], Offset: p.pos - 1})
 
 		case '\'':
-			items = append(items, &Item{Code: Text, Text: p.quoted(), Offset: start})
+			items = append(items, p.constant(c, start))
+			apart = false
+
+		case '"':
+			// Without /F90 a quotation mark is no item's start, and the
+			// default case says what's wrong as it always has.
+			if !p.opts.Quotes {
+				p.pos = start
+				p.unexpected(&items, &apart, depth)
+
+				continue
+			}
+
+			items = append(items, p.constant(c, start))
 			apart = false
 
 		default:
-			if apart && !p.atHollerith() {
-				p.fail(p.pos, "a comma is needed between two edit descriptors")
-			}
-
-			item, free := p.item(depth)
-			items = append(items, item)
-			apart = !free
+			p.unexpected(&items, &apart, depth)
 		}
 	}
+}
+
+// unexpected reads an item that starts with none of the characters list
+// looks for: an edit descriptor or a group, which needs a comma before it
+// if the item before needs one after it (apart).
+func (p *parser) unexpected(items *[]*Item, apart *bool, depth int) {
+	if *apart && !p.atHollerith() {
+		p.fail(p.pos, "a comma is needed between two edit descriptors")
+	}
+
+	item, free := p.item(depth)
+	*items = append(*items, item)
+	*apart = !free
+}
+
+// constant reads a character constant between quote marks, starting at
+// start, as an item.
+func (p *parser) constant(quote byte, start int) *Item {
+	text := p.quoted(quote)
+
+	return &Item{Code: Text, Text: text, Quote: quote, Length: p.pos - start, Offset: start}
+}
+
+// markNames name the marks a character constant may be between.
+var markNames = map[byte]string{'\'': "apostrophe", '"': "quotation mark"}
+
+// Apostrophes is a format's text with each character constant between
+// quotation marks put between apostrophes, its apostrophes doubled and its
+// doubled quotation marks made one: FTNRTL, like VMS's FORRTL, reads only
+// apostrophes, so a FORMAT written under /F90 is given to it this way.
+// Nothing else changes, so offsets before the first such constant hold.
+func Apostrophes(text string, f *Format) string {
+	var quoted []*Item
+
+	var walk func(items []*Item)
+	walk = func(items []*Item) {
+		for _, item := range items {
+			if item.Code == Text && item.Quote == '"' {
+				quoted = append(quoted, item)
+			}
+
+			walk(item.Items)
+		}
+	}
+
+	walk(f.Items)
+
+	var b strings.Builder
+
+	at := 0
+
+	for _, item := range quoted {
+		// The item starts with the blanks before its mark (Offset), which
+		// stay.
+		mark := item.Offset + strings.IndexByte(text[item.Offset:], '"')
+
+		b.WriteString(text[at:mark])
+		b.WriteString("'" + strings.ReplaceAll(item.Text, "'", "''") + "'")
+		at = item.Offset + item.Length
+	}
+
+	b.WriteString(text[at:])
+
+	return b.String()
 }
 
 // atHollerith reports whether an H constant starts at pos: digits, then
@@ -303,9 +389,9 @@ func (p *parser) atHollerith() bool {
 	return n.Set && p.next() == 'H'
 }
 
-// quoted reads a character constant, from its opening apostrophe: its
-// text, with each doubled apostrophe one.
-func (p *parser) quoted() string {
+// quoted reads a character constant, from its opening mark, quote (an
+// apostrophe or a quotation mark): its text, with each doubled mark one.
+func (p *parser) quoted(quote byte) string {
 	start := p.pos
 	p.pos++
 
@@ -313,20 +399,20 @@ func (p *parser) quoted() string {
 
 	for {
 		if p.pos >= len(p.text) {
-			p.fail(start, "the character constant has no closing apostrophe")
+			p.fail(start, "the character constant has no closing %s", markNames[quote])
 		}
 
 		c := p.text[p.pos]
 		p.pos++
 
-		if c != '\'' {
+		if c != quote {
 			b.WriteByte(c)
 
 			continue
 		}
 
-		if p.pos < len(p.text) && p.text[p.pos] == '\'' {
-			b.WriteByte('\'')
+		if p.pos < len(p.text) && p.text[p.pos] == quote {
+			b.WriteByte(quote)
 			p.pos++
 
 			continue
@@ -422,6 +508,11 @@ func (p *parser) item(depth int) (item *Item, free bool) {
 
 	case '\'':
 		p.fail(start, "a character constant can't have a repeat count")
+
+	case '"':
+		if p.opts.Quotes {
+			p.fail(start, "a character constant can't have a repeat count")
+		}
 	}
 
 	code, ok := p.code()

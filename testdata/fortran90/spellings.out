@@ -1,0 +1,11 @@
+ T F T T F F
+ T F T T F F
+    5   15   31    7
+it's|say "hi"|say "hi"|it's
+continued
+ 1234
+  403
+not ! a comment|not & continued
+ T F T T
+twice 21 is  42
+  $STATUS == "%X00000001"

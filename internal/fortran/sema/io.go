@@ -156,7 +156,7 @@ func (a *analyzer) formatStatement(s *ast.FormatStmt) {
 		return
 	}
 
-	f, err := format.Parse(s.Text, format.Options{})
+	f, err := format.Parse(s.Text, format.Options{Quotes: s.Quotes()})
 
 	var e *format.Error
 	if errors.As(err, &e) {
@@ -169,7 +169,28 @@ func (a *analyzer) formatStatement(s *ast.FormatStmt) {
 		a.unit.Formats = map[int]*Format{}
 	}
 
-	a.unit.Formats[s.Label] = &Format{Label: s.Label, Text: s.Text, Encoded: encodeVFEs(s.Text, f), Parsed: f, AST: s}
+	a.unit.Formats[s.Label] = &Format{Label: s.Label, Text: s.Text, Encoded: encodeFormat(s, f), Parsed: f, AST: s}
+}
+
+// encodeFormat is the text FTNRTL gets for a FORMAT statement: its variable
+// format expressions numbered (encodeVFEs), and under /F90 each character
+// constant between quotation marks put between apostrophes, the only marks
+// FTNRTL reads (format.Apostrophes). The second step reads the first's text
+// again, since numbering the expressions moved what follows them.
+func encodeFormat(s *ast.FormatStmt, f *format.Format) string {
+	encoded := encodeVFEs(s.Text, f)
+	if !s.Quotes() || !strings.Contains(encoded, `"`) {
+		return encoded
+	}
+
+	again, err := format.Parse(encoded, format.Options{Quotes: true})
+	if err != nil {
+		// The numbers stand where expressions stood, so the text reads as
+		// the statement's did; this is only a guard.
+		return encoded
+	}
+
+	return format.Apostrophes(encoded, again)
 }
 
 // encodeVFEs is a format's text with each variable format expression

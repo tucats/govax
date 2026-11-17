@@ -134,7 +134,37 @@ func TestFortranPrograms(t *testing.T) {
 		t.Fatalf("no kernels in %s (%v)", fortranKernels, err)
 	}
 
-	sources = append(sources, kernels...)
+	runFortranCorpus(t, append(sources, kernels...), fortranPagingPrograms)
+}
+
+// fortran90Programs is the Fortran 90 corpus (docs/planning/PHASE-99 - Fortran
+// 90.md, Decision 16): free-form name.f90 files with their name.out, and name.in
+// for one that reads the terminal, as testdata/fortran's.
+var fortran90Programs = filepath.Join("..", "..", "testdata", "fortran90")
+
+// fortran90PagingPrograms are the Fortran 90 programs also run with paging on.
+var fortran90PagingPrograms = []string{"average", "layout", "spellings", "squares", "strings"}
+
+// TestFortran90Programs runs the Fortran 90 corpus as TestFortranPrograms runs
+// the old one, in every mode: FORTRAN finds each NAME.F90 on the volume and reads
+// it in free form, with /F90, by its type. It needs the console, as the old
+// corpus's harness does, because each program is assembled, linked against
+// FTNRTL, and run on the machine.
+func TestFortran90Programs(t *testing.T) {
+	sources, err := filepath.Glob(filepath.Join(fortran90Programs, "*.f90"))
+	if err != nil || len(sources) == 0 {
+		t.Fatalf("no programs in %s (%v)", fortran90Programs, err)
+	}
+
+	runFortranCorpus(t, sources, fortran90PagingPrograms)
+}
+
+// runFortranCorpus compiles, assembles, links, and runs each source (a .for or
+// .f90 file), with paging off and on (for pagingPrograms), in optimizerModes and
+// recursiveModes, and holds what each prints to its .out file and to what it
+// printed the other ways.
+func runFortranCorpus(t *testing.T, sources, pagingPrograms []string) {
+	t.Helper()
 
 	eachLoader(t, func(t *testing.T, paging bool) {
 		printed := map[string]string{}
@@ -149,8 +179,13 @@ func TestFortranPrograms(t *testing.T) {
 				d, c, buf := shareFindConsole(t, paging)
 
 				for _, source := range sources {
-					name := strings.TrimSuffix(filepath.Base(source), ".for")
-					if paging && !slices.Contains(fortranPagingPrograms, name) {
+					// The file's type goes to the volume with it: FORTRAN
+					// reads a .F90 file in free form.
+					ext := filepath.Ext(source)
+					base := strings.TrimSuffix(source, ext)
+
+					name := filepath.Base(base)
+					if paging && !slices.Contains(pagingPrograms, name) {
 						continue
 					}
 
@@ -160,7 +195,7 @@ func TestFortranPrograms(t *testing.T) {
 							t.Fatal(err)
 						}
 
-						want, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".out")
+						want, err := os.ReadFile(base + ".out")
 						if err != nil && (filepath.Dir(source) != fortranKernels || !os.IsNotExist(err)) {
 							t.Fatal(err)
 						}
@@ -170,7 +205,7 @@ func TestFortranPrograms(t *testing.T) {
 						upper := strings.ToUpper(name)
 						deleteFilesAfter(t, d, upper)
 
-						if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper + ".FOR"},
+						if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper + strings.ToUpper(ext)},
 							rms.TextRecords, splitSource(string(text))); err != nil {
 							t.Fatal(err)
 						}
@@ -185,7 +220,7 @@ func TestFortranPrograms(t *testing.T) {
 							}
 						}
 
-						input, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".in")
+						input, err := os.ReadFile(base + ".in")
 						if err != nil && !os.IsNotExist(err) {
 							t.Fatal(err)
 						}
@@ -250,7 +285,7 @@ func deleteFilesAfter(t *testing.T, d *Dispatcher, name string) {
 }
 
 // TestFortranModules is the harness for programs of several files, each
-// directory of testdata/fortran/modules one program: its .FOR files are
+// directory of testdata/fortran/modules one program: its .FOR (and .F90) files are
 // compiled and assembled separately, and any other file (an INCLUDE file) is
 // only copied to the volume. links.txt has a LINK command's modules on each
 // line, and the program, named for its directory, must print name.out however
@@ -262,6 +297,25 @@ func TestFortranModules(t *testing.T) {
 	if err != nil || len(programs) == 0 {
 		t.Fatalf("no programs in %s (%v)", fortranPrograms, err)
 	}
+
+	runFortranModules(t, programs)
+}
+
+// TestFortran90Modules is TestFortranModules for the Fortran 90 corpus's
+// programs of several files, whose sources may be of either form (.f90 or .for).
+func TestFortran90Modules(t *testing.T) {
+	programs, err := filepath.Glob(filepath.Join(fortran90Programs, "modules", "*"))
+	if err != nil || len(programs) == 0 {
+		t.Fatalf("no programs in %s (%v)", fortran90Programs, err)
+	}
+
+	runFortranModules(t, programs)
+}
+
+// runFortranModules runs programs, each a directory, in both paging modes and
+// every way FORTRAN compiles them.
+func runFortranModules(t *testing.T, programs []string) {
+	t.Helper()
 
 	eachLoader(t, func(t *testing.T, paging bool) {
 		for _, mode := range append(optimizerModes, recursiveModes...) {
@@ -318,8 +372,10 @@ func fortranModules(t *testing.T, programs []string, paging bool, qualifier stri
 					t.Fatal(err)
 				}
 
-				if strings.HasSuffix(upper, ".FOR") {
-					sources = append(sources, strings.TrimSuffix(upper, ".FOR"))
+				// A source of either form; FORTRAN finds NAME.FOR or
+				// NAME.F90, and reads the second in free form.
+				if ext := filepath.Ext(upper); ext == ".FOR" || ext == ".F90" {
+					sources = append(sources, strings.TrimSuffix(upper, ext))
 				}
 			}
 
