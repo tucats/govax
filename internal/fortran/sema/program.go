@@ -128,7 +128,8 @@ type Unit struct {
 	Structures []*Structure
 	structs    map[string]*Structure
 
-	byName map[string]*Symbol
+	// scope is the unit's own names (scope.go), the names in Symbols.
+	scope *scope
 
 	// others and labelRefs are the mentions of the names that have no Symbol, and
 	// of the statement labels (crossref.go).
@@ -147,7 +148,7 @@ type Unit struct {
 // Lookup returns the symbol named name, or nil if the unit never uses
 // that name.
 func (u *Unit) Lookup(name string) *Symbol {
-	return u.byName[name]
+	return u.scope.find(name)
 }
 
 // Class is what a name names, decided by how the unit declares and uses

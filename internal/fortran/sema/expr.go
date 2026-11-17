@@ -175,7 +175,7 @@ func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
 // the unit hasn't classified that names one of FORTRAN's intrinsic
 // functions is that function (intrinsicRef).
 func (a *analyzer) apply(e *ast.Apply) Expr {
-	s := a.unit.byName[e.Name]
+	s := a.scope.find(e.Name)
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
 		if _, ok := constFuncs[e.Name]; ok {
@@ -265,7 +265,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 
 	switch n := e.X.(type) {
 	case *ast.Name:
-		if s := a.unit.byName[n.Name]; s != nil && s.Class == Constant {
+		if s := a.scope.find(n.Name); s != nil && s.Class == Constant {
 			if !s.broken {
 				a.badUse(s, n.Pos, "have a substring")
 			}

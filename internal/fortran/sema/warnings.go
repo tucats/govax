@@ -25,7 +25,7 @@ func needsType(s *Symbol) bool {
 // letter's type. An old-form PARAMETER's name has its value's type, not a first letter's.
 // A text library's name isn't the program's to declare.
 func (a *analyzer) undeclared() {
-	if !a.warnings.Declarations || a.implicit.none {
+	if !a.warnings.Declarations || a.scope.rules().none {
 		return
 	}
 

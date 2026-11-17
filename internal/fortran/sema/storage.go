@@ -211,7 +211,7 @@ func (a *analyzer) volatiles() {
 // group can't be named (the HP manual's 5.19), nor a constant, which has no
 // storage.
 func (a *analyzer) volatileName(item *ast.AttrItem) {
-	if a.unit.byName[item.Name] == nil && a.unit.namelists[item.Name] != nil {
+	if a.scope.find(item.Name) == nil && a.unit.namelists[item.Name] != nil {
 		a.report("VOLATILEGROUP", item.Pos, item.Name)
 
 		return

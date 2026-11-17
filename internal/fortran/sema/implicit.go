@@ -69,7 +69,7 @@ func (r *implicitRules) typeOf(name string) (t Type, untyped bool) {
 // another IMPLICIT statement is IMPLNONE. A rule whose type has an error
 // leaves its letters their default types.
 func (a *analyzer) implicits(body []ast.Stmt) {
-	r := a.implicit
+	r := a.scope.rules()
 
 	var other ast.Stmt // an IMPLICIT statement other than IMPLICIT NONE
 
@@ -122,7 +122,7 @@ func (a *analyzer) rejectImplicit(s *ast.ImplicitStmt, what string, line int) {
 // implicitLetters gives the letters l names the type t (if ok: its type
 // had no error), for the IMPLICIT statement on line.
 func (a *analyzer) implicitLetters(t Type, ok bool, l ast.LetterRange, line int) {
-	r := a.implicit
+	r := a.scope.rules()
 
 	for c := l.First; c <= l.Last; c++ {
 		if earlier := r.lines[c-'A']; earlier != 0 {

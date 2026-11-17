@@ -188,7 +188,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 			return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: v}, nil
 		}
 
-		s := ev.a.unit.byName[e.Name]
+		s := ev.a.scope.find(e.Name)
 
 		if s != nil {
 			ev.a.note(&s.refs, e.Pos, RefUsed)

@@ -389,7 +389,7 @@ func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool)
 		// declared EXTERNAL (or a dummy procedure, passed on).
 		if n, isName := spec.Value.(*ast.Name); isName {
 			if p, isProc := a.nameArg(n).(*Procedure); isProc && (p.Routine != "" || p.Dummy != nil) {
-				if s := a.unit.byName[n.Name]; s != nil && s.Class != Intrinsic {
+				if s := a.scope.find(n.Name); s != nil && s.Class != Intrinsic {
 					key.Proc = p
 
 					return key, true

@@ -64,7 +64,7 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 	// unit declared: an array (then it's an element), a variable, a
 	// dummy argument. A name only mentioned so far (Unclassified) may
 	// still be an intrinsic function's.
-	if s := ev.a.unit.byName[e.Name]; s != nil && s.Class != Intrinsic && (s.Class != Unclassified || s.Dummy != 0) {
+	if s := ev.a.scope.find(e.Name); s != nil && s.Class != Intrinsic && (s.Class != Unclassified || s.Dummy != 0) {
 		if s.Class == Array {
 			return nil, named("the array element "+e.Name+"(...) is not a constant", e.Pos)
 		}

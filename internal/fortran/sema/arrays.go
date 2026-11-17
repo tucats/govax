@@ -311,7 +311,7 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 	}
 
 	for _, n := range adj.names {
-		if s := a.unit.byName[n.Name]; s.Dummy != 0 {
+		if s := a.scope.find(n.Name); s.Dummy != 0 {
 			adj.sym.BoundDummies = append(adj.sym.BoundDummies, s)
 		}
 	}
@@ -321,7 +321,7 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 // argument or a variable in a common block (section 6.1.1.1), of a type
 // that converts to INTEGER.
 func (a *analyzer) checkBoundName(n *ast.Name) bool {
-	s := a.unit.byName[n.Name]
+	s := a.scope.find(n.Name)
 
 	switch {
 	case s.broken:

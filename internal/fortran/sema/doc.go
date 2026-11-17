@@ -38,7 +38,12 @@
 // CHARACTER*n, ...), and DIMENSION. Every name the unit uses gets a
 // Symbol, with its type (declared, or implicit from its first letter),
 // its dimensions if it is an array, and its position among the dummy
-// arguments if it is one.
+// arguments if it is one. The symbols are kept in the unit's scope
+// (scope.go), a table of names with a host to look in for a name it
+// lacks: a program unit has no host yet (Fortran 90's internal procedures
+// will), and a statement function's definition is a scope whose host is
+// the unit's.
+//
 // What a name *is* (its Class) comes from how it is used, since FORTRAN
 // has no declaration for most of that: REAL F declares only a type, and
 // F becomes a variable when the unit uses F alone, or an external

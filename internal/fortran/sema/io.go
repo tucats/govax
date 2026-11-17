@@ -544,7 +544,7 @@ func (a *analyzer) keySpecs(io *IO, s *ast.TransferStmt) (rest []*ast.IOSpec, ke
 // reported, if it is none.
 func (a *analyzer) keyValue(spec *ast.IOSpec) Expr {
 	if n, isName := spec.Value.(*ast.Name); isName {
-		if s := a.unit.byName[n.Name]; s != nil && len(s.Dims) > 0 && s.Type.Kind == Logical && s.Type.Size == 1 {
+		if s := a.scope.find(n.Name); s != nil && len(s.Dims) > 0 && s.Type.Kind == Logical && s.Type.Size == 1 {
 			if s.AssumedSize() {
 				a.report("NOSIZE", spec.Pos, s.Name)
 
@@ -750,7 +750,7 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 	switch e := e.(type) {
 	case *ast.Name:
-		if s := a.unit.byName[e.Name]; s != nil && (s.Class == Constant || s.External || s.Class == Intrinsic ||
+		if s := a.scope.find(e.Name); s != nil && (s.Class == Constant || s.External || s.Class == Intrinsic ||
 			s.Class == Function || s.Class == Subroutine || s.Class == StmtFunction || s.Class == UnitName) {
 			return nil
 		}
@@ -766,7 +766,7 @@ func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 		}
 
 	case *ast.Apply:
-		if s := a.unit.byName[e.Name]; s == nil || s.Class != Array {
+		if s := a.scope.find(e.Name); s == nil || s.Class != Array {
 			return nil
 		}
 

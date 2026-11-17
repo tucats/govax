@@ -67,7 +67,7 @@ func (a *analyzer) libraryExternal(item *ast.AttrItem) bool {
 		return false
 	}
 
-	s := a.unit.byName[item.Name]
+	s := a.scope.find(item.Name)
 
 	return s == nil || s.Dummy == 0
 }

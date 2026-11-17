@@ -611,7 +611,7 @@ func (a *analyzer) quietMatchLoop() *construct {
 func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 	var v *Var
 
-	if s := a.unit.byName[n.Name]; s != nil && (s.Class == Constant || s.Struct != nil) && !s.broken {
+	if s := a.scope.find(n.Name); s != nil && (s.Class == Constant || s.Struct != nil) && !s.broken {
 		a.badUse(s, n.Pos, "be a DO loop's variable")
 
 		return nil

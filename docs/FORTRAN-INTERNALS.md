@@ -1467,8 +1467,10 @@ statement from running it, since falling in isn't entering.
 stands, so the compiler has only to answer what X means while the definition's
 expression is lowered. The dummy argument's name belongs to the definition:
 X may be an array elsewhere in the unit and gives this X only its type. So
-sema makes X a symbol of its own, in none of the unit's lists, standing in the
-unit's table only while the expression is analyzed (`sema/stmtfunc.go`).
+sema makes X a symbol of its own, in none of the unit's lists: the definition
+is a scope of its own (`sema/scope.go`) whose only names are its dummy
+arguments and whose host is the unit's, so every other name in the expression
+is the unit's (`sema/stmtfunc.go`).
 
 Lowering (`ir/lowerstmtfunc.go`) then gives each such symbol a place in
 `lowerer.bound`, where `symbolMem` looks first, and lowers the same expression

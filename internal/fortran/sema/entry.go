@@ -170,7 +170,7 @@ func (a *analyzer) entryPoint(s *ast.EntryStmt) {
 	}
 
 	e.Sym.laterEntry = nil
-	a.unit.byName[e.Name].laterEntry = nil // the name, if RESULT names the value
+	a.scope.find(e.Name).laterEntry = nil // the name, if RESULT names the value
 
 	for _, p := range e.Params {
 		if p.laterEntry == s {

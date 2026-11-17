@@ -231,7 +231,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 	switch e := e.(type) {
 	case *ast.Name:
-		if s := a.unit.byName[e.Name]; s != nil && s.Class == Constant {
+		if s := a.scope.find(e.Name); s != nil && s.Class == Constant {
 			if !s.broken {
 				a.badUse(s, e.Pos, "be assigned a value")
 			}
@@ -239,7 +239,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 			return nil
 		}
 
-		if s := a.unit.byName[e.Name]; s != nil && !s.broken && (s.External || s.Class == Intrinsic) {
+		if s := a.scope.find(e.Name); s != nil && !s.broken && (s.External || s.Class == Intrinsic) {
 			a.badUse(s, e.Pos, "be assigned a value")
 
 			return nil
@@ -262,7 +262,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 	case *ast.Apply:
 		// After the first executable statement, F(X) = ... can only be
 		// an assignment to an array element.
-		s := a.unit.byName[e.Name]
+		s := a.scope.find(e.Name)
 		if s != nil && s.broken {
 			return nil
 		}
@@ -313,7 +313,7 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	list, targets, places := altReturns(s.Args)
 	a.jumps(targets, path)
 
-	sym := a.unit.byName[s.Name]
+	sym := a.scope.find(s.Name)
 
 	if sym == nil || (sym.Class == Unclassified && sym.Dummy == 0) {
 		// A system subroutine, unless the file has one of its own.

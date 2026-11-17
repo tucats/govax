@@ -104,7 +104,7 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		return false
 	}
 
-	if sym := a.unit.byName[ap.Name]; sym != nil && (sym.Class == Array || sym.Dummy != 0) {
+	if sym := a.scope.find(ap.Name); sym != nil && (sym.Class == Array || sym.Dummy != 0) {
 		return false
 	}
 

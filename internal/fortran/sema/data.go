@@ -591,11 +591,11 @@ func (a *analyzer) dataImpliedDo(e *ast.ImpliedDo, vars map[string]int32, vals *
 // INTEGER type: its declaration's, or its first letter's. A constant, or an
 // array, can't be one.
 func (a *analyzer) integerName(name string) bool {
-	if s := a.unit.byName[name]; s != nil {
+	if s := a.scope.find(name); s != nil {
 		return s.Type.Kind == Integer && s.Class != Constant && s.Class != Array
 	}
 
-	t, _ := a.implicit.typeOf(name)
+	t, _ := a.scope.rules().typeOf(name)
 
 	return t.Kind == Integer
 }

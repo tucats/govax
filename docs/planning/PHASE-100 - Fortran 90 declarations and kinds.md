@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and questions for the author), is done (2026-11-17), every recommendation
-accepted by the author ("The author's answers"); subtask 2 is next. Needs
+accepted by the author ("The author's answers"); subtask 2, the scope
+chain, is done (2026-11-17); subtask 3 is next. Needs
 Phase 99.
 
 ## Goal
@@ -284,7 +285,8 @@ and 7), and COMPLEX(16) by question 1's answer.
 1. **Survey** (this Part A) (done 2026-11-17; accepted by the author the
    same day).
 2. **The scope chain** in sema (finding 13): a refactoring, no change in what
-   is compiled; every old test passes and `TestNoF90Unchanged` holds.
+   is compiled; every old test passes and `TestNoF90Unchanged` holds (done
+   2026-11-17).
 3. **`::` declarations and attributes:** the parser's entity lists and
    attribute specs, the attribute statements in both forms, sema's attribute
    table (finding 11), `= initialization` through `data.go` with scalars
@@ -366,3 +368,20 @@ The author accepted every recommendation:
 - **2026-11-17:** The author reviewed the survey and accepted every
   recommendation ("The author's answers"). Subtask 1 is done; subtask 2, the
   scope chain, is next.
+- **2026-11-17, subtask 2 (done):** the scope chain. `sema/scope.go`'s
+  `scope` holds a scoping unit's names (`byName`), the list it keeps them
+  in (a unit's is `Unit.Symbols`), its implicit rules, and its `host`;
+  `find` looks a name up the chain and enters nothing (the 33 reads of
+  `a.unit.byName` became `a.scope.find`), `enter` puts a new name in the
+  nearest scope that keeps a list, `define` makes a name a scope's own, and
+  `rules` is the nearest implicit rules (the analyzer's `implicit` field is
+  gone). `Unit.byName` became `Unit.scope`, `Unit.Lookup` its `find`; the
+  analyzer's `scope` is the one being read. A statement function's
+  definition is now a scope of its own (`newInnerScope`, host the unit's),
+  replacing the swap of its dummies into and out of the unit's table; each
+  dummy is defined as it is read, so a name given twice finds the first, as
+  the swap did. COMMON blocks, namelists, and structures stay the unit's.
+  Nothing compiled changed: the `internal/fortran` packages (golden dumps,
+  `TestNoF90Unchanged`), `dclcmd`, and the console's FORTRAN, Fortran 90, and
+  DUNGEON tests pass; `TestScopeChain` checks the chain itself. sema's
+  `doc.go` and FORTRAN-INTERNALS.md's statement function section say so.

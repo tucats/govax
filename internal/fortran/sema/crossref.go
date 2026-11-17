@@ -124,7 +124,7 @@ func (a *analyzer) noteOther(what, name string, pos diag.Position, kind RefKind)
 func (a *analyzer) noteIntrinsic(name string, pos diag.Position) {
 	a.extensions.intrinsic(name, pos)
 
-	if s := a.unit.byName[name]; s != nil {
+	if s := a.scope.find(name); s != nil {
 		a.note(&s.refs, pos, RefUsed)
 	} else {
 		a.noteOther(whatIntrinsic, name, pos, RefUsed)
@@ -135,7 +135,7 @@ func (a *analyzer) noteIntrinsic(name string, pos diag.Position) {
 // if the unit has declared it (REAL RAN), so that the name counts as used, or of
 // the routine.
 func (a *analyzer) noteSystem(name string, pos diag.Position) {
-	if s := a.unit.byName[name]; s != nil {
+	if s := a.scope.find(name); s != nil {
 		a.note(&s.refs, pos, RefUsed)
 	} else {
 		a.noteOther(whatSystem, name, pos, RefUsed)

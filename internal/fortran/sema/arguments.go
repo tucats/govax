@@ -88,7 +88,7 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 // (section 6.1.1, an EXTERNAL or INTRINSIC name, or a dummy procedure passed
 // on), or what name makes it.
 func (a *analyzer) nameArg(n *ast.Name) Expr {
-	s := a.unit.byName[n.Name]
+	s := a.scope.find(n.Name)
 
 	if s != nil {
 		a.note(&s.refs, n.Pos, RefUsed)

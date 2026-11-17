@@ -98,7 +98,6 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			units:          units,
 			stmtFuncs:      map[ast.Stmt]*Symbol{},
 			entryOf:        map[*ast.EntryStmt]*Entry{},
-			implicit:       defaultImplicit(defaultInt),
 			rejected:       map[ast.Stmt]bool{},
 			pendingOpen:    map[lex.Kind]int{},
 			boundVars:      map[*Symbol]diag.Position{},
@@ -386,9 +385,12 @@ type analyzer struct {
 	// gFloating is set when the unit's REAL*8 is G_floating (format).
 	gFloating bool
 
-	// implicit are the unit's letters' types (implicit.go), and
-	// rejected the IMPLICIT statements left out of them.
-	implicit *implicitRules
+	// scope is the scope the names being read are in (scope.go): the unit's,
+	// or while a statement function's definition is read, its own.
+	scope *scope
+
+	// rejected are the IMPLICIT statements left out of the unit's implicit
+	// rules (implicit.go).
 	rejected map[ast.Stmt]bool
 
 	// group is the group of Figure 1-1 the unit's statements have
@@ -491,19 +493,19 @@ type routineRef struct {
 // analyzeUnit analyzes one unit.
 func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	u := &Unit{
-		AST:    au,
-		Kind:   au.Kind(),
-		Name:   name,
-		Labels: map[int]*Label{},
-		byName: map[string]*Symbol{},
-
+		AST:     au,
+		Kind:    au.Kind(),
+		Name:    name,
+		Labels:  map[int]*Label{},
 		structs: map[string]*Structure{},
 
 		GFloating: a.gFloating,
 		NoF77:     a.noF77,
 		F90:       a.f90,
 	}
+	u.scope = newUnitScope(&u.Symbols, defaultImplicit(a.defaultInt))
 	a.unit = u
+	a.scope = u.scope
 
 	if fu := a.units[name]; fu != nil && fu.unit == nil && fu.kind == u.Kind {
 		fu.unit = u
@@ -643,7 +645,7 @@ func (a *analyzer) addDummy(s *Symbol) {
 // type, if the unit hasn't used the name before; pos is where it is
 // used, which is its first appearance if it is new.
 func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
-	if s := a.unit.byName[name]; s != nil {
+	if s := a.scope.find(name); s != nil {
 		if a.walking {
 			a.usedBeforeEntry(s, pos)
 		}
@@ -653,10 +655,9 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 		return s
 	}
 
-	t, untyped := a.implicit.typeOf(name)
+	t, untyped := a.scope.rules().typeOf(name)
 	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary, included: a.inInclude}
-	a.unit.byName[name] = s
-	a.unit.Symbols = append(a.unit.Symbols, s)
+	a.scope.enter(s)
 	a.note(&s.refs, pos, RefUsed)
 
 	return s

@@ -13,9 +13,10 @@ import (
 //
 // The dummy arguments belong to the definition alone: X is a new name there,
 // taking only its type from the entity the unit calls X, which may be an array
-// or a COMMON variable, and it has no storage. So while the definition's
-// expression is analyzed each dummy argument's symbol stands in the unit's
-// table in place of whatever has its name, and is taken out again after.
+// or a COMMON variable, and it has no storage. So the definition is a scope of
+// its own (scope.go), whose host is the unit's: the dummy arguments are its
+// names, and every other name in the expression is found in, or entered in,
+// the unit's (the Fortran 90 standard's 12.5.4 describes it so).
 
 // StmtFuncDef is a statement function's definition: its symbol, its dummy
 // arguments (symbols of their own, in none of the unit's tables), and its
@@ -32,33 +33,27 @@ type StmtFuncDef struct {
 // messages of their own.
 func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 	def := &StmtFuncDef{Sym: sym}
-	saved := map[string]*Symbol{}
 	ok := true
+
+	// The definition's scope, inside the unit's: its dummy arguments are its
+	// own names, and every other name in its expression is the unit's. Each
+	// dummy is defined as it is read, so a name given twice finds the first.
+	unitScope := a.scope
+	a.scope = newInnerScope(unitScope)
 
 	for _, arg := range s.Target.(*ast.Apply).Args {
 		n := arg.(*ast.Name)
 		d := a.stmtFuncDummy(n)
 		ok = ok && !d.broken
 
-		if _, seen := saved[n.Name]; !seen {
-			saved[n.Name] = a.unit.byName[n.Name]
-		}
-
 		def.Dummies = append(def.Dummies, d)
-		a.unit.byName[n.Name] = d
+		a.scope.define(d)
 	}
 
 	a.defining = sym
 	value := a.assignedExpr(s.Value, sym.Type)
 	a.defining = nil
-
-	for name, was := range saved {
-		if was == nil {
-			delete(a.unit.byName, name)
-		} else {
-			a.unit.byName[name] = was
-		}
-	}
+	a.scope = unitScope
 
 	if sym.untyped && !sym.Typed {
 		a.report("NOTYPE", sym.Pos, sym.Name)
@@ -91,12 +86,12 @@ func (a *analyzer) stmtFuncDummy(n *ast.Name) *Symbol {
 
 	var untyped bool
 
-	if s := a.unit.byName[n.Name]; s != nil {
+	if s := a.scope.find(n.Name); s != nil {
 		d.Type, d.broken = s.Type, s.broken
 		s.typesDummy = true
 		untyped = s.untyped && !s.Typed
 	} else {
-		d.Type, untyped = a.implicit.typeOf(n.Name)
+		d.Type, untyped = a.scope.rules().typeOf(n.Name)
 
 		// In no table of the unit, so undeclared won't see it; a name the unit has
 		// is seen there.
