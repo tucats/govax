@@ -42,11 +42,15 @@ import (
 // ArrayOrder is how the scalarizer runs an array assignment (sema's answer to
 // whether its sides overlap): Down says, for each loop (the target's
 // dimensions, the leftmost first), whether it runs from the extent down to 1;
-// Temporary that the value goes into an array of the extents TempShape first.
+// Temporary that the value goes into an array of the extents TempShape first;
+// Fill that the value, a Constructor that reads nothing of the target's, is
+// stored straight into the target an item at a time, with no loops of the
+// target's (finding 10: its extent then needn't be known when compiling).
 type ArrayOrder struct {
 	Down      []bool
 	Temporary bool
 	TempShape []int
+	Fill      bool
 
 	// target is the array the assignment writes, for Hoisted.
 	target *Symbol
@@ -78,6 +82,10 @@ func (o *ArrayOrder) String() string {
 
 	if o.Temporary {
 		return "  [through a temporary]"
+	}
+
+	if o.Fill {
+		return "  [filled]"
 	}
 
 	var down []string
@@ -115,6 +123,20 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 
 	// need is each loop's direction, 1 up, -1 down, 0 either.
 	need := make([]int, rank)
+
+	if !a.checkManyOne(target) {
+		return nil, false
+	}
+
+	if c, ok := value.(*Constructor); ok && rank == 1 && !reads(c, ts) {
+		o.Fill = true
+
+		return o, true
+	}
+
+	if !a.constructorSizes(value) {
+		return nil, false
+	}
 
 	// The target's subscripts must be computed before any element is defined
 	// (7.5.1.5); a vector subscript's elements are read as the loops go.
@@ -179,6 +201,187 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 	}
 
 	return o, true
+}
+
+// checkManyOne reports a section in an assignment's target whose vector
+// subscript is a constant with a value twice (Fortran 90's 6.2.2.3.2: a
+// many-one section may not be defined), MANYONE: false after it. A vector that
+// isn't constant is the program's to get right, as the standard leaves it.
+func (a *analyzer) checkManyOne(target Expr) bool {
+	if s, ok := target.(*Substring); ok {
+		target = s.X
+	}
+
+	sec, ok := target.(*Section)
+	if !ok {
+		return true
+	}
+
+	for _, sub := range sec.Subs {
+		v, ok := sub.Vector.(*ArrayConst)
+		if !ok {
+			continue
+		}
+
+		seen := map[int32]bool{}
+
+		for _, c := range v.Elems {
+			if seen[c.Int] {
+				a.report("MANYONE", v.Pos, sec.Sym.Name, c.Int)
+
+				return false
+			}
+
+			seen[c.Int] = true
+		}
+	}
+
+	return true
+}
+
+// constructorSizes reports a Constructor among the value's arrays whose extent
+// isn't known when compiling: it is built into an array temporary, which
+// must have a size known when compiling (finding 7), unless it is the whole
+// of an assignment's value (ArrayOrder.Fill). False after NOTIMPL.
+func (a *analyzer) constructorSizes(value Expr) bool {
+	for _, leaf := range Leaves(value) {
+		if c, ok := leaf.(*Constructor); ok && !c.S[0].Known {
+			a.notImplForm(c.Pos, "an array constructor of a size not known when compiling, but as an array's whole value, "+
+				"(Phase 104)")
+
+			return false
+		}
+	}
+
+	return true
+}
+
+// reads reports whether the constructor c reads storage ts may share, in any
+// value or implied DO's bound.
+func reads(c *Constructor, ts *Symbol) bool {
+	found := false
+
+	check := func(e Expr) {
+		if rankOf(e) == 0 {
+			for _, s := range readSymbols(e) {
+				found = found || mayShare(ts, s)
+			}
+
+			if !Inline(e) {
+				// A function's value, or an operation's: what it reads.
+				found = found || readsAny(e, ts)
+			}
+
+			return
+		}
+
+		found = found || vectorsRead(e, ts)
+
+		Scalarize(e, func(leaf Expr) Expr {
+			if c, ok := leaf.(*Constructor); ok {
+				found = found || reads(c, ts)
+			} else {
+				found = found || mayShare(ts, baseSymbol(leaf))
+			}
+
+			return leaf
+		}, func(x Expr) Expr {
+			found = found || readsAny(x, ts)
+
+			return x
+		})
+	}
+
+	var walk func([]CtorItem)
+
+	walk = func(items []CtorItem) {
+		for _, it := range items {
+			if it.Do == nil {
+				check(it.Value)
+
+				continue
+			}
+
+			check(it.Do.Start)
+			check(it.Do.Limit)
+			check(it.Do.Step)
+			walk(it.Do.Items)
+		}
+	}
+
+	walk(c.Items)
+
+	return found
+}
+
+// readsAny reports whether the scalar e may read storage ts may share: its
+// variables and elements, and anything a function it calls is given (a
+// function may read its arguments, or a common block: an EXTERNAL function's
+// reference is taken to read anything).
+func readsAny(e Expr, ts *Symbol) bool {
+	found := false
+
+	var walk func(Expr)
+
+	walk = func(e Expr) {
+		switch e := e.(type) {
+		case nil:
+		case *Var:
+			found = found || mayShare(ts, e.Sym)
+		case *Elem:
+			found = found || mayShare(ts, e.Sym)
+
+			for _, s := range e.Subs {
+				walk(s)
+			}
+		case *FieldRef:
+			found = found || mayShare(ts, e.Sym)
+		case *Substring:
+			walk(e.X)
+			walk(e.Lower)
+			walk(e.Upper)
+		case *Concat:
+			for _, p := range e.Parts {
+				walk(p)
+			}
+		case *Convert:
+			walk(e.X)
+		case *Unary:
+			walk(e.X)
+		case *Binary:
+			walk(e.X)
+			walk(e.Y)
+		case *Compare:
+			walk(e.X)
+			walk(e.Y)
+		case *Const, *Procedure:
+		case *ArrayRef, *Section:
+			found = found || mayShare(ts, baseSymbol(e))
+		case *IntrinsicRef:
+			for _, x := range e.Args {
+				walk(x)
+			}
+		case *StmtFuncRef:
+			// Its expression may name anything of the unit's.
+			found = true
+		case *FuncRef:
+			// What it is given, and what it can reach otherwise: a common
+			// block, or a dummy argument's storage, the caller's.
+			found = found || ts.Common != nil || ts.Dummy != 0 || ts.group != nil
+
+			for _, x := range e.Args {
+				if x.Expr != nil {
+					found = found || mayShare(ts, baseSymbol(x.Expr)) || readsAny(x.Expr, ts)
+				}
+			}
+		default:
+			found = true
+		}
+	}
+
+	walk(e)
+
+	return found
 }
 
 // vectorsRead reports whether a vector subscript anywhere in the array

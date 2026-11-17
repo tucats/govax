@@ -208,6 +208,14 @@ func datumText(d *Datum) string {
 	case TextDatum:
 		return "text '" + strings.ReplaceAll(d.Text, "'", "''") + "'"
 
+	case ArrayDatum:
+		parts := make([]string, len(d.Values))
+		for i, c := range d.Values {
+			parts[i] = ExprText(c)
+		}
+
+		return d.Values[0].T.String() + " array " + strings.Join(parts, " ")
+
 	case DescriptorDatum:
 		return "descriptor " + descriptorText(d.Desc)
 	}

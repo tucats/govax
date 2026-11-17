@@ -375,6 +375,12 @@ DCMPLX             -  1   C32 C16 CMPLX
 AIMAG              -  1   C8  R4  IMAG
 AIMAG              -  1   C32 R16 IMAG
 CONJG              -  1   C32 C32 CONJG
+
+RESHAPE            -  2,4 *   *   ARRAY T SOURCE,SHAPE,PAD?,ORDER?
+SHAPE              -  1   *   I4  ARRAY I SOURCE
+SIZE               -  1,2 *   I4  ARRAY I ARRAY,DIM?
+LBOUND             -  1,2 *   I4  ARRAY I ARRAY,DIM?
+UBOUND             -  1,2 *   I4  ARRAY I ARRAY,DIM?
 `
 
 // form is one row of the table.

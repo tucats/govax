@@ -72,6 +72,7 @@ PROGRAMS90 = {
     "arrays": ["arrays.f90"],
     "overlap": ["overlap.f90"],
     "vectors": ["vectors.f90"],
+    "constants": ["constants.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

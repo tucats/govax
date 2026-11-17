@@ -274,6 +274,11 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 		return &place
 	}
 
+	if s.ArrayValue != nil {
+		// An array PARAMETER's element whose subscripts aren't constants.
+		return l.constantArrayMem(s)
+	}
+
 	t := l.typeOf(s.Type)
 
 	if p := l.charParam(s); p != nil {

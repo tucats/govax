@@ -227,21 +227,13 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 // already: its bounds, its attributes (attrtable.go), and its value, a
 // PARAMETER's (parameter.go) or an initial value (data.go). An initialized
 // name has SAVE (the standard's 5.1), which impliedSaves gives it once every
-// declaration is known. An array that is a PARAMETER is Phase 102's.
+// declaration is known. An array that is a PARAMETER is an array constant
+// (constarray.go).
 func (a *analyzer) f90Entity(s *ast.TypeStmt, sym *Symbol, d *ast.Declarator, specs []*ast.AttrSpec) {
-	parameter, array := false, d.Dims != nil
+	parameter := false
 
 	for _, spec := range specs {
 		parameter = parameter || spec.Name == "PARAMETER"
-		array = array || spec.Name == "DIMENSION"
-	}
-
-	if parameter && array {
-		a.notImplForm(d.Pos, "an array that is a PARAMETER")
-
-		sym.broken = true
-
-		return
 	}
 
 	if d.Dims != nil {

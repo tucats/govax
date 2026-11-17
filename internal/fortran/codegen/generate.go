@@ -955,6 +955,9 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 			w.Statement(label, ".LONG", strconv.Itoa(int(d.Value.Int())), "")
 		}
 
+	case ir.ArrayDatum:
+		g.writeArrayDatum(w, label, d)
+
 	case ir.TextDatum:
 		pieces := asciiPieces(d.Text)
 
@@ -990,6 +993,47 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 
 	case ir.NamelistDatum:
 		g.writeNamelist(w, label, d.Namelist)
+	}
+}
+
+// writeArrayDatum writes a numeric array constant's elements, a few to a line:
+// an integer by its size (.BYTE, .WORD, .LONG), anything else as its
+// longwords, as a constant's datum is.
+func (g *routineGen) writeArrayDatum(w *Writer, label string, d *ir.Datum) {
+	t := d.Values[0].T
+	directive, perLine := ".LONG", 8
+
+	switch {
+	case t == ir.Byte:
+		directive = ".BYTE"
+	case t == ir.Word:
+		directive = ".WORD"
+	case !t.Integer():
+		perLine = max(1, 8/t.Width())
+	}
+
+	for start := 0; start < len(d.Values); start += perLine {
+		var items []string
+
+		for _, c := range d.Values[start:min(start+perLine, len(d.Values))] {
+			if t.Integer() {
+				items = append(items, strconv.Itoa(int(c.Int())))
+
+				continue
+			}
+
+			for _, l := range c.Longwords() {
+				items = append(items, fmt.Sprintf("^X%08X", l))
+			}
+		}
+
+		w.Statement(label, directive, strings.Join(items, ","), "")
+		label = ""
+	}
+
+	// What follows starts on a longword again.
+	if t == ir.Byte || t == ir.Word {
+		w.Statement("", ".ALIGN", "LONG", "")
 	}
 }
 

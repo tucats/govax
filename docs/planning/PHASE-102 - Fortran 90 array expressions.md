@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 6 are done (2026-11-17), and subtask 7 is next.
+author's answers"); subtasks 2 to 7 are done (2026-11-17), and subtask 8 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -413,7 +413,8 @@ and FTNRTL do today.
 7. **Constant arrays and constructors:** `ArrayConst`, array PARAMETERs,
    initialization, RESHAPE of constants and the constant inquiries,
    constructors in expressions and assignment (finding 10); MANYONE for a
-   constant vector subscript with a value twice (finding 13).
+   constant vector subscript with a value twice (finding 13) (done
+   2026-11-17).
 8. **Elemental intrinsics on arrays:** the class column for Table D-3's rows,
    MERGE (finding 9).
 9. **Reductions and inquiries**, with MASK= and constant DIM=, DOT_PRODUCT,
@@ -661,3 +662,53 @@ shapes in Phase 104.
   `TestArrayOrder`'s four, `ir`'s `f90vector.for` and `f90vecchk.for`,
   `TestFortranCheck`'s VECTOR, and `testdata/fortran90`'s `vectors.f90`,
   worked by hand, run in all eight modes and the same on gfortran.
+- **2026-11-17, subtask 7:** Constant arrays and constructors. `sema.ArrayConst`
+  (its elements `Const`s in array element order, its shape known) is what the
+  evaluator gives for an array form (`constarray.go`): `isArrayForm` decides
+  from the syntax tree whether a constant expression is an array (a
+  constructor, an array constant's name or a section of one, RESHAPE, SHAPE,
+  LBOUND and UBOUND without DIM=, an elemental intrinsic of `constFuncs` with
+  an array argument, an operation with an array operand), so each is evaluated
+  once; `evalAny` takes either kind and `eval` refuses an array (NOTSCALAR).
+  Each element is computed by the scalar code, `unaryOn`, `binaryOn`, and
+  `concatOn` now split from `unary`, `binary`, and `concat`. A constructor's
+  values must have one type and length (CONSTRUCTTYPE, CONSTRUCTLEN; an
+  INTEGER of another length takes the first's), an implied DO's variable an
+  INTEGER (CTORDOVAR), at most 2^20 elements (CONSTRUCTSIZE). An array
+  PARAMETER (`defineArrayParameter`, in both the `::` form and `DIMENSION`
+  then `PARAMETER (P = ...)`, which isn't read differently under `/NOF90`) is
+  a `Constant` with its `Dims` and an `ArrayValue`, given an array of its
+  shape or a scalar for every element (NOTCONFORM otherwise), converted to its
+  type; an element or section of it with constant subscripts is folded
+  (`constantSection`), one with subscripts not constant an `Elem` or `Section`
+  of the constant's symbol, read from data (`ir`'s `constantArrayMem`).
+  RESHAPE (SOURCE, SHAPE, PAD, ORDER; BADRESHAPE), SIZE, SHAPE, LBOUND, and
+  UBOUND (of an array whose bounds are constants, or an array constant's, 1 and
+  its extents; DIMRANGE) are fortran90Table's new ARRAY rows, answered by the
+  evaluator; with an array whose bounds aren't constants they are subtask 9's.
+  An initial value may be an array constant of the array's shape
+  (`initialValue`, `dataValues.array`). The parser reads a declaration's `= (/
+  ... /)` (`entityValue`; `pending` is gone). A constructor whose values aren't
+  all constants is a `sema.Constructor` (`constructor.go`): items of values and
+  `CtorDo`s, each implied DO's variable a symbol of its own in a scope of its
+  own (the standard's 14.1.3), its extent known when every item's is. In
+  `ArrayOrder`, `Fill` says a Constructor that is the whole value of a rank-1
+  assignment and reads nothing of the target's (`reads`, `readsAny`: a
+  function's reference reads what it is given, and a common block or a dummy's
+  storage) is stored straight into the target, its extent then any; any other
+  Constructor is built before the loops into an array temporary, whose size must
+  be known (NOTIMPL naming Phase 104), and an `ArrayConst` is read from an
+  `ArrayDatum` (`$Kn`, written only if read, `.BYTE`/`.WORD`/`.LONG` or
+  longwords; a CHARACTER one a text): both are leaves to the scalarizer, apart
+  from the target. `checkManyOne` is MANYONE. `ir/lowerctor.go`'s
+  `fillConstructor` keeps a running position in an index cell, each item's
+  values stored at the next (an array item by `eachElement`, a nest of the
+  item's own shape; an implied DO a counted loop over its own variable, bound to
+  an index cell); under `/CHECK=BOUNDS` a position past the target's extent, or
+  an end short of it, calls FTN$NOTCONFOR. `arrayNest` is now `newNest`,
+  `prepare`, the loops, and `done`. Tests: `TestArrayConstants` (49 cases),
+  `TestErrors`' changed cases (an array PARAMETER and a declaration's
+  constructor now compile; `N(1)` of a scalar constant is BADUSE as before),
+  `ir`'s `f90ctor.for`, `TestFortranCheck`'s FILL, and `testdata/fortran90`'s
+  `constants.f90`, worked by hand, run in all eight modes and the same on
+  gfortran.

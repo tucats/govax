@@ -3,6 +3,7 @@ package sema
 import (
 	"fmt"
 	"math/big"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -76,6 +77,10 @@ type dataSet struct {
 	values    []*ast.DataValue
 	broadcast bool
 	assign    bool
+
+	// array is an initial value that is an array constant, whose elements are
+	// the items' values in turn (initialValue).
+	array *ArrayConst
 }
 
 // dataStatement keeps a DATA statement's lists for dataSets.
@@ -97,12 +102,63 @@ func (a *analyzer) initialValues(d *ast.Declarator) {
 // initialValue keeps the value a Fortran 90 declaration gives the name d
 // declares, sym, after its =, and notes that the name is initialized, which
 // gives it SAVE (impliedSaves).
+//
+// An array may be given an array, an array constructor of constants or an
+// array PARAMETER (constarray.go), of its shape (NOTCONFORM): each element its
+// element of the value.
 func (a *analyzer) initialValue(sym *Symbol, d *ast.Declarator) {
 	name := &ast.Name{ExprBase: ast.ExprBase{Pos: d.Pos}, Name: d.Name}
 	value := &ast.DataValue{Value: d.Value, Pos: d.ValuePos}
+	set := dataSet{[]ast.Expr{name}, []*ast.DataValue{value}, true, true, nil}
 
-	a.dataSets = append(a.dataSets, dataSet{[]ast.Expr{name}, []*ast.DataValue{value}, true, true})
 	a.initialized = append(a.initialized, sym)
+
+	if ev := a.declEval(); ev.isArrayForm(d.Value) {
+		arr, err := ev.evalArray(d.Value)
+		if err != nil {
+			if err.kind != constFailed {
+				a.report("DATAVALUE", err.pos, err.why)
+			}
+
+			return
+		}
+
+		if !a.initialShape(sym, arr, d.Value.Position()) {
+			return
+		}
+
+		set.broadcast, set.array = false, arr
+	}
+
+	a.dataSets = append(a.dataSets, set)
+}
+
+// initialShape reports whether arr, an initial value, has sym's shape:
+// NOTSCALAR for a scalar, NOTCONFORM for an array of another shape.
+func (a *analyzer) initialShape(sym *Symbol, arr *ArrayConst, pos diag.Position) bool {
+	if sym.Class != Array {
+		a.report("NOTSCALAR", pos)
+
+		return false
+	}
+
+	extents := make([]int, len(sym.Dims))
+
+	for i, dim := range sym.Dims {
+		if !dim.known() {
+			return true // DATASIZE, from the items' walk
+		}
+
+		extents[i] = max(dim.Extent(), 0)
+	}
+
+	if !slices.Equal(extents, arr.extents()) {
+		a.report("NOTCONFORM", pos, knownShape(extents...).String(), arr.S.String())
+
+		return false
+	}
+
+	return true
 }
 
 // impliedSaves gives SAVE to each name a Fortran 90 declaration initialized
@@ -122,7 +178,7 @@ func (a *analyzer) impliedSaves() {
 // error: its other items would only be counted wrong.
 func (a *analyzer) dataStatements() {
 	for _, set := range a.dataSets {
-		vals := &dataValues{a: a, list: set.values, broadcast: set.broadcast, assign: set.assign}
+		vals := &dataValues{a: a, list: set.values, broadcast: set.broadcast, assign: set.assign, array: set.array}
 		ok := true
 
 		for _, e := range set.names {
@@ -155,6 +211,11 @@ type dataValues struct {
 	// it must be one an assignment could store: a Fortran 90 declaration's
 	// = value (initialValue).
 	broadcast, assign bool
+
+	// array, if not nil, is the value whose elements are the items' in turn,
+	// and taken how many of them have been.
+	array *ArrayConst
+	taken int
 }
 
 // dataValue is one constant of a list. Exactly one of its fields says what it
@@ -169,15 +230,19 @@ type dataValue struct {
 	isText    bool
 	character bool
 	assign    bool
-	typeless *ast.TypelessConst
-	radix    []byte
-	c        *Const
-	source   string
-	pos      diag.Position
+	typeless  *ast.TypelessConst
+	radix     []byte
+	c         *Const
+	source    string
+	pos       diag.Position
 }
 
 // more reports whether values are left, and where the next is.
 func (v *dataValues) more() (diag.Position, bool) {
+	if v.array != nil {
+		return v.array.Pos, v.taken < len(v.array.Elems)
+	}
+
 	if v.broadcast {
 		return diag.Position{}, false
 	}
@@ -196,6 +261,26 @@ func (v *dataValues) more() (diag.Position, bool) {
 // next is the next constant. pos is the item it is for, where running out of
 // constants is reported. It returns false after an error, reported.
 func (v *dataValues) next(pos diag.Position) (*dataValue, bool) {
+	if v.array != nil {
+		if v.taken >= len(v.array.Elems) {
+			v.a.report("DATACOUNT", pos, "more names than values")
+
+			return nil, false
+		}
+
+		c := v.array.Elems[v.taken]
+		v.taken++
+
+		v.cur = dataValue{source: DumpExpr(c), pos: v.array.Pos, assign: v.assign}
+		if c.T.Kind == Character {
+			v.cur.text, v.cur.isText, v.cur.character = c.Text, true, true
+		} else {
+			v.cur.c = c
+		}
+
+		return &v.cur, true
+	}
+
 	if v.left == 0 && v.broadcast && v.i > 0 {
 		// The one value again, for the next element.
 		v.left = 1

@@ -312,6 +312,7 @@ const (
 	ControlDatum                     // an I/O statement's control block
 	FormatDatum                      // a FORMAT statement's block
 	NamelistDatum                    // a NAMELIST group's block
+	ArrayDatum                       // a numeric array constant's elements (lowerctor.go)
 )
 
 // Datum is one item of the routine's read-only data. Two uses of the
@@ -340,6 +341,9 @@ type Datum struct {
 
 	// Namelist is a NAMELIST group's block.
 	Namelist *NamelistBlock
+
+	// Values are an array constant's elements, in array element order.
+	Values []*Const
 }
 
 // DType is a descriptor's data type code (the OpenVMS Calling Standard's

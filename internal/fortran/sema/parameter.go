@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"slices"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 )
 
@@ -28,6 +30,12 @@ func (a *analyzer) parameter(s *ast.ParameterStmt, d *ast.ParamDef) {
 // statement's work, and a Fortran 90 declaration's with the PARAMETER
 // attribute (decl.go's f90Entity), which gives the type first.
 func (a *analyzer) defineParameter(sym *Symbol, s *ast.ParameterStmt, d *ast.ParamDef) {
+	if sym.Class == Array && sym.Dummy == 0 && !s.Old {
+		a.defineArrayParameter(sym, d)
+
+		return
+	}
+
 	ev := a.declEval()
 
 	// keep is whether the name becomes this constant: not if it is one
@@ -114,6 +122,83 @@ func (a *analyzer) defineParameter(sym *Symbol, s *ast.ParameterStmt, d *ast.Par
 	sym.Value = c.at(d.Name.Pos)
 }
 
+// defineArrayParameter makes sym, an array d names, an array constant
+// (Fortran 90's 5.1.2.1): its value an array of its shape, or a scalar, which
+// is every element's (gfortran's reading, and Fortran 95's), each element
+// converted to its type as a scalar PARAMETER's value is. Its bounds must be
+// constants. A CHARACTER*(*) array takes its value's length.
+func (a *analyzer) defineArrayParameter(sym *Symbol, d *ast.ParamDef) {
+	for _, dim := range sym.Dims {
+		if !dim.known() {
+			a.badUse(sym, d.Name.Pos, "be a constant, since its bounds aren't constants")
+
+			sym.broken = true
+
+			return
+		}
+	}
+
+	sym.Class, sym.defPos = Constant, d.Name.Pos
+
+	ev := a.declEval()
+
+	c, arr, err := ev.evalAny(d.Value)
+	if err != nil {
+		a.notConstant(err)
+
+		return
+	}
+
+	extents := make([]int, len(sym.Dims))
+	for i, dim := range sym.Dims {
+		extents[i] = max(dim.Extent(), 0)
+	}
+
+	n := sym.Elements()
+	values := make([]*Const, n)
+
+	switch {
+	case arr == nil:
+		for i := range values {
+			values[i] = c
+		}
+
+	case !slices.Equal(arr.extents(), extents):
+		a.report("NOTCONFORM", d.Value.Position(), knownShape(extents...).String(), arr.S.String())
+
+		return
+
+	default:
+		copy(values, arr.Elems)
+	}
+
+	t := sym.Type
+
+	for i, v := range values {
+		cv, err := ev.convert(v, t, d.Value.Position())
+		if err == incompatible {
+			a.report("PARAMTYPE", d.Value.Position(), sym.Name, t.String(), article(v.T.String()))
+
+			return
+		}
+
+		if err != nil {
+			a.notConstant(err)
+
+			return
+		}
+
+		values[i] = cv
+	}
+
+	if t.Kind == Character && t.Size == 0 && n > 0 {
+		t = values[0].T
+		sym.Type = t
+	}
+
+	sym.ArrayValue = newArrayConst(t, values, d.Name.Pos, extents...)
+}
+
 // notConstant reports a PARAMETER value that isn't a constant expression
 // (NOTCONST), where the part that isn't constant is, unless its error is
 // reported already.
@@ -126,6 +211,10 @@ func (a *analyzer) notConstant(err *constErr) {
 // constantUse is a constant's value where an executable statement's
 // expression uses its name.
 func (a *analyzer) constantUse(s *Symbol, n *ast.Name) Expr {
+	if s.ArrayValue != nil {
+		return s.ArrayValue.at(n.Pos)
+	}
+
 	if s.Value == nil {
 		return a.bad(n.Pos)
 	}

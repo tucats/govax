@@ -90,6 +90,10 @@ func (a *analyzer) arrayValue(e ast.Expr) Expr {
 		return v
 	}
 
+	if c, ok := e.(*ast.ArrayConstructor); ok {
+		return a.constructor(c)
+	}
+
 	if what := formWhat(e); what != "" {
 		a.notImplForm(e.Position(), what)
 	}
@@ -105,13 +109,17 @@ func (a *analyzer) arrayValue(e ast.Expr) Expr {
 func (a *analyzer) folded(e ast.Expr) (v Expr, ok bool) {
 	// First quietly, to learn whether e is constant at all, then for
 	// its messages.
-	if _, err := (&evaluator{a: a, quiet: true}).eval(e); err != nil && err.kind != constFailed {
+	if _, _, err := (&evaluator{a: a, quiet: true}).evalAny(e); err != nil && err.kind != constFailed {
 		return nil, false
 	}
 
-	c, err := (&evaluator{a: a}).eval(e)
-	if err != nil {
+	c, arr, err := (&evaluator{a: a}).evalAny(e)
+
+	switch {
+	case err != nil:
 		return a.bad(e.Position()), true
+	case arr != nil:
+		return arr, true
 	}
 
 	return c, true
@@ -205,7 +213,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
 		_, selected := isInquiry(e.Name)
-		if _, ok := constFuncs[e.Name]; ok || selected && a.intrinsicNamed(e.Name) {
+		if _, ok := constFuncs[e.Name]; ok || (selected || arrayFunctions[e.Name]) && a.intrinsicNamed(e.Name) {
 			if v, ok := a.folded(e); ok {
 				return v
 			}
@@ -230,6 +238,22 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	switch s.Class {
 	case StmtFunction:
 		return a.stmtFuncRef(s, e)
+
+	case Constant:
+		if s.ArrayValue == nil {
+			a.badUse(s, e.Pos, "be used as a function")
+
+			return a.bad(e.Pos)
+		}
+
+		// An array constant's element or section: a constant if its
+		// subscripts are, else read from the constant's data when the program
+		// runs (ir's symbolMem).
+		if v, ok := a.folded(e); ok {
+			return v
+		}
+
+		return a.section(s, e)
 
 	case Array:
 		return a.element(s, e)
@@ -517,6 +541,13 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 func (a *analyzer) binary(e *ast.Binary) Expr {
 	switch e.Op {
 	case ast.Pow, ast.Concat:
+		if v, ok := a.folded(e); ok {
+			return v
+		}
+	}
+
+	// An operation on array constants is one (constarray.go).
+	if (&evaluator{a: a, quiet: true}).isArrayForm(e) {
 		if v, ok := a.folded(e); ok {
 			return v
 		}

@@ -144,6 +144,11 @@ func (ev *evaluator) realRange(pos diag.Position, what string, t Type) *constErr
 // the *constErr is nil, a common Go pattern for "a value or a reason why
 // not".
 func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
+	// An array where a scalar must be (constarray.go has the arrays).
+	if ev.isArrayForm(e) {
+		return nil, ev.notScalar(e)
+	}
+
 	switch e := ev.a.substringForm(e).(type) {
 	case *ast.IntConst:
 		// intValue reads the digits as an int64, so that a value too
@@ -376,7 +381,14 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 		return nil, err
 	}
 
-	if x, err = ev.numeric(x); err != nil {
+	return ev.unaryOn(e, x)
+}
+
+// unaryOn is e's operation on x, its operand's value (an array constant's
+// element, for constarray.go).
+func (ev *evaluator) unaryOn(e *ast.Unary, x *Const) (*Const, *constErr) {
+	x, err := ev.numeric(x)
+	if err != nil {
 		return nil, err
 	}
 
@@ -460,6 +472,18 @@ func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
 		return nil, err
 	}
 
+	return ev.binaryOn(e, x, y)
+}
+
+// binaryOn is e's operation on x and y, its operands' values (array
+// constants' elements, for constarray.go).
+func (ev *evaluator) binaryOn(e *ast.Binary, x, y *Const) (*Const, *constErr) {
+	var err *constErr
+
+	if e.Op == ast.Concat {
+		return ev.concatOn(e, x, y)
+	}
+
 	if !e.Op.Relational() {
 		if x, err = ev.numeric(x); err != nil {
 			return nil, err
@@ -511,6 +535,11 @@ func (ev *evaluator) concat(e *ast.Binary) (*Const, *constErr) {
 		return nil, err
 	}
 
+	return ev.concatOn(e, x, y)
+}
+
+// concatOn is x // y.
+func (ev *evaluator) concatOn(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	for _, o := range []*Const{x, y} {
 		if o.T.Kind != Character {
 			return nil, ev.report("BADOPERAND", e.Pos, "//", o.T.String())

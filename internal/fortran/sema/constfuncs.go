@@ -64,8 +64,17 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 	// A(...) is a function reference only if A isn't something else the
 	// unit declared: an array (then it's an element), a variable, a
 	// dummy argument. A name only mentioned so far (Unclassified) may
-	// still be an intrinsic function's.
-	if s := ev.a.scope.find(e.Name); s != nil && s.Class != Intrinsic && (s.Class != Unclassified || s.Dummy != 0) {
+	// still be an intrinsic function's. An array constant's element is a
+	// constant (constarray.go).
+	s := ev.a.scope.find(e.Name)
+
+	if s != nil && s.ArrayValue != nil {
+		c, _, err := ev.constantSection(s, e)
+
+		return c, err
+	}
+
+	if s != nil && s.Class != Intrinsic && (s.Class != Unclassified || s.Dummy != 0) {
 		if s.Class == Array {
 			return nil, named("the array element "+e.Name+"(...) is not a constant", e.Pos)
 		}
@@ -77,6 +86,14 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		// Fortran 90's name, not intrinsic under /NOF90 without an INTRINSIC
 		// statement: the program's own function.
 		return nil, named(e.Name+" is a function, not a constant", e.Pos)
+	}
+
+	if arrayFunctions[e.Name] && ev.a.intrinsicNamed(e.Name) {
+		// SIZE, and LBOUND and UBOUND with DIM=: RESHAPE, SHAPE, and the
+		// others are arrays (isArrayForm).
+		ev.a.noteIntrinsic(e.Name, e.Pos)
+
+		return ev.boundsScalar(e)
 	}
 
 	forms := formsNamed(e.Name)

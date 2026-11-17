@@ -753,6 +753,18 @@ var messages = map[string]kind{
 	"SECTIONEND": {Error, "a section of the assumed-size array %s needs an upper bound in its last dimension"},
 	"VECTORRANK": {Error, "a vector subscript must be an array of rank one, not rank %d"},
 
+	// Array constructors and constants (Phase 102, subtask 7).
+	"CONSTRUCTTYPE": {Error, "an array constructor's values must have one type, and this one is %[2]s where the first is %[1]s"},
+	"CONSTRUCTLEN":  {Error, "an array constructor's CHARACTER values must have one length, and this one has %[2]d where the first has %[1]d"},
+	"CONSTRUCTSIZE": {Error, "an array constant can't have more than %d elements"},
+	"CTORDOBOUND":   {Error, "an implied-DO list's bounds and step must be INTEGER"},
+	"CTORDOVAR":     {Error, "an array constructor's implied-DO variable %s must be INTEGER"},
+	"BADRESHAPE":    {Error, "this RESHAPE can't be computed: %s"},
+	"ARRAYARG":      {Error, "%s's %s must be an array"},
+	"DIMRANGE":      {Error, "%s's DIM, %s, isn't a dimension of an array of rank %d"},
+	"SHAPEVALUE":    {Error, "%s has %d elements, and its value %d"},
+	"MANYONE":       {Error, "the vector subscript of %s names element %d more than once, so the section can't be assigned to"},
+
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.
 	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},
 

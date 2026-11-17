@@ -90,7 +90,8 @@ func NewElem(s *Symbol, subs []Expr, inBounds []bool, pos diag.Position) *Elem {
 func (e *Elem) Checked(i int) bool { return i >= len(e.InBounds) || !e.InBounds[i] }
 
 // Scalarize is the array-valued expression e made a scalar one: each array it
-// reads (an *ArrayRef or a *Section, a leaf) replaced by element(leaf), each
+// reads (an *ArrayRef, a *Section, an *ArrayConst, or a *Constructor, a leaf)
+// replaced by element(leaf), each
 // scalar part of it by scalar(part), and each elemental operation between
 // them copied without a shape. scalar is how a value computed once before the
 // loops stands for itself in them.
@@ -102,7 +103,7 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 	walk := func(x Expr) Expr { return Scalarize(x, element, scalar) }
 
 	switch e := e.(type) {
-	case *ArrayRef, *Section:
+	case *ArrayRef, *Section, *ArrayConst, *Constructor:
 		return element(e)
 
 	case *Unary:
@@ -154,8 +155,8 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 	panic("sema: an array-valued expression Scalarize doesn't know")
 }
 
-// Leaves are the arrays an array-valued expression reads, its *ArrayRefs and
-// *Sections, left to right.
+// Leaves are the arrays an array-valued expression reads, its *ArrayRefs,
+// *Sections, *ArrayConsts, and *Constructors, left to right.
 func Leaves(e Expr) []Expr {
 	var list []Expr
 

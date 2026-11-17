@@ -342,8 +342,10 @@ type Symbol struct {
 	Pos diag.Position
 
 	// Value is a constant's value, with its type; nil for a constant
-	// whose PARAMETER statement had an error.
-	Value *Const
+	// whose PARAMETER statement had an error. An array constant (Fortran 90's
+	// array PARAMETER) has Dims, and its value is ArrayValue.
+	Value      *Const
+	ArrayValue *ArrayConst
 
 	// StmtFunc is a statement function's definition, once the statement
 	// walk has reached it (stmtfunc.go).
@@ -751,6 +753,24 @@ type (
 		Sym *Symbol
 	}
 
+	// ArrayConst is an array of constants (Fortran 90's 7.1.6.1): a
+	// constructor of constants, an array PARAMETER, a section of one with
+	// constant subscripts, RESHAPE of constants, or an operation on them. Its
+	// type is its elements', its shape known, and Elems its elements in array
+	// element order (the leftmost subscript varying fastest).
+	ArrayConst struct {
+		exprBase
+		Elems []*Const
+	}
+
+	// Constructor is an array constructor whose values aren't all constants
+	// (Fortran 90's 4.5): (/ X, A(2:3), (I * Y, I = 1, N) /), of rank one,
+	// its extent known when compiling only if every item's is.
+	Constructor struct {
+		exprBase
+		Items []CtorItem
+	}
+
 	// Section is Fortran 90's array section, Sym(Subs) with a subscript
 	// triplet in at least one dimension (the standard's 6.2.2): a
 	// subscript per dimension of Sym. Its rank is the number of triplets,
@@ -886,28 +906,28 @@ type IntrinsicOp int
 
 // The operations. Each says what its arguments are, by position.
 const (
-	AbsOp      IntrinsicOp = iota + 1 // |X|, of an INTEGER or REAL X
-	MaxOp                             // the largest of the arguments
-	MinOp                             // the smallest
-	DimOp                             // X-Y if X is greater, else 0
-	SignOp                            // |X| with Y's sign (+ for a Y of 0)
-	ModOp                             // X - (X/Y)*Y, of INTEGERs
-	NintOp                            // a REAL rounded to the nearest INTEGER, halves away from 0
-	ZextOp                            // an INTEGER or LOGICAL made longer with zeros, not its sign
-	ImagOp                            // a COMPLEX value's imaginary part
-	CmplxOp                           // the COMPLEX value (X, Y)
-	ConjgOp                           // a COMPLEX value with its imaginary part negated
-	ShiftOp                           // ISHFT(I, N): I's bits shifted left N places, right -N; N constant
-	BitsOp                            // IBITS(I, POS, LEN): LEN bits of I from bit POS
-	BitSetOp                          // IBSET(I, POS): I with bit POS set
-	BitClearOp                        // IBCLR(I, POS): I with bit POS clear
-	BitTestOp                         // BTEST(I, POS): bit POS of I, a LOGICAL
-	LenOp                             // a passed-length CHARACTER value's length
-	ArraySizeOp                       // SIZEOF of an adjustable array
-	IndexOp                           // INDEX(C1, C2): where C2 first is in C1, or 0
-	IcharOp                           // a CHARACTER value's first character's code
-	CharOp                            // the CHARACTER*1 whose code is X
-	CallOp                            // a call of Routine, MTHRTL's or FTNRTL's, with the arguments by reference
+	AbsOp       IntrinsicOp = iota + 1 // |X|, of an INTEGER or REAL X
+	MaxOp                              // the largest of the arguments
+	MinOp                              // the smallest
+	DimOp                              // X-Y if X is greater, else 0
+	SignOp                             // |X| with Y's sign (+ for a Y of 0)
+	ModOp                              // X - (X/Y)*Y, of INTEGERs
+	NintOp                             // a REAL rounded to the nearest INTEGER, halves away from 0
+	ZextOp                             // an INTEGER or LOGICAL made longer with zeros, not its sign
+	ImagOp                             // a COMPLEX value's imaginary part
+	CmplxOp                            // the COMPLEX value (X, Y)
+	ConjgOp                            // a COMPLEX value with its imaginary part negated
+	ShiftOp                            // ISHFT(I, N): I's bits shifted left N places, right -N; N constant
+	BitsOp                             // IBITS(I, POS, LEN): LEN bits of I from bit POS
+	BitSetOp                           // IBSET(I, POS): I with bit POS set
+	BitClearOp                         // IBCLR(I, POS): I with bit POS clear
+	BitTestOp                          // BTEST(I, POS): bit POS of I, a LOGICAL
+	LenOp                              // a passed-length CHARACTER value's length
+	ArraySizeOp                        // SIZEOF of an adjustable array
+	IndexOp                            // INDEX(C1, C2): where C2 first is in C1, or 0
+	IcharOp                            // a CHARACTER value's first character's code
+	CharOp                             // the CHARACTER*1 whose code is X
+	CallOp                             // a call of Routine, MTHRTL's or FTNRTL's, with the arguments by reference
 )
 
 // String is the operation's name in the dump.
@@ -968,6 +988,30 @@ func (c *Const) Bits() uint32 {
 
 // at is a copy of c at pos: a constant's value where its name is used.
 func (c *Const) at(pos diag.Position) *Const {
+	d := *c
+	d.Pos = pos
+
+	return &d
+}
+
+// CtorItem is one item of an array constructor: a value, scalar or array, or
+// an implied-DO list, Do.
+type CtorItem struct {
+	Value Expr
+	Do    *CtorDo
+}
+
+// CtorDo is an implied-DO list in an array constructor, (Items, Var = Start,
+// Limit, Step): Var an INTEGER variable of the list's own (the standard's
+// 14.1.3: the implied DO's variable has its scope), Step 1 when left out.
+type CtorDo struct {
+	Var                *Symbol
+	Start, Limit, Step Expr
+	Items              []CtorItem
+}
+
+// at is the array constant at pos.
+func (c *ArrayConst) at(pos diag.Position) *ArrayConst {
 	d := *c
 	d.Pos = pos
 

@@ -504,6 +504,21 @@ func DumpExpr(e Expr) string {
 		return text
 	case *ArrayRef:
 		return e.Sym.Name + "[]"
+	case *ArrayConst:
+		// (/:F 1.0 2.0 3.0 /) with its shape, [2,2], if its rank isn't 1.
+		parts := make([]string, len(e.Elems))
+		for i, c := range e.Elems {
+			parts[i] = DumpExpr(c)
+		}
+
+		shape := ""
+		if len(e.S) != 1 {
+			shape = e.S.String()
+		}
+
+		return "(/:" + e.T.letter() + shape + " " + strings.Join(parts, " ") + " /)"
+	case *Constructor:
+		return "(/:" + e.T.letter() + " " + dumpCtorItems(e.Items) + " /)"
 	case *Section:
 		// A[1:N:2, J, <IV[]>], a bound taken from an adjustable array's own
 		// bounds shown as *, a vector subscript in angle brackets.
@@ -777,4 +792,23 @@ func dumpKeyList(list []*KeyDef) string {
 	}
 
 	return "(" + strings.Join(keys, ", ") + ")"
+}
+
+// dumpCtorItems is an array constructor's items as the dump shows them, an
+// implied DO as (items, I = start, limit, step).
+func dumpCtorItems(items []CtorItem) string {
+	parts := make([]string, len(items))
+
+	for i, it := range items {
+		if it.Do == nil {
+			parts[i] = DumpExpr(it.Value)
+
+			continue
+		}
+
+		parts[i] = "(" + dumpCtorItems(it.Do.Items) + ", " + it.Do.Var.Name + " = " + DumpExpr(it.Do.Start) + ", " +
+			DumpExpr(it.Do.Limit) + ", " + DumpExpr(it.Do.Step) + ")"
+	}
+
+	return strings.Join(parts, " ")
 }

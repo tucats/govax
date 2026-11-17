@@ -27,7 +27,7 @@ func (a *analyzer) substringForm(e ast.Expr) ast.Expr {
 		return e
 	}
 
-	if s := a.scope.find(ap.Name); s != nil && s.Class == Array {
+	if s := a.scope.find(ap.Name); s != nil && (s.Class == Array || s.ArrayValue != nil) {
 		return e
 	}
 

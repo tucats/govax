@@ -111,6 +111,19 @@ var checkPrograms = []struct {
       END`,
 	},
 	{
+		// A constructor stored straight into a section (Phase 102, subtask
+		// 7), with fewer values than the section has elements.
+		name: "FILL", qualifier: "/CHECK=BOUNDS", checked: "%FOR-F-NOTCONFOR", plain: "AFTER",
+		source: `
+      OPTIONS /F90
+      REAL A(10)
+      N = 5
+      M = 4
+      A(1:N) = (/ (2.0 * I, I = 1, M) /)
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
 		// The second operand of .AND. isn't reached, so neither is its check.
 		name: "GUARDED", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
 		refused: "SUBRNG",

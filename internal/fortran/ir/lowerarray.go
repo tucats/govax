@@ -3,6 +3,7 @@ package ir
 import (
 	"strconv"
 
+	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
@@ -105,6 +106,12 @@ type leafDim struct {
 // statement is two nests, the value into the temporary, then the temporary
 // into the target, each the same as an assignment of its own.
 func (l *lowerer) arrayAssign(s *sema.Assign) {
+	if s.Order != nil && s.Order.Fill {
+		l.fillConstructor(s.Target, s.Value.(*sema.Constructor))
+
+		return
+	}
+
 	if s.Order != nil && s.Order.Temporary {
 		temp := l.arrayTemp(s.Value.Type(), s.Order.TempShape)
 
@@ -152,18 +159,8 @@ type arrayTempKey struct {
 // arrayNest lowers target = value as one nest of loops, run as order says
 // (nil: every loop up).
 func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder) {
-	n := &arrayNest{
-		l: l, name: "array (line " + strconv.Itoa(l.from.Position().Line) + ")",
-		leaves: map[sema.Expr]*arrayLeaf{}, order: order,
-	}
-	rank := len(target.Shape())
-
-	for range rank {
-		sym := sema.NewSymbol("$I", sema.IntegerType)
-		l.bound[sym] = &Mem{Cell: l.indexCell(), T: Long}
-		n.index = append(n.index, sym)
-		n.kept = append(n.kept, sym)
-	}
+	n := l.newNest(len(target.Shape()), order)
+	rank := len(n.index)
 
 	leaves := append(sema.Leaves(target), sema.Leaves(value)...)
 	for _, leaf := range leaves {
@@ -184,10 +181,55 @@ func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder) {
 	v := sema.Scalarize(value, n.element, n.hoist)
 
 	n.loops(rank-1, func() { l.assignScalar(t, v) })
+	n.done()
+}
 
-	for _, sym := range n.kept {
-		delete(l.bound, sym)
+// newNest is a nest of rank loops, each with its index, run as order says.
+func (l *lowerer) newNest(rank int, order *sema.ArrayOrder) *arrayNest {
+	n := &arrayNest{
+		l: l, name: "array (line " + strconv.Itoa(l.from.Position().Line) + ")",
+		leaves: map[sema.Expr]*arrayLeaf{}, order: order,
 	}
+
+	for range rank {
+		sym := sema.NewSymbol("$I", sema.IntegerType)
+		l.bound[sym] = &Mem{Cell: l.indexCell(), T: Long}
+		n.index = append(n.index, sym)
+		n.kept = append(n.kept, sym)
+	}
+
+	return n
+}
+
+// done unbinds the nest's own symbols.
+func (n *arrayNest) done() {
+	for _, sym := range n.kept {
+		delete(n.l.bound, sym)
+	}
+}
+
+// eachElement lowers body once for each element of the array value, in array
+// element order, given the element: a nest of loops of the value's own shape.
+func (l *lowerer) eachElement(value sema.Expr, body func(element sema.Expr)) {
+	n := l.newNest(len(value.Shape()), nil)
+
+	for _, leaf := range sema.Leaves(value) {
+		n.prepare(leaf)
+	}
+
+	n.extents = make([]sema.Expr, len(n.index))
+	for d := range n.extents {
+		n.extents[d] = n.extent(d, value, value)
+	}
+
+	if l.unit.Checks.Bounds {
+		n.checkSubscripts()
+	}
+
+	v := sema.Scalarize(value, n.element, n.hoist)
+
+	n.loops(len(n.index)-1, func() { body(v) })
+	n.done()
 }
 
 // indexCell is an index cell for the statement being lowered: one another
@@ -309,19 +351,40 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 	n.leaves[leaf] = info
 	n.prepared = append(n.prepared, leaf)
 
-	switch leaf := leaf.(type) {
-	case *sema.ArrayRef:
-		info.sym = leaf.Sym
+	// whole makes info a whole array's: each dimension ranging from its
+	// lower bound by 1.
+	whole := func(sym *sema.Symbol, pos diag.Position) {
+		info.sym = sym
 
-		for i := range leaf.Sym.Dims {
-			lower := n.lowerBound(leaf.Sym, i)
+		for i := range sym.Dims {
+			lower := n.lowerBound(sym, i)
 			info.dims = append(info.dims, leafDim{
 				ranges: true, loop: loopOf(i),
-				stride: sema.IntConstAt(1, leaf.Pos),
+				stride: sema.IntConstAt(1, pos),
 				base:   n.keepIR(arith(Sub, Long, lower, LongConst(1))),
 				lower:  lower,
 			})
 		}
+	}
+
+	switch leaf := leaf.(type) {
+	case *sema.ArrayRef:
+		whole(leaf.Sym, leaf.Pos)
+
+	case *sema.ArrayConst:
+		// An array constant is read from its datum, as a whole array of
+		// lowering's own whose lower bounds are 1.
+		sym := sema.NewArray("$K", leaf.T, constExtents(leaf))
+		n.l.bound[sym] = n.l.arrayConstMem(leaf)
+		n.kept = append(n.kept, sym)
+		whole(sym, leaf.Pos)
+
+	case *sema.Constructor:
+		// A constructor is built now, before the loops, into an array
+		// temporary, which they read (lowerctor.go).
+		temp := n.l.arrayTemp(leaf.T, constExtents(leaf))
+		n.l.fillConstructor(temp, leaf)
+		whole(temp.Sym, leaf.Pos)
 
 	case *sema.Section:
 		info.sym = leaf.Sym
@@ -411,6 +474,9 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 		var count Expr
 
 		switch leaf := leaf.(type) {
+		case *sema.ArrayConst, *sema.Constructor:
+			count = LongConst(int32(leaf.Shape()[i].Size))
+
 		case *sema.Section:
 			if d.vector != nil {
 				// A vector subscript's extent is the vector's: known, or one

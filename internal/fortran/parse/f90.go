@@ -22,8 +22,8 @@ import (
 //   - Fortran 90's declarations (Phase 100): a type statement's :: form,
 //     with its attributes (attrSpec) and = values (entityValue), the
 //     attribute statements with ::, and INTENT, OPTIONAL, and TARGET, into
-//     the old statements' nodes (decl.go, spec.go); a kind or length
-//     selector (REAL(8) X) is still a PendingStmt naming the form;
+//     the old statements' nodes (decl.go, spec.go), an = value an array
+//     constructor too (Phase 102);
 //   - and the statements that hold others: CONTAINS's procedures, an
 //     interface block's bodies, a derived type's components. Left in the
 //     unit's list, they would be read as the unit's own declarations, so
@@ -33,17 +33,6 @@ import (
 // parsePending makes a statement a PendingStmt, reported NOTIMPL by its kind.
 func parsePending(p *parser) ast.Stmt {
 	return &ast.PendingStmt{StmtBase: p.base()}
-}
-
-// pending makes the statement a PendingStmt naming what, at t (the
-// statement's start for nil): a Fortran 90 form of an old statement.
-func (p *parser) pending(what string, t *lex.Token) ast.Stmt {
-	s := &ast.PendingStmt{StmtBase: p.base(), What: what}
-	if t != nil {
-		s.WhatPos = p.pos(*t)
-	}
-
-	return s
 }
 
 // doubleColon is the statement's :: token at level 0, or nil: Fortran 90's
@@ -195,18 +184,14 @@ func (p *parser) intentSpec() string {
 // entityValue reads what may follow an entity of a Fortran 90 type
 // declaration: = and its initialization expression (R504). DEC's initial
 // values in slashes are VAX FORTRAN's form, without ::, and not allowed with
-// it (SLASHINIT; the HP manual's rule). An array constructor as the value is
-// Phase 102's.
+// it (SLASHINIT; the HP manual's rule). The value may be an array constructor, an
+// array's (Phase 102).
 func (p *parser) entityValue(d *ast.Declarator) ast.Stmt {
 	switch {
 	case p.at("/"):
 		p.fail("SLASHINIT", p.here())
 
 	case p.accept("="):
-		if p.at("(/") {
-			return p.pending("an array constructor", p.peek())
-		}
-
 		d.ValuePos = p.here()
 		d.Value = p.expr()
 	}
