@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 7 are done (2026-11-17), and subtask 8 is next.
+author's answers"); subtasks 2 to 8 are done (2026-11-17), and subtask 9 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -416,7 +416,7 @@ and FTNRTL do today.
    constant vector subscript with a value twice (finding 13) (done
    2026-11-17).
 8. **Elemental intrinsics on arrays:** the class column for Table D-3's rows,
-   MERGE (finding 9).
+   MERGE (finding 9) (done 2026-11-17).
 9. **Reductions and inquiries**, with MASK= and constant DIM=, DOT_PRODUCT,
    MAXLOC and MINLOC, MATMUL and TRANSPOSE (finding 12).
 10. **WHERE** in both forms (finding 8).
@@ -712,3 +712,26 @@ shapes in Phase 104.
   `ir`'s `f90ctor.for`, `TestFortranCheck`'s FILL, and `testdata/fortran90`'s
   `constants.f90`, worked by hand, run in all eight modes and the same on
   gfortran.
+- **2026-11-17, subtask 8:** Elemental intrinsics on arrays. Table D-3's rows,
+  which have no class column, are class E when read (`readTable`), but SIZEOF
+  and NWORKERS, DEC's, and LEN, an inquiry (`notElemental`). `intrinsicRef`
+  takes array arguments: their shapes conform (NOTCONFORM), the row is chosen
+  by the elements' types as before, and the value `intrinsicValue` makes
+  (an `IntrinsicRef`, or a `Convert`, `Binary`, `Unary`, or `Compare` of one)
+  gets the shape on every node above an array (`giveShape`). A row that isn't
+  elemental given an array is NOTIMPL, but LEN of a CHARACTER array of known
+  length, that length. `sema.Scalarize` walks an `IntrinsicRef`'s arguments,
+  so the scalarizer computes the function at each element, a MTHRTL routine
+  called once per element, a scalar argument that isn't inline computed once
+  before the loops; overlap and `checkArrayParts` see into its arguments too.
+  MERGE (13.13.67) is a fortran90Table row, class E, analyzed by `merge`:
+  TSOURCE and FSOURCE of one type and length (MERGEARGS, new), MASK LOGICAL
+  (BADARG), a `MergeOp` `IntrinsicRef` of TSOURCE's type; lowered as FSOURCE
+  in a temporary that TSOURCE replaces where MASK holds (`choose`), a
+  CHARACTER one through a text temporary (`mergeText`); of a length not
+  constant, or COMPLEX*32, NOTIMPL. An ARRAY row (SIZE and the rest) of an
+  array whose bounds aren't constants is NOTIMPL until subtask 9 (it had
+  reached an `IntrinsicRef` of no operation). Tests: `TestElementals`,
+  `TestShapes`' changed case (`X = SQRT(A)` is NOTSCALAR), `ir`'s
+  `f90elem.for`, and `testdata/fortran90`'s `elements.f90`, worked by hand, run
+  in all eight modes and the same on gfortran.

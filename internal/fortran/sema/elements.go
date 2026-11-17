@@ -130,6 +130,16 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 
 		return &c
 
+	case *IntrinsicRef:
+		c := *e
+		c.S, c.Args = nil, make([]Expr, len(e.Args))
+
+		for i, x := range e.Args {
+			c.Args[i] = walk(x)
+		}
+
+		return &c
+
 	case *Concat:
 		c := *e
 		c.S, c.Parts = nil, make([]Expr, len(e.Parts))

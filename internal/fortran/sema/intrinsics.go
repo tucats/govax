@@ -376,12 +376,17 @@ AIMAG              -  1   C8  R4  IMAG
 AIMAG              -  1   C32 R16 IMAG
 CONJG              -  1   C32 C32 CONJG
 
+MERGE              -  3   *   *   MERGE E TSOURCE,FSOURCE,MASK
+
 RESHAPE            -  2,4 *   *   ARRAY T SOURCE,SHAPE,PAD?,ORDER?
 SHAPE              -  1   *   I4  ARRAY I SOURCE
 SIZE               -  1,2 *   I4  ARRAY I ARRAY,DIM?
 LBOUND             -  1,2 *   I4  ARRAY I ARRAY,DIM?
 UBOUND             -  1,2 *   I4  ARRAY I ARRAY,DIM?
 `
+
+// notElemental are the names of Table D-3's rows that aren't elemental.
+var notElemental = map[string]bool{"SIZEOF": true, "NWORKERS": true, "LEN": true}
 
 // form is one row of the table.
 type form struct {
@@ -466,6 +471,12 @@ func readTable(table string, old map[string]bool) ([]form, map[string]bool) {
 
 		if r.generic == "-" {
 			r.generic = ""
+		}
+
+		// Every function of Table D-3 is elemental in Fortran 90 (13.2.1), but
+		// DEC's SIZEOF and NWORKERS, and LEN, an inquiry.
+		if len(f) == 6 && !notElemental[r.generic] && !notElemental[r.specific] {
+			r.class = 'E'
 		}
 
 		if r.specific == "-" {

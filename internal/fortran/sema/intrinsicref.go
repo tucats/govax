@@ -69,18 +69,22 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.sizeOf(e)
 	}
 
+	if forms[0].how == "ARRAY" {
+		// One whose array's bounds are constants was folded (apply).
+		a.notImplForm(e.Pos, e.Name+" of an array whose bounds aren't constants")
+
+		return a.bad(e.Pos)
+	}
+
+	array := false
+
 	args := make([]Expr, len(slots.args))
 	for i, x := range slots.args {
 		if args[i] = a.arrayValue(x); args[i].Type().Kind == Invalid {
 			return a.bad(e.Pos)
 		}
 
-		if rankOf(args[i]) > 0 {
-			// The elemental intrinsics on arrays are subtask 8's.
-			a.notImplForm(x.Position(), "an array argument to the intrinsic function "+e.Name)
-
-			return a.bad(e.Pos)
-		}
+		array = array || rankOf(args[i]) > 0
 
 		if args[i].Type() == complex32 && !takesComplex32(forms) {
 			// Only the conversions and parts have rows for one (complex32).
@@ -88,6 +92,20 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 			return a.bad(e.Pos)
 		}
+	}
+
+	// An elemental function of arrays is an array of their shape, a scalar
+	// argument standing for each element (Fortran 90's 13.2.1).
+	var shape Shape
+
+	if array {
+		if shape, ok = a.conforms(e.Pos, args...); !ok {
+			return a.bad(e.Pos)
+		}
+	}
+
+	if e.Name == "MERGE" {
+		return a.merge(e, args, shape)
 	}
 
 	// KIND= makes the result that kind of the result's type.
@@ -108,6 +126,17 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		f.result = want
 	}
 
+	if array && f.class != 'E' {
+		// LEN of a CHARACTER array whose length is known is that length.
+		if f.how == "LEN" && args[0].Type().Size > 0 {
+			return &Const{exprBase: exprBase{T: f.result, Pos: e.Pos}, Int: int32(args[0].Type().Size)}
+		}
+
+		a.notImplForm(e.Pos, "an array argument to the intrinsic function "+e.Name)
+
+		return a.bad(e.Pos)
+	}
+
 	v := a.intrinsicValue(e, f, a.intrinsicArgs(f, args))
 
 	switch {
@@ -118,7 +147,92 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		v = a.convert(v, byteType)
 	}
 
+	if shape != nil {
+		giveShape(v, shape)
+	}
+
 	return v
+}
+
+// giveShape gives each node of e, an elemental function's value made of
+// array arguments, that has an array below it the shape s.
+func giveShape(e Expr, s Shape) bool {
+	array := rankOf(e) > 0
+
+	switch e := e.(type) {
+	case *IntrinsicRef:
+		for _, x := range e.Args {
+			array = giveShape(x, s) || array
+		}
+
+		if array && e.S == nil {
+			e.S = s
+		}
+
+	case *Binary:
+		array = giveShape(e.X, s) || array
+		array = giveShape(e.Y, s) || array
+
+		if array && e.S == nil {
+			e.S = s
+		}
+
+	case *Compare:
+		array = giveShape(e.X, s) || array
+		array = giveShape(e.Y, s) || array
+
+		if array && e.S == nil {
+			e.S = s
+		}
+
+	case *Unary:
+		array = giveShape(e.X, s) || array
+
+		if array && e.S == nil {
+			e.S = s
+		}
+
+	case *Convert:
+		array = giveShape(e.X, s) || array
+
+		if array && e.S == nil {
+			e.S = s
+		}
+	}
+
+	return array
+}
+
+// merge is MERGE(TSOURCE, FSOURCE, MASK) (Fortran 90's 13.13.67): TSOURCE
+// where MASK is true, FSOURCE where it is false, elemental. TSOURCE and
+// FSOURCE have one type and length (MERGEARGS), MASK is LOGICAL; the value is
+// TSOURCE's type.
+func (a *analyzer) merge(e *ast.Apply, args []Expr, shape Shape) Expr {
+	ts, fs, mask := args[0], args[1], args[2]
+
+	switch {
+	case ts.Type() != fs.Type():
+		a.report("MERGEARGS", e.Pos, ts.Type().String(), fs.Type().String())
+
+		return a.bad(e.Pos)
+
+	case mask.Type().Kind != Logical:
+		a.report("BADARG", mask.Position(), "MERGE", "a LOGICAL MASK", mask.Type().String())
+
+		return a.bad(e.Pos)
+
+	case ts.Type().Kind == Character && ts.Type().Size == 0:
+		a.notImplForm(e.Pos, "MERGE of CHARACTER values of a length not constant")
+
+		return a.bad(e.Pos)
+
+	case ts.Type() == complex32:
+		a.notImplForm(e.Pos, complex32Intrinsic)
+
+		return a.bad(e.Pos)
+	}
+
+	return &IntrinsicRef{exprBase{T: ts.Type(), Pos: e.Pos, S: shape}, "MERGE", MergeOp, args, ""}
 }
 
 // takesComplex32 reports whether any of the rows takes a COMPLEX*32.

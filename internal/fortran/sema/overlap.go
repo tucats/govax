@@ -752,6 +752,11 @@ func (a *analyzer) checkArrayParts(value Expr) bool {
 
 		case *Convert:
 			visit(e.X)
+
+		case *IntrinsicRef:
+			for _, x := range e.Args {
+				visit(x)
+			}
 		}
 	}
 

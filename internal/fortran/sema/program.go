@@ -928,13 +928,14 @@ const (
 	IcharOp                            // a CHARACTER value's first character's code
 	CharOp                             // the CHARACTER*1 whose code is X
 	CallOp                             // a call of Routine, MTHRTL's or FTNRTL's, with the arguments by reference
+	MergeOp                            // MERGE(T, F, MASK): T if MASK is true, else F
 )
 
 // String is the operation's name in the dump.
 func (op IntrinsicOp) String() string {
 	return [...]string{"?", "abs", "max", "min", "dim", "sign", "mod", "nint", "zext", "imag", "cmplx",
 		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "len", "arraysize", "index",
-		"ichar", "char", "call"}[op]
+		"ichar", "char", "call", "merge"}[op]
 }
 
 // Arg is an actual argument. Expr is nil for a null argument (CALL

@@ -85,7 +85,7 @@ func TestShapes(t *testing.T) {
 		{"an argument", []string{"DIMENSION A(10)", "CALL S(A(2:5))"}, "NOTIMPL: an array section or array expression as an actual argument is not implemented yet"},
 		{"an expression argument", []string{"DIMENSION A(10)", "CALL S(A + 1)"}, "NOTIMPL: an array section or array expression as an actual argument is not implemented yet"},
 		{"a whole array argument", []string{"DIMENSION A(10)", "CALL S(A)"}, ""},
-		{"an intrinsic's", []string{"DIMENSION A(10)", "X = SQRT(A)"}, "NOTIMPL: an array argument to the intrinsic function SQRT is not implemented yet"},
+		{"an intrinsic's", []string{"DIMENSION A(10)", "X = SQRT(A)"}, "NOTSCALAR: an array is used where a scalar is required"},
 		{"an output item", []string{"DIMENSION A(10)", "PRINT *, A(1:3)"}, "NOTIMPL: an array section or array expression in an I/O list is not implemented yet"},
 		{"an input item", []string{"DIMENSION A(10)", "READ *, A(1:3)"}, "NOTIMPL: an array section in an I/O statement is not implemented yet"},
 		{"a whole array item", []string{"DIMENSION A(10)", "PRINT *, A"}, ""},

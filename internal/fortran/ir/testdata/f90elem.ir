@@ -1,0 +1,98 @@
+routine F90ELM main
+  cell  A       F  $LOCAL+0    array A, 16 bytes
+  cell  B       F  $LOCAL+16   array B, 16 bytes
+  cell  K       L  $LOCAL+32   array K, 16 bytes
+  cell  L       L  $LOCAL+48   array L, 16 bytes
+  cell  S       B  $LOCAL+64   array S, 8 bytes
+  cell  X       F  $LOCAL+72   variable X
+  cell  $I1     L  $LOCAL+76   an array statement's index
+  cell  $T1     F  $LOCAL+80   temporary
+  cell  $C1     L  $LOCAL+84   array (line 11), dimension 1's count
+  cell  $T2     F  $LOCAL+88   temporary
+  cell  $T3     F  $LOCAL+92   temporary
+  cell  $C2     L  $LOCAL+96   array (line 12), dimension 1's count
+  cell  $C3     L  $LOCAL+100  array (line 13), dimension 1's count
+  cell  $C4     L  $LOCAL+104  array (line 14), dimension 1's count
+  cell  $C5     L  $LOCAL+108  array (line 15), dimension 1's count
+  cell  $T4     B  $LOCAL+112  temporary
+  $LOCAL is 116 bytes
+  datum $K1     text 'XX'
+B1:
+  ; line 11
+  assign $T1 = mul.F(X, 2.0)
+  assign $C1 = 4
+  assign $I1 = 1
+  jump B2
+B2:  ; array (line 11), dimension 1's body
+  assign $T3 = A-4[$I1]
+  branch lt.F($T3, 0.0) B3 B4
+B3:
+  assign $T3 = neg.F($T3)
+  jump B4
+B4:
+  assign $T2 = $T3
+  branch gt.F($T1, $T2) B5 B6
+B5:
+  assign $T2 = $T1
+  jump B6
+B6:
+  assign B-4[$I1] = $T2
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B7
+B7:
+  ; line 12
+  assign $C2 = 4
+  assign $I1 = 1
+  jump B8
+B8:  ; array (line 12), dimension 1's body
+  call MTH$SQRT(ref A-4[$I1]) -> $T3
+  assign B-4[$I1] = $T3
+  assign $I1 = add.L($I1, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B8 B9
+B9:
+  ; line 13
+  assign $C3 = 4
+  assign $I1 = 1
+  jump B10
+B10:  ; array (line 13), dimension 1's body
+  assign K-4[$I1] = zext.BL(S-2[mul.L($I1, 2)])
+  assign $I1 = add.L($I1, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B10 B11
+B11:
+  ; line 14
+  assign $C4 = 4
+  assign $I1 = 1
+  jump B12
+B12:  ; array (line 14), dimension 1's body
+  assign $T3 = B-4[$I1]
+  branch gt.F(A-4[$I1], B-4[$I1]) B13 B14
+B13:
+  assign $T3 = A-4[$I1]
+  jump B14
+B14:
+  assign B-4[$I1] = $T3
+  assign $I1 = add.L($I1, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B12 B15
+B15:
+  ; line 15
+  assign $C5 = 4
+  assign $I1 = 1
+  jump B16
+B16:  ; array (line 15), dimension 1's body
+  move $T4(2) = $K1(2)
+  branch L-4[$I1] B17 B18
+B17:
+  move $T4(2) = S-2[mul.L($I1, 2)](2)
+  jump B18
+B18:
+  move S-2[mul.L($I1, 2)](2) = $T4(2)
+  assign $I1 = add.L($I1, 1)
+  assign $C5 = sub.L($C5, 1)
+  branch gt.L($C5, 0) B16 B19
+B19:
+  ; line 16
+  return 1

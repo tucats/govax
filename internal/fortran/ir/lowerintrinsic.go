@@ -38,6 +38,14 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	case sema.MaxOp, sema.MinOp:
 		return l.extreme(e, t)
 
+	case sema.MergeOp:
+		// FSOURCE in a temporary, which TSOURCE replaces where MASK holds.
+		v := l.temp(t)
+		l.emit(&Assign{origin: l.origin(), Dst: v, Src: l.expr(e.Args[1])})
+		l.choose(l.cond(e.Args[2]), v, l.expr(e.Args[0]))
+
+		return &Load{v}
+
 	case sema.DimOp:
 		return l.difference(t, l.expr(e.Args[0]), l.expr(e.Args[1]))
 
@@ -366,8 +374,29 @@ func (l *lowerer) index(e *sema.IntrinsicRef) Expr {
 // temporary (MOVB, which takes a longer value's low byte; Table D-3's
 // argument is from 0 to 255).
 func (l *lowerer) char(e *sema.IntrinsicRef) Text {
+	if e.Op == sema.MergeOp {
+		return l.mergeText(e)
+	}
+
 	v := l.temp(Byte)
 	l.emit(&Assign{origin: l.origin(), Dst: v, Src: convertLow(Byte, l.expr(e.Args[0]))})
 
 	return Text{v, LongConst(1)}
+}
+
+// mergeText is MERGE of CHARACTER values, whose length is a constant: FSOURCE
+// moved to a CHARACTER temporary, which TSOURCE replaces where MASK holds.
+func (l *lowerer) mergeText(e *sema.IntrinsicRef) Text {
+	n := LongConst(int32(e.T.Size))
+	v := Text{l.textTemp(e.T.Size), n}
+
+	l.emit(&CharMove{l.origin(), v, l.chars(e.Args[1])})
+
+	set, next := l.newBlock(), l.newBlock()
+	l.divert(l.cond(e.Args[2]), set, next)
+	l.begin(set)
+	l.emit(&CharMove{l.origin(), v, l.chars(e.Args[0])})
+	l.begin(next)
+
+	return v
 }
