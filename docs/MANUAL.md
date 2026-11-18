@@ -8063,7 +8063,10 @@ WIDGETS    14.50000
 - **Types.** Each is shown as what it is: a REAL as a number, a LOGICAL as `.TRUE.` or `.FALSE.`, a COMPLEX as `(re,im)`, and
   CHARACTER as text. A qualifier still decides, as `EXAMINE/HEXADECIMAL/LONGWORD X` does. A record shows as longwords.
 - **Subscripts.** `M(2,1)` uses FORTRAN's bounds and order, and an array named alone is all its elements, but
-  an assumed-size array's first only. An adjustable array's bounds are its current ones. `S(2:4)` is a substring. A
+  an assumed-size array's first only. An adjustable array's bounds are its current ones, and so are Fortran 90's
+  allocatable, automatic, and assumed-shape arrays', read from their descriptors; an assumed-shape dummy given a section
+  shows the section's elements, by the descriptor's strides, and an allocatable array not allocated is
+  `%DEBUG-W-NOTALLOC`. `S(2:4)` is a substring. A
   subscript is read in the input radix: under the default, hexadecimal, `V(10)` is `V(16)`, which is why the session starts
   with `SET RADIX DECIMAL`. `V[1]` keeps MACRO's meaning, a zero-based element of the label.
 - **Statements.** `UNIT.$LINEn` is the first instruction of FORTRAN line `n`, or `$LINEn` in that routine; an included file's

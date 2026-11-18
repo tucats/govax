@@ -41,6 +41,12 @@ type fortranPlace struct {
 	reg    bool            // addr is a register's number, the value not in memory
 	module *dbgsym.Module  // the module it's in
 	prog   *dbgsym.Program // the image it's in
+
+	// strides are each dimension's stride in bytes, and a0 where the element of
+	// all zero subscripts would be, for an array a class NCA descriptor says isn't
+	// contiguous (an assumed-shape dummy given a section); nil for any other.
+	strides []int64
+	a0      uint32
 }
 
 // fortranItem is what a location that may be a FORTRAN variable looks like: a path, a name
@@ -264,6 +270,9 @@ func (d *Debugger) fortranBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym
 
 	case dbgtable.InRegister:
 		return uint32(v.Place.N), length, nil
+
+	case dbgtable.Described, dbgtable.DescribedFrame:
+		return d.describedBase(v, mod, prog)
 	}
 
 	if v.DescriptorPassed() {
@@ -276,6 +285,100 @@ func (d *Debugger) fortranBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym
 	}
 
 	return addr, length, nil
+}
+
+// describedAt is the address of the descriptor that is a Described variable's own
+// storage: a symbol's, or a displacement from its routine's frame.
+func (d *Debugger) describedAt(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) (uint32, error) {
+	if v.Place.Kind == dbgtable.DescribedFrame {
+		frame, ok := d.fortranFrameOf(v, mod)
+		if !ok {
+			return 0, vmserrors.New(vmserrors.DBG_NOTACTIVE, v.Unit+"."+v.Name)
+		}
+
+		return frame.fp + uint32(int32(v.Place.N)), nil
+	}
+
+	s, ok := prog.Lookup(mod.Name + `\` + v.Place.Symbol)
+	if !ok {
+		return 0, vmserrors.New(vmserrors.DBG_NOSYMBOL, v.Place.Symbol)
+	}
+
+	return s.Value, nil
+}
+
+// describedBase is where a Described variable's first element is, its descriptor's
+// POINTER, and a CHARACTER one's length, the descriptor's first word (docs/planning/
+// PHASE-104 - Fortran 90 dynamic arrays.md, finding 14). A POINTER of 0 is an
+// allocatable array not allocated, or an automatic object of a routine not entered.
+func (d *Debugger) describedBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) (addr, length uint32, err error) {
+	at, err := d.describedAt(v, mod, prog)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	data, err := d.Machine.ReadBytes(at, 8)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	pointer := binary.LittleEndian.Uint32(data[4:])
+	if pointer == 0 {
+		return 0, 0, vmserrors.New(vmserrors.DBG_NOTALLOC, v.Unit+"."+v.Name)
+	}
+
+	length = uint32(max(v.Size, 0))
+	if v.Type == dbgtable.Char {
+		length = uint32(binary.LittleEndian.Uint16(data))
+	}
+
+	return pointer, length, nil
+}
+
+// describedStrides is a Described array's strides and A0 if its descriptor is class
+// NCA and its elements aren't one after another (an assumed-shape dummy given a
+// section): each element's address is then A0 plus each subscript times its
+// dimension's stride. It is nil for any other.
+func (d *Debugger) describedStrides(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program,
+	bounds []dbgtable.Bound, size uint32) ([]int64, uint32, error) {
+	if v.Place.Kind != dbgtable.Described && v.Place.Kind != dbgtable.DescribedFrame {
+		return nil, 0, nil
+	}
+
+	at, err := d.describedAt(v, mod, prog)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	head, err := d.Machine.ReadBytes(at, 20)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	const classNCA = 10
+	if head[3] != classNCA {
+		return nil, 0, nil
+	}
+
+	strides := make([]int64, len(bounds))
+	contiguous, expect := true, int64(size)
+
+	for i := range bounds {
+		s, err := d.long(at + 20 + 4*uint32(i))
+		if err != nil {
+			return nil, 0, err
+		}
+
+		strides[i] = int64(int32(s))
+		contiguous = contiguous && strides[i] == expect
+		expect *= int64(bounds[i].Upper - bounds[i].Lower + 1)
+	}
+
+	if contiguous {
+		return nil, 0, nil
+	}
+
+	return strides, binary.LittleEndian.Uint32(head[16:]), nil
 }
 
 // fortranBounds are the variable's bounds now: those the compiler knew, and those a class
@@ -381,6 +484,10 @@ func (d *Debugger) fortranPlaces(item string) (places []fortranPlace, ok bool, e
 	name := mod.Name + `\` + v.Unit + "." + v.Name
 	place := fortranPlace{name: name, addr: base, size: size, v: v, reg: v.Place.Kind == dbgtable.InRegister, module: mod, prog: prog}
 
+	if place.strides, place.a0, err = d.describedStrides(v, mod, prog, bounds, size); err != nil {
+		return nil, true, err
+	}
+
 	if len(bounds) == 0 {
 		if substring != "" {
 			return d.fortranSubstring(place, substring)
@@ -424,6 +531,7 @@ func (d *Debugger) fortranElement(place fortranPlace, bounds []dbgtable.Bound, t
 
 	offset, stride := int64(0), int64(1)
 	shown := make([]string, len(words))
+	strided := int64(place.a0)
 
 	for i, word := range words {
 		value, err := d.Machine.EvalWholeIn(d.inputRadix, strings.TrimSpace(word))
@@ -440,9 +548,16 @@ func (d *Debugger) fortranElement(place fortranPlace, bounds []dbgtable.Bound, t
 		shown[i] = strconv.Itoa(n)
 		offset += int64(n-b.Lower) * stride
 		stride *= int64(b.Upper - b.Lower + 1)
+
+		if place.strides != nil {
+			strided += int64(n) * place.strides[i]
+		}
 	}
 
 	place.addr = uint32(int64(place.addr) + offset*int64(place.size))
+	if place.strides != nil {
+		place.addr = uint32(strided)
+	}
 	place.name += "(" + strings.Join(shown, ",") + ")"
 
 	return place, nil
@@ -510,6 +625,16 @@ func wholeArray(place fortranPlace, bounds []dbgtable.Bound) []fortranPlace {
 		element := place
 		element.addr = at
 		element.name = place.name + "(" + strings.Join(words, ",") + ")"
+
+		if place.strides != nil {
+			addr := int64(place.a0)
+			for i, n := range subscripts {
+				addr += int64(n) * place.strides[i]
+			}
+
+			element.addr = uint32(addr)
+		}
+
 		places = append(places, element)
 
 		dimension := 0

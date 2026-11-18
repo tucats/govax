@@ -1,0 +1,11 @@
+n = 2 T  1.00000  2.00000
+residual small: T
+n = 3 T  1.00000  2.00000  3.00000
+residual small: T
+n = 4 T  1.00000  2.00000  3.00000  4.00000
+residual small: T
+n = 5 T  1.00000  2.00000  3.00000  4.00000  5.00000
+residual small: T
+singular solved: F
+bad of 1000:    0
+  $STATUS == "%X00000001"

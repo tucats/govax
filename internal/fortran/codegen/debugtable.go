@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/dbgtable"
+	"github.com/tucats/govax/internal/fortran/ir"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
@@ -31,10 +32,17 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 	// in a routine with ENTRY statements through the cell its entry points
 	// copy the address to (Through).
 	for _, p := range g.r.Params {
-		// An assumed-shape dummy's argument is a class NCA descriptor, which
-		// the debugger doesn't read yet (docs/planning/PHASE-104 - Fortran 90
-		// dynamic arrays.md, subtask 9), as an allocatable array's isn't.
+		// An assumed-shape dummy is reached through the class NCA copy its
+		// entry points make of the caller's descriptor, which has its own lower
+		// bounds (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md,
+		// finding 14).
 		if p.Sym != nil && p.Sym.AssumedShape() {
+			for _, c := range g.r.Cells {
+				if c.Desc != nil && c.Dummy == p.Name {
+					lines = append(lines, g.describedVar(p.Name, p.Sym, c).Line())
+				}
+			}
+
 			continue
 		}
 
@@ -60,20 +68,18 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 			lines = append(lines, dbgtable.LoopLine(g.r.Name, name, c.Register))
 		}
 
-		// Cells of the compiler's own (no Sym) aren't the program's
-		// variables, and names a text library's module declared
-		// (INCLUDE '($SSDEF)') that the unit never used would only clutter
-		// the table, as they would the storage map. An allocatable array's
-		// cell is its class NCA descriptor, which the debugger doesn't read
-		// yet (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md,
-		// subtask 9): left out until it does, rather than shown as elements. An
-		// automatic array's cell is its class A descriptor, which the debugger
-		// would read as an adjustable dummy's, but the table has no form for
-		// elements reached through a descriptor that is the variable's own:
-		// subtask 9's too, as is an automatic CHARACTER scalar, whose cell is a
-		// class S descriptor of it.
+		// Cells of the compiler's own (no Sym, or a symbol of lowering's own,
+		// $G or $W) aren't the program's variables, and names a text library's
+		// module declared (INCLUDE '($SSDEF)') that the unit never used would
+		// only clutter the table, as they would the storage map. An allocatable
+		// array's cell is its class NCA descriptor, an automatic array's its
+		// class A one, an automatic CHARACTER scalar's its class S one: each is
+		// Described, reached through that descriptor (finding 14).
 		switch {
-		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Allocatable || c.Sym.AutomaticObject:
+		case c.Sym == nil || c.Sym.UnusedFromLibrary() || strings.HasPrefix(c.Sym.Name, "$"):
+
+		case c.Sym.Allocatable || c.Sym.AutomaticObject:
+			lines = append(lines, g.describedVar(c.Sym.Name, c.Sym, c).Line())
 
 		case c.Register != 0:
 			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.InRegister, N: c.Register}).Line())
@@ -106,6 +112,32 @@ func (g *routineGen) debugVar(name string, s *sema.Symbol, place dbgtable.Place)
 		default:
 			v.Descriptor = g.names.symbol(c.Name)
 		}
+	}
+
+	return v
+}
+
+// describedVar is the entry of a variable whose own storage is the descriptor c
+// (dbgtable.Described): its place and its bounds' descriptor are both c.
+func (g *routineGen) describedVar(name string, s *sema.Symbol, c *ir.Cell) dbgtable.Var {
+	place := dbgtable.Place{Kind: dbgtable.Described, Symbol: g.names.symbol(c.Name)}
+	if c.Frame {
+		place = dbgtable.Place{Kind: dbgtable.DescribedFrame, N: c.Offset - g.frameSize()}
+	}
+
+	v := g.debugVar(name, s, place)
+	v.Descriptor, v.DescriptorInFrame, v.DescriptorOffset = "", false, 0
+
+	if c.Frame {
+		v.DescriptorInFrame, v.DescriptorOffset = true, c.Offset-g.frameSize()
+	} else {
+		v.Descriptor = g.names.symbol(c.Name)
+	}
+
+	// Every bound is the descriptor's: an allocatable array's are none of them
+	// known when compiling, and an assumed-shape dummy's upper ones aren't.
+	for i := range v.Bounds {
+		v.Bounds[i] = dbgtable.Bound{}
 	}
 
 	return v

@@ -499,7 +499,8 @@ calls), then the frame's run-time storage everything after needs.
    examples, and the intrinsic table's rows (done 2026-11-18).
 9. **Programs end to end** (a linear-equation solver with assumed-shape arrays, a
    sieve with ALLOCATE, a sort with PACK and automatic work arrays), every mode,
-   gfortran's witness; the debugger's EXAMINE through an NCA (finding 14).
+   gfortran's witness; the debugger's EXAMINE through an NCA (finding 14) (done
+   2026-11-18).
 10. **Close-out:** FORTRAN-INTERNALS.md's section 29 (descriptors and dynamic
     storage: the NCA of `A(2:10:2, J)` beside its memory, why an assumed-shape
     dummy needs an interface, the frame and the heap), MANUAL.md's 14.13 and its
@@ -1180,3 +1181,35 @@ The author read the survey and accepted every recommendation:
     `ir`, and `codegen`; `testdata/fortran90/transform.f90` (the standard's examples
     and more, every mode, paging both ways; gfortran prints the same 32 lines).
     MANUAL.md's 14.13 and HELP FORTRAN describe them.
+- **2026-11-18, subtask 9 done:** Programs end to end, and the debugger.
+  - *Programs* (`testdata/fortran90`): `solver.f90` (Gaussian elimination with
+    partial pivoting on assumed-shape dummies, automatic work arrays, allocatable
+    systems of sizes 2 to 5, MAXLOC, MATMUL, SUM of sections, a singular system, a
+    thousand solves), `sieve.f90` (an allocatable LOGICAL array of bounds 2:N,
+    strided sections, PACK of a constructor into an allocatable array of COUNT's
+    size, ALLOCATED, STAT=, a function's allocatable local freed at each return),
+    and `sorter.f90` (a quicksort as a recursive function whose value's shape is
+    SIZE of its dummy, made of a constructor of its own values over PACK's choices;
+    a merge sort with an automatic work array over sections of its own array). Each
+    was right on its first run, in every mode, paging both ways, and gfortran prints
+    the same lines (10, 15, and 8).
+  - *What they cost* (finding 15's measurement, left to Phase 110): instructions
+    /NOOPTIMIZE to /OPTIMIZE, solver 1,786,346 to 1,128,807 (-36.8%), sieve 431,672
+    to 204,251 (-52.7%), sorter 622,166 to 397,673 (-36.1%).
+  - *The debugger* (finding 14). The `/DEBUG` table gains two place kinds,
+    `dbgtable.Described` (`D:symbol`) and `DescribedFrame` (`G:n`): a variable whose
+    own storage is a descriptor, its bounds read from the same one
+    (`codegen/debugtable.go`'s `describedVar`): an allocatable array's class NCA
+    cell, an automatic array's class A one, an automatic CHARACTER scalar's class S
+    one, a function's value made at entry, and an assumed-shape dummy's class NCA
+    copy (`$Bn`), none of which the table had before. The debugger
+    (`debugger/fortran.go`'s `describedBase`, `describedStrides`) takes the first
+    element's address from POINTER and a CHARACTER length from the first word; a
+    class NCA descriptor whose strides aren't the contiguous ones (an assumed-shape
+    dummy given a section) gives each element's address as A0 plus each subscript
+    times its stride, in EXAMINE of an element and of the whole array. A POINTER of
+    0 is govax's new **DBG-W-NOTALLOC** ("!S is not allocated").
+  - *Tests:* `internal/debugger`'s `TestFortranDescribedArrays` (a section through an
+    assumed-shape dummy, whole and by element; automatic INTEGER and CHARACTER; an
+    allocatable array of bounds 0:1, 2; NOTALLOC; subscripts out of bounds). MANUAL.md's
+    14.10 describes them.

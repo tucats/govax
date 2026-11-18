@@ -1163,7 +1163,10 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   RESHAPE of values, and reductions by a run-time DIM= (`sema/transform.go`,
   `ArrayFunc.Transformed`; `ir/lowertransform.go`, each computed whole into
   a temporary, once per statement; `testdata/fortran90/transform.f90`).
-  Subtask 9, programs end to end, is next.
+  Subtask 9 (2026-11-18) is programs end to end (`solver.f90`, `sieve.f90`,
+  `sorter.f90`) and the debugger reading descriptors (`dbgtable.Described`,
+  `debugger/fortran.go`'s `describedBase`; DBG-W-NOTALLOC). Subtask 10, the
+  close-out, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

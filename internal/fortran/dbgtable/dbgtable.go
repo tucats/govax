@@ -61,6 +61,16 @@ const (
 	// ThroughFrame is Through in a RECURSIVE unit, whose ENTRY cells are in the frame: at
 	// the address in the longword N bytes from the routine's FP.
 	ThroughFrame PlaceKind = 'P'
+
+	// Described is a variable whose own storage is a descriptor at Symbol, which says
+	// where its elements are (Fortran 90's dynamic arrays): an allocatable array's
+	// class NCA descriptor, an automatic array's class A one, an automatic CHARACTER
+	// scalar's class S one, or an assumed-shape dummy's class NCA copy. Its POINTER is
+	// the first element's address, 0 for an allocatable array not allocated, and a
+	// class NCA one's strides say where the others are. DescribedFrame is the same
+	// descriptor N bytes from the routine's FP, in a RECURSIVE unit.
+	Described      PlaceKind = 'D'
+	DescribedFrame PlaceKind = 'G'
 )
 
 // Place is where a variable is. For a CHARACTER variable that's a dummy argument, the
@@ -72,7 +82,7 @@ type Place struct {
 }
 
 func (p Place) String() string {
-	if p.Kind == Static || p.Kind == Through {
+	if p.Kind == Static || p.Kind == Through || p.Kind == Described {
 		return string(p.Kind) + ":" + p.Symbol
 	}
 
@@ -260,9 +270,9 @@ func parsePlace(text string) (Place, bool) {
 	p := Place{Kind: PlaceKind(kind[0])}
 
 	switch p.Kind {
-	case Static, Through:
+	case Static, Through, Described:
 		p.Symbol = value
-	case Argument, Frame, InRegister, ThroughFrame:
+	case Argument, Frame, InRegister, ThroughFrame, DescribedFrame:
 		n, err := strconv.Atoi(value)
 		if err != nil {
 			return Place{}, false

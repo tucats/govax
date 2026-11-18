@@ -1,0 +1,16 @@
+  10:  4 primes
+   2   3   5   7
+bounds:    2   10
+  55: 16 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53
+bounds:    2   55
+ 100: 25 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53  59  61  67  71  73  79  83  89  97
+bounds:    2  100
+allocated: F
+allocated: T
+again failed: T  5
+total:  2510
+  $STATUS == "%X00000001"

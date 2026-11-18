@@ -47,6 +47,7 @@ const (
 	dbgMisInvNum
 	dbgNeedMore
 	dbgDynModSet
+	dbgNotAlloc
 )
 
 // DBG facility status codes.
@@ -113,6 +114,10 @@ const (
 	DBG_TOOFEWSUB = DBGFacility<<FacilityPosition | dbgTooFewSub<<MessagePosition | StatusWarning
 	DBG_SUBOUTBND = DBGFacility<<FacilityPosition | dbgSubOutBnd<<MessagePosition | StatusWarning
 	DBG_NOTACTIVE = DBGFacility<<FacilityPosition | dbgNotActive<<MessagePosition | StatusWarning
+	// DBG_NOTALLOC is EXAMINE of a FORTRAN allocatable array that isn't allocated
+	// now (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 14); its
+	// argument is the variable's path. The wording is govax's.
+	DBG_NOTALLOC = DBGFacility<<FacilityPosition | dbgNotAlloc<<MessagePosition | StatusWarning
 	// The scope messages (Phase 89, VMS 7.1's texts from testdata/dbg89).
 	// DBG_SYMNOTACT names a register of a call level that isn't there, or
 	// that the level doesn't keep (R0 and R1 of a caller): its argument is
@@ -208,6 +213,7 @@ func init() {
 	DefineMessage(DBG_TOOFEWSUB, DBGFacility, "TOOFEWSUB", "too few subscripts, array has !S")
 	DefineMessage(DBG_SUBOUTBND, DBGFacility, "SUBOUTBND", "subscript !S is out of bounds, value is !S, bounds are !S")
 	DefineMessage(DBG_NOTACTIVE, DBGFacility, "NOTACTIVE", "!S has no active call frame")
+	DefineMessage(DBG_NOTALLOC, DBGFacility, "NOTALLOC", "!S is not allocated")
 	DefineMessage(DBG_SYMNOTACT, DBGFacility, "SYMNOTACT", "non-static variable '!S' is not active")
 	DefineMessage(DBG_NODEFSCPE, DBGFacility, "NODEFSCPE", "No default scope list: error performing !S")
 	DefineMessage(DBG_BADSCOPE, DBGFacility, "BADSCOPE", "invalid pathname !S, SCOPE not changed")
