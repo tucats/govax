@@ -208,6 +208,14 @@ func DumpStmt(s Stmt) string {
 	case *LoopExitStmt:
 		return strings.TrimRight(s.Kind.String()+" "+s.Name, " ")
 
+	case *AllocateStmt:
+		text := s.Kind.String() + " (" + declarators(s.Objects)
+		if s.Stat != nil {
+			text += ", STAT=" + DumpExpr(s.Stat)
+		}
+
+		return text + ")"
+
 	case *SelectCaseStmt:
 		return "SELECT CASE " + DumpExpr(s.Expr)
 

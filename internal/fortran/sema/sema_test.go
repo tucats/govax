@@ -331,7 +331,7 @@ func TestErrors(t *testing.T) {
 		{"PUBLIC outside a module", []string{"REAL, PUBLIC :: X", "END"}, "NOTINMODULE@1:13"},
 		{"a PRIVATE statement outside a module", []string{"PRIVATE", "END"}, "NOTINMODULE@1:7"},
 		{"POINTER, Phase 107's", []string{"REAL, POINTER :: P", "END"}, "NOTIMPL@1:13"},
-		{"ALLOCATABLE with a deferred shape", []string{"REAL, ALLOCATABLE :: A(:)", "END"}, "NOTIMPL@1:13 NOTIMPL@1:28"},
+		{"ALLOCATABLE with a deferred shape", []string{"REAL, ALLOCATABLE :: A(:)", "END"}, ""},
 		{"an assumed-shape dummy", []string{"SUBROUTINE S(A)", "REAL A(0:)", "END"}, "NOTIMPL@2:12"},
 		{"initial values in slashes after ::", []string{"REAL :: X /1.0/", "END"}, "SLASHINIT@1:17"},
 		{"a character value for a REAL", []string{"REAL :: X = 'AB'", "END"}, "INITTYPE@1:19"},

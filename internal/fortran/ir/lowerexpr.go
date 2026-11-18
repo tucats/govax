@@ -56,6 +56,9 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.Present:
 		return l.present(e)
 
+	case *sema.Allocated:
+		return l.allocated(e)
+
 	case *sema.Unary:
 		op := Neg
 		if e.Op == ast.Not {
@@ -283,6 +286,10 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 	if s.ArrayValue != nil {
 		// An array PARAMETER's element whose subscripts aren't constants.
 		return l.constantArrayMem(s)
+	}
+
+	if s.Allocatable {
+		return l.allocatableBase(s)
 	}
 
 	t := l.typeOf(s.Type)

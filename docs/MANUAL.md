@@ -7222,6 +7222,8 @@ It has these routines, which MACRO programs can call too:
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
 | `FTN$ADJARRDIM()` | Signals `%FOR-F-ADJARRDIM`, severe: `/CHECK=BOUNDS` found an adjustable array's upper bound below its lower |
 | `FTN$NOTCONFOR()` | Signals `%FOR-F-NOTCONFOR`, severe, "array shapes do not conform": `/CHECK=BOUNDS` found two arrays of different shapes in a Fortran 90 array assignment. VAX FORTRAN had no such condition; it is govax's, FOR number 300 |
+| `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0), `flags` a longword (bit 0: STAT= given), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
+| `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array: gives its memory to `LIB$FREE_VM` and clears POINTER. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC` |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
@@ -7346,14 +7348,14 @@ To change FTNRTL, edit its sources in `SYS$SOURCES` and run
 `@SYS$SOURCES:BUILDFTN`, which builds it and installs it in `SYS$SHARE`
 as a new version ([Rebuilding FTNRTL and the macro
 library](#rebuilding-ftnrtl-and-the-macro-library)). Or build one of your
-own elsewhere and point the logical name at it. With the 19 `.MAR` files
+own elsewhere and point the logical name at it. With the 21 `.MAR` files
 and `ftnrtl.opt` on your volume:
 
 ```text
 VAX> MACRO FTN_VECTOR,FTN_CONTROL,FTN_UNITS,FTN_STATEMENT,FTN_FORMAT,FTN_EDIT
 VAX> MACRO FTN_FLOAT,FTN_LISTOUT,FTN_LISTIN,FTN_NAMELIST,FTN_INTERNAL,FTN_OPEN
 VAX> MACRO FTN_INQUIRE,FTN_POSITION,FTN_UNFORMATTED,FTN_DIRECT,FTN_RECORD
-VAX> MACRO FTN_INTRINSICS,FTN_SYSTEM
+VAX> MACRO FTN_KEYED,FTN_INTRINSICS,FTN_SYSTEM,FTN_ALLOC
 VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 ```
@@ -8395,8 +8397,8 @@ The attributes are PARAMETER, DIMENSION, SAVE, EXTERNAL, INTRINSIC, and DEC's VO
 AUTOMATIC, and STATIC, each doing what its statement does; INTENT and OPTIONAL, which say
 what a routine does with a dummy argument and whether a call may leave it out (below,
 with internal procedures and interface blocks); TARGET, checked and recorded but changing
-nothing yet; and POINTER and ALLOCATABLE, not there yet. PUBLIC and PRIVATE belong in a
-module (`NOTINMODULE`). Each has its statement too, with `::` or without: `DIMENSION ::
+nothing yet; ALLOCATABLE (below, with allocatable arrays); and POINTER, not there yet.
+PUBLIC and PRIVATE belong in a module (`NOTINMODULE`). Each has its statement too, with `::` or without: `DIMENSION ::
 Z(3)`, `SAVE :: TOTAL`, `INTENT(IN) :: A, B`, `OPTIONAL :: Q`, `TARGET :: T(4)`. A value
 given with `=` is a constant expression stored as an assignment would store it (so `REAL ::
 X = 'AB'` is `INITTYPE`, where DATA would take it), a scalar value fills a whole array,
@@ -8844,18 +8846,68 @@ distance   3.0  2  1
 How a host is reached, how OPTIONAL arguments are passed, and how a generic reference is
 resolved are in FORTRAN-INTERNALS.md's section 28.
 
+**Allocatable arrays** (the standard's 5.1.2.4.3, 5.2.6, and 6.3). An array declared
+ALLOCATABLE, with a colon for each of its dimensions, has a rank and nothing more until
+ALLOCATE gives it bounds, which may be any INTEGER values the program computes;
+DEALLOCATE gives its memory back, and ALLOCATED says which it is now. Allocated, it is an
+array like any other, by elements, whole, or in sections, and SIZE, LBOUND, UBOUND, and
+SHAPE answer for the bounds it was given:
+
+```fortran
+program grid
+  real, allocatable :: g(:, :)
+  integer :: rows, cols, i
+  rows = 3
+  cols = 4
+  allocate (g(rows, 0:cols-1))
+  do i = 1, rows
+    g(i, :) = i * 10.0
+  end do
+  g(:, 0) = 0.0
+  print '(1x, 4f6.1)', (g(i, :), i = 1, rows)
+  print *, allocated(g), shape(g), lbound(g, 2)
+  deallocate (g)
+  print *, allocated(g)
+end program grid
+```
+
+prints
+
+```text
+   0.0  10.0  10.0  10.0
+   0.0  20.0  20.0  20.0
+   0.0  30.0  30.0  30.0
+T           3           4           0
+F
+```
+
+An upper bound below its lower gives a dimension no elements, an array that is still
+allocated. The ALLOCATABLE statement gives the attribute too (`ALLOCATABLE :: G(:, :)`),
+and the colons may come from DIMENSION. An allocatable array can't be a dummy argument or
+a function's value (`ALLOCDUMMY`), nor be in COMMON, EQUIVALENCE, DATA, or a NAMELIST
+group (`ALLOCATTR`); colons on any other array are `DEFERREDNOTALLOC`. A bound in
+ALLOCATE may not use an array the same statement allocates (`ALLOCSELF`).
+
+The array is its descriptor, class NCA, which FTNRTL's `FTN$ALLOCATE` fills in with
+memory from LIB$GET_VM (FORTRAN-INTERNALS.md will describe it). Allocating an array that
+is allocated is `%FOR-F-ALREADYALLOC`, deallocating one that isn't `%FOR-F-NOTALLOC`
+(govax's own conditions, FOR numbers 301 and 302), and running out of memory VAX
+FORTRAN's `%FOR-F-INSVIRMEM`; each is severe, ending the program. STAT=, to have such a
+statement go on with a status instead, isn't there yet, nor is a local's deallocation when
+its procedure returns.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, the ALLOCATE statement is not implemented yet
-  at line 5 of DUA1:[WORK]BAD.F90;1
-    allocate (a(10))
+%FORT-E-NOTIMPL, the USE statement is not implemented yet
+  at line 2 of DUA1:[WORK]BAD.F90;1
+    use limits
   --^
 ```
 
-That includes assumed-shape and deferred-shape arrays (`A(:)`), modules and USE (with
-MODULE PROCEDURE), derived types, ALLOCATE, and pointers, each to come in its turn.
+That includes assumed-shape arrays (a dummy's `A(:)`), modules and USE (with MODULE
+PROCEDURE), derived types, and pointers, each to come in its turn.
 Of arrays as values, these are not there yet: an array assignment that needs a temporary
 array of a size not known when compiling; a section or array expression as an argument to a
 program's own procedure; an array function's value of a shape not known when compiling

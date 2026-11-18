@@ -153,6 +153,23 @@ func TestWarningsUnused(t *testing.T) {
 	}
 }
 
+// TestWarningsUnusedWholeArray: an array used only whole, as an intrinsic's
+// argument or an operand, is used (Phase 104 found SUM(A) unnoted).
+func TestWarningsUnusedWholeArray(t *testing.T) {
+	opts := testOptions
+	opts.F90 = true
+
+	got := warningsOf(t, opts, []string{"UNUSED"},
+		"      SUBROUTINE S(A, B, N)",
+		"      REAL A(N), B(N)",
+		"      PRINT *, SUM(A), B + 1.0",
+		"      END")
+
+	if len(got) != 0 {
+		t.Errorf("got %v", got)
+	}
+}
+
 // TestWarningsUnusedAfterError: a statement with an error may have lost its mentions, so
 // nothing is said of unused names.
 func TestWarningsUnusedAfterError(t *testing.T) {

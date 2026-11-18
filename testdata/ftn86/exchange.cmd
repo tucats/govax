@@ -30,6 +30,7 @@ COPY/QUIET "internal/ftnrtl/mar/ftn_record.mar"/HOST DUA5:[FTN86]FTN_RECORD.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_keyed.mar"/HOST DUA5:[FTN86]FTN_KEYED.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_intrinsics.mar"/HOST DUA5:[FTN86]FTN_INTRINSICS.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_system.mar"/HOST DUA5:[FTN86]FTN_SYSTEM.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_alloc.mar"/HOST DUA5:[FTN86]FTN_ALLOC.MAR
 CREATE/DIRECTORY DUA5:[ADJUST]
 COPY/QUIET "testdata/fortran/adjust.for"/HOST DUA5:[ADJUST]ADJUST.FOR
 FORTRAN/MACRO=DUA5:[ADJUST] DUA5:[ADJUST]ADJUST

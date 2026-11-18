@@ -1,0 +1,19 @@
+allocated before: F
+allocated after:  T
+size, lbound, ubound of v:  6  1  6
+shape and lbound of m:      3  4   0 -1
+v:      1.   4.   9.  16.  25.  36.
+v:      2.   0.  10.   0.  26.   0.
+sum:    38.
+m(0,:):   -1.   0.   1.   2.
+m(1,:):    9.  10.  11.  12.
+m(2,:):   19.  20.  21.  22.
+col sums:  27.  30.  33.  36.
+total:   38.
+allocated v: F
+again: -2  2   5.
+k:      1   4   9  16
+empty: T  0  0   0
+levels:    30
+all gone: F F F
+  $STATUS == "%X00000001"

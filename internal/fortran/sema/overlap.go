@@ -564,7 +564,7 @@ func slots(e Expr) []slot {
 
 		for i, d := range e.Sym.Dims {
 			list[i] = slot{triplet: true, stride: IntConstAt(1, e.Pos)}
-			if d.LowerExpr == nil {
+			if d.LowerKnown() {
 				list[i].lower = IntConstAt(d.Lower, e.Pos)
 			}
 		}

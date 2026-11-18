@@ -233,8 +233,19 @@
    operands Fortran gives none (or only VAX FORTRAN does), and
    INTERFACE ASSIGNMENT(=) defines assignments Fortran doesn't.
 
-   Fortran 90's other statements (MODULE, POINTER, ALLOCATABLE, and the
-   rest) are recognized and draw %FORT-E-NOTIMPL until they are
+   An ALLOCATABLE array, declared with a colon for each dimension, gets
+   its bounds and memory from ALLOCATE, gives them back by DEALLOCATE,
+   and ALLOCATED says which it is now:
+
+     real, allocatable :: g(:, :)
+     allocate (g(n, 0:m))
+     if (allocated(g)) deallocate (g)
+
+   Allocating one already allocated is %FOR-F-ALREADYALLOC, deallocating
+   one that isn't %FOR-F-NOTALLOC; STAT= isn't there yet.
+
+   Fortran 90's other statements (MODULE, POINTER, and the rest) are
+   recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may
    hold "..." constants under /F90; one in a variable can't yet, and
    FTNRTL refuses it, %FOR-F-SYNERRFOR.

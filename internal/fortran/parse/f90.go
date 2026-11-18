@@ -399,3 +399,50 @@ func parseEndWhere(p *parser) ast.Stmt {
 
 	return s
 }
+
+// parseAllocate parses Fortran 90's ALLOCATE (object[, object]...[,
+// STAT=v]) and DEALLOCATE (name[, name]...[, STAT=v]) (the standard's R622
+// and R631; docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md). An
+// ALLOCATE object is a name and its bounds, read as an array declarator's
+// are, so A(N) and B(0:M, 3) are Declarators; whether the bounds are right
+// for the array (no *, no :, as many as its rank) is semantic analysis's
+// question. A DEALLOCATE object is a name alone. STAT= may come only last.
+func parseAllocate(p *parser) ast.Stmt {
+	s := &ast.AllocateStmt{StmtBase: p.base()}
+	allocate := p.st.Kind == lex.Allocate
+
+	p.expect("(")
+
+	for {
+		if p.atName("STAT") && p.peekAt(1) != nil && p.peekAt(1).Is("=") {
+			p.next()
+			p.next()
+
+			s.Stat = p.reference("a variable for STAT=")
+
+			break
+		}
+
+		n := p.name("an allocatable array's name")
+		d := &ast.Declarator{Name: n.Name, Pos: n.Pos}
+
+		if allocate {
+			if !p.at("(") {
+				p.syntax("the array's bounds")
+			}
+
+			d.Dims = p.dimensions()
+		}
+
+		s.Objects = append(s.Objects, d)
+
+		if !p.accept(",") {
+			break
+		}
+	}
+
+	p.expect(")")
+	p.end()
+
+	return s
+}

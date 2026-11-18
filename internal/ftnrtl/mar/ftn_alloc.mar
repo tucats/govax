@@ -1,0 +1,172 @@
+	.TITLE	FTN_ALLOC - Fortran 90's ALLOCATE and DEALLOCATE
+	.IDENT	/V1.0/
+;
+; The routines behind Fortran 90's ALLOCATE and DEALLOCATE statements
+; (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 4). An
+; allocatable array is its descriptor, class NCA (the OpenVMS Calling
+; Standard's 5.7), in the program's own storage, whose POINTER is 0 while
+; the array isn't allocated:
+;
+;	 0  length (a word): an element's size in bytes
+;	 2  data type and class (DSC$K_CLASS_NCA) bytes
+;	 4  POINTER: the first element's address, or 0
+;	 8  scale, digits, flags (none), and the rank (DSC$B_DIMCT)
+;	12  ARSIZE: the array's size in bytes
+;	16  A0: where the element whose subscripts are all 0 would be
+;	20  S1 ... Sn: each dimension's stride, in bytes
+;	    L1, U1 ... Ln, Un: each dimension's bounds
+;
+; The compiler passes the descriptor's address and a longword of flags
+; (bit 0: the statement has STAT=), and for ALLOCATE the bounds, by value.
+; Each routine returns 0 in R0 if it worked. If it didn't and STAT= was
+; given, it returns the condition's FOR number, which STAT= receives;
+; without STAT= it signals the condition, which is severe, so it doesn't
+; come back. VAX FORTRAN had no ALLOCATE: ALREADYALLOC and NOTALLOC are
+; govax's own conditions, numbered past NOTCONFOR's 300 (FTN_CONTROL), in
+; govax's own words (PHASE-99's Decision 15), and running out of memory is
+; VAX FORTRAN's INSVIRMEM.
+;
+; Every routine is called with CALLS or CALLG; the conventions are those
+; of FTN_VECTOR.MAR's "Reading these sources".
+;
+	$DSCDEF				; descriptors' fields
+
+FOR$_INSVIRMEM	= ^X18814C		; FOR number 41, severity F
+FOR$_ALREADYALLOC = ^X18896C		; FOR number 301, severity F
+FOR$_NOTALLOC	= ^X188974		; FOR number 302, severity F
+
+ALLOC_V_STAT	= 0			; the flags' bit: STAT= given
+
+; The least memory an array is given. A zero-sized array (an upper bound
+; below its lower) is allocated too, and its POINTER must not be 0, so it
+; gets a block of this size; LIB$GET_VM gives quadwords anyway.
+MIN_BLOCK	= 8
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+NO_FILE:	.QUAD	0		; INSVIRMEM's file: an empty string's
+					;  descriptor
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; status = FTN$ALLOCATE(descriptor, flags, l1, u1, ..., ln, un)
+;
+; Allocates the array: its element size and rank are in its descriptor,
+; and each dimension's bounds are a pair of arguments. The strides make
+; the elements contiguous, the first subscript varying fastest: S1 is the
+; element's size, and each next stride the one before times that
+; dimension's extent, U - L + 1 (0 if U is below L). Then
+;
+;	A0 = POINTER - (S1*L1 + ... + Sn*Ln)
+;
+; so that A0 + S1*s1 + ... + Sn*sn is the element (s1, ..., sn). POINTER is
+; stored last: if anything fails, the array is still not allocated.
+;
+	.ENTRY	FTN$ALLOCATE,^M<R2,R3,R4,R5,R6,R7,R8>
+	SUBL2	#8,SP			; -8(FP): the size asked for, -4(FP):
+					;  the address LIB$GET_VM gives
+	MOVL	4(AP),R6		; the descriptor
+	TSTL	DSC$A_POINTER(R6)	; allocated already?
+	BEQL	10$
+	MOVL	#FOR$_ALREADYALLOC,R0
+	BRW	FAIL
+10$:	MOVZBL	DSC$B_DIMCT(R6),R2	; the rank, a count of dimensions
+	MOVZWL	DSC$W_LENGTH(R6),R3	; the size so far: one element's
+	MOVAL	12(AP),R4		; the first dimension's bounds
+	MOVAL	DSC$L_S1(R6),R5		; its stride's place
+	MOVAL	DSC$L_S1(R6)[R2],R8	; its bounds' place, after the strides
+	CLRL	R7			; S1*L1 + ... so far
+	;
+	; Each dimension: its stride is the size so far, and the size grows by
+	; its extent. EMUL makes a quadword product, so a size past 2**31 - 1
+	; bytes, which no VAX address could reach, is seen and refused.
+	;
+20$:	MOVL	R3,(R5)+		; the stride
+	MOVL	(R4)+,R0		; the lower bound
+	MOVL	R0,(R8)+
+	MULL3	R0,R3,R1		; S*L, into the sum
+	ADDL2	R1,R7
+	SUBL3	R0,(R4),R1		; the extent, U - L + 1,
+	MOVL	(R4)+,(R8)+		;  and the upper bound
+	INCL	R1
+	BGEQ	30$
+	CLRL	R1			; none below 0
+30$:	EMUL	R1,R3,#0,R0		; R0 and R1: the size times the extent
+	TSTL	R1			; past 32 bits?
+	BNEQ	NOMEM
+	MOVL	R0,R3
+	BLSS	NOMEM			; past 31?
+	SOBGTR	R2,20$
+	;
+	; The memory, from LIB$GET_VM (num_bytes, base_adr), both by reference.
+	;
+	MOVL	R3,DSC$L_ARSIZE(R6)
+	CMPL	R3,#MIN_BLOCK
+	BGEQ	40$
+	MOVL	#MIN_BLOCK,R3
+40$:	MOVL	R3,-8(FP)
+	PUSHAL	-4(FP)
+	PUSHAL	-8(FP)
+	CALLS	#2,G^LIB$GET_VM
+	BLBC	R0,NOMEM
+	MOVL	-4(FP),R0		; the first element's address
+	SUBL3	R7,R0,DSC$A_A0(R6)	; A0
+	MOVL	R0,DSC$A_POINTER(R6)	; allocated now
+	CLRL	R0
+	RET
+
+NOMEM:	MOVL	#FOR$_INSVIRMEM,R0
+	;
+	; FAIL: the condition in R0 is the answer: its FOR number, bits 3 to
+	; 14, if STAT= was given, else a signal. INSVIRMEM's message has VAX
+	; FORTRAN's I/O arguments (unit, file, user PC, and RMS's status and
+	; value after them), given here as unit 0 and no file; the others have
+	; none. The user PC is where the routine's call returns.
+	;
+FAIL:	BBC	#ALLOC_V_STAT,8(AP),50$	; STAT=?
+	EXTZV	#3,#12,R0,R0		; yes: its FOR number
+	RET
+50$:	CMPL	R0,#FOR$_INSVIRMEM
+	BNEQ	60$
+	CLRQ	-(SP)			; RMS's status and value: none
+	PUSHL	16(FP)			; the user PC
+	PUSHAQ	NO_FILE			; the file
+	CLRL	-(SP)			; the unit
+	PUSHL	#3			; three FAO arguments
+	PUSHL	R0
+	CALLS	#7,G^LIB$STOP
+	RET
+60$:	CLRL	-(SP)			; no FAO arguments
+	PUSHL	R0
+	CALLS	#2,G^LIB$STOP
+	RET
+
+;
+; status = FTN$DEALLOCATE(descriptor, flags)
+;
+; Gives the array's memory back to LIB$FREE_VM (num_bytes, base_adr),
+; whose second argument is the address of the address, so the descriptor's
+; POINTER serves, then clears POINTER. The size is the one FTN$ALLOCATE
+; asked for: ARSIZE, or MIN_BLOCK for less.
+;
+	.ENTRY	FTN$DEALLOCATE,^M<R2>
+	SUBL2	#8,SP			; -8(FP): the size
+	MOVL	4(AP),R2		; the descriptor
+	TSTL	DSC$A_POINTER(R2)	; allocated?
+	BNEQ	10$
+	MOVL	#FOR$_NOTALLOC,R0
+	BRW	FAIL
+10$:	MOVL	DSC$L_ARSIZE(R2),R0
+	CMPL	R0,#MIN_BLOCK
+	BGEQ	20$
+	MOVL	#MIN_BLOCK,R0
+20$:	MOVL	R0,-8(FP)
+	PUSHAL	DSC$A_POINTER(R2)
+	PUSHAL	-8(FP)
+	CALLS	#2,G^LIB$FREE_VM
+	CLRL	DSC$A_POINTER(R2)	; not allocated now
+	CLRL	R0
+	RET
+
+	.END

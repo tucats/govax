@@ -75,4 +75,11 @@ var forMessages = map[uint32]Message{
 	// FTN$NOTCONFOR, /CHECK=BOUNDS finding two arrays of different shapes
 	// in a Fortran 90 array assignment (FOR number 300).
 	0x00188960: {Facility: "FOR", Ident: "NOTCONFOR", Text: "array shapes do not conform", FAOCount: 0},
+
+	// FTNRTL's FTN$ALLOCATE and FTN$DEALLOCATE, Fortran 90's ALLOCATE of an
+	// array already allocated and DEALLOCATE of one not allocated (FOR
+	// numbers 301 and 302; docs/planning/PHASE-104 - Fortran 90 dynamic
+	// arrays.md, finding 4).
+	0x00188968: {Facility: "FOR", Ident: "ALREADYALLOC", Text: "allocatable array is already allocated", FAOCount: 0},
+	0x00188970: {Facility: "FOR", Ident: "NOTALLOC", Text: "allocatable array is not allocated", FAOCount: 0},
 }

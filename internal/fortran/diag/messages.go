@@ -1433,6 +1433,28 @@ var messages = map[string]kind{
 	// NMLTWICE is a NAMELIST group defined twice in a unit.
 	"NMLTWICE": {Error, "the NAMELIST group %s is defined already (line %d)"},
 
+	// Allocatable arrays (docs/planning/PHASE-104 - Fortran 90 dynamic
+	// arrays.md). DEFERREDNOTALLOC is a deferred shape, (:), on an array that
+	// isn't ALLOCATABLE (or a dummy's assumed shape); DEFERREDMIX bounds some
+	// of which are colons; ALLOCSHAPE an ALLOCATABLE name without a deferred
+	// shape (the standard's 5.1's constraints); ALLOCDUMMY one that is a dummy
+	// argument or a function's value, ALLOCATTR one in COMMON, EQUIVALENCE,
+	// DATA, or NAMELIST, or given a value (5.2.6, the HP manual's 6.3).
+	// NOTALLOCATABLE is ALLOCATE, DEALLOCATE, or ALLOCATED of a name that isn't
+	// an allocatable array; ALLOCBOUNDS an ALLOCATE object with the wrong
+	// number of bounds, or a bound of * or :; ALLOCSELF a bound that uses an
+	// object of its own statement (6.3.1's constraint); ALLOCOBJECT the same
+	// object twice in one statement.
+	"DEFERREDNOTALLOC": {Error, "%s has a deferred shape, (:), so it must be ALLOCATABLE"},
+	"DEFERREDMIX":      {Error, "the bounds of %s must be all colons or none"},
+	"ALLOCSHAPE":       {Error, "%s is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},
+	"ALLOCDUMMY":       {Error, "%s can't be ALLOCATABLE: it is %s"},
+	"ALLOCATTR":        {Error, "the allocatable array %s can't %s"},
+	"NOTALLOCATABLE":   {Error, "%s is not an allocatable array"},
+	"ALLOCBOUNDS":      {Error, "in ALLOCATE, %s needs %s, each a value or two separated by a colon"},
+	"ALLOCSELF":        {Error, "a bound in ALLOCATE can't use %s, which the same statement allocates or deallocates"},
+	"ALLOCOBJECT":      {Error, "%s is named twice in one %s statement"},
+
 	// NMLDUMMY is a dummy argument in a NAMELIST group (section 4.10).
 	"NMLDUMMY": {Error, "the dummy argument %s can't be in a NAMELIST group"},
 

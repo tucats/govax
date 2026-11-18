@@ -218,6 +218,10 @@ func (l *lowerer) prepare() {
 			c.Kind = ArrayCell
 		}
 
+		if s.Allocatable {
+			l.allocatableCell(s, c)
+		}
+
 		r.Cells = append(r.Cells, c)
 		l.cells[s] = c
 	}
@@ -246,6 +250,7 @@ func (l *lowerer) lowerBody() *Routine {
 
 	l.begin(l.newBlock())
 	l.computeBounds(u.Params)
+	l.clearAllocatables()
 	l.stmts(u.Body)
 
 	// The order of the work: the entry points' and adjustable arrays'

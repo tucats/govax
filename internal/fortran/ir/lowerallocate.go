@@ -1,0 +1,190 @@
+package ir
+
+import "github.com/tucats/govax/internal/fortran/sema"
+
+// Allocatable arrays (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md,
+// findings 1, 2, and 4). An allocatable array's storage is its descriptor, class
+// NCA (the OpenVMS Calling Standard's 5.7), in the variable's own cell:
+//
+//	REAL, ALLOCATABLE :: B(:, :)
+//
+//	B:   .WORD   4                  ; length: an element's size
+//	     .BYTE   DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+//	     .LONG   0                  ; POINTER: 0 while B isn't allocated
+//	     .BYTE   0,0,0,2            ; scale, digits, flags, dimensions
+//	     .LONG   0                  ; ARSIZE, the array's size in bytes
+//	     .LONG   0                  ; A0
+//	     .LONG   0,0                ; S1, S2: strides, in bytes
+//	     .LONG   0,0,0,0            ; L1, U1, L2, U2: bounds
+//
+// ALLOCATE (B(0:M, 3)) is a call of FTNRTL's FTN$ALLOCATE with the descriptor's
+// address, a longword of flags, and the bounds by value, which takes the
+// memory from LIB$GET_VM and fills the descriptor in: POINTER the first
+// element's address, strides of 4 and 4*(M+1), and A0 the address the element
+// B(0, 0) would have, POINTER less S1*L1 + S2*L2. DEALLOCATE (B) is a call of
+// FTN$DEALLOCATE, which gives the memory back and clears POINTER, and
+// ALLOCATED(B) is a test of POINTER.
+//
+// Everything else reads the descriptor as an adjustable array's is read
+// (lowerbounds.go), its cell standing among the adjustable arrays' (adjustableOf),
+// but for two differences. Every bound is in the descriptor, none known when
+// compiling. And an element is reached through the strides, in bytes, not the
+// multipliers: B(I, J) is at A0 + S2*J, indexed by I, since an allocatable
+// array's storage is contiguous, its S1 the element's size:
+//
+//	MOVL   B+24,R0              S2
+//	MULL2  J,R0                 times J
+//	ADDL2  B+16,R0              plus A0
+//	MOVL   I,R1
+//	MOVF   (R0)[R1],R2          the element
+//
+// A rank-one array's element is A0 indexed by its subscript, @B+16[R1] when the
+// optimizer leaves A0 in memory.
+
+// FTNRTL's routines for ALLOCATE and DEALLOCATE (mar/ftn_alloc.mar).
+const (
+	ftnAllocate   = "FTN$ALLOCATE"
+	ftnDeallocate = "FTN$DEALLOCATE"
+)
+
+// allocatableCell makes the cell c of the allocatable array s its descriptor.
+func (l *lowerer) allocatableCell(s *sema.Symbol, c *Cell) {
+	d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassNCA, Length: s.Type.Size}
+
+	for range s.Dims {
+		d.Dims = append(d.Dims, Bound{Set: true})
+	}
+
+	c.Kind, c.T, c.Desc = DescriptorCell, Long, d
+
+	if l.adjustable == nil {
+		l.adjustable = map[*sema.Symbol]*Cell{}
+	}
+
+	l.adjustable[s] = c
+}
+
+// clearAllocatables writes, at an entry point, what the descriptor of each
+// allocatable array in the frame starts as: a frame cell has no initial values,
+// and an earlier activation, or anything else, may have left any bytes there. A
+// static one's are its initial values.
+func (l *lowerer) clearAllocatables() {
+	for _, c := range l.r.Cells {
+		if c.Frame && isAllocatable(c) {
+			l.fillDescriptor(c)
+		}
+	}
+}
+
+// frameAllocatables reports whether the routine has an allocatable array in
+// its frame, which each entry point clears.
+func (l *lowerer) frameAllocatables() bool {
+	for _, c := range l.r.Cells {
+		if c.Frame && isAllocatable(c) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isAllocatable reports whether c is an allocatable array's descriptor.
+func isAllocatable(c *Cell) bool {
+	return c.Kind == DescriptorCell && c.Desc != nil && c.Desc.Class == ClassNCA && c.Sym != nil
+}
+
+// allocate lowers ALLOCATE or DEALLOCATE: a call of FTNRTL for each object, in
+// the statement's order. Its flags are 0: without STAT=, FTNRTL signals a
+// failure itself.
+func (l *lowerer) allocate(s *sema.Allocate) {
+	for _, obj := range s.Objects {
+		c := l.adjustableOf(obj.Sym)
+		args := []Arg{{Ref: &Mem{Cell: c, T: Long}}, {Value: LongConst(0)}}
+
+		if s.Deallocate {
+			l.emit(&Call{origin: l.origin(), Routine: ftnDeallocate, Args: args})
+
+			continue
+		}
+
+		for i := range obj.Upper {
+			args = append(args, Arg{Value: l.expr(obj.Lower[i])}, Arg{Value: l.expr(obj.Upper[i])})
+		}
+
+		l.emit(&Call{origin: l.origin(), Routine: ftnAllocate, Args: args})
+	}
+}
+
+// allocated is ALLOCATED(A): whether A's descriptor has an address.
+func (l *lowerer) allocated(e *sema.Allocated) Expr {
+	c := l.adjustableOf(e.Sym)
+
+	return &Cmp{Op: Ne, X: &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, Y: LongConst(0)}
+}
+
+// allocatableBase is where the allocatable array s's first element is, the
+// address in its descriptor's POINTER: what a whole array passed by reference is.
+func (l *lowerer) allocatableBase(s *sema.Symbol) *Mem {
+	c := l.adjustableOf(s)
+
+	return &Mem{Ptr: &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, T: l.typeOf(s.Type), Volatile: s.Volatile}
+}
+
+// stridedElement is where the element e of the array whose class NCA
+// descriptor is c is: A0 plus each subscript after the first times its
+// dimension's stride, indexed by the first, the element's size being the
+// first's stride (finding 2).
+func (l *lowerer) stridedElement(e *sema.Elem, c *Cell) *Mem {
+	s := e.Sym
+	subs := make([]Expr, len(e.Subs))
+
+	for i, sub := range e.Subs {
+		subs[i] = l.expr(sub)
+
+		if l.unit.Checks.Bounds && e.Checked(i) {
+			subs[i] = inRange(subs[i], l.lowerBound(s, c, i), l.upperBound(s, c, i))
+		}
+	}
+
+	var ptr Expr = &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}
+
+	for i := 1; i < len(subs); i++ {
+		stride := &Load{&Mem{Cell: c, Offset: c.Desc.StrideOffset(i), T: Long}}
+		ptr = arith(Add, Long, ptr, arith(Mul, Long, subs[i], stride))
+	}
+
+	base := &Mem{Ptr: ptr, T: l.typeOf(s.Type), Volatile: s.Volatile}
+
+	return l.elementAt(base, s, subs[0])
+}
+
+// ncaAsClassA is a class A descriptor of the whole array whose class NCA
+// descriptor is c, for what reads only class A (FTNRTL's I/O lists and run-time
+// formats, a CHARACTER array argument): an allocatable array is contiguous, so
+// its multipliers are its extents, and its A0 is the same address.
+func (l *lowerer) ncaAsClassA(s *sema.Symbol, c *Cell) *Mem {
+	d := &Descriptor{DType: c.Desc.DType, Class: ClassA, Length: c.Desc.Length}
+	for range s.Dims {
+		d.Dims = append(d.Dims, Bound{Set: true})
+	}
+
+	a := l.descriptorCell(d)
+
+	copyField := func(offset int) {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: a, Offset: offset, T: Long},
+			Src: &Load{&Mem{Cell: c, Offset: offset, T: Long}}})
+	}
+
+	copyField(PointerOffset)
+	copyField(ArsizeOffset)
+	copyField(A0Offset)
+
+	for i := range s.Dims {
+		copyField(d.LowerOffset(i))
+		copyField(d.LowerOffset(i) + Long.Size())
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: a, Offset: d.MultiplierOffset(i), T: Long},
+			Src: l.extent(s, c, i)})
+	}
+
+	return &Mem{Cell: a, T: Long}
+}

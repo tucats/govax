@@ -56,9 +56,12 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		// Cells of the compiler's own (no Sym) aren't the program's
 		// variables, and names a text library's module declared
 		// (INCLUDE '($SSDEF)') that the unit never used would only clutter
-		// the table, as they would the storage map.
+		// the table, as they would the storage map. An allocatable array's
+		// cell is its class NCA descriptor, which the debugger doesn't read
+		// yet (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md,
+		// subtask 9): left out until it does, rather than shown as elements.
 		switch {
-		case c.Sym == nil || c.Sym.UnusedFromLibrary():
+		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Allocatable:
 
 		case c.Register != 0:
 			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.InRegister, N: c.Register}).Line())

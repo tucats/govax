@@ -493,6 +493,18 @@ type (
 		NamePos diag.Position
 	}
 
+	// AllocateStmt is Fortran 90's ALLOCATE (object[, object]...[, STAT=v])
+	// or DEALLOCATE (name[, name]...[, STAT=v]) (the standard's 6.3.1 and
+	// 6.3.3), told apart by Kind. Each of ALLOCATE's Objects is a name with
+	// the bounds it is to have, (n) or (l:u) per dimension, as an array
+	// declarator's are written; DEALLOCATE's have no Dims. Stat is STAT='s
+	// variable, nil without one.
+	AllocateStmt struct {
+		StmtBase
+		Objects []*Declarator
+		Stat    Expr
+	}
+
 	// SelectCaseStmt is Fortran 90's SELECT CASE (Expr), the start of a
 	// CASE construct (the standard's 8.1.3).
 	SelectCaseStmt struct {

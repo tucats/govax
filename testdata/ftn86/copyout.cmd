@@ -29,5 +29,6 @@ COPY/QUIET DUA5:[FTN86]FTN_RECORD.OBJ "testdata/ftn86/vax/round6/ftn_record.obj"
 COPY/QUIET DUA5:[FTN86]FTN_KEYED.OBJ "testdata/ftn86/vax/round6/ftn_keyed.obj"/HOST
 COPY/QUIET DUA5:[FTN86]FTN_INTRINSICS.OBJ "testdata/ftn86/vax/round6/ftn_intrinsics.obj"/HOST
 COPY/QUIET DUA5:[FTN86]FTN_SYSTEM.OBJ "testdata/ftn86/vax/round6/ftn_system.obj"/HOST
+COPY/QUIET DUA5:[FTN86]FTN_ALLOC.OBJ "testdata/ftn86/vax/round6/ftn_alloc.obj"/HOST
 DISMOUNT DUA5:
 EXIT

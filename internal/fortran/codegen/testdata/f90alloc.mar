@@ -1,0 +1,228 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for F90ALC, the main program
+;   A     REAL (:)    $LOCAL+0   F90ALC.A
+;   B     REAL (:,:)  $LOCAL+32  F90ALC.B
+;   N     INTEGER     $LOCAL+76  F90ALC.N
+;   I     INTEGER     $LOCAL+80  F90ALC.I
+;   J     INTEGER     $LOCAL+84  F90ALC.J
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+F90ALC.A:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; A: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+F90ALC.B:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; B: not allocated
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+F90ALC.N:
+	.BLKL	1			; N
+F90ALC.I:
+	.BLKL	1			; I
+F90ALC.J:
+	.BLKL	1			; J
+F90ALC.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	0,0			; bounds
+F90ALC.$I1:
+	.BLKL	1			; an array statement's loop index
+F90ALC.$I2:
+	.BLKL	1			; an array statement's loop index
+F90ALC.$T1:
+	.BLKL	1			; temporary
+F90ALC.$T2:
+	.BLKL	1			; temporary
+F90ALC.$T3:
+	.BLKL	1			; temporary
+F90ALC.$T4:
+	.BLKL	1			; temporary
+F90ALC.$T5:
+	.BLKL	1			; temporary
+F90ALC.$I3:
+	.BLKL	1			; an array statement's loop index
+F90ALC.$I4:
+	.BLKL	1			; an array statement's loop index
+F90ALC.$T6:
+	.BLKL	1			; temporary
+F90ALC.$T7:
+	.BLKL	1			; temporary
+F90ALC.$T8:
+	.BLKL	1			; temporary
+F90ALC.$T9:
+	.BLKL	1			; temporary
+F90ALC.$T10:
+	.BLKL	1			; temporary
+F90ALC.$T11:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+F90ALC.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+F90ALC.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS F90ALC.$T5
+F90ALC.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS F90ALC.$T10
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Fortran 90's allocatable arrays (Phase 104, subtask 2): each is its
+;    3  C     class NCA descriptor; ALLOCATE and DEALLOCATE are FTNRTL's calls,
+;    4  C     ALLOCATED a test of POINTER; an element is A0 indexed by its first
+;    5  C     subscript, plus each other subscript times its stride; a whole
+;    6  C     array in an output list is a class A descriptor copied from it; a
+;    7  C     recursive unit's is in the frame, cleared at entry.
+;    8        PROGRAM F90ALC
+	.ENTRY	F90ALC,^M<R2,R3,R4>
+;    9        REAL, ALLOCATABLE :: A(:), B(:, :)
+;   10        INTEGER N, I, J
+;   11        IF (.NOT. ALLOCATED(A)) ALLOCATE (A(N), B(0:N, 3))
+	TSTL	F90ALC.A+4
+	BEQL	F90ALC.$2
+	BRW	F90ALC.$1
+F90ALC.$2:
+	PUSHL	F90ALC.N
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	F90ALC.A
+	CALLS	#4,G^FTN$ALLOCATE
+	PUSHL	#3
+	PUSHL	#1
+	PUSHL	F90ALC.N
+	PUSHL	#0
+	PUSHL	#0
+	PUSHAQ	F90ALC.B
+	CALLS	#6,G^FTN$ALLOCATE
+F90ALC.$1:
+;   12        A(I) = B(I, J) + B(1, 2)
+	MULL3	F90ALC.J,F90ALC.B+24,R0
+	ADDL2	F90ALC.B+16,R0
+	MOVL	F90ALC.I,R1
+	MULL3	#2,F90ALC.B+24,R2
+	ADDL2	F90ALC.B+16,R2
+	MOVL	F90ALC.A+16,R3
+	MOVL	F90ALC.I,R4
+	ADDF3	(R0)[R1],4(R2),(R3)[R4]
+;   13        PRINT *, A, SIZE(B, 2), UBOUND(B, 1)
+	PUSHL	#-1
+	PUSHAB	F90ALC.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVL	F90ALC.A+4,F90ALC.$D1+4
+	MOVL	F90ALC.A+12,F90ALC.$D1+12
+	MOVL	F90ALC.A+16,F90ALC.$D1+16
+	MOVL	F90ALC.A+24,F90ALC.$D1+24
+	MOVL	F90ALC.A+28,F90ALC.$D1+28
+	SUBL3	F90ALC.A+24,F90ALC.A+28,R0
+	ADDL3	R0,#1,F90ALC.$D1+20
+	PUSHAQ	F90ALC.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,F90ALC.B+28,F90ALC.$T1
+	SUBL3	#1,F90ALC.B+36,F90ALC.$T2
+	SUBL3	F90ALC.B+28,F90ALC.B+32,R0
+	ADDL3	R0,#1,F90ALC.$T3
+	BLSS	F90ALC.$4
+	BRW	F90ALC.$3
+F90ALC.$4:
+	CLRL	F90ALC.$T3
+F90ALC.$3:
+	SUBL3	F90ALC.B+36,F90ALC.B+40,R0
+	ADDL3	R0,#1,F90ALC.$T4
+	BLSS	F90ALC.$6
+	BRW	F90ALC.$5
+F90ALC.$6:
+	CLRL	F90ALC.$T4
+F90ALC.$5:
+	MOVL	F90ALC.$T4,F90ALC.$T5
+	PUSHAQ	F90ALC.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,F90ALC.B+28,F90ALC.$T6
+	SUBL3	#1,F90ALC.B+36,F90ALC.$T7
+	SUBL3	F90ALC.B+28,F90ALC.B+32,R0
+	ADDL3	R0,#1,F90ALC.$T8
+	BLSS	F90ALC.$8
+	BRW	F90ALC.$7
+F90ALC.$8:
+	CLRL	F90ALC.$T8
+F90ALC.$7:
+	SUBL3	F90ALC.B+36,F90ALC.B+40,R0
+	ADDL3	R0,#1,F90ALC.$T9
+	BLSS	F90ALC.$10
+	BRW	F90ALC.$9
+F90ALC.$10:
+	CLRL	F90ALC.$T9
+F90ALC.$9:
+	MOVL	F90ALC.B+32,F90ALC.$T11
+	TSTL	F90ALC.$T8
+	BLEQ	F90ALC.$12
+	BRW	F90ALC.$11
+F90ALC.$12:
+	CLRL	F90ALC.$T11
+F90ALC.$11:
+	MOVL	F90ALC.$T11,F90ALC.$T10
+	PUSHAQ	F90ALC.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   14        DEALLOCATE (A, B)
+	PUSHL	#0
+	PUSHAQ	F90ALC.A
+	CALLS	#2,G^FTN$DEALLOCATE
+	PUSHL	#0
+	PUSHAQ	F90ALC.B
+	CALLS	#2,G^FTN$DEALLOCATE
+;   15        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for R, a RECURSIVE subroutine
+;   N     INTEGER      argument 1  @R.N(AP)
+;   W     INTEGER (:)  FP-32       R.W(FP)
+;
+R.N = 4					; N is argument 1
+R.W = -32				; W, INTEGER (:), allocatable: its descriptor, in the frame
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   16        RECURSIVE SUBROUTINE R(N)
+	.ENTRY	R,^M<>
+	SUBL2	#32,SP			; this activation's own storage
+	MOVL	#168296452,R.W(FP)	; the descriptor's length, 4, type, and class
+	CLRL	R.W+4(FP)		; no string yet
+	MOVL	#16777216,R.W+8(FP)	; its flags and dimensions
+;   17        INTEGER, ALLOCATABLE :: W(:)
+;   18        ALLOCATE (W(N))
+	PUSHL	@R.N(AP)
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	R.W(FP)
+	CALLS	#4,G^FTN$ALLOCATE
+;   19        W(N) = N
+	MOVL	R.W+16(FP),R0
+	MOVL	@R.N(AP),R1
+	MOVL	@R.N(AP),(R0)[R1]
+;   20        END
+	RET
+
+	.END	F90ALC

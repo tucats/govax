@@ -112,11 +112,17 @@ func (a *analyzer) dimensionBounds(adj *adjustableArray, b ast.Bound, last bool,
 	var ok bool
 
 	if b.Colon {
-		// (:) or (lb:), Fortran 90's deferred and assumed shapes: Phases
-		// 104 and 107.
-		a.notImplForm(pos, "an assumed-shape or deferred-shape array")
+		// (:), Fortran 90's deferred shape: an allocatable array's, which
+		// checkShapes settles once every declaration is read, ALLOCATABLE
+		// among them. (lb:) is a dummy's assumed shape: Phase 104's
+		// subtask 5.
+		if b.Lower != nil {
+			a.notImplForm(pos, "an assumed-shape array")
 
-		return dim, false
+			return dim, false
+		}
+
+		return Dim{Deferred: true}, true
 	}
 
 	if b.Lower != nil {
@@ -289,6 +295,8 @@ func (a *analyzer) checkArrays() {
 		}
 	}
 
+	a.checkShapes()
+
 	for _, adj := range a.adjustable {
 		ok := true
 
@@ -415,7 +423,7 @@ func (s *Symbol) ElementNumber(subs []int) (int, bool) {
 
 	for i, d := range s.Dims {
 		switch {
-		case d.LowerExpr != nil || d.UpperExpr != nil:
+		case d.LowerExpr != nil || d.UpperExpr != nil || d.Deferred:
 			return 0, false
 		case subs[i] < d.Lower:
 			return 0, false

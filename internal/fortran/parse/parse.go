@@ -125,11 +125,12 @@ func init() {
 		lex.Automatic:   parseAttr,
 		lex.Static:      parseAttr,
 
-		// Fortran 90's attribute statements (Phase 100); ALLOCATABLE,
-		// POINTER, PUBLIC, and PRIVATE wait for their phases, below.
-		lex.Intent:   parseAttr,
-		lex.Optional: parseAttr,
-		lex.Target:   parseAttr,
+		// Fortran 90's attribute statements (Phase 100; ALLOCATABLE, Phase
+		// 104); POINTER, PUBLIC, and PRIVATE wait for their phases, below.
+		lex.Intent:      parseAttr,
+		lex.Optional:    parseAttr,
+		lex.Target:      parseAttr,
+		lex.Allocatable: parseAttr,
 
 		lex.Namelist:     parseNamelist,
 		lex.Record:       parseRecord,
@@ -190,12 +191,11 @@ func init() {
 		// Fortran 90's statements (f90.go): recognized, and NOTIMPL until
 		// their phases parse them.
 		lex.Module:            parseModule,
-		lex.Allocatable:       parsePending,
-		lex.Allocate:          parsePending,
+		lex.Allocate:          parseAllocate,
 		lex.Case:              parseCase,
 		lex.Contains:          parseContains,
 		lex.Cycle:             parseLoopExit,
-		lex.Deallocate:        parsePending,
+		lex.Deallocate:        parseAllocate,
 		lex.ElseWhere:         parseElseWhere,
 		lex.EndInterface:      parseEndInterface,
 		lex.EndSelect:         parseEndSelect,

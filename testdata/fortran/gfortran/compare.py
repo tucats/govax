@@ -89,6 +89,7 @@ PROGRAMS90 = {
     "numbers": ["numbers.f90"],
     "stats": ["stats.f90"],
     "smooth": ["smooth.f90"],
+    "allocs": ["allocs.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

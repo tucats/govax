@@ -458,3 +458,61 @@ func TestArrayForms(t *testing.T) {
 		}
 	}
 }
+
+// TestAllocateForms checks ALLOCATABLE, ALLOCATE, and DEALLOCATE (Phase 104):
+// each object's bounds read as an array declarator's, STAT= last.
+func TestAllocateForms(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"program p",
+		"  real, allocatable :: a(:), b(:, :)",
+		"  allocatable :: c(:)",
+		"  allocatable d",
+		"  allocate (a(n), b(0:m, 3))",
+		"  allocate (c(-1:1), stat=ierr)",
+		"  deallocate (a, b, stat=k(2))",
+		"  deallocate (c)",
+		"end program p",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "A.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	want := strings.Join([]string{
+		"== main program P",
+		"1           PROGRAM P",
+		"2           REAL, ALLOCATABLE :: A(:), B(:, :)",
+		"3           ALLOCATABLE :: C(:)",
+		"4           ALLOCATABLE D",
+		"5           ALLOCATE (A(N), B(0:M, 3))",
+		"6           ALLOCATE (C((- 1):1), STAT=IERR)",
+		"7           DEALLOCATE (A, B, STAT=K(2))",
+		"8           DEALLOCATE (C)",
+		"9           END PROGRAM P",
+		"",
+	}, "\n")
+
+	if got := ast.Dump(file); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	errors := []struct{ line, want string }{
+		{"ALLOCATE (A)", "SYNTAX"},
+		{"ALLOCATE (A(3)", "SYNTAX"},
+		{"ALLOCATE (STAT=I, A(3))", "SYNTAX"},
+		{"DEALLOCATE (A(3))", "SYNTAX"},
+		{"ALLOCATE A(3)", "SYNTAX"},
+	}
+
+	for _, e := range errors {
+		_, ms := parseLines(t, "E.FOR", fixed(e.line), "   10 END")
+		if got := strings.Join(idents(ms), " "); got != e.want {
+			t.Errorf("%s: got %v, want %s", e.line, ms, e.want)
+		}
+	}
+}

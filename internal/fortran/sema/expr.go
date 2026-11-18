@@ -54,8 +54,10 @@ func (a *analyzer) arrayValue(e ast.Expr) Expr {
 		return &Const{exprBase: exprBase{T: Type{Character, len(e.Value)}, Pos: e.Pos}, Text: e.Value}
 
 	case *ast.Name:
+		// lookup, not find alone, so that the use is noted: an array used
+		// only whole (SUM(A)) is used (reportUnused, the cross reference).
 		if s := a.scope.find(e.Name); s != nil && !s.broken && s.Class == Array {
-			return a.wholeArray(s, e)
+			return a.wholeArray(a.lookup(e.Name, e.Pos), e)
 		}
 
 		return a.name(e, false)
@@ -246,6 +248,10 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
 		if e.Name == "PRESENT" && a.intrinsicNamed(e.Name) {
 			return a.present(e)
+		}
+
+		if e.Name == "ALLOCATED" && a.intrinsicNamed(e.Name) {
+			return a.allocated(e)
 		}
 
 		_, selected := isInquiry(e.Name)

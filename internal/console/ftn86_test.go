@@ -233,6 +233,11 @@ var ftn86VMSDifferences = map[string]string{
 // the next VMS round is to run. None are, since Phase 89's round (subtask 12).
 var ftn86AwaitingVMS = []string{}
 
+// ftn86NewModules are FTNRTL's modules newer than VMS's last run of the procedure, each a
+// MACRO command, and a success in $STATUS, more in govax's FTNRTL section than in VMS's
+// until the next VMS round: FTN_ALLOC is Phase 104's (subtask 2).
+var ftn86NewModules = []string{"FTN_ALLOC"}
+
 // ftn86AwaitingRecursive says VMS's last run had no R variants, each program compiled
 // /RECURSIVE. It has since Phase 89's round.
 const ftn86AwaitingRecursive = false
@@ -258,12 +263,18 @@ func ftn86Lines(text string) string {
 	return strings.Join(lines, "\n")
 }
 
-// ftn86Statuses is a section's lines that show $STATUS.
-func ftn86Statuses(text string) string {
+// ftn86Statuses is a section's lines that show $STATUS, less the first newer of them: as
+// many as there are modules newer than the run the section is held to (every MACRO's
+// status is the same success, so which ones are left out doesn't matter).
+func ftn86Statuses(text string, newer int) string {
 	var lines []string
 
 	for line := range strings.SplitSeq(text, "\n") {
-		if strings.Contains(line, "$STATUS") {
+		switch {
+		case !strings.Contains(line, "$STATUS"):
+		case newer > 0:
+			newer-- // a new module's MACRO, which VMS's run hasn't
+		default:
 			lines = append(lines, line)
 		}
 	}
@@ -315,7 +326,7 @@ func TestFTN86Oracle(t *testing.T) {
 
 	// FTNRTL's section on VMS has its options file too, which LINK echoes under SET
 	// VERIFY: what both say is the status of each command.
-	if a, b := ftn86Statuses(got["FTNRTL"]), ftn86Statuses(want["FTNRTL"]); a != b {
+	if a, b := ftn86Statuses(got["FTNRTL"], len(ftn86NewModules)), ftn86Statuses(want["FTNRTL"], 0); a != b {
 		t.Errorf("building FTNRTL ended with:\n%s\nVMS's:\n%s", a, b)
 	}
 

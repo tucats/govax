@@ -145,7 +145,6 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 		"12:3 the USE statement",
 		"15:3 the TYPE (type-name) statement",
 		"30:3 the pointer assignment statement",
-		"31:3 the ALLOCATE statement",
 	}
 
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {

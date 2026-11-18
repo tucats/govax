@@ -444,6 +444,9 @@ func readIntrinsics() ([]form, map[string]bool, map[string]bool) {
 	// name, never a value (optional.go).
 	newNames["PRESENT"] = true
 
+	// Nor has ALLOCATED, given an allocatable array's name (allocate.go).
+	newNames["ALLOCATED"] = true
+
 	return append(forms, more...), names, newNames
 }
 

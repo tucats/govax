@@ -163,6 +163,10 @@ func dumpSymbol(s *Symbol) string {
 		where += " target"
 	}
 
+	if s.Allocatable {
+		where += " allocatable"
+	}
+
 	if s.saved && s.f90Saved {
 		where += " saved"
 	}
@@ -176,6 +180,12 @@ func dims(list []Dim) string {
 	text := make([]string, len(list))
 
 	for i, d := range list {
+		if d.Deferred {
+			text[i] = ":"
+
+			continue
+		}
+
 		lower, upper := strconv.Itoa(d.Lower), strconv.Itoa(d.Upper)
 
 		if d.LowerExpr != nil {
@@ -389,6 +399,28 @@ func stmtText(list []Stmt) string {
 		return "WHERE " + DumpExpr(s.Mask) + " " + stmtText(s.Then.Body)
 	case *Continue:
 		return "CONTINUE"
+	case *Allocate:
+		verb := "ALLOCATE"
+		if s.Deallocate {
+			verb = "DEALLOCATE"
+		}
+
+		objects := make([]string, len(s.Objects))
+
+		for i, o := range s.Objects {
+			objects[i] = o.Sym.Name
+
+			if o.Upper != nil {
+				bounds := make([]string, len(o.Upper))
+				for j := range o.Upper {
+					bounds[j] = DumpExpr(o.Lower[j]) + ":" + DumpExpr(o.Upper[j])
+				}
+
+				objects[i] += "(" + strings.Join(bounds, ", ") + ")"
+			}
+		}
+
+		return verb + " " + strings.Join(objects, ", ")
 	case *LoopExit:
 		verb := "EXIT"
 		if s.Cycle {
@@ -638,6 +670,8 @@ func DumpExpr(e Expr) string {
 		return "(%LOC " + DumpExpr(e.X) + ")"
 	case *Present:
 		return "(PRESENT " + e.Sym.Name + ")"
+	case *Allocated:
+		return "(ALLOCATED " + e.Sym.Name + ")"
 	case *Unary:
 		return "(" + e.Op.String() + ":" + e.T.letter() + " " + DumpExpr(e.X) + ")"
 	case *Binary:

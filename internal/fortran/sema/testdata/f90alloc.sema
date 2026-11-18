@@ -1,0 +1,22 @@
+== main program F90ALC
+  F90ALC                  program unit
+  A         REAL          array(:)         $LOCAL+0 allocatable
+  B         REAL          array(:, :)      $LOCAL+32 allocatable
+  N         INTEGER       variable         $LOCAL+76
+  I         INTEGER       variable         $LOCAL+80
+  J         INTEGER       variable         $LOCAL+84
+  $LOCAL is 88 bytes
+11          IF (.NOT.:L (ALLOCATED A)) ALLOCATE A(1:N), B(0:N, 1:3)
+12          A[I] = (+:R B[I, J] B[1, 2])
+13          PRINT * A[] SIZE(B[], DIM=2) UBOUND(B[], DIM=1)
+14          DEALLOCATE A, B
+15          END
+== recursive SUBROUTINE R
+  R                       program unit
+  N         INTEGER       variable         argument 1
+  W         INTEGER       array(:)         frame+0 allocatable
+  $LOCAL is 0 bytes
+  the frame area is 32 bytes
+18          ALLOCATE W(1:N)
+19          W[N] = N
+20          END

@@ -1,0 +1,104 @@
+routine F90ALC main
+  cell  A       L  $LOCAL+0    descriptor F NCA 4 (?)
+  cell  B       L  $LOCAL+32   descriptor F NCA 4 (?,?)
+  cell  N       L  $LOCAL+76   variable N
+  cell  I       L  $LOCAL+80   variable I
+  cell  J       L  $LOCAL+84   variable J
+  cell  $D1     L  $LOCAL+88   descriptor F A 4 (?)
+  cell  $I1     L  $LOCAL+120  an array statement's index
+  cell  $I2     L  $LOCAL+124  an array statement's index
+  cell  $T1     L  $LOCAL+128  temporary
+  cell  $T2     L  $LOCAL+132  temporary
+  cell  $T3     L  $LOCAL+136  temporary
+  cell  $T4     L  $LOCAL+140  temporary
+  cell  $T5     L  $LOCAL+144  temporary
+  cell  $I3     L  $LOCAL+148  an array statement's index
+  cell  $I4     L  $LOCAL+152  an array statement's index
+  cell  $T6     L  $LOCAL+156  temporary
+  cell  $T7     L  $LOCAL+160  temporary
+  cell  $T8     L  $LOCAL+164  temporary
+  cell  $T9     L  $LOCAL+168  temporary
+  cell  $T10    L  $LOCAL+172  temporary
+  cell  $T11    L  $LOCAL+176  temporary
+  $LOCAL is 180 bytes
+  datum $IO1    control
+  datum $D2     descriptor L S 4 $T5
+  datum $D3     descriptor L S 4 $T10
+B1:
+  ; line 11
+  branch not.L(ne.L(A+4, 0)) B2 B3
+B2:
+  call FTN$ALLOCATE(ref A, val 0, val 1, val N)
+  call FTN$ALLOCATE(ref B, val 0, val 0, val N, val 1, val 3)
+  jump B3
+B3:
+  ; line 12
+  assign @(A+16)[I] = add.F(@(add.L(B+16, mul.L(J, B+24)))[I], @(add.L(B+16, mul.L(2, B+24)))+4)
+  ; line 13
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $D1+4 = A+4
+  assign $D1+12 = A+12
+  assign $D1+16 = A+16
+  assign $D1+24 = A+24
+  assign $D1+28 = A+28
+  assign $D1+20 = add.L(sub.L(A+28, A+24), 1)
+  call FTN$IO_ITEM(ref $D1)
+  assign $T1 = sub.L(B+28, 1)
+  assign $T2 = sub.L(B+36, 1)
+  assign $T3 = add.L(sub.L(B+32, B+28), 1)
+  branch lt.L($T3, 0) B4 B5
+B4:
+  assign $T3 = 0
+  jump B5
+B5:
+  assign $T4 = add.L(sub.L(B+40, B+36), 1)
+  branch lt.L($T4, 0) B6 B7
+B6:
+  assign $T4 = 0
+  jump B7
+B7:
+  assign $T5 = $T4
+  call FTN$IO_ITEM(ref $D2)
+  assign $T6 = sub.L(B+28, 1)
+  assign $T7 = sub.L(B+36, 1)
+  assign $T8 = add.L(sub.L(B+32, B+28), 1)
+  branch lt.L($T8, 0) B8 B9
+B8:
+  assign $T8 = 0
+  jump B9
+B9:
+  assign $T9 = add.L(sub.L(B+40, B+36), 1)
+  branch lt.L($T9, 0) B10 B11
+B10:
+  assign $T9 = 0
+  jump B11
+B11:
+  assign $T11 = B+32
+  branch le.L($T8, 0) B12 B13
+B12:
+  assign $T11 = 0
+  jump B13
+B13:
+  assign $T10 = $T11
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 14
+  call FTN$DEALLOCATE(ref A, val 0)
+  call FTN$DEALLOCATE(ref B, val 0)
+  ; line 15
+  return 1
+routine R subroutine
+  param N       L  argument 1
+  cell  W       L  frame+0    descriptor L NCA 4 (?)
+  $LOCAL is 0 bytes
+  the frame is 32 bytes
+B1:
+  assign W = 168296452
+  assign W+4 = 0
+  assign W+8 = 16777216
+  ; line 18
+  call FTN$ALLOCATE(ref W, val 0, val 1, val @N)
+  ; line 19
+  assign @(W+16)[@N] = @N
+  ; line 20
+  return

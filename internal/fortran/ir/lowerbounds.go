@@ -202,10 +202,15 @@ func negated(e Expr) Expr {
 	return arith(Add, Long, arith(Neg, Long, v, nil), LongConst(-k))
 }
 
-// extent is dimension i's extent: a constant, or its descriptor's multiplier.
+// extent is dimension i's extent: a constant, or its descriptor's multiplier;
+// in a class NCA descriptor, which has strides, its bounds' difference plus 1.
 func (l *lowerer) extent(s *sema.Symbol, c *Cell, i int) Expr {
 	if dim := s.Dims[i]; !c.Desc.Dims[i].Set {
 		return LongConst(int32(dim.Extent()))
+	}
+
+	if c.Desc.Class == ClassNCA {
+		return arith(Add, Long, arith(Sub, Long, l.upperBound(s, c, i), l.lowerBound(s, c, i)), LongConst(1))
 	}
 
 	return &Load{&Mem{Cell: c, Offset: c.Desc.MultiplierOffset(i), T: Long}}
@@ -213,7 +218,7 @@ func (l *lowerer) extent(s *sema.Symbol, c *Cell, i int) Expr {
 
 // lowerBound is dimension i's lower bound: a constant, or its descriptor's.
 func (l *lowerer) lowerBound(s *sema.Symbol, c *Cell, i int) Expr {
-	if dim := s.Dims[i]; dim.LowerExpr == nil {
+	if dim := s.Dims[i]; dim.LowerKnown() {
 		return LongConst(int32(dim.Lower))
 	}
 
@@ -228,7 +233,7 @@ func (l *lowerer) upperBound(s *sema.Symbol, c *Cell, i int) Expr {
 	switch {
 	case sema.OpenEnded(s, s.Dims, i):
 		return LongConst(math.MaxInt32)
-	case dim.UpperExpr == nil:
+	case dim.UpperExpr == nil && !dim.Deferred:
 		return LongConst(int32(dim.Upper))
 	}
 
@@ -268,6 +273,10 @@ func (l *lowerer) elementAt(base *Mem, s *sema.Symbol, index Expr) *Mem {
 // its subscripts' sum, each multiplied by the extents before it, written from
 // the last so that it takes one multiplication a dimension.
 func (l *lowerer) adjustableElement(e *sema.Elem, c *Cell) *Mem {
+	if c.Desc.Class == ClassNCA {
+		return l.stridedElement(e, c)
+	}
+
 	a0 := &Mem{
 		Ptr:      &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}},
 		T:        l.typeOf(e.Sym.Type),
@@ -311,7 +320,8 @@ func (l *lowerer) arraySize(s *sema.Symbol) Expr {
 // 6.2.4). The entry point goes to this block, which goes on to the statements.
 func (l *lowerer) layOutEntryBounds() {
 	for _, e := range l.unit.Entries {
-		if !slices.ContainsFunc(l.adjustableOrder, func(s *sema.Symbol) bool { return defines(s, e.Params) }) {
+		if !slices.ContainsFunc(l.adjustableOrder, func(s *sema.Symbol) bool { return defines(s, e.Params) }) &&
+			!l.frameAllocatables() {
 			continue
 		}
 
@@ -322,6 +332,7 @@ func (l *lowerer) layOutEntryBounds() {
 		b.Note = e.Sym.Name + "'s adjustable arrays' bounds"
 		l.begin(b)
 		l.computeBounds(e.Params)
+		l.clearAllocatables()
 		l.jump(body)
 		entry.First = b
 	}

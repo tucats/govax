@@ -495,6 +495,13 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 
 		return s, false
 
+	case s.Allocatable:
+		a.report("ALLOCATTR", pos, name, "be given an initial value")
+
+		s.broken = true
+
+		return s, false
+
 	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
 		s.Class == External || s.Class == Intrinsic:
 		a.badUse(s, pos, "be given an initial value")

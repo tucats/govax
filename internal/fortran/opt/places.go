@@ -83,6 +83,13 @@ const (
 	// RegisterRegion is a register cell, Place.Cell, which is no memory at all.
 	RegisterRegion
 
+	// AllocatedRegion is the elements of the allocatable array whose
+	// descriptor is Place.Cell (docs/planning/PHASE-104 - Fortran 90 dynamic
+	// arrays.md): memory FTNRTL took for it, which nothing reaches but through
+	// that descriptor or an address a call was given. Any call may change it, as
+	// it may a dummy's (ChangedByCall).
+	AllocatedRegion
+
 	// HostRegion is, in an internal procedure, its host's $LOCAL section, where
 	// the host's variables it uses are (ir/lowerinternal.go): any call may read
 	// or change them, since a call of the host's other internal procedures may,
@@ -214,6 +221,12 @@ func (s *Storage) place(m *ir.Mem, size int) Place {
 func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Place) Place {
 	whole := Place{Lo: wholeLo, Hi: wholeHi}
 
+	if c := allocatedBase(m.Ptr); c != nil {
+		whole.Region, whole.Cell = AllocatedRegion, c
+
+		return whole
+	}
+
 	switch ptr := m.Ptr.(type) {
 	case *ir.Addr:
 		// A field of a packed record, at an address computed on the spot.
@@ -278,6 +291,33 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 	whole.Region = UnknownRegion
 
 	return whole
+}
+
+// allocatedBase is the allocatable array's descriptor cell an element's address e
+// is computed from: its A0, or its POINTER, plus whatever else (ir/lowerallocate.go);
+// nil if e isn't such an address.
+func allocatedBase(e ir.Expr) *ir.Cell {
+	switch e := e.(type) {
+	case *ir.Load:
+		m := e.Mem
+		if c := m.Cell; c != nil && m.Index == nil && c.Kind == ir.DescriptorCell && c.Sym != nil &&
+			c.Desc != nil && c.Desc.Class == ir.ClassNCA && (m.Offset == ir.A0Offset || m.Offset == ir.PointerOffset) {
+			return c
+		}
+
+	case *ir.Op:
+		if e.Op != ir.Add {
+			return nil
+		}
+
+		if c := allocatedBase(e.X); c != nil {
+			return c
+		}
+
+		return allocatedBase(e.Y)
+	}
+
+	return nil
 }
 
 // isCharacter reports whether dummy p is a CHARACTER dummy, whose argument points

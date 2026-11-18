@@ -336,6 +336,11 @@ type Symbol struct {
 	Target   bool
 	attrs    attribute
 
+	// Allocatable is Fortran 90's ALLOCATABLE: an array of deferred shape whose
+	// storage is its descriptor, class NCA, until ALLOCATE gives it elements
+	// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 4).
+	Allocatable bool
+
 	// f90Saved is set when a Fortran 90 form gave the name SAVE (an
 	// attribute, SAVE ::, or an initialization), for the dump.
 	f90Saved bool
@@ -411,6 +416,12 @@ type Dim struct {
 	Assumed              bool
 	LowerExpr, UpperExpr ast.Expr
 
+	// Deferred is a dimension of Fortran 90's deferred shape, written (:): an
+	// allocatable array's, whose bounds ALLOCATE gives it when the program
+	// runs (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md). Neither
+	// bound is known, and Lower and Upper mean nothing.
+	Deferred bool
+
 	// LowerValue and UpperValue are those bounds analyzed and converted to
 	// INTEGER, which lowering computes when the subprogram is entered.
 	LowerValue, UpperValue Expr
@@ -418,7 +429,18 @@ type Dim struct {
 
 // known reports whether the dimension's bounds are both known now.
 func (d Dim) known() bool {
-	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil
+	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil && !d.Deferred
+}
+
+// LowerKnown reports whether the dimension's lower bound is a constant, Lower.
+func (d Dim) LowerKnown() bool {
+	return d.LowerExpr == nil && !d.Deferred
+}
+
+// UpperKnown reports whether the dimension's upper bound is a constant, Upper:
+// not adjustable, not deferred, nor an assumed-size array's *.
+func (d Dim) UpperKnown() bool {
+	return d.UpperExpr == nil && !d.Deferred && !d.Assumed
 }
 
 // Extent is how many elements the dimension has, du - dl + 1 (section
@@ -474,7 +496,20 @@ func (s *Symbol) TypeText() string {
 
 // Size is the storage the name takes, in bytes.
 func (s *Symbol) Size() int {
+	if s.Allocatable {
+		return DescriptorSize(len(s.Dims))
+	}
+
 	return s.Type.Size * s.Elements()
+}
+
+// DescriptorSize is the size in bytes of an array descriptor of rank n, class A
+// or NCA (the OpenVMS Calling Standard's 5.4 and 5.7): five longwords, then
+// for each dimension a multiplier or stride and two bounds. An allocatable
+// array's storage is one of these (docs/planning/PHASE-104 - Fortran 90
+// dynamic arrays.md, finding 4).
+func DescriptorSize(n int) int {
+	return 20 + 12*n
 }
 
 // Label is a statement label defined in a unit.

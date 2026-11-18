@@ -338,6 +338,11 @@ func (a *analyzer) layout() {
 
 		align := s.Type.Align()
 
+		// An allocatable array's place is its descriptor, of longwords.
+		if s.Allocatable {
+			align = 4
+		}
+
 		// A record of a structure laid out by RECORDS=NATURAL goes on the
 		// structure's boundary, so that its fields are aligned as addresses.
 		// FP is only on a longword, so a frame can't do that past a longword

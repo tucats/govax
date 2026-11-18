@@ -38,6 +38,7 @@ $ macro/nolist ftn_record
 $ macro/nolist ftn_keyed
 $ macro/nolist ftn_intrinsics
 $ macro/nolist ftn_system
+$ macro/nolist ftn_alloc
 $ link/shareable=ftnrtl/nosyslib ftnrtl/options
 $ copy ftnrtl.exe sys$share:ftnrtl.exe
 $ delete ftn_*.obj;*,ftnrtl.exe;*

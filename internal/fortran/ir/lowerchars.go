@@ -253,6 +253,10 @@ func (l *lowerer) charArg(a sema.Arg) Arg {
 // cell of its own, which its entry points fill in (lowerbounds.go).
 func (l *lowerer) arrayDescriptor(s *sema.Symbol) *Mem {
 	if c := l.adjustableOf(s); c != nil {
+		if c.Desc.Class == ClassNCA {
+			return l.ncaAsClassA(s, c)
+		}
+
 		return &Mem{Cell: c, T: Long}
 	}
 

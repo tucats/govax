@@ -103,6 +103,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.LoopExit:
 		l.terminate(&Jump{l.origin(), l.loopTarget(s)})
 
+	case *sema.Allocate:
+		l.allocate(s)
+
 	case *sema.Stop:
 		l.stop(s)
 

@@ -764,6 +764,12 @@ func typeText(s *sema.Symbol) string {
 	bounds := make([]string, len(s.Dims))
 
 	for i, d := range s.Dims {
+		if d.Deferred {
+			bounds[i] = ":"
+
+			continue
+		}
+
 		lower, upper := strconv.Itoa(d.Lower), strconv.Itoa(d.Upper)
 
 		if d.LowerExpr != nil {
@@ -857,8 +863,12 @@ func (g *routineGen) writeLocal(w *Writer) {
 		} else if c.Kind == ir.DescriptorCell {
 			w.Label(label)
 			note := "set when the descriptor is used"
-			if c.Dummy != "" {
+
+			switch {
+			case c.Dummy != "":
 				note = c.Dummy + "'s bounds: set at each entry point"
+			case c.Sym != nil:
+				note = c.Sym.Name + ": not allocated"
 			}
 
 			writeDescriptor(w, c.Desc, "0", "0", note)
@@ -952,6 +962,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 	case ir.DescriptorCell:
 		if c.Dummy != "" {
 			return c.Dummy + "'s descriptor, filled in at each entry point"
+		}
+
+		if c.Sym != nil {
+			return c.Sym.Name + ", " + typeText(c.Sym) + ", allocatable: its descriptor"
 		}
 
 		return "a descriptor, written whole at each use"
@@ -1130,6 +1144,12 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 	w.Statement("", ".BYTE", what, "")
 	w.Statement("", directive, pointer, note)
 
+	if d.Class == ir.ClassNCA {
+		writeNCA(w, d)
+
+		return
+	}
+
 	if d.Class != ir.ClassA {
 		return
 	}
@@ -1153,6 +1173,21 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 
 	w.Statement("", ".LONG", strings.Join(multipliers, ","), "multipliers")
 	w.Statement("", ".LONG", strings.Join(bounds, ","), "bounds")
+}
+
+// writeNCA writes the rest of a class NCA descriptor, an allocatable array's
+// before ALLOCATE fills it in: no flags, its rank, and zeros (its POINTER, before
+// this, is 0 too, which says the array isn't allocated).
+func writeNCA(w *Writer, d *ir.Descriptor) {
+	zeros := func(n int) string {
+		return strings.TrimSuffix(strings.Repeat("0,", n), ",")
+	}
+
+	w.Statement("", ".BYTE", fmt.Sprintf("0,0,0,%d", len(d.Dims)), "scale, digits, flags, dimensions")
+	w.Statement("", ".LONG", "0", "the array's size in bytes")
+	w.Statement("", ".LONG", "0", "A0, where the element with zero subscripts would be")
+	w.Statement("", ".LONG", zeros(len(d.Dims)), "strides, in bytes")
+	w.Statement("", ".LONG", zeros(2*len(d.Dims)), "bounds")
 }
 
 // The I/O control block's layout (Decision 12 of docs/planning/PHASE-74 -

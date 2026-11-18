@@ -453,7 +453,8 @@ calls), then the frame's run-time storage everything after needs.
 2. **NCA descriptors and allocatable arrays:** `ir.ClassNCA`, elements through a
    descriptor (finding 2), deferred-shape declarations and ALLOCATABLE (finding
    3), `ftn_alloc.mar`'s FTN$ALLOCATE and FTN$DEALLOCATE, ALLOCATE, DEALLOCATE,
-   ALLOCATED, the inquiries and the scalarizer's extents from a descriptor.
+   ALLOCATED, the inquiries and the scalarizer's extents from a descriptor
+   (done 2026-11-18).
 3. **Allocation status:** STAT=, ALREADYALLOC, NOTALLOC, INSVIRMEM, zero sizes,
    deallocation at return and clearing at entry (finding 5), reentrant units,
    hosts and internal procedures; an unwind's test.
@@ -546,3 +547,67 @@ The author read the survey and accepted every recommendation:
   six questions for the author.
 - **2026-11-18, subtask 1 done:** The author accepted every recommendation
   ("The author's answers"); subtask 2 is next.
+- **2026-11-18, subtask 2 done:** Allocatable arrays, end to end.
+  - *Syntax.* `parse/f90.go`'s `parseAllocate` reads ALLOCATE's and
+    DEALLOCATE's lists into `ast.AllocateStmt` (each object a `Declarator`,
+    its bounds read by `dimensions`; `STAT=` last), and the ALLOCATABLE
+    statement is `parseAttr`'s, its items with array specifications as
+    TARGET's (`TestAllocateForms`).
+  - *Declarations* (`sema/allocate.go`). A colon bound is `Dim.Deferred`
+    (`(lb:)`, a dummy's assumed shape, is NOTIMPL for subtask 5); the
+    ALLOCATABLE attribute and statement set `Symbol.Allocatable`
+    (`attrtable.go`, read whole as INTENT's are). `checkShapes` (from
+    `checkArrays`, once every declaration is read) settles each deferred
+    shape: an allocatable's must be all colons (ALLOCSHAPE, DEFERREDMIX), a
+    dummy's colons are NOTIMPL, any other's are DEFERREDNOTALLOC; an
+    allocatable array of records is NOTIMPL (Phase 105). `checkAllocatables`
+    (after `equivalences`) is ALLOCDUMMY and ALLOCATTR for COMMON and
+    EQUIVALENCE; DATA's (`dataName`) and NAMELIST's (`checkNamelists`) where
+    those are read. `Dim.LowerKnown` and `UpperKnown` replace the tests of
+    `LowerExpr == nil` that took a bound for a constant (sections' default
+    bounds, constant subscripts' checks, overlap, lowering). An allocatable's
+    `Symbol.Size` is its descriptor's (`DescriptorSize`), on a longword.
+  - *Statements and the intrinsic.* `sema.Allocate` (NOTALLOCATABLE,
+    ALLOCOBJECT, ALLOCBOUNDS; ALLOCSELF read as any mention of an object of
+    the same statement in a bound, since 6.3.1 forbids its value, bounds, and
+    status alike); `STAT=` is NOTIMPL until subtask 3. ALLOCATED is
+    `sema.Allocated`, built as PRESENT is (no row in the table; a name only
+    under `/F90`, Phase 99's rule for new intrinsic names).
+  - *The IR* (`ir/lowerallocate.go`). `ClassNCA` (10), `StrideOffset`, and
+    NCA's `Fixed` (flags 0, the rank, POINTER 0). The allocatable's own cell
+    is its descriptor (`allocatableCell`: a `DescriptorCell` with `Sym` set,
+    registered among the adjustable arrays' cells so that every reader of
+    bounds and extents finds it: `lowerBound`, `upperBound`, and `extent`, U -
+    L + 1 for NCA). An element is `stridedElement`: A0 plus each later
+    subscript times its stride, indexed by the first (`@A+16[R6]` for rank
+    one, from Phase 84's deferred indexes). A whole array by reference is
+    its POINTER (`allocatableBase`, through `symbolMem`); anything that reads
+    only class A (FTNRTL's I/O lists, run-time formats, CHARACTER arguments)
+    gets a class A copy (`ncaAsClassA`). ALLOCATE and DEALLOCATE are a call
+    per object; ALLOCATED a test of POINTER. A recursive unit's allocatable
+    is in the frame, and each entry point writes its fixed longwords and a 0
+    POINTER (`clearAllocatables`; finding 5's clearing of static ones is
+    subtask 3's).
+  - *The optimizer.* An allocatable's elements are a region of their own,
+    `opt.AllocatedRegion`, keyed by the descriptor cell (`allocatedBase` finds
+    it in an element's address): they conflict only with each other, and any
+    call may change them.
+  - *FTNRTL* (`mar/ftn_alloc.mar`, GSMATCH 1,22; vector 688 and 696):
+    `FTN$ALLOCATE(desc, flags, l1, u1, ...)` and `FTN$DEALLOCATE(desc, flags)`
+    as finding 4 has them, with the status and STAT= flag ready for subtask
+    3; ALREADYALLOC (301) and NOTALLOC (302) in `vmsdef/formessages.go`.
+    Choices of ours, unconfirmed (no VAX FORTRAN had ALLOCATE): a size past
+    2**31 - 1 bytes is INSVIRMEM, found by EMUL before LIB$GET_VM is asked;
+    INSVIRMEM is signaled with VAX FORTRAN's I/O arguments, unit 0 and no
+    file; a block of at least 8 bytes, so that a zero-sized array's POINTER
+    isn't 0, and DEALLOCATE gives back the same size.
+  - *Left for later:* the `/DEBUG` table leaves allocatable arrays out until
+    the debugger reads class NCA (subtask 9).
+  - *A fix found on the way:* a whole array used only in an expression
+    (`SUM(A)`, `B + 1.0`) wasn't noted as used, so `/WARNINGS=UNUSED` called
+    it unused (`sema/expr.go`'s `arrayValue`; `TestWarningsUnusedWholeArray`).
+  - *Tests:* `sema`'s `TestAllocatable` (every message), the `f90alloc`
+    goldens in `ir`, `sema`, and `codegen`, and `testdata/fortran90/allocs.f90`
+    (every mode, paging both ways; gfortran prints the same 18 lines).
+    MANUAL.md's 14.13 has "Allocatable arrays" and FTNRTL's two routines,
+    and HELP FORTRAN a paragraph.

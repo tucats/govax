@@ -112,9 +112,9 @@ func (a *analyzer) checkSubscript(s *Symbol, name string, dims []Dim, i, v int, 
 	d := dims[i]
 
 	switch {
-	case d.LowerExpr == nil && v < d.Lower:
+	case d.LowerKnown() && v < d.Lower:
 		a.report("SUBSCRIPTRANGE", pos, v, name, "lower", d.Lower)
-	case d.UpperExpr == nil && !OpenEnded(s, dims, i) && v > d.Upper:
+	case d.UpperExpr == nil && !d.Deferred && !OpenEnded(s, dims, i) && v > d.Upper:
 		a.report("SUBSCRIPTRANGE", pos, v, name, "upper", d.Upper)
 	}
 }

@@ -627,6 +627,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.psectDirectives()
 	a.layoutCommon()
 	a.equivalences()
+	a.checkAllocatables()
 	a.checkArrays()
 	a.checkCommonSizes()
 	a.saves()

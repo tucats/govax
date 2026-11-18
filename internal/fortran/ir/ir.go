@@ -445,9 +445,16 @@ const (
 	ClassS Class = 1 // a scalar or a fixed-length string
 	ClassD Class = 2 // a dynamic string, whose text LIB$SGET1_DD allocates
 	ClassA Class = 4 // an array
+
+	// ClassNCA is a noncontiguous array (the OpenVMS Calling Standard's 5.7):
+	// class A's layout to the byte, but with a stride in bytes in each
+	// dimension's longword where class A has a multiplier in elements, so that
+	// an element is at A0 + S1*s1 + ... + Sn*sn. An allocatable array is one
+	// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, findings 1 and 2).
+	ClassNCA Class = 10
 )
 
-// String is the class's name after DSC$K_CLASS_: S, D, A.
+// String is the class's name after DSC$K_CLASS_: S, D, A, NCA.
 func (c Class) String() string {
 	switch c {
 	case ClassS:
@@ -456,6 +463,8 @@ func (c Class) String() string {
 		return "D"
 	case ClassA:
 		return "A"
+	case ClassNCA:
+		return "NCA"
 	}
 
 	return "?"
@@ -531,6 +540,12 @@ func (d *Descriptor) MultiplierOffset(i int) int {
 	return 20 + 4*i
 }
 
+// StrideOffset is the place of dimension i's stride, from 0, in a class NCA
+// descriptor: where class A has its multiplier (DSC$L_Si).
+func (d *Descriptor) StrideOffset(i int) int {
+	return d.MultiplierOffset(i)
+}
+
 // LowerOffset is the place of dimension i's lower bound in a class A descriptor,
 // after the multipliers (DSC$L_Li). Its upper bound (DSC$L_Ui) is the next
 // longword.
@@ -558,6 +573,14 @@ func (d *Descriptor) Fixed() []FixedLong {
 	switch d.Class {
 	case ClassD:
 		fixed = append(fixed, FixedLong{PointerOffset, 0})
+
+	case ClassNCA:
+		// What ALLOCATE hasn't filled in yet: no flags (the Calling Standard
+		// gives class NCA none of class A's), the rank, and a POINTER of 0, which
+		// is what says an allocatable array isn't allocated.
+		fixed = append(fixed,
+			FixedLong{PointerOffset, 0},
+			FixedLong{8, uint32(len(d.Dims)) << 24})
 
 	case ClassA:
 		fixed = append(fixed,
@@ -591,7 +614,7 @@ type FixedLong struct {
 // for class A five longwords, then a multiplier and two bounds for each
 // dimension.
 func (d *Descriptor) Size() int {
-	if d.Class == ClassA {
+	if d.Class == ClassA || d.Class == ClassNCA {
 		return 20 + 12*len(d.Dims)
 	}
 

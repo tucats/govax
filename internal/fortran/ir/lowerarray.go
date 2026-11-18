@@ -489,7 +489,7 @@ func (n *arrayNest) lowerBound(s *sema.Symbol, i int) Expr {
 
 // upperBound is dimension i of s's upper bound, as lowerBound is.
 func (n *arrayNest) upperBound(s *sema.Symbol, i int) Expr {
-	if c := n.l.adjustableOf(s); c != nil && s.Dims[i].UpperExpr != nil {
+	if c := n.l.adjustableOf(s); c != nil && !s.Dims[i].UpperKnown() && !s.Dims[i].Assumed {
 		return &Load{&Mem{Cell: c, Offset: c.Desc.LowerOffset(i) + Long.Size(), T: Long}}
 	}
 

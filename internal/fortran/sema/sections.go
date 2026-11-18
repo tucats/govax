@@ -197,7 +197,7 @@ func (a *analyzer) triplet(s *Symbol, e *ast.Apply, i int, t *ast.Triplet) (Sect
 		if sub.Lower = bound(t.Lower); sub.Lower == nil {
 			return sub, false
 		}
-	case d.LowerExpr == nil:
+	case d.LowerKnown():
 		sub.Lower = intConst(d.Lower)
 	}
 
@@ -210,7 +210,7 @@ func (a *analyzer) triplet(s *Symbol, e *ast.Apply, i int, t *ast.Triplet) (Sect
 		a.report("SECTIONEND", e.Pos, e.Name)
 
 		return sub, false
-	case d.UpperExpr == nil:
+	case d.UpperKnown():
 		sub.Upper = intConst(d.Upper)
 	}
 

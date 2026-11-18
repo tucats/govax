@@ -101,6 +101,7 @@ COPY/QUIET "internal/ftnrtl/mar/ftn_record.mar"/HOST DUA5:[FTN]FTN_RECORD.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_keyed.mar"/HOST DUA5:[FTN]FTN_KEYED.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_intrinsics.mar"/HOST DUA5:[FTN]FTN_INTRINSICS.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_system.mar"/HOST DUA5:[FTN]FTN_SYSTEM.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_alloc.mar"/HOST DUA5:[FTN]FTN_ALLOC.MAR
 !
 ! [ODD]: names with no type and with no name, as govax's volumes write them.
 CREATE/DIRECTORY DUA5:[ODD]
