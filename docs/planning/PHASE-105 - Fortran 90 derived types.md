@@ -1,8 +1,8 @@
 # Phase 105 — Fortran 90: derived types
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Needs Phase 104 (done). Subtask 1, the survey (Part A), written
-2026-11-18, for review.
+Part C). Needs Phase 104 (done). Subtask 1, the survey (Part A), done
+2026-11-18 and accepted by the author ("The author's answers").
 
 ## Goal
 
@@ -346,15 +346,26 @@ FORTRAN had no derived types); the standard is the target and gfortran 16.2,
     5). A record and a derived-type object never pass for each other. Assumed-shape,
     OPTIONAL, INTENT, and keyword arguments follow from Phases 103 and 104 once
     the type is on `Type`.
-11. **Function results go through a hidden argument.** `TYPE(POINT) FUNCTION F`,
-    `FUNCTION F() RESULT(R)` with R of a derived type, recursive or not: the
-    caller passes the address of a temporary of the type, which the result
-    variable is, and components are assigned there (`F%X = 1.0`). The plan said
-    "past a quadword, as COMPLEX*16 is", meaning a type of 8 bytes or fewer in R0
-    and R1; but a record is bytes, not a number, and sizes of 3, 5, 6, or 7 bytes
-    would need byte-by-byte moves out of registers, while the IR moves records
-    only through memory. Always hidden is one rule for every derived type, as
-    CHARACTER's is (question 2). Array-valued functions of a derived type follow
+11. **Function results in R0 and R1 when they fit, else a hidden argument**
+    (the author's answer 2). `TYPE(POINT) FUNCTION F`, `FUNCTION F() RESULT(R)`
+    with R of a derived type, recursive or not:
+    - **8 bytes or fewer** come back in R0, or R0 and R1, as the Calling
+      Standard returns any value up to a quadword. The result variable is a cell
+      of the function's own (in the frame when reentrant) rounded up to 4 or 8
+      bytes, its components assigned there (`F%X = 1.0`); the return loads it
+      whole, `MOVL cell,R0` up to 4 bytes or `MOVQ cell,R0` past that, so the
+      bytes past the type's size in R0 or R1 are undefined. The caller stores R0
+      (and R1) into a temporary of the same rounded size, `MOVL R0,t` or `MOVQ
+      R0,t`, and uses its first size bytes as a record; for an assignment of a
+      1-, 2-, 4-, or 8-byte type straight into the target, one `MOVB`, `MOVW`,
+      `MOVL`, or `MOVQ` from the registers. So the IR still moves records only
+      through memory: the registers are crossed only at the call and the return,
+      as a COMPLEX*8's are. `Type.HiddenResult` stays `Size > 8` for a derived
+      type, as for every other non-CHARACTER type.
+    - **Past 8 bytes**, the caller passes the address of a temporary of the type,
+      which the result variable is, as for COMPLEX*16.
+    A MACRO caller or callee sees the Calling Standard's rule either way.
+    Array-valued functions of a derived type follow
     Phase 104's two forms. A statement function of a derived type is NOTIMPL (it is
     allowed but rare, and its expansion in line would need a constructor's
     temporary per reference).
@@ -405,7 +416,8 @@ this order makes scalar objects usable end to end first (assignments need
 constructors to be tested readably), then arguments, then arrays, whose tests use
 all three.
 
-1. **Survey** (this Part A).
+1. **Survey** (this Part A) (done 2026-11-18; accepted by the author the
+   same day, with answer 2 changed).
 2. **Definitions and objects:** `Type.Struct`, `Structure.Derived` and
    `Sequence`, `ast.TypeDefStmt` and the definition's checks (finding 2), class 1
    names and host association (finding 3), layout and `/ALIGN` (finding 4),
@@ -415,7 +427,8 @@ all three.
    initial values and PARAMETERs and their components, intrinsic assignment by
    `sameType`, defined assignment replacing it, NODERIVEDOP (findings 8 and 9).
 4. **Arguments and results:** `sameType` at every check, RECORD versus TYPE,
-   separate definitions (finding 10), the hidden result, RESULT, recursion,
+   separate definitions (finding 10), results in R0 and R1 up to 8 bytes and the
+   hidden result past that, RESULT, recursion,
    internal procedures, interface bodies with SEQUENCE types (finding 11).
 5. **Arrays:** components with a rank and their sections, MULTIRANK, a field's
    list read as a name's (finding 6's change for records), arrays of a type as
@@ -464,6 +477,31 @@ all three.
    numeric and CHARACTER may share storage as VAX FORTRAN lets them**; (b) the
    standard's classes strictly; (c) any SEQUENCE object with anything.
 
+## The author's answers (2026-11-18)
+
+The author read the survey and accepted every recommendation but question 2's:
+
+1. A non-SEQUENCE type is naturally aligned unless `/NOALIGN` or
+   `/ALIGN=RECORDS=PACKED` (or an OPTIONS group's) was given explicitly;
+   SEQUENCE types follow STRUCTURE's rule (finding 4). `Alignment` learns
+   whether RECORDS was given.
+2. **A function's derived-type result comes back in R0, or R0 and R1, when it
+   fits in 8 bytes, and through a hidden first argument only past that**, as the
+   plan first said (finding 11, rewritten for it).
+3. Default initialization of components is NOTIMPL naming Phase 112, and the
+   corpus keeps it out.
+4. NAMELIST of derived types is all here: output, `P%X =` input, and
+   whole-object `P =` input, FTNRTL learning `%` in names and objects of
+   several entities (finding 14).
+5. Separate non-SEQUENCE definitions passed to each other in one file are an
+   error (finding 10).
+6. EQUIVALENCE of SEQUENCE types follows the standard's type classes, except
+   that numeric and CHARACTER storage may be shared as VAX FORTRAN allows
+   (finding 12).
+
+The plan's open question 1 is settled by finding 1: a record and a derived-type
+object are never the same type, with a message naming both.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -472,3 +510,7 @@ all three.
   definitions and `TYPE(t)` declarations NOTIMPL, `%`, `IMPLICIT TYPE(t)`, and
   `TYPE(t) FUNCTION` syntax errors. Sixteen findings; the subtasks reordered
   (scalars, constructors, and arguments before arrays); six questions.
+- **2026-11-18, subtask 1 (done):** The author accepted the survey and every
+  recommendation but question 2: a derived-type result of 8 bytes or fewer
+  comes back in R0 and R1 (finding 11 rewritten; "The author's answers").
+  Subtask 2 is next.
