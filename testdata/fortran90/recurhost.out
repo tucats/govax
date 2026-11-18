@@ -1,0 +1,6 @@
+level1:  10    10
+level2:  20    30
+level3:  30    60
+total:   60
+tri(5):      15
+  $STATUS == "%X00000001"

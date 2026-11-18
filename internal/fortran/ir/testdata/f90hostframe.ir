@@ -1,0 +1,41 @@
+routine WALK subroutine
+  param N       L  through $A1
+  entry 1 WALK N=1
+  cell  MINE    L  frame+0    variable MINE, reached by an internal procedure
+  cell  $A1     L  frame+4    address of N, reached by an internal procedure
+  cell  $T1     L  frame+8    temporary
+  $LOCAL is 0 bytes
+  the frame is 12 bytes
+B1:
+  ; line 9
+  assign MINE = @N
+  ; line 10
+  branch gt.L(@N, 1) B2 B3
+B2:
+  assign $T1 = sub.L(@N, 1)
+  call WALK(ref $T1)
+  jump B3
+B3:
+  ; line 11
+  call local WALK.ADD(val FP)
+  ; line 21
+  return
+routine WALK.ADD subroutine, internal to WALK
+  param $HOST   L  argument 1, WALK's FP, reaching its frame
+  $LOCAL is 0 bytes
+B1:
+  ; line 14
+  assign MINE = add.L(MINE, @N)
+  ; line 15
+  call local WALK.SHOW(ref MINE, val arg $HOST)
+  ; line 16
+  return
+routine WALK.SHOW subroutine, internal to WALK
+  param V       L  argument 1
+  param $HOST   L  argument 2, WALK's FP
+  $LOCAL is 0 bytes
+B1:
+  ; line 19
+  assign @V = add.L(@V, 1)
+  ; line 20
+  return

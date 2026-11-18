@@ -63,6 +63,15 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 		}
 	}
 
+	if p := r.HostFP; p != nil {
+		reaches := ""
+		if r.HostFrame {
+			reaches = ", reaching its frame"
+		}
+
+		fmt.Fprintf(b, "  param %-7s %-2s argument %d, %s's FP%s\n", p.Name, p.T, p.Index, r.Host.Name, reaches)
+	}
+
 	for _, e := range r.Entries {
 		fmt.Fprintf(b, "  entry %d %s", e.Number, e.Name)
 
@@ -458,6 +467,9 @@ func ExprText(e Expr) string {
 
 	case *CallValue:
 		return "R0"
+
+	case *FramePointer:
+		return "FP"
 
 	case *ArgPointer:
 		return "arg " + e.Param.Name

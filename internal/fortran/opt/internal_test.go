@@ -35,14 +35,18 @@ var hostProgram = []string{
 	"END",
 }
 
-// optimizedMacro is the MACRO of hostProgram's routines, lowered once, each with
+// optimizedMacro is the MACRO of program's routines (hostProgram's if none), lowered once, each with
 // every pass run on it, written together as one module writes them: an internal
 // procedure names its host's cells, so the host must be the one lowered with it.
-func optimizedMacro(t *testing.T) string {
+func optimizedMacro(t *testing.T, program ...string) string {
 	t.Helper()
 
-	lines := make([]string, len(hostProgram))
-	for i, line := range hostProgram {
+	if program == nil {
+		program = hostProgram
+	}
+
+	lines := make([]string, len(program))
+	for i, line := range program {
 		lines[i] = "      " + line
 	}
 
@@ -97,5 +101,30 @@ func TestHostVariableInInternal(t *testing.T) {
 
 	if !strings.Contains(use, "CALLS\t#0,S.BUMP") || !strings.Contains(use, "MOVL\tS.K,S.M") {
 		t.Errorf("USE doesn't read its host's K after calling BUMP:\n%s", use)
+	}
+}
+
+// TestHostFrameChangedByCall checks that a RECURSIVE host reads its frame variable
+// MINE again after calling ADD, which changes it through the host's FP, and that
+// ADD reaches MINE and N's cell from the register holding that FP.
+func TestHostFrameChangedByCall(t *testing.T) {
+	text := optimizedMacro(t,
+		"RECURSIVE SUBROUTINE S(N)",
+		"INTEGER N, MINE",
+		"MINE = 5",
+		"CALL ADD",
+		"N = MINE",
+		"CONTAINS",
+		"SUBROUTINE ADD",
+		"MINE = MINE + N",
+		"END SUBROUTINE",
+		"END")
+
+	if !strings.Contains(text, "CALLS\t#1,S.ADD") || !strings.Contains(text, "MOVL\tS.MINE(FP),@S.$A1(FP)") {
+		t.Errorf("S doesn't pass its FP, or doesn't read MINE after the call:\n%s", text)
+	}
+
+	if !strings.Contains(text, "ADDL2\t@S.$A1(R10),S.MINE(R10)") {
+		t.Errorf("ADD doesn't reach its host's frame from R10:\n%s", text)
 	}
 }

@@ -570,7 +570,7 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 	case m.Param != nil:
 		base = "@" + g.argumentPlace(m.Param)
 	case m.Cell != nil && m.Cell.Frame:
-		base = withOffset(g.cellSymbol(m.Cell), m.Offset) + "(" + g.frameBase + ")"
+		base = withOffset(g.cellSymbol(m.Cell), m.Offset) + "(" + g.frameOf(m.Cell) + ")"
 	case m.Cell != nil:
 		base = withOffset(g.cellSymbol(m.Cell), m.Offset)
 	default:
@@ -646,10 +646,21 @@ func (g *routineGen) argumentPlace(p *ir.Param) string {
 // SUB.$E(FP), or in a variable format expression SUB.$E(R11).
 func (g *routineGen) cellPlace(c *ir.Cell) string {
 	if c.Frame {
-		return g.cellSymbol(c) + "(" + g.frameBase + ")"
+		return g.cellSymbol(c) + "(" + g.frameOf(c) + ")"
 	}
 
 	return g.cellSymbol(c)
+}
+
+// frameOf is the register a frame cell's displacement is from: the frame's base
+// for the routine's own, or in an internal procedure, for its host's, the register
+// holding the host's FP (hostBaseRegister).
+func (g *routineGen) frameOf(c *ir.Cell) string {
+	if r := g.owner[c]; r != nil && r != g.r {
+		return register(hostBaseRegister)
+	}
+
+	return g.frameBase
 }
 
 // cellSymbol is the cell c's symbol: the routine's name for it, or for a cell
@@ -693,6 +704,9 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.CallValue:
 		return operand{text: "R0"}
+
+	case *ir.FramePointer:
+		return operand{text: "FP"}
 
 	case *ir.LabelAddr:
 		r := g.alloc(ir.Long)

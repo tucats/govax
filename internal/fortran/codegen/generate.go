@@ -400,6 +400,11 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 		}
 	}
 
+	if p := r.HostFP; p != nil {
+		w.Assignment(g.names.symbol(p.Name), strconv.Itoa(4*p.Index),
+			fmt.Sprintf("%s's FP is hidden argument %d", r.Host.Name, p.Index))
+	}
+
 	g.writeCommonNames(w)
 	g.writeFrameNames(w)
 
@@ -471,6 +476,7 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 	}
 
 	g.writeFrame(w)
+	g.writeHostBase(w)
 
 	if len(r.Entries) > 0 {
 		g.writeEntryArgs(w, r.Entries[0])
@@ -504,6 +510,7 @@ func (g *routineGen) writeVFE(w *Writer, v *ir.VFERoutine) {
 	}
 
 	w.Statement("", "MOVL", "8(AP),AP", "the AP of the routine doing the I/O, for its dummy arguments")
+	g.writeHostBase(w)
 	w.Statement("", "CASEL", "R0,#1,#"+strconv.Itoa(len(v.Cases)-1), "")
 
 	table := g.newLabel()
@@ -546,6 +553,15 @@ func (g *routineGen) writeFrame(w *Writer) {
 		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.frameSize())+",SP", "this activation's own storage")
 	default:
 		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.frameSize())+",SP", "the frame's AUTOMATIC variables")
+	}
+}
+
+// writeHostBase loads the host's FP, in an internal procedure that reaches its
+// host's frame, from its hidden last argument into hostBaseRegister.
+func (g *routineGen) writeHostBase(w *Writer) {
+	if g.r.HostFrame {
+		w.Statement("", "MOVL", g.argumentPlace(g.r.HostFP)+","+register(hostBaseRegister),
+			"the FP of "+g.r.Host.Name+", for its frame")
 	}
 }
 

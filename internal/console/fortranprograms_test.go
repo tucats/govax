@@ -75,13 +75,6 @@ var recursiveDifferences = map[string]string{
 		"its value, undefined in FORTRAN-77 (section 4.12)",
 }
 
-// recursiveLater are the programs not yet run compiled /RECURSIVE, each with the
-// reason: what they compile that way is a later subtask's.
-var recursiveLater = map[string]string{
-	"hosts": "/RECURSIVE makes its subprograms, the hosts of internal procedures, RECURSIVE: " +
-		"a host in its stack frame (docs/planning/PHASE-103 - Fortran 90 procedures and interfaces.md, subtask 4)",
-}
-
 // runCounts is what one program's RUN cost: its instructions, and the memory's
 // reads and writes. Those are mostly data references, but the reads have a part
 // that goes with where code falls and not what it does: instruction fetches that
@@ -150,7 +143,7 @@ func TestFortranPrograms(t *testing.T) {
 var fortran90Programs = filepath.Join("..", "..", "testdata", "fortran90")
 
 // fortran90PagingPrograms are the Fortran 90 programs also run with paging on.
-var fortran90PagingPrograms = []string{"arrayio", "arrays", "average", "bytes", "cases", "constants", "cplx16", "declare", "elements", "examples", "forms", "hosts", "inquire", "internal", "kinds", "layout", "loops", "matrix", "overlap", "precise", "reduce", "selects", "smooth", "spellings", "squares", "stats", "strings", "tokens", "vectors", "where"}
+var fortran90PagingPrograms = []string{"arrayio", "arrays", "autohost", "average", "bytes", "cases", "constants", "cplx16", "declare", "elements", "examples", "forms", "hosts", "inquire", "internal", "kinds", "layout", "loops", "matrix", "overlap", "precise", "recurhost", "reduce", "selects", "smooth", "spellings", "squares", "stats", "strings", "tokens", "vectors", "where"}
 
 // TestFortran90Programs runs the Fortran 90 corpus as TestFortranPrograms runs
 // the old one, in every mode: FORTRAN finds each NAME.F90 on the volume and reads
@@ -197,10 +190,6 @@ func runFortranCorpus(t *testing.T, sources, pagingPrograms []string) {
 					}
 
 					t.Run(name, func(t *testing.T) {
-						if reason, later := recursiveLater[name]; later && recursive {
-							t.Skip(reason)
-						}
-
 						text, err := os.ReadFile(source)
 						if err != nil {
 							t.Fatal(err)

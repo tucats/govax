@@ -185,6 +185,14 @@ type Routine struct {
 	// and dummy arguments by the host's own names for them (lowerinternal.go).
 	Host  *Routine
 	Local string
+
+	// HostFP is, in an internal procedure of a host whose storage is in its
+	// stack frame, the hidden last argument by which the host passes its FP,
+	// after the dummy arguments (and not among Params); nil otherwise.
+	// HostFrame says the procedure reaches a cell of that frame, which the code
+	// generator reaches from a register loaded from HostFP.
+	HostFP    *Param
+	HostFrame bool
 }
 
 // Param is a dummy argument. Its value isn't the routine's: the
@@ -1069,6 +1077,11 @@ type (
 	// in the Switch that follows the Call.
 	CallValue struct{}
 
+	// FramePointer is the routine's own FP, a Long: what a host whose storage is
+	// in its stack frame passes its internal procedures as their hidden last
+	// argument, so that they can reach that storage (lowerinternal.go).
+	FramePointer struct{}
+
 	// ArgPointer is the address the argument list holds for Param, a Long:
 	// the longword at 4*Index(AP) itself, not what it points at. A
 	// CHARACTER dummy's is its descriptor's address.
@@ -1149,8 +1162,9 @@ func (*ArgPointer) Type() Type { return Long }
 // Type is Long: an address.
 func (*LabelAddr) Type() Type { return Long }
 
-func (*RoutineAddr) Type() Type { return Long }
-func (*CallValue) Type() Type   { return Long }
+func (*RoutineAddr) Type() Type  { return Long }
+func (*CallValue) Type() Type    { return Long }
+func (*FramePointer) Type() Type { return Long }
 
 // Type is the operation's type.
 func (o *Op) Type() Type { return o.T }
@@ -1170,19 +1184,20 @@ func (*Field) Type() Type { return Long }
 // Type is Long: a position.
 func (*CharIndex) Type() Type { return Long }
 
-func (*Const) exprNode()       {}
-func (*Load) exprNode()        {}
-func (*Addr) exprNode()        {}
-func (*LabelAddr) exprNode()   {}
-func (*RoutineAddr) exprNode() {}
-func (*CallValue) exprNode()   {}
-func (*ArgPointer) exprNode()  {}
-func (*Op) exprNode()          {}
-func (*Cmp) exprNode()         {}
-func (*CharCmp) exprNode()     {}
-func (*Field) exprNode()       {}
-func (*InRange) exprNode()     {}
-func (*CharIndex) exprNode()   {}
+func (*Const) exprNode()        {}
+func (*Load) exprNode()         {}
+func (*Addr) exprNode()         {}
+func (*LabelAddr) exprNode()    {}
+func (*RoutineAddr) exprNode()  {}
+func (*CallValue) exprNode()    {}
+func (*FramePointer) exprNode() {}
+func (*ArgPointer) exprNode()   {}
+func (*Op) exprNode()           {}
+func (*Cmp) exprNode()          {}
+func (*CharCmp) exprNode()      {}
+func (*Field) exprNode()        {}
+func (*InRange) exprNode()      {}
+func (*CharIndex) exprNode()    {}
 
 // LongConst is the Long constant n.
 func LongConst(n int32) *Const {

@@ -7,8 +7,8 @@ routine HOST subroutine
   cell  C       F  BLK+0    variable C, reached by an internal procedure
   cell  K       L  $LOCAL+0    variable K, reached by an internal procedure
   cell  $B1     L  $LOCAL+4    descriptor F A 4 (?), reached by an internal procedure
-  cell  $A2     L  $LOCAL+36   address of N
-  cell  $A4     L  $LOCAL+40   address of S
+  cell  $A2     L  $LOCAL+36   address of N, reached by an internal procedure
+  cell  $A4     L  $LOCAL+40   address of S, reached by an internal procedure
   cell  $T1     F  $LOCAL+44   temporary
   $LOCAL is 48 bytes
 B1:

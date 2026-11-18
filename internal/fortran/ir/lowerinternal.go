@@ -26,10 +26,17 @@ import (
 //   - a host's adjustable array is reached through its descriptor cell ($B1),
 //     which the host fills as it starts.
 //
-// All of that is static storage, which is right while only one activation of the
-// host can exist. A host in its stack frame (RECURSIVE, or with AUTOMATIC
-// variables) needs the host's FP as a hidden argument, which semantic analysis
-// reports isn't done yet (subtask 4).
+// A host whose storage is in its stack frame (a RECURSIVE one, or one with
+// AUTOMATIC variables) can be active several times at once, and its internal
+// procedure must reach the activation that called it. So every call of one of
+// its internal procedures passes a hidden last argument: the host's FP, or in an
+// internal procedure calling a sibling or itself, the FP it was given
+// (Routine.HostFP, Decision 11). The procedure's code reaches a host's frame cell
+// from that FP by the host's own displacement for it (HOST.X(R10), the code
+// generator's hostBaseRegister): a displacement the host's code fixes only once
+// its optimizer has closed its frame up, so the IR names the cell, not its offset.
+// The dummies' cells of such a host are in its frame too (Routine.NewCell), each
+// activation having its own.
 //
 // So a host's places are made before its internal procedures are lowered
 // (lowerHost), each procedure's lowering finds the host's places through
@@ -50,10 +57,16 @@ func lowerHost(u *sema.Unit) []*Routine {
 
 	l.reachedParams = map[*Param]bool{}
 	inner := make([]*Routine, 0, len(u.Contains))
+	inFrame := l.r.Reentrant || l.r.FrameSize > 0
 
 	for _, c := range u.Contains {
 		il := newLowerer(c, l)
 		il.prepare()
+
+		if inFrame {
+			il.r.HostFP = &Param{Name: "$HOST", Index: len(il.r.Params) + 1, T: Long}
+		}
+
 		inner = append(inner, il.lowerBody())
 	}
 
@@ -67,6 +80,12 @@ func lowerHost(u *sema.Unit) []*Routine {
 // in. A host with ENTRY statements has such a cell for every dummy already.
 func (l *lowerer) passHostArgs() {
 	if len(l.unit.Entries) > 0 {
+		for _, p := range l.r.Params {
+			if l.reachedParams[p] {
+				p.Through.Reached = true
+			}
+		}
+
 		return
 	}
 
@@ -79,6 +98,7 @@ func (l *lowerer) passHostArgs() {
 
 		p.Through = l.newCell("$A"+strconv.Itoa(i+1), ArgCell, Long, Long.Size())
 		p.Through.Dummy = p.Name
+		p.Through.Reached = true
 		args = append(args, EntryArg{p.Index, p})
 	}
 
@@ -95,7 +115,7 @@ func (l *lowerer) cellOf(s *sema.Symbol) *Cell {
 		return c
 	}
 
-	return l.host.reach(l.host.cellOf(s))
+	return l.reach(l.host.cellOf(s))
 }
 
 // adjustableOf is the descriptor cell of the adjustable array s, the
@@ -106,24 +126,48 @@ func (l *lowerer) adjustableOf(s *sema.Symbol) *Cell {
 		return c
 	}
 
-	return l.host.reach(l.host.adjustableOf(s))
+	return l.reach(l.host.adjustableOf(s))
 }
 
-// reach notes that an internal procedure reaches the host's cell c, which may
+// reach notes that this internal procedure reaches its host's cell c, which may
 // be nil.
 func (l *lowerer) reach(c *Cell) *Cell {
 	if c == nil {
 		return nil
 	}
 
-	// Semantic analysis refuses such a host (sema's hostLimits).
 	if c.Frame {
-		panic(fmt.Sprintf("ir: %s: an internal procedure reaches %s in its host's frame", l.r.Name, c.Name))
+		if l.r.HostFP == nil {
+			panic(fmt.Sprintf("ir: %s: reaches %s in its host's frame with no FP of its host's", l.r.Name, c.Name))
+		}
+
+		l.r.HostFrame = true
 	}
 
 	c.Reached = true
 
 	return c
+}
+
+// hostFrameArg is the hidden argument a call of an internal procedure passes, if
+// its host's storage is in its frame: the host's FP, from the host itself or
+// passed on from an internal procedure's own hidden argument. ok is false for a
+// call that passes none.
+func (l *lowerer) hostFrameArg() (arg Arg, ok bool) {
+	host := l
+	if l.host != nil {
+		host = l.host
+	}
+
+	if !host.r.Reentrant && host.r.FrameSize == 0 {
+		return Arg{}, false
+	}
+
+	if l.host == nil {
+		return Arg{Value: &FramePointer{}}, true
+	}
+
+	return Arg{Value: &ArgPointer{l.r.HostFP}}, true
 }
 
 // paramOf is the dummy argument s, the routine's own or in an internal
@@ -137,6 +181,11 @@ func (l *lowerer) paramOf(s *sema.Symbol) *Param {
 	p = l.host.paramOf(s)
 	if p != nil {
 		l.host.reachedParams[p] = true
+
+		// A reentrant host's cells for its dummies are in its frame.
+		if l.host.r.Reentrant {
+			l.r.HostFrame = true
+		}
 	}
 
 	return p

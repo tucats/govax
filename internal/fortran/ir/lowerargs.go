@@ -227,5 +227,9 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 
 	call := &Call{origin: l.origin(), Args: args, Result: result}
 	call.Routine, call.Local, call.Through = l.callee(f.Fn)
+
+	if hidden, ok := l.hostFrameArg(); ok && call.Local {
+		call.Args = append(call.Args, hidden)
+	}
 	l.emit(call)
 }

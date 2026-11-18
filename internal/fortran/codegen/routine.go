@@ -173,7 +173,17 @@ func (g *routineGen) noteCellRegisters() {
 	if g.needsFrameBase() {
 		g.cellRegister[frameBaseRegister], g.used[frameBaseRegister] = true, true
 	}
+
+	// So is the host's FP in an internal procedure that reaches its host's frame.
+	if g.r.HostFrame {
+		g.cellRegister[hostBaseRegister], g.used[hostBaseRegister] = true, true
+	}
 }
+
+// hostBaseRegister holds, in an internal procedure that reaches its host's frame,
+// the host's FP, which its hidden last argument gives (ir/lowerinternal.go): a host's
+// frame cell is its displacement from it, HOST.X(R10). Each entry loads it.
+const hostBaseRegister = numRegisters - 2
 
 // frameBaseRegister holds the frame's base in a variable format expression, where FP
 // is the expression's routine's and not the frame's (ir/lowervfe.go). The code generator

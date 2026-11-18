@@ -379,7 +379,7 @@ func (c *checker) expr(e Expr) error {
 	case *LabelAddr:
 		return c.target(e.Block)
 
-	case *RoutineAddr:
+	case *RoutineAddr, *FramePointer:
 		return nil
 
 	case *Op:

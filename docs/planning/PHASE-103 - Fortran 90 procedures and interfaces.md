@@ -3,8 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
-("The author's answers"). Subtasks 2 (the forms) and 3 (internal procedures
-with static hosts) are done; subtask 4 is next.
+("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
+with static hosts), and 4 (hosts in the frame) are done; subtask 5 is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -458,7 +458,7 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    IR golden dumps, runs both optimizer settings (done 2026-11-17).
 4. **Hosts in the frame:** the hidden argument, `Mem.Ptr` through the host's FP,
    RECURSIVE and AUTOMATIC hosts, recursive and sibling internal procedures; the
-   corpus programs of subtask 3 in `recursiveModes`.
+   corpus programs of subtask 3 in `recursiveModes` (done 2026-11-17).
 5. **Interface blocks:** bodies as hostless scopes (finding 7), external and dummy
    procedures with explicit interfaces, INTERFACEDIFF, EXPLICITREQ, and
    question 1's checks.
@@ -634,3 +634,32 @@ The author read the survey and accepted every recommendation:
   dummies, SAVE'd variable, and function values; not `/RECURSIVE` until subtask 4,
   `recursiveLater` in `internal/console/fortranprograms_test.go`), both the same
   on gfortran (`compare.py`'s PROGRAMS90), their output worked by hand.
+- **2026-11-17, subtask 4:** Hosts in the frame. sema's `hostLimits` (the
+  NOTIMPL for a RECURSIVE host or one with AUTOMATIC variables) is gone.
+  **ir**: an internal procedure of a host whose storage is in its frame
+  (`Reentrant`, or `FrameSize` above 0) has a hidden last argument, the host's FP
+  (`Routine.HostFP`, `$HOST`, after the dummies and not among `Params`). The host
+  passes its own FP (the new expression `FramePointer`), an internal procedure
+  calling a sibling or itself passes on the one it was given
+  (`hostFrameArg`, `ArgPointer` of its `HostFP`). Decision 11 said the argument
+  exists only when something reached is in the frame; it is passed to every
+  internal procedure of such a host instead, since a sibling's call is lowered
+  before what the sibling reaches is known, and it costs a PUSHL. A procedure that
+  reaches a frame cell of its host, or a reentrant host's dummy (whose address
+  cell is in its frame), says so (`Routine.HostFrame`). The IR names a host's
+  frame cell, never its displacement: the host's optimizer may yet close its frame
+  up. The cells holding the dummies' addresses that internal procedures use are
+  `Reached` too, so no allocator takes them.
+  **codegen**: an internal procedure with `HostFrame` keeps R10
+  (`hostBaseRegister`) from the allocator, as R11 is kept for a variable format
+  expression's frame, loads the host's FP into it at its entry and at its variable
+  format expressions' (`writeHostBase`, after FTNRTL's AP is taken), and reaches a
+  host's frame cell as `HOST.X(R10)` (`frameOf`), the host's own displacement
+  symbol. The dump shows `$HOST` and whether its frame is reached; golden
+  `ir/testdata/f90hostframe.for`. `opt`'s `TestHostFrameChangedByCall`.
+  **Corpus**: `hosts.f90` now runs `/RECURSIVE` too (`recursiveLater` is gone);
+  `recurhost.f90` (a RECURSIVE subroutine's frame variables, CHARACTER variable,
+  and dummies reached after deeper activations return, a sibling passing the FP
+  on, a RECURSIVE function's RESULT variable and dummy; the same on gfortran) and
+  `autohost.f90` (AUTOMATIC variables, and a variable format expression in the
+  internal procedure reading one; DEC's, so not in `compare.py`).

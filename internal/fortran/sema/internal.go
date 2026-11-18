@@ -135,8 +135,6 @@ func (a *analyzer) internalInterfaces(au *ast.Unit) []*analyzer {
 		return nil
 	}
 
-	a.hostLimits(au)
-
 	inner := make([]*analyzer, 0, len(au.Contains))
 
 	for _, cu := range au.Contains {
@@ -160,34 +158,6 @@ func (a *analyzer) internalInterfaces(au *ast.Unit) []*analyzer {
 	}
 
 	return inner
-}
-
-// hostLimits reports what this subtask doesn't compile yet: a host whose
-// storage is in its stack frame, a RECURSIVE one's or an AUTOMATIC variable's,
-// which its internal procedures reach through a hidden argument
-// (docs/planning/PHASE-103, finding 5; subtask 4).
-func (a *analyzer) hostLimits(au *ast.Unit) {
-	pos := au.Contains[0].Position()
-
-	for _, s := range au.Body {
-		if c, ok := s.(*ast.ContainsStmt); ok {
-			pos = c.Pos
-		}
-	}
-
-	if a.unit.Recursive {
-		a.notImplForm(pos, "an internal procedure of a RECURSIVE unit")
-
-		return
-	}
-
-	for _, s := range a.unit.Symbols {
-		if s.Automatic {
-			a.notImplForm(pos, "an internal procedure of a unit with AUTOMATIC variables")
-
-			return
-		}
-	}
 }
 
 // defineInternal makes the internal procedure iu's name a name of its host,
