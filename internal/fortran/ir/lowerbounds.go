@@ -321,7 +321,7 @@ func (l *lowerer) arraySize(s *sema.Symbol) Expr {
 func (l *lowerer) layOutEntryBounds() {
 	for _, e := range l.unit.Entries {
 		if !slices.ContainsFunc(l.adjustableOrder, func(s *sema.Symbol) bool { return defines(s, e.Params) }) &&
-			!l.frameAllocatables() {
+			!l.entryClears() {
 			continue
 		}
 

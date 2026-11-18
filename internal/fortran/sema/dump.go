@@ -167,6 +167,10 @@ func dumpSymbol(s *Symbol) string {
 		where += " allocatable"
 	}
 
+	if s.FreedAtReturn {
+		where += " freed"
+	}
+
 	if s.saved && s.f90Saved {
 		where += " saved"
 	}
@@ -418,6 +422,10 @@ func stmtText(list []Stmt) string {
 
 				objects[i] += "(" + strings.Join(bounds, ", ") + ")"
 			}
+		}
+
+		if s.Stat != nil {
+			objects = append(objects, "STAT="+DumpExpr(s.Stat))
 		}
 
 		return verb + " " + strings.Join(objects, ", ")

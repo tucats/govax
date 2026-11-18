@@ -118,6 +118,8 @@ func (l *lowerer) prepareReturns() {
 // returnFromRoutine ends the current block by returning, by way of the
 // entry point's own return block if the entry points' types differ.
 func (l *lowerer) returnFromRoutine() {
+	l.freeAllocatables()
+
 	if l.r.Selector == nil {
 		l.terminate(&Return{origin: l.origin(), Value: l.returnValue()})
 

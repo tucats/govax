@@ -70,8 +70,16 @@ func TestAllocatable(t *testing.T) {
 			"ALLOCSELF: a bound in ALLOCATE can't use A, which the same statement allocates or deallocates"},
 		{"an object twice", prog("real, allocatable :: a(:)", "allocate (a(3), a(4))"),
 			"ALLOCOBJECT: A is named twice in one ALLOCATE statement"},
-		{"STAT=", prog("real, allocatable :: a(:)", "allocate (a(3), stat=i)"),
-			"NOTIMPL: STAT= in ALLOCATE is not implemented yet"},
+		{"STAT=", prog("real, allocatable :: a(:)", "allocate (a(3), stat=i)", "deallocate (a, stat=i)"), ""},
+		{"STAT= an element", prog("real, allocatable :: a(:)", "integer*2 k(2)", "allocate (a(3), stat=k(2))"), ""},
+		{"STAT= not an integer", prog("real, allocatable :: a(:)", "allocate (a(3), stat=x)"),
+			"BADSTAT: a STAT= specifier must name an INTEGER variable or array element"},
+		{"STAT= a constant", prog("real, allocatable :: a(:)", "integer, parameter :: n = 1", "allocate (a(3), stat=n)"),
+			"BADSTAT: a STAT= specifier must name an INTEGER variable or array element"},
+		{"STAT= an object's element", prog("integer, allocatable :: a(:)", "deallocate (a, stat=a(1))"),
+			"STATSELF: the STAT= specifier can't use A, which the same statement allocates or deallocates"},
+		{"STAT= a DO variable", prog("real, allocatable :: a(:)", "do i = 1, 2", "allocate (a(3), stat=i)", "end do"),
+			"DOVARSET: I is the control variable of the DO loop at line 3, which can't change it"},
 		{"of records", prog("structure /s/", "integer i", "end structure", "record /s/ r(:)", "allocatable r"),
 			"NOTIMPL: an allocatable array of records is not implemented yet"},
 	}
@@ -80,5 +88,67 @@ func TestAllocatable(t *testing.T) {
 		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
+	}
+}
+
+// TestFreedAtReturn checks which allocatable arrays a unit's returns
+// deallocate (Symbol.FreedAtReturn): a subprogram's own, not saved by SAVE (by
+// name or with no list) or STATIC; never a main program's, and never a host's
+// that an internal procedure uses.
+func TestFreedAtReturn(t *testing.T) {
+	prog, messages := analyzeFreeWith(t, Options{},
+		"program p",
+		"real, allocatable :: m(:)",
+		"contains",
+		"subroutine inner",
+		"real, allocatable :: i(:)",
+		"allocate (m(1), i(1))",
+		"end subroutine",
+		"end program",
+		"subroutine s",
+		"real, allocatable :: a(:), b(:), c(:)",
+		"save b",
+		"static c",
+		"end subroutine",
+		"function f()",
+		"real, allocatable :: a(:)",
+		"save",
+		"f = 1",
+		"end function",
+		"recursive subroutine r",
+		"real, allocatable :: a(:)",
+		"end subroutine")
+
+	if len(messages) != 0 {
+		t.Fatalf("messages: %s", messageText(messages))
+	}
+
+	want := map[string]map[string]bool{
+		"P":     {"M": false},
+		"INNER": {"I": true, "M": false},
+		"S":     {"A": true, "B": false, "C": false},
+		"F":     {"A": false},
+		"R":     {"A": true},
+	}
+
+	for _, u := range prog.Units {
+		for name, freed := range want[u.Name] {
+			s := u.Lookup(name)
+			if s == nil {
+				t.Errorf("%s: no symbol %s", u.Name, name)
+
+				continue
+			}
+
+			if s.FreedAtReturn != freed {
+				t.Errorf("%s's %s: FreedAtReturn %v, want %v", u.Name, name, s.FreedAtReturn, freed)
+			}
+		}
+
+		delete(want, u.Name)
+	}
+
+	for name := range want {
+		t.Errorf("no unit %s", name)
 	}
 }

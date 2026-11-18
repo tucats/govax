@@ -111,7 +111,7 @@ func (l *lowerer) stmt(s sema.Stmt) {
 
 	case *sema.Return:
 		if s.Alt != nil {
-			l.terminate(&Return{origin: l.origin(), Value: l.expr(s.Alt)})
+			l.terminate(&Return{origin: l.origin(), Value: l.alternate(s.Alt)})
 		} else {
 			l.returnFromRoutine()
 		}
@@ -204,6 +204,23 @@ func (l *lowerer) call(s *sema.Call) {
 	next := l.newBlock()
 	l.terminate(&Switch{l.origin(), index, 1, l.labelBlocks(s.AltReturns), next})
 	l.begin(next)
+}
+
+// alternate is RETURN i's i, the value a return leaves in R0, the arrays its
+// unit frees at its returns freed after it is computed: in a temporary while
+// they are, since i may be one of their elements and the calls use R0.
+func (l *lowerer) alternate(e sema.Expr) Expr {
+	value := l.expr(e)
+
+	if !l.freesAtReturn() {
+		return value
+	}
+
+	t := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: t, Src: value})
+	l.freeAllocatables()
+
+	return &Load{t}
 }
 
 // arithIf lowers IF (e) s1, s2, s3 to a Sign of e. A constant e is a

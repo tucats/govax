@@ -341,6 +341,11 @@ type Symbol struct {
 	// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 4).
 	Allocatable bool
 
+	// FreedAtReturn is set for an allocatable array that every return of its
+	// unit deallocates, and every entry point marks unallocated: a
+	// subprogram's own that isn't saved (finding 5; freedAtReturn).
+	FreedAtReturn bool
+
 	// f90Saved is set when a Fortran 90 form gave the name SAVE (an
 	// attribute, SAVE ::, or an initialization), for the dump.
 	f90Saved bool

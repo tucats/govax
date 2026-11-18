@@ -14,7 +14,7 @@
 == recursive SUBROUTINE R
   R                       program unit
   N         INTEGER       variable         argument 1
-  W         INTEGER       array(:)         frame+0 allocatable
+  W         INTEGER       array(:)         frame+0 allocatable freed
   $LOCAL is 0 bytes
   the frame area is 32 bytes
 18          ALLOCATE W(1:N)

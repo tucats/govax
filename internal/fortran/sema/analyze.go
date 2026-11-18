@@ -657,6 +657,7 @@ func (a *analyzer) finishUnit() {
 	a.reportExtensions(a.unit.AST)
 	a.passedLengths()
 	a.recursiveStorage()
+	a.freedAtReturn()
 	a.checkAssociated()
 	a.layout()
 	a.recordInitials()

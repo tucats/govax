@@ -1444,7 +1444,9 @@ var messages = map[string]kind{
 	// an allocatable array; ALLOCBOUNDS an ALLOCATE object with the wrong
 	// number of bounds, or a bound of * or :; ALLOCSELF a bound that uses an
 	// object of its own statement (6.3.1's constraint); ALLOCOBJECT the same
-	// object twice in one statement.
+	// object twice in one statement. BADSTAT is a STAT= that doesn't name an
+	// INTEGER variable or array element, and STATSELF one that uses an object
+	// of its own statement (6.3.1's and 6.3.3's constraints).
 	"DEFERREDNOTALLOC": {Error, "%s has a deferred shape, (:), so it must be ALLOCATABLE"},
 	"DEFERREDMIX":      {Error, "the bounds of %s must be all colons or none"},
 	"ALLOCSHAPE":       {Error, "%s is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},
@@ -1454,6 +1456,8 @@ var messages = map[string]kind{
 	"ALLOCBOUNDS":      {Error, "in ALLOCATE, %s needs %s, each a value or two separated by a colon"},
 	"ALLOCSELF":        {Error, "a bound in ALLOCATE can't use %s, which the same statement allocates or deallocates"},
 	"ALLOCOBJECT":      {Error, "%s is named twice in one %s statement"},
+	"BADSTAT":          {Error, "a STAT= specifier must name an INTEGER variable or array element"},
+	"STATSELF":         {Error, "the STAT= specifier can't use %s, which the same statement allocates or deallocates"},
 
 	// NMLDUMMY is a dummy argument in a NAMELIST group (section 4.10).
 	"NMLDUMMY": {Error, "the dummy argument %s can't be in a NAMELIST group"},

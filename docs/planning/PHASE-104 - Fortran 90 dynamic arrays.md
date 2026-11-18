@@ -457,7 +457,7 @@ calls), then the frame's run-time storage everything after needs.
    (done 2026-11-18).
 3. **Allocation status:** STAT=, ALREADYALLOC, NOTALLOC, INSVIRMEM, zero sizes,
    deallocation at return and clearing at entry (finding 5), reentrant units,
-   hosts and internal procedures; an unwind's test.
+   hosts and internal procedures; an unwind's test (done 2026-11-18).
 4. **Run-time storage in the frame:** `StackAllocate` and `StackRelease`, automatic
    arrays and CHARACTER objects, nonconstant `LEN=` on dummies, the inquiry
    functions in specification expressions (finding 7); the scalarizer's temporaries
@@ -611,3 +611,36 @@ The author read the survey and accepted every recommendation:
     (every mode, paging both ways; gfortran prints the same 18 lines).
     MANUAL.md's 14.13 has "Allocatable arrays" and FTNRTL's two routines,
     and HELP FORTRAN a paragraph.
+- **2026-11-18, subtask 3 done:** Allocation status.
+  - *STAT=* (`sema/allocate.go`'s `statVariable`): an INTEGER variable or
+    array element of any kind, as IOSTAT='s is (BADSTAT), using no object of
+    its statement (STATSELF, 6.3.1's and 6.3.3's constraint read as any
+    mention, as ALLOCSELF is); `sema.Allocate.Stat`. Lowered
+    (`ir/lowerallocate.go`'s `allocate`) as each call with flag 1 and its R0 in
+    a temporary, a branch to the statement's end on a failure, then the
+    temporary stored (converted to STAT's kind). The statement stops at the
+    first failing object, leaving the rest as they were: our choice, and
+    gfortran does the same (`allocstat.f90`'s "stops at b").
+  - *Deallocation at return* (finding 5). `sema.Symbol.FreedAtReturn`
+    (`freedAtReturn`, after `recursiveStorage`): a subprogram's own allocatable
+    array not saved by SAVE with its name, a SAVE with no list, or STATIC. A
+    main program's never are, and a host's array an internal procedure uses is
+    the host's symbol, so only the host frees it. `freeAllocatables` is in line
+    at every return, `TSTL` of POINTER and a call of `FTN$DEALLOCATE` with no
+    STAT=, from `returnFromRoutine` (RETURN, END, and so ENTRY's shared and
+    typed returns) and RETURN i, whose number goes to a temporary first, since
+    it may be the array's element (`alternate`).
+  - *Clearing at entry*. `clearAllocatables` also writes 0 to a static
+    FreedAtReturn array's POINTER at every entry point (`entryClears`, which
+    `layOutEntryBounds` now asks), the author's answer 6; a frame one's
+    descriptor is still written whole.
+  - *FTNRTL* needed nothing: subtask 2's `ftn_alloc.mar` already had the flag,
+    the statuses, INSVIRMEM by EMUL, and the 8-byte least block.
+  - *Tests:* `sema`'s `TestAllocatable` (STAT='s messages) and
+    `TestFreedAtReturn`; the `f90stat` goldens in `sema`, `ir`, and
+    `codegen`; `testdata/fortran90/allocstat.f90` (every mode; gfortran prints
+    the same) and `allocvms.f90` (STAT='s FOR numbers, the three conditions
+    signaled and returned by LIB$SIG_TO_RET, an unwind out of a routine with
+    its array allocated and its next call, LIB$STAT_VM's bytes unchanged by a
+    recursion that never deallocates). MANUAL.md's 14.13 and HELP FORTRAN
+    describe STAT= and deallocation at return.

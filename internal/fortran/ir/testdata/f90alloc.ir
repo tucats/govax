@@ -101,4 +101,9 @@ B1:
   ; line 19
   assign @(W+16)[@N] = @N
   ; line 20
+  branch ne.L(W+4, 0) B2 B3
+B2:  ; deallocates W at the return
+  call FTN$DEALLOCATE(ref W, val 0)
+  jump B3
+B3:
   return

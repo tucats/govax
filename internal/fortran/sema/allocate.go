@@ -32,11 +32,16 @@ import (
 // record (an array of records as a whole is Phase 105's).
 
 // Allocate is ALLOCATE, or DEALLOCATE if Deallocate is set (the standard's 6.3.1
-// and 6.3.3): each of Objects in turn.
+// and 6.3.3): each of Objects in turn. Stat is STAT='s INTEGER variable or array
+// element, or nil: with it, a failure is a number stored there, not an error
+// that ends the program, and the statement stops at the object that failed,
+// leaving the rest as they were (ours, unconfirmed: the standard leaves the
+// others' status undefined); success stores 0.
 type Allocate struct {
 	stmtBase
 	Deallocate bool
 	Objects    []*Allocation
+	Stat       Expr
 }
 
 // Allocation is one object of ALLOCATE or DEALLOCATE: the allocatable array Sym,
@@ -138,17 +143,12 @@ func (a *analyzer) checkAllocatables() {
 // ALLOCATE object has a bound pair for each of its dimensions, each an INTEGER
 // value (ALLOCBOUNDS), which may not use any object of the same statement
 // (ALLOCSELF: 6.3.1's constraint, read here as any mention, the value, bounds, or
-// status all being forbidden). STAT= is subtask 3's.
+// status all being forbidden). STAT= names an INTEGER variable or array element
+// (BADSTAT) that uses no object of the statement either (STATSELF).
 func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 	st := &Allocate{stmtBase: stmtBase{s}, Deallocate: s.Kind == lex.Deallocate}
 	named := map[string]bool{}
 	ok := true
-
-	if s.Stat != nil {
-		a.notImplForm(s.Stat.Position(), "STAT= in "+s.Kind.String())
-
-		ok = false
-	}
 
 	for _, d := range s.Objects {
 		if named[d.Name] {
@@ -186,11 +186,70 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 		}
 	}
 
+	if s.Stat != nil {
+		st.Stat = a.statVariable(s.Stat, named)
+		ok = ok && st.Stat != nil
+	}
+
 	if !ok {
 		return nil
 	}
 
 	return st
+}
+
+// statVariable analyzes STAT='s variable x, which may not mention a name of
+// named: nil after a message if it isn't an INTEGER variable or array element.
+func (a *analyzer) statVariable(x ast.Expr, named map[string]bool) Expr {
+	if n := mentionOf(x, named); n != nil {
+		a.report("STATSELF", n.Pos, n.Name)
+
+		return nil
+	}
+
+	t := a.place(x, false)
+
+	switch {
+	case t == nil:
+		a.report("BADSTAT", x.Position())
+
+		return nil
+	case t.Type().Kind == Invalid:
+		return nil
+	case t.Type().Kind != Integer:
+		a.report("BADSTAT", x.Position())
+
+		return nil
+	}
+
+	if v, isVar := t.(*Var); isVar {
+		a.checkLoopVariable(v.Sym, v.Pos)
+	}
+
+	a.noteAssigned(t)
+
+	return t
+}
+
+// freedAtReturn marks each allocatable array that its unit's every return
+// deallocates (Symbol.FreedAtReturn): one of a subprogram's own that isn't
+// saved, by SAVE (with its name, or with none), or by STATIC. A main program's
+// last as long as the program does. A host's array that an internal procedure
+// uses is the host's symbol, so the host frees it, not the internal procedure
+// (the standard's 6.3.3.1).
+func (a *analyzer) freedAtReturn() {
+	if a.unit.Kind == ast.MainProgram {
+		return
+	}
+
+	for _, s := range a.unit.Symbols {
+		if !s.Allocatable || s.broken || s.saved || a.saveAll ||
+			(s.storageStmt != nil && s.storageStmt.Kind == lex.Static) {
+			continue
+		}
+
+		s.FreedAtReturn = true
+	}
 }
 
 // allocationBounds analyzes the bounds ALLOCATE's object d gives obj.Sym, none

@@ -8892,9 +8892,29 @@ The array is its descriptor, class NCA, which FTNRTL's `FTN$ALLOCATE` fills in w
 memory from LIB$GET_VM (FORTRAN-INTERNALS.md will describe it). Allocating an array that
 is allocated is `%FOR-F-ALREADYALLOC`, deallocating one that isn't `%FOR-F-NOTALLOC`
 (govax's own conditions, FOR numbers 301 and 302), and running out of memory VAX
-FORTRAN's `%FOR-F-INSVIRMEM`; each is severe, ending the program. STAT=, to have such a
-statement go on with a status instead, isn't there yet, nor is a local's deallocation when
-its procedure returns.
+FORTRAN's `%FOR-F-INSVIRMEM` (also an array past 2,147,483,647 bytes); each is severe,
+ending the program. With `STAT=`, naming an INTEGER variable or array element, the
+statement goes on instead: it stores 0 when every object worked, and otherwise the FOR
+number of the first failure (301, 302, or 41), leaving that object and those after it as
+they were:
+
+```fortran
+  allocate (a(n), b(n), stat=ist)
+  if (ist /= 0) then
+    print *, 'no room:', ist, allocated(a), allocated(b)
+  end if
+```
+
+A subprogram's own allocatable arrays that aren't saved (by SAVE, with their names or with
+none, or STATIC) are deallocated, if allocated, at each of its returns: RETURN, END, an
+alternate return (its number computed first), whichever entry point it was called by. So
+each call finds them unallocated, and a recursive procedure's levels each have their own.
+A main program's last as long as it does, a SAVE'd one keeps its elements from call to
+call, and a host's array that an internal procedure allocates is the host's, freed at the
+host's return. A routine left by an unwind (a condition handler's `SYS$UNWIND`, or
+`LIB$SIG_TO_RET`) runs none of that code, so each entry point also marks the arrays
+unallocated: the unwound call's memory is lost, but the next call allocates them again
+without `%FOR-F-ALREADYALLOC`.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

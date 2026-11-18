@@ -1,0 +1,17 @@
+== SUBROUTINE S
+  S                       program unit
+  N         INTEGER       variable         argument 1
+  IS        INTEGER*2     array(1:2)       argument 2
+  T                       program unit
+  A         REAL          array(:)         $LOCAL+0 allocatable freed
+  B         REAL          array(:)         $LOCAL+32 allocatable freed
+  K         REAL          array(:)         $LOCAL+64 allocatable saved
+  entry T (N)
+  header *s at places (2)
+  $LOCAL is 96 bytes
+11          ALLOCATE A(1:N), B(1:N), STAT=IS[2]
+12          IF (.NE.:I IS[2] 0) RETURN 1
+13          DEALLOCATE A, STAT=IS[1]
+14          ENTRY T
+15          IF (.NOT.:L (ALLOCATED K)) ALLOCATE K(1:N)
+16          END

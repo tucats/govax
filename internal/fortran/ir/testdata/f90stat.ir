@@ -1,0 +1,69 @@
+routine S subroutine
+  param N       L  through $A1
+  param IS      W  through $A2
+  entry 1 S N=1 IS=2
+  entry 2 T N=1 at B18
+  cell  A       L  $LOCAL+0    descriptor F NCA 4 (?)
+  cell  B       L  $LOCAL+32   descriptor F NCA 4 (?)
+  cell  K       L  $LOCAL+64   descriptor F NCA 4 (?)
+  cell  $A1     L  $LOCAL+96   address of N
+  cell  $A2     L  $LOCAL+100  address of IS
+  cell  $T1     L  $LOCAL+104  temporary
+  $LOCAL is 108 bytes
+B1:
+  assign A+4 = 0
+  assign B+4 = 0
+  ; line 11
+  call FTN$ALLOCATE(ref A, val 1, val 1, val @N) -> $T1
+  branch ne.L($T1, 0) B3 B2
+B2:
+  call FTN$ALLOCATE(ref B, val 1, val 1, val @N) -> $T1
+  jump B3
+B3:
+  assign @IS+2 = cvt.LW($T1)
+  ; line 12
+  branch ne.W(@IS+2, 0) B4 B9
+B4:
+  assign $T1 = 1
+  branch ne.L(A+4, 0) B5 B6
+B5:  ; deallocates A at the return
+  call FTN$DEALLOCATE(ref A, val 0)
+  jump B6
+B6:
+  branch ne.L(B+4, 0) B7 B8
+B7:  ; deallocates B at the return
+  call FTN$DEALLOCATE(ref B, val 0)
+  jump B8
+B8:
+  return $T1
+B9:
+  ; line 13
+  call FTN$DEALLOCATE(ref A, val 1) -> $T1
+  jump B10
+B10:
+  assign @IS = cvt.LW($T1)
+  ; line 14
+  jump B11
+B11:  ; ENTRY T
+  ; line 15
+  branch not.L(ne.L(K+4, 0)) B12 B13
+B12:
+  call FTN$ALLOCATE(ref K, val 0, val 1, val @N)
+  jump B13
+B13:
+  ; line 16
+  branch ne.L(A+4, 0) B14 B15
+B14:  ; deallocates A at the return
+  call FTN$DEALLOCATE(ref A, val 0)
+  jump B15
+B15:
+  branch ne.L(B+4, 0) B16 B17
+B16:  ; deallocates B at the return
+  call FTN$DEALLOCATE(ref B, val 0)
+  jump B17
+B17:
+  return 0
+B18:  ; T's adjustable arrays' bounds
+  assign A+4 = 0
+  assign B+4 = 0
+  jump B11

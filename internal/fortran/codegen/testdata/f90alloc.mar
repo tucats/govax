@@ -223,6 +223,14 @@ R.W = -32				; W, INTEGER (:), allocatable: its descriptor, in the frame
 	MOVL	@R.N(AP),R1
 	MOVL	@R.N(AP),(R0)[R1]
 ;   20        END
+	TSTL	R.W+4(FP)
+	BNEQ	R.$2
+	BRW	R.$1
+R.$2:
+	PUSHL	#0
+	PUSHAQ	R.W(FP)
+	CALLS	#2,G^FTN$DEALLOCATE
+R.$1:
 	RET
 
 	.END	F90ALC

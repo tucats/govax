@@ -1,0 +1,13 @@
+ALREADYALLOC:  301
+NOTALLOC:      302
+INSVIRMEM:      41 F
+signaled:   %X0018896C
+signaled:   %X0018896C
+signaled:   %X00188974
+signaled:   %X0018814C
+unwound:    %X0000002C
+unwound:    %X0000002C
+a block left behind: T
+churn:    91
+bytes kept:     0
+  $STATUS == "%X00000001"

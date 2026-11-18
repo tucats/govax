@@ -67,25 +67,75 @@ func (l *lowerer) allocatableCell(s *sema.Symbol, c *Cell) {
 // clearAllocatables writes, at an entry point, what the descriptor of each
 // allocatable array in the frame starts as: a frame cell has no initial values,
 // and an earlier activation, or anything else, may have left any bytes there. A
-// static one's are its initial values.
+// static one's are its initial values, but one its unit frees at every return
+// (sema.Symbol.FreedAtReturn) has its POINTER cleared too: a routine left by an
+// unwind (a condition handler's $UNWIND) runs none of its returns' code, and the
+// next call's ALLOCATE would then find the array still allocated. The block is
+// lost, but the program goes on (finding 5).
 func (l *lowerer) clearAllocatables() {
 	for _, c := range l.r.Cells {
-		if c.Frame && isAllocatable(c) {
+		switch {
+		case !isAllocatable(c):
+		case c.Frame:
 			l.fillDescriptor(c)
+		case c.Sym.FreedAtReturn:
+			l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: LongConst(0)})
 		}
 	}
 }
 
-// frameAllocatables reports whether the routine has an allocatable array in
-// its frame, which each entry point clears.
-func (l *lowerer) frameAllocatables() bool {
+// entryClears reports whether the routine has an allocatable array that each
+// entry point clears (clearAllocatables).
+func (l *lowerer) entryClears() bool {
 	for _, c := range l.r.Cells {
-		if c.Frame && isAllocatable(c) {
+		if isAllocatable(c) && (c.Frame || c.Sym.FreedAtReturn) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// freesAtReturn reports whether a return of the routine deallocates anything.
+func (l *lowerer) freesAtReturn() bool {
+	for _, c := range l.r.Cells {
+		if isAllocatable(c) && c.Sym.FreedAtReturn {
+			return true
+		}
+	}
+
+	return false
+}
+
+// freeAllocatables deallocates, before a return, each allocatable array the
+// unit frees at every return that is allocated now (the standard's 6.3.3.1):
+//
+//	TSTL   W+4                  POINTER: allocated?
+//	BEQL   1$
+//	PUSHL  #0                   no STAT=
+//	PUSHAB W
+//	CALLS  #2,G^FTN$DEALLOCATE
+//	1$:
+//
+// The statements to be done at the statement's end come first.
+func (l *lowerer) freeAllocatables() {
+	l.flush()
+
+	for _, c := range l.r.Cells {
+		if !isAllocatable(c) || !c.Sym.FreedAtReturn {
+			continue
+		}
+
+		free, next := l.newBlock(), l.newBlock()
+		pointer := &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}
+		l.branch(&Cmp{Op: Ne, X: pointer, Y: LongConst(0)}, free, next)
+
+		l.begin(free)
+		free.Note = "deallocates " + c.Sym.Name + " at the return"
+		l.emit(&Call{origin: l.origin(), Routine: ftnDeallocate,
+			Args: []Arg{{Ref: &Mem{Cell: c, T: Long}}, {Value: LongConst(0)}}})
+		l.begin(next)
+	}
 }
 
 // isAllocatable reports whether c is an allocatable array's descriptor.
@@ -94,26 +144,72 @@ func isAllocatable(c *Cell) bool {
 }
 
 // allocate lowers ALLOCATE or DEALLOCATE: a call of FTNRTL for each object, in
-// the statement's order. Its flags are 0: without STAT=, FTNRTL signals a
-// failure itself.
+// the statement's order. Without STAT= the flags are 0, and FTNRTL signals a
+// failure itself. With it they are 1, and FTNRTL returns 0 or the failure's FOR
+// number, which goes to STAT='s variable; the first failure ends the statement:
+//
+//	PUSHL  N                    ALLOCATE (A(N), B(N), STAT=IS)
+//	PUSHL  #1
+//	PUSHL  #1                   STAT= given
+//	PUSHAB A
+//	CALLS  #4,G^FTN$ALLOCATE
+//	MOVL   R0,$T1
+//	BNEQ   1$                   failed: B is left as it was
+//	...                         the same for B
+//	1$: MOVL $T1,IS
 func (l *lowerer) allocate(s *sema.Allocate) {
-	for _, obj := range s.Objects {
-		c := l.adjustableOf(obj.Sym)
-		args := []Arg{{Ref: &Mem{Cell: c, T: Long}}, {Value: LongConst(0)}}
+	var status *Mem
 
-		if s.Deallocate {
-			l.emit(&Call{origin: l.origin(), Routine: ftnDeallocate, Args: args})
+	flags := LongConst(0)
+	done := l.newBlock()
 
-			continue
-		}
-
-		for i := range obj.Upper {
-			args = append(args, Arg{Value: l.expr(obj.Lower[i])}, Arg{Value: l.expr(obj.Upper[i])})
-		}
-
-		l.emit(&Call{origin: l.origin(), Routine: ftnAllocate, Args: args})
+	if s.Stat != nil {
+		status, flags = l.temp(Long), LongConst(allocStat)
 	}
+
+	for i, obj := range s.Objects {
+		c := l.adjustableOf(obj.Sym)
+		args := []Arg{{Ref: &Mem{Cell: c, T: Long}}, {Value: flags}}
+
+		routine := ftnDeallocate
+		if !s.Deallocate {
+			routine = ftnAllocate
+
+			for i := range obj.Upper {
+				args = append(args, Arg{Value: l.expr(obj.Lower[i])}, Arg{Value: l.expr(obj.Upper[i])})
+			}
+		}
+
+		l.emit(&Call{origin: l.origin(), Routine: routine, Args: args, Result: status})
+
+		if status != nil && i < len(s.Objects)-1 {
+			next := l.newBlock()
+			l.branch(&Cmp{Op: Ne, X: &Load{status}, Y: LongConst(0)}, done, next)
+			l.begin(next)
+		}
+	}
+
+	if status == nil {
+		l.made--
+
+		return
+	}
+
+	l.begin(done)
+
+	dst := l.mem(s.Stat)
+
+	var value Expr = &Load{status}
+	if dst.T != Long {
+		value = arith(Cvt, dst.T, value, nil)
+	}
+
+	l.emit(&Assign{origin: l.origin(), Dst: dst, Src: value})
 }
+
+// allocStat is FTN$ALLOCATE's and FTN$DEALLOCATE's flag for a statement with
+// STAT=: return a failure's FOR number rather than signal it.
+const allocStat = 1
 
 // allocated is ALLOCATED(A): whether A's descriptor has an address.
 func (l *lowerer) allocated(e *sema.Allocated) Expr {

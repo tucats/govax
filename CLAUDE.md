@@ -1093,7 +1093,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `Symbol.Allocatable`, `Allocate`, `Allocated`; `ir/lowerallocate.go`: each
   is its own class NCA descriptor cell, `ir.ClassNCA`, an element A0 plus
   strides; `opt.AllocatedRegion`; FTNRTL's `ftn_alloc.mar`, GSMATCH 1,22;
-  `testdata/fortran90/allocs.f90`).
+  `testdata/fortran90/allocs.f90`); subtask 3 (2026-11-18) is allocation
+  status: STAT= (`sema.Allocate.Stat`, a failure's FOR number, the statement
+  stopping at its first), and a subprogram's unsaved allocatables deallocated
+  at every return and marked unallocated at every entry
+  (`Symbol.FreedAtReturn`; `ir`'s `freeAllocatables`, `clearAllocatables`;
+  `testdata/fortran90/allocstat.f90`, `allocvms.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

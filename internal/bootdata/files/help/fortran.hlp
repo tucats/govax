@@ -242,7 +242,10 @@
      if (allocated(g)) deallocate (g)
 
    Allocating one already allocated is %FOR-F-ALREADYALLOC, deallocating
-   one that isn't %FOR-F-NOTALLOC; STAT= isn't there yet.
+   one that isn't %FOR-F-NOTALLOC, and too large %FOR-F-INSVIRMEM; with
+   STAT=ist the statement stores 0 or the FOR number (301, 302, 41) of
+   its first failure instead.  A subprogram's allocatable arrays not
+   SAVE'd are deallocated at each of its returns.
 
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are

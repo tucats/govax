@@ -1,0 +1,34 @@
+allocate:           0 T
+again fails:        T  3
+deallocate:         0 F
+again fails:        T
+stops at b:         T T T F  2
+both freed:         0 F F F
+zero-sized:         0 T  0
+work at entry:      4 F
+work sum:           4  10
+work at entry:      5 F
+work sum:           5  15
+keep allocates at:  1
+keep:               1  1  1
+keep:               2  3  2
+keep:               3  6  3
+early:                 0   35   -1
+outer at entry:     1 F
+outer filled:       1  1  2  3
+outer at entry:     2 F
+outer filled:       2  2  4  6  8
+mine at entry:      1 F
+mine sum:           1  0.5
+mine at entry:      2 F
+mine sum:           2  1.0
+nested:               30   55
+normal return:      1
+alternate return:   2
+both at entry:      3 F
+sum:                3  6.0
+second at entry:    4 F
+sum:                4  8.0
+both at entry:      2 F
+sum:                2  4.0
+  $STATUS == "%X00000001"

@@ -1,0 +1,152 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for S, a subroutine
+;   N     INTEGER        an argument  @S.$A1
+;   IS    INTEGER*2 (2)  an argument  @S.$A2
+;   A     REAL (:)       $LOCAL+0     S.A
+;   B     REAL (:)       $LOCAL+32    S.B
+;   K     REAL (:)       $LOCAL+64    S.K
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+S.A:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; A: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+S.B:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; B: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+S.K:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; K: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+S.$A1:	.BLKL	1			; N's longword of the argument list, set at each entry point
+S.$A2:	.BLKL	1			; IS's longword of the argument list, set at each entry point
+S.$T1:	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Fortran 90's allocation status (Phase 104, subtask 3): STAT=, which
+;    3  C     ends the statement at its first failure; a subprogram's allocatable
+;    4  C     arrays deallocated at each return if allocated, and marked not
+;    5  C     allocated at each entry point; a SAVE'd one left alone; RETURN i's
+;    6  C     value computed before the deallocations.
+;    7        SUBROUTINE S(N, IS, *)
+	.ENTRY	S,^M<>
+	MOVL	4(AP),S.$A1		; N is argument 1
+	MOVL	8(AP),S.$A2		; IS is argument 2
+	CLRL	S.A+4
+	CLRL	S.B+4
+;    8        REAL, ALLOCATABLE :: A(:), B(:)
+;    9        REAL, ALLOCATABLE, SAVE :: K(:)
+;   10        INTEGER*2 IS(2)
+;   11        ALLOCATE (A(N), B(N), STAT=IS(2))
+	PUSHL	@S.$A1
+	PUSHL	#1
+	PUSHL	#1
+	PUSHAQ	S.A
+	CALLS	#4,G^FTN$ALLOCATE
+	MOVL	R0,S.$T1
+	BEQL	S.$2
+	BRW	S.$1
+S.$2:
+	PUSHL	@S.$A1
+	PUSHL	#1
+	PUSHL	#1
+	PUSHAQ	S.B
+	CALLS	#4,G^FTN$ALLOCATE
+	MOVL	R0,S.$T1
+S.$1:
+	MOVL	#1,R0
+	CVTLW	S.$T1,@S.$A2[R0]
+;   12        IF (IS(2) .NE. 0) RETURN 1
+	MOVL	#1,R0
+	TSTW	@S.$A2[R0]
+	BNEQ	S.$4
+	BRW	S.$3
+S.$4:
+	MOVL	#1,S.$T1
+	TSTL	S.A+4
+	BNEQ	S.$6
+	BRW	S.$5
+S.$6:
+	PUSHL	#0
+	PUSHAQ	S.A
+	CALLS	#2,G^FTN$DEALLOCATE
+S.$5:
+	TSTL	S.B+4
+	BNEQ	S.$8
+	BRW	S.$7
+S.$8:
+	PUSHL	#0
+	PUSHAQ	S.B
+	CALLS	#2,G^FTN$DEALLOCATE
+S.$7:
+	MOVL	S.$T1,R0		; the alternate return's number
+	RET
+S.$3:
+;   13        DEALLOCATE (A, STAT=IS(1))
+	PUSHL	#1
+	PUSHAQ	S.A
+	CALLS	#2,G^FTN$DEALLOCATE
+	MOVL	R0,S.$T1
+	CVTLW	S.$T1,@S.$A2
+;   14        ENTRY T(N)
+S.$9:					; ENTRY T
+;   15        IF (.NOT. ALLOCATED(K)) ALLOCATE (K(N))
+	TSTL	S.K+4
+	BEQL	S.$11
+	BRW	S.$10
+S.$11:
+	PUSHL	@S.$A1
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	S.K
+	CALLS	#4,G^FTN$ALLOCATE
+S.$10:
+;   16        END
+	TSTL	S.A+4
+	BNEQ	S.$13
+	BRW	S.$12
+S.$13:
+	PUSHL	#0
+	PUSHAQ	S.A
+	CALLS	#2,G^FTN$DEALLOCATE
+S.$12:
+	TSTL	S.B+4
+	BNEQ	S.$15
+	BRW	S.$14
+S.$15:
+	PUSHL	#0
+	PUSHAQ	S.B
+	CALLS	#2,G^FTN$DEALLOCATE
+S.$14:
+	CLRL	R0			; the alternate return's number
+	RET
+S.$16:					; T's adjustable arrays' bounds
+	CLRL	S.A+4
+	CLRL	S.B+4
+	BRW	S.$9
+
+	.ENTRY	T,^M<>
+	MOVL	4(AP),S.$A1		; N is argument 1
+	BRW	S.$16
+
+	.END
