@@ -8826,7 +8826,8 @@ specifics of their own, tried first.
 functions of one or two INTENT(IN) operands, none OPTIONAL. `A .DIST. B` calls the one its
 operands fit. A unary defined operator binds more tightly than any other operator, and a
 binary one more loosely, so `1.0 + X .DIST. Y - 2.0` is `(1.0 + X) .DIST. (Y - 2.0)`. With a
-RECORD named A, `A.B.C` is still the field reference; otherwise it is A `.B.` C. An interface
+RECORD named A, `A.B.C` is still the field reference, and with A an object of a derived type
+too when B is a component of a type defined there; otherwise it is A `.B.` C. An interface
 may extend an intrinsic operator (`OPERATOR(+)`, `OPERATOR(//)`, `OPERATOR(<=)`, which is
 `.LE.`) only to operands Fortran gives it no meaning for (`DEFOPINTR` otherwise). A meaning
 only VAX FORTRAN gives, such as `.AND.` of INTEGERs or `.XOR.`, a block may take over: the
@@ -8834,7 +8835,12 @@ block's function is called when it fits, and VAX FORTRAN's meaning applies when 
 `INTERFACE ASSIGNMENT(=)` lists subroutines of two dummies, the first INTENT(OUT) or
 INTENT(INOUT) and the second INTENT(IN), for assignments Fortran doesn't define: with one for
 a CHARACTER variable and a LOGICAL value, `W = .TRUE.` is `CALL S(W, (.TRUE.))`. The values
-and operands are scalars of FORTRAN's types until derived types arrive.
+and operands are scalars of FORTRAN's types or of derived types. A derived type has no
+operators of its own: `P == Q` for two of its objects means what an `INTERFACE OPERATOR(==)`
+block says, and is an error (`NODERIVEDOP`) without one; and an `INTERFACE ASSIGNMENT(=)` for
+a derived type takes every assignment of that type, `P = POINT(1.0, 2.0)` too. An interface
+body has no host, so it defines the type again; only a SEQUENCE type's two definitions, with
+the same name and components, are one type.
 
 All of it together:
 

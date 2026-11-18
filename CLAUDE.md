@@ -1179,7 +1179,16 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   naturally aligned unless PACKED was given, `Alignment.RecordsGiven`, the
   command's explicit `/NOALIGN`; `%` a component selector after any reference,
   `ast.FieldRef.Percent`; class 1 names, TYPECLASH; the storage map's "Type"
-  lines; `testdata/fortran90/types.f90`).
+  lines; `testdata/fortran90/types.f90`); subtask 3 (2026-11-18) is
+  constructors, assignment, and operators (`sema/structvalue.go`: a constructor
+  of constants a `Const` of the record type with `Parts` and its bytes in `Raw`,
+  a PARAMETER's or an initial value (`Symbol.recordValue`, `valueInitials`), a
+  constant's component folded; any other a `StructValue`, which
+  `ir/lowerstruct.go`'s `buildRecord` builds a component at a time, in the
+  target when `Assign.InPlace`; `sameType`, the standard's type equality, in
+  assignment, `differ`, and INTERFACEDIFF; `operand` and `aggregateOperands`,
+  NODERIVEDOP; the parser's `recordScope.component`, so `P .DIST. Q` stays an
+  operation; `testdata/fortran90/structs.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

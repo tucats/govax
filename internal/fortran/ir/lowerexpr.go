@@ -287,6 +287,12 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 		return &place
 	}
 
+	if s.Value != nil && s.Value.T.Kind == sema.Record {
+		// A derived type's constant, whose component's subscripts aren't
+		// constants: its value in $PDATA.
+		return l.text(string(s.Value.Raw))
+	}
+
 	if s.ArrayValue != nil {
 		// An array PARAMETER's element whose subscripts aren't constants.
 		return l.constantArrayMem(s)
@@ -389,6 +395,19 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		m.Index = index
 
 		return m
+
+	case *sema.Const:
+		// A derived type's constant, in $PDATA (lowerstruct.go).
+		if e.T.Kind == sema.Record {
+			return l.text(string(e.Raw))
+		}
+
+	case *sema.StructValue:
+		// A structure constructor's value, built in a temporary.
+		t := l.textTemp(e.T.Size)
+		l.buildRecord(t, e)
+
+		return t
 	}
 
 	panic("ir: an assignment's target that is neither a variable nor an array element")

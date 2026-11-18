@@ -105,6 +105,7 @@ PROGRAMS90 = {
     "solver": ["solver.f90"],
     "sieve": ["sieve.f90"],
     "sorter": ["sorter.f90"],
+    "structs": ["structs.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

@@ -79,6 +79,10 @@ func (a *analyzer) defineParameter(sym *Symbol, s *ast.ParameterStmt, d *ast.Par
 			// letter.
 			sym.Type, sym.untyped = c.T, false
 			sym.Value = c.at(d.Name.Pos)
+
+			if c.T.Kind == Record {
+				sym.Struct = c.T.Struct
+			}
 		}
 
 		return

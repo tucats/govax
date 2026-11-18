@@ -77,6 +77,11 @@ func (ev *evaluator) isArrayForm(e ast.Expr) bool {
 	case *ast.Apply:
 		s := ev.a.scope.find(e.Name)
 
+		// A structure constructor is a scalar (structvalue.go).
+		if ev.a.constructorType(e.Name, s) != nil {
+			return false
+		}
+
 		if s != nil && s.ArrayValue != nil {
 			for _, arg := range e.Args {
 				if _, ok := arg.(*ast.Triplet); ok || ev.isArrayForm(arg) {

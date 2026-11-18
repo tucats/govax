@@ -214,7 +214,7 @@ func interfaceDifference(body *Unit, fu *fileUnit) string {
 	}
 
 	if body.Kind == ast.FunctionUnit {
-		if here, there := body.Result.Type, fu.result().Type; here != there {
+		if here, there := body.Result.Type, fu.result().Type; !sameTypes(here, there) {
 			return "its value is " + here.String() + " here, " + there.String() + " there"
 		}
 
@@ -249,7 +249,7 @@ func dummyDifference(p, q *Symbol) string {
 
 		return ""
 
-	case p.Type != q.Type:
+	case !sameTypes(p.Type, q.Type):
 		return "is " + p.Type.String() + " here, " + q.Type.String() + " there"
 
 	case len(p.Dims) != len(q.Dims):

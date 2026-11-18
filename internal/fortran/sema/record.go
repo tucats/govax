@@ -168,6 +168,14 @@ func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 // value refuses, scalar), or where whole allows it (an actual argument, an I/O
 // list item) an array field without subscripts.
 func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
+	// A constant's component, ORIGIN%X, is a constant if its subscripts are
+	// (structvalue.go); one that isn't is read from the constant's datum.
+	if a.constantBase(e) {
+		if v, ok := a.folded(e); ok {
+			return v
+		}
+	}
+
 	// The syntax tree nests a reference from its last field in: R.A.B is
 	// FieldRef{FieldRef{Name R, A}, B}. The steps, from the record's own
 	// field out.
@@ -403,6 +411,11 @@ func structureOf(e Expr) *Structure {
 		return e.Field().Struct
 	}
 
+	// A structure constructor, a derived type's constant: its type's.
+	if t := e.Type(); t.Kind == Record {
+		return t.Struct
+	}
+
 	return nil
 }
 
@@ -537,6 +550,13 @@ func (a *analyzer) recordInitials() {
 		}
 
 		image := s.Struct.image()
+		sep := "."
+
+		// TYPE(POINT) :: P = POINT(1.0, 2.0): the value given (structvalue.go).
+		if s.recordValue != nil {
+			image, sep = a.valueInitials(s.recordValue, s.TypePos), "%"
+		}
+
 		if len(image) == 0 {
 			continue
 		}
@@ -556,7 +576,7 @@ func (a *analyzer) recordInitials() {
 			for _, in := range image {
 				a.unit.Initials = append(a.unit.Initials, &Initial{
 					Sym: s, Offset: n*s.Struct.Size + in.Offset, Type: in.Type, Bytes: in.Bytes,
-					Item: item + "." + in.Item, Source: in.Source, Pos: in.Pos,
+					Item: item + sep + in.Item, Source: in.Source, Pos: in.Pos,
 				})
 			}
 		}

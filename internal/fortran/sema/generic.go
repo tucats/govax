@@ -191,6 +191,9 @@ func differ(x, y dummyShape) bool {
 		return true
 	case x.t.Kind == Invalid || y.t.Kind == Invalid:
 		return false
+	case x.t.Kind == Record && y.t.Kind == Record && x.t.Struct != nil && y.t.Struct != nil:
+		// Two derived types differ unless they are one type (structvalue.go).
+		return !argumentStructures(x.t.Struct, y.t.Struct)
 	}
 
 	return x.t.Kind != y.t.Kind || (x.t.Kind != Character && x.t.Size != y.t.Size)

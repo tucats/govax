@@ -334,13 +334,14 @@ func (p *parser) reference(what string) ast.Expr {
 // Under /F90 a period after a reference may also start a defined operator, A
 // .B. C, and the field reading is taken only where it must be meant
 // (fieldNext): after a record, a name a RECORD statement declared, or a field
-// or element of one, as the HP manual has it (a field of a record wins); or
+// or element of one, as the HP manual has it (a field of a record wins); after
+// a derived type's object when the name is a component of a type in scope; or
 // where no defined operator can be, a period and a name with no period after
 // it, which semantic analysis can then report as the field of something that
 // isn't a record.
 func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 	base := ast.ExprBase{Pos: p.pos(t)}
-	record := p.records.has(t.Text)
+	record := p.records.kind(t.Text)
 
 	var x ast.Expr = &ast.Name{ExprBase: base, Name: t.Text}
 
@@ -373,14 +374,22 @@ func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 
 // fieldNext reports whether a record field reference, .FIELD, is next after a
 // reference: a period and a name, which under /F90 is a field only if the
-// reference is a record's (record) or no defined operator could start there
+// reference is a record's (record), or a derived-type object's and the name a
+// component of a type in scope, or no defined operator could start there
 // (dottedAhead).
-func (p *parser) fieldNext(record bool) bool {
+func (p *parser) fieldNext(record recordKind) bool {
 	if !p.at(".") || p.peekAt(1) == nil || p.peekAt(1).Kind != lex.Name {
 		return false
 	}
 
-	return !p.f90() || record || !p.dottedAhead(0)
+	switch {
+	case !p.f90() || record == structRecord:
+		return true
+	case record == derivedObject && p.records.component(p.peekAt(1).Text):
+		return true
+	}
+
+	return !p.dottedAhead(0)
 }
 
 // componentNext reports whether a derived-type object's component, %NAME, is

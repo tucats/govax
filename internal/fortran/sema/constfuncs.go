@@ -68,6 +68,11 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 	// constant (constarray.go).
 	s := ev.a.scope.find(e.Name)
 
+	// POINT(1.0, 2.0), a structure constructor (structvalue.go).
+	if st := ev.a.constructorType(e.Name, s); st != nil {
+		return ev.structConst(st, e)
+	}
+
 	if s != nil && s.ArrayValue != nil {
 		c, _, err := ev.constantSection(s, e)
 

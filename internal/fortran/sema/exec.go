@@ -150,7 +150,7 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		}
 	}
 
-	return &Assign{stmtBase{s}, target, value, order}
+	return &Assign{stmtBase: stmtBase{s}, Target: target, Value: value, Order: order, InPlace: inPlace(target, value)}
 }
 
 // assignParts analyzes an assignment's target and value, the value converted
@@ -228,7 +228,7 @@ func (a *analyzer) assignedShape(pos diag.Position, target, value Expr) bool {
 func (a *analyzer) assignedValue(pos diag.Position, target, value Expr) Expr {
 	switch tt, vt := target.Type(), value.Type(); {
 	case tt.Kind == Record:
-		if st := structureOf(target); vt.Kind != Record || structureOf(value) != st {
+		if st := structureOf(target); vt.Kind != Record || !sameType(structureOf(value), st) {
 			what := article(vt.String()) + " value"
 			if s := structureOf(value); s != nil {
 				what = s.objectText()

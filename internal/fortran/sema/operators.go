@@ -316,11 +316,11 @@ func (a *analyzer) extendedOp(op ast.Op, pos diag.Position, operands ...Expr) (E
 // definedOp analyzes a defined operation, X .OP. Y or .OP. X: a reference to the
 // function of the operator's interface its operands fit.
 func (a *analyzer) definedOp(e *ast.DefinedOp) Expr {
-	operands := []Expr{a.arrayValue(e.X)}
+	operands := []Expr{a.operand(e.X)}
 	list := []ast.Expr{e.X}
 
 	if e.Y != nil {
-		operands = append(operands, a.arrayValue(e.Y))
+		operands = append(operands, a.operand(e.Y))
 		list = append(list, e.Y)
 	}
 

@@ -578,6 +578,8 @@ func DumpExpr(e Expr) string {
 		return text
 	case *ArrayRef:
 		return e.Sym.Name + "[]"
+	case *StructValue:
+		return dumpConstructor(e.T, e.Values)
 	case *ArrayConst:
 		// (/:F 1.0 2.0 3.0 /) with its shape, [2,2], if its rank isn't 1.
 		parts := make([]string, len(e.Elems))
@@ -725,6 +727,9 @@ func DumpExpr(e Expr) string {
 // REAL*16's Q.
 func dumpConst(c *Const) string {
 	switch c.T.Kind {
+	case Record:
+		return dumpConstructor(c.T, c.Parts)
+
 	case Real:
 		return dumpReal(c.Real, c.T)
 
@@ -746,6 +751,17 @@ func dumpConst(c *Const) string {
 	}
 
 	return strconv.Itoa(int(c.Int))
+}
+
+// dumpConstructor is a structure constructor's value, of the derived type t, as
+// the dump shows it: POINT{1.0, Y}.
+func dumpConstructor(t Type, values []Expr) string {
+	parts := make([]string, len(values))
+	for i, v := range values {
+		parts[i] = DumpExpr(v)
+	}
+
+	return t.Struct.Name + "{" + strings.Join(parts, ", ") + "}"
 }
 
 // dumpReal is a value of REAL type t, as dumpConst shows it.

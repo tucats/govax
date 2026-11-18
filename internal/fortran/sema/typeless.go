@@ -291,19 +291,19 @@ func (a *analyzer) operands(ex, ey ast.Expr) (x, y Expr) {
 
 	if (ux != nil) != (uy != nil) {
 		if uy != nil {
-			x = a.arrayValue(ex)
+			x = a.operand(ex)
 			x, y = a.typedBeside(uy, x)
 
 			return x, y
 		}
 
-		y = a.arrayValue(ey)
+		y = a.operand(ey)
 		y, x = a.typedBeside(ux, y)
 
 		return x, y
 	}
 
-	x, y = a.arrayValue(ex), a.arrayValue(ey)
+	x, y = a.operand(ex), a.operand(ey)
 
 	kx, okx := x.(*Const)
 	ky, oky := y.(*Const)

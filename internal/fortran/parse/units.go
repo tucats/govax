@@ -189,6 +189,7 @@ func (u *unitStack) place(s ast.Stmt, ls *lex.Statement) {
 	// the unit's END, which it never reached, closes it too.
 	if f.typeDef != nil && k != lex.End {
 		f.typeDef.Body = append(f.typeDef.Body, s)
+		f.records.components(s)
 
 		if k == lex.EndType {
 			f.typeDef = nil
@@ -319,27 +320,68 @@ func (u *unitStack) endTypeDef(f *openFrame) {
 }
 
 // recordScope is the names declared records in one unit (by RECORD
-// statements, and TYPE(t) declarations: a derived type's object is read as a
-// record is), and its host's. The parser needs them to read A.B.C under /F90:
-// a field of A if A is a record, else A .B. C, a defined operation
-// (fieldNext). The names are those of the statements before the one being
+// statements) and objects of derived types (by TYPE(t) declarations), and its
+// host's. The parser needs them to read A.B.C under /F90: a field of A if A is
+// a record, else A .B. C, a defined operation (fieldNext). A derived type's
+// object is read as a record is when B is a component of a type defined in
+// the scope (fields), so that P .DIST. Q stays an operation when DIST is no
+// component. The names are those of the statements before the one being
 // parsed, which is enough, since a declaration comes before every executable
 // statement that refers to its records. Under IMPLICIT TYPE(t) (letters) a
 // name no type statement declares (typed) is an object of t too.
 type recordScope struct {
-	names   map[string]bool
+	names   map[string]recordKind
 	typed   map[string]bool
+	fields  map[string]bool
 	letters [26]bool
 	host    *recordScope
 }
 
-// add declares name a record in the scope.
-func (r *recordScope) add(name string) {
+// recordKind is what a name is to recordScope.
+type recordKind int
+
+const (
+	notRecord     recordKind = iota
+	structRecord             // a RECORD statement's record
+	derivedObject            // an object of a derived type
+)
+
+// add declares name a record of the kind in the scope.
+func (r *recordScope) add(name string, kind recordKind) {
 	if r.names == nil {
-		r.names = map[string]bool{}
+		r.names = map[string]recordKind{}
 	}
 
-	r.names[name] = true
+	r.names[name] = kind
+}
+
+// components notes the components s, a statement of a derived type's
+// definition, declares.
+func (r *recordScope) components(s ast.Stmt) {
+	t, ok := s.(*ast.TypeStmt)
+	if !ok {
+		return
+	}
+
+	if r.fields == nil {
+		r.fields = map[string]bool{}
+	}
+
+	for _, d := range t.Entities {
+		r.fields[d.Name] = true
+	}
+}
+
+// component reports whether name is a component of a derived type defined in
+// the scope or a host's.
+func (r *recordScope) component(name string) bool {
+	for ; r != nil; r = r.host {
+		if r.fields[name] {
+			return true
+		}
+	}
+
+	return false
 }
 
 // declare notes what the statement s, of the unit, says of records: a RECORD
@@ -350,14 +392,14 @@ func (r *recordScope) declare(s ast.Stmt) {
 	case *ast.RecordStmt:
 		for _, g := range s.Groups {
 			for _, d := range g.Entities {
-				r.add(d.Name)
+				r.add(d.Name, structRecord)
 			}
 		}
 
 	case *ast.TypeStmt:
 		for _, d := range s.Entities {
 			if s.Type.Derived != "" {
-				r.add(d.Name)
+				r.add(d.Name, derivedObject)
 
 				continue
 			}
@@ -380,20 +422,21 @@ func (r *recordScope) declare(s ast.Stmt) {
 	}
 }
 
-// has reports whether name is a record in the scope or a host's.
-func (r *recordScope) has(name string) bool {
+// kind is what name is in the scope or a host's: a record, a derived type's
+// object, or neither.
+func (r *recordScope) kind(name string) recordKind {
 	for ; r != nil; r = r.host {
 		switch {
-		case r.names[name]:
-			return true
+		case r.names[name] != notRecord:
+			return r.names[name]
 		case r.typed[name]:
-			return false
+			return notRecord
 		case name != "" && name[0] >= 'A' && name[0] <= 'Z' && r.letters[name[0]-'A']:
-			return true
+			return derivedObject
 		}
 	}
 
-	return false
+	return notRecord
 }
 
 // parseContains parses CONTAINS (R1225).

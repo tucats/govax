@@ -427,6 +427,10 @@ func readsAny(e Expr, ts *Symbol) bool {
 			walk(e.X)
 			walk(e.Y)
 		case *Const, *Procedure:
+		case *StructValue:
+			for _, v := range e.Values {
+				walk(v)
+			}
 		case *ArrayRef, *Section:
 			found = found || mayShare(ts, baseSymbol(e))
 		case *ArrayFunc:

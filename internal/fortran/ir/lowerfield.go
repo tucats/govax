@@ -140,9 +140,20 @@ func (l *lowerer) fieldArrayDescriptor(e *sema.FieldRef) *Mem {
 // which one MOVC3 allows for and pieces don't; that takes a record longer than
 // 65,535 bytes overlapping itself, and is left undefined (ours).
 func (l *lowerer) moveRecord(s *sema.Assign) {
-	size := s.Target.Type().Size
-	dst, src := l.mem(s.Target), l.mem(s.Value)
+	// A structure constructor none of whose values reads the target is built
+	// there (lowerstruct.go).
+	if v, ok := s.Value.(*sema.StructValue); ok && s.InPlace {
+		l.buildRecord(l.mem(s.Target), v)
 
+		return
+	}
+
+	l.moveBytes(l.mem(s.Target), l.mem(s.Value), s.Target.Type().Size)
+}
+
+// moveBytes moves size bytes from src to dst, two Byte places, in pieces of
+// at most a word's length.
+func (l *lowerer) moveBytes(dst, src *Mem, size int) {
 	if size <= maxWordLength {
 		n := LongConst(int32(size))
 		l.emit(&CharMove{l.origin(), Text{dst, n}, Text{src, n}})

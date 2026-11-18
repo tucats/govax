@@ -407,6 +407,11 @@ type Symbol struct {
 	Value      *Const
 	ArrayValue *ArrayConst
 
+	// recordValue is the initial value a Fortran 90 declaration gives an
+	// object of a derived type, TYPE(POINT) :: P = POINT(1.0, 2.0)
+	// (structvalue.go), every element's if it is an array.
+	recordValue *Const
+
 	// Internal is the internal procedure a host's name stands for: the name of
 	// a FUNCTION or SUBROUTINE after the host's CONTAINS, whose interface is the
 	// procedure's own declarations (internal.go). nil for any other name.
@@ -630,6 +635,12 @@ type (
 		Target Expr
 		Value  Expr
 		Order  *ArrayOrder
+
+		// InPlace says a structure constructor's value may be built straight
+		// in the target, a component at a time, since none of its values reads
+		// the target (structvalue.go's inPlace); otherwise it is built in a
+		// temporary and moved.
+		InPlace bool
 	}
 
 	// Call is CALL Sub(Args).
@@ -885,6 +896,13 @@ type (
 		// of its type (typeless.go). Its bits needn't be a number, and needn't
 		// be what Real and Imag would pack to.
 		Raw []byte
+
+		// Parts are a derived type's constant's component values, one per
+		// field of its structure in order: a *Const for a scalar component (a
+		// derived type's own a Const like this one), an *ArrayConst for an
+		// array component. Raw is then the whole value's bytes, padding zero
+		// (structvalue.go).
+		Parts []Expr
 	}
 
 	// Var is a scalar variable.
@@ -969,6 +987,20 @@ type (
 		exprBase
 		Items    []CtorItem
 		LengthOf Expr
+	}
+
+	// StructValue is a structure constructor whose values aren't all
+	// constant (the standard's 4.4.4; structvalue.go): POINT(X, 2.0), a value
+	// of the derived type T.Struct. Values are its components' values, one per
+	// field of the structure in order, each converted to its component's type
+	// as an assignment converts: a scalar's an expression of its type, a
+	// derived type's component a record of that type, an array component's
+	// constant (Bytes holds its bytes, nil for any other component). A
+	// constructor whose values are all constant is a Const instead.
+	StructValue struct {
+		exprBase
+		Values []Expr
+		Bytes  [][]byte
 	}
 
 	// Section is Fortran 90's array section, Sym(Subs) with a subscript

@@ -90,7 +90,16 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 
 	switch e := a.Expr.(type) {
 	case *sema.Var, *sema.Elem, *sema.FieldRef:
-		if a.Copy {
+		switch {
+		case a.Copy && e.Type().Kind == sema.Record:
+			// A record in parentheses, or as defined assignment's value: a
+			// copy of its bytes.
+			t := l.textTemp(e.Type().Size)
+			l.moveBytes(t, l.mem(e), e.Type().Size)
+
+			return Arg{Ref: t}
+
+		case a.Copy:
 			return Arg{Ref: l.value(l.expr(e))}
 		}
 
@@ -100,7 +109,15 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 		return Arg{Ref: l.symbolMem(e.Sym)}
 
 	case *sema.Const:
+		if e.T.Kind == sema.Record {
+			// A derived type's constant, read-only in $PDATA as any constant.
+			return Arg{Ref: l.mem(e)}
+		}
+
 		return Arg{Ref: l.constant(l.constOf(e))}
+
+	case *sema.StructValue:
+		return Arg{Ref: l.mem(e)}
 	}
 
 	return Arg{Ref: l.value(l.expr(a.Expr))}

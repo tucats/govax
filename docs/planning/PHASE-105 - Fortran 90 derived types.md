@@ -426,7 +426,8 @@ all three.
    (done 2026-11-18).
 3. **Constructors, assignment, operators:** `StructValue`, constant folding,
    initial values and PARAMETERs and their components, intrinsic assignment by
-   `sameType`, defined assignment replacing it, NODERIVEDOP (findings 8 and 9).
+   `sameType`, defined assignment replacing it, NODERIVEDOP (findings 8 and 9)
+   (done 2026-11-18).
 4. **Arguments and results:** `sameType` at every check, RECORD versus TYPE,
    separate definitions (finding 10), results in R0 and R1 up to 8 bytes and the
    hidden result past that, RESULT, recursion,
@@ -567,3 +568,68 @@ object are never the same type, with a message naming both.
     message), `fortran`'s `TestDerivedTypeMap`, and
     `testdata/fortran90/types.f90` in every mode. It isn't in `compare.py`: DEC's
     period is no Fortran 95.
+- **2026-11-18, subtask 3 (done):** Constructors, assignment, operators
+  (`sema/structvalue.go`, `ir/lowerstruct.go`).
+  - *Constructors.* `POINT(...)` is a constructor when POINT is a finished
+    derived type in scope and nothing else of the unit (`constructorType`),
+    in the evaluator (`ev.apply`, so a constructor of constants is a constant)
+    and in `apply`. A value per component (CONSTRCOUNT), no keywords
+    (CONSTRKEYWORD) and none left out (CONSTRNULL), each converted as an
+    assignment converts (CONSTRVALUE): a component of a derived type takes an
+    object of a type `sameType` calls its own, an array component a scalar for
+    every element or an array of its shape (NOTCONFORM).
+  - *Constants.* A constructor of constants is a `Const` of the record type
+    whose `Parts` are the components' values (a `*Const`, or an `*ArrayConst`
+    for an array component) and whose `Raw` is the value's bytes, padding zero
+    (`partBytes`). `ev.convert` moves one only to its own type. It is a
+    PARAMETER's value (both forms; `TYPE(T), PARAMETER` arrays NOTIMPL for
+    subtask 5), and a constant's component folds, `ORIGIN%X`, `TAG%AT%Y`,
+    `TAG%MARKS(2)` (`ev.component`, and `field` trying the evaluator first when
+    the reference starts from a constant). A component whose subscripts aren't
+    constant is read from the constant's datum (`symbolMem`). A record constant
+    alone where a value is wanted is AGGREGATE, as a record's name is.
+  - *Initial values.* `TYPE(POINT) :: P = POINT(1.0, 2.0)` keeps the constant
+    (`Symbol.recordValue`, implying SAVE), and `recordInitials` makes it one
+    Initial per scalar component, an array component's per element, named
+    `P%AT%X`, `P%MARKS(2)` (`valueInitials`); INITTYPE for another type's
+    value, DATAVALUE for one not constant; an array's value from an array
+    constructor NOTIMPL for subtask 5 (a scalar is every element's).
+  - *Values not constant* are a `StructValue`: each scalar component's value
+    converted, an array component's constant bytes (`Bytes`; a value that isn't
+    constant NOTIMPL for subtask 5). Lowering builds it a component at a time
+    (`buildRecord`: a store, a MOVC3/MOVC5 for CHARACTER, a nested constructor
+    built in place, an object's bytes moved), at a place whose offset counts
+    bytes (`recordPlace`: a dummy through its argument's longword, an element
+    with a subscript through its address computed once). `Assign.InPlace` (sema's
+    `inPlace`, over `readsAny`, which now walks a `StructValue`) builds it in the
+    target when no value reads the target; `P = POINT(P%Y, P%X)` goes through a
+    temporary, then `moveBytes` (`moveRecord`'s pieces, shared). A constructor
+    as an argument is passed in a temporary, a constant in its datum, and a
+    record copied for defined assignment's value or parentheses.
+  - *Assignment and operators.* Intrinsic assignment of a record checks
+    `sameType` (the same definition, or two SEQUENCE definitions agreeing in
+    name and components, 4.4.2); `structureOf` answers for any record-typed
+    expression. Operands are analyzed by `operand`, which keeps a record or an
+    object as a whole, so that `extendedOp` and `definedOp` can give
+    `P .DIST. Q` and `P == Q` an interface's meaning; otherwise
+    `aggregateOperands` reports NODERIVEDOP (once) for a derived type and
+    AGGREGATE (per operand, as before) for a STRUCTURE's record. The evaluator
+    makes no constant of an operation on a record (`noOperators`). Defined
+    assignment already took records (`intrinsicAssignment` is false for them);
+    every assignment of the type goes through it, a constructor's too.
+  - *Type equality where it was needed now*: generics' and operators' `differ`
+    (`argumentStructures`: `sameType`, or two STRUCTUREs of one form as
+    RECORDARG has it), and INTERFACEDIFF's types (`sameTypes`), so an interface
+    body's own SEQUENCE definition matches the procedure's. The other argument
+    checks (`recordArguments`'s form, separate non-SEQUENCE definitions) are
+    subtask 4's.
+  - *The parser.* Under `/F90` a period after a derived type's object is a
+    component only if the name is one of a type's defined in scope
+    (`recordScope.component`, gathered from each definition's statements),
+    so `ORIGIN .DIST. Q` stays an operation; a STRUCTURE's record keeps the
+    HP manual's rule (a field wins).
+  - *Tests:* `sema/structvalue_test.go` (constants, their bytes and
+    components, initial values, values in place or moved, every message),
+    `testdata/fortran90/structs.f90` (in `compare.py`; gfortran prints the same
+    lines). MANUAL.md's 14.13 says what operators and assignment do with
+    derived types.

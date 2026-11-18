@@ -184,7 +184,7 @@ func (a *analyzer) whereAssign(w *Where, s *ast.AssignStmt) *Assign {
 		return nil
 	}
 
-	return &Assign{stmtBase{s}, target, value, nil}
+	return &Assign{stmtBase: stmtBase{s}, Target: target, Value: value}
 }
 
 // matchWhere finds the WHERE construct an ELSEWHERE or END WHERE statement

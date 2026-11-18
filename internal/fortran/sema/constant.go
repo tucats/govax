@@ -222,6 +222,10 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 
 	case *ast.Apply:
 		return ev.apply(e)
+
+	case *ast.FieldRef:
+		// A constant's component, ORIGIN%X (structvalue.go).
+		return ev.component(e)
 	}
 
 	if what := formWhat(e); what != "" {
@@ -387,6 +391,10 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 // unaryOn is e's operation on x, its operand's value (an array constant's
 // element, for constarray.go).
 func (ev *evaluator) unaryOn(e *ast.Unary, x *Const) (*Const, *constErr) {
+	if x.T.Kind == Record {
+		return nil, noOperators(e.Pos)
+	}
+
 	x, err := ev.numeric(x)
 	if err != nil {
 		return nil, err
@@ -480,6 +488,10 @@ func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
 func (ev *evaluator) binaryOn(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	var err *constErr
 
+	if x.T.Kind == Record || y.T.Kind == Record {
+		return nil, noOperators(e.Pos)
+	}
+
 	if e.Op == ast.Concat {
 		return ev.concatOn(e, x, y)
 	}
@@ -524,6 +536,13 @@ func (ev *evaluator) binaryOn(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	}
 
 	return ev.operate(e.Op, x, y, e.Pos)
+}
+
+// noOperators is an operation on a derived type's value, which has none but
+// what an interface block gives it: no constant, so that the expression's own
+// analysis says so (NODERIVEDOP).
+func noOperators(pos diag.Position) *constErr {
+	return notConst("a derived type's value has no intrinsic operators", pos)
 }
 
 // concat is X // Y, two CHARACTER values joined.
@@ -932,6 +951,22 @@ func bitwiseConst(op ast.Op, x, y *Const, pos diag.Position) *Const {
 func (ev *evaluator) convert(c *Const, t Type, pos diag.Position) (*Const, *constErr) {
 	if c.T == t {
 		return c, nil
+	}
+
+	// A derived type's value converts only to its own type, perhaps another
+	// SEQUENCE definition of it (structvalue.go's sameType).
+	if c.T.Kind == Record || t.Kind == Record {
+		switch {
+		case c.T.Kind == Invalid || t.Kind == Invalid:
+			return nil, failed
+		case c.T.Kind != Record || t.Kind != Record || !sameType(c.T.Struct, t.Struct):
+			return nil, incompatible
+		}
+
+		r := *c
+		r.T, r.Pos = t, pos
+
+		return &r, nil
 	}
 
 	r := &Const{exprBase: exprBase{T: t, Pos: pos}}

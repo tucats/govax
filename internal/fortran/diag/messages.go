@@ -412,6 +412,18 @@ var messages = map[string]kind{
 	"RECORDTYPE":   {Error, "%s is a derived type, not a structure: TYPE(%[1]s) declares its objects"},
 	"TYPECLASH":    {Error, "%s names the derived type defined at line %d, so it can't also be %s"},
 
+	// Structure constructors and what operators do with derived types
+	// (sema/structvalue.go). CONSTRCOUNT is a constructor with too few or too
+	// many values (4.4.4); CONSTRKEYWORD a value with a keyword, and
+	// CONSTRNULL one left out, which Fortran 90's constructors don't have;
+	// CONSTRVALUE a value that can't be assigned to its component; NODERIVEDOP an operator
+	// on a derived type's value that no interface block gives a meaning.
+	"CONSTRCOUNT":   {Error, "%s has %s, but its constructor gives %d values"},
+	"CONSTRKEYWORD": {Error, "a structure constructor's values have no keywords, as those of the constructor of %s here"},
+	"CONSTRNULL":    {Error, "a structure constructor needs a value for every component, and one of %s is left out"},
+	"CONSTRVALUE":   {Error, "%s can't be the value of the component %s of %s, which is %s"},
+	"NODERIVEDOP":   {Error, "the operator %s has no meaning for %s unless an interface block gives it one"},
+
 	// NOTRECORD is a field reference to a name that isn't a record.
 	"NOTRECORD": {Error, "%s is %s, not a record, so it has no field %s"},
 
@@ -610,7 +622,7 @@ var messages = map[string]kind{
 	"KEYWORDTWICE": {Error, "the argument %s of %s is given twice"},
 	"KEYWORDORDER": {Error, "an argument of %s without a keyword can't follow one with a keyword"},
 	"MISSINGARG":   {Error, "%s needs its argument %s"},
-	"NULLSTMTARG":   {Error, "an argument of the statement function %s can't be left out"},
+	"NULLSTMTARG":  {Error, "an argument of the statement function %s can't be left out"},
 
 	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT
 	// statement (section 4.8).

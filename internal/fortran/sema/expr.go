@@ -141,7 +141,15 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 	}
 
 	if s.Class == Constant {
-		return a.constantUse(s, n)
+		v := a.constantUse(s, n)
+		if v.Type().Kind == Record && !wholeOK {
+			// A constant of a derived type, a value as a whole.
+			a.report("AGGREGATE", n.Pos, n.Name)
+
+			return a.bad(n.Pos)
+		}
+
+		return v
 	}
 
 	if s.Struct != nil && !wholeOK {
@@ -245,14 +253,9 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		return a.genericRef(s, e)
 	}
 
-	// POINT(1.0, 2.0), a structure constructor: subtask 3's
-	// (docs/planning/PHASE-105 - Fortran 90 derived types.md).
-	if s == nil || s.Class == Unclassified && s.Dummy == 0 {
-		if st := a.unit.structure(e.Name); st != nil && st.Derived {
-			a.notImplForm(e.Pos, "a structure constructor")
-
-			return a.bad(e.Pos)
-		}
+	// POINT(1.0, 2.0), a structure constructor (structvalue.go).
+	if st := a.constructorType(e.Name, s); st != nil {
+		return a.structConstructor(st, e)
 	}
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
@@ -564,8 +567,12 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 		return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: minInt}
 	}
 
-	x := a.arrayValue(e.X)
+	x := a.operand(e.X)
 	if v, ok := a.extendedOp(e.Op, e.Pos, x); ok {
+		return v
+	}
+
+	if v := a.aggregateOperands(e.Op.String(), e.Pos, x); v != nil {
 		return v
 	}
 
@@ -633,6 +640,10 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		return v
 	}
 
+	if v := a.aggregateOperands(e.Op.String(), e.Pos, x, y); v != nil {
+		return v
+	}
+
 	if !e.Op.Relational() {
 		x, y = a.numericConst(x), a.numericConst(y)
 	}
@@ -678,6 +689,10 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 func (a *analyzer) power(e *ast.Binary) Expr {
 	x, y := a.operands(e.X, e.Y)
 	if v, ok := a.extendedOp(e.Op, e.Pos, x, y); ok {
+		return v
+	}
+
+	if v := a.aggregateOperands(e.Op.String(), e.Pos, x, y); v != nil {
 		return v
 	}
 
@@ -764,12 +779,16 @@ func (a *analyzer) concat(e *ast.Binary) Expr {
 		}
 	}
 
-	x, y := a.arrayValue(e.X), a.arrayValue(e.Y)
+	x, y := a.operand(e.X), a.operand(e.Y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
 	}
 
 	if v, ok := a.extendedOp(e.Op, e.Pos, x, y); ok {
+		return v
+	}
+
+	if v := a.aggregateOperands(e.Op.String(), e.Pos, x, y); v != nil {
 		return v
 	}
 
