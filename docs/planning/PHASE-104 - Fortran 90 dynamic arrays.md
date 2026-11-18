@@ -486,7 +486,14 @@ calls), then the frame's run-time storage everything after needs.
    test, copy-in and copy-out, INTENT and vector subscripts, CHARACTER (finding 11)
    (done 2026-11-18).
 7. **Array-valued functions and run-time CHARACTER lengths** (finding 12),
-   internal and external, recursive.
+   internal and external, recursive. In three parts (2026-11-18):
+   - 7a. Array values of a shape known when compiling: the caller's temporary
+     through the hidden argument, references through every kind of explicit
+     interface, EXPLICITVALUE, INTERFACEDIFF of the value (done 2026-11-18).
+   - 7b. Array values of a shape known only at run time: the callee's heap block
+     through the caller's NCA descriptor, freed at the statement's end.
+   - 7c. CHARACTER values of a run-time length, scalar and array, through a
+     class D descriptor; ENTRY in an array-valued function.
 8. **The transformational intrinsics** (finding 13), each against the standard's
    examples, and the intrinsic table's rows.
 9. **Programs end to end** (a linear-equation solver with assumed-shape arrays, a
@@ -974,3 +981,53 @@ The author read the survey and accepted every recommendation:
     assumed-shape buffer, copied or not; LIB$STAT_VM's bytes unchanged by a
     thousand heap temporaries). MANUAL.md's 14.13 has "Sections and expressions
     to other dummies", and HELP FORTRAN a paragraph.
+- **2026-11-18, subtask 7 split** into 7a (a value's shape known when
+  compiling), 7b (known only at run time), and 7c (CHARACTER values of a
+  run-time length, and ENTRY), each a commit (A.4).
+- **2026-11-18, subtask 7a done:** Array-valued functions of a shape known when
+  compiling.
+  - *sema* (`sema/arrayvalue.go`). `dimension` lets a function's value (its name
+    without RESULT, or its RESULT variable) have dimensions, under `/F90` and
+    `/NOF90` alike (VAX FORTRAN gave it no meaning, BADUSE); the function's name
+    with RESULT still can't (and BADUSE now calls it "the name of this function",
+    not "of this subroutine", a fix). `checkArrayValue` (from `checkArrays`)
+    refuses a value of the length (*) (STARARRAY, 5.1.1.5's constraint) and makes
+    a value whose bounds aren't constant, one of records, and ENTRY in such a
+    function NOTIMPL, taking a broken value out of the adjustable arrays.
+    `Symbol.HiddenValue` (a value too wide, CHARACTER, or an array) replaces
+    `Type.HiddenResult` where a unit's value is placed (`storage.go`). Every
+    reference to a function is made by `funcRef`, which gives it the shape of its
+    explicit interface's value (`resultShape`: an interface body, an internal
+    function, a recursive function's own, a generic's specific, a dummy
+    procedure's interface body), so the array expression machinery takes it as it
+    is: `Scalarize` and `Leaves` treat an array-valued FuncRef as a leaf, a scalar
+    context is NOTSCALAR, a shape that differs NOTCONFORM, and an argument is a
+    `Sequence` or `Shaped` value through its temporary. The overlap test needs
+    nothing: the value is computed before the loops, and `baseSymbol` has no
+    storage for it. A reference of the file's to an array-valued function with no
+    interface is EXPLICITVALUE (beside EXPLICITREQ); an interface body whose value
+    differs in rank or extent is INTERFACEDIFF (`resultDifference`). The sema dump
+    shows the shape after the arguments, `F(X)(3)`.
+  - *The IR.* The unit's value is a `Param` at argument 1 when `HiddenValue`, an
+    explicit-shape dummy array in all but name, so its elements and whole-array
+    assignments need nothing new. A leaf that is an array-valued FuncRef is
+    computed in `prepare`, before the loops, into an `arrayTemp` of its shape by
+    `callArrayFunction` (the temporary's address, or for CHARACTER a class A
+    descriptor of it by `charArg`, prepended to the arguments; `callWith` is the
+    rest of `callFunction`, shared), then read as a whole array.
+  - *A fix found on the way* (by `opt`'s `TestPassesOnCorpus`, a second run of the
+    passes changing the golden's internal function TAGS): in an internal procedure
+    `Storage.own` answered from a map made when the Storage was, so a temporary
+    the common subexpression pass had just made (`$U1`) was taken for the host's,
+    which any call may change, and a value over it (`$U1 + 1`) ended at every
+    call until the next run. The map is made again when the routine has gained
+    cells (`opt/effects.go`).
+  - *Choices of ours, unconfirmed:* a value passed to a dummy that isn't
+    assumed-shape is copied from its temporary into the argument's (two copies; the
+    second could be left out); `SIZE` of a reference is folded without calling the
+    function (7.1.7.1 allows it).
+  - *Tests:* `sema`'s `TestArrayValue` (every message and NOTIMPL) and
+    `TestErrors`' changed case; the `f90value` goldens in `sema`, `ir`, and
+    `codegen`; `testdata/fortran90/values.f90` (every mode, paging both ways;
+    gfortran prints the same 19 lines). MANUAL.md's 14.13 has "Array-valued
+    functions", and HELP FORTRAN a paragraph.

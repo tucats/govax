@@ -1,0 +1,48 @@
+== FUNCTION SPAN
+  SPAN      INTEGER       result
+  N         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+9           SPAN[] = N
+10          SPAN[2] = (*:I 2 N)
+11          END
+== SUBROUTINE USE
+  USE                     program unit
+  A         REAL          array(1:3)       argument 1
+  K         INTEGER       array(1:3)       $LOCAL+0
+  C         CHARACTER*4   array(1:2)       $LOCAL+12
+  SPAN      INTEGER       function          interface(line 18)
+  HALF      REAL          function
+  TAGS      CHARACTER*4   function
+  TAKE                    subroutine
+  $LOCAL is 20 bytes
+22          K[] = (+:I SPAN(4)(3) 1)
+23          A[] = (*:R HALF(A[])(3) 2.0)
+24          PRINT * SPAN(1)(3) SUM(HALF(A[])(3))
+25          CALL TAKE((sequence HALF(A[])(3)))
+26          C[] = TAGS('AB')(2)
+38          END
+== FUNCTION HALF
+  HALF      REAL          result
+  V         REAL          array(1:)        argument 1
+  $LOCAL is 0 bytes
+30          HALF[] = (/:R V[] 2.0)
+31          END
+== FUNCTION TAGS
+  TAGS      CHARACTER*4   result
+  S         CHARACTER*(*) variable         argument 1
+  $LOCAL is 0 bytes
+35          TAGS[1] = (//:C S 'X')
+36          TAGS[2] = (//:C 'Y' S)
+37          END
+== recursive FUNCTION STEP
+  STEP                    program unit
+  R         INTEGER       result
+  N         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+42          IF (.LE.:I N 1) THEN
+43            R[] = (/:I 0 1 /)
+44          ELSE
+45            R[] = STEP((-:I N 1))(2)
+46            R[] = (/:I R[2] (+:I R[1] R[2]) /)
+47          END IF
+48          END

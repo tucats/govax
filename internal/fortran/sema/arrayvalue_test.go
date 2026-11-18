@@ -1,0 +1,64 @@
+package sema
+
+import "testing"
+
+// TestArrayValue is array-valued functions' declarations, references, and
+// messages (arrayvalue.go; docs/planning/PHASE-104 - Fortran 90 dynamic
+// arrays.md, subtask 7a).
+func TestArrayValue(t *testing.T) {
+	// file is a program referencing the external function F, whose value is
+	// REAL F(3), through the lines given, then F itself.
+	file := func(lines ...string) []string {
+		return append(append([]string{"program p", "real a(3), x"}, lines...),
+			"end program", "function f(n)", "integer n", "real f(3)", "f = n", "end function")
+	}
+
+	iface := []string{"interface", "function f(n)", "integer n", "real f(3)", "end function", "end interface"}
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"through an interface body", file(append(iface, "a = f(1) + a", "print *, f(2)", "x = sum(f(3))")...), ""},
+		{"an internal function", []string{"program p", "real a(3)", "a = g(1.0)", "contains", "function g(x)",
+			"real x, g(3)", "g = x", "end function", "end program"}, ""},
+		{"with RESULT", []string{"function g(x) result(r)", "real x", "real, dimension(2, 2) :: r", "r = x",
+			"r(1, 2) = 0", "end function"}, ""},
+		{"DIMENSION of the value", []string{"function g(x)", "real x", "dimension g(4)", "g = x", "end function"}, ""},
+		{"a CHARACTER value", []string{"function g(x)", "character*3 g(2)", "g = 'abc'", "end function"}, ""},
+		{"a recursive one's reference to itself", []string{"recursive function g(n) result(r)", "integer n, r(2)",
+			"r = 0", "if (n > 0) r = g(n - 1) + 1", "end function"}, ""},
+		{"through a dummy procedure's interface", []string{"subroutine s(fn)", "interface", "function fn(i)",
+			"integer i, fn(2)", "end function", "end interface", "print *, fn(1) * 2", "end subroutine"}, ""},
+		{"a generic's specific", []string{"program p", "interface g", "function g1(i)", "integer i, g1(2)",
+			"end function", "end interface", "integer k(2)", "k = g(3)", "end program"}, ""},
+
+		{"where a scalar must be", file(append(iface, "x = f(1)")...),
+			"NOTSCALAR: an array is used where a scalar is required"},
+		{"of another shape", file(append(iface, "a(1:2) = f(1)")...),
+			"NOTCONFORM: the shapes (2) and (3) don't conform"},
+		{"through no interface", file("a = f(1)"),
+			"EXPLICITVALUE: the value of F (line 5) is an array, so a reference to it needs an explicit interface"},
+		{"an interface body of another shape", file("interface", "function f(n)", "integer n", "real f(4)",
+			"end function", "end interface", "a = 1"),
+			"INTERFACEDIFF: this interface body for F doesn't agree with its definition (line 11): its value has 4 elements in dimension 1 here, 3 there"},
+		{"an interface body of another rank", file("interface", "function f(n)", "integer n", "real f",
+			"end function", "end interface", "a = 1"),
+			"INTERFACEDIFF: this interface body for F doesn't agree with its definition (line 11): its value is a scalar here, an array of rank 1 there"},
+		{"the name with RESULT", []string{"function g(x) result(r)", "real x, r", "dimension g(2)", "r = x", "end function"},
+			"BADUSE: G is the name of this function, so it can't be an array"},
+		{"the length (*)", []string{"function g(x)", "character*(*) g(2)", "g = 'x'", "end function"},
+			"STARARRAY: G has the length (*), so a function's value of that name can't be an array"},
+		{"bounds not constant", []string{"function g(n)", "integer n", "real g(n)", "g = 1", "end function"},
+			"NOTIMPL: an array-valued function whose value's bounds aren't constant is not implemented yet"},
+		{"an ENTRY", []string{"function g(n)", "integer n", "real g(2)", "entry h(n)", "g = 1", "end function"},
+			"NOTIMPL: an ENTRY statement in an array-valued function is not implemented yet"},
+	}
+
+	for _, c := range cases {
+		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}

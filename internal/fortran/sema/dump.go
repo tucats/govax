@@ -656,6 +656,11 @@ func DumpExpr(e Expr) string {
 
 		return "(//:" + e.T.letter() + " " + strings.Join(parts, " ") + ")"
 	case *FuncRef:
+		// An array value's shape after its arguments: F(X)(3).
+		if len(e.S) > 0 {
+			return e.Fn.Name + dumpArgs(e.Args) + e.S.String()
+		}
+
 		return e.Fn.Name + dumpArgs(e.Args)
 	case *StmtFuncRef:
 		args := make([]string, len(e.Args))

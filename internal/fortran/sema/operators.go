@@ -280,7 +280,7 @@ func (a *analyzer) operation(s *Symbol, args []Arg, pos diag.Position) Expr {
 	a.note(&s.refs, pos, RefUsed)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: pos})
 
-	return &FuncRef{exprBase{T: s.Type, Pos: pos}, s, args}
+	return a.funcRef(s, s.Type, args, pos)
 }
 
 // extendedOp is the operation op on operands (analyzed) as an interface block

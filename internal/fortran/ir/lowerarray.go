@@ -455,6 +455,14 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 		n.l.precompute(leaf, temp)
 		whole(temp.Sym, leaf.Pos)
 
+	case *sema.FuncRef:
+		// An array-valued function's value, computed now, before the loops,
+		// into a temporary of its shape, which the call's hidden first
+		// argument points at (callArrayFunction): the loops read it.
+		temp := n.l.arrayTemp(leaf.T, constExtents(leaf))
+		n.l.callArrayFunction(leaf, temp)
+		whole(temp.Sym, leaf.Pos)
+
 	case *sema.Section:
 		info.sym = leaf.Sym
 		loop := 0
@@ -543,7 +551,7 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 		var count Expr
 
 		switch leaf := leaf.(type) {
-		case *sema.ArrayConst:
+		case *sema.ArrayConst, *sema.FuncRef:
 			count = LongConst(int32(leaf.Shape()[i].Size))
 
 		case *sema.Constructor:

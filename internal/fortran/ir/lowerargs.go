@@ -259,6 +259,28 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 		result = nil
 	}
 
+	l.callWith(f, args, result, backs)
+}
+
+// callArrayFunction calls the array-valued function f refers to, its value
+// going to temp, an array temporary of its shape: the hidden first argument is
+// the temporary's address, or for CHARACTER a class A descriptor of it, as a
+// whole CHARACTER array is passed to an explicit-shape dummy (charArg).
+func (l *lowerer) callArrayFunction(f *sema.FuncRef, temp *sema.ArrayRef) {
+	args, backs := l.args(f.Args)
+
+	hidden := Arg{Ref: l.symbolMem(temp.Sym)}
+	if f.T.Kind == sema.Character {
+		hidden = l.charArg(sema.Arg{Expr: temp})
+	}
+
+	l.callWith(f, append([]Arg{hidden}, args...), nil, backs)
+}
+
+// callWith calls the function f refers to with the argument list args, its
+// value to result if it comes back in registers, then copies back what args
+// said to.
+func (l *lowerer) callWith(f *sema.FuncRef, args []Arg, result *Mem, backs []func()) {
 	call := &Call{origin: l.origin(), Args: args, Result: result}
 	call.Routine, call.Local, call.Through = l.callee(f.Fn)
 

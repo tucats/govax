@@ -208,7 +208,7 @@ func (a *analyzer) genericRef(s *Symbol, e *ast.Apply) Expr {
 	case genericSpecific:
 		a.unit.calls = append(a.unit.calls, routineRef{sym: spec, args: args, pos: e.Pos})
 
-		return &FuncRef{exprBase{T: spec.Type, Pos: e.Pos}, spec, args}
+		return a.funcRef(spec, spec.Type, args, e.Pos)
 	case genericIntrinsic:
 		return a.intrinsicRef(e)
 	}
@@ -227,7 +227,7 @@ func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
 	args := a.argsTo(s, list)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
-	return &FuncRef{exprBase{T: t, Pos: e.Pos}, s, args}
+	return a.funcRef(s, t, args, e.Pos)
 }
 
 // apply analyzes Name(args): an array element if Name is an array, and
@@ -316,7 +316,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		args := a.argsTo(s, list)
 		a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
-		return &FuncRef{exprBase{T: s.Type, Pos: e.Pos}, s, args}
+		return a.funcRef(s, s.Type, args, e.Pos)
 
 	case Variable:
 		switch {

@@ -102,7 +102,7 @@ func inFrameByDefault(s *Symbol) bool {
 	case s.Dummy != 0, s.External, s.broken:
 		return false
 	case s.Result:
-		return !s.Type.HiddenResult()
+		return !s.HiddenValue()
 	}
 
 	return s.Class == Variable || s.Class == Array || s.Class == Unclassified
@@ -309,7 +309,7 @@ func (a *analyzer) layout() {
 
 	// A function with ENTRY statements has one place for all its names'
 	// values, unless they go through a hidden argument.
-	shared := len(a.unit.Entries) > 0 && a.unit.Result != nil && !a.unit.Result.Type.HiddenResult()
+	shared := len(a.unit.Entries) > 0 && a.unit.Result != nil && !a.unit.Result.HiddenValue()
 	if shared {
 		if a.unit.Result.Automatic {
 			frame = a.placeResults()
@@ -327,7 +327,7 @@ func (a *analyzer) layout() {
 			continue
 		}
 
-		if s.Result && (shared || s.Type.HiddenResult()) {
+		if s.Result && (shared || s.HiddenValue()) {
 			continue
 		}
 

@@ -799,6 +799,9 @@ func (a *analyzer) describe(s *Symbol) string {
 		return "the name of this program"
 	case s.Class == UnitName && a.unit.Kind == ast.BlockDataUnit:
 		return "the name of this block data subprogram"
+	case s.Class == UnitName && a.unit.Kind == ast.FunctionUnit:
+		// A function with RESULT: its name is the routine's alone.
+		return "the name of this function"
 	case s.Class == UnitName:
 		return "the name of this subroutine"
 	case s.External:
@@ -978,6 +981,13 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 			// interface is explicit in a recursive routine's reference to itself.
 			if p, kind := explicitDummy(fu.params()); p != nil && fu.unit != u {
 				messages.Report("EXPLICITREQ", r.pos, r.sym.Name, kind, p.Name, fu.pos.Line)
+
+				continue
+			}
+
+			// So does a function whose value is an array (arrayvalue.go).
+			if v := fu.result(); fu.kind == ast.FunctionUnit && v != nil && v.Dims != nil && fu.unit != u {
+				messages.Report("EXPLICITVALUE", r.pos, r.sym.Name, fu.pos.Line)
 
 				continue
 			}

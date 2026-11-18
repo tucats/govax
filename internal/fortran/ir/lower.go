@@ -179,16 +179,17 @@ func (l *lowerer) prepare() {
 	u, r := l.unit, l.r
 
 	// A function whose value doesn't fit in R0 and R1 (CHARACTER, REAL*16,
-	// COMPLEX*16) returns it through a hidden first argument: the caller
-	// passes the address of a place for the result (for CHARACTER, of a
+	// COMPLEX*16, an array) returns it through a hidden first argument: the
+	// caller passes the address of a place for the result (for CHARACTER, of a
 	// descriptor of one, which also gives its length), and the function
-	// stores there (sema.Type.HiddenResult). That argument moves the dummy
-	// arguments along by one.
+	// stores there (sema.Symbol.HiddenValue). That argument moves the dummy
+	// arguments along by one. An array value is then a dummy array in all
+	// but name.
 	switch u.Kind {
 	case ast.FunctionUnit:
 		r.Kind = Function
 
-		if u.Result.Type.HiddenResult() {
+		if u.Result.HiddenValue() {
 			l.hidden = 1
 			p := &Param{Name: u.Result.Name, Index: 1, T: l.typeOf(u.Result.Type), Sym: u.Result}
 			r.Params = append(r.Params, p)

@@ -292,6 +292,18 @@
    when the program runs and copied only if it must be; it may also be a
    run-time format, an internal file, or ENCODE's or DECODE's buffer.
 
+   A function's value may be an array of a shape known when compiling,
+   its name (or RESULT variable) given dimensions:
+
+     function cross(a, b)
+       real :: a(3), b(3), cross(3)
+
+   A reference needs an explicit interface (%FORT-E-EXPLICITVALUE
+   otherwise); its value is an array expression of that shape, computed
+   once, before its statement's loops, into a temporary the call passes
+   as a hidden first argument.  A value whose bounds or length aren't
+   constant is not there yet.
+
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may

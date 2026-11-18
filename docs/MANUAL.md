@@ -8994,7 +8994,8 @@ names must have constant lengths (`LENNOTDUMMY`). `LEN` of a whole array or a se
 elements' length. Such names stand in array expressions as any CHARACTER array does: an
 assignment through a temporary, `MERGE`, a concatenation (each element's built in a dynamic
 string, freed at once), and a CHARACTER function's value (called once, before the
-statement's loops). A function whose value has such a length is not there yet.
+statement's loops). A function whose value has such a length is not there yet (below,
+"Array-valued functions").
 
 **Assumed-shape dummy arguments** (the standard's 5.1.2.4.2 and 12.4.1.1). A dummy array
 declared with a colon for each dimension, `A(:, :)`, takes its shape from its actual
@@ -9083,6 +9084,35 @@ goes by a class A descriptor of whichever is passed. An assumed-shape array may 
 run-time format, an internal file, or ENCODE's or DECODE's buffer the same way, copied back
 after a WRITE or ENCODE. Not there yet: a section, an expression, or an assumed-shape array
 given to `%REF`, `%DESCR`, `%LOC`, or a system subroutine (DATE, IDATE, ...).
+
+**Array-valued functions** (the standard's 12.5.2.2 and 12.3.1.1). A function's value may
+be an array: its name (or its `RESULT` variable) given dimensions, in its type statement,
+a `DIMENSION` statement, or with `DIMENSION=`. Inside the function the value is an array
+like any other, assigned whole or an element at a time; a function whose value has no
+`RESULT` variable can't name itself to recurse, since `F(N - 1)` is then an element:
+
+```fortran
+function cross(a, b)
+  real :: a(3), b(3), cross(3)
+  cross(1) = a(2) * b(3) - a(3) * b(2)
+  cross(2) = a(3) * b(1) - a(1) * b(3)
+  cross(3) = a(1) * b(2) - a(2) * b(1)
+end function
+```
+
+A caller must know the value is an array, so a reference needs an explicit interface: an
+interface body, as for `CROSS` here, or the function being internal, or a recursive
+function's reference to itself; one of the file's functions referenced without one is
+`EXPLICITVALUE`, and an interface body that gives its value another rank or extent
+`INTERFACEDIFF`. Its value is then an array expression of that shape: assigned (even to the
+function's own argument, `Z = UNIT(Z)`), in an elemental operation, a reduction, `MATMUL`,
+a WHERE mask, an output list, or an actual argument of any kind of dummy. Each reference is
+called once, before its statement's loops, its value into a temporary of the calling
+statement's whose address the call passes as a hidden first argument, as a `REAL*16`
+function's place is passed (a class A descriptor of it for a CHARACTER value). A CHARACTER
+value's length must be known (`STARARRAY` for `CHARACTER*(*)`). Not there yet: a value whose
+bounds or CHARACTER length aren't constant (`REAL F(N)`), and ENTRY in an array-valued
+function.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

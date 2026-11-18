@@ -1188,6 +1188,12 @@ var messages = map[string]kind{
 	// the file with an OPTIONAL or assumed-shape dummy argument (12.3.1.1).
 	"EXPLICITREQ": {Error, "%s has the %s dummy argument %s (line %d), so a reference to it needs an explicit interface"},
 
+	// EXPLICITVALUE is a reference through an implicit interface to a function
+	// of the file whose value is an array (12.3.1.1); STARARRAY such a value of
+	// the length (*) (5.1.1.5).
+	"EXPLICITVALUE": {Error, "the value of %s (line %d) is an array, so a reference to it needs an explicit interface"},
+	"STARARRAY":     {Error, "%s has the length (*), so a function's value of that name can't be an array"},
+
 	// Keyword arguments, OPTIONAL, PRESENT, and INTENT (sema/optional.go and
 	// intent.go; PHASE-103's findings 8 to 10).
 

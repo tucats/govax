@@ -1140,8 +1140,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   class A descriptor; an assumed-shape array as a run-time format, an internal
   file, or ENCODE's or DECODE's buffer the same way, `ioFinish`'s `backs`;
   `holdingAfter`, a fix, keeps an earlier argument's dynamic string past a copy's
-  loops; `testdata/fortran90/seqargs.f90`, `seqvms.f90`). Subtask 7 (array-valued
-  functions and run-time CHARACTER lengths) is next.
+  loops; `testdata/fortran90/seqargs.f90`, `seqvms.f90`). Subtask 7 is array-valued
+  functions and run-time CHARACTER lengths, in three parts: 7a (2026-11-18) values
+  of a shape known when compiling (`sema/arrayvalue.go`: a function's value given
+  dimensions, `Symbol.HiddenValue`, `funcRef` giving each reference its explicit
+  interface's shape, `checkArrayValue`, EXPLICITVALUE, STARARRAY, INTERFACEDIFF of
+  the value; an array-valued `FuncRef` a scalarizer leaf, computed before the loops
+  into a temporary by `ir`'s `callArrayFunction`; `testdata/fortran90/values.f90`);
+  7b (run-time shapes, the callee's heap block) is next, then 7c (run-time
+  CHARACTER lengths, ENTRY).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

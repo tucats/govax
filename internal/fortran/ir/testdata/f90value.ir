@@ -1,0 +1,269 @@
+routine SPAN function
+  param SPAN    L  argument 1
+  param N       L  argument 2
+  cell  $I1     L  $LOCAL+0    an array statement's index
+  cell  $C1     L  $LOCAL+4    array (line 9), dimension 1's count
+  $LOCAL is 8 bytes
+B1:
+  ; line 9
+  assign $C1 = 3
+  assign $I1 = 1
+  jump B2
+B2:  ; array (line 9), dimension 1's body
+  assign @SPAN-4[$I1] = @N
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 10
+  assign @SPAN+4 = mul.L(2, @N)
+  ; line 11
+  return
+routine USE subroutine
+  param A       F  argument 1
+  cell  K       L  $LOCAL+0    array K, 12 bytes
+  cell  C       B  $LOCAL+12   array C, 8 bytes
+  cell  $I1     L  $LOCAL+20   an array statement's index
+  cell  $W1     L  $LOCAL+24   an array temporary, 12 bytes
+  cell  $C1     L  $LOCAL+36   array (line 22), dimension 1's count
+  cell  $W2     F  $LOCAL+40   an array temporary, 12 bytes
+  cell  $D1     L  $LOCAL+52   descriptor F NCA 4 (?)
+  cell  $C2     L  $LOCAL+84   array (line 23), dimension 1's count
+  cell  $C3     L  $LOCAL+88   array (line 24), dimension 1's count
+  cell  $D2     L  $LOCAL+92   descriptor L S 4
+  cell  $I2     L  $LOCAL+100  an array statement's index
+  cell  $T1     F  $LOCAL+104  temporary
+  cell  $C4     L  $LOCAL+108  array (line 24), dimension 1's count
+  cell  $W3     F  $LOCAL+112  an array temporary, 12 bytes
+  cell  $C5     L  $LOCAL+124  array (line 25), dimension 1's count
+  cell  $W4     B  $LOCAL+128  an array temporary, 8 bytes
+  cell  $C6     L  $LOCAL+136  array (line 26), dimension 1's count
+  $LOCAL is 140 bytes
+  datum $K1     L 4
+  datum $IO1    control
+  datum $K2     L 1
+  datum $D3     descriptor F S 4 $T1
+  datum $K3     text 'AB'
+  datum $D4     descriptor T S 2 $K3
+  datum $D5     descriptor T A 4 (1:2) $W4
+B1:
+  ; line 22
+  call SPAN(ref $W1, ref $K1)
+  assign $C1 = 3
+  assign $I1 = 1
+  jump B2
+B2:  ; array (line 22), dimension 1's body
+  assign K-4[$I1] = add.L($W1-4[$I1], 1)
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 23
+  assign $D1+4 = addr(@A)
+  assign $D1+20 = 4
+  assign $D1+24 = 1
+  assign $D1+28 = 3
+  assign $D1+16 = sub.L($D1+4, 4)
+  assign $D1+12 = 12
+  call local USE.HALF(ref $W2, ref $D1)
+  assign $C2 = 3
+  assign $I1 = 1
+  jump B4
+B4:  ; array (line 23), dimension 1's body
+  assign @A-4[$I1] = mul.F($W2-4[$I1], 2.0)
+  assign $I1 = add.L($I1, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B4 B5
+B5:
+  ; line 24
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  call SPAN(ref $W1, ref $K2)
+  assign $C3 = 3
+  assign $I1 = 1
+  jump B6
+B6:  ; array (line 24), dimension 1's body
+  assign $D2+4 = addr($W1-4[$I1])
+  call FTN$IO_ITEM(ref $D2)
+  assign $I1 = add.L($I1, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B6 B7
+B7:
+  assign $D1+4 = addr(@A)
+  assign $D1+20 = 4
+  assign $D1+24 = 1
+  assign $D1+28 = 3
+  assign $D1+16 = sub.L($D1+4, 4)
+  assign $D1+12 = 12
+  call local USE.HALF(ref $W2, ref $D1)
+  assign $T1 = 0.0
+  assign $C4 = 3
+  assign $I2 = 1
+  jump B8
+B8:  ; array (line 24), dimension 1's body
+  assign $T1 = add.F($T1, $W2-4[$I2])
+  assign $I2 = add.L($I2, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B8 B9
+B9:
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 25
+  assign $D1+4 = addr(@A)
+  assign $D1+20 = 4
+  assign $D1+24 = 1
+  assign $D1+28 = 3
+  assign $D1+16 = sub.L($D1+4, 4)
+  assign $D1+12 = 12
+  call local USE.HALF(ref $W3, ref $D1)
+  assign $C5 = 3
+  assign $I2 = 1
+  jump B10
+B10:  ; array (line 25), dimension 1's body
+  assign $W2-4[$I2] = $W3-4[$I2]
+  assign $I2 = add.L($I2, 1)
+  assign $C5 = sub.L($C5, 1)
+  branch gt.L($C5, 0) B10 B11
+B11:
+  call TAKE(val addr($W2))
+  ; line 26
+  call local USE.TAGS(ref $D5, ref $D4)
+  assign $C6 = 2
+  assign $I2 = 1
+  jump B12
+B12:  ; array (line 26), dimension 1's body
+  move C-4[mul.L($I2, 4)](4) = $W4-4[mul.L($I2, 4)](4)
+  assign $I2 = add.L($I2, 1)
+  assign $C6 = sub.L($C6, 1)
+  branch gt.L($C6, 0) B12 B13
+B13:
+  ; line 38
+  return
+routine USE.HALF function, internal to USE
+  param HALF    F  argument 1
+  param V       F  argument 2
+  cell  $B1     L  $LOCAL+0    descriptor F NCA 4 (?)
+  cell  $T1     L  $LOCAL+32   temporary
+  cell  $I1     L  $LOCAL+36   an array statement's index
+  cell  $C1     L  $LOCAL+40   array (line 30), dimension 1's count
+  $LOCAL is 44 bytes
+B1:
+  ; line 28
+  assign $B1+4 = @(arg V)+4
+  branch eq.B(@(arg V)+3, 4) B3 B2
+B2:
+  assign $B1+20 = @(arg V)+20
+  assign $T1 = add.L(sub.L(@(arg V)+28, @(arg V)+24), 1)
+  jump B4
+B3:
+  assign $B1+20 = 4
+  assign $T1 = @(arg V)+20
+  jump B4
+B4:
+  assign $B1+24 = 1
+  branch lt.L($T1, 0) B5 B6
+B5:
+  assign $T1 = 0
+  jump B6
+B6:
+  assign $B1+28 = $T1
+  assign $B1+16 = sub.L($B1+4, $B1+20)
+  assign $B1+12 = mul.L(4, $B1+28)
+  ; line 30
+  assign $C1 = 3
+  assign $I1 = 1
+  jump B7
+B7:  ; array (line 30), dimension 1's body
+  assign @HALF-4[$I1] = div.F(@(add.L($B1+16, mul.L($I1, $B1+20))), 2.0)
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B7 B8
+B8:
+  ; line 31
+  return
+routine USE.TAGS function, internal to USE
+  param TAGS    B  argument 1
+  param S       B  argument 2
+  cell  $D1     L  $LOCAL+0    descriptor T D 0
+  cell  $T1     W  $LOCAL+8    temporary
+  $LOCAL is 12 bytes
+  datum $K1     text 'X'
+  datum $K2     text 'Y'
+B1:
+  ; line 35
+  assign $T1 = cvt.LW(add.L(zext.WL(@(arg S)), 1))
+  call LIB$SGET1_DD(ref $T1, ref $D1)
+  move @($D1+4)(zext.WL(@(arg S))) = @(@(arg S)+4)(zext.WL(@(arg S)))
+  move @($D1+4)[zext.WL(@(arg S))](1) = $K1(1)
+  move @(@(arg TAGS)+4)(4) = @($D1+4)(add.L(zext.WL(@(arg S)), 1))
+  call LIB$SFREE1_DD(ref $D1)
+  ; line 36
+  assign $T1 = cvt.LW(add.L(zext.WL(@(arg S)), 1))
+  call LIB$SGET1_DD(ref $T1, ref $D1)
+  move @($D1+4)(1) = $K2(1)
+  move @($D1+4)+1(zext.WL(@(arg S))) = @(@(arg S)+4)(zext.WL(@(arg S)))
+  move @(@(arg TAGS)+4)+4(4) = @($D1+4)(add.L(zext.WL(@(arg S)), 1))
+  call LIB$SFREE1_DD(ref $D1)
+  ; line 37
+  return
+routine STEP function
+  param R       L  argument 1
+  param N       L  argument 2
+  cell  $I1     L  frame+0    an array statement's index
+  cell  $C1     L  frame+4    array (line 43), dimension 1's count
+  cell  $W1     L  frame+8    an array temporary, 8 bytes
+  cell  $T1     L  frame+16   temporary
+  cell  $C2     L  frame+20   array (line 45), dimension 1's count
+  cell  $I2     L  frame+24   an array statement's index
+  cell  $C3     L  frame+28   array (line 46), dimension 1's count
+  $LOCAL is 0 bytes
+  the frame is 32 bytes
+  datum $K1     L array 0 1
+B1:
+  ; line 42
+  branch le.L(@N, 1) B2 B5
+B2:
+  ; line 43
+  assign $C1 = 2
+  assign $I1 = 1
+  jump B3
+B3:  ; array (line 43), dimension 1's body
+  assign @R-4[$I1] = $K1-4[$I1]
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B3 B4
+B4:
+  ; line 44
+  jump B10
+B5:
+  ; line 45
+  assign $T1 = sub.L(@N, 1)
+  call STEP(ref $W1, ref $T1)
+  assign $C2 = 2
+  assign $I1 = 1
+  jump B6
+B6:  ; array (line 45), dimension 1's body
+  assign @R-4[$I1] = $W1-4[$I1]
+  assign $I1 = add.L($I1, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B6 B7
+B7:
+  ; line 46
+  assign $I2 = 0
+  assign $I2 = add.L($I2, 1)
+  assign $W1-4[$I2] = @R+4
+  assign $I2 = add.L($I2, 1)
+  assign $W1-4[$I2] = add.L(@R, @R+4)
+  assign $C3 = 2
+  assign $I1 = 1
+  jump B8
+B8:  ; array (line 46), dimension 1's body
+  assign @R-4[$I1] = $W1-4[$I1]
+  assign $I1 = add.L($I1, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B8 B9
+B9:
+  ; line 47
+  jump B10
+B10:
+  ; line 48
+  return

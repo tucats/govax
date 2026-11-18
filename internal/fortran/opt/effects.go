@@ -98,10 +98,13 @@ type Storage struct {
 	cells map[*ir.Cell]bool
 }
 
-// own reports whether c is the routine's own cell, not its host's.
+// own reports whether c is the routine's own cell, not its host's. The map is
+// made again when the routine has gained cells since it was made: a pass's
+// temporary (cse.go's $Un) is the routine's own from the moment it is made, or
+// the rest of that pass would take it for its host's, which any call may change.
 func (s *Storage) own(c *ir.Cell) bool {
-	if s.cells == nil {
-		s.cells = map[*ir.Cell]bool{}
+	if s.cells == nil || len(s.cells) != len(s.r.Cells) {
+		s.cells = make(map[*ir.Cell]bool, len(s.r.Cells))
 
 		for _, o := range s.r.Cells {
 			s.cells[o] = true

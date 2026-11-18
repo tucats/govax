@@ -529,7 +529,8 @@ func TestErrors(t *testing.T) {
 		{"assumed size, not the last", []string{"SUBROUTINE S(A)", "DIMENSION A(*, 2)", "END"}, "ASSUMEDSIZE@2:17"},
 		{"a constant bound folded", []string{"DIMENSION A(2*3-1:10/2)", "A(5) = 1", "END"}, ""},
 		{"the program's name typed", []string{"PROGRAM P", "INTEGER P", "END"}, "BADUSE@2:15"},
-		{"the result dimensioned", []string{"FUNCTION F(X)", "DIMENSION F(3)", "END"}, "BADUSE@2:17"},
+		{"the result dimensioned", []string{"FUNCTION F(X)", "DIMENSION F(3)", "F = X", "END"}, ""},
+		{"the name with RESULT dimensioned", []string{"FUNCTION F(X) RESULT(R)", "DIMENSION F(3)", "R = X", "END"}, "BADUSE@2:17"},
 
 		// IMPLICIT.
 		{"IMPLICIT types names", []string{"IMPLICIT INTEGER (A-C), LOGICAL (L)", "A = 1.5", "IF (L) STOP", "END"}, ""},

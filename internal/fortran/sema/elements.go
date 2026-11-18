@@ -103,7 +103,8 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 	walk := func(x Expr) Expr { return Scalarize(x, element, scalar) }
 
 	switch e := e.(type) {
-	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc:
+	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc, *FuncRef:
+		// A FuncRef here is an array-valued function's (arrayvalue.go).
 		return element(e)
 
 	case *Unary:
@@ -166,7 +167,8 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 }
 
 // Leaves are the arrays an array-valued expression reads, its *ArrayRefs,
-// *Sections, *ArrayConsts, and *Constructors, left to right.
+// *Sections, *ArrayConsts, *Constructors, *ArrayFuncs, and array-valued
+// *FuncRefs, left to right.
 func Leaves(e Expr) []Expr {
 	var list []Expr
 

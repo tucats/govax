@@ -217,6 +217,10 @@ func interfaceDifference(body *Unit, fu *fileUnit) string {
 		if here, there := body.Result.Type, fu.result().Type; here != there {
 			return "its value is " + here.String() + " here, " + there.String() + " there"
 		}
+
+		if diff := resultDifference(body.Result, fu.result()); diff != "" {
+			return diff
+		}
 	}
 
 	for i, p := range body.Params {
