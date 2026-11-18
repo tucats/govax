@@ -170,6 +170,7 @@ The usual suspects are all here:
 | **The debugger** | Modeled on the VMS debugger: breakpoints, stepping, `EXAMINE`, source lines, by symbol |
 | **RMS on Files-11** | Sequential, relative, and indexed files on ODS-2 disk containers, laid out as VMS lays them out |
 | **BACKUP** | Reads, restores, compares, and writes real VMS save sets |
+| **Batch Queues** | Manage batch queues and submit jobs (including under different user ids) |
 
 None of these is a loose imitation. The objects, images, libraries, and
 save sets govax writes are built the way VMS's own tools build them, and
@@ -181,9 +182,11 @@ themselves, and the test suite replays those runs to keep it honest.
 govax is not a full simulated VAX/VMS system. It doesn't emulate disk
 controllers or a console boot ROM, and it can't boot VMS. Its operating
 system is a small microkernel plus Go code that behaves, from a program's
-point of view, as VMS does. It's a single-user system with no batch queues,
-no DECnet or TCP/IP, and no clusters, and FORTRAN and MACRO-32 are the only
-languages you can build with.
+point of view, as VMS does. It's a single-user system that only supports
+multiple processess via batch queues or process creation via LIB$SPAWN,
+SYS$CREPRC, and so on. There's no DECnet or TCP/IP, and no clusters.
+FORTRAN and MACRO-32 are the only languages you can build with using
+the GOVAX-supplied tools.
 
 If you want the real operating system, booted on a simulated VAX, Bob
 Supnik's [SIMH](https://simh.trailing-edge.com) is still the gold standard.
