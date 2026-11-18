@@ -8704,6 +8704,146 @@ What the compiled loops look like is in FORTRAN-INTERNALS.md's section 27. Each 
 its own loop, the leftmost subscript varying fastest; `/OPTIMIZE` gives it registers and closes
 it with `SOBGTR` or `AOBLEQ`, as it does a DO loop.
 
+**Internal procedures** (the standard's 12.1.2.2). A main program or a subprogram may end
+with CONTAINS and one or more FUNCTIONs or SUBROUTINEs, its *internal procedures*, each
+ending with `END FUNCTION` or `END SUBROUTINE`. An internal procedure uses its host's
+variables, arrays, constants, NAMELIST groups, and structures by their names (*host
+association*), unless its own declarations declare the name. A name the host uses anywhere,
+in its executable statements too, is the host's: if neither declares I and both have a `DO
+I`, there is one I, and the internal procedure changes its host's loop variable. The implicit
+rules are the host's, changed by the internal procedure's own IMPLICIT statements. An
+internal procedure can be called only by its host and the host's other internal procedures,
+and can't be an actual argument (`INTERNALARG`). Its name may be an external procedure's of
+the same file, which it hides in its host. In the MACRO file it is `HOST.NAME`, entered at a
+local label. A RECURSIVE host's, or an AUTOMATIC one's, internal procedures reach the
+activation that called them.
+
+**Interface blocks** (12.3). `INTERFACE ... END INTERFACE` describes procedures defined
+elsewhere, each by an *interface body*: its FUNCTION or SUBROUTINE statement, its
+declarations, and its END. A body's name is a dummy argument of the unit, which it makes a
+dummy procedure, or else an external procedure, which may then be passed without an EXTERNAL
+statement. A body sees nothing of the unit around it: its names, and the kinds and bounds in
+its declarations, are its own. A procedure has one explicit interface in a unit: a type
+statement or EXTERNAL for a body's name is `INTERFACEDECL`. A body for a procedure the same
+file defines must agree with the definition (`INTERFACEDIFF` names the first difference).
+
+**Explicit interfaces.** A reference to an internal procedure, or to a procedure with an
+interface body, is checked against its interface: the number of arguments (`ARGCOUNT`), each
+argument's type and kind (`ARGTYPE`), its rank (`ARGRANK`; an array element may go to an
+array dummy), a CHARACTER length where both are known (`ARGLENGTH`), and a variable for an
+INTENT(OUT) or INTENT(INOUT) dummy (`NOTDEFINABLE`). A FUNCTION's type is its interface's,
+whatever the caller's IMPLICIT rules say. A call through an implicit interface to a
+procedure of the same file is checked for counts as it always was; `/WARNINGS=ARGUMENT_CHECKING`
+also warns of its types and ranks.
+
+**Keyword and OPTIONAL arguments** (12.4.1, 5.1.2.6). Through an explicit interface, a call
+may give arguments by their dummies' names, after those given by position, in any order:
+`CALL REPORT(VALUE=Y, LABEL='distance')`. A dummy declared OPTIONAL may be left out, and
+`PRESENT(A)` asks whether it was given, in the procedure or its internal procedures. Each
+mistake has its message: `KEYWORDNAME`, `KEYWORDTWICE`, `KEYWORDORDER`, `MISSINGARG` for a
+dummy that isn't OPTIONAL left out, `KEYWORDNOINTERFACE` for a keyword with no explicit
+interface, `NOTOPTIONAL` for PRESENT of anything else, and `EXPLICITREQ` for a call
+through an implicit interface to a procedure of the file that has an OPTIONAL dummy. An
+argument left out is passed as VMS passes one, a 0 in the argument list, and an OPTIONAL
+dummy passed on while absent is absent in its turn. A routine also takes a shorter list than
+its dummies, as VMS's convention allows: a MACRO or FORTRAN-77 caller may leave its last
+OPTIONAL arguments out, and PRESENT says they are absent.
+
+**INTENT** (5.1.2.3). INTENT(IN), INTENT(OUT), and INTENT(INOUT) say what a procedure does
+with a dummy, and change no code. An INTENT(IN) dummy given a value, by an assignment, a DO,
+a READ, ASSIGN, or a specifier like IOSTAT=, or passed through an explicit interface to an
+INTENT(OUT) or INTENT(INOUT) dummy, is `INTENTIN`. An INTENT(OUT) dummy used on a line before
+any line that may give it a value, an actual argument counting as one, draws the warning
+`INTENTOUTREF`.
+
+**Generic names** (12.3.2.1, 14.1.2.4). `INTERFACE name` with several bodies makes the name
+stand for all of them. A reference by it is to the one whose dummies its arguments fit
+exactly in type, kind, and rank, chosen when compiling; by keyword too. The specifics keep
+their own names, by which they may be called as well. Two specifics must both be functions or
+both subroutines (`GENERICMIX`), and the standard's rule must tell them apart (`GENERICAMBIG`):
+one has a dummy, not OPTIONAL, that the other has nothing in the place of, both at its
+position and by its name. A generic name may be an intrinsic function's, which it extends: a
+reference no specific fits is the intrinsic's, but a specific taking what the intrinsic takes
+is `GENERICINTRINSIC`. A reference no specific fits is `GENERICNONE`:
+
+```text
+%FORT-E-GENERICNONE, no specific procedure of the generic name SWAP takes a REAL and an INTEGER
+  at line 23 of DUA1:[WORK]BAD.F90;1
+    call swap(x, n)
+  -------^
+```
+
+A generic name in a host is generic in its internal procedures, and a block there adds
+specifics of their own, tried first.
+
+**Defined operators and assignment** (7.1.3, 7.5.1.3). `INTERFACE OPERATOR(.DIST.)` lists
+functions of one or two INTENT(IN) operands, none OPTIONAL. `A .DIST. B` calls the one its
+operands fit. A unary defined operator binds more tightly than any other operator, and a
+binary one more loosely, so `1.0 + X .DIST. Y - 2.0` is `(1.0 + X) .DIST. (Y - 2.0)`. With a
+RECORD named A, `A.B.C` is still the field reference; otherwise it is A `.B.` C. An interface
+may extend an intrinsic operator (`OPERATOR(+)`, `OPERATOR(//)`, `OPERATOR(<=)`, which is
+`.LE.`) only to operands Fortran gives it no meaning for (`DEFOPINTR` otherwise). A meaning
+only VAX FORTRAN gives, such as `.AND.` of INTEGERs or `.XOR.`, a block may take over: the
+block's function is called when it fits, and VAX FORTRAN's meaning applies when none does.
+`INTERFACE ASSIGNMENT(=)` lists subroutines of two dummies, the first INTENT(OUT) or
+INTENT(INOUT) and the second INTENT(IN), for assignments Fortran doesn't define: with one for
+a CHARACTER variable and a LOGICAL value, `W = .TRUE.` is `CALL S(W, (.TRUE.))`. The values
+and operands are scalars of FORTRAN's types until derived types arrive.
+
+All of it together:
+
+```fortran
+program tour
+  interface swap
+    subroutine swapr(a, b)
+      real, intent(inout) :: a, b
+    end subroutine swapr
+    subroutine swapi(i, j)
+      integer, intent(inout) :: i, j
+    end subroutine swapi
+  end interface
+  interface operator(.dist.)
+    real function dist(x, y)
+      real, intent(in) :: x, y
+    end function dist
+  end interface
+  real x, y
+  integer m, n
+
+  x = 1.0
+  y = 4.0
+  m = 1
+  n = 2
+  call swap(x, y)
+  call swap(m, n)
+  call report('swapped', x)
+  call report(value=y .dist. x, label='distance', places=1)
+
+contains
+  subroutine report(label, value, places)
+    character*(*), intent(in) :: label
+    real, intent(in) :: value
+    integer, intent(in), optional :: places
+
+    if (present(places)) then
+      write (*, '(1x, a, f6.1, 2i3)') label, value, m, n
+    else
+      write (*, '(1x, a, f8.3, 2i3)') label, value, m, n
+    end if
+  end subroutine report
+end program tour
+```
+
+with SWAPR, SWAPI, and DIST as external procedures in the same file, prints:
+
+```text
+swapped   4.000  2  1
+distance   3.0  2  1
+```
+
+How a host is reached, how OPTIONAL arguments are passed, and how a generic reference is
+resolved are in FORTRAN-INTERNALS.md's section 28.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 

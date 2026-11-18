@@ -1063,6 +1063,30 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `arrayio`, `matrix`, `stats`, and `smooth`, which found CMP's N wrong on
   overflow (`internal/cpu/condcodes.go`'s `compareCodes`); MANUAL.md's
   14.13 and FORTRAN-INTERNALS.md's section 27.
+  Phase 103 (done 2026-11-18; its "Where things stand" is the follow-up
+  list) is procedures and interfaces: the parser's nested units
+  (`parse/units.go`'s `unitStack`; `ast.Unit.Contains`,
+  `ast.InterfaceBlock`, `ast.DefinedOp`; `A.B.C` a field only after a
+  RECORD's name, `recordScope`); internal procedures (`sema/internal.go`:
+  a host analyzed in four steps so a name the host uses anywhere is the
+  host's; `HOST.INNER` at a local label; a host's dummies through ENTRY's
+  `$An` cells, a frame host's cells through its FP as a hidden last
+  argument in R10; `opt`'s `HostRegion` and `Cell.Reached`); interface
+  blocks (`sema/interface.go`: bodies as hostless scopes; INTERFACEDIFF,
+  EXPLICITREQ, `/WARNINGS=ARGUMENT_CHECKING`) and `checkInterface` for
+  every explicit interface; keyword and OPTIONAL arguments, PRESENT
+  (`sema/optional.go`'s `argumentOrder`, 0 for one left out;
+  `ir/loweroptional.go`: each OPTIONAL dummy through a cell its entry fills
+  only if the argument count reaches it, so VMS's shorter lists work) and
+  INTENT (`sema/intent.go`: INTENTIN, INTENTOUTREF); generic names
+  (`sema/generic.go`: chosen when compiling by exact type, kind, and rank,
+  else the intrinsic the name extends; 14.1.2.3's rules) and defined
+  operators and assignment (`sema/operators.go`: an intrinsic operator
+  extended only where the standard gives no meaning, or only DEC does);
+  `testdata/fortran90`'s `internal`, `hosts`, `recurhost`, `autohost`,
+  `interfaces`, `optional`, `generics`, `operators`, `hostopt`, `numbers`,
+  and `modules/shortlist`; MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's
+  section 28.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -1,13 +1,14 @@
 # Phase 103 — Fortran 90: procedures and interfaces
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
+**Status:** done 2026-11-18. Planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
 ("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
 with static hosts), 4 (hosts in the frame), 5 (interface blocks), and 6
 (keyword arguments, OPTIONAL, PRESENT, INTENT), 7 (generic interfaces), 8
-(defined operators and assignment), and 9 (programs end to end) are done;
-subtask 10, the close-out, is next.
+(defined operators and assignment), 9 (programs end to end), and 10 (the
+close-out) are done; "Where things stand", at the end, is what the phase
+left.
 Needs Phase 102 (done).
 
 ## Goal
@@ -475,7 +476,8 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    (done 2026-11-18).
 10. **Close-out:** FORTRAN-INTERNALS.md's section 28 (nested scopes, host
     association, resolving a call, with `DO I` in a host and its internal
-    procedure followed through), MANUAL.md's 14.13, HELP FORTRAN.
+    procedure followed through), MANUAL.md's 14.13, HELP FORTRAN (done
+    2026-11-18).
 
 ## A.5 Questions for the author
 
@@ -829,3 +831,44 @@ The author read the survey and accepted every recommendation:
   `autohost` and `modules/shortlist` are DEC's. Nothing in the compiler needed
   changing: the hand-worked `.out` of `hostopt.f90` was wrong once (DEEP's total),
   and govax and gfortran agreed on the right one.
+- **2026-11-18, subtask 10:** The close-out. FORTRAN-INTERNALS.md's section 28
+  (the forms and the `A.B.C` rule; host association's four steps, following
+  `DO I` in a host and its internal procedure into the MACRO, where the host's
+  pass count stays in R6 and the program prints 4; reaching a host's dummies
+  and frame; explicit interfaces; argument order, absent arguments, and the
+  count-guarded cells; INTENT; generic resolution with the standard's `SWAP`
+  example; operators and assignment; what the programs found). MANUAL.md's
+  14.13 gains internal procedures, interface blocks, explicit interfaces,
+  keyword and OPTIONAL arguments, INTENT, generic names, and defined operators
+  and assignment, with `TOUR`, run on govax, and GENERICNONE's message as govax
+  gives it. HELP FORTRAN's Fortran 90 topic says the same in brief. PLAN.md
+  summarizes the phase.
+
+## Where things stand
+
+Phase 103 is done. What it left, and where each goes:
+
+- **Phase 104:** a FUNCTION whose result is an array or has a run-time
+  CHARACTER length, an assumed-shape dummy (`A(:)`), and a section or array
+  expression as an actual argument; each is NOTIMPL naming it.
+- **Phase 105:** derived types, which defined operators and assignment are for;
+  until then their operands are FORTRAN's own types, scalars.
+- **Phase 106:** MODULE PROCEDURE in an interface block (NOTIMPL), USE in an
+  interface body, and module procedures' explicit interfaces.
+- **Phase 107:** POINTER and TARGET dummies (TARGET is recorded, nothing more).
+- **Phase 108:** keyword arguments to the intrinsic functions whose table rows
+  have no dummies' names; the transformational intrinsics' own ranks in
+  GENERICINTRINSIC's check, which now takes them as scalars.
+- **Phase 110:** scopes in the cross reference (an internal procedure has its
+  own, headed HOST.INNER, and nothing more), the debugger's names through hosts,
+  and `/STANDARD` for the phase's forms; and measuring what internal procedures
+  cost the optimizer, which treats every host cell an internal procedure reaches
+  as changed by any call, with no inline expansion.
+- **Unconfirmed choices of ours:** a null argument (`CALL S(A,,B)`) through an
+  explicit interface is accepted and passes 0, as for an absent OPTIONAL one;
+  every internal procedure of a host in its frame gets the hidden FP, not only
+  those reaching the frame (Decision 11 said the latter; a sibling's call is
+  lowered before what the sibling reaches is known); INTENTOUTREF follows the
+  statements' order, not their flow; a name an internal procedure's declarations
+  use that its host uses only in executable statements is NOTIMPL rather than
+  the host's.

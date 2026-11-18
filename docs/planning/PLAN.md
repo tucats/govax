@@ -152,7 +152,7 @@ questions, and a progress log extended as that phase is worked.
 | 100 | [PHASE-100 - Fortran 90 declarations and kinds](PHASE-100%20-%20Fortran%2090%20declarations%20and%20kinds.md) | `::` declarations, attributes, initialization, KIND= and LEN=, kinds on constants, the kind and numeric inquiry intrinsics; sema's scope chain; INTEGER(1) and COMPLEX(16) as new types; KIND= on the conversions and keyword arguments to intrinsics — planned 2026-11-17; done 2026-11-17 |
 | 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE (a CASEL table, a binary search, or a chain), DO with no control, EXIT, CYCLE, construct names; jumps to END IF by Fortran 90's rule — planned 2026-11-17; done 2026-11-17 |
 | 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17; done 2026-11-17 |
-| 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17 |
+| 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17; done 2026-11-18 |
 | 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17 |
 | 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17 |
 | 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17 |
@@ -927,3 +927,30 @@ compiling:
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 27 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 103, procedures and interfaces.
+
+Phase 103 (done 2026-11-18) is procedures and their interfaces:
+
+- **The forms:** `ast.Unit.Contains`, `ast.InterfaceBlock`, keyword arguments in CALL, and
+  `ast.DefinedOp`; the parser's stack of open units (`parse/units.go`), and `A.B.C` settled there,
+  a field only after a name a RECORD statement declared.
+- **Internal procedures** (`sema/internal.go`): a host analyzed in four steps, so a name the host
+  uses anywhere is the host's; each a routine `HOST.INNER` at a local label after its host; a host's
+  dummies through ENTRY's cells, and a RECURSIVE or AUTOMATIC host's frame through its FP passed
+  as a hidden last argument (R10); the optimizer's `HostRegion` and `Reached` cells.
+- **Interface blocks** (`sema/interface.go`): bodies as scopes with no host, external and dummy
+  procedures, INTERFACEDIFF, EXPLICITREQ, `/WARNINGS=ARGUMENT_CHECKING`; every reference through an
+  explicit interface checked by `checkInterface`.
+- **Keyword and OPTIONAL arguments, PRESENT, INTENT** (`sema/optional.go`, `intent.go`,
+  `ir/loweroptional.go`): arguments put in the dummies' order, 0 for one left out; each OPTIONAL
+  dummy reached through a cell its entry fills only if the argument count reaches it, so VMS's
+  shorter lists work; INTENTIN, INTENTOUTREF.
+- **Generic names, operators, assignment** (`sema/generic.go`, `operators.go`): a reference chooses
+  its specific when compiling, by exact type, kind, and rank, falling back to an intrinsic the name
+  extends; 14.1.2.3's rules at the block; intrinsic operators extended only where the standard
+  gives no meaning (or only DEC does); defined assignment as `CALL S(X, (Y))`.
+- **Programs:** `testdata/fortran90`'s `internal`, `hosts`, `recurhost`, `autohost`, `interfaces`,
+  `optional`, `generics`, `operators`, `hostopt`, `numbers`, and `modules/shortlist`, all but the
+  DEC ones the same on gfortran.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 28 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 104, dynamic arrays.

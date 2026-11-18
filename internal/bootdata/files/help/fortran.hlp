@@ -210,6 +210,29 @@
    temporary array of a size not known when compiling, and a section
    passed to a program's own procedure, are not there yet.
 
+   A main program or subprogram may end with CONTAINS and internal
+   procedures (END SUBROUTINE, END FUNCTION), which use their host's
+   names: a name the host uses anywhere, even only in a DO, is the
+   host's unless the internal procedure declares its own.  An interface
+   block (INTERFACE ... END INTERFACE) describes external and dummy
+   procedures by their FUNCTION or SUBROUTINE statements and
+   declarations.  Through either explicit interface every reference is
+   checked (ARGCOUNT, ARGTYPE, ARGRANK, ARGLENGTH, NOTDEFINABLE), may
+   give arguments by keyword, and may leave out OPTIONAL dummies, which
+   PRESENT asks about; a left-out argument is passed as 0, and a shorter
+   argument list from a MACRO or old FORTRAN caller is understood.
+
+     call solve(x, n, tol=1.0e-6)
+     if (present(tol)) eps = tol
+
+   INTENT(IN) dummies can't be given values (INTENTIN), and an
+   INTENT(OUT) one used before anything sets it draws INTENTOUTREF.
+   INTERFACE name makes a generic name, each reference choosing the
+   specific its arguments fit exactly, by type, kind, and rank;
+   INTERFACE OPERATOR(.op.) and OPERATOR(+) give operators meanings for
+   operands Fortran gives none (or only VAX FORTRAN does), and
+   INTERFACE ASSIGNMENT(=) defines assignments Fortran doesn't.
+
    Fortran 90's other statements (MODULE, POINTER, ALLOCATABLE, and the
    rest) are recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may

@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), and arrays as values (section 27). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), and procedures with explicit interfaces (section 28). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -43,7 +43,8 @@ map of the files, with what building this one suggests about building another.
 Sections 22 and 23 are later additions: indexed files, and recursive routines. Section 24
 begins Fortran 90: free source form and the new tokens and statements; section 25 is its
 declarations, attributes, and kinds; section 26 its control constructs; section 27 arrays
-as values and the scalarizer.
+as values and the scalarizer; section 28 internal procedures, interfaces, and how a call
+is resolved.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -3580,3 +3581,281 @@ Optimizing gains less on these programs, 6% to 10%, than on the old corpus's ker
 each statement's nest is short and is the whole of the work. The phase doc lists what is left
 for Phase 110 to measure. The largest items are that the assignments of a WHERE construct are
 separate nests, never fused, and that a whole-array copy is a loop rather than a MOVC3.
+
+## 28. Fortran 90: procedures and interfaces (Phase 103)
+
+FORTRAN-77 has one kind of procedure interface: the *implicit* one. A caller knows a routine's
+name and, by the first letter or a type statement, its result's type, and nothing else. It
+pushes what it was given and hopes. Fortran 90 adds *explicit* interfaces: the caller knows each
+dummy argument's name, type, kind, rank, INTENT, and whether it is OPTIONAL. That knowledge is
+what keyword arguments, optional arguments, generic names, and defined operators all rest on,
+and it comes from two new places: *internal procedures*, which a unit holds after CONTAINS and
+whose declarations its own statements can see, and *interface blocks*, which describe
+procedures defined elsewhere.
+
+Most of this phase is semantic analysis, as the earlier Fortran 90 sections were. What
+reaches the IR is a call of a named routine with a list of arguments, as in section 12. The
+new mechanisms below sema are two small ones: how an internal procedure reaches its host's
+storage, and how a routine learns which of its OPTIONAL dummies it was given.
+
+### Units inside units
+
+The parser's units were flat: a header, a body, an END. An internal procedure is a whole unit
+inside another, and an interface body is a unit's header and declarations inside a statement.
+`parse/units.go` keeps a stack of open units (`unitStack`). A FUNCTION or SUBROUTINE statement
+starts a unit *inside* the innermost one if that unit is past its CONTAINS or has an interface
+block open. Otherwise it ends the open units (NOEND) and starts a new unit of the file, as it
+always did. `ast.Unit.Contains` holds the internal procedures, and `ast.InterfaceBlock` is a
+statement of the body, holding its `Bodies` (each an `ast.Unit`) and its generic specification:
+none, a name, `OPERATOR(op)`, or `ASSIGNMENT(=)`. The rules that are syntax are checked here:
+CONTAINS with nothing after it, an internal procedure with a CONTAINS or an ENTRY of its own, an
+executable statement in an interface body.
+
+One question about expressions has to be settled here too. `A.B.C` is DEC's reference to the
+field C of the field B of the record A, but in Fortran 90 it can also be A `.B.` C, a defined
+binary operator. The two readings make different trees: in `X + A.B.C * 2` the fields are a
+primary, while the operator binds more loosely than anything else and splits the expression as
+`(X + A) .B. (C * 2)`. Sema can't turn one tree into the other, so the parser decides
+(`recordScope`). A name is a record only if a RECORD statement declared it, and the parser has
+read every declaration before the first executable statement. `.B` after a record (or after one
+of its fields or elements) is a field, and anywhere else `.B.` is an operator. Old programs,
+which have no defined operators, parse exactly as they did.
+
+### Host association, in four steps
+
+An internal procedure sees its host's names (12.1.2.2.1). A name is the procedure's own if one
+of its declarations declares it; any other name it uses is its host's, if the host has it. The
+catch is *wherever in the host the host mentions it*, executable statements included:
+
+```fortran
+      PROGRAM STEPS
+      DO I = 1, 3
+         CALL STEP
+      END DO
+      PRINT *, I
+      CONTAINS
+      SUBROUTINE STEP
+         DO I = 1, 2
+         END DO
+      END SUBROUTINE STEP
+      END PROGRAM STEPS
+```
+
+Neither unit declares I. The host's DO makes I a variable of the host, so STEP's I is the host's
+I, and STEP changes its host's loop variable. That is the standard's meaning, and a classic
+mistake. A compiler that analyzes the host whole and then its internal procedures would get it
+right. But the host's statements need to know the internal procedures too: STEP's interface, to
+check `CALL STEP`, and a FUNCTION's type, to type a reference to it. So `analyzeUnit` works in
+four steps (`sema/internal.go`):
+
+1. the host's declarations;
+2. each internal procedure's header and declarations, its interface, by an analyzer of its own
+   whose scope has the host's scope as its host (`innerAnalyzer`, section 25's scope chain);
+3. the host's executable statements, which enter the names the host first uses there (I);
+4. each internal procedure's executable statements, whose lookups now find all of those.
+
+A name made in step 2 that the host then uses in step 3 would have had to be the host's all
+along. That can happen only through a bound or a length (`REAL W(N)`, N used only in the host's
+executable part). It is reported NOTIMPL rather than guessed (`checkProvisional`). The implicit
+rules are the host's, letter by letter, with the internal procedure's own IMPLICIT statements
+changing letters on top (`implicitRules.inherit`).
+
+What STEP compiles to shows the rest of the story. The host's I is in `$LOCAL`, so STEP names it
+as the host does:
+
+```text
+	.ENTRY	STEPS,^M<R6>
+	MOVL	#3,R6			; DO (line 2)'s count
+	MOVL	#1,STEPS.I
+STEPS.$1:				; DO (line 2)'s body
+	CALLS	#0,STEPS.STEP
+	INCL	STEPS.I
+	SOBGTR	R6,STEPS.$1		; one pass fewer
+	...
+STEPS.STEP:
+	.WORD	^M<>			; internal procedure STEP of STEPS
+	MOVL	#1,STEPS.I
+STEPS.STEP.$1:				; DO (line 8)'s body
+	INCL	STEPS.I
+	CMPL	STEPS.I,#2
+	BLEQ	STEPS.STEP.$1
+	RET
+```
+
+The internal procedure is a routine written after its host in the same module. It is entered at
+a local label with a register mask, `STEPS.STEP: .WORD ^M<>`, rather than a global `.ENTRY`, so
+no other module can call it and two hosts may each have a STEP. Its own symbols are
+`STEPS.STEP.X`, the path the listing and the debugger show. The loop's pass count is the host's
+own, in R6, so the host's loop still runs three times. But I is 3 after each STEP, 4 after the
+INCL, and the program prints 4. `/OPTIMIZE` kept the count in a register and left I in memory,
+because I is `Reached` by an internal procedure: any call in the host may read or change it
+(section 16's rule for a "taken" local, `opt/effects.go`). In the internal procedure a host's
+cell is a region of its own, `HostRegion`, which any call may change, as COMMON may.
+
+### Reaching the host
+
+A host's variable in `$LOCAL`, or in a common block, is a cell with a name, and the internal
+procedure uses that name. Two other kinds of host storage need more.
+
+A host's **dummy argument** is reached through the host's AP, which only the host's own code
+has. Section 12's ENTRY statements already solved that problem: each dummy gets a cell (`$A1`)
+that the entry copies its address into, and the body reaches the dummy through the cell. A host
+does that for each dummy an internal procedure reaches (`passHostArgs`), and the internal
+procedure uses `@HOST.$A1` as the host does.
+
+A host whose storage is in its **stack frame**, a RECURSIVE host (section 23) or one with
+AUTOMATIC variables, may be active several times at once. Its internal procedure must reach the
+activation that called it. So every call of one of its internal procedures passes a hidden last
+argument, the host's FP, or in an internal procedure calling a sibling or itself, the FP it was
+given (`Routine.HostFP`). The internal procedure loads it into R10 and reaches each frame cell by
+the host's own displacement symbol:
+
+```text
+	.ENTRY	WALK,^M<>
+	SUBL2	#12,SP			; this activation's own storage
+	MOVL	4(AP),WALK.$A1(FP)	; N is argument 1
+	...
+	PUSHL	FP
+	CALLS	#1,WALK.ADD
+	RET
+WALK.ADD.$HOST = 4			; WALK's FP is hidden argument 1
+	...
+WALK.ADD:
+	.WORD	^M<R10>			; internal procedure ADD of WALK
+	MOVL	WALK.ADD.$HOST(AP),R10	; the FP of WALK, for its frame
+	ADDL2	@WALK.$A1(R10),WALK.MINE(R10)
+```
+
+The IR names the host's cell, never its offset, because the host's optimizer may still close
+its frame up. The displacement is the host's symbol, fixed when the host's code is written. An
+internal procedure is never called once its host has returned (it can't be an actual argument:
+INTERNALARG), so the frame the FP points at is always live.
+
+### Explicit interfaces, checked
+
+An internal procedure's interface is its own declarations (step 2). An **interface body** is a
+header and declarations with nothing to run (`sema/interface.go`). It is analyzed in a scope
+with *no* host: the standard gives an interface body none of the enclosing unit's names, so a
+kind written with the host's PARAMETER is an error there. The body's unit is kept in the holding
+unit's `Interfaces` and never lowered. Its name becomes either a dummy procedure, if it is a
+dummy argument, or an external procedure.
+
+Every reference through an explicit interface goes to one function, `checkInterface`: the count
+(ARGCOUNT, as section 12 already checked within a file), and then per argument its type and kind
+(ARGTYPE), its rank (ARGRANK: an element may go to an array dummy, sequence association), a
+CHARACTER length where both are known (ARGLENGTH), and for an INTENT(OUT) or INOUT dummy that it
+is a variable (NOTDEFINABLE). An interface body for a procedure the same file defines is
+compared with the definition, and the first difference is INTERFACEDIFF. A call through an
+*implicit* interface to such a procedure is checked the same way only if
+`/WARNINGS=ARGUMENT_CHECKING` asks, and only as warnings: old programs pass an array's first
+element for a scalar on purpose.
+
+### Putting a call's arguments in order
+
+With an explicit interface a call may name its arguments (`CALL SOLVE(X, TOL=1.0E-6)`) and leave
+OPTIONAL ones out. `sema/optional.go`'s `argumentOrder` puts them in the dummies' order before
+anything else looks at them. The arguments without keywords come first and fill the dummies by
+position. Each keyword fills the dummy it names, which must not be filled twice. Every dummy
+that isn't OPTIONAL must end up with an argument. The result is a plain positional list with a
+`nil` for each dummy left out, which is VAX FORTRAN's old null argument. Everything later (the
+analysis of each argument, `checkInterface`, the IR) sees an ordinary list as long as the
+dummies, and the IR passes a 0 for each `nil`, as it always did for `CALL S(A,,B)`. That is VMS's
+convention for an absent argument.
+
+VMS has a second convention: a caller may pass a *shorter* list, and the routine treats the
+missing trailing arguments as absent. The LIB$ routines work that way, and a MACRO or FORTRAN-77
+caller of a Fortran 90 routine may too. The longword at `4*n(AP)` is then not the routine's at
+all, and only the count byte at `(AP)` says so. So every OPTIONAL dummy is reached through a
+cell, the ENTRY mechanism once more, and the entry fills the cell only if the count reaches it:
+
+```text
+	.ENTRY	SOLVE,^M<>
+	CLRL	SOLVE.$A2		; TOL is argument 2, if the caller passed it
+	CMPB	(AP),#2
+	BLSSU	SOLVE.$3
+	MOVL	8(AP),SOLVE.$A2
+SOLVE.$3:
+	MOVL	#^X37BD3686,SOLVE.T	; 1E-06
+	TSTL	SOLVE.$A2
+	BEQL	SOLVE.$1
+	MOVF	@SOLVE.$A2,SOLVE.T
+SOLVE.$1:
+```
+
+`PRESENT(TOL)` is then a test of the cell (`TSTL SOLVE.$A2`). Passing TOL on to another
+routine's OPTIONAL dummy passes the cell's contents, so a 0 stays a 0 however the routine was
+called. An internal procedure asking about its host's OPTIONAL dummy tests the host's cell.
+`testdata/fortran90/modules/shortlist` is a FORTRAN-77 caller, in a file of its own, passing such
+a routine a shorter list.
+
+INTENT changes no code. Sema checks what it can see (`sema/intent.go`). An INTENT(IN) dummy
+given a value anywhere a value is given (an assignment, a DO variable, an input item, ASSIGN,
+IOSTAT=), or passed to an INTENT(OUT) dummy, is INTENTIN. An INTENT(OUT) dummy used on a line
+before every line that may define it is the warning INTENTOUTREF. "May define it" counts an
+actual argument passed as itself, since the callee might set it. The test is about the order
+of the statements, not their flow, which is why it is only a warning.
+
+### Resolving a generic reference
+
+`INTERFACE SWAP` with bodies for SWAPR and SWAPI makes SWAP a *generic* name
+(`sema/generic.go`). A reference by it becomes a reference to the specific whose interface it
+fits, chosen when compiling: `CALL SWAP(X, Y)` with REAL X and Y is `CALL SWAPR(X, Y)` in the IR,
+with nothing at run time. `resolveGeneric` analyzes the arguments once and then tries each
+specific in turn. `argumentOrder` puts the arguments in that specific's order, quietly, and
+`fits` requires each one to have its dummy's type, kind, and *rank* exactly. A scalar doesn't
+fit an array dummy here, as sequence association would allow in a plain call, because rank is
+what tells specifics apart. The unit's own specifics are tried first, then its host's. If no
+specific fits and the name is an intrinsic function's, the reference is the intrinsic's: a block
+can *extend* SQRT to LOGICAL arguments without hiding SQRT of a REAL.
+
+The standard makes "the one that fits" well defined by restricting the blocks rather than the
+references (14.1.2.3). Two specifics of one name must both be functions or both subroutines,
+and one of them must have a non-OPTIONAL dummy that the other can't take in its place *both* by
+position *and* by keyword: at its position the other has no dummy, or one of a different type,
+kind, or rank, and the other's dummy of the same name is missing or different in the same way.
+`tellsApart` is that sentence, word for word. The standard's own example is SWAP itself. SWAPR's
+A and SWAPI's I differ at position 1, and SWAPI has no A, so the pair can be told apart. Make I
+REAL and the keyword test still passes (SWAPI has no A) but the position test doesn't, and
+`CALL SWAP(0.0, 1.0)` could mean either: GENERICAMBIG. A specific of an intrinsic's name is
+checked against the intrinsic's table rows "as if the intrinsic consisted of a collection of
+specific procedures", each row with every argument count it allows (GENERICINTRINSIC).
+
+### Operators and assignment
+
+A defined operator is a generic name spelled differently (`sema/operators.go`).
+`INTERFACE OPERATOR(.DIST.)` lists functions of one or two INTENT(IN) operands. `A .DIST. B`,
+an `ast.DefinedOp` from the parser, is a reference to the one the operands fit, chosen by
+position alone. A unary defined operator binds more tightly than anything else and a binary one
+more loosely, which the parser's precedence table has done since this phase's first subtask that built the forms.
+
+An intrinsic operator can be extended too, but only to operands it has no meaning for: `+` on
+two LOGICALs, `//` on a CHARACTER and an INTEGER. Sema analyzes the operands as before; then, if
+`intrinsicMeaning` says the standard gives none, it looks for a block that fits (`extendedOp`). A
+block function for operands the standard does give a meaning to, such as `+` of two REALs, is
+refused at the block (DEFOPINTR). VAX FORTRAN gives some meanings the standard doesn't: `.AND.`
+of INTEGERs bit by bit, `.XOR.`, and a LOGICAL assigned an INTEGER. A block may take those over
+(the author's choice): `12 .AND. 7` is 7 with a block that computes the minimum, and 4 without.
+One trap: the constant evaluator folds `'N=' // 42` before anything else sees it, and it knows
+nothing of blocks. So an operator that has a block isn't folded first.
+
+`INTERFACE ASSIGNMENT(=)` makes `X = Y`, for types the standard doesn't assign between,
+`CALL S(X, (Y))`. The value is passed as a copy, as the standard's parentheses say.
+`assignment` analyzes the target and value, offers them to `definedAssignment`, and only then
+converts the value for an intrinsic assignment (`finishAssign`).
+
+### What the programs found
+
+Nine programs in `testdata/fortran90` cover the phase, each worked by hand, run in all eight
+modes, and the same on gfortran: `internal`, `hosts`, `recurhost`, `interfaces`, `optional`,
+`generics`, `operators`, `hostopt` (the optimizer's cases: a value a loop would keep in a
+register, which an internal procedure it calls changes, for each kind of host storage), and
+`numbers` (everything together). `autohost` and `modules/shortlist` use DEC's AUTOMATIC and
+null arguments, which gfortran doesn't take.
+
+None of them found a fault in the code generator or the optimizer. That is largely because the
+design put everything new where an older mechanism already worked. A host's dummy uses ENTRY's
+cells, and so does an OPTIONAL dummy. A host's frame cell is reached as section 23's variable
+format expressions reach theirs. A generic, an operator, or a defined assignment is an ordinary
+call by the time the IR sees it. What the programs did catch was the hand-worked expected
+output. `hostopt.f90`'s recursive total was worked wrong once, and govax and gfortran agreed on
+the right answer.
