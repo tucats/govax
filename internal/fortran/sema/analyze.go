@@ -785,6 +785,8 @@ func (a *analyzer) describe(s *Symbol) string {
 	switch {
 	case s.Internal != nil:
 		return "an internal procedure"
+	case s.Generic != nil && s.Interface == nil:
+		return "a generic name"
 	case s.Interface != nil:
 		return "a procedure with an interface body"
 	case s.Result:

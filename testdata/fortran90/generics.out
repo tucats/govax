@@ -1,0 +1,6 @@
+swapped:  2.5  1.5  4  3 rite left
+twice:  42  2.50  2.5000
+norm:   2.0  13.0
+max: T F  7
+show: F T  2  1
+  $STATUS == "%X00000001"

@@ -8714,8 +8714,8 @@ it with `SOBGTR` or `AOBLEQ`, as it does a DO loop.
   --^
 ```
 
-That includes assumed-shape and deferred-shape arrays (`A(:)`), generic interface blocks
-(`INTERFACE SWAP`, `OPERATOR`, `ASSIGNMENT`), modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
+That includes assumed-shape and deferred-shape arrays (`A(:)`), interface blocks for operators
+and assignment (`INTERFACE OPERATOR`, `ASSIGNMENT`), modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
 Of arrays as values, these are not there yet: an array assignment that needs a temporary
 array of a size not known when compiling; a section or array expression as an argument to a
 program's own procedure; an array function's value of a shape not known when compiling

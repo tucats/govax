@@ -1191,6 +1191,30 @@ var messages = map[string]kind{
 	// undefined when the routine starts (5.1.2.3).
 	"INTENTOUTREF": {Warning, "%s is an INTENT(OUT) dummy argument, used here before any statement gives it a value"},
 
+	// Generic interfaces (sema/generic.go; PHASE-103's finding 11).
+
+	// GENERICDECL is a generic name the unit declares otherwise.
+	"GENERICDECL": {Error, "%s is already %s in this unit (line %d), so it can't be a generic name"},
+
+	// GENERICMIX is a generic name's specific procedures, a function and a
+	// subroutine (14.1.2.3).
+	"GENERICMIX": {Error, "%s and %s, specific procedures of the generic name %s, must both be functions or both subroutines"},
+
+	// GENERICAMBIG is two specific procedures of a generic name whose
+	// arguments can't tell them apart (14.1.2.3).
+	"GENERICAMBIG": {Error, "the specific procedures %s (line %d) and %s of the generic name %s can't be told apart by their arguments"},
+
+	// GENERICINTRINSIC is a specific procedure of a generic name that is an
+	// intrinsic function's, taking what the intrinsic takes (14.1.2.3).
+	"GENERICINTRINSIC": {Error, "the specific procedure %s takes arguments the intrinsic function %s already takes"},
+
+	// GENERICNONE is a reference by a generic name that no specific procedure
+	// fits (14.1.2.4.1).
+	"GENERICNONE": {Error, "no specific procedure of the generic name %s takes %s"},
+
+	// GENERICARG is a generic name as an actual argument (12.4.1.2).
+	"GENERICARG": {Error, "the generic name %s can't be an actual argument; pass one of its specific procedures"},
+
 	// ARGTYPEW and ARGRANKW are ARGTYPE and ARGRANK through an implicit
 	// interface, under /WARNINGS=ARGUMENT_CHECKING.
 	"ARGTYPEW": {Warning, "argument %d of %s is %s, but its dummy argument %s is %s (line %d)"},

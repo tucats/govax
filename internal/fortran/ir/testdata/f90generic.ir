@@ -1,0 +1,20 @@
+routine GEN main
+  cell  X       F  $LOCAL+0    variable X
+  cell  Y       F  $LOCAL+4    variable Y
+  cell  M       L  $LOCAL+8    variable M
+  cell  N       L  $LOCAL+12   variable N
+  cell  Q       L  $LOCAL+16   variable Q
+  cell  $T1     F  $LOCAL+20   temporary
+  $LOCAL is 24 bytes
+B1:
+  ; line 22
+  call SWAPR(ref X, ref Y)
+  ; line 23
+  call SWAPI(ref N, ref M)
+  ; line 24
+  call SQRTL(ref Q) -> Q
+  ; line 25
+  call MTH$SQRT(ref X) -> $T1
+  assign Y = $T1
+  ; line 26
+  return 1

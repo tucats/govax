@@ -374,6 +374,11 @@ type Symbol struct {
 	// name.
 	Interface *Unit
 
+	// Generic is what a generic name stands for in this unit: its specific
+	// procedures (generic.go). nil for any other name. A generic name may be a
+	// specific procedure's own too.
+	Generic *Generic
+
 	// StmtFunc is a statement function's definition, once the statement
 	// walk has reached it (stmtfunc.go).
 	StmtFunc *StmtFuncDef

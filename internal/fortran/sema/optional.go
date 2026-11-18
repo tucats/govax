@@ -52,11 +52,7 @@ import (
 // in order; a list whose only fault is how many arguments it has is returned as it
 // is, for checkInterface's ARGCOUNT.
 func (a *analyzer) actuals(s *Symbol, list []ast.Expr, places []int, pos diag.Position) ([]ast.Expr, bool) {
-	keyword := slices.IndexFunc(list, func(e ast.Expr) bool {
-		_, ok := e.(*ast.KeywordArg)
-
-		return ok
-	})
+	keyword := slices.IndexFunc(list, isKeyword)
 
 	target := a.interfaceOf(s)
 	if target == nil || target.incomplete || s.broken {
@@ -75,6 +71,50 @@ func (a *analyzer) actuals(s *Symbol, list []ast.Expr, places []int, pos diag.Po
 		return list, true
 	}
 
+	slots, fault := argumentOrder(s.Name, target, list, places, pos)
+
+	switch {
+	case fault == nil:
+		out := make([]ast.Expr, len(slots))
+		for j, i := range slots {
+			if i >= 0 {
+				out[j] = unkeyed(list[i])
+			}
+		}
+
+		return out, true
+
+	case fault.lengthOnly:
+		return list, true
+	}
+
+	a.report(fault.ident, fault.pos, fault.args...)
+
+	return nil, false
+}
+
+// orderFault is why a reference's arguments can't be put in its interface's
+// order: a message, or lengthOnly for a list without keywords whose only fault is
+// how many arguments it has, which checkInterface's ARGCOUNT reports.
+type orderFault struct {
+	ident      string
+	pos        diag.Position
+	args       []any
+	lengthOnly bool
+}
+
+// argumentOrder is the place in list (the alternate return specifiers taken
+// out, which were in the places places) of the actual argument for each of the
+// interface target's dummies, -1 for one left out, or why there is none. name
+// is the procedure's, for a message. It reports nothing itself, so that a generic
+// reference can try each specific procedure in turn (generic.go).
+func argumentOrder(name string, target *Unit, list []ast.Expr, places []int, pos diag.Position) ([]int, *orderFault) {
+	keyword := slices.IndexFunc(list, isKeyword)
+
+	fail := func(ident string, pos diag.Position, args ...any) ([]int, *orderFault) {
+		return nil, &orderFault{ident: ident, pos: pos, args: args}
+	}
+
 	// Each argument's place in the whole list, alternate returns counted.
 	full := make([]int, len(list))
 
@@ -87,13 +127,13 @@ func (a *analyzer) actuals(s *Symbol, list []ast.Expr, places []int, pos diag.Po
 	}
 
 	if keyword >= 0 && len(places) > 0 && places[len(places)-1] > full[keyword] {
-		a.report("KEYWORDORDER", pos, s.Name)
-
-		return nil, false
+		return fail("KEYWORDORDER", pos, name)
 	}
 
-	slots := make([]ast.Expr, len(target.Params))
-	given := make([]bool, len(target.Params))
+	slots := make([]int, len(target.Params))
+	for j := range slots {
+		slots[j] = -1
+	}
 
 	for i, e := range list {
 		if k, ok := e.(*ast.KeywordArg); ok {
@@ -101,24 +141,18 @@ func (a *analyzer) actuals(s *Symbol, list []ast.Expr, places []int, pos diag.Po
 
 			switch {
 			case j < 0:
-				a.report("KEYWORDNAME", k.Pos, s.Name, k.Name, dummyList(target.Params))
-
-				return nil, false
-			case given[j]:
-				a.report("KEYWORDTWICE", k.Pos, k.Name, s.Name)
-
-				return nil, false
+				return fail("KEYWORDNAME", k.Pos, name, k.Name, dummyList(target.Params))
+			case slots[j] >= 0:
+				return fail("KEYWORDTWICE", k.Pos, k.Name, name)
 			}
 
-			slots[j], given[j] = k.X, true
+			slots[j] = i
 
 			continue
 		}
 
 		if keyword >= 0 && i > keyword {
-			a.report("KEYWORDORDER", e.Position(), s.Name)
-
-			return nil, false
+			return fail("KEYWORDORDER", e.Position(), name)
 		}
 
 		// The dummy at that place, the interface's alternate returns counted.
@@ -131,33 +165,45 @@ func (a *analyzer) actuals(s *Symbol, list []ast.Expr, places []int, pos diag.Po
 
 		if j >= len(target.Params) || slices.Contains(target.AltPlaces, full[i]) {
 			if keyword < 0 {
-				return list, true
+				return nil, &orderFault{lengthOnly: true}
 			}
 
-			a.report("ARGCOUNT", pos, s.Name, count(len(target.Params)+len(target.AltPlaces), "dummy argument"),
+			return fail("ARGCOUNT", pos, name, count(len(target.Params)+len(target.AltPlaces), "dummy argument"),
 				target.AST.Position().Line, len(list)+len(places))
-
-			return nil, false
 		}
 
-		slots[j], given[j] = e, true
+		slots[j] = i
 	}
 
 	for j, p := range target.Params {
-		if given[j] || p.Optional {
+		if slots[j] >= 0 || p.Optional {
 			continue
 		}
 
 		if keyword < 0 {
-			return list, true
+			return nil, &orderFault{lengthOnly: true}
 		}
 
-		a.report("MISSINGARG", pos, s.Name, p.Name)
-
-		return nil, false
+		return fail("MISSINGARG", pos, name, p.Name)
 	}
 
-	return slots, true
+	return slots, nil
+}
+
+// isKeyword reports whether an actual argument is given by keyword.
+func isKeyword(e ast.Expr) bool {
+	_, ok := e.(*ast.KeywordArg)
+
+	return ok
+}
+
+// unkeyed is an actual argument without its keyword.
+func unkeyed(e ast.Expr) ast.Expr {
+	if k, ok := e.(*ast.KeywordArg); ok {
+		return k.X
+	}
+
+	return e
 }
 
 // interfaceOf is the explicit interface a reference to s in this unit goes

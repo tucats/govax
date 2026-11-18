@@ -191,6 +191,26 @@ func (a *analyzer) ownName(name string) bool {
 	return false
 }
 
+// genericRef is a reference to the generic name s as a function (generic.go):
+// to the specific function its arguments fit, or to the intrinsic function the
+// name extends.
+func (a *analyzer) genericRef(s *Symbol, e *ast.Apply) Expr {
+	a.note(&s.refs, e.Pos, RefUsed)
+
+	spec, args, how := a.resolveGeneric(s, e.Args, nil, true, e.Pos)
+
+	switch how {
+	case genericSpecific:
+		a.unit.calls = append(a.unit.calls, routineRef{sym: spec, args: args, pos: e.Pos})
+
+		return &FuncRef{exprBase{T: spec.Type, Pos: e.Pos}, spec, args}
+	case genericIntrinsic:
+		return a.intrinsicRef(e)
+	}
+
+	return a.bad(e.Pos)
+}
+
 // selfReference is a recursive function's reference to itself or one of its
 // entry points, named by s, whose value is of type t.
 func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
@@ -215,6 +235,10 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	}
 
 	s := a.scope.find(e.Name)
+
+	if s != nil && s.Generic != nil && !s.broken {
+		return a.genericRef(s, e)
+	}
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
 		if e.Name == "PRESENT" && a.intrinsicNamed(e.Name) {

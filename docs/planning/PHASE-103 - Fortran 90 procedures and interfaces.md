@@ -5,7 +5,8 @@ Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
 ("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
 with static hosts), 4 (hosts in the frame), 5 (interface blocks), and 6
-(keyword arguments, OPTIONAL, PRESENT, INTENT) are done; subtask 7 is next.
+(keyword arguments, OPTIONAL, PRESENT, INTENT), and 7 (generic interfaces)
+are done; subtask 8 is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -465,7 +466,8 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    question 1's checks (done 2026-11-17).
 6. **Keyword arguments, OPTIONAL, PRESENT, INTENT** (findings 8 to 10), with the
    absent-dummy test (done 2026-11-17).
-7. **Generic interfaces** (finding 11), intrinsic names extended, hosts' generics.
+7. **Generic interfaces** (finding 11), intrinsic names extended, hosts' generics
+   (done 2026-11-18).
 8. **Defined operators and assignment** (findings 12 and 13).
 9. **Programs end to end**, every mode, gfortran's witness, the optimizer's
    cases (a host variable kept in a register across a call that changes it).
@@ -749,3 +751,31 @@ The author read the survey and accepted every recommendation:
   its own file passing a shorter list and a null argument). MANUAL.md's and HELP
   FORTRAN's lines saying INTENT and OPTIONAL change nothing and that keyword
   arguments aren't there are corrected; the prose waits for subtask 10.
+- **2026-11-18, subtask 7:** Generic interfaces. **sema** (`sema/generic.go`,
+  whose comment works the standard's `INTERFACE A` example): a block with a
+  generic name is compiled (`compiledBlock`, was `specificBlock`); its bodies are
+  read as any others and make external procedures (`declareInterface` now returns
+  the symbol), and `declareGeneric` makes the name stand for them
+  (`Symbol.Generic`, a `Generic` of `Specifics`): a new name, a specific's own
+  name, or a name an earlier block made generic, else GENERICDECL. A block in an
+  internal procedure for a name generic in its host makes a name of its own whose
+  `Host` is the host's, tried after its own specifics (14.1.2.4.1's (3)).
+  `checkGenerics`, once a unit's bodies are read, checks each pair of its own
+  specifics (GENERICMIX, and GENERICAMBIG by 14.1.2.3's rule as written:
+  `tellsApart`, a nonoptional dummy the other can't take in its place by position
+  and by keyword, over `dummyShape`s) and each specific of a name that is an
+  intrinsic function's against the intrinsic's table rows taken as specifics
+  (GENERICINTRINSIC, `takenByIntrinsic`: an elemental row any rank, another
+  scalars, ours until Phase 108). `resolveGeneric` analyzes a reference's
+  arguments once, then tries each specific (own, then the hosts'), putting the
+  arguments in place by `argumentOrder` (subtask 6's `actuals` split into a quiet
+  part both use) and requiring each to fit its dummy exactly (`fits`: type, kind,
+  and rank, so no sequence association; a null argument only for an OPTIONAL
+  dummy); a reference no specific fits is the intrinsic function's when the name is
+  one (`genericRef` then analyzes it as before), else GENERICNONE naming the
+  arguments (`describeActuals`). The reference becomes a plain reference to the
+  specific by its own name, checked against its interface as any other
+  (`callStmt`, now shared by CALL). A generic name as an actual argument is
+  GENERICARG. **Tests**: `sema`'s `TestGenerics`; golden `ir/testdata/f90generic.for`;
+  the corpus's `generics.f90` (every mode, both paging modes, the same on
+  gfortran).

@@ -391,6 +391,17 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 		return nil
 	}
 
+	if sym.Generic != nil {
+		spec, args, how := a.resolveGeneric(sym, list, places, false, s.NamePos)
+		if how != genericSpecific {
+			return nil
+		}
+
+		a.unit.calls = append(a.unit.calls, routineRef{spec, args, s.NamePos, places})
+
+		return a.callStmt(s, spec, args, targets)
+	}
+
 	switch sym.Class {
 	case Unclassified, External:
 		// A dummy argument called is a dummy procedure.
@@ -431,7 +442,13 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	args := a.args(list)
 	a.unit.calls = append(a.unit.calls, routineRef{sym, args, s.NamePos, places})
 
-	c := &Call{stmtBase: stmtBase{s}, Sub: sym, Args: args}
+	return a.callStmt(s, sym, args, targets)
+}
+
+// callStmt is the CALL statement s of the subroutine sub with its arguments
+// analyzed, and its alternate return specifiers' labels.
+func (a *analyzer) callStmt(s *ast.CallStmt, sub *Symbol, args []Arg, targets []ast.LabelRef) Stmt {
+	c := &Call{stmtBase: stmtBase{s}, Sub: sub, Args: args}
 	for _, t := range targets {
 		c.AltReturns = append(c.AltReturns, t.Label)
 	}

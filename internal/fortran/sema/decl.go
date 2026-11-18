@@ -83,7 +83,7 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 		case *ast.InterfaceBlock:
 			// Its bodies are read when every other declaration is
 			// (interfaceBodies).
-			if specificBlock(s) {
+			if compiledBlock(s) {
 				a.interfaces = append(a.interfaces, s)
 			}
 		}

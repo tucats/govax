@@ -107,6 +107,13 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 
 		return a.bad(n.Pos)
 
+	case s.Generic != nil && s.Interface == nil:
+		// Only a specific procedure can be passed (12.4.1.2): the choice of
+		// one needs a reference's arguments.
+		a.report("GENERICARG", n.Pos, n.Name)
+
+		return a.bad(n.Pos)
+
 	case s.Class == Intrinsic:
 		return a.procedure(n)
 

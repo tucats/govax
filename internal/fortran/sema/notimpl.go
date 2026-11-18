@@ -34,7 +34,7 @@ func handled(s ast.Stmt) bool {
 		return true
 
 	case *ast.InterfaceBlock:
-		return specificBlock(s)
+		return compiledBlock(s)
 	}
 
 	return false

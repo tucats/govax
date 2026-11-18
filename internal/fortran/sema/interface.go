@@ -53,14 +53,9 @@ import (
 // with an OPTIONAL dummy can be referenced only through an explicit interface
 // (12.3.1.1), which a reference through an implicit one breaks (EXPLICITREQ).
 //
-// A generic interface block (INTERFACE SWAP, OPERATOR, ASSIGNMENT) waits for
-// subtasks 7 and 8, MODULE PROCEDURE for Phase 106.
-
-// specificBlock reports whether the interface block is one this phase
-// compiles: no generic specification and no MODULE PROCEDURE statement.
-func specificBlock(b *ast.InterfaceBlock) bool {
-	return b.Generic.Kind == ast.NoGeneric && len(b.ModuleProcedures) == 0
-}
+// A generic interface block (INTERFACE SWAP) is generic.go's; its bodies are
+// read here as any others, and make external procedures too. OPERATOR and
+// ASSIGNMENT blocks wait for subtask 8, MODULE PROCEDURE for Phase 106.
 
 // interfaceWhat names an interface block this phase doesn't compile, for its
 // NOTIMPL message.
@@ -83,6 +78,8 @@ func interfaceWhat(b *ast.InterfaceBlock) string {
 // wherever in the declarations it is.
 func (a *analyzer) interfaceBodies() {
 	for _, b := range a.interfaces {
+		var specifics []*Symbol
+
 		for _, bu := range b.Bodies {
 			if _, bad := bu.Header.(*ast.BadStmt); bad {
 				continue
@@ -99,9 +96,18 @@ func (a *analyzer) interfaceBodies() {
 			ba.untyped()
 
 			a.unit.Interfaces = append(a.unit.Interfaces, body)
-			a.declareInterface(body)
+
+			if s := a.declareInterface(body); s != nil {
+				specifics = append(specifics, s)
+			}
+		}
+
+		if b.Generic.Kind == ast.GenericName {
+			a.declareGeneric(b.Generic, specifics)
 		}
 	}
+
+	a.checkGenerics()
 }
 
 // bodyAnalyzer is an analyzer for an interface body of this unit: a unit's
@@ -116,8 +122,9 @@ func (a *analyzer) bodyAnalyzer() *analyzer {
 
 // declareInterface gives the name of the interface body bu its interface in
 // this unit: a dummy argument's, making it a dummy procedure, or else a new
-// name of the unit's, an external procedure.
-func (a *analyzer) declareInterface(bu *Unit) {
+// name of the unit's, an external procedure. It returns the name's symbol, or
+// nil after a message.
+func (a *analyzer) declareInterface(bu *Unit) *Symbol {
 	pos := bu.AST.Position()
 	old := a.scope.byName[bu.Name]
 
@@ -127,20 +134,20 @@ func (a *analyzer) declareInterface(bu *Unit) {
 		a.scope.enter(old)
 
 	case old.broken:
-		return
+		return nil
 
 	case old.Class == UnitName || old.Result || old.ResultVar != nil:
 		// The standard's constraint on R1201: a subprogram's own procedure
 		// (its name, or an entry point's) has its interface already.
 		a.report("INTERFACESELF", pos, bu.Name)
 
-		return
+		return nil
 
 	case !plainDummy(old):
 		a.report("INTERFACEDECL", pos, bu.Name, a.describe(old), old.Pos.Line)
 		old.broken = true
 
-		return
+		return nil
 	}
 
 	old.Interface, old.Typed = bu, true
@@ -149,6 +156,8 @@ func (a *analyzer) declareInterface(bu *Unit) {
 	if bu.Kind == ast.FunctionUnit && bu.Result != nil {
 		old.Class, old.Type = Function, bu.Result.Type
 	}
+
+	return old
 }
 
 // plainDummy reports whether s is a dummy argument nothing has said more of
