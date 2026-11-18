@@ -355,6 +355,17 @@ type Symbol struct {
 	// Fortran 90 dynamic arrays.md, finding 7).
 	AutomaticObject bool
 
+	// LengthExpr is a CHARACTER length that isn't constant, CHARACTER(LEN=N)
+	// with N a dummy argument, as written (the Fortran 90 standard's 5.1.1.5),
+	// and LengthValue its value, an INTEGER expression computed at each entry
+	// point whose list defines it (BoundDummies). Type.Size is then 0, as for a
+	// passed length, CHARACTER*(*), which PassedLength tells apart. A dummy
+	// argument's text is its actual argument's first LengthValue characters; any
+	// other name's is an automatic object (AutomaticObject), made on the stack
+	// (charlength.go).
+	LengthExpr  ast.Expr
+	LengthValue Expr
+
 	// f90Saved is set when a Fortran 90 form gave the name SAVE (an
 	// attribute, SAVE ::, or an initialization), for the dump.
 	f90Saved bool
@@ -505,17 +516,31 @@ func (s *Symbol) TypeText() string {
 		return s.Struct.Display()
 	}
 
+	if s.LengthExpr != nil {
+		return "CHARACTER*(" + lengthText(s.LengthExpr) + ")"
+	}
+
 	return s.Type.String()
 }
 
 // Size is the storage the name takes, in bytes.
 func (s *Symbol) Size() int {
+	// An automatic CHARACTER scalar's is a class S descriptor, its length
+	// and address.
+	if s.AutomaticObject && s.Dims == nil {
+		return StringDescriptorSize
+	}
+
 	if s.Allocatable || s.AutomaticObject {
 		return DescriptorSize(len(s.Dims))
 	}
 
 	return s.Type.Size * s.Elements()
 }
+
+// StringDescriptorSize is the size in bytes of a class S descriptor: a word of
+// length, its type and class bytes, and the address.
+const StringDescriptorSize = 8
 
 // DescriptorSize is the size in bytes of an array descriptor of rank n, class A
 // or NCA (the OpenVMS Calling Standard's 5.4 and 5.7): five longwords, then

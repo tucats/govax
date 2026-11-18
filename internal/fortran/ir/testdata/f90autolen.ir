@@ -1,0 +1,77 @@
+routine AUTOLEN subroutine
+  param S       B  argument 1
+  param N       L  argument 2
+  param C       B  argument 3
+  cell  T       L  $LOCAL+0    descriptor T S 0
+  cell  W       L  $LOCAL+8    descriptor T A 0 (?)
+  cell  $L1     L  $LOCAL+40   length of S
+  cell  $T1     L  $LOCAL+44   temporary
+  cell  $T2     L  $LOCAL+48   temporary
+  cell  $T3     L  $LOCAL+52   temporary
+  cell  $D4     L  $LOCAL+56   descriptor T S 0
+  cell  $D5     L  $LOCAL+64   descriptor T S 0
+  $LOCAL is 72 bytes
+  datum $IO1    control
+  datum $D1     descriptor L S 4 $T1
+  datum $D2     descriptor L S 4 $T2
+  datum $D3     descriptor L S 4 $T3
+B1:
+  ; line 5
+  assign $L1 = @N
+  branch lt.L($L1, 0) B2 B3
+B2:
+  assign $L1 = 0
+  jump B3
+B3:
+  assign $T1 = add.L(zext.WL(@(arg C)), 1)
+  branch lt.L($T1, 0) B4 B5
+B4:
+  assign $T1 = 0
+  jump B5
+B5:
+  assign T = cvt.LW($T1)
+  stack T+4 = zext.WL(T) bytes
+  assign $T1 = @N
+  branch lt.L($T1, 0) B6 B7
+B6:
+  assign $T1 = 0
+  jump B7
+B7:
+  assign W = cvt.LW($T1)
+  assign W+28 = @N
+  assign W+20 = W+28
+  branch lt.L(W+20, 0) B8 B9
+B8:
+  assign W+20 = 0
+  jump B9
+B9:
+  assign W+12 = mul.L(zext.WL(W), W+20)
+  stack W+4 = W+12 bytes
+  assign W+16 = addr(@(W+4)[mul.L(-1, zext.WL(W))])
+  ; line 11
+  move @(T+4)(zext.WL(T)) = @(@(arg C)+4)(zext.WL(@(arg C)))
+  ; line 12
+  move @(@(arg S)+4)($L1) = @(T+4)(zext.WL(T))
+  ; line 13
+  move @(W+16)[zext.WL(W)](zext.WL(W)) = @(@(arg S)+4)($L1)
+  ; line 14
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $T1 = $L1
+  call FTN$IO_ITEM(ref $D1)
+  assign $T2 = zext.WL(T)
+  call FTN$IO_ITEM(ref $D2)
+  assign $T3 = zext.WL(W)
+  call FTN$IO_ITEM(ref $D3)
+  assign $D4 = T
+  assign $D4+4 = addr(@(T+4))
+  call FTN$IO_ITEM(ref $D4)
+  assign $D5 = W
+  assign $D5+4 = addr(@(W+16)[zext.WL(W)])
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_END()
+  ; line 15
+  assign $D5 = cvt.LW($L1)
+  assign $D5+4 = addr(@(@(arg S)+4))
+  call SHOW(ref T, ref $D5)
+  ; line 16
+  return

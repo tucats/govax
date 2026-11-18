@@ -71,9 +71,16 @@ func (l *lowerer) funcLength(f *sema.FuncRef) Expr {
 // charLength is the length of a CHARACTER variable or of each element of a
 // CHARACTER array: its declared length, or for a passed-length dummy
 // argument its descriptor's, an unsigned word made a longword.
+//
+// A length that isn't constant (CHARACTER(LEN=N)) is a dummy argument's cell
+// of it, or an automatic object's descriptor's (lowerlength.go).
 func (l *lowerer) charLength(s *sema.Symbol) Expr {
 	if s.Type.Size > 0 {
 		return LongConst(int32(s.Type.Size))
+	}
+
+	if s.LengthValue != nil {
+		return l.runtimeLength(s)
 	}
 
 	return &Op{Zext, Long, &Load{descriptorField(l.paramOf(s), 0, Word)}, nil}
@@ -217,12 +224,18 @@ func (l *lowerer) charArg(a sema.Arg) Arg {
 		return Arg{Ref: l.textDescriptor(e.Text)}
 
 	case *sema.Var:
-		if p := l.charParam(e.Sym); p != nil && e.Sym.Type.Size == 0 && !a.Copy {
+		if p := l.charParam(e.Sym); p != nil && e.Sym.PassedLength() && !a.Copy {
 			return Arg{Value: &ArgPointer{p}}
 		}
 
+		// An automatic CHARACTER scalar's own cell is a class S descriptor
+		// of it (lowerlength.go).
+		if e.Sym.AutomaticObject && e.Sym.Dims == nil && !a.Copy {
+			return Arg{Ref: &Mem{Cell: l.adjustableOf(e.Sym), T: Long}}
+		}
+
 	case *sema.ArrayRef:
-		if p := l.charParam(e.Sym); p != nil && e.Sym.Type.Size == 0 {
+		if p := l.charParam(e.Sym); p != nil && e.Sym.PassedLength() {
 			return Arg{Value: &ArgPointer{p}}
 		}
 
@@ -281,7 +294,7 @@ func (l *lowerer) arrayDescriptor(s *sema.Symbol) *Mem {
 		a0.Index = arith(Mul, Long, LongConst(int32(-first)), n)
 	}
 
-	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: &Load{descriptorField(p, 0, Word)}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: l.lengthWord(s)})
 	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: &Addr{m}})
 	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: ArsizeOffset, T: Long},
 		Src: arith(Mul, Long, n, LongConst(int32(d.Elements())))})

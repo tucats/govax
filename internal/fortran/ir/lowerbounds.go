@@ -61,6 +61,10 @@ func (l *lowerer) prepareBounds() {
 	n := 0
 
 	for _, s := range l.unit.Symbols {
+		if l.prepareLength(s) && !s.Adjustable() {
+			l.adjustableOrder = append(l.adjustableOrder, s)
+		}
+
 		if s.Class != sema.Array || !s.Adjustable() || s.AutomaticObject {
 			continue
 		}
@@ -117,11 +121,20 @@ func defines(s *sema.Symbol, params []*sema.Symbol) bool {
 }
 
 // computeBounds writes the code that fills in the descriptors of the adjustable
-// arrays an entry point whose list is params defines.
+// arrays an entry point whose list is params defines, and the CHARACTER lengths
+// of its dummy arguments that aren't constant, each before its array's bounds.
 func (l *lowerer) computeBounds(params []*sema.Symbol) {
 	for _, s := range l.adjustableOrder {
-		if defines(s, params) {
-			l.computeArrayBounds(s, l.adjustable[s])
+		if !defines(s, params) {
+			continue
+		}
+
+		if c := l.lengths[s]; c != nil {
+			l.computeLength(s, c)
+		}
+
+		if c := l.adjustable[s]; c != nil {
+			l.computeArrayBounds(s, c)
 		}
 	}
 }
@@ -148,9 +161,10 @@ func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
 	// writes all of it.
 	l.fillDescriptor(c)
 
-	// A passed-length array's elements are as long as its descriptor says.
-	if s.Type.Size == 0 {
-		store(0, Word, &Load{descriptorField(l.params[s], 0, Word)})
+	// A passed-length array's elements are as long as its descriptor says, an
+	// array of a length that isn't constant as long as its entry computed.
+	if s.Type.Kind == sema.Character && s.Type.Size == 0 {
+		store(0, Word, l.lengthWord(s))
 	}
 
 	base := l.symbolMem(s)

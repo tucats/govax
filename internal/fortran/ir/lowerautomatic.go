@@ -28,9 +28,14 @@ import "github.com/tucats/govax/internal/fortran/sema"
 // elements (5.1.2.4.1), so such an extent is 0, where an adjustable array's
 // isn't changed (FORTRAN-77 called it an error, which /CHECK=BOUNDS reports).
 
-// automaticCell makes the cell c of the automatic array s its descriptor.
+// automaticCell makes the cell c of the automatic array s its descriptor. An
+// automatic CHARACTER scalar, whose length isn't constant (lowerlength.go), has a
+// class S descriptor.
 func (l *lowerer) automaticCell(s *sema.Symbol, c *Cell) {
 	d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassA, Length: s.Type.Size}
+	if s.Dims == nil {
+		d.Class = ClassS
+	}
 
 	// As for an adjustable array's (prepareBounds): nothing reads the length of
 	// an array of records too long for the word.
@@ -74,6 +79,15 @@ func (l *lowerer) computeAutomatic(s *sema.Symbol, c *Cell) {
 
 	l.fillDescriptor(c)
 
+	// A CHARACTER length that isn't constant is the descriptor's first word,
+	// which every use of the object reads.
+	if s.LengthValue != nil {
+		n := l.temp(Long)
+		l.emit(&Assign{origin: l.origin(), Dst: n, Src: l.expr(s.LengthValue)})
+		l.notNegative(n)
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: arith(Cvt, Word, &Load{n}, nil)})
+	}
+
 	for i, dim := range s.Dims {
 		if !d.Dims[i].Set {
 			continue
@@ -96,7 +110,18 @@ func (l *lowerer) computeAutomatic(s *sema.Symbol, c *Cell) {
 		l.notNegative(field(d.MultiplierOffset(i)))
 	}
 
-	count := Expr(LongConst(int32(s.Type.Size)))
+	count := l.charLength(s)
+	if s.Type.Kind != sema.Character {
+		count = LongConst(int32(s.Type.Size))
+	}
+
+	if s.Dims == nil {
+		l.emit(&StackAllocate{origin: l.origin(), Size: count, Dst: field(PointerOffset)})
+		l.release()
+
+		return
+	}
+
 	for i := range s.Dims {
 		count = arith(Mul, Long, count, l.extent(s, c, i))
 	}

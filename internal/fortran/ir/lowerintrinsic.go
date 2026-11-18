@@ -347,6 +347,14 @@ func (l *lowerer) charLen(e sema.Expr) Expr {
 
 	case *sema.StmtFuncRef:
 		return LongConst(int32(c.T.Size))
+
+	case *sema.ArrayRef:
+		// A whole array's elements' length (a passed length, or one computed
+		// at entry), as a section's is its array's.
+		return l.charLength(c.Sym)
+
+	case *sema.Section:
+		return l.charLength(c.Sym)
 	}
 
 	return l.chars(e).Len

@@ -284,7 +284,7 @@ func (a *analyzer) checkNamelists() {
 			case s.Allocatable:
 				a.report("ALLOCATTR", n.Pos, s.Name, "be in a NAMELIST group")
 			case s.AutomaticObject:
-				a.report("AUTOATTR", n.Pos, s.Name, "be in a NAMELIST group")
+				a.autoAttr(s, n.Pos, s.Name, "be in a NAMELIST group")
 			case s.Struct != nil:
 				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
 			case s.External || (s.Class != Variable && s.Class != Array):

@@ -256,6 +256,16 @@
    It can't be in COMMON, EQUIVALENCE, DATA, NAMELIST, SAVE, or STATIC
    (%FORT-E-AUTOATTR).
 
+   A CHARACTER length may be computed the same way, when the subprogram is
+   entered: a dummy argument's is the first N characters of its actual
+   argument, and the subprogram's own names with one are made on the stack.
+
+     character(len=n) :: s
+     character(len=len(c) + 1) :: t, w(n)
+
+   The same rules hold (%FORT-E-AUTOLENATTR), and a main program's lengths
+   must be constant (%FORT-E-LENNOTDUMMY).
+
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may

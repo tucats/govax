@@ -113,6 +113,10 @@ type lowerer struct {
 	adjustable      map[*sema.Symbol]*Cell
 	adjustableOrder []*sema.Symbol
 
+	// lengths is each dummy argument's cell of its CHARACTER length, when
+	// that isn't constant (lowerlength.go).
+	lengths map[*sema.Symbol]*Cell
+
 	// inVFE is set while a variable format expression is lowered: code that
 	// runs with another routine's FP (lowervfe.go).
 	inVFE bool

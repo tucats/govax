@@ -63,7 +63,8 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		// automatic array's cell is its class A descriptor, which the debugger
 		// would read as an adjustable dummy's, but the table has no form for
 		// elements reached through a descriptor that is the variable's own:
-		// subtask 9's too.
+		// subtask 9's too, as is an automatic CHARACTER scalar, whose cell is a
+		// class S descriptor of it.
 		switch {
 		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Allocatable || c.Sym.AutomaticObject:
 

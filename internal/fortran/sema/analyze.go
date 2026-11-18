@@ -379,7 +379,7 @@ type analyzer struct {
 
 	// provisionalBounds are the names of provisional among adjustable arrays'
 	// bounds, which are BOUNDVAR unless the host uses them.
-	provisionalBounds []*ast.Name
+	provisionalBounds []provisionalBound
 
 	// interfacing is set while an internal procedure's declarations are read,
 	// before its host's executable statements.
@@ -656,6 +656,7 @@ func (a *analyzer) finishUnit() {
 	a.reportUnused()
 	a.reportIntentOut()
 	a.reportExtensions(a.unit.AST)
+	a.checkLengths()
 	a.passedLengths()
 	a.recursiveStorage()
 	a.freedAtReturn()

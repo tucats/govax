@@ -1,0 +1,27 @@
+head:  5 [ABCDE]
+still:  5
+line now: *BCDEFGHIJKL 99
+head:  0 []
+still:  0
+head:  0 []
+still:  0
+pad:  6  6 [VAX  !] [<>    ]
+show: 12 [VAX  !<>    ]
+pad:  2  4 [ !] [<>  ]
+show:  6 [ !<>  ]
+shared:  6  2 [common] [22]
+all b: [112233]
+inner:  8 [common33]
+shared:  0  0 [] []
+all b: []
+inner:  0 []
+tops:  2 ab xy ef
+copy:  3 ab. cd. ef.
+each:  3  3 ef.
+rows: abxy efgh ijkl
+words:  3 aaa b-b ccc
+depth:  14
+pair:   2  5 pq pqrst
+pair2:  1  4 v vwxy
+churned:   20000
+  $STATUS == "%X00000001"

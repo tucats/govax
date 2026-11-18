@@ -168,9 +168,10 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 	// first time a name needs it, and kept: so a bad length is reported
 	// once, not once per name, and not at all if every name has its own.
 	var (
-		stmtType Type
-		stmtOK   bool
-		checked  bool
+		stmtType   Type
+		stmtLength ast.Expr
+		stmtOK     bool
+		checked    bool
 	)
 
 	// A Fortran 90 declaration's attributes, read against the table once
@@ -182,14 +183,14 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		// if this is the name's first mention.
 		sym := a.declare(d.Name, d.Pos)
 
-		t, ok := stmtType, stmtOK
+		t, length, ok := stmtType, stmtLength, stmtOK
 
 		switch {
 		case d.HasLength():
-			t, ok = a.typeOf(s.Type, d.Len, d.Pos)
+			t, length, ok = a.entityType(s.Type, d.Len, d.Pos)
 		case !checked:
-			stmtType, stmtOK = a.typeOf(s.Type, s.Type.Len, s.Type.Pos)
-			t, ok, checked = stmtType, stmtOK, true
+			stmtType, stmtLength, stmtOK = a.entityType(s.Type, s.Type.Len, s.Type.Pos)
+			t, length, ok, checked = stmtType, stmtLength, stmtOK, true
 		}
 
 		if d.Init != nil {
@@ -216,6 +217,12 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 			a.report("DUPDECL", d.Pos, d.Name, sym.TypePos.Line)
 		default:
 			sym.Type, sym.Typed, sym.TypePos, sym.broken = t, true, d.Pos, sym.broken || !ok
+
+			// CHARACTER(LEN=N): a length known only when the program runs
+			// (charlength.go).
+			if length != nil && ok {
+				a.runtimeLength(sym, length)
+			}
 		}
 
 		if s.Colons {
@@ -304,32 +311,57 @@ const maxCharLength = 65535
 // A Fortran 90 selector names the type by its kind (selectedType; kinds.go),
 // and a CHARACTER one its length as well, which a length written after an
 // entity, A*5, replaces; for a numeric type such a length replaces the kind.
+//
+// Only a type statement's entity may have a CHARACTER length that isn't
+// constant (entityType); anywhere else (IMPLICIT, a structure's field, a
+// FUNCTION statement) it is still BADCHARLEN, or for a selector's NOTIMPL.
 func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type, bool) {
+	t, length, ok := a.entityType(spec, l, pos)
+	if length != nil {
+		if spec.Selector && l == spec.Len {
+			a.notImplForm(length.Position(), "a CHARACTER length that isn't constant")
+		} else {
+			a.report("BADCHARLEN", length.Position())
+		}
+
+		return invalid, false
+	}
+
+	return t, ok
+}
+
+// entityType is typeOf for an entity of a type statement, whose CHARACTER
+// length may be a specification expression (the Fortran 90 standard's 5.1.1.5):
+// then the type is CHARACTER of length 0, as a passed length's is, and the
+// expression is returned, for runtimeLength.
+func (a *analyzer) entityType(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type, ast.Expr, bool) {
 	if spec.Type == ast.Character {
 		if spec.Selector && !a.characterKind(spec) {
-			return invalid, false
+			return invalid, nil, false
 		}
 
 		return a.characterType(l, pos, spec.Selector && l == spec.Len)
 	}
 
 	if spec.Selector && !l.HasLength() {
-		return a.selectedType(spec)
+		t, ok := a.selectedType(spec)
+
+		return t, nil, ok
 	}
 
 	if t, ok := fixedTypes[spec.Type]; ok {
 		if l.HasLength() {
 			a.report("NOLENGTH", pos, spec.Type.String())
 
-			return invalid, false
+			return invalid, nil, false
 		}
 
-		return t, true
+		return t, nil, true
 	}
 
 	info, ok := lengths[spec.Type]
 	if !ok {
-		return invalid, false
+		return invalid, nil, false
 	}
 
 	if l.LenExpr != nil || l.LenStar {
@@ -337,29 +369,29 @@ func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type
 		// its type turns out not to be CHARACTER.
 		a.report("NUMLENGTH", pos, spec.Type.String())
 
-		return invalid, false
+		return invalid, nil, false
 	}
 
 	if !l.HasLength() {
 		switch spec.Type {
 		case ast.Integer:
-			return a.defaultInt, true
+			return a.defaultInt, nil, true
 		case ast.Logical:
-			return a.defaultLogical, true
+			return a.defaultLogical, nil, true
 		}
 
-		return info.def, true
+		return info.def, nil, true
 	}
 
 	for _, n := range info.allowed {
 		if n == l.Length {
-			return Type{info.def.Kind, n}, true
+			return Type{info.def.Kind, n}, nil, true
 		}
 	}
 
 	a.report("BADLENGTH", pos, spec.Type.String(), l.Length, spec.Type.String(), info.text)
 
-	return invalid, false
+	return invalid, nil, false
 }
 
 // characterType is the CHARACTER type of length l (section 4.4.2): 1
@@ -367,38 +399,36 @@ func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type
 // expression, from 1 to 65535 (BADCHARLEN); or (*), a passed length,
 // which only some names may have (passedLengths).
 //
-// A Fortran 90 selector's length (selector: CHARACTER(LEN=N)) may be a
-// specification expression, a dummy's N, and zero or less, which means zero
-// (the standard's 5.1.1.5); both are NOTIMPL, named, until Phases 104 and 108.
-func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (Type, bool) {
+// A length, in either form (*(N) or LEN=N), may be a specification
+// expression, a dummy's N (the Fortran 90 standard's 5.1.1.5): its expression
+// is returned, with the type CHARACTER of length 0, and what may have one is
+// runtimeLength's to say. A constant length of zero or less, which means zero,
+// is NOTIMPL, named, until Phase 108.
+func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (Type, ast.Expr, bool) {
 	n := int64(l.Length)
 
 	switch {
 	case l.LenStar:
-		return Type{Character, 0}, true
+		return Type{Character, 0}, nil, true
 
 	case l.LenExpr != nil:
 		v, kind := a.constInt(l.LenExpr)
 
 		switch {
 		case kind == constFailed:
-			return invalid, false
+			return invalid, nil, false
 		case kind == constOK:
 			n = int64(v)
-		case selector && kind == constNamed:
-			a.notImplForm(l.LenExpr.Position(), "a CHARACTER length that isn't constant")
-
-			return invalid, false
 		default:
-			n = 0
+			return Type{Character, 0}, l.LenExpr, true
 		}
 
 		pos = l.LenExpr.Position()
 
-		if selector && kind == constOK && n < 1 {
+		if selector && n < 1 {
 			a.notImplForm(pos, "a CHARACTER length of zero")
 
-			return invalid, false
+			return invalid, nil, false
 		}
 
 	case !l.HasLength():
@@ -408,10 +438,10 @@ func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (T
 	if n < 1 || n > maxCharLength {
 		a.report("BADCHARLEN", pos)
 
-		return invalid, false
+		return invalid, nil, false
 	}
 
-	return Type{Character, int(n)}, true
+	return Type{Character, int(n)}, nil, true
 }
 
 // baseTypes are the type keywords for the kinds of type, for a length

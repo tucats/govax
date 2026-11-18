@@ -167,7 +167,10 @@ func dumpSymbol(s *Symbol) string {
 		where += " allocatable"
 	}
 
-	if s.AutomaticObject {
+	switch {
+	case s.AutomaticObject && s.Dims == nil:
+		where += " automatic-scalar"
+	case s.AutomaticObject:
 		where += " automatic-array"
 	}
 

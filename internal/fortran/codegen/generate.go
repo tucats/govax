@@ -951,6 +951,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "characters, for one statement"
 	case ir.ArgCell:
 		return c.Dummy + "'s longword of the argument list, set at each entry point"
+	case ir.LengthCell:
+		return c.Dummy + "'s CHARACTER length, computed at each entry point"
 	case ir.SelectorCell:
 		return "the entry point the routine was called by"
 	case ir.FormatCell:

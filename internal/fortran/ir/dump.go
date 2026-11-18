@@ -204,6 +204,8 @@ func cellNote(c *Cell) string {
 		return "descriptor " + descriptorText(c.Desc)
 	case ArgCell:
 		return "address of " + c.Dummy
+	case LengthCell:
+		return "length of " + c.Dummy
 	case SelectorCell:
 		return "the entry point used"
 	case FormatCell:

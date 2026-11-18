@@ -1103,8 +1103,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   descriptor; `sema/arrays.go`'s `boundFunction`, SIZE/LBOUND/UBOUND/LEN and
   integer elementals in bounds; the IR's `StackAllocate` and `StackRelease`;
   `ir/lowerautomatic.go`; array temporaries renamed `$Wn`;
-  `testdata/fortran90/autos.f90`); 4b (automatic CHARACTER lengths) and 4c
-  (the scalarizer's run-time temporaries) are next.
+  `testdata/fortran90/autos.f90`); 4b (2026-11-18) is CHARACTER lengths that
+  aren't constant (`sema/charlength.go`: `Symbol.LengthExpr`, `LengthValue`,
+  `PassedLength`; an automatic scalar's storage a class S descriptor; LEN of
+  an array; `ir/lowerlength.go`: a dummy's length in a `LengthCell`, `$Ln`;
+  `testdata/fortran90/autolen.f90`); 4c (the scalarizer's run-time
+  temporaries) is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

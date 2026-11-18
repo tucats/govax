@@ -8439,8 +8439,9 @@ with a `D` or `Q` exponent has its type already, and can't have a kind (`KINDEXP
 kind the type doesn't have is `NOSUCHKIND` (`REAL(3)`), and `DOUBLE PRECISION` and the other
 types that name one length take none (`NOKIND`). DEC's lengths go on working beside kinds,
 and a length after an entity's name replaces the statement's kind or length (`REAL(8) ::
-X*4`). A `CHARACTER` length of zero, and a `CHARACTER` length
-that isn't constant (`CHARACTER(LEN=N)` with `N` a dummy argument), are not there yet.
+X*4`). A `CHARACTER` length of zero is not there yet; a length that isn't constant
+(`CHARACTER(LEN=N)` with `N` a dummy argument) is described below, under "Automatic
+arrays".
 
 **INTEGER(1).** `INTEGER(1)`, which may also be written `INTEGER*1`, is a signed byte. An
 operation on two of them is done in a byte (`ADDB3`, `MULB3`, `CMPB`, ...); beside a wider
@@ -8955,6 +8956,35 @@ arrays must still have constant bounds (`ADJNOTDUMMY`). Under ENTRY, each entry 
 the automatic arrays whose bounds use only its own dummy arguments. The storage is the
 user stack's (2 MB with paging off), and an array too large for it ends the program as a
 runaway recursion does, with no message.
+
+**CHARACTER lengths that aren't constant** (the standard's 5.1.1.5). A length, written
+`CHARACTER(LEN=N)` or `CHARACTER*(N)`, may be made of what an automatic array's bounds
+may be, and is computed in the same way, each time the subprogram is entered; it doesn't
+change if `N` does later, and one less than 0 is 0. A dummy argument with such a length is
+the first `N` characters of its actual argument (which must have at least that many), and
+`LEN` of it is `N`; the subprogram's own names with one are automatic objects, made on the
+stack as automatic arrays are, alone or as arrays of either kind of bounds:
+
+```fortran
+subroutine frame(title, n)
+  character(len=*) :: title
+  integer :: n
+  character(len=len(title) + 2*n) :: line
+  character(len=n) :: pads(2)
+  pads = '*'
+  line = pads(1) // title // pads(2)
+  print '(1x, 3a)', '[', line, ']'
+end subroutine frame
+```
+
+prints `[*  RESULTS*  ]` for `call frame('RESULTS', 3)`: each pad is three characters, its
+first an asterisk. Such a name is passed to another routine by a descriptor of its length, so a
+passed-length dummy (`CHARACTER*(*)`) gets `N`. It can't be in COMMON, EQUIVALENCE, DATA,
+or a NAMELIST group, nor be named by SAVE or STATIC (`AUTOLENATTR`), and a main program's
+names must have constant lengths (`LENNOTDUMMY`). `LEN` of a whole array or a section is its
+elements' length. A function whose value has such a length is not there yet, nor is a
+CHARACTER value of a length not known when compiling in an array expression or a
+constructor.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

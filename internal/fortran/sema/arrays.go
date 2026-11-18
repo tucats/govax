@@ -58,6 +58,28 @@ type adjustableArray struct {
 	// arrays.
 	names    []*ast.Name
 	inquired map[*ast.Name]bool
+
+	// length is set when the expression is sym's CHARACTER length, not a
+	// bound (charlength.go): the same rules, other words in the messages.
+	length bool
+}
+
+// where is what the messages call the place a name is in: an array's bounds,
+// or a CHARACTER length; whereOne is a bound alone.
+func (adj *adjustableArray) where() string {
+	if adj.length {
+		return "a CHARACTER length"
+	}
+
+	return "an array's bounds"
+}
+
+func (adj *adjustableArray) whereOne() string {
+	if adj.length {
+		return "a CHARACTER length"
+	}
+
+	return "an array's bound"
 }
 
 // automaticAllowed reports whether the unit may have automatic arrays: a
@@ -218,7 +240,7 @@ func (a *analyzer) bound(adj *adjustableArray, e ast.Expr) (int, ast.Expr, bool)
 
 	if len(adj.names) == before {
 		// Not constant, for a reason that isn't a name: 2.0 ** 0.5.
-		a.report("BADBOUND", e.Position())
+		a.report("BADBOUND", e.Position(), adj.whereOne())
 
 		return 0, nil, false
 	}
@@ -229,7 +251,7 @@ func (a *analyzer) bound(adj *adjustableArray, e ast.Expr) (int, ast.Expr, bool)
 // constantBound is the INTEGER value of a constant bound of value c.
 func (a *analyzer) constantBound(ev *evaluator, c *Const, pos diag.Position) (int, bool) {
 	if c.T.Kind != Integer && c.T.Kind != Real {
-		a.report("BADBOUND", pos)
+		a.report("BADBOUND", pos, "an array's bound")
 
 		return 0, false
 	}
@@ -237,7 +259,7 @@ func (a *analyzer) constantBound(ev *evaluator, c *Const, pos diag.Position) (in
 	c, err := ev.convert(c, IntegerType, pos)
 	if err != nil {
 		if err.kind != constFailed {
-			a.report("BADBOUND", pos)
+			a.report("BADBOUND", pos, "an array's bound")
 		}
 
 		return 0, false
@@ -254,7 +276,7 @@ func (a *analyzer) constantBound(ev *evaluator, c *Const, pos diag.Position) (in
 func (a *analyzer) boundOperands(adj *adjustableArray, e ast.Expr) bool {
 	if c, err := (&evaluator{a: a, quiet: true}).eval(e); err == nil {
 		if c.T.Kind != Integer && c.T.Kind != Real {
-			a.report("BADBOUND", e.Position())
+			a.report("BADBOUND", e.Position(), adj.whereOne())
 
 			return false
 		}
@@ -295,7 +317,7 @@ func (a *analyzer) boundOperands(adj *adjustableArray, e ast.Expr) bool {
 		return a.boundFunction(adj, e)
 	}
 
-	a.report("BADBOUND", e.Position())
+	a.report("BADBOUND", e.Position(), adj.whereOne())
 
 	return false
 }
@@ -350,7 +372,7 @@ func (a *analyzer) boundFunction(adj *adjustableArray, e *ast.Apply) bool {
 		return ok
 	}
 
-	a.report("BOUNDREF", e.Pos, e.Name)
+	a.report("BOUNDREF", e.Pos, e.Name, adj.where())
 
 	return false
 }
@@ -383,7 +405,7 @@ func (a *analyzer) checkArrays() {
 		ok := true
 
 		for _, n := range adj.names {
-			ok = a.checkBoundName(n, adj.inquired[n]) && ok
+			ok = a.checkBoundName(adj, n) && ok
 		}
 
 		if ok {
@@ -400,6 +422,11 @@ func (a *analyzer) checkArrays() {
 func (a *analyzer) boundValues(adj *adjustableArray) {
 	dims := adj.sym.Dims
 
+	if adj.length {
+		adj.sym.LengthValue = a.convert(a.value(adj.sym.LengthExpr), IntegerType)
+		dims = nil
+	}
+
 	for i := range dims {
 		if e := dims[i].LowerExpr; e != nil {
 			dims[i].LowerValue = a.convert(a.value(e), IntegerType)
@@ -413,7 +440,7 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 	// Only the unit's own: an internal procedure reads a host's dummy through
 	// its host's cell, whichever way it was called (ir/lowerinternal.go).
 	for _, n := range adj.names {
-		if s := a.scope.find(n.Name); s.Dummy != 0 && !a.hostName(s.Name) {
+		if s := a.scope.find(n.Name); s.Dummy != 0 && !a.hostName(s.Name) && !slices.Contains(adj.sym.BoundDummies, s) {
 			adj.sym.BoundDummies = append(adj.sym.BoundDummies, s)
 		}
 	}
@@ -429,40 +456,41 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 // An inquiry function's argument may be an array, or a CHARACTER name of any
 // length (inquired), but not an allocatable or automatic one, whose bounds aren't
 // those of the unit's entry.
-func (a *analyzer) checkBoundName(n *ast.Name, inquired bool) bool {
+func (a *analyzer) checkBoundName(adj *adjustableArray, n *ast.Name) bool {
 	s := a.scope.find(n.Name)
+	inquired, where := adj.inquired[n], adj.where()
 
 	switch {
 	case s.broken:
 		return false
 
 	case a.interfacing && slices.Contains(a.provisional, s):
-		a.provisionalBounds = append(a.provisionalBounds, n)
+		a.provisionalBounds = append(a.provisionalBounds, provisionalBound{n, where})
 
 		return false
 
 	case inquired && (s.Allocatable || s.AutomaticObject):
-		a.report("BOUNDREF", n.Pos, n.Name)
+		a.report("BOUNDREF", n.Pos, n.Name, where)
 
 		return false
 
 	case inquired && s.Dummy == 0 && s.Common == nil && !a.hostName(s.Name):
-		a.report("BOUNDVAR", n.Pos, n.Name)
+		a.report("BOUNDVAR", n.Pos, n.Name, where)
 
 		return false
 
 	case inquired:
 		return s.Class == Array || s.Class == Variable || s.Class == Unclassified ||
-			a.badBoundInquiry(n)
+			a.badBoundInquiry(n, where)
 
 	case s.Class == Array || s.Class == Function || s.Class == StmtFunction:
-		a.report("BOUNDREF", n.Pos, n.Name)
+		a.report("BOUNDREF", n.Pos, n.Name, where)
 
 		return false
 
 	case s.Dummy == 0 && s.Common == nil && !a.hostName(s.Name):
 		// A constant among them, defined after the bound that uses it.
-		a.report("BOUNDVAR", n.Pos, n.Name)
+		a.report("BOUNDVAR", n.Pos, n.Name, where)
 
 		return false
 
@@ -471,7 +499,7 @@ func (a *analyzer) checkBoundName(n *ast.Name, inquired bool) bool {
 		return true
 
 	case s.Type.Kind != Integer && s.Type.Kind != Real:
-		a.report("BADBOUND", n.Pos)
+		a.report("BADBOUND", n.Pos, adj.whereOne())
 
 		return false
 	}
@@ -540,8 +568,8 @@ func (s *Symbol) ElementNumber(subs []int) (int, bool) {
 
 // badBoundInquiry reports an inquiry function's argument that is neither a
 // variable nor an array, and returns false.
-func (a *analyzer) badBoundInquiry(n *ast.Name) bool {
-	a.report("BOUNDREF", n.Pos, n.Name)
+func (a *analyzer) badBoundInquiry(n *ast.Name, where string) bool {
+	a.report("BOUNDREF", n.Pos, n.Name, where)
 
 	return false
 }
@@ -559,13 +587,13 @@ func (a *analyzer) checkAutomatics() {
 
 		switch {
 		case s.Common != nil:
-			a.report("AUTOATTR", s.DimPos, s.Name, "be in a common block")
+			a.autoAttr(s, s.autoPos(), s.Name, "be in a common block")
 		case s.Equivalenced:
-			a.report("AUTOATTR", s.equivPos, s.Name, "be in an EQUIVALENCE list")
+			a.autoAttr(s, s.equivPos, s.Name, "be in an EQUIVALENCE list")
 		case s.saved:
-			a.report("AUTOATTR", s.DimPos, s.Name, "be saved")
+			a.autoAttr(s, s.autoPos(), s.Name, "be saved")
 		case s.storageStmt != nil && s.storageStmt.Kind == lex.Static:
-			a.report("AUTOATTR", s.DimPos, s.Name, "be STATIC")
+			a.autoAttr(s, s.autoPos(), s.Name, "be STATIC")
 		default:
 			continue
 		}

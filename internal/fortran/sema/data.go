@@ -503,7 +503,7 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 		return s, false
 
 	case s.AutomaticObject:
-		a.report("AUTOATTR", pos, name, "be given an initial value")
+		a.autoAttr(s, pos, name, "be given an initial value")
 
 		s.broken = true
 

@@ -465,7 +465,8 @@ calls), then the frame's run-time storage everything after needs.
    array expressions, `IV(IV)` (finding 8). In three parts (2026-11-18):
    - 4a. `StackAllocate` and `StackRelease`, automatic arrays, and the inquiry
      functions in specification expressions (done 2026-11-18).
-   - 4b. Automatic CHARACTER objects and a dummy's nonconstant `LEN=`.
+   - 4b. Automatic CHARACTER objects and a dummy's nonconstant `LEN=` (done
+     2026-11-18).
    - 4c. The scalarizer's temporaries of run-time size, the heap past 64 KB,
      CHARACTER values of a run-time length in array expressions, `IV(IV)`.
 5. **Assumed-shape dummies:** the entry copy, every kind of actual, EXPLICITREQ,
@@ -702,3 +703,41 @@ The author read the survey and accepted every recommendation:
     and `codegen`, and `testdata/fortran90/autos.f90` (every mode, paging both
     ways; gfortran prints the same 12 lines). MANUAL.md's 14.13 has
     "Automatic arrays", and HELP FORTRAN a paragraph.
+- **2026-11-18, subtask 4b done:** CHARACTER lengths that aren't constant.
+  - *Declarations* (`sema/charlength.go`). A type statement's entity whose
+    length, in either form (`CHARACTER(LEN=N)`, `CHARACTER*(N)`), isn't constant
+    is CHARACTER of length 0, as a passed length is, with `Symbol.LengthExpr`
+    and `LengthValue` (`entityType`, `runtimeLength`); `Symbol.PassedLength`
+    tells the two apart. The length is checked as a bound is
+    (`adjustableArray.length`: `boundOperands`, `checkBoundName`, `boundValues`,
+    its dummies joining `BoundDummies`), and BADBOUND, BOUNDVAR, and BOUNDREF
+    now say "a CHARACTER length" or "an array's bounds". A subprogram's own
+    such name is `AutomaticObject` (a scalar's storage a class S descriptor,
+    `StringDescriptorSize`), with AUTOLENATTR beside AUTOATTR (`autoAttr`); in a
+    main program or block data it is LENNOTDUMMY (`CHARACTER*(N)` there was
+    BADCHARLEN, and the selector's form NOTIMPL). IMPLICIT's and a structure
+    field's lengths still must be constant (`typeOf`); a PARAMETER's is
+    BADCHARLEN, and a function's value of such a length NOTIMPL until subtask 7
+    (`checkLengths`). Under `/F90` and `/NOF90` alike, as 4a's arrays.
+  - *LEN of an array* (`sema/intrinsicref.go`): of a whole array or a section
+    whose length isn't constant, its elements' length (`ir`'s `charLen`), which
+    was NOTIMPL.
+  - *The IR* (`ir/lowerlength.go`). A dummy's length is a `LengthCell`, `$Ln`,
+    computed at each entry point that defines it, before its array's bounds
+    (`computeBounds`), never less than 0; its text is still where its
+    descriptor points. An automatic object's length is its descriptor's first
+    word, stored by `computeAutomatic` before the bounds, its storage
+    `StackAllocate`d (a scalar's at its class S descriptor's POINTER, no A0).
+    `charLength` reads either (`runtimeLength`, `lengthWord`); a passed length's
+    shortcuts (passing a dummy's own descriptor on) are `PassedLength` only, and
+    an automatic scalar is passed by its own descriptor.
+  - *Choices of ours, unconfirmed:* a length past 65,535 isn't checked (a
+    descriptor's word holds it); the storage map and dumps show the length's
+    expression (`CHARACTER*(LEN(C)+1)`, `lengthText`).
+  - *Left for later:* the `/DEBUG` table still describes such a dummy as a
+    passed-length one (its actual's length, not N) and leaves automatic
+    scalars out with the automatic arrays (subtask 9).
+  - *Tests:* `sema`'s `TestRuntimeLength`, the `f90autolen` goldens in `sema`,
+    `ir`, and `codegen`, and `testdata/fortran90/autolen.f90` (every mode, paging
+    both ways; gfortran prints the same 26 lines). MANUAL.md's 14.13 has
+    "CHARACTER lengths that aren't constant", and HELP FORTRAN a paragraph.

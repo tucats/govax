@@ -1,0 +1,166 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for AUTOLEN, a subroutine
+;   S     CHARACTER*(N)         argument 1  @AUTOLEN.S(AP)
+;   N     INTEGER               argument 2  @AUTOLEN.N(AP)
+;   C     CHARACTER*(*)         argument 3  @AUTOLEN.C(AP)
+;   T     CHARACTER*(LEN(C)+1)  $LOCAL+0    AUTOLEN.T
+;   W     CHARACTER*(N) (?)     $LOCAL+8    AUTOLEN.W
+;
+AUTOLEN.S = 4				; S is argument 1
+AUTOLEN.N = 8				; N is argument 2
+AUTOLEN.C = 12				; C is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+AUTOLEN.T:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; T: not allocated
+AUTOLEN.W:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+AUTOLEN.$L1:
+	.BLKL	1			; S's CHARACTER length, computed at each entry point
+AUTOLEN.$T1:
+	.BLKL	1			; temporary
+AUTOLEN.$T2:
+	.BLKL	1			; temporary
+AUTOLEN.$T3:
+	.BLKL	1			; temporary
+AUTOLEN.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+AUTOLEN.$D5:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+AUTOLEN.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+AUTOLEN.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTOLEN.$T1
+AUTOLEN.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTOLEN.$T2
+AUTOLEN.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTOLEN.$T3
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     CHARACTER lengths that aren't constant (Phase 104, subtask 4b): a dummy
+;    3  C     argument's, kept in a cell; an automatic scalar's, in its class S
+;    4  C     descriptor; an automatic array's, in its class A descriptor's first word.
+;    5        SUBROUTINE AUTOLEN(S, N, C)
+	.ENTRY	AUTOLEN,^M<R2,R3,R4,R5>
+	MOVL	@AUTOLEN.N(AP),AUTOLEN.$L1
+	BLSS	AUTOLEN.$2
+	BRW	AUTOLEN.$1
+AUTOLEN.$2:
+	CLRL	AUTOLEN.$L1
+AUTOLEN.$1:
+	MOVZWL	@AUTOLEN.C(AP),R0
+	ADDL3	R0,#1,AUTOLEN.$T1
+	BLSS	AUTOLEN.$4
+	BRW	AUTOLEN.$3
+AUTOLEN.$4:
+	CLRL	AUTOLEN.$T1
+AUTOLEN.$3:
+	CVTLW	AUTOLEN.$T1,AUTOLEN.T
+	MOVZWL	AUTOLEN.T,R0
+	SUBL2	R0,SP			; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTOLEN.T+4
+	MOVL	@AUTOLEN.N(AP),AUTOLEN.$T1
+	BLSS	AUTOLEN.$6
+	BRW	AUTOLEN.$5
+AUTOLEN.$6:
+	CLRL	AUTOLEN.$T1
+AUTOLEN.$5:
+	CVTLW	AUTOLEN.$T1,AUTOLEN.W
+	MOVL	@AUTOLEN.N(AP),AUTOLEN.W+28
+	MOVL	AUTOLEN.W+28,AUTOLEN.W+20
+	BLSS	AUTOLEN.$8
+	BRW	AUTOLEN.$7
+AUTOLEN.$8:
+	CLRL	AUTOLEN.W+20
+AUTOLEN.$7:
+	MOVZWL	AUTOLEN.W,R0
+	MULL3	R0,AUTOLEN.W+20,AUTOLEN.W+12
+	SUBL2	AUTOLEN.W+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTOLEN.W+4
+	MOVL	AUTOLEN.W+4,R0
+	MOVZWL	AUTOLEN.W,R1
+	MULL2	#-1,R1
+	MOVAB	(R0)[R1],AUTOLEN.W+16
+;    6        INTEGER :: N
+;    7        CHARACTER(LEN=N) :: S
+;    8        CHARACTER(LEN=*) :: C
+;    9        CHARACTER(LEN=LEN(C)+1) :: T
+;   10        CHARACTER*(N) :: W(N)
+;   11        T = C
+	MOVZWL	@AUTOLEN.C(AP),R0
+	MOVL	AUTOLEN.C(AP),R1
+	MOVZWL	AUTOLEN.T,R2
+	MOVC5	R0,@4(R1),#^A/ /,R2,@AUTOLEN.T+4
+;   12        S = T
+	MOVZWL	AUTOLEN.T,R0
+	MOVL	AUTOLEN.S(AP),R1
+	MOVC5	R0,@AUTOLEN.T+4,#^A/ /,AUTOLEN.$L1,@4(R1)
+;   13        W(1) = S
+	MOVL	AUTOLEN.S(AP),R0
+	MOVZWL	AUTOLEN.W,R1
+	MOVL	AUTOLEN.W+16,R2
+	MOVZWL	AUTOLEN.W,R3
+	MOVC5	AUTOLEN.$L1,@4(R0),#^A/ /,R1,(R2)[R3]
+;   14        PRINT *, LEN(S), LEN(T), LEN(W), T, W(1)
+	PUSHL	#-1
+	PUSHAB	AUTOLEN.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVL	AUTOLEN.$L1,AUTOLEN.$T1
+	PUSHAQ	AUTOLEN.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVZWL	AUTOLEN.T,AUTOLEN.$T2
+	PUSHAQ	AUTOLEN.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVZWL	AUTOLEN.W,AUTOLEN.$T3
+	PUSHAQ	AUTOLEN.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVW	AUTOLEN.T,AUTOLEN.$D4
+	MOVAB	@AUTOLEN.T+4,AUTOLEN.$D4+4
+	PUSHAQ	AUTOLEN.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVW	AUTOLEN.W,AUTOLEN.$D5
+	MOVL	AUTOLEN.W+16,R0
+	MOVZWL	AUTOLEN.W,R1
+	MOVAB	(R0)[R1],AUTOLEN.$D5+4
+	PUSHAQ	AUTOLEN.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   15        CALL SHOW(T, S)
+	CVTLW	AUTOLEN.$L1,AUTOLEN.$D5
+	MOVL	AUTOLEN.S(AP),R0
+	MOVAB	@4(R0),AUTOLEN.$D5+4
+	PUSHAQ	AUTOLEN.$D5
+	PUSHAQ	AUTOLEN.T
+	CALLS	#2,G^SHOW
+;   16        END
+	RET
+
+	.END

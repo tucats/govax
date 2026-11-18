@@ -204,7 +204,7 @@ func (a *analyzer) untyped() {
 // references it (ours, unconfirmed: the manual doesn't speak of it).
 func (a *analyzer) passedLengths() {
 	for _, s := range a.unit.Symbols {
-		if s.Type.Kind != Character || s.Type.Size != 0 || s.broken {
+		if !s.PassedLength() || s.broken {
 			continue
 		}
 

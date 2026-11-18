@@ -207,9 +207,9 @@ func (a *analyzer) checkProvisional(inner []*analyzer) {
 
 		// A bound's name the host never uses is the procedure's own variable,
 		// which a bound can't use.
-		for _, n := range ia.provisionalBounds {
-			if a.scope.byName[n.Name] == nil {
-				ia.report("BOUNDVAR", n.Pos, n.Name)
+		for _, b := range ia.provisionalBounds {
+			if a.scope.byName[b.n.Name] == nil {
+				ia.report("BOUNDVAR", b.n.Pos, b.n.Name, b.where)
 			}
 		}
 	}

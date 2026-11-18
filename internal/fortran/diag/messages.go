@@ -579,7 +579,7 @@ var messages = map[string]kind{
 	"DUPSTMTFUNC": {Error, "the statement function %s is already defined, at line %d"},
 
 	// BADBOUND is an array bound that isn't an arithmetic expression.
-	"BADBOUND": {Error, "an array's bound must be an INTEGER or REAL expression"},
+	"BADBOUND": {Error, "%s must be an INTEGER or REAL expression"},
 
 	// ADJNOTDUMMY is a bound that isn't constant on an array that isn't
 	// a dummy argument: only those can be adjustable.
@@ -592,12 +592,22 @@ var messages = map[string]kind{
 	// 90 standard's 5.1.2.4.1 and 5.2.4).
 	"AUTOATTR": {Error, "%s is an automatic array, whose bounds aren't constants, so it can't %s"},
 
+	// AUTOLENATTR is AUTOATTR for a subprogram's own CHARACTER name whose
+	// length isn't constant (CHARACTER(LEN=N) :: S; finding 7), which is an
+	// automatic object too.
+	"AUTOLENATTR": {Error, "%s is an automatic object, whose CHARACTER length isn't constant, so it can't %s"},
+
+	// LENNOTDUMMY is a CHARACTER length that isn't constant in a main program
+	// or a block data subprogram, which can have no automatic objects (the
+	// Fortran 90 standard's 5.1.1.5).
+	"LENNOTDUMMY": {Error, "the CHARACTER length of %s must be constant: only a subprogram's names can have a length that isn't"},
+
 	// BOUNDVAR is a name in an adjustable array's bound that isn't a
 	// dummy argument or in a common block.
-	"BOUNDVAR": {Error, "%s can't be used in an array's bounds: it isn't a dummy argument or in a common block"},
+	"BOUNDVAR": {Error, "%s can't be used in %s: it isn't a dummy argument or in a common block"},
 
 	// BOUNDREF is an array or a function in an array's bound.
-	"BOUNDREF": {Error, "%s can't be used in an array's bounds: arrays and functions aren't allowed there"},
+	"BOUNDREF": {Error, "%s can't be used in %s: arrays and functions aren't allowed there"},
 
 	// BOUNDTYPE is a type statement changing the type of a name already
 	// used in an array's bounds.

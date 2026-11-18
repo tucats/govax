@@ -92,6 +92,7 @@ PROGRAMS90 = {
     "allocs": ["allocs.f90"],
     "allocstat": ["allocstat.f90"],
     "autos": ["autos.f90"],
+    "autolen": ["autolen.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 
