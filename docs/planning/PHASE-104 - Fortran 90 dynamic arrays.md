@@ -2,7 +2,8 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and six questions for the author), was written 2026-11-18, for review.
+and six questions for the author), was accepted by the author 2026-11-18
+("The author's answers").
 Needs Phase 103 (done).
 
 ## Goal
@@ -447,7 +448,8 @@ The plan's order put NCA descriptors before anything that makes one; this order
 makes allocatable arrays first, the simplest descriptors to test end to end (no
 calls), then the frame's run-time storage everything after needs.
 
-1. **Survey** (this Part A), for review.
+1. **Survey** (this Part A) (done 2026-11-18; accepted by the author the
+   same day).
 2. **NCA descriptors and allocatable arrays:** `ir.ClassNCA`, elements through a
    descriptor (finding 2), deferred-shape declarations and ALLOCATABLE (finding
    3), `ftn_alloc.mar`'s FTN$ALLOCATE and FTN$DEALLOCATE, ALLOCATE, DEALLOCATE,
@@ -503,6 +505,27 @@ calls), then the frame's run-time storage everything after needs.
    ALLOCATE fail**; (b) don't clear (an unwound routine's next ALLOCATE of it is
    ALREADYALLOC, which is what the program's state says).
 
+## The author's answers (2026-11-18)
+
+The author read the survey and accepted every recommendation:
+
+1. Temporaries of run-time size are in the frame up to a fixed 64 KB, a
+   constant in the compiler, and on the heap past it; a qualifier can come
+   later if a program wants one (finding 6). This settles the plan's open
+   question 1.
+2. The transformational intrinsics and the copies for old dummies are written
+   in line by the scalarizer; `ftn_array.mar` isn't written (finding 13).
+3. An array-valued or run-time-length result is the caller's temporary when its
+   shape is known when compiling, else a heap block the callee allocates through
+   the caller's descriptor, freed by the caller at the statement's end
+   (finding 12).
+4. An assumed-shape array passed to an old dummy gets a run-time contiguity
+   test, and is copied only when it fails (finding 11).
+5. Under `/CHECK=BOUNDS`, an assumed-shape dummy's actual must be a class NCA or
+   A descriptor of its rank, else BADARRDESC (finding 9).
+6. Each non-SAVE allocatable local's POINTER is cleared at entry, so an unwind
+   leaks its block but never makes the next ALLOCATE fail (finding 5).
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -521,3 +544,5 @@ calls), then the frame's run-time storage everything after needs.
   question 2 is answered from the standard and the HP manual (no allocatable in
   COMMON or EQUIVALENCE). A revised subtask list (allocatable arrays first) and
   six questions for the author.
+- **2026-11-18, subtask 1 done:** The author accepted every recommendation
+  ("The author's answers"); subtask 2 is next.
