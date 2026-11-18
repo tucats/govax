@@ -206,6 +206,8 @@ func dims(list []Dim) string {
 		switch {
 		case d.Assumed:
 			upper = "*"
+		case d.AssumedShape:
+			upper = ""
 		case d.UpperExpr != nil:
 			upper = ast.DumpExpr(d.UpperExpr)
 		}

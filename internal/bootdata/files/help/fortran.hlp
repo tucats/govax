@@ -267,6 +267,20 @@
    The same rules hold (%FORT-E-AUTOLENATTR), and a main program's lengths
    must be constant (%FORT-E-LENNOTDUMMY).
 
+   A dummy array declared with a colon for each dimension takes its
+   shape from its actual argument, a whole array or a section with any
+   steps; its lower bounds are its own, 1 or as declared:
+
+     real :: a(:, :), b(0:)
+     call halve(x(1:9:2, :))
+
+   It goes by a class NCA descriptor, so a reference needs an explicit
+   interface (an internal procedure's, an interface block's;
+   %FORT-E-EXPLICITREQ otherwise), and the actual must be an array of its
+   rank (%FORT-E-ARGRANK).  An array expression as such an argument, and
+   an assumed-shape array passed to a dummy that isn't one, are not
+   there yet.
+
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may

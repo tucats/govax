@@ -973,11 +973,11 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 				continue
 			}
 
-			// A routine with an OPTIONAL dummy has to be referenced through an
-			// explicit interface (12.3.1.1); its own interface is explicit in a
-			// recursive routine's reference to itself.
-			if p := firstOptional(fu.params()); p != nil && fu.unit != u {
-				messages.Report("EXPLICITREQ", r.pos, r.sym.Name, p.Name, fu.pos.Line)
+			// A routine with an OPTIONAL or assumed-shape dummy has to be
+			// referenced through an explicit interface (12.3.1.1); its own
+			// interface is explicit in a recursive routine's reference to itself.
+			if p, kind := explicitDummy(fu.params()); p != nil && fu.unit != u {
+				messages.Report("EXPLICITREQ", r.pos, r.sym.Name, kind, p.Name, fu.pos.Line)
 
 				continue
 			}

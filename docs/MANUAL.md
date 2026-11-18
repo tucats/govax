@@ -8994,6 +8994,61 @@ assignment through a temporary, `MERGE`, a concatenation (each element's built i
 string, freed at once), and a CHARACTER function's value (called once, before the
 statement's loops). A function whose value has such a length is not there yet.
 
+**Assumed-shape dummy arguments** (the standard's 5.1.2.4.2 and 12.4.1.1). A dummy array
+declared with a colon for each dimension, `A(:, :)`, takes its shape from its actual
+argument: a whole array of any kind, or a section, with any steps, backward too. Its lower
+bounds are its own, 1 or as declared (`A(0:, :)`, a constant or a specification
+expression of the routine's dummies), never the actual's, and its upper bounds follow from
+the actual's extents. Changing an element changes the caller's:
+
+```fortran
+program scale
+  real :: x(3, 4)
+  integer :: i, j
+  do j = 1, 4
+    do i = 1, 3
+      x(i, j) = 10 * i + j
+    end do
+  end do
+  call halve(x(1:3:2, 4:1:-2))
+  print '(1x, 4f6.1)', (x(i, :), i = 1, 3)
+contains
+  subroutine halve(a)
+    real :: a(0:, :)
+    print '(1x, a, 4i3)', 'bounds:', lbound(a), ubound(a)
+    a = a / 2.0
+  end subroutine halve
+end program scale
+```
+
+prints
+
+```text
+bounds:  0  1  1  2
+  11.0   6.0  13.0   7.0
+  21.0  22.0  23.0  24.0
+  31.0  16.0  33.0  17.0
+```
+
+The actual argument goes by a class NCA descriptor (the OpenVMS Calling Standard's 5.7),
+whose strides in bytes say where each element is, so the caller must know the dummy is
+assumed-shape: a procedure with one can be referenced only through an explicit interface,
+its own as an internal procedure, an interface block's, or a recursive procedure's own
+(`EXPLICITREQ` for a procedure of the same file without one). The actual must be an array
+of the dummy's rank (`ARGRANK`; an element won't do), not an assumed-size array
+(`NOSHAPE`), and of the dummy's CHARACTER length where both are known (`ARGLENGTH`); a
+`CHARACTER(LEN=*)` one takes the actual's. A MACRO caller builds the descriptor itself:
+each entry point copies it, with the dummy's own bounds, into a descriptor of the
+routine's. Inside, an assumed-shape array is used as any other: by element, whole, by
+section, with SIZE, LBOUND, UBOUND, SHAPE, and the reductions, and passed on to another
+assumed-shape dummy whole or as a section; an output list takes it an element at a time.
+An OPTIONAL one may be left out, and an ENTRY may have one. Not there yet: an array
+expression or a section with a vector subscript as such an argument, which needs a
+temporary; an assumed-shape array passed to a dummy that isn't assumed-shape (an
+explicit-shape or assumed-size one, or a routine with no interface), which takes its
+elements one after another, and its use as a format, an internal file, or ENCODE's or
+DECODE's buffer; and `/DEBUG`'s view of one, which the debugger doesn't read yet.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
@@ -9004,10 +9059,11 @@ statement's loops). A function whose value has such a length is not there yet.
   --^
 ```
 
-That includes assumed-shape arrays (a dummy's `A(:)`), modules and USE (with MODULE
-PROCEDURE), derived types, and pointers, each to come in its turn.
-Of arrays as values, these are not there yet: a section or array expression as an argument
-to a program's own procedure; an array function's value of a shape not known when compiling
+That includes modules and USE (with MODULE PROCEDURE), derived types, and pointers, each
+to come in its turn. Of arrays as values, these are not there yet: a section or array
+expression as an argument to a program's own procedure, but a section to an assumed-shape
+dummy; an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
+gives no elements but govax still calls `BOUNDORDER`; an array function's value of a shape not known when compiling
 (RESHAPE of values that aren't constants, a `DIM=` that isn't constant on an array of rank 2
 or more); a CHARACTER constructor whose first value's length is known only when the program
 runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of

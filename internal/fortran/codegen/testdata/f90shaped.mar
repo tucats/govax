@@ -1,0 +1,516 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for SHAPED, a subroutine
+;   A     REAL (?:,:)        argument 1   @SHAPED.A(AP)
+;   N     INTEGER            argument 2   @SHAPED.N(AP)
+;   C     CHARACTER*(*) (:)  argument 3   @SHAPED.C(AP)
+;   O     REAL (:)           an argument  @SHAPED.$A4
+;
+SHAPED.A = 4				; A is argument 1
+SHAPED.N = 8				; N is argument 2
+SHAPED.C = 12				; C is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SHAPED.$A4:
+	.BLKL	1			; O's longword of the argument list, set at each entry point
+SHAPED.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+SHAPED.$B2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; C's bounds: set at each entry point
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+SHAPED.$B3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; O's bounds: set at each entry point
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+SHAPED.$T1:
+	.BLKL	1			; temporary
+SHAPED.$T2:
+	.BLKL	1			; temporary
+SHAPED.$I1:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$I2:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$T3:
+	.BLKL	1			; temporary
+SHAPED.$T4:
+	.BLKL	1			; temporary
+SHAPED.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHAPED.$T5:
+	.BLKL	1			; temporary
+SHAPED.$I3:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$I4:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$T6:
+	.BLKL	1			; temporary
+SHAPED.$T7:
+	.BLKL	1			; temporary
+SHAPED.$T8:
+	.BLKL	1			; temporary
+SHAPED.$T9:
+	.BLKL	1			; temporary
+SHAPED.$T10:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SHAPED.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+SHAPED.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SHAPED.$T2
+SHAPED.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SHAPED.$T9
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90/CHECK=BOUNDS
+;    2  C     Fortran 90's assumed-shape dummies (Phase 104, subtask 5a): the entry's
+;    3  C     copy of the caller's descriptor, with a dummy's own lower bounds, and an
+;    4  C     OPTIONAL one's passed over when it is left out; elements through the
+;    5  C     strides, checked against the copy's bounds; and a caller's descriptors of
+;    6  C     a whole array, sections (one of an adjustable array), a CHARACTER array,
+;    7  C     and an allocatable array's own, through an interface block.
+;    8        SUBROUTINE SHAPED(A, N, C, O)
+	.ENTRY	SHAPED,^M<R2,R3>
+	CLRL	SHAPED.$A4		; O is argument 4, if the caller passed it
+	CMPB	(AP),#4
+	BLSSU	SHAPED.$29
+	MOVL	16(AP),SHAPED.$A4
+SHAPED.$29:
+	MOVL	SHAPED.A(AP),R0
+	MOVL	4(R0),SHAPED.$B1+4
+	MOVL	SHAPED.A(AP),R0
+	MOVL	20(R0),SHAPED.$B1+20
+	MOVL	@SHAPED.N(AP),SHAPED.$B1+28
+	MOVL	SHAPED.A(AP),R0
+	MOVL	SHAPED.A(AP),R1
+	SUBL3	28(R1),32(R0),R0
+	ADDL3	R0,#1,SHAPED.$T1
+	BLSS	SHAPED.$2
+	BRW	SHAPED.$1
+SHAPED.$2:
+	CLRL	SHAPED.$T1
+SHAPED.$1:
+	ADDL3	SHAPED.$B1+28,SHAPED.$T1,R0
+	SUBL3	#1,R0,SHAPED.$B1+32
+	MOVL	SHAPED.A(AP),R0
+	MOVL	24(R0),SHAPED.$B1+24
+	MOVL	#1,SHAPED.$B1+36
+	MOVL	SHAPED.A(AP),R0
+	MOVL	SHAPED.A(AP),R1
+	SUBL3	36(R1),40(R0),R0
+	ADDL3	R0,#1,SHAPED.$T2
+	BLSS	SHAPED.$4
+	BRW	SHAPED.$3
+SHAPED.$4:
+	CLRL	SHAPED.$T2
+SHAPED.$3:
+	MOVL	SHAPED.$T2,SHAPED.$B1+40
+	MULL3	SHAPED.$B1+20,SHAPED.$B1+28,R0
+	SUBL3	R0,SHAPED.$B1+4,R0
+	SUBL3	SHAPED.$B1+24,R0,SHAPED.$B1+16
+	SUBL3	SHAPED.$B1+28,SHAPED.$B1+32,R0
+	INCL	R0
+	MULL2	#4,R0
+	MULL3	R0,SHAPED.$B1+40,SHAPED.$B1+12
+	MOVW	@SHAPED.C(AP),SHAPED.$B2
+	MOVL	SHAPED.C(AP),R0
+	MOVL	4(R0),SHAPED.$B2+4
+	MOVL	SHAPED.C(AP),R0
+	MOVL	20(R0),SHAPED.$B2+20
+	MOVL	#1,SHAPED.$B2+24
+	MOVL	SHAPED.C(AP),R0
+	MOVL	SHAPED.C(AP),R1
+	SUBL3	24(R1),28(R0),R0
+	ADDL3	R0,#1,SHAPED.$T2
+	BLSS	SHAPED.$6
+	BRW	SHAPED.$5
+SHAPED.$6:
+	CLRL	SHAPED.$T2
+SHAPED.$5:
+	MOVL	SHAPED.$T2,SHAPED.$B2+28
+	SUBL3	SHAPED.$B2+20,SHAPED.$B2+4,SHAPED.$B2+16
+	MOVZWL	@SHAPED.C(AP),R0
+	MULL3	R0,SHAPED.$B2+28,SHAPED.$B2+12
+	TSTL	SHAPED.$A4
+	BNEQ	SHAPED.$8
+	BRW	SHAPED.$7
+SHAPED.$8:
+	MOVL	SHAPED.$A4,R0
+	MOVL	4(R0),SHAPED.$B3+4
+	MOVL	SHAPED.$A4,R0
+	MOVL	20(R0),SHAPED.$B3+20
+	MOVL	#1,SHAPED.$B3+24
+	MOVL	SHAPED.$A4,R0
+	MOVL	SHAPED.$A4,R1
+	SUBL3	24(R1),28(R0),R0
+	ADDL3	R0,#1,SHAPED.$T2
+	BLSS	SHAPED.$10
+	BRW	SHAPED.$9
+SHAPED.$10:
+	CLRL	SHAPED.$T2
+SHAPED.$9:
+	MOVL	SHAPED.$T2,SHAPED.$B3+28
+	SUBL3	SHAPED.$B3+20,SHAPED.$B3+4,SHAPED.$B3+16
+	MULL3	#4,SHAPED.$B3+28,SHAPED.$B3+12
+SHAPED.$7:
+;    9        INTEGER N
+;   10        REAL A(N:, :)
+;   11        CHARACTER*(*) C(:)
+;   12        REAL, OPTIONAL :: O(:)
+;   13        A(N, 1) = A(N + 1, 2) + SIZE(A)
+	SUBL3	#1,SHAPED.$B1+28,SHAPED.$T2
+	SUBL3	SHAPED.$B1+28,SHAPED.$B1+32,R0
+	ADDL3	R0,#1,SHAPED.$T1
+	BLSS	SHAPED.$12
+	BRW	SHAPED.$11
+SHAPED.$12:
+	CLRL	SHAPED.$T1
+SHAPED.$11:
+	MOVL	SHAPED.$B1+40,SHAPED.$T3
+	BLSS	SHAPED.$14
+	BRW	SHAPED.$13
+SHAPED.$14:
+	CLRL	SHAPED.$T3
+SHAPED.$13:
+	MULL3	SHAPED.$T1,SHAPED.$T3,SHAPED.$T4
+	ADDL3	@SHAPED.N(AP),#1,R0
+	INDEX	R0,SHAPED.$B1+28,SHAPED.$B1+32,#1,#0,R0
+	MULL2	SHAPED.$B1+20,R0
+	ADDL2	SHAPED.$B1+16,R0
+	INDEX	#2,#1,SHAPED.$B1+40,#1,#0,R1
+	MULL2	SHAPED.$B1+24,R1
+	ADDL2	R1,R0
+	CVTLF	SHAPED.$T4,R1
+	INDEX	@SHAPED.N(AP),SHAPED.$B1+28,SHAPED.$B1+32,#1,#0,R2
+	MULL2	SHAPED.$B1+20,R2
+	ADDL2	SHAPED.$B1+16,R2
+	INDEX	#1,#1,SHAPED.$B1+40,#1,#0,R3
+	MULL2	SHAPED.$B1+24,R3
+	ADDL2	R3,R2
+	ADDF3	(R0),R1,(R2)
+;   14        PRINT *, C(2), LBOUND(A, 1), UBOUND(A, 2)
+	PUSHL	#-1
+	PUSHAB	SHAPED.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVW	@SHAPED.C(AP),SHAPED.$D1
+	INDEX	#2,#1,SHAPED.$B2+28,#1,#0,R0
+	MULL2	SHAPED.$B2+20,R0
+	ADDL2	SHAPED.$B2+16,R0
+	MOVAB	(R0),SHAPED.$D1+4
+	PUSHAQ	SHAPED.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,SHAPED.$B1+28,SHAPED.$T4
+	SUBL3	SHAPED.$B1+28,SHAPED.$B1+32,R0
+	ADDL3	R0,#1,SHAPED.$T3
+	BLSS	SHAPED.$16
+	BRW	SHAPED.$15
+SHAPED.$16:
+	CLRL	SHAPED.$T3
+SHAPED.$15:
+	MOVL	SHAPED.$B1+40,SHAPED.$T1
+	BLSS	SHAPED.$18
+	BRW	SHAPED.$17
+SHAPED.$18:
+	CLRL	SHAPED.$T1
+SHAPED.$17:
+	MOVL	SHAPED.$B1+28,SHAPED.$T5
+	TSTL	SHAPED.$T3
+	BLEQ	SHAPED.$20
+	BRW	SHAPED.$19
+SHAPED.$20:
+	MOVL	#1,SHAPED.$T5
+SHAPED.$19:
+	MOVL	SHAPED.$T5,SHAPED.$T2
+	PUSHAQ	SHAPED.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,SHAPED.$B1+28,SHAPED.$T6
+	SUBL3	SHAPED.$B1+28,SHAPED.$B1+32,R0
+	ADDL3	R0,#1,SHAPED.$T7
+	BLSS	SHAPED.$22
+	BRW	SHAPED.$21
+SHAPED.$22:
+	CLRL	SHAPED.$T7
+SHAPED.$21:
+	MOVL	SHAPED.$B1+40,SHAPED.$T8
+	BLSS	SHAPED.$24
+	BRW	SHAPED.$23
+SHAPED.$24:
+	CLRL	SHAPED.$T8
+SHAPED.$23:
+	MOVL	SHAPED.$B1+40,SHAPED.$T10
+	TSTL	SHAPED.$T8
+	BLEQ	SHAPED.$26
+	BRW	SHAPED.$25
+SHAPED.$26:
+	CLRL	SHAPED.$T10
+SHAPED.$25:
+	MOVL	SHAPED.$T10,SHAPED.$T9
+	PUSHAQ	SHAPED.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   15        IF (PRESENT(O)) O(1) = 0.0
+	TSTL	SHAPED.$A4
+	BNEQ	SHAPED.$28
+	BRW	SHAPED.$27
+SHAPED.$28:
+	INDEX	#1,#1,SHAPED.$B3+28,#1,#0,R0
+	MULL2	SHAPED.$B3+20,R0
+	ADDL2	SHAPED.$B3+16,R0
+	CLRF	(R0)
+SHAPED.$27:
+;   16        END
+	RET
+
+; Storage map for CALLER, a subroutine
+;   X     REAL (?,3)       argument 1  @CALLER.X(AP)
+;   M     INTEGER          argument 2  @CALLER.M(AP)
+;   Y     REAL (4,3)       $LOCAL+0    CALLER.Y
+;   H     REAL (:,:)       $LOCAL+48   CALLER.H
+;   S     CHARACTER*4 (6)  $LOCAL+92   CALLER.S
+;
+CALLER.X = 4				; X is argument 1
+CALLER.M = 8				; M is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CALLER.Y:
+	.BLKL	12			; Y, REAL (4,3)
+CALLER.H:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; H: not allocated
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+CALLER.S:
+	.BLKL	6			; S, CHARACTER*4 (6)
+CALLER.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; X's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,3			; multipliers
+	.LONG	1,0,1,3			; bounds
+CALLER.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+CALLER.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+CALLER.$I1:
+	.BLKL	1			; an array statement's loop index
+CALLER.$I2:
+	.BLKL	1			; an array statement's loop index
+CALLER.$I3:
+	.BLKL	1			; an array statement's loop index
+CALLER.$I4:
+	.BLKL	1			; an array statement's loop index
+CALLER.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+CALLER.$T1:
+	.BLKL	1			; temporary
+CALLER.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CALLER.$K1:
+	.LONG	0
+CALLER.$K2:
+	.LONG	1
+CALLER.$K3:
+	.LONG	2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   17        OPTIONS /F90/CHECK=BOUNDS
+;   18        SUBROUTINE CALLER(X, M)
+	.ENTRY	CALLER,^M<>
+	MOVAL	@CALLER.X(AP),CALLER.$B1+4
+	MOVL	@CALLER.M(AP),CALLER.$B1+32
+	MOVL	CALLER.$B1+32,CALLER.$B1+20
+	CMPL	CALLER.$B1+32,#1
+	BLSS	CALLER.$2
+	BRW	CALLER.$1
+CALLER.$2:
+	CALLS	#0,G^FTN$ADJARRDIM
+CALLER.$1:
+	MNEGL	CALLER.$B1+20,R0
+	DECL	R0
+	MOVAL	@CALLER.X(AP)[R0],CALLER.$B1+16
+	MULL3	#4,CALLER.$B1+20,R0
+	MULL3	R0,#3,CALLER.$B1+12
+	CLRL	CALLER.H+4
+;   19        INTEGER M
+;   20        REAL X(M, 3), Y(4, 3)
+;   21        REAL, ALLOCATABLE :: H(:, :)
+;   22        CHARACTER*4 S(6)
+;   23        INTERFACE
+;   24          SUBROUTINE SHAPED(A, N, C, O)
+;   25          INTEGER N
+;   26          REAL A(N:, :)
+;   27          CHARACTER*(*) C(:)
+;   28          REAL, OPTIONAL :: O(:)
+;   29          END SUBROUTINE
+;   30        END INTERFACE
+;   31        ALLOCATE (H(2, 2))
+	PUSHL	#2
+	PUSHL	#1
+	PUSHL	#2
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	CALLER.H
+	CALLS	#6,G^FTN$ALLOCATE
+;   32        CALL SHAPED(Y, 0, S)
+	MOVAL	CALLER.Y,CALLER.$D1+4
+	MOVL	#4,CALLER.$D1+20
+	MOVL	#1,CALLER.$D1+28
+	MOVL	#4,CALLER.$D1+32
+	MOVL	#16,CALLER.$D1+24
+	MOVL	#1,CALLER.$D1+36
+	MOVL	#3,CALLER.$D1+40
+	SUBL3	#20,CALLER.$D1+4,CALLER.$D1+16
+	MOVL	#48,CALLER.$D1+12
+	MOVAB	CALLER.S,CALLER.$D2+4
+	MOVL	#4,CALLER.$D2+20
+	MOVL	#1,CALLER.$D2+24
+	MOVL	#6,CALLER.$D2+28
+	SUBL3	#4,CALLER.$D2+4,CALLER.$D2+16
+	MOVL	#24,CALLER.$D2+12
+	PUSHL	#0
+	PUSHAQ	CALLER.$D2
+	PUSHAL	CALLER.$K1
+	PUSHAQ	CALLER.$D1
+	CALLS	#4,G^SHAPED
+;   33        CALL SHAPED(Y(1:4:2, 3:1:-1), 1, S(2:6:2), Y(2, :))
+	MOVAL	CALLER.Y+32,CALLER.$D1+4
+	MOVL	#8,CALLER.$D1+20
+	MOVL	#1,CALLER.$D1+28
+	MOVL	#2,CALLER.$D1+32
+	MOVL	#-16,CALLER.$D1+24
+	MOVL	#1,CALLER.$D1+36
+	MOVL	#3,CALLER.$D1+40
+	ADDL3	CALLER.$D1+4,#8,CALLER.$D1+16
+	MOVL	#24,CALLER.$D1+12
+	MOVAB	CALLER.S+4,CALLER.$D2+4
+	MOVL	#8,CALLER.$D2+20
+	MOVL	#1,CALLER.$D2+24
+	MOVL	#3,CALLER.$D2+28
+	SUBL3	#8,CALLER.$D2+4,CALLER.$D2+16
+	MOVL	#12,CALLER.$D2+12
+	MOVAL	CALLER.Y+4,CALLER.$D3+4
+	MOVL	#16,CALLER.$D3+20
+	MOVL	#1,CALLER.$D3+24
+	MOVL	#3,CALLER.$D3+28
+	SUBL3	#16,CALLER.$D3+4,CALLER.$D3+16
+	MOVL	#12,CALLER.$D3+12
+	PUSHAQ	CALLER.$D3
+	PUSHAQ	CALLER.$D2
+	PUSHAL	CALLER.$K2
+	PUSHAQ	CALLER.$D1
+	CALLS	#4,G^SHAPED
+;   34        CALL SHAPED(X, M, S, X(M, :))
+	MOVAL	@CALLER.X(AP),CALLER.$D1+4
+	MOVL	#4,CALLER.$D1+20
+	MOVL	#1,CALLER.$D1+28
+	MOVL	CALLER.$B1+32,CALLER.$D1+32
+	MULL3	#4,CALLER.$B1+20,CALLER.$D1+24
+	MOVL	#1,CALLER.$D1+36
+	MOVL	#3,CALLER.$D1+40
+	SUBL3	CALLER.$D1+24,CALLER.$D1+4,R0
+	SUBL3	#4,R0,CALLER.$D1+16
+	MULL3	#4,CALLER.$B1+20,R0
+	MULL3	R0,#3,CALLER.$D1+12
+	MOVAB	CALLER.S,CALLER.$D2+4
+	MOVL	#4,CALLER.$D2+20
+	MOVL	#1,CALLER.$D2+24
+	MOVL	#6,CALLER.$D2+28
+	SUBL3	#4,CALLER.$D2+4,CALLER.$D2+16
+	MOVL	#24,CALLER.$D2+12
+	MOVL	@CALLER.M(AP),CALLER.$T1
+	INDEX	CALLER.$T1,#1,CALLER.$B1+32,#1,#0,R0
+	MOVL	R0,CALLER.$T2
+	MOVL	CALLER.$B1+16,R0
+	ADDL3	CALLER.$B1+20,CALLER.$T1,R1
+	MOVAL	(R0)[R1],CALLER.$D3+4
+	MULL3	#4,CALLER.$B1+20,CALLER.$D3+20
+	MOVL	#1,CALLER.$D3+24
+	MOVL	#3,CALLER.$D3+28
+	SUBL3	CALLER.$D3+20,CALLER.$D3+4,CALLER.$D3+16
+	MOVL	#12,CALLER.$D3+12
+	PUSHAQ	CALLER.$D3
+	PUSHAQ	CALLER.$D2
+	PUSHAL	@CALLER.M(AP)
+	PUSHAQ	CALLER.$D1
+	CALLS	#4,G^SHAPED
+;   35        CALL SHAPED(H, 2, S(6:1:-1))
+	MOVAB	CALLER.S+20,CALLER.$D2+4
+	MOVL	#-4,CALLER.$D2+20
+	MOVL	#1,CALLER.$D2+24
+	MOVL	#6,CALLER.$D2+28
+	ADDL3	CALLER.$D2+4,#4,CALLER.$D2+16
+	MOVL	#24,CALLER.$D2+12
+	PUSHL	#0
+	PUSHAQ	CALLER.$D2
+	PUSHAL	CALLER.$K3
+	PUSHAQ	CALLER.H
+	CALLS	#4,G^SHAPED
+;   36        END
+	TSTL	CALLER.H+4
+	BNEQ	CALLER.$4
+	BRW	CALLER.$3
+CALLER.$4:
+	PUSHL	#0
+	PUSHAQ	CALLER.H
+	CALLS	#2,G^FTN$DEALLOCATE
+CALLER.$3:
+	RET
+
+	.END

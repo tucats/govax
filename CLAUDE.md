@@ -1114,7 +1114,16 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `endTemps` at the statement's end, `stmtCond` before a statement's branch;
   `ArrayOrder.CopyVectors` for `IV(IV)`; CHARACTER values of run-time length
   hoisted or built per element; `Constructor.LengthOf`;
-  `testdata/fortran90/rtemps.f90`); subtask 5 (assumed-shape dummies) is next.
+  `testdata/fortran90/rtemps.f90`); subtask 5a (2026-11-18) is assumed-shape
+  dummies (`Dim.AssumedShape`, `Symbol.AssumedShape`; `sema/shaped.go`: `argsTo`
+  and `shapedArg` mark an assumed-shape dummy's actual, a whole array or a section,
+  `Arg.Shaped`, through an explicit interface, EXPLICITREQ without one;
+  `ir/lowershaped.go`: each entry point copies the caller's class NCA descriptor into
+  the dummy's `$Bn` cell with its own lower bounds, `computeShaped`; an element is A0
+  plus every subscript times its stride; a caller builds a descriptor per call,
+  `buildNCA`, `sectionNCA`; `testdata/fortran90/shaped.f90`, `shapes.f90`); subtask 5b
+  (array expressions and vector sections as such actuals, OPTIONAL passed on,
+  generics, BADARRDESC) is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

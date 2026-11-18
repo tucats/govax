@@ -94,6 +94,8 @@ PROGRAMS90 = {
     "autos": ["autos.f90"],
     "autolen": ["autolen.f90"],
     "rtemps": ["rtemps.f90"],
+    "shaped": ["shaped.f90"],
+    "shapes": ["shapes.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

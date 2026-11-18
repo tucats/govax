@@ -692,6 +692,10 @@ func (a *analyzer) codeStatement(s *ast.CodeStmt, path []frame) Stmt {
 			ok = false
 		}
 
+		if a.noContiguous(b, what+"'s buffer") {
+			ok = false
+		}
+
 		io.Unit = b
 	default:
 		if b.Type().Kind == Invalid {
@@ -728,6 +732,10 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 		if r, ok := t.(*ArrayRef); ok && r.Sym.AssumedSize() {
 			a.report("NOSIZE", u.Pos, r.Sym.Name)
 
+			return false
+		}
+
+		if a.noContiguous(t, "an internal file") {
 			return false
 		}
 
@@ -862,6 +870,9 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 
 	switch t := e.Type(); {
 	case t.Kind == Invalid:
+		return false
+
+	case a.noContiguous(e, "a format"):
 		return false
 
 	case t.Kind == Character:

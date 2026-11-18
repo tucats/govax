@@ -18,7 +18,7 @@ import (
 // bounds and storage, which DEALLOCATE gives back; ALLOCATED(A) says which it is
 // now. Its declaration is a deferred shape, a colon for each dimension, which
 // only an allocatable array may have (a dummy's colons are an assumed shape,
-// Phase 104's subtask 5, and a pointer's are Phase 107's).
+// shaped.go, and a pointer's are Phase 107's).
 //
 // What it is in storage is its descriptor, class NCA (the OpenVMS Calling
 // Standard's 5.7), in the variable's own place: Symbol.Size is the descriptor's
@@ -61,19 +61,21 @@ type Allocated struct {
 
 // checkShapes settles each array with a deferred shape, once every declaration,
 // ALLOCATABLE's among them, is read: an allocatable array must have one, all
-// colons (ALLOCSHAPE, DEFERREDMIX), and nothing else may (DEFERREDNOTALLOC), but a
-// dummy's, whose colons are an assumed shape.
+// colons with no lower bounds (ALLOCSHAPE, DEFERREDMIX), and nothing else may
+// (DEFERREDNOTALLOC, SHAPENOTDUMMY), but a dummy's, whose colons are an assumed
+// shape.
 func (a *analyzer) checkShapes() {
 	for _, s := range a.unit.Symbols {
 		if s.broken {
 			continue
 		}
 
-		deferred := 0
+		deferred, lowered := 0, false
 
 		for _, d := range s.Dims {
 			if d.Deferred {
 				deferred++
+				lowered = lowered || d.lowerGiven
 			}
 		}
 
@@ -90,6 +92,11 @@ func (a *analyzer) checkShapes() {
 
 			s.broken = true
 
+		case s.Allocatable && lowered:
+			a.report("ALLOCSHAPE", s.DimPos, s.Name)
+
+			s.broken = true
+
 		case s.Allocatable && s.Struct != nil:
 			a.notImplForm(s.DimPos, "an allocatable array of records")
 
@@ -97,8 +104,19 @@ func (a *analyzer) checkShapes() {
 
 		case s.Allocatable:
 
+		case s.Dummy != 0 && s.Struct != nil:
+			a.notImplForm(s.DimPos, "an assumed-shape array of records")
+
+			s.broken = true
+
 		case s.Dummy != 0:
-			a.notImplForm(s.DimPos, "an assumed-shape array")
+			// An assumed shape (shaped.go).
+			for i := range s.Dims {
+				s.Dims[i].Deferred, s.Dims[i].AssumedShape = false, true
+			}
+
+		case lowered:
+			a.report("SHAPENOTDUMMY", s.DimPos, s.Name)
 
 			s.broken = true
 

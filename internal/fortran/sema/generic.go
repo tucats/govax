@@ -302,8 +302,18 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 
 			args := make([]Arg, len(slots))
 			for j, i := range slots {
-				if i >= 0 {
-					args[j] = analyzed[i]
+				if i < 0 {
+					continue
+				}
+
+				// A whole array to an assumed-shape dummy goes by descriptor
+				// (shaped.go); a section had its NOTIMPL from arg.
+				args[j] = analyzed[i]
+
+				if r, ok := args[j].Expr.(*ArrayRef); ok && target.Params[j].AssumedShape() && !r.Sym.AssumedSize() {
+					args[j].Shaped = true
+				} else {
+					args[j] = a.unshaped(args[j])
 				}
 			}
 

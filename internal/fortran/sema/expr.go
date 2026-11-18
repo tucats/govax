@@ -224,7 +224,7 @@ func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	args := a.args(list)
+	args := a.argsTo(s, list)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
 	return &FuncRef{exprBase{T: t, Pos: e.Pos}, s, args}
@@ -313,7 +313,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			return a.bad(e.Pos)
 		}
 
-		args := a.args(list)
+		args := a.argsTo(s, list)
 		a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
 		return &FuncRef{exprBase{T: s.Type, Pos: e.Pos}, s, args}

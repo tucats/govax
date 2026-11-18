@@ -228,6 +228,16 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 		return whole
 	}
 
+	// An assumed-shape dummy's element, through the descriptor its entry copied
+	// (ir/lowershaped.go): what its argument reaches, the caller's.
+	if c := shapedBase(m.Ptr); c != nil {
+		if p := s.paramNamed(c.Dummy); p != nil {
+			whole.Region, whole.Param = DummyRegion, p
+
+			return whole
+		}
+	}
+
 	switch ptr := m.Ptr.(type) {
 	case *ir.Addr:
 		// A field of a packed record, at an address computed on the spot.
@@ -317,6 +327,32 @@ func allocatedBase(e ir.Expr) *ir.Cell {
 		}
 
 		return allocatedBase(e.Y)
+	}
+
+	return nil
+}
+
+// shapedBase is the assumed-shape dummy's descriptor cell an element's address
+// starts from, A0 or POINTER plus strides times subscripts; nil if there is none.
+func shapedBase(e ir.Expr) *ir.Cell {
+	switch e := e.(type) {
+	case *ir.Load:
+		m := e.Mem
+		if c := m.Cell; c != nil && m.Index == nil && c.Kind == ir.DescriptorCell && c.Dummy != "" &&
+			c.Desc != nil && c.Desc.Class == ir.ClassNCA && (m.Offset == ir.A0Offset || m.Offset == ir.PointerOffset) {
+			return c
+		}
+
+	case *ir.Op:
+		if e.Op != ir.Add {
+			return nil
+		}
+
+		if c := shapedBase(e.X); c != nil {
+			return c
+		}
+
+		return shapedBase(e.Y)
 	}
 
 	return nil

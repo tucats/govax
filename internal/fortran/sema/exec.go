@@ -465,7 +465,7 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 		return nil
 	}
 
-	args := a.args(list)
+	args := a.argsTo(sym, list)
 	a.unit.calls = append(a.unit.calls, routineRef{sym, args, s.NamePos, places})
 
 	return a.callStmt(s, sym, args, targets)

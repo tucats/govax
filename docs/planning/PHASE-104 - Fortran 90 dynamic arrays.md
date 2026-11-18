@@ -472,7 +472,16 @@ calls), then the frame's run-time storage everything after needs.
      2026-11-18).
 5. **Assumed-shape dummies:** the entry copy, every kind of actual, EXPLICITREQ,
    rank and length checks, INTERFACEDIFF's new characteristics, OPTIONAL and ENTRY,
-   `/CHECK=BOUNDS`'s descriptor check (findings 9 and 10).
+   `/CHECK=BOUNDS`'s descriptor check (findings 9 and 10). In two parts
+   (2026-11-18):
+   - 5a. The declarations, the entry copy (OPTIONAL and ENTRY among them),
+     elements and every whole-array use in the routine, and as actuals whole
+     arrays of every kind and sections without vector subscripts; EXPLICITREQ,
+     ARGRANK, ARGLENGTH, INTERFACEDIFF (done 2026-11-18).
+   - 5b. Array expressions and vector-subscripted sections as actuals, through
+     temporaries; an absent OPTIONAL one passed on as absent; generic names
+     whose specifics have them; `/CHECK=BOUNDS`'s BADARRDESC, and a class A
+     descriptor accepted from a MACRO caller.
 6. **Sections and expressions to old dummies:** contiguity known, the run-time
    test, copy-in and copy-out, INTENT and vector subscripts, CHARACTER (finding 11).
 7. **Array-valued functions and run-time CHARACTER lengths** (finding 12),
@@ -799,3 +808,61 @@ The author read the survey and accepted every recommendation:
     prints the same 20 lines), with a temporary of 80,000 bytes and a statement
     through a temporary 6,001 times in one call. MANUAL.md's 14.13 and HELP
     FORTRAN describe temporaries of any size.
+- **2026-11-18, subtask 5 split** into 5a (the routine's side, whole arrays and
+  sections as actuals) and 5b (actuals through temporaries, OPTIONAL passed on,
+  generics, BADARRDESC), each a commit (A.4).
+- **2026-11-18, subtask 5a done:** Assumed-shape dummies.
+  - *Declarations.* A dummy's deferred shape is an assumed one: `checkShapes`
+    turns its colons into `Dim.AssumedShape` (`Symbol.AssumedShape`), whose lower
+    bound is 1 or a specification expression read by `dimensionBounds` as an
+    adjustable array's (`(lb:)`, `Dim.lowerGiven` until then). `(lb:)` on
+    anything else is SHAPENOTDUMMY, on an allocatable array ALLOCSHAPE.
+    `Adjustable` is false for an assumed-shape array; `UpperKnown`, `known`, and
+    `ElementNumber` know its upper bounds aren't. An assumed-shape array of
+    records is NOTIMPL (Phase 105).
+  - *Actual arguments* (`sema/shaped.go`). `argsTo` analyzes a reference's
+    arguments against its explicit interface (`interfaceOf`): an assumed-shape
+    dummy's by `shapedArg`, a whole array or a section, marked `Arg.Shaped`;
+    everything else as before, through `unshaped`, which refuses a whole
+    assumed-shape array to any other dummy (NOTIMPL, subtask 6). A generic's
+    chosen specific marks its whole arrays the same way (`resolveGeneric`).
+    `argumentMismatch` makes the ranks equal for an assumed-shape dummy (an
+    element is ARGRANK), `checkInterface` its CHARACTER length (ARGLENGTH, both
+    known), and no longer judges an argument that already failed (it drew
+    NOTDEFINABLE after a NOTIMPL). EXPLICITREQ names an assumed-shape dummy as
+    it did an OPTIONAL one (`explicitDummy`; the message takes the kind),
+    INTERFACEDIFF an array's kind (`shapeText`). `definable` takes a section
+    without a vector subscript. A run-time format, an internal file, and
+    ENCODE's or DECODE's buffer that is an assumed-shape array are NOTIMPL
+    (`noContiguous`, subtask 6).
+  - *The routine* (`ir/lowershaped.go`). Each assumed-shape dummy has a class
+    NCA cell (`shapedCell`, `$Bn`, first among the adjustable arrays' so that
+    others' bounds may ask about it), filled by each entry point whose list has
+    the dummy (`computeShaped`): POINTER and the strides copied, the lower
+    bounds the dummy's own, each upper bound the lower plus the actual's extent
+    (never below 0) less 1, A0 and ARSIZE from those; an OPTIONAL one's copy is
+    passed over when its argument is 0, and a passed length is the actual's.
+    An element is A0 plus every subscript times its stride (`stridedElement`,
+    the first subscript too); the whole array's base is POINTER (`symbolMem`);
+    an output list takes it an element at a time (`ioItem`, through a shaped
+    `NewArrayRef`); SIZEOF reads ARSIZE.
+  - *The caller* (`shapedArg`, `sectionNCA`, `buildNCA`). An allocatable array's
+    descriptor and an assumed-shape dummy's cell are passed as they are; any
+    other whole array gets a descriptor cell of the call's with its own bounds
+    and the strides its extents give (`baseStride`); a section one with bounds 1
+    to each triplet's extent and the stride of the triplet's step, POINTER its
+    first element, the subscripts computed once by the scalarizer's nest (and
+    under `/CHECK=BOUNDS` each triplet's first and last checked, as an array
+    assignment's are).
+  - *The optimizer.* An element reached from an assumed-shape dummy's cell is
+    the dummy's region (`opt/places.go`'s `shapedBase`): the caller's storage,
+    which any call may change, as a dummy's.
+  - *Left for later:* the `/DEBUG` table leaves assumed-shape dummies out
+    (subtask 9). Found on the way, not this subtask's: an explicit-shape array
+    of no elements (`Z(0)`, which Fortran 90 allows) is still BOUNDORDER, as in
+    FORTRAN-77; MANUAL.md's "Not there yet" says so.
+  - *Tests:* `sema`'s `TestAssumedShape` (every message and NOTIMPL); the
+    `f90shaped` goldens in `sema`, `ir`, and `codegen`;
+    `testdata/fortran90/shaped.f90` and `shapes.f90` (every mode, paging both
+    ways; gfortran prints the same 18 and 16 lines). MANUAL.md's 14.13 has
+    "Assumed-shape dummy arguments", and HELP FORTRAN a paragraph.

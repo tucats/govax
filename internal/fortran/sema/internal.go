@@ -287,7 +287,9 @@ func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 			continue
 		}
 
-		if arg.Expr == nil || p.broken || arg.Mode != ByDefault || arg.Hollerith || arg.Typeless || p.DummyProcedure() {
+		// An argument with an error has had its message.
+		if arg.Expr == nil || arg.Expr.Type().Kind == Invalid || p.broken || arg.Mode != ByDefault || arg.Hollerith ||
+			arg.Typeless || p.DummyProcedure() {
 			continue
 		}
 
@@ -295,6 +297,14 @@ func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 		rank := argumentRank(arg.Expr)
 
 		if given.Kind == Character && wanted.Kind == Character && rank == 0 && len(p.Dims) == 0 && given.Size > 0 && wanted.Size > given.Size {
+			messages.Report("ARGLENGTH", arg.Expr.Position(), i+1, r.sym.Name, given.Size, p.Name, wanted.Size, line)
+
+			continue
+		}
+
+		// An assumed-shape dummy's elements are its actual's: the lengths must
+		// be the same (12.4.1.1), where both are known.
+		if given.Kind == Character && p.AssumedShape() && given.Size > 0 && wanted.Size > 0 && wanted.Size != given.Size {
 			messages.Report("ARGLENGTH", arg.Expr.Position(), i+1, r.sym.Name, given.Size, p.Name, wanted.Size, line)
 
 			continue
@@ -359,6 +369,15 @@ func definable(e Expr) bool {
 	case *Var:
 		return e.Sym.Class != Constant
 	case *Elem, *ArrayRef, *FieldRef:
+		return true
+	case *Section:
+		// One with a vector subscript isn't (12.4.1.1).
+		for _, sub := range e.Subs {
+			if sub.Vector != nil {
+				return false
+			}
+		}
+
 		return true
 	case *Substring:
 		return definable(e.X)

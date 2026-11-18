@@ -200,7 +200,8 @@ func interfaceDifferences(prog *Program, units map[string]*fileUnit, messages *d
 // definition fu, as INTERFACEDIFF says it, or "" if they agree: their kinds,
 // their dummy arguments' number and alternate returns, a function's type, and
 // each dummy's type, rank and constant extents, INTENT, OPTIONAL, and whether
-// it is a procedure. The dummies' names may differ (12.3.2.1).
+// it is a procedure, and an array's kind (assumed-shape, assumed-size, or
+// explicit-shape). The dummies' names may differ (12.3.2.1).
 func interfaceDifference(body *Unit, fu *fileUnit) string {
 	if fu.kind != body.Kind {
 		return "it is " + article(body.Kind.String()) + " here, " + article(fu.kind.String()) + " there"
@@ -249,6 +250,9 @@ func dummyDifference(p, q *Symbol) string {
 
 	case len(p.Dims) != len(q.Dims):
 		return "is " + rankText(len(p.Dims)) + " here, " + rankText(len(q.Dims)) + " there"
+
+	case len(p.Dims) > 0 && shapeText(p) != shapeText(q):
+		return "is " + shapeText(p) + " here, " + shapeText(q) + " there"
 
 	case p.Intent != q.Intent:
 		return "is " + intentText(p.Intent) + " here, " + intentText(q.Intent) + " there"
@@ -331,6 +335,12 @@ func argumentMismatch(arg Arg, p *Symbol) (string, []any) {
 
 	rank, element := argumentRank(arg.Expr), isElement(arg.Expr)
 	if dims := len(p.Dims); (dims == 0 && rank > 0) || (dims > 0 && rank == 0 && !element) {
+		return "ARGRANK", []any{rankText(rank), p.Name, rankText(dims)}
+	}
+
+	// An assumed-shape dummy takes its actual's shape, so the ranks must be
+	// the same, and an element won't do (12.4.1.1).
+	if dims := len(p.Dims); p.AssumedShape() && rank != dims {
 		return "ARGRANK", []any{rankText(rank), p.Name, rankText(dims)}
 	}
 

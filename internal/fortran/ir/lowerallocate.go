@@ -229,7 +229,8 @@ func (l *lowerer) allocatableBase(s *sema.Symbol) *Mem {
 // stridedElement is where the element e of the array whose class NCA
 // descriptor is c is: A0 plus each subscript after the first times its
 // dimension's stride, indexed by the first, the element's size being the
-// first's stride (finding 2).
+// first's stride (finding 2). An assumed-shape array's first stride may be any
+// (lowershaped.go), so its first subscript is multiplied by it too.
 func (l *lowerer) stridedElement(e *sema.Elem, c *Cell) *Mem {
 	s := e.Sym
 	subs := make([]Expr, len(e.Subs))
@@ -244,12 +245,21 @@ func (l *lowerer) stridedElement(e *sema.Elem, c *Cell) *Mem {
 
 	var ptr Expr = &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}
 
-	for i := 1; i < len(subs); i++ {
+	first := 1
+	if s.AssumedShape() {
+		first = 0
+	}
+
+	for i := first; i < len(subs); i++ {
 		stride := &Load{&Mem{Cell: c, Offset: c.Desc.StrideOffset(i), T: Long}}
 		ptr = arith(Add, Long, ptr, arith(Mul, Long, subs[i], stride))
 	}
 
 	base := &Mem{Ptr: ptr, T: l.typeOf(s.Type), Volatile: s.Volatile}
+
+	if first == 0 {
+		return base
+	}
 
 	return l.elementAt(base, s, subs[0])
 }

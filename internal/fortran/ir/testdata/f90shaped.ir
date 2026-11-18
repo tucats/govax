@@ -1,0 +1,267 @@
+routine SHAPED subroutine
+  param A       F  argument 1
+  param N       L  argument 2
+  param C       B  argument 3
+  param O       F  through $A4
+  entry 1 SHAPED O=4
+  cell  $A4     L  $LOCAL+0    address of O
+  cell  $B1     L  $LOCAL+4    descriptor F NCA 4 (?,?)
+  cell  $B2     L  $LOCAL+48   descriptor T NCA 0 (?)
+  cell  $B3     L  $LOCAL+80   descriptor F NCA 4 (?)
+  cell  $T1     L  $LOCAL+112  temporary
+  cell  $T2     L  $LOCAL+116  temporary
+  cell  $I1     L  $LOCAL+120  an array statement's index
+  cell  $I2     L  $LOCAL+124  an array statement's index
+  cell  $T3     L  $LOCAL+128  temporary
+  cell  $T4     L  $LOCAL+132  temporary
+  cell  $D1     L  $LOCAL+136  descriptor T S 0
+  cell  $T5     L  $LOCAL+144  temporary
+  cell  $I3     L  $LOCAL+148  an array statement's index
+  cell  $I4     L  $LOCAL+152  an array statement's index
+  cell  $T6     L  $LOCAL+156  temporary
+  cell  $T7     L  $LOCAL+160  temporary
+  cell  $T8     L  $LOCAL+164  temporary
+  cell  $T9     L  $LOCAL+168  temporary
+  cell  $T10    L  $LOCAL+172  temporary
+  $LOCAL is 176 bytes
+  datum $IO1    control
+  datum $D2     descriptor L S 4 $T2
+  datum $D3     descriptor L S 4 $T9
+B1:
+  ; line 8
+  assign $B1+4 = @(arg A)+4
+  assign $B1+20 = @(arg A)+20
+  assign $B1+28 = @N
+  assign $T1 = add.L(sub.L(@(arg A)+32, @(arg A)+28), 1)
+  branch lt.L($T1, 0) B2 B3
+B2:
+  assign $T1 = 0
+  jump B3
+B3:
+  assign $B1+32 = sub.L(add.L($B1+28, $T1), 1)
+  assign $B1+24 = @(arg A)+24
+  assign $B1+36 = 1
+  assign $T2 = add.L(sub.L(@(arg A)+40, @(arg A)+36), 1)
+  branch lt.L($T2, 0) B4 B5
+B4:
+  assign $T2 = 0
+  jump B5
+B5:
+  assign $B1+40 = $T2
+  assign $B1+16 = sub.L(sub.L($B1+4, mul.L($B1+20, $B1+28)), $B1+24)
+  assign $B1+12 = mul.L(mul.L(4, add.L(sub.L($B1+32, $B1+28), 1)), $B1+40)
+  assign $B2 = @(arg C)
+  assign $B2+4 = @(arg C)+4
+  assign $B2+20 = @(arg C)+20
+  assign $B2+24 = 1
+  assign $T2 = add.L(sub.L(@(arg C)+28, @(arg C)+24), 1)
+  branch lt.L($T2, 0) B6 B7
+B6:
+  assign $T2 = 0
+  jump B7
+B7:
+  assign $B2+28 = $T2
+  assign $B2+16 = sub.L($B2+4, $B2+20)
+  assign $B2+12 = mul.L(zext.WL(@(arg C)), $B2+28)
+  branch ne.L(arg O, 0) B8 B11
+B8:
+  assign $B3+4 = @(arg O)+4
+  assign $B3+20 = @(arg O)+20
+  assign $B3+24 = 1
+  assign $T2 = add.L(sub.L(@(arg O)+28, @(arg O)+24), 1)
+  branch lt.L($T2, 0) B9 B10
+B9:
+  assign $T2 = 0
+  jump B10
+B10:
+  assign $B3+28 = $T2
+  assign $B3+16 = sub.L($B3+4, $B3+20)
+  assign $B3+12 = mul.L(4, $B3+28)
+  jump B11
+B11:
+  ; line 13
+  assign $T2 = sub.L($B1+28, 1)
+  assign $T1 = add.L(sub.L($B1+32, $B1+28), 1)
+  branch lt.L($T1, 0) B12 B13
+B12:
+  assign $T1 = 0
+  jump B13
+B13:
+  assign $T3 = $B1+40
+  branch lt.L($T3, 0) B14 B15
+B14:
+  assign $T3 = 0
+  jump B15
+B15:
+  assign $T4 = mul.L($T1, $T3)
+  assign @(add.L(add.L($B1+16, mul.L(inrange(@N, $B1+28, $B1+32), $B1+20)), mul.L(inrange(1, 1, $B1+40), $B1+24))) = add.F(@(add.L(add.L($B1+16, mul.L(inrange(add.L(@N, 1), $B1+28, $B1+32), $B1+20)), mul.L(inrange(2, 1, $B1+40), $B1+24))), cvt.LF($T4))
+  ; line 14
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $D1 = @(arg C)
+  assign $D1+4 = addr(@(add.L($B2+16, mul.L(inrange(2, 1, $B2+28), $B2+20))))
+  call FTN$IO_ITEM(ref $D1)
+  assign $T4 = sub.L($B1+28, 1)
+  assign $T3 = add.L(sub.L($B1+32, $B1+28), 1)
+  branch lt.L($T3, 0) B16 B17
+B16:
+  assign $T3 = 0
+  jump B17
+B17:
+  assign $T1 = $B1+40
+  branch lt.L($T1, 0) B18 B19
+B18:
+  assign $T1 = 0
+  jump B19
+B19:
+  assign $T5 = $B1+28
+  branch le.L($T3, 0) B20 B21
+B20:
+  assign $T5 = 1
+  jump B21
+B21:
+  assign $T2 = $T5
+  call FTN$IO_ITEM(ref $D2)
+  assign $T6 = sub.L($B1+28, 1)
+  assign $T7 = add.L(sub.L($B1+32, $B1+28), 1)
+  branch lt.L($T7, 0) B22 B23
+B22:
+  assign $T7 = 0
+  jump B23
+B23:
+  assign $T8 = $B1+40
+  branch lt.L($T8, 0) B24 B25
+B24:
+  assign $T8 = 0
+  jump B25
+B25:
+  assign $T10 = $B1+40
+  branch le.L($T8, 0) B26 B27
+B26:
+  assign $T10 = 0
+  jump B27
+B27:
+  assign $T9 = $T10
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 15
+  branch ne.L(arg O, 0) B28 B29
+B28:
+  assign @(add.L($B3+16, mul.L(inrange(1, 1, $B3+28), $B3+20))) = 0.0
+  jump B29
+B29:
+  ; line 16
+  return
+routine CALLER subroutine
+  param X       F  argument 1
+  param M       L  argument 2
+  cell  Y       F  $LOCAL+0    array Y, 48 bytes
+  cell  H       L  $LOCAL+48   descriptor F NCA 4 (?,?)
+  cell  S       B  $LOCAL+92   array S, 24 bytes
+  cell  $B1     L  $LOCAL+116  descriptor F A 4 (?,1:3)
+  cell  $D1     L  $LOCAL+160  descriptor F NCA 4 (?,?)
+  cell  $D2     L  $LOCAL+204  descriptor T NCA 4 (?)
+  cell  $I1     L  $LOCAL+236  an array statement's index
+  cell  $I2     L  $LOCAL+240  an array statement's index
+  cell  $I3     L  $LOCAL+244  an array statement's index
+  cell  $I4     L  $LOCAL+248  an array statement's index
+  cell  $D3     L  $LOCAL+252  descriptor F NCA 4 (?)
+  cell  $T1     L  $LOCAL+284  temporary
+  cell  $T2     L  $LOCAL+288  temporary
+  $LOCAL is 292 bytes
+  datum $K1     L 0
+  datum $K2     L 1
+  datum $K3     L 2
+B1:
+  assign $B1+4 = addr(@X)
+  assign $B1+32 = @M
+  assign $B1+20 = $B1+32
+  branch lt.L($B1+32, 1) B2 B3
+B2:
+  call FTN$ADJARRDIM()
+  noreturn
+B3:
+  assign $B1+16 = addr(@X-4[neg.L($B1+20)])
+  assign $B1+12 = mul.L(mul.L(4, $B1+20), 3)
+  assign H+4 = 0
+  ; line 31
+  call FTN$ALLOCATE(ref H, val 0, val 1, val 2, val 1, val 2)
+  ; line 32
+  assign $D1+4 = addr(Y)
+  assign $D1+20 = 4
+  assign $D1+28 = 1
+  assign $D1+32 = 4
+  assign $D1+24 = 16
+  assign $D1+36 = 1
+  assign $D1+40 = 3
+  assign $D1+16 = sub.L($D1+4, 20)
+  assign $D1+12 = 48
+  assign $D2+4 = addr(S)
+  assign $D2+20 = 4
+  assign $D2+24 = 1
+  assign $D2+28 = 6
+  assign $D2+16 = sub.L($D2+4, 4)
+  assign $D2+12 = 24
+  call SHAPED(ref $D1, ref $K1, ref $D2, val 0)
+  ; line 33
+  assign $D1+4 = addr(Y+32)
+  assign $D1+20 = 8
+  assign $D1+28 = 1
+  assign $D1+32 = 2
+  assign $D1+24 = -16
+  assign $D1+36 = 1
+  assign $D1+40 = 3
+  assign $D1+16 = add.L($D1+4, 8)
+  assign $D1+12 = 24
+  assign $D2+4 = addr(S+4)
+  assign $D2+20 = 8
+  assign $D2+24 = 1
+  assign $D2+28 = 3
+  assign $D2+16 = sub.L($D2+4, 8)
+  assign $D2+12 = 12
+  assign $D3+4 = addr(Y+4)
+  assign $D3+20 = 16
+  assign $D3+24 = 1
+  assign $D3+28 = 3
+  assign $D3+16 = sub.L($D3+4, 16)
+  assign $D3+12 = 12
+  call SHAPED(ref $D1, ref $K2, ref $D2, ref $D3)
+  ; line 34
+  assign $D1+4 = addr(@X)
+  assign $D1+20 = 4
+  assign $D1+28 = 1
+  assign $D1+32 = $B1+32
+  assign $D1+24 = mul.L(4, $B1+20)
+  assign $D1+36 = 1
+  assign $D1+40 = 3
+  assign $D1+16 = sub.L(sub.L($D1+4, $D1+24), 4)
+  assign $D1+12 = mul.L(mul.L(4, $B1+20), 3)
+  assign $D2+4 = addr(S)
+  assign $D2+20 = 4
+  assign $D2+24 = 1
+  assign $D2+28 = 6
+  assign $D2+16 = sub.L($D2+4, 4)
+  assign $D2+12 = 24
+  assign $T1 = @M
+  assign $T2 = inrange($T1, 1, $B1+32)
+  assign $D3+4 = addr(@($B1+16)[add.L($B1+20, $T1)])
+  assign $D3+20 = mul.L(4, $B1+20)
+  assign $D3+24 = 1
+  assign $D3+28 = 3
+  assign $D3+16 = sub.L($D3+4, $D3+20)
+  assign $D3+12 = 12
+  call SHAPED(ref $D1, ref @M, ref $D2, ref $D3)
+  ; line 35
+  assign $D2+4 = addr(S+20)
+  assign $D2+20 = -4
+  assign $D2+24 = 1
+  assign $D2+28 = 6
+  assign $D2+16 = add.L($D2+4, 4)
+  assign $D2+12 = 24
+  call SHAPED(ref H, ref $K3, ref $D2, val 0)
+  ; line 36
+  branch ne.L(H+4, 0) B4 B5
+B4:  ; deallocates H at the return
+  call FTN$DEALLOCATE(ref H, val 0)
+  jump B5
+B5:
+  return

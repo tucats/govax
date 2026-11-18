@@ -31,6 +31,13 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 	// in a routine with ENTRY statements through the cell its entry points
 	// copy the address to (Through).
 	for _, p := range g.r.Params {
+		// An assumed-shape dummy's argument is a class NCA descriptor, which
+		// the debugger doesn't read yet (docs/planning/PHASE-104 - Fortran 90
+		// dynamic arrays.md, subtask 9), as an allocatable array's isn't.
+		if p.Sym != nil && p.Sym.AssumedShape() {
+			continue
+		}
+
 		place := dbgtable.Place{Kind: dbgtable.Argument, N: p.Index}
 		switch {
 		case p.Through != nil && p.Through.Frame:

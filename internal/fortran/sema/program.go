@@ -447,6 +447,18 @@ type Dim struct {
 	// bound is known, and Lower and Upper mean nothing.
 	Deferred bool
 
+	// AssumedShape is a dimension of a dummy argument's assumed shape (the
+	// Fortran 90 standard's 5.1.2.4.2), written (:) or (lb:): its extent is the
+	// actual argument's, and its lower bound Lower (or LowerExpr), 1 when it is
+	// left out, never the actual's. Its upper bound is known only when the
+	// routine is entered (docs/planning/PHASE-104 - Fortran 90 dynamic
+	// arrays.md, finding 9).
+	AssumedShape bool
+
+	// lowerGiven says a deferred shape's colon had a lower bound before it,
+	// (lb:), which only an assumed shape may have (checkShapes).
+	lowerGiven bool
+
 	// LowerValue and UpperValue are those bounds analyzed and converted to
 	// INTEGER, which lowering computes when the subprogram is entered.
 	LowerValue, UpperValue Expr
@@ -459,7 +471,7 @@ type Dim struct {
 
 // known reports whether the dimension's bounds are both known now.
 func (d Dim) known() bool {
-	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil && !d.Deferred && !d.Runtime
+	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil && !d.Deferred && !d.Runtime && !d.AssumedShape
 }
 
 // LowerKnown reports whether the dimension's lower bound is a constant, Lower.
@@ -470,7 +482,7 @@ func (d Dim) LowerKnown() bool {
 // UpperKnown reports whether the dimension's upper bound is a constant, Upper:
 // not adjustable, not deferred, nor an assumed-size array's *.
 func (d Dim) UpperKnown() bool {
-	return d.UpperExpr == nil && !d.Deferred && !d.Assumed && !d.Runtime
+	return d.UpperExpr == nil && !d.Deferred && !d.Assumed && !d.Runtime && !d.AssumedShape
 }
 
 // Extent is how many elements the dimension has, du - dl + 1 (section
@@ -480,8 +492,13 @@ func (d Dim) Extent() int {
 }
 
 // Adjustable reports whether s is an adjustable array: a dummy array with a
-// bound that isn't constant (section 6.1.1.1).
+// bound that isn't constant (section 6.1.1.1). An assumed-shape array isn't
+// one, whatever its lower bounds.
 func (s *Symbol) Adjustable() bool {
+	if s.AssumedShape() {
+		return false
+	}
+
 	for _, d := range s.Dims {
 		if d.LowerExpr != nil || d.UpperExpr != nil {
 			return true
@@ -489,6 +506,13 @@ func (s *Symbol) Adjustable() bool {
 	}
 
 	return false
+}
+
+// AssumedShape reports whether s is an assumed-shape dummy array (the Fortran
+// 90 standard's 5.1.2.4.2), A(:, 0:): every dimension's extent is its actual
+// argument's.
+func (s *Symbol) AssumedShape() bool {
+	return len(s.Dims) > 0 && s.Dims[0].AssumedShape
 }
 
 // AssumedSize reports whether s is an assumed-size array, whose last
@@ -1125,6 +1149,10 @@ type Arg struct {
 	// Typeless is set for an octal or hexadecimal constant: it has no type, so
 	// its Expr's INTEGER*4 is only its four bytes (section 2.2.1.4).
 	Typeless bool
+
+	// Shaped is set for the actual argument of an assumed-shape dummy, a whole
+	// array or a section, which goes by a class NCA descriptor (shaped.go).
+	Shaped bool
 }
 
 // ArgMode is how an actual argument is passed.

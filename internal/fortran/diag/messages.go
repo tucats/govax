@@ -1185,8 +1185,8 @@ var messages = map[string]kind{
 	"INTERFACEDIFF": {Error, "this interface body for %s doesn't agree with its definition (line %d): %s"},
 
 	// EXPLICITREQ is a reference through an implicit interface to a routine of
-	// the file with an OPTIONAL dummy argument (12.3.1.1).
-	"EXPLICITREQ": {Error, "%s has the OPTIONAL dummy argument %s (line %d), so a reference to it needs an explicit interface"},
+	// the file with an OPTIONAL or assumed-shape dummy argument (12.3.1.1).
+	"EXPLICITREQ": {Error, "%s has the %s dummy argument %s (line %d), so a reference to it needs an explicit interface"},
 
 	// Keyword arguments, OPTIONAL, PRESENT, and INTENT (sema/optional.go and
 	// intent.go; PHASE-103's findings 8 to 10).
@@ -1475,6 +1475,12 @@ var messages = map[string]kind{
 	"ALLOCOBJECT":      {Error, "%s is named twice in one %s statement"},
 	"BADSTAT":          {Error, "a STAT= specifier must name an INTEGER variable or array element"},
 	"STATSELF":         {Error, "the STAT= specifier can't use %s, which the same statement allocates or deallocates"},
+
+	// Assumed-shape dummies (docs/planning/PHASE-104 - Fortran 90 dynamic
+	// arrays.md, findings 9 and 10). SHAPENOTDUMMY is a shape (lb:) on an array
+	// that isn't a dummy argument (5.1.2.4.2), nor ALLOCATABLE's (:), which
+	// ALLOCSHAPE reports.
+	"SHAPENOTDUMMY": {Error, "%s has an assumed shape, (lb:), so it must be a dummy argument"},
 
 	// NMLDUMMY is a dummy argument in a NAMELIST group (section 4.10).
 	"NMLDUMMY": {Error, "the dummy argument %s can't be in a NAMELIST group"},

@@ -313,6 +313,15 @@ func (l *lowerer) ioItem(v sema.Expr) {
 		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: l.item(e)}}})
 	}
 
+	// An assumed-shape array's elements may not be one after another, which a
+	// class A descriptor says they are: an element at a time, as a section's
+	// (the list's whole array may have no shape of its own, sema's name).
+	if r, ok := v.(*sema.ArrayRef); ok && r.Sym.AssumedShape() {
+		l.eachElement(sema.NewArrayRef(r.Sym, r.Pos), call)
+
+		return
+	}
+
 	if len(v.Shape()) == 0 {
 		call(v)
 

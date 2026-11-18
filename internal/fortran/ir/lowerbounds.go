@@ -60,8 +60,17 @@ import (
 func (l *lowerer) prepareBounds() {
 	n := 0
 
+	// The assumed-shape dummies first, whose bounds the others' may ask about
+	// (lowershaped.go).
 	for _, s := range l.unit.Symbols {
-		if l.prepareLength(s) && !s.Adjustable() {
+		if s.Class == sema.Array && s.AssumedShape() && l.params[s] != nil {
+			n++
+			l.shapedCell(s, n)
+		}
+	}
+
+	for _, s := range l.unit.Symbols {
+		if l.prepareLength(s) && !s.Adjustable() && !s.AssumedShape() {
 			l.adjustableOrder = append(l.adjustableOrder, s)
 		}
 
@@ -141,8 +150,14 @@ func (l *lowerer) computeBounds(params []*sema.Symbol) {
 
 // computeArrayBounds fills in the descriptor c of the adjustable array s.
 func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
-	if s.AutomaticObject {
+	switch {
+	case s.AutomaticObject:
 		l.computeAutomatic(s, c)
+
+		return
+
+	case s.AssumedShape():
+		l.computeShaped(s, c)
 
 		return
 	}
@@ -262,7 +277,7 @@ func (l *lowerer) upperBound(s *sema.Symbol, c *Cell, i int) Expr {
 	switch {
 	case sema.OpenEnded(s, s.Dims, i):
 		return LongConst(math.MaxInt32)
-	case dim.UpperExpr == nil && !dim.Deferred && !dim.Runtime:
+	case dim.UpperExpr == nil && !dim.Deferred && !dim.Runtime && !dim.AssumedShape:
 		return LongConst(int32(dim.Upper))
 	}
 

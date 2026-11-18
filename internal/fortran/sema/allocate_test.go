@@ -52,8 +52,9 @@ func TestAllocatable(t *testing.T) {
 				"ALLOCATTR: the allocatable array A can't be given an initial value"},
 		{"twice", prog("real, allocatable :: a(:)", "allocatable a"),
 			"ATTRAGAIN: A has the ALLOCATABLE attribute already"},
-		{"an assumed shape", []string{"subroutine s(a)", "real a(:)", "end subroutine"},
-			"NOTIMPL: an assumed-shape array is not implemented yet"},
+		{"an assumed shape", []string{"subroutine s(a)", "real a(:)", "end subroutine"}, ""},
+		{"a lower bound", prog("real, allocatable :: a(0:)"),
+			"ALLOCSHAPE: A is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},
 
 		{"ALLOCATE of an array not allocatable", prog("real a(3)", "allocate (a(3))"), "NOTALLOCATABLE: A is not an allocatable array"},
 		{"DEALLOCATE of a variable", prog("deallocate (x)"), "NOTALLOCATABLE: X is not an allocatable array"},

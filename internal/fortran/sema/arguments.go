@@ -17,7 +17,7 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 	args := make([]Arg, len(list))
 
 	for i, e := range list {
-		args[i] = a.arg(e)
+		args[i] = a.unshaped(a.arg(e))
 		a.notePassed(args[i])
 	}
 

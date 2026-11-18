@@ -779,8 +779,20 @@ func typeText(s *sema.Symbol) string {
 		switch {
 		case d.Assumed:
 			upper = "*"
+		case d.AssumedShape:
+			upper = ""
 		case d.UpperExpr != nil || d.Runtime:
 			upper = "?"
+		}
+
+		if d.AssumedShape {
+			if lower == "1" {
+				lower = ""
+			}
+
+			bounds[i] = lower + ":"
+
+			continue
 		}
 
 		if lower == "1" {

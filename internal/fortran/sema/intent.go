@@ -82,7 +82,7 @@ func (a *analyzer) notePassed(arg Arg) {
 	}
 
 	switch e := arg.Expr.(type) {
-	case *Var, *Elem, *ArrayRef, *Substring:
+	case *Var, *Elem, *ArrayRef, *Section, *Substring:
 		a.noteNotRead(e.Position())
 	case *FieldRef:
 		a.noteNotRead(e.NamePos)
