@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
-("The author's answers"); subtask 2 is next. Needs Phase 102 (done).
+("The author's answers"). Subtask 2, the forms, is done; subtask 3 is next.
+Needs Phase 102 (done).
 
 ## Goal
 
@@ -447,7 +448,7 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
 2. **The forms:** `ast.Unit.Contains`, `ast.InterfaceBlock`, keyword arguments in
    CALL, `ast.DefinedOp` with its two precedence levels and finding 12's record
    rule, the parser's checks (finding 1); everything new still NOTIMPL in sema;
-   parser golden dumps, `TestNoF90Unchanged`.
+   parser golden dumps, `TestNoF90Unchanged` (done 2026-11-17).
 3. **Internal procedures with static hosts:** finding 2's four steps, the host's
    implicit rules and namelists through the chain, finding 3's rules, each
    internal procedure's interface checked at its calls (finding 6's count, type,
@@ -539,3 +540,33 @@ The author read the survey and accepted every recommendation:
   author (A.5). For review.
 - **2026-11-17:** The author accepted the survey and every recommendation
   ("The author's answers"). Subtask 1 is done; subtask 2 is next.
+- **2026-11-17, subtask 2:** The forms. `ast.Unit.Contains` (the internal
+  procedures, each a unit, after an `ast.ContainsStmt` in the host's body),
+  `ast.InterfaceBlock` (its `GenericSpec`: none, a name, `OPERATOR(op)` with a
+  relational operator in its dotted spelling, so `==` is `.EQ.`, or
+  `ASSIGNMENT(=)`; its `Bodies`, `ModuleProcedures`, and `End`),
+  `ast.ModuleProcedureStmt`, `ast.EndInterfaceStmt`, and `ast.DefinedOp`. The
+  parser's old `nesting` is gone: `parse/units.go`'s `unitStack` keeps the units
+  open, a FUNCTION or SUBROUTINE starting one inside the innermost if it is past
+  its CONTAINS or has an interface block open, else ending the open units
+  (NOEND) and starting one of the file's; a module's procedures are told from
+  internal ones (`moduleUnit`, which may have CONTAINS and ENTRY). Its checks:
+  EMPTYCONTAINS, NESTEDCONTAINS, ENTRYINTERNAL, AFTERCONTAINS (a statement
+  after CONTAINS that isn't a procedure's), BADINBODY (an executable statement,
+  ENTRY, DATA, FORMAT, or CONTAINS in a body; a statement function is lexed as
+  an assignment, so it is one of those), INTERFACESTMT (a statement in a block
+  outside its bodies), NOINTERFACEEND, NOINTERFACE. A derived type still gathers
+  its components into its PendingStmt. CALL's list takes `NAME = actual`.
+  Defined operators (under `/F90` only): a binary one at `precDefined`, below
+  `.EQV.`, a unary one with a primary as its operand; the lexer's one token, or
+  after a name or `)` its `.`, name, `.` (`definedBinary`, `dottedAhead`).
+  Finding 12's rule is `recordScope`: the names RECORD statements declared in a
+  unit and its hosts (an interface body has none), passed to each statement's
+  parser; `fieldNext` reads `.B` as a field after a record (and after its fields
+  and elements), or where no `.` follows the name, so `X.A` on a non-record
+  still reaches sema's message; otherwise `.B.` is the operator. In sema each
+  new form is NOTIMPL as before (`formWhat`'s "a defined operator";
+  `TestProcedureFormsPending`). `TestGolden` now reads free-form `.f90` programs
+  under `/F90` too, `parse/testdata/procs.f90` every new form and message.
+  A fix on the way: `article` gave "a assignment statement" for a kind named in
+  lowercase. `TestNoF90Unchanged` holds.

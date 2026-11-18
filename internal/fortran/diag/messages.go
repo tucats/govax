@@ -157,6 +157,34 @@ var messages = map[string]kind{
 	// END FUNCTION or END SUBROUTINE (the standard's 12.5.2.2 and 12.5.2.3).
 	"ENDNOKIND": {Error, "the END of %s, which is inside another unit, must be END %s"},
 
+	// Fortran 90's units inside units (parse/units.go; docs/planning/PHASE-103 -
+	// Fortran 90 procedures and interfaces.md, finding 1).
+
+	// EMPTYCONTAINS is CONTAINS with no procedure after it (R210, R212).
+	"EMPTYCONTAINS": {Error, "a CONTAINS statement must be followed by at least one procedure"},
+
+	// NESTEDCONTAINS is CONTAINS in an internal procedure (12.1.2.2).
+	"NESTEDCONTAINS": {Error, "%s is an internal procedure, which can't have a CONTAINS statement of its own"},
+
+	// ENTRYINTERNAL is ENTRY in an internal procedure (12.1.2.2).
+	"ENTRYINTERNAL": {Error, "%s is an internal procedure, which can't have an ENTRY statement"},
+
+	// AFTERCONTAINS is a statement between CONTAINS and the unit's END that
+	// isn't an internal procedure's.
+	"AFTERCONTAINS": {Error, "%s can't follow CONTAINS: only procedures and the unit's END can"},
+
+	// BADINBODY is a statement an interface body can't hold (R1204).
+	"BADINBODY": {Error, "%s can't be in an interface body, which holds only a procedure's declarations"},
+
+	// INTERFACESTMT is a statement in an interface block outside its bodies.
+	"INTERFACESTMT": {Error, "%s can't be in an interface block outside an interface body"},
+
+	// NOINTERFACEEND is an interface block its unit's END reaches.
+	"NOINTERFACEEND": {Error, "this interface block has no END INTERFACE statement"},
+
+	// NOINTERFACE is END INTERFACE with no interface block open.
+	"NOINTERFACE": {Error, "this END INTERFACE statement ends no interface block"},
+
 	// SYNTAX is a statement whose tokens don't follow its grammar: the
 	// first argument says what the parser expected, the second what it
 	// found instead.

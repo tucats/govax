@@ -21,23 +21,16 @@ import (
 // directives between units begin none: they wait for the next unit, as
 // its Prologue (or the file's Trailing statements, after the last).
 //
-// And it gathers structure declarations' statements into the
-// declarations (blocks.go), the one place statements nest.
+// Units nest in Fortran 90: a unit's internal procedures follow its
+// CONTAINS statement, and an interface block holds interface bodies, each a
+// unit with its own END (units.go). And it gathers structure declarations'
+// statements into the declarations (blocks.go).
 func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
-	file := &ast.File{}
-
-	var (
-		unit     *ast.Unit      // the unit being read; nil between units
-		last     *lex.Statement // the unit's last statement so far, for NOEND
-		prologue []ast.Stmt     // OPTIONS and directives waiting for a unit
-		blocks   = &blockStack{messages: messages}
-		nests    = &nesting{} // Fortran 90's statements holding others (f90.go)
-		current  openUnit     // what the unit's END is checked against
-	)
+	u := &unitStack{file: &ast.File{}, messages: messages, blocks: &blockStack{messages: messages}}
 
 	// One statement per turn. Each is parsed on its own (statement), then
-	// placed: in the prologue waiting for a unit, inside an open STRUCTURE
-	// declaration, as a new unit's header, or in the open unit's body.
+	// placed: in the prologue waiting for a unit, as a new unit's header,
+	// or in the open unit (place).
 	for _, ls := range statements {
 		if ls.Kind == lex.Empty {
 			if ls.Label != 0 {
@@ -47,80 +40,22 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 			continue
 		}
 
-		s := statement(ls, messages)
+		s := statement(ls, messages, u.records())
 
-		if unit == nil && (ls.Kind == lex.Options || ls.Kind == lex.Directive) {
-			prologue = append(prologue, s)
-
-			continue
-		}
-
-		// Inside a Fortran 90 statement that holds others (CONTAINS's
-		// procedures, an interface block, a derived type), a statement goes
-		// into it, all but the unit's own END.
-		if nests.active() {
-			if nests.take(s, ls, messages) {
-				last = ls
-
-				continue
-			}
-		}
-
-		// A unit's END, or the next unit's header, ends any structure
-		// declaration left open; otherwise a statement inside one goes
-		// into it.
-		if ls.Kind == lex.End || isHeader(ls.Kind) {
-			blocks.closeAll()
-			nests.closeAll()
-		} else if blocks.take(s) {
-			last = ls
+		if u.top() == nil && (ls.Kind == lex.Options || ls.Kind == lex.Directive) {
+			u.prologue = append(u.prologue, s)
 
 			continue
 		}
 
-		if isHeader(ls.Kind) {
-			if unit != nil {
-				noEnd(unit, last, messages)
-			}
-
-			unit = &ast.Unit{Prologue: prologue, Header: s}
-			file.Units = append(file.Units, unit)
-			prologue = nil
-			current = unitOf(s, false)
-		} else {
-			if unit == nil {
-				unit = &ast.Unit{Prologue: prologue}
-				file.Units = append(file.Units, unit)
-				prologue = nil
-				current = unitOf(nil, false)
-			}
-
-			placed := blocks.outside(s)
-			unit.Body = append(unit.Body, placed)
-			nests.opens(placed)
-		}
-
-		last = ls
-
-		// The lexer's kind, not the parser's node, decides that a unit
-		// has ended: END with an error in it still ends its unit, as it
-		// did for the lexer (which looks for typed FUNCTION statements
-		// only at a unit's start).
-		if ls.Kind == lex.End {
-			checkEnd(s, current, messages)
-
-			unit = nil
-		}
+		u.place(s, ls)
+		u.last = ls
 	}
 
-	if unit != nil {
-		blocks.closeAll()
-		noEnd(unit, last, messages)
-	}
+	u.finish()
+	u.file.Trailing = u.prologue
 
-	file.Trailing = prologue
-
-	return file
+	return u.file
 }
 
 // isHeader reports whether statements of kind k start a program unit.
@@ -258,17 +193,17 @@ func init() {
 		lex.Allocatable:       parsePending,
 		lex.Allocate:          parsePending,
 		lex.Case:              parseCase,
-		lex.Contains:          parsePending,
+		lex.Contains:          parseContains,
 		lex.Cycle:             parseLoopExit,
 		lex.Deallocate:        parsePending,
 		lex.ElseWhere:         parseElseWhere,
-		lex.EndInterface:      parsePending,
+		lex.EndInterface:      parseEndInterface,
 		lex.EndSelect:         parseEndSelect,
 		lex.EndType:           parsePending,
 		lex.EndWhere:          parseEndWhere,
 		lex.Exit:              parseLoopExit,
-		lex.Interface:         parsePending,
-		lex.ModuleProcedure:   parsePending,
+		lex.Interface:         parseInterface,
+		lex.ModuleProcedure:   parseModuleProcedure,
 		lex.Nullify:           parsePending,
 		lex.PointerAssignment: parsePending,
 		lex.Pointer:           parsePending,
@@ -291,6 +226,10 @@ type parser struct {
 	st       *lex.Statement
 	tokens   []lex.Token
 	i        int // the next token's index
+
+	// records are the names declared records where the statement is, which
+	// decide what A.B.C is under /F90 (fieldNext); nil outside any unit.
+	records *recordScope
 }
 
 // bailout is what a parsing function panics with when it has reported an
@@ -301,8 +240,8 @@ type parser struct {
 type bailout struct{}
 
 // statement parses one statement.
-func statement(ls *lex.Statement, messages *diag.List) (s ast.Stmt) {
-	p := &parser{messages: messages, st: ls, tokens: ls.Tokens}
+func statement(ls *lex.Statement, messages *diag.List, records *recordScope) (s ast.Stmt) {
+	p := &parser{messages: messages, st: ls, tokens: ls.Tokens, records: records}
 	base := p.base()
 
 	if ls.Kind == lex.Unknown {
@@ -552,7 +491,7 @@ func quote(text string) string {
 
 // article is "a" or "an", for the word that follows it.
 func article(word string) string {
-	if word != "" && strings.ContainsRune("AEIOU", rune(word[0])) {
+	if word != "" && strings.ContainsRune("AEIOUaeiou", rune(word[0])) {
 		return "an"
 	}
 

@@ -24,11 +24,11 @@ import (
 //     attribute statements with ::, and INTENT, OPTIONAL, and TARGET, into
 //     the old statements' nodes (decl.go, spec.go), an = value an array
 //     constructor too (Phase 102);
-//   - and the statements that hold others: CONTAINS's procedures, an
-//     interface block's bodies, a derived type's components. Left in the
-//     unit's list, they would be read as the unit's own declarations, so
-//     the parser gathers them into the PendingStmt that holds them
-//     (nesting).
+//   - and the statements that hold others (units.go): CONTAINS's
+//     internal procedures (ast.Unit.Contains), an interface block's bodies
+//     (ast.InterfaceBlock), each a unit of its own (Phase 103), and a
+//     derived type's components, gathered into the PendingStmt of its TYPE
+//     statement until Phase 105.
 
 // parsePending makes a statement a PendingStmt, reported NOTIMPL by its kind.
 func parsePending(p *parser) ast.Stmt {
@@ -254,8 +254,8 @@ var unitEnds = map[ast.UnitKind]string{
 	ast.ModuleUnit:     "MODULE",
 }
 
-// openUnit is a unit, or a procedure inside one, whose END hasn't come yet:
-// what checkEnd checks an END against.
+// openUnit is what checkEnd checks a unit's END against: its kind, its
+// name, and whether it is inside another.
 type openUnit struct {
 	kind   ast.UnitKind
 	name   string
@@ -315,105 +315,6 @@ func checkEnd(s ast.Stmt, o openUnit, messages *diag.List) {
 	}
 }
 
-// nesting gathers the statements a Fortran 90 statement holds into its
-// PendingStmt's Inner, instead of the unit's body: a CONTAINS statement's
-// procedures, up to its unit's END; an interface block's bodies, up to END
-// INTERFACE; a derived type's components, up to END TYPE. One may hold
-// another (a module procedure's own CONTAINS, an interface block in an
-// interface body), so they are a stack, innermost last.
-type nesting struct {
-	open []*nest
-
-	// units are the procedures open inside the nests (after CONTAINS, or
-	// interface bodies), innermost last, for END's checks.
-	units []openUnit
-}
-
-// nest is one open gathering statement.
-type nest struct {
-	stmt *ast.PendingStmt
-	kind lex.Kind // Contains, Interface, or TypeDef
-
-	// depth is how many of units belong to this nest: procedures opened
-	// inside it whose END hasn't come.
-	depth int
-}
-
-// active reports whether a nest is open.
-func (n *nesting) active() bool {
-	return len(n.open) > 0
-}
-
-// opens reports whether s starts a nest, and starts it: a CONTAINS, an
-// interface block, a derived type's definition. A CONTAINS in a unit or
-// procedure gathers up to that unit's END. Only a PendingStmt can.
-func (n *nesting) opens(s ast.Stmt) bool {
-	ps, ok := s.(*ast.PendingStmt)
-	if !ok {
-		return false
-	}
-
-	switch k := ps.Kind; k {
-	case lex.Contains, lex.Interface, lex.TypeDef:
-		n.open = append(n.open, &nest{stmt: ps, kind: k})
-
-		return true
-	}
-
-	return false
-}
-
-// take puts s, a statement inside the innermost nest, into it, closing nests
-// as their ends come, and checking ENDs. It reports false for the statement
-// that ends the outermost CONTAINS nest, the unit's own END, which the caller
-// places in the unit's body as usual.
-func (n *nesting) take(s ast.Stmt, ls *lex.Statement, messages *diag.List) bool {
-	top := n.open[len(n.open)-1]
-
-	switch {
-	case isHeader(ls.Kind) && ls.Kind != lex.Module:
-		// A procedure inside: after CONTAINS, or an interface body.
-		n.units = append(n.units, unitOf(s, true))
-		top.depth++
-
-	case ls.Kind == lex.End && top.depth > 0:
-		checkEnd(s, n.units[len(n.units)-1], messages)
-		n.units = n.units[:len(n.units)-1]
-		top.depth--
-
-	case ls.Kind == lex.End:
-		// The END of the unit the CONTAINS is in: the nest closes, and the
-		// END belongs to what holds the CONTAINS. (An interface block or a
-		// type definition an END reaches was never closed; its statement's
-		// NOTIMPL will fail the compilation anyway.)
-		n.open = n.open[:len(n.open)-1]
-
-		if !n.active() {
-			return false
-		}
-
-		return n.take(s, ls, messages)
-
-	case ls.Kind == lex.EndInterface && top.kind == lex.Interface && top.depth == 0,
-		ls.Kind == lex.EndType && top.kind == lex.TypeDef && top.depth == 0:
-		top.stmt.Inner = append(top.stmt.Inner, s)
-		n.open = n.open[:len(n.open)-1]
-
-		return true
-	}
-
-	top.stmt.Inner = append(top.stmt.Inner, s)
-	n.opens(s)
-
-	return true
-}
-
-// closeAll closes every nest, at a unit's end or the file's: their ENDs
-// never came, which the unit's NOEND, or the parse of what follows, reports.
-func (n *nesting) closeAll() {
-	n.open, n.units = nil, nil
-}
-
 // kindBeforeLetters reports whether the parenthesis next in an IMPLICIT
 // statement, after a type keyword, is Fortran 90's kind selector rather
 // than the letters: a parenthesis follows the one it closes (IMPLICIT REAL(8)
@@ -459,7 +360,7 @@ func parseWhere(p *parser) ast.Stmt {
 		panic(bailout{})
 	}
 
-	s.Then = statement(then, p.messages)
+	s.Then = statement(then, p.messages, p.records)
 
 	if _, bad := s.Then.(*ast.BadStmt); bad {
 		panic(bailout{})

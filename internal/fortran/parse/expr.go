@@ -20,8 +20,15 @@ import (
 //	**                     8  (right to left)
 //
 // So A + B*C .GT. D .AND. .NOT. E is ((A + (B*C)) .GT. D) .AND. (.NOT. E).
+//
+// Fortran 90's defined operators (R704, R723) bind most and least tightly of
+// all: .INVERSE. A ** 2 is (.INVERSE. A)**2, and A + B .CROSS. C .EQV. D is
+// (A + B) .CROSS. (C .EQV. D). A binary one is precDefined, below .EQV.; a
+// unary one is read with its operand, a primary, before any other operator
+// can take it (unary). They are operators only under /F90.
 const (
-	precNot = 3
+	precDefined = -1
+	precNot     = 3
 	precAdd = 6
 	precMul = 7
 	precPow = 8
@@ -50,7 +57,7 @@ var binaryOps = map[string]binaryOp{
 
 // expr reads an expression.
 func (p *parser) expr() ast.Expr {
-	return p.binary(0)
+	return p.binary(precDefined)
 }
 
 // binary reads an expression whose operators all bind at least as
@@ -72,6 +79,18 @@ func (p *parser) binary(minPrec int) ast.Expr {
 		t := p.peek()
 		if t == nil || t.Kind != lex.Operator {
 			return x
+		}
+
+		if name, n := p.definedBinary(); n > 0 {
+			if minPrec > precDefined {
+				return x
+			}
+
+			p.i += n
+
+			x = &ast.DefinedOp{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: name, X: x, Y: p.binary(precDefined + 1)}
+
+			continue
 		}
 
 		op, ok := binaryOps[t.Text]
@@ -123,9 +142,59 @@ func (p *parser) unary(minPrec int) ast.Expr {
 		p.next()
 
 		return &ast.Unary{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: ast.Not, X: p.binary(precNot + 1)}
+
+	case p.f90() && t.DefinedOperator():
+		// A unary defined operator's operand is a primary (R704).
+		p.next()
+
+		return &ast.DefinedOp{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: t.Text, X: p.primary()}
 	}
 
 	return p.primary()
+}
+
+// f90 reports whether the statement is compiled under /F90, where Fortran
+// 90's readings of DEC's forms apply.
+func (p *parser) f90() bool {
+	return p.st.Source != nil && p.st.Source.F90
+}
+
+// definedBinary reports whether a binary defined operator is next under /F90,
+// returning it (.CROSS.) and how many tokens it is, or 0. The lexer makes one
+// token of it where no record field can be (after a constant); after a name or
+// a ), where A.B.C may be DEC's record fields, it leaves the period, the name,
+// and the period apart, and the parser has read a field already if A is a
+// record (fieldNext), so the three here are the operator.
+func (p *parser) definedBinary() (string, int) {
+	t := p.peek()
+
+	switch {
+	case !p.f90():
+		return "", 0
+	case t.DefinedOperator():
+		return t.Text, 1
+	case p.dottedAhead(0):
+		return "." + p.peekAt(1).Text + ".", 3
+	}
+
+	return "", 0
+}
+
+// dottedAhead reports whether the tokens from the nth next are a period, a
+// name of letters only, and a period: a defined operator the lexer left apart.
+func (p *parser) dottedAhead(n int) bool {
+	dot, name, end := p.peekAt(n), p.peekAt(n+1), p.peekAt(n+2)
+	if dot == nil || !dot.Is(".") || name == nil || name.Kind != lex.Name || end == nil || !end.Is(".") {
+		return false
+	}
+
+	for _, c := range name.Text {
+		if c < 'A' || c > 'Z' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // primary reads a constant, a reference (a name, an array element or
@@ -260,8 +329,17 @@ func (p *parser) reference(what string) ast.Expr {
 // A field's list with a colon is still read as its substring: a section
 // of a record's array field is for a later phase (docs/planning/PHASE-102 -
 // Fortran 90 array expressions.md, finding 4).
+//
+// Under /F90 a period after a reference may also start a defined operator, A
+// .B. C, and the field reading is taken only where it must be meant
+// (fieldNext): after a record, a name a RECORD statement declared, or a field
+// or element of one, as the HP manual has it (a field of a record wins); or
+// where no defined operator can be, a period and a name with no period after
+// it, which semantic analysis can then report as the field of something that
+// isn't a record.
 func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 	base := ast.ExprBase{Pos: p.pos(t)}
+	record := p.records.has(t.Text)
 
 	var x ast.Expr = &ast.Name{ExprBase: base, Name: t.Text}
 
@@ -274,7 +352,7 @@ func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 		case p.at("(") && p.substringAhead():
 			return p.substring(x)
 
-		case p.at(".") && p.peekAt(1) != nil && p.peekAt(1).Kind == lex.Name:
+		case p.fieldNext(record):
 			p.next()
 
 			f := p.next()
@@ -290,6 +368,18 @@ func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 			return x
 		}
 	}
+}
+
+// fieldNext reports whether a record field reference, .FIELD, is next after a
+// reference: a period and a name, which under /F90 is a field only if the
+// reference is a record's (record) or no defined operator could start there
+// (dottedAhead).
+func (p *parser) fieldNext(record bool) bool {
+	if !p.at(".") || p.peekAt(1) == nil || p.peekAt(1).Kind != lex.Name {
+		return false
+	}
+
+	return !p.f90() || record || !p.dottedAhead(0)
 }
 
 // substringAhead reports whether the parenthesized list that is next has

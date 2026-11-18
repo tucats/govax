@@ -99,14 +99,25 @@
 // into the innermost one's Body, so that INTEGER*2 YEAR inside a
 // structure is a field, never a variable.
 //
-// Fortran 90's statements that hold others are gathered the same way
-// (f90.go's nesting): CONTAINS holds the procedures after it, to its unit's
-// END; an interface block its interface bodies, to END INTERFACE; a derived
-// type's definition its components, to END TYPE. Until their phases compile
-// them, each is a PendingStmt, which semantic analysis reports NOTIMPL once,
-// and what it holds is parsed but not analyzed. An END PROGRAM, END
-// SUBROUTINE, and the rest are checked against the unit or procedure they
-// end (checkEnd: ENDKIND, ENDNAME, ENDNONAME, ENDNOKIND).
+// Fortran 90's units nest (units.go; Phase 103): a unit's internal
+// procedures follow its CONTAINS statement, each a unit in its host's
+// Contains, and an interface block (an ast.InterfaceBlock) holds interface
+// bodies, units with no executable part, to END INTERFACE. Parse keeps a stack
+// of the units open, and a FUNCTION or SUBROUTINE statement starts one inside
+// the innermost if that one is past its CONTAINS or has an interface block
+// open. What can't be where it is is reported there: EMPTYCONTAINS,
+// NESTEDCONTAINS, ENTRYINTERNAL, AFTERCONTAINS, BADINBODY, INTERFACESTMT,
+// NOINTERFACEEND, NOINTERFACE. A derived type's definition gathers its
+// components into its PendingStmt, to END TYPE, until Phase 105. An END
+// PROGRAM, END SUBROUTINE, and the rest are checked against the unit or
+// procedure they end (checkEnd: ENDKIND, ENDNAME, ENDNONAME, ENDNOKIND).
+//
+// Under /F90 a period may start a defined operator, A .CROSS. B, and DEC's
+// record fields, A.B.C, read the same; the parser decides, by the names RECORD
+// statements declared in the unit and its hosts (recordScope): after a record
+// .B is a field, and otherwise .B. is the operator (expr.go's fieldNext and
+// definedBinary). A unary defined operator binds most tightly of all, a binary
+// one least.
 //
 // A parenthesized list after a name is read the same way whatever the name
 // is: an ast.Apply, whose items may be Fortran 90's subscript triplets,

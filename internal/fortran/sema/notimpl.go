@@ -139,6 +139,8 @@ func formWhat(e ast.Expr) string {
 		// An intrinsic function's reference takes its keyword arguments
 		// (intrinsicSlots); a program's own procedure's are Phase 103's.
 		return "a keyword argument to a procedure that isn't intrinsic"
+	case *ast.DefinedOp:
+		return "a defined operator"
 	}
 
 	return ""

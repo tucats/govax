@@ -667,6 +667,80 @@ type (
 	}
 )
 
+// Fortran 90's procedures (docs/planning/PHASE-103 - Fortran 90 procedures and
+// interfaces.md).
+type (
+	// ContainsStmt is CONTAINS, which ends a unit's executable part; the
+	// internal procedures after it are the unit's Contains.
+	ContainsStmt struct {
+		StmtBase
+	}
+
+	// InterfaceBlock is an interface block (the standard's R1201): the
+	// INTERFACE statement (the block's StmtBase), with its generic
+	// specification, the interface bodies (each a unit with a header,
+	// declarations, and END, but no executable part), the MODULE PROCEDURE
+	// statements, and End, the END INTERFACE statement (nil if it never
+	// came, which the parser reported).
+	InterfaceBlock struct {
+		StmtBase
+		Generic          GenericSpec
+		Bodies           []*Unit
+		ModuleProcedures []*ModuleProcedureStmt
+		End              Stmt
+	}
+
+	// ModuleProcedureStmt is MODULE PROCEDURE name-list, in an interface
+	// block (R1205).
+	ModuleProcedureStmt struct {
+		StmtBase
+		Names []*Name
+	}
+
+	// EndInterfaceStmt is END INTERFACE.
+	EndInterfaceStmt struct {
+		StmtBase
+	}
+)
+
+// GenericKind is what an interface block's INTERFACE statement names
+// (R1207's generic-spec).
+type GenericKind int
+
+// The kinds of generic specification.
+const (
+	NoGeneric      GenericKind = iota // INTERFACE alone: specific interfaces only
+	GenericName                       // INTERFACE SWAP
+	GenericOp                         // INTERFACE OPERATOR(.CROSS.), OPERATOR(+)
+	GenericAssign                     // INTERFACE ASSIGNMENT(=)
+)
+
+// GenericSpec is an INTERFACE statement's generic specification: Name for a
+// generic name, Op for an operator (an intrinsic one in its dotted spelling,
+// .EQ. for ==, since the standard makes them one operator; a defined one as
+// written). Pos is where it is.
+type GenericSpec struct {
+	Kind GenericKind
+	Name string
+	Op   string
+	Pos  diag.Position
+}
+
+// String is the specification as written in the INTERFACE statement: SWAP,
+// OPERATOR(.CROSS.), ASSIGNMENT(=), or "" for none.
+func (g GenericSpec) String() string {
+	switch g.Kind {
+	case GenericName:
+		return g.Name
+	case GenericOp:
+		return "OPERATOR(" + g.Op + ")"
+	case GenericAssign:
+		return "ASSIGNMENT(=)"
+	}
+
+	return ""
+}
+
 // PendingStmt is a Fortran 90 statement, or a Fortran 90 form of an older
 // one, that the parser recognizes but doesn't parse yet
 // (docs/planning/PHASE-99 - Fortran 90.md, subtask 5): semantic analysis
@@ -675,12 +749,11 @@ type (
 // start if zero). Each later phase replaces some of them with nodes of
 // their own.
 //
-// Inner holds the statements a Fortran 90 statement gathers, which would
-// mislead semantic analysis in the unit's own list: a CONTAINS statement's
-// procedures (up to its unit's END), an interface block's bodies (up to
-// END INTERFACE), and a derived type definition's components (up to END
-// TYPE). They are parsed, and their syntax errors reported, but not
-// analyzed.
+// Inner holds the statements a derived type definition gathers, its
+// components (up to END TYPE), which would mislead semantic analysis in the
+// unit's own list as declarations of variables. They are parsed, and their
+// syntax errors reported, but not analyzed. (CONTAINS and interface blocks
+// gathered theirs here too until Phase 103 gave them nodes of their own.)
 type PendingStmt struct {
 	StmtBase
 	What    string

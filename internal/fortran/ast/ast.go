@@ -54,8 +54,18 @@ type Unit struct {
 	Header Stmt
 
 	// Body is the statements after the header, in order. A unit the
-	// parser finished properly ends with an *EndStmt.
+	// parser finished properly ends with an *EndStmt. A unit with internal
+	// procedures has a *ContainsStmt before its END, and the procedures
+	// in Contains; an interface block is one statement, an
+	// *InterfaceBlock, holding its bodies.
 	Body []Stmt
+
+	// Contains are the internal procedures after the unit's CONTAINS
+	// statement (Fortran 90's 12.1.2.2), each a unit of its own, in order:
+	// nil for a unit without CONTAINS. They aren't in File.Units: their
+	// names aren't global, and semantic analysis reaches them through
+	// their host.
+	Contains []*Unit
 }
 
 // Kind is what kind of unit this is, from its header.
@@ -510,6 +520,19 @@ type (
 	Binary struct {
 		ExprBase
 		Op   Op
+		X, Y Expr
+	}
+
+	// DefinedOp is a Fortran 90 defined operation (the standard's R704 and
+	// R723): Op is the operator, .CROSS., and Y is nil for a unary one,
+	// .INVERSE. A. A unary defined operator binds more tightly than any
+	// other operator, a binary one less tightly (parse/expr.go). An
+	// intrinsic operator extended by an interface is still a Binary or a
+	// Unary: only semantic analysis can tell that its operands have no
+	// intrinsic meaning.
+	DefinedOp struct {
+		ExprBase
+		Op   string
 		X, Y Expr
 	}
 

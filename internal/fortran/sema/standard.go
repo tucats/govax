@@ -651,6 +651,10 @@ func (x *extensions) expr(e ast.Expr) {
 
 	case *ast.ArrayConstructor:
 		x.exprs(e.Values)
+
+	case *ast.DefinedOp:
+		// Fortran 90's, which /STANDARD judges from Phase 110.
+		x.exprs([]ast.Expr{e.X, e.Y})
 	}
 }
 

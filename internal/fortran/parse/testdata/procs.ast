@@ -1,0 +1,162 @@
+== main program PROCS
+5           PROGRAM PROCS
+6           STRUCTURE /PAIR/
+7             REAL A, B
+8             RECORD /PAIR/ INNER
+9             END STRUCTURE
+10          RECORD /PAIR/ P, Q(3)
+11          INTERFACE
+              == SUBROUTINE SOLVE
+12            SUBROUTINE SOLVE(A, TOL)
+13            REAL A(*)
+14            REAL, OPTIONAL :: TOL
+15            END SUBROUTINE SOLVE
+              == FUNCTION AREA
+16            FUNCTION AREA(R)
+17            REAL AREA, R
+18            END FUNCTION
+19          END INTERFACE
+20          INTERFACE SWAP
+              == SUBROUTINE SWAPR
+21            SUBROUTINE SWAPR(X, Y)
+22            REAL X, Y
+23            END SUBROUTINE
+24            MODULE PROCEDURE SWAPI, SWAPC
+25          END INTERFACE
+26          INTERFACE OPERATOR(.CROSS.)
+              == FUNCTION CROSS
+27            FUNCTION CROSS(U, V)
+28            REAL CROSS(3), U(3), V(3)
+29            END FUNCTION CROSS
+30          END INTERFACE
+31          INTERFACE OPERATOR(+)
+32          END INTERFACE
+33          INTERFACE OPERATOR(.EQ.)
+34          END INTERFACE
+35          INTERFACE OPERATOR(/)
+36          END INTERFACE
+37          INTERFACE OPERATOR(//)
+38          END INTERFACE
+39          INTERFACE ASSIGNMENT(=)
+40          END INTERFACE
+41          CALL SOLVE(X, TOL=1.0E-6)
+42          CALL SOLVE(TOL=T, A=X)
+43          Y = (** (.INVERSE. A) 2)
+44          Y = (.CROSS. (+ A B) (.EQV. C D))
+45          Y = (.DOT. X Z)
+46          Y = (.DOT. (.DOT. (paren X) (+ Z 1)) 2)
+47          Y = (+ P.A Q(2).INNER.B)
+48          Y = P.A.DOT.Z
+49          Y = X.A
+50          CONTAINS
+              == SUBROUTINE INNER
+51            SUBROUTINE INNER(N)
+52            Y = P.A.DOT.Z
+53            Y = (.DOT. N Z)
+54            CONTAINS
+55            END SUBROUTINE INNER
+              == FUNCTION TWICE
+56            REAL FUNCTION TWICE(X)
+58            TWICE = (* 2 X)
+59            END FUNCTION TWICE
+60          END PROGRAM PROCS
+== SUBROUTINE HOST
+62          SUBROUTINE HOST
+63          INTERFACE
+              == SUBROUTINE S
+64            SUBROUTINE S(F)
+65            INTERFACE
+                == FUNCTION F
+66              FUNCTION F(X)
+67              END FUNCTION
+68            END INTERFACE
+71            END SUBROUTINE
+73          END INTERFACE
+75          CALL S
+76          CONTAINS
+              == SUBROUTINE A
+77            SUBROUTINE A
+78            END
+80          END SUBROUTINE HOST
+== SUBROUTINE NOCONTAINS
+82          SUBROUTINE NOCONTAINS
+83          CONTAINS
+84          END
+== SUBROUTINE OPEN
+86          SUBROUTINE OPEN
+87          error: INTERFACE
+89          INTERFACE
+              == SUBROUTINE T
+90            SUBROUTINE T
+91            END SUBROUTINE T
+92          END
+== SUBROUTINE UNENDED
+94          SUBROUTINE UNENDED
+95          Y = A.B1.C
+96          CONTAINS
+              == SUBROUTINE U
+97            SUBROUTINE U
+98            END SUBROUTINE U
+== main program NEXT
+99          PROGRAM NEXT
+100         END PROGRAM NEXT
+
+%FORT-E-NESTEDCONTAINS, the SUBROUTINE INNER is an internal procedure, which can't have a CONTAINS statement of its own
+  at line 54 of PROCS.F90
+    contains
+  --^
+
+%FORT-E-ENTRYINTERNAL, the FUNCTION TWICE is an internal procedure, which can't have an ENTRY statement
+  at line 57 of PROCS.F90
+      entry again(x)
+  ----^
+
+%FORT-E-BADINBODY, an assignment statement can't be in an interface body, which holds only a procedure's declarations
+  at line 69 of PROCS.F90
+        y = 1
+  ------^
+
+%FORT-E-BADINBODY, a DATA statement can't be in an interface body, which holds only a procedure's declarations
+  at line 70 of PROCS.F90
+        data z /1.0/
+  ------^
+
+%FORT-E-INTERFACESTMT, an assignment statement can't be in an interface block outside an interface body
+  at line 72 of PROCS.F90
+      x = 1
+  ----^
+
+%FORT-E-NOINTERFACE, this END INTERFACE statement ends no interface block
+  at line 74 of PROCS.F90
+    end interface
+  --^
+
+%FORT-E-ENDNOKIND, the END of the SUBROUTINE A, which is inside another unit, must be END SUBROUTINE
+  at line 78 of PROCS.F90
+    end
+  --^
+
+%FORT-E-AFTERCONTAINS, an assignment statement can't follow CONTAINS: only procedures and the unit's END can
+  at line 79 of PROCS.F90
+    x = 2
+  --^
+
+%FORT-E-EMPTYCONTAINS, a CONTAINS statement must be followed by at least one procedure
+  at line 83 of PROCS.F90
+  contains
+  ^
+
+%FORT-E-SYNTAX, expected an operator, but found '='
+  at line 87 of PROCS.F90
+    interface operator(=)
+  ---------------------^
+
+%FORT-E-NOINTERFACEEND, this interface block has no END INTERFACE statement
+  at line 89 of PROCS.F90
+    interface
+  --^
+
+%FORT-E-NOEND, SUBROUTINE UNENDED has no END statement
+  at line 98 of PROCS.F90
+    end subroutine u
+  ------------------^

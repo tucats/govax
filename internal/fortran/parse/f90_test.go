@@ -11,10 +11,10 @@ import (
 )
 
 // TestF90Nesting checks the statements Fortran 90's statements gather
-// (docs/planning/PHASE-99 - Fortran 90.md, subtask 5): a module is one unit, its
-// interface block, derived type, and CONTAINS each holding what is inside them,
-// a module procedure's own CONTAINS inside that, and the unit's own END in its
-// body; after the module, a main program with Fortran 90's forms of old
+// (docs/planning/PHASE-99 - Fortran 90.md, subtask 5; Phase 103, subtask 2): a
+// module is one unit, its interface block holding its bodies, its derived type
+// its components, and its CONTAINS its procedures, a module procedure's own
+// CONTAINS inside that, and the unit's own END in its body; after the module, a main program with Fortran 90's forms of old
 // statements and construct names.
 func TestF90Nesting(t *testing.T) {
 	file, ms := parseLines(t, "N.FOR",
@@ -51,17 +51,20 @@ func TestF90Nesting(t *testing.T) {
 	want := strings.Join([]string{
 		"== MODULE M",
 		"1           MODULE M",
-		"2           not yet: INTERFACE",
+		"2           INTERFACE G",
+		"              == FUNCTION F",
 		"3             FUNCTION F(X)",
 		"4             END FUNCTION F",
-		"5             not yet: MODULE PROCEDURE",
-		"6             not yet: END INTERFACE",
+		"5             MODULE PROCEDURE A",
+		"6           END INTERFACE",
 		"7           not yet: derived TYPE",
 		"8             REAL :: X, Y",
 		"9             not yet: END TYPE",
-		"10          not yet: CONTAINS",
+		"10          CONTAINS",
+		"              == SUBROUTINE A",
 		"11            SUBROUTINE A",
-		"12            not yet: CONTAINS",
+		"12            CONTAINS",
+		"                == SUBROUTINE B",
 		"13              SUBROUTINE B",
 		"14              END SUBROUTINE B",
 		"15            END SUBROUTINE A",

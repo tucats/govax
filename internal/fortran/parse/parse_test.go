@@ -32,6 +32,19 @@ func parseLines(t *testing.T, spec string, lines ...string) (*ast.File, []diag.M
 	return file, messages.Messages()
 }
 
+// parseFree runs the first three passes over lines as the free-form file
+// spec, compiled /F90.
+func parseFree(t *testing.T, spec string, lines ...string) (*ast.File, []diag.Message) {
+	t.Helper()
+
+	var messages diag.List
+
+	program := source.Read(source.Form{F90: true}, &source.File{Spec: spec, Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	return file, messages.Messages()
+}
+
 // fixed puts text in a fixed-format line's statement field.
 func fixed(text string) string {
 	return "      " + text
@@ -711,14 +724,27 @@ func TestGolden(t *testing.T) {
 		t.Fatalf("no programs in testdata: %v", err)
 	}
 
-	for _, src := range sources {
+	// The .f90 programs are free form, compiled /F90 (Phase 103).
+	free, _ := filepath.Glob(filepath.Join("testdata", "*.f90"))
+
+	for _, src := range append(sources, free...) {
 		data, err := os.ReadFile(src)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
-		file, ms := parseLines(t, strings.ToUpper(filepath.Base(src)), lines...)
+
+		var (
+			file *ast.File
+			ms   []diag.Message
+		)
+
+		if filepath.Ext(src) == ".f90" {
+			file, ms = parseFree(t, strings.ToUpper(filepath.Base(src)), lines...)
+		} else {
+			file, ms = parseLines(t, strings.ToUpper(filepath.Base(src)), lines...)
+		}
 
 		var b strings.Builder
 
@@ -728,7 +754,7 @@ func TestGolden(t *testing.T) {
 			b.WriteString("\n" + m.String() + "\n")
 		}
 
-		golden := strings.TrimSuffix(src, ".for") + ".ast"
+		golden := strings.TrimSuffix(src, filepath.Ext(src)) + ".ast"
 
 		if *update {
 			if err := os.WriteFile(golden, []byte(b.String()), 0o644); err != nil {

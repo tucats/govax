@@ -96,6 +96,14 @@ func parseCall(p *parser) ast.Stmt {
 			p.next()
 			s.Args = append(s.Args, &ast.AltReturn{ExprBase: ast.ExprBase{Pos: pos}, Target: p.labelRef()})
 
+		case p.atKeyword():
+			// Fortran 90's keyword argument, CALL SOLVE(A, TOL=1.0E-6)
+			// (R1212): NAME= can't start anything else here.
+			t := p.next()
+			p.next()
+
+			s.Args = append(s.Args, &ast.KeywordArg{ExprBase: ast.ExprBase{Pos: p.pos(t)}, Name: t.Text, X: p.expr()})
+
 		default:
 			s.Args = append(s.Args, p.expr())
 		}
@@ -170,7 +178,7 @@ func parseLogicalIf(p *parser) ast.Stmt {
 		panic(bailout{})
 	}
 
-	s.Then = statement(then, p.messages)
+	s.Then = statement(then, p.messages, p.records)
 
 	// If the statement had an error, the IF as a whole has one: later
 	// passes needn't look inside it.

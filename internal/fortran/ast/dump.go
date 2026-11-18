@@ -16,27 +16,11 @@ func Dump(f *File) string {
 	var b strings.Builder
 
 	for _, u := range f.Units {
-		name := u.Name()
-		if name == "" {
-			name = "(no name)"
-			if u.Kind() == MainProgram {
-				name = "(no PROGRAM statement)"
-			}
-		}
-
 		for _, s := range u.Prologue {
 			dumpLines(&b, s, "")
 		}
 
-		fmt.Fprintf(&b, "== %s %s\n", u.Kind(), name)
-
-		if u.Header != nil {
-			dumpLines(&b, u.Header, "")
-		}
-
-		for _, s := range u.Body {
-			dumpLines(&b, s, "")
-		}
+		dumpUnit(&b, u, "")
 	}
 
 	if len(f.Trailing) > 0 {
@@ -48,6 +32,41 @@ func Dump(f *File) string {
 	}
 
 	return b.String()
+}
+
+// dumpUnit writes the line naming the unit u, then its header and body,
+// indented by indent. A unit inside another (an internal procedure, an
+// interface body) has its naming line indented with its statements, after the
+// columns of line numbers and labels; its internal procedures follow its
+// CONTAINS statement, a level further in.
+func dumpUnit(b *strings.Builder, u *Unit, indent string) {
+	name := u.Name()
+	if name == "" {
+		name = "(no name)"
+		if u.Kind() == MainProgram {
+			name = "(no PROGRAM statement)"
+		}
+	}
+
+	if indent == "" {
+		fmt.Fprintf(b, "== %s %s\n", u.Kind(), name)
+	} else {
+		fmt.Fprintf(b, "%12s%s== %s %s\n", "", indent, u.Kind(), name)
+	}
+
+	if u.Header != nil {
+		dumpLines(b, u.Header, indent)
+	}
+
+	for _, s := range u.Body {
+		dumpLines(b, s, indent)
+
+		if _, ok := s.(*ContainsStmt); ok {
+			for _, inner := range u.Contains {
+				dumpUnit(b, inner, indent+"  ")
+			}
+		}
+	}
 }
 
 // dumpLines writes s's line, indented by indent, and the lines of any
@@ -66,6 +85,18 @@ func dumpLines(b *strings.Builder, s Stmt, indent string) {
 		body = s.Body
 	case *PendingStmt:
 		body = s.Inner
+	case *InterfaceBlock:
+		for _, u := range s.Bodies {
+			dumpUnit(b, u, indent+"  ")
+		}
+
+		for _, m := range s.ModuleProcedures {
+			dumpLines(b, m, indent+"  ")
+		}
+
+		if s.End != nil {
+			dumpLines(b, s.End, indent)
+		}
 	}
 
 	for _, inner := range body {
@@ -239,6 +270,27 @@ func DumpStmt(s Stmt) string {
 
 	case *EndWhereStmt:
 		return "END WHERE"
+
+	case *ContainsStmt:
+		return "CONTAINS"
+
+	case *InterfaceBlock:
+		if g := s.Generic.String(); g != "" {
+			return "INTERFACE " + g
+		}
+
+		return "INTERFACE"
+
+	case *ModuleProcedureStmt:
+		names := make([]string, len(s.Names))
+		for i, n := range s.Names {
+			names[i] = n.Name
+		}
+
+		return "MODULE PROCEDURE " + strings.Join(names, ", ")
+
+	case *EndInterfaceStmt:
+		return "END INTERFACE"
 
 	case *PendingStmt:
 		if s.What != "" {
@@ -537,6 +589,12 @@ func DumpExpr(e Expr) string {
 		return "(" + e.Op.String() + " " + DumpExpr(e.X) + ")"
 	case *Binary:
 		return "(" + e.Op.String() + " " + DumpExpr(e.X) + " " + DumpExpr(e.Y) + ")"
+	case *DefinedOp:
+		if e.Y == nil {
+			return "(" + e.Op + " " + DumpExpr(e.X) + ")"
+		}
+
+		return "(" + e.Op + " " + DumpExpr(e.X) + " " + DumpExpr(e.Y) + ")"
 	case *Paren:
 		return "(paren " + DumpExpr(e.X) + ")"
 	case *HollerithConst:
