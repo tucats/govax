@@ -30,8 +30,8 @@ func init() {
 
 // emulCmp is CMP{B,W,L}: src1 is compared with src2; neither operand is
 // modified. N <- src1 LSS src2, Z <- src1 EQL src2, V <- 0, C <- src1 LSSU
-// src2 (unsigned) -- exactly subResult's V/C shape (src1 - src2's borrow and
-// overflow), reused here even though CMP never writes a result.
+// src2 (unsigned): compareCodes, whose N is the signed comparison itself, so
+// right when src1 - src2 would overflow.
 func emulCmp(e *Engine, d *Decoded) error {
 	size := int(d.Operands[0].Size)
 
@@ -45,10 +45,10 @@ func emulCmp(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	result, _, c := subResult(src1, src2, size)
+	n, z, c := compareCodes(src1, src2, size)
 	psl := e.cpu.PSL()
-	psl.SetN(signBit(result, size))
-	psl.SetZ(isZero(result, size))
+	psl.SetN(n)
+	psl.SetZ(z)
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)

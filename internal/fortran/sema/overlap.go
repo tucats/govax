@@ -18,7 +18,9 @@ import (
 //
 //   - apart: different storage (different names not joined by COMMON or
 //     EQUIVALENCE, two dummy arguments), or the same array where a subscript
-//     shows the two never meet (A(:, 1) = A(:, 2));
+//     shows the two never meet (A(:, 1) = A(:, 2)); two fixed subscripts not
+//     known to differ (A(I, :) = A(K, :)) are taken as equal, since either
+//     answer, the same element or apart, needs nothing of the loops;
 //   - the same element at each index of the loops (A = A + 1, A(1:N) =
 //     2 * A(1:N));
 //   - ordered: the same array, the same subscripts in every dimension but
@@ -628,7 +630,13 @@ func relate(target, leaf Expr) (rel overlapRelation, loop, dir int) {
 				return relApart, 0, 0
 			}
 
-			return relUnknown, 0, 0
+			// Two fixed subscripts whose difference isn't known when
+			// compiling (A(I, K:N) and A(K, K:N)) are computed once, before
+			// the loops: when the program runs they are equal, and this
+			// dimension is the same element's, or they differ and the two
+			// never meet, which any order of the loops is right for. So the
+			// other dimensions decide, as if they were equal.
+			continue
 
 		case x.triplet && y.triplet:
 			if DumpExpr(x.stride) != DumpExpr(y.stride) {

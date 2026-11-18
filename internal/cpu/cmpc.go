@@ -3,12 +3,9 @@ package cpu
 import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_cmpc.c's CMPC3/CMPC5. Each byte comparison's
-// N/Z/C are computed the way the manual's Condition Codes section states --
-// N/Z/C from subResult at the compared width (signed LSS for N, unsigned
-// LSSU for C, matching vax.h's SETCONDITIONBITS macro's LONGWORD/ULONGWORD
-// cast pair) -- rather than porting the macro literally, since it's already
-// this package's standard "N/Z from result, C from an unsigned compare"
-// shape (condcodes.go).
+// N/Z/C are computed the way the manual's Condition Codes section states,
+// by compareCodes at the compared width (condcodes.go): signed LSS for N,
+// unsigned LSSU for C. ^X7F is greater than ^X80 for N, less for C.
 
 func init() {
 	reg := func(fn byte, h Handler) {
@@ -52,9 +49,9 @@ func emulCmpc3(e *Engine, d *Decoded) error {
 			return err
 		}
 
-		result, _, c := subResult(uint64(b1), uint64(b2), 1)
-		psl.SetN(signBit(result, 1))
-		psl.SetZ(isZero(result, 1))
+		n, z, c := compareCodes(uint64(b1), uint64(b2), 1)
+		psl.SetN(n)
+		psl.SetZ(z)
 		psl.SetC(c)
 
 		if b1 != b2 {
@@ -123,10 +120,10 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 	src1 := d.Operands[1].Addr
 	src2 := d.Operands[4].Addr
 
-	result, _, c := subResult(uint64(uint32(len1)), uint64(uint32(len2)), 4)
+	n, z, c := compareCodes(uint64(uint32(len1)), uint64(uint32(len2)), 4)
 	psl := e.cpu.PSL()
-	psl.SetN(signBit(result, 4))
-	psl.SetZ(isZero(result, 4))
+	psl.SetN(n)
+	psl.SetZ(z)
 	psl.SetC(c)
 
 	// inequality tracks whether the main loop below stopped because it
@@ -153,9 +150,9 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 			return err
 		}
 
-		result, _, c := subResult(uint64(b1), uint64(b2), 1)
-		psl.SetN(signBit(result, 1))
-		psl.SetZ(isZero(result, 1))
+		n, z, c := compareCodes(uint64(b1), uint64(b2), 1)
+		psl.SetN(n)
+		psl.SetZ(z)
 		psl.SetC(c)
 
 		if b1 != b2 {
@@ -176,9 +173,9 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 			return err
 		}
 
-		result, _, c := subResult(uint64(b), uint64(fill), 1)
-		psl.SetN(signBit(result, 1))
-		psl.SetZ(isZero(result, 1))
+		n, z, c := compareCodes(uint64(b), uint64(fill), 1)
+		psl.SetN(n)
+		psl.SetZ(z)
 		psl.SetC(c)
 
 		if b != fill {
@@ -195,9 +192,9 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 			return err
 		}
 
-		result, _, c := subResult(uint64(fill), uint64(b), 1)
-		psl.SetN(signBit(result, 1))
-		psl.SetZ(isZero(result, 1))
+		n, z, c := compareCodes(uint64(fill), uint64(b), 1)
+		psl.SetN(n)
+		psl.SetZ(z)
 		psl.SetC(c)
 
 		if fill != b {

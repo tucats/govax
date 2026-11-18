@@ -276,10 +276,10 @@ func emulCmpv(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	result, _, c := subResult(uint64(field), data, 4)
+	n, z, c := compareCodes(uint64(field), data, 4)
 	psl := e.cpu.PSL()
-	psl.SetN(signBit(result, 4))
-	psl.SetZ(isZero(result, 4))
+	psl.SetN(n)
+	psl.SetZ(z)
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)

@@ -40,6 +40,20 @@ func isZero(v uint64, size int) bool {
 	return maskToSize(int64(v), size) == 0
 }
 
+// compareCodes is the condition codes a comparison of src1 with src2 sets
+// (CMPB/W/L, CMPV/CMPZV, and each byte of CMPC3/CMPC5): N <- src1 LSS src2,
+// signed; Z <- src1 EQL src2; C <- src1 LSSU src2. N is the signed comparison
+// itself, not the sign of src1 - src2, which is wrong whenever the difference
+// overflows: 3 compared with -2147483648 is greater, though 3 - (-2147483648)
+// is negative in a longword.
+func compareCodes(src1, src2 uint64, size int) (n, z, c bool) {
+	n = signExtend(src1, size) < signExtend(src2, size)
+	z = maskToSize(int64(src1), size) == maskToSize(int64(src2), size)
+	c = maskToSize(int64(src1), size) < maskToSize(int64(src2), size)
+
+	return n, z, c
+}
+
 // minSigned returns the most negative representable value at the given size
 // (1, 2, 4, or 8 bytes), e.g. -128 for size 1 -- the "largest negative
 // integer" the VAX manual's MNEG/negation-overflow notes refer to.

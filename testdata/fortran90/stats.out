@@ -1,0 +1,43 @@
+Count: 20   lowest: 47   highest: 95
+Mean:  74.75   variance:  170.72   deviation: 13.07
+The highest is number  9
+The lowest is number 10
+Above the mean: 11
+Mean of those passing:  78.53
+Mean of those failing:  53.33
+Histogram:
+ 40 - 49  *
+ 50 - 59  **
+ 60 - 69  ****
+ 70 - 79  *****
+ 80 - 99  ********
+Every score counted: T
+Standard scores:
+ -0.21  0.78 -0.82  1.24 -1.28  0.17 -0.44  1.01  1.55 -2.12
+  0.48 -0.13 -0.67  0.33  0.71 -1.51  1.17 -0.98  0.10  0.63
+Their extremes: -2.12  1.55
+Sorted:
+  47  55  58  62  64  66  69  72  73  76
+  77  79  81  83  84  85  88  90  91  95
+Median:  76.5
+In order: T
+Moving averages of three:
+  73.7  80.0  71.0  75.3  68.0  78.0  84.0  76.7  74.3
+  67.0  73.3  72.7  76.3  72.7  76.3  69.0  76.0  73.7
+The same in place: T
+Five students, four tests:
+  1    72  77  81  55  total  285
+  2    85  69  73  90  total  317
+  3    64  88  66  62  total  280
+  4    91  95  79  76  total  341
+  5    58  47  84  83  total  272
+Test means:     74.0  75.2  76.6  73.2
+Test highs:       91    95    84    90
+By student:        4     4     5     2
+Student lows:    55   69   62   76   47
+Eighty up:        1    2    1    2    2
+Passed all:     F  T  T  T  F
+Someone failed:  T  T  F  T
+Top total, student  4
+Tests 1 and 2 correlate:  0.568
+  $STATUS == "%X00000001"

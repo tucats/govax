@@ -77,6 +77,9 @@ PROGRAMS90 = {
     "reduce": ["reduce.f90"],
     "where": ["where.f90"],
     "arrayio": ["arrayio.f90"],
+    "matrix": ["matrix.f90"],
+    "stats": ["stats.f90"],
+    "smooth": ["smooth.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

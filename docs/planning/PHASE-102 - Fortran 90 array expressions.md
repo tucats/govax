@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 11 are done (2026-11-17), and subtask 12 is next.
+author's answers"); subtasks 2 to 12 are done (2026-11-17), and subtask 13 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -422,7 +422,8 @@ and FTNRTL do today.
 10. **WHERE** in both forms (finding 8) (done 2026-11-17).
 11. **Arrays in I/O lists** (finding 14) (done 2026-11-17).
 12. **Programs end to end** (a matrix and statistics program, smoothing with
-    WHERE), gfortran's witness, every mode, the optimizer's cases.
+    WHERE), gfortran's witness, every mode, the optimizer's cases (done
+    2026-11-17).
 13. **Close-out:** FORTRAN-INTERNALS.md's section 27 (arrays as values and the
     scalarizer, with `A(2:N) = A(1:N-1) + B(2:N)` followed through), MANUAL.md's
     14.13, HELP FORTRAN.
@@ -839,3 +840,41 @@ shapes in Phase 104.
   `where.f90`, which subtask 10's entry says ran in all eight modes, was
   missing from `fortran90PagingPrograms`; it is there now, and passes.
   MANUAL.md's "Not there yet" says I/O lists take arrays.
+- **2026-11-17, subtask 12:** Programs end to end. Three programs in
+  `testdata/fortran90`, each worked by hand (the determinant, -191, and the
+  inverse's rounding margins checked in exact fractions; the standard scores'
+  and correlation's margins; the smoothing's sums, every one a whole number),
+  run by `TestFortran90Programs` in all eight modes, and the same on gfortran
+  (`compare.py`'s `PROGRAMS90`): `matrix.f90`, Gaussian elimination with
+  partial pivoting on an adjustable dummy, the inverse by columns, MATMUL,
+  TRANSPOSE, and sums by DIM=; `stats.f90`, a PARAMETER's scores through every
+  reduction, masks, a histogram, a sort by MINLOC of a section, a moving
+  average, and a RESHAPEd table by DIM=; and `smooth.f90`, a picture cleaned by
+  WHERE statements, smoothed from five sections (in place through a
+  temporary), leveled by a WHERE construct with ELSEWHERE into CHARACTER and
+  INTEGER arrays, and its edges found. They found two bugs. **The CPU's CMP**
+  took N from the sign of src1 - src2, wrong when the difference overflows: an
+  INTEGER MAXVAL, whose accumulator starts at -2147483648, never took an
+  element. The C source had it too; `compareCodes` (`internal/cpu/condcodes.go`)
+  is now CMP's, CMPV's, and CMPC's N, the signed comparison itself
+  (`TestEmulCmpOverflowingDifference`; DEVIATIONS-RESOLVED.md). And
+  **overlap** sent `A(K, :) = A(P, :)` and `A(I, K:N) = A(I, K:N) - F * A(K,
+  K:N)` through a temporary, NOTIMPL in a subroutine whose N is a dummy: two
+  fixed subscripts not known to differ were "unknown". They are computed once
+  before the loops, so when the program runs they are equal (the same
+  element) or not (apart), and neither asks anything of the loops: `relate`
+  now takes them as equal and lets the other dimensions decide
+  (`TestArrayOrder`'s four new cases). The optimizer's cases, read in the
+  `/OPTIMIZE` MACRO: the elimination's inner loop is six instructions, three
+  induction variables stepping by the row stride and `AOBLEQ`; the smoothing's
+  five sections share one index register, each a displacement
+  (`IMG-4[R6]`, `IMG+32[R6]`), the loops closed by `AOBLEQ` on constant limits;
+  each WHERE assignment's mask is a compare and branch in its own nest. The
+  gains, 6% to 10%, are smaller than the old corpus's kernels' because each
+  statement's nest is short. Left as they are, for Phase 110's measurements:
+  a WHERE construct's assignments are separate nests, never fused; a target
+  and a leaf with the same subscripts (`A(I, K:N)` on both sides) are
+  prepared twice, two registers stepping together; MINLOC's result goes
+  through `$A1` and a one-trip loop into K, which it doesn't overlap; a
+  reduction's running element and found flag stay in memory; `T = IMG` is
+  a loop, not a MOVC3.

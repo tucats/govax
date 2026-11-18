@@ -41,6 +41,42 @@ func TestEmulCmp(t *testing.T) {
 	}
 }
 
+// TestEmulCmpOverflowingDifference holds N to the signed comparison where
+// src1 - src2 overflows: 3 is greater than -2147483648 (MAXVAL's starting value
+// in a FORTRAN reduction), though their difference's sign bit is set, and ^X7F
+// greater than ^X80 as bytes; C, unsigned, says the opposite in both.
+func TestEmulCmpOverflowingDifference(t *testing.T) {
+	cases := []struct {
+		name         string
+		opcode       byte
+		src1, src2   uint32
+		wantN, wantC bool
+	}{
+		{"CMPL 3, -2147483648", 0xD1, 3, 0x80000000, false, true},
+		{"CMPL -2147483648, 3", 0xD1, 0x80000000, 3, true, false},
+		{"CMPL 2147483647, -1", 0xD1, 0x7FFFFFFF, 0xFFFFFFFF, false, true},
+		{"CMPW 32767, -32768", 0xB1, 0x7FFF, 0x8000, false, true},
+		{"CMPB 127, -128", 0x91, 0x7F, 0x80, false, true},
+		{"CMPB -128, 127", 0x91, 0x80, 0x7F, true, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cpu, mem := fixture()
+			e := NewEngine(cpu, mem)
+			cpu.SetGPR(registers.R1, tc.src1)
+			cpu.SetGPR(registers.R2, tc.src2)
+
+			stepInstruction(t, e, tc.opcode, regMode(registers.R1), regMode(registers.R2))
+
+			psl := cpu.PSL()
+			if psl.N() != tc.wantN || psl.Z() || psl.V() || psl.C() != tc.wantC {
+				t.Errorf("N=%v Z=%v V=%v C=%v, want N=%v Z=false V=false C=%v",
+					psl.N(), psl.Z(), psl.V(), psl.C(), tc.wantN, tc.wantC)
+			}
+		})
+	}
+}
+
 func TestEmulCmplUsesGenericHandler(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)

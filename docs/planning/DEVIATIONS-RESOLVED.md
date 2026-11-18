@@ -3853,3 +3853,23 @@ Entry template:
   previous kernel), which the check refuses; it now pushes `^X03C00000`.
   `TestReiChecksPoppedPSL` (`internal/cpu/rei_test.go`) runs every rule,
   and `TestLoadContextChecksPSL` the scheduler's.
+
+### [Phase 102, resolved] CMP's N was the difference's sign, wrong when it overflows
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_cmp.c` (N by
+  `SETCONDITIONBITS` of `d1 - d2` against 0), ported to
+  `internal/cpu/cmp.go`'s `emulCmp`, and the same rule in
+  `internal/cpu/bitfield.go`'s `emulCmpv` (CMPV, CMPZV) and
+  `internal/cpu/cmpc.go`'s byte comparisons (CMPC3, CMPC5).
+- **What**: the architecture manual's CMP: N ← src1 LSS src2, a signed
+  comparison. Both the C source and govax took N from the sign of src1 −
+  src2 at the operand's width, which is the opposite answer whenever the
+  difference overflows: CMPL of 3 with -2147483648 set N, so BGTR didn't
+  branch, and CMPB of ^X7F with ^X80 called 127 less than -128. Found by
+  `testdata/fortran90`'s `stats.f90` (Phase 102, subtask 12): an INTEGER
+  MAXVAL starts its accumulator at -2147483648 and compares each element
+  with it, and every element looked smaller.
+- **Status**: fixed in Phase 102's subtask 12: `compareCodes`
+  (`internal/cpu/condcodes.go`) is N, Z, and C of a comparison, N the signed
+  comparison itself, used by all three. `TestEmulCmpOverflowingDifference`
+  holds CMPL, CMPW, and CMPB at their limits.

@@ -143,7 +143,7 @@ func TestFortranPrograms(t *testing.T) {
 var fortran90Programs = filepath.Join("..", "..", "testdata", "fortran90")
 
 // fortran90PagingPrograms are the Fortran 90 programs also run with paging on.
-var fortran90PagingPrograms = []string{"arrayio", "arrays", "average", "bytes", "cases", "constants", "cplx16", "declare", "elements", "examples", "forms", "inquire", "kinds", "layout", "loops", "overlap", "precise", "reduce", "selects", "spellings", "squares", "strings", "tokens", "vectors", "where"}
+var fortran90PagingPrograms = []string{"arrayio", "arrays", "average", "bytes", "cases", "constants", "cplx16", "declare", "elements", "examples", "forms", "inquire", "kinds", "layout", "loops", "matrix", "overlap", "precise", "reduce", "selects", "smooth", "spellings", "squares", "stats", "strings", "tokens", "vectors", "where"}
 
 // TestFortran90Programs runs the Fortran 90 corpus as TestFortranPrograms runs
 // the old one, in every mode: FORTRAN finds each NAME.F90 on the volume and reads

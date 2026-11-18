@@ -1,0 +1,40 @@
+The matrix and its right side:
+   2.0   1.0  -1.0   3.0     14.0
+   4.0   1.0   0.0   2.0     12.0
+  -2.0   5.0   2.0  -1.0      3.0
+   1.0  -1.0   3.0   2.0      2.0
+Solution:      1.000   2.000  -1.000   3.000
+Row swaps:   3
+Reduced:
+   4.000   1.000   0.000   2.000
+   5.500   2.000   0.000
+   3.455   1.500
+   2.513
+Determinant: -191.000
+Residual small: T
+The inverse times 1000, rounded:
+   -215    351    -37    -47
+     63     68    157    -84
+   -173     63     68    230
+    398   -236     -5    136
+The matrix times its inverse, rounded:
+  1  0  0  0
+  0  1  0  0
+  0  0  1  0
+  0  0  0  1
+Its Gram matrix:
+   25   -5   -3   18
+   -5   28    6   -2
+   -3    6   14    1
+   18   -2    1   18
+Symmetric: T
+Trace:   85
+Row sums:       5    7    4    5
+Column sums:    5    6    4    6
+Largest:        4    5    3    3
+Its cube:
+    11    18    42    54
+    54     9    44    82
+    72    40    -5    58
+    20    60    34     1
+  $STATUS == "%X00000001"
