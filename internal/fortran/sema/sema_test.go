@@ -1290,7 +1290,7 @@ func TestErrors(t *testing.T) {
 		{"a substring out of its variable", []string{"CHARACTER*8 S", "S(0:3) = 'A'", "S(5:9) = 'A'", "S(4:3) = 'A'", "END"}, "SUBRANGE@2:7 SUBRANGE@3:7 SUBRANGE@4:7"},
 		{"a substring's one bound out", []string{"CHARACTER*8 S", "S(I:9) = 'A'", "S(0:I) = 'A'", "END"}, "SUBBOUND@2:7 SUBBOUND@3:7"},
 		{"a substring of a constant", []string{"CHARACTER*8 S", "PARAMETER (S = 'ABC')", "PRINT *, S(1:2)", "END"}, "BADUSE@3:16"},
-		{"a section, not yet", []string{"CHARACTER*8 S(2)", "PRINT *, S(1:2)", "END"}, "NOTIMPL@2:16"},
+		{"a section", []string{"CHARACTER*8 S(2)", "PRINT *, S(1:2)", "END"}, ""},
 		{"a field of a name that isn't a record", []string{"X = R.F + 1", "END"}, "NOTRECORD@1:11"},
 		{"an implied-DO list", []string{"PRINT *, (I, I = 1, 3)", "END"}, ""},
 		{"WRITE with ERR=", []string{"WRITE (*, *, ERR=10) X", "10 END"}, ""},

@@ -713,7 +713,14 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 		return true
 	}
 
-	if t := a.place(u.Expr, true); t != nil && t.Type().Kind == Character {
+	t := a.place(u.Expr, true)
+	if t != nil && t.Type().Kind == Invalid {
+		// A place with an error, reported (an array section, which can't
+		// be an internal file).
+		return false
+	}
+
+	if t != nil && t.Type().Kind == Character {
 		if r, ok := t.(*ArrayRef); ok && r.Sym.AssumedSize() {
 			a.report("NOSIZE", u.Pos, r.Sym.Name)
 
@@ -785,9 +792,10 @@ func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 }
 
 // sectionPlace is t, a place, unless it is an array section (or a section's
-// substring): not a place where a scalar must be (nil), and in an I/O list or
-// as an internal file not compiled yet (docs/planning/PHASE-102 - Fortran 90
-// array expressions.md, subtask 11).
+// substring): not a place where a scalar must be (nil), and as an internal
+// file or ENCODE's buffer, whose records are contiguous memory, not compiled
+// (a section's descriptor is Phase 109's). An input list's sections don't come
+// here (inputPlace).
 func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
 	if t == nil || rankOf(t) == 0 {
 		return t
@@ -797,7 +805,7 @@ func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
 		return nil
 	}
 
-	a.notImplForm(t.Position(), "an array section in an I/O statement")
+	a.notImplForm(t.Position(), "an array section as an internal file or buffer")
 
 	return a.bad(t.Position())
 }
@@ -1055,11 +1063,11 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 		v = a.arrayValue(e)
 	}
 
-	if rankOf(v) > 0 {
-		// A whole array is an item as it always was (its Name, above); a
-		// section or an array-valued expression is subtask 11's.
-		a.notImplForm(v.Position(), "an array section or array expression in an I/O list")
-
+	// A section or an array-valued expression is an item for each of its
+	// elements in array element order (docs/planning/PHASE-102 - Fortran 90
+	// array expressions.md, finding 14); its parts must be ones the
+	// scalarizer computes at each element.
+	if rankOf(v) > 0 && !a.checkArrayParts(v) {
 		return a.bad(v.Position())
 	}
 
@@ -1067,10 +1075,13 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 }
 
 // inputItem analyzes an input list's item, a place: a variable, an array
-// element, a substring, or a whole array. Reading into a DO loop's
-// variable inside the loop is DOVARSET, as assigning it is.
+// element, a substring, a whole array, or an array section (or a section's
+// substring), read an element at a time. Reading into a DO loop's variable
+// inside the loop is DOVARSET, as assigning it is; a section whose constant
+// vector subscript names an element twice is MANYONE, as in an assignment's
+// target (the standard's 9.4.2: no element may be read twice by one item).
 func (a *analyzer) inputItem(e ast.Expr) Expr {
-	t := a.place(e, true)
+	t := a.inputPlace(e)
 
 	switch t := t.(type) {
 	case nil:
@@ -1087,11 +1098,33 @@ func (a *analyzer) inputItem(e ast.Expr) Expr {
 
 	case *Var:
 		a.checkLoopVariable(t.Sym, t.Pos)
+
+	case *Section, *Substring:
+		if rankOf(t) > 0 && !a.checkManyOne(t) {
+			return a.bad(t.Position())
+		}
 	}
 
 	a.noteAssigned(t)
 
 	return t
+}
+
+// inputPlace is the place an input item names, as place's with whole arrays,
+// but a section, which an input list may read into and an internal file or
+// ENCODE's buffer may not be, is one too.
+func (a *analyzer) inputPlace(e ast.Expr) Expr {
+	switch f := a.substringForm(e).(type) {
+	case *ast.Apply:
+		if s := a.scope.find(f.Name); s != nil && s.Class == Array {
+			return a.target(f)
+		}
+
+	case *ast.Substring:
+		return a.target(f)
+	}
+
+	return a.place(e, true)
 }
 
 // inputWhat names an input item that can't be read into, for BADINPUT.

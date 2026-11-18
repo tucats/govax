@@ -8635,7 +8635,9 @@ array PARAMETERs and initial values, the elemental intrinsic functions on arrays
 RESHAPE of constants, SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, COUNT, DOT_PRODUCT,
 MAXLOC, MINLOC, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND, and UBOUND, and WHERE, its
 statement and its construct with ELSEWHERE (a WHERE inside a WHERE, and ELSEWHERE with a
-mask, are Fortran 95's: `%FORT-E-F95ONLY`). Fortran 90's other new
+mask, are Fortran 95's: `%FORT-E-F95ONLY`), and sections and array expressions in I/O lists,
+written or read an element at a time in array element order (`READ *, N, A(1:N)` uses the N
+it has just read; a section can't yet be an internal file or ENCODE's buffer). Fortran 90's other new
 intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
 own. A format written as a character constant may hold `"..."` constants under `/F90`
 (`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as

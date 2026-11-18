@@ -293,7 +293,39 @@ func (l *lowerer) ioItems(items []*sema.Item) {
 			continue
 		}
 
-		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: l.item(it.Value)}}})
+		l.ioItem(it.Value)
+	}
+}
+
+// ioItem lowers one item of an I/O list. A scalar, or a whole array of the
+// program's (one class A descriptor, all of it in one call), is one call. Any
+// other array (a section, an array expression, an array constant) is a call
+// for each element, in array element order, through the scalarizer's loops
+// (docs/planning/PHASE-102 - Fortran 90 array expressions.md, finding 14): an
+// input section's element is a place, read where it is, and an output
+// expression's element a value computed into a temporary, as a scalar
+// expression's is. A constructor's values are items in turn, an implied DO of
+// it a loop around its own: the constructor is never built. The extents and
+// subscripts are computed when the item is reached, so READ *, N, A(1:N) uses
+// the N just read.
+func (l *lowerer) ioItem(v sema.Expr) {
+	call := func(e sema.Expr) {
+		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: l.item(e)}}})
+	}
+
+	if len(v.Shape()) == 0 {
+		call(v)
+
+		return
+	}
+
+	switch v := v.(type) {
+	case *sema.ArrayRef:
+		call(v)
+	case *sema.Constructor:
+		l.fillItems(v.Items, call)
+	default:
+		l.eachElement(v, call)
 	}
 }
 

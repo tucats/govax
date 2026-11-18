@@ -765,7 +765,7 @@ var messages = map[string]kind{
 	"SHAPEVALUE":    {Error, "%s has %d elements, and its value %d"},
 	"MERGEARGS":     {Error, "the TSOURCE and FSOURCE of MERGE must have one type and length, and they are %s and %s"},
 	"ARRAYRANK":     {Error, "%s's %s must be of rank %s, not %d"},
-	"MANYONE":       {Error, "the vector subscript of %s names element %d more than once, so the section can't be assigned to"},
+	"MANYONE":       {Error, "the vector subscript of %s names element %d more than once, so the section can't be given values"},
 
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.
 	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},

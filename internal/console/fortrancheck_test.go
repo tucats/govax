@@ -124,6 +124,19 @@ var checkPrograms = []struct {
       END`,
 	},
 	{
+		// An output list's section (Phase 102, subtask 11), its last subscript
+		// past the array's end, checked once before its loop.
+		name: "IOSECTION", qualifier: "/CHECK=BOUNDS", checked: "%SYSTEM-F-SUBRNG", plain: "AFTER",
+		source: `
+      OPTIONS /F90
+      REAL A(10), PAD(10)
+      N = 11
+      A = 1.0
+      PRINT *, A(2:N:3)
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
 		// A WHERE's mask of another extent than its assignment's target, known
 		// only when the program runs (Phase 102, subtask 10).
 		name: "WHERE", qualifier: "/CHECK=BOUNDS", checked: "%FOR-F-NOTCONFOR", plain: "AFTER",

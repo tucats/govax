@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 10 are done (2026-11-17), and subtask 11 is next.
+author's answers"); subtasks 2 to 11 are done (2026-11-17), and subtask 12 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -420,7 +420,7 @@ and FTNRTL do today.
 9. **Reductions and inquiries**, with MASK= and constant DIM=, DOT_PRODUCT,
    MAXLOC and MINLOC, MATMUL and TRANSPOSE (finding 12) (done 2026-11-17).
 10. **WHERE** in both forms (finding 8) (done 2026-11-17).
-11. **Arrays in I/O lists** (finding 14).
+11. **Arrays in I/O lists** (finding 14) (done 2026-11-17).
 12. **Programs end to end** (a matrix and statistics program, smoothing with
     WHERE), gfortran's witness, every mode, the optimizer's cases.
 13. **Close-out:** FORTRAN-INTERNALS.md's section 27 (arrays as values and the
@@ -813,3 +813,29 @@ shapes in Phase 104.
   `TestFortranCheck`'s WHERE, and `testdata/fortran90`'s `where.f90`, worked by
   hand, run in all eight modes and the same on gfortran. MANUAL.md's "Not there
   yet" says WHERE is there.
+- **2026-11-17, subtask 11:** Arrays in I/O lists. An output item may now be any
+  array value (`sema/io.go`'s `outputItem`, its parts held to what the
+  scalarizer computes at each element by `checkArrayParts`, as an assignment's
+  value is), and an input item a section or a section's substring
+  (`inputPlace`: `place`'s rule, but a section is a place here; MANYONE for a
+  constant vector subscript with a value twice, `checkManyOne`, whose message now
+  says the section "can't be given values", fitting a READ as well as an
+  assignment). In `ir/lowerio.go` an item is `ioItem`'s: a scalar, or a whole
+  array of the program's (its one class A descriptor), is one `FTN$IO_ITEM` call
+  as before; a constructor's values are items in turn (`fillItems`, its implied
+  DOs loops of their own), so it is never built; any other array is a call per
+  element through the scalarizer's `eachElement`, an input element a place read
+  where it is, an output one a value in a temporary as a scalar expression's is.
+  Each item's extents and subscripts are computed when the list reaches it, so
+  `READ *, N, A(1:N)` uses the N just read; `/CHECK=BOUNDS` checks a section's
+  first and last subscripts once before its loop, as in an assignment. An
+  internal file or ENCODE's buffer that is a section stays NOTIMPL (a
+  section's descriptor is Phase 109's), now with one message: `ioUnit` stops at
+  a place with an error instead of going on to NOTSCALAR. FTNRTL needed nothing.
+  Tests: `TestShapes`' I/O cases (the old NOTIMPLs now compile, and 11 new ones),
+  `TestErrors`' changed case, `ir`'s `f90io.for`, `TestFortranCheck`'s
+  IOSECTION, and `testdata/fortran90`'s `arrayio.f90` (with `arrayio.in`),
+  worked by hand, run in all eight modes and the same on gfortran.
+  `where.f90`, which subtask 10's entry says ran in all eight modes, was
+  missing from `fortran90PagingPrograms`; it is there now, and passes.
+  MANUAL.md's "Not there yet" says I/O lists take arrays.
