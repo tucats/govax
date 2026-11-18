@@ -1,0 +1,6 @@
+static:   165    55
+dummy:    75    80
+frame:     9
+optional:     3
+optional:    30
+  $STATUS == "%X00000001"

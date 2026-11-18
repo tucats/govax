@@ -5,8 +5,9 @@ Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
 ("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
 with static hosts), 4 (hosts in the frame), 5 (interface blocks), and 6
-(keyword arguments, OPTIONAL, PRESENT, INTENT), 7 (generic interfaces), and 8
-(defined operators and assignment) are done; subtask 9 is next.
+(keyword arguments, OPTIONAL, PRESENT, INTENT), 7 (generic interfaces), 8
+(defined operators and assignment), and 9 (programs end to end) are done;
+subtask 10, the close-out, is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -470,7 +471,8 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    (done 2026-11-18).
 8. **Defined operators and assignment** (findings 12 and 13) (done 2026-11-18).
 9. **Programs end to end**, every mode, gfortran's witness, the optimizer's
-   cases (a host variable kept in a register across a call that changes it).
+   cases (a host variable kept in a register across a call that changes it)
+   (done 2026-11-18).
 10. **Close-out:** FORTRAN-INTERNALS.md's section 28 (nested scopes, host
     association, resolving a call, with `DO I` in a host and its internal
     procedure followed through), MANUAL.md's 14.13, HELP FORTRAN.
@@ -811,3 +813,19 @@ The author read the survey and accepted every recommendation:
   MODULE PROCEDURE; golden `ir/testdata/f90operators.for`; the corpus's
   `operators.f90` (every mode, both paging modes, the same on gfortran, which
   also takes `.AND.` on INTEGERs from the interface).
+- **2026-11-18, subtask 9:** Programs end to end. Two more programs in
+  `testdata/fortran90`, run in every mode (`/NOOPTIMIZE`, `/OPTIMIZE`, both
+  `/RECURSIVE`) with paging off and on: `hostopt.f90`, the optimizer's cases,
+  a loop that would keep a value in a register calling an internal procedure
+  that changes it, for each place a host's value can be (a static variable, a
+  dummy through its cell, a RECURSIVE host's frame variable, an OPTIONAL dummy
+  asked about with PRESENT); and `numbers.f90`, the phase's features together
+  (defined operators on INTEGERs, one a RECURSIVE function with RESULT also
+  described in another external function's own block; a generic name whose
+  specifics have OPTIONAL dummies, called by keyword; internal procedures using
+  the host's DO variable and array). Every Phase 103 program (`internal`,
+  `hosts`, `recurhost`, `interfaces`, `optional`, `generics`, `operators`,
+  `hostopt`, `numbers`) prints the same on gfortran (`compare.py`'s PROGRAMS90);
+  `autohost` and `modules/shortlist` are DEC's. Nothing in the compiler needed
+  changing: the hand-worked `.out` of `hostopt.f90` was wrong once (DEEP's total),
+  and govax and gfortran agreed on the right one.

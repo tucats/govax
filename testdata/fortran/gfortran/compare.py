@@ -85,6 +85,8 @@ PROGRAMS90 = {
     "optional": ["optional.f90"],
     "generics": ["generics.f90"],
     "operators": ["operators.f90"],
+    "hostopt": ["hostopt.f90"],
+    "numbers": ["numbers.f90"],
     "stats": ["stats.f90"],
     "smooth": ["smooth.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
