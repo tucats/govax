@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and six questions for the author), was written 2026-11-17, for review.
-Needs Phase 102 (done).
+and six questions for the author), was accepted by the author 2026-11-17
+("The author's answers"); subtask 2 is next. Needs Phase 102 (done).
 
 ## Goal
 
@@ -442,7 +442,8 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
 
 ## A.4 The subtasks, revised
 
-1. **Survey** (this Part A).
+1. **Survey** (this Part A) (done 2026-11-17; accepted by the author the
+   same day).
 2. **The forms:** `ast.Unit.Contains`, `ast.InterfaceBlock`, keyword arguments in
    CALL, `ast.DefinedOp` with its two precedence levels and finding 12's record
    rule, the parser's checks (finding 1); everything new still NOTIMPL in sema;
@@ -498,6 +499,29 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    Phase 99's table said, which would need the parser to build both trees for
    every such expression and sema to choose one.
 
+## The author's answers (2026-11-17)
+
+The author read the survey and accepted every recommendation:
+
+1. Same-file calls through an implicit interface are checked for type, kind,
+   and rank only under a new `/WARNINGS=ARGUMENT_CHECKING` keyword, off by
+   default; FUNCTYPE and ARGCOUNT stay errors as today (finding 7). This
+   settles the plan's open question 1.
+2. An internal procedure is named `HOST.INNER`, its symbols `HOST.INNER.X`,
+   in place of Decision 10's `HOST.$Pn` (finding 4).
+3. Decision 11 as written: a static host's cells by name, its dummies through
+   Through cells, and the host's FP as a hidden argument only when something
+   an internal procedure reaches is in the host's frame (finding 5).
+4. Calls govax compiles always pass the full list, 0 for an absent argument,
+   and PRESENT also tests the argument count, so a caller using VMS's shorter
+   list is understood (finding 9).
+5. An interface takes precedence over a meaning only DEC gives (INTEGER
+   `.AND.`, LOGICAL = INTEGER, `.XOR.`), never over one the standard gives
+   (finding 13).
+6. `A.B.C` is settled in the parser, by the names RECORD statements (and
+   Phase 105's TYPE declarations) declare in the scope and its hosts; a field
+   of a record wins (finding 12).
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -513,3 +537,5 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
   settled in the parser, by the names RECORD statements declare (finding 12);
   CALL's list doesn't take keywords yet (finding 8). Six questions for the
   author (A.5). For review.
+- **2026-11-17:** The author accepted the survey and every recommendation
+  ("The author's answers"). Subtask 1 is done; subtask 2 is next.
