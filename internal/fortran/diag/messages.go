@@ -453,6 +453,18 @@ var messages = map[string]kind{
 	// value's place with the function's (section 6.2.4.1).
 	"ENTRYTYPE": {Error, "the entry point %s, %s, can't go with the function %s, %s: they must all be up to 8 bytes long and not CHARACTER, or all REAL*16 and COMPLEX*16, or all CHARACTER of one length"},
 
+	// ENTRYVALUE is a function's entry point whose value isn't the same
+	// variable as the function's: when one of them is an array, or made by the
+	// function (bounds or a CHARACTER length that aren't constant), they must all
+	// have the same rank, extents, bounds, and length (the Fortran 90 standard's
+	// 12.5.2.5).
+	"ENTRYVALUE": {Error, "the entry point %s's value must be the same as the function %s's: %s"},
+
+	// ENTRYMAKE is a function's entry point whose dummy arguments don't include
+	// one the function's value's bounds or length use, which it would need to
+	// make the value.
+	"ENTRYMAKE": {Error, "the entry point %s has no dummy argument %s, which %s's value's bounds or length use: it couldn't make the value"},
+
 	// Declarations.
 
 	// DUPDECL is a second type declaration of a name.

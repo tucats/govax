@@ -105,8 +105,10 @@ func (l *lowerer) prepareBounds() {
 
 	// The automatic arrays after the dummies, whose bounds an automatic array's
 	// may ask about (SIZE(A)); their cells are their own (automaticCell).
+	// An entry point's name for a value the function makes is the function's own
+	// value, made once at each entry point (lowervalue.go).
 	for _, s := range l.unit.Symbols {
-		if s.AutomaticObject && l.adjustable[s] != nil {
+		if s.AutomaticObject && l.adjustable[s] != nil && (!s.Result || s == l.unit.Result) {
 			l.adjustableOrder = append(l.adjustableOrder, s)
 		}
 	}

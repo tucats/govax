@@ -143,7 +143,7 @@ func TestFortranPrograms(t *testing.T) {
 var fortran90Programs = filepath.Join("..", "..", "testdata", "fortran90")
 
 // fortran90PagingPrograms are the Fortran 90 programs also run with paging on.
-var fortran90PagingPrograms = []string{"allocs", "allocstat", "allocvms", "arrayio", "autolen", "autos", "arrays", "autohost", "average", "bytes", "cases", "constants", "cplx16", "declare", "elements", "examples", "forms", "generics", "hostopt", "hosts", "inquire", "interfaces", "internal", "kinds", "layout", "loops", "matrix", "numbers", "operators", "optional", "overlap", "precise", "rampvms", "ramps", "recurhost", "reduce", "rtemps", "selects", "seqargs", "seqvms", "shapeargs", "shaped", "shapes", "smooth", "spellings", "squares", "stats", "strings", "tokens", "values", "vectors", "where"}
+var fortran90PagingPrograms = []string{"allocs", "allocstat", "allocvms", "arrayio", "autolen", "autos", "arrays", "autohost", "average", "bytes", "cases", "constants", "cplx16", "declare", "elements", "examples", "forms", "generics", "hostopt", "hosts", "inquire", "interfaces", "internal", "kinds", "layout", "loops", "madetext", "matrix", "numbers", "operators", "optional", "overlap", "precise", "rampvms", "ramps", "recurhost", "reduce", "rtemps", "selects", "seqargs", "seqvms", "shapeargs", "shaped", "shapes", "smooth", "spellings", "squares", "stats", "strings", "tokens", "values", "vectors", "where"}
 
 // TestFortran90Programs runs the Fortran 90 corpus as TestFortranPrograms runs
 // the old one, in every mode: FORTRAN finds each NAME.F90 on the volume and reads

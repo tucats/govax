@@ -421,6 +421,8 @@ func (a *analyzer) checkArrays() {
 			adj.sym.broken = true
 		}
 	}
+
+	a.checkEntryValues()
 }
 
 // boundValues analyzes an adjustable array's bounds into expressions of type

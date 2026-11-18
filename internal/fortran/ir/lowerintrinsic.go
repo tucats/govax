@@ -333,7 +333,8 @@ func (l *lowerer) bitFunction(t Type, e *sema.IntrinsicRef) Expr {
 }
 
 // charLen is a CHARACTER value's length: a concatenation's, its parts' sum,
-// with no temporary built; a function's, as declared, with no call made.
+// with no temporary built; a function's, as declared, with no call made, unless
+// the function makes its value, when only the call says how long it is.
 func (l *lowerer) charLen(e sema.Expr) Expr {
 	switch c := e.(type) {
 	case *sema.Concat:
@@ -345,6 +346,13 @@ func (l *lowerer) charLen(e sema.Expr) Expr {
 		return n
 
 	case *sema.FuncRef:
+		switch {
+		case c.Made && len(c.S) > 0:
+			return l.charLength(l.valueResult(c).Sym)
+		case c.Made:
+			return l.madeText(c).Len
+		}
+
 		return l.funcLength(c)
 
 	case *sema.StmtFuncRef:

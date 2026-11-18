@@ -192,6 +192,10 @@ func (l *lowerer) chars(e sema.Expr) Text {
 		return l.concat(e)
 
 	case *sema.FuncRef:
+		if e.Made {
+			return l.madeText(e)
+		}
+
 		// The value is as long as this unit declares the function, in a
 		// temporary of that length; a dummy procedure declared CHARACTER*(*)
 		// is as long as the unit that passed it says, which only its

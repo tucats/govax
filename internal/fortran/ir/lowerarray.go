@@ -163,17 +163,6 @@ func (l *lowerer) arrayTemp(t sema.Type, shape []int) *sema.ArrayRef {
 	return sema.NewArrayRef(sym, l.from.Position())
 }
 
-// allKnown reports whether every extent of the shape is known when compiling.
-func allKnown(shape sema.Shape) bool {
-	for _, e := range shape {
-		if !e.Known {
-			return false
-		}
-	}
-
-	return true
-}
-
 // arrayTempKey is what array temporaries are pooled by: their element type and
 // size in bytes.
 type arrayTempKey struct {
@@ -470,9 +459,10 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 		// An array-valued function's value, computed now, before the loops,
 		// into a temporary of its shape, which the call's hidden first
 		// argument points at (callArrayFunction): the loops read it. A value
-		// whose extents are known only when the program runs is the function's
-		// to make, described in a descriptor of the statement's (valueResult).
-		if !allKnown(leaf.S) {
+		// whose extents or CHARACTER length are known only when the program runs
+		// is the function's to make, described in a descriptor of the
+		// statement's (valueResult).
+		if leaf.Made {
 			whole(n.l.valueResult(leaf).Sym, leaf.Pos)
 
 			break

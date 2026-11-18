@@ -967,11 +967,15 @@ type (
 		Subs []SectionSub
 	}
 
-	// FuncRef is a reference to an external function.
+	// FuncRef is a reference to an external function. Made says the function
+	// makes its value itself, an array of a shape or a CHARACTER value of a length
+	// its explicit interface gives as specification expressions, which only it can
+	// work out (arrayvalue.go).
 	FuncRef struct {
 		exprBase
 		Fn   *Symbol
 		Args []Arg
+		Made bool
 	}
 
 	// StmtFuncRef is a reference to a statement function (section 6.2.1):

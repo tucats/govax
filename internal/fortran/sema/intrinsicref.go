@@ -137,14 +137,15 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 	if array && f.class != 'E' {
 		// LEN of a CHARACTER array whose length is known is that length;
-		// of a whole array or a section whose length isn't, its elements'
-		// length, which the IR knows where to find (charLen).
+		// of a whole array, a section, or a function's value whose length
+		// isn't, its elements' length, which the IR knows where to find
+		// (charLen): a function that makes its value is called for it.
 		if f.how == "LEN" && args[0].Type().Size > 0 {
 			return &Const{exprBase: exprBase{T: f.result, Pos: e.Pos}, Int: int32(args[0].Type().Size)}
 		}
 
 		switch args[0].(type) {
-		case *ArrayRef, *Section:
+		case *ArrayRef, *Section, *FuncRef:
 			if f.how == "LEN" {
 				return &IntrinsicRef{exprBase: exprBase{T: f.result, Pos: e.Pos}, Name: e.Name, Op: LenOp, Args: args[:1]}
 			}

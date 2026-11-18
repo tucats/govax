@@ -55,8 +55,13 @@ func (l *lowerer) prepareEntries(hidden int) {
 	l.entries = map[*sema.Entry]*Entry{}
 
 	for i, e := range u.Entries {
-		// A hidden argument's place is every name's: they have one value.
-		if hidden != 0 {
+		// A hidden argument's place is every name's: they have one value. A value
+		// the function makes is its own cell, every name's too (lowervalue.go).
+		switch {
+		case l.valueParam != nil:
+			l.adjustable[e.Sym] = l.adjustable[u.Result]
+			l.cells[e.Sym] = l.cells[u.Result]
+		case hidden != 0:
 			l.params[e.Sym] = l.params[u.Result]
 		}
 
@@ -76,7 +81,7 @@ func (l *lowerer) entryArgs(params []*sema.Symbol, hidden int) []EntryArg {
 	args := make([]EntryArg, 0, len(params)+hidden)
 
 	if hidden != 0 {
-		args = append(args, EntryArg{1, l.params[l.unit.Result]})
+		args = append(args, EntryArg{1, l.hiddenParam()})
 	}
 
 	for i, s := range params {
@@ -168,4 +173,14 @@ func (l *lowerer) entryPoint(s *sema.EntryPoint) {
 
 	l.begin(b)
 	l.entries[s.Entry].First = b
+}
+
+// hiddenParam is a function's hidden first argument: the place of its value, or
+// the descriptor of one it makes (lowervalue.go).
+func (l *lowerer) hiddenParam() *Param {
+	if l.valueParam != nil {
+		return l.valueParam
+	}
+
+	return l.params[l.unit.Result]
 }

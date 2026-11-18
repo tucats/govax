@@ -494,7 +494,7 @@ calls), then the frame's run-time storage everything after needs.
      through the caller's NCA descriptor, freed at the statement's end (done
      2026-11-18).
    - 7c. CHARACTER values of a run-time length, scalar and array, through a
-     class D descriptor; ENTRY in an array-valued function.
+     class D descriptor; ENTRY in an array-valued function (done 2026-11-18).
 8. **The transformational intrinsics** (finding 13), each against the standard's
    examples, and the intrinsic table's rows.
 9. **Programs end to end** (a linear-equation solver with assumed-shape arrays, a
@@ -1091,3 +1091,47 @@ The author read the survey and accepted every recommendation:
     descriptor, reading what the function filled in, and giving the block back with
     LIB$FREE_VM. MANUAL.md's 14.13 "Array-valued functions" and HELP FORTRAN describe
     them.
+- **2026-11-18, subtask 7c done:** CHARACTER values of a run-time length, and
+  ENTRY in array-valued functions.
+  - *sema.* A function's own value may have a CHARACTER length that is a
+    specification expression (`runtimeLength` no longer NOTIMPLs `Result`; the
+    function's name when RESULT names the value still is): an automatic object,
+    as an array of run-time bounds is. A reference's `FuncRef.Made` (`madeValue`)
+    says the function makes its value, from its explicit interface's value being an
+    automatic object, and lowering goes by it rather than 7b's unknown extents. The
+    caller's own symbol for such a function, length 0, isn't a passed length
+    (`madeLength`, in `passedLengths`). LEN of a function reference whose value is an
+    array is no longer NOTIMPL. `checkEntryValues` (`arrayvalue.go`): when the value
+    or an entry point's is an array or made, every entry point's must be declared
+    alike, rank, extents, bounds as written, and length (new **ENTRYVALUE**), and
+    each entry point of a made value must have every dummy its bounds or length use
+    (new **ENTRYMAKE**); 7a's ENTRY NOTIMPL is gone.
+  - *The function* (`ir/lowervalue.go`). A scalar made value is an automatic
+    CHARACTER object of its own class S cell, its storage a dynamic string
+    `madeString` gets with LIB$SGET1_DD in the caller's class D descriptor, the
+    hidden argument, then copies the address from; an array's element length is
+    written to the caller's NCA descriptor's first word and its first stride is
+    the length (`publishValue`). With ENTRY, every entry point's name is the value's
+    one cell, only the function's own computed at each entry point (`prepareBounds`),
+    and `hiddenParam` is the entry lists' first argument.
+  - *The caller.* A scalar is `madeText`: a class D descriptor cell of the
+    statement's, passed, read, and freed with LIB$SFREE1_DD at the statement's end
+    (`after`), as a concatenation's; LIB$SGET1_DD replaces a string the descriptor
+    already holds, so an implied DO calling the function at each pass leaves one. An
+    array is 7b's `$Gn` cell, `sema.NewValueArray` marking its length as the
+    descriptor's. `charLen` (LEN) calls the function; `ncaAsClassA` copies a run-time
+    element length.
+  - *Choices of ours, unconfirmed:* ENTRYVALUE compares bounds and lengths as
+    written (`lengthText`), so `N+1` and `1+N` differ; LEN of a reference calls the
+    function.
+  - *Not checked by a probe:* LIB$STAT_VM's count leaves dynamic strings out (their
+    own zone), so `rampvms.f90` checks the arrays' blocks; with LIB$SFREE1_DD taken
+    out it still printed T, the strings being replaced in place. The goldens show
+    each LIB$SFREE1_DD.
+  - *Tests:* `sema`'s `TestArrayValue` (ENTRY of each kind, ENTRYVALUE by rank,
+    extent, bounds, and length, ENTRYMAKE, a made length through an interface) and
+    `TestRuntimeLength`'s changed case; the `f90valuec` goldens in `sema`, `ir`, and
+    `codegen`; `testdata/fortran90/madetext.f90` (every mode, paging both ways;
+    gfortran prints the same 16 lines) and `rampvms.f90`'s CHARACTER cases; and
+    `TestFortranValueFromMACRO`'s dynamic string, written with LIB$PUT_OUTPUT and
+    freed with LIB$SFREE1_DD. MANUAL.md's 14.13 and HELP FORTRAN describe them.

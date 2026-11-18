@@ -1,0 +1,562 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for REP, a CHARACTER*(*) function
+;   $VALUE  CHARACTER*(N*LEN(C))  hidden argument 1  @REP.$VALUE(AP)
+;   C       CHARACTER*(*)         argument 2         @REP.C(AP)
+;   N       INTEGER               argument 3         @REP.N(AP)
+;   REP     CHARACTER*(N*LEN(C))  $LOCAL+0           REP.REP
+;
+REP.$VALUE = 4				; $VALUE's value goes through hidden argument 1
+REP.C = 8				; C is argument 2
+REP.N = 12				; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+REP.REP:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; REP: not allocated
+REP.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Functions whose CHARACTER value's length is known only when the program
+;    3  C     runs (Phase 104, subtask 7c): a scalar, a dynamic string the function
+;    4  C     gets with LIB$SGET1_DD in the caller's class D descriptor, freed by the
+;    5  C     caller with LIB$SFREE1_DD; an array, its element length the first word
+;    6  C     of the caller's class NCA descriptor; LEN of each; ENTRY in a function
+;    7  C     whose value is an array of a known shape, and in one whose value it
+;    8  C     makes.
+;    9        FUNCTION REP(C, N)
+	.ENTRY	REP,^M<R2,R3,R4,R5>
+	MOVZWL	@REP.C(AP),R0
+	MULL3	@REP.N(AP),R0,REP.$T1
+	BLSS	REP.$2
+	BRW	REP.$1
+REP.$2:
+	CLRL	REP.$T1
+REP.$1:
+	CVTLW	REP.$T1,REP.REP
+	PUSHL	REP.$VALUE(AP)
+	PUSHAQ	REP.REP
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVL	REP.$VALUE(AP),R0
+	MOVL	4(R0),REP.REP+4
+;   10        CHARACTER*(*) C
+;   11        INTEGER N
+;   12        CHARACTER(LEN=N*LEN(C)) REP
+;   13        REP = C
+	MOVZWL	@REP.C(AP),R0
+	MOVL	REP.C(AP),R1
+	MOVZWL	REP.REP,R2
+	MOVC5	R0,@4(R1),#^A/ /,R2,@REP.REP+4
+;   14        END FUNCTION
+	RET
+
+; Storage map for TAGS, a CHARACTER*(*) function
+;   $VALUE  CHARACTER*(W) (?)  hidden argument 1  @TAGS.$VALUE(AP)
+;   N       INTEGER            argument 2         @TAGS.N(AP)
+;   W       INTEGER            argument 3         @TAGS.W(AP)
+;   TAGS    CHARACTER*(W) (?)  $LOCAL+0           TAGS.TAGS
+;
+TAGS.$VALUE = 4				; $VALUE's value goes through hidden argument 1
+TAGS.N = 8				; N is argument 2
+TAGS.W = 12				; W is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+TAGS.TAGS:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; TAGS: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+TAGS.$T1:
+	.BLKL	1			; temporary
+TAGS.$I1:
+	.BLKL	1			; an array statement's loop index
+TAGS.$C1:
+	.BLKL	1			; array (line 19), dimension 1's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+TAGS.$K1:
+	.ASCII	/#/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   15        OPTIONS /F90
+;   16        FUNCTION TAGS(N, W)
+	.ENTRY	TAGS,^M<R2,R3,R4,R5>
+	MOVL	@TAGS.W(AP),TAGS.$T1
+	BLSS	TAGS.$2
+	BRW	TAGS.$1
+TAGS.$2:
+	CLRL	TAGS.$T1
+TAGS.$1:
+	CVTLW	TAGS.$T1,TAGS.TAGS
+	MOVL	@TAGS.N(AP),TAGS.TAGS+28
+	MOVL	TAGS.TAGS+28,TAGS.TAGS+20
+	BLSS	TAGS.$4
+	BRW	TAGS.$3
+TAGS.$4:
+	CLRL	TAGS.TAGS+20
+TAGS.$3:
+	MOVZWL	TAGS.TAGS,R0
+	MULL3	R0,TAGS.TAGS+20,TAGS.TAGS+12
+	PUSHAQ	TAGS.TAGS
+	CALLS	#1,G^FTN$GET_TEMP
+	MOVL	TAGS.TAGS+4,R0
+	MOVZWL	TAGS.TAGS,R1
+	MULL2	#-1,R1
+	MOVAB	(R0)[R1],TAGS.TAGS+16
+	MOVL	#168689664,@TAGS.$VALUE(AP)
+	MOVL	#2,R0
+	MOVL	#16777216,@TAGS.$VALUE(AP)[R0]
+	MOVW	TAGS.TAGS,@TAGS.$VALUE(AP)
+	MOVL	#1,R0
+	MOVL	TAGS.TAGS+4,@TAGS.$VALUE(AP)[R0]
+	MOVL	#3,R0
+	MOVL	TAGS.TAGS+12,@TAGS.$VALUE(AP)[R0]
+	MOVL	#4,R0
+	MOVL	TAGS.TAGS+16,@TAGS.$VALUE(AP)[R0]
+	MOVL	#5,R0
+	MOVZWL	TAGS.TAGS,@TAGS.$VALUE(AP)[R0]
+	MOVL	#6,R0
+	MOVL	#1,@TAGS.$VALUE(AP)[R0]
+	MOVL	#7,R0
+	MOVL	TAGS.TAGS+20,@TAGS.$VALUE(AP)[R0]
+;   17        INTEGER N, W
+;   18        CHARACTER(LEN=W) TAGS(N)
+;   19        TAGS = '#'
+	MOVL	TAGS.TAGS+20,TAGS.$T1
+	BLSS	TAGS.$6
+	BRW	TAGS.$5
+TAGS.$6:
+	CLRL	TAGS.$T1
+TAGS.$5:
+	MOVL	TAGS.$T1,TAGS.$C1	; array (line 19), dimension 1's count
+	MOVL	#1,TAGS.$I1
+	TSTL	TAGS.$C1
+	BGTR	TAGS.$8
+	BRW	TAGS.$7
+TAGS.$8:
+TAGS.$9:				; array (line 19), dimension 1's body
+	MOVZWL	TAGS.TAGS,R0
+	MOVL	TAGS.TAGS+16,R1
+	MOVZWL	TAGS.TAGS,R2
+	MULL2	TAGS.$I1,R2
+	MOVC5	#1,TAGS.$K1,#^A/ /,R0,(R1)[R2]
+	INCL	TAGS.$I1
+	DECL	TAGS.$C1		; one pass fewer
+	BLEQ	TAGS.$10
+	BRW	TAGS.$9
+TAGS.$10:
+TAGS.$7:
+;   20        END FUNCTION
+	RET
+
+; Storage map for USE, a subroutine
+;   S     CHARACTER*(*)      argument 1  @USE.S(AP)
+;   $G    CHARACTER*(*) (:)  $LOCAL+28   USE.$G1
+;   $G    CHARACTER*(*) (:)  $LOCAL+80   USE.$G2
+;
+USE.S = 4				; S is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+USE.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+USE.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+USE.$T1:
+	.BLKB	2			; temporary
+	.BLKB	2
+USE.$T2:
+	.BLKL	1			; temporary
+USE.$I1:
+	.BLKL	1			; an array statement's loop index
+USE.$G1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; $G: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USE.$T3:
+	.BLKL	1			; temporary
+USE.$T4:
+	.BLKL	1			; temporary
+USE.$C1:
+	.BLKL	1			; array (line 36), dimension 1's count
+USE.$D6:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+USE.$G2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; $G: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USE.$T5:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+USE.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS USE.$K1
+USE.$K2:
+	.LONG	2
+USE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+USE.$D4:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS USE.$K4
+USE.$K5:
+	.LONG	3
+USE.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS USE.$T2
+USE.$K6:
+	.LONG	1
+USE.$K7:
+	.LONG	4
+USE.$D7:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS USE.$T5
+USE.$K1:
+	.ASCII	/AB/
+USE.$K3:
+	.ASCII	/!/
+USE.$K4:
+	.ASCII	/X/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   21        OPTIONS /F90
+;   22        SUBROUTINE USE(S)
+	.ENTRY	USE,^M<R2,R3,R4,R5>
+;   23        CHARACTER*(*) S
+;   24        INTERFACE
+;   25          FUNCTION REP(C, N)
+;   26          CHARACTER*(*) C
+;   27          INTEGER N
+;   28          CHARACTER(LEN=N*LEN(C)) REP
+;   29          END FUNCTION
+;   30          FUNCTION TAGS(N, W)
+;   31          INTEGER N, W
+;   32          CHARACTER(LEN=W) TAGS(N)
+;   33          END FUNCTION
+;   34        END INTERFACE
+;   35        S = REP('AB', 2) // '!'
+	PUSHAL	USE.$K2
+	PUSHAQ	USE.$D2
+	PUSHAQ	USE.$D1
+	CALLS	#3,G^REP
+	MOVZWL	USE.$D1,R0
+	INCL	R0
+	CVTLW	R0,USE.$T1
+	PUSHAQ	USE.$D3
+	PUSHAW	USE.$T1
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	USE.$D1,R0
+	MOVC3	R0,@USE.$D1+4,@USE.$D3+4
+	MOVL	USE.$D3+4,R0
+	MOVZWL	USE.$D1,R1
+	MOVC3	#1,USE.$K3,(R0)[R1]
+	MOVZWL	USE.$D1,R0
+	INCL	R0
+	MOVZWL	@USE.S(AP),R1
+	MOVL	USE.S(AP),R2
+	MOVC5	R0,@USE.$D3+4,#^A/ /,R1,@4(R2)
+	PUSHAQ	USE.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	USE.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+;   36        PRINT *, LEN(REP('X', 3)), TAGS(2, 3), LEN(TAGS(1, 4))
+	PUSHL	#-1
+	PUSHAB	USE.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAL	USE.$K5
+	PUSHAQ	USE.$D4
+	PUSHAQ	USE.$D3
+	CALLS	#3,G^REP
+	MOVZWL	USE.$D3,USE.$T2
+	PUSHAQ	USE.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	USE.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+	TSTL	USE.$G1+4
+	BNEQ	USE.$2
+	BRW	USE.$1
+USE.$2:
+	PUSHL	#0
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$1:
+	PUSHAL	USE.$K5
+	PUSHAL	USE.$K2
+	PUSHAQ	USE.$G1
+	CALLS	#3,G^TAGS
+	SUBL3	#1,USE.$G1+24,USE.$T3
+	SUBL3	USE.$G1+24,USE.$G1+28,R0
+	ADDL3	R0,#1,USE.$T4
+	BLSS	USE.$4
+	BRW	USE.$3
+USE.$4:
+	CLRL	USE.$T4
+USE.$3:
+	MOVL	USE.$T4,USE.$C1		; array (line 36), dimension 1's count
+	MOVL	#1,USE.$I1
+	TSTL	USE.$C1
+	BGTR	USE.$6
+	BRW	USE.$5
+USE.$6:
+USE.$7:					; array (line 36), dimension 1's body
+	MOVW	USE.$G1,USE.$D6
+	MOVL	USE.$G1+16,R0
+	ADDL3	USE.$I1,USE.$T3,R1
+	MOVZWL	USE.$G1,R2
+	MULL2	R2,R1
+	MOVAB	(R0)[R1],USE.$D6+4
+	PUSHAQ	USE.$D6
+	CALLS	#1,G^FTN$IO_ITEM
+	INCL	USE.$I1
+	DECL	USE.$C1			; one pass fewer
+	BLEQ	USE.$8
+	BRW	USE.$7
+USE.$8:
+USE.$5:
+	TSTL	USE.$G2+4
+	BNEQ	USE.$10
+	BRW	USE.$9
+USE.$10:
+	PUSHL	#0
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$9:
+	PUSHAL	USE.$K7
+	PUSHAL	USE.$K6
+	PUSHAQ	USE.$G2
+	CALLS	#3,G^TAGS
+	MOVZWL	USE.$G2,USE.$T5
+	PUSHAQ	USE.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	TSTL	USE.$G1+4
+	BNEQ	USE.$12
+	BRW	USE.$11
+USE.$12:
+	PUSHL	#0
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$11:
+	TSTL	USE.$G2+4
+	BNEQ	USE.$14
+	BRW	USE.$13
+USE.$14:
+	PUSHL	#0
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$13:
+;   37        END SUBROUTINE
+	RET
+
+; Storage map for SQ, an INTEGER function
+;   SQ    INTEGER (3)  a hidden argument  @SQ.$A1
+;   N     INTEGER      an argument        @SQ.$A2
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SQ.$A1:	.BLKL	1			; SQ's longword of the argument list, set at each entry point
+SQ.$A2:	.BLKL	1			; N's longword of the argument list, set at each entry point
+SQ.$I1:	.BLKL	1			; an array statement's loop index
+SQ.$T1:	.BLKL	1			; temporary
+SQ.$C1:	.BLKL	1			; array (line 41), dimension 1's count
+SQ.$C2:	.BLKL	1			; array (line 44), dimension 1's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   38        OPTIONS /F90
+;   39        FUNCTION SQ(N)
+	.ENTRY	SQ,^M<>
+	MOVL	4(AP),SQ.$A1		; SQ is argument 1
+	MOVL	8(AP),SQ.$A2		; N is argument 2
+;   40        INTEGER N, SQ(3), CU(3)
+;   41        SQ = N * N
+	MULL3	@SQ.$A2,@SQ.$A2,SQ.$T1
+	MOVL	#3,SQ.$C1		; array (line 41), dimension 1's count
+	MOVL	#1,SQ.$I1
+SQ.$1:					; array (line 41), dimension 1's body
+	SUBL3	#1,SQ.$I1,R0
+	MOVL	SQ.$T1,@SQ.$A1[R0]
+	INCL	SQ.$I1
+	DECL	SQ.$C1			; one pass fewer
+	BLEQ	SQ.$2
+	BRW	SQ.$1
+SQ.$2:
+;   42        RETURN
+	RET
+;   43        ENTRY CU(N)
+SQ.$3:					; ENTRY CU
+;   44        CU = N * N * N
+	MULL3	@SQ.$A2,@SQ.$A2,R0
+	MULL3	R0,@SQ.$A2,SQ.$T1
+	MOVL	#3,SQ.$C2		; array (line 44), dimension 1's count
+	MOVL	#1,SQ.$I1
+SQ.$4:					; array (line 44), dimension 1's body
+	SUBL3	#1,SQ.$I1,R0
+	MOVL	SQ.$T1,@SQ.$A1[R0]
+	INCL	SQ.$I1
+	DECL	SQ.$C2			; one pass fewer
+	BLEQ	SQ.$5
+	BRW	SQ.$4
+SQ.$5:
+;   45        END FUNCTION
+	RET
+
+	.ENTRY	CU,^M<>
+	MOVL	4(AP),SQ.$A1		; SQ is argument 1
+	MOVL	8(AP),SQ.$A2		; N is argument 2
+	BRW	SQ.$3
+
+; Storage map for UP, a REAL function
+;   $VALUE  REAL (?)  a hidden argument  @UP.$A1
+;   N       INTEGER   an argument        @UP.$A2
+;   K       INTEGER   an argument        @UP.$A3
+;   UP      REAL (?)  $LOCAL+0           UP.UP
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+UP.UP:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; UP: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+UP.$A1:	.BLKL	1			; $VALUE's longword of the argument list, set at each entry point
+UP.$A2:	.BLKL	1			; N's longword of the argument list, set at each entry point
+UP.$A3:	.BLKL	1			; K's longword of the argument list, set at each entry point
+UP.$I1:	.BLKL	1			; an array statement's loop index
+UP.$T1:	.BLKL	1			; temporary
+UP.$T2:	.BLKL	1			; temporary
+UP.$C1:	.BLKL	1			; array (line 51), dimension 1's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   46        OPTIONS /F90
+;   47        FUNCTION UP(N, K)
+	.ENTRY	UP,^M<>
+	MOVL	4(AP),UP.$A1		; $VALUE is argument 1
+	MOVL	8(AP),UP.$A2		; N is argument 2
+	MOVL	12(AP),UP.$A3		; K is argument 3
+	MOVL	@UP.$A2,UP.UP+28
+	MOVL	UP.UP+28,UP.UP+20
+	BLSS	UP.$2
+	BRW	UP.$1
+UP.$2:
+	CLRL	UP.UP+20
+UP.$1:
+	MULL3	#4,UP.UP+20,UP.UP+12
+	PUSHAQ	UP.UP
+	CALLS	#1,G^FTN$GET_TEMP
+	MOVL	UP.UP+4,R0
+	MOVAL	-4(R0),UP.UP+16
+	MOVL	#168427524,@UP.$A1
+	MOVL	#2,R0
+	MOVL	#16777216,@UP.$A1[R0]
+	MOVL	#1,R0
+	MOVL	UP.UP+4,@UP.$A1[R0]
+	MOVL	#3,R0
+	MOVL	UP.UP+12,@UP.$A1[R0]
+	MOVL	#4,R0
+	MOVL	UP.UP+16,@UP.$A1[R0]
+	MOVL	#5,R0
+	MOVL	#4,@UP.$A1[R0]
+	MOVL	#6,R0
+	MOVL	#1,@UP.$A1[R0]
+	MOVL	#7,R0
+	MOVL	UP.UP+20,@UP.$A1[R0]
+;   48        INTEGER N, K
+;   49        REAL UP(N), DOWN(N)
+;   50        ENTRY DOWN(K, N)
+UP.$3:					; ENTRY DOWN
+;   51        UP = K
+	MOVL	UP.UP+20,UP.$T1
+	BLSS	UP.$5
+	BRW	UP.$4
+UP.$5:
+	CLRL	UP.$T1
+UP.$4:
+	CVTLF	@UP.$A3,UP.$T2
+	MOVL	UP.$T1,UP.$C1		; array (line 51), dimension 1's count
+	MOVL	#1,UP.$I1
+	TSTL	UP.$C1
+	BGTR	UP.$7
+	BRW	UP.$6
+UP.$7:
+UP.$8:					; array (line 51), dimension 1's body
+	MOVL	UP.UP+16,R0
+	MOVL	UP.$I1,R1
+	MOVF	UP.$T2,(R0)[R1]
+	INCL	UP.$I1
+	DECL	UP.$C1			; one pass fewer
+	BLEQ	UP.$9
+	BRW	UP.$8
+UP.$9:
+UP.$6:
+;   52        END FUNCTION
+	RET
+UP.$10:					; DOWN's adjustable arrays' bounds
+	MOVL	@UP.$A2,UP.UP+28
+	MOVL	UP.UP+28,UP.UP+20
+	BLSS	UP.$12
+	BRW	UP.$11
+UP.$12:
+	CLRL	UP.UP+20
+UP.$11:
+	MULL3	#4,UP.UP+20,UP.UP+12
+	PUSHAQ	UP.UP
+	CALLS	#1,G^FTN$GET_TEMP
+	MOVL	UP.UP+4,R0
+	MOVAL	-4(R0),UP.UP+16
+	MOVL	#168427524,@UP.$A1
+	MOVL	#2,R0
+	MOVL	#16777216,@UP.$A1[R0]
+	MOVL	#1,R0
+	MOVL	UP.UP+4,@UP.$A1[R0]
+	MOVL	#3,R0
+	MOVL	UP.UP+12,@UP.$A1[R0]
+	MOVL	#4,R0
+	MOVL	UP.UP+16,@UP.$A1[R0]
+	MOVL	#5,R0
+	MOVL	#4,@UP.$A1[R0]
+	MOVL	#6,R0
+	MOVL	#1,@UP.$A1[R0]
+	MOVL	#7,R0
+	MOVL	UP.UP+20,@UP.$A1[R0]
+	BRW	UP.$3
+
+	.ENTRY	DOWN,^M<>
+	MOVL	4(AP),UP.$A1		; $VALUE is argument 1
+	MOVL	8(AP),UP.$A3		; K is argument 2
+	MOVL	12(AP),UP.$A2		; N is argument 3
+	BRW	UP.$10
+
+	.END

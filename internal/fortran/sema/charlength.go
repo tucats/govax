@@ -45,11 +45,13 @@ func (s *Symbol) PassedLength() bool {
 
 // runtimeLength makes e, an expression that isn't constant, the CHARACTER
 // length of sym, which a type statement just declared: a dummy argument's, or
-// in a subprogram an automatic object's. A function's own value, whose length
-// its caller must know (12.3.1.1), is NOTIMPL until subtask 7.
+// in a subprogram an automatic object's. A function's own value is one too,
+// which the function makes, its caller having no way to know the length
+// (12.3.1.1; ir/lowervalue.go); the function's name when RESULT names the
+// value is NOTIMPL.
 func (a *analyzer) runtimeLength(sym *Symbol, e ast.Expr) {
 	switch {
-	case sym.Result || sym.Class == UnitName:
+	case sym.Class == UnitName:
 		a.notImplForm(e.Position(), "a function whose value has a CHARACTER length that isn't constant")
 
 	case sym.Dummy == 0 && !a.automaticAllowed():

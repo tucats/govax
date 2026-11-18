@@ -1,0 +1,44 @@
+== FUNCTION REP
+  REP       CHARACTER*(N*LEN(C)) result            automatic-scalar
+  C         CHARACTER*(*) variable         argument 1
+  N         INTEGER       variable         argument 2
+  $LOCAL is 0 bytes
+13          REP = C
+14          END
+== FUNCTION TAGS
+  TAGS      CHARACTER*(W) result            automatic-array
+  N         INTEGER       variable         argument 1
+  W         INTEGER       variable         argument 2
+  $LOCAL is 0 bytes
+19          TAGS[] = '#'
+20          END
+== SUBROUTINE USE
+  USE                     program unit
+  S         CHARACTER*(*) variable         argument 1
+  REP       CHARACTER*(*) function          interface(line 25)
+  TAGS      CHARACTER*(*) function          interface(line 30)
+  $LOCAL is 0 bytes
+35          S = (//:C REP('AB', 2) '!')
+36          PRINT * (len:INTEGER LEN REP('X', 3)) TAGS(2, 3)(:) (len:INTEGER LEN TAGS(1, 4)(:))
+37          END
+== FUNCTION SQ
+  SQ        INTEGER       result
+  N         INTEGER       variable         argument 1
+  CU        INTEGER       result
+  entry CU (N)
+  $LOCAL is 0 bytes
+41          SQ[] = (*:I N N)
+42          RETURN
+43          ENTRY CU
+44          CU[] = (*:I (*:I N N) N)
+45          END
+== FUNCTION UP
+  UP        REAL          result            automatic-array
+  N         INTEGER       variable         argument 1
+  K         INTEGER       variable         argument 2
+  DOWN      REAL          result            automatic-array
+  entry DOWN (K, N)
+  $LOCAL is 0 bytes
+50          ENTRY DOWN
+51          UP[] = (REAL K)
+52          END

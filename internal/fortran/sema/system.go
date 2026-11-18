@@ -71,7 +71,7 @@ func (a *analyzer) systemFunction(e *ast.Apply, f systemFunction) Expr {
 
 	sym := &Symbol{Name: f.routine, Class: Function, Type: RealType}
 
-	return &FuncRef{exprBase{T: RealType, Pos: e.Pos}, sym, []Arg{arg}}
+	return &FuncRef{exprBase: exprBase{T: RealType, Pos: e.Pos}, Fn: sym, Args: []Arg{arg}}
 }
 
 // isPlace reports whether an argument goes as a variable or an array element

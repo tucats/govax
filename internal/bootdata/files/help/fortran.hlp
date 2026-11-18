@@ -304,8 +304,11 @@
    as a hidden first argument.  A value's bounds may be specification
    expressions (REAL F(N)); then the function makes the value on the
    heap and describes it in a class NCA descriptor the caller passes,
-   and the caller gives it back at the statement's end.  A value whose
-   CHARACTER length isn't constant is not there yet.
+   and the caller gives it back at the statement's end.  A CHARACTER
+   value's length may be a specification expression too; a scalar one
+   is a dynamic string in a class D descriptor the caller passes.  ENTRY
+   may name such a function's entry points, each declared alike
+   (%FORT-E-ENTRYVALUE, %FORT-E-ENTRYMAKE).
 
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are

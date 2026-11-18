@@ -218,15 +218,21 @@ func NewRuntimeArray(name string, t Type, rank int) *Symbol {
 }
 
 // NewValueArray is an array of lowering's own that holds an array-valued
-// function's value whose bounds are known only when the program runs
-// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 12): rank
-// dimensions, read as an allocatable array's are, from the class NCA descriptor
-// the function fills in.
+// function's value whose bounds or CHARACTER length are known only when the
+// program runs (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding
+// 12): rank dimensions, read as an allocatable array's are, from the class NCA
+// descriptor the function fills in, and a CHARACTER one's elements' length too.
 func NewValueArray(name string, t Type, rank int) *Symbol {
 	s := &Symbol{Name: name, Class: Array, Type: t, Offset: -1, Allocatable: true}
 
 	for range rank {
 		s.Dims = append(s.Dims, Dim{Deferred: true, Lower: 1})
+	}
+
+	if t.Kind == Character && t.Size == 0 {
+		// Its elements' length is the descriptor's first word, which the
+		// function writes; this only marks it as known only then.
+		s.LengthValue = IntConstAt(0, diag.Position{})
 	}
 
 	return s

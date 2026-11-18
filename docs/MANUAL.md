@@ -9152,8 +9152,31 @@ however the value is used; a value passed to an assumed-shape dummy goes by that
 and to any other dummy by its `POINTER`, with no copy. A program in MACRO may call such a
 function the same way and give the block back with `LIB$FREE_VM` of `ARSIZE` bytes (8 if
 less). A statement left by an unwind leaves its block allocated; the next statement to use
-the descriptor's cell gives it back. Not there yet: a value whose CHARACTER length isn't
-constant, and ENTRY in an array-valued function.
+the descriptor's cell gives it back.
+
+A CHARACTER value's length may be a specification expression too, `CHARACTER(LEN=N*LEN(C))
+REP`, scalar or array, and the function makes that value the same way. An array's element
+length is its class NCA descriptor's first word. A scalar is the Calling Standard's dynamic
+text: the caller passes a class D descriptor, the function gets the string with
+`LIB$SGET1_DD`, and the caller gives it back with `LIB$SFREE1_DD` at the end of the
+statement. `LEN` of such a reference calls the function.
+
+A function whose value is an array, or one it makes, may have ENTRY statements. Every entry
+point's value is then the function's own variable, so each must be declared alike: the same
+rank, extents, bounds as written, and length (`ENTRYVALUE` otherwise). And an entry point must
+have every dummy argument the value's bounds or length use, or it couldn't make the value
+(`ENTRYMAKE`):
+
+```fortran
+function up(n, k)
+  integer :: n, k, i
+  real :: up(n), down(n)
+  entry down(k, n)
+  do i = 1, n
+    up(i) = k * i
+  end do
+end function
+```
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

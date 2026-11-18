@@ -7,9 +7,9 @@ import (
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
-// Array-valued functions whose value's bounds are known only when the program
-// runs (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 12, and
-// the author's answer 3):
+// Functions whose value's bounds or CHARACTER length are known only when the
+// program runs (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding
+// 12, and the author's answer 3):
 //
 //	FUNCTION RAMP(N)
 //	INTEGER N
@@ -46,6 +46,18 @@ import (
 // same statement, as in PRINT *, (SUM(RAMP(I)), I = 1, 3)) gives it back first.
 // A statement calls each reference once, however many times its lowering asks
 // for the value (a temporary's extents, then its elements).
+//
+// A CHARACTER value whose length is a specification expression,
+//
+//	FUNCTION REPEAT(C, N)
+//	CHARACTER(LEN=N*LEN(C)) REPEAT
+//
+// is the same: an array's element length is its NCA descriptor's first word,
+// and a scalar is the Calling Standard's dynamic text, a class D descriptor of
+// the caller's that the function gives a string with LIB$SGET1_DD, which the
+// caller frees with LIB$SFREE1_DD at the statement's end, as it frees a
+// concatenation's (madeString, madeText). In the function such a scalar is an
+// automatic object of its own class S cell (lowerlength.go).
 
 // valueCell makes the function's own value, whose bounds aren't constants, an
 // automatic array of its own cell, with p, the hidden first argument, the
@@ -88,11 +100,19 @@ func (l *lowerer) publishValue(s *sema.Symbol, c *Cell) {
 		}
 	}
 
+	// An element's CHARACTER length known only now is the first word of both.
+	if s.Type.Kind == sema.Character && s.Type.Size == 0 {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Param: l.valueParam, T: Word}, Src: &Load{&Mem{Cell: c, T: Word}}})
+	}
+
 	set(PointerOffset, from(PointerOffset))
 	set(ArsizeOffset, from(ArsizeOffset))
 	set(A0Offset, from(A0Offset))
 
 	stride := Expr(LongConst(int32(s.Type.Size)))
+	if s.Type.Kind == sema.Character {
+		stride = l.charLength(s)
+	}
 
 	for i := range s.Dims {
 		set(d.StrideOffset(i), stride)
@@ -103,6 +123,44 @@ func (l *lowerer) publishValue(s *sema.Symbol, c *Cell) {
 
 		stride = arith(Mul, Long, &Load{to(d.StrideOffset(i))}, l.extent(s, c, i))
 	}
+}
+
+// madeString makes the storage of the function's own CHARACTER value of a length
+// known only now, whose class S descriptor c has the length in its first word: a
+// dynamic string, LIB$SGET1_DD's, in the caller's class D descriptor, the hidden
+// argument, whose address c then holds too. LIB$SGET1_DD gives back any string
+// the descriptor held.
+//
+//	PUSHAL  @4(AP)                  ; the caller's descriptor
+//	PUSHAW  F.F                     ; the length
+//	CALLS   #2,G^LIB$SGET1_DD
+//	MOVL    4(R0),F.F+4             ; through @4(AP): the text's address
+func (l *lowerer) madeString(c *Cell) {
+	p := l.valueParam
+
+	l.emit(&Call{origin: l.origin(), Routine: libGetString,
+		Args: []Arg{{Ref: &Mem{Cell: c, T: Word}}, {Value: &ArgPointer{p}}}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long},
+		Src: &Load{descriptorField(p, PointerOffset, Long)}})
+}
+
+// madeText is the value of f, a reference to a CHARACTER function whose value's
+// length is known only when the program runs: a class D descriptor of the
+// statement's, passed as the hidden first argument, which the function gives a
+// dynamic string (madeString), freed at the statement's end. A descriptor holds
+// either no string or one of its own, so a call in a loop of the statement (an
+// implied DO list) replaces the last pass's.
+func (l *lowerer) madeText(f *sema.FuncRef) Text {
+	c := l.descriptorCell(&Descriptor{DType: DTypeT, Class: ClassD})
+	desc := &Mem{Cell: c, T: Long}
+
+	args, backs := l.args(f.Args)
+	l.callWith(f, append([]Arg{{Ref: desc}}, args...), nil, backs)
+	l.after = append(l.after, &Call{origin: l.origin(), Routine: libFreeString, Args: []Arg{{Ref: desc}}})
+
+	text := &Mem{Ptr: &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, T: Byte}
+
+	return Text{text, &Op{Zext, Long, &Load{&Mem{Cell: c, T: Word}}, nil}}
 }
 
 // valueResult is the value of f, a reference to an array-valued function whose

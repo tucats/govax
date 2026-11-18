@@ -116,7 +116,12 @@ func (l *lowerer) computeAutomatic(s *sema.Symbol, c *Cell) {
 	}
 
 	if s.Dims == nil {
-		l.emit(&StackAllocate{origin: l.origin(), Size: count, Dst: field(PointerOffset)})
+		if s.Result && l.valueParam != nil {
+			l.madeString(c)
+		} else {
+			l.emit(&StackAllocate{origin: l.origin(), Size: count, Dst: field(PointerOffset)})
+		}
+
 		l.release()
 
 		return

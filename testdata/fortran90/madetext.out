@@ -1,0 +1,17 @@
+[ababab      ]
+len:    6 -----|
+loop: + ++ +++ ++++
+same:  yes
+case:  zz
+show:   4 qqq!
+sub:   ..xyxyxy....
+stars: [****] 0
+size:  [12345]
+tags: #    ##   ### 
+pad:  <ab><ab><ab>
+plen:   6
+known:    9   16   25   27   64  125
+made:   1.0  2.0  3.0 -1.0 -2.0 -3.0 -4.0
+entry: [wor][-----]
+total:  4000
+  $STATUS == "%X00000001"

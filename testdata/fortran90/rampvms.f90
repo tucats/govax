@@ -4,8 +4,11 @@
 ! an implied DO list that calls the function at each pass, in a statement's
 ! own branch (a logical IF's, an arithmetic IF's, a computed GO TO's), in a
 ! CALL with alternate returns, and in a recursive function's references to
-! itself; and values of 20,000 elements, past the stack's limit for
-! temporaries. The first count is taken after the loop's first pass, which
+! itself; values of 20,000 elements, past the stack's limit for
+! temporaries; and CHARACTER values of a length known only at run time, a
+! dynamic string or an array (Phase 104, subtask 7c), one in an implied DO
+! list. A dynamic string comes from LIB$SGET1_DD's own zone, which the count
+! doesn't include; the arrays' blocks are counted. The first count is taken after the loop's first pass, which
 ! makes what stays: the heap's zones, at its first block, and the internal
 ! WRITE's format, kept for its later passes.
 program rampvms
@@ -18,12 +21,21 @@ program rampvms
     recursive function tri(n) result(r)
       integer :: n, r(n)
     end function
+    function blanks(n)
+      integer :: n
+      character(len=n) :: blanks
+    end function
+    function labels(n, w)
+      integer :: n, w
+      character(len=w) :: labels(n)
+    end function
   end interface
-  integer :: before, after, j, k, hits
+  integer :: before, after, j, k, hits, chars
   real :: x(20000), total
-  character(len=80) :: line
+  character(len=80) :: line, text
 
   hits = 0
+  chars = 0
   total = 0.0
   do j = 1, 500
     x(1:j) = ramp(j)
@@ -38,12 +50,16 @@ program rampvms
     hits = -1000
 50  if (sum(tri(mod(j, 6) + 1)) < 0) hits = -1000
     if (mod(j, 100) == 0) x = ramp(20000)
+    chars = chars + len(blanks(mod(j, 4)))
+    write (text, '(5a)') (blanks(k), k = 1, 5)
+    if (any(labels(mod(j, 3) + 1, 2) == 'ab')) chars = chars + 1
     if (j == 1) before = bytes()
   end do
   after = bytes()
   print '(1x, a, f10.0, i5)', 'total:', total, hits
   print '(1x, a, a)', 'line: ', line(1:30)
   print '(1x, a, f10.0)', 'big:  ', x(20000)
+  print '(1x, a, i6)', 'chars:', chars
   print '(1x, a, l2)', 'heap given back:', before == after
 contains
   integer function bytes()
@@ -63,6 +79,18 @@ recursive function tri(n) result(r)
   integer :: n, r(n)
   r(n) = n
   if (n > 1) r(1:n - 1) = tri(n - 1)
+end function
+
+function blanks(n)
+  integer :: n
+  character(len=n) :: blanks
+  blanks = ' '
+end function
+
+function labels(n, w)
+  integer :: n, w
+  character(len=w) :: labels(n)
+  labels = 'ab'
 end function
 
 subroutine alt(v, *)

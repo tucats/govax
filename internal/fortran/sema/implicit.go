@@ -209,7 +209,7 @@ func (a *analyzer) passedLengths() {
 		}
 
 		switch {
-		case s.Dummy != 0, s.Result, s.Class == Constant:
+		case s.Dummy != 0, s.Result, s.Class == Constant, madeLength(s):
 			continue
 		}
 

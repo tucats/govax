@@ -281,6 +281,12 @@ func (l *lowerer) ncaAsClassA(s *sema.Symbol, c *Cell) *Mem {
 			Src: &Load{&Mem{Cell: c, Offset: offset, T: Long}}})
 	}
 
+	// A CHARACTER length known only when the program runs (a function's value,
+	// lowervalue.go) is the NCA descriptor's first word.
+	if d.Length == 0 && s.Type.Kind == sema.Character {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: a, T: Word}, Src: &Load{&Mem{Cell: c, T: Word}}})
+	}
+
 	copyField(PointerOffset)
 	copyField(ArsizeOffset)
 	copyField(A0Offset)

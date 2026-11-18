@@ -1153,8 +1153,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `ir/lowervalue.go`'s `publishValue`; each reference a `$Gn` cell read as
   an allocatable array's, `sema.NewValueArray`, called once per statement
   and freed at its end; `testdata/fortran90/ramps.f90`, `rampvms.f90`,
-  `internal/console`'s `TestFortranValueFromMACRO`); 7c (run-time
-  CHARACTER lengths, ENTRY) is next.
+  `internal/console`'s `TestFortranValueFromMACRO`); 7c (2026-11-18)
+  run-time CHARACTER lengths (`sema.FuncRef.Made`; a scalar a dynamic
+  string in the caller's class D descriptor, `madeString`/`madeText`, an
+  array's length its NCA's first word) and ENTRY in array-valued functions
+  (`checkEntryValues`, ENTRYVALUE, ENTRYMAKE; every name the value's one
+  cell; `testdata/fortran90/madetext.f90`). Subtask 8, the
+  transformational intrinsics, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
