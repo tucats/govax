@@ -811,7 +811,7 @@ var messages = map[string]kind{
 
 	// BADOPERAND is an operator applied to a type it doesn't take:
 	// .AND. on a REAL.
-	"BADOPERAND": {Error, "%s can't be applied to a %s value"},
+	"BADOPERAND": {Error, "%s can't be applied to %s value"},
 
 	// CHARNUMBER is a CHARACTER value where a number or a logical value
 	// must be: FORTRAN converts no character value to one.
@@ -1214,6 +1214,41 @@ var messages = map[string]kind{
 
 	// GENERICARG is a generic name as an actual argument (12.4.1.2).
 	"GENERICARG": {Error, "the generic name %s can't be an actual argument; pass one of its specific procedures"},
+
+	// Defined operators and assignment (sema/operators.go; PHASE-103's findings
+	// 12 and 13).
+
+	// OPUNDEFINED is a defined operator no interface block in the unit or its
+	// hosts gives a meaning (12.3.2.1.1).
+	"OPUNDEFINED": {Error, "%s is no operator here: no interface block gives it a meaning"},
+
+	// DEFOPNONE is a defined operation whose operands no function of its
+	// operator's interface blocks takes.
+	"DEFOPNONE": {Error, "no function for the operator %s takes %s"},
+
+	// DEFOPFUNC, DEFOPDUMMY, and DEFOPCOUNT are an operator's procedure that
+	// isn't a function, whose dummies aren't one or two INTENT(IN) data objects,
+	// not OPTIONAL, or whose number doesn't fit the intrinsic operator it
+	// extends (12.3.2.1.1).
+	"DEFOPFUNC":  {Error, "%s is a subroutine, but a procedure for %s must be a function"},
+	"DEFOPDUMMY": {Error, "%s, a function for %s, must have one or two dummy arguments, each data, INTENT(IN), and not OPTIONAL"},
+	"DEFOPCOUNT": {Error, "%s, a function for %s, takes %d operands, which that operator never has"},
+
+	// DEFOPINTR is a function for an intrinsic operator taking operands Fortran
+	// gives the operator a meaning for already (7.1.3, 14.1.2.3).
+	"DEFOPINTR": {Error, "%s takes operands the operator %s already has a meaning for"},
+
+	// DEFASSIGNSUB, DEFASSIGNDUMMY, and DEFASSIGNINTR are ASSIGNMENT(=)'s
+	// procedures: subroutines of two dummies, the first INTENT(OUT) or
+	// INTENT(INOUT), the second INTENT(IN), for an assignment Fortran gives no
+	// meaning (12.3.2.1.2, 7.5.1.3).
+	"DEFASSIGNSUB":   {Error, "%s is a function, but a procedure for ASSIGNMENT(=) must be a subroutine"},
+	"DEFASSIGNDUMMY": {Error, "%s, a subroutine for ASSIGNMENT(=), must have two dummy arguments, not OPTIONAL, the first INTENT(OUT) or INTENT(INOUT) and the second INTENT(IN)"},
+	"DEFASSIGNINTR":  {Error, "%s defines assigning %s %s, which Fortran defines already"},
+
+	// OPAMBIG is two procedures for one operator, or for assignment, that no
+	// operand's type, kind, or rank tells apart (14.1.2.3).
+	"OPAMBIG": {Error, "the procedures %s (line %d) and %s for %s can't be told apart by their operands"},
 
 	// ARGTYPEW and ARGRANKW are ARGTYPE and ARGRANK through an implicit
 	// interface, under /WARNINGS=ARGUMENT_CHECKING.

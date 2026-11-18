@@ -1,0 +1,9 @@
+dist:  5.00
+sd:  3.00
+inv:  0.50
+plus: T F T
+cat: n=42        |
+and:   7   7
+assign: yes no 
+inner: yes
+  $STATUS == "%X00000001"

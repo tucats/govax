@@ -74,6 +74,9 @@ func (a *analyzer) arrayValue(e ast.Expr) Expr {
 	case *ast.Binary:
 		return a.binary(e)
 
+	case *ast.DefinedOp:
+		return a.definedOp(e)
+
 	case *ast.Substring:
 		return a.substring(e)
 
@@ -545,7 +548,12 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 		return &Const{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Int: minInt}
 	}
 
-	x := a.numericConst(a.arrayValue(e.X))
+	x := a.arrayValue(e.X)
+	if v, ok := a.extendedOp(e.Op, e.Pos, x); ok {
+		return v
+	}
+
+	x = a.numericConst(x)
 
 	switch {
 	case x.Type().Kind == Invalid:
@@ -577,15 +585,20 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 
 // binary analyzes X op Y.
 func (a *analyzer) binary(e *ast.Binary) Expr {
-	switch e.Op {
-	case ast.Pow, ast.Concat:
+	// An interface block may give the operator a meaning for operands Fortran
+	// gives none (operators.go), which the constant evaluator doesn't know.
+	extended := len(a.operatorFor(e.Op.String())) > 0
+
+	switch {
+	case extended:
+	case e.Op == ast.Pow, e.Op == ast.Concat:
 		if v, ok := a.folded(e); ok {
 			return v
 		}
 	}
 
 	// An operation on array constants is one (constarray.go).
-	if (&evaluator{a: a, quiet: true}).isArrayForm(e) {
+	if !extended && (&evaluator{a: a, quiet: true}).isArrayForm(e) {
 		if v, ok := a.folded(e); ok {
 			return v
 		}
@@ -600,6 +613,10 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 	}
 
 	x, y := a.operands(e.X, e.Y)
+	if v, ok := a.extendedOp(e.Op, e.Pos, x, y); ok {
+		return v
+	}
+
 	if !e.Op.Relational() {
 		x, y = a.numericConst(x), a.numericConst(y)
 	}
@@ -644,6 +661,10 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 // result's (powerTypes).
 func (a *analyzer) power(e *ast.Binary) Expr {
 	x, y := a.operands(e.X, e.Y)
+	if v, ok := a.extendedOp(e.Op, e.Pos, x, y); ok {
+		return v
+	}
+
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
 	}
@@ -730,6 +751,10 @@ func (a *analyzer) concat(e *ast.Binary) Expr {
 	x, y := a.arrayValue(e.X), a.arrayValue(e.Y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
+	}
+
+	if v, ok := a.extendedOp(e.Op, e.Pos, x, y); ok {
+		return v
 	}
 
 	shape, ok := a.conforms(e.Pos, x, y)
@@ -856,7 +881,7 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr, shape Shape) Expr {
 
 	// COMPLEX values are only equal or not: they have no order.
 	if t.Kind == Complex && e.Op != ast.EQ && e.Op != ast.NE {
-		a.report("BADOPERAND", e.Pos, e.Op.String(), t.String())
+		a.report("BADOPERAND", e.Pos, e.Op.String(), article(t.String()))
 
 		return a.bad(e.Pos)
 	}

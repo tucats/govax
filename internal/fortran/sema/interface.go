@@ -53,22 +53,14 @@ import (
 // with an OPTIONAL dummy can be referenced only through an explicit interface
 // (12.3.1.1), which a reference through an implicit one breaks (EXPLICITREQ).
 //
-// A generic interface block (INTERFACE SWAP) is generic.go's; its bodies are
-// read here as any others, and make external procedures too. OPERATOR and
-// ASSIGNMENT blocks wait for subtask 8, MODULE PROCEDURE for Phase 106.
+// A generic interface block (INTERFACE SWAP) is generic.go's, and one for an
+// operator or assignment operators.go's; their bodies are read here as any
+// others, and make external procedures too. MODULE PROCEDURE waits for Phase
+// 106.
 
 // interfaceWhat names an interface block this phase doesn't compile, for its
-// NOTIMPL message.
-func interfaceWhat(b *ast.InterfaceBlock) string {
-	switch b.Generic.Kind {
-	case ast.GenericName:
-		return "a generic interface block"
-	case ast.GenericOp:
-		return "an interface block for an operator"
-	case ast.GenericAssign:
-		return "an interface block for assignment"
-	}
-
+// NOTIMPL message: one with MODULE PROCEDURE statements (Phase 106).
+func interfaceWhat(*ast.InterfaceBlock) string {
 	return "the MODULE PROCEDURE statement"
 }
 
@@ -102,12 +94,16 @@ func (a *analyzer) interfaceBodies() {
 			}
 		}
 
-		if b.Generic.Kind == ast.GenericName {
+		switch b.Generic.Kind {
+		case ast.GenericName:
 			a.declareGeneric(b.Generic, specifics)
+		case ast.GenericOp, ast.GenericAssign:
+			a.declareOperator(b.Generic, specifics)
 		}
 	}
 
 	a.checkGenerics()
+	a.checkOperators()
 }
 
 // bodyAnalyzer is an analyzer for an interface body of this unit: a unit's

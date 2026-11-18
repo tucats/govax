@@ -24,26 +24,17 @@ func analyzeFree(t *testing.T, lines ...string) []diag.Message {
 	return messages.Messages()
 }
 
-// TestProcedureFormsPending checks that Phase 103's forms, which the parser
-// builds since subtask 2, are each NOTIMPL in semantic analysis until the
-// subtask that compiles them: an operator's or assignment's interface block and
-// a defined operator. CONTAINS is compiled since subtask 3, an interface block
-// with no generic specification since subtask 5, keyword arguments since
-// subtask 6, and a generic name's block since subtask 7.
+// TestProcedureFormsPending checks that what is left of Phase 103's forms, which
+// the parser builds since subtask 2, is NOTIMPL in semantic analysis: MODULE
+// PROCEDURE, Phase 106's. Every other form is compiled since subtask 8.
 func TestProcedureFormsPending(t *testing.T) {
 	cases := []struct {
 		name  string
 		lines []string
 		want  string
 	}{
-		{"an operator's interface block", []string{"program p", "interface operator(.cross.)", "function f(x, y)", "end function", "end interface", "end program"},
-			"NOTIMPL: an interface block for an operator is not implemented yet"},
-		{"an assignment's interface block", []string{"program p", "interface assignment(=)", "subroutine s(x, y)", "end subroutine", "end interface", "end program"},
-			"NOTIMPL: an interface block for assignment is not implemented yet"},
-		{"a binary defined operator", []string{"program p", "y = a .cross. b", "end program"},
-			"NOTIMPL: a defined operator is not implemented yet"},
-		{"a unary defined operator", []string{"program p", "y = .inverse. a", "end program"},
-			"NOTIMPL: a defined operator is not implemented yet"},
+		{"MODULE PROCEDURE", []string{"program p", "interface g", "module procedure f", "end interface", "end program"},
+			"NOTIMPL: the MODULE PROCEDURE statement is not implemented yet"},
 		{"a record's field", []string{"program p", "structure /s/", "real b", "end structure",
 			"record /s/ a", "y = a.b", "end program"}, ""},
 	}

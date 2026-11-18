@@ -400,7 +400,7 @@ func (ev *evaluator) unaryOn(e *ast.Unary, x *Const) (*Const, *constErr) {
 			return c, nil
 		}
 
-		return nil, ev.report("BADOPERAND", e.Pos, ".NOT.", x.T.String())
+		return nil, ev.report("BADOPERAND", e.Pos, ".NOT.", article(x.T.String()))
 	}
 
 	if x, err = ev.arithmetic(x); err != nil || e.Op == ast.Add {
@@ -542,7 +542,7 @@ func (ev *evaluator) concat(e *ast.Binary) (*Const, *constErr) {
 func (ev *evaluator) concatOn(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	for _, o := range []*Const{x, y} {
 		if o.T.Kind != Character {
-			return nil, ev.report("BADOPERAND", e.Pos, "//", o.T.String())
+			return nil, ev.report("BADOPERAND", e.Pos, "//", article(o.T.String()))
 		}
 	}
 
@@ -812,7 +812,7 @@ func (ev *evaluator) compare(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	}
 
 	if t.Kind == Complex && e.Op != ast.EQ && e.Op != ast.NE {
-		return nil, ev.report("BADOPERAND", e.Pos, e.Op.String(), t.String())
+		return nil, ev.report("BADOPERAND", e.Pos, e.Op.String(), article(t.String()))
 	}
 
 	if x, err = ev.convert(x, t, x.Pos); err != nil {
@@ -884,7 +884,7 @@ func relation(op ast.Op, order int) bool {
 func (ev *evaluator) logical(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	for _, o := range []*Const{x, y} {
 		if o.T.Kind == Real || o.T.Kind == Complex {
-			return nil, ev.report("BADOPERAND", e.Pos, e.Op.String(), o.T.String())
+			return nil, ev.report("BADOPERAND", e.Pos, e.Op.String(), article(o.T.String()))
 		}
 	}
 

@@ -124,7 +124,16 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return a.whereAssignment(c, s)
 	}
 
-	target, value := a.assignParts(s)
+	target, value := a.assignOperands(s)
+	if target == nil {
+		return nil
+	}
+
+	if call := a.definedAssignment(s, target, value); call != nil {
+		return call
+	}
+
+	target, value = a.finishAssign(s, target, value)
 	if target == nil {
 		return nil
 	}
@@ -148,6 +157,18 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 // assignParts analyzes an assignment's target and value, the value converted
 // for the target, its shape checked; nils after an error.
 func (a *analyzer) assignParts(s *ast.AssignStmt) (Expr, Expr) {
+	target, value := a.assignOperands(s)
+	if target == nil {
+		return nil, nil
+	}
+
+	return a.finishAssign(s, target, value)
+}
+
+// assignOperands analyzes an assignment's target and value as they are; nils
+// after an error. Between them and finishAssign a defined assignment may take
+// the statement (operators.go).
+func (a *analyzer) assignOperands(s *ast.AssignStmt) (Expr, Expr) {
 	target := a.target(s.Target)
 	a.noteAssigned(target)
 
@@ -163,6 +184,12 @@ func (a *analyzer) assignParts(s *ast.AssignStmt) (Expr, Expr) {
 		return nil, nil
 	}
 
+	return target, value
+}
+
+// finishAssign checks an assignment's shapes and converts its value for its
+// target; nils after an error.
+func (a *analyzer) finishAssign(s *ast.AssignStmt, target, value Expr) (Expr, Expr) {
 	if !a.assignedShape(s.Pos, target, value) {
 		return nil, nil
 	}

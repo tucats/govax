@@ -67,9 +67,9 @@ type Generic struct {
 }
 
 // compiledBlock reports whether the interface block is one this phase compiles:
-// no generic specification, or a generic name, and no MODULE PROCEDURE statement.
+// any without a MODULE PROCEDURE statement, which is Phase 106's.
 func compiledBlock(b *ast.InterfaceBlock) bool {
-	return (b.Generic.Kind == ast.NoGeneric || b.Generic.Kind == ast.GenericName) && len(b.ModuleProcedures) == 0
+	return len(b.ModuleProcedures) == 0
 }
 
 // declareGeneric makes the block's generic name stand for the specific

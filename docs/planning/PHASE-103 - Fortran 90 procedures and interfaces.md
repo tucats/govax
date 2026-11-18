@@ -5,8 +5,8 @@ Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
 ("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
 with static hosts), 4 (hosts in the frame), 5 (interface blocks), and 6
-(keyword arguments, OPTIONAL, PRESENT, INTENT), and 7 (generic interfaces)
-are done; subtask 8 is next.
+(keyword arguments, OPTIONAL, PRESENT, INTENT), 7 (generic interfaces), and 8
+(defined operators and assignment) are done; subtask 9 is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -468,7 +468,7 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    absent-dummy test (done 2026-11-17).
 7. **Generic interfaces** (finding 11), intrinsic names extended, hosts' generics
    (done 2026-11-18).
-8. **Defined operators and assignment** (findings 12 and 13).
+8. **Defined operators and assignment** (findings 12 and 13) (done 2026-11-18).
 9. **Programs end to end**, every mode, gfortran's witness, the optimizer's
    cases (a host variable kept in a register across a call that changes it).
 10. **Close-out:** FORTRAN-INTERNALS.md's section 28 (nested scopes, host
@@ -779,3 +779,35 @@ The author read the survey and accepted every recommendation:
   GENERICARG. **Tests**: `sema`'s `TestGenerics`; golden `ir/testdata/f90generic.for`;
   the corpus's `generics.f90` (every mode, both paging modes, the same on
   gfortran).
+- **2026-11-18, subtask 8:** Defined operators and assignment. **sema**
+  (`sema/operators.go`, whose comment teaches them): every interface block but one
+  with MODULE PROCEDURE is compiled now (`compiledBlock`). An OPERATOR or
+  ASSIGNMENT block's bodies make external procedures as any others, and
+  `declareOperator` records them in `Unit.operators` by the operator's dotted
+  spelling (`=` for assignment), each checked first (`checkOperatorProcedure`):
+  an operator's must be a function (DEFOPFUNC) of one or two data dummies, each
+  INTENT(IN) and not OPTIONAL (DEFOPDUMMY), as many as an intrinsic operator it
+  extends ever takes (DEFOPCOUNT), and not taking operands the standard gives
+  that operator a meaning for (DEFOPINTR, `intrinsicMeaning`: numeric for the
+  arithmetic operators, CHARACTER for `//`, both for the relational ones but
+  COMPLEX only for `.EQ.` and `.NE.`, LOGICAL for the logical ones; `.XOR.` and
+  INTEGER logical operands DEC's alone); assignment's must be subroutines
+  (DEFASSIGNSUB) of two dummies, OUT or INOUT then IN (DEFASSIGNDUMMY), for an
+  assignment the standard doesn't define (DEFASSIGNINTR, `intrinsicAssignment`).
+  `checkOperators` is 14.1.2.3's rule for operators: two procedures with as many
+  operands differ at some position (OPAMBIG). A defined operation (`ast.DefinedOp`,
+  `definedOp`) is a reference to the function its operands fit exactly, the unit's
+  blocks first then its hosts' (`operatorFor`, `resolveOperator`, generic.go's
+  `fits`); OPUNDEFINED with no block, DEFOPNONE with none fitting. An intrinsic
+  operator (`unary`, `binary`, `power`, `concat`) tries its blocks
+  (`extendedOp`) once its operands are analyzed, if the standard gives them no
+  meaning, and goes on as before if none fits: so an interface takes over a
+  meaning only DEC gives, and DEC's stands otherwise (the author's answer 5). A
+  binary operator with blocks isn't folded by the constant evaluator first, which
+  knows nothing of them. Assignment (`assignment`) is now `assignOperands`, then
+  `definedAssignment` (CALL S(X, (Y)), the value a copy), then `finishAssign`. A
+  fix on the way: BADOPERAND said "a INTEGER value"; it takes its article now.
+  **Tests**: `sema`'s `TestOperators`; `TestProcedureFormsPending` now has only
+  MODULE PROCEDURE; golden `ir/testdata/f90operators.for`; the corpus's
+  `operators.f90` (every mode, both paging modes, the same on gfortran, which
+  also takes `.AND.` on INTEGERs from the interface).

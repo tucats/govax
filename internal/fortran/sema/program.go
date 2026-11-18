@@ -143,6 +143,11 @@ type Unit struct {
 	// program: it is in no Program.Units (interface.go).
 	Interfaces []*Unit
 
+	// operators are the unit's interface blocks for operators and assignment,
+	// by the operator as OPERATOR( ) writes it in its dotted spelling
+	// (.CROSS., +, .EQ.) and "=" for ASSIGNMENT(=) (operators.go).
+	operators map[string]*Generic
+
 	// others and labelRefs are the mentions of the names that have no Symbol, and
 	// of the statement labels (crossref.go).
 	others    map[otherName][]Reference

@@ -1,0 +1,19 @@
+routine OPS main
+  cell  T       L  $LOCAL+0    variable T
+  cell  W       B  $LOCAL+4    variable W
+  cell  D       F  $LOCAL+8    variable D
+  cell  E       F  $LOCAL+12   variable E
+  cell  $T1     L  $LOCAL+16   temporary
+  $LOCAL is 20 bytes
+  datum $K1     F 3.0
+  datum $D1     descriptor T S 3 W
+B1:
+  ; line 24
+  call SDIST(ref $K1, ref E) -> D
+  ; line 25
+  call LPLUS(ref T, ref T) -> T
+  ; line 26
+  assign $T1 = T
+  call YESNO(ref $D1, ref $T1)
+  ; line 27
+  return 1
