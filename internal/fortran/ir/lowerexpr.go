@@ -53,6 +53,9 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.Loc:
 		return l.loc(e)
 
+	case *sema.Present:
+		return l.present(e)
+
 	case *sema.Unary:
 		op := Neg
 		if e.Op == ast.Not {

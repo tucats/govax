@@ -636,6 +636,8 @@ func DumpExpr(e Expr) string {
 		return "(procedure:" + e.T.String() + " " + e.Name + " " + e.Routine + ")"
 	case *Loc:
 		return "(%LOC " + DumpExpr(e.X) + ")"
+	case *Present:
+		return "(PRESENT " + e.Sym.Name + ")"
 	case *Unary:
 		return "(" + e.Op.String() + ":" + e.T.letter() + " " + DumpExpr(e.X) + ")"
 	case *Binary:

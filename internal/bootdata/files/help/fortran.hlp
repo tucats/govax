@@ -129,8 +129,8 @@
    Type declarations may have Fortran 90's :: form, with attributes and
    values given with =:  INTEGER, PARAMETER :: N = 10 and REAL,
    DIMENSION(N), SAVE :: X = 0.  PARAMETER, DIMENSION, SAVE, EXTERNAL,
-   INTRINSIC, VOLATILE, AUTOMATIC, and STATIC are compiled; INTENT,
-   OPTIONAL, and TARGET are checked and recorded; each has its own
+   INTRINSIC, VOLATILE, AUTOMATIC, INTENT, OPTIONAL, and STATIC are
+   compiled; TARGET is checked and recorded; each has its own
    statement, with or without ::.  A value given with = fills a whole
    array and gives the name SAVE.
 

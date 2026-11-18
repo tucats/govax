@@ -4,8 +4,8 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
 ("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
-with static hosts), 4 (hosts in the frame), and 5 (interface blocks) are
-done; subtask 6 is next.
+with static hosts), 4 (hosts in the frame), 5 (interface blocks), and 6
+(keyword arguments, OPTIONAL, PRESENT, INTENT) are done; subtask 7 is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -464,7 +464,7 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    procedures with explicit interfaces, INTERFACEDIFF, EXPLICITREQ, and
    question 1's checks (done 2026-11-17).
 6. **Keyword arguments, OPTIONAL, PRESENT, INTENT** (findings 8 to 10), with the
-   absent-dummy test.
+   absent-dummy test (done 2026-11-17).
 7. **Generic interfaces** (finding 11), intrinsic names extended, hosts' generics.
 8. **Defined operators and assignment** (findings 12 and 13).
 9. **Programs end to end**, every mode, gfortran's witness, the optimizer's
@@ -705,3 +705,47 @@ The author read the survey and accepted every recommendation:
   `forms.f90` called BUMP, whose dummy is OPTIONAL, with no explicit interface,
   which EXPLICITREQ now refuses, so it has an interface block
   for it. MANUAL.md's `/WARNINGS` table and HELP FORTRAN have the new keyword.
+- **2026-11-17, subtask 6:** Keyword arguments, OPTIONAL, PRESENT, and INTENT.
+  **sema** (`sema/optional.go`, whose comment teaches them): `actuals` puts a
+  reference's arguments in its explicit interface's order before anything else
+  looks at them (`interfaceOf`: an internal procedure's, an interface body's, or
+  a recursive procedure's own in a reference to itself, 12.3.1), a nil for each
+  dummy left out, so every later step sees a plain positional list as long as
+  the dummies; CALL's, a function reference's, and `selfReference`'s lists go
+  through it. Its messages are the intrinsic path's, generalized (KEYWORDNAME,
+  KEYWORDTWICE, KEYWORDORDER, and MISSINGARG, finding 8's ARGMISSING, now name
+  "the intrinsic function X" or the procedure; `nameList` shared), with
+  KEYWORDNOINTERFACE for a keyword through an implicit interface, and ARGCOUNT
+  for too many. A list without keywords whose only fault is its length is left
+  as it is, for `checkInterface`'s ARGCOUNT as before. A null argument (DEC's,
+  `CALL S(A,,B)`) counts as given and passes 0, as an absent one does (ours,
+  unconfirmed: the standard has no null argument). PRESENT (`present`; a name in
+  `f90Intrinsics` with no table row) takes an OPTIONAL dummy of the unit or its
+  host, by position or `A=` (NOTOPTIONAL otherwise), and is the new expression
+  `Present`. EXPLICITREQ no longer counts a recursive unit's reference to
+  itself. **INTENT** (`sema/intent.go`): INTENTIN, an error, for an INTENT(IN)
+  dummy given a value (`target`'s forms, and every caller of
+  `checkLoopVariable`: DO and implied-DO variables, input items, ASSIGN,
+  returned specifiers) or passed through an explicit interface to an INTENT(OUT)
+  or INOUT dummy (`checkInterface`); INTENTOUTREF, a general warning, for an
+  INTENT(OUT) dummy used on a line before the first line that may give it a
+  value, counting an actual argument passed as itself as one that may
+  (`notePassed`, `Unit.notRead`; PRESENT's argument is neither), a use on the
+  same line as a definition saying nothing, and a host's dummy that any of its
+  internal procedures mentions never looked at (`reportIntentOut`).
+  **ir** (`ir/loweroptional.go`): every OPTIONAL dummy is reached through a cell,
+  ENTRY's mechanism (`prepareOptionals`, `throughCell`, which `passHostArgs` now
+  shares), so PRESENT is a test of the cell (`ArgPointer` through it), passing an
+  absent dummy on passes the cell's 0, and an internal procedure asks about its
+  host's by the host's cell. **codegen**: `writeEntryArgs` fills an OPTIONAL
+  dummy's cell only if the argument count reaches it (`CLRL`, `CMPB (AP),#n`,
+  `BLSSU`, `MOVL`), the author's answer 4: a MACRO or FORTRAN-77 caller's shorter
+  list reads as absent. **Tests**: `sema`'s `TestKeywordsAndOptional` and
+  `TestIntent`; golden `ir/testdata/f90optional.for`; the corpus's `optional.f90`
+  (every mode, both paging modes, the same on gfortran: arguments left out and by
+  keyword, an INTENT(OUT) adjustable array, an absent OPTIONAL adjustable array
+  never touched, an OPTIONAL passed on absent, PRESENT of a host's dummy under
+  `/RECURSIVE` through its frame) and `modules/shortlist` (a fixed-form caller in
+  its own file passing a shorter list and a null argument). MANUAL.md's and HELP
+  FORTRAN's lines saying INTENT and OPTIONAL change nothing and that keyword
+  arguments aren't there are corrected; the prose waits for subtask 10.

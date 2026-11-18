@@ -148,6 +148,11 @@ type Unit struct {
 	others    map[otherName][]Reference
 	labelRefs map[int][]Reference
 
+	// notRead are the mentions of names that neither read nor give a value:
+	// an actual argument passed as itself, which the routine may do either
+	// with, and PRESENT's argument (intent.go's reportIntentOut).
+	notRead map[Reference]bool
+
 	// calls are the unit's references to routines, which Analyze checks
 	// against the file's other units once every unit is analyzed.
 	calls []routineRef
@@ -898,6 +903,14 @@ type (
 	Loc struct {
 		exprBase
 		X Expr
+	}
+
+	// Present is PRESENT(A), whether the OPTIONAL dummy argument Sym, the
+	// unit's own or its host's, was given an actual argument (the Fortran 90
+	// standard's 13.13.80; optional.go). Its type is the default LOGICAL.
+	Present struct {
+		exprBase
+		Sym *Symbol
 	}
 
 	// Substring is X(Lower:Upper), part of a CHARACTER variable or array

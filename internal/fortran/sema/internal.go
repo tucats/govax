@@ -300,8 +300,13 @@ func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 			continue
 		}
 
-		if (p.Intent == "OUT" || p.Intent == "INOUT") && (arg.Copy || !definable(arg.Expr)) {
-			messages.Report("NOTDEFINABLE", arg.Expr.Position(), i+1, r.sym.Name, p.Name, p.Intent, line)
+		if p.Intent == "OUT" || p.Intent == "INOUT" {
+			switch base := definedSymbol(arg.Expr); {
+			case arg.Copy || !definable(arg.Expr):
+				messages.Report("NOTDEFINABLE", arg.Expr.Position(), i+1, r.sym.Name, p.Name, p.Intent, line)
+			case base != nil && base.Dummy != 0 && base.Intent == "IN" && !base.broken:
+				messages.Report("INTENTIN", arg.Expr.Position(), base.Name)
+			}
 		}
 	}
 }

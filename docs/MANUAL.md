@@ -8392,9 +8392,10 @@ real, external :: sum4
 ```
 
 The attributes are PARAMETER, DIMENSION, SAVE, EXTERNAL, INTRINSIC, and DEC's VOLATILE,
-AUTOMATIC, and STATIC, each doing what its statement does; INTENT, OPTIONAL, and TARGET,
-which are checked and recorded but change nothing yet (a dummy argument is passed as it
-always is); and POINTER and ALLOCATABLE, not there yet. PUBLIC and PRIVATE belong in a
+AUTOMATIC, and STATIC, each doing what its statement does; INTENT and OPTIONAL, which say
+what a routine does with a dummy argument and whether a call may leave it out (below,
+with internal procedures and interface blocks); TARGET, checked and recorded but changing
+nothing yet; and POINTER and ALLOCATABLE, not there yet. PUBLIC and PRIVATE belong in a
 module (`NOTINMODULE`). Each has its statement too, with `::` or without: `DIMENSION ::
 Z(3)`, `SAVE :: TOTAL`, `INTENT(IN) :: A, B`, `OPTIONAL :: Q`, `TARGET :: T(4)`. A value
 given with `=` is a constant expression stored as an assignment would store it (so `REAL ::
@@ -8496,8 +8497,8 @@ These functions, and the kind and inquiry functions, take their arguments by key
 by the standard's names: `SELECTED_REAL_KIND(R=40)`, `INT(A=X, KIND=1)`. An argument
 without a keyword can't follow one with (`KEYWORDORDER`); an unknown keyword is
 `KEYWORDNAME`, one given twice `KEYWORDTWICE`, and a required argument left out
-`MISSINGARG`. Keyword arguments to the other intrinsic functions, and to a program's own
-procedures, are not there yet. Under `/NOF90` these new names are a program's own functions,
+`MISSINGARG`. Keyword arguments to the other intrinsic functions are not there yet; a
+program's own procedures take them through an explicit interface. Under `/NOF90` these new names are a program's own functions,
 as in VAX FORTRAN, unless an `INTRINSIC` statement names them.
 
 **Writing for any processor.** A program that names its kinds by what it needs rather than
@@ -8714,8 +8715,7 @@ it with `SOBGTR` or `AOBLEQ`, as it does a DO loop.
 ```
 
 That includes assumed-shape and deferred-shape arrays (`A(:)`), generic interface blocks
-(`INTERFACE SWAP`, `OPERATOR`, `ASSIGNMENT`), keyword arguments to a program's own
-procedures, modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
+(`INTERFACE SWAP`, `OPERATOR`, `ASSIGNMENT`), modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
 Of arrays as values, these are not there yet: an array assignment that needs a temporary
 array of a size not known when compiling; a section or array expression as an argument to a
 program's own procedure; an array function's value of a shape not known when compiling

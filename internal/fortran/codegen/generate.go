@@ -583,8 +583,23 @@ func (g *routineGen) writeEntryArgs(w *Writer, e *ir.Entry) {
 	}
 
 	for _, a := range e.Args {
-		w.Statement("", "MOVL", strconv.Itoa(4*a.Index)+"(AP),"+g.cellPlace(a.Param.Through),
-			fmt.Sprintf("%s is argument %d", a.Param.Name, a.Index))
+		cell := g.cellPlace(a.Param.Through)
+
+		if a.Param.Sym == nil || !a.Param.Sym.Optional {
+			w.Statement("", "MOVL", strconv.Itoa(4*a.Index)+"(AP),"+cell, fmt.Sprintf("%s is argument %d", a.Param.Name, a.Index))
+
+			continue
+		}
+
+		// An OPTIONAL dummy's longword may be past the end of a shorter list
+		// than the dummies, which VMS's convention allows a caller; then it is
+		// absent (ir/loweroptional.go).
+		skip := g.newLabel()
+		w.Statement("", "CLRL", cell, fmt.Sprintf("%s is argument %d, if the caller passed it", a.Param.Name, a.Index))
+		w.Statement("", "CMPB", "(AP),#"+strconv.Itoa(a.Index), "")
+		w.Statement("", "BLSSU", skip, "")
+		w.Statement("", "MOVL", strconv.Itoa(4*a.Index)+"(AP),"+cell, "")
+		w.Label(skip)
 	}
 }
 

@@ -1,0 +1,9 @@
+opts 1.0 F F
+opts 2.0 T F
+  count  3
+opts 3.0 T T
+  count  4
+  label four
+opts 4.0 F T
+  label null
+  $STATUS == "%X00000001"

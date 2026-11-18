@@ -89,9 +89,9 @@ func (a *analyzer) intrinsicSlots(e *ast.Apply, forms []form, quiet bool) (intri
 
 			switch {
 			case j < 0:
-				return report("KEYWORDNAME", e.Name, k.Name, dummyNames(dummies))
+				return report("KEYWORDNAME", "the intrinsic function "+e.Name, k.Name, dummyNames(dummies))
 			case slots[j] != nil:
-				return report("KEYWORDTWICE", k.Name, e.Name)
+				return report("KEYWORDTWICE", k.Name, "the intrinsic function "+e.Name)
 			}
 
 			slots[j] = k.X
@@ -113,7 +113,7 @@ func (a *analyzer) intrinsicSlots(e *ast.Apply, forms []form, quiet bool) (intri
 
 	for j, d := range dummies {
 		if slots[j] == nil && !d.optional {
-			return report("MISSINGARG", e.Name, d.name)
+			return report("MISSINGARG", "the intrinsic function "+e.Name, d.name)
 		}
 	}
 
@@ -155,6 +155,11 @@ func dummyNames(dummies []dummyArg) string {
 		names[j] = d.name
 	}
 
+	return nameList(names)
+}
+
+// nameList is names as a message lists them: "A", "A and B", "A, B, and C".
+func nameList(names []string) string {
 	switch len(names) {
 	case 1:
 		return names[0]

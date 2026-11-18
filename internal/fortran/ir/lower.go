@@ -228,6 +228,8 @@ func (l *lowerer) prepare() {
 
 	if len(u.Entries) > 0 {
 		l.prepareEntries(l.hidden)
+	} else {
+		l.prepareOptionals()
 	}
 
 	l.prepareBounds()

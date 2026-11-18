@@ -345,6 +345,8 @@ func (a *analyzer) target(e ast.Expr) Expr {
 		return t
 
 	case *Elem, *Substring, *FieldRef, *ArrayRef, *Section:
+		a.checkIntentIn(definedSymbol(t), t.Position())
+
 		return t
 	}
 
@@ -353,8 +355,11 @@ func (a *analyzer) target(e ast.Expr) Expr {
 }
 
 // checkLoopVariable reports a change to the control variable of a DO
-// loop the statement is in (DOVARSET), which section 5.3.1 forbids.
+// loop the statement is in (DOVARSET), which section 5.3.1 forbids, and
+// to an INTENT(IN) dummy argument (INTENTIN).
 func (a *analyzer) checkLoopVariable(s *Symbol, pos diag.Position) {
+	a.checkIntentIn(s, pos)
+
 	for _, c := range a.open {
 		if c.do != nil && c.do.Var == s {
 			a.report("DOVARSET", pos, s.Name, c.line())
@@ -415,6 +420,11 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 			a.badUse(sym, s.NamePos, "be called")
 		}
 
+		return nil
+	}
+
+	list, ok := a.actuals(sym, list, places, s.NamePos)
+	if !ok {
 		return nil
 	}
 

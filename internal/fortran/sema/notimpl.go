@@ -144,8 +144,10 @@ func formWhat(e ast.Expr) string {
 		return "a KEY= list"
 	case *ast.KeywordArg:
 		// An intrinsic function's reference takes its keyword arguments
-		// (intrinsicSlots); a program's own procedure's are Phase 103's.
-		return "a keyword argument to a procedure that isn't intrinsic"
+		// (intrinsicSlots), and a reference through an explicit interface
+		// (optional.go's actuals); one is left only where neither does, as in
+		// a statement function's reference.
+		return "a keyword argument here"
 	case *ast.DefinedOp:
 		return "a defined operator"
 	}

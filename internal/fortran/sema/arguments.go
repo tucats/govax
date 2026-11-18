@@ -18,6 +18,7 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 
 	for i, e := range list {
 		args[i] = a.arg(e)
+		a.notePassed(args[i])
 	}
 
 	return args

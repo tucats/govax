@@ -291,7 +291,7 @@ func (ev *evaluator) selectedKind(e *ast.Apply, how string, args []ast.Expr) (*C
 	}
 
 	if len(values) == 0 {
-		return nil, ev.report("MISSINGARG", e.Pos, e.Name, "P or R")
+		return nil, ev.report("MISSINGARG", e.Pos, "the intrinsic function "+e.Name, "P or R")
 	}
 
 	var p, r *int64

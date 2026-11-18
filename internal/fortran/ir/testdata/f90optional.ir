@@ -1,0 +1,40 @@
+routine OPT subroutine
+  param A       F  argument 1
+  param B       F  through $A2
+  param C       B  through $A3
+  entry 1 OPT B=2 C=3
+  cell  L       L  $LOCAL+0    variable L
+  cell  $A2     L  $LOCAL+4    address of B, reached by an internal procedure
+  cell  $A3     L  $LOCAL+8    address of C
+  $LOCAL is 12 bytes
+  datum $K1     F 2.0
+B1:
+  ; line 12
+  assign L = ne.L(arg B, 0)
+  ; line 13
+  branch ne.L(arg C, 0) B2 B3
+B2:
+  assign @A = @B
+  jump B3
+B3:
+  ; line 14
+  call local OPT.INNER(ref @A, val 0)
+  ; line 15
+  call local OPT.INNER(ref $K1, ref @A)
+  ; line 22
+  return
+routine OPT.INNER subroutine, internal to OPT
+  param X       F  argument 1
+  param Y       F  through $A2
+  entry 1 INNER Y=2
+  cell  $A2     L  $LOCAL+0    address of Y
+  $LOCAL is 4 bytes
+B1:
+  ; line 20
+  branch and.L(ne.L(arg B, 0), ne.L(arg Y, 0)) B2 B3
+B2:
+  assign @Y = @X
+  jump B3
+B3:
+  ; line 21
+  return

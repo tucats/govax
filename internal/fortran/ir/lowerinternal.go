@@ -79,32 +79,33 @@ func lowerHost(u *sema.Unit) []*Routine {
 // procedure reaches a cell holding its address, which the host's entry fills
 // in. A host with ENTRY statements has such a cell for every dummy already.
 func (l *lowerer) passHostArgs() {
-	if len(l.unit.Entries) > 0 {
-		for _, p := range l.r.Params {
-			if l.reachedParams[p] {
-				p.Through.Reached = true
-			}
-		}
-
-		return
-	}
-
-	var args []EntryArg
-
 	for i, p := range l.r.Params {
 		if !l.reachedParams[p] {
 			continue
 		}
 
-		p.Through = l.newCell("$A"+strconv.Itoa(i+1), ArgCell, Long, Long.Size())
-		p.Through.Dummy = p.Name
+		// A host with ENTRY statements has a cell for every dummy, and an
+		// OPTIONAL dummy has one already (prepareOptionals).
+		if p.Through == nil {
+			l.throughCell(i, p)
+		}
+
 		p.Through.Reached = true
-		args = append(args, EntryArg{p.Index, p})
+	}
+}
+
+// throughCell gives the routine's dummy argument p, its ith, a cell its entry
+// copies its address to ($A1, $A2, ...), for a routine without ENTRY
+// statements, whose one entry point (Entries[0]) is then made if it hasn't one.
+func (l *lowerer) throughCell(i int, p *Param) {
+	p.Through = l.newCell("$A"+strconv.Itoa(i+1), ArgCell, Long, Long.Size())
+	p.Through.Dummy = p.Name
+
+	if len(l.r.Entries) == 0 {
+		l.r.Entries = []*Entry{{Name: l.unit.Name, Number: 1}}
 	}
 
-	if len(args) > 0 {
-		l.r.Entries = []*Entry{{Name: l.unit.Name, Number: 1, Args: args}}
-	}
+	l.r.Entries[0].Args = append(l.r.Entries[0].Args, EntryArg{p.Index, p})
 }
 
 // cellOf is the cell of the variable or array s: the routine's own, or in an

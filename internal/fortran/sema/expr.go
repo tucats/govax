@@ -194,7 +194,12 @@ func (a *analyzer) ownName(name string) bool {
 // selfReference is a recursive function's reference to itself or one of its
 // entry points, named by s, whose value is of type t.
 func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
-	args := a.args(e.Args)
+	list, ok := a.actuals(s, e.Args, nil, e.Pos)
+	if !ok {
+		return a.bad(e.Pos)
+	}
+
+	args := a.args(list)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
 	return &FuncRef{exprBase{T: t, Pos: e.Pos}, s, args}
@@ -212,6 +217,10 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	s := a.scope.find(e.Name)
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
+		if e.Name == "PRESENT" && a.intrinsicNamed(e.Name) {
+			return a.present(e)
+		}
+
 		_, selected := isInquiry(e.Name)
 		if _, ok := constFuncs[e.Name]; ok || (selected || arrayFunctions[e.Name]) && a.intrinsicNamed(e.Name) {
 			if v, ok := a.folded(e); ok {
@@ -266,7 +275,12 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		fallthrough
 
 	case Function:
-		args := a.args(e.Args)
+		list, ok := a.actuals(s, e.Args, nil, e.Pos)
+		if !ok {
+			return a.bad(e.Pos)
+		}
+
+		args := a.args(list)
 		a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
 		return &FuncRef{exprBase{T: s.Type, Pos: e.Pos}, s, args}

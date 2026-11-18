@@ -652,6 +652,7 @@ func (a *analyzer) finishUnit() {
 	a.untyped()
 	a.undeclared()
 	a.reportUnused()
+	a.reportIntentOut()
 	a.reportExtensions(a.unit.AST)
 	a.passedLengths()
 	a.recursiveStorage()
@@ -967,8 +968,9 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 			}
 
 			// A routine with an OPTIONAL dummy has to be referenced through an
-			// explicit interface (12.3.1.1).
-			if p := firstOptional(fu.params()); p != nil {
+			// explicit interface (12.3.1.1); its own interface is explicit in a
+			// recursive routine's reference to itself.
+			if p := firstOptional(fu.params()); p != nil && fu.unit != u {
 				messages.Report("EXPLICITREQ", r.pos, r.sym.Name, p.Name, fu.pos.Line)
 
 				continue

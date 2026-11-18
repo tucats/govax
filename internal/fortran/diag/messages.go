@@ -555,10 +555,14 @@ var messages = map[string]kind{
 	// Fortran 90 declarations and kinds.md, subtask 6; sema/intrinsickeys.go):
 	// a keyword the function hasn't, a dummy given twice, an argument without
 	// a keyword after one with, and a required argument left out.
-	"KEYWORDNAME":  {Error, "the intrinsic function %s has no argument %s; its arguments are %s"},
-	"KEYWORDTWICE": {Error, "the argument %s of the intrinsic function %s is given twice"},
+	//
+	// Since Phase 103 (sema/optional.go) the same four are said of a reference
+	// through an explicit interface, whose first argument names the procedure
+	// rather than "the intrinsic function X".
+	"KEYWORDNAME":  {Error, "%s has no argument %s; its arguments are %s"},
+	"KEYWORDTWICE": {Error, "the argument %s of %s is given twice"},
 	"KEYWORDORDER": {Error, "an argument of %s without a keyword can't follow one with a keyword"},
-	"MISSINGARG":   {Error, "the intrinsic function %s needs its argument %s"},
+	"MISSINGARG":   {Error, "%s needs its argument %s"},
 	"NULLSTMTARG":   {Error, "an argument of the statement function %s can't be left out"},
 
 	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT
@@ -1166,6 +1170,26 @@ var messages = map[string]kind{
 	// EXPLICITREQ is a reference through an implicit interface to a routine of
 	// the file with an OPTIONAL dummy argument (12.3.1.1).
 	"EXPLICITREQ": {Error, "%s has the OPTIONAL dummy argument %s (line %d), so a reference to it needs an explicit interface"},
+
+	// Keyword arguments, OPTIONAL, PRESENT, and INTENT (sema/optional.go and
+	// intent.go; PHASE-103's findings 8 to 10).
+
+	// KEYWORDNOINTERFACE is a keyword argument in a reference to a procedure
+	// with no explicit interface (12.4.1).
+	"KEYWORDNOINTERFACE": {Error, "%s has no explicit interface here, so its arguments can't be given by keyword"},
+
+	// NOTOPTIONAL is PRESENT of anything but an OPTIONAL dummy argument of
+	// the unit or its host (13.13.80).
+	"NOTOPTIONAL": {Error, "the argument of PRESENT must be the name of an OPTIONAL dummy argument"},
+
+	// INTENTIN is an INTENT(IN) dummy argument given a value, or passed where
+	// an explicit interface may give it one (5.1.2.3).
+	"INTENTIN": {Error, "%s is an INTENT(IN) dummy argument, which can't be given a value"},
+
+	// INTENTOUTREF is an INTENT(OUT) dummy argument used before every
+	// statement that gives it a value, in the order of the statements: it is
+	// undefined when the routine starts (5.1.2.3).
+	"INTENTOUTREF": {Warning, "%s is an INTENT(OUT) dummy argument, used here before any statement gives it a value"},
 
 	// ARGTYPEW and ARGRANKW are ARGTYPE and ARGRANK through an implicit
 	// interface, under /WARNINGS=ARGUMENT_CHECKING.

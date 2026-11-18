@@ -440,6 +440,10 @@ func readIntrinsics() ([]form, map[string]bool, map[string]bool) {
 	forms, names := readTable(intrinsicTable, nil)
 	more, newNames := readTable(fortran90Table, names)
 
+	// PRESENT has no row: what it is given is an OPTIONAL dummy argument's
+	// name, never a value (optional.go).
+	newNames["PRESENT"] = true
+
 	return append(forms, more...), names, newNames
 }
 
