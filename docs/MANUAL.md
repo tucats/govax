@@ -7225,6 +7225,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$NOTCONFOR()` | Signals `%FOR-F-NOTCONFOR`, severe, "array shapes do not conform": `/CHECK=BOUNDS` found two arrays of different shapes in a Fortran 90 array assignment. VAX FORTRAN had no such condition; it is govax's, FOR number 300 |
 | `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0), `flags` a longword (bit 0: STAT= given), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
 | `FTN$BADARRDESC()` | Signals `%FOR-F-BADARRDESC`, severe, "argument is not an array descriptor of the dummy argument's rank": `/CHECK=BOUNDS` found an assumed-shape dummy given something other than a class NCA or class A descriptor of its rank (a call without the routine's interface, or a MACRO caller's mistake). govax's own, FOR number 303 |
+| `FTN$GET_TEMP(desc)` | The storage of an array the compiler makes when the program runs, on the heap: a statement's temporary past 64 KB, or the value of a function whose value's shape is known only when it runs. `desc` is a class A descriptor with its size (ARSIZE) filled in; takes that many bytes (8 at least) from `LIB$GET_VM` into its POINTER, or signals `%FOR-F-INSVIRMEM`. `FTN$DEALLOCATE` gives it back |
 | `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array: gives its memory to `LIB$FREE_VM` and clears POINTER. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC` |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
@@ -8290,9 +8291,11 @@ It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90
 may call VAX FORTRAN routines and the other way round, and an old program compiles as it
 always has. This section grows with each part; so far a program may be written in Fortran
 90's free source form and with its spellings, with its declarations and kinds, with
-its control constructs (construct names, EXIT, CYCLE, and SELECT CASE), and with arrays as
+its control constructs (construct names, EXIT, CYCLE, and SELECT CASE), with arrays as
 values (sections, array expressions and assignment, constructors, WHERE, and the array
-functions); everything else
+functions), with internal procedures, interface blocks, and keyword, optional, and generic
+arguments, and with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
+array-valued functions, and the transformational functions); everything else
 Fortran 90 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
@@ -9025,7 +9028,7 @@ names must have constant lengths (`LENNOTDUMMY`). `LEN` of a whole array or a se
 elements' length. Such names stand in array expressions as any CHARACTER array does: an
 assignment through a temporary, `MERGE`, a concatenation (each element's built in a dynamic
 string, freed at once), and a CHARACTER function's value (called once, before the
-statement's loops). A function whose value has such a length is not there yet (below,
+statement's loops). A function's value may have such a length too (below,
 "Array-valued functions").
 
 **Assumed-shape dummy arguments** (the standard's 5.1.2.4.2 and 12.4.1.1). A dummy array
@@ -9087,8 +9090,8 @@ assumed-shape dummy whole or as a section; an output list takes it an element at
 An OPTIONAL one may be left out, and passed on to another OPTIONAL dummy is left out there
 too (so is an OPTIONAL explicit-shape one); an ENTRY may have one. Not there yet: a
 CHARACTER array expression whose length is known only when the program runs and isn't made
-of variables, arrays, and concatenations of them, as such an argument; and `/DEBUG`'s view
-of one, which the debugger doesn't read yet.
+of variables, arrays, and concatenations of them, as such an argument. Under `/DEBUG` the
+debugger reads such a dummy through its descriptor ([section 14.10](#1410-debugging-a-compiled-program)).
 
 **Sections and expressions to other dummies.** A dummy that isn't assumed-shape, an
 explicit-shape or assumed-size array, or any dummy of a routine with no interface, takes

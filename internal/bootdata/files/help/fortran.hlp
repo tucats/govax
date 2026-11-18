@@ -210,7 +210,7 @@
    written an element at a time.  A statement that needs a temporary
    array gets one of the size it needs, on the stack up to 64 KB and
    from the heap past that, given back at the statement's end.  A
-   section passed to a program's own procedure is not there yet.
+   section may be passed to any procedure (below).
 
    A main program or subprogram may end with CONTAINS and internal
    procedures (END SUBROUTINE, END FUNCTION), which use their host's
@@ -293,8 +293,8 @@
    when the program runs and copied only if it must be; it may also be a
    run-time format, an internal file, or ENCODE's or DECODE's buffer.
 
-   A function's value may be an array of a shape known when compiling,
-   its name (or RESULT variable) given dimensions:
+   A function's value may be an array, its name (or RESULT variable)
+   given dimensions:
 
      function cross(a, b)
        real :: a(3), b(3), cross(3)
@@ -310,6 +310,10 @@
    is a dynamic string in a class D descriptor the caller passes.  ENTRY
    may name such a function's entry points, each declared alike
    (%FORT-E-ENTRYVALUE, %FORT-E-ENTRYMAKE).
+
+   Under /DEBUG the debugger's EXAMINE reads allocatable, automatic, and
+   assumed-shape arrays through their descriptors, a section by its
+   strides (%DEBUG-W-NOTALLOC for an array not allocated).
 
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are

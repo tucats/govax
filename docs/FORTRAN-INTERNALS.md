@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), and procedures with explicit interfaces (section 28). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), and dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -44,7 +44,8 @@ Sections 22 and 23 are later additions: indexed files, and recursive routines. S
 begins Fortran 90: free source form and the new tokens and statements; section 25 is its
 declarations, attributes, and kinds; section 26 its control constructs; section 27 arrays
 as values and the scalarizer; section 28 internal procedures, interfaces, and how a call
-is resolved.
+is resolved; section 29 descriptors, the stack and the heap, and the arrays they make
+possible.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -3859,3 +3860,240 @@ format expressions reach theirs. A generic, an operator, or a defined assignment
 call by the time the IR sees it. What the programs did catch was the hand-worked expected
 output. `hostopt.f90`'s recursive total was worked wrong once, and govax and gfortran agreed on
 the right answer.
+
+## 29. Fortran 90: descriptors and dynamic storage (Phase 104)
+
+Until this phase every array had a place and a shape the compiler could write down: a
+variable's own storage, a COMMON block's, or a dummy's, with bounds that were constants or, for
+an adjustable array, computed once at entry from the dummies. Fortran 90 takes both away. An
+*allocatable* array has no storage until ALLOCATE gives it some, of a shape chosen then. An
+*automatic* array is a subprogram's own, of a size its arguments decide. An *assumed-shape*
+dummy is whatever its caller passed, a section with any strides included. A function may
+return an array whose shape only it can work out. And the scalarizer of section 27, which
+used to give up when a temporary's size wasn't a constant, now has to make one anyway.
+
+All of this rests on one data structure, the *array descriptor*, and two ways of finding
+memory while the program runs, the stack and the heap. This section takes them in that order,
+then shows what each new kind of array does with them.
+
+### The class NCA descriptor
+
+The OpenVMS Calling Standard already describes an array: class A, the descriptor the compiler
+has passed for CHARACTER arrays and kept for adjustable arrays since section 12. Its middle
+block holds each dimension's extent as a *multiplier*, in elements, and the elements must be
+one after another. Class NCA (10, "noncontiguous array") has the same layout to the byte, but
+the middle block holds each dimension's *stride*, in bytes, the distance from one element to the
+next along that dimension. With strides, any section is an array in its own right.
+
+Here is what the compiler writes to pass `A(2:10:2, J)` of `REAL A(10, 5)` to an assumed-shape
+dummy:
+
+```text
+	MOVL	@PASS.J(AP),PASS.$T1
+	MULL3	PASS.$T1,#10,R0
+	SUBL2	#9,R0                       ; A(2,J) is element 10*J - 9 from A(1,1)
+	MOVAL	@PASS.A(AP)[R0],PASS.$D1+4  ; POINTER: the section's first element
+	MOVL	#8,PASS.$D1+20              ; S1: every other REAL, 8 bytes
+	MOVL	#1,PASS.$D1+24              ; L1
+	MOVL	#5,PASS.$D1+28              ; U1: five elements
+	SUBL3	#8,PASS.$D1+4,PASS.$D1+16   ; A0 = POINTER - S1*L1
+	MOVL	#20,PASS.$D1+12             ; ARSIZE
+	PUSHAQ	PASS.$D1
+	CALLS	#1,G^SHOW
+```
+
+Laid beside the array's memory, with A at 1000 and J = 3:
+
+```text
+  descriptor $D1                     memory
+   0  4         length, REAL*4       1000  A(1,1)
+   2  10, 10    DTYPE_F, CLASS_NCA   ...
+   4  1084      POINTER  ----------> 1084  A(2,3)   V(1) = A0 + 8*1
+   8  0,0,0,1   flags, rank 1        1088  A(3,3)
+  12  20        ARSIZE               1092  A(4,3)   V(2) = A0 + 8*2
+  16  1076      A0 (V(0)'s place)    1096  A(5,3)
+  20  8         S1                   1100  A(6,3)   V(3) = A0 + 8*3
+  24  1, 5      L1, U1               ...
+                                     1116  A(10,3)  V(5) = A0 + 8*5
+```
+
+A0 is where an element of all-zero subscripts would be. With it, an element's address is one
+multiply-add per dimension and nothing else: no lower bound to subtract, no element size to
+multiply by. In the callee, `V(3)` of `REAL V(:)` is
+
+```text
+	MULL3	#3,THIRD.$B1+20,R0          ; 3 * S1
+	ADDL2	THIRD.$B1+16,R0             ; + A0
+	MOVF	(R0),R0
+```
+
+(`ir.ClassNCA`; `Descriptor.StrideOffset`; `lowerallocate.go`'s `stridedElement`). The
+optimizer's invariant motion (section 16) takes A0 and the outer dimensions' products out of an
+inner loop, so a loop over a section costs about what a loop over a plain array does.
+
+### Why an assumed-shape dummy needs an interface
+
+The callee above reads its argument list's longword as the address of a descriptor. A
+FORTRAN-77 caller, which knows nothing of the callee, pushes the address of the first element
+instead. Nothing in the call says which the callee got. So the standard requires the caller
+to *know*: a procedure with an assumed-shape dummy may be referenced only through an explicit
+interface (section 28's), and govax reports EXPLICITREQ for a call of the file's own routine
+without one. With the interface, the caller builds the descriptor (`ir/lowershaped.go`'s
+`sectionNCA`, `arrayNCA`); without it, it doesn't, and the callee would read an element of
+the array as a descriptor.
+
+Two things make the callee robust anyway. Each entry point *copies* the caller's descriptor
+into a cell of its own (`$B1` above), with the dummy's own lower bounds. Everything in the
+routine then reads one descriptor in one known place, whatever the caller wrote, a MACRO
+caller included, and the optimizer can see that nothing else changes it. The copy is also
+where a check goes: under `/CHECK=BOUNDS` the class byte and rank are tested first, and
+anything else is FTNRTL's BADARRDESC. A class A descriptor from a MACRO caller is accepted
+always, its multipliers turned into strides.
+
+### The other direction: a section to an old dummy
+
+A FORTRAN-77 dummy, `REAL X(N)` or `X(*)`, wants the address of elements one after another
+(*sequence association*). A section may not be that. Sema decides when it can (`Contiguous`:
+whole by a step of 1 up to one dimension, single subscripts after); such a section is passed as
+its first element's address, as FORTRAN-77 always did. Anything else is copied into a
+temporary before the call and back after it (`ir/lowersequence.go`). An assumed-shape array
+is tested while the program runs: if its strides are the contiguous ones (S1 the element size,
+each next stride the last times the extent), its POINTER goes straight through, and only
+otherwise is it copied. The copy back runs right after the call returns, before the rest of the
+statement, so a function reference in an expression sees the effect of its own call.
+
+### Two places to get memory while the program runs
+
+The compiler has always placed storage when compiling: `$LOCAL`, a COMMON block, or since
+section 23 a fixed frame area under FP. Run-time sizes need run-time allocation, and there are
+two kinds, chosen by how long the memory must live.
+
+*The stack*, for memory that dies with the routine or the statement. The IR has two new
+statements, `StackAllocate` (`SUBL2 size,SP`, rounded to a longword, then `MOVL SP,cell`) and
+`StackRelease` (`MOVL saved,SP`). An automatic array is made at entry and never released: RET
+puts SP back from FP, and so does an unwind. A statement's temporary is made inside the
+statement, after `StackMark` saved SP, and given back at the statement's end, so a statement in
+a loop doesn't grow the stack. The optimizer treats both as walls: nothing moves across them.
+
+*The heap*, for memory that must outlive a frame or is too big for the stack. ALLOCATE's
+memory, a temporary past 64 KB (the user stack is 2 MB with paging off), and a function's
+value of run-time shape all come from LIB$GET_VM through FTNRTL (`ftn_alloc.mar`:
+`FTN$ALLOCATE`, `FTN$GET_TEMP`, `FTN$DEALLOCATE`). A statement gives its heap temporaries
+back at its end (`ir/lowertemps.go`'s `endTemps`), on every way out, including the branch of an
+IF, an arithmetic IF, a computed GO TO, and a CALL with alternate returns.
+
+### Allocatable arrays
+
+An allocatable array's storage *is* its class NCA descriptor, in the variable's own place, its
+prototype block (length, type, class, rank) known when compiling and POINTER 0 while it isn't
+allocated:
+
+```text
+B:   .WORD   4                  ; REAL, ALLOCATABLE :: B(:, :)
+     .BYTE   DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+     .LONG   0                  ; POINTER: not allocated
+     .BYTE   0,0,0,2
+     .LONG   0,0,0,0,0,0,0,0    ; ARSIZE, A0, strides, bounds
+```
+
+ALLOCATE (B(0:M, 3)) is one call, `FTN$ALLOCATE(B, flags, 0, M, 1, 3)`, which computes the
+extents, strides, ARSIZE, and A0, takes the memory, and fills the descriptor in; ALLOCATED(B)
+is a `TSTL B+4` in line; DEALLOCATE is `FTN$DEALLOCATE`. Putting the work in FTNRTL keeps the
+error handling in one place: with STAT= the routine returns the FOR number (301 ALREADYALLOC,
+302 NOTALLOC, 41 INSVIRMEM), without it the routine signals. A zero-sized array still gets an
+8-byte block, so that POINTER is never 0 for an allocated array.
+
+A subprogram's allocatable local that isn't SAVE'd is deallocated at every return. Each entry
+point also *clears* its POINTER. That looks redundant, and is, unless the routine was left by an
+unwind, which runs none of the return code. Then the next call would find the array allocated
+and its ALLOCATE would fail. Clearing at entry leaks the block instead, and the program goes on.
+
+### Automatic objects
+
+`REAL W(SIZE(A))` in a subprogram is an adjustable array with no dummy to describe it: its
+bounds are computed at entry, as section 12's adjustable bounds are, into its own class A
+descriptor cell, and then `StackAllocate` makes its storage and fills POINTER and A0. From
+there every use reads it exactly as it reads an adjustable dummy's descriptor
+(`ir/lowerautomatic.go`). The specification expressions this needs grew by Fortran 90's
+inquiry functions: SIZE, LBOUND, UBOUND, and LEN of a dummy, which are lowered at entry like
+any expression. `CHARACTER(LEN=N) :: S` is the same with a length and no bounds, a class S
+descriptor of its text.
+
+### Temporaries of run-time size
+
+Section 27's scalarizer made a temporary when an assignment's sides overlapped, for a
+constructor, for a WHERE's mask, or for `IV(IV) = 1`. When the size wasn't a constant it gave up.
+Now `runtimeTemp` makes a class A descriptor cell (`$R1`) standing among the adjustable
+arrays, stores the extents the statement computes, and takes the storage from the stack up to
+64 KB and from `FTN$GET_TEMP` past that. The rest of the scalarizer doesn't know the
+difference: the temporary is just another adjustable array whose bounds are in a descriptor.
+
+### Array-valued functions
+
+A function whose value is an array always has an explicit interface at its references, so
+caller and callee agree on how the value comes back: through a hidden first argument, as a
+CHARACTER or REAL\*16 value already did. Which argument depends on who can know the shape.
+
+- **Known when compiling** (`REAL F(3)`): the caller passes a temporary of that shape, and the
+  function's value is that temporary, a dummy array in all but name.
+- **Known only at run time** (`REAL F(N)`): only the function can evaluate its own bounds, which
+  may use its COMMON, its host's variables, or SIZE of its dummies. So the caller passes a class
+  NCA descriptor with POINTER 0, and the function, at entry, computes its bounds, takes the
+  storage with `FTN$GET_TEMP`, and writes the caller's descriptor whole
+  (`ir/lowervalue.go`). Inside the function the value is an automatic array of its own cell.
+  The caller reads the value as an allocatable array and frees it at the statement's end. The
+  caller's descriptor cell (`$G1`) has POINTER 0 whenever no statement holds a value, so a
+  call finding a block still there (from an unwind, or from an earlier pass of an implied-DO
+  loop in the same statement) frees it first.
+- **A CHARACTER value of run-time length**: the Calling Standard's dynamic text. The caller
+  passes a class D descriptor, the function gets a string with LIB$SGET1_DD, and the caller
+  frees it with LIB$SFREE1_DD, as it frees a concatenation's.
+
+Each reference is called once per statement, however many times lowering needs its value: a
+temporary's extents first, then its elements. The statement keeps a map from the reference to
+its result for that.
+
+### The transformational functions
+
+SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK, RESHAPE of values, and a reduction with a DIM= known only
+at run time are computed whole into a temporary before the statement's loops
+(`ir/lowertransform.go`), by loops of their own that walk the argument and put each element
+where it goes. CSHIFT's goes to `MOD(j - 1 - SHIFT, n) + 1`; EOSHIFT fills its boundary first;
+PACK and UNPACK keep a running count; RESHAPE copies SOURCE and PAD to rank one and walks the
+result in ORDER's order; a run-time DIM= is one arm per dimension, each Phase 102's
+constant-DIM code. The plan had the simple ones computed where they are used, as TRANSPOSE is,
+but a computed subscript (CSHIFT's MOD, EOSHIFT's reach past the end) is something the
+scalarizer's leaves don't take, and one mechanism for all of them is safe whatever the
+statement's target overlaps.
+
+### What the debugger needs
+
+The `/DEBUG` table (section 18) gained one idea: a variable whose own storage is a descriptor
+(`dbgtable.Described`). The debugger reads the descriptor for the first element's address
+(POINTER), a CHARACTER length (the first word), the bounds, and, for a class NCA descriptor whose
+strides aren't the contiguous ones, each element's address from A0 and the strides. That covers
+allocatable, automatic, and assumed-shape arrays, and automatic strings, with one code path.
+
+### What the programs found
+
+Nineteen programs in `testdata/fortran90` cover the phase, from `allocs.f90` to `sorter.f90`,
+each run in all eight modes and witnessed by gfortran where it is portable. The VMS-only ones
+(`allocvms`, `seqvms`, `rampvms`) check what gfortran can't: STAT='s FOR numbers, ENCODE on an
+assumed-shape buffer, and LIB$STAT_VM's count of bytes unchanged by thousands of heap blocks
+given back.
+
+The faults they found were all in how statements end, not in descriptors:
+
+- A copy's loops end basic blocks, and a block's end ran the statement's pending frees, so a
+  dynamic string an earlier argument of the same call had made was freed before the call
+  (`holdingAfter`, subtask 6).
+- In an internal procedure the optimizer's map of the host's storage was made once, so a
+  temporary a later pass added looked like the host's, which any call may change
+  (`opt/effects.go`, subtask 7a).
+- A CALL with alternate returns ended its block with its Switch, and its statement's heap
+  temporaries were never given back (subtask 7b).
+- A transformational function's shape was a slice of its argument's, so marking the function's
+  own extents rewrote the argument's (subtask 8).
+
+And one was in the tests: subtask 6's heap check copied a 30,000-element section a thousand
+times, 690 million instructions in each of eight modes, and twenty copies prove the same thing.

@@ -1087,8 +1087,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `interfaces`, `optional`, `generics`, `operators`, `hostopt`, `numbers`,
   and `modules/shortlist`; MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's
   section 28.
-  Phase 104 (in progress; its Part A the survey, accepted by the author
-  2026-11-18, with a revised subtask list, A.4) is dynamic arrays: subtask 2
+  Phase 104 (done 2026-11-18; its Part A the survey, accepted by the author
+  2026-11-18, with a revised subtask list, A.4; its "Where things stand" is
+  the follow-up list, and PLAN.md summarizes it) is dynamic arrays: subtask 2
   (2026-11-18) is allocatable arrays (`sema/allocate.go`: `Dim.Deferred`,
   `Symbol.Allocatable`, `Allocate`, `Allocated`; `ir/lowerallocate.go`: each
   is its own class NCA descriptor cell, `ir.ClassNCA`, an element A0 plus
@@ -1165,8 +1166,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   a temporary, once per statement; `testdata/fortran90/transform.f90`).
   Subtask 9 (2026-11-18) is programs end to end (`solver.f90`, `sieve.f90`,
   `sorter.f90`) and the debugger reading descriptors (`dbgtable.Described`,
-  `debugger/fortran.go`'s `describedBase`; DBG-W-NOTALLOC). Subtask 10, the
-  close-out, is next.
+  `debugger/fortran.go`'s `describedBase`; DBG-W-NOTALLOC), and subtask 10
+  (2026-11-18) the close-out, FORTRAN-INTERNALS.md's section 29.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

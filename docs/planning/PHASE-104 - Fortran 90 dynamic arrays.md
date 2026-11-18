@@ -1,9 +1,16 @@
 # Phase 104 — Fortran 90: dynamic arrays
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
-and six questions for the author), was accepted by the author 2026-11-18
-("The author's answers").
+**Status:** done 2026-11-18. Planned 2026-11-17 with Phase 99 (`PHASE-99 -
+Fortran 90.md`, Part C). Subtask 1, the survey (Part A, below, with a revised
+subtask list and six questions for the author), was accepted by the author
+2026-11-18 ("The author's answers"). Subtasks 2 (allocatable arrays), 3
+(allocation status), 4 (run-time storage: 4a automatic arrays, 4b CHARACTER
+lengths, 4c the scalarizer's temporaries), 5 (assumed-shape dummies, 5a and 5b),
+6 (sections and expressions to old dummies), 7 (array-valued functions: 7a a
+known shape, 7b a run-time shape, 7c run-time CHARACTER lengths and ENTRY), 8
+(the transformational intrinsics), 9 (programs end to end and the debugger), and
+10 (the close-out) are done; "Where things stand", at the end, is what the phase
+left.
 Needs Phase 103 (done).
 
 ## Goal
@@ -504,7 +511,7 @@ calls), then the frame's run-time storage everything after needs.
 10. **Close-out:** FORTRAN-INTERNALS.md's section 29 (descriptors and dynamic
     storage: the NCA of `A(2:10:2, J)` beside its memory, why an assumed-shape
     dummy needs an interface, the frame and the heap), MANUAL.md's 14.13 and its
-    FOR messages, HELP FORTRAN.
+    FOR messages, HELP FORTRAN (done 2026-11-18).
 
 ## A.5 Questions for the author
 
@@ -1213,3 +1220,50 @@ The author read the survey and accepted every recommendation:
     assumed-shape dummy, whole and by element; automatic INTEGER and CHARACTER; an
     allocatable array of bounds 0:1, 2; NOTALLOC; subscripts out of bounds). MANUAL.md's
     14.10 describes them.
+- **2026-11-18, subtask 10 done:** The close-out. FORTRAN-INTERNALS.md's section 29,
+  "Fortran 90: descriptors and dynamic storage": the class NCA descriptor of
+  `A(2:10:2, J)` beside the array's memory, from the compiler's own MACRO, and an
+  element of it in the callee; why an assumed-shape dummy needs an interface; a
+  section to an old dummy; the stack and the heap; allocatable arrays; automatic
+  objects; temporaries of run-time size; the three forms of an array-valued
+  function's value; the transformational functions; the debugger; and what the
+  programs found. MANUAL.md's 14.13 (its introduction, the run-time length and the
+  debugger no longer "not there yet") and FTNRTL's table (`FTN$GET_TEMP`), and HELP
+  FORTRAN (a stale "section passed to a program's own procedure is not there yet",
+  and the debugger's part). PLAN.md's summary and CLAUDE.md.
+
+## Where things stand
+
+Phase 104 is done. What it left, and where each goes:
+
+- **Phase 105:** arrays of records: an allocatable or automatic array of them, a
+  section of one as an argument, and an array-valued function whose value is records
+  (each NOTIMPL).
+- **Phase 106:** an allocatable array in a module.
+- **Phase 107:** POINTER arrays, on this phase's class NCA descriptors and
+  `FTN$ALLOCATE`, and TARGET.
+- **Phase 108:** the intrinsic functions this phase's transformational ones don't
+  cover, and keyword arguments for those whose table rows lack their dummies' names.
+- **Phase 109:** a whole array or section in an I/O list by its descriptor rather than
+  an element at a time; a section as an internal file or ENCODE's buffer.
+- **Phase 110:** what the programs measured (subtask 9's log): the second stride
+  multiply for an assumed-shape dummy's first dimension, the copies for sections to
+  old dummies (a copy is made for INTENT(OUT) too), `A = F(X)` into A directly when
+  they can't overlap, a value passed to an old dummy copied from its temporary, and
+  SPREAD, CSHIFT, and EOSHIFT computed where they're used instead of into a temporary;
+  `/STANDARD` for the phase's forms; the debugger's names through hosts.
+- **Not planned, ours:** the DIM= of SPREAD, CSHIFT, and EOSHIFT and RESHAPE's ORDER=
+  must be constants; a CHARACTER argument to them, or to an assumed-shape or old
+  dummy, of a run-time length must be made of names (`lengthFromNames`); `%REF`,
+  `%DESCR`, and `%LOC` of a section, an expression, or an assumed-shape array; a
+  constructor of a substring's values.
+- **Unconfirmed choices of ours:** a statement with STAT= stops at its first failing
+  object; a zero-sized array takes an 8-byte block; ALREADYALLOC (301), NOTALLOC
+  (302), BADARRDESC (303), and DBG-W-NOTALLOC are govax's own; a class A descriptor is
+  accepted by an assumed-shape dummy with or without `/CHECK=BOUNDS`; an unwind leaves
+  heap blocks allocated (an allocatable local's until its next entry clears it, a
+  function's value until its cell's next use); ENTRYVALUE compares bounds and lengths
+  as written; RESHAPE with too few elements and no PAD leaves the rest as it was;
+  SIZE of an array-valued reference of a known shape is folded without calling the
+  function, and of a made one calls it.
+

@@ -153,7 +153,7 @@ questions, and a progress log extended as that phase is worked.
 | 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE (a CASEL table, a binary search, or a chain), DO with no control, EXIT, CYCLE, construct names; jumps to END IF by Fortran 90's rule — planned 2026-11-17; done 2026-11-17 |
 | 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17; done 2026-11-17 |
 | 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17; done 2026-11-18 |
-| 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17 |
+| 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17; done 2026-11-18 |
 | 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17 |
 | 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17 |
 | 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17 |
@@ -954,3 +954,34 @@ Phase 103 (done 2026-11-18) is procedures and their interfaces:
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 28 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 104, dynamic arrays.
+
+Phase 104 (done 2026-11-18) is dynamic arrays, on the Calling Standard's class NCA descriptor (class
+A's layout, strides in bytes, an element at A0 plus each subscript times its stride):
+
+- **Allocatable arrays** (`sema/allocate.go`, `ir/lowerallocate.go`): each its own NCA descriptor,
+  POINTER 0 while unallocated; ALLOCATE and DEALLOCATE calls of FTNRTL's `ftn_alloc.mar`, STAT='s
+  FOR numbers (ALREADYALLOC 301, NOTALLOC 302, INSVIRMEM 41); a local deallocated at every return
+  and cleared at every entry.
+- **Run-time storage:** the IR's `StackAllocate`, `StackRelease`, and `StackMark`; automatic arrays
+  and CHARACTER objects made at entry (`ir/lowerautomatic.go`, `lowerlength.go`); the scalarizer's
+  temporaries of run-time size, on the stack up to 64 KB and the heap past it (`ir/lowertemps.go`,
+  `FTN$GET_TEMP`), given back at the statement's end.
+- **Assumed-shape dummies** (`sema/shaped.go`, `ir/lowershaped.go`): a descriptor per call through
+  an explicit interface, a copy with the dummy's own bounds at each entry, BADARRDESC (303) under
+  `/CHECK=BOUNDS`.
+- **Sections and expressions to old dummies** (`sema/sequence.go`, `ir/lowersequence.go`): passed
+  where they are if contiguous (a run-time test for an assumed-shape array), else copied in and back.
+- **Array-valued functions** (`sema/arrayvalue.go`, `ir/lowervalue.go`): the caller's temporary for a
+  shape known when compiling; for a run-time shape or CHARACTER length, made by the function on the
+  heap in the caller's class NCA (or class D) descriptor, freed at the statement's end; ENTRY
+  (ENTRYVALUE, ENTRYMAKE).
+- **The transformational intrinsics** (`sema/transform.go`, `ir/lowertransform.go`): SPREAD,
+  CSHIFT, EOSHIFT, PACK, UNPACK, RESHAPE of values, and reductions by a run-time DIM=, each computed
+  whole into a temporary.
+- **The debugger:** allocatable, automatic, and assumed-shape arrays through their descriptors
+  (`dbgtable.Described`), a section by its strides, DBG-W-NOTALLOC.
+- **Programs:** nineteen in `testdata/fortran90`, from `allocs` to `solver`, `sieve`, and
+  `sorter`, the portable ones the same on gfortran.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 29 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 105, derived types.
