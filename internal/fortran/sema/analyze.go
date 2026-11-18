@@ -135,7 +135,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 	// Last, the checks between units, which need them all analyzed: that
 	// each call matches what it calls, and that COMMON blocks of one name
 	// agree with each other from unit to unit.
-	checkReferences(prog, units, messages)
+	checkReferences(prog, units, opts.Warnings, messages)
 	checkPsects(prog, messages)
 	checkCommonLayouts(prog, messages)
 	raiseCommonAlignments(prog)
@@ -385,6 +385,12 @@ type analyzer struct {
 	// before its host's executable statements.
 	interfacing bool
 
+	// inBody is set for an interface body's analyzer, whose unit is no unit
+	// of the file (interface.go); interfaces are the interface blocks the
+	// declarations walk found, whose bodies interfaceBodies analyzes.
+	inBody     bool
+	interfaces []*ast.InterfaceBlock
+
 	// baseAlign, standard, and checks are the options the unit started with,
 	// which its internal procedures start with too.
 	baseAlign Alignment
@@ -557,7 +563,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) []*Unit {
 	}
 
 	a.finishUnit()
-	a.checkInternalCalls()
+	a.checkExplicitCalls()
 
 	return units
 }
@@ -589,7 +595,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 
 	// An internal procedure's name is its host's, not the file's: it is no
 	// unit another unit's references are checked against.
-	if fu := a.units[name]; a.host == nil && fu != nil && fu.unit == nil && fu.kind == u.Kind {
+	if fu := a.units[name]; a.host == nil && !a.inBody && fu != nil && fu.unit == nil && fu.kind == u.Kind {
 		fu.unit = u
 	}
 
@@ -615,6 +621,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	// reported again at each use.)
 	a.applyPrologueGroups()
 	a.declarations(body)
+	a.interfaceBodies()
 	a.checkAlignGroups()
 	a.checkEntryTypes()
 	a.psectDirectives()
@@ -777,6 +784,8 @@ func (a *analyzer) describe(s *Symbol) string {
 	switch {
 	case s.Internal != nil:
 		return "an internal procedure"
+	case s.Interface != nil:
+		return "a procedure with an interface body"
 	case s.Result:
 		return "the value of this function"
 	case s.Class == UnitName && a.unit.Kind == ast.MainProgram:
@@ -863,7 +872,7 @@ func incompleteDeclarations(body []ast.Stmt) bool {
 // with its type, and every reference must give as many arguments as the
 // routine has dummy arguments. VAX FORTRAN compiles each unit alone and
 // can't see these mistakes; a file holding both units lets us.
-func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.List) {
+func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Warnings, messages *diag.List) {
 	for _, u := range prog.Units {
 		for _, s := range u.Symbols {
 			// A unit's own name (a DUPUNIT's among them) is reported
@@ -871,7 +880,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 			// A dummy procedure's name is the unit's own, whatever routine
 			// it stands for when the program runs.
 			fu := units[s.Name]
-			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.Internal != nil || s.broken || s.onlyDeclared || s.DummyProcedure() {
+			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.Internal != nil || s.Interface != nil || s.broken || s.onlyDeclared || s.DummyProcedure() {
 				continue
 			}
 
@@ -929,8 +938,9 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 	for _, u := range prog.Units {
 		for _, r := range u.calls {
 			// A reference to an internal procedure, or an internal procedure's to
-			// itself, is checked against its interface (checkInternalCalls).
-			if r.sym.Internal != nil || (u.Host != nil && (r.sym.Class == UnitName || r.sym.Result)) {
+			// itself, is checked against its interface (checkExplicitCalls).
+			// So is one through an interface body.
+			if r.sym.Internal != nil || r.sym.Interface != nil || (u.Host != nil && (r.sym.Class == UnitName || r.sym.Result)) {
 				continue
 			}
 
@@ -956,10 +966,24 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 				continue
 			}
 
+			// A routine with an OPTIONAL dummy has to be referenced through an
+			// explicit interface (12.3.1.1).
+			if p := firstOptional(fu.params()); p != nil {
+				messages.Report("EXPLICITREQ", r.pos, r.sym.Name, p.Name, fu.pos.Line)
+
+				continue
+			}
+
 			constantArguments(r, fu, messages)
 			recordArguments(r, fu, messages)
+
+			if warnings.ArgumentChecking {
+				checkImplicitArguments(r, fu, messages)
+			}
 		}
 	}
+
+	interfaceDifferences(prog, units, messages)
 }
 
 // checkBlockName reports a common block with the name of a routine, or of

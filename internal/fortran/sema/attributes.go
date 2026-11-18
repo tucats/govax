@@ -117,7 +117,7 @@ func (a *analyzer) external(item *ast.AttrItem) {
 // every system service, and a unit calls few (docs/planning/PHASE-83 - FORTRAN and
 // VMS.md, Decision 5).
 func (s *Symbol) Linked() bool {
-	return s.External && s.Dummy == 0 && (s.ownExternal || s.passed || s.Class != External)
+	return s.External && s.Dummy == 0 && (s.ownExternal || s.passed || (s.Class != External && s.Interface == nil))
 }
 
 // UnusedFromLibrary reports whether the name is a variable a text library's

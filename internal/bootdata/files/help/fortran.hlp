@@ -479,9 +479,11 @@
    What the compiler says, beyond errors: ALL, NONE, [NO]GENERAL (its
    warnings and informational messages; on by default),
    [NO]DECLARATIONS (each name with no type of its own), [NO]UNUSED
-   (names only declared, and labels nothing refers to), and
+   (names only declared, and labels nothing refers to),
    [NO]ALIGNMENT (fields and common names off their natural
-   boundaries).  /WARNINGS alone is ALL and /NOWARNINGS is NONE.  What
+   boundaries), and [NO]ARGUMENT_CHECKING (an argument whose type,
+   kind, or rank isn't its dummy's, in a reference without an
+   explicit interface to a routine of the same file).  /WARNINGS alone is ALL and /NOWARNINGS is NONE.  What
    isn't shown doesn't count: a compilation with only those ends with a
    good status.
 

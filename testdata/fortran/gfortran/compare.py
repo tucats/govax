@@ -81,6 +81,7 @@ PROGRAMS90 = {
     "internal": ["internal.f90"],
     "hosts": ["hosts.f90"],
     "recurhost": ["recurhost.f90"],
+    "interfaces": ["interfaces.f90"],
     "stats": ["stats.f90"],
     "smooth": ["smooth.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],

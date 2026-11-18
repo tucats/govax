@@ -79,6 +79,13 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		case *ast.DirectiveStmt:
 			a.directive(s)
+
+		case *ast.InterfaceBlock:
+			// Its bodies are read when every other declaration is
+			// (interfaceBodies).
+			if specificBlock(s) {
+				a.interfaces = append(a.interfaces, s)
+			}
 		}
 	}
 }

@@ -36,6 +36,15 @@ program forms
   parameter (limit = 4)
   data label /'forms!'/
   dimension weights(limit)
+  ! BUMP's OPTIONAL dummy needs its interface explicit where it is called
+  ! (Phase 103, subtask 5: EXPLICITREQ).
+  interface
+     subroutine bump(counts, n, by)
+       integer, intent(in) :: n
+       integer(selected_int_kind(9)), intent(inout) :: counts(n)
+       integer(2), intent(in), optional :: by
+     end subroutine bump
+  end interface
 
   write (*, '(1x, a, 2i3, i2)') banner, many, limit, kind(short)
   write (*, '(1x, a, 3i5, a2)') 'Bytes:', short, b1, b2, char(letter)

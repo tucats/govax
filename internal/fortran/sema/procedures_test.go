@@ -26,16 +26,21 @@ func analyzeFree(t *testing.T, lines ...string) []diag.Message {
 
 // TestProcedureFormsPending checks that Phase 103's forms, which the parser
 // builds since subtask 2, are each NOTIMPL in semantic analysis until the
-// subtask that compiles them: an interface block, a keyword argument in a CALL,
-// and a defined operator. CONTAINS is compiled since subtask 3.
+// subtask that compiles them: a generic interface block, a keyword argument in a
+// CALL, and a defined operator. CONTAINS is compiled since subtask 3, and an
+// interface block with no generic specification since subtask 5.
 func TestProcedureFormsPending(t *testing.T) {
 	cases := []struct {
 		name  string
 		lines []string
 		want  string
 	}{
-		{"an interface block", []string{"program p", "interface", "subroutine s(x)", "end subroutine", "end interface", "end program"},
-			"NOTIMPL: the INTERFACE statement is not implemented yet"},
+		{"a generic interface block", []string{"program p", "interface swap", "subroutine s(x)", "end subroutine", "end interface", "end program"},
+			"NOTIMPL: a generic interface block is not implemented yet"},
+		{"an operator's interface block", []string{"program p", "interface operator(.cross.)", "function f(x, y)", "end function", "end interface", "end program"},
+			"NOTIMPL: an interface block for an operator is not implemented yet"},
+		{"an assignment's interface block", []string{"program p", "interface assignment(=)", "subroutine s(x, y)", "end subroutine", "end interface", "end program"},
+			"NOTIMPL: an interface block for assignment is not implemented yet"},
 		{"a keyword argument", []string{"program p", "call s(x, tol=1.0)", "end program"},
 			"NOTIMPL: a keyword argument to a procedure that isn't intrinsic is not implemented yet"},
 		{"a binary defined operator", []string{"program p", "y = a .cross. b", "end program"},

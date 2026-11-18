@@ -62,7 +62,7 @@ func placementOf(s ast.Stmt, stmtFunc bool) placement {
 		return placement{specGroup, execGroup}
 
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.CommonStmt, *ast.EquivalenceStmt,
-		*ast.AttrStmt, *ast.RecordStmt, *ast.StructureStmt, *ast.DictionaryStmt:
+		*ast.AttrStmt, *ast.RecordStmt, *ast.StructureStmt, *ast.DictionaryStmt, *ast.InterfaceBlock:
 		return placement{specGroup, specGroup}
 
 	case *ast.AssignStmt:

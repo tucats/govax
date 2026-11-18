@@ -1149,6 +1149,29 @@ var messages = map[string]kind{
 	"ARGLENGTH":    {Error, "argument %d of %s is %d characters long, but its dummy argument %s is %d (line %d)"},
 	"NOTDEFINABLE": {Error, "argument %d of %s must be a variable, since its dummy argument %s is INTENT(%s) (line %d)"},
 
+	// Interface blocks (sema/interface.go; PHASE-103's finding 7).
+
+	// INTERFACESELF is an interface body for the subprogram holding it, or one
+	// of its entry points (R1201's constraint).
+	"INTERFACESELF": {Error, "%s is this subprogram's own procedure, so an interface body here can't describe it"},
+
+	// INTERFACEDECL is an interface body for a name the unit declares
+	// otherwise, which would give the procedure a second interface (12.3.2.1).
+	"INTERFACEDECL": {Error, "%s is already %s in this unit (line %d), so an interface body can't declare it"},
+
+	// INTERFACEDIFF is an interface body that disagrees with the definition of
+	// its procedure in the file (12.3.2.1's "consistent").
+	"INTERFACEDIFF": {Error, "this interface body for %s doesn't agree with its definition (line %d): %s"},
+
+	// EXPLICITREQ is a reference through an implicit interface to a routine of
+	// the file with an OPTIONAL dummy argument (12.3.1.1).
+	"EXPLICITREQ": {Error, "%s has the OPTIONAL dummy argument %s (line %d), so a reference to it needs an explicit interface"},
+
+	// ARGTYPEW and ARGRANKW are ARGTYPE and ARGRANK through an implicit
+	// interface, under /WARNINGS=ARGUMENT_CHECKING.
+	"ARGTYPEW": {Warning, "argument %d of %s is %s, but its dummy argument %s is %s (line %d)"},
+	"ARGRANKW": {Warning, "argument %d of %s is %s, but its dummy argument %s is %s (line %d)"},
+
 	// ALTPLACE is a CALL of a routine of the file whose alternate return
 	// specifiers aren't in the places of the routine's *s (section 6.1.1.5).
 	"ALTPLACE": {Error, "the alternate return specifiers in this call of %s aren't in the places of its dummy argument list's *s (line %d)"},

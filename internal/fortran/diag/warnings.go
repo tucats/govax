@@ -24,11 +24,18 @@ type Warnings struct {
 
 	// Alignment is CDEC$ OPTIONS /WARN=ALIGNMENT from the start of each unit.
 	Alignment bool
+
+	// ArgumentChecking warns of each argument of a reference, through an implicit
+	// interface, to a routine of the file whose type, kind, or rank isn't its
+	// dummy argument's (Phase 103; the HP Fortran compiler's keyword).
+	ArgumentChecking bool
 }
 
 // warningKeywords are /WARNINGS's keywords, each what it does to a setting.
 var warningKeywords = map[string]func(*Warnings){
-	"ALL":            func(w *Warnings) { *w = Warnings{Declarations: true, Unused: true, Alignment: true} },
+	"ALL": func(w *Warnings) {
+		*w = Warnings{Declarations: true, Unused: true, Alignment: true, ArgumentChecking: true}
+	},
 	"NONE":           func(w *Warnings) { *w = Warnings{NoGeneral: true} },
 	"DECLARATIONS":   func(w *Warnings) { w.Declarations = true },
 	"NODECLARATIONS": func(w *Warnings) { w.Declarations = false },
@@ -38,10 +45,13 @@ var warningKeywords = map[string]func(*Warnings){
 	"NOUNUSED":       func(w *Warnings) { w.Unused = false },
 	"ALIGNMENT":      func(w *Warnings) { w.Alignment = true },
 	"NOALIGNMENT":    func(w *Warnings) { w.Alignment = false },
+
+	"ARGUMENT_CHECKING":   func(w *Warnings) { w.ArgumentChecking = true },
+	"NOARGUMENT_CHECKING": func(w *Warnings) { w.ArgumentChecking = false },
 }
 
 // warningKeywordList says what the keywords are, for a message.
-const warningKeywordList = "ALL, NONE, [NO]ALIGNMENT, [NO]DECLARATIONS, [NO]GENERAL, or [NO]UNUSED"
+const warningKeywordList = "ALL, NONE, [NO]ALIGNMENT, [NO]ARGUMENT_CHECKING, [NO]DECLARATIONS, [NO]GENERAL, or [NO]UNUSED"
 
 // With is the setting with /WARNINGS's keywords applied in order, so that
 // /WARNINGS=UNUSED adds to the default and /WARNINGS=(NONE,UNUSED) replaces it. No
@@ -73,7 +83,7 @@ func (w Warnings) With(keywords []string) (Warnings, error) {
 // even under /WARNINGS=NONE, which gives only the setting each unit starts with (ours).
 var askedFor = map[string]bool{
 	"UNDECLARED": true, "UNUSEDNAME": true, "UNUSEDDUMMY": true, "UNUSEDLABEL": true,
-	"ALIGNFIELD": true, "ALIGNCOMMON": true, "EXTENSION": true,
+	"ALIGNFIELD": true, "ALIGNCOMMON": true, "EXTENSION": true, "ARGTYPEW": true, "ARGRANKW": true,
 }
 
 // Held reports whether the setting keeps the message m from being shown.

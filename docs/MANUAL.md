@@ -6827,6 +6827,7 @@ or without `/CHECK`, since the program is surely wrong even if it never reaches 
 | `DECLARATIONS` | off | `%FORT-W-UNDECLARED` for each name with no type of its own, the ones `IMPLICIT NONE` would refuse |
 | `UNUSED` | off | `%FORT-W-UNUSEDNAME` for a name only declared, `UNUSEDDUMMY` for a dummy argument never mentioned, and `UNUSEDLABEL` for a label nothing refers to |
 | `ALIGNMENT` | off | `%FORT-I-ALIGNFIELD` and `ALIGNCOMMON`, as `CDEC$ OPTIONS /WARN=ALIGNMENT` does from each unit's start |
+| `ARGUMENT_CHECKING` | off | `%FORT-W-ARGTYPEW` and `ARGRANKW` for an argument, of a reference without an explicit interface to a routine of the same file, whose type, kind, or rank isn't its dummy argument's (the HP Fortran compiler's keyword; through an explicit interface these are errors) |
 
 The keywords also come as `NOGENERAL` and so on, with `ALL` and `NONE`, cut short if you like, applied in
 order to the default: `/WARNINGS=UNUSED` adds to it, and `/WARNINGS=(NONE,UNUSED)` shows only that.
@@ -8712,8 +8713,9 @@ it with `SOBGTR` or `AOBLEQ`, as it does a DO loop.
   --^
 ```
 
-That includes assumed-shape and deferred-shape arrays (`A(:)`), interface blocks and
-CONTAINS, modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
+That includes assumed-shape and deferred-shape arrays (`A(:)`), generic interface blocks
+(`INTERFACE SWAP`, `OPERATOR`, `ASSIGNMENT`), keyword arguments to a program's own
+procedures, modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
 Of arrays as values, these are not there yet: an array assignment that needs a temporary
 array of a size not known when compiling; a section or array expression as an argument to a
 program's own procedure; an array function's value of a shape not known when compiling

@@ -154,13 +154,14 @@ func TestWarningsKeywords(t *testing.T) {
 		keywords []string
 		want     Warnings
 	}{
-		{nil, Warnings{Declarations: true, Unused: true, Alignment: true}},
+		{nil, Warnings{Declarations: true, Unused: true, Alignment: true, ArgumentChecking: true}},
 		{[]string{"NONE"}, Warnings{NoGeneral: true}},
 		{[]string{"ALL", "NONE"}, Warnings{NoGeneral: true}},
-		{[]string{"NONE", "ALL"}, Warnings{Declarations: true, Unused: true, Alignment: true}},
+		{[]string{"NONE", "ALL"}, Warnings{Declarations: true, Unused: true, Alignment: true, ArgumentChecking: true}},
 		{[]string{"unused"}, Warnings{Unused: true}},
 		{[]string{"DECL", "NOGEN", "ALI"}, Warnings{Declarations: true, NoGeneral: true, Alignment: true}},
-		{[]string{"ALL", "NODECLARATIONS", "NOUNUSED", "NOALIGNMENT"}, Warnings{}},
+		{[]string{"ALL", "NODECLARATIONS", "NOUNUSED", "NOALIGNMENT", "NOARG"}, Warnings{}},
+		{[]string{"ARGUMENT"}, Warnings{ArgumentChecking: true}},
 		{[]string{"NON"}, Warnings{NoGeneral: true}},
 	}
 

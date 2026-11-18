@@ -155,6 +155,10 @@ func dumpSymbol(s *Symbol) string {
 		where += " optional"
 	}
 
+	if s.Interface != nil {
+		where += " interface(line " + strconv.Itoa(s.Interface.AST.Position().Line) + ")"
+	}
+
 	if s.Target {
 		where += " target"
 	}

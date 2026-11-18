@@ -138,6 +138,11 @@ type Unit struct {
 	Host     *Unit
 	Contains []*Unit
 
+	// Interfaces are the bodies of the unit's interface blocks, each a Unit
+	// with a header and declarations but no statements, and no unit of the
+	// program: it is in no Program.Units (interface.go).
+	Interfaces []*Unit
+
 	// others and labelRefs are the mentions of the names that have no Symbol, and
 	// of the statement labels (crossref.go).
 	others    map[otherName][]Reference
@@ -358,6 +363,11 @@ type Symbol struct {
 	// a FUNCTION or SUBROUTINE after the host's CONTAINS, whose interface is the
 	// procedure's own declarations (internal.go). nil for any other name.
 	Internal *Unit
+
+	// Interface is the interface body that gives an external procedure or a
+	// dummy procedure its explicit interface (interface.go). nil for any other
+	// name.
+	Interface *Unit
 
 	// StmtFunc is a statement function's definition, once the statement
 	// walk has reached it (stmtfunc.go).

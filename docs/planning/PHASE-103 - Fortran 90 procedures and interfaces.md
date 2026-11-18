@@ -4,7 +4,8 @@
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
 ("The author's answers"). Subtasks 2 (the forms), 3 (internal procedures
-with static hosts), and 4 (hosts in the frame) are done; subtask 5 is next.
+with static hosts), 4 (hosts in the frame), and 5 (interface blocks) are
+done; subtask 6 is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -461,7 +462,7 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    corpus programs of subtask 3 in `recursiveModes` (done 2026-11-17).
 5. **Interface blocks:** bodies as hostless scopes (finding 7), external and dummy
    procedures with explicit interfaces, INTERFACEDIFF, EXPLICITREQ, and
-   question 1's checks.
+   question 1's checks (done 2026-11-17).
 6. **Keyword arguments, OPTIONAL, PRESENT, INTENT** (findings 8 to 10), with the
    absent-dummy test.
 7. **Generic interfaces** (finding 11), intrinsic names extended, hosts' generics.
@@ -663,3 +664,44 @@ The author read the survey and accepted every recommendation:
   on, a RECURSIVE function's RESULT variable and dummy; the same on gfortran) and
   `autohost.f90` (AUTOMATIC variables, and a variable format expression in the
   internal procedure reading one; DEC's, so not in `compare.py`).
+- **2026-11-17, subtask 5:** Interface blocks. **sema** (`sema/interface.go`,
+  whose comment teaches them): the declarations walk gathers each block with no
+  generic specification (`specificBlock`), and `interfaceBodies` reads their
+  bodies once every other declaration is read, so a type statement or EXTERNAL
+  for a body's name is known wherever it stands. Each body is a `Unit` made by an
+  analyzer with no host (`bodyAnalyzer`, `analyzer.inBody`: no unit of the file,
+  so `beginUnit` doesn't take its name's `fileUnit`), its header and
+  declarations alone, then `untyped`; it is in the holding unit's `Interfaces`,
+  never in `Program.Units`, so nothing lowers it. `declareInterface` gives its
+  name `Symbol.Interface`: a dummy argument nothing else has declared
+  (`plainDummy`; OPTIONAL allowed) becomes a dummy procedure, any new name an
+  external procedure (`External`, so it may be passed with no EXTERNAL
+  statement, 12.3.2.2), a FUNCTION's type the body's; the unit's own name or an
+  entry point's is INTERFACESELF (R1201's constraint), anything else the unit
+  declares INTERFACEDECL (a type statement, EXTERNAL, a second body), and an
+  internal procedure of the name DUPINTERFACE, as a type statement is. A
+  body's own blocks describe its dummy procedures, by the same code. A
+  reference through a body is checked as an internal procedure's
+  (`checkExplicitCalls`, was `checkInternalCalls`; `explicitInterface`), and
+  `checkReferences` leaves it alone. `interfaceDifferences` compares each body
+  for an external procedure with the file's definition (INTERFACEDIFF, the first
+  difference: the kind of unit, the dummies' number and alternate returns, the
+  value's type, each dummy's type, rank, INTENT, OPTIONAL, constant extents, and
+  whether it is a procedure; names may differ). A reference through an implicit
+  interface to a routine of the file with an OPTIONAL dummy is EXPLICITREQ.
+  Question 1's answer: `/WARNINGS=ARGUMENT_CHECKING` (`diag.Warnings`; in ALL,
+  so `/WARNINGS` alone has it) warns ARGTYPEW and ARGRANKW through an implicit
+  interface, the explicit check's type and rank tests shared
+  (`argumentMismatch`). An external procedure with a body is in the object's
+  `.EXTRN`s only if passed (`Symbol.Linked`), since an unused one needn't
+  exist. A generic, operator, or assignment block is NOTIMPL by name
+  (`interfaceWhat`; subtasks 7 and 8) and leaves its unit incomplete, as before.
+  An array-valued function's body is BADUSE, as an array-valued function is
+  anywhere until Phase 104. In a BLOCK DATA a block is BLOCKSTMT, after an
+  executable statement LATEDECL. The dump shows `interface(line n)`.
+  **Tests**: `sema`'s `TestInterfaceBlocks` (each message), `TestInterfaceSymbols`,
+  `TestArgumentChecking`; `TestProcedureFormsPending` now has the generic forms.
+  **Corpus**: `interfaces.f90` (every mode, the same on gfortran);
+  `forms.f90` called BUMP, whose dummy is OPTIONAL, with no explicit interface,
+  which EXPLICITREQ now refuses, so it has an interface block
+  for it. MANUAL.md's `/WARNINGS` table and HELP FORTRAN have the new keyword.

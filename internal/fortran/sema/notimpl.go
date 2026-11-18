@@ -17,7 +17,7 @@ import (
 // statement it doesn't is reported where the statement walk reaches it
 // (unimplemented), and keeps only its part in the unit's structure.
 func handled(s ast.Stmt) bool {
-	switch s.(type) {
+	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.CommonStmt, *ast.EquivalenceStmt, *ast.ImplicitStmt, *ast.ParameterStmt,
 		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt, *ast.ComputedGotoStmt,
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
@@ -32,6 +32,9 @@ func handled(s ast.Stmt) bool {
 
 	case *ast.AuxIOStmt:
 		return true
+
+	case *ast.InterfaceBlock:
+		return specificBlock(s)
 	}
 
 	return false
@@ -43,6 +46,10 @@ func handled(s ast.Stmt) bool {
 func statementWhat(s ast.Stmt) string {
 	if p, ok := s.(*ast.PendingStmt); ok && p.What != "" {
 		return p.What
+	}
+
+	if b, ok := s.(*ast.InterfaceBlock); ok {
+		return interfaceWhat(b)
 	}
 
 	return "the " + s.Base().Kind.String() + " statement"

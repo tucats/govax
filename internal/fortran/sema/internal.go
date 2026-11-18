@@ -54,7 +54,7 @@ import (
 // with the type its own declarations give it, and not the file's: a unit
 // elsewhere in the file may have the same name, which the host's procedure
 // hides in the host. Its interface is explicit there, so its references are
-// checked as no external procedure's can be (checkInternalCalls). It can't be
+// checked as no external procedure's can be (checkExplicitCalls). It can't be
 // an actual argument (INTERNALARG): it is called only from its host and its
 // host's other internal procedures, never once its host has returned.
 
@@ -171,7 +171,7 @@ func (a *analyzer) defineInternal(iu *Unit) {
 	if old := a.scope.byName[iu.Name]; old != nil {
 		switch {
 		case old.Internal == nil && old.Class != UnitName && !old.Result && len(old.Dims) == 0 &&
-			(old.Class == Intrinsic || old.External || (old.Typed && old.Class == Unclassified)):
+			(old.Class == Intrinsic || old.External || old.Interface != nil || (old.Typed && old.Class == Unclassified)):
 			a.report("DUPINTERFACE", old.Pos, old.Name, pos.Line)
 		default:
 			a.report("DUPNAME", pos, iu.Name, a.describe(old), old.Pos.Line)
@@ -223,11 +223,12 @@ func (a *analyzer) hostName(name string) bool {
 	return sc != nil && sc.unit != nil && sc.unit != a.unit
 }
 
-// checkInternalCalls checks each reference to an internal procedure, in the
-// host and in its internal procedures, against the procedure's interface, as
-// checkReferences checks a reference to another unit of the file, and more
-// closely, since the interface is explicit (finding 6).
-func (a *analyzer) checkInternalCalls() {
+// checkExplicitCalls checks each reference through an explicit interface, in
+// the unit and in its internal procedures, against the interface: an internal
+// procedure's, or an interface body's (interface.go). It is as checkReferences
+// checks a reference to another unit of the file, and closer, since the
+// interface is explicit (finding 6).
+func (a *analyzer) checkExplicitCalls() {
 	units := append([]*Unit{a.unit}, a.unit.Contains...)
 
 	for _, u := range units {
@@ -236,7 +237,7 @@ func (a *analyzer) checkInternalCalls() {
 		}
 
 		for _, r := range u.calls {
-			target := r.sym.Internal
+			target := explicitInterface(r.sym)
 
 			// A recursive internal procedure's call of itself.
 			if target == nil && u.Host != nil && (r.sym.Class == UnitName || r.sym.Result) && r.sym.Name == u.Name {
@@ -280,33 +281,20 @@ func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 	for i, arg := range r.args {
 		p := target.Params[i]
 
+		if ident, rest := argumentMismatch(arg, p); ident != "" {
+			messages.Report(ident, arg.Expr.Position(), append(append([]any{i + 1, r.sym.Name}, rest...), line)...)
+
+			continue
+		}
+
 		if arg.Expr == nil || p.broken || arg.Mode != ByDefault || arg.Hollerith || arg.Typeless || p.DummyProcedure() {
 			continue
 		}
 
-		if _, ok := arg.Expr.(*Procedure); ok {
-			continue
-		}
-
 		given, wanted := arg.Expr.Type(), p.Type
-		if given.Kind == Invalid || wanted.Kind == Invalid || given.Kind == Record || wanted.Kind == Record {
-			continue
-		}
+		rank := argumentRank(arg.Expr)
 
-		if given.Kind != wanted.Kind || (given.Kind != Character && given.Size != wanted.Size) {
-			messages.Report("ARGTYPE", arg.Expr.Position(), i+1, r.sym.Name, article(given.String()), p.Name, article(wanted.String()), line)
-
-			continue
-		}
-
-		rank, element := argumentRank(arg.Expr), isElement(arg.Expr)
-		if dims := len(p.Dims); (dims == 0 && rank > 0) || (dims > 0 && rank == 0 && !element) {
-			messages.Report("ARGRANK", arg.Expr.Position(), i+1, r.sym.Name, rankText(rank), p.Name, rankText(dims), line)
-
-			continue
-		}
-
-		if given.Kind == Character && rank == 0 && len(p.Dims) == 0 && given.Size > 0 && wanted.Size > given.Size {
+		if given.Kind == Character && wanted.Kind == Character && rank == 0 && len(p.Dims) == 0 && given.Size > 0 && wanted.Size > given.Size {
 			messages.Report("ARGLENGTH", arg.Expr.Position(), i+1, r.sym.Name, given.Size, p.Name, wanted.Size, line)
 
 			continue

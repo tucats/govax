@@ -1,0 +1,7 @@
+tally:   55
+root:  1.2599
+[item7]
+interfaces 10
+double:   6
+applied:   7
+  $STATUS == "%X00000001"
