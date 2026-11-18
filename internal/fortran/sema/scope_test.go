@@ -7,9 +7,8 @@ import "testing"
 // new name is entered in the host's table and list, and the implicit rules
 // are the host's.
 func TestScopeChain(t *testing.T) {
-	var list []*Symbol
-
-	unit := newUnitScope(&list, defaultImplicit(IntegerType))
+	u := &Unit{}
+	unit := newUnitScope(u, defaultImplicit(IntegerType), nil)
 	x := &Symbol{Name: "X"}
 	unit.enter(x)
 
@@ -28,8 +27,8 @@ func TestScopeChain(t *testing.T) {
 	y := &Symbol{Name: "Y"}
 	inner.enter(y)
 
-	if unit.find("Y") != y || len(list) != 2 || list[1] != y {
-		t.Errorf("Y entered from the inner scope isn't the unit's: list %v", list)
+	if unit.find("Y") != y || len(u.Symbols) != 2 || u.Symbols[1] != y {
+		t.Errorf("Y entered from the inner scope isn't the unit's: list %v", u.Symbols)
 	}
 
 	if inner.find("Z") != nil {

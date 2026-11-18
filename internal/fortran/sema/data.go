@@ -481,7 +481,7 @@ func (a *analyzer) dataItem(s *Symbol, offset int, t Type, text string, pos diag
 // initializes only what is in a named block (section 4.1 says "the entities in
 // named common blocks", and nothing else could reach a program from one).
 func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
-	s := a.lookup(name, pos)
+	s := a.local(name, pos)
 	a.note(&s.refs, pos, RefAssigned)
 
 	switch {

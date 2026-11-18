@@ -131,6 +131,13 @@ type Unit struct {
 	// scope is the unit's own names (scope.go), the names in Symbols.
 	scope *scope
 
+	// Host is the unit an internal procedure lies in, or nil for an external
+	// unit; Contains are a unit's internal procedures, in order (internal.go;
+	// docs/planning/PHASE-103 - Fortran 90 procedures and interfaces.md). An
+	// internal procedure is in Program.Units too, after its host.
+	Host     *Unit
+	Contains []*Unit
+
 	// others and labelRefs are the mentions of the names that have no Symbol, and
 	// of the statement labels (crossref.go).
 	others    map[otherName][]Reference
@@ -346,6 +353,11 @@ type Symbol struct {
 	// array PARAMETER) has Dims, and its value is ArrayValue.
 	Value      *Const
 	ArrayValue *ArrayConst
+
+	// Internal is the internal procedure a host's name stands for: the name of
+	// a FUNCTION or SUBROUTINE after the host's CONTAINS, whose interface is the
+	// procedure's own declarations (internal.go). nil for any other name.
+	Internal *Unit
 
 	// StmtFunc is a statement function's definition, once the statement
 	// walk has reached it (stmtfunc.go).

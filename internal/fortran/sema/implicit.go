@@ -28,6 +28,45 @@ type implicitRules struct {
 	// none is set by IMPLICIT NONE; noneLine is its line.
 	none     bool
 	noneLine int
+
+	// noType are the letters that give no type: an internal procedure's whose
+	// host had IMPLICIT NONE, until its own IMPLICIT statements give them one
+	// (inherit).
+	noType [26]bool
+}
+
+// inherit is an internal procedure's rules before its own IMPLICIT
+// statements: its host's, letter by letter (the Fortran 90 standard's 5.3,
+// "the implicit typing rules of the host"). Its own statements then change
+// the letters they name, and only those: so none of the host's lines count
+// against them (DUPIMPLICIT is about one unit's statements), and a host's
+// IMPLICIT NONE becomes letters with no type, which an IMPLICIT statement of
+// the procedure's may still give one. The procedure's own IMPLICIT NONE
+// takes every letter's type away, as it does anywhere.
+func (r *implicitRules) inherit() *implicitRules {
+	in := &implicitRules{types: r.types}
+
+	for c := range in.noType {
+		in.noType[c] = r.none || r.noType[c]
+	}
+
+	return in
+}
+
+// strict reports whether no letter gives a type: IMPLICIT NONE, the unit's
+// own or its host's.
+func (r *implicitRules) strict() bool {
+	if r.none {
+		return true
+	}
+
+	for _, none := range r.noType {
+		if !none {
+			return false
+		}
+	}
+
+	return true
 }
 
 // defaultImplicit is the rules with no IMPLICIT statement.
@@ -57,7 +96,7 @@ func (r *implicitRules) typeOf(name string) (t Type, untyped bool) {
 		return RealType, false
 	}
 
-	if r.none {
+	if r.none || r.noType[name[0]-'A'] {
 		return invalid, true
 	}
 
@@ -134,6 +173,7 @@ func (a *analyzer) implicitLetters(t Type, ok bool, l ast.LetterRange, line int)
 
 	for c := l.First; c <= l.Last; c++ {
 		r.lines[c-'A'] = line
+		r.noType[c-'A'] = false
 
 		if ok {
 			r.types[c-'A'] = t

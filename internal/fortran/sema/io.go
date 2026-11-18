@@ -357,7 +357,7 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 	ok = a.ioUnit(io, &s.Unit)
 
 	if s.Namelist != nil {
-		io.Form, io.Group = NamelistForm, a.unit.namelists[s.Namelist.Name]
+		io.Form, io.Group = NamelistForm, a.unit.namelist(s.Namelist.Name)
 
 		if io.Group != nil {
 			a.noteOther(whatNamelist, s.Namelist.Name, s.Namelist.Pos, RefUsed)
@@ -814,7 +814,7 @@ func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
 // (READ (5, NL), PRINT NL), or nil.
 func (a *analyzer) namelistNamed(f *ast.FormatSpec) *Namelist {
 	if n, ok := f.Expr.(*ast.Name); ok {
-		return a.unit.namelists[n.Name]
+		return a.unit.namelist(n.Name)
 	}
 
 	return nil

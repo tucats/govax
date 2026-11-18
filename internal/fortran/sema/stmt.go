@@ -208,6 +208,11 @@ func (a *analyzer) statement(s ast.Stmt) {
 		// Their work was done by implicits and declarations.
 		return
 
+	case *ast.ContainsStmt:
+		// It ends the executable statements; the internal procedures after it
+		// are analyzed as units of their own (internal.go).
+		return
+
 	case *ast.FormatStmt:
 		a.formatExpressions(s)
 

@@ -177,6 +177,14 @@ type Routine struct {
 
 	// Unit is the program unit the routine came from.
 	Unit *sema.Unit
+
+	// Host is the routine an internal procedure lies in, and Local the
+	// procedure's own name, its Name being the host's, a period, and Local
+	// (HOST.INNER); nil and "" for any other routine. An internal procedure is
+	// entered at a local label, not a global .ENTRY, and reaches its host's cells
+	// and dummy arguments by the host's own names for them (lowerinternal.go).
+	Host  *Routine
+	Local string
 }
 
 // Param is a dummy argument. Its value isn't the routine's: the
@@ -299,6 +307,10 @@ type Cell struct {
 	// Points, in a cell an optimizer made to hold an address, is the place the address
 	// is in, whichever part of that place it reaches.
 	Points *Mem
+
+	// Reached says an internal procedure of the routine reaches the cell, by host
+	// association: any call may read or change it (lowerinternal.go).
+	Reached bool
 }
 
 // DatumKind is what a datum is.
@@ -750,9 +762,13 @@ type (
 	// A dummy procedure has no name to call: Routine is "" and Through is
 	// the place the routine is, as CALLS's operand reaches it (@F(AP), its
 	// entry mask being what the argument list's longword points at).
+	//
+	// Local says Routine is an internal procedure of this module, called at its
+	// local label (Routine.Local), not by a global name.
 	Call struct {
 		origin
 		Routine string
+		Local   bool
 		Through *Mem
 		Args    []Arg
 		Result  *Mem

@@ -69,6 +69,13 @@ func Check(r *Routine) error {
 		data[d] = true
 	}
 
+	// An internal procedure uses its host's cells too, by their own names.
+	if r.Host != nil {
+		for _, c := range r.Host.Cells {
+			cells[c] = true
+		}
+	}
+
 	for _, e := range r.Entries {
 		if e.First != nil && !blocks[e.First] {
 			return fmt.Errorf("%s: entry point %s starts at a block not laid out", r.Name, e.Name)

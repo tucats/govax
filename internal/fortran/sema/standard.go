@@ -261,8 +261,9 @@ func (a *analyzer) reportExtensions(au *ast.Unit) {
 
 	for _, s := range a.unit.Symbols {
 		// A unit's own name is its header's, if it wrote one: a main program without a
-		// PROGRAM statement has one the compiler made.
-		if !s.library && s.Class != UnitName {
+		// PROGRAM statement has one the compiler made. An internal procedure's name
+		// is its own unit's to report.
+		if !s.library && s.Class != UnitName && s.Internal == nil {
 			x.name(s.Name, s.Pos)
 		}
 	}

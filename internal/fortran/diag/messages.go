@@ -1128,6 +1128,27 @@ var messages = map[string]kind{
 	// number of arguments from its dummy arguments.
 	"ARGCOUNT": {Error, "%s takes %s (line %d), but is given %d here"},
 
+	// Internal procedures (sema/internal.go; docs/planning/PHASE-103 - Fortran 90
+	// procedures and interfaces.md, findings 2, 3, and 6).
+
+	// DUPNAME is an internal procedure with the name of its host or of another
+	// of its host's internal procedures, or of something else its host declares.
+	"DUPNAME": {Error, "%s is already %s in this unit, at line %d"},
+
+	// DUPINTERFACE is a type statement, EXTERNAL, or INTRINSIC in a host for one
+	// of its internal procedures, whose interface is explicit already (12.3.2.1).
+	"DUPINTERFACE": {Error, "%s is an internal procedure (line %d), whose interface its own statements give; it can't be declared here"},
+
+	// INTERNALARG is an internal procedure as an actual argument (R1213's constraint).
+	"INTERNALARG": {Error, "the internal procedure %s can't be an actual argument"},
+
+	// ARGTYPE, ARGRANK, ARGLENGTH, and NOTDEFINABLE are an actual argument that
+	// doesn't match its dummy in an explicit interface (12.4.1).
+	"ARGTYPE":      {Error, "argument %d of %s is %s, but its dummy argument %s is %s (line %d)"},
+	"ARGRANK":      {Error, "argument %d of %s is %s, but its dummy argument %s is %s (line %d)"},
+	"ARGLENGTH":    {Error, "argument %d of %s is %d characters long, but its dummy argument %s is %d (line %d)"},
+	"NOTDEFINABLE": {Error, "argument %d of %s must be a variable, since its dummy argument %s is INTENT(%s) (line %d)"},
+
 	// ALTPLACE is a CALL of a routine of the file whose alternate return
 	// specifiers aren't in the places of the routine's *s (section 6.1.1.5).
 	"ALTPLACE": {Error, "the alternate return specifiers in this call of %s aren't in the places of its dummy argument list's *s (line %d)"},

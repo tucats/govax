@@ -17,6 +17,10 @@ type routineGen struct {
 	// defined are the names the module's routines and entry points define.
 	defined map[string]bool
 
+	// owner is each cell's routine, for a cell of another routine's: an
+	// internal procedure's host's.
+	owner map[*ir.Cell]*ir.Routine
+
 	// bases names the common blocks' first bytes.
 	bases *namer
 	src   *sourceLines
@@ -80,9 +84,14 @@ type routineGen struct {
 
 // newRoutineGen starts generating r.
 func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
+	prefix := r.Name
+	if r.Host != nil {
+		prefix = names.internal(r.Host.Name, r.Local)
+	}
+
 	return &routineGen{
 		r:       r,
-		names:   names.routine(r.Name),
+		names:   names.routine(prefix),
 		bases:   names,
 		src:     src,
 		labels:  map[*ir.Block]string{},
@@ -96,6 +105,15 @@ func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
 func (g *routineGen) generate() {
 	// The source lines up to the unit's header go before .ENTRY (into pre).
 	g.src.through(&g.pre, g.r.Unit.AST.Header)
+
+	// A host's code takes its lines only up to its CONTAINS statement: the
+	// internal procedures' come with their code, which follows, and the host's
+	// END after them.
+	if contains := containsStatement(g.r.Unit.AST); contains != nil && contains.Source != nil {
+		g.src.limit = contains.Source.Last
+
+		defer func() { g.src.limit = -1 }()
+	}
 
 	// Two preparations: which blocks are jumped to (and so need labels),
 	// and which registers the optimizer gave to variables for good.
@@ -173,7 +191,7 @@ func (g *routineGen) needsFrameBase() bool {
 // number, when no register cell is in the way: the code generated for nothing, for an
 // optimizer to see which registers it can have.
 func ExpressionRegisters(r *ir.Routine) [numRegisters]bool {
-	g := newRoutineGen(r, &namer{}, &sourceLines{})
+	g := newRoutineGen(r, &namer{}, &sourceLines{limit: -1})
 	g.generate()
 
 	return g.used
@@ -450,6 +468,10 @@ func (g *routineGen) call(s *ir.Call) {
 		m := g.mem(g.fitMem(s.Through))
 		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), m.text)
 		g.free(m)
+	} else if s.Local {
+		// An internal procedure of this module, at its local label.
+		host, inner, _ := strings.Cut(s.Routine, ".")
+		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), g.bases.internal(host, inner))
 	} else {
 		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), "G^"+s.Routine)
 	}
@@ -723,4 +745,15 @@ func (g *routineGen) emit(opcode string, wrote ir.Type, operands ...string) {
 func (g *routineGen) label(name, comment string) {
 	g.code.label(name, comment, false)
 	g.set = ""
+}
+
+// containsStatement is the unit's CONTAINS statement, or nil.
+func containsStatement(u *ast.Unit) *ast.StmtBase {
+	for _, s := range u.Body {
+		if c, ok := s.(*ast.ContainsStmt); ok {
+			return c.Base()
+		}
+	}
+
+	return nil
 }

@@ -99,6 +99,13 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 	switch {
 	case s == nil || s.broken:
 
+	case s.Internal != nil:
+		// Called only from its host and its host's other internal procedures,
+		// never by a routine it is given to (R1213's constraint).
+		a.report("INTERNALARG", n.Pos, n.Name)
+
+		return a.bad(n.Pos)
+
 	case s.Class == Intrinsic:
 		return a.procedure(n)
 

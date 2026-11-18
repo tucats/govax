@@ -82,6 +82,12 @@ const (
 
 	// RegisterRegion is a register cell, Place.Cell, which is no memory at all.
 	RegisterRegion
+
+	// HostRegion is, in an internal procedure, its host's $LOCAL section, where
+	// the host's variables it uses are (ir/lowerinternal.go): any call may read
+	// or change them, since a call of the host's other internal procedures may,
+	// as a call may change COMMON. The range is the host's offsets.
+	HostRegion
 )
 
 // The range of a place whose extent isn't known: everything in its region.
@@ -177,6 +183,8 @@ func (s *Storage) place(m *ir.Mem, size int) Place {
 		switch {
 		case c.Common != nil:
 			p.Region, p.Common = CommonRegion, c.Common
+		case s.r.Host != nil && !s.own(c):
+			p.Region = HostRegion
 		case c.Frame:
 			p.Region = FrameRegion
 		default:

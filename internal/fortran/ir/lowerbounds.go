@@ -301,7 +301,7 @@ func (l *lowerer) adjustableIndex(list []sema.Expr, s *sema.Symbol, c *Cell, che
 
 // arraySize is an adjustable array's size in bytes, for SIZEOF.
 func (l *lowerer) arraySize(s *sema.Symbol) Expr {
-	return &Load{&Mem{Cell: l.adjustable[s], Offset: ArsizeOffset, T: Long}}
+	return &Load{&Mem{Cell: l.adjustableOf(s), Offset: ArsizeOffset, T: Long}}
 }
 
 // layOutEntryBounds lays out, after the routine's last statement, the block for

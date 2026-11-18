@@ -142,7 +142,7 @@ func (l *lowerer) procedureArg(p *sema.Procedure, mode sema.ArgMode) Arg {
 		return Arg{Ref: l.descriptor(d)}
 	}
 
-	param := l.params[p.Dummy]
+	param := l.paramOf(p.Dummy)
 
 	switch {
 	case char == descriptor:
@@ -187,18 +187,23 @@ func (l *lowerer) loc(e *sema.Loc) Expr {
 // address, so it is what a CHARACTER dummy's text would be. A recursive
 // function's own name (or an entry point's) is its value's symbol, which is a
 // Param when the value goes through a hidden argument, but the call is still of
-// the routine by name.
-func (l *lowerer) callee(s *sema.Symbol) (string, *Mem) {
-	p := l.params[s]
+// the routine by name. An internal procedure is called at its local label
+// (internalCallee), and local says so.
+func (l *lowerer) callee(s *sema.Symbol) (name string, local bool, through *Mem) {
+	if name, ok := l.internalCallee(s); ok {
+		return name, true, nil
+	}
+
+	p := l.paramOf(s)
 	if p == nil || s.Result {
-		return s.Name, nil
+		return s.Name, false, nil
 	}
 
 	if s.Type.Kind == sema.Character {
-		return "", dummyText(p)
+		return "", false, dummyText(p)
 	}
 
-	return "", &Mem{Param: p, T: Byte}
+	return "", false, &Mem{Param: p, T: Byte}
 }
 
 // callFunction calls the function f refers to, its value going to result:
@@ -221,6 +226,6 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 	}
 
 	call := &Call{origin: l.origin(), Args: args, Result: result}
-	call.Routine, call.Through = l.callee(f.Fn)
+	call.Routine, call.Local, call.Through = l.callee(f.Fn)
 	l.emit(call)
 }

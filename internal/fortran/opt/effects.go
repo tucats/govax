@@ -92,6 +92,23 @@ type Storage struct {
 
 	// dying are the cells whose values can die (deadcode.go).
 	dying []*ir.Cell
+
+	// cells are the routine's own cells, in an internal procedure, which uses its
+	// host's too (own).
+	cells map[*ir.Cell]bool
+}
+
+// own reports whether c is the routine's own cell, not its host's.
+func (s *Storage) own(c *ir.Cell) bool {
+	if s.cells == nil {
+		s.cells = map[*ir.Cell]bool{}
+
+		for _, o := range s.r.Cells {
+			s.cells[o] = true
+		}
+	}
+
+	return s.cells[c]
 }
 
 // NewStorage looks over routine r.
@@ -102,6 +119,12 @@ func NewStorage(r *ir.Routine) *Storage {
 		if c.Sym != nil && c.Sym.Volatile {
 			s.anyVolatile = true
 			s.volatile = append(s.volatile, s.Whole(&ir.Mem{Cell: c, T: c.T}))
+		}
+
+		// A host's cell its internal procedures reach is taken, as a cell whose
+		// address was given away is: a call may read or change it.
+		if c.Reached {
+			s.take([]Place{s.Whole(&ir.Mem{Cell: c, T: c.T})})
 		}
 	}
 

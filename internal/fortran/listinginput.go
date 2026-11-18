@@ -71,7 +71,7 @@ func listingCrossRefs(prog *sema.Program, program *source.Program) []listing.Cro
 	}
 
 	for _, u := range prog.Units {
-		crossRef := listing.CrossRef{Unit: u.Name}
+		crossRef := listing.CrossRef{Unit: u.Path()}
 
 		for _, name := range u.CrossReference() {
 			row := listing.CrossRow{Name: name.Name, What: name.What}
@@ -94,20 +94,47 @@ func listingCrossRefs(prog *sema.Program, program *source.Program) []listing.Cro
 }
 
 // listingUnits says where each unit starts: at its first line, or past its
-// predecessor's last statement, which takes in the comments before it.
+// predecessor's last statement, which takes in the comments before it. An
+// internal procedure starts past its host's CONTAINS statement or the internal
+// procedure before it, and its host's END goes with the last of them, rather than
+// on a page of its own.
 func listingUnits(prog *sema.Program) []listing.Unit {
 	units := make([]listing.Unit, 0, len(prog.Units))
 	start := 0
+
+	// after is the line after the statement s, or start if s has no source.
+	after := func(s ast.Stmt) int {
+		if s == nil || s.Base().Source == nil {
+			return start
+		}
+
+		return s.Base().Source.Last + 1
+	}
 
 	// Comment lines between two units belong to the second: they usually
 	// describe it. So each unit after the first starts on the line after
 	// the last statement (END) of the one before.
 	for _, u := range prog.Units {
-		units = append(units, listing.Unit{Line: start, Name: u.Name})
-
-		if last := lastStatement(u.AST); last != nil {
-			start = last.Base().Source.Last + 1
+		if u.Host != nil {
+			continue
 		}
+
+		units = append(units, listing.Unit{Line: start, Name: u.Path()})
+
+		var before ast.Stmt
+
+		for _, s := range u.AST.Body {
+			if c, ok := s.(*ast.ContainsStmt); ok {
+				before = c
+			}
+		}
+
+		for _, c := range u.Contains {
+			units = append(units, listing.Unit{Line: after(before), Name: c.Path()})
+			before = lastStatement(c.AST)
+		}
+
+		start = after(lastStatement(u.AST))
 	}
 
 	return units

@@ -24,6 +24,10 @@ type namer struct {
 	// bases are the symbols of the file's common blocks' first bytes, by
 	// program section.
 	bases map[string]string
+
+	// prefixes are each routine's names, by its prefix, made once: a host's
+	// internal procedure names the host's cells with the host's names.
+	prefixes map[string]*routineNames
 }
 
 // base is the symbol of the first byte of the common block in the program
@@ -54,9 +58,28 @@ type routineNames struct {
 	long []string
 }
 
-// routine starts naming the symbols of the routine named name.
+// routine is the namer of the symbols of the routine named name.
 func (n *namer) routine(name string) *routineNames {
-	return &routineNames{n: n, prefix: name, made: map[string]string{}}
+	if r := n.prefixes[name]; r != nil {
+		return r
+	}
+
+	if n.prefixes == nil {
+		n.prefixes = map[string]*routineNames{}
+	}
+
+	r := &routineNames{n: n, prefix: name, made: map[string]string{}}
+	n.prefixes[name] = r
+
+	return r
+}
+
+// internal is the label of the internal procedure named inner of the routine
+// named host, HOST.INNER: a symbol the host owns, as its variables are, so it
+// collides with nothing of the host's or of another host's INNER. The
+// procedure's own symbols have it for their prefix (HOST.INNER.X).
+func (n *namer) internal(host, inner string) string {
+	return n.routine(host).symbol(inner)
 }
 
 // symbol is the MACRO symbol for the routine's name: a variable, a

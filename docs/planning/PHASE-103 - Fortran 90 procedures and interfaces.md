@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list
 and six questions for the author), was accepted by the author 2026-11-17
-("The author's answers"). Subtask 2, the forms, is done; subtask 3 is next.
+("The author's answers"). Subtasks 2 (the forms) and 3 (internal procedures
+with static hosts) are done; subtask 4 is next.
 Needs Phase 102 (done).
 
 ## Goal
@@ -454,7 +455,7 @@ what the lexer, parser, sema, the IR, codegen, and the optimizer do today.
    internal procedure's interface checked at its calls (finding 6's count, type,
    kind, rank, length, definability); the routines and their names (finding 4),
    host cells and Through cells (finding 5), the optimizer's rules (finding 14);
-   IR golden dumps, runs both optimizer settings.
+   IR golden dumps, runs both optimizer settings (done 2026-11-17).
 4. **Hosts in the frame:** the hidden argument, `Mem.Ptr` through the host's FP,
    RECURSIVE and AUTOMATIC hosts, recursive and sibling internal procedures; the
    corpus programs of subtask 3 in `recursiveModes`.
@@ -570,3 +571,66 @@ The author read the survey and accepted every recommendation:
   under `/F90` too, `parse/testdata/procs.f90` every new form and message.
   A fix on the way: `article` gave "a assignment statement" for a kind named in
   lowercase. `TestNoF90Unchanged` holds.
+- **2026-11-17, subtask 3:** Internal procedures with static hosts.
+  **sema** (`sema/internal.go`, whose comment teaches host association):
+  `analyzeUnit` is now finding 2's four steps (`beginUnit`, the declarations;
+  `internalInterfaces`, each internal procedure's header and declarations by an
+  analyzer of its own, `innerAnalyzer`; `executablePart`; then each internal
+  procedure's `executablePart` and `finishUnit`, then the host's). An internal
+  procedure's scope has its host's for its host (`newUnitScope`'s `host`;
+  `scope.findIn`); its implicit rules are its host's, letter by letter
+  (`implicitRules.inherit`: a host's IMPLICIT NONE becomes letters with no type,
+  `noType`, which the procedure's own IMPLICIT may type, and no host line counts
+  for DUPIMPLICIT; `strict` for `/WARNINGS=DECLARATIONS`); NAMELIST groups and
+  structures are found through the hosts (`Unit.namelist`, `Unit.structure`;
+  `scope.go`'s comment corrected). A declaration's name is the procedure's own
+  (`analyzer.local`, under `declare` and DATA's `dataName`), any other name the
+  host's if the host has it. Each internal procedure is a `Unit` with `Host`,
+  in its host's `Contains` and in `Program.Units` after its host (`Path`,
+  `HOST.INNER`), and its name a host `Symbol` with `Internal` (`defineInternal`:
+  a FUNCTION's type its own declarations'; DUPNAME, DUPINTERFACE). INTERNALARG in
+  `nameArg`. `checkInternalCalls` checks every reference to an internal procedure,
+  and a recursive one's to itself, against its interface (`checkInterface`:
+  ARGCOUNT, ALTPLACE, HOLLCHAR, RECORDARG as before, and the new ARGTYPE, ARGRANK
+  with sequence association for an element, ARGLENGTH, NOTDEFINABLE);
+  `checkReferences` leaves them alone, so an internal procedure may share a name
+  with a unit of the file, which it hides in its host. A host's dummy in an
+  internal procedure's adjustable bound is allowed (7.1.6.2) and no
+  `BoundDummies` of the procedure's. Finding 2's step 2 problem: a name the
+  procedure's declarations use before its host has is entered as the
+  procedure's own and noted (`provisional`); if the host's executable statements
+  then use it, `checkProvisional` reports NOTIMPL (the standard makes it the
+  host's), and a bound's name the host never uses is BOUNDVAR then. BADSPECNAME,
+  finding 2's message, isn't needed. `hostLimits` reports NOTIMPL for a RECURSIVE
+  host or one with AUTOMATIC variables (subtask 4). /STANDARD reports an internal
+  procedure's name once, as its own unit's.
+  **ir** (`ir/lowerinternal.go`): `lowerHost` makes the host's places
+  (`newLowerer`, `prepare`), lowers each internal procedure (`Routine.Host`,
+  `Local`, `Name` HOST.INNER) whose `cellOf`, `paramOf`, and `adjustableOf` find
+  the host's and note them (`Cell.Reached`; a host's frame cell is a panic, sema
+  having refused it), then gives each reached dummy a Through cell the host fills
+  at entry (`passHostArgs`, an `Entries[0]` of those arguments alone), and lowers
+  the host's statements last. A call of an internal procedure is `Call.Local`
+  (`internalCallee`). `Check` takes the host's cells as the procedure's. The
+  dump says "internal to HOST", "call local", "reached by an internal procedure";
+  golden `ir/testdata/f90internal.for`.
+  **codegen**: the namer keeps one `routineNames` per prefix (`namer.internal`,
+  HOST.INNER a symbol the host owns), a host's cell is named by its host in its
+  internal procedures (`cellSymbol`, from `Generate`'s `owner` map), an internal
+  procedure starts at `HOST.INNER: .WORD mask` and is called `CALLS #n,HOST.INNER`,
+  and isn't among the module's defined names. The source lines of a host stop at
+  its CONTAINS (`sourceLines.limit`), so each internal procedure's lines come
+  with its code and the host's END after the last.
+  **opt**: `HostRegion`, a host's $LOCAL in an internal procedure, changed by any
+  call (ChangedByCall's default), and a host's `Reached` cells taken
+  (`TestHostVariableChangedByCall`, `TestHostVariableInInternal`; each fails with
+  its rule taken out).
+  **listing**: units in source order with internal procedures' headings and cross
+  references named HOST.INNER (`listingUnits`), the host's END under its last
+  internal procedure's heading rather than a page of its own.
+  **Tests**: `sema`'s `TestInternalProcedures` (each message, the implicit rules,
+  NOTIMPLs) and `TestHostAssociationShares` (the host's I); the corpus's
+  `internal.f90` (a main program's, every mode) and `hosts.f90` (subprograms'
+  dummies, SAVE'd variable, and function values; not `/RECURSIVE` until subtask 4,
+  `recursiveLater` in `internal/console/fortranprograms_test.go`), both the same
+  on gfortran (`compare.py`'s PROGRAMS90), their output worked by hand.

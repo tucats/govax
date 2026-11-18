@@ -381,7 +381,7 @@ func (b *structBuilder) typeStatement(s *ast.TypeStmt) {
 // already be declared and complete (sections 4.15.1, 4.15.2).
 func (b *structBuilder) recordStatement(s *ast.RecordStmt) {
 	for _, g := range s.Groups {
-		st := b.a.unit.structs[g.Structure]
+		st := b.a.unit.structure(g.Structure)
 
 		switch {
 		case st == nil:

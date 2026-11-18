@@ -104,7 +104,7 @@ func (f *FieldRef) Text() string {
 // name a type statement names can't be one.
 func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 	for _, g := range s.Groups {
-		st := a.unit.structs[g.Structure]
+		st := a.unit.structure(g.Structure)
 		if st == nil {
 			a.report("NOSTRUCT", g.Pos, g.Structure)
 		} else {

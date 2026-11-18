@@ -291,11 +291,11 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 		return m
 	}
 
-	if p := l.params[s]; p != nil {
+	if p := l.paramOf(s); p != nil {
 		return &Mem{Param: p, T: t, Volatile: s.Volatile}
 	}
 
-	return &Mem{Cell: l.cells[s], T: t, Volatile: s.Volatile}
+	return &Mem{Cell: l.cellOf(s), T: t, Volatile: s.Volatile}
 }
 
 // mem is where a variable or an array element is. An element's address
@@ -319,7 +319,7 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		return l.fieldMem(e)
 
 	case *sema.Elem:
-		if c := l.adjustable[e.Sym]; c != nil {
+		if c := l.adjustableOf(e.Sym); c != nil {
 			return l.adjustableElement(e, c)
 		}
 

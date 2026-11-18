@@ -49,6 +49,10 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 		fmt.Fprintf(b, " %s", r.Result)
 	}
 
+	if r.Host != nil {
+		fmt.Fprintf(b, ", internal to %s", r.Host.Name)
+	}
+
 	b.WriteString("\n")
 
 	for _, p := range r.Params {
@@ -97,7 +101,12 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 			section = "frame"
 		}
 
-		fmt.Fprintf(b, "  cell  %-7s %-2s %s+%-4d %s\n", c.Name, c.T, section, c.Offset, cellNote(c))
+		note := cellNote(c)
+		if c.Reached {
+			note += ", reached by an internal procedure"
+		}
+
+		fmt.Fprintf(b, "  cell  %-7s %-2s %s+%-4d %s\n", c.Name, c.T, section, c.Offset, note)
 	}
 
 	fmt.Fprintf(b, "  $LOCAL is %d bytes\n", r.LocalSize)
@@ -316,6 +325,10 @@ func StmtText(s Stmt) string {
 		}
 
 		routine := s.Routine
+		if s.Local {
+			routine = "local " + routine
+		}
+
 		if s.Through != nil {
 			routine = "through " + MemText(s.Through)
 		}

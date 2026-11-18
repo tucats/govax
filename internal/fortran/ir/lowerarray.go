@@ -480,7 +480,7 @@ func (n *arrayNest) bound(e sema.Expr, s *sema.Symbol, i int, of func(*sema.Symb
 // lowerBound is dimension i of s's lower bound: a constant, or an adjustable
 // array's from its descriptor.
 func (n *arrayNest) lowerBound(s *sema.Symbol, i int) Expr {
-	if c := n.l.adjustable[s]; c != nil {
+	if c := n.l.adjustableOf(s); c != nil {
 		return n.l.lowerBound(s, c, i)
 	}
 
@@ -489,7 +489,7 @@ func (n *arrayNest) lowerBound(s *sema.Symbol, i int) Expr {
 
 // upperBound is dimension i of s's upper bound, as lowerBound is.
 func (n *arrayNest) upperBound(s *sema.Symbol, i int) Expr {
-	if c := n.l.adjustable[s]; c != nil && s.Dims[i].UpperExpr != nil {
+	if c := n.l.adjustableOf(s); c != nil && s.Dims[i].UpperExpr != nil {
 		return &Load{&Mem{Cell: c, Offset: c.Desc.LowerOffset(i) + Long.Size(), T: Long}}
 	}
 
@@ -540,7 +540,7 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 			count = tripCount(Long, d.lower, d.upper, n.l.expr(d.stride))
 
 		case *sema.ArrayRef:
-			if c := n.l.adjustable[leaf.Sym]; c != nil {
+			if c := n.l.adjustableOf(leaf.Sym); c != nil {
 				count = n.l.extent(leaf.Sym, c, i)
 			} else {
 				count = LongConst(int32(leaf.Sym.Dims[i].Extent()))
@@ -731,7 +731,7 @@ func (n *arrayNest) checkSubscripts() {
 // checkedUpper is dimension i of s's upper bound as a check needs it: none (the
 // most a Long can be) for an open-ended dimension.
 func (n *arrayNest) checkedUpper(s *sema.Symbol, i int) Expr {
-	if c := n.l.adjustable[s]; c != nil {
+	if c := n.l.adjustableOf(s); c != nil {
 		return n.l.upperBound(s, c, i)
 	}
 

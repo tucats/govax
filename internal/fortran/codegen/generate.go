@@ -113,7 +113,7 @@ type Options struct {
 // read them. It returns the routines' storage maps, which the file has as
 // comments, for the listing.
 func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Options) []StorageMap {
-	src := &sourceLines{lines: lines}
+	src := &sourceLines{lines: lines, limit: -1}
 	names := &namer{}
 	maps := make([]StorageMap, 0, len(routines))
 
@@ -123,10 +123,21 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 	main := ""
 	localAlign := localAlignment(routines)
 
-	// The names this module defines, whichever routine comes first.
+	// The names this module defines, whichever routine comes first, and the
+	// routine each cell belongs to. An internal procedure's name isn't global:
+	// a unit of another module may have it.
 	defined := map[string]bool{}
+	owner := map[*ir.Cell]*ir.Routine{}
 
 	for _, r := range routines {
+		for _, c := range r.Cells {
+			owner[c] = r
+		}
+
+		if r.Host != nil {
+			continue
+		}
+
 		defined[r.Name] = true
 
 		for _, e := range r.Entries {
@@ -137,6 +148,7 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 	for _, r := range routines {
 		g := newRoutineGen(r, names, src)
 		g.defined = defined
+		g.owner = owner
 		g.localAlign = localAlign
 		g.improve = opts.Improve
 		g.debugTable = opts.DebugTable
@@ -449,7 +461,15 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 	w.Blank()
 	w.Statement("", ".PSECT", codePsect, "")
 	w.Append(&g.pre)
-	w.Statement("", ".ENTRY", r.Name+","+g.entryMask(), "")
+
+	if r.Host != nil {
+		// An internal procedure's entry is a local label with a register mask,
+		// which CALLS reads as it does an .ENTRY's: no other module calls it.
+		w.Statement(g.names.prefix, ".WORD", g.entryMask(), "internal procedure "+r.Local+" of "+r.Host.Name)
+	} else {
+		w.Statement("", ".ENTRY", r.Name+","+g.entryMask(), "")
+	}
+
 	g.writeFrame(w)
 
 	if len(r.Entries) > 0 {
@@ -1040,15 +1060,11 @@ func (g *routineGen) writeArrayDatum(w *Writer, label string, d *ir.Datum) {
 // target is the address expression for the place m, moved by delta
 // bytes: SQUARES.I, CALLS.M+4, FILL.$K1.
 func (g *routineGen) target(m *ir.Mem, delta int) string {
-	var name string
-
 	if m.Cell != nil {
-		name = m.Cell.Name
-	} else {
-		name = m.Datum.Name
+		return withOffset(g.cellSymbol(m.Cell), m.Offset+delta)
 	}
 
-	return withOffset(g.names.symbol(name), m.Offset+delta)
+	return withOffset(g.names.symbol(m.Datum.Name), m.Offset+delta)
 }
 
 // firstOffset is how far an array's first element is from the element

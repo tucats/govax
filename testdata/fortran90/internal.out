@@ -1,0 +1,12 @@
+sum:  7.00
+first:  5
+steps, i:   6   4
+twice(21):  42
+fact(10): 3628800
+tag: [host ]
+Host :  5
+tag: [Host ]
+[AL]
+calls:  6
+external twice(7):  21
+  $STATUS == "%X00000001"

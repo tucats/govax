@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"slices"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
@@ -318,16 +320,21 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 		}
 	}
 
+	// Only the unit's own: an internal procedure reads a host's dummy through
+	// its host's cell, whichever way it was called (ir/lowerinternal.go).
 	for _, n := range adj.names {
-		if s := a.scope.find(n.Name); s.Dummy != 0 {
+		if s := a.scope.find(n.Name); s.Dummy != 0 && !a.hostName(s.Name) {
 			adj.sym.BoundDummies = append(adj.sym.BoundDummies, s)
 		}
 	}
 }
 
 // checkBoundName checks a name in an adjustable array's bound: a dummy
-// argument or a variable in a common block (section 6.1.1.1), of a type
-// that converts to INTEGER.
+// argument or a variable in a common block (section 6.1.1.1), or in an
+// internal procedure its host's variable (the Fortran 90 standard's 7.1.6.2), of
+// a type that converts to INTEGER. A name an internal procedure's declarations
+// made its own because its host hadn't used it yet waits for its host's
+// statements (checkProvisional).
 func (a *analyzer) checkBoundName(n *ast.Name) bool {
 	s := a.scope.find(n.Name)
 
@@ -335,12 +342,17 @@ func (a *analyzer) checkBoundName(n *ast.Name) bool {
 	case s.broken:
 		return false
 
+	case a.interfacing && slices.Contains(a.provisional, s):
+		a.provisionalBounds = append(a.provisionalBounds, n)
+
+		return false
+
 	case s.Class == Array || s.Class == Function || s.Class == StmtFunction:
 		a.report("BOUNDREF", n.Pos, n.Name)
 
 		return false
 
-	case s.Dummy == 0 && s.Common == nil:
+	case s.Dummy == 0 && s.Common == nil && !a.hostName(s.Name):
 		// A constant among them, defined after the bound that uses it.
 		a.report("BOUNDVAR", n.Pos, n.Name)
 

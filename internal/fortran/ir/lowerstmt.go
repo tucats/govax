@@ -177,7 +177,7 @@ func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
 // comes before the Switch and uses R0, so then the value waits in a temporary.
 func (l *lowerer) call(s *sema.Call) {
 	call := &Call{origin: l.origin(), Args: l.args(s.Args)}
-	call.Routine, call.Through = l.callee(s.Sub)
+	call.Routine, call.Local, call.Through = l.callee(s.Sub)
 
 	if s.AltReturns == nil {
 		l.emit(call)

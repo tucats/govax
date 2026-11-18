@@ -9,13 +9,15 @@ package sema
 // A scope is one such unit's table of names. It may have a host, the scope
 // it lies inside: a name the scope doesn't have is looked for in the host,
 // and its host's host, outward (host association, the standard's 12.1.2.2.1).
-// A program unit's scope has no host until internal and module procedures
-// come (docs/planning/PHASE-99 - Fortran 90.md, Decision 4, and Phase 103);
-// a statement function's scope has the unit's as its host (stmtfunc.go).
+// An external program unit's scope has no host. An internal procedure's has
+// its host's (internal.go; docs/planning/PHASE-103 - Fortran 90 procedures and
+// interfaces.md), and a statement function's the unit's (stmtfunc.go).
 //
 // Only the names of variables, constants, and procedures are in scopes. A
 // unit's COMMON blocks, namelist groups, and structures keep tables of their
-// own: they are other classes of names, which aren't host-associated.
+// own. COMMON blocks are global names and aren't host-associated; namelist
+// groups and structures are, and their lookups go out through the units'
+// hosts as a name's does (Unit.namelist, Unit.structure).
 //
 // There are two kinds of read. find looks a name up and enters nothing;
 // analyzer.lookup is the read of a name the program uses, which enters it, with
@@ -37,12 +39,16 @@ type scope struct {
 
 	// host is the scope this one lies inside, or nil.
 	host *scope
+
+	// unit is the unit whose names these are, for a unit's scope; nil for a
+	// statement function's.
+	unit *Unit
 }
 
-// newUnitScope is a program unit's scope, keeping its names in order in list,
-// with the implicit rules r and no host.
-func newUnitScope(list *[]*Symbol, r *implicitRules) *scope {
-	return &scope{byName: map[string]*Symbol{}, list: list, implicit: r}
+// newUnitScope is unit u's scope, keeping its names in order in u.Symbols,
+// with the implicit rules r, inside host (nil for an external unit).
+func newUnitScope(u *Unit, r *implicitRules, host *scope) *scope {
+	return &scope{byName: map[string]*Symbol{}, list: &u.Symbols, implicit: r, host: host, unit: u}
 }
 
 // newInnerScope is a scope inside host that enters no names of its own beyond
@@ -55,13 +61,20 @@ func newInnerScope(host *scope) *scope {
 // find returns the symbol named name in this scope or the nearest host that
 // has it, or nil; it enters nothing.
 func (s *scope) find(name string) *Symbol {
+	sym, _ := s.findIn(name)
+
+	return sym
+}
+
+// findIn is find, with the scope the symbol was found in.
+func (s *scope) findIn(name string) (*Symbol, *scope) {
 	for sc := s; sc != nil; sc = sc.host {
 		if sym := sc.byName[name]; sym != nil {
-			return sym
+			return sym, sc
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // define makes sym this scope's own name, hiding any of its name in a host.

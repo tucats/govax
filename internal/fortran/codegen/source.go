@@ -19,6 +19,11 @@ type sourceLines struct {
 	// files is the stack of files being included: files[d] is the file
 	// at include depth d, whose lines are being written.
 	files []*source.File
+
+	// limit, if not -1, is the last line that may be written now: while a host's
+	// code is made, its CONTAINS statement's, so that its internal procedures'
+	// lines and its END come with the code after them (routineGen.generate).
+	limit int
 }
 
 // through writes the lines up to and including the last line of the
@@ -47,6 +52,10 @@ func (s *sourceLines) rest(w *Writer) {
 // marking its end. A line not Listed (INCLUDE's default, /NOLIST) leaves
 // only those comments. Files joined by + are named as they start.
 func (s *sourceLines) upTo(w *Writer, last int) {
+	if s.limit >= 0 {
+		last = min(last, s.limit)
+	}
+
 	for ; s.next <= last && s.next < len(s.lines); s.next++ {
 		line := s.lines[s.next]
 

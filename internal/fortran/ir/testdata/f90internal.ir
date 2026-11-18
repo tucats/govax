@@ -1,0 +1,89 @@
+routine HOST subroutine
+  param V       F  argument 1
+  param N       L  through $A2
+  param F       F  argument 3
+  param S       B  through $A4
+  entry 1 HOST N=2 S=4
+  cell  C       F  BLK+0    variable C, reached by an internal procedure
+  cell  K       L  $LOCAL+0    variable K, reached by an internal procedure
+  cell  $B1     L  $LOCAL+4    descriptor F A 4 (?), reached by an internal procedure
+  cell  $A2     L  $LOCAL+36   address of N
+  cell  $A4     L  $LOCAL+40   address of S
+  cell  $T1     F  $LOCAL+44   temporary
+  $LOCAL is 48 bytes
+B1:
+  assign $B1+4 = addr(@V)
+  assign $B1+28 = @N
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@V-4)
+  assign $B1+12 = mul.L(4, $B1+20)
+  ; line 14
+  assign K = 0
+  ; line 15
+  call local HOST.EACH()
+  ; line 16
+  call local HOST.TWICE(ref @F) -> $T1
+  assign @F = mul.F(@F, $T1)
+  ; line 35
+  return
+routine HOST.EACH subroutine, internal to HOST
+  cell  J       L  $LOCAL+0    variable J
+  cell  $C1     L  $LOCAL+4    DO (line 19)'s count
+  cell  $T1     L  $LOCAL+8    temporary
+  $LOCAL is 12 bytes
+  datum $K1     text 'X'
+  datum $K2     L 3
+B1:
+  ; line 19
+  assign $C1 = @N
+  assign J = 1
+  branch le.L($C1, 0) B3 B2
+B2:  ; DO (line 19)'s body
+  ; line 20
+  assign @($B1+16)[J] = add.F(@($B1+16)[J], C)
+  ; line 21
+  assign J = add.L(J, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 22
+  move @(@(arg S)+4)(1) = $K1(1)
+  ; line 23
+  call local HOST.FACT(ref $K2) -> $T1
+  assign K = add.L(K, $T1)
+  ; line 24
+  return
+routine HOST.TWICE function F, internal to HOST
+  param X       F  argument 1
+  cell  TWICE   F  $LOCAL+0    result TWICE
+  $LOCAL is 4 bytes
+B1:
+  ; line 26
+  assign TWICE = add.F(@X, @X)
+  ; line 27
+  return TWICE
+routine HOST.FACT function L, internal to HOST
+  param M       L  argument 1
+  cell  FACT    L  frame+0    result FACT
+  cell  $T1     L  frame+4    temporary
+  cell  $T2     L  frame+8    temporary
+  $LOCAL is 0 bytes
+  the frame is 12 bytes
+B1:
+  ; line 29
+  branch le.L(@M, 1) B2 B3
+B2:
+  ; line 30
+  assign FACT = 1
+  ; line 31
+  jump B4
+B3:
+  ; line 32
+  assign $T2 = sub.L(@M, 1)
+  call local HOST.FACT(ref $T2) -> $T1
+  assign FACT = mul.L(@M, $T1)
+  ; line 33
+  jump B4
+B4:
+  ; line 34
+  return FACT

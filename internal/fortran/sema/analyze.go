@@ -67,8 +67,9 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 	units := unitNames(file, mainName, messages)
 
 	// Then each unit in turn, with an analyzer of its own: every unit has
-	// its own names (FORTRAN has no nested scopes, and a name means
-	// nothing outside its unit unless it's in COMMON or names a unit).
+	// its own names (a name means nothing outside its unit unless it's in
+	// COMMON or names a unit), and its internal procedures, each with an
+	// analyzer of its own too, its names by host association (internal.go).
 	for _, au := range file.Units {
 		unitOpts, psects, groups := prologue(prog, au.Prologue, opts, messages)
 
@@ -96,11 +97,6 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			prog:           prog,
 			psects:         psects,
 			units:          units,
-			stmtFuncs:      map[ast.Stmt]*Symbol{},
-			entryOf:        map[*ast.EntryStmt]*Entry{},
-			rejected:       map[ast.Stmt]bool{},
-			pendingOpen:    map[lex.Kind]int{},
-			boundVars:      map[*Symbol]diag.Position{},
 			defaultInt:     defaultInt,
 			defaultLogical: defaultLogical,
 			gFloating:      unitOpts.GFloating,
@@ -108,14 +104,15 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			f90:            unitOpts.F90,
 			recursive:      unitOpts.Recursive,
 			align:          opts.Align,
+			baseAlign:      opts.Align,
 			warnings:       opts.Warnings,
-			extensions:     newExtensions(opts.Standard),
+			standard:       opts.Standard,
+			checks:         unitOpts.Checks,
 			prologueGroups: groups,
 		}
+		a.makeMaps()
 
-		unit := a.analyzeUnit(au, unitName(au, mainName))
-		unit.Checks = unitOpts.Checks
-		prog.Units = append(prog.Units, unit)
+		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName))...)
 	}
 
 	// What comes after the last unit is an extension as anywhere.
@@ -370,6 +367,30 @@ type analyzer struct {
 	units    map[string]*fileUnit
 	unit     *Unit
 
+	// body is the unit's statements, as the walks read them.
+	body []ast.Stmt
+
+	// host is the analyzer of an internal procedure's host, or nil
+	// (internal.go). provisional are the names an internal procedure's
+	// declarations entered as its own because its host hadn't used them yet,
+	// which the host's executable statements may still use (checkProvisional).
+	host        *analyzer
+	provisional []*Symbol
+
+	// provisionalBounds are the names of provisional among adjustable arrays'
+	// bounds, which are BOUNDVAR unless the host uses them.
+	provisionalBounds []*ast.Name
+
+	// interfacing is set while an internal procedure's declarations are read,
+	// before its host's executable statements.
+	interfacing bool
+
+	// baseAlign, standard, and checks are the options the unit started with,
+	// which its internal procedures start with too.
+	baseAlign Alignment
+	standard  Conformance
+	checks    Checks
+
 	// psects are the PSECT directives before the unit and in it, in order,
 	// applied when every COMMON statement is read (directive.go).
 	psects []*ast.DirectiveStmt
@@ -499,12 +520,55 @@ type routineRef struct {
 	altPlaces []int
 }
 
-// analyzeUnit analyzes one unit.
-func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
+// makeMaps makes the analyzer's tables, empty.
+func (a *analyzer) makeMaps() {
+	a.stmtFuncs = map[ast.Stmt]*Symbol{}
+	a.entryOf = map[*ast.EntryStmt]*Entry{}
+	a.rejected = map[ast.Stmt]bool{}
+	a.pendingOpen = map[lex.Kind]int{}
+	a.boundVars = map[*Symbol]diag.Position{}
+	a.extensions = newExtensions(a.standard)
+}
+
+// analyzeUnit analyzes one unit and its internal procedures, and returns them,
+// the unit first and then its internal procedures in order.
+//
+// A unit with internal procedures is analyzed in four steps (internal.go): its
+// declarations; each internal procedure's declarations, which are its
+// interface; the unit's executable statements, which can now type a reference
+// to an internal function and enter the names they use; and each internal
+// procedure's executable statements, which find every one of their host's names,
+// those only its executable statements used among them (host association). A unit
+// without internal procedures takes the same steps with nothing between them.
+func (a *analyzer) analyzeUnit(au *ast.Unit, name string) []*Unit {
+	u := a.beginUnit(au, name)
+	inner := a.internalInterfaces(au)
+
+	a.executablePart()
+	a.checkProvisional(inner)
+
+	units := []*Unit{u}
+
+	for _, ia := range inner {
+		ia.executablePart()
+		ia.finishUnit()
+
+		units = append(units, ia.unit)
+	}
+
+	a.finishUnit()
+	a.checkInternalCalls()
+
+	return units
+}
+
+// beginUnit makes the unit's Unit and analyzes its header and declarations.
+func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	u := &Unit{
 		AST:     au,
 		Kind:    au.Kind(),
 		Name:    name,
+		Checks:  a.checks,
 		Labels:  map[int]*Label{},
 		structs: map[string]*Structure{},
 
@@ -512,18 +576,29 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 		NoF77:     a.noF77,
 		F90:       a.f90,
 	}
-	u.scope = newUnitScope(&u.Symbols, defaultImplicit(a.defaultInt))
+
+	if a.host == nil {
+		u.scope = newUnitScope(u, defaultImplicit(a.defaultInt), nil)
+	} else {
+		u.Host = a.host.unit
+		u.scope = newUnitScope(u, a.host.scope.rules().inherit(), a.host.scope)
+	}
+
 	a.unit = u
 	a.scope = u.scope
 
-	if fu := a.units[name]; fu != nil && fu.unit == nil && fu.kind == u.Kind {
+	// An internal procedure's name is its host's, not the file's: it is no
+	// unit another unit's references are checked against.
+	if fu := a.units[name]; a.host == nil && fu != nil && fu.unit == nil && fu.kind == u.Kind {
 		fu.unit = u
 	}
 
-	body := au.Body
+	a.body = au.Body
 	if u.Kind == ast.BlockDataUnit {
-		body = a.blockDataBody(body)
+		a.body = a.blockDataBody(a.body)
 	}
+
+	body := a.body
 
 	u.incomplete = incompleteDeclarations(body)
 
@@ -552,14 +627,25 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.impliedSaves()
 	a.volatiles()
 	a.dataStatements()
-	a.statements(body)
+
+	return u
+}
+
+// executablePart analyzes the unit's executable statements.
+func (a *analyzer) executablePart() {
+	a.statements(a.body)
 	a.checkNamelists()
 	a.checkLabels()
 	a.noteLabels()
+}
+
+// finishUnit makes the checks that need every statement analyzed, and lays the
+// unit's storage out.
+func (a *analyzer) finishUnit() {
 	a.untyped()
 	a.undeclared()
 	a.reportUnused()
-	a.reportExtensions(au)
+	a.reportExtensions(a.unit.AST)
 	a.passedLengths()
 	a.recursiveStorage()
 	a.checkAssociated()
@@ -567,8 +653,6 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.recordInitials()
 	a.checkAutomaticInitials()
 	a.placeInitials()
-
-	return u
 }
 
 // header enters the names the header statement declares: the unit's
@@ -665,6 +749,20 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 		return s
 	}
 
+	s := a.newName(name, pos)
+
+	// An internal procedure's declarations come before its host's executable
+	// statements, which may yet use the name (checkProvisional).
+	if a.interfacing {
+		a.provisional = append(a.provisional, s)
+	}
+
+	return s
+}
+
+// newName enters name, which no scope in the chain has, with its implicit
+// type, as a name of the nearest unit's scope; pos is where it is first used.
+func (a *analyzer) newName(name string, pos diag.Position) *Symbol {
 	t, untyped := a.scope.rules().typeOf(name)
 	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary, included: a.inInclude}
 	a.scope.enter(s)
@@ -677,6 +775,8 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 // subroutine".
 func (a *analyzer) describe(s *Symbol) string {
 	switch {
+	case s.Internal != nil:
+		return "an internal procedure"
 	case s.Result:
 		return "the value of this function"
 	case s.Class == UnitName && a.unit.Kind == ast.MainProgram:
@@ -771,7 +871,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 			// A dummy procedure's name is the unit's own, whatever routine
 			// it stands for when the program runs.
 			fu := units[s.Name]
-			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.broken || s.onlyDeclared || s.DummyProcedure() {
+			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.Internal != nil || s.broken || s.onlyDeclared || s.DummyProcedure() {
 				continue
 			}
 
@@ -828,6 +928,12 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 
 	for _, u := range prog.Units {
 		for _, r := range u.calls {
+			// A reference to an internal procedure, or an internal procedure's to
+			// itself, is checked against its interface (checkInternalCalls).
+			if r.sym.Internal != nil || (u.Host != nil && (r.sym.Class == UnitName || r.sym.Result)) {
+				continue
+			}
+
 			fu := units[r.sym.Name]
 			// A recursive unit's references to itself are checked as any other
 			// unit's would be.

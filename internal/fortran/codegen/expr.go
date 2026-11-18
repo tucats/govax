@@ -570,9 +570,9 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 	case m.Param != nil:
 		base = "@" + g.argumentPlace(m.Param)
 	case m.Cell != nil && m.Cell.Frame:
-		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset) + "(" + g.frameBase + ")"
+		base = withOffset(g.cellSymbol(m.Cell), m.Offset) + "(" + g.frameBase + ")"
 	case m.Cell != nil:
-		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset)
+		base = withOffset(g.cellSymbol(m.Cell), m.Offset)
 	default:
 		base = withOffset(g.names.symbol(m.Datum.Name), m.Offset)
 	}
@@ -646,7 +646,17 @@ func (g *routineGen) argumentPlace(p *ir.Param) string {
 // SUB.$E(FP), or in a variable format expression SUB.$E(R11).
 func (g *routineGen) cellPlace(c *ir.Cell) string {
 	if c.Frame {
-		return g.names.symbol(c.Name) + "(" + g.frameBase + ")"
+		return g.cellSymbol(c) + "(" + g.frameBase + ")"
+	}
+
+	return g.cellSymbol(c)
+}
+
+// cellSymbol is the cell c's symbol: the routine's name for it, or for a cell
+// of its host's, the host's (HOST.X in HOST.INNER's code).
+func (g *routineGen) cellSymbol(c *ir.Cell) string {
+	if r := g.owner[c]; r != nil && r != g.r {
+		return g.bases.routine(r.Name).symbol(c.Name)
 	}
 
 	return g.names.symbol(c.Name)

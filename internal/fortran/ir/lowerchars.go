@@ -34,7 +34,7 @@ func (l *lowerer) charParam(s *sema.Symbol) *Param {
 		return nil
 	}
 
-	return l.params[s]
+	return l.paramOf(s)
 }
 
 // descriptorField is a field of the descriptor a CHARACTER dummy argument's
@@ -76,7 +76,7 @@ func (l *lowerer) charLength(s *sema.Symbol) Expr {
 		return LongConst(int32(s.Type.Size))
 	}
 
-	return &Op{Zext, Long, &Load{descriptorField(l.params[s], 0, Word)}, nil}
+	return &Op{Zext, Long, &Load{descriptorField(l.paramOf(s), 0, Word)}, nil}
 }
 
 // maxLength is the most characters a CHARACTER value can have, and whether
@@ -252,7 +252,7 @@ func (l *lowerer) charArg(a sema.Arg) Arg {
 // with the address, in a descriptor cell. An adjustable array has a descriptor
 // cell of its own, which its entry points fill in (lowerbounds.go).
 func (l *lowerer) arrayDescriptor(s *sema.Symbol) *Mem {
-	if c := l.adjustable[s]; c != nil {
+	if c := l.adjustableOf(s); c != nil {
 		return &Mem{Cell: c, T: Long}
 	}
 

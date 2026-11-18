@@ -9,12 +9,15 @@ import (
 )
 
 // Lower lowers each program unit of a program semantic analysis found no
-// error in into a Routine.
+// error in into a Routine, a unit's internal procedures after it.
 func Lower(p *sema.Program) []*Routine {
 	routines := make([]*Routine, 0, len(p.Units))
 
 	for _, u := range p.Units {
-		routines = append(routines, lowerUnit(u))
+		// An internal procedure is lowered with its host (lowerHost).
+		if u.Host == nil {
+			routines = append(routines, lowerHost(u)...)
+		}
 	}
 
 	return routines
@@ -30,6 +33,17 @@ func Lower(p *sema.Program) []*Routine {
 type lowerer struct {
 	unit *sema.Unit
 	r    *Routine
+
+	// host is an internal procedure's host's lowerer, whose places for its
+	// names the procedure uses (lowerinternal.go); nil for any other routine.
+	// reachedParams are, in a host, its dummy arguments its internal
+	// procedures reach.
+	host          *lowerer
+	reachedParams map[*Param]bool
+
+	// hidden is 1 for a function whose value goes through a hidden first
+	// argument, else 0.
+	hidden int
 
 	// cells and params are the routine's places for the unit's
 	// symbols.
@@ -121,14 +135,20 @@ type lowerer struct {
 	namelists map[*sema.Namelist]*Cell
 }
 
-// lowerUnit lowers one program unit.
-func lowerUnit(u *sema.Unit) *Routine {
+// newLowerer starts lowering the unit u, an internal procedure of the routine
+// host lowers if host isn't nil.
+func newLowerer(u *sema.Unit, host *lowerer) *lowerer {
 	r := &Routine{Name: u.Name, Unit: u, Checks: u.Checks, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials,
 		Reentrant: u.Recursive}
 
-	l := &lowerer{
+	if host != nil {
+		r.Host, r.Local, r.Name = host.r, u.Name, host.r.Name+"."+u.Name
+	}
+
+	return &lowerer{
 		unit:      u,
 		r:         r,
+		host:      host,
 		cells:     map[*sema.Symbol]*Cell{},
 		params:    map[*sema.Symbol]*Param{},
 		bound:     map[*sema.Symbol]*Mem{},
@@ -139,6 +159,12 @@ func lowerUnit(u *sema.Unit) *Routine {
 		freeArray: map[arrayTempKey][]*Cell{},
 		data:      map[string]*Datum{},
 	}
+}
+
+// prepare makes the routine's places: its dummy arguments, its variables'
+// cells, and those of its entry points and adjustable arrays.
+func (l *lowerer) prepare() {
+	u, r := l.unit, l.r
 
 	// A function whose value doesn't fit in R0 and R1 (CHARACTER, REAL*16,
 	// COMPLEX*16) returns it through a hidden first argument: the caller
@@ -146,14 +172,12 @@ func lowerUnit(u *sema.Unit) *Routine {
 	// descriptor of one, which also gives its length), and the function
 	// stores there (sema.Type.HiddenResult). That argument moves the dummy
 	// arguments along by one.
-	hidden := 0
-
 	switch u.Kind {
 	case ast.FunctionUnit:
 		r.Kind = Function
 
 		if u.Result.Type.HiddenResult() {
-			hidden = 1
+			l.hidden = 1
 			p := &Param{Name: u.Result.Name, Index: 1, T: l.typeOf(u.Result.Type), Sym: u.Result}
 			r.Params = append(r.Params, p)
 			l.params[u.Result] = p
@@ -169,7 +193,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 	}
 
 	for _, s := range u.Dummies {
-		p := &Param{Name: s.Name, Index: s.Dummy + hidden, T: l.typeOf(s.Type), Sym: s}
+		p := &Param{Name: s.Name, Index: s.Dummy + l.hidden, T: l.typeOf(s.Type), Sym: s}
 		r.Params = append(r.Params, p)
 		l.params[s] = p
 	}
@@ -199,14 +223,24 @@ func lowerUnit(u *sema.Unit) *Routine {
 	}
 
 	if r.Kind == BlockData {
-		return r
+		return
 	}
 
 	if len(u.Entries) > 0 {
-		l.prepareEntries(hidden)
+		l.prepareEntries(l.hidden)
 	}
 
 	l.prepareBounds()
+}
+
+// lowerBody lowers the unit's statements, after prepare, and returns the
+// routine.
+func (l *lowerer) lowerBody() *Routine {
+	u, r := l.unit, l.r
+
+	if r.Kind == BlockData {
+		return r
+	}
 
 	l.begin(l.newBlock())
 	l.computeBounds(u.Params)

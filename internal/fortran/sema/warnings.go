@@ -25,7 +25,7 @@ func needsType(s *Symbol) bool {
 // letter's type. An old-form PARAMETER's name has its value's type, not a first letter's.
 // A text library's name isn't the program's to declare.
 func (a *analyzer) undeclared() {
-	if !a.warnings.Declarations || a.scope.rules().none {
+	if !a.warnings.Declarations || a.scope.rules().strict() {
 		return
 	}
 
@@ -99,7 +99,7 @@ func (a *analyzer) reportUnused() {
 //   - A unit's own names, the function's value and its ENTRY names among them, aren't
 //     for it to use.
 func (a *analyzer) neverUsed(s *Symbol) bool {
-	if s.Class == UnitName || s.Result || s.broken || s.library || s.included || s.typesDummy ||
+	if s.Class == UnitName || s.Result || s.Internal != nil || s.broken || s.library || s.included || s.typesDummy ||
 		s.Common != nil || s.Equivalenced || (s.External && s.Dummy == 0) {
 		return false
 	}
