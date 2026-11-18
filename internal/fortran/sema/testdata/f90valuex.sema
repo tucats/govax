@@ -1,0 +1,36 @@
+== FUNCTION RAMP
+  RAMP      REAL          result            automatic-array
+  N         INTEGER       variable         argument 1
+  I         INTEGER       variable         $LOCAL+0
+  $LOCAL is 4 bytes
+12          DO I = 0, N, 1
+13            RAMP[I] = (REAL I)
+14          END DO
+15          END
+== SUBROUTINE USE
+  USE                     program unit
+  A         REAL          array(1:N)       argument 1
+  N         INTEGER       variable         argument 2
+  RAMP      REAL          function          interface(line 21)
+  DOUBLE    REAL          function
+  TAKE                    subroutine
+  $LOCAL is 0 bytes
+26          A[1:N:1] = RAMP((-:I N 1))(:)
+27          PRINT * SUM(RAMP(N)(:)) DOUBLE(A[])(:)
+28          CALL TAKE((sequence RAMP(2)(:))) or to (10)
+29    10    CONTINUE
+35          END
+== FUNCTION DOUBLE
+  DOUBLE    REAL          result            automatic-array
+  V         REAL          array(1:)        argument 1
+  $LOCAL is 0 bytes
+33          DOUBLE[] = (*:R 2.0 V[])
+34          END
+== recursive FUNCTION TRI
+  TRI                     program unit
+  R         INTEGER       result            automatic-array
+  N         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+39          R[N] = N
+40          IF (.GT.:I N 1) R[1:(-:I N 1):1] = TRI((-:I N 1))(:)
+41          END

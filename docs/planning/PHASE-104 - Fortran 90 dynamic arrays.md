@@ -491,7 +491,8 @@ calls), then the frame's run-time storage everything after needs.
      through the hidden argument, references through every kind of explicit
      interface, EXPLICITVALUE, INTERFACEDIFF of the value (done 2026-11-18).
    - 7b. Array values of a shape known only at run time: the callee's heap block
-     through the caller's NCA descriptor, freed at the statement's end.
+     through the caller's NCA descriptor, freed at the statement's end (done
+     2026-11-18).
    - 7c. CHARACTER values of a run-time length, scalar and array, through a
      class D descriptor; ENTRY in an array-valued function.
 8. **The transformational intrinsics** (finding 13), each against the standard's
@@ -1031,3 +1032,62 @@ The author read the survey and accepted every recommendation:
     `codegen`; `testdata/fortran90/values.f90` (every mode, paging both ways;
     gfortran prints the same 19 lines). MANUAL.md's 14.13 has "Array-valued
     functions", and HELP FORTRAN a paragraph.
+- **2026-11-18, subtask 7b done:** Array-valued functions whose value's shape is
+  known only when the program runs.
+  - *sema* (`sema/arrayvalue.go`). A value whose bounds aren't constant is no
+    longer NOTIMPL: `bound` already made it an automatic object, its bounds
+    specification expressions (the dummies, SIZE of an assumed-shape one, COMMON,
+    the host's variables), and that is how lowering knows the function makes its
+    storage. `valueShape` leaves such an extent unknown, and `funcRef` makes each
+    reference its `Extent.Of`, so the scalarizer reads it from the reference once
+    called. A value whose CHARACTER length isn't constant keeps the NOTIMPL it had
+    (7c), as does ENTRY.
+  - *The function* (`ir/lowervalue.go`). The hidden first argument is `$VALUE`
+    (the value's own name being its cell's), the caller's class NCA descriptor;
+    the value is an automatic array of its own class A cell (`valueCell`), which
+    every use in the function reads, computed at entry by `computeAutomatic` with
+    its storage from FTNRTL's `FTN$GET_TEMP` rather than the stack, then
+    `publishValue` writes the caller's descriptor whole: the prototype block,
+    POINTER, ARSIZE, A0, each stride the element's size times the extents before
+    it, and the bounds, U written as L plus the extent less 1 so that the caller's
+    U - L + 1 is never below 0. `FTN$GET_TEMP` now takes at least `MIN_BLOCK` (8)
+    bytes, the size `FTN$DEALLOCATE` gives back, so a value of no elements has an
+    address (no new entry, GSMATCH unchanged).
+  - *The caller.* Each reference is a `$Gn` cell, a class NCA descriptor read as an
+    allocatable array's (`sema.NewValueArray`; `valueResult`, from `prepareIn` and
+    `leafExtent`), pooled apart from other descriptors (`freeValues`), its POINTER 0
+    whenever no statement holds a value there: the static cell's initial value, a
+    frame cell's cleared at the main entry point (`fillEntryValues`, put in after
+    the body is lowered, since the cells are made then) and at ENTRY's with the
+    allocatable arrays. A statement calls each reference once (`runtimeTemps.values`,
+    by reference), and gives the blocks back at its end (`endTemps`, `freeValue`:
+    FTN$DEALLOCATE, which clears POINTER); a call finding a block still there gives
+    it back first, which covers an implied DO list calling the function at each
+    pass, an unwind, and a statement that ends without `endTemps`. Passed to an
+    assumed-shape dummy the value goes by its own descriptor (`shapedArg`), to any
+    other dummy by its POINTER (`sequenceOf`), with no copy.
+  - *A fix found on the way:* a CALL with alternate returns ended its block with its
+    `Switch`, so `release` dropped the statement's run-time temporaries without
+    giving them back: a heap temporary of 4c's leaked there, as a value's block did.
+    `call` now keeps R0 and calls `endTemps` before the `Switch`.
+  - *Found too:* 7a's `values.f90` was in neither `fortran90PagingPrograms` nor the
+    corpus README; both now have it. And subtask 6's `seqvms.f90` ran 690 million
+    instructions (1,000 copies of a 30,000-element section through the heap),
+    25 to 43 seconds in each of the corpus's eight modes, which had taken the
+    console suite from about 3.5 minutes to 8.5; twenty copies show the heap given
+    back as well, 14 million instructions.
+  - *Choices of ours, unconfirmed:* the function writes the caller's descriptor
+    whole, trusting none of it; a statement left by an unwind leaves its blocks
+    allocated until the next statement to use the cell (the program goes on, as
+    with a heap temporary); SIZE of a reference calls the function.
+  - *Tests:* `sema`'s `TestArrayValue` (run-time bounds, SIZE of a dummy in them, an
+    interface body's, NOTCONFORM and NOTSCALAR of such a value, recursion); the
+    `f90valuex` goldens in `sema`, `ir`, and `codegen`;
+    `testdata/fortran90/ramps.f90` (every mode, paging both ways; gfortran prints
+    the same 18 lines) and `rampvms.f90` (LIB$STAT_VM's bytes unchanged by thousands
+    of values in every statement form, counted after the loop's first pass, which
+    makes the heap's zones and the internal WRITE's kept format); and
+    `internal/console`'s `TestFortranValueFromMACRO`, a MACRO program passing its own
+    descriptor, reading what the function filled in, and giving the block back with
+    LIB$FREE_VM. MANUAL.md's 14.13 "Array-valued functions" and HELP FORTRAN describe
+    them.

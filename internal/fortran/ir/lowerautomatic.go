@@ -128,7 +128,14 @@ func (l *lowerer) computeAutomatic(s *sema.Symbol, c *Cell) {
 
 	store(ArsizeOffset, count)
 
-	l.emit(&StackAllocate{origin: l.origin(), Size: &Load{field(ArsizeOffset)}, Dst: field(PointerOffset)})
+	// A function's value of run-time shape outlives the frame: its storage is
+	// the heap's, which the caller gives back (lowervalue.go).
+	value := s.Result && l.valueParam != nil
+	if value {
+		l.emit(&Call{origin: l.origin(), Routine: ftnGetTemp, Args: []Arg{{Ref: field(0)}}})
+	} else {
+		l.emit(&StackAllocate{origin: l.origin(), Size: &Load{field(ArsizeOffset)}, Dst: field(PointerOffset)})
+	}
 
 	// A0 is the first element's address, less the element number the lowest
 	// subscripts would have counting from all zeros (computeArrayBounds).
@@ -140,6 +147,10 @@ func (l *lowerer) computeAutomatic(s *sema.Symbol, c *Cell) {
 	}
 
 	store(A0Offset, &Addr{l.elementAt(base, s, negated(first))})
+
+	if value {
+		l.publishValue(s, c)
+	}
 
 	l.release()
 }

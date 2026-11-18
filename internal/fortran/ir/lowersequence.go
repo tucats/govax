@@ -93,6 +93,12 @@ func (l *lowerer) holdingAfter(f func()) {
 
 // sequenceOf is sequence's work.
 func (l *lowerer) sequenceOf(e sema.Expr, described, back, desc bool) sequenced {
+	// A function's value of run-time shape is contiguous where the function
+	// put it (lowervalue.go), and an expression, never copied back.
+	if f, ok := e.(*sema.FuncRef); ok && !allKnown(f.S) {
+		return sequenced{value: l.fromNCA(l.wholeNCA(l.valueResult(f)), len(f.S), desc)}
+	}
+
 	if described {
 		switch x := e.(type) {
 		case *sema.ArrayRef:

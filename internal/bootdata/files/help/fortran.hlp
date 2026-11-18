@@ -301,8 +301,11 @@
    A reference needs an explicit interface (%FORT-E-EXPLICITVALUE
    otherwise); its value is an array expression of that shape, computed
    once, before its statement's loops, into a temporary the call passes
-   as a hidden first argument.  A value whose bounds or length aren't
-   constant is not there yet.
+   as a hidden first argument.  A value's bounds may be specification
+   expressions (REAL F(N)); then the function makes the value on the
+   heap and describes it in a class NCA descriptor the caller passes,
+   and the caller gives it back at the statement's end.  A value whose
+   CHARACTER length isn't constant is not there yet.
 
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are

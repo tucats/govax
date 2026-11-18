@@ -982,8 +982,16 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 			return "an array temporary, " + typeText(c.Sym) + ", for one statement: its descriptor"
 		}
 
+		if c.Sym != nil && c.Sym.AutomaticObject && c.Sym.Result {
+			return c.Sym.Name + "'s value, " + typeText(c.Sym) + ", made on the heap at entry: its descriptor"
+		}
+
 		if c.Sym != nil && c.Sym.AutomaticObject {
 			return c.Sym.Name + ", " + typeText(c.Sym) + ", automatic: its descriptor"
+		}
+
+		if c.Sym != nil && c.Sym.Allocatable && c.Sym.Name == "$G" {
+			return "a function's value of run-time shape, for one statement: its descriptor"
 		}
 
 		if c.Sym != nil {

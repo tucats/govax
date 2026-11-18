@@ -179,12 +179,22 @@ SIGNAL:	CMPL	R0,#FOR$_INSVIRMEM
 ; contiguous) already has ARSIZE; this takes that many bytes from LIB$GET_VM
 ; into its POINTER, or signals INSVIRMEM, as an ALLOCATE without STAT=
 ; does. The statement gives the storage back at its end with
-; FTN$DEALLOCATE, which reads only ARSIZE and POINTER.
+; FTN$DEALLOCATE, which reads only ARSIZE and POINTER. An array-valued
+; function whose value's shape is known only when it runs takes its
+; value's storage here too, which may be of any size, 0 among them: as
+; with FTN$ALLOCATE, less than MIN_BLOCK takes MIN_BLOCK, the size
+; FTN$DEALLOCATE gives back.
 ;
 	.ENTRY	FTN$GET_TEMP,^M<R2>
+	SUBL2	#4,SP			; -4(FP): the size
 	MOVL	4(AP),R2		; the descriptor
+	MOVL	DSC$L_ARSIZE(R2),R0
+	CMPL	R0,#MIN_BLOCK
+	BGEQ	5$
+	MOVL	#MIN_BLOCK,R0
+5$:	MOVL	R0,-4(FP)
 	PUSHAL	DSC$A_POINTER(R2)	; LIB$GET_VM (num_bytes, base_adr)
-	PUSHAL	DSC$L_ARSIZE(R2)
+	PUSHAL	-4(FP)
 	CALLS	#2,G^LIB$GET_VM
 	BLBC	R0,10$
 	RET

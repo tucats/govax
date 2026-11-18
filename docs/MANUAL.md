@@ -9110,9 +9110,50 @@ a WHERE mask, an output list, or an actual argument of any kind of dummy. Each r
 called once, before its statement's loops, its value into a temporary of the calling
 statement's whose address the call passes as a hidden first argument, as a `REAL*16`
 function's place is passed (a class A descriptor of it for a CHARACTER value). A CHARACTER
-value's length must be known (`STARARRAY` for `CHARACTER*(*)`). Not there yet: a value whose
-bounds or CHARACTER length aren't constant (`REAL F(N)`), and ENTRY in an array-valued
-function.
+value's length must be known (`STARARRAY` for `CHARACTER*(*)`).
+
+A value's bounds may be specification expressions, as an automatic array's are (above):
+the function's dummies, `SIZE` of an assumed-shape one, its common blocks, its host's
+variables. Only the function can work them out, so it makes the value itself:
+
+```fortran
+program ramps
+  interface
+    function ramp(n)
+      integer :: n
+      real :: ramp(n)
+    end function
+  end interface
+  print '(1x, 5f5.1)', ramp(3), sum(ramp(4))
+  print '(1x, i3)', size(ramp(0))
+end program ramps
+
+function ramp(n)
+  integer :: n, i
+  real :: ramp(n)
+  ramp = (/ (real(i), i = 1, n) /)
+end function
+```
+
+prints
+
+```text
+  1.0  2.0  3.0 10.0
+  0
+```
+
+The hidden first argument is then a class NCA descriptor of the caller's, its `POINTER` 0,
+and the function, as it is entered, computes the bounds, takes the storage from the heap
+(FTNRTL's `FTN$GET_TEMP`, at least 8 bytes, so that a value of no elements has an address
+too), and fills the descriptor in: `POINTER`, `ARSIZE`, `A0`, the strides, and the bounds,
+the elements one after another. The caller reads the value through it and gives the storage
+back with `FTN$DEALLOCATE` at the end of the statement, which calls the function once
+however the value is used; a value passed to an assumed-shape dummy goes by that descriptor,
+and to any other dummy by its `POINTER`, with no copy. A program in MACRO may call such a
+function the same way and give the block back with `LIB$FREE_VM` of `ARSIZE` bytes (8 if
+less). A statement left by an unwind leaves its block allocated; the next statement to use
+the descriptor's cell gives it back. Not there yet: a value whose CHARACTER length isn't
+constant, and ENTRY in an array-valued function.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

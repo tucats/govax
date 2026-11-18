@@ -1147,8 +1147,14 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   interface's shape, `checkArrayValue`, EXPLICITVALUE, STARARRAY, INTERFACEDIFF of
   the value; an array-valued `FuncRef` a scalarizer leaf, computed before the loops
   into a temporary by `ir`'s `callArrayFunction`; `testdata/fortran90/values.f90`);
-  7b (run-time shapes, the callee's heap block) is next, then 7c (run-time
-  CHARACTER lengths, ENTRY).
+  7b (2026-11-18) values of a run-time shape (the value an automatic array
+  of the function's own class A cell, its storage from FTNRTL's
+  `FTN$GET_TEMP`, the caller's class NCA descriptor written whole at entry,
+  `ir/lowervalue.go`'s `publishValue`; each reference a `$Gn` cell read as
+  an allocatable array's, `sema.NewValueArray`, called once per statement
+  and freed at its end; `testdata/fortran90/ramps.f90`, `rampvms.f90`,
+  `internal/console`'s `TestFortranValueFromMACRO`); 7c (run-time
+  CHARACTER lengths, ENTRY) is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

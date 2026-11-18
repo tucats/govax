@@ -217,6 +217,21 @@ func NewRuntimeArray(name string, t Type, rank int) *Symbol {
 	return s
 }
 
+// NewValueArray is an array of lowering's own that holds an array-valued
+// function's value whose bounds are known only when the program runs
+// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 12): rank
+// dimensions, read as an allocatable array's are, from the class NCA descriptor
+// the function fills in.
+func NewValueArray(name string, t Type, rank int) *Symbol {
+	s := &Symbol{Name: name, Class: Array, Type: t, Offset: -1, Allocatable: true}
+
+	for range rank {
+		s.Dims = append(s.Dims, Dim{Deferred: true, Lower: 1})
+	}
+
+	return s
+}
+
 // NewArrayRef is the whole array s as an array-valued expression, with its
 // shape.
 func NewArrayRef(s *Symbol, pos diag.Position) *ArrayRef {

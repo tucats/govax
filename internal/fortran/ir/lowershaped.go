@@ -270,6 +270,12 @@ type ncaDim struct {
 // described. A whole array that is an OPTIONAL dummy of this routine is passed
 // on as absent, a 0, when its own argument was.
 func (l *lowerer) shapedArg(a sema.Arg) Arg {
+	// A function's value of run-time shape is described already, by its own
+	// class NCA descriptor (lowervalue.go).
+	if f, ok := a.Expr.(*sema.FuncRef); ok && !allKnown(f.S) {
+		return Arg{Ref: l.wholeNCA(l.valueResult(f))}
+	}
+
 	if !sema.Described(a) {
 		return Arg{Ref: l.wholeNCA(l.valueTemp(a.Expr))}
 	}

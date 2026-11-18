@@ -1,0 +1,622 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for RAMP, a REAL function
+;   $VALUE  REAL (0:?)  hidden argument 1  @RAMP.$VALUE(AP)
+;   N       INTEGER     argument 2         @RAMP.N(AP)
+;   RAMP    REAL (0:?)  $LOCAL+4           RAMP.RAMP
+;   I       INTEGER     $LOCAL+0           RAMP.I
+;
+RAMP.$VALUE = 4				; $VALUE's value goes through hidden argument 1
+RAMP.N = 8				; N is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+RAMP.I:	.BLKL	1			; I
+RAMP.RAMP:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; RAMP: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	0,0			; bounds
+RAMP.$C1:
+	.BLKL	1			; DO (line 12)'s count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Array-valued functions (Phase 104, subtask 7b): a value whose bounds
+;    3  C     are known only when the program runs, made by the function on the heap
+;    4  C     and described in the caller's class NCA descriptor; a lower bound that
+;    5  C     isn't 1; bounds from SIZE of an assumed-shape dummy; a recursive
+;    6  C     function's reference to itself; references in an assignment, a
+;    7  C     reduction, an output list, as an argument, and in a CALL with
+;    8  C     alternate returns.
+;    9        FUNCTION RAMP(N)
+	.ENTRY	RAMP,^M<>
+	MOVL	@RAMP.N(AP),RAMP.RAMP+28
+	ADDL3	RAMP.RAMP+28,#1,RAMP.RAMP+20
+	BLSS	RAMP.$2
+	BRW	RAMP.$1
+RAMP.$2:
+	CLRL	RAMP.RAMP+20
+RAMP.$1:
+	MULL3	#4,RAMP.RAMP+20,RAMP.RAMP+12
+	PUSHAQ	RAMP.RAMP
+	CALLS	#1,G^FTN$GET_TEMP
+	MOVAL	@RAMP.RAMP+4,RAMP.RAMP+16
+	MOVL	#168427524,@RAMP.$VALUE(AP)
+	MOVL	#2,R0
+	MOVL	#16777216,@RAMP.$VALUE(AP)[R0]
+	MOVL	#1,R0
+	MOVL	RAMP.RAMP+4,@RAMP.$VALUE(AP)[R0]
+	MOVL	#3,R0
+	MOVL	RAMP.RAMP+12,@RAMP.$VALUE(AP)[R0]
+	MOVL	#4,R0
+	MOVL	RAMP.RAMP+16,@RAMP.$VALUE(AP)[R0]
+	MOVL	#5,R0
+	MOVL	#4,@RAMP.$VALUE(AP)[R0]
+	MOVL	#6,R0
+	CLRL	@RAMP.$VALUE(AP)[R0]
+	MOVL	#7,R0
+	SUBL3	#1,RAMP.RAMP+20,@RAMP.$VALUE(AP)[R0]
+;   10        INTEGER N, I
+;   11        REAL RAMP(0:N)
+;   12        DO I = 0, N
+	ADDL3	@RAMP.N(AP),#1,RAMP.$C1	; DO (line 12)'s count
+	CLRL	RAMP.I
+	TSTL	RAMP.$C1
+	BGTR	RAMP.$4
+	BRW	RAMP.$3
+RAMP.$4:
+RAMP.$5:				; DO (line 12)'s body
+;   13          RAMP(I) = I
+	MOVL	RAMP.RAMP+16,R0
+	MOVL	RAMP.I,R1
+	CVTLF	RAMP.I,(R0)[R1]
+;   14        END DO
+	INCL	RAMP.I
+	DECL	RAMP.$C1		; one pass fewer
+	BLEQ	RAMP.$6
+	BRW	RAMP.$5
+RAMP.$6:
+RAMP.$3:
+;   15        END FUNCTION
+	RET
+
+; Storage map for USE, a subroutine
+;   A     REAL (?)  argument 1  @USE.A(AP)
+;   N     INTEGER   argument 2  @USE.N(AP)
+;   $G    REAL (:)  $LOCAL+40   USE.$G1
+;   $G    REAL (:)  $LOCAL+100  USE.$G2
+;
+USE.A = 4				; A is argument 1
+USE.N = 8				; N is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+USE.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+USE.$I1:
+	.BLKL	1			; an array statement's loop index
+USE.$T1:
+	.BLKL	1			; temporary
+USE.$G1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; $G: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USE.$T2:
+	.BLKL	1			; temporary
+USE.$T3:
+	.BLKL	1			; temporary
+USE.$T4:
+	.BLKL	1			; temporary
+USE.$C1:
+	.BLKL	1			; array (line 26), dimension 1's count
+USE.$T5:
+	.BLKL	1			; temporary
+USE.$C2:
+	.BLKL	1			; array (line 27), dimension 1's count
+USE.$I2:
+	.BLKL	1			; an array statement's loop index
+USE.$G2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; $G: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USE.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USE.$C3:
+	.BLKL	1			; array (line 27), dimension 1's count
+USE.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+USE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+USE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS USE.$T5
+USE.$K1:
+	.LONG	2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   16        OPTIONS /F90
+;   17        SUBROUTINE USE(A, N)
+	.ENTRY	USE,^M<R2,R3>
+	MOVAL	@USE.A(AP),USE.$B1+4
+	MOVL	@USE.N(AP),USE.$B1+28
+	MOVL	USE.$B1+28,USE.$B1+20
+	MOVL	#-1,R0
+	MOVAL	@USE.A(AP)[R0],USE.$B1+16
+	MULL3	#4,USE.$B1+20,USE.$B1+12
+;   18        INTEGER N
+;   19        REAL A(N)
+;   20        INTERFACE
+;   21          FUNCTION RAMP(N)
+;   22          INTEGER N
+;   23          REAL RAMP(0:N)
+;   24          END FUNCTION
+;   25        END INTERFACE
+;   26        A(1:N) = RAMP(N - 1)
+	MOVL	@USE.N(AP),USE.$T1
+	TSTL	USE.$G1+4
+	BNEQ	USE.$2
+	BRW	USE.$1
+USE.$2:
+	PUSHL	#0
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$1:
+	SUBL3	#1,@USE.N(AP),USE.$T2
+	PUSHAL	USE.$T2
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^RAMP
+	SUBL3	#1,USE.$G1+24,USE.$T3
+	MOVL	USE.$T1,USE.$T4
+	BLSS	USE.$4
+	BRW	USE.$3
+USE.$4:
+	CLRL	USE.$T4
+USE.$3:
+	MOVL	USE.$T4,USE.$C1		; array (line 26), dimension 1's count
+	MOVL	#1,USE.$I1
+	TSTL	USE.$C1
+	BGTR	USE.$6
+	BRW	USE.$5
+USE.$6:
+USE.$7:					; array (line 26), dimension 1's body
+	MOVL	USE.$G1+16,R0
+	ADDL3	USE.$I1,USE.$T3,R1
+	MOVL	USE.$B1+16,R2
+	MOVL	USE.$I1,R3
+	MOVF	(R0)[R1],(R2)[R3]
+	INCL	USE.$I1
+	DECL	USE.$C1			; one pass fewer
+	BLEQ	USE.$8
+	BRW	USE.$7
+USE.$8:
+USE.$5:
+	TSTL	USE.$G1+4
+	BNEQ	USE.$10
+	BRW	USE.$9
+USE.$10:
+	PUSHL	#0
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$9:
+;   27        PRINT *, SUM(RAMP(N)), DOUBLE(A)
+	PUSHL	#-1
+	PUSHAB	USE.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	TSTL	USE.$G1+4
+	BNEQ	USE.$12
+	BRW	USE.$11
+USE.$12:
+	PUSHL	#0
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$11:
+	PUSHAL	@USE.N(AP)
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^RAMP
+	SUBL3	#1,USE.$G1+24,USE.$T4
+	SUBL3	USE.$G1+24,USE.$G1+28,R0
+	ADDL3	R0,#1,USE.$T3
+	BLSS	USE.$14
+	BRW	USE.$13
+USE.$14:
+	CLRL	USE.$T3
+USE.$13:
+	CLRF	USE.$T5
+	MOVL	USE.$T3,USE.$C2		; array (line 27), dimension 1's count
+	MOVL	#1,USE.$I1
+	TSTL	USE.$C2
+	BGTR	USE.$16
+	BRW	USE.$15
+USE.$16:
+USE.$17:				; array (line 27), dimension 1's body
+	MOVL	USE.$G1+16,R0
+	ADDL3	USE.$I1,USE.$T4,R1
+	ADDF2	(R0)[R1],USE.$T5
+	INCL	USE.$I1
+	DECL	USE.$C2			; one pass fewer
+	BLEQ	USE.$18
+	BRW	USE.$17
+USE.$18:
+USE.$15:
+	PUSHAQ	USE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	TSTL	USE.$G2+4
+	BNEQ	USE.$20
+	BRW	USE.$19
+USE.$20:
+	PUSHL	#0
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$19:
+	MOVAL	@USE.A(AP),USE.$D2+4
+	MOVL	#4,USE.$D2+20
+	MOVL	#1,USE.$D2+24
+	MOVL	USE.$B1+28,USE.$D2+28
+	SUBL3	#4,USE.$D2+4,USE.$D2+16
+	MULL3	#4,USE.$B1+20,USE.$D2+12
+	PUSHAQ	USE.$D2
+	PUSHAQ	USE.$G2
+	CALLS	#2,USE.DOUBLE
+	SUBL3	#1,USE.$G2+24,USE.$T2
+	SUBL3	USE.$G2+24,USE.$G2+28,R0
+	ADDL3	R0,#1,USE.$T1
+	BLSS	USE.$22
+	BRW	USE.$21
+USE.$22:
+	CLRL	USE.$T1
+USE.$21:
+	MOVL	USE.$T1,USE.$C3		; array (line 27), dimension 1's count
+	MOVL	#1,USE.$I2
+	TSTL	USE.$C3
+	BGTR	USE.$24
+	BRW	USE.$23
+USE.$24:
+USE.$25:				; array (line 27), dimension 1's body
+	MOVL	USE.$G2+16,R0
+	ADDL3	USE.$I2,USE.$T2,R1
+	MOVAL	(R0)[R1],USE.$D3+4
+	PUSHAQ	USE.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	INCL	USE.$I2
+	DECL	USE.$C3			; one pass fewer
+	BLEQ	USE.$26
+	BRW	USE.$25
+USE.$26:
+USE.$23:
+	CALLS	#0,G^FTN$IO_END
+	TSTL	USE.$G1+4
+	BNEQ	USE.$28
+	BRW	USE.$27
+USE.$28:
+	PUSHL	#0
+	PUSHAQ	USE.$G1
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$27:
+	TSTL	USE.$G2+4
+	BNEQ	USE.$30
+	BRW	USE.$29
+USE.$30:
+	PUSHL	#0
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$29:
+;   28        CALL TAKE(RAMP(2), *10)
+	TSTL	USE.$G2+4
+	BNEQ	USE.$32
+	BRW	USE.$31
+USE.$32:
+	PUSHL	#0
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$31:
+	PUSHAL	USE.$K1
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^RAMP
+	PUSHL	USE.$G2+4
+	CALLS	#1,G^TAKE
+	MOVL	R0,USE.$T1
+	TSTL	USE.$G2+4
+	BNEQ	USE.$34
+	BRW	USE.$33
+USE.$34:
+	PUSHL	#0
+	PUSHAQ	USE.$G2
+	CALLS	#2,G^FTN$DEALLOCATE
+USE.$33:
+	CASEL	USE.$T1,#1,#0
+USE.$35:
+	.WORD	USE.L10-USE.$35
+;   29     10 CONTINUE
+USE.L10:
+;   30        CONTAINS
+	RET
+
+; Storage map for USE.DOUBLE, a REAL function
+;   $VALUE  REAL (?)  hidden argument 1  @USE.DOUBLE.$VALUE(AP)
+;   V       REAL (:)  argument 2         @USE.DOUBLE.V(AP)
+;   DOUBLE  REAL (?)  $LOCAL+0           USE.DOUBLE.DOUBLE
+;
+USE.DOUBLE.$VALUE = 4			; $VALUE's value goes through hidden argument 1
+USE.DOUBLE.V = 8			; V is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+USE.DOUBLE.DOUBLE:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; DOUBLE: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+USE.DOUBLE.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; V's bounds: set at each entry point
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USE.DOUBLE.$T1:
+	.BLKL	1			; temporary
+USE.DOUBLE.$I1:
+	.BLKL	1			; an array statement's loop index
+USE.DOUBLE.$T2:
+	.BLKL	1			; temporary
+USE.DOUBLE.$C1:
+	.BLKL	1			; array (line 33), dimension 1's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+USE.DOUBLE.$F1:
+	.LONG	^X00004100		; 2.0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   31          FUNCTION DOUBLE(V)
+USE.DOUBLE:
+	.WORD	^M<R2>			; internal procedure DOUBLE of USE
+	MOVL	USE.DOUBLE.V(AP),R0
+	MOVL	4(R0),USE.DOUBLE.$B1+4
+	MOVL	USE.DOUBLE.V(AP),R0
+	CMPB	3(R0),#4
+	BNEQ	USE.DOUBLE.$2
+	BRW	USE.DOUBLE.$1
+USE.DOUBLE.$2:
+	MOVL	USE.DOUBLE.V(AP),R0
+	MOVL	20(R0),USE.DOUBLE.$B1+20
+	MOVL	USE.DOUBLE.V(AP),R0
+	MOVL	USE.DOUBLE.V(AP),R1
+	SUBL3	24(R1),28(R0),R0
+	ADDL3	R0,#1,USE.DOUBLE.$T1
+	BRW	USE.DOUBLE.$3
+USE.DOUBLE.$1:
+	MOVL	#4,USE.DOUBLE.$B1+20
+	MOVL	USE.DOUBLE.V(AP),R0
+	MOVL	20(R0),USE.DOUBLE.$T1
+USE.DOUBLE.$3:
+	MOVL	#1,USE.DOUBLE.$B1+24
+	TSTL	USE.DOUBLE.$T1
+	BLSS	USE.DOUBLE.$5
+	BRW	USE.DOUBLE.$4
+USE.DOUBLE.$5:
+	CLRL	USE.DOUBLE.$T1
+USE.DOUBLE.$4:
+	MOVL	USE.DOUBLE.$T1,USE.DOUBLE.$B1+28
+	SUBL3	USE.DOUBLE.$B1+20,USE.DOUBLE.$B1+4,USE.DOUBLE.$B1+16
+	MULL3	#4,USE.DOUBLE.$B1+28,USE.DOUBLE.$B1+12
+	MOVL	USE.DOUBLE.$B1+28,USE.DOUBLE.$T1
+	BLSS	USE.DOUBLE.$7
+	BRW	USE.DOUBLE.$6
+USE.DOUBLE.$7:
+	CLRL	USE.DOUBLE.$T1
+USE.DOUBLE.$6:
+	MOVL	USE.DOUBLE.$T1,USE.DOUBLE.$T2
+	MOVL	USE.DOUBLE.$T2,USE.DOUBLE.DOUBLE+28
+	MOVL	USE.DOUBLE.DOUBLE+28,USE.DOUBLE.DOUBLE+20
+	BLSS	USE.DOUBLE.$9
+	BRW	USE.DOUBLE.$8
+USE.DOUBLE.$9:
+	CLRL	USE.DOUBLE.DOUBLE+20
+USE.DOUBLE.$8:
+	MULL3	#4,USE.DOUBLE.DOUBLE+20,USE.DOUBLE.DOUBLE+12
+	PUSHAQ	USE.DOUBLE.DOUBLE
+	CALLS	#1,G^FTN$GET_TEMP
+	MOVL	USE.DOUBLE.DOUBLE+4,R0
+	MOVAL	-4(R0),USE.DOUBLE.DOUBLE+16
+	MOVL	#168427524,@USE.DOUBLE.$VALUE(AP)
+	MOVL	#2,R0
+	MOVL	#16777216,@USE.DOUBLE.$VALUE(AP)[R0]
+	MOVL	#1,R0
+	MOVL	USE.DOUBLE.DOUBLE+4,@USE.DOUBLE.$VALUE(AP)[R0]
+	MOVL	#3,R0
+	MOVL	USE.DOUBLE.DOUBLE+12,@USE.DOUBLE.$VALUE(AP)[R0]
+	MOVL	#4,R0
+	MOVL	USE.DOUBLE.DOUBLE+16,@USE.DOUBLE.$VALUE(AP)[R0]
+	MOVL	#5,R0
+	MOVL	#4,@USE.DOUBLE.$VALUE(AP)[R0]
+	MOVL	#6,R0
+	MOVL	#1,@USE.DOUBLE.$VALUE(AP)[R0]
+	MOVL	#7,R0
+	MOVL	USE.DOUBLE.DOUBLE+20,@USE.DOUBLE.$VALUE(AP)[R0]
+;   32          REAL V(:), DOUBLE(SIZE(V))
+;   33          DOUBLE = 2.0 * V
+	MOVL	USE.DOUBLE.DOUBLE+20,USE.DOUBLE.$T2
+	BLSS	USE.DOUBLE.$11
+	BRW	USE.DOUBLE.$10
+USE.DOUBLE.$11:
+	CLRL	USE.DOUBLE.$T2
+USE.DOUBLE.$10:
+	MOVL	USE.DOUBLE.$T2,USE.DOUBLE.$C1 ; array (line 33), dimension 1's count
+	MOVL	#1,USE.DOUBLE.$I1
+	TSTL	USE.DOUBLE.$C1
+	BGTR	USE.DOUBLE.$13
+	BRW	USE.DOUBLE.$12
+USE.DOUBLE.$13:
+USE.DOUBLE.$14:				; array (line 33), dimension 1's body
+	MULL3	USE.DOUBLE.$I1,USE.DOUBLE.$B1+20,R0
+	ADDL2	USE.DOUBLE.$B1+16,R0
+	MOVL	USE.DOUBLE.DOUBLE+16,R1
+	MOVL	USE.DOUBLE.$I1,R2
+	MULF3	USE.DOUBLE.$F1,(R0),(R1)[R2]
+	INCL	USE.DOUBLE.$I1
+	DECL	USE.DOUBLE.$C1		; one pass fewer
+	BLEQ	USE.DOUBLE.$15
+	BRW	USE.DOUBLE.$14
+USE.DOUBLE.$15:
+USE.DOUBLE.$12:
+;   34          END FUNCTION
+	RET
+
+; Storage map for TRI, a RECURSIVE INTEGER function
+;   $VALUE  INTEGER (?)  hidden argument 1  @TRI.$VALUE(AP)
+;   N       INTEGER      argument 2         @TRI.N(AP)
+;   R       INTEGER (?)  FP-88              TRI.R(FP)
+;   $G      INTEGER (:)  FP-48              TRI.$G1(FP)
+;
+TRI.$VALUE = 4				; $VALUE's value goes through hidden argument 1
+TRI.N = 8				; N is argument 2
+TRI.R = -88				; R's value, INTEGER (?), made on the heap at entry: its descriptor, in the frame
+TRI.$I1 = -56				; an array statement's loop index, in the frame
+TRI.$T1 = -52				; temporary, in the frame
+TRI.$G1 = -48				; a function's value of run-time shape, for one statement: its descriptor, in the frame
+TRI.$T2 = -16				; temporary, in the frame
+TRI.$T3 = -12				; temporary, in the frame
+TRI.$T4 = -8				; temporary, in the frame
+TRI.$C1 = -4				; array (line 40), dimension 1's count, in the frame
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   35        END SUBROUTINE
+;   36        OPTIONS /F90
+;   37        RECURSIVE FUNCTION TRI(N) RESULT(R)
+	.ENTRY	TRI,^M<R2,R3>
+	SUBL2	#88,SP			; this activation's own storage
+	MOVL	#67633156,TRI.R(FP)	; the descriptor's length, 4, type, and class
+	MOVL	#31457280,TRI.R+8(FP)	; its flags and dimensions
+	CLRL	TRI.R+12(FP)		; the array's size in bytes
+	CLRL	TRI.R+20(FP)		; dimension 1's multiplier
+	MOVL	#1,TRI.R+24(FP)		; dimension 1's lower bound
+	CLRL	TRI.R+28(FP)		; dimension 1's upper bound
+	MOVL	@TRI.N(AP),TRI.R+28(FP)
+	MOVL	TRI.R+28(FP),TRI.R+20(FP)
+	BLSS	TRI.$2
+	BRW	TRI.$1
+TRI.$2:
+	CLRL	TRI.R+20(FP)		; dimension 1's multiplier
+TRI.$1:
+	MULL3	#4,TRI.R+20(FP),TRI.R+12(FP)
+	PUSHAQ	TRI.R(FP)
+	CALLS	#1,G^FTN$GET_TEMP
+	MOVL	TRI.R+4(FP),R0
+	MOVAL	-4(R0),TRI.R+16(FP)
+	MOVL	#168296452,@TRI.$VALUE(AP)
+	MOVL	#2,R0
+	MOVL	#16777216,@TRI.$VALUE(AP)[R0]
+	MOVL	#1,R0
+	MOVL	TRI.R+4(FP),@TRI.$VALUE(AP)[R0]
+	MOVL	#3,R0
+	MOVL	TRI.R+12(FP),@TRI.$VALUE(AP)[R0]
+	MOVL	#4,R0
+	MOVL	TRI.R+16(FP),@TRI.$VALUE(AP)[R0]
+	MOVL	#5,R0
+	MOVL	#4,@TRI.$VALUE(AP)[R0]
+	MOVL	#6,R0
+	MOVL	#1,@TRI.$VALUE(AP)[R0]
+	MOVL	#7,R0
+	MOVL	TRI.R+20(FP),@TRI.$VALUE(AP)[R0]
+	CLRL	TRI.$G1+4(FP)		; no string yet
+;   38        INTEGER N, R(N)
+;   39        R(N) = N
+	MOVL	TRI.R+16(FP),R0
+	MOVL	@TRI.N(AP),R1
+	MOVL	@TRI.N(AP),(R0)[R1]
+;   40        IF (N > 1) R(1:N - 1) = TRI(N - 1)
+	CMPL	@TRI.N(AP),#1
+	BGTR	TRI.$4
+	BRW	TRI.$3
+TRI.$4:
+	SUBL3	#1,@TRI.N(AP),TRI.$T1(FP)
+	TSTL	TRI.$G1+4(FP)
+	BNEQ	TRI.$6
+	BRW	TRI.$5
+TRI.$6:
+	PUSHL	#0
+	PUSHAQ	TRI.$G1(FP)
+	CALLS	#2,G^FTN$DEALLOCATE
+TRI.$5:
+	SUBL3	#1,@TRI.N(AP),TRI.$T2(FP)
+	PUSHAL	TRI.$T2(FP)
+	PUSHAQ	TRI.$G1(FP)
+	CALLS	#2,G^TRI
+	SUBL3	#1,TRI.$G1+24(FP),TRI.$T3(FP)
+	MOVL	TRI.$T1(FP),TRI.$T4(FP)
+	BLSS	TRI.$8
+	BRW	TRI.$7
+TRI.$8:
+	CLRL	TRI.$T4(FP)
+TRI.$7:
+	MOVL	TRI.$T4(FP),TRI.$C1(FP)	; array (line 40), dimension 1's count
+	MOVL	#1,TRI.$I1(FP)
+	TSTL	TRI.$C1(FP)
+	BGTR	TRI.$10
+	BRW	TRI.$9
+TRI.$10:
+TRI.$11:				; array (line 40), dimension 1's body
+	MOVL	TRI.$G1+16(FP),R0
+	ADDL3	TRI.$I1(FP),TRI.$T3(FP),R1
+	MOVL	TRI.R+16(FP),R2
+	MOVL	TRI.$I1(FP),R3
+	MOVL	(R0)[R1],(R2)[R3]
+	INCL	TRI.$I1(FP)
+	DECL	TRI.$C1(FP)		; one pass fewer
+	BLEQ	TRI.$12
+	BRW	TRI.$11
+TRI.$12:
+TRI.$9:
+	TSTL	TRI.$G1+4(FP)
+	BNEQ	TRI.$14
+	BRW	TRI.$13
+TRI.$14:
+	PUSHL	#0
+	PUSHAQ	TRI.$G1(FP)
+	CALLS	#2,G^FTN$DEALLOCATE
+TRI.$13:
+TRI.$3:
+;   41        END FUNCTION
+	RET
+
+	.END

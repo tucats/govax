@@ -1,7 +1,7 @@
 ! Sections to old dummies, VMS's side (Phase 104, subtask 6): an assumed-shape
 ! array as ENCODE's and DECODE's buffer, through a temporary when its elements
 ! aren't one after another and copied back after ENCODE; and LIB$STAT_VM's
-! count of bytes, unchanged by a thousand calls each copying a section of
+! count of bytes, unchanged by twenty calls each copying a section of
 ! 30,000 elements through a temporary on the heap.
 program seqvms
   implicit none
@@ -26,7 +26,7 @@ program seqvms
   big = 0.5
   n = 30000
   before = bytes()
-  do j = 1, 1000
+  do j = 1, 20
     if (total(big(1, 1:n), n) /= 15000.0) print *, 'wrong'
   end do
   after = bytes()

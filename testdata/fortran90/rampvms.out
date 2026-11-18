@@ -1,0 +1,5 @@
+total:   125250.  599
+line:    21.   28.   36.    0.    1.
+big:      20000.
+heap given back: T
+  $STATUS == "%X00000001"

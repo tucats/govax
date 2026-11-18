@@ -57,12 +57,16 @@ const ftnGetTemp = "FTN$GET_TEMP"
 // runtimeTemps is what the statement being lowered must give back at its end:
 // its run-time temporaries' descriptors, where SP was before the first, and the
 // statements that free the dynamic strings of values computed once before an
-// array statement's loops (hoistText).
+// array statement's loops (hoistText); and the values of array-valued
+// functions of run-time shape it has called, by reference, with their
+// descriptors' cells (lowervalue.go).
 type runtimeTemps struct {
-	cells []*Cell
-	syms  []*sema.Symbol
-	mark  *Mem
-	after []Stmt
+	cells      []*Cell
+	syms       []*sema.Symbol
+	mark       *Mem
+	after      []Stmt
+	values     map[*sema.FuncRef]*sema.ArrayRef
+	valueCells []*Cell
 }
 
 // runtimeTemp is an array temporary of type t for the statement being lowered,
@@ -167,8 +171,8 @@ func (l *lowerer) runtimeTemp(t sema.Type, extents []Expr, length Expr) *sema.Ar
 }
 
 // endTemps gives back what the statement's run-time temporaries took, at its
-// end: the dynamic strings of values computed once, each heap block, then the
-// stack. It must be lowered where control passes once at the statement's end.
+// end: the dynamic strings of values computed once, each heap block, the
+// functions' values, then the stack. It must be lowered where control passes once at the statement's end.
 func (l *lowerer) endTemps() {
 	temps := l.runtime
 	l.runtime = runtimeTemps{}
@@ -191,6 +195,10 @@ func (l *lowerer) endTemps() {
 		l.begin(next)
 	}
 
+	for _, c := range temps.valueCells {
+		l.freeValue(c)
+	}
+
 	if temps.mark != nil {
 		l.emit(&StackRelease{origin: l.origin(), To: &Load{temps.mark}})
 	}
@@ -198,12 +206,16 @@ func (l *lowerer) endTemps() {
 	for _, sym := range temps.syms {
 		delete(l.adjustable, sym)
 	}
+
+	for _, ref := range temps.values {
+		delete(l.adjustable, ref.Sym)
+	}
 }
 
 // pendingTemps reports whether the statement being lowered has something for
 // endTemps to give back.
 func (l *lowerer) pendingTemps() bool {
-	return l.runtime.mark != nil || len(l.runtime.after) > 0
+	return l.runtime.mark != nil || len(l.runtime.after) > 0 || len(l.runtime.valueCells) > 0
 }
 
 // stmtCond is cond for a statement's own branch (an IF's, a DO WHILE's): if the

@@ -42,8 +42,11 @@ type lowerer struct {
 	reachedParams map[*Param]bool
 
 	// hidden is 1 for a function whose value goes through a hidden first
-	// argument, else 0.
-	hidden int
+	// argument, else 0. valueParam is that argument when it is the class NCA
+	// descriptor of a value whose bounds are known only when the program runs,
+	// which the function fills in (lowervalue.go).
+	hidden     int
+	valueParam *Param
 
 	// cells and params are the routine's places for the unit's
 	// symbols.
@@ -100,6 +103,14 @@ type lowerer struct {
 	freeRuntime map[string][]*Cell
 	runtimes    int
 	runtime     runtimeTemps
+
+	// freeValues are the descriptor cells of array-valued functions' values of
+	// run-time shape not in use, by their descriptors' form, values how many the
+	// routine has, and entryValues those in the frame, which the main entry
+	// point must clear (lowervalue.go).
+	freeValues  map[string][]*Cell
+	values      int
+	entryValues entryFill
 
 	// after are statements to be done at the end of the statement being
 	// lowered, before its block's terminator if it has one: the freeing
@@ -169,6 +180,7 @@ func newLowerer(u *sema.Unit, host *lowerer) *lowerer {
 		freeText:    map[int][]*Cell{},
 		freeArray:   map[arrayTempKey][]*Cell{},
 		freeRuntime: map[string][]*Cell{},
+		freeValues:  map[string][]*Cell{},
 		data:        map[string]*Datum{},
 	}
 }
@@ -193,7 +205,12 @@ func (l *lowerer) prepare() {
 			l.hidden = 1
 			p := &Param{Name: u.Result.Name, Index: 1, T: l.typeOf(u.Result.Type), Sym: u.Result}
 			r.Params = append(r.Params, p)
-			l.params[u.Result] = p
+
+			if u.Result.AutomaticObject {
+				l.valueCell(p)
+			} else {
+				l.params[u.Result] = p
+			}
 		} else {
 			r.Result = l.typeOf(u.Result.Type)
 		}
@@ -267,7 +284,9 @@ func (l *lowerer) lowerBody() *Routine {
 	l.begin(l.newBlock())
 	l.computeBounds(u.Params)
 	l.clearAllocatables()
+	l.entryValues = entryFill{block: l.cur, at: len(l.cur.Stmts)}
 	l.stmts(u.Body)
+	l.fillEntryValues()
 
 	// The order of the work: the entry points' and adjustable arrays'
 	// preparation, then the first block, the code computing the main entry's
@@ -605,6 +624,10 @@ func (l *lowerer) release() {
 
 	for _, c := range l.busy {
 		switch {
+		case isValueCell(c):
+			key := descriptorKey(c.Desc)
+			l.freeValues[key] = append(l.freeValues[key], c)
+			continue
 		case c.Kind == DescriptorCell && c.Sym != nil && c.Sym.AutomaticObject:
 			key := descriptorKey(c.Desc)
 			l.freeRuntime[key] = append(l.freeRuntime[key], c)
