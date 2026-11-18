@@ -65,6 +65,14 @@ func (a *analyzer) recursiveStorage() {
 			continue
 		}
 
+		// An automatic array's descriptor is the activation's own, whatever a
+		// SAVE with no list says (a SAVE naming it is AUTOATTR).
+		if s.AutomaticObject {
+			s.Automatic = true
+
+			continue
+		}
+
 		if s.group == nil {
 			s.Automatic = !static(s)
 
@@ -338,8 +346,9 @@ func (a *analyzer) layout() {
 
 		align := s.Type.Align()
 
-		// An allocatable array's place is its descriptor, of longwords.
-		if s.Allocatable {
+		// An allocatable or automatic array's place is its descriptor, of
+		// longwords.
+		if s.Allocatable || s.AutomaticObject {
 			align = 4
 		}
 

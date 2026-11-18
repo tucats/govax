@@ -59,9 +59,13 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		// the table, as they would the storage map. An allocatable array's
 		// cell is its class NCA descriptor, which the debugger doesn't read
 		// yet (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md,
-		// subtask 9): left out until it does, rather than shown as elements.
+		// subtask 9): left out until it does, rather than shown as elements. An
+		// automatic array's cell is its class A descriptor, which the debugger
+		// would read as an adjustable dummy's, but the table has no form for
+		// elements reached through a descriptor that is the variable's own:
+		// subtask 9's too.
 		switch {
-		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Allocatable:
+		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Allocatable || c.Sym.AutomaticObject:
 
 		case c.Register != 0:
 			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.InRegister, N: c.Register}).Line())

@@ -83,10 +83,11 @@ const (
 	// RegisterRegion is a register cell, Place.Cell, which is no memory at all.
 	RegisterRegion
 
-	// AllocatedRegion is the elements of the allocatable array whose
-	// descriptor is Place.Cell (docs/planning/PHASE-104 - Fortran 90 dynamic
-	// arrays.md): memory FTNRTL took for it, which nothing reaches but through
-	// that descriptor or an address a call was given. Any call may change it, as
+	// AllocatedRegion is the elements of the allocatable or automatic array
+	// whose descriptor is Place.Cell (docs/planning/PHASE-104 - Fortran 90
+	// dynamic arrays.md): memory FTNRTL took for it, or the stack below the
+	// frame, which nothing reaches but through that descriptor or an address a
+	// call was given. Any call may change it, as
 	// it may a dummy's (ChangedByCall).
 	AllocatedRegion
 
@@ -293,15 +294,16 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 	return whole
 }
 
-// allocatedBase is the allocatable array's descriptor cell an element's address e
-// is computed from: its A0, or its POINTER, plus whatever else (ir/lowerallocate.go);
-// nil if e isn't such an address.
+// allocatedBase is the allocatable or automatic array's descriptor cell an element's
+// address e is computed from: its A0, or its POINTER, plus whatever else
+// (ir/lowerallocate.go, ir/lowerautomatic.go); nil if e isn't such an address.
 func allocatedBase(e ir.Expr) *ir.Cell {
 	switch e := e.(type) {
 	case *ir.Load:
 		m := e.Mem
 		if c := m.Cell; c != nil && m.Index == nil && c.Kind == ir.DescriptorCell && c.Sym != nil &&
-			c.Desc != nil && c.Desc.Class == ir.ClassNCA && (m.Offset == ir.A0Offset || m.Offset == ir.PointerOffset) {
+			c.Desc != nil && (c.Desc.Class == ir.ClassNCA || c.Sym.AutomaticObject) &&
+			(m.Offset == ir.A0Offset || m.Offset == ir.PointerOffset) {
 			return c
 		}
 

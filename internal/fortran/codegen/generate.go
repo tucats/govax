@@ -964,6 +964,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 			return c.Dummy + "'s descriptor, filled in at each entry point"
 		}
 
+		if c.Sym != nil && c.Sym.AutomaticObject {
+			return c.Sym.Name + ", " + typeText(c.Sym) + ", automatic: its descriptor"
+		}
+
 		if c.Sym != nil {
 			return c.Sym.Name + ", " + typeText(c.Sym) + ", allocatable: its descriptor"
 		}

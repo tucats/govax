@@ -133,9 +133,10 @@ func (l *lowerer) maskedAssign(s *sema.Assign, mask *whereMask) {
 
 // arrayTemp is an array temporary of type t and the extents shape, for the
 // statement being lowered, as a whole array: a cell another statement used
-// and gave back, or a new one ($An).
+// and gave back, or a new one ($Wn: a work array; $An is a dummy's address,
+// lowerentry.go).
 func (l *lowerer) arrayTemp(t sema.Type, shape []int) *sema.ArrayRef {
-	sym := sema.NewArray("$A", t, shape)
+	sym := sema.NewArray("$W", t, shape)
 	size := sym.Size()
 	key := arrayTempKey{l.typeOf(t), size}
 
@@ -146,7 +147,7 @@ func (l *lowerer) arrayTemp(t sema.Type, shape []int) *sema.ArrayRef {
 		l.freeArray[key] = free[:len(free)-1]
 	} else {
 		l.arrays++
-		c = l.newCell("$A"+strconv.Itoa(l.arrays), ArrayTempCell, key.t, size)
+		c = l.newCell("$W"+strconv.Itoa(l.arrays), ArrayTempCell, key.t, size)
 	}
 
 	l.busy = append(l.busy, c)
@@ -213,10 +214,14 @@ func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder, mas
 
 // newNest is a nest of rank loops, each with its index, run as order says.
 func (l *lowerer) newNest(rank int, order *sema.ArrayOrder) *arrayNest {
-	n := &arrayNest{
-		l: l, name: "array (line " + strconv.Itoa(l.from.Position().Line) + ")",
-		leaves: map[sema.Expr]*arrayLeaf{}, order: order,
+	// A bound's inquiry (an automatic array's SIZE(A)) is lowered at an entry
+	// point, before any statement.
+	name := "array (at entry)"
+	if l.from != nil {
+		name = "array (line " + strconv.Itoa(l.from.Position().Line) + ")"
 	}
+
+	n := &arrayNest{l: l, name: name, leaves: map[sema.Expr]*arrayLeaf{}, order: order}
 
 	for range rank {
 		sym := sema.NewSymbol("$I", sema.IntegerType)

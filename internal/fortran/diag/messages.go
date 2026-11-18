@@ -585,6 +585,13 @@ var messages = map[string]kind{
 	// a dummy argument: only those can be adjustable.
 	"ADJNOTDUMMY": {Error, "the bounds of %s must be constants: only a dummy argument can be an adjustable array"},
 
+	// AUTOATTR is an automatic array (a subprogram's own array whose bounds
+	// aren't constants, docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md,
+	// finding 7) in COMMON, EQUIVALENCE, DATA, NAMELIST, SAVE, or STATIC: its
+	// storage is made at each entry, so none of those can hold it (the Fortran
+	// 90 standard's 5.1.2.4.1 and 5.2.4).
+	"AUTOATTR": {Error, "%s is an automatic array, whose bounds aren't constants, so it can't %s"},
+
 	// BOUNDVAR is a name in an adjustable array's bound that isn't a
 	// dummy argument or in a common block.
 	"BOUNDVAR": {Error, "%s can't be used in an array's bounds: it isn't a dummy argument or in a common block"},

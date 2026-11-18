@@ -1098,7 +1098,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   stopping at its first), and a subprogram's unsaved allocatables deallocated
   at every return and marked unallocated at every entry
   (`Symbol.FreedAtReturn`; `ir`'s `freeAllocatables`, `clearAllocatables`;
-  `testdata/fortran90/allocstat.f90`, `allocvms.f90`).
+  `testdata/fortran90/allocstat.f90`, `allocvms.f90`); subtask 4a (2026-11-18)
+  is automatic arrays (`Symbol.AutomaticObject`, its storage a class A
+  descriptor; `sema/arrays.go`'s `boundFunction`, SIZE/LBOUND/UBOUND/LEN and
+  integer elementals in bounds; the IR's `StackAllocate` and `StackRelease`;
+  `ir/lowerautomatic.go`; array temporaries renamed `$Wn`;
+  `testdata/fortran90/autos.f90`); 4b (automatic CHARACTER lengths) and 4c
+  (the scalarizer's run-time temporaries) are next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -287,6 +287,13 @@ func (s *Storage) StmtEffects(st ir.Stmt) Effects {
 		if st.Result != nil {
 			c.write(st.Result)
 		}
+
+	case *ir.StackAllocate:
+		c.write(st.Dst)
+		c.expr(st.Size)
+
+	case *ir.StackRelease:
+		c.expr(st.To)
 	}
 
 	return c.e

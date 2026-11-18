@@ -7,13 +7,13 @@ routine F90WHR main
   cell  $C2     L  $LOCAL+92   array (line 9), dimension 1's count
   cell  $I2     L  $LOCAL+96   an array statement's index
   cell  $C3     L  $LOCAL+100  array (line 11), dimension 1's count
-  cell  $A1     L  $LOCAL+104  an array temporary, 40 bytes
+  cell  $W1     L  $LOCAL+104  an array temporary, 40 bytes
   cell  $C4     L  $LOCAL+144  array (line 13), dimension 1's count
   cell  $C5     L  $LOCAL+148  array (line 14), dimension 1's count
   cell  $I3     L  $LOCAL+152  an array statement's index
   cell  $C6     L  $LOCAL+156  array (line 15), dimension 1's count
   cell  $C7     L  $LOCAL+160  array (line 17), dimension 1's count
-  cell  $A2     F  $LOCAL+164  an array temporary, 40 bytes
+  cell  $W2     F  $LOCAL+164  an array temporary, 40 bytes
   cell  $C8     L  $LOCAL+204  array (line 18), dimension 1's count
   cell  $C9     L  $LOCAL+208  array (line 18), dimension 1's count
   $LOCAL is 212 bytes
@@ -66,7 +66,7 @@ B13:
   assign $I2 = 1
   jump B14
 B14:  ; array (line 13), dimension 1's body
-  assign $A1-4[$I2] = gt.F(A-4[$I2], 0.0)
+  assign $W1-4[$I2] = gt.F(A-4[$I2], 0.0)
   assign $I2 = add.L($I2, 1)
   assign $C4 = sub.L($C4, 1)
   branch gt.L($C4, 0) B14 B15
@@ -76,7 +76,7 @@ B15:
   assign $I1 = 1
   jump B16
 B16:  ; array (line 14), dimension 1's body
-  branch $A1-4[$I1] B17 B18
+  branch $W1-4[$I1] B17 B18
 B17:
   assign A-4[$I1] = neg.F(A-4[$I1])
   jump B18
@@ -90,7 +90,7 @@ B19:
   assign $I3 = 1
   jump B20
 B20:  ; array (line 15), dimension 1's body
-  branch $A1-4[$I3] B21 B22
+  branch $W1-4[$I3] B21 B22
 B21:
   assign B-4[$I3] = 1.0
   jump B22
@@ -120,7 +120,7 @@ B27:
 B28:  ; array (line 18), dimension 1's body
   branch gt.F(B-4[$I3], 0.0) B29 B30
 B29:
-  assign $A2-4[$I3] = A+40[mul.L($I3, -1)]
+  assign $W2-4[$I3] = A+40[mul.L($I3, -1)]
   jump B30
 B30:
   assign $I3 = add.L($I3, 1)
@@ -133,7 +133,7 @@ B31:
 B32:  ; array (line 18), dimension 1's body
   branch gt.F(B-4[$I1], 0.0) B33 B34
 B33:
-  assign A-4[$I1] = $A2-4[$I1]
+  assign A-4[$I1] = $W2-4[$I1]
   jump B34
 B34:
   assign $I1 = add.L($I1, 1)

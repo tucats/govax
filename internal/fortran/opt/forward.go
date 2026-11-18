@@ -262,6 +262,12 @@ func (f *forwarder) rewrite(st ir.Stmt) {
 		if st.Result != nil {
 			st.Result = f.mem(st.Result)
 		}
+
+	case *ir.StackAllocate:
+		st.Dst, st.Size = f.mem(st.Dst), f.expr(st.Size)
+
+	case *ir.StackRelease:
+		st.To = f.expr(st.To)
 	}
 }
 
@@ -296,6 +302,9 @@ func (f *forwarder) stmt(st ir.Stmt) {
 		if st.Result != nil {
 			f.kill(f.s.Place(f.mem(st.Result)))
 		}
+
+	case *ir.StackAllocate:
+		f.kill(f.s.Place(f.mem(st.Dst)))
 	}
 }
 

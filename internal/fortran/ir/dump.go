@@ -348,6 +348,12 @@ func StmtText(s Stmt) string {
 		}
 
 		return text
+
+	case *StackAllocate:
+		return "stack " + MemText(s.Dst) + " = " + ExprText(s.Size) + " bytes"
+
+	case *StackRelease:
+		return "stack release to " + ExprText(s.To)
 	}
 
 	return fmt.Sprintf("%T", s)

@@ -3467,7 +3467,7 @@ SHIFT.$5:				; array (line 3), dimension 1's body
 
 ### Temporaries
 
-When the overlap test answers "unknown", `arrayTemp` makes an array cell (`ArrayTempCell`, `$An`)
+When the overlap test answers "unknown", `arrayTemp` makes an array cell (`ArrayTempCell`, `$Wn`, a work array)
 of the assignment's shape, and the statement becomes two nests: the value into the temporary,
 then the temporary into the target. Each nest is an ordinary one, with its own `/CHECK` checks.
 `A(10:1:-1) = A(1:10)` is:

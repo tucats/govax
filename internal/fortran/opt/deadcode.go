@@ -610,6 +610,11 @@ func walkMems(r *ir.Routine, visit func(*ir.Mem)) {
 				if st.Result != nil {
 					mem(st.Result)
 				}
+			case *ir.StackAllocate:
+				mem(st.Dst)
+				expr(st.Size)
+			case *ir.StackRelease:
+				expr(st.To)
 			}
 		}
 

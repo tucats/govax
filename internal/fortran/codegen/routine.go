@@ -315,6 +315,10 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 			g.charMove(s)
 		case *ir.Call:
 			g.call(s)
+		case *ir.StackAllocate:
+			g.stackAllocate(s)
+		case *ir.StackRelease:
+			g.stackRelease(s)
 		}
 
 		g.endStatement()
@@ -424,6 +428,35 @@ func (g *routineGen) assign(s *ir.Assign) {
 	}
 
 	g.store(s.Src, s.Dst)
+}
+
+// stackAllocate takes storage from the stack below the frame, SP moved down by
+// the size and back to a longword, and stores its address:
+//
+//	SUBL2   SUB.W+12,SP          storage known only now
+//	BICL2   #3,SP
+//	MOVL    SP,SUB.W+4
+//
+// CALLS and RET don't mind where SP is, and RET puts it back where the caller
+// left it, so a routine's return gives the storage back by itself.
+func (g *routineGen) stackAllocate(s *ir.StackAllocate) {
+	v := g.eval(g.fit(s.Size))
+	g.note = "storage of a size known only now"
+	g.emit("SUBL2", ir.None, v.text, "SP")
+	g.free(v)
+	g.emit("BICL2", ir.None, "#3", "SP")
+
+	d := g.mem(g.fitMem(s.Dst))
+	g.emit("MOVL", ir.Long, "SP", d.text)
+	g.free(d)
+}
+
+// stackRelease gives back the stack storage taken since SP was To's value.
+func (g *routineGen) stackRelease(s *ir.StackRelease) {
+	v := g.eval(g.fit(s.To))
+	g.note = "the statement's storage given back"
+	g.emit("MOVL", ir.None, v.text, "SP")
+	g.free(v)
 }
 
 // call writes a CALLS: each argument pushed, from the last to the first

@@ -18,7 +18,7 @@ routine F90RED main
   cell  $T3     L  $LOCAL+216  temporary
   cell  $C5     L  $LOCAL+220  array (line 11), dimension 2's count
   cell  $C6     L  $LOCAL+224  array (line 11), dimension 1's count
-  cell  $A1     L  $LOCAL+228  an array temporary, 8 bytes
+  cell  $W1     L  $LOCAL+228  an array temporary, 8 bytes
   cell  $I3     L  $LOCAL+236  an array statement's index
   cell  $T4     L  $LOCAL+240  temporary
   cell  $T5     L  $LOCAL+244  temporary
@@ -138,13 +138,13 @@ B25:
   assign $C7 = sub.L($C7, 1)
   branch gt.L($C7, 0) B20 B26
 B26:
-  assign $A1 = $T4
-  assign $A1+4 = $T5
+  assign $W1 = $T4
+  assign $W1+4 = $T5
   assign $C9 = 2
   assign $I2 = 1
   jump B27
 B27:  ; array (line 12), dimension 1's body
-  assign K-4[$I2] = $A1-4[$I2]
+  assign K-4[$I2] = $W1-4[$I2]
   assign $I2 = add.L($I2, 1)
   assign $C9 = sub.L($C9, 1)
   branch gt.L($C9, 0) B27 B28

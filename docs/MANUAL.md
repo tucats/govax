@@ -8916,6 +8916,46 @@ host's return. A routine left by an unwind (a condition handler's `SYS$UNWIND`, 
 unallocated: the unwound call's memory is lost, but the next call allocates them again
 without `%FOR-F-ALREADYALLOC`.
 
+**Automatic arrays** (the standard's 5.1.2.4.1 and 7.1.6.2). A subprogram's own array may
+have bounds that aren't constants, computed each time it is entered from its dummy
+arguments, variables in common blocks, a host's variables, and the inquiry functions SIZE,
+LBOUND, UBOUND, and LEN of those, with MAX, MIN, MOD, ABS, INT, NINT, DIM, and SIGN. Its
+elements are made on the stack then and given back at the return, so each call, and each
+level of a recursion, has its own:
+
+```fortran
+program smooth3
+  real :: x(5) = (/ 1.0, 4.0, 9.0, 16.0, 25.0 /)
+  call smooth(x, 5)
+  print '(1x, 5f6.2)', x
+end program smooth3
+
+subroutine smooth(a, n)
+  integer :: n
+  real :: a(n)
+  real :: w(0:size(a) + 1)
+  w(1:n) = a
+  w(0) = a(1)
+  w(n + 1) = a(n)
+  a = (w(0:n-1) + w(1:n) + w(2:n+1)) / 3.0
+end subroutine smooth
+```
+
+prints
+
+```text
+  2.00  4.67  9.67 16.67 22.00
+```
+
+An upper bound below the lower gives a dimension no elements. The inquiry functions may
+be used in an adjustable array's bounds too (`REAL B(SIZE(A))` for a dummy `B`). An automatic array can't be in COMMON, EQUIVALENCE, DATA, or a NAMELIST group, nor
+be named by SAVE or STATIC (`AUTOATTR`); a SAVE with no list leaves it alone. Its bounds
+can't ask about another automatic or allocatable array (`BOUNDREF`), and a main program's
+arrays must still have constant bounds (`ADJNOTDUMMY`). Under ENTRY, each entry point makes
+the automatic arrays whose bounds use only its own dummy arguments. The storage is the
+user stack's (2 MB with paging off), and an array too large for it ends the program as a
+runaway recursion does, with no message.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 

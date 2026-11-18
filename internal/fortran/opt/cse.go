@@ -532,6 +532,16 @@ func (r *replacer) rewrite(b *ir.Block, first, last int) {
 					st.Result = r.mem(st.Result)
 				}
 			}
+
+		case *ir.StackAllocate:
+			st.Size = r.expr(st.Size)
+
+			if r.place != nil {
+				st.Dst = r.mem(st.Dst)
+			}
+
+		case *ir.StackRelease:
+			st.To = r.expr(st.To)
 		}
 	}
 }

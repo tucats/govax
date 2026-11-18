@@ -1,0 +1,13 @@
+row sums:   50.   90.  130.
+w and t:  3  5  0  4
+shown:       0.   50.   90.  130.  182.
+codes: 3  86  65  88
+codes: 0
+sizes:  4  2  6  28  54
+sizes:  1  0  3   7  27
+sizes:  0  0  2   0  18
+depth:  30
+pair:   2  3   4.   9.
+pair2:  3  5  18.  50.
+churned:    10000.
+  $STATUS == "%X00000001"

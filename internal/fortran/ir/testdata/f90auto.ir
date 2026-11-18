@@ -1,0 +1,227 @@
+routine AUTO subroutine
+  param A       F  argument 1
+  param N       L  argument 2
+  param C       B  argument 3
+  cell  M       L  SIZES+0    variable M
+  cell  W       L  $LOCAL+0    descriptor F A 4 (?)
+  cell  V       L  $LOCAL+32   descriptor F A 4 (?,1:2)
+  cell  X       L  $LOCAL+76   descriptor F A 4 (?)
+  cell  Y       L  $LOCAL+108  descriptor F A 4 (?)
+  cell  W2      L  $LOCAL+140  descriptor L A 4 (?)
+  cell  $B1     L  $LOCAL+172  descriptor F A 4 (?,1:3)
+  cell  $I1     L  $LOCAL+216  an array statement's index
+  cell  $I2     L  $LOCAL+220  an array statement's index
+  cell  $T1     L  $LOCAL+224  temporary
+  cell  $T2     L  $LOCAL+228  temporary
+  cell  $C1     L  $LOCAL+232  array (line 12), dimension 1's count
+  cell  $C2     L  $LOCAL+236  array (line 13), dimension 2's count
+  cell  $C3     L  $LOCAL+240  array (line 13), dimension 1's count
+  cell  $C4     L  $LOCAL+244  array (line 15), dimension 1's count
+  cell  $C5     L  $LOCAL+248  array (line 16), dimension 1's count
+  cell  $I3     L  $LOCAL+252  an array statement's index
+  cell  $T3     L  $LOCAL+256  temporary
+  cell  $T4     L  $LOCAL+260  temporary
+  cell  $I4     L  $LOCAL+264  an array statement's index
+  cell  $T5     L  $LOCAL+268  temporary
+  cell  $T6     L  $LOCAL+272  temporary
+  cell  $I5     L  $LOCAL+276  an array statement's index
+  cell  $T7     L  $LOCAL+280  temporary
+  cell  $T8     L  $LOCAL+284  temporary
+  cell  $D5     L  $LOCAL+288  descriptor F S 4
+  $LOCAL is 296 bytes
+  datum $IO1    control
+  datum $D1     descriptor L S 4 $T2
+  datum $D2     descriptor L S 4 $T4
+  datum $D3     descriptor L S 4 $T6
+  datum $D4     descriptor L S 4 $T8
+B1:
+  assign $B1+4 = addr(@A)
+  assign $B1+32 = @N
+  assign $B1+20 = $B1+32
+  assign $B1+16 = addr(@A-4[neg.L($B1+20)])
+  assign $B1+12 = mul.L(mul.L(4, $B1+20), 3)
+  ; line 5
+  assign W+28 = @N
+  assign W+20 = W+28
+  branch lt.L(W+20, 0) B2 B3
+B2:
+  assign W+20 = 0
+  jump B3
+B3:
+  assign W+12 = mul.L(4, W+20)
+  stack W+4 = W+12 bytes
+  assign W+16 = addr(@(W+4)-4)
+  assign $T1 = $B1+20
+  branch lt.L($T1, 0) B4 B5
+B4:
+  assign $T1 = 0
+  jump B5
+B5:
+  assign $T2 = $T1
+  assign V+32 = $T2
+  assign V+20 = V+32
+  branch lt.L(V+20, 0) B6 B7
+B6:
+  assign V+20 = 0
+  jump B7
+B7:
+  assign V+12 = mul.L(mul.L(4, V+20), 2)
+  stack V+4 = V+12 bytes
+  assign V+16 = addr(@(V+4)-4[neg.L(V+20)])
+  assign X+28 = zext.WL(@(arg C))
+  assign X+20 = add.L(X+28, 1)
+  branch lt.L(X+20, 0) B8 B9
+B8:
+  assign X+20 = 0
+  jump B9
+B9:
+  assign X+12 = mul.L(4, X+20)
+  stack X+4 = X+12 bytes
+  assign X+16 = addr(@(X+4))
+  assign $T2 = @N
+  branch gt.L(M, $T2) B10 B11
+B10:
+  assign $T2 = M
+  jump B11
+B11:
+  assign Y+28 = $T2
+  assign Y+20 = Y+28
+  branch lt.L(Y+20, 0) B12 B13
+B12:
+  assign Y+20 = 0
+  jump B13
+B13:
+  assign Y+12 = mul.L(4, Y+20)
+  stack Y+4 = Y+12 bytes
+  assign Y+16 = addr(@(Y+4)-4)
+  assign $T2 = $B1+20
+  branch lt.L($T2, 0) B14 B15
+B14:
+  assign $T2 = 0
+  jump B15
+B15:
+  assign $T1 = 3
+  assign W2+28 = $T1
+  assign W2+20 = W2+28
+  branch lt.L(W2+20, 0) B16 B17
+B16:
+  assign W2+20 = 0
+  jump B17
+B17:
+  assign W2+12 = mul.L(4, W2+20)
+  stack W2+4 = W2+12 bytes
+  assign W2+16 = addr(@(W2+4)-4)
+  ; line 12
+  assign $T1 = W+20
+  branch lt.L($T1, 0) B18 B19
+B18:
+  assign $T1 = 0
+  jump B19
+B19:
+  assign $C1 = $T1
+  assign $I1 = 1
+  branch le.L($C1, 0) B21 B20
+B20:  ; array (line 12), dimension 1's body
+  assign @(W+16)[$I1] = 1.0
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B20 B21
+B21:
+  ; line 13
+  assign $T1 = V+20
+  branch lt.L($T1, 0) B22 B23
+B22:
+  assign $T1 = 0
+  jump B23
+B23:
+  assign $C2 = 2
+  assign $I2 = 1
+  jump B24
+B24:  ; array (line 13), dimension 2's body
+  assign $C3 = $T1
+  assign $I1 = 1
+  branch le.L($C3, 0) B26 B25
+B25:  ; array (line 13), dimension 1's body
+  assign @(V+16)[add.L(mul.L($I2, V+20), $I1)] = 2.0
+  assign $I1 = add.L($I1, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B25 B26
+B26:
+  assign $I2 = add.L($I2, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B24 B27
+B27:
+  ; line 14
+  assign @(X+16) = 3.0
+  ; line 15
+  assign $T1 = Y+20
+  branch lt.L($T1, 0) B28 B29
+B28:
+  assign $T1 = 0
+  jump B29
+B29:
+  assign $C4 = $T1
+  assign $I2 = 1
+  branch le.L($C4, 0) B31 B30
+B30:  ; array (line 15), dimension 1's body
+  assign @(Y+16)[$I2] = 4.0
+  assign $I2 = add.L($I2, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B30 B31
+B31:
+  ; line 16
+  assign $T1 = W2+20
+  branch lt.L($T1, 0) B32 B33
+B32:
+  assign $T1 = 0
+  jump B33
+B33:
+  assign $C5 = $T1
+  assign $I2 = 1
+  branch le.L($C5, 0) B35 B34
+B34:  ; array (line 16), dimension 1's body
+  assign @(W2+16)[$I2] = 5
+  assign $I2 = add.L($I2, 1)
+  assign $C5 = sub.L($C5, 1)
+  branch gt.L($C5, 0) B34 B35
+B35:
+  ; line 17
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $T1 = W+20
+  branch lt.L($T1, 0) B36 B37
+B36:
+  assign $T1 = 0
+  jump B37
+B37:
+  assign $T2 = $T1
+  call FTN$IO_ITEM(ref $D1)
+  assign $T3 = V+20
+  branch lt.L($T3, 0) B38 B39
+B38:
+  assign $T3 = 0
+  jump B39
+B39:
+  assign $T4 = mul.L($T3, 2)
+  call FTN$IO_ITEM(ref $D2)
+  assign $T5 = X+20
+  branch lt.L($T5, 0) B40 B41
+B40:
+  assign $T5 = 0
+  jump B41
+B41:
+  assign $T6 = $T5
+  call FTN$IO_ITEM(ref $D3)
+  assign $T7 = Y+20
+  branch lt.L($T7, 0) B42 B43
+B42:
+  assign $T7 = 0
+  jump B43
+B43:
+  assign $T8 = $T7
+  call FTN$IO_ITEM(ref $D4)
+  assign $D5+4 = addr(@(W+16)+4)
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_ITEM(ref W2)
+  call FTN$IO_END()
+  ; line 18
+  return

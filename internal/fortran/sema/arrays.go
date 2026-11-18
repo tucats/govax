@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // Arrays (sections 2.2.3, 4.5, 6.1.1). An array declarator gives a name
@@ -52,9 +53,32 @@ const maxArrayBytes = 1<<31 - 1
 type adjustableArray struct {
 	sym *Symbol
 
-	// names are the names in those bounds, as they are written.
-	names []*ast.Name
+	// names are the names in those bounds, as they are written; inquired are
+	// those an inquiry function asks about (SIZE(A), LEN(S)), which may be
+	// arrays.
+	names    []*ast.Name
+	inquired map[*ast.Name]bool
 }
+
+// automaticAllowed reports whether the unit may have automatic arrays: a
+// function or subroutine may, a main program or block data subprogram may not
+// (the Fortran 90 standard's 5.1.2.4.1).
+func (a *analyzer) automaticAllowed() bool {
+	return a.unit.Kind == ast.FunctionUnit || a.unit.Kind == ast.SubroutineUnit
+}
+
+// boundInquiries are the inquiry functions a bound may use, of an array's
+// bounds or a string's length (the Fortran 90 standard's 7.1.6.2(8)); their
+// first argument may be an array. boundElementals are the elemental intrinsic
+// functions of integer arguments it may use (7.1.6.2(7)).
+var (
+	boundInquiries  = map[string]bool{"SIZE": true, "LBOUND": true, "UBOUND": true, "LEN": true}
+	boundElementals = map[string]bool{
+		"ABS": true, "IABS": true, "MAX": true, "MIN": true, "MAX0": true, "MIN0": true,
+		"MOD": true, "INT": true, "NINT": true, "IFIX": true, "IDINT": true, "IDNINT": true,
+		"DIM": true, "IDIM": true, "SIGN": true, "ISIGN": true,
+	}
+)
 
 // dimension gives sym the dimensions its array declarator d declares
 // (sections 2.2.3.1, 4.5). Whatever goes wrong with its bounds, sym is an
@@ -175,10 +199,15 @@ func (a *analyzer) bound(adj *adjustableArray, e ast.Expr) (int, ast.Expr, bool)
 	case err.kind == constFailed:
 		return 0, nil, false
 
-	case adj.sym.Dummy == 0:
+	case adj.sym.Dummy == 0 && !a.automaticAllowed():
 		a.report("ADJNOTDUMMY", e.Position(), adj.sym.Name)
 
 		return 0, nil, false
+
+	case adj.sym.Dummy == 0:
+		// A subprogram's own array: automatic (finding 7). Its checks wait
+		// until every declaration is read (checkAutomatics).
+		adj.sym.AutomaticObject = true
 	}
 
 	before := len(adj.names)
@@ -263,12 +292,65 @@ func (a *analyzer) boundOperands(adj *adjustableArray, e ast.Expr) bool {
 		return true
 
 	case *ast.Apply:
-		a.report("BOUNDREF", e.Pos, e.Name)
-
-		return false
+		return a.boundFunction(adj, e)
 	}
 
 	a.report("BADBOUND", e.Position())
+
+	return false
+}
+
+// boundFunction checks a function reference in a bound that isn't constant: an
+// intrinsic function the unit hasn't made something else, one of the inquiry
+// functions or elemental functions of integers a specification expression may use
+// (7.1.6.2). An inquiry's first argument is a name, which may be an array's.
+func (a *analyzer) boundFunction(adj *adjustableArray, e *ast.Apply) bool {
+	s := a.scope.find(e.Name)
+	free := s == nil || (s.Class == Unclassified && s.Dummy == 0 && !s.External) || s.Class == Intrinsic
+
+	switch {
+	case !free || !a.intrinsicNamed(e.Name) || len(e.Args) == 0:
+	case boundInquiries[e.Name]:
+		n, ok := e.Args[0].(*ast.Name)
+		if !ok {
+			break
+		}
+
+		adj.names = append(adj.names, n)
+
+		if adj.inquired == nil {
+			adj.inquired = map[*ast.Name]bool{}
+		}
+
+		adj.inquired[n] = true
+
+		ok = true
+
+		for _, arg := range e.Args[1:] {
+			if k, keyed := arg.(*ast.KeywordArg); keyed {
+				arg = k.X
+			}
+
+			ok = a.boundOperands(adj, arg) && ok
+		}
+
+		return ok
+
+	case boundElementals[e.Name]:
+		ok := true
+
+		for _, arg := range e.Args {
+			if k, keyed := arg.(*ast.KeywordArg); keyed {
+				arg = k.X
+			}
+
+			ok = a.boundOperands(adj, arg) && ok
+		}
+
+		return ok
+	}
+
+	a.report("BOUNDREF", e.Pos, e.Name)
 
 	return false
 }
@@ -301,7 +383,7 @@ func (a *analyzer) checkArrays() {
 		ok := true
 
 		for _, n := range adj.names {
-			ok = a.checkBoundName(n) && ok
+			ok = a.checkBoundName(n, adj.inquired[n]) && ok
 		}
 
 		if ok {
@@ -343,7 +425,11 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 // a type that converts to INTEGER. A name an internal procedure's declarations
 // made its own because its host hadn't used it yet waits for its host's
 // statements (checkProvisional).
-func (a *analyzer) checkBoundName(n *ast.Name) bool {
+//
+// An inquiry function's argument may be an array, or a CHARACTER name of any
+// length (inquired), but not an allocatable or automatic one, whose bounds aren't
+// those of the unit's entry.
+func (a *analyzer) checkBoundName(n *ast.Name, inquired bool) bool {
 	s := a.scope.find(n.Name)
 
 	switch {
@@ -354,6 +440,20 @@ func (a *analyzer) checkBoundName(n *ast.Name) bool {
 		a.provisionalBounds = append(a.provisionalBounds, n)
 
 		return false
+
+	case inquired && (s.Allocatable || s.AutomaticObject):
+		a.report("BOUNDREF", n.Pos, n.Name)
+
+		return false
+
+	case inquired && s.Dummy == 0 && s.Common == nil && !a.hostName(s.Name):
+		a.report("BOUNDVAR", n.Pos, n.Name)
+
+		return false
+
+	case inquired:
+		return s.Class == Array || s.Class == Variable || s.Class == Unclassified ||
+			a.badBoundInquiry(n)
 
 	case s.Class == Array || s.Class == Function || s.Class == StmtFunction:
 		a.report("BOUNDREF", n.Pos, n.Name)
@@ -436,4 +536,40 @@ func (s *Symbol) ElementNumber(subs []int) (int, bool) {
 	}
 
 	return number, true
+}
+
+// badBoundInquiry reports an inquiry function's argument that is neither a
+// variable nor an array, and returns false.
+func (a *analyzer) badBoundInquiry(n *ast.Name) bool {
+	a.report("BOUNDREF", n.Pos, n.Name)
+
+	return false
+}
+
+// checkAutomatics reports the automatic arrays something else would give
+// storage of their own (AUTOATTR): a common block, an EQUIVALENCE list, SAVE,
+// or STATIC (the Fortran 90 standard's 5.1.2.4.1, 5.2.4, 5.5.1); DATA's and
+// NAMELIST's are reported where those are read. A SAVE with no list saves only
+// what may be saved, which an automatic array may not.
+func (a *analyzer) checkAutomatics() {
+	for _, s := range a.unit.Symbols {
+		if !s.AutomaticObject || s.broken {
+			continue
+		}
+
+		switch {
+		case s.Common != nil:
+			a.report("AUTOATTR", s.DimPos, s.Name, "be in a common block")
+		case s.Equivalenced:
+			a.report("AUTOATTR", s.equivPos, s.Name, "be in an EQUIVALENCE list")
+		case s.saved:
+			a.report("AUTOATTR", s.DimPos, s.Name, "be saved")
+		case s.storageStmt != nil && s.storageStmt.Kind == lex.Static:
+			a.report("AUTOATTR", s.DimPos, s.Name, "be STATIC")
+		default:
+			continue
+		}
+
+		s.broken = true
+	}
 }

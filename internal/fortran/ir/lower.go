@@ -218,8 +218,11 @@ func (l *lowerer) prepare() {
 			c.Kind = ArrayCell
 		}
 
-		if s.Allocatable {
+		switch {
+		case s.Allocatable:
 			l.allocatableCell(s, c)
+		case s.AutomaticObject:
+			l.automaticCell(s, c)
 		}
 
 		r.Cells = append(r.Cells, c)

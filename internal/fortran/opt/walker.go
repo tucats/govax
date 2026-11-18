@@ -52,6 +52,13 @@ func (w *walker) stmt(st ir.Stmt) {
 				w.expr(a.Value, false, false)
 			}
 		}
+
+	case *ir.StackAllocate:
+		w.mem(st.Dst, false)
+		w.expr(st.Size, true, false)
+
+	case *ir.StackRelease:
+		w.expr(st.To, true, false)
 	}
 }
 
@@ -215,6 +222,13 @@ func (w *memWalker) stmt(st ir.Stmt) {
 		if st.Result != nil {
 			w.use(st.Result, roleWrite)
 		}
+
+	case *ir.StackAllocate:
+		w.use(st.Dst, roleWrite)
+		w.expr(st.Size)
+
+	case *ir.StackRelease:
+		w.expr(st.To)
 	}
 }
 

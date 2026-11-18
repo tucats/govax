@@ -167,6 +167,10 @@ func dumpSymbol(s *Symbol) string {
 		where += " allocatable"
 	}
 
+	if s.AutomaticObject {
+		where += " automatic-array"
+	}
+
 	if s.FreedAtReturn {
 		where += " freed"
 	}

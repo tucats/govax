@@ -8,15 +8,15 @@ routine F90OVL main
   cell  $I2     L  $LOCAL+128  an array statement's index
   cell  $C3     L  $LOCAL+132  array (line 10), dimension 2's count
   cell  $C4     L  $LOCAL+136  array (line 10), dimension 1's count
-  cell  $A1     F  $LOCAL+140  an array temporary, 32 bytes
+  cell  $W1     F  $LOCAL+140  an array temporary, 32 bytes
   cell  $C5     L  $LOCAL+172  array (line 11), dimension 1's count
   cell  $C6     L  $LOCAL+176  array (line 11), dimension 1's count
   cell  $T1     F  $LOCAL+180  temporary
   cell  $C7     L  $LOCAL+184  array (line 12), dimension 1's count
-  cell  $A2     B  $LOCAL+188  an array temporary, 12 bytes
+  cell  $W2     B  $LOCAL+188  an array temporary, 12 bytes
   cell  $C8     L  $LOCAL+200  array (line 13), dimension 1's count
   cell  $C9     L  $LOCAL+204  array (line 13), dimension 1's count
-  cell  $A3     F  $LOCAL+208  an array temporary, 40 bytes
+  cell  $W3     F  $LOCAL+208  an array temporary, 40 bytes
   cell  $C10    L  $LOCAL+248  array (line 14), dimension 1's count
   cell  $C11    L  $LOCAL+252  array (line 14), dimension 1's count
   $LOCAL is 256 bytes
@@ -64,7 +64,7 @@ B9:
   assign $I2 = 1
   jump B10
 B10:  ; array (line 11), dimension 1's body
-  assign $A1-4[$I2] = add.F(A-4[$I2], A+4[$I2])
+  assign $W1-4[$I2] = add.F(A-4[$I2], A+4[$I2])
   assign $I2 = add.L($I2, 1)
   assign $C5 = sub.L($C5, 1)
   branch gt.L($C5, 0) B10 B11
@@ -73,7 +73,7 @@ B11:
   assign $I1 = 1
   jump B12
 B12:  ; array (line 11), dimension 1's body
-  assign A[$I1] = $A1-4[$I1]
+  assign A[$I1] = $W1-4[$I1]
   assign $I1 = add.L($I1, 1)
   assign $C6 = sub.L($C6, 1)
   branch gt.L($C6, 0) B12 B13
@@ -94,7 +94,7 @@ B15:
   assign $I1 = 1
   jump B16
 B16:  ; array (line 13), dimension 1's body
-  move $A2-4[mul.L($I1, 4)](4) = C+4(4)
+  move $W2-4[mul.L($I1, 4)](4) = C+4(4)
   assign $I1 = add.L($I1, 1)
   assign $C8 = sub.L($C8, 1)
   branch gt.L($C8, 0) B16 B17
@@ -103,7 +103,7 @@ B17:
   assign $I2 = 1
   jump B18
 B18:  ; array (line 13), dimension 1's body
-  move C-4[mul.L($I2, 4)](4) = $A2-4[mul.L($I2, 4)](4)
+  move C-4[mul.L($I2, 4)](4) = $W2-4[mul.L($I2, 4)](4)
   assign $I2 = add.L($I2, 1)
   assign $C9 = sub.L($C9, 1)
   branch gt.L($C9, 0) B18 B19
@@ -113,7 +113,7 @@ B19:
   assign $I2 = 1
   jump B20
 B20:  ; array (line 14), dimension 1's body
-  assign $A3-4[$I2] = A-4[$I2]
+  assign $W3-4[$I2] = A-4[$I2]
   assign $I2 = add.L($I2, 1)
   assign $C10 = sub.L($C10, 1)
   branch gt.L($C10, 0) B20 B21
@@ -122,7 +122,7 @@ B21:
   assign $I1 = 1
   jump B22
 B22:  ; array (line 14), dimension 1's body
-  assign A+40[mul.L($I1, -1)] = $A3-4[$I1]
+  assign A+40[mul.L($I1, -1)] = $W3-4[$I1]
   assign $I1 = add.L($I1, 1)
   assign $C11 = sub.L($C11, 1)
   branch gt.L($C11, 0) B22 B23

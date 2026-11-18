@@ -288,7 +288,7 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 		return l.constantArrayMem(s)
 	}
 
-	if s.Allocatable {
+	if s.Allocatable || s.AutomaticObject {
 		return l.allocatableBase(s)
 	}
 

@@ -730,7 +730,8 @@ type CountedLoop struct {
 	Body        *Block
 }
 
-// Stmt is a statement in a block: an Assign, a CharMove, or a Call.
+// Stmt is a statement in a block: an Assign, a CharMove, a Call, a StackAllocate,
+// or a StackRelease.
 type Stmt interface {
 	// Source is the FORTRAN statement the IR statement came from, which
 	// says which source lines the code generator writes before its
@@ -806,9 +807,35 @@ type (
 	}
 )
 
-func (*Assign) stmtNode()   {}
-func (*CharMove) stmtNode() {}
-func (*Call) stmtNode()     {}
+// The statements that move SP, making and giving back storage on the stack whose
+// size is known only when the program runs (docs/planning/PHASE-104 - Fortran 90
+// dynamic arrays.md, finding 6). Every entry point has made its fixed frame area
+// before them, so a frame cell, reached from FP, is never in the way; CALLS and
+// RET don't care where SP is, and RET puts SP back where the caller left it.
+type (
+	// StackAllocate takes Size bytes (a Long, rounded up to a longword) from
+	// the stack, by moving SP down, and stores their address, the new SP, at
+	// Dst: SUBL2 size,SP, BICL2 #3,SP, MOVL SP,dst. Size must not be negative.
+	// An optimizer moves no StackAllocate, and assumes nothing of the storage.
+	StackAllocate struct {
+		origin
+		Size Expr
+		Dst  *Mem
+	}
+
+	// StackRelease gives back what the StackAllocates since SP was To's value
+	// took: MOVL to,SP. Nothing in that storage may be read after it.
+	StackRelease struct {
+		origin
+		To Expr
+	}
+)
+
+func (*Assign) stmtNode()        {}
+func (*CharMove) stmtNode()      {}
+func (*Call) stmtNode()          {}
+func (*StackAllocate) stmtNode() {}
+func (*StackRelease) stmtNode()  {}
 
 // The terminators.
 type (

@@ -346,6 +346,15 @@ type Symbol struct {
 	// subprogram's own that isn't saved (finding 5; freedAtReturn).
 	FreedAtReturn bool
 
+	// AutomaticObject is Fortran 90's automatic array (the standard's
+	// 5.1.2.4.1): a subprogram's own array, not a dummy argument, whose bounds
+	// aren't all constants. Its bounds are computed at each entry point whose
+	// list defines them, as an adjustable array's are, and its elements are made
+	// on the stack then and last until the routine returns. Its own storage is
+	// the class A descriptor that says where they are (docs/planning/PHASE-104 -
+	// Fortran 90 dynamic arrays.md, finding 7).
+	AutomaticObject bool
+
 	// f90Saved is set when a Fortran 90 form gave the name SAVE (an
 	// attribute, SAVE ::, or an initialization), for the dump.
 	f90Saved bool
@@ -501,7 +510,7 @@ func (s *Symbol) TypeText() string {
 
 // Size is the storage the name takes, in bytes.
 func (s *Symbol) Size() int {
-	if s.Allocatable {
+	if s.Allocatable || s.AutomaticObject {
 		return DescriptorSize(len(s.Dims))
 	}
 

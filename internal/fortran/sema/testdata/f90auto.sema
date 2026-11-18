@@ -1,0 +1,20 @@
+== SUBROUTINE AUTO
+  AUTO                    program unit
+  A         REAL          array(1:N, 1:3)  argument 1
+  N         INTEGER       variable         argument 2
+  C         CHARACTER*(*) variable         argument 3
+  M         INTEGER       variable         SIZES+0
+  W         REAL          array(1:N)       $LOCAL+0 automatic-array
+  V         REAL          array(1:SIZE(A, 1), 1:2) $LOCAL+32 automatic-array
+  X         REAL          array(0:LEN(C))  $LOCAL+76 automatic-array
+  Y         REAL          array(1:MAX(N, M)) $LOCAL+108 automatic-array
+  W2        INTEGER       array(1:UBOUND(A, DIM=2)) $LOCAL+140 automatic-array
+  $LOCAL is 172 bytes
+  /SIZES/ is 4 bytes
+12          W[] = 1.0
+13          V[] = 2.0
+14          X[0] = 3.0
+15          Y[] = 4.0
+16          W2[] = 5
+17          PRINT * SIZE(W[]) SIZE(V[]) SIZE(X[]) SIZE(Y[]) W[1] W2[]
+18          END

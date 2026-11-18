@@ -61,7 +61,7 @@ func (l *lowerer) prepareBounds() {
 	n := 0
 
 	for _, s := range l.unit.Symbols {
-		if s.Class != sema.Array || !s.Adjustable() {
+		if s.Class != sema.Array || !s.Adjustable() || s.AutomaticObject {
 			continue
 		}
 
@@ -89,12 +89,21 @@ func (l *lowerer) prepareBounds() {
 		l.adjustable[s] = c
 		l.adjustableOrder = append(l.adjustableOrder, s)
 	}
+
+	// The automatic arrays after the dummies, whose bounds an automatic array's
+	// may ask about (SIZE(A)); their cells are their own (automaticCell).
+	for _, s := range l.unit.Symbols {
+		if s.AutomaticObject && l.adjustable[s] != nil {
+			l.adjustableOrder = append(l.adjustableOrder, s)
+		}
+	}
 }
 
 // defines reports whether an entry point whose list is params defines the
 // adjustable array s: s itself and every dummy argument in its bounds are there.
+// An automatic array, in no list, needs only the dummies.
 func defines(s *sema.Symbol, params []*sema.Symbol) bool {
-	if !slices.Contains(params, s) {
+	if !s.AutomaticObject && !slices.Contains(params, s) {
 		return false
 	}
 
@@ -119,6 +128,12 @@ func (l *lowerer) computeBounds(params []*sema.Symbol) {
 
 // computeArrayBounds fills in the descriptor c of the adjustable array s.
 func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
+	if s.AutomaticObject {
+		l.computeAutomatic(s, c)
+
+		return
+	}
+
 	store := func(offset int, t Type, x Expr) {
 		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: offset, T: t}, Src: x})
 	}

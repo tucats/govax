@@ -1,0 +1,404 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Common block /SIZES/, 4 bytes, the most any unit in this file declares
+	.PSECT	SIZES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+SIZES.$BASE:
+	.BLKB	4
+
+; Storage map for AUTO, a subroutine
+;   A     REAL (?,3)     argument 1  @AUTO.A(AP)
+;   N     INTEGER        argument 2  @AUTO.N(AP)
+;   C     CHARACTER*(*)  argument 3  @AUTO.C(AP)
+;   M     INTEGER        SIZES+0     AUTO.M
+;   W     REAL (?)       $LOCAL+0    AUTO.W
+;   V     REAL (?,2)     $LOCAL+32   AUTO.V
+;   X     REAL (0:?)     $LOCAL+76   AUTO.X
+;   Y     REAL (?)       $LOCAL+108  AUTO.Y
+;   W2    INTEGER (?)    $LOCAL+140  AUTO.W2
+;
+AUTO.A = 4				; A is argument 1
+AUTO.N = 8				; N is argument 2
+AUTO.C = 12				; C is argument 3
+AUTO.M = SIZES.$BASE			; M, in /SIZES/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+AUTO.W:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+AUTO.V:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; V: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,2			; multipliers
+	.LONG	1,0,1,2			; bounds
+AUTO.X:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; X: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	0,0			; bounds
+AUTO.Y:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; Y: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+AUTO.W2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; W2: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+AUTO.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,3			; multipliers
+	.LONG	1,0,1,3			; bounds
+AUTO.$I1:
+	.BLKL	1			; an array statement's loop index
+AUTO.$I2:
+	.BLKL	1			; an array statement's loop index
+AUTO.$T1:
+	.BLKL	1			; temporary
+AUTO.$T2:
+	.BLKL	1			; temporary
+AUTO.$C1:
+	.BLKL	1			; array (line 12), dimension 1's count
+AUTO.$C2:
+	.BLKL	1			; array (line 13), dimension 2's count
+AUTO.$C3:
+	.BLKL	1			; array (line 13), dimension 1's count
+AUTO.$C4:
+	.BLKL	1			; array (line 15), dimension 1's count
+AUTO.$C5:
+	.BLKL	1			; array (line 16), dimension 1's count
+AUTO.$I3:
+	.BLKL	1			; an array statement's loop index
+AUTO.$T3:
+	.BLKL	1			; temporary
+AUTO.$T4:
+	.BLKL	1			; temporary
+AUTO.$I4:
+	.BLKL	1			; an array statement's loop index
+AUTO.$T5:
+	.BLKL	1			; temporary
+AUTO.$T6:
+	.BLKL	1			; temporary
+AUTO.$I5:
+	.BLKL	1			; an array statement's loop index
+AUTO.$T7:
+	.BLKL	1			; temporary
+AUTO.$T8:
+	.BLKL	1			; temporary
+AUTO.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+AUTO.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+AUTO.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTO.$T2
+AUTO.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTO.$T4
+AUTO.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTO.$T6
+AUTO.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AUTO.$T8
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Fortran 90's automatic arrays (Phase 104, subtask 4a): a subprogram's
+;    3  C     own arrays whose bounds aren't constants, computed at each entry from
+;    4  C     dummy arguments, common, and the inquiry functions of 7.1.6.2.
+;    5        SUBROUTINE AUTO(A, N, C)
+	.ENTRY	AUTO,^M<>
+	MOVAL	@AUTO.A(AP),AUTO.$B1+4
+	MOVL	@AUTO.N(AP),AUTO.$B1+32
+	MOVL	AUTO.$B1+32,AUTO.$B1+20
+	MNEGL	AUTO.$B1+20,R0
+	DECL	R0
+	MOVAL	@AUTO.A(AP)[R0],AUTO.$B1+16
+	MULL3	#4,AUTO.$B1+20,R0
+	MULL3	R0,#3,AUTO.$B1+12
+	MOVL	@AUTO.N(AP),AUTO.W+28
+	MOVL	AUTO.W+28,AUTO.W+20
+	BLSS	AUTO.$2
+	BRW	AUTO.$1
+AUTO.$2:
+	CLRL	AUTO.W+20
+AUTO.$1:
+	MULL3	#4,AUTO.W+20,AUTO.W+12
+	SUBL2	AUTO.W+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTO.W+4
+	MOVL	AUTO.W+4,R0
+	MOVAL	-4(R0),AUTO.W+16
+	MOVL	AUTO.$B1+20,AUTO.$T1
+	BLSS	AUTO.$4
+	BRW	AUTO.$3
+AUTO.$4:
+	CLRL	AUTO.$T1
+AUTO.$3:
+	MOVL	AUTO.$T1,AUTO.$T2
+	MOVL	AUTO.$T2,AUTO.V+32
+	MOVL	AUTO.V+32,AUTO.V+20
+	BLSS	AUTO.$6
+	BRW	AUTO.$5
+AUTO.$6:
+	CLRL	AUTO.V+20
+AUTO.$5:
+	MULL3	#4,AUTO.V+20,R0
+	MULL3	R0,#2,AUTO.V+12
+	SUBL2	AUTO.V+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTO.V+4
+	MOVL	AUTO.V+4,R0
+	MNEGL	AUTO.V+20,R1
+	MOVAL	-4(R0)[R1],AUTO.V+16
+	MOVZWL	@AUTO.C(AP),AUTO.X+28
+	ADDL3	AUTO.X+28,#1,AUTO.X+20
+	BLSS	AUTO.$8
+	BRW	AUTO.$7
+AUTO.$8:
+	CLRL	AUTO.X+20
+AUTO.$7:
+	MULL3	#4,AUTO.X+20,AUTO.X+12
+	SUBL2	AUTO.X+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTO.X+4
+	MOVAL	@AUTO.X+4,AUTO.X+16
+	MOVL	@AUTO.N(AP),AUTO.$T2
+	CMPL	AUTO.M,AUTO.$T2
+	BGTR	AUTO.$10
+	BRW	AUTO.$9
+AUTO.$10:
+	MOVL	AUTO.M,AUTO.$T2
+AUTO.$9:
+	MOVL	AUTO.$T2,AUTO.Y+28
+	MOVL	AUTO.Y+28,AUTO.Y+20
+	BLSS	AUTO.$12
+	BRW	AUTO.$11
+AUTO.$12:
+	CLRL	AUTO.Y+20
+AUTO.$11:
+	MULL3	#4,AUTO.Y+20,AUTO.Y+12
+	SUBL2	AUTO.Y+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTO.Y+4
+	MOVL	AUTO.Y+4,R0
+	MOVAL	-4(R0),AUTO.Y+16
+	MOVL	AUTO.$B1+20,AUTO.$T2
+	BLSS	AUTO.$14
+	BRW	AUTO.$13
+AUTO.$14:
+	CLRL	AUTO.$T2
+AUTO.$13:
+	MOVL	#3,AUTO.$T1
+	MOVL	AUTO.$T1,AUTO.W2+28
+	MOVL	AUTO.W2+28,AUTO.W2+20
+	BLSS	AUTO.$16
+	BRW	AUTO.$15
+AUTO.$16:
+	CLRL	AUTO.W2+20
+AUTO.$15:
+	MULL3	#4,AUTO.W2+20,AUTO.W2+12
+	SUBL2	AUTO.W2+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,AUTO.W2+4
+	MOVL	AUTO.W2+4,R0
+	MOVAL	-4(R0),AUTO.W2+16
+;    6        INTEGER :: N, M
+;    7        COMMON /SIZES/ M
+;    8        REAL :: A(N, 3)
+;    9        CHARACTER(LEN=*) :: C
+;   10        REAL :: W(N), V(SIZE(A, 1), 2), X(0:LEN(C)), Y(MAX(N, M))
+;   11        INTEGER W2(UBOUND(A, DIM=2))
+;   12        W = 1.0
+	MOVL	AUTO.W+20,AUTO.$T1
+	BLSS	AUTO.$18
+	BRW	AUTO.$17
+AUTO.$18:
+	CLRL	AUTO.$T1
+AUTO.$17:
+	MOVL	AUTO.$T1,AUTO.$C1	; array (line 12), dimension 1's count
+	MOVL	#1,AUTO.$I1
+	TSTL	AUTO.$C1
+	BGTR	AUTO.$20
+	BRW	AUTO.$19
+AUTO.$20:
+AUTO.$21:				; array (line 12), dimension 1's body
+	MOVL	AUTO.W+16,R0
+	MOVL	AUTO.$I1,R1
+	MOVL	#^X00004080,(R0)[R1]	; 1.0
+	INCL	AUTO.$I1
+	DECL	AUTO.$C1		; one pass fewer
+	BLEQ	AUTO.$22
+	BRW	AUTO.$21
+AUTO.$22:
+AUTO.$19:
+;   13        V = 2.0
+	MOVL	AUTO.V+20,AUTO.$T1
+	BLSS	AUTO.$24
+	BRW	AUTO.$23
+AUTO.$24:
+	CLRL	AUTO.$T1
+AUTO.$23:
+	MOVL	#2,AUTO.$C2		; array (line 13), dimension 2's count
+	MOVL	#1,AUTO.$I2
+AUTO.$25:				; array (line 13), dimension 2's body
+	MOVL	AUTO.$T1,AUTO.$C3	; array (line 13), dimension 1's count
+	MOVL	#1,AUTO.$I1
+	TSTL	AUTO.$C3
+	BGTR	AUTO.$27
+	BRW	AUTO.$26
+AUTO.$27:
+AUTO.$28:				; array (line 13), dimension 1's body
+	MOVL	AUTO.V+16,R0
+	MULL3	AUTO.$I2,AUTO.V+20,R1
+	ADDL2	AUTO.$I1,R1
+	MOVL	#^X00004100,(R0)[R1]	; 2.0
+	INCL	AUTO.$I1
+	DECL	AUTO.$C3		; one pass fewer
+	BLEQ	AUTO.$29
+	BRW	AUTO.$28
+AUTO.$29:
+AUTO.$26:
+	INCL	AUTO.$I2
+	DECL	AUTO.$C2		; one pass fewer
+	BLEQ	AUTO.$30
+	BRW	AUTO.$25
+AUTO.$30:
+;   14        X(0) = 3.0
+	MOVL	#^X00004140,@AUTO.X+16	; 3.0
+;   15        Y = 4.0
+	MOVL	AUTO.Y+20,AUTO.$T1
+	BLSS	AUTO.$32
+	BRW	AUTO.$31
+AUTO.$32:
+	CLRL	AUTO.$T1
+AUTO.$31:
+	MOVL	AUTO.$T1,AUTO.$C4	; array (line 15), dimension 1's count
+	MOVL	#1,AUTO.$I2
+	TSTL	AUTO.$C4
+	BGTR	AUTO.$34
+	BRW	AUTO.$33
+AUTO.$34:
+AUTO.$35:				; array (line 15), dimension 1's body
+	MOVL	AUTO.Y+16,R0
+	MOVL	AUTO.$I2,R1
+	MOVL	#^X00004180,(R0)[R1]	; 4.0
+	INCL	AUTO.$I2
+	DECL	AUTO.$C4		; one pass fewer
+	BLEQ	AUTO.$36
+	BRW	AUTO.$35
+AUTO.$36:
+AUTO.$33:
+;   16        W2 = 5
+	MOVL	AUTO.W2+20,AUTO.$T1
+	BLSS	AUTO.$38
+	BRW	AUTO.$37
+AUTO.$38:
+	CLRL	AUTO.$T1
+AUTO.$37:
+	MOVL	AUTO.$T1,AUTO.$C5	; array (line 16), dimension 1's count
+	MOVL	#1,AUTO.$I2
+	TSTL	AUTO.$C5
+	BGTR	AUTO.$40
+	BRW	AUTO.$39
+AUTO.$40:
+AUTO.$41:				; array (line 16), dimension 1's body
+	MOVL	AUTO.W2+16,R0
+	MOVL	AUTO.$I2,R1
+	MOVL	#5,(R0)[R1]
+	INCL	AUTO.$I2
+	DECL	AUTO.$C5		; one pass fewer
+	BLEQ	AUTO.$42
+	BRW	AUTO.$41
+AUTO.$42:
+AUTO.$39:
+;   17        PRINT *, SIZE(W), SIZE(V), SIZE(X), SIZE(Y), W(1), W2
+	PUSHL	#-1
+	PUSHAB	AUTO.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVL	AUTO.W+20,AUTO.$T1
+	BLSS	AUTO.$44
+	BRW	AUTO.$43
+AUTO.$44:
+	CLRL	AUTO.$T1
+AUTO.$43:
+	MOVL	AUTO.$T1,AUTO.$T2
+	PUSHAQ	AUTO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	AUTO.V+20,AUTO.$T3
+	BLSS	AUTO.$46
+	BRW	AUTO.$45
+AUTO.$46:
+	CLRL	AUTO.$T3
+AUTO.$45:
+	MULL3	AUTO.$T3,#2,AUTO.$T4
+	PUSHAQ	AUTO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	AUTO.X+20,AUTO.$T5
+	BLSS	AUTO.$48
+	BRW	AUTO.$47
+AUTO.$48:
+	CLRL	AUTO.$T5
+AUTO.$47:
+	MOVL	AUTO.$T5,AUTO.$T6
+	PUSHAQ	AUTO.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	AUTO.Y+20,AUTO.$T7
+	BLSS	AUTO.$50
+	BRW	AUTO.$49
+AUTO.$50:
+	CLRL	AUTO.$T7
+AUTO.$49:
+	MOVL	AUTO.$T7,AUTO.$T8
+	PUSHAQ	AUTO.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	AUTO.W+16,R0
+	MOVAL	4(R0),AUTO.$D5+4
+	PUSHAQ	AUTO.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	AUTO.W2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   18        END
+	RET
+
+	.END

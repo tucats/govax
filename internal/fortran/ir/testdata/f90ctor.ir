@@ -12,11 +12,11 @@ routine F90CTR main
   cell  $I2     L  $LOCAL+80   an array statement's index
   cell  $C3     L  $LOCAL+84   array (line 19), dimension 2's count
   cell  $C4     L  $LOCAL+88   array (line 19), dimension 1's count
-  cell  $A1     F  $LOCAL+92   an array temporary, 16 bytes
+  cell  $W1     F  $LOCAL+92   an array temporary, 16 bytes
   cell  $I3     L  $LOCAL+108  an array statement's index
   cell  $C5     L  $LOCAL+112  constructor (line 20), implied DO of I's count
   cell  $C6     L  $LOCAL+116  array (line 20), dimension 1's count
-  cell  $A2     F  $LOCAL+120  an array temporary, 8 bytes
+  cell  $W2     F  $LOCAL+120  an array temporary, 8 bytes
   cell  $C7     L  $LOCAL+128  array (line 21), dimension 1's count
   cell  $T1     L  $LOCAL+132  temporary
   cell  $C8     L  $LOCAL+136  constructor (line 22), implied DO of I's count
@@ -74,24 +74,24 @@ B9:
   ; line 20
   assign $I1 = 0
   assign $I1 = add.L($I1, 1)
-  assign $A1-4[$I1] = X
+  assign $W1-4[$I1] = X
   assign $C5 = 2
   assign $I3 = 1
   jump B10
 B10:  ; constructor (line 20), implied DO of I's body
   assign $I1 = add.L($I1, 1)
-  assign $A1-4[$I1] = mul.F(cvt.LF($I3), X)
+  assign $W1-4[$I1] = mul.F(cvt.LF($I3), X)
   assign $I3 = add.L($I3, 1)
   assign $C5 = sub.L($C5, 1)
   branch gt.L($C5, 0) B10 B11
 B11:
   assign $I1 = add.L($I1, 1)
-  assign $A1-4[$I1] = A
+  assign $W1-4[$I1] = A
   assign $C6 = 4
   assign $I2 = 1
   jump B12
 B12:  ; array (line 20), dimension 1's body
-  assign A-4[$I2] = $A1-4[$I2]
+  assign A-4[$I2] = $W1-4[$I2]
   assign $I2 = add.L($I2, 1)
   assign $C6 = sub.L($C6, 1)
   branch gt.L($C6, 0) B12 B13
@@ -99,14 +99,14 @@ B13:
   ; line 21
   assign $I1 = 0
   assign $I1 = add.L($I1, 1)
-  assign $A2-4[$I1] = X
+  assign $W2-4[$I1] = X
   assign $I1 = add.L($I1, 1)
-  assign $A2-4[$I1] = add.F(X, 1.0)
+  assign $W2-4[$I1] = add.F(X, 1.0)
   assign $C7 = 2
   assign $I3 = 1
   jump B14
 B14:  ; array (line 21), dimension 1's body
-  assign A-4[$I3] = add.F($A2-4[$I3], A+4[$I3])
+  assign A-4[$I3] = add.F($W2-4[$I3], A+4[$I3])
   assign $I3 = add.L($I3, 1)
   assign $C7 = sub.L($C7, 1)
   branch gt.L($C7, 0) B14 B15

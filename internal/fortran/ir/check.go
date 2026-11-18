@@ -184,6 +184,20 @@ func (c *checker) block(b *Block) error {
 			if err == nil && s.Result != nil {
 				err = c.mem(s.Result)
 			}
+
+		case *StackAllocate:
+			if err = c.expr(s.Size); err == nil {
+				err = c.mem(s.Dst)
+			}
+
+			if err == nil && (s.Size.Type() != Long || s.Dst.T != Long) {
+				err = fmt.Errorf("%s isn't of Longs", StmtText(s))
+			}
+
+		case *StackRelease:
+			if err = c.expr(s.To); err == nil && s.To.Type() != Long {
+				err = fmt.Errorf("%s isn't of a Long", StmtText(s))
+			}
 		}
 
 		if err != nil {

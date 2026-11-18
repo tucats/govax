@@ -247,6 +247,15 @@
    its first failure instead.  A subprogram's allocatable arrays not
    SAVE'd are deallocated at each of its returns.
 
+   A subprogram's own array may have bounds computed when it is entered,
+   from its dummy arguments, common, and SIZE, LBOUND, UBOUND, or LEN of
+   them: an automatic array, made on the stack and gone at the return.
+
+     real :: w(0:size(a) + 1)
+
+   It can't be in COMMON, EQUIVALENCE, DATA, NAMELIST, SAVE, or STATIC
+   (%FORT-E-AUTOATTR).
+
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may

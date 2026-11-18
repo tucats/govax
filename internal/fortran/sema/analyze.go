@@ -632,6 +632,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.checkCommonSizes()
 	a.saves()
 	a.storageStatements()
+	a.checkAutomatics()
 	a.impliedSaves()
 	a.volatiles()
 	a.dataStatements()

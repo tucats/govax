@@ -462,7 +462,12 @@ calls), then the frame's run-time storage everything after needs.
    arrays and CHARACTER objects, nonconstant `LEN=` on dummies, the inquiry
    functions in specification expressions (finding 7); the scalarizer's temporaries
    of run-time size, the heap past 64 KB, CHARACTER values of a run-time length in
-   array expressions, `IV(IV)` (finding 8).
+   array expressions, `IV(IV)` (finding 8). In three parts (2026-11-18):
+   - 4a. `StackAllocate` and `StackRelease`, automatic arrays, and the inquiry
+     functions in specification expressions (done 2026-11-18).
+   - 4b. Automatic CHARACTER objects and a dummy's nonconstant `LEN=`.
+   - 4c. The scalarizer's temporaries of run-time size, the heap past 64 KB,
+     CHARACTER values of a run-time length in array expressions, `IV(IV)`.
 5. **Assumed-shape dummies:** the entry copy, every kind of actual, EXPLICITREQ,
    rank and length checks, INTERFACEDIFF's new characteristics, OPTIONAL and ENTRY,
    `/CHECK=BOUNDS`'s descriptor check (findings 9 and 10).
@@ -644,3 +649,56 @@ The author read the survey and accepted every recommendation:
     its array allocated and its next call, LIB$STAT_VM's bytes unchanged by a
     recursion that never deallocates). MANUAL.md's 14.13 and HELP FORTRAN
     describe STAT= and deallocation at return.
+- **2026-11-18, subtask 4 split** into 4a (automatic arrays), 4b (automatic
+  CHARACTER lengths), and 4c (the scalarizer's run-time temporaries), each a
+  commit (A.4).
+- **2026-11-18, subtask 4a done:** Automatic arrays and the stack statements.
+  - *Declarations* (`sema/arrays.go`). A non-dummy array with a bound that isn't
+    constant is `Symbol.AutomaticObject` in a function or subroutine
+    (`automaticAllowed`), under `/F90` and `/NOF90` alike, and still ADJNOTDUMMY in
+    a main program or block data (three of `TestErrors`' cases changed to say
+    so). Its storage is its class A descriptor (`Symbol.Size`, on a longword),
+    in the frame in a recursive unit whatever a bare SAVE says
+    (`recursiveStorage`). `checkAutomatics` (after `storageStatements`) is
+    AUTOATTR for COMMON, EQUIVALENCE, SAVE, and STATIC; DATA's and NAMELIST's
+    where those are read. One message where the survey named two (AUTOSAVE
+    folded into AUTOATTR, "can't be saved"): ours.
+  - *Specification expressions* (7.1.6.2). A bound may call SIZE, LBOUND,
+    UBOUND, and LEN, whose first argument is a name (an array's among them), and
+    the elemental functions of integers ABS, IABS, MAX, MIN, MAX0, MIN0, MOD,
+    INT, NINT, IFIX, IDINT, IDNINT, DIM, IDIM, SIGN, ISIGN (`boundFunction`,
+    keyword arguments read), where the unit hasn't made the name something
+    else; any other function is BOUNDREF, as before. An inquiry's argument must
+    be a dummy, in common, or a host's (BOUNDVAR otherwise), and not
+    allocatable or automatic (BOUNDREF: F90's restricted expressions; Fortran
+    95 would allow an earlier declaration's). This holds for adjustable dummies'
+    bounds too.
+  - *The IR.* `StackAllocate` (`SUBL2 size,SP`, `BICL2 #3,SP`, `MOVL SP,dst`)
+    and `StackRelease` (`MOVL to,SP`; nothing makes one until 4c), in `Check`,
+    the dump, codegen (`stackAllocate`, `stackRelease`), and every optimizer
+    walk: the two walkers, `StmtEffects`, Forward, dead code's references, and
+    CSE's replacer. No pass moves one.
+  - *Lowering* (`ir/lowerautomatic.go`). The variable's own cell is the
+    descriptor (`automaticCell`), among the adjustable arrays' cells after the
+    dummies' (`prepareBounds`), so every reader of bounds, extents, elements,
+    and whole arrays finds it; the base is POINTER (`symbolMem`, as an
+    allocatable's). `computeAutomatic` at each entry point that defines it
+    (`defines`: its bounds' dummies only): bounds, extents made 0 if negative
+    (`notNegative`; an adjustable dummy's aren't changed, and /CHECK=BOUNDS's
+    ADJARRDIM doesn't apply), ARSIZE, the storage, A0. Code lowered before the
+    first statement has the header as its origin (a bound's SIZE needs a
+    statement's line, `newNest`).
+  - *The optimizer.* An automatic array's elements are `AllocatedRegion`, keyed
+    by its descriptor (`allocatedBase`).
+  - *Left for later:* the `/DEBUG` table leaves automatic arrays out with the
+    allocatable ones (subtask 9).
+  - *A fix found on the way:* the array temporaries (Phase 102) and the cells
+    holding a dummy's address in a unit with ENTRY or an internal procedure
+    (Phases 79 and 103) were both named `$An`, so a host with both had two
+    labels of one name (MACRO's OUTOFPHASE and DUPSYM), and in a frame host
+    one cell for both. Array temporaries are now `$Wn` (work arrays); four
+    `ir` goldens renamed.
+  - *Tests:* `sema`'s `TestAutomatic`, the `f90auto` goldens in `sema`, `ir`,
+    and `codegen`, and `testdata/fortran90/autos.f90` (every mode, paging both
+    ways; gfortran prints the same 12 lines). MANUAL.md's 14.13 has
+    "Automatic arrays", and HELP FORTRAN a paragraph.
