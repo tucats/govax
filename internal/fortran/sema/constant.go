@@ -233,7 +233,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 
 // charConst is a CHARACTER constant.
 func charConst(text string, pos diag.Position) *Const {
-	return &Const{exprBase: exprBase{T: Type{Character, len(text)}, Pos: pos}, Text: text}
+	return &Const{exprBase: exprBase{T: Type{Kind: Character, Size: len(text)}, Pos: pos}, Text: text}
 }
 
 // real is the constant a real literal writes (section 2.2.1.2): REAL*4,
@@ -245,9 +245,9 @@ func (ev *evaluator) real(e *ast.RealConst) (*Const, *constErr) {
 
 	switch {
 	case strings.ContainsRune(text, 'D'):
-		t, text = Type{Real, 8}, strings.Replace(text, "D", "E", 1)
+		t, text = Type{Kind: Real, Size: 8}, strings.Replace(text, "D", "E", 1)
 	case strings.ContainsRune(text, 'Q'):
-		t, text = Type{Real, 16}, strings.Replace(text, "Q", "E", 1)
+		t, text = Type{Kind: Real, Size: 16}, strings.Replace(text, "Q", "E", 1)
 	}
 
 	return ev.realAs(e, t, text)
@@ -307,7 +307,7 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 			return nil, ev.report("BADCOMPLEX", x.Position())
 		}
 
-		hKind = hKind || kinded && c.T == Type{Real, 16}
+		hKind = hKind || kinded && c.T == Type{Kind: Real, Size: 16}
 
 		return c, nil
 	}
@@ -319,13 +319,13 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 		return nil, err
 	}
 
-	t := Type{Complex, 8}
+	t := Type{Kind: Complex, Size: 8}
 
 	switch {
 	case hKind:
-		t = Type{Complex, 32}
+		t = Type{Kind: Complex, Size: 32}
 	case re.T.Kind == Real && re.T.Size > 4 || im.T.Kind == Real && im.T.Size > 4:
-		t = Type{Complex, 16}
+		t = Type{Kind: Complex, Size: 16}
 	}
 
 	pt := t.part()

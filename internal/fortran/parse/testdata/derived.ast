@@ -1,0 +1,39 @@
+== main program SHAPES
+3           PROGRAM SHAPES
+4           IMPLICIT TYPE(POINT) (P)
+5           TYPE POINT
+6             SEQUENCE
+7             REAL :: X, Y
+8             END TYPE POINT
+9           TYPE, PRIVATE :: HIDDEN
+10            INTEGER I
+11            END TYPE
+12          TYPE SEGMENT
+13            TYPE(POINT) :: ENDS(2)
+14            CHARACTER(LEN=8) :: LABEL
+15            END TYPE SEGMENT
+16          TYPE(POINT) :: A, B(3)
+17          TYPE(SEGMENT), DIMENSION(4) :: PATH
+18          REAL R
+19          A%X = 1.0
+20          B(2)%Y = (+ A%X 2.0)
+21          PATH(1)%ENDS(2)%X = B(2)%Y
+22          PATH(1)%LABEL(2:4) = 'abc'
+23          R = (+ A.X PATH(1).ENDS(1).Y)
+24          P%X = 3.0
+25          END PROGRAM SHAPES
+== FUNCTION MID
+27          TYPE(POINT) FUNCTION MID(A, B)
+28          TYPE POINT
+29            REAL X, Y
+30            END TYPE
+31          TYPE(POINT) A, B
+32          MID%X = (/ (paren (+ A%X B%X)) 2)
+33          END FUNCTION MID
+== FUNCTION TWICE
+35          RECURSIVE TYPE(POINT) FUNCTION TWICE(A)
+36          TYPE POINT
+37            REAL X, Y
+38            END TYPE
+39          TYPE(POINT) A
+40          END

@@ -323,8 +323,9 @@ func (p *parser) reference(what string) ast.Expr {
 // arguments, A(I, J), making an Apply, whose list may hold Fortran 90's
 // subscript triplets, A(1:N:2), or a substring's bounds, C(1:3), which
 // only semantic analysis can tell apart), a substring's bounds after
-// that, NAMES(1, 3)(:7), and record fields, REC.FIELD, each of which may
-// have subscripts and a substring of its own.
+// that, NAMES(1, 3)(:7), and record fields, REC.FIELD, or a derived-type
+// object's components, P%X (componentNext), each of which may have subscripts
+// and a substring of its own.
 //
 // A field's list with a colon is still read as its substring: a section
 // of a record's array field is for a later phase (docs/planning/PHASE-102 -
@@ -352,11 +353,11 @@ func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 		case p.at("(") && p.substringAhead():
 			return p.substring(x)
 
-		case p.fieldNext(record):
-			p.next()
+		case p.fieldNext(record) || p.componentNext():
+			percent := p.next().Is("%")
 
 			f := p.next()
-			ref := &ast.FieldRef{ExprBase: ast.ExprBase{Pos: p.pos(f)}, X: x, Field: f.Text}
+			ref := &ast.FieldRef{ExprBase: ast.ExprBase{Pos: p.pos(f)}, X: x, Field: f.Text, Percent: percent}
 
 			if p.at("(") && !p.substringAhead() {
 				ref.Args = p.subscripts()
@@ -380,6 +381,14 @@ func (p *parser) fieldNext(record bool) bool {
 	}
 
 	return !p.f90() || record || !p.dottedAhead(0)
+}
+
+// componentNext reports whether a derived-type object's component, %NAME, is
+// next after a reference (the standard's R612): % and a name. No built-in
+// function, %LOC and the rest, can follow a reference, so after one a % always
+// selects a component, under /F90 or not.
+func (p *parser) componentNext() bool {
+	return p.at("%") && p.peekAt(1) != nil && p.peekAt(1).Kind == lex.Name
 }
 
 // substringAhead reports whether the parenthesized list that is next has

@@ -185,6 +185,12 @@ var messages = map[string]kind{
 	// NOINTERFACE is END INTERFACE with no interface block open.
 	"NOINTERFACE": {Error, "this END INTERFACE statement ends no interface block"},
 
+	// NOENDTYPE is a derived type's definition its unit's END, or the next
+	// unit's header, reaches; NOTYPEEND is END TYPE with no definition open
+	// (the standard's R422).
+	"NOENDTYPE": {Error, "the definition of the derived type %s has no END TYPE statement"},
+	"NOTYPEEND": {Error, "this END TYPE statement ends no derived type's definition"},
+
 	// SYNTAX is a statement whose tokens don't follow its grammar: the
 	// first argument says what the parser expected, the second what it
 	// found instead.
@@ -368,7 +374,7 @@ var messages = map[string]kind{
 	"FILLINIT": {Error, "%%FILL can't be given initial values"},
 
 	// STRUCTSIZE is a structure too long for a longword to measure.
-	"STRUCTSIZE": {Error, "the structure %s is too large: it takes more than 2147483647 bytes"},
+	"STRUCTSIZE": {Error, "%s is too large: it takes more than 2147483647 bytes"},
 
 	// RECORDTYPED is a RECORD statement naming a name a type statement
 	// has given a type (section 4.13: a record's form is its structure).
@@ -377,12 +383,41 @@ var messages = map[string]kind{
 	// DUPRECORD is a name two RECORD statements name.
 	"DUPRECORD": {Error, "%s is already a record, declared at line %d"},
 
+	// Fortran 90's derived types (the standard's 4.4; sema/derived.go;
+	// docs/planning/PHASE-105 - Fortran 90 derived types.md). TYPENAME is a
+	// type named as an intrinsic type is; TYPEACCESS PUBLIC or PRIVATE outside
+	// a module; DUPTYPE a second definition of a name in one unit; TYPESTMT a
+	// statement a definition can't hold; TYPEEMPTY a definition with no
+	// components (R422); TYPETWICE and TYPEORDER SEQUENCE or PRIVATE twice or
+	// after a component; SEQCOMPONENT a SEQUENCE type's component of a type
+	// without SEQUENCE (4.4.1); ENDTYPENAME END TYPE naming another type;
+	// TYPEATTR a component's attribute other than DIMENSION or POINTER;
+	// TYPESELF a component of the type being defined; NOTYPEDEF TYPE(t) where
+	// no type t is defined; TYPESTRUCT TYPE(s) naming a STRUCTURE, and
+	// RECORDTYPE RECORD /t/ naming a derived type; TYPECLASH another use of a
+	// type's name in its unit (14.1.2).
+	"TYPENAME":     {Error, "a derived type can't be named %s, an intrinsic type's name"},
+	"TYPEACCESS":   {Error, "%s is allowed in a derived type's definition only in a module"},
+	"DUPTYPE":      {Error, "a derived type or structure named %s is already defined, at line %d"},
+	"TYPESTMT":     {Error, "a derived type's definition holds only component declarations, SEQUENCE, and PRIVATE, not %s"},
+	"TYPEEMPTY":    {Error, "the derived type %s has no components"},
+	"TYPETWICE":    {Error, "the derived type %[2]s already has a %[1]s statement, at line %[3]d"},
+	"TYPEORDER":    {Error, "a %s statement must come before the type's components"},
+	"SEQCOMPONENT": {Error, "%s is a SEQUENCE type, so its component %s must be too, and the type %s isn't"},
+	"ENDTYPENAME":  {Error, "this END TYPE names %s, but ends the definition of %s"},
+	"TYPEATTR":     {Error, "a component can have only the DIMENSION or POINTER attribute, not %s"},
+	"TYPESELF":     {Error, "a component of the derived type %s can't be of that type itself unless it is a POINTER"},
+	"NOTYPEDEF":    {Error, "there is no derived type named %s defined before this statement"},
+	"TYPESTRUCT":   {Error, "%s is a structure, not a derived type: a RECORD statement declares its records"},
+	"RECORDTYPE":   {Error, "%s is a derived type, not a structure: TYPE(%[1]s) declares its objects"},
+	"TYPECLASH":    {Error, "%s names the derived type defined at line %d, so it can't also be %s"},
+
 	// NOTRECORD is a field reference to a name that isn't a record.
 	"NOTRECORD": {Error, "%s is %s, not a record, so it has no field %s"},
 
 	// NOFIELD is a field reference naming a field its structure doesn't
 	// have.
-	"NOFIELD": {Error, "the structure %s has no field named %s"},
+	"NOFIELD": {Error, "%s has no %s named %s"},
 
 	// FIELDNOTRECORD is a field reference that goes on past a field that
 	// isn't a substructure.
@@ -403,7 +438,7 @@ var messages = map[string]kind{
 
 	// RECORDASSIGN is an assignment to a record of anything but a record of
 	// the same structure declaration (section 3.4).
-	"RECORDASSIGN": {Error, "%s can't be assigned to %s, which is a record of the structure %s: both must be of one structure"},
+	"RECORDASSIGN": {Error, "%s can't be assigned to %s, which is %s: both must be of one structure or type"},
 
 	// AGGREGATEIO is a record in a formatted, list-directed, or NAMELIST I/O
 	// list (section 2.2.5.2).

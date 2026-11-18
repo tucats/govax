@@ -207,7 +207,7 @@ func (ev *evaluator) alike(e *ast.Apply, args []*Const, kinds ...Kind) ([]*Const
 				want += ", "
 			}
 
-			want += Type{k, 4}.String()
+			want += Type{Kind: k, Size: 4}.String()
 		}
 
 		return nil, ev.badArg(e, want, args[0])
@@ -429,7 +429,7 @@ func constDprod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		}
 	}
 
-	t := Type{Real, 8}
+	t := Type{Kind: Real, Size: 8}
 
 	v, err := round(ev.a.format(t), vaxfloat.MulExact(args[0].Real, args[1].Real))
 	if err != nil {
@@ -443,7 +443,7 @@ func constDprod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 // COMPLEX's value, or a real part with an imaginary part of zero) or of
 // two that aren't COMPLEX.
 func constCmplx(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
-	t := Type{Complex, 8}
+	t := Type{Kind: Complex, Size: 8}
 
 	for _, arg := range args {
 		if !arg.T.numeric() || len(args) == 2 && arg.T.Kind == Complex {

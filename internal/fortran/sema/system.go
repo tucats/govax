@@ -289,7 +289,7 @@ func (a *analyzer) systemMVBits(s *ast.CallStmt, list []ast.Expr) Stmt {
 			return nil
 		}
 
-		args[i].Expr = a.convert(e, Type{Integer, size})
+		args[i].Expr = a.convert(e, Type{Kind: Integer, Size: size})
 	}
 
 	if size == 2 {

@@ -74,6 +74,9 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 		case *ast.StructureStmt:
 			a.structureStatement(s)
 
+		case *ast.TypeDefStmt:
+			a.typeDefinition(s)
+
 		case *ast.RecordStmt:
 			a.recordStatement(s)
 
@@ -215,8 +218,24 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 			a.report("TYPEAFTER", d.Pos, d.Name, sym.defPos.Line)
 		case sym.Typed:
 			a.report("DUPDECL", d.Pos, d.Name, sym.TypePos.Line)
+		case sym.Result && t.Kind == Record:
+			// Subtask 4's (docs/planning/PHASE-105 - Fortran 90 derived types.md).
+			a.notImplForm(d.Pos, "a function of a derived type")
+
+			sym.broken = true
+
 		default:
 			sym.Type, sym.Typed, sym.TypePos, sym.broken = t, true, d.Pos, sym.broken || !ok
+
+			// TYPE(POINT) P: an object of a derived type, which is compiled
+			// as a record is (derived.go).
+			if t.Kind == Record {
+				sym.Struct = t.Struct
+
+				if sym.Class == Unclassified {
+					sym.Class = Variable
+				}
+			}
 
 			// CHARACTER(LEN=N): a length known only when the program runs
 			// (charlength.go).
@@ -257,6 +276,18 @@ func (a *analyzer) f90Entity(s *ast.TypeStmt, sym *Symbol, d *ast.Declarator, sp
 	a.giveAttributes(s, sym, d, specs)
 
 	switch {
+	case sym.Struct != nil && (parameter || d.Value != nil):
+		// Structure constructors are subtask 3's (docs/planning/PHASE-105 -
+		// Fortran 90 derived types.md).
+		pos := d.ValuePos
+		if d.Value == nil {
+			pos = d.Pos
+		}
+
+		a.notImplForm(pos, "a value of a derived type")
+
+		sym.broken = true
+
 	case parameter && d.Value == nil:
 		a.report("PARAMNOVALUE", d.Pos, d.Name)
 
@@ -288,16 +319,16 @@ var lengths = map[ast.BaseType]struct {
 	ast.Integer: {IntegerType, []int{1, 2, 4}, "1, 2, and 4"},
 	ast.Logical: {LogicalType, []int{1, 2, 4}, "1, 2, and 4"},
 	ast.Real:    {RealType, []int{4, 8, 16}, "4, 8, and 16"},
-	ast.Complex: {Type{Complex, 8}, []int{8, 16, 32}, "8, 16, and 32"},
+	ast.Complex: {Type{Kind: Complex, Size: 8}, []int{8, 16, 32}, "8, 16, and 32"},
 }
 
 // fixedTypes are the type keywords that name one length, and so may not
 // be given another (Table 2-1): BYTE is LOGICAL*1, DOUBLE PRECISION
 // REAL*8, DOUBLE COMPLEX COMPLEX*16.
 var fixedTypes = map[ast.BaseType]Type{
-	ast.Byte:            {Logical, 1},
-	ast.DoublePrecision: {Real, 8},
-	ast.DoubleComplex:   {Complex, 16},
+	ast.Byte:            {Kind: Logical, Size: 1},
+	ast.DoublePrecision: {Kind: Real, Size: 8},
+	ast.DoubleComplex:   {Kind: Complex, Size: 16},
 }
 
 // maxCharLength is the longest CHARACTER length (section 2.2.4).
@@ -335,6 +366,12 @@ func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type
 // then the type is CHARACTER of length 0, as a passed length's is, and the
 // expression is returned, for runtimeLength.
 func (a *analyzer) entityType(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type, ast.Expr, bool) {
+	if spec.Derived != "" {
+		t, ok := a.derivedType(spec, l, pos)
+
+		return t, nil, ok
+	}
+
 	if spec.Type == ast.Character {
 		if spec.Selector && !a.characterKind(spec) {
 			return invalid, nil, false
@@ -385,7 +422,7 @@ func (a *analyzer) entityType(spec ast.TypeSpec, l ast.Len, pos diag.Position) (
 
 	for _, n := range info.allowed {
 		if n == l.Length {
-			return Type{info.def.Kind, n}, nil, true
+			return Type{Kind: info.def.Kind, Size: n}, nil, true
 		}
 	}
 
@@ -409,7 +446,7 @@ func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (T
 
 	switch {
 	case l.LenStar:
-		return Type{Character, 0}, nil, true
+		return Type{Kind: Character, Size: 0}, nil, true
 
 	case l.LenExpr != nil:
 		v, kind := a.constInt(l.LenExpr)
@@ -420,7 +457,7 @@ func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (T
 		case kind == constOK:
 			n = int64(v)
 		default:
-			return Type{Character, 0}, l.LenExpr, true
+			return Type{Kind: Character, Size: 0}, l.LenExpr, true
 		}
 
 		pos = l.LenExpr.Position()
@@ -441,7 +478,7 @@ func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (T
 		return invalid, nil, false
 	}
 
-	return Type{Character, int(n)}, nil, true
+	return Type{Kind: Character, Size: int(n)}, nil, true
 }
 
 // baseTypes are the type keywords for the kinds of type, for a length

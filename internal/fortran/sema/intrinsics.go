@@ -545,9 +545,9 @@ func tableType(text string) Type {
 	case "*":
 		return invalid
 	case "CH":
-		return Type{Character, 0}
+		return Type{Kind: Character, Size: 0}
 	case "CH1":
-		return Type{Character, 1}
+		return Type{Kind: Character, Size: 1}
 	}
 
 	kinds := map[byte]Kind{'I': Integer, 'R': Real, 'C': Complex, 'L': Logical}
@@ -562,7 +562,7 @@ func tableType(text string) Type {
 		n = n*10 + int(c-'0')
 	}
 
-	return Type{k, n}
+	return Type{Kind: k, Size: n}
 }
 
 // formsNamed are the rows a reference to name selects from: a generic

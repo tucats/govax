@@ -51,7 +51,7 @@ func (a *analyzer) arrayValue(e ast.Expr) Expr {
 		return logicalConst(e.Value, e.Pos)
 
 	case *ast.CharConst:
-		return &Const{exprBase: exprBase{T: Type{Character, len(e.Value)}, Pos: e.Pos}, Text: e.Value}
+		return &Const{exprBase: exprBase{T: Type{Kind: Character, Size: len(e.Value)}, Pos: e.Pos}, Text: e.Value}
 
 	case *ast.Name:
 		// lookup, not find alone, so that the use is noted: an array used
@@ -243,6 +243,16 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 
 	if s != nil && s.Generic != nil && !s.broken {
 		return a.genericRef(s, e)
+	}
+
+	// POINT(1.0, 2.0), a structure constructor: subtask 3's
+	// (docs/planning/PHASE-105 - Fortran 90 derived types.md).
+	if s == nil || s.Class == Unclassified && s.Dummy == 0 {
+		if st := a.unit.structure(e.Name); st != nil && st.Derived {
+			a.notImplForm(e.Pos, "a structure constructor")
+
+			return a.bad(e.Pos)
+		}
 	}
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
@@ -443,7 +453,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 			return a.bad(e.Pos)
 		}
 
-		return &Substring{exprBase{T: Type{Character, last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
+		return &Substring{exprBase{T: Type{Kind: Character, Size: last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 
 	case firstKnown && (first < 1 || first > t.Size):
 		a.report("SUBBOUND", e.Pos, first, name, t.Size)
@@ -456,7 +466,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return &Substring{exprBase{T: Type{Character, 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
+	return &Substring{exprBase{T: Type{Kind: Character, Size: 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 }
 
 // passedSubstring is a substring of a passed-length dummy argument, whose
@@ -488,10 +498,10 @@ func (a *analyzer) passedSubstring(e *ast.Substring, x, lower, upper Expr) Expr 
 		return a.bad(e.Pos)
 
 	case firstKnown && lastKnown:
-		return &Substring{exprBase{T: Type{Character, last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
+		return &Substring{exprBase{T: Type{Kind: Character, Size: last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 	}
 
-	return &Substring{exprBase{T: Type{Character, 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
+	return &Substring{exprBase{T: Type{Kind: Character, Size: 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 }
 
 // constantInt is e's value if it is an INTEGER constant.
@@ -697,7 +707,7 @@ func (a *analyzer) power(e *ast.Binary) Expr {
 	if t == byteType {
 		// No OTS$ routine takes bytes: an INTEGER*1 power is done in
 		// INTEGER*2 and converted back, as an intrinsic is (byteResult).
-		w := Type{Integer, 2}
+		w := Type{Kind: Integer, Size: 2}
 
 		return a.convert(&Binary{exprBase{T: w, Pos: e.Pos, S: shape}, ast.Pow, a.convert(x, w), a.convert(y, w)}, t)
 	}
@@ -732,8 +742,8 @@ func (a *analyzer) powerTypes(x, y Expr) (result, base, exponent Type) {
 	case yt.Kind == Integer:
 		return xt, xt, IntegerType
 
-	case xt.Kind == Real && yt.Kind == Real && xt != yt && xt.Size+yt.Size == 12 && a.format(Type{Real, 8}) == vaxfloat.D:
-		return Type{Real, 8}, xt, yt
+	case xt.Kind == Real && yt.Kind == Real && xt != yt && xt.Size+yt.Size == 12 && a.format(Type{Kind: Real, Size: 8}) == vaxfloat.D:
+		return Type{Kind: Real, Size: 8}, xt, yt
 	}
 
 	t := higher(xt, yt)
@@ -806,7 +816,7 @@ func (a *analyzer) concat(e *ast.Binary) Expr {
 		size += p.Type().Size
 	}
 
-	return &Concat{exprBase{T: Type{Character, size}, Pos: e.Pos, S: shape}, parts}
+	return &Concat{exprBase{T: Type{Kind: Character, Size: size}, Pos: e.Pos, S: shape}, parts}
 }
 
 // lastConst is the last of parts if it is a constant.
@@ -842,7 +852,7 @@ func (a *analyzer) mixedType(x, y Expr) Type {
 	}
 
 	if t == IntegerType && cx.T == IntegerType && cx.Int >= math.MinInt16 && cx.Int <= math.MaxInt16 && y.Type().integer().Size == 2 {
-		return Type{Integer, 2}
+		return Type{Kind: Integer, Size: 2}
 	}
 
 	return t
@@ -934,7 +944,7 @@ func (a *analyzer) condition(e ast.Expr) Expr {
 	case Logical, Invalid:
 		return c
 	case Integer:
-		return a.convert(c, Type{Logical, c.Type().Size})
+		return a.convert(c, Type{Kind: Logical, Size: c.Type().Size})
 	default:
 		a.report("NOTLOGICAL", e.Position(), c.Type().String())
 	}

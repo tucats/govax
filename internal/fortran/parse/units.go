@@ -57,8 +57,8 @@ type openFrame struct {
 	iface *ast.InterfaceBlock
 
 	// typeDef is a derived type's definition open in the unit, which
-	// gathers its statements up to END TYPE (Phase 105 will parse them).
-	typeDef *ast.PendingStmt
+	// gathers its statements up to END TYPE (derived.go).
+	typeDef *ast.TypeDefStmt
 
 	// records are the names RECORD statements of the unit declare, with
 	// its host's (an interface body has no host).
@@ -170,7 +170,7 @@ func (u *unitStack) place(s ast.Stmt, ls *lex.Statement) {
 
 	if isHeader(k) {
 		if f := u.top(); f != nil {
-			f.typeDef = nil
+			u.endTypeDef(f)
 		}
 
 		u.blocks.closeAll()
@@ -188,7 +188,7 @@ func (u *unitStack) place(s ast.Stmt, ls *lex.Statement) {
 	// A derived type's definition takes every statement to its END TYPE;
 	// the unit's END, which it never reached, closes it too.
 	if f.typeDef != nil && k != lex.End {
-		f.typeDef.Inner = append(f.typeDef.Inner, s)
+		f.typeDef.Body = append(f.typeDef.Body, s)
 
 		if k == lex.EndType {
 			f.typeDef = nil
@@ -197,7 +197,7 @@ func (u *unitStack) place(s ast.Stmt, ls *lex.Statement) {
 		return
 	}
 
-	f.typeDef = nil
+	u.endTypeDef(f)
 
 	switch {
 	case k == lex.End:
@@ -287,33 +287,50 @@ func (u *unitStack) inUnit(f *openFrame, s ast.Stmt, k lex.Kind) {
 		return
 
 	case lex.TypeDef:
-		if ps, ok := s.(*ast.PendingStmt); ok {
-			f.typeDef = ps
+		// One with an error in its first statement still gathers its
+		// statements, so they aren't taken for the unit's; they go nowhere.
+		td, ok := s.(*ast.TypeDefStmt)
+		if !ok {
+			td = &ast.TypeDefStmt{StmtBase: *s.Base()}
 		}
+
+		f.typeDef = td
+
+	case lex.EndType:
+		u.messages.Report("NOTYPEEND", s.Position())
+
+		return
 	}
 
 	placed := u.blocks.outside(s)
 	f.unit.Body = append(f.unit.Body, placed)
 
-	if r, ok := placed.(*ast.RecordStmt); ok {
-		for _, g := range r.Groups {
-			for _, d := range g.Entities {
-				f.records.add(d.Name)
-			}
-		}
+	f.records.declare(placed)
+}
+
+// endTypeDef closes a derived type's definition still open in f when its
+// unit ends, or the next unit starts, without its END TYPE.
+func (u *unitStack) endTypeDef(f *openFrame) {
+	if f.typeDef != nil && f.typeDef.Name != "" {
+		u.messages.Report("NOENDTYPE", f.typeDef.Position(), f.typeDef.Name)
 	}
+
+	f.typeDef = nil
 }
 
 // recordScope is the names declared records in one unit (by RECORD
-// statements; from Phase 105 by TYPE(t) declarations too), and its host's.
-// The parser needs them to read A.B.C under /F90: a field of A if A is a
-// record, else A .B. C, a defined operation (fieldNext). The names are those
-// of the statements before the one being parsed, which is enough, since a
-// RECORD statement is a declaration and comes before every executable
-// statement that refers to its records.
+// statements, and TYPE(t) declarations: a derived type's object is read as a
+// record is), and its host's. The parser needs them to read A.B.C under /F90:
+// a field of A if A is a record, else A .B. C, a defined operation
+// (fieldNext). The names are those of the statements before the one being
+// parsed, which is enough, since a declaration comes before every executable
+// statement that refers to its records. Under IMPLICIT TYPE(t) (letters) a
+// name no type statement declares (typed) is an object of t too.
 type recordScope struct {
-	names map[string]bool
-	host  *recordScope
+	names   map[string]bool
+	typed   map[string]bool
+	letters [26]bool
+	host    *recordScope
 }
 
 // add declares name a record in the scope.
@@ -325,10 +342,53 @@ func (r *recordScope) add(name string) {
 	r.names[name] = true
 }
 
+// declare notes what the statement s, of the unit, says of records: a RECORD
+// statement's and a TYPE(t) declaration's names are records, another type
+// statement's aren't, and IMPLICIT TYPE(t) makes its letters' names records.
+func (r *recordScope) declare(s ast.Stmt) {
+	switch s := s.(type) {
+	case *ast.RecordStmt:
+		for _, g := range s.Groups {
+			for _, d := range g.Entities {
+				r.add(d.Name)
+			}
+		}
+
+	case *ast.TypeStmt:
+		for _, d := range s.Entities {
+			if s.Type.Derived != "" {
+				r.add(d.Name)
+
+				continue
+			}
+
+			if r.typed == nil {
+				r.typed = map[string]bool{}
+			}
+
+			r.typed[d.Name] = true
+		}
+
+	case *ast.ImplicitStmt:
+		for _, rule := range s.Rules {
+			for _, l := range rule.Letters {
+				for c := l.First; c <= l.Last; c++ {
+					r.letters[c-'A'] = rule.Type.Derived != ""
+				}
+			}
+		}
+	}
+}
+
 // has reports whether name is a record in the scope or a host's.
 func (r *recordScope) has(name string) bool {
 	for ; r != nil; r = r.host {
-		if r.names[name] {
+		switch {
+		case r.names[name]:
+			return true
+		case r.typed[name]:
+			return false
+		case name != "" && name[0] >= 'A' && name[0] <= 'Z' && r.letters[name[0]-'A']:
 			return true
 		}
 	}

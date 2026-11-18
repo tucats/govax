@@ -103,7 +103,7 @@ func (a *analyzer) newWhere(s ast.Stmt, mask ast.Expr) *Where {
 
 	case t.Kind == Integer:
 		// An INTEGER is a condition by its bit 0, as an IF's is.
-		m = a.convert(m, Type{Logical, t.Size})
+		m = a.convert(m, Type{Kind: Logical, Size: t.Size})
 
 	case t.Kind != Logical:
 		a.report("WHEREMASK", mask.Position(), article(t.String())+" array")

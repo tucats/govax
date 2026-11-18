@@ -89,7 +89,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 
 		defaultInt, defaultLogical := IntegerType, LogicalType
 		if unitOpts.NoI4 {
-			defaultInt, defaultLogical = Type{Integer, 2}, Type{Logical, 2}
+			defaultInt, defaultLogical = Type{Kind: Integer, Size: 2}, Type{Kind: Logical, Size: 2}
 		}
 
 		a := &analyzer{
@@ -621,6 +621,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	// reported again at each use.)
 	a.applyPrologueGroups()
 	a.declarations(body)
+	a.resolveImplicitObjects()
 	a.interfaceBodies()
 	a.checkAlignGroups()
 	a.checkEntryTypes()
@@ -651,6 +652,7 @@ func (a *analyzer) executablePart() {
 // finishUnit makes the checks that need every statement analyzed, and lays the
 // unit's storage out.
 func (a *analyzer) finishUnit() {
+	a.checkTypeNames()
 	a.untyped()
 	a.undeclared()
 	a.reportUnused()
@@ -690,7 +692,13 @@ func (a *analyzer) header(au *ast.Unit) {
 			}
 		}
 
-		if h.Type != nil {
+		if h.Type != nil && h.Type.Derived != "" {
+			// Its type may be defined in its body; and its value is subtask
+			// 4's (docs/planning/PHASE-105 - Fortran 90 derived types.md).
+			a.notImplForm(h.Type.DerivedPos, "a function of a derived type")
+
+			s.broken = true
+		} else if h.Type != nil {
 			if t, ok := a.functionType(*h.Type, s); ok {
 				s.Type, s.Typed, s.TypePos = t, t.Kind != Invalid, h.Pos
 			} else {
@@ -779,6 +787,11 @@ func (a *analyzer) newName(name string, pos diag.Position) *Symbol {
 	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary, included: a.inInclude}
 	a.scope.enter(s)
 	a.note(&s.refs, pos, RefUsed)
+
+	// IMPLICIT TYPE(t)'s letter: the type may not be defined yet.
+	if t.Kind == Record && t.Struct == nil {
+		a.implicitObject(s)
+	}
 
 	return s
 }
@@ -912,7 +925,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 				// A CHARACTER*(*) function has whatever length the unit
 				// referencing it declares (section 6.2.2.2).
 				t := fu.result().Type
-				if t == (Type{Character, 0}) && s.Type.Kind == Character {
+				if t == (Type{Kind: Character, Size: 0}) && s.Type.Kind == Character {
 					continue
 				}
 

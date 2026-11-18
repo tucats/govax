@@ -1,6 +1,9 @@
 package sema
 
-import "github.com/tucats/govax/internal/fortran/ast"
+import (
+	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
+)
 
 // Implicit typing (section 4.8). A name no declaration gives a type has
 // the type its first letter has: by default INTEGER for I to N and REAL
@@ -33,6 +36,13 @@ type implicitRules struct {
 	// host had IMPLICIT NONE, until its own IMPLICIT statements give them one
 	// (inherit).
 	noType [26]bool
+
+	// derived are the derived types' names IMPLICIT TYPE(t) gave letters, ""
+	// for a letter of an intrinsic type, and derivedPos where each is named.
+	// Such a letter's type in types is a Record with no Struct, which a name
+	// is given only once the type is known (derived.go's implicitObject).
+	derived    [26]string
+	derivedPos [26]diag.Position
 }
 
 // inherit is an internal procedure's rules before its own IMPLICIT
@@ -44,7 +54,7 @@ type implicitRules struct {
 // the procedure's may still give one. The procedure's own IMPLICIT NONE
 // takes every letter's type away, as it does anywhere.
 func (r *implicitRules) inherit() *implicitRules {
-	in := &implicitRules{types: r.types}
+	in := &implicitRules{types: r.types, derived: r.derived, derivedPos: r.derivedPos}
 
 	for c := range in.noType {
 		in.noType[c] = r.none || r.noType[c]
@@ -140,10 +150,19 @@ func (a *analyzer) implicits(body []ast.Stmt) {
 		other = st
 
 		for _, rule := range st.Rules {
-			t, ok := a.typeOf(rule.Type, rule.Type.Len, rule.Type.Pos)
+			// IMPLICIT TYPE(POSN) (A-B): the type may be defined later in
+			// the unit, so the letters hold its name (derived).
+			t, ok := Type{Kind: Record}, true
+			if rule.Type.Derived == "" {
+				t, ok = a.typeOf(rule.Type, rule.Type.Len, rule.Type.Pos)
+			}
 
 			for _, l := range rule.Letters {
-				a.implicitLetters(t, ok, l, st.Pos.Line)
+				if a.implicitLetters(t, ok, l, st.Pos.Line) {
+					for c := l.First; c <= l.Last; c++ {
+						r.derived[c-'A'], r.derivedPos[c-'A'] = rule.Type.Derived, rule.Type.DerivedPos
+					}
+				}
 			}
 		}
 	}
@@ -159,15 +178,16 @@ func (a *analyzer) rejectImplicit(s *ast.ImplicitStmt, what string, line int) {
 }
 
 // implicitLetters gives the letters l names the type t (if ok: its type
-// had no error), for the IMPLICIT statement on line.
-func (a *analyzer) implicitLetters(t Type, ok bool, l ast.LetterRange, line int) {
+// had no error), for the IMPLICIT statement on line, and reports whether it
+// did.
+func (a *analyzer) implicitLetters(t Type, ok bool, l ast.LetterRange, line int) bool {
 	r := a.scope.rules()
 
 	for c := l.First; c <= l.Last; c++ {
 		if earlier := r.lines[c-'A']; earlier != 0 {
 			a.report("DUPIMPLICIT", l.Pos, string(rune(c)), earlier)
 
-			return
+			return false
 		}
 	}
 
@@ -175,10 +195,14 @@ func (a *analyzer) implicitLetters(t Type, ok bool, l ast.LetterRange, line int)
 		r.lines[c-'A'] = line
 		r.noType[c-'A'] = false
 
+		r.derived[c-'A'] = ""
+
 		if ok {
 			r.types[c-'A'] = t
 		}
 	}
+
+	return ok
 }
 
 // untyped reports each name that needs a type and has none, under

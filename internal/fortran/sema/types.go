@@ -21,9 +21,10 @@ const (
 	Character
 	Complex
 
-	// Record is a record's type (section 2.2.5): its size is its
-	// structure's, which the record's Symbol.Struct is. Only a record
-	// itself has it; a field reference has its field's type.
+	// Record is a record's type (section 2.2.5), and a Fortran 90 derived
+	// type's object's: its size is its structure's, which the type's Struct
+	// is. Only a record itself, or an aggregate reference, has it; a field
+	// reference to a typed field has its field's type.
 	Record
 )
 
@@ -38,18 +39,30 @@ const (
 // expressions of every one are compiled (Phase 78). A CHARACTER expression
 // whose length isn't known until the program runs, a substring with a
 // bound that isn't constant, has the size 0 too.
+//
+// A Record type also says which structure it is (Struct): two records of
+// different structures of one size are of different types, and == between
+// Types says so (docs/planning/PHASE-105 - Fortran 90 derived types.md,
+// finding 1). Struct is nil for every other kind.
 type Type struct {
-	Kind Kind
-	Size int
+	Kind   Kind
+	Size   int
+	Struct *Structure
+}
+
+// recordType is the type of a record, or a derived type's object, of the
+// structure st.
+func recordType(st *Structure) Type {
+	return Type{Kind: Record, Size: st.Size, Struct: st}
 }
 
 // INTEGER*4, REAL*4, LOGICAL*4, and the Invalid type. A name declared
 // INTEGER or LOGICAL with no length has its unit's default (analyzer's
 // defaultInt, defaultLogical), these unless /NOI4.
 var (
-	IntegerType = Type{Integer, 4}
-	RealType    = Type{Real, 4}
-	LogicalType = Type{Logical, 4}
+	IntegerType = Type{Kind: Integer, Size: 4}
+	RealType    = Type{Kind: Real, Size: 4}
+	LogicalType = Type{Kind: Logical, Size: 4}
 	invalid     = Type{}
 )
 
@@ -76,7 +89,12 @@ func (t Type) String() string {
 
 		return "CHARACTER*" + strconv.Itoa(t.Size)
 	case Record:
-		// Symbol.TypeText names the structure.
+		// A derived type is named as a declaration names it; a structure's
+		// record by Symbol.TypeText.
+		if t.Struct != nil && t.Struct.Derived {
+			return "TYPE(" + t.Struct.Name + ")"
+		}
+
 		return "RECORD"
 	default:
 		return "(invalid)"
@@ -190,8 +208,8 @@ func higher(t, u Type) Type {
 		t, u = u, t
 	}
 
-	if t == (Type{Complex, 8}) && u.Kind == Real && u.Size > 4 {
-		return Type{Complex, 16}
+	if t == (Type{Kind: Complex, Size: 8}) && u.Kind == Real && u.Size > 4 {
+		return Type{Kind: Complex, Size: 16}
 	}
 
 	return t
@@ -206,7 +224,7 @@ func higher(t, u Type) Type {
 func operationType(t, u Type) Type {
 	h := higher(t, u)
 	if h.Kind == Logical {
-		return Type{Integer, max(t.Size, u.Size, 2)}
+		return Type{Kind: Integer, Size: max(t.Size, u.Size, 2)}
 	}
 
 	return h
@@ -217,7 +235,7 @@ func operationType(t, u Type) Type {
 // integers, or an integer and a logical, an integer.
 func logicalType(t, u Type) Type {
 	if t.Kind == Logical && u.Kind == Logical {
-		return Type{Logical, max(t.Size, u.Size)}
+		return Type{Kind: Logical, Size: max(t.Size, u.Size)}
 	}
 
 	return operationType(t, u)
@@ -228,7 +246,7 @@ func logicalType(t, u Type) Type {
 // type is itself.
 func (t Type) integer() Type {
 	if t.Kind == Logical {
-		return Type{Integer, max(t.Size, 2)}
+		return Type{Kind: Integer, Size: max(t.Size, 2)}
 	}
 
 	return t
@@ -249,7 +267,7 @@ func (t Type) numeric() bool {
 // COMPLEX*16's REAL*8), and any other type itself.
 func (t Type) part() Type {
 	if t.Kind == Complex {
-		return Type{Real, t.Size / 2}
+		return Type{Kind: Real, Size: t.Size / 2}
 	}
 
 	return t

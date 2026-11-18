@@ -231,10 +231,10 @@ func (a *analyzer) assignedValue(pos diag.Position, target, value Expr) Expr {
 		if st := structureOf(target); vt.Kind != Record || structureOf(value) != st {
 			what := article(vt.String()) + " value"
 			if s := structureOf(value); s != nil {
-				what = "a record of the structure " + s.Display()
+				what = s.objectText()
 			}
 
-			a.report("RECORDASSIGN", pos, what, aggregateName(target), st.Display())
+			a.report("RECORDASSIGN", pos, what, aggregateName(target), st.objectText())
 
 			return nil
 		}

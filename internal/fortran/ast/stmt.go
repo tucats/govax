@@ -206,6 +206,36 @@ type (
 	}
 )
 
+// Fortran 90's derived types (the standard's 4.4.1; docs/planning/PHASE-105 -
+// Fortran 90 derived types.md).
+type (
+	// TypeDefStmt is a derived type's definition: TYPE [[, access] ::] name,
+	// then its Body, the statements up to and including its END TYPE (an
+	// *EndTypeStmt, last; missing if the parser reported it missing):
+	// SEQUENCE, PRIVATE, and component declarations, which are type
+	// statements. Access is PUBLIC or PRIVATE, or "" for none.
+	TypeDefStmt struct {
+		StmtBase
+		Name      string
+		NamePos   diag.Position
+		Access    string
+		AccessPos diag.Position
+		Body      []Stmt
+	}
+
+	// SequenceStmt is SEQUENCE, in a derived type's definition.
+	SequenceStmt struct {
+		StmtBase
+	}
+
+	// EndTypeStmt is END TYPE [name]; Name is "" without one.
+	EndTypeStmt struct {
+		StmtBase
+		Name    string
+		NamePos diag.Position
+	}
+)
+
 // ImplicitRule is one type and its letters in an IMPLICIT statement:
 // REAL*8 (A-H, O-Z).
 type ImplicitRule struct {

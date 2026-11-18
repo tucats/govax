@@ -308,7 +308,7 @@ func (ev *evaluator) selectedKind(e *ast.Apply, how string, args []ast.Expr) (*C
 // every integer of r digits, or -1 if none does.
 func selectedIntKind(r int64) int {
 	for _, k := range []int{1, 2, 4} {
-		if int64(intRangeDigits(Type{Integer, k})) >= r {
+		if int64(intRangeDigits(Type{Kind: Integer, Size: k})) >= r {
 			return k
 		}
 	}
@@ -326,7 +326,7 @@ func (a *analyzer) selectedRealKind(p, r *int64) int {
 	precision, rng := false, false
 
 	for _, k := range []int{4, 8, 16} {
-		f := a.format(Type{Real, k})
+		f := a.format(Type{Kind: Real, Size: k})
 		okP := p == nil || int64(realPrecision(f)) >= *p
 		okR := r == nil || int64(modelRange(f)) >= *r
 

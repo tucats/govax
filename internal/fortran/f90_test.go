@@ -143,7 +143,6 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 	want := []string{
 		"1:1 the MODULE statement",
 		"12:3 the USE statement",
-		"15:3 the TYPE (type-name) statement",
 		"30:3 the pointer assignment statement",
 	}
 
@@ -158,5 +157,53 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 
 	if r := fortran.Compile(noF90Options("B"), named); r.Errors != 0 || r.MACRO == nil {
 		t.Errorf("named ENDs: %v", r.Messages)
+	}
+}
+
+// TestDerivedTypeMap checks the storage map's lines for derived types
+// (docs/planning/PHASE-105 - Fortran 90 derived types.md, subtask 2): each type
+// with its size and SEQUENCE, each component at its offset, a type without
+// SEQUENCE naturally aligned, and an object's type as TYPE(name).
+func TestDerivedTypeMap(t *testing.T) {
+	lines := []string{
+		"program p",
+		"  type flag",
+		"    logical(1) :: on",
+		"    integer :: n",
+		"  end type flag",
+		"  type pair",
+		"    sequence",
+		"    logical(1) :: on",
+		"    integer :: n",
+		"  end type pair",
+		"  type(flag) :: f",
+		"  type(pair) :: g(2)",
+		"  f%n = 1",
+		"  g(2)%n = f%n",
+		"end program",
+	}
+
+	opts := noF90Options("A")
+	opts.F90 = true
+	r := fortran.Compile(opts, fortran.File{Spec: "A.F90", Name: "A", Free: true, Lines: lines})
+
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+
+	for _, want := range []string{
+		"Type FLAG, 8 bytes",
+		"+0     ON    LOGICAL*1",
+		"+4     N     INTEGER",
+		"Type PAIR, 5 bytes, SEQUENCE",
+		"+1     N     INTEGER",
+		"F     TYPE(FLAG)",
+		"G     TYPE(PAIR) (2)",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in the MACRO file:\n%s", want, text)
+		}
 	}
 }

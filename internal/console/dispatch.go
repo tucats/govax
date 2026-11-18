@@ -946,6 +946,7 @@ func (d *Dispatcher) bindGrammar() {
 			GFloating:      r.Present("G_FLOATING") && !r.Negated("G_FLOATING"),
 			Align:          nonEmpty(r.List("ALIGN")),
 			AlignGiven:     r.Present("ALIGN") && !r.Negated("ALIGN") && !r.Defaulted("ALIGN"),
+			NoAlign:        r.Present("ALIGN") && r.Negated("ALIGN"),
 			Optimize:       !r.Negated("OPTIMIZE"),
 			List:           r.Present("LIST") && !r.Negated("LIST") && !r.Defaulted("LIST"),
 			ListFile:       r.String("LIST"),

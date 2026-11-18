@@ -225,7 +225,7 @@ func (a *analyzer) blockDataBody(body []ast.Stmt) []ast.Stmt {
 	for _, s := range body {
 		switch s.(type) {
 		case *ast.CommonStmt, *ast.DataStmt, *ast.DimensionStmt, *ast.EquivalenceStmt, *ast.ImplicitStmt,
-			*ast.ParameterStmt, *ast.RecordStmt, *ast.TypeStmt, *ast.StructureStmt, *ast.EndStmt, *ast.BadStmt:
+			*ast.ParameterStmt, *ast.RecordStmt, *ast.TypeStmt, *ast.StructureStmt, *ast.TypeDefStmt, *ast.EndStmt, *ast.BadStmt:
 			kept = append(kept, s)
 
 			continue

@@ -55,7 +55,7 @@ type kindInfo struct {
 // and conversions are compiled in line, its quotient is FTNRTL's FTN$DIVCH,
 // and its I/O, powers, and intrinsic functions are NOTIMPL until Phases 108
 // and 109.
-var complex32 = Type{Complex, 32}
+var complex32 = Type{Kind: Complex, Size: 32}
 
 // The forms of COMPLEX(16) that are NOTIMPL, as the messages name them.
 const (
@@ -101,10 +101,10 @@ func kindType(base ast.BaseType, k int) (Type, *kindProblem) {
 		}
 
 		if info.kind == Complex {
-			return Type{Complex, 2 * k}, nil
+			return Type{Kind: Complex, Size: 2 * k}, nil
 		}
 
-		return Type{info.kind, k}, nil
+		return Type{Kind: info.kind, Size: k}, nil
 	}
 
 	return invalid, &kindProblem{ident: "NOSUCHKIND", args: []any{base.String(), k, info.text}}

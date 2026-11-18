@@ -1168,6 +1168,18 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `sorter.f90`) and the debugger reading descriptors (`dbgtable.Described`,
   `debugger/fortran.go`'s `describedBase`; DBG-W-NOTALLOC), and subtask 10
   (2026-11-18) the close-out, FORTRAN-INTERNALS.md's section 29.
+  Phase 105 (in progress; its Part A the survey, accepted by the author
+  2026-11-18, with the subtasks revised, A.4) is derived types, on Phase 82's
+  STRUCTURE machinery: subtask 2 (2026-11-18) is definitions and objects
+  (`ast.TypeDefStmt`, gathered by `parse/units.go`, `parse/derived.go`;
+  `sema/derived.go`: a derived type a `Structure` with `Derived` and `Sequence`,
+  `sema.Type.Struct` naming a record's structure, so `==` tells two apart;
+  `TYPE(t)` declarations, IMPLICIT TYPE(t) resolved once the declarations are
+  read, `TYPE(t) FUNCTION` lexed as a typed FUNCTION; a non-SEQUENCE type
+  naturally aligned unless PACKED was given, `Alignment.RecordsGiven`, the
+  command's explicit `/NOALIGN`; `%` a component selector after any reference,
+  `ast.FieldRef.Percent`; class 1 names, TYPECLASH; the storage map's "Type"
+  lines; `testdata/fortran90/types.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -2191,7 +2191,7 @@ func analyzeAligned(t *testing.T, al Alignment, lines ...string) (*Program, []di
 // TestAlignValues checks the grammar /ALIGN shares with CDEC$ OPTIONS (the HP
 // manual's 14.14).
 func TestAlignValues(t *testing.T) {
-	both := func(r AlignRule) Alignment { return Alignment{Records: r, Commons: r} }
+	both := func(r AlignRule) Alignment { return Alignment{Records: r, Commons: r, RecordsGiven: true} }
 
 	cases := []struct {
 		values []string
@@ -2203,13 +2203,13 @@ func TestAlignValues(t *testing.T) {
 		{values: []string{"NONE"}, want: both(Packed)},
 		{values: []string{"NATURAL"}, want: both(Natural)},
 		{values: []string{"PACKED"}, want: both(Packed)},
-		{values: []string{"RECORDS=NATURAL"}, want: Alignment{Records: Natural}},
-		{values: []string{"STRUCTURES=NATURAL"}, want: Alignment{Records: Natural}},
-		{values: []string{"RECO=NATU"}, want: Alignment{Records: Natural}},
+		{values: []string{"RECORDS=NATURAL"}, want: Alignment{Records: Natural, RecordsGiven: true}},
+		{values: []string{"STRUCTURES=NATURAL"}, want: Alignment{Records: Natural, RecordsGiven: true}},
+		{values: []string{"RECO=NATU"}, want: Alignment{Records: Natural, RecordsGiven: true}},
 		{values: []string{"COMMONS=STANDARD"}, want: Alignment{Commons: Standard}},
 		{values: []string{"C=S"}, want: Alignment{Commons: Standard}},
 		{values: []string{"RECORDS=NATURAL", "COMMONS=NATURAL"}, want: both(Natural)},
-		{values: []string{"RECORDS=NATURAL", "RECORDS=PACKED"}, want: Alignment{}},
+		{values: []string{"RECORDS=NATURAL", "RECORDS=PACKED"}, want: Alignment{RecordsGiven: true}},
 		{values: []string{"STANDARD"}, bad: true},
 		{values: []string{"RECORDS=STANDARD"}, bad: true},
 		{values: []string{"STRUCTURES=STANDARD"}, bad: true},

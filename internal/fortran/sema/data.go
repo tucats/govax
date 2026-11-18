@@ -661,7 +661,7 @@ func (a *analyzer) dataSubstring(e *ast.Substring, vars map[string]int32, vals *
 
 	text += "(" + strconv.Itoa(first) + ":" + strconv.Itoa(last) + ")"
 
-	return a.dataItem(s, number*s.Type.Size+first-1, Type{Character, last - first + 1}, text, e.Pos, vals)
+	return a.dataItem(s, number*s.Type.Size+first-1, Type{Kind: Character, Size: last - first + 1}, text, e.Pos, vals)
 }
 
 // dataImpliedDo is an implied-DO list, (dlist, i=n1,n2[,n3]). Its variable

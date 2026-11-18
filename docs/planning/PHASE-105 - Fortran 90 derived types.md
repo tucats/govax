@@ -422,7 +422,8 @@ all three.
    `Sequence`, `ast.TypeDefStmt` and the definition's checks (finding 2), class 1
    names and host association (finding 3), layout and `/ALIGN` (finding 4),
    `TYPE(t)` declarations, IMPLICIT, and typed FUNCTION statements (finding 5),
-   `%` and `.` scalar components with substrings (finding 6), the storage map.
+   `%` and `.` scalar components with substrings (finding 6), the storage map
+   (done 2026-11-18).
 3. **Constructors, assignment, operators:** `StructValue`, constant folding,
    initial values and PARAMETERs and their components, intrinsic assignment by
    `sameType`, defined assignment replacing it, NODERIVEDOP (findings 8 and 9).
@@ -514,3 +515,55 @@ object are never the same type, with a message naming both.
   recommendation but question 2: a derived-type result of 8 bytes or fewer
   comes back in R0 and R1 (finding 11 rewritten; "The author's answers").
   Subtask 2 is next.
+- **2026-11-18, subtask 2 (done):** Definitions and objects.
+  - *Syntax.* The parser makes `TYPE [, access ::] name` an `ast.TypeDefStmt`
+    (`parse/derived.go`), and `units.go` gathers every statement to its END TYPE
+    into its `Body` (NOENDTYPE if the unit ends first, NOTYPEEND for an END TYPE
+    with none open). `SEQUENCE` is an `ast.SequenceStmt`, `END TYPE [name]` an
+    `ast.EndTypeStmt`; PRIVATE stays a `PendingStmt`. `TYPE(t) [, attrs ::]
+    entities` is a `TypeStmt` whose `TypeSpec.Derived` names the type (the
+    statement's tail shared with the intrinsic types, `typeEntities`); IMPLICIT
+    takes `TYPE(t)`; the lexer takes `[RECURSIVE] TYPE(t) FUNCTION F` for a typed
+    FUNCTION whose `FunctionType` is `TypeDecl`. After any reference `%` and a name
+    is a component (`componentNext`), a `FieldRef` with `Percent`, under `/F90`
+    and `/NOF90` alike; `recordScope` counts TYPE(t) entities and IMPLICIT
+    TYPE(t)'s letters as records, so `P.X.Y` reads as components under `/F90`.
+  - *The type says its structure.* `sema.Type` gained `Struct` (every positional
+    `Type{k, n}` literal is keyed now); `recordType(st)` makes a record's or an
+    object's type, and `Type.String` is `TYPE(POINT)` for a derived type.
+    `Structure` gained `Derived` and `Sequence`, `What` and `objectText` for
+    messages (NOFIELD, STRUCTSIZE, and RECORDASSIGN reworded to fit both), and
+    `Display` is `TYPE(POINT)` for one.
+  - *Definitions* (`sema/derived.go`'s `typeDefinition`): components through
+    `structBuilder` (`componentStatement`: DIMENSION as an attribute, POINTER
+    NOTIMPL for Phase 107, a default initial value NOTIMPL for Phase 112, any other
+    attribute TYPEATTR; a component's type defined before it, TYPESELF for its
+    own); TYPENAME, TYPEACCESS outside a module, DUPTYPE (a STRUCTURE of the
+    name too), TYPESTMT, TYPEEMPTY, TYPETWICE, TYPEORDER, SEQCOMPONENT,
+    ENDTYPENAME. A type is in the unit's table of structures, so an internal
+    procedure sees its host's; TYPE(t) naming a STRUCTURE is TYPESTRUCT, and RECORD
+    /t/ naming a type RECORDTYPE. No FIELDOP warning for a type's components,
+    which `%` reaches.
+  - *Layout* (the author's answer 1): `Alignment.RecordsGiven` says a setting
+    named RECORDS, so a non-SEQUENCE type is natural unless PACKED was given
+    explicitly (`derivedLayout`); the FORTRAN command now passes an explicit
+    `/NOALIGN` (`FortranOptions.NoAlign`). The storage map heads a type "Type
+    POINT, 8 bytes, SEQUENCE".
+  - *Objects.* A TYPE(t) entity gets the type and its `Symbol.Struct`, and is
+    compiled as a record is from there: fields, whole moves between one type's
+    objects, arguments by reference (still compared by `form` until subtask 4),
+    host association. IMPLICIT TYPE(t) letters hold the type's name
+    (`implicitRules.derived`), since the standard puts IMPLICIT before the
+    definitions; a name given such a type waits for `resolveImplicitObjects`,
+    after the declarations walk (a dummy is entered at the header, before any
+    definition). TYPECLASH (14.1.2, class 1) is checked once the unit is analyzed:
+    any symbol of the unit with a type's name.
+  - *NOTIMPL for the subtasks to come:* a structure constructor (a reference to a
+    type's name in parentheses), a value of a derived type in a declaration
+    (subtask 3), and a function of a derived type, by header, type statement, or
+    IMPLICIT (subtask 4).
+  - *Tests:* `parse/testdata/derived.f90`, `lex`'s typed FUNCTION cases,
+    `sema/derived_test.go` (layouts under four settings, types told apart, every
+    message), `fortran`'s `TestDerivedTypeMap`, and
+    `testdata/fortran90/types.f90` in every mode. It isn't in `compare.py`: DEC's
+    period is no Fortran 95.

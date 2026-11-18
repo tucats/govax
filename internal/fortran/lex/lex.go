@@ -29,8 +29,9 @@ type Statement struct {
 
 	// FunctionType is the data type keyword of a typed FUNCTION
 	// statement (Integer for INTEGER FUNCTION F(X)), and Unknown for an
-	// untyped one or any other statement. The type's length, if any, is
-	// among the tokens before the FUNCTION keyword token.
+	// untyped one or any other statement; TypeDecl for TYPE(POINT) FUNCTION
+	// F. The type's length, if any, is among the tokens before the FUNCTION
+	// keyword token, as a derived type's parenthesized name is.
 	FunctionType Kind
 
 	// Recursive is set for a FUNCTION or SUBROUTINE statement that says
@@ -314,6 +315,16 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 			}
 		}
 
+		// TYPE(POINT) FUNCTION F(A), a function of a derived type (the
+		// standard's R1217), whose FunctionType is TypeDecl.
+		if k == Type && unitStart && i+len(kw) < j && l.sq.text[i+len(kw)] == '(' {
+			if fn := l.typedFunction(st, TypeDecl, i+len(kw), j); fn != nil {
+				l.keywordBlanks(i, kw)
+
+				return fn
+			}
+		}
+
 		switch k {
 		case End:
 			return l.endStatement(st, i, j)
@@ -479,7 +490,9 @@ const recursive = "RECURSIVE"
 
 // typedFunction recognizes a typed FUNCTION statement (INTEGER FUNCTION
 // F(X), REAL*8 FUNCTION G, CHARACTER*(*) FUNCTION H(S), INTEGER RECURSIVE
-// FUNCTION F(N)), whose type keyword k ends at i, or returns nil. Squeezed, INTEGER FUNCTION F(10)
+// FUNCTION F(N), TYPE(POINT) FUNCTION P), whose type keyword k ends at i, or
+// returns nil. A derived type's k is TypeDecl, and its name in parentheses is
+// read as a kind selector's place is. Squeezed, INTEGER FUNCTION F(10)
 // and INTEGER FUNCTIONF(10), which declares an array named FUNCTIONF,
 // are the same text; a FUNCTION statement can only be a program unit's
 // first statement, so only there is the text taken for one.

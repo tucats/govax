@@ -87,8 +87,14 @@ func (f *FieldRef) Text() string {
 		b.WriteString("()")
 	}
 
+	// A derived type's components are shown as Fortran 90 writes them.
+	sep := "."
+	if f.Sym.Struct != nil && f.Sym.Struct.Derived {
+		sep = "%"
+	}
+
 	for _, s := range f.Path {
-		b.WriteString("." + s.Field.Name)
+		b.WriteString(sep + s.Field.Name)
 
 		if s.Subs != nil {
 			b.WriteString("()")
@@ -105,9 +111,16 @@ func (f *FieldRef) Text() string {
 func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 	for _, g := range s.Groups {
 		st := a.unit.structure(g.Structure)
-		if st == nil {
+
+		switch {
+		case st == nil:
 			a.report("NOSTRUCT", g.Pos, g.Structure)
-		} else {
+		case st.Derived:
+			// RECORD names only a STRUCTURE (derived.go).
+			a.report("RECORDTYPE", g.Pos, g.Structure)
+
+			st = nil
+		default:
 			a.noteOther(whatStructure, g.Structure, g.Pos, RefUsed)
 		}
 
@@ -136,7 +149,7 @@ func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 				sym.broken = true
 
 			default:
-				sym.Struct, sym.Type = st, Type{Record, st.Size}
+				sym.Struct, sym.Type = st, recordType(st)
 				sym.Typed, sym.TypePos, sym.untyped = true, d.Pos, false
 
 				if sym.Class == Unclassified {
@@ -199,7 +212,7 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 
 		switch {
 		case f == nil:
-			a.report("NOFIELD", step.Pos, st.Display(), step.Field)
+			a.report("NOFIELD", step.Pos, st.What(), st.fieldWord(), step.Field)
 
 			return a.bad(e.Pos)
 
@@ -219,7 +232,7 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 
 	ref.T = prev.Type
 	if prev.Struct != nil {
-		ref.T = Type{Record, prev.Struct.Size}
+		ref.T = recordType(prev.Struct)
 	}
 
 	return ref
@@ -505,7 +518,7 @@ func recordArguments(r routineRef, fu *fileUnit, messages *diag.List) {
 // argumentKind says what an argument or a dummy argument is for RECORDARG.
 func argumentKind(s *Structure, t Type) string {
 	if s != nil {
-		return "a record of the structure " + s.Display()
+		return s.objectText()
 	}
 
 	return article(t.String())
@@ -666,7 +679,7 @@ func piece(k *FieldInitial, from, to int) *FieldInitial {
 	b := k.Bytes[from-k.Offset : to-k.Offset]
 
 	return &FieldInitial{
-		Offset: from, Type: Type{Character, len(b)}, Bytes: b,
+		Offset: from, Type: Type{Kind: Character, Size: len(b)}, Bytes: b,
 		Item: k.Item + " (in part)", Source: k.Source, Pos: k.Pos,
 	}
 }

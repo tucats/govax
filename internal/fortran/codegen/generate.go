@@ -731,7 +731,19 @@ func structureLines(list []*sema.Structure) []string {
 	var lines []string
 
 	for _, s := range list {
-		lines = append(lines, fmt.Sprintf("  Structure %s, %d bytes", s.Display(), s.Size))
+		header := fmt.Sprintf("  Structure %s, %d bytes", s.Display(), s.Size)
+
+		// A derived type: Type POINT, 8 bytes, SEQUENCE. A type without
+		// SEQUENCE is naturally aligned unless told otherwise, so its
+		// padding shows as gaps between offsets.
+		if s.Derived {
+			header = fmt.Sprintf("  Type %s, %d bytes", s.Name, s.Size)
+			if s.Sequence {
+				header += ", SEQUENCE"
+			}
+		}
+
+		lines = append(lines, header)
 
 		width := 4
 		for _, f := range s.Fields {

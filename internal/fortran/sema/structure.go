@@ -89,6 +89,11 @@ type Structure struct {
 	// RECORD statement inside it can't name it: a structure can't
 	// contain itself (section 4.15.2).
 	open bool
+
+	// Derived is set for a Fortran 90 derived type, which a TYPE statement
+	// defines (derived.go), and Sequence for one whose definition says
+	// SEQUENCE. A derived type's fields are its components.
+	Derived, Sequence bool
 }
 
 // Field is one of a structure's fields.
@@ -149,11 +154,44 @@ func (s *Structure) Field(name string) *Field {
 // "structure": /DATE/, or for a nested structure without a name "at
 // line 8".
 func (s *Structure) Display() string {
-	if s.Name == "" {
+	switch {
+	case s.Derived:
+		return "TYPE(" + s.Name + ")"
+	case s.Name == "":
 		return "at line " + strconv.Itoa(s.Pos.Line)
 	}
 
 	return "/" + s.Name + "/"
+}
+
+// What names the structure for a message: "the structure /DATE/", "the
+// derived type POINT".
+func (s *Structure) What() string {
+	if s.Derived {
+		return "the derived type " + s.Name
+	}
+
+	return "the structure " + s.Display()
+}
+
+// fieldWord is what the structure's fields are called: a derived type's are
+// its components.
+func (s *Structure) fieldWord() string {
+	if s.Derived {
+		return "component"
+	}
+
+	return "field"
+}
+
+// objectText says what a record of the structure is, for a message: "a
+// record of the structure /DATE/", "an object of the derived type POINT".
+func (s *Structure) objectText() string {
+	if s.Derived {
+		return "an object of " + s.What()
+	}
+
+	return "a record of " + s.What()
 }
 
 // ElementSize is the length in bytes of one of the field's items: its
@@ -386,6 +424,10 @@ func (b *structBuilder) recordStatement(s *ast.RecordStmt) {
 		switch {
 		case st == nil:
 			b.a.report("NOSTRUCT", g.Pos, g.Structure)
+		case st.Derived:
+			b.a.report("RECORDTYPE", g.Pos, g.Structure)
+
+			st = nil
 		case st.open:
 			b.a.report("RECURSTRUCT", g.Pos, g.Structure)
 
@@ -483,7 +525,7 @@ func (b *structBuilder) unionStatement(s *ast.UnionStmt) {
 	b.boundary = max(outerBoundary, b.boundary)
 
 	if int64(b.offset) > maxStructureBytes && !b.tooLarge {
-		b.a.report("STRUCTSIZE", u.Pos, b.s.Display())
+		b.a.report("STRUCTSIZE", u.Pos, b.s.What())
 
 		b.tooLarge = true
 	}
@@ -581,7 +623,8 @@ func (b *structBuilder) add(f *Field) {
 			b.s.byName[f.Name] = f
 		}
 
-		if operatorNames[f.Name] {
+		// A derived type's components are reached by %, too.
+		if operatorNames[f.Name] && !b.s.Derived {
 			b.a.report("FIELDOP", f.Pos, f.Name)
 		}
 	}
@@ -591,7 +634,7 @@ func (b *structBuilder) add(f *Field) {
 	size := int64(f.ElementSize()) * int64(f.Elements())
 	if int64(b.offset)+size > maxStructureBytes {
 		if !b.tooLarge {
-			b.a.report("STRUCTSIZE", f.Pos, b.s.Display())
+			b.a.report("STRUCTSIZE", f.Pos, b.s.What())
 		}
 
 		b.tooLarge = true

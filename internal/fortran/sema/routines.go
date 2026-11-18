@@ -63,7 +63,7 @@ func routineName(f form, g bool) string {
 	integerOf := strings.HasPrefix(name, "II") || strings.HasPrefix(name, "JI")
 
 	switch {
-	case f.uses(Type{Real, 16}):
+	case f.uses(Type{Kind: Real, Size: 16}):
 		switch {
 		case name[0] == 'Q':
 			name = "H" + name[1:]
@@ -71,7 +71,7 @@ func routineName(f form, g bool) string {
 			name = name[:2] + "H" + name[3:]
 		}
 
-	case g && (f.uses(Type{Real, 8}) || f.uses(Type{Complex, 16})):
+	case g && (f.uses(Type{Kind: Real, Size: 8}) || f.uses(Type{Kind: Complex, Size: 16})):
 		switch {
 		case name == "DBLE":
 			name = "GDBLE"
@@ -149,7 +149,7 @@ func (a *analyzer) passedForm(name string) form {
 		candidates = named
 	}
 
-	for _, t := range []Type{a.defaultInt, {Real, 4}} {
+	for _, t := range []Type{a.defaultInt, {Kind: Real, Size: 4}} {
 		for _, f := range candidates {
 			if f.arg == t {
 				return f

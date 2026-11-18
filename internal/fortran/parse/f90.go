@@ -27,8 +27,8 @@ import (
 //   - and the statements that hold others (units.go): CONTAINS's
 //     internal procedures (ast.Unit.Contains), an interface block's bodies
 //     (ast.InterfaceBlock), each a unit of its own (Phase 103), and a
-//     derived type's components, gathered into the PendingStmt of its TYPE
-//     statement until Phase 105.
+//     derived type's components, gathered into its TYPE statement's
+//     TypeDefStmt (derived.go; Phase 105).
 
 // parsePending makes a statement a PendingStmt, reported NOTIMPL by its kind.
 func parsePending(p *parser) ast.Stmt {
@@ -186,7 +186,7 @@ func (p *parser) intentSpec() string {
 // values in slashes are VAX FORTRAN's form, without ::, and not allowed with
 // it (SLASHINIT; the HP manual's rule). The value may be an array constructor, an
 // array's (Phase 102).
-func (p *parser) entityValue(d *ast.Declarator) ast.Stmt {
+func (p *parser) entityValue(d *ast.Declarator) {
 	switch {
 	case p.at("/"):
 		p.fail("SLASHINIT", p.here())
@@ -195,8 +195,6 @@ func (p *parser) entityValue(d *ast.Declarator) ast.Stmt {
 		d.ValuePos = p.here()
 		d.Value = p.expr()
 	}
-
-	return nil
 }
 
 // parseModule parses Fortran 90's MODULE name (the standard's R1105).

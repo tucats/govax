@@ -121,6 +121,10 @@ type FortranOptions struct {
 	Align      []string
 	AlignGiven bool
 
+	// NoAlign is /NOALIGN given explicitly, which packs Fortran 90 derived
+	// types without SEQUENCE too (sema.Alignment's RecordsGiven).
+	NoAlign bool
+
 	// Optimize is /OPTIMIZE (fortran.Options): the console sets it unless given /NOOPTIMIZE.
 	Optimize bool
 
@@ -233,6 +237,10 @@ func (fc FortranContinuations) limit() (int, error) {
 // alignment is the compiler's Options.Align for /ALIGN, or an error if a value
 // isn't one.
 func (opts FortranOptions) alignment() (sema.Alignment, error) {
+	if opts.NoAlign && !opts.AlignGiven {
+		return sema.Alignment{}.WithNoAlign(), nil
+	}
+
 	if !opts.AlignGiven {
 		return sema.Alignment{}, nil
 	}

@@ -53,6 +53,12 @@ type Alignment struct {
 	// common blocks.
 	Records, Commons AlignRule
 
+	// RecordsGiven is set once a qualifier or an OPTIONS group has said how
+	// records are placed, even PACKED: a Fortran 90 derived type without
+	// SEQUENCE is naturally aligned unless told otherwise (docs/planning/
+	// PHASE-105 - Fortran 90 derived types.md, the author's answer 1).
+	RecordsGiven bool
+
 	// Warn is /WARN=ALIGNMENT: an informational message for each field or
 	// common name not on its natural boundary. It is off unless asked for,
 	// since under V5.0's packing nearly every structure would get one (ours).
@@ -87,7 +93,7 @@ func matchKeyword(word string, list ...string) string {
 // doesn't name keep their rules.
 func (al Alignment) WithAlign(values []string) (Alignment, error) {
 	if len(values) == 0 {
-		al.Records, al.Commons = Natural, Natural
+		al.Records, al.Commons, al.RecordsGiven = Natural, Natural, true
 	}
 
 	for _, v := range values {
@@ -103,7 +109,7 @@ func (al Alignment) WithAlign(values []string) (Alignment, error) {
 
 // WithNoAlign is the setting with /NOALIGN applied: PACKED for both classes.
 func (al Alignment) WithNoAlign() Alignment {
-	al.Records, al.Commons = Packed, Packed
+	al.Records, al.Commons, al.RecordsGiven = Packed, Packed, true
 
 	return al
 }
@@ -118,9 +124,9 @@ func (al Alignment) withValue(value string) (Alignment, error) {
 	if !hasClass {
 		switch matchKeyword(word, "ALL", "NONE", "NATURAL", "PACKED", "STANDARD") {
 		case "ALL", "NATURAL":
-			al.Records, al.Commons = Natural, Natural
+			al.Records, al.Commons, al.RecordsGiven = Natural, Natural, true
 		case "NONE", "PACKED":
-			al.Records, al.Commons = Packed, Packed
+			al.Records, al.Commons, al.RecordsGiven = Packed, Packed, true
 		case "STANDARD":
 			return al, errors.New("STANDARD needs a class: /ALIGN=COMMONS=STANDARD")
 		default:
@@ -151,7 +157,7 @@ func (al Alignment) withValue(value string) (Alignment, error) {
 			return al, errors.New("STANDARD applies only to COMMONS")
 		}
 
-		al.Records = rule
+		al.Records, al.RecordsGiven = rule, true
 	default:
 		return al, errors.New("a class is COMMONS, RECORDS, or STRUCTURES, not " + class)
 	}

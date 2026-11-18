@@ -263,7 +263,7 @@ func takesComplex32(forms []form) bool {
 }
 
 // byteType is INTEGER*1, Fortran 90's INTEGER(1).
-var byteType = Type{Integer, 1}
+var byteType = Type{Kind: Integer, Size: 1}
 
 // byteResult reports whether a generic function's INTEGER*1 arguments give
 // an INTEGER*1 result. The table has no INTEGER*1 rows (VAX FORTRAN has no
@@ -273,7 +273,7 @@ var byteType = Type{Integer, 1}
 // back. A function whose INTEGER*2 rows give other results too, INT by the
 // unit's default integer, keeps the row's, as does a specific name.
 func (a *analyzer) byteResult(name string, forms []form, f form, args []Expr) bool {
-	if f.arg != (Type{Integer, 2}) || f.result != f.arg || name != f.generic {
+	if f.arg != (Type{Kind: Integer, Size: 2}) || f.result != f.arg || name != f.generic {
 		return false
 	}
 
@@ -377,7 +377,7 @@ func (a *analyzer) selectForm(e *ast.Apply, forms []form, args []Expr, want Type
 
 	if len(chosen) == 0 && t == byteType {
 		// No row takes INTEGER*1: it is done in INTEGER*2 (byteResult).
-		t = Type{Integer, 2}
+		t = Type{Kind: Integer, Size: 2}
 
 		for _, f := range forms {
 			if takesType(f, t, len(args)) {
@@ -387,7 +387,7 @@ func (a *analyzer) selectForm(e *ast.Apply, forms []form, args []Expr, want Type
 	}
 
 	if len(chosen) == 0 && t == IntegerType && wordConstants(args) {
-		t = Type{Integer, 2}
+		t = Type{Kind: Integer, Size: 2}
 
 		for _, f := range forms {
 			if takesType(f, t, len(args)) {
@@ -433,7 +433,7 @@ func takesType(f form, t Type, n int) bool {
 // INTEGER constant that fits one.
 func wordConstants(args []Expr) bool {
 	for _, x := range args {
-		if x.Type() == (Type{Integer, 2}) {
+		if x.Type() == (Type{Kind: Integer, Size: 2}) {
 			continue
 		}
 
@@ -519,7 +519,7 @@ func (a *analyzer) argumentType(e *ast.Apply, forms []form, args []Expr) (Type, 
 	// argument).
 	switch t := args[0].Type(); t.Kind {
 	case Character:
-		return Type{Character, 0}, true
+		return Type{Kind: Character, Size: 0}, true
 	case Logical:
 		return t, true
 	}
@@ -538,7 +538,7 @@ func (a *analyzer) argumentType(e *ast.Apply, forms []form, args []Expr) (Type, 
 	for _, x := range args {
 		if c, ok := x.(*Const); ok {
 			fits := c.T == IntegerType && c.Int >= math.MinInt16 && c.Int <= math.MaxInt16
-			if !(varying && t == Type{Integer, 2} && fits) {
+			if !(varying && t == Type{Kind: Integer, Size: 2} && fits) {
 				t = higher(t, c.T)
 			}
 		}

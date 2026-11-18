@@ -159,7 +159,7 @@ func TestInterfaceSymbols(t *testing.T) {
 		t.Errorf("G: interface %v, dummy procedure %v, %v %v", g.Interface != nil, g.DummyProcedure(), g.Class, g.Type)
 	}
 
-	if name.Interface != u.Interfaces[1] || !name.External || name.Class != Function || name.Type != (Type{Character, 4}) {
+	if name.Interface != u.Interfaces[1] || !name.External || name.Class != Function || name.Type != (Type{Kind: Character, Size: 4}) {
 		t.Errorf("NAME: interface %v, external %v, %v %v", name.Interface != nil, name.External, name.Class, name.Type)
 	}
 

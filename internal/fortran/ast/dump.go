@@ -85,6 +85,8 @@ func dumpLines(b *strings.Builder, s Stmt, indent string) {
 		body = s.Body
 	case *PendingStmt:
 		body = s.Inner
+	case *TypeDefStmt:
+		body = s.Body
 	case *InterfaceBlock:
 		for _, u := range s.Bodies {
 			dumpUnit(b, u, indent+"  ")
@@ -299,6 +301,20 @@ func DumpStmt(s Stmt) string {
 
 	case *EndInterfaceStmt:
 		return "END INTERFACE"
+
+	case *TypeDefStmt:
+		text := "TYPE"
+		if s.Access != "" {
+			text += ", " + s.Access + " ::"
+		}
+
+		return text + " " + s.Name
+
+	case *SequenceStmt:
+		return "SEQUENCE"
+
+	case *EndTypeStmt:
+		return strings.TrimSpace("END TYPE " + s.Name)
 
 	case *PendingStmt:
 		if s.What != "" {
@@ -626,11 +642,16 @@ func DumpExpr(e Expr) string {
 	case *Substring:
 		return DumpExpr(e.X) + "(" + DumpExpr(e.Lower) + ":" + DumpExpr(e.Upper) + ")"
 	case *FieldRef:
-		if e.Args != nil {
-			return DumpExpr(e.X) + "." + e.Field + args(e.Args)
+		sep := "."
+		if e.Percent {
+			sep = "%"
 		}
 
-		return DumpExpr(e.X) + "." + e.Field
+		if e.Args != nil {
+			return DumpExpr(e.X) + sep + e.Field + args(e.Args)
+		}
+
+		return DumpExpr(e.X) + sep + e.Field
 	case *BuiltinArg:
 		return "%" + e.Func + "(" + DumpExpr(e.X) + ")"
 	case *KeywordArg:
@@ -673,6 +694,10 @@ func DumpExpr(e Expr) string {
 
 // String is the type as written: INTEGER, REAL*8, CHARACTER*(*).
 func (t TypeSpec) String() string {
+	if t.Derived != "" {
+		return t.Text()
+	}
+
 	if t.Type == 0 {
 		// A length with no type: FUNCTION F*8.
 		return t.Len.String()

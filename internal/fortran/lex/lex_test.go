@@ -96,6 +96,12 @@ func TestClassify(t *testing.T) {
 		{text: "FUNCTION ROOT(A)", want: "FUNCTION: ROOT ( A )", first: true},
 		{text: "LOGICAL FUNCTION", want: "LOGICAL: FUNCTION", first: true},
 
+		// A function of a derived type (docs/planning/PHASE-105), and TYPE(...)
+		// elsewhere VAX FORTRAN's output statement.
+		{text: "TYPE(POINT) FUNCTION MID(A, B)", want: "FUNCTION (TYPE (type-name)): ( POINT ) FUNCTION MID ( A , B )", first: true},
+		{text: "RECURSIVE TYPE(POINT) FUNCTION F(N)", want: "FUNCTION (TYPE (type-name)) (recursive): ( POINT ) FUNCTION F ( N )", first: true},
+		{text: "TYPE (10), X", want: "TYPE: ( 10 ) , X", first: true},
+
 		// RECURSIVE, before the type or after it (docs/planning/PHASE-89), only at a
 		// unit's start; RESULT is a name for the parser.
 		{text: "RECURSIVE FUNCTION F(N) RESULT(L)", want: "FUNCTION (recursive): F ( N ) RESULT ( L )", first: true},

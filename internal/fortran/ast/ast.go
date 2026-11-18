@@ -266,6 +266,21 @@ type TypeSpec struct {
 	// KindPos is where it starts.
 	Kind    Expr
 	KindPos diag.Position
+
+	// Derived is the name of a derived type, Fortran 90's TYPE(name)
+	// (the standard's R502), whose Type is then 0; "" for an intrinsic
+	// type. DerivedPos is where the name is.
+	Derived    string
+	DerivedPos diag.Position
+}
+
+// Text is the type as a message names it: INTEGER, or TYPE(POINT).
+func (t TypeSpec) Text() string {
+	if t.Derived != "" {
+		return "TYPE(" + t.Derived + ")"
+	}
+
+	return t.Type.String()
 }
 
 // Declarator is one entity a type, DIMENSION, COMMON, or RECORD
@@ -553,13 +568,16 @@ type (
 	}
 
 	// FieldRef is a reference to a record's field, X.Field (section
-	// 2.2.5.2): X is the record (a *Name, an *Apply for an element of an
-	// array of records, or another FieldRef).
+	// 2.2.5.2), or to a derived-type object's component, Fortran 90's
+	// X%Field (the standard's 6.1.2), where Percent is set: X is the record
+	// or object (a *Name, an *Apply for an element of an array of them, or
+	// another FieldRef).
 	FieldRef struct {
 		ExprBase
-		X     Expr
-		Field string
-		Args  []Expr // the field's subscripts, if it is an array; else nil
+		X       Expr
+		Field   string
+		Args    []Expr // the field's subscripts, if it is an array; else nil
+		Percent bool
 	}
 
 	// BuiltinArg is one of the built-in functions of section 6.1.2:

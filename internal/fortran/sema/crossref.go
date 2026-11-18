@@ -72,6 +72,7 @@ const (
 	whatCommon    = "common block"
 	whatNamelist  = "namelist"
 	whatStructure = "structure"
+	whatType      = "derived type"
 	whatIntrinsic = "intrinsic"
 	whatSystem    = "system routine"
 )

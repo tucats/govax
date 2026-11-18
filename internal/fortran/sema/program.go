@@ -128,6 +128,14 @@ type Unit struct {
 	Structures []*Structure
 	structs    map[string]*Structure
 
+	// typesKnown is set once the unit's declarations are read, when every
+	// derived type it may name is defined; pendingObjects are the names
+	// IMPLICIT TYPE(t) gave a type before then, and implicitFailed the types
+	// such a letter named that aren't there (derived.go).
+	typesKnown     bool
+	pendingObjects []*Symbol
+	implicitFailed map[string]bool
+
 	// scope is the unit's own names (scope.go), the names in Symbols.
 	scope *scope
 

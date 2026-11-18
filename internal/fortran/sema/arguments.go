@@ -88,7 +88,7 @@ func (a *analyzer) argValue(e ast.Expr) Arg {
 		return Arg{Expr: a.field(x, true)}
 
 	case *ast.HollerithConst:
-		c := &Const{exprBase: exprBase{T: Type{Character, len(x.Value)}, Pos: x.Pos}, Text: x.Value}
+		c := &Const{exprBase: exprBase{T: Type{Kind: Character, Size: len(x.Value)}, Pos: x.Pos}, Text: x.Value}
 
 		return Arg{Expr: c, Mode: ByRef, Hollerith: true}
 

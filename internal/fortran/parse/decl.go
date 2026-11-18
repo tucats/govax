@@ -32,7 +32,13 @@ func parseProgram(p *parser) ast.Stmt {
 func parseFunction(p *parser) ast.Stmt {
 	s := &ast.FunctionStmt{StmtBase: p.base(), Recursive: p.st.Recursive}
 
-	if k := p.st.FunctionType; k != lex.Unknown {
+	if p.st.FunctionType == lex.TypeDecl {
+		spec := p.derivedSpec()
+		s.Type = &spec
+		s.Type.Pos = s.Pos
+
+		p.expect("FUNCTION")
+	} else if k := p.st.FunctionType; k != lex.Unknown {
 		s.Type = &ast.TypeSpec{Type: ast.TypeKeywords[k], Pos: s.Pos}
 
 		// INTEGER(4) FUNCTION F, Fortran 90's kind selector, or VAX
@@ -220,6 +226,15 @@ func parseTypeStmt(p *parser) ast.Stmt {
 		}
 	}
 
+	p.typeEntities(s, character)
+
+	return s
+}
+
+// typeEntities reads the rest of a type declaration after its type: in
+// Fortran 90's form, the attributes and the ::, then the entities, each with
+// its initial values in slashes or, with ::, its = value.
+func (p *parser) typeEntities(s *ast.TypeStmt, character bool) {
 	if s.Colons {
 		for p.accept(",") {
 			s.Attrs = append(s.Attrs, p.attrSpec())
@@ -233,9 +248,7 @@ func parseTypeStmt(p *parser) ast.Stmt {
 
 		switch {
 		case s.Colons:
-			if pending := p.entityValue(d); pending != nil {
-				return pending
-			}
+			p.entityValue(d)
 
 		case p.at("/"):
 			d.InitPos = p.here()
@@ -250,8 +263,6 @@ func parseTypeStmt(p *parser) ast.Stmt {
 	}
 
 	p.end()
-
-	return s
 }
 
 // parseDimension parses DIMENSION a(d) [,a(d)]... (section 4.5), and
@@ -373,7 +384,8 @@ func (p *parser) upperBound() ast.Bound {
 
 // parseImplicit parses IMPLICIT typ(a[,a]...)[,typ(a[,a]...)]..., each a
 // a letter or a range of them, c1-c2; or IMPLICIT NONE (section 4.8). A
-// type's keyword is a name here, without its blanks: DOUBLEPRECISION.
+// type's keyword is a name here, without its blanks: DOUBLEPRECISION. The
+// type may be a derived type, TYPE(POSN) (Fortran 90).
 func parseImplicit(p *parser) ast.Stmt {
 	s := &ast.ImplicitStmt{StmtBase: p.base()}
 
@@ -389,7 +401,7 @@ func parseImplicit(p *parser) ast.Stmt {
 		r := &ast.ImplicitRule{}
 
 		t := p.peek()
-		if t == nil || t.Kind != lex.Name || ast.TypeNames[t.Text] == 0 {
+		if t == nil || t.Kind != lex.Name || (ast.TypeNames[t.Text] == 0 && t.Text != "TYPE") {
 			p.syntax("a data type")
 		}
 
@@ -397,9 +409,13 @@ func parseImplicit(p *parser) ast.Stmt {
 
 		r.Type = ast.TypeSpec{Type: ast.TypeNames[t.Text], Pos: p.pos(*t)}
 
-		// IMPLICIT REAL(8) (A-H): Fortran 90's kind selector, a parenthesis
-		// before the letters'.
-		if p.at("(") && p.kindBeforeLetters() {
+		// IMPLICIT TYPE(POSN) (A-B): a derived type (the standard's R541,
+		// R502); IMPLICIT REAL(8) (A-H): Fortran 90's kind selector, a
+		// parenthesis before the letters'.
+		if t.Text == "TYPE" {
+			r.Type = p.derivedSpec()
+			r.Type.Pos = p.pos(*t)
+		} else if p.at("(") && p.kindBeforeLetters() {
 			p.typeSelector(&r.Type)
 		} else if p.accept("*") {
 			r.Type.Len = p.lengthSpec(r.Type.Type == ast.Character)
