@@ -25,8 +25,9 @@ What Phase 85 gave FORTRAN-77, extended to Fortran 90:
   types and `%`, module variables (`M%X` or `M.X`: the survey decides), and an
   internal procedure's host names; `EXAMINE A(2:5)` of an assumed-shape array;
 - **`/OPTIMIZE`** measured on the Fortran 90 corpus: whether the scalarizer's
-  loops need more (loop fusion across statements, the run-time overlap test of
-  Phase 102's question 1).
+  loops need more (loop fusion across statements and across a WHERE construct's
+  assignments, the run-time overlap test of Phase 102's question 1, and the
+  other cases Phase 102's "Where things stand" lists).
 
 ## What earlier phases leave in place
 

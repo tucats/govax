@@ -25,10 +25,17 @@ Arrays whose shape, or whose place, is known only at run time:
 - **array-valued functions** and functions of run-time character length, their
   result through a hidden descriptor argument, as CHARACTER results are today;
 - the **transformational intrinsics** on run-time shapes: MATMUL, TRANSPOSE,
-  RESHAPE, SPREAD, PACK, UNPACK, CSHIFT, EOSHIFT, MERGE, and the reductions of
-  Phase 102 over descriptors;
+  RESHAPE (of values that aren't constants), SPREAD, PACK, UNPACK, CSHIFT,
+  EOSHIFT, and the reductions of Phase 102 over descriptors, with a `DIM=` that
+  isn't constant on an array of rank above 1; MERGE of CHARACTER values of a
+  run-time length (Phase 102 compiles MERGE otherwise);
 - the scalarizer's **temporaries of run-time size**, in the frame or, past the
-  limit, on the heap (Decision 8).
+  limit, on the heap (Decision 8): an assignment the overlap test sends through
+  a temporary, a constructor not stored straight into its target, a WHERE
+  mask, and a vector subscript in the target that reads the target (`IV(IV) =
+  1`), all NOTIMPL in Phase 102 when their extents aren't constants; and
+  CHARACTER values of a run-time length in array expressions (Phase 102's
+  `checkArrayParts`).
 
 ## What earlier phases leave in place
 

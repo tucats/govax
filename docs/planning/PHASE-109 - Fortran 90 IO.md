@@ -22,6 +22,7 @@ and FTNRTL:
 - **I/O items by descriptor**: an array section, an assumed-shape array, an
   allocatable array, a pointer's target, as one item with an NCA descriptor
   rather than an element at a time (Phase 102's expansion kept for what can't);
+  and a section as an internal file or ENCODE's buffer, NOTIMPL in Phase 102;
 - **derived types** in lists, a component at a time (Phase 105), checked again
   here with the new edits and nonadvancing records.
 - **character constants between quotation marks in a run-time format held in

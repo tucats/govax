@@ -187,9 +187,32 @@
    whichever suits its values.  A GO TO may jump to END IF from any
    block of its IF or from outside, under /NOF90 too.
 
-   Fortran 90's other statements (MODULE, array expressions, POINTER,
-   ALLOCATABLE, and the rest) are recognized and draw %FORT-E-NOTIMPL
-   until they are added.  A format written as a character constant may
+   Arrays are values: a whole array or a section may stand in an
+   expression or assignment wherever a scalar may, each element done in
+   turn, and a scalar goes with any array.
+
+     curved = min(score * 1.1, 100.0)       ! every element
+     score(2:n) = score(1:n-1)              ! shifts: as if computed first
+     where (curved < 60.0) curved = 60.0    ! only where the mask holds
+     total = sum(a(:, j), mask=a(:, j) > 0)
+
+   A section's subscripts may be triplets, low:high:stride with any part
+   left out (A(:, J), A(N:1:-1)), or vector subscripts, INTEGER arrays
+   of subscripts (A(IV)).  Two arrays in one operation must have one
+   shape (NOTCONFORM).  (/ 1, 2, (I, I = 3, N) /) is an array
+   constructor; a PARAMETER may be an array, of rank 2 by RESHAPE.  The
+   elemental functions (SQRT, MAX, MERGE, ...) take arrays; SUM,
+   PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT take MASK= and DIM=;
+   MAXLOC, MINLOC, DOT_PRODUCT, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
+   and UBOUND are there too.  WHERE is a statement or a construct with
+   ELSEWHERE.  Sections and array expressions in I/O lists are read or
+   written an element at a time.  An assignment that would need a
+   temporary array of a size not known when compiling, and a section
+   passed to a program's own procedure, are not there yet.
+
+   Fortran 90's other statements (MODULE, POINTER, ALLOCATABLE, and the
+   rest) are recognized and draw %FORT-E-NOTIMPL until they are
+   added.  A format written as a character constant may
    hold "..." constants under /F90; one in a variable can't yet, and
    FTNRTL refuses it, %FOR-F-SYNERRFOR.
 
@@ -264,7 +287,9 @@
 
    What the compiled code looks out for: ALL, NONE, [NO]BOUNDS
    (subscripts and substrings: the subscript range trap; an adjustable
-   array's bounds: FOR$_ADJARRDIM), [NO]OVERFLOW (integer overflow
+   array's bounds: FOR$_ADJARRDIM; a section's first and last
+   subscripts, and Fortran 90 array shapes known only at run time:
+   FOR$_NOTCONFOR), [NO]OVERFLOW (integer overflow
    traps), and [NO]UNDERFLOW (floating underflow faults).  /CHECK alone
    is ALL.  The default is /NOCHECK.  An OPTIONS statement before a unit
    may change it for that unit.

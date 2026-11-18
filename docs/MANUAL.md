@@ -6113,7 +6113,8 @@ subroutines (section 14.8). The compiler optimizes what it writes by default
 recursive routines, which ASTs and handlers may also enter while they run (section
 14.12). The language's largest omission is DICTIONARY (section 14.7). Fortran 90 is being
 added to the same compiler, a part at a time; so far, programs in free source form with
-Fortran 90's spellings, declarations, and kinds (section 14.13).
+Fortran 90's spellings, declarations and kinds, control constructs, and arrays as values
+(section 14.13).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
@@ -6134,7 +6135,7 @@ compiler works.
 | The debugger | [14.10](#1410-debugging-a-compiled-program) |
 | A large program, and a program on VMS | [14.11](#1411-a-large-program-and-a-real-vms) |
 | Recursive routines, and routines ASTs can enter | [14.12](#1412-recursive-and-reentrant-routines) |
-| Fortran 90: free source form, `/F90`, declarations and kinds, what's there so far | [14.13](#1413-fortran-90) |
+| Fortran 90: free source form, `/F90`, declarations and kinds, control constructs, arrays as values, what's there so far | [14.13](#1413-fortran-90) |
 
 ### 14.1 A first program
 
@@ -7370,7 +7371,7 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 | Parallel directives | `CPAR$` lines are comments, and `NWORKERS` is 1 |
 | Threads, HP Fortran's `/REENTRANCY` and `NON_RECURSIVE` | A RECURSIVE routine is safe under ASTs and handlers; there are no threads to be safe under, and `OPTIONS /NORECURSIVE` exempts a unit from `/RECURSIVE` |
 | Output identical to VAX FORTRAN's | Object code, messages, and listings are govax's own, by design |
-| Fortran 90, but for free form, its spellings, declarations, and kinds | `%FORT-E-NOTIMPL` at each statement, until each part is added ([section 14.13](#1413-fortran-90)) |
+| Fortran 90, but for free form, its spellings, declarations and kinds, control constructs, and arrays as values | `%FORT-E-NOTIMPL` at each statement, until each part is added ([section 14.13](#1413-fortran-90)) |
 
 What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
 
@@ -8280,8 +8281,10 @@ Fortran 90 (ISO/IEC 1539:1991) is being added to govax's compiler, a part at a t
 It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90 program
 may call VAX FORTRAN routines and the other way round, and an old program compiles as it
 always has. This section grows with each part; so far a program may be written in Fortran
-90's free source form and with its spellings, with its declarations and kinds, and with
-its control constructs (construct names, EXIT, CYCLE, and SELECT CASE); everything else
+90's free source form and with its spellings, with its declarations and kinds, with
+its control constructs (construct names, EXIT, CYCLE, and SELECT CASE), and with arrays as
+values (sections, array expressions and assignment, constructors, WHERE, and the array
+functions); everything else
 Fortran 90 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
@@ -8617,6 +8620,88 @@ its IF construct, and from outside it, where VAX FORTRAN allowed only the last b
 holds under `/NOF90` too: it accepts programs that were refused, and changes none that
 compiled.
 
+**Arrays as values** (the standard's 6.2, 7.1.4, 7.5.1.5, and 7.5.3). A whole array, or a
+*section* of one, may stand in an expression or an assignment wherever a scalar may, and
+the operation applies to each element:
+
+```fortran
+program curve
+  implicit none
+  integer, parameter :: n = 6
+  real :: score(n) = (/ 72.0, 85.0, 52.0, 91.0, 49.0, 77.0 /)
+  real :: curved(n)
+  integer :: best(1)
+
+  curved = min(score * 1.1, 100.0)
+  where (curved < 60.0) curved = 60.0
+  best = maxloc(score)
+  print '(1x, a, 6f6.1)', 'curved: ', curved
+  print '(1x, a, f6.2, a, i2)', 'mean:', sum(score) / n, ', best is number', best(1)
+  print '(1x, a, i2)', 'above 70:', count(score > 70.0)
+  print '(1x, a, 3f6.1)', 'every other, backward:', score(n:1:-2)
+  score(2:n) = score(1:n-1)
+  print '(1x, a, 6f6.1)', 'shifted:', score
+end program curve
+```
+
+```text
+$ RUN CURVE
+curved:   79.2  93.5  60.0 100.0  60.0  84.7
+mean: 71.00, best is number 4
+above 70: 4
+every other, backward:  77.0  91.0  85.0
+shifted:  72.0  72.0  85.0  52.0  91.0  49.0
+```
+
+- *Sections*: a subscript may be a triplet, `low:high:stride`, with any part left out (`A(:, J)`
+  is column J, `A(N:1:-1)` is A backward, `A(1:N:2)` every other element), or a *vector
+  subscript*, an INTEGER array whose values are the subscripts (`A(IV)`, `A(2, (/ 1, 5, 3 /))`).
+  A section of a CHARACTER array may end in a substring, `C(:)(2:4)`. Only the subscripts a
+  section uses need be within the array's bounds.
+- *Expressions and assignment*: two arrays in one operation must have the same shape (the
+  number of dimensions and the extent of each), checked when compiling where the extents are
+  constants (`NOTCONFORM`); a scalar goes with any array, as if it were an array of the other's
+  shape. A comparison of arrays is a LOGICAL array. An assignment to an array takes the right
+  side element by element, a scalar right side given to every element. The right side acts as
+  if computed whole before any element changes, so `score(2:n) = score(1:n-1)` shifts the
+  array, as above. The compiler gets this by running the loop the right way (here backward),
+  and where no direction will do, by computing the right side into a temporary array first;
+  that temporary must be of a size known when compiling (`A(1:N) = A(N:1:-1)` with N a
+  variable is not there yet). An array as an argument to a program's own procedure is still
+  only a whole array's name, as in VAX FORTRAN.
+- *Constructors and constants*: `(/ 1, 2, 3 /)` and `(/ (I * I, I = 1, N) /)` are rank-one
+  arrays, their values all of one type and length (`CONSTRUCTTYPE`, `CONSTRUCTLEN`). A
+  PARAMETER may be an array (`INTEGER, PARAMETER :: P(3) = (/ 2, 3, 5 /)`), of rank 2 or
+  more by `RESHAPE` (`RESHAPE((/ 1, 2, 3, 4 /), (/ 2, 2 /))`), and an initial value given with
+  `=` may be an array of the variable's shape. A vector subscript with a value twice may not
+  be assigned to; if it is a constant, that is `MANYONE`.
+- *Intrinsic functions*: every elemental function (all of FORTRAN-77's, as `SQRT(A)`,
+  `MAX(A, 0.0)`, `ABS(A - B)`, and `MERGE(T, F, MASK)`) takes arrays, each element computed in
+  turn. SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT reduce an array, with `MASK=` and a
+  `DIM=` (constant, for an array of rank 2 or more); an empty array's SUM is 0, its PRODUCT 1,
+  its MAXVAL the most negative number, and its MINVAL the most positive. MAXLOC and MINLOC
+  give the first extreme's subscripts, each counted from 1, or zeros if none (Fortran 90 gives
+  them no `DIM=`). DOT_PRODUCT, MATMUL (matrix by matrix, vector by matrix, matrix by vector),
+  and TRANSPOSE are written in line; SIZE, SHAPE, LBOUND, and UBOUND answer for any array.
+  Under `/NOF90` these names are a program's own unless an INTRINSIC statement names them.
+- *WHERE*: `WHERE (mask) A = expr`, or a construct of WHERE, assignments, an optional
+  ELSEWHERE and its assignments, and END WHERE, assigns only the elements where the mask is
+  true (false after ELSEWHERE). The mask is computed once, at the WHERE, and nothing is
+  computed for an element that isn't assigned. Only assignments of the mask's shape may stand
+  inside (`WHEREBODY`, `WHERETARGET`). A WHERE inside a WHERE, and ELSEWHERE with a mask of its
+  own, are Fortran 95's (`F95ONLY`).
+- *I/O lists*: a section, an array expression, or a constructor in an output list is written,
+  and a section in an input list read, an element at a time in array element order. `READ *, N,
+  A(1:N)` uses the N it has just read.
+- *Checks*: under `/CHECK=BOUNDS` a section's first and last subscripts, and each value of a
+  vector subscript, are checked as subscripts are, and two shapes that weren't known when
+  compiling are compared when the program runs: a difference is `%FOR-F-NOTCONFOR`, "array
+  shapes do not conform".
+
+What the compiled loops look like is in FORTRAN-INTERNALS.md's section 27. Each statement is
+its own loop, the leftmost subscript varying fastest; `/OPTIMIZE` gives it registers and closes
+it with `SOBGTR` or `AOBLEQ`, as it does a DO loop.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
@@ -8629,15 +8714,13 @@ compiled.
 
 That includes assumed-shape and deferred-shape arrays (`A(:)`), interface blocks and
 CONTAINS, modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
-Arrays as values are partly there (Phase 102, whose close-out will describe them here): whole
-arrays, sections, and vector subscripts in expressions and assignments, array constructors,
-array PARAMETERs and initial values, the elemental intrinsic functions on arrays and MERGE,
-RESHAPE of constants, SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, COUNT, DOT_PRODUCT,
-MAXLOC, MINLOC, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND, and UBOUND, and WHERE, its
-statement and its construct with ELSEWHERE (a WHERE inside a WHERE, and ELSEWHERE with a
-mask, are Fortran 95's: `%FORT-E-F95ONLY`), and sections and array expressions in I/O lists,
-written or read an element at a time in array element order (`READ *, N, A(1:N)` uses the N
-it has just read; a section can't yet be an internal file or ENCODE's buffer). Fortran 90's other new
+Of arrays as values, these are not there yet: an array assignment that needs a temporary
+array of a size not known when compiling; a section or array expression as an argument to a
+program's own procedure; an array function's value of a shape not known when compiling
+(RESHAPE of values that aren't constants, a `DIM=` that isn't constant on an array of rank 2
+or more); a CHARACTER function, or a concatenation, of a length not known when compiling in
+an array expression; sections of arrays of records; and a section as an internal file or
+ENCODE's buffer. Fortran 90's other new
 intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
 own. A format written as a character constant may hold `"..."` constants under `/F90`
 (`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as

@@ -1042,6 +1042,27 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `constantFormat`); `testdata/fortran90`'s `selects`, `tokens`,
   `loops`, `cases`, and `examples` (the standard's 8.1 examples);
   MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 26.
+  Phase 102 (done 2026-11-17; its "Where things stand" is the follow-up
+  list) is arrays as values: the parser's one form for `X(...)`, sema
+  deciding substring or section (`sema/sections.go`); shapes on expressions
+  (`sema/shape.go`, `exprBase.S`; `value` the scalar context, `arrayValue`
+  where arrays may stand; NOTCONFORM); overlap (`sema/overlap.go`'s
+  `ArrayOrder`: apart, the same element, ordered loops, or a temporary,
+  `$An`, of a size known when compiling, else NOTIMPL naming Phase 104);
+  the scalarizer (`ir/lowerarray.go`: a nest of counted loops, leftmost
+  innermost, each leaf's element a sema expression over index symbols,
+  `$In`, bound in `lowerer.bound`; `sema/elements.go`'s `Scalarize`);
+  vector subscripts; `ArrayConst`, array PARAMETERs, RESHAPE of constants,
+  constructors (`sema/constarray.go`, `constructor.go`,
+  `ir/lowerctor.go`); elemental intrinsics on arrays and MERGE; the
+  reductions and inquiries, MATMUL and TRANSPOSE (`sema/arrayfuncs.go`,
+  `ir/lowerarrayfunc.go`); WHERE (`sema/where.go`, `ir/lowerwhere.go`);
+  arrays in I/O lists an element at a time; `/CHECK=BOUNDS` and FTNRTL's
+  `FTN$NOTCONFOR` (GSMATCH 1,21); `testdata/fortran90`'s `arrays`,
+  `overlap`, `vectors`, `constants`, `elements`, `reduce`, `where`,
+  `arrayio`, `matrix`, `stats`, and `smooth`, which found CMP's N wrong on
+  overflow (`internal/cpu/condcodes.go`'s `compareCodes`); MANUAL.md's
+  14.13 and FORTRAN-INTERNALS.md's section 27.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

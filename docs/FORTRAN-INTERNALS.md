@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), and its control constructs (section 26). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), and arrays as values (section 27). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -42,7 +42,8 @@ run-time checks, and what a real program and a real VAX found. Section 21 is a
 map of the files, with what building this one suggests about building another.
 Sections 22 and 23 are later additions: indexed files, and recursive routines. Section 24
 begins Fortran 90: free source form and the new tokens and statements; section 25 is its
-declarations, attributes, and kinds; section 26 its control constructs.
+declarations, attributes, and kinds; section 26 its control constructs; section 27 arrays
+as values and the scalarizer.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -3277,3 +3278,305 @@ and the rule since section 24 is that they get nothing new.
 The END IF rule changed under both settings. VAX FORTRAN let a GO TO reach an END IF only from the
 IF's last block; Fortran 90 allows any block, and outside. Since the change only accepts programs
 that were refused, `/NOF90` takes it too.
+
+## 27. Fortran 90: arrays as values (Phase 102)
+
+Fortran 90 lets a whole array, or a regular piece of one, stand wherever a scalar could in an
+expression or an assignment: `A = B + 2.0 * C`, `A(2:N) = A(1:N-1)`, `L = A > 0`. The standard
+defines such a statement element by element, but *as if* the whole right side were computed
+before any element of the target changed (7.5.1.5). The VAX has no vector instructions, so this
+part of the compiler is a translation: every array statement becomes loops of scalar statements,
+which the passes of the earlier sections already compile. That translation is called a
+*scalarizer*. Nothing below the IR changed. The optimizer took the loops as it takes a DO's, and
+FTNRTL gained one routine, a message for `/CHECK`.
+
+This section follows one statement through the passes:
+
+```fortran
+      SUBROUTINE SHIFT(N)
+      COMMON /V/ A(100), B(100)
+      A(2:N) = A(1:N-1) + B(2:N)
+      END
+```
+
+### One form in the parser, two meanings in sema
+
+`X(1:3)` is a *substring* if X is a CHARACTER scalar and a *section* if X is an array. The
+parser can't tell which, because it doesn't know what X is. So it reads every parenthesized
+list after a name as an `ast.Apply` whose items may be `ast.Triplet`s (a lower bound, an upper
+bound, and a stride, each possibly left out). Sema decides (`sections.go`'s `substringForm`).
+One stride-less triplet after a name that isn't an array becomes the `ast.Substring` the parser
+used to build, so every older pass still sees what it always saw. A second list after an element
+or section (`C(I)(1:3)`, `B(:, J)(2:3)`) is always a substring. `TestNoF90Unchanged`'s digests
+show that old programs compile to the same MACRO as before.
+
+`(/ 1, 2, (I, I = 3, 10) /)`, an *array constructor*, is a primary of its own
+(`ast.ArrayConstructor`). Its implied DOs use the node that I/O lists and DATA already had.
+
+### Shape belongs to the expression
+
+Every expression now has a *shape*: its rank and an extent per dimension. A scalar has none, and
+conforms with anything. Fortran 90's Decision 5 had put the rank in the type, but `sema.Type` is
+compared with `==` in hundreds of places that care only about the element type: a dummy's type
+against an actual argument's, whether a conversion is needed. It also becomes the IR's type, a
+map key. A REAL array and a REAL scalar would have stopped being equal everywhere. So `Type()`
+stays the element's type, and the shape is a field of its own beside it (`exprBase.S`, a
+`Shape`, in `shape.go`).
+
+An extent is either `Known`, with its size, or else `Of` some array or section and one of its
+dimensions, to be computed when the statement runs. A section's extent is the DO loop's trip
+count, `MAX((u - l + s) / s, 0)`. Two shapes conform if their ranks are equal and no two known
+extents differ (`conform`). Where both extents are known and differ, that is a compile-time
+error, NOTCONFORM, naming both shapes as `(10, :)`. Where an extent isn't known, the check waits
+for `/CHECK=BOUNDS` at run time.
+
+Arrays may stand in only some places, and sema keeps them out of the rest by having two ways to
+analyze an expression. `value` is the scalar context: a subscript, a DO bound, an IF's condition,
+a unit number. An array there is NOTSCALAR ("an array where a scalar is required"). `arrayValue`
+is the other context, used only where the standard allows an array: an assignment's sides, an
+elemental operation's operands, an intrinsic function's arguments, an I/O list's items, a WHERE
+mask, a constructor's values, and a vector subscript. Our statement's sema dump shows the
+section, the shape, and the answer of the overlap test that comes next:
+
+```text
+3           A[2:N:1] = (+:R A[1:(-:I N 1):1] B[2:N:1])  [down in 1]
+```
+
+### Overlap: may the loops compute what they assign?
+
+A scalarizer that simply runs `A(k+1) = A(k) + B(k+1)` for k = 1, 2, ... is wrong. Each pass
+reads the element the previous pass just wrote, so A(1) is copied all the way to A(N). The
+standard's "as if before" says the second pass must read the *old* A(2). `sema/overlap.go`
+decides, for the target and for each array the value reads that might share its storage
+(`mayShare`), how the two relate. It compares them a subscript at a time, as `slot`s: either a
+fixed subscript, or a triplet's start and stride. There are four answers.
+
+- **Apart.** The two never meet. Either their storage differs (different names that no COMMON
+  or EQUIVALENCE joins; two dummy arguments, by the rule the optimizer already relies on), or a
+  fixed subscript differs by a constant (`A(:, 1) = A(:, 2)`), or the starts differ by a constant
+  that isn't a multiple of the stride (`A(2:20:2) = A(1:19:2)`).
+- **The same element** at every index: the same fixed subscripts, and the same triplet starts
+  and strides (`A(1:N) = A(1:N) + 1`). Each pass reads only what it is about to write itself.
+- **Ordered.** The starts differ by a constant multiple of a constant stride. The element read at
+  index k is the one written at k + q. If the loop over that dimension runs up when q is positive
+  and down when it is negative, every element is read before it is written. Our statement reads
+  `A(1:N-1)` while writing `A(2:N)`. `difference` sees `N-1` and `N` as one expression plus
+  different constants, so q is -1, and the answer is **down in 1**.
+- **Unknown**: anything else, such as a reversal (`A(10:1:-1) = A`), a row assigned to a column,
+  an EQUIVALENCE that moves one array along another, or two leaves asking for opposite directions
+  in one loop (`A(2:9) = A(1:8) + A(3:10)`). The value then goes into a temporary first.
+
+Two fixed subscripts whose difference *isn't* known, `A(I, K:N)` against `A(K, K:N)`, were
+"unknown" until this phase's programs showed what that costs (below). Both are computed once,
+before the loops. When the program runs they are either equal, and that dimension is the same
+element, or different, and the two never meet. Neither answer asks anything of the loops, so
+`relate` treats them as equal and lets the other dimensions decide. `TestArrayOrder` holds a
+case for each answer.
+
+The result is an `ArrayOrder` on the assignment: a direction for each loop, or `Temporary` and
+the temporary's extents. One more case matters. A scalar the loops would compute at every element,
+if it reads the target (`A = A / A(10)`), is computed once before them instead
+(`ArrayOrder.Hoisted`). A(10) changes during the loops, and the standard wants its old value
+throughout.
+
+### The scalarizer
+
+`ir/lowerarray.go` lowers an array assignment as a *nest* of counted loops, one per dimension of
+the target. The leftmost dimension's loop is innermost, so memory is walked in array element
+order. Each loop runs an index k from 1 to its dimension's extent by 1, or down from the extent
+if the `ArrayOrder` says so. Every array in the statement, a *leaf* (a whole array, a section, a
+constant, a constructor), then answers one question: "what is your element at the indexes k?"
+
+The answer is built in sema's terms, not the IR's, and that choice is what made the scalarizer
+small. The loops' indexes are `sema.Symbol`s of lowering's own (`sema.NewSymbol`), bound to IR
+cells in `lowerer.bound`, the mechanism statement functions already used (section 12). A
+section's element is then an ordinary `sema.Elem` whose subscripts are expressions of those
+symbols, and an elemental operation's is the operation on its operands' elements
+(`sema.Scalarize`, which copies each node without its shape). The element of an adjustable
+array, a CHARACTER element with its substring, a COMPLEX product, or a comparison stored in a
+LOGICAL is lowered by the same code that lowers it anywhere else. `countedLoop`, section 12's
+DO, needed no new form either.
+
+Before the loops, `prepare` turns each leaf's subscripts into a *normalized* form. Dimension d's
+subscript at index k is `k * stride + base`, where `base = lower - stride`, and every part that
+isn't a constant goes to a temporary once. The loops' extents come from the target's shape where
+it knows them, from the value's otherwise, and else are computed: a triplet's trip count, never
+below 0 (`atLeastZero`). A scalar in the value that isn't cheap to recompute (`sema.Inline`: a
+constant, a variable, an element with constant subscripts) is computed before the loops too
+(`hoist`). A function is then called once, and the standard's "before any element is defined"
+holds for it as well. Here is our statement's IR, with its loop counting down:
+
+```text
+  assign $T1 = @N
+  assign $T2 = sub.L(@N, 1)
+  assign $T3 = @N
+  assign $T4 = sub.L($T1, 1)
+  branch lt.L($T4, 0) B2 B3
+B2:
+  assign $T4 = 0
+  jump B3
+B3:
+  assign $C1 = $T4
+  assign $I1 = $T4
+  branch le.L($C1, 0) B5 B4
+B4:  ; array (line 3), dimension 1's body
+  assign A[$I1] = add.F(A-4[$I1], B[$I1])
+  assign $I1 = sub.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B4 B5
+```
+
+The loop's extent is N - 1, at least 0, in `$T4`. `$I1` is the index (an `IndexCell`, `$In`,
+pooled per statement as temporaries are), and `$C1` the pass count, as a DO keeps it. The three
+leaves' subscripts, k + 1, k, and k + 1, are each folded into a displacement on one index:
+`A[$I1]` is A(k+1) because A's own displacement already allows for its lower bound, `A-4[$I1]`
+is A(k), and `B[$I1]` is B(k+1). `$T2` and `$T3`, the triplets' upper bounds, are computed but
+never read, because nothing needed them; dead-code elimination removes them under `/OPTIMIZE`.
+`/NOOPTIMIZE`'s MACRO is the IR an instruction at a time:
+
+```text
+SHIFT.$5:				; array (line 3), dimension 1's body
+	MOVL	SHIFT.$I1,R0
+	MOVL	SHIFT.$I1,R1
+	MOVL	SHIFT.$I1,R2
+	ADDF3	SHIFT.A-4[R0],SHIFT.B[R1],SHIFT.A[R2]
+	DECL	SHIFT.$I1
+	DECL	SHIFT.$C1		; one pass fewer
+	BLEQ	SHIFT.$6
+	BRW	SHIFT.$5
+```
+
+Because the loop is a `CountedLoop` with a longword index and a constant step, everything section
+16 does to a DO applies. The index goes in a register, the count and the index turn out to be the
+same value running down to 1, and `DoLimits` closes the loop with SOBGTR. One instruction per
+element is left:
+
+```text
+	MOVL	@SHIFT.N(AP),SHIFT.$T1
+	SUBL3	#1,SHIFT.$T1,R6
+	BGEQ	SHIFT.$1
+	CLRL	R6
+SHIFT.$1:
+	CMPL	R6,#1
+	BLSS	SHIFT.$3
+SHIFT.$5:				; array (line 3), dimension 1's body
+	ADDF3	SHIFT.A-4[R6],SHIFT.B[R6],SHIFT.A[R6]
+	SOBGTR	R6,SHIFT.$5
+```
+
+### Temporaries
+
+When the overlap test answers "unknown", `arrayTemp` makes an array cell (`ArrayTempCell`, `$An`)
+of the assignment's shape, and the statement becomes two nests: the value into the temporary,
+then the temporary into the target. Each nest is an ordinary one, with its own `/CHECK` checks.
+`A(10:1:-1) = A(1:10)` is:
+
+```text
+B14:  ; array (line 6), dimension 1's body
+  assign $A1-4[$I1] = A-4[$I1]
+  ...
+B16:  ; array (line 6), dimension 1's body
+  assign A+40[mul.L($I2, -1)] = $A1-4[$I2]
+```
+
+A temporary follows `Routine.NewCell`'s rule, as every compiler cell does: it is in `$LOCAL` in
+an ordinary routine and in the frame in a recursive one, where each activation needs its own.
+Its size must be known when compiling. `X(1:N) = X(N:1:-1)` would need one of N elements, and is
+NOTIMPL naming Phase 104, whose run-time-sized temporaries and descriptors this phase leaves
+alone. That limit, the size of a temporary and not of a shape, is the phase's real boundary.
+Adjustable arrays and sections whose extents are known only at run time compile freely, as long
+as nothing has to be copied.
+
+### What is computed before the loops, and what at each element
+
+Most of Fortran 90's array functions fit the element question too, each in its own way
+(`sema/arrayfuncs.go`, `ir/lowerarrayfunc.go`):
+
+- **An element at a time.** An elemental intrinsic (`SQRT(A)`, `MAX(A, 0.0)`; Table D-3's
+  rows are now class E, but for LEN, SIZEOF, and NWORKERS) is the function of its arguments' elements. A MTHRTL routine is called once
+  per element, and a scalar argument is hoisted. MERGE is a row too: FSOURCE goes in a temporary
+  and is replaced by TSOURCE where MASK holds. TRANSPOSE is its argument's element with two loops
+  swapped, and copies nothing.
+- **A small loop at each element.** A reduction by `DIM=` (`SUM(A, DIM=1)`) and an element of
+  MATMUL are scalars, each computed by an inner nest of its own over the dimension being reduced,
+  with the statement's indexes standing for the other dimensions (`ArrayFuncAt`). So
+  `C = MATMUL(A, B)` is the textbook triple loop, with no temporary unless C is A or B.
+- **Once, before the loops.** A reduction with no DIM= is a scalar, hoisted like any other. Its
+  accumulator starts at the value for an empty array: SUM 0, PRODUCT 1, MAXVAL the most negative
+  number (the VAX has no infinities), MINVAL the most positive, ANY false, ALL true. MAXLOC and
+  MINLOC fill a small INTEGER temporary in one scan, counting each subscript from 1, the first
+  extreme winning and zeros when nothing is found. SHAPE, LBOUND, and UBOUND fill one too.
+
+### Constant arrays and constructors
+
+The constant evaluator (section 8) gives scalars, and now arrays too: `sema.ArrayConst`, its
+elements `Const`s in array element order (`constarray.go`). Constructors of constants, array
+PARAMETERs and their sections, elemental operations and intrinsics of them, RESHAPE, and the
+inquiries of arrays with constant bounds all fold. Each element is computed by the scalar code,
+so a folded array has the bits the run-time code would have given it. RESHAPE is the only way to
+write a PARAMETER of rank 2, so it came into this phase for constants. An `ArrayConst` that the
+loops read is a datum in `$PDATA`, written only if something reads it.
+
+A constructor whose values aren't constant (`sema.Constructor`) is built before the loops into a
+temporary, whose size must again be known. There is one exception (`ArrayOrder.Fill`). When the
+constructor is the whole value of a rank-1 assignment and reads nothing of the target's, its
+values are stored straight into the target at a running position, so its length may be anything:
+`A(1:N) = (/ (I * I, I = 1, N) /)`. A constant vector subscript with a value twice, in a target
+or an input list, is MANYONE: the standard forbids assigning through it, and only a constant can
+be checked.
+
+### WHERE
+
+`WHERE (mask) A = expr` assigns only where the mask holds, and ELSEWHERE only where it doesn't.
+The standard computes the mask once, at the WHERE, so an assignment in the construct that changes
+what the mask reads mustn't change the mask. `sema/where.go` treats the construct as an IF block
+(its arms, its labels, INTOBLOCK for a jump into it). At END WHERE, `maskInLoops` decides whether
+each assignment's loops may recompute the mask element by element: they may if no earlier
+assignment's target reads into the mask, and each assignment's mask relates to its target as its
+value does, by the overlap test. The common `WHERE (A > 0) A = SQRT(A)` needs nothing more: each
+element's test is a compare and a branch in the assignment's own loop. Otherwise the mask is
+computed once into a temporary of its own type. A value that must go through a temporary is
+masked in both of its nests, so `SQRT` is never taken of an element the mask excludes.
+
+### I/O lists, and the run-time checks
+
+An output item that is a section or an array expression is a loop of `FTN$IO_ITEM` calls in
+array element order (`ioItem`), each value through a temporary as a scalar expression's is. An
+input section is a loop over its elements' places, and a constructor's values are items in turn,
+never built. A whole array keeps its single class A descriptor (section 14), and descriptors for
+sections are Phase 109's. The extents are computed when the list reaches the item, so `READ *, N,
+A(1:N)` uses the N just read.
+
+Under `/CHECK=BOUNDS` a section's first and last subscripts are checked once, before the loops
+(`checkSubscripts`), not at every element. A vector subscript's values are checked where they are
+used. Every extent not known when compiling is compared with the loops' (`checkShapes`), and a
+difference calls FTNRTL's new `FTN$NOTCONFOR`, which signals `FOR$_NOTCONFOR`, "array shapes do
+not conform". It is govax's own condition, FOR number 300, past the numbers VAX FORTRAN used.
+
+### What the programs found
+
+Eleven programs in `testdata/fortran90` cover the phase, each worked by hand, run in all eight
+modes, and the same on gfortran. The last three are real ones: `matrix.f90` (Gaussian elimination
+with partial pivoting), `stats.f90` (the reductions on a set of scores), and `smooth.f90` (image
+smoothing with WHERE). They found two bugs that the smaller programs, each written for one
+feature, hadn't.
+
+The first was in the CPU. `stats.f90`'s INTEGER MAXVAL printed `***`. The accumulator starts at
+-2147483648, and `CMPL elem, acc` followed by `BGTR` never branched. govax's CMP had set N from
+the sign of src1 - src2, which is the wrong answer whenever that subtraction overflows: 3 -
+(-2147483648) is negative in a longword. The architecture says N ← src1 LSS src2, a signed
+comparison. The C emulator had the same rule, and no program had yet compared numbers that
+far apart. `compareCodes` (`internal/cpu/condcodes.go`) now gives CMP, CMPV, and
+CMPC that comparison itself.
+
+The second was the overlap rule above. `matrix.f90`'s elimination works on rows of the same
+array in a subroutine, `A(K, :) = A(P, :)` and `A(I, K:N) = A(I, K:N) - F * A(K, K:N)`, with N a
+dummy. "Unknown" sent each statement to a temporary whose size isn't known when compiling, so
+both were NOTIMPL. Treating unknown fixed subscripts as equal compiles them with no temporary.
+The inner loop is now six instructions: three induction variables, one per leaf, each stepping
+by the row's stride, and an `AOBLEQ`.
+
+Optimizing gains less on these programs, 6% to 10%, than on the old corpus's kernels, because
+each statement's nest is short and is the whole of the work. The phase doc lists what is left
+for Phase 110 to measure. The largest items are that the assignments of a WHERE construct are
+separate nests, never fused, and that a whole-array copy is a loop rather than a MOVC3.

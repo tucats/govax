@@ -151,7 +151,7 @@ questions, and a progress log extended as that phase is worked.
 | 99 | [PHASE-99 - Fortran 90](PHASE-99%20-%20Fortran%2090.md) | The Fortran 90 program's plan (Phases 99–111): Fortran 90 joined to VAX FORTRAN in one compiler, `/F90` settling the few texts the two read differently, NCA descriptors for run-time arrays, module files of our own; its groundwork: `/F90` and `/SOURCE_FORM`, free source form, Fortran 90's lexical items, the new statements recognized, named END statements, the Fortran 90 corpus — planned 2026-11-17, the plan accepted the same day; done 2026-11-17 |
 | 100 | [PHASE-100 - Fortran 90 declarations and kinds](PHASE-100%20-%20Fortran%2090%20declarations%20and%20kinds.md) | `::` declarations, attributes, initialization, KIND= and LEN=, kinds on constants, the kind and numeric inquiry intrinsics; sema's scope chain; INTEGER(1) and COMPLEX(16) as new types; KIND= on the conversions and keyword arguments to intrinsics — planned 2026-11-17; done 2026-11-17 |
 | 101 | [PHASE-101 - Fortran 90 control constructs](PHASE-101%20-%20Fortran%2090%20control%20constructs.md) | SELECT CASE (a CASEL table, a binary search, or a chain), DO with no control, EXIT, CYCLE, construct names; jumps to END IF by Fortran 90's rule — planned 2026-11-17; done 2026-11-17 |
-| 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17 |
+| 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17; done 2026-11-17 |
 | 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17 |
 | 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17 |
 | 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17 |
@@ -899,3 +899,31 @@ Phase 101 (done 2026-11-17) is control constructs:
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 26 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 102, array expressions.
+
+Phase 102 (done 2026-11-17) is arrays as values, wherever a temporary's size is known when
+compiling:
+
+- **The forms:** a parenthesized list after a name is one form, sema deciding substring or
+  section (`sections.go`); array constructors; WHERE's statements.
+- **Shapes** on expressions, not types (`sema/shape.go`): known extents or ones computed when
+  the statement runs; NOTCONFORM; `value` the scalar context, `arrayValue` where arrays may stand.
+- **Overlap** (`sema/overlap.go`): apart, the same element, ordered (a loop run down or up), or
+  unknown (a temporary, `$An`, by `Routine.NewCell`'s rule); two fixed subscripts not known to
+  differ taken as equal.
+- **The scalarizer** (`ir/lowerarray.go`): a nest of counted loops, leftmost innermost, each leaf's
+  element a sema expression over index symbols bound to cells, so the old lowering does the rest
+  and the optimizer treats each nest as a DO; vector subscripts; `/CHECK=BOUNDS` once per section
+  and FTNRTL's `FTN$NOTCONFOR` for shapes.
+- **Constants and constructors:** `ArrayConst`, array PARAMETERs and initial values, RESHAPE of
+  constants, MANYONE; a constructor stored straight into its target or built in a temporary.
+- **Intrinsics:** every elemental row and MERGE on arrays; SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY,
+  COUNT with MASK= and DIM=, DOT_PRODUCT, MAXLOC, MINLOC, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
+  UBOUND (`sema/arrayfuncs.go`, `ir/lowerarrayfunc.go`).
+- **WHERE** (`sema/where.go`, `ir/lowerwhere.go`): the mask in the loops when it can be, else in a
+  temporary; **I/O lists** an element at a time.
+- **Programs:** `testdata/fortran90`'s `arrays`, `overlap`, `vectors`, `constants`, `elements`,
+  `reduce`, `where`, `arrayio`, `matrix`, `stats`, and `smooth`, the same on gfortran. They found
+  a CPU bug: CMP's N was the difference's sign, wrong when it overflows.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 27 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 103, procedures and interfaces.

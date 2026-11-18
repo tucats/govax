@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 12 are done (2026-11-17), and subtask 13 is next.
+author's answers"); subtasks 2 to 13 are done (2026-11-17), and the phase is done.
+"Where things stand", at the end, lists what it left.
 Needs Phase 101 (done).
 
 ## Goal
@@ -426,7 +427,7 @@ and FTNRTL do today.
     2026-11-17).
 13. **Close-out:** FORTRAN-INTERNALS.md's section 27 (arrays as values and the
     scalarizer, with `A(2:N) = A(1:N-1) + B(2:N)` followed through), MANUAL.md's
-    14.13, HELP FORTRAN.
+    14.13, HELP FORTRAN (done 2026-11-17).
 
 ## A.5 Questions for the author
 
@@ -878,3 +879,48 @@ shapes in Phase 104.
   through `$A1` and a one-trip loop into K, which it doesn't overlap; a
   reduction's running element and found flag stay in memory; `T = IMG` is
   a loop, not a MOVC3.
+- **2026-11-17, subtask 13:** The close-out. FORTRAN-INTERNALS.md's section 27 follows
+  `A(2:N) = A(1:N-1) + B(2:N)` through the passes (one form in the parser, shape on the
+  expression, the two contexts, overlap's four answers and subtask 12's rule, the scalarizer's
+  element question over normalized loops, with the statement's real sema dump, IR, and MACRO
+  both ways, `/OPTIMIZE`'s being one `ADDF3` and a `SOBGTR`), then temporaries, the array
+  functions by where each is computed, constants and constructors, WHERE, I/O lists and the
+  checks, and what the programs found. MANUAL.md's 14.13 has "Arrays as values" (an example
+  run on govax, then sections, expressions and assignment, constructors and constants, the
+  intrinsic functions, WHERE, I/O lists, and the checks), and its "Not there yet", the
+  section 14 summary, and 14.7's table say what is left. HELP FORTRAN's Fortran_90 topic has
+  the same in brief, and `/CHECK` names FOR$_NOTCONFOR (`helplib.hlb` rebuilt). Phase 104's
+  goal no longer lists MERGE and now names what this phase left it; Phase 109's and 110's name
+  theirs. PLAN.md's summary and index row, and CLAUDE.md. The phase is done.
+
+## Where things stand
+
+What Phase 102 left, each for the phase named:
+
+- **Temporaries of a size not known when compiling** (Phase 104): an assignment the
+  overlap test sends through a temporary (`X(1:N) = X(N:1:-1)`), a constructor that isn't
+  stored straight into its target, and a WHERE mask kept in a temporary, each NOTIMPL when
+  the extents aren't constants.
+- **Arrays as actual arguments** to a program's own procedures, other than a whole array's
+  name (Phase 104's sections to old dummies, with Phase 103's interfaces).
+- **Array functions of a shape not known when compiling** (Phase 104): RESHAPE of values that
+  aren't constants, a `DIM=` that isn't constant with ARRAY of rank above 1, and MERGE of
+  CHARACTER values of a length not constant.
+- **CHARACTER values of a run-time length in an array expression** (a CHARACTER function's
+  value, a concatenation with a passed-length dummy), which would be made at each element:
+  NOTIMPL (`checkArrayParts`), for Phase 104's functions of run-time character length.
+- **A vector subscript in the target that reads the target** (`IV(IV) = 1`): NOTIMPL, the
+  subscripts needing to be copied first (Phase 104, with its temporaries).
+- **COMPLEX(16)** arrays in MERGE (Phase 108, with the rest of COMPLEX(16)'s intrinsics).
+- **Sections of arrays of records**, and vector subscripts in record fields (Phase 105).
+- **A section as an internal file or ENCODE's buffer**, and sections as one I/O item by
+  descriptor (Phase 109).
+- **A WHERE inside a WHERE, ELSEWHERE with a mask, and MAXLOC's `DIM=`**: Fortran 95's
+  (F95ONLY; Phase 112, if it comes).
+- **The optimizer's cases** (Phase 110, to be measured): a WHERE construct's assignments are
+  separate nests, never fused, nor are adjacent array statements; a target and a leaf with the
+  same subscripts are prepared twice, two induction variables stepping together; MINLOC and
+  MAXLOC go through `$A1` and a one-trip loop into a target they don't overlap; a reduction's
+  running value and found flag stay in memory; a whole-array copy is a loop, not a MOVC3; and
+  the run-time overlap test of open question 1, if measurements ask for it.
+- **`/STANDARD`** judges nothing new (Phase 110's `/STANDARD=F90`).
