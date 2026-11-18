@@ -180,7 +180,8 @@ func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
 // What the statement must do last (freeing a concatenation's dynamic string)
 // comes before the Switch and uses R0, so then the value waits in a temporary.
 func (l *lowerer) call(s *sema.Call) {
-	call := &Call{origin: l.origin(), Args: l.args(s.Args)}
+	args, backs := l.args(s.Args)
+	call := &Call{origin: l.origin(), Args: args}
 	call.Routine, call.Local, call.Through = l.callee(s.Sub)
 
 	if hidden, ok := l.hostFrameArg(); ok && call.Local {
@@ -189,18 +190,21 @@ func (l *lowerer) call(s *sema.Call) {
 
 	if s.AltReturns == nil {
 		l.emit(call)
+		copyBack(backs)
 
 		return
 	}
 
 	var index Expr = &CallValue{}
 
-	if len(l.after) > 0 {
+	// R0 kept while what follows the call uses it.
+	if len(l.after) > 0 || len(backs) > 0 {
 		call.Result = l.temp(Long)
 		index = &Load{call.Result}
 	}
 
 	l.emit(call)
+	copyBack(backs)
 
 	next := l.newBlock()
 	l.terminate(&Switch{l.origin(), index, 1, l.labelBlocks(s.AltReturns), next})

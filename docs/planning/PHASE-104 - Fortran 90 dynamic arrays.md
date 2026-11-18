@@ -483,7 +483,8 @@ calls), then the frame's run-time storage everything after needs.
      whose specifics have them; `/CHECK=BOUNDS`'s BADARRDESC, and a class A
      descriptor accepted from a MACRO caller (done 2026-11-18).
 6. **Sections and expressions to old dummies:** contiguity known, the run-time
-   test, copy-in and copy-out, INTENT and vector subscripts, CHARACTER (finding 11).
+   test, copy-in and copy-out, INTENT and vector subscripts, CHARACTER (finding 11)
+   (done 2026-11-18).
 7. **Array-valued functions and run-time CHARACTER lengths** (finding 12),
    internal and external, recursive.
 8. **The transformational intrinsics** (finding 13), each against the standard's
@@ -911,3 +912,65 @@ The author read the survey and accepted every recommendation:
     then a class S one and an NCA of the wrong rank, each BADARRDESC. MANUAL.md's
     14.13, the `/CHECK` table, and Appendix B's FTNRTL routines, and HELP FORTRAN,
     describe them.
+- **2026-11-18, subtask 6 done:** Sections and expressions to old dummies.
+  - *sema* (`sema/sequence.go`). `argsTo` gives each argument of a dummy that
+    isn't assumed-shape, or of a routine with no interface, to `sequenced`
+    (was `unshaped` and `arrayChecked`'s NOTIMPL): an array section or array
+    expression, or a whole assumed-shape array, is `Arg.Sequence`, and
+    `Arg.CopyBack` when it is `Described` (a whole array, a section without a
+    vector subscript, or a substring of either, none in parentheses) and the
+    dummy isn't known INTENT(IN). A generic's chosen specific does the same.
+    `Contiguous` is the compiling-time rule: the base isn't assumed-shape, and
+    each dimension is whole by a step of 1 up to one taken by a step of 1 or a
+    single subscript, every later one a single subscript. The survey's finding
+    11 gave `A(2:5, :)` as contiguous, which it isn't (A(10, 10)'s rows 2 to 5
+    of each column); the rule is right, the example was wrong. A record array's
+    section is NOTIMPL (Phase 105), and so is a CHARACTER expression of a
+    run-time length not made of names, as for an assumed-shape dummy. `arg`
+    (the system subroutines' and the built-in functions' arguments) keeps
+    NOTIMPL for sections and expressions, and now for a whole assumed-shape
+    array too, which `systemBuffer` (DATE, TIME) and `%LOC` had passed as its
+    POINTER without a check. The sema dump shows `(sequence X)` and
+    `(sequence back X)`.
+  - *The IR* (`ir/lowersequence.go`). `sequenceArg` returns the argument and
+    what copies it back; `args` returns the copy backs with the list, and each
+    caller (`call`, `callFunction`, `callIntrinsic`) runs them right after its
+    `Call` (`copyBack`), so a function reference's are done before the rest of
+    its statement, and a CALL with alternate returns keeps R0 in a temporary
+    while they run. `sequence` chooses: a contiguous section is its first
+    element's address (`contiguousSection`, over `describeSection`, the part of
+    `sectionNCA` that finds the first element and each triplet), or for
+    CHARACTER a class A descriptor (`buildClassA`); a whole assumed-shape array
+    or a section of one is `testedSequence`, the descriptor's strides tested when
+    the program runs (`contiguityTest`), passed where it is or through a
+    temporary, a flag saying which so that only a copy is copied back, its
+    run-time temporary's size made 0 on the other way so that `endTemps` frees
+    nothing, and SP marked before the test (the author's answer 4); anything else
+    is `valueTemp`'s temporary, copied back by `arrayNest` with the actual as the
+    target. A CHARACTER one's class A descriptor from an NCA is `ncaClassA`.
+  - *I/O.* An assumed-shape array as a run-time format, an internal file, or
+    ENCODE's or DECODE's buffer goes the same way (`ioUnit`, `ioFormat`), copied
+    back after a WRITE or ENCODE, between FTN$IO_END and ERR=/END= (`ioFinish`'s
+    `backs`); the three NOTIMPLs (`noContiguous`) are gone. The control block is
+    still made first, so `TestNoF90Unchanged`'s baseline holds.
+  - *A fix found on the way:* a temporary's loops end blocks, and a block's end
+    did the statement's `after` list, freeing a dynamic string an earlier
+    argument of the same call had made: `CALL H(S // 'X', A * 2.0)` with S
+    passed-length gave H freed text (subtask 5b's assumed-shape path had it too).
+    `holdingAfter` holds the list aside while a copy, in or back, is lowered,
+    for both paths.
+  - *Choices of ours, unconfirmed:* the copy is made for INTENT(OUT) too (the
+    standard allows either); the contiguous case still computes each extent,
+    which only the descriptor forms use; a section's extent of one element in a
+    later dimension isn't seen as contiguous (`A(2:5, 1:1)` is copied).
+  - *Left for later:* `%REF`, `%DESCR`, and `%LOC` of a section, an expression,
+    or an assumed-shape array, and the same given to a system subroutine, are
+    NOTIMPL; a section as an internal file is Phase 109's.
+  - *Tests:* `sema`'s `TestShapes`, `TestAssumedShape`, and `TestErrors` cases
+    changed from NOTIMPL to compiled (and the system subroutine's NOTIMPL); the
+    `f90seq` goldens in `sema`, `ir`, and `codegen`;
+    `testdata/fortran90/seqargs.f90` (every mode, paging both ways; gfortran
+    prints the same 26 lines) and `seqvms.f90` (ENCODE and DECODE on an
+    assumed-shape buffer, copied or not; LIB$STAT_VM's bytes unchanged by a
+    thousand heap temporaries). MANUAL.md's 14.13 has "Sections and expressions
+    to other dummies", and HELP FORTRAN a paragraph.

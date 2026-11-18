@@ -281,8 +281,16 @@
    subscript, or (A) is computed into a temporary, which is passed and
    not copied back.  Under /CHECK=BOUNDS the routine refuses anything but
    a class NCA or class A descriptor of the dummy's rank
-   (%FOR-F-BADARRDESC).  An assumed-shape array passed to a dummy that
-   isn't one is not there yet.
+   (%FOR-F-BADARRDESC).
+
+   A section or array expression passed to a dummy that isn't
+   assumed-shape (or to a routine with no interface) goes as the
+   address of elements one after another: a section that already is
+   one, A(:, J), where it is; any other through a temporary, copied back
+   after the call unless the dummy is INTENT(IN) or the actual an
+   expression or vector-subscripted.  An assumed-shape array is tested
+   when the program runs and copied only if it must be; it may also be a
+   run-time format, an internal file, or ENCODE's or DECODE's buffer.
 
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are

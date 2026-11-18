@@ -96,7 +96,7 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		routine = "FTN$UNLOCK"
 	}
 
-	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)
+	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat, nil)
 }
 
 // A key's type in OPEN's key list block: a descriptor's type, with descending

@@ -767,7 +767,7 @@ func quote(text string) string {
 	return "'" + strings.ReplaceAll(text, "'", "''") + "'"
 }
 
-// dumpArgs is an argument list: (A, , (copy X), T[]).
+// dumpArgs is an argument list: (A, , (copy X), T[], (sequence back A[1, 1:3:1])).
 func dumpArgs(args []Arg) string {
 	text := make([]string, len(args))
 
@@ -779,6 +779,14 @@ func dumpArgs(args []Arg) string {
 
 		if arg.Copy {
 			text[i] = "(copy " + text[i] + ")"
+		}
+
+		// Its elements one after another, and copied back (sequence.go).
+		switch {
+		case arg.CopyBack:
+			text[i] = "(sequence back " + text[i] + ")"
+		case arg.Sequence:
+			text[i] = "(sequence " + text[i] + ")"
 		}
 	}
 

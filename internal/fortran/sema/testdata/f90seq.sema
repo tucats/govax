@@ -1,0 +1,28 @@
+== SUBROUTINE GIVE
+  GIVE                    program unit
+  A         REAL          array(1:N, 1:3)  argument 1
+  N         INTEGER       variable         argument 2
+  S         CHARACTER*4   array(1:5)       argument 3
+  LOOK                    subroutine        interface(line 15)
+  TAKE                    subroutine
+  WORDS                   subroutine
+  X         REAL          variable         $LOCAL+0
+  F         REAL          function
+  $LOCAL is 4 bytes
+19          CALL TAKE((sequence back A[1:*:1, 2]))
+20          CALL TAKE((sequence back A[1, 1:3:1]))
+21          CALL LOOK((sequence A[1, 1:2:1]))
+22          CALL TAKE((sequence (+:R A[1:*:1, 1] 1.0)))
+23          CALL WORDS((sequence back S[1:5:2]))
+24          X = (+:R F((sequence back A[2, 1:3:1])) 1.0)
+25          END
+== SUBROUTINE SHAPED
+  SHAPED                  program unit
+  W         REAL          array(1:, 1:)    argument 1
+  C         CHARACTER*8   array(1:)        argument 2
+  TAKE                    subroutine
+  $LOCAL is 0 bytes
+29          CALL TAKE((sequence back W[]))
+30          CALL TAKE((sequence back W[1:*:1, 1]))
+31          WRITE (internal C[],run-time '(A)') 'X' 'Y'
+32          END

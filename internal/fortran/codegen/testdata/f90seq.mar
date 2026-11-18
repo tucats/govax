@@ -1,0 +1,937 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for GIVE, a subroutine
+;   A     REAL (?,3)       argument 1  @GIVE.A(AP)
+;   N     INTEGER          argument 2  @GIVE.N(AP)
+;   S     CHARACTER*4 (5)  argument 3  @GIVE.S(AP)
+;   X     REAL             $LOCAL+0    GIVE.X
+;   $W    REAL (?)         $LOCAL+100  GIVE.$R1
+;
+GIVE.A = 4				; A is argument 1
+GIVE.N = 8				; N is argument 2
+GIVE.S = 12				; S is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+GIVE.X:	.BLKL	1			; X
+GIVE.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,3			; multipliers
+	.LONG	1,0,1,3			; bounds
+GIVE.$I1:
+	.BLKL	1			; an array statement's loop index
+GIVE.$T1:
+	.BLKL	1			; temporary
+GIVE.$T2:
+	.BLKL	1			; temporary
+GIVE.$T3:
+	.BLKL	1			; temporary
+GIVE.$W1:
+	.BLKL	3			; an array temporary of 12 bytes, for one statement
+GIVE.$C1:
+	.BLKL	1			; array (line 20), dimension 1's count
+GIVE.$I2:
+	.BLKL	1			; an array statement's loop index
+GIVE.$C2:
+	.BLKL	1			; array (line 20), dimension 1's count
+GIVE.$W2:
+	.BLKL	2			; an array temporary of 8 bytes, for one statement
+GIVE.$C3:
+	.BLKL	1			; array (line 21), dimension 1's count
+GIVE.$R1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+GIVE.$T4:
+	.BLKL	1			; temporary
+GIVE.$T5:
+	.BLKL	1			; temporary
+GIVE.$C4:
+	.BLKL	1			; array (line 22), dimension 1's count
+GIVE.$W3:
+	.BLKL	3			; an array temporary of 12 bytes, for one statement
+GIVE.$C5:
+	.BLKL	1			; array (line 23), dimension 1's count
+GIVE.$C6:
+	.BLKL	1			; array (line 23), dimension 1's count
+GIVE.$T6:
+	.BLKL	1			; temporary
+GIVE.$C7:
+	.BLKL	1			; array (line 24), dimension 1's count
+GIVE.$C8:
+	.BLKL	1			; array (line 24), dimension 1's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+GIVE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.ADDRESS GIVE.$W3
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.ADDRESS GIVE.$W3-4		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+GIVE.$F1:
+	.LONG	^X00004080		; 1.0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Sections and array expressions given to dummies that aren't
+;    3  C     assumed-shape (Phase 104, subtask 6): a section known to be contiguous,
+;    4  C     passed as its first element's address; one that isn't, copied into a
+;    5  C     temporary and back, but not back to an INTENT(IN) dummy; an expression,
+;    6  C     never copied back; a CHARACTER section by a class A descriptor; an
+;    7  C     assumed-shape array, and a section of one, tested when the program runs;
+;    8  C     an assumed-shape array as an internal file; and a function reference
+;    9  C     whose copy back comes when its call returns.
+;   10        SUBROUTINE GIVE(A, N, S)
+	.ENTRY	GIVE,^M<R2,R3,R4,R5>
+	MOVAL	@GIVE.A(AP),GIVE.$B1+4
+	MOVL	@GIVE.N(AP),GIVE.$B1+32
+	MOVL	GIVE.$B1+32,GIVE.$B1+20
+	MNEGL	GIVE.$B1+20,R0
+	DECL	R0
+	MOVAL	@GIVE.A(AP)[R0],GIVE.$B1+16
+	MULL3	#4,GIVE.$B1+20,R0
+	MULL3	R0,#3,GIVE.$B1+12
+;   11        INTEGER N
+;   12        REAL A(N, 3)
+;   13        CHARACTER*4 S(5)
+;   14        INTERFACE
+;   15          SUBROUTINE LOOK(V)
+;   16          REAL, INTENT(IN) :: V(2)
+;   17          END SUBROUTINE
+;   18        END INTERFACE
+;   19        CALL TAKE(A(:, 2))
+	MOVL	GIVE.$B1+32,GIVE.$T1
+	MOVL	GIVE.$T1,GIVE.$T2
+	BLSS	GIVE.$2
+	BRW	GIVE.$1
+GIVE.$2:
+	CLRL	GIVE.$T2
+GIVE.$1:
+	MOVL	GIVE.$B1+16,R0
+	MULL3	#2,GIVE.$B1+20,R1
+	MOVAL	4(R0)[R1],GIVE.$T3
+	PUSHL	GIVE.$T3
+	CALLS	#1,G^TAKE
+;   20        CALL TAKE(A(1, :))
+	MOVL	#3,GIVE.$C1		; array (line 20), dimension 1's count
+	MOVL	#1,GIVE.$I1
+GIVE.$3:				; array (line 20), dimension 1's body
+	MOVL	GIVE.$B1+16,R0
+	MULL3	GIVE.$I1,GIVE.$B1+20,R1
+	MOVL	GIVE.$I1,R2
+	MOVF	4(R0)[R1],GIVE.$W1-4[R2]
+	INCL	GIVE.$I1
+	DECL	GIVE.$C1		; one pass fewer
+	BLEQ	GIVE.$4
+	BRW	GIVE.$3
+GIVE.$4:
+	MOVAL	GIVE.$W1,R0
+	PUSHL	R0
+	CALLS	#1,G^TAKE
+	MOVL	#3,GIVE.$C2		; array (line 20), dimension 1's count
+	MOVL	#1,GIVE.$I2
+GIVE.$5:				; array (line 20), dimension 1's body
+	MOVL	GIVE.$I2,R0
+	MOVL	GIVE.$B1+16,R1
+	MULL3	GIVE.$I2,GIVE.$B1+20,R2
+	MOVF	GIVE.$W1-4[R0],4(R1)[R2]
+	INCL	GIVE.$I2
+	DECL	GIVE.$C2		; one pass fewer
+	BLEQ	GIVE.$6
+	BRW	GIVE.$5
+GIVE.$6:
+;   21        CALL LOOK(A(1, 1:2))
+	MOVL	#2,GIVE.$C3		; array (line 21), dimension 1's count
+	MOVL	#1,GIVE.$I2
+GIVE.$7:				; array (line 21), dimension 1's body
+	MOVL	GIVE.$B1+16,R0
+	MULL3	GIVE.$I2,GIVE.$B1+20,R1
+	MOVL	GIVE.$I2,R2
+	MOVF	4(R0)[R1],GIVE.$W2-4[R2]
+	INCL	GIVE.$I2
+	DECL	GIVE.$C3		; one pass fewer
+	BLEQ	GIVE.$8
+	BRW	GIVE.$7
+GIVE.$8:
+	MOVAL	GIVE.$W2,R0
+	PUSHL	R0
+	CALLS	#1,G^LOOK
+;   22        CALL TAKE(A(:, 1) + 1.0)
+	MOVL	GIVE.$B1+32,GIVE.$T3
+	MOVL	GIVE.$T3,GIVE.$T2
+	BLSS	GIVE.$10
+	BRW	GIVE.$9
+GIVE.$10:
+	CLRL	GIVE.$T2
+GIVE.$9:
+	MOVL	GIVE.$T2,GIVE.$R1+20
+	MOVL	GIVE.$R1+20,GIVE.$R1+28
+	MULL3	#4,GIVE.$R1+20,GIVE.$R1+12
+	MOVL	SP,GIVE.$T1		; where the statement's storage starts
+	CMPL	GIVE.$R1+12,#65536
+	BLEQ	GIVE.$12
+	BRW	GIVE.$11
+GIVE.$12:
+	SUBL2	GIVE.$R1+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,GIVE.$R1+4
+	BRW	GIVE.$13
+GIVE.$11:
+	PUSHAQ	GIVE.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+GIVE.$13:
+	MOVL	GIVE.$R1+4,R0
+	MOVAL	-4(R0),GIVE.$R1+16
+	MOVL	GIVE.$B1+32,GIVE.$T4
+	MOVL	GIVE.$R1+20,GIVE.$T5
+	BLSS	GIVE.$15
+	BRW	GIVE.$14
+GIVE.$15:
+	CLRL	GIVE.$T5
+GIVE.$14:
+	MOVL	GIVE.$T5,GIVE.$C4	; array (line 22), dimension 1's count
+	MOVL	#1,GIVE.$I1
+	TSTL	GIVE.$C4
+	BGTR	GIVE.$17
+	BRW	GIVE.$16
+GIVE.$17:
+GIVE.$18:				; array (line 22), dimension 1's body
+	MOVL	GIVE.$B1+16,R0
+	ADDL3	GIVE.$B1+20,GIVE.$I1,R1
+	MOVL	GIVE.$R1+16,R2
+	MOVL	GIVE.$I1,R3
+	ADDF3	(R0)[R1],GIVE.$F1,(R2)[R3]
+	INCL	GIVE.$I1
+	DECL	GIVE.$C4		; one pass fewer
+	BLEQ	GIVE.$19
+	BRW	GIVE.$18
+GIVE.$19:
+GIVE.$16:
+	MOVAL	@GIVE.$R1+4,R0
+	PUSHL	R0
+	CALLS	#1,G^TAKE
+	CMPL	GIVE.$R1+12,#65536
+	BGTR	GIVE.$21
+	BRW	GIVE.$20
+GIVE.$21:
+	PUSHL	#0
+	PUSHAQ	GIVE.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+GIVE.$20:
+	MOVL	GIVE.$T1,SP		; the statement's storage given back
+;   23        CALL WORDS(S(1:5:2))
+	MOVL	#3,GIVE.$C5		; array (line 23), dimension 1's count
+	MOVL	#1,GIVE.$I1
+GIVE.$22:				; array (line 23), dimension 1's body
+	MOVL	GIVE.S(AP),R0
+	MOVL	4(R0),R0
+	MULL3	GIVE.$I1,#2,R1
+	MULL2	#4,R1
+	MULL3	GIVE.$I1,#4,R2
+	MOVC3	#4,-8(R0)[R1],GIVE.$W3-4[R2]
+	INCL	GIVE.$I1
+	DECL	GIVE.$C5		; one pass fewer
+	BLEQ	GIVE.$23
+	BRW	GIVE.$22
+GIVE.$23:
+	MOVAL	GIVE.$D1,R0
+	PUSHL	R0
+	CALLS	#1,G^WORDS
+	MOVL	#3,GIVE.$C6		; array (line 23), dimension 1's count
+	MOVL	#1,GIVE.$I2
+GIVE.$24:				; array (line 23), dimension 1's body
+	MULL3	GIVE.$I2,#4,R0
+	MOVL	GIVE.S(AP),R1
+	MOVL	4(R1),R1
+	MULL3	GIVE.$I2,#2,R2
+	MULL2	#4,R2
+	MOVC3	#4,GIVE.$W3-4[R0],-8(R1)[R2]
+	INCL	GIVE.$I2
+	DECL	GIVE.$C6		; one pass fewer
+	BLEQ	GIVE.$25
+	BRW	GIVE.$24
+GIVE.$25:
+;   24        X = F(A(2, :)) + 1.0
+	MOVL	#3,GIVE.$C7		; array (line 24), dimension 1's count
+	MOVL	#1,GIVE.$I2
+GIVE.$26:				; array (line 24), dimension 1's body
+	MOVL	GIVE.$B1+16,R0
+	MULL3	GIVE.$I2,GIVE.$B1+20,R1
+	MOVL	GIVE.$I2,R2
+	MOVF	8(R0)[R1],GIVE.$W1-4[R2]
+	INCL	GIVE.$I2
+	DECL	GIVE.$C7		; one pass fewer
+	BLEQ	GIVE.$27
+	BRW	GIVE.$26
+GIVE.$27:
+	MOVAL	GIVE.$W1,R0
+	PUSHL	R0
+	CALLS	#1,G^F
+	MOVF	R0,GIVE.$T6
+	MOVL	#3,GIVE.$C8		; array (line 24), dimension 1's count
+	MOVL	#1,GIVE.$I1
+GIVE.$28:				; array (line 24), dimension 1's body
+	MOVL	GIVE.$I1,R0
+	MOVL	GIVE.$B1+16,R1
+	MULL3	GIVE.$I1,GIVE.$B1+20,R2
+	MOVF	GIVE.$W1-4[R0],8(R1)[R2]
+	INCL	GIVE.$I1
+	DECL	GIVE.$C8		; one pass fewer
+	BLEQ	GIVE.$29
+	BRW	GIVE.$28
+GIVE.$29:
+	ADDF3	GIVE.$T6,GIVE.$F1,GIVE.X
+;   25        END
+	RET
+
+; Storage map for SHAPED, a subroutine
+;   W     REAL (:,:)       argument 1  @SHAPED.W(AP)
+;   C     CHARACTER*8 (:)  argument 2  @SHAPED.C(AP)
+;   $W    REAL (?,?)       $LOCAL+104  SHAPED.$R1
+;   $W    REAL (?)         $LOCAL+228  SHAPED.$R2
+;   $W    CHARACTER*8 (?)  $LOCAL+276  SHAPED.$R3
+;
+SHAPED.W = 4				; W is argument 1
+SHAPED.C = 8				; C is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SHAPED.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; W's bounds: set at each entry point
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+SHAPED.$B2:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; C's bounds: set at each entry point
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+SHAPED.$T1:
+	.BLKL	1			; temporary
+SHAPED.$T2:
+	.BLKL	1			; temporary
+SHAPED.$T3:
+	.BLKL	1			; temporary
+SHAPED.$I1:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$I2:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$T4:
+	.BLKL	1			; temporary
+SHAPED.$T5:
+	.BLKL	1			; temporary
+SHAPED.$R1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+SHAPED.$I3:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$I4:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$T6:
+	.BLKL	1			; temporary
+SHAPED.$T7:
+	.BLKL	1			; temporary
+SHAPED.$C1:
+	.BLKL	1			; array (line 29), dimension 2's count
+SHAPED.$C2:
+	.BLKL	1			; array (line 29), dimension 1's count
+SHAPED.$I5:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$I6:
+	.BLKL	1			; an array statement's loop index
+SHAPED.$T8:
+	.BLKL	1			; temporary
+SHAPED.$T9:
+	.BLKL	1			; temporary
+SHAPED.$C3:
+	.BLKL	1			; array (line 29), dimension 2's count
+SHAPED.$C4:
+	.BLKL	1			; array (line 29), dimension 1's count
+SHAPED.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+SHAPED.$R2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+SHAPED.$C5:
+	.BLKL	1			; array (line 30), dimension 1's count
+SHAPED.$T10:
+	.BLKL	1			; temporary
+SHAPED.$T11:
+	.BLKL	1			; temporary
+SHAPED.$C6:
+	.BLKL	1			; array (line 30), dimension 1's count
+SHAPED.$R3:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+SHAPED.$C7:
+	.BLKL	1			; array (line 31), dimension 1's count
+SHAPED.$D2:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+SHAPED.$C8:
+	.BLKL	1			; array (line 31), dimension 1's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SHAPED.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0008			; flags: run-time format
+	.LONG	0			; (not used yet)
+SHAPED.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SHAPED.$K1
+SHAPED.$D4:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SHAPED.$K2
+SHAPED.$D5:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SHAPED.$K3
+SHAPED.$K1:
+	.ASCII	/(A)/
+SHAPED.$K2:
+	.ASCII	/X/
+SHAPED.$K3:
+	.ASCII	/Y/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   26        SUBROUTINE SHAPED(W, C)
+	.ENTRY	SHAPED,^M<R2,R3,R4,R5>
+	MOVL	SHAPED.W(AP),R0
+	MOVL	4(R0),SHAPED.$B1+4
+	MOVL	SHAPED.W(AP),R0
+	CMPB	3(R0),#4
+	BNEQ	SHAPED.$2
+	BRW	SHAPED.$1
+SHAPED.$2:
+	MOVL	SHAPED.W(AP),R0
+	MOVL	20(R0),SHAPED.$B1+20
+	MOVL	SHAPED.W(AP),R0
+	MOVL	SHAPED.W(AP),R1
+	SUBL3	28(R1),32(R0),R0
+	ADDL3	R0,#1,SHAPED.$T1
+	MOVL	SHAPED.W(AP),R0
+	MOVL	24(R0),SHAPED.$B1+24
+	MOVL	SHAPED.W(AP),R0
+	MOVL	SHAPED.W(AP),R1
+	SUBL3	36(R1),40(R0),R0
+	ADDL3	R0,#1,SHAPED.$T2
+	BRW	SHAPED.$3
+SHAPED.$1:
+	MOVL	#4,SHAPED.$B1+20
+	MOVL	SHAPED.W(AP),R0
+	MOVL	20(R0),SHAPED.$T1
+	MULL3	SHAPED.$B1+20,SHAPED.$T1,SHAPED.$B1+24
+	MOVL	SHAPED.W(AP),R0
+	MOVL	24(R0),SHAPED.$T2
+SHAPED.$3:
+	MOVL	#1,SHAPED.$B1+28
+	TSTL	SHAPED.$T1
+	BLSS	SHAPED.$5
+	BRW	SHAPED.$4
+SHAPED.$5:
+	CLRL	SHAPED.$T1
+SHAPED.$4:
+	MOVL	SHAPED.$T1,SHAPED.$B1+32
+	MOVL	#1,SHAPED.$B1+36
+	TSTL	SHAPED.$T2
+	BLSS	SHAPED.$7
+	BRW	SHAPED.$6
+SHAPED.$7:
+	CLRL	SHAPED.$T2
+SHAPED.$6:
+	MOVL	SHAPED.$T2,SHAPED.$B1+40
+	SUBL3	SHAPED.$B1+20,SHAPED.$B1+4,R0
+	SUBL3	SHAPED.$B1+24,R0,SHAPED.$B1+16
+	MULL3	#4,SHAPED.$B1+32,R0
+	MULL3	R0,SHAPED.$B1+40,SHAPED.$B1+12
+	MOVL	SHAPED.C(AP),R0
+	MOVL	4(R0),SHAPED.$B2+4
+	MOVL	SHAPED.C(AP),R0
+	CMPB	3(R0),#4
+	BNEQ	SHAPED.$9
+	BRW	SHAPED.$8
+SHAPED.$9:
+	MOVL	SHAPED.C(AP),R0
+	MOVL	20(R0),SHAPED.$B2+20
+	MOVL	SHAPED.C(AP),R0
+	MOVL	SHAPED.C(AP),R1
+	SUBL3	24(R1),28(R0),R0
+	ADDL3	R0,#1,SHAPED.$T2
+	BRW	SHAPED.$10
+SHAPED.$8:
+	MOVL	#8,SHAPED.$B2+20
+	MOVL	SHAPED.C(AP),R0
+	MOVL	20(R0),SHAPED.$T2
+SHAPED.$10:
+	MOVL	#1,SHAPED.$B2+24
+	TSTL	SHAPED.$T2
+	BLSS	SHAPED.$12
+	BRW	SHAPED.$11
+SHAPED.$12:
+	CLRL	SHAPED.$T2
+SHAPED.$11:
+	MOVL	SHAPED.$T2,SHAPED.$B2+28
+	SUBL3	SHAPED.$B2+20,SHAPED.$B2+4,SHAPED.$B2+16
+	MULL3	#8,SHAPED.$B2+28,SHAPED.$B2+12
+;   27        REAL W(:, :)
+;   28        CHARACTER*8 C(:)
+;   29        CALL TAKE(W)
+	MOVL	SP,SHAPED.$T3		; where the statement's storage starts
+	MOVZWL	SHAPED.$B1,R0
+	CMPL	SHAPED.$B1+20,R0
+	BEQL	SHAPED.$14
+	BRW	SHAPED.$13
+SHAPED.$14:
+	SUBL3	SHAPED.$B1+28,SHAPED.$B1+32,R0
+	INCL	R0
+	MULL2	SHAPED.$B1+20,R0
+	CMPL	SHAPED.$B1+24,R0
+	BNEQ	SHAPED.$16
+	BRW	SHAPED.$15
+SHAPED.$16:
+SHAPED.$13:
+	MOVL	SHAPED.$B1+32,SHAPED.$T4
+	BLSS	SHAPED.$18
+	BRW	SHAPED.$17
+SHAPED.$18:
+	CLRL	SHAPED.$T4
+SHAPED.$17:
+	MOVL	SHAPED.$B1+40,SHAPED.$T5
+	BLSS	SHAPED.$20
+	BRW	SHAPED.$19
+SHAPED.$20:
+	CLRL	SHAPED.$T5
+SHAPED.$19:
+	MOVL	SHAPED.$T4,SHAPED.$R1+20
+	MOVL	SHAPED.$R1+20,SHAPED.$R1+32
+	MOVL	SHAPED.$T5,SHAPED.$R1+24
+	MOVL	SHAPED.$R1+24,SHAPED.$R1+40
+	MULL3	#4,SHAPED.$R1+20,R0
+	MULL3	R0,SHAPED.$R1+24,SHAPED.$R1+12
+	CMPL	SHAPED.$R1+12,#65536
+	BLEQ	SHAPED.$22
+	BRW	SHAPED.$21
+SHAPED.$22:
+	SUBL2	SHAPED.$R1+12,SP	; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,SHAPED.$R1+4
+	BRW	SHAPED.$23
+SHAPED.$21:
+	PUSHAQ	SHAPED.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+SHAPED.$23:
+	MOVL	SHAPED.$R1+4,R0
+	MNEGL	SHAPED.$R1+20,R1
+	MOVAL	-4(R0)[R1],SHAPED.$R1+16
+	MOVL	SHAPED.$R1+20,SHAPED.$T6
+	BLSS	SHAPED.$25
+	BRW	SHAPED.$24
+SHAPED.$25:
+	CLRL	SHAPED.$T6
+SHAPED.$24:
+	MOVL	SHAPED.$R1+24,SHAPED.$T7
+	BLSS	SHAPED.$27
+	BRW	SHAPED.$26
+SHAPED.$27:
+	CLRL	SHAPED.$T7
+SHAPED.$26:
+	MOVL	SHAPED.$T7,SHAPED.$C1	; array (line 29), dimension 2's count
+	MOVL	#1,SHAPED.$I4
+	TSTL	SHAPED.$C1
+	BGTR	SHAPED.$29
+	BRW	SHAPED.$28
+SHAPED.$29:
+SHAPED.$30:				; array (line 29), dimension 2's body
+	MOVL	SHAPED.$T6,SHAPED.$C2	; array (line 29), dimension 1's count
+	MOVL	#1,SHAPED.$I3
+	TSTL	SHAPED.$C2
+	BGTR	SHAPED.$32
+	BRW	SHAPED.$31
+SHAPED.$32:
+SHAPED.$33:				; array (line 29), dimension 1's body
+	MULL3	SHAPED.$I3,SHAPED.$B1+20,R0
+	ADDL2	SHAPED.$B1+16,R0
+	MULL3	SHAPED.$I4,SHAPED.$B1+24,R1
+	ADDL2	R1,R0
+	MOVL	SHAPED.$R1+16,R1
+	MULL3	SHAPED.$I4,SHAPED.$R1+20,R2
+	ADDL2	SHAPED.$I3,R2
+	MOVF	(R0),(R1)[R2]
+	INCL	SHAPED.$I3
+	DECL	SHAPED.$C2		; one pass fewer
+	BLEQ	SHAPED.$34
+	BRW	SHAPED.$33
+SHAPED.$34:
+SHAPED.$31:
+	INCL	SHAPED.$I4
+	DECL	SHAPED.$C1		; one pass fewer
+	BLEQ	SHAPED.$35
+	BRW	SHAPED.$30
+SHAPED.$35:
+SHAPED.$28:
+	MOVL	#1,SHAPED.$T2
+	MOVAL	@SHAPED.$R1+4,SHAPED.$T1
+	BRW	SHAPED.$36
+SHAPED.$15:
+	CLRL	SHAPED.$R1+12
+	CLRL	SHAPED.$T2
+	MOVL	SHAPED.$B1+4,SHAPED.$T1
+SHAPED.$36:
+	PUSHL	SHAPED.$T1
+	CALLS	#1,G^TAKE
+	TSTL	SHAPED.$T2
+	BNEQ	SHAPED.$38
+	BRW	SHAPED.$37
+SHAPED.$38:
+	MOVL	SHAPED.$B1+32,SHAPED.$T8
+	BLSS	SHAPED.$40
+	BRW	SHAPED.$39
+SHAPED.$40:
+	CLRL	SHAPED.$T8
+SHAPED.$39:
+	MOVL	SHAPED.$B1+40,SHAPED.$T9
+	BLSS	SHAPED.$42
+	BRW	SHAPED.$41
+SHAPED.$42:
+	CLRL	SHAPED.$T9
+SHAPED.$41:
+	MOVL	SHAPED.$T9,SHAPED.$C3	; array (line 29), dimension 2's count
+	MOVL	#1,SHAPED.$I6
+	TSTL	SHAPED.$C3
+	BGTR	SHAPED.$44
+	BRW	SHAPED.$43
+SHAPED.$44:
+SHAPED.$45:				; array (line 29), dimension 2's body
+	MOVL	SHAPED.$T8,SHAPED.$C4	; array (line 29), dimension 1's count
+	MOVL	#1,SHAPED.$I5
+	TSTL	SHAPED.$C4
+	BGTR	SHAPED.$47
+	BRW	SHAPED.$46
+SHAPED.$47:
+SHAPED.$48:				; array (line 29), dimension 1's body
+	MOVL	SHAPED.$R1+16,R0
+	MULL3	SHAPED.$I6,SHAPED.$R1+20,R1
+	ADDL2	SHAPED.$I5,R1
+	MULL3	SHAPED.$I5,SHAPED.$B1+20,R2
+	ADDL2	SHAPED.$B1+16,R2
+	MULL3	SHAPED.$I6,SHAPED.$B1+24,R3
+	ADDL2	R3,R2
+	MOVF	(R0)[R1],(R2)
+	INCL	SHAPED.$I5
+	DECL	SHAPED.$C4		; one pass fewer
+	BLEQ	SHAPED.$49
+	BRW	SHAPED.$48
+SHAPED.$49:
+SHAPED.$46:
+	INCL	SHAPED.$I6
+	DECL	SHAPED.$C3		; one pass fewer
+	BLEQ	SHAPED.$50
+	BRW	SHAPED.$45
+SHAPED.$50:
+SHAPED.$43:
+SHAPED.$37:
+	CMPL	SHAPED.$R1+12,#65536
+	BGTR	SHAPED.$52
+	BRW	SHAPED.$51
+SHAPED.$52:
+	PUSHL	#0
+	PUSHAQ	SHAPED.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+SHAPED.$51:
+	MOVL	SHAPED.$T3,SP		; the statement's storage given back
+;   30        CALL TAKE(W(:, 1))
+	MOVL	SHAPED.$B1+32,SHAPED.$T9
+	MOVL	SHAPED.$T9,SHAPED.$T8
+	BLSS	SHAPED.$54
+	BRW	SHAPED.$53
+SHAPED.$54:
+	CLRL	SHAPED.$T8
+SHAPED.$53:
+	ADDL3	SHAPED.$B1+16,SHAPED.$B1+20,R0
+	ADDL2	SHAPED.$B1+24,R0
+	MOVAL	(R0),SHAPED.$D1+4
+	MOVL	SHAPED.$B1+20,SHAPED.$D1+20
+	MOVL	#1,SHAPED.$D1+24
+	MOVL	SHAPED.$T8,SHAPED.$D1+28
+	SUBL3	SHAPED.$D1+20,SHAPED.$D1+4,SHAPED.$D1+16
+	MULL3	#4,SHAPED.$T8,SHAPED.$D1+12
+	MOVL	SP,SHAPED.$T5		; where the statement's storage starts
+	MOVZWL	SHAPED.$D1,R0
+	CMPL	SHAPED.$D1+20,R0
+	BNEQ	SHAPED.$56
+	BRW	SHAPED.$55
+SHAPED.$56:
+	MOVL	SHAPED.$B1+32,SHAPED.$T4
+	MOVL	SHAPED.$T4,SHAPED.$T3
+	BLSS	SHAPED.$58
+	BRW	SHAPED.$57
+SHAPED.$58:
+	CLRL	SHAPED.$T3
+SHAPED.$57:
+	MOVL	SHAPED.$T3,SHAPED.$R2+20
+	MOVL	SHAPED.$R2+20,SHAPED.$R2+28
+	MULL3	#4,SHAPED.$R2+20,SHAPED.$R2+12
+	CMPL	SHAPED.$R2+12,#65536
+	BLEQ	SHAPED.$60
+	BRW	SHAPED.$59
+SHAPED.$60:
+	SUBL2	SHAPED.$R2+12,SP	; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,SHAPED.$R2+4
+	BRW	SHAPED.$61
+SHAPED.$59:
+	PUSHAQ	SHAPED.$R2
+	CALLS	#1,G^FTN$GET_TEMP
+SHAPED.$61:
+	MOVL	SHAPED.$R2+4,R0
+	MOVAL	-4(R0),SHAPED.$R2+16
+	MOVL	SHAPED.$B1+32,SHAPED.$T1
+	MOVL	SHAPED.$R2+20,SHAPED.$T2
+	BLSS	SHAPED.$63
+	BRW	SHAPED.$62
+SHAPED.$63:
+	CLRL	SHAPED.$T2
+SHAPED.$62:
+	MOVL	SHAPED.$T2,SHAPED.$C5	; array (line 30), dimension 1's count
+	MOVL	#1,SHAPED.$I4
+	TSTL	SHAPED.$C5
+	BGTR	SHAPED.$65
+	BRW	SHAPED.$64
+SHAPED.$65:
+SHAPED.$66:				; array (line 30), dimension 1's body
+	MULL3	SHAPED.$I4,SHAPED.$B1+20,R0
+	ADDL2	SHAPED.$B1+16,R0
+	ADDL2	SHAPED.$B1+24,R0
+	MOVL	SHAPED.$R2+16,R1
+	MOVL	SHAPED.$I4,R2
+	MOVF	(R0),(R1)[R2]
+	INCL	SHAPED.$I4
+	DECL	SHAPED.$C5		; one pass fewer
+	BLEQ	SHAPED.$67
+	BRW	SHAPED.$66
+SHAPED.$67:
+SHAPED.$64:
+	MOVL	#1,SHAPED.$T7
+	MOVAL	@SHAPED.$R2+4,SHAPED.$T6
+	BRW	SHAPED.$68
+SHAPED.$55:
+	CLRL	SHAPED.$R2+12
+	CLRL	SHAPED.$T7
+	MOVL	SHAPED.$D1+4,SHAPED.$T6
+SHAPED.$68:
+	PUSHL	SHAPED.$T6
+	CALLS	#1,G^TAKE
+	TSTL	SHAPED.$T7
+	BNEQ	SHAPED.$70
+	BRW	SHAPED.$69
+SHAPED.$70:
+	MOVL	SHAPED.$B1+32,SHAPED.$T10
+	MOVL	SHAPED.$T10,SHAPED.$T11
+	BLSS	SHAPED.$72
+	BRW	SHAPED.$71
+SHAPED.$72:
+	CLRL	SHAPED.$T11
+SHAPED.$71:
+	MOVL	SHAPED.$T11,SHAPED.$C6	; array (line 30), dimension 1's count
+	MOVL	#1,SHAPED.$I3
+	TSTL	SHAPED.$C6
+	BGTR	SHAPED.$74
+	BRW	SHAPED.$73
+SHAPED.$74:
+SHAPED.$75:				; array (line 30), dimension 1's body
+	MOVL	SHAPED.$R2+16,R0
+	MOVL	SHAPED.$I3,R1
+	MULL3	SHAPED.$I3,SHAPED.$B1+20,R2
+	ADDL2	SHAPED.$B1+16,R2
+	ADDL2	SHAPED.$B1+24,R2
+	MOVF	(R0)[R1],(R2)
+	INCL	SHAPED.$I3
+	DECL	SHAPED.$C6		; one pass fewer
+	BLEQ	SHAPED.$76
+	BRW	SHAPED.$75
+SHAPED.$76:
+SHAPED.$73:
+SHAPED.$69:
+	CMPL	SHAPED.$R2+12,#65536
+	BGTR	SHAPED.$78
+	BRW	SHAPED.$77
+SHAPED.$78:
+	PUSHL	#0
+	PUSHAQ	SHAPED.$R2
+	CALLS	#2,G^FTN$DEALLOCATE
+SHAPED.$77:
+	MOVL	SHAPED.$T5,SP		; the statement's storage given back
+;   31        WRITE (C, '(A)') 'X', 'Y'
+	MOVL	SP,SHAPED.$T2		; where the statement's storage starts
+	MOVZWL	SHAPED.$B2,R0
+	CMPL	SHAPED.$B2+20,R0
+	BNEQ	SHAPED.$80
+	BRW	SHAPED.$79
+SHAPED.$80:
+	MOVL	SHAPED.$B2+28,SHAPED.$T1
+	BLSS	SHAPED.$82
+	BRW	SHAPED.$81
+SHAPED.$82:
+	CLRL	SHAPED.$T1
+SHAPED.$81:
+	MOVL	SHAPED.$T1,SHAPED.$R3+20
+	MOVL	SHAPED.$R3+20,SHAPED.$R3+28
+	MULL3	#8,SHAPED.$R3+20,SHAPED.$R3+12
+	CMPL	SHAPED.$R3+12,#65536
+	BLEQ	SHAPED.$84
+	BRW	SHAPED.$83
+SHAPED.$84:
+	SUBL2	SHAPED.$R3+12,SP	; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,SHAPED.$R3+4
+	BRW	SHAPED.$85
+SHAPED.$83:
+	PUSHAQ	SHAPED.$R3
+	CALLS	#1,G^FTN$GET_TEMP
+SHAPED.$85:
+	MOVL	SHAPED.$R3+4,R0
+	MOVAB	-8(R0),SHAPED.$R3+16
+	MOVL	SHAPED.$R3+20,SHAPED.$T3
+	BLSS	SHAPED.$87
+	BRW	SHAPED.$86
+SHAPED.$87:
+	CLRL	SHAPED.$T3
+SHAPED.$86:
+	MOVL	SHAPED.$T3,SHAPED.$C7	; array (line 31), dimension 1's count
+	MOVL	#1,SHAPED.$I4
+	TSTL	SHAPED.$C7
+	BGTR	SHAPED.$89
+	BRW	SHAPED.$88
+SHAPED.$89:
+SHAPED.$90:				; array (line 31), dimension 1's body
+	MULL3	SHAPED.$I4,SHAPED.$B2+20,R0
+	ADDL2	SHAPED.$B2+16,R0
+	MOVL	SHAPED.$R3+16,R1
+	MULL3	SHAPED.$I4,#8,R2
+	MOVC3	#8,(R0),(R1)[R2]
+	INCL	SHAPED.$I4
+	DECL	SHAPED.$C7		; one pass fewer
+	BLEQ	SHAPED.$91
+	BRW	SHAPED.$90
+SHAPED.$91:
+SHAPED.$88:
+	MOVL	#1,SHAPED.$T11
+	MOVAL	SHAPED.$R3,SHAPED.$T10
+	BRW	SHAPED.$92
+SHAPED.$79:
+	CLRL	SHAPED.$R3+12
+	CLRL	SHAPED.$T11
+	MOVW	SHAPED.$B2,SHAPED.$D2
+	MOVL	SHAPED.$B2+4,SHAPED.$D2+4
+	MOVL	SHAPED.$B2+12,SHAPED.$D2+12
+	SUBL3	SHAPED.$B2+24,SHAPED.$B2+28,R0
+	ADDL3	R0,#1,SHAPED.$D2+20
+	MOVL	SHAPED.$D2+20,SHAPED.$D2+28
+	MOVZWL	SHAPED.$D2,R0
+	SUBL3	R0,SHAPED.$D2+4,SHAPED.$D2+16
+	MOVAL	SHAPED.$D2,SHAPED.$T10
+SHAPED.$92:
+	PUSHAQ	SHAPED.$D3
+	PUSHL	SHAPED.$T10
+	PUSHAB	SHAPED.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	PUSHAQ	SHAPED.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SHAPED.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	TSTL	SHAPED.$T11
+	BNEQ	SHAPED.$94
+	BRW	SHAPED.$93
+SHAPED.$94:
+	MOVL	SHAPED.$B2+28,SHAPED.$T4
+	BLSS	SHAPED.$96
+	BRW	SHAPED.$95
+SHAPED.$96:
+	CLRL	SHAPED.$T4
+SHAPED.$95:
+	MOVL	SHAPED.$T4,SHAPED.$C8	; array (line 31), dimension 1's count
+	MOVL	#1,SHAPED.$I5
+	TSTL	SHAPED.$C8
+	BGTR	SHAPED.$98
+	BRW	SHAPED.$97
+SHAPED.$98:
+SHAPED.$99:				; array (line 31), dimension 1's body
+	MOVL	SHAPED.$R3+16,R0
+	MULL3	SHAPED.$I5,#8,R1
+	MULL3	SHAPED.$I5,SHAPED.$B2+20,R2
+	ADDL2	SHAPED.$B2+16,R2
+	MOVC3	#8,(R0)[R1],(R2)
+	INCL	SHAPED.$I5
+	DECL	SHAPED.$C8		; one pass fewer
+	BLEQ	SHAPED.$100
+	BRW	SHAPED.$99
+SHAPED.$100:
+SHAPED.$97:
+SHAPED.$93:
+	CMPL	SHAPED.$R3+12,#65536
+	BGTR	SHAPED.$102
+	BRW	SHAPED.$101
+SHAPED.$102:
+	PUSHL	#0
+	PUSHAQ	SHAPED.$R3
+	CALLS	#2,G^FTN$DEALLOCATE
+SHAPED.$101:
+	MOVL	SHAPED.$T2,SP		; the statement's storage given back
+;   32        END
+	RET
+
+	.END

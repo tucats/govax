@@ -1156,8 +1156,16 @@ type Arg struct {
 	// parentheses (Copy), whose value goes in a temporary.
 	Shaped bool
 
+	// Sequence is set for an array section or array expression given to a
+	// dummy that isn't assumed-shape, or a whole assumed-shape array: what is
+	// passed is the address of its elements one after another (sequence
+	// association), copied into a temporary unless they already are
+	// (sequence.go). CopyBack says such a copy goes back to the actual after
+	// the call: the actual is definable, and the dummy isn't INTENT(IN).
+	Sequence, CopyBack bool
+
 	// expression is set by argValue for an array section or array expression,
-	// which only an assumed-shape dummy takes (arrayChecked).
+	// for its dummy to decide on (shaped, sequenced, arrayChecked).
 	expression bool
 }
 

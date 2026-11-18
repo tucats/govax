@@ -1130,8 +1130,18 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   deciding after the choice; the entry copy reading a class A descriptor's
   multipliers, and under `/CHECK=BOUNDS` `checkDescriptor`'s BADARRDESC (FTNRTL's
   `FTN$BADARRDESC`, GSMATCH 1,24); `testdata/fortran90/shapeargs.f90`,
-  `internal/console`'s `TestFortranShapedFromMACRO`. Subtask 6 (sections and
-  expressions to old dummies) is next.
+  `internal/console`'s `TestFortranShapedFromMACRO`. Subtask 6 (2026-11-18) is
+  sections and expressions to old dummies (`sema/sequence.go`: `sequenced` marks
+  `Arg.Sequence` and `CopyBack`, `Contiguous` the compiling-time rule;
+  `ir/lowersequence.go`: a contiguous section's first element, a whole
+  assumed-shape array or a section of one tested by its strides when the program
+  runs, `testedSequence`, anything else through `valueTemp`'s temporary, copied
+  back after the call by `args`' copy backs, `copyBack`; a CHARACTER one by a
+  class A descriptor; an assumed-shape array as a run-time format, an internal
+  file, or ENCODE's or DECODE's buffer the same way, `ioFinish`'s `backs`;
+  `holdingAfter`, a fix, keeps an earlier argument's dynamic string past a copy's
+  loops; `testdata/fortran90/seqargs.f90`, `seqvms.f90`). Subtask 7 (array-valued
+  functions and run-time CHARACTER lengths) is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

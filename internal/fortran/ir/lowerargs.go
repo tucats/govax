@@ -12,15 +12,37 @@ import (
 // the passing unit declares, from which a CHARACTER*(*) dummy procedure takes its
 // length.
 
-// args lowers a call's actual arguments.
-func (l *lowerer) args(list []sema.Arg) []Arg {
+// args lowers a call's actual arguments, and returns with them what must be
+// done once the call returns: copying temporaries back to the sections they
+// stood for (lowersequence.go), which copyBack does.
+func (l *lowerer) args(list []sema.Arg) ([]Arg, []func()) {
 	args := make([]Arg, len(list))
 
+	var backs []func()
+
 	for i, a := range list {
+		if a.Sequence {
+			var back func()
+
+			args[i], back = l.sequenceArg(a)
+			if back != nil {
+				backs = append(backs, back)
+			}
+
+			continue
+		}
+
 		args[i] = l.arg(a)
 	}
 
-	return args
+	return args, backs
+}
+
+// copyBack does what args said must be done once the call returns.
+func copyBack(backs []func()) {
+	for _, back := range backs {
+		back()
+	}
 }
 
 // arg lowers an actual argument. A variable, an array element, or a whole array
@@ -34,9 +56,16 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 		return Arg{Value: LongConst(0)}
 	}
 
-	// An assumed-shape dummy's, by a class NCA descriptor (lowershaped.go).
+	// An assumed-shape dummy's, by a class NCA descriptor (lowershaped.go),
+	// the statement's after list held aside while a temporary's loops end
+	// blocks (holdingAfter): an earlier argument's dynamic string is the
+	// call's.
 	if a.Shaped {
-		return l.shapedArg(a)
+		var arg Arg
+
+		l.holdingAfter(func() { arg = l.shapedArg(a) })
+
+		return arg
 	}
 
 	if p, ok := a.Expr.(*sema.Procedure); ok {
@@ -216,7 +245,7 @@ func (l *lowerer) callee(s *sema.Symbol) (name string, local bool, through *Mem)
 // argument, where the argument says (the address of result, or for a
 // CHARACTER value a descriptor of it).
 func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
-	args := l.args(f.Args)
+	args, backs := l.args(f.Args)
 
 	switch {
 	case f.T.Kind == sema.Character:
@@ -237,4 +266,5 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 		call.Args = append(call.Args, hidden)
 	}
 	l.emit(call)
+	copyBack(backs)
 }

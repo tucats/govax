@@ -313,7 +313,7 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 				if target.Params[j].AssumedShape() {
 					args[j] = a.shaped(analyzed[i])
 				} else {
-					args[j] = a.unshaped(a.arrayChecked(analyzed[i]))
+					args[j] = a.sequenced(analyzed[i], target.Params[j])
 				}
 			}
 

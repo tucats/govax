@@ -59,7 +59,20 @@ func (l *lowerer) io(s *sema.IO) {
 		c.Flags |= ControlRunFormat
 	}
 
-	args := []Arg{{Ref: l.control(c)}, l.ioUnit(s)}
+	// An assumed-shape array as the internal file, the buffer, or the format
+	// goes through a temporary unless its elements are one after another
+	// (lowersequence.go); the file's or buffer's is copied back once the
+	// statement is done.
+	var backs []func()
+
+	control := Arg{Ref: l.control(c)}
+
+	unit, back := l.ioUnit(s)
+	if back != nil {
+		backs = append(backs, back)
+	}
+
+	args := []Arg{control, unit}
 
 	if s.Form != sema.ListForm && s.Form != sema.UnformattedForm {
 		args = append(args, l.ioFormat(s))
@@ -85,7 +98,7 @@ func (l *lowerer) io(s *sema.IO) {
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
 	l.ioItems(s.Items)
 
-	l.ioFinish(&Call{origin: l.origin(), Routine: ftnIOEnd}, c, s.Err, s.End, s.IOStat)
+	l.ioFinish(&Call{origin: l.origin(), Routine: ftnIOEnd}, c, s.Err, s.End, s.IOStat, backs)
 }
 
 // controlFor is the control block of a statement with these specifiers.
@@ -108,11 +121,13 @@ func controlFor(errLabel, endLabel int, iostat sema.Expr) Control {
 }
 
 // ioFinish emits the call that ends an I/O statement and returns its
-// status in R0, and what the statement does with the status: IOSTAT=, END=,
-// and ERR=.
-func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat sema.Expr) {
+// status in R0, then backs (copies back to an assumed-shape array, done once
+// the statement is, lowersequence.go), and what the statement does with the
+// status: IOSTAT=, END=, and ERR=.
+func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat sema.Expr, backs []func()) {
 	if c.Flags&(ControlErr|ControlEnd|ControlIOStat) == 0 {
 		l.emit(end)
+		copyBack(backs)
 
 		return
 	}
@@ -121,12 +136,13 @@ func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat 
 	// and the statement's last work is done (both may use R0).
 	var status Expr = &CallValue{}
 
-	if iostat != nil || len(l.after) > 0 {
+	if iostat != nil || len(l.after) > 0 || len(backs) > 0 {
 		end.Result = l.temp(Long)
 		status = &Load{end.Result}
 	}
 
 	l.emit(end)
+	copyBack(backs)
 
 	if iostat != nil {
 		ios := l.mem(iostat)
@@ -200,17 +216,27 @@ func beginRoutine(s *sema.IO) string {
 // ioUnit is the begin call's unit argument: a unit's number by value (a
 // default unit's from sema), an internal file's descriptor, or ENCODE's
 // or DECODE's buffer's address.
-func (l *lowerer) ioUnit(s *sema.IO) Arg {
-	switch {
-	case s.Code:
-		return Arg{Value: l.bufferAddress(s.Unit)}
-	case s.Internal:
-		return Arg{Ref: l.item(s.Unit)}
-	case s.Unit == nil:
-		return Arg{Value: LongConst(int32(s.Default))}
+//
+// An assumed-shape array as the internal file or buffer goes as its elements one
+// after another (lowersequence.go), and back is what copies them back when
+// the statement writes them; nil if nothing does.
+func (l *lowerer) ioUnit(s *sema.IO) (unit Arg, back func()) {
+	if r, ok := s.Unit.(*sema.ArrayRef); ok && r.Sym.AssumedShape() && (s.Code || s.Internal) {
+		seq := l.sequence(r, true, !s.Read, s.Internal)
+
+		return Arg{Value: seq.value}, seq.back
 	}
 
-	return Arg{Value: l.expr(s.Unit)}
+	switch {
+	case s.Code:
+		return Arg{Value: l.bufferAddress(s.Unit)}, nil
+	case s.Internal:
+		return Arg{Ref: l.item(s.Unit)}, nil
+	case s.Unit == nil:
+		return Arg{Value: LongConst(int32(s.Default))}, nil
+	}
+
+	return Arg{Value: l.expr(s.Unit)}, nil
 }
 
 // bufferAddress is the address of ENCODE's or DECODE's buffer, whatever
@@ -240,6 +266,12 @@ func (l *lowerer) ioFormat(s *sema.IO) Arg {
 	case s.FormatVar != nil:
 		// The address ASSIGN stored, passed as it is.
 		return Arg{Value: l.expr(s.FormatVar)}
+	}
+
+	// An assumed-shape array's text, its elements one after another
+	// (lowersequence.go).
+	if r, ok := s.RunFormat.(*sema.ArrayRef); ok && r.Sym.AssumedShape() {
+		return Arg{Value: l.sequence(r, true, false, true).value}
 	}
 
 	return Arg{Ref: l.runFormat(s.RunFormat)}

@@ -417,6 +417,16 @@ type ncaElement struct {
 // subscripts are computed once, as the scalarizer computes them (arrayNest), and
 // under /CHECK=BOUNDS the first and last subscript of each triplet are checked.
 func (l *lowerer) sectionNCA(e *sema.Section, sub *sema.Substring) *Mem {
+	return l.describeSection(e, sub, func(el ncaElement, pointer Expr, dims []ncaDim) *Mem {
+		return l.buildNCA(e.Sym, el, pointer, dims)
+	})
+}
+
+// describeSection is sectionNCA's work: it computes the section e's (or the
+// substring sub's of each of its elements) first element's address and each
+// triplet's dimension, and gives them to describe, while the subscripts' cells
+// are still the section's.
+func (l *lowerer) describeSection(e *sema.Section, sub *sema.Substring, describe func(ncaElement, Expr, []ncaDim) *Mem) *Mem {
 	s := e.Sym
 	c := l.adjustableOf(s)
 
@@ -454,7 +464,7 @@ func (l *lowerer) sectionNCA(e *sema.Section, sub *sema.Substring) *Mem {
 
 	pointer := Expr(&Addr{l.mem(sema.NewElem(s, subs, inBounds, e.Pos))})
 
-	return l.buildNCA(s, l.substringOf(s, sub, &pointer), pointer, dims)
+	return describe(l.substringOf(s, sub, &pointer), pointer, dims)
 }
 
 // buildNCA is a class NCA descriptor, in a descriptor cell of the statement's,

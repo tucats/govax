@@ -120,7 +120,8 @@ func (l *lowerer) callIntrinsic(e *sema.IntrinsicRef) *Mem {
 		args[i] = sema.Arg{Expr: x}
 	}
 
-	call := &Call{origin: l.origin(), Routine: e.Routine, Args: l.args(args)}
+	list, backs := l.args(args)
+	call := &Call{origin: l.origin(), Routine: e.Routine, Args: list}
 
 	if t == HFloat || t == Octa {
 		call.Args = append([]Arg{{Ref: result}}, call.Args...)
@@ -129,6 +130,7 @@ func (l *lowerer) callIntrinsic(e *sema.IntrinsicRef) *Mem {
 	}
 
 	l.emit(call)
+	copyBack(backs)
 
 	return result
 }

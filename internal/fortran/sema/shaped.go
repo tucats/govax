@@ -39,15 +39,15 @@ import (
 // definable (12.4.1.1; INTENT(OUT) is NOTDEFINABLE).
 //
 // Inside the routine, an assumed-shape array is used as any other: whole, by
-// element, by section. Only what needs its elements one after another in
-// storage, which they may not be, waits for later: passing it to a dummy that
-// isn't assumed-shape (sequence association, which needs a copy: subtask 6), and
-// using it as a run-time format, an internal file, or ENCODE's or DECODE's
-// buffer. An I/O list takes it an element at a time.
+// element, by section. Given to a dummy that isn't assumed-shape, or used as a
+// run-time format, an internal file, or ENCODE's or DECODE's buffer, where its
+// elements must be one after another in storage, which they may not be, it goes
+// through a temporary unless they are (sequence.go). An I/O list takes it an
+// element at a time.
 
 // argsTo analyzes the actual arguments, list, of a reference to the procedure s,
 // in its dummies' order (actuals): an assumed-shape dummy's by shaped, every
-// other's as args does.
+// other's by sequenced (sequence.go).
 func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 	var params []*Symbol
 
@@ -58,10 +58,15 @@ func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 	args := make([]Arg, len(list))
 
 	for i, e := range list {
-		if i < len(params) && params[i].AssumedShape() && !params[i].broken {
+		var p *Symbol
+		if i < len(params) && !params[i].broken {
+			p = params[i]
+		}
+
+		if p != nil && p.AssumedShape() {
 			args[i] = a.shaped(a.argValue(e))
 		} else {
-			args[i] = a.unshaped(a.arg(e))
+			args[i] = a.sequenced(a.argValue(e), p)
 		}
 
 		a.notePassed(args[i])
@@ -162,34 +167,6 @@ func Described(arg Arg) bool {
 	}
 
 	return false
-}
-
-// unshaped is arg, the actual argument of a dummy that isn't assumed-shape, or a
-// bad expression after NOTIMPL if it is a whole assumed-shape array: such a
-// dummy takes its elements one after another (sequence association, 12.4.1.4),
-// which needs a copy unless they are (subtask 6).
-func (a *analyzer) unshaped(arg Arg) Arg {
-	if r, ok := arg.Expr.(*ArrayRef); ok && r.Sym.AssumedShape() && !r.Sym.broken {
-		a.notImplForm(r.Pos, "an assumed-shape array as the actual argument of a dummy that isn't assumed-shape (Phase 104, subtask 6)")
-		arg.Expr = a.bad(r.Pos)
-	}
-
-	return arg
-}
-
-// noContiguous reports NOTIMPL, and returns true, if e is a whole assumed-shape
-// array, which what is to be used as cannot have, its elements needing to be one
-// after another in storage: a run-time format, an internal file, or ENCODE's or
-// DECODE's buffer.
-func (a *analyzer) noContiguous(e Expr, what string) bool {
-	r, ok := e.(*ArrayRef)
-	if !ok || !r.Sym.AssumedShape() || r.Sym.broken {
-		return false
-	}
-
-	a.notImplForm(r.Pos, "an assumed-shape array as "+what+" (Phase 104, subtask 6)")
-
-	return true
 }
 
 // shapeText says what kind of array a dummy is, for INTERFACEDIFF.

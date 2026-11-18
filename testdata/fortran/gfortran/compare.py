@@ -97,6 +97,7 @@ PROGRAMS90 = {
     "shaped": ["shaped.f90"],
     "shapes": ["shapes.f90"],
     "shapeargs": ["shapeargs.f90"],
+    "seqargs": ["seqargs.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

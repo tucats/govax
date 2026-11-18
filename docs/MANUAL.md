@@ -9055,11 +9055,34 @@ assumed-shape dummy whole or as a section; an output list takes it an element at
 An OPTIONAL one may be left out, and passed on to another OPTIONAL dummy is left out there
 too (so is an OPTIONAL explicit-shape one); an ENTRY may have one. Not there yet: a
 CHARACTER array expression whose length is known only when the program runs and isn't made
-of variables, arrays, and concatenations of them, as such an argument; an assumed-shape
-array passed to a dummy that isn't assumed-shape (an
-explicit-shape or assumed-size one, or a routine with no interface), which takes its
-elements one after another, and its use as a format, an internal file, or ENCODE's or
-DECODE's buffer; and `/DEBUG`'s view of one, which the debugger doesn't read yet.
+of variables, arrays, and concatenations of them, as such an argument; and `/DEBUG`'s view
+of one, which the debugger doesn't read yet.
+
+**Sections and expressions to other dummies.** A dummy that isn't assumed-shape, an
+explicit-shape or assumed-size array, or any dummy of a routine with no interface, takes
+the address of its actual's first element and finds the rest one after another (sequence
+association), as every FORTRAN-77 array dummy does. A section or an array expression may
+be passed to one:
+
+```fortran
+      CALL TOTAL(A(:, J), N, T)       ! a column: passed where it is
+      CALL TOTAL(A(J, :), M, T)       ! a row: through a temporary
+      CALL TOTAL(A(:, 1) * 2.0, N, T) ! an expression: through a temporary
+```
+
+A section whose elements are already one after another (the whole of each dimension up to
+one taken by a step of 1, then single subscripts: `A(:, J)`, `A(2:5, J)`) is passed where it
+is. Any other is copied into a temporary of the calling statement's (on the stack, or past
+64 KB the heap), which is passed, and copied back when the call returns, unless the dummy
+is `INTENT(IN)`; a function reference's copy back is done before the rest of its
+statement. An expression, a section with a vector subscript, or an array in parentheses
+is copied in only, as for an assumed-shape dummy. An assumed-shape array, or a section of
+one, is tested when the program runs: if its strides say its elements are one after
+another after all, it is passed where it is, else through a temporary. A CHARACTER one
+goes by a class A descriptor of whichever is passed. An assumed-shape array may be a
+run-time format, an internal file, or ENCODE's or DECODE's buffer the same way, copied back
+after a WRITE or ENCODE. Not there yet: a section, an expression, or an assumed-shape array
+given to `%REF`, `%DESCR`, `%LOC`, or a system subroutine (DATE, IDATE, ...).
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
@@ -9072,8 +9095,7 @@ DECODE's buffer; and `/DEBUG`'s view of one, which the debugger doesn't read yet
 ```
 
 That includes modules and USE (with MODULE PROCEDURE), derived types, and pointers, each
-to come in its turn. Of arrays as values, these are not there yet: a section or array
-expression as an argument to a program's own procedure, but to an assumed-shape dummy; an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
+to come in its turn. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
 gives no elements but govax still calls `BOUNDORDER`; an array function's value of a shape not known when compiling
 (RESHAPE of values that aren't constants, a `DIM=` that isn't constant on an array of rank 2
 or more); a CHARACTER constructor whose first value's length is known only when the program

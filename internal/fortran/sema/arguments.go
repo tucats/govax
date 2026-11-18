@@ -12,12 +12,13 @@ import (
 // lets them. A procedure's name is the procedure, and a Hollerith constant its
 // bytes.
 
-// args analyzes a list of actual arguments.
+// args analyzes a list of actual arguments of a system subroutine (system.go,
+// errsns.go).
 func (a *analyzer) args(list []ast.Expr) []Arg {
 	args := make([]Arg, len(list))
 
 	for i, e := range list {
-		args[i] = a.unshaped(a.arg(e))
+		args[i] = a.arg(e)
 		a.notePassed(args[i])
 	}
 
@@ -26,15 +27,25 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 
 // arg analyzes an actual argument: a variable, an array element, or a whole
 // array is passed as itself; a parenthesized one, or any other expression, as a
-// copy. An array section or array expression is NOTIMPL here: only an
-// assumed-shape dummy takes one yet (shaped.go, through argValue).
+// copy. An array section or array expression, or a whole assumed-shape array,
+// is NOTIMPL here, where the routine is one of the system subroutines or the
+// argument is a built-in function's: a procedure's dummy takes one (shaped.go
+// and sequence.go, through argValue).
 func (a *analyzer) arg(e ast.Expr) Arg {
-	return a.arrayChecked(a.argValue(e))
+	arg := a.arrayChecked(a.argValue(e))
+
+	// Nor a whole assumed-shape array, whose elements may not be one after
+	// another.
+	if r, ok := arg.Expr.(*ArrayRef); ok && r.Sym.AssumedShape() && !r.Sym.broken {
+		a.notImplForm(r.Pos, "an assumed-shape array as a system subroutine's or built-in function's argument")
+		arg.Expr = a.bad(r.Pos)
+	}
+
+	return arg
 }
 
 // arrayChecked is arg, unless it is an array section or array expression, which
-// a dummy that isn't assumed-shape doesn't take yet: then a bad expression,
-// after NOTIMPL (arrayArg).
+// arg doesn't take: then a bad expression, after NOTIMPL (arrayArg).
 func (a *analyzer) arrayChecked(arg Arg) Arg {
 	if arg.expression {
 		arg.Expr = a.arrayArg(arg.Expr)
@@ -46,8 +57,8 @@ func (a *analyzer) arrayChecked(arg Arg) Arg {
 
 // argValue analyzes an actual argument as arg does, but keeps an array section
 // or array expression, marked as one (Arg.expression), for its dummy to decide
-// on: an assumed-shape dummy takes it by descriptor (shaped.go), any other not
-// yet (arrayChecked).
+// on: an assumed-shape dummy takes it by descriptor (shaped.go), any other by
+// sequence association (sequence.go).
 func (a *analyzer) argValue(e ast.Expr) Arg {
 	switch x := e.(type) {
 	case nil:
