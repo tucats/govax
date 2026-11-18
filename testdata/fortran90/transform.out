@@ -1,0 +1,33 @@
+spread:   2  2  2  3  3  3  4  4  4
+spread2:  2  3  4  2  3  4  2  3  4
+cshift:   3  4  5  6  1  2
+cshift-:  5  6  1  2  3  4
+cshift2:  3  5  7  1  6  8  2  4  9
+eoshift:  4  5  6  0  0  0
+eosh-9:   9  9  1  2  3  4
+eosh2:   B / G C D H * E I
+eosh-c:  D G   E H   F I  
+pack:     9  7
+packv:    9  7  3  4  5  6
+packall:  1  4  7  2  5  8  3  6  9
+packnot:  0
+unpack:   1  1  0  2  1  0  0  0  3
+unpack0:  0  4  0  5  0  0  0  0  6
+reshape:  1  5  2  6  3  0  4  0
+resh2:    1  2  3  4  5  6
+rshape:   2  3
+sum dim 1  12  15  18
+sum dim 2   6  15  24
+any:     F F T
+maxval:    7   5   9
+self:     2  3  4  5  6  1
+teosh:    4  5  6  7  8  9 -1 -1 -1
+shapes:   2  3  2  3  2  3  2  3
+rt sum:   4.0  8.0 12.0 16.0
+rt csh:   4.0  1.0  2.0  3.0
+rt eos:   2.0  3.0  4.0 -1.0
+rt pack:  3.0  4.0
+merge:  abc uvw
+cshc:   def abc
+ring:     1  2  3  4  5
+  $STATUS == "%X00000001"

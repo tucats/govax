@@ -933,6 +933,12 @@ type (
 		Mask    Expr
 		Dim     int
 		DimExpr Expr
+
+		// Pad is EOSHIFT's BOUNDARY or RESHAPE's PAD, and Order RESHAPE's
+		// ORDER, from 0, each dimension's place in the order its subscripts
+		// vary (transform.go).
+		Pad   Expr
+		Order []int
 	}
 
 	// ArrayFuncAt is F's element at the indexes Index, the index variables of

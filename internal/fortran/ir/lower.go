@@ -622,6 +622,8 @@ func (l *lowerer) release() {
 		}
 	}
 
+	l.runtime.funcs = nil
+
 	for _, c := range l.busy {
 		switch {
 		case isValueCell(c):

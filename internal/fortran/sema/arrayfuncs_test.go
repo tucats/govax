@@ -40,14 +40,14 @@ func TestArrayFunctions(t *testing.T) {
 		{"SIZE folded", []string{"N = SIZE(A, 2)"}, "4 a scalar"},
 
 		{"a DIM out of range", []string{"V = SUM(A, DIM=3)"}, "DIMRANGE: SUM's DIM, 3, isn't a dimension of an array of rank 2"},
-		{"a DIM not constant", []string{"V = SUM(A, DIM=I)"}, "NOTIMPL: SUM with a DIM= not constant (Phase 104) is not implemented yet"},
+		{"a DIM not constant", []string{"V = SUM(A, DIM=I)"}, "SUM(A[], DIM=I) (:)"},
 		{"a scalar ARRAY", []string{"X = SUM(X)"}, "ARRAYARG: SUM's ARRAY must be an array"},
 		{"MAXVAL of COMPLEX", []string{"X = MAXVAL(Z)"}, "BADARG: the intrinsic function MAXVAL's arguments must be INTEGER or REAL, and this one is COMPLEX"},
 		{"a mask that doesn't conform", []string{"X = SUM(V, MASK=L)"}, "NOTCONFORM: the shapes (4) and (3, 4) don't conform"},
 		{"MATMUL's shapes", []string{"V(1:3) = MATMUL(A, W(1:3))"}, "NOTCONFORM: the shapes (4) and (3) don't conform"},
 		{"MATMUL of vectors", []string{"X = MATMUL(V, W)"}, "ARRAYRANK: MATMUL's MATRIX_B must be of rank 2 when MATRIX_A's is 1, not 1"},
 		{"TRANSPOSE of a vector", []string{"V = TRANSPOSE(V)"}, "ARRAYRANK: TRANSPOSE's MATRIX must be of rank 2, not 1"},
-		{"RESHAPE not constant", []string{"M = RESHAPE(V, (/ 4, 2 /))"}, "NOTIMPL: RESHAPE of values not constant (Phase 104) is not implemented yet"},
+		{"RESHAPE not constant", []string{"M = RESHAPE(V, (/ 4, 2 /))"}, "RESHAPE(V[], (/:I 4 2 /)) (4, 2)"},
 	}
 
 	for _, c := range cases {

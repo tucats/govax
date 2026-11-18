@@ -101,6 +101,7 @@ PROGRAMS90 = {
     "values": ["values.f90"],
     "ramps": ["ramps.f90"],
     "madetext": ["madetext.f90"],
+    "transform": ["transform.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

@@ -67,6 +67,10 @@ type runtimeTemps struct {
 	after      []Stmt
 	values     map[*sema.FuncRef]*sema.ArrayRef
 	valueCells []*Cell
+
+	// funcs are the transformational functions' values the statement has
+	// computed (lowertransform.go), whatever the temporaries they are in.
+	funcs map[*sema.ArrayFunc]*sema.ArrayRef
 }
 
 // runtimeTemp is an array temporary of type t for the statement being lowered,

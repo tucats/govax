@@ -1,0 +1,949 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for TRANS, a subroutine
+;   V     INTEGER (6)    argument 1  @TRANS.V(AP)
+;   M     INTEGER (3,3)  argument 2  @TRANS.M(AP)
+;   L     LOGICAL (3,3)  argument 3  @TRANS.L(AP)
+;   N     INTEGER        argument 4  @TRANS.N(AP)
+;   K     INTEGER        argument 5  @TRANS.K(AP)
+;   W     INTEGER (3)    $LOCAL+0    TRANS.W
+;   $W    INTEGER (?,?)  $LOCAL+28   TRANS.$R1
+;   $W    INTEGER (?)    $LOCAL+212  TRANS.$R2
+;
+TRANS.V = 4				; V is argument 1
+TRANS.M = 8				; M is argument 2
+TRANS.L = 12				; L is argument 3
+TRANS.N = 16				; N is argument 4
+TRANS.K = 20				; K is argument 5
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+TRANS.W:
+	.BLKL	3			; W, INTEGER (3)
+TRANS.$I1:
+	.BLKL	1			; an array statement's loop index
+TRANS.$I2:
+	.BLKL	1			; an array statement's loop index
+TRANS.$I3:
+	.BLKL	1			; an array statement's loop index
+TRANS.$T1:
+	.BLKL	1			; temporary
+TRANS.$R1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+TRANS.$T2:
+	.BLKL	1			; temporary
+TRANS.$I4:
+	.BLKL	1			; an array statement's loop index
+TRANS.$I5:
+	.BLKL	1			; an array statement's loop index
+TRANS.$C1:
+	.BLKL	1			; array (line 10), dimension 2's count
+TRANS.$C2:
+	.BLKL	1			; array (line 10), dimension 1's count
+TRANS.$C3:
+	.BLKL	1			; array (line 10), dimension 2's count
+TRANS.$C4:
+	.BLKL	1			; array (line 10), dimension 1's count
+TRANS.$W1:
+	.BLKL	6			; an array temporary of 24 bytes, for one statement
+TRANS.$C5:
+	.BLKL	1			; array (line 11), dimension 1's count
+TRANS.$C6:
+	.BLKL	1			; array (line 11), dimension 1's count
+TRANS.$W2:
+	.BLKL	9			; an array temporary of 36 bytes, for one statement
+TRANS.$I6:
+	.BLKL	1			; an array statement's loop index
+TRANS.$C7:
+	.BLKL	1			; array (line 12), dimension 2's count
+TRANS.$C8:
+	.BLKL	1			; array (line 12), dimension 1's count
+TRANS.$I7:
+	.BLKL	1			; an array statement's loop index
+TRANS.$I8:
+	.BLKL	1			; an array statement's loop index
+TRANS.$C9:
+	.BLKL	1			; array (line 12), dimension 2's count
+TRANS.$C10:
+	.BLKL	1			; array (line 12), dimension 1's count
+TRANS.$C11:
+	.BLKL	1			; array (line 12), dimension 2's count
+TRANS.$C12:
+	.BLKL	1			; array (line 12), dimension 1's count
+TRANS.$C13:
+	.BLKL	1			; array (line 13), dimension 2's count
+TRANS.$C14:
+	.BLKL	1			; array (line 13), dimension 1's count
+TRANS.$R2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+TRANS.$T3:
+	.BLKL	1			; temporary
+TRANS.$C15:
+	.BLKL	1			; array (line 13), dimension 2's count
+TRANS.$C16:
+	.BLKL	1			; array (line 13), dimension 1's count
+TRANS.$C17:
+	.BLKL	1			; array (line 13), dimension 1's count
+TRANS.$W3:
+	.BLKL	3			; an array temporary of 12 bytes, for one statement
+TRANS.$C18:
+	.BLKL	1			; array (line 14), dimension 1's count
+TRANS.$C19:
+	.BLKL	1			; array (line 14), dimension 2's count
+TRANS.$C20:
+	.BLKL	1			; array (line 14), dimension 1's count
+TRANS.$C21:
+	.BLKL	1			; array (line 14), dimension 2's count
+TRANS.$C22:
+	.BLKL	1			; array (line 14), dimension 1's count
+TRANS.$W4:
+	.BLKL	2			; an array temporary of 8 bytes, for one statement
+TRANS.$W5:
+	.BLKL	2			; an array temporary of 8 bytes, for one statement
+TRANS.$C23:
+	.BLKL	1			; array (line 15), dimension 1's count
+TRANS.$T4:
+	.BLKL	1			; temporary
+TRANS.$T5:
+	.BLKL	1			; temporary
+TRANS.$C24:
+	.BLKL	1			; array (line 15), dimension 1's count
+TRANS.$T6:
+	.BLKL	1			; temporary
+TRANS.$T7:
+	.BLKL	1			; temporary
+TRANS.$C25:
+	.BLKL	1			; array (line 15), dimension 2's count
+TRANS.$C26:
+	.BLKL	1			; array (line 15), dimension 1's count
+TRANS.$T8:
+	.BLKL	1			; temporary
+TRANS.$T9:
+	.BLKL	1			; temporary
+TRANS.$C27:
+	.BLKL	1			; array (line 15), dimension 2's count
+TRANS.$C28:
+	.BLKL	1			; array (line 15), dimension 1's count
+TRANS.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+TRANS.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     The transformational functions (Phase 104, subtask 8), each computed
+;    3  C     into a temporary before the statement's loops: SPREAD, CSHIFT, EOSHIFT
+;    4  C     with BOUNDARY, PACK, UNPACK, RESHAPE of values with a shape known only
+;    5  C     at run time, and SUM by a DIM= known only at run time, checked under
+;    6  C     /CHECK=BOUNDS.
+;    7        SUBROUTINE TRANS(V, M, L, N, K)
+	.ENTRY	TRANS,^M<R2,R3>
+;    8        INTEGER N, K, V(6), M(3, 3), W(3)
+;    9        LOGICAL L(3, 3)
+;   10        M = SPREAD(V(1:3), 2, N)
+	MOVL	@TRANS.N(AP),TRANS.$T1
+	BLSS	TRANS.$2
+	BRW	TRANS.$1
+TRANS.$2:
+	CLRL	TRANS.$T1
+TRANS.$1:
+	MOVL	#3,TRANS.$R1+20
+	MOVL	TRANS.$R1+20,TRANS.$R1+32
+	MOVL	TRANS.$T1,TRANS.$R1+24
+	MOVL	TRANS.$R1+24,TRANS.$R1+40
+	MULL3	#4,TRANS.$R1+20,R0
+	MULL3	R0,TRANS.$R1+24,TRANS.$R1+12
+	MOVL	SP,TRANS.$T2		; where the statement's storage starts
+	CMPL	TRANS.$R1+12,#65536
+	BLEQ	TRANS.$4
+	BRW	TRANS.$3
+TRANS.$4:
+	SUBL2	TRANS.$R1+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,TRANS.$R1+4
+	BRW	TRANS.$5
+TRANS.$3:
+	PUSHAQ	TRANS.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+TRANS.$5:
+	MOVL	TRANS.$R1+4,R0
+	MNEGL	TRANS.$R1+20,R1
+	MOVAL	-4(R0)[R1],TRANS.$R1+16
+	MOVL	TRANS.$T1,TRANS.$C1	; array (line 10), dimension 2's count
+	MOVL	#1,TRANS.$I5
+	TSTL	TRANS.$C1
+	BGTR	TRANS.$7
+	BRW	TRANS.$6
+TRANS.$7:
+TRANS.$8:				; array (line 10), dimension 2's body
+	MOVL	#3,TRANS.$C2		; array (line 10), dimension 1's count
+	MOVL	#1,TRANS.$I4
+TRANS.$9:				; array (line 10), dimension 1's body
+	SUBL3	#1,TRANS.$I4,R0
+	MOVL	TRANS.$R1+16,R1
+	MULL3	TRANS.$I5,TRANS.$R1+20,R2
+	ADDL2	TRANS.$I4,R2
+	MOVL	@TRANS.V(AP)[R0],(R1)[R2]
+	INCL	TRANS.$I4
+	DECL	TRANS.$C2		; one pass fewer
+	BLEQ	TRANS.$10
+	BRW	TRANS.$9
+TRANS.$10:
+	INCL	TRANS.$I5
+	DECL	TRANS.$C1		; one pass fewer
+	BLEQ	TRANS.$11
+	BRW	TRANS.$8
+TRANS.$11:
+TRANS.$6:
+	MOVL	#3,TRANS.$C3		; array (line 10), dimension 2's count
+	MOVL	#1,TRANS.$I2
+TRANS.$12:				; array (line 10), dimension 2's body
+	MOVL	#3,TRANS.$C4		; array (line 10), dimension 1's count
+	MOVL	#1,TRANS.$I1
+TRANS.$13:				; array (line 10), dimension 1's body
+	MOVL	TRANS.$R1+16,R0
+	MULL3	TRANS.$I2,TRANS.$R1+20,R1
+	ADDL2	TRANS.$I1,R1
+	MULL3	TRANS.$I2,#3,R2
+	ADDL2	TRANS.$I1,R2
+	SUBL2	#4,R2
+	MOVL	(R0)[R1],@TRANS.M(AP)[R2]
+	INCL	TRANS.$I1
+	DECL	TRANS.$C4		; one pass fewer
+	BLEQ	TRANS.$14
+	BRW	TRANS.$13
+TRANS.$14:
+	INCL	TRANS.$I2
+	DECL	TRANS.$C3		; one pass fewer
+	BLEQ	TRANS.$15
+	BRW	TRANS.$12
+TRANS.$15:
+	CMPL	TRANS.$R1+12,#65536
+	BGTR	TRANS.$17
+	BRW	TRANS.$16
+TRANS.$17:
+	PUSHL	#0
+	PUSHAQ	TRANS.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+TRANS.$16:
+	MOVL	TRANS.$T2,SP		; the statement's storage given back
+;   11        V = CSHIFT(V, -K)
+	MNEGL	@TRANS.K(AP),TRANS.$T2
+	MOVL	#6,TRANS.$C5		; array (line 11), dimension 1's count
+	MOVL	#1,TRANS.$I3
+TRANS.$18:				; array (line 11), dimension 1's body
+	SUBL3	TRANS.$T2,TRANS.$I3,TRANS.$T1
+	DECL	TRANS.$T1
+	DIVL3	#6,TRANS.$T1,R0
+	MULL2	#6,R0
+	SUBL2	R0,TRANS.$T1
+	BLSS	TRANS.$20
+	BRW	TRANS.$19
+TRANS.$20:
+	ADDL2	#6,TRANS.$T1
+TRANS.$19:
+	INCL	TRANS.$T1
+	SUBL3	#1,TRANS.$I3,R0
+	MOVL	TRANS.$T1,R1
+	MOVL	@TRANS.V(AP)[R0],TRANS.$W1-4[R1]
+	INCL	TRANS.$I3
+	DECL	TRANS.$C5		; one pass fewer
+	BLEQ	TRANS.$21
+	BRW	TRANS.$18
+TRANS.$21:
+	MOVL	#6,TRANS.$C6		; array (line 11), dimension 1's count
+	MOVL	#1,TRANS.$I5
+TRANS.$22:				; array (line 11), dimension 1's body
+	MOVL	TRANS.$I5,R0
+	SUBL3	#1,TRANS.$I5,R1
+	MOVL	TRANS.$W1-4[R0],@TRANS.V(AP)[R1]
+	INCL	TRANS.$I5
+	DECL	TRANS.$C6		; one pass fewer
+	BLEQ	TRANS.$23
+	BRW	TRANS.$22
+TRANS.$23:
+;   12        M = EOSHIFT(M, 1, -1, 2)
+	MOVL	#3,TRANS.$C7		; array (line 12), dimension 2's count
+	MOVL	#1,TRANS.$I6
+TRANS.$24:				; array (line 12), dimension 2's body
+	MOVL	#3,TRANS.$C8		; array (line 12), dimension 1's count
+	MOVL	#1,TRANS.$I1
+TRANS.$25:				; array (line 12), dimension 1's body
+	MULL3	TRANS.$I6,#3,R0
+	ADDL2	TRANS.$I1,R0
+	MOVL	#-1,TRANS.$W2-16[R0]
+	INCL	TRANS.$I1
+	DECL	TRANS.$C8		; one pass fewer
+	BLEQ	TRANS.$26
+	BRW	TRANS.$25
+TRANS.$26:
+	INCL	TRANS.$I6
+	DECL	TRANS.$C7		; one pass fewer
+	BLEQ	TRANS.$27
+	BRW	TRANS.$24
+TRANS.$27:
+	MOVL	#3,TRANS.$C9		; array (line 12), dimension 2's count
+	MOVL	#1,TRANS.$I8
+TRANS.$28:				; array (line 12), dimension 2's body
+	MOVL	#3,TRANS.$C10		; array (line 12), dimension 1's count
+	MOVL	#1,TRANS.$I7
+TRANS.$29:				; array (line 12), dimension 1's body
+	SUBL3	#1,TRANS.$I8,TRANS.$T1
+	CMPL	TRANS.$T1,#1
+	BGEQ	TRANS.$31
+	BRW	TRANS.$30
+TRANS.$31:
+	CMPL	TRANS.$T1,#3
+	BLEQ	TRANS.$32
+	BRW	TRANS.$30
+TRANS.$32:
+	MULL3	TRANS.$I8,#3,R0
+	ADDL2	TRANS.$I7,R0
+	SUBL2	#4,R0
+	MULL3	TRANS.$T1,#3,R1
+	ADDL2	TRANS.$I7,R1
+	MOVL	@TRANS.M(AP)[R0],TRANS.$W2-16[R1]
+TRANS.$30:
+	INCL	TRANS.$I7
+	DECL	TRANS.$C10		; one pass fewer
+	BLEQ	TRANS.$33
+	BRW	TRANS.$29
+TRANS.$33:
+	INCL	TRANS.$I8
+	DECL	TRANS.$C9		; one pass fewer
+	BLEQ	TRANS.$34
+	BRW	TRANS.$28
+TRANS.$34:
+	MOVL	#3,TRANS.$C11		; array (line 12), dimension 2's count
+	MOVL	#1,TRANS.$I4
+TRANS.$35:				; array (line 12), dimension 2's body
+	MOVL	#3,TRANS.$C12		; array (line 12), dimension 1's count
+	MOVL	#1,TRANS.$I3
+TRANS.$36:				; array (line 12), dimension 1's body
+	MULL3	TRANS.$I4,#3,R0
+	ADDL2	TRANS.$I3,R0
+	MULL3	TRANS.$I4,#3,R1
+	ADDL2	TRANS.$I3,R1
+	SUBL2	#4,R1
+	MOVL	TRANS.$W2-16[R0],@TRANS.M(AP)[R1]
+	INCL	TRANS.$I3
+	DECL	TRANS.$C12		; one pass fewer
+	BLEQ	TRANS.$37
+	BRW	TRANS.$36
+TRANS.$37:
+	INCL	TRANS.$I4
+	DECL	TRANS.$C11		; one pass fewer
+	BLEQ	TRANS.$38
+	BRW	TRANS.$35
+TRANS.$38:
+;   13        W = PACK(M, L)
+	CLRL	TRANS.$T1
+	MOVL	#3,TRANS.$C13		; array (line 13), dimension 2's count
+	MOVL	#1,TRANS.$I6
+TRANS.$39:				; array (line 13), dimension 2's body
+	MOVL	#3,TRANS.$C14		; array (line 13), dimension 1's count
+	MOVL	#1,TRANS.$I7
+TRANS.$40:				; array (line 13), dimension 1's body
+	MULL3	TRANS.$I6,#3,R0
+	ADDL2	TRANS.$I7,R0
+	SUBL2	#4,R0
+	BLBS	@TRANS.L(AP)[R0],TRANS.$42
+	BRW	TRANS.$41
+TRANS.$42:
+	INCL	TRANS.$T1
+TRANS.$41:
+	INCL	TRANS.$I7
+	DECL	TRANS.$C14		; one pass fewer
+	BLEQ	TRANS.$43
+	BRW	TRANS.$40
+TRANS.$43:
+	INCL	TRANS.$I6
+	DECL	TRANS.$C13		; one pass fewer
+	BLEQ	TRANS.$44
+	BRW	TRANS.$39
+TRANS.$44:
+	MOVL	TRANS.$T1,TRANS.$R2+20
+	MOVL	TRANS.$R2+20,TRANS.$R2+28
+	MULL3	#4,TRANS.$R2+20,TRANS.$R2+12
+	MOVL	SP,TRANS.$T2		; where the statement's storage starts
+	CMPL	TRANS.$R2+12,#65536
+	BLEQ	TRANS.$46
+	BRW	TRANS.$45
+TRANS.$46:
+	SUBL2	TRANS.$R2+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,TRANS.$R2+4
+	BRW	TRANS.$47
+TRANS.$45:
+	PUSHAQ	TRANS.$R2
+	CALLS	#1,G^FTN$GET_TEMP
+TRANS.$47:
+	MOVL	TRANS.$R2+4,R0
+	MOVAL	-4(R0),TRANS.$R2+16
+	CLRL	TRANS.$T3
+	MOVL	#3,TRANS.$C15		; array (line 13), dimension 2's count
+	MOVL	#1,TRANS.$I4
+TRANS.$48:				; array (line 13), dimension 2's body
+	MOVL	#3,TRANS.$C16		; array (line 13), dimension 1's count
+	MOVL	#1,TRANS.$I5
+TRANS.$49:				; array (line 13), dimension 1's body
+	MULL3	TRANS.$I4,#3,R0
+	ADDL2	TRANS.$I5,R0
+	SUBL2	#4,R0
+	BLBS	@TRANS.L(AP)[R0],TRANS.$51
+	BRW	TRANS.$50
+TRANS.$51:
+	INCL	TRANS.$T3
+	MULL3	TRANS.$I4,#3,R0
+	ADDL2	TRANS.$I5,R0
+	SUBL2	#4,R0
+	MOVL	TRANS.$R2+16,R1
+	MOVL	TRANS.$T3,R2
+	MOVL	@TRANS.M(AP)[R0],(R1)[R2]
+TRANS.$50:
+	INCL	TRANS.$I5
+	DECL	TRANS.$C16		; one pass fewer
+	BLEQ	TRANS.$52
+	BRW	TRANS.$49
+TRANS.$52:
+	INCL	TRANS.$I4
+	DECL	TRANS.$C15		; one pass fewer
+	BLEQ	TRANS.$53
+	BRW	TRANS.$48
+TRANS.$53:
+	MOVL	#3,TRANS.$C17		; array (line 13), dimension 1's count
+	MOVL	#1,TRANS.$I8
+TRANS.$54:				; array (line 13), dimension 1's body
+	MOVL	TRANS.$R2+16,R0
+	MOVL	TRANS.$I8,R1
+	MOVL	TRANS.$I8,R2
+	MOVL	(R0)[R1],TRANS.W-4[R2]
+	INCL	TRANS.$I8
+	DECL	TRANS.$C17		; one pass fewer
+	BLEQ	TRANS.$55
+	BRW	TRANS.$54
+TRANS.$55:
+	CMPL	TRANS.$R2+12,#65536
+	BGTR	TRANS.$57
+	BRW	TRANS.$56
+TRANS.$57:
+	PUSHL	#0
+	PUSHAQ	TRANS.$R2
+	CALLS	#2,G^FTN$DEALLOCATE
+TRANS.$56:
+	MOVL	TRANS.$T2,SP		; the statement's storage given back
+;   14        M = UNPACK(W, L, 0)
+	MOVL	#3,TRANS.$C18		; array (line 14), dimension 1's count
+	MOVL	#1,TRANS.$I7
+TRANS.$58:				; array (line 14), dimension 1's body
+	MOVL	TRANS.$I7,R0
+	MOVL	TRANS.$I7,R1
+	MOVL	TRANS.W-4[R0],TRANS.$W3-4[R1]
+	INCL	TRANS.$I7
+	DECL	TRANS.$C18		; one pass fewer
+	BLEQ	TRANS.$59
+	BRW	TRANS.$58
+TRANS.$59:
+	CLRL	TRANS.$T3
+	MOVL	#3,TRANS.$C19		; array (line 14), dimension 2's count
+	MOVL	#1,TRANS.$I3
+TRANS.$60:				; array (line 14), dimension 2's body
+	MOVL	#3,TRANS.$C20		; array (line 14), dimension 1's count
+	MOVL	#1,TRANS.$I8
+TRANS.$61:				; array (line 14), dimension 1's body
+	MULL3	TRANS.$I3,#3,R0
+	ADDL2	TRANS.$I8,R0
+	SUBL2	#4,R0
+	BLBS	@TRANS.L(AP)[R0],TRANS.$63
+	BRW	TRANS.$62
+TRANS.$63:
+	INCL	TRANS.$T3
+	MOVL	TRANS.$T3,R0
+	MULL3	TRANS.$I3,#3,R1
+	ADDL2	TRANS.$I8,R1
+	MOVL	TRANS.$W3-4[R0],TRANS.$W2-16[R1]
+	BRW	TRANS.$64
+TRANS.$62:
+	MULL3	TRANS.$I3,#3,R0
+	ADDL2	TRANS.$I8,R0
+	CLRL	TRANS.$W2-16[R0]
+TRANS.$64:
+	INCL	TRANS.$I8
+	DECL	TRANS.$C20		; one pass fewer
+	BLEQ	TRANS.$65
+	BRW	TRANS.$61
+TRANS.$65:
+	INCL	TRANS.$I3
+	DECL	TRANS.$C19		; one pass fewer
+	BLEQ	TRANS.$66
+	BRW	TRANS.$60
+TRANS.$66:
+	MOVL	#3,TRANS.$C21		; array (line 14), dimension 2's count
+	MOVL	#1,TRANS.$I5
+TRANS.$67:				; array (line 14), dimension 2's body
+	MOVL	#3,TRANS.$C22		; array (line 14), dimension 1's count
+	MOVL	#1,TRANS.$I4
+TRANS.$68:				; array (line 14), dimension 1's body
+	MULL3	TRANS.$I5,#3,R0
+	ADDL2	TRANS.$I4,R0
+	MULL3	TRANS.$I5,#3,R1
+	ADDL2	TRANS.$I4,R1
+	SUBL2	#4,R1
+	MOVL	TRANS.$W2-16[R0],@TRANS.M(AP)[R1]
+	INCL	TRANS.$I4
+	DECL	TRANS.$C22		; one pass fewer
+	BLEQ	TRANS.$69
+	BRW	TRANS.$68
+TRANS.$69:
+	INCL	TRANS.$I5
+	DECL	TRANS.$C21		; one pass fewer
+	BLEQ	TRANS.$70
+	BRW	TRANS.$67
+TRANS.$70:
+;   15        PRINT *, RESHAPE(V, (/ 2, N /))
+	PUSHL	#-1
+	PUSHAB	TRANS.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	CLRL	TRANS.$I6
+	INCL	TRANS.$I6
+	MOVL	TRANS.$I6,R0
+	MOVL	#2,TRANS.$W5-4[R0]
+	INCL	TRANS.$I6
+	MOVL	TRANS.$I6,R0
+	MOVL	@TRANS.N(AP),TRANS.$W5-4[R0]
+	MOVL	#2,TRANS.$C23		; array (line 15), dimension 1's count
+	MOVL	#1,TRANS.$I7
+TRANS.$71:				; array (line 15), dimension 1's body
+	MOVL	TRANS.$I7,R0
+	MOVL	TRANS.$I7,R1
+	MOVL	TRANS.$W5-4[R0],TRANS.$W4-4[R1]
+	INCL	TRANS.$I7
+	DECL	TRANS.$C23		; one pass fewer
+	BLEQ	TRANS.$72
+	BRW	TRANS.$71
+TRANS.$72:
+	MOVL	TRANS.$W4,TRANS.$T3
+	BLSS	TRANS.$74
+	BRW	TRANS.$73
+TRANS.$74:
+	CLRL	TRANS.$T3
+TRANS.$73:
+	MOVL	TRANS.$W4+4,TRANS.$T2
+	BLSS	TRANS.$76
+	BRW	TRANS.$75
+TRANS.$76:
+	CLRL	TRANS.$T2
+TRANS.$75:
+	MOVL	TRANS.$T3,TRANS.$R1+20
+	MOVL	TRANS.$R1+20,TRANS.$R1+32
+	MOVL	TRANS.$T2,TRANS.$R1+24
+	MOVL	TRANS.$R1+24,TRANS.$R1+40
+	MULL3	#4,TRANS.$R1+20,R0
+	MULL3	R0,TRANS.$R1+24,TRANS.$R1+12
+	MOVL	SP,TRANS.$T1		; where the statement's storage starts
+	CMPL	TRANS.$R1+12,#65536
+	BLEQ	TRANS.$78
+	BRW	TRANS.$77
+TRANS.$78:
+	SUBL2	TRANS.$R1+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,TRANS.$R1+4
+	BRW	TRANS.$79
+TRANS.$77:
+	PUSHAQ	TRANS.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+TRANS.$79:
+	MOVL	TRANS.$R1+4,R0
+	MNEGL	TRANS.$R1+20,R1
+	MOVAL	-4(R0)[R1],TRANS.$R1+16
+	MOVL	#6,TRANS.$T4
+	MOVL	TRANS.$T4,TRANS.$R2+20
+	MOVL	TRANS.$R2+20,TRANS.$R2+28
+	MULL3	#4,TRANS.$R2+20,TRANS.$R2+12
+	CMPL	TRANS.$R2+12,#65536
+	BLEQ	TRANS.$81
+	BRW	TRANS.$80
+TRANS.$81:
+	SUBL2	TRANS.$R2+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,TRANS.$R2+4
+	BRW	TRANS.$82
+TRANS.$80:
+	PUSHAQ	TRANS.$R2
+	CALLS	#1,G^FTN$GET_TEMP
+TRANS.$82:
+	MOVL	TRANS.$R2+4,R0
+	MOVAL	-4(R0),TRANS.$R2+16
+	CLRL	TRANS.$T5
+	MOVL	#6,TRANS.$C24		; array (line 15), dimension 1's count
+	MOVL	#1,TRANS.$I2
+TRANS.$83:				; array (line 15), dimension 1's body
+	INCL	TRANS.$T5
+	SUBL3	#1,TRANS.$I2,R0
+	MOVL	TRANS.$R2+16,R1
+	MOVL	TRANS.$T5,R2
+	MOVL	@TRANS.V(AP)[R0],(R1)[R2]
+	INCL	TRANS.$I2
+	DECL	TRANS.$C24		; one pass fewer
+	BLEQ	TRANS.$84
+	BRW	TRANS.$83
+TRANS.$84:
+	CLRL	TRANS.$T6
+	MOVL	TRANS.$T2,TRANS.$C25	; array (line 15), dimension 2's count
+	MOVL	#1,TRANS.$I4
+	TSTL	TRANS.$C25
+	BGTR	TRANS.$86
+	BRW	TRANS.$85
+TRANS.$86:
+TRANS.$87:				; array (line 15), dimension 2's body
+	MOVL	TRANS.$T3,TRANS.$C26	; array (line 15), dimension 1's count
+	MOVL	#1,TRANS.$I5
+	TSTL	TRANS.$C26
+	BGTR	TRANS.$89
+	BRW	TRANS.$88
+TRANS.$89:
+TRANS.$90:				; array (line 15), dimension 1's body
+	INCL	TRANS.$T6
+	CMPL	TRANS.$T6,TRANS.$T4
+	BLEQ	TRANS.$92
+	BRW	TRANS.$91
+TRANS.$92:
+	MOVL	TRANS.$R2+16,R0
+	MOVL	TRANS.$T6,R1
+	MOVL	TRANS.$R1+16,R2
+	MULL3	TRANS.$I4,TRANS.$R1+20,R3
+	ADDL2	TRANS.$I5,R3
+	MOVL	(R0)[R1],(R2)[R3]
+	BRW	TRANS.$93
+TRANS.$91:
+TRANS.$93:
+	INCL	TRANS.$I5
+	DECL	TRANS.$C26		; one pass fewer
+	BLEQ	TRANS.$94
+	BRW	TRANS.$90
+TRANS.$94:
+TRANS.$88:
+	INCL	TRANS.$I4
+	DECL	TRANS.$C25		; one pass fewer
+	BLEQ	TRANS.$95
+	BRW	TRANS.$87
+TRANS.$95:
+TRANS.$85:
+	MOVL	TRANS.$R1+20,TRANS.$T8
+	BLSS	TRANS.$97
+	BRW	TRANS.$96
+TRANS.$97:
+	CLRL	TRANS.$T8
+TRANS.$96:
+	MOVL	TRANS.$R1+24,TRANS.$T9
+	BLSS	TRANS.$99
+	BRW	TRANS.$98
+TRANS.$99:
+	CLRL	TRANS.$T9
+TRANS.$98:
+	MOVL	TRANS.$T9,TRANS.$C27	; array (line 15), dimension 2's count
+	MOVL	#1,TRANS.$I8
+	TSTL	TRANS.$C27
+	BGTR	TRANS.$101
+	BRW	TRANS.$100
+TRANS.$101:
+TRANS.$102:				; array (line 15), dimension 2's body
+	MOVL	TRANS.$T8,TRANS.$C28	; array (line 15), dimension 1's count
+	MOVL	#1,TRANS.$I3
+	TSTL	TRANS.$C28
+	BGTR	TRANS.$104
+	BRW	TRANS.$103
+TRANS.$104:
+TRANS.$105:				; array (line 15), dimension 1's body
+	MOVL	TRANS.$R1+16,R0
+	MULL3	TRANS.$I8,TRANS.$R1+20,R1
+	ADDL2	TRANS.$I3,R1
+	MOVAL	(R0)[R1],TRANS.$D1+4
+	PUSHAQ	TRANS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	INCL	TRANS.$I3
+	DECL	TRANS.$C28		; one pass fewer
+	BLEQ	TRANS.$106
+	BRW	TRANS.$105
+TRANS.$106:
+TRANS.$103:
+	INCL	TRANS.$I8
+	DECL	TRANS.$C27		; one pass fewer
+	BLEQ	TRANS.$107
+	BRW	TRANS.$102
+TRANS.$107:
+TRANS.$100:
+	CALLS	#0,G^FTN$IO_END
+	CMPL	TRANS.$R2+12,#65536
+	BGTR	TRANS.$109
+	BRW	TRANS.$108
+TRANS.$109:
+	PUSHL	#0
+	PUSHAQ	TRANS.$R2
+	CALLS	#2,G^FTN$DEALLOCATE
+TRANS.$108:
+	CMPL	TRANS.$R1+12,#65536
+	BGTR	TRANS.$111
+	BRW	TRANS.$110
+TRANS.$111:
+	PUSHL	#0
+	PUSHAQ	TRANS.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+TRANS.$110:
+	MOVL	TRANS.$T1,SP		; the statement's storage given back
+;   16        END SUBROUTINE
+	RET
+
+; Storage map for DIMS, a subroutine
+;   M     INTEGER (3,3)  argument 1  @DIMS.M(AP)
+;   K     INTEGER        argument 2  @DIMS.K(AP)
+;   W     INTEGER (3)    argument 3  @DIMS.W(AP)
+;   $W    INTEGER (?)    $LOCAL+20   DIMS.$R1
+;
+DIMS.M = 4				; M is argument 1
+DIMS.K = 8				; K is argument 2
+DIMS.W = 12				; W is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+DIMS.$I1:
+	.BLKL	1			; an array statement's loop index
+DIMS.$T1:
+	.BLKL	1			; temporary
+DIMS.$I2:
+	.BLKL	1			; an array statement's loop index
+DIMS.$I3:
+	.BLKL	1			; an array statement's loop index
+DIMS.$T2:
+	.BLKL	1			; temporary
+DIMS.$R1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+DIMS.$T3:
+	.BLKL	1			; temporary
+DIMS.$I4:
+	.BLKL	1			; an array statement's loop index
+DIMS.$T4:
+	.BLKL	1			; temporary
+DIMS.$C1:
+	.BLKL	1			; array (line 20), dimension 1's count
+DIMS.$I5:
+	.BLKL	1			; an array statement's loop index
+DIMS.$T5:
+	.BLKL	1			; temporary
+DIMS.$C2:
+	.BLKL	1			; array (line 20), dimension 1's count
+DIMS.$I6:
+	.BLKL	1			; an array statement's loop index
+DIMS.$T6:
+	.BLKL	1			; temporary
+DIMS.$C3:
+	.BLKL	1			; array (line 20), dimension 1's count
+DIMS.$I7:
+	.BLKL	1			; an array statement's loop index
+DIMS.$T7:
+	.BLKL	1			; temporary
+DIMS.$C4:
+	.BLKL	1			; array (line 20), dimension 1's count
+DIMS.$T8:
+	.BLKL	1			; temporary
+DIMS.$C5:
+	.BLKL	1			; array (line 20), dimension 1's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   17        OPTIONS /F90/CHECK=BOUNDS
+;   18        SUBROUTINE DIMS(M, K, W)
+	.ENTRY	DIMS,^M<R2>
+;   19        INTEGER K, M(3, 3), W(3)
+;   20        W = SUM(M, DIM=K)
+	MOVL	@DIMS.K(AP),DIMS.$T1
+	CMPL	DIMS.$T1,#1
+	BLSS	DIMS.$2
+	BRW	DIMS.$1
+DIMS.$2:
+	CALLS	#0,G^FTN$NOTCONFOR
+DIMS.$1:
+	CMPL	DIMS.$T1,#2
+	BGTR	DIMS.$4
+	BRW	DIMS.$3
+DIMS.$4:
+	CALLS	#0,G^FTN$NOTCONFOR
+DIMS.$3:
+	CLRL	DIMS.$T2
+	CMPL	DIMS.$T1,#1
+	BEQL	DIMS.$6
+	BRW	DIMS.$5
+DIMS.$6:
+	MOVL	#3,DIMS.$T2
+DIMS.$5:
+	CMPL	DIMS.$T1,#2
+	BEQL	DIMS.$8
+	BRW	DIMS.$7
+DIMS.$8:
+	MOVL	#3,DIMS.$T2
+DIMS.$7:
+	MOVL	DIMS.$T2,DIMS.$R1+20
+	MOVL	DIMS.$R1+20,DIMS.$R1+28
+	MULL3	#4,DIMS.$R1+20,DIMS.$R1+12
+	MOVL	SP,DIMS.$T3		; where the statement's storage starts
+	CMPL	DIMS.$R1+12,#65536
+	BLEQ	DIMS.$10
+	BRW	DIMS.$9
+DIMS.$10:
+	SUBL2	DIMS.$R1+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,DIMS.$R1+4
+	BRW	DIMS.$11
+DIMS.$9:
+	PUSHAQ	DIMS.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+DIMS.$11:
+	MOVL	DIMS.$R1+4,R0
+	MOVAL	-4(R0),DIMS.$R1+16
+	CMPL	DIMS.$T1,#1
+	BEQL	DIMS.$13
+	BRW	DIMS.$12
+DIMS.$13:
+	MOVL	DIMS.$R1+20,DIMS.$T4
+	BLSS	DIMS.$15
+	BRW	DIMS.$14
+DIMS.$15:
+	CLRL	DIMS.$T4
+DIMS.$14:
+	CMPL	DIMS.$T4,#3
+	BNEQ	DIMS.$17
+	BRW	DIMS.$16
+DIMS.$17:
+	CALLS	#0,G^FTN$NOTCONFOR
+DIMS.$16:
+	MOVL	#3,DIMS.$C1		; array (line 20), dimension 1's count
+	MOVL	#1,DIMS.$I4
+DIMS.$18:				; array (line 20), dimension 1's body
+	CLRL	DIMS.$T5
+	MOVL	#3,DIMS.$C2		; array (line 20), dimension 1's count
+	MOVL	#1,DIMS.$I5
+DIMS.$19:				; array (line 20), dimension 1's body
+	MULL3	DIMS.$I4,#3,R0
+	ADDL2	DIMS.$I5,R0
+	SUBL2	#4,R0
+	ADDL2	@DIMS.M(AP)[R0],DIMS.$T5
+	INCL	DIMS.$I5
+	DECL	DIMS.$C2		; one pass fewer
+	BLEQ	DIMS.$20
+	BRW	DIMS.$19
+DIMS.$20:
+	MOVL	DIMS.$R1+16,R0
+	MOVL	DIMS.$I4,R1
+	MOVL	DIMS.$T5,(R0)[R1]
+	INCL	DIMS.$I4
+	DECL	DIMS.$C1		; one pass fewer
+	BLEQ	DIMS.$21
+	BRW	DIMS.$18
+DIMS.$21:
+	BRW	DIMS.$22
+DIMS.$12:
+	CMPL	DIMS.$T1,#2
+	BEQL	DIMS.$24
+	BRW	DIMS.$23
+DIMS.$24:
+	MOVL	DIMS.$R1+20,DIMS.$T6
+	BLSS	DIMS.$26
+	BRW	DIMS.$25
+DIMS.$26:
+	CLRL	DIMS.$T6
+DIMS.$25:
+	CMPL	DIMS.$T6,#3
+	BNEQ	DIMS.$28
+	BRW	DIMS.$27
+DIMS.$28:
+	CALLS	#0,G^FTN$NOTCONFOR
+DIMS.$27:
+	MOVL	#3,DIMS.$C3		; array (line 20), dimension 1's count
+	MOVL	#1,DIMS.$I6
+DIMS.$29:				; array (line 20), dimension 1's body
+	CLRL	DIMS.$T7
+	MOVL	#3,DIMS.$C4		; array (line 20), dimension 1's count
+	MOVL	#1,DIMS.$I7
+DIMS.$30:				; array (line 20), dimension 1's body
+	MULL3	DIMS.$I7,#3,R0
+	ADDL2	DIMS.$I6,R0
+	SUBL2	#4,R0
+	ADDL2	@DIMS.M(AP)[R0],DIMS.$T7
+	INCL	DIMS.$I7
+	DECL	DIMS.$C4		; one pass fewer
+	BLEQ	DIMS.$31
+	BRW	DIMS.$30
+DIMS.$31:
+	MOVL	DIMS.$R1+16,R0
+	MOVL	DIMS.$I6,R1
+	MOVL	DIMS.$T7,(R0)[R1]
+	INCL	DIMS.$I6
+	DECL	DIMS.$C3		; one pass fewer
+	BLEQ	DIMS.$32
+	BRW	DIMS.$29
+DIMS.$32:
+	BRW	DIMS.$22
+DIMS.$23:
+DIMS.$22:
+	MOVL	DIMS.$R1+20,DIMS.$T8
+	BLSS	DIMS.$34
+	BRW	DIMS.$33
+DIMS.$34:
+	CLRL	DIMS.$T8
+DIMS.$33:
+	CMPL	DIMS.$T8,#3
+	BNEQ	DIMS.$36
+	BRW	DIMS.$35
+DIMS.$36:
+	CALLS	#0,G^FTN$NOTCONFOR
+DIMS.$35:
+	MOVL	#3,DIMS.$C5		; array (line 20), dimension 1's count
+	MOVL	#1,DIMS.$I1
+DIMS.$37:				; array (line 20), dimension 1's body
+	MOVL	DIMS.$R1+16,R0
+	MOVL	DIMS.$I1,R1
+	SUBL3	#1,DIMS.$I1,R2
+	MOVL	(R0)[R1],@DIMS.W(AP)[R2]
+	INCL	DIMS.$I1
+	DECL	DIMS.$C5		; one pass fewer
+	BLEQ	DIMS.$38
+	BRW	DIMS.$37
+DIMS.$38:
+	CMPL	DIMS.$R1+12,#65536
+	BGTR	DIMS.$40
+	BRW	DIMS.$39
+DIMS.$40:
+	PUSHL	#0
+	PUSHAQ	DIMS.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+DIMS.$39:
+	MOVL	DIMS.$T3,SP		; the statement's storage given back
+;   21        END SUBROUTINE
+	RET
+
+	.END

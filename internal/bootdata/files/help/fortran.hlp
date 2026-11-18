@@ -204,7 +204,8 @@
    elemental functions (SQRT, MAX, MERGE, ...) take arrays; SUM,
    PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT take MASK= and DIM=;
    MAXLOC, MINLOC, DOT_PRODUCT, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
-   and UBOUND are there too.  WHERE is a statement or a construct with
+   and UBOUND are there too, and SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK,
+   and RESHAPE of any values.  WHERE is a statement or a construct with
    ELSEWHERE.  Sections and array expressions in I/O lists are read or
    written an element at a time.  A statement that needs a temporary
    array gets one of the size it needs, on the stack up to 64 KB and

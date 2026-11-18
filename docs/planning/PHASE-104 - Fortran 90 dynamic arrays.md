@@ -496,7 +496,7 @@ calls), then the frame's run-time storage everything after needs.
    - 7c. CHARACTER values of a run-time length, scalar and array, through a
      class D descriptor; ENTRY in an array-valued function (done 2026-11-18).
 8. **The transformational intrinsics** (finding 13), each against the standard's
-   examples, and the intrinsic table's rows.
+   examples, and the intrinsic table's rows (done 2026-11-18).
 9. **Programs end to end** (a linear-equation solver with assumed-shape arrays, a
    sieve with ALLOCATE, a sort with PACK and automatic work arrays), every mode,
    gfortran's witness; the debugger's EXAMINE through an NCA (finding 14).
@@ -1135,3 +1135,48 @@ The author read the survey and accepted every recommendation:
     gfortran prints the same 16 lines) and `rampvms.f90`'s CHARACTER cases; and
     `TestFortranValueFromMACRO`'s dynamic string, written with LIB$PUT_OUTPUT and
     freed with LIB$SFREE1_DD. MANUAL.md's 14.13 and HELP FORTRAN describe them.
+- **2026-11-18, subtask 8 done:** The transformational intrinsics.
+  - *sema* (`sema/transform.go`). SPREAD, CSHIFT, EOSHIFT, PACK, and UNPACK join
+    `fortran90Table` (REDUCE rows with their dummies' names, so keywords work), and
+    RESHAPE of values not constant goes to `transform` too; each is an `ArrayFunc`
+    (gaining `Pad`, EOSHIFT's BOUNDARY or RESHAPE's PAD, and `Order`), and
+    `Transformed` says lowering computes it whole. Their checks: DIMRANGE, ARRAYARG,
+    ARRAYRANK, BADARG, NOTCONFORM for SHIFT and BOUNDARY (scalars, or arrays of the
+    rank below ARRAY's), MASK, VECTOR, FIELD, and BADRESHAPE for a SHAPE whose size
+    isn't known when compiling (the standard's constraint) or an ORDER that isn't a
+    permutation. A reduction's DIM= that isn't constant on an array of rank above 1
+    is `DimExpr` with a shape of unknown extents, no longer NOTIMPL. An extent known
+    only at run time is the function's own (`Extent.Of` is the ArrayFunc). A fix on
+    the way: a shape taken from an argument must be copied (`slices.Clone`), or
+    marking the function's own extents rewrites the argument's.
+  - *The IR* (`ir/lowertransform.go`). `transformed` computes the value into a
+    temporary of its shape (`extentsTempOf`: a cell, or a run-time temporary), once
+    per statement (`runtimeTemps.funcs`, cleared at each statement's end): its extents
+    first (`transformExtents`; PACK's by COUNT of the mask, RESHAPE's from SHAPE's
+    values, a run-time DIM='s chosen among ARRAY's), then its elements by loops of
+    its own that walk the argument in array element order and put each where it goes
+    (`walk`, over `arrayNest`, a line argument's dimensions mapped past DIM's):
+    SPREAD at every copy; CSHIFT at (j - 1 - SHIFT) mod n, from 1; EOSHIFT the
+    boundary everywhere, then each element whose place is inside; PACK VECTOR, then
+    each element where MASK holds; UNPACK VECTOR's next element or FIELD's; RESHAPE
+    from SOURCE and PAD copied to rank one (`flatten`), in ORDER's loop order; and a
+    reduction by DIM's value, an arm per dimension, each Phase 102's constant DIM=
+    (`sema.WithDim`), out of range FOR's NOTCONFOR under `/CHECK=BOUNDS` and an empty
+    result otherwise.
+  - *A departure from finding 13, by our choice:* the finding had SPREAD, CSHIFT,
+    and EOSHIFT computed where they are used, as TRANSPOSE is. An element there would
+    be the argument's at a subscript computed from the loops' (a MOD; outside the
+    array for EOSHIFT's boundary), which the scalarizer's leaves don't take, and the
+    argument may be any array expression; so every one is computed into a temporary,
+    which is safe whatever the statement's target overlaps, at the cost of a copy.
+    Phase 110 may make the simple ones elements again.
+  - *Choices of ours, unconfirmed:* the DIM= of SPREAD, CSHIFT, and EOSHIFT, and
+    RESHAPE's ORDER=, must be constants (NOTIMPL otherwise); a CHARACTER argument of a
+    run-time length must be a whole array or a section; RESHAPE with too few elements
+    and no PAD leaves the rest as it was (the standard calls the program wrong); MERGE
+    of CHARACTER values of a run-time length needed nothing new (4b's).
+  - *Tests:* `sema`'s `TestTransform` (each function, each message), and
+    `TestArrayFunctions`' two cases now compiled; the `f90trans` goldens in `sema`,
+    `ir`, and `codegen`; `testdata/fortran90/transform.f90` (the standard's examples
+    and more, every mode, paging both ways; gfortran prints the same 32 lines).
+    MANUAL.md's 14.13 and HELP FORTRAN describe them.

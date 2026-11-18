@@ -1158,8 +1158,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   string in the caller's class D descriptor, `madeString`/`madeText`, an
   array's length its NCA's first word) and ENTRY in array-valued functions
   (`checkEntryValues`, ENTRYVALUE, ENTRYMAKE; every name the value's one
-  cell; `testdata/fortran90/madetext.f90`). Subtask 8, the
-  transformational intrinsics, is next.
+  cell; `testdata/fortran90/madetext.f90`). Subtask 8 (2026-11-18) is
+  the transformational intrinsics, SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK,
+  RESHAPE of values, and reductions by a run-time DIM= (`sema/transform.go`,
+  `ArrayFunc.Transformed`; `ir/lowertransform.go`, each computed whole into
+  a temporary, once per statement; `testdata/fortran90/transform.f90`).
+  Subtask 9, programs end to end, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

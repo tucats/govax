@@ -30,15 +30,16 @@ import (
 //     INTEGER array, one element per dimension of their argument, computed
 //     into a temporary before the statement's loops.
 //
-// DIM= must be a constant when ARRAY's rank is above 1, since the result's
-// shape depends on it; one that isn't is Phase 104's (the author's answer 4).
-// LBOUND, UBOUND, and SIZE take one that isn't, the result being a scalar.
+// DIM= that isn't constant on an ARRAY of rank above 1 makes a result whose
+// shape depends on its value, computed into a temporary when the program runs
+// (transform.go). LBOUND, UBOUND, and SIZE take one that isn't, the result
+// being a scalar.
 
 // Element reports whether lowering computes the function's elements one at a
 // time where they are used (a reduction with DIM=, MATMUL, TRANSPOSE), rather
 // than into a temporary before an array statement's loops.
 func (f *ArrayFunc) Element() bool {
-	return len(f.S) > 0 && (f.Name == "MATMUL" || f.Name == "TRANSPOSE" || f.Dim > 0)
+	return len(f.S) > 0 && !transformational(f.Name) && (f.Name == "MATMUL" || f.Name == "TRANSPOSE" || f.Dim > 0)
 }
 
 // arrayFunction analyzes a reference to one of the array functions, its
@@ -187,12 +188,19 @@ func (a *analyzer) arrayFunction(e *ast.Apply, args []ast.Expr) Expr {
 	}
 
 	// A reduction: a scalar, or with DIM= the array's shape without that
-	// dimension.
-	if f.Dim > 0 {
+	// dimension; with a DIM= not constant, of the rank below the array's, each
+	// extent the function's own, known when the program runs.
+	switch {
+	case f.Dim > 0:
 		for i, x := range f.Array.Shape() {
 			if i != f.Dim-1 {
 				f.S = append(f.S, x)
 			}
+		}
+
+	case f.DimExpr != nil:
+		for i := range rankOf(f.Array) - 1 {
+			f.S = append(f.S, Extent{Of: f, Dim: i})
 		}
 	}
 
@@ -229,9 +237,9 @@ func (a *analyzer) arrayDim(f *ArrayFunc, x ast.Expr, scalar bool) bool {
 		f.DimExpr = d
 
 	case rank > 1:
-		a.notImplForm(d.Position(), f.Name+" with a DIM= not constant (Phase 104)")
-
-		return false
+		// The result's shape depends on DIM's value: the function is computed
+		// into a temporary when the program runs (ir/lowertransform.go).
+		f.DimExpr = d
 	}
 
 	return true
@@ -387,6 +395,40 @@ func (a *analyzer) matmul(f *ArrayFunc, x, y Expr) Expr {
 	}
 
 	return f
+}
+
+// WithDim is the reduction f with the constant DIM= d (1 to its array's rank)
+// in place of its DIM= that isn't constant: lowering's arm for that value
+// (ir/lowertransform.go).
+func WithDim(f *ArrayFunc, d int) *ArrayFunc {
+	g := *f
+	g.Dim, g.DimExpr, g.S = d, nil, nil
+
+	for i, x := range f.Array.Shape() {
+		if i != d-1 {
+			g.S = append(g.S, x)
+		}
+	}
+
+	return &g
+}
+
+// NewCount is COUNT(MASK) of the LOGICAL array mask, an INTEGER scalar.
+func NewCount(mask Expr) *ArrayFunc {
+	return &ArrayFunc{exprBase: exprBase{T: IntegerType, Pos: mask.Position()}, Name: "COUNT", Array: mask}
+}
+
+// BlankConst is the CHARACTER constant of one blank, EOSHIFT's BOUNDARY when
+// none is given: assigned to a longer element, it is padded with blanks.
+func BlankConst(pos diag.Position) *Const {
+	return &Const{exprBase: exprBase{T: Type{Kind: Character, Size: 1}, Pos: pos}, Text: " "}
+}
+
+// Transformed reports whether lowering computes f's whole value into a
+// temporary of its shape, known when compiling or only when the program runs:
+// one of transform.go's functions, or a reduction with a DIM= not constant.
+func (f *ArrayFunc) Transformed() bool {
+	return transformational(f.Name) || (f.DimExpr != nil && len(f.S) > 0)
 }
 
 // NewArrayFuncAt is f's element at the loops' indexes index, one per

@@ -451,6 +451,14 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 			break
 		}
 
+		// A transformational function's whole value, computed now
+		// (lowertransform.go).
+		if leaf.Transformed() {
+			whole(n.l.transformed(leaf).Sym, leaf.Pos)
+
+			break
+		}
+
 		temp := n.l.arrayTemp(leaf.T, constExtents(leaf))
 		n.l.precompute(leaf, temp)
 		whole(temp.Sym, leaf.Pos)
@@ -580,6 +588,9 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 		case *sema.ArrayFunc:
 			if x := leaf.S[i]; x.Known {
 				count = LongConst(int32(x.Size))
+			} else if x.Of == sema.Expr(leaf) {
+				// An extent of its own: its temporary's.
+				count = n.l.symExtent(info.sym, i)
 			} else {
 				count = n.leafExtent(x.Of, n.loopOf(x.Of, x.Dim))
 			}

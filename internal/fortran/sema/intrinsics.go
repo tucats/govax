@@ -390,6 +390,11 @@ MAXLOC             -  1,2 *   I4  REDUCE T ARRAY,MASK?
 MINLOC             -  1,2 *   I4  REDUCE T ARRAY,MASK?
 MATMUL             -  2   *   *   REDUCE T MATRIX_A,MATRIX_B
 TRANSPOSE          -  1   *   *   REDUCE T MATRIX
+SPREAD             -  3   *   *   REDUCE T SOURCE,DIM,NCOPIES
+CSHIFT             -  2,3 *   *   REDUCE T ARRAY,SHIFT,DIM?
+EOSHIFT            -  2,4 *   *   REDUCE T ARRAY,SHIFT,BOUNDARY?,DIM?
+PACK               -  2,3 *   *   REDUCE T ARRAY,MASK,VECTOR?
+UNPACK             -  3   *   *   REDUCE T VECTOR,MASK,FIELD
 
 RESHAPE            -  2,4 *   *   ARRAY T SOURCE,SHAPE,PAD?,ORDER?
 SHAPE              -  1   *   I4  ARRAY I SOURCE

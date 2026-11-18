@@ -2,6 +2,7 @@ package sema
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -606,6 +607,14 @@ func DumpExpr(e Expr) string {
 
 		if e.Mask != nil {
 			text += ", MASK=" + DumpExpr(e.Mask)
+		}
+
+		if e.Pad != nil {
+			text += ", PAD=" + DumpExpr(e.Pad)
+		}
+
+		if e.Order != nil && !slices.IsSorted(e.Order) {
+			text += ", ORDER=" + fmt.Sprint(e.Order)
 		}
 
 		return text + ")"

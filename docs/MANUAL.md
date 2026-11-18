@@ -8692,11 +8692,39 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
 - *Intrinsic functions*: every elemental function (all of FORTRAN-77's, as `SQRT(A)`,
   `MAX(A, 0.0)`, `ABS(A - B)`, and `MERGE(T, F, MASK)`) takes arrays, each element computed in
   turn. SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT reduce an array, with `MASK=` and a
-  `DIM=` (constant, for an array of rank 2 or more); an empty array's SUM is 0, its PRODUCT 1,
+  `DIM=` (one known only at run time on an array of rank 2 or more chooses among the
+  dimensions then, and under `/CHECK=BOUNDS` one out of range is `%FOR-F-NOTCONFOR`); an
+  empty array's SUM is 0, its PRODUCT 1,
   its MAXVAL the most negative number, and its MINVAL the most positive. MAXLOC and MINLOC
   give the first extreme's subscripts, each counted from 1, or zeros if none (Fortran 90 gives
   them no `DIM=`). DOT_PRODUCT, MATMUL (matrix by matrix, vector by matrix, matrix by vector),
   and TRANSPOSE are written in line; SIZE, SHAPE, LBOUND, and UBOUND answer for any array.
+  The transformational functions SPREAD, CSHIFT, EOSHIFT (with `BOUNDARY=`, or 0, `.FALSE.`, or
+  blanks), PACK (with `VECTOR=`, and a scalar `MASK`), UNPACK, and RESHAPE (of any values,
+  with `PAD=` and `ORDER=`) are computed into a temporary before the statement's loops, of a
+  size known only at run time if need be:
+
+  ```fortran
+  program shifts
+    integer :: v(5) = (/ 1, 2, 3, 4, 5 /), n
+    n = 2
+    print '(1x, 5i3)', cshift(v, n), eoshift(v, -n, 9)
+    print '(1x, 5i3)', pack(v, mod(v, 2) == 1), spread(v(1:2), 1, n)
+  end program shifts
+  ```
+
+  prints
+
+  ```text
+    3  4  5  1  2
+    9  9  1  2  3
+    1  3  5  1  1
+    2  2
+  ```
+
+  SHIFT and BOUNDARY may be arrays of the rank below ARRAY's, a line each. SPREAD's, CSHIFT's,
+  and EOSHIFT's `DIM=` must be a constant, and RESHAPE's `ORDER=` too (`NOTIMPL` otherwise);
+  RESHAPE's SHAPE must have a size known when compiling (`BADRESHAPE`).
   Under `/NOF90` these names are a program's own unless an INTRINSIC statement names them.
 - *WHERE*: `WHERE (mask) A = expr`, or a construct of WHERE, assignments, an optional
   ELSEWHERE and its assignments, and END WHERE, assigns only the elements where the mask is
@@ -9190,9 +9218,7 @@ end function
 
 That includes modules and USE (with MODULE PROCEDURE), derived types, and pointers, each
 to come in its turn. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
-gives no elements but govax still calls `BOUNDORDER`; an array function's value of a shape not known when compiling
-(RESHAPE of values that aren't constants, a `DIM=` that isn't constant on an array of rank 2
-or more); a CHARACTER constructor whose first value's length is known only when the program
+gives no elements but govax still calls `BOUNDORDER`; a CHARACTER constructor whose first value's length is known only when the program
 runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of
 records; and a section as an internal file or ENCODE's buffer. Fortran 90's other new
 intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
