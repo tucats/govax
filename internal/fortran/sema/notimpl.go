@@ -22,7 +22,8 @@ func handled(s ast.Stmt) bool {
 		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt, *ast.ComputedGotoStmt,
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
-		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.LoopExitStmt, *ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
+		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.LoopExitStmt, *ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt,
+		*ast.WhereStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
 		*ast.EntryStmt, *ast.StructureStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.AttrStmt, *ast.DirectiveStmt, *ast.BadStmt:
 		return true
 
@@ -73,8 +74,7 @@ func pendingHeader(u *ast.Unit) ast.Stmt {
 // yet, and keeps its part in the unit's block structure.
 //
 // A Fortran 90 construct's statements are reported once, at the statement
-// that opens it: an ELSEWHERE or END WHERE inside a block WHERE says
-// nothing more (pendingOpeners).
+// that opens it: the statements inside it say nothing more (pendingOpeners).
 //
 // PUBLIC and PRIVATE statements belong in a module (the standard's R522's
 // constraint), and a module's statements never reach here (pendingHeader):
@@ -112,11 +112,12 @@ func (a *analyzer) unimplemented(s ast.Stmt) {
 // pendingOpeners, pendingInner, and pendingClosers are Fortran 90's
 // constructs not compiled yet, for unimplemented: the statement that opens
 // each, the statements inside it named by the one that opens their construct,
-// and of those the ones that close it.
+// and of those the ones that close it. None is left since Phase 102 compiled
+// WHERE; the mechanism stays for the next construct a phase adds.
 var (
-	pendingOpeners = map[lex.Kind]bool{lex.WhereBlock: true}
-	pendingInner   = map[lex.Kind]lex.Kind{lex.ElseWhere: lex.WhereBlock, lex.EndWhere: lex.WhereBlock}
-	pendingClosers = map[lex.Kind]bool{lex.EndWhere: true}
+	pendingOpeners = map[lex.Kind]bool{}
+	pendingInner   = map[lex.Kind]lex.Kind{}
+	pendingClosers = map[lex.Kind]bool{}
 )
 
 // formWhat names an expression's form that semantic analysis doesn't

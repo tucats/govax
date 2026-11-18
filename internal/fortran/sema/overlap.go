@@ -54,6 +54,10 @@ type ArrayOrder struct {
 
 	// target is the array the assignment writes, for Hoisted.
 	target *Symbol
+
+	// need is each loop's direction as the value's arrays ask it, 1 up, -1
+	// down, 0 either, for a WHERE's mask to add its own to (where.go).
+	need []int
 }
 
 // Hoisted reports whether lowering must compute the scalar e, one it would
@@ -128,7 +132,7 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 		return nil, false
 	}
 
-	if c, ok := value.(*Constructor); ok && rank == 1 && !reads(c, ts) {
+	if c, ok := value.(*Constructor); ok && rank == 1 && !a.noFill && !reads(c, ts) {
 		o.Fill = true
 
 		return o, true
@@ -146,48 +150,11 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 		return nil, false
 	}
 
-	// A vector subscript in the value that reads the target's storage is read
-	// as the loops go too: a temporary.
-	o.Temporary = vectorsRead(value, ts)
-
-	Scalarize(value, func(leaf Expr) Expr {
-		// An array function computed at each element (a reduction with DIM=,
-		// MATMUL, TRANSPOSE) that reads the target needs a temporary; any
-		// other is computed before the loops.
-		if f, ok := leaf.(*ArrayFunc); ok && f.Element() && funcReads(f, ts) {
-			o.Temporary = true
-		}
-
-		if o.Temporary || !mayShare(ts, baseSymbol(leaf)) {
-			return leaf
-		}
-
-		switch rel, loop, dir := relate(target, leaf); rel {
-		case relOrdered:
-			if need[loop] == -dir {
-				o.Temporary = true
-			}
-
-			need[loop] = dir
-
-		case relUnknown:
-			o.Temporary = true
-		}
-
-		return leaf
-	}, func(x Expr) Expr {
-		if Inline(x) && x.Type().Kind == Character {
-			for _, s := range readSymbols(x) {
-				if mayShare(ts, s) {
-					o.Temporary = true
-				}
-			}
-		}
-
-		return x
-	})
+	o.Temporary = !relateValue(target, value, need)
 
 	if !o.Temporary {
+		o.need = need
+
 		for i, d := range need {
 			o.Down[i] = d < 0
 		}
@@ -208,6 +175,58 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 	}
 
 	return o, true
+}
+
+// relateValue relates each array the value reads to the target, adding the
+// direction each loop must run in to need (1 up, -1 down, 0 either). False if
+// the value must go into a temporary: an array related to the target in no way
+// the loops can keep, two that need opposite directions, a vector subscript
+// that reads the target's storage, or a CHARACTER scalar that does.
+func relateValue(target, value Expr, need []int) bool {
+	ts := baseSymbol(target)
+
+	// A vector subscript in the value that reads the target's storage is read
+	// as the loops go too: a temporary.
+	temporary := vectorsRead(value, ts)
+
+	Scalarize(value, func(leaf Expr) Expr {
+		// An array function computed at each element (a reduction with DIM=,
+		// MATMUL, TRANSPOSE) that reads the target needs a temporary; any
+		// other is computed before the loops.
+		if f, ok := leaf.(*ArrayFunc); ok && f.Element() && funcReads(f, ts) {
+			temporary = true
+		}
+
+		if temporary || !mayShare(ts, baseSymbol(leaf)) {
+			return leaf
+		}
+
+		switch rel, loop, dir := relate(target, leaf); rel {
+		case relOrdered:
+			if need[loop] == -dir {
+				temporary = true
+			}
+
+			need[loop] = dir
+
+		case relUnknown:
+			temporary = true
+		}
+
+		return leaf
+	}, func(x Expr) Expr {
+		if Inline(x) && x.Type().Kind == Character {
+			for _, s := range readSymbols(x) {
+				if mayShare(ts, s) {
+					temporary = true
+				}
+			}
+		}
+
+		return x
+	})
+
+	return !temporary
 }
 
 // checkManyOne reports a section in an assignment's target whose vector
@@ -338,24 +357,32 @@ func funcReads(f *ArrayFunc, ts *Symbol) bool {
 	found := false
 
 	for _, x := range []Expr{f.Array, f.Other, f.Mask, f.DimExpr} {
-		switch {
-		case x == nil:
-		case rankOf(x) == 0:
-			found = found || readsAny(x, ts)
-		default:
-			found = found || vectorsRead(x, ts)
-
-			Scalarize(x, func(leaf Expr) Expr {
-				found = found || leafReads(leaf, ts)
-
-				return leaf
-			}, func(s Expr) Expr {
-				found = found || readsAny(s, ts)
-
-				return s
-			})
+		if x != nil {
+			found = found || arrayReads(x, ts)
 		}
 	}
+
+	return found
+}
+
+// arrayReads reports whether the expression x, an array or a scalar, reads
+// storage ts may share: its arrays, its vector subscripts, its scalars.
+func arrayReads(x Expr, ts *Symbol) bool {
+	if rankOf(x) == 0 {
+		return readsAny(x, ts)
+	}
+
+	found := vectorsRead(x, ts)
+
+	Scalarize(x, func(leaf Expr) Expr {
+		found = found || leafReads(leaf, ts)
+
+		return leaf
+	}, func(s Expr) Expr {
+		found = found || readsAny(s, ts)
+
+		return s
+	})
 
 	return found
 }

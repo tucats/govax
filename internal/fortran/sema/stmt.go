@@ -66,6 +66,13 @@ type construct struct {
 	sel       *Select
 	caseFirst bool
 
+	// For a WHERE construct: its WHERE statement, and the Where it makes
+	// (nil if the statement had an error, or was Fortran 95's); its blocks
+	// are arms, the current one arm, ELSEWHERE's statement elseAt
+	// (where.go).
+	whereStart ast.Stmt
+	where      *Where
+
 	// spans are the CASE construct's case value ranges so far, which each
 	// new one mustn't overlap (selectcase.go).
 	spans []caseSpan
@@ -77,8 +84,11 @@ func (c *construct) isDo() bool { return c.do != nil || c.while != nil }
 // isSelect reports whether c is a CASE construct.
 func (c *construct) isSelect() bool { return c.selStart != nil }
 
+// isWhere reports whether c is a WHERE construct.
+func (c *construct) isWhere() bool { return c.whereStart != nil }
+
 // isIf reports whether c is an IF block.
-func (c *construct) isIf() bool { return !c.isDo() && !c.isSelect() }
+func (c *construct) isIf() bool { return !c.isDo() && !c.isSelect() && !c.isWhere() }
 
 // line is the line the construct starts on, for messages.
 func (c *construct) line() int {
@@ -89,6 +99,8 @@ func (c *construct) line() int {
 		return c.while.AST.Position().Line
 	case c.selStart != nil:
 		return c.selStart.Position().Line
+	case c.whereStart != nil:
+		return c.whereStart.Position().Line
 	}
 
 	return c.ifStart.Position().Line
@@ -128,6 +140,8 @@ func (c *construct) what() string {
 		return "DO loop"
 	case c.isSelect():
 		return "SELECT CASE construct"
+	case c.isWhere():
+		return "WHERE construct"
 	}
 
 	return "IF block"
@@ -177,6 +191,10 @@ func (a *analyzer) statement(s ast.Stmt) {
 	}
 
 	a.beforeFirstCase(s)
+
+	if a.whereBody(s) {
+		return
+	}
 
 	if !handled(s) {
 		a.unimplemented(s)
@@ -239,6 +257,15 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	case *ast.EndSelectStmt:
 		a.endSelect(s)
+
+	case *ast.WhereBlockStmt:
+		a.whereBlock(s)
+
+	case *ast.ElseWhereStmt:
+		a.elseWhere(s)
+
+	case *ast.EndWhereStmt:
+		a.endWhere(s)
 
 	case *ast.EndIfStmt:
 		if c := a.matchIf(s); c != nil {
@@ -327,6 +354,9 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 			a.pop()
 		}
 
+	case lex.WhereBlock, lex.ElseWhere, lex.EndWhere:
+		a.brokenWhere(kind, s)
+
 	default:
 		if label := s.Base().Label; label != 0 {
 			a.endLoops(label, s)
@@ -353,7 +383,7 @@ func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt, *ast.LoopExitStmt,
-		*ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt,
+		*ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt,
 		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt:
 		return aStatement(s)
@@ -373,7 +403,7 @@ func (a *analyzer) path() []frame {
 	path := make([]frame, len(a.open))
 
 	for i, c := range a.open {
-		path[i] = frame{id: c.id, arm: c.arm, do: c.isDo(), sel: c.isSelect()}
+		path[i] = frame{id: c.id, arm: c.arm, do: c.isDo(), sel: c.isSelect(), where: c.isWhere()}
 	}
 
 	return path
@@ -475,6 +505,8 @@ func (a *analyzer) closeAll() {
 			a.report("NODO", c.loopStart(), c.label)
 		case c.isSelect():
 			a.report("NOENDSELECT", c.selStart.Position())
+		case c.isWhere():
+			a.report("NOENDWHERE", c.whereStart.Position())
 		case !c.isDo():
 			a.report("NOENDIF", c.ifStart.Position())
 		}

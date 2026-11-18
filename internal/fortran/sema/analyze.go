@@ -356,6 +356,11 @@ type analyzer struct {
 	// unimplemented), so that only that statement is reported.
 	pendingOpen map[lex.Kind]int
 
+	// noFill keeps arrayOrder from filling a target straight from a
+	// constructor, for a WHERE's assignments, which assign only where the
+	// mask holds (where.go).
+	noFill bool
+
 	// constructNames are the unit's construct names, in the order given
 	// (constructs.go).
 	constructNames []constructName

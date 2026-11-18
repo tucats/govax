@@ -612,6 +612,22 @@ type (
 		EndSelect ast.Stmt
 	}
 
+	// Where is a WHERE construct, or the WHERE statement as a construct of
+	// one assignment (where.go): Mask a LOGICAL array; Then the assignments
+	// done where it is true, Else ELSEWHERE's, where it is false (nil for
+	// none), each an *Assign to an array of the mask's shape; EndWhere the
+	// END WHERE statement (nil for the WHERE statement). MaskTemp is the
+	// mask's extents when it is computed once into a temporary before the
+	// assignments, nil when each assignment's loops compute it.
+	Where struct {
+		stmtBase
+		Mask     Expr
+		Then     *Arm
+		Else     *Arm
+		EndWhere ast.Stmt
+		MaskTemp []int
+	}
+
 	// Stop is STOP, or PAUSE when Pause is set, with the text it
 	// displays if it has one.
 	Stop struct {

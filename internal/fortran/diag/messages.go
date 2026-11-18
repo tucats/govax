@@ -980,6 +980,21 @@ var messages = map[string]kind{
 	// SELECT.
 	"NOENDSELECT": {Error, "this SELECT CASE construct has no END SELECT statement"},
 
+	// Fortran 90's WHERE (the standard's 7.5.3; sema/where.go). NOWHERE is
+	// ELSEWHERE or END WHERE outside any WHERE construct; NOENDWHERE a WHERE
+	// construct the unit's END reaches; WHEREBODY a statement in one that
+	// isn't an assignment (R742); WHEREMASK a mask that isn't a LOGICAL
+	// array; WHERETARGET an assignment in a WHERE to a scalar;
+	// ELSEWHEREORDER a second ELSEWHERE; F95ONLY a form Fortran 95 added
+	// (a WHERE inside a WHERE, ELSEWHERE with a mask), Phase 112's.
+	"NOWHERE":        {Error, "this %s statement is not in a WHERE construct"},
+	"NOENDWHERE":     {Error, "this WHERE construct has no END WHERE statement"},
+	"WHEREBODY":      {Error, "only assignments may be in a WHERE construct, not %s"},
+	"WHEREMASK":      {Error, "a WHERE's mask must be a LOGICAL array, and this one is %s"},
+	"WHERETARGET":    {Error, "an assignment in a WHERE must be to an array of the mask's shape, not to a scalar"},
+	"ELSEWHEREORDER": {Error, "this WHERE construct has an ELSEWHERE statement already, at line %d"},
+	"F95ONLY":        {Error, "%s is Fortran 95's, not Fortran 90's, and isn't compiled yet (Phase 112)"},
+
 	// CASEFIRST is a statement between SELECT CASE and the construct's first
 	// CASE, where the standard's R808 has no place for one.
 	"CASEFIRST": {Error, "a SELECT CASE statement must be followed by a CASE statement, not %s"},

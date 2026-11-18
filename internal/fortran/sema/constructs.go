@@ -51,6 +51,8 @@ func (c *construct) opener() ast.Stmt {
 		return c.while.AST
 	case c.selStart != nil:
 		return c.selStart
+	case c.whereStart != nil:
+		return c.whereStart
 	}
 
 	return c.ifStart

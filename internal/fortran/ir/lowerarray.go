@@ -106,6 +106,13 @@ type leafDim struct {
 // statement is two nests, the value into the temporary, then the temporary
 // into the target, each the same as an assignment of its own.
 func (l *lowerer) arrayAssign(s *sema.Assign) {
+	l.maskedAssign(s, nil)
+}
+
+// maskedAssign is arrayAssign where mask holds (a WHERE's assignment), or
+// everywhere for a nil mask. With a temporary both nests are masked: the value
+// is computed only where it is assigned.
+func (l *lowerer) maskedAssign(s *sema.Assign, mask *whereMask) {
 	if s.Order != nil && s.Order.Fill {
 		l.fillConstructor(s.Target, s.Value.(*sema.Constructor))
 
@@ -115,13 +122,13 @@ func (l *lowerer) arrayAssign(s *sema.Assign) {
 	if s.Order != nil && s.Order.Temporary {
 		temp := l.arrayTemp(s.Value.Type(), s.Order.TempShape)
 
-		l.arrayNest(temp, s.Value, nil)
-		l.arrayNest(s.Target, temp, nil)
+		l.arrayNest(temp, s.Value, nil, mask)
+		l.arrayNest(s.Target, temp, nil, mask)
 
 		return
 	}
 
-	l.arrayNest(s.Target, s.Value, s.Order)
+	l.arrayNest(s.Target, s.Value, s.Order, mask)
 }
 
 // arrayTemp is an array temporary of type t and the extents shape, for the
@@ -156,13 +163,26 @@ type arrayTempKey struct {
 	size int
 }
 
+// whereMask is a WHERE's mask as an assignment's loops test it: the LOGICAL
+// array, or its temporary, and whether the elements are assigned where it is
+// false (ELSEWHERE's).
+type whereMask struct {
+	expr   sema.Expr
+	negate bool
+}
+
 // arrayNest lowers target = value as one nest of loops, run as order says
-// (nil: every loop up).
-func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder) {
+// (nil: every loop up), assigning each element only where mask holds (nil:
+// everywhere). The mask's arrays are leaves of the nest beside the value's.
+func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder, mask *whereMask) {
 	n := l.newNest(len(target.Shape()), order)
 	rank := len(n.index)
 
 	leaves := append(sema.Leaves(target), sema.Leaves(value)...)
+	if mask != nil {
+		leaves = append(leaves, sema.Leaves(mask.expr)...)
+	}
+
 	for _, leaf := range leaves {
 		n.prepare(leaf)
 	}
@@ -180,7 +200,14 @@ func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder) {
 	t := sema.Scalarize(target, n.element, n.hoist)
 	v := sema.Scalarize(value, n.element, n.hoist)
 
-	n.loops(rank-1, func() { l.assignScalar(t, v) })
+	if mask == nil {
+		n.loops(rank-1, func() { l.assignScalar(t, v) })
+	} else {
+		m := sema.Scalarize(mask.expr, n.element, n.hoist)
+
+		n.loops(rank-1, func() { l.maskedBy(m, mask.negate, func() { l.assignScalar(t, v) }) })
+	}
+
 	n.done()
 }
 

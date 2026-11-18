@@ -94,6 +94,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.Select:
 		l.selectCase(s)
 
+	case *sema.Where:
+		l.where(s)
+
 	case *sema.Continue:
 		// Nothing to do: CONTINUE is there for its label.
 

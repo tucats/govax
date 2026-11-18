@@ -124,6 +124,19 @@ var checkPrograms = []struct {
       END`,
 	},
 	{
+		// A WHERE's mask of another extent than its assignment's target, known
+		// only when the program runs (Phase 102, subtask 10).
+		name: "WHERE", qualifier: "/CHECK=BOUNDS", checked: "%FOR-F-NOTCONFOR", plain: "AFTER",
+		source: `
+      OPTIONS /F90
+      REAL A(10), B(10)
+      N = 5
+      M = 4
+      WHERE (B(1:M) .GE. 0.0) A(1:N) = 1.0
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
 		// The second operand of .AND. isn't reached, so neither is its check.
 		name: "GUARDED", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
 		refused: "SUBRNG",

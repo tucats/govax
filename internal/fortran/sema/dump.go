@@ -233,6 +233,24 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 				line(b, s.EndSelect, depth, "END SELECT")
 			}
 
+		case *Where:
+			mask := "WHERE " + DumpExpr(s.Mask)
+			if s.MaskTemp != nil {
+				mask += "  [mask in a temporary]"
+			}
+
+			line(b, s.AST, depth, mask)
+			dumpStmts(b, s.Then.Body, depth+1)
+
+			if s.Else != nil {
+				line(b, s.Else.AST, depth, "ELSEWHERE")
+				dumpStmts(b, s.Else.Body, depth+1)
+			}
+
+			if s.EndWhere != nil {
+				line(b, s.EndWhere, depth, "END WHERE")
+			}
+
 		case *Do:
 			line(b, s.AST, depth, fmt.Sprintf("DO %s%s = %s, %s, %s", loopLabel(s.Label), symName(s.Var),
 				DumpExpr(s.Start), DumpExpr(s.Limit), DumpExpr(s.Step)))
@@ -363,6 +381,8 @@ func stmtText(list []Stmt) string {
 		return "GO TO " + s.Var.Name + " (" + labelList(s.Labels) + ")"
 	case *ArithIf:
 		return "IF (" + DumpExpr(s.Cond) + ") " + labelList(s.Labels[:])
+	case *Where:
+		return "WHERE " + DumpExpr(s.Mask) + " " + stmtText(s.Then.Body)
 	case *Continue:
 		return "CONTINUE"
 	case *LoopExit:

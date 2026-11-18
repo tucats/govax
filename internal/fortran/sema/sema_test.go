@@ -147,8 +147,8 @@ func TestErrors(t *testing.T) {
 		{"a section with a stride", []string{"DIMENSION A(10,10)", "X = A(1:10:2, J)", "END"}, "NOTSCALAR@2:11"},
 		{"a triplet to a function", []string{"X = F(1, 2:3)", "END"}, "NOTIMPL@1:16"},
 		{"an array constructor", []string{"X = SUM((/ 1.0, 2.0 /))", "END"}, "NOTIMPL@1:15"},
-		{"WHERE", []string{"DIMENSION A(3)", "WHERE (A .GT. 0) A = 1", "END"}, "NOTIMPL@2:7"},
-		{"a WHERE construct, once", []string{"DIMENSION A(3)", "WHERE (A .GT. 0)", "A(1) = 1", "ELSEWHERE", "A(2) = 2", "END WHERE", "END"}, "NOTIMPL@2:7"},
+		{"WHERE", []string{"DIMENSION A(3)", "WHERE (A .GT. 0) A = 1", "END"}, ""},
+		{"a WHERE construct's scalar targets", []string{"DIMENSION A(3)", "WHERE (A .GT. 0)", "A(1) = 1", "ELSEWHERE", "A(2) = 2", "END WHERE", "END"}, "WHERETARGET@3:7 WHERETARGET@5:7"},
 
 		// CDEC$ OPTIONS and END OPTIONS (the HP manual's 14.14).
 		{"a group in a main program", []string{"CDEC$ OPTIONS /ALIGN", "COMMON /B/ X", "CDEC$ END OPTIONS", "X = 1", "END"}, ""},

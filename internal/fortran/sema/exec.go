@@ -64,6 +64,9 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 	case *ast.ContinueStmt:
 		return &Continue{stmtBase{s}}
 
+	case *ast.WhereStmt:
+		return a.whereStatement(s)
+
 	case *ast.LoopExitStmt:
 		return a.loopExit(s)
 
@@ -117,27 +120,12 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	target := a.target(s.Target)
-	a.noteAssigned(target)
-
-	// A target with an error says nothing of what its value may be.
-	var value Expr
-	if target == nil || target.Type().Kind == Record {
-		value = a.aggregateValue(s.Value)
-	} else {
-		value = a.assignedExpr(s.Value, target.Type())
+	if c := a.top(); c != nil && c.isWhere() {
+		return a.whereAssignment(c, s)
 	}
 
-	if target == nil || target.Type().Kind == Invalid || value.Type().Kind == Invalid {
-		return nil
-	}
-
-	if !a.assignedShape(s.Pos, target, value) {
-		return nil
-	}
-
-	value = a.assignedValue(s.Pos, target, value)
-	if value == nil {
+	target, value := a.assignParts(s)
+	if target == nil {
 		return nil
 	}
 
@@ -155,6 +143,36 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	}
 
 	return &Assign{stmtBase{s}, target, value, order}
+}
+
+// assignParts analyzes an assignment's target and value, the value converted
+// for the target, its shape checked; nils after an error.
+func (a *analyzer) assignParts(s *ast.AssignStmt) (Expr, Expr) {
+	target := a.target(s.Target)
+	a.noteAssigned(target)
+
+	// A target with an error says nothing of what its value may be.
+	var value Expr
+	if target == nil || target.Type().Kind == Record {
+		value = a.aggregateValue(s.Value)
+	} else {
+		value = a.assignedExpr(s.Value, target.Type())
+	}
+
+	if target == nil || target.Type().Kind == Invalid || value.Type().Kind == Invalid {
+		return nil, nil
+	}
+
+	if !a.assignedShape(s.Pos, target, value) {
+		return nil, nil
+	}
+
+	value = a.assignedValue(s.Pos, target, value)
+	if value == nil {
+		return nil, nil
+	}
+
+	return target, value
 }
 
 // assignedShape checks an assignment's shapes (Fortran 90's 7.5.1.5): a

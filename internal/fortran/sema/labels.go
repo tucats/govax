@@ -41,6 +41,7 @@ type frame struct {
 	arm    *Arm
 	do     bool
 	sel    bool
+	where  bool
 	anyArm bool
 }
 
@@ -106,8 +107,11 @@ func (a *analyzer) checkLabels() {
 
 		case into != nil:
 			what := "an IF block"
-			if into.sel {
+			switch {
+			case into.sel:
 				what = "a SELECT CASE construct"
+			case into.where:
+				what = "a WHERE construct"
 			}
 
 			a.report("INTOBLOCK", r.pos, r.label, what)

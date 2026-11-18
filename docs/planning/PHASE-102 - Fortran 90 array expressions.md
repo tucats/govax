@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A, below, with a revised subtask list and
 questions for the author), was accepted by the author 2026-11-17 ("The
-author's answers"); subtasks 2 to 9 are done (2026-11-17), and subtask 10 is next.
+author's answers"); subtasks 2 to 10 are done (2026-11-17), and subtask 11 is next.
 Needs Phase 101 (done).
 
 ## Goal
@@ -419,7 +419,7 @@ and FTNRTL do today.
    MERGE (finding 9) (done 2026-11-17).
 9. **Reductions and inquiries**, with MASK= and constant DIM=, DOT_PRODUCT,
    MAXLOC and MINLOC, MATMUL and TRANSPOSE (finding 12) (done 2026-11-17).
-10. **WHERE** in both forms (finding 8).
+10. **WHERE** in both forms (finding 8) (done 2026-11-17).
 11. **Arrays in I/O lists** (finding 14).
 12. **Programs end to end** (a matrix and statistics program, smoothing with
     WHERE), gfortran's witness, every mode, the optimizer's cases.
@@ -768,3 +768,48 @@ shapes in Phase 104.
   MANUAL.md's "Not there yet" and `/CHECK` table say what now compiles. Tests:
   `TestArrayFunctions`, `ir`'s `f90reduce.for`, and `testdata/fortran90`'s
   `reduce.f90`, worked by hand, run in all eight modes and the same on gfortran.
+- **2026-11-17, subtask 10:** WHERE. `sema/where.go`: WHERE (mask) opens a
+  construct on the analyzer's stack (`construct.whereStart`, `where`;
+  `isWhere`, and `isIf` now excludes it), its blocks two `Arm`s of a
+  `sema.Where` (`Then`, `Else`), so `add` and the label paths treat it as an IF
+  block: a jump into it from outside, to an assignment, ELSEWHERE, or END WHERE,
+  is INTOBLOCK ("a WHERE construct"), and only the WHERE is a target. The WHERE
+  statement is a `Where` of one assignment (`whereStatement`, through
+  `executable`, so a logical IF's statement may be one). The mask is a LOGICAL
+  array, an INTEGER one converted as an IF's condition is (WHEREMASK, new,
+  for a scalar or another type); each assignment's target an array of the
+  mask's shape (WHERETARGET, new; NOTCONFORM); only assignments inside
+  (WHEREBODY, new, the statement's structure kept by `brokenStatement`); a
+  second ELSEWHERE is ELSEWHEREORDER; NOWHERE and NOENDWHERE as SELECT CASE's;
+  a WHERE inside a WHERE and ELSEWHERE (mask) are F95ONLY (new, naming Phase
+  112). `assignment` is split, `assignParts` the target and value, so a WHERE's
+  assignments (`whereAssign`) are checked as any are and ordered at END WHERE
+  (`finishWhere`): `arrayOrder` with `analyzer.noFill` (a constructor isn't
+  stored straight into the target, the mask skipping some of it; with a size
+  not known it is then NOTIMPL as any constructor in a temporary), then
+  `maskInLoops`, finding 8's test made exact: the loops may compute the mask
+  themselves if no earlier assignment's target reads into the mask
+  (`arrayReads`, `funcReads`' old body), each assignment's mask relates to its
+  target as its value does (`relateValue`, `arrayOrder`'s leaf loop taken out,
+  the value's needs kept in `ArrayOrder.need`; a mask one element behind runs
+  the loop down, one ahead and a value behind need the temporary), a value
+  through a temporary has a mask that reads nothing of the target's, and, with
+  more than one assignment, the mask calls none of the program's procedures
+  (`callsProcedure`). So `WHERE (A > 0) A = SQRT(A)` and `B = A ... END WHERE`'s
+  last write of A are in the loops, while `A = -A` then `B = 1` puts the mask in
+  a temporary (`Where.MaskTemp`, its extents; NOTIMPL naming Phase 104 when not
+  known). A scalar of the target's in the mask (`A > A(1)`) is hoisted as the
+  value's are. The temporary has the mask's own type, not LOGICAL\*1 as
+  finding 8 said: no conversion at each element, at 4 bytes an element. In
+  `ir/lowerwhere.go`, `where` computes the mask into an `arrayTemp` if it must,
+  then each assignment by `maskedAssign` (`arrayAssign` with a mask), whose
+  nests take the mask's arrays as leaves beside the value's (so `/CHECK=BOUNDS`
+  compares their extents) and assign each element under `maskedBy`'s branch,
+  ELSEWHERE's negated; a value through a temporary is masked in both nests, so
+  nothing is computed where it isn't assigned (`SQRT` of a negative). The
+  construct's temporaries are given back at its end. `pendingOpeners` and its
+  maps are empty now. Tests: `TestWhere` (37 cases), `TestErrors`' changed
+  cases, `TestF90StatementsNotImplemented`, `ir`'s `f90where.for`,
+  `TestFortranCheck`'s WHERE, and `testdata/fortran90`'s `where.f90`, worked by
+  hand, run in all eight modes and the same on gfortran. MANUAL.md's "Not there
+  yet" says WHERE is there.

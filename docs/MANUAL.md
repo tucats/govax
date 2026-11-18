@@ -8621,19 +8621,21 @@ compiled.
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, the WHERE statement is not implemented yet
+%FORT-E-NOTIMPL, the ALLOCATE statement is not implemented yet
   at line 5 of DUA1:[WORK]BAD.F90;1
-    where (total > 0) total = 0
+    allocate (a(10))
   --^
 ```
 
-That includes assumed-shape and deferred-shape arrays (`A(:)`), WHERE, interface blocks and
+That includes assumed-shape and deferred-shape arrays (`A(:)`), interface blocks and
 CONTAINS, modules and USE, derived types, ALLOCATE, and pointers, each to come in its turn.
 Arrays as values are partly there (Phase 102, whose close-out will describe them here): whole
 arrays, sections, and vector subscripts in expressions and assignments, array constructors,
 array PARAMETERs and initial values, the elemental intrinsic functions on arrays and MERGE,
-RESHAPE of constants, and SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, COUNT, DOT_PRODUCT,
-MAXLOC, MINLOC, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND, and UBOUND. Fortran 90's other new
+RESHAPE of constants, SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, COUNT, DOT_PRODUCT,
+MAXLOC, MINLOC, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND, and UBOUND, and WHERE, its
+statement and its construct with ELSEWHERE (a WHERE inside a WHERE, and ELSEWHERE with a
+mask, are Fortran 95's: `%FORT-E-F95ONLY`). Fortran 90's other new
 intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
 own. A format written as a character constant may hold `"..."` constants under `/F90`
 (`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as
