@@ -450,11 +450,16 @@ type Dim struct {
 	// LowerValue and UpperValue are those bounds analyzed and converted to
 	// INTEGER, which lowering computes when the subprogram is entered.
 	LowerValue, UpperValue Expr
+
+	// Runtime is a dimension of one of lowering's array temporaries whose
+	// extent is known only when the program runs (NewRuntimeArray): its lower
+	// bound is 1, Lower, and its upper bound is in its descriptor.
+	Runtime bool
 }
 
 // known reports whether the dimension's bounds are both known now.
 func (d Dim) known() bool {
-	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil && !d.Deferred
+	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil && !d.Deferred && !d.Runtime
 }
 
 // LowerKnown reports whether the dimension's lower bound is a constant, Lower.
@@ -465,7 +470,7 @@ func (d Dim) LowerKnown() bool {
 // UpperKnown reports whether the dimension's upper bound is a constant, Upper:
 // not adjustable, not deferred, nor an assumed-size array's *.
 func (d Dim) UpperKnown() bool {
-	return d.UpperExpr == nil && !d.Deferred && !d.Assumed
+	return d.UpperExpr == nil && !d.Deferred && !d.Assumed && !d.Runtime
 }
 
 // Extent is how many elements the dimension has, du - dl + 1 (section
@@ -736,7 +741,7 @@ type (
 		Then     *Arm
 		Else     *Arm
 		EndWhere ast.Stmt
-		MaskTemp []int
+		MaskTemp []int // each extent, or -1 for one known only when the program runs (tempShape)
 	}
 
 	// Stop is STOP, or PAUSE when Pause is set, with the text it
@@ -918,10 +923,14 @@ type (
 
 	// Constructor is an array constructor whose values aren't all constants
 	// (Fortran 90's 4.5): (/ X, A(2:3), (I * Y, I = 1, N) /), of rank one,
-	// its extent known when compiling only if every item's is.
+	// its extent known when compiling only if every item's is. LengthOf is,
+	// for one of CHARACTER values whose length is known only when the program
+	// runs (T.Size 0), the value whose length its elements have, its first:
+	// a variable, an array, or a concatenation of them (constructor.go).
 	Constructor struct {
 		exprBase
-		Items []CtorItem
+		Items    []CtorItem
+		LengthOf Expr
 	}
 
 	// Section is Fortran 90's array section, Sym(Subs) with a subscript

@@ -542,6 +542,11 @@ func (r *replacer) rewrite(b *ir.Block, first, last int) {
 
 		case *ir.StackRelease:
 			st.To = r.expr(st.To)
+
+		case *ir.StackMark:
+			if r.place != nil {
+				st.Dst = r.mem(st.Dst)
+			}
 		}
 	}
 }

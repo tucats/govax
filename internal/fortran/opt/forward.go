@@ -268,6 +268,9 @@ func (f *forwarder) rewrite(st ir.Stmt) {
 
 	case *ir.StackRelease:
 		st.To = f.expr(st.To)
+
+	case *ir.StackMark:
+		st.Dst = f.mem(st.Dst)
 	}
 }
 
@@ -304,6 +307,9 @@ func (f *forwarder) stmt(st ir.Stmt) {
 		}
 
 	case *ir.StackAllocate:
+		f.kill(f.s.Place(f.mem(st.Dst)))
+
+	case *ir.StackMark:
 		f.kill(f.s.Place(f.mem(st.Dst)))
 	}
 }

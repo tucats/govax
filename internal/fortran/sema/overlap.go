@@ -32,8 +32,8 @@ import (
 //   - unknown: anything else (different names that share storage, a section of
 //     another form). Then the value goes into a temporary first, an array of
 //     the assignment's shape, and the temporary is assigned to the target: two
-//     nests. A temporary's size must be known when compiling (finding 7); one
-//     that isn't is Phase 104's.
+//     nests. A temporary's size may be known only when the program runs
+//     (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 8).
 //
 // Two arrays that need opposite directions in one dimension need a temporary
 // too. A scalar the loops compute at each element (Inline) that reads the
@@ -44,15 +44,20 @@ import (
 // ArrayOrder is how the scalarizer runs an array assignment (sema's answer to
 // whether its sides overlap): Down says, for each loop (the target's
 // dimensions, the leftmost first), whether it runs from the extent down to 1;
-// Temporary that the value goes into an array of the extents TempShape first;
-// Fill that the value, a Constructor that reads nothing of the target's, is
-// stored straight into the target an item at a time, with no loops of the
-// target's (finding 10: its extent then needn't be known when compiling).
+// Temporary that the value goes into an array of the extents TempShape first
+// (-1 for an extent known only when the program runs); Fill that the value, a
+// Constructor that reads nothing of the target's, is stored straight into the
+// target an item at a time, with no loops of the target's (finding 10: its
+// extent then needn't be known when compiling); CopyVectors that the target's
+// vector subscripts read the target's own array (IV(IV) = 1), so that each is
+// copied into a temporary first, since they must be computed before any
+// element is defined (7.5.1.5).
 type ArrayOrder struct {
-	Down      []bool
-	Temporary bool
-	TempShape []int
-	Fill      bool
+	Down        []bool
+	Temporary   bool
+	TempShape   []int
+	Fill        bool
+	CopyVectors bool
 
 	// target is the array the assignment writes, for Hoisted.
 	target *Symbol
@@ -87,11 +92,11 @@ func (o *ArrayOrder) String() string {
 	}
 
 	if o.Temporary {
-		return "  [through a temporary]"
+		return o.vectorsText() + "  [through a temporary]"
 	}
 
 	if o.Fill {
-		return "  [filled]"
+		return o.vectorsText() + "  [filled]"
 	}
 
 	var down []string
@@ -103,10 +108,19 @@ func (o *ArrayOrder) String() string {
 	}
 
 	if down == nil {
-		return ""
+		return o.vectorsText()
 	}
 
-	return "  [down in " + strings.Join(down, ", ") + "]"
+	return o.vectorsText() + "  [down in " + strings.Join(down, ", ") + "]"
+}
+
+// vectorsText is CopyVectors as the dump shows it.
+func (o *ArrayOrder) vectorsText() string {
+	if o.CopyVectors {
+		return "  [vectors copied]"
+	}
+
+	return ""
 }
 
 // overlapRelation is what overlap found between an assignment's target and one array
@@ -121,7 +135,7 @@ const (
 )
 
 // arrayOrder is how the array assignment target = value is to run, or false
-// after NOTIMPL (a temporary whose size isn't known when compiling).
+// after an error.
 func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrder, bool) {
 	rank := rankOf(target)
 	ts := baseSymbol(target)
@@ -134,22 +148,15 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 		return nil, false
 	}
 
+	// The target's subscripts must be computed before any element is defined
+	// (7.5.1.5); a vector subscript's elements are read as the loops go, so
+	// one that reads the target is copied first.
+	o.CopyVectors = vectorsRead(target, ts)
+
 	if c, ok := value.(*Constructor); ok && rank == 1 && !a.noFill && !reads(c, ts) {
 		o.Fill = true
 
 		return o, true
-	}
-
-	if !a.constructorSizes(value) {
-		return nil, false
-	}
-
-	// The target's subscripts must be computed before any element is defined
-	// (7.5.1.5); a vector subscript's elements are read as the loops go.
-	if vectorsRead(target, ts) {
-		a.notImplForm(pos, "a vector subscript in an assignment's target that reads the target's own array")
-
-		return nil, false
 	}
 
 	o.Temporary = !relateValue(target, value, need)
@@ -165,18 +172,25 @@ func (a *analyzer) arrayOrder(pos diag.Position, target, value Expr) (*ArrayOrde
 	}
 
 	shape, _ := a.conform(pos, target.Shape(), value.Shape())
-
-	if _, known := shape.Size(); !known || (value.Type().Kind == Character && value.Type().Size == 0) {
-		a.notImplForm(pos, "an array assignment that needs a temporary of a size not known when compiling (Phase 104)")
-
-		return nil, false
-	}
-
-	for _, e := range shape {
-		o.TempShape = append(o.TempShape, e.Size)
-	}
+	o.TempShape = tempShape(shape)
 
 	return o, true
+}
+
+// tempShape is an array temporary's extents for a value of the given shape:
+// each one's size, or -1 where it is known only when the program runs, when
+// lowering computes it.
+func tempShape(shape Shape) []int {
+	list := make([]int, len(shape))
+
+	for i, e := range shape {
+		list[i] = e.Size
+		if !e.Known {
+			list[i] = -1
+		}
+	}
+
+	return list
 }
 
 // relateValue relates each array the value reads to the target, adding the
@@ -261,23 +275,6 @@ func (a *analyzer) checkManyOne(target Expr) bool {
 			}
 
 			seen[c.Int] = true
-		}
-	}
-
-	return true
-}
-
-// constructorSizes reports a Constructor among the value's arrays whose extent
-// isn't known when compiling: it is built into an array temporary, which
-// must have a size known when compiling (finding 7), unless it is the whole
-// of an assignment's value (ArrayOrder.Fill). False after NOTIMPL.
-func (a *analyzer) constructorSizes(value Expr) bool {
-	for _, leaf := range Leaves(value) {
-		if c, ok := leaf.(*Constructor); ok && !c.S[0].Known {
-			a.notImplForm(c.Pos, "an array constructor of a size not known when compiling, but as an array's whole value, "+
-				"(Phase 104)")
-
-			return false
 		}
 	}
 
@@ -727,14 +724,21 @@ func offsetForm(e Expr) (string, int) {
 
 // Inline reports whether the scalarizer computes the scalar e in its loops,
 // at each element, rather than once before them: a constant, a variable, an
-// element whose subscripts are constants, and any CHARACTER value, whose text
-// it reads where it is (the CHARACTER values it can't, a function's or a
-// concatenation's of a length known only when the program runs, are NOTIMPL:
-// checkArrayParts).
+// element whose subscripts are constants, and a CHARACTER value, whose text
+// it reads where it is; but not a CHARACTER function's value, which is called
+// once, nor a concatenation whose length is known only when the program runs,
+// whose dynamic string is made once (docs/planning/PHASE-104 - Fortran 90
+// dynamic arrays.md, finding 8).
 func Inline(e Expr) bool {
 	switch e := e.(type) {
 	case *Const, *Var:
 		return true
+
+	case *FuncRef, *StmtFuncRef:
+		return false
+
+	case *Concat:
+		return e.T.Size > 0
 
 	case *Elem:
 		for _, s := range e.Subs {
@@ -783,67 +787,4 @@ func readSymbols(e Expr) []*Symbol {
 	walk(e)
 
 	return list
-}
-
-// checkArrayParts reports the parts of an array assignment's value the
-// scalarizer can't compute yet: a CHARACTER value made by a function, which
-// would be called at each element, and a concatenation in an array expression
-// whose length is known only when the program runs, whose dynamic string would
-// be made at each element. False after NOTIMPL.
-func (a *analyzer) checkArrayParts(value Expr) bool {
-	ok := true
-
-	var visit func(Expr)
-
-	visit = func(e Expr) {
-		if !ok || e == nil {
-			return
-		}
-
-		switch e := e.(type) {
-		case *FuncRef, *StmtFuncRef:
-			if e.Type().Kind == Character {
-				a.notImplForm(e.Position(), "a CHARACTER function's value in an array expression")
-				ok = false
-			}
-
-		case *Concat:
-			if e.T.Size == 0 {
-				a.notImplForm(e.Position(), "a concatenation of a length not constant in an array expression")
-				ok = false
-
-				return
-			}
-
-			for _, p := range e.Parts {
-				visit(p)
-			}
-
-		case *Substring:
-			visit(e.X)
-
-		case *Unary:
-			visit(e.X)
-
-		case *Binary:
-			visit(e.X)
-			visit(e.Y)
-
-		case *Compare:
-			visit(e.X)
-			visit(e.Y)
-
-		case *Convert:
-			visit(e.X)
-
-		case *IntrinsicRef:
-			for _, x := range e.Args {
-				visit(x)
-			}
-		}
-	}
-
-	visit(value)
-
-	return ok
 }

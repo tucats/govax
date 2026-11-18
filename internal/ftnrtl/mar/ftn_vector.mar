@@ -603,4 +603,11 @@
 	.MASK	FTN$DEALLOCATE
 	JMP	L^FTN$DEALLOCATE+2
 
+;
+; The storage of an array temporary past 64 KB, from the heap (FTN_ALLOC).
+;
+	.TRANSFER FTN$GET_TEMP	; 704: FTN$GET_TEMP(desc)
+	.MASK	FTN$GET_TEMP
+	JMP	L^FTN$GET_TEMP+2
+
 	.END

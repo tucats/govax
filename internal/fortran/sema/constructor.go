@@ -26,6 +26,10 @@ type ctorBuilder struct {
 	typed bool
 	size  int
 	known bool
+
+	// lengthOf is the first CHARACTER value whose length isn't known when
+	// compiling (Constructor.LengthOf).
+	lengthOf Expr
 }
 
 // constructor analyzes an array constructor: an ArrayConst if its values are
@@ -47,6 +51,9 @@ func (a *analyzer) constructor(e *ast.ArrayConstructor) Expr {
 	}
 
 	c := &Constructor{exprBase: exprBase{T: b.t, Pos: e.Pos}, Items: items}
+	if b.t.Kind == Character && b.t.Size == 0 {
+		c.LengthOf = b.lengthOf
+	}
 	c.S = Shape{{Size: b.size, Known: b.known}}
 
 	if !b.known {
@@ -99,12 +106,21 @@ func (b *ctorBuilder) value(v Expr) (Expr, bool) {
 	case t.Kind == Invalid:
 		return v, false
 
-	case t.Kind == Character && t.Size == 0:
-		b.a.notImplForm(v.Position(), "an array constructor of CHARACTER values of a length not constant")
+	case t.Kind == Character && t.Size == 0 && b.lengthOf == nil && (!b.typed || b.t.Size == 0) &&
+		!lengthFromNames(v):
+		// The elements' length is computed from the first value of a length
+		// not constant, before the items are: so it must be one whose length
+		// its names give, whatever an implied DO's variable is.
+		b.a.notImplForm(v.Position(), "an array constructor whose first CHARACTER value of a length not constant "+
+			"isn't a variable's, an array's, or a concatenation of them")
 
 		return v, false
 
 	case !b.typed:
+		if t.Kind == Character && t.Size == 0 {
+			b.lengthOf = v
+		}
+
 		b.t, b.typed = t, true
 
 	case t == b.t:
@@ -113,9 +129,15 @@ func (b *ctorBuilder) value(v Expr) (Expr, bool) {
 		v = b.a.convert(v, b.t)
 
 	case t.Kind == Character && b.t.Kind == Character:
-		b.a.report("CONSTRUCTLEN", v.Position(), b.t.Size, t.Size)
+		// Values whose lengths are known when compiling must have one
+		// length; one known only when the program runs is the program's to
+		// get right (the standard's 4.5), made the elements' length as an
+		// assignment would (ours).
+		if b.t.Size > 0 && t.Size > 0 {
+			b.a.report("CONSTRUCTLEN", v.Position(), b.t.Size, t.Size)
 
-		return v, false
+			return v, false
+		}
 
 	default:
 		b.a.report("CONSTRUCTTYPE", v.Position(), b.t.String(), t.String())
@@ -199,4 +221,25 @@ func (b *ctorBuilder) impliedDo(d *ast.ImpliedDo) (*CtorDo, bool) {
 	b.size, b.known = size, known
 
 	return do, true
+}
+
+// lengthFromNames reports whether the CHARACTER value v's length is one its
+// names give, which lowering can compute before the constructor's items: a
+// variable, an element, an array or section, or a concatenation of them and
+// of values of lengths known when compiling.
+func lengthFromNames(v Expr) bool {
+	switch v := v.(type) {
+	case *Var, *Elem, *ArrayRef, *Section:
+		return true
+	case *Concat:
+		for _, p := range v.Parts {
+			if p.Type().Size == 0 && !lengthFromNames(p) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	return false
 }

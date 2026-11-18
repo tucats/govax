@@ -62,7 +62,7 @@ func TestWhere(t *testing.T) {
 		{"a jump to END WHERE", []string{"GO TO 10", "WHERE (L)", "A = 1", "10 END WHERE"}, "INTOBLOCK: this jump to label 10 goes into a WHERE construct from outside it"},
 		{"a jump to WHERE", []string{"GO TO 10", "10 WHERE (L)", "A = 1", "END WHERE"}, "mask; "},
 		{"a temporary not known", []string{"N = 3", "WHERE (A(1:N) > 0)", "A(1:N) = -A(1:N)", "B(1:N) = 1", "END WHERE"},
-			"NOTIMPL: a WHERE whose mask needs a temporary of a size not known when compiling (Phase 104) is not implemented yet"},
+			"temp; ; "},
 	}
 
 	for _, c := range cases {

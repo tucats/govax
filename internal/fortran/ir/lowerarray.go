@@ -113,22 +113,28 @@ func (l *lowerer) arrayAssign(s *sema.Assign) {
 // everywhere for a nil mask. With a temporary both nests are masked: the value
 // is computed only where it is assigned.
 func (l *lowerer) maskedAssign(s *sema.Assign, mask *whereMask) {
+	target := s.Target
+	if s.Order != nil && s.Order.CopyVectors {
+		target = l.copyVectors(target)
+	}
+
 	if s.Order != nil && s.Order.Fill {
-		l.fillConstructor(s.Target, s.Value.(*sema.Constructor))
+		l.fillConstructor(target, s.Value.(*sema.Constructor))
 
 		return
 	}
 
 	if s.Order != nil && s.Order.Temporary {
-		temp := l.arrayTemp(s.Value.Type(), s.Order.TempShape)
+		t, length := l.tempType(target, s.Value)
+		temp := l.shapeTemp(t, s.Order.TempShape, l.knownShape(target.Shape(), s.Value.Shape()), length)
 
 		l.arrayNest(temp, s.Value, nil, mask)
-		l.arrayNest(s.Target, temp, nil, mask)
+		l.arrayNest(target, temp, nil, mask)
 
 		return
 	}
 
-	l.arrayNest(s.Target, s.Value, s.Order, mask)
+	l.arrayNest(target, s.Value, s.Order, mask)
 }
 
 // arrayTemp is an array temporary of type t and the extents shape, for the
@@ -237,6 +243,7 @@ func (l *lowerer) newNest(rank int, order *sema.ArrayOrder) *arrayNest {
 func (n *arrayNest) done() {
 	for _, sym := range n.kept {
 		delete(n.l.bound, sym)
+		delete(n.l.lengths, sym)
 	}
 }
 
@@ -352,6 +359,10 @@ func (n *arrayNest) hoist(e sema.Expr) sema.Expr {
 		return e
 	}
 
+	if e.Type().Kind == sema.Character {
+		return n.hoistText(e)
+	}
+
 	m := n.l.temp(n.l.typeOf(e.Type()))
 	n.l.store(m, e)
 
@@ -413,8 +424,21 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 
 	case *sema.Constructor:
 		// A constructor is built now, before the loops, into an array
-		// temporary, which they read (lowerctor.go).
-		temp := n.l.arrayTemp(leaf.T, constExtents(leaf))
+		// temporary, which they read (lowerctor.go): a cell if its extent and
+		// its elements' length are known when compiling, else a run-time
+		// temporary of its extent, or of the count of its items, made by
+		// running through them first (countItems).
+		var temp *sema.ArrayRef
+
+		switch {
+		case !leaf.S[0].Known:
+			temp = n.l.runtimeTemp(leaf.T, []Expr{n.l.countItems(leaf.Items)}, n.l.ctorLength(leaf))
+		case leaf.T.Kind == sema.Character && leaf.T.Size == 0:
+			temp = n.l.runtimeTemp(leaf.T, []Expr{LongConst(int32(leaf.S[0].Size))}, n.l.ctorLength(leaf))
+		default:
+			temp = n.l.arrayTemp(leaf.T, constExtents(leaf))
+		}
+
 		n.l.fillConstructor(temp, leaf)
 		whole(temp.Sym, leaf.Pos)
 
@@ -519,8 +543,15 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 		var count Expr
 
 		switch leaf := leaf.(type) {
-		case *sema.ArrayConst, *sema.Constructor:
+		case *sema.ArrayConst:
 			count = LongConst(int32(leaf.Shape()[i].Size))
+
+		case *sema.Constructor:
+			// Its temporary's extent (prepare).
+			count = LongConst(int32(leaf.Shape()[i].Size))
+			if !leaf.S[i].Known {
+				count = n.l.extent(info.sym, n.l.adjustableOf(info.sym), i)
+			}
 
 		case *sema.ArrayFunc:
 			if x := leaf.S[i]; x.Known {

@@ -13,7 +13,6 @@ import (
 func TestShapes(t *testing.T) {
 	const notYet = ""
 
-	const unsized = "NOTIMPL: an array assignment that needs a temporary of a size not known when compiling (Phase 104) is not implemented yet"
 
 	cases := []struct {
 		name  string
@@ -45,9 +44,12 @@ func TestShapes(t *testing.T) {
 		{"EQUIVALENCE", []string{"DIMENSION A(10), B(10)", "EQUIVALENCE (A(2), B)", "A = B"}, notYet},
 		{"one common block", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A, B", "A = B"}, notYet},
 		{"overlapping in common", []string{"DIMENSION A(10), B(10)", "COMMON /C/ A", "EQUIVALENCE (A(5), B)", "A = B"}, notYet},
-		{"a temporary of unknown size", []string{"DIMENSION A(10)", "A(1:N) = A(N:1:-1)"}, unsized},
-		{"a CHARACTER function", []string{"CHARACTER*4 C(3), F", "C = F(1)"}, "NOTIMPL: a CHARACTER function's value in an array expression is not implemented yet"},
-		{"a concatenation of unknown length", []string{"SUBROUTINE S(C, D)", "CHARACTER*(*) C(3), D", "C = C // D"}, "NOTIMPL: a concatenation of a length not constant in an array expression is not implemented yet"},
+		{"a temporary of unknown size", []string{"DIMENSION A(10)", "A(1:N) = A(N:1:-1)"}, ""},
+		{"a CHARACTER function", []string{"CHARACTER*4 C(3), F", "C = F(1)"}, ""},
+		{"a concatenation of unknown length", []string{"SUBROUTINE S(C, D)", "CHARACTER*(*) C(3), D", "C = C // D"}, ""},
+		{"a constructor of a substring's values", []string{"SUBROUTINE S(C, D, N)", "CHARACTER*(*) C(3), D", "C = (/ D(1:N), C(2:3) /)"},
+			"NOTIMPL: an array constructor whose first CHARACTER value of a length not constant isn't a variable's, an array's, or a concatenation of them is not implemented yet"},
+		{"a constructor of a dummy's values", []string{"SUBROUTINE S(C, D)", "CHARACTER*(*) C(3), D", "C = (/ D, (C(I), I = 2, 3) /)"}, ""},
 
 		// What doesn't conform.
 		{"extents", []string{"DIMENSION A(10), B(5)", "A = B"}, "NOTCONFORM: the shapes (10) and (5) don't conform"},
@@ -77,7 +79,7 @@ func TestShapes(t *testing.T) {
 		{"a vector with a triplet", []string{"DIMENSION A(4, 10), B(4, 3)", "INTEGER IV(3)", "B = A(:, IV)"}, ""},
 		{"a vector's extent", []string{"DIMENSION A(10), B(5)", "INTEGER IV(3)", "B = A(IV)"}, "NOTCONFORM: the shapes (5) and (3) don't conform"},
 		{"a vector of rank 2", []string{"DIMENSION A(10), B(4)", "INTEGER IV(2, 2)", "B = A(IV)"}, "VECTORRANK: a vector subscript must be an array of rank one, not rank 2"},
-		{"a vector of the target", []string{"INTEGER IV(3)", "IV(IV) = 1"}, "NOTIMPL: a vector subscript in an assignment's target that reads the target's own array is not implemented yet"},
+		{"a vector of the target", []string{"INTEGER IV(3)", "IV(IV) = 1"}, ""},
 		{"a vector where a scalar must be", []string{"DIMENSION A(10)", "INTEGER IV(3)", "IF (A(IV) .GT. 0) STOP"}, "NOTSCALAR: an array is used where a scalar is required"},
 		{"a condition", []string{"DIMENSION A(10)", "IF (A .GT. 0) STOP"}, "NOTSCALAR: an array is used where a scalar is required"},
 		{"a DO bound", []string{"DIMENSION A(10)", "DO 10 I = 1, A(1:2)", "10 CONTINUE"}, "NOTSCALAR: an array is used where a scalar is required"},
@@ -100,8 +102,7 @@ func TestShapes(t *testing.T) {
 			"MANYONE: the vector subscript of A names element 2 more than once, so the section can't be given values"},
 		{"an expression read into", []string{"DIMENSION A(10)", "READ *, A + 1"},
 			"BADINPUT: an expression can't be read into: an input list holds variables, array elements, substrings, arrays, and implied-DO lists"},
-		{"a CHARACTER function's values", []string{"CHARACTER*4 C(3), F", "PRINT *, C // F(1)"},
-			"NOTIMPL: a CHARACTER function's value in an array expression is not implemented yet"},
+		{"a CHARACTER function's values", []string{"CHARACTER*4 C(3), F", "PRINT *, C // F(1)"}, ""},
 		{"a section as an internal file", []string{"CHARACTER*4 C(6)", "WRITE (C(1:6:2), '(A)') 'X'"},
 			"NOTIMPL: an array section as an internal file or buffer is not implemented yet"},
 		{"a section as ENCODE's buffer", []string{"DIMENSION A(10)", "ENCODE (8, 100, A(1:9:2)) X", "100 FORMAT (F8.2)"},

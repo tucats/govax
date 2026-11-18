@@ -356,6 +356,9 @@ func StmtText(s Stmt) string {
 
 	case *StackRelease:
 		return "stack release to " + ExprText(s.To)
+
+	case *StackMark:
+		return MemText(s.Dst) + " = stack mark"
 	}
 
 	return fmt.Sprintf("%T", s)

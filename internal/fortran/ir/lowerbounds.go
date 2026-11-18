@@ -262,7 +262,7 @@ func (l *lowerer) upperBound(s *sema.Symbol, c *Cell, i int) Expr {
 	switch {
 	case sema.OpenEnded(s, s.Dims, i):
 		return LongConst(math.MaxInt32)
-	case dim.UpperExpr == nil && !dim.Deferred:
+	case dim.UpperExpr == nil && !dim.Deferred && !dim.Runtime:
 		return LongConst(int32(dim.Upper))
 	}
 

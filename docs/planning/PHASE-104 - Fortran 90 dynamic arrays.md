@@ -468,7 +468,8 @@ calls), then the frame's run-time storage everything after needs.
    - 4b. Automatic CHARACTER objects and a dummy's nonconstant `LEN=` (done
      2026-11-18).
    - 4c. The scalarizer's temporaries of run-time size, the heap past 64 KB,
-     CHARACTER values of a run-time length in array expressions, `IV(IV)`.
+     CHARACTER values of a run-time length in array expressions, `IV(IV)` (done
+     2026-11-18).
 5. **Assumed-shape dummies:** the entry copy, every kind of actual, EXPLICITREQ,
    rank and length checks, INTERFACEDIFF's new characteristics, OPTIONAL and ENTRY,
    `/CHECK=BOUNDS`'s descriptor check (findings 9 and 10).
@@ -741,3 +742,60 @@ The author read the survey and accepted every recommendation:
     `ir`, and `codegen`, and `testdata/fortran90/autolen.f90` (every mode, paging
     both ways; gfortran prints the same 26 lines). MANUAL.md's 14.13 has
     "CHARACTER lengths that aren't constant", and HELP FORTRAN a paragraph.
+- **2026-11-18, subtask 4c done:** The scalarizer's temporaries of run-time size.
+  - *sema.* The NOTIMPLs Phase 102 left for this phase are gone: an assignment
+    through a temporary of any size (`ArrayOrder.TempShape`, -1 for an extent
+    known only when the program runs, `tempShape`), a WHERE's mask kept the same
+    way (`Where.MaskTemp`), a constructor of a run-time size wherever it stands
+    (`constructorSizes` gone), and a vector subscript of the target's own array
+    (`ArrayOrder.CopyVectors`, set before the Fill test, so `V(V) = (/ ... /)` is
+    right too). `checkArrayParts` is gone: a CHARACTER function's value and a
+    concatenation of a run-time length aren't `Inline`, so the scalarizer computes
+    them once, before the loops; an elemental concatenation of a run-time length
+    is built for each element in a dynamic string, freed by the next branch, as
+    before. MERGE of CHARACTER values of a run-time length is allowed. A
+    CHARACTER constructor whose first value's length isn't constant has
+    `Constructor.LengthOf`, that value, if it is a variable's, an array's, or a
+    concatenation of them (`lengthFromNames`; else NOTIMPL, ours), and later
+    values of another length are made that length as by assignment (ours: the
+    standard requires one length, which can't be checked when compiling; two
+    constant lengths still draw CONSTRUCTLEN). `Dim.Runtime` and
+    `NewRuntimeArray` are lowering's temporaries of run-time extents, kept as
+    automatic arrays are (`AutomaticObject`).
+  - *The IR* (`ir/lowertemps.go`). `runtimeTemp`: a class A descriptor cell
+    (`$Rn`, pooled by form, `freeRuntime`) standing among the adjustable arrays'
+    cells, so the scalarizer reads it as any adjustable array; its extents, the
+    upper bounds, ARSIZE, the storage, and A0 stored by the statement. The
+    storage is the stack's up to 64 KB (`tempStackLimit`, the author's answer 1),
+    the heap's past it (FTNRTL's new `FTN$GET_TEMP`, vector 704, GSMATCH 1,23,
+    INSVIRMEM as ALLOCATE's); SP is saved first by a new IR statement,
+    `StackMark` (`MOVL SP,dst`), through check, dump, codegen, and every
+    optimizer walk. `endTemps`, at the statement's end (from `release` when
+    control is there, or `stmtCond` and `stmtExpr` before an IF's, a logical IF's,
+    a DO WHILE's, an arithmetic IF's, a computed GO TO's, or a LOGICAL or INTEGER
+    CASE's branch), frees the hoisted dynamic strings, gives a heap
+    block to `FTN$DEALLOCATE`, and restores SP (`StackRelease`): a statement in a
+    loop doesn't grow the stack. `shapeTemp` chooses a cell or a run-time
+    temporary; `extentsOf` computes the extents a shape's leaves have;
+    `countItems` counts a constructor's items, running its implied DOs without
+    their values; `copyVectors` copies the target's vectors and rebuilds the
+    section's shape; `hoistText` binds a CHARACTER value computed once, its
+    run-time length in a cell (`lengths`), its dynamic string freed at
+    `endTemps`. A temporary's CHARACTER length is the value's if known, else the
+    target's (`tempType`, `elementLength`). MERGE of run-time lengths chooses an
+    address and a length, with no copy (`mergeText`). A constructor's temporary
+    is a run-time one when its extent or its elements' length isn't known.
+  - *A fix found on the way:* a constructor of a size not known when compiling
+    in a scalar context (`SUM((/ (I, I = 1, N) /))`) was built into a temporary
+    of 0 elements, so its reduction was wrong (SUM gave 0) with no message.
+  - *Choices of ours, unconfirmed:* the 64 KB limit is a temporary's own size,
+    not the statement's sum; a temporary's size isn't checked for overflow past
+    2**31 - 1 bytes (FTN$ALLOCATE's EMUL test isn't repeated); a statement left
+    by an unwind leaves a heap temporary allocated.
+  - *Tests:* `sema`'s `TestShapes`, `TestArrayConstants`, and `TestWhere` cases
+    changed from NOTIMPL to their answers (a constructor of a substring's values
+    is the new NOTIMPL); the `f90rtemp` goldens in `sema`, `ir`, and `codegen`;
+    `testdata/fortran90/rtemps.f90` (every mode, paging both ways; gfortran
+    prints the same 20 lines), with a temporary of 80,000 bytes and a statement
+    through a temporary 6,001 times in one call. MANUAL.md's 14.13 and HELP
+    FORTRAN describe temporaries of any size.

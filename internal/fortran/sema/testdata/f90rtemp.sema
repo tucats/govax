@@ -1,0 +1,20 @@
+== SUBROUTINE RTEMP
+  RTEMP                   program unit
+  A         REAL          array(1:N)       argument 1
+  N         INTEGER       variable         argument 2
+  C         CHARACTER*(*) array(1:N)       argument 3
+  IV        INTEGER       array(1:N)       argument 4
+  F         CHARACTER*4   function         argument 5
+  $LOCAL is 0 bytes
+12          A[N:1:-1] = A[]  [through a temporary]
+13          C[2:N:1] = C[1:(-:I N 1):1]  [down in 1]
+14          WHERE (.GT.:R A[] 0.0)  [mask in a temporary]
+15            A[] = (-:R A[])
+16          ELSEWHERE
+17            A[] = 1.0
+18          END WHERE
+19          A[] = (+:R A[] (/:R ((REAL I), I = 1, N, 1) /))
+20          IV[<IV[]>] = 0  [vectors copied]
+21          C[] = (//:C F(N) C[])
+22          C[] = (merge:CHARACTER*(*) MERGE C[] C[N:1:-1] (.GT.:R A[] 0.0))  [through a temporary]
+23          END

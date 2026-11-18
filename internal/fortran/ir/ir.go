@@ -732,7 +732,7 @@ type CountedLoop struct {
 }
 
 // Stmt is a statement in a block: an Assign, a CharMove, a Call, a StackAllocate,
-// or a StackRelease.
+// a StackRelease, or a StackMark.
 type Stmt interface {
 	// Source is the FORTRAN statement the IR statement came from, which
 	// says which source lines the code generator writes before its
@@ -830,6 +830,14 @@ type (
 		origin
 		To Expr
 	}
+
+	// StackMark stores SP's value at Dst, MOVL SP,dst: where a statement
+	// whose temporaries StackAllocate makes starts, which its StackRelease
+	// puts SP back to at its end.
+	StackMark struct {
+		origin
+		Dst *Mem
+	}
 )
 
 func (*Assign) stmtNode()        {}
@@ -837,6 +845,7 @@ func (*CharMove) stmtNode()      {}
 func (*Call) stmtNode()          {}
 func (*StackAllocate) stmtNode() {}
 func (*StackRelease) stmtNode()  {}
+func (*StackMark) stmtNode()     {}
 
 // The terminators.
 type (

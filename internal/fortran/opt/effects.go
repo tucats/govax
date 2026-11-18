@@ -294,6 +294,9 @@ func (s *Storage) StmtEffects(st ir.Stmt) Effects {
 
 	case *ir.StackRelease:
 		c.expr(st.To)
+
+	case *ir.StackMark:
+		c.write(st.Dst)
 	}
 
 	return c.e

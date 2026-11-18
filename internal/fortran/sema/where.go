@@ -33,9 +33,10 @@ import (
 // mask before the last of them, the scalarizer computes the mask in each
 // assignment's loops, element by element, beside the value: the common WHERE
 // (A > 0) A = SQRT(A) needs no more. Otherwise the mask goes first into a
-// LOGICAL array temporary of its shape (Where.MaskTemp), which each nest reads;
-// its size must then be known when compiling, or it is NOTIMPL naming Phase
-// 104, as any array temporary is. The test is finishWhere's.
+// LOGICAL array temporary of its shape (Where.MaskTemp), which each nest reads,
+// of a size known when compiling or only when the program runs (docs/planning/
+// PHASE-104 - Fortran 90 dynamic arrays.md, finding 8). The test is
+// finishWhere's.
 
 // whereStatement analyzes the WHERE statement, WHERE (mask) assignment: a
 // construct of one assignment.
@@ -183,10 +184,6 @@ func (a *analyzer) whereAssign(w *Where, s *ast.AssignStmt) *Assign {
 		return nil
 	}
 
-	if !a.checkArrayParts(value) {
-		return nil
-	}
-
 	return &Assign{stmtBase{s}, target, value, nil}
 }
 
@@ -287,16 +284,7 @@ func (a *analyzer) finishWhere(w *Where, pos diag.Position) bool {
 		return true
 	}
 
-	shape := w.Mask.Shape()
-	if _, known := shape.Size(); !known {
-		a.notImplForm(pos, "a WHERE whose mask needs a temporary of a size not known when compiling (Phase 104)")
-
-		return false
-	}
-
-	for _, e := range shape {
-		w.MaskTemp = append(w.MaskTemp, e.Size)
-	}
+	w.MaskTemp = tempShape(w.Mask.Shape())
 
 	return true
 }

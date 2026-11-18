@@ -124,10 +124,10 @@ NOMEM:	MOVL	#FOR$_INSVIRMEM,R0
 	; value after them), given here as unit 0 and no file; the others have
 	; none. The user PC is where the routine's call returns.
 	;
-FAIL:	BBC	#ALLOC_V_STAT,8(AP),50$	; STAT=?
+FAIL:	BBC	#ALLOC_V_STAT,8(AP),SIGNAL	; STAT=?
 	EXTZV	#3,#12,R0,R0		; yes: its FOR number
 	RET
-50$:	CMPL	R0,#FOR$_INSVIRMEM
+SIGNAL:	CMPL	R0,#FOR$_INSVIRMEM
 	BNEQ	60$
 	CLRQ	-(SP)			; RMS's status and value: none
 	PUSHL	16(FP)			; the user PC
@@ -168,5 +168,27 @@ FAIL:	BBC	#ALLOC_V_STAT,8(AP),50$	; STAT=?
 	CLRL	DSC$A_POINTER(R2)	; not allocated now
 	CLRL	R0
 	RET
+
+;
+; FTN$GET_TEMP(descriptor)
+;
+; The storage of an array temporary too big for the stack (docs/planning/
+; PHASE-104 - Fortran 90 dynamic arrays.md, finding 6): a statement whose
+; temporary's size is known only when the program runs takes it from the
+; stack up to 64 KB, and past that from here. The descriptor (class A,
+; contiguous) already has ARSIZE; this takes that many bytes from LIB$GET_VM
+; into its POINTER, or signals INSVIRMEM, as an ALLOCATE without STAT=
+; does. The statement gives the storage back at its end with
+; FTN$DEALLOCATE, which reads only ARSIZE and POINTER.
+;
+	.ENTRY	FTN$GET_TEMP,^M<R2>
+	MOVL	4(AP),R2		; the descriptor
+	PUSHAL	DSC$A_POINTER(R2)	; LIB$GET_VM (num_bytes, base_adr)
+	PUSHAL	DSC$L_ARSIZE(R2)
+	CALLS	#2,G^LIB$GET_VM
+	BLBC	R0,10$
+	RET
+10$:	MOVL	#FOR$_INSVIRMEM,R0
+	BRW	SIGNAL
 
 	.END

@@ -44,7 +44,7 @@ func (l *lowerer) automaticCell(s *sema.Symbol, c *Cell) {
 	}
 
 	for _, dim := range s.Dims {
-		d.Dims = append(d.Dims, Bound{dim.Lower, dim.Upper, dim.LowerExpr != nil || dim.UpperExpr != nil})
+		d.Dims = append(d.Dims, Bound{dim.Lower, dim.Upper, dim.LowerExpr != nil || dim.UpperExpr != nil || dim.Runtime})
 	}
 
 	c.Kind, c.T, c.Desc = DescriptorCell, Long, d

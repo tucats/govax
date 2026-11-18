@@ -59,6 +59,9 @@ func (w *walker) stmt(st ir.Stmt) {
 
 	case *ir.StackRelease:
 		w.expr(st.To, true, false)
+
+	case *ir.StackMark:
+		w.mem(st.Dst, false)
 	}
 }
 
@@ -229,6 +232,9 @@ func (w *memWalker) stmt(st ir.Stmt) {
 
 	case *ir.StackRelease:
 		w.expr(st.To)
+
+	case *ir.StackMark:
+		w.use(st.Dst, roleWrite)
 	}
 }
 

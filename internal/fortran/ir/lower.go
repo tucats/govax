@@ -94,6 +94,13 @@ type lowerer struct {
 	arrays      int
 	boundArrays []*sema.Symbol
 
+	// freeRuntime are the descriptor cells of run-time temporaries not in
+	// use, by their descriptors' form, runtimes how many the routine has, and
+	// runtime what the statement being lowered must give back (lowertemps.go).
+	freeRuntime map[string][]*Cell
+	runtimes    int
+	runtime     runtimeTemps
+
 	// after are statements to be done at the end of the statement being
 	// lowered, before its block's terminator if it has one: the freeing
 	// of its dynamic strings.
@@ -150,18 +157,19 @@ func newLowerer(u *sema.Unit, host *lowerer) *lowerer {
 	}
 
 	return &lowerer{
-		unit:      u,
-		r:         r,
-		host:      host,
-		cells:     map[*sema.Symbol]*Cell{},
-		params:    map[*sema.Symbol]*Param{},
-		bound:     map[*sema.Symbol]*Mem{},
-		labels:    map[int]*Block{},
-		free:      map[Type][]*Cell{},
-		freeDesc:  map[string][]*Cell{},
-		freeText:  map[int][]*Cell{},
-		freeArray: map[arrayTempKey][]*Cell{},
-		data:      map[string]*Datum{},
+		unit:        u,
+		r:           r,
+		host:        host,
+		cells:       map[*sema.Symbol]*Cell{},
+		params:      map[*sema.Symbol]*Param{},
+		bound:       map[*sema.Symbol]*Mem{},
+		labels:      map[int]*Block{},
+		free:        map[Type][]*Cell{},
+		freeDesc:    map[string][]*Cell{},
+		freeText:    map[int][]*Cell{},
+		freeArray:   map[arrayTempKey][]*Cell{},
+		freeRuntime: map[string][]*Cell{},
+		data:        map[string]*Datum{},
 	}
 }
 
@@ -583,7 +591,25 @@ func (l *lowerer) fillDescriptor(c *Cell) {
 // release gives back the temporaries and descriptor cells the statement
 // just lowered used, for the next statement to use again.
 func (l *lowerer) release() {
+	// The run-time temporaries are given back here, where the statement ends,
+	// if control is here; a statement's branch gives them back before it
+	// (stmtCond).
+	if l.pendingTemps() {
+		if l.cur != nil {
+			l.endTemps()
+		} else {
+			l.runtime = runtimeTemps{}
+		}
+	}
+
 	for _, c := range l.busy {
+		switch {
+		case c.Kind == DescriptorCell && c.Sym != nil && c.Sym.AutomaticObject:
+			key := descriptorKey(c.Desc)
+			l.freeRuntime[key] = append(l.freeRuntime[key], c)
+			continue
+		}
+
 		switch c.Kind {
 		case DescriptorCell:
 			key := descriptorKey(c.Desc)

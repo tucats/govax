@@ -393,8 +393,28 @@ func (l *lowerer) char(e *sema.IntrinsicRef) Text {
 }
 
 // mergeText is MERGE of CHARACTER values, whose length is a constant: FSOURCE
-// moved to a CHARACTER temporary, which TSOURCE replaces where MASK holds.
+// moved to a CHARACTER temporary, which TSOURCE replaces where MASK holds. Of
+// values whose length is known only when the program runs, it is the one
+// chosen where it is, its address and length chosen (docs/planning/PHASE-104 -
+// Fortran 90 dynamic arrays.md, finding 8).
 func (l *lowerer) mergeText(e *sema.IntrinsicRef) Text {
+	if e.T.Size == 0 {
+		ts, fs := l.chars(e.Args[0]), l.chars(e.Args[1])
+		at, n := l.temp(Long), l.temp(Long)
+
+		l.emit(&Assign{origin: l.origin(), Dst: at, Src: &Addr{fs.Mem}})
+		l.emit(&Assign{origin: l.origin(), Dst: n, Src: fs.Len})
+
+		set, next := l.newBlock(), l.newBlock()
+		l.divert(l.cond(e.Args[2]), set, next)
+		l.begin(set)
+		l.emit(&Assign{origin: l.origin(), Dst: at, Src: &Addr{ts.Mem}})
+		l.emit(&Assign{origin: l.origin(), Dst: n, Src: ts.Len})
+		l.begin(next)
+
+		return Text{&Mem{Ptr: &Load{at}, T: Byte}, &Load{n}}
+	}
+
 	n := LongConst(int32(e.T.Size))
 	v := Text{l.textTemp(e.T.Size), n}
 

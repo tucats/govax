@@ -69,7 +69,7 @@ func TestArrayConstants(t *testing.T) {
 		{"RESHAPE short", []string{"INTEGER, PARAMETER :: M(2, 2) = RESHAPE((/ 1, 2 /), (/ 2, 2 /))"}, "BADRESHAPE: this RESHAPE can't be computed: SOURCE has 2 elements, too few for the shape, and no PAD"},
 		{"a DIM out of range", []string{"DIMENSION A(3)", "J = SIZE(A, 2)"}, "DIMRANGE: SIZE's DIM, 2, isn't a dimension of an array of rank 1"},
 		{"a many-one section", []string{"DIMENSION A(5)", "A((/ 1, 2, 1 /)) = 0"}, "MANYONE: the vector subscript of A names element 1 more than once, so the section can't be given values"},
-		{"a constructor of unknown size in an expression", []string{"REAL :: A(4)", "A(1:N) = (/ (X, I = 1, N) /) + A(1:N)"}, "NOTIMPL: an array constructor of a size not known when compiling, but as an array's whole value, (Phase 104) is not implemented yet"},
+		{"a constructor of unknown size in an expression", []string{"REAL :: A(4)", "A(1:N) = (/ (X, I = 1, N) /) + A(1:N)"}, "(+:R (/:R (X, I = 1, N, 1) /) A[1:N:1])"},
 		{"an implied DO's REAL variable", []string{"REAL :: A(2)", "A = (/ (X, X = 1, 2) /)"}, "CTORDOVAR: an array constructor's implied-DO variable X must be INTEGER"},
 	}
 

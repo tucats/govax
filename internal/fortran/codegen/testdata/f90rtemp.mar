@@ -1,0 +1,763 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for RTEMP, a subroutine
+;   A     REAL (?)           argument 1  @RTEMP.A(AP)
+;   N     INTEGER            argument 2  @RTEMP.N(AP)
+;   C     CHARACTER*(*) (?)  argument 3  @RTEMP.C(AP)
+;   IV    INTEGER (?)        argument 4  @RTEMP.IV(AP)
+;   F     CHARACTER*4        argument 5  @RTEMP.F(AP)
+;   $W    REAL (?)           $LOCAL+112  RTEMP.$R1
+;   $W    LOGICAL (?)        $LOCAL+184  RTEMP.$R2
+;   $W    INTEGER (?)        $LOCAL+244  RTEMP.$R3
+;   $W    CHARACTER*(*) (?)  $LOCAL+304  RTEMP.$R4
+;
+RTEMP.A = 4				; A is argument 1
+RTEMP.N = 8				; N is argument 2
+RTEMP.C = 12				; C is argument 3
+RTEMP.IV = 16				; IV is argument 4
+RTEMP.F = 20				; F is argument 5
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+RTEMP.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$B2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; C's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$B3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; IV's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$I1:
+	.BLKL	1			; an array statement's loop index
+RTEMP.$T1:
+	.BLKL	1			; temporary
+RTEMP.$T2:
+	.BLKL	1			; temporary
+RTEMP.$T3:
+	.BLKL	1			; temporary
+RTEMP.$R1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$T4:
+	.BLKL	1			; temporary
+RTEMP.$I2:
+	.BLKL	1			; an array statement's loop index
+RTEMP.$T5:
+	.BLKL	1			; temporary
+RTEMP.$C1:
+	.BLKL	1			; array (line 12), dimension 1's count
+RTEMP.$I3:
+	.BLKL	1			; an array statement's loop index
+RTEMP.$T6:
+	.BLKL	1			; temporary
+RTEMP.$T7:
+	.BLKL	1			; temporary
+RTEMP.$T8:
+	.BLKL	1			; temporary
+RTEMP.$C2:
+	.BLKL	1			; array (line 12), dimension 1's count
+RTEMP.$C3:
+	.BLKL	1			; array (line 13), dimension 1's count
+RTEMP.$R2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_LU,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$C4:
+	.BLKL	1			; array (line 14), dimension 1's count
+RTEMP.$C5:
+	.BLKL	1			; array (line 15), dimension 1's count
+RTEMP.$I4:
+	.BLKL	1			; an array statement's loop index
+RTEMP.$C6:
+	.BLKL	1			; array (line 17), dimension 1's count
+RTEMP.$C7:
+	.BLKL	1			; constructor (line 19), count of implied DO of I's count
+RTEMP.$C8:
+	.BLKL	1			; constructor (line 19), implied DO of I's count
+RTEMP.$C9:
+	.BLKL	1			; array (line 19), dimension 1's count
+RTEMP.$R3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$C10:
+	.BLKL	1			; array (line 20), dimension 1's count
+RTEMP.$C11:
+	.BLKL	1			; array (line 20), dimension 1's count
+RTEMP.$T9:
+	.BLKL	1			; characters, for one statement
+RTEMP.$C12:
+	.BLKL	1			; array (line 21), dimension 1's count
+RTEMP.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+RTEMP.$T10:
+	.BLKB	2			; temporary
+	.BLKB	2
+RTEMP.$R4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+RTEMP.$C13:
+	.BLKL	1			; array (line 22), dimension 1's count
+RTEMP.$C14:
+	.BLKL	1			; array (line 22), dimension 1's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+RTEMP.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS RTEMP.$T9
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Array temporaries of a size known only when the program runs (Phase
+;    3  C     104, subtask 4c): an assignment through one, a CHARACTER one of a
+;    4  C     length known only then, a WHERE's mask kept in one, a constructor's,
+;    5  C     the target's own vector subscript copied, a CHARACTER function's value
+;    6  C     computed once, and MERGE of lengths known only then.
+;    7        SUBROUTINE RTEMP(A, N, C, IV, F)
+	.ENTRY	RTEMP,^M<R2,R3,R4,R5>
+	MOVAL	@RTEMP.A(AP),RTEMP.$B1+4
+	MOVL	@RTEMP.N(AP),RTEMP.$B1+28
+	MOVL	RTEMP.$B1+28,RTEMP.$B1+20
+	MOVL	#-1,R0
+	MOVAL	@RTEMP.A(AP)[R0],RTEMP.$B1+16
+	MULL3	#4,RTEMP.$B1+20,RTEMP.$B1+12
+	MOVW	@RTEMP.C(AP),RTEMP.$B2
+	MOVL	RTEMP.C(AP),R0
+	MOVAB	@4(R0),RTEMP.$B2+4
+	MOVL	@RTEMP.N(AP),RTEMP.$B2+28
+	MOVL	RTEMP.$B2+28,RTEMP.$B2+20
+	MOVL	RTEMP.C(AP),R0
+	MOVL	4(R0),R0
+	MOVZWL	@RTEMP.C(AP),R1
+	MULL2	#-1,R1
+	MOVAB	(R0)[R1],RTEMP.$B2+16
+	MOVZWL	@RTEMP.C(AP),R0
+	MULL3	R0,RTEMP.$B2+20,RTEMP.$B2+12
+	MOVAL	@RTEMP.IV(AP),RTEMP.$B3+4
+	MOVL	@RTEMP.N(AP),RTEMP.$B3+28
+	MOVL	RTEMP.$B3+28,RTEMP.$B3+20
+	MOVL	#-1,R0
+	MOVAL	@RTEMP.IV(AP)[R0],RTEMP.$B3+16
+	MULL3	#4,RTEMP.$B3+20,RTEMP.$B3+12
+;    8        INTEGER :: N, IV(N)
+;    9        REAL :: A(N)
+;   10        CHARACTER(LEN=*) :: C(N)
+;   11        CHARACTER(LEN=4) :: F
+;   12        A(N:1:-1) = A
+	MOVL	@RTEMP.N(AP),RTEMP.$T1
+	ADDL3	RTEMP.$T1,#1,RTEMP.$T2
+	MOVL	RTEMP.$T1,RTEMP.$T3
+	BLSS	RTEMP.$2
+	BRW	RTEMP.$1
+RTEMP.$2:
+	CLRL	RTEMP.$T3
+RTEMP.$1:
+	MOVL	RTEMP.$T3,RTEMP.$R1+20
+	MOVL	RTEMP.$R1+20,RTEMP.$R1+28
+	MULL3	#4,RTEMP.$R1+20,RTEMP.$R1+12
+	MOVL	SP,RTEMP.$T4		; where the statement's storage starts
+	CMPL	RTEMP.$R1+12,#65536
+	BLEQ	RTEMP.$4
+	BRW	RTEMP.$3
+RTEMP.$4:
+	SUBL2	RTEMP.$R1+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,RTEMP.$R1+4
+	BRW	RTEMP.$5
+RTEMP.$3:
+	PUSHAQ	RTEMP.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+RTEMP.$5:
+	MOVL	RTEMP.$R1+4,R0
+	MOVAL	-4(R0),RTEMP.$R1+16
+	MOVL	RTEMP.$R1+20,RTEMP.$T5
+	BLSS	RTEMP.$7
+	BRW	RTEMP.$6
+RTEMP.$7:
+	CLRL	RTEMP.$T5
+RTEMP.$6:
+	MOVL	RTEMP.$T5,RTEMP.$C1	; array (line 12), dimension 1's count
+	MOVL	#1,RTEMP.$I2
+	TSTL	RTEMP.$C1
+	BGTR	RTEMP.$9
+	BRW	RTEMP.$8
+RTEMP.$9:
+RTEMP.$10:				; array (line 12), dimension 1's body
+	MOVL	RTEMP.$B1+16,R0
+	MOVL	RTEMP.$I2,R1
+	MOVL	RTEMP.$R1+16,R2
+	MOVL	RTEMP.$I2,R3
+	MOVF	(R0)[R1],(R2)[R3]
+	INCL	RTEMP.$I2
+	DECL	RTEMP.$C1		; one pass fewer
+	BLEQ	RTEMP.$11
+	BRW	RTEMP.$10
+RTEMP.$11:
+RTEMP.$8:
+	MOVL	@RTEMP.N(AP),RTEMP.$T6
+	ADDL3	RTEMP.$T6,#1,RTEMP.$T7
+	MOVL	RTEMP.$T6,RTEMP.$T8
+	BLSS	RTEMP.$13
+	BRW	RTEMP.$12
+RTEMP.$13:
+	CLRL	RTEMP.$T8
+RTEMP.$12:
+	MOVL	RTEMP.$T8,RTEMP.$C2	; array (line 12), dimension 1's count
+	MOVL	#1,RTEMP.$I3
+	TSTL	RTEMP.$C2
+	BGTR	RTEMP.$15
+	BRW	RTEMP.$14
+RTEMP.$15:
+RTEMP.$16:				; array (line 12), dimension 1's body
+	MOVL	RTEMP.$R1+16,R0
+	MOVL	RTEMP.$I3,R1
+	MOVL	RTEMP.$B1+16,R2
+	MULL3	RTEMP.$I3,#-1,R3
+	ADDL2	RTEMP.$T7,R3
+	MOVF	(R0)[R1],(R2)[R3]
+	INCL	RTEMP.$I3
+	DECL	RTEMP.$C2		; one pass fewer
+	BLEQ	RTEMP.$17
+	BRW	RTEMP.$16
+RTEMP.$17:
+RTEMP.$14:
+	CMPL	RTEMP.$R1+12,#65536
+	BGTR	RTEMP.$19
+	BRW	RTEMP.$18
+RTEMP.$19:
+	PUSHL	#0
+	PUSHAQ	RTEMP.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+RTEMP.$18:
+	MOVL	RTEMP.$T4,SP		; the statement's storage given back
+;   13        C(2:N) = C(1:N-1)
+	MOVL	@RTEMP.N(AP),RTEMP.$T8
+	SUBL3	#1,@RTEMP.N(AP),RTEMP.$T7
+	SUBL3	#1,RTEMP.$T8,RTEMP.$T6
+	BLSS	RTEMP.$21
+	BRW	RTEMP.$20
+RTEMP.$21:
+	CLRL	RTEMP.$T6
+RTEMP.$20:
+	MOVL	RTEMP.$T6,RTEMP.$C3	; array (line 13), dimension 1's count
+	MOVL	RTEMP.$T6,RTEMP.$I3
+	TSTL	RTEMP.$C3
+	BGTR	RTEMP.$23
+	BRW	RTEMP.$22
+RTEMP.$23:
+RTEMP.$24:				; array (line 13), dimension 1's body
+	MOVZWL	@RTEMP.C(AP),R0
+	MOVL	RTEMP.$B2+16,R1
+	MOVZWL	@RTEMP.C(AP),R2
+	MULL2	RTEMP.$I3,R2
+	MOVL	RTEMP.$B2+16,R3
+	ADDL3	RTEMP.$I3,#1,R4
+	MOVZWL	@RTEMP.C(AP),R5
+	MULL2	R5,R4
+	MOVC3	R0,(R1)[R2],(R3)[R4]
+	DECL	RTEMP.$I3
+	DECL	RTEMP.$C3		; one pass fewer
+	BLEQ	RTEMP.$25
+	BRW	RTEMP.$24
+RTEMP.$25:
+RTEMP.$22:
+;   14        WHERE (A > 0.0)
+	MOVL	RTEMP.$B1+20,RTEMP.$T6
+	BLSS	RTEMP.$27
+	BRW	RTEMP.$26
+RTEMP.$27:
+	CLRL	RTEMP.$T6
+RTEMP.$26:
+	MOVL	RTEMP.$T6,RTEMP.$R2+20
+	MOVL	RTEMP.$R2+20,RTEMP.$R2+28
+	MULL3	#4,RTEMP.$R2+20,RTEMP.$R2+12
+	MOVL	SP,RTEMP.$T7		; where the statement's storage starts
+	CMPL	RTEMP.$R2+12,#65536
+	BLEQ	RTEMP.$29
+	BRW	RTEMP.$28
+RTEMP.$29:
+	SUBL2	RTEMP.$R2+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,RTEMP.$R2+4
+	BRW	RTEMP.$30
+RTEMP.$28:
+	PUSHAQ	RTEMP.$R2
+	CALLS	#1,G^FTN$GET_TEMP
+RTEMP.$30:
+	MOVL	RTEMP.$R2+4,R0
+	MOVAL	-4(R0),RTEMP.$R2+16
+	MOVL	RTEMP.$R2+20,RTEMP.$T8
+	BLSS	RTEMP.$32
+	BRW	RTEMP.$31
+RTEMP.$32:
+	CLRL	RTEMP.$T8
+RTEMP.$31:
+	MOVL	RTEMP.$T8,RTEMP.$C4	; array (line 14), dimension 1's count
+	MOVL	#1,RTEMP.$I2
+	TSTL	RTEMP.$C4
+	BGTR	RTEMP.$34
+	BRW	RTEMP.$33
+RTEMP.$34:
+RTEMP.$35:				; array (line 14), dimension 1's body
+	MOVL	RTEMP.$B1+16,R0
+	MOVL	RTEMP.$I2,R1
+	CLRL	R2
+	TSTF	(R0)[R1]
+	BLEQ	RTEMP.$36
+	MNEGL	#1,R2
+RTEMP.$36:
+	MOVL	RTEMP.$R2+16,R0
+	MOVL	RTEMP.$I2,R1
+	MOVL	R2,(R0)[R1]
+	INCL	RTEMP.$I2
+	DECL	RTEMP.$C4		; one pass fewer
+	BLEQ	RTEMP.$37
+	BRW	RTEMP.$35
+RTEMP.$37:
+RTEMP.$33:
+;   15          A = -A
+	MOVL	RTEMP.$B1+20,RTEMP.$T5
+	BLSS	RTEMP.$39
+	BRW	RTEMP.$38
+RTEMP.$39:
+	CLRL	RTEMP.$T5
+RTEMP.$38:
+	MOVL	RTEMP.$T5,RTEMP.$C5	; array (line 15), dimension 1's count
+	MOVL	#1,RTEMP.$I1
+	TSTL	RTEMP.$C5
+	BGTR	RTEMP.$41
+	BRW	RTEMP.$40
+RTEMP.$41:
+RTEMP.$42:				; array (line 15), dimension 1's body
+	MOVL	RTEMP.$R2+16,R0
+	MOVL	RTEMP.$I1,R1
+	BLBS	(R0)[R1],RTEMP.$44
+	BRW	RTEMP.$43
+RTEMP.$44:
+	MOVL	RTEMP.$B1+16,R0
+	MOVL	RTEMP.$I1,R1
+	MOVL	RTEMP.$B1+16,R2
+	MOVL	RTEMP.$I1,R3
+	MNEGF	(R0)[R1],(R2)[R3]
+RTEMP.$43:
+	INCL	RTEMP.$I1
+	DECL	RTEMP.$C5		; one pass fewer
+	BLEQ	RTEMP.$45
+	BRW	RTEMP.$42
+RTEMP.$45:
+RTEMP.$40:
+;   16        ELSEWHERE
+;   17          A = 1.0
+	MOVL	RTEMP.$B1+20,RTEMP.$T4
+	BLSS	RTEMP.$47
+	BRW	RTEMP.$46
+RTEMP.$47:
+	CLRL	RTEMP.$T4
+RTEMP.$46:
+	MOVL	RTEMP.$T4,RTEMP.$C6	; array (line 17), dimension 1's count
+	MOVL	#1,RTEMP.$I4
+	TSTL	RTEMP.$C6
+	BGTR	RTEMP.$49
+	BRW	RTEMP.$48
+RTEMP.$49:
+RTEMP.$50:				; array (line 17), dimension 1's body
+	MOVL	RTEMP.$R2+16,R0
+	MOVL	RTEMP.$I4,R1
+	BLBC	(R0)[R1],RTEMP.$52
+	BRW	RTEMP.$51
+RTEMP.$52:
+	MOVL	RTEMP.$B1+16,R0
+	MOVL	RTEMP.$I4,R1
+	MOVL	#^X00004080,(R0)[R1]	; 1.0
+RTEMP.$51:
+	INCL	RTEMP.$I4
+	DECL	RTEMP.$C6		; one pass fewer
+	BLEQ	RTEMP.$53
+	BRW	RTEMP.$50
+RTEMP.$53:
+RTEMP.$48:
+;   18        END WHERE
+	CMPL	RTEMP.$R2+12,#65536
+	BGTR	RTEMP.$55
+	BRW	RTEMP.$54
+RTEMP.$55:
+	PUSHL	#0
+	PUSHAQ	RTEMP.$R2
+	CALLS	#2,G^FTN$DEALLOCATE
+RTEMP.$54:
+	MOVL	RTEMP.$T7,SP		; the statement's storage given back
+;   19        A = A + (/ (REAL(I), I = 1, N) /)
+	CLRL	RTEMP.$T4
+	MOVL	@RTEMP.N(AP),RTEMP.$C7	; constructor (line 19), count of implied DO of I's count
+	MOVL	#1,RTEMP.$I1
+	TSTL	RTEMP.$C7
+	BGTR	RTEMP.$57
+	BRW	RTEMP.$56
+RTEMP.$57:
+RTEMP.$58:				; constructor (line 19), count of implied DO of I's body
+	INCL	RTEMP.$T4
+	INCL	RTEMP.$I1
+	DECL	RTEMP.$C7		; one pass fewer
+	BLEQ	RTEMP.$59
+	BRW	RTEMP.$58
+RTEMP.$59:
+RTEMP.$56:
+	MOVL	RTEMP.$T4,RTEMP.$R1+20
+	MOVL	RTEMP.$R1+20,RTEMP.$R1+28
+	MULL3	#4,RTEMP.$R1+20,RTEMP.$R1+12
+	MOVL	SP,RTEMP.$T5		; where the statement's storage starts
+	CMPL	RTEMP.$R1+12,#65536
+	BLEQ	RTEMP.$61
+	BRW	RTEMP.$60
+RTEMP.$61:
+	SUBL2	RTEMP.$R1+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,RTEMP.$R1+4
+	BRW	RTEMP.$62
+RTEMP.$60:
+	PUSHAQ	RTEMP.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+RTEMP.$62:
+	MOVL	RTEMP.$R1+4,R0
+	MOVAL	-4(R0),RTEMP.$R1+16
+	CLRL	RTEMP.$I2
+	MOVL	@RTEMP.N(AP),RTEMP.$C8	; constructor (line 19), implied DO of I's count
+	MOVL	#1,RTEMP.$I3
+	TSTL	RTEMP.$C8
+	BGTR	RTEMP.$64
+	BRW	RTEMP.$63
+RTEMP.$64:
+RTEMP.$65:				; constructor (line 19), implied DO of I's body
+	INCL	RTEMP.$I2
+	MOVL	RTEMP.$R1+16,R0
+	MOVL	RTEMP.$I2,R1
+	CVTLF	RTEMP.$I3,(R0)[R1]
+	INCL	RTEMP.$I3
+	DECL	RTEMP.$C8		; one pass fewer
+	BLEQ	RTEMP.$66
+	BRW	RTEMP.$65
+RTEMP.$66:
+RTEMP.$63:
+	MOVL	RTEMP.$B1+20,RTEMP.$T8
+	BLSS	RTEMP.$68
+	BRW	RTEMP.$67
+RTEMP.$68:
+	CLRL	RTEMP.$T8
+RTEMP.$67:
+	MOVL	RTEMP.$T8,RTEMP.$C9	; array (line 19), dimension 1's count
+	MOVL	#1,RTEMP.$I4
+	TSTL	RTEMP.$C9
+	BGTR	RTEMP.$70
+	BRW	RTEMP.$69
+RTEMP.$70:
+RTEMP.$71:				; array (line 19), dimension 1's body
+	MOVL	RTEMP.$B1+16,R0
+	MOVL	RTEMP.$I4,R1
+	MOVL	RTEMP.$R1+16,R2
+	MOVL	RTEMP.$I4,R3
+	MOVL	RTEMP.$B1+16,R4
+	MOVL	RTEMP.$I4,R5
+	ADDF3	(R0)[R1],(R2)[R3],(R4)[R5]
+	INCL	RTEMP.$I4
+	DECL	RTEMP.$C9		; one pass fewer
+	BLEQ	RTEMP.$72
+	BRW	RTEMP.$71
+RTEMP.$72:
+RTEMP.$69:
+	CMPL	RTEMP.$R1+12,#65536
+	BGTR	RTEMP.$74
+	BRW	RTEMP.$73
+RTEMP.$74:
+	PUSHL	#0
+	PUSHAQ	RTEMP.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+RTEMP.$73:
+	MOVL	RTEMP.$T5,SP		; the statement's storage given back
+;   20        IV(IV) = 0
+	MOVL	RTEMP.$B3+20,RTEMP.$T8
+	BLSS	RTEMP.$76
+	BRW	RTEMP.$75
+RTEMP.$76:
+	CLRL	RTEMP.$T8
+RTEMP.$75:
+	MOVL	RTEMP.$T8,RTEMP.$R3+20
+	MOVL	RTEMP.$R3+20,RTEMP.$R3+28
+	MULL3	#4,RTEMP.$R3+20,RTEMP.$R3+12
+	MOVL	SP,RTEMP.$T5		; where the statement's storage starts
+	CMPL	RTEMP.$R3+12,#65536
+	BLEQ	RTEMP.$78
+	BRW	RTEMP.$77
+RTEMP.$78:
+	SUBL2	RTEMP.$R3+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,RTEMP.$R3+4
+	BRW	RTEMP.$79
+RTEMP.$77:
+	PUSHAQ	RTEMP.$R3
+	CALLS	#1,G^FTN$GET_TEMP
+RTEMP.$79:
+	MOVL	RTEMP.$R3+4,R0
+	MOVAL	-4(R0),RTEMP.$R3+16
+	MOVL	RTEMP.$R3+20,RTEMP.$T4
+	BLSS	RTEMP.$81
+	BRW	RTEMP.$80
+RTEMP.$81:
+	CLRL	RTEMP.$T4
+RTEMP.$80:
+	MOVL	RTEMP.$T4,RTEMP.$C10	; array (line 20), dimension 1's count
+	MOVL	#1,RTEMP.$I2
+	TSTL	RTEMP.$C10
+	BGTR	RTEMP.$83
+	BRW	RTEMP.$82
+RTEMP.$83:
+RTEMP.$84:				; array (line 20), dimension 1's body
+	MOVL	RTEMP.$B3+16,R0
+	MOVL	RTEMP.$I2,R1
+	MOVL	RTEMP.$R3+16,R2
+	MOVL	RTEMP.$I2,R3
+	MOVL	(R0)[R1],(R2)[R3]
+	INCL	RTEMP.$I2
+	DECL	RTEMP.$C10		; one pass fewer
+	BLEQ	RTEMP.$85
+	BRW	RTEMP.$84
+RTEMP.$85:
+RTEMP.$82:
+	MOVL	RTEMP.$R3+20,RTEMP.$T7
+	BLSS	RTEMP.$87
+	BRW	RTEMP.$86
+RTEMP.$87:
+	CLRL	RTEMP.$T7
+RTEMP.$86:
+	MOVL	RTEMP.$T7,RTEMP.$C11	; array (line 20), dimension 1's count
+	MOVL	#1,RTEMP.$I1
+	TSTL	RTEMP.$C11
+	BGTR	RTEMP.$89
+	BRW	RTEMP.$88
+RTEMP.$89:
+RTEMP.$90:				; array (line 20), dimension 1's body
+	MOVL	RTEMP.$B3+16,R0
+	MOVL	RTEMP.$R3+16,R1
+	MOVL	RTEMP.$I1,R2
+	MOVL	(R1)[R2],R1
+	CLRL	(R0)[R1]
+	INCL	RTEMP.$I1
+	DECL	RTEMP.$C11		; one pass fewer
+	BLEQ	RTEMP.$91
+	BRW	RTEMP.$90
+RTEMP.$91:
+RTEMP.$88:
+	CMPL	RTEMP.$R3+12,#65536
+	BGTR	RTEMP.$93
+	BRW	RTEMP.$92
+RTEMP.$93:
+	PUSHL	#0
+	PUSHAQ	RTEMP.$R3
+	CALLS	#2,G^FTN$DEALLOCATE
+RTEMP.$92:
+	MOVL	RTEMP.$T5,SP		; the statement's storage given back
+;   21        C = F(N) // C
+	MOVL	RTEMP.$B2+20,RTEMP.$T7
+	BLSS	RTEMP.$95
+	BRW	RTEMP.$94
+RTEMP.$95:
+	CLRL	RTEMP.$T7
+RTEMP.$94:
+	PUSHAL	@RTEMP.N(AP)
+	PUSHAQ	RTEMP.$D1
+	MOVL	RTEMP.F(AP),R0
+	CALLS	#2,@4(R0)
+	MOVL	RTEMP.$T7,RTEMP.$C12	; array (line 21), dimension 1's count
+	MOVL	#1,RTEMP.$I1
+	TSTL	RTEMP.$C12
+	BGTR	RTEMP.$97
+	BRW	RTEMP.$96
+RTEMP.$97:
+RTEMP.$98:				; array (line 21), dimension 1's body
+	MOVZWL	@RTEMP.C(AP),R0
+	ADDL2	#4,R0
+	CVTLW	R0,RTEMP.$T10
+	PUSHAQ	RTEMP.$D2
+	PUSHAW	RTEMP.$T10
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#4,RTEMP.$T9,@RTEMP.$D2+4
+	MOVZWL	@RTEMP.C(AP),R0
+	MOVL	RTEMP.$B2+16,R1
+	MOVZWL	@RTEMP.C(AP),R2
+	MULL2	RTEMP.$I1,R2
+	MOVL	RTEMP.$D2+4,R3
+	MOVC3	R0,(R1)[R2],4(R3)
+	MOVZWL	@RTEMP.C(AP),R0
+	ADDL2	#4,R0
+	MOVZWL	@RTEMP.C(AP),R1
+	MOVL	RTEMP.$B2+16,R2
+	MOVZWL	@RTEMP.C(AP),R3
+	MULL2	RTEMP.$I1,R3
+	MOVC5	R0,@RTEMP.$D2+4,#^A/ /,R1,(R2)[R3]
+	INCL	RTEMP.$I1
+	DECL	RTEMP.$C12		; one pass fewer
+	PUSHAQ	RTEMP.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+	TSTL	RTEMP.$C12
+	BLEQ	RTEMP.$99
+	BRW	RTEMP.$98
+RTEMP.$99:
+RTEMP.$96:
+;   22        C = MERGE(C, C(N:1:-1), A > 0.0)
+	MOVL	RTEMP.$B2+20,RTEMP.$T7
+	BLSS	RTEMP.$101
+	BRW	RTEMP.$100
+RTEMP.$101:
+	CLRL	RTEMP.$T7
+RTEMP.$100:
+	MOVW	@RTEMP.C(AP),RTEMP.$R4
+	MOVL	RTEMP.$T7,RTEMP.$R4+20
+	MOVL	RTEMP.$R4+20,RTEMP.$R4+28
+	MOVZWL	RTEMP.$R4,R0
+	MULL3	R0,RTEMP.$R4+20,RTEMP.$R4+12
+	MOVL	SP,RTEMP.$T4		; where the statement's storage starts
+	CMPL	RTEMP.$R4+12,#65536
+	BLEQ	RTEMP.$103
+	BRW	RTEMP.$102
+RTEMP.$103:
+	SUBL2	RTEMP.$R4+12,SP		; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,RTEMP.$R4+4
+	BRW	RTEMP.$104
+RTEMP.$102:
+	PUSHAQ	RTEMP.$R4
+	CALLS	#1,G^FTN$GET_TEMP
+RTEMP.$104:
+	MOVL	RTEMP.$R4+4,R0
+	MOVZWL	RTEMP.$R4,R1
+	MULL2	#-1,R1
+	MOVAB	(R0)[R1],RTEMP.$R4+16
+	MOVL	@RTEMP.N(AP),RTEMP.$T5
+	ADDL3	RTEMP.$T5,#1,RTEMP.$T8
+	MOVL	RTEMP.$R4+20,RTEMP.$T6
+	BLSS	RTEMP.$106
+	BRW	RTEMP.$105
+RTEMP.$106:
+	CLRL	RTEMP.$T6
+RTEMP.$105:
+	MOVL	RTEMP.$T6,RTEMP.$C13	; array (line 22), dimension 1's count
+	MOVL	#1,RTEMP.$I2
+	TSTL	RTEMP.$C13
+	BGTR	RTEMP.$108
+	BRW	RTEMP.$107
+RTEMP.$108:
+RTEMP.$109:				; array (line 22), dimension 1's body
+	MOVL	RTEMP.$B2+16,R0
+	MULL3	RTEMP.$I2,#-1,R1
+	ADDL2	RTEMP.$T8,R1
+	MOVZWL	@RTEMP.C(AP),R2
+	MULL2	R2,R1
+	MOVAB	(R0)[R1],RTEMP.$T3
+	MOVZWL	@RTEMP.C(AP),RTEMP.$T2
+	MOVL	RTEMP.$B1+16,R0
+	MOVL	RTEMP.$I2,R1
+	TSTF	(R0)[R1]
+	BGTR	RTEMP.$111
+	BRW	RTEMP.$110
+RTEMP.$111:
+	MOVL	RTEMP.$B2+16,R0
+	MOVZWL	@RTEMP.C(AP),R1
+	MULL2	RTEMP.$I2,R1
+	MOVAB	(R0)[R1],RTEMP.$T3
+	MOVZWL	@RTEMP.C(AP),RTEMP.$T2
+RTEMP.$110:
+	MOVZWL	RTEMP.$R4,R0
+	MOVL	RTEMP.$R4+16,R1
+	MOVZWL	RTEMP.$R4,R2
+	MULL2	RTEMP.$I2,R2
+	MOVC5	RTEMP.$T2,@RTEMP.$T3,#^A/ /,R0,(R1)[R2]
+	INCL	RTEMP.$I2
+	DECL	RTEMP.$C13		; one pass fewer
+	BLEQ	RTEMP.$112
+	BRW	RTEMP.$109
+RTEMP.$112:
+RTEMP.$107:
+	MOVL	RTEMP.$B2+20,RTEMP.$T1
+	BLSS	RTEMP.$114
+	BRW	RTEMP.$113
+RTEMP.$114:
+	CLRL	RTEMP.$T1
+RTEMP.$113:
+	MOVL	RTEMP.$T1,RTEMP.$C14	; array (line 22), dimension 1's count
+	MOVL	#1,RTEMP.$I3
+	TSTL	RTEMP.$C14
+	BGTR	RTEMP.$116
+	BRW	RTEMP.$115
+RTEMP.$116:
+RTEMP.$117:				; array (line 22), dimension 1's body
+	MOVZWL	RTEMP.$R4,R0
+	MOVL	RTEMP.$R4+16,R1
+	MOVZWL	RTEMP.$R4,R2
+	MULL2	RTEMP.$I3,R2
+	MOVZWL	@RTEMP.C(AP),R3
+	MOVL	RTEMP.$B2+16,R4
+	MOVZWL	@RTEMP.C(AP),R5
+	MULL2	RTEMP.$I3,R5
+	MOVC5	R0,(R1)[R2],#^A/ /,R3,(R4)[R5]
+	INCL	RTEMP.$I3
+	DECL	RTEMP.$C14		; one pass fewer
+	BLEQ	RTEMP.$118
+	BRW	RTEMP.$117
+RTEMP.$118:
+RTEMP.$115:
+	CMPL	RTEMP.$R4+12,#65536
+	BGTR	RTEMP.$120
+	BRW	RTEMP.$119
+RTEMP.$120:
+	PUSHL	#0
+	PUSHAQ	RTEMP.$R4
+	CALLS	#2,G^FTN$DEALLOCATE
+RTEMP.$119:
+	MOVL	RTEMP.$T4,SP		; the statement's storage given back
+;   23        END
+	RET
+
+	.END

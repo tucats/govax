@@ -239,11 +239,6 @@ func (a *analyzer) merge(e *ast.Apply, args []Expr, shape Shape) Expr {
 
 		return a.bad(e.Pos)
 
-	case ts.Type().Kind == Character && ts.Type().Size == 0:
-		a.notImplForm(e.Pos, "MERGE of CHARACTER values of a length not constant")
-
-		return a.bad(e.Pos)
-
 	case ts.Type() == complex32:
 		a.notImplForm(e.Pos, complex32Intrinsic)
 

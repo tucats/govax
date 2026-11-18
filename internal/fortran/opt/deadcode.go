@@ -615,6 +615,8 @@ func walkMems(r *ir.Routine, visit func(*ir.Mem)) {
 				expr(st.Size)
 			case *ir.StackRelease:
 				expr(st.To)
+			case *ir.StackMark:
+				mem(st.Dst)
 			}
 		}
 

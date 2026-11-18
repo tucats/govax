@@ -196,7 +196,7 @@ func (l *lowerer) selectLogical(s *sema.Select, blocks []*Block, none *Block) {
 		}
 	}
 
-	l.branch(l.cond(s.Expr), onTrue, onFalse)
+	l.branch(l.stmtCond(s.Expr), onTrue, onFalse)
 }
 
 // selectInteger is an INTEGER construct's dispatch. The value goes into a
@@ -230,7 +230,7 @@ func (l *lowerer) selectInteger(s *sema.Select, blocks []*Block, none *Block) {
 		}
 	}
 
-	value := l.expr(s.Expr)
+	value := l.stmtExpr(s.Expr)
 
 	if c, ok := value.(*Const); ok {
 		to := none

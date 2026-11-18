@@ -319,6 +319,8 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 			g.stackAllocate(s)
 		case *ir.StackRelease:
 			g.stackRelease(s)
+		case *ir.StackMark:
+			g.stackMark(s)
 		}
 
 		g.endStatement()
@@ -457,6 +459,14 @@ func (g *routineGen) stackRelease(s *ir.StackRelease) {
 	g.note = "the statement's storage given back"
 	g.emit("MOVL", ir.None, v.text, "SP")
 	g.free(v)
+}
+
+// stackMark stores SP where the statement's StackRelease will find it.
+func (g *routineGen) stackMark(s *ir.StackMark) {
+	d := g.mem(g.fitMem(s.Dst))
+	g.note = "where the statement's storage starts"
+	g.emit("MOVL", ir.Long, "SP", d.text)
+	g.free(d)
 }
 
 // call writes a CALLS: each argument pushed, from the last to the first

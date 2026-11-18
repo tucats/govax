@@ -198,6 +198,11 @@ func (c *checker) block(b *Block) error {
 			if err = c.expr(s.To); err == nil && s.To.Type() != Long {
 				err = fmt.Errorf("%s isn't of a Long", StmtText(s))
 			}
+
+		case *StackMark:
+			if err = c.mem(s.Dst); err == nil && s.Dst.T != Long {
+				err = fmt.Errorf("%s isn't of a Long", StmtText(s))
+			}
 		}
 
 		if err != nil {

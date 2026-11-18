@@ -206,9 +206,10 @@
    MAXLOC, MINLOC, DOT_PRODUCT, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
    and UBOUND are there too.  WHERE is a statement or a construct with
    ELSEWHERE.  Sections and array expressions in I/O lists are read or
-   written an element at a time.  An assignment that would need a
-   temporary array of a size not known when compiling, and a section
-   passed to a program's own procedure, are not there yet.
+   written an element at a time.  A statement that needs a temporary
+   array gets one of the size it needs, on the stack up to 64 KB and
+   from the heap past that, given back at the statement's end.  A
+   section passed to a program's own procedure is not there yet.
 
    A main program or subprogram may end with CONTAINS and internal
    procedures (END SUBROUTINE, END FUNCTION), which use their host's

@@ -192,6 +192,29 @@ func NewArray(name string, t Type, extents []int) *Symbol {
 	return s
 }
 
+// NewRuntimeArray is an array temporary of lowering's own, as NewArray's, whose
+// extents are known only when the program runs (docs/planning/PHASE-104 -
+// Fortran 90 dynamic arrays.md, finding 8): rank dimensions, each with lower
+// bound 1 and an upper bound lowering computes. Lowering keeps it as it keeps
+// an automatic array, a class A descriptor saying where its storage is. A
+// CHARACTER one's length may be known only then too (t.Size 0): the
+// descriptor's first word.
+func NewRuntimeArray(name string, t Type, rank int) *Symbol {
+	s := &Symbol{Name: name, Class: Array, Type: t, Offset: -1, AutomaticObject: true}
+
+	for range rank {
+		s.Dims = append(s.Dims, Dim{Lower: 1, Runtime: true})
+	}
+
+	if t.Kind == Character && t.Size == 0 {
+		// The length's value, which lowering doesn't compute from this: it
+		// stores the length in the descriptor itself.
+		s.LengthValue = IntConstAt(0, diag.Position{})
+	}
+
+	return s
+}
+
 // NewArrayRef is the whole array s as an array-valued expression, with its
 // shape.
 func NewArrayRef(s *Symbol, pos diag.Position) *ArrayRef {

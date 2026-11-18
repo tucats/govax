@@ -1,0 +1,21 @@
+ 6.0  5.0  4.0  3.0  2.0  1.0
+ 6.0  7.0  7.0  7.0  7.0  7.0
+         -1           0          -3           0          -5
+          1           2           1           2           1
+         60          10          20          30          40          50
+        101         102         103         104         105         106
+         21          36
+         13          11           9           7           5           3
+sum is 21
+case 21
+j is           3
+jklghidefabc
+klklklkl
+xyzghidefabc
+xyzabcdefabc
+UPxUPxUPxUPx
+UPxUPUPxUP
+aaaccccccaaa
+      20001           2   200030000
+ 100.0    1.0
+  $STATUS == "%X00000001"

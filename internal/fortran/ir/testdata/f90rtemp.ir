@@ -1,0 +1,424 @@
+routine RTEMP subroutine
+  param A       F  argument 1
+  param N       L  argument 2
+  param C       B  argument 3
+  param IV      L  argument 4
+  param F       B  argument 5
+  cell  $B1     L  $LOCAL+0    descriptor F A 4 (?)
+  cell  $B2     L  $LOCAL+32   descriptor T A 0 (?)
+  cell  $B3     L  $LOCAL+64   descriptor L A 4 (?)
+  cell  $I1     L  $LOCAL+96   an array statement's index
+  cell  $T1     L  $LOCAL+100  temporary
+  cell  $T2     L  $LOCAL+104  temporary
+  cell  $T3     L  $LOCAL+108  temporary
+  cell  $R1     L  $LOCAL+112  descriptor F A 4 (?)
+  cell  $T4     L  $LOCAL+144  temporary
+  cell  $I2     L  $LOCAL+148  an array statement's index
+  cell  $T5     L  $LOCAL+152  temporary
+  cell  $C1     L  $LOCAL+156  array (line 12), dimension 1's count
+  cell  $I3     L  $LOCAL+160  an array statement's index
+  cell  $T6     L  $LOCAL+164  temporary
+  cell  $T7     L  $LOCAL+168  temporary
+  cell  $T8     L  $LOCAL+172  temporary
+  cell  $C2     L  $LOCAL+176  array (line 12), dimension 1's count
+  cell  $C3     L  $LOCAL+180  array (line 13), dimension 1's count
+  cell  $R2     L  $LOCAL+184  descriptor LU A 4 (?)
+  cell  $C4     L  $LOCAL+216  array (line 14), dimension 1's count
+  cell  $C5     L  $LOCAL+220  array (line 15), dimension 1's count
+  cell  $I4     L  $LOCAL+224  an array statement's index
+  cell  $C6     L  $LOCAL+228  array (line 17), dimension 1's count
+  cell  $C7     L  $LOCAL+232  constructor (line 19), count of implied DO of I's count
+  cell  $C8     L  $LOCAL+236  constructor (line 19), implied DO of I's count
+  cell  $C9     L  $LOCAL+240  array (line 19), dimension 1's count
+  cell  $R3     L  $LOCAL+244  descriptor L A 4 (?)
+  cell  $C10    L  $LOCAL+276  array (line 20), dimension 1's count
+  cell  $C11    L  $LOCAL+280  array (line 20), dimension 1's count
+  cell  $T9     B  $LOCAL+284  temporary
+  cell  $C12    L  $LOCAL+288  array (line 21), dimension 1's count
+  cell  $D2     L  $LOCAL+292  descriptor T D 0
+  cell  $T10    W  $LOCAL+300  temporary
+  cell  $R4     L  $LOCAL+304  descriptor T A 0 (?)
+  cell  $C13    L  $LOCAL+336  array (line 22), dimension 1's count
+  cell  $C14    L  $LOCAL+340  array (line 22), dimension 1's count
+  $LOCAL is 344 bytes
+  datum $D1     descriptor T S 4 $T9
+B1:
+  assign $B1+4 = addr(@A)
+  assign $B1+28 = @N
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@A-4)
+  assign $B1+12 = mul.L(4, $B1+20)
+  assign $B2 = @(arg C)
+  assign $B2+4 = addr(@(@(arg C)+4))
+  assign $B2+28 = @N
+  assign $B2+20 = $B2+28
+  assign $B2+16 = addr(@(@(arg C)+4)[mul.L(-1, zext.WL(@(arg C)))])
+  assign $B2+12 = mul.L(zext.WL(@(arg C)), $B2+20)
+  assign $B3+4 = addr(@IV)
+  assign $B3+28 = @N
+  assign $B3+20 = $B3+28
+  assign $B3+16 = addr(@IV-4)
+  assign $B3+12 = mul.L(4, $B3+20)
+  ; line 12
+  assign $T1 = @N
+  assign $T2 = add.L($T1, 1)
+  assign $T3 = $T1
+  branch lt.L($T3, 0) B2 B3
+B2:
+  assign $T3 = 0
+  jump B3
+B3:
+  assign $R1+20 = $T3
+  assign $R1+28 = $R1+20
+  assign $R1+12 = mul.L(4, $R1+20)
+  $T4 = stack mark
+  branch gt.L($R1+12, 65536) B5 B4
+B4:
+  stack $R1+4 = $R1+12 bytes
+  jump B6
+B5:
+  call FTN$GET_TEMP(ref $R1)
+  jump B6
+B6:
+  assign $R1+16 = addr(@($R1+4)-4)
+  assign $T5 = $R1+20
+  branch lt.L($T5, 0) B7 B8
+B7:
+  assign $T5 = 0
+  jump B8
+B8:
+  assign $C1 = $T5
+  assign $I2 = 1
+  branch le.L($C1, 0) B10 B9
+B9:  ; array (line 12), dimension 1's body
+  assign @($R1+16)[$I2] = @($B1+16)[$I2]
+  assign $I2 = add.L($I2, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B9 B10
+B10:
+  assign $T6 = @N
+  assign $T7 = add.L($T6, 1)
+  assign $T8 = $T6
+  branch lt.L($T8, 0) B11 B12
+B11:
+  assign $T8 = 0
+  jump B12
+B12:
+  assign $C2 = $T8
+  assign $I3 = 1
+  branch le.L($C2, 0) B14 B13
+B13:  ; array (line 12), dimension 1's body
+  assign @($B1+16)[add.L(mul.L($I3, -1), $T7)] = @($R1+16)[$I3]
+  assign $I3 = add.L($I3, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B13 B14
+B14:
+  branch gt.L($R1+12, 65536) B15 B16
+B15:
+  call FTN$DEALLOCATE(ref $R1, val 0)
+  jump B16
+B16:
+  stack release to $T4
+  ; line 13
+  assign $T8 = @N
+  assign $T7 = sub.L(@N, 1)
+  assign $T6 = sub.L($T8, 1)
+  branch lt.L($T6, 0) B17 B18
+B17:
+  assign $T6 = 0
+  jump B18
+B18:
+  assign $C3 = $T6
+  assign $I3 = $T6
+  branch le.L($C3, 0) B20 B19
+B19:  ; array (line 13), dimension 1's body
+  move @($B2+16)[mul.L(add.L($I3, 1), zext.WL(@(arg C)))](zext.WL(@(arg C))) = @($B2+16)[mul.L($I3, zext.WL(@(arg C)))](zext.WL(@(arg C)))
+  assign $I3 = sub.L($I3, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B19 B20
+B20:
+  ; line 14
+  assign $T6 = $B1+20
+  branch lt.L($T6, 0) B21 B22
+B21:
+  assign $T6 = 0
+  jump B22
+B22:
+  assign $R2+20 = $T6
+  assign $R2+28 = $R2+20
+  assign $R2+12 = mul.L(4, $R2+20)
+  $T7 = stack mark
+  branch gt.L($R2+12, 65536) B24 B23
+B23:
+  stack $R2+4 = $R2+12 bytes
+  jump B25
+B24:
+  call FTN$GET_TEMP(ref $R2)
+  jump B25
+B25:
+  assign $R2+16 = addr(@($R2+4)-4)
+  assign $T8 = $R2+20
+  branch lt.L($T8, 0) B26 B27
+B26:
+  assign $T8 = 0
+  jump B27
+B27:
+  assign $C4 = $T8
+  assign $I2 = 1
+  branch le.L($C4, 0) B29 B28
+B28:  ; array (line 14), dimension 1's body
+  assign @($R2+16)[$I2] = gt.F(@($B1+16)[$I2], 0.0)
+  assign $I2 = add.L($I2, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B28 B29
+B29:
+  ; line 15
+  assign $T5 = $B1+20
+  branch lt.L($T5, 0) B30 B31
+B30:
+  assign $T5 = 0
+  jump B31
+B31:
+  assign $C5 = $T5
+  assign $I1 = 1
+  branch le.L($C5, 0) B35 B32
+B32:  ; array (line 15), dimension 1's body
+  branch @($R2+16)[$I1] B33 B34
+B33:
+  assign @($B1+16)[$I1] = neg.F(@($B1+16)[$I1])
+  jump B34
+B34:
+  assign $I1 = add.L($I1, 1)
+  assign $C5 = sub.L($C5, 1)
+  branch gt.L($C5, 0) B32 B35
+B35:
+  ; line 17
+  assign $T4 = $B1+20
+  branch lt.L($T4, 0) B36 B37
+B36:
+  assign $T4 = 0
+  jump B37
+B37:
+  assign $C6 = $T4
+  assign $I4 = 1
+  branch le.L($C6, 0) B41 B38
+B38:  ; array (line 17), dimension 1's body
+  branch @($R2+16)[$I4] B40 B39
+B39:
+  assign @($B1+16)[$I4] = 1.0
+  jump B40
+B40:
+  assign $I4 = add.L($I4, 1)
+  assign $C6 = sub.L($C6, 1)
+  branch gt.L($C6, 0) B38 B41
+B41:
+  ; line 18
+  branch gt.L($R2+12, 65536) B42 B43
+B42:
+  call FTN$DEALLOCATE(ref $R2, val 0)
+  jump B43
+B43:
+  stack release to $T7
+  ; line 19
+  assign $T4 = 0
+  assign $C7 = @N
+  assign $I1 = 1
+  branch le.L($C7, 0) B45 B44
+B44:  ; constructor (line 19), count of implied DO of I's body
+  assign $T4 = add.L($T4, 1)
+  assign $I1 = add.L($I1, 1)
+  assign $C7 = sub.L($C7, 1)
+  branch gt.L($C7, 0) B44 B45
+B45:
+  assign $R1+20 = $T4
+  assign $R1+28 = $R1+20
+  assign $R1+12 = mul.L(4, $R1+20)
+  $T5 = stack mark
+  branch gt.L($R1+12, 65536) B47 B46
+B46:
+  stack $R1+4 = $R1+12 bytes
+  jump B48
+B47:
+  call FTN$GET_TEMP(ref $R1)
+  jump B48
+B48:
+  assign $R1+16 = addr(@($R1+4)-4)
+  assign $I2 = 0
+  assign $C8 = @N
+  assign $I3 = 1
+  branch le.L($C8, 0) B50 B49
+B49:  ; constructor (line 19), implied DO of I's body
+  assign $I2 = add.L($I2, 1)
+  assign @($R1+16)[$I2] = cvt.LF($I3)
+  assign $I3 = add.L($I3, 1)
+  assign $C8 = sub.L($C8, 1)
+  branch gt.L($C8, 0) B49 B50
+B50:
+  assign $T8 = $B1+20
+  branch lt.L($T8, 0) B51 B52
+B51:
+  assign $T8 = 0
+  jump B52
+B52:
+  assign $C9 = $T8
+  assign $I4 = 1
+  branch le.L($C9, 0) B54 B53
+B53:  ; array (line 19), dimension 1's body
+  assign @($B1+16)[$I4] = add.F(@($B1+16)[$I4], @($R1+16)[$I4])
+  assign $I4 = add.L($I4, 1)
+  assign $C9 = sub.L($C9, 1)
+  branch gt.L($C9, 0) B53 B54
+B54:
+  branch gt.L($R1+12, 65536) B55 B56
+B55:
+  call FTN$DEALLOCATE(ref $R1, val 0)
+  jump B56
+B56:
+  stack release to $T5
+  ; line 20
+  assign $T8 = $B3+20
+  branch lt.L($T8, 0) B57 B58
+B57:
+  assign $T8 = 0
+  jump B58
+B58:
+  assign $R3+20 = $T8
+  assign $R3+28 = $R3+20
+  assign $R3+12 = mul.L(4, $R3+20)
+  $T5 = stack mark
+  branch gt.L($R3+12, 65536) B60 B59
+B59:
+  stack $R3+4 = $R3+12 bytes
+  jump B61
+B60:
+  call FTN$GET_TEMP(ref $R3)
+  jump B61
+B61:
+  assign $R3+16 = addr(@($R3+4)-4)
+  assign $T4 = $R3+20
+  branch lt.L($T4, 0) B62 B63
+B62:
+  assign $T4 = 0
+  jump B63
+B63:
+  assign $C10 = $T4
+  assign $I2 = 1
+  branch le.L($C10, 0) B65 B64
+B64:  ; array (line 20), dimension 1's body
+  assign @($R3+16)[$I2] = @($B3+16)[$I2]
+  assign $I2 = add.L($I2, 1)
+  assign $C10 = sub.L($C10, 1)
+  branch gt.L($C10, 0) B64 B65
+B65:
+  assign $T7 = $R3+20
+  branch lt.L($T7, 0) B66 B67
+B66:
+  assign $T7 = 0
+  jump B67
+B67:
+  assign $C11 = $T7
+  assign $I1 = 1
+  branch le.L($C11, 0) B69 B68
+B68:  ; array (line 20), dimension 1's body
+  assign @($B3+16)[@($R3+16)[$I1]] = 0
+  assign $I1 = add.L($I1, 1)
+  assign $C11 = sub.L($C11, 1)
+  branch gt.L($C11, 0) B68 B69
+B69:
+  branch gt.L($R3+12, 65536) B70 B71
+B70:
+  call FTN$DEALLOCATE(ref $R3, val 0)
+  jump B71
+B71:
+  stack release to $T5
+  ; line 21
+  assign $T7 = $B2+20
+  branch lt.L($T7, 0) B72 B73
+B72:
+  assign $T7 = 0
+  jump B73
+B73:
+  call through @(@(arg F)+4)(ref $D1, ref @N)
+  assign $C12 = $T7
+  assign $I1 = 1
+  branch le.L($C12, 0) B75 B74
+B74:  ; array (line 21), dimension 1's body
+  assign $T10 = cvt.LW(add.L(zext.WL(@(arg C)), 4))
+  call LIB$SGET1_DD(ref $T10, ref $D2)
+  move @($D2+4)(4) = $T9(4)
+  move @($D2+4)+4(zext.WL(@(arg C))) = @($B2+16)[mul.L($I1, zext.WL(@(arg C)))](zext.WL(@(arg C)))
+  move @($B2+16)[mul.L($I1, zext.WL(@(arg C)))](zext.WL(@(arg C))) = @($D2+4)(add.L(zext.WL(@(arg C)), 4))
+  assign $I1 = add.L($I1, 1)
+  assign $C12 = sub.L($C12, 1)
+  call LIB$SFREE1_DD(ref $D2)
+  branch gt.L($C12, 0) B74 B75
+B75:
+  ; line 22
+  assign $T7 = $B2+20
+  branch lt.L($T7, 0) B76 B77
+B76:
+  assign $T7 = 0
+  jump B77
+B77:
+  assign $R4 = @(arg C)
+  assign $R4+20 = $T7
+  assign $R4+28 = $R4+20
+  assign $R4+12 = mul.L(zext.WL($R4), $R4+20)
+  $T4 = stack mark
+  branch gt.L($R4+12, 65536) B79 B78
+B78:
+  stack $R4+4 = $R4+12 bytes
+  jump B80
+B79:
+  call FTN$GET_TEMP(ref $R4)
+  jump B80
+B80:
+  assign $R4+16 = addr(@($R4+4)[mul.L(-1, zext.WL($R4))])
+  assign $T5 = @N
+  assign $T8 = add.L($T5, 1)
+  assign $T6 = $R4+20
+  branch lt.L($T6, 0) B81 B82
+B81:
+  assign $T6 = 0
+  jump B82
+B82:
+  assign $C13 = $T6
+  assign $I2 = 1
+  branch le.L($C13, 0) B86 B83
+B83:  ; array (line 22), dimension 1's body
+  assign $T3 = addr(@($B2+16)[mul.L(add.L(mul.L($I2, -1), $T8), zext.WL(@(arg C)))])
+  assign $T2 = zext.WL(@(arg C))
+  branch gt.F(@($B1+16)[$I2], 0.0) B84 B85
+B84:
+  assign $T3 = addr(@($B2+16)[mul.L($I2, zext.WL(@(arg C)))])
+  assign $T2 = zext.WL(@(arg C))
+  jump B85
+B85:
+  move @($R4+16)[mul.L($I2, zext.WL($R4))](zext.WL($R4)) = @($T3)($T2)
+  assign $I2 = add.L($I2, 1)
+  assign $C13 = sub.L($C13, 1)
+  branch gt.L($C13, 0) B83 B86
+B86:
+  assign $T1 = $B2+20
+  branch lt.L($T1, 0) B87 B88
+B87:
+  assign $T1 = 0
+  jump B88
+B88:
+  assign $C14 = $T1
+  assign $I3 = 1
+  branch le.L($C14, 0) B90 B89
+B89:  ; array (line 22), dimension 1's body
+  move @($B2+16)[mul.L($I3, zext.WL(@(arg C)))](zext.WL(@(arg C))) = @($R4+16)[mul.L($I3, zext.WL($R4))](zext.WL($R4))
+  assign $I3 = add.L($I3, 1)
+  assign $C14 = sub.L($C14, 1)
+  branch gt.L($C14, 0) B89 B90
+B90:
+  branch gt.L($R4+12, 65536) B91 B92
+B91:
+  call FTN$DEALLOCATE(ref $R4, val 0)
+  jump B92
+B92:
+  stack release to $T4
+  ; line 23
+  return

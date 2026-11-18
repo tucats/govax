@@ -31,7 +31,7 @@ func (l *lowerer) where(s *sema.Where) {
 	mask := s.Mask
 
 	if s.MaskTemp != nil {
-		temp := l.arrayTemp(mask.Type(), s.MaskTemp)
+		temp := l.shapeTemp(mask.Type(), s.MaskTemp, mask.Shape(), nil)
 		l.arrayNest(temp, mask, nil, nil)
 		l.flush()
 

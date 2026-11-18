@@ -153,7 +153,7 @@ func (l *lowerer) labelBlocks(labels []int) []*Block {
 //	  switch <e> [L10 L20 L30] B2
 //	B2: (the next statement)
 func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
-	index := l.expr(s.Index)
+	index := l.stmtExpr(s.Index)
 
 	if c, ok := index.(*Const); ok {
 		if n := int(c.Int()); n >= 1 && n <= len(s.Labels) {
@@ -226,7 +226,7 @@ func (l *lowerer) alternate(e sema.Expr) Expr {
 // arithIf lowers IF (e) s1, s2, s3 to a Sign of e. A constant e is a
 // jump to its label.
 func (l *lowerer) arithIf(s *sema.ArithIf) {
-	value := l.expr(s.Cond)
+	value := l.stmtExpr(s.Cond)
 	neg, zero, pos := l.labelBlock(s.Labels[0]), l.labelBlock(s.Labels[1]), l.labelBlock(s.Labels[2])
 
 	if c, ok := value.(*Const); ok {
@@ -351,7 +351,7 @@ func (l *lowerer) blockIf(s *sema.If) {
 			next = l.newBlock()
 		}
 
-		l.branch(l.cond(arm.Cond), then, next)
+		l.branch(l.stmtCond(arm.Cond), then, next)
 		l.release()
 
 		l.begin(then)
@@ -387,7 +387,7 @@ func (l *lowerer) blockIf(s *sema.If) {
 // to where they go.
 func (l *lowerer) logicalIf(s *sema.If) {
 	arm := s.Arms[0]
-	cond := l.cond(arm.Cond)
+	cond := l.stmtCond(arm.Cond)
 	next := l.newBlock()
 
 	if len(arm.Body) == 1 {
@@ -563,7 +563,7 @@ func (l *lowerer) doWhile(d *sema.DoWhile) {
 		top.Note = name + "'s test"
 
 		l.begin(top)
-		l.branch(l.cond(d.Cond), body, exit)
+		l.branch(l.stmtCond(d.Cond), body, exit)
 		l.release()
 	}
 

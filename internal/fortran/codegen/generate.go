@@ -779,7 +779,7 @@ func typeText(s *sema.Symbol) string {
 		switch {
 		case d.Assumed:
 			upper = "*"
-		case d.UpperExpr != nil:
+		case d.UpperExpr != nil || d.Runtime:
 			upper = "?"
 		}
 
@@ -964,6 +964,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 	case ir.DescriptorCell:
 		if c.Dummy != "" {
 			return c.Dummy + "'s descriptor, filled in at each entry point"
+		}
+
+		if c.Sym != nil && c.Sym.AutomaticObject && strings.HasPrefix(c.Name, "$R") {
+			return "an array temporary, " + typeText(c.Sym) + ", for one statement: its descriptor"
 		}
 
 		if c.Sym != nil && c.Sym.AutomaticObject {

@@ -8670,12 +8670,19 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   side element by element, a scalar right side given to every element. The right side acts as
   if computed whole before any element changes, so `score(2:n) = score(1:n-1)` shifts the
   array, as above. The compiler gets this by running the loop the right way (here backward),
-  and where no direction will do, by computing the right side into a temporary array first;
-  that temporary must be of a size known when compiling (`A(1:N) = A(N:1:-1)` with N a
-  variable is not there yet). An array as an argument to a program's own procedure is still
+  and where no direction will do, by computing the right side into a temporary array first,
+  of whatever size the statement needs (`A(1:N) = A(N:1:-1)` with N a variable): up to 64 KB
+  on the user stack, given back at the statement's end, and past that from the heap
+  (`LIB$GET_VM`, through FTNRTL's `FTN$GET_TEMP`), given back the same way. A vector
+  subscript in the target that reads the target's own array (`IV(IV) = 0`) is copied first,
+  as the standard asks. An array as an argument to a program's own procedure is still
   only a whole array's name, as in VAX FORTRAN.
 - *Constructors and constants*: `(/ 1, 2, 3 /)` and `(/ (I * I, I = 1, N) /)` are rank-one
-  arrays, their values all of one type and length (`CONSTRUCTTYPE`, `CONSTRUCTLEN`). A
+  arrays, their values all of one type and length (`CONSTRUCTTYPE`, `CONSTRUCTLEN`); a
+  CHARACTER constructor whose first value's length is known only when the program runs (a
+  variable's, an array's, or a concatenation of them) has that length, each later value made
+  that length as an assignment would. One of a size known only when the program runs is
+  counted, then built, wherever it stands. A
   PARAMETER may be an array (`INTEGER, PARAMETER :: P(3) = (/ 2, 3, 5 /)`), of rank 2 or
   more by `RESHAPE` (`RESHAPE((/ 1, 2, 3, 4 /), (/ 2, 2 /))`), and an initial value given with
   `=` may be an array of the variable's shape. A vector subscript with a value twice may not
@@ -8982,9 +8989,10 @@ first an asterisk. Such a name is passed to another routine by a descriptor of i
 passed-length dummy (`CHARACTER*(*)`) gets `N`. It can't be in COMMON, EQUIVALENCE, DATA,
 or a NAMELIST group, nor be named by SAVE or STATIC (`AUTOLENATTR`), and a main program's
 names must have constant lengths (`LENNOTDUMMY`). `LEN` of a whole array or a section is its
-elements' length. A function whose value has such a length is not there yet, nor is a
-CHARACTER value of a length not known when compiling in an array expression or a
-constructor.
+elements' length. Such names stand in array expressions as any CHARACTER array does: an
+assignment through a temporary, `MERGE`, a concatenation (each element's built in a dynamic
+string, freed at once), and a CHARACTER function's value (called once, before the
+statement's loops). A function whose value has such a length is not there yet.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
@@ -8998,13 +9006,12 @@ constructor.
 
 That includes assumed-shape arrays (a dummy's `A(:)`), modules and USE (with MODULE
 PROCEDURE), derived types, and pointers, each to come in its turn.
-Of arrays as values, these are not there yet: an array assignment that needs a temporary
-array of a size not known when compiling; a section or array expression as an argument to a
-program's own procedure; an array function's value of a shape not known when compiling
+Of arrays as values, these are not there yet: a section or array expression as an argument
+to a program's own procedure; an array function's value of a shape not known when compiling
 (RESHAPE of values that aren't constants, a `DIM=` that isn't constant on an array of rank 2
-or more); a CHARACTER function, or a concatenation, of a length not known when compiling in
-an array expression; sections of arrays of records; and a section as an internal file or
-ENCODE's buffer. Fortran 90's other new
+or more); a CHARACTER constructor whose first value's length is known only when the program
+runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of
+records; and a section as an internal file or ENCODE's buffer. Fortran 90's other new
 intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
 own. A format written as a character constant may hold `"..."` constants under `/F90`
 (`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as

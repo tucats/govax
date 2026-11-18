@@ -144,10 +144,6 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	var order *ArrayOrder
 
 	if rankOf(target) > 0 {
-		if !a.checkArrayParts(value) {
-			return nil
-		}
-
 		var ok bool
 		if order, ok = a.arrayOrder(s.Pos, target, value); !ok {
 			return nil

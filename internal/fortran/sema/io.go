@@ -1069,12 +1069,7 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 
 	// A section or an array-valued expression is an item for each of its
 	// elements in array element order (docs/planning/PHASE-102 - Fortran 90
-	// array expressions.md, finding 14); its parts must be ones the
-	// scalarizer computes at each element.
-	if rankOf(v) > 0 && !a.checkArrayParts(v) {
-		return a.bad(v.Position())
-	}
-
+	// array expressions.md, finding 14).
 	return v
 }
 
