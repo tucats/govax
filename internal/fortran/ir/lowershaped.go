@@ -118,9 +118,51 @@ func (l *lowerer) computeShaped(s *sema.Symbol, c *Cell) {
 
 	store(PointerOffset, actual(PointerOffset))
 
-	for i, dim := range s.Dims {
+	// Each dimension's extent, from whichever kind of descriptor came.
+	extents := make([]*Mem, len(s.Dims))
+	for i := range extents {
+		extents[i] = l.temp(Long)
+	}
+
+	class := &Load{descriptorField(p, ClassOffset, Byte)}
+
+	if l.unit.Checks.Bounds {
+		l.checkDescriptor(p, len(s.Dims))
+	}
+
+	nca, classA, join := l.newBlock(), l.newBlock(), l.newBlock()
+	l.branch(&Cmp{Op: Eq, X: class, Y: IntConst(Byte, int32(ClassA))}, classA, nca)
+
+	// Class NCA: the strides as they are, the extents from the bounds.
+	l.begin(nca)
+
+	for i := range s.Dims {
 		store(d.StrideOffset(i), actual(d.StrideOffset(i)))
 
+		upper := d.LowerOffset(i) + Long.Size()
+		l.emit(&Assign{origin: l.origin(), Dst: extents[i],
+			Src: arith(Add, Long, arith(Sub, Long, actual(upper), actual(d.LowerOffset(i))), LongConst(1))})
+	}
+
+	l.jump(join)
+
+	// Class A, from a MACRO caller: the same longwords are multipliers, each
+	// dimension's extent, the elements one after another, so the strides are
+	// the element's size times the extents before.
+	l.begin(classA)
+
+	stride := l.elementSize(s)
+
+	for i := range s.Dims {
+		store(d.StrideOffset(i), stride)
+		l.emit(&Assign{origin: l.origin(), Dst: extents[i], Src: actual(d.StrideOffset(i))})
+		stride = arith(Mul, Long, &Load{field(d.StrideOffset(i))}, &Load{extents[i]})
+	}
+
+	l.jump(join)
+	l.begin(join)
+
+	for i, dim := range s.Dims {
 		lower := Expr(LongConst(int32(dim.Lower)))
 		if dim.LowerValue != nil {
 			store(d.LowerOffset(i), l.expr(dim.LowerValue))
@@ -131,11 +173,8 @@ func (l *lowerer) computeShaped(s *sema.Symbol, c *Cell) {
 
 		// The actual's extent, never below 0, kept by an upper bound of the
 		// dummy's own.
-		extent := l.temp(Long)
-		l.emit(&Assign{origin: l.origin(), Dst: extent,
-			Src: arith(Add, Long, arith(Sub, Long, actual(d.LowerOffset(i)+Long.Size()), actual(d.LowerOffset(i))), LongConst(1))})
-		l.notNegative(extent)
-		store(d.LowerOffset(i)+Long.Size(), arith(Sub, Long, arith(Add, Long, lower, &Load{extent}), LongConst(1)))
+		l.notNegative(extents[i])
+		store(d.LowerOffset(i)+Long.Size(), arith(Sub, Long, arith(Add, Long, lower, &Load{extents[i]}), LongConst(1)))
 	}
 
 	// A0, where the element of all zero subscripts would be: POINTER less each
@@ -160,6 +199,30 @@ func (l *lowerer) computeShaped(s *sema.Symbol, c *Cell) {
 	}
 
 	l.release()
+}
+
+// checkDescriptor is /CHECK=BOUNDS's test of the descriptor the caller passed for
+// an assumed-shape dummy, the argument p, of rank dims (the author's answer 5):
+// its class must be NCA or A, and its DIMCT the rank, else FTN$BADARRDESC, as
+// when an old-style call passed an array's address, not a descriptor.
+func (l *lowerer) checkDescriptor(p *Param, dims int) {
+	class := func() Expr { return &Load{descriptorField(p, ClassOffset, Byte)} }
+
+	ok, notNCA, bad, next := l.newBlock(), l.newBlock(), l.newBlock(), l.newBlock()
+
+	l.branch(&Cmp{Op: Eq, X: class(), Y: IntConst(Byte, int32(ClassNCA))}, ok, notNCA)
+
+	l.begin(notNCA)
+	l.branch(&Cmp{Op: Eq, X: class(), Y: IntConst(Byte, int32(ClassA))}, ok, bad)
+
+	l.begin(ok)
+	l.branch(&Cmp{Op: Eq, X: &Load{descriptorField(p, DimctOffset, Byte)}, Y: IntConst(Byte, int32(dims))}, next, bad)
+
+	l.begin(bad)
+	l.emit(&Call{origin: l.origin(), Routine: ftnBadArrDsc})
+	l.terminate(&NoReturn{l.origin()})
+
+	l.begin(next)
 }
 
 // elementSize is the size in bytes of an element of the array s: its type's,
@@ -200,46 +263,160 @@ type ncaDim struct {
 	lower, upper, extent, stride Expr
 }
 
-// shapedArg is the class NCA descriptor of e, the actual argument of an
-// assumed-shape dummy: a whole array, or a section (sema's shaped.go).
-func (l *lowerer) shapedArg(e sema.Expr) *Mem {
-	switch e := e.(type) {
+// shapedArg is the actual argument a, of an assumed-shape dummy: the address of
+// a class NCA descriptor of it (sema's shaped.go). A whole array, a section, or a
+// substring of either is described where its elements are; any other array value
+// is computed into a temporary of the statement's first (valueTemp), which is
+// described. A whole array that is an OPTIONAL dummy of this routine is passed
+// on as absent, a 0, when its own argument was.
+func (l *lowerer) shapedArg(a sema.Arg) Arg {
+	if !sema.Described(a) {
+		return Arg{Ref: l.wholeNCA(l.valueTemp(a.Expr))}
+	}
+
+	switch e := a.Expr.(type) {
 	case *sema.ArrayRef:
-		s := e.Sym
-		c := l.adjustableOf(s)
-
-		// An allocatable array's own descriptor, or an assumed-shape dummy's
-		// cell: one already.
-		if c != nil && c.Desc.Class == ClassNCA {
-			return &Mem{Cell: c, T: Long}
+		if e.Sym.Optional && e.Sym.Dummy != 0 {
+			return l.optionalNCA(e)
 		}
 
-		dims := make([]ncaDim, len(s.Dims))
-
-		for i := range s.Dims {
-			extent := Expr(LongConst(int32(s.Dims[i].Extent())))
-			if c != nil {
-				extent = l.extent(s, c, i)
-			}
-
-			dims[i] = ncaDim{l.lowerBound(s, c, i), l.upperBound(s, c, i), extent, l.baseStride(s, c, i)}
-		}
-
-		return l.buildNCA(s, &Addr{l.symbolMem(s)}, dims)
+		return Arg{Ref: l.wholeNCA(e)}
 
 	case *sema.Section:
-		return l.sectionNCA(e)
+		return Arg{Ref: l.sectionNCA(e, nil)}
+
+	case *sema.Substring:
+		if sec, ok := e.X.(*sema.Section); ok {
+			return Arg{Ref: l.sectionNCA(sec, e)}
+		}
+
+		return Arg{Ref: l.arrayNCA(e.X.(*sema.ArrayRef), e)}
 	}
 
 	panic("ir: an assumed-shape dummy's actual argument that is neither an array nor a section")
 }
 
-// sectionNCA is the class NCA descriptor of the section e: its first element's
+// valueTemp is the array value e computed into a temporary of the statement's,
+// for an assumed-shape dummy: an expression, a section with a vector subscript,
+// or an array in parentheses. A CHARACTER one's elements are as long as e's,
+// computed now if that isn't known when compiling (valueLength).
+func (l *lowerer) valueTemp(e sema.Expr) *sema.ArrayRef {
+	t := e.Type()
+
+	var length Expr
+	if t.Kind == sema.Character && t.Size == 0 {
+		m := l.temp(Long)
+		l.emit(&Assign{origin: l.origin(), Dst: m, Src: l.valueLength(e)})
+		l.notNegative(m)
+		length = &Load{m}
+	}
+
+	temp := l.shapeTemp(t, sizesOf(e.Shape()), e.Shape(), length)
+	l.arrayNest(temp, e, nil, nil)
+
+	return temp
+}
+
+// optionalNCA is the whole array e, an OPTIONAL dummy argument of this routine,
+// as an assumed-shape dummy's actual argument: its descriptor's address if its
+// own argument was given, else 0, so that the dummy is absent too (5.1.2.6).
+func (l *lowerer) optionalNCA(e *sema.ArrayRef) Arg {
+	result := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: result, Src: LongConst(0)})
+
+	given, next := l.newBlock(), l.newBlock()
+	l.branch(&Cmp{Op: Ne, X: &ArgPointer{l.paramOf(e.Sym)}, Y: LongConst(0)}, given, next)
+
+	l.begin(given)
+	l.emit(&Assign{origin: l.origin(), Dst: result, Src: &Addr{l.wholeNCA(e)}})
+	l.jump(next)
+
+	l.begin(next)
+
+	return Arg{Value: &Load{result}}
+}
+
+// wholeNCA is the class NCA descriptor of the whole array e: an allocatable
+// array's own, or an assumed-shape dummy's cell, which already are one, or else
+// a new one (arrayNCA).
+func (l *lowerer) wholeNCA(e *sema.ArrayRef) *Mem {
+	if c := l.adjustableOf(e.Sym); c != nil && c.Desc.Class == ClassNCA {
+		return &Mem{Cell: c, T: Long}
+	}
+
+	return l.arrayNCA(e, nil)
+}
+
+// arrayNCA is a new class NCA descriptor of the whole array e, or of the
+// substring sub of each of its elements: its own bounds, and the strides its
+// descriptor or its extents give.
+func (l *lowerer) arrayNCA(e *sema.ArrayRef, sub *sema.Substring) *Mem {
+	s := e.Sym
+	c := l.adjustableOf(s)
+
+	dims := make([]ncaDim, len(s.Dims))
+
+	for i := range s.Dims {
+		extent := Expr(LongConst(int32(s.Dims[i].Extent())))
+		if c != nil {
+			extent = l.extent(s, c, i)
+		}
+
+		dims[i] = ncaDim{l.lowerBound(s, c, i), l.upperBound(s, c, i), extent, l.baseStride(s, c, i)}
+	}
+
+	pointer := Expr(&Addr{l.symbolMem(s)})
+	if c != nil && c.Desc.Class == ClassNCA {
+		pointer = &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}
+	}
+
+	return l.buildNCA(s, l.substringOf(s, sub, &pointer), pointer, dims)
+}
+
+// substringOf is the element type an NCA descriptor of the array s, or of the
+// substring sub of each of its elements (nil: the whole elements), describes,
+// and for a substring moves pointer, the first element's address, to the
+// substring's first character. The type's size is 0 for a length known only when
+// the program runs, which buildNCA then computes.
+func (l *lowerer) substringOf(s *sema.Symbol, sub *sema.Substring, pointer *Expr) ncaElement {
+	if sub == nil {
+		return ncaElement{t: s.Type}
+	}
+
+	lower := l.expr(sub.Lower)
+	*pointer = arith(Sub, Long, arith(Add, Long, *pointer, lower), LongConst(1))
+
+	if sub.T.Size > 0 {
+		return ncaElement{t: sub.T}
+	}
+
+	upper := l.charLength(s)
+	if sub.Upper != nil {
+		upper = l.expr(sub.Upper)
+	}
+
+	m := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: m, Src: arith(Add, Long, arith(Sub, Long, upper, lower), LongConst(1))})
+	l.notNegative(m)
+
+	return ncaElement{t: sub.T, length: &Load{m}}
+}
+
+// ncaElement is what an NCA descriptor's elements are: their type, and if it is
+// CHARACTER of a length known only when the program runs (size 0), that length,
+// or nil for the array's own elements' (lengthWord).
+type ncaElement struct {
+	t      sema.Type
+	length Expr
+}
+
+// sectionNCA is the class NCA descriptor of the section e, or of the substring
+// sub of each of its elements (nil: the whole elements): its first element's
 // address, and for each triplet the bounds 1 and its extent, and its step
 // through the array, the dimension's stride times the triplet's. The section's
 // subscripts are computed once, as the scalarizer computes them (arrayNest), and
 // under /CHECK=BOUNDS the first and last subscript of each triplet are checked.
-func (l *lowerer) sectionNCA(e *sema.Section) *Mem {
+func (l *lowerer) sectionNCA(e *sema.Section, sub *sema.Substring) *Mem {
 	s := e.Sym
 	c := l.adjustableOf(s)
 
@@ -275,16 +452,16 @@ func (l *lowerer) sectionNCA(e *sema.Section) *Mem {
 		dims = append(dims, ncaDim{LongConst(1), extent, extent, stride})
 	}
 
-	first := l.mem(sema.NewElem(s, subs, inBounds, e.Pos))
+	pointer := Expr(&Addr{l.mem(sema.NewElem(s, subs, inBounds, e.Pos))})
 
-	return l.buildNCA(s, &Addr{first}, dims)
+	return l.buildNCA(s, l.substringOf(s, sub, &pointer), pointer, dims)
 }
 
 // buildNCA is a class NCA descriptor, in a descriptor cell of the statement's,
-// of elements of the array s's type, the first at pointer, with the dimensions
-// dims; A0 and ARSIZE computed from them.
-func (l *lowerer) buildNCA(s *sema.Symbol, pointer Expr, dims []ncaDim) *Mem {
-	d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassNCA, Length: s.Type.Size}
+// of elements of the array s that are el, the first at pointer, with the
+// dimensions dims; A0 and ARSIZE computed from them.
+func (l *lowerer) buildNCA(s *sema.Symbol, el ncaElement, pointer Expr, dims []ncaDim) *Mem {
+	d := &Descriptor{DType: l.dtypeOf(el.t), Class: ClassNCA, Length: el.t.Size}
 
 	for range dims {
 		d.Dims = append(d.Dims, Bound{Set: true})
@@ -308,12 +485,21 @@ func (l *lowerer) buildNCA(s *sema.Symbol, pointer Expr, dims []ncaDim) *Mem {
 		return &Load{field(offset)}
 	}
 
-	if s.Type.Kind == sema.Character && s.Type.Size == 0 {
-		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: l.lengthWord(s)})
+	size := Expr(LongConst(int32(el.t.Size)))
+
+	if el.t.Kind == sema.Character && el.t.Size == 0 {
+		length := el.length
+		if length == nil {
+			length = l.lengthWord(s)
+		} else {
+			length = arith(Cvt, Word, length, nil)
+		}
+
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: length})
+		size = &Op{Zext, Long, &Load{&Mem{Cell: c, T: Word}}, nil}
 	}
 
 	a0 := value(PointerOffset, pointer)
-	size := l.elementSize(s)
 
 	for i, dm := range dims {
 		stride := value(d.StrideOffset(i), dm.stride)

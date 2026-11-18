@@ -280,7 +280,9 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 	analyzed := make([]Arg, len(list))
 
 	for i, e := range list {
-		analyzed[i] = a.arg(unkeyed(e))
+		// An array section or expression is kept until the specific is
+		// chosen: an assumed-shape dummy takes it (shaped.go).
+		analyzed[i] = a.argValue(unkeyed(e))
 		a.notePassed(analyzed[i])
 
 		if _, bad := analyzed[i].Expr.(*bad); bad {
@@ -306,14 +308,12 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 					continue
 				}
 
-				// A whole array to an assumed-shape dummy goes by descriptor
-				// (shaped.go); a section had its NOTIMPL from arg.
-				args[j] = analyzed[i]
-
-				if r, ok := args[j].Expr.(*ArrayRef); ok && target.Params[j].AssumedShape() && !r.Sym.AssumedSize() {
-					args[j].Shaped = true
+				// An array to an assumed-shape dummy goes by descriptor
+				// (shaped.go).
+				if target.Params[j].AssumedShape() {
+					args[j] = a.shaped(analyzed[i])
 				} else {
-					args[j] = a.unshaped(args[j])
+					args[j] = a.unshaped(a.arrayChecked(analyzed[i]))
 				}
 			}
 

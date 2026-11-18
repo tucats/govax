@@ -5,8 +5,7 @@ import "testing"
 // TestAssumedShape checks assumed-shape dummy arguments (shaped.go;
 // docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, findings 9 and 10):
 // their declarations, the actual arguments an explicit interface lets them take,
-// and the messages for the rest, with the NOTIMPLs subtasks 5b and 6 will take
-// away.
+// and the messages for the rest, with the NOTIMPLs subtask 6 will take away.
 func TestAssumedShape(t *testing.T) {
 	// host is a program whose internal procedure S has the assumed-shape dummy
 	// V of the declaration given, and the statements given.
@@ -44,11 +43,27 @@ func TestAssumedShape(t *testing.T) {
 		{"another length", host("character*4 v(:)", "call s(d)"),
 			"ARGLENGTH: argument 1 of S is 2 characters long, but its dummy argument V is 4 (line 8)"},
 		{"a vector subscript to INTENT(OUT)", host("real, intent(out) :: v(:)", "call s(a(iv))"),
-			"NOTIMPL: an array expression or a vector-subscripted section as an assumed-shape dummy's actual argument (Phase 104, subtask 5b) is not implemented yet"},
-		{"an expression", host("real v(:)", "call s(a + 1.0)"),
-			"NOTIMPL: an array expression or a vector-subscripted section as an assumed-shape dummy's actual argument (Phase 104, subtask 5b) is not implemented yet"},
-		{"a whole array in parentheses", host("real v(:)", "call s((a))"),
-			"NOTIMPL: an array expression or a vector-subscripted section as an assumed-shape dummy's actual argument (Phase 104, subtask 5b) is not implemented yet"},
+			"NOTDEFINABLE: argument 1 of S must be a variable, since its dummy argument V is INTENT(OUT) (line 8)"},
+		{"a vector subscript", host("real v(:)", "call s(a(iv))", "call s(b(iv, 2))"), ""},
+		{"an expression", host("real v(:)", "call s(a + 1.0)", "call s(sqrt(a(1:3)))", "call s((/ 1.0, x /))"), ""},
+		{"a whole array in parentheses", host("real v(:)", "call s((a))"), ""},
+		{"in parentheses to INTENT(INOUT)", host("real, intent(inout) :: v(:)", "call s((a))"),
+			"NOTDEFINABLE: argument 1 of S must be a variable, since its dummy argument V is INTENT(INOUT) (line 8)"},
+		{"a substring of a section", host("character*(*) v(:)", "call s(c(2:4)(2:3))", "call s(c(iv)(1:2))"), ""},
+		{"a concatenation", host("character*(*) v(:)", "call s(c // d)"), ""},
+		{"an expression of another rank", host("real v(:)", "call s(b * 2.0)"),
+			"ARGRANK: argument 1 of S is an array of rank 2, but its dummy argument V is an array of rank 1 (line 8)"},
+		{"a run-time length not of names", []string{"subroutine q(w, n)", "character*(*) w(:)", "integer n",
+			"call s(w(:)(1:n))", "call s(w // w)", "call s(w(:)(1:n) // 'x')", "contains", "subroutine s(v)",
+			"character*(*) v(:)", "end subroutine", "end subroutine"},
+			"NOTIMPL: a CHARACTER array expression of a length known only when the program runs, not made of names, as an assumed-shape dummy's actual argument is not implemented yet"},
+
+		{"a generic's assumed-shape specific", []string{"program p", "interface g", "subroutine g1(v)", "real v(:)",
+			"end subroutine", "subroutine g2(v)", "integer v(:)", "end subroutine", "end interface",
+			"real a(10)", "integer k(4)", "call g(a(1:9:2))", "call g(a * 2.0)", "call g(k(k))", "end program"}, ""},
+		{"a generic's other specific", []string{"program p", "interface g", "subroutine g1(v)", "real v(10)",
+			"end subroutine", "end interface", "real a(20)", "call g(a(1:10))", "end program"},
+			"NOTIMPL: an array section or array expression as an actual argument is not implemented yet"},
 
 		{"an assumed-size array", []string{"subroutine q(w)", "real w(*)", "call s(w)", "contains",
 			"subroutine s(v)", "real v(:)", "end subroutine", "end subroutine"},

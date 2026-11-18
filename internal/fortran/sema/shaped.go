@@ -33,6 +33,11 @@ import (
 // assumed-size array (NOSHAPE), and a CHARACTER one's length must be the
 // dummy's (ARGLENGTH).
 //
+// Any other array value, an expression like A + 1.0, a section with a vector
+// subscript, or (A), is computed into a temporary of the caller's statement, and
+// that is described and passed; nothing is copied back, the dummy not being
+// definable (12.4.1.1; INTENT(OUT) is NOTDEFINABLE).
+//
 // Inside the routine, an assumed-shape array is used as any other: whole, by
 // element, by section. Only what needs its elements one after another in
 // storage, which they may not be, waits for later: passing it to a dummy that
@@ -41,7 +46,7 @@ import (
 // buffer. An I/O list takes it an element at a time.
 
 // argsTo analyzes the actual arguments, list, of a reference to the procedure s,
-// in its dummies' order (actuals): an assumed-shape dummy's by shapedArg, every
+// in its dummies' order (actuals): an assumed-shape dummy's by shaped, every
 // other's as args does.
 func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 	var params []*Symbol
@@ -54,7 +59,7 @@ func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 
 	for i, e := range list {
 		if i < len(params) && params[i].AssumedShape() && !params[i].broken {
-			args[i] = a.shapedArg(e)
+			args[i] = a.shaped(a.argValue(e))
 		} else {
 			args[i] = a.unshaped(a.arg(e))
 		}
@@ -65,96 +70,99 @@ func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 	return args
 }
 
-// shapedArg analyzes e, the actual argument of an assumed-shape dummy: a whole
-// array or a section, passed by descriptor. A scalar is analyzed as any argument
-// is, for checkInterface's ARGRANK.
-func (a *analyzer) shapedArg(e ast.Expr) Arg {
-	var v Expr
+// shaped is arg, analyzed by argValue, as the actual argument of an
+// assumed-shape dummy, which goes by descriptor (Arg.Shaped): a whole array, a
+// section, a substring of either, or any other array value, an expression, a
+// vector-subscripted section, or an array in parentheses, whose value the caller
+// puts in a temporary (the IR's shapedArg), never copied back (12.4.1.1: the
+// dummy isn't definable then). Anything else is left for checkInterface's ARGRANK
+// and the rest.
+func (a *analyzer) shaped(arg Arg) Arg {
+	switch arg.Expr.(type) {
+	case nil, *bad, *Procedure:
+		// An OPTIONAL dummy left out, a failure, or a procedure.
+		return arg
+	}
 
-	switch x := e.(type) {
-	case nil:
-		// An OPTIONAL dummy left out.
-		return Arg{}
+	if arg.Hollerith || arg.Typeless || arg.Mode != ByDefault {
+		return a.arrayChecked(arg)
+	}
 
-	case *ast.Name:
-		v = a.nameArg(x)
+	v := arg.Expr
+	arg.expression = false
 
-	case *ast.Apply:
-		v = a.apply(x)
+	if f, ok := v.(*FieldRef); ok {
+		if argumentRank(f) > 0 {
+			a.notImplForm(f.Position(), "a record's array field as an assumed-shape dummy's actual argument (Phase 105)")
 
-	case *ast.Paren:
-		// An expression, even (A): its value, not A.
-		v = a.arrayValue(x)
-		if rankOf(v) == 0 {
-			return a.arg(e)
-		}
-
-		a.notImplForm(v.Position(), shapedLater)
-
-		return Arg{Expr: a.bad(v.Position())}
-
-	case *ast.FieldRef:
-		arg := a.arg(e)
-		if argumentRank(arg.Expr) > 0 {
-			a.notImplForm(e.Position(), "a record's array field as an assumed-shape dummy's actual argument (Phase 105)")
-
-			return Arg{Expr: a.bad(e.Position())}
+			return Arg{Expr: a.bad(f.Position())}
 		}
 
 		return arg
+	}
 
-	case *ast.HollerithConst, *ast.TypelessConst, *ast.BuiltinArg:
-		return a.arg(e)
+	if r, ok := v.(*ArrayRef); ok {
+		switch {
+		case r.Sym.AssumedSize():
+			a.report("NOSHAPE", r.Pos, r.Sym.Name)
 
-	default:
-		v = a.arrayValue(e)
+			return Arg{Expr: a.bad(r.Pos)}
+
+		case r.Sym.Struct != nil:
+			a.notImplForm(r.Pos, "an array of records as a whole")
+
+			return Arg{Expr: a.bad(r.Pos)}
+		}
+	}
+
+	if argumentRank(v) == 0 {
+		return arg
+	}
+
+	// A temporary's CHARACTER elements need a length, which a value whose
+	// length is known only when the program runs gives only if it is made of
+	// names (as a constructor's first value must, Constructor.LengthOf).
+	if t := v.Type(); t.Kind == Character && t.Size == 0 && !Described(arg) && !lengthFromNames(v) {
+		a.notImplForm(v.Position(), "a CHARACTER array expression of a length known only when the program runs, not made of names, as an assumed-shape dummy's actual argument")
+
+		return Arg{Expr: a.bad(v.Position())}
+	}
+
+	arg.Shaped = true
+
+	return arg
+}
+
+// Described reports whether arg, the actual argument of an assumed-shape dummy,
+// is passed by a descriptor of its own elements where they are: a whole array, a
+// section without a vector subscript, or a substring of either, none in
+// parentheses. Any other's value goes in a temporary first.
+func Described(arg Arg) bool {
+	if arg.Copy {
+		return false
+	}
+
+	v := arg.Expr
+	if sub, ok := v.(*Substring); ok {
+		v = sub.X
 	}
 
 	switch x := v.(type) {
 	case *ArrayRef:
-		switch {
-		case x.Sym.AssumedSize():
-			a.report("NOSHAPE", x.Pos, x.Sym.Name)
-
-			return Arg{Expr: a.bad(x.Pos)}
-
-		case x.Sym.Struct != nil:
-			a.notImplForm(x.Pos, "an array of records as a whole")
-
-			return Arg{Expr: a.bad(x.Pos)}
-		}
-
-		return Arg{Expr: x, Shaped: true}
+		return true
 
 	case *Section:
 		for _, sub := range x.Subs {
 			if sub.Vector != nil {
-				a.notImplForm(x.Pos, shapedLater)
-
-				return Arg{Expr: a.bad(x.Pos)}
+				return false
 			}
 		}
 
-		return Arg{Expr: x, Shaped: true}
+		return true
 	}
 
-	if rankOf(v) > 0 {
-		a.notImplForm(v.Position(), shapedLater)
-
-		return Arg{Expr: a.bad(v.Position())}
-	}
-
-	// A statement function may be only its dummy argument's name; what is
-	// passed is its value (arg).
-	_, stmtFunc := v.(*StmtFuncRef)
-
-	return Arg{Expr: v, Copy: stmtFunc}
+	return false
 }
-
-// shapedLater is what NOTIMPL says of an assumed-shape dummy's actual argument
-// that a temporary must hold: an array expression, or a section with a vector
-// subscript.
-const shapedLater = "an array expression or a vector-subscripted section as an assumed-shape dummy's actual argument (Phase 104, subtask 5b)"
 
 // unshaped is arg, the actual argument of a dummy that isn't assumed-shape, or a
 // bad expression after NOTIMPL if it is a whole assumed-shape array: such a

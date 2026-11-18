@@ -481,7 +481,7 @@ calls), then the frame's run-time storage everything after needs.
    - 5b. Array expressions and vector-subscripted sections as actuals, through
      temporaries; an absent OPTIONAL one passed on as absent; generic names
      whose specifics have them; `/CHECK=BOUNDS`'s BADARRDESC, and a class A
-     descriptor accepted from a MACRO caller.
+     descriptor accepted from a MACRO caller (done 2026-11-18).
 6. **Sections and expressions to old dummies:** contiguity known, the run-time
    test, copy-in and copy-out, INTENT and vector subscripts, CHARACTER (finding 11).
 7. **Array-valued functions and run-time CHARACTER lengths** (finding 12),
@@ -866,3 +866,48 @@ The author read the survey and accepted every recommendation:
     `testdata/fortran90/shaped.f90` and `shapes.f90` (every mode, paging both
     ways; gfortran prints the same 18 and 16 lines). MANUAL.md's 14.13 has
     "Assumed-shape dummy arguments", and HELP FORTRAN a paragraph.
+- **2026-11-18, subtask 5b done:** Assumed-shape dummies given values.
+  - *sema.* `arg` is now `argValue`, which keeps an array section or array
+    expression (`Arg.expression`; an array in parentheses is one, with `Copy`),
+    and `arrayChecked`, the old NOTIMPL for any other dummy. `shaped` (was
+    `shapedArg`) takes every array value for an assumed-shape dummy, marking it
+    `Shaped`; `Described` says whether it is described where its elements are (a
+    whole array, a section without a vector subscript, or a substring of either,
+    none in parentheses) or computed into a temporary. A CHARACTER array
+    expression whose length is known only when the program runs must be made of
+    names (`lengthFromNames`, as a constructor's first value), else NOTIMPL. A
+    vector-subscripted section or a parenthesized array to INTENT(OUT) or
+    INTENT(INOUT) is NOTDEFINABLE, as `definable` already said. A generic name's
+    arguments are analyzed by `argValue`, and `shaped` or `arrayChecked` decided
+    once the specific is chosen (`resolveGeneric`), so a section or expression can
+    reach a generic's assumed-shape specific.
+  - *The caller* (`ir/lowershaped.go`). `shapedArg` takes the `sema.Arg` and returns
+    the argument: `valueTemp` computes any other value into a temporary of the
+    statement's (4c's `shapeTemp`, a cell or a run-time temporary, given back at the
+    statement's end; a CHARACTER one's length `valueLength`'s) and `wholeNCA`
+    describes it, never copied back (12.4.1.1). A substring of a whole array or a
+    section is an NCA of its own (`arrayNCA`, `sectionNCA` with a substring,
+    `substringOf`: POINTER moved to the substring's first character, LENGTH the
+    substring's, computed when not constant; `buildNCA` takes an `ncaElement`). A
+    whole array that is an OPTIONAL dummy of the routine, assumed-shape or not, is
+    passed by value as its descriptor's address or 0 (`optionalNCA`), so the dummy
+    it reaches is absent too.
+  - *The entry* (`computeShaped`). The caller's descriptor's class byte chooses:
+    class A (a MACRO caller's, finding 9) has multipliers, each dimension's extent,
+    so its strides are the element's size times the extents before it; anything
+    else is read as NCA. Under `/CHECK=BOUNDS` `checkDescriptor` first requires class
+    NCA or A and DIMCT the rank, else FTNRTL's new `FTN$BADARRDESC` (`ftn_control.mar`,
+    vector 712, GSMATCH 1,24; FOR number 303, `vmsdef/formessages.go`). Our choice,
+    unconfirmed: class A is accepted with or without `/CHECK=BOUNDS` (the survey put
+    it under the check), since reading its multipliers as strides would be wrong
+    with no message; it costs a compare and a branch at each entry. The IR's
+    `ClassOffset` and `DimctOffset` name the fields.
+  - *Tests:* `sema`'s `TestAssumedShape` (expressions, vector sections, parentheses,
+    substrings, NOTDEFINABLE, the CHARACTER NOTIMPL, generics both ways); the
+    `f90shapedx` goldens in `sema`, `ir`, and `codegen` (and `f90shaped`'s entry code
+    changed); `testdata/fortran90/shapeargs.f90` (every mode, paging both ways;
+    gfortran prints the same 21 lines); and `internal/console`'s
+    `TestFortranShapedFromMACRO`, a MACRO program passing class A and NCA descriptors,
+    then a class S one and an NCA of the wrong rank, each BADARRDESC. MANUAL.md's
+    14.13, the `/CHECK` table, and Appendix B's FTNRTL routines, and HELP FORTRAN,
+    describe them.

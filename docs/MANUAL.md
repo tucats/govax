@@ -6796,6 +6796,7 @@ string changes nothing. So a directive on a program's first line doesn't head pa
 | | An adjustable array's bounds at each entry point defining it, an upper below its lower being wrong | `%FOR-F-ADJARRDIM` |
 | | A Fortran 90 array section's first and last subscripts, once before its assignment's loops, and each of a vector subscript's values | `%SYSTEM-F-SUBRNG` |
 | | Two arrays' extents in one Fortran 90 array assignment, where they weren't known to be equal when compiling, and an array constructor's values against the section it is stored in | `%FOR-F-NOTCONFOR` (govax's own, FOR number 300) |
+| | An assumed-shape dummy's argument, at each entry point: a class NCA or class A descriptor of the dummy's rank, nothing else | `%FOR-F-BADARRDESC` (govax's own, FOR number 303) |
 | `OVERFLOW` | Integer arithmetic, each unit's entry masks setting the IV bit | `%SYSTEM-F-INTOVF` |
 | `UNDERFLOW` | Floating arithmetic, each entry point setting the PSW's FU bit | `%SYSTEM-F-FLTUND_F`, not a quiet zero |
 
@@ -7223,6 +7224,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$ADJARRDIM()` | Signals `%FOR-F-ADJARRDIM`, severe: `/CHECK=BOUNDS` found an adjustable array's upper bound below its lower |
 | `FTN$NOTCONFOR()` | Signals `%FOR-F-NOTCONFOR`, severe, "array shapes do not conform": `/CHECK=BOUNDS` found two arrays of different shapes in a Fortran 90 array assignment. VAX FORTRAN had no such condition; it is govax's, FOR number 300 |
 | `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0), `flags` a longword (bit 0: STAT= given), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
+| `FTN$BADARRDESC()` | Signals `%FOR-F-BADARRDESC`, severe, "argument is not an array descriptor of the dummy argument's rank": `/CHECK=BOUNDS` found an assumed-shape dummy given something other than a class NCA or class A descriptor of its rank (a call without the routine's interface, or a MACRO caller's mistake). govax's own, FOR number 303 |
 | `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array: gives its memory to `LIB$FREE_VM` and clears POINTER. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC` |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
@@ -9037,14 +9039,24 @@ its own as an internal procedure, an interface block's, or a recursive procedure
 (`EXPLICITREQ` for a procedure of the same file without one). The actual must be an array
 of the dummy's rank (`ARGRANK`; an element won't do), not an assumed-size array
 (`NOSHAPE`), and of the dummy's CHARACTER length where both are known (`ARGLENGTH`); a
-`CHARACTER(LEN=*)` one takes the actual's. A MACRO caller builds the descriptor itself:
-each entry point copies it, with the dummy's own bounds, into a descriptor of the
-routine's. Inside, an assumed-shape array is used as any other: by element, whole, by
+`CHARACTER(LEN=*)` one takes the actual's. A substring of each element, `C(2:4)(2:3)`, is
+described where it is too. Any other array value, an expression (`A * 2.0`, `SQRT(A)`, a
+constructor), a section with a vector subscript (`A(IV)`), or an array in parentheses
+(`(A)`), is computed into a temporary of the calling statement's, on the stack or past 64
+KB the heap, and that is passed; nothing is copied back, so such a dummy mustn't be
+changed (INTENT(OUT) or INTENT(INOUT) draws `NOTDEFINABLE`). A generic name chooses a
+specific with an assumed-shape dummy for any of these. A MACRO caller builds the descriptor
+itself, class NCA, or class A, whose multipliers the entry turns into strides: each entry
+point copies it, with the dummy's own bounds, into a descriptor of the routine's, and under
+`/CHECK=BOUNDS` refuses anything else, or a descriptor of another rank, with
+`%FOR-F-BADARRDESC`. Inside, an assumed-shape array is used as any other: by element, whole, by
 section, with SIZE, LBOUND, UBOUND, SHAPE, and the reductions, and passed on to another
 assumed-shape dummy whole or as a section; an output list takes it an element at a time.
-An OPTIONAL one may be left out, and an ENTRY may have one. Not there yet: an array
-expression or a section with a vector subscript as such an argument, which needs a
-temporary; an assumed-shape array passed to a dummy that isn't assumed-shape (an
+An OPTIONAL one may be left out, and passed on to another OPTIONAL dummy is left out there
+too (so is an OPTIONAL explicit-shape one); an ENTRY may have one. Not there yet: a
+CHARACTER array expression whose length is known only when the program runs and isn't made
+of variables, arrays, and concatenations of them, as such an argument; an assumed-shape
+array passed to a dummy that isn't assumed-shape (an
 explicit-shape or assumed-size one, or a routine with no interface), which takes its
 elements one after another, and its use as a format, an internal file, or ENCODE's or
 DECODE's buffer; and `/DEBUG`'s view of one, which the debugger doesn't read yet.
@@ -9061,8 +9073,7 @@ DECODE's buffer; and `/DEBUG`'s view of one, which the debugger doesn't read yet
 
 That includes modules and USE (with MODULE PROCEDURE), derived types, and pointers, each
 to come in its turn. Of arrays as values, these are not there yet: a section or array
-expression as an argument to a program's own procedure, but a section to an assumed-shape
-dummy; an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
+expression as an argument to a program's own procedure, but to an assumed-shape dummy; an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
 gives no elements but govax still calls `BOUNDORDER`; an array function's value of a shape not known when compiling
 (RESHAPE of values that aren't constants, a `DIM=` that isn't constant on an array of rank 2
 or more); a CHARACTER constructor whose first value's length is known only when the program

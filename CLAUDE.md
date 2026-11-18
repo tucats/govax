@@ -1092,7 +1092,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (2026-11-18) is allocatable arrays (`sema/allocate.go`: `Dim.Deferred`,
   `Symbol.Allocatable`, `Allocate`, `Allocated`; `ir/lowerallocate.go`: each
   is its own class NCA descriptor cell, `ir.ClassNCA`, an element A0 plus
-  strides; `opt.AllocatedRegion`; FTNRTL's `ftn_alloc.mar`, GSMATCH 1,22 (1,23 with 4c's `FTN$GET_TEMP`);
+  strides; `opt.AllocatedRegion`; FTNRTL's `ftn_alloc.mar`, GSMATCH 1,22 (1,23 with 4c's `FTN$GET_TEMP`, 1,24 with 5b's `FTN$BADARRDESC`);
   `testdata/fortran90/allocs.f90`); subtask 3 (2026-11-18) is allocation
   status: STAT= (`sema.Allocate.Stat`, a failure's FOR number, the statement
   stopping at its first), and a subprogram's unsaved allocatables deallocated
@@ -1122,8 +1122,16 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   the dummy's `$Bn` cell with its own lower bounds, `computeShaped`; an element is A0
   plus every subscript times its stride; a caller builds a descriptor per call,
   `buildNCA`, `sectionNCA`; `testdata/fortran90/shaped.f90`, `shapes.f90`); subtask 5b
-  (array expressions and vector sections as such actuals, OPTIONAL passed on,
-  generics, BADARRDESC) is next.
+  (2026-11-18) is such actuals that aren't arrays where they are: `sema`'s
+  `argValue` keeps array values (`Arg.expression`), `shaped` marks them and
+  `Described` says which go through a temporary (`ir`'s `valueTemp`, never copied
+  back) and which are described in place (a substring of a section too,
+  `substringOf`); an OPTIONAL dummy passed on as absent (`optionalNCA`); generics
+  deciding after the choice; the entry copy reading a class A descriptor's
+  multipliers, and under `/CHECK=BOUNDS` `checkDescriptor`'s BADARRDESC (FTNRTL's
+  `FTN$BADARRDESC`, GSMATCH 1,24); `testdata/fortran90/shapeargs.f90`,
+  `internal/console`'s `TestFortranShapedFromMACRO`. Subtask 6 (sections and
+  expressions to old dummies) is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

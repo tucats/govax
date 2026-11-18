@@ -610,4 +610,12 @@
 	.MASK	FTN$GET_TEMP
 	JMP	L^FTN$GET_TEMP+2
 
+;
+; /CHECK=BOUNDS's report of an assumed-shape dummy given something other than
+; an array descriptor of its rank (FTN_CONTROL).
+;
+	.TRANSFER FTN$BADARRDESC ; 712: not an array descriptor of the rank
+	.MASK	FTN$BADARRDESC
+	JMP	L^FTN$BADARRDESC+2
+
 	.END

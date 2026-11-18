@@ -501,10 +501,12 @@ type Descriptor struct {
 	Dims []Bound
 }
 
-// The places, in a descriptor, of the fields lowering stores: the length
-// (a word, DSC$W_LENGTH, at the descriptor's start), the address, and in an
-// array's, its size and A0.
+// The places, in a descriptor, of the fields lowering stores or reads: the
+// length (a word, DSC$W_LENGTH, at the descriptor's start), the class byte,
+// the address, and in an array's, its rank, size, and A0.
 const (
+	ClassOffset   = 3  // DSC$B_CLASS
+	DimctOffset   = 11 // DSC$B_DIMCT, in an array's descriptor
 	PointerOffset = 4  // DSC$A_POINTER
 	ArsizeOffset  = 12 // DSC$L_ARSIZE, in a class A descriptor
 	A0Offset      = 16 // DSC$A_A0, in a class A descriptor

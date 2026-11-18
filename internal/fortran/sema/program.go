@@ -1150,9 +1150,15 @@ type Arg struct {
 	// its Expr's INTEGER*4 is only its four bytes (section 2.2.1.4).
 	Typeless bool
 
-	// Shaped is set for the actual argument of an assumed-shape dummy, a whole
-	// array or a section, which goes by a class NCA descriptor (shaped.go).
+	// Shaped is set for the actual argument of an assumed-shape dummy, which
+	// goes by a class NCA descriptor (shaped.go): a whole array or a section of
+	// one, or an array expression, a vector-subscripted section, or an array in
+	// parentheses (Copy), whose value goes in a temporary.
 	Shaped bool
+
+	// expression is set by argValue for an array section or array expression,
+	// which only an assumed-shape dummy takes (arrayChecked).
+	expression bool
 }
 
 // ArgMode is how an actual argument is passed.

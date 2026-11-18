@@ -30,69 +30,122 @@ routine SHAPED subroutine
 B1:
   ; line 8
   assign $B1+4 = @(arg A)+4
-  assign $B1+20 = @(arg A)+20
-  assign $B1+28 = @N
-  assign $T1 = add.L(sub.L(@(arg A)+32, @(arg A)+28), 1)
-  branch lt.L($T1, 0) B2 B3
+  branch eq.B(@(arg A)+3, 10) B3 B2
 B2:
-  assign $T1 = 0
-  jump B3
+  branch eq.B(@(arg A)+3, 4) B3 B4
 B3:
-  assign $B1+32 = sub.L(add.L($B1+28, $T1), 1)
-  assign $B1+24 = @(arg A)+24
-  assign $B1+36 = 1
-  assign $T2 = add.L(sub.L(@(arg A)+40, @(arg A)+36), 1)
-  branch lt.L($T2, 0) B4 B5
+  branch eq.B(@(arg A)+11, 2) B5 B4
 B4:
-  assign $T2 = 0
-  jump B5
+  call FTN$BADARRDESC()
+  noreturn
 B5:
+  branch eq.B(@(arg A)+3, 4) B7 B6
+B6:
+  assign $B1+20 = @(arg A)+20
+  assign $T1 = add.L(sub.L(@(arg A)+32, @(arg A)+28), 1)
+  assign $B1+24 = @(arg A)+24
+  assign $T2 = add.L(sub.L(@(arg A)+40, @(arg A)+36), 1)
+  jump B8
+B7:
+  assign $B1+20 = 4
+  assign $T1 = @(arg A)+20
+  assign $B1+24 = mul.L($B1+20, $T1)
+  assign $T2 = @(arg A)+24
+  jump B8
+B8:
+  assign $B1+28 = @N
+  branch lt.L($T1, 0) B9 B10
+B9:
+  assign $T1 = 0
+  jump B10
+B10:
+  assign $B1+32 = sub.L(add.L($B1+28, $T1), 1)
+  assign $B1+36 = 1
+  branch lt.L($T2, 0) B11 B12
+B11:
+  assign $T2 = 0
+  jump B12
+B12:
   assign $B1+40 = $T2
   assign $B1+16 = sub.L(sub.L($B1+4, mul.L($B1+20, $B1+28)), $B1+24)
   assign $B1+12 = mul.L(mul.L(4, add.L(sub.L($B1+32, $B1+28), 1)), $B1+40)
   assign $B2 = @(arg C)
   assign $B2+4 = @(arg C)+4
+  branch eq.B(@(arg C)+3, 10) B14 B13
+B13:
+  branch eq.B(@(arg C)+3, 4) B14 B15
+B14:
+  branch eq.B(@(arg C)+11, 1) B16 B15
+B15:
+  call FTN$BADARRDESC()
+  noreturn
+B16:
+  branch eq.B(@(arg C)+3, 4) B18 B17
+B17:
   assign $B2+20 = @(arg C)+20
-  assign $B2+24 = 1
   assign $T2 = add.L(sub.L(@(arg C)+28, @(arg C)+24), 1)
-  branch lt.L($T2, 0) B6 B7
-B6:
+  jump B19
+B18:
+  assign $B2+20 = zext.WL(@(arg C))
+  assign $T2 = @(arg C)+20
+  jump B19
+B19:
+  assign $B2+24 = 1
+  branch lt.L($T2, 0) B20 B21
+B20:
   assign $T2 = 0
-  jump B7
-B7:
+  jump B21
+B21:
   assign $B2+28 = $T2
   assign $B2+16 = sub.L($B2+4, $B2+20)
   assign $B2+12 = mul.L(zext.WL(@(arg C)), $B2+28)
-  branch ne.L(arg O, 0) B8 B11
-B8:
+  branch ne.L(arg O, 0) B22 B32
+B22:
   assign $B3+4 = @(arg O)+4
+  branch eq.B(@(arg O)+3, 10) B24 B23
+B23:
+  branch eq.B(@(arg O)+3, 4) B24 B25
+B24:
+  branch eq.B(@(arg O)+11, 1) B26 B25
+B25:
+  call FTN$BADARRDESC()
+  noreturn
+B26:
+  branch eq.B(@(arg O)+3, 4) B28 B27
+B27:
   assign $B3+20 = @(arg O)+20
-  assign $B3+24 = 1
   assign $T2 = add.L(sub.L(@(arg O)+28, @(arg O)+24), 1)
-  branch lt.L($T2, 0) B9 B10
-B9:
+  jump B29
+B28:
+  assign $B3+20 = 4
+  assign $T2 = @(arg O)+20
+  jump B29
+B29:
+  assign $B3+24 = 1
+  branch lt.L($T2, 0) B30 B31
+B30:
   assign $T2 = 0
-  jump B10
-B10:
+  jump B31
+B31:
   assign $B3+28 = $T2
   assign $B3+16 = sub.L($B3+4, $B3+20)
   assign $B3+12 = mul.L(4, $B3+28)
-  jump B11
-B11:
+  jump B32
+B32:
   ; line 13
   assign $T2 = sub.L($B1+28, 1)
   assign $T1 = add.L(sub.L($B1+32, $B1+28), 1)
-  branch lt.L($T1, 0) B12 B13
-B12:
+  branch lt.L($T1, 0) B33 B34
+B33:
   assign $T1 = 0
-  jump B13
-B13:
+  jump B34
+B34:
   assign $T3 = $B1+40
-  branch lt.L($T3, 0) B14 B15
-B14:
+  branch lt.L($T3, 0) B35 B36
+B35:
   assign $T3 = 0
-  jump B15
-B15:
+  jump B36
+B36:
   assign $T4 = mul.L($T1, $T3)
   assign @(add.L(add.L($B1+16, mul.L(inrange(@N, $B1+28, $B1+32), $B1+20)), mul.L(inrange(1, 1, $B1+40), $B1+24))) = add.F(@(add.L(add.L($B1+16, mul.L(inrange(add.L(@N, 1), $B1+28, $B1+32), $B1+20)), mul.L(inrange(2, 1, $B1+40), $B1+24))), cvt.LF($T4))
   ; line 14
@@ -102,53 +155,53 @@ B15:
   call FTN$IO_ITEM(ref $D1)
   assign $T4 = sub.L($B1+28, 1)
   assign $T3 = add.L(sub.L($B1+32, $B1+28), 1)
-  branch lt.L($T3, 0) B16 B17
-B16:
+  branch lt.L($T3, 0) B37 B38
+B37:
   assign $T3 = 0
-  jump B17
-B17:
+  jump B38
+B38:
   assign $T1 = $B1+40
-  branch lt.L($T1, 0) B18 B19
-B18:
+  branch lt.L($T1, 0) B39 B40
+B39:
   assign $T1 = 0
-  jump B19
-B19:
+  jump B40
+B40:
   assign $T5 = $B1+28
-  branch le.L($T3, 0) B20 B21
-B20:
+  branch le.L($T3, 0) B41 B42
+B41:
   assign $T5 = 1
-  jump B21
-B21:
+  jump B42
+B42:
   assign $T2 = $T5
   call FTN$IO_ITEM(ref $D2)
   assign $T6 = sub.L($B1+28, 1)
   assign $T7 = add.L(sub.L($B1+32, $B1+28), 1)
-  branch lt.L($T7, 0) B22 B23
-B22:
+  branch lt.L($T7, 0) B43 B44
+B43:
   assign $T7 = 0
-  jump B23
-B23:
+  jump B44
+B44:
   assign $T8 = $B1+40
-  branch lt.L($T8, 0) B24 B25
-B24:
+  branch lt.L($T8, 0) B45 B46
+B45:
   assign $T8 = 0
-  jump B25
-B25:
+  jump B46
+B46:
   assign $T10 = $B1+40
-  branch le.L($T8, 0) B26 B27
-B26:
+  branch le.L($T8, 0) B47 B48
+B47:
   assign $T10 = 0
-  jump B27
-B27:
+  jump B48
+B48:
   assign $T9 = $T10
   call FTN$IO_ITEM(ref $D3)
   call FTN$IO_END()
   ; line 15
-  branch ne.L(arg O, 0) B28 B29
-B28:
+  branch ne.L(arg O, 0) B49 B50
+B49:
   assign @(add.L($B3+16, mul.L(inrange(1, 1, $B3+28), $B3+20))) = 0.0
-  jump B29
-B29:
+  jump B50
+B50:
   ; line 16
   return
 routine CALLER subroutine

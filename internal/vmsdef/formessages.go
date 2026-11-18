@@ -82,4 +82,9 @@ var forMessages = map[uint32]Message{
 	// arrays.md, finding 4).
 	0x00188968: {Facility: "FOR", Ident: "ALREADYALLOC", Text: "allocatable array is already allocated", FAOCount: 0},
 	0x00188970: {Facility: "FOR", Ident: "NOTALLOC", Text: "allocatable array is not allocated", FAOCount: 0},
+
+	// FTNRTL's FTN$BADARRDESC, /CHECK=BOUNDS finding an assumed-shape dummy
+	// argument given something other than a class NCA or A descriptor of its
+	// rank (FOR number 303; PHASE-104's finding 9).
+	0x00188978: {Facility: "FOR", Ident: "BADARRDESC", Text: "argument is not an array descriptor of the dummy argument's rank", FAOCount: 0},
 }

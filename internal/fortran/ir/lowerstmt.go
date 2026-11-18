@@ -15,6 +15,7 @@ const (
 	ftnPause     = "FTN$PAUSE"
 	ftnAdjArrDim = "FTN$ADJARRDIM"
 	ftnNotConfor = "FTN$NOTCONFOR"
+	ftnBadArrDsc = "FTN$BADARRDESC"
 )
 
 // stmts lowers a list of statements.

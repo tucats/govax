@@ -36,7 +36,7 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 
 	// An assumed-shape dummy's, by a class NCA descriptor (lowershaped.go).
 	if a.Shaped {
-		return Arg{Ref: l.shapedArg(a.Expr)}
+		return l.shapedArg(a)
 	}
 
 	if p, ok := a.Expr.(*sema.Procedure); ok {

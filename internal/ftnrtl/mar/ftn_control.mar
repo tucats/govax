@@ -4,8 +4,10 @@
 ; The routines of FTNRTL that control a program as a whole: FTN$VERSION,
 ; which says which FTNRTL a program is running with, FTN$STOP, which is
 ; FORTRAN's STOP statement, FTN$PAUSE, its PAUSE statement, and
-; FTN$ADJARRDIM, /CHECK=BOUNDS finding an array's bounds wrong; and
-; FTN$NOTCONFOR, /CHECK=BOUNDS finding two arrays' shapes different.
+; FTN$ADJARRDIM, /CHECK=BOUNDS finding an array's bounds wrong;
+; FTN$NOTCONFOR, /CHECK=BOUNDS finding two arrays' shapes different; and
+; FTN$BADARRDESC, /CHECK=BOUNDS finding an assumed-shape dummy argument
+; given something other than an array's descriptor of its rank.
 ;
 ; Like every FTNRTL routine, each is called with CALLS or CALLG, by the
 ; VAX calling standard: AP points at the argument list, whose first byte
@@ -150,6 +152,23 @@ FOR$_NOTCONFOR = ^X188964		; FOR number 300, severity F
 
 	.ENTRY	FTN$NOTCONFOR,^M<>
 	PUSHL	#FOR$_NOTCONFOR
+	CALLS	#1,G^LIB$STOP
+	RET
+;
+; FTN$BADARRDESC
+;
+; A Fortran 90 routine compiled with /CHECK=BOUNDS found, as it was entered,
+; that the argument of one of its assumed-shape dummies isn't a class NCA or
+; class A descriptor of the dummy's rank (docs/planning/PHASE-104 - Fortran 90
+; dynamic arrays.md, finding 9): a call without the routine's interface, which
+; passed an array's address, or a MACRO caller's mistake. govax's own
+; condition, FOR number 303, in govax's words. It is severe, so this doesn't
+; come back.
+;
+FOR$_BADARRDESC = ^X18897C		; FOR number 303, severity F
+
+	.ENTRY	FTN$BADARRDESC,^M<>
+	PUSHL	#FOR$_BADARRDESC
 	CALLS	#1,G^LIB$STOP
 	RET
 

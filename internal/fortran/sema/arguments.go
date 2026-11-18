@@ -26,8 +26,29 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 
 // arg analyzes an actual argument: a variable, an array element, or a whole
 // array is passed as itself; a parenthesized one, or any other expression, as a
-// copy.
+// copy. An array section or array expression is NOTIMPL here: only an
+// assumed-shape dummy takes one yet (shaped.go, through argValue).
 func (a *analyzer) arg(e ast.Expr) Arg {
+	return a.arrayChecked(a.argValue(e))
+}
+
+// arrayChecked is arg, unless it is an array section or array expression, which
+// a dummy that isn't assumed-shape doesn't take yet: then a bad expression,
+// after NOTIMPL (arrayArg).
+func (a *analyzer) arrayChecked(arg Arg) Arg {
+	if arg.expression {
+		arg.Expr = a.arrayArg(arg.Expr)
+		arg.expression = false
+	}
+
+	return arg
+}
+
+// argValue analyzes an actual argument as arg does, but keeps an array section
+// or array expression, marked as one (Arg.expression), for its dummy to decide
+// on: an assumed-shape dummy takes it by descriptor (shaped.go), any other not
+// yet (arrayChecked).
+func (a *analyzer) argValue(e ast.Expr) Arg {
 	switch x := e.(type) {
 	case nil:
 		// A null argument: CALL S(A,,B).
@@ -37,7 +58,13 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		return Arg{Expr: a.nameArg(x)}
 
 	case *ast.Paren:
-		v := a.arrayArg(a.arrayValue(x))
+		v := a.arrayValue(x)
+
+		// An array in parentheses is an expression, even (A): its value, not
+		// A, so it is a copy too.
+		if rankOf(v) > 0 {
+			return Arg{Expr: v, Copy: true, expression: true}
+		}
 
 		switch v.(type) {
 		case *Var, *Elem, *Substring, *StmtFuncRef, *FieldRef:
@@ -78,13 +105,11 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		v = a.arrayValue(e)
 	}
 
-	v = a.arrayArg(v)
-
 	// A statement function may be only its dummy argument's name, the actual
 	// variable itself; what is passed is its value.
 	_, stmtFunc := v.(*StmtFuncRef)
 
-	return Arg{Expr: v, Copy: stmtFunc}
+	return Arg{Expr: v, Copy: stmtFunc, expression: rankOf(v) > 0}
 }
 
 // nameArg analyzes a name standing alone as an actual argument: a procedure
