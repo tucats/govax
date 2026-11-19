@@ -138,8 +138,15 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		a.stmtFuncs[s] = nil
 
 	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Common != nil || sym.External ||
-		sym.Class == Intrinsic || sym.Struct != nil:
+		sym.Class == Intrinsic || sym.Struct != nil && !sym.Struct.Derived:
 		a.badUse(sym, ap.Pos, "be a statement function")
+		a.stmtFuncs[s] = nil
+
+	case sym.Type.Kind == Record:
+		// Allowed, but rare, and each reference's expansion in line would need
+		// a constructor's temporary (docs/planning/PHASE-105 - Fortran 90
+		// derived types.md, finding 11).
+		a.notImplForm(ap.Pos, "a statement function of a derived type")
 		a.stmtFuncs[s] = nil
 
 	default:
@@ -218,23 +225,14 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 			a.report("TYPEAFTER", d.Pos, d.Name, sym.defPos.Line)
 		case sym.Typed:
 			a.report("DUPDECL", d.Pos, d.Name, sym.TypePos.Line)
-		case sym.Result && t.Kind == Record:
-			// Subtask 4's (docs/planning/PHASE-105 - Fortran 90 derived types.md).
-			a.notImplForm(d.Pos, "a function of a derived type")
-
-			sym.broken = true
-
 		default:
 			sym.Type, sym.Typed, sym.TypePos, sym.broken = t, true, d.Pos, sym.broken || !ok
 
 			// TYPE(POINT) P: an object of a derived type, which is compiled
-			// as a record is (derived.go).
+			// as a record is (derived.go). Its class is its use's, as a REAL
+			// name's is: TYPE(POINT) F may be a function's name.
 			if t.Kind == Record {
 				sym.Struct = t.Struct
-
-				if sym.Class == Unclassified {
-					sym.Class = Variable
-				}
 			}
 
 			// CHARACTER(LEN=N): a length known only when the program runs

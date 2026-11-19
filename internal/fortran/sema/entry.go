@@ -212,6 +212,17 @@ func (a *analyzer) checkEntryTypes() {
 			continue
 		}
 
+		// A function of a derived type has entry points of that type only
+		// (12.5.2.5): their values share one place, and nothing else is
+		// that type's bytes.
+		if s.Type.Kind == Record || f.Type.Kind == Record {
+			if !sameTypes(s.Type, f.Type) {
+				a.report("ENTRYDERIVED", e.AST.Pos, s.Name, s.Type.String(), f.Name, f.Type.String())
+			}
+
+			continue
+		}
+
 		same := valueGroup(s.Type) == valueGroup(f.Type)
 		if s.Type.Kind == Character && s.Type != f.Type {
 			same = false
@@ -242,11 +253,11 @@ func valueGroup(t Type) int {
 // returns the first offset after it: defining one defines the others of its
 // type (section 6.2.4.1), so they overlap as EQUIVALENCE would have them.
 func (a *analyzer) placeResults() int {
-	size := a.unit.Result.Size()
+	size := a.unit.Result.room()
 	a.unit.Result.Offset, a.unit.Result.Equivalenced = 0, true
 
 	for _, e := range a.unit.Entries {
-		size = max(size, e.Sym.Size())
+		size = max(size, e.Sym.room())
 		e.Sym.Offset, e.Sym.Equivalenced = 0, true
 	}
 

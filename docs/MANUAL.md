@@ -8842,6 +8842,19 @@ a derived type takes every assignment of that type, `P = POINT(1.0, 2.0)` too. A
 body has no host, so it defines the type again; only a SEQUENCE type's two definitions, with
 the same name and components, are one type.
 
+**Derived types as arguments and values** (4.4.2, 12.5.2.2). An object of a derived type goes
+by reference to a dummy of its own type, and nowhere else: to another type, to a number, or
+from a RECORD of the same layout is `TYPEARG`. The same rule holds between two units of one
+file, each with its own definition: two definitions of a type's name are one type only if
+both have SEQUENCE and the same components, and otherwise the call is `SEPARATEARG`, or for a
+function's value `SEPARATEFUNC`, each naming the two definitions' lines. A function may be of a
+derived type, by `TYPE(POINT) FUNCTION F`, a type statement, RESULT, or IMPLICIT; its header
+may name a type its own body defines. A value of up to 8 bytes comes back in R0, or R0 and
+R1, as the Calling Standard returns any value that size, so a MACRO routine can return one
+too; a longer value goes through a hidden first argument, the address of a place for it, as
+a COMPLEX\*16's does. An entry point of such a function has its type (`ENTRYDERIVED`), and a
+statement function of a derived type isn't there yet.
+
 All of it together:
 
 ```fortran

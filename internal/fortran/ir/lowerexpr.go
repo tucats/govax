@@ -408,6 +408,13 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		l.buildRecord(t, e)
 
 		return t
+
+	case *sema.FuncRef:
+		// A function's value of a derived type, in a temporary
+		// (lowerresult.go).
+		if e.T.Kind == sema.Record {
+			return l.recordResult(e)
+		}
 	}
 
 	panic("ir: an assignment's target that is neither a variable nor an array element")

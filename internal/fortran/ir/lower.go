@@ -212,7 +212,7 @@ func (l *lowerer) prepare() {
 				l.params[u.Result] = p
 			}
 		} else {
-			r.Result = l.typeOf(u.Result.Type)
+			r.Result = l.resultType(u.Result.Type)
 		}
 	case ast.SubroutineUnit:
 		r.Kind = Subroutine

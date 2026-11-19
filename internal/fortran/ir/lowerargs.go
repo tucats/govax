@@ -118,6 +118,11 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 
 	case *sema.StructValue:
 		return Arg{Ref: l.mem(e)}
+
+	case *sema.FuncRef:
+		if e.T.Kind == sema.Record {
+			return Arg{Ref: l.mem(e)}
+		}
 	}
 
 	return Arg{Ref: l.value(l.expr(a.Expr))}

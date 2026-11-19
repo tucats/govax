@@ -267,7 +267,7 @@ func (l *lowerer) returnValue() Expr {
 			return nil
 		}
 
-		return &Load{l.symbolMem(l.unit.Result)}
+		return l.resultValue(l.unit.Result)
 	case Main:
 		return LongConst(1)
 	case Subroutine:

@@ -431,7 +431,8 @@ all three.
 4. **Arguments and results:** `sameType` at every check, RECORD versus TYPE,
    separate definitions (finding 10), results in R0 and R1 up to 8 bytes and the
    hidden result past that, RESULT, recursion,
-   internal procedures, interface bodies with SEQUENCE types (finding 11).
+   internal procedures, interface bodies with SEQUENCE types (finding 11)
+   (done 2026-11-18).
 5. **Arrays:** components with a rank and their sections, MULTIRANK, a field's
    list read as a name's (finding 6's change for records), arrays of a type as
    wholes, sections, constructors, and the type-generic intrinsics; to
@@ -633,3 +634,47 @@ object are never the same type, with a message naming both.
     `testdata/fortran90/structs.f90` (in `compare.py`; gfortran prints the same
     lines). MANUAL.md's 14.13 says what operators and assignment do with
     derived types.
+- **2026-11-18, subtask 4 (done):** Arguments and results (`ir/lowerresult.go`;
+  `sema/results_test.go`).
+  - *A function's type.* The three NOTIMPLs are gone. A header's `TYPE(T)
+    FUNCTION F` types the value at once (so a type statement for it is DUPDECL)
+    but finds its structure after the declarations (`Unit.headerType`, resolved in
+    `resolveImplicitObjects`), since 5.1.1.7 lets the function's own body, or an
+    interface body, define the type after the header. A type statement, RESULT,
+    and IMPLICIT TYPE(t) give the value a derived type as they give any other.
+  - *A name of a derived type has its use's class.* `TYPE(POINT) F` no longer
+    makes F a variable, as `REAL F` doesn't, so F may be an external function
+    (EXTERNAL takes a derived type's name; a STRUCTURE's record still not), a
+    dummy procedure, or a variable, by its use.
+  - *Values in registers* (the author's answer 2). Up to 8 bytes, the value's
+    storage is its room, a longword up to 4 bytes and a quadword past that
+    (`Symbol.room`, `sema.RecordRoom`; `placeResults` for ENTRY's shared place),
+    and the return loads it whole (`resultType`, `resultValue`: `MOVL F.F,R0` or
+    `MOVQ`). A caller assigning the value to a target of 1, 2, 4, or 8 bytes stores
+    the registers straight into it (`assignResult`: `MOVB`, `MOVW`, `MOVL`, `MOVQ`
+    `R0,target`, the target's index taken away by `recordPlace`); any other use
+    (a 3-, 5-, 6-, or 7-byte type's assignment, an argument, a constructor's
+    component, an operand of a defined operator) gets a temporary of the room
+    (`recordResult`, through `mem`), whose first bytes are the record. Past 8
+    bytes the value goes through a hidden first argument, a temporary of the type,
+    as COMPLEX*16's. `TestDerivedResultCode` holds the instructions.
+  - *Type equality at every check.* `recordArguments` passes what
+    `argumentStructures` passes (one type, or two STRUCTUREs of one form), and
+    otherwise, where a derived type is involved, says TYPEARG (a record, a number,
+    or another type), or SEPARATEARG for two units' definitions of one name (each
+    definition's line); FUNCTYPE compares by `sameTypes`, SEPARATEFUNC for the
+    same case. A function of a derived type has entry points only of its type
+    (ENTRYDERIVED, 12.5.2.5). A statement function of a derived type is NOTIMPL
+    (finding 11). An array-valued function of a derived type is still NOTIMPL,
+    subtask 5's.
+  - *Tests:* `sema`'s `TestDerivedResults` (every way of typing the value, and
+    its room) and `TestDerivedArguments` (what passes, every message);
+    `fortran`'s `TestDerivedResultCode`; `testdata/fortran90/results.f90`
+    (values of 3, 4, 6, 8, 12, and 16 bytes, RESULT, ENTRY, RECURSIVE, an
+    internal function using its host's type, a defined `+`'s value as an operand,
+    a function passed as an argument), in every mode and in `compare.py`, where
+    gfortran prints the same lines. Its REALs are printed by formats:
+    gfortran 16 writes a list-directed REAL*4 with 9 digits where VMS writes 7,
+    and so `structs.f90` (subtask 3's) now differs on gfortran in its digits
+    only, the values agreeing; a later subtask should give it formats too.
+    MANUAL.md's 14.13 has "Derived types as arguments and values".

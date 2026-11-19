@@ -365,9 +365,33 @@ func (a *analyzer) layout() {
 		}
 
 		s.Offset = (*place + align - 1) / align * align
-		*place = s.Offset + s.Size()
+		*place = s.Offset + s.room()
 	}
 
 	a.unit.LocalSize = (offset + 3) &^ 3
 	a.unit.FrameSize = (frame + 3) &^ 3
+}
+
+// room is the bytes of storage s takes: its size, but for a function's value
+// of a derived type that comes back in registers, which takes a longword up
+// to 4 bytes and a quadword past that, so that the return can load it whole
+// with a MOVL or MOVQ (docs/planning/PHASE-105 - Fortran 90 derived types.md,
+// finding 11). The bytes past the type's are left as they are, so R0's or
+// R1's last bytes are undefined, as the Calling Standard allows.
+func (s *Symbol) room() int {
+	if s.Result && s.Type.Kind == Record && !s.HiddenValue() {
+		return RecordRoom(s.Type)
+	}
+
+	return s.Size()
+}
+
+// RecordRoom is the room a record value of type t that comes back in
+// registers takes: 4 bytes up to a longword, 8 past it.
+func RecordRoom(t Type) int {
+	if t.Size <= 4 {
+		return 4
+	}
+
+	return 8
 }

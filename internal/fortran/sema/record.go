@@ -519,7 +519,22 @@ func recordArguments(r routineRef, fu *fileUnit, messages *diag.List) {
 		switch {
 		case given == nil && wanted == nil:
 
-		case given != nil && wanted != nil && given.form() == wanted.form():
+		case argumentStructures(given, wanted):
+
+		case given != nil && given.Derived || wanted != nil && wanted.Derived:
+			// A derived type's object goes only to a dummy of its own type
+			// (4.4.2, 12.4.1.1), never a record of the same layout, and two
+			// units' definitions of one name are one type only if both have
+			// SEQUENCE and the same components.
+			if given != nil && wanted != nil && given.Derived && wanted.Derived && given.Name == wanted.Name {
+				messages.Report("SEPARATEARG", arg.Expr.Position(), i+1, r.sym.Name, given.Name, given.Pos.Line,
+					p.Name, fu.pos.Line, wanted.Pos.Line)
+
+				continue
+			}
+
+			messages.Report("TYPEARG", arg.Expr.Position(), i+1, r.sym.Name, argumentKind(given, arg.Expr.Type()),
+				p.Name, fu.pos.Line, argumentKind(wanted, p.Type))
 
 		default:
 			messages.Report("RECORDARG", arg.Expr.Position(), i+1, r.sym.Name, argumentKind(given, arg.Expr.Type()),

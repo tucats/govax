@@ -131,10 +131,13 @@ type Unit struct {
 	// typesKnown is set once the unit's declarations are read, when every
 	// derived type it may name is defined; pendingObjects are the names
 	// IMPLICIT TYPE(t) gave a type before then, and implicitFailed the types
-	// such a letter named that aren't there (derived.go).
+	// such a letter named that aren't there (derived.go). headerType is a
+	// TYPE(t) FUNCTION statement's type-spec, whose type may be defined in
+	// the function's own body, so it too waits for the declarations.
 	typesKnown     bool
 	pendingObjects []*Symbol
 	implicitFailed map[string]bool
+	headerType     *ast.TypeSpec
 
 	// scope is the unit's own names (scope.go), the names in Symbols.
 	scope *scope

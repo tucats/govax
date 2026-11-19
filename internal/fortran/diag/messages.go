@@ -460,6 +460,19 @@ var messages = map[string]kind{
 	// length, a word.
 	"RECORDIOSIZE": {Error, "%s takes %d bytes, too long for an I/O list item, which can take %d"},
 
+	// TYPEARG is an actual argument of a derived type to a dummy argument of
+	// another type, or a record or a value of an intrinsic type to a dummy of a
+	// derived type (4.4.2, 12.4.1.1); two units' definitions of one type's name
+	// are the same type only if both have SEQUENCE and the same components.
+	"TYPEARG": {Error, "argument %d of %s is %s, but its dummy argument %s (line %d) is %s: an object goes only to a dummy argument of its own type"},
+
+	// SEPARATEARG and SEPARATEFUNC are TYPEARG and FUNCTYPE for two units'
+	// definitions of one derived type's name, which are one type only if both
+	// have SEQUENCE and the same components (4.4.2); the messages give each
+	// definition's line.
+	"SEPARATEARG":  {Error, "argument %d of %s is of the derived type %s defined at line %d, but its dummy argument %s (line %d) is of the type defined at line %d: two definitions are one type only if both have SEQUENCE and the same components"},
+	"SEPARATEFUNC": {Error, "the function %s (line %d) has a value of the derived type %s defined at line %d, but this unit gives it the type defined at line %d: two definitions are one type only if both have SEQUENCE and the same components"},
+
 	// RECORDARG is an argument and a dummy argument of the file's routine
 	// that aren't both records of one form (section 6.1.1).
 	"RECORDARG": {Error, "argument %d of %s is %s, but its dummy argument %s (line %d) is %s: a record goes only to a record of the same form"},
@@ -495,6 +508,10 @@ var messages = map[string]kind{
 	// executable statement before the ENTRY statement that first names it
 	// (section 6.2.4).
 	"ENTRYLATE": {Error, "%s can't be used before the ENTRY statement that names it, at line %d"},
+
+	// ENTRYDERIVED is an entry point of a function of a derived type whose
+	// type isn't the function's, or the other way round (12.5.2.5).
+	"ENTRYDERIVED": {Error, "the entry point %s, %s, can't go with the function %s, %s: a function of a derived type has entry points only of the same type"},
 
 	// ENTRYTYPE is a function's entry point of a type that can't share its
 	// value's place with the function's (section 6.2.4.1).

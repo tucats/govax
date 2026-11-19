@@ -693,11 +693,12 @@ func (a *analyzer) header(au *ast.Unit) {
 		}
 
 		if h.Type != nil && h.Type.Derived != "" {
-			// Its type may be defined in its body; and its value is subtask
-			// 4's (docs/planning/PHASE-105 - Fortran 90 derived types.md).
-			a.notImplForm(h.Type.DerivedPos, "a function of a derived type")
-
-			s.broken = true
+			// TYPE(POINT) FUNCTION F: the type may be defined in the
+			// function's own body (5.1.1.7), so which structure it is waits
+			// for the declarations (resolveImplicitObjects). Until then the
+			// value is typed, so a type statement for it is DUPDECL.
+			s.Type, s.Typed, s.TypePos = Type{Kind: Record}, true, h.Pos
+			u.headerType = h.Type
 		} else if h.Type != nil {
 			if t, ok := a.functionType(*h.Type, s); ok {
 				s.Type, s.Typed, s.TypePos = t, t.Kind != Invalid, h.Pos
@@ -929,7 +930,17 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 					continue
 				}
 
-				if t != s.Type && !fu.result().broken {
+				switch {
+				case sameTypes(t, s.Type) || fu.result().broken:
+
+				case t.Struct != nil && s.Type.Struct != nil && t.Struct.Derived && s.Type.Struct.Derived &&
+					t.Struct.Name == s.Type.Struct.Name:
+					// Two definitions of one derived type's name, as two units
+					// each define it: say which is which.
+					messages.Report("SEPARATEFUNC", s.Pos, s.Name, fu.pos.Line, t.Struct.Name, t.Struct.Pos.Line,
+						s.Type.Struct.Pos.Line)
+
+				default:
 					messages.Report("FUNCTYPE", s.Pos, s.Name, t.String(), fu.pos.Line, s.Type.String())
 				}
 

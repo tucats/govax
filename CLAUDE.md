@@ -1188,7 +1188,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   target when `Assign.InPlace`; `sameType`, the standard's type equality, in
   assignment, `differ`, and INTERFACEDIFF; `operand` and `aggregateOperands`,
   NODERIVEDOP; the parser's `recordScope.component`, so `P .DIST. Q` stays an
-  operation; `testdata/fortran90/structs.f90`).
+  operation; `testdata/fortran90/structs.f90`); subtask 4 (2026-11-18) is
+  arguments and results (a function of a derived type by header, type
+  statement, RESULT, or IMPLICIT, the header's type found after the
+  declarations, `Unit.headerType`; `TYPE(T) F` leaves F's class to its use;
+  up to 8 bytes back in R0 and R1, the value's cell its room, `Symbol.room`,
+  loaded whole and stored by the caller straight into a 1-, 2-, 4-, or 8-byte
+  target or into a temporary, past 8 bytes a hidden argument,
+  `ir/lowerresult.go`; TYPEARG, SEPARATEARG, SEPARATEFUNC, ENTRYDERIVED;
+  `testdata/fortran90/results.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

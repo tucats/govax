@@ -174,10 +174,8 @@ func TestDerivedMessages(t *testing.T) {
 			"NOTIMPL: a component's default initial value is not implemented yet"},
 		{"a POINTER component", program("type t", "integer, pointer :: i", "end type"),
 			"NOTIMPL: a POINTER component is not implemented yet"},
-		{"a function", []string{"type(point) function f()", "type point", "real x", "end type", "end function"},
-			"NOTIMPL: a function of a derived type is not implemented yet"},
-		{"a function's type", []string{"function f()", "type point", "real x", "end type", "type(point) f", "end function"},
-			"NOTIMPL: a function of a derived type is not implemented yet"},
+		{"a function", []string{"type(point) function f()", "type point", "real x", "end type", "f%x = 1", "end function"}, ""},
+		{"a function's type", []string{"function f()", "type point", "real x", "end type", "type(point) f", "f%x = 1", "end function"}, ""},
 	}
 
 	for _, c := range cases {

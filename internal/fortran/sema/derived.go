@@ -367,19 +367,25 @@ func (a *analyzer) implicitObject(s *Symbol) {
 	}
 
 	s.Type, s.Struct = recordType(st), st
-
-	if s.Result || s.Class == UnitName {
-		a.notImplForm(s.Pos, "a function of a derived type")
-
-		s.broken = true
-	}
 }
 
 // resolveImplicitObjects gives the names entered while the declarations were
-// read their IMPLICIT TYPE(t) types, now that every type is defined. A name a
-// declaration has typed since keeps that type.
+// read their IMPLICIT TYPE(t) types, and a TYPE(t) FUNCTION statement's value
+// its type, now that every type is defined. A name a declaration has typed
+// since keeps that type.
 func (a *analyzer) resolveImplicitObjects() {
 	a.unit.typesKnown = true
+
+	// TYPE(POINT) FUNCTION F's type (header).
+	if spec := a.unit.headerType; spec != nil {
+		s := a.unit.Result
+
+		if st, ok := a.derivedStructure(spec.Derived, spec.DerivedPos); ok {
+			s.Type, s.Struct = recordType(st), st
+		} else {
+			s.Type, s.broken = invalid, true
+		}
+	}
 
 	for _, s := range a.unit.pendingObjects {
 		if !s.Typed && s.Struct == nil && s.Type.Kind == Record {

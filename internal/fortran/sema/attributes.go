@@ -95,7 +95,7 @@ func (a *analyzer) external(item *ast.AttrItem) {
 	case s.External || s.Class == Intrinsic:
 		a.report("DUPATTR", item.Pos, s.Name, a.describe(s))
 	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction || s.Class == Array ||
-		s.Common != nil || s.Struct != nil:
+		s.Common != nil || s.Struct != nil && !s.Struct.Derived:
 		a.badUse(s, item.Pos, "be named in an EXTERNAL statement")
 
 		s.broken = true

@@ -207,3 +207,84 @@ func TestDerivedTypeMap(t *testing.T) {
 		}
 	}
 }
+
+// TestDerivedResultCode checks how a function of a derived type returns its
+// value (docs/planning/PHASE-105 - Fortran 90 derived types.md, finding 11): up
+// to 8 bytes in R0, or R0 and R1, its value's cell loaded whole, a MOVL up to a
+// longword and a MOVQ past it; stored by the caller straight into a target of a
+// byte, word, longword, or quadword, and into a temporary otherwise; past 8
+// bytes through a hidden first argument.
+func TestDerivedResultCode(t *testing.T) {
+	types := map[string][]string{
+		"ONE":    {"integer(1) :: a"},
+		"TWO":    {"integer(2) :: a"},
+		"THREE":  {"character(len=3) :: a"},
+		"EIGHT":  {"real :: a, b"},
+		"TWELVE": {"real :: a, b, c"},
+	}
+	names := []string{"ONE", "TWO", "THREE", "EIGHT", "TWELVE"}
+
+	define := func() []string {
+		var lines []string
+		for _, n := range names {
+			lines = append(append(append(lines, "  type "+n, "    sequence"), "    "+types[n][0]), "  end type "+n)
+		}
+
+		return lines
+	}
+
+	lines := []string{"program p"}
+	lines = append(lines, define()...)
+
+	for _, n := range names {
+		lines = append(lines, "  type("+n+") :: v"+n+", f"+n, "  external f"+n)
+	}
+
+	for _, n := range names {
+		lines = append(lines, "  v"+n+" = f"+n+"()")
+	}
+
+	lines = append(lines, "end program")
+
+	for _, n := range names {
+		lines = append(lines, "type("+n+") function f"+n+"()")
+		lines = append(lines, define()...)
+		lines = append(lines, "  f"+n+"%a = 1", "end function")
+	}
+
+	// THREE's value is CHARACTER; give it text.
+	for i, l := range lines {
+		if l == "  fTHREE%a = 1" {
+			lines[i] = "  fTHREE%a = 'abc'"
+		}
+	}
+
+	opts := noF90Options("A")
+	opts.F90 = true
+	r := fortran.Compile(opts, fortran.File{Spec: "A.F90", Name: "A", Free: true, Lines: lines})
+
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+
+	for _, want := range []string{
+		"CALLS\t#0,G^FONE\n\tMOVB\tR0,P.VONE",
+		"CALLS\t#0,G^FTWO\n\tMOVW\tR0,P.VTWO",
+		"CALLS\t#0,G^FTHREE\n\tMOVL\tR0,P.$T",
+		"CALLS\t#0,G^FEIGHT\n\tMOVQ\tR0,P.VEIGHT",
+		"CALLS\t#1,G^FTWELVE",
+		"MOVL\tFONE.FONE,R0",
+		"MOVL\tFTHREE.FTHREE,R0",
+		"MOVQ\tFEIGHT.FEIGHT,R0",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in the MACRO file", want)
+		}
+	}
+
+	if t.Failed() {
+		t.Logf("the MACRO file:\n%s", text)
+	}
+}
