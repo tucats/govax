@@ -1142,12 +1142,20 @@ type (
 	// FuncRef is a reference to an external function. Made says the function
 	// makes its value itself, an array of a shape or a CHARACTER value of a length
 	// its explicit interface gives as specification expressions, which only it can
-	// work out (arrayvalue.go).
+	// work out (arrayvalue.go), or describes it, an array pointer's target.
+	// Pointer says its value is a pointer (its explicit interface's value has
+	// POINTER; pointerresult.go): the reference stands for the pointer's target,
+	// as a pointer's name does.
 	FuncRef struct {
 		exprBase
-		Fn   *Symbol
-		Args []Arg
-		Made bool
+		Fn      *Symbol
+		Args    []Arg
+		Made    bool
+		Pointer bool
+
+		// through stands for the storage a pointer value reaches, for
+		// overlap (baseSymbol).
+		through *Symbol
 	}
 
 	// StmtFuncRef is a reference to a statement function (section 6.2.1):

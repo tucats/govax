@@ -9693,16 +9693,58 @@ an explicit interface, a module's, an internal procedure's, or an interface bloc
 (`INTERFACEDIFF`). What the routine is given is the address of the caller's own pointer, its
 longword or its descriptor, so nothing is copied in or back.
 
-Functions whose result is a pointer are reported `%FORT-E-NOTIMPL`, to come in their turn.
+A function's value may be a pointer, `REAL, POINTER :: LARGEST` in the function: a **pointer
+result**. Inside the function it is a pointer like any other, given its association by `=>`,
+ALLOCATE, or NULLIFY; it starts each call disassociated, so a function that gives it none returns
+a pointer to nothing. The caller is given the association, not a value: where a reference stands
+in an expression, an argument, or an output list, it stands for the target, and `P => F(X)` makes
+P point where the function's value does.
+
+```fortran
+module picks
+  real, target :: table(5) = (/ 3.0, 9.0, 4.0, 1.0, 7.0 /)
+contains
+  function largest ()
+    real, pointer :: largest
+    integer :: i
+    largest => table(1)
+    do i = 2, size (table)
+      if (table(i) > largest) largest => table(i)
+    end do
+  end function largest
+
+  function odds ()
+    real, pointer :: odds(:)
+    odds => table(1::2)
+  end function odds
+end module picks
+
+program pick
+  use picks
+  real, pointer :: big
+  big => largest ()
+  big = 0.0
+  print *, largest (), sum (odds ())
+end program pick
+```
+
+prints `7.000000       14.00000`: BIG pointed at the 9.0, which became 0.0. A function whose value
+is a pointer can be called only through an explicit interface (`EXPLICITPOINTER`), and an
+interface block must say POINTER where the function does (`INTERFACEDIFF`); an ENTRY in such a
+function is a pointer of the same type (`ENTRYVALUE`). A scalar pointer's address comes back in
+R0, a CHARACTER one's descriptor in R0 and R1, and an array pointer's descriptor through a hidden
+first argument, the address of a class NCA descriptor of the caller's, which the function fills
+in. An array assignment whose value is reached through a pointer function, `X(4:6) = EVENS(X)`,
+goes through a temporary, the function's value perhaps being part of X.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, a function whose result is a pointer is not implemented yet
-  at line 1 of DUA1:[WORK]BAD.F90;1
-  function bad ()
-  ^
+%FORT-E-NOTIMPL, a CHARACTER pointer whose length isn't constant is not implemented yet
+  at line 3 of DUA1:[WORK]BAD.F90;1
+    character(len=n), pointer :: p
+  -------------------------------^
 ```
 
 Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have

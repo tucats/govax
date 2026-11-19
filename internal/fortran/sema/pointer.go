@@ -39,8 +39,8 @@ import (
 // Scalar pointers (subtask 2), array pointers (subtask 3), ALLOCATE and
 // DEALLOCATE of pointers (subtask 4), and scalar pointer components (subtask
 // 5a: a FieldRef whose last field is one stands for the pointer here), array
-// pointer components (5b), and pointer dummies (6a: pointerArg) are compiled;
-// pointer results are NOTIMPL until their subtask.
+// pointer components (5b), pointer dummies (6a: pointerArg), and pointer
+// results (6b: pointerresult.go) are compiled.
 //
 // An array pointer, REAL, POINTER :: P(:, :), has a deferred shape: its shape,
 // bounds, and elements are its target's. P => A(1:9:2, :) makes P describe
@@ -115,8 +115,8 @@ func PointerSymbol(e Expr) *Symbol {
 
 // checkPointers reports what a pointer may not be, once the declarations have
 // said what each name is: in EQUIVALENCE (POINTERATTR; 5.5.1); and what this
-// compiler doesn't compile yet (NOTIMPL): a function result, a CHARACTER
-// pointer whose length isn't constant but a dummy's CHARACTER(*).
+// compiler doesn't compile yet (NOTIMPL): a CHARACTER pointer whose length
+// isn't constant but a dummy's CHARACTER(*).
 // DATA's, NAMELIST's, and an initial value's are reported where those are read.
 func (a *analyzer) checkPointers() {
 	for _, s := range a.unit.Symbols {
@@ -134,8 +134,6 @@ func (a *analyzer) checkPointers() {
 		switch {
 		case s.Equivalenced:
 			a.report("POINTERATTR", s.equivPos, s.Name, "be in an EQUIVALENCE list")
-		case s.Result:
-			a.notImplForm(s.Pos, "a function whose result is a pointer")
 		case s.Type.Kind == Character && s.Type.Size == 0 && !(s.Dummy != 0 && s.PassedLength()):
 			// A pointer dummy's CHARACTER(*) is its actual's length, which the
 			// actual's descriptor holds (finding 8); any other length known only
@@ -270,7 +268,9 @@ func (a *analyzer) pointerArg(x ast.Expr, n int, proc, p *Symbol) Arg {
 // constraints): a variable with TARGET or a part of one (an element, a
 // section, a substring, a component), a pointer, or a part of a pointer's
 // target; of the pointer's type, kind, rank, and, when both are constants,
-// length. nil after a message: POINTERFUNC for a function's reference,
+// length; or a reference to a function whose value is a pointer
+// (pointerresult.go). nil after a message: POINTERFUNC for another function's
+// reference,
 // NOTTARGET for anything that isn't such a variable, VECTORTARGET for a section
 // with a vector subscript, POINTERTYPE for one of another type.
 func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
@@ -282,6 +282,10 @@ func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
 // structure constructor's pointer component's (pointerTarget's rules).
 func (a *analyzer) targetFor(name string, pt Type, rank int, x ast.Expr) Expr {
 	if a.functionReference(x) {
+		if f, ok := a.pointerFunctionTarget(name, pt, rank, x); ok {
+			return f
+		}
+
 		a.report("POINTERFUNC", x.Position(), ast.DumpExpr(x))
 
 		return nil
@@ -428,6 +432,12 @@ func (a *analyzer) functionReference(x ast.Expr) bool {
 		return isApply
 	case s.Class == Function, s.Class == Intrinsic, s.External, s.Class == StmtFunction:
 		return true
+	case s.Class == UnitName:
+		// A recursive function's reference to itself, its value a RESULT
+		// variable.
+		_, isApply := x.(*ast.Apply)
+
+		return isApply
 	case s.Class == Unclassified:
 		_, isApply := x.(*ast.Apply)
 

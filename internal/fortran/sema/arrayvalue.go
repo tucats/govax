@@ -47,13 +47,25 @@ import (
 // HiddenValue reports whether the function whose value s is returns it through
 // a hidden first argument: a value too wide for R0 and R1, a CHARACTER value
 // (Type.HiddenResult), or an array.
+//
+// A pointer's value is an association, not a value (pointerresult.go): a
+// scalar's address in R0, a CHARACTER one's descriptor in R0 and R1, and only
+// an array pointer's descriptor through the hidden argument.
 func (s *Symbol) HiddenValue() bool {
+	if s.Pointer {
+		return s.Dims != nil
+	}
+
 	return s.Type.HiddenResult() || s.Dims != nil
 }
 
 // HiddenValue reports whether f's value comes back through a hidden first
 // argument, as Symbol.HiddenValue says of the function's own.
 func (f *FuncRef) HiddenValue() bool {
+	if f.Pointer {
+		return len(f.S) > 0
+	}
+
 	return f.T.HiddenResult() || len(f.S) > 0
 }
 
@@ -108,6 +120,12 @@ func (a *analyzer) funcRef(s *Symbol, t Type, args []Arg, pos diag.Position) *Fu
 	f := &FuncRef{exprBase: exprBase{T: t, Pos: pos}, Fn: s, Args: args}
 	f.S = a.resultShape(s)
 	f.Made = a.madeValue(s)
+
+	// A pointer's target, an array the function describes in the caller's
+	// descriptor, is read as a value it makes is (pointerresult.go).
+	if f.Pointer = pointerValued(a.interfaceOf(s)); f.Pointer && len(f.S) > 0 {
+		f.Made = true
+	}
 
 	for i := range f.S {
 		if !f.S[i].Known {
@@ -187,11 +205,16 @@ func (a *analyzer) checkEntryValues() {
 
 	for _, e := range a.unit.Entries {
 		s := e.Sym
-		if s.broken || (f.Dims == nil && s.Dims == nil && !f.AutomaticObject && !s.AutomaticObject) {
+		if s.broken || (f.Dims == nil && s.Dims == nil && !f.AutomaticObject && !s.AutomaticObject && !f.Pointer && !s.Pointer) {
 			continue
 		}
 
-		if diff := entryValueDifference(s, f); diff != "" {
+		diff := entryPointerDifference(s, f)
+		if diff == "" {
+			diff = entryValueDifference(s, f)
+		}
+
+		if diff != "" {
 			a.report("ENTRYVALUE", e.AST.Pos, s.Name, f.Name, diff)
 
 			s.broken = true

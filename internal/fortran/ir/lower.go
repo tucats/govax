@@ -117,6 +117,11 @@ type lowerer struct {
 	values      int
 	entryValues entryFill
 
+	// pointerValues are the array pointers the statement being lowered has
+	// had functions whose values are pointers fill in, by reference
+	// (lowerpointer.go's pointerValue).
+	pointerValues map[*sema.FuncRef]*sema.ArrayRef
+
 	// after are statements to be done at the end of the statement being
 	// lowered, before its block's terminator if it has one: the freeing
 	// of its dynamic strings.
@@ -216,13 +221,16 @@ func (l *lowerer) prepare() {
 			p := &Param{Name: u.Result.Name, Index: 1, T: l.typeOf(u.Result.Type), Sym: u.Result}
 			r.Params = append(r.Params, p)
 
+			// An array pointer's value is the caller's descriptor, which
+			// the hidden argument is the address of, as a pointer dummy's
+			// is (dummyPointerCell).
 			if u.Result.AutomaticObject {
 				l.valueCell(p)
 			} else {
 				l.params[u.Result] = p
 			}
 		} else {
-			r.Result = l.resultType(u.Result.Type)
+			r.Result = l.valueType(u.Result)
 		}
 	case ast.SubroutineUnit:
 		r.Kind = Subroutine
@@ -678,6 +686,7 @@ func (l *lowerer) release() {
 	}
 
 	l.busy = l.busy[:0]
+	l.pointerValues = nil
 
 	for _, sym := range l.boundArrays {
 		delete(l.bound, sym)

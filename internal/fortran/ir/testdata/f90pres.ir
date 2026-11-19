@@ -1,0 +1,118 @@
+routine SP function L
+  param V       F  argument 1
+  cell  SP      F  $LOCAL+0    result SP
+  $LOCAL is 4 bytes
+B1:
+  assign SP = 0
+  ; line 11
+  assign SP = addr(@V+8)
+  ; line 12
+  return SP
+routine CP function Q
+  param S       B  argument 1
+  cell  CP      B  $LOCAL+0    result CP
+  $LOCAL is 8 bytes
+B1:
+  assign CP = 17694724
+  assign CP+4 = 0
+  ; line 17
+  assign CP = 17694724
+  assign CP+4 = addr(@(@(arg S)+4)+1)
+  ; line 18
+  return CP
+routine AP function
+  param AP      F  argument 1
+  param V       F  argument 2
+  param N       L  argument 3
+  cell  $I1     L  $LOCAL+0    an array statement's index
+  cell  $T1     L  $LOCAL+4    temporary
+  cell  $T2     L  $LOCAL+8    temporary
+  $LOCAL is 12 bytes
+B1:
+  assign @(arg AP) = 168427524
+  assign @(arg AP)+8 = 16777216
+  assign @(arg AP)+4 = 0
+  ; line 23
+  assign $T1 = @N
+  assign $T2 = div.L(add.L($T1, 1), 2)
+  branch lt.L($T2, 0) B2 B3
+B2:
+  assign $T2 = 0
+  jump B3
+B3:
+  assign @(arg AP)+4 = addr(@V)
+  assign @(arg AP)+20 = 8
+  assign @(arg AP)+24 = 1
+  assign @(arg AP)+28 = $T2
+  assign @(arg AP)+16 = sub.L(@(arg AP)+4, 8)
+  assign @(arg AP)+12 = mul.L(4, $T2)
+  ; line 24
+  branch gt.L(@N, 9) B4 B5
+B4:
+  call FTN$ALLOCATE(ref @(arg AP), val 2, val 1, val @N)
+  jump B5
+B5:
+  ; line 25
+  return
+routine USER subroutine
+  param V       F  argument 1
+  param S       B  argument 2
+  param X       F  argument 3
+  cell  P       F  $LOCAL+0    variable P
+  cell  Q       L  $LOCAL+4    descriptor F NCA 4 (?)
+  cell  C       B  $LOCAL+36   variable C
+  cell  $T1     L  $LOCAL+44   temporary
+  cell  $I1     L  $LOCAL+48   an array statement's index
+  cell  $D1     L  $LOCAL+52   descriptor F NCA 4 (?)
+  cell  $T2     L  $LOCAL+84   temporary
+  cell  $T3     L  $LOCAL+88   temporary
+  cell  $T4     F  $LOCAL+92   temporary
+  cell  $C1     L  $LOCAL+96   array (line 46), dimension 1's count
+  cell  $T5     B  $LOCAL+100  temporary
+  cell  $D2     L  $LOCAL+108  descriptor T S 8
+  $LOCAL is 116 bytes
+  datum $K1     L 5
+  datum $K2     L 4
+B1:
+  ; line 46
+  call SP(ref @V) -> $T1
+  call AP(ref $D1, ref @V, ref $K1)
+  assign $T2 = sub.L($D1+24, 1)
+  assign $T3 = add.L(sub.L($D1+28, $D1+24), 1)
+  branch lt.L($T3, 0) B2 B3
+B2:
+  assign $T3 = 0
+  jump B3
+B3:
+  assign $T4 = 0.0
+  assign $C1 = $T3
+  assign $I1 = 1
+  branch le.L($C1, 0) B5 B4
+B4:  ; array (line 46), dimension 1's body
+  assign $T4 = add.F($T4, @(add.L($D1+16, mul.L(add.L($I1, $T2), $D1+20))))
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B4 B5
+B5:
+  assign @X = add.F(@($T1), $T4)
+  ; line 47
+  call SP(ref @V) -> $T3
+  assign P = $T3
+  ; line 48
+  assign $D2+4 = addr(@(@(arg S)+4))
+  call CP(ref $D2) -> $T5
+  assign C = 17694724
+  assign C+4 = $T5+4
+  ; line 49
+  call AP(ref $D1, ref @V, ref $K2)
+  assign Q+4 = $D1+4
+  assign Q+8 = $D1+8
+  assign Q+12 = $D1+12
+  assign Q+16 = $D1+16
+  assign Q+20 = $D1+20
+  assign Q+24 = $D1+24
+  assign Q+28 = $D1+28
+  ; line 50
+  assign @X = add.F(@X, 5.0)
+  ; line 51
+  return

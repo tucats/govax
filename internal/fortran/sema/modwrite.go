@@ -649,7 +649,14 @@ func (w *moduleWriter) procedure(pu *Unit, depth int, name string) {
 	}
 
 	if word == "FUNCTION" {
-		w.entity(pu.Result, depth+1, "", result)
+		// A pointer value is a characteristic a reference must know
+		// (12.2.2): the caller gets an association, not a value.
+		attrs := ""
+		if pu.Result.Pointer {
+			attrs = ", POINTER"
+		}
+
+		w.entity(pu.Result, depth+1, attrs, result)
 	}
 
 	w.put(depth, "END "+word+" "+name)

@@ -199,7 +199,7 @@ func (l *lowerer) moveRecord(s *sema.Assign) {
 
 	// A function's value of a derived type, stored from R0 and R1 when one
 	// instruction can (lowerresult.go).
-	if f, ok := s.Value.(*sema.FuncRef); ok && l.assignResult(s.Target, f) {
+	if f, ok := s.Value.(*sema.FuncRef); ok && !f.Pointer && l.assignResult(s.Target, f) {
 		return
 	}
 

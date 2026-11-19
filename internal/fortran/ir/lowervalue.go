@@ -168,6 +168,12 @@ func (l *lowerer) madeText(f *sema.FuncRef) Text {
 // function called now, its value described in a $Gn cell, unless the statement
 // has called it already.
 func (l *lowerer) valueResult(f *sema.FuncRef) *sema.ArrayRef {
+	// An array pointer's target, described by the function, which the
+	// statement doesn't give back (lowerpointer.go).
+	if f.Pointer {
+		return l.pointerArray(f)
+	}
+
 	temps := &l.runtime
 	if ref := temps.values[f]; ref != nil {
 		return ref

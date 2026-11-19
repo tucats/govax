@@ -281,8 +281,65 @@ func TestPointerDummies(t *testing.T) {
 		{"a CHARACTER pointer dummy of a length known when the program runs",
 			[]string{"subroutine s(p, n)", "integer n", "character(len=n), pointer :: p", "end subroutine"},
 			"NOTIMPL: a CHARACTER pointer whose length isn't constant is not implemented yet"},
-		{"a pointer result, subtask 6b's", []string{"function f()", "integer, pointer :: f", "end function"},
-			"NOTIMPL: a function whose result is a pointer is not implemented yet"},
+	}
+
+	for _, c := range cases {
+		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// TestPointerResults checks functions whose values are pointers
+// (docs/planning/PHASE-107 - Fortran 90 pointers.md, subtask 6b): the
+// function's own uses of its value, references and => from them, and the
+// refusals: EXPLICITPOINTER, INTERFACEDIFF, POINTERTYPE, POINTERFUNC,
+// ENTRYVALUE.
+func TestPointerResults(t *testing.T) {
+	// mod is a module of functions whose values are pointers, and a program
+	// using it.
+	mod := func(lines ...string) []string {
+		decl := []string{"module m", "real, target, save :: v(4)", "character(len=4), target, save :: w", "contains",
+			"function sp(i)", "integer i", "real, pointer :: sp", "sp => v(i)", "sp = sp + 1.0", "end function",
+			"function ap(n) result(r)", "integer n", "real, pointer :: r(:)", "r => v(1:n)",
+			"if (n > 3) allocate (r(n))", "r(1) = 2.0", "end function",
+			"function cp()", "character(len=4), pointer :: cp", "if (.false.) nullify (cp)", "cp => w", "end function",
+			"recursive function rp(i) result(r)", "integer i", "real, pointer :: r", "if (i > 0) r => rp(i - 1)",
+			"if (i == 0) r => v(1)", "end function",
+			"real function plain()", "plain = 1.0", "end function",
+			"end module", "program main", "use m", "real, pointer :: p, q(:)", "real x",
+			"character(len=4), pointer :: c", "integer, pointer :: k"}
+
+		return append(append(decl, lines...), "end program")
+	}
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"every use", mod("p => sp(2)", "q => ap(3)", "c => cp()", "x = sp(1) + sum(ap(2)) + size(ap(4))",
+			"print *, sp(1), ap(2), cp() // 'X'", "q = ap(3)", "if (associated(p, sp(2))) x = 1.0",
+			"if (associated(q, ap(1))) x = 2.0", "p => rp(3)"), ""},
+		{"another type", mod("k => sp(1)"),
+			"POINTERTYPE: the pointer K points at INTEGER, so its target can't be REAL"},
+		{"another rank", mod("q => sp(1)"),
+			"POINTERTYPE: the pointer Q points at an array of REAL, so its target can't be REAL"},
+		{"a function whose value isn't a pointer", mod("p => plain()"),
+			"POINTERFUNC: the target PLAIN() is a function reference, and only a function whose result is a pointer gives a target"},
+		{"without an interface", []string{"function f()", "integer, pointer :: f", "end function",
+			"program main", "integer f, k", "k = f()", "end program"},
+			"EXPLICITPOINTER: the value of F (line 1) is a pointer, so a reference to it needs an explicit interface"},
+		{"an interface body without POINTER", []string{"function f()", "integer, pointer :: f", "end function",
+			"program main", "interface", "function f()", "integer f", "end function", "end interface", "end program"},
+			"INTERFACEDIFF: this interface body for F doesn't agree with its definition (line 1): its value is not a pointer here, a pointer there"},
+		{"an ENTRY that isn't a pointer", []string{"function f()", "integer, pointer :: f", "integer g",
+			"entry g()", "end function"},
+			"ENTRYVALUE: the entry point G's value must be the same as the function F's: it is not a pointer, the function's a pointer"},
+		{"an ENTRY pointing at another type", []string{"function f()", "integer, pointer :: f", "real, pointer :: g",
+			"entry g()", "end function"},
+			"ENTRYVALUE: the entry point G's value must be the same as the function F's: it points at REAL, the function's at INTEGER"},
+		{"an ENTRY of the same kind", []string{"function f()", "integer, pointer :: f, g", "entry g()", "end function"}, ""},
 	}
 
 	for _, c := range cases {

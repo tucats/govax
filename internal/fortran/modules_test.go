@@ -679,6 +679,15 @@ contains
     p => t
     nullify (c)
   end subroutine aim
+  function slot (i)
+    integer :: i
+    real, pointer :: slot
+    slot => slots(i)
+  end function slot
+  function row ()
+    real, pointer :: row(:)
+    row => slots(2:4)
+  end function row
 end module cursors`
 
 // pointersUser points the module's pointers and uses them.
@@ -690,6 +699,8 @@ const pointersUser = `program walk
   tag = 'ABC'
   if (associated(here, slots(2))) print *, here, tag
   call aim (here, slots(3), tag)
+  here => slot(4)
+  print *, sum(row())
 end program walk`
 
 // TestModulePointers holds a module's pointers' text, and a user compiled
@@ -708,6 +719,8 @@ func TestModulePointers(t *testing.T) {
 		"    REAL(KIND=4), POINTER :: P",
 		"    REAL(KIND=4), TARGET :: T",
 		"    CHARACTER(LEN=*), POINTER :: C",
+		"    REAL(KIND=4), POINTER :: SLOT\n  END FUNCTION SLOT",
+		"    REAL(KIND=4), POINTER :: ROW(:)\n  END FUNCTION ROW",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("no %q in\n%s", want, text)
@@ -733,6 +746,7 @@ func TestModulePointers(t *testing.T) {
 		"\tMOVL\t#^X00004080,@WALK.HERE",
 		"\tMOVAB\tWALK.NAME,WALK.TAG+4",
 		"\tMOVL\t#17694723,WALK.TAG\n\tPUSHAL\tWALK.TAG\n\tPUSHAL\tWALK.SLOTS+8\n\tPUSHAL\tWALK.HERE\n\tCALLS\t#3,G^CURSORS.AIM",
+		"\tCALLS\t#1,G^CURSORS.SLOT\n\tMOVL\tR0,",
 	} {
 		if !strings.Contains(code, want) {
 			t.Errorf("no %q in\n%s", want, code)

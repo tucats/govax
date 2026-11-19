@@ -1284,6 +1284,10 @@ var messages = map[string]kind{
 	"EXPLICITVALUE": {Error, "the value of %s (line %d) is an array, so a reference to it needs an explicit interface"},
 	"STARARRAY":     {Error, "%s has the length (*), so a function's value of that name can't be an array"},
 
+	// EXPLICITPOINTER is a reference through an implicit interface to a
+	// function whose value is a pointer (the Fortran 90 standard's 12.3.1.1).
+	"EXPLICITPOINTER": {Error, "the value of %s (line %d) is a pointer, so a reference to it needs an explicit interface"},
+
 	// Keyword arguments, OPTIONAL, PRESENT, and INTENT (sema/optional.go and
 	// intent.go; PHASE-103's findings 8 to 10).
 

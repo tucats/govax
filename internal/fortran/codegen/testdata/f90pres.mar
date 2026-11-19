@@ -1,0 +1,267 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for SP, a REAL function
+;   V     REAL (10)      argument 1  @SP.V(AP)
+;   SP    REAL, POINTER  $LOCAL+0    SP.SP
+;
+SP.V = 4				; V is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SP.SP:	.BLKL	1			; SP, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Pointer results (Phase 107, subtask 6b): a scalar pointer's
+;    3  C     address comes back in R0 (SP), a CHARACTER one's descriptor in R0
+;    4  C     and R1 (CP), an array one's descriptor through a hidden first
+;    5  C     argument, the caller's (AP), each cleared at entry; the caller's
+;    6  C     references read the target through a pointer of the statement's,
+;    7  C     and => copies the association.
+;    8        FUNCTION SP(V)
+	.ENTRY	SP,^M<>
+	CLRL	SP.SP
+;    9        REAL, TARGET :: V(10)
+;   10        REAL, POINTER :: SP
+;   11        SP => V(3)
+	MOVL	#2,R0
+	MOVAL	@SP.V(AP)[R0],SP.SP
+;   12        END
+	MOVL	SP.SP,R0		; the function's value
+	RET
+
+; Storage map for CP, a CHARACTER*4 function
+;   S     CHARACTER*8           argument 1  @CP.S(AP)
+;   CP    CHARACTER*4, POINTER  $LOCAL+0    CP.CP
+;
+CP.S = 4				; S is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CP.CP:	.BLKL	2			; CP, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   13        OPTIONS /F90
+;   14        FUNCTION CP(S)
+	.ENTRY	CP,^M<>
+	MOVL	#17694724,CP.CP
+	CLRL	CP.CP+4
+;   15        CHARACTER(LEN=8), TARGET :: S
+;   16        CHARACTER(LEN=4), POINTER :: CP
+;   17        CP => S(2:5)
+	MOVL	#17694724,CP.CP
+	MOVL	CP.S(AP),R0
+	MOVL	4(R0),R0
+	MOVAB	1(R0),CP.CP+4
+;   18        END
+	MOVQ	CP.CP,R0		; the function's value
+	RET
+
+; Storage map for AP, a REAL function
+;   AP    REAL, POINTER (:)  hidden argument 1  @AP.AP(AP)
+;   V     REAL (10)          argument 2         @AP.V(AP)
+;   N     INTEGER            argument 3         @AP.N(AP)
+;
+AP.AP = 4				; AP's value goes through hidden argument 1
+AP.V = 8				; V is argument 2
+AP.N = 12				; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+AP.$I1:	.BLKL	1			; an array statement's loop index
+AP.$T1:	.BLKL	1			; temporary
+AP.$T2:	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   19        OPTIONS /F90
+;   20        FUNCTION AP(V, N)
+	.ENTRY	AP,^M<>
+	MOVL	#168427524,@AP.AP(AP)
+	MOVL	AP.AP(AP),R0
+	MOVL	#16777216,8(R0)
+	MOVL	AP.AP(AP),R0
+	CLRL	4(R0)
+;   21        REAL, TARGET :: V(10)
+;   22        REAL, POINTER :: AP(:)
+;   23        AP => V(1:N:2)
+	MOVL	@AP.N(AP),AP.$T1
+	ADDL3	AP.$T1,#1,R0
+	DIVL3	#2,R0,AP.$T2
+	BLSS	AP.$2
+	BRW	AP.$1
+AP.$2:
+	CLRL	AP.$T2
+AP.$1:
+	MOVL	AP.AP(AP),R0
+	MOVAL	@AP.V(AP),4(R0)
+	MOVL	AP.AP(AP),R0
+	MOVL	#8,20(R0)
+	MOVL	AP.AP(AP),R0
+	MOVL	#1,24(R0)
+	MOVL	AP.AP(AP),R0
+	MOVL	AP.$T2,28(R0)
+	MOVL	AP.AP(AP),R0
+	MOVL	AP.AP(AP),R1
+	SUBL3	#8,4(R0),16(R1)
+	MOVL	AP.AP(AP),R0
+	MULL3	#4,AP.$T2,12(R0)
+;   24        IF (N > 9) ALLOCATE (AP(N))
+	CMPL	@AP.N(AP),#9
+	BGTR	AP.$4
+	BRW	AP.$3
+AP.$4:
+	PUSHL	@AP.N(AP)
+	PUSHL	#1
+	PUSHL	#2
+	PUSHAL	@AP.AP(AP)
+	CALLS	#4,G^FTN$ALLOCATE
+AP.$3:
+;   25        END
+	RET
+
+; Storage map for USER, a subroutine
+;   V     REAL (10)             argument 1  @USER.V(AP)
+;   S     CHARACTER*8           argument 2  @USER.S(AP)
+;   X     REAL                  argument 3  @USER.X(AP)
+;   P     REAL, POINTER         $LOCAL+0    USER.P
+;   Q     REAL, POINTER (:)     $LOCAL+4    USER.Q
+;   C     CHARACTER*4, POINTER  $LOCAL+36   USER.C
+;
+USER.V = 4				; V is argument 1
+USER.S = 8				; S is argument 2
+USER.X = 12				; X is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+USER.P:	.BLKL	1			; P
+USER.Q:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; Q: disassociated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USER.C:	.BLKL	2			; C
+USER.$T1:
+	.BLKL	1			; temporary
+USER.$I1:
+	.BLKL	1			; an array statement's loop index
+USER.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+USER.$T2:
+	.BLKL	1			; temporary
+USER.$T3:
+	.BLKL	1			; temporary
+USER.$T4:
+	.BLKL	1			; temporary
+USER.$C1:
+	.BLKL	1			; array (line 46), dimension 1's count
+USER.$T5:
+	.BLKL	2			; characters, for one statement
+USER.$D2:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+USER.$K1:
+	.LONG	5
+USER.$K2:
+	.LONG	4
+USER.$KF1:
+	.LONG	^X000041A0		; 5.0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   26        OPTIONS /F90
+;   27        SUBROUTINE USER(V, S, X)
+	.ENTRY	USER,^M<>
+;   28        INTERFACE
+;   29        FUNCTION SP(V)
+;   30        REAL, TARGET :: V(10)
+;   31        REAL, POINTER :: SP
+;   32        END FUNCTION
+;   33        FUNCTION CP(S)
+;   34        CHARACTER(LEN=8), TARGET :: S
+;   35        CHARACTER(LEN=4), POINTER :: CP
+;   36        END FUNCTION
+;   37        FUNCTION AP(V, N)
+;   38        REAL, TARGET :: V(10)
+;   39        REAL, POINTER :: AP(:)
+;   40        END FUNCTION
+;   41        END INTERFACE
+;   42        REAL, TARGET :: V(10)
+;   43        CHARACTER(LEN=8), TARGET :: S
+;   44        REAL, POINTER :: P, Q(:)
+;   45        CHARACTER(LEN=4), POINTER :: C
+;   46        X = SP(V) + SUM(AP(V, 5))
+	PUSHAL	@USER.V(AP)
+	CALLS	#1,G^SP
+	MOVL	R0,USER.$T1
+	PUSHAL	USER.$K1
+	PUSHAL	@USER.V(AP)
+	PUSHAQ	USER.$D1
+	CALLS	#3,G^AP
+	SUBL3	#1,USER.$D1+24,USER.$T2
+	SUBL3	USER.$D1+24,USER.$D1+28,R0
+	ADDL3	R0,#1,USER.$T3
+	BLSS	USER.$2
+	BRW	USER.$1
+USER.$2:
+	CLRL	USER.$T3
+USER.$1:
+	CLRF	USER.$T4
+	MOVL	USER.$T3,USER.$C1	; array (line 46), dimension 1's count
+	MOVL	#1,USER.$I1
+	TSTL	USER.$C1
+	BGTR	USER.$4
+	BRW	USER.$3
+USER.$4:
+USER.$5:				; array (line 46), dimension 1's body
+	ADDL3	USER.$I1,USER.$T2,R0
+	MULL2	USER.$D1+20,R0
+	ADDL2	USER.$D1+16,R0
+	ADDF2	(R0),USER.$T4
+	INCL	USER.$I1
+	DECL	USER.$C1		; one pass fewer
+	BLEQ	USER.$6
+	BRW	USER.$5
+USER.$6:
+USER.$3:
+	ADDF3	@USER.$T1,USER.$T4,@USER.X(AP)
+;   47        P => SP(V)
+	PUSHAL	@USER.V(AP)
+	CALLS	#1,G^SP
+	MOVL	R0,USER.$T3
+	MOVL	USER.$T3,USER.P
+;   48        C => CP(S)
+	MOVL	USER.S(AP),R0
+	MOVAB	@4(R0),USER.$D2+4
+	PUSHAQ	USER.$D2
+	CALLS	#1,G^CP
+	MOVQ	R0,USER.$T5
+	MOVL	#17694724,USER.C
+	MOVL	USER.$T5+4,USER.C+4
+;   49        Q => AP(V, 4)
+	PUSHAL	USER.$K2
+	PUSHAL	@USER.V(AP)
+	PUSHAQ	USER.$D1
+	CALLS	#3,G^AP
+	MOVL	USER.$D1+4,USER.Q+4
+	MOVL	USER.$D1+8,USER.Q+8
+	MOVL	USER.$D1+12,USER.Q+12
+	MOVL	USER.$D1+16,USER.Q+16
+	MOVL	USER.$D1+20,USER.Q+20
+	MOVL	USER.$D1+24,USER.Q+24
+	MOVL	USER.$D1+28,USER.Q+28
+;   50        X = X + LEN(CP(S) // 'A')
+	ADDF2	USER.$KF1,@USER.X(AP)
+;   51        END
+	RET
+
+	.END

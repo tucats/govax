@@ -330,7 +330,7 @@ func (l *lowerer) store(dst *Mem, value sema.Expr) {
 		return
 	}
 
-	if f, ok := value.(*sema.FuncRef); ok && !f.T.HiddenResult() {
+	if f, ok := value.(*sema.FuncRef); ok && !f.T.HiddenResult() && !f.Pointer {
 		l.callFunction(f, dst)
 
 		return

@@ -97,7 +97,7 @@ func (l *lowerer) prepareReturns() {
 	byType := map[Type]*returnBlock{}
 
 	add := func(s *sema.Symbol) {
-		if t := l.resultType(s.Type); byType[t] == nil {
+		if t := l.valueType(s); byType[t] == nil {
 			byType[t] = &returnBlock{l.newBlock(), s}
 			l.returns = append(l.returns, byType[t])
 		}
@@ -144,10 +144,10 @@ func (l *lowerer) returnFromRoutine() {
 
 // returnBlockFor is the block that returns the value of the name s.
 func (l *lowerer) returnBlockFor(s *sema.Symbol) *Block {
-	t := l.resultType(s.Type)
+	t := l.valueType(s)
 
 	for _, b := range l.returns {
-		if l.resultType(b.sym.Type) == t {
+		if l.valueType(b.sym) == t {
 			return b.block
 		}
 	}
@@ -159,7 +159,7 @@ func (l *lowerer) returnBlockFor(s *sema.Symbol) *Block {
 // statement, which they are the last part of.
 func (l *lowerer) layOutReturns() {
 	for _, b := range l.returns {
-		b.block.Note = "returns the value as " + l.resultType(b.sym.Type).String()
+		b.block.Note = "returns the value as " + l.valueType(b.sym).String()
 		l.begin(b.block)
 		l.terminate(&Return{origin: l.origin(), Value: l.resultValue(b.sym)})
 	}

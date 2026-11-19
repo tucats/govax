@@ -153,6 +153,8 @@ func (l *lowerer) pointerTargetMem(s *sema.Symbol) *Mem {
 // may be a pointer's target, or for a pointer its target's address (0 if it is
 // disassociated): what a pointer assigned to it holds.
 func (l *lowerer) targetAddress(target sema.Expr) Expr {
+	target = l.targetPointer(target)
+
 	if sema.IsPointer(target) && !isArrayPointer(target) {
 		return &Load{l.pointerOf(target)}
 	}
@@ -243,18 +245,20 @@ func (l *lowerer) associated(e *sema.Associated) Expr {
 		return &Cmp{Op: Ne, X: address, Y: LongConst(0)}
 	}
 
+	target := l.targetPointer(e.Target)
+
 	if p := sema.PointerSymbol(e.Pointer); p != nil && p.ArrayPointer() {
-		return l.arrayAssociated(p, e.Target)
+		return l.arrayAssociated(p, target)
 	}
 
-	same := &Cmp{Op: Eq, X: address, Y: l.targetAddress(e.Target)}
+	same := &Cmp{Op: Eq, X: address, Y: l.targetAddress(target)}
 
 	switch {
-	case sema.IsPointer(e.Target):
+	case sema.IsPointer(target):
 		return arith(And, Long, same, &Cmp{Op: Ne, X: &Load{l.pointerOf(e.Pointer)}, Y: LongConst(0)})
 
-	case e.Target.Type().Kind == sema.Character && e.Target.Type().Size == 0:
-		length := l.chars(e.Target).Len
+	case target.Type().Kind == sema.Character && target.Type().Size == 0:
+		length := l.chars(target).Len
 
 		return arith(And, Long, same, &Cmp{Op: Gt, X: length, Y: LongConst(0)})
 	}
@@ -356,6 +360,7 @@ func (l *lowerer) arrayPointerAssign(p *sema.Symbol, target sema.Expr) {
 // component, cell a located one: the pointer may lead back to the record
 // (H%V => LP%H%V(4:1:-1), LP pointing at H).
 func (l *lowerer) associate(cell *Cell, p *sema.Symbol, target sema.Expr) {
+	target = l.targetPointer(target)
 	l.commonHeader(cell)
 
 	if q := sema.PointerSymbol(target); q != nil {
@@ -496,6 +501,7 @@ func ownBounds(f *sema.FieldRef, dims []ncaDim) []ncaDim {
 // zero-sized target is never associated). P's POINTER may not be 0, so that
 // two disassociated pointers aren't associated with each other.
 func (l *lowerer) arrayAssociated(p *sema.Symbol, target sema.Expr) Expr {
+	target = l.targetPointer(target)
 	pc := l.adjustableOf(p)
 
 	var tc *Cell
@@ -585,4 +591,162 @@ func (l *lowerer) pointerActual(x sema.Expr) Arg {
 	l.setHeader(x)
 
 	return Arg{Ref: l.fieldPlace(x.(*sema.FieldRef), false)}
+}
+
+// Pointer results (subtask 6b; finding 9). A function whose value is a pointer
+// returns an association, not a value: a scalar pointer's address in R0, a
+// CHARACTER one's class S descriptor in R0 and R1, as a record of 8 bytes comes
+// back (lowerresult.go), and an array pointer's class NCA descriptor through a
+// hidden first argument, the address of a descriptor of the caller's. In the
+// function the value is a pointer like any other: a scalar one a cell of its
+// own, which the return loads whole (resultValue), and an array one the
+// caller's descriptor, reached as an array pointer dummy's is (dummyPointerCell),
+// so that =>, ALLOCATE, and NULLIFY of it fill the caller's descriptor in. Each
+// entry point clears it first (clearPointerResult), so that a function that
+// gives it no association returns a disassociated pointer.
+//
+//	FUNCTION FIRST(L)                 TYPE(NODE), POINTER :: FIRST
+//	FIRST => L%HEAD                   MOVL   @FIRST.L(AP),FIRST.FIRST
+//	END                               MOVL   FIRST.FIRST,R0
+//	                                  RET
+//
+// In the caller each reference is a pointer of the statement's own, which the
+// call fills in (pointerValue): a temporary longword or descriptor from R0 (and
+// R1), or a descriptor cell passed as the hidden argument. The reference then
+// stands for that pointer, and so for its target, as a pointer's name does:
+// everything that reads a pointer's target reads it, and P => F(X) copies its
+// association into P as P => Q copies Q's.
+
+// pointerResult is the function's value if it is a pointer, else nil.
+func (l *lowerer) pointerResult() *sema.Symbol {
+	if l.r.Kind != Function || l.unit.Result == nil || !l.unit.Result.Pointer {
+		return nil
+	}
+
+	return l.unit.Result
+}
+
+// clearPointerResult disassociates, at an entry point, the function's value if
+// it is a pointer: an array pointer's descriptor, the caller's, given its
+// unchanging longwords (its elements' length and type, its class, its rank),
+// which a caller's descriptor of the statement's needn't have yet, and POINTER
+// 0; a scalar one's address 0, and a CHARACTER one's header.
+func (l *lowerer) clearPointerResult() {
+	s := l.pointerResult()
+	if s == nil {
+		return
+	}
+
+	if s.ArrayPointer() {
+		c := l.adjustableOf(s)
+
+		for _, f := range c.Desc.Fixed() {
+			if f.Offset != PointerOffset {
+				l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: f.Offset, T: Long}, Src: LongConst(int32(f.Value))})
+			}
+		}
+
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: LongConst(0)})
+
+		return
+	}
+
+	l.setPointerHeader(s)
+	l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(s), Src: LongConst(0)})
+}
+
+// pointerValue is the pointer the reference f, to a function whose value is a
+// pointer (sema.FuncRef.Pointer), gives: a pointer of the statement's own,
+// which the function is called now to fill in, as a reference to the pointer
+// (a Var, or for an array pointer an ArrayRef), which stands for its target.
+// A scalar pointer is a temporary of the statement's, from R0, or for CHARACTER
+// from R0 and R1.
+func (l *lowerer) pointerValue(f *sema.FuncRef) sema.Expr {
+	if len(f.S) > 0 {
+		return l.pointerArray(f)
+	}
+
+	var cell *Mem
+
+	if charPointer(f.T) {
+		cell = l.textTemp(sema.StringDescriptorSize)
+	} else {
+		cell = l.temp(Long)
+	}
+
+	r := *cell
+	r.T = Long
+	if charPointer(f.T) {
+		r.T = Quad
+	}
+
+	args, backs := l.args(f.Args)
+	l.callWith(f, args, &r, backs)
+
+	sym := sema.NewSymbol("$P", f.T)
+	sym.Pointer = true
+	l.cells[sym] = cell.Cell
+
+	return sema.NewVar(sym, f.Pos)
+}
+
+// pointerArray is the array pointer the reference f, to a function whose value
+// is an array pointer, gives: a class NCA descriptor of the statement's, whose
+// address is the hidden first argument, which the function fills in. A
+// statement calls each reference once, however many times its lowering asks for
+// the value (its extents, then its elements).
+func (l *lowerer) pointerArray(f *sema.FuncRef) *sema.ArrayRef {
+	if ref := l.pointerValues[f]; ref != nil {
+		return ref
+	}
+
+	sym := sema.NewSymbol("$P", f.T)
+	sym.Class, sym.Pointer = sema.Array, true
+
+	for range f.S {
+		sym.Dims = append(sym.Dims, sema.Dim{Deferred: true, Lower: 1})
+	}
+
+	c := l.descriptorCell(l.ncaDescriptor(sym))
+
+	if l.adjustable == nil {
+		l.adjustable = map[*sema.Symbol]*Cell{}
+	}
+
+	l.adjustable[sym] = c
+
+	args, backs := l.args(f.Args)
+	l.callWith(f, append([]Arg{{Ref: &Mem{Cell: c, T: Long}}}, args...), nil, backs)
+
+	ref := sema.NewArrayRef(sym, f.Pos)
+
+	if l.pointerValues == nil {
+		l.pointerValues = map[*sema.FuncRef]*sema.ArrayRef{}
+	}
+
+	l.pointerValues[f] = ref
+
+	return ref
+}
+
+// targetPointer is the target of =>, ASSOCIATED, or a constructor's pointer
+// component as the pointer it is, if it is a reference to a function whose
+// value is a pointer (pointerValue), whose association is then the pointer's;
+// else the target as it is.
+func (l *lowerer) targetPointer(target sema.Expr) sema.Expr {
+	if p, ok := l.pointerFunction(target); ok {
+		return p
+	}
+
+	return target
+}
+
+// pointerFunction reports whether e is a reference to a function whose value is
+// a pointer, and if so gives the pointer it stands for (pointerValue).
+func (l *lowerer) pointerFunction(e sema.Expr) (sema.Expr, bool) {
+	if f, ok := e.(*sema.FuncRef); ok && f.Pointer {
+		return l.pointerValue(f), true
+	}
+
+	return nil, false
 }

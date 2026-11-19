@@ -93,11 +93,16 @@ func (l *lowerer) clearAllocatables() {
 	}
 
 	l.clearPointers()
+	l.clearPointerResult()
 }
 
 // entryClears reports whether the routine has an allocatable array or a
 // pointer that each entry point clears (clearAllocatables).
 func (l *lowerer) entryClears() bool {
+	if l.pointerResult() != nil {
+		return true
+	}
+
 	for _, c := range l.r.Cells {
 		if isAllocatable(c) && (c.Frame || c.Sym.FreedAtReturn) {
 			return true

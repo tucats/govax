@@ -455,8 +455,19 @@
        head => new             ! the caller's HEAD
 
    A routine with a pointer or TARGET dummy needs an explicit
-   interface (%FORT-E-EXPLICITREQ).  Pointer results are not there
-   yet.
+   interface (%FORT-E-EXPLICITREQ).
+
+   A function's value may be a pointer.  The caller is given the
+   association: a reference stands for the target, and P => F(X)
+   makes P point where the function's value does.  The value starts
+   each call disassociated, and a reference needs an explicit
+   interface (%FORT-E-EXPLICITPOINTER):
+
+     function largest ()
+       real, pointer :: largest
+       largest => table(1)
+       ...
+     big => largest ()         ! BIG points at TABLE's largest
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

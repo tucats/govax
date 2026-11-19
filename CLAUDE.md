@@ -1297,8 +1297,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   text; ALLOCATE's bounds in the list, `allocBounds`; `ir`'s located cells,
   `Cell.At`/`Base`, `componentCell`, resolved by `ir/locate.go`'s
   `resolveLocated` before the optimizer; INTENT(IN) and pointer components fixed,
-  `pointerHome`; `testdata/fortran90/ptrcarr.f90`); subtask 6, pointer dummies
-  and results, is next.
+  `pointerHome`; `testdata/fortran90/ptrcarr.f90`); subtask 6a (2026-11-19)
+  pointer dummies (the address of the caller's own pointer storage; `Cell.Arg`,
+  a located cell at an argument's address; POINTERARG; `testdata/fortran90/ptrdum.f90`);
+  subtask 6b (2026-11-19) pointer results (`sema/pointerresult.go`: `FuncRef.Pointer`,
+  `=> F(X)`, EXPLICITPOINTER; a scalar's address in R0, a CHARACTER one's
+  descriptor in R0 and R1, an array one's descriptor through the hidden argument,
+  cleared at entry, `clearPointerResult`; the caller's reference a pointer of the
+  statement's, `ir`'s `pointerValue`; `testdata/fortran90/ptrres.f90`); subtask 7,
+  the optimizer's aliasing rules, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

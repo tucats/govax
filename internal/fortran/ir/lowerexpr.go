@@ -35,6 +35,10 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		return &Load{l.mem(e)}
 
 	case *sema.FuncRef:
+		if p, ok := l.pointerFunction(e); ok {
+			return l.expr(p)
+		}
+
 		result := l.temp(l.typeOf(e.T))
 		l.callFunction(e, result)
 
@@ -196,6 +200,10 @@ func (l *lowerer) chars(e sema.Expr) Text {
 		return l.concat(e)
 
 	case *sema.FuncRef:
+		if p, ok := l.pointerFunction(e); ok {
+			return l.chars(p)
+		}
+
 		if e.Made {
 			return l.madeText(e)
 		}
@@ -419,6 +427,11 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		return t
 
 	case *sema.FuncRef:
+		// A pointer's target (lowerpointer.go).
+		if p, ok := l.pointerFunction(e); ok {
+			return l.mem(p)
+		}
+
 		// A function's value of a derived type, in a temporary
 		// (lowerresult.go).
 		if e.T.Kind == sema.Record {

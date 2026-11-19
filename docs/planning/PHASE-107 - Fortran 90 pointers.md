@@ -7,7 +7,7 @@ pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
 subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
 scalar pointer components and recursive types, done 2026-11-19; subtask 5b,
 array pointer components, done 2026-11-19; subtask 6a, pointer dummies, done
-2026-11-19.
+2026-11-19; subtask 6b, pointer results, done 2026-11-19.
 
 ## Goal
 
@@ -69,7 +69,7 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
 4. **ALLOCATE and DEALLOCATE of pointers** (done 2026-11-19).
 5. **Pointer components**, recursive types: 5a, scalar ones (done 2026-11-19);
    5b, array pointer components (done 2026-11-19).
-6. **Pointer dummies and results.**
+6. **Pointer dummies and results** (done 2026-11-19).
 7. **The optimizer's aliasing rules**, with programs that would break if they
    were wrong, both settings.
 8. **Programs end to end** (a linked list and a binary tree in modules, a sparse
@@ -435,7 +435,8 @@ The plan's order stands; each subtask's content is now the findings'.
    2026-11-19).
 6. **Pointer dummies and results** (findings 8, 9). Split in two when it began
    (2026-11-19): **6a**, pointer dummies (finding 8) (done 2026-11-19); **6b**,
-   pointer results (finding 9), with `P => F(X)` and ENTRY in such a function.
+   pointer results (finding 9), with `P => F(X)` and ENTRY in such a function
+   (done 2026-11-19).
 7. **The optimizer's aliasing rules:** `PointerRegion`, TARGETs' places, taken
    TARGETs, with programs that would print something else if the rule were wrong
    or too bold, both settings (finding 11).
@@ -902,3 +903,55 @@ The plan's open question 1 is settled by answer 1.
     procedure through an interface block.
   - *Docs.* MANUAL.md's 14.13 (pointer dummies; "Not there yet"'s example now a pointer
     result), HELP FORTRAN.
+- **2026-11-19:** Subtask 6b, pointer results, done.
+  - *sema* (finding 9; `sema/pointerresult.go`). A function's value with POINTER is no
+    longer NOTIMPL. A reference through an explicit interface whose value is a pointer is a
+    `FuncRef` with **`Pointer`** set, and for an array pointer `Made` too, so that every place
+    reading a value the function describes (the scalarizer's leaves, LEN, SIZE, sequence and
+    assumed-shape arguments) reads it. `Symbol.HiddenValue` and `FuncRef.HiddenValue` take a
+    pointer's value as an association: a scalar's in R0, a CHARACTER one's descriptor in R0
+    and R1, only an array pointer's through the hidden argument. `targetFor` accepts, where
+    POINTERFUNC stood, a reference to a function whose value is a pointer
+    (`pointerFunctionTarget`, through `apply` so a record's pointer is no AGGREGATE), held to
+    the pointer's type, kind, rank, and length by `pointerMatches`; `functionReference` knows a
+    recursive function's reference to itself (`UnitName`), which `HIT => FIND (HEAD%NEXT, V)`
+    found. A reference without an explicit interface is the new **EXPLICITPOINTER**;
+    INTERFACEDIFF compares the value's POINTER (`pointerResultDifference`); an ENTRY of such a
+    function is a pointer of the same type, and the other way round (ENTRYVALUE,
+    `entryPointerDifference`). The module text writes the value's POINTER (`modwrite`'s
+    `procedure`), as 6a's did a dummy's.
+  - *Overlap* (finding 10). A pointer function's value is its own `baseSymbol`, a pointer of
+    its type (`FuncRef.through`), so an array assignment whose target is a TARGET, a pointer, or
+    in COMMON goes through a temporary (`X(4:6) = EVENS(X)`), and `readsAny` takes a scalar
+    reference to read anything such a pointer may point at.
+  - *Lowering* (`ir/lowerpointer.go`'s pointer results). In the function: a scalar or
+    CHARACTER value is its own cell, the return loading it whole (`valueType`, Long or Quad, in
+    place of `resultType` wherever a name's value is returned, ENTRY's return blocks too;
+    `resultValue` reads `pointerStorage`); an array pointer's is the caller's descriptor at the
+    hidden argument's address, `l.params[result]`, so `dummyPointerCell` makes it the located
+    cell 6a made for array pointer dummies and every descriptor routine reaches it. Each entry
+    point clears it (`clearPointerResult`, from `clearAllocatables`; `entryClears` says ENTRY's
+    entry points must): an array pointer's unchanging longwords and POINTER 0, a scalar's
+    address 0 and a CHARACTER one's header. In the caller: each reference is a pointer of the
+    statement's own (`pointerValue`): a `$T` longword or an 8-byte text temporary from R0 (and
+    R1), named by a `$P` symbol of `sema.NewSymbol` with `Pointer` set, or for an array pointer a
+    `$D` descriptor cell passed as the hidden argument, once per statement
+    (`pointerArray`, `lowerer.pointerValues`, cleared by `release`), nothing given back at the
+    statement's end. `expr`, `mem`, `chars`, `complexParts`, and `complexValue` lower a
+    reference as that pointer, and so as its target; `store` and `assignResult` no longer take
+    it for a value in R0; `valueResult` sends an array pointer's to `pointerArray`.
+    `targetPointer` turns the target of `=>`, ASSOCIATED, and a constructor's pointer
+    component into the pointer, so that `P => F(X)` is `P => Q`: an address stored, or a
+    descriptor copied (`copyDescriptor`).
+  - *Tests.* `sema`'s `TestPointerResults` (every use; POINTERTYPE by type and rank;
+    POINTERFUNC for a function whose value isn't a pointer; EXPLICITPOINTER; INTERFACEDIFF;
+    ENTRYVALUE both ways), and `TestPointerDummies` without its NOTIMPL case;
+    `TestModulePointers` (a module's scalar and array pointer functions, their text, and the
+    call's code); `ir` and `codegen` golden `f90pres.for`; `opt`'s `pointerRoutines` names its
+    routines; `testdata/fortran90/ptrres.f90`, worked by hand, every mode and both loaders, the
+    same on gfortran but two lines `compare.py`'s `KNOWN` explains (gfortran leaves an
+    unassigned pointer value undefined, where govax's is disassociated, and makes no temporary
+    for `X(4:6) = EVENS(X)`, giving `2.0` where 7.5.1.5 asks `4.0`).
+  - *Docs.* MANUAL.md's 14.13 (pointer results; "Not there yet"'s example now a CHARACTER
+    pointer of a length known when the program runs), HELP FORTRAN. Subtask 7, the optimizer's
+    aliasing rules, is next.

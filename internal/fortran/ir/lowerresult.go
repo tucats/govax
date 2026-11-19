@@ -46,12 +46,31 @@ func wholeType(n int) Type {
 	return Quad
 }
 
+// valueType is the machine type in which the function's name (or an entry
+// point's) s returns its value: resultType's, but for a pointer its
+// association (lowerpointer.go's pointer results), a scalar's address, a
+// longword, or a CHARACTER one's descriptor, a quadword.
+func (l *lowerer) valueType(s *sema.Symbol) Type {
+	switch {
+	case !s.Pointer:
+		return l.resultType(s.Type)
+	case charPointer(s.Type):
+		return Quad
+	}
+
+	return Long
+}
+
 // resultValue is the value the function returns for its name (or an entry
 // point's) s, which goes in R0 and R1: the variable, loaded whole as
-// resultType says.
+// valueType says, or a pointer's own storage.
 func (l *lowerer) resultValue(s *sema.Symbol) Expr {
 	m := l.symbolMem(s)
-	m.T = l.resultType(s.Type)
+	if s.Pointer {
+		m = l.pointerStorage(s)
+	}
+
+	m.T = l.valueType(s)
 
 	return &Load{m}
 }

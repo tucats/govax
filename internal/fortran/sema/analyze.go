@@ -1126,7 +1126,14 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 				continue
 			}
 
-			// So does a function whose value is an array (arrayvalue.go).
+			// So does a function whose value is an array (arrayvalue.go), or
+			// a pointer (pointerresult.go).
+			if v := fu.result(); fu.kind == ast.FunctionUnit && v != nil && v.Pointer && fu.unit != u {
+				messages.Report("EXPLICITPOINTER", r.pos, r.sym.Name, fu.pos.Line)
+
+				continue
+			}
+
 			if v := fu.result(); fu.kind == ast.FunctionUnit && v != nil && v.Dims != nil && fu.unit != u {
 				messages.Report("EXPLICITVALUE", r.pos, r.sym.Name, fu.pos.Line)
 

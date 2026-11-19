@@ -299,6 +299,10 @@ func interfaceDifference(body *Unit, fu *fileUnit) string {
 		if diff := resultDifference(body.Result, fu.result()); diff != "" {
 			return diff
 		}
+
+		if diff := pointerResultDifference(body.Result, fu.result()); diff != "" {
+			return diff
+		}
 	}
 
 	for i, p := range body.Params {

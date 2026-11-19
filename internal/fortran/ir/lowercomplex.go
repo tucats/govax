@@ -84,6 +84,10 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 		return &Load{r}, &Load{i}
 
 	case *sema.FuncRef:
+		if q, ok := l.pointerFunction(e); ok {
+			return l.complexParts(q)
+		}
+
 		result := l.temp(l.typeOf(e.T))
 		l.callFunction(e, result)
 
@@ -251,6 +255,10 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 		return l.constant(l.constOf(e))
 
 	case *sema.FuncRef:
+		if p, ok := l.pointerFunction(e); ok {
+			return l.complexValue(p)
+		}
+
 		result := l.temp(l.typeOf(e.T))
 		l.callFunction(e, result)
 

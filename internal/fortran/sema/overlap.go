@@ -468,6 +468,9 @@ func readsAny(e Expr, ts *Symbol) bool {
 			// block, or a dummy argument's storage, the caller's.
 			found = found || ts.Common != nil || ts.Dummy != 0 || ts.group != nil
 
+			// A pointer's target, wherever it is.
+			found = found || e.Pointer && mayShare(ts, baseSymbol(e))
+
 			for _, x := range e.Args {
 				if x.Expr != nil {
 					found = found || mayShare(ts, baseSymbol(x.Expr)) || readsAny(x.Expr, ts)
@@ -550,6 +553,18 @@ func baseSymbol(e Expr) *Symbol {
 		return e.Sym
 	case *Substring:
 		return baseSymbol(e.X)
+	case *FuncRef:
+		// A pointer's target, which may be anything a pointer of its type
+		// may point at (pointerresult.go): a symbol of its own, so that it
+		// may share with any TARGET, pointer, or common block of such a type,
+		// and stands in no known relation to them.
+		if e.Pointer {
+			if e.through == nil {
+				e.through = &Symbol{Name: e.Fn.Name, Type: e.T, Struct: e.T.Struct, Pointer: true, Class: Variable}
+			}
+
+			return e.through
+		}
 	}
 
 	return nil

@@ -101,6 +101,7 @@ PROGRAMS90 = {
     "ptrcomps": ["ptrcomps.f90"],
     "ptrcarr": ["ptrcarr.f90"],
     "ptrdum": ["ptrdum.f90"],
+    "ptrres": ["ptrres.f90"],
     "allocstat": ["allocstat.f90"],
     "autos": ["autos.f90"],
     "autolen": ["autolen.f90"],
@@ -148,6 +149,13 @@ KNOWN = {
         "Double:  56 16  38": "Double:  53 15 307",
         "Its EPSILON:  0.2775558E-16": "Its EPSILON:  0.2220446E-15",
         "For 15 digits and 307: 16": "For 15 digits and 307:  8",
+    },
+    "ptrres": {
+        # A pointer function's value is cleared at entry (PHASE-107's finding 2), where gfortran
+        # leaves it undefined; and an assignment whose value is reached through a pointer function
+        # goes through a temporary (7.5.1.5), which gfortran leaves out.
+        "outside F": "outside T",
+        "overlap  1.0  2.0  3.0  2.0  4.0  6.0": "overlap  1.0  2.0  3.0  2.0  2.0  6.0",
     },
     "recursion": {
         # IEEE's negative zero, which the VAX's floating formats don't have.
