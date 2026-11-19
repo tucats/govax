@@ -485,6 +485,12 @@ type Symbol struct {
 	// there (use.go). nil for a name of the unit's own.
 	Use *UseOrigin
 
+	// listed is set on a use-associated name a USE's item gives (an ONLY
+	// list's, or a rename's), as against one a USE of the whole module gives
+	// with every other entity: the unit has said it wants this one, so the
+	// listings show it, and /WARNINGS=UNUSED reports it if nothing uses it.
+	listed bool
+
 	// from is, for an entity of a module read from its text, the module that
 	// defines it and its name there, when the text says it came from another
 	// module (a FROM line); nil for the text's module's own (modread.go).

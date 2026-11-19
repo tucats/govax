@@ -56,6 +56,57 @@ func symbolOrigin(r *Symbol, ms *moduleScope) entityOrigin {
 	return entityOrigin{Module: ms.name, Name: r.Name}
 }
 
+// Unmentioned reports whether the name is one a USE of a whole module gave the
+// unit with the module's other entities, and the unit never mentions: the
+// storage map and the cross reference leave it out, as they do a name a text
+// library's module declares and the unit doesn't use, since a USE of a large
+// module would otherwise give every unit that uses it rows for all of it. The
+// /DEBUG table keeps it, so the debugger can find it from any unit that has it.
+func (s *Symbol) Unmentioned() bool {
+	return s.Use != nil && !s.listed && onlyDefined(s.refs)
+}
+
+// UseText says where a use-associated name came from, as the listings say it:
+// "from CONSTS"; "from CONSTS as PI" for a name renamed, PI being the
+// module's; and for an entity the module has from another module, where it is
+// defined too, "from SHAPES, defined in GEOM" or "from SHAPES as R, defined in
+// GEOM as RADIUS". It is "" for a name of the unit's own.
+func (s *Symbol) UseText() string {
+	if s.Use == nil {
+		return ""
+	}
+
+	text := "from " + s.Use.Module
+	if s.Use.Remote != s.Name {
+		text += " as " + s.Use.Remote
+	}
+
+	if o := s.Use.origin; o.Module != "" && o.Module != s.Use.Module {
+		text += ", defined in " + o.Module
+		if o.Name != s.Use.Remote {
+			text += " as " + o.Name
+		}
+	}
+
+	return text
+}
+
+// HashedLinkName is a use-associated module procedure's global name when it is
+// the hashed form of M.P (LongName), with M.P, for the storage map to say what
+// the MACRO file's calls name; "" for any other name.
+func (s *Symbol) HashedLinkName() (link, full string) {
+	if s.Use == nil || s.LinkName == "" {
+		return "", ""
+	}
+
+	o := s.Use.origin
+	if full = o.Module + "." + o.Name; s.LinkName == full {
+		return "", ""
+	}
+
+	return s.LinkName, full
+}
+
 // useRequest is a unit's USE statements of one module, joined as 11.3.2 says:
 // if any has no ONLY, every public entity, the lists one list of renames; if
 // all have ONLY, only what the lists name.
@@ -80,6 +131,8 @@ func (a *analyzer) uses(body []ast.Stmt) {
 		if !ok {
 			continue
 		}
+
+		a.noteOther(whatModule, s.Module, s.ModulePos, RefUsed)
 
 		r := byModule[s.Module]
 		if r == nil {
@@ -199,6 +252,10 @@ func structFormatMatters(st *Structure, structs map[*Structure]bool) bool {
 type localName struct {
 	name string
 	pos  diag.Position
+
+	// listed is set for a name an item of the USE gives: an ONLY list's, or a
+	// rename's (Symbol.listed).
+	listed bool
 }
 
 // useModule enters the module ms's public entities the request r asks for, by
@@ -236,7 +293,7 @@ func (a *analyzer) useModule(ms *moduleScope, r *useRequest) {
 			local = it.Remote
 		}
 
-		wanted[it.Remote] = append(wanted[it.Remote], localName{local, it.Pos})
+		wanted[it.Remote] = append(wanted[it.Remote], localName{local, it.Pos, true})
 	}
 
 	localsOf := func(remote string) []localName {
@@ -245,7 +302,7 @@ func (a *analyzer) useModule(ms *moduleScope, r *useRequest) {
 		}
 
 		if r.all {
-			return []localName{{remote, r.pos}}
+			return []localName{{remote, r.pos, false}}
 		}
 
 		return nil
@@ -259,8 +316,13 @@ func (a *analyzer) useModule(ms *moduleScope, r *useRequest) {
 		}
 
 		for _, n := range localsOf(e.Name) {
-			if c := a.useSymbol(ms, e, n.name, n.pos); c != nil && copies[e] == nil {
+			c := a.useSymbol(ms, e, n.name, n.pos)
+			if c != nil && copies[e] == nil {
 				copies[e] = c
+			}
+
+			if c != nil && n.listed {
+				c.listed = true
 			}
 		}
 	}
@@ -270,6 +332,10 @@ func (a *analyzer) useModule(ms *moduleScope, r *useRequest) {
 		if ms.publicSymbol(e) && e.Generic != nil {
 			for _, n := range localsOf(e.Name) {
 				a.useGeneric(ms, e, n.name, copies, n.pos)
+
+				if g := a.scope.byName[n.name]; g != nil && g.Use != nil && n.listed {
+					g.listed = true
+				}
 			}
 		}
 	}

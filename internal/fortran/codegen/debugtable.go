@@ -19,8 +19,14 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 	}
 
 	// A routine with no ENTRY statement lists no entry points, and one with them lists
-	// its first too.
-	lines := []string{dbgtable.EntryLine(g.r.Name, g.r.Name)}
+	// its first too. A module has none: it has no code. Its variables are listed as
+	// its own, each at its symbol in the module's section, as a COMMON block's are in
+	// any unit, and a unit that uses the module lists them too, under its own names
+	// (docs/planning/PHASE-106 - Fortran 90 modules.md, finding 13).
+	var lines []string
+	if g.r.Kind != ir.Module {
+		lines = append(lines, dbgtable.EntryLine(g.r.Name, g.r.Name))
+	}
 
 	for _, e := range g.r.Entries {
 		if e.Name != g.r.Name {

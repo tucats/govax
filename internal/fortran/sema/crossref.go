@@ -25,6 +25,12 @@ import (
 // its structure. A name a text library's module declares appears only if the program
 // uses it, with those uses: the program would have thousands of rows for one INCLUDE
 // otherwise, each pointing into a file it never sees (ours).
+//
+// A use-associated name (docs/planning/PHASE-106 - Fortran 90 modules.md, finding
+// 13) says where it came from after what it is, "INTEGER from CONSTS", and is
+// listed by the same rule as a library's: if the unit mentions it, or a USE's ONLY
+// list or rename names it (Symbol.Unmentioned). Each module a USE names has a row of
+// its own, the USE statements' lines.
 
 // RefKind is what a mention of a name does.
 type RefKind int
@@ -73,6 +79,7 @@ const (
 	whatNamelist  = "namelist"
 	whatStructure = "structure"
 	whatType      = "derived type"
+	whatModule    = "module"
 	whatIntrinsic = "intrinsic"
 	whatSystem    = "system routine"
 )
@@ -166,8 +173,12 @@ func (u *Unit) CrossReference() []CrossName {
 	var rows []row
 
 	for _, s := range u.Symbols {
-		if refs := settled(s.refs); len(refs) > 0 && s.Class != UnitName {
+		if refs := settled(s.refs); len(refs) > 0 && s.Class != UnitName && !s.Unmentioned() {
 			group, what := u.describeCross(s)
+			if from := s.UseText(); from != "" {
+				what += " " + from
+			}
+
 			rows = append(rows, row{group: group, name: CrossName{Name: s.Name, What: what, Refs: refs}})
 		}
 	}

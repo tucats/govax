@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
 
@@ -98,7 +99,18 @@ func (a *analyzer) reportUnused() {
 //     that dummy its type.
 //   - A unit's own names, the function's value and its ENTRY names among them, aren't
 //     for it to use.
+//   - A module's public names are for its users; its private ones are its own, and
+//     reported. A name a USE of a whole module gave the unit with all the rest is
+//     the module's, but one a USE's ONLY list or rename named is the unit's choice,
+//     and reported if nothing uses it (Symbol.listed).
 func (a *analyzer) neverUsed(s *Symbol) bool {
+	switch {
+	case a.unit.Kind == ast.ModuleUnit && !s.private:
+		return false
+	case s.Use != nil:
+		return s.listed && onlyDefined(s.refs)
+	}
+
 	if s.Class == UnitName || s.Result || s.Internal != nil || s.broken || s.library || s.included || s.typesDummy ||
 		s.Common != nil || s.Equivalenced || (s.External && s.Dummy == 0) {
 		return false

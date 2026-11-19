@@ -385,7 +385,7 @@ qualifiers stay a subtask of their own.
    the stamp symbol, MODFORMAT, MODSTALE, HELP FORTRAN (findings 9, 10, 12)
    (done 2026-11-19).
 6. **Listings:** the storage map's and cross reference's origins, the `/DEBUG`
-   table's module variables (finding 13).
+   table's module variables (finding 13) (done 2026-11-19).
 7. **Programs end to end** (`testdata/fortran90/modules/`, each with a
    `compiles.txt` of the compile orders allowed beside `links.txt`; 11.3.3's and
    12.1.2.2.2's examples among them), every mode, gfortran's witness.
@@ -639,3 +639,37 @@ Definition modules as module files stay for later (the plan's open question 2).
   the host, MODNOTFOUND, FORMODULEDIR, and `TestModuleStampLink`, MACRO and LINK
   on a stale user object); `internal/console`'s `TestDispatch_fortranModules`
   through the grammar; `cmd/govax`'s `TestFortranCommand`.
+- **2026-11-19:** Subtask 6, listings. A use-associated name says where it came
+  from (`Symbol.UseText`: "from CONSTS", "from CONSTS as PI" for a rename, PI being
+  the module's, and ", defined in GEOM" for an entity the module has from another),
+  at the end of its storage map row (`codegen`'s `storageMap`, a fifth column) and
+  after what its cross reference row says it is ("INTEGER from CONSTS"); each module
+  a USE names has a cross reference row, `module`, the USE statements' lines
+  (`whatModule`, noted in `uses`). A name a USE of a whole module gave with the rest,
+  and the unit never mentions, has neither row (`Symbol.Unmentioned`), by the rule a
+  text library's names have, so a large module doesn't give every user rows for all
+  of it; one an ONLY list or a rename names is the unit's choice
+  (`Symbol.listed`, set by `useModule` from `localName.listed`) and has them. A
+  module procedure's map and cross reference are headed by its path, M.P (and
+  M.P.INNER for its internal procedures): `Unit.Path` is now the host's path and the
+  unit's name, never the link name, and `StorageMap.Routine` is the path (it was
+  `ir.Routine.Name`, so an internal procedure of a module procedure was headed one
+  way in its map and another in its cross reference); a map whose routine's global
+  name isn't its path says what that is ("VERY_LONG_MODULE_NAME_$EC613099 is
+  VERY_LONG_MODULE_NAME_HERE.A_LONG_PROCEDURE_NAME_TOO, its global name"), as a
+  user's map does for each use-associated module procedure with a hashed name, the
+  name its calls give (`Symbol.HashedLinkName`). The `/DEBUG` table already listed
+  a module's variables at their symbols in its section, as a COMMON block's, and a
+  user's under the user's names; a module now has no entry point line, having no
+  code. A fix found here: `/WARNINGS=UNUSED` reported a module's public constants,
+  which are its users'; now a module's public names are never reported, its private
+  ones are, a name a USE of a whole module gave isn't, and one an ONLY list or a
+  rename named is (`neverUsed`; a use-associated variable's module section no
+  longer hides it, as a COMMON block's would). Choices made here: the `/DEBUG` table
+  keeps a user's unmentioned use-associated variables, so the debugger can find
+  them from any unit that has them, until Phase 110's `M.X`; a use-associated
+  name's row keeps the USE's line as its definition (`D`). MANUAL.md's 14.13 has
+  the listing's view, an example run on govax. Tests:
+  `internal/fortran/modlisting_test.go` (`TestModuleListings`, with the modules and
+  apart from them through their files; `TestModuleUnusedWarnings`;
+  `TestModuleDebugTable`).

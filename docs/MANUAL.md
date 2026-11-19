@@ -9332,8 +9332,52 @@ module file's digest, which the module's object defines when it has variables or
 Linked with the object of a module since compiled from a changed source, the user's old object
 is LINK's undefined symbol, naming the stamp: compile the user again. A module and its users
 must agree on `/G_FLOATING` when the module has a REAL\*8 or COMPLEX\*16 entity
-(`%FORT-E-MODFORMAT`). The listing's view of modules, and the rest of this section's story of
-them, are still to come.
+(`%FORT-E-MODFORMAT`).
+
+In a listing a module has a storage map of its variables, each in the module's section
+`$MOD$NAME` as a common block's are, and a module procedure's map and cross reference are
+headed `MODULE.PROCEDURE`, with a line naming its global name if that had to be shortened
+(MACRO's names have 31 characters). A user's map and cross reference say where each
+use-associated name came from, and its cross reference has a row for each module its `USE`
+statements name. A name a `USE` of a whole module gave, and the unit never mentions, has no
+row, as a text library's name doesn't; one an `ONLY` list or a rename names has one:
+
+```text
+module shapes
+  integer :: radius = 2
+  real :: areas(3), spare
+end module shapes
+program prog
+  use shapes, r => radius
+  integer :: i
+  do i = 1, 3
+    areas(i) = 3.14159 * r * i
+  end do
+  print *, areas
+end program prog
+```
+
+```text
+Storage map for PROG, the main program
+  R      INTEGER   $MOD$SHAPES+0  PROG.R      from SHAPES as RADIUS
+  AREAS  REAL (3)  $MOD$SHAPES+4  PROG.AREAS  from SHAPES
+  I      INTEGER   $LOCAL+0       PROG.I
+  R7 is $H1: a value computed before a loop
+  R6 is $R1: I, during a loop
+
+Cross reference for PROG                    (D defined, A assigned, a blank is used)
+  AREAS    REAL array from SHAPES         6D  9A  11
+  I        INTEGER                        7D  8A  9
+  R        INTEGER from SHAPES as RADIUS  6D  9
+  SHAPES   module                         6
+```
+
+`SPARE` has no row: `PROG` never mentions it.
+
+A name a module passes on from another says that too (`from SHAPES, defined in GEOM`).
+`/WARNINGS=UNUSED` doesn't report a module's public names, which are its users', nor what a
+`USE` of a whole module gave; it does report a name an `ONLY` list or rename asked for and
+nothing uses. The rest of this section's story of modules is still to come.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

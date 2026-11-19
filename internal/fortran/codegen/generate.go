@@ -158,7 +158,7 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 		g.debugTable = opts.DebugTable
 		g.generate()
 
-		storage := StorageMap{Routine: r.Name, Lines: g.storageMap()}
+		storage := StorageMap{Routine: g.path(), Lines: g.storageMap()}
 		maps = append(maps, storage)
 		g.write(w, storage)
 
@@ -689,11 +689,25 @@ type StorageMap struct {
 	Lines   []string
 }
 
+// path is the routine's name as the listing shows it, its unit's Path: a module
+// procedure's M.P, though its global name, r.Name, may be LongName's hashed form.
+func (g *routineGen) path() string {
+	return g.r.Unit.Path()
+}
+
 // storageMap makes the routine's storage map's lines: its variables; what any
 // other register holds; then the numbered forms of names too long for MACRO, and
 // the layouts of its structures.
+//
+// A use-associated variable is where its module's section has it, as a COMMON
+// block's variable is, and its row ends with where it came from ("from CONSTS",
+// Symbol.UseText); one the unit never mentions isn't shown (Symbol.Unmentioned).
+// A routine whose global name isn't its path, a module procedure's hashed name,
+// says so, as does each use-associated module procedure whose global name is
+// hashed, being the name the MACRO file's calls give (docs/planning/PHASE-106 -
+// Fortran 90 modules.md, finding 13).
 func (g *routineGen) storageMap() []string {
-	type row struct{ name, typ, where, symbol string }
+	type row struct{ name, typ, where, symbol, from string }
 
 	var rows []row
 
@@ -710,19 +724,19 @@ func (g *routineGen) storageMap() []string {
 			}
 		}
 
-		rows = append(rows, row{p.Name, typeText(p.Sym), where, "@" + g.argumentPlace(p)})
+		rows = append(rows, row{p.Name, typeText(p.Sym), where, "@" + g.argumentPlace(p), ""})
 	}
 
 	for _, c := range g.r.Cells {
 		switch {
-		case c.Sym == nil || c.Sym.UnusedFromLibrary():
+		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Unmentioned():
 
 		case c.Register != 0:
-			rows = append(rows, row{c.Sym.Name, typeText(c.Sym), register(c.Register), register(c.Register)})
+			rows = append(rows, row{c.Sym.Name, typeText(c.Sym), register(c.Register), register(c.Register), c.Sym.UseText()})
 
 		case c.Frame:
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
-				"FP" + strconv.Itoa(c.Offset-g.frameSize()), g.names.symbol(c.Name) + "(FP)"})
+				"FP" + strconv.Itoa(c.Offset-g.frameSize()), g.names.symbol(c.Name) + "(FP)", ""})
 
 		default:
 			section := "$LOCAL"
@@ -731,26 +745,37 @@ func (g *routineGen) storageMap() []string {
 			}
 
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
-				section + "+" + strconv.Itoa(c.Offset), g.names.symbol(c.Name)})
+				section + "+" + strconv.Itoa(c.Offset), g.names.symbol(c.Name), c.Sym.UseText()})
 		}
 	}
 
-	lines := []string{"Storage map for " + g.r.Name + ", " + g.what()}
+	path := g.path()
+	lines := []string{"Storage map for " + path + ", " + g.what()}
+
+	if g.r.Name != path {
+		lines = append(lines, "  "+g.r.Name+" is "+path+", its global name")
+	}
 
 	if len(rows) == 0 {
 		lines = append(lines, "  (no variables)")
 	}
 
-	widths := [3]int{4, 4, 5}
+	widths := [4]int{4, 4, 5, 6}
 
 	for _, r := range rows {
 		widths[0] = max(widths[0], len(r.name))
 		widths[1] = max(widths[1], len(r.typ))
 		widths[2] = max(widths[2], len(r.where))
+		widths[3] = max(widths[3], len(r.symbol))
 	}
 
 	for _, r := range rows {
-		lines = append(lines, fmt.Sprintf("  %-*s  %-*s  %-*s  %s", widths[0], r.name, widths[1], r.typ, widths[2], r.where, r.symbol))
+		line := fmt.Sprintf("  %-*s  %-*s  %-*s  %s", widths[0], r.name, widths[1], r.typ, widths[2], r.where, r.symbol)
+		if r.from != "" {
+			line = fmt.Sprintf("%-*s  %s", 2+widths[0]+2+widths[1]+2+widths[2]+2+widths[3], line, r.from)
+		}
+
+		lines = append(lines, line)
 	}
 
 	for _, c := range g.r.Cells {
@@ -760,7 +785,13 @@ func (g *routineGen) storageMap() []string {
 	}
 
 	for _, name := range g.names.long {
-		lines = append(lines, "  "+g.names.symbol(name)+" is "+g.r.Name+"."+name)
+		lines = append(lines, "  "+g.names.symbol(name)+" is "+path+"."+name)
+	}
+
+	for _, s := range g.r.Unit.Symbols {
+		if link, full := s.HashedLinkName(); link != "" && !s.Unmentioned() {
+			lines = append(lines, "  "+link+" is "+full+", "+s.Name+" here")
+		}
 	}
 
 	return append(lines, structureLines(g.r.Unit.Structures)...)

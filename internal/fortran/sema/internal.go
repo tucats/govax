@@ -58,15 +58,13 @@ import (
 // an actual argument (INTERNALARG): it is called only from its host and its
 // host's other internal procedures, never once its host has returned.
 
-// Path is the unit's name as the listing and the MACRO file show it: an internal
-// procedure's is its host's, a period, and its own (HOST.INNER).
+// Path is the unit's name as the listing shows it: an internal procedure's is
+// its host's path, a period, and its own (HOST.INNER), and a module procedure's
+// its module's and its own (M.P, M.P.INNER), even where its global name is
+// LongName's hashed form, which its storage map gives beside it.
 func (u *Unit) Path() string {
-	if u.LinkName != "" {
-		return u.LinkName
-	}
-
 	if u.Host != nil {
-		return u.Host.Name + "." + u.Name
+		return u.Host.Path() + "." + u.Name
 	}
 
 	return u.Name
