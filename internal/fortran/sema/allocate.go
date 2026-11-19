@@ -134,6 +134,9 @@ func (a *analyzer) checkAllocatables() {
 			a.report("ALLOCDUMMY", s.Pos, s.Name, "a dummy argument")
 		case s.Result:
 			a.report("ALLOCDUMMY", s.Pos, s.Name, "a function's value")
+		case s.Common != nil && s.Common.Module != "":
+			// A module's variable: its section holds its descriptor.
+			continue
 		case s.Common != nil:
 			a.report("ALLOCATTR", s.Pos, s.Name, "be in a common block")
 		case s.Equivalenced:
@@ -251,7 +254,7 @@ func (a *analyzer) freedAtReturn() {
 	}
 
 	for _, s := range a.unit.Symbols {
-		if !s.Allocatable || s.broken || s.saved || a.saveAll ||
+		if !s.Allocatable || s.broken || s.saved || a.saveAll || s.Common != nil ||
 			(s.storageStmt != nil && s.storageStmt.Kind == lex.Static) {
 			continue
 		}

@@ -60,6 +60,9 @@ type equivItem struct {
 func (a *analyzer) equivalences() {
 	var groups []*equivGroup
 
+	a.storageAssoc = true
+	defer func() { a.storageAssoc = false }()
+
 	for _, s := range a.equivStmts {
 		for _, set := range s.Sets {
 			groups = a.equivalenceSet(set, groups)

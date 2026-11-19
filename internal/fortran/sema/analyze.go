@@ -47,6 +47,14 @@ type Options struct {
 
 	// Standard is /STANDARD: what to flag as an extension to FORTRAN-77 (standard.go).
 	Standard Conformance
+
+	// Modules finds the module files of modules the compilation doesn't
+	// compile (module.go); nil finds none. Version and Source are what a
+	// module's text says made it: govax's version, and the source file's
+	// specification and time.
+	Modules ModuleFinder
+	Version string
+	Source  string
 }
 
 // Analyze gives the parser's tree its meaning, reporting what is wrong
@@ -61,6 +69,7 @@ type Options struct {
 // meaningful only if no error was reported.
 func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List) *Program {
 	prog := &Program{}
+	prog.modules = newModules(file, opts)
 
 	// First, the names of every unit in the file, so that a unit can be
 	// checked as it calls another defined later in the file.
@@ -112,7 +121,32 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 		}
 		a.makeMaps()
 
-		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName))...)
+		// A module's text is made once it has been analyzed without an error,
+		// for the USE statements after it (module.go).
+		name := unitName(au, mainName)
+		failed := messages.Count(diag.Error) + messages.Count(diag.Fatal)
+
+		if au.Kind() == ast.ModuleUnit {
+			delete(prog.modules.later, name)
+			prog.modules.current = name
+		}
+
+		units := a.analyzeUnit(au, name)
+		prog.Units = append(prog.Units, units...)
+
+		if au.Kind() == ast.ModuleUnit {
+			prog.modules.current = ""
+
+			if messages.Count(diag.Error)+messages.Count(diag.Fatal) == failed {
+				prog.finishModule(units[0], opts, messages)
+			}
+
+			// A module that failed has had its messages: its users say
+			// nothing more of it.
+			if prog.modules.compiled[name] == nil {
+				prog.modules.loaded[name] = &moduleScope{name: name, failed: true}
+			}
+		}
 	}
 
 	// What comes after the last unit is an extension as anywhere.
@@ -381,6 +415,15 @@ type analyzer struct {
 	// bounds, which are BOUNDVAR unless the host uses them.
 	provisionalBounds []provisionalBound
 
+	// reading is the facts of a module's text being read for a USE
+	// (modread.go), or nil when the unit is a program's own.
+	reading *moduleFacts
+
+	// respecify says a declaration may name a use-associated name: a NAMELIST
+	// group's, or in a module PUBLIC and PRIVATE (use.go). storageAssoc says it
+	// is in COMMON or EQUIVALENCE, for USECOMMON.
+	respecify, storageAssoc bool
+
 	// interfacing is set while an internal procedure's declarations are read,
 	// before its host's executable statements.
 	interfacing bool
@@ -613,6 +656,11 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.implicits(body)
 	a.header(au)
 	a.entries(body)
+	a.uses(body)
+
+	if u.Kind == ast.ModuleUnit {
+		a.moduleStatements(body)
+	}
 
 	// Declarations first, then the executable statements, so that every
 	// statement sees every declaration: a name is an array whatever
@@ -627,6 +675,11 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.checkEntryTypes()
 	a.psectDirectives()
 	a.checkCommonTypes()
+
+	if u.Kind == ast.ModuleUnit {
+		a.moduleBlock()
+	}
+
 	a.layoutCommon()
 	a.equivalences()
 	a.checkAllocatables()
@@ -635,6 +688,11 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.saves()
 	a.storageStatements()
 	a.checkAutomatics()
+
+	if a.reading != nil {
+		a.applyLayoutFacts()
+	}
+
 	a.impliedSaves()
 	a.volatiles()
 	a.dataStatements()

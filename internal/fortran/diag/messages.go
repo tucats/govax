@@ -1609,6 +1609,25 @@ var messages = map[string]kind{
 
 	// SYSLEN is a system subroutine's arguments of both integer lengths.
 	"SYSLEN": {Error, "the arguments of %s must be all INTEGER*2 or all INTEGER*4"},
+
+	// Modules (sema/module.go, use.go, modread.go; docs/planning/PHASE-106 -
+	// Fortran 90 modules.md). MODSTMT is what a module's specification part
+	// can't hold (11.3). MODLATER is a USE of a module later in the file, MODCYCLE a module
+	// that uses itself, MODNOTFOUND one with no module file where the search
+	// looked, MODFILEBAD a module file that doesn't read (its line, and why),
+	// MODFACT what a module file's !GOVAX$ lines and declarations disagree on
+	// (only ever inside MODFILEBAD). USELOCAL is a use-associated name that is
+	// also one of the unit's own; USEATTR one declared again, USECOMMON one in
+	// COMMON or EQUIVALENCE (11.3.2).
+	"MODSTMT":     {Error, "a module's specification part can't hold %s"},
+	"MODLATER":    {Error, "the module %s is at line %d, after this USE: a module must be compiled before it is used"},
+	"MODCYCLE":    {Error, "the module %s uses itself, directly or through other modules"},
+	"MODNOTFOUND": {Error, "no module file for %s; looked in %s"},
+	"MODFILEBAD":  {Error, "the module file %s can't be read, at line %d: %s"},
+	"MODFACT":     {Error, "%s"},
+	"USELOCAL":    {Error, "%s, from the module %s, is also a local name of this unit, at line %d"},
+	"USEATTR":     {Error, "%s comes from the module %s, and can't be declared again"},
+	"USECOMMON":   {Error, "%s comes from the module %s, and can't be in COMMON or EQUIVALENCE"},
 }
 
 // Known reports whether ident is a message in the table, and its

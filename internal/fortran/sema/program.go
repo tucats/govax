@@ -10,6 +10,11 @@ import (
 type Program struct {
 	Units []*Unit
 
+	// Modules are the modules the compilation compiled, in order, with their
+	// texts, the module files to write (module.go).
+	Modules []*ModuleText
+	modules *modules
+
 	// Ident is the string of the file's first CDEC$ IDENT directive, if
 	// HasIdent says it has one (directive.go).
 	Ident    string
@@ -89,8 +94,16 @@ type Unit struct {
 	FrameSize int
 
 	// Commons are the common blocks the unit declares, in order of first
-	// appearance.
-	Commons []*CommonBlock
+	// appearance; a module's are its own section's too (module.go).
+	// UsedBlocks are the unit's views of the program sections of the modules
+	// it uses, each holding the unit's names of the module's variables
+	// (use.go): no statement of the unit lays them out.
+	Commons    []*CommonBlock
+	UsedBlocks []*CommonBlock
+
+	// usedStructs are the types USE statements gave the unit, each with its
+	// module's name (use.go).
+	usedStructs map[*Structure]string
 
 	// Initials are the initial values DATA statements and type statements
 	// give the unit's names, in order of place (data.go).
@@ -441,6 +454,10 @@ type Symbol struct {
 	// whose type is its value's.
 	defPos  diag.Position
 	oldForm bool
+
+	// Use is where a use-associated name came from: the module, and its name
+	// there (use.go). nil for a name of the unit's own.
+	Use *UseOrigin
 
 	// broken is set when a declaration of the name had an error, which
 	// has been reported: its uses get no messages of their own, which

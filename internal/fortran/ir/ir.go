@@ -15,11 +15,18 @@ const (
 	Subroutine
 	Function
 	BlockData
+	Module
 )
 
 // String names the kind, for the dump.
 func (k Kind) String() string {
-	return [...]string{"main", "subroutine", "function", "block data"}[k]
+	return [...]string{"main", "subroutine", "function", "block data", "module"}[k]
+}
+
+// NoCode reports whether a routine of the kind has no code: a block data
+// subprogram's, or a module's, which are only storage and its initial values.
+func (k Kind) NoCode() bool {
+	return k == BlockData || k == Module
 }
 
 // Type is a value's type as the machine sees it: what size it is and

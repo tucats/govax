@@ -734,7 +734,7 @@ func (a *analyzer) recordInitials() {
 			continue
 		}
 
-		if s.Common != nil && s.Common.Name == "" {
+		if s.Common != nil && s.Common.Blank() {
 			a.report("DATABLANK", s.TypePos, s.Name)
 
 			continue

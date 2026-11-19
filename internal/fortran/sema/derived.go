@@ -66,7 +66,9 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 
 	st := &Structure{Name: s.Name, Pos: s.NamePos, byName: map[string]*Field{}, open: true, Derived: true}
 
-	if old := a.unit.structs[s.Name]; old != nil {
+	if a.usedStructure(s.Name, s.NamePos) {
+		// Reported.
+	} else if old := a.unit.structs[s.Name]; old != nil {
 		a.report("DUPTYPE", s.NamePos, s.Name, old.Pos.Line)
 	} else {
 		a.unit.structs[s.Name] = st
@@ -75,7 +77,7 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 	a.unit.Structures = append(a.unit.Structures, st)
 
 	st.Sequence = a.typeHeader(s)
-	st.Natural = a.derivedLayout(st.Sequence)
+	st.Natural = a.readNatural(st.Name, a.derivedLayout(st.Sequence))
 	b := &structBuilder{a: a, s: st, boundary: 1}
 
 	a.structDepth++
@@ -114,6 +116,7 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 	}
 
 	a.warnFields(st)
+	a.readTypeLayout(st)
 
 	if !b.declares {
 		a.report("TYPEEMPTY", s.NamePos, s.Name)

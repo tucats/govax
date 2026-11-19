@@ -222,6 +222,8 @@ func (l *lowerer) prepare() {
 		r.Kind = Subroutine
 	case ast.BlockDataUnit:
 		r.Kind = BlockData
+	case ast.ModuleUnit:
+		r.Kind = Module
 	default:
 		r.Kind = Main
 	}
@@ -263,7 +265,7 @@ func (l *lowerer) prepare() {
 		l.cells[s] = c
 	}
 
-	if r.Kind == BlockData {
+	if r.Kind.NoCode() {
 		return
 	}
 
@@ -281,7 +283,7 @@ func (l *lowerer) prepare() {
 func (l *lowerer) lowerBody() *Routine {
 	u, r := l.unit, l.r
 
-	if r.Kind == BlockData {
+	if r.Kind.NoCode() {
 		return r
 	}
 

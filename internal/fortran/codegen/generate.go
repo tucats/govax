@@ -215,7 +215,7 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 	initials := map[string][]*sema.Initial{}
 
 	for _, r := range routines {
-		for _, b := range r.Unit.Commons {
+		for _, b := range append(append([]*sema.CommonBlock{}, r.Unit.Commons...), r.Unit.UsedBlocks...) {
 			if _, seen := sizes[b.Psect]; !seen {
 				blocks = append(blocks, b)
 			}
@@ -233,7 +233,11 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 	for _, b := range blocks {
 		w.Blank()
 		what := "Common block " + b.String()
-		if b.Name == "" {
+
+		switch {
+		case b.Module != "":
+			what = "The module " + b.Module + "'s variables"
+		case b.Name == "":
 			what = "Blank common"
 		}
 
@@ -449,7 +453,7 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 		g.writeData(w)
 	}
 
-	if r.Kind == ir.BlockData {
+	if r.Kind.NoCode() {
 		w.Blank()
 		w.Append(&g.pre)
 		g.code.Write(w)
@@ -633,6 +637,8 @@ func (g *routineGen) what() string {
 		return "a " + recursive + "subroutine"
 	case ir.BlockData:
 		return "a block data subprogram"
+	case ir.Module:
+		return "a module"
 	}
 
 	return "the main program"

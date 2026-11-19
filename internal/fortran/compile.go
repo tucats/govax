@@ -82,6 +82,11 @@ type Options struct {
 	// and labels are defined, assigned, and used.
 	CrossReference bool
 
+	// Modules finds the module files of the modules USE statements name that
+	// the compilation doesn't compile itself (sema.ModuleFinder); nil finds
+	// none.
+	Modules sema.ModuleFinder
+
 	// Includes reads the files and modules INCLUDE statements name; nil
 	// means a program can include nothing.
 	Includes source.Opener
@@ -129,6 +134,12 @@ type Result struct {
 	// terminators; nil when the compilation failed (an error or fatal
 	// message), since then there is no file to write.
 	MACRO []string
+
+	// Modules are the modules the compilation compiled, each with its text,
+	// the module file's lines (sema.ModuleText): nil when the compilation
+	// failed, as MACRO is, since no module file is written then (the author's
+	// answer 7 to docs/planning/PHASE-106 - Fortran 90 modules.md).
+	Modules []*sema.ModuleText
 
 	// Listing is the listing's lines, each page's first starting with a form feed:
 	// made with Options.List, whether or not the compilation failed, when it's
@@ -241,6 +252,9 @@ func CompileAll(opts Options, files []File) (result Result) {
 			Checks:    opts.Checks,
 			Warnings:  opts.Warnings,
 			Standard:  opts.Standard,
+			Modules:   opts.Modules,
+			Version:   opts.Version,
+			Source:    file.Spec + " " + vmsTime(opts.Compiled),
 		}, &messages)
 
 		// Lowering and optimizing assume a correct program, so they run
@@ -309,6 +323,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 	generating.DebugTable = opts.Debug.Symbols
 	maps = codegen.Generate(&w, routines, program.Lines, generating)
 	result.MACRO = w.Lines()
+	result.Modules = prog.Modules
 
 	return result
 }

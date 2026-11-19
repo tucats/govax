@@ -494,7 +494,7 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 	a.note(&s.refs, pos, RefAssigned)
 
 	switch {
-	case s.broken || s.Type.Kind == Invalid:
+	case a.respecified(s, pos), s.broken || s.Type.Kind == Invalid:
 		return s, false
 
 	case s.Dummy != 0:
@@ -535,7 +535,7 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 
 		return s, false
 
-	case s.Common != nil && s.Common.Name == "":
+	case s.Common != nil && s.Common.Blank():
 		a.report("DATABLANK", pos, name)
 
 		return s, false

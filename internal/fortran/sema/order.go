@@ -30,6 +30,7 @@ type group int
 
 const (
 	anywhere group = iota
+	useGroup
 	implicitNoneGroup
 	implicitGroup
 	specGroup
@@ -48,6 +49,12 @@ type placement struct {
 // decides).
 func placementOf(s ast.Stmt, stmtFunc bool) placement {
 	switch s := s.(type) {
+	case *ast.UseStmt:
+		return placement{useGroup, useGroup}
+
+	case *ast.AccessStmt:
+		return placement{specGroup, specGroup}
+
 	case *ast.ImplicitStmt:
 		if s.None {
 			return placement{implicitNoneGroup, implicitNoneGroup}

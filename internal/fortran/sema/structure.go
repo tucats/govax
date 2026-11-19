@@ -276,7 +276,9 @@ func (a *analyzer) declareStructure(s *ast.StructureStmt) *Structure {
 	if s.Name != "" {
 		a.noteOther(whatStructure, s.Name, s.Position(), RefDefined)
 
-		if old := a.unit.structs[s.Name]; old != nil {
+		if a.usedStructure(s.Name, s.Position()) {
+			// Reported.
+		} else if old := a.unit.structs[s.Name]; old != nil {
 			a.report("DUPSTRUCT", s.Position(), s.Name, old.Pos.Line)
 		} else {
 			a.unit.structs[s.Name] = st
@@ -285,7 +287,7 @@ func (a *analyzer) declareStructure(s *ast.StructureStmt) *Structure {
 
 	a.unit.Structures = append(a.unit.Structures, st)
 
-	st.Natural = a.align.Records == Natural
+	st.Natural = a.readNatural(s.Name, a.align.Records == Natural)
 	b := &structBuilder{a: a, s: st, boundary: 1}
 
 	a.structDepth++
@@ -299,6 +301,10 @@ func (a *analyzer) declareStructure(s *ast.StructureStmt) *Structure {
 	}
 
 	a.warnFields(st)
+
+	if s.Name != "" {
+		a.readTypeLayout(st)
+	}
 
 	if !b.declares {
 		a.report("STRUCTEMPTY", s.Position())

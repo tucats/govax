@@ -141,8 +141,7 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 	}
 
 	want := []string{
-		"1:1 the MODULE statement",
-		"12:3 the USE statement",
+		"6:3 a module procedure",
 		"30:3 the pointer assignment statement",
 	}
 

@@ -29,9 +29,11 @@ const blankPsect = "$BLANK"
 // CommonBlock is one unit's view of a common block.
 type CommonBlock struct {
 	// Name is the block's name, "" for blank common; Psect is the name of
-	// its program section.
-	Name  string
-	Psect string
+	// its program section. Module is set instead of Name for a module's
+	// variables' section, $MOD$M (module.go), and names the module.
+	Name   string
+	Psect  string
+	Module string
 
 	// Members are the names the unit's COMMON statements put in the
 	// block, in storage order. A name EQUIVALENCE brought in isn't one,
@@ -64,11 +66,21 @@ type CommonBlock struct {
 // String is the block as messages and the storage map say it: /BLK1/, or
 // blank common.
 func (b *CommonBlock) String() string {
+	if b.Module != "" {
+		return "module " + b.Module + "'s variables"
+	}
+
 	if b.Name == "" {
 		return "blank common"
 	}
 
 	return "/" + b.Name + "/"
+}
+
+// Blank reports whether the block is blank common, which has neither a name
+// nor a module.
+func (b *CommonBlock) Blank() bool {
+	return b.Name == "" && b.Module == ""
 }
 
 // commonBlock returns the unit's block named name, making it the first
@@ -77,7 +89,7 @@ func (a *analyzer) commonBlock(name string, block *ast.CommonBlock) *CommonBlock
 	a.noteOther(whatCommon, name, block.Pos, RefDefined)
 
 	for _, b := range a.unit.Commons {
-		if b.Name == name {
+		if b.Name == name && b.Module == "" {
 			return b
 		}
 	}
@@ -96,6 +108,9 @@ func (a *analyzer) commonBlock(name string, block *ast.CommonBlock) *CommonBlock
 // Their places wait until every declaration is read (layoutCommon), since
 // a name's type and dimensions may come after it.
 func (a *analyzer) commonStatement(s *ast.CommonStmt) {
+	a.storageAssoc = true
+	defer func() { a.storageAssoc = false }()
+
 	for _, block := range s.Blocks {
 		b := a.commonBlock(block.Name, block)
 
@@ -113,6 +128,10 @@ func (a *analyzer) commonEntity(b *CommonBlock, d *ast.Declarator) {
 	sym := a.declare(d.Name, d.Pos)
 
 	switch {
+	case sym.Use != nil:
+		// USECOMMON, reported by declare.
+		return
+
 	case sym.Dummy != 0:
 		a.report("COMMONDUMMY", d.Pos, d.Name)
 

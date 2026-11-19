@@ -87,6 +87,7 @@ func (a *analyzer) note(list *[]Reference, pos diag.Position, kind RefKind) {
 // declare is lookup for the name a specification statement says something about.
 func (a *analyzer) declare(name string, pos diag.Position) *Symbol {
 	s := a.local(name, pos)
+	a.respecified(s, pos)
 	a.note(&s.refs, pos, RefDefined)
 
 	return s

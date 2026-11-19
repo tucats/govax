@@ -148,6 +148,12 @@ func (a *analyzer) internalInterfaces(au *ast.Unit) []*analyzer {
 			continue
 		}
 
+		if a.unit.Kind == ast.ModuleUnit {
+			a.notImplForm(cu.Position(), "a module procedure")
+
+			continue
+		}
+
 		ia := a.innerAnalyzer()
 		ia.interfacing = true
 		ia.beginUnit(cu, cu.Name())

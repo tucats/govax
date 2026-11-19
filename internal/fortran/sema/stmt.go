@@ -204,8 +204,8 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
-		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.NamelistStmt, *ast.DirectiveStmt:
-		// Their work was done by implicits and declarations.
+		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.NamelistStmt, *ast.DirectiveStmt, *ast.UseStmt:
+		// Their work was done by implicits, uses, and declarations.
 		return
 
 	case *ast.InterfaceBlock:

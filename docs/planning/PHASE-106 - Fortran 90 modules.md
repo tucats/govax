@@ -370,7 +370,7 @@ qualifiers stay a subtask of their own.
    constraints, the psect and layout, PARAMETERs, types, NAMELIST, COMMON in a
    module; the module text's writer and reader for these, and USE without lists
    in one compilation through it (findings 1, 2, 3, 6, 7, 11); MODLATER,
-   MODCYCLE; the storage map's psect.
+   MODCYCLE; the storage map's psect (done 2026-11-18).
 3. **Module procedures:** analysis as the module's procedures, `M.P` and the
    hashed form, `LinkName`, their interfaces in the text, calls and actual
    arguments from users; MODULE PROCEDURE, generics and operators from modules,
@@ -457,3 +457,51 @@ Definition modules as module files stay for later (the plan's open question 2).
   `/G_FLOATING` mismatches; the subtasks revised (the text's writer and reader
   with the first USE); seven questions. The author accepted every
   recommendation the same day ("The author's answers").
+- **2026-11-18:** Subtask 2, modules and their data. The parser reads USE
+  (`ast.UseStmt`: renames, ONLY lists, generic specifications) and PUBLIC and
+  PRIVATE (`ast.AccessStmt`; a type's PRIVATE is one), `parse/modules.go`, with
+  the golden `parse/testdata/modules.f90`. Semantic analysis compiles a MODULE
+  unit (`sema/module.go`): its variables, initialized or not, are a common block
+  of its own, `$MOD$M` (`CommonBlock.Module`; `moduleBlock`, before
+  `layoutCommon`, by the module's `/ALIGN`), laid out and initialized as
+  COMMON's; a COMMON block declared in the module stays its own section; a long
+  module name's section is `LongName`'s hashed form (finding 5). The IR makes
+  a module a routine of no code, `ir.Module` (`Kind.NoCode`, as BLOCK DATA),
+  whose section codegen writes with its initial values. When a module has been
+  analyzed without an error, `Program.finishModule` writes its text
+  (`sema/modwrite.go`: types first, each after the structures its fields name,
+  then constants, variables, COMMON statements, NAMELIST), kept in the
+  compilation's table (`modules`) and as `Program.Modules` /
+  `fortran.Result.Modules`, with its digest (SHA-256 without the SOURCE line).
+  Every USE reads a module's text (`sema/modread.go`): the `!GOVAX$` lines into
+  `moduleFacts`, then the compiler's own source pass, lexer, parser, and
+  semantic analysis of the one unit with `analyzer.reading` set; a text that
+  doesn't read is MODFILEBAD with its line. USE without a list
+  (`sema/use.go`) enters each entity in the using unit's own scope as a copy
+  marked `Symbol.Use` (module, remote name, entity), a variable through the
+  unit's view of the module's section (`Unit.UsedBlocks`, which no statement of
+  the unit lays out, and codegen writes as a contribution), types as the
+  module's own `Structure` (`Unit.usedStructs`), NAMELIST groups with the
+  unit's copies; USE comes first (`order.go`'s `useGroup`). MODLATER, MODCYCLE,
+  MODNOTFOUND (no finder yet: subtask 5), USELOCAL, USEATTR (a type statement,
+  DIMENSION, DATA, a STRUCTURE or TYPE of the name), and USECOMMON. A module in
+  the same file that failed has had its messages; its users say nothing more,
+  their declarations incomplete. Choices made here: a variable's offset and a
+  section's size are the text's AT, PSECT, and COMMON lines, not recomputed
+  (the reader checks each size against its declaration, `applyLayoutFacts`,
+  and each type's size and boundary against its TYPE line, `readTypeLayout`;
+  MODFACT inside MODFILEBAD); a REAL literal is written in its exact digits, a
+  folded REAL value in the fewest digits that round back in D and G, with a
+  FOLDED line so the reader doesn't take it for a literal (section 2.3.1.2's
+  extra precision); MODSTMT is only for executable statements, statement
+  functions, and FORMAT, since ENTRYUNIT, ATTRDUMMY, ADJNOTDUMMY, and
+  AUTOCOMMON already say the rest; the plan's MODPSECT is dropped, no FORTRAN
+  name starting with $. Until their subtasks, module procedures, USE's lists,
+  and PUBLIC and PRIVATE in a module are NOTIMPL; a structure with initial
+  values, an unnamed nested structure, and a constant whose bits are no number
+  can't be written into a text yet (NOTIMPL). Tests:
+  `internal/fortran/modules_test.go` (the text, a user compiled with the module
+  and apart making the same code, the messages, the hashed name, `/G_FLOATING`,
+  `/RECURSIVE`), and `testdata/fortran90/moddata.f90`, in every mode, the same
+  on gfortran.
+

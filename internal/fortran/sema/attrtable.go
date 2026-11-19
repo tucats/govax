@@ -178,6 +178,9 @@ func (a *analyzer) attrSpecs(list []*ast.AttrSpec) []*ast.AttrSpec {
 		case row.fate == attrNotYet:
 			a.notImplForm(spec.Pos, "the "+row.name+" attribute")
 
+		case row.fate == attrModuleOnly && a.unit.Kind == ast.ModuleUnit:
+			a.notImplForm(spec.Pos, "the "+row.name+" attribute")
+
 		case row.fate == attrModuleOnly:
 			a.report("NOTINMODULE", spec.Pos, "the "+row.name+" attribute")
 		}

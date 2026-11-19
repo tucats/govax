@@ -107,6 +107,10 @@ var (
 // array, so its uses are elements; it is broken, so they get no messages.
 func (a *analyzer) dimension(sym *Symbol, d *ast.Declarator) {
 	switch {
+	case sym.Use != nil:
+		// USEATTR, reported by declare.
+		return
+
 	// A function's value may be an array (arrayvalue.go); its name with RESULT
 	// may not, being the routine's alone.
 	case sym.Class == UnitName || sym.Class == Constant || sym.External || sym.Class == Intrinsic:
