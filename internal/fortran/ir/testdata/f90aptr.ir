@@ -1,0 +1,134 @@
+routine F90APTR main
+  cell  A       L  $LOCAL+0    array A, 40 bytes
+  cell  M       L  $LOCAL+40   array M, 80 bytes
+  cell  P       L  $LOCAL+120  descriptor L NCA 4 (?)
+  cell  Q       L  $LOCAL+152  descriptor L NCA 4 (?,?)
+  cell  R       L  $LOCAL+196  descriptor L NCA 4 (?)
+  cell  $I1     L  $LOCAL+228  an array statement's index
+  cell  $I2     L  $LOCAL+232  an array statement's index
+  cell  $D1     L  $LOCAL+236  descriptor L NCA 4 (?)
+  cell  $W1     L  $LOCAL+268  an array temporary, 40 bytes
+  cell  $T1     L  $LOCAL+308  temporary
+  cell  $C1     L  $LOCAL+312  array (line 18), dimension 1's count
+  cell  $I3     L  $LOCAL+316  an array statement's index
+  cell  $C2     L  $LOCAL+320  array (line 18), dimension 1's count
+  $LOCAL is 324 bytes
+B1:
+  ; line 12
+  assign P+4 = addr(A)
+  assign P+20 = 4
+  assign P+24 = 0
+  assign P+28 = 9
+  assign P+16 = P+4
+  assign P+12 = 40
+  ; line 13
+  assign Q+4 = addr(M+4)
+  assign Q+20 = 4
+  assign Q+28 = 1
+  assign Q+32 = 2
+  assign Q+24 = 32
+  assign Q+36 = 1
+  assign Q+40 = 3
+  assign Q+16 = sub.L(Q+4, 36)
+  assign Q+12 = 24
+  ; line 14
+  assign R+4 = P+4
+  assign R+8 = P+8
+  assign R+12 = P+12
+  assign R+16 = P+16
+  assign R+20 = P+20
+  assign R+24 = P+24
+  assign R+28 = P+28
+  ; line 15
+  assign $D1+4 = addr(@(add.L(P+16, mul.L(9, P+20))))
+  assign $D1+20 = mul.L(P+20, -1)
+  assign $D1+24 = 1
+  assign $D1+28 = 9
+  assign $D1+16 = sub.L($D1+4, $D1+20)
+  assign $D1+12 = 36
+  assign P+4 = $D1+4
+  assign P+8 = $D1+8
+  assign P+12 = $D1+12
+  assign P+16 = $D1+16
+  assign P+20 = $D1+20
+  assign P+24 = $D1+24
+  assign P+28 = $D1+28
+  ; line 16
+  assign @(add.L(P+16, mul.L(2, P+20))) = @(add.L(add.L(Q+16, Q+20), mul.L(2, Q+24)))
+  ; line 17
+  assign R+4 = 0
+  ; line 18
+  assign $D1+4 = addr(A+4)
+  assign $D1+20 = 4
+  assign $D1+24 = 1
+  assign $D1+28 = 3
+  assign $D1+16 = sub.L($D1+4, 4)
+  assign $D1+12 = 12
+  branch or.L(and.L(and.L(and.L(and.L(eq.L(P+4, $D1+4), ne.L(P+4, 0)), eq.L(P+20, $D1+20)), eq.L(sub.L(P+28, P+24), sub.L($D1+28, $D1+24))), gt.L($D1+12, 0)), ne.L(R+4, 0)) B2 B7
+B2:
+  assign $T1 = sub.L(P+24, 1)
+  assign $C1 = 10
+  assign $I1 = 1
+  jump B3
+B3:  ; array (line 18), dimension 1's body
+  assign $W1-4[$I1] = @(add.L(P+16, mul.L(add.L($I1, $T1), P+20)))
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B3 B4
+B4:
+  assign $C2 = 10
+  assign $I3 = 1
+  jump B5
+B5:  ; array (line 18), dimension 1's body
+  assign A-4[$I3] = $W1-4[$I3]
+  assign $I3 = add.L($I3, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B5 B6
+B6:
+  jump B7
+B7:
+  ; line 19
+  return 1
+routine S subroutine
+  param V       F  argument 1
+  cell  W       L  frame+0    descriptor F NCA 4 (?)
+  cell  $I1     L  frame+32   an array statement's index
+  cell  $T1     L  frame+36   temporary
+  cell  $T2     L  frame+40   temporary
+  cell  $C1     L  frame+44   array (line 25), dimension 1's count
+  $LOCAL is 0 bytes
+  the frame is 48 bytes
+B1:
+  assign W = 168427524
+  assign W+4 = 0
+  assign W+8 = 16777216
+  ; line 24
+  branch not.L(ne.L(W+4, 0)) B2 B3
+B2:
+  assign W+4 = addr(@V)
+  assign W+20 = 8
+  assign W+24 = 1
+  assign W+28 = 5
+  assign W+16 = sub.L(W+4, 8)
+  assign W+12 = 20
+  jump B3
+B3:
+  ; line 25
+  assign $T1 = sub.L(W+24, 1)
+  assign $T2 = add.L(sub.L(W+28, W+24), 1)
+  branch lt.L($T2, 0) B4 B5
+B4:
+  assign $T2 = 0
+  jump B5
+B5:
+  assign $C1 = $T2
+  assign $I1 = 1
+  branch le.L($C1, 0) B7 B6
+B6:  ; array (line 25), dimension 1's body
+  assign @(add.L(W+16, mul.L(add.L($I1, $T1), W+20))) = 0.0
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B6 B7
+B7:
+  ; line 26
+  return

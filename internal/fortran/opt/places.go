@@ -307,11 +307,15 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 // allocatedBase is the allocatable or automatic array's descriptor cell an element's
 // address e is computed from: its A0, or its POINTER, plus whatever else
 // (ir/lowerallocate.go, ir/lowerautomatic.go); nil if e isn't such an address.
+// An array pointer's descriptor is laid out as an allocatable array's, but what
+// it describes may be any TARGET's storage, so it isn't one: its elements are
+// UnknownRegion (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 11,
+// which subtask 7 makes bolder).
 func allocatedBase(e ir.Expr) *ir.Cell {
 	switch e := e.(type) {
 	case *ir.Load:
 		m := e.Mem
-		if c := m.Cell; c != nil && m.Index == nil && c.Kind == ir.DescriptorCell && c.Sym != nil &&
+		if c := m.Cell; c != nil && m.Index == nil && c.Kind == ir.DescriptorCell && c.Sym != nil && !c.Sym.Pointer &&
 			c.Desc != nil && (c.Desc.Class == ir.ClassNCA || c.Sym.AutomaticObject) &&
 			(m.Offset == ir.A0Offset || m.Offset == ir.PointerOffset) {
 			return c

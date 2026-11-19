@@ -2,7 +2,7 @@ package sema
 
 import "testing"
 
-// TestPointers checks scalar pointers' declarations, pointer assignment,
+// TestPointers checks scalar and array pointers' declarations, pointer assignment,
 // NULLIFY, and ASSOCIATED (pointer.go): nothing for a program that is right,
 // and each message for a mistake, or NOTIMPL for what a later subtask of
 // docs/planning/PHASE-107 - Fortran 90 pointers.md compiles.
@@ -42,10 +42,31 @@ func TestPointers(t *testing.T) {
 		{"as an actual argument", with("p => n", "call sub(p)", "m = abs(p)"), ""},
 		{"in I/O", with("p => n", "read *, p", "print *, p", "c => s4", "write (c, '(I4)') 1"), ""},
 
+		{"an array pointer", with("integer, pointer :: a(:), b(:, :)", "integer, target :: w(3, 4)",
+			"a => v", "a => v(2:5:2)", "a => w(2, :)", "b => w", "b => w(:, ::2)", "a => a(3:1:-1)", "b => b",
+			"a = 0", "a(2) = 1", "m = sum(a) + size(b) + lbound(a, 1)", "p => a(1)", "nullify (a, b)",
+			"l = associated(a) .and. associated(a, v) .and. associated(b, w(1:2, 2:3)) .and. associated(a, b(1, :))"), ""},
+		{"an array pointer of CHARACTER", with("character(len=4), pointer :: ca(:)", "character(len=4), target :: cs(3)",
+			"ca => cs(1:3:2)", "ca => cs(:)(1:4)", "ca(1) = 'X'"), ""},
+		{"an array pointer to a component", prog("type t", "integer i, k(0:2)", "end type", "type(t), target :: r(3)",
+			"integer, pointer :: a(:)", "a => r%i", "a => r(2)%k", "a => r(1)%k(1:)"), ""},
+		{"a scalar's target for an array pointer", with("integer, pointer :: a(:)", "a => n"),
+			"POINTERTYPE: the pointer A points at an array of INTEGER, so its target can't be INTEGER"},
+		{"a target of another rank", with("integer, pointer :: b(:, :)", "b => v"),
+			"POINTERTYPE: the pointer B points at an array of rank 2 of INTEGER, so its target can't be an array of INTEGER"},
+		{"an element of a pointer's target", with("integer, pointer :: a(:)", "a => v(1)"),
+			"POINTERTYPE: the pointer A points at an array of INTEGER, so its target can't be INTEGER"},
+		{"a section without TARGET", with("integer, pointer :: a(:)", "integer w(5)", "a => w(2:3)"),
+			"NOTTARGET: W(2:3) is neither a TARGET, a part of one, nor a pointer, so no pointer may point at it"},
+		{"a vector subscript", with("integer, pointer :: a(:)", "a => v((/ 1, 3 /))"),
+			"VECTORTARGET: the target V((/ 1, 3 /)) has a vector subscript, so no pointer may point at it"},
+		{"an assumed-size array", []string{"subroutine s(x)", "integer, target :: x(*)", "integer, pointer :: a(:)",
+			"a => x", "end subroutine"}, "NOSHAPE: the assumed-size array X has no shape, so it can't be used as a whole here"},
+
 		{"bounds on an array pointer", prog("real, pointer :: a(3)"),
 			"POINTERSHAPE: A is an array POINTER, so its bounds must all be colons, (:)"},
 		{"POINTER and ALLOCATABLE", prog("real, pointer, allocatable :: a(:)"),
-			"ATTRPAIR: the POINTER and ALLOCATABLE attributes can't go together; NOTIMPL: an array pointer is not implemented yet"},
+			"ATTRPAIR: the POINTER and ALLOCATABLE attributes can't go together"},
 		{"POINTER and TARGET", prog("real, target :: x", "pointer x"),
 			"ATTRCONFLICT: X has the TARGET attribute, so it can't have the POINTER attribute too"},
 		{"an initial value", prog("integer, target :: n", "integer, pointer :: p = 1"),
@@ -78,7 +99,6 @@ func TestPointers(t *testing.T) {
 		{"ASSOCIATED of three", with("l = associated(p, n, n)"),
 			"INTRINARGS: the intrinsic function ASSOCIATED takes 1 or 2 arguments, not 3"},
 
-		{"an array pointer, subtask 3's", prog("real, pointer :: a(:)"), "NOTIMPL: an array pointer is not implemented yet"},
 		{"ALLOCATE of a pointer, subtask 4's", with("allocate (p)"),
 			"NOTIMPL: ALLOCATE of a pointer is not implemented yet"},
 		{"a pointer component, subtask 5's", with("nullify (r%next)"),

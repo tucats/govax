@@ -532,6 +532,14 @@ const (
 	A0Offset      = 16 // DSC$A_A0, in a class A descriptor
 )
 
+// Clone is a copy of d, its dimensions its own.
+func (d *Descriptor) Clone() *Descriptor {
+	c := *d
+	c.Dims = append([]Bound(nil), d.Dims...)
+
+	return &c
+}
+
 // Bound is one dimension of an array: its lower and upper bounds.
 type Bound struct {
 	Lower, Upper int

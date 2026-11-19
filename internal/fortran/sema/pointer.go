@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"strconv"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
@@ -34,27 +36,33 @@ import (
 // assume a store through a pointer leaves every other variable alone (5.1.2.8's
 // purpose).
 //
-// Scalar pointers are compiled (subtask 2); array pointers, pointer dummies and
-// results, pointer components, and ALLOCATE of a pointer are NOTIMPL until their
-// subtasks.
+// Scalar pointers (subtask 2) and array pointers (subtask 3) are compiled;
+// pointer dummies and results, pointer components, and ALLOCATE of a pointer
+// are NOTIMPL until their subtasks.
+//
+// An array pointer, REAL, POINTER :: P(:, :), has a deferred shape: its shape,
+// bounds, and elements are its target's. P => A(1:9:2, :) makes P describe
+// those elements as a section does (the section's bounds start at 1), and P =>
+// A the whole array with A's own bounds (5.1.2.4.3).
 
-// PointerAssign is pointer assignment, Pointer => Target (7.5.2): Pointer a Var
-// of a pointer, Target a variable with TARGET, a part of one, or a pointer (a
-// Var of one), whose association Pointer takes.
+// PointerAssign is pointer assignment, Pointer => Target (7.5.2): Pointer a
+// pointer (PointerSymbol), Target a variable with TARGET, a part of one, or a
+// pointer, whose association Pointer takes.
 type PointerAssign struct {
 	stmtBase
 	Pointer Expr
 	Target  Expr
 }
 
-// Nullify is NULLIFY: each of Pointers, each a Var of a pointer, disassociated.
+// Nullify is NULLIFY: each of Pointers, each a pointer (PointerSymbol),
+// disassociated.
 type Nullify struct {
 	stmtBase
 	Pointers []Expr
 }
 
 // Associated is ASSOCIATED(POINTER [, TARGET]) (13.13.13), whether Pointer, a
-// Var of a pointer, is associated: with anything, if Target is nil; with
+// pointer (PointerSymbol), is associated: with anything, if Target is nil; with
 // Target's storage if Target is a variable; or with the same target as Target if
 // that is a pointer, and false if either is disassociated. Its type is the
 // default LOGICAL.
@@ -65,18 +73,33 @@ type Associated struct {
 }
 
 // IsPointer reports whether e is a reference to a pointer itself: a Var of a
-// pointer's symbol. Lowering reaches such a reference's value through the
-// pointer, but in pointer assignment and ASSOCIATED, where it is the pointer.
+// scalar pointer's symbol, or an ArrayRef of an array pointer's. Lowering
+// reaches such a reference's value through the pointer, but in pointer
+// assignment and ASSOCIATED, where it is the pointer.
 func IsPointer(e Expr) bool {
-	v, ok := e.(*Var)
+	return PointerSymbol(e) != nil
+}
 
-	return ok && v.Sym.Pointer
+// PointerSymbol is the pointer e refers to as a whole (IsPointer), or nil.
+func PointerSymbol(e Expr) *Symbol {
+	switch e := e.(type) {
+	case *Var:
+		if e.Sym.Pointer {
+			return e.Sym
+		}
+	case *ArrayRef:
+		if e.Sym.Pointer {
+			return e.Sym
+		}
+	}
+
+	return nil
 }
 
 // checkPointers reports what a pointer may not be, once the declarations have
 // said what each name is: in EQUIVALENCE (POINTERATTR; 5.5.1); and what this
-// compiler doesn't compile yet (NOTIMPL): an array pointer, a pointer dummy
-// argument or function result, a CHARACTER pointer whose length isn't constant.
+// compiler doesn't compile yet (NOTIMPL): a pointer dummy argument or function
+// result, a CHARACTER pointer whose length isn't constant.
 // DATA's, NAMELIST's, and an initial value's are reported where those are read.
 func (a *analyzer) checkPointers() {
 	for _, s := range a.unit.Symbols {
@@ -87,8 +110,6 @@ func (a *analyzer) checkPointers() {
 		switch {
 		case s.Equivalenced:
 			a.report("POINTERATTR", s.equivPos, s.Name, "be in an EQUIVALENCE list")
-		case s.Dims != nil:
-			a.notImplForm(s.DimPos, "an array pointer")
 		case s.Dummy != 0:
 			a.notImplForm(s.Pos, "a pointer dummy argument")
 		case s.Result:
@@ -104,8 +125,9 @@ func (a *analyzer) checkPointers() {
 }
 
 // pointerObject analyzes x where a pointer itself must stand: in pointer
-// assignment, NULLIFY, and ASSOCIATED. It is a Var of a pointer, or nil after a
-// message: NOTPOINTER for anything else. assigned says the statement gives the
+// assignment, NULLIFY, and ASSOCIATED. It is a Var of a scalar pointer or an
+// ArrayRef of an array pointer (PointerSymbol), or nil after a message:
+// NOTPOINTER for anything else. assigned says the statement gives the
 // pointer an association, for the cross reference.
 func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 	switch x := x.(type) {
@@ -125,6 +147,10 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 			a.note(&s.refs, x.Pos, RefAssigned)
 		}
 
+		if s.Dims != nil {
+			return NewArrayRef(s, x.Pos)
+		}
+
 		return &Var{exprBase{T: s.Type, Pos: x.Pos}, s}
 
 	case *ast.FieldRef:
@@ -140,10 +166,11 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 
 // pointerTarget analyzes x as a target for the pointer ptr (7.5.2's
 // constraints): a variable with TARGET or a part of one (an element, a
-// substring, a component), a pointer, or a part of a pointer's target; of the
-// pointer's type, kind, rank, and, when both are constants, length. nil after a
-// message: POINTERFUNC for a function's reference, NOTTARGET for anything that
-// isn't such a variable, POINTERTYPE for one of another type.
+// section, a substring, a component), a pointer, or a part of a pointer's
+// target; of the pointer's type, kind, rank, and, when both are constants,
+// length. nil after a message: POINTERFUNC for a function's reference,
+// NOTTARGET for anything that isn't such a variable, VECTORTARGET for a section
+// with a vector subscript, POINTERTYPE for one of another type.
 func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
 	if a.functionReference(x) {
 		a.report("POINTERFUNC", x.Position(), ast.DumpExpr(x))
@@ -151,7 +178,7 @@ func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
 		return nil
 	}
 
-	t := a.place(x, true)
+	t := a.targetPlace(x)
 
 	switch {
 	case t == nil:
@@ -169,11 +196,91 @@ func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
 		return nil
 	}
 
+	if vectorSubscripted(t) {
+		a.report("VECTORTARGET", x.Position(), ast.DumpExpr(x))
+
+		return nil
+	}
+
 	if !a.pointerMatches(ptr, t, x.Position()) {
 		return nil
 	}
 
 	return t
+}
+
+// targetPlace analyzes x as a variable that may be a target: a name (an
+// array's as the whole array, its bounds its own), an element or a section, a
+// substring, or a component (a whole array component as an array of its own
+// bounds); nil for what is no variable, a constant or a procedure.
+func (a *analyzer) targetPlace(x ast.Expr) Expr {
+	switch e := a.substringForm(x).(type) {
+	case *ast.Name:
+		if s := a.scope.find(e.Name); s != nil && (s.Class == Constant || s.External || s.Class == Intrinsic ||
+			s.Class == Function || s.Class == Subroutine || s.Class == StmtFunction || s.Class == UnitName) {
+			return nil
+		}
+
+		switch t := a.name(e, true).(type) {
+		case *ArrayRef:
+			return a.wholeArray(t.Sym, e)
+		case *Var:
+			return t
+		case *Const:
+			return nil
+		default:
+			// An error, reported.
+			return t
+		}
+
+	case *ast.Apply:
+		s := a.scope.find(e.Name)
+		if s == nil || s.Class != Array {
+			return nil
+		}
+
+		return a.element(s, e)
+
+	case *ast.Substring:
+		return a.substring(e)
+
+	case *ast.FieldRef:
+		if a.constantComponent(e) {
+			return a.bad(e.Pos)
+		}
+
+		t := a.field(e, true)
+		if f, ok := t.(*FieldRef); ok && f.WholeArray() {
+			return f.wholeRanked()
+		}
+
+		return t
+	}
+
+	return nil
+}
+
+// vectorSubscripted reports whether the place t is a section with a vector
+// subscript, or a substring or component of one.
+func vectorSubscripted(t Expr) bool {
+	var subs []SectionSub
+
+	switch t := t.(type) {
+	case *Section:
+		subs = t.Subs
+	case *FieldRef:
+		subs = t.Sections
+	case *Substring:
+		return vectorSubscripted(t.X)
+	}
+
+	for _, sub := range subs {
+		if sub.Vector != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // targetText names x for NOTTARGET: a reference or a constant as written,
@@ -221,6 +328,12 @@ func (a *analyzer) functionReference(x ast.Expr) bool {
 	return false
 }
 
+// TargetBase is the variable whose storage the place t is part of (targetBase):
+// for lowering, which must know whether a pointer's target reads the pointer.
+func TargetBase(t Expr) *Symbol {
+	return targetBase(t)
+}
+
 // targetBase is the variable whose storage the place t is part of: the name of
 // a Var, an element, a substring, or a component reference.
 func targetBase(t Expr) *Symbol {
@@ -253,7 +366,7 @@ func (a *analyzer) pointerMatches(ptr, t Expr, pos diag.Position) bool {
 		return true
 	}
 
-	a.report("POINTERTYPE", pos, ptr.(*Var).Sym.Name, pointedText(pt, targetRank(ptr)), pointedText(tt, targetRank(t)))
+	a.report("POINTERTYPE", pos, PointerSymbol(ptr).Name, pointedText(pt, targetRank(ptr)), pointedText(tt, targetRank(t)))
 
 	return false
 }
@@ -269,15 +382,18 @@ func targetRank(t Expr) int {
 }
 
 // pointedText describes a target's type and rank for POINTERTYPE: "INTEGER*4",
-// "an array of REAL*4".
+// "an array of REAL*4", "an array of rank 2 of REAL*4".
 func pointedText(t Type, rank int) string {
 	text := t.String()
 	if t.Kind == Record && t.Struct != nil {
 		text = t.Struct.Display()
 	}
 
-	if rank > 0 {
+	switch {
+	case rank == 1:
 		return "an array of " + text
+	case rank > 1:
+		return "an array of rank " + strconv.Itoa(rank) + " of " + text
 	}
 
 	return text

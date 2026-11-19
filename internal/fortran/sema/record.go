@@ -133,6 +133,13 @@ func (f *FieldRef) wholeRanked() *FieldRef {
 	return &c
 }
 
+// Whole reports whether the reference's ranked part was written with no
+// subscripts (PATH%X, T%COORD): an array, not a section, whose bounds are the
+// ranked part's own (the standard's 13.13.52, LBOUND).
+func (f *FieldRef) Whole() bool {
+	return f.whole
+}
+
 // Field is the field the reference names, its last.
 func (f *FieldRef) Field() *Field {
 	return f.Path[len(f.Path)-1].Field

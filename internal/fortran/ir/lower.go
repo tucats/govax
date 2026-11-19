@@ -261,7 +261,7 @@ func (l *lowerer) prepare() {
 		}
 
 		switch {
-		case s.Allocatable:
+		case s.Allocatable, s.ArrayPointer():
 			l.allocatableCell(s, c)
 		case s.AutomaticObject:
 			l.automaticCell(s, c)

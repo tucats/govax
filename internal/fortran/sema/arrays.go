@@ -482,7 +482,7 @@ func (a *analyzer) checkBoundName(adj *adjustableArray, n *ast.Name) bool {
 
 		return false
 
-	case inquired && (s.Allocatable || s.AutomaticObject):
+	case inquired && (s.Allocatable || s.AutomaticObject || s.ArrayPointer()):
 		a.report("BOUNDREF", n.Pos, n.Name, where)
 
 		return false

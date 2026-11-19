@@ -1269,7 +1269,14 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   POINTERTYPE, POINTERATTR; `checkPointers`' NOTIMPLs for later subtasks; a
   reference is a `Var`, which `ir/lowerpointer.go`'s `pointerTargetMem` reaches
   through the cell; frame pointers cleared at entry; `mayShare`'s pointer rule;
-  `testdata/fortran90/pointers.f90`).
+  `testdata/fortran90/pointers.f90`); subtask 3 (2026-11-19) array pointers
+  (a class NCA descriptor, `Symbol.ArrayPointer`; `Symbol.Strided`, an
+  assumed-shape dummy's or an array pointer's elements through every stride;
+  `ir/lowerpointer.go`'s `arrayPointerAssign`, `describeTarget` over
+  `fillNCA`, `copyDescriptor`, `arrayAssociated`; VECTORTARGET; a COMMON one's
+  header written at `=>`, `commonHeader`; `A(::2)` parsed, `atColon`; an array
+  pointer's elements `UnknownRegion` in `opt/places.go`;
+  `testdata/fortran90/ptrarrays.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

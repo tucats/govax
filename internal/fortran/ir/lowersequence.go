@@ -111,7 +111,7 @@ func (l *lowerer) sequenceOf(e sema.Expr, described, back, desc bool) sequenced 
 
 		case *sema.Section:
 			switch {
-			case x.Sym.AssumedShape():
+			case x.Sym.Strided():
 				return l.testedSequence(e, l.sectionNCA(x, nil), len(x.S), back, desc)
 
 			case sema.Contiguous(x):

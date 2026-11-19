@@ -401,9 +401,19 @@
    each entry (Fortran 95's rule; Fortran 90 leaves it undefined).  A
    target that isn't a TARGET is %FORT-E-NOTTARGET, one of another type
    %FORT-E-POINTERTYPE; a pointer may not be in DATA, NAMELIST, or
-   EQUIVALENCE, nor given a value (%FORT-E-POINTERATTR).  Array
-   pointers, ALLOCATE of a pointer, pointer components, pointer dummy
-   arguments, and pointer results are not there yet.
+   EQUIVALENCE, nor given a value (%FORT-E-POINTERATTR).
+
+   An array pointer, REAL, POINTER :: V(:), takes its shape and
+   elements from its target, a whole array (and its bounds), a section
+   (bounds from 1), or another array pointer:
+
+     row => m(2, :)             ! the second row of M
+     every => m(:, ::2)         ! every other column
+
+   It is a class NCA descriptor, which => fills in, and is an array
+   everywhere else.  A section with a vector subscript is no target
+   (%FORT-E-VECTORTARGET).  ALLOCATE of a pointer, pointer components,
+   pointer dummy arguments, and pointer results are not there yet.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

@@ -1,0 +1,258 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for F90APTR, the main program
+;   A     INTEGER (0:9)           $LOCAL+0    F90APTR.A
+;   M     INTEGER (4,5)           $LOCAL+40   F90APTR.M
+;   P     INTEGER, POINTER (:)    $LOCAL+120  F90APTR.P
+;   Q     INTEGER, POINTER (:,:)  $LOCAL+152  F90APTR.Q
+;   R     INTEGER, POINTER (:)    $LOCAL+196  F90APTR.R
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+F90APTR.A:
+	.BLKL	10			; A, INTEGER (0:9)
+F90APTR.M:
+	.BLKL	20			; M, INTEGER (4,5)
+F90APTR.P:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
+	.LONG	0			; P: disassociated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+F90APTR.Q:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
+	.LONG	0			; Q: disassociated
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+F90APTR.R:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
+	.LONG	0			; R: disassociated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+F90APTR.$I1:
+	.BLKL	1			; an array statement's loop index
+F90APTR.$I2:
+	.BLKL	1			; an array statement's loop index
+F90APTR.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+F90APTR.$W1:
+	.BLKL	10			; an array temporary of 40 bytes, for one statement
+F90APTR.$T1:
+	.BLKL	1			; temporary
+F90APTR.$C1:
+	.BLKL	1			; array (line 18), dimension 1's count
+F90APTR.$I3:
+	.BLKL	1			; an array statement's loop index
+F90APTR.$C2:
+	.BLKL	1			; array (line 18), dimension 1's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Fortran 90's array pointers (Phase 107, subtask 3): a pointer's
+;    3  C     cell is a class NCA descriptor; => to a whole array keeps its
+;    4  C     bounds, to a section starts them at 1, to a pointer copies its
+;    5  C     descriptor, and to the pointer's own section goes through a
+;    6  C     cell of the statement's; an element is reached through every
+;    7  C     stride; ASSOCIATED compares POINTER, extents, and strides; a
+;    8  C     recursive unit's array pointer is in the frame, cleared at entry.
+;    9        PROGRAM F90APTR
+	.ENTRY	F90APTR,^M<>
+;   10        INTEGER, TARGET :: A(0:9), M(4, 5)
+;   11        INTEGER, POINTER :: P(:), Q(:, :), R(:)
+;   12        P => A
+	MOVAL	F90APTR.A,F90APTR.P+4
+	MOVL	#4,F90APTR.P+20
+	CLRL	F90APTR.P+24
+	MOVL	#9,F90APTR.P+28
+	MOVL	F90APTR.P+4,F90APTR.P+16
+	MOVL	#40,F90APTR.P+12
+;   13        Q => M(2:3, ::2)
+	MOVAL	F90APTR.M+4,F90APTR.Q+4
+	MOVL	#4,F90APTR.Q+20
+	MOVL	#1,F90APTR.Q+28
+	MOVL	#2,F90APTR.Q+32
+	MOVL	#32,F90APTR.Q+24
+	MOVL	#1,F90APTR.Q+36
+	MOVL	#3,F90APTR.Q+40
+	SUBL3	#36,F90APTR.Q+4,F90APTR.Q+16
+	MOVL	#24,F90APTR.Q+12
+;   14        R => P
+	MOVL	F90APTR.P+4,F90APTR.R+4
+	MOVL	F90APTR.P+8,F90APTR.R+8
+	MOVL	F90APTR.P+12,F90APTR.R+12
+	MOVL	F90APTR.P+16,F90APTR.R+16
+	MOVL	F90APTR.P+20,F90APTR.R+20
+	MOVL	F90APTR.P+24,F90APTR.R+24
+	MOVL	F90APTR.P+28,F90APTR.R+28
+;   15        P => P(9:1:-1)
+	MULL3	#9,F90APTR.P+20,R0
+	ADDL2	F90APTR.P+16,R0
+	MOVAL	(R0),F90APTR.$D1+4
+	MULL3	F90APTR.P+20,#-1,F90APTR.$D1+20
+	MOVL	#1,F90APTR.$D1+24
+	MOVL	#9,F90APTR.$D1+28
+	SUBL3	F90APTR.$D1+20,F90APTR.$D1+4,F90APTR.$D1+16
+	MOVL	#36,F90APTR.$D1+12
+	MOVL	F90APTR.$D1+4,F90APTR.P+4
+	MOVL	F90APTR.$D1+8,F90APTR.P+8
+	MOVL	F90APTR.$D1+12,F90APTR.P+12
+	MOVL	F90APTR.$D1+16,F90APTR.P+16
+	MOVL	F90APTR.$D1+20,F90APTR.P+20
+	MOVL	F90APTR.$D1+24,F90APTR.P+24
+	MOVL	F90APTR.$D1+28,F90APTR.P+28
+;   16        P(2) = Q(1, 2)
+	ADDL3	F90APTR.Q+16,F90APTR.Q+20,R0
+	MULL3	#2,F90APTR.Q+24,R1
+	ADDL2	R1,R0
+	MULL3	#2,F90APTR.P+20,R1
+	ADDL2	F90APTR.P+16,R1
+	MOVL	(R0),(R1)
+;   17        NULLIFY (R)
+	CLRL	F90APTR.R+4
+;   18        IF (ASSOCIATED(P, A(1:3)) .OR. ASSOCIATED(R)) A = P
+	MOVAL	F90APTR.A+4,F90APTR.$D1+4
+	MOVL	#4,F90APTR.$D1+20
+	MOVL	#1,F90APTR.$D1+24
+	MOVL	#3,F90APTR.$D1+28
+	SUBL3	#4,F90APTR.$D1+4,F90APTR.$D1+16
+	MOVL	#12,F90APTR.$D1+12
+	CMPL	F90APTR.P+4,F90APTR.$D1+4
+	BEQL	F90APTR.$4
+	BRW	F90APTR.$3
+F90APTR.$4:
+	TSTL	F90APTR.P+4
+	BNEQ	F90APTR.$5
+	BRW	F90APTR.$3
+F90APTR.$5:
+	CMPL	F90APTR.P+20,F90APTR.$D1+20
+	BEQL	F90APTR.$6
+	BRW	F90APTR.$3
+F90APTR.$6:
+	SUBL3	F90APTR.P+24,F90APTR.P+28,R0
+	SUBL3	F90APTR.$D1+24,F90APTR.$D1+28,R1
+	CMPL	R0,R1
+	BEQL	F90APTR.$7
+	BRW	F90APTR.$3
+F90APTR.$7:
+	TSTL	F90APTR.$D1+12
+	BLEQ	F90APTR.$8
+	BRW	F90APTR.$2
+F90APTR.$8:
+F90APTR.$3:
+	TSTL	F90APTR.R+4
+	BNEQ	F90APTR.$9
+	BRW	F90APTR.$1
+F90APTR.$9:
+F90APTR.$2:
+	SUBL3	#1,F90APTR.P+24,F90APTR.$T1
+	MOVL	#10,F90APTR.$C1		; array (line 18), dimension 1's count
+	MOVL	#1,F90APTR.$I1
+F90APTR.$10:				; array (line 18), dimension 1's body
+	ADDL3	F90APTR.$I1,F90APTR.$T1,R0
+	MULL2	F90APTR.P+20,R0
+	ADDL2	F90APTR.P+16,R0
+	MOVL	F90APTR.$I1,R1
+	MOVL	(R0),F90APTR.$W1-4[R1]
+	INCL	F90APTR.$I1
+	DECL	F90APTR.$C1		; one pass fewer
+	BLEQ	F90APTR.$11
+	BRW	F90APTR.$10
+F90APTR.$11:
+	MOVL	#10,F90APTR.$C2		; array (line 18), dimension 1's count
+	MOVL	#1,F90APTR.$I3
+F90APTR.$12:				; array (line 18), dimension 1's body
+	MOVL	F90APTR.$I3,R0
+	MOVL	F90APTR.$I3,R1
+	MOVL	F90APTR.$W1-4[R0],F90APTR.A-4[R1]
+	INCL	F90APTR.$I3
+	DECL	F90APTR.$C2		; one pass fewer
+	BLEQ	F90APTR.$13
+	BRW	F90APTR.$12
+F90APTR.$13:
+F90APTR.$1:
+;   19        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for S, a RECURSIVE subroutine
+;   V     REAL (10)          argument 1  @S.V(AP)
+;   W     REAL, POINTER (:)  FP-48       S.W(FP)
+;
+S.V = 4					; V is argument 1
+S.W = -48				; W, REAL, POINTER (:), allocatable: its descriptor, in the frame
+S.$I1 = -16				; an array statement's loop index, in the frame
+S.$T1 = -12				; temporary, in the frame
+S.$T2 = -8				; temporary, in the frame
+S.$C1 = -4				; array (line 25), dimension 1's count, in the frame
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   20        OPTIONS /F90
+;   21        RECURSIVE SUBROUTINE S(V)
+	.ENTRY	S,^M<>
+	SUBL2	#48,SP			; this activation's own storage
+	MOVL	#168427524,S.W(FP)	; the descriptor's length, 4, type, and class
+	CLRL	S.W+4(FP)		; no string yet
+	MOVL	#16777216,S.W+8(FP)	; its flags and dimensions
+;   22        REAL, TARGET :: V(10)
+;   23        REAL, POINTER :: W(:)
+;   24        IF (.NOT. ASSOCIATED(W)) W => V(::2)
+	TSTL	S.W+4(FP)
+	BEQL	S.$2
+	BRW	S.$1
+S.$2:
+	MOVAL	@S.V(AP),S.W+4(FP)
+	MOVL	#8,S.W+20(FP)		; dimension 1's multiplier
+	MOVL	#1,S.W+24(FP)		; dimension 1's lower bound
+	MOVL	#5,S.W+28(FP)		; dimension 1's upper bound
+	SUBL3	#8,S.W+4(FP),S.W+16(FP)
+	MOVL	#20,S.W+12(FP)		; the array's size in bytes
+S.$1:
+;   25        W = 0
+	SUBL3	#1,S.W+24(FP),S.$T1(FP)
+	SUBL3	S.W+24(FP),S.W+28(FP),R0
+	ADDL3	R0,#1,S.$T2(FP)
+	BLSS	S.$4
+	BRW	S.$3
+S.$4:
+	CLRL	S.$T2(FP)
+S.$3:
+	MOVL	S.$T2(FP),S.$C1(FP)	; array (line 25), dimension 1's count
+	MOVL	#1,S.$I1(FP)
+	TSTL	S.$C1(FP)
+	BGTR	S.$6
+	BRW	S.$5
+S.$6:
+S.$7:					; array (line 25), dimension 1's body
+	ADDL3	S.$I1(FP),S.$T1(FP),R0
+	MULL2	S.W+20(FP),R0
+	ADDL2	S.W+16(FP),R0
+	CLRF	(R0)
+	INCL	S.$I1(FP)
+	DECL	S.$C1(FP)		; one pass fewer
+	BLEQ	S.$8
+	BRW	S.$7
+S.$8:
+S.$5:
+;   26        END
+	RET
+
+	.END	F90APTR

@@ -1581,13 +1581,15 @@ var messages = map[string]kind{
 	// pointer (7.5.2's constraints); POINTERTYPE a target of another type, kind,
 	// length, or rank than the pointer's; POINTERFUNC a function's reference
 	// that isn't a pointer's (7.5.2: only a function whose result is a pointer
-	// gives a target).
+	// gives a target); VECTORTARGET a section with a vector subscript (7.5.2:
+	// its elements are no array's in order, so no descriptor describes them).
 	"POINTERSHAPE": {Error, "%s is an array POINTER, so its bounds must all be colons, (:)"},
 	"POINTERATTR":  {Error, "the pointer %s can't %s"},
 	"NOTPOINTER":   {Error, "%s is not a pointer"},
 	"NOTTARGET":    {Error, "%s is neither a TARGET, a part of one, nor a pointer, so no pointer may point at it"},
 	"POINTERTYPE":  {Error, "the pointer %s points at %s, so its target can't be %s"},
 	"POINTERFUNC":  {Error, "the target %s is a function reference, and only a function whose result is a pointer gives a target"},
+	"VECTORTARGET": {Error, "the target %s has a vector subscript, so no pointer may point at it"},
 
 	// Assumed-shape dummies (docs/planning/PHASE-104 - Fortran 90 dynamic
 	// arrays.md, findings 9 and 10). SHAPENOTDUMMY is a shape (lb:) on an array

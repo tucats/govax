@@ -96,6 +96,7 @@ PROGRAMS90 = {
     "smooth": ["smooth.f90"],
     "allocs": ["allocs.f90"],
     "pointers": ["pointers.f90"],
+    "ptrarrays": ["ptrarrays.f90"],
     "allocstat": ["allocstat.f90"],
     "autos": ["autos.f90"],
     "autolen": ["autolen.f90"],

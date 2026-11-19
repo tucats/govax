@@ -8296,7 +8296,7 @@ values (sections, array expressions and assignment, constructors, WHERE, and the
 functions), with internal procedures, interface blocks, and keyword, optional, and generic
 arguments, with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
 array-valued functions, and the transformational functions), with derived types, with
-modules, compiled together or apart, and with scalar pointers; everything else Fortran 90
+modules, compiled together or apart, and with scalar and array pointers; everything else Fortran 90
 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
@@ -9533,18 +9533,54 @@ routine's local variable becomes meaningless when that routine returns, as the s
 says, and nothing catches its use. The debugger doesn't show pointers yet, and a pointer's
 row of the storage map says `INTEGER, POINTER`.
 
-So far a pointer is a scalar: array pointers, ALLOCATE and DEALLOCATE of a pointer, pointer
-components of derived types (and so linked lists), pointer dummy arguments, and functions
-whose result is a pointer are reported `%FORT-E-NOTIMPL`, each to come in its turn.
+An **array pointer** is declared with a colon for each dimension, `REAL, POINTER :: V(:)`,
+`INTEGER, POINTER :: Q(:, :)` (`POINTERSHAPE` for any other bound): its shape, bounds, and
+elements are its target's, which may be a whole array, a section, or another array pointer:
+
+```fortran
+program rows
+  integer, target :: m(3, 4)
+  integer, pointer :: row(:), every(:, :)
+  integer i
+  m = reshape ((/ (i, i = 1, 12) /), (/ 3, 4 /))
+  row => m(2, :)             ! the second row: 2 5 8 11
+  every => m(:, ::2)         ! columns 1 and 3
+  row = row * 10
+  print *, lbound (row), ubound (row), sum (every)
+  print *, m(2, :)
+end program rows
+```
+
+prints `1 4 120`, then `20 50 80 110`. A pointer to a whole array, or to a whole array
+component (`T%COORD`), has that array's bounds; one to a section, or to a component of an
+array of records (`PATH%X`), has bounds from 1, the section's extents (the standard's
+5.1.2.4.3). The target's rank must be the pointer's (`POINTERTYPE`), and a section with a
+vector subscript is no target (`VECTORTARGET`). `P => P(N:1:-1)` is allowed, and reverses
+P. `ASSOCIATED(P, T)` is true when P points at exactly T's elements in T's order (`P =>
+A(:N)` is associated with A when N is A's upper bound), and never for a target with no
+elements. An array pointer is an array everywhere else: its elements, sections, and whole
+value in expressions, assignments, WHERE, and I/O lists; LBOUND, UBOUND, SIZE, and SHAPE; as
+an actual argument to an assumed-shape dummy, which gets its descriptor, or to an
+explicit-shape one, which gets its elements one after another (copied there and back when
+they aren't). An array assignment whose two sides may meet through a pointer (`A = P`, with P
+perhaps pointing into A) is computed into a temporary first.
+
+An array pointer is a class NCA descriptor of its target, as an allocatable array is (above),
+and `=>` fills it in; nothing is copied. Its target may be a section, so its elements are
+found through every dimension's stride, as an assumed-shape dummy's are.
+
+So far ALLOCATE and DEALLOCATE of a pointer, pointer components of derived types (and so
+linked lists), pointer dummy arguments, and functions whose result is a pointer are reported
+`%FORT-E-NOTIMPL`, each to come in its turn.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, an array pointer is not implemented yet
+%FORT-E-NOTIMPL, ALLOCATE of a pointer is not implemented yet
   at line 2 of DUA1:[WORK]BAD.F90;1
-    real, pointer :: p(:)
-  -------------------^
+    allocate (p)
+  ------------^
 ```
 
 Of modules, these are not there yet: POINTER components; ENTRY in a module procedure; a module whose text would have

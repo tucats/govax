@@ -332,7 +332,7 @@ func TestErrors(t *testing.T) {
 		{"PUBLIC outside a module", []string{"REAL, PUBLIC :: X", "END"}, "NOTINMODULE@1:13"},
 		{"a PRIVATE statement outside a module", []string{"PRIVATE", "END"}, "NOTINMODULE@1:7"},
 		{"POINTER", []string{"REAL, POINTER :: P", "END"}, ""},
-		{"an array POINTER, Phase 107's subtask 3's", []string{"REAL, POINTER :: P(:)", "END"}, "NOTIMPL@1:24"},
+		{"an array POINTER", []string{"REAL, POINTER :: P(:)", "END"}, ""},
 		{"ALLOCATABLE with a deferred shape", []string{"REAL, ALLOCATABLE :: A(:)", "END"}, ""},
 		{"an assumed-shape dummy", []string{"SUBROUTINE S(A)", "REAL A(0:)", "END"}, ""},
 		{"an assumed shape not a dummy's", []string{"SUBROUTINE S", "REAL A(0:)", "END"}, "SHAPENOTDUMMY@2:12"},

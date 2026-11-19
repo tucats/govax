@@ -363,7 +363,15 @@ func (l *lowerer) wholeNCA(e *sema.ArrayRef) *Mem {
 // substring sub of each of its elements: its own bounds, and the strides its
 // descriptor or its extents give.
 func (l *lowerer) arrayNCA(e *sema.ArrayRef, sub *sema.Substring) *Mem {
-	s := e.Sym
+	pointer, dims := l.wholeDims(e.Sym)
+
+	return l.buildNCA(e.Sym, l.substringOf(e.Sym, sub, &pointer), pointer, dims)
+}
+
+// wholeDims is the whole array s's first element's address and its
+// dimensions, as a class NCA descriptor of it has them: its own bounds, and the
+// strides its descriptor or its extents give.
+func (l *lowerer) wholeDims(s *sema.Symbol) (Expr, []ncaDim) {
 	c := l.adjustableOf(s)
 
 	dims := make([]ncaDim, len(s.Dims))
@@ -382,7 +390,7 @@ func (l *lowerer) arrayNCA(e *sema.ArrayRef, sub *sema.Substring) *Mem {
 		pointer = &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}
 	}
 
-	return l.buildNCA(s, l.substringOf(s, sub, &pointer), pointer, dims)
+	return pointer, dims
 }
 
 // substringOf is the element type an NCA descriptor of the array s, or of the
@@ -549,6 +557,17 @@ func (l *lowerer) buildNCA(s *sema.Symbol, el ncaElement, pointer Expr, dims []n
 	}
 
 	c := l.descriptorCell(d)
+	l.fillNCA(c, s, el, pointer, dims)
+
+	return &Mem{Cell: c, T: Long}
+}
+
+// fillNCA is buildNCA's work, in the class NCA descriptor cell c, whose first
+// longword (the elements' length and type) is already right unless el's length
+// is known only when the program runs: an array pointer's own cell, too
+// (lowerpointer.go).
+func (l *lowerer) fillNCA(c *Cell, s *sema.Symbol, el ncaElement, pointer Expr, dims []ncaDim) {
+	d := c.Desc
 
 	field := func(offset int) *Mem {
 		return &Mem{Cell: c, Offset: offset, T: Long}
@@ -593,6 +612,4 @@ func (l *lowerer) buildNCA(s *sema.Symbol, el ncaElement, pointer Expr, dims []n
 
 	value(A0Offset, a0)
 	value(ArsizeOffset, size)
-
-	return &Mem{Cell: c, T: Long}
 }

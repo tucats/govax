@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
 author the same day ("The author's answers"); subtask 2, scalar and character
-pointers, done 2026-11-19.
+pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19.
 
 ## Goal
 
@@ -414,7 +414,7 @@ The plan's order stands; each subtask's content is now the findings'.
 3. **Array pointers:** descriptors read through every stride, `=>` to whole
    arrays, sections, components, and pointers with their bounds, the inquiries,
    ASSOCIATED of arrays, actual arguments to assumed-shape and old dummies
-   (findings 3 to 5), overlap (finding 10).
+   (findings 3 to 5), overlap (finding 10) (done 2026-11-19).
 4. **ALLOCATE and DEALLOCATE of pointers:** the parser's objects, FTNRTL's flag
    bits, `FTN$ALLOC_SCALAR` and `FTN$DEALLOC_SCALAR`, the header and condition
    304, the clear bit, GSMATCH 1,25, MANUAL.md's FTNRTL table (finding 6).
@@ -562,3 +562,74 @@ The plan's open question 1 is settled by answer 1.
     the overlap. `TestF90StatementsNotImplemented` now expects no NOTIMPL.
   - *Docs.* MANUAL.md's 14.13 ("Pointers", and "Not there yet"'s example), HELP
     FORTRAN.
+- **2026-11-19:** Subtask 3, array pointers, done.
+  - *Declarations and storage* (findings 1, 2). An array pointer is no longer
+    NOTIMPL. `Symbol.ArrayPointer` names one, and `Symbol.Strided` (an
+    assumed-shape dummy or an array pointer) says an array's elements are found
+    through every stride and are never known contiguous when compiling: the
+    places that asked `AssumedShape` for that (sequence association and
+    `Contiguous`, I/O lists, internal files and run-time formats, record
+    elements, `stridedElement`, `symbolMem`, SIZE) now ask `Strided`. Its storage
+    is a class NCA descriptor, `DescriptorSize(rank)`, made by
+    `allocatableCell` as an allocatable array's is, so it stands among the
+    adjustable arrays' cells and bounds, extents, SIZE, LBOUND, UBOUND, SHAPE,
+    and the scalarizer read it with nothing new. A frame one is cleared at entry
+    by `clearAllocatables`' `fillDescriptor` (POINTER 0). A module's gets its
+    disassociated form from the module's object, as an allocatable array's does
+    ("disassociated" in the comment); **a COMMON one gets none** (no unit's object
+    gives a common block values), so `=>` writes the descriptor's unchanging
+    longwords there first (`commonHeader`), else an assumed-shape callee under
+    `/CHECK=BOUNDS` would refuse its class and rank. An array pointer in an
+    inquiry in a specification expression is BOUNDREF, as an allocatable array
+    is.
+  - *Pointer assignment* (finding 4). `pointerObject` gives an array pointer as
+    an `ArrayRef` (`PointerSymbol` and `IsPointer` take both forms), and a target
+    is read by `targetPlace` (a whole array's `ArrayRef` with its shape, a
+    section, a substring, a component; a whole array component as
+    `wholeRanked`), where subtask 2's `place` refused sections. A section with a
+    vector subscript is VECTORTARGET (new); a rank that differs is POINTERTYPE,
+    whose text now names a rank above 1 (`an array of rank 2 of INTEGER`).
+    Lowering (`ir/lowerpointer.go`'s `arrayPointerAssign`): a pointer target's
+    descriptor copied (`copyDescriptor`, every longword after the first); else
+    `describeTarget` fills the pointer's cell in place through `fillNCA`
+    (`buildNCA`'s work, split out so it can fill a cell it didn't make) with a
+    whole array's own bounds (`wholeDims`, split out of `arrayNCA`) or a
+    section's from 1 (`describeSection`). **Bounds of a component:** `T%COORD`
+    keeps COORD's declared bounds (`ownBounds`); `PATH%X`, its rank from the
+    array of records, is a section, from 1. Fortran 90's LBOUND text ("a whole
+    array or array structure component") leaves the second unsettled; Fortran
+    95's 6.2.2 calls it a section, and gfortran agrees, so govax does.
+    `P => P(9:1:-1)`, a target whose base is the pointer itself
+    (`sema.TargetBase`), is described into a cell of the statement's and copied.
+  - *NULLIFY and ASSOCIATED* (finding 5). NULLIFY clears POINTER
+    (`pointerAddress` is the descriptor's POINTER for an array pointer).
+    `arrayAssociated` compares P's descriptor with the target's (a pointer's own,
+    or a description made for the question): POINTER, P's POINTER not 0, each
+    dimension's stride and U - L, and the target's ARSIZE greater than 0 (answer
+    4).
+  - *A parser bug found:* `A(::2)` and `A(2::2)` were SYNTAX errors, the lexer
+    having read the two colons as Fortran 90's `::`; `triplet` now takes `::` as
+    an omitted upper bound and the stride's colon (`atColon`; `TestArrayForms`).
+  - *An optimizer bug found:* `places.go`'s `allocatedBase` took an array
+    pointer's descriptor for an allocatable array's, making its elements an
+    `AllocatedRegion`, apart from every named variable, so `A(2) = 7; P(1) = 1;
+    K = A(2)` with `P => A(2:2)` printed 7 under `/OPTIMIZE`. An array pointer's
+    elements are now `UnknownRegion`, as a scalar pointer's target is, until
+    subtask 7's `PointerRegion` (`ptrarrays.f90` holds it).
+  - *Overlap* (finding 10). `mayShare` already knew pointers (subtask 2); with
+    `Contiguous` refusing a pointer's sections, `A = P` and `B(2:5) = P(1:4)`
+    with P into the same array go through a temporary.
+  - *Tests.* `sema`'s `TestPointers` (array forms, VECTORTARGET, POINTERTYPE by
+    rank, NOTTARGET of a section, NOSHAPE of an assumed-size target); `ir` and
+    `codegen` golden `f90aptr.for`; `testdata/fortran90/ptrarrays.f90`, worked by
+    hand, in every mode and both loaders, and the same on gfortran: whole arrays,
+    sections, a pointer's section, another pointer, the self-reversal, a zero-sized
+    target, two dimensions with WHERE and reductions, assumed-shape and
+    explicit-shape actuals, overlap, components, CHARACTER elements, a module's and
+    a COMMON array pointer, and the store the optimizer once carried past. gfortran
+    16.2 itself gets `P => P(9:0:-1)` wrong when P's lower bound is 0 (it reads the
+    subscripts as from 1), so the corpus reverses from a lower bound of 1; and it
+    answers ASSOCIATED of a pointer never nullified as true, where Fortran 90 calls
+    the status undefined, so the corpus nullifies first.
+  - *Docs.* MANUAL.md's 14.13 (array pointers; "Not there yet"'s example now
+    ALLOCATE of a pointer), HELP FORTRAN.

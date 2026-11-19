@@ -234,9 +234,10 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 			}
 		}
 
-		// A module's allocatable array is its descriptor, in the module's
-		// section: the module's own object gives it its unallocated form,
-		// as $LOCAL gives a unit's own (the standard's 11.3.3.4).
+		// A module's allocatable array or array pointer is its descriptor,
+		// in the module's section: the module's own object gives it its
+		// unallocated or disassociated form, as $LOCAL gives a unit's own
+		// (the standard's 11.3.3.4).
 		if r.Kind == ir.Module {
 			for _, c := range r.Cells {
 				if c.Common != nil && c.Common.Module == r.Unit.Name && c.Kind == ir.DescriptorCell && c.Desc != nil {
@@ -282,7 +283,12 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 
 			writeInitials(w, list[:n], at, c.Offset)
 			list = list[n:]
-			writeDescriptor(w, c.Desc, "0", "0", c.Name+": not allocated")
+			note := c.Name + ": not allocated"
+			if c.Sym != nil && c.Sym.Pointer {
+				note = c.Name + ": disassociated"
+			}
+
+			writeDescriptor(w, c.Desc, "0", "0", note)
 			at = c.Offset + c.Size
 		}
 
@@ -1001,6 +1007,8 @@ func (g *routineGen) writeLocal(w *Writer) {
 			switch {
 			case c.Dummy != "":
 				note = c.Dummy + "'s bounds: set at each entry point"
+			case c.Sym != nil && c.Sym.Pointer:
+				note = c.Sym.Name + ": disassociated"
 			case c.Sym != nil:
 				note = c.Sym.Name + ": not allocated"
 			}

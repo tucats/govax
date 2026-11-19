@@ -711,7 +711,7 @@ func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 		switch {
 		case r.Sym.AssumedSize():
 			size = 0
-		case (r.Sym.Adjustable() || r.Sym.Allocatable || r.Sym.AssumedShape()) && r.Sym.Type.Size != 0:
+		case (r.Sym.Adjustable() || r.Sym.Allocatable || r.Sym.Strided()) && r.Sym.Type.Size != 0:
 			// Known only when the program runs, once the bounds are.
 			return &IntrinsicRef{exprBase: exprBase{T: IntegerType, Pos: e.Pos}, Op: ArraySizeOp, Args: []Expr{x}}
 		case r.Sym.Adjustable():

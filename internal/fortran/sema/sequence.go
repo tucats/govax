@@ -46,7 +46,7 @@ package sema
 // another. Anything else is arg as it was.
 func (a *analyzer) sequenced(arg Arg, p *Symbol) Arg {
 	whole := false
-	if r, ok := arg.Expr.(*ArrayRef); ok && r.Sym.AssumedShape() && !r.Sym.broken {
+	if r, ok := arg.Expr.(*ArrayRef); ok && r.Sym.Strided() && !r.Sym.broken {
 		whole = true
 	}
 
@@ -86,7 +86,7 @@ func (a *analyzer) sequenced(arg Arg, p *Symbol) Arg {
 // A(2:5, J), and A(:, :) are; A(2:5, :), A(J, :), and A(1:9:2) aren't (unless a
 // dimension has one element, which isn't looked at).
 func Contiguous(e *Section) bool {
-	if e.Sym.AssumedShape() {
+	if e.Sym.Strided() {
 		return false
 	}
 

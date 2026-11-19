@@ -480,7 +480,7 @@ func (p *parser) subscripts() []ast.Expr {
 
 	for {
 		switch {
-		case p.at(":"):
+		case p.atColon():
 			list = append(list, p.triplet(nil, p.here()))
 		case p.at(",") || p.at(")"):
 			list = append(list, nil)
@@ -493,7 +493,7 @@ func (p *parser) subscripts() []ast.Expr {
 			pos := p.here()
 
 			e := p.expr()
-			if p.at(":") {
+			if p.atColon() {
 				e = p.triplet(e, pos)
 			}
 
@@ -513,9 +513,17 @@ func (p *parser) subscripts() []ast.Expr {
 // triplet reads the rest of a subscript triplet, [l]:[u][:s] (the standard's
 // R619), whose lower bound, already read, is lower (nil if it was left out);
 // the colon is next. pos is where the triplet starts. The upper bound may be
-// left out; a stride, after a second colon, may not.
+// left out; a stride, after a second colon, may not. With both left out, A(::2)
+// and A(2::2), the lexer has read the two colons as Fortran 90's ::, which here
+// is just that.
 func (p *parser) triplet(lower ast.Expr, pos diag.Position) ast.Expr {
 	t := &ast.Triplet{ExprBase: ast.ExprBase{Pos: pos}, Lower: lower}
+
+	if p.accept("::") {
+		t.Stride = p.expr()
+
+		return t
+	}
 
 	p.expect(":")
 
@@ -528,6 +536,12 @@ func (p *parser) triplet(lower ast.Expr, pos diag.Position) ast.Expr {
 	}
 
 	return t
+}
+
+// atColon reports whether a triplet's first colon is next: a colon, or the
+// two of :: (triplet).
+func (p *parser) atColon() bool {
+	return p.at(":") || p.at("::")
 }
 
 // arrayConstructor reads Fortran 90's (/ values /) (the standard's R431 to

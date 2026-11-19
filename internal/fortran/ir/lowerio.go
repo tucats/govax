@@ -224,7 +224,7 @@ func beginRoutine(s *sema.IO) string {
 // after another (lowersequence.go), and back is what copies them back when
 // the statement writes them; nil if nothing does.
 func (l *lowerer) ioUnit(s *sema.IO) (unit Arg, back func()) {
-	if r, ok := s.Unit.(*sema.ArrayRef); ok && r.Sym.AssumedShape() && (s.Code || s.Internal) {
+	if r, ok := s.Unit.(*sema.ArrayRef); ok && r.Sym.Strided() && (s.Code || s.Internal) {
 		seq := l.sequence(r, true, !s.Read, s.Internal)
 
 		return Arg{Value: seq.value}, seq.back
@@ -273,7 +273,7 @@ func (l *lowerer) ioFormat(s *sema.IO) Arg {
 
 	// An assumed-shape array's text, its elements one after another
 	// (lowersequence.go).
-	if r, ok := s.RunFormat.(*sema.ArrayRef); ok && r.Sym.AssumedShape() {
+	if r, ok := s.RunFormat.(*sema.ArrayRef); ok && r.Sym.Strided() {
 		return Arg{Value: l.sequence(r, true, false, true).value}
 	}
 
@@ -357,7 +357,7 @@ func (l *lowerer) ioItem(v sema.Expr) {
 	// An assumed-shape array's elements may not be one after another, which a
 	// class A descriptor says they are: an element at a time, as a section's
 	// (the list's whole array may have no shape of its own, sema's name).
-	if r, ok := v.(*sema.ArrayRef); ok && r.Sym.AssumedShape() {
+	if r, ok := v.(*sema.ArrayRef); ok && r.Sym.Strided() {
 		l.eachElement(sema.NewArrayRef(r.Sym, r.Pos), call)
 
 		return

@@ -613,6 +613,22 @@ func (s *Symbol) AssumedShape() bool {
 	return len(s.Dims) > 0 && s.Dims[0].AssumedShape
 }
 
+// ArrayPointer reports whether s is an array pointer, P(:, :) with POINTER:
+// its storage is a class NCA descriptor of its target (docs/planning/PHASE-107
+// - Fortran 90 pointers.md, finding 2).
+func (s *Symbol) ArrayPointer() bool {
+	return s.Pointer && s.Dims != nil
+}
+
+// Strided reports whether the elements of the array s are found through every
+// dimension's stride, which may be anything, so that they needn't be one after
+// another: an assumed-shape dummy's (its actual may be a section) and an array
+// pointer's (its target may be). Neither is ever known contiguous when
+// compiling.
+func (s *Symbol) Strided() bool {
+	return s.AssumedShape() || s.ArrayPointer()
+}
+
 // AssumedSize reports whether s is an assumed-size array, whose last
 // upper bound is * (section 6.1.1.2).
 func (s *Symbol) AssumedSize() bool {
@@ -658,7 +674,7 @@ func (s *Symbol) Size() int {
 		return StringDescriptorSize
 	}
 
-	if s.Allocatable || s.AutomaticObject {
+	if s.Allocatable || s.AutomaticObject || s.ArrayPointer() {
 		return DescriptorSize(len(s.Dims))
 	}
 

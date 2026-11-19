@@ -63,7 +63,7 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 		}
 	}
 
-	if c := l.adjustableOf(e.Sym); c != nil && e.Subs != nil && e.Sym.AssumedShape() {
+	if c := l.adjustableOf(e.Sym); c != nil && e.Subs != nil && e.Sym.Strided() {
 		// An assumed-shape array's elements are each its own strides apart
 		// (lowershaped.go), which needn't be the type's size: the record is
 		// at the address stridedElement computes.

@@ -36,7 +36,7 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 
 	// Nor a whole assumed-shape array, whose elements may not be one after
 	// another.
-	if r, ok := arg.Expr.(*ArrayRef); ok && r.Sym.AssumedShape() && !r.Sym.broken {
+	if r, ok := arg.Expr.(*ArrayRef); ok && r.Sym.Strided() && !r.Sym.broken {
 		a.notImplForm(r.Pos, "an assumed-shape array as a system subroutine's or built-in function's argument")
 		arg.Expr = a.bad(r.Pos)
 	}
