@@ -113,6 +113,9 @@ PROGRAMS90 = {
     "typedyn": ["typedyn.f90"],
     "seqtypes": ["seqtypes.f90"],
     "typeio": ["typeio.f90"],
+    "geometry": ["geometry.f90"],
+    "stock": ["stock.f90"],
+    "accounts": ["accounts.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

@@ -1,0 +1,14 @@
+BOLTS     120    0.10
+NUTS       80    0.05
+GEARS       4   12.50
+SPRINGS    30    0.75
+WIDGETS     2   99.00
+total      236    286.50
+WIDGETS     2   99.00    198.00
+GEARS       4   12.50     50.00
+SPRINGS    30    0.75     22.50
+BOLTS     120    0.10     12.00
+NUTS       80    0.05      4.00
+WIDGETS  reorder
+GEARS    reorder
+  $STATUS == "%X00000001"

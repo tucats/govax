@@ -148,6 +148,17 @@ func (p *parser) unary(minPrec int) ast.Expr {
 		p.next()
 
 		return &ast.DefinedOp{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: t.Text, X: p.primary()}
+
+	case p.f90() && p.dottedAhead(0):
+		// The same, left apart by the lexer after a ), as after an I/O
+		// statement's control list: WRITE (*, F) .ROT. V. Where an operand
+		// must start no record can come before the periods, so this is no
+		// field reference.
+		p.next()
+		op := "." + p.next().Text + "."
+		p.next()
+
+		return &ast.DefinedOp{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: op, X: p.primary()}
 	}
 
 	return p.primary()

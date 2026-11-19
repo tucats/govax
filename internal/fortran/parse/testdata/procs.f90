@@ -47,6 +47,7 @@ program procs
   y = p.a + q(2).inner.b
   y = p.a.dot.z
   y = x.a
+  write (*, 10) .inverse. a, (.inverse. b)
 contains
   subroutine inner(n)
     y = p.a.dot.z

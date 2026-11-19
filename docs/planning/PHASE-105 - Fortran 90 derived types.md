@@ -457,7 +457,7 @@ all three.
 8. **Programs end to end** (a geometry program with constructors and defined
    operators, a parts inventory of an array of a type read and written formatted
    and unformatted, a SEQUENCE type shared through COMMON and an interface body),
-   every mode, gfortran's witness.
+   every mode, gfortran's witness (done 2026-11-18).
 9. **Close-out:** FORTRAN-INTERNALS.md's section 30 (STRUCTURE and TYPE side by
    side: one `Structure`, two front doors; why a component section is just
    another stride; why an interface body needs a SEQUENCE type), MANUAL.md's
@@ -923,3 +923,26 @@ object are never the same type, with a message naming both.
     FORRTL's rules), in every mode and with paging on. MANUAL.md's 14.13 has
     "Derived types in I/O lists and NAMELIST groups". Subtask 8, programs end to
     end, is next.
+- **2026-11-18, subtask 8 (done):** Programs end to end.
+  - *The programs* (`testdata/fortran90`, worked by hand, in every mode and with
+    paging on): `geometry.f90`, a SEQUENCE type VEC with `+`, `-`, and `*` (a REAL
+    times a VEC) extending the intrinsic operators and `.DOT.`, `.CROSS.`, and a
+    unary `.ROT.` as defined operators, each an external function with an interface
+    body, computing a triangle's area, centroid, and perimeter and a polygon's area
+    and bounds, moving an array of VECs by component; `stock.f90`, a parts inventory
+    in an array of a type, read whole from the terminal by a format, totaled by its
+    components as arrays, written unformatted and read back into a section whose
+    extent is the count just read, sorted by swapping whole parts; `accounts.f90`, a
+    SEQUENCE type shared by a common block, interface bodies, and three external
+    procedures, one returning an 18-byte object through its hidden argument as an
+    output item. All three are in `compare.py`, gfortran printing the same lines,
+    and each of them and subtask 7's two printed the same under `/CHECK=BOUNDS`
+    (their scratch files aside, run there without a volume).
+  - *A fix.* A unary defined operator starting an output item, `WRITE (*, F) .ROT.
+    V`, was a syntax error: after a `)` the lexer leaves a period, a word, and a
+    period apart, since there they may be DEC's record field reference, and only
+    the binary reading put them back together. `parse`'s `unary` now reads them as
+    a unary defined operator where an operand must start, where no record can come
+    before them (`parse/testdata/procs.f90`'s new WRITE). Nothing else was found:
+    the programs compiled and ran as written otherwise.
+  - Subtask 9, the close-out, is next.
