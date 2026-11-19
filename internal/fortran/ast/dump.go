@@ -302,6 +302,46 @@ func DumpStmt(s Stmt) string {
 	case *EndInterfaceStmt:
 		return "END INTERFACE"
 
+	case *UseStmt:
+		text := "USE " + s.Module
+		if s.Only {
+			text += ", ONLY:"
+		}
+
+		items := make([]string, len(s.Items))
+		for i, it := range s.Items {
+			switch {
+			case it.Generic.Kind != NoGeneric:
+				items[i] = it.Generic.String()
+			case it.Local != "":
+				items[i] = it.Local + " => " + it.Remote
+			default:
+				items[i] = it.Remote
+			}
+		}
+
+		switch {
+		case len(items) == 0:
+		case s.Only:
+			text += " " + strings.Join(items, ", ")
+		default:
+			text += ", " + strings.Join(items, ", ")
+		}
+
+		return text
+
+	case *AccessStmt:
+		if len(s.Items) == 0 {
+			return s.Access
+		}
+
+		items := make([]string, len(s.Items))
+		for i, it := range s.Items {
+			items[i] = it.Text()
+		}
+
+		return s.Access + " :: " + strings.Join(items, ", ")
+
 	case *TypeDefStmt:
 		text := "TYPE"
 		if s.Access != "" {

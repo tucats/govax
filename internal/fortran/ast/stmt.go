@@ -745,6 +745,72 @@ type (
 	}
 )
 
+// Fortran 90's modules (docs/planning/PHASE-106 - Fortran 90 modules.md).
+type (
+	// UseStmt is USE module [, rename-list] or USE module, ONLY: [only-list]
+	// (the standard's R1107): Module, where its name is, whether ONLY was
+	// given, and the list's items in order. ONLY: with nothing after it is an
+	// empty list, which gives the unit nothing but the module's dependence.
+	UseStmt struct {
+		StmtBase
+		Module    string
+		ModulePos diag.Position
+		Only      bool
+		Items     []*UseItem
+	}
+
+	// AccessStmt is PUBLIC or PRIVATE, with or without :: and a list of names
+	// and generic specifications (R522). Access is PUBLIC or PRIVATE; a
+	// statement with no Items sets its module's default.
+	AccessStmt struct {
+		StmtBase
+		Access string
+		Items  []*AccessItem
+	}
+)
+
+// UseItem is one item of a USE statement's list (R1108, R1109): a rename,
+// local => remote, or in an ONLY list a name alone (Local is "" then) or a
+// generic specification, OPERATOR(op) or ASSIGNMENT(=) (Generic's Kind is
+// GenericOp or GenericAssign, and Remote is ""). A generic name in an ONLY list
+// is a name alone, as the standard reads it. Pos is where the item starts.
+type UseItem struct {
+	Local, Remote string
+	Generic       GenericSpec
+	Pos           diag.Position
+}
+
+// Name is the name the item gives in the using unit: its local name, or the
+// module's own if it isn't renamed, or the generic specification's text.
+func (it *UseItem) Name() string {
+	switch {
+	case it.Generic.Kind != NoGeneric:
+		return it.Generic.String()
+	case it.Local != "":
+		return it.Local
+	}
+
+	return it.Remote
+}
+
+// AccessItem is one item of an access statement's list (R523): a name (Name,
+// Generic's Kind NoGeneric) or a generic specification, OPERATOR(op) or
+// ASSIGNMENT(=). A generic name is a name. Pos is where it is.
+type AccessItem struct {
+	Name    string
+	Generic GenericSpec
+	Pos     diag.Position
+}
+
+// Text is the item as written: the name, or the generic specification.
+func (it *AccessItem) Text() string {
+	if it.Generic.Kind != NoGeneric {
+		return it.Generic.String()
+	}
+
+	return it.Name
+}
+
 // GenericKind is what an interface block's INTERFACE statement names
 // (R1207's generic-spec).
 type GenericKind int

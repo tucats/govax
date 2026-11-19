@@ -3,7 +3,6 @@ package sema
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
-	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // Fortran 90's derived types (the standard's 4.4; docs/planning/PHASE-105 -
@@ -93,8 +92,8 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 		case *ast.SequenceStmt, *ast.EndTypeStmt:
 			// typeHeader's and endType's.
 
-		case *ast.PendingStmt:
-			if c.Kind != lex.Private {
+		case *ast.AccessStmt:
+			if c.Access != "PRIVATE" || len(c.Items) > 0 {
 				a.report("TYPESTMT", c.Position(), aStatement(c))
 			}
 
@@ -151,8 +150,8 @@ func (a *analyzer) typeHeader(s *ast.TypeDefStmt) bool {
 		case *ast.SequenceStmt:
 			seen = &sequence
 
-		case *ast.PendingStmt:
-			if c.Kind != lex.Private {
+		case *ast.AccessStmt:
+			if c.Access != "PRIVATE" || len(c.Items) > 0 {
 				continue
 			}
 

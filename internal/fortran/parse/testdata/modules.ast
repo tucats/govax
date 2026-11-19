@@ -1,0 +1,28 @@
+== MODULE CONSTS
+5           MODULE CONSTS
+6           USE BASE
+7           USE OTHER, TWOPI => PI2, E => EULER
+8           PRIVATE
+9           PUBLIC :: PI, POINT, OPERATOR(+), ASSIGNMENT(=), SWAP
+10          PRIVATE :: GAUGE
+11          REAL, PARAMETER :: PI = 3.14159
+12          TYPE POINT
+13            PRIVATE
+14            REAL X, Y
+15            END TYPE POINT
+16          INTERFACE SWAP
+17            MODULE PROCEDURE SWAPR
+18          END INTERFACE
+19          CONTAINS
+              == SUBROUTINE SWAPR
+20            SUBROUTINE SWAPR(A, B)
+21            REAL A, B
+22            END SUBROUTINE SWAPR
+23          END MODULE CONSTS
+== main program USER
+24          PROGRAM USER
+25          USE CONSTS, ONLY: PI, OPERATOR(+), LOCAL => SWAP
+26          USE BASE, ONLY:
+27          USE OTHER, ONLY: ASSIGNMENT(=), OPERATOR(.CROSS.), OPERATOR(/)
+28          PRINT * PI
+29          END PROGRAM USER
