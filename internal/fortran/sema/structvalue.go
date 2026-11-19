@@ -130,7 +130,7 @@ func (a *analyzer) constructorType(name string, s *Symbol) *Structure {
 		return nil
 	}
 
-	st := a.unit.structure(name)
+	st := a.typeNamed(name)
 	if st == nil || !st.Derived || st.open {
 		return nil
 	}

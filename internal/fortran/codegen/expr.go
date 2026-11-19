@@ -1123,7 +1123,7 @@ func (g *routineGen) move(t ir.Type, src, dst string) {
 // otherwise); for a floating or complex value, its longwords in $PDATA,
 // since MACRO would take #n in a floating instruction for a floating value
 // of its own to convert (Decision 16 has the compiler's bits used, never
-// MACRO's).
+// MACRO's). Its name is $KFn, apart from FORMAT n's block, $Fn.
 func (g *routineGen) constant(c *ir.Const) string {
 	if c.T.Integer() {
 		return "#" + strconv.Itoa(int(c.Int()))
@@ -1135,7 +1135,7 @@ func (g *routineGen) constant(c *ir.Const) string {
 		}
 	}
 
-	d := &ir.Datum{Name: "$F" + strconv.Itoa(len(g.extra)+1), Kind: ir.ConstantDatum, Value: c}
+	d := &ir.Datum{Name: "$KF" + strconv.Itoa(len(g.extra)+1), Kind: ir.ConstantDatum, Value: c}
 	g.extra = append(g.extra, d)
 
 	return g.names.symbol(d.Name)

@@ -80,7 +80,7 @@ CHECK.Y = 8				; Y is argument 2
 CHECK.Z = 12				; Z is argument 3
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
-CHECK.$F1:
+CHECK.$KF1:
 	.LONG	^X00004080		; 1.0
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
@@ -106,7 +106,7 @@ CHECK.L70:
 	RET
 ;   21  80    RETURN Z + 1.0
 CHECK.L80:
-	ADDF3	@CHECK.Z(AP),CHECK.$F1,R0 ; the alternate return's number
+	ADDF3	@CHECK.Z(AP),CHECK.$KF1,R0 ; the alternate return's number
 	CVTFL	R0,R0
 	RET
 ;   22        END

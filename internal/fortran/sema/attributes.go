@@ -154,7 +154,8 @@ func (a *analyzer) intrinsic(item *ast.AttrItem) {
 // saves checks the unit's SAVE statements' lists (section 4.14): common blocks
 // the unit declares, but not blank common; variables and arrays, but not names
 // in a common block, procedures, or dummy arguments. A name in one is a
-// variable from here on, so a use of it as a function is NOTARRAY.
+// variable from here on, so a use of it as a function is NOTARRAY. A module's
+// variables are in a section of their own, but may be named.
 func (a *analyzer) saves() {
 	for _, st := range a.saveStmts {
 		if len(st.Items) == 0 {
@@ -176,8 +177,14 @@ func (a *analyzer) saves() {
 			case s.Dummy != 0:
 				a.report("SAVEDUMMY", item.Pos, s.Name)
 
-			case s.Common != nil:
+			case s.Common != nil && s.Common.Module == "":
 				a.report("SAVECOMMON", item.Pos, s.Name, s.Common.String())
+
+			case s.Common != nil:
+				// A module's variable, in its module's section: static
+				// already, so SAVE (as the standard's 11.3.3.2 and 11.3.3.4
+				// write it) changes nothing.
+				s.saved = true
 
 			case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
 				s.Class == External || s.Class == Intrinsic || s.Struct != nil:

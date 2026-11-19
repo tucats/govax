@@ -291,7 +291,16 @@ func deleteFilesAfter(t *testing.T, d *Dispatcher, name string) {
 // line, and the program, named for its directory, must print name.out however
 // they are ordered: which module's contribution to a common block's overlaid
 // section comes first, or longest, or holds the values, mustn't matter; nor whether
-// it is compiled /RECURSIVE (recursiveModes).
+// it is compiled /RECURSIVE (recursiveModes). A program that reads the terminal
+// has name.in, the lines typed.
+//
+// A program of Fortran 90 modules has compiles.txt too (docs/planning/PHASE-106 -
+// Fortran 90 modules.md, subtask 7): each line an order its files may be compiled
+// in, a FORTRAN command for each word ("A B,C D" is three commands, the second
+// compiling B and C), so each USE finds its module in this compilation or in a
+// module file an earlier command wrote. Every order is followed by every link;
+// no module file is left from the order before. Without compiles.txt, one
+// FORTRAN command compiles every file.
 func TestFortranModules(t *testing.T) {
 	programs, err := filepath.Glob(filepath.Join(fortranPrograms, "modules", "*"))
 	if err != nil || len(programs) == 0 {
@@ -347,6 +356,16 @@ func fortranModules(t *testing.T, programs []string, paging bool, qualifier stri
 				t.Fatal(err)
 			}
 
+			compiles, err := os.ReadFile(filepath.Join(program, "compiles.txt"))
+			if err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+
+			input, err := os.ReadFile(filepath.Join(program, name+".in"))
+			if err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+
 			files, err := os.ReadDir(program)
 			if err != nil {
 				t.Fatal(err)
@@ -355,7 +374,8 @@ func fortranModules(t *testing.T, programs []string, paging bool, qualifier stri
 			var sources []string
 
 			for _, file := range files {
-				if file.Name() == name+".out" || file.Name() == "links.txt" {
+				switch file.Name() {
+				case name + ".out", name + ".in", "links.txt", "compiles.txt":
 					continue
 				}
 
@@ -379,32 +399,54 @@ func fortranModules(t *testing.T, programs []string, paging bool, qualifier stri
 				}
 			}
 
-			buf.Reset()
-
-			commands := []string{"FORTRAN" + qualifier + " " + strings.Join(sources, ",")}
-			for _, source := range sources {
-				commands = append(commands, "MACRO "+source)
+			orders := []string{strings.Join(sources, ",")}
+			if compiles != nil {
+				orders = strings.Split(strings.TrimSpace(string(compiles)), "\n")
 			}
 
-			for _, command := range commands {
-				shareFindRun(t, d, command)
-
-				if out := buf.String(); out != "" {
-					t.Fatalf("%s said:\n%s", command, out)
-				}
-			}
+			// Module files go before each order, and after the last: there
+			// may be none to delete.
+			deleteModules := func() { _ = d.Dispatch("DELETE *.F90$MOD;*") }
+			t.Cleanup(deleteModules)
 
 			image := strings.ToUpper(name)
 
-			for _, modules := range strings.Fields(string(links)) {
-				shareFindRun(t, d, "LINK/EXECUTABLE="+image+" "+modules)
+			for _, order := range orders {
+				// No module file from the order before may stand in for one
+				// this order hasn't written yet.
+				deleteModules()
+				buf.Reset()
 
-				if out := buf.String(); out != "" {
-					t.Fatalf("LINK %s said:\n%s", modules, out)
+				var commands []string
+				for _, files := range strings.Fields(order) {
+					commands = append(commands, "FORTRAN"+qualifier+" "+files)
 				}
 
-				if got := shareRun(t, d, buf, image); got != string(want) {
-					t.Errorf("after LINK %s, RUN %s printed:\n%s\nwant:\n%s", modules, image, got, want)
+				for _, source := range sources {
+					commands = append(commands, "MACRO "+source)
+				}
+
+				for _, command := range commands {
+					shareFindRun(t, d, command)
+
+					if out := buf.String(); out != "" {
+						t.Fatalf("compiled in the order %s, %s said:\n%s", order, command, out)
+					}
+				}
+
+				for _, modules := range strings.Fields(string(links)) {
+					shareFindRun(t, d, "LINK/EXECUTABLE="+image+" "+modules)
+
+					if out := buf.String(); out != "" {
+						t.Fatalf("compiled in the order %s, LINK %s said:\n%s", order, modules, out)
+					}
+
+					c.In = strings.NewReader(string(input))
+
+					if got := shareRun(t, d, buf, image); got != string(want) {
+						t.Errorf("compiled in the order %s, after LINK %s, RUN %s printed:\n%s\nwant:\n%s",
+							order, modules, image, got, want)
+					}
 				}
 			}
 		})

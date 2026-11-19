@@ -181,7 +181,7 @@ func (l *lowerer) arrayFuncValue(e sema.Expr) *Mem {
 // or computed now from the leaf it is of.
 func (n *arrayNest) dimExtent(x sema.Extent) sema.Expr {
 	if x.Known {
-		return sema.IntConstAt(x.Size, n.l.from.Position())
+		return sema.IntConstAt(x.Size, n.l.here())
 	}
 
 	return n.keepIR(n.leafExtent(x.Of, n.loopOf(x.Of, x.Dim)))
@@ -194,7 +194,7 @@ func (l *lowerer) accumulator(t sema.Type) (*Mem, sema.Expr) {
 	sym := sema.NewSymbol("$R", t)
 	l.bound[sym] = m
 
-	return m, sema.NewVar(sym, l.from.Position())
+	return m, sema.NewVar(sym, l.here())
 }
 
 // reduce computes the reduction f (SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY,
@@ -322,7 +322,7 @@ func (l *lowerer) masked(mask sema.Expr, body func()) {
 
 // logical is the LOGICAL constant v of the type t.
 func (l *lowerer) logical(t Type, v bool) *Const {
-	c := l.constOf(sema.LogicalConstAt(v, l.from.Position()))
+	c := l.constOf(sema.LogicalConstAt(v, l.here()))
 
 	return IntConst(t, c.Int())
 }

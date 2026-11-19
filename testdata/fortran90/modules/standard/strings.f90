@@ -1,0 +1,29 @@
+! 11.3.3.6, operator extensions: // extended to concatenate two VARYING
+! values, each a derived type serving as a varying-length character string,
+! and + to add two INTERVALs; each operator is an external function whose
+! interface the module OPERATORS gives.
+
+MODULE VARYING_STRINGS
+TYPE VARYING
+INTEGER LENGTH
+CHARACTER (LEN = 40) TEXT
+END TYPE
+TYPE INTERVAL
+REAL LOWER, UPPER
+END TYPE
+END MODULE VARYING_STRINGS
+
+FUNCTION JOIN (X, Y)
+USE VARYING_STRINGS
+TYPE (VARYING) JOIN
+TYPE (VARYING), INTENT (IN) :: X, Y
+JOIN % LENGTH = MIN (X % LENGTH + Y % LENGTH, LEN (JOIN % TEXT))
+JOIN % TEXT = X % TEXT (1:X % LENGTH) // Y % TEXT (1:Y % LENGTH)
+END FUNCTION JOIN
+
+FUNCTION WIDEN (X, Y)
+USE VARYING_STRINGS
+TYPE (INTERVAL) WIDEN
+TYPE (INTERVAL), INTENT (IN) :: X, Y
+WIDEN = INTERVAL (X % LOWER + Y % LOWER, X % UPPER + Y % UPPER)
+END FUNCTION WIDEN

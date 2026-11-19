@@ -126,7 +126,23 @@ func (a *analyzer) innerAnalyzer() *analyzer {
 	}
 	ia.makeMaps()
 
+	ia.textTypes = a.textTypes
+	if a.reading != nil {
+		ia.textTypes = a.unit
+	}
+
 	return ia
+}
+
+// typeNamed is the structure or derived type the unit knows by name, in
+// its own scope or a host's, or in a module's text the module's (textTypes);
+// nil if there is none.
+func (a *analyzer) typeNamed(name string) *Structure {
+	if st := a.unit.structure(name); st != nil || a.textTypes == nil {
+		return st
+	}
+
+	return a.textTypes.structure(name)
 }
 
 // internalInterfaces is the second step: each internal procedure's header and

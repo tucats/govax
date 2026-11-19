@@ -160,7 +160,7 @@ func (l *lowerer) fillItems(items []sema.CtorItem, put func(sema.Expr)) {
 
 			l.bound[do.Var] = place
 
-			name := "constructor (line " + strconv.Itoa(l.from.Position().Line) + "), implied DO of " + do.Var.Name
+			name := "constructor (line " + strconv.Itoa(l.here().Line) + "), implied DO of " + do.Var.Name
 
 			l.countedLoop(name, do.Var, do.Start, do.Limit, do.Step, false, func(*Block) {
 				l.fillItems(do.Items, put)

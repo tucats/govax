@@ -180,7 +180,7 @@ func (f *FieldRef) Text() string {
 // name a type statement names can't be one.
 func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 	for _, g := range s.Groups {
-		st := a.unit.structure(g.Structure)
+		st := a.typeNamed(g.Structure)
 
 		switch {
 		case st == nil:

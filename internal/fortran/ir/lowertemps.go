@@ -171,7 +171,7 @@ func (l *lowerer) runtimeTemp(t sema.Type, extents []Expr, length Expr) *sema.Ar
 
 	store(A0Offset, &Addr{l.elementAt(base, sym, negated(first))})
 
-	return sema.NewArrayRef(sym, l.from.Position())
+	return sema.NewArrayRef(sym, l.here())
 }
 
 // endTemps gives back what the statement's run-time temporaries took, at its
@@ -471,7 +471,7 @@ func (l *lowerer) countItems(items []sema.CtorItem) Expr {
 
 				l.bound[do.Var] = place
 
-				name := "constructor (line " + strconv.Itoa(l.from.Position().Line) + "), count of implied DO of " + do.Var.Name
+				name := "constructor (line " + strconv.Itoa(l.here().Line) + "), count of implied DO of " + do.Var.Name
 
 				l.countedLoop(name, do.Var, do.Start, do.Limit, do.Step, false, func(*Block) {
 					walk(do.Items)

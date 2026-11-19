@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
@@ -416,6 +417,18 @@ func (l *lowerer) dtypeOf(t sema.Type) DType {
 	}
 
 	return DTypeL
+}
+
+// here is where the statement being lowered is, for the expressions lowering
+// makes; before the first statement (an entry point's code computing a bound
+// from an inquiry of an assumed-shape dummy, DIMENSION (SIZE (X, 2)), the
+// standard's 11.3.3.5), the unit's header.
+func (l *lowerer) here() diag.Position {
+	if l.from == nil {
+		return l.unit.AST.Header.Position()
+	}
+
+	return l.from.Position()
 }
 
 // origin is the statement being lowered, for the IR statement made from

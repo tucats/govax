@@ -217,6 +217,7 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 	var blocks []*sema.CommonBlock
 
 	initials := map[string][]*sema.Initial{}
+	descriptors := map[string][]*ir.Cell{}
 
 	for _, r := range routines {
 		for _, b := range append(append([]*sema.CommonBlock{}, r.Unit.Commons...), r.Unit.UsedBlocks...) {
@@ -230,6 +231,17 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 		for _, in := range r.Initials {
 			if b := in.Sym.Common; b != nil {
 				initials[b.Psect] = append(initials[b.Psect], in)
+			}
+		}
+
+		// A module's allocatable array is its descriptor, in the module's
+		// section: the module's own object gives it its unallocated form,
+		// as $LOCAL gives a unit's own (the standard's 11.3.3.4).
+		if r.Kind == ir.Module {
+			for _, c := range r.Cells {
+				if c.Common != nil && c.Common.Module == r.Unit.Name && c.Kind == ir.DescriptorCell && c.Desc != nil {
+					descriptors[c.Common.Psect] = append(descriptors[c.Common.Psect], c)
+				}
 			}
 		}
 	}
@@ -248,13 +260,33 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 		w.Comment(fmt.Sprintf("%s, %d bytes, the most any unit in this file declares", what, sizes[b.Psect]))
 		w.Statement("", ".PSECT", b.Psect+commonAttributes(b.Attrs), "")
 
-		if list := initials[b.Psect]; len(list) > 0 {
-			sort.SliceStable(list, func(i, j int) bool { return list[i].Offset < list[j].Offset })
-			w.Label(names.base(b.Psect))
-			writeInitials(w, list, 0, sizes[b.Psect])
-		} else {
+		list, cells := initials[b.Psect], descriptors[b.Psect]
+		if len(list) == 0 && len(cells) == 0 {
 			w.Statement(names.base(b.Psect), ".BLKB", strconv.Itoa(sizes[b.Psect]), "")
+
+			continue
 		}
+
+		sort.SliceStable(list, func(i, j int) bool { return list[i].Offset < list[j].Offset })
+		sort.SliceStable(cells, func(i, j int) bool { return cells[i].Offset < cells[j].Offset })
+		w.Label(names.base(b.Psect))
+
+		// The initial values up to each descriptor, the descriptor, and so on.
+		at := 0
+
+		for _, c := range cells {
+			n := 0
+			for n < len(list) && list[n].Offset < c.Offset {
+				n++
+			}
+
+			writeInitials(w, list[:n], at, c.Offset)
+			list = list[n:]
+			writeDescriptor(w, c.Desc, "0", "0", c.Name+": not allocated")
+			at = c.Offset + c.Size
+		}
+
+		writeInitials(w, list, at, sizes[b.Psect])
 	}
 }
 

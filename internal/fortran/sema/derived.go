@@ -305,7 +305,7 @@ func (b *structBuilder) componentType(spec ast.TypeSpec, d *ast.Declarator) (*St
 // derivedStructure is the derived type a TYPE(name) names: one defined before
 // it in its unit or a host (an interface body has no host), never a STRUCTURE.
 func (a *analyzer) derivedStructure(name string, pos diag.Position) (*Structure, bool) {
-	st := a.unit.structure(name)
+	st := a.typeNamed(name)
 
 	switch {
 	case a.ambiguousType(name, pos):

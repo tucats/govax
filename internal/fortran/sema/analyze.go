@@ -438,6 +438,13 @@ type analyzer struct {
 	inBody     bool
 	interfaces []*ast.InterfaceBlock
 
+	// textTypes is the module whose text is being read, for a unit inside it:
+	// an interface body in a module's text names the module's types, which
+	// a body can't reach by host association; in the module's source its
+	// body had them by USE or defined them, and the text gives them all at
+	// the module's level (modwrite.go). Nil outside a module's text.
+	textTypes *Unit
+
 	// baseAlign, standard, and checks are the options the unit started with,
 	// which its internal procedures start with too.
 	baseAlign Alignment

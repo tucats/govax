@@ -84,7 +84,7 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 				i = k
 			}
 
-		case isDigit(c), c == '.' && i+1 < j && isDigit(text[i+1]):
+		case isDigit(c), c == '.' && i+1 < j && isDigit(text[i+1]) && !closesWord(tokens):
 			// A number, including one starting with a decimal point (.5).
 			// plain says it must be digits only: a DO statement's label, or
 			// a type length after *.
@@ -218,6 +218,17 @@ func (l *lexer) definedOperator(tokens []Token, i, j int) int {
 	}
 
 	return i
+}
+
+// closesWord reports whether a period after tokens closes a word another
+// period opened after a name or a ): in R.AT.2.0, the period before 2 ends
+// .AT., which definedOperator left as a period and a name, R.AT perhaps being
+// a field (a constant never follows one), so it doesn't start the number .2.
+func closesWord(tokens []Token) bool {
+	n := len(tokens)
+
+	return n >= 3 && tokens[n-1].Kind == Name && tokens[n-2].Is(".") &&
+		(tokens[n-3].Kind == Name || tokens[n-3].Is(")"))
 }
 
 // dottedWord returns where a word of letters between periods, the first at i,

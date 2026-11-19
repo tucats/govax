@@ -20,7 +20,9 @@ What's changed in gfortran's copy only says in its dialect what VAX FORTRAN says
 
 The Fortran 90 corpus (PROGRAMS90) is given to gfortran as it is, each file in the form its type
 says, with -std=f95: gfortran has no -std=f90, and the corpus keeps Fortran 95's additions out by
-review. Its programs read name.in, if there is one, as their input.
+review. Its programs read name.in, if there is one, as their input. A program of several files
+names its main program's file first and the rest in the order their modules need; gfortran is
+given the rest first, then the main program's.
 
 What's normalized is only FORTRAN's carriage control: gfortran prints column 1 as text, and VMS
 acts on it; and the .out files' last line, SHOW SYMBOL's $STATUS.
@@ -120,6 +122,11 @@ PROGRAMS90 = {
     "stock": ["stock.f90"],
     "accounts": ["accounts.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
+    "standard": ["modules/standard/standard.f90", "modules/standard/globals.f90", "modules/standard/strings.f90",
+                 "modules/standard/library.f90", "modules/standard/renames.f90", "modules/standard/users.f90",
+                 "modules/standard/work.f90"],
+    "polys": ["modules/polys/polys.f90", "modules/polys/kinds.f90", "modules/polys/polynomials.f90",
+              "modules/polys/roots.f90", "modules/polys/report.f90", "modules/polys/table.for"],
 }
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.
@@ -215,7 +222,10 @@ def compare(name, work):
     if name in PROGRAMS90:
         files = PROGRAMS90[name]
         main = CORPUS90 / files[0]
-        sources = [str(CORPUS90 / file) for file in files]
+        # The main program's file is named first, for its .in and .out; the
+        # others follow in the order their modules need, and gfortran is given
+        # them first, so each module is compiled before a USE reads it.
+        sources = [str(CORPUS90 / file) for file in [*files[1:], files[0]]]
         flags = [*FLAGS90, f"-I{main.parent}"]
     else:
         files = PROGRAMS[name]

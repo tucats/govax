@@ -202,7 +202,7 @@ func (w *walk) of(x sema.Expr, mapping []int) sema.Expr {
 
 // index is the walk's loop d's index, from 1.
 func (w *walk) index(d int) sema.Expr {
-	return sema.NewVar(w.n.index[d], w.n.l.from.Position())
+	return sema.NewVar(w.n.index[d], w.n.l.here())
 }
 
 // indexes are every loop's index, loop 0's first.

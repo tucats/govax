@@ -907,7 +907,7 @@ does (`ADDF2`), and `INCL` and `DECL` add and subtract 1.
   `@n(AP)` for its offset, so the offset goes into the index instead:
   `SUBL3 #1,MEAN.I,R0` then `@MEAN.A(AP)[R0]`.
 - **Constants.** An integer is an immediate operand, `#n`. A REAL
-  constant is its bits in `$PDATA` (`$F1`; a longword for F_floating,
+  constant is its bits in `$PDATA` (`$KF1`; a longword for F_floating,
   more for the others, section 11),
   since MACRO reads `#n` in a floating instruction as a value to convert
   itself, and the compiler's own bits, folded by `vaxfloat`, are the ones
@@ -1062,7 +1062,7 @@ wrong, or by reading the architecture manual:
 - **Floating constants are data.** MACRO reads `#1.5` in a floating
   instruction as a number to convert itself; the compiler wants its own
   bits, folded by `vaxfloat` as the CPU would round (Decision 16), so a
-  D, G, or H constant is a datum in `$PDATA` (`AREA.$F1` below, 4D0), and
+  D, G, or H constant is a datum in `$PDATA` (`AREA.$KF1` below, 4D0), and
   an F constant stored is `MOVL #^X...` of its bits.
 - **Character comparisons are unsigned.** `CMPC3` and `CMPC5` set the
   condition codes as an unsigned comparison of the bytes, so their
@@ -1226,20 +1226,20 @@ that every name but SIZEOF can be passed.
 	PUSHAD	AREA.$K1                ; 1D0, by reference
 	CALLS	#1,G^MTH$DATAN
 	MOVD	R0,AREA.$T1             ; the result, in R0:R1
-	MULD3	AREA.$F1,AREA.$T1,R0    ; 4D0 times it, into R0:R1
+	MULD3	AREA.$KF1,AREA.$T1,R0    ; 4D0 times it, into R0:R1
 	MULD3	@AREA.R(AP),@AREA.R(AP),R2  ; R**2, into R2:R3
 	MULD3	R0,R2,@AREA.A(AP)
 ;    6        C = C*(0.0, 1.0) + R
-	MULF3	@AREA.C(AP),AREA.$F2,R0     ; the real part's tree
+	MULF3	@AREA.C(AP),AREA.$KF2,R0     ; the real part's tree
 	MOVL	#1,R1
-	MULF3	@AREA.C(AP)[R1],AREA.$F3,R1
+	MULF3	@AREA.C(AP)[R1],AREA.$KF3,R1
 	SUBF2	R1,R0
 	CVTFD	R0,R0
 	ADDD2	@AREA.R(AP),R0
 	CVTDF	R0,AREA.$T2
-	MULF3	@AREA.C(AP),AREA.$F3,R0     ; the imaginary part's
+	MULF3	@AREA.C(AP),AREA.$KF3,R0     ; the imaginary part's
 	MOVL	#1,R1
-	MULF3	@AREA.C(AP)[R1],AREA.$F2,R1
+	MULF3	@AREA.C(AP)[R1],AREA.$KF2,R1
 	ADDF2	R1,R0
 	CVTFD	R0,R0
 	MOVL	#1,R2
@@ -1491,7 +1491,7 @@ the dummy's type first, as an assignment to it would be:
 	MOVF	(R0)[R1],SCALE.$T1
 	MOVL	SCALE.$B1+16,R0
 	MOVL	@SCALE.$A3,R1
-	MULF3	SCALE.$F1,SCALE.$T1,(R0)[R1]
+	MULF3	SCALE.$KF1,SCALE.$T1,(R0)[R1]
 ```
 
 Since a reference is lowered like any expression, the temporaries live to the
@@ -4179,7 +4179,7 @@ indexes" (`FieldRef.At`), a scalar FieldRef that `fieldMem` reaches as any other
 	MULL3	R7,#2,R8
 TOUR.$1:				; array (line 7), dimension 1's body
 	MOVL	R8,R6
-	MULF3	TOUR.$F1,TOUR.PATH-8[R6],TOUR.PATH-4[R6]
+	MULF3	TOUR.$KF1,TOUR.PATH-8[R6],TOUR.PATH-4[R6]
 	ADDL2	#2,R8
 	AOBLEQ	#6,R7,TOUR.$1
 ```

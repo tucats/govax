@@ -388,7 +388,8 @@ qualifiers stay a subtask of their own.
    table's module variables (finding 13) (done 2026-11-19).
 7. **Programs end to end** (`testdata/fortran90/modules/`, each with a
    `compiles.txt` of the compile orders allowed beside `links.txt`; 11.3.3's and
-   12.1.2.2.2's examples among them), every mode, gfortran's witness.
+   12.1.2.2.2's examples among them), every mode, gfortran's witness (done
+   2026-11-19).
 8. **Close-out:** FORTRAN-INTERNALS.md's section 31 (separate compilation, what a
    module file is and why it is Fortran text, use association beside host
    association), MANUAL.md's 14.13, HELP FORTRAN.
@@ -673,3 +674,41 @@ Definition modules as module files stay for later (the plan's open question 2).
   `internal/fortran/modlisting_test.go` (`TestModuleListings`, with the modules and
   apart from them through their files; `TestModuleUnusedWarnings`;
   `TestModuleDebugTable`).
+- **2026-11-19:** Subtask 7, programs end to end. `TestFortran90Modules`
+  (`internal/console/fortranprograms_test.go`) reads a program's `compiles.txt`:
+  each line an order its files may be compiled in, a FORTRAN command per word
+  (`A B,C D` three commands), every order followed by every line of `links.txt`,
+  the module files deleted before each order so none stands in for one the order
+  hasn't written; and `name.in` for a program that reads the terminal.
+  `testdata/fortran90/modules/standard` is the standard's examples (11.3.3.1 to
+  11.3.3.6, 11.3.3.8, and 12.1.2.2.2) made to run over seven files, the
+  standard's text kept where it is code; `modules/polys` a polynomial library of
+  three modules in a chain (KINDS, POLYNOMIALS, ROOTS re-exporting it), a main
+  program using only the last, a user with an ONLY list and a rename of a module
+  variable, and a fixed-form user compiled `/NOF90`. Each runs in three compile
+  orders and two links, in every mode and both paging modes; their output was
+  worked by hand and is the same on gfortran (`compare.py`, which now gives
+  gfortran a program's other files before its main program's). They found five
+  defects, each fixed here and held by `internal/fortran/modprograms_test.go`:
+  a SAVE statement naming a module's variable was SAVECOMMON, its section being
+  a common block (`attributes.go`'s `saves`: a module's section is static, so
+  SAVE there changes nothing; a COMMON block's member is still refused); a
+  module's allocatable array had no descriptor header in its section, so
+  ALLOCATE saw no dimensions (codegen's `writeCommons` now writes each one's
+  unallocated descriptor from the module's own routine, as `$LOCAL` does a unit's);
+  a module's text whose interface bodies name the module's types, as the writer
+  makes them, couldn't be read, a body having no host (`analyzer.textTypes`, the
+  module whose text is read, and `typeNamed`, every lookup of a type by name); an
+  explicit-shape dummy's bound from an inquiry of an assumed-shape dummy, the
+  standard's `DIMENSION (SIZE (X, 2))`, crashed lowering, its entry code having
+  no statement (`lowerer.here`, the header's position then); and the floating
+  constants the code generator adds were `$Fn`, FORMAT n's block's name, so a
+  unit with both didn't assemble (now `$KFn`; the old corpus's MACRO files
+  change by that name alone, so `testdata/nof90.sum` was rewritten, the only
+  change to old programs' output). And one in the lexer, not modules': after a
+  name or `)`, the period closing `.AT.` was read as the start of a number in
+  `R .AT. 2.0` (`tokenize.go`'s `closesWord`). Choices made here: a fixed-form
+  `/NOF90` unit using a module has no defined operators, VAX FORTRAN reading
+  `A.B.C` as a field, so `polys`'s calls the module's functions; a compile order
+  that USEs a module before it is compiled isn't run, MODNOTFOUND being
+  `internal/dclcmd`'s tests'.

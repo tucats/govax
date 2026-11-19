@@ -24,7 +24,7 @@ SUB.$A5:
 	.BLKL	1			; S's longword of the argument list, set at each entry point
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
-SUB.$F1:
+SUB.$KF1:
 	.LONG	^X00004080		; 1.0
 SUB.$K1:
 	.ASCII	/X/
@@ -45,7 +45,7 @@ SUB.$K1:
 ;    9        ENTRY BUS(B, A)
 SUB.$1:					; ENTRY BUS
 ;   10        B = A + 1.0
-	ADDF3	@SUB.$A1,SUB.$F1,@SUB.$A2
+	ADDF3	@SUB.$A1,SUB.$KF1,@SUB.$A2
 ;   11        RETURN
 	RET
 ;   12        ENTRY ARR(I, V)
@@ -95,7 +95,7 @@ F.$A1:	.BLKL	1			; X's longword of the argument list, set at each entry point
 F.$E:	.BLKL	1			; the entry point the routine was called by
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
-F.$F1:	.LONG	^X00004100,^X00000000	; 2D0
+F.$KF1:	.LONG	^X00004100,^X00000000	; 2D0
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;   19
@@ -133,7 +133,7 @@ F.$8:
 ;   28        ENTRY G
 F.$9:					; ENTRY G
 ;   29        G = 2.0D0
-	MOVD	F.$F1,F.G		; 2D0
+	MOVD	F.$KF1,F.G		; 2D0
 ;   30        END
 	CASEL	F.$E,#1,#2
 F.$10:

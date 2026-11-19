@@ -14,7 +14,15 @@ in `fortran90PagingPrograms` (all of them so far).
 `modules/` holds programs of several files, a directory each, run by
 `TestFortran90Modules` once per line of its `links.txt`, as
 `testdata/fortran/modules`'s are. Its sources may be of either form: `.f90`
-free, `.for` fixed.
+free, `.for` fixed. A program of modules has a `compiles.txt` too (Phase
+106, subtask 7): each line an order its files may be compiled in, a FORTRAN
+command per word (`A B,C D` is three commands, the second compiling B and C),
+each module found in its compilation or in the module file an earlier
+command wrote; every order is followed by every link, with no module file
+left from the order before. Without one, a single FORTRAN command compiles
+every file. A program that reads the terminal has `name.in`. In
+`compare.py` such a program names its main program's file first and the
+rest in the order their modules need.
 
 The expected output is worked by hand from the standard (ISO/IEC 1539:1991)
 and the *VAX FORTRAN Language Reference Manual* for what FTNRTL prints, never
@@ -107,4 +115,6 @@ its own.
 | `modprocs.f90` | Module procedures (Phase 106, subtask 3): a generic name and two defined operators of module procedures, a module procedure with an internal procedure of its own counting in the module's variable, a recursive one, one taking an assumed-shape array, one returning an array of its argument's size, one taking a dummy procedure, and a module procedure passed as an actual argument. The same on gfortran |
 | `modaccess.f90` | Access and association (Phase 106, subtask 4): a module whose default is PRIVATE, with private data, a public type whose components are private, and a public generic name whose specifics are private; a second module that uses it by an ONLY list with a rename and passes some of it on, keeping one name private; a program that reaches one entity by two paths, joins two ONLY lists of one module, renames a generic name, and has a name two modules give that it never references; an internal procedure whose USE hides its host's name. The same on gfortran |
 | `modules/mixed` | Both source forms in one program: `mixed.f90` and `report.f90` free, `fill.for` fixed, and `limits.inc`, INCLUDEd by both forms, written to read the same way in either |
+| `modules/standard` | The standard's examples of modules (11.3.3 and 12.1.2.2.2) made to run, over seven files: a COMMON block declared once in a module and seen by a unit declaring it the FORTRAN-77 way; global data by ONLY lists and by renames beside a local name of the same spelling, after a lone SAVE; a derived type's array; global allocatable arrays with the SAVE attribute, allocated in one file from a size read at the terminal (`standard.in`) and used in another; a procedure library's interface, its explicit-shape dummies' bounds an inquiry of an assumed-shape dummy, called with keywords in any order; `//` and `+` extended to derived types by external functions whose interfaces a second module gives, the types reached through it; the renaming example (11.3.3.8) and the two JZs, each by a name of its own; the host-and-use example with the standard's comments. Compiled in three orders, linked in two. The same on gfortran |
+| `modules/polys` | Polynomials end to end: a kinds module, POLYNOMIALS (PRIVATE by default, a type with private components, `+`, `*` of two kinds, and `.AT.` by module procedures, a counter of polynomials made), and ROOTS (Newton's method with OPTIONAL arguments, re-exporting POLYNOMIALS whole), each in its own file; a main program using only ROOTS; a subroutine with an ONLY list and a rename of the module's variable; a fixed-form subroutine, compiled /NOF90, using the module and changing its variable. Compiled in three orders, linked in two. The same on gfortran |
 | `modules/shortlist` | VMS's shorter argument list (Phase 103, subtask 6): a FORTRAN-77 caller in a file of its own leaving OPTS's last OPTIONAL dummies out altogether, and a null argument; PRESENT tells by the argument count, and OPTS passes them on to its internal procedure as absent. DEC's null argument keeps it from gfortran |

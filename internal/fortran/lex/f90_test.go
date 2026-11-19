@@ -83,6 +83,12 @@ func TestF90Tokens(t *testing.T) {
 		{"X = A.B.C", "assignment: X = A . B . C"},
 		{"X = R(1).F.EQ.2", "assignment: X = R ( 1 ) . F .EQ. 2"},
 
+		// The period closing such a word after a name or ) closes it, and
+		// doesn't start a number (R .AT. 2.0, Phase 106's subtask 7).
+		{"X = R.AT.2.0_8", "assignment: X = R . AT . 2.0_8"},
+		{"X = F(Y).AT.2", "assignment: X = F ( Y ) . AT . 2"},
+		{"X = R.AT..5", "assignment: X = R . AT . .5"},
+
 		// Old numbers are read as before.
 		{"X = 1.5 + 2. + .5 + 1E3 + 2.5D0", "assignment: X = 1.5 + 2. + .5 + 1E3 + 2.5D0"},
 		{"IF (I.EQ.1.AND.J.EQ.2) X = 1.E5", "logical IF: ( I .EQ. 1 .AND. J .EQ. 2 ) / assignment: X = 1.E5"},

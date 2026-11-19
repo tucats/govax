@@ -164,7 +164,7 @@ func (l *lowerer) arrayTemp(t sema.Type, shape []int) *sema.ArrayRef {
 	l.bound[sym] = &Mem{Cell: c, T: key.t}
 	l.boundArrays = append(l.boundArrays, sym)
 
-	return sema.NewArrayRef(sym, l.from.Position())
+	return sema.NewArrayRef(sym, l.here())
 }
 
 // arrayTempKey is what array temporaries are pooled by: their element type and
@@ -228,7 +228,7 @@ func (l *lowerer) newNest(rank int, order *sema.ArrayOrder) *arrayNest {
 	// point, before any statement.
 	name := "array (at entry)"
 	if l.from != nil {
-		name = "array (line " + strconv.Itoa(l.from.Position().Line) + ")"
+		name = "array (line " + strconv.Itoa(l.here().Line) + ")"
 	}
 
 	n := &arrayNest{l: l, name: name, leaves: map[sema.Expr]*arrayLeaf{}, order: order}
@@ -302,7 +302,7 @@ func (n *arrayNest) loops(d int, body func()) {
 		return
 	}
 
-	pos := n.l.from.Position()
+	pos := n.l.here()
 	one := sema.IntConstAt(1, pos)
 	name := n.name + ", dimension " + strconv.Itoa(d+1)
 	var start, limit, step sema.Expr = one, n.extents[d], one
@@ -319,7 +319,7 @@ func (n *arrayNest) loops(d int, body func()) {
 // keepIR is the INTEGER value e, as the loops use it: a constant as it is,
 // anything else computed now into a temporary.
 func (n *arrayNest) keepIR(e Expr) sema.Expr {
-	pos := n.l.from.Position()
+	pos := n.l.here()
 
 	if c, ok := e.(*Const); ok {
 		return sema.IntConstAt(int(c.Int()), pos)
@@ -351,7 +351,7 @@ func (n *arrayNest) bind(m *Mem, t sema.Type) sema.Expr {
 	n.l.bound[sym] = m
 	n.kept = append(n.kept, sym)
 
-	return sema.NewVar(sym, n.l.from.Position())
+	return sema.NewVar(sym, n.l.here())
 }
 
 // hoist is the scalar e as the loops use it: as it is if the loops compute it
@@ -685,7 +685,7 @@ func (n *arrayNest) atLeastZero(e Expr) Expr {
 // extent is dimension d's extent for the loops: the shape's if it is known when
 // compiling (the target's, or the value's), or the target's computed now.
 func (n *arrayNest) extent(d int, target, value sema.Expr) sema.Expr {
-	pos := n.l.from.Position()
+	pos := n.l.here()
 
 	for _, s := range []sema.Shape{target.Shape(), value.Shape()} {
 		if d < len(s) && s[d].Known {
