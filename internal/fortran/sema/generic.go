@@ -173,8 +173,8 @@ func specificPos(s *Symbol) diag.Position {
 
 // dummyShape is what of a dummy argument tells specific procedures apart: its
 // name, type and kind, rank, whether it is OPTIONAL, and whether it is a
-// procedure. A type of Invalid is any type, and a rank of -1 any rank, as an
-// intrinsic function's table gives them.
+// procedure. A type of Invalid is any type, a rank of -1 any rank, and -2 an
+// array of any rank, as an intrinsic function's table gives them.
 type dummyShape struct {
 	name     string
 	t        Type
@@ -201,6 +201,8 @@ func differ(x, y dummyShape) bool {
 	case x.proc || y.proc:
 		return x.proc != y.proc
 	case x.rank >= 0 && y.rank >= 0 && x.rank != y.rank:
+		return true
+	case x.rank == -2 && y.rank == 0, x.rank == 0 && y.rank == -2:
 		return true
 	case x.t.Kind == Invalid || y.t.Kind == Invalid:
 		return false
@@ -245,8 +247,8 @@ func tellsApart(p, q []dummyShape) bool {
 // specific procedure with the dummies p takes, so that the two can't be told
 // apart: some row of the intrinsic, with some number of arguments it allows, is
 // a specific that 14.1.2.3 can't tell from p. An elemental function takes an
-// array of any rank; another, scalars (ours: Phase 108 brings the
-// transformational functions' own ranks).
+// array of any rank; another, what its table's dummies say (intrinsics.go):
+// SUM's ARRAY an array of any rank, its DIM a scalar.
 func takenByIntrinsic(p []dummyShape, name string) bool {
 	for _, f := range formsNamed(name) {
 		hi := f.max
@@ -258,8 +260,12 @@ func takenByIntrinsic(p []dummyShape, name string) bool {
 			row := make([]dummyShape, n)
 			for i := range row {
 				row[i] = dummyShape{t: f.arg}
-				if f.class == 'E' {
+
+				switch {
+				case f.class == 'E':
 					row[i].rank = -1
+				case i < len(f.dummies):
+					row[i].rank = f.dummies[i].rank
 				}
 
 				if i < len(f.dummies) {

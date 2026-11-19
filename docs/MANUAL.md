@@ -7253,7 +7253,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$IDATE(i, j, k)`, `FTN$JDATE(i, j, k)` | IDATE: the month, the day, and the year's last two digits, as words or as longwords |
 | `FTN$SECNDS(x)` | SECNDS, a REAL\*4 in R0: the seconds since midnight less `x`, plus a day once if that is negative |
 | `FTN$EXIT([status])`, `FTN$EXIT_W([status])` | EXIT: `$EXIT` with a longword's or a word's status, SS$_NORMAL without one |
-| `FTN$IMVBITS(m, i, len, n, j)`, `FTN$JMVBITS(...)` | MVBITS: EXTZV and INSV, every argument a word's address or a longword's |
+| `FTN$IMVBITS(m, i, len, n, j)`, `FTN$JMVBITS(...)`, `FTN$BMVBITS(...)` | MVBITS: EXTZV and INSV, every argument a word's address, a longword's, or (for an `INTEGER(1)` TO) a byte's |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |
@@ -7835,7 +7835,7 @@ it finds them open.
 | `CALL EXIT[(status)]` | Ends the program, closing units; SS\$_NORMAL without a status |
 | `y = SECNDS(x)` | REAL\*4: the seconds since midnight less x, plus a day if that's negative |
 | `y = RAN(seed)` | REAL\*4, from an INTEGER\*4 seed it changes; `MTH$RANDOM` |
-| `CALL MVBITS(m, i, len, n, j)` | Moves `len` bits from position `i` of `m` to position `j` of `n`; other bits stay |
+| `CALL MVBITS(m, i, len, n, j)` | Moves `len` bits from position `i` of `m` to position `j` of `n`; other bits stay. Fortran 90's intrinsic subroutine since Phase 108: `m` any integer expression of `n`'s kind, the arguments by keyword too (`FROM`, `FROMPOS`, `LEN`, `TO`, `TOPOS`), and on arrays an element at a time |
 
 A routine of your own with one of these names wins, and so does an `EXTERNAL` statement
 naming it.
@@ -8489,7 +8489,8 @@ would give `COMPLEX(16)`: write `CMPLX(X, KIND=16)` for that. Of the intrinsic f
 **The kind and inquiry functions** (the standard's 13.7.1 and 13.13). `KIND(X)` is the kind
 of `X`'s type, and `SELECTED_INT_KIND(R)` and `SELECTED_REAL_KIND(P, R)` the kind of least
 range or precision that holds `R` decimal digits of range and `P` of precision, or -1 (no
-such precision), -2 (no such range), or -3 (neither). The numeric model's inquiries ask
+such precision), -2 (no such range), or -3 (neither); of values not constant they are
+computed when the program runs. The numeric model's inquiries ask
 about a type, never a value: `HUGE`, `TINY`, `EPSILON`, `DIGITS`, `PRECISION`, `RANGE`,
 `RADIX`, `MINEXPONENT`, `MAXEXPONENT`, and `BIT_SIZE`. Each is answered when compiling, so
 it may name a kind in a declaration or give a PARAMETER its value, and the answers are the

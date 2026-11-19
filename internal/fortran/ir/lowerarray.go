@@ -880,3 +880,63 @@ func (n *arrayNest) check(e Expr) {
 
 	n.l.emit(&Assign{origin: n.l.origin(), Dst: n.l.temp(Long), Src: e})
 }
+
+// elementalCall lowers an elemental subroutine's call on arrays (Fortran 90's
+// MVBITS; sema's Call.Shape): a nest of loops over their shape, the leftmost
+// dimension innermost, calling the subroutine once for each element with each
+// array argument's element there and each scalar one as it is, a scalar that
+// isn't a variable or a constant computed once before the loops. The calls go
+// in array element order, which is what the standard asks when the argument
+// TO is FROM itself or overlaps it (13.11). The first array argument is the
+// one whose extents the loops take where none is known when compiling.
+func (l *lowerer) elementalCall(s *sema.Call) {
+	var target sema.Expr
+
+	var leaves []sema.Expr
+
+	for _, a := range s.Args {
+		if len(a.Expr.Shape()) > 0 && target == nil {
+			target = a.Expr
+		}
+
+		leaves = append(leaves, sema.Leaves(a.Expr)...)
+	}
+
+	n := l.newNest(len(s.Shape), nil)
+	rank := len(n.index)
+
+	for _, leaf := range leaves {
+		n.prepare(leaf)
+	}
+
+	n.extents = make([]sema.Expr, rank)
+
+	for d := range rank {
+		n.extents[d] = n.extent(d, target, target)
+
+		for _, a := range s.Args {
+			if sh := a.Expr.Shape(); d < len(sh) && sh[d].Known {
+				n.extents[d] = sema.IntConstAt(sh[d].Size, l.here())
+
+				break
+			}
+		}
+	}
+
+	if l.unit.Checks.Bounds {
+		n.checkShapes(leaves)
+		n.checkSubscripts()
+	}
+
+	each := *s
+	each.Shape = nil
+	each.Args = make([]sema.Arg, len(s.Args))
+
+	for i, a := range s.Args {
+		each.Args[i] = a
+		each.Args[i].Expr = sema.Scalarize(a.Expr, n.element, n.hoist)
+	}
+
+	n.loops(rank-1, func() { l.call(&each) })
+	n.done()
+}

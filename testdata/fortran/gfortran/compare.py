@@ -59,6 +59,7 @@ PROGRAMS90 = {
     "modprocs": ["modprocs.f90"],
     "modaccess": ["modaccess.f90"],
     "bytes": ["bytes.f90"],
+    "keywords": ["keywords.f90"],
     "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],

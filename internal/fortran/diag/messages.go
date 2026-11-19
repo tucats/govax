@@ -999,6 +999,13 @@ var messages = map[string]kind{
 	// arguments.
 	"INTRINARGS": {Error, "the intrinsic function %s takes %s, not %d"},
 
+	// INTRINSUBARGS and NULLINTRINSUB are the same of an intrinsic
+	// subroutine, Fortran 90's MVBITS, DATE_AND_TIME, SYSTEM_CLOCK,
+	// RANDOM_NUMBER, and RANDOM_SEED (docs/planning/PHASE-108 - Fortran 90
+	// intrinsic procedures.md, finding 2; sema/intrinsicsub.go).
+	"INTRINSUBARGS": {Error, "the intrinsic subroutine %s takes %s, not %d"},
+	"NULLINTRINSUB": {Error, "an argument of the intrinsic subroutine %s can't be left out"},
+
 	// BADARG is an intrinsic function's argument of a type or value it
 	// doesn't take.
 	"BADARG": {Error, "the intrinsic function %s's arguments must be %s, and this one is %s"},

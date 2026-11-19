@@ -347,9 +347,9 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    `fortran90Table`, ISHFTC's optional SIZE, question 3's kinds, the intrinsic
    subroutines' table and MVBITS as the standard's (elemental too), GENERICINTRINSIC's
    transformational ranks, SELECTED_*_KIND of values (findings 1, 2, 5's last part,
-   8's last part).
+   8's last part) (done 2026-11-19).
 3. **Character functions** and zero lengths (findings 3, 4), FTNRTL's entries,
-   GSMATCH 1,26, condition 305.
+   GSMATCH 1,27 (subtask 2's FTN$BMVBITS took 1,26), condition 305.
 4. **Numeric functions and COMPLEX(16)** (findings 5, 6).
 5. **The model functions** in F, D, G, and H (finding 7).
 6. **TRANSFER** (finding 8).
@@ -441,3 +441,39 @@ The author read the survey and accepted every recommendation:
   answers"), and settled question 4's open point on the simh VAX: VMS 7.1's
   `SYS$TIMEZONE_DIFFERENTIAL` is `"-18000"` in LNM$SYSTEM_TABLE, a signed count of
   seconds (finding 9). No other probe is needed before the implementation.
+- **2026-11-19:** Subtask 2, the table and keywords. Every row of `sema`'s
+  `intrinsicTable` now has its class and dummies, Table D-3's by the standard's names
+  (DEC's by the HP manual's), read by `readDummies`: `...` after MAX's and MIN's A1 and A2
+  for more by position (`form.variadic`), `-` for NWORKERS's none, and a rank on a
+  transformational or inquiry function's array dummies (`ARRAY[]`, `VECTOR[1]`,
+  `MATRIX[2]`, `X[*]`). A specific name takes its generic's dummies but KIND
+  (`dummiesOf`); `keywordSlots` (`intrinsickeys.go`) is the one ordering of keyword
+  arguments for functions and subroutines, too few by position still INTRINARGS, as
+  before, and MISSINGARG only after a keyword. The new names are `fortran90Table`'s:
+  ACHAR and IACHAR as CHAR's and ICHAR's rows, done; the rest `LATER` rows, NOTIMPL by
+  name ("the intrinsic function TRIM") until their subtasks, so under `/F90` they are no
+  longer silently external functions. INDEX takes BACK (`.FALSE.` today's search, any
+  other NOTIMPL until subtask 3, `indexBack`); ISHFTC's SIZE is optional, BIT_SIZE (I)
+  of I's own type when left out (8 for an INTEGER(1), shifted as a word); CHAR takes
+  KIND. Under `/F90` IBITS, IBCLR, IBSET, ISHFT, and ISHFTC are of I's kind, the other
+  arguments converted to it before the row is chosen (`iKindFunctions`; question 3);
+  under `/NOF90` Table D-3's rules stand. A fix: ISHFT of an INTEGER(1) zero-extends it
+  to the word it is shifted in (`intrinsicArgs`), so `ISHFT(-1_1, -4)` is 15, not -1.
+  SELECTED_INT_KIND and SELECTED_REAL_KIND of values not constant are a chain of MERGEs
+  of constants on comparisons (`inquiry.go`'s `selectedValue`), each argument read once
+  per comparison (unconfirmed: a function reference as the argument is called that many
+  times; the standard leaves it open). GENERICINTRINSIC reads the table's ranks
+  (`takenByIntrinsic`, `dummyShape`'s rank -2 for an array of any rank): a specific of SUM
+  taking a scalar is told from SUM, one taking an array isn't. The intrinsic subroutines
+  are `intrinsicsub.go`'s table (MVBITS elemental; DATE_AND_TIME, SYSTEM_CLOCK,
+  RANDOM_NUMBER, and RANDOM_SEED NOTIMPL until subtask 7), intrinsic under `/F90` or by
+  an INTRINSIC statement, MVBITS always, a unit of the file of the name winning; new
+  messages INTRINSUBARGS and NULLINTRINSUB. MVBITS is the standard's under both
+  settings (question 8): FROM any integer expression of TO's kind (a constant of another
+  converted as assigned, INTRANGE past it; a value of another SYSLEN), the positions any
+  integer kind converted to TO's, TO a variable, element, array, or section; on arrays a
+  `Call` with a `Shape`, lowered by `ir`'s `elementalCall` as a loop nest calling the
+  routine per element in array element order (TO may be FROM). FTNRTL's `FTN$BMVBITS`
+  for an INTEGER(1) TO, at vector offset 736, GSMATCH 1,26. `testdata/fortran90/
+  keywords.f90` runs it all in every mode, and gfortran prints the same
+  (`compare.py`); `sema`'s `intrinsics108_test.go` holds the dumps and messages.

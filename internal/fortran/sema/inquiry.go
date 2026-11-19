@@ -346,3 +346,118 @@ func (a *analyzer) selectedRealKind(p, r *int64) int {
 
 	return -2
 }
+
+// selectedValue is SELECTED_INT_KIND(R) (how SIK) or SELECTED_REAL_KIND(P, R)
+// (SRK) of values not constant (docs/planning/PHASE-108 - Fortran 90
+// intrinsic procedures.md, finding 5): the same choice as selectedKind's, made
+// when the program runs by a chain of comparisons, written as MERGEs of
+// constants, which lowering writes in line:
+//
+//	SELECTED_INT_KIND(R) = MERGE(1, MERGE(2, MERGE(4, -1, R <= 9), R <= 4), R <= 2)
+//
+// SELECTED_REAL_KIND's kinds are the unit's REAL*8 D or G, as when compiling.
+// Each argument is read as many times as the chain compares it, so one with a
+// side effect (a function's reference) has it more than once.
+func (a *analyzer) selectedValue(e *ast.Apply, how string, list []ast.Expr) Expr {
+	values := make([]Expr, len(list))
+
+	for i, x := range list {
+		if x == nil {
+			continue
+		}
+
+		v := a.value(x)
+
+		switch t := v.Type(); {
+		case t.Kind == Invalid:
+			return a.bad(e.Pos)
+		case t.Kind != Integer:
+			a.report("BADARG", x.Position(), e.Name, "INTEGER", t.String())
+
+			return a.bad(e.Pos)
+		}
+
+		values[i] = a.convert(v, IntegerType)
+	}
+
+	pos := e.Pos
+	answer := func(k int) Expr { return a.intAnswer(int64(k), pos) }
+
+	// atMost is x <= n, or nil (always true) for an argument left out.
+	atMost := func(x Expr, n int) Expr {
+		if x == nil {
+			return nil
+		}
+
+		return &Compare{exprBase{T: LogicalType, Pos: pos}, ast.LE, x, IntConstAt(n, pos)}
+	}
+
+	both := func(x, y Expr) Expr {
+		switch {
+		case x == nil:
+			return y
+		case y == nil:
+			return x
+		}
+
+		return &Binary{exprBase{T: LogicalType, Pos: pos}, ast.And, x, y}
+	}
+
+	not := func(x Expr) Expr { return &Unary{exprBase{T: LogicalType, Pos: pos}, ast.Not, x} }
+
+	merge := func(yes, no, cond Expr) Expr {
+		if cond == nil {
+			return yes
+		}
+
+		return &IntrinsicRef{exprBase{T: a.defaultInt, Pos: pos}, "MERGE", MergeOp, []Expr{yes, no, cond}, ""}
+	}
+
+	if how == "SIK" {
+		v := answer(-1)
+
+		for _, k := range []int{4, 2, 1} {
+			v = merge(answer(k), v, atMost(values[0], intRangeDigits(Type{Kind: Integer, Size: k})))
+		}
+
+		return v
+	}
+
+	var p, r Expr
+
+	switch len(values) {
+	case 0:
+		a.report("MISSINGARG", pos, "the intrinsic function "+e.Name, "P or R")
+
+		return a.bad(pos)
+	case 2:
+		r = values[1]
+	}
+
+	p = values[0]
+
+	// What none has: precision (-1), range (-2), or both (-3).
+	maxP, maxR := 0, 0
+	for _, k := range []int{4, 8, 16} {
+		f := a.format(Type{Kind: Real, Size: k})
+		maxP, maxR = max(maxP, realPrecision(f)), max(maxR, modelRange(f))
+	}
+
+	someP, someR := atMost(p, maxP), atMost(r, maxR)
+
+	var v Expr = answer(-2)
+	if someP != nil {
+		v = merge(answer(-1), v, not(someP))
+	}
+
+	if someP != nil && someR != nil {
+		v = merge(answer(-3), v, both(not(someP), not(someR)))
+	}
+
+	for _, k := range []int{16, 8, 4} {
+		f := a.format(Type{Kind: Real, Size: k})
+		v = merge(answer(k), v, both(atMost(p, realPrecision(f)), atMost(r, modelRange(f))))
+	}
+
+	return v
+}

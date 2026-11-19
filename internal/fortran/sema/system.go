@@ -3,7 +3,8 @@ package sema
 import "github.com/tucats/govax/internal/fortran/ast"
 
 // The system subroutines and functions of the 1988 VAX FORTRAN Language
-// Reference Manual's D.4 and D.5.3, which FORTRAN's run-time library provides.
+// Reference Manual's D.4, which FORTRAN's run-time library provides. D.5.3's
+// MVBITS is Fortran 90's intrinsic subroutine now (intrinsicsub.go).
 // A program calls them as it would its own, but they aren't quite ordinary
 // calls: a routine gets only addresses and nothing of what's at them, so the
 // compiler chooses among FTNRTL's routines by the arguments it can see, as FORRTL
@@ -26,7 +27,6 @@ var systemSubroutines = map[string]func(*analyzer, *ast.CallStmt, []ast.Expr) St
 	"IDATE":  (*analyzer).systemIDate,
 	"ERRSNS": (*analyzer).errsns,
 	"EXIT":   (*analyzer).systemExit,
-	"MVBITS": (*analyzer).systemMVBits,
 }
 
 // systemFunction is a function that takes one argument and is REAL*4 whatever
@@ -253,48 +253,4 @@ func (a *analyzer) systemExit(s *ast.CallStmt, list []ast.Expr) Stmt {
 	}
 
 	return systemCall(s, "FTN$EXIT", []Arg{arg})
-}
-
-// systemMVBits analyzes CALL MVBITS(m,i,len,n,j) (D.5.3). m and n are places
-// whose length chooses the routine, which reads every argument at that length,
-// so i, len, and j, which are expressions, are converted to it (the manual's rule
-// that all are of one length, with its allowance for values in range, and a
-// constant has whatever length the unit's default gives it).
-func (a *analyzer) systemMVBits(s *ast.CallStmt, list []ast.Expr) Stmt {
-	if len(list) != 5 {
-		a.report("SYSCOUNT", s.NamePos, s.Name, "5 arguments", len(list))
-
-		return nil
-	}
-
-	args := a.args(list)
-	size := 0
-
-	a.noteAssigned(args[3].Expr)
-
-	if !a.systemPlace(s, args[0], &size) || !a.systemPlace(s, args[3], &size) {
-		return nil
-	}
-
-	for _, i := range []int{1, 2, 4} {
-		e := args[i].Expr
-
-		if e == nil || !isSystemInteger(e.Type()) || args[i].Mode != ByDefault {
-			if e == nil {
-				a.report("SYSARG", s.NamePos, s.Name, "an integer expression where it says a position or a length")
-			} else if e.Type().Kind != Invalid {
-				a.report("SYSARG", e.Position(), s.Name, "an integer expression where it says a position or a length")
-			}
-
-			return nil
-		}
-
-		args[i].Expr = a.convert(e, Type{Kind: Integer, Size: size})
-	}
-
-	if size == 2 {
-		return systemCall(s, "FTN$IMVBITS", args)
-	}
-
-	return systemCall(s, "FTN$JMVBITS", args)
 }

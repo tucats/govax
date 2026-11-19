@@ -36,8 +36,9 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	if hasNull(slots.args) && dummiesOf(e.Name, forms) == nil {
-		a.report("NULLINTRINARG", e.Pos, e.Name)
+	if forms[0].how == "LATER" {
+		// A function a later subtask of Phase 108 brings.
+		a.notImplForm(e.Pos, "the intrinsic function "+e.Name)
 
 		return a.bad(e.Pos)
 	}
@@ -60,9 +61,7 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 	case selected:
 		// A constant's was folded (apply); this is a value's.
-		a.notImplForm(e.Pos, e.Name+" of a value not constant")
-
-		return a.bad(e.Pos)
+		return a.selectedValue(e, forms[0].how, slots.args)
 	}
 
 	if e.Name == "SIZEOF" {
@@ -126,6 +125,26 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.merge(e, args, shape)
 	}
 
+	if forms[0].how == "INDEX" && len(args) == 3 {
+		// INDEX's BACK: .FALSE. is today's search; any other, subtask 3's.
+		if args = a.indexBack(e, args); args == nil {
+			return a.bad(e.Pos)
+		}
+	}
+
+	// I's kind (finding 1, the author's answer 3): under /F90 the bit
+	// functions are of I's type, the other arguments converted to it.
+	iType := invalid
+	if a.f90 && iKindFunctions[forms[0].generic] && e.Name == forms[0].generic && args[0].Type().Kind == Integer {
+		iType = args[0].Type()
+
+		for i := 1; i < len(args); i++ {
+			if args[i].Type().Kind == Integer {
+				args[i] = a.convert(args[i], iType)
+			}
+		}
+	}
+
 	// KIND= makes the result that kind of the result's type.
 	want := invalid
 	if slots.kind != nil {
@@ -165,12 +184,20 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
+	if f.how == "SHIFTC" && len(args) == 2 {
+		// ISHFTC's SIZE left out is BIT_SIZE(I) (13.13.53), of I's own type:
+		// an INTEGER(1)'s 8, though it is shifted as a word.
+		args = append(args, IntConstAt(8*args[0].Type().Size, e.Pos))
+	}
+
 	v := a.intrinsicValue(e, f, a.intrinsicArgs(f, args))
 
 	switch {
 	case v.Type().Kind == Invalid:
 	case want.Kind != Invalid:
 		v = a.convert(v, want)
+	case iType.Kind != Invalid && v.Type().Kind == Integer:
+		v = a.convert(v, iType)
 	case a.byteResult(e.Name, forms, f, args):
 		v = a.convert(v, byteType)
 	}
@@ -557,14 +584,44 @@ func (a *analyzer) argumentType(e *ast.Apply, forms []form, args []Expr) (Type, 
 	return t, true
 }
 
+// iKindFunctions are the bit functions whose result is I's kind in Fortran 90
+// (13.13.43, .44, .46, .52, .53), where VAX FORTRAN's IBITS, IBCLR, and ISHFTC
+// of an INTEGER*2 are INTEGER*4 (Table D-3) and an INTEGER*2 I beside an
+// INTEGER*4 argument is shifted as a longword (D.5.2).
+var iKindFunctions = map[string]bool{"IBITS": true, "IBCLR": true, "IBSET": true, "ISHFT": true, "ISHFTC": true}
+
+// indexBack is INDEX(STRING, SUBSTRING, BACK)'s arguments with BACK, a LOGICAL
+// scalar, taken out: .FALSE. searches forward, as INDEX always has. Any other
+// BACK is subtask 3's (NOTIMPL); nil after a message.
+func (a *analyzer) indexBack(e *ast.Apply, args []Expr) []Expr {
+	back := args[2]
+
+	switch c, ok := back.(*Const); {
+	case back.Type().Kind != Logical || rankOf(back) > 0:
+		a.report("BADARG", back.Position(), e.Name, "a LOGICAL scalar BACK", back.Type().String())
+
+		return nil
+	case !ok || c.Truth():
+		a.notImplForm(back.Position(), "INDEX's BACK other than .FALSE.")
+
+		return nil
+	}
+
+	return args[:2]
+}
+
 // intrinsicArgs are the arguments converted to the types the row takes: to
 // its argument type, or for CMPLX to its result's parts' type, the two
 // arguments each on its own. A CHARACTER argument, and CHAR's, is as it is.
+// An INTEGER(1) I is shifted as a word (no row takes it), so it is extended
+// with zeros: its high bits are none of its own.
 func (a *analyzer) intrinsicArgs(f form, args []Expr) []Expr {
 	out := make([]Expr, len(args))
 
 	for i, x := range args {
 		switch {
+		case i == 0 && f.how == "SHIFT" && x.Type() == byteType:
+			out[i] = &IntrinsicRef{exprBase{T: f.arg, Pos: x.Position(), S: x.Shape()}, "ZEXT", ZextOp, []Expr{x}, ""}
 		case f.how == "CMPLX" && len(args) == 2:
 			out[i] = a.convert(x, f.result.part())
 		case f.how == "CHAR", f.arg.Kind == Character:

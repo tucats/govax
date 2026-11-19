@@ -1,10 +1,12 @@
 package sema
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
 )
 
 // Keyword arguments and KIND= for the intrinsic functions (docs/planning/
@@ -16,9 +18,8 @@ import (
 // INT's KIND. The standard's 12.4.1 is the rule: the arguments without a
 // keyword come first and fill the dummies in order, those with one fill the
 // dummy they name, no dummy twice, and only an optional dummy may be left out.
-// The table's last column (intrinsics.go) is each function's dummies; a
-// function without them takes its arguments by position only, as VAX FORTRAN
-// always did.
+// The table's last column (intrinsics.go) is each function's dummies, every
+// function's since Phase 108 (Table D-3's by the standard's names).
 //
 // A function's KIND (13.13: INT, REAL, CMPLX, NINT, AINT, ANINT, LOGICAL) is
 // the kind of its result. It is taken out of the arguments before the row is
@@ -27,8 +28,7 @@ import (
 // compiling.
 
 // intrinsicArgs is a reference's arguments in its function's dummies' order,
-// and its KIND, if it has one (nil if not). A function without dummies' names
-// has its arguments as written. An optional dummy left out before one given
+// and its KIND, if it has one (nil if not). An optional dummy left out before one given
 // is nil (SELECTED_REAL_KIND(R=40)'s P); those at the end are left off.
 type intrinsicArgs struct {
 	args []ast.Expr
@@ -36,62 +36,93 @@ type intrinsicArgs struct {
 }
 
 // dummiesOf is the dummies a reference to name by forms may name: the rows'
-// own, if they have them and the reference uses the name they were given
-// for. A specific name (IINT of INT's row) takes its arguments by position.
+// own, which a specific name (IINT of INT's rows) shares with its generic,
+// but for KIND: a specific name's result has one kind.
 func dummiesOf(name string, forms []form) []dummyArg {
 	f := forms[0]
-	if f.dummies == nil || f.generic != "" && f.generic != name {
-		return nil
+	if f.generic == "" || f.generic == name {
+		return f.dummies
+	}
+
+	if k := dummyIndex(f.dummies, "KIND"); k >= 0 {
+		return slices.Delete(slices.Clone(f.dummies), k, k+1)
 	}
 
 	return f.dummies
 }
 
 // intrinsicSlots puts e's arguments in its function's dummies' order
-// (intrinsicArgs), reporting what's wrong: a keyword the function hasn't
-// (KEYWORDNAME), a dummy given twice (KEYWORDTWICE), an argument without a
-// keyword after one with (KEYWORDORDER), more arguments than dummies
-// (INTRINARGS), a null argument (NULLINTRINARG), and a required one left out
-// (MISSINGARG). quiet leaves them unreported, for the constant evaluator's
-// first try (expr.go's folded).
+// (intrinsicArgs), reporting what's wrong (keywordSlots). quiet leaves it
+// unreported, for the constant evaluator's first try (expr.go's folded).
 func (a *analyzer) intrinsicSlots(e *ast.Apply, forms []form, quiet bool) (intrinsicArgs, bool) {
-	report := func(ident string, args ...any) (intrinsicArgs, bool) {
-		if !quiet {
-			a.report(ident, e.Pos, args...)
-		}
+	dummies := dummiesOf(e.Name, forms)
 
+	slots, ok := a.keywordSlots(e.Pos, e.Name, false, e.Args, dummies, forms[0].variadic,
+		func() string { return takesAll(forms) }, quiet)
+	if !ok {
 		return intrinsicArgs{}, false
 	}
 
-	dummies := dummiesOf(e.Name, forms)
-	if dummies == nil {
-		for _, x := range e.Args {
-			if k, ok := x.(*ast.KeywordArg); ok {
-				if !quiet {
-					a.notImplForm(k.Pos, "a keyword argument to the intrinsic function "+e.Name)
-				}
+	var out intrinsicArgs
 
-				return intrinsicArgs{}, false
-			}
+	for j, x := range slots {
+		if j < len(dummies) && dummies[j].name == "KIND" {
+			out.kind = x
+
+			continue
 		}
 
-		return intrinsicArgs{args: e.Args}, true
+		out.args = append(out.args, x)
+	}
+
+	for len(out.args) > 0 && out.args[len(out.args)-1] == nil {
+		out.args = out.args[:len(out.args)-1]
+	}
+
+	return out, true
+}
+
+// keywordSlots puts a reference's arguments, list, in the order of the
+// procedure's dummies, an intrinsic function's or subroutine's: a nil for an
+// optional dummy left out, and those past the dummies after them if variadic
+// allows them. It reports what's wrong, unless quiet: a keyword the procedure
+// hasn't (KEYWORDNAME), a dummy given twice (KEYWORDTWICE), an argument without
+// a keyword after one with (KEYWORDORDER), more arguments than dummies or,
+// without keywords, fewer than it needs (INTRINARGS, with takes the count it
+// allows), a null argument
+// (NULLINTRINARG), and a required one left out (MISSINGARG); for a subroutine
+// (sub), INTRINSUBARGS and NULLINTRINSUB.
+func (a *analyzer) keywordSlots(pos diag.Position, name string, sub bool, list []ast.Expr, dummies []dummyArg,
+	variadic bool, takes func() string, quiet bool) ([]ast.Expr, bool) {
+	what, tooMany, null := "the intrinsic function "+name, "INTRINARGS", "NULLINTRINARG"
+	if sub {
+		what, tooMany, null = "the intrinsic subroutine "+name, "INTRINSUBARGS", "NULLINTRINSUB"
+	}
+
+	report := func(ident string, args ...any) ([]ast.Expr, bool) {
+		if !quiet {
+			a.report(ident, pos, args...)
+		}
+
+		return nil, false
 	}
 
 	slots := make([]ast.Expr, len(dummies))
 	keywords := false
 
-	for i, x := range e.Args {
+	for i, x := range list {
 		if k, ok := x.(*ast.KeywordArg); ok {
 			keywords = true
 
 			j := dummyIndex(dummies, k.Name)
 
 			switch {
+			case j < 0 && len(dummies) == 0:
+				return report(tooMany, name, takes(), len(list))
 			case j < 0:
-				return report("KEYWORDNAME", "the intrinsic function "+e.Name, k.Name, dummyNames(dummies))
+				return report("KEYWORDNAME", what, k.Name, dummyNames(dummies))
 			case slots[j] != nil:
-				return report("KEYWORDTWICE", k.Name, "the intrinsic function "+e.Name)
+				return report("KEYWORDTWICE", k.Name, what)
 			}
 
 			slots[j] = k.X
@@ -101,39 +132,32 @@ func (a *analyzer) intrinsicSlots(e *ast.Apply, forms []form, quiet bool) (intri
 
 		switch {
 		case keywords:
-			return report("KEYWORDORDER", e.Name)
-		case i >= len(dummies):
-			return report("INTRINARGS", e.Name, takesAll(forms), len(e.Args))
+			return report("KEYWORDORDER", name)
+		case i >= len(dummies) && !variadic:
+			return report(tooMany, name, takes(), len(list))
 		case x == nil:
-			return report("NULLINTRINARG", e.Name)
+			return report(null, name)
+		case i >= len(dummies):
+			slots = append(slots, x)
+
+			continue
 		}
 
 		slots[i] = x
 	}
 
 	for j, d := range dummies {
-		if slots[j] == nil && !d.optional {
-			return report("MISSINGARG", "the intrinsic function "+e.Name, d.name)
+		switch {
+		case slots[j] != nil || d.optional:
+		case !keywords:
+			// Too few by position, as VAX FORTRAN's references always were.
+			return report(tooMany, name, takes(), len(list))
+		default:
+			return report("MISSINGARG", what, d.name)
 		}
 	}
 
-	var out intrinsicArgs
-
-	for j, d := range dummies {
-		if d.name == "KIND" {
-			out.kind = slots[j]
-
-			continue
-		}
-
-		out.args = append(out.args, slots[j])
-	}
-
-	for len(out.args) > 0 && out.args[len(out.args)-1] == nil {
-		out.args = out.args[:len(out.args)-1]
-	}
-
-	return out, true
+	return slots, true
 }
 
 // dummyIndex is the place of the dummy named name, or -1.

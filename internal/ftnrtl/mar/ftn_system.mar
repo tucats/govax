@@ -230,7 +230,8 @@ DATE_TEXT:
 
 ;
 ; CALL MVBITS(m,i,len,n,j): FTN$IMVBITS with every argument a word's address,
-; FTN$JMVBITS with every one a longword's.
+; FTN$JMVBITS with every one a longword's, and FTN$BMVBITS (Fortran 90's, for
+; an INTEGER(1) TO) with every one a byte's.
 ;
 ; EXTZV takes len bits from i up in m, and INSV puts them at j up in n; those
 ; instructions are the whole of it, with their limits and nothing added. So a
@@ -238,8 +239,17 @@ DATE_TEXT:
 ; runs on into the next bytes, and a position past the variable, which the VAX
 ; takes as a bit number from the variable's address, reaches into what's nearby.
 ; Both instructions take a position that's a signed longword, so a negative one
-; counts back in FTN$JMVBITS; FTN$IMVBITS's words are unsigned, as FORRTL's are.
+; counts back in FTN$JMVBITS; FTN$IMVBITS's words are unsigned, as FORRTL's are,
+; and so are FTN$BMVBITS's bytes.
 ;
+	.ENTRY	FTN$BMVBITS,^M<R2,R3>
+	MOVZBL	@8(AP),R1		; i
+	MOVZBL	@12(AP),R2		; len
+	MOVZBL	@20(AP),R3		; j
+	EXTZV	R1,R2,@4(AP),R0
+	INSV	R0,R3,R2,@16(AP)
+	RET
+
 	.ENTRY	FTN$IMVBITS,^M<R2,R3>
 	MOVZWL	@8(AP),R1		; i
 	MOVZWL	@12(AP),R2		; len

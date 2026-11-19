@@ -153,11 +153,16 @@
    and the numeric inquiries HUGE, TINY, EPSILON, DIGITS, PRECISION,
    RANGE, RADIX, MINEXPONENT, MAXEXPONENT, and BIT_SIZE, are answered
    when compiling, from the VAX formats' models, so they may name kinds
-   and PARAMETERs.  Without /G_FLOATING, SELECTED_REAL_KIND(15, 307) is
-   16 (H), since D's range is F's.  INT, NINT, REAL, CMPLX, AINT, ANINT,
-   and LOGICAL take a KIND for their result, and these functions take
-   keyword arguments: SELECTED_REAL_KIND(R=40), INT(X, KIND=2).  Under
-   /NOF90 the new names are a program's own unless named INTRINSIC.
+   and PARAMETERs (SELECTED_INT_KIND and SELECTED_REAL_KIND of values
+   not constant are computed when the program runs).  Without
+   /G_FLOATING, SELECTED_REAL_KIND(15, 307) is 16 (H), since D's range
+   is F's.  INT, NINT, REAL, CMPLX, AINT, ANINT, CHAR, and LOGICAL take
+   a KIND for their result, and every intrinsic function takes keyword
+   arguments by the standard's names: SELECTED_REAL_KIND(R=40),
+   INT(X, KIND=2), IAND(I=5, J=3).  So does MVBITS, which takes any
+   integer expression for FROM and works on arrays an element at a
+   time.  Under /NOF90 the new names are a program's own unless named
+   INTRINSIC.
 
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and

@@ -420,6 +420,12 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 
 	sym := a.scope.find(s.Name)
 
+	// An intrinsic subroutine (intrinsicsub.go), unless the file has one of
+	// its own.
+	if sub := a.intrinsicSubroutine(s.Name, sym, len(targets) > 0); sub != nil {
+		return a.intrinsicCall(s, sub, list)
+	}
+
 	if sym == nil || (sym.Class == Unclassified && sym.Dummy == 0) {
 		// A system subroutine, unless the file has one of its own.
 		if system := systemSubroutines[s.Name]; system != nil && a.units[s.Name] == nil && len(targets) == 0 {

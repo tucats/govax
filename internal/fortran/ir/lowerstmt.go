@@ -187,6 +187,12 @@ func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
 // giving back its run-time temporaries and its functions' values) comes before
 // the Switch and uses R0, so then the value waits in a temporary.
 func (l *lowerer) call(s *sema.Call) {
+	if s.Shape != nil {
+		l.elementalCall(s)
+
+		return
+	}
+
 	args, backs := l.args(s.Args)
 	call := &Call{origin: l.origin(), Args: args}
 	call.Routine, call.Local, call.Through = l.callee(s.Sub)

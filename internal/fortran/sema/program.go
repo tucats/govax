@@ -776,6 +776,12 @@ type (
 		// AltReturns are the labels of the alternate return specifiers, in
 		// order, which the argument list doesn't hold (altreturn.go).
 		AltReturns []int
+
+		// Shape is an elemental subroutine's call on arrays (Fortran 90's
+		// MVBITS, intrinsicsub.go): the arrays' shape, the call made once for
+		// each element, a scalar argument standing for every one. Nil for
+		// any other call.
+		Shape Shape
 	}
 
 	// Goto is GO TO Label.

@@ -58,271 +58,281 @@ import (
 //	         model's
 //	SIK, SRK SELECTED_INT_KIND and SELECTED_REAL_KIND, of constants
 //
-// Two more columns may follow (Decision 14 of docs/planning/PHASE-99 - Fortran
-// 90.md): the function's class, E elemental, I inquiry, or T
-// transformational, and its dummy arguments' names, a ? after an optional one,
-// by which a reference may give its arguments as keywords, INT(A=X, KIND=2)
-// (intrinsickeys.go). A row without them takes its arguments by position only
-// (Phase 108 names the rest). Every row of a generic name names the same
-// dummies. KIND, the kind of the result (the standard's 13.13), is never
-// counted in the third column: a reference's KIND= is taken out before its
-// row is chosen, and makes the result that kind.
+// The last two columns are the function's class, E elemental, I inquiry, or T
+// transformational (Fortran 90's 13.2), and its dummy arguments' names
+// (Decision 14 of docs/planning/PHASE-99 - Fortran 90.md), by which a reference
+// may give its arguments as keywords, INT(A=X, KIND=2), IAND(I=5, J=3)
+// (intrinsickeys.go). The names are the standard's 13.13, and for DEC's own
+// functions the HP Fortran manual's; a specific name takes its generic's
+// (docs/planning/PHASE-108 - Fortran 90 intrinsic procedures.md, finding 1).
+// Every row of a generic name names the same dummies. A ? after a name makes
+// the dummy optional; ... after the last says more may follow, by position
+// only (MAX(A1, A2, A3, ...)); - is none (NWORKERS). A transformational or
+// inquiry function's dummy is a scalar unless a rank follows it, [1] or [2] an
+// array of that rank, [] an array of any rank, [*] anything: what a generic
+// name's specific procedures are told apart from it by (generic.go's
+// takenByIntrinsic). KIND, the kind of the result (the standard's 13.13), is
+// never counted in the third column: a reference's KIND= is taken out before
+// its row is chosen, and makes the result that kind.
+//
+// LATER is a function the phase hasn't brought yet, NOTIMPL by name: its
+// argument and result types are left open (*), the rows to come.
 const intrinsicTable = `
-SQRT   SQRT    1 R4  R4  MTH
-SQRT   DSQRT   1 R8  R8  MTH
-SQRT   QSQRT   1 R16 R16 MTH
-SQRT   CSQRT   1 C8  C8  MTH
-SQRT   CDSQRT  1 C16 C16 MTH
-LOG    ALOG    1 R4  R4  MTH
-LOG    DLOG    1 R8  R8  MTH
-LOG    QLOG    1 R16 R16 MTH
-LOG    CLOG    1 C8  C8  MTH
-LOG    CDLOG   1 C16 C16 MTH
-LOG10  ALOG10  1 R4  R4  MTH
-LOG10  DLOG10  1 R8  R8  MTH
-LOG10  QLOG10  1 R16 R16 MTH
-EXP    EXP     1 R4  R4  MTH
-EXP    DEXP    1 R8  R8  MTH
-EXP    QEXP    1 R16 R16 MTH
-EXP    CEXP    1 C8  C8  MTH
-EXP    CDEXP   1 C16 C16 MTH
-SIN    SIN     1 R4  R4  MTH
-SIN    DSIN    1 R8  R8  MTH
-SIN    QSIN    1 R16 R16 MTH
-SIN    CSIN    1 C8  C8  MTH
-SIN    CDSIN   1 C16 C16 MTH
-SIND   SIND    1 R4  R4  MTH
-SIND   DSIND   1 R8  R8  MTH
-SIND   QSIND   1 R16 R16 MTH
-COS    COS     1 R4  R4  MTH
-COS    DCOS    1 R8  R8  MTH
-COS    QCOS    1 R16 R16 MTH
-COS    CCOS    1 C8  C8  MTH
-COS    CDCOS   1 C16 C16 MTH
-COSD   COSD    1 R4  R4  MTH
-COSD   DCOSD   1 R8  R8  MTH
-COSD   QCOSD   1 R16 R16 MTH
-TAN    TAN     1 R4  R4  MTH
-TAN    DTAN    1 R8  R8  MTH
-TAN    QTAN    1 R16 R16 MTH
-TAND   TAND    1 R4  R4  MTH
-TAND   DTAND   1 R8  R8  MTH
-TAND   QTAND   1 R16 R16 MTH
-ASIN   ASIN    1 R4  R4  MTH
-ASIN   DASIN   1 R8  R8  MTH
-ASIN   QASIN   1 R16 R16 MTH
-ASIND  ASIND   1 R4  R4  MTH
-ASIND  DASIND  1 R8  R8  MTH
-ASIND  QASIND  1 R16 R16 MTH
-ACOS   ACOS    1 R4  R4  MTH
-ACOS   DACOS   1 R8  R8  MTH
-ACOS   QACOS   1 R16 R16 MTH
-ACOSD  ACOSD   1 R4  R4  MTH
-ACOSD  DACOSD  1 R8  R8  MTH
-ACOSD  QACOSD  1 R16 R16 MTH
-ATAN   ATAN    1 R4  R4  MTH
-ATAN   DATAN   1 R8  R8  MTH
-ATAN   QATAN   1 R16 R16 MTH
-ATAND  ATAND   1 R4  R4  MTH
-ATAND  DATAND  1 R8  R8  MTH
-ATAND  QATAND  1 R16 R16 MTH
-ATAN2  ATAN2   2 R4  R4  MTH
-ATAN2  DATAN2  2 R8  R8  MTH
-ATAN2  QATAN2  2 R16 R16 MTH
-ATAN2D ATAN2D  2 R4  R4  MTH
-ATAN2D DATAN2D 2 R8  R8  MTH
-ATAN2D QATAN2D 2 R16 R16 MTH
-SINH   SINH    1 R4  R4  MTH
-SINH   DSINH   1 R8  R8  MTH
-SINH   QSINH   1 R16 R16 MTH
-COSH   COSH    1 R4  R4  MTH
-COSH   DCOSH   1 R8  R8  MTH
-COSH   QCOSH   1 R16 R16 MTH
-TANH   TANH    1 R4  R4  MTH
-TANH   DTANH   1 R8  R8  MTH
-TANH   QTANH   1 R16 R16 MTH
+SQRT   SQRT     1   R4  R4  MTH    E X
+SQRT   DSQRT    1   R8  R8  MTH    E X
+SQRT   QSQRT    1   R16 R16 MTH    E X
+SQRT   CSQRT    1   C8  C8  MTH    E X
+SQRT   CDSQRT   1   C16 C16 MTH    E X
+LOG    ALOG     1   R4  R4  MTH    E X
+LOG    DLOG     1   R8  R8  MTH    E X
+LOG    QLOG     1   R16 R16 MTH    E X
+LOG    CLOG     1   C8  C8  MTH    E X
+LOG    CDLOG    1   C16 C16 MTH    E X
+LOG10  ALOG10   1   R4  R4  MTH    E X
+LOG10  DLOG10   1   R8  R8  MTH    E X
+LOG10  QLOG10   1   R16 R16 MTH    E X
+EXP    EXP      1   R4  R4  MTH    E X
+EXP    DEXP     1   R8  R8  MTH    E X
+EXP    QEXP     1   R16 R16 MTH    E X
+EXP    CEXP     1   C8  C8  MTH    E X
+EXP    CDEXP    1   C16 C16 MTH    E X
+SIN    SIN      1   R4  R4  MTH    E X
+SIN    DSIN     1   R8  R8  MTH    E X
+SIN    QSIN     1   R16 R16 MTH    E X
+SIN    CSIN     1   C8  C8  MTH    E X
+SIN    CDSIN    1   C16 C16 MTH    E X
+SIND   SIND     1   R4  R4  MTH    E X
+SIND   DSIND    1   R8  R8  MTH    E X
+SIND   QSIND    1   R16 R16 MTH    E X
+COS    COS      1   R4  R4  MTH    E X
+COS    DCOS     1   R8  R8  MTH    E X
+COS    QCOS     1   R16 R16 MTH    E X
+COS    CCOS     1   C8  C8  MTH    E X
+COS    CDCOS    1   C16 C16 MTH    E X
+COSD   COSD     1   R4  R4  MTH    E X
+COSD   DCOSD    1   R8  R8  MTH    E X
+COSD   QCOSD    1   R16 R16 MTH    E X
+TAN    TAN      1   R4  R4  MTH    E X
+TAN    DTAN     1   R8  R8  MTH    E X
+TAN    QTAN     1   R16 R16 MTH    E X
+TAND   TAND     1   R4  R4  MTH    E X
+TAND   DTAND    1   R8  R8  MTH    E X
+TAND   QTAND    1   R16 R16 MTH    E X
+ASIN   ASIN     1   R4  R4  MTH    E X
+ASIN   DASIN    1   R8  R8  MTH    E X
+ASIN   QASIN    1   R16 R16 MTH    E X
+ASIND  ASIND    1   R4  R4  MTH    E X
+ASIND  DASIND   1   R8  R8  MTH    E X
+ASIND  QASIND   1   R16 R16 MTH    E X
+ACOS   ACOS     1   R4  R4  MTH    E X
+ACOS   DACOS    1   R8  R8  MTH    E X
+ACOS   QACOS    1   R16 R16 MTH    E X
+ACOSD  ACOSD    1   R4  R4  MTH    E X
+ACOSD  DACOSD   1   R8  R8  MTH    E X
+ACOSD  QACOSD   1   R16 R16 MTH    E X
+ATAN   ATAN     1   R4  R4  MTH    E X
+ATAN   DATAN    1   R8  R8  MTH    E X
+ATAN   QATAN    1   R16 R16 MTH    E X
+ATAND  ATAND    1   R4  R4  MTH    E X
+ATAND  DATAND   1   R8  R8  MTH    E X
+ATAND  QATAND   1   R16 R16 MTH    E X
+ATAN2  ATAN2    2   R4  R4  MTH    E Y,X
+ATAN2  DATAN2   2   R8  R8  MTH    E Y,X
+ATAN2  QATAN2   2   R16 R16 MTH    E Y,X
+ATAN2D ATAN2D   2   R4  R4  MTH    E Y,X
+ATAN2D DATAN2D  2   R8  R8  MTH    E Y,X
+ATAN2D QATAN2D  2   R16 R16 MTH    E Y,X
+SINH   SINH     1   R4  R4  MTH    E X
+SINH   DSINH    1   R8  R8  MTH    E X
+SINH   QSINH    1   R16 R16 MTH    E X
+COSH   COSH     1   R4  R4  MTH    E X
+COSH   DCOSH    1   R8  R8  MTH    E X
+COSH   QCOSH    1   R16 R16 MTH    E X
+TANH   TANH     1   R4  R4  MTH    E X
+TANH   DTANH    1   R8  R8  MTH    E X
+TANH   QTANH    1   R16 R16 MTH    E X
 
-ABS    IIABS   1 I2  I2  ABS
-ABS    JIABS   1 I4  I4  ABS
-ABS    ABS     1 R4  R4  ABS
-ABS    DABS    1 R8  R8  ABS
-ABS    QABS    1 R16 R16 ABS
-ABS    CABS    1 C8  R4  MTH
-ABS    CDABS   1 C16 R8  MTH
-IABS   IIABS   1 I2  I2  ABS
-IABS   JIABS   1 I4  I4  ABS
+ABS    IIABS    1   I2  I2  ABS    E A
+ABS    JIABS    1   I4  I4  ABS    E A
+ABS    ABS      1   R4  R4  ABS    E A
+ABS    DABS     1   R8  R8  ABS    E A
+ABS    QABS     1   R16 R16 ABS    E A
+ABS    CABS     1   C8  R4  MTH    E A
+ABS    CDABS    1   C16 R8  MTH    E A
+IABS   IIABS    1   I2  I2  ABS    E A
+IABS   JIABS    1   I4  I4  ABS    E A
 
-INT    -       1 I2  I2  CVT E A,KIND?
-INT    -       1 I2  I4  CVT E A,KIND?
-INT    -       1 I4  I2  CVT E A,KIND?
-INT    -       1 I4  I4  CVT E A,KIND?
-INT    IINT    1 R4  I2  CVT E A,KIND?
-INT    JINT    1 R4  I4  CVT E A,KIND?
-INT    IIDINT  1 R8  I2  CVT E A,KIND?
-INT    JIDINT  1 R8  I4  CVT E A,KIND?
-INT    IIQINT  1 R16 I2  CVT E A,KIND?
-INT    JIQINT  1 R16 I4  CVT E A,KIND?
-INT    -       1 C8  I2  CVT E A,KIND?
-INT    -       1 C8  I4  CVT E A,KIND?
-INT    -       1 C16 I2  CVT E A,KIND?
-INT    -       1 C16 I4  CVT E A,KIND?
-IDINT  IIDINT  1 R8  I2  CVT
-IDINT  JIDINT  1 R8  I4  CVT
-IQINT  IIQINT  1 R16 I2  CVT
-IQINT  JIQINT  1 R16 I4  CVT
-IFIX   IIFIX   1 R4  I2  CVT
-IFIX   JIFIX   1 R4  I4  CVT
-AINT   AINT    1 R4  R4  MTH E A,KIND?
-AINT   DINT    1 R8  R8  MTH E A,KIND?
-AINT   QINT    1 R16 R16 MTH E A,KIND?
+INT    -        1   I2  I2  CVT    E A,KIND?
+INT    -        1   I2  I4  CVT    E A,KIND?
+INT    -        1   I4  I2  CVT    E A,KIND?
+INT    -        1   I4  I4  CVT    E A,KIND?
+INT    IINT     1   R4  I2  CVT    E A,KIND?
+INT    JINT     1   R4  I4  CVT    E A,KIND?
+INT    IIDINT   1   R8  I2  CVT    E A,KIND?
+INT    JIDINT   1   R8  I4  CVT    E A,KIND?
+INT    IIQINT   1   R16 I2  CVT    E A,KIND?
+INT    JIQINT   1   R16 I4  CVT    E A,KIND?
+INT    -        1   C8  I2  CVT    E A,KIND?
+INT    -        1   C8  I4  CVT    E A,KIND?
+INT    -        1   C16 I2  CVT    E A,KIND?
+INT    -        1   C16 I4  CVT    E A,KIND?
+IDINT  IIDINT   1   R8  I2  CVT    E A
+IDINT  JIDINT   1   R8  I4  CVT    E A
+IQINT  IIQINT   1   R16 I2  CVT    E A
+IQINT  JIQINT   1   R16 I4  CVT    E A
+IFIX   IIFIX    1   R4  I2  CVT    E A
+IFIX   JIFIX    1   R4  I4  CVT    E A
+AINT   AINT     1   R4  R4  MTH    E A,KIND?
+AINT   DINT     1   R8  R8  MTH    E A,KIND?
+AINT   QINT     1   R16 R16 MTH    E A,KIND?
 
-NINT   ININT   1 R4  I2  NINT E A,KIND?
-NINT   JNINT   1 R4  I4  NINT E A,KIND?
-NINT   IIDNNT  1 R8  I2  NINT E A,KIND?
-NINT   JIDNNT  1 R8  I4  NINT E A,KIND?
-NINT   IIQNNT  1 R16 I2  NINT E A,KIND?
-NINT   JIQNNT  1 R16 I4  NINT E A,KIND?
-IDNINT IIDNNT  1 R8  I2  NINT
-IDNINT JIDNNT  1 R8  I4  NINT
-IQNINT IIQNNT  1 R16 I2  NINT
-IQNINT JIQNNT  1 R16 I4  NINT
-ANINT  ANINT   1 R4  R4  MTH E A,KIND?
-ANINT  DNINT   1 R8  R8  MTH E A,KIND?
-ANINT  QNINT   1 R16 R16 MTH E A,KIND?
+NINT   ININT    1   R4  I2  NINT   E A,KIND?
+NINT   JNINT    1   R4  I4  NINT   E A,KIND?
+NINT   IIDNNT   1   R8  I2  NINT   E A,KIND?
+NINT   JIDNNT   1   R8  I4  NINT   E A,KIND?
+NINT   IIQNNT   1   R16 I2  NINT   E A,KIND?
+NINT   JIQNNT   1   R16 I4  NINT   E A,KIND?
+IDNINT IIDNNT   1   R8  I2  NINT   E A
+IDNINT JIDNNT   1   R8  I4  NINT   E A
+IQNINT IIQNNT   1   R16 I2  NINT   E A
+IQNINT JIQNNT   1   R16 I4  NINT   E A
+ANINT  ANINT    1   R4  R4  MTH    E A,KIND?
+ANINT  DNINT    1   R8  R8  MTH    E A,KIND?
+ANINT  QNINT    1   R16 R16 MTH    E A,KIND?
 
-ZEXT   IZEXT   1 L1  I2  ZEXT
-ZEXT   IZEXT   1 L2  I2  ZEXT
-ZEXT   IZEXT   1 I2  I2  ZEXT
-ZEXT   JZEXT   1 L1  I4  ZEXT
-ZEXT   JZEXT   1 L2  I4  ZEXT
-ZEXT   JZEXT   1 L4  I4  ZEXT
-ZEXT   JZEXT   1 I2  I4  ZEXT
-ZEXT   JZEXT   1 I4  I4  ZEXT
+ZEXT   IZEXT    1   L1  I2  ZEXT   E X
+ZEXT   IZEXT    1   L2  I2  ZEXT   E X
+ZEXT   IZEXT    1   I2  I2  ZEXT   E X
+ZEXT   JZEXT    1   L1  I4  ZEXT   E X
+ZEXT   JZEXT    1   L2  I4  ZEXT   E X
+ZEXT   JZEXT    1   L4  I4  ZEXT   E X
+ZEXT   JZEXT    1   I2  I4  ZEXT   E X
+ZEXT   JZEXT    1   I4  I4  ZEXT   E X
 
-REAL   FLOATI  1 I2  R4  CVT E A,KIND?
-REAL   FLOATJ  1 I4  R4  CVT E A,KIND?
-REAL   -       1 R4  R4  CVT E A,KIND?
-REAL   SNGL    1 R8  R4  CVT E A,KIND?
-REAL   SNGLQ   1 R16 R4  CVT E A,KIND?
-REAL   REAL    1 C8  R4  CVT E A,KIND?
-REAL   -       1 C16 R4  CVT E A,KIND?
--      DREAL   1 C16 R8  CVT
-DBLE   -       1 I2  R8  CVT
-DBLE   -       1 I4  R8  CVT
-DBLE   DBLE    1 R4  R8  CVT
-DBLE   -       1 R8  R8  CVT
-DBLE   DBLEQ   1 R16 R8  CVT
-DBLE   -       1 C8  R8  CVT
-DBLE   -       1 C16 R8  CVT
-QEXT   -       1 I2  R16 CVT
-QEXT   -       1 I4  R16 CVT
-QEXT   QEXT    1 R4  R16 CVT
-QEXT   QEXTD   1 R8  R16 CVT
-QEXT   -       1 R16 R16 CVT
-QEXT   -       1 C8  R16 CVT
-QEXT   -       1 C16 R16 CVT
-FLOAT  FLOATI  1 I2  R4  CVT
-FLOAT  FLOATJ  1 I4  R4  CVT
-DFLOAT DFLOTI  1 I2  R8  CVT
-DFLOAT DFLOTJ  1 I4  R8  CVT
-QFLOAT -       1 I2  R16 CVT
-QFLOAT -       1 I4  R16 CVT
+REAL   FLOATI   1   I2  R4  CVT    E A,KIND?
+REAL   FLOATJ   1   I4  R4  CVT    E A,KIND?
+REAL   -        1   R4  R4  CVT    E A,KIND?
+REAL   SNGL     1   R8  R4  CVT    E A,KIND?
+REAL   SNGLQ    1   R16 R4  CVT    E A,KIND?
+REAL   REAL     1   C8  R4  CVT    E A,KIND?
+REAL   -        1   C16 R4  CVT    E A,KIND?
+-      DREAL    1   C16 R8  CVT    E A
+DBLE   -        1   I2  R8  CVT    E A
+DBLE   -        1   I4  R8  CVT    E A
+DBLE   DBLE     1   R4  R8  CVT    E A
+DBLE   -        1   R8  R8  CVT    E A
+DBLE   DBLEQ    1   R16 R8  CVT    E A
+DBLE   -        1   C8  R8  CVT    E A
+DBLE   -        1   C16 R8  CVT    E A
+QEXT   -        1   I2  R16 CVT    E A
+QEXT   -        1   I4  R16 CVT    E A
+QEXT   QEXT     1   R4  R16 CVT    E A
+QEXT   QEXTD    1   R8  R16 CVT    E A
+QEXT   -        1   R16 R16 CVT    E A
+QEXT   -        1   C8  R16 CVT    E A
+QEXT   -        1   C16 R16 CVT    E A
+FLOAT  FLOATI   1   I2  R4  CVT    E A
+FLOAT  FLOATJ   1   I4  R4  CVT    E A
+DFLOAT DFLOTI   1   I2  R8  CVT    E A
+DFLOAT DFLOTJ   1   I4  R8  CVT    E A
+QFLOAT -        1   I2  R16 CVT    E A
+QFLOAT -        1   I4  R16 CVT    E A
 
-CMPLX  -       1,2 I2  C8  CMPLX E X,Y?,KIND?
-CMPLX  -       1,2 I4  C8  CMPLX E X,Y?,KIND?
-CMPLX  -       1,2 R4  C8  CMPLX E X,Y?,KIND?
-CMPLX  -       1,2 R8  C8  CMPLX E X,Y?,KIND?
-CMPLX  -       1,2 R16 C8  CMPLX E X,Y?,KIND?
-CMPLX  -       1   C8  C8  CMPLX E X,Y?,KIND?
-CMPLX  -       1   C16 C8  CMPLX E X,Y?,KIND?
-DCMPLX -       1,2 I2  C16 CMPLX
-DCMPLX -       1,2 I4  C16 CMPLX
-DCMPLX -       1,2 R4  C16 CMPLX
-DCMPLX -       1,2 R8  C16 CMPLX
-DCMPLX -       1,2 R16 C16 CMPLX
-DCMPLX -       1   C8  C16 CMPLX
-DCMPLX -       1   C16 C16 CMPLX
--      AIMAG   1 C8  R4  IMAG
--      DIMAG   1 C16 R8  IMAG
-CONJG  CONJG   1 C8  C8  CONJG
-CONJG  DCONJG  1 C16 C16 CONJG
--      DPROD   2 R4  R8  DPROD
+CMPLX  -        1,2 I2  C8  CMPLX  E X,Y?,KIND?
+CMPLX  -        1,2 I4  C8  CMPLX  E X,Y?,KIND?
+CMPLX  -        1,2 R4  C8  CMPLX  E X,Y?,KIND?
+CMPLX  -        1,2 R8  C8  CMPLX  E X,Y?,KIND?
+CMPLX  -        1,2 R16 C8  CMPLX  E X,Y?,KIND?
+CMPLX  -        1   C8  C8  CMPLX  E X,Y?,KIND?
+CMPLX  -        1   C16 C8  CMPLX  E X,Y?,KIND?
+DCMPLX -        1,2 I2  C16 CMPLX  E X,Y?
+DCMPLX -        1,2 I4  C16 CMPLX  E X,Y?
+DCMPLX -        1,2 R4  C16 CMPLX  E X,Y?
+DCMPLX -        1,2 R8  C16 CMPLX  E X,Y?
+DCMPLX -        1,2 R16 C16 CMPLX  E X,Y?
+DCMPLX -        1   C8  C16 CMPLX  E X,Y?
+DCMPLX -        1   C16 C16 CMPLX  E X,Y?
+-      AIMAG    1   C8  R4  IMAG   E Z
+-      DIMAG    1   C16 R8  IMAG   E Z
+CONJG  CONJG    1   C8  C8  CONJG  E Z
+CONJG  DCONJG   1   C16 C16 CONJG  E Z
+-      DPROD    2   R4  R8  DPROD  E X,Y
 
-MAX    IMAX0   2+ I2  I2  MAX
-MAX    JMAX0   2+ I4  I4  MAX
-MAX    AMAX1   2+ R4  R4  MAX
-MAX    DMAX1   2+ R8  R8  MAX
-MAX    QMAX1   2+ R16 R16 MAX
-MAX0   IMAX0   2+ I2  I2  MAX
-MAX0   JMAX0   2+ I4  I4  MAX
-MAX1   IMAX1   2+ R4  I2  MAX
-MAX1   JMAX1   2+ R4  I4  MAX
-AMAX0  AIMAX0  2+ I2  R4  MAX
-AMAX0  AJMAX0  2+ I4  R4  MAX
-MIN    IMIN0   2+ I2  I2  MIN
-MIN    JMIN0   2+ I4  I4  MIN
-MIN    AMIN1   2+ R4  R4  MIN
-MIN    DMIN1   2+ R8  R8  MIN
-MIN    QMIN1   2+ R16 R16 MIN
-MIN0   IMIN0   2+ I2  I2  MIN
-MIN0   JMIN0   2+ I4  I4  MIN
-MIN1   IMIN1   2+ R4  I2  MIN
-MIN1   JMIN1   2+ R4  I4  MIN
-AMIN0  AIMIN0  2+ I2  R4  MIN
-AMIN0  AJMIN0  2+ I4  R4  MIN
-DIM    IIDIM   2 I2  I2  DIM
-DIM    JIDIM   2 I4  I4  DIM
-DIM    DIM     2 R4  R4  DIM
-DIM    DDIM    2 R8  R8  DIM
-DIM    QDIM    2 R16 R16 DIM
-IDIM   IIDIM   2 I2  I2  DIM
-IDIM   JIDIM   2 I4  I4  DIM
-MOD    IMOD    2 I2  I2  MOD
-MOD    JMOD    2 I4  I4  MOD
-MOD    AMOD    2 R4  R4  MTH
-MOD    DMOD    2 R8  R8  MTH
-MOD    QMOD    2 R16 R16 MTH
-SIGN   IISIGN  2 I2  I2  SIGN
-SIGN   JISIGN  2 I4  I4  SIGN
-SIGN   SIGN    2 R4  R4  SIGN
-SIGN   DSIGN   2 R8  R8  SIGN
-SIGN   QSIGN   2 R16 R16 SIGN
-ISIGN  IISIGN  2 I2  I2  SIGN
-ISIGN  JISIGN  2 I4  I4  SIGN
+MAX    IMAX0    2+  I2  I2  MAX    E A1,A2,...
+MAX    JMAX0    2+  I4  I4  MAX    E A1,A2,...
+MAX    AMAX1    2+  R4  R4  MAX    E A1,A2,...
+MAX    DMAX1    2+  R8  R8  MAX    E A1,A2,...
+MAX    QMAX1    2+  R16 R16 MAX    E A1,A2,...
+MAX0   IMAX0    2+  I2  I2  MAX    E A1,A2,...
+MAX0   JMAX0    2+  I4  I4  MAX    E A1,A2,...
+MAX1   IMAX1    2+  R4  I2  MAX    E A1,A2,...
+MAX1   JMAX1    2+  R4  I4  MAX    E A1,A2,...
+AMAX0  AIMAX0   2+  I2  R4  MAX    E A1,A2,...
+AMAX0  AJMAX0   2+  I4  R4  MAX    E A1,A2,...
+MIN    IMIN0    2+  I2  I2  MIN    E A1,A2,...
+MIN    JMIN0    2+  I4  I4  MIN    E A1,A2,...
+MIN    AMIN1    2+  R4  R4  MIN    E A1,A2,...
+MIN    DMIN1    2+  R8  R8  MIN    E A1,A2,...
+MIN    QMIN1    2+  R16 R16 MIN    E A1,A2,...
+MIN0   IMIN0    2+  I2  I2  MIN    E A1,A2,...
+MIN0   JMIN0    2+  I4  I4  MIN    E A1,A2,...
+MIN1   IMIN1    2+  R4  I2  MIN    E A1,A2,...
+MIN1   JMIN1    2+  R4  I4  MIN    E A1,A2,...
+AMIN0  AIMIN0   2+  I2  R4  MIN    E A1,A2,...
+AMIN0  AJMIN0   2+  I4  R4  MIN    E A1,A2,...
+DIM    IIDIM    2   I2  I2  DIM    E X,Y
+DIM    JIDIM    2   I4  I4  DIM    E X,Y
+DIM    DIM      2   R4  R4  DIM    E X,Y
+DIM    DDIM     2   R8  R8  DIM    E X,Y
+DIM    QDIM     2   R16 R16 DIM    E X,Y
+IDIM   IIDIM    2   I2  I2  DIM    E X,Y
+IDIM   JIDIM    2   I4  I4  DIM    E X,Y
+MOD    IMOD     2   I2  I2  MOD    E A,P
+MOD    JMOD     2   I4  I4  MOD    E A,P
+MOD    AMOD     2   R4  R4  MTH    E A,P
+MOD    DMOD     2   R8  R8  MTH    E A,P
+MOD    QMOD     2   R16 R16 MTH    E A,P
+SIGN   IISIGN   2   I2  I2  SIGN   E A,B
+SIGN   JISIGN   2   I4  I4  SIGN   E A,B
+SIGN   SIGN     2   R4  R4  SIGN   E A,B
+SIGN   DSIGN    2   R8  R8  SIGN   E A,B
+SIGN   QSIGN    2   R16 R16 SIGN   E A,B
+ISIGN  IISIGN   2   I2  I2  SIGN   E A,B
+ISIGN  JISIGN   2   I4  I4  SIGN   E A,B
 
-IAND   IIAND   2 I2  I2  AND
-IAND   JIAND   2 I4  I4  AND
-IOR    IIOR    2 I2  I2  OR
-IOR    JIOR    2 I4  I4  OR
-IEOR   IIEOR   2 I2  I2  XOR
-IEOR   JIEOR   2 I4  I4  XOR
-NOT    INOT    1 I2  I2  NOT
-NOT    JNOT    1 I4  I4  NOT
-ISHFT  IISHFT  2 I2  I2  SHIFT
-ISHFT  JISHFT  2 I4  I4  SHIFT
-IBITS  IIBITS  3 I2  I4  BITS
-IBITS  JIBITS  3 I4  I4  BITS
-IBSET  IIBSET  2 I2  I2  BSET
-IBSET  JIBSET  2 I4  I4  BSET
-BTEST  BITEST  2 I2  L2  BTEST
-BTEST  BJTEST  2 I4  L4  BTEST
-IBCLR  IIBCLR  2 I2  I4  BCLR
-IBCLR  JIBCLR  2 I4  I4  BCLR
-ISHFTC IISHFTC 3 I2  I4  SHIFTC
-ISHFTC JISHFTC 3 I4  I4  SHIFTC
+IAND   IIAND    2   I2  I2  AND    E I,J
+IAND   JIAND    2   I4  I4  AND    E I,J
+IOR    IIOR     2   I2  I2  OR     E I,J
+IOR    JIOR     2   I4  I4  OR     E I,J
+IEOR   IIEOR    2   I2  I2  XOR    E I,J
+IEOR   JIEOR    2   I4  I4  XOR    E I,J
+NOT    INOT     1   I2  I2  NOT    E I
+NOT    JNOT     1   I4  I4  NOT    E I
+ISHFT  IISHFT   2   I2  I2  SHIFT  E I,SHIFT
+ISHFT  JISHFT   2   I4  I4  SHIFT  E I,SHIFT
+IBITS  IIBITS   3   I2  I4  BITS   E I,POS,LEN
+IBITS  JIBITS   3   I4  I4  BITS   E I,POS,LEN
+IBSET  IIBSET   2   I2  I2  BSET   E I,POS
+IBSET  JIBSET   2   I4  I4  BSET   E I,POS
+BTEST  BITEST   2   I2  L2  BTEST  E I,POS
+BTEST  BJTEST   2   I4  L4  BTEST  E I,POS
+IBCLR  IIBCLR   2   I2  I4  BCLR   E I,POS
+IBCLR  JIBCLR   2   I4  I4  BCLR   E I,POS
+ISHFTC IISHFTC  2,3 I2  I4  SHIFTC E I,SHIFT,SIZE?
+ISHFTC JISHFTC  2,3 I4  I4  SHIFTC E I,SHIFT,SIZE?
 
--      LEN      1 CH  I4  LEN
--      INDEX    2 CH  I4  INDEX
--      CHAR     1 L1  CH1 CHAR
--      CHAR     1 I2  CH1 CHAR
--      CHAR     1 I4  CH1 CHAR
--      ICHAR    1 CH  I4  ICHAR
--      LLT      2 CH  L4  LLT
--      LLE      2 CH  L4  LLE
--      LGT      2 CH  L4  LGT
--      LGE      2 CH  L4  LGE
--      NWORKERS 0 *   I4  ONE
--      SIZEOF   1 *   I4  SIZEOF
+-      LEN      1   CH  I4  LEN    I STRING
+-      INDEX    2,3 CH  I4  INDEX  E STRING,SUBSTRING,BACK?
+-      CHAR     1   L1  CH1 CHAR   E I,KIND?
+-      CHAR     1   I2  CH1 CHAR   E I,KIND?
+-      CHAR     1   I4  CH1 CHAR   E I,KIND?
+-      ICHAR    1   CH  I4  ICHAR  E C
+-      LLT      2   CH  L4  LLT    E STRING_A,STRING_B
+-      LLE      2   CH  L4  LLE    E STRING_A,STRING_B
+-      LGT      2   CH  L4  LGT    E STRING_A,STRING_B
+-      LGE      2   CH  L4  LGE    E STRING_A,STRING_B
+-      NWORKERS 0   *   I4  ONE    I -
+-      SIZEOF   1   *   I4  SIZEOF I X
 `
 
 // fortran90Table is Fortran 90's intrinsic functions (the standard's 13.13)
@@ -351,60 +361,82 @@ LOGICAL            -  1   L2  L4  CVT E L,KIND?
 LOGICAL            -  1   L4  L2  CVT E L,KIND?
 LOGICAL            -  1   L4  L4  CVT E L,KIND?
 
-KIND               -  1   *   I4  INQ I X
+KIND               -  1   *   I4  INQ I X[*]
 SELECTED_INT_KIND  -  1   I4  I4  SIK T R
 SELECTED_REAL_KIND -  0,2 I4  I4  SRK T P?,R?
-HUGE               -  1   *   *   INQ I X
-TINY               -  1   *   *   INQ I X
-EPSILON            -  1   *   *   INQ I X
-DIGITS             -  1   *   I4  INQ I X
-PRECISION          -  1   *   I4  INQ I X
-RANGE              -  1   *   I4  INQ I X
-RADIX              -  1   *   I4  INQ I X
-MAXEXPONENT        -  1   *   I4  INQ I X
-MINEXPONENT        -  1   *   I4  INQ I X
-BIT_SIZE           -  1   *   *   INQ I I
+HUGE               -  1   *   *   INQ I X[*]
+TINY               -  1   *   *   INQ I X[*]
+EPSILON            -  1   *   *   INQ I X[*]
+DIGITS             -  1   *   I4  INQ I X[*]
+PRECISION          -  1   *   I4  INQ I X[*]
+RANGE              -  1   *   I4  INQ I X[*]
+RADIX              -  1   *   I4  INQ I X[*]
+MAXEXPONENT        -  1   *   I4  INQ I X[*]
+MINEXPONENT        -  1   *   I4  INQ I X[*]
+BIT_SIZE           -  1   *   *   INQ I I[*]
 
 INT                -  1   C32 I2  CVT E A,KIND?
 INT                -  1   C32 I4  CVT E A,KIND?
 REAL               -  1   C32 R16 CVT E A,KIND?
-DBLE               -  1   C32 R8  CVT
-QEXT               -  1   C32 R16 CVT
+DBLE               -  1   C32 R8  CVT E A
+QEXT               -  1   C32 R16 CVT E A
 CMPLX              -  1   C32 C8  CMPLX E X,Y?,KIND?
-DCMPLX             -  1   C32 C16 CMPLX
-AIMAG              -  1   C8  R4  IMAG
-AIMAG              -  1   C32 R16 IMAG
-CONJG              -  1   C32 C32 CONJG
+DCMPLX             -  1   C32 C16 CMPLX E X,Y?
+AIMAG              -  1   C8  R4  IMAG E Z
+AIMAG              -  1   C32 R16 IMAG E Z
+CONJG              -  1   C32 C32 CONJG E Z
 
 MERGE              -  3   *   *   MERGE E TSOURCE,FSOURCE,MASK
 
-SUM                -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
-PRODUCT            -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
-MAXVAL             -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
-MINVAL             -  1,3 *   *   REDUCE T ARRAY,DIM?,MASK?
-ALL                -  1,2 *   *   REDUCE T MASK,DIM?
-ANY                -  1,2 *   *   REDUCE T MASK,DIM?
-COUNT              -  1,2 *   I4  REDUCE T MASK,DIM?
-DOT_PRODUCT        -  2   *   *   REDUCE T VECTOR_A,VECTOR_B
-MAXLOC             -  1,2 *   I4  REDUCE T ARRAY,MASK?
-MINLOC             -  1,2 *   I4  REDUCE T ARRAY,MASK?
-MATMUL             -  2   *   *   REDUCE T MATRIX_A,MATRIX_B
-TRANSPOSE          -  1   *   *   REDUCE T MATRIX
-SPREAD             -  3   *   *   REDUCE T SOURCE,DIM,NCOPIES
-CSHIFT             -  2,3 *   *   REDUCE T ARRAY,SHIFT,DIM?
-EOSHIFT            -  2,4 *   *   REDUCE T ARRAY,SHIFT,BOUNDARY?,DIM?
-PACK               -  2,3 *   *   REDUCE T ARRAY,MASK,VECTOR?
-UNPACK             -  3   *   *   REDUCE T VECTOR,MASK,FIELD
+SUM                -  1,3 *   *   REDUCE T ARRAY[],DIM?,MASK?[*]
+PRODUCT            -  1,3 *   *   REDUCE T ARRAY[],DIM?,MASK?[*]
+MAXVAL             -  1,3 *   *   REDUCE T ARRAY[],DIM?,MASK?[*]
+MINVAL             -  1,3 *   *   REDUCE T ARRAY[],DIM?,MASK?[*]
+ALL                -  1,2 *   *   REDUCE T MASK[],DIM?
+ANY                -  1,2 *   *   REDUCE T MASK[],DIM?
+COUNT              -  1,2 *   I4  REDUCE T MASK[],DIM?
+DOT_PRODUCT        -  2   *   *   REDUCE T VECTOR_A[1],VECTOR_B[1]
+MAXLOC             -  1,2 *   I4  REDUCE T ARRAY[],MASK?[*]
+MINLOC             -  1,2 *   I4  REDUCE T ARRAY[],MASK?[*]
+MATMUL             -  2   *   *   REDUCE T MATRIX_A[],MATRIX_B[]
+TRANSPOSE          -  1   *   *   REDUCE T MATRIX[2]
+SPREAD             -  3   *   *   REDUCE T SOURCE[*],DIM,NCOPIES
+CSHIFT             -  2,3 *   *   REDUCE T ARRAY[],SHIFT[*],DIM?
+EOSHIFT            -  2,4 *   *   REDUCE T ARRAY[],SHIFT[*],BOUNDARY?[*],DIM?
+PACK               -  2,3 *   *   REDUCE T ARRAY[],MASK[*],VECTOR?[1]
+UNPACK             -  3   *   *   REDUCE T VECTOR[1],MASK[],FIELD[*]
 
-RESHAPE            -  2,4 *   *   ARRAY T SOURCE,SHAPE,PAD?,ORDER?
-SHAPE              -  1   *   I4  ARRAY I SOURCE
-SIZE               -  1,2 *   I4  ARRAY I ARRAY,DIM?
-LBOUND             -  1,2 *   I4  ARRAY I ARRAY,DIM?
-UBOUND             -  1,2 *   I4  ARRAY I ARRAY,DIM?
+RESHAPE            -  2,4 *   *   ARRAY T SOURCE[],SHAPE[1],PAD?[],ORDER?[1]
+SHAPE              -  1   *   I4  ARRAY I SOURCE[*]
+SIZE               -  1,2 *   I4  ARRAY I ARRAY[],DIM?
+LBOUND             -  1,2 *   I4  ARRAY I ARRAY[],DIM?
+UBOUND             -  1,2 *   I4  ARRAY I ARRAY[],DIM?
+
+ACHAR              -  1   I2  CH1 CHAR E I
+ACHAR              -  1   I4  CH1 CHAR E I
+IACHAR             -  1   CH  I4  ICHAR E C
+ADJUSTL            -  1   CH  *   LATER E STRING
+ADJUSTR            -  1   CH  *   LATER E STRING
+LEN_TRIM           -  1   CH  *   LATER E STRING
+SCAN               -  2,3 CH  *   LATER E STRING,SET,BACK?
+VERIFY             -  2,3 CH  *   LATER E STRING,SET,BACK?
+TRIM               -  1   CH  *   LATER T STRING
+REPEAT             -  2   CH  *   LATER T STRING,NCOPIES
+
+CEILING            -  1   *   *   LATER E A
+FLOOR              -  1   *   *   LATER E A
+MODULO             -  2   *   *   LATER E A,P
+
+EXPONENT           -  1   *   *   LATER E X
+FRACTION           -  1   *   *   LATER E X
+NEAREST            -  2   *   *   LATER E X,S
+RRSPACING          -  1   *   *   LATER E X
+SCALE              -  2   *   *   LATER E X,I
+SET_EXPONENT       -  2   *   *   LATER E X,I
+SPACING            -  1   *   *   LATER E X
+
+TRANSFER           -  2,3 *   *   LATER T SOURCE[*],MOLD[*],SIZE?
 `
-
-// notElemental are the names of Table D-3's rows that aren't elemental.
-var notElemental = map[string]bool{"SIZEOF": true, "NWORKERS": true, "LEN": true}
 
 // form is one row of the table.
 type form struct {
@@ -421,18 +453,23 @@ type form struct {
 	// how is the table's sixth column.
 	how string
 
-	// class is the seventh, 'E', 'I', or 'T', and 0 for a row without one;
-	// dummies the eighth, the dummy arguments in order, nil for a row
-	// without one.
-	class   byte
-	dummies []dummyArg
+	// class is the seventh, 'E', 'I', or 'T'; dummies the eighth, the dummy
+	// arguments in order (empty for none), and variadic says more may follow
+	// them by position.
+	class    byte
+	dummies  []dummyArg
+	variadic bool
 }
 
-// dummyArg is an intrinsic function's dummy argument: its name, which a
-// keyword argument gives, and whether a reference may leave it out.
+// dummyArg is an intrinsic procedure's dummy argument: its name, which a
+// keyword argument gives, whether a reference may leave it out, and its rank,
+// as generic.go's dummyShape has it (-1 any, -2 any array; 0, a scalar, for
+// an elemental function's, which take arrays of any rank by being
+// elemental).
 type dummyArg struct {
 	name     string
 	optional bool
+	rank     int
 }
 
 // intrinsicForms are the tables' rows; intrinsics the names of VAX FORTRAN's
@@ -471,7 +508,7 @@ func readTable(table string, old map[string]bool) ([]form, map[string]bool) {
 			continue
 		}
 
-		if len(f) != 6 && len(f) != 8 {
+		if len(f) != 8 {
 			panic("sema: an intrinsic table row of " + fmt.Sprint(len(f)) + " fields: " + line)
 		}
 
@@ -487,24 +524,11 @@ func readTable(table string, old map[string]bool) ([]form, map[string]bool) {
 			r.max = r.min
 		}
 
-		if len(f) == 8 {
-			r.class = f[6][0]
-
-			for name := range strings.SplitSeq(f[7], ",") {
-				d := dummyArg{name: strings.TrimSuffix(name, "?")}
-				d.optional = d.name != name
-				r.dummies = append(r.dummies, d)
-			}
-		}
+		r.class = f[6][0]
+		r.dummies, r.variadic = readDummies(f[7])
 
 		if r.generic == "-" {
 			r.generic = ""
-		}
-
-		// Every function of Table D-3 is elemental in Fortran 90 (13.2.1), but
-		// DEC's SIZEOF and NWORKERS, and LEN, an inquiry.
-		if len(f) == 6 && !notElemental[r.generic] && !notElemental[r.specific] {
-			r.class = 'E'
 		}
 
 		if r.specific == "-" {
@@ -521,6 +545,47 @@ func readTable(table string, old map[string]bool) ([]form, map[string]bool) {
 	}
 
 	return forms, names
+}
+
+// readDummies reads a row's last column: the dummies, and whether more may
+// follow by position.
+func readDummies(text string) ([]dummyArg, bool) {
+	dummies := []dummyArg{}
+
+	if text == "-" {
+		return dummies, false
+	}
+
+	variadic := false
+
+	for name := range strings.SplitSeq(text, ",") {
+		if name == "..." {
+			variadic = true
+
+			continue
+		}
+
+		d := dummyArg{}
+
+		if base, shape, ok := strings.Cut(name, "["); ok {
+			switch shape = strings.TrimSuffix(shape, "]"); shape {
+			case "*":
+				d.rank = -1
+			case "":
+				d.rank = -2
+			default:
+				d.rank = int(shape[0] - '0')
+			}
+
+			name = base
+		}
+
+		d.name = strings.TrimSuffix(name, "?")
+		d.optional = d.name != name
+		dummies = append(dummies, d)
+	}
+
+	return dummies, variadic
 }
 
 // intrinsicNamed reports whether name, where the unit hasn't made it
