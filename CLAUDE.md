@@ -1260,7 +1260,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   subtask 7 (2026-11-19) programs end to end (`testdata/fortran90/modules`'s
   `compiles.txt`, `standard`, `polys`); subtask 8 (2026-11-19) the close-out,
   FORTRAN-INTERNALS.md's section 31.
-  Phase 107 (in progress) is pointers: subtask 1 (2026-11-19) is the survey,
+  Phase 107 (done 2026-11-19; its "Where things stand" is the follow-up list,
+  and PLAN.md summarizes it) is pointers: subtask 1 (2026-11-19) is the survey,
   its doc's Part A, accepted by the author the same day (Decision 12's
   storage confirmed; the aliasing rule as a `PointerRegion` by type class;
   "The author's answers"); subtask 2 (2026-11-19) scalar and character
@@ -1316,8 +1317,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `sparse.f90`, and `modules/concord`, a list and a tree in modules; fixes: a bound
   from a dummy's component, `D%N`, `sema`'s `boundComponent`; a defined operation's
   and assignment's array operands, `operandsTo`, `definedValue`; ASSOCIATED of a
-  pointer function's value, `pointerFunctionValue`); subtask 9, the close-out, is
-  next.
+  pointer function's value, `pointerFunctionValue`); subtask 9 (2026-11-19) the
+  close-out, FORTRAN-INTERNALS.md's section 32.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

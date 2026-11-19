@@ -1,15 +1,10 @@
 # Phase 107 — Fortran 90: pointers
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
-author the same day ("The author's answers"); subtask 2, scalar and character
-pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
-subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
-scalar pointer components and recursive types, done 2026-11-19; subtask 5b,
-array pointer components, done 2026-11-19; subtask 6a, pointer dummies, done
-2026-11-19; subtask 6b, pointer results, done 2026-11-19; subtask 7, the
-optimizer's aliasing rules, done 2026-11-19; subtask 8, programs end to end,
-done 2026-11-19.
+**Status:** done 2026-11-19. Planned 2026-11-17 with Phase 99 (`PHASE-99 -
+Fortran 90.md`, Part C). Subtask 1, the survey (Part A), done 2026-11-19 and
+accepted by the author the same day ("The author's answers"); subtasks 2 to 9
+(5 and 6 each in two parts) done 2026-11-19. "Where things stand", at the end,
+is what the phase left.
 
 ## Goal
 
@@ -77,7 +72,7 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
 8. **Programs end to end** (a linked list and a binary tree in modules, a sparse
    matrix), every mode, gfortran's witness (done 2026-11-19).
 9. **Close-out**: FORTRAN-INTERNALS.md's section 32 (pointers and aliasing),
-   MANUAL.md.
+   MANUAL.md. (done 2026-11-19)
 
 # Part A — the survey (subtask 1)
 
@@ -447,7 +442,7 @@ The plan's order stands; each subtask's content is now the findings'.
    2026-11-19).
 9. **Close-out:** FORTRAN-INTERNALS.md's section 32 (pointers and aliasing, a
    linked list's code, why TARGET exists), MANUAL.md's 14.13 and FTNRTL table,
-   HELP FORTRAN.
+   HELP FORTRAN (done 2026-11-19).
 
 ## A.5 Questions for the author
 
@@ -1067,3 +1062,49 @@ The plan's open question 1 is settled by answer 1.
     compiled and assembled). Noticed, not changed: NOTRECORD calls a module function
     whose value's component is referenced, `F(A)%N`, "a procedure with an interface
     body". Subtask 9, the close-out, is next.
+- **2026-11-19:** Subtask 9, the close-out. FORTRAN-INTERNALS.md's section 32,
+  "Fortran 90: pointers and aliasing", follows a linked list through the passes: the
+  three forms of a pointer and why a type may name itself only through one, pointers
+  starting disassociated, sema's two meanings of a pointer's name and the IR's
+  `pointerTargetMem` (deferred addressing does the rest), `=>` for scalars and an
+  array pointer's descriptor filled in place, ALLOCATE's flags and FTNRTL's header
+  for DEALLOCATE's check, component chains and the located cells that carried array
+  pointer components, dummies, and results, overlap, and why TARGET exists, with a
+  loop whose K stays in a register across a store through Q while the TARGET T is
+  read each pass; its MACRO is govax's own `/OPTIMIZE` output. MANUAL.md's 14.13
+  names pointers whole in its introduction and lists what of pointers isn't there
+  (a disassociated pointer's use an ACCVIO at address 0, checked on govax); HELP
+  FORTRAN the same; the help library rebuilt (`go generate ./internal/bootdata`).
+  PLAN.md and CLAUDE.md summarize the phase.
+
+## Where things stand
+
+Phase 107 is done. What it left, and where each goes:
+
+- **Phase 109:** a whole array pointer (and allocatable array) in an I/O list by its
+  descriptor, rather than an element at a time.
+- **Phase 110:** `/CHECK=POINTERS` (a disassociated pointer's use, today an ACCVIO at
+  address 0); a run-time overlap test in place of a temporary for an array assignment
+  that may meet itself through a pointer (the author's answer 6); the debugger's EXAMINE
+  of a pointer and through one (the `/DEBUG` table leaves pointers out); `/STANDARD` for
+  the phase's forms.
+- **Phase 112:** `NULL()`, `=> NULL()` initialization, and default initialization of
+  components (Fortran 95).
+- **Not planned, ours (NOTIMPL):** a CHARACTER pointer whose length is known only when the
+  program runs, but for a `CHARACTER(LEN=*)` pointer dummy.
+- **Not Fortran 90, not planned:** procedure pointers, bounds remapping (`P(1:N) => A`),
+  allocatable components.
+- **Noticed, not changed:** NOTRECORD calls a module function whose value's component is
+  referenced, `F(A)%N`, "a procedure with an interface body"; a component of an array
+  element in a bound, `Y(D(1)%N)`, is still BADBOUND.
+- **Unconfirmed choices of ours:** every pointer starting disassociated, and new storage with
+  pointers in it cleared (the author's answer 2; Fortran 90 says undefined); BADDEALLOC, FOR
+  number 304, and its header (the author's answer 1); a scalar pointer to the one element of
+  an array pointer's block of its size giving back the whole block; `ALLOCATE (P, P%NEXT)`
+  done in order; the bounds of a pointer to a component of an array of records (from 1,
+  Fortran 95's reading); a TARGET judged by its type whether or not `=>` names it; COMMON
+  reachable by any pointer (the author's answer 3); ASSOCIATED of a zero-sized target false
+  (the author's answer 4).
+- **Awaiting a VMS round:** none: no VAX Fortran 90 exists, and the corpus is held to
+  gfortran (`compare.py`) but for govax's own `ptrallocvms.f90`, `ptrclear.f90`, and
+  `ptrequiv.f90`; Phase 111's optional VMS round may run their MACRO on VMS.

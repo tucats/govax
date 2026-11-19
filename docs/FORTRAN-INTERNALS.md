@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), and modules and separate compilation (section 31). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), and pointers (section 32). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -46,7 +46,8 @@ declarations, attributes, and kinds; section 26 its control constructs; section 
 as values and the scalarizer; section 28 internal procedures, interfaces, and how a call
 is resolved; section 29 descriptors, the stack and the heap, and the arrays they make
 possible; section 30 derived types; section 31 modules: what a module leaves behind for its
-users, how a USE reads it, and how separately compiled pieces are kept in step.
+users, how a USE reads it, and how separately compiled pieces are kept in step; section 32
+pointers, and the TARGET attribute that lets the optimizer reason about them.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -4639,3 +4640,368 @@ text that name the module's own types and had no host to find them in, and, unre
 modules, two code generator names colliding (`$Fn` for both a FORMAT's block and a floating
 constant, now `$KFn`) and the lexer reading `.AT. 2.0`'s period as a number's. Each is held by a
 test of its own (`internal/fortran/modprograms_test.go`).
+
+## 32. Fortran 90: pointers and aliasing (Phase 107)
+
+A FORTRAN-77 variable *is* its storage: a name, a place in `$LOCAL` or a common block or a
+frame, and every reference to the name reaches that place. A dummy argument was already a
+little different (section 12: the place is wherever the caller's argument list says), but the
+association was fixed for the whole call. A Fortran 90 *pointer* is a variable whose place
+can change while the program runs: `P => T` makes P stand for T, a later `P => U` for U,
+`NULLIFY (P)` for nothing. That one idea asks something of every pass. sema must decide, at
+each mention of P, whether the program means the pointer or the thing it points at. The IR
+must reach a target through an address it loads. FTNRTL must allocate memory that belongs to
+no variable. And the optimizer, which until now could see every place a store might change,
+must reason about a store through an address it can't see, which is what the TARGET
+attribute exists for.
+
+The program the section follows builds a linked list and walks it:
+
+```fortran
+program tour
+  type node
+    integer :: value
+    type(node), pointer :: next
+  end type node
+  type(node), pointer :: head, p
+  integer, target :: t
+  integer, pointer :: q
+  integer :: i, k, total
+  nullify (head)
+  do i = 1, 3
+    allocate (p)
+    p = node(i * 10, head)
+    head => p
+  end do
+  total = 0
+  p => head
+  do while (associated (p))
+    total = total + p%value
+    p => p%next
+  end do
+  t = 1
+  k = 2
+  q => t
+  do i = 1, 3
+    q = q + k
+  end do
+  print *, total, head%next%value, t
+end program tour
+```
+
+It prints `60 20 7`. Every listing in this section is govax's own `/OPTIMIZE` output.
+
+### Three forms of a pointer
+
+A pointer's storage holds where its target is, in the least that can say it (the plan's
+Decision 12):
+
+- a pointer to a scalar of any type but CHARACTER is a **longword**, the target's address, or 0
+  when it points at nothing (*disassociated*);
+- a CHARACTER pointer is a **class S descriptor**, 8 bytes: the target's length and address,
+  exactly what a CHARACTER dummy argument is given (section 12), so a pointer passed to such a
+  dummy passes its own descriptor;
+- an array pointer is a **class NCA descriptor** (section 29), its POINTER 0 when disassociated,
+  the same 20 bytes plus 12 for each dimension an allocatable array has.
+
+`sema.Symbol.Pointer` marks a pointer, `ArrayPointer` an array one, and `PointerSize` is its
+storage's size. The storage map says what each is:
+
+```text
+; Storage map for TOUR, the main program
+;   HEAD   TYPE(NODE), POINTER  $LOCAL+0   TOUR.HEAD
+;   P      TYPE(NODE), POINTER  $LOCAL+4   TOUR.P
+;   T      INTEGER              $LOCAL+8   TOUR.T
+;   Q      INTEGER, POINTER     $LOCAL+12  TOUR.Q
+...
+;   Type NODE, 8 bytes
+;     +0     VALUE  INTEGER
+;     +4     NEXT   TYPE(NODE), POINTER
+```
+
+A NODE is 8 bytes because NEXT is an address, not a NODE; that is why a type may name itself
+only through POINTER (TYPESELF otherwise). Every walk over a structure's fields that would
+follow a field's type (laying it out, comparing two types, writing a module's text) stops at a
+pointer component, which may lead back to the structure being walked.
+
+Fortran 90 calls a pointer's status *undefined* until something sets it. govax's pointers all
+start disassociated, Fortran 95's rule: static storage starts at zero, and a pointer in a stack
+frame (a RECURSIVE or AUTOMATIC unit's, or a function's pointer value) is cleared at every entry
+point (`ir/lowerpointer.go`'s `clearPointers`, called where `clearAllocatables` fills in
+descriptors). So are the pointer components of records in a frame (`Structure.PointerOffsets`,
+at any depth; `clearRecords` loops over an array of them), and the memory ALLOCATE makes for a
+type with pointers in it, by FTNRTL's clear flag below. The price is a few CLRLs per entry; the
+gain is that `ASSOCIATED` means something from the first statement.
+
+### One name, two meanings
+
+`P = 5` changes P's target; `P => T` changes P. The parser can't tell which a mention means
+(it reads `P` either way), so sema decides by where the mention stands, as it decides whether
+`X(1:3)` is a substring or a section (section 27). In `=>`, NULLIFY, ASSOCIATED, ALLOCATE,
+DEALLOCATE, and as the actual argument to a pointer dummy, a mention is the pointer; everywhere
+else (an expression, the left of `=`, an I/O list, an internal file, an actual argument to any
+other dummy) it is the target. sema keeps it a `Var` of the pointer's symbol in both cases, and
+the IR, which sees the symbol's `Pointer`, sends the second kind to `pointerTargetMem`: a `Mem`
+whose `Ptr` is the pointer's longword (a CHARACTER pointer's descriptor's POINTER). VAX
+deferred addressing does the rest:
+
+```text
+;   19      total = total + p%value
+	ADDL2	@TOUR.P,R6
+```
+
+`@TOUR.P` is the longword at P, used as an address: the target. Because the IR's `Mem` already
+had a run-time address form for dummies and descriptors, nothing downstream of `symbolMem`
+learned anything new: every expression, assignment, I/O item, and actual argument that worked
+on a variable works on a pointer's target. Passing a pointer to an ordinary dummy is `PUSHAL
+@P`, the target's address, at no cost.
+
+An array pointer's elements are reached as an assumed-shape dummy's are (section 29), through
+every stride, since its target may be a section. `Symbol.Strided` says so for both, and every
+place that once asked "is this array assumed-shape?" to decide how to reach an element, or
+whether it is known contiguous, now asks `Strided`. The descriptor *is* the pointer's storage,
+so unlike an assumed-shape dummy there is no copy at entry.
+
+### Pointer assignment
+
+`sema.PointerAssign` checks 7.5.2: the left side a pointer (NOTPOINTER), the right a variable
+whose base is a TARGET or a pointer (NOTTARGET), not a vector-subscripted section
+(VECTORTARGET), of the same type, kind, and rank, and length when both lengths are constants
+(POINTERTYPE). Then lowering is one of three things. A scalar's address is stored: `q => t` is
+`MOVAL TOUR.T,TOUR.Q`, and `head => p` copies one pointer's longword into another, `MOVL
+TOUR.P,TOUR.HEAD`. A CHARACTER pointer gets its header and then its address. An array pointer's
+descriptor is filled in (`arrayPointerAssign`), from another pointer's (`copyDescriptor`) or by
+describing the target (`describeTarget`, over `fillNCA`, the same routine that builds the
+descriptor an assumed-shape dummy is passed):
+
+```fortran
+  integer, target :: m(3, 4)
+  integer, pointer :: row(:)
+  row => m(2, :)
+```
+
+```text
+;    6    row => m(2, :)
+	MOVAL	ROWS.M+4,ROWS.ROW+4	; POINTER: M(2,1)
+	MOVL	#12,ROWS.ROW+20		; the stride: a column, 12 bytes
+	MOVL	#1,ROWS.ROW+24		; bounds 1 to 4
+	MOVL	#4,ROWS.ROW+28
+	SUBL3	#12,ROWS.ROW+4,ROWS.ROW+16	; A0, element 0
+	MOVL	#16,ROWS.ROW+12		; the size in bytes
+```
+
+(The comments are this tour's; the compiler's own are the storage map's.) ROW's elements are
+now M(2,1), M(2,2), ..., 12 bytes apart, and `ROW = ROW * 10` changes the second row of M
+without a byte copied. A pointer to a whole array keeps the array's bounds; one to a section
+counts from 1, as the standard says. `P => P(9:1:-1)` describes its target from P itself, so
+the description is built in a temporary first and then copied in. `NULLIFY` stores 0 in the
+address or the descriptor's POINTER. `ASSOCIATED(P)` tests it; `ASSOCIATED(P, T)` compares
+addresses, and for arrays the whole description, POINTER, each stride, and each extent, with a
+target of no elements never associated (the author's answer 4, gfortran's choice).
+
+### Memory that belongs to no variable
+
+`ALLOCATE (P)` gives a pointer a target of its own. An array pointer goes through Phase 104's
+`FTN$ALLOCATE` with a new flag; a scalar one through a new routine, since there is no
+descriptor to fill in, only a longword:
+
+```text
+;   12      allocate (p)
+	PUSHL	#8			; a NODE's size
+	PUSHL	#6			; flags: a pointer's (2), cleared (4)
+	PUSHAL	TOUR.P			; where the address goes
+	CALLS	#3,G^FTN$ALLOC_SCALAR
+```
+
+Flag 2 says the block is a pointer's, flag 4 that the type holds pointers, so the block is
+cleared and the new node's NEXT starts disassociated. An allocatable array's memory has one
+owner, the array, and DEALLOCATE of it is always of the whole thing. A pointer's has none:
+`P => A` makes P point at an allocatable array, or at a TARGET local, or at the middle of
+another pointer's block, and `DEALLOCATE (P)` of any of those would hand LIB$FREE_VM memory it
+never gave out. The standard calls that undefined; most compilers damage the heap. FTNRTL
+catches it (the plan's open question 1, the author's answer 1): a block made for a pointer has
+an 8-byte header before its first byte, a mark (the header's own address XOR `PTR_MARK`, so a
+copied header doesn't pass) and the size asked for. `FTN$DEALLOC_SCALAR` and `FTN$DEALLOCATE`
+with the pointer flag check, in `ftn_alloc.mar`'s `CHECK_BLOCK`, that the header can be read
+(PROBER: a TARGET may be the first thing in a program's storage), that the mark is right, and
+that the target is the whole block (for an array, contiguous and in order), and signal the new
+`%FOR-F-BADDEALLOC`, FOR number 304, if not. Allocatable arrays' blocks have no header, so a
+pointer to one is caught too.
+
+### Components, and descriptors that aren't cells
+
+`HEAD%NEXT%VALUE` goes through two pointers on its way. Lowering's `fieldPlace` (section 30's
+`fieldMem`, renamed) walks the path; at each pointer component the place so far is a pointer's
+longword, which it loads, and the walk goes on from offset 0 there:
+
+```text
+;   20      p => p%next
+	MOVL	TOUR.P,R0
+	MOVL	4(R0),TOUR.P
+```
+
+The scalar case was that simple because a scalar pointer component is a longword at an offset.
+An *array* pointer component is a descriptor at an offset, and here Phase 104's design pushed
+back: the IR reached every descriptor, in some 90 places (elements, sections, bounds, the
+scalarizer's extents, `=>`, ALLOCATE, ASSOCIATED), as a *cell*, `Mem{Cell: c, Offset: n}`. Rather
+than teach each of them a second way, Phase 107 made a reference to such a component a symbol of
+its own in sema (`sema/pointercomp.go`'s `componentPointer`: `H%V` is read as a named array
+pointer would be), and in the IR a **located cell**: a cell with no storage, only a statement of
+where its storage is (`Cell.At`, a record's place; `Cell.Base`, an address in a temporary;
+`Cell.Arg`, an argument's address). Every descriptor routine works on it unchanged, and
+`ir/locate.go`'s `resolveLocated`, run once a routine is lowered, rewrites each place naming one
+into its real place, so neither the optimizer nor the code generator ever sees one. The same
+trick later carried pointer dummies and pointer results.
+
+### Pointer dummies and results
+
+A pointer dummy is given **the address of the caller's own pointer** (the author's answer 5),
+its longword or its descriptor, so the callee's `=>`, NULLIFY, ALLOCATE, and DEALLOCATE change
+the caller's pointer with nothing to copy back:
+
+```fortran
+  subroutine push (head, v)
+    type(node), pointer :: head
+    integer, intent(in) :: v
+    type(node), pointer :: new
+    allocate (new)
+    new%value = v
+    new%next => head
+    head => new
+  end subroutine push
+```
+
+```text
+;   13      new%next => head
+	MOVL	LISTS.PUSH.NEW,R0
+	MOVL	@LISTS.PUSH.HEAD(AP),4(R0)
+;   14      head => new
+	MOVL	LISTS.PUSH.NEW,@LISTS.PUSH.HEAD(AP)
+```
+
+`@HEAD(AP)` is the caller's pointer, and `CALL PUSH (LIST%NEXT, 6)` passes the address of a
+component in a node, `PUSHAL 4(R0)`, so the new node goes in the middle of the list. An array
+pointer dummy is the third kind of located cell, `Cell.Arg`. Such a call needs an explicit
+interface (EXPLICITREQ), since the caller must know to pass the pointer and not its target; and
+the module text, which had written a dummy's type but not its POINTER, learned to (a user passed
+PUSH the target until it did).
+
+A pointer *result* returns an association, not a value: a scalar's address in R0, a CHARACTER
+one's descriptor in R0 and R1, an array one's descriptor through a hidden first argument the
+caller provides, which the function fills in (`clearPointerResult` clears it at entry, so a
+function that sets nothing returns a disassociated pointer). In the caller each reference becomes
+a pointer of the statement's own (`pointerValue`), a temporary longword or descriptor, after which
+it is a pointer like any other: a target in an expression, and `P => F(X)` the copy of one
+pointer into another.
+
+### Overlap: a pointer may point into the array being assigned
+
+Section 27's overlap analysis decides whether an array assignment's loops may read what they have
+already written. A pointer makes the answer "maybe" more often: in `A = P + 1`, P may point into
+A. `sema/overlap.go`'s `mayShare` learned that a pointer may share storage with another pointer,
+a TARGET (a dummy too), or anything in COMMON, of a type it may meet, and nothing else; so `A = P`
+gets a temporary when A is a TARGET and doesn't when it isn't. A run-time test of the two address
+ranges, cheaper than a temporary when they don't overlap, is Phase 110's (the author's answer 6).
+
+### Why TARGET exists
+
+Section 16's optimizer keeps a value in a register across a statement only if nothing the
+statement does can change the value's storage. A store to `$LOCAL+8` can't change `$LOCAL+20`;
+the places analysis (`opt/places.go`) knows both, compares them, and says so. A store through a
+pointer is a store to an address the compiler doesn't know. Until the phase's seventh subtask the
+analysis called such a place `UnknownRegion`, conflicting with everything: after `Q = Q + K`,
+every variable in the routine had to be read from memory again. Correct, and slow, and in a loop that walks a list
+it is most of the loop.
+
+The standard's answer is the TARGET attribute. A pointer may point only at a TARGET (or a part of
+one), at memory ALLOCATE made, or at another pointer's target, and only at a value of its own
+type. So a variable without TARGET can never be changed through a pointer, and the optimizer may
+believe it. Subtask 7 made that the rule:
+
+- the lowerer marks each place it reaches through a pointer with the type the pointer points at
+  (`ir.Mem.Pointee`, shown in the IR's dump as `@(P){=>INTEGER}`), so the optimizer needn't
+  recognize the address's form, which its own passes rewrite;
+- `places.go` makes a marked place a `PointerRegion` of that *class* (`sema/pointerclass.go`'s
+  `PointersMayMeet`: an intrinsic type by kind, every CHARACTER length one class, a derived type
+  by `sameType`; and a record meets any class one of its components, at any depth, belongs to);
+- a `PointerRegion` place conflicts with another of a class that may meet, with any TARGET of
+  such a class and anything sharing its storage by EQUIVALENCE (`Place.Targets`, from
+  `findTargets`), with all of COMMON but a module's block (another unit may declare a TARGET in a
+  common block; a module's variables are judged by their own attributes, which every user sees),
+  and with an unknown place; with nothing else. Any call may change a `PointerRegion`.
+
+Here is the difference it makes:
+
+```fortran
+program alias
+  integer, target :: t
+  integer, pointer :: q
+  integer :: i, k, n, total
+  read (*, *) n, k, t
+  q => t
+  total = 0
+  do i = 1, n
+    q = q + k
+    total = total + t
+  end do
+  print *, total, t
+end program alias
+```
+
+```text
+	MOVL	ALIAS.Q,R6		; Q's target's address, once
+	MOVL	ALIAS.I,R7
+	MOVL	ALIAS.TOTAL,R8
+	MOVL	ALIAS.K,R10		; K, once
+ALIAS.$3:				; DO (line 8)'s body
+;    9      q = q + k
+	ADDL2	R10,(R6)
+;   10      total = total + t
+	ADDL2	ALIAS.T,R8
+;   11    end do
+	AOBLEQ	R9,R7,ALIAS.$3
+```
+
+K, which has no TARGET, lives in R10 for the whole loop, though every pass stores through Q. T is
+a TARGET of Q's type, so the store may have changed it, and it is read from memory each time,
+which is right: Q points at T, and given `3 2 1` the program prints `15 7`. Had T been declared
+without TARGET, `q => t` would be NOTTARGET, and the compiler would have been free to hold T in a
+register too. That is the whole bargain: the programmer says, by TARGET, which variables a pointer
+may reach, and the compiler keeps every other one fast. A program that points where the standard
+doesn't allow (through EQUIVALENCE to a non-TARGET in another unit, say, or by passing a
+non-TARGET's address to MACRO code that keeps it) gets what it asked for; MANUAL.md's 14.9 lists
+it among the rules `/OPTIMIZE` takes at their word.
+
+Two smaller choices are worth knowing. A TARGET is judged by its type whether or not the unit
+ever points at it, rather than only once `=>` names it: a TARGET is there to be pointed at, and
+the bolder rule would have saved little. And the forward and dead-code passes needed no change:
+they keep facts only of places with no address, so two pointers with equal-looking places are
+never taken for one.
+
+### What the programs found
+
+`testdata/fortran90` has a program per subtask, each worked by hand and run in every mode and both
+loaders, and the same on gfortran (`compare.py`): `pointers.f90`, `ptrarrays.f90`,
+`ptralloc.f90` (with `ptrallocvms.f90`, VMS's own: the FOR numbers and LIB$STAT_VM's bytes),
+`ptrcomps.f90`, `ptrcarr.f90`, `ptrdum.f90`, `ptrres.f90`, `ptralias.f90`, and govax's own
+`ptrclear.f90` (stale pointers counted, with the clearing switched off) and `ptrequiv.f90`
+(EQUIVALENCE with a TARGET, which Fortran 95 forbids and gfortran refuses). `ptralias.f90` was run
+against rules made too bold on purpose: ignoring TARGETs and COMMON, six of its cases printed
+wrong under `/OPTIMIZE`; without the record half of the class rule, the component case did. The
+programs end to end are `ptrstd.f90`, the standard's own examples of pointers made to run;
+`sparse.f90`, a sparse matrix of linked rows with defined operators; and `modules/concord`, a
+concordance over four files, a queue module and a tree module with recursive procedures on pointer
+dummies, compiled in four orders.
+
+Along the way the pointer work found older seams: the lexer reading `A(::2)`'s two colons as
+`::`; the places analysis taking an array pointer's descriptor for an allocatable array's, so a
+store through the pointer was thought to leave every named variable alone; an
+`XORL3 #PTR_MARK,R3,(R3)+` in FTNRTL, which reads R3 in the same instruction that autoincrements
+it (UNPREDICTABLE, the architecture says); INTENT(IN) refusing a store *through* a dummy's
+pointer component, which changes only the target; and, in `sparse.f90`, a bound read from a
+dummy's component (`Y(A%N)`), a defined operator's array operand, a defined assignment's array
+value, and ASSOCIATED of a pointer function's value. Each is held by a test of its own.
+
+What waits: `/CHECK=POINTERS` and the debugger's EXAMINE of a pointer (Phase 110); a whole array
+pointer in an I/O list by its descriptor (Phase 109); `NULL()` and default initialization (Phase
+112); a CHARACTER pointer whose length is known only when the program runs.

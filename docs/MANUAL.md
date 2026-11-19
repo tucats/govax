@@ -8303,7 +8303,8 @@ values (sections, array expressions and assignment, constructors, WHERE, and the
 functions), with internal procedures, interface blocks, and keyword, optional, and generic
 arguments, with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
 array-valued functions, and the transformational functions), with derived types, with
-modules, compiled together or apart, and with scalar and array pointers; everything else Fortran 90
+modules, compiled together or apart, and with pointers (scalar, CHARACTER, and array pointers,
+pointer components, dummies, and results); everything else Fortran 90
 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
@@ -9774,6 +9775,15 @@ reach of one. Any call may change any pointer's target.
     character(len=n), pointer :: p
   -------------------------------^
 ```
+
+Of pointers, these are not there yet: a CHARACTER pointer whose length is known only when the
+program runs (but `CHARACTER(LEN=*)` pointer dummies, above); `NULL()` and initial values for
+pointers and pointer components, which are Fortran 95's; `/CHECK=POINTERS`, which would catch
+the use of a disassociated pointer (today a disassociated pointer's target is at address 0,
+and using it is an access violation); the debugger's EXAMINE of a pointer or through one,
+which leaves pointers out of the `/DEBUG` table for now; and an array pointer in an I/O list
+written by its descriptor (it is written an element at a time, which gives the same records).
+Procedure pointers and bounds remapping (`P(1:N) => A`) aren't Fortran 90 at all.
 
 Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have
 to give one type two names, or an external procedure that is a specific of two of its generic

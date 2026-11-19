@@ -476,6 +476,11 @@
    type the pointer's may meet.  Every other variable may stay in a
    register across it; that is what TARGET is for.
 
+   Using a disassociated pointer's target is an access violation at
+   address 0 (%SYSTEM-F-ACCVIO); /CHECK=POINTERS isn't there yet.  Nor
+   are CHARACTER pointers of a length known only at run time, NULL(),
+   or initial values for pointers.
+
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may
    hold "..." constants under /F90; one in a variable can't yet, and

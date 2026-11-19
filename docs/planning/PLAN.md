@@ -156,7 +156,7 @@ questions, and a progress log extended as that phase is worked.
 | 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17; done 2026-11-18 |
 | 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17; done 2026-11-18 |
 | 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17; done 2026-11-19 |
-| 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17 |
+| 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17; done 2026-11-19 |
 | 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17 |
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17 |
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data — planned 2026-11-17 |
@@ -1047,3 +1047,31 @@ compiled apart go down one path.
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 31 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 107, pointers.
+
+Phase 107 (done 2026-11-19) is pointers. A pointer is its target's address, and a reference to it
+is its target everywhere but where the program means the pointer itself.
+
+- **Storage** (Decision 12): a scalar pointer a longword, a CHARACTER one a class S descriptor, an
+  array one a class NCA descriptor; every pointer starts disassociated, a frame's and a frame
+  record's cleared at entry (the author's answer 2).
+- **References** (`sema/pointer.go`; `ir/lowerpointer.go`): sema decides pointer or target by where
+  a mention stands; a target is a `Mem` through the pointer's longword (`pointerTargetMem`), an
+  array pointer's elements through every stride (`Symbol.Strided`). `=>`, NULLIFY, and ASSOCIATED
+  with 7.5.2's checks (NOTPOINTER, NOTTARGET, POINTERTYPE, VECTORTARGET).
+- **ALLOCATE and DEALLOCATE of pointers**: FTNRTL's pointer and clear flags, `FTN$ALLOC_SCALAR` and
+  `FTN$DEALLOC_SCALAR` (GSMATCH 1,25), a header on each pointer's block, BADDEALLOC (FOR number
+  304, govax's own) for a target ALLOCATE didn't make (the author's answer 1).
+- **Pointer components** and recursive types, scalar and array (`sema/pointercomp.go`; the IR's
+  located cells, `ir/locate.go`); **pointer dummies** (the caller's own pointer's address, the
+  author's answer 5) and **pointer results** (R0, R0 and R1, or a hidden descriptor).
+- **Aliasing**: overlap's `mayShare` learns pointers (a temporary, the author's answer 6); the
+  optimizer's `PointerRegion` by type class (`sema/pointerclass.go`, `ir.Mem.Pointee`), meeting
+  only TARGETs, other pointers' targets, and COMMON (the author's answer 3), so every variable
+  without TARGET may stay in a register across a store through a pointer.
+- **Programs:** `testdata/fortran90`'s `pointers`, `ptrarrays`, `ptralloc`, `ptrcomps`, `ptrcarr`,
+  `ptrdum`, `ptrres`, `ptralias`, the standard's examples (`ptrstd`), `sparse`, and
+  `modules/concord`, in every mode, the same on gfortran; govax's own `ptrallocvms`, `ptrclear`,
+  and `ptrequiv`.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 32 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 108, intrinsic procedures.
