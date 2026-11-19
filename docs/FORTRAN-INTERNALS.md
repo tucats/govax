@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), and derived types (section 30). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), and modules and separate compilation (section 31). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -45,7 +45,8 @@ begins Fortran 90: free source form and the new tokens and statements; section 2
 declarations, attributes, and kinds; section 26 its control constructs; section 27 arrays
 as values and the scalarizer; section 28 internal procedures, interfaces, and how a call
 is resolved; section 29 descriptors, the stack and the heap, and the arrays they make
-possible.
+possible; section 30 derived types; section 31 modules: what a module leaves behind for its
+users, how a USE reads it, and how separately compiled pieces are kept in step.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -4280,3 +4281,361 @@ that compared layouts where the standard compares definitions. The last, in subt
 the parser: after a `)` the lexer can't tell `.ROT.` from DEC's field selector, and so leaves
 the periods apart, and only the binary operator was put back together; `WRITE (*, F) .ROT. V`
 was a syntax error until the unary reading did the same.
+
+## 31. Fortran 90: modules and separate compilation (Phase 106)
+
+Every compiler so far in this tour compiled one file and forgot it. A unit learned about
+another unit of the same file (an interface, a function's type), but nothing crossed from one
+compilation to the next except global names for LINK to match, and a mistake there (a
+subroutine called with the wrong arguments) was found, if at all, when the program ran. A
+Fortran 90 *module* changes that. `USE SHAPES` asks for everything SHAPES declared: its types,
+constants, variables, interfaces, and procedures, with their exact types, kinds, and
+arguments, and it asks for them whether SHAPES is earlier in this file or was compiled last
+week. So a module compilation leaves something behind for the next one to read, and that is
+this section's subject: what it leaves, how a user reads it, and how the result still links
+into an ordinary VMS image.
+
+The program the section follows, split into two files compiled one after the other:
+
+```fortran
+module shapes                        ! shapes.f90
+  implicit none
+  private
+  public :: point, origin, moves, shift, dist
+  type point
+    real :: x, y
+  end type point
+  type(point), parameter :: origin = point(0.0, 0.0)
+  integer :: moves = 0
+  real :: scale = 1.0
+  interface shift
+    module procedure shift_both, shift_x
+  end interface
+contains
+  function shift_both(p, dx, dy)
+    type(point), intent(in) :: p
+    real, intent(in) :: dx, dy
+    type(point) :: shift_both
+    moves = moves + 1
+    shift_both = point(p%x + scale*dx, p%y + scale*dy)
+  end function shift_both
+  function shift_x(p, dx)
+    type(point), intent(in) :: p
+    real, intent(in) :: dx
+    type(point) :: shift_x
+    shift_x = shift_both(p, dx, 0.0)
+  end function shift_x
+  real function dist(p, q)
+    type(point), intent(in) :: p, q
+    dist = sqrt((p%x - q%x)**2 + (p%y - q%y)**2)
+  end function dist
+end module shapes
+```
+
+```fortran
+program tour                         ! prog.f90
+  use shapes, only: point, origin, shift, steps => moves, dist
+  type(point) :: p
+  p = shift(shift(origin, 3.0, 1.0), 1.0)
+  print '(1x, 3f6.2, i3)', p, dist(p, origin), steps
+end program tour
+```
+
+```text
+$ govax fortran shapes.f90           ! writes shapes.mar and shapes.f90$mod
+$ govax fortran prog.f90             ! reads shapes.f90$mod, writes prog.mar
+$ govax macro shapes.mar
+$ govax macro prog.mar
+$ govax link prog.obj shapes.obj
+$ govax run prog.exe
+  4.00  1.00  4.12  2
+```
+
+### A module is a unit with no code
+
+sema compiles a MODULE as it compiles a host with internal procedures (section 28), by the same
+four steps (`analyzeContained`): the module's declarations, each module procedure's
+declarations and so its interface, the host's statements (a module has none), then each
+procedure's statements. The module procedures see the module's names by host association,
+exactly as an internal procedure sees its host's; `SHIFT_BOTH` reaches `MOVES` and `SCALE`
+that way. What differs is that a module has no code of its own and its procedures are global.
+
+A module's variables have to live somewhere every user can reach, for the whole run. govax
+already had such a thing: a COMMON block, a psect every unit that names it contributes to and
+LINK overlays (section 8). So a module's variables *are* a common block (`moduleBlock`), with
+a psect name no FORTRAN name can take, `$MOD$SHAPES`, laid out by COMMON's code and initialized
+the way a COMMON block's DATA is. They are static even under `/RECURSIVE`: the standard lets a
+processor keep a module's variables for the whole run, and nothing else would make sense for a
+psect. The IR makes the module a routine of no code (`ir.Module`, as BLOCK DATA is), so
+codegen writes its section and nothing more:
+
+```text
+	.PSECT	$MOD$SHAPES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$SHAPES.$BASE:
+	.LONG	0			; MOVES = 0
+	.LONG	^X00004080		; SCALE = 1.0
+
+SHAPES.MOVES = $MOD$SHAPES.$BASE	; MOVES, in module SHAPES's variables
+SHAPES.SCALE = $MOD$SHAPES.$BASE+4	; SCALE, in module SHAPES's variables
+```
+
+Module procedures get global names, `SHAPES.SHIFT_BOTH`, so they never collide with an external
+`SHIFT_BOTH` of the program or another module's (`Unit.LinkName`). The period can't appear in
+a FORTRAN name, which is what makes the form safe, and VMS's own symbols use `$`, not `.`. A
+name past MACRO's 31 characters can't be numbered as local symbols are (`.$Nn`, counted through
+one MACRO file), since the module and every user must arrive at the same name without seeing
+each other's files; `LongName` makes it from the full name instead: its first 22 characters,
+`$`, and 8 hexadecimal digits of the full name's SHA-256. The same rule shortens a long
+module's psect name.
+
+A call of a module procedure is an ordinary external call, `CALLS #3,G^SHAPES.SHIFT_BOTH`,
+with nothing hidden: a module has no stack frame, so unlike an internal procedure's call
+(section 28's R10) there is no host frame to pass.
+
+### What a module leaves behind: its text
+
+When SHAPES compiles without an error, sema writes down what a user may need of it
+(`sema/modwrite.go`), and the FORTRAN command puts that in `SHAPES.F90$MOD` beside the MACRO
+file. Here is the whole of it:
+
+```text
+!GOVAX$ MODULE FILE 1
+!GOVAX$ COMPILER GOVAX FORTRAN V0.0-0
+!GOVAX$ SOURCE .../tour/shapes.f90 19-NOV-2026 08:30:53.79
+!GOVAX$ FLOATING D
+!GOVAX$ OBJECT
+MODULE SHAPES
+!GOVAX$ PSECT $MOD$SHAPES SIZE 8 ALIGN 0
+!GOVAX$ TYPE POINT SIZE 8 BOUNDARY 4 NATURAL
+  TYPE POINT
+    REAL(KIND=4) :: X
+    REAL(KIND=4) :: Y
+  END TYPE POINT
+  TYPE(POINT), PARAMETER :: ORIGIN = POINT(0E+00_4, 0E+00_4)
+!GOVAX$ AT MOVES 0 4
+  INTEGER(KIND=4) :: MOVES
+!GOVAX$ AT SCALE 4 4
+  REAL(KIND=4) :: SCALE
+  INTERFACE SHIFT
+    MODULE PROCEDURE SHIFT_BOTH, SHIFT_X
+  END INTERFACE
+  PRIVATE :: SCALE, SHIFT_BOTH, SHIFT_X
+CONTAINS
+!GOVAX$ LINK SHIFT_BOTH SHAPES.SHIFT_BOTH
+  FUNCTION SHIFT_BOTH(P, DX, DY)
+    TYPE(POINT), INTENT(IN) :: P
+    REAL(KIND=4), INTENT(IN) :: DX
+    REAL(KIND=4), INTENT(IN) :: DY
+    TYPE(POINT) :: SHIFT_BOTH
+  END FUNCTION SHIFT_BOTH
+!GOVAX$ LINK SHIFT_X SHAPES.SHIFT_X
+  FUNCTION SHIFT_X(P, DX)
+  ...
+END MODULE SHAPES
+```
+
+It is Fortran 90. Leave out the `!GOVAX$` lines, which are comments to any other reader, and
+what remains is a module a Fortran compiler could compile: the specification part, written out
+so nothing depends on the module's IMPLICIT rules, `/I4`, or kinds by default
+(`REAL(KIND=4)`, never `REAL`); each PARAMETER's value folded (a floating one in as many digits
+as bring back its exact bits); and after CONTAINS each module procedure as an *interface*, a
+header and its dummies' declarations with no statements, which is what Fortran calls a
+procedure body with nothing in it. The procedures' code isn't there because a user doesn't
+need it: it is in the module's object.
+
+The comments carry what Fortran can't say. `PSECT` and `AT` give the section's size and each
+variable's offset, `TYPE` a type's size and alignment, `LINK` a procedure's global name,
+`FLOATING` whether REAL\*8 meant D or G, and (once modules use modules) `FROM` where an entity
+came from. Their reader checks every one against what analysis computes from the declarations,
+so a file edited by hand, or written by another version of govax, is caught
+(`MODFILEBAD`, naming the line) rather than believed.
+
+Why text, and why Fortran? The other choice was a record format of our own with a reader of its
+own, which would be one more grammar to keep in step with the compiler. Fortran text is read
+by the compiler's own passes, which already know every declaration; and a person can read it,
+which is how the format can be explained in one listing.
+
+### Every USE reads text
+
+Here is the design's central decision. When a user says `USE SHAPES`, sema doesn't look
+SHAPES up in some table of analyzed units, even when SHAPES was compiled a moment ago in the
+same file. It reads SHAPES's text (`sema/modread.go`): the `!GOVAX$` lines into `moduleFacts`,
+then the compiler's own source pass, lexer, parser, and semantic analysis of that one unit, in a
+mode that makes no code (`analyzer.reading`). The text comes from memory when the module is in
+this compilation, and from its file when it isn't (the FORTRAN command's `fortranModules`, a
+`sema.ModuleFinder`). So a module in the same file and a module compiled last week go down one
+path; every test of a one-file program is also a test of the writer and reader; and a stale
+module file on the disk can never stand in for a module just compiled.
+
+The read leaves a *module scope*, the module's names and entities. `USE` then enters what the
+user asked for into the *user's own* scope (`sema/use.go`'s `useModule`): each a copy of the
+module's symbol, marked `Symbol.Use` with its module and its remote name, under the local name
+the user gives it. Being in the user's own scope is what the standard's rules need. A
+use-associated name hides a host's name of the same spelling (12.1.2.2.1); a later type
+statement or DIMENSION for it finds it there and is `USEATTR`, since only the module may say
+what it is; COMMON or EQUIVALENCE of it is `USECOMMON`.
+
+Each kind of entity goes in its own way:
+
+- A **variable** is reached through the user's own view of the module's section
+  (`Unit.UsedBlocks`). The user's MACRO file contributes to `$MOD$SHAPES` as any COMMON
+  block's user does, its size from the `PSECT` line, and names the variable at its offset
+  from the `AT` line, under the user's local name:
+
+  ```text
+  	.PSECT	$MOD$SHAPES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+  $MOD$SHAPES.$BASE:
+  	.BLKB	8
+
+  TOUR.STEPS = $MOD$SHAPES.$BASE		; STEPS, in module SHAPES's variables
+  ```
+
+  The rename `STEPS => MOVES` is nothing at run time: the user's name for the same bytes.
+- A **type** is the module's own `Structure`, one object however many paths reach it, since
+  `sameType` (section 30) compares definitions by identity (`readType`; the compilation keeps
+  one table of the types its module texts gave).
+- A **module procedure** is a symbol with an explicit interface (the text's body) and a link
+  name (the `LINK` line); every call is checked against the interface as an internal
+  procedure's is.
+- A **generic name or operator** brings its specifics with it, the user's copies of them.
+
+`SHIFT` shows why that last rule matters. `SHIFT_BOTH` and `SHIFT_X` are PRIVATE: the user may
+not name them. But it may call them through the public generic `SHIFT` (5.2.3), so the module's
+text carries them, the user's copies are *hidden* (`Unit.hidden`, in the scope but not under
+any name the program can write), and resolution (section 28) picks one as usual:
+
+```text
+	CALLS	#3,G^SHAPES.SHIFT_BOTH
+	...
+	CALLS	#2,G^SHAPES.SHIFT_X
+```
+
+`PRIVATE` stopped the user from writing the name; it never stopped the call.
+
+### PUBLIC, PRIVATE, ONLY, and the rest of association
+
+Access belongs to a *name in a module*, not to an entity (`sema/access.go`). A module's default
+is PUBLIC unless a bare `PRIVATE` statement says otherwise, as SHAPES's does, and statements and
+attributes then mark names one by one; `resolveAccess` settles them once the module's procedures
+and generics are known, so `PRIVATE :: SHIFT_X` can come before `SHIFT_X` is defined. The checks
+are the standard's: a public entity may not be of a private type (`ACCESSTYPE`), nor a public
+module procedure have an argument or value of one (`ACCESSPROC`), nor a public namelist group a
+private item (`ACCESSNML`), nor a public type a component of one unless its components are
+PRIVATE (`ACCESSCOMPONENT`); a type with a PRIVATE statement in its definition is a type whose
+components and constructor only its module may touch (`COMPPRIVATE` elsewhere).
+
+A user's `ONLY` list and renames choose among the public names. Several USEs of one module in
+a unit join as 11.3.2 says (`useRequest`): one without ONLY gives everything, the renames
+together; all with ONLY give the union of the lists.
+
+When two USEs give one local name, there are two cases. If both reach the same entity, through
+different paths (module M re-exports J's `X`, and the unit uses both J and M), it is one name:
+every copy carries its entity's *origin*, the module that defined it and its name there
+(`entityOrigin`), and two copies of one origin are one. If they reach different entities, the
+standard makes it an error only when the program uses the name (11.3.2), so sema marks the name
+ambiguous and says nothing until `lookup` finds a reference:
+
+```text
+%FORT-E-USEAMBIG, N can't be referenced here: the modules A and B each give an entity of that name
+  at line 10 of AMB.F90
+    print *, n
+  -----------^
+```
+
+Generic names are the exception the standard makes: generics of one name from several modules
+join into one, and `checkGenerics` (section 28) holds the joined list to 14.1.2.3's rules in the
+user, so two modules' SWAPs that can't be told apart are reported at the second USE.
+
+### Modules that use modules
+
+A module's text is *self-contained*: it carries everything its users can reach, including what
+it has from other modules, each such entity with a `FROM` line naming its origin. A user of M
+needs M's file and no other, even when M re-exports J's types. If the user also uses J, J's
+file is read too, and its `POINT` and the one M passed on are the same `Structure`, matched by
+origin. If the two files disagree about it (J recompiled with a changed POINT, M not), the user
+gets `MODSTALE` naming both, the one error that can explain all the others such a mixture
+would cause.
+
+A module can't use itself, directly or through others (`MODCYCLE`), and in one file a module
+must come before its users (`MODLATER`, naming the line where it is): the compiler reads a file
+once, from the top, as the standard expects of a processor.
+
+### Separate compilation, and keeping the pieces in step
+
+`MODNOTFOUND` is what a user compiled before its module gets, listing every place
+`fortranModules` looked: this compilation's own module directory (`/MODULE`, else the default
+directory where the MACRO file goes), the source's directory, then `/MODULE_PATH`'s directories
+or the translations of `FORT$MODULES`, each name on the host in both cases:
+
+```text
+%FORT-E-MODNOTFOUND, no module file for SHAPES; looked in .../nf/shapes.f90$mod,
+    .../nf/SHAPES.F90$MOD, shapes.f90$mod, SHAPES.F90$MOD
+```
+
+Two rules make separate compilation behave. First, a module file is written only when its
+contents change (`writeModuleFiles`, comparing `sema.ModuleDigest`, a SHA-256 of the text
+without its COMPILER and SOURCE lines), so an edit to a module procedure's body, which changes
+nothing a user can see, leaves the file's date (or its version on a volume) alone, and a
+procedure that rebuilds what is older than its inputs rebuilds only the module. No module file
+is written by a compilation with an error.
+
+Second, the objects must agree. A user's code bakes in offsets and sizes from the text; linked
+with the object of a module since changed (a variable added before `MOVES`), it would read the
+wrong bytes without a word. VMS shareable images have GSMATCH for this; modules get a *stamp*.
+Each module with an object (one with variables or procedures, the `OBJECT` line) defines a
+global symbol named for its text's digest (`sema.StampName`, codegen's `writeStamps`), and each
+user's object refers to it:
+
+```text
+$MOD$SHAPES.2018EFBA == 0		; this module's stamp, which its users' objects refer to
+...
+	.EXTRN	$MOD$SHAPES.2018EFBA	; the stamps of the modules used
+```
+
+Change the module's interface, compile and assemble it, link it with the user's old object,
+and LINK can't find the symbol the user asked for:
+
+```text
+%LINK-W-NUDFSYMS, 1 undefined symbol:
+%LINK-I-UDFSYM, 	$MOD$SHAPES.2018EFBA
+```
+
+That costs nothing at run time (the symbol is an absolute 0 nothing reads) and needed nothing of
+LINK. A module of only types, constants, and interfaces has no object, so its text has no
+`OBJECT` line and its users refer to no stamp.
+
+One of a unit's options does matter to its users: `/G_FLOATING`. `sema.Type` says REAL\*8, not D
+or G, which is a unit's choice (section 11). A module compiled `/G_FLOATING` and used by a
+`/NOG_FLOATING` unit would hand it G values to read as D, so a USE across the two is `MODFORMAT`
+when the module has a REAL\*8 or COMPLEX\*16 entity anywhere (`formatMatters`). Every other
+option is written into the text as the sizes and offsets it produced, and so can't disagree.
+
+### Use association beside host association
+
+Section 28's host association and this section's use association both make another unit's names
+visible, and it is worth seeing why the compiler implements them so differently. A host and its
+internal procedures are compiled together, in one pass over one file, and an internal procedure
+may reach its host's *frame* (R10); so host association is a scope chain, `find` walking
+outward, and nothing is copied. A module may have been compiled anywhere, by another run of the
+compiler; it has no frame, only static storage and global names; and its user must be able to
+rename, restrict, and combine what it takes. So use association copies: the module's entities
+become the user's own names, read from a text, placed by its comments, and checked against
+other copies by origin. The scope chain then works exactly as before, since a use-associated
+name is simply local.
+
+### What the programs found
+
+`testdata/fortran90` has `moddata.f90`, `modprocs.f90`, and `modaccess.f90`, each a module
+and its users in one file; `testdata/fortran90/modules/standard` is the standard's own examples
+(11.3.3 and 12.1.2.2.2) made to run, and `modules/polys` a library of three modules in a chain,
+a re-exporting module, a user with ONLY and a rename, and a fixed-form `/NOF90` user. Each
+multi-file program is compiled in every order its `compiles.txt` allows and linked in every
+order its `links.txt` lists, in every mode, and gfortran gives the same output.
+
+Building them up found the seams you might expect between the module machinery and what was
+there before: a SAVE of a module variable refused as a COMMON member's (`SAVECOMMON`), a
+module's allocatable array with no descriptor in its section, interface bodies in a module's
+text that name the module's own types and had no host to find them in, and, unrelated to
+modules, two code generator names colliding (`$Fn` for both a FORMAT's block and a floating
+constant, now `$KFn`) and the lexer reading `.AT. 2.0`'s period as a number's. Each is held by a
+test of its own (`internal/fortran/modprograms_test.go`).

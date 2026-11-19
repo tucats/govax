@@ -155,7 +155,7 @@ questions, and a progress log extended as that phase is worked.
 | 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17; done 2026-11-18 |
 | 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17; done 2026-11-18 |
 | 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17; done 2026-11-18 |
-| 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17 |
+| 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17; done 2026-11-19 |
 | 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17 |
 | 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17 |
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17 |
@@ -1016,3 +1016,34 @@ names it, so a record and an object are never one type.
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 30 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 106, modules.
+
+Phase 106 (done 2026-11-19) is modules and separate compilation. Every USE reads a module's
+*text*, from this compilation or from its module file, so a module in the same file and one
+compiled apart go down one path.
+
+- **Modules** (`sema/module.go`): a MODULE analyzed by the internal procedures' four steps; its
+  variables a common block of their own, psect `$MOD$M`, static under `/RECURSIVE`; its procedures
+  global, `M.P` (`Unit.LinkName`), a name past 31 characters `LongName`'s stable hashed form; the IR's
+  `ir.Module`, a routine of no code; MODSTMT, MODLATER, MODCYCLE.
+- **The module text** (`sema/modwrite.go`, `modread.go`): Fortran 90, the specification part written
+  out and each module procedure's interface, with `!GOVAX$` lines for layout, link names, the floating
+  format, and origins, read by the compiler's own passes and checked against them (MODFILEBAD);
+  self-contained, re-exported entities with `FROM` lines, a type one `Structure` by its origin
+  (MODSTALE).
+- **Association** (`sema/use.go`, `access.go`): copies in the user's own scope, renames and ONLY,
+  several USEs joined, one entity by two paths one name, USEAMBIG only where referenced, generic
+  names joined and checked in the user; USEATTR, USECOMMON; PUBLIC and PRIVATE statements and
+  attributes, private types and components (ACCESSTYPE, ACCESSPROC, ACCESSNML, ACCESSCOMPONENT,
+  COMPPRIVATE, ONLYPUBLIC); MODULE PROCEDURE.
+- **Files and the command** (`dclcmd/fortranmodules.go`): `NAME.F90$MOD` written only when it changes
+  and never after an error; the search (`/MODULE`'s or the default directory, the source's,
+  `/MODULE_PATH` or `FORT$MODULES`; MODNOTFOUND); the stamp, a global symbol of the text's digest
+  that users' objects refer to, so LINK names a stale object; MODFORMAT for `/G_FLOATING`.
+- **Listings:** each use-associated name's origin in the storage map and cross reference, a row per
+  module, module procedures headed `M.P`.
+- **Programs:** `testdata/fortran90`'s `moddata`, `modprocs`, and `modaccess`, and `modules/standard`
+  (the standard's examples) and `modules/polys`, compiled in every order their `compiles.txt` allows,
+  in every mode, the same on gfortran.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 31 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 107, pointers.

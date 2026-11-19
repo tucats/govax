@@ -8294,9 +8294,10 @@ always has. This section grows with each part; so far a program may be written i
 its control constructs (construct names, EXIT, CYCLE, and SELECT CASE), with arrays as
 values (sections, array expressions and assignment, constructors, WHERE, and the array
 functions), with internal procedures, interface blocks, and keyword, optional, and generic
-arguments, and with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
-array-valued functions, and the transformational functions); everything else
-Fortran 90 adds is recognized and reported as not yet implemented.
+arguments, with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
+array-valued functions, and the transformational functions), with derived types, and with
+modules, compiled together or apart; everything else Fortran 90 adds is recognized and
+reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -9306,9 +9307,118 @@ function up(n, k)
 end function
 ```
 
-**Modules.** A `MODULE` holds data, types, constants, interfaces, and procedures, which a
-unit reaches with `USE` (with renames and `ONLY`), its names `PUBLIC` or `PRIVATE`. Compiling
-a module writes its *module file*, `NAME.F90$MOD`, a Fortran text of what its users may reach,
+**Modules** (the standard's 11.3). A `MODULE` holds data, types, constants, interfaces, and
+procedures for the units that `USE` it. Its specification part may hold declarations, types,
+interface blocks, PARAMETERs, COMMON, EQUIVALENCE, DATA, NAMELIST, SAVE, IMPLICIT, USE, and
+PUBLIC and PRIVATE, but no executable statement, statement function, ENTRY, FORMAT, or automatic
+object (`%FORT-E-MODSTMT` for a statement, a message of its own for the rest); after `CONTAINS` come its *module procedures*, which see the
+module's names as an internal procedure sees its host's, and may have internal procedures of
+their own:
+
+```fortran
+module shapes
+  implicit none
+  private
+  public :: point, origin, moves, shift, dist
+  type point
+    real :: x, y
+  end type point
+  type(point), parameter :: origin = point(0.0, 0.0)
+  integer :: moves = 0
+  real :: scale = 1.0
+  interface shift
+    module procedure shift_both, shift_x
+  end interface
+contains
+  function shift_both(p, dx, dy)
+    type(point), intent(in) :: p
+    real, intent(in) :: dx, dy
+    type(point) :: shift_both
+    moves = moves + 1
+    shift_both = point(p%x + scale*dx, p%y + scale*dy)
+  end function shift_both
+  function shift_x(p, dx)
+    type(point), intent(in) :: p
+    real, intent(in) :: dx
+    type(point) :: shift_x
+    shift_x = shift_both(p, dx, 0.0)
+  end function shift_x
+  real function dist(p, q)
+    type(point), intent(in) :: p, q
+    dist = sqrt((p%x - q%x)**2 + (p%y - q%y)**2)
+  end function dist
+end module shapes
+
+program tour
+  use shapes, only: point, origin, shift, steps => moves, dist
+  type(point) :: p
+  p = shift(shift(origin, 3.0, 1.0), 1.0)
+  print '(1x, 3f6.2, i3)', p, dist(p, origin), steps
+end program tour
+```
+
+prints
+
+```text
+  4.00  1.00  4.12  2
+```
+
+A module's variables keep their values for the whole run, with or without SAVE, and under
+`/RECURSIVE` too: they are a program section of their own, `$MOD$SHAPES`, laid out and
+initialized as a common block is, which every user's object contributes to. A module procedure
+is a global routine named `MODULE.PROCEDURE` (`SHAPES.DIST`), so it never meets an external
+routine or another module's procedure of the same name; a program in MACRO may call it by that
+name. A name past MACRO's 31 characters is shortened to its first 22, `$`, and 8 hexadecimal
+digits made from the whole name, the same in the module and every user; the listing gives both.
+
+**USE.** `USE SHAPES` gives a unit every public entity of the module; `USE SHAPES, R => RADIUS`
+gives them all with RADIUS called R here; `USE SHAPES, ONLY: POINT, STEPS => MOVES` gives only
+those listed, by a name, a rename, or a generic name, `OPERATOR(op)`, or `ASSIGNMENT(=)`.
+Several USEs of one module in a unit are joined: one without ONLY gives everything. USE statements
+come first in a unit, before IMPLICIT; IMPLICIT doesn't come with a module. A name a USE gives
+is the unit's own: it hides a host's name of the same spelling, and the unit may not declare it
+again (no type statement, DIMENSION, DATA, or SAVE of it, `%FORT-E-USEATTR`; no COMMON or
+EQUIVALENCE, `%FORT-E-USECOMMON`), though it may put it in a NAMELIST group. A module may use
+other modules and pass on what they give it; a unit may use a module in a main program, a
+subprogram, a module procedure, an internal procedure, or an interface body, which is how an
+interface body reaches a module's types. A module may not use itself, directly or through
+others (`%FORT-E-MODCYCLE`), and in one file a module comes before its users
+(`%FORT-E-MODLATER`).
+
+**One name from two modules.** Two USEs may give one local name. If both reach the same entity
+(module M passes on J's X, and the unit uses both J and M), it is one name. If they reach
+different entities, the unit may still compile, as long as it never uses the name:
+
+```text
+%FORT-E-USEAMBIG, N can't be referenced here: the modules A and B each give an entity of that name
+  at line 10 of DUA1:[WORK]AMB.F90;1
+    print *, n
+  -----------^
+```
+
+A rename or an ONLY list settles it. Generic names are different: generic names (or operators)
+of one name from several modules become one generic name, whose specific procedures must all be
+told apart by their arguments in the unit that joins them (`%FORT-E-GENERICAMBIG` at the USE).
+
+**PUBLIC and PRIVATE** (5.1.2.2, 5.2.3, 4.4.1), only in a module. Every name of a module is
+public unless the module says `PRIVATE` alone, which makes its default private; then
+`PUBLIC :: list` and `PRIVATE :: list` (or the attributes, `REAL, PRIVATE :: SCALE`) set names
+one by one, a generic name or `OPERATOR(op)` among them, and a name the module itself has from
+another module, which it then passes on or keeps to itself. A private name is the module's and
+its procedures' alone (`%FORT-E-ONLYPUBLIC` for one in a user's ONLY list). A private specific
+procedure of a public generic name is still called through the generic name, as `SHIFT_BOTH`
+is above. A public entity may not be of a private type, nor a public module procedure have an
+argument or value of one (`ACCESSTYPE`, `ACCESSPROC`). `TYPE, PRIVATE :: T` makes a type
+private; a `PRIVATE` statement inside a public type's definition makes its components private:
+users may declare, assign, and pass its objects, but not name a component or use its
+constructor (`%FORT-E-COMPPRIVATE`).
+
+**Generic names and operators from modules.** An `INTERFACE name`, `INTERFACE OPERATOR(op)`, or
+`INTERFACE ASSIGNMENT(=)` block in a module names its module procedures with
+`MODULE PROCEDURE`; a user may do the same for module procedures it uses, to make generic names
+of its own. Interface bodies in a module describe external procedures, as anywhere else.
+
+**Module files and separate compilation.** Compiling a module writes its *module file*, `NAME.F90$MOD`, a Fortran text of what its users may reach,
 in the default directory (where the MACRO file goes) or in the one `/MODULE=directory` names;
 a module file that would come out no different is left as it is, so its date (or on a volume
 its version) says when the module last changed for its users. No module file is written by a
@@ -9377,7 +9487,7 @@ Cross reference for PROG                    (D defined, A assigned, a blank is u
 A name a module passes on from another says that too (`from SHAPES, defined in GEOM`).
 `/WARNINGS=UNUSED` doesn't report a module's public names, which are its users', nor what a
 `USE` of a whole module gave; it does report a name an `ONLY` list or rename asked for and
-nothing uses. The rest of this section's story of modules is still to come.
+nothing uses.
 
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
@@ -9389,7 +9499,13 @@ nothing uses. The rest of this section's story of modules is still to come.
   --------^
 ```
 
-That includes pointers, each to come in its turn. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
+That includes pointers, each to come in its turn. Of modules, these are not there yet: POINTER
+module variables and components; ENTRY in a module procedure; a module whose text would have
+to give one type two names, or an external procedure that is a specific of two of its generic
+names, or a COMMON block it and a module it uses both declare (each `%FORT-E-NOTIMPL` when the
+module compiles); and govax's definition modules (`$SSDEF` and the rest) as modules to USE,
+which are still INCLUDE's. A fixed-form `/NOF90` unit may use a module, but VAX FORTRAN reads
+`A.B.C` as a field, so it can't use a module's defined operators. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
 gives no elements but govax still calls `BOUNDORDER`; a CHARACTER constructor whose first value's length is known only when the program
 runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of
 records; and a section as an internal file or ENCODE's buffer. Fortran 90's other new

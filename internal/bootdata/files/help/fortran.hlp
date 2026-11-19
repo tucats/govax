@@ -338,7 +338,39 @@
    yet.
 
    A MODULE holds data, types, constants, interfaces, and procedures
-   for the units that USE it.  Compiling a module writes its module
+   for the units that USE it:
+
+     module counts
+       integer :: total = 0
+     contains
+       subroutine add(n)
+         integer, intent(in) :: n
+         total = total + n
+       end subroutine add
+     end module counts
+
+     program tally
+       use counts, only: add, grand => total
+       call add(2); call add(3)
+       print *, grand              ! prints 5
+     end program tally
+
+   A module's variables are a program section of their own, $MOD$NAME,
+   kept for the whole run; its procedures (after CONTAINS) are global
+   routines named MODULE.PROCEDURE, ADD here COUNTS.ADD.  USE M gives
+   every public name of M, USE M, LOCAL => REMOTE renames one, and USE
+   M, ONLY: list gives only those listed (names, renames, generic
+   names, OPERATOR(op), ASSIGNMENT(=)).  A name a USE gives may not be
+   declared again in the unit (%FORT-E-USEATTR); two modules' entities
+   of one name are an error only where the unit refers to the name
+   (%FORT-E-USEAMBIG), and generic names of one name join.  In a
+   module, PRIVATE alone makes names private by default, and PUBLIC ::
+   and PRIVATE :: lists (or the attributes) set them one by one; a
+   private specific is still called through its public generic name.
+   TYPE, PRIVATE :: T is a private type; a PRIVATE statement in a
+   type's definition makes its components private.
+
+   Compiling a module writes its module
    file, NAME.F90$MOD, a Fortran text of what its users may reach, in
    the default directory or the one /MODULE names; a module file that
    would be no different is left alone.  A USE finds a module earlier

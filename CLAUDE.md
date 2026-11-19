@@ -1234,6 +1234,32 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   programs end to end (`geometry.f90`, `stock.f90`, `accounts.f90`; a fix, a
   unary defined operator after a `)`, `parse`'s `unary`); subtask 9 (2026-11-18)
   the close-out, FORTRAN-INTERNALS.md's section 30.
+  Phase 106 (done 2026-11-19; its Part A the survey, accepted by the author
+  2026-11-18, with the subtasks revised, A.4; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is modules and separate
+  compilation: every USE reads a module's text, from this compilation or its
+  module file. Subtask 2 (2026-11-18) is modules and their data
+  (`ast.UseStmt`, `ast.AccessStmt`, `parse/modules.go`; `sema/module.go`: a
+  module's variables a common block of their own, `$MOD$M`, `moduleBlock`;
+  `ir.Module`, no code; the text written by `sema/modwrite.go` and read by
+  `sema/modread.go`'s `moduleFacts` and the compiler's own passes with
+  `analyzer.reading`, MODFILEBAD; `sema/use.go`'s copies marked `Symbol.Use`,
+  `Unit.UsedBlocks`; MODLATER, MODCYCLE, USEATTR, USECOMMON); subtask 3
+  (2026-11-19) module procedures (`analyzeContained`; `Unit.LinkName`, M.P or
+  `LongName`'s hashed form; LINK lines; MODULE PROCEDURE; generics and
+  operators joined across USEs); subtask 4 (2026-11-19) access and association
+  (`sema/access.go`: `moduleAccess`, `resolveAccess`, ACCESSTYPE, ACCESSPROC,
+  ACCESSNML, ACCESSCOMPONENT, COMPPRIVATE; `useRequest`, ONLY and renames,
+  `entityOrigin` and FROM lines, USEAMBIG only where referenced, MODSTALE);
+  subtask 5 (2026-11-19) module files and the command
+  (`dclcmd/fortranmodules.go`: `writeModuleFiles`, only when `sema.ModuleDigest`
+  changes, never after an error; `fortranModules`, the `sema.ModuleFinder`;
+  `/MODULE`, `/MODULE_PATH`, `FORT$MODULES`, MODNOTFOUND, FORMODULEDIR; the
+  stamp, `sema.StampName`, codegen's `writeStamps`; MODFORMAT); subtask 6
+  (2026-11-19) listings (`Symbol.UseText`, `Unmentioned`; `Unit.Path` M.P);
+  subtask 7 (2026-11-19) programs end to end (`testdata/fortran90/modules`'s
+  `compiles.txt`, `standard`, `polys`); subtask 8 (2026-11-19) the close-out,
+  FORTRAN-INTERNALS.md's section 31.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

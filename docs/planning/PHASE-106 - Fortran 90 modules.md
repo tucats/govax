@@ -1,8 +1,9 @@
 # Phase 106 — Fortran 90: modules
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A), done 2026-11-18 and accepted by the
-author the same day.
+**Status:** done 2026-11-19. Planned 2026-11-17 with Phase 99 (`PHASE-99 -
+Fortran 90.md`, Part C). Subtask 1, the survey (Part A), done 2026-11-18 and
+accepted by the author the same day; subtasks 2 to 8 done 2026-11-18 and
+2026-11-19. "Where things stand", at the end, is what the phase left.
 
 ## Goal
 
@@ -392,7 +393,7 @@ qualifiers stay a subtask of their own.
    2026-11-19).
 8. **Close-out:** FORTRAN-INTERNALS.md's section 31 (separate compilation, what a
    module file is and why it is Fortran text, use association beside host
-   association), MANUAL.md's 14.13, HELP FORTRAN.
+   association), MANUAL.md's 14.13, HELP FORTRAN (done 2026-11-19).
 
 ## A.5 Questions for the author
 
@@ -712,3 +713,50 @@ Definition modules as module files stay for later (the plan's open question 2).
   `A.B.C` as a field, so `polys`'s calls the module's functions; a compile order
   that USEs a module before it is compiled isn't run, MODNOTFOUND being
   `internal/dclcmd`'s tests'.
+- **2026-11-19:** Subtask 8, the close-out. FORTRAN-INTERNALS.md's section 31,
+  "Fortran 90: modules and separate compilation", follows SHAPES and a user
+  compiled apart through it: a module as a unit with no code (its variables a
+  common block's psect, its procedures global `M.P` names, `LongName`), the module
+  file whole and why it is Fortran text, every USE reading text and what each kind
+  of entity becomes in the user (a private specific reached through its public
+  generic, a hidden copy), access, ONLY and renames, one entity by two paths and
+  USEAMBIG, modules using modules and MODSTALE, the search, the file rewritten only
+  when it changes, the stamp and LINK's message for a stale object, MODFORMAT, and
+  use association beside host association; its MACRO and messages are govax's own
+  output. MANUAL.md's 14.13 has the whole story of modules: what a module may hold,
+  SHAPES and TOUR with their output, module data and names, USE with renames and
+  ONLY, one name from two modules, PUBLIC and PRIVATE, generic names from modules,
+  then the module files and listings subtasks 5 and 6 wrote, and what isn't there
+  yet; the introduction names derived types and modules. HELP FORTRAN's Fortran_90
+  topic has a module and its user (run on govax) and USE's, PUBLIC's, and
+  PRIVATE's rules; the help library rebuilt (`go generate ./internal/bootdata`).
+  PLAN.md and CLAUDE.md summarize the phase.
+
+## Where things stand
+
+Phase 106 is done. What it left, and where each goes:
+
+- **Phase 107:** POINTER module variables and components.
+- **Phase 110:** the debugger's EXAMINE of a module's variable as `M.X` from a
+  user (the `/DEBUG` table lists a user's use-associated variables under its own
+  names until then); `/STANDARD` for the phase's forms.
+- **Phase 112:** PURE and ELEMENTAL module procedures (Fortran 95).
+- **Later, if wanted (the plan's open question 2):** govax's definition modules
+  (`$SSDEF` and the rest) as module files to USE, beside INCLUDE's.
+- **Not planned, ours (NOTIMPL when a module compiles):** ENTRY in a module
+  procedure; an external procedure that is a specific of two of a module's
+  generic names or operators; a type known by two local names in a module; a
+  hidden entity whose name the module has for something else; a COMMON block both
+  a module and a module it uses declare; a structure with initial values, an
+  unnamed nested structure, and a constant whose bits are no number, in a module's
+  text.
+- **Unconfirmed choices of ours:** the module file's form (Fortran 90 text with
+  `!GOVAX$` lines; the author's answer 1); the stamp, checked from object to
+  object, a user referring only to the modules it USEs; a module always defining
+  its stamp; the search order (the author's answer 6); a fixed-form `/NOF90` user
+  having no defined operators from a module; the `/DEBUG` table keeping a user's
+  unmentioned use-associated variables; module variables static whatever SAVE
+  says.
+- **Awaiting a VMS round:** none: no VAX Fortran 90 exists, and the corpus's
+  modules are held to gfortran (`compare.py`); Phase 111's optional VMS round may
+  run their MACRO on VMS.
