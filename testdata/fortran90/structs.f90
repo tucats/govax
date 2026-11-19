@@ -6,7 +6,8 @@
 ! has no operators of its own: .DIST. and == here are interface blocks', whose
 ! bodies define the SEQUENCE type again, as a body has no host, and the
 ! assignment of a PAIR is a subroutine's, which swaps its components: every
-! assignment of a PAIR goes through it, B = PAIR(1, 2) too.
+! assignment of a PAIR goes through it, B = PAIR(1, 2) too. REALs are printed
+! by formats, objects whole (subtask 7), so gfortran's witness prints the same.
 program structs
   implicit none
   type point
@@ -58,31 +59,31 @@ program structs
   integer :: i
   real :: r
 
-  print *, ux, origin%y, unit%x + unit%y
-  print *, q%x, q%y
-  print *, m%text, ' ', m%marks, m%at%x, m%at%y
+  print '(3f8.3)', ux, origin%y, unit%x + unit%y
+  print '(2f8.3)', q
+  print '(1x, a, 3i4, 2f8.3)', m
 
   p = point(1.5, 2.5)
-  print *, p%x, p%y
+  print '(2f8.3)', p
   r = 6.0
   p = point(r, r / 4)
-  print *, p%x, p%y
+  print '(2f8.3)', p
   p = point(p%y, p%x)
-  print *, p%x, p%y
+  print '(2f8.3)', p
   p = origin
-  print *, p%x, p%y
+  print '(2f8.3)', p
 
   do i = 1, 3
     path(i) = point(i, i * i)
   end do
-  print *, (path(i)%x, path(i)%y, i = 1, 3)
+  print '(6f8.3)', (path(i), i = 1, 3)
 
   l = label('mark' // 'ed', (/ 1, 2, 3 /), point(r, -r))
-  print *, l%text, ' ', l%marks, l%at%x, l%at%y
+  print '(1x, a, 3i4, 2f8.3)', l
   l = label('x', 5, q)
-  print *, l%text, '|', l%marks, l%at%x, l%at%y
+  print '(1x, 2a, 3i4, 2f8.3)', l%text, '|', l%marks, l%at
 
-  print *, origin .dist. q, q .dist. point(r, 0.0)
+  print '(2f8.3)', origin .dist. q, q .dist. point(r, 0.0)
   print *, p == origin, q == point(3, 4), path(2) == q
 
   b = pair(1, 2)

@@ -1168,8 +1168,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `sorter.f90`) and the debugger reading descriptors (`dbgtable.Described`,
   `debugger/fortran.go`'s `describedBase`; DBG-W-NOTALLOC), and subtask 10
   (2026-11-18) the close-out, FORTRAN-INTERNALS.md's section 29.
-  Phase 105 (in progress; its Part A the survey, accepted by the author
-  2026-11-18, with the subtasks revised, A.4) is derived types, on Phase 82's
+  Phase 105 (done 2026-11-18; its Part A the survey, accepted by the author
+  2026-11-18, with the subtasks revised, A.4; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is derived types, on Phase 82's
   STRUCTURE machinery: subtask 2 (2026-11-18) is definitions and objects
   (`ast.TypeDefStmt`, gathered by `parse/units.go`, `parse/derived.go`;
   `sema/derived.go`: a derived type a `Structure` with `Derived` and `Sequence`,
@@ -1222,7 +1223,17 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `sema/datatypes.go`: DATA's constructors, `dataRecordItem`, and component
   designators, `dataComponentSlots`; the parser's constant list reading a
   constructor; `testdata/fortran90`'s `seqtypes.f90`, `seqshare.f90`); subtask
-  7, I/O and NAMELIST, is next.
+  7 (2026-11-18) is I/O and NAMELIST (`sema/derivedio.go`: in a formatted list
+  an object is its ultimate components, `sema.Components`, lowered by `ir`'s
+  `objectItems`, an array of a type element by element; unformatted its bytes,
+  past 65,535 a class A descriptor of bytes; a NAMELIST object an entity per
+  component, `P%X`, after a header entity whose descriptor is class Z,
+  `ir.ClassZ`, its length the object's entity count, FTNRTL's `ftn_namelist.mar`
+  taking `%` in names and filling a whole object's components, `NEXT_PART`;
+  `testdata/fortran90`'s `typeio.f90`, `typenml.f90`); subtask 8 (2026-11-18)
+  programs end to end (`geometry.f90`, `stock.f90`, `accounts.f90`; a fix, a
+  unary defined operator after a `)`, `parse`'s `unary`); subtask 9 (2026-11-18)
+  the close-out, FORTRAN-INTERNALS.md's section 30.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

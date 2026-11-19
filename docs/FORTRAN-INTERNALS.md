@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), and dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), and derived types (section 30). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -1996,7 +1996,9 @@ routine with a flag that captures the field rather than placing it in a record, 
 namelist value is written exactly as a list-directed one is. What is new is the
 grammar around them (where a group starts and ends, what a word followed by `=` means,
 the conditions that name what they found) and VMS's library settled each of those
-rules, by a probe of 786 cases (`testdata/nml80`).
+rules, by a probe of 786 cases (`testdata/nml80`). Fortran 90's objects of derived
+types later added one kind of entity, a header for an object whose components follow
+(section 30).
 
 ### Units and the terminal
 
@@ -4097,3 +4099,184 @@ The faults they found were all in how statements end, not in descriptors:
 
 And one was in the tests: subtask 6's heap check copied a 30,000-element section a thousand
 times, 690 million instructions in each of eight modes, and twenty copies prove the same thing.
+
+## 30. Fortran 90: derived types (Phase 105)
+
+Section 13 showed DEC's STRUCTURE and RECORD: a layout is a table of offsets, a field
+reference is arithmetic on an offset, and an aggregate assignment is a byte move. Fortran 90's
+derived types are the same idea with a different syntax and stricter rules, and the compiler
+treats them as the same idea. This section shows where the two meet, and the few places where
+Fortran 90 asked for something new: what makes two types one, an array of components, values
+of a type (constructors and function results), and I/O, where FTNRTL knows nothing of types.
+
+The program the section follows:
+
+```fortran
+program tour
+  type point
+    real :: x, y
+  end type point
+  type(point) :: p, path(6)
+  namelist /where/ p
+  path%y = 2.0 * path%x
+  p = mid(path(1), path(6))
+  write (*, '(2f6.2)') p
+  write (*, where)
+contains
+  function mid(a, b)
+    type(point), intent(in) :: a, b
+    type(point) :: mid
+    mid = point((a%x + b%x) / 2, (a%y + b%y) / 2)
+  end function mid
+end program tour
+```
+
+### One house, two front doors
+
+The parser reads `TYPE POINT ... END TYPE` into an `ast.TypeDefStmt`, and sema
+(`sema/derived.go`) turns it into the same `Structure` a STRUCTURE declaration becomes, with
+two flags: `Derived`, and `Sequence` if the definition has a SEQUENCE statement. From there
+on the type is a table of `Field`s with offsets, and everything section 13 built works on it:
+`fieldMem` (`ir/lowerfield.go`) computes `P%X` exactly as it computes `R.X`, a record
+assignment is `moveBytes`, and `/ALIGN` lays a type out with the same routine. `%` and `.` are
+two spellings of one selector; the parser builds an `ast.FieldRef` for both, and records which
+was written only so messages can quote it.
+
+The type itself is new: `sema.Type` gained `Struct`, the structure a record or object is of. A
+RECORD and a TYPE(POINT) object of the same layout are of different types (`sameType`), and
+two TYPE(POINT) objects are of the same type only if they name the same definition, which is
+where the standard's rules come in.
+
+### What makes two types one
+
+A derived type is a *name* for a definition, not a layout. Within one scoping unit that is
+simple: one definition, one type. Across units it isn't. Two external subroutines that each
+say `TYPE POINT; REAL :: X, Y; END TYPE` have two types that happen to look alike, and the
+standard says an object of one may not be passed to a dummy of the other. The exception is a
+SEQUENCE type: two SEQUENCE definitions with the same name and the same components, in the same
+order, are one type (4.4.2).
+
+That rule is why every interface body in `geometry.f90` repeats VEC's definition with SEQUENCE.
+An interface body has no host (section 28), so it can't see the program's definition; it must
+define the type again, and only SEQUENCE makes the two definitions one. sema checks it where a
+call meets a definition in another unit of the file (`recordArguments`, SEPARATEARG,
+SEPARATEFUNC), and `sameType` checks it within a unit, in assignment, in INTERFACEDIFF, and in
+an array constructor's values. COMMON and EQUIVALENCE take only SEQUENCE objects for the same
+reason (NOSEQUENCE): another unit sees the storage through its own definition, and only
+SEQUENCE promises the layouts agree.
+
+### A component with a rank is just another stride
+
+`PATH%X` is the X of every element: an array of rank 1, extent 6, whose elements are 8 bytes
+apart, the size of a POINT. The scalarizer (section 27) already walks arrays whose elements
+are any distance apart (a section by a step of 2 is one), so a ranked component needs no new
+loop machinery. sema gives the `FieldRef` a `Ranked` part, the step of the path that carries
+the rank, and its section subscripts; the scalarizer asks it for "your element at these
+indexes" (`FieldRef.At`), a scalar FieldRef that `fieldMem` reaches as any other:
+
+```text
+	MOVL	#1,R7
+	MULL3	R7,#2,R8
+TOUR.$1:				; array (line 7), dimension 1's body
+	MOVL	R8,R6
+	MULF3	TOUR.$F1,TOUR.PATH-8[R6],TOUR.PATH-4[R6]
+	ADDL2	#2,R8
+	AOBLEQ	#6,R7,TOUR.$1
+```
+
+The index register steps by 2 longwords, a POINT's size, and the two operands differ only in
+their displacement, the field's offset. Passing `PATH%X` to an assumed-shape dummy is the
+same observation once more: its class NCA descriptor (section 29) gets the type's size as its
+stride, and the callee works on the components where they are. Passing it to an old dummy,
+which wants elements one after another, copies it.
+
+### Values of a type
+
+A *structure constructor*, `POINT(1.0, 2.0)`, is a value with no name. If all its values are
+constants it folds to a `Const` with `Parts` (its components) and `Raw` (its bytes), which can
+be a PARAMETER, an initial value, or a DATA value, and whose components fold too
+(`ORIGIN%X`). Otherwise it is a `StructValue`, which lowering builds a component at a time
+(`buildRecord`), in the assignment's target when no value reads the target, else in a
+temporary.
+
+A function's value of a derived type comes back the way the Calling Standard returns any value:
+in R0, or R0 and R1, when it fits in 8 bytes (`ir/lowerresult.go`). `MID` keeps its value in a
+quadword cell and loads it at its return, and the caller stores it straight into P:
+
+```text
+	MOVQ	TOUR.MID.MID,R0		; the function's value
+	...
+	CALLS	#2,TOUR.MID
+	MOVQ	R0,TOUR.P
+```
+
+Past 8 bytes the value goes through a hidden first argument, the address of a place for it,
+as a COMPLEX\*16's does; `accounts.f90`'s 18-byte ACCOUNT is one.
+
+A derived type has no operators of its own. `P == Q` is an error unless an
+`INTERFACE OPERATOR(==)` block gives it a meaning, and then it is a function call (section 28);
+`P = Q` is a byte move unless an `INTERFACE ASSIGNMENT(=)` block takes it over.
+
+### I/O: the compiler takes objects apart
+
+FTNRTL's I/O statements take items, each a descriptor of a scalar or a contiguous array of an
+intrinsic type. A derived-type object is neither, and FTNRTL didn't change to take one: the
+compiler gives it the object's *ultimate components* instead, the components left when every
+component of a derived type has been taken apart in turn (the standard's 9.4.2).
+`sema.Components` lists them as FieldRefs on the object, and `ir/lowerio.go`'s `objectItems`
+calls `FTN$IO_ITEM` once for each:
+
+```text
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	TOUR.$D2		; P%X
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	TOUR.$D3		; P%Y
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+```
+
+An array component is one item, a whole array field's class A descriptor; an array of a type is
+each element's components, element by element, through the scalarizer's `eachElement`; a
+constructor's values are items as they are; and a value with no place (a function's) is put in
+one first. An unformatted statement is the other way round: its form is the processor's to
+choose, and an object goes as its bytes, padding and all, as a record always did.
+
+NAMELIST is where FTNRTL had to learn something, since a group's block names its entities and
+the program's input names them back. An object becomes an entity per ultimate component,
+named by its designator, after a *header* entity for the object itself:
+
+```text
+TOUR.$D4:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_Z
+	.LONG	0			; a NAMELIST object's header: its entities follow
+TOUR.$NWHERE:
+	.ADDRESS TOUR.$K2		; NAMELIST /WHERE/'s block: its name
+	.LONG	3			; its entities
+	.ADDRESS TOUR.$K3,TOUR.$D4	; P
+	.ADDRESS TOUR.$K4,TOUR.$D2	; P%X
+	.ADDRESS TOUR.$K5,TOUR.$D3	; P%Y
+```
+
+The block keeps VMS's layout (section 14's "NAMELIST: a statement with no items"). The header's descriptor has class 0, which no real
+descriptor uses, and says in its length how many entities after it are the object's. Output
+passes over headers, so `P%X` and `P%Y` are written as any two variables are. Input reads `%`
+as part of a name, so `P%X = 9.0` finds its entity; and `P = 1.0, 2.0` finds the header, makes
+its first entity the current one, and goes on to the next where an array's values would go on to
+its next element, until the header's count runs out and one more value is TOOMANVAL
+(`ftn_namelist.mar`'s `NEXT_PART`).
+
+### What the programs found
+
+Fourteen programs in `testdata/fortran90` cover the phase, from `types.f90` to `accounts.f90`,
+in all eight modes, and `testdata/fortran`'s `recarrays.for` and `recdyn.for` hold STRUCTURE's
+records to the forms they share with derived types. gfortran agrees with every portable one.
+
+Most of what they found was a seam between the two front doors, places where code written for
+records assumed something a derived type doesn't promise, or the reverse: a constant's
+component accepted as an assignment's target, which would have stored into read-only data; an
+array constant's component taken for an error already reported; RECORD-versus-TYPE comparisons
+that compared layouts where the standard compares definitions. The last, in subtask 8, was in
+the parser: after a `)` the lexer can't tell `.ROT.` from DEC's field selector, and so leaves
+the periods apart, and only the binary operator was put back together; `WRITE (*, F) .ROT. V`
+was a syntax error until the unary reading did the same.

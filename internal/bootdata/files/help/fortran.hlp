@@ -315,6 +315,28 @@
    assumed-shape arrays through their descriptors, a section by its
    strides (%DEBUG-W-NOTALLOC for an array not allocated).
 
+   Derived types: TYPE name ... END TYPE defines one, its components
+   declared as variables are (SEQUENCE first to make two units'
+   definitions of the same name and components one type), and
+   TYPE(name) declares objects of it, scalars or arrays of any kind.  A
+   component is P%X (or DEC's P.X); PATH%X of an array PATH is an array
+   whose elements are a type's size apart, and may be assigned, passed,
+   and used as any array.  POINT(1.0, 2.0) is a structure constructor:
+   a constant if its values are, usable as a PARAMETER, an initial
+   value, or in DATA.  A type has no operators but those an INTERFACE
+   OPERATOR block gives it (%FORT-E-NODERIVEDOP); assignment is a copy
+   unless an INTERFACE ASSIGNMENT(=) block takes it.  An object goes by
+   reference only to a dummy of its own type (%FORT-E-TYPEARG,
+   SEPARATEARG); a function's value of a type comes back in R0 and R1 up
+   to 8 bytes, else through a hidden first argument.  COMMON and
+   EQUIVALENCE take only SEQUENCE objects (%FORT-E-NOSEQUENCE).  In a
+   formatted or list-directed I/O list an object is its components in
+   order; unformatted, its bytes.  A NAMELIST group may hold a scalar
+   object: output names each component (P%X =), and input takes P%X =
+   or the whole object, P = 1.0, 2.0.  Default values for components
+   (Fortran 95) and arrays of a type in a NAMELIST group are not there
+   yet.
+
    Fortran 90's other statements (MODULE, POINTER, and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may

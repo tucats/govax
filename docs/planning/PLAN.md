@@ -154,7 +154,7 @@ questions, and a progress log extended as that phase is worked.
 | 102 | [PHASE-102 - Fortran 90 array expressions](PHASE-102%20-%20Fortran%2090%20array%20expressions.md) | Sections, vector subscripts, whole-array expressions by a scalarizer, overlap and temporaries, array constructors, WHERE, elemental intrinsics on arrays, reductions and inquiries — planned 2026-11-17; done 2026-11-17 |
 | 103 | [PHASE-103 - Fortran 90 procedures and interfaces](PHASE-103%20-%20Fortran%2090%20procedures%20and%20interfaces.md) | Internal procedures and host association, interface blocks, explicit interfaces, keyword and optional arguments, INTENT, generic names, defined operators and assignment — planned 2026-11-17; done 2026-11-18 |
 | 104 | [PHASE-104 - Fortran 90 dynamic arrays](PHASE-104%20-%20Fortran%2090%20dynamic%20arrays.md) | NCA descriptors, assumed-shape dummies, copy-in/out, automatic arrays, ALLOCATABLE, ALLOCATE, DEALLOCATE, array-valued functions, the transformational intrinsics — planned 2026-11-17; done 2026-11-18 |
-| 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17 |
+| 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17; done 2026-11-18 |
 | 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17 |
 | 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17 |
 | 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17 |
@@ -985,3 +985,34 @@ A's layout, strides in bytes, an element at A0 plus each subscript times its str
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 29 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 105, derived types.
+
+Phase 105 (done 2026-11-18) is derived types, on Phase 82's STRUCTURE machinery: a definition is
+the same `Structure` a STRUCTURE declaration is, with `Derived` and `Sequence`, and `sema.Type.Struct`
+names it, so a record and an object are never one type.
+
+- **Definitions and objects** (`sema/derived.go`): `TYPE(t)` declarations, IMPLICIT TYPE(t), typed
+  FUNCTION statements; class 1 names; a non-SEQUENCE type naturally aligned unless PACKED was given;
+  `%` a component selector after any reference.
+- **Values** (`sema/structvalue.go`, `ir/lowerstruct.go`): constructors of constants folded to
+  constants (PARAMETERs, initial values, DATA, their components), any other built a component at a
+  time; assignment by `sameType`, defined assignment replacing it; no operators but interface
+  blocks' (NODERIVEDOP).
+- **Arguments and results** (`ir/lowerresult.go`): by reference to a dummy of the type only
+  (TYPEARG, SEPARATEARG, SEPARATEFUNC: two units' definitions are one type only with SEQUENCE); a
+  function's value in R0 and R1 up to 8 bytes, else through a hidden first argument.
+- **Arrays:** a component with a rank is a `FieldRef` the scalarizer walks by the type's stride
+  (MULTIRANK); arrays of a type whole, as sections, in constructors and the type-generic intrinsics;
+  ranked components to assumed-shape dummies by a descriptor of that stride, to old ones by a copy;
+  allocatable, automatic, assumed-shape, and array-valued arrays of a type and of records.
+- **COMMON, EQUIVALENCE, DATA** (`sema/seqtypes.go`, `datatypes.go`): SEQUENCE objects only
+  (NOSEQUENCE, EQUIVCOMPONENT), the standard's storage classes with numbers and characters together
+  (EQUIVTYPE); DATA of constructors and component designators.
+- **I/O and NAMELIST** (`sema/derivedio.go`, `ir/lowerio.go`): an object in a formatted list its
+  ultimate components, unformatted its bytes; a NAMELIST object an entity per component after a
+  class Z header, FTNRTL taking `%` in names and filling a whole object's components (`P = 1., 2.`).
+- **Programs:** fourteen in `testdata/fortran90`, from `types` to `geometry`, `stock`, and
+  `accounts`, and `testdata/fortran`'s `recarrays` and `recdyn`, the portable ones the same on
+  gfortran.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 30 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 106, modules.

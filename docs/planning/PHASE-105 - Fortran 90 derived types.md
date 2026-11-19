@@ -1,8 +1,9 @@
 # Phase 105 — Fortran 90: derived types
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Needs Phase 104 (done). Subtask 1, the survey (Part A), done
-2026-11-18 and accepted by the author ("The author's answers").
+**Status:** done 2026-11-18. Planned 2026-11-17 with Phase 99 (`PHASE-99 -
+Fortran 90.md`, Part C). Needs Phase 104 (done). Subtask 1, the survey (Part A),
+done 2026-11-18 and accepted by the author ("The author's answers"); subtasks 2
+to 9 done the same day. "Where things stand", at the end, is what the phase left.
 
 ## Goal
 
@@ -461,7 +462,7 @@ all three.
 9. **Close-out:** FORTRAN-INTERNALS.md's section 30 (STRUCTURE and TYPE side by
    side: one `Structure`, two front doors; why a component section is just
    another stride; why an interface body needs a SEQUENCE type), MANUAL.md's
-   14.13, HELP FORTRAN.
+   14.13, HELP FORTRAN. (done 2026-11-18)
 
 ## A.5 Questions for the author
 
@@ -946,3 +947,41 @@ object are never the same type, with a message naming both.
     before them (`parse/testdata/procs.f90`'s new WRITE). Nothing else was found:
     the programs compiled and ran as written otherwise.
   - Subtask 9, the close-out, is next.
+- **2026-11-18, subtask 9 (done):** The close-out. FORTRAN-INTERNALS.md's section
+  30, "Fortran 90: derived types": one `Structure` behind two front doors, what
+  makes two types one and why an interface body repeats a SEQUENCE definition, a
+  ranked component as another stride (with its loop's code), constructors and
+  results in R0 and R1, and I/O, the compiler taking objects apart and the
+  NAMELIST header; section 14's NAMELIST part points to it. MANUAL.md's 14.13 had
+  each subtask's part already; HELP FORTRAN's Fortran_90 topic has a paragraph on
+  derived types (`helplib.hlb` regenerated). PLAN.md's summary. Subtask 4's
+  leftover: `structs.f90` prints its REALs by formats, objects whole, so gfortran
+  now prints the same lines (its `.out` worked again by hand).
+
+## Where things stand
+
+Phase 105 is done. What it left, and where each goes:
+
+- **Phase 106:** PRIVATE components and access-specs, and types shared by USE (a
+  module's type is one type everywhere, SEQUENCE or not).
+- **Phase 107:** POINTER components, a type pointing to itself, and the I/O
+  refusals they bring.
+- **Phase 109:** an array of a derived type, or an array component of one, in a
+  NAMELIST group (NOTIMPL: FTNRTL would read an element's subscripts inside a
+  name, `PTS(2)%X`), with Fortran 90's NAMELIST form.
+- **Phase 110:** the debugger's EXAMINE of `P%X` and `R.F` (an object is shown as a
+  record's longwords until then), with the rest of the `/DEBUG` table's growth;
+  `/STANDARD` for the phase's forms.
+- **Phase 112:** default initialization of components (NOTIMPL), Fortran 95's.
+- **Not planned, ours:** a statement function of a derived type (NOTIMPL); a section
+  in DATA's component designators (NOTIMPL, as for an array); RECORDIOSIZE for a
+  whole array of records whose elements pass 65,535 bytes.
+- **Unconfirmed choices of ours:** EQUIVALENCE's storage classes are by size, not
+  by `/[NO]I4` (an INTEGER\*2 component makes a type of the other class); a
+  NAMELIST header named with subscripts applies them to its first component; the
+  `?` listing at a terminal names the components, not the objects; an unformatted
+  object past 65,535 bytes is one item, an array of bytes; the NAMELIST header's
+  descriptor is class 0, govax's own convention, which no VMS run-time library
+  reads.
+- **Awaiting the next VMS round:** `testdata/fortran`'s `recarrays.for` and
+  `recdyn.for`, in `testdata/ftn86`'s procedure and `ftn86AwaitingVMS`.
