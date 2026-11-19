@@ -286,14 +286,21 @@ func (l *lowerer) clearRecords(first *Mem, n Expr, st *sema.Structure) {
 	l.release()
 }
 
-// arrayPointerAssign is P => target for the array pointer p: target's
-// descriptor copied, if it is a pointer; else target described into p's cell,
-// a whole array with its own bounds, a section (or a component with a rank)
-// with bounds from 1 (5.1.2.4.3). A target that reads p itself, P => P(N:1:-1),
-// is described into a cell of the statement's first, and copied: describing it
-// in place would change the bounds and strides it is read through.
+// arrayPointerAssign is P => target for the array pointer p (associate).
 func (l *lowerer) arrayPointerAssign(p *sema.Symbol, target sema.Expr) {
-	cell := l.adjustableOf(p)
+	l.associate(l.adjustableOf(p), p, target)
+}
+
+// associate fills cell, the descriptor of the array pointer p, in to describe
+// target: target's descriptor copied, if it is a pointer; else target
+// described into p's cell, a whole array with its own bounds, a section (or a
+// component with a rank) with bounds from 1 (5.1.2.4.3). A target that reads p
+// itself, P => P(N:1:-1), is described into a cell of the statement's first,
+// and copied: describing it in place would change the bounds and strides it is
+// read through. So is a target reached through a pointer of an array pointer
+// component, cell a located one: the pointer may lead back to the record
+// (H%V => LP%H%V(4:1:-1), LP pointing at H).
+func (l *lowerer) associate(cell *Cell, p *sema.Symbol, target sema.Expr) {
 	l.commonHeader(cell)
 
 	if q := sema.PointerSymbol(target); q != nil {
@@ -302,7 +309,14 @@ func (l *lowerer) arrayPointerAssign(p *sema.Symbol, target sema.Expr) {
 		return
 	}
 
-	if sema.TargetBase(target) != p {
+	base := sema.TargetBase(target)
+	inPlace := base != p
+
+	if cell.Located() {
+		inPlace = base != nil && !base.Pointer
+	}
+
+	if inPlace {
 		l.describeTarget(cell, p, target)
 
 		return
@@ -318,9 +332,10 @@ func (l *lowerer) arrayPointerAssign(p *sema.Symbol, target sema.Expr) {
 // cell c if c is in a common block: no unit's object gives a common block
 // initial values, as $LOCAL and a module's section have them, and a routine
 // given the pointer's target as an assumed-shape array reads its class and
-// rank (computeShaped, checkDescriptor).
+// rank (computeShaped, checkDescriptor). So too for an array pointer
+// component's, which no record's initial value or clearing gives either.
 func (l *lowerer) commonHeader(c *Cell) {
-	if c.Common == nil || c.Common.Module != "" {
+	if !c.Located() && (c.Common == nil || c.Common.Module != "") {
 		return
 	}
 
@@ -454,4 +469,35 @@ func (l *lowerer) arrayAssociated(p *sema.Symbol, target sema.Expr) Expr {
 	}
 
 	return arith(And, Long, result, &Cmp{Op: Gt, X: field(tc, ArsizeOffset), Y: LongConst(0)})
+}
+
+// componentCell is the located cell (locate.go) that is the descriptor of the
+// array pointer component s stands for (sema/pointercomp.go), in its record
+// where s.Component says: at the place itself if the place has neither a
+// computed address nor an index, else at the address computed now into a
+// temporary of the statement's. Each use of the component makes its own, so
+// that the record is found where the statement is when it is used: in an
+// implied DO, (H(I)%V(1), I = 1, 3), a different one each time.
+func (l *lowerer) componentCell(s *sema.Symbol) *Cell {
+	return l.locatedCell(s.Name, l.ncaDescriptor(s), l.fieldPlace(s.Component, false))
+}
+
+// locatedCell is a located cell named name of the descriptor d, which is at
+// place.
+func (l *lowerer) locatedCell(name string, d *Descriptor, place *Mem) *Cell {
+	c := &Cell{Name: name, Kind: DescriptorCell, T: Long, Size: d.Size(), Desc: d}
+
+	if place.Ptr == nil && place.Index == nil && place.Param == nil {
+		at := *place
+		at.T = Long
+		c.At, c.Common, c.Frame = &at, nil, place.Cell != nil && place.Cell.Frame
+
+		return c
+	}
+
+	base := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: base, Src: &Addr{place}})
+	c.Base = base.Cell
+
+	return c
 }

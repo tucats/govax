@@ -396,6 +396,11 @@ type analyzer struct {
 	// (constructs.go).
 	constructNames []constructName
 
+	// componentPointers are the symbols that stand for array pointer
+	// components, by the scope and the reference to each with its subscripts
+	// (pointercomp.go).
+	componentPointers map[componentKey]*Symbol
+
 	messages *diag.List
 	prog     *Program
 	units    map[string]*fileUnit

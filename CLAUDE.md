@@ -1290,8 +1290,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `ast.AllocObject`; constructors' targets; FTNRTL's clear bit for such
   types, frame and automatic records cleared at entry, `clearRecords`;
   `baseSymbol` through a pointer component its `Field.reached`;
-  `testdata/fortran90/ptrcomps.f90`, `ptrclear.f90`); subtask 5b, array
-  pointer components, is next.
+  `testdata/fortran90/ptrcomps.f90`, `ptrclear.f90`); subtask 5b (2026-11-19)
+  array pointer components (`Field.Rank`, a class NCA descriptor in the record;
+  `sema/pointercomp.go`: each reference to one, `H%V`, a symbol of its own with
+  `Symbol.Component`, read as a named array pointer, `componentKey` by scope and
+  text; ALLOCATE's bounds in the list, `allocBounds`; `ir`'s located cells,
+  `Cell.At`/`Base`, `componentCell`, resolved by `ir/locate.go`'s
+  `resolveLocated` before the optimizer; INTENT(IN) and pointer components fixed,
+  `pointerHome`; `testdata/fortran90/ptrcarr.f90`); subtask 6, pointer dummies
+  and results, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

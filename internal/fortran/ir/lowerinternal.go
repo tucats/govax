@@ -132,6 +132,10 @@ func (l *lowerer) cellOf(s *sema.Symbol) *Cell {
 // adjustableOf is the descriptor cell of the adjustable array s, the
 // routine's own or its host's, or nil if s isn't one.
 func (l *lowerer) adjustableOf(s *sema.Symbol) *Cell {
+	if s.Component != nil {
+		return l.componentCell(s)
+	}
+
 	c := l.adjustable[s]
 	if c != nil || l.host == nil {
 		return c

@@ -837,6 +837,10 @@ func (w *moduleWriter) structure(st *Structure) {
 				spec += ", POINTER"
 			}
 
+			if f.Rank > 0 {
+				spec += ", DIMENSION(" + deferredText(f.Rank) + ")"
+			}
+
 			w.put(2, spec+" :: "+f.Name+dimsText(f.Dims))
 		}
 

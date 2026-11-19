@@ -5,7 +5,8 @@ Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
 author the same day ("The author's answers"); subtask 2, scalar and character
 pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
 subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
-scalar pointer components and recursive types, done 2026-11-19.
+scalar pointer components and recursive types, done 2026-11-19; subtask 5b,
+array pointer components, done 2026-11-19.
 
 ## Goal
 
@@ -66,7 +67,7 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
 3. **Array pointers** and pointers to sections (done 2026-11-19).
 4. **ALLOCATE and DEALLOCATE of pointers** (done 2026-11-19).
 5. **Pointer components**, recursive types: 5a, scalar ones (done 2026-11-19);
-   5b, array pointer components.
+   5b, array pointer components (done 2026-11-19).
 6. **Pointer dummies and results.**
 7. **The optimizer's aliasing rules**, with programs that would break if they
    were wrong, both settings.
@@ -429,7 +430,8 @@ The plan's order stands; each subtask's content is now the findings'.
    the one being defined among them, and everything above for them (done
    2026-11-19); **5b**, array pointer components (a class NCA descriptor in a
    record, which every descriptor routine of the IR reaches only through a cell
-   today) and `rankedStride` through an array pointer of records.
+   today) and `rankedStride` through an array pointer of records (done
+   2026-11-19).
 6. **Pointer dummies and results** (findings 8, 9).
 7. **The optimizer's aliasing rules:** `PointerRegion`, TARGETs' places, taken
    TARGETs, with programs that would print something else if the rule were wrong
@@ -768,3 +770,65 @@ The plan's open question 1 is settled by answer 1.
     array 18 with its clearing switched off).
   - *Docs.* MANUAL.md's 14.13 (pointer components, cleared storage, "Not there
     yet"'s example now an array POINTER component), HELP FORTRAN.
+- **2026-11-19:** Subtask 5b, array pointer components, done.
+  - *Definitions.* A POINTER component with a deferred shape is an array pointer
+    component (`derived.go`'s `pointerDims`): `Field.Rank` is its rank and its
+    `Dims` stay nil, so every walk that lays out, initializes, or compares a record
+    sees one item, `DescriptorSize(Rank)` bytes (`ElementSize`), on a longword.
+    `PointerOffsets` gives its descriptor's POINTER, 4 bytes in, so FTNRTL's clear
+    bit and `clearRecords` leave it disassociated. The storage map says `INTEGER,
+    POINTER (:)`, a module's text `INTEGER(KIND=4), POINTER, DIMENSION(:) :: V`, and
+    `sameType`, `sameStructure`, and `form` compare the rank.
+  - *A symbol for each component reference* (`sema/pointercomp.go`). Rather than
+    teach every array form (elements, sections, the scalarizer, the inquiries,
+    actual arguments, I/O lists, =>, ALLOCATE, ASSOCIATED) a second way to find a
+    descriptor, `field` makes the reference to the component itself, `H%V`, a
+    symbol, `componentPointer`: an array pointer like a named one, with
+    `Symbol.Component` the reference, in no unit's table. What follows is read as
+    for a named pointer: `H%V(I)` an Elem, `H%V(1:3)` a Section, `H%V` an ArrayRef,
+    and for an array pointer of records a FieldRef from the symbol (`T%KIDS(2)%KEY`,
+    `T%KIDS%KEY`; `recordBase` split, `recordBaseOf` taking the symbol). One
+    reference's symbol is made once per scope and text (`componentKey`), so
+    `H%V = H%V + 1` is one array to overlap.go, ordered with no temporary, while a
+    statement function's dummy or an internal procedure's own variable of the same
+    name gets a symbol of its own (`ptrcarr.f90`'s FIRST and OWN). A one-triplet list
+    after one is a section, not a substring (`componentSubstring`). ALLOCATE's
+    object `H%V(0:N)` has its bounds as the reference's list (`allocatedComponent`,
+    `allocBounds`; a stride is ALLOCBOUNDS); an element or section where a pointer
+    must be is NOTALLOCATABLE or NOTPOINTER. A constructor's array pointer
+    component takes a target of its rank (`targetFor`), a component whose
+    declaration failed no message more.
+  - *Located cells* (`ir/locate.go`). The IR reaches a descriptor only as a cell,
+    `Mem{Cell: c, Offset: ...}`, in some 90 places. `adjustableOf` of a component's
+    symbol makes a located cell (`componentCell`, `locatedCell`): no storage, only
+    where its storage is, `Cell.At` (the record's place, if it has neither a
+    computed address nor an index: `H+4`) or `Cell.Base` (a temporary given the
+    address then: through a pointer, a dummy, an element at a subscript known only
+    when the program runs). Each use makes its own, so the record is the one the
+    statement means where it is used, in an implied DO too. When a routine is lowered,
+    `resolveLocated` makes every place naming such a cell name its place, so the
+    optimizer and the code generator never see one (`Mem.Linked` refuses one before
+    then). `=>`, ALLOCATE, and a constructor write the descriptor's unchanging
+    longwords first, as for a COMMON pointer (`commonHeader`): no record's initial
+    value or clearing gives them. `=>` describes a target into a temporary first when
+    it is reached through a pointer, which may lead back to the record (`associate`,
+    which `buildRecord` now shares).
+  - *`rankedStride` through an array pointer of records* needed nothing: a
+    FieldRef's ranked part on an array pointer's symbol reads its S1 through
+    `baseStride` (subtask 3), which `T%KIDS%KEY` and `TP%KEY` now exercise.
+  - *A bug found: INTENT(IN) and pointer components* (subtask 5a's). `X%P = 4`
+    with X an INTENT(IN) dummy was INTENTIN, though it changes only X%P's target;
+    and `X%P => T`, NULLIFY, ALLOCATE, and DEALLOCATE of it, which change X, said
+    nothing. `definedSymbol` now passes over a reference through a pointer, and
+    the pointer statements check the record that holds the pointer
+    (`pointerHome`).
+  - *Tests.* `sema`'s `TestPointerComponents` (every form and message) and
+    `TestPointers` (no NOTIMPL); `TestModulePointerComponents` (array pointer
+    components in a module's text, read from two modules); `ir` and `codegen`
+    golden `f90pcarr.for`; `opt`'s `pointerRoutines`;
+    `testdata/fortran90/ptrcarr.f90`, every mode and both loaders, and the same on
+    gfortran (also run once under `/CHECK=BOUNDS`, whose descriptor checks read the
+    headers); `ptrclear.f90`'s records each with an array pointer (its frames printed
+    3 and 21 stale pointers with the descriptor's offset left out of `PointerOffsets`).
+  - *Docs.* MANUAL.md's 14.13 (array pointer components; "Not there yet"'s example
+    now a pointer dummy), HELP FORTRAN.

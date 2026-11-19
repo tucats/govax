@@ -399,6 +399,14 @@ type Symbol struct {
 	// but in pointer assignment, NULLIFY, and ASSOCIATED (pointer.go).
 	Pointer bool
 
+	// Component is set in a symbol that stands for an array pointer component
+	// (subtask 5b): the reference to the component itself, X%P, whose storage,
+	// a class NCA descriptor in its record, is this symbol's. Such a symbol is
+	// in no unit's table; a reference through the component (X%P(I), X%P(1:3),
+	// X%P%KEY) is a reference to it, as to a named array pointer, and lowering
+	// finds its descriptor in the record (componentPointer).
+	Component *FieldRef
+
 	// FreedAtReturn is set for an allocatable array that every return of its
 	// unit deallocates, and every entry point marks unallocated: a
 	// subprogram's own that isn't saved (finding 5; freedAtReturn).

@@ -333,6 +333,20 @@ type Cell struct {
 	// Reached says an internal procedure of the routine reaches the cell, by host
 	// association: any call may read or change it (lowerinternal.go).
 	Reached bool
+
+	// At and Base, lowering's own, make a located cell: one with no storage of
+	// its own, the descriptor of an array pointer component in its record
+	// (lowerpointer.go's componentCell). Its storage is at At, a place with
+	// neither a computed address nor an index, or at the address the cell
+	// Base holds. No routine leaves lowering with a place naming such a cell:
+	// each is made to name where it is (locate.go).
+	At   *Mem
+	Base *Cell
+}
+
+// Located reports whether the cell is a located cell (At, Base).
+func (c *Cell) Located() bool {
+	return c.At != nil || c.Base != nil
 }
 
 // DatumKind is what a datum is.
@@ -1058,7 +1072,7 @@ type Mem struct {
 // data can hold it: not through an argument or a computed address, with no index,
 // and not in the frame.
 func (m *Mem) Linked() bool {
-	return m.Param == nil && m.Ptr == nil && m.Index == nil && (m.Cell == nil || !m.Cell.Frame)
+	return m.Param == nil && m.Ptr == nil && m.Index == nil && (m.Cell == nil || !m.Cell.Frame && !m.Cell.Located())
 }
 
 // Text is a CHARACTER value's place: Mem, a Byte place whose offset and

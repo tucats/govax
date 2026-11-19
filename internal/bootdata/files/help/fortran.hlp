@@ -436,8 +436,13 @@
    be in an I/O list, NAMELIST, EQUIVALENCE, or DATA
    (%FORT-E-POINTERPART); NODES(:)%NEXT is no array
    (%FORT-E-POINTERRANKED).  New storage with pointers in it starts
-   disassociated.  Array pointer components, pointer dummy arguments,
-   and pointer results are not there yet.
+   disassociated.
+
+   A pointer component may be an array pointer, INTEGER, POINTER ::
+   V(:), used as a named one is: H%V => A(2:9), H%V(I), SIZE(H%V),
+   ALLOCATE (H%V(0:N)).  With TYPE(NODE), POINTER :: KIDS(:),
+   T%KIDS(2)%KEY is one child's KEY and T%KIDS%KEY every child's.
+   Pointer dummy arguments and pointer results are not there yet.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

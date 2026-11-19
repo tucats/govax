@@ -5,7 +5,8 @@
 ! FTNRTL; a recursive function's records in the frame, one, three (cleared
 ! in line), and twenty (by a loop), each pointed somewhere by one call before
 ! the next call's frame takes the same stack; an automatic array of them.
-! The standard leaves such pointers undefined, so this is govax's own, not in
+! Each record has an array pointer too (subtask 5b), its descriptor's address
+! cleared the same way. The standard leaves such pointers undefined, so this is govax's own, not in
 ! compare.py.
 program ptrclear
   implicit none
@@ -13,6 +14,7 @@ program ptrclear
     integer :: value
     type(node), pointer :: next
     character(len=3), pointer :: tag
+    integer, pointer :: vals(:)
   end type node
   type holder
     integer :: count
@@ -25,13 +27,14 @@ program ptrclear
   integer :: i, n, k1, k2
 
   allocate (p)
-  print '(1x, a, 2l2)', 'allocated:  ', associated (p%next), associated (p%tag)
+  print '(1x, a, 3l2)', 'allocated:  ', associated (p%next), associated (p%tag), associated (p%vals)
 
   allocate (arr(40))
   n = 0
   do i = 1, 40
     if (associated (arr(i)%next)) n = n + 1
     if (associated (arr(i)%tag)) n = n + 1
+    if (associated (arr(i)%vals)) n = n + 1
   end do
   print '(1x, a, i4)', 'array:      ', n
 
@@ -40,6 +43,7 @@ program ptrclear
   if (associated (h%first%next) .or. associated (h%pair(2)%tag)) n = n + 1
   do i = 1, 5
     if (associated (hs(i)%pair(1)%next) .or. associated (hs(i)%pair(2)%tag)) n = n + 1
+    if (associated (hs(i)%pair(2)%vals)) n = n + 1
   end do
   print '(1x, a, i4)', 'nested:     ', n
 
@@ -59,26 +63,31 @@ contains
     type(node), target :: mine
     type(node) :: few(3), many(20)
     character(len=3), target :: word
+    integer, target :: nums(4)
     k = 0
     if (associated (mine%next)) k = k + 1
     if (associated (mine%tag)) k = k + 1
+    if (associated (mine%vals)) k = k + 1
     do i = 1, 3
       if (associated (few(i)%next)) k = k + 1
     end do
     do i = 1, 20
       if (associated (many(i)%next)) k = k + 1
       if (associated (many(i)%tag)) k = k + 1
+      if (associated (many(i)%vals)) k = k + 1
     end do
     if (dirty) then
       word = 'ABC'
       mine%next => mine
       mine%tag => word
+      mine%vals => nums
       do i = 1, 3
         few(i)%next => mine
       end do
       do i = 1, 20
         many(i)%next => mine
         many(i)%tag => word
+        many(i)%vals => nums(1:i/5)
       end do
     end if
   end function level
@@ -90,7 +99,7 @@ contains
     integer :: i
     n = 0
     do i = 1, m
-      if (associated (a(i)%next) .or. associated (a(i)%tag)) n = n + 1
+      if (associated (a(i)%next) .or. associated (a(i)%tag) .or. associated (a(i)%vals)) n = n + 1
     end do
   end subroutine automatic
 end program ptrclear

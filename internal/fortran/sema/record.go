@@ -358,6 +358,32 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 
 		last := i == len(steps)-1
 
+		// An array pointer component stands for a named array pointer, a
+		// symbol of its own, for whatever follows it.
+		if f.Pointer && f.Rank > 0 {
+			ref.T = componentType(f)
+			s := a.componentPointer(ref)
+
+			if last {
+				return a.pointerPart(s, step)
+			}
+
+			if f.Struct == nil {
+				a.report("FIELDNOTRECORD", steps[i+1].Pos, f.Name, article(f.Type.String()), steps[i+1].Field)
+
+				return a.bad(e.Pos)
+			}
+
+			ref = &FieldRef{exprBase: exprBase{Pos: e.Pos}, NamePos: x.Position()}
+			if !a.recordBaseOf(ref, s, s.Name, step.Pos, step.Args, steps[i+1].Field) {
+				return a.bad(e.Pos)
+			}
+
+			st, prev = f.Struct, f
+
+			continue
+		}
+
 		if !a.fieldSubscripts(ref, f, step, whole && last && ref.S == nil) {
 			return a.bad(e.Pos)
 		}
@@ -395,8 +421,12 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 		return false
 	}
 
-	s := a.lookup(name, pos)
+	return a.recordBaseOf(ref, a.lookup(name, pos), name, pos, args, first)
+}
 
+// recordBaseOf is recordBase's work, the record named name being s.
+func (a *analyzer) recordBaseOf(ref *FieldRef, s *Symbol, name string, pos diag.Position, args []ast.Expr,
+	first string) bool {
 	// An array constant of a derived type is read from its datum as an array
 	// of records is from its storage.
 	isArray := s.Class == Array || s.Class == Constant && s.ArrayValue != nil
@@ -703,6 +733,14 @@ func (s *Structure) form() string {
 			b.WriteString("^" + f.Struct.Name)
 		case f.Pointer:
 			b.WriteString("^" + f.Type.String())
+		}
+
+		if f.Rank > 0 {
+			b.WriteString("(" + deferredText(f.Rank) + ")")
+		}
+
+		switch {
+		case f.Pointer:
 		case f.Struct != nil:
 			b.WriteString("{" + f.Struct.form() + "}")
 		default:

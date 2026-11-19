@@ -1,0 +1,106 @@
+routine F90PCARR subroutine
+  param N       L  argument 1
+  cell  H       B  $LOCAL+0    variable H
+  cell  P       B  $LOCAL+36   variable P
+  cell  T       B  $LOCAL+40   variable T
+  cell  A       L  $LOCAL+76   array A, 40 bytes
+  cell  $T1     L  $LOCAL+116  temporary
+  cell  $I1     L  $LOCAL+120  an array statement's index
+  cell  $T2     L  $LOCAL+124  temporary
+  cell  $T3     L  $LOCAL+128  temporary
+  cell  $D1     L  $LOCAL+132  descriptor L NCA 4 (?)
+  cell  $T4     L  $LOCAL+164  temporary
+  cell  $T5     L  $LOCAL+168  temporary
+  cell  $C1     L  $LOCAL+172  array (line 31), dimension 1's count
+  $LOCAL is 176 bytes
+B1:
+  ; line 24
+  assign H+4 = 168296452
+  assign H+12 = 16777216
+  assign H+8 = addr(A)
+  assign H+24 = 4
+  assign H+28 = 1
+  assign H+32 = 10
+  assign H+20 = sub.L(H+8, 4)
+  assign H+16 = 40
+  ; line 25
+  assign $T1 = addr(@(P)+4)
+  assign @($T1) = 168296452
+  assign @($T1)+8 = 16777216
+  assign $T2 = @N
+  assign $T3 = div.L($T2, 2)
+  branch lt.L($T3, 0) B2 B3
+B2:
+  assign $T3 = 0
+  jump B3
+B3:
+  assign @($T1)+4 = addr(A+4)
+  assign @($T1)+20 = 8
+  assign @($T1)+24 = 1
+  assign @($T1)+28 = $T3
+  assign @($T1)+16 = sub.L(@($T1)+4, 8)
+  assign @($T1)+12 = mul.L(4, $T3)
+  ; line 26
+  assign $T3 = addr(@(P)+4)
+  assign @(add.L(H+20, mul.L(@N, H+24))) = add.L(@(add.L(@($T3)+16, @($T3)+20)), 1)
+  ; line 27
+  assign $T3 = addr(@(P)+4)
+  assign @($T3) = 168296452
+  assign @($T3)+8 = 16777216
+  call FTN$ALLOCATE(ref @($T3), val 2, val 0, val @N)
+  ; line 28
+  assign $D1+4 = addr(A)
+  assign $D1+20 = 4
+  assign $D1+24 = 1
+  assign $D1+28 = 10
+  assign $D1+16 = sub.L($D1+4, 4)
+  assign $D1+12 = 40
+  branch and.L(and.L(and.L(and.L(eq.L(H+8, $D1+4), ne.L(H+8, 0)), eq.L(H+24, $D1+20)), eq.L(sub.L(H+32, H+28), sub.L($D1+28, $D1+24))), gt.L($D1+12, 0)) B4 B5
+B4:
+  assign @N = 1
+  jump B5
+B5:
+  ; line 29
+  assign $T3 = addr(@(P)+4)
+  call FTN$DEALLOCATE(ref @($T3), val 2)
+  ; line 30
+  assign H = 3
+  assign H+4 = 168296452
+  assign H+12 = 16777216
+  assign $T3 = @N
+  assign $T2 = add.L($T3, 1)
+  assign $T1 = $T3
+  branch lt.L($T1, 0) B6 B7
+B6:
+  assign $T1 = 0
+  jump B7
+B7:
+  assign H+8 = addr(A-8[$T2])
+  assign H+24 = -4
+  assign H+28 = 1
+  assign H+32 = $T1
+  assign H+20 = add.L(H+8, 4)
+  assign H+16 = mul.L(4, $T1)
+  ; line 31
+  assign $T1 = T+28
+  assign $T2 = T+32
+  assign $T3 = sub.L($T1, 1)
+  assign $T4 = add.L(sub.L($T2, $T1), 1)
+  branch lt.L($T4, 0) B8 B9
+B8:
+  assign $T4 = 0
+  jump B9
+B9:
+  assign $T5 = 0
+  assign $C1 = $T4
+  assign $I1 = 1
+  branch le.L($C1, 0) B11 B10
+B10:  ; array (line 31), dimension 1's body
+  assign $T5 = add.L($T5, @(add.L(T+20, mul.L(add.L($I1, $T3), T+24))))
+  assign $I1 = add.L($I1, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B10 B11
+B11:
+  assign @N = $T5
+  ; line 32
+  return

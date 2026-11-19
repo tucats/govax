@@ -293,7 +293,7 @@ func sameStructure(x, y *Structure) bool {
 		self := f.Pointer && f.Struct == x && g.Struct == y
 
 		if f.Name != g.Name || f.Offset != g.Offset || f.Struct != g.Struct && !self || f.Map != g.Map ||
-			f.Pointer != g.Pointer ||
+			f.Pointer != g.Pointer || f.Rank != g.Rank ||
 			f.Type.Kind != g.Type.Kind || f.Type.Size != g.Type.Size || len(f.Dims) != len(g.Dims) {
 			return false
 		}

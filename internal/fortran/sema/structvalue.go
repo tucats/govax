@@ -60,7 +60,7 @@ func sameType(x, y *Structure) bool {
 		g := y.Fields[i]
 
 		switch {
-		case f.Name != g.Name || len(f.Dims) != len(g.Dims) || f.Pointer != g.Pointer:
+		case f.Name != g.Name || len(f.Dims) != len(g.Dims) || f.Pointer != g.Pointer || f.Rank != g.Rank:
 			return false
 		case f.Pointer && f.Struct == x && g.Struct == y:
 			// Each a pointer to its own type, NODE's NEXT: the same so far.
@@ -335,8 +335,15 @@ func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 
 		// A pointer component is pointer-assigned its value (7.5.1.5), which
 		// must be a target it may point at (pointer.go).
+		if f.Pointer && componentType(f).Kind == Invalid {
+			// The component's declaration had an error, reported.
+			v.Values[i], ok = a.bad(arg.Position()), false
+
+			continue
+		}
+
 		if f.Pointer {
-			v.Values[i] = a.targetFor(st.Name+"%"+f.Name, componentType(f), 0, arg)
+			v.Values[i] = a.targetFor(st.Name+"%"+f.Name, componentType(f), f.Rank, arg)
 			if v.Values[i] == nil {
 				v.Values[i], ok = a.bad(arg.Position()), false
 			}

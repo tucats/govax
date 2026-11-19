@@ -37,8 +37,15 @@ import (
 // aren't known where it is called.
 
 // definedSymbol is the variable or array the place e is part of, for a check of
-// what gives it a value; nil for anything else.
+// what gives it a value; nil for anything else, a pointer component's target
+// among them (X%P = 4 changes no part of X: docs/planning/PHASE-107 - Fortran
+// 90 pointers.md, subtask 5b), as is an array pointer component's (X%V(1) = 4,
+// whose symbol is no dummy).
 func definedSymbol(e Expr) *Symbol {
+	if f, ok := e.(*FieldRef); ok && f.ThroughPointer() {
+		return nil
+	}
+
 	switch e := e.(type) {
 	case *Var:
 		return e.Sym
@@ -152,4 +159,32 @@ func (a *analyzer) intentOut(s *Symbol, limit int) {
 		pos.Line, pos.Column, pos.Serial = use.Line, use.Column, use.Serial
 		a.report("INTENTOUTREF", pos, s.Name)
 	}
+}
+
+// pointerHome is the variable whose storage holds the pointer p itself (a
+// reference to a pointer, IsPointer), for INTENTIN where a statement changes
+// its association: a pointer component's record, if no pointer leads to it
+// (X%P, X%V; not X%NEXT%P, which is in X%NEXT's target); nil for a named
+// pointer, which can be no dummy argument yet.
+func pointerHome(p Expr) *Symbol {
+	if s := PointerSymbol(p); s != nil {
+		if s.Component == nil {
+			return nil
+		}
+
+		p = s.Component
+	}
+
+	f, ok := p.(*FieldRef)
+	if !ok {
+		return nil
+	}
+
+	for _, step := range f.Path[:len(f.Path)-1] {
+		if step.Field.Pointer {
+			return nil
+		}
+	}
+
+	return f.Sym
 }

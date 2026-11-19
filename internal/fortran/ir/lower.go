@@ -315,6 +315,7 @@ func (l *lowerer) lowerBody() *Routine {
 	l.layOutReturns()
 	l.layOutEntryBounds()
 	l.layOutVFEs()
+	resolveLocated(r)
 
 	// A panic, not an error message: a block made and never placed is a
 	// bug in lowering, not in the program, and must not go unnoticed.

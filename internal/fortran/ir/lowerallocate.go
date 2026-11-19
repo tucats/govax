@@ -51,19 +51,25 @@ const (
 
 // allocatableCell makes the cell c of the allocatable array s its descriptor.
 func (l *lowerer) allocatableCell(s *sema.Symbol, c *Cell) {
-	d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassNCA, Length: s.Type.Size}
-
-	for range s.Dims {
-		d.Dims = append(d.Dims, Bound{Set: true})
-	}
-
-	c.Kind, c.T, c.Desc = DescriptorCell, Long, d
+	c.Kind, c.T, c.Desc = DescriptorCell, Long, l.ncaDescriptor(s)
 
 	if l.adjustable == nil {
 		l.adjustable = map[*sema.Symbol]*Cell{}
 	}
 
 	l.adjustable[s] = c
+}
+
+// ncaDescriptor is the class NCA descriptor of the allocatable array or array
+// pointer s, its bounds set when the program runs.
+func (l *lowerer) ncaDescriptor(s *sema.Symbol) *Descriptor {
+	d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassNCA, Length: s.Type.Size}
+
+	for range s.Dims {
+		d.Dims = append(d.Dims, Bound{Set: true})
+	}
+
+	return d
 }
 
 // clearAllocatables writes, at an entry point, what the descriptor of each

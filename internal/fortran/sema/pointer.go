@@ -178,11 +178,28 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 		return &Var{exprBase{T: s.Type, Pos: x.Pos}, s}
 
 	case *ast.FieldRef:
-		f, ok := a.field(x, false).(*FieldRef)
+		t := a.field(x, false)
+
+		// An array pointer component, whose symbol stands for it.
+		if r, isArray := t.(*ArrayRef); isArray && r.Sym.Component != nil {
+			if assigned {
+				a.noteAssigned(r.Sym.Component)
+				a.checkIntentIn(pointerHome(r), x.Pos)
+			}
+
+			return r
+		}
+
+		f, ok := t.(*FieldRef)
 
 		switch {
-		case !ok:
+		case !ok && t.Type().Kind == Invalid:
 			// An error, reported.
+			return nil
+		case !ok:
+			// An element or a section of an array pointer component.
+			a.report("NOTPOINTER", x.Pos, ast.DumpExpr(x))
+
 			return nil
 		case !f.IsPointer():
 			a.report("NOTPOINTER", x.Pos, f.Text())
@@ -192,6 +209,7 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 
 		if assigned {
 			a.noteAssigned(f)
+			a.checkIntentIn(pointerHome(f), x.Pos)
 		}
 
 		return f

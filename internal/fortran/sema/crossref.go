@@ -102,6 +102,14 @@ func (a *analyzer) declare(name string, pos diag.Position) *Symbol {
 
 // noteAssigned notes that the statement gives the place e a value.
 func (a *analyzer) noteAssigned(e Expr) {
+	// An array pointer component's symbol is in no table: its record is
+	// what the cross reference shows (pointercomp.go).
+	if s := baseOf(e); s != nil && s.Component != nil {
+		a.noteAssigned(s.Component)
+
+		return
+	}
+
 	switch e := e.(type) {
 	case *Var:
 		a.note(&e.Sym.refs, e.Pos, RefAssigned)
@@ -301,4 +309,21 @@ func (a *analyzer) noteLabels() {
 	for _, r := range a.refs {
 		a.noteLabel(r.label, r.pos, RefUsed)
 	}
+}
+
+// baseOf is the symbol a Var, an Elem, an ArrayRef, or a Section refers to, or
+// nil for any other expression.
+func baseOf(e Expr) *Symbol {
+	switch e := e.(type) {
+	case *Var:
+		return e.Sym
+	case *Elem:
+		return e.Sym
+	case *ArrayRef:
+		return e.Sym
+	case *Section:
+		return e.Sym
+	}
+
+	return nil
 }

@@ -110,8 +110,7 @@ func TestPointers(t *testing.T) {
 		{"a pointer's bound using itself", with("integer, pointer :: a(:)", "allocate (a(p))", "allocate (p, a(p))"),
 			"ALLOCSELF: a bound in ALLOCATE can't use P, which the same statement allocates or deallocates"},
 		{"ALLOCATED of a pointer", with("l = allocated(p)"), "NOTALLOCATABLE: P is not an allocatable array"},
-		{"an array pointer component, subtask 5b's", prog("type t", "integer, pointer :: k(:)", "end type"),
-			"NOTIMPL: an array POINTER component is not implemented yet"},
+		{"an array pointer component", prog("type t", "integer, pointer :: k(:), m(:, :)", "end type"), ""},
 		{"bounds on a pointer component", prog("type t", "integer, pointer :: k(3)", "end type"),
 			"POINTERSHAPE: K is an array POINTER, so its bounds must all be colons, (:)"},
 		{"a component of its own type without POINTER", prog("type t", "type(t) :: next", "end type"),
@@ -140,6 +139,16 @@ func TestPointerComponents(t *testing.T) {
 		decl := []string{"program main", "type node", "integer v", "type(node), pointer :: next",
 			"character(len=4), pointer :: tag", "end type", "type(node), pointer :: h", "type(node), target :: n0",
 			"type(node) :: r, ra(3)", "integer, target :: k", "character(len=4), target :: s4", "integer m"}
+
+		return append(append(decl, lines...), "end program")
+	}
+
+	// arrays declares ARR, a type with array pointer components, TREE, one
+	// pointing at an array of itself, records of them, and targets.
+	arrays := func(lines ...string) []string {
+		decl := []string{"program main", "type arr", "integer n", "integer, pointer :: v(:)", "integer, pointer :: m(:, :)",
+			"end type", "type tree", "integer key", "type(tree), pointer :: kids(:)", "end type", "type(arr) :: x, y, xs(3)",
+			"type(tree), pointer :: tp", "integer, target :: kk(5), mm(3, 3)", "integer plain(5), n"}
 
 		return append(append(decl, lines...), "end program")
 	}
@@ -183,6 +192,36 @@ func TestPointerComponents(t *testing.T) {
 			"POINTERRANKED: the pointer component NEXT can't follow a part of the reference that has a rank"},
 		{"ALLOCATE of a component that isn't a pointer", with("allocate (r%v)"),
 			"NOTALLOCATABLE: R%V is not an allocatable array or a pointer"},
+
+		// Array pointer components (subtask 5b).
+		{"an array pointer component's uses", arrays("x%v => kk", "x%v => kk(2:5:2)", "x%v => y%v", "x%v => x%v(3:1:-1)",
+			"x%m => mm(:, 2:3)", "x%v(1) = x%v(2) + size(x%v) + lbound(x%v, 1)", "x%v = x%v + 1", "kk(1:2) = x%v(1:2)",
+			"nullify (x%v)", "l = associated(x%v) .and. associated(x%v, kk) .and. associated(x%v, y%v)",
+			"allocate (x%v(3), x%m(0:2, n), stat=n)", "deallocate (x%v, x%m)", "print *, x%v, x%m(1, :)",
+			"y = x", "y = arr(n, kk(1:3), mm)", "call sub(x%v, x%m)", "tp%kids => tp%kids(2)%kids",
+			"n = tp%kids(1)%key + sum(tp%kids%key)", "allocate (tp%kids(2)%kids(n))"), ""},
+		{"an array pointer component's rank", arrays("x%v => mm"),
+			"POINTERTYPE: the pointer X%V points at an array of INTEGER, so its target can't be an array of rank 2 of INTEGER"},
+		{"a constructor's array pointer of another rank", arrays("y = arr(n, mm, mm)"),
+			"POINTERTYPE: the pointer ARR%V points at an array of INTEGER, so its target can't be an array of rank 2 of INTEGER"},
+		{"an array pointer component's target without TARGET", arrays("x%v => plain"),
+			"NOTTARGET: PLAIN is neither a TARGET, a part of one, nor a pointer, so no pointer may point at it"},
+		{"no bounds for an array pointer component", arrays("allocate (x%v)"),
+			"ALLOCBOUNDS: in ALLOCATE, X%V needs 1 bound, each a value or two separated by a colon"},
+		{"a stride in ALLOCATE's bounds", arrays("allocate (x%v(1:4:2))"),
+			"ALLOCBOUNDS: in ALLOCATE, X%V needs 1 bound, each a value or two separated by a colon"},
+		{"DEALLOCATE of an element", arrays("deallocate (x%v(1))"),
+			"NOTALLOCATABLE: X%V(1) is not an allocatable array or a pointer"},
+		{"NULLIFY of a section", arrays("nullify (x%v(1:2))"), "NOTPOINTER: X%V(1:2) is not a pointer"},
+		{"a field of a number", arrays("n = x%v%key"),
+			"FIELDNOTRECORD: the field V is an INTEGER, not a substructure, so it has no field KEY"},
+		{"subscripts of an array pointer component", arrays("n = x%m(1)"),
+			"SUBSCRIPTS: the array X%M takes 2 subscripts, not 1"},
+		{"an array pointer after a part with rank", arrays("print *, xs(:)%v"),
+			"POINTERRANKED: the pointer component V can't follow a part of the reference that has a rank"},
+		{"INTENT(IN)'s association", []string{"subroutine s(x, t)", "type h", "integer, pointer :: v(:), p", "end type",
+			"type(h), intent(in) :: x", "integer, target :: t(3)", "x%v(1) = 2", "x%p = 3", "x%v => t", "end subroutine"},
+			"INTENTIN: X is an INTENT(IN) dummy argument, which can't be given a value"},
 	}
 
 	for _, c := range cases {

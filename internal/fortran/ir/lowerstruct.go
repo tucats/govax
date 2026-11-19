@@ -23,6 +23,12 @@ func (l *lowerer) buildRecord(dst *Mem, v *sema.StructValue) {
 		value := v.Values[i]
 
 		switch {
+		case f.Pointer && f.Rank > 0:
+			// An array pointer component's descriptor is filled in where it
+			// is in the record, as pointer assignment fills a named one's.
+			p := sema.NewComponentPointer(f)
+			l.associate(l.locatedCell(f.Name, l.ncaDescriptor(p), &place), p, value)
+
 		case f.Pointer:
 			// Pointer assignment of the component (7.5.1.5): its target's
 			// address, and a CHARACTER one's length and type before it.

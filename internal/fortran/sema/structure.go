@@ -3,6 +3,7 @@ package sema
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
@@ -139,6 +140,13 @@ type Field struct {
 	// fields stops at one.
 	Pointer bool
 
+	// Rank is an array pointer component's rank, its shape deferred, (:) or
+	// (:,:) (subtask 5b): its storage is a class NCA descriptor of that rank,
+	// as a named array pointer's is, and Dims stay nil, so that every walk
+	// that lays out or initializes a record sees one item of that size.
+	// 0 for any other field.
+	Rank int
+
 	// through stands for the storage a reference reaches through this
 	// pointer component, for overlap (overlap.go's baseSymbol), made at its
 	// first need.
@@ -219,6 +227,10 @@ func (s *Structure) objectText() string {
 // ElementSize is the length in bytes of one of the field's items: its
 // type's, or its substructure's.
 func (f *Field) ElementSize() int {
+	if f.Pointer && f.Rank > 0 {
+		return DescriptorSize(f.Rank)
+	}
+
 	if f.Pointer {
 		return PointerSize(componentType(f))
 	}
@@ -263,6 +275,10 @@ func (f *Field) TypeText() string {
 		text += ", POINTER"
 	}
 
+	if f.Rank > 0 {
+		text += " (" + deferredText(f.Rank) + ")"
+	}
+
 	if f.Dims != nil {
 		text += " (" + dims(f.Dims) + ")"
 	}
@@ -289,13 +305,14 @@ func (s *Structure) HasPointers() bool {
 // PointerOffsets are the offsets in a record of the structure of each of its
 // pointers' address longwords, at any depth, every element of an array
 // component's: what must be 0 for each pointer in it to be disassociated.
-// A CHARACTER pointer's is its descriptor's POINTER, 4 bytes in.
+// A CHARACTER pointer's is its descriptor's POINTER, 4 bytes in, and so is an
+// array pointer's.
 func (s *Structure) PointerOffsets() []int {
 	var list []int
 
 	for _, f := range s.Fields {
 		switch {
-		case f.Pointer && f.Type.Kind == Character && f.Struct == nil:
+		case f.Pointer && (f.Rank > 0 || f.Type.Kind == Character && f.Struct == nil):
 			list = append(list, f.Offset+4)
 
 		case f.Pointer:
@@ -819,4 +836,10 @@ func dumpStructure(s *Structure) string {
 	}
 
 	return text
+}
+
+// deferredText is a deferred shape of rank n as Fortran 90 writes it, without
+// its parentheses: ":" or ":,:".
+func deferredText(n int) string {
+	return strings.Repeat(":,", n)[:2*n-1]
 }

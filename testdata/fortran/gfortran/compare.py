@@ -99,6 +99,7 @@ PROGRAMS90 = {
     "ptrarrays": ["ptrarrays.f90"],
     "ptralloc": ["ptralloc.f90"],
     "ptrcomps": ["ptrcomps.f90"],
+    "ptrcarr": ["ptrcarr.f90"],
     "allocstat": ["allocstat.f90"],
     "autos": ["autos.f90"],
     "autolen": ["autolen.f90"],

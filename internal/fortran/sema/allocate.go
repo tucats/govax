@@ -199,7 +199,7 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 
 	for _, d := range s.Objects {
 		if d.Component != nil {
-			if obj := a.allocatedComponent(d.Component); obj != nil {
+			if obj := a.allocatedComponent(d.Component, st.Deallocate, named); obj != nil {
 				st.Objects = append(st.Objects, obj)
 			} else {
 				ok = false
@@ -248,13 +248,52 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 // allocatedComponent analyzes x, an ALLOCATE or DEALLOCATE object that is a
 // component (subtask 5): a scalar pointer component, HEAD%NEXT, which ALLOCATE
 // gives a new target and DEALLOCATE gives its target back, as for a pointer of
-// its own. nil after a message: NOTALLOCATABLE for any other component.
-func (a *analyzer) allocatedComponent(x *ast.FieldRef) *Allocation {
-	f, ok := a.field(x, false).(*FieldRef)
+// its own, or an array pointer component, H%V, whose ALLOCATE object has its
+// bounds as the last part's list, H%V(0:N), and which is then the symbol that
+// stands for it (pointercomp.go), as a named array pointer would be. nil after
+// a message: NOTALLOCATABLE for any other component.
+func (a *analyzer) allocatedComponent(x *ast.FieldRef, deallocate bool, named map[string]bool) *Allocation {
+	bare := x
+	if !deallocate && x.Args != nil {
+		c := *x
+		c.Args = nil
+		bare = &c
+	}
+
+	t := a.field(bare, false)
+
+	if r, isArray := t.(*ArrayRef); isArray && r.Sym.Component != nil {
+		a.noteAssigned(r)
+		a.checkIntentIn(pointerHome(r), x.Pos)
+
+		obj := &Allocation{Sym: r.Sym}
+		if deallocate {
+			return obj
+		}
+
+		d := &ast.Declarator{Name: r.Sym.Name, Pos: x.Pos, Dims: allocBounds(x.Args)}
+		if !a.allocationBounds(obj, d, named) {
+			return nil
+		}
+
+		return obj
+	}
+
+	if bare != x && t.Type().Kind != Invalid {
+		// Bounds after anything else: the reference's own message.
+		t = a.field(x, false)
+	}
+
+	f, ok := t.(*FieldRef)
 
 	switch {
-	case !ok:
+	case !ok && t.Type().Kind == Invalid:
 		// An error, reported.
+		return nil
+	case !ok:
+		// An element or a section of an array pointer component.
+		a.report("NOTALLOCATABLE", x.Pos, ast.DumpExpr(x), "an allocatable array or a pointer")
+
 		return nil
 	case !f.IsPointer():
 		a.report("NOTALLOCATABLE", x.Pos, f.Text(), "an allocatable array or a pointer")
@@ -263,6 +302,7 @@ func (a *analyzer) allocatedComponent(x *ast.FieldRef) *Allocation {
 	}
 
 	a.noteAssigned(f)
+	a.checkIntentIn(pointerHome(f), x.Pos)
 
 	return &Allocation{Component: f}
 }
@@ -481,4 +521,27 @@ func (a *analyzer) allocated(e *ast.Apply) Expr {
 	}
 
 	return &Allocated{exprBase{T: LogicalType, Pos: e.Pos}, s}
+}
+
+// allocBounds are the bounds an ALLOCATE object's list gives when the parser
+// read it as a reference's subscripts, H%V(0:N): a triplet's bounds, or an
+// upper bound alone; a triplet with a stride or without an upper bound is no
+// bound pair (Colon, which ALLOCBOUNDS refuses).
+func allocBounds(args []ast.Expr) []ast.Bound {
+	bounds := make([]ast.Bound, len(args))
+
+	for i, arg := range args {
+		t, ok := arg.(*ast.Triplet)
+
+		switch {
+		case !ok:
+			bounds[i].Upper = arg
+		case t.Stride != nil || t.Upper == nil:
+			bounds[i].Colon = true
+		default:
+			bounds[i].Lower, bounds[i].Upper = t.Lower, t.Upper
+		}
+	}
+
+	return bounds
 }

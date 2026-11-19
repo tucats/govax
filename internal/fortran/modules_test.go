@@ -734,6 +734,8 @@ const listsModule = `module links
     integer :: value
     type(node), pointer :: next
     character(len=4), pointer :: tag
+    type(node), pointer :: kids(:)
+    real, pointer :: grid(:, :)
   end type node
   type(node), pointer :: head
 end module links`
@@ -759,7 +761,10 @@ const listsUser = `program walk
   main%first%next => head
   main%spare => main%first%next
   allocate (head%next)
-  print *, main%spare%value, associated (main%first%next%next)
+  allocate (main%first%kids(3), head%grid(2, 2))
+  main%first%kids%value = 4
+  head%kids => main%first%kids(3:1:-1)
+  print *, main%spare%value, associated (main%first%next%next), sum (head%kids%value), size (head%grid)
 end program walk`
 
 // TestModulePointerComponents holds a module's pointer components' text,
@@ -775,6 +780,8 @@ func TestModulePointerComponents(t *testing.T) {
 	for _, want := range []string{
 		"  TYPE(NODE), POINTER :: NEXT",
 		"  CHARACTER(LEN=4), POINTER :: TAG",
+		"  TYPE(NODE), POINTER, DIMENSION(:) :: KIDS",
+		"  REAL(KIND=4), POINTER, DIMENSION(:,:) :: GRID",
 		"  TYPE(NODE), POINTER :: HEAD",
 	} {
 		if !strings.Contains(text, want) {

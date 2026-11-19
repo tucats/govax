@@ -9634,18 +9634,43 @@ pointers of records in a stack frame, and of an automatic array's, at each entry
 and 95 leave them undefined, and gfortran doesn't clear them, so a program that relies on it is
 govax's own.
 
-So far array pointer components (`INTEGER, POINTER :: K(:)` in a type), pointer dummy
-arguments, and functions whose result is a pointer are reported `%FORT-E-NOTIMPL`, each to come
-in its turn.
+A pointer component may be an **array pointer**, its shape deferred, `INTEGER, POINTER ::
+V(:)` or `TYPE(NODE), POINTER :: KIDS(:)` (a tree whose nodes point at an array of their
+children). It is an array pointer in every way a named one is: `H%V => A(2:9:3)`, `H%V(I)`,
+`H%V(1:3)`, `SUM (H%V)`, `SIZE (H%V)` and the other inquiries, `ALLOCATE (H%V(0:N))` (the
+bounds in the reference's list), DEALLOCATE, NULLIFY, ASSOCIATED, and `H%V` as an actual
+argument to an assumed-shape or an explicit-shape dummy. `T%KIDS(2)%KEY` is a field of one
+record it points at, and `T%KIDS%KEY` the array of every one's. Its storage in the record is
+its descriptor, as a named array pointer's is (20 bytes and 12 for each dimension), which
+intrinsic assignment of the record copies, and the storage map shows it `INTEGER, POINTER (:)`.
+
+```fortran
+program shelf
+  type holder
+    integer :: n
+    integer, pointer :: v(:)
+  end type holder
+  type(holder) :: h
+  integer, target :: data(6) = (/ 1, 2, 3, 4, 5, 6 /)
+  h%v => data(2:6:2)
+  h%v(2) = 0
+  print *, size (h%v), h%v, data(4)
+end program shelf
+```
+
+prints `3 2 0 6 0`.
+
+Pointer dummy arguments and functions whose result is a pointer are reported
+`%FORT-E-NOTIMPL`, each to come in its turn.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, an array POINTER component is not implemented yet
-  at line 4 of DUA1:[WORK]BAD.F90;1
-      type(node), pointer :: kids(:)
-  ---------------------------^
+%FORT-E-NOTIMPL, a pointer dummy argument is not implemented yet
+  at line 1 of DUA1:[WORK]BAD.F90;1
+  subroutine bad (p)
+  ----------------^
 ```
 
 Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have

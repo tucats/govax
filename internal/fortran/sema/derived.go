@@ -210,9 +210,9 @@ func (a *analyzer) endType(s *ast.TypeDefStmt) {
 // may be DIMENSION, whose bounds an entity without its own takes, and POINTER
 // (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 7), which makes
 // each entity a pointer component, of any type in scope, the one being defined
-// among them. An array pointer component, with a deferred shape, is NOTIMPL
-// until subtask 5b. A component's default initial value is Fortran 95's (the
-// author's answer 3).
+// among them; one with a deferred shape is an array pointer component
+// (subtask 5b), its rank its Field's Rank. A component's default initial value
+// is Fortran 95's (the author's answer 3).
 func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 	a := b.a
 
@@ -259,7 +259,9 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 		}
 
 		if pointer && decl.Dims != nil && ok {
+			// An array pointer's shape is its descriptor's, not the record's.
 			ok = b.pointerDims(f, decl)
+			decl = &ast.Declarator{Name: decl.Name, Pos: decl.Pos}
 		}
 
 		if !ok || !b.fieldDims(f, decl) {
@@ -270,10 +272,15 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 	}
 }
 
-// pointerDims checks a pointer component's array declarator: a deferred
-// shape, all colons, or POINTERSHAPE. An array pointer component is NOTIMPL
-// for now (subtask 5b), so the answer is always false, after a message.
+// pointerDims checks a pointer component's array declarator, a deferred
+// shape, all colons (else POINTERSHAPE), and gives the field its rank.
 func (b *structBuilder) pointerDims(f *Field, d *ast.Declarator) bool {
+	if len(d.Dims) > maxDimensions {
+		b.a.report("TOOMANYDIMS", d.Pos, len(d.Dims))
+
+		return false
+	}
+
 	for _, bd := range d.Dims {
 		if !bd.Colon || bd.Lower != nil {
 			b.a.report("POINTERSHAPE", d.Pos, d.Name)
@@ -282,9 +289,9 @@ func (b *structBuilder) pointerDims(f *Field, d *ast.Declarator) bool {
 		}
 	}
 
-	b.a.notImplForm(d.Pos, "an array POINTER component")
+	f.Rank = len(d.Dims)
 
-	return false
+	return true
 }
 
 // componentIntrinsic is the type of the component d of an intrinsic type, as a

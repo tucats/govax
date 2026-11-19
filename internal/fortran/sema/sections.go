@@ -57,7 +57,7 @@ func (a *analyzer) componentSubstring(e *ast.FieldRef) ast.Expr {
 		return e
 	}
 
-	if f := a.componentOf(e); f == nil || f.Dims != nil {
+	if f := a.componentOf(e); f == nil || f.Dims != nil || f.Rank > 0 {
 		return e
 	}
 
