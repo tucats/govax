@@ -518,6 +518,13 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 
 		return s, false
 
+	case s.Struct != nil && s.Struct.HasPointers():
+		a.report("POINTERPART", pos, name, s.Struct.Name, "be given an initial value")
+
+		s.broken = true
+
+		return s, false
+
 	case s.AutomaticObject:
 		a.autoAttr(s, pos, name, "be given an initial value")
 

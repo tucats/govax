@@ -422,6 +422,12 @@ func stmtText(list []Stmt) string {
 		objects := make([]string, len(s.Objects))
 
 		for i, o := range s.Objects {
+			if o.Component != nil {
+				objects[i] = DumpExpr(o.Component)
+
+				continue
+			}
+
 			objects[i] = o.Sym.Name
 
 			if o.Upper != nil {

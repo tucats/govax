@@ -1594,6 +1594,14 @@ var messages = map[string]kind{
 	"POINTERFUNC":  {Error, "the target %s is a function reference, and only a function whose result is a pointer gives a target"},
 	"VECTORTARGET": {Error, "the target %s has a vector subscript, so no pointer may point at it"},
 
+	// Pointer components (docs/planning/PHASE-107 - Fortran 90 pointers.md,
+	// finding 7). POINTERPART is an object of a type with a pointer component,
+	// at any depth, where 4.4.1, 5.5.1, 5.4, 9.4.2, and 5.2.10 forbid one: an
+	// I/O list, a NAMELIST group, EQUIVALENCE, an initial value; POINTERRANKED a
+	// pointer component after a part of a reference with rank (6.1.2).
+	"POINTERPART":   {Error, "%s is of the type %s, which has a pointer component, so it can't %s"},
+	"POINTERRANKED": {Error, "the pointer component %s can't follow a part of the reference that has a rank"},
+
 	// Assumed-shape dummies (docs/planning/PHASE-104 - Fortran 90 dynamic
 	// arrays.md, findings 9 and 10). SHAPENOTDUMMY is a shape (lb:) on an array
 	// that isn't a dummy argument (5.1.2.4.2), nor ALLOCATABLE's (:), which

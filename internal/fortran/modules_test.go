@@ -726,3 +726,81 @@ func TestModulePointers(t *testing.T) {
 		}
 	}
 }
+
+// listsModule is a module with a type that points at itself, and a pointer of
+// it (docs/planning/PHASE-107 - Fortran 90 pointers.md, subtask 5a).
+const listsModule = `module links
+  type node
+    integer :: value
+    type(node), pointer :: next
+    character(len=4), pointer :: tag
+  end type node
+  type(node), pointer :: head
+end module links`
+
+// shelfModule uses LINKS and passes NODE on in a type of its own, so that a
+// user of both reads NODE from two module texts.
+const shelfModule = `module shelf
+  use links
+  type rack
+    type(node) :: first
+    type(node), pointer :: spare
+  end type rack
+  type(rack) :: main
+end module shelf`
+
+// listsUser walks a list through both modules' names.
+const listsUser = `program walk
+  use links
+  use shelf
+  type(node), target :: n0
+  n0%value = 1
+  head => n0
+  main%first%next => head
+  main%spare => main%first%next
+  allocate (head%next)
+  print *, main%spare%value, associated (main%first%next%next)
+end program walk`
+
+// TestModulePointerComponents holds a module's pointer components' text,
+// including a type naming itself, and a user compiled with the modules' texts
+// from module files, NODE coming from both, to the code it gets in one file.
+func TestModulePointerComponents(t *testing.T) {
+	links := compileFree("LINKS", listsModule, nil)
+	if links.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(links))
+	}
+
+	text := strings.Join(moduleText(t, links, "LINKS"), "\n")
+	for _, want := range []string{
+		"  TYPE(NODE), POINTER :: NEXT",
+		"  CHARACTER(LEN=4), POINTER :: TAG",
+		"  TYPE(NODE), POINTER :: HEAD",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in\n%s", want, text)
+		}
+	}
+
+	files := moduleFiles{"LINKS": moduleText(t, links, "LINKS")}
+
+	shelf := compileFree("SHELF", shelfModule, files)
+	if shelf.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(shelf))
+	}
+
+	files["SHELF"] = moduleText(t, shelf, "SHELF")
+
+	both := compileFree("WALK", listsModule+"\n"+shelfModule+"\n"+listsUser, nil)
+	user := compileFree("WALK", listsUser, files)
+
+	if both.Errors != 0 || user.Errors != 0 {
+		t.Fatalf("messages: %v %v", messageList(both), messageList(user))
+	}
+
+	routine := func(lines []string) string { return routineCode(lines, "WALK") }
+
+	if routine(both.MACRO) != routine(user.MACRO) {
+		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(user.MACRO))
+	}
+}

@@ -9590,21 +9590,65 @@ deallocate (v)
 v => bigger
 ```
 
-So far pointer components of derived types (and so linked lists), pointer dummy arguments,
-and functions whose result is a pointer are reported `%FORT-E-NOTIMPL`, each to come in its
-turn.
+A derived type may have **pointer components**, `INTEGER, POINTER :: P` or `TYPE(NODE),
+POINTER :: NEXT` in its definition, of any type in scope, the type being defined among them:
+that is how a linked list or a tree is made.
+
+```fortran
+program chain
+  type node
+    integer :: value
+    type(node), pointer :: next
+  end type node
+  type(node), pointer :: head, new
+  integer i
+  nullify (head)
+  do i = 1, 3
+    allocate (new)
+    new = node(i * 10, head)  ! the new node points at the old head
+    head => new
+  end do
+  print *, head%value, head%next%value, head%next%next%value, &
+           associated (head%next%next%next)
+end program chain
+```
+
+prints `30 20 10 F`. A reference goes through each pointer component on its way, so
+`HEAD%NEXT%VALUE` is the VALUE of the node HEAD's NEXT points at; such a component is a
+pointer like any other in `=>`, NULLIFY, ASSOCIATED, ALLOCATE, and DEALLOCATE
+(`ALLOCATE (HEAD%NEXT)`), and stands for its target everywhere else, an actual argument to an
+ordinary dummy among them (a recursive routine walking a tree takes `T%LEFT` as its node). A
+structure constructor gives a pointer component a target (a TARGET variable or a part of one,
+or a pointer), never a value, so a constructor of such a type is never a constant, and
+intrinsic assignment of a record copies its pointers, not their targets. No pointer component
+may follow a part of a reference that has a rank: `NODES(:)%NEXT` names no array
+(`POINTERRANKED`). An object of a type with a pointer component, at any depth, can't be an
+item of an I/O list, in a NAMELIST group or EQUIVALENCE, or given an initial value
+(`POINTERPART`); its components that aren't pointers can. A pointer component is laid out as a
+pointer variable is, on a longword boundary in a naturally aligned type, and the storage map
+shows it `TYPE(NODE), POINTER`.
+
+Pointer components start disassociated too: storage ALLOCATE makes for a type with pointers in
+it (a pointer's target, or an allocatable array's elements) is cleared, and so are the
+pointers of records in a stack frame, and of an automatic array's, at each entry. Fortran 90
+and 95 leave them undefined, and gfortran doesn't clear them, so a program that relies on it is
+govax's own.
+
+So far array pointer components (`INTEGER, POINTER :: K(:)` in a type), pointer dummy
+arguments, and functions whose result is a pointer are reported `%FORT-E-NOTIMPL`, each to come
+in its turn.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, a POINTER component is not implemented yet
+%FORT-E-NOTIMPL, an array POINTER component is not implemented yet
   at line 4 of DUA1:[WORK]BAD.F90;1
-      type(node), pointer :: next
-  ----------------^
+      type(node), pointer :: kids(:)
+  ---------------------------^
 ```
 
-Of modules, these are not there yet: POINTER components; ENTRY in a module procedure; a module whose text would have
+Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have
 to give one type two names, or an external procedure that is a specific of two of its generic
 names, or a COMMON block it and a module it uses both declare (each `%FORT-E-NOTIMPL` when the
 module compiles); and govax's definition modules (`$SSDEF` and the rest) as modules to USE,

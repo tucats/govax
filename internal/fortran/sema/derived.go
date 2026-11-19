@@ -24,7 +24,7 @@ import (
 // storage map. What differs is checked at the doors:
 //
 //   - a definition holds only component declarations (type statements whose
-//     only attribute is DIMENSION, or POINTER, which is Phase 107's), SEQUENCE,
+//     attributes are DIMENSION and POINTER), SEQUENCE,
 //     and PRIVATE (a module's, Phase 106), never a UNION, a MAP, %FILL, a RECORD
 //     statement, or a nested definition (typeDefinition);
 //   - a type's name is a local name of class 1 (14.1.2): no variable,
@@ -206,23 +206,26 @@ func (a *analyzer) endType(s *ast.TypeDefStmt) {
 
 // componentStatement declares a component for each entity of a type statement
 // in a definition (R425): an intrinsic type's, or another derived type's
-// already defined, with constant bounds and lengths. The statement's only
-// attribute may be DIMENSION, whose bounds an entity without its own takes;
-// POINTER is Phase 107's. A component's default initial value is Fortran 95's
-// (the author's answer 3).
+// already defined, with constant bounds and lengths. The statement's attributes
+// may be DIMENSION, whose bounds an entity without its own takes, and POINTER
+// (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 7), which makes
+// each entity a pointer component, of any type in scope, the one being defined
+// among them. An array pointer component, with a deferred shape, is NOTIMPL
+// until subtask 5b. A component's default initial value is Fortran 95's (the
+// author's answer 3).
 func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 	a := b.a
 
 	var dims []ast.Bound
+
+	pointer := false
 
 	for _, at := range s.Attrs {
 		switch at.Name {
 		case "DIMENSION":
 			dims = at.Dims
 		case "POINTER":
-			a.notImplForm(at.Pos, "a POINTER component")
-
-			return
+			pointer = true
 		default:
 			a.report("TYPEATTR", at.Pos, at.Name)
 		}
@@ -238,12 +241,12 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 			a.notImplForm(pos, "a component's default initial value")
 		}
 
-		f := &Field{Name: d.Name, Pos: d.Pos}
+		f := &Field{Name: d.Name, Pos: d.Pos, Pointer: pointer}
 
 		var ok bool
 
 		if s.Type.Derived != "" {
-			f.Struct, ok = b.componentType(s.Type, d)
+			f.Struct, ok = b.componentType(s.Type, d, pointer)
 		} else {
 			f.Type, ok = b.componentIntrinsic(s, d)
 		}
@@ -255,12 +258,33 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 			decl = &copied
 		}
 
+		if pointer && decl.Dims != nil && ok {
+			ok = b.pointerDims(f, decl)
+		}
+
 		if !ok || !b.fieldDims(f, decl) {
 			f.Struct, f.Type, f.Dims = nil, invalid, nil
 		}
 
 		b.add(f)
 	}
+}
+
+// pointerDims checks a pointer component's array declarator: a deferred
+// shape, all colons, or POINTERSHAPE. An array pointer component is NOTIMPL
+// for now (subtask 5b), so the answer is always false, after a message.
+func (b *structBuilder) pointerDims(f *Field, d *ast.Declarator) bool {
+	for _, bd := range d.Dims {
+		if !bd.Colon || bd.Lower != nil {
+			b.a.report("POINTERSHAPE", d.Pos, d.Name)
+
+			return false
+		}
+	}
+
+	b.a.notImplForm(d.Pos, "an array POINTER component")
+
+	return false
 }
 
 // componentIntrinsic is the type of the component d of an intrinsic type, as a
@@ -282,13 +306,20 @@ func (b *structBuilder) componentIntrinsic(s *ast.TypeStmt, d *ast.Declarator) (
 }
 
 // componentType is the derived type of a component d of that type, which must
-// be defined already, and not be the type being defined (that only a POINTER
-// component may name, Phase 107).
-func (b *structBuilder) componentType(spec ast.TypeSpec, d *ast.Declarator) (*Structure, bool) {
+// be defined already, and not be the type being defined, which only a POINTER
+// component may name (R424's constraint): a linked list's NODE pointing at the
+// next NODE.
+func (b *structBuilder) componentType(spec ast.TypeSpec, d *ast.Declarator, pointer bool) (*Structure, bool) {
 	if d.HasLength() {
 		b.a.report("NOLENGTH", d.Pos, spec.Text())
 
 		return nil, false
+	}
+
+	if spec.Derived == b.s.Name && pointer && b.s.Derived {
+		b.a.noteOther(whatType, spec.Derived, spec.DerivedPos, RefUsed)
+
+		return b.s, true
 	}
 
 	if spec.Derived == b.s.Name {

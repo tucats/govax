@@ -140,6 +140,13 @@ func (l *lowerer) computeAutomatic(s *sema.Symbol, c *Cell) {
 		l.emit(&Call{origin: l.origin(), Routine: ftnGetTemp, Args: []Arg{{Ref: field(0)}}})
 	} else {
 		l.emit(&StackAllocate{origin: l.origin(), Size: &Load{field(ArsizeOffset)}, Dst: field(PointerOffset)})
+
+		// Records with pointers in them start disassociated (the author's
+		// answer 2).
+		if clearsPointers(s.Type) {
+			n := arith(Div, Long, &Load{field(ArsizeOffset)}, LongConst(int32(s.Struct.Size)))
+			l.clearRecords(&Mem{Ptr: &Load{field(PointerOffset)}, T: Byte}, n, s.Struct)
+		}
 	}
 
 	// A0 is the first element's address, less the element number the lowest

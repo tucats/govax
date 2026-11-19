@@ -1111,8 +1111,10 @@ type (
 	// field of the structure in order, each converted to its component's type
 	// as an assignment converts: a scalar's an expression of its type, a
 	// derived type's component a record of that type, an array component's
-	// constant (Bytes holds its bytes, nil for any other component). A
-	// constructor whose values are all constant is a Const instead.
+	// constant (Bytes holds its bytes, nil for any other component), and a
+	// pointer component's its target (a place, or a pointer, as pointer
+	// assignment's). A constructor whose values are all constant is a Const
+	// instead.
 	StructValue struct {
 		exprBase
 		Values []Expr

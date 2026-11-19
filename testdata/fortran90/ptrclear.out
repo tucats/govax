@@ -1,0 +1,6 @@
+allocated:   F F
+array:         0
+nested:        0
+frames:        0   0
+automatic:     0
+  $STATUS == "%X00000001"

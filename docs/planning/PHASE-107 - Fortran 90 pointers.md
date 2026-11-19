@@ -4,7 +4,8 @@
 Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
 author the same day ("The author's answers"); subtask 2, scalar and character
 pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
-subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19.
+subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
+scalar pointer components and recursive types, done 2026-11-19.
 
 ## Goal
 
@@ -64,7 +65,8 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
    2026-11-19).
 3. **Array pointers** and pointers to sections (done 2026-11-19).
 4. **ALLOCATE and DEALLOCATE of pointers** (done 2026-11-19).
-5. **Pointer components**, recursive types.
+5. **Pointer components**, recursive types: 5a, scalar ones (done 2026-11-19);
+   5b, array pointer components.
 6. **Pointer dummies and results.**
 7. **The optimizer's aliasing rules**, with programs that would break if they
    were wrong, both settings.
@@ -422,7 +424,12 @@ The plan's order stands; each subtask's content is now the findings'.
    2026-11-19).
 5. **Pointer components and recursive types:** `derived.go`, `HasPointers` and
    its refusals, constructors, component chains, `rankedStride` through a
-   pointer, the module text's self-referencing types (finding 7).
+   pointer, the module text's self-referencing types (finding 7). Split in two
+   when it began (2026-11-19): **5a**, scalar pointer components of every type,
+   the one being defined among them, and everything above for them (done
+   2026-11-19); **5b**, array pointer components (a class NCA descriptor in a
+   record, which every descriptor routine of the IR reaches only through a cell
+   today) and `rankedStride` through an array pointer of records.
 6. **Pointer dummies and results** (findings 8, 9).
 7. **The optimizer's aliasing rules:** `PointerRegion`, TARGETs' places, taken
    TARGETs, with programs that would print something else if the rule were wrong
@@ -683,3 +690,81 @@ The plan's open question 1 is settled by answer 1.
   - *Docs.* MANUAL.md's 14.13 (ALLOCATE and DEALLOCATE of pointers, growing an array,
     "Not there yet"'s example now a POINTER component) and its FTNRTL table, HELP
     FORTRAN.
+- **2026-11-19:** Subtask 5 split in two (A.4): array pointer components need the
+  IR's descriptor routines (`fillNCA`, `copyDescriptor`, `stridedElement`, the
+  bounds and the scalarizer's extents), which reach a descriptor only as a cell,
+  to reach one at any place in a record; that is 5b, with `rankedStride` through
+  an array pointer of records. 5a is the rest.
+- **2026-11-19:** Subtask 5a, scalar pointer components and recursive types, done.
+  - *Definitions* (finding 7). A component statement may say POINTER
+    (`derived.go`'s `componentStatement`), of an intrinsic type or of any derived
+    type in scope, the one being defined among them (`componentType`; TYPESELF
+    stays for one without POINTER). `Field.Pointer` marks it; its storage is
+    `PointerSize`'s (`ElementSize`), on a longword (`boundary`), and the storage
+    map says `TYPE(NODE), POINTER` (`TypeText`). An array pointer component, all
+    colons, is NOTIMPL until 5b; other bounds are POINTERSHAPE (`pointerDims`).
+    Every walk down a structure's fields that would follow a pointer component's
+    type, which may be the structure itself, stops there: `image` (no initial
+    values: zero, disassociated), `form` (the target's type by name),
+    `sameType` and `modread`'s `sameStructure` (a pointer to the type itself is
+    the same on both sides; without this a type read from two module texts was
+    MODSTALE, as `TestModulePointerComponents` shows), `componentsClass` (a
+    pointer is of neither class), `modwrite` (`, POINTER`).
+  - *What can't hold a pointer.* `Structure.HasPointers` (at any depth) refuses
+    an object as an I/O list's item, in a NAMELIST group, in EQUIVALENCE (before
+    EQUIVTYPE's class rule), and in DATA or with an initial value: one message,
+    **POINTERPART**, with the rule as its last argument, as POINTERATTR has. A
+    constructor of such a type is never constant (`componentConst`'s NOTCONST
+    reason names the component), so a PARAMETER of one is refused there. COMMON
+    is allowed.
+  - *References.* sema keeps `HEAD%NEXT%VALUE` a FieldRef as before; a field
+    after a part with rank may not be a pointer (**POINTERRANKED**, 6.1.2), and
+    a FieldRef whose last field is a pointer is the pointer itself where
+    `=>`, NULLIFY, ASSOCIATED, ALLOCATE, and DEALLOCATE want one
+    (`FieldRef.IsPointer`, `IsPointer`; NOTPOINTER and NOTALLOCATABLE otherwise),
+    its target anywhere else. Lowering's `fieldMem` is now `fieldPlace`: at each
+    pointer component the place so far is the pointer's longword (a CHARACTER
+    one's descriptor's POINTER), loaded, and the reference goes on from offset 0
+    there; with `target` false the last pointer's own storage is the place
+    (`pointerOf`, `setHeader`, which `pointerAssign`, `nullify`, `associated`,
+    and `allocateScalar` now take for any pointer reference). A pointer
+    assignment's target address is computed before the store, so `P%NEXT =>
+    P%NEXT%NEXT` reads the pointer it changes first.
+  - *ALLOCATE and DEALLOCATE of a component.* The parser reads an object that has
+    a `%` (or a record's period) before its end as a reference
+    (`componentObject`), an `ast.AllocObject` with its `Component`;
+    `sema.Allocation.Component` is the FieldRef (`allocatedComponent`). ALLOCSELF
+    doesn't look at components (unconfirmed: 6.3.1 forbids an object depending
+    on another of the same statement, `ALLOCATE (P, P%NEXT)`; govax does them in
+    order).
+  - *Constructors* give each pointer component a target by pointer assignment's
+    rules (`targetFor`, `pointerTarget`'s work with the pointer named
+    `NODE%NEXT`), and `buildRecord` stores its address (a CHARACTER one's header
+    first). Intrinsic assignment stays a MOVC3, which copies the pointers.
+  - *Cleared storage* (the author's answer 2). FTNRTL's clear bit (`allocClear`,
+    4) for ALLOCATE of a pointer to such a type and of an allocatable array of
+    one; a frame's records and arrays of records (`clearPointers` takes
+    `ArrayCell`s now) and an automatic array's, after its StackAllocate, have
+    each pointer's longword cleared (`Structure.PointerOffsets`, at any depth,
+    through array components), in line up to 16 stores, else by a loop over the
+    records (`clearRecords`). A function's value of run-time shape from
+    `FTN$GET_TEMP` isn't cleared: every element is assigned before it is read.
+  - *Overlap.* A FieldRef through a pointer component isn't in its record's
+    storage: `baseSymbol` gives the component's own stand-in (`Field.reached`, a
+    pointer of the component's type, one per component), so it may share with
+    pointers, TARGETs, and COMMON of a type that may meet; two references through
+    one component are related only if they agree up to it (`throughPrefix`,
+    `relate`); `readsAny` and `readSymbols` count both the record and the target.
+  - *The optimizer* needed nothing: a place through a loaded address is
+    `UnknownRegion`. `TestStorageOnCorpus` counts the pointer golden programs'
+    unknown places apart (`pointerRoutines`) until subtask 7.
+  - *Tests.* `sema`'s `TestPointerComponents` (every form and message) and
+    `TestPointers`' new cases; `parse`'s `TestPointerForms` (component objects);
+    `TestModulePointerComponents` (the text, and a user reading NODE from two
+    modules' texts); `ir` and `codegen` golden `f90pcomp.for`;
+    `testdata/fortran90/ptrcomps.f90`, worked by hand, every mode and both loaders,
+    the same on gfortran; `ptrclear.f90`, govax's own (its frames printed 24 and 43
+    stale pointers before `clearPointers` took arrays of records, and its automatic
+    array 18 with its clearing switched off).
+  - *Docs.* MANUAL.md's 14.13 (pointer components, cleared storage, "Not there
+    yet"'s example now an array POINTER component), HELP FORTRAN.

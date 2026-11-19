@@ -299,6 +299,8 @@ func (a *analyzer) checkNamelists() {
 				a.report("POINTERATTR", n.Pos, s.Name, "be in a NAMELIST group")
 			case s.AutomaticObject:
 				a.autoAttr(s, n.Pos, s.Name, "be in a NAMELIST group")
+			case s.Struct != nil && s.Struct.HasPointers():
+				a.report("POINTERPART", n.Pos, s.Name, s.Struct.Name, "be in a NAMELIST group")
 			case s.Struct != nil && s.Struct.Derived && s.Class == Array:
 				a.notImplForm(n.Pos, "an array of a derived type in a NAMELIST group")
 			case s.Struct != nil && s.Struct.Derived && s.Class == Variable:

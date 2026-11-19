@@ -36,9 +36,11 @@ import (
 // assume a store through a pointer leaves every other variable alone (5.1.2.8's
 // purpose).
 //
-// Scalar pointers (subtask 2) and array pointers (subtask 3) are compiled;
-// pointer dummies and results, pointer components, and ALLOCATE of a pointer
-// are NOTIMPL until their subtasks.
+// Scalar pointers (subtask 2), array pointers (subtask 3), ALLOCATE and
+// DEALLOCATE of pointers (subtask 4), and scalar pointer components (subtask
+// 5a: a FieldRef whose last field is one stands for the pointer here) are
+// compiled; array pointer components, and pointer dummies and results, are
+// NOTIMPL until their subtasks.
 //
 // An array pointer, REAL, POINTER :: P(:, :), has a deferred shape: its shape,
 // bounds, and elements are its target's. P => A(1:9:2, :) makes P describe
@@ -73,14 +75,29 @@ type Associated struct {
 }
 
 // IsPointer reports whether e is a reference to a pointer itself: a Var of a
-// scalar pointer's symbol, or an ArrayRef of an array pointer's. Lowering
-// reaches such a reference's value through the pointer, but in pointer
-// assignment and ASSOCIATED, where it is the pointer.
+// scalar pointer's symbol, an ArrayRef of an array pointer's, or a FieldRef
+// whose last field is a pointer component (finding 7). Lowering reaches such
+// a reference's value through the pointer, but in pointer assignment and
+// ASSOCIATED, where it is the pointer.
 func IsPointer(e Expr) bool {
+	if f, ok := e.(*FieldRef); ok {
+		return f.IsPointer()
+	}
+
 	return PointerSymbol(e) != nil
 }
 
-// PointerSymbol is the pointer e refers to as a whole (IsPointer), or nil.
+// pointerName names the pointer e (IsPointer) for a message: P, or HEAD%NEXT.
+func pointerName(e Expr) string {
+	if f, ok := e.(*FieldRef); ok {
+		return f.Text()
+	}
+
+	return PointerSymbol(e).Name
+}
+
+// PointerSymbol is the pointer e refers to as a whole, if it is a named
+// variable's (a pointer component's FieldRef has none), or nil.
 func PointerSymbol(e Expr) *Symbol {
 	switch e := e.(type) {
 	case *Var:
@@ -103,6 +120,13 @@ func PointerSymbol(e Expr) *Symbol {
 // DATA's, NAMELIST's, and an initial value's are reported where those are read.
 func (a *analyzer) checkPointers() {
 	for _, s := range a.unit.Symbols {
+		if !s.Pointer && s.Struct != nil && s.Struct.HasPointers() && s.Equivalenced && !s.broken {
+			// 5.5.1: nor an object with a pointer in it.
+			a.report("POINTERPART", s.equivPos, s.Name, s.Struct.Name, "be in an EQUIVALENCE list")
+
+			s.broken = true
+		}
+
 		if !s.Pointer || s.broken {
 			continue
 		}
@@ -154,9 +178,23 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 		return &Var{exprBase{T: s.Type, Pos: x.Pos}, s}
 
 	case *ast.FieldRef:
-		a.notImplForm(x.Pos, "a pointer component")
+		f, ok := a.field(x, false).(*FieldRef)
 
-		return nil
+		switch {
+		case !ok:
+			// An error, reported.
+			return nil
+		case !f.IsPointer():
+			a.report("NOTPOINTER", x.Pos, f.Text())
+
+			return nil
+		}
+
+		if assigned {
+			a.noteAssigned(f)
+		}
+
+		return f
 	}
 
 	a.report("NOTPOINTER", x.Position(), ast.DumpExpr(x))
@@ -172,6 +210,13 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 // NOTTARGET for anything that isn't such a variable, VECTORTARGET for a section
 // with a vector subscript, POINTERTYPE for one of another type.
 func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
+	return a.targetFor(pointerName(ptr), ptr.Type(), targetRank(ptr), x)
+}
+
+// targetFor analyzes x as a target for a pointer named name (for messages) to
+// values of type t and rank rank: pointer assignment's, ASSOCIATED's, or a
+// structure constructor's pointer component's (pointerTarget's rules).
+func (a *analyzer) targetFor(name string, pt Type, rank int, x ast.Expr) Expr {
 	if a.functionReference(x) {
 		a.report("POINTERFUNC", x.Position(), ast.DumpExpr(x))
 
@@ -202,7 +247,7 @@ func (a *analyzer) pointerTarget(ptr Expr, x ast.Expr) Expr {
 		return nil
 	}
 
-	if !a.pointerMatches(ptr, t, x.Position()) {
+	if !a.pointerMatches(name, pt, rank, t, x.Position()) {
 		return nil
 	}
 
@@ -350,11 +395,12 @@ func targetBase(t Expr) *Symbol {
 }
 
 // pointerMatches reports, after POINTERTYPE if not, whether the place t may be
-// the pointer ptr's target by type, kind, rank, and length (7.5.2: the same
-// type, type parameters, and rank). A length is compared only when both are
-// constants; a substring's whose bounds aren't is the program's to get right.
-func (a *analyzer) pointerMatches(ptr, t Expr, pos diag.Position) bool {
-	pt, tt := ptr.Type(), t.Type()
+// the target of the pointer name, which points at values of type pt and rank
+// rank, by type, kind, rank, and length (7.5.2: the same type, type
+// parameters, and rank). A length is compared only when both are constants; a
+// substring's whose bounds aren't is the program's to get right.
+func (a *analyzer) pointerMatches(name string, pt Type, rank int, t Expr, pos diag.Position) bool {
+	tt := t.Type()
 
 	same := sameTypes(pt, tt)
 
@@ -362,11 +408,11 @@ func (a *analyzer) pointerMatches(ptr, t Expr, pos diag.Position) bool {
 		same = pt.Size == tt.Size || pt.Size == 0 || tt.Size == 0
 	}
 
-	if same && targetRank(t) == targetRank(ptr) {
+	if same && targetRank(t) == rank {
 		return true
 	}
 
-	a.report("POINTERTYPE", pos, PointerSymbol(ptr).Name, pointedText(pt, targetRank(ptr)), pointedText(tt, targetRank(t)))
+	a.report("POINTERTYPE", pos, name, pointedText(pt, rank), pointedText(tt, targetRank(t)))
 
 	return false
 }

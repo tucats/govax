@@ -524,15 +524,22 @@ type (
 	}
 
 	// AllocateStmt is Fortran 90's ALLOCATE (object[, object]...[, STAT=v])
-	// or DEALLOCATE (name[, name]...[, STAT=v]) (the standard's 6.3.1 and
-	// 6.3.3), told apart by Kind. Each of ALLOCATE's Objects is a name with
-	// the bounds it is to have, (n) or (l:u) per dimension, as an array
-	// declarator's are written; DEALLOCATE's have no Dims. Stat is STAT='s
-	// variable, nil without one.
+	// or DEALLOCATE (object[, object]...[, STAT=v]) (the standard's 6.3.1 and
+	// 6.3.3), told apart by Kind. Stat is STAT='s variable, nil without one.
 	AllocateStmt struct {
 		StmtBase
-		Objects []*Declarator
+		Objects []*AllocObject
 		Stat    Expr
+	}
+
+	// AllocObject is one object of ALLOCATE or DEALLOCATE: a name with the
+	// bounds it is to have, (n) or (l:u) per dimension, as an array
+	// declarator's are written (DEALLOCATE's have no Dims); or, if Component is
+	// set, a component, HEAD%NEXT, whose Declarator holds only its text and
+	// position (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 6).
+	AllocObject struct {
+		*Declarator
+		Component *FieldRef
 	}
 
 	// PointerAssignStmt is Fortran 90's pointer assignment, Pointer => Target

@@ -58,6 +58,31 @@ func (l *lowerer) pointerAddress(s *sema.Symbol) *Mem {
 	return m
 }
 
+// pointerOf is the address longword of the pointer x, a reference to a pointer
+// itself (sema.IsPointer): a named pointer's (pointerAddress), or a pointer
+// component's in its record, HEAD%NEXT (subtask 5: the record reached as any
+// field reference's is, lowerfield.go), a CHARACTER one's descriptor's POINTER.
+func (l *lowerer) pointerOf(x sema.Expr) *Mem {
+	if p := sema.PointerSymbol(x); p != nil {
+		return l.pointerAddress(p)
+	}
+
+	f := x.(*sema.FieldRef)
+	m := l.fieldPlace(f, false)
+
+	if charPointer(f.Type()) {
+		m.Offset += PointerOffset
+	}
+
+	return m
+}
+
+// charPointer reports whether a pointer to values of type t is a CHARACTER
+// pointer, whose storage is a class S descriptor.
+func charPointer(t sema.Type) bool {
+	return t.Kind == sema.Character
+}
+
 // pointerTargetMem is where the pointer s's target is: at the address its cell
 // holds. A disassociated pointer's is address 0, which is no place a program may
 // read or write (a reference to one is the program's error; /CHECK=POINTERS will
@@ -75,6 +100,10 @@ func (l *lowerer) pointerTargetMem(s *sema.Symbol) *Mem {
 // may be a pointer's target, or for a pointer its target's address (0 if it is
 // disassociated): what a pointer assigned to it holds.
 func (l *lowerer) targetAddress(target sema.Expr) Expr {
+	if sema.IsPointer(target) && !isArrayPointer(target) {
+		return &Load{l.pointerOf(target)}
+	}
+
 	if q := sema.PointerSymbol(target); q != nil {
 		return &Load{l.pointerAddress(q)}
 	}
@@ -91,16 +120,25 @@ func (l *lowerer) targetAddress(target sema.Expr) Expr {
 // The length is the pointer's declared one, which sema has checked against the
 // target's where both are constants.
 func (l *lowerer) pointerAssign(s *sema.PointerAssign) {
-	p := sema.PointerSymbol(s.Pointer)
-
-	if p.ArrayPointer() {
+	if p := sema.PointerSymbol(s.Pointer); p != nil && p.ArrayPointer() {
 		l.arrayPointerAssign(p, s.Target)
 
 		return
 	}
 
-	l.setPointerHeader(p)
-	l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(p), Src: l.targetAddress(s.Target)})
+	// The target's address first: P%NEXT => P%NEXT%NEXT reads the pointer it
+	// changes.
+	address := l.targetAddress(s.Target)
+
+	l.setHeader(s.Pointer)
+	l.emit(&Assign{origin: l.origin(), Dst: l.pointerOf(s.Pointer), Src: address})
+}
+
+// isArrayPointer reports whether x is a reference to an array pointer itself.
+func isArrayPointer(x sema.Expr) bool {
+	p := sema.PointerSymbol(x)
+
+	return p != nil && p.ArrayPointer()
 }
 
 // setPointerHeader writes the CHARACTER pointer p's descriptor's first
@@ -114,13 +152,25 @@ func (l *lowerer) setPointerHeader(p *sema.Symbol) {
 		Src: charPointerHeader(p.Type.Size)})
 }
 
+// setHeader is setPointerHeader for the pointer x, a named pointer or a pointer
+// component (whose descriptor is in its record).
+func (l *lowerer) setHeader(x sema.Expr) {
+	if p := sema.PointerSymbol(x); p != nil {
+		l.setPointerHeader(p)
+
+		return
+	}
+
+	if t := x.Type(); charPointer(t) {
+		l.emit(&Assign{origin: l.origin(), Dst: l.fieldPlace(x.(*sema.FieldRef), false), Src: charPointerHeader(t.Size)})
+	}
+}
+
 // nullify is NULLIFY: each pointer's address 0.
 func (l *lowerer) nullify(s *sema.Nullify) {
 	for _, x := range s.Pointers {
-		p := sema.PointerSymbol(x)
-
-		l.setPointerHeader(p)
-		l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(p), Src: LongConst(0)})
+		l.setHeader(x)
+		l.emit(&Assign{origin: l.origin(), Dst: l.pointerOf(x), Src: LongConst(0)})
 	}
 }
 
@@ -132,14 +182,13 @@ func (l *lowerer) nullify(s *sema.Nullify) {
 // associated (the author's answer 4), which for a substring whose length is
 // known only when the program runs is a test of it too.
 func (l *lowerer) associated(e *sema.Associated) Expr {
-	p := sema.PointerSymbol(e.Pointer)
-	address := &Load{l.pointerAddress(p)}
+	address := &Load{l.pointerOf(e.Pointer)}
 
 	if e.Target == nil {
 		return &Cmp{Op: Ne, X: address, Y: LongConst(0)}
 	}
 
-	if p.ArrayPointer() {
+	if p := sema.PointerSymbol(e.Pointer); p != nil && p.ArrayPointer() {
 		return l.arrayAssociated(p, e.Target)
 	}
 
@@ -147,7 +196,7 @@ func (l *lowerer) associated(e *sema.Associated) Expr {
 
 	switch {
 	case sema.IsPointer(e.Target):
-		return arith(And, Long, same, &Cmp{Op: Ne, X: &Load{l.pointerAddress(p)}, Y: LongConst(0)})
+		return arith(And, Long, same, &Cmp{Op: Ne, X: &Load{l.pointerOf(e.Pointer)}, Y: LongConst(0)})
 
 	case e.Target.Type().Kind == sema.Character && e.Target.Type().Size == 0:
 		length := l.chars(e.Target).Len
@@ -162,13 +211,79 @@ func (l *lowerer) associated(e *sema.Associated) Expr {
 // frame, so that it starts disassociated as a static one does (finding 2: a
 // frame isn't cleared, and the standard's undefined status is made
 // disassociated, as Fortran 95 has it).
+//
+// So are the pointer components of each record in the frame, and of each
+// element of an array of records there (the author's answer 2; subtask 5).
 func (l *lowerer) clearPointers() {
 	for _, c := range l.r.Cells {
-		if c.Frame && c.Sym != nil && c.Sym.Pointer && c.Kind == VariableCell {
+		switch {
+		case !c.Frame || c.Sym == nil || c.Kind != VariableCell && c.Kind != ArrayCell:
+
+		case c.Sym.Pointer:
+			if c.Kind != VariableCell {
+				continue
+			}
+
 			l.setPointerHeader(c.Sym)
 			l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(c.Sym), Src: LongConst(0)})
+
+		case clearsPointers(c.Sym.Type):
+			l.clearRecords(&Mem{Cell: c, T: Byte}, LongConst(int32(c.Sym.Elements())), c.Sym.Struct)
 		}
 	}
+}
+
+// clearUnrolled is the most stores clearRecords writes one by one; past it, a
+// loop clears the records.
+const clearUnrolled = 16
+
+// clearRecords stores 0 in each pointer of n records of the type st, one after
+// another from first, a Byte place with no index: each pointer component's
+// address longword, at any depth (sema.Structure.PointerOffsets). A few are
+// stores in line; more are a loop over the records:
+//
+//	MOVAB  first,$T1
+//	MOVL   n,$T2
+//	BLEQ   2$
+//	1$: CLRL 4($T1)             each pointer of the record
+//	ADDL2  #size,$T1
+//	SOBGTR $T2,1$
+//	2$:
+func (l *lowerer) clearRecords(first *Mem, n Expr, st *sema.Structure) {
+	offsets := st.PointerOffsets()
+
+	if k, ok := n.(*Const); ok && int(k.Int())*len(offsets) <= clearUnrolled {
+		for i := range int(k.Int()) {
+			for _, o := range offsets {
+				m := *first
+				m.Offset, m.T = first.Offset+i*st.Size+o, Long
+				l.emit(&Assign{origin: l.origin(), Dst: &m, Src: LongConst(0)})
+			}
+		}
+
+		return
+	}
+
+	at, count := l.temp(Long), l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: at, Src: &Addr{first}})
+	l.emit(&Assign{origin: l.origin(), Dst: count, Src: n})
+
+	body, done := l.newBlock(), l.newBlock()
+	body.Note = "clears " + st.Name + "'s pointers"
+	l.branch(&Cmp{Op: Gt, X: &Load{count}, Y: LongConst(0)}, body, done)
+
+	l.begin(body)
+
+	for _, o := range offsets {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Ptr: &Load{at}, Offset: o, T: Long}, Src: LongConst(0)})
+	}
+
+	l.emit(&Assign{origin: l.origin(), Dst: at, Src: arith(Add, Long, &Load{at}, LongConst(int32(st.Size)))})
+	l.emit(&Assign{origin: l.origin(), Dst: count, Src: arith(Sub, Long, &Load{count}, LongConst(1))})
+	l.branch(&Cmp{Op: Gt, X: &Load{count}, Y: LongConst(0)}, body, done)
+
+	l.begin(done)
+	l.release()
 }
 
 // arrayPointerAssign is P => target for the array pointer p: target's

@@ -97,7 +97,8 @@ func (l *lowerer) entryClears() bool {
 			return true
 		}
 
-		if c.Frame && c.Sym != nil && c.Sym.Pointer {
+		if c.Frame && c.Sym != nil && (c.Kind == VariableCell && c.Sym.Pointer ||
+			(c.Kind == VariableCell || c.Kind == ArrayCell) && clearsPointers(c.Sym.Type)) {
 			return true
 		}
 	}
@@ -177,9 +178,12 @@ func (l *lowerer) allocate(s *sema.Allocate) {
 	}
 
 	for i, obj := range s.Objects {
-		if obj.Sym.Pointer && !obj.Sym.ArrayPointer() {
-			l.allocateScalar(obj.Sym, s.Deallocate, flags, status)
-		} else {
+		switch {
+		case obj.Component != nil:
+			l.allocateScalar(obj.Component, s.Deallocate, flags, status)
+		case obj.Sym.Pointer && !obj.Sym.ArrayPointer():
+			l.allocateScalar(sema.NewVar(obj.Sym, obj.Sym.Pos), s.Deallocate, flags, status)
+		default:
 			l.allocateArray(obj, s.Deallocate, flags, status)
 		}
 
@@ -216,6 +220,11 @@ func (l *lowerer) allocate(s *sema.Allocate) {
 func (l *lowerer) allocateArray(obj *sema.Allocation, deallocate bool, flags *Const, status *Mem) {
 	c := l.adjustableOf(obj.Sym)
 
+	// Elements with pointers in them start disassociated (the author's answer 2).
+	if clearsPointers(obj.Sym.Type) {
+		flags = LongConst(flags.Int() | allocClear)
+	}
+
 	if obj.Sym.Pointer {
 		flags = LongConst(flags.Int() | allocPointer)
 
@@ -247,16 +256,20 @@ func (l *lowerer) allocateArray(obj *sema.Allocation, deallocate bool, flags *Co
 //	PUSHL  #2                   a pointer's
 //	PUSHAL P
 //	CALLS  #3,G^FTN$ALLOC_SCALAR
-func (l *lowerer) allocateScalar(p *sema.Symbol, deallocate bool, flags *Const, status *Mem) {
+func (l *lowerer) allocateScalar(p sema.Expr, deallocate bool, flags *Const, status *Mem) {
 	routine := ftnDeallocScalar
 	if !deallocate {
 		routine = ftnAllocScalar
 
-		l.setPointerHeader(p)
+		l.setHeader(p)
 	}
 
-	args := []Arg{{Ref: l.pointerAddress(p)}, {Value: LongConst(flags.Int() | allocPointer)},
-		{Value: LongConst(int32(p.Type.Size))}}
+	bits := flags.Int() | allocPointer
+	if !deallocate && clearsPointers(p.Type()) {
+		bits |= allocClear
+	}
+
+	args := []Arg{{Ref: l.pointerOf(p)}, {Value: LongConst(bits)}, {Value: LongConst(int32(p.Type().Size))}}
 
 	l.emit(&Call{origin: l.origin(), Routine: routine, Args: args, Result: status})
 }
@@ -266,12 +279,20 @@ func (l *lowerer) allocateScalar(p *sema.Symbol, deallocate bool, flags *Const, 
 // rather than signal it; allocPointer for a pointer, whose block FTNRTL marks
 // so that DEALLOCATE can tell it made it, and which ALLOCATE gives a new
 // target whatever it had (docs/planning/PHASE-107 - Fortran 90 pointers.md,
-// finding 6). FTNRTL also takes bit 2, to clear the block, for a type with
-// pointer components (subtask 5).
+// finding 6); allocClear for elements of a type with pointer components,
+// whose block FTNRTL clears so that each pointer in it starts disassociated
+// (the author's answer 2).
 const (
 	allocStat    = 1
 	allocPointer = 2
+	allocClear   = 4
 )
+
+// clearsPointers reports whether new storage for values of type t must be
+// cleared: a derived type with a pointer component, at any depth.
+func clearsPointers(t sema.Type) bool {
+	return t.Kind == sema.Record && t.Struct != nil && t.Struct.HasPointers()
+}
 
 // allocated is ALLOCATED(A): whether A's descriptor has an address.
 func (l *lowerer) allocated(e *sema.Allocated) Expr {

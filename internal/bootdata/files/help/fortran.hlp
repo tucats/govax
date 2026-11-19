@@ -418,9 +418,26 @@
    own, leaving the old one as it was; DEALLOCATE gives it back and
    leaves the pointer disassociated.  The target must be one ALLOCATE
    made, and the whole of it: else %FOR-F-BADDEALLOC (FOR number 304),
-   and a disassociated pointer's is %FOR-F-NOTALLOC (302).  Pointer
-   components, pointer dummy arguments, and pointer results are not
-   there yet.
+   and a disassociated pointer's is %FOR-F-NOTALLOC (302).
+
+   A derived type may have pointer components, of its own type too,
+   for linked lists and trees:
+
+     type node
+       integer :: value
+       type(node), pointer :: next
+     end type node
+     ...
+     head%next%value = 3        ! through HEAD's NEXT
+     allocate (head%next%next)
+
+   A constructor gives a pointer component a target, and assignment of
+   a record copies its pointers.  An object with a pointer in it can't
+   be in an I/O list, NAMELIST, EQUIVALENCE, or DATA
+   (%FORT-E-POINTERPART); NODES(:)%NEXT is no array
+   (%FORT-E-POINTERRANKED).  New storage with pointers in it starts
+   disassociated.  Array pointer components, pointer dummy arguments,
+   and pointer results are not there yet.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

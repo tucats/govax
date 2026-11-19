@@ -211,7 +211,16 @@ func DumpStmt(s Stmt) string {
 		return strings.TrimRight(s.Kind.String()+" "+s.Name, " ")
 
 	case *AllocateStmt:
-		text := s.Kind.String() + " (" + declarators(s.Objects)
+		objects := make([]string, len(s.Objects))
+		for i, o := range s.Objects {
+			if o.Component != nil {
+				objects[i] = DumpExpr(o.Component)
+			} else {
+				objects[i] = o.String()
+			}
+		}
+
+		text := s.Kind.String() + " (" + strings.Join(objects, ", ")
 		if s.Stat != nil {
 			text += ", STAT=" + DumpExpr(s.Stat)
 		}

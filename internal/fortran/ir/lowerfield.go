@@ -32,6 +32,24 @@ const maxWordLength = 65535
 // of its dimensions are in its descriptor (lowerbounds.go): its subscripts, each
 // multiplied by the extents before it, are one count of records.
 func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
+	return l.fieldPlace(e, true)
+}
+
+// fieldPlace is fieldMem's work. A field that is a pointer component
+// (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 7) holds an
+// address, not the rest of the reference: the place so far is that address's
+// longword (a CHARACTER pointer's descriptor's POINTER), loaded, and the
+// reference goes on from where it points, at an offset of 0. So
+// HEAD%NEXT%VALUE, with HEAD a NODE whose NEXT is at +4 and VALUE at +0, is
+//
+//	MOVL   HEAD+4,R0            NEXT's address
+//	MOVL   (R0),R1              its VALUE
+//
+// If target is false and the last field is a pointer, the place is the
+// pointer's own storage instead (its longword, or a CHARACTER one's descriptor),
+// a Long: what pointer assignment, NULLIFY, ASSOCIATED, and ALLOCATE work on
+// (pointerStorage).
+func (l *lowerer) fieldPlace(e *sema.FieldRef, target bool) *Mem {
 	base := l.symbolMem(e.Sym)
 	if base.Param != nil {
 		base = &Mem{Ptr: &ArgPointer{base.Param}, T: base.T, Volatile: base.Volatile}
@@ -63,6 +81,40 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 		}
 	}
 
+	// finish is the place base+offset+parts as a place of type t, whose unit
+	// is the bytes an index counts: indexed by the parts if each is a
+	// multiple of it, else through the address computed with the bytes.
+	finish := func(t Type, unit int) *Mem {
+		scaled := true
+
+		for _, p := range parts {
+			scaled = scaled && p.stride%unit == 0
+		}
+
+		if !scaled {
+			unit = 1
+		}
+
+		var index Expr
+
+		for _, p := range parts {
+			index = arith(Add, Long, index, arith(Mul, Long, p.v, LongConst(int32(p.stride/unit))))
+		}
+
+		m := *base
+		m.Offset, m.Index = offset, index
+
+		if scaled {
+			m.T = t
+
+			return &m
+		}
+
+		m.T = Byte
+
+		return &Mem{Ptr: &Addr{&m}, T: t, Volatile: m.Volatile}
+	}
+
 	if c := l.adjustableOf(e.Sym); c != nil && e.Subs != nil && e.Sym.Strided() {
 		// An assumed-shape array's elements are each its own strides apart
 		// (lowershaped.go), which needn't be the type's size: the record is
@@ -81,9 +133,27 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 		element(e.Subs, e.Sym.Dims, e.Sym.Struct.Size)
 	}
 
-	for _, s := range e.Path {
+	for i, s := range e.Path {
 		offset += s.Field.Offset
-		element(s.Subs, s.Field.Dims, s.Field.ElementSize())
+
+		if !s.Field.Pointer {
+			element(s.Subs, s.Field.Dims, s.Field.ElementSize())
+
+			continue
+		}
+
+		if i == len(e.Path)-1 && !target {
+			return finish(Long, Long.Size())
+		}
+
+		// Go on at the pointer's target.
+		if s.Field.Type.Kind == sema.Character && s.Field.Struct == nil {
+			offset += PointerOffset
+		}
+
+		address := finish(Long, Long.Size())
+		base = &Mem{Ptr: &Load{address}, T: Byte, Volatile: address.Volatile}
+		offset, parts = 0, nil
 	}
 
 	t := l.typeOf(e.T)
@@ -93,34 +163,7 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 		unit = 1
 	}
 
-	scaled := true
-
-	for _, p := range parts {
-		scaled = scaled && p.stride%unit == 0
-	}
-
-	if !scaled {
-		unit = 1
-	}
-
-	var index Expr
-
-	for _, p := range parts {
-		index = arith(Add, Long, index, arith(Mul, Long, p.v, LongConst(int32(p.stride/unit))))
-	}
-
-	m := *base
-	m.Offset, m.Index = offset, index
-
-	if scaled {
-		m.T = t
-
-		return &m
-	}
-
-	m.T = Byte
-
-	return &Mem{Ptr: &Addr{&m}, T: t, Volatile: m.Volatile}
+	return finish(t, unit)
 }
 
 // fieldArrayDescriptor is a class A descriptor of a whole array field (section

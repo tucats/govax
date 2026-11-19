@@ -1,0 +1,56 @@
+routine F90PCOMP subroutine
+  param N       L  argument 1
+  cell  H       B  frame+0    variable H
+  cell  R       B  frame+4    variable R
+  cell  RA      B  frame+20   array RA, 160 bytes
+  cell  S       B  frame+180  variable S
+  cell  $T1     L  frame+184  temporary
+  cell  $T2     L  frame+188  temporary
+  cell  $T3     B  frame+192  temporary
+  $LOCAL is 0 bytes
+  the frame is 208 bytes
+B1:
+  assign H = 0
+  assign R+4 = 0
+  assign R+12 = 0
+  assign $T1 = addr(RA)
+  assign $T2 = 10
+  branch gt.L($T2, 0) B2 B3
+B2:  ; clears NODE's pointers
+  assign @($T1)+4 = 0
+  assign @($T1)+12 = 0
+  assign $T1 = add.L($T1, 16)
+  assign $T2 = sub.L($T2, 1)
+  branch gt.L($T2, 0) B2 B3
+B3:
+  ; line 17
+  assign H = addr(R)
+  ; line 18
+  assign @(@(@(H)+4)+4) = @N
+  ; line 19
+  assign R+4 = RA-12[mul.L(@N, 4)]
+  ; line 20
+  assign R+8 = 17694724
+  assign R+12 = addr(S)
+  ; line 21
+  assign RA+20 = 0
+  assign R+8 = 17694724
+  assign R+12 = 0
+  ; line 22
+  branch and.L(eq.L(R+4, H), ne.L(R+4, 0)) B4 B5
+B4:
+  assign @N = 1
+  jump B5
+B5:
+  ; line 23
+  call FTN$ALLOC_SCALAR(ref @(H)+4, val 6, val 16)
+  ; line 24
+  assign $T3 = 3
+  assign $T3+4 = H
+  assign $T3+8 = 17694724
+  assign $T3+12 = addr(S)
+  move R(16) = $T3(16)
+  ; line 25
+  call FTN$DEALLOC_SCALAR(ref @(H)+4, val 2, val 16)
+  ; line 26
+  return

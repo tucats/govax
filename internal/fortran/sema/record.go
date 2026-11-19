@@ -53,6 +53,14 @@ type FieldStep struct {
 // the reference's, or for a substructure of the kind Record. Every field but
 // the last is a substructure.
 //
+// A field may be a pointer component (docs/planning/PHASE-107 - Fortran 90
+// pointers.md, finding 7): there the reference goes on in the pointer's target,
+// not in the record. HEAD%NEXT%VALUE is the VALUE of the NODE that HEAD's NEXT
+// points at, and HEAD%NEXT, where a value or a variable is wanted, that NODE
+// itself; only pointer assignment, NULLIFY, ASSOCIATED, ALLOCATE, and
+// DEALLOCATE see the pointer (pointer.go). Lowering loads each such pointer's
+// address in turn.
+//
 // It may be an array instead (Fortran 90's 6.1.2; docs/planning/PHASE-105 -
 // Fortran 90 derived types.md, finding 7): one of its parts, Ranked, has
 // section subscripts or is a whole array, and the reference has that part's
@@ -138,6 +146,31 @@ func (f *FieldRef) wholeRanked() *FieldRef {
 // ranked part's own (the standard's 13.13.52, LBOUND).
 func (f *FieldRef) Whole() bool {
 	return f.whole
+}
+
+// ThroughPointer reports whether any field of the reference is a pointer
+// component, so that what it names, or the pointer it names, is reached
+// through a pointer: not in the record's own storage.
+func (f *FieldRef) ThroughPointer() bool {
+	return f.lastPointer() >= 0
+}
+
+// lastPointer is the index in Path of the reference's last pointer component,
+// or -1 if it has none.
+func (f *FieldRef) lastPointer() int {
+	for i := len(f.Path) - 1; i >= 0; i-- {
+		if f.Path[i].Field.Pointer {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// IsPointer reports whether the reference names a pointer component itself:
+// its last field is one, and no part has rank.
+func (f *FieldRef) IsPointer() bool {
+	return f.Field().Pointer && f.S == nil
 }
 
 // Field is the field the reference names, its last.
@@ -309,6 +342,15 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 			return a.bad(e.Pos)
 
 		case a.privateComponents(st, step.Pos):
+			return a.bad(e.Pos)
+		}
+
+		// A pointer's target isn't part of the array a ranked part names, so
+		// no pointer component may follow one (6.1.2's constraint):
+		// NODES(:)%NEXT names no array.
+		if f.Pointer && ref.S != nil {
+			a.report("POINTERRANKED", step.Pos, f.Name)
+
 			return a.bad(e.Pos)
 		}
 
@@ -614,6 +656,12 @@ func (a *analyzer) checkRecordItems(io *IO, items []*Item) {
 		switch t := it.Value.Type(); {
 		case t.Kind != Record:
 
+		case t.Struct != nil && t.Struct.HasPointers():
+			// 9.4.2: a pointer's target is no part of the object to read or
+			// write.
+			a.report("POINTERPART", it.Value.Position(), aggregateName(it.Value), t.Struct.Name,
+				"be an item of an I/O list")
+
 		case io.Form != UnformattedForm && t.Struct != nil && t.Struct.Derived:
 			// Its ultimate components, an item each (derivedio.go).
 
@@ -649,9 +697,15 @@ func (s *Structure) form() string {
 
 		fmt.Fprintf(&b, "%010d:", f.Offset)
 
-		if f.Struct != nil {
+		switch {
+		case f.Pointer && f.Struct != nil:
+			// A pointer's target's type by its name: the type may be this one.
+			b.WriteString("^" + f.Struct.Name)
+		case f.Pointer:
+			b.WriteString("^" + f.Type.String())
+		case f.Struct != nil:
 			b.WriteString("{" + f.Struct.form() + "}")
-		} else {
+		default:
 			b.WriteString(f.Type.String())
 		}
 
@@ -799,7 +853,9 @@ func (s *Structure) image() []*FieldInitial {
 	}
 
 	for _, f := range s.Fields {
-		if f.Struct == nil {
+		// A pointer component has no initial value: it starts disassociated,
+		// its storage 0.
+		if f.Struct == nil || f.Pointer {
 			continue
 		}
 

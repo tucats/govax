@@ -1281,7 +1281,17 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `allocateScalar`; FTNRTL's flag bit 1, a pointer's block with an 8-byte header,
   a mark and its size, checked by DEALLOCATE, BADDEALLOC, FOR number 304; bit 2
   clears a block; `FTN$ALLOC_SCALAR` and `FTN$DEALLOC_SCALAR`, GSMATCH 1,25;
-  `testdata/fortran90/ptralloc.f90`, `ptrallocvms.f90`).
+  `testdata/fortran90/ptralloc.f90`, `ptrallocvms.f90`); subtask 5a
+  (2026-11-19) scalar pointer components and recursive types (`Field.Pointer`,
+  a type naming itself only through one; `Structure.HasPointers`, POINTERPART,
+  and `PointerOffsets`; POINTERRANKED; a FieldRef ending in one is a pointer,
+  `FieldRef.IsPointer`, and one going through one loads each address in turn,
+  `ir`'s `fieldPlace`, `pointerOf`; ALLOCATE and DEALLOCATE of components,
+  `ast.AllocObject`; constructors' targets; FTNRTL's clear bit for such
+  types, frame and automatic records cleared at entry, `clearRecords`;
+  `baseSymbol` through a pointer component its `Field.reached`;
+  `testdata/fortran90/ptrcomps.f90`, `ptrclear.f90`); subtask 5b, array
+  pointer components, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

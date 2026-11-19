@@ -56,6 +56,11 @@ type Allocate struct {
 type Allocation struct {
 	Sym          *Symbol
 	Lower, Upper []Expr
+
+	// Component is set, and Sym nil, for a pointer component, HEAD%NEXT
+	// (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 7): a scalar
+	// one, with no bounds.
+	Component *FieldRef
 }
 
 // Allocated is ALLOCATED(ARRAY), whether the allocatable array Sym is allocated
@@ -193,6 +198,16 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 	}
 
 	for _, d := range s.Objects {
+		if d.Component != nil {
+			if obj := a.allocatedComponent(d.Component); obj != nil {
+				st.Objects = append(st.Objects, obj)
+			} else {
+				ok = false
+			}
+
+			continue
+		}
+
 		sym := a.lookup(d.Name, d.Pos)
 		a.note(&sym.refs, d.Pos, RefAssigned)
 
@@ -213,7 +228,7 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 			continue
 		}
 
-		if !a.allocationBounds(obj, d, named) {
+		if !a.allocationBounds(obj, d.Declarator, named) {
 			ok = false
 		}
 	}
@@ -228,6 +243,28 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 	}
 
 	return st
+}
+
+// allocatedComponent analyzes x, an ALLOCATE or DEALLOCATE object that is a
+// component (subtask 5): a scalar pointer component, HEAD%NEXT, which ALLOCATE
+// gives a new target and DEALLOCATE gives its target back, as for a pointer of
+// its own. nil after a message: NOTALLOCATABLE for any other component.
+func (a *analyzer) allocatedComponent(x *ast.FieldRef) *Allocation {
+	f, ok := a.field(x, false).(*FieldRef)
+
+	switch {
+	case !ok:
+		// An error, reported.
+		return nil
+	case !f.IsPointer():
+		a.report("NOTALLOCATABLE", x.Pos, f.Text(), "an allocatable array or a pointer")
+
+		return nil
+	}
+
+	a.noteAssigned(f)
+
+	return &Allocation{Component: f}
 }
 
 // statVariable analyzes STAT='s variable x, which may not mention a name of

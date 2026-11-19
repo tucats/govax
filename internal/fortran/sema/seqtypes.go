@@ -63,6 +63,12 @@ func classOf(t Type) sequenceClass {
 // component's type is (a nested type's by its own components).
 func componentsClass(st *Structure) sequenceClass {
 	for _, f := range st.Fields {
+		// A pointer is neither numeric nor character (4.4.1's sequence
+		// types): a type with one is of the other class.
+		if f.Pointer {
+			return otherClass
+		}
+
 		t := f.Type
 		if f.Struct != nil {
 			t = recordType(f.Struct)
@@ -115,6 +121,12 @@ func (a *analyzer) equivalenceClasses(items []equivItem) {
 		it := &items[i]
 		if it.sym.Struct == nil {
 			continue
+		}
+
+		// An object with a pointer in it can't be in the list at all
+		// (POINTERPART, checkPointers): that is the one message.
+		if it.sym.Struct.HasPointers() {
+			return
 		}
 
 		if derived == nil {

@@ -1,0 +1,109 @@
+	.TITLE	TEST
+
+; Storage map for F90PCOMP, a RECURSIVE subroutine
+;   N     INTEGER              argument 1  @F90PCOMP.N(AP)
+;   H     TYPE(NODE), POINTER  FP-208      F90PCOMP.H(FP)
+;   R     TYPE(NODE)           FP-204      F90PCOMP.R(FP)
+;   RA    TYPE(NODE) (10)      FP-188      F90PCOMP.RA(FP)
+;   S     CHARACTER*4          FP-28       F90PCOMP.S(FP)
+;   Type NODE, 16 bytes
+;     +0     V     INTEGER
+;     +4     NEXT  TYPE(NODE), POINTER
+;     +8     TAG   CHARACTER*4, POINTER
+;
+F90PCOMP.N = 4				; N is argument 1
+F90PCOMP.H = -208			; H, in the frame
+F90PCOMP.R = -204			; R, in the frame
+F90PCOMP.RA = -188			; RA, TYPE(NODE) (10), in the frame
+F90PCOMP.S = -28			; S, in the frame
+F90PCOMP.$T1 = -24			; temporary, in the frame
+F90PCOMP.$T2 = -20			; temporary, in the frame
+F90PCOMP.$T3 = -16			; characters, for one statement, in the frame
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Pointer components (Phase 107, subtask 5a): a type pointing at
+;    3  C     itself, a chain loaded a pointer at a time, => and NULLIFY of a
+;    4  C     component, a CHARACTER component's header, ASSOCIATED of one,
+;    5  C     ALLOCATE of one with the clear flag, a constructor's targets, and a
+;    6  C     recursive unit's record and array of records cleared at entry.
+;    7        RECURSIVE SUBROUTINE F90PCOMP(N)
+	.ENTRY	F90PCOMP,^M<R2,R3,R4,R5>
+	SUBL2	#208,SP			; this activation's own storage
+	CLRL	F90PCOMP.H(FP)
+	CLRL	F90PCOMP.R+4(FP)
+	CLRL	F90PCOMP.R+12(FP)
+	MOVAB	F90PCOMP.RA(FP),F90PCOMP.$T1(FP)
+	MOVL	#10,F90PCOMP.$T2(FP)
+	BGTR	F90PCOMP.$2
+	BRW	F90PCOMP.$1
+F90PCOMP.$2:
+F90PCOMP.$3:				; clears NODE's pointers
+	MOVL	F90PCOMP.$T1(FP),R0
+	CLRL	4(R0)
+	MOVL	F90PCOMP.$T1(FP),R0
+	CLRL	12(R0)
+	ADDL2	#16,F90PCOMP.$T1(FP)
+	DECL	F90PCOMP.$T2(FP)
+	BLEQ	F90PCOMP.$4
+	BRW	F90PCOMP.$3
+F90PCOMP.$4:
+F90PCOMP.$1:
+;    8        TYPE NODE
+;    9          INTEGER V
+;   10          TYPE(NODE), POINTER :: NEXT
+;   11          CHARACTER(LEN=4), POINTER :: TAG
+;   12        END TYPE
+;   13        TYPE(NODE), POINTER :: H
+;   14        TYPE(NODE), TARGET :: R, RA(10)
+;   15        CHARACTER(LEN=4), TARGET :: S
+;   16        INTEGER N
+;   17        H => R
+	MOVAB	F90PCOMP.R(FP),F90PCOMP.H(FP)
+;   18        H%NEXT%NEXT%V = N
+	MOVL	F90PCOMP.H(FP),R0
+	MOVL	4(R0),R0
+	MOVL	@F90PCOMP.N(AP),@4(R0)
+;   19        R%NEXT => RA(N)%NEXT
+	MULL3	@F90PCOMP.N(AP),#4,R0
+	MOVL	F90PCOMP.RA-12(FP)[R0],F90PCOMP.R+4(FP)
+;   20        R%TAG => S
+	MOVL	#17694724,F90PCOMP.R+8(FP)
+	MOVAB	F90PCOMP.S(FP),F90PCOMP.R+12(FP)
+;   21        NULLIFY (RA(2)%NEXT, R%TAG)
+	CLRL	F90PCOMP.RA+20(FP)
+	MOVL	#17694724,F90PCOMP.R+8(FP)
+	CLRL	F90PCOMP.R+12(FP)
+;   22        IF (ASSOCIATED (R%NEXT, H)) N = 1
+	CMPL	F90PCOMP.R+4(FP),F90PCOMP.H(FP)
+	BEQL	F90PCOMP.$6
+	BRW	F90PCOMP.$5
+F90PCOMP.$6:
+	TSTL	F90PCOMP.R+4(FP)
+	BNEQ	F90PCOMP.$7
+	BRW	F90PCOMP.$5
+F90PCOMP.$7:
+	MOVL	#1,@F90PCOMP.N(AP)
+F90PCOMP.$5:
+;   23        ALLOCATE (H%NEXT)
+	PUSHL	#16
+	PUSHL	#6
+	MOVL	F90PCOMP.H(FP),R0
+	PUSHAL	4(R0)
+	CALLS	#3,G^FTN$ALLOC_SCALAR
+;   24        R = NODE(3, H, S)
+	MOVL	#3,F90PCOMP.$T3(FP)
+	MOVL	F90PCOMP.H(FP),F90PCOMP.$T3+4(FP)
+	MOVL	#17694724,F90PCOMP.$T3+8(FP)
+	MOVAB	F90PCOMP.S(FP),F90PCOMP.$T3+12(FP)
+	MOVC3	#16,F90PCOMP.$T3(FP),F90PCOMP.R(FP)
+;   25        DEALLOCATE (H%NEXT)
+	PUSHL	#16
+	PUSHL	#2
+	MOVL	F90PCOMP.H(FP),R0
+	PUSHAL	4(R0)
+	CALLS	#3,G^FTN$DEALLOC_SCALAR
+;   26        END
+	RET
+
+	.END

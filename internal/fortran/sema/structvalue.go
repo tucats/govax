@@ -60,8 +60,10 @@ func sameType(x, y *Structure) bool {
 		g := y.Fields[i]
 
 		switch {
-		case f.Name != g.Name || len(f.Dims) != len(g.Dims):
+		case f.Name != g.Name || len(f.Dims) != len(g.Dims) || f.Pointer != g.Pointer:
 			return false
+		case f.Pointer && f.Struct == x && g.Struct == y:
+			// Each a pointer to its own type, NODE's NEXT: the same so far.
 		case f.Struct != nil || g.Struct != nil:
 			if !sameType(f.Struct, g.Struct) {
 				return false
@@ -209,6 +211,13 @@ func (ev *evaluator) structConst(st *Structure, e *ast.Apply) (*Const, *constErr
 func (ev *evaluator) componentConst(st *Structure, f *Field, arg ast.Expr) (Expr, *constErr) {
 	t := componentType(f)
 
+	// A pointer component's value is a target, which has an address only when
+	// the program runs (docs/planning/PHASE-107 - Fortran 90 pointers.md,
+	// finding 7): a constructor of a type with one is never a constant.
+	if f.Pointer {
+		return nil, notConst("the component "+f.Name+" of "+st.Name+" is a pointer, whose value is a target", arg.Position())
+	}
+
 	if f.Dims == nil {
 		c, err := ev.eval(arg)
 		if err != nil {
@@ -301,7 +310,9 @@ func (a *analyzer) partBytes(part Expr) []byte {
 
 // structConstructor analyzes the constructor e of the type st in an
 // executable statement: a constant if every value is one (structConst, through
-// folded), else a StructValue of each component's value converted. An array
+// folded), else a StructValue of each component's value converted, a pointer
+// component's a target (the place itself, or a pointer, as pointer
+// assignment's). An array
 // component's value is its bytes if it is constant, else an array value of the
 // component's shape or a scalar for every element, which lowering assigns as
 // an array assignment's (subtask 5).
@@ -321,6 +332,17 @@ func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 
 	for i, f := range st.Fields {
 		arg := e.Args[i]
+
+		// A pointer component is pointer-assigned its value (7.5.1.5), which
+		// must be a target it may point at (pointer.go).
+		if f.Pointer {
+			v.Values[i] = a.targetFor(st.Name+"%"+f.Name, componentType(f), 0, arg)
+			if v.Values[i] == nil {
+				v.Values[i], ok = a.bad(arg.Position()), false
+			}
+
+			continue
+		}
 
 		if f.Dims != nil {
 			if _, err := (&evaluator{a: a, quiet: true}).componentConst(st, f, arg); err != nil && err.kind != constFailed {

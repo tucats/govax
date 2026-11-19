@@ -404,8 +404,9 @@ func parseEndWhere(p *parser) ast.Stmt {
 // are, so A(N) and B(0:M, 3) are Declarators, or a name alone, a scalar
 // pointer's (docs/planning/PHASE-107 - Fortran 90 pointers.md); whether the
 // bounds are right for the object (no *, no :, as many as its rank) is
-// semantic analysis's question. A DEALLOCATE object is a name alone. STAT= may
-// come only last.
+// semantic analysis's question. A DEALLOCATE object is a name alone. Either
+// may be a component instead, HEAD%NEXT, read as a reference (subtask 5). STAT=
+// may come only last.
 func parseAllocate(p *parser) ast.Stmt {
 	s := &ast.AllocateStmt{StmtBase: p.base()}
 	allocate := p.st.Kind == lex.Allocate
@@ -422,16 +423,30 @@ func parseAllocate(p *parser) ast.Stmt {
 			break
 		}
 
-		n := p.name("an allocatable array's name")
-		d := &ast.Declarator{Name: n.Name, Pos: n.Pos}
+		if p.componentObject() {
+			start := p.peek()
+			x := p.reference("a pointer component")
 
-		// A scalar pointer has no bounds, and an array's missing bounds
-		// are semantic analysis's to report (ALLOCBOUNDS).
-		if allocate && p.at("(") {
-			d.Dims = p.dimensions()
+			f, ok := x.(*ast.FieldRef)
+			if !ok {
+				p.syntax("a pointer component")
+			}
+
+			s.Objects = append(s.Objects, &ast.AllocObject{
+				Declarator: &ast.Declarator{Name: ast.DumpExpr(f), Pos: p.pos(*start)}, Component: f,
+			})
+		} else {
+			n := p.name("an allocatable array's name")
+			d := &ast.Declarator{Name: n.Name, Pos: n.Pos}
+
+			// A scalar pointer has no bounds, and an array's missing bounds
+			// are semantic analysis's to report (ALLOCBOUNDS).
+			if allocate && p.at("(") {
+				d.Dims = p.dimensions()
+			}
+
+			s.Objects = append(s.Objects, &ast.AllocObject{Declarator: d})
 		}
-
-		s.Objects = append(s.Objects, d)
 
 		if !p.accept(",") {
 			break
@@ -442,6 +457,41 @@ func parseAllocate(p *parser) ast.Stmt {
 	p.end()
 
 	return s
+}
+
+// componentObject reports whether the next ALLOCATE or DEALLOCATE object is a
+// component, HEAD%NEXT or LIST(I)%HEAD: a name, perhaps a parenthesized list,
+// then a % (or a record's period) before the object's end.
+func (p *parser) componentObject() bool {
+	n := 0
+	if t := p.peekAt(n); t == nil || t.Kind != lex.Name {
+		return false
+	}
+
+	n++
+
+	if t := p.peekAt(n); t != nil && t.Is("(") {
+		depth := 0
+
+		for ; p.peekAt(n) != nil; n++ {
+			switch t := p.peekAt(n); {
+			case t.Is("("):
+				depth++
+			case t.Is(")"):
+				depth--
+			}
+
+			if depth == 0 {
+				break
+			}
+		}
+
+		n++
+	}
+
+	t := p.peekAt(n)
+
+	return t != nil && (t.Is("%") || t.Is(".")) && p.peekAt(n+1) != nil && p.peekAt(n+1).Kind == lex.Name
 }
 
 // parsePointerAssign parses Fortran 90's pointer assignment, pointer =>

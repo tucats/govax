@@ -416,7 +416,9 @@ func readsAny(e Expr, ts *Symbol) bool {
 				walk(s)
 			}
 		case *FieldRef:
-			found = found || mayShare(ts, e.Sym)
+			// The record's storage, and through a pointer component the
+			// target's too.
+			found = found || mayShare(ts, e.Sym) || mayShare(ts, baseSymbol(e))
 
 			for _, x := range e.Subs {
 				walk(x)
@@ -541,12 +543,55 @@ func baseSymbol(e Expr) *Symbol {
 	case *Section:
 		return e.Sym
 	case *FieldRef:
+		if f := e.lastPointer(); f >= 0 {
+			return e.Path[f].Field.reached()
+		}
+
 		return e.Sym
 	case *Substring:
 		return baseSymbol(e.X)
 	}
 
 	return nil
+}
+
+// reached is the symbol that stands for the storage a reference reaches
+// through the pointer component f (baseSymbol): a pointer of f's type, one per
+// component, so that two references through it are the same storage to
+// mayShare and relate (which then compare the references themselves,
+// throughPrefix), and one may share with any pointer, TARGET, or common block
+// of a type that may meet its.
+func (f *Field) reached() *Symbol {
+	if f.through == nil {
+		f.through = &Symbol{Name: f.Name, Type: componentType(f), Struct: f.Struct, Pointer: true, Class: Variable}
+	}
+
+	return f.through
+}
+
+// throughPrefix is the reference f up to its last pointer component, as text
+// with its subscripts: two references through one component reach the same
+// storage only if they agree there (relate). "" if f is no FieldRef through a
+// pointer.
+func throughPrefix(e Expr) string {
+	if s, ok := e.(*Substring); ok {
+		e = s.X
+	}
+
+	f, ok := e.(*FieldRef)
+	if !ok {
+		return ""
+	}
+
+	last := f.lastPointer()
+	if last < 0 {
+		return ""
+	}
+
+	c := *f
+	c.Path, c.Ranked, c.Sections, c.S, c.whole = f.Path[:last+1], 0, nil, nil, false
+
+	return DumpExpr(&c)
 }
 
 // mayShare reports whether x and y may be the same storage, wholly or in
@@ -723,7 +768,7 @@ func componentRelation(target, leaf Expr) (decided, apart bool) {
 // share its storage: for relOrdered also which loop must run which way (1 up,
 // -1 down).
 func relate(target, leaf Expr) (rel overlapRelation, loop, dir int) {
-	if baseSymbol(target) != baseSymbol(leaf) {
+	if baseSymbol(target) != baseSymbol(leaf) || throughPrefix(target) != throughPrefix(leaf) {
 		return relUnknown, 0, 0
 	}
 
@@ -914,6 +959,10 @@ func readSymbols(e Expr) []*Symbol {
 			}
 		case *FieldRef:
 			list = append(list, e.Sym)
+
+			if e.ThroughPointer() {
+				list = append(list, baseSymbol(e))
+			}
 		case *Substring:
 			walk(e.X)
 			walk(e.Lower)

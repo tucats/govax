@@ -8,7 +8,8 @@ import "github.com/tucats/govax/internal/fortran/sema"
 // built a component at a time: a store of each scalar component's value at the
 // component's offset, a MOVC3 or MOVC5 of a CHARACTER one, a constant array
 // component's bytes moved from a datum, and a component of a derived type
-// built in place if its value is a constructor too, else moved. Where it is
+// built in place if its value is a constructor too, else moved, and a pointer
+// component given its target's address (pointer assignment). Where it is
 // built is the assignment's target if none of the values reads it
 // (Assign.InPlace), else a temporary of the type's size.
 
@@ -22,6 +23,19 @@ func (l *lowerer) buildRecord(dst *Mem, v *sema.StructValue) {
 		value := v.Values[i]
 
 		switch {
+		case f.Pointer:
+			// Pointer assignment of the component (7.5.1.5): its target's
+			// address, and a CHARACTER one's length and type before it.
+			if f.Struct == nil && charPointer(f.Type) {
+				header := place
+				header.T = Long
+				l.emit(&Assign{origin: l.origin(), Dst: &header, Src: charPointerHeader(f.Type.Size)})
+				place.Offset += PointerOffset
+			}
+
+			place.T = Long
+			l.emit(&Assign{origin: l.origin(), Dst: &place, Src: l.targetAddress(value)})
+
 		case v.Bytes[i] != nil:
 			n := LongConst(int32(len(v.Bytes[i])))
 			l.emit(&CharMove{l.origin(), Text{&place, n}, Text{l.text(string(v.Bytes[i])), n}})

@@ -537,6 +537,8 @@ func TestPointerForms(t *testing.T) {
 		"  z => t + 1",
 		"  nullify (x, y, r%next)",
 		"  allocate (x, a(3))",
+		"  allocate (r%next, l(i)%head%next, a(0:2), stat=k)",
+		"  deallocate (r%next, x)",
 		"end program p",
 	}
 
@@ -558,6 +560,8 @@ func TestPointerForms(t *testing.T) {
 		"Z => (+ T 1)",
 		"NULLIFY (X, Y, R%NEXT)",
 		"ALLOCATE (X, A(3))",
+		"ALLOCATE (R%NEXT, L(I)%HEAD%NEXT, A(0:2), STAT=K)",
+		"DEALLOCATE (R%NEXT, X)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %q in\n%s", want, got)

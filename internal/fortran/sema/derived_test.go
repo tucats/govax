@@ -172,8 +172,7 @@ func TestDerivedMessages(t *testing.T) {
 			"NOTYPEEND: this END TYPE statement ends no derived type's definition"},
 		{"default initialization", program("type t", "integer :: i = 0", "end type"),
 			"NOTIMPL: a component's default initial value is not implemented yet"},
-		{"a POINTER component", program("type t", "integer, pointer :: i", "end type"),
-			"NOTIMPL: a POINTER component is not implemented yet"},
+		{"a POINTER component", program("type t", "integer, pointer :: i", "type(t), pointer :: next", "end type"), ""},
 		{"a function", []string{"type(point) function f()", "type point", "real x", "end type", "f%x = 1", "end function"}, ""},
 		{"a function's type", []string{"function f()", "type point", "real x", "end type", "type(point) f", "f%x = 1", "end function"}, ""},
 	}

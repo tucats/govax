@@ -129,6 +129,20 @@ type Field struct {
 	// maps (from 1); nil and 0 for a field outside every union.
 	Union *Union
 	Map   int
+
+	// Pointer is set for a derived type's POINTER component
+	// (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 7): its
+	// storage is a pointer's, an address or a CHARACTER one's class S
+	// descriptor (PointerSize), and Type or Struct are its target's. Struct
+	// may be the type being defined (TYPE(NODE), POINTER :: NEXT in NODE),
+	// which only a pointer component may name, so a walk down a structure's
+	// fields stops at one.
+	Pointer bool
+
+	// through stands for the storage a reference reaches through this
+	// pointer component, for overlap (overlap.go's baseSymbol), made at its
+	// first need.
+	through *Symbol
 }
 
 // Union is one union declaration in a structure: Offset is where its
@@ -205,6 +219,10 @@ func (s *Structure) objectText() string {
 // ElementSize is the length in bytes of one of the field's items: its
 // type's, or its substructure's.
 func (f *Field) ElementSize() int {
+	if f.Pointer {
+		return PointerSize(componentType(f))
+	}
+
 	if f.Struct != nil {
 		return f.Struct.Size
 	}
@@ -241,11 +259,60 @@ func (f *Field) TypeText() string {
 		text = f.Struct.Display()
 	}
 
+	if f.Pointer {
+		text += ", POINTER"
+	}
+
 	if f.Dims != nil {
 		text += " (" + dims(f.Dims) + ")"
 	}
 
 	return text
+}
+
+// HasPointers reports whether a record of the structure holds a pointer: a
+// pointer component, or one in a component of a derived type, at any depth
+// (an ultimate pointer component, the standard's 4.4.1). An object of such a
+// type can't be an I/O list's item, in a NAMELIST group or an EQUIVALENCE
+// list, or given an initial value (finding 7). The walk passes over a pointer
+// component's own type, which may be this one.
+func (s *Structure) HasPointers() bool {
+	for _, f := range s.Fields {
+		if f.Pointer || f.Struct != nil && f.Struct.HasPointers() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// PointerOffsets are the offsets in a record of the structure of each of its
+// pointers' address longwords, at any depth, every element of an array
+// component's: what must be 0 for each pointer in it to be disassociated.
+// A CHARACTER pointer's is its descriptor's POINTER, 4 bytes in.
+func (s *Structure) PointerOffsets() []int {
+	var list []int
+
+	for _, f := range s.Fields {
+		switch {
+		case f.Pointer && f.Type.Kind == Character && f.Struct == nil:
+			list = append(list, f.Offset+4)
+
+		case f.Pointer:
+			list = append(list, f.Offset)
+
+		case f.Struct != nil:
+			inner := f.Struct.PointerOffsets()
+
+			for n := range f.Elements() {
+				for _, o := range inner {
+					list = append(list, f.Offset+n*f.Struct.Size+o)
+				}
+			}
+		}
+	}
+
+	return list
 }
 
 // maxStructureBytes is the longest structure: a record's offsets and

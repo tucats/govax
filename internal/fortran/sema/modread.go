@@ -289,7 +289,11 @@ func sameStructure(x, y *Structure) bool {
 	for i, f := range x.Fields {
 		g := y.Fields[i]
 
-		if f.Name != g.Name || f.Offset != g.Offset || f.Struct != g.Struct || f.Map != g.Map ||
+		// A pointer to the type itself names each text's own Structure.
+		self := f.Pointer && f.Struct == x && g.Struct == y
+
+		if f.Name != g.Name || f.Offset != g.Offset || f.Struct != g.Struct && !self || f.Map != g.Map ||
+			f.Pointer != g.Pointer ||
 			f.Type.Kind != g.Type.Kind || f.Type.Size != g.Type.Size || len(f.Dims) != len(g.Dims) {
 			return false
 		}

@@ -833,6 +833,10 @@ func (w *moduleWriter) structure(st *Structure) {
 				spec = w.typeSpec(recordType(f.Struct))
 			}
 
+			if f.Pointer {
+				spec += ", POINTER"
+			}
+
 			w.put(2, spec+" :: "+f.Name+dimsText(f.Dims))
 		}
 

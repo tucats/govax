@@ -1,0 +1,24 @@
+empty:     0:
+pushed:    5:  50  40  30  20  10
+reversed:  5:  10  20  30  40  50
+chain:     10  20  30
+changed:   5:  10  20 -30  40  50
+inserted:  6:  10  20  25 -30  40  50
+fixed:    T T
+removed:   5:  10  20 -30  40  50
+copy:      99  10 T
+grown:     6:  10  20  33 -30  40  50
+given:    F
+back:      5:  10  20 -30  40  50
+cut:       4:  10  20 -30  40
+joined:    5:  10  20 -30  40  50
+refs:       1   2   3   4   5   9   2 AxyD AxyD
+built:      9 AxyD T T
+node():     5  10 T
+array:      5   4   3
+overlap:    4   5   6   7   8
+sorted:    20  30  35  40  50  60  65  70  80
+tree:       4  35  65
+dropped:   0:
+made:       5
+  $STATUS == "%X00000001"
