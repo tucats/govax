@@ -89,12 +89,12 @@ B3:
   assign $I1 = 1
   branch le.L($C1, 0) B5 B4
 B4:  ; array (line 46), dimension 1's body
-  assign $T4 = add.F($T4, @(add.L($D1+16, mul.L(add.L($I1, $T2), $D1+20))))
+  assign $T4 = add.F($T4, @(add.L($D1+16, mul.L(add.L($I1, $T2), $D1+20))){=>REAL})
   assign $I1 = add.L($I1, 1)
   assign $C1 = sub.L($C1, 1)
   branch gt.L($C1, 0) B4 B5
 B5:
-  assign @X = add.F(@($T1), $T4)
+  assign @X = add.F(@($T1){=>REAL}, $T4)
   ; line 47
   call SP(ref @V) -> $T3
   assign P = $T3

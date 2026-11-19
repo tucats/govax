@@ -27,7 +27,7 @@ B1:
 B2:
   assign IS = $T1
   ; line 21
-  assign @(P) = 1
+  assign @(P){=>INTEGER} = 1
   ; line 22
   call FTN$DEALLOC_SCALAR(ref P, val 3, val 4) -> $T1
   branch ne.L($T1, 0) B6 B3

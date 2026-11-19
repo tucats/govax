@@ -112,7 +112,7 @@ func (l *lowerer) fieldPlace(e *sema.FieldRef, target bool) *Mem {
 
 		m.T = Byte
 
-		return &Mem{Ptr: &Addr{&m}, T: t, Volatile: m.Volatile}
+		return &Mem{Ptr: &Addr{&m}, T: t, Volatile: m.Volatile, Pointee: m.Pointee}
 	}
 
 	if c := l.adjustableOf(e.Sym); c != nil && e.Subs != nil && e.Sym.Strided() {
@@ -120,7 +120,7 @@ func (l *lowerer) fieldPlace(e *sema.FieldRef, target bool) *Mem {
 		// (lowershaped.go), which needn't be the type's size: the record is
 		// at the address stridedElement computes.
 		el := l.stridedElement(sema.NewElem(e.Sym, e.Subs, nil, e.NamePos), c)
-		base = &Mem{Ptr: el.Ptr, T: Byte, Volatile: e.Sym.Volatile}
+		base = &Mem{Ptr: el.Ptr, T: Byte, Volatile: e.Sym.Volatile, Pointee: el.Pointee}
 	} else if c != nil && e.Subs != nil {
 		base = &Mem{Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}, T: Byte, Volatile: e.Sym.Volatile}
 		v, k := split(l.adjustableIndex(e.Subs, e.Sym, c, nil))
@@ -152,7 +152,7 @@ func (l *lowerer) fieldPlace(e *sema.FieldRef, target bool) *Mem {
 		}
 
 		address := finish(Long, Long.Size())
-		base = &Mem{Ptr: &Load{address}, T: Byte, Volatile: address.Volatile}
+		base = &Mem{Ptr: &Load{address}, T: Byte, Volatile: address.Volatile, Pointee: pointee(sema.FieldTargetType(s.Field))}
 		offset, parts = 0, nil
 	}
 

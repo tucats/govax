@@ -7,7 +7,8 @@ pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
 subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
 scalar pointer components and recursive types, done 2026-11-19; subtask 5b,
 array pointer components, done 2026-11-19; subtask 6a, pointer dummies, done
-2026-11-19; subtask 6b, pointer results, done 2026-11-19.
+2026-11-19; subtask 6b, pointer results, done 2026-11-19; subtask 7, the
+optimizer's aliasing rules, done 2026-11-19.
 
 ## Goal
 
@@ -71,7 +72,7 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
    5b, array pointer components (done 2026-11-19).
 6. **Pointer dummies and results** (done 2026-11-19).
 7. **The optimizer's aliasing rules**, with programs that would break if they
-   were wrong, both settings.
+   were wrong, both settings (done 2026-11-19).
 8. **Programs end to end** (a linked list and a binary tree in modules, a sparse
    matrix), every mode, gfortran's witness.
 9. **Close-out**: FORTRAN-INTERNALS.md's section 32 (pointers and aliasing),
@@ -439,7 +440,7 @@ The plan's order stands; each subtask's content is now the findings'.
    (done 2026-11-19).
 7. **The optimizer's aliasing rules:** `PointerRegion`, TARGETs' places, taken
    TARGETs, with programs that would print something else if the rule were wrong
-   or too bold, both settings (finding 11).
+   or too bold, both settings (finding 11) (done 2026-11-19).
 8. **Programs end to end** (a linked list and a binary tree in modules, a sparse
    matrix, the standard's examples), every mode, gfortran's witness.
 9. **Close-out:** FORTRAN-INTERNALS.md's section 32 (pointers and aliasing, a
@@ -955,3 +956,63 @@ The plan's open question 1 is settled by answer 1.
   - *Docs.* MANUAL.md's 14.13 (pointer results; "Not there yet"'s example now a CHARACTER
     pointer of a length known when the program runs), HELP FORTRAN. Subtask 7, the optimizer's
     aliasing rules, is next.
+- **2026-11-19:** Subtask 7, the optimizer's aliasing rules, done (finding 11).
+  - *The class rule* (`sema/pointerclass.go`). `PointersMayMeet(t, u)`: a value of type t
+    reached through a pointer and one of type u may share storage when they are one class
+    (an intrinsic type by kind and kind number; every CHARACTER length one class; a derived
+    type by `sameType`, so an interface body's SEQUENCE copy is the type it copies), or one
+    is a record that ultimately holds a component of the other's class, pointer components
+    passed over (a record holds only an address there). `FieldTargetType` is a pointer
+    component's target type. sema's own `pointerMayMeet`, overlap's coarser rule (a record
+    with anything), is left as it is: it decides only temporaries.
+  - *The mark* (`ir.Mem.Pointee`). The lowerer marks each place it reaches through a pointer
+    with the type the pointer points at, so the optimizer needn't recognize the address's
+    form, which its own passes rewrite: a scalar or CHARACTER pointer's target
+    (`pointerTargetMem`), an array pointer's elements and base (`stridedElement`,
+    `allocatableBase`, by `arrayPointee`), a field chain through a pointer component (the
+    component's target type from there on, `fieldPlace`), an element of an array pointer of
+    records, a constructor's component built through an address, a record place moved to a
+    temporary (`recordPlace`), and a descriptor in a record reached through a pointer, a
+    located cell at Base (`Cell.Pointee`, which `locateMem` gives the resolved place). The
+    register allocator's rewritten places keep it (`registers.go`'s base candidates). The
+    IR's dump writes it, `@(P){=>INTEGER}`, so the golden `.ir` files of the pointer
+    programs show every mark.
+  - *The places* (`opt/places.go`, "Pointers"). A marked place is a `PointerRegion` with its
+    `Class`, unless its address has become a place's own (`Addr`), which says more. It
+    conflicts with another of a class that may meet; with a place overlapping a TARGET of
+    such a class, `Place.Targets` (local, frame, host, a module's variables, an allocatable
+    or automatic array by its descriptor, a dummy; anything sharing a TARGET's storage by
+    EQUIVALENCE, its range overlapping the TARGET's); with all of COMMON but a module's block
+    (the author's answer 3); with `UnknownRegion`; and with nothing else. `findTargets`
+    lists the TARGETs once per Storage, a module's from its block's members (all of them,
+    not only those the unit names); `targetsOver` gives each place the types it overlaps as
+    one list per set of TARGETs (`Storage.targetSets`), so a `Place` stays comparable, a map
+    key, with equal places equal. Any call may change a `PointerRegion` (`ChangedByCall`'s
+    default), and `Volatile` asks VOLATILE TARGET dummies of a class that may meet. A TARGET
+    is judged by its type whether or not the unit names it in `=>`: the bolder rule, only a
+    taken TARGET, would save little (a TARGET is there to be pointed at) and tie the targets'
+    list to `findTaken`'s order.
+  - *What was checked to be safe.* `forward.go` keeps facts only of places with no address
+    (`isKey`), and `deadcode.go` compares places only for cells, so two pointers' equal
+    places are never taken for one; `unsafeToMove` keeps a load through an address in its
+    loop unless surely reached, so a disassociated pointer's 0 never faults earlier than it
+    would have.
+  - *Tests.* `opt`'s `TestPointerConflicts` (19 cases: TARGETs and not, other types,
+    EQUIVALENCE, records holding the type or not, pointers to one type and two, a record's
+    pointer and its component's, COMMON, allocatable arrays, substrings), `TestPointerModules`,
+    `TestPointerDummies` (a TARGET dummy and one without), and `TestPointerRegisters` (K, no
+    TARGET, in a register across `P = P + K`, which the old UnknownRegion denied it; a TARGET
+    not). `TestStorageOnCorpus` loses `pointerRoutines`: the corpus's unknown places are back
+    to the 14 it had before pointers, and 60 are pointers'. `testdata/fortran90/ptralias.f90`,
+    worked by hand, every mode and both loaders, the same on gfortran (its REALs printed as
+    integers, gfortran's list-directed layout being another), and `ptrequiv.f90`, govax's own
+    (EQUIVALENCE with a TARGET, which Fortran 90's 5.5.1 allows and Fortran 95 forbids, so
+    gfortran refuses it). Each was run against rules made too bold on purpose: ignoring
+    TARGETs and COMMON, `ptralias` printed six cases wrong under `/OPTIMIZE` (a local TARGET,
+    a component, a host's TARGET, a TARGET dummy, a section, a kept TARGET) and `ptrequiv`
+    both; without the containment half of the class rule, the component case; with pointers
+    never meeting, nearly every case. The COMMON and module cases print right even so, no pass
+    yet keeping a COMMON or module value across a store; they stand guard for one that will.
+  - *Docs.* MANUAL.md's 14.9 (a pointer pointing only where the standard lets it, among what
+    the optimizer takes at its word) and 14.13 ("What TARGET is for"), HELP FORTRAN.
+    Subtask 8, programs end to end, is next.

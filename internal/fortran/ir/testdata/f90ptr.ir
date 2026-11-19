@@ -17,25 +17,25 @@ B1:
   ; line 14
   assign P = addr(N)
   ; line 15
-  assign @(P) = add.L(@(P), 1)
+  assign @(P){=>INTEGER} = add.L(@(P){=>INTEGER}, 1)
   ; line 16
   assign Q = P
   ; line 17
   branch and.L(and.L(eq.L(Q, P), ne.L(Q, 0)), not.L(eq.L(P, addr(M)))) B2 B3
 B2:
-  call X(ref @(Q))
+  call X(ref @(Q){=>INTEGER})
   jump B3
 B3:
   ; line 18
   assign C = 17694722
   assign C+4 = addr(S+1)
   ; line 19
-  move @(C+4)(2) = $K1(2)
+  move @(C+4){=>CHARACTER*2}(2) = $K1(2)
   ; line 20
   call FTN$WRITE_SL(ref $IO1, val -1)
   assign $T1 = ne.L(C+4, 0)
   call FTN$IO_ITEM(ref $D1)
-  assign $D2+4 = addr(@(C+4))
+  assign $D2+4 = addr(@(C+4){=>CHARACTER*2})
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()
   ; line 21
@@ -54,6 +54,6 @@ B2:
   jump B3
 B3:
   ; line 27
-  assign @(L) = 0
+  assign @(L){=>INTEGER} = 0
   ; line 28
   return

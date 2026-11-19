@@ -24,9 +24,9 @@ B1:
   assign H+20 = sub.L(H+8, 4)
   assign H+16 = 40
   ; line 25
-  assign $T1 = addr(@(P)+4)
-  assign @($T1) = 168296452
-  assign @($T1)+8 = 16777216
+  assign $T1 = addr(@(P)+4{=>TYPE(HOLDER)})
+  assign @($T1){=>TYPE(HOLDER)} = 168296452
+  assign @($T1)+8{=>TYPE(HOLDER)} = 16777216
   assign $T2 = @N
   assign $T3 = div.L($T2, 2)
   branch lt.L($T3, 0) B2 B3
@@ -34,20 +34,20 @@ B2:
   assign $T3 = 0
   jump B3
 B3:
-  assign @($T1)+4 = addr(A+4)
-  assign @($T1)+20 = 8
-  assign @($T1)+24 = 1
-  assign @($T1)+28 = $T3
-  assign @($T1)+16 = sub.L(@($T1)+4, 8)
-  assign @($T1)+12 = mul.L(4, $T3)
+  assign @($T1)+4{=>TYPE(HOLDER)} = addr(A+4)
+  assign @($T1)+20{=>TYPE(HOLDER)} = 8
+  assign @($T1)+24{=>TYPE(HOLDER)} = 1
+  assign @($T1)+28{=>TYPE(HOLDER)} = $T3
+  assign @($T1)+16{=>TYPE(HOLDER)} = sub.L(@($T1)+4{=>TYPE(HOLDER)}, 8)
+  assign @($T1)+12{=>TYPE(HOLDER)} = mul.L(4, $T3)
   ; line 26
-  assign $T3 = addr(@(P)+4)
-  assign @(add.L(H+20, mul.L(@N, H+24))) = add.L(@(add.L(@($T3)+16, @($T3)+20)), 1)
+  assign $T3 = addr(@(P)+4{=>TYPE(HOLDER)})
+  assign @(add.L(H+20, mul.L(@N, H+24))){=>INTEGER} = add.L(@(add.L(@($T3)+16{=>TYPE(HOLDER)}, @($T3)+20{=>TYPE(HOLDER)})){=>INTEGER}, 1)
   ; line 27
-  assign $T3 = addr(@(P)+4)
-  assign @($T3) = 168296452
-  assign @($T3)+8 = 16777216
-  call FTN$ALLOCATE(ref @($T3), val 2, val 0, val @N)
+  assign $T3 = addr(@(P)+4{=>TYPE(HOLDER)})
+  assign @($T3){=>TYPE(HOLDER)} = 168296452
+  assign @($T3)+8{=>TYPE(HOLDER)} = 16777216
+  call FTN$ALLOCATE(ref @($T3){=>TYPE(HOLDER)}, val 2, val 0, val @N)
   ; line 28
   assign $D1+4 = addr(A)
   assign $D1+20 = 4
@@ -61,8 +61,8 @@ B4:
   jump B5
 B5:
   ; line 29
-  assign $T3 = addr(@(P)+4)
-  call FTN$DEALLOCATE(ref @($T3), val 2)
+  assign $T3 = addr(@(P)+4{=>TYPE(HOLDER)})
+  call FTN$DEALLOCATE(ref @($T3){=>TYPE(HOLDER)}, val 2)
   ; line 30
   assign H = 3
   assign H+4 = 168296452
@@ -96,7 +96,7 @@ B9:
   assign $I1 = 1
   branch le.L($C1, 0) B11 B10
 B10:  ; array (line 31), dimension 1's body
-  assign $T5 = add.L($T5, @(add.L(T+20, mul.L(add.L($I1, $T3), T+24))))
+  assign $T5 = add.L($T5, @(add.L(T+20, mul.L(add.L($I1, $T3), T+24))){=>TYPE(TREE)})
   assign $I1 = add.L($I1, 1)
   assign $C1 = sub.L($C1, 1)
   branch gt.L($C1, 0) B10 B11

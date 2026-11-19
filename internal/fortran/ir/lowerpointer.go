@@ -146,7 +146,23 @@ func (l *lowerer) pointerTargetMem(s *sema.Symbol) *Mem {
 		t = Byte
 	}
 
-	return &Mem{Ptr: &Load{l.pointerAddress(s)}, T: t, Volatile: s.Volatile}
+	return &Mem{Ptr: &Load{l.pointerAddress(s)}, T: t, Volatile: s.Volatile, Pointee: pointee(s.Type)}
+}
+
+// pointee is the Mem.Pointee of a place reached through a pointer to values of
+// type t: the class the optimizer's aliasing rule knows it by (subtask 7).
+func pointee(t sema.Type) *sema.Type {
+	return &t
+}
+
+// arrayPointee is the Mem.Pointee of an element of the array s: its type's if s
+// is an array pointer, nil for any other array.
+func arrayPointee(s *sema.Symbol) *sema.Type {
+	if !s.ArrayPointer() {
+		return nil
+	}
+
+	return pointee(s.Type)
 }
 
 // targetAddress is the address of the place target, a variable that sema says
@@ -562,7 +578,7 @@ func (l *lowerer) locatedCell(name string, d *Descriptor, place *Mem) *Cell {
 
 	base := l.temp(Long)
 	l.emit(&Assign{origin: l.origin(), Dst: base, Src: &Addr{place}})
-	c.Base = base.Cell
+	c.Base, c.Pointee = base.Cell, place.Pointee
 
 	return c
 }

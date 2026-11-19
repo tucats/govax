@@ -322,7 +322,8 @@ func (l *lowerer) allocated(e *sema.Allocated) Expr {
 func (l *lowerer) allocatableBase(s *sema.Symbol) *Mem {
 	c := l.adjustableOf(s)
 
-	return &Mem{Ptr: &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, T: l.typeOf(s.Type), Volatile: s.Volatile}
+	return &Mem{Ptr: &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, T: l.typeOf(s.Type), Volatile: s.Volatile,
+		Pointee: arrayPointee(s)}
 }
 
 // stridedElement is where the element e of the array whose class NCA
@@ -355,7 +356,7 @@ func (l *lowerer) stridedElement(e *sema.Elem, c *Cell) *Mem {
 		ptr = arith(Add, Long, ptr, arith(Mul, Long, subs[i], stride))
 	}
 
-	base := &Mem{Ptr: ptr, T: l.typeOf(s.Type), Volatile: s.Volatile}
+	base := &Mem{Ptr: ptr, T: l.typeOf(s.Type), Volatile: s.Volatile, Pointee: arrayPointee(s)}
 
 	if first == 0 {
 		return base

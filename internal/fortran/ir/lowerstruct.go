@@ -88,7 +88,7 @@ func (l *lowerer) fillComponent(place *Mem, f *sema.Field, value sema.Expr) {
 	l.emit(&Assign{origin: l.origin(), Dst: at, Src: &Addr{place}})
 
 	sym := sema.NewArray("$P", t, extents)
-	l.bound[sym] = &Mem{Ptr: &Load{at}, T: l.typeOf(t)}
+	l.bound[sym] = &Mem{Ptr: &Load{at}, T: l.typeOf(t), Pointee: place.Pointee}
 
 	l.arrayNest(sema.NewArrayRef(sym, value.Position()), value, nil, nil)
 
@@ -106,7 +106,7 @@ func (l *lowerer) recordPlace(m *Mem) *Mem {
 		t := l.temp(Long)
 		l.emit(&Assign{origin: l.origin(), Dst: t, Src: &Addr{m}})
 
-		return &Mem{Ptr: &Load{t}, T: Byte, Volatile: m.Volatile}
+		return &Mem{Ptr: &Load{t}, T: Byte, Volatile: m.Volatile, Pointee: m.Pointee}
 
 	case m.Param != nil:
 		return &Mem{Ptr: &ArgPointer{m.Param}, T: Byte, Volatile: m.Volatile}

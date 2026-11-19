@@ -1,6 +1,7 @@
 package opt
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/tucats/govax/internal/fortran/ir"
@@ -46,6 +47,36 @@ import (
 //
 // A character dummy has two places, its text and the descriptor that says where
 // the text is. The caller made the descriptor and nothing here writes it.
+//
+// # Pointers
+//
+// A Fortran 90 pointer may point only at a variable with the TARGET attribute, a
+// part of one, or another pointer's target (the standard's 7.5.2), of its own type
+// (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 11). So a place
+// reached through a pointer, which the lowerer marks with the type it points at
+// (ir.Mem.Pointee), is a PointerRegion of that type's class, and it conflicts with
+//
+//   - another PointerRegion of a class that may meet it (sema.PointersMayMeet: the
+//     same class, or a record holding a component of the other's);
+//   - a place overlapping a TARGET of such a class: a local, frame, host, or module
+//     variable, an allocatable array, or a dummy argument, and whatever shares its
+//     storage by EQUIVALENCE, since its place overlaps the TARGET's (Place.Targets);
+//   - anything in a common block, which another unit may declare a TARGET (the
+//     author's answer 3); a module's variables are judged by their own attributes,
+//     which every unit using the module sees;
+//   - an UnknownRegion.
+//
+// And with nothing else: not a local without TARGET, not a dummy without it (a
+// dummy may be a pointer's target in the caller, but the standard's 12.5.2.9
+// forbids changing it through the pointer while it is the dummy), not $PDATA, not a
+// register. That is what TARGET is for. In
+//
+//	      INTEGER, POINTER :: P
+//	      DO I = 1, N
+//	         P = P + K
+//	      END DO
+//
+// K, without TARGET, stays in a register across every store through P.
 
 // Region is the storage a place is in.
 type Region int
@@ -96,6 +127,11 @@ const (
 	// or change them, since a call of the host's other internal procedures may,
 	// as a call may change COMMON. The range is the host's offsets.
 	HostRegion
+
+	// PointerRegion is what a Fortran 90 pointer to values of type Place.Class
+	// points at: some TARGET, part of one, or memory ALLOCATE made, of a type
+	// that may meet the class (see "Pointers" above). Any call may change it.
+	PointerRegion
 )
 
 // The range of a place whose extent isn't known: everything in its region.
@@ -120,6 +156,16 @@ type Place struct {
 	// Volatile says the Mem it came from is marked. Storage.Volatile also looks at
 	// what the place overlaps.
 	Volatile bool
+
+	// Class is a PointerRegion's: the type of what its pointer points at.
+	Class sema.Type
+
+	// Targets are the types of the TARGETs the place overlaps, which a store
+	// through a pointer of a class meeting one of them may change; nil if it
+	// overlaps none. The Storage that made the place keeps one list for each
+	// set of TARGETs, so that two places are equal, as a map's keys, when they
+	// are the same place.
+	Targets *[]sema.Type
 }
 
 // Conflict reports whether a store to one place can change what the other holds.
@@ -133,11 +179,46 @@ func Conflict(a, b Place) bool {
 		return true
 	}
 
+	if a.Region == PointerRegion {
+		return pointerConflict(a, b)
+	}
+
+	if b.Region == PointerRegion {
+		return pointerConflict(b, a)
+	}
+
 	if a.Region != b.Region || a.Common != b.Common || a.Param != b.Param || a.Cell != b.Cell {
 		return false
 	}
 
 	return a.Lo < b.Hi && b.Lo < a.Hi
+}
+
+// pointerConflict reports whether a store through the pointer place p can change
+// what q holds, or the other way round (see "Pointers" above).
+func pointerConflict(p, q Place) bool {
+	switch q.Region {
+	case PointerRegion:
+		return sema.PointersMayMeet(p.Class, q.Class)
+	case CommonRegion:
+		if q.Common.Module == "" {
+			return true
+		}
+	case RegisterRegion, DynamicRegion:
+		return false
+	}
+
+	if q.Targets == nil {
+		return false
+	}
+
+	for _, t := range *q.Targets {
+		if sema.PointersMayMeet(p.Class, t) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // wholeSize, given as a size, says the place's extent isn't a known number of bytes.
@@ -213,14 +294,120 @@ func (s *Storage) place(m *ir.Mem, size int) Place {
 	}
 
 	p.Volatile = p.Volatile || m.Volatile
+	p.Targets = s.targetsOver(p)
 
 	return p
+}
+
+// target is a TARGET's place and type.
+type target struct {
+	place Place
+	t     sema.Type
+}
+
+// findTargets lists every TARGET the routine can reach but through a pointer:
+// its own variables and allocatable arrays, its host's, the module variables of
+// every module whose block it uses (all of them, not only those it names, since
+// one it doesn't name may share another's storage by EQUIVALENCE), and its dummy
+// arguments. A common block's needn't be listed: a pointer place conflicts with
+// all of it.
+func (s *Storage) findTargets() {
+	blocks := map[*sema.CommonBlock]bool{}
+
+	cells := func(list []*ir.Cell) {
+		for _, c := range list {
+			if c.Common != nil && c.Common.Module != "" {
+				blocks[c.Common] = true
+			}
+
+			if c.Sym == nil || !c.Sym.Target || c.Register != 0 || c.Located() {
+				continue
+			}
+
+			var p Place
+
+			if c.Kind == ir.DescriptorCell && (c.Sym.Allocatable || c.Sym.AutomaticObject) {
+				p = Place{Region: AllocatedRegion, Cell: c, Lo: wholeLo, Hi: wholeHi}
+			} else {
+				p = s.Whole(&ir.Mem{Cell: c, T: c.T})
+			}
+
+			s.targets = append(s.targets, target{p, c.Sym.Type})
+		}
+	}
+
+	cells(s.r.Cells)
+
+	if s.r.Host != nil {
+		cells(s.r.Host.Cells)
+	}
+
+	for b := range blocks {
+		for _, m := range b.Members {
+			if m.Target {
+				p := Place{Region: CommonRegion, Common: b, Lo: m.Offset, Hi: m.Offset + max(m.Size(), 1)}
+				s.targets = append(s.targets, target{p, m.Type})
+			}
+		}
+	}
+
+	for _, p := range s.r.Params {
+		if p.Sym != nil && p.Sym.Target {
+			s.targets = append(s.targets, target{Place{Region: DummyRegion, Param: p, Lo: wholeLo, Hi: wholeHi}, p.Sym.Type})
+		}
+	}
+}
+
+// targetsOver are the types of the TARGETs place p overlaps, the list s keeps
+// for that set of them; nil for none.
+func (s *Storage) targetsOver(p Place) *[]sema.Type {
+	switch p.Region {
+	case LocalRegion, FrameRegion, CommonRegion, HostRegion, DummyRegion, AllocatedRegion:
+	default:
+		return nil
+	}
+
+	var (
+		list []sema.Type
+		key  []byte
+	)
+
+	for i, t := range s.targets {
+		if Conflict(p, t.place) {
+			list = append(list, t.t)
+			key = fmt.Appendf(key, "%d,", i)
+		}
+	}
+
+	if list == nil {
+		return nil
+	}
+
+	if s.targetSets == nil {
+		s.targetSets = map[string]*[]sema.Type{}
+	}
+
+	if kept, ok := s.targetSets[string(key)]; ok {
+		return kept
+	}
+
+	s.targetSets[string(key)] = &list
+
+	return &list
 }
 
 // throughPointer is where a place reached through a computed address is, which the
 // lowerer makes in a few forms: the only ones this needs to know.
 func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Place) Place {
 	whole := Place{Lo: wholeLo, Hi: wholeHi}
+
+	// A pointer's target (see "Pointers" above), unless the address has become a
+	// place's own, which says more.
+	if _, ok := m.Ptr.(*ir.Addr); m.Pointee != nil && !ok {
+		whole.Region, whole.Class = PointerRegion, *m.Pointee
+
+		return whole
+	}
 
 	if c := allocatedBase(m.Ptr); c != nil {
 		whole.Region, whole.Cell = AllocatedRegion, c
@@ -240,6 +427,7 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 
 	switch ptr := m.Ptr.(type) {
 	case *ir.Addr:
+
 		// A field of a packed record, at an address computed on the spot.
 		if m.Index != nil || size == wholeSize || ptr.Mem.Index != nil {
 			return s.place(ptr.Mem, wholeSize)
@@ -310,9 +498,8 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 // address e is computed from: its A0, or its POINTER, plus whatever else
 // (ir/lowerallocate.go, ir/lowerautomatic.go); nil if e isn't such an address.
 // An array pointer's descriptor is laid out as an allocatable array's, but what
-// it describes may be any TARGET's storage, so it isn't one: its elements are
-// UnknownRegion (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 11,
-// which subtask 7 makes bolder).
+// it describes may be any TARGET's storage, so it isn't one: its elements are a
+// PointerRegion (throughPointer, by their Mem.Pointee).
 func allocatedBase(e ir.Expr) *ir.Cell {
 	switch e := e.(type) {
 	case *ir.Load:

@@ -345,6 +345,11 @@ type Cell struct {
 	At   *Mem
 	Base *Cell
 	Arg  *Param
+
+	// Pointee, in a located cell at Base, is the Mem.Pointee of the record it
+	// is in, which the places resolved to it take (locate.go): a descriptor in a
+	// record reached through a pointer is in that pointer's target.
+	Pointee *sema.Type
 }
 
 // Located reports whether the cell is a located cell (At, Base, Arg).
@@ -1063,6 +1068,16 @@ type Mem struct {
 	// process sharing the memory) may read or change it at any moment.
 	// The optimizer (package opt) asks.
 	Volatile bool
+
+	// Pointee, for a place reached through a Fortran 90 pointer, is the type of
+	// what the pointer points at (docs/planning/PHASE-107 - Fortran 90
+	// pointers.md, finding 11): a pointer's own type, or for a component of a
+	// record reached through one, the record's. The optimizer's aliasing rule
+	// needs nothing else: such a place may be only a TARGET's, another pointer's
+	// target, or something in COMMON, of a type that may meet it
+	// (sema.PointersMayMeet), whatever form the address takes after an
+	// optimizer's pass has rewritten it. nil for every other place.
+	Pointee *sema.Type
 
 	// Deferred, an optimizer's, asks that a place with a Ptr and an Index be reached
 	// through the address where it is, @S.$B1+16[R1], with Offset part of the index,

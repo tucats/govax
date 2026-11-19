@@ -7959,6 +7959,11 @@ with `/OPTIMIZE`, or differently from one version to the next:
   two dummies given the same variable, or a dummy and the COMMON variable passed to it.
 - **A subscript outside its array.** `A(I)` is taken to be somewhere in A, not in the
   array after it in COMMON. A constant subscript's place is exact.
+- **A Fortran 90 pointer pointing only where the standard lets it:** at a TARGET or a
+  part of one, at memory ALLOCATE made, or at another pointer's target, of its own type.
+  A store through a pointer is taken to leave every variable without TARGET alone (one
+  in COMMON aside), and every TARGET of a type it can't point into
+  ([section 14.13](#1413-fortran-90), "Pointers").
 - **The control variable changed in its DO's range,** which section 5.3.1 forbids. Where
   a call could do it, or another name, the loop keeps its count and does what it
   always did.
@@ -9736,6 +9741,28 @@ R0, a CHARACTER one's descriptor in R0 and R1, and an array pointer's descriptor
 first argument, the address of a class NCA descriptor of the caller's, which the function fills
 in. An array assignment whose value is reached through a pointer function, `X(4:6) = EVENS(X)`,
 goes through a temporary, the function's value perhaps being part of X.
+
+**What TARGET is for.** A pointer may point only at a TARGET, a part of one, memory
+ALLOCATE made, or another pointer's target, and only at a value of its own type. So
+under `/OPTIMIZE` a store through a pointer is taken to change only those: a TARGET of the
+pointer's type (or a record holding a component of that type, or the other way round),
+anything sharing a TARGET's storage by EQUIVALENCE, another pointer's target of such a
+type, and anything in COMMON, which another unit may have declared a TARGET. A module's
+variables are judged by their own attributes. Every other variable, and every dummy
+argument without TARGET (which the standard forbids changing through a pointer while it
+is the dummy), may stay in a register across the store:
+
+```fortran
+integer, pointer :: p
+integer :: k
+...
+do i = 1, n
+  p = p + k        ! K stays in a register; were it a TARGET, it couldn't
+end do
+```
+
+A CHARACTER pointer may point at any length's text, so every CHARACTER TARGET is in
+reach of one. Any call may change any pointer's target.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:

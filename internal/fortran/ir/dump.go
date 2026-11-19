@@ -435,6 +435,10 @@ func MemText(m *Mem) string {
 		text += "{volatile}"
 	}
 
+	if m.Pointee != nil {
+		text += "{=>" + m.Pointee.String() + "}"
+	}
+
 	return text
 }
 

@@ -127,6 +127,7 @@ func locateMem(m *Mem) {
 
 		if c.Base != nil {
 			m.Cell, m.Ptr = nil, &Load{&Mem{Cell: c.Base, T: Long}}
+			m.Pointee = c.Pointee
 
 			continue
 		}

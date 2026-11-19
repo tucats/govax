@@ -1,6 +1,9 @@
 package opt
 
-import "github.com/tucats/govax/internal/fortran/ir"
+import (
+	"github.com/tucats/govax/internal/fortran/ir"
+	"github.com/tucats/govax/internal/fortran/sema"
+)
 
 // Effects: what a statement reads and writes, and what a call may change that the
 // statement doesn't name (Decision 7 of docs/planning/PHASE-84 - FORTRAN optimizer.md).
@@ -96,6 +99,11 @@ type Storage struct {
 	// cells are the routine's own cells, in an internal procedure, which uses its
 	// host's too (own).
 	cells map[*ir.Cell]bool
+
+	// targets are the TARGETs a pointer may reach (places.go's findTargets), and
+	// targetSets the lists of their types places share (targetsOver).
+	targets    []target
+	targetSets map[string]*[]sema.Type
 }
 
 // own reports whether c is the routine's own cell, not its host's. The map is
@@ -117,6 +125,8 @@ func (s *Storage) own(c *ir.Cell) bool {
 // NewStorage looks over routine r.
 func NewStorage(r *ir.Routine) *Storage {
 	s := &Storage{r: r}
+
+	s.findTargets()
 
 	for _, c := range r.Cells {
 		if c.Sym != nil && c.Sym.Volatile {
@@ -199,6 +209,13 @@ func (s *Storage) Volatile(p Place) bool {
 	switch p.Region {
 	case UnknownRegion:
 		return s.anyVolatile
+	case PointerRegion:
+		// A VOLATILE TARGET dummy (s.volatile has the variables).
+		for _, t := range s.targets {
+			if t.place.Region == DummyRegion && t.place.Param.Sym.Volatile && sema.PointersMayMeet(p.Class, t.t) {
+				return true
+			}
+		}
 	case DummyRegion:
 		return p.Param.Sym != nil && p.Param.Sym.Volatile
 	}

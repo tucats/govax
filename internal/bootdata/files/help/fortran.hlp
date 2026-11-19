@@ -130,7 +130,8 @@
    values given with =:  INTEGER, PARAMETER :: N = 10 and REAL,
    DIMENSION(N), SAVE :: X = 0.  PARAMETER, DIMENSION, SAVE, EXTERNAL,
    INTRINSIC, VOLATILE, AUTOMATIC, INTENT, OPTIONAL, and STATIC are
-   compiled; TARGET is checked and recorded; each has its own
+   compiled; TARGET is checked and tells the optimizer what a pointer
+   may change (see below); each has its own
    statement, with or without ::.  A value given with = fills a whole
    array and gives the name SAVE.
 
@@ -468,6 +469,12 @@
        largest => table(1)
        ...
      big => largest ()         ! BIG points at TABLE's largest
+
+   Under /OPTIMIZE a store through a pointer is taken to change only
+   what a pointer may point at: a TARGET (or what shares its storage
+   by EQUIVALENCE), memory ALLOCATE made, or anything in COMMON, of a
+   type the pointer's may meet.  Every other variable may stay in a
+   register across it; that is what TARGET is for.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

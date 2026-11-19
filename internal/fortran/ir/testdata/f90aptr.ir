@@ -40,7 +40,7 @@ B1:
   assign R+24 = P+24
   assign R+28 = P+28
   ; line 15
-  assign $D1+4 = addr(@(add.L(P+16, mul.L(9, P+20))))
+  assign $D1+4 = addr(@(add.L(P+16, mul.L(9, P+20))){=>INTEGER})
   assign $D1+20 = mul.L(P+20, -1)
   assign $D1+24 = 1
   assign $D1+28 = 9
@@ -54,7 +54,7 @@ B1:
   assign P+24 = $D1+24
   assign P+28 = $D1+28
   ; line 16
-  assign @(add.L(P+16, mul.L(2, P+20))) = @(add.L(add.L(Q+16, Q+20), mul.L(2, Q+24)))
+  assign @(add.L(P+16, mul.L(2, P+20))){=>INTEGER} = @(add.L(add.L(Q+16, Q+20), mul.L(2, Q+24))){=>INTEGER}
   ; line 17
   assign R+4 = 0
   ; line 18
@@ -71,7 +71,7 @@ B2:
   assign $I1 = 1
   jump B3
 B3:  ; array (line 18), dimension 1's body
-  assign $W1-4[$I1] = @(add.L(P+16, mul.L(add.L($I1, $T1), P+20)))
+  assign $W1-4[$I1] = @(add.L(P+16, mul.L(add.L($I1, $T1), P+20))){=>INTEGER}
   assign $I1 = add.L($I1, 1)
   assign $C1 = sub.L($C1, 1)
   branch gt.L($C1, 0) B3 B4
@@ -125,7 +125,7 @@ B5:
   assign $I1 = 1
   branch le.L($C1, 0) B7 B6
 B6:  ; array (line 25), dimension 1's body
-  assign @(add.L(W+16, mul.L(add.L($I1, $T1), W+20))) = 0.0
+  assign @(add.L(W+16, mul.L(add.L($I1, $T1), W+20))){=>REAL} = 0.0
   assign $I1 = add.L($I1, 1)
   assign $C1 = sub.L($C1, 1)
   branch gt.L($C1, 0) B6 B7

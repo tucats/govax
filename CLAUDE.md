@@ -1304,8 +1304,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `=> F(X)`, EXPLICITPOINTER; a scalar's address in R0, a CHARACTER one's
   descriptor in R0 and R1, an array one's descriptor through the hidden argument,
   cleared at entry, `clearPointerResult`; the caller's reference a pointer of the
-  statement's, `ir`'s `pointerValue`; `testdata/fortran90/ptrres.f90`); subtask 7,
-  the optimizer's aliasing rules, is next.
+  statement's, `ir`'s `pointerValue`; `testdata/fortran90/ptrres.f90`); subtask 7
+  (2026-11-19) the optimizer's aliasing rules (`sema/pointerclass.go`'s
+  `PointersMayMeet`, type classes; each place reached through a pointer marked
+  `ir.Mem.Pointee`, a located cell's `Cell.Pointee`; `opt/places.go`'s
+  `PointerRegion`, conflicting only with a pointer place of a class that may meet,
+  a place overlapping such a TARGET, `Place.Targets` from `findTargets`, COMMON but
+  a module's block, and the unknown; `opt`'s `pointers_test.go`;
+  `testdata/fortran90/ptralias.f90`, `ptrequiv.f90`); subtask 8, programs end to
+  end, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -1141,16 +1141,11 @@ func checkLoop(t *testing.T, g *Graph, l *Loop) {
 	}
 }
 
-// pointerRoutines are the golden programs of Phase 107's pointers, whose places
-// through a pointer are UnknownRegion until subtask 7's PointerRegion: their
-// unknown places are counted apart from the rest's.
-var pointerRoutines = map[string]bool{"F90PTR": true, "F90APTR": true, "F90PALLOC": true, "F90PCOMP": true, "F90PCARR": true, "F90PDUM": true, "F90PDUM.INNER": true, "SP": true, "CP": true, "AP": true, "USER": true}
-
 // TestStorageOnCorpus checks what must hold of every place in every routine: every
 // argument passed by reference is one a call may change or read-only, every region
 // is one lowering is known to make, and an unknown place is rare enough to log.
 func TestStorageOnCorpus(t *testing.T) {
-	places, unknown, taken, throughPointers := 0, 0, 0, 0
+	places, unknown, taken, pointers := 0, 0, 0, 0
 
 	for _, r := range corpus(t) {
 		s := NewStorage(r)
@@ -1163,12 +1158,11 @@ func TestStorageOnCorpus(t *testing.T) {
 				for _, p := range list {
 					places++
 
-					switch {
-					case p.Region != UnknownRegion:
-					case pointerRoutines[r.Name]:
-						throughPointers++
-					default:
+					switch p.Region {
+					case UnknownRegion:
 						unknown++
+					case PointerRegion:
+						pointers++
 					}
 
 					if p.Hi < p.Lo {
@@ -1206,7 +1200,7 @@ func TestStorageOnCorpus(t *testing.T) {
 		}
 	}
 
-	t.Logf("%d places, %d unknown, %d in the pointer programs, %d ranges taken", places, unknown, throughPointers, taken)
+	t.Logf("%d places, %d unknown, %d through pointers, %d ranges taken", places, unknown, pointers, taken)
 
 	if unknown*1000 > places {
 		t.Errorf("%d of %d places unknown", unknown, places)

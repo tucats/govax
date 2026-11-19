@@ -26,7 +26,7 @@ B3:
   ; line 17
   assign H = addr(R)
   ; line 18
-  assign @(@(@(H)+4)+4) = @N
+  assign @(@(@(H)+4{=>TYPE(NODE)})+4{=>TYPE(NODE)}){=>TYPE(NODE)} = @N
   ; line 19
   assign R+4 = RA-12[mul.L(@N, 4)]
   ; line 20
@@ -43,7 +43,7 @@ B4:
   jump B5
 B5:
   ; line 23
-  call FTN$ALLOC_SCALAR(ref @(H)+4, val 6, val 16)
+  call FTN$ALLOC_SCALAR(ref @(H)+4{=>TYPE(NODE)}, val 6, val 16)
   ; line 24
   assign $T3 = 3
   assign $T3+4 = H
@@ -51,6 +51,6 @@ B5:
   assign $T3+12 = addr(S)
   move R(16) = $T3(16)
   ; line 25
-  call FTN$DEALLOC_SCALAR(ref @(H)+4, val 2, val 16)
+  call FTN$DEALLOC_SCALAR(ref @(H)+4{=>TYPE(NODE)}, val 2, val 16)
   ; line 26
   return

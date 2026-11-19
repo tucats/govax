@@ -484,7 +484,7 @@ func (a *allocator) findBases() {
 				kind: baseCandidate, t: ir.Long, loop: l,
 				source: &ir.Addr{Mem: base},
 				holds:  "part of the address of " + placeName(base),
-				points: &ir.Mem{Cell: base.Cell, Param: base.Param, Ptr: base.Ptr, T: base.T},
+				points: &ir.Mem{Cell: base.Cell, Param: base.Param, Ptr: base.Ptr, T: base.T, Pointee: base.Pointee},
 				gain:   -loopWeight(l.Depth - 1),
 				place: func(cell *ir.Cell, m *ir.Mem) *ir.Mem {
 					rest := sameBase(m, base, index)
@@ -492,7 +492,7 @@ func (a *allocator) findBases() {
 						return nil
 					}
 
-					return &ir.Mem{Ptr: &ir.Load{Mem: &ir.Mem{Cell: cell, T: ir.Long}}, Index: rest, T: m.T}
+					return &ir.Mem{Ptr: &ir.Load{Mem: &ir.Mem{Cell: cell, T: ir.Long}}, Index: rest, T: m.T, Pointee: m.Pointee}
 				},
 			}
 			found[key] = c

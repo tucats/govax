@@ -1,0 +1,15 @@
+target          14           5
+component          63          31
+two pointers          18          80
+common          33          40
+module          28          50
+host          84          60
+dummy          14           8
+allocated          14          90
+section          60          70
+section           3
+substring XY abXYef
+kept         302         201
+untouched          12           3          15          60          65
+other type         240          52
+  $STATUS == "%X00000001"

@@ -17,7 +17,7 @@ B1:
   ; line 18
   assign @(arg IP) = addr(N)
   ; line 19
-  assign @(@(arg IP)) = add.L(@(@(arg IP)), 1)
+  assign @(@(arg IP)){=>INTEGER} = add.L(@(@(arg IP)){=>INTEGER}, 1)
   ; line 20
   assign @(arg AP)+4 = addr(V+4)
   assign @(arg AP)+20 = 8
@@ -26,7 +26,7 @@ B1:
   assign @(arg AP)+16 = sub.L(@(arg AP)+4, 8)
   assign @(arg AP)+12 = 20
   ; line 21
-  assign @(add.L(@(arg AP)+16, mul.L(2, @(arg AP)+20))) = @(add.L(@(arg AP)+16, @(arg AP)+20))
+  assign @(add.L(@(arg AP)+16, mul.L(2, @(arg AP)+20))){=>REAL} = @(add.L(@(arg AP)+16, @(arg AP)+20)){=>REAL}
   ; line 22
   assign @(arg CP)+4 = addr(S)
   ; line 23
