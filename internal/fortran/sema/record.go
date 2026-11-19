@@ -590,8 +590,9 @@ func (a *analyzer) aggregateValue(e ast.Expr, arrays bool) Expr {
 }
 
 // checkRecordItems checks an I/O list's records (section 2.2.5.2): only an
-// unformatted statement may hold one, and only as long as a descriptor can
-// describe it.
+// unformatted statement may hold a STRUCTURE's record, and a whole array of
+// records only as long as a descriptor can describe its elements. An object
+// of a derived type may be in any statement's list (derivedio.go).
 func (a *analyzer) checkRecordItems(io *IO, items []*Item) {
 	for _, it := range items {
 		if it.Loop != nil {
@@ -603,13 +604,25 @@ func (a *analyzer) checkRecordItems(io *IO, items []*Item) {
 		switch t := it.Value.Type(); {
 		case t.Kind != Record:
 
+		case io.Form != UnformattedForm && t.Struct != nil && t.Struct.Derived:
+			// Its ultimate components, an item each (derivedio.go).
+
 		case io.Form != UnformattedForm:
 			a.report("AGGREGATEIO", it.Value.Position(), aggregateName(it.Value))
 
-		case t.Size > maxItemBytes:
+		case t.Size > maxItemBytes && isArrayRef(it.Value):
+			// A whole array's descriptor gives its elements' length in a
+			// word; a scalar's bytes go as an array of bytes (ir's item).
 			a.report("RECORDIOSIZE", it.Value.Position(), aggregateName(it.Value), t.Size, maxItemBytes)
 		}
 	}
+}
+
+// isArrayRef reports whether e is a whole array.
+func isArrayRef(e Expr) bool {
+	_, ok := e.(*ArrayRef)
+
+	return ok
 }
 
 // form is the structure's form as a dummy argument's must match an actual

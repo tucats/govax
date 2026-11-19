@@ -71,6 +71,11 @@ type Namelist struct {
 	Items []*Symbol
 	Refs  []Expr
 	Pos   diag.Position
+
+	// Entities are the block's entities, in order: a variable's or array's
+	// one, or an object of a derived type's header and components'
+	// (derivedio.go).
+	Entities []NamelistEntity
 }
 
 // IO is an I/O statement: READ, WRITE, PRINT, TYPE, ACCEPT, ENCODE, or
@@ -285,6 +290,12 @@ func (a *analyzer) checkNamelists() {
 				a.report("ALLOCATTR", n.Pos, s.Name, "be in a NAMELIST group")
 			case s.AutomaticObject:
 				a.autoAttr(s, n.Pos, s.Name, "be in a NAMELIST group")
+			case s.Struct != nil && s.Struct.Derived && s.Class == Array:
+				a.notImplForm(n.Pos, "an array of a derived type in a NAMELIST group")
+			case s.Struct != nil && s.Struct.Derived && s.Class == Variable:
+				v := &Var{exprBase{T: s.Type, Pos: n.Pos}, s}
+				n.Refs = append(n.Refs, v)
+				a.namelistObject(n, s.Name, v, n.Pos)
 			case s.Struct != nil:
 				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
 			case s.External || (s.Class != Variable && s.Class != Array):
@@ -292,9 +303,13 @@ func (a *analyzer) checkNamelists() {
 			case s.Type == complex32:
 				a.notImplForm(n.Pos, complex32IO)
 			case s.Class == Array:
-				n.Refs = append(n.Refs, &ArrayRef{exprBase{T: s.Type, Pos: n.Pos}, s})
+				r := &ArrayRef{exprBase{T: s.Type, Pos: n.Pos}, s}
+				n.Refs = append(n.Refs, r)
+				n.Entities = append(n.Entities, NamelistEntity{Name: s.Name, Ref: r})
 			default:
-				n.Refs = append(n.Refs, &Var{exprBase{T: s.Type, Pos: n.Pos}, s})
+				v := &Var{exprBase{T: s.Type, Pos: n.Pos}, s}
+				n.Refs = append(n.Refs, v)
+				n.Entities = append(n.Entities, NamelistEntity{Name: s.Name, Ref: v})
 			}
 		}
 	}

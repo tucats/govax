@@ -18,7 +18,7 @@ import (
 // lowering's own, a loop's index or a value computed once before the loops,
 // which lowering gives a place.
 func NewSymbol(name string, t Type) *Symbol {
-	return &Symbol{Name: name, Class: Variable, Type: t, Offset: -1}
+	return &Symbol{Name: name, Class: Variable, Type: t, Offset: -1, Struct: t.Struct}
 }
 
 // NewVar is a reference to the scalar variable s.

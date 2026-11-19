@@ -349,3 +349,63 @@ func TestComponentArgumentCode(t *testing.T) {
 		t.Logf("the MACRO file:\n%s", text)
 	}
 }
+
+// TestDerivedIOCode checks what derived types in I/O compile to
+// (docs/planning/PHASE-105 - Fortran 90 derived types.md, subtask 7): a NAMELIST
+// object's header descriptor, class Z with its count of entities in its length,
+// in read-only data and in a recursive unit's block in the frame; and an
+// unformatted item longer than a word's length described as an array of bytes.
+func TestDerivedIOCode(t *testing.T) {
+	lines := []string{
+		"program p",
+		"  type point",
+		"    real :: x, y",
+		"  end type point",
+		"  type big",
+		"    real :: v(20000)",
+		"  end type big",
+		"  type(point) :: a",
+		"  type(big) :: b",
+		"  namelist /g/ a",
+		"  write (*, g)",
+		"  write (1) b",
+		"  call r",
+		"contains",
+		"  recursive subroutine r",
+		"    type(point) :: c",
+		"    namelist /h/ c",
+		"    write (*, h)",
+		"  end subroutine r",
+		"end program",
+	}
+
+	opts := noF90Options("A")
+	opts.F90 = true
+	r := fortran.Compile(opts, fortran.File{Spec: "A.F90", Name: "A", Free: true, Lines: lines})
+
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+
+	for _, want := range []string{
+		// The header: A's two components follow.
+		".WORD\t2\t\t\t; length\n\t.BYTE\tDSC$K_DTYPE_Z,DSC$K_CLASS_Z\n\t.LONG\t0\t\t\t; a NAMELIST object's header",
+		"; A%X",
+		"; A%Y",
+		// B's 80,000 bytes: one dimension of bytes.
+		".BYTE\tDSC$K_DTYPE_BU,DSC$K_CLASS_A\n\t.ADDRESS P.B\n",
+		".LONG\t80000\t\t\t; the array's size in bytes",
+		// C's group in the frame: three entities, the header's descriptor's address stored.
+		"MOVL\t#3,",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in the MACRO file", want)
+		}
+	}
+
+	if t.Failed() {
+		t.Log(text)
+	}
+}

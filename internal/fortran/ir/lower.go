@@ -31,6 +31,10 @@ func Lower(p *sema.Program) []*Routine {
 // a terminator and starts a new block. So lowering a FORTRAN statement is
 // mostly "emit some statements into cur, perhaps end it and start another".
 type lowerer struct {
+	// byComponents is set while a formatted statement's items are lowered:
+	// an object of a derived type is then its components (objectItems).
+	byComponents bool
+
 	unit *sema.Unit
 	r    *Routine
 

@@ -96,7 +96,10 @@ func (l *lowerer) io(s *sema.IO) {
 	}
 
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
+
+	l.byComponents = s.Form != sema.UnformattedForm
 	l.ioItems(s.Items)
+	l.byComponents = false
 
 	l.ioFinish(&Call{origin: l.origin(), Routine: ftnIOEnd}, c, s.Err, s.End, s.IOStat, backs)
 }
@@ -341,6 +344,12 @@ func (l *lowerer) ioItems(items []*sema.Item) {
 // subscripts are computed when the item is reached, so READ *, N, A(1:N) uses
 // the N just read.
 func (l *lowerer) ioItem(v sema.Expr) {
+	if l.byComponents && v.Type().Kind == sema.Record {
+		l.objectItems(v)
+
+		return
+	}
+
 	call := func(e sema.Expr) {
 		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: l.item(e)}}})
 	}
@@ -367,6 +376,39 @@ func (l *lowerer) ioItem(v sema.Expr) {
 		l.fillItems(v.Items, call)
 	default:
 		l.eachElement(v, call)
+	}
+}
+
+// objectItems lowers a formatted statement's item of a derived type (sema's
+// derivedio.go): an item for each of its ultimate components in turn, or for
+// an array of a type, each element's in array element order. An object that
+// isn't a place, a function's value or MERGE's, is put in one first, a symbol of
+// lowering's own bound to it while its components are lowered.
+func (l *lowerer) objectItems(v sema.Expr) {
+	v = sema.Shaped(v)
+
+	if len(v.Shape()) > 0 {
+		if c, ok := v.(*sema.Constructor); ok {
+			l.fillItems(c.Items, l.objectItems)
+		} else {
+			l.eachElement(v, l.objectItems)
+		}
+
+		return
+	}
+
+	parts, ok := sema.Components(v)
+	if !ok {
+		sym := sema.NewSymbol("$V", v.Type())
+		l.bound[sym] = l.mem(v)
+
+		defer delete(l.bound, sym)
+
+		parts, _ = sema.Components(sema.NewVar(sym, v.Position()))
+	}
+
+	for _, p := range parts {
+		l.ioItem(p)
 	}
 }
 
@@ -408,8 +450,8 @@ func (l *lowerer) namelist(n *sema.Namelist) *Mem {
 	d := l.datum("namelist "+n.Name, func() *Datum {
 		b := &NamelistBlock{Group: n.Name, Name: l.counted(n.Name)}
 
-		for i, s := range n.Items {
-			b.Entities = append(b.Entities, NamelistEntity{Name: l.counted(s.Name), Desc: l.item(n.Refs[i]).Datum})
+		for _, e := range n.Entities {
+			b.Entities = append(b.Entities, NamelistEntity{Name: l.counted(e.Name), Desc: l.namelistDescriptor(e).Datum})
 		}
 
 		return &Datum{Name: "$N" + n.Name, Kind: NamelistDatum, Namelist: b}
@@ -433,7 +475,7 @@ func (l *lowerer) namelistCell(n *sema.Namelist) *Mem {
 
 	c := l.namelists[n]
 	if c == nil {
-		c = l.newCell("$NL"+n.Name, NamelistCell, Long, header+perEntity*len(n.Items))
+		c = l.newCell("$NL"+n.Name, NamelistCell, Long, header+perEntity*len(n.Entities))
 		c.Loop = n.Name
 
 		if l.namelists == nil {
@@ -448,15 +490,26 @@ func (l *lowerer) namelistCell(n *sema.Namelist) *Mem {
 	}
 
 	store(0, &Addr{&Mem{Datum: l.counted(n.Name), T: Byte}})
-	store(4, LongConst(int32(len(n.Items))))
+	store(4, LongConst(int32(len(n.Entities))))
 
-	for i, s := range n.Items {
+	for i, e := range n.Entities {
 		base := header + perEntity*i
-		store(base, &Addr{&Mem{Datum: l.counted(s.Name), T: Byte}})
-		store(base+4, &Addr{l.item(n.Refs[i])})
+		store(base, &Addr{&Mem{Datum: l.counted(e.Name), T: Byte}})
+		store(base+4, &Addr{l.namelistDescriptor(e)})
 	}
 
 	return &Mem{Cell: c, T: Long}
+}
+
+// namelistDescriptor is a group entity's descriptor: an item's, or for an
+// object of a derived type's header, a class Z descriptor whose length is how
+// many entities after it are the object's (sema's derivedio.go).
+func (l *lowerer) namelistDescriptor(e sema.NamelistEntity) *Mem {
+	if e.Ref == nil {
+		return l.descriptor(&Descriptor{DType: DTypeZ, Class: ClassZ, Length: e.Parts})
+	}
+
+	return l.item(e.Ref)
 }
 
 // counted is the datum holding name as a counted string (.ASCIC): a byte

@@ -452,7 +452,8 @@ all three.
 6. **COMMON, EQUIVALENCE, DATA** with SEQUENCE types (finding 12) (done
    2026-11-18).
 7. **I/O and NAMELIST:** the compiler's expansion, unformatted bytes and their
-   pieces (finding 13); NAMELIST's entities and FTNRTL's names (finding 14).
+   pieces (finding 13); NAMELIST's entities and FTNRTL's names (finding 14)
+   (done 2026-11-18).
 8. **Programs end to end** (a geometry program with constructors and defined
    operators, a parts inventory of an array of a type read and written formatted
    and unformatted, a SEQUENCE type shared through COMMON and an interface body),
@@ -866,3 +867,59 @@ object are never the same type, with a message naming both.
     variable sharing storage, VAX's extension, not gfortran's), in every mode and
     with paging on. MANUAL.md's 14.13 has "Derived types in COMMON, EQUIVALENCE, and
     DATA". Subtask 7, I/O and NAMELIST, is next.
+- **2026-11-18, subtask 7 (done):** I/O and NAMELIST (findings 13 and 14;
+  `sema/derivedio.go`, `ir/lowerio.go`'s `objectItems`, FTNRTL's
+  `ftn_namelist.mar`).
+  - *Formatted, list-directed, and internal file statements.* An item of a derived
+    type is no longer AGGREGATEIO: lowering takes it apart (`objectItems`, while
+    `lowerer.byComponents` says the statement is formatted). `sema.Components` is
+    an object's ultimate components in order, each a `FieldRef` built on the object
+    (`fieldOf`: on a Var, an Elem, or a scalar FieldRef), a component of a derived
+    type taken apart in turn, an array component a whole array field (one class A
+    descriptor, as an array field in a list always was), an array component of a
+    derived type every element of it (`wholeRanked`); a constructor's values and a
+    constant's `Parts` are its components as they are. An object that is none of
+    these (a function's value, MERGE's) is put in its place by `mem` and a symbol of
+    lowering's own bound to it (`sema.NewSymbol` now gives such a symbol its type's
+    `Struct`, which `fieldMem` reads). An array of a type, or a whole array in a
+    list, which a list holds without its shape (`sema.Shaped` gives it one), goes
+    element by element through `eachElement`, each element's components together:
+    the standard's order (9.4.2). FTNRTL is unchanged for these. A STRUCTURE's
+    record stays AGGREGATEIO, as the HP manual says.
+  - *Unformatted.* An object is its bytes, as a record always was. Past 65,535
+    bytes, where a class S descriptor's word can't say its length, the item is a
+    class A descriptor of that many bytes (BU elements), which FTNRTL's
+    `FTN$$UNF_ITEM` takes by its longword ARSIZE: one item, not the pieces finding
+    13 planned, and no FTNRTL change. RECORDIOSIZE is left only for a whole array
+    whose elements are that long (its descriptor's element length is a word).
+  - *NAMELIST* (the author's answer 4). A scalar object of a derived type in a group
+    is entities (`Namelist.Entities`, `namelistObject`): a header named for the
+    object, then for each component an entity named `P%X`, a component of a derived
+    type its own header and entities (`T%AT`, `T%AT%X`, `T%AT%Y`), an array
+    component an array entity. A header's descriptor is class Z (new, `ir.ClassZ`,
+    DSC$K_CLASS_Z = 0, which no real descriptor uses), its length the number of
+    entities after it that are the object's, nested headers among them, its POINTER
+    0. FTNRTL: output passes over headers, so `P%X     =   1.500000    ,` is written
+    as any entity is (the names padded to 8, as FORRTL pads any name); a name may
+    hold `%` (`IS_NAME_CHAR`), so `P%X = 9.0` and `T%MARKS(2) = 7` find their
+    entities; and a header named, `P = 1.25, 2.5`, makes its first entity current
+    with the rest of the object's still to come (`PARTS`, `PARTP` in the frame),
+    which `PUT_VALUE` and `NULLS` go on to when an entity's elements run out
+    (`NEXT_PART`) before they report TOOMANVAL, whose message names the last
+    entity. The block keeps VMS's layout; a program compiled before still works.
+    No new entry, so the GSMATCH stays 1,24. An array of a derived type, or an array
+    component of one, in a group is NOTIMPL (ours): its entities would need an
+    element's subscripts inside a name (`PTS(2)%X`), FTNRTL's name reader then
+    reading through parentheses, which waits for Phase 109's Fortran 90 NAMELIST
+    form. A STRUCTURE's record stays NMLITEM.
+  - *Unconfirmed* (no VMS has a Fortran 90 run-time library to ask): a header
+    named with subscripts (`P(1) = ...`) applies them to its first component; and
+    the `?` listing at a terminal names the components, not the objects.
+  - *Tests:* `sema`'s `TestDerivedIO` and `TestNamelistEntities`, and `TestErrors`'
+    RECORDIOSIZE case changed to a whole array; `fortran`'s `TestDerivedIOCode` (a
+    header's descriptor, a recursive unit's block in its frame, an 80,000-byte
+    item); `testdata/fortran90`'s `typeio.f90` (in `compare.py`, gfortran printing
+    the same lines) and `typenml.f90` (FTNRTL's `$GRP` form, worked by FTNRTL's and
+    FORRTL's rules), in every mode and with paging on. MANUAL.md's 14.13 has
+    "Derived types in I/O lists and NAMELIST groups". Subtask 8, programs end to
+    end, is next.

@@ -453,6 +453,11 @@ const (
 	// an element is at A0 + S1*s1 + ... + Sn*sn. An allocatable array is one
 	// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, findings 1 and 2).
 	ClassNCA Class = 10
+
+	// ClassZ is no class: in a NAMELIST group's block, the descriptor of an
+	// object of a derived type, which holds only how many entities after it
+	// make up the object, in its length (FTNRTL's mar/ftn_namelist.mar).
+	ClassZ Class = 0
 )
 
 // String is the class's name after DSC$K_CLASS_: S, D, A, NCA.
@@ -466,6 +471,8 @@ func (c Class) String() string {
 		return "A"
 	case ClassNCA:
 		return "NCA"
+	case ClassZ:
+		return "Z"
 	}
 
 	return "?"

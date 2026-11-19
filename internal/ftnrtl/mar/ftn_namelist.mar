@@ -24,7 +24,8 @@
 ;
 ; repeated until a $ or an &, whatever follows it, ends the statement and the
 ; rest of its record is lost. Commas and blanks may separate assignments. A
-; name is letters, digits, _, and $, the first a letter, in either case; a
+; name is letters, digits, _, $, and %, the first a letter, in either case (a
+; Fortran 90 object's component is P%X, an entity of its own); a
 ; name's subscripts must follow it directly, but blanks may stand anywhere else
 ; but in a number. Subscripts and substring bounds are integer constants. What
 ; can be wrong with one (out of bounds, too few, a substring of an INTEGER) is
@@ -38,7 +39,9 @@
 ; a comma right after a value belongs to it, and any other comma is a null,
 ; which leaves its element as it was: "A=5,,7" sets A(1) and A(3). r*c is r of a
 ; value, and r*, or r* before a separator, r nulls. A substring of an array
-; element applies to each element after it too.
+; element applies to each element after it too. A Fortran 90 object of a
+; derived type named whole, P = 1.0, 2.0, takes values for its components in
+; order, each component's elements before the next component's (FIND_ENTITY).
 ;
 ; A value is a number, a logical word, a character constant, or a complex
 ; constant. Each is converted to the element's type afresh:
@@ -145,7 +148,9 @@ SUBS		= -104			; 8 longwords: the subscripts read
 MISSING		= -108			; long: a bit for each that wasn't given
 ITEMS		= -112			; long: how many there were
 COLON		= -116			; long: 1 if a colon separated them
-FRAME_SIZE	= 116
+PARTS		= -120			; long: the object's entities still to come
+PARTP		= -124			; long: the next one's place in the block
+FRAME_SIZE	= 124
 
 ;
 ; FTN$$NML_READ(context, block)
@@ -282,8 +287,9 @@ QUESTION:
 
 ;
 ; UPPER: the byte in R1, a capital if it was a small letter. IS_LETTER: R0's
-; low bit is set if the byte in R1 is a letter. IS_NAME_CHAR: or a digit, _, or $.
-; IS_DIGIT: or a digit alone. None changes R1 but UPPER.
+; low bit is set if the byte in R1 is a letter. IS_NAME_CHAR: or a digit, _, $,
+; or % (a component's name after its object's, P%X). IS_DIGIT: or a digit
+; alone. None changes R1 but UPPER.
 ;
 UPPER:	CMPB	R1,#^A/a/
 	BLSSU	10$
@@ -322,6 +328,8 @@ IS_NAME_CHAR:
 	CMPB	R1,#^A/_/
 	BEQL	90$
 	CMPB	R1,#^A/$/
+	BEQL	90$
+	CMPB	R1,#^A/%/
 	BEQL	90$
 	CLRL	R0
 90$:	RSB
@@ -366,6 +374,13 @@ EQUALS_NEXT:
 ; R8 its descriptor, and R9, R10, and R11 the whole of it. A name not in the
 ; group is FOR$_INVREFVAR, as it was typed.
 ;
+; An object of a derived type (Fortran 90) is a header entity, whose
+; descriptor's class is 0 and whose length is how many entities after it are
+; the object's, then those entities: P%X, P%Y, or for a component of a derived
+; type its own header and entities. Naming the object makes its first entity
+; that isn't a header the current one, and its values go on to the next when
+; that one is full (NEXT_PART), as an array's go on to its next element.
+;
 FIND_ENTITY:
 	MOVL	CTX_POS(R6),R2
 	MOVL	R2,R3			; its start
@@ -397,6 +412,13 @@ FIND_ENTITY:
 40$:	ADDL2	#8,R2
 	BRB	30$
 45$:	MOVQ	(SP)+,R2
+	CLRL	PARTS(FP)
+	MOVL	4(R2),R8
+	TSTB	DSC$B_CLASS(R8)
+	BNEQ	50$
+	MOVZWL	DSC$W_LENGTH(R8),PARTS(FP) ; an object's header
+	ADDL3	#8,R2,PARTP(FP)
+	BRW	NEXT_PART
 50$:	MOVL	(R2),NAME(FP)
 	MOVL	4(R2),R8
 	MOVL	DSC$A_POINTER(R8),R9
@@ -411,6 +433,33 @@ NOT_IN_GROUP:
 	MOVW	#^X010E,CTX_NM_DESC+2(R6) ; type T (14), class S (1), one word
 	ADDL3	CTX_RECP(R6),R3,CTX_NM_DESC+4(R6)
 	BRW	INVALID_TEXT
+
+;
+; NEXT_PART: if an object's entities are left, makes the next that isn't a
+; header the current entity, as FIND_ENTITY does, and sets R0's low bit; else
+; clears it. Changes R0 and R1.
+;
+NEXT_PART:
+10$:	TSTL	PARTS(FP)
+	BEQL	80$
+	DECL	PARTS(FP)
+	MOVL	PARTP(FP),R1
+	ADDL2	#8,PARTP(FP)
+	MOVL	4(R1),R0
+	TSTB	DSC$B_CLASS(R0)
+	BEQL	10$			; a component's header: its entities follow
+	MOVL	R0,R8
+	MOVL	(R1),NAME(FP)
+	MOVL	DSC$A_POINTER(R8),R9
+	MOVZWL	DSC$W_LENGTH(R8),R11
+	MOVL	#1,R10
+	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
+	BNEQ	70$
+	DIVL3	R11,DSC$L_ARSIZE(R8),R10
+70$:	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
 
 ;
 ; REFERENCE: the subscripts and substring after the current entity's name, the
@@ -861,7 +910,10 @@ PUT_VALUE:
 	MOVB	#V_WORD,CTX_LI_KIND(R6)
 10$:	TSTL	R10
 	BNEQ	20$
-	BRW	TOO_MANY
+	BSBW	NEXT_PART		; an object's next entity
+	BLBC	R0,15$
+	BRW	PUT_VALUE
+15$:	BRW	TOO_MANY
 20$:	PUSHL	R11			; the length,
 	PUSHL	R9			;  the address,
 	MOVZBL	DSC$B_DTYPE(R8),-(SP)	;  the type,
@@ -882,6 +934,8 @@ PUT_VALUE:
 ;
 NULLS:	TSTL	R10
 	BNEQ	10$
+	BSBW	NEXT_PART		; an object's next entity
+	BLBS	R0,NULLS
 	BRW	TOO_MANY
 10$:	MOVZWL	DSC$W_LENGTH(R8),R0
 	ADDL2	R0,R9
@@ -1081,7 +1135,10 @@ FRAME2_SIZE	= 112
 	MOVAB	NB_ENTITIES(R7),R8
 	MOVL	NB_COUNT(R7),R9
 	BEQL	80$
-10$:	BSBW	ENTITY_NAME
+10$:	MOVL	4(R8),R0
+	TSTB	DSC$B_CLASS(R0)
+	BEQL	30$			; an object's header: its entities follow
+	BSBW	ENTITY_NAME
 	TSTL	12(AP)
 	BEQL	20$
 	BSBW	ENTITY_VALUES
@@ -1089,7 +1146,7 @@ FRAME2_SIZE	= 112
 	BLEQ	20$
 	BSBW	COMMA
 20$:	BSBW	FLUSH
-	ADDL2	#8,R8
+30$:	ADDL2	#8,R8
 	SOBGTR	R9,10$
 80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END": 4 characters in a longword,
 	MOVB	#^A/D/,FIELD+4(FP)	;  and the fifth

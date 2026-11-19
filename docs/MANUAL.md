@@ -8900,6 +8900,36 @@ data edge%first, edge%second / 4, 5 /
 
 A STRUCTURE's record stays out of DATA and EQUIVALENCE, as before.
 
+**Derived types in I/O lists and NAMELIST groups** (9.4.2, 9.8). In a formatted,
+list-directed, or internal file statement an object of a derived type is its components in
+order, each an item of its own: a component of a derived type is taken apart in turn, an array
+component is every element of it, and an array of a type is each element's components, element
+by element. So with `T` a TAG of a CHARACTER\*4 NAME, a POINT AT, and INTEGER MARKS(3),
+`WRITE (*, '(1X, A, 2F5.1, 3I3)') T` prints ` ABCD  3.0  4.0  1  2  3`, and a READ fills the
+components the same way. A constructor or a function's value may be an output item. In an
+unformatted statement an object is its bytes, padding included, however long. A STRUCTURE's
+record stays out of formatted lists (`AGGREGATEIO`), as before.
+
+A NAMELIST group may hold a scalar object of a derived type. Output writes each component on a
+line of its own, named by its designator:
+
+```text
+ $GRP
+ P%X     =   1.500000    ,
+ P%Y     =  -2.000000    ,
+ T%NAME  = 'ABCD',
+ T%AT%X  =   3.000000    ,
+ T%AT%Y  =   4.000000    ,
+ T%MARKS =           1,           2,           3
+ $END
+```
+
+Input names a component (`P%X = 9.0`, `T%AT%Y = 5.5`, `T%MARKS(2) = 7`) or a whole object or
+component of a derived type, whose values go to its components in order (`P = 1.25, 2.5`,
+`T%AT = , 9.0`), nulls leaving a component as it was; a value past the last component is
+`FOR-F-TOOMANVAL`. An array of a derived type, or an array component of one, isn't there yet in
+a NAMELIST group (it is in I/O lists).
+
 All of it together:
 
 ```fortran

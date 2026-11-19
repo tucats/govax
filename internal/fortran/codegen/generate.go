@@ -1083,6 +1083,12 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 			return
 		}
 
+		if d.Desc.Class == ir.ClassZ {
+			writeDescriptor(w, d.Desc, "0", "", "a NAMELIST object's header: its entities follow")
+
+			return
+		}
+
 		pointer := g.target(d.Desc.Target, 0)
 		a0 := ""
 

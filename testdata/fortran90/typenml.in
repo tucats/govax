@@ -1,0 +1,4 @@
+ $GRP P%X = 9.0, T%AT%Y = 5.5, T%MARKS(2) = 7, t%name = 'wxyz' $END
+ $GRP P = 1.25, 2.5  T = 'QRST', 6.0, 7.0, 4, 5, 6 $END
+ $GRP T%AT = , 9.0  T%MARKS = 2*8 N = 2 $END
+ $GRP P = 1.0, 2.0, 3.0 $END

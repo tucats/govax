@@ -112,6 +112,7 @@ PROGRAMS90 = {
     "typeargs": ["typeargs.f90"],
     "typedyn": ["typedyn.f90"],
     "seqtypes": ["seqtypes.f90"],
+    "typeio": ["typeio.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

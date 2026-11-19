@@ -684,6 +684,13 @@ func (l *lowerer) item(e sema.Expr) *Mem {
 	t := e.Type()
 	d := &Descriptor{DType: l.dtypeOf(t), Class: ClassS, Length: t.Size}
 
+	if t.Kind == sema.Record && t.Size > maxWordLength {
+		// A descriptor's length is a word: a longer record's bytes are an
+		// array of bytes, which an unformatted statement takes by its size in
+		// bytes, a longword (docs/planning/PHASE-105, finding 13).
+		d = &Descriptor{DType: DTypeBU, Class: ClassA, Length: 1, Dims: []Bound{{Lower: 1, Upper: t.Size}}}
+	}
+
 	if f, ok := e.(*sema.FieldRef); ok && f.WholeArray() {
 		return l.fieldArrayDescriptor(f)
 	}
