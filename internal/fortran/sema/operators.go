@@ -265,11 +265,15 @@ func (a *analyzer) resolveOperator(key string, operands []Arg) *Symbol {
 }
 
 // operandArgs are an operation's operands as a procedure's actual arguments,
-// each passed as itself, as any actual argument is.
+// each passed as itself, as any actual argument is: an array section or array
+// expression marked as argValue marks one (Arg.expression), for the dummy to
+// decide on, as A * (/ 1.0, 2.0 /)'s constant goes to an assumed-shape dummy by
+// a descriptor of its temporary. A whole array is passed as itself.
 func operandArgs(operands []Expr) []Arg {
 	args := make([]Arg, len(operands))
 	for i, x := range operands {
-		args[i] = Arg{Expr: x}
+		_, whole := x.(*ArrayRef)
+		args[i] = Arg{Expr: x, expression: rankOf(x) > 0 && !whole}
 	}
 
 	return args
@@ -277,10 +281,34 @@ func operandArgs(operands []Expr) []Arg {
 
 // operation is the reference to the function s for an operation at pos.
 func (a *analyzer) operation(s *Symbol, args []Arg, pos diag.Position) Expr {
+	args = a.operandsTo(s, args)
+
 	a.note(&s.refs, pos, RefUsed)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: pos})
 
 	return a.funcRef(s, s.Type, args, pos)
+}
+
+// operandsTo are an operation's operands, args, as the actual arguments of the
+// procedure s, each analyzed against its dummy as argsTo analyzes a reference's:
+// an assumed-shape dummy's by shaped, every other's by sequenced.
+func (a *analyzer) operandsTo(s *Symbol, args []Arg) []Arg {
+	target := explicitInterface(s)
+	if target == nil || target.incomplete || s.broken {
+		return args
+	}
+
+	for i, p := range target.Params {
+		switch {
+		case i >= len(args) || p.broken:
+		case p.AssumedShape():
+			args[i] = a.shaped(args[i])
+		default:
+			args[i] = a.sequenced(args[i], p)
+		}
+	}
+
+	return args
 }
 
 // extendedOp is the operation op on operands (analyzed) as an interface block
@@ -348,6 +376,18 @@ func (a *analyzer) definedOp(e *ast.DefinedOp) Expr {
 	return a.operation(s, args, e.Pos)
 }
 
+// definedValue analyzes the value of an assignment to a scalar record when an
+// ASSIGNMENT(=) interface may take it: a record's value as aggregateValue
+// analyzes one, or any other value, an array among them (arrayValue).
+func (a *analyzer) definedValue(e ast.Expr) Expr {
+	switch a.substringForm(e).(type) {
+	case *ast.Name, *ast.Apply, *ast.FieldRef, *ast.ArrayConstructor:
+		return a.aggregateValue(e, true)
+	}
+
+	return a.arrayValue(e)
+}
+
 // definedAssignment is the assignment target = value as an interface block for
 // ASSIGNMENT(=) defines it, CALL S(target, (value)), when Fortran gives it no
 // meaning and a subroutine of the block fits; nil otherwise.
@@ -356,17 +396,26 @@ func (a *analyzer) definedAssignment(s *ast.AssignStmt, target, value Expr) Stmt
 		return nil
 	}
 
+	// The value is (value): an array in parentheses an expression, as
+	// argValue has it, which an assumed-shape dummy takes by a temporary.
 	args := []Arg{{Expr: target}, {Expr: value}}
 
-	switch value.(type) {
-	case *Var, *Elem, *Substring, *FieldRef:
-		args[1].Copy = true
+	switch {
+	case rankOf(value) > 0:
+		args[1].Copy, args[1].expression = true, true
+	default:
+		switch value.(type) {
+		case *Var, *Elem, *Substring, *FieldRef:
+			args[1].Copy = true
+		}
 	}
 
 	sub := a.resolveOperator(assignmentKey, args)
 	if sub == nil {
 		return nil
 	}
+
+	args = a.operandsTo(sub, args)
 
 	a.note(&sub.refs, s.Pos, RefUsed)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: sub, args: args, pos: s.Pos})

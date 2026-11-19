@@ -177,11 +177,19 @@ func (a *analyzer) assignOperands(s *ast.AssignStmt) (Expr, Expr) {
 	target := a.target(s.Target)
 	a.noteAssigned(target)
 
-	// A target with an error says nothing of what its value may be.
+	// A target with an error says nothing of what its value may be. A record's
+	// value may be an array when an ASSIGNMENT(=) interface may take it, as
+	// FILL (M, X(:)) does M = (/ 1.0, 2.0 /); if none does, finishAssign's
+	// shapes refuse it.
 	var value Expr
-	if target == nil || target.Type().Kind == Record {
+
+	switch {
+	case target != nil && target.Type().Kind == Record && rankOf(target) == 0 &&
+		len(a.operatorFor(assignmentKey)) != 0:
+		value = a.definedValue(s.Value)
+	case target == nil || target.Type().Kind == Record:
 		value = a.aggregateValue(s.Value, target != nil && rankOf(target) > 0)
-	} else {
+	default:
 		value = a.assignedExpr(s.Value, target.Type())
 	}
 

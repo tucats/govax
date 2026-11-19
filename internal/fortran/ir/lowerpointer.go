@@ -253,9 +253,12 @@ func (l *lowerer) nullify(s *sema.Nullify) {
 // disassociated). A CHARACTER pointer's length is its declared one, so the
 // addresses decide; a target of no characters, a zero-sized one, is never
 // associated (the author's answer 4), which for a substring whose length is
-// known only when the program runs is a test of it too.
+// known only when the program runs is a test of it too. P may be a pointer
+// function's value, which is the statement's own pointer (targetPointer), as T
+// may be.
 func (l *lowerer) associated(e *sema.Associated) Expr {
-	address := &Load{l.pointerOf(e.Pointer)}
+	pointer := l.targetPointer(e.Pointer)
+	address := &Load{l.pointerOf(pointer)}
 
 	if e.Target == nil {
 		return &Cmp{Op: Ne, X: address, Y: LongConst(0)}
@@ -263,7 +266,7 @@ func (l *lowerer) associated(e *sema.Associated) Expr {
 
 	target := l.targetPointer(e.Target)
 
-	if p := sema.PointerSymbol(e.Pointer); p != nil && p.ArrayPointer() {
+	if p := sema.PointerSymbol(pointer); p != nil && p.ArrayPointer() {
 		return l.arrayAssociated(p, target)
 	}
 
@@ -271,7 +274,7 @@ func (l *lowerer) associated(e *sema.Associated) Expr {
 
 	switch {
 	case sema.IsPointer(target):
-		return arith(And, Long, same, &Cmp{Op: Ne, X: &Load{l.pointerOf(e.Pointer)}, Y: LongConst(0)})
+		return arith(And, Long, same, &Cmp{Op: Ne, X: &Load{l.pointerOf(pointer)}, Y: LongConst(0)})
 
 	case target.Type().Kind == sema.Character && target.Type().Size == 0:
 		length := l.chars(target).Len

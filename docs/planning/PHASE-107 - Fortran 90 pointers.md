@@ -8,7 +8,8 @@ subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
 scalar pointer components and recursive types, done 2026-11-19; subtask 5b,
 array pointer components, done 2026-11-19; subtask 6a, pointer dummies, done
 2026-11-19; subtask 6b, pointer results, done 2026-11-19; subtask 7, the
-optimizer's aliasing rules, done 2026-11-19.
+optimizer's aliasing rules, done 2026-11-19; subtask 8, programs end to end,
+done 2026-11-19.
 
 ## Goal
 
@@ -74,7 +75,7 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
 7. **The optimizer's aliasing rules**, with programs that would break if they
    were wrong, both settings (done 2026-11-19).
 8. **Programs end to end** (a linked list and a binary tree in modules, a sparse
-   matrix), every mode, gfortran's witness.
+   matrix), every mode, gfortran's witness (done 2026-11-19).
 9. **Close-out**: FORTRAN-INTERNALS.md's section 32 (pointers and aliasing),
    MANUAL.md.
 
@@ -442,7 +443,8 @@ The plan's order stands; each subtask's content is now the findings'.
    TARGETs, with programs that would print something else if the rule were wrong
    or too bold, both settings (finding 11) (done 2026-11-19).
 8. **Programs end to end** (a linked list and a binary tree in modules, a sparse
-   matrix, the standard's examples), every mode, gfortran's witness.
+   matrix, the standard's examples), every mode, gfortran's witness (done
+   2026-11-19).
 9. **Close-out:** FORTRAN-INTERNALS.md's section 32 (pointers and aliasing, a
    linked list's code, why TARGET exists), MANUAL.md's 14.13 and FTNRTL table,
    HELP FORTRAN.
@@ -1016,3 +1018,52 @@ The plan's open question 1 is settled by answer 1.
   - *Docs.* MANUAL.md's 14.9 (a pointer pointing only where the standard lets it, among what
     the optimizer takes at its word) and 14.13 ("What TARGET is for"), HELP FORTRAN.
     Subtask 8, programs end to end, is next.
+- **2026-11-19:** Subtask 8, programs end to end, done.
+  - *The programs*, each worked by hand and the same on gfortran (`compare.py`'s
+    `PROGRAMS90`, no known difference), run in every mode and both loaders:
+    `testdata/fortran90/ptrstd.f90`, the standard's examples of pointers made to run
+    (4.4.1's REFERENCE and NODE, 5.1.2.7 and 5.1.2.8, 6.3's ALLOCATE, NULLIFY, and
+    DEALLOCATE, 7.5.2's six pointer assignments, 13.13.13's ASSOCIATED, C.5.2's
+    DYNAM_ITER reading its shape from the terminal and C.5.3's ITER, C.12.8's BEST),
+    each in an internal subroutine named for its section so the names can be the
+    standard's; `sparse.f90`, a sparse matrix whose rows are linked lists in an array
+    pointer component, with set, find (a pointer function), copy, transpose, `+` by
+    merging rows, `*` by a vector and a matrix, a diagonal matrix by a defined
+    assignment, and a count of live entries ending at 0; and
+    `modules/concord`, a concordance over four files: LISTS a queue of line numbers
+    (an opaque type, its pointer components PRIVATE), TREES a binary search tree whose
+    nodes hold one, built, searched, outlined, and pruned by recursive procedures with
+    pointer dummies, compiled in four orders and linked two ways. `ptrstd` passed at
+    once, and `concord` once its own errors were fixed (a PUBLIC type with components
+    of a PRIVATE type, which govax's ACCESSCOMPONENT refused as gfortran did; a
+    component of a function reference, which both refuse); `sparse` found four
+    defects, each fixed here:
+  - *A bound read from a dummy's component*, `REAL :: Y (A % N)` (7.1.6.2: a subobject
+    of a dummy is a specification expression's primary), was BADBOUND, which left the
+    module broken and its type unknown to the program (NOTYPEDEF). `boundOperands`
+    takes a `FieldRef` (`boundComponent`): its base, a name, goes on the array's names
+    marked `adjustableArray.components`, checked by `checkBoundName` as a bound's name
+    is (BOUNDVAR for a local's); subscripts along the way are bound expressions; the
+    component's type is checked once analyzed (`boundValue`, BADBOUND for CHARACTER).
+    A CHARACTER length reads the same way. A component of an array element, `D(1)%N`,
+    is still BADBOUND: nothing has asked for it.
+  - *A defined operation's array operands*, `D * (/ 1.0, 1.0, 1.0 /)`, panicked in
+    lowering: `operandArgs` didn't mark an array section or expression as `argValue`
+    does, and nothing ran the operands through `shaped` or `sequenced` against the
+    procedure's dummies, as `argsTo` does a reference's. `operandArgs` marks them and
+    `operandsTo` analyzes them, for operations and defined assignment alike.
+  - *A defined assignment's array value*, `G = (/ 3.0, 0.0, 1.0 /)` to `DIAGONAL (A,
+    X(:))`, was NOTSCALAR before the interface was asked: a scalar record's value is now
+    analyzed as an array may be when an ASSIGNMENT(=) interface is in scope
+    (`definedValue`), passed as `(value)` is, and an array no interface takes is still
+    NOTSCALAR, from the shapes' check.
+  - *ASSOCIATED of a pointer function's value*, `ASSOCIATED (FIND (A, 4, 1))`, was
+    NOTPOINTER, though 6b took one as the TARGET argument: `associatedRef` reads a
+    function reference through `pointerFunctionValue`, and lowering's `associated`
+    makes it the statement's own pointer (`targetPointer`) as it does a target.
+  - *Tests.* `sema`'s `TestBoundFromComponent`, `TestOperandArrays`, and
+    `TestPointerResults`' ASSOCIATED cases; `internal/fortran/ptrprograms_test.go`
+    (`TestValueFromComponent`, `TestOperandArrays`, `TestAssociatedOfFunction`, each
+    compiled and assembled). Noticed, not changed: NOTRECORD calls a module function
+    whose value's component is referenced, `F(A)%N`, "a procedure with an interface
+    body". Subtask 9, the close-out, is next.

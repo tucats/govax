@@ -1311,8 +1311,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `PointerRegion`, conflicting only with a pointer place of a class that may meet,
   a place overlapping such a TARGET, `Place.Targets` from `findTargets`, COMMON but
   a module's block, and the unknown; `opt`'s `pointers_test.go`;
-  `testdata/fortran90/ptralias.f90`, `ptrequiv.f90`); subtask 8, programs end to
-  end, is next.
+  `testdata/fortran90/ptralias.f90`, `ptrequiv.f90`); subtask 8 (2026-11-19)
+  programs end to end (`testdata/fortran90`'s `ptrstd.f90`, the standard's examples,
+  `sparse.f90`, and `modules/concord`, a list and a tree in modules; fixes: a bound
+  from a dummy's component, `D%N`, `sema`'s `boundComponent`; a defined operation's
+  and assignment's array operands, `operandsTo`, `definedValue`; ASSOCIATED of a
+  pointer function's value, `pointerFunctionValue`); subtask 9, the close-out, is
+  next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

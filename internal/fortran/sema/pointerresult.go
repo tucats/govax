@@ -73,6 +73,29 @@ func (a *analyzer) pointerFunctionTarget(name string, pt Type, rank int, x ast.E
 	return f, true
 }
 
+// pointerFunctionValue analyzes x, a function reference, as ASSOCIATED's first
+// argument: a reference to a function whose value is a pointer, which stands
+// for that pointer (ASSOCIATED (FIND (L, K)) asks whether FIND found anything),
+// or nil after a message: NOTPOINTER for any other function's.
+func (a *analyzer) pointerFunctionValue(x ast.Expr) Expr {
+	if apply, isApply := x.(*ast.Apply); isApply {
+		if s := a.scope.find(apply.Name); s != nil && pointerValued(a.interfaceOf(s)) {
+			v := a.apply(apply)
+
+			switch f, isRef := v.(*FuncRef); {
+			case v.Type().Kind == Invalid:
+				return nil
+			case isRef && f.Pointer:
+				return f
+			}
+		}
+	}
+
+	a.report("NOTPOINTER", x.Position(), ast.DumpExpr(x))
+
+	return nil
+}
+
 // pointerResultDifference is how the value of an interface body here differs
 // from the definition's there in being a pointer, or "".
 func pointerResultDifference(here, there *Symbol) string {

@@ -340,6 +340,11 @@ func TestPointerResults(t *testing.T) {
 			"entry g()", "end function"},
 			"ENTRYVALUE: the entry point G's value must be the same as the function F's: it points at REAL, the function's at INTEGER"},
 		{"an ENTRY of the same kind", []string{"function f()", "integer, pointer :: f, g", "entry g()", "end function"}, ""},
+		{"ASSOCIATED of a pointer function's value", mod("if (associated(sp(2))) x = 1.0",
+			"if (associated(ap(2), q)) x = 2.0", "if (associated(cp(), c)) x = 3.0",
+			"if (associated(pointer = sp(1), target = v(1))) x = 4.0"), ""},
+		{"ASSOCIATED of another function's value", mod("if (associated(plain())) x = 1.0"),
+			"NOTPOINTER: PLAIN() is not a pointer"},
 	}
 
 	for _, c := range cases {

@@ -1,0 +1,49 @@
+ 5 lines, 37 words, 19 different, 32 line numbers
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LAZY          2:  1  2
+LEAVES        1:  5
+OVER          3:  1  4
+QUICK         1:  1
+RUNS          2:  3
+SLEEPS        1:  2
+SUN           2:  2  5
+THE           8:  1  2  3  4  5
+As read: 19 words, height 8, 32 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS SUN)) -)
+OVER: T OVER          3
+OVER now:  300 F
+Without SUN, a leaf: 18 words, height 8, 30 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS -)) -)
+Without LAZY, one subtree: 17 words, height 7, 28 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS(RUNS -)) -)
+Without QUICK, two subtrees: 16 words, height 7, 27 line numbers
+THE(RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS) -)
+Without the root, one subtree: 15 words, height 6, 22 line numbers
+RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS)
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LEAVES        1:  5
+OVER        300:  1  4
+RUNS          2:  3
+SLEEPS        1:  2
+Left:  0  0 F
+  $STATUS == "%X00000001"

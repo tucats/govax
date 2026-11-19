@@ -59,6 +59,11 @@ type adjustableArray struct {
 	names    []*ast.Name
 	inquired map[*ast.Name]bool
 
+	// components are the names whose components the bounds read, D in D%N
+	// (the Fortran 90 standard's 7.1.6.2: a subobject of a dummy argument):
+	// a record, whose component is checked for its type once it is analyzed.
+	components map[*ast.Name]bool
+
 	// length is set when the expression is sym's CHARACTER length, not a
 	// bound (charlength.go): the same rules, other words in the messages.
 	length bool
@@ -325,11 +330,54 @@ func (a *analyzer) boundOperands(adj *adjustableArray, e ast.Expr) bool {
 
 	case *ast.Apply:
 		return a.boundFunction(adj, e)
+
+	case *ast.FieldRef:
+		return a.boundComponent(adj, e)
 	}
 
 	a.report("BADBOUND", e.Position(), adj.whereOne())
 
 	return false
+}
+
+// boundComponent checks a component in a bound that isn't constant, D%N or
+// D%P%N(2): its base is a name, checked as a bound's names are, and any
+// subscript along the way is a bound's expression itself. Its type is
+// checked once it is analyzed (boundValues).
+func (a *analyzer) boundComponent(adj *adjustableArray, e *ast.FieldRef) bool {
+	ok := true
+
+	var x ast.Expr = e
+
+	for {
+		f, more := x.(*ast.FieldRef)
+		if !more {
+			break
+		}
+
+		for _, sub := range f.Args {
+			ok = a.boundOperands(adj, sub) && ok
+		}
+
+		x = f.X
+	}
+
+	n, named := x.(*ast.Name)
+	if !named {
+		a.report("BADBOUND", e.Position(), adj.whereOne())
+
+		return false
+	}
+
+	adj.names = append(adj.names, n)
+
+	if adj.components == nil {
+		adj.components = map[*ast.Name]bool{}
+	}
+
+	adj.components[n] = true
+
+	return ok
 }
 
 // boundFunction checks a function reference in a bound that isn't constant: an
@@ -436,17 +484,17 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 	dims := adj.sym.Dims
 
 	if adj.length {
-		adj.sym.LengthValue = a.convert(a.value(adj.sym.LengthExpr), IntegerType)
+		adj.sym.LengthValue = a.boundValue(adj, adj.sym.LengthExpr)
 		dims = nil
 	}
 
 	for i := range dims {
 		if e := dims[i].LowerExpr; e != nil {
-			dims[i].LowerValue = a.convert(a.value(e), IntegerType)
+			dims[i].LowerValue = a.boundValue(adj, e)
 		}
 
 		if e := dims[i].UpperExpr; e != nil {
-			dims[i].UpperValue = a.convert(a.value(e), IntegerType)
+			dims[i].UpperValue = a.boundValue(adj, e)
 		}
 	}
 
@@ -457,6 +505,23 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 			adj.sym.BoundDummies = append(adj.sym.BoundDummies, s)
 		}
 	}
+}
+
+// boundValue is one bound's value, converted to INTEGER. A component the
+// bound reads (boundComponent) is first known to be numeric here, its
+// structure's declarations having been read: BADBOUND if it isn't.
+func (a *analyzer) boundValue(adj *adjustableArray, e ast.Expr) Expr {
+	v := a.value(e)
+
+	if len(adj.components) != 0 {
+		if k := v.Type().Kind; k != Integer && k != Real && k != Invalid {
+			a.report("BADBOUND", e.Position(), adj.whereOne())
+
+			adj.sym.broken = true
+		}
+	}
+
+	return a.convert(v, IntegerType)
 }
 
 // checkBoundName checks a name in an adjustable array's bound: a dummy
@@ -472,6 +537,7 @@ func (a *analyzer) boundValues(adj *adjustableArray) {
 func (a *analyzer) checkBoundName(adj *adjustableArray, n *ast.Name) bool {
 	s := a.scope.find(n.Name)
 	inquired, where := adj.inquired[n], adj.where()
+	component := adj.components[n]
 
 	switch {
 	case s.broken:
@@ -495,6 +561,15 @@ func (a *analyzer) checkBoundName(adj *adjustableArray, n *ast.Name) bool {
 	case inquired:
 		return s.Class == Array || s.Class == Variable || s.Class == Unclassified ||
 			a.badBoundInquiry(n, where)
+
+	case component && (s.Dummy == 0 && s.Common == nil && !a.hostName(s.Name)):
+		a.report("BOUNDVAR", n.Pos, n.Name, where)
+
+		return false
+
+	case component:
+		// Its component's type is boundValue's to check.
+		return true
 
 	case s.Class == Array || s.Class == Function || s.Class == StmtFunction:
 		a.report("BOUNDREF", n.Pos, n.Name, where)

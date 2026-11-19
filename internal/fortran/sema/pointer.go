@@ -89,8 +89,11 @@ func IsPointer(e Expr) bool {
 
 // pointerName names the pointer e (IsPointer) for a message: P, or HEAD%NEXT.
 func pointerName(e Expr) string {
-	if f, ok := e.(*FieldRef); ok {
+	switch f := e.(type) {
+	case *FieldRef:
 		return f.Text()
+	case *FuncRef:
+		return f.Fn.Name
 	}
 
 	return PointerSymbol(e).Name
@@ -604,7 +607,13 @@ func (a *analyzer) associatedRef(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	ptr := a.pointerObject(args[0], false)
+	var ptr Expr
+	if a.functionReference(args[0]) {
+		ptr = a.pointerFunctionValue(args[0])
+	} else {
+		ptr = a.pointerObject(args[0], false)
+	}
+
 	if ptr == nil {
 		return a.bad(e.Pos)
 	}

@@ -67,3 +67,50 @@ func TestOperators(t *testing.T) {
 		}
 	}
 }
+
+// TestOperandArrays checks arrays as a defined operation's operands and a
+// defined assignment's value (docs/planning/PHASE-107 - Fortran 90 pointers.md,
+// subtask 8): each is passed as a reference's argument is, an array constant or
+// expression to an assumed-shape dummy, and a record's value may be an array
+// when an ASSIGNMENT(=) interface is there to take it.
+func TestOperandArrays(t *testing.T) {
+	// mod is a module of a type T with * extended to T and a vector, and
+	// assignment from a vector (FILL) or from a REAL (PUT, scalar only when
+	// scalar is set), and a program using it.
+	mod := func(scalar bool, lines ...string) []string {
+		fill := []string{"subroutine fill(a, x)", "type(t), intent(out) :: a", "real, intent(in) :: x(:)",
+			"a%v = sum(x)", "end subroutine"}
+		name := "fill"
+
+		if scalar {
+			fill = []string{"subroutine put(a, x)", "type(t), intent(out) :: a", "real, intent(in) :: x",
+				"a%v = x", "end subroutine"}
+			name = "put"
+		}
+
+		head := append([]string{"module m", "type t", "real :: v", "end type", "interface operator (*)",
+			"module procedure tv", "end interface", "interface assignment (=)", "module procedure " + name,
+			"end interface", "contains", "function tv(a, x) result(y)", "type(t), intent(in) :: a",
+			"real, intent(in) :: x(:)", "real :: y(size(x))", "y = a%v * x", "end function"}, fill...)
+		head = append(head, "end module", "program p", "use m", "type(t) :: a, b", "real :: x(3), y(3)")
+
+		return append(append(head, lines...), "end program")
+	}
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"operands", mod(false, "y = a * (/ 1.0, 2.0, 3.0 /)", "y = a * (x + 1.0)", "y = a * x(3:1:-1)", "y = a * x"), ""},
+		{"assigned arrays", mod(false, "a = (/ 1.0, 2.0 /)", "a = x", "a = x * 2.0", "a = x(1:2)", "b = a"), ""},
+		{"an array to a scalar's assignment", mod(true, "a = 2.0", "a = x + 1.0"),
+			"NOTSCALAR: an array is used where a scalar is required"},
+	}
+
+	for _, c := range cases {
+		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}

@@ -103,6 +103,8 @@ PROGRAMS90 = {
     "ptrdum": ["ptrdum.f90"],
     "ptrres": ["ptrres.f90"],
     "ptralias": ["ptralias.f90"],
+    "ptrstd": ["ptrstd.f90"],
+    "sparse": ["sparse.f90"],
     "allocstat": ["allocstat.f90"],
     "autos": ["autos.f90"],
     "autolen": ["autolen.f90"],
@@ -135,6 +137,8 @@ PROGRAMS90 = {
                  "modules/standard/work.f90"],
     "polys": ["modules/polys/polys.f90", "modules/polys/kinds.f90", "modules/polys/polynomials.f90",
               "modules/polys/roots.f90", "modules/polys/report.f90", "modules/polys/table.for"],
+    "concord": ["modules/concord/concord.f90", "modules/concord/words.f90", "modules/concord/lists.f90",
+                "modules/concord/trees.f90"],
 }
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.

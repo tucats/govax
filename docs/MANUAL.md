@@ -9736,7 +9736,8 @@ end program pick
 prints `7.000000       14.00000`: BIG pointed at the 9.0, which became 0.0. A function whose value
 is a pointer can be called only through an explicit interface (`EXPLICITPOINTER`), and an
 interface block must say POINTER where the function does (`INTERFACEDIFF`); an ENTRY in such a
-function is a pointer of the same type (`ENTRYVALUE`). A scalar pointer's address comes back in
+function is a pointer of the same type (`ENTRYVALUE`). ASSOCIATED takes such a reference as
+either argument: `ASSOCIATED (LARGEST ())` asks whether it points anywhere. A scalar pointer's address comes back in
 R0, a CHARACTER one's descriptor in R0 and R1, and an array pointer's descriptor through a hidden
 first argument, the address of a class NCA descriptor of the caller's, which the function fills
 in. An array assignment whose value is reached through a pointer function, `X(4:6) = EVENS(X)`,
