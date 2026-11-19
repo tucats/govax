@@ -81,10 +81,16 @@ var forMessages = map[uint32]Message{
 	// numbers 301 and 302; docs/planning/PHASE-104 - Fortran 90 dynamic
 	// arrays.md, finding 4).
 	0x00188968: {Facility: "FOR", Ident: "ALREADYALLOC", Text: "allocatable array is already allocated", FAOCount: 0},
-	0x00188970: {Facility: "FOR", Ident: "NOTALLOC", Text: "allocatable array is not allocated", FAOCount: 0},
+	0x00188970: {Facility: "FOR", Ident: "NOTALLOC", Text: "allocatable array or pointer is not allocated", FAOCount: 0},
 
 	// FTNRTL's FTN$BADARRDESC, /CHECK=BOUNDS finding an assumed-shape dummy
 	// argument given something other than a class NCA or A descriptor of its
 	// rank (FOR number 303; PHASE-104's finding 9).
 	0x00188978: {Facility: "FOR", Ident: "BADARRDESC", Text: "argument is not an array descriptor of the dummy argument's rank", FAOCount: 0},
+
+	// FTNRTL's FTN$DEALLOCATE and FTN$DEALLOC_SCALAR, DEALLOCATE of a pointer
+	// whose target FTNRTL didn't make for a pointer, or isn't the whole of
+	// it (FOR number 304; docs/planning/PHASE-107 - Fortran 90 pointers.md,
+	// finding 6).
+	0x00188980: {Facility: "FOR", Ident: "BADDEALLOC", Text: "the pointer's target was not made by ALLOCATE, or is not the whole of it", FAOCount: 0},
 }

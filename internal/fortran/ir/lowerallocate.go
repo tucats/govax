@@ -43,8 +43,10 @@ import "github.com/tucats/govax/internal/fortran/sema"
 
 // FTNRTL's routines for ALLOCATE and DEALLOCATE (mar/ftn_alloc.mar).
 const (
-	ftnAllocate   = "FTN$ALLOCATE"
-	ftnDeallocate = "FTN$DEALLOCATE"
+	ftnAllocate      = "FTN$ALLOCATE"
+	ftnDeallocate    = "FTN$DEALLOCATE"
+	ftnAllocScalar   = "FTN$ALLOC_SCALAR"
+	ftnDeallocScalar = "FTN$DEALLOC_SCALAR"
 )
 
 // allocatableCell makes the cell c of the allocatable array s its descriptor.
@@ -175,19 +177,11 @@ func (l *lowerer) allocate(s *sema.Allocate) {
 	}
 
 	for i, obj := range s.Objects {
-		c := l.adjustableOf(obj.Sym)
-		args := []Arg{{Ref: &Mem{Cell: c, T: Long}}, {Value: flags}}
-
-		routine := ftnDeallocate
-		if !s.Deallocate {
-			routine = ftnAllocate
-
-			for i := range obj.Upper {
-				args = append(args, Arg{Value: l.expr(obj.Lower[i])}, Arg{Value: l.expr(obj.Upper[i])})
-			}
+		if obj.Sym.Pointer && !obj.Sym.ArrayPointer() {
+			l.allocateScalar(obj.Sym, s.Deallocate, flags, status)
+		} else {
+			l.allocateArray(obj, s.Deallocate, flags, status)
 		}
-
-		l.emit(&Call{origin: l.origin(), Routine: routine, Args: args, Result: status})
 
 		if status != nil && i < len(s.Objects)-1 {
 			next := l.newBlock()
@@ -214,9 +208,70 @@ func (l *lowerer) allocate(s *sema.Allocate) {
 	l.emit(&Assign{origin: l.origin(), Dst: dst, Src: value})
 }
 
-// allocStat is FTN$ALLOCATE's and FTN$DEALLOCATE's flag for a statement with
-// STAT=: return a failure's FOR number rather than signal it.
-const allocStat = 1
+// allocateArray is the call of FTN$ALLOCATE or FTN$DEALLOCATE for obj, an
+// allocatable array or an array pointer, its descriptor's address first. An
+// array pointer's flags have allocPointer too, and one in COMMON has its
+// descriptor's unchanging longwords written first, which FTN$ALLOCATE reads
+// (lowerpointer.go's commonHeader).
+func (l *lowerer) allocateArray(obj *sema.Allocation, deallocate bool, flags *Const, status *Mem) {
+	c := l.adjustableOf(obj.Sym)
+
+	if obj.Sym.Pointer {
+		flags = LongConst(flags.Int() | allocPointer)
+
+		if !deallocate {
+			l.commonHeader(c)
+		}
+	}
+
+	args := []Arg{{Ref: &Mem{Cell: c, T: Long}}, {Value: flags}}
+
+	routine := ftnDeallocate
+	if !deallocate {
+		routine = ftnAllocate
+
+		for i := range obj.Upper {
+			args = append(args, Arg{Value: l.expr(obj.Lower[i])}, Arg{Value: l.expr(obj.Upper[i])})
+		}
+	}
+
+	l.emit(&Call{origin: l.origin(), Routine: routine, Args: args, Result: status})
+}
+
+// allocateScalar is the call of FTN$ALLOC_SCALAR or FTN$DEALLOC_SCALAR for
+// the scalar pointer p: the address of the longword that holds its target's
+// address (a CHARACTER pointer's descriptor's POINTER, its length and type
+// written first), the flags, and the target's size in bytes, by value:
+//
+//	PUSHL  #4                   ALLOCATE (P), P an INTEGER pointer
+//	PUSHL  #2                   a pointer's
+//	PUSHAL P
+//	CALLS  #3,G^FTN$ALLOC_SCALAR
+func (l *lowerer) allocateScalar(p *sema.Symbol, deallocate bool, flags *Const, status *Mem) {
+	routine := ftnDeallocScalar
+	if !deallocate {
+		routine = ftnAllocScalar
+
+		l.setPointerHeader(p)
+	}
+
+	args := []Arg{{Ref: l.pointerAddress(p)}, {Value: LongConst(flags.Int() | allocPointer)},
+		{Value: LongConst(int32(p.Type.Size))}}
+
+	l.emit(&Call{origin: l.origin(), Routine: routine, Args: args, Result: status})
+}
+
+// FTN$ALLOCATE's, FTN$DEALLOCATE's, and the scalar routines' flags:
+// allocStat for a statement with STAT=, to return a failure's FOR number
+// rather than signal it; allocPointer for a pointer, whose block FTNRTL marks
+// so that DEALLOCATE can tell it made it, and which ALLOCATE gives a new
+// target whatever it had (docs/planning/PHASE-107 - Fortran 90 pointers.md,
+// finding 6). FTNRTL also takes bit 2, to clear the block, for a type with
+// pointer components (subtask 5).
+const (
+	allocStat    = 1
+	allocPointer = 2
+)
 
 // allocated is ALLOCATED(A): whether A's descriptor has an address.
 func (l *lowerer) allocated(e *sema.Allocated) Expr {

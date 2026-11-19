@@ -198,7 +198,7 @@ F90APTR.$1:
 ;   W     REAL, POINTER (:)  FP-48       S.W(FP)
 ;
 S.V = 4					; V is argument 1
-S.W = -48				; W, REAL, POINTER (:), allocatable: its descriptor, in the frame
+S.W = -48				; W, REAL, POINTER (:): its descriptor, in the frame
 S.$I1 = -16				; an array statement's loop index, in the frame
 S.$T1 = -12				; temporary, in the frame
 S.$T2 = -8				; temporary, in the frame

@@ -26,6 +26,28 @@
 ; govax's own words (PHASE-99's Decision 15), and running out of memory is
 ; VAX FORTRAN's INSVIRMEM.
 ;
+; Pointers (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 6).
+; ALLOCATE of an array pointer is FTN$ALLOCATE with flag bit 1 set, and of
+; a scalar pointer FTN$ALLOC_SCALAR; DEALLOCATE of them FTN$DEALLOCATE
+; with bit 1, and FTN$DEALLOC_SCALAR. A pointer's ALLOCATE never finds it
+; "already allocated": it gets a new target, and whatever it pointed at
+; before is left as it was (the standard's 6.3.1.2). Its block carries a
+; header of two longwords before its first byte:
+;
+;	-8  the mark: the header's own address XOR PTR_MARK
+;	-4  the size the target was asked for, in bytes
+;
+; so that DEALLOCATE of a pointer can tell that ALLOCATE made its target,
+; and that the pointer is associated with the whole of it: else the block
+; isn't given back, and the condition is govax's BADDEALLOC (FOR number
+; 304). That catches a pointer to a TARGET variable, to an allocatable
+; array (whose block has no header), to a part of a block, or to one
+; already given back (its mark is cleared then). An allocatable array's
+; block, and a temporary's, have no header.
+;
+; Flag bit 2 asks for the block to be cleared, for a type with pointer
+; components, so that they start disassociated.
+;
 ; Every routine is called with CALLS or CALLG; the conventions are those
 ; of FTN_VECTOR.MAR's "Reading these sources".
 ;
@@ -34,8 +56,14 @@
 FOR$_INSVIRMEM	= ^X18814C		; FOR number 41, severity F
 FOR$_ALREADYALLOC = ^X18896C		; FOR number 301, severity F
 FOR$_NOTALLOC	= ^X188974		; FOR number 302, severity F
+FOR$_BADDEALLOC	= ^X188984		; FOR number 304, severity F
 
-ALLOC_V_STAT	= 0			; the flags' bit: STAT= given
+ALLOC_V_STAT	= 0			; the flags' bits: STAT= given,
+ALLOC_V_POINTER	= 1			;  a pointer's,
+ALLOC_V_CLEAR	= 2			;  and the block to be cleared
+
+PTR_MARK	= ^X50544E46		; "FNTP", XORed with the header's address
+PTR_HEADER	= 8			; the header's size
 
 ; The least memory an array is given. A zero-sized array (an upper bound
 ; below its lower) is allocated too, and its POINTER must not be 0, so it
@@ -64,9 +92,8 @@ NO_FILE:	.QUAD	0		; INSVIRMEM's file: an empty string's
 ; stored last: if anything fails, the array is still not allocated.
 ;
 	.ENTRY	FTN$ALLOCATE,^M<R2,R3,R4,R5,R6,R7,R8>
-	SUBL2	#8,SP			; -8(FP): the size asked for, -4(FP):
-					;  the address LIB$GET_VM gives
 	MOVL	4(AP),R6		; the descriptor
+	BBS	#ALLOC_V_POINTER,8(AP),10$	; a pointer: never allocated
 	TSTL	DSC$A_POINTER(R6)	; allocated already?
 	BEQL	10$
 	MOVL	#FOR$_ALREADYALLOC,R0
@@ -99,18 +126,12 @@ NO_FILE:	.QUAD	0		; INSVIRMEM's file: an empty string's
 	BLSS	NOMEM			; past 31?
 	SOBGTR	R2,20$
 	;
-	; The memory, from LIB$GET_VM (num_bytes, base_adr), both by reference.
+	; The memory, from GET_BLOCK: LIB$GET_VM's, with a pointer's header.
 	;
 	MOVL	R3,DSC$L_ARSIZE(R6)
-	CMPL	R3,#MIN_BLOCK
-	BGEQ	40$
-	MOVL	#MIN_BLOCK,R3
-40$:	MOVL	R3,-8(FP)
-	PUSHAL	-4(FP)
-	PUSHAL	-8(FP)
-	CALLS	#2,G^LIB$GET_VM
-	BLBC	R0,NOMEM
-	MOVL	-4(FP),R0		; the first element's address
+	PUSHL	R3			; the size, for GET_BLOCK
+	CALLS	#1,GET_BLOCK		; R0: the first element's address
+	BLBC	R1,NOMEM
 	SUBL3	R7,R0,DSC$A_A0(R6)	; A0
 	MOVL	R0,DSC$A_POINTER(R6)	; allocated now
 	CLRL	R0
@@ -150,23 +171,187 @@ SIGNAL:	CMPL	R0,#FOR$_INSVIRMEM
 ; POINTER serves, then clears POINTER. The size is the one FTN$ALLOCATE
 ; asked for: ARSIZE, or MIN_BLOCK for less.
 ;
-	.ENTRY	FTN$DEALLOCATE,^M<R2>
-	SUBL2	#8,SP			; -8(FP): the size
+; A pointer's (flag bit 1) must be the whole of a block FTN$ALLOCATE or
+; FTN$ALLOC_SCALAR made for a pointer: its strides those FTN$ALLOCATE would
+; have given its bounds, so that it is contiguous and in order, and its
+; POINTER and ARSIZE the block's (CHECK_BLOCK).
+;
+	.ENTRY	FTN$DEALLOCATE,^M<R2,R3,R4,R5>
 	MOVL	4(AP),R2		; the descriptor
 	TSTL	DSC$A_POINTER(R2)	; allocated?
 	BNEQ	10$
 	MOVL	#FOR$_NOTALLOC,R0
 	BRW	FAIL
-10$:	MOVL	DSC$L_ARSIZE(R2),R0
-	CMPL	R0,#MIN_BLOCK
-	BGEQ	20$
-	MOVL	#MIN_BLOCK,R0
-20$:	MOVL	R0,-8(FP)
+10$:	BBS	#ALLOC_V_POINTER,8(AP),20$
+	PUSHL	DSC$L_ARSIZE(R2)	; an allocatable array or a temporary
 	PUSHAL	DSC$A_POINTER(R2)
-	PUSHAL	-8(FP)
-	CALLS	#2,G^LIB$FREE_VM
+	CALLS	#2,FREE_BLOCK
 	CLRL	DSC$A_POINTER(R2)	; not allocated now
 	CLRL	R0
+	RET
+	;
+	; A pointer: first its strides, each the size of the dimensions
+	; before it, as FTN$ALLOCATE makes them.
+	;
+20$:	MOVZBL	DSC$B_DIMCT(R2),R3	; the rank
+	MOVZWL	DSC$W_LENGTH(R2),R0	; the size so far: one element's
+	MOVAL	DSC$L_S1(R2),R4		; the first stride
+	MOVAL	DSC$L_S1(R2)[R3],R5	; the first dimension's bounds
+30$:	CMPL	(R4)+,R0		; the stride it would have?
+	BNEQ	BADPTR
+	MOVL	(R5)+,R1		; U - L + 1
+	SUBL3	R1,(R5)+,R1
+	INCL	R1
+	BGEQ	40$
+	CLRL	R1			; none below 0
+40$:	MULL2	R1,R0			; the size grows by the extent
+	SOBGTR	R3,30$
+	MOVL	DSC$A_POINTER(R2),R3	; the block's first byte
+	MOVL	DSC$L_ARSIZE(R2),R4	;  and its size
+	JSB	CHECK_BLOCK
+	BLBC	R0,BADPTR
+	PUSHL	R4
+	PUSHAL	DSC$A_POINTER(R2)
+	CALLS	#2,FREE_BLOCK
+	CLRL	DSC$A_POINTER(R2)	; disassociated now
+	CLRL	R0
+	RET
+
+BADPTR:	MOVL	#FOR$_BADDEALLOC,R0
+	BRW	FAIL
+
+;
+; status = FTN$ALLOC_SCALAR(cell, flags, size)
+;
+; ALLOCATE of a scalar pointer: a block of size bytes (by value; MIN_BLOCK
+; at least), its address stored in the longword cell, the pointer's (a
+; CHARACTER pointer's descriptor's POINTER). The flags are FTN$ALLOCATE's,
+; bit 1 always set; there is nothing to refuse but a lack of memory.
+;
+	.ENTRY	FTN$ALLOC_SCALAR,^M<>
+	PUSHL	12(AP)			; the size
+	CALLS	#1,GET_BLOCK
+	BLBC	R1,10$
+	MOVL	R0,@4(AP)		; associated now
+	CLRL	R0
+	RET
+10$:	BRW	NOMEM
+
+;
+; status = FTN$DEALLOC_SCALAR(cell, flags, size)
+;
+; DEALLOCATE of a scalar pointer: the block at the address in cell, which
+; must be one FTN$ALLOC_SCALAR made of size bytes (or FTN$ALLOCATE made for
+; an array pointer of that size: a scalar pointer may be associated with
+; its one element), is given back, and the cell cleared. NOTALLOC if the
+; pointer is disassociated, BADDEALLOC if the block isn't such a one.
+;
+	.ENTRY	FTN$DEALLOC_SCALAR,^M<R2,R3,R4>
+	MOVL	4(AP),R2		; the cell
+	MOVL	(R2),R3			; the target's address
+	BNEQ	10$
+	MOVL	#FOR$_NOTALLOC,R0
+	BRW	FAIL
+10$:	MOVL	12(AP),R4		; its size
+	JSB	CHECK_BLOCK
+	BLBC	R0,BADPTR
+	PUSHL	R4
+	PUSHL	R2			; the address of the address
+	CALLS	#2,FREE_BLOCK
+	CLRL	(R2)			; disassociated now
+	CLRL	R0
+	RET
+
+;
+; CHECK_BLOCK, by JSB: R3 the first byte of a pointer's target, R4 its
+; size. R0's low bit is set if they are a block made for a pointer, whole;
+; R1 is changed. The header's longwords are probed first, since R3 may be
+; anywhere: a target at the start of a program's storage may have no
+; readable memory before it.
+;
+CHECK_BLOCK:
+	PROBER	#0,#PTR_HEADER,-PTR_HEADER(R3)	; readable?
+	BEQL	10$
+	SUBL3	#PTR_HEADER,R3,R1	; the header's address
+	XORL2	#PTR_MARK,R1		;  makes the mark
+	CMPL	R1,-PTR_HEADER(R3)
+	BNEQ	10$
+	CMPL	R4,-PTR_HEADER+4(R3)	; the whole block?
+	BNEQ	10$
+	MOVL	#1,R0
+	RSB
+10$:	CLRL	R0
+	RSB
+
+;
+; address = GET_BLOCK(size), by CALLS from the routines here, whose flags
+; (8(AP) of the caller's frame, reached through its AP saved at 8(FP)) say
+; whether it is a pointer's block, with its header, and whether it is to be
+; cleared. Takes size bytes, MIN_BLOCK at least, and the header, from
+; LIB$GET_VM. R0 is the address of the first byte after any header, R1's
+; low bit set if it worked.
+;
+GET_BLOCK:
+	.WORD	^M<R2,R3,R4,R5,R6>
+	SUBL2	#8,SP			; -8(FP): the size asked for, -4(FP):
+					;  the address LIB$GET_VM gives
+	MOVL	8(FP),R6		; the caller's AP
+	MOVL	4(AP),R2		; the size
+	CMPL	R2,#MIN_BLOCK
+	BGEQ	10$
+	MOVL	#MIN_BLOCK,R2
+10$:	MOVL	R2,-8(FP)
+	BBC	#ALLOC_V_POINTER,8(R6),20$
+	ADDL2	#PTR_HEADER,-8(FP)	; and a pointer's header
+20$:	PUSHAL	-4(FP)
+	PUSHAL	-8(FP)
+	CALLS	#2,G^LIB$GET_VM
+	BLBC	R0,60$
+	MOVL	-4(FP),R3		; the block
+	BBC	#ALLOC_V_POINTER,8(R6),30$
+	XORL3	#PTR_MARK,R3,(R3)	; the mark (R3 not autoincremented:
+					;  a register read in the same
+					;  instruction is UNPREDICTABLE)
+	MOVL	4(AP),4(R3)		;  and the size asked for
+	ADDL2	#PTR_HEADER,R3		; the first byte after the header
+	MOVL	R3,-4(FP)
+30$:	BBC	#ALLOC_V_CLEAR,8(R6),50$
+40$:	MOVZWL	#65535,R4		; cleared, 65,535 bytes at a time
+	CMPL	R2,R4
+	BGEQ	45$
+	MOVL	R2,R4
+45$:	SUBL2	R4,R2
+	MOVC5	#0,(R3),#0,R4,(R3)	; R3: just past what was cleared
+	TSTL	R2
+	BGTR	40$
+50$:	MOVL	-4(FP),R0
+	MOVL	#1,R1
+	RET
+60$:	CLRL	R1
+	RET
+
+;
+; FREE_BLOCK(address_of_address, size), by CALLS: gives back a block
+; GET_BLOCK made, whose size was asked for; for a pointer's (the caller's
+; flag bit 1) the header before it too, its mark cleared first.
+;
+FREE_BLOCK:
+	.WORD	^M<R2,R3>
+	SUBL2	#8,SP			; -8(FP): the size, -4(FP): the address
+	MOVL	8(FP),R3		; the caller's AP
+	MOVL	8(AP),R2		; the size
+	CMPL	R2,#MIN_BLOCK
+	BGEQ	10$
+	MOVL	#MIN_BLOCK,R2
+10$:	MOVL	R2,-8(FP)
+	MOVL	@4(AP),-4(FP)		; the address
+	BBC	#ALLOC_V_POINTER,8(R3),20$
+	ADDL2	#PTR_HEADER,-8(FP)	; a pointer's header too,
+	SUBL2	#PTR_HEADER,-4(FP)
+	CLRL	@-4(FP)			;  its mark cleared
+20$:	PUSHAL	-4(FP)
+	PUSHAL	-8(FP)
+	CALLS	#2,G^LIB$FREE_VM
 	RET
 
 ;

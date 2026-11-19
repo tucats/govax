@@ -1553,9 +1553,11 @@ var messages = map[string]kind{
 	// shape (the standard's 5.1's constraints); ALLOCDUMMY one that is a dummy
 	// argument or a function's value, ALLOCATTR one in COMMON, EQUIVALENCE,
 	// DATA, or NAMELIST, or given a value (5.2.6, the HP manual's 6.3).
-	// NOTALLOCATABLE is ALLOCATE, DEALLOCATE, or ALLOCATED of a name that isn't
-	// an allocatable array; ALLOCBOUNDS an ALLOCATE object with the wrong
-	// number of bounds, or a bound of * or :; ALLOCSELF a bound that uses an
+	// NOTALLOCATABLE is ALLOCATE or DEALLOCATE of a name that is neither an
+	// allocatable array nor a pointer, or ALLOCATED of one that isn't an
+	// allocatable array (the second argument says which); ALLOCBOUNDS an ALLOCATE object with the wrong
+	// number of bounds, or a bound of * or :; ALLOCSCALAR bounds for a scalar
+	// pointer; ALLOCSELF a bound that uses an
 	// object of its own statement (6.3.1's constraint); ALLOCOBJECT the same
 	// object twice in one statement. BADSTAT is a STAT= that doesn't name an
 	// INTEGER variable or array element, and STATSELF one that uses an object
@@ -1565,8 +1567,9 @@ var messages = map[string]kind{
 	"ALLOCSHAPE":       {Error, "%s is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},
 	"ALLOCDUMMY":       {Error, "%s can't be ALLOCATABLE: it is %s"},
 	"ALLOCATTR":        {Error, "the allocatable array %s can't %s"},
-	"NOTALLOCATABLE":   {Error, "%s is not an allocatable array"},
+	"NOTALLOCATABLE":   {Error, "%s is not %s"},
 	"ALLOCBOUNDS":      {Error, "in ALLOCATE, %s needs %s, each a value or two separated by a colon"},
+	"ALLOCSCALAR":      {Error, "%s is a scalar pointer, so ALLOCATE gives it no bounds"},
 	"ALLOCSELF":        {Error, "a bound in ALLOCATE can't use %s, which the same statement allocates or deallocates"},
 	"ALLOCOBJECT":      {Error, "%s is named twice in one %s statement"},
 	"BADSTAT":          {Error, "a STAT= specifier must name an INTEGER variable or array element"},

@@ -1,0 +1,157 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Common block /BLK/, 32 bytes, the most any unit in this file declares
+	.PSECT	BLK,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+BLK.$BASE:
+	.BLKB	32
+
+; Storage map for F90PALLOC, the main program
+;   P     INTEGER, POINTER        $LOCAL+0   F90PALLOC.P
+;   A     INTEGER, POINTER (:)    $LOCAL+4   F90PALLOC.A
+;   K     INTEGER, POINTER (:,:)  $LOCAL+36  F90PALLOC.K
+;   C     CHARACTER*6, POINTER    $LOCAL+80  F90PALLOC.C
+;   R     TYPE(PAIR), POINTER     $LOCAL+88  F90PALLOC.R
+;   S     REAL, POINTER (:)       BLK+0      F90PALLOC.S
+;   IS    INTEGER                 $LOCAL+92  F90PALLOC.IS
+;   N     INTEGER                 $LOCAL+96  F90PALLOC.N
+;   Type PAIR, 8 bytes
+;     +0     I     INTEGER
+;     +4     J     INTEGER
+;
+F90PALLOC.S = BLK.$BASE			; S, REAL, POINTER (:): its descriptor, in /BLK/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+F90PALLOC.P:
+	.BLKL	1			; P
+F90PALLOC.A:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
+	.LONG	0			; A: disassociated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+F90PALLOC.K:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
+	.LONG	0			; K: disassociated
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+F90PALLOC.C:
+	.BLKL	2			; C
+F90PALLOC.R:
+	.BLKL	1			; R
+F90PALLOC.IS:
+	.BLKL	1			; IS
+F90PALLOC.N:
+	.BLKL	1			; N
+F90PALLOC.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     ALLOCATE and DEALLOCATE of pointers (Phase 107, subtask 4): a
+;    3  C     scalar pointer by FTN$ALLOC_SCALAR and FTN$DEALLOC_SCALAR with
+;    4  C     its target's size, a CHARACTER one's header written first, a
+;    5  C     record's; an array pointer by FTN$ALLOCATE and FTN$DEALLOCATE
+;    6  C     with the pointer's flag, a COMMON one's header written first;
+;    7  C     STAT= on both.
+;    8        PROGRAM F90PALLOC
+	.ENTRY	F90PALLOC,^M<>
+;    9        TYPE PAIR
+;   10          INTEGER I, J
+;   11        END TYPE
+;   12        INTEGER, POINTER :: P, A(:), K(:, :)
+;   13        CHARACTER(LEN=6), POINTER :: C
+;   14        TYPE(PAIR), POINTER :: R
+;   15        REAL, POINTER :: S(:)
+;   16        COMMON /BLK/ S
+;   17        INTEGER IS, N
+;   18        N = 4
+	MOVL	#4,F90PALLOC.N
+;   19        ALLOCATE (P, C, R, A(N), K(0:N, 2))
+	PUSHL	#4
+	PUSHL	#2
+	PUSHAL	F90PALLOC.P
+	CALLS	#3,G^FTN$ALLOC_SCALAR
+	MOVL	#17694726,F90PALLOC.C
+	PUSHL	#6
+	PUSHL	#2
+	PUSHAL	F90PALLOC.C+4
+	CALLS	#3,G^FTN$ALLOC_SCALAR
+	PUSHL	#8
+	PUSHL	#2
+	PUSHAL	F90PALLOC.R
+	CALLS	#3,G^FTN$ALLOC_SCALAR
+	PUSHL	F90PALLOC.N
+	PUSHL	#1
+	PUSHL	#2
+	PUSHAQ	F90PALLOC.A
+	CALLS	#4,G^FTN$ALLOCATE
+	PUSHL	#2
+	PUSHL	#1
+	PUSHL	F90PALLOC.N
+	PUSHL	#0
+	PUSHL	#2
+	PUSHAQ	F90PALLOC.K
+	CALLS	#6,G^FTN$ALLOCATE
+;   20        ALLOCATE (S(N), STAT=IS)
+	MOVL	#168427524,F90PALLOC.S
+	MOVL	#16777216,F90PALLOC.S+8
+	PUSHL	F90PALLOC.N
+	PUSHL	#1
+	PUSHL	#3
+	PUSHAQ	F90PALLOC.S
+	CALLS	#4,G^FTN$ALLOCATE
+	MOVL	R0,F90PALLOC.$T1
+	MOVL	F90PALLOC.$T1,F90PALLOC.IS
+;   21        P = 1
+	MOVL	#1,@F90PALLOC.P
+;   22        DEALLOCATE (P, C, R, A, STAT=IS)
+	PUSHL	#4
+	PUSHL	#3
+	PUSHAL	F90PALLOC.P
+	CALLS	#3,G^FTN$DEALLOC_SCALAR
+	MOVL	R0,F90PALLOC.$T1
+	BEQL	F90PALLOC.$2
+	BRW	F90PALLOC.$1
+F90PALLOC.$2:
+	PUSHL	#6
+	PUSHL	#3
+	PUSHAL	F90PALLOC.C+4
+	CALLS	#3,G^FTN$DEALLOC_SCALAR
+	MOVL	R0,F90PALLOC.$T1
+	BEQL	F90PALLOC.$3
+	BRW	F90PALLOC.$1
+F90PALLOC.$3:
+	PUSHL	#8
+	PUSHL	#3
+	PUSHAL	F90PALLOC.R
+	CALLS	#3,G^FTN$DEALLOC_SCALAR
+	MOVL	R0,F90PALLOC.$T1
+	BEQL	F90PALLOC.$4
+	BRW	F90PALLOC.$1
+F90PALLOC.$4:
+	PUSHL	#3
+	PUSHAQ	F90PALLOC.A
+	CALLS	#2,G^FTN$DEALLOCATE
+	MOVL	R0,F90PALLOC.$T1
+F90PALLOC.$1:
+	MOVL	F90PALLOC.$T1,F90PALLOC.IS
+;   23        DEALLOCATE (K, S)
+	PUSHL	#2
+	PUSHAQ	F90PALLOC.K
+	CALLS	#2,G^FTN$DEALLOCATE
+	PUSHL	#2
+	PUSHAQ	F90PALLOC.S
+	CALLS	#2,G^FTN$DEALLOCATE
+;   24        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	F90PALLOC

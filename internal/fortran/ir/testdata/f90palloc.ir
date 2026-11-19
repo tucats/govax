@@ -1,0 +1,49 @@
+routine F90PALLOC main
+  cell  P       L  $LOCAL+0    variable P
+  cell  A       L  $LOCAL+4    descriptor L NCA 4 (?)
+  cell  K       L  $LOCAL+36   descriptor L NCA 4 (?,?)
+  cell  C       B  $LOCAL+80   variable C
+  cell  R       B  $LOCAL+88   variable R
+  cell  S       L  BLK+0    descriptor F NCA 4 (?)
+  cell  IS      L  $LOCAL+92   variable IS
+  cell  N       L  $LOCAL+96   variable N
+  cell  $T1     L  $LOCAL+100  temporary
+  $LOCAL is 104 bytes
+B1:
+  ; line 18
+  assign N = 4
+  ; line 19
+  call FTN$ALLOC_SCALAR(ref P, val 2, val 4)
+  assign C = 17694726
+  call FTN$ALLOC_SCALAR(ref C+4, val 2, val 6)
+  call FTN$ALLOC_SCALAR(ref R, val 2, val 8)
+  call FTN$ALLOCATE(ref A, val 2, val 1, val N)
+  call FTN$ALLOCATE(ref K, val 2, val 0, val N, val 1, val 2)
+  ; line 20
+  assign S = 168427524
+  assign S+8 = 16777216
+  call FTN$ALLOCATE(ref S, val 3, val 1, val N) -> $T1
+  jump B2
+B2:
+  assign IS = $T1
+  ; line 21
+  assign @(P) = 1
+  ; line 22
+  call FTN$DEALLOC_SCALAR(ref P, val 3, val 4) -> $T1
+  branch ne.L($T1, 0) B6 B3
+B3:
+  call FTN$DEALLOC_SCALAR(ref C+4, val 3, val 6) -> $T1
+  branch ne.L($T1, 0) B6 B4
+B4:
+  call FTN$DEALLOC_SCALAR(ref R, val 3, val 8) -> $T1
+  branch ne.L($T1, 0) B6 B5
+B5:
+  call FTN$DEALLOCATE(ref A, val 3) -> $T1
+  jump B6
+B6:
+  assign IS = $T1
+  ; line 23
+  call FTN$DEALLOCATE(ref K, val 2)
+  call FTN$DEALLOCATE(ref S, val 2)
+  ; line 24
+  return 1

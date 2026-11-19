@@ -44,9 +44,15 @@ type Allocate struct {
 	Stat       Expr
 }
 
-// Allocation is one object of ALLOCATE or DEALLOCATE: the allocatable array Sym,
-// and for ALLOCATE the bounds it is to have, each dimension's Lower and Upper an
-// INTEGER expression (Lower the constant 1 where the statement leaves it out).
+// Allocation is one object of ALLOCATE or DEALLOCATE: the allocatable array or
+// pointer Sym, and for ALLOCATE the bounds it is to have, each dimension's Lower
+// and Upper an INTEGER expression (Lower the constant 1 where the statement
+// leaves it out), none for a scalar pointer.
+//
+// ALLOCATE of a pointer (6.3.1.2; docs/planning/PHASE-107 - Fortran 90
+// pointers.md, finding 6) makes a new target for it, whatever it was associated
+// with before (that is left as it was), and DEALLOCATE of one gives back the
+// target ALLOCATE made, the whole of it, and leaves the pointer disassociated.
 type Allocation struct {
 	Sym          *Symbol
 	Lower, Upper []Expr
@@ -164,8 +170,9 @@ func (a *analyzer) checkAllocatables() {
 }
 
 // allocateStatement analyzes ALLOCATE or DEALLOCATE (6.3.1, 6.3.3). Each object
-// must be an allocatable array (NOTALLOCATABLE), named once (ALLOCOBJECT); an
-// ALLOCATE object has a bound pair for each of its dimensions, each an INTEGER
+// must be an allocatable array or a pointer (NOTALLOCATABLE), named once
+// (ALLOCOBJECT); an ALLOCATE object has a bound pair for each of its
+// dimensions (none for a scalar pointer), each an INTEGER
 // value (ALLOCBOUNDS), which may not use any object of the same statement
 // (ALLOCSELF: 6.3.1's constraint, read here as any mention, the value, bounds, or
 // status all being forbidden). STAT= names an INTEGER variable or array element
@@ -189,17 +196,9 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 		sym := a.lookup(d.Name, d.Pos)
 		a.note(&sym.refs, d.Pos, RefAssigned)
 
-		if sym.Pointer && !sym.broken {
-			a.notImplForm(d.Pos, s.Kind.String()+" of a pointer")
-
-			ok = false
-
-			continue
-		}
-
-		if !sym.Allocatable || sym.broken {
+		if !(sym.Allocatable || sym.Pointer) || sym.broken {
 			if !sym.broken {
-				a.report("NOTALLOCATABLE", d.Pos, d.Name)
+				a.report("NOTALLOCATABLE", d.Pos, d.Name, "an allocatable array or a pointer")
 			}
 
 			ok = false
@@ -289,6 +288,12 @@ func (a *analyzer) freedAtReturn() {
 // of which may mention a name of named.
 func (a *analyzer) allocationBounds(obj *Allocation, d *ast.Declarator, named map[string]bool) bool {
 	sym := obj.Sym
+
+	if sym.Dims == nil && d.Dims != nil {
+		a.report("ALLOCSCALAR", d.Pos, sym.Name)
+
+		return false
+	}
 
 	if len(d.Dims) != len(sym.Dims) {
 		a.report("ALLOCBOUNDS", d.Pos, sym.Name, count(len(sym.Dims), "bound"))
@@ -424,7 +429,7 @@ func (a *analyzer) allocated(e *ast.Apply) Expr {
 
 	n, ok := arg.(*ast.Name)
 	if !ok {
-		a.report("NOTALLOCATABLE", arg.Position(), ast.DumpExpr(arg))
+		a.report("NOTALLOCATABLE", arg.Position(), ast.DumpExpr(arg), "an allocatable array")
 
 		return a.bad(e.Pos)
 	}
@@ -432,7 +437,7 @@ func (a *analyzer) allocated(e *ast.Apply) Expr {
 	s := a.lookup(n.Name, n.Pos)
 	if !s.Allocatable || s.broken {
 		if !s.broken {
-			a.report("NOTALLOCATABLE", n.Pos, n.Name)
+			a.report("NOTALLOCATABLE", n.Pos, n.Name, "an allocatable array")
 		}
 
 		return a.bad(e.Pos)

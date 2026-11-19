@@ -412,8 +412,15 @@
 
    It is a class NCA descriptor, which => fills in, and is an array
    everywhere else.  A section with a vector subscript is no target
-   (%FORT-E-VECTORTARGET).  ALLOCATE of a pointer, pointer components,
-   pointer dummy arguments, and pointer results are not there yet.
+   (%FORT-E-VECTORTARGET).
+
+   ALLOCATE (P) or ALLOCATE (V(N)) gives a pointer a new target of its
+   own, leaving the old one as it was; DEALLOCATE gives it back and
+   leaves the pointer disassociated.  The target must be one ALLOCATE
+   made, and the whole of it: else %FOR-F-BADDEALLOC (FOR number 304),
+   and a disassociated pointer's is %FOR-F-NOTALLOC (302).  Pointer
+   components, pointer dummy arguments, and pointer results are not
+   there yet.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

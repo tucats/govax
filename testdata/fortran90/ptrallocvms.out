@@ -1,0 +1,15 @@
+disassociated:       302
+a TARGET:            304 T
+allocatable array:   304 T
+a part:              304
+every other:         304
+reversed:            304
+the whole section:     0 F
+given back already:  304
+one element:           0 F
+part of a string:    304
+signaled:   %X00188984
+signaled:   %X00188974
+bytes kept:     0
+bytes lost:    16
+  $STATUS == "%X00000001"

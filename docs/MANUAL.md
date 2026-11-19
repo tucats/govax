@@ -7223,10 +7223,12 @@ It has these routines, which MACRO programs can call too:
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
 | `FTN$ADJARRDIM()` | Signals `%FOR-F-ADJARRDIM`, severe: `/CHECK=BOUNDS` found an adjustable array's upper bound below its lower |
 | `FTN$NOTCONFOR()` | Signals `%FOR-F-NOTCONFOR`, severe, "array shapes do not conform": `/CHECK=BOUNDS` found two arrays of different shapes in a Fortran 90 array assignment. VAX FORTRAN had no such condition; it is govax's, FOR number 300 |
-| `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0), `flags` a longword (bit 0: STAT= given), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
+| `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array or array pointer: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0 for an allocatable array), `flags` a longword (bit 0: STAT= given; bit 1: a pointer's, which is never already allocated, and whose block has an 8-byte header before it, a mark and the size, for DEALLOCATE to check; bit 2: the block cleared), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
 | `FTN$BADARRDESC()` | Signals `%FOR-F-BADARRDESC`, severe, "argument is not an array descriptor of the dummy argument's rank": `/CHECK=BOUNDS` found an assumed-shape dummy given something other than a class NCA or class A descriptor of its rank (a call without the routine's interface, or a MACRO caller's mistake). govax's own, FOR number 303 |
 | `FTN$GET_TEMP(desc)` | The storage of an array the compiler makes when the program runs, on the heap: a statement's temporary past 64 KB, or the value of a function whose value's shape is known only when it runs. `desc` is a class A descriptor with its size (ARSIZE) filled in; takes that many bytes (8 at least) from `LIB$GET_VM` into its POINTER, or signals `%FOR-F-INSVIRMEM`. `FTN$DEALLOCATE` gives it back |
-| `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array: gives its memory to `LIB$FREE_VM` and clears POINTER. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC` |
+| `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array or array pointer: gives its memory to `LIB$FREE_VM` and clears POINTER. With flag bit 1, a pointer's, the descriptor must describe the whole of a block `FTN$ALLOCATE` or `FTN$ALLOC_SCALAR` made for a pointer, in order. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC`; for a pointer's target that isn't such a block, 304, or `%FOR-F-BADDEALLOC` (govax's own) |
+| `FTN$ALLOC_SCALAR(cell, flags, size)` | Fortran 90's ALLOCATE of a scalar pointer: `cell` is the longword that holds its target's address (a CHARACTER pointer's descriptor's POINTER), `flags` `FTN$ALLOCATE`'s (bit 1 always set), `size` the target's size in bytes, by value. Takes the memory as `FTN$ALLOCATE` does for a pointer, and stores its address in `cell`. Returns 0 in R0, or 41 or `%FOR-F-INSVIRMEM` |
+| `FTN$DEALLOC_SCALAR(cell, flags, size)` | Fortran 90's DEALLOCATE of a scalar pointer: the target at the address in `cell` must be a block made for a pointer, of `size` bytes; gives it back and clears `cell`. Returns 0 in R0; otherwise as `FTN$DEALLOCATE` for a pointer (302, `%FOR-F-NOTALLOC`; 304, `%FOR-F-BADDEALLOC`) |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
@@ -9569,18 +9571,37 @@ An array pointer is a class NCA descriptor of its target, as an allocatable arra
 and `=>` fills it in; nothing is copied. Its target may be a section, so its elements are
 found through every dimension's stride, as an assumed-shape dummy's are.
 
-So far ALLOCATE and DEALLOCATE of a pointer, pointer components of derived types (and so
-linked lists), pointer dummy arguments, and functions whose result is a pointer are reported
-`%FORT-E-NOTIMPL`, each to come in its turn.
+ALLOCATE of a pointer gives it a new target of its own, a scalar (`ALLOCATE (P)`, no bounds)
+or an array with the bounds given (`ALLOCATE (V(0:N))`); whatever the pointer pointed at
+before is left as it was, so ALLOCATE of a pointer already associated is no error (keep the
+old target through another pointer, or it is lost). DEALLOCATE of a pointer gives its target
+back and leaves it disassociated; the target must be one ALLOCATE made, and the whole of it.
+DEALLOCATE of a disassociated pointer is `%FOR-F-NOTALLOC` (FOR number 302), and of a pointer
+to anything else (a TARGET variable, an allocatable array, part of an allocated target, a
+target already given back through another pointer) `%FOR-F-BADDEALLOC`, "the pointer's target
+was not made by ALLOCATE, or is not the whole of it" (FOR number 304, govax's own; the
+standard leaves this undefined, and most compilers don't check it). STAT= works as for
+allocatable arrays. Growing an array is a matter of pointers:
+
+```fortran
+allocate (bigger(2 * n))
+bigger(1:n) = v
+deallocate (v)
+v => bigger
+```
+
+So far pointer components of derived types (and so linked lists), pointer dummy arguments,
+and functions whose result is a pointer are reported `%FORT-E-NOTIMPL`, each to come in its
+turn.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, ALLOCATE of a pointer is not implemented yet
-  at line 2 of DUA1:[WORK]BAD.F90;1
-    allocate (p)
-  ------------^
+%FORT-E-NOTIMPL, a POINTER component is not implemented yet
+  at line 4 of DUA1:[WORK]BAD.F90;1
+      type(node), pointer :: next
+  ----------------^
 ```
 
 Of modules, these are not there yet: POINTER components; ENTRY in a module procedure; a module whose text would have

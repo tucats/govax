@@ -618,4 +618,16 @@
 	.MASK	FTN$BADARRDESC
 	JMP	L^FTN$BADARRDESC+2
 
+;
+; Fortran 90's ALLOCATE and DEALLOCATE of a scalar pointer, through the
+; longword that holds its target's address (FTN_ALLOC).
+;
+	.TRANSFER FTN$ALLOC_SCALAR ; 720: FTN$ALLOC_SCALAR(cell, flags, size)
+	.MASK	FTN$ALLOC_SCALAR
+	JMP	L^FTN$ALLOC_SCALAR+2
+
+	.TRANSFER FTN$DEALLOC_SCALAR ; 728: FTN$DEALLOC_SCALAR(cell, flags, size)
+	.MASK	FTN$DEALLOC_SCALAR
+	JMP	L^FTN$DEALLOC_SCALAR+2
+
 	.END

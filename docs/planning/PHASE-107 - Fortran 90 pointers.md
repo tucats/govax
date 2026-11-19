@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
 author the same day ("The author's answers"); subtask 2, scalar and character
-pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19.
+pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
+subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19.
 
 ## Goal
 
@@ -61,8 +62,8 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
    Part A, below, revises the rest of this list in A.4).
 2. **Scalar and character pointers**, `=>`, NULLIFY, ASSOCIATED (done
    2026-11-19).
-3. **Array pointers** and pointers to sections.
-4. **ALLOCATE and DEALLOCATE of pointers.**
+3. **Array pointers** and pointers to sections (done 2026-11-19).
+4. **ALLOCATE and DEALLOCATE of pointers** (done 2026-11-19).
 5. **Pointer components**, recursive types.
 6. **Pointer dummies and results.**
 7. **The optimizer's aliasing rules**, with programs that would break if they
@@ -417,7 +418,8 @@ The plan's order stands; each subtask's content is now the findings'.
    (findings 3 to 5), overlap (finding 10) (done 2026-11-19).
 4. **ALLOCATE and DEALLOCATE of pointers:** the parser's objects, FTNRTL's flag
    bits, `FTN$ALLOC_SCALAR` and `FTN$DEALLOC_SCALAR`, the header and condition
-   304, the clear bit, GSMATCH 1,25, MANUAL.md's FTNRTL table (finding 6).
+   304, the clear bit, GSMATCH 1,25, MANUAL.md's FTNRTL table (finding 6) (done
+   2026-11-19).
 5. **Pointer components and recursive types:** `derived.go`, `HasPointers` and
    its refusals, constructors, component chains, `rankedStride` through a
    pointer, the module text's self-referencing types (finding 7).
@@ -633,3 +635,51 @@ The plan's open question 1 is settled by answer 1.
     the status undefined, so the corpus nullifies first.
   - *Docs.* MANUAL.md's 14.13 (array pointers; "Not there yet"'s example now
     ALLOCATE of a pointer), HELP FORTRAN.
+- **2026-11-19:** Subtask 4, ALLOCATE and DEALLOCATE of pointers, done.
+  - *sema* (finding 6). `allocateStatement` takes a pointer as an object as it takes
+    an allocatable array; NOTALLOCATABLE's text now has the kinds as its argument
+    ("an allocatable array or a pointer" for the statements, "an allocatable
+    array" for ALLOCATED, whose argument a pointer may not be). A scalar pointer's
+    ALLOCATE has no bounds, and bounds for one are the new ALLOCSCALAR; an array
+    pointer's are ALLOCBOUNDS' as before, ALLOCSELF and STAT= unchanged. A pointer
+    is never freed at a return (`freedAtReturn` looks only at allocatable arrays).
+    Components as objects (`ALLOCATE (P%NEXT)`) wait for subtask 5's components.
+  - *Lowering* (`ir/lowerallocate.go`'s `allocateArray` and `allocateScalar`). An
+    array pointer is FTN$ALLOCATE or FTN$DEALLOCATE with flag bit 1 (`allocPointer`),
+    a COMMON one's descriptor header written first (`commonHeader`: FTN$ALLOCATE reads
+    the element size and rank). A scalar one is the new `FTN$ALLOC_SCALAR(cell, flags,
+    size)` or `FTN$DEALLOC_SCALAR(cell, flags, size)`, `cell` `pointerAddress`'s
+    longword (a CHARACTER pointer's descriptor's POINTER, its header written first),
+    `size` the target type's size. **The arguments' order is (cell, flags, size)**, not
+    the survey's (cell, size, flags), so that every routine of FTN_ALLOC has its flags
+    at 8(AP), where the shared failure path reads them.
+  - *FTNRTL* (`ftn_alloc.mar`, GSMATCH 1,25; vector entries 720 and 728). Memory is
+    taken and given back by two local routines, `GET_BLOCK` and `FREE_BLOCK`, which read
+    the caller's flags through its saved AP: with bit 1 a block has the 8-byte header
+    (the header's address XOR `PTR_MARK`, then the size asked for), with bit 2 it is
+    cleared, 65,535 bytes at a time by MOVC5 (no caller sets it until subtask 5's
+    types with pointer components). A pointer's ALLOCATE is never ALREADYALLOC.
+    DEALLOCATE of a pointer checks, in `CHECK_BLOCK`, that the header can be read
+    (PROBER: the target may be at the start of a program's storage), that its mark is
+    its own address's, and that its size is the target's: for an array, ARSIZE, after
+    its strides are checked to be those FTN$ALLOCATE would give its bounds (contiguous
+    and in order). Else it is the new BADDEALLOC, FOR number 304, govax's own
+    (`vmsdef/formessages.go`); the mark is cleared before LIB$FREE_VM. A scalar pointer
+    to the one element of an array pointer's block of its size may give it back; that
+    is the whole block (unconfirmed, ours). NOTALLOC's text is now "allocatable array or
+    pointer is not allocated".
+  - *A slip found by the first run:* `XORL3 #PTR_MARK,R3,(R3)+` marked the block with
+    R3's incremented value: the architecture calls a register read in register mode in
+    the same instruction as its autoincrement UNPREDICTABLE, and govax reads it after.
+    The code now writes the header without the autoincrement.
+  - *A label fixed:* the MACRO file's comment on an array pointer's cell said
+    "allocatable" (`codegen`'s storage comments, subtask 3's; `f90aptr.mar`).
+  - *Tests.* `sema`'s `TestPointers` (every form, ALLOCSCALAR, ALLOCBOUNDS, ALLOCSELF,
+    ALLOCATED of a pointer) and `TestAllocate`'s texts; `ir` and `codegen` golden
+    `f90palloc.for`; `ftnrtl/build`'s vector offsets and minor id;
+    `testdata/fortran90/ptralloc.f90`, worked by hand, every mode and both loaders, the
+    same on gfortran; `ptrallocvms.f90`, VMS's own (the FOR numbers, the signals, and
+    LIB$STAT_VM's bytes: none kept, a lost INTEGER target's 16).
+  - *Docs.* MANUAL.md's 14.13 (ALLOCATE and DEALLOCATE of pointers, growing an array,
+    "Not there yet"'s example now a POINTER component) and its FTNRTL table, HELP
+    FORTRAN.

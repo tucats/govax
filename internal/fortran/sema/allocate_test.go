@@ -60,8 +60,8 @@ func TestAllocatable(t *testing.T) {
 		{"a lower bound", prog("real, allocatable :: a(0:)"),
 			"ALLOCSHAPE: A is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},
 
-		{"ALLOCATE of an array not allocatable", prog("real a(3)", "allocate (a(3))"), "NOTALLOCATABLE: A is not an allocatable array"},
-		{"DEALLOCATE of a variable", prog("deallocate (x)"), "NOTALLOCATABLE: X is not an allocatable array"},
+		{"ALLOCATE of an array not allocatable", prog("real a(3)", "allocate (a(3))"), "NOTALLOCATABLE: A is not an allocatable array or a pointer"},
+		{"DEALLOCATE of a variable", prog("deallocate (x)"), "NOTALLOCATABLE: X is not an allocatable array or a pointer"},
 		{"ALLOCATED of an array", prog("real a(3)", "l = allocated(a)"), "NOTALLOCATABLE: A is not an allocatable array"},
 		{"too few bounds", prog("real, allocatable :: a(:, :)", "allocate (a(3))"),
 			"ALLOCBOUNDS: in ALLOCATE, A needs 2 bounds, each a value or two separated by a colon"},

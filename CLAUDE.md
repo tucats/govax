@@ -1276,7 +1276,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `fillNCA`, `copyDescriptor`, `arrayAssociated`; VECTORTARGET; a COMMON one's
   header written at `=>`, `commonHeader`; `A(::2)` parsed, `atColon`; an array
   pointer's elements `UnknownRegion` in `opt/places.go`;
-  `testdata/fortran90/ptrarrays.f90`).
+  `testdata/fortran90/ptrarrays.f90`); subtask 4 (2026-11-19) ALLOCATE and
+  DEALLOCATE of pointers (`ir/lowerallocate.go`'s `allocateArray` and
+  `allocateScalar`; FTNRTL's flag bit 1, a pointer's block with an 8-byte header,
+  a mark and its size, checked by DEALLOCATE, BADDEALLOC, FOR number 304; bit 2
+  clears a block; `FTN$ALLOC_SCALAR` and `FTN$DEALLOC_SCALAR`, GSMATCH 1,25;
+  `testdata/fortran90/ptralloc.f90`, `ptrallocvms.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2989,7 +2994,7 @@ expect adjustment as phases land):
   context's record, Phase 75; `ftn_listin.mar`, list-directed input, Phase 80; `ftn_namelist.mar`, namelist input and output, Phase 80; `ftn_internal.mar`, internal files, ENCODE, and DECODE, Phase 80; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
   lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
   each function MTHRTL lacks that a program may pass as an argument,
-  FTN$LEN to FTN$NWORKERS, Phase 78; `ftn_system.mar`, the system subroutines, Phase 83; `ftn_alloc.mar`, Fortran 90's ALLOCATE and DEALLOCATE, and the heap's array temporaries, Phase 104), linked by `ftnrtl.opt` (the vector its own cluster, first;
+  FTN$LEN to FTN$NWORKERS, Phase 78; `ftn_system.mar`, the system subroutines, Phase 83; `ftn_alloc.mar`, Fortran 90's ALLOCATE and DEALLOCATE, and the heap's array temporaries, Phase 104; of pointers, Phase 107), linked by `ftnrtl.opt` (the vector its own cluster, first;
   `GSMATCH=LEQUAL`; raise the minor id with each new entry), committed
   as `ftnrtl.exe` and embedded (`Files`, `Image`). `ftnrtl/build`
   assembles and links it with `internal/asm` and `internal/link` as

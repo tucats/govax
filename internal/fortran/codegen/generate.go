@@ -1124,6 +1124,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 			return "a function's value of run-time shape, for one statement: its descriptor"
 		}
 
+		if c.Sym != nil && c.Sym.Pointer {
+			return c.Sym.Name + ", " + typeText(c.Sym) + ": its descriptor"
+		}
+
 		if c.Sym != nil {
 			return c.Sym.Name + ", " + typeText(c.Sym) + ", allocatable: its descriptor"
 		}
