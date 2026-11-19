@@ -1,7 +1,8 @@
 # Phase 106 — Fortran 90: modules
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A), done 2026-11-18, for review.
+Part C). Subtask 1, the survey (Part A), done 2026-11-18 and accepted by the
+author the same day.
 
 ## Goal
 
@@ -62,7 +63,7 @@ Modules and separate compilation (the standard's 11.3), by Decision 10:
 
 1. **Survey** (the standard's 11.3, 12.1.2.2.2, 14.1.2; the Handbook's chapter
    11; the HP manual's module chapter for the file conventions), for review
-   (done 2026-11-18; Part A, whose A.4 revises this list).
+   (done 2026-11-18, accepted; Part A, whose A.4 revises this list).
 2. **Modules in one file**: MODULE, USE, use association, the psect and names.
 3. **PUBLIC and PRIVATE**, ONLY, renames.
 4. **Module procedures**, and generics and operators from modules.
@@ -363,7 +364,8 @@ The plan put module files fifth. By finding 6 every USE reads a module's text,
 so the writer and reader come with the first USE, and the command's search and
 qualifiers stay a subtask of their own.
 
-1. **Survey** (this Part A) (done 2026-11-18, for review).
+1. **Survey** (this Part A) (done 2026-11-18; accepted by the author the
+   same day).
 2. **Modules and their data:** `ast.UseStmt`, the module unit and its
    constraints, the psect and layout, PARAMETERs, types, NAMELIST, COMMON in a
    module; the module text's writer and reader for these, and USE without lists
@@ -419,6 +421,28 @@ qualifiers stay a subtask of their own.
 8. The plan's open question 2: **definition modules as module files** (`USE`
    of govax's `$SSDEF` and the rest). Proposed: later, if wanted.
 
+## The author's answers (2026-11-18)
+
+The author read the survey and accepted every recommendation:
+
+1. The module file is Fortran 90 text, the module's specification part and its
+   procedures' interfaces, with `!GOVAX$` lines for layout, link names, and
+   origins, read by the compiler's own front end (finding 7).
+2. Module files are self-contained: each carries all its users can reach,
+   re-exported entities with their origins (finding 8).
+3. A module in the same compilation is read through its text, made in memory,
+   as a separately compiled one is read from its file (finding 6).
+4. A user references a global symbol carrying the module file's digest, which
+   the module's object defines, so LINK reports a stale module object (finding 9).
+5. MODFORMAT when the `/G_FLOATING` formats differ and the module has a REAL*8
+   or COMPLEX*16 entity (finding 10).
+6. The search: this compilation's modules, then the `/MODULE` directory or the
+   default directory, then the source's directory, then `/MODULE_PATH` or
+   `FORT$MODULES` (finding 12).
+7. No module file is written when the compilation has an error (finding 12).
+
+Definition modules as module files stay for later (the plan's open question 2).
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -431,4 +455,5 @@ qualifiers stay a subtask of their own.
   `!GOVAX$` lines, stable hashed names for long globals (today's `.$Nn` isn't
   stable across files), the default directory added to the search, and
   `/G_FLOATING` mismatches; the subtasks revised (the text's writer and reader
-  with the first USE); seven questions.
+  with the first USE); seven questions. The author accepted every
+  recommendation the same day ("The author's answers").
