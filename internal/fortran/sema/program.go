@@ -412,8 +412,10 @@ type Symbol struct {
 
 	// recordValue is the initial value a Fortran 90 declaration gives an
 	// object of a derived type, TYPE(POINT) :: P = POINT(1.0, 2.0)
-	// (structvalue.go), every element's if it is an array.
-	recordValue *Const
+	// (structvalue.go), every element's if it is an array; recordValues an
+	// array's from an array value, an element's each, in array element order.
+	recordValue  *Const
+	recordValues []*Const
 
 	// Internal is the internal procedure a host's name stands for: the name of
 	// a FUNCTION or SUBROUTINE after the host's CONTAINS, whose interface is the

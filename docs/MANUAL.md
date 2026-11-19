@@ -8855,6 +8855,23 @@ too; a longer value goes through a hidden first argument, the address of a place
 a COMPLEX\*16's does. An entry point of such a function has its type (`ENTRYDERIVED`), and a
 statement function of a derived type isn't there yet.
 
+**Arrays of derived types and components with rank** (6.1.2, 7.5.1.5). With `PATH` an array
+of POINTs, `PATH%X` is the X of every element, an array of PATH's shape; `PATH(2:9:2)%Y` takes
+a section's; `T%COORD(1:2)` is a section of an array component, and `B%C%X` takes its rank from
+the array component C. Only one part of a reference may be an array (`MULTIRANK`: `PATH%XS`
+with XS an array component). Each is an array like any other, in assignments, WHERE,
+expressions, intrinsic functions, and I/O lists, its elements a type's size apart. A STRUCTURE's
+records take the same forms: `RA.A` is every record's A, and `R.B(2:4)` is a section of the
+array field B, where VAX FORTRAN read it as a substring and refused it, unless B is CHARACTER
+and not an array. Arrays of a type, and of records, are assigned whole, as sections, and from
+one object (`Q = P`, every element), and an array constructor may hold objects of a type,
+`(/ POINT(1.0, 2.0), P /)`. MERGE, SPREAD, CSHIFT, EOSHIFT (given a BOUNDARY, which a
+derived type has no default for), PACK, UNPACK, RESHAPE, TRANSPOSE, and the inquiries take
+arrays of any type. An array PARAMETER of a type, an array's initial value, and a structure
+constructor's array component (`POLY(3, V * 2.0)`, or one value for every element) are there
+too. Passing `PATH%X` or a section of a component as an actual argument is not there yet
+(`NOTIMPL`), nor allocatable, automatic, or assumed-shape arrays of a type.
+
 All of it together:
 
 ```fortran

@@ -1196,7 +1196,20 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   loaded whole and stored by the caller straight into a 1-, 2-, 4-, or 8-byte
   target or into a temporary, past 8 bytes a hidden argument,
   `ir/lowerresult.go`; TYPEARG, SEPARATEARG, SEPARATEFUNC, ENTRYDERIVED;
-  `testdata/fortran90/results.f90`).
+  `testdata/fortran90/results.f90`); subtask 5a (2026-11-18) is arrays in
+  expressions and assignments (a field's list read as a name's, sema's
+  `componentSubstring` making a stride-less triplet after a scalar field its
+  substring; a `FieldRef` with a ranked part, `Ranked` and `Sections`, its
+  element `At`, a leaf of the scalarizer, `ir`'s `prepareSections`; MULTIRANK;
+  `sectionList` shared by sections and components; overlap's
+  `componentRelation`; arrays of a type and of records whole, as sections,
+  from a scalar, in constructors, MERGE, the transformational functions,
+  TRANSPOSE, and the inquiries; array PARAMETERs of a type, arrays' initial
+  values, `Symbol.recordValues`; constructors' array components from arrays,
+  `fillComponent`; a constant's component never defined, `constantComponent`;
+  `testdata/fortran90`'s `typearrays.f90`, `typevalues.f90`,
+  `testdata/fortran/recarrays.for`); 5b, arguments and the dynamic kinds, is
+  next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

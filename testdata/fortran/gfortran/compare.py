@@ -107,6 +107,8 @@ PROGRAMS90 = {
     "sorter": ["sorter.f90"],
     "structs": ["structs.f90"],
     "results": ["results.f90"],
+    "typearrays": ["typearrays.f90"],
+    "typevalues": ["typevalues.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
 }
 

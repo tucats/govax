@@ -2,6 +2,7 @@ package ir
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/bits"
 
@@ -122,7 +123,7 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		return x
 	}
 
-	panic("ir: an expression semantic analysis left that lowering can't lower")
+	panic(fmt.Sprintf("ir: an expression semantic analysis left that lowering can't lower (%T)", e))
 }
 
 // cond lowers a Branch's condition. It is expr's lowering, but for a
@@ -414,6 +415,22 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		// (lowerresult.go).
 		if e.T.Kind == sema.Record {
 			return l.recordResult(e)
+		}
+
+	case *sema.IntrinsicRef:
+		// MERGE of records or a derived type's objects: FSOURCE moved to a
+		// temporary, which TSOURCE replaces where MASK holds.
+		if e.T.Kind == sema.Record && e.Op == sema.MergeOp {
+			v := l.textTemp(e.T.Size)
+			l.moveBytes(v, l.mem(e.Args[1]), e.T.Size)
+
+			set, next := l.newBlock(), l.newBlock()
+			l.divert(l.cond(e.Args[2]), set, next)
+			l.begin(set)
+			l.moveBytes(v, l.mem(e.Args[0]), e.T.Size)
+			l.begin(next)
+
+			return v
 		}
 	}
 

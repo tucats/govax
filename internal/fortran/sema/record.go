@@ -52,6 +52,18 @@ type FieldStep struct {
 // the fields from the record's own down to the field named last, whose type is
 // the reference's, or for a substructure of the kind Record. Every field but
 // the last is a substructure.
+//
+// It may be an array instead (Fortran 90's 6.1.2; docs/planning/PHASE-105 -
+// Fortran 90 derived types.md, finding 7): one of its parts, Ranked, has
+// section subscripts or is a whole array, and the reference has that part's
+// shape (S). PATH%X with PATH(10) is PATH's every element's X, T%COORD(1,:) a
+// section of T's array component, PATH(2:9:2)%C%Y a section through two
+// components. Ranked is 0 for the record's own subscripts, k for Path[k-1]'s;
+// that part's subscripts are Sections, one per dimension (a whole array's every
+// one a triplet of its bounds), and its Subs (or the reference's Subs) nil. Its
+// element at the scalarizer's indexes (At) is a scalar FieldRef, reached as any
+// is: at the record's place plus the component's offset plus the element's,
+// which only strides by the type's size.
 type FieldRef struct {
 	exprBase
 
@@ -61,6 +73,52 @@ type FieldRef struct {
 	Sym  *Symbol
 	Subs []Expr
 	Path []FieldStep
+
+	Ranked   int
+	Sections []SectionSub
+
+	// whole is set when the ranked part was written with no subscripts
+	// (PATH%X, R.A of an array field A): every element of it. Text shows no
+	// list for it, and where a scalar must be a field's is FIELDWHOLE.
+	whole bool
+}
+
+// RankedDims are the dimensions of the reference's ranked part: the record
+// array's, or the field's.
+func (f *FieldRef) RankedDims() []Dim {
+	if f.Ranked == 0 {
+		return f.Sym.Dims
+	}
+
+	return f.Path[f.Ranked-1].Field.Dims
+}
+
+// RankedField is the field whose dimensions the ranked part has, nil for the
+// record array's own.
+func (f *FieldRef) RankedField() *Field {
+	if f.Ranked == 0 {
+		return nil
+	}
+
+	return f.Path[f.Ranked-1].Field
+}
+
+// At is the array reference f's element whose ranked part has the subscripts
+// subs, a scalar reference.
+func (f *FieldRef) At(subs []Expr) *FieldRef {
+	c := *f
+	c.S, c.Sections, c.whole = nil, nil, false
+
+	if f.Ranked == 0 {
+		c.Subs = subs
+
+		return &c
+	}
+
+	c.Path = append([]FieldStep(nil), f.Path...)
+	c.Path[f.Ranked-1].Subs = subs
+
+	return &c
 }
 
 // Field is the field the reference names, its last.
@@ -73,7 +131,7 @@ func (f *FieldRef) Field() *Field {
 func (f *FieldRef) WholeArray() bool {
 	last := f.Path[len(f.Path)-1]
 
-	return last.Field.Dims != nil && last.Subs == nil
+	return f.S == nil && last.Field.Dims != nil && last.Subs == nil
 }
 
 // Text is the reference as messages and dumps name it, its subscripts
@@ -83,7 +141,7 @@ func (f *FieldRef) Text() string {
 
 	b.WriteString(f.Sym.Name)
 
-	if f.Subs != nil {
+	if f.Subs != nil || f.S != nil && f.Ranked == 0 && !f.whole {
 		b.WriteString("()")
 	}
 
@@ -93,10 +151,10 @@ func (f *FieldRef) Text() string {
 		sep = "%"
 	}
 
-	for _, s := range f.Path {
+	for i, s := range f.Path {
 		b.WriteString(sep + s.Field.Name)
 
-		if s.Subs != nil {
+		if s.Subs != nil || f.S != nil && f.Ranked == i+1 && !f.whole {
 			b.WriteString("()")
 		}
 	}
@@ -165,8 +223,11 @@ func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 }
 
 // field analyzes a field reference: a scalar one, an aggregate one (which
-// value refuses, scalar), or where whole allows it (an actual argument, an I/O
-// list item) an array field without subscripts.
+// value refuses, scalar), or an array one, whose one ranked part has section
+// subscripts or is a whole array (PATH%X, T%COORD(1,:); value refuses that
+// where a scalar must be). Where whole allows it (an actual argument, an I/O
+// list item) the last field, an array, without subscripts is an array name
+// reference (WholeArray), as before Fortran 90, unless another part has rank.
 func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 	// A constant's component, ORIGIN%X, is a constant if its subscripts are
 	// (structvalue.go); one that isn't is read from the constant's datum.
@@ -229,12 +290,14 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 			return a.bad(e.Pos)
 		}
 
-		subs, ok := a.fieldSubscripts(f, step, whole && i == len(steps)-1)
-		if !ok {
+		ref.Path = append(ref.Path, FieldStep{Field: f})
+
+		last := i == len(steps)-1
+
+		if !a.fieldSubscripts(ref, f, step, whole && last && ref.S == nil) {
 			return a.bad(e.Pos)
 		}
 
-		ref.Path = append(ref.Path, FieldStep{f, subs})
 		st, prev = f.Struct, f
 	}
 
@@ -247,8 +310,10 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 }
 
 // recordBase analyzes the record a field reference starts from, x: a
-// record's name, or an element of an array of records. first is the field
-// named after it, for the message if x isn't a record.
+// record's name, an element of an array of records, or since Fortran 90 an
+// array of records whole or a section of one (finding 7), which makes the
+// record's own part the reference's ranked one. first is the field named
+// after it, for the message if x isn't a record.
 func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 	var (
 		name string
@@ -268,6 +333,10 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 
 	s := a.lookup(name, pos)
 
+	// An array constant of a derived type is read from its datum as an array
+	// of records is from its storage.
+	isArray := s.Class == Array || s.Class == Constant && s.ArrayValue != nil
+
 	switch {
 	case s.broken:
 		return false
@@ -282,17 +351,17 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 
 		return false
 
-	case args == nil && s.Class == Array:
-		a.report("NEEDSUBSCRIPT", pos, name)
+	case args == nil && isArray && s.AssumedSize():
+		a.report("NOSHAPE", pos, name)
 
 		return false
 
-	case args != nil && s.Class != Array:
+	case args != nil && !isArray:
 		a.report("NOTARRAY", pos, name)
 
 		return false
 
-	case len(args) != len(s.Dims):
+	case args != nil && len(args) != len(s.Dims):
 		a.report("SUBSCRIPTS", pos, name, count(len(s.Dims), "subscript"), len(args))
 
 		return false
@@ -300,72 +369,125 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 
 	ref.Sym = s
 
-	if args != nil {
-		subs, ok := a.subscripts(pos, args)
+	switch {
+	case args == nil && isArray:
+		// Every record of the array: PATH%X.
+		ref.Ranked, ref.whole = 0, true
+		ref.Sections, ref.S = wholeSections(s.Dims, pos, ref)
+
+	case args != nil:
+		if a.nullSubscript(pos, args) {
+			return false
+		}
+
+		subs, shape, ok := a.sectionList(s, name, s.Dims, pos, args, ref)
 		if !ok {
 			return false
 		}
 
-		a.checkConstantSubscripts(s, name, s.Dims, subs)
-
-		ref.Subs = subs
+		if shape == nil {
+			ref.Subs = indexes(subs)
+		} else {
+			ref.Ranked, ref.Sections, ref.S = 0, subs, shape
+		}
 	}
 
 	return true
 }
 
-// fieldSubscripts are a field's subscripts in a reference, one for each of
-// its dimensions, or none for a field that isn't an array. An array field
-// without them is an array name reference (section 2.2.6), which only an
-// actual argument or an I/O list item may be (whole).
-func (a *analyzer) fieldSubscripts(f *Field, step *ast.FieldRef, whole bool) ([]Expr, bool) {
+// wholeSections are the section subscripts of a whole array of dims, each a
+// triplet from its lower bound to its upper by 1 (a bound known only when the
+// program runs nil, the dimension's own, as section leaves it), and its shape,
+// an extent not known when compiling computed from of's subscript.
+func wholeSections(dims []Dim, pos diag.Position, of Expr) ([]SectionSub, Shape) {
+	subs := make([]SectionSub, len(dims))
+	shape := make(Shape, len(dims))
+
+	for i, d := range dims {
+		subs[i].Stride = IntConstAt(1, pos)
+
+		if d.LowerKnown() {
+			subs[i].Lower = IntConstAt(d.Lower, pos)
+		}
+
+		if d.UpperKnown() {
+			subs[i].Upper = IntConstAt(d.Upper, pos)
+		}
+
+		if d.known() {
+			shape[i] = Extent{Size: max(d.Extent(), 0), Known: true}
+		} else {
+			shape[i] = Extent{Of: of, Dim: i}
+		}
+	}
+
+	return subs, shape
+}
+
+// fieldSubscripts analyzes a field's subscripts in a reference, the field f
+// of step, the last of ref.Path: one for each of its dimensions, or none for
+// a field that isn't an array. An array field without them is every element
+// of it, the reference's ranked part, or where whole allows it an array name
+// reference (section 2.2.6), which only an actual argument or an I/O list item
+// may be. With section subscripts the field is the ranked part. Only one part
+// of a reference may have rank (Fortran 90's 6.1.2): MULTIRANK.
+func (a *analyzer) fieldSubscripts(ref *FieldRef, f *Field, step *ast.FieldRef, whole bool) bool {
+	k := len(ref.Path)
+
 	switch {
 	case f.Dims == nil && step.Args != nil:
 		a.report("FIELDSUBS", step.Pos, f.Name, "no subscripts", len(step.Args))
 
-		return nil, false
+		return false
 
 	case f.Dims == nil:
-		return nil, true
+		return true
 
 	case step.Args == nil && whole:
-		return nil, true
+		return true
 
 	case step.Args == nil:
-		a.report("FIELDWHOLE", step.Pos, f.Name)
+		if ref.S != nil {
+			a.report("MULTIRANK", step.Pos, f.Name)
 
-		return nil, false
+			return false
+		}
+
+		ref.Ranked, ref.whole = k, true
+		ref.Sections, ref.S = wholeSections(f.Dims, step.Pos, ref)
+
+		return true
 
 	case len(step.Args) != len(f.Dims):
 		a.report("FIELDSUBS", step.Pos, f.Name, count(len(f.Dims), "subscript"), len(step.Args))
 
-		return nil, false
+		return false
 	}
 
-	subs, ok := a.subscripts(step.Pos, step.Args)
-	if ok {
-		a.checkConstantSubscripts(nil, f.Name, f.Dims, subs)
+	if a.nullSubscript(step.Pos, step.Args) {
+		return false
 	}
 
-	return subs, ok
-}
-
-// subscripts analyzes an element's subscripts, each made INTEGER (a REAL one
-// is truncated, section 2.2.3.2).
-func (a *analyzer) subscripts(pos diag.Position, args []ast.Expr) ([]Expr, bool) {
-	if a.nullSubscript(pos, args) {
-		return nil, false
+	subs, shape, ok := a.sectionList(nil, f.Name, f.Dims, step.Pos, step.Args, ref)
+	if !ok {
+		return false
 	}
 
-	subs := make([]Expr, len(args))
-	ok := true
+	if shape == nil {
+		ref.Path[k-1].Subs = indexes(subs)
 
-	for i, arg := range args {
-		subs[i] = a.convert(a.arithmetic(a.subscriptValue(arg)), IntegerType)
-		ok = ok && subs[i].Type().Kind != Invalid
+		return true
 	}
 
-	return subs, ok
+	if ref.S != nil {
+		a.report("MULTIRANK", step.Pos, f.Name)
+
+		return false
+	}
+
+	ref.Ranked, ref.Sections, ref.S = k, subs, shape
+
+	return true
 }
 
 // scalar is e where a value is wanted: an aggregate reference isn't one
@@ -421,12 +543,17 @@ func structureOf(e Expr) *Structure {
 
 // aggregateValue analyzes the value of an assignment to an aggregate reference:
 // another one if it can be, or whatever value makes of it, for assignedValue to
-// refuse. An array of records as a whole isn't one.
-func (a *analyzer) aggregateValue(e ast.Expr) Expr {
-	switch x := e.(type) {
+// refuse. An array of records as a whole is one only for an array target
+// (arrays): A = B, both arrays of records or of a derived type.
+func (a *analyzer) aggregateValue(e ast.Expr, arrays bool) Expr {
+	switch x := a.substringForm(e).(type) {
 	case *ast.Name:
 		v := a.name(x, true)
-		if _, whole := v.(*ArrayRef); whole {
+		if r, whole := v.(*ArrayRef); whole {
+			if arrays {
+				return a.wholeArray(r.Sym, x)
+			}
+
 			a.report("NEEDSUBSCRIPT", x.Pos, x.Name)
 
 			return a.bad(x.Pos)
@@ -439,6 +566,12 @@ func (a *analyzer) aggregateValue(e ast.Expr) Expr {
 
 	case *ast.FieldRef:
 		return a.field(x, false)
+
+	case *ast.ArrayConstructor:
+		// (/ POINT(1.0, 2.0), P /) for an array target.
+		if arrays {
+			return a.constructor(x)
+		}
 	}
 
 	return a.value(e)
@@ -572,7 +705,7 @@ func (a *analyzer) recordInitials() {
 			image, sep = a.valueInitials(s.recordValue, s.TypePos), "%"
 		}
 
-		if len(image) == 0 {
+		if len(image) == 0 && s.recordValues == nil {
 			continue
 		}
 
@@ -586,6 +719,11 @@ func (a *analyzer) recordInitials() {
 			item := s.Name
 			if s.Dims != nil {
 				item = s.elementText(n)
+			}
+
+			// An array's value from an array, an element's each.
+			if s.recordValues != nil {
+				image, sep = a.valueInitials(s.recordValues[n], s.TypePos), "%"
 			}
 
 			for _, in := range image {

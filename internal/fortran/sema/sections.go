@@ -1,6 +1,9 @@
 package sema
 
-import "github.com/tucats/govax/internal/fortran/ast"
+import (
+	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
+)
 
 // Sections and substrings. Since Fortran 90 a parenthesized list after a
 // name may hold subscript triplets, [l]:[u][:s], which make an array section
@@ -22,6 +25,10 @@ import "github.com/tucats/govax/internal/fortran/ast"
 // node calls it first, so old programs' substrings take the path they always
 // took (TestNoF90Unchanged).
 func (a *analyzer) substringForm(e ast.Expr) ast.Expr {
+	if f, ok := e.(*ast.FieldRef); ok {
+		return a.componentSubstring(f)
+	}
+
 	ap, ok := e.(*ast.Apply)
 	if !ok {
 		return e
@@ -32,6 +39,78 @@ func (a *analyzer) substringForm(e ast.Expr) ast.Expr {
 	}
 
 	return substringReading(e)
+}
+
+// componentSubstring is substringForm for a field reference, whose
+// parenthesized list the parser reads as a name's (R.A(1:3), P%NAME(2:4)): one
+// triplet without a stride after a field that isn't an array is the field's
+// substring, as Fortran 77 read it; anything else stays the reference, for
+// field to read as an element or a section. A field that can't be found is
+// left to field's messages.
+func (a *analyzer) componentSubstring(e *ast.FieldRef) ast.Expr {
+	if len(e.Args) != 1 {
+		return e
+	}
+
+	t, ok := e.Args[0].(*ast.Triplet)
+	if !ok || t.Stride != nil {
+		return e
+	}
+
+	if f := a.componentOf(e); f == nil || f.Dims != nil {
+		return e
+	}
+
+	whole := *e
+	whole.Args = nil
+
+	return &ast.Substring{ExprBase: e.ExprBase, X: &whole, Lower: t.Lower, Upper: t.Upper}
+}
+
+// componentOf is the field the reference e names, found quietly from the
+// declarations, or nil if it can't be: no record at its start, or a name no
+// structure on the way has.
+func (a *analyzer) componentOf(e *ast.FieldRef) *Field {
+	var st *Structure
+
+	switch x := e.X.(type) {
+	case *ast.FieldRef:
+		f := a.componentOf(x)
+		if f == nil {
+			return nil
+		}
+
+		st = f.Struct
+
+	case *ast.Name:
+		st = a.structureNamed(x.Name)
+
+	case *ast.Apply:
+		st = a.structureNamed(x.Name)
+	}
+
+	if st == nil {
+		return nil
+	}
+
+	return st.Field(e.Field)
+}
+
+// structureNamed is the structure of the record, object, or derived-type
+// constant the name is in scope, or nil.
+func (a *analyzer) structureNamed(name string) *Structure {
+	s := a.scope.find(name)
+
+	switch {
+	case s == nil:
+		return nil
+	case s.Struct != nil:
+		return s.Struct
+	case s.Type.Kind == Record:
+		return s.Type.Struct
+	}
+
+	return nil
 }
 
 // substringReading is e as Fortran 77 read it: one triplet without a stride
@@ -112,15 +191,51 @@ func (a *analyzer) section(s *Symbol, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	sec := &Section{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: make([]SectionSub, len(e.Args))}
+	sec := &Section{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s}
+
+	subs, shape, ok := a.sectionList(s, e.Name, s.Dims, e.Pos, e.Args, sec)
+	if !ok {
+		return a.bad(e.Pos)
+	}
+
+	sec.Subs, sec.S = subs, shape
+
+	if sec.S != nil {
+		return sec
+	}
+
+	return &Elem{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: indexes(subs)}
+}
+
+// indexes are the subscripts of a list with no triplet and no vector
+// subscript, an element's.
+func indexes(subs []SectionSub) []Expr {
+	list := make([]Expr, len(subs))
+	for i, sub := range subs {
+		list[i] = sub.Index
+	}
+
+	return list
+}
+
+// sectionList analyzes the subscripts args, one for each of dims, at pos: an
+// array's, s's, or a field's (s nil), name naming it in messages. It is shared
+// by an array's sections and a component's (record.go). Each subscript,
+// triplet, or vector subscript is analyzed as section says, and shape is the
+// section's, an extent for each triplet and vector subscript, nil if there are
+// none (an element); of is the expression an extent not known when compiling
+// is computed from (Extent.Of), whose subscript i is the triplet.
+func (a *analyzer) sectionList(s *Symbol, name string, dims []Dim, pos diag.Position, args []ast.Expr,
+	of Expr) (subs []SectionSub, shape Shape, ok bool) {
+	subs = make([]SectionSub, len(args))
 
 	// A subscript with an error doesn't stop the others' analysis, so each
 	// gets its messages.
 	failed := false
 
-	for i, arg := range e.Args {
-		t, ok := arg.(*ast.Triplet)
-		if !ok {
+	for i, arg := range args {
+		t, isTriplet := arg.(*ast.Triplet)
+		if !isTriplet {
 			v := a.convert(a.arithmetic(a.arrayValue(arg)), IntegerType)
 			if v.Type().Kind == Invalid {
 				failed = true
@@ -131,14 +246,14 @@ func (a *analyzer) section(s *Symbol, e *ast.Apply) Expr {
 			switch rankOf(v) {
 			case 0:
 				if c, ok := constantInt(v); ok {
-					a.checkSubscript(s, e.Name, s.Dims, i, c, v.Position())
+					a.checkSubscript(s, name, dims, i, c, v.Position())
 				}
 
-				sec.Subs[i] = SectionSub{Index: v}
+				subs[i] = SectionSub{Index: v}
 
 			case 1:
-				sec.Subs[i] = SectionSub{Vector: v}
-				sec.S = append(sec.S, v.Shape()[0])
+				subs[i] = SectionSub{Vector: v}
+				shape = append(shape, v.Shape()[0])
 
 			default:
 				a.report("VECTORRANK", v.Position(), rankOf(v))
@@ -149,34 +264,25 @@ func (a *analyzer) section(s *Symbol, e *ast.Apply) Expr {
 			continue
 		}
 
-		sub, ok := a.triplet(s, e, i, t)
+		sub, ok := a.triplet(dims[i], name, pos, t)
 		if !ok {
-			return a.bad(e.Pos)
+			return nil, nil, false
 		}
 
-		sec.Subs[i] = sub
-		sec.S = append(sec.S, a.tripletExtent(s, e.Name, sec, i))
+		subs[i] = sub
+		shape = append(shape, a.tripletExtent(s, name, dims, sub, of, i))
 	}
 
 	if failed {
-		return a.bad(e.Pos)
+		return nil, nil, false
 	}
 
-	if sec.S != nil {
-		return sec
-	}
-
-	subs := make([]Expr, len(sec.Subs))
-	for i, sub := range sec.Subs {
-		subs[i] = sub.Index
-	}
-
-	return &Elem{exprBase: exprBase{T: s.Type, Pos: e.Pos}, Sym: s, Subs: subs}
+	return subs, shape, true
 }
 
-// triplet analyzes the triplet t, the section's subscript i of s.
-func (a *analyzer) triplet(s *Symbol, e *ast.Apply, i int, t *ast.Triplet) (SectionSub, bool) {
-	d := s.Dims[i]
+// triplet analyzes the triplet t, a subscript of the dimension d of what name
+// names, at pos.
+func (a *analyzer) triplet(d Dim, name string, pos diag.Position, t *ast.Triplet) (SectionSub, bool) {
 	sub := SectionSub{}
 
 	bound := func(x ast.Expr) Expr {
@@ -207,7 +313,7 @@ func (a *analyzer) triplet(s *Symbol, e *ast.Apply, i int, t *ast.Triplet) (Sect
 			return sub, false
 		}
 	case d.Assumed:
-		a.report("SECTIONEND", e.Pos, e.Name)
+		a.report("SECTIONEND", pos, name)
 
 		return sub, false
 	case d.UpperKnown():
@@ -231,40 +337,25 @@ func (a *analyzer) triplet(s *Symbol, e *ast.Apply, i int, t *ast.Triplet) (Sect
 	return sub, true
 }
 
-// tripletExtent is the extent of the section's subscript i, a triplet: known
-// when its bounds and stride are constants, when the subscripts it uses are
-// checked against the dimension too.
-func (a *analyzer) tripletExtent(s *Symbol, name string, sec *Section, i int) Extent {
-	sub := sec.Subs[i]
-
+// tripletExtent is the extent of sub, a triplet, the subscript i of of (a
+// section of s, or a component of a field with dims): known when its bounds
+// and stride are constants, when the subscripts it uses are checked against
+// the dimension too.
+func (a *analyzer) tripletExtent(s *Symbol, name string, dims []Dim, sub SectionSub, of Expr, i int) Extent {
 	l, okl := constantInt(sub.Lower)
 	u, oku := constantInt(sub.Upper)
 	st, oks := constantInt(sub.Stride)
 
 	if !okl || !oku || !oks {
-		return Extent{Of: sec, Dim: i}
+		return Extent{Of: of, Dim: i}
 	}
 
 	n := max((u-l+st)/st, 0)
 
 	if n > 0 {
-		a.checkSubscript(s, name, s.Dims, i, l, sub.Lower.Position())
-		a.checkSubscript(s, name, s.Dims, i, l+(n-1)*st, sub.Upper.Position())
+		a.checkSubscript(s, name, dims, i, l, sub.Lower.Position())
+		a.checkSubscript(s, name, dims, i, l+(n-1)*st, sub.Upper.Position())
 	}
 
 	return Extent{Size: n, Known: true}
-}
-
-// subscriptValue analyzes a subscript where only a scalar may be (an array
-// element's own subscripts are analyzed by section, which takes vector
-// subscripts too): a vector subscript of a record's array field is Phase 105's.
-func (a *analyzer) subscriptValue(e ast.Expr) Expr {
-	v := a.arrayValue(e)
-	if rankOf(v) == 0 {
-		return v
-	}
-
-	a.notImplForm(e.Position(), "a vector subscript")
-
-	return a.bad(e.Position())
 }

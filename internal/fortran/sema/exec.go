@@ -174,7 +174,7 @@ func (a *analyzer) assignOperands(s *ast.AssignStmt) (Expr, Expr) {
 	// A target with an error says nothing of what its value may be.
 	var value Expr
 	if target == nil || target.Type().Kind == Record {
-		value = a.aggregateValue(s.Value)
+		value = a.aggregateValue(s.Value, target != nil && rankOf(target) > 0)
 	} else {
 		value = a.assignedExpr(s.Value, target.Type())
 	}
@@ -339,6 +339,10 @@ func (a *analyzer) target(e ast.Expr) Expr {
 		t = a.substring(e)
 
 	case *ast.FieldRef:
+		if a.constantComponent(e) {
+			return nil
+		}
+
 		t = a.field(e, false)
 
 	case *ast.Apply:

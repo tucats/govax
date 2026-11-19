@@ -254,12 +254,21 @@ func (a *analyzer) checkManyOne(target Expr) bool {
 		target = s.X
 	}
 
-	sec, ok := target.(*Section)
-	if !ok {
+	var (
+		subs []SectionSub
+		name string
+	)
+
+	switch t := target.(type) {
+	case *Section:
+		subs, name = t.Subs, t.Sym.Name
+	case *FieldRef:
+		subs, name = t.Sections, t.Text()
+	default:
 		return true
 	}
 
-	for _, sub := range sec.Subs {
+	for _, sub := range subs {
 		v, ok := sub.Vector.(*ArrayConst)
 		if !ok {
 			continue
@@ -269,7 +278,7 @@ func (a *analyzer) checkManyOne(target Expr) bool {
 
 		for _, c := range v.Elems {
 			if seen[c.Int] {
-				a.report("MANYONE", v.Pos, sec.Sym.Name, c.Int)
+				a.report("MANYONE", v.Pos, name, c.Int)
 
 				return false
 			}
@@ -408,6 +417,16 @@ func readsAny(e Expr, ts *Symbol) bool {
 			}
 		case *FieldRef:
 			found = found || mayShare(ts, e.Sym)
+
+			for _, x := range e.Subs {
+				walk(x)
+			}
+
+			for _, step := range e.Path {
+				for _, x := range step.Subs {
+					walk(x)
+				}
+			}
 		case *Substring:
 			walk(e.X)
 			walk(e.Lower)
@@ -491,11 +510,18 @@ func vectorsRead(e Expr, ts *Symbol) bool {
 	}
 
 	vectors = func(leaf Expr) {
-		if s, ok := leaf.(*Section); ok {
-			for _, sub := range s.Subs {
-				if sub.Vector != nil {
-					reads(sub.Vector)
-				}
+		var subs []SectionSub
+
+		switch x := leaf.(type) {
+		case *Section:
+			subs = x.Subs
+		case *FieldRef:
+			subs = x.Sections
+		}
+
+		for _, sub := range subs {
+			if sub.Vector != nil {
+				reads(sub.Vector)
 			}
 		}
 	}
@@ -513,6 +539,8 @@ func baseSymbol(e Expr) *Symbol {
 	case *ArrayRef:
 		return e.Sym
 	case *Section:
+		return e.Sym
+	case *FieldRef:
 		return e.Sym
 	case *Substring:
 		return baseSymbol(e.X)
@@ -573,17 +601,29 @@ func slots(e Expr) []slot {
 		return list
 
 	case *Section:
-		list := make([]slot, len(e.Subs))
+		return sectionSlots(e.Subs)
 
-		for i, s := range e.Subs {
-			switch {
-			case s.Vector != nil:
-				list[i] = slot{vector: s.Vector}
-			case s.Triplet():
-				list[i] = slot{triplet: true, lower: s.Lower, stride: s.Stride}
-			default:
-				list[i] = slot{index: s.Index}
+	case *FieldRef:
+		// Every part's subscripts in turn, the record's first: the ranked
+		// part's are its loops', and the others fixed.
+		var list []slot
+
+		part := func(k int, subs []Expr) {
+			if e.S != nil && e.Ranked == k {
+				list = append(list, sectionSlots(e.Sections)...)
+
+				return
 			}
+
+			for _, x := range subs {
+				list = append(list, slot{index: x})
+			}
+		}
+
+		part(0, e.Subs)
+
+		for i, step := range e.Path {
+			part(i+1, step.Subs)
 		}
 
 		return list
@@ -592,11 +632,77 @@ func slots(e Expr) []slot {
 	return nil
 }
 
+// sectionSlots are a section's subscripts as overlap compares them.
+func sectionSlots(subs []SectionSub) []slot {
+	list := make([]slot, len(subs))
+
+	for i, s := range subs {
+		switch {
+		case s.Vector != nil:
+			list[i] = slot{vector: s.Vector}
+		case s.Triplet():
+			list[i] = slot{triplet: true, lower: s.Lower, stride: s.Stride}
+		default:
+			list[i] = slot{index: s.Index}
+		}
+	}
+
+	return list
+}
+
+// componentRelation is how two component references of one record or array
+// of records stand, so far as their fields say: the same fields all the way
+// (decided, false: their subscripts must say), or apart, where the first
+// fields they differ in are bytes of the structure that don't meet, which no
+// element of either reaches the other's (decided, apart); anything else is
+// unknown (decided, not apart). A component reference and a reference to the
+// records themselves are unknown.
+func componentRelation(target, leaf Expr) (decided, apart bool) {
+	t, tok := target.(*FieldRef)
+	l, lok := leaf.(*FieldRef)
+
+	switch {
+	case !tok && !lok:
+		return false, false
+	case !tok || !lok:
+		return true, false
+	}
+
+	for i := range min(len(t.Path), len(l.Path)) {
+		x, y := t.Path[i].Field, l.Path[i].Field
+		if x == y {
+			continue
+		}
+
+		xEnd, yEnd := x.Offset+x.Size(), y.Offset+y.Size()
+
+		return true, xEnd <= y.Offset || yEnd <= x.Offset
+	}
+
+	if len(t.Path) != len(l.Path) || t.Ranked != l.Ranked {
+		return true, false
+	}
+
+	return false, false
+}
+
 // relate is how the array leaf the value reads stands to the target, which may
 // share its storage: for relOrdered also which loop must run which way (1 up,
 // -1 down).
 func relate(target, leaf Expr) (rel overlapRelation, loop, dir int) {
 	if baseSymbol(target) != baseSymbol(leaf) {
+		return relUnknown, 0, 0
+	}
+
+	if s, ok := target.(*Substring); ok {
+		target = s.X
+	}
+
+	if decided, apart := componentRelation(target, leaf); decided {
+		if apart {
+			return relApart, 0, 0
+		}
+
 		return relUnknown, 0, 0
 	}
 

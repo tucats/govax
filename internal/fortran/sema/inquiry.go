@@ -166,7 +166,7 @@ func (a *analyzer) inquiryArgType(x ast.Expr) Type {
 		return t
 	}
 
-	switch x := x.(type) {
+	switch x := a.substringForm(x).(type) {
 	case *ast.Name:
 		return a.name(x, true).Type()
 	case *ast.Apply:

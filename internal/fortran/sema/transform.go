@@ -63,12 +63,15 @@ func (a *analyzer) transform(e *ast.Apply, args []ast.Expr) Expr {
 
 	f := &ArrayFunc{exprBase: exprBase{Pos: e.Pos}, Name: e.Name}
 
+	// operand, not arrayValue: each of these takes an array of any type, a
+	// derived type's or a record's too, and a scalar of it (SPREAD's SOURCE,
+	// EOSHIFT's BOUNDARY), which a type's other rules refuse where it can't be.
 	value := func(i int) Expr {
 		if arg(i) == nil {
 			return nil
 		}
 
-		return a.arrayValue(arg(i))
+		return a.operand(arg(i))
 	}
 
 	// array is argument i, which must be an array.
@@ -269,7 +272,7 @@ func (a *analyzer) shift(f *ArrayFunc, array Expr, arg func(int) ast.Expr, value
 		}
 
 		f.Pad = a.convert(b, array.Type())
-		if array.Type().Kind == Character {
+		if array.Type().Kind == Character || array.Type().Kind == Record {
 			f.Pad = b
 		}
 	}
@@ -288,8 +291,13 @@ func (a *analyzer) shift(f *ArrayFunc, array Expr, arg func(int) ast.Expr, value
 }
 
 // sameKind reports whether a value of type b may stand for one of type t: the
-// same kind of type (a CHARACTER one of any length).
+// same kind of type (a CHARACTER one of any length), or for a derived type or
+// a record the same type.
 func sameKind(b, t Type) bool {
+	if b.Kind == Record && t.Kind == Record {
+		return sameType(b.Struct, t.Struct)
+	}
+
 	return b.Kind == t.Kind
 }
 

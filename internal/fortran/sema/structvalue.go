@@ -101,6 +101,16 @@ func argumentStructures(given, wanted *Structure) bool {
 	return given != nil && wanted != nil && !given.Derived && !wanted.Derived && given.form() == wanted.form()
 }
 
+// shape is an array field's shape, its extents all known.
+func (f *Field) shape() Shape {
+	s := make(Shape, len(f.Dims))
+	for i, d := range f.Dims {
+		s[i] = Extent{Size: max(d.Extent(), 0), Known: true}
+	}
+
+	return s
+}
+
 // componentType is a component's type: its own, or for a component of a
 // derived type the record type of that type.
 func componentType(f *Field) Type {
@@ -282,8 +292,9 @@ func (a *analyzer) partBytes(part Expr) []byte {
 // structConstructor analyzes the constructor e of the type st in an
 // executable statement: a constant if every value is one (structConst, through
 // folded), else a StructValue of each component's value converted. An array
-// component's value must be constant until arrays of components are compiled
-// (subtask 5).
+// component's value is its bytes if it is constant, else an array value of the
+// component's shape or a scalar for every element, which lowering assigns as
+// an array assignment's (subtask 5).
 func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 	if v, ok := a.folded(e); ok {
 		return v
@@ -303,9 +314,8 @@ func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 
 		if f.Dims != nil {
 			if _, err := (&evaluator{a: a, quiet: true}).componentConst(st, f, arg); err != nil && err.kind != constFailed {
-				a.notImplForm(arg.Position(), "an array component's value that isn't constant")
-
-				ok = false
+				v.Values[i] = a.componentValue(st, f, arg)
+				ok = ok && v.Values[i].Type().Kind != Invalid
 
 				continue
 			}
@@ -333,17 +343,19 @@ func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 	return v
 }
 
-// componentValue analyzes arg, the value a constructor gives st's scalar
-// component f, converted to its type as an assignment's value is to its target
-// (exec.go's assignedValue): a component of a derived type takes an object of
-// that type, a CHARACTER one any CHARACTER value, a numeric or LOGICAL one a
-// value of those types or a character constant (section 2.2.1.6).
+// componentValue analyzes arg, the value a constructor gives st's component f,
+// converted to its type as an assignment's value is to its target (exec.go's
+// assignedValue): a component of a derived type takes an object of that type, a
+// CHARACTER one any CHARACTER value, a numeric or LOGICAL one a value of those
+// types or a character constant (section 2.2.1.6). A scalar component takes a
+// scalar; an array one an array of its shape, or a scalar for every element
+// (4.4.4).
 func (a *analyzer) componentValue(st *Structure, f *Field, arg ast.Expr) Expr {
 	t := componentType(f)
 
 	var v Expr
 	if f.Struct != nil {
-		v = a.aggregateValue(arg)
+		v = a.aggregateValue(arg, f.Dims != nil)
 	} else {
 		v = a.assignedExpr(arg, t)
 	}
@@ -354,11 +366,18 @@ func (a *analyzer) componentValue(st *Structure, f *Field, arg ast.Expr) Expr {
 	case vt.Kind == Invalid:
 		return v
 
-	case rankOf(v) > 0:
+	case rankOf(v) > 0 && f.Dims == nil:
 		a.report("NOTSCALAR", v.Position())
 
 		return a.bad(v.Position())
 
+	case rankOf(v) > 0:
+		if _, ok := a.conform(v.Position(), f.shape(), v.Shape()); !ok {
+			return a.bad(v.Position())
+		}
+	}
+
+	switch {
 	case f.Struct != nil:
 		if vt.Kind == Record && sameType(vt.Struct, f.Struct) {
 			return v
@@ -457,6 +476,9 @@ func (ev *evaluator) componentBase(x ast.Expr) (*Const, *constErr) {
 		switch {
 		case s == nil || s.Class != Constant:
 			return nil, named(x.Name+" is not a constant", x.Pos)
+		case s.ArrayValue != nil:
+			// PTS%X of an array constant is an array, read from its datum.
+			return nil, notConst("an array constant's components are an array", x.Pos)
 		case s.Value == nil:
 			return nil, failed
 		}
@@ -467,6 +489,13 @@ func (ev *evaluator) componentBase(x ast.Expr) (*Const, *constErr) {
 	case *ast.FieldRef:
 		var err *constErr
 		if c, err = ev.component(x); err != nil {
+			return nil, err
+		}
+
+	case *ast.Apply:
+		// An element of an array constant of a derived type, PTS(2).
+		var err *constErr
+		if c, err = ev.eval(x); err != nil {
 			return nil, err
 		}
 
@@ -481,8 +510,40 @@ func (ev *evaluator) componentBase(x ast.Expr) (*Const, *constErr) {
 	return c, nil
 }
 
+// constantComponent reports, for a reference e that is to be defined (an
+// assignment's target, an input item), whether it is a constant's component,
+// ORIGIN%X or PTS(I)%X, after saying so: a constant is never defined.
+func (a *analyzer) constantComponent(e *ast.FieldRef) bool {
+	if !a.constantBase(e) {
+		return false
+	}
+
+	x := ast.Expr(e)
+	for f, ok := x.(*ast.FieldRef); ok; f, ok = x.(*ast.FieldRef) {
+		x = f.X
+	}
+
+	var (
+		name string
+		pos  diag.Position
+	)
+
+	switch n := x.(type) {
+	case *ast.Name:
+		name, pos = n.Name, n.Pos
+	case *ast.Apply:
+		name, pos = n.Name, n.Pos
+	}
+
+	if s := a.scope.find(name); !s.broken {
+		a.badUse(s, pos, "be assigned a value")
+	}
+
+	return true
+}
+
 // constantBase reports whether the reference e, a component reference, starts
-// from a named constant.
+// from a named constant, or an element of an array constant.
 func (a *analyzer) constantBase(e *ast.FieldRef) bool {
 	x := ast.Expr(e)
 
@@ -495,12 +556,18 @@ func (a *analyzer) constantBase(e *ast.FieldRef) bool {
 		x = f.X
 	}
 
-	n, ok := x.(*ast.Name)
-	if !ok {
+	var name string
+
+	switch n := x.(type) {
+	case *ast.Name:
+		name = n.Name
+	case *ast.Apply:
+		name = n.Name
+	default:
 		return false
 	}
 
-	s := a.scope.find(n.Name)
+	s := a.scope.find(name)
 
 	return s != nil && s.Class == Constant
 }
@@ -512,8 +579,17 @@ func (a *analyzer) constantBase(e *ast.FieldRef) bool {
 func (a *analyzer) operand(e ast.Expr) Expr {
 	switch x := a.substringForm(e).(type) {
 	case *ast.Name:
-		if s := a.scope.find(x.Name); s != nil && !s.broken && s.Class != Array &&
-			(s.Struct != nil || s.Class == Constant && s.Value != nil && s.Value.T.Kind == Record) {
+		s := a.scope.find(x.Name)
+
+		switch {
+		case s == nil || s.broken:
+
+		case s.Class == Array && s.Struct != nil:
+			// An array of records or of a derived type, whole.
+			return a.wholeArray(a.lookup(x.Name, x.Pos), x)
+
+		case s.Struct != nil || s.Class == Constant && s.Value != nil && s.Value.T.Kind == Record ||
+			s.Class == Constant && s.ArrayValue != nil && s.ArrayValue.T.Kind == Record:
 			return a.name(x, true)
 		}
 
@@ -570,7 +646,29 @@ func (a *analyzer) recordInitialValue(sym *Symbol, d *ast.Declarator) {
 	ev := a.declEval()
 
 	if ev.isArrayForm(d.Value) {
-		a.notImplForm(d.ValuePos, "an array value of a derived type")
+		// TYPE(POINT) :: R(2) = (/ POINT(1.0, 2.0), ORIGIN /): an element's
+		// value each, of the array's shape.
+		arr, err := ev.evalArray(d.Value)
+		if err != nil {
+			if err.kind != constFailed {
+				a.report("DATAVALUE", err.pos, err.why)
+			}
+
+			return
+		}
+
+		if arr.T.Kind != Record || !sameType(arr.T.Struct, sym.Struct) {
+			a.report("INITTYPE", d.ValuePos, article(arr.T.String()), article(sym.Type.String()))
+
+			return
+		}
+
+		if !a.initialShape(sym, arr, d.ValuePos) {
+			return
+		}
+
+		a.initialized = append(a.initialized, sym)
+		sym.recordValues = arr.Elems
 
 		return
 	}

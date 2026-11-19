@@ -444,6 +444,11 @@ var messages = map[string]kind{
 	// item must be.
 	"FIELDWHOLE": {Error, "the field %s is an array, and can't be used without subscripts here"},
 
+	// MULTIRANK is a component reference with two parts that have rank, an
+	// array of records and an array field, or two array fields (Fortran 90's
+	// 6.1.2: at most one part may): PATH%XS with PATH and XS arrays.
+	"MULTIRANK": {Error, "the field %s is an array after an array, but only one part of a reference may be an array"},
+
 	// AGGREGATE is a record or substructure as a whole where a value must
 	// be: section 2.2.5.2 has no operations on them but assignment.
 	"AGGREGATE": {Error, "%s is a record as a whole, which only an assignment, an argument, or an unformatted I/O list can use"},

@@ -274,13 +274,6 @@ func (a *analyzer) f90Entity(s *ast.TypeStmt, sym *Symbol, d *ast.Declarator, sp
 	a.giveAttributes(s, sym, d, specs)
 
 	switch {
-	case sym.Struct != nil && parameter && sym.Class == Array && d.Value != nil:
-		// An array constant of a derived type: arrays of a type are
-		// subtask 5's (docs/planning/PHASE-105 - Fortran 90 derived types.md).
-		a.notImplForm(d.ValuePos, "an array constant of a derived type")
-
-		sym.broken = true
-
 	case sym.Struct != nil && !parameter && d.Value != nil:
 		// TYPE(POINT) :: P = POINT(1.0, 2.0) (structvalue.go).
 		a.recordInitialValue(sym, d)

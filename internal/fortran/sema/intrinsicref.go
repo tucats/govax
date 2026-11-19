@@ -91,7 +91,14 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 	args := make([]Expr, len(slots.args))
 	for i, x := range slots.args {
-		if args[i] = a.arrayValue(x); args[i].Type().Kind == Invalid {
+		// MERGE's sources may be of any type, a derived type's too.
+		if e.Name == "MERGE" && i < 2 {
+			args[i] = a.operand(x)
+		} else {
+			args[i] = a.arrayValue(x)
+		}
+
+		if args[i].Type().Kind == Invalid {
 			return a.bad(e.Pos)
 		}
 
@@ -231,9 +238,12 @@ func giveShape(e Expr, s Shape) bool {
 func (a *analyzer) merge(e *ast.Apply, args []Expr, shape Shape) Expr {
 	ts, fs, mask := args[0], args[1], args[2]
 
-	switch {
-	case ts.Type() != fs.Type():
-		a.report("MERGEARGS", e.Pos, ts.Type().String(), fs.Type().String())
+	switch tt, ft := ts.Type(), fs.Type(); {
+	case tt.Kind == Record && ft.Kind == Record && sameType(tt.Struct, ft.Struct):
+		// Objects of one derived type (4.4.2), or records of one structure.
+
+	case tt != ft:
+		a.report("MERGEARGS", e.Pos, tt.String(), ft.String())
 
 		return a.bad(e.Pos)
 
@@ -675,7 +685,7 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 	var x Expr
 
-	switch n := e.Args[0].(type) {
+	switch n := a.substringForm(e.Args[0]).(type) {
 	case *ast.Name:
 		x = a.name(n, true)
 	case *ast.Apply:

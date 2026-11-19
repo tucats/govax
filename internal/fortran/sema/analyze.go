@@ -820,6 +820,9 @@ func (a *analyzer) describe(s *Symbol) string {
 		return "the name of this subroutine"
 	case s.External:
 		return External.String()
+	case s.Class == Constant:
+		// A named constant of a derived type is a constant first.
+		return Constant.String()
 	case s.Struct != nil && s.Class == Array:
 		return "an array of records"
 	case s.Struct != nil:

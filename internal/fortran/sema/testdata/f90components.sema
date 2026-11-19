@@ -1,0 +1,40 @@
+== main program COMPS
+  COMPS                   program unit
+  PATH      TYPE(POINT)   array(1:6)       $LOCAL+0
+  Q         TYPE(POINT)   array(1:6)       $LOCAL+48
+  P         TYPE(POINT)   variable         $LOCAL+96
+  T         TYPE(POLY)    variable         $LOCAL+104
+  IV        INTEGER       array(1:2)       $LOCAL+120
+  V         REAL          array(1:3)       $LOCAL+128
+  structure TYPE(POINT) is 8 bytes
+    X           REAL                +0
+    Y           REAL                +4
+  structure TYPE(POLY) is 16 bytes
+    N           INTEGER             +0
+    C           REAL (1:3)          +4
+  $LOCAL is 140 bytes
+21          PATH[1:6:1].X:+0 = 1.0
+22          PATH[2:6:2].Y:+4 = (+:R PATH[1:5:2].X:+0 1.0)
+23          T.C:+4[2:3:1] = T.C:+4[1:2:1]  [down in 1]
+24          PATH[2:6:1].X:+0 = PATH[1:5:1].X:+0  [down in 1]
+25          PATH[1:6:1].X:+0 = PATH[1:6:1].Y:+4
+26          PATH[1:6:1].Y:+4 = PATH[6:1:-1].Y:+4  [through a temporary]
+27          Q[] = PATH[]
+28          Q[2:3:1] = Q[1:2:1]  [down in 1]
+29          Q[] = P
+30          Q[<IV[]>] = POINT{1.0, 2.0}
+31          T = POLY{3, (*:R V[] 2.0)}
+32          V[1:2:1] = (+:R PATH[<IV[]>].X:+0 T.C:+4[2:3:1])
+33          END
+== SUBROUTINE RECS
+  RECS                    program unit
+  R         /S/           variable         $LOCAL+0
+  RA        /S/           array(1:3)       $LOCAL+20
+  structure /S/ is 20 bytes
+    A           INTEGER             +0
+    B           INTEGER (1:4)       +4
+  $LOCAL is 80 bytes
+41          R.B:+4[1:2:1] = R.B:+4[3:4:1]
+42          RA[1:3:1].A:+0 = R.B:+4[2:4:1]
+43          RA[2:3:1] = R
+44          END

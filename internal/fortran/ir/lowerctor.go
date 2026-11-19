@@ -56,10 +56,15 @@ func constExtents(e sema.Expr) []int {
 // arrayConstMem is the place of the array constant c's first element: a datum
 // of its elements, one per routine for each contents.
 func (l *lowerer) arrayConstMem(c *sema.ArrayConst) *Mem {
-	if c.T.Kind == sema.Character {
+	if c.T.Kind == sema.Character || c.T.Kind == sema.Record {
+		// Text, or a derived type's values: each element's bytes in turn.
 		var b strings.Builder
 		for _, e := range c.Elems {
-			b.WriteString(e.Text)
+			if c.T.Kind == sema.Record {
+				b.Write(e.Raw)
+			} else {
+				b.WriteString(e.Text)
+			}
 		}
 
 		return l.text(b.String())

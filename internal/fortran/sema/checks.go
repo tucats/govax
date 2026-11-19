@@ -92,22 +92,12 @@ func OpenEnded(s *Symbol, dims []Dim, i int) bool {
 		d.LowerExpr == nil && d.UpperExpr == nil && d.Lower == 1 && d.Upper == 1
 }
 
-// checkConstantSubscripts warns of a constant subscript outside its dimension, in any
-// compilation (Decision 9 of the phase's document, ours): the program is surely wrong,
-// though it may never run the statement. A bound only known at run time says nothing.
-func (a *analyzer) checkConstantSubscripts(s *Symbol, name string, dims []Dim, subs []Expr) {
-	for i, sub := range subs {
-		v, ok := constantInt(sub)
-		if !ok || i >= len(dims) {
-			continue
-		}
-
-		a.checkSubscript(s, name, dims, i, v, sub.Position())
-	}
-}
-
 // checkSubscript warns of v, a constant subscript at pos in dimension i of
-// dims, outside the dimension (checkConstantSubscripts).
+// dims, outside the dimension, in any compilation (Decision 9 of Phase 85's
+// document, ours): the program is surely wrong, though it may never run the
+// statement. A bound only known at run time says nothing. An element's and a
+// section's subscripts, an array's or a component's, are checked so as they are
+// analyzed (sections.go's sectionList).
 func (a *analyzer) checkSubscript(s *Symbol, name string, dims []Dim, i, v int, pos diag.Position) {
 	d := dims[i]
 

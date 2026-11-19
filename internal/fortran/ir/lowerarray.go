@@ -80,6 +80,10 @@ type arrayNest struct {
 type arrayLeaf struct {
 	sym *sema.Symbol
 
+	// field is the field whose dimensions a component reference's ranked
+	// part has (PATH(1)%XS(2:5)), nil for an array's or a record array's own.
+	field *sema.Field
+
 	// dims is each of the array's dimensions, in order.
 	dims []leafDim
 }
@@ -363,6 +367,21 @@ func (n *arrayNest) hoist(e sema.Expr) sema.Expr {
 		return n.hoistText(e)
 	}
 
+	if e.Type().Kind == sema.Record {
+		// A record, a constructor's value, or a function's of a derived type,
+		// copied once into a temporary of its own (the value of A = P, with
+		// P one of A's elements, is P before any element changes).
+		m := n.l.textTemp(e.Type().Size)
+
+		if v, ok := e.(*sema.StructValue); ok {
+			n.l.buildRecord(m, v)
+		} else {
+			n.l.moveBytes(m, n.l.mem(e), e.Type().Size)
+		}
+
+		return n.bind(m, e.Type())
+	}
+
 	m := n.l.temp(n.l.typeOf(e.Type()))
 	n.l.store(m, e)
 
@@ -481,43 +500,56 @@ func (n *arrayNest) prepareIn(leaf sema.Expr, loops []int) {
 		whole(temp.Sym, leaf.Pos)
 
 	case *sema.Section:
-		info.sym = leaf.Sym
-		loop := 0
+		n.prepareSections(info, leaf.Sym, nil, leaf.Subs, loopOf)
 
-		for i, sub := range leaf.Subs {
-			if sub.Vector != nil {
-				info.dims = append(info.dims, leafDim{ranges: true, loop: loopOf(loop), vector: sub.Vector})
+	case *sema.FieldRef:
+		// A component reference's ranked part is a section of the record
+		// array, or of an array field, whose elements At makes.
+		n.prepareSections(info, leaf.Sym, leaf.RankedField(), leaf.Sections, loopOf)
+	}
+}
 
-				for _, inner := range sema.Leaves(sub.Vector) {
-					n.prepareIn(inner, []int{loopOf(loop)})
-				}
+// prepareSections makes info ready as a section's leaf, of the array sym or, if
+// field isn't nil, of that field's dimensions: its subscripts subs, the loop of
+// its ranked subscript k loopOf(k).
+func (n *arrayNest) prepareSections(info *arrayLeaf, sym *sema.Symbol, field *sema.Field, subs []sema.SectionSub,
+	loopOf func(int) int) {
+	info.sym, info.field = sym, field
+	loop := 0
 
-				loop++
+	for i, sub := range subs {
+		if sub.Vector != nil {
+			info.dims = append(info.dims, leafDim{ranges: true, loop: loopOf(loop), vector: sub.Vector})
 
-				continue
+			for _, inner := range sema.Leaves(sub.Vector) {
+				n.prepareIn(inner, []int{loopOf(loop)})
 			}
 
-			if !sub.Triplet() {
-				info.dims = append(info.dims, leafDim{fixed: n.keep(sub.Index)})
-
-				continue
-			}
-
-			lower := n.keepIR(n.bound(sub.Lower, leaf.Sym, i, n.lowerBound))
-			upper := n.keepIR(n.bound(sub.Upper, leaf.Sym, i, n.upperBound))
-			stride := n.keep(sub.Stride)
-
-			info.dims = append(info.dims, leafDim{
-				ranges: true, loop: loopOf(loop),
-				stride: stride,
-				base:   n.keepIR(arith(Sub, Long, n.l.expr(lower), n.l.expr(stride))),
-				lower:  n.l.expr(lower),
-				upper:  n.l.expr(upper),
-				// A triplet's extent is computed only if something needs it.
-				extentPending: true,
-			})
 			loop++
+
+			continue
 		}
+
+		if !sub.Triplet() {
+			info.dims = append(info.dims, leafDim{fixed: n.keep(sub.Index)})
+
+			continue
+		}
+
+		lower := n.keepIR(n.bound(sub.Lower, sym, i, n.lowerBound))
+		upper := n.keepIR(n.bound(sub.Upper, sym, i, n.upperBound))
+		stride := n.keep(sub.Stride)
+
+		info.dims = append(info.dims, leafDim{
+			ranges: true, loop: loopOf(loop),
+			stride: stride,
+			base:   n.keepIR(arith(Sub, Long, n.l.expr(lower), n.l.expr(stride))),
+			lower:  n.l.expr(lower),
+			upper:  n.l.expr(upper),
+			// A triplet's extent is computed only if something needs it.
+			extentPending: true,
+		})
+		loop++
 	}
 }
 
@@ -595,7 +627,7 @@ func (n *arrayNest) leafExtent(leaf sema.Expr, loop int) Expr {
 				count = n.leafExtent(x.Of, n.loopOf(x.Of, x.Dim))
 			}
 
-		case *sema.Section:
+		case *sema.Section, *sema.FieldRef:
 			if d.vector != nil {
 				// A vector subscript's extent is the vector's: known, or one
 				// of its own arrays'.
@@ -681,9 +713,34 @@ func (n *arrayNest) element(leaf sema.Expr) sema.Expr {
 		return n.funcElement(f)
 	}
 
+	if f, ok := leaf.(*sema.FieldRef); ok {
+		return f.At(n.subscripts(leaf))
+	}
+
+	info := n.leaves[leaf]
+
+	return sema.NewElem(info.sym, n.subscripts(leaf), n.inBounds(leaf), leaf.Position())
+}
+
+// inBounds says which of the leaf's subscripts are known to be within its
+// dimensions at the loops' indexes: all but a vector subscript's, whose values
+// are checked where they are used.
+func (n *arrayNest) inBounds(leaf sema.Expr) []bool {
+	info := n.leaves[leaf]
+	list := make([]bool, len(info.dims))
+
+	for i, d := range info.dims {
+		list[i] = d.vector == nil
+	}
+
+	return list
+}
+
+// subscripts are the leaf's subscripts at the loops' indexes.
+func (n *arrayNest) subscripts(leaf sema.Expr) []sema.Expr {
+
 	info := n.leaves[leaf]
 	subs := make([]sema.Expr, len(info.dims))
-	inBounds := make([]bool, len(info.dims))
 
 	for i, d := range info.dims {
 		if d.vector != nil {
@@ -691,8 +748,6 @@ func (n *arrayNest) element(leaf sema.Expr) sema.Expr {
 
 			continue
 		}
-
-		inBounds[i] = true
 
 		if !d.ranges {
 			subs[i] = d.fixed
@@ -704,7 +759,7 @@ func (n *arrayNest) element(leaf sema.Expr) sema.Expr {
 		subs[i] = sema.IntSum(sema.IntProduct(k, d.stride), d.base)
 	}
 
-	return sema.NewElem(info.sym, subs, inBounds, leaf.Position())
+	return subs
 }
 
 // checkShapes compares, under /CHECK=BOUNDS, every leaf's extent in each
@@ -749,12 +804,20 @@ func (n *arrayNest) checkShapes(leaves []sema.Expr) {
 func (n *arrayNest) checkSubscripts() {
 	for _, leaf := range n.prepared {
 		info := n.leaves[leaf]
-		if _, ok := leaf.(*sema.Section); !ok {
+
+		switch leaf.(type) {
+		case *sema.Section, *sema.FieldRef:
+		default:
 			continue
 		}
 
 		for i, d := range info.dims {
 			low, high := n.lowerBound(info.sym, i), n.checkedUpper(info.sym, i)
+			if info.field != nil {
+				// A field's bounds are constants.
+				dim := info.field.Dims[i]
+				low, high = LongConst(int32(dim.Lower)), LongConst(int32(dim.Upper))
+			}
 
 			switch {
 			case d.vector != nil:

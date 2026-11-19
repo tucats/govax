@@ -26,6 +26,9 @@ func (l *lowerer) buildRecord(dst *Mem, v *sema.StructValue) {
 			n := LongConst(int32(len(v.Bytes[i])))
 			l.emit(&CharMove{l.origin(), Text{&place, n}, Text{l.text(string(v.Bytes[i])), n}})
 
+		case f.Dims != nil:
+			l.fillComponent(&place, f, value)
+
 		case f.Struct != nil:
 			if inner, ok := value.(*sema.StructValue); ok {
 				l.buildRecord(&place, inner)
@@ -43,6 +46,33 @@ func (l *lowerer) buildRecord(dst *Mem, v *sema.StructValue) {
 			l.store(&place, value)
 		}
 	}
+}
+
+// fillComponent assigns value, an array of the array field f's shape or a
+// scalar for every element, to the field at place, as an array assignment to an
+// array of lowering's own whose storage is the field's: the scalarizer's loops.
+// The value reads nothing of the record being built (sema's InPlace, or a
+// temporary), so they need no order.
+func (l *lowerer) fillComponent(place *Mem, f *sema.Field, value sema.Expr) {
+	extents := make([]int, len(f.Dims))
+	for i, d := range f.Dims {
+		extents[i] = d.Extent()
+	}
+
+	t := value.Type()
+	if f.Struct == nil {
+		t = f.Type
+	}
+
+	at := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: at, Src: &Addr{place}})
+
+	sym := sema.NewArray("$P", t, extents)
+	l.bound[sym] = &Mem{Ptr: &Load{at}, T: l.typeOf(t)}
+
+	l.arrayNest(sema.NewArrayRef(sym, value.Position()), value, nil, nil)
+
+	delete(l.bound, sym)
 }
 
 // recordPlace is m, a record's place, as a Byte place whose Offset counts

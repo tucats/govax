@@ -90,7 +90,8 @@ func NewElem(s *Symbol, subs []Expr, inBounds []bool, pos diag.Position) *Elem {
 func (e *Elem) Checked(i int) bool { return i >= len(e.InBounds) || !e.InBounds[i] }
 
 // Scalarize is the array-valued expression e made a scalar one: each array it
-// reads (an *ArrayRef, a *Section, an *ArrayConst, or a *Constructor, a leaf)
+// reads (an *ArrayRef, a *Section, an *ArrayConst, a *Constructor, or an array
+// *FieldRef, a leaf)
 // replaced by element(leaf), each
 // scalar part of it by scalar(part), and each elemental operation between
 // them copied without a shape. scalar is how a value computed once before the
@@ -103,8 +104,9 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 	walk := func(x Expr) Expr { return Scalarize(x, element, scalar) }
 
 	switch e := e.(type) {
-	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc, *FuncRef:
-		// A FuncRef here is an array-valued function's (arrayvalue.go).
+	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc, *FuncRef, *FieldRef:
+		// A FuncRef here is an array-valued function's (arrayvalue.go), a
+		// FieldRef a component's with a ranked part (record.go).
 		return element(e)
 
 	case *Unary:
@@ -167,8 +169,8 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 }
 
 // Leaves are the arrays an array-valued expression reads, its *ArrayRefs,
-// *Sections, *ArrayConsts, *Constructors, *ArrayFuncs, and array-valued
-// *FuncRefs, left to right.
+// *Sections, *ArrayConsts, *Constructors, *ArrayFuncs, array-valued
+// *FuncRefs, and array *FieldRefs, left to right.
 func Leaves(e Expr) []Expr {
 	var list []Expr
 

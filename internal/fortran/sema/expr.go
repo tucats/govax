@@ -57,6 +57,15 @@ func (a *analyzer) arrayValue(e ast.Expr) Expr {
 		// lookup, not find alone, so that the use is noted: an array used
 		// only whole (SUM(A)) is used (reportUnused, the cross reference).
 		if s := a.scope.find(e.Name); s != nil && !s.broken && s.Class == Array {
+			if s.Struct != nil {
+				// An array of records or of a derived type as a whole is a
+				// value only where operand keeps one: no operator takes it.
+				a.lookup(e.Name, e.Pos)
+				a.report("AGGREGATE", e.Pos, e.Name)
+
+				return a.bad(e.Pos)
+			}
+
 			return a.wholeArray(a.lookup(e.Name, e.Pos), e)
 		}
 

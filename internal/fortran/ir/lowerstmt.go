@@ -306,6 +306,13 @@ func (l *lowerer) assignScalar(target, value sema.Expr) {
 		return
 	}
 
+	if target.Type().Kind == sema.Record {
+		// An element of an array of records, or of a type: its bytes.
+		l.moveBytes(l.mem(target), l.mem(value), target.Type().Size)
+
+		return
+	}
+
 	l.store(l.mem(target), value)
 }
 

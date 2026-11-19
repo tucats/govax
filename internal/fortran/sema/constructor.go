@@ -79,7 +79,9 @@ func (b *ctorBuilder) items(list []ast.Expr) ([]CtorItem, bool) {
 			continue
 		}
 
-		v, ok := b.value(b.a.arrayValue(x))
+		// operand, not arrayValue: a value of a derived type, or an array of
+		// one, is an item too, (/ POINT(1.0, 2.0), P, PATH(2:3) /).
+		v, ok := b.value(b.a.operand(x))
 		if !ok {
 			return nil, false
 		}
@@ -124,6 +126,9 @@ func (b *ctorBuilder) value(v Expr) (Expr, bool) {
 		b.t, b.typed = t, true
 
 	case t == b.t:
+
+	case t.Kind == Record && b.t.Kind == Record && sameType(t.Struct, b.t.Struct):
+		// Two SEQUENCE definitions of one type (4.4.2).
 
 	case t.Kind == Integer && b.t.Kind == Integer:
 		v = b.a.convert(v, b.t)

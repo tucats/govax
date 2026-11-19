@@ -60,6 +60,11 @@ func (a *analyzer) arrayChecked(arg Arg) Arg {
 // on: an assumed-shape dummy takes it by descriptor (shaped.go), any other by
 // sequence association (sequence.go).
 func (a *analyzer) argValue(e ast.Expr) Arg {
+	// A field's substring, R.NAME(1:3), is read as one (sections.go).
+	if f, ok := e.(*ast.FieldRef); ok {
+		e = a.substringForm(f)
+	}
+
 	switch x := e.(type) {
 	case nil:
 		// A null argument: CALL S(A,,B).
@@ -85,7 +90,17 @@ func (a *analyzer) argValue(e ast.Expr) Arg {
 		return Arg{Expr: v}
 
 	case *ast.FieldRef:
-		return Arg{Expr: a.field(x, true)}
+		v := a.field(x, true)
+		if rankOf(v) > 0 {
+			// Its elements are a type's size apart: an assumed-shape dummy's
+			// descriptor or an old dummy's copy, both subtask 5b's.
+			a.notImplForm(v.Position(), "a component of an array, or an array component's section, as an actual argument "+
+				"(docs/planning/PHASE-105 - Fortran 90 derived types.md, subtask 5b)")
+
+			return Arg{Expr: a.bad(v.Position())}
+		}
+
+		return Arg{Expr: v}
 
 	case *ast.HollerithConst:
 		c := &Const{exprBase: exprBase{T: Type{Kind: Character, Size: len(x.Value)}, Pos: x.Pos}, Text: x.Value}

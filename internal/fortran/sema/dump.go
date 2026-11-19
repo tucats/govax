@@ -557,6 +557,36 @@ func dumpSubs(subs []Expr) string {
 	return "[" + strings.Join(text, ", ") + "]"
 }
 
+// dumpSections is a section's subscripts in the dump, [1:N:2, J, <IV[]>].
+func dumpSections(list []SectionSub) string {
+	subs := make([]string, len(list))
+
+	for i, s := range list {
+		switch {
+		case s.Vector != nil:
+			subs[i] = "<" + DumpExpr(s.Vector) + ">"
+
+			continue
+		case !s.Triplet():
+			subs[i] = DumpExpr(s.Index)
+
+			continue
+		}
+
+		bound := func(x Expr) string {
+			if x == nil {
+				return "*"
+			}
+
+			return DumpExpr(x)
+		}
+
+		subs[i] = bound(s.Lower) + ":" + bound(s.Upper) + ":" + DumpExpr(s.Stride)
+	}
+
+	return "[" + strings.Join(subs, ", ") + "]"
+}
+
 // DumpExpr is an expression in the dump's form.
 func DumpExpr(e Expr) string {
 	switch e := e.(type) {
@@ -569,10 +599,20 @@ func DumpExpr(e Expr) string {
 	case *Elem:
 		return e.Sym.Name + dumpSubs(e.Subs)
 	case *FieldRef:
-		// R[I].F:+12[J], each field with its offset in its structure.
-		text := e.Sym.Name + dumpSubs(e.Subs)
-		for _, s := range e.Path {
-			text += "." + s.Field.Name + ":+" + strconv.Itoa(s.Field.Offset) + dumpSubs(s.Subs)
+		// R[I].F:+12[J], each field with its offset in its structure; an
+		// array reference's ranked part with its section subscripts,
+		// PATH[1:10:1].X:+0.
+		subs := func(k int, list []Expr) string {
+			if e.S != nil && e.Ranked == k {
+				return dumpSections(e.Sections)
+			}
+
+			return dumpSubs(list)
+		}
+
+		text := e.Sym.Name + subs(0, e.Subs)
+		for i, s := range e.Path {
+			text += "." + s.Field.Name + ":+" + strconv.Itoa(s.Field.Offset) + subs(i+1, s.Subs)
 		}
 
 		return text
@@ -632,31 +672,7 @@ func DumpExpr(e Expr) string {
 	case *Section:
 		// A[1:N:2, J, <IV[]>], a bound taken from an adjustable array's own
 		// bounds shown as *, a vector subscript in angle brackets.
-		subs := make([]string, len(e.Subs))
-		for i, s := range e.Subs {
-			switch {
-			case s.Vector != nil:
-				subs[i] = "<" + DumpExpr(s.Vector) + ">"
-
-				continue
-			case !s.Triplet():
-				subs[i] = DumpExpr(s.Index)
-
-				continue
-			}
-
-			bound := func(x Expr) string {
-				if x == nil {
-					return "*"
-				}
-
-				return DumpExpr(x)
-			}
-
-			subs[i] = bound(s.Lower) + ":" + bound(s.Upper) + ":" + DumpExpr(s.Stride)
-		}
-
-		return e.Sym.Name + "[" + strings.Join(subs, ", ") + "]"
+		return e.Sym.Name + dumpSections(e.Subs)
 	case *Substring:
 		return DumpExpr(e.X) + "(" + DumpExpr(e.Lower) + ":" + DumpExpr(e.Upper) + ")"
 	case *Concat:

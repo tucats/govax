@@ -438,8 +438,17 @@ all three.
    wholes, sections, constructors, and the type-generic intrinsics; to
    assumed-shape dummies by stride and to old ones by copy; allocatable,
    automatic, assumed-shape, and array-valued arrays of a type, and the same for
-   records (finding 7). Likely in two parts, 5a scalarized expressions and
-   assignment, 5b arguments and the dynamic kinds.
+   records (finding 7). In two parts:
+   - 5a scalarized expressions and assignment: components with rank,
+     MULTIRANK, a field's list read as a name's, arrays of a type whole and as
+     sections, scalars of a type for every element, array constructors of a
+     type, the type-generic intrinsics, array PARAMETERs of a type, arrays'
+     initial values, and constructors' array components from arrays (done
+     2026-11-18);
+   - 5b arguments and the dynamic kinds: a ranked component or an array of a
+     type to assumed-shape dummies by stride and to old ones by copy;
+     allocatable, automatic, assumed-shape, and array-valued arrays of a type,
+     and the same for records.
 6. **COMMON, EQUIVALENCE, DATA** with SEQUENCE types (finding 12).
 7. **I/O and NAMELIST:** the compiler's expansion, unformatted bytes and their
    pieces (finding 13); NAMELIST's entities and FTNRTL's names (finding 14).
@@ -678,3 +687,80 @@ object are never the same type, with a message naming both.
     and so `structs.f90` (subtask 3's) now differs on gfortran in its digits
     only, the values agreeing; a later subtask should give it formats too.
     MANUAL.md's 14.13 has "Derived types as arguments and values".
+- **2026-11-18, subtask 5a (done):** Arrays in expressions and assignments
+  (subtask 5 split in two, A.4).
+  - *A field's list is a name's.* The parser reads a component's parenthesized
+    list as subscripts that may hold triplets (`parse/expr.go`'s
+    `referenceAfter`), and `substringForm` (`sections.go`'s
+    `componentSubstring`, `componentOf`) makes one stride-less triplet after a
+    field that isn't an array its substring, as VAX FORTRAN read it; every
+    place that reads a reference goes through it (`argValue`, `aggregateValue`,
+    the I/O items, SIZEOF, the inquiries). `R.B(1:2)` of an array field is now
+    a section, under `/NOF90` too: before, it was an error (FIELDWHOLE).
+  - *A ranked FieldRef* (finding 7). `FieldRef` gained `Ranked` (0 the
+    record's own subscripts, k the path's step k) and `Sections`, the ranked
+    part's section subscripts, with the part's shape in `S`: a whole array
+    (`PATH%X`, an array field without subscripts outside an argument or an I/O
+    list) has a triplet of its bounds per dimension (`wholeSections`), a
+    section or vector subscript `sectionList`'s, the one analysis an array's
+    sections and a component's now share (`section`, `triplet`, and
+    `tripletExtent` take dimensions, not a symbol). A second ranked part is
+    MULTIRANK (new); an array field without subscripts where a scalar must be
+    is still FIELDWHOLE (`scalarValue`). `At` is the element at given
+    subscripts, a scalar FieldRef, which `fieldMem` reaches as before, so
+    `PATH%Y = 2.0 * PATH%X` is one loop stepping by the type's size (MULF3
+    `PATH-8[R7]`, `ADDL2 #2,R7`). The scalarizer takes a ranked FieldRef as a
+    leaf (`Scalarize`, `Leaves`; `ir`'s `prepareSections`, shared with a
+    section, a field's constant bounds in `arrayLeaf.field`); the dump shows
+    the ranked part's sections (`dumpSections`).
+  - *Overlap.* `baseSymbol`, `slots`, `vectorsRead`, `checkManyOne`, and
+    `readsAny` know a component reference (`readsAny` now walks its
+    subscripts too). Two component references of one record or array of
+    records are related by their subscripts when their fields are the same,
+    apart when the first fields they differ in don't meet
+    (`componentRelation`: `PATH%X = PATH%Y` needs no temporary), and unknown
+    otherwise, a temporary.
+  - *Arrays of a type, and of records.* `wholeArray` no longer refuses them;
+    `aggregateValue` takes a whole array or an array constructor for an array
+    target, `operand` a whole array, and `arrayValue` refuses one (AGGREGATE),
+    as it refuses a scalar record. An element moves whole (`assignScalar`'s
+    `moveBytes`), and a scalar of the type is copied once into a temporary
+    before the loops (`hoist`), a constructor built there. Array constructors
+    hold objects of a type (`ctorBuilder` through `operand`; two SEQUENCE
+    definitions of one type by `sameType`). MERGE (`merge`, lowered by `mem`
+    as two moves around the mask's branch), the transformational functions
+    (`transform`'s `value` through `operand`; `sameKind` is `sameType` for
+    records; EOSHIFT of a type needs its BOUNDARY), TRANSPOSE, and the
+    inquiries take arrays of any type.
+  - *Constants and initial values.* An array PARAMETER of a type is an
+    `ArrayConst` of record constants, its datum their bytes in turn
+    (`arrayConstMem`); `PTS(2)%Y` folds (`componentBase` takes an element), and
+    `PTS(I)%Y` and `PTS%X` are read from the datum (`recordBase` takes an array
+    constant as an array of records). `TYPE(POINT) :: R(2) = (/ ... /)` is an
+    initial value per element (`Symbol.recordValues`, `recordInitials`;
+    INITTYPE, NOTCONFORM). A constructor's array component may be any array of
+    its shape or a scalar (`componentValue`), which `buildRecord` assigns
+    through an array of lowering's own over the component's storage
+    (`fillComponent`).
+  - *Fixes found on the way.* A constant's component as an assignment's target
+    or an input item (`ORIGIN%X = 1`, since subtask 3) said nothing and stored
+    into `$PDATA`: now BADUSE (`constantComponent`), and BADUSE names a
+    constant of a derived type "a constant" (`describe`). `componentBase` called
+    an array constant a failure already reported, which left an unreported bad
+    expression for lowering to panic on.
+  - *Left for 5b, NOTIMPL:* a ranked component as an actual argument
+    (`argValue`); it would have passed the first element's address as if the
+    components were contiguous. Formatted I/O of whole objects stays subtask
+    7's (AGGREGATEIO); a ranked component of an intrinsic type is an I/O item
+    an element at a time already (`eachElement`).
+  - *Tests:* `sema`'s `TestErrors` (MULTIRANK, FIELDWHOLE where a scalar must
+    be, sections of fields, NOTCONFORM, SUBSCRIPTRANGE) and `TestStructMessages`
+    (the two NOTIMPLs now compiled, constants as targets, initial values,
+    arrays of a type as numbers or with operators, constructors and MERGE of
+    two types, EOSHIFT without a BOUNDARY); the goldens
+    `f90components.for` in `sema`, `ir`, and `codegen`; `testdata/fortran90`'s
+    `typearrays.f90` and `typevalues.f90` (in `compare.py`; gfortran prints the
+    same lines), and `testdata/fortran`'s `recarrays.for`, STRUCTURE's records,
+    in every mode. `recarrays.for` is in `testdata/ftn86`'s procedure
+    (`gen.go` rerun) and `ftn86AwaitingVMS`, for the next VMS round; the
+    `/NOF90` baseline has it too.

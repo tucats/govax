@@ -55,9 +55,18 @@ func (a *analyzer) arrayFunction(e *ast.Apply, args []ast.Expr) Expr {
 
 	f := &ArrayFunc{exprBase: exprBase{Pos: e.Pos}, Name: e.Name}
 
-	// array is argument i, which must be an array.
+	// array is argument i, which must be an array. The inquiries and
+	// TRANSPOSE take an array of any type, a derived type's too (operand).
 	array := func(i int, what string) Expr {
-		x := a.arrayValue(arg(i))
+		var x Expr
+
+		switch e.Name {
+		case "SIZE", "LBOUND", "UBOUND", "SHAPE", "TRANSPOSE":
+			x = a.operand(arg(i))
+		default:
+			x = a.arrayValue(arg(i))
+		}
+
 		if x.Type().Kind == Invalid {
 			return nil
 		}

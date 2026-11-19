@@ -123,8 +123,9 @@
 // is: an ast.Apply, whose items may be Fortran 90's subscript triplets,
 // [l]:[u][:s]. So C(1:3) is an Apply with one Triplet, and semantic analysis,
 // which knows whether C is a CHARACTER variable or an array, makes it a
-// substring or an array section (sema/sections.go). A second list after the
-// first, C(I)(1:3) or B(:, J)(2:3), is always a substring. An array
+// substring or an array section (sema/sections.go). A field's or a
+// component's list is read the same way, R.A(1:3), P%NAME(2:4). A second list
+// after the first, C(I)(1:3) or B(:, J)(2:3), is always a substring. An array
 // constructor, (/ ... /), is a primary of its own, its values expressions or
 // implied-DO lists; WHERE, ELSEWHERE, and END WHERE have nodes, a WHERE
 // statement's assignment hung on it as a logical IF's statement is.

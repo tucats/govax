@@ -327,9 +327,11 @@ func (p *parser) reference(what string) ast.Expr {
 // object's components, P%X (componentNext), each of which may have subscripts
 // and a substring of its own.
 //
-// A field's list with a colon is still read as its substring: a section
-// of a record's array field is for a later phase (docs/planning/PHASE-102 -
-// Fortran 90 array expressions.md, finding 4).
+// A field's parenthesized list is read as a name's is, subscripts that may
+// hold triplets: whether R.A(1:3) is a section of an array field or a
+// substring of a CHARACTER one is semantic analysis's to say, as for a name
+// (docs/planning/PHASE-105 - Fortran 90 derived types.md, finding 6). A list
+// after the field's own is a substring, R.NAMES(2)(1:3).
 //
 // Under /F90 a period after a reference may also start a defined operator, A
 // .B. C, and the field reading is taken only where it must be meant
@@ -360,7 +362,7 @@ func (p *parser) referenceAfter(t lex.Token) ast.Expr {
 			f := p.next()
 			ref := &ast.FieldRef{ExprBase: ast.ExprBase{Pos: p.pos(f)}, X: x, Field: f.Text, Percent: percent}
 
-			if p.at("(") && !p.substringAhead() {
+			if p.at("(") {
 				ref.Args = p.subscripts()
 			}
 

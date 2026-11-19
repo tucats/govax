@@ -789,7 +789,12 @@ func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 		return a.sectionPlace(a.target(e), whole)
 
 	case *ast.FieldRef:
-		return a.field(e, whole)
+		if a.constantComponent(e) {
+			return a.bad(e.Pos)
+		}
+
+		// A component reference with a ranked part is a section too.
+		return a.sectionPlace(a.field(e, whole), whole)
 	}
 
 	return nil
@@ -1056,7 +1061,7 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 		return item
 	}
 
-	if f, ok := e.(*ast.FieldRef); ok {
+	if f, ok := a.substringForm(e).(*ast.FieldRef); ok {
 		return a.field(f, true)
 	}
 
@@ -1121,6 +1126,15 @@ func (a *analyzer) inputPlace(e ast.Expr) Expr {
 
 	case *ast.Substring:
 		return a.target(f)
+
+	case *ast.FieldRef:
+		if a.constantComponent(f) {
+			return a.bad(f.Pos)
+		}
+
+		// An array field whole is an array name reference, as before
+		// Fortran 90; a ranked component, PATH%X, an item for each element.
+		return a.field(f, true)
 	}
 
 	return a.place(e, true)

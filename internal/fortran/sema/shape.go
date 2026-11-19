@@ -152,16 +152,12 @@ func arrayShape(r *ArrayRef) Shape {
 
 // wholeArray is a whole array as an array-valued expression: an ArrayRef with
 // its shape, or after an error a bad expression. An assumed-size array has no
-// shape to give (NOSHAPE), nor an array of records one this phase compiles.
+// shape to give (NOSHAPE). An array of records or of a derived type is one
+// too (docs/planning/PHASE-105 - Fortran 90 derived types.md, finding 7), each
+// element moved whole.
 func (a *analyzer) wholeArray(s *Symbol, n *ast.Name) Expr {
-	switch {
-	case s.AssumedSize():
+	if s.AssumedSize() {
 		a.report("NOSHAPE", n.Pos, s.Name)
-
-		return a.bad(n.Pos)
-
-	case s.Struct != nil:
-		a.notImplForm(n.Pos, "an array of records as a whole")
 
 		return a.bad(n.Pos)
 	}
@@ -176,6 +172,13 @@ func (a *analyzer) wholeArray(s *Symbol, n *ast.Name) Expr {
 func (a *analyzer) scalarValue(v Expr) Expr {
 	if rankOf(v) == 0 {
 		return v
+	}
+
+	// An array field written without subscripts, as before Fortran 90.
+	if f, ok := v.(*FieldRef); ok && f.whole && f.Ranked > 0 {
+		a.report("FIELDWHOLE", f.Pos, f.RankedField().Name)
+
+		return a.bad(v.Position())
 	}
 
 	a.report("NOTSCALAR", v.Position())

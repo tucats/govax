@@ -1,0 +1,329 @@
+	.TITLE	TEST
+
+; Storage map for COMPS, the main program
+;   PATH  TYPE(POINT) (6)  $LOCAL+0    COMPS.PATH
+;   Q     TYPE(POINT) (6)  $LOCAL+48   COMPS.Q
+;   P     TYPE(POINT)      $LOCAL+96   COMPS.P
+;   T     TYPE(POLY)       $LOCAL+104  COMPS.T
+;   IV    INTEGER (2)      $LOCAL+120  COMPS.IV
+;   V     REAL (3)         $LOCAL+128  COMPS.V
+;   Type POINT, 8 bytes
+;     +0     X     REAL
+;     +4     Y     REAL
+;   Type POLY, 16 bytes
+;     +0     N     INTEGER
+;     +4     C     REAL (1:3)
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+COMPS.PATH:
+	.BLKL	12			; PATH, TYPE(POINT) (6)
+COMPS.Q:
+	.BLKL	12			; Q, TYPE(POINT) (6)
+COMPS.P:
+	.BLKL	2			; P
+COMPS.T:
+	.BLKL	4			; T
+COMPS.IV:
+	.BLKL	2			; IV, INTEGER (2)
+COMPS.V:
+	.BLKL	3			; V, REAL (3)
+COMPS.$I1:
+	.BLKL	1			; an array statement's loop index
+COMPS.$C1:
+	.BLKL	1			; array (line 21), dimension 1's count
+COMPS.$C2:
+	.BLKL	1			; array (line 22), dimension 1's count
+COMPS.$C3:
+	.BLKL	1			; array (line 23), dimension 1's count
+COMPS.$C4:
+	.BLKL	1			; array (line 24), dimension 1's count
+COMPS.$C5:
+	.BLKL	1			; array (line 25), dimension 1's count
+COMPS.$W1:
+	.BLKL	6			; an array temporary of 24 bytes, for one statement
+COMPS.$C6:
+	.BLKL	1			; array (line 26), dimension 1's count
+COMPS.$I2:
+	.BLKL	1			; an array statement's loop index
+COMPS.$C7:
+	.BLKL	1			; array (line 26), dimension 1's count
+COMPS.$C8:
+	.BLKL	1			; array (line 27), dimension 1's count
+COMPS.$C9:
+	.BLKL	1			; array (line 28), dimension 1's count
+COMPS.$C10:
+	.BLKL	1			; array (line 29), dimension 1's count
+COMPS.$C11:
+	.BLKL	1			; array (line 30), dimension 1's count
+COMPS.$T1:
+	.BLKL	1			; temporary
+COMPS.$C12:
+	.BLKL	1			; array (line 31), dimension 1's count
+COMPS.$C13:
+	.BLKL	1			; array (line 32), dimension 1's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+COMPS.$F1:
+	.LONG	^X00004080		; 1.0
+COMPS.$F2:
+	.LONG	^X00004100		; 2.0
+COMPS.$K1:
+	.ASCII	<128>/@/<0><0><0>/A/<0><0>
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Arrays of derived types and components with rank (Phase 105,
+;    3  C     subtask 5a): a component of every element, PATH%X; of a section,
+;    4  C     PATH(2:6:2)%Y; a section of an array component, T%C(2:3); a vector
+;    5  C     subscript of records, PATH(IV)%X; an array of a type whole and as a
+;    6  C     section; each assignment's order: a section read before it is
+;    7  C     written, components that are apart, components that may meet; a
+;    8  C     structure constructor whose array component's value is an array.
+;    9        PROGRAM COMPS
+	.ENTRY	COMPS,^M<R2,R3,R4,R5>
+;   10        TYPE POINT
+;   11          REAL X, Y
+;   12        END TYPE POINT
+;   13        TYPE POLY
+;   14          INTEGER N
+;   15          REAL C(3)
+;   16        END TYPE POLY
+;   17        TYPE(POINT) PATH(6), Q(6), P
+;   18        TYPE(POLY) T
+;   19        INTEGER IV(2)
+;   20        REAL V(3)
+;   21        PATH%X = 1.0
+	MOVL	#6,COMPS.$C1		; array (line 21), dimension 1's count
+	MOVL	#1,COMPS.$I1
+COMPS.$1:				; array (line 21), dimension 1's body
+	MULL3	COMPS.$I1,#2,R0
+	MOVL	#^X00004080,COMPS.PATH-8[R0] ; 1.0
+	INCL	COMPS.$I1
+	DECL	COMPS.$C1		; one pass fewer
+	BLEQ	COMPS.$2
+	BRW	COMPS.$1
+COMPS.$2:
+;   22        PATH(2:6:2)%Y = PATH(1:5:2)%X + 1.0
+	MOVL	#3,COMPS.$C2		; array (line 22), dimension 1's count
+	MOVL	#1,COMPS.$I1
+COMPS.$3:				; array (line 22), dimension 1's body
+	MULL3	COMPS.$I1,#2,R0
+	MULL2	#2,R0
+	MULL3	COMPS.$I1,#2,R1
+	MULL2	#2,R1
+	ADDF3	COMPS.PATH-16[R0],COMPS.$F1,COMPS.PATH-4[R1]
+	INCL	COMPS.$I1
+	DECL	COMPS.$C2		; one pass fewer
+	BLEQ	COMPS.$4
+	BRW	COMPS.$3
+COMPS.$4:
+;   23        T%C(2:3) = T%C(1:2)
+	MOVL	#2,COMPS.$C3		; array (line 23), dimension 1's count
+	MOVL	#2,COMPS.$I1
+COMPS.$5:				; array (line 23), dimension 1's body
+	MOVL	COMPS.$I1,R0
+	MOVL	COMPS.$I1,R1
+	MOVF	COMPS.T[R0],COMPS.T+4[R1]
+	DECL	COMPS.$I1
+	DECL	COMPS.$C3		; one pass fewer
+	BLEQ	COMPS.$6
+	BRW	COMPS.$5
+COMPS.$6:
+;   24        PATH(2:6)%X = PATH(1:5)%X
+	MOVL	#5,COMPS.$C4		; array (line 24), dimension 1's count
+	MOVL	#5,COMPS.$I1
+COMPS.$7:				; array (line 24), dimension 1's body
+	MULL3	COMPS.$I1,#2,R0
+	MULL3	COMPS.$I1,#2,R1
+	MOVF	COMPS.PATH-8[R0],COMPS.PATH[R1]
+	DECL	COMPS.$I1
+	DECL	COMPS.$C4		; one pass fewer
+	BLEQ	COMPS.$8
+	BRW	COMPS.$7
+COMPS.$8:
+;   25        PATH%X = PATH%Y
+	MOVL	#6,COMPS.$C5		; array (line 25), dimension 1's count
+	MOVL	#1,COMPS.$I1
+COMPS.$9:				; array (line 25), dimension 1's body
+	MULL3	COMPS.$I1,#2,R0
+	MULL3	COMPS.$I1,#2,R1
+	MOVF	COMPS.PATH-4[R0],COMPS.PATH-8[R1]
+	INCL	COMPS.$I1
+	DECL	COMPS.$C5		; one pass fewer
+	BLEQ	COMPS.$10
+	BRW	COMPS.$9
+COMPS.$10:
+;   26        PATH%Y = PATH(6:1:-1)%Y
+	MOVL	#6,COMPS.$C6		; array (line 26), dimension 1's count
+	MOVL	#1,COMPS.$I1
+COMPS.$11:				; array (line 26), dimension 1's body
+	MULL3	COMPS.$I1,#-1,R0
+	MULL2	#2,R0
+	MOVL	COMPS.$I1,R1
+	MOVF	COMPS.PATH+52[R0],COMPS.$W1-4[R1]
+	INCL	COMPS.$I1
+	DECL	COMPS.$C6		; one pass fewer
+	BLEQ	COMPS.$12
+	BRW	COMPS.$11
+COMPS.$12:
+	MOVL	#6,COMPS.$C7		; array (line 26), dimension 1's count
+	MOVL	#1,COMPS.$I2
+COMPS.$13:				; array (line 26), dimension 1's body
+	MOVL	COMPS.$I2,R0
+	MULL3	COMPS.$I2,#2,R1
+	MOVF	COMPS.$W1-4[R0],COMPS.PATH-4[R1]
+	INCL	COMPS.$I2
+	DECL	COMPS.$C7		; one pass fewer
+	BLEQ	COMPS.$14
+	BRW	COMPS.$13
+COMPS.$14:
+;   27        Q = PATH
+	MOVL	#6,COMPS.$C8		; array (line 27), dimension 1's count
+	MOVL	#1,COMPS.$I2
+COMPS.$15:				; array (line 27), dimension 1's body
+	MULL3	COMPS.$I2,#8,R0
+	MULL3	COMPS.$I2,#8,R1
+	MOVC3	#8,COMPS.PATH-8[R0],COMPS.Q-8[R1]
+	INCL	COMPS.$I2
+	DECL	COMPS.$C8		; one pass fewer
+	BLEQ	COMPS.$16
+	BRW	COMPS.$15
+COMPS.$16:
+;   28        Q(2:3) = Q(1:2)
+	MOVL	#2,COMPS.$C9		; array (line 28), dimension 1's count
+	MOVL	#2,COMPS.$I2
+COMPS.$17:				; array (line 28), dimension 1's body
+	MULL3	COMPS.$I2,#8,R0
+	MULL3	COMPS.$I2,#8,R1
+	MOVC3	#8,COMPS.Q-8[R0],COMPS.Q[R1]
+	DECL	COMPS.$I2
+	DECL	COMPS.$C9		; one pass fewer
+	BLEQ	COMPS.$18
+	BRW	COMPS.$17
+COMPS.$18:
+;   29        Q = P
+	MOVL	#6,COMPS.$C10		; array (line 29), dimension 1's count
+	MOVL	#1,COMPS.$I2
+COMPS.$19:				; array (line 29), dimension 1's body
+	MULL3	COMPS.$I2,#8,R0
+	MOVC3	#8,COMPS.P,COMPS.Q-8[R0]
+	INCL	COMPS.$I2
+	DECL	COMPS.$C10		; one pass fewer
+	BLEQ	COMPS.$20
+	BRW	COMPS.$19
+COMPS.$20:
+;   30        Q(IV) = POINT(1.0, 2.0)
+	MOVL	#2,COMPS.$C11		; array (line 30), dimension 1's count
+	MOVL	#1,COMPS.$I2
+COMPS.$21:				; array (line 30), dimension 1's body
+	MOVL	COMPS.$I2,R0
+	MULL3	COMPS.IV-4[R0],#8,R0
+	MOVC3	#8,COMPS.$K1,COMPS.Q-8[R0]
+	INCL	COMPS.$I2
+	DECL	COMPS.$C11		; one pass fewer
+	BLEQ	COMPS.$22
+	BRW	COMPS.$21
+COMPS.$22:
+;   31        T = POLY(3, V * 2.0)
+	MOVL	#3,COMPS.T
+	MOVAB	COMPS.T+4,COMPS.$T1
+	MOVL	#3,COMPS.$C12		; array (line 31), dimension 1's count
+	MOVL	#1,COMPS.$I2
+COMPS.$23:				; array (line 31), dimension 1's body
+	MOVL	COMPS.$I2,R0
+	MOVL	COMPS.$T1,R1
+	MOVL	COMPS.$I2,R2
+	MULF3	COMPS.V-4[R0],COMPS.$F2,-4(R1)[R2]
+	INCL	COMPS.$I2
+	DECL	COMPS.$C12		; one pass fewer
+	BLEQ	COMPS.$24
+	BRW	COMPS.$23
+COMPS.$24:
+;   32        V(1:2) = PATH(IV)%X + T%C(2:3)
+	MOVL	#2,COMPS.$C13		; array (line 32), dimension 1's count
+	MOVL	#1,COMPS.$I2
+COMPS.$25:				; array (line 32), dimension 1's body
+	MOVL	COMPS.$I2,R0
+	MULL3	COMPS.IV-4[R0],#2,R0
+	MOVL	COMPS.$I2,R1
+	MOVL	COMPS.$I2,R2
+	ADDF3	COMPS.PATH-8[R0],COMPS.T+4[R1],COMPS.V-4[R2]
+	INCL	COMPS.$I2
+	DECL	COMPS.$C13		; one pass fewer
+	BLEQ	COMPS.$26
+	BRW	COMPS.$25
+COMPS.$26:
+;   33        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for RECS, a subroutine
+;   R     /S/      $LOCAL+0   RECS.R
+;   RA    /S/ (3)  $LOCAL+20  RECS.RA
+;   Structure /S/, 20 bytes
+;     +0     A     INTEGER
+;     +4     B     INTEGER (1:4)
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+RECS.R:	.BLKL	5			; R
+RECS.RA:
+	.BLKL	15			; RA, /S/ (3)
+RECS.$I1:
+	.BLKL	1			; an array statement's loop index
+RECS.$C1:
+	.BLKL	1			; array (line 41), dimension 1's count
+RECS.$C2:
+	.BLKL	1			; array (line 42), dimension 1's count
+RECS.$C3:
+	.BLKL	1			; array (line 43), dimension 1's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   34  C     A STRUCTURE's records: a section of an array field, and an array of
+;   35  C     records whole, as before Fortran 90 but for the sections.
+;   36        SUBROUTINE RECS
+	.ENTRY	RECS,^M<R2,R3,R4,R5>
+;   37        STRUCTURE /S/
+;   38          INTEGER A, B(4)
+;   39        END STRUCTURE
+;   40        RECORD /S/ R, RA(3)
+;   41        R.B(1:2) = R.B(3:4)
+	MOVL	#2,RECS.$C1		; array (line 41), dimension 1's count
+	MOVL	#1,RECS.$I1
+RECS.$1:				; array (line 41), dimension 1's body
+	MOVL	RECS.$I1,R0
+	MOVL	RECS.$I1,R1
+	MOVL	RECS.R+8[R0],RECS.R[R1]
+	INCL	RECS.$I1
+	DECL	RECS.$C1		; one pass fewer
+	BLEQ	RECS.$2
+	BRW	RECS.$1
+RECS.$2:
+;   42        RA.A = R.B(2:4)
+	MOVL	#3,RECS.$C2		; array (line 42), dimension 1's count
+	MOVL	#1,RECS.$I1
+RECS.$3:				; array (line 42), dimension 1's body
+	MOVL	RECS.$I1,R0
+	MULL3	RECS.$I1,#5,R1
+	MOVL	RECS.R+4[R0],RECS.RA-20[R1]
+	INCL	RECS.$I1
+	DECL	RECS.$C2		; one pass fewer
+	BLEQ	RECS.$4
+	BRW	RECS.$3
+RECS.$4:
+;   43        RA(2:3) = R
+	MOVL	#2,RECS.$C3		; array (line 43), dimension 1's count
+	MOVL	#1,RECS.$I1
+RECS.$5:				; array (line 43), dimension 1's body
+	MULL3	RECS.$I1,#20,R0
+	MOVC3	#20,RECS.R,RECS.RA[R0]
+	INCL	RECS.$I1
+	DECL	RECS.$C3		; one pass fewer
+	BLEQ	RECS.$6
+	BRW	RECS.$5
+RECS.$6:
+;   44        END
+	RET
+
+	.END	COMPS
