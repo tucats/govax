@@ -969,6 +969,8 @@ func (d *Dispatcher) bindGrammar() {
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),
 			},
+			ModuleDir:   r.String("MODULE"),
+			ModulePath:  nonEmpty(r.List("MODULE_PATH")),
 			CommandLine: d.Console.Line(),
 		})
 	})

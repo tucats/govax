@@ -32,6 +32,7 @@ import (
 //	        [/STANDARD[=(keyword,...)] | /NOSTANDARD]
 //	        [/DEBUG[=(keyword,...)] | /NODEBUG] [/OBJECT[=file] | /NOOBJECT]
 //	        [/[NO]F77] [/[NO]RECURSIVE] [/[NO]F90] [/SOURCE_FORM={FREE|FIXED}]
+//	        [/MODULE=directory] [/MODULE_PATH=(directory,...)]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -170,6 +171,13 @@ type FortranOptions struct {
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
+
+	// ModuleDir is /MODULE=directory, where module files are written and
+	// looked for first; "" means the default directory. ModulePath is
+	// /MODULE_PATH's directories, searched last for a module file, in place of
+	// FORT$MODULES's (fortranmodules.go).
+	ModuleDir  string
+	ModulePath []string
 
 	// CommandLine is the command as typed, for the MACRO file's header.
 	CommandLine string
@@ -387,6 +395,18 @@ func (c *Context) Fortran(opts FortranOptions) (err error) {
 		return err
 	}
 
+	if opts.ModuleDir != "" {
+		if _, err := c.moduleDirectoryOf(opts.ModuleDir, "/MODULE", true); err != nil {
+			return err
+		}
+	}
+
+	for _, p := range opts.ModulePath {
+		if _, err := c.moduleDirectoryOf(p, "/MODULE_PATH", false); err != nil {
+			return err
+		}
+	}
+
 	// MACRO reads a file, and the plan keeps the MACRO file (Decision 17).
 	if opts.Object && opts.NoMacro {
 		return vmserrors.New(vmserrors.CLI_FOROBJECT)
@@ -532,6 +552,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		Debug:          debug,
 		Continuations:  continuations,
 		Includes:       includes,
+		Modules:        &fortranModules{c: c, source: found, opts: opts},
 		Version:        BuildVersion,
 		Compiled:       time.Now(),
 		CommandLine:    opts.CommandLine,
@@ -551,6 +572,10 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 
 	if result.Errors > 0 {
 		return vmserrors.New(vmserrors.CLI_FORERRORS, result.Errors, found.Name)
+	}
+
+	if err := c.writeModuleFiles(result.Modules, opts, found); err != nil {
+		return err
 	}
 
 	if !opts.NoMacro {

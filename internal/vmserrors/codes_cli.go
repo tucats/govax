@@ -242,6 +242,10 @@ const (
 
 	// docs/planning/PHASE-99 - Fortran 90.md: FORTRAN's /SOURCE_FORM.
 	cliForSourceForm
+
+	// docs/planning/PHASE-106 - Fortran 90 modules.md: FORTRAN's /MODULE and
+	// /MODULE_PATH.
+	cliForModuleDir
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -591,6 +595,10 @@ const (
 	// CLI_FORSOURCEFORM refuses a FORTRAN whose /SOURCE_FORM is neither FREE nor FIXED.
 	CLI_FORSOURCEFORM = CLIFacility<<FacilityPosition | cliForSourceForm<<MessagePosition | StatusError
 
+	// CLI_FORMODULEDIR refuses a FORTRAN whose /MODULE, /MODULE_PATH, or
+	// FORT$MODULES names something that isn't a directory.
+	CLI_FORMODULEDIR = CLIFacility<<FacilityPosition | cliForModuleDir<<MessagePosition | StatusError
+
 	// CLI_P1TOOSMALL, an error, is VMINIT with paging on given a /P1 that
 	// can't hold P1's permanent part and the user stack.
 	CLI_P1TOOSMALL = CLIFacility<<FacilityPosition | cliP1TooSmall<<MessagePosition | StatusError
@@ -767,6 +775,7 @@ func init() {
 	DefineMessage(CLI_DIRECT, CLIFacility, "DIRECT", "invalid directory syntax - check brackets and other delimiters")
 	DefineMessage(CLI_NOLIST, CLIFacility, "NOLIST", "list of parameter values not allowed - check use of comma (,)")
 	DefineMessage(CLI_FORSOURCEFORM, CLIFacility, "FORSOURCEFORM", "/SOURCE_FORM=!S is neither FREE nor FIXED")
+	DefineMessage(CLI_FORMODULEDIR, CLIFacility, "FORMODULEDIR", "!S names !S, which isn't a directory for module files")
 	DefineMessage(CLI_NOTHEN, CLIFacility, "NOTHEN", "IF or ON statement syntax error - check placement of THEN keyword")
 	DefineMessage(CLI_INSFPRM, CLIFacility, "INSFPRM", "missing command parameters - supply all required parameters")
 	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits")

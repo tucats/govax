@@ -37,6 +37,7 @@ func TestModuleAccessText(t *testing.T) {
 	}
 
 	want := []string{
+		"!GOVAX$ OBJECT",
 		"MODULE CALC",
 		"!GOVAX$ TYPE CELL SIZE 4 BOUNDARY 4 NATURAL",
 		"!GOVAX$ FROM CELL STACKS CELL",

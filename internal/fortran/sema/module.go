@@ -99,6 +99,10 @@ type moduleScope struct {
 	block     *CommonBlock
 	gFloating bool
 
+	// stamp is the module's stamp (StampName) if its object defines what a
+	// user needs, "" if it has no object to ask for.
+	stamp string
+
 	// failed is set when the text couldn't be read; the USE that found it
 	// reported it, and later USEs say nothing more.
 	failed bool
@@ -146,6 +150,16 @@ func LongName(name string) string {
 	sum := sha256.Sum256([]byte(name))
 
 	return name[:22] + "$" + strings.ToUpper(hex.EncodeToString(sum[:4]))
+}
+
+// StampName is the stamp of module name whose text has the digest given:
+// $MOD$NAME.1A2B3C4D, the digest's first 8 digits after the name, as LongName
+// holds it. The module's object defines it, and each user's refers to it, so
+// that a user compiled from one text of the module and linked with the object
+// of another is LINK's undefined symbol, naming the stamp: govax's GSMATCH for
+// modules (finding 9).
+func StampName(name, digest string) string {
+	return LongName(modulePsectPrefix + name + "." + digest[:min(8, len(digest))])
 }
 
 // moduleStatements reports each statement a module's specification part can't

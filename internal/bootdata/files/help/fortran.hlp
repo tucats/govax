@@ -337,7 +337,23 @@
    (Fortran 95) and arrays of a type in a NAMELIST group are not there
    yet.
 
-   Fortran 90's other statements (MODULE, POINTER, and the rest) are
+   A MODULE holds data, types, constants, interfaces, and procedures
+   for the units that USE it.  Compiling a module writes its module
+   file, NAME.F90$MOD, a Fortran text of what its users may reach, in
+   the default directory or the one /MODULE names; a module file that
+   would be no different is left alone.  A USE finds a module earlier
+   in the same compilation, or else its module file: in the /MODULE
+   directory (or the default directory), then the source's directory,
+   then each of /MODULE_PATH's directories, or with no /MODULE_PATH
+   each translation of FORT$MODULES (%FORT-E-MODNOTFOUND lists where it
+   looked).  So a module is compiled before its users.  A user's object
+   refers to a symbol of the module's (its stamp), so linking it with
+   the object of a module compiled since from a changed source gives
+   LINK's undefined symbol $MOD$NAME.nnnnnnnn: compile the user again.
+   A module and its users must agree on /G_FLOATING if the module has
+   REAL*8 or COMPLEX*16 entities (%FORT-E-MODFORMAT).
+
+   Fortran 90's other statements (POINTER and the rest) are
    recognized and draw %FORT-E-NOTIMPL until they are
    added.  A format written as a character constant may
    hold "..." constants under /F90; one in a variable can't yet, and
@@ -543,6 +559,25 @@
    refused unless /MACRO names another file, since its MACRO file would
    replace it.  /NOMACRO
    compiles the source and reports any errors, but writes no MACRO file.
+
+/MODULE
+
+      /MODULE=directory
+
+   The directory module files are written to (NAME.F90$MOD, for each
+   MODULE the compilation compiles), and the first place a USE looks
+   for one.  Without it, they go in the default directory, as the
+   MACRO file does.  A host directory must exist.  Module files are
+   written with /NOMACRO too, and never after an error.
+
+/MODULE_PATH
+
+      /MODULE_PATH=(directory[,...])
+
+   Directories a USE looks in for a module file after the /MODULE
+   directory (or the default directory) and the source's directory, in
+   the order given.  Without it, the directories are the translations
+   of the logical name FORT$MODULES, if it is defined.
 
 /OBJECT
 

@@ -920,6 +920,9 @@ grammar console
     ! differently (docs/PHASE-99, Decision 2; the default is the source's form:
     ! free form /F90, fixed /NOF90), and SOURCE_FORM is /SOURCE_FORM=FREE or
     ! FIXED, the form of the files named whatever their types say (Decision 3).
+    ! MODULE is /MODULE=directory, where module files (NAME.F90$MOD) are
+    ! written and looked for first, and MODULE_PATH is /MODULE_PATH=(dir,...),
+    ! the directories looked in last (docs/PHASE-106, subtask 5).
     ! Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
@@ -981,6 +984,10 @@ grammar console
                     /default=""
         qualifier   continuations/id=1376       -
                     /type=$integer
+        qualifier   module/id=1394              -
+                    /type=$string
+        qualifier   module_path/id=1395         -
+                    /type=$string/list
 
     !
     ! govax-native extension (docs/PHASE-30.md, internal/console +

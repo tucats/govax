@@ -2,6 +2,7 @@ package fortran_test
 
 import (
 	"fmt"
+	"slices"
 	"regexp"
 	"strings"
 	"testing"
@@ -104,6 +105,7 @@ func TestModuleText(t *testing.T) {
 		"!GOVAX$ COMPILER GOVAX FORTRAN V1.0-140",
 		"!GOVAX$ SOURCE CONSTS.F90 17-NOV-2026 12:00:00.00",
 		"!GOVAX$ FLOATING D",
+		"!GOVAX$ OBJECT",
 		"MODULE CONSTS",
 		"!GOVAX$ PSECT $MOD$CONSTS SIZE 92 ALIGN 0",
 		"!GOVAX$ TYPE POINT SIZE 8 BOUNDARY 4 NATURAL",
@@ -229,6 +231,12 @@ func routineCode(lines []string, name string) string {
 	var code []string
 
 	for _, line := range lines {
+		// A user compiled apart from its module refers to the module's stamp,
+		// which a MACRO file that defines it doesn't.
+		if strings.Contains(line, "the stamps of the modules used") {
+			continue
+		}
+
 		if !sourceComment.MatchString(line) {
 			code = append(code, lineNote.ReplaceAllString(line, "(line)"))
 		}
@@ -331,6 +339,90 @@ func TestModuleGFloating(t *testing.T) {
 
 	if !strings.Contains(strings.Join(r.MACRO, "\n"), "\tMOVG\tP.$") {
 		t.Errorf("no MOVG:\n%s", strings.Join(r.MACRO, "\n"))
+	}
+}
+
+// TestModuleFormat checks MODFORMAT (finding 10): a user compiled with the other
+// REAL*8 format than a module with a REAL*8 or COMPLEX*16 entity, of any kind
+// (a variable, a component, a dummy argument), and none for a module whose
+// entities don't care.
+func TestModuleFormat(t *testing.T) {
+	g := func(o *fortran.Options) { o.GFloating = true }
+	user := "program p\n  use m\nend program"
+
+	for _, module := range []string{
+		"module m\n  real(8) :: x\nend module",
+		"module m\n  type t\n    complex(8) :: z\n  end type\nend module",
+		"module m\ncontains\n  subroutine s(d)\n    double precision :: d\n  end subroutine\nend module",
+	} {
+		alone := compileFree("M", module, nil, g)
+		if alone.Errors != 0 {
+			t.Fatalf("messages: %v", messageList(alone))
+		}
+
+		r := compileFree("P", user, moduleFiles{"M": moduleText(t, alone, "M")})
+		want := "2:7 MODFORMAT the module M was compiled /G_FLOATING, this unit /NOG_FLOATING: its REAL*8 and COMPLEX*16 entities would be read in the wrong format"
+
+		if got := messageList(r); len(got) != 1 || got[0] != want {
+			t.Errorf("%s:\n%v", module, got)
+		}
+
+		if same := compileFree("P", user, moduleFiles{"M": moduleText(t, alone, "M")}, g); same.Errors != 0 {
+			t.Errorf("the same format: %v", messageList(same))
+		}
+	}
+
+	alone := compileFree("M", "module m\n  real(4) :: x\n  complex(4) :: z\nend module", nil, g)
+	if r := compileFree("P", user, moduleFiles{"M": moduleText(t, alone, "M")}); r.Errors != 0 {
+		t.Errorf("no REAL*8: %v", messageList(r))
+	}
+}
+
+// TestModuleStamps checks the stamps (finding 9): a module with variables or
+// procedures says OBJECT and defines its stamp, a global symbol carrying its
+// text's digest; a user compiled apart refers to it with .EXTRN, one in the
+// same file doesn't; and a module of only types and constants asks for none.
+func TestModuleStamps(t *testing.T) {
+	alone := compileFree("CONSTS", constsModule, nil)
+	text := moduleText(t, alone, "CONSTS")
+	stamp := sema.StampName("CONSTS", alone.Modules[0].Digest)
+
+	if !strings.HasPrefix(stamp, "$MOD$CONSTS.") || len(stamp) != len("$MOD$CONSTS.")+8 {
+		t.Fatalf("stamp %q", stamp)
+	}
+
+	if macro := strings.Join(alone.MACRO, "\n"); !strings.Contains(macro, stamp+" == 0") {
+		t.Errorf("no definition of %s:\n%s", stamp, macro)
+	}
+
+	user := compileFree("AREA", constsUser, moduleFiles{"CONSTS": text})
+	if macro := strings.Join(user.MACRO, "\n"); !strings.Contains(macro, "\t.EXTRN\t"+stamp+"\t") {
+		t.Errorf("no reference to %s:\n%s", stamp, macro)
+	}
+
+	both := compileFree("AREA", constsModule+"\n"+constsUser, nil)
+	if macro := strings.Join(both.MACRO, "\n"); strings.Contains(macro, ".EXTRN\t$MOD$") {
+		t.Errorf("a stamp referred to in its own file:\n%s", macro)
+	}
+
+	types := compileFree("KINDS", "module kinds\n  integer, parameter :: dp = 8\n  type pair\n    integer a, b\n  end type\nend module", nil)
+	if slices.Contains(moduleText(t, types, "KINDS"), "!GOVAX$ OBJECT") {
+		t.Errorf("an OBJECT line for a module of types")
+	}
+
+	kuser := compileFree("Q", "program q\n  use kinds\n  type(pair) :: p\n  p%a = dp\nend program", moduleFiles{"KINDS": moduleText(t, types, "KINDS")})
+	if kuser.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(kuser))
+	}
+
+	if macro := strings.Join(kuser.MACRO, "\n"); strings.Contains(macro, "$MOD$KINDS.") {
+		t.Errorf("a stamp asked of a module with no object:\n%s", macro)
+	}
+
+	// A long module name's stamp is the hashed form, the same both sides.
+	long := sema.StampName("A_VERY_LONG_MODULE_NAME_INDEED", alone.Modules[0].Digest)
+	if len(long) != 31 || long != sema.LongName("$MOD$A_VERY_LONG_MODULE_NAME_INDEED."+alone.Modules[0].Digest[:8]) {
+		t.Errorf("long stamp %q", long)
 	}
 }
 

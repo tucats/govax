@@ -382,7 +382,8 @@ qualifiers stay a subtask of their own.
    USECOMMON (findings 2, 3, 8) (done 2026-11-19).
 5. **Module files and the command:** writing the file only when it changes, the
    search, `/MODULE`, `/MODULE_PATH`, `FORT$MODULES`, MODNOTFOUND, host and volume,
-   the stamp symbol, MODFORMAT, MODSTALE, HELP FORTRAN (findings 9, 10, 12).
+   the stamp symbol, MODFORMAT, MODSTALE, HELP FORTRAN (findings 9, 10, 12)
+   (done 2026-11-19).
 6. **Listings:** the storage map's and cross reference's origins, the `/DEBUG`
    table's module variables (finding 13).
 7. **Programs end to end** (`testdata/fortran90/modules/`, each with a
@@ -597,3 +598,44 @@ Definition modules as module files stay for later (the plan's open question 2).
   `TestModuleReexport`, compiled with and apart from its modules, and with the
   second module's file alone; `TestModuleStale`; `TestModuleAccessMessages`),
   and `testdata/fortran90/modaccess.f90`, in every mode, the same on gfortran.
+- **2026-11-19:** Subtask 5, module files and the command. The FORTRAN command
+  writes each module a compilation without an error compiled as `NAME.F90$MOD`
+  (`dclcmd/fortranmodules.go`'s `writeModuleFiles`) in `/MODULE=directory`'s
+  directory or the default directory, where the MACRO file goes, unless a file
+  there has the same digest (`sema.ModuleDigest`, which now leaves out the
+  COMPILER line as well as SOURCE, so a new build of govax doesn't make every
+  module new); with `/NOMACRO` too, as gfortran's `-fsyntax-only` does. A USE of
+  a module the compilation doesn't compile goes to `fortranModules`, the
+  `sema.ModuleFinder`: the output directory, the first source's directory, then
+  `/MODULE_PATH=(dir,...)`'s directories or, without it, each translation of
+  `FORT$MODULES` (the author's answer 6), each once; a directory on the host or a
+  volume by `rms.Session.Side` (a logical name its translation), a volume one
+  reached by `LocateRelated`; a host name tried in the case of the source's type,
+  then the other; MODNOTFOUND names every file looked for, and one there but
+  unreadable with its reason. `/MODULE` and `/MODULE_PATH` in the grammar
+  (`console.dcl`, ids 1394 and 1395) and `govax fortran`'s `--module` and
+  `--module-path`; a `/MODULE` that isn't a directory, or a host one that doesn't
+  exist, is CLI_FORMODULEDIR. The stamp (finding 9): a module's text has an
+  `!GOVAX$ OBJECT` line when its object holds its own section or a module
+  procedure; the module's object defines its stamp, `sema.StampName`
+  (`$MOD$M.` and the digest's first 8 digits, `LongName`'s form past 31
+  characters; `Unit.Stamp`, a global assignment by codegen's `writeStamps`), and a
+  unit that USEs a module with an OBJECT line refers to it (`Unit.Stamps`, an
+  `.EXTRN` but where this MACRO file defines it), so a stale user object linked
+  with a new module object is LINK's NUDFSYMS naming the stamp. MODFORMAT (finding
+  10): a USE of a module of the other `/G_FLOATING` format with a REAL*8 or
+  COMPLEX*16 entity anywhere (a name, a component, a procedure's dummy or value;
+  `use.go`'s `formatMatters`). MODSTALE was subtask 4's. HELP FORTRAN's
+  Fortran_90 topic and `/MODULE` and `/MODULE_PATH` lines; MANUAL.md's syntax
+  block, qualifier paragraph, and a "Modules" paragraph in 14.13 (the whole story
+  is the close-out's). Choices made here: a user refers only to the stamps of the
+  modules it USEs; a module re-exporting another's entities refers to that
+  module's stamp in its own object, so the check goes from object to object (a
+  user of a re-exporting module with no object of its own isn't checked against
+  the other's); a module always defines its stamp, whether or not its users ask
+  for it. Tests: `internal/fortran/modules_test.go`'s `TestModuleFormat` and
+  `TestModuleStamps`; `internal/dclcmd/fortranmodules_test.go` (written and left
+  alone on a volume, none after an error, `/NOMACRO`, the search on a volume and
+  the host, MODNOTFOUND, FORMODULEDIR, and `TestModuleStampLink`, MACRO and LINK
+  on a stale user object); `internal/console`'s `TestDispatch_fortranModules`
+  through the grammar; `cmd/govax`'s `TestFortranCommand`.

@@ -140,6 +140,10 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 
 		defined[r.Name] = true
 
+		if r.Unit != nil && r.Unit.Stamp != "" {
+			defined[r.Unit.Stamp] = true
+		}
+
 		for _, e := range r.Entries {
 			defined[e.Name] = true
 		}
@@ -434,6 +438,8 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 		w.Statement("", ".EXTRN", strings.Join(externals, ","), "named in an EXTERNAL statement")
 	}
 
+	g.writeStamps(w)
+
 	if len(g.cells()) > 0 {
 		w.Blank()
 		w.Statement("", ".PSECT", localPsect+alignmentName(g.localAlign), "")
@@ -494,6 +500,36 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 
 	for _, v := range r.VFEs {
 		g.writeVFE(w, v)
+	}
+}
+
+// writeStamps writes a module's stamp, and the stamps of the modules whose
+// objects the unit needs (sema.StampName; docs/planning/PHASE-106 - Fortran 90
+// modules.md, finding 9). A module's object defines its stamp, a global symbol
+// of no value; a user's refers to each with .EXTRN, so LINK reports an object
+// of a module compiled from another text than the user was as the stamp's
+// undefined symbol. A stamp this MACRO file defines needs no .EXTRN, which
+// MACRO would refuse.
+func (g *routineGen) writeStamps(w *Writer) {
+	u := g.r.Unit
+	if u == nil {
+		return
+	}
+
+	if u.Stamp != "" {
+		w.GlobalAssignment(u.Stamp, "0", "this module's stamp, which its users' objects refer to")
+	}
+
+	var stamps []string
+
+	for _, s := range u.Stamps {
+		if !g.defined[s] {
+			stamps = append(stamps, s)
+		}
+	}
+
+	if len(stamps) > 0 {
+		w.Statement("", ".EXTRN", strings.Join(stamps, ","), "the stamps of the modules used")
 	}
 }
 

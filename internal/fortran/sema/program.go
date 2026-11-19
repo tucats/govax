@@ -101,6 +101,14 @@ type Unit struct {
 	Commons    []*CommonBlock
 	UsedBlocks []*CommonBlock
 
+	// Stamp is a module's stamp, the global symbol its object defines
+	// (StampName), and Stamps those of the modules the unit's USE statements
+	// read whose objects its own needs, which its object refers to: linked
+	// with an object of a module compiled from another text, LINK finds the
+	// symbol undefined (finding 9, the author's answer 4).
+	Stamp  string
+	Stamps []string
+
 	// usedStructs are the types USE statements gave the unit, each with its
 	// module's name (use.go), and usedTypes the same by local name, in the
 	// order the USEs gave them; ambiguousTypes are the local names two USEs

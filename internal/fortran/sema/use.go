@@ -100,8 +100,99 @@ func (a *analyzer) uses(body []ast.Stmt) {
 			continue
 		}
 
+		a.moduleFormat(ms, r.pos)
+
+		if ms.stamp != "" && !slices.Contains(a.unit.Stamps, ms.stamp) {
+			a.unit.Stamps = append(a.unit.Stamps, ms.stamp)
+		}
+
 		a.useModule(ms, r)
 	}
+}
+
+// moduleFormat reports MODFORMAT for a USE at pos of a module compiled with the
+// other REAL*8 format than this unit's, if the module has an entity whose type
+// depends on it (finding 10, the author's answer 5): a REAL*8 or COMPLEX*16
+// variable, constant, component, function value, or dummy argument. A Type
+// doesn't say D or G, its unit does, so such an entity would be read in the
+// wrong format. A module of no such entity may be used whatever its format.
+func (a *analyzer) moduleFormat(ms *moduleScope, pos diag.Position) {
+	if ms.gFloating == a.gFloating || !formatMatters(ms.unit, map[*Unit]bool{}, map[*Structure]bool{}) {
+		return
+	}
+
+	format := func(g bool) string {
+		if g {
+			return "/G_FLOATING"
+		}
+
+		return "/NOG_FLOATING"
+	}
+
+	a.report("MODFORMAT", pos, ms.name, format(ms.gFloating), format(a.gFloating))
+}
+
+// formatMatters reports whether a unit has an entity whose type is REAL*8 or
+// COMPLEX*16, or is a record with such a component, among its names, its
+// types, and its procedures' interfaces and contained units.
+func formatMatters(u *Unit, units map[*Unit]bool, structs map[*Structure]bool) bool {
+	if u == nil || units[u] {
+		return false
+	}
+
+	units[u] = true
+
+	for _, s := range u.Symbols {
+		if typeFormatMatters(s.Type, structs) || formatMatters(s.Interface, units, structs) ||
+			formatMatters(s.Internal, units, structs) {
+			return true
+		}
+	}
+
+	for _, st := range u.Structures {
+		if structFormatMatters(st, structs) {
+			return true
+		}
+	}
+
+	for _, cu := range u.Contains {
+		if formatMatters(cu, units, structs) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// typeFormatMatters reports whether a type is REAL*8 or COMPLEX*16, or a
+// record holding one.
+func typeFormatMatters(t Type, structs map[*Structure]bool) bool {
+	switch {
+	case t.Kind == Real && t.Size == 8, t.Kind == Complex && t.Size == 16:
+		return true
+	case t.Struct != nil:
+		return structFormatMatters(t.Struct, structs)
+	}
+
+	return false
+}
+
+// structFormatMatters reports whether a structure has a REAL*8 or COMPLEX*16
+// component, at any depth.
+func structFormatMatters(st *Structure, structs map[*Structure]bool) bool {
+	if st == nil || structs[st] {
+		return false
+	}
+
+	structs[st] = true
+
+	for _, f := range st.Fields {
+		if typeFormatMatters(f.Type, structs) || structFormatMatters(f.Struct, structs) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // localName is a name an entity is given here, and where.

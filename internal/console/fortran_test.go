@@ -675,3 +675,42 @@ func TestFortran_listVolume(t *testing.T) {
 		}
 	}
 }
+
+// TestDispatch_fortranModules checks /MODULE and /MODULE_PATH through the grammar
+// (docs/planning/PHASE-106 - Fortran 90 modules.md, subtask 5): a module file
+// written to /MODULE's directory, found there by /MODULE_PATH, and MODNOTFOUND
+// without either.
+func TestDispatch_fortranModules(t *testing.T) {
+	d, _, buf := newCommandDispatcher(t)
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	mods := filepath.Join(dir, "mods")
+	if err := os.Mkdir(mods, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	src := filepath.Join(dir, "src")
+	if err := os.Mkdir(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	writeHostFile(t, filepath.Join(src, "m.f90"), "module m\n  integer :: k\nend module\n")
+	writeHostFile(t, filepath.Join(src, "p.f90"), "program p\n  use m\n  k = 1\nend\n")
+
+	if err := d.Dispatch(`FORTRAN/NOMACRO/MODULE="` + mods + `" "` + filepath.Join(src, "m.f90") + `"`); err != nil || buf.Len() != 0 {
+		t.Fatalf("the module: %v\n%s", err, buf)
+	}
+
+	if _, err := os.Stat(filepath.Join(mods, "m.f90$mod")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.Dispatch(`FORTRAN/NOMACRO/MODULE_PATH=("` + mods + `") "` + filepath.Join(src, "p.f90") + `"`); err != nil || buf.Len() != 0 {
+		t.Fatalf("the user: %v\n%s", err, buf)
+	}
+
+	if err := d.Dispatch(`FORTRAN/NOMACRO "` + filepath.Join(src, "p.f90") + `"`); err == nil || !strings.Contains(buf.String(), "%FORT-E-MODNOTFOUND, no module file for M; looked in "+filepath.Join(dir, "m.f90$mod")) {
+		t.Fatalf("no module file: %v\n%s", err, buf)
+	}
+}

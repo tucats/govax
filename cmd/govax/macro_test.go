@@ -285,6 +285,7 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{f90: true}, `FORTRAN "sq"/F90`},
 		{[]string{"sq"}, fortranFlags{noF90: true, f90: true}, `FORTRAN "sq"/NOF90`},
 		{[]string{"sq"}, fortranFlags{sourceForm: "free"}, `FORTRAN "sq"/SOURCE_FORM=FREE`},
+		{[]string{"sq"}, fortranFlags{module: "mods", modulePath: "a,/b/c"}, `FORTRAN "sq"/MODULE="mods"/MODULE_PATH=("a","/b/c")`},
 	}
 
 	for _, c := range cases {

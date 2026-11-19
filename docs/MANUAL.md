@@ -2394,7 +2394,7 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]CROSS_REFERENCE  /CHECK[=(keyword,...)] | /NOCHECK
     /WARNINGS[=(keyword,...)] | /NOWARNINGS  /STANDARD[=(keyword,...)] | /NOSTANDARD
     /DEBUG[=(keyword,...)] | /NODEBUG  /OBJECT[=file] | /NOOBJECT  /[NO]F77  /[NO]RECURSIVE
-    /[NO]F90  /SOURCE_FORM=FREE|FIXED
+    /[NO]F90  /SOURCE_FORM=FREE|FIXED  /MODULE=directory  /MODULE_PATH=(directory,...)
 ```
 
 Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default, or `.F90` when there
@@ -6723,10 +6723,10 @@ The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, joined by `+` and with
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
-`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)); `/[NO]F90` and `/SOURCE_FORM` are in [section 14.13](#1413-fortran-90), and the others are described below. An `OPTIONS` statement before a unit may give `/I4`,
+`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)); `/[NO]F90`, `/SOURCE_FORM`, `/MODULE`, and `/MODULE_PATH` are in [section 14.13](#1413-fortran-90), and the others are described below. An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, `/NOEXTEND_SOURCE`, `/F77`, `/NOF77`, `/F90`, `/NOF90`, `/RECURSIVE`, or `/NORECURSIVE` for that unit alone, each name cut short if it stands for only one of them (but `/F90` and `/NOF90` written in full: `/F` and `/NOF` are still `/F77` and `/NOF77`, as they were before there was a `/F90`); the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, `--object-file file`, and `--recursive` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, `/OBJECT=file`, and `/RECURSIVE`, `--f90`, `--no-f90`, and `--source-form form` are `/F90`, `/NOF90`, and `/SOURCE_FORM=form`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, `--object-file file`, and `--recursive` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, `/OBJECT=file`, and `/RECURSIVE`, `--f90`, `--no-f90`, and `--source-form form` are `/F90`, `/NOF90`, and `/SOURCE_FORM=form`, `--module dir` and `--module-path dir,...` are `/MODULE=dir` and `/MODULE_PATH=(dir,...)`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, in the default directory; `/LIST=file` names another. It is written after
@@ -9306,18 +9306,46 @@ function up(n, k)
 end function
 ```
 
+**Modules.** A `MODULE` holds data, types, constants, interfaces, and procedures, which a
+unit reaches with `USE` (with renames and `ONLY`), its names `PUBLIC` or `PRIVATE`. Compiling
+a module writes its *module file*, `NAME.F90$MOD`, a Fortran text of what its users may reach,
+in the default directory (where the MACRO file goes) or in the one `/MODULE=directory` names;
+a module file that would come out no different is left as it is, so its date (or on a volume
+its version) says when the module last changed for its users. No module file is written by a
+compilation with an error; one is with `/NOMACRO`. A `USE` finds a module earlier in the same
+compilation, or else its module file: in the `/MODULE` directory (or the default directory),
+then the first source's directory, then each directory of `/MODULE_PATH=(directory,...)` or,
+without it, each translation of the logical name `FORT$MODULES`; on the host a file's name is
+tried in the case of the source's type, then the other. A module is compiled before its users,
+and `%FORT-E-MODNOTFOUND` names every file it looked for:
+
+```text
+VAX> FORTRAN SHAPES
+VAX> FORTRAN/MODULE_PATH=([LIB]) PROG
+VAX> MACRO SHAPES
+VAX> MACRO PROG
+VAX> LINK PROG,SHAPES
+```
+
+A user's object refers to the module's *stamp*, a global symbol `$MOD$NAME.nnnnnnnn` of its
+module file's digest, which the module's object defines when it has variables or procedures.
+Linked with the object of a module since compiled from a changed source, the user's old object
+is LINK's undefined symbol, naming the stamp: compile the user again. A module and its users
+must agree on `/G_FLOATING` when the module has a REAL\*8 or COMPLEX\*16 entity
+(`%FORT-E-MODFORMAT`). The listing's view of modules, and the rest of this section's story of
+them, are still to come.
+
 **Not there yet.** Every other Fortran 90 statement is recognized, and draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, the USE statement is not implemented yet
+%FORT-E-NOTIMPL, the POINTER attribute is not implemented yet
   at line 2 of DUA1:[WORK]BAD.F90;1
-    use limits
-  --^
+    real, pointer :: p
+  --------^
 ```
 
-That includes modules and USE (with MODULE PROCEDURE), derived types, and pointers, each
-to come in its turn. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
+That includes pointers, each to come in its turn. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
 gives no elements but govax still calls `BOUNDORDER`; a CHARACTER constructor whose first value's length is known only when the program
 runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of
 records; and a section as an internal file or ENCODE's buffer. Fortran 90's other new

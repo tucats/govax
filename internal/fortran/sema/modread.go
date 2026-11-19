@@ -27,6 +27,10 @@ type moduleFacts struct {
 	format    string
 	gFloating bool
 
+	// object says the module's object defines what its users need (an
+	// OBJECT line), so a user refers to the module's stamp.
+	object bool
+
 	// blocks are the program sections' sizes and alignments, by section, and
 	// at each variable's place, by name.
 	blocks map[string]blockFact
@@ -103,6 +107,8 @@ func readFacts(lines []string) (*moduleFacts, string, int) {
 			f.format = w[2]
 		case w[0] == "FLOATING" && len(w) == 2:
 			f.gFloating = w[1] == "G"
+		case w[0] == "OBJECT" && len(w) == 1:
+			f.object = true
 		case (w[0] == "PSECT" || w[0] == "COMMON") && len(w) == 6:
 			f.blocks[w[1]] = blockFact{size: number(3), align: number(5), line: n}
 			bad = number(3) < 0 || number(5) < 0
@@ -361,6 +367,10 @@ func (m *modules) read(name string, lines []string, spec string) (*moduleScope, 
 	}
 
 	ms := &moduleScope{name: name, unit: a.unit, gFloating: facts.gFloating}
+
+	if facts.object {
+		ms.stamp = StampName(name, ModuleDigest(lines))
+	}
 
 	for _, s := range a.unit.Symbols {
 		if s.Value != nil && facts.folded[s.Name] {

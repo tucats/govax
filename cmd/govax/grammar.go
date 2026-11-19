@@ -89,6 +89,8 @@ type fortranFlags struct {
 	debug        string // --debug: /DEBUG's keywords, separated by commas
 	object       bool   // --object: /OBJECT
 	objectFile   string // --object-file: /OBJECT=file
+	module       string // --module: /MODULE=directory
+	modulePath   string // --module-path: /MODULE_PATH's directories, separated by commas
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -610,6 +612,26 @@ var fortranGrammar = []cli.Option{
 		Action: func(c *cli.Context) error {
 			fortran.object = true
 			fortran.objectFile, _ = c.String("object-file")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "module",
+		Description: "The directory module files are written to and looked for in first (default: the current directory)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.module, _ = c.String("module")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "module-path",
+		Description: "Directories to look for module files in last, separated by commas",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.modulePath, _ = c.String("module-path")
 
 			return nil
 		},
@@ -1189,6 +1211,19 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.continuationsGiven {
 		command += fmt.Sprintf("/CONTINUATIONS=%d", f.continuations)
+	}
+
+	if f.module != "" {
+		command += "/MODULE=" + dclQuote(f.module)
+	}
+
+	if f.modulePath != "" {
+		dirs := strings.Split(f.modulePath, ",")
+		for i, d := range dirs {
+			dirs[i] = dclQuote(d)
+		}
+
+		command += "/MODULE_PATH=(" + strings.Join(dirs, ",") + ")"
 	}
 
 	return command

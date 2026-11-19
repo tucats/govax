@@ -1613,7 +1613,9 @@ var messages = map[string]kind{
 	// Modules (sema/module.go, use.go, modread.go; docs/planning/PHASE-106 -
 	// Fortran 90 modules.md). MODSTMT is what a module's specification part
 	// can't hold (11.3). MODLATER is a USE of a module later in the file, MODCYCLE a module
-	// that uses itself, MODNOTFOUND one with no module file where the search
+	// that uses itself, MODFORMAT one compiled with the other REAL*8 format
+	// whose REAL*8 or COMPLEX*16 entities that matters to (finding 10),
+	// MODNOTFOUND one with no module file where the search
 	// looked, MODFILEBAD a module file that doesn't read (its line, and why),
 	// MODFACT what a module file's !GOVAX$ lines and declarations disagree on
 	// (only ever inside MODFILEBAD). USELOCAL is a use-associated name that is
@@ -1622,6 +1624,7 @@ var messages = map[string]kind{
 	"MODSTMT":     {Error, "a module's specification part can't hold %s"},
 	"MODLATER":    {Error, "the module %s is at line %d, after this USE: a module must be compiled before it is used"},
 	"MODCYCLE":    {Error, "the module %s uses itself, directly or through other modules"},
+	"MODFORMAT":   {Error, "the module %s was compiled %s, this unit %s: its REAL*8 and COMPLEX*16 entities would be read in the wrong format"},
 	"MODNOTFOUND": {Error, "no module file for %s; looked in %s"},
 	"MODFILEBAD":  {Error, "the module file %s can't be read, at line %d: %s"},
 	"MODFACT":     {Error, "%s"},

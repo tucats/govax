@@ -126,19 +126,23 @@ func (p *Program) finishModule(u *Unit, opts Options, messages *diag.List) {
 		return
 	}
 
-	mt := &ModuleText{Name: u.Name, Lines: w.lines, Digest: moduleDigest(w.lines)}
+	mt := &ModuleText{Name: u.Name, Lines: w.lines, Digest: ModuleDigest(w.lines)}
+	u.Stamp = StampName(u.Name, mt.Digest)
 	p.Modules = append(p.Modules, mt)
 	p.modules.compiled[u.Name] = mt
 }
 
-// moduleDigest is the SHA-256 of a module's text, in hexadecimal, but for its
-// SOURCE line: two compilations of one source with nothing changed give one
-// digest, whatever the files' times (finding 9).
-func moduleDigest(lines []string) string {
+// ModuleDigest is the SHA-256 of a module's text, in hexadecimal, but for its
+// SOURCE and COMPILER lines: two compilations of one source with nothing
+// changed give one digest, whatever the files' times and whichever build of
+// govax compiled them (finding 9). The FORTRAN command compares a module file's
+// digest with the new text's to leave a file that hasn't changed alone, and a
+// module's stamp (StampName) carries the digest's first digits.
+func ModuleDigest(lines []string) string {
 	h := sha256.New()
 
 	for _, line := range lines {
-		if strings.HasPrefix(line, "!GOVAX$ SOURCE ") {
+		if strings.HasPrefix(line, "!GOVAX$ SOURCE ") || strings.HasPrefix(line, "!GOVAX$ COMPILER ") {
 			continue
 		}
 
@@ -147,6 +151,22 @@ func moduleDigest(lines []string) string {
 	}
 
 	return strings.ToUpper(hex.EncodeToString(h.Sum(nil)))
+}
+
+// hasObject reports whether the module's object holds something its users
+// need: a section of its own variables, or a module procedure.
+func (w *moduleWriter) hasObject() bool {
+	if len(w.u.Contains) > 0 {
+		return true
+	}
+
+	for _, b := range w.u.Commons {
+		if b.Module == w.u.Name {
+			return true
+		}
+	}
+
+	return false
 }
 
 // fact writes a !GOVAX$ line.
@@ -244,6 +264,16 @@ func (w *moduleWriter) module(opts Options) {
 	}
 
 	w.fact("FLOATING", floating)
+
+	// OBJECT says the module's object defines what its users need: its
+	// variables' section or its procedures. A user of such a module refers to
+	// its stamp (StampName), so that LINK finds an object of another
+	// compilation of the module out of date; a module of only types,
+	// constants, and interfaces needs no object, and a user asks for none.
+	if w.hasObject() {
+		w.fact("OBJECT")
+	}
+
 	w.put(0, "MODULE "+u.Name)
 
 	for _, b := range u.Commons {
