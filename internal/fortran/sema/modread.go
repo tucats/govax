@@ -39,8 +39,15 @@ type moduleFacts struct {
 	// not written (FOLDED lines).
 	folded map[string]bool
 
-	// links are the module procedures' global names, by name (LINK lines).
+	// links are the module procedures' global names, by name, and an
+	// external procedure's true name when the module knows it by another
+	// (LINK lines).
 	links map[string]string
+
+	// from are the entities the module has from other modules, by the name
+	// the text gives them, each with its defining module and its name there
+	// (FROM lines; finding 8).
+	from map[string]entityOrigin
 }
 
 // blockFact is a PSECT or COMMON line: a section's size and alignment.
@@ -63,7 +70,7 @@ type typeFact struct {
 // readFacts reads a text's !GOVAX$ lines, or reports what is wrong with one
 // and the line it is on.
 func readFacts(lines []string) (*moduleFacts, string, int) {
-	f := &moduleFacts{blocks: map[string]blockFact{}, at: map[string]atFact{}, types: map[string]typeFact{}, folded: map[string]bool{}, links: map[string]string{}}
+	f := &moduleFacts{blocks: map[string]blockFact{}, at: map[string]atFact{}, types: map[string]typeFact{}, folded: map[string]bool{}, links: map[string]string{}, from: map[string]entityOrigin{}}
 
 	for i, line := range lines {
 		rest, ok := strings.CutPrefix(line, "!GOVAX$ ")
@@ -104,6 +111,8 @@ func readFacts(lines []string) (*moduleFacts, string, int) {
 			bad = number(2) < 0 || number(3) < 0
 		case w[0] == "LINK" && len(w) == 3:
 			f.links[w[1]] = w[2]
+		case w[0] == "FROM" && len(w) == 4:
+			f.from[w[1]] = entityOrigin{Module: w[2], Name: w[3]}
 		case w[0] == "FOLDED" && len(w) == 2:
 			f.folded[w[1]] = true
 		case w[0] == "TYPE" && len(w) == 7:
@@ -177,13 +186,116 @@ func (a *analyzer) moduleScope(name string, pos diag.Position) *moduleScope {
 	}
 
 	ms, why, line := m.read(name, lines, spec)
+
+	// A type the text gives differently from an earlier text explains
+	// whatever else went wrong reading it.
+	if st := m.stale; st != nil {
+		m.stale, m.pending = nil, nil
+
+		return failed("MODSTALE", st.origin.Name, st.origin.Module, st.first, spec)
+	}
+
 	if ms == nil {
+		m.pending = nil
+
 		return failed("MODFILEBAD", spec, line, why)
 	}
 
+	for o, t := range m.pending {
+		m.types[o] = t
+	}
+
+	m.pending = nil
 	m.loaded[name] = ms
 
 	return ms
+}
+
+// knownType is a type a module text has given: the one Structure every module
+// text that has the type gives it, and the text that gave it first.
+type knownType struct {
+	st   *Structure
+	spec string
+}
+
+// staleType is a type two module texts give differently (MODSTALE): the type,
+// and the text that gave it first.
+type staleType struct {
+	origin entityOrigin
+	first  string
+}
+
+// readType makes the type st, which the module text being read defines under
+// the name local, the one Structure its origin has in this compilation
+// (finding 3): the type of the module the text's FROM line names, or the
+// text's own. The first text to give a type gives the Structure, and each
+// later one that gives it must give the same (sameStructure), or the two
+// texts are of different compilations of the type's module (MODSTALE). The
+// unit's tables then hold the one Structure under the text's name.
+func (a *analyzer) readType(local string, st *Structure) *Structure {
+	m := a.prog.modules
+	o := entityOrigin{Module: a.unit.Name, Name: local}
+
+	if f, ok := a.reading.from[local]; ok {
+		o = f
+	}
+
+	st.Module, st.Name = o.Module, o.Name
+
+	known, ok := m.types[o]
+	if !ok {
+		known, ok = m.pending[o]
+	}
+
+	if !ok {
+		if m.pending == nil {
+			m.pending = map[entityOrigin]knownType{}
+		}
+
+		m.pending[o] = knownType{st: st, spec: m.reading}
+
+		return st
+	}
+
+	if !sameStructure(known.st, st) && m.stale == nil {
+		m.stale = &staleType{origin: o, first: known.spec}
+	}
+
+	a.unit.structs[local] = known.st
+
+	if n := len(a.unit.Structures); n > 0 && a.unit.Structures[n-1] == st {
+		a.unit.Structures[n-1] = known.st
+	}
+
+	return known.st
+}
+
+// sameStructure reports whether two module texts' forms of one type agree:
+// the same layout, and the same fields in the same places, of the same types.
+// The types the fields name are already the one Structure each, so they are
+// compared as pointers.
+func sameStructure(x, y *Structure) bool {
+	if x.Size != y.Size || x.Boundary != y.Boundary || x.Natural != y.Natural || x.Derived != y.Derived ||
+		x.Sequence != y.Sequence || x.PrivateComponents != y.PrivateComponents || len(x.Fields) != len(y.Fields) {
+		return false
+	}
+
+	for i, f := range x.Fields {
+		g := y.Fields[i]
+
+		if f.Name != g.Name || f.Offset != g.Offset || f.Struct != g.Struct || f.Map != g.Map ||
+			f.Type.Kind != g.Type.Kind || f.Type.Size != g.Type.Size || len(f.Dims) != len(g.Dims) {
+			return false
+		}
+
+		for j, d := range f.Dims {
+			if d.Lower != g.Dims[j].Lower || d.Upper != g.Dims[j].Upper {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 // lookedText is the places a search looked, for MODNOTFOUND.
@@ -220,6 +332,7 @@ func (m *modules) read(name string, lines []string, spec string) (*moduleScope, 
 	}
 
 	au := tree.Units[0]
+	m.reading = spec
 
 	opts := m.opts
 	opts.GFloating = facts.gFloating
@@ -253,10 +366,22 @@ func (m *modules) read(name string, lines []string, spec string) (*moduleScope, 
 		if s.Value != nil && facts.folded[s.Name] {
 			s.Value.literal = false
 		}
+
+		if o, ok := facts.from[s.Name]; ok {
+			s.from = &o
+		}
+	}
+
+	for _, n := range a.unit.Namelists {
+		n.origin = entityOrigin{Module: name, Name: n.Name}
+
+		if o, ok := facts.from[n.Name]; ok {
+			n.origin = o
+		}
 	}
 
 	for _, b := range a.unit.Commons {
-		if b.Module != "" {
+		if b.Module == name {
 			ms.block = b
 		}
 	}

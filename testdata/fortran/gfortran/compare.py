@@ -55,6 +55,7 @@ PROGRAMS = {
 PROGRAMS90 = {
     "moddata": ["moddata.f90"],
     "modprocs": ["modprocs.f90"],
+    "modaccess": ["modaccess.f90"],
     "bytes": ["bytes.f90"],
     "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],

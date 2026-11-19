@@ -142,6 +142,16 @@ func (a *analyzer) constructorType(name string, s *Symbol) *Structure {
 // (Fortran 90's constructors have none) and a value for each component
 // (CONSTRCOUNT).
 func (ev *evaluator) constructorArgs(st *Structure, e *ast.Apply) *constErr {
+	// A type two USEs gave, and a type whose components are private outside
+	// its module, have no constructor here (USEAMBIG, COMPPRIVATE).
+	if two, ok := ev.a.ambiguousTypeOf(e.Name); ok {
+		return ev.report("USEAMBIG", e.Pos, e.Name, two[0], two[1])
+	}
+
+	if st.PrivateComponents && !ev.a.insideModule(st.Module) {
+		return ev.report("COMPPRIVATE", e.Pos, st.Name, st.Module)
+	}
+
 	for _, arg := range e.Args {
 		switch x := arg.(type) {
 		case *ast.KeywordArg:

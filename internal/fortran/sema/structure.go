@@ -94,6 +94,14 @@ type Structure struct {
 	// defines (derived.go), and Sequence for one whose definition says
 	// SEQUENCE. A derived type's fields are its components.
 	Derived, Sequence bool
+
+	// Module is the module that defines the structure, "" for one defined in
+	// any other unit; with Name, it is what makes a type one type however it
+	// was reached (use.go, modread.go). PrivateComponents is set for a derived
+	// type whose definition says PRIVATE: its components can be named only in
+	// its module (access.go).
+	Module            string
+	PrivateComponents bool
 }
 
 // Field is one of a structure's fields.
@@ -273,6 +281,10 @@ func (a *analyzer) structureStatement(s *ast.StructureStmt) {
 func (a *analyzer) declareStructure(s *ast.StructureStmt) *Structure {
 	st := &Structure{Name: s.Name, Pos: s.Position(), byName: map[string]*Field{}, open: true}
 
+	if a.unit.Kind == ast.ModuleUnit {
+		st.Module = a.unit.Name
+	}
+
 	if s.Name != "" {
 		a.noteOther(whatStructure, s.Name, s.Position(), RefDefined)
 
@@ -308,6 +320,10 @@ func (a *analyzer) declareStructure(s *ast.StructureStmt) *Structure {
 
 	if !b.declares {
 		a.report("STRUCTEMPTY", s.Position())
+	}
+
+	if s.Name != "" && a.reading != nil && a.unit.Kind == ast.ModuleUnit {
+		st = a.readType(s.Name, st)
 	}
 
 	return st

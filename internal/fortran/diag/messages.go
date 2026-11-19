@@ -1634,6 +1634,32 @@ var messages = map[string]kind{
 	"USELOCAL":       {Error, "%s, from the module %s, is also a local name of this unit, at line %d"},
 	"USEATTR":        {Error, "%s comes from the module %s, and can't be declared again"},
 	"USECOMMON":      {Error, "%s comes from the module %s, and can't be in COMMON or EQUIVALENCE"},
+
+	// Access and association (sema/access.go, use.go). ACCESSDEFAULT is a
+	// second PUBLIC or PRIVATE without a list (R522's constraint), ACCESSTWICE
+	// a name given its accessibility again (5.1.2), ACCESSNAME one that is no
+	// entity accessibility can be given (R522's constraint). ACCESSTYPE is a
+	// public entity of a private type (5.1.2's constraint), ACCESSPROC a module
+	// procedure with an argument or value of one that is public or a public
+	// generic interface's (R522's), ACCESSNML a public namelist group with a
+	// private item (R544's), ACCESSCOMPONENT a public type with a component of
+	// a private type and no PRIVATE statement (R422's). COMPPRIVATE is a
+	// component or constructor of a type whose components are private, outside
+	// its module (4.4.1). ONLYPUBLIC is a USE list's name the module doesn't
+	// make public (R1108's and R1109's constraints); USEAMBIG a name two USEs
+	// gave for two entities, referenced (11.3.2); MODSTALE a type two module
+	// files give differently.
+	"ACCESSDEFAULT":   {Error, "a module may have only one PUBLIC or PRIVATE statement without a list; the first is at line %d"},
+	"ACCESSTWICE":     {Error, "%s is given PUBLIC or PRIVATE again; it was given at line %d"},
+	"ACCESSNAME":      {Error, "%s %s, so it can't be PUBLIC or PRIVATE"},
+	"ACCESSTYPE":      {Error, "%s is public, but its type %s is private"},
+	"ACCESSPROC":      {Error, "the module procedure %s has %s of the private type %s, so it must be private, and no public generic interface's"},
+	"ACCESSNML":       {Error, "the namelist group %s is public, but its item %s is private"},
+	"ACCESSCOMPONENT": {Error, "the public type %s has the component %s of the private type %s, so its components must be PRIVATE"},
+	"COMPPRIVATE":     {Error, "the components of the type %s are private to the module %s"},
+	"ONLYPUBLIC":      {Error, "%s isn't a public entity of the module %s"},
+	"USEAMBIG":        {Error, "%s can't be referenced here: the modules %s and %s each give an entity of that name"},
+	"MODSTALE":        {Error, "the type %s of the module %s isn't the same in %s and %s: one of them is out of date"},
 }
 
 // Known reports whether ident is a message in the table, and its

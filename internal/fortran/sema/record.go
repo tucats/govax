@@ -300,6 +300,9 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 		case f.Struct == nil && f.Type.Kind == Invalid:
 			// Its declaration had an error, reported.
 			return a.bad(e.Pos)
+
+		case a.privateComponents(st, step.Pos):
+			return a.bad(e.Pos)
 		}
 
 		ref.Path = append(ref.Path, FieldStep{Field: f})

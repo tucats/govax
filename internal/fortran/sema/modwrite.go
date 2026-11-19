@@ -46,6 +46,14 @@ import (
 // TYPE line's, checked against what the reader computes from the components.
 // Initial values aren't written: they are in the module's object only.
 //
+// A module's access is written as Fortran too: a PRIVATE statement names
+// what its users can't reach, and a type whose components are private says
+// PRIVATE in its definition. What the module has from another module is
+// written with a FROM line, the name the text gives it, its module, and its
+// name there (moduleWriter):
+//
+//	!GOVAX$ FROM TOP STACKS POP
+//
 // The text's lines are free form, at most 132 characters; a long declaration
 // goes on in lines that start with &, which continue it exactly where the line
 // before ended (the standard's 3.3.1.3).
@@ -54,6 +62,19 @@ import (
 const moduleFormat = "1"
 
 // moduleWriter makes a module's text.
+//
+// The text holds every entity of the module a user can reach, and those the
+// module has from other modules (finding 8): a module file is all its users
+// need, whatever modules it used. Each entity it has from another module is
+// written under the name the module knows it by, with a FROM line naming the
+// module that defines it and its name there, which is how a reader knows it
+// for the same entity it may reach by another path (use.go's origins, and
+// readType for types). An entity the module's users can't reach is written
+// too, in a PRIVATE statement: a public procedure's argument may be of a
+// private type, and a public generic interface's specific may be private.
+// The text also gives what the module can't name but its entities need: a
+// generic interface's specific known only through it, a namelist group's
+// item, a type of a component or argument; each under its own name, private.
 type moduleWriter struct {
 	u     *Unit
 	lines []string
@@ -63,8 +84,22 @@ type moduleWriter struct {
 	failed []failedEntity
 
 	// written are the structures written so far, each once, before any that
-	// mentions it.
+	// mentions it; seen those the walk for types has visited.
 	written map[*Structure]bool
+	seen    map[*Structure]bool
+
+	// typeNames are the names the text gives types, and names those it gives
+	// entities, by origin; taken are the names the text has given.
+	typeNames map[*Structure]string
+	names     map[entityOrigin]string
+	taken     map[string]bool
+
+	// entities are the module's names the text gives, in order; hidden the
+	// entities it gives that the module has no name for, and hiddenTypes the
+	// types: both private.
+	entities    []*Symbol
+	hidden      []*Symbol
+	hiddenTypes []*Structure
 }
 
 // failedEntity is an entity of a module its text can't describe.
@@ -77,7 +112,10 @@ type failedEntity struct {
 // keeps it for the USE statements after it and the module file. What the text
 // can't describe yet is reported NOTIMPL, and then there is no text.
 func (p *Program) finishModule(u *Unit, opts Options, messages *diag.List) {
-	w := &moduleWriter{u: u, written: map[*Structure]bool{}}
+	w := &moduleWriter{
+		u: u, written: map[*Structure]bool{}, seen: map[*Structure]bool{},
+		typeNames: map[*Structure]string{}, names: map[entityOrigin]string{}, taken: map[string]bool{},
+	}
 	w.module(opts)
 
 	if len(w.failed) > 0 {
@@ -132,14 +170,66 @@ func (w *moduleWriter) put(depth int, text string) {
 	w.lines = append(w.lines, text)
 }
 
-// fail notes an entity the text can't describe.
+// fail notes an entity the text can't describe, once.
 func (w *moduleWriter) fail(pos diag.Position, what string) {
+	for _, f := range w.failed {
+		if f.pos == pos && f.what == what {
+			return
+		}
+	}
+
 	w.failed = append(w.failed, failedEntity{pos, what})
+}
+
+// originOf is the entity s's origin: where a USE got it from, or this module.
+func (w *moduleWriter) originOf(s *Symbol) entityOrigin {
+	if s.Use != nil {
+		return s.Use.origin
+	}
+
+	return entityOrigin{Module: w.u.Name, Name: s.Name}
+}
+
+// nameOf is the name the text gives the entity s.
+func (w *moduleWriter) nameOf(s *Symbol) string {
+	if name := w.names[w.originOf(s)]; name != "" {
+		return name
+	}
+
+	return s.Name
+}
+
+// from writes the FROM line of an entity the module has from another module,
+// named name in the text.
+func (w *moduleWriter) from(name string, s *Symbol) {
+	if s.Use != nil && s.Use.origin.Module != w.u.Name {
+		w.fact("FROM", name, s.Use.origin.Module, s.Use.origin.Name)
+	}
+}
+
+// typeName is the name the text gives the type st.
+func (w *moduleWriter) typeName(st *Structure) string {
+	if name := w.typeNames[st]; name != "" {
+		return name
+	}
+
+	return st.Name
+}
+
+// typeSpec is typeSpec with the text's name for a derived type.
+func (w *moduleWriter) typeSpec(t Type) string {
+	if t.Kind == Record && t.Struct != nil && t.Struct.Derived {
+		return "TYPE(" + w.typeName(t.Struct) + ")"
+	}
+
+	return typeSpec(t)
 }
 
 // module writes the whole text.
 func (w *moduleWriter) module(opts Options) {
 	u := w.u
+
+	w.prepare()
 
 	w.fact("MODULE", "FILE", moduleFormat)
 	w.fact("COMPILER", "GOVAX", "FORTRAN", "V"+opts.Version)
@@ -166,8 +256,17 @@ func (w *moduleWriter) module(opts Options) {
 		w.structure(st)
 	}
 
-	for _, s := range u.Symbols {
-		if s.Class == Constant && s.Use == nil {
+	for _, t := range u.usedTypes {
+		w.structure(t.st)
+	}
+
+	for _, st := range w.hiddenTypes {
+		w.structure(st)
+	}
+
+	for _, s := range w.all() {
+		if s.Class == Constant {
+			w.from(w.nameOf(s), s)
 			w.constant(s)
 		}
 	}
@@ -175,17 +274,202 @@ func (w *moduleWriter) module(opts Options) {
 	w.variables()
 	w.namelists()
 	w.interfaces()
+	w.privateStatement()
 
-	if len(u.Contains) > 0 {
+	procs := w.usedProcedures()
+
+	if len(u.Contains) > 0 || len(procs) > 0 {
 		w.put(0, "CONTAINS")
 
 		for _, pu := range u.Contains {
 			w.fact("LINK", pu.Name, pu.LinkName)
-			w.procedure(pu, 1)
+			w.procedure(pu, 1, pu.Name)
+		}
+
+		for _, s := range procs {
+			name := w.nameOf(s)
+			w.fact("LINK", name, s.LinkName)
+			w.from(name, s)
+			w.procedure(explicitInterface(s), 1, name)
 		}
 	}
 
 	w.put(0, "END MODULE "+u.Name)
+}
+
+// all are the entities the text gives: the module's names, then those it
+// has no name for.
+func (w *moduleWriter) all() []*Symbol {
+	return append(slices.Clip(w.entities), w.hidden...)
+}
+
+// prepare decides what the text holds and the names it gives: the module's
+// entities by their names, each hidden entity by its own name, if the module
+// doesn't have it, and each type its local name, or its own for a type the
+// module has no name for.
+func (w *moduleWriter) prepare() {
+	u := w.u
+
+	for _, s := range u.Symbols {
+		if u.scope.byName[s.Name] != s || s.ambiguous != "" || !useEntity(s) {
+			continue
+		}
+
+		w.entities = append(w.entities, s)
+		w.names[w.originOf(s)] = s.Name
+	}
+
+	for _, s := range u.Symbols {
+		w.taken[s.Name] = true
+	}
+
+	for name := range u.structs {
+		w.taken[name] = true
+	}
+
+	for _, n := range u.Namelists {
+		w.taken[n.Name] = true
+	}
+
+	for _, h := range u.hidden {
+		o := h.Use.origin
+
+		switch {
+		case w.names[o] != "":
+		case w.taken[h.Name]:
+			w.fail(h.Pos, "an entity of the module "+o.Module+" reached through a generic interface or a namelist group, whose name "+h.Name+" this module has for something else")
+		default:
+			w.names[o] = h.Name
+			w.taken[h.Name] = true
+			w.hidden = append(w.hidden, h)
+		}
+	}
+
+	for _, name := range keysInOrder(u.structs) {
+		st := u.structs[name]
+
+		if old := w.typeNames[st]; old != "" {
+			w.fail(u.AST.Position(), "a type known by two names, "+old+" and "+name+", in a module")
+
+			continue
+		}
+
+		w.typeNames[st] = name
+	}
+
+	for _, name := range keysInOrder(u.structs) {
+		w.need(u.structs[name], nil)
+	}
+
+	for _, s := range w.all() {
+		w.need(symbolStruct(s), nil)
+
+		if pu := explicitInterface(s); pu != nil {
+			w.needProcedure(pu)
+		}
+	}
+}
+
+// need gives the type st a name in the text, if it has none, and so each type
+// its fields name: a type the module has no name for is written under its own,
+// private. Types in local are a procedure's own, which its interface writes.
+func (w *moduleWriter) need(st *Structure, local []*Structure) {
+	if st == nil || w.seen[st] || slices.Contains(local, st) {
+		return
+	}
+
+	w.seen[st] = true
+
+	if w.typeNames[st] == "" {
+		switch {
+		case st.Name == "":
+			w.fail(st.Pos, "an unnamed structure in a module")
+
+			return
+		case w.taken[st.Name]:
+			w.fail(st.Pos, "the type "+st.Name+" of the module "+st.Module+", which this module's entities need, and whose name this module has for something else")
+
+			return
+		}
+
+		w.typeNames[st] = st.Name
+		w.taken[st.Name] = true
+		w.hiddenTypes = append(w.hiddenTypes, st)
+	}
+
+	for _, f := range st.Fields {
+		w.need(f.Struct, local)
+	}
+}
+
+// needProcedure gives the types of a procedure's arguments and value names.
+func (w *moduleWriter) needProcedure(pu *Unit) {
+	for _, p := range pu.Params {
+		w.need(symbolStruct(p), pu.Structures)
+	}
+
+	if pu.Result != nil {
+		w.need(symbolStruct(pu.Result), pu.Structures)
+	}
+}
+
+// usedProcedures are the module procedures of other modules the text gives,
+// written after the module's own, after CONTAINS.
+func (w *moduleWriter) usedProcedures() []*Symbol {
+	var list []*Symbol
+
+	for _, s := range w.all() {
+		if s.Internal == nil && isModuleProcedure(s) {
+			list = append(list, s)
+		}
+	}
+
+	return list
+}
+
+// privateStatement writes a PRIVATE statement naming what the module's users
+// can't reach: its private entities, types, namelist groups, and operators,
+// and what the text gives that the module has no name for.
+func (w *moduleWriter) privateStatement() {
+	u := w.u
+
+	var names []string
+
+	for _, s := range w.entities {
+		if s.private {
+			names = append(names, s.Name)
+		}
+	}
+
+	for _, s := range w.hidden {
+		names = append(names, w.nameOf(s))
+	}
+
+	for _, name := range keysInOrder(u.structs) {
+		if u.access != nil && u.access.privateTypes[name] {
+			names = append(names, name)
+		}
+	}
+
+	for _, st := range w.hiddenTypes {
+		names = append(names, w.typeNames[st])
+	}
+
+	for _, n := range u.Namelists {
+		if n.private {
+			names = append(names, n.Name)
+		}
+	}
+
+	for _, key := range keysInOrder(u.operators) {
+		if u.access != nil && u.access.privateOps[key] {
+			names = append(names, operatorText(key))
+		}
+	}
+
+	if len(names) > 0 {
+		w.put(1, "PRIVATE :: "+strings.Join(names, ", "))
+	}
 }
 
 // interfaces writes the module's interface blocks: one for each external
@@ -198,8 +482,8 @@ func (w *moduleWriter) interfaces() {
 
 	var generics []*Symbol
 
-	for _, s := range u.Symbols {
-		if s.Generic != nil && s.Use == nil && !s.broken {
+	for _, s := range w.entities {
+		if s.Generic != nil {
 			generics = append(generics, s)
 
 			for _, p := range s.Generic.Specifics {
@@ -208,21 +492,17 @@ func (w *moduleWriter) interfaces() {
 		}
 	}
 
-	keys := make([]string, 0, len(u.operators))
-	for k, g := range u.operators {
-		keys = append(keys, k)
-
-		for _, p := range g.Specifics {
+	keys := keysInOrder(u.operators)
+	for _, k := range keys {
+		for _, p := range u.operators[k].Specifics {
 			inGeneric[p] = true
 		}
 	}
 
-	slices.Sort(keys)
-
-	for _, s := range u.Symbols {
-		if s.Interface != nil && s.Dummy == 0 && s.Use == nil && s.LinkName == "" && !inGeneric[s] {
+	for _, s := range w.all() {
+		if s.Interface != nil && s.Dummy == 0 && s.Internal == nil && !isModuleProcedure(s) && !inGeneric[s] {
 			w.put(1, "INTERFACE")
-			w.procedure(s.Interface, 2)
+			w.external(s, 2)
 			w.put(1, "END INTERFACE")
 		}
 	}
@@ -243,6 +523,20 @@ func (w *moduleWriter) interfaces() {
 	}
 }
 
+// external writes an external procedure's interface body, with the lines
+// that say where it came from and, when the module knows it by a name not
+// its own, its own name.
+func (w *moduleWriter) external(s *Symbol, depth int) {
+	name := w.nameOf(s)
+
+	if s.LinkName != "" {
+		w.fact("LINK", name, s.LinkName)
+	}
+
+	w.from(name, s)
+	w.procedure(s.Interface, depth, name)
+}
+
 // genericBlock writes one generic interface block: head, the specifics'
 // bodies or MODULE PROCEDURE statement, END INTERFACE. An external specific's
 // body can be written once only: one that is a specific of two generic names
@@ -254,13 +548,13 @@ func (w *moduleWriter) genericBlock(head string, specifics []*Symbol, written ma
 
 	for _, p := range specifics {
 		switch {
-		case p.LinkName != "":
-			names = append(names, p.Name)
+		case isModuleProcedure(p):
+			names = append(names, w.nameOf(p))
 		case written[p]:
 			w.fail(p.Pos, "an external procedure that is a specific of two generic names or operators in a module")
 		case p.Interface != nil:
 			written[p] = true
-			w.procedure(p.Interface, 2)
+			w.external(p, 2)
 		}
 	}
 
@@ -271,11 +565,11 @@ func (w *moduleWriter) genericBlock(head string, specifics []*Symbol, written ma
 	w.put(1, "END INTERFACE")
 }
 
-// procedure writes a procedure's interface: its header, the constants and types
-// of its own its declarations may name, each dummy argument's declaration with
-// its attributes, a function's value's, and END (what an interface body holds,
-// 12.3.2.1).
-func (w *moduleWriter) procedure(pu *Unit, depth int) {
+// procedure writes a procedure's interface under the name name: its header,
+// the constants and types of its own its declarations may name, each dummy
+// argument's declaration with its attributes, a function's value's, and END
+// (what an interface body holds, 12.3.2.1).
+func (w *moduleWriter) procedure(pu *Unit, depth int, name string) {
 	h := pu.AST.Header
 
 	args := make([]string, 0, len(pu.Params)+len(pu.AltPlaces))
@@ -296,13 +590,15 @@ func (w *moduleWriter) procedure(pu *Unit, depth int) {
 	}
 
 	word := "SUBROUTINE"
-	header := pu.Name + "(" + strings.Join(args, ", ") + ")"
+	header := name + "(" + strings.Join(args, ", ") + ")"
+	result := name
 
 	if f, ok := h.(*ast.FunctionStmt); ok {
 		word = "FUNCTION"
 
 		if f.Result != nil {
-			header += " RESULT(" + pu.Result.Name + ")"
+			result = pu.Result.Name
+			header += " RESULT(" + result + ")"
 		}
 	}
 
@@ -323,10 +619,10 @@ func (w *moduleWriter) procedure(pu *Unit, depth int) {
 	}
 
 	if word == "FUNCTION" {
-		w.entity(pu.Result, depth+1, "")
+		w.entity(pu.Result, depth+1, "", result)
 	}
 
-	w.put(depth, "END "+word+" "+pu.Name)
+	w.put(depth, "END "+word+" "+name)
 }
 
 // dummy writes a dummy argument's declaration: a dummy procedure's interface
@@ -343,18 +639,18 @@ func (w *moduleWriter) dummy(p *Symbol, depth int) {
 			attrs += ", OPTIONAL"
 		}
 
-		w.entity(p, depth, attrs)
+		w.entity(p, depth, attrs, p.Name)
 
 		return
 	}
 
 	if p.Interface != nil {
 		w.put(depth, "INTERFACE")
-		w.procedure(p.Interface, depth+1)
+		w.procedure(p.Interface, depth+1, p.Interface.Name)
 		w.put(depth, "END INTERFACE")
 	} else {
 		if p.Class == Function {
-			w.entity(p, depth, "")
+			w.entity(p, depth, "", p.Name)
 		}
 
 		w.put(depth, "EXTERNAL "+p.Name)
@@ -365,29 +661,29 @@ func (w *moduleWriter) dummy(p *Symbol, depth int) {
 	}
 }
 
-// entity writes the declaration of a dummy argument or function value s with
-// attributes attrs (", INTENT(IN)"): its type, its CHARACTER length, and its
-// dimensions. A VAX structure's record is a RECORD statement, its attributes
-// statements of their own.
-func (w *moduleWriter) entity(s *Symbol, depth int, attrs string) {
+// entity writes the declaration of a dummy argument or function value s,
+// named name, with attributes attrs (", INTENT(IN)"): its type, its CHARACTER
+// length, and its dimensions. A VAX structure's record is a RECORD statement,
+// its attributes statements of their own.
+func (w *moduleWriter) entity(s *Symbol, depth int, attrs, name string) {
 	if s.Struct != nil && !s.Struct.Derived {
-		w.put(depth, "RECORD /"+s.Struct.Name+"/ "+s.Name+dimsText(s.Dims))
+		w.put(depth, "RECORD /"+w.typeName(s.Struct)+"/ "+name+dimsText(s.Dims))
 
 		for _, a := range strings.Split(strings.TrimPrefix(attrs, ", "), ", ") {
 			if a != "" {
-				w.put(depth, a+" "+s.Name)
+				w.put(depth, a+" "+name)
 			}
 		}
 
 		return
 	}
 
-	spec := typeSpec(s.Type)
+	spec := w.typeSpec(s.Type)
 	if s.LengthExpr != nil {
 		spec = "CHARACTER(LEN=" + fortranText(s.LengthExpr) + ")"
 	}
 
-	w.put(depth, spec+attrs+" :: "+s.Name+dimsText(s.Dims))
+	w.put(depth, spec+attrs+" :: "+name+dimsText(s.Dims))
 }
 
 // typeSpec is the type t as a Fortran 90 type specification with its kind or
@@ -482,25 +778,35 @@ func (w *moduleWriter) structure(st *Structure) {
 		layout = "NATURAL"
 	}
 
-	w.fact("TYPE", st.Name, "SIZE", strconv.Itoa(st.Size), "BOUNDARY", strconv.Itoa(st.Boundary), layout)
+	name := w.typeName(st)
+
+	w.fact("TYPE", name, "SIZE", strconv.Itoa(st.Size), "BOUNDARY", strconv.Itoa(st.Boundary), layout)
+
+	if st.Module != "" && st.Module != w.u.Name {
+		w.fact("FROM", name, st.Module, st.Name)
+	}
 
 	if st.Derived {
-		w.put(1, "TYPE "+st.Name)
+		w.put(1, "TYPE "+name)
 
 		if st.Sequence {
 			w.put(2, "SEQUENCE")
 		}
 
+		if st.PrivateComponents {
+			w.put(2, "PRIVATE")
+		}
+
 		for _, f := range st.Fields {
-			spec := typeSpec(f.Type)
+			spec := w.typeSpec(f.Type)
 			if f.Struct != nil {
-				spec = typeSpec(recordType(f.Struct))
+				spec = w.typeSpec(recordType(f.Struct))
 			}
 
 			w.put(2, spec+" :: "+f.Name+dimsText(f.Dims))
 		}
 
-		w.put(1, "END TYPE "+st.Name)
+		w.put(1, "END TYPE "+name)
 
 		return
 	}
@@ -511,7 +817,7 @@ func (w *moduleWriter) structure(st *Structure) {
 		return
 	}
 
-	w.put(1, "STRUCTURE /"+st.Name+"/")
+	w.put(1, "STRUCTURE /"+name+"/")
 
 	var union *Union
 
@@ -549,7 +855,7 @@ func (w *moduleWriter) structure(st *Structure) {
 		case f.Name == "%FILL":
 			w.put(depth, "BYTE %FILL("+strconv.Itoa(f.Size())+")")
 		case f.Struct != nil:
-			w.put(depth, "RECORD /"+f.Struct.Name+"/ "+f.Name+dimsText(f.Dims))
+			w.put(depth, "RECORD /"+w.typeName(f.Struct)+"/ "+f.Name+dimsText(f.Dims))
 		default:
 			w.put(depth, oldTypeText(f.Type)+" "+f.Name+dimsText(f.Dims))
 		}
@@ -584,11 +890,16 @@ func oldTypeText(t Type) string {
 
 // constant writes a named constant with its value.
 func (w *moduleWriter) constant(s *Symbol) {
+	name := w.nameOf(s)
+	if s.Use == nil {
+		name = s.Name
+	}
+
 	var value string
 
 	switch {
 	case s.ArrayValue != nil:
-		v, ok := arrayConstText(s.ArrayValue, s.Type, s.Dims)
+		v, ok := w.arrayConstText(s.ArrayValue, s.Type, s.Dims)
 		if !ok {
 			w.fail(s.Pos, "the value of the constant "+s.Name+" in a module's text")
 
@@ -598,7 +909,7 @@ func (w *moduleWriter) constant(s *Symbol) {
 		value = v
 
 	case s.Value != nil:
-		v, ok := constText(s.Value, s.Type)
+		v, ok := w.constText(s.Value, s.Type)
 		if !ok {
 			w.fail(s.Pos, "the value of the constant "+s.Name+" in a module's text")
 
@@ -611,7 +922,7 @@ func (w *moduleWriter) constant(s *Symbol) {
 		return
 	}
 
-	spec := typeSpec(s.Type)
+	spec := w.typeSpec(s.Type)
 	if spec == "" {
 		w.fail(s.Pos, "a constant of a structure in a module")
 
@@ -621,15 +932,16 @@ func (w *moduleWriter) constant(s *Symbol) {
 	// A REAL or COMPLEX value computed, not written, is its rounded value,
 	// whose digits the reader must not take for a literal's.
 	if c := s.Value; c != nil && (s.Type.Kind == Real || s.Type.Kind == Complex) && !c.literal {
-		w.fact("FOLDED", s.Name)
+		w.fact("FOLDED", name)
 	}
 
-	w.put(1, spec+", PARAMETER :: "+s.Name+dimsText(s.Dims)+" = "+value)
+	w.put(1, spec+", PARAMETER :: "+name+dimsText(s.Dims)+" = "+value)
 }
 
 // variables writes the module's variables, each after its AT fact, the
 // module's own in its section's order, then each COMMON block's with its
-// COMMON statement.
+// COMMON statement, then those it has from other modules, in their modules'
+// sections and COMMON blocks, each with its FROM line.
 func (w *moduleWriter) variables() {
 	u := w.u
 
@@ -640,7 +952,7 @@ func (w *moduleWriter) variables() {
 
 		for _, s := range u.Symbols {
 			if s.Common == b {
-				w.variable(s)
+				w.variable(s, s.Name)
 			}
 		}
 	}
@@ -654,7 +966,7 @@ func (w *moduleWriter) variables() {
 
 		for _, s := range u.Symbols {
 			if s.Common == b {
-				w.variable(s)
+				w.variable(s, s.Name)
 			}
 		}
 
@@ -665,23 +977,79 @@ func (w *moduleWriter) variables() {
 
 		w.put(1, "COMMON /"+b.Name+"/ "+strings.Join(names, ", "))
 	}
+
+	for _, b := range u.UsedBlocks {
+		w.usedBlock(b)
+	}
 }
 
-// variable writes one variable's AT fact and declaration.
-func (w *moduleWriter) variable(s *Symbol) {
-	w.fact("AT", s.Name, strconv.Itoa(s.Offset), strconv.Itoa(s.Size()))
+// usedBlock writes the variables the module has from another module's section
+// or COMMON block b, which the text gives: its PSECT or COMMON line, each
+// variable's FROM and AT lines and declaration, and for a COMMON block its
+// statement, naming only those variables (the AT lines place them).
+func (w *moduleWriter) usedBlock(b *CommonBlock) {
+	var members []*Symbol
+
+	given := map[entityOrigin]bool{}
+
+	for _, s := range b.Members {
+		o := w.originOf(s)
+
+		if given[o] || !slices.Contains(w.all(), s) {
+			continue
+		}
+
+		given[o] = true
+		members = append(members, s)
+	}
+
+	if len(members) == 0 {
+		return
+	}
+
+	for _, own := range w.u.Commons {
+		if own.Psect == b.Psect {
+			w.fail(b.NamePos, "the COMMON block /"+b.Name+"/ of both this module and a module it uses")
+
+			return
+		}
+	}
+
+	line := "PSECT"
+	if b.Module == "" {
+		line = "COMMON"
+	}
+
+	w.fact(line, b.Psect, "SIZE", strconv.Itoa(b.Size), "ALIGN", strconv.Itoa(b.LayoutAlign))
+
+	names := make([]string, len(members))
+
+	for i, s := range members {
+		names[i] = w.nameOf(s)
+		w.from(names[i], s)
+		w.variable(s, names[i])
+	}
+
+	if b.Module == "" {
+		w.put(1, "COMMON /"+b.Name+"/ "+strings.Join(names, ", "))
+	}
+}
+
+// variable writes one variable's AT fact and declaration, named name.
+func (w *moduleWriter) variable(s *Symbol, name string) {
+	w.fact("AT", name, strconv.Itoa(s.Offset), strconv.Itoa(s.Size()))
 
 	if s.Struct != nil && !s.Struct.Derived {
-		w.put(1, "RECORD /"+s.Struct.Name+"/ "+s.Name+dimsText(s.Dims))
+		w.put(1, "RECORD /"+w.typeName(s.Struct)+"/ "+name+dimsText(s.Dims))
 
 		if s.Volatile {
-			w.put(1, "VOLATILE "+s.Name)
+			w.put(1, "VOLATILE "+name)
 		}
 
 		return
 	}
 
-	spec := typeSpec(s.Type)
+	spec := w.typeSpec(s.Type)
 	if s.LengthExpr != nil {
 		w.fail(s.Pos, "a CHARACTER variable of a length not constant in a module")
 
@@ -700,15 +1068,24 @@ func (w *moduleWriter) variable(s *Symbol) {
 		spec += ", TARGET"
 	}
 
-	w.put(1, spec+" :: "+s.Name+dimsText(s.Dims))
+	w.put(1, spec+" :: "+name+dimsText(s.Dims))
 }
 
-// namelists writes the module's NAMELIST groups.
+// namelists writes the module's NAMELIST groups, each it has from another
+// module with its FROM line.
 func (w *moduleWriter) namelists() {
 	for _, n := range w.u.Namelists {
+		if n.ambiguous != "" {
+			continue
+		}
+
+		if o := n.origin; o.Module != "" && o.Module != w.u.Name {
+			w.fact("FROM", n.Name, o.Module, o.Name)
+		}
+
 		names := make([]string, len(n.Items))
 		for i, s := range n.Items {
-			names[i] = s.Name
+			names[i] = w.nameOf(s)
 		}
 
 		w.put(1, "NAMELIST /"+n.Name+"/ "+strings.Join(names, ", "))
@@ -722,7 +1099,7 @@ func (w *moduleWriter) namelists() {
 // character that can't be in one, a derived type's by its constructor. It
 // reports false for a value it can't write (a typeless constant's bits that
 // are no number).
-func constText(c *Const, t Type) (string, bool) {
+func (w *moduleWriter) constText(c *Const, t Type) (string, bool) {
 	kind := "_" + strconv.Itoa(t.KindNumber())
 
 	switch t.Kind {
@@ -793,9 +1170,9 @@ func constText(c *Const, t Type) (string, bool) {
 
 			switch p := p.(type) {
 			case *Const:
-				text, ok = constText(p, ft)
+				text, ok = w.constText(p, ft)
 			case *ArrayConst:
-				text, ok = arrayConstText(p, ft, f.Dims)
+				text, ok = w.arrayConstText(p, ft, f.Dims)
 			}
 
 			if !ok {
@@ -805,7 +1182,7 @@ func constText(c *Const, t Type) (string, bool) {
 			parts[i] = text
 		}
 
-		return st.Name + "(" + strings.Join(parts, ", ") + ")", true
+		return w.typeName(st) + "(" + strings.Join(parts, ", ") + ")", true
 	}
 
 	return "", false
@@ -920,11 +1297,11 @@ func characterText(s string) string {
 
 // arrayConstText is an array constant of element type t and dimensions dims as
 // a constructor, under RESHAPE for more than one dimension.
-func arrayConstText(c *ArrayConst, t Type, dims []Dim) (string, bool) {
+func (w *moduleWriter) arrayConstText(c *ArrayConst, t Type, dims []Dim) (string, bool) {
 	elems := make([]string, len(c.Elems))
 
 	for i, e := range c.Elems {
-		text, ok := constText(e, t)
+		text, ok := w.constText(e, t)
 		if !ok {
 			return "", false
 		}

@@ -20,8 +20,8 @@ import (
 //     Symbol and mean nothing yet (a dummy is passed as before; their phases,
 //     103 and 107, give them meaning); ALLOCATABLE is allocate.go's;
 //     POINTER is NOTIMPL;
-//     PUBLIC and PRIVATE belong in a module, which isn't compiled yet, so
-//     anywhere else they are an error.
+//     PUBLIC and PRIVATE belong in a module (access.go), and anywhere else
+//     they are an error.
 //
 // A name's attributes come from wherever they were given, old statements
 // included (attrsOf), so INTEGER, PARAMETER :: N = 1 after SAVE N is
@@ -158,8 +158,8 @@ func (a *analyzer) conflict(s *Symbol, x attribute, pos diag.Position) bool {
 // the attributes to give each entity, in the list's order, with each one's
 // specification (DIMENSION's bounds, INTENT's spec). An attribute the list
 // gives twice (ATTRTWICE), two that can't go together (ATTRPAIR), one not
-// compiled yet (NOTIMPL), and PUBLIC or PRIVATE (NOTINMODULE) are reported
-// here, once for the statement, and left out.
+// compiled yet (NOTIMPL), and PUBLIC or PRIVATE outside a module
+// (NOTINMODULE) are reported here, once for the statement, and left out.
 func (a *analyzer) attrSpecs(list []*ast.AttrSpec) []*ast.AttrSpec {
 	var (
 		kept []*ast.AttrSpec
@@ -179,7 +179,7 @@ func (a *analyzer) attrSpecs(list []*ast.AttrSpec) []*ast.AttrSpec {
 			a.notImplForm(spec.Pos, "the "+row.name+" attribute")
 
 		case row.fate == attrModuleOnly && a.unit.Kind == ast.ModuleUnit:
-			a.notImplForm(spec.Pos, "the "+row.name+" attribute")
+			// access.go's.
 
 		case row.fate == attrModuleOnly:
 			a.report("NOTINMODULE", spec.Pos, "the "+row.name+" attribute")
@@ -199,7 +199,9 @@ func (a *analyzer) attrSpecs(list []*ast.AttrSpec) []*ast.AttrSpec {
 
 		seen |= x
 
-		if !pair && attrTable[x].fate != attrNotYet && attrTable[x].fate != attrModuleOnly {
+		moduleOnly := attrTable[x].fate == attrModuleOnly && a.unit.Kind != ast.ModuleUnit
+
+		if !pair && attrTable[x].fate != attrNotYet && !moduleOnly {
 			kept = append(kept, spec)
 		}
 	}
@@ -242,6 +244,9 @@ func (a *analyzer) giveAttributes(s *ast.TypeStmt, sym *Symbol, d *ast.Declarato
 
 		case attrIntent, attrOptional, attrTarget, attrAllocatable:
 			a.recordAttribute(sym, x, spec.Intent, d.Pos)
+
+		case attrPublic, attrPrivate:
+			a.giveAccess(sym.Name, x == attrPrivate, d.Pos)
 		}
 
 		sym.attrs |= x

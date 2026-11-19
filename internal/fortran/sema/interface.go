@@ -166,7 +166,7 @@ func (a *analyzer) moduleProcedures(b *ast.InterfaceBlock) []*Symbol {
 			case s == nil:
 				a.report("MODPROCNAME", n.Pos, n.Name, "isn't known here")
 			case s.broken:
-			case s.LinkName == "" || explicitInterface(s) == nil:
+			case !isModuleProcedure(s) || explicitInterface(s) == nil:
 				a.report("MODPROCNAME", n.Pos, n.Name, "is "+a.describe(s))
 			default:
 				a.note(&s.refs, n.Pos, RefUsed)
@@ -220,6 +220,12 @@ func (a *analyzer) declareInterface(bu *Unit) *Symbol {
 
 	old.Interface, old.Typed = bu, true
 	old.Class, old.Type = Subroutine, Type{}
+
+	// A module's text names an external procedure the module knew by another
+	// name by the name it knew it by, with its own on a LINK line.
+	if a.reading != nil && a.unit.Kind == ast.ModuleUnit && a.reading.links[bu.Name] != "" {
+		old.LinkName = a.reading.links[bu.Name]
+	}
 
 	if bu.Kind == ast.FunctionUnit && bu.Result != nil {
 		old.Class, old.Type = Function, bu.Result.Type

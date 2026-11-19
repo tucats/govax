@@ -102,8 +102,22 @@ type Unit struct {
 	UsedBlocks []*CommonBlock
 
 	// usedStructs are the types USE statements gave the unit, each with its
-	// module's name (use.go).
-	usedStructs map[*Structure]string
+	// module's name (use.go), and usedTypes the same by local name, in the
+	// order the USEs gave them; ambiguousTypes are the local names two USEs
+	// gave two types, with the two modules, an error only when used.
+	usedStructs    map[*Structure]string
+	usedTypes      []usedType
+	ambiguousTypes map[string][2]string
+
+	// hidden are the unit's copies of a used module's entities that no name
+	// of the unit reaches: a generic interface's specific, a namelist group's
+	// item, known here only through what holds them (use.go).
+	hidden []*Symbol
+
+	// access is a module's accessibility: its default, and what its PUBLIC and
+	// PRIVATE statements and attributes gave (access.go). nil in any other
+	// unit.
+	access *moduleAccess
 
 	// Initials are the initial values DATA statements and type statements
 	// give the unit's names, in order of place (data.go).
@@ -462,6 +476,23 @@ type Symbol struct {
 	// Use is where a use-associated name came from: the module, and its name
 	// there (use.go). nil for a name of the unit's own.
 	Use *UseOrigin
+
+	// from is, for an entity of a module read from its text, the module that
+	// defines it and its name there, when the text says it came from another
+	// module (a FROM line); nil for the text's module's own (modread.go).
+	from *entityOrigin
+
+	// moduleProc is set on a use-associated module procedure's copy (an
+	// internal procedure's Symbol has its Internal instead).
+	moduleProc bool
+
+	// private is set on a module's entity that its users can't reach: given
+	// PRIVATE, or by the module's default (access.go).
+	private bool
+
+	// ambiguous is set on a name two USEs gave for two entities: the second
+	// module's name. Referencing it is an error (USEAMBIG, 11.3.2).
+	ambiguous string
 
 	// LinkName is the name the MACRO file calls a procedure by, when that
 	// isn't its name here: a module procedure's M.P (or its hashed form,

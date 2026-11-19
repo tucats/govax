@@ -379,7 +379,7 @@ qualifiers stay a subtask of their own.
    defaults, private types and components and R522's constraint, re-export with
    origins (finding 8), ONLY and renames, several USEs joined, USE in module,
    internal, and interface-body scopes, USEAMBIG when referenced, USEATTR and
-   USECOMMON (findings 2, 3, 8).
+   USECOMMON (findings 2, 3, 8) (done 2026-11-19).
 5. **Module files and the command:** writing the file only when it changes, the
    search, `/MODULE`, `/MODULE_PATH`, `FORT$MODULES`, MODNOTFOUND, host and volume,
    the stamp symbol, MODFORMAT, MODSTALE, HELP FORTRAN (findings 9, 10, 12).
@@ -544,4 +544,56 @@ Definition modules as module files stay for later (the plan's open question 2).
   `TestModuleProcedureText`, `TestModuleProceduresSeparately`,
   `TestModuleProcedureMessages`, `TestModuleLongNames`; and
   `testdata/fortran90/modprocs.f90`, in every mode, the same on gfortran.
-
+- **2026-11-19:** Subtask 4, access and association. PUBLIC and PRIVATE
+  (`sema/access.go`): `moduleAccess` on a module's Unit holds the default
+  (ACCESSDEFAULT for a second) and what statements and attributes gave by name
+  or operator text (ACCESSTWICE); the statements are read in two steps,
+  `accessStatements` with the declarations (a name nothing declares, and no
+  procedure or generic interface of the module, becomes an implicitly typed
+  variable then, so the module's section holds it) and `resolveAccess` in
+  `analyzeContained` once the module procedures and generic interfaces are
+  known (ACCESSNAME), marking each Symbol and namelist group `private`, and
+  each type's local name and each operator in `privateTypes` and `privateOps`:
+  access belongs to a name in a module, not the entity, so a module may make a
+  used entity private. `TYPE, PRIVATE ::` and `TYPE, PUBLIC ::`, the `PUBLIC`
+  and `PRIVATE` attributes, and a type's PRIVATE statement
+  (`Structure.PrivateComponents`; `Structure.Module` the defining module) are
+  compiled. The checks (`accessChecks`, reported in line order): ACCESSTYPE,
+  ACCESSPROC, ACCESSNML, ACCESSCOMPONENT; a type the module has no name for
+  (an ONLY list left it out) has no PRIVATE attribute there. COMPPRIVATE for a
+  component (`record.go`, `datatypes.go`) or constructor (`constructorArgs`) of
+  such a type outside its module and its procedures (`insideModule`). USE
+  (`sema/use.go`): a unit's USEs of one module are joined (`useRequest`, 11.3.2),
+  each public entity entered by its local names (`useModule`), ONLYPUBLIC for an
+  item that names none; every copy carries its entity's origin
+  (`UseOrigin.origin`, an `entityOrigin`: the defining module and its name
+  there), so one entity by two paths is one name; two entities of one name are
+  ambiguous (`Symbol.ambiguous`, `Unit.ambiguousTypes`, `Namelist.ambiguous`),
+  USEAMBIG only where referenced (`lookup`, `derivedStructure`,
+  `constructorArgs`, `namelistRef`). A generic interface's specific or a namelist
+  group's item a USE gives no name is a hidden copy (`Unit.hidden`). USE in a
+  module procedure, an internal procedure, and an interface body needed nothing
+  new. The text (`modwrite.go`) now gives everything a user can reach and what
+  the module has from other modules (finding 8): the moduleWriter decides the
+  names first (`prepare`: the module's names, hidden entities and types the
+  module has no name for under their own, private, NOTIMPL if the name is taken),
+  writes each used type, constant, variable (a PSECT or COMMON line for its
+  module's section or block, `usedBlock`), namelist group, external procedure
+  (with a LINK line when the module knows it by another name), generic interface,
+  and module procedure (after CONTAINS) with a `!GOVAX$ FROM name module remote`
+  line, and the module's private names in a PRIVATE statement. The reader
+  (`modread.go`) keeps FROM lines (`moduleFacts.from`), groups FROM variables in
+  their modules' sections (`moduleBlock`), applies LINK lines to interface bodies,
+  and makes each type of a module text the one Structure of its origin
+  (`readType`; the compilation's `modules.types`, those of a text being read
+  pending until it reads): a type two texts give differently is MODSTALE (moved
+  here from subtask 5, being where the types meet), which explains whatever else
+  the read found. Choices made here: the access checks aren't made on a module's
+  text (they were made when it compiled, and a hidden type is private there);
+  a type known by two local names in a module, a hidden entity whose name the
+  module has for something else, and a COMMON block both a module and a module it
+  uses declare can't be written into the text yet (NOTIMPL). Tests:
+  `internal/fortran/modaccess_test.go` (`TestModuleAccessText`,
+  `TestModuleReexport`, compiled with and apart from its modules, and with the
+  second module's file alone; `TestModuleStale`; `TestModuleAccessMessages`),
+  and `testdata/fortran90/modaccess.f90`, in every mode, the same on gfortran.

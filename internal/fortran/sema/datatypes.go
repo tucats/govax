@@ -124,6 +124,10 @@ func (a *analyzer) dataComponentSlots(e *ast.FieldRef, vars map[string]int32) (*
 
 		f := t.Struct.Field(step.Field)
 
+		if f != nil && a.privateComponents(t.Struct, step.Pos) {
+			return s, nil, false
+		}
+
 		switch {
 		case f == nil:
 			a.report("NOFIELD", step.Pos, t.Struct.What(), t.Struct.fieldWord(), step.Field)

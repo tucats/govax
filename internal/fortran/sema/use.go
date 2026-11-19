@@ -33,6 +33,37 @@ type UseOrigin struct {
 	Module string
 	Remote string
 	Entity *Symbol
+
+	// origin is the entity's defining module and its name there, which may be
+	// another module than the one the USE named, when that one passes on an
+	// entity it uses (finding 8): one entity reached by two paths has one
+	// origin, and is one name.
+	origin entityOrigin
+}
+
+// entityOrigin is an entity's defining module and its name there.
+type entityOrigin struct {
+	Module, Name string
+}
+
+// symbolOrigin is the origin of the entity r of the module ms read from its
+// text: its FROM line's, or the module's own.
+func symbolOrigin(r *Symbol, ms *moduleScope) entityOrigin {
+	if r.from != nil {
+		return *r.from
+	}
+
+	return entityOrigin{Module: ms.name, Name: r.Name}
+}
+
+// useRequest is a unit's USE statements of one module, joined as 11.3.2 says:
+// if any has no ONLY, every public entity, the lists one list of renames; if
+// all have ONLY, only what the lists name.
+type useRequest struct {
+	module string
+	pos    diag.Position
+	all    bool
+	items  []*ast.UseItem
 }
 
 // uses reads the unit's USE statements, entering each module's entities as the
@@ -40,63 +71,175 @@ type UseOrigin struct {
 // the unit's declarations incomplete, so that the names it would have given
 // aren't each reported as something else.
 func (a *analyzer) uses(body []ast.Stmt) {
+	var requests []*useRequest
+
+	byModule := map[string]*useRequest{}
+
 	for _, st := range body {
 		s, ok := st.(*ast.UseStmt)
 		if !ok {
 			continue
 		}
 
-		if s.Only || len(s.Items) > 0 {
-			a.notImplForm(s.Position(), "a USE statement's list")
-			a.unit.incomplete = true
-
-			continue
+		r := byModule[s.Module]
+		if r == nil {
+			r = &useRequest{module: s.Module, pos: s.ModulePos}
+			byModule[s.Module] = r
+			requests = append(requests, r)
 		}
 
-		ms := a.moduleScope(s.Module, s.ModulePos)
+		r.all = r.all || !s.Only
+		r.items = append(r.items, s.Items...)
+	}
+
+	for _, r := range requests {
+		ms := a.moduleScope(r.module, r.pos)
 		if ms == nil {
 			a.unit.incomplete = true
 
 			continue
 		}
 
-		a.useAll(ms, s.ModulePos)
+		a.useModule(ms, r)
 	}
 }
 
-// useAll enters every entity of the module ms as a name of the unit, by its own
-// name; pos is the USE's module name, where each name is said to appear.
-func (a *analyzer) useAll(ms *moduleScope, pos diag.Position) {
-	copies := map[*Symbol]*Symbol{}
+// localName is a name an entity is given here, and where.
+type localName struct {
+	name string
+	pos  diag.Position
+}
 
-	for _, r := range ms.unit.Symbols {
-		if !useEntity(r) || r.Generic != nil {
+// useModule enters the module ms's public entities the request r asks for, by
+// the names it gives them: each renamed entity by its local names, every
+// other by its own if r takes every entity (ONLYPUBLIC for an item that names
+// no public entity).
+func (a *analyzer) useModule(ms *moduleScope, r *useRequest) {
+	mu := ms.unit
+	wanted := map[string][]localName{}
+	ops := map[string]bool{}
+
+	for _, it := range r.items {
+		if it.Generic.Kind != ast.NoGeneric {
+			key := specKey(it.Generic)
+
+			if mu.operators[key] == nil || mu.access.privateOps[key] {
+				a.report("ONLYPUBLIC", it.Pos, it.Generic.String(), ms.name)
+
+				continue
+			}
+
+			ops[key] = true
+
 			continue
 		}
 
-		if c := a.useSymbol(ms, r, r.Name, pos); c != nil {
-			copies[r] = c
+		if !ms.public(it.Remote) {
+			a.report("ONLYPUBLIC", it.Pos, it.Remote, ms.name)
+
+			continue
+		}
+
+		local := it.Local
+		if local == "" {
+			local = it.Remote
+		}
+
+		wanted[it.Remote] = append(wanted[it.Remote], localName{local, it.Pos})
+	}
+
+	localsOf := func(remote string) []localName {
+		if w := wanted[remote]; len(w) > 0 {
+			return w
+		}
+
+		if r.all {
+			return []localName{{remote, r.pos}}
+		}
+
+		return nil
+	}
+
+	copies := map[*Symbol]*Symbol{}
+
+	for _, e := range mu.Symbols {
+		if !ms.publicSymbol(e) || e.Generic != nil {
+			continue
+		}
+
+		for _, n := range localsOf(e.Name) {
+			if c := a.useSymbol(ms, e, n.name, n.pos); c != nil && copies[e] == nil {
+				copies[e] = c
+			}
 		}
 	}
 
 	// Generic names after the procedures, whose copies their specifics are.
-	for _, r := range ms.unit.Symbols {
-		if r.Generic != nil && !r.broken {
-			a.useGeneric(ms, r, r.Name, copies, pos)
+	for _, e := range mu.Symbols {
+		if ms.publicSymbol(e) && e.Generic != nil {
+			for _, n := range localsOf(e.Name) {
+				a.useGeneric(ms, e, n.name, copies, n.pos)
+			}
 		}
 	}
 
-	a.useOperators(ms, copies, pos)
-
-	for _, st := range ms.unit.Structures {
-		if st.Name != "" {
-			a.useStructure(ms, st, st.Name, pos)
+	for _, key := range keysInOrder(mu.operators) {
+		if !mu.access.privateOps[key] && (r.all || ops[key]) {
+			a.useOperator(ms, key, mu.operators[key], copies, r.pos)
 		}
 	}
 
-	for _, n := range ms.unit.Namelists {
-		a.useNamelist(ms, n, copies, pos)
+	for _, name := range keysInOrder(mu.structs) {
+		if !mu.access.privateTypes[name] {
+			for _, n := range localsOf(name) {
+				a.useStructure(ms, mu.structs[name], n.name, n.pos)
+			}
+		}
 	}
+
+	for _, nl := range mu.Namelists {
+		if !nl.private {
+			for _, n := range localsOf(nl.Name) {
+				a.useNamelist(ms, nl, n.name, copies, n.pos)
+			}
+		}
+	}
+}
+
+// keysInOrder are a map's keys in order.
+func keysInOrder[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	slices.Sort(keys)
+
+	return keys
+}
+
+// public reports whether the module has a public entity named name: a name of
+// its scope, a type, or a namelist group.
+func (ms *moduleScope) public(name string) bool {
+	mu := ms.unit
+
+	if e := mu.scope.byName[name]; e != nil && ms.publicSymbol(e) {
+		return true
+	}
+
+	if mu.structs[name] != nil && !mu.access.privateTypes[name] {
+		return true
+	}
+
+	nl := mu.namelists[name]
+
+	return nl != nil && !nl.private
+}
+
+// publicSymbol reports whether e, a symbol of the module, is a public entity
+// a USE gives.
+func (ms *moduleScope) publicSymbol(e *Symbol) bool {
+	return useEntity(e) && !e.private && ms.unit.scope.byName[e.Name] == e
 }
 
 // useEntity reports whether the symbol r of a module read from its text is an
@@ -119,6 +262,7 @@ func useEntity(r *Symbol) bool {
 func useProcedure(c, r *Symbol) {
 	c.Interface = explicitInterface(r)
 	c.External = true
+	c.moduleProc = isModuleProcedure(r)
 
 	switch {
 	case r.LinkName != "":
@@ -128,19 +272,24 @@ func useProcedure(c, r *Symbol) {
 	}
 }
 
-// useCopy is the unit's copy of the module's procedure r, for a generic name's
-// or an operator's specific: the copy a USE entered, or one made now that no
-// name of the unit reaches, as for a specific known here only by the generic
-// name.
+// isModuleProcedure reports whether s is a module procedure: one of this
+// module's, or a use-associated one's copy.
+func isModuleProcedure(s *Symbol) bool {
+	return s.moduleProc || (s.Internal != nil && s.Internal.LinkName != "")
+}
+
+// useCopy is the unit's copy of the module's entity r, for a generic name's or
+// an operator's specific, or a namelist group's item: the copy a USE entered,
+// or one made now that no name of the unit reaches (Unit.hidden), as for a
+// specific known here only by the generic name.
 func (a *analyzer) useCopy(ms *moduleScope, r *Symbol, copies map[*Symbol]*Symbol, pos diag.Position) *Symbol {
 	if c := copies[r]; c != nil {
 		return c
 	}
 
-	c := &Symbol{Name: r.Name, Class: r.Class, Type: r.Type, Typed: true, Offset: -1, Pos: pos,
-		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r}}
-	useProcedure(c, r)
+	c := a.symbolCopy(ms, r, r.Name, pos)
 	copies[r] = c
+	a.unit.hidden = append(a.unit.hidden, c)
 
 	return c
 }
@@ -151,27 +300,31 @@ func (a *analyzer) useCopy(ms *moduleScope, r *Symbol, copies map[*Symbol]*Symbo
 // (11.3.2): its specifics are joined, and checkGenerics then holds the joined
 // list to 14.1.2.3 in this unit.
 func (a *analyzer) useGeneric(ms *moduleScope, r *Symbol, local string, copies map[*Symbol]*Symbol, pos diag.Position) {
-	specifics := make([]*Symbol, 0, len(r.Generic.Specifics))
-	for _, p := range r.Generic.Specifics {
-		specifics = append(specifics, a.useCopy(ms, p, copies, pos))
-	}
-
 	old := a.scope.byName[local]
 
 	switch {
 	case old == nil && r.Interface != nil:
 		// The generic name is a specific's own too: its copy.
-		old = a.useCopy(ms, r, copies, pos)
+		old = a.symbolCopy(ms, r, local, pos)
 		a.scope.enter(old)
 		a.note(&old.refs, pos, RefDefined)
+
+		if copies[r] == nil {
+			copies[r] = old
+		}
 
 		old.Generic = &Generic{Name: local}
 
 	case old == nil:
 		old = &Symbol{Name: local, Offset: -1, Pos: pos, Typed: true, Class: r.Class,
-			Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r}, Generic: &Generic{Name: local}}
+			Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r, origin: symbolOrigin(r, ms)}, Generic: &Generic{Name: local}}
 		a.scope.enter(old)
 		a.note(&old.refs, pos, RefDefined)
+
+	case old.Generic == nil && old.Use != nil:
+		a.ambiguous(old, ms)
+
+		return
 
 	case old.Generic == nil:
 		a.report("USELOCAL", pos, local, ms.name, old.Pos.Line)
@@ -179,56 +332,76 @@ func (a *analyzer) useGeneric(ms *moduleScope, r *Symbol, local string, copies m
 		return
 	}
 
-	for _, p := range specifics {
-		if !slices.Contains(old.Generic.Specifics, p) {
+	for _, sp := range r.Generic.Specifics {
+		if p := a.useCopy(ms, sp, copies, pos); !slices.Contains(old.Generic.Specifics, p) {
 			old.Generic.Specifics = append(old.Generic.Specifics, p)
 		}
 	}
 }
 
-// useOperators joins the module's operators and assignment to the unit's, their
-// specifics the unit's copies of the module's procedures.
-func (a *analyzer) useOperators(ms *moduleScope, copies map[*Symbol]*Symbol, pos diag.Position) {
-	for key, g := range ms.unit.operators {
-		if a.unit.operators == nil {
-			a.unit.operators = map[string]*Generic{}
-		}
+// useOperator joins the module's operator or assignment key to the unit's,
+// its specifics the unit's copies of the module's procedures.
+func (a *analyzer) useOperator(ms *moduleScope, key string, g *Generic, copies map[*Symbol]*Symbol, pos diag.Position) {
+	if a.unit.operators == nil {
+		a.unit.operators = map[string]*Generic{}
+	}
 
-		mine := a.unit.operators[key]
-		if mine == nil {
-			mine = &Generic{Name: g.Name}
-			a.unit.operators[key] = mine
-		}
+	mine := a.unit.operators[key]
+	if mine == nil {
+		mine = &Generic{Name: g.Name}
+		a.unit.operators[key] = mine
+	}
 
-		for _, p := range g.Specifics {
-			if c := a.useCopy(ms, p, copies, pos); !slices.Contains(mine.Specifics, c) {
-				mine.Specifics = append(mine.Specifics, c)
-			}
+	for _, p := range g.Specifics {
+		if c := a.useCopy(ms, p, copies, pos); !slices.Contains(mine.Specifics, c) {
+			mine.Specifics = append(mine.Specifics, c)
 		}
 	}
 }
 
 // useSymbol enters the module's entity r in the unit as local, unless the unit
-// has the name: the same entity by another path is the name it has, and any
-// other name of the unit's own is USELOCAL.
+// has the name: the same entity by another path is the name it has, another
+// module's entity makes the name ambiguous, and any other name of the unit's
+// own is USELOCAL.
 func (a *analyzer) useSymbol(ms *moduleScope, r *Symbol, local string, pos diag.Position) *Symbol {
 	if old := a.scope.byName[local]; old != nil {
-		if old.Use != nil && old.Use.Entity == r {
+		switch {
+		case old.Use != nil && old.Use.origin == symbolOrigin(r, ms) && old.Generic == nil:
 			return old
+		case old.Use != nil:
+			a.ambiguous(old, ms)
+		default:
+			a.report("USELOCAL", pos, local, ms.name, old.Pos.Line)
 		}
-
-		a.report("USELOCAL", pos, local, ms.name, old.Pos.Line)
 
 		return nil
 	}
 
+	c := a.symbolCopy(ms, r, local, pos)
+	a.scope.enter(c)
+	a.note(&c.refs, pos, RefDefined)
+
+	return c
+}
+
+// ambiguous marks the use-associated name old, which the module ms gives for
+// another entity too: it may be there, but not referenced (11.3.2, USEAMBIG).
+func (a *analyzer) ambiguous(old *Symbol, ms *moduleScope) {
+	if old.ambiguous == "" {
+		old.ambiguous = ms.name
+	}
+}
+
+// symbolCopy is the unit's copy of the module's entity r, named local: the
+// same type, structure, value, and place.
+func (a *analyzer) symbolCopy(ms *moduleScope, r *Symbol, local string, pos diag.Position) *Symbol {
 	c := &Symbol{
 		Name: local, Class: r.Class, Type: r.Type, Typed: true, TypePos: pos,
 		Struct: r.Struct, Dims: r.Dims, DimPos: pos,
 		Offset: -1, Pos: pos,
 		Value: r.Value, ArrayValue: r.ArrayValue, recordValue: r.recordValue, recordValues: r.recordValues,
 		Allocatable: r.Allocatable, Volatile: r.Volatile, Target: r.Target,
-		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r},
+		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r, origin: symbolOrigin(r, ms)},
 	}
 
 	if r.Internal != nil || (r.Interface != nil && r.Dummy == 0) {
@@ -240,9 +413,6 @@ func (a *analyzer) useSymbol(ms *moduleScope, r *Symbol, local string, pos diag.
 		c.Offset = r.Offset
 		c.Common.Members = append(c.Common.Members, c)
 	}
-
-	a.scope.enter(c)
-	a.note(&c.refs, pos, RefDefined)
 
 	return c
 }
@@ -267,10 +437,21 @@ func (a *analyzer) usedBlock(rb *CommonBlock, pos diag.Position) *CommonBlock {
 
 // useStructure makes the module's type st the unit's, named local: it is the
 // module's own Structure, so a type reached by two paths is one type (finding
-// 3).
+// 3). Another module's type of the name makes the name ambiguous: an error
+// only where it is used (ambiguousType).
 func (a *analyzer) useStructure(ms *moduleScope, st *Structure, local string, pos diag.Position) {
 	if old := a.unit.structs[local]; old != nil {
-		if old != st {
+		switch module := a.unit.usedStructs[old]; {
+		case old == st:
+		case module != "":
+			if a.unit.ambiguousTypes == nil {
+				a.unit.ambiguousTypes = map[string][2]string{}
+			}
+
+			if _, ok := a.unit.ambiguousTypes[local]; !ok {
+				a.unit.ambiguousTypes[local] = [2]string{module, ms.name}
+			}
+		default:
 			a.report("USELOCAL", pos, local, ms.name, old.Pos.Line)
 		}
 
@@ -278,39 +459,78 @@ func (a *analyzer) useStructure(ms *moduleScope, st *Structure, local string, po
 	}
 
 	a.unit.structs[local] = st
+	a.unit.usedTypes = append(a.unit.usedTypes, usedType{local, st})
 
 	if a.unit.usedStructs == nil {
 		a.unit.usedStructs = map[*Structure]string{}
 	}
 
-	a.unit.usedStructs[st] = ms.name
+	if a.unit.usedStructs[st] == "" {
+		a.unit.usedStructs[st] = ms.name
+	}
 }
 
-// useNamelist makes the module's NAMELIST group n the unit's, its items the
-// unit's copies of the module's variables.
-func (a *analyzer) useNamelist(ms *moduleScope, n *Namelist, copies map[*Symbol]*Symbol, pos diag.Position) {
-	if old := a.unit.namelists[n.Name]; old != nil {
-		a.report("USELOCAL", pos, n.Name, ms.name, old.Pos.Line)
+// usedType is a type a USE gave the unit, and its local name.
+type usedType struct {
+	local string
+	st    *Structure
+}
+
+// ambiguousType reports a use of a type name two USEs gave for two types
+// (USEAMBIG), and reports whether it was one.
+func (a *analyzer) ambiguousType(name string, pos diag.Position) bool {
+	two, ok := a.ambiguousTypeOf(name)
+	if ok {
+		a.report("USEAMBIG", pos, name, two[0], two[1])
+	}
+
+	return ok
+}
+
+// ambiguousTypeOf is the two modules that gave the type name the unit reaches
+// two types, if they did.
+func (a *analyzer) ambiguousTypeOf(name string) ([2]string, bool) {
+	for u := a.unit; u != nil; u = u.Host {
+		if u.structs[name] != nil {
+			two, ok := u.ambiguousTypes[name]
+
+			return two, ok
+		}
+	}
+
+	return [2]string{}, false
+}
+
+// useNamelist makes the module's NAMELIST group n the unit's, named local, its
+// items the unit's copies of the module's variables. The same group by
+// another path is the one the unit has; another module's group of the name
+// makes it ambiguous.
+func (a *analyzer) useNamelist(ms *moduleScope, n *Namelist, local string, copies map[*Symbol]*Symbol, pos diag.Position) {
+	if old := a.unit.namelists[local]; old != nil {
+		switch {
+		case old.origin == n.origin:
+		case old.origin.Module != "":
+			if old.ambiguous == "" {
+				old.ambiguous = ms.name
+			}
+		default:
+			a.report("USELOCAL", pos, local, ms.name, old.Pos.Line)
+		}
 
 		return
 	}
 
-	c := &Namelist{Name: n.Name, Pos: pos}
+	c := &Namelist{Name: local, Pos: pos, origin: n.origin}
 
 	for _, s := range n.Items {
-		item := copies[s]
-		if item == nil {
-			return
-		}
-
-		c.Items = append(c.Items, item)
+		c.Items = append(c.Items, a.useCopy(ms, s, copies, pos))
 	}
 
 	if a.unit.namelists == nil {
 		a.unit.namelists = map[string]*Namelist{}
 	}
 
-	a.unit.namelists[n.Name] = c
+	a.unit.namelists[local] = c
 	a.unit.Namelists = append(a.unit.Namelists, c)
 }
 

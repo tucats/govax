@@ -606,6 +606,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) []*Unit {
 func (a *analyzer) analyzeContained(au *ast.Unit) []*Unit {
 	inner := a.internalInterfaces(au)
 	a.moduleProcedureBlocks()
+	a.resolveAccess()
 
 	a.executablePart()
 	a.checkProvisional(inner)
@@ -655,6 +656,10 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 		u.scope = newUnitScope(u, a.host.scope.rules().inherit(), a.host.scope)
 	}
 
+	if u.Kind == ast.ModuleUnit {
+		u.access = newModuleAccess()
+	}
+
 	a.unit = u
 	a.scope = u.scope
 
@@ -671,7 +676,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 
 	body := a.body
 
-	u.incomplete = incompleteDeclarations(body)
+	u.incomplete = incompleteDeclarations(body, u.Kind == ast.ModuleUnit)
 
 	// The IMPLICIT statements first, since they give the header's
 	// names their types too.
@@ -699,6 +704,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.checkCommonTypes()
 
 	if u.Kind == ast.ModuleUnit {
+		a.accessStatements(body)
 		a.moduleBlock()
 	}
 
@@ -846,6 +852,13 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 			a.usedBeforeEntry(s, pos)
 		}
 
+		// A name two USEs gave for two entities may be there, but not
+		// referenced (11.3.2).
+		if s.ambiguous != "" && !s.broken {
+			a.report("USEAMBIG", pos, name, s.Use.Module, s.ambiguous)
+			s.broken = true
+		}
+
 		a.note(&s.refs, pos, RefUsed)
 
 		return s
@@ -892,6 +905,8 @@ func (a *analyzer) describe(s *Symbol) string {
 		return "the value of this function"
 	case s.Class == UnitName && a.unit.Kind == ast.MainProgram:
 		return "the name of this program"
+	case s.Class == UnitName && a.unit.Kind == ast.ModuleUnit:
+		return "the name of this module"
 	case s.Class == UnitName && a.unit.Kind == ast.BlockDataUnit:
 		return "the name of this block data subprogram"
 	case s.Class == UnitName && a.unit.Kind == ast.FunctionUnit:
@@ -956,9 +971,14 @@ var structural = map[string]bool{
 // names would mostly be wrong (a name in RECORD isn't a variable), so
 // such a unit gets only the messages about its structure, and its statements'
 // own NOTIMPLs.
-func incompleteDeclarations(body []ast.Stmt) bool {
+func incompleteDeclarations(body []ast.Stmt, module bool) bool {
 	for _, s := range body {
 		if _, bad := s.(*ast.BadStmt); !bad && handled(s) {
+			continue
+		}
+
+		// A module's PUBLIC and PRIVATE statements are access.go's.
+		if _, access := s.(*ast.AccessStmt); access && module {
 			continue
 		}
 

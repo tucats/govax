@@ -76,6 +76,13 @@ type Namelist struct {
 	// one, or an object of a derived type's header and components'
 	// (derivedio.go).
 	Entities []NamelistEntity
+
+	// private is set for a module's group its users can't reach (access.go);
+	// origin is a used group's module and name there (use.go); ambiguous is set
+	// on a group two USEs gave from two modules, the second's name.
+	private   bool
+	origin    entityOrigin
+	ambiguous string
 }
 
 // IO is an I/O statement: READ, WRITE, PRINT, TYPE, ACCEPT, ENCODE, or
@@ -376,7 +383,7 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 	ok = a.ioUnit(io, &s.Unit)
 
 	if s.Namelist != nil {
-		io.Form, io.Group = NamelistForm, a.unit.namelist(s.Namelist.Name)
+		io.Form, io.Group = NamelistForm, a.namelistRef(s.Namelist.Name, s.Namelist.Pos)
 
 		if io.Group != nil {
 			a.noteOther(whatNamelist, s.Namelist.Name, s.Namelist.Pos, RefUsed)
@@ -838,10 +845,22 @@ func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
 // (READ (5, NL), PRINT NL), or nil.
 func (a *analyzer) namelistNamed(f *ast.FormatSpec) *Namelist {
 	if n, ok := f.Expr.(*ast.Name); ok {
-		return a.unit.namelist(n.Name)
+		return a.namelistRef(n.Name, n.Pos)
 	}
 
 	return nil
+}
+
+// namelistRef is the NAMELIST group named name, used at pos, or nil: one two
+// USEs gave from two modules is USEAMBIG, though the statement goes on with it.
+func (a *analyzer) namelistRef(name string, pos diag.Position) *Namelist {
+	n := a.unit.namelist(name)
+
+	if n != nil && n.ambiguous != "" {
+		a.report("USEAMBIG", pos, name, n.origin.Module, n.ambiguous)
+	}
+
+	return n
 }
 
 // ioFormat analyzes an I/O statement's format (section 7.1.1.2), in this

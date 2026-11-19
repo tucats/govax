@@ -84,15 +84,13 @@ func pendingHeader(u *ast.Unit) ast.Stmt {
 // that opens it: the statements inside it say nothing more (pendingOpeners).
 //
 // PUBLIC and PRIVATE statements belong in a module (the standard's R522's
-// constraint), and a module's statements never reach here (pendingHeader):
-// anywhere else they are an error, NOTINMODULE.
+// constraint), where access.go reads them: anywhere else they are an error,
+// NOTINMODULE.
 func (a *analyzer) unimplemented(s ast.Stmt) {
 	kind := s.Base().Kind
 
 	if (kind == lex.Public || kind == lex.Private) && a.unit.Kind == ast.ModuleUnit {
-		a.notImplForm(s.Position(), "the "+kind.String()+" statement")
-		a.brokenStatement(kind, s)
-
+		// Read with the declarations (access.go).
 		return
 	}
 

@@ -62,9 +62,15 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 		a.report("TYPENAME", s.NamePos, s.Name)
 	case s.Access != "" && a.unit.Kind != ast.ModuleUnit:
 		a.report("TYPEACCESS", s.AccessPos, s.Access)
+	case s.Access != "":
+		a.giveAccess(s.Name, s.Access == "PRIVATE", s.AccessPos)
 	}
 
 	st := &Structure{Name: s.Name, Pos: s.NamePos, byName: map[string]*Field{}, open: true, Derived: true}
+
+	if a.unit.Kind == ast.ModuleUnit {
+		st.Module = a.unit.Name
+	}
 
 	if a.usedStructure(s.Name, s.NamePos) {
 		// Reported.
@@ -76,7 +82,7 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 
 	a.unit.Structures = append(a.unit.Structures, st)
 
-	st.Sequence = a.typeHeader(s)
+	st.Sequence, st.PrivateComponents = a.typeHeader(s)
 	st.Natural = a.readNatural(st.Name, a.derivedLayout(st.Sequence))
 	b := &structBuilder{a: a, s: st, boundary: 1}
 
@@ -118,6 +124,10 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 	a.warnFields(st)
 	a.readTypeLayout(st)
 
+	if a.reading != nil && a.unit.Kind == ast.ModuleUnit {
+		st = a.readType(s.Name, st)
+	}
+
 	if !b.declares {
 		a.report("TYPEEMPTY", s.NamePos, s.Name)
 	}
@@ -134,9 +144,10 @@ func (a *analyzer) typeDefinition(s *ast.TypeDefStmt) {
 }
 
 // typeHeader checks a definition's SEQUENCE and PRIVATE statements, which come
-// once each before its components (R422), and reports whether it is SEQUENCE.
-// PRIVATE is allowed only in a module (Phase 106).
-func (a *analyzer) typeHeader(s *ast.TypeDefStmt) bool {
+// once each before its components (R422), and reports whether it is SEQUENCE
+// and whether its components are private. PRIVATE is allowed only in a module
+// (access.go).
+func (a *analyzer) typeHeader(s *ast.TypeDefStmt) (bool, bool) {
 	var sequence, private ast.Stmt
 
 	components := false
@@ -178,7 +189,7 @@ func (a *analyzer) typeHeader(s *ast.TypeDefStmt) bool {
 		}
 	}
 
-	return sequence != nil
+	return sequence != nil, private != nil && a.unit.Kind == ast.ModuleUnit
 }
 
 // endType checks the name on a definition's END TYPE, which must be the type's
@@ -297,6 +308,9 @@ func (a *analyzer) derivedStructure(name string, pos diag.Position) (*Structure,
 	st := a.unit.structure(name)
 
 	switch {
+	case a.ambiguousType(name, pos):
+		return nil, false
+
 	case st == nil:
 		a.report("NOTYPEDEF", pos, name)
 

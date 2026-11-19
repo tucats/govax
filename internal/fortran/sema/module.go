@@ -76,6 +76,15 @@ type modules struct {
 	// (MODCYCLE).
 	current string
 
+	// types are the types the module texts read so far have given, by their
+	// origin, each one Structure (readType); pending are those of the text
+	// being read, kept only if it reads, and stale the first a text gave
+	// differently from an earlier text. reading is the text's specification.
+	types   map[entityOrigin]knownType
+	pending map[entityOrigin]knownType
+	stale   *staleType
+	reading string
+
 	// opts are what a module file's text is analyzed with: the compilation's
 	// options, which the file's own lines change.
 	opts Options
@@ -102,6 +111,7 @@ func newModules(file *ast.File, opts Options) *modules {
 		compiled: map[string]*ModuleText{},
 		loaded:   map[string]*moduleScope{},
 		later:    map[string]diag.Position{},
+		types:    map[entityOrigin]knownType{},
 		finder:   opts.Modules,
 		opts:     opts,
 	}
@@ -171,25 +181,34 @@ func (a *analyzer) moduleStatements(body []ast.Stmt) {
 // statement placed, in order of first appearance; layoutCommon then places
 // them, by the module's /ALIGN as a COMMON statement's names are (finding 1).
 // A module with no variables has no section.
+//
+// A module's text gives the variables its module has from other modules too
+// (finding 8), each with a FROM line naming its module, whose section holds
+// it: read from a text, those are in a block of each such module's section.
 func (a *analyzer) moduleBlock() {
 	u := a.unit
-
-	var members []*Symbol
+	blocks := map[string]*CommonBlock{}
 
 	for _, s := range u.Symbols {
-		if moduleVariable(s) {
-			members = append(members, s)
+		if !moduleVariable(s) {
+			continue
 		}
-	}
 
-	if len(members) == 0 {
-		return
-	}
+		module := u.Name
 
-	b := &CommonBlock{Module: u.Name, Psect: ModulePsect(u.Name), NamePos: u.AST.Position(), Attrs: PsectAttrs{Align: DefaultAlign}}
-	u.Commons = append(u.Commons, b)
+		if a.reading != nil {
+			if o, ok := a.reading.from[s.Name]; ok {
+				module = o.Module
+			}
+		}
 
-	for _, s := range members {
+		b := blocks[module]
+		if b == nil {
+			b = &CommonBlock{Module: module, Psect: ModulePsect(module), NamePos: u.AST.Position(), Attrs: PsectAttrs{Align: DefaultAlign}}
+			blocks[module] = b
+			u.Commons = append(u.Commons, b)
+		}
+
 		s.Common, s.commonAlign, s.commonPos = b, a.align, s.Pos
 		if s.Class == Unclassified {
 			s.Class = Variable
