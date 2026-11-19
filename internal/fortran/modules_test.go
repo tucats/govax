@@ -184,21 +184,7 @@ func TestModuleUserSeparately(t *testing.T) {
 		t.Fatalf("messages: %v", messageList(user))
 	}
 
-	// The routine's code, without the source lines, whose numbers differ.
-	routine := func(lines []string) string {
-		var code []string
-
-		for _, line := range lines {
-			if !sourceComment.MatchString(line) {
-				code = append(code, line)
-			}
-		}
-
-		text := strings.Join(code, "\n")
-		at := strings.Index(text, "; Storage map for AREA")
-
-		return text[at:]
-	}
+	routine := func(lines []string) string { return routineCode(lines, "AREA") }
 
 	if routine(both.MACRO) != routine(user.MACRO) {
 		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(user.MACRO))
@@ -229,8 +215,29 @@ func TestModuleUserSeparately(t *testing.T) {
 	}
 }
 
-// sourceComment is a MACRO file's comment showing a source line.
-var sourceComment = regexp.MustCompile(`^;\s+\d+  `)
+// sourceComment is a MACRO file's comment showing a source line, and lineNote
+// a comment's mention of one.
+var (
+	sourceComment = regexp.MustCompile(`^;\s+\d+  `)
+	lineNote      = regexp.MustCompile(`\(line \d+\)`)
+)
+
+// routineCode is the MACRO file's code from the routine name's storage map on,
+// without the source lines or mentions of their numbers, which differ between a
+// file of the module and its user and a file of the user alone.
+func routineCode(lines []string, name string) string {
+	var code []string
+
+	for _, line := range lines {
+		if !sourceComment.MatchString(line) {
+			code = append(code, lineNote.ReplaceAllString(line, "(line)"))
+		}
+	}
+
+	text := strings.Join(code, "\n")
+
+	return text[strings.Index(text, "; Storage map for "+name+","):]
+}
 
 // TestModuleMessages checks what modules and USE report: a module used before
 // it is compiled, one that uses itself, what a module's specification part can't
@@ -338,5 +345,228 @@ func TestModuleRecursive(t *testing.T) {
 
 	if text := strings.Join(r.MACRO, "\n"); !strings.Contains(text, "S.DEPTH = $MOD$RM.$BASE\t") || !strings.Contains(text, "\tINCL\tS.DEPTH") {
 		t.Errorf("depth isn't in the module's section:\n%s", text)
+	}
+}
+
+// procsModule has module procedures of every kind of interface: a generic name
+// and an operator of module procedures, an external procedure's interface
+// body, RESULT, an assumed-shape array, a passed length, OPTIONAL, a dummy
+// procedure with its interface, an alternate return, and a module procedure
+// with an internal procedure of its own.
+const procsModule = `module ops
+  type vec
+    real :: x, y
+  end type vec
+  integer :: calls = 0
+  interface swap
+    module procedure swapr, swapi
+  end interface
+  interface operator(+)
+    module procedure addvec
+  end interface
+  interface
+    subroutine ext(n)
+      integer n
+    end subroutine ext
+  end interface
+contains
+  subroutine swapr(a, b)
+    real, intent(inout) :: a, b
+    real t
+    t = a; a = b; b = t
+    call note
+  contains
+    subroutine note
+      calls = calls + 1
+    end subroutine note
+  end subroutine swapr
+  subroutine swapi(i, j)
+    integer, intent(inout) :: i, j
+    integer t
+    t = i; i = j; j = t
+  end subroutine swapi
+  function addvec(u, v) result(w)
+    type(vec), intent(in) :: u, v
+    type(vec) w
+    w = vec(u%x + v%x, u%y + v%y)
+  end function addvec
+  recursive integer function total(a, f, s, k) result(n)
+    real a(:)
+    character(len=*) s
+    integer, optional :: k
+    interface
+      real function f(x)
+        real x
+      end function f
+    end interface
+    n = size(a) + len(s)
+  end function total
+  subroutine pick(i, *, *)
+    integer i
+    if (i > 0) return 1
+    return 2
+  end subroutine pick
+end module ops`
+
+// TestModuleProcedureText checks the text's procedures (subtask 3): the
+// generic and operator blocks with MODULE PROCEDURE, the external procedure's
+// interface block, and after CONTAINS each module procedure's interface with
+// its LINK line, its internal procedure left out.
+func TestModuleProcedureText(t *testing.T) {
+	r := compileFree("OPS", procsModule, nil)
+	if r.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(r))
+	}
+
+	text := strings.Join(moduleText(t, r, "OPS"), "\n")
+
+	for _, want := range []string{
+		"  INTERFACE\n    SUBROUTINE EXT(N)\n      INTEGER(KIND=4) :: N\n    END SUBROUTINE EXT\n  END INTERFACE\n",
+		"  INTERFACE SWAP\n    MODULE PROCEDURE SWAPR, SWAPI\n  END INTERFACE\n",
+		"  INTERFACE OPERATOR(+)\n    MODULE PROCEDURE ADDVEC\n  END INTERFACE\nCONTAINS\n",
+		"!GOVAX$ LINK SWAPR OPS.SWAPR\n  SUBROUTINE SWAPR(A, B)\n    REAL(KIND=4), INTENT(INOUT) :: A\n" +
+			"    REAL(KIND=4), INTENT(INOUT) :: B\n  END SUBROUTINE SWAPR\n",
+		"  FUNCTION ADDVEC(U, V) RESULT(W)\n    TYPE(VEC), INTENT(IN) :: U\n    TYPE(VEC), INTENT(IN) :: V\n    TYPE(VEC) :: W\n",
+		"  RECURSIVE FUNCTION TOTAL(A, F, S, K) RESULT(N)\n    REAL(KIND=4) :: A(1:)\n    INTERFACE\n      FUNCTION F(X)\n" +
+			"        REAL(KIND=4) :: X\n        REAL(KIND=4) :: F\n      END FUNCTION F\n    END INTERFACE\n" +
+			"    CHARACTER(LEN=*) :: S\n    INTEGER(KIND=4), OPTIONAL :: K\n    INTEGER(KIND=4) :: N\n  END FUNCTION TOTAL\n",
+		"  SUBROUTINE PICK(I, *, *)\n",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no\n%s\nin\n%s", want, text)
+		}
+	}
+
+	if strings.Contains(text, "NOTE") {
+		t.Errorf("an internal procedure is in the text:\n%s", text)
+	}
+
+	// The optimizer's checks hold for a module procedure's internal procedure
+	// reaching the module's variable, its host's host's.
+	if o := compileFree("OPS", procsModule, nil, func(o *fortran.Options) { o.Optimize = true }); o.Errors != 0 {
+		t.Errorf("/OPTIMIZE: %v", messageList(o))
+	}
+
+	// The module's code: each module procedure at its global .ENTRY, its
+	// internal procedure at a local label, called with no hidden argument.
+	code := strings.Join(r.MACRO, "\n")
+	for _, want := range []string{
+		"\t.ENTRY\tOPS.SWAPR,", "\t.ENTRY\tOPS.TOTAL,", "\tCALLS\t#0,OPS.SWAPR.NOTE",
+		"OPS.SWAPR.NOTE:\n\t.WORD\t^M<>\t\t\t; internal procedure NOTE of OPS.SWAPR",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("no %q in\n%s", want, code)
+		}
+	}
+}
+
+// procsUser calls OPS's procedures by every path.
+const procsUser = `program p
+  use ops
+  real x, y, z(3)
+  integer i, j
+  type(vec) w
+  external g
+  real g
+  x = 1; y = 2; i = 3; j = 4
+  call swap(x, y)
+  call swap(i, j)
+  w = vec(1.0, 2.0) + vec(3.0, 4.0)
+  z = 1.5
+  call ext(i)
+  i = total(z, g, 'abc')
+  call pick(i, *10, *20)
+10 continue
+20 call apply(swapr)
+end program p`
+
+// TestModuleProceduresSeparately checks a user of module procedures compiled
+// with the module and apart (finding 6), and the calls it makes: by global
+// name, the generic and operator resolved to their specifics, a module
+// procedure passed as an argument.
+func TestModuleProceduresSeparately(t *testing.T) {
+	both := compileFree("P", procsModule+"\n"+procsUser, nil)
+	if both.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(both))
+	}
+
+	alone := compileFree("OPS", procsModule, nil)
+	user := compileFree("P", procsUser, moduleFiles{"OPS": moduleText(t, alone, "OPS")})
+
+	if user.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(user))
+	}
+
+	routine := func(lines []string) string { return routineCode(lines, "P") }
+
+	if routine(both.MACRO) != routine(user.MACRO) {
+		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(user.MACRO))
+	}
+
+	code := routine(user.MACRO)
+	for _, want := range []string{
+		"\tCALLS\t#2,G^OPS.SWAPR", "\tCALLS\t#2,G^OPS.SWAPI", "\tCALLS\t#2,G^OPS.ADDVEC", "\tCALLS\t#1,G^EXT",
+		"\tCALLS\t#4,G^OPS.TOTAL", "\tCALLS\t#1,G^OPS.PICK", "\tPUSHAB\tG^OPS.SWAPR\n\tCALLS\t#1,G^APPLY",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("no %q in\n%s", want, code)
+		}
+	}
+}
+
+// TestModuleProcedureMessages checks MODULE PROCEDURE's messages, a generic
+// name two modules make ambiguous reported at the USE (14.1.2.3), a reference
+// checked against a module's interface, and what waits.
+func TestModuleProcedureMessages(t *testing.T) {
+	cases := []struct {
+		name, text string
+		want       []string
+	}{
+		{"modproc", "module m\n  interface g\n    module procedure nothere, x\n  end interface\n  interface\n    module procedure s\n" +
+			"  end interface\n  integer x\ncontains\n  subroutine s\n  end subroutine s\nend module", []string{
+			"3:22 MODPROCNAME NOTHERE isn't known here, not a module procedure",
+			"3:31 MODPROCNAME X is a variable, not a module procedure",
+			"6:5 MODPROCGENERIC a MODULE PROCEDURE statement is allowed only in an interface block with a generic name, OPERATOR, or ASSIGNMENT",
+		}},
+		{"ambiguous", "module a\n  interface swap\n    module procedure sa\n  end interface\ncontains\n  subroutine sa(x)\n    real x\n" +
+			"  end subroutine sa\nend module\nmodule b\n  interface swap\n    module procedure sb\n  end interface\ncontains\n" +
+			"  subroutine sb(y)\n    real y\n  end subroutine sb\nend module\nprogram p\n  use a\n  use b\nend program", []string{
+			"21:7 GENERICAMBIG the specific procedures SA (line 20) and SB of the generic name SWAP can't be told apart by their arguments",
+		}},
+		{"argument", "module m\ncontains\n  subroutine s(n)\n    integer n\n  end subroutine s\nend module\nprogram p\n  integer k\n  use m\n  call s(1.0)\nend program", []string{
+			"9:3 ORDER this USE statement must come before the INTEGER statement at line 8",
+			"10:10 ARGTYPE argument 1 of S is a REAL, but its dummy argument N is an INTEGER (line 9)",
+		}},
+		{"entry", "module m\ncontains\n  subroutine s(x)\n    real x\n    entry e(x)\n  end subroutine s\nend module", []string{
+			"3:3 NOTIMPL ENTRY in a module procedure is not implemented yet",
+		}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := messageList(compileFree("A", c.text, nil))
+			if strings.Join(got, "\n") != strings.Join(c.want, "\n") {
+				t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(c.want, "\n"))
+			}
+		})
+	}
+}
+
+// TestModuleLongNames checks a module procedure's name past 31 characters: the
+// hashed form, the same in the module and a user compiled apart (finding 5).
+func TestModuleLongNames(t *testing.T) {
+	module := "module very_long_module_name_here\ncontains\n  subroutine a_long_procedure_name_too\n  end subroutine a_long_procedure_name_too\nend module"
+	user := "program p\n  use very_long_module_name_here\n  call a_long_procedure_name_too\nend program"
+
+	name := sema.LongName("VERY_LONG_MODULE_NAME_HERE.A_LONG_PROCEDURE_NAME_TOO")
+
+	alone := compileFree("M", module, nil)
+	if !strings.Contains(strings.Join(alone.MACRO, "\n"), "\t.ENTRY\t"+name+",") {
+		t.Errorf("no .ENTRY %s in\n%s", name, strings.Join(alone.MACRO, "\n"))
+	}
+
+	r := compileFree("P", user, moduleFiles{"VERY_LONG_MODULE_NAME_HERE": moduleText(t, alone, "VERY_LONG_MODULE_NAME_HERE")})
+	if !strings.Contains(strings.Join(r.MACRO, "\n"), "\tCALLS\t#0,G^"+name) {
+		t.Errorf("no call of %s in\n%s", name, strings.Join(r.MACRO, "\n"))
 	}
 }

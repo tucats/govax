@@ -135,13 +135,16 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 
 	r := fortran.Compile(noF90Options("A"), fortran.File{Spec: "A.F90", Name: "A", Free: true, Lines: lines})
 
+	// Since Phase 106 a module compiles, and its user sees its names, so the
+	// program's own mistakes are reported too: only the NOTIMPLs count here.
 	var got []string
 	for _, m := range r.Messages {
-		got = append(got, fmt.Sprintf("%d:%d %s", m.Pos.Line, m.Pos.Column, strings.TrimSuffix(m.Text, " is not implemented yet")))
+		if m.Ident == "NOTIMPL" {
+			got = append(got, fmt.Sprintf("%d:%d %s", m.Pos.Line, m.Pos.Column, strings.TrimSuffix(m.Text, " is not implemented yet")))
+		}
 	}
 
 	want := []string{
-		"6:3 a module procedure",
 		"30:3 the pointer assignment statement",
 	}
 

@@ -134,7 +134,7 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 			owner[c] = r
 		}
 
-		if r.Host != nil {
+		if !r.Global() {
 			continue
 		}
 
@@ -471,7 +471,7 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 	w.Statement("", ".PSECT", codePsect, "")
 	w.Append(&g.pre)
 
-	if r.Host != nil {
+	if !r.Global() {
 		// An internal procedure's entry is a local label with a register mask,
 		// which CALLS reads as it does an .ENTRY's: no other module calls it.
 		w.Statement(g.names.prefix, ".WORD", g.entryMask(), "internal procedure "+r.Local+" of "+r.Host.Name)

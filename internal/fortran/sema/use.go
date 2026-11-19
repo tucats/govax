@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"slices"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
@@ -68,7 +70,7 @@ func (a *analyzer) useAll(ms *moduleScope, pos diag.Position) {
 	copies := map[*Symbol]*Symbol{}
 
 	for _, r := range ms.unit.Symbols {
-		if !useEntity(r) {
+		if !useEntity(r) || r.Generic != nil {
 			continue
 		}
 
@@ -76,6 +78,15 @@ func (a *analyzer) useAll(ms *moduleScope, pos diag.Position) {
 			copies[r] = c
 		}
 	}
+
+	// Generic names after the procedures, whose copies their specifics are.
+	for _, r := range ms.unit.Symbols {
+		if r.Generic != nil && !r.broken {
+			a.useGeneric(ms, r, r.Name, copies, pos)
+		}
+	}
+
+	a.useOperators(ms, copies, pos)
 
 	for _, st := range ms.unit.Structures {
 		if st.Name != "" {
@@ -89,9 +100,112 @@ func (a *analyzer) useAll(ms *moduleScope, pos diag.Position) {
 }
 
 // useEntity reports whether the symbol r of a module read from its text is an
-// entity a USE gives: a constant, or a variable in a program section.
+// entity a USE gives: a constant, a variable in a program section, a module
+// procedure, an external procedure with an interface body, or a generic name.
 func useEntity(r *Symbol) bool {
-	return r.Class == Constant || r.Common != nil
+	switch {
+	case r.broken, r.Class == UnitName:
+		return false
+	case r.Class == Constant, r.Common != nil, r.Internal != nil, r.Generic != nil:
+		return true
+	}
+
+	return r.Interface != nil && r.Dummy == 0
+}
+
+// useProcedure makes c, a copy of the module's procedure r, a procedure here:
+// with r's interface, called by r's global name, a module procedure's M.P or an
+// external procedure's own name, which a rename doesn't change.
+func useProcedure(c, r *Symbol) {
+	c.Interface = explicitInterface(r)
+	c.External = true
+
+	switch {
+	case r.LinkName != "":
+		c.LinkName = r.LinkName
+	case c.Name != r.Name:
+		c.LinkName = r.Name
+	}
+}
+
+// useCopy is the unit's copy of the module's procedure r, for a generic name's
+// or an operator's specific: the copy a USE entered, or one made now that no
+// name of the unit reaches, as for a specific known here only by the generic
+// name.
+func (a *analyzer) useCopy(ms *moduleScope, r *Symbol, copies map[*Symbol]*Symbol, pos diag.Position) *Symbol {
+	if c := copies[r]; c != nil {
+		return c
+	}
+
+	c := &Symbol{Name: r.Name, Class: r.Class, Type: r.Type, Typed: true, Offset: -1, Pos: pos,
+		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r}}
+	useProcedure(c, r)
+	copies[r] = c
+
+	return c
+}
+
+// useGeneric enters the module's generic name r as local, its specifics the
+// unit's copies of the module's procedures. A generic name the unit has from
+// another module, or another USE, is one generic interface with this one
+// (11.3.2): its specifics are joined, and checkGenerics then holds the joined
+// list to 14.1.2.3 in this unit.
+func (a *analyzer) useGeneric(ms *moduleScope, r *Symbol, local string, copies map[*Symbol]*Symbol, pos diag.Position) {
+	specifics := make([]*Symbol, 0, len(r.Generic.Specifics))
+	for _, p := range r.Generic.Specifics {
+		specifics = append(specifics, a.useCopy(ms, p, copies, pos))
+	}
+
+	old := a.scope.byName[local]
+
+	switch {
+	case old == nil && r.Interface != nil:
+		// The generic name is a specific's own too: its copy.
+		old = a.useCopy(ms, r, copies, pos)
+		a.scope.enter(old)
+		a.note(&old.refs, pos, RefDefined)
+
+		old.Generic = &Generic{Name: local}
+
+	case old == nil:
+		old = &Symbol{Name: local, Offset: -1, Pos: pos, Typed: true, Class: r.Class,
+			Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r}, Generic: &Generic{Name: local}}
+		a.scope.enter(old)
+		a.note(&old.refs, pos, RefDefined)
+
+	case old.Generic == nil:
+		a.report("USELOCAL", pos, local, ms.name, old.Pos.Line)
+
+		return
+	}
+
+	for _, p := range specifics {
+		if !slices.Contains(old.Generic.Specifics, p) {
+			old.Generic.Specifics = append(old.Generic.Specifics, p)
+		}
+	}
+}
+
+// useOperators joins the module's operators and assignment to the unit's, their
+// specifics the unit's copies of the module's procedures.
+func (a *analyzer) useOperators(ms *moduleScope, copies map[*Symbol]*Symbol, pos diag.Position) {
+	for key, g := range ms.unit.operators {
+		if a.unit.operators == nil {
+			a.unit.operators = map[string]*Generic{}
+		}
+
+		mine := a.unit.operators[key]
+		if mine == nil {
+			mine = &Generic{Name: g.Name}
+			a.unit.operators[key] = mine
+		}
+
+		for _, p := range g.Specifics {
+			if c := a.useCopy(ms, p, copies, pos); !slices.Contains(mine.Specifics, c) {
+				mine.Specifics = append(mine.Specifics, c)
+			}
+		}
+	}
 }
 
 // useSymbol enters the module's entity r in the unit as local, unless the unit
@@ -115,6 +229,10 @@ func (a *analyzer) useSymbol(ms *moduleScope, r *Symbol, local string, pos diag.
 		Value: r.Value, ArrayValue: r.ArrayValue, recordValue: r.recordValue, recordValues: r.recordValues,
 		Allocatable: r.Allocatable, Volatile: r.Volatile, Target: r.Target,
 		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r},
+	}
+
+	if r.Internal != nil || (r.Interface != nil && r.Dummy == 0) {
+		useProcedure(c, r)
 	}
 
 	if r.Common != nil {

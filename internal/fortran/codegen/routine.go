@@ -85,7 +85,7 @@ type routineGen struct {
 // newRoutineGen starts generating r.
 func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
 	prefix := r.Name
-	if r.Host != nil {
+	if !r.Global() {
 		prefix = names.internal(r.Host.Name, r.Local)
 	}
 

@@ -246,6 +246,12 @@ func (l *lowerer) loc(e *sema.Loc) Expr {
 // the routine by name. An internal procedure is called at its local label
 // (internalCallee), and local says so.
 func (l *lowerer) callee(s *sema.Symbol) (name string, local bool, through *Mem) {
+	// A module procedure, its module's own or one a USE gave, is called by its
+	// global name, with no hidden argument: its host, a module, has no frame.
+	if s.LinkName != "" {
+		return s.LinkName, false, nil
+	}
+
 	if name, ok := l.internalCallee(s); ok {
 		return name, true, nil
 	}
@@ -306,7 +312,7 @@ func (l *lowerer) callWith(f *sema.FuncRef, args []Arg, result *Mem, backs []fun
 	call := &Call{origin: l.origin(), Args: args, Result: result}
 	call.Routine, call.Local, call.Through = l.callee(f.Fn)
 
-	if hidden, ok := l.hostFrameArg(); ok && call.Local {
+	if hidden, ok := l.hostFrameArg(f.Fn); ok && call.Local {
 		call.Args = append(call.Args, hidden)
 	}
 	l.emit(call)

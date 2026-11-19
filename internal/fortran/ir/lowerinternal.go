@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
@@ -46,9 +47,12 @@ import (
 // call in the host may read or change it, which the optimizer must know.
 
 // lowerHost lowers the unit u and its internal procedures, and returns their
-// routines, the unit's first.
-func lowerHost(u *sema.Unit) []*Routine {
-	l := newLowerer(u, nil)
+// routines, the unit's first; host is u's host's lowerer, or nil. A module's
+// procedures are lowered as its internal procedures are, each with internal
+// procedures of its own (Phase 106): a module has no frame, so they take no
+// hidden argument, and each is entered at its global .ENTRY, M.P.
+func lowerHost(u *sema.Unit, host *lowerer) []*Routine {
+	l := newLowerer(u, host)
 	l.prepare()
 
 	if len(u.Contains) == 0 {
@@ -60,6 +64,12 @@ func lowerHost(u *sema.Unit) []*Routine {
 	inFrame := l.r.Reentrant || l.r.FrameSize > 0
 
 	for _, c := range u.Contains {
+		if u.Kind == ast.ModuleUnit {
+			inner = append(inner, lowerHost(c, l)...)
+
+			continue
+		}
+
 		il := newLowerer(c, l)
 		il.prepare()
 
@@ -154,9 +164,11 @@ func (l *lowerer) reach(c *Cell) *Cell {
 // its host's storage is in its frame: the host's FP, from the host itself or
 // passed on from an internal procedure's own hidden argument. ok is false for a
 // call that passes none.
-func (l *lowerer) hostFrameArg() (arg Arg, ok bool) {
+func (l *lowerer) hostFrameArg(s *sema.Symbol) (arg Arg, ok bool) {
+	// The callee is this routine's own internal procedure, or else one of its
+	// host's (a sibling, or itself).
 	host := l
-	if l.host != nil {
+	if own := s.Internal != nil && s.Internal.Host == l.unit; !own && l.host != nil {
 		host = l.host
 	}
 
@@ -164,7 +176,7 @@ func (l *lowerer) hostFrameArg() (arg Arg, ok bool) {
 		return Arg{}, false
 	}
 
-	if l.host == nil {
+	if host == l {
 		return Arg{Value: &FramePointer{}}, true
 	}
 
@@ -199,8 +211,10 @@ func (l *lowerer) paramOf(s *sema.Symbol) *Param {
 func (l *lowerer) internalCallee(s *sema.Symbol) (string, bool) {
 	switch {
 	case s.Internal != nil:
+		// This routine's own internal procedure, or a sibling's name of its
+		// host's.
 		r := l.r
-		if r.Host != nil {
+		if s.Internal.Host != l.unit && r.Host != nil {
 			r = r.Host
 		}
 

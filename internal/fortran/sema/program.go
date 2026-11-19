@@ -155,6 +155,10 @@ type Unit struct {
 	// scope is the unit's own names (scope.go), the names in Symbols.
 	scope *scope
 
+	// LinkName is a module procedure's global name, M.P, or its hashed form
+	// past 31 characters (module.go's LongName); "" for any other unit.
+	LinkName string
+
 	// Host is the unit an internal procedure lies in, or nil for an external
 	// unit; Contains are a unit's internal procedures, in order (internal.go;
 	// docs/planning/PHASE-103 - Fortran 90 procedures and interfaces.md). An
@@ -458,6 +462,12 @@ type Symbol struct {
 	// Use is where a use-associated name came from: the module, and its name
 	// there (use.go). nil for a name of the unit's own.
 	Use *UseOrigin
+
+	// LinkName is the name the MACRO file calls a procedure by, when that
+	// isn't its name here: a module procedure's M.P (or its hashed form,
+	// LongName), in its module and wherever a USE gives it, and a procedure a
+	// USE renamed. "" for any other name.
+	LinkName string
 
 	// broken is set when a declaration of the name had an error, which
 	// has been reported: its uses get no messages of their own, which

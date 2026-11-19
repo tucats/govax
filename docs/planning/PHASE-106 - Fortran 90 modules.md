@@ -374,7 +374,7 @@ qualifiers stay a subtask of their own.
 3. **Module procedures:** analysis as the module's procedures, `M.P` and the
    hashed form, `LinkName`, their interfaces in the text, calls and actual
    arguments from users; MODULE PROCEDURE, generics and operators from modules,
-   generic names joined across USEs and checked in the user (findings 2, 4, 5).
+   generic names joined across USEs and checked in the user (findings 2, 4, 5) (done 2026-11-19).
 4. **Access and association:** PUBLIC and PRIVATE statements and attributes,
    defaults, private types and components and R522's constraint, re-export with
    origins (finding 8), ONLY and renames, several USEs joined, USE in module,
@@ -504,4 +504,44 @@ Definition modules as module files stay for later (the plan's open question 2).
   and apart making the same code, the messages, the hashed name, `/G_FLOATING`,
   `/RECURSIVE`), and `testdata/fortran90/moddata.f90`, in every mode, the same
   on gfortran.
+- **2026-11-19:** Subtask 3, module procedures. A module's FUNCTIONs and
+  SUBROUTINEs after CONTAINS are analyzed as its contained units, by the
+  internal procedures' steps (`analyzeContained`, the four steps of
+  `analyzeUnit` after the declarations, recursive, so a module procedure may
+  have internal procedures of its own); each has a global name,
+  `Unit.LinkName`/`Symbol.LinkName`, M.P or `LongName`'s hashed form (finding 5).
+  The IR lowers a module's procedures with it (`lowerHost(u, host)`, now
+  recursive), each named by its link name, entered at a global `.ENTRY`
+  (`ir.Routine.Global`), its internal procedures at local labels named from it
+  (M.P.Q); a call by link name has no hidden argument, a module having no frame
+  (`callee`; `internalCallee` and `hostFrameArg` now tell a routine's own
+  internal procedure from its host's); `ir.Check` lets a routine use every
+  host's cells, not only its host's. A module procedure may be an actual
+  argument (`nameArg`, `PUSHAB G^M.P`). MODULE PROCEDURE is compiled
+  (`compiledBlock` is always true): in a module its blocks wait until the
+  module's procedures are known (`analyzer.waiting`, `moduleProcedureBlocks`),
+  elsewhere they name use-associated module procedures at once
+  (`moduleProcedures`; MODPROCNAME, MODPROCGENERIC); generic and operator code
+  reaches a specific's interface by `explicitInterface`, and reports a
+  use-associated specific at its USE (`specificPos`). The text gains interface
+  blocks (an external procedure's body; each generic name and operator, its
+  module procedures in a MODULE PROCEDURE statement and its external specifics'
+  bodies) and after CONTAINS each module procedure's interface (header with
+  RECURSIVE, RESULT, and `*`s; its own constants and types; each dummy's
+  declaration with INTENT and OPTIONAL, a dummy procedure's interface or
+  EXTERNAL; the value's declaration), each after its LINK line, which the
+  reader takes for the procedure's link name. USE gives module procedures and
+  external procedures with interfaces (`useProcedure`: the interface, the link
+  name, a renamed procedure's original name), generic names (`useGeneric`) and
+  operators (`useOperators`) with the unit's copies of their specifics, joined
+  with what the unit has of the same name from another USE (11.3.2), so
+  `checkGenerics` holds the joined list to 14.1.2.3 in the user (GENERICAMBIG at
+  the USE). A reference checked against a use-associated interface names the
+  USE's line. Choices made here: an external procedure that is a specific of
+  two generic names or operators of a module can't be written into its text yet
+  (NOTIMPL), nor can ENTRY in a module procedure (whose entry points would be
+  module procedures too). Tests: `internal/fortran/modules_test.go`'s
+  `TestModuleProcedureText`, `TestModuleProceduresSeparately`,
+  `TestModuleProcedureMessages`, `TestModuleLongNames`; and
+  `testdata/fortran90/modprocs.f90`, in every mode, the same on gfortran.
 

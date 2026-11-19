@@ -147,6 +147,10 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 	switch {
 	case s == nil || s.broken:
 
+	case s.LinkName != "" && s.Generic == nil:
+		// A module procedure is global (module.go), and may be passed.
+		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Routine: s.LinkName}
+
 	case s.Internal != nil:
 		// Called only from its host and its host's other internal procedures,
 		// never by a routine it is given to (R1213's constraint).

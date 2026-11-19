@@ -34,7 +34,7 @@ func TestProcedureFormsPending(t *testing.T) {
 		want  string
 	}{
 		{"MODULE PROCEDURE", []string{"program p", "interface g", "module procedure f", "end interface", "end program"},
-			"NOTIMPL: the MODULE PROCEDURE statement is not implemented yet"},
+			"MODPROCNAME: F isn't known here, not a module procedure"},
 		{"a record's field", []string{"program p", "structure /s/", "real b", "end structure",
 			"record /s/ a", "y = a.b", "end program"}, ""},
 	}

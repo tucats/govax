@@ -61,6 +61,10 @@ import (
 // Path is the unit's name as the listing and the MACRO file show it: an internal
 // procedure's is its host's, a period, and its own (HOST.INNER).
 func (u *Unit) Path() string {
+	if u.LinkName != "" {
+		return u.LinkName
+	}
+
 	if u.Host != nil {
 		return u.Host.Name + "." + u.Name
 	}
@@ -148,8 +152,9 @@ func (a *analyzer) internalInterfaces(au *ast.Unit) []*analyzer {
 			continue
 		}
 
-		if a.unit.Kind == ast.ModuleUnit {
-			a.notImplForm(cu.Position(), "a module procedure")
+		module := a.unit.Kind == ast.ModuleUnit
+		if module && hasEntry(cu) {
+			a.notImplForm(cu.Position(), "ENTRY in a module procedure")
 
 			continue
 		}
@@ -159,11 +164,32 @@ func (a *analyzer) internalInterfaces(au *ast.Unit) []*analyzer {
 		ia.beginUnit(cu, cu.Name())
 		ia.interfacing = false
 
+		// A module's procedure is global, by its module's name and its own
+		// (Decision 10; module.go).
+		if module {
+			ia.unit.LinkName = LongName(a.unit.Name + "." + cu.Name())
+
+			if a.reading != nil && a.reading.links[cu.Name()] != "" {
+				ia.unit.LinkName = a.reading.links[cu.Name()]
+			}
+		}
+
 		a.defineInternal(ia.unit)
 		inner = append(inner, ia)
 	}
 
 	return inner
+}
+
+// hasEntry reports whether the unit au has an ENTRY statement.
+func hasEntry(au *ast.Unit) bool {
+	for _, s := range au.Body {
+		if _, ok := s.(*ast.EntryStmt); ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // defineInternal makes the internal procedure iu's name a name of its host,
@@ -188,7 +214,7 @@ func (a *analyzer) defineInternal(iu *Unit) {
 		return
 	}
 
-	s := &Symbol{Name: iu.Name, Class: Subroutine, Offset: -1, Pos: pos, Internal: iu, Typed: true}
+	s := &Symbol{Name: iu.Name, Class: Subroutine, Offset: -1, Pos: pos, Internal: iu, Typed: true, LinkName: iu.LinkName}
 
 	if iu.Kind == ast.FunctionUnit && iu.Result != nil {
 		s.Class, s.Type = Function, iu.Result.Type
@@ -267,6 +293,12 @@ func (a *analyzer) checkExplicitCalls() {
 func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 	fu := &fileUnit{kind: target.Kind, pos: target.AST.Position(), unit: target}
 	line := fu.pos.Line
+
+	// A use-associated procedure's interface is in its module's text: the
+	// line that gave it here is the USE's.
+	if r.sym.Use != nil {
+		line = r.sym.Pos.Line
+	}
 
 	n, given := len(target.Params)+len(target.AltPlaces), len(r.args)+len(r.altPlaces)
 	if n != given {

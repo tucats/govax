@@ -94,16 +94,88 @@ func (a *analyzer) interfaceBodies() {
 			}
 		}
 
-		switch b.Generic.Kind {
-		case ast.GenericName:
-			a.declareGeneric(b.Generic, specifics)
-		case ast.GenericOp, ast.GenericAssign:
-			a.declareOperator(b.Generic, specifics)
+		// A module's own procedures are known only once its declarations are
+		// read (analyzeContained), so its MODULE PROCEDURE statements wait.
+		if len(b.ModuleProcedures) > 0 && a.unit.Kind == ast.ModuleUnit {
+			a.waiting = append(a.waiting, waitingBlock{b, specifics})
+
+			continue
 		}
+
+		a.declareBlock(b, append(specifics, a.moduleProcedures(b)...))
 	}
+
+	if len(a.waiting) == 0 {
+		a.checkGenerics()
+		a.checkOperators()
+	}
+}
+
+// waitingBlock is a module's interface block with MODULE PROCEDURE statements,
+// and the specifics its bodies gave, waiting for the module's procedures.
+type waitingBlock struct {
+	b         *ast.InterfaceBlock
+	specifics []*Symbol
+}
+
+// declareBlock gives the block's generic name or operator the specifics.
+func (a *analyzer) declareBlock(b *ast.InterfaceBlock, specifics []*Symbol) {
+	switch b.Generic.Kind {
+	case ast.GenericName:
+		a.declareGeneric(b.Generic, specifics)
+	case ast.GenericOp, ast.GenericAssign:
+		a.declareOperator(b.Generic, specifics)
+	}
+}
+
+// moduleProcedureBlocks declares a module's waiting interface blocks, now that
+// its procedures are known, and checks its generic names and operators.
+func (a *analyzer) moduleProcedureBlocks() {
+	if len(a.waiting) == 0 {
+		return
+	}
+
+	for _, w := range a.waiting {
+		a.declareBlock(w.b, append(w.specifics, a.moduleProcedures(w.b)...))
+	}
+
+	a.waiting = nil
 
 	a.checkGenerics()
 	a.checkOperators()
+}
+
+// moduleProcedures are the procedures the block's MODULE PROCEDURE statements
+// name (R1205, 12.3.2.1): each a module procedure this unit can reach, its
+// module's own or one a USE gave it (MODPROCNAME otherwise); and a block with
+// them must have a generic specification (MODPROCGENERIC).
+func (a *analyzer) moduleProcedures(b *ast.InterfaceBlock) []*Symbol {
+	var list []*Symbol
+
+	for _, m := range b.ModuleProcedures {
+		if b.Generic.Kind == ast.NoGeneric {
+			a.report("MODPROCGENERIC", m.Position())
+
+			continue
+		}
+
+		for _, n := range m.Names {
+			s := a.scope.find(n.Name)
+
+			switch {
+			case s == nil:
+				a.report("MODPROCNAME", n.Pos, n.Name, "isn't known here")
+			case s.broken:
+			case s.LinkName == "" || explicitInterface(s) == nil:
+				a.report("MODPROCNAME", n.Pos, n.Name, "is "+a.describe(s))
+			default:
+				a.note(&s.refs, n.Pos, RefUsed)
+				list = append(list, s)
+			}
+		}
+	}
+
+	return list
 }
 
 // bodyAnalyzer is an analyzer for an interface body of this unit: a unit's

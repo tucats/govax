@@ -16,7 +16,7 @@ func Lower(p *sema.Program) []*Routine {
 	for _, u := range p.Units {
 		// An internal procedure is lowered with its host (lowerHost).
 		if u.Host == nil {
-			routines = append(routines, lowerHost(u)...)
+			routines = append(routines, lowerHost(u, nil)...)
 		}
 	}
 
@@ -169,6 +169,11 @@ func newLowerer(u *sema.Unit, host *lowerer) *lowerer {
 
 	if host != nil {
 		r.Host, r.Local, r.Name = host.r, u.Name, host.r.Name+"."+u.Name
+	}
+
+	// A module procedure's name is global, M.P or its hashed form.
+	if u.LinkName != "" {
+		r.Name = u.LinkName
 	}
 
 	return &lowerer{

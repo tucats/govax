@@ -72,12 +72,12 @@ func (a *analyzer) declareOperator(spec ast.GenericSpec, specifics []*Symbol) {
 // operator key (named name in messages) a meaning, or assignment, reporting what
 // it can't.
 func (a *analyzer) checkOperatorProcedure(key, name string, s *Symbol) bool {
-	u := s.Interface
+	u := explicitInterface(s)
 	if u == nil || u.incomplete {
 		return false
 	}
 
-	pos := u.AST.Position()
+	pos := specificPos(s)
 	shapes := dummyShapes(u)
 
 	if key == assignmentKey {
@@ -154,8 +154,8 @@ func (a *analyzer) checkOperators() {
 
 		for i, p := range g.Specifics {
 			for _, q := range g.Specifics[i+1:] {
-				if p != q && !differAtSomePosition(dummyShapes(p.Interface), dummyShapes(q.Interface)) {
-					a.report("OPAMBIG", q.Interface.AST.Position(), p.Name, p.Pos.Line, q.Name, g.Name)
+				if p != q && !differAtSomePosition(dummyShapes(explicitInterface(p)), dummyShapes(explicitInterface(q))) {
+					a.report("OPAMBIG", specificPos(q), p.Name, p.Pos.Line, q.Name, g.Name)
 				}
 			}
 		}
@@ -255,7 +255,7 @@ func (a *analyzer) resolveOperator(key string, operands []Arg) *Symbol {
 
 	for _, g := range a.operatorFor(key) {
 		for _, s := range g.Specifics {
-			if u := s.Interface; len(u.Params) == len(operands) && fits(slots, operands, u) {
+			if u := explicitInterface(s); len(u.Params) == len(operands) && fits(slots, operands, u) {
 				return s
 			}
 		}

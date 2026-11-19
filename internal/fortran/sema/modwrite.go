@@ -3,6 +3,7 @@ package sema
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -173,7 +174,220 @@ func (w *moduleWriter) module(opts Options) {
 
 	w.variables()
 	w.namelists()
+	w.interfaces()
+
+	if len(u.Contains) > 0 {
+		w.put(0, "CONTAINS")
+
+		for _, pu := range u.Contains {
+			w.fact("LINK", pu.Name, pu.LinkName)
+			w.procedure(pu, 1)
+		}
+	}
+
 	w.put(0, "END MODULE "+u.Name)
+}
+
+// interfaces writes the module's interface blocks: one for each external
+// procedure with an interface body that is no generic name's or operator's
+// specific, then each generic name's and operator's, its module procedures in a
+// MODULE PROCEDURE statement and its external ones' bodies in the block.
+func (w *moduleWriter) interfaces() {
+	u := w.u
+	inGeneric := map[*Symbol]bool{}
+
+	var generics []*Symbol
+
+	for _, s := range u.Symbols {
+		if s.Generic != nil && s.Use == nil && !s.broken {
+			generics = append(generics, s)
+
+			for _, p := range s.Generic.Specifics {
+				inGeneric[p] = true
+			}
+		}
+	}
+
+	keys := make([]string, 0, len(u.operators))
+	for k, g := range u.operators {
+		keys = append(keys, k)
+
+		for _, p := range g.Specifics {
+			inGeneric[p] = true
+		}
+	}
+
+	slices.Sort(keys)
+
+	for _, s := range u.Symbols {
+		if s.Interface != nil && s.Dummy == 0 && s.Use == nil && s.LinkName == "" && !inGeneric[s] {
+			w.put(1, "INTERFACE")
+			w.procedure(s.Interface, 2)
+			w.put(1, "END INTERFACE")
+		}
+	}
+
+	written := map[*Symbol]bool{}
+
+	for _, s := range generics {
+		w.genericBlock("INTERFACE "+s.Name, s.Generic.Specifics, written)
+	}
+
+	for _, k := range keys {
+		head := "INTERFACE OPERATOR(" + k + ")"
+		if k == assignmentKey {
+			head = "INTERFACE ASSIGNMENT(=)"
+		}
+
+		w.genericBlock(head, u.operators[k].Specifics, written)
+	}
+}
+
+// genericBlock writes one generic interface block: head, the specifics'
+// bodies or MODULE PROCEDURE statement, END INTERFACE. An external specific's
+// body can be written once only: one that is a specific of two generic names
+// is beyond the text yet.
+func (w *moduleWriter) genericBlock(head string, specifics []*Symbol, written map[*Symbol]bool) {
+	w.put(1, head)
+
+	var names []string
+
+	for _, p := range specifics {
+		switch {
+		case p.LinkName != "":
+			names = append(names, p.Name)
+		case written[p]:
+			w.fail(p.Pos, "an external procedure that is a specific of two generic names or operators in a module")
+		case p.Interface != nil:
+			written[p] = true
+			w.procedure(p.Interface, 2)
+		}
+	}
+
+	if len(names) > 0 {
+		w.put(2, "MODULE PROCEDURE "+strings.Join(names, ", "))
+	}
+
+	w.put(1, "END INTERFACE")
+}
+
+// procedure writes a procedure's interface: its header, the constants and types
+// of its own its declarations may name, each dummy argument's declaration with
+// its attributes, a function's value's, and END (what an interface body holds,
+// 12.3.2.1).
+func (w *moduleWriter) procedure(pu *Unit, depth int) {
+	h := pu.AST.Header
+
+	args := make([]string, 0, len(pu.Params)+len(pu.AltPlaces))
+	params := pu.Params
+
+	for i := range len(pu.Params) + len(pu.AltPlaces) {
+		if slices.Contains(pu.AltPlaces, i) {
+			args = append(args, "*")
+		} else {
+			args = append(args, params[0].Name)
+			params = params[1:]
+		}
+	}
+
+	prefix := ""
+	if pu.Recursive {
+		prefix = "RECURSIVE "
+	}
+
+	word := "SUBROUTINE"
+	header := pu.Name + "(" + strings.Join(args, ", ") + ")"
+
+	if f, ok := h.(*ast.FunctionStmt); ok {
+		word = "FUNCTION"
+
+		if f.Result != nil {
+			header += " RESULT(" + pu.Result.Name + ")"
+		}
+	}
+
+	w.put(depth, prefix+word+" "+header)
+
+	for _, st := range pu.Structures {
+		w.structure(st)
+	}
+
+	for _, s := range pu.Symbols {
+		if s.Class == Constant && s.Use == nil {
+			w.constant(s)
+		}
+	}
+
+	for _, p := range pu.Params {
+		w.dummy(p, depth+1)
+	}
+
+	if word == "FUNCTION" {
+		w.entity(pu.Result, depth+1, "")
+	}
+
+	w.put(depth, "END "+word+" "+pu.Name)
+}
+
+// dummy writes a dummy argument's declaration: a dummy procedure's interface
+// body or EXTERNAL (with its type for a function), any other's type,
+// dimensions, INTENT, and OPTIONAL.
+func (w *moduleWriter) dummy(p *Symbol, depth int) {
+	if !p.DummyProcedure() {
+		attrs := ""
+		if p.Intent != "" {
+			attrs += ", INTENT(" + p.Intent + ")"
+		}
+
+		if p.Optional {
+			attrs += ", OPTIONAL"
+		}
+
+		w.entity(p, depth, attrs)
+
+		return
+	}
+
+	if p.Interface != nil {
+		w.put(depth, "INTERFACE")
+		w.procedure(p.Interface, depth+1)
+		w.put(depth, "END INTERFACE")
+	} else {
+		if p.Class == Function {
+			w.entity(p, depth, "")
+		}
+
+		w.put(depth, "EXTERNAL "+p.Name)
+	}
+
+	if p.Optional {
+		w.put(depth, "OPTIONAL "+p.Name)
+	}
+}
+
+// entity writes the declaration of a dummy argument or function value s with
+// attributes attrs (", INTENT(IN)"): its type, its CHARACTER length, and its
+// dimensions. A VAX structure's record is a RECORD statement, its attributes
+// statements of their own.
+func (w *moduleWriter) entity(s *Symbol, depth int, attrs string) {
+	if s.Struct != nil && !s.Struct.Derived {
+		w.put(depth, "RECORD /"+s.Struct.Name+"/ "+s.Name+dimsText(s.Dims))
+
+		for _, a := range strings.Split(strings.TrimPrefix(attrs, ", "), ", ") {
+			if a != "" {
+				w.put(depth, a+" "+s.Name)
+			}
+		}
+
+		return
+	}
+
+	spec := typeSpec(s.Type)
+	if s.LengthExpr != nil {
+		spec = "CHARACTER(LEN=" + fortranText(s.LengthExpr) + ")"
+	}
+
+	w.put(depth, spec+attrs+" :: "+s.Name+dimsText(s.Dims))
 }
 
 // typeSpec is the type t as a Fortran 90 type specification with its kind or

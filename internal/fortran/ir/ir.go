@@ -23,6 +23,12 @@ func (k Kind) String() string {
 	return [...]string{"main", "subroutine", "function", "block data", "module"}[k]
 }
 
+// Global reports whether the routine r is entered at a global .ENTRY: any but
+// an internal procedure, whose host isn't a module.
+func (r *Routine) Global() bool {
+	return r.Host == nil || r.Host.Kind == Module
+}
+
 // NoCode reports whether a routine of the kind has no code: a block data
 // subprogram's, or a module's, which are only storage and its initial values.
 func (k Kind) NoCode() bool {

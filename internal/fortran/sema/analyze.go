@@ -415,6 +415,10 @@ type analyzer struct {
 	// bounds, which are BOUNDVAR unless the host uses them.
 	provisionalBounds []provisionalBound
 
+	// waiting are a module's interface blocks with MODULE PROCEDURE
+	// statements, until its procedures are known (interface.go).
+	waiting []waitingBlock
+
 	// reading is the facts of a module's text being read for a USE
 	// (modread.go), or nil when the unit is a program's own.
 	reading *moduleFacts
@@ -590,17 +594,35 @@ func (a *analyzer) makeMaps() {
 // those only its executable statements used among them (host association). A unit
 // without internal procedures takes the same steps with nothing between them.
 func (a *analyzer) analyzeUnit(au *ast.Unit, name string) []*Unit {
-	u := a.beginUnit(au, name)
+	a.beginUnit(au, name)
+
+	return a.analyzeContained(au)
+}
+
+// analyzeContained is analyzeUnit's steps after the unit's declarations. A
+// module's procedures may have internal procedures of their own, so each is
+// analyzed by the same steps in turn (module.go); a module read from its text
+// is only its procedures' interfaces, their declarations (modread.go).
+func (a *analyzer) analyzeContained(au *ast.Unit) []*Unit {
 	inner := a.internalInterfaces(au)
+	a.moduleProcedureBlocks()
 
 	a.executablePart()
 	a.checkProvisional(inner)
 
-	units := []*Unit{u}
+	units := []*Unit{a.unit}
 
 	for _, ia := range inner {
-		ia.executablePart()
-		ia.finishUnit()
+		switch {
+		case a.reading != nil:
+		case a.unit.Kind == ast.ModuleUnit:
+			units = append(units, ia.analyzeContained(ia.unit.AST)...)
+
+			continue
+		default:
+			ia.executablePart()
+			ia.finishUnit()
+		}
 
 		units = append(units, ia.unit)
 	}
@@ -966,7 +988,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 			// A dummy procedure's name is the unit's own, whatever routine
 			// it stands for when the program runs.
 			fu := units[s.Name]
-			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.Internal != nil || s.Interface != nil || s.broken || s.onlyDeclared || s.DummyProcedure() {
+			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.Internal != nil || s.Interface != nil || s.Use != nil || s.broken || s.onlyDeclared || s.DummyProcedure() {
 				continue
 			}
 

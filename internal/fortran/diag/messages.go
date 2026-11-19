@@ -1625,9 +1625,15 @@ var messages = map[string]kind{
 	"MODNOTFOUND": {Error, "no module file for %s; looked in %s"},
 	"MODFILEBAD":  {Error, "the module file %s can't be read, at line %d: %s"},
 	"MODFACT":     {Error, "%s"},
-	"USELOCAL":    {Error, "%s, from the module %s, is also a local name of this unit, at line %d"},
-	"USEATTR":     {Error, "%s comes from the module %s, and can't be declared again"},
-	"USECOMMON":   {Error, "%s comes from the module %s, and can't be in COMMON or EQUIVALENCE"},
+
+	// MODPROCNAME is a MODULE PROCEDURE statement's name that isn't a module
+	// procedure the unit can reach; MODPROCGENERIC one in an interface block
+	// with no generic specification (R1205's constraints).
+	"MODPROCNAME":    {Error, "%s %s, not a module procedure"},
+	"MODPROCGENERIC": {Error, "a MODULE PROCEDURE statement is allowed only in an interface block with a generic name, OPERATOR, or ASSIGNMENT"},
+	"USELOCAL":       {Error, "%s, from the module %s, is also a local name of this unit, at line %d"},
+	"USEATTR":        {Error, "%s comes from the module %s, and can't be declared again"},
+	"USECOMMON":      {Error, "%s comes from the module %s, and can't be in COMMON or EQUIVALENCE"},
 }
 
 // Known reports whether ident is a message in the table, and its

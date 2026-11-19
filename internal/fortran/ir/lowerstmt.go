@@ -185,7 +185,7 @@ func (l *lowerer) call(s *sema.Call) {
 	call := &Call{origin: l.origin(), Args: args}
 	call.Routine, call.Local, call.Through = l.callee(s.Sub)
 
-	if hidden, ok := l.hostFrameArg(); ok && call.Local {
+	if hidden, ok := l.hostFrameArg(s.Sub); ok && call.Local {
 		call.Args = append(call.Args, hidden)
 	}
 

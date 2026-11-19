@@ -38,6 +38,9 @@ type moduleFacts struct {
 	// folded are the REAL and COMPLEX constants whose values were computed,
 	// not written (FOLDED lines).
 	folded map[string]bool
+
+	// links are the module procedures' global names, by name (LINK lines).
+	links map[string]string
 }
 
 // blockFact is a PSECT or COMMON line: a section's size and alignment.
@@ -60,7 +63,7 @@ type typeFact struct {
 // readFacts reads a text's !GOVAX$ lines, or reports what is wrong with one
 // and the line it is on.
 func readFacts(lines []string) (*moduleFacts, string, int) {
-	f := &moduleFacts{blocks: map[string]blockFact{}, at: map[string]atFact{}, types: map[string]typeFact{}, folded: map[string]bool{}}
+	f := &moduleFacts{blocks: map[string]blockFact{}, at: map[string]atFact{}, types: map[string]typeFact{}, folded: map[string]bool{}, links: map[string]string{}}
 
 	for i, line := range lines {
 		rest, ok := strings.CutPrefix(line, "!GOVAX$ ")
@@ -99,6 +102,8 @@ func readFacts(lines []string) (*moduleFacts, string, int) {
 		case w[0] == "AT" && len(w) == 4:
 			f.at[w[1]] = atFact{offset: number(2), size: number(3), line: n}
 			bad = number(2) < 0 || number(3) < 0
+		case w[0] == "LINK" && len(w) == 3:
+			f.links[w[1]] = w[2]
 		case w[0] == "FOLDED" && len(w) == 2:
 			f.folded[w[1]] = true
 		case w[0] == "TYPE" && len(w) == 7:

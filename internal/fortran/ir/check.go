@@ -69,9 +69,10 @@ func Check(r *Routine) error {
 		data[d] = true
 	}
 
-	// An internal procedure uses its host's cells too, by their own names.
-	if r.Host != nil {
-		for _, c := range r.Host.Cells {
+	// An internal procedure uses its host's cells too, by their own names, and
+	// a module procedure's internal procedure its host's host's, the module's.
+	for h := r.Host; h != nil; h = h.Host {
+		for _, c := range h.Cells {
 			cells[c] = true
 		}
 	}

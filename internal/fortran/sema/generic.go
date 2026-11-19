@@ -66,10 +66,10 @@ type Generic struct {
 	Host *Symbol
 }
 
-// compiledBlock reports whether the interface block is one this phase compiles:
-// any without a MODULE PROCEDURE statement, which is Phase 106's.
-func compiledBlock(b *ast.InterfaceBlock) bool {
-	return len(b.ModuleProcedures) == 0
+// compiledBlock reports whether the interface block is one this phase
+// compiles: every one, since Phase 106 gave MODULE PROCEDURE its meaning.
+func compiledBlock(*ast.InterfaceBlock) bool {
+	return true
 }
 
 // declareGeneric makes the block's generic name stand for the specific
@@ -134,28 +134,41 @@ func (a *analyzer) checkGenerics() {
 		specifics := s.Generic.Specifics
 
 		for i, p := range specifics {
-			if p.Interface == nil || p.Interface.incomplete {
+			pu := explicitInterface(p)
+			if pu == nil || pu.incomplete {
 				continue
 			}
 
 			for _, q := range specifics[i+1:] {
-				if q.Interface == nil || q.Interface.incomplete || p == q {
+				qu := explicitInterface(q)
+				if qu == nil || qu.incomplete || p == q {
 					continue
 				}
 
 				switch {
 				case (p.Class == Function) != (q.Class == Function):
-					a.report("GENERICMIX", q.Interface.AST.Position(), p.Name, q.Name, s.Name)
-				case !distinguishable(dummyShapes(p.Interface), dummyShapes(q.Interface)):
-					a.report("GENERICAMBIG", q.Interface.AST.Position(), p.Name, p.Pos.Line, q.Name, s.Name)
+					a.report("GENERICMIX", specificPos(q), p.Name, q.Name, s.Name)
+				case !distinguishable(dummyShapes(pu), dummyShapes(qu)):
+					a.report("GENERICAMBIG", specificPos(q), p.Name, p.Pos.Line, q.Name, s.Name)
 				}
 			}
 
-			if p.Class == Function && a.intrinsicNamed(s.Name) && takenByIntrinsic(dummyShapes(p.Interface), s.Name) {
-				a.report("GENERICINTRINSIC", p.Interface.AST.Position(), p.Name, s.Name)
+			if p.Class == Function && a.intrinsicNamed(s.Name) && takenByIntrinsic(dummyShapes(pu), s.Name) {
+				a.report("GENERICINTRINSIC", specificPos(p), p.Name, s.Name)
 			}
 		}
 	}
+}
+
+// specificPos is where a specific procedure of a generic name or an operator is
+// reported: its interface's header, or for one a USE gave the unit, the USE,
+// since its interface is in the module's text (finding 2).
+func specificPos(s *Symbol) diag.Position {
+	if s.Use != nil {
+		return s.Pos
+	}
+
+	return explicitInterface(s).AST.Position()
 }
 
 // dummyShape is what of a dummy argument tells specific procedures apart: its
