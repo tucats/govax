@@ -1,7 +1,8 @@
 # Phase 107 — Fortran 90: pointers
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A), done 2026-11-19, for review.
+Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
+author the same day ("The author's answers").
 
 ## Goal
 
@@ -49,11 +50,13 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
 
 1. Should DEALLOCATE of a pointer to memory not obtained by ALLOCATE be caught?
    Proposed: FTNRTL's heap blocks carry a mark it checks, an error if absent.
+   Settled (2026-11-19): yes, for blocks made for pointers ("The author's
+   answers", 1).
 
 ## Subtasks (provisional)
 
 1. **Survey** (the standard's 5.1.2.7 and 5.1.2.8, 6.3.1.2, 6.3.3.2, 7.5.2,
-   12.4.1.1; the Handbook's chapters 5 to 7), for review (done 2026-11-19;
+   12.4.1.1; the Handbook's chapters 5 to 7) (done 2026-11-19, accepted;
    Part A, below, revises the rest of this list in A.4).
 2. **Scalar and character pointers**, `=>`, NULLIFY, ASSOCIATED.
 3. **Array pointers** and pointers to sections.
@@ -398,7 +401,8 @@ gfortran 16.2, `-std=f95`, the witness.
 
 The plan's order stands; each subtask's content is now the findings'.
 
-1. **Survey** (this Part A) (done 2026-11-19).
+1. **Survey** (this Part A) (done 2026-11-19; accepted by the author the
+   same day).
 2. **Scalar and character pointers:** POINTER as attribute and statement,
    storage in static, frame, COMMON, and module cells, cleared at entry, the
    refusals (findings 1, 2); references as their targets in expressions,
@@ -450,6 +454,27 @@ The plan's order stands; each subtask's content is now the findings'.
    **A temporary, decided when compiling; a run-time test is Phase 110's**; (b)
    the run-time test now.
 
+## The author's answers (2026-11-19)
+
+The author read the survey and accepted every recommendation:
+
+1. A block ALLOCATE makes for a pointer carries a header (a mark and its size);
+   DEALLOCATE of a pointer checks it and signals condition 304, govax's own, when
+   it is absent or the pointer isn't associated with the whole block. Allocatable
+   arrays' and values' blocks are unchanged (finding 6; the plan's open question 1).
+2. Pointers in new storage are cleared: a block FTNRTL allocates for a type with
+   pointer components (flag bit 2), and the pointer components of a frame or
+   automatic record at entry, so every pointer starts disassociated (findings 2, 6).
+3. A store through a pointer may change anything in any common block; a module's
+   variables are judged by their own attributes (finding 11).
+4. ASSOCIATED with a zero-sized target is false (finding 5).
+5. A pointer dummy's argument is the address of the actual's own pointer storage,
+   so the callee changes the caller's association directly (finding 8).
+6. An array assignment that may overlap through a pointer goes through a
+   temporary, decided when compiling; a run-time test is Phase 110's (finding 10).
+
+The plan's open question 1 is settled by answer 1.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -461,3 +486,5 @@ The plan's order stands; each subtask's content is now the findings'.
   subtasks restated, and six questions. gfortran 16.2 tried for bounds after `=>`,
   ASSOCIATED of a zero-sized target, and DEALLOCATE of a pointer to a TARGET (which
   it doesn't catch). Nothing in the code changed.
+- **2026-11-19:** The author accepted the survey's six recommendations ("The
+  author's answers"). Subtask 2 is next.
