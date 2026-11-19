@@ -58,3 +58,11 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Outputs a console test's host file commands once left in its package
+# directory (FORTRAN, MACRO, and LINK of a host file with no output named
+# write to the current directory). TestHostFileCommands now runs in a scratch
+# directory; this keeps any stray copy out of the repository.
+/internal/console/hello.exe
+/internal/console/hello.mar
+/internal/console/hello.obj

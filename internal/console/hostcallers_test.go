@@ -199,5 +199,14 @@ func hostCommandConsole(t *testing.T, key, sysprv bool) (string, func(string) st
 		}
 	}
 
+	// A host file command with no output named writes its output to the
+	// process's current directory (FORTRAN "H/hello.for" makes HELLO.MAR
+	// there, MACRO an object, LINK an image), which under go test is this
+	// package's source directory. The test runs in a scratch directory of its
+	// own instead, removed when it ends, so nothing is left in the tree; and a
+	// directory apart from host, so that what the commands make there doesn't
+	// count among host's files.
+	t.Chdir(t.TempDir())
+
 	return host, dispatch
 }
