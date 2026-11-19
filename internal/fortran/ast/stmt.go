@@ -535,6 +535,22 @@ type (
 		Stat    Expr
 	}
 
+	// PointerAssignStmt is Fortran 90's pointer assignment, Pointer => Target
+	// (the standard's 7.5.2): Pointer a pointer's name or component, Target a
+	// variable or a function's reference, both as the parser reads any
+	// reference; which is allowed is semantic analysis's question.
+	PointerAssignStmt struct {
+		StmtBase
+		Pointer, Target Expr
+	}
+
+	// NullifyStmt is Fortran 90's NULLIFY (object[, object]...) (the
+	// standard's 6.3.2), each object a pointer's name or component.
+	NullifyStmt struct {
+		StmtBase
+		Objects []Expr
+	}
+
 	// SelectCaseStmt is Fortran 90's SELECT CASE (Expr), the start of a
 	// CASE construct (the standard's 8.1.3).
 	SelectCaseStmt struct {

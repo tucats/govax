@@ -347,8 +347,8 @@ func (a *analyzer) layout() {
 		align := s.Type.Align()
 
 		// An allocatable or automatic array's place is its descriptor, of
-		// longwords.
-		if s.Allocatable || s.AutomaticObject {
+		// longwords, and a pointer's an address or a descriptor.
+		if s.Allocatable || s.AutomaticObject || s.Pointer {
 			align = 4
 		}
 

@@ -19,7 +19,7 @@ import (
 //     old statements are; INTENT, OPTIONAL, and TARGET are recorded on the
 //     Symbol and mean nothing yet (a dummy is passed as before; their phases,
 //     103 and 107, give them meaning); ALLOCATABLE is allocate.go's;
-//     POINTER is NOTIMPL;
+//     POINTER is pointer.go's;
 //     PUBLIC and PRIVATE belong in a module (access.go), and anywhere else
 //     they are an error.
 //
@@ -85,7 +85,7 @@ var attrTable = map[attribute]attrRow{
 	attrIntent:      {"INTENT", attrPointer, attrRecorded},
 	attrOptional:    {"OPTIONAL", 0, attrRecorded},
 	attrTarget:      {"TARGET", attrPointer, attrRecorded},
-	attrPointer:     {"POINTER", attrAllocatable, attrNotYet},
+	attrPointer:     {"POINTER", attrAllocatable, attrCompiled},
 	attrAllocatable: {"ALLOCATABLE", 0, attrCompiled},
 	attrPublic:      {"PUBLIC", attrPrivate, attrModuleOnly},
 	attrPrivate:     {"PRIVATE", 0, attrModuleOnly},
@@ -106,7 +106,7 @@ var attrOfStatement = map[lex.Kind]attribute{
 	lex.Save: attrSave, lex.External: attrExternal, lex.Intrinsic: attrIntrinsic, lex.Volatile: attrVolatile,
 	lex.Automatic: attrAutomatic, lex.Static: attrStatic, lex.Intent: attrIntent, lex.Optional: attrOptional,
 	lex.Target: attrTarget, lex.Dimension: attrDimension, lex.Parameter: attrParameter,
-	lex.Allocatable: attrAllocatable,
+	lex.Allocatable: attrAllocatable, lex.Pointer: attrPointer,
 }
 
 // excluded reports whether attributes x and y may not go together.
@@ -242,7 +242,7 @@ func (a *analyzer) giveAttributes(s *ast.TypeStmt, sym *Symbol, d *ast.Declarato
 
 			sym.f90Saved = sym.f90Saved || x == attrSave
 
-		case attrIntent, attrOptional, attrTarget, attrAllocatable:
+		case attrIntent, attrOptional, attrTarget, attrAllocatable, attrPointer:
 			a.recordAttribute(sym, x, spec.Intent, d.Pos)
 
 		case attrPublic, attrPrivate:
@@ -273,9 +273,9 @@ func (a *analyzer) attributeLater(s *ast.TypeStmt, x attribute, item *ast.AttrIt
 	}
 }
 
-// recordAttribute records INTENT (with its spec), OPTIONAL, TARGET, or
-// ALLOCATABLE for a name: kept on the Symbol, for their phases (103, 104,
-// 107). INTENT and OPTIONAL
+// recordAttribute records INTENT (with its spec), OPTIONAL, TARGET,
+// ALLOCATABLE, or POINTER for a name: kept on the Symbol, for their phases
+// (103, 104, 107). INTENT and OPTIONAL
 // are a dummy argument's alone (ATTRDUMMY); none may be given twice.
 func (a *analyzer) recordAttribute(s *Symbol, x attribute, intent string, pos diag.Position) {
 	name := attrTable[x].name
@@ -306,11 +306,18 @@ func (a *analyzer) recordAttribute(s *Symbol, x attribute, intent string, pos di
 
 	case attrAllocatable:
 		s.Allocatable = true
+
+	case attrPointer:
+		s.Pointer = true
+
+		if s.Class == Unclassified && s.Dims == nil {
+			s.Class = Variable
+		}
 	}
 }
 
-// attributeItems reads INTENT, OPTIONAL, TARGET, and ALLOCATABLE statements
-// whole, and
+// attributeItems reads INTENT, OPTIONAL, TARGET, ALLOCATABLE, and POINTER
+// statements whole, and
 // for the others checks a Fortran 90 statement's names (one with ::, SAVE
 // :: X) against the table, and records each name's attribute. It returns the
 // items the statement's old reading is to go on with: none for the three, and
@@ -319,7 +326,7 @@ func (a *analyzer) recordAttribute(s *Symbol, x attribute, intent string, pos di
 // may name a NAMELIST group, which is no symbol.
 func (a *analyzer) attributeItems(s *ast.AttrStmt) []*ast.AttrItem {
 	x := attrOfStatement[s.Kind]
-	recorded := attrTable[x].fate == attrRecorded || x == attrAllocatable
+	recorded := attrTable[x].fate == attrRecorded || x == attrAllocatable || x == attrPointer
 	checked := s.Colons || recorded
 
 	var kept []*ast.AttrItem

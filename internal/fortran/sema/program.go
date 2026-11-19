@@ -391,6 +391,14 @@ type Symbol struct {
 	// (docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md, finding 4).
 	Allocatable bool
 
+	// Pointer is Fortran 90's POINTER (the standard's 5.1.2.7): the name's
+	// storage is not its value but where its value is, its target's address,
+	// 0 while it is disassociated; a CHARACTER pointer's is a class S
+	// descriptor, its length and its target's address (docs/planning/PHASE-107
+	// - Fortran 90 pointers.md, finding 2). A reference to it is its target's,
+	// but in pointer assignment, NULLIFY, and ASSOCIATED (pointer.go).
+	Pointer bool
+
 	// FreedAtReturn is set for an allocatable array that every return of its
 	// unit deallocates, and every entry point marks unallocated: a
 	// subprogram's own that isn't saved (finding 5; freedAtReturn).
@@ -654,7 +662,22 @@ func (s *Symbol) Size() int {
 		return DescriptorSize(len(s.Dims))
 	}
 
+	if s.Pointer {
+		return PointerSize(s.Type)
+	}
+
 	return s.Type.Size * s.Elements()
+}
+
+// PointerSize is the storage a scalar pointer to a value of type t takes: a
+// longword holding the target's address, or for a CHARACTER target a class S
+// descriptor (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 2).
+func PointerSize(t Type) int {
+	if t.Kind == Character {
+		return StringDescriptorSize
+	}
+
+	return 4
 }
 
 // StringDescriptorSize is the size in bytes of a class S descriptor: a word of

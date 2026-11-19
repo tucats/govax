@@ -662,3 +662,67 @@ func TestModuleLongNames(t *testing.T) {
 		t.Errorf("no call of %s in\n%s", name, strings.Join(r.MACRO, "\n"))
 	}
 }
+
+// pointersModule has pointers among its variables (docs/planning/PHASE-107 -
+// Fortran 90 pointers.md, subtask 2): each is its storage, an address or a
+// class S descriptor, and the text says POINTER as it says TARGET.
+const pointersModule = `module cursors
+  real, target :: slots(4)
+  real, pointer :: here
+  character(len=3), pointer :: tag
+  character(len=8), target :: name
+end module cursors`
+
+// pointersUser points the module's pointers and uses them.
+const pointersUser = `program walk
+  use cursors
+  here => slots(2)
+  here = 1.0
+  tag => name(1:3)
+  tag = 'ABC'
+  if (associated(here, slots(2))) print *, here, tag
+end program walk`
+
+// TestModulePointers holds a module's pointers' text, and a user compiled
+// with the module's text from a module file to the code it gets in one file.
+func TestModulePointers(t *testing.T) {
+	alone := compileFree("CURSORS", pointersModule, nil)
+	if alone.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(alone))
+	}
+
+	text := strings.Join(moduleText(t, alone, "CURSORS"), "\n")
+	for _, want := range []string{
+		"!GOVAX$ AT HERE 16 4\n  REAL(KIND=4), POINTER :: HERE",
+		"!GOVAX$ AT TAG 20 8\n  CHARACTER(LEN=3), POINTER :: TAG",
+		"  REAL(KIND=4), TARGET :: SLOTS(1:4)",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in\n%s", want, text)
+		}
+	}
+
+	both := compileFree("WALK", pointersModule+"\n"+pointersUser, nil)
+	user := compileFree("WALK", pointersUser, moduleFiles{"CURSORS": moduleText(t, alone, "CURSORS")})
+
+	if both.Errors != 0 || user.Errors != 0 {
+		t.Fatalf("messages: %v %v", messageList(both), messageList(user))
+	}
+
+	routine := func(lines []string) string { return routineCode(lines, "WALK") }
+
+	if routine(both.MACRO) != routine(user.MACRO) {
+		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(user.MACRO))
+	}
+
+	code := strings.Join(user.MACRO, "\n")
+	for _, want := range []string{
+		"\tMOVAL\tWALK.SLOTS+4,WALK.HERE",
+		"\tMOVL\t#^X00004080,@WALK.HERE",
+		"\tMOVAB\tWALK.NAME,WALK.TAG+4",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("no %q in\n%s", want, code)
+		}
+	}
+}

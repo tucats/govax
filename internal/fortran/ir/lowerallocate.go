@@ -71,7 +71,8 @@ func (l *lowerer) allocatableCell(s *sema.Symbol, c *Cell) {
 // (sema.Symbol.FreedAtReturn) has its POINTER cleared too: a routine left by an
 // unwind (a condition handler's $UNWIND) runs none of its returns' code, and the
 // next call's ALLOCATE would then find the array still allocated. The block is
-// lost, but the program goes on (finding 5).
+// lost, but the program goes on (finding 5). Each pointer in the frame is
+// cleared then too (lowerpointer.go's clearPointers).
 func (l *lowerer) clearAllocatables() {
 	for _, c := range l.r.Cells {
 		switch {
@@ -82,13 +83,19 @@ func (l *lowerer) clearAllocatables() {
 			l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: LongConst(0)})
 		}
 	}
+
+	l.clearPointers()
 }
 
-// entryClears reports whether the routine has an allocatable array that each
-// entry point clears (clearAllocatables).
+// entryClears reports whether the routine has an allocatable array or a
+// pointer that each entry point clears (clearAllocatables).
 func (l *lowerer) entryClears() bool {
 	for _, c := range l.r.Cells {
 		if isAllocatable(c) && (c.Frame || c.Sym.FreedAtReturn) {
+			return true
+		}
+
+		if c.Frame && c.Sym != nil && c.Sym.Pointer {
 			return true
 		}
 	}

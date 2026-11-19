@@ -84,6 +84,12 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		switch {
 		case c.Sym == nil || c.Sym.UnusedFromLibrary() || strings.HasPrefix(c.Sym.Name, "$"):
 
+		// A pointer's cell holds its target's address, not its value, which
+		// the debugger doesn't follow yet (docs/planning/PHASE-107 - Fortran
+		// 90 pointers.md, finding 12: Phase 110's), so it is left out rather
+		// than shown as a value it isn't.
+		case c.Sym.Pointer:
+
 		case c.Sym.Allocatable || c.Sym.AutomaticObject:
 			lines = append(lines, g.describedVar(c.Sym.Name, c.Sym, c).Line())
 

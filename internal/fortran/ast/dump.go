@@ -218,6 +218,17 @@ func DumpStmt(s Stmt) string {
 
 		return text + ")"
 
+	case *PointerAssignStmt:
+		return DumpExpr(s.Pointer) + " => " + DumpExpr(s.Target)
+
+	case *NullifyStmt:
+		objects := make([]string, len(s.Objects))
+		for i, o := range s.Objects {
+			objects[i] = DumpExpr(o)
+		}
+
+		return "NULLIFY (" + strings.Join(objects, ", ") + ")"
+
 	case *SelectCaseStmt:
 		return "SELECT CASE " + DumpExpr(s.Expr)
 

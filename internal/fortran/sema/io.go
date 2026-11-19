@@ -295,6 +295,8 @@ func (a *analyzer) checkNamelists() {
 				a.report("NMLDUMMY", n.Pos, s.Name)
 			case s.Allocatable:
 				a.report("ALLOCATTR", n.Pos, s.Name, "be in a NAMELIST group")
+			case s.Pointer:
+				a.report("POINTERATTR", n.Pos, s.Name, "be in a NAMELIST group")
 			case s.AutomaticObject:
 				a.autoAttr(s, n.Pos, s.Name, "be in a NAMELIST group")
 			case s.Struct != nil && s.Struct.Derived && s.Class == Array:

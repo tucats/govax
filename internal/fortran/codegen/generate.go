@@ -870,9 +870,14 @@ func structureLines(list []*sema.Structure) []string {
 
 // typeText is a variable's type, with an array's bounds: INTEGER,
 // REAL (0:9), INTEGER (2,3), INTEGER (*), or for bounds computed when the
-// program runs REAL (?,3), REAL (?:?).
+// program runs REAL (?,3), REAL (?:?); a pointer's INTEGER, POINTER.
 func typeText(s *sema.Symbol) string {
 	text := s.TypeText()
+
+	// A pointer's storage is its target's address, or a descriptor of it.
+	if s.Pointer {
+		text += ", POINTER"
+	}
 
 	if len(s.Dims) == 0 {
 		return text

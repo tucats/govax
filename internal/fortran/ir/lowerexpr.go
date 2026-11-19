@@ -60,6 +60,9 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.Allocated:
 		return l.allocated(e)
 
+	case *sema.Associated:
+		return l.associated(e)
+
 	case *sema.Unary:
 		op := Neg
 		if e.Op == ast.Not {
@@ -301,6 +304,11 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 
 	if s.Allocatable || s.AutomaticObject || s.AssumedShape() {
 		return l.allocatableBase(s)
+	}
+
+	// A pointer stands for its target (lowerpointer.go).
+	if s.Pointer {
+		return l.pointerTargetMem(s)
 	}
 
 	t := l.typeOf(s.Type)

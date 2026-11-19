@@ -305,6 +305,11 @@ func (f *Field) boundary() int {
 
 // boundary is the name's natural boundary, an array's being its element's.
 func (s *Symbol) boundary() int {
+	// A pointer is an address, or a descriptor of longwords.
+	if s.Pointer {
+		return 4
+	}
+
 	if s.Struct != nil {
 		return s.Struct.Boundary
 	}

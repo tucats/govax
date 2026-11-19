@@ -502,7 +502,6 @@ func TestAllocateForms(t *testing.T) {
 	}
 
 	errors := []struct{ line, want string }{
-		{"ALLOCATE (A)", "SYNTAX"},
 		{"ALLOCATE (A(3)", "SYNTAX"},
 		{"ALLOCATE (STAT=I, A(3))", "SYNTAX"},
 		{"DEALLOCATE (A(3))", "SYNTAX"},
@@ -511,6 +510,66 @@ func TestAllocateForms(t *testing.T) {
 
 	for _, e := range errors {
 		_, ms := parseLines(t, "E.FOR", fixed(e.line), "   10 END")
+		if got := strings.Join(idents(ms), " "); got != e.want {
+			t.Errorf("%s: got %v, want %s", e.line, ms, e.want)
+		}
+	}
+}
+
+// TestPointerForms parses Fortran 90's pointer statements
+// (docs/planning/PHASE-107 - Fortran 90 pointers.md): the POINTER attribute
+// and statement, pointer assignment with any target the grammar allows (which
+// is allowed is semantic analysis's question), NULLIFY, and ALLOCATE of a
+// scalar, which has no bounds.
+func TestPointerForms(t *testing.T) {
+	var messages diag.List
+
+	lines := []string{
+		"program p",
+		"  real, pointer :: x, a(:)",
+		"  pointer :: y, b(:, :)",
+		"  pointer z",
+		"  x => t",
+		"  y => s(3)%v",
+		"  z => t + 1",
+		"  nullify (x, y, r%next)",
+		"  allocate (x, a(3))",
+		"end program p",
+	}
+
+	program := source.Read(source.Form{}, &source.File{Spec: "A.F90", Lines: lines, Free: true}, nil, &messages)
+	file := Parse(lex.Lex(program.Statements, &messages), &messages)
+
+	if ms := messages.Messages(); len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	got := ast.Dump(file)
+
+	for _, want := range []string{
+		"REAL, POINTER :: X, A(:)",
+		"POINTER :: Y, B(:, :)",
+		"POINTER Z",
+		"X => T",
+		"Y => S(3)%V",
+		"Z => (+ T 1)",
+		"NULLIFY (X, Y, R%NEXT)",
+		"ALLOCATE (X, A(3))",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in\n%s", want, got)
+		}
+	}
+
+	errors := []struct{ line, want string }{
+		{"P =>", "SYNTAX"},
+		{"NULLIFY P", "SYNTAX"},
+		{"NULLIFY (P", "SYNTAX"},
+		{"P => Q, R", "EXTRATEXT"},
+	}
+
+	for _, e := range errors {
+		_, ms := parseLines(t, "E.FOR", fixed("OPTIONS /F90"), fixed(e.line), "   10 END")
 		if got := strings.Join(idents(ms), " "); got != e.want {
 			t.Errorf("%s: got %v, want %s", e.line, ms, e.want)
 		}

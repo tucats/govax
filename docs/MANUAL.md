@@ -8295,9 +8295,9 @@ its control constructs (construct names, EXIT, CYCLE, and SELECT CASE), with arr
 values (sections, array expressions and assignment, constructors, WHERE, and the array
 functions), with internal procedures, interface blocks, and keyword, optional, and generic
 arguments, with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
-array-valued functions, and the transformational functions), with derived types, and with
-modules, compiled together or apart; everything else Fortran 90 adds is recognized and
-reported as not yet implemented.
+array-valued functions, and the transformational functions), with derived types, with
+modules, compiled together or apart, and with scalar pointers; everything else Fortran 90
+adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -8405,10 +8405,11 @@ real, external :: sum4
 The attributes are PARAMETER, DIMENSION, SAVE, EXTERNAL, INTRINSIC, and DEC's VOLATILE,
 AUTOMATIC, and STATIC, each doing what its statement does; INTENT and OPTIONAL, which say
 what a routine does with a dummy argument and whether a call may leave it out (below,
-with internal procedures and interface blocks); TARGET, checked and recorded but changing
-nothing yet; ALLOCATABLE (below, with allocatable arrays); and POINTER, not there yet.
+with internal procedures and interface blocks); TARGET and POINTER (below, with pointers);
+and ALLOCATABLE (below, with allocatable arrays).
 PUBLIC and PRIVATE belong in a module (`NOTINMODULE`). Each has its statement too, with `::` or without: `DIMENSION ::
-Z(3)`, `SAVE :: TOTAL`, `INTENT(IN) :: A, B`, `OPTIONAL :: Q`, `TARGET :: T(4)`. A value
+Z(3)`, `SAVE :: TOTAL`, `INTENT(IN) :: A, B`, `OPTIONAL :: Q`, `TARGET :: T(4)`, `POINTER ::
+P`. A value
 given with `=` is a constant expression stored as an assignment would store it (so `REAL ::
 X = 'AB'` is `INITTYPE`, where DATA would take it), a scalar value fills a whole array,
 and it gives the name SAVE. DEC's values in slashes stay legal without `::`, and are
@@ -9489,18 +9490,64 @@ A name a module passes on from another says that too (`from SHAPES, defined in G
 `USE` of a whole module gave; it does report a name an `ONLY` list or rename asked for and
 nothing uses.
 
-**Not there yet.** Every other Fortran 90 statement is recognized, and draws
+**Pointers** (the standard's 5.1.2.7, 5.1.2.8, 6.3.2, 7.5.2, and 13.13.13). A variable with
+the POINTER attribute holds not a value but where one is: it *points at* a variable, its
+*target*, and wherever a value or a variable is wanted (in an expression, on the left of
+`=`, in an I/O list, as an internal file, or as an actual argument) it stands for that
+target. `P => T` makes T the target; `NULLIFY (P)` makes P point at nothing
+(*disassociated*); `ASSOCIATED(P)` says whether P points at anything, `ASSOCIATED(P, T)`
+whether at T, and `ASSOCIATED(P, Q)` whether P and the pointer Q point at the same thing:
+
+```fortran
+program aim
+  integer, target :: n = 1, m = 2
+  integer, pointer :: p, q
+  p => n
+  p = 5                      ! N is 5
+  q => p                     ! Q points at N too
+  p => m
+  q = q + p                  ! N is 7
+  print *, n, m, associated (q, n), associated (q, p)
+end program aim
+```
+
+prints `7 2 T F`. A target must be a variable with the TARGET attribute, an element, a
+substring, or a component of one, or another pointer, whose target is taken (`NOTTARGET`
+otherwise), of the pointer's type, kind, and rank, and for CHARACTER of its length when both
+lengths are constants (`POINTERTYPE`); an expression or a function's value is no target
+(`NOTTARGET`, `POINTERFUNC`). `=>`, NULLIFY, and ASSOCIATED take a pointer itself
+(`NOTPOINTER` for anything else). A pointer may be in a module or in COMMON, may be
+AUTOMATIC, VOLATILE, or SAVE'd, and may point at a record of a derived type, whose components
+are then reached through it (`PP%X`); it may not have an initial value, nor be in DATA, a
+NAMELIST group, or EQUIVALENCE (`POINTERATTR`). TARGET excludes POINTER, and POINTER
+excludes ALLOCATABLE.
+
+A pointer is its target's address, a longword, or for CHARACTER a descriptor of its target's
+length and address; so `P => N` is a `MOVAL`, `P = 5` a `MOVL #5,@P`, and a pointer passed
+to an ordinary dummy argument passes its target, at no cost. **Every pointer starts
+disassociated**: a static one's storage starts at zero, and one in a stack frame (a RECURSIVE
+or AUTOMATIC unit's) is cleared each time its routine is entered. Fortran 90 leaves a
+pointer's status undefined until something sets it; govax's is Fortran 95's rule, a choice,
+and a program that relies on it may act differently elsewhere. A pointer whose target was a
+routine's local variable becomes meaningless when that routine returns, as the standard
+says, and nothing catches its use. The debugger doesn't show pointers yet, and a pointer's
+row of the storage map says `INTEGER, POINTER`.
+
+So far a pointer is a scalar: array pointers, ALLOCATE and DEALLOCATE of a pointer, pointer
+components of derived types (and so linked lists), pointer dummy arguments, and functions
+whose result is a pointer are reported `%FORT-E-NOTIMPL`, each to come in its turn.
+
+**Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, the POINTER attribute is not implemented yet
+%FORT-E-NOTIMPL, an array pointer is not implemented yet
   at line 2 of DUA1:[WORK]BAD.F90;1
-    real, pointer :: p
-  --------^
+    real, pointer :: p(:)
+  -------------------^
 ```
 
-That includes pointers, each to come in its turn. Of modules, these are not there yet: POINTER
-module variables and components; ENTRY in a module procedure; a module whose text would have
+Of modules, these are not there yet: POINTER components; ENTRY in a module procedure; a module whose text would have
 to give one type two names, or an external procedure that is a specific of two of its generic
 names, or a COMMON block it and a module it uses both declare (each `%FORT-E-NOTIMPL` when the
 module compiles); and govax's definition modules (`$SSDEF` and the rest) as modules to USE,

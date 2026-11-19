@@ -155,8 +155,9 @@ func (p *parser) dataName() ast.Expr {
 //
 // Fortran 90's attribute statements are read here too (the standard's 5.2):
 // any of them may have a :: before its list (a SAVE with :: must have one),
-// INTENT has its spec first, INTENT (IN) [::] A, B, and TARGET's and
-// ALLOCATABLE's items may have array specifications, as AUTOMATIC's.
+// INTENT has its spec first, INTENT (IN) [::] A, B, and TARGET's,
+// ALLOCATABLE's, and POINTER's items may have array specifications, as
+// AUTOMATIC's.
 func parseAttr(p *parser) ast.Stmt {
 	s := &ast.AttrStmt{StmtBase: p.base()}
 	k := p.st.Kind
@@ -184,7 +185,7 @@ func parseAttr(p *parser) ast.Stmt {
 			n := p.name("a subprogram's name")
 			s.Items = append(s.Items, &ast.AttrItem{Name: n.Name, Pos: n.Pos, Star: true})
 
-		case k == lex.Automatic || k == lex.Static || k == lex.Target || k == lex.Allocatable:
+		case k == lex.Automatic || k == lex.Static || k == lex.Target || k == lex.Allocatable || k == lex.Pointer:
 			d := p.declarator(declPlain, false)
 			s.Items = append(s.Items, &ast.AttrItem{Name: d.Name, Pos: d.Pos, Array: d})
 

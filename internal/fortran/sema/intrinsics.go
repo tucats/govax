@@ -452,6 +452,9 @@ func readIntrinsics() ([]form, map[string]bool, map[string]bool) {
 	// Nor has ALLOCATED, given an allocatable array's name (allocate.go).
 	newNames["ALLOCATED"] = true
 
+	// Nor has ASSOCIATED, given a pointer itself (pointer.go).
+	newNames["ASSOCIATED"] = true
+
 	return append(forms, more...), names, newNames
 }
 

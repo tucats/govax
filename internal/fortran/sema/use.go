@@ -557,7 +557,7 @@ func (a *analyzer) symbolCopy(ms *moduleScope, r *Symbol, local string, pos diag
 		Struct: r.Struct, Dims: r.Dims, DimPos: pos,
 		Offset: -1, Pos: pos,
 		Value: r.Value, ArrayValue: r.ArrayValue, recordValue: r.recordValue, recordValues: r.recordValues,
-		Allocatable: r.Allocatable, Volatile: r.Volatile, Target: r.Target,
+		Allocatable: r.Allocatable, Volatile: r.Volatile, Target: r.Target, Pointer: r.Pointer,
 		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r, origin: symbolOrigin(r, ms)},
 	}
 

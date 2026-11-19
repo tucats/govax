@@ -7,11 +7,13 @@ import (
 )
 
 // Fortran 90's statements (docs/planning/PHASE-99 - Fortran 90.md, subtask 5).
-// The lexer recognizes every one; the parser makes most of them a
+// The lexer recognizes every one. The parser made those not compiled yet a
 // PendingStmt, which semantic analysis reports NOTIMPL by name, so a program
-// using WHERE hears "the WHERE statement is not implemented yet" where it
-// is, not a syntax error. Each later phase gives its statements
-// real parsers. What is parsed now:
+// using WHERE heard "the WHERE statement is not implemented yet" where it
+// was, not a syntax error, and each later phase gave its statements real
+// parsers; since Phase 107's pointer statements every one has its own, and a
+// PendingStmt is left only for the semantic NOTIMPLs that still use one. What
+// this file parses:
 //
 //   - MODULE name, a unit's header, so a module is one unit;
 //   - END PROGRAM name and the rest, checked against the unit they end
@@ -21,19 +23,16 @@ import (
 //     parseLoopExit, parseDo, parseSelectCase, parseCase, parseEndSelect);
 //   - Fortran 90's declarations (Phase 100): a type statement's :: form,
 //     with its attributes (attrSpec) and = values (entityValue), the
-//     attribute statements with ::, and INTENT, OPTIONAL, and TARGET, into
-//     the old statements' nodes (decl.go, spec.go), an = value an array
-//     constructor too (Phase 102);
+//     attribute statements with ::, and INTENT, OPTIONAL, TARGET, and
+//     POINTER, into the old statements' nodes (decl.go, spec.go), an = value
+//     an array constructor too (Phase 102);
+//   - ALLOCATE and DEALLOCATE (Phase 104), pointer assignment and NULLIFY
+//     (Phase 107);
 //   - and the statements that hold others (units.go): CONTAINS's
 //     internal procedures (ast.Unit.Contains), an interface block's bodies
 //     (ast.InterfaceBlock), each a unit of its own (Phase 103), and a
 //     derived type's components, gathered into its TYPE statement's
 //     TypeDefStmt (derived.go; Phase 105).
-
-// parsePending makes a statement a PendingStmt, reported NOTIMPL by its kind.
-func parsePending(p *parser) ast.Stmt {
-	return &ast.PendingStmt{StmtBase: p.base()}
-}
 
 // doubleColon is the statement's :: token at level 0, or nil: Fortran 90's
 // form of a declaration (INTEGER, SAVE :: X, DIMENSION :: A(10)).
@@ -402,9 +401,11 @@ func parseEndWhere(p *parser) ast.Stmt {
 // STAT=v]) and DEALLOCATE (name[, name]...[, STAT=v]) (the standard's R622
 // and R631; docs/planning/PHASE-104 - Fortran 90 dynamic arrays.md). An
 // ALLOCATE object is a name and its bounds, read as an array declarator's
-// are, so A(N) and B(0:M, 3) are Declarators; whether the bounds are right
-// for the array (no *, no :, as many as its rank) is semantic analysis's
-// question. A DEALLOCATE object is a name alone. STAT= may come only last.
+// are, so A(N) and B(0:M, 3) are Declarators, or a name alone, a scalar
+// pointer's (docs/planning/PHASE-107 - Fortran 90 pointers.md); whether the
+// bounds are right for the object (no *, no :, as many as its rank) is
+// semantic analysis's question. A DEALLOCATE object is a name alone. STAT= may
+// come only last.
 func parseAllocate(p *parser) ast.Stmt {
 	s := &ast.AllocateStmt{StmtBase: p.base()}
 	allocate := p.st.Kind == lex.Allocate
@@ -424,15 +425,53 @@ func parseAllocate(p *parser) ast.Stmt {
 		n := p.name("an allocatable array's name")
 		d := &ast.Declarator{Name: n.Name, Pos: n.Pos}
 
-		if allocate {
-			if !p.at("(") {
-				p.syntax("the array's bounds")
-			}
-
+		// A scalar pointer has no bounds, and an array's missing bounds
+		// are semantic analysis's to report (ALLOCBOUNDS).
+		if allocate && p.at("(") {
 			d.Dims = p.dimensions()
 		}
 
 		s.Objects = append(s.Objects, d)
+
+		if !p.accept(",") {
+			break
+		}
+	}
+
+	p.expect(")")
+	p.end()
+
+	return s
+}
+
+// parsePointerAssign parses Fortran 90's pointer assignment, pointer =>
+// target (the standard's R736; docs/planning/PHASE-107 - Fortran 90
+// pointers.md, finding 4): the pointer a reference as the parser reads any,
+// so that P, A%NEXT, and A(3) all parse, and the target an expression, so that
+// semantic analysis, which says which may stand where, can say why P => 5 or
+// P => T + 1 is no target.
+func parsePointerAssign(p *parser) ast.Stmt {
+	s := &ast.PointerAssignStmt{StmtBase: p.base()}
+	s.Pointer = p.reference("a pointer")
+
+	p.expect("=>")
+
+	s.Target = p.expr()
+
+	p.end()
+
+	return s
+}
+
+// parseNullify parses Fortran 90's NULLIFY (object[, object]...) (the
+// standard's R629), each object a pointer's name or a component.
+func parseNullify(p *parser) ast.Stmt {
+	s := &ast.NullifyStmt{StmtBase: p.base()}
+
+	p.expect("(")
+
+	for {
+		s.Objects = append(s.Objects, p.reference("a pointer"))
 
 		if !p.accept(",") {
 			break

@@ -1,0 +1,135 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for F90PTR, the main program
+;   N     INTEGER               $LOCAL+0   F90PTR.N
+;   M     INTEGER               $LOCAL+4   F90PTR.M
+;   P     INTEGER, POINTER      $LOCAL+8   F90PTR.P
+;   Q     INTEGER, POINTER      $LOCAL+12  F90PTR.Q
+;   S     CHARACTER*4           $LOCAL+16  F90PTR.S
+;   C     CHARACTER*2, POINTER  $LOCAL+20  F90PTR.C
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+F90PTR.N:
+	.BLKL	1			; N
+F90PTR.M:
+	.BLKL	1			; M
+F90PTR.P:
+	.BLKL	1			; P
+F90PTR.Q:
+	.BLKL	1			; Q
+F90PTR.S:
+	.BLKL	1			; S
+F90PTR.C:
+	.BLKL	2			; C
+F90PTR.$T1:
+	.BLKL	1			; temporary
+F90PTR.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+F90PTR.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+F90PTR.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_LU,DSC$K_CLASS_S
+	.ADDRESS F90PTR.$T1
+F90PTR.$K1:
+	.ASCII	/AB/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        OPTIONS /F90
+;    2  C     Fortran 90's scalar pointers (Phase 107, subtask 2): a pointer's
+;    3  C     cell is its target's address, a CHARACTER pointer's a class S
+;    4  C     descriptor; a reference is its target, reached through the cell;
+;    5  C     => stores an address, NULLIFY 0, ASSOCIATED compares; an actual
+;    6  C     argument is the cell's address itself; a recursive unit's pointer
+;    7  C     is in the frame, cleared at entry.
+;    8        PROGRAM F90PTR
+	.ENTRY	F90PTR,^M<R2,R3,R4,R5>
+;    9        INTEGER, TARGET :: N, M
+;   10        INTEGER, POINTER :: P, Q
+;   11        CHARACTER*4, TARGET :: S
+;   12        CHARACTER*2, POINTER :: C
+;   13        NULLIFY (Q)
+	CLRL	F90PTR.Q
+;   14        P => N
+	MOVAL	F90PTR.N,F90PTR.P
+;   15        P = P + 1
+	INCL	@F90PTR.P
+;   16        Q => P
+	MOVL	F90PTR.P,F90PTR.Q
+;   17        IF (ASSOCIATED(Q, P) .AND. .NOT. ASSOCIATED(P, M)) CALL X(Q)
+	CMPL	F90PTR.Q,F90PTR.P
+	BEQL	F90PTR.$2
+	BRW	F90PTR.$1
+F90PTR.$2:
+	TSTL	F90PTR.Q
+	BNEQ	F90PTR.$3
+	BRW	F90PTR.$1
+F90PTR.$3:
+	MOVAL	F90PTR.M,R0
+	CMPL	F90PTR.P,R0
+	BNEQ	F90PTR.$4
+	BRW	F90PTR.$1
+F90PTR.$4:
+	PUSHAL	@F90PTR.Q
+	CALLS	#1,G^X
+F90PTR.$1:
+;   18        C => S(2:3)
+	MOVL	#17694722,F90PTR.C
+	MOVAB	F90PTR.S+1,F90PTR.C+4
+;   19        C = 'AB'
+	MOVC3	#2,F90PTR.$K1,@F90PTR.C+4
+;   20        PRINT *, ASSOCIATED(C), C
+	PUSHL	#-1
+	PUSHAB	F90PTR.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	CLRL	R0
+	TSTL	F90PTR.C+4
+	BEQL	F90PTR.$5
+	MNEGL	#1,R0
+F90PTR.$5:
+	MOVL	R0,F90PTR.$T1
+	PUSHAQ	F90PTR.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAB	@F90PTR.C+4,F90PTR.$D2+4
+	PUSHAQ	F90PTR.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   21        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for R, a RECURSIVE subroutine
+;   K     INTEGER           argument 1  @R.K(AP)
+;   L     INTEGER, POINTER  FP-4        R.L(FP)
+;
+R.K = 4					; K is argument 1
+R.L = -4				; L, in the frame
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   22        OPTIONS /F90
+;   23        RECURSIVE SUBROUTINE R(K)
+	.ENTRY	R,^M<>
+	SUBL2	#4,SP			; this activation's own storage
+	CLRL	R.L(FP)
+;   24        INTEGER, TARGET :: K
+;   25        INTEGER, POINTER :: L
+;   26        IF (.NOT. ASSOCIATED(L)) L => K
+	BEQL	R.$2
+	BRW	R.$1
+R.$2:
+	MOVAL	@R.K(AP),R.L(FP)
+R.$1:
+;   27        L = 0
+	CLRL	@R.L(FP)
+;   28        END
+	RET
+
+	.END	F90PTR

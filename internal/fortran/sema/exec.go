@@ -73,6 +73,12 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 	case *ast.AllocateStmt:
 		return a.allocateStatement(s)
 
+	case *ast.PointerAssignStmt:
+		return a.pointerAssignment(s)
+
+	case *ast.NullifyStmt:
+		return a.nullify(s)
+
 	case *ast.StopStmt:
 		st := &Stop{stmtBase: stmtBase{s}, Pause: s.Kind == lex.Pause}
 

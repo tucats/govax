@@ -276,6 +276,10 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			return a.allocated(e)
 		}
 
+		if e.Name == "ASSOCIATED" && a.intrinsicNamed(e.Name) {
+			return a.associatedRef(e)
+		}
+
 		_, selected := isInquiry(e.Name)
 		if _, ok := constFuncs[e.Name]; ok || (selected || arrayFunctions[e.Name]) && a.intrinsicNamed(e.Name) {
 			if v, ok := a.folded(e); ok {

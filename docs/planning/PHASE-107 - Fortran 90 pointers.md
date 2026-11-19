@@ -2,7 +2,8 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
-author the same day ("The author's answers").
+author the same day ("The author's answers"); subtask 2, scalar and character
+pointers, done 2026-11-19.
 
 ## Goal
 
@@ -58,7 +59,8 @@ Fortran 90's pointers (the standard's 5.1.2.7, 6.3, 7.5.2), by Decision 12:
 1. **Survey** (the standard's 5.1.2.7 and 5.1.2.8, 6.3.1.2, 6.3.3.2, 7.5.2,
    12.4.1.1; the Handbook's chapters 5 to 7) (done 2026-11-19, accepted;
    Part A, below, revises the rest of this list in A.4).
-2. **Scalar and character pointers**, `=>`, NULLIFY, ASSOCIATED.
+2. **Scalar and character pointers**, `=>`, NULLIFY, ASSOCIATED (done
+   2026-11-19).
 3. **Array pointers** and pointers to sections.
 4. **ALLOCATE and DEALLOCATE of pointers.**
 5. **Pointer components**, recursive types.
@@ -408,7 +410,7 @@ The plan's order stands; each subtask's content is now the findings'.
    refusals (findings 1, 2); references as their targets in expressions,
    assignments, actual arguments to non-pointer dummies, I/O, internal files
    (finding 3); `=>` for scalars, NULLIFY, ASSOCIATED (findings 4, 5); the module
-   text's POINTER.
+   text's POINTER (done 2026-11-19).
 3. **Array pointers:** descriptors read through every stride, `=>` to whole
    arrays, sections, components, and pointers with their bounds, the inquiries,
    ASSOCIATED of arrays, actual arguments to assumed-shape and old dummies
@@ -488,3 +490,75 @@ The plan's open question 1 is settled by answer 1.
   it doesn't catch). Nothing in the code changed.
 - **2026-11-19:** The author accepted the survey's six recommendations ("The
   author's answers"). Subtask 2 is next.
+- **2026-11-19:** Subtask 2, scalar and character pointers, done.
+  - *Parsing.* The POINTER statement is `parseAttr`'s, its items declarators as
+    TARGET's are; pointer assignment (`ast.PointerAssignStmt`, the pointer a
+    reference, the target any expression, so that `P => 5` and `P => T + 1` are
+    sema's NOTTARGET rather than syntax errors) and NULLIFY
+    (`ast.NullifyStmt`) have parsers of their own. With these no statement is a
+    `PendingStmt` any more, and `parsePending` is gone; the type stays for the
+    semantic NOTIMPLs that use one. ALLOCATE's object may now have no bounds (a
+    scalar pointer's), an array's missing bounds ALLOCBOUNDS.
+  - *Declarations* (finding 1). POINTER is compiled (`attrtable.go`), recorded as
+    `Symbol.Pointer` by the attribute or the statement; an array pointer's
+    colons pass `checkShapes`, bounds that aren't colons are POINTERSHAPE, and
+    DEFERREDNOTALLOC's text names POINTER. `checkPointers` (`sema/pointer.go`,
+    after `checkArrays`) reports EQUIVALENCE and the NOTIMPLs of later subtasks:
+    an array pointer (3), a pointer dummy or function result (6), a CHARACTER
+    pointer whose length isn't constant (with 6's `CHARACTER(*)`); ALLOCATE and
+    DEALLOCATE of a pointer (4) and a pointer component (5) are NOTIMPL where
+    they are. DATA, an initial value, and NAMELIST are refused where those are
+    read. **One message, POINTERATTR, with the rule as its last argument**,
+    rather than the survey's four (POINTERDATA, POINTERNML, POINTEREQUIV,
+    POINTERINIT), as ALLOCATTR does for allocatable arrays; DATA's is "be given
+    an initial value", as ALLOCATTR's is.
+  - *Storage* (finding 2). `Symbol.Size` is `PointerSize`: 4, or 8 for CHARACTER;
+    a pointer is on a longword in `$LOCAL`, the frame, COMMON, and a module's
+    section (`boundary`). The module text writes `, POINTER`, and USE's copy
+    keeps it (`TestModulePointers`). A frame pointer is cleared at every entry
+    point (`ir/lowerpointer.go`'s `clearPointers`, from `clearAllocatables`;
+    `entryClears` counts it), a CHARACTER one's header written too.
+  - *References* (finding 3). sema keeps a reference to a pointer a `Var` of its
+    symbol; `symbolMem` sends a pointer to `pointerTargetMem`, a `Mem` whose
+    `Ptr` is the cell's longword (a CHARACTER pointer's descriptor's POINTER),
+    so expressions, assignments, I/O items, internal files, and actual
+    arguments (`PUSHAL @P`, the target's address at no cost) all work unchanged,
+    and so do a record pointer's components (`PP%X`) and an internal procedure's
+    use of its host's pointer.
+  - *`=>`, NULLIFY, ASSOCIATED* (findings 4, 5). `sema.PointerAssign`,
+    `Nullify`, and `Associated` (ASSOCIATED analyzed by sema itself, as
+    ALLOCATED is: `associatedRef`, keywords POINTER= and TARGET=). A target must
+    be a variable whose base (`targetBase`: a substring's, an element's, a
+    component's) is a TARGET or a pointer (NOTTARGET), not a function's
+    reference (POINTERFUNC), of the pointer's type, kind, and rank, and length
+    when both are constants (POINTERTYPE; `targetRank` reads a whole array's
+    rank from its symbol). Lowering: `=>` stores the target's address (`MOVAL
+    N,P`; a pointer's own longword for `Q => P`), a CHARACTER pointer's header
+    first (its declared length, `DSC$K_DTYPE_T`, `DSC$K_CLASS_S`); NULLIFY
+    stores 0; ASSOCIATED tests or compares addresses, with a pointer target
+    also that P isn't 0, and with a CHARACTER target of run-time length also
+    that the length isn't 0 (answer 4).
+  - *Overlap* (finding 10, the scalar half). `mayShare` learns pointers now,
+    not in subtask 3, since a scalar pointer read in an array assignment into
+    its own target (`V = V + E`, `E => V(3)`) must be read once: a pointer may
+    share with another pointer, a TARGET (a dummy too), or anything in COMMON
+    (answer 3), of a type it may meet (`pointerMayMeet`: the same type and kind,
+    any two CHARACTERs, or a record with anything). So `Hoisted` reads E before
+    the loops.
+  - *The optimizer* needed nothing yet: a place through a pointer is
+    `UnknownRegion`, conflicting with everything, and `P => T` takes T's
+    address, so T is "taken" and a call may change it. Subtask 7 makes that
+    bolder (`PointerRegion`). A pointer's own cell may go to a register.
+  - *Listings and the debugger.* The storage map's type says `INTEGER, POINTER`
+    (`codegen.typeText`). The `/DEBUG` table leaves pointers out, rather than
+    let the debugger show an address as a value (finding 12: Phase 110's).
+  - *Tests.* `parse`'s `TestPointerForms`; `sema`'s `TestPointers` (every message
+    and NOTIMPL); `ir` and `codegen` golden `f90ptr.for`;
+    `TestModulePointers`; `testdata/fortran90/pointers.f90`, worked by hand, in
+    every mode and both loaders, and the same on gfortran (`compare.py`): targets
+    of every kind, records, an internal file, READ, an actual argument, a module's
+    pointer changing a TARGET during a call, a COMMON pointer, a loop storing
+    through a pointer to a variable the optimizer would keep in a register, and
+    the overlap. `TestF90StatementsNotImplemented` now expects no NOTIMPL.
+  - *Docs.* MANUAL.md's 14.13 ("Pointers", and "Not there yet"'s example), HELP
+    FORTRAN.

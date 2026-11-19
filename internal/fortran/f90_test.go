@@ -91,9 +91,10 @@ func TestF90LexicalItems(t *testing.T) {
 }
 
 // TestF90StatementsNotImplemented compiles Fortran 90's statements through
-// every pass (docs/planning/PHASE-99 - Fortran 90.md, subtask 5): each is
+// every pass (docs/planning/PHASE-99 - Fortran 90.md, subtask 5): each was
 // NOTIMPL by name where it is, a construct's inner statements and a module's
-// contents saying nothing more, and named ENDs compile.
+// contents saying nothing more, until its phase compiled it (none is left since
+// Phase 107), and named ENDs compile.
 func TestF90StatementsNotImplemented(t *testing.T) {
 	lines := []string{
 		"module shapes", // 1
@@ -144,9 +145,8 @@ func TestF90StatementsNotImplemented(t *testing.T) {
 		}
 	}
 
-	want := []string{
-		"30:3 the pointer assignment statement",
-	}
+	// Pointer assignment, the last of them, compiles since Phase 107.
+	var want []string
 
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))

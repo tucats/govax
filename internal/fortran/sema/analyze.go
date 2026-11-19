@@ -719,6 +719,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.equivalences()
 	a.checkAllocatables()
 	a.checkArrays()
+	a.checkPointers()
 	a.checkCommonSizes()
 	a.saves()
 	a.storageStatements()

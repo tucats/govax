@@ -1098,6 +1098,10 @@ func (w *moduleWriter) variable(s *Symbol, name string) {
 		spec += ", TARGET"
 	}
 
+	if s.Pointer {
+		spec += ", POINTER"
+	}
+
 	w.put(1, spec+" :: "+name+dimsText(s.Dims))
 }
 

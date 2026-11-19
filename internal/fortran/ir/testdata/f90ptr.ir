@@ -1,0 +1,59 @@
+routine F90PTR main
+  cell  N       L  $LOCAL+0    variable N
+  cell  M       L  $LOCAL+4    variable M
+  cell  P       L  $LOCAL+8    variable P
+  cell  Q       L  $LOCAL+12   variable Q
+  cell  S       B  $LOCAL+16   variable S
+  cell  C       B  $LOCAL+20   variable C
+  cell  $T1     L  $LOCAL+28   temporary
+  cell  $D2     L  $LOCAL+32   descriptor T S 2
+  $LOCAL is 40 bytes
+  datum $K1     text 'AB'
+  datum $IO1    control
+  datum $D1     descriptor LU S 4 $T1
+B1:
+  ; line 13
+  assign Q = 0
+  ; line 14
+  assign P = addr(N)
+  ; line 15
+  assign @(P) = add.L(@(P), 1)
+  ; line 16
+  assign Q = P
+  ; line 17
+  branch and.L(and.L(eq.L(Q, P), ne.L(Q, 0)), not.L(eq.L(P, addr(M)))) B2 B3
+B2:
+  call X(ref @(Q))
+  jump B3
+B3:
+  ; line 18
+  assign C = 17694722
+  assign C+4 = addr(S+1)
+  ; line 19
+  move @(C+4)(2) = $K1(2)
+  ; line 20
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $T1 = ne.L(C+4, 0)
+  call FTN$IO_ITEM(ref $D1)
+  assign $D2+4 = addr(@(C+4))
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 21
+  return 1
+routine R subroutine
+  param K       L  argument 1
+  cell  L       L  frame+0    variable L
+  $LOCAL is 0 bytes
+  the frame is 4 bytes
+B1:
+  assign L = 0
+  ; line 26
+  branch not.L(ne.L(L, 0)) B2 B3
+B2:
+  assign L = addr(@K)
+  jump B3
+B3:
+  ; line 27
+  assign @(L) = 0
+  ; line 28
+  return

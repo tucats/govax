@@ -107,6 +107,12 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.Allocate:
 		l.allocate(s)
 
+	case *sema.PointerAssign:
+		l.pointerAssign(s)
+
+	case *sema.Nullify:
+		l.nullify(s)
+
 	case *sema.Stop:
 		l.stop(s)
 

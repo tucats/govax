@@ -61,9 +61,10 @@ type Allocated struct {
 
 // checkShapes settles each array with a deferred shape, once every declaration,
 // ALLOCATABLE's among them, is read: an allocatable array must have one, all
-// colons with no lower bounds (ALLOCSHAPE, DEFERREDMIX), and nothing else may
-// (DEFERREDNOTALLOC, SHAPENOTDUMMY), but a dummy's, whose colons are an assumed
-// shape.
+// colons with no lower bounds (ALLOCSHAPE, DEFERREDMIX), an array pointer
+// too (POINTERSHAPE; docs/planning/PHASE-107 - Fortran 90 pointers.md, finding
+// 1), and nothing else may (DEFERREDNOTALLOC, SHAPENOTDUMMY), but a dummy's,
+// whose colons are an assumed shape.
 func (a *analyzer) checkShapes() {
 	for _, s := range a.unit.Symbols {
 		if s.broken {
@@ -80,6 +81,11 @@ func (a *analyzer) checkShapes() {
 		}
 
 		switch {
+		case deferred == 0 && s.Pointer && s.Dims != nil:
+			a.report("POINTERSHAPE", s.DimPos, s.Name)
+
+			s.broken = true
+
 		case deferred == 0:
 			if s.Allocatable {
 				a.report("ALLOCSHAPE", s.Pos, s.Name)
@@ -98,6 +104,14 @@ func (a *analyzer) checkShapes() {
 			s.broken = true
 
 		case s.Allocatable:
+
+		case s.Pointer && lowered:
+			a.report("POINTERSHAPE", s.DimPos, s.Name)
+
+			s.broken = true
+
+		case s.Pointer:
+			// An array pointer's shape is its target's (pointer.go).
 
 		case s.Dummy != 0:
 			// An assumed shape (shaped.go).
@@ -174,6 +188,14 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 	for _, d := range s.Objects {
 		sym := a.lookup(d.Name, d.Pos)
 		a.note(&sym.refs, d.Pos, RefAssigned)
+
+		if sym.Pointer && !sym.broken {
+			a.notImplForm(d.Pos, s.Kind.String()+" of a pointer")
+
+			ok = false
+
+			continue
+		}
 
 		if !sym.Allocatable || sym.broken {
 			if !sym.broken {

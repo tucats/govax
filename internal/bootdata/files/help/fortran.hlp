@@ -385,8 +385,27 @@
    A module and its users must agree on /G_FLOATING if the module has
    REAL*8 or COMPLEX*16 entities (%FORT-E-MODFORMAT).
 
-   Fortran 90's other statements (POINTER and the rest) are
-   recognized and draw %FORT-E-NOTIMPL until they are
+   A POINTER points at a TARGET variable (or a part of one, or another
+   pointer's target) and stands for it wherever a value or variable is
+   wanted:
+
+     integer, target :: n
+     integer, pointer :: p
+     p => n                     ! P points at N
+     p = 5                      ! so N is 5
+     if (associated (p, n)) nullify (p)
+
+   A pointer is its target's address (a CHARACTER pointer a class S
+   descriptor), so a pointer passed to an ordinary dummy passes its
+   target.  Every pointer starts disassociated, a frame's cleared at
+   each entry (Fortran 95's rule; Fortran 90 leaves it undefined).  A
+   target that isn't a TARGET is %FORT-E-NOTTARGET, one of another type
+   %FORT-E-POINTERTYPE; a pointer may not be in DATA, NAMELIST, or
+   EQUIVALENCE, nor given a value (%FORT-E-POINTERATTR).  Array
+   pointers, ALLOCATE of a pointer, pointer components, pointer dummy
+   arguments, and pointer results are not there yet.
+
+   What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may
    hold "..." constants under /F90; one in a variable can't yet, and
    FTNRTL refuses it, %FOR-F-SYNERRFOR.

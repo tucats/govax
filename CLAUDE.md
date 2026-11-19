@@ -1263,7 +1263,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   Phase 107 (in progress) is pointers: subtask 1 (2026-11-19) is the survey,
   its doc's Part A, accepted by the author the same day (Decision 12's
   storage confirmed; the aliasing rule as a `PointerRegion` by type class;
-  "The author's answers").
+  "The author's answers"); subtask 2 (2026-11-19) scalar and character
+  pointers (`sema/pointer.go`: `Symbol.Pointer`, `PointerSize`, a longword or a
+  class S descriptor; `PointerAssign`, `Nullify`, `Associated`, NOTTARGET,
+  POINTERTYPE, POINTERATTR; `checkPointers`' NOTIMPLs for later subtasks; a
+  reference is a `Var`, which `ir/lowerpointer.go`'s `pointerTargetMem` reaches
+  through the cell; frame pointers cleared at entry; `mayShare`'s pointer rule;
+  `testdata/fortran90/pointers.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

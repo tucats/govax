@@ -33,7 +33,7 @@ func TestAllocatable(t *testing.T) {
 		{"of a derived type", prog("type t", "real x", "end type", "type(t), allocatable :: r(:, :)",
 			"allocate (r(2, 2))", "r%x = 1.0", "r(1, 2) = t(2.0)"), ""},
 
-		{"a deferred shape not allocatable", prog("real a(:)"), "DEFERREDNOTALLOC: A has a deferred shape, (:), so it must be ALLOCATABLE"},
+		{"a deferred shape not allocatable", prog("real a(:)"), "DEFERREDNOTALLOC: A has a deferred shape, (:), so it must be ALLOCATABLE or a POINTER"},
 		{"colons and bounds", prog("real, allocatable :: a(:, 3)"), "DEFERREDMIX: the bounds of A must be all colons or none"},
 		{"bounds on an allocatable", prog("real, allocatable :: a(3)"),
 			"ALLOCSHAPE: A is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},

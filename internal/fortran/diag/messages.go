@@ -1560,7 +1560,7 @@ var messages = map[string]kind{
 	// object twice in one statement. BADSTAT is a STAT= that doesn't name an
 	// INTEGER variable or array element, and STATSELF one that uses an object
 	// of its own statement (6.3.1's and 6.3.3's constraints).
-	"DEFERREDNOTALLOC": {Error, "%s has a deferred shape, (:), so it must be ALLOCATABLE"},
+	"DEFERREDNOTALLOC": {Error, "%s has a deferred shape, (:), so it must be ALLOCATABLE or a POINTER"},
 	"DEFERREDMIX":      {Error, "the bounds of %s must be all colons or none"},
 	"ALLOCSHAPE":       {Error, "%s is ALLOCATABLE, so it must be an array whose bounds are all colons, (:)"},
 	"ALLOCDUMMY":       {Error, "%s can't be ALLOCATABLE: it is %s"},
@@ -1571,6 +1571,23 @@ var messages = map[string]kind{
 	"ALLOCOBJECT":      {Error, "%s is named twice in one %s statement"},
 	"BADSTAT":          {Error, "a STAT= specifier must name an INTEGER variable or array element"},
 	"STATSELF":         {Error, "the STAT= specifier can't use %s, which the same statement allocates or deallocates"},
+
+	// Pointers (docs/planning/PHASE-107 - Fortran 90 pointers.md). POINTERSHAPE
+	// is an array POINTER whose bounds aren't all colons (5.1.2.4.3);
+	// POINTERATTR a pointer in DATA, EQUIVALENCE, or a NAMELIST group, or given
+	// an initial value (5.1, 5.2.9, 5.4, 5.5.1), the reason its last argument.
+	// NOTPOINTER is pointer assignment, NULLIFY, or ASSOCIATED of what isn't a
+	// pointer; NOTTARGET a target that is neither a TARGET, a part of one, nor a
+	// pointer (7.5.2's constraints); POINTERTYPE a target of another type, kind,
+	// length, or rank than the pointer's; POINTERFUNC a function's reference
+	// that isn't a pointer's (7.5.2: only a function whose result is a pointer
+	// gives a target).
+	"POINTERSHAPE": {Error, "%s is an array POINTER, so its bounds must all be colons, (:)"},
+	"POINTERATTR":  {Error, "the pointer %s can't %s"},
+	"NOTPOINTER":   {Error, "%s is not a pointer"},
+	"NOTTARGET":    {Error, "%s is neither a TARGET, a part of one, nor a pointer, so no pointer may point at it"},
+	"POINTERTYPE":  {Error, "the pointer %s points at %s, so its target can't be %s"},
+	"POINTERFUNC":  {Error, "the target %s is a function reference, and only a function whose result is a pointer gives a target"},
 
 	// Assumed-shape dummies (docs/planning/PHASE-104 - Fortran 90 dynamic
 	// arrays.md, findings 9 and 10). SHAPENOTDUMMY is a shape (lb:) on an array

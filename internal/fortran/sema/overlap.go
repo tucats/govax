@@ -554,12 +554,19 @@ func baseSymbol(e Expr) *Symbol {
 // two names an EQUIVALENCE ties together. Two dummy arguments are taken to be
 // apart, by the rule the optimizer keeps too (the standard's 12.5.2.9: a
 // program may not change what one name refers to through another).
+//
+// A pointer's storage is its target's, wherever that is (docs/planning/PHASE-107 -
+// Fortran 90 pointers.md, finding 10): it may share with another pointer, with a
+// TARGET (a dummy too), or with anything in COMMON, which another unit may make a
+// TARGET (the author's answer 3), if the two types may meet (pointerMayMeet).
 func mayShare(x, y *Symbol) bool {
 	switch {
 	case x == nil || y == nil:
 		return false
 	case x == y:
 		return true
+	case x.Pointer || y.Pointer:
+		return pointerMayReach(x, y) || pointerMayReach(y, x)
 	case x.Dummy != 0 || y.Dummy != 0:
 		return false
 	case x.Common != nil || y.Common != nil:
@@ -567,6 +574,32 @@ func mayShare(x, y *Symbol) bool {
 	}
 
 	return x.group != nil && x.group == y.group
+}
+
+// pointerMayReach reports whether p, if it is a pointer, may point into the
+// storage of y: another pointer's target, a TARGET, or something in COMMON, of a
+// type p's may meet.
+func pointerMayReach(p, y *Symbol) bool {
+	if !p.Pointer || !y.Pointer && !y.Target && y.Common == nil {
+		return false
+	}
+
+	return pointerMayMeet(p.Type, y.Type)
+}
+
+// pointerMayMeet reports whether a pointer to a value of type t may point at
+// storage that a name of type u holds: the same type and kind, any two
+// CHARACTER lengths (a pointer may point at a substring), or a record of any
+// kind, whose fields may be of the other's type (finding 11).
+func pointerMayMeet(t, u Type) bool {
+	switch {
+	case t.Kind == Record || u.Kind == Record:
+		return true
+	case t.Kind == Character || u.Kind == Character:
+		return t.Kind == u.Kind
+	}
+
+	return t == u
 }
 
 // slot is one subscript of an array leaf or target, as overlap compares them:
