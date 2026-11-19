@@ -449,6 +449,11 @@ func (a *analyzer) dataItems(e ast.Expr, vars map[string]int32, vals *dataValues
 
 	case *ast.ImpliedDo:
 		return a.dataImpliedDo(e, vars, vals)
+
+	case *ast.FieldRef:
+		if a.derivedField(e) {
+			return a.dataComponent(e, vars, vals)
+		}
 	}
 
 	a.report("DATAFORM", e.Position())
@@ -458,6 +463,10 @@ func (a *analyzer) dataItems(e ast.Expr, vars map[string]int32, vals *dataValues
 
 // dataItem gives one item the next constant.
 func (a *analyzer) dataItem(s *Symbol, offset int, t Type, text string, pos diag.Position, vals *dataValues) bool {
+	if t.Kind == Record {
+		return a.dataRecordItem(s, offset, t, text, pos, vals)
+	}
+
 	v, ok := vals.next(pos)
 	if !ok {
 		return false
@@ -517,8 +526,9 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 
 		return s, false
 
-	case s.Struct != nil:
-		// Section 4.13: its initial values are its structure's.
+	case s.Struct != nil && !s.Struct.Derived:
+		// Section 4.13: its initial values are its structure's. A derived
+		// type's object may be (datatypes.go).
 		a.badUse(s, pos, "be in a DATA statement")
 
 		s.broken = true
@@ -598,9 +608,9 @@ func (a *analyzer) dataElement(e *ast.Apply, vars map[string]int32) (*Symbol, in
 // dataSubstring is a substring in a list: one item, of its own length.
 func (a *analyzer) dataSubstring(e *ast.Substring, vars map[string]int32, vals *dataValues) bool {
 	var (
-		s      *Symbol
-		number int
-		ok     bool
+		s    *Symbol
+		item dataSlot
+		ok   bool
 	)
 
 	switch x := e.X.(type) {
@@ -611,8 +621,24 @@ func (a *analyzer) dataSubstring(e *ast.Substring, vars map[string]int32, vals *
 			return false
 		}
 
+		item = dataSlot{0, s.Type, s.Name}
+
 	case *ast.Apply:
-		s, number, ok = a.dataElement(x, vars)
+		var number int
+
+		if s, number, ok = a.dataElement(x, vars); ok {
+			item = dataSlot{number * s.Type.Size, s.Type, s.elementText(number)}
+		}
+
+	case *ast.FieldRef:
+		// ORIGIN%NAME(2:4), a component's substring (datatypes.go).
+		if !a.derivedField(x) {
+			a.report("DATAFORM", e.Pos)
+
+			return false
+		}
+
+		s, item, ok = a.dataComponentSubstring(x, vars)
 
 	default:
 		a.report("DATAFORM", e.Pos)
@@ -622,13 +648,20 @@ func (a *analyzer) dataSubstring(e *ast.Substring, vars map[string]int32, vals *
 		return false
 	}
 
-	if s.Type.Kind != Character {
-		a.report("DATASUBSTR", e.Pos, s.Name, s.Type.String())
+	// The messages name an array's element by its array, a component by
+	// itself.
+	named := s.Name
+	if _, ok := e.X.(*ast.FieldRef); ok {
+		named = item.text
+	}
+
+	if item.t.Kind != Character {
+		a.report("DATASUBSTR", e.Pos, named, item.t.String())
 
 		return false
 	}
 
-	first, last := 1, s.Type.Size
+	first, last := 1, item.t.Size
 
 	if e.Lower != nil {
 		v, ok := a.dataInt(e.Lower, vars)
@@ -648,20 +681,14 @@ func (a *analyzer) dataSubstring(e *ast.Substring, vars map[string]int32, vals *
 		last = int(v)
 	}
 
-	if first < 1 || first > last || last > s.Type.Size {
-		a.report("DATASUBRANGE", e.Pos, first, last, s.Name, s.Type.Size)
+	if first < 1 || first > last || last > item.t.Size {
+		a.report("DATASUBRANGE", e.Pos, first, last, named, item.t.Size)
 
 		return false
 	}
 
-	text := s.Name
-	if s.Class == Array {
-		text = s.elementText(number)
-	}
-
-	text += "(" + strconv.Itoa(first) + ":" + strconv.Itoa(last) + ")"
-
-	return a.dataItem(s, number*s.Type.Size+first-1, Type{Kind: Character, Size: last - first + 1}, text, e.Pos, vals)
+	return a.dataItem(s, item.offset+first-1, Type{Kind: Character, Size: last - first + 1},
+		substringText(item.text, first, last), e.Pos, vals)
 }
 
 // dataImpliedDo is an implied-DO list, (dlist, i=n1,n2[,n3]). Its variable

@@ -712,6 +712,15 @@ var messages = map[string]kind{
 	// COMMONDUMMY is a dummy argument in a common block.
 	"COMMONDUMMY": {Error, "%s is a dummy argument, so it can't be in a common block"},
 
+	// NOSEQUENCE is an object of a derived type without SEQUENCE in a common
+	// block or an EQUIVALENCE list (the standard's 5.5.2, 5.5.1), and
+	// EQUIVCOMPONENT a component in an EQUIVALENCE list (R547). EQUIVTYPE is
+	// a list breaking 5.5.1's type classes, numbers and characters one class
+	// (docs/planning/PHASE-105 - Fortran 90 derived types.md, finding 12).
+	"NOSEQUENCE":     {Error, "%s is an object of the derived type %s, which has no SEQUENCE statement, so it can't be %s"},
+	"EQUIVCOMPONENT": {Error, "%s is a component, which can't be in an EQUIVALENCE list: only its whole object can"},
+	"EQUIVTYPE":      {Error, "%s, of type %s, can't share storage with %s, of type %s: %s"},
+
 	// DUPCOMMON is a name listed in a common block twice, or in two.
 	"DUPCOMMON": {Error, "%s is already in %s"},
 
@@ -780,7 +789,7 @@ var messages = map[string]kind{
 
 	// DATAFORM is an item a list can't hold: an implied-DO list holds
 	// array elements, substrings, and other implied-DO lists, no bare names.
-	"DATAFORM": {Error, "a DATA list can hold only variables, arrays, array elements, substrings, and implied-DO lists, and an implied-DO list no variable or array by itself"},
+	"DATAFORM": {Error, "a DATA list can hold only variables, arrays, array elements, substrings, components, and implied-DO lists, and an implied-DO list no variable or array by itself"},
 
 	// DATACONST is a subscript or bound that isn't constant.
 	"DATACONST": {Error, "a subscript, substring bound, or implied-DO limit in a DATA list must be an integer constant expression"},

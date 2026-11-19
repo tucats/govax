@@ -563,6 +563,15 @@ func (p *parser) constant() ast.Expr {
 	case t.Kind == lex.Name:
 		p.next()
 
+		// A name and a parenthesized list is Fortran 90's structure
+		// constructor, POINT(1.0, 2.0) (the standard's R533), whose values
+		// are expressions: inside the parentheses a / is a division, not the
+		// list's end. Nothing else could follow a name here, so this reading
+		// changes no older program.
+		if p.at("(") {
+			return &ast.Apply{ExprBase: base, Name: t.Text, Args: p.subscripts()}
+		}
+
 		return &ast.Name{ExprBase: base, Name: t.Text}
 	}
 

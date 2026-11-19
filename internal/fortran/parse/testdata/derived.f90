@@ -24,6 +24,16 @@ program shapes
   p%x = 3.0
 end program shapes
 
+block data inits
+  type point
+    sequence
+    real x, y
+  end type
+  type(point) o, q(2)
+  common /pts/ o, q
+  data o / point(1.0 / 2, -3) /, q(1)%x, q(2) / 2*point(0, 0) /
+end block data inits
+
 type(point) function mid(a, b)
   type point
     real x, y

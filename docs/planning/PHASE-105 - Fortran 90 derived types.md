@@ -449,7 +449,8 @@ all three.
      type to assumed-shape dummies by stride and to old ones by copy;
      allocatable, automatic, assumed-shape, and array-valued arrays of a type,
      and the same for records (done 2026-11-18).
-6. **COMMON, EQUIVALENCE, DATA** with SEQUENCE types (finding 12).
+6. **COMMON, EQUIVALENCE, DATA** with SEQUENCE types (finding 12) (done
+   2026-11-18).
 7. **I/O and NAMELIST:** the compiler's expansion, unformatted bytes and their
    pieces (finding 13); NAMELIST's entities and FTNRTL's names (finding 14).
 8. **Programs end to end** (a geometry program with constructors and defined
@@ -820,3 +821,48 @@ object are never the same type, with a message naming both.
     is in `testdata/ftn86`'s procedure (`gen.go` rerun) and `ftn86AwaitingVMS`.
     MANUAL.md's 14.13 has "Arrays of derived types as arguments, and dynamic ones".
     Subtask 6, COMMON, EQUIVALENCE, and DATA, is next.
+- **2026-11-18, subtask 6 (done):** COMMON, EQUIVALENCE, and DATA (finding 12;
+  `sema/seqtypes.go`, `sema/datatypes.go`).
+  - *COMMON* took every record already, laid out whole by its `Boundary`; now an
+    object of a type without SEQUENCE is NOSEQUENCE (new, 5.5.2), checked after the
+    declarations (`checkCommonTypes`), since a TYPE(t) statement may follow the
+    COMMON statement. A STRUCTURE's record stays allowed, as VAX FORTRAN has it.
+  - *EQUIVALENCE* takes an object of a SEQUENCE type, whole, as an array element,
+    or anywhere a name may be (`equivalenceName`); a type without SEQUENCE is
+    NOSEQUENCE, a component EQUIVCOMPONENT (new, R547), a STRUCTURE's record and its
+    fields refused as before (BADUSE, EQUIVFORM). The type classes (the author's
+    answer 6) are `equivalenceClasses`, checked per list: a sequence type whose
+    ultimate components are all INTEGER\*4, LOGICAL\*4, REAL\*4, REAL\*8,
+    COMPLEX\*8, or CHARACTER is of the default class (`componentsClass`; numbers
+    and characters one class, the exception), and shares storage with objects of
+    those types and other such sequence types; a sequence type of the other class
+    only with objects of its own type (`sameType`); EQUIVTYPE (new) otherwise. A
+    list with no derived-type object keeps VAX FORTRAN's rules untouched. "Default"
+    is by size, not by `/[NO]I4`: under `/NOI4` an INTEGER component is INTEGER\*2,
+    which isn't a numeric storage unit, and so of the other class (ours).
+  - *DATA.* The parser's constant list reads a name and a parenthesized list as a
+    structure constructor (`parse/decl.go`'s `constant`), its values expressions,
+    so `POINT(1.0 / 2, -3)` and `2*PAIR(1, 2)` are values; nothing older could
+    follow a name there. An item of a derived type (a whole object, an element, a
+    component of a derived type, in an implied-DO list too) takes a constant of its
+    type (`dataRecordItem`; DATATYPE for another type, a number, or text), which
+    becomes an Initial per scalar component as a declaration's `= value` does
+    (`valueInitials`). A component designator (`dataComponent`,
+    `dataComponentSlots`) names its items in array element order: `B%FIRST`,
+    `L%MARKS(2)`, `L%MARKS` (every element), `PTS%X` (every element's), `L(2)%AT`,
+    with MULTIRANK for two ranked parts and NOTIMPL for a section, as for an array;
+    a component's substring is `dataSubstring`'s (`L%TEXT(2:3)`). A type
+    statement's old `/ value /` takes a constructor the same way. A field of
+    anything but a derived-type object stays DATAFORM, and a STRUCTURE's record
+    BADUSE, as before (`derivedField`), so no `/NOF90` message changes; DATAFORM's
+    text now names components.
+  - *Tests:* `sema`'s `TestDataDerived` (every item form's Initials) and
+    `TestSequenceStorage` (every message); `parse/testdata/derived.f90`'s BLOCK DATA;
+    `testdata/fortran90`'s `seqtypes.f90` (a common block of SEQUENCE objects
+    defined again in each unit, given values by BLOCK DATA; DATA of objects,
+    elements, and components; an array of a numeric sequence type equivalenced with
+    an INTEGER array; in `compare.py`, gfortran printing the same lines) and
+    `seqshare.f90` (a character and a numeric sequence type and a CHARACTER
+    variable sharing storage, VAX's extension, not gfortran's), in every mode and
+    with paging on. MANUAL.md's 14.13 has "Derived types in COMMON, EQUIVALENCE, and
+    DATA". Subtask 7, I/O and NAMELIST, is next.

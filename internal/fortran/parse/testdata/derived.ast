@@ -22,18 +22,28 @@
 23          R = (+ A.X PATH(1).ENDS(1).Y)
 24          P%X = 3.0
 25          END PROGRAM SHAPES
-== FUNCTION MID
-27          TYPE(POINT) FUNCTION MID(A, B)
+== BLOCK DATA INITS
+27          BLOCK DATA INITS
 28          TYPE POINT
-29            REAL X, Y
-30            END TYPE
-31          TYPE(POINT) A, B
-32          MID%X = (/ (paren (+ A%X B%X)) 2)
-33          END FUNCTION MID
+29            SEQUENCE
+30            REAL X, Y
+31            END TYPE
+32          TYPE(POINT) O, Q(2)
+33          COMMON /PTS/ O, Q
+34          DATA O /POINT((/ 1.0 2), (- 3))/ Q(1)%X, Q(2) /2*POINT(0, 0)/
+35          END BLOCK DATA INITS
+== FUNCTION MID
+37          TYPE(POINT) FUNCTION MID(A, B)
+38          TYPE POINT
+39            REAL X, Y
+40            END TYPE
+41          TYPE(POINT) A, B
+42          MID%X = (/ (paren (+ A%X B%X)) 2)
+43          END FUNCTION MID
 == FUNCTION TWICE
-35          RECURSIVE TYPE(POINT) FUNCTION TWICE(A)
-36          TYPE POINT
-37            REAL X, Y
-38            END TYPE
-39          TYPE(POINT) A
-40          END
+45          RECURSIVE TYPE(POINT) FUNCTION TWICE(A)
+46          TYPE POINT
+47            REAL X, Y
+48            END TYPE
+49          TYPE(POINT) A
+50          END

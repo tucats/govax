@@ -626,6 +626,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.checkAlignGroups()
 	a.checkEntryTypes()
 	a.psectDirectives()
+	a.checkCommonTypes()
 	a.layoutCommon()
 	a.equivalences()
 	a.checkAllocatables()

@@ -1215,8 +1215,14 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   arrays of a type and of records to both; allocatable, automatic,
   assumed-shape, and array-valued arrays of a type, and of records; records'
   ranks checked by `argumentMismatch`; `testdata/fortran90`'s `typeargs.f90`,
-  `typedyn.f90`, `testdata/fortran/recdyn.for`); subtask 6, COMMON,
-  EQUIVALENCE, and DATA, is next.
+  `typedyn.f90`, `testdata/fortran/recdyn.for`); subtask 6 (2026-11-18) is
+  COMMON, EQUIVALENCE, and DATA (`sema/seqtypes.go`: only SEQUENCE objects in
+  COMMON and EQUIVALENCE, NOSEQUENCE, EQUIVCOMPONENT, the type classes by
+  `equivalenceClasses`, numbers and characters one class, EQUIVTYPE;
+  `sema/datatypes.go`: DATA's constructors, `dataRecordItem`, and component
+  designators, `dataComponentSlots`; the parser's constant list reading a
+  constructor; `testdata/fortran90`'s `seqtypes.f90`, `seqshare.f90`); subtask
+  7, I/O and NAMELIST, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

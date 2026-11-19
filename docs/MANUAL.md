@@ -8883,6 +8883,23 @@ dummy in place when the section is contiguous, else by a copy. Allocatable array
 arrays, assumed-shape dummies, and array-valued functions may all be of a derived type, and the
 same holds for a STRUCTURE's records (`RECORD /ITEM/ RB(:)` with ALLOCATABLE RB).
 
+**Derived types in COMMON, EQUIVALENCE, and DATA.** An object of a SEQUENCE type may be in a
+common block or an EQUIVALENCE list, whose units see its components in the order written; any
+other type's object may not (`%FORT-E-NOSEQUENCE`), nor may a component alone be equivalenced
+(`EQUIVCOMPONENT`). An object of a type whose components are all INTEGER, LOGICAL, REAL, DOUBLE
+PRECISION, COMPLEX, or CHARACTER of the default kinds shares storage with any such object, numbers
+and characters together as VAX FORTRAN allows; an object of any other SEQUENCE type (one with an
+INTEGER\*2 component, say) shares storage only with objects of its own type (`EQUIVTYPE`). DATA
+gives a whole object a structure constructor of constants, and a component a value of its type:
+
+```fortran
+type(pair) :: origin, corners(2), edge
+data origin / pair(0, 0) /, corners / 2*pair(1, 2) /
+data edge%first, edge%second / 4, 5 /
+```
+
+A STRUCTURE's record stays out of DATA and EQUIVALENCE, as before.
+
 All of it together:
 
 ```fortran

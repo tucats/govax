@@ -79,13 +79,18 @@ func (a *analyzer) equivalenceSet(set []ast.Expr, groups []*equivGroup) []*equiv
 		a.report("EQUIVONE", set[0].Position())
 	}
 
-	var first *equivItem
+	var (
+		first *equivItem
+		items []equivItem
+	)
 
 	for _, e := range set {
 		item, ok := a.equivalenceItem(e)
 		if !ok {
 			continue
 		}
+
+		items = append(items, item)
 
 		if item.sym.group == nil {
 			g := &equivGroup{members: []*Symbol{item.sym}}
@@ -101,6 +106,8 @@ func (a *analyzer) equivalenceSet(set []ast.Expr, groups []*equivGroup) []*equiv
 
 		a.mergeGroups(first, &item)
 	}
+
+	a.equivalenceClasses(items)
 
 	return groups
 }
@@ -145,6 +152,13 @@ func (a *analyzer) equivalenceItem(e ast.Expr) (equivItem, bool) {
 
 	case *ast.Substring:
 		return a.equivalenceSubstring(e)
+
+	case *ast.FieldRef:
+		if a.derivedField(e) {
+			a.equivalenceComponent(e)
+
+			return equivItem{}, false
+		}
 	}
 
 	a.report("EQUIVFORM", e.Position())
@@ -168,11 +182,18 @@ func (a *analyzer) equivalenceName(name string, pos diag.Position) (*Symbol, boo
 		return s, false
 
 	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
-		s.External || s.Class == Intrinsic || s.Struct != nil:
+		s.External || s.Class == Intrinsic || s.Struct != nil && !s.Struct.Derived:
 		// A record can't be (section 2.2.5.2): a union is how a structure's
 		// fields share storage.
 		a.badUse(s, pos, "be in an EQUIVALENCE list")
 
+		s.broken = true
+
+		return s, false
+
+	case a.notSequence(s, pos, "in an EQUIVALENCE list"):
+		// An object of a derived type may be, if the type is a SEQUENCE
+		// type (seqtypes.go).
 		s.broken = true
 
 		return s, false
@@ -264,6 +285,13 @@ func (a *analyzer) equivalenceSubstring(e *ast.Substring) (equivItem, bool) {
 	case *ast.Apply:
 		item, ok = a.equivalenceElement(x)
 
+	case *ast.FieldRef:
+		if !a.derivedField(x) {
+			a.report("EQUIVFORM", e.Pos)
+		} else {
+			a.equivalenceComponent(x)
+		}
+
 	default:
 		a.report("EQUIVFORM", e.Pos)
 	}
@@ -303,6 +331,13 @@ func (a *analyzer) equivalenceSubstring(e *ast.Substring) (equivItem, bool) {
 	item.offset += first - 1
 
 	return item, true
+}
+
+// equivalenceComponent reports a component in an EQUIVALENCE list, which may
+// name only whole objects and their elements and substrings (the standard's
+// R547): a component's storage is its object's, which is equivalenced whole.
+func (a *analyzer) equivalenceComponent(e *ast.FieldRef) {
+	a.report("EQUIVCOMPONENT", e.Pos, ast.DumpExpr(e))
 }
 
 // equivalenceConstant is the value of a subscript or a substring bound.
