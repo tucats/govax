@@ -1,8 +1,8 @@
 # Phase 108 — Fortran 90: the intrinsic procedures
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A), done 2026-11-19, for the author's
-review.
+Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
+author the same day ("The author's answers").
 
 ## Goal
 
@@ -304,7 +304,13 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    **`SYS$TIMEZONE_DIFFERENTIAL`** in the system table at startup, as VMS V6 and
    later do (seconds east of UTC, as text), from the host's offset then, and
    FTNRTL translates it with `$TRNLNM`; without it ZONE is blanks and VALUES (4)
-   -HUGE (0).
+   -HUGE (0). **Settled on VMS 7.1** (the author's check on the simh VAX,
+   2026-11-19): `SHOW LOGICAL SYS$TIMEZONE_DIFFERENTIAL` gives
+   `"SYS$TIMEZONE_DIFFERENTIAL" = "-18000" (LNM$SYSTEM_TABLE)`, a signed decimal
+   count of seconds (US Eastern standard time, UTC - 5 hours) in the system
+   table. govax writes the same form; a positive offset is written without a `+`
+   (unconfirmed: the VAX showed a negative one), and FTNRTL's reader takes an
+   optional sign either way.
 10. **SYSTEM_CLOCK** is `FTN$SYSTEM_CLOCK (count, rate, max)` (and `_W`): the
     rate 100 (the VAX clock's hundredths), the maximum HUGE of the default integer,
     the count the system time (`$GETTIM`, 100 ns units) in hundredths modulo the
@@ -335,7 +341,8 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
 
 ## A.4 The subtasks, revised
 
-1. **Survey** (this Part A) (done 2026-11-19, for review).
+1. **Survey** (this Part A) (done 2026-11-19; accepted by the author the same
+   day).
 2. **The table and keywords**: every row's class and dummies, the new names in
    `fortran90Table`, ISHFTC's optional SIZE, question 3's kinds, the intrinsic
    subroutines' table and MVBITS as the standard's (elemental too), GENERICINTRINSIC's
@@ -385,6 +392,30 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    any expression, elemental; only programs that were errors change); (b) under
    `/F90` only.
 
+## The author's answers (2026-11-19)
+
+The author read the survey and accepted every recommendation:
+
+1. New numeric routines (COMPLEX(16)'s functions and powers, the model functions)
+   are FTNRTL's, in MACRO over MTHRTL's H routines; MTHRTL's vector stays VMS's
+   (the plan's open question 1).
+2. RANDOM_NUMBER draws with MTH$RANDOM on a one-longword seed FTNRTL keeps (N = 1,
+   2 under `/NOI4`), wider formats from several draws, a fixed starting seed that
+   RANDOM_SEED () restores (the plan's open question 2).
+3. IBITS, IBCLR, and ISHFTC of an INTEGER\*2 give I's kind under `/F90`, the 1988
+   manual's INTEGER\*4 under `/NOF90`.
+4. The zone comes from `SYS$TIMEZONE_DIFFERENTIAL`, defined at startup from the
+   host's offset and read by FTNRTL. Its form on VMS 7.1 is settled by the author's
+   check (finding 9): a signed count of seconds in LNM$SYSTEM_TABLE, `"-18000"`. No
+   further probe is needed for the phase.
+5. TRANSFER's undefined tail is zero; SYSTEM_CLOCK's rate is 100 and its maximum
+   HUGE of the default integer, the count wrapping.
+6. REPEAT's error is FOR number 305, `%FOR-F-BADREPEAT`, "REPEAT count negative or
+   result too long".
+7. A declared zero length is a run-time length whose expression is 0, through
+   Phase 104's machinery.
+8. MVBITS follows the standard's rule under both settings.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -406,3 +437,7 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
   KEYWORDNOINTERFACE, MVBITS of a constant SYSARG. Tried on gfortran: its seed is
   8 integers, its clock's rate 1000, ADJUSTR, TRIM of blanks, SCAN with BACK,
   MODULO, and the model functions of REAL\*4 as the standard's examples give.
+- **2026-11-19:** The author accepted every recommendation ("The author's
+  answers"), and settled question 4's open point on the simh VAX: VMS 7.1's
+  `SYS$TIMEZONE_DIFFERENTIAL` is `"-18000"` in LNM$SYSTEM_TABLE, a signed count of
+  seconds (finding 9). No other probe is needed before the implementation.
