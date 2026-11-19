@@ -657,7 +657,7 @@ func (w *moduleWriter) procedure(pu *Unit, depth int, name string) {
 
 // dummy writes a dummy argument's declaration: a dummy procedure's interface
 // body or EXTERNAL (with its type for a function), any other's type,
-// dimensions, INTENT, and OPTIONAL.
+// dimensions, INTENT, OPTIONAL, TARGET, and POINTER.
 func (w *moduleWriter) dummy(p *Symbol, depth int) {
 	if !p.DummyProcedure() {
 		attrs := ""
@@ -667,6 +667,16 @@ func (w *moduleWriter) dummy(p *Symbol, depth int) {
 
 		if p.Optional {
 			attrs += ", OPTIONAL"
+		}
+
+		// Characteristics of the dummy too (12.2.1.1), which a reference must
+		// know: a pointer dummy is given the actual pointer itself.
+		if p.Target {
+			attrs += ", TARGET"
+		}
+
+		if p.Pointer {
+			attrs += ", POINTER"
 		}
 
 		w.entity(p, depth, attrs, p.Name)

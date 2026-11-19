@@ -334,19 +334,22 @@ type Cell struct {
 	// association: any call may read or change it (lowerinternal.go).
 	Reached bool
 
-	// At and Base, lowering's own, make a located cell: one with no storage of
-	// its own, the descriptor of an array pointer component in its record
-	// (lowerpointer.go's componentCell). Its storage is at At, a place with
-	// neither a computed address nor an index, or at the address the cell
-	// Base holds. No routine leaves lowering with a place naming such a cell:
-	// each is made to name where it is (locate.go).
+	// At, Base, and Arg, lowering's own, make a located cell: one with no
+	// storage of its own, the descriptor of an array pointer component in its
+	// record (lowerpointer.go's componentCell), or of an array pointer dummy
+	// argument in its caller (dummyPointerCell). Its storage is at At, a place
+	// with neither a computed address nor an index, at the address the cell
+	// Base holds, or at the address the argument list holds for the dummy Arg.
+	// No routine leaves lowering with a place naming such a cell: each is made
+	// to name where it is (locate.go).
 	At   *Mem
 	Base *Cell
+	Arg  *Param
 }
 
-// Located reports whether the cell is a located cell (At, Base).
+// Located reports whether the cell is a located cell (At, Base, Arg).
 func (c *Cell) Located() bool {
-	return c.At != nil || c.Base != nil
+	return c.At != nil || c.Base != nil || c.Arg != nil
 }
 
 // DatumKind is what a datum is.

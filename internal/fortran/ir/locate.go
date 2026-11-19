@@ -7,9 +7,11 @@ package ir
 // descriptor a cell that is only a name for its place, At (a record in
 // $LOCAL, in COMMON, in the frame) or the address in a temporary, Base (a
 // record reached through a pointer, a dummy, or an element whose subscripts
-// aren't constants), and when the routine is lowered, resolveLocated makes
-// every place that names such a cell name that place instead: H+8 rather than
-// H%V+4, or 4(R0) with R0 the address. Nothing after lowering, the optimizer
+// aren't constants); so too an array pointer dummy argument's descriptor, the
+// caller's own, at the address its argument holds, Arg. When the routine is
+// lowered, resolveLocated makes every place that names such a cell name that
+// place instead: H+8 rather than H%V+4, 4(R0) with R0 the address, or
+// @4(AP) for the dummy's first longword. Nothing after lowering, the optimizer
 // or the code generator, ever sees a located cell.
 
 // resolveLocated makes each place in r's code that names a located cell name
@@ -125,6 +127,12 @@ func locateMem(m *Mem) {
 
 		if c.Base != nil {
 			m.Cell, m.Ptr = nil, &Load{&Mem{Cell: c.Base, T: Long}}
+
+			continue
+		}
+
+		if c.Arg != nil {
+			m.Cell, m.Ptr = nil, &ArgPointer{c.Arg}
 
 			continue
 		}

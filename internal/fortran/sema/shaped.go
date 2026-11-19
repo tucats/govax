@@ -63,9 +63,12 @@ func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 			p = params[i]
 		}
 
-		if p != nil && p.AssumedShape() {
+		switch {
+		case p != nil && p.Pointer:
+			args[i] = a.pointerArg(e, i, s, p)
+		case p != nil && p.AssumedShape():
 			args[i] = a.shaped(a.argValue(e))
-		} else {
+		default:
 			args[i] = a.sequenced(a.argValue(e), p)
 		}
 
@@ -182,7 +185,8 @@ func shapeText(s *Symbol) string {
 
 // explicitDummy is the first dummy argument among params that makes a reference
 // need an explicit interface (12.3.1.1), and what kind it is, for EXPLICITREQ:
-// an OPTIONAL one, or an assumed-shape one. nil if there is none.
+// an OPTIONAL one, an assumed-shape one, a pointer, or a TARGET. nil if there
+// is none.
 func explicitDummy(params []*Symbol) (*Symbol, string) {
 	for _, p := range params {
 		switch {
@@ -190,6 +194,10 @@ func explicitDummy(params []*Symbol) (*Symbol, string) {
 			return p, "OPTIONAL"
 		case p.AssumedShape():
 			return p, "assumed-shape"
+		case p.Pointer:
+			return p, "pointer"
+		case p.Target:
+			return p, "TARGET"
 		}
 	}
 

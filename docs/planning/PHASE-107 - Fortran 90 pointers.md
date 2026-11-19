@@ -6,7 +6,8 @@ author the same day ("The author's answers"); subtask 2, scalar and character
 pointers, done 2026-11-19; subtask 3, array pointers, done 2026-11-19;
 subtask 4, ALLOCATE and DEALLOCATE of pointers, done 2026-11-19; subtask 5a,
 scalar pointer components and recursive types, done 2026-11-19; subtask 5b,
-array pointer components, done 2026-11-19.
+array pointer components, done 2026-11-19; subtask 6a, pointer dummies, done
+2026-11-19.
 
 ## Goal
 
@@ -432,7 +433,9 @@ The plan's order stands; each subtask's content is now the findings'.
    record, which every descriptor routine of the IR reaches only through a cell
    today) and `rankedStride` through an array pointer of records (done
    2026-11-19).
-6. **Pointer dummies and results** (findings 8, 9).
+6. **Pointer dummies and results** (findings 8, 9). Split in two when it began
+   (2026-11-19): **6a**, pointer dummies (finding 8) (done 2026-11-19); **6b**,
+   pointer results (finding 9), with `P => F(X)` and ENTRY in such a function.
 7. **The optimizer's aliasing rules:** `PointerRegion`, TARGETs' places, taken
    TARGETs, with programs that would print something else if the rule were wrong
    or too bold, both settings (finding 11).
@@ -832,3 +835,70 @@ The plan's open question 1 is settled by answer 1.
     3 and 21 stale pointers with the descriptor's offset left out of `PointerOffsets`).
   - *Docs.* MANUAL.md's 14.13 (array pointer components; "Not there yet"'s example
     now a pointer dummy), HELP FORTRAN.
+- **2026-11-19:** Subtask 6 split in two (A.4): **6a**, pointer dummies (finding 8),
+  and **6b**, pointer results (finding 9), which needs a new way back from a call
+  (a descriptor through a hidden argument) and `=>` from a function's reference.
+- **2026-11-19:** Subtask 6a, pointer dummies, done.
+  - *sema* (finding 8). A pointer dummy is no longer NOTIMPL, and a CHARACTER(LEN=*)
+    one is allowed (its length is its actual's, which the actual's descriptor holds);
+    any other CHARACTER pointer of a length known only when the program runs stays
+    NOTIMPL. `argsTo` sends a pointer dummy's actual to `pointerArg`, which reads it
+    as `=>` reads its pointer (`pointerObject`, now `pointerObjectOr` with the refusal
+    as a callback) and holds it to the dummy's type, kind, rank, and constant length:
+    the new **POINTERARG** names the argument, the routine, the dummy, and what the
+    dummy points at. `Arg.Pointer` marks it, and `argumentMismatch` and
+    `checkInterface`'s per-argument checks pass over it. A pointer's ASSOCIATED
+    note and INTENT(IN) check (`pointerHome`) are `=>`'s, since the callee may change
+    it. `explicitDummy` says a pointer or a **TARGET** dummy needs an explicit interface
+    (12.3.1.1; EXPLICITREQ's kind "pointer" or "TARGET"), and `dummyDifference` compares
+    POINTER and TARGET (INTERFACEDIFF, `attributeText`). INTENT with POINTER was
+    already ATTRPAIR.
+  - *The module text* writes a dummy's TARGET and POINTER (`modwrite`'s `dummy`): a
+    module procedure's interface had lost both, so a user passed a pointer dummy the
+    target, which the first run found (`TestModulePointers` now has a procedure with
+    pointer and TARGET dummies, and the call's code).
+  - *Lowering.* A pointer dummy's storage is the caller's pointer, at the address its
+    argument holds (`pointerStorage`: `@4(AP)`, or through ENTRY's `$An` cell, which
+    an internal procedure reaching its host's pointer dummy uses too); a scalar one's
+    target is a load of that longword, a CHARACTER one's its descriptor's POINTER,
+    and its length its descriptor's word, as a passed-length dummy's is
+    (`charLength`). An array pointer dummy's descriptor is a third kind of located
+    cell, **`Cell.Arg`**, the caller's descriptor at the argument's address
+    (`dummyPointerCell`, from `adjustableOf`), which `resolveLocated` turns into
+    `Mem{Ptr: ArgPointer}`; so every descriptor routine (elements, sections, bounds,
+    the scalarizer, `=>`, ALLOCATE, ASSOCIATED) reaches it with nothing new, and
+    there is no entry copy, unlike an assumed-shape dummy's. The caller passes the
+    address of its pointer's own storage (`pointerActual`: a named pointer's cell or
+    descriptor, a pointer component's place in its record, an array pointer
+    component's located cell), and writes what a callee may read and nothing else
+    has given: a CHARACTER pointer's header (its declared length, for a
+    `CHARACTER(LEN=*)` dummy), and an array pointer's unchanging longwords if it is
+    in COMMON or a record (`commonHeader`, for FTN$ALLOCATE in the callee). The
+    callee writes no header of a passed-length dummy (`setPointerHeader`) nor of an
+    array pointer dummy's descriptor (`commonHeader`), whose length is the actual's.
+    `allocateScalar`'s size is `pointerLength` for a CHARACTER pointer, so
+    `ALLOCATE (C)` of a `CHARACTER(LEN=*)` pointer dummy asks for its actual's length.
+    An OPTIONAL pointer dummy left out is the longword 0, and PRESENT is as before.
+  - *The optimizer.* A CHARACTER dummy's descriptor was `DescriptorRegion`, read-only,
+    and the text it points at the dummy's own: for a CHARACTER pointer dummy the
+    descriptor is the caller's pointer, which `=>` changes, and its target anybody's,
+    so `places.go` makes the first `DummyRegion` and the second unknown
+    (`isDescriptorPointer`); `TestStorageOnCorpus` caught the write to a "read-only"
+    descriptor. The register allocator doesn't take a pointer dummy for a scalar
+    whose value it may hold (its `Param.T` is the target's type, not an address's);
+    it may still keep a pointer dummy's address in a register in a loop, a target
+    reached through it being unknown either way. `pointerRoutines` counts F90PDUM's
+    unknown places apart until subtask 7.
+  - *Tests.* `sema`'s `TestPointerDummies` (every kind of actual, POINTERARG for a
+    target, an element, another type, an expression, another length; EXPLICITREQ for a
+    pointer and a TARGET dummy; INTERFACEDIFF; ATTRPAIR; the remaining NOTIMPLs) and
+    `TestPointers`' case; `TestModulePointers`; `ir` and `codegen` golden
+    `f90pdum.for`; `testdata/fortran90/ptrdum.f90`, worked by hand, every mode and both
+    loaders, the same on gfortran: a linked list's head and links passed to procedures
+    that push, drop, find, and free, an array grown with its lower bound kept, a
+    pointer dummy passed on as a pointer and as its target and reached by an internal
+    procedure, a `CHARACTER(LEN=*)` pointer dummy, an OPTIONAL one, a rank-two one,
+    pointer components as actuals, and a COMMON array pointer allocated by an external
+    procedure through an interface block.
+  - *Docs.* MANUAL.md's 14.13 (pointer dummies; "Not there yet"'s example now a pointer
+    result), HELP FORTRAN.

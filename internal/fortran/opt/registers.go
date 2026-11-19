@@ -800,8 +800,10 @@ func (a *allocator) findVariables() {
 		a.findVariable(home, c.Name, refsOf[c])
 	}
 
+	// A pointer dummy's argument points at the caller's pointer, an address,
+	// not a value of the dummy's type.
 	for _, p := range a.r.Params {
-		if p.Sym == nil || len(p.Sym.Dims) != 0 || isCharacter(p) || p.Sym.Volatile || p.T == ir.None {
+		if p.Sym == nil || len(p.Sym.Dims) != 0 || isCharacter(p) || p.Sym.Volatile || p.T == ir.None || p.Sym.Pointer {
 			continue
 		}
 

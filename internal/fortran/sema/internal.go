@@ -341,7 +341,7 @@ func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 
 		// An argument with an error has had its message.
 		if arg.Expr == nil || arg.Expr.Type().Kind == Invalid || p.broken || arg.Mode != ByDefault || arg.Hollerith ||
-			arg.Typeless || p.DummyProcedure() {
+			arg.Typeless || p.DummyProcedure() || arg.Pointer {
 			continue
 		}
 

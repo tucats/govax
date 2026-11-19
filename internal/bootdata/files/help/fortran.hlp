@@ -442,7 +442,21 @@
    V(:), used as a named one is: H%V => A(2:9), H%V(I), SIZE(H%V),
    ALLOCATE (H%V(0:N)).  With TYPE(NODE), POINTER :: KIDS(:),
    T%KIDS(2)%KEY is one child's KEY and T%KIDS%KEY every child's.
-   Pointer dummy arguments and pointer results are not there yet.
+
+   A dummy argument may be a pointer.  Its actual argument must be a
+   pointer of the same type, kind, and rank (%FORT-E-POINTERARG), and
+   the routine is given that pointer itself, so its =>, NULLIFY,
+   ALLOCATE, and DEALLOCATE change the caller's:
+
+     subroutine push (head, v)
+       type(node), pointer :: head
+       ...
+       new%next => head
+       head => new             ! the caller's HEAD
+
+   A routine with a pointer or TARGET dummy needs an explicit
+   interface (%FORT-E-EXPLICITREQ).  Pointer results are not there
+   yet.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.  A format written as a character constant may

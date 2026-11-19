@@ -275,7 +275,12 @@ func (l *lowerer) allocateScalar(p sema.Expr, deallocate bool, flags *Const, sta
 		bits |= allocClear
 	}
 
-	args := []Arg{{Ref: l.pointerOf(p)}, {Value: LongConst(bits)}, {Value: LongConst(int32(p.Type().Size))}}
+	size := Expr(LongConst(int32(p.Type().Size)))
+	if charPointer(p.Type()) {
+		size = l.pointerLength(p)
+	}
+
+	args := []Arg{{Ref: l.pointerOf(p)}, {Value: LongConst(bits)}, {Value: size}}
 
 	l.emit(&Call{origin: l.origin(), Routine: routine, Args: args, Result: status})
 }

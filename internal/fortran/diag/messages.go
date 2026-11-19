@@ -1602,6 +1602,13 @@ var messages = map[string]kind{
 	"POINTERPART":   {Error, "%s is of the type %s, which has a pointer component, so it can't %s"},
 	"POINTERRANKED": {Error, "the pointer component %s can't follow a part of the reference that has a rank"},
 
+	// Pointer dummies (docs/planning/PHASE-107 - Fortran 90 pointers.md,
+	// finding 8). POINTERARG is an actual argument of a pointer dummy that
+	// isn't a pointer to values of the dummy's type, kind, rank, and (when both
+	// are constants) length (12.4.1.1); its arguments are the argument's
+	// number, the procedure, the dummy, and what the dummy points at.
+	"POINTERARG": {Error, "argument %d of %s, for the pointer dummy argument %s, must be a pointer to %s"},
+
 	// Assumed-shape dummies (docs/planning/PHASE-104 - Fortran 90 dynamic
 	// arrays.md, findings 9 and 10). SHAPENOTDUMMY is a shape (lb:) on an array
 	// that isn't a dummy argument (5.1.2.4.2), nor ALLOCATABLE's (:), which

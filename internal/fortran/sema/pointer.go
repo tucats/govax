@@ -38,9 +38,9 @@ import (
 //
 // Scalar pointers (subtask 2), array pointers (subtask 3), ALLOCATE and
 // DEALLOCATE of pointers (subtask 4), and scalar pointer components (subtask
-// 5a: a FieldRef whose last field is one stands for the pointer here) are
-// compiled; array pointer components, and pointer dummies and results, are
-// NOTIMPL until their subtasks.
+// 5a: a FieldRef whose last field is one stands for the pointer here), array
+// pointer components (5b), and pointer dummies (6a: pointerArg) are compiled;
+// pointer results are NOTIMPL until their subtask.
 //
 // An array pointer, REAL, POINTER :: P(:, :), has a deferred shape: its shape,
 // bounds, and elements are its target's. P => A(1:9:2, :) makes P describe
@@ -115,8 +115,8 @@ func PointerSymbol(e Expr) *Symbol {
 
 // checkPointers reports what a pointer may not be, once the declarations have
 // said what each name is: in EQUIVALENCE (POINTERATTR; 5.5.1); and what this
-// compiler doesn't compile yet (NOTIMPL): a pointer dummy argument or function
-// result, a CHARACTER pointer whose length isn't constant.
+// compiler doesn't compile yet (NOTIMPL): a function result, a CHARACTER
+// pointer whose length isn't constant but a dummy's CHARACTER(*).
 // DATA's, NAMELIST's, and an initial value's are reported where those are read.
 func (a *analyzer) checkPointers() {
 	for _, s := range a.unit.Symbols {
@@ -134,11 +134,12 @@ func (a *analyzer) checkPointers() {
 		switch {
 		case s.Equivalenced:
 			a.report("POINTERATTR", s.equivPos, s.Name, "be in an EQUIVALENCE list")
-		case s.Dummy != 0:
-			a.notImplForm(s.Pos, "a pointer dummy argument")
 		case s.Result:
 			a.notImplForm(s.Pos, "a function whose result is a pointer")
-		case s.Type.Kind == Character && s.Type.Size == 0:
+		case s.Type.Kind == Character && s.Type.Size == 0 && !(s.Dummy != 0 && s.PassedLength()):
+			// A pointer dummy's CHARACTER(*) is its actual's length, which the
+			// actual's descriptor holds (finding 8); any other length known only
+			// when the program runs isn't compiled.
 			a.notImplForm(s.Pos, "a CHARACTER pointer whose length isn't constant")
 		default:
 			continue
@@ -154,6 +155,14 @@ func (a *analyzer) checkPointers() {
 // NOTPOINTER for anything else. assigned says the statement gives the
 // pointer an association, for the cross reference.
 func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
+	return a.pointerObjectOr(x, assigned, func(pos diag.Position, text string) {
+		a.report("NOTPOINTER", pos, text)
+	})
+}
+
+// pointerObjectOr is pointerObject with refuse saying what isn't a pointer,
+// at pos, named text, in place of NOTPOINTER.
+func (a *analyzer) pointerObjectOr(x ast.Expr, assigned bool, refuse func(pos diag.Position, text string)) Expr {
 	switch x := x.(type) {
 	case *ast.Name:
 		s := a.lookup(x.Name, x.Pos)
@@ -162,7 +171,7 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 		}
 
 		if !s.Pointer {
-			a.report("NOTPOINTER", x.Pos, x.Name)
+			refuse(x.Pos, x.Name)
 
 			return nil
 		}
@@ -198,11 +207,11 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 			return nil
 		case !ok:
 			// An element or a section of an array pointer component.
-			a.report("NOTPOINTER", x.Pos, ast.DumpExpr(x))
+			refuse(x.Pos, ast.DumpExpr(x))
 
 			return nil
 		case !f.IsPointer():
-			a.report("NOTPOINTER", x.Pos, f.Text())
+			refuse(x.Pos, f.Text())
 
 			return nil
 		}
@@ -215,9 +224,46 @@ func (a *analyzer) pointerObject(x ast.Expr, assigned bool) Expr {
 		return f
 	}
 
-	a.report("NOTPOINTER", x.Position(), ast.DumpExpr(x))
+	refuse(x.Position(), ast.DumpExpr(x))
 
 	return nil
+}
+
+// pointerArg analyzes x, argument n (from 0) of a reference to the procedure
+// proc, as the actual argument of the pointer dummy p (12.4.1.1): a pointer of
+// p's type, kind, rank, and (where both are constants) length, passed as itself
+// (Arg.Pointer), so that what the procedure does to p it does to the actual
+// (the author's answer 5). Anything else is POINTERARG. An OPTIONAL dummy's
+// argument left out is passed as the longword 0, as any other's.
+func (a *analyzer) pointerArg(x ast.Expr, n int, proc, p *Symbol) Arg {
+	if x == nil {
+		return Arg{}
+	}
+
+	refuse := func(pos diag.Position, _ string) {
+		a.report("POINTERARG", pos, n+1, proc.Name, p.Name, pointedText(p.Type, len(p.Dims)))
+	}
+
+	// nil after a message: POINTERARG, or the reference's own error.
+	ptr := a.pointerObjectOr(x, true, refuse)
+	if ptr == nil {
+		return Arg{Expr: a.bad(x.Position())}
+	}
+
+	pt, rank := ptr.Type(), targetRank(ptr)
+
+	same := sameTypes(p.Type, pt)
+	if p.Type.Kind == Character && pt.Kind == Character {
+		same = p.Type.Size == pt.Size || p.Type.Size == 0 || pt.Size == 0
+	}
+
+	if !same || rank != len(p.Dims) {
+		refuse(x.Position(), "")
+
+		return Arg{Expr: a.bad(x.Position())}
+	}
+
+	return Arg{Expr: ptr, Pointer: true}
 }
 
 // pointerTarget analyzes x as a target for the pointer ptr (7.5.2's

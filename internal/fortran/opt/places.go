@@ -253,8 +253,10 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 
 	case *ir.ArgPointer:
 		// What the argument list's longword points at: a CHARACTER dummy's
-		// descriptor, or a record dummy's record.
-		if isCharacter(ptr.Param) {
+		// descriptor, or a record dummy's record. A CHARACTER pointer dummy's
+		// descriptor is the caller's pointer, which the routine may change:
+		// the dummy's own storage, as any other pointer dummy's is.
+		if isCharacter(ptr.Param) && !ptr.Param.Sym.Pointer {
 			whole.Region, whole.Param = DescriptorRegion, ptr.Param
 
 			return whole
@@ -369,11 +371,13 @@ func isCharacter(p *ir.Param) bool {
 }
 
 // isDescriptorPointer reports whether m is the address field of the descriptor
-// a CHARACTER dummy's argument points at.
+// a CHARACTER dummy's argument points at, which points at the dummy's text. A
+// CHARACTER pointer dummy's descriptor is the caller's pointer, whose target is
+// anybody's (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 8).
 func isDescriptorPointer(m *ir.Mem) bool {
 	ptr, ok := m.Ptr.(*ir.ArgPointer)
 
-	return ok && isCharacter(ptr.Param) && m.Offset == ir.PointerOffset
+	return ok && isCharacter(ptr.Param) && !ptr.Param.Sym.Pointer && m.Offset == ir.PointerOffset
 }
 
 // paramNamed is the routine's dummy argument of that name.

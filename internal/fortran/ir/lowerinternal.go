@@ -136,6 +136,10 @@ func (l *lowerer) adjustableOf(s *sema.Symbol) *Cell {
 		return l.componentCell(s)
 	}
 
+	if c := l.dummyPointerCell(s); c != nil {
+		return c
+	}
+
 	c := l.adjustable[s]
 	if c != nil || l.host == nil {
 		return c

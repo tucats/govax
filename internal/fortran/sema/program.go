@@ -1340,6 +1340,13 @@ type Arg struct {
 	// the call: the actual is definable, and the dummy isn't INTENT(IN).
 	Sequence, CopyBack bool
 
+	// Pointer is set for the actual argument of a pointer dummy, a reference
+	// to a pointer itself (IsPointer): what is passed is the address of the
+	// pointer's own storage, so that the callee's pointer assignments,
+	// NULLIFYs, ALLOCATEs, and DEALLOCATEs are the actual's (pointer.go's
+	// pointerArg).
+	Pointer bool
+
 	// expression is set by argValue for an array section or array expression,
 	// for its dummy to decide on (shaped, sequenced, arrayChecked).
 	expression bool

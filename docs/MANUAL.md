@@ -9660,17 +9660,49 @@ end program shelf
 
 prints `3 2 0 6 0`.
 
-Pointer dummy arguments and functions whose result is a pointer are reported
-`%FORT-E-NOTIMPL`, each to come in its turn.
+A dummy argument may be a pointer, `REAL, POINTER :: A(:)`, a **pointer dummy**. Its actual
+argument must then be a pointer to the same type, kind, and rank, and the same length when both
+are constants (`POINTERARG`), and the routine is given that pointer itself: what it does to its
+dummy, `=>`, NULLIFY, ALLOCATE, or DEALLOCATE, it does to the caller's pointer. That is how a
+routine grows a caller's array or adds a node to a caller's list:
+
+```fortran
+module lists
+  type node
+    integer :: value
+    type(node), pointer :: next
+  end type node
+contains
+  subroutine push (head, v)
+    type(node), pointer :: head
+    integer, intent(in) :: v
+    type(node), pointer :: new
+    allocate (new)
+    new%value = v
+    new%next => head
+    head => new
+  end subroutine push
+end module lists
+```
+
+`CALL PUSH (LIST, 5)` puts a node at the front of LIST, and `CALL PUSH (LIST%NEXT, 7)` one after
+its first. A pointer dummy may be OPTIONAL, but has no INTENT; a `CHARACTER(LEN=*)` one has its
+actual's declared length. A routine with a pointer or a TARGET dummy can be called only through
+an explicit interface, a module's, an internal procedure's, or an interface block's
+(`EXPLICITREQ`), and an interface block must say POINTER and TARGET where the routine does
+(`INTERFACEDIFF`). What the routine is given is the address of the caller's own pointer, its
+longword or its descriptor, so nothing is copied in or back.
+
+Functions whose result is a pointer are reported `%FORT-E-NOTIMPL`, to come in their turn.
 
 **Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
 `%FORT-E-NOTIMPL` where it stands, naming what it is:
 
 ```text
-%FORT-E-NOTIMPL, a pointer dummy argument is not implemented yet
+%FORT-E-NOTIMPL, a function whose result is a pointer is not implemented yet
   at line 1 of DUA1:[WORK]BAD.F90;1
-  subroutine bad (p)
-  ----------------^
+  function bad ()
+  ^
 ```
 
 Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have

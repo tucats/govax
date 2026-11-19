@@ -35,6 +35,15 @@ import "github.com/tucats/govax/internal/fortran/sema"
 //
 // and for P => A the same with A's own bounds; P => Q copies Q's descriptor.
 // NULLIFY clears POINTER, as DEALLOCATE does an allocatable array's.
+//
+// A pointer dummy argument (subtask 6a) has no storage of its own: its
+// argument is the address of the caller's pointer, so its storage is there
+// (pointerStorage), and an array pointer dummy's descriptor is a located cell at
+// that address (dummyPointerCell). What the routine does to it, it does to the
+// caller's pointer:
+//
+//	SUBROUTINE AIM(P, T)          INTEGER, POINTER :: P
+//	P => T                        MOVAL  @AIM.T(AP),@AIM.P(AP)
 
 // charPointerHeader is a CHARACTER pointer's descriptor's first longword for a
 // target of length n: the length, DSC$K_DTYPE_T, and DSC$K_CLASS_S.
@@ -42,20 +51,64 @@ func charPointerHeader(n int) Expr {
 	return LongConst(int32(n | int(DTypeT)<<16 | int(ClassS)<<24))
 }
 
-// pointerAddress is the longword of the pointer s that holds its target's
-// address: its cell, or a CHARACTER pointer's descriptor's POINTER.
-func (l *lowerer) pointerAddress(s *sema.Symbol) *Mem {
+// pointerStorage is where the named pointer s's own storage starts: its cell
+// (an array pointer's descriptor, adjustableOf), or for a pointer dummy
+// argument the caller's own pointer, at the address its argument holds
+// (finding 8: so the dummy's =>, NULLIFY, ALLOCATE, and DEALLOCATE are the
+// caller's, with nothing copied in or back).
+func (l *lowerer) pointerStorage(s *sema.Symbol) *Mem {
 	if s.ArrayPointer() {
-		return &Mem{Cell: l.adjustableOf(s), Offset: PointerOffset, T: Long, Volatile: s.Volatile}
+		return &Mem{Cell: l.adjustableOf(s), T: Long, Volatile: s.Volatile}
 	}
 
-	m := &Mem{Cell: l.cellOf(s), T: Long, Volatile: s.Volatile}
+	if p := l.paramOf(s); p != nil {
+		return &Mem{Ptr: &ArgPointer{p}, T: Long, Volatile: s.Volatile}
+	}
 
-	if s.Type.Kind == sema.Character {
+	return &Mem{Cell: l.cellOf(s), T: Long, Volatile: s.Volatile}
+}
+
+// pointerAddress is the longword of the pointer s that holds its target's
+// address: its storage's first, or a CHARACTER or array pointer's
+// descriptor's POINTER.
+func (l *lowerer) pointerAddress(s *sema.Symbol) *Mem {
+	m := l.pointerStorage(s)
+
+	if s.ArrayPointer() || s.Type.Kind == sema.Character {
 		m.Offset = PointerOffset
 	}
 
 	return m
+}
+
+// dummyPointerCell is the descriptor of the array pointer dummy argument s, a
+// located cell (locate.go) at the address its argument holds: the caller's
+// pointer's own descriptor, which every routine reading or filling a
+// descriptor reaches as a cell. nil if s isn't such a dummy.
+func (l *lowerer) dummyPointerCell(s *sema.Symbol) *Cell {
+	if !s.ArrayPointer() || s.Component != nil {
+		return nil
+	}
+
+	p := l.paramOf(s)
+	if p == nil {
+		return nil
+	}
+
+	d := l.ncaDescriptor(s)
+
+	return &Cell{Name: s.Name, Kind: DescriptorCell, T: Long, Size: d.Size(), Desc: d, Arg: p, Sym: s}
+}
+
+// pointerLength is the length of the values the CHARACTER pointer x points
+// at: its declared one, or a passed-length dummy's, which its actual's
+// descriptor holds.
+func (l *lowerer) pointerLength(x sema.Expr) Expr {
+	if n := x.Type().Size; n > 0 {
+		return LongConst(int32(n))
+	}
+
+	return l.charLength(sema.PointerSymbol(x))
 }
 
 // pointerOf is the address longword of the pointer x, a reference to a pointer
@@ -143,13 +196,15 @@ func isArrayPointer(x sema.Expr) bool {
 
 // setPointerHeader writes the CHARACTER pointer p's descriptor's first
 // longword, its length and type; nothing for any other pointer.
+//
+// A passed-length dummy's header is its actual's, which its length is read
+// from: nothing is written, the caller having written it (pointerActual).
 func (l *lowerer) setPointerHeader(p *sema.Symbol) {
-	if p.Type.Kind != sema.Character || p.ArrayPointer() {
+	if p.Type.Kind != sema.Character || p.ArrayPointer() || p.Type.Size == 0 {
 		return
 	}
 
-	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: l.cellOf(p), T: Long, Volatile: p.Volatile},
-		Src: charPointerHeader(p.Type.Size)})
+	l.emit(&Assign{origin: l.origin(), Dst: l.pointerStorage(p), Src: charPointerHeader(p.Type.Size)})
 }
 
 // setHeader is setPointerHeader for the pointer x, a named pointer or a pointer
@@ -334,8 +389,12 @@ func (l *lowerer) associate(cell *Cell, p *sema.Symbol, target sema.Expr) {
 // given the pointer's target as an assumed-shape array reads its class and
 // rank (computeShaped, checkDescriptor). So too for an array pointer
 // component's, which no record's initial value or clearing gives either.
+//
+// An array pointer dummy's descriptor (dummyPointerCell) is the caller's,
+// which the caller has seen has its header (pointerActual): a passed-length
+// dummy's length is the actual's, which writing its own would lose.
 func (l *lowerer) commonHeader(c *Cell) {
-	if !c.Located() && (c.Common == nil || c.Common.Module != "") {
+	if c.Arg != nil || !c.Located() && (c.Common == nil || c.Common.Module != "") {
 		return
 	}
 
@@ -500,4 +559,30 @@ func (l *lowerer) locatedCell(name string, d *Descriptor, place *Mem) *Cell {
 	c.Base = base.Cell
 
 	return c
+}
+
+// pointerActual is the actual argument x, a pointer, of a pointer dummy
+// (sema.Arg.Pointer): the address of x's own storage, its longword or its
+// descriptor, so the callee changes x itself (the author's answer 5). A
+// CHARACTER pointer's descriptor and an array pointer's in COMMON or a record
+// have their unchanging longwords written first, which nothing else need
+// have given them, and from which a passed-length dummy takes its length and
+// FTNRTL's ALLOCATE an array's element size and rank.
+func (l *lowerer) pointerActual(x sema.Expr) Arg {
+	if p := sema.PointerSymbol(x); p != nil {
+		if p.ArrayPointer() {
+			c := l.adjustableOf(p)
+			l.commonHeader(c)
+
+			return Arg{Ref: &Mem{Cell: c, T: Long, Volatile: p.Volatile}}
+		}
+
+		l.setPointerHeader(p)
+
+		return Arg{Ref: l.pointerStorage(p)}
+	}
+
+	l.setHeader(x)
+
+	return Arg{Ref: l.fieldPlace(x.(*sema.FieldRef), false)}
 }

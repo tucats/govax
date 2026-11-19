@@ -115,10 +115,7 @@ func TestPointers(t *testing.T) {
 			"POINTERSHAPE: K is an array POINTER, so its bounds must all be colons, (:)"},
 		{"a component of its own type without POINTER", prog("type t", "type(t) :: next", "end type"),
 			"TYPESELF: a component of the derived type T can't be of that type itself unless it is a POINTER"},
-		{"a pointer dummy, subtask 6's", []string{"subroutine s(p)", "integer, pointer :: p", "end subroutine"},
-			"NOTIMPL: a pointer dummy argument is not implemented yet"},
-		{"a pointer result, subtask 6's", []string{"function f()", "integer, pointer :: f", "end function"},
-			"NOTIMPL: a function whose result is a pointer is not implemented yet"},
+		{"a pointer dummy", []string{"subroutine s(p)", "integer, pointer :: p", "end subroutine"}, ""},
 	}
 
 	for _, c := range cases {
@@ -222,6 +219,70 @@ func TestPointerComponents(t *testing.T) {
 		{"INTENT(IN)'s association", []string{"subroutine s(x, t)", "type h", "integer, pointer :: v(:), p", "end type",
 			"type(h), intent(in) :: x", "integer, target :: t(3)", "x%v(1) = 2", "x%p = 3", "x%v => t", "end subroutine"},
 			"INTENTIN: X is an INTENT(IN) dummy argument, which can't be given a value"},
+	}
+
+	for _, c := range cases {
+		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// TestPointerDummies checks pointer dummy arguments (docs/planning/PHASE-107 -
+// Fortran 90 pointers.md, subtask 6a): the callee's uses, each kind of actual
+// argument, and the refusals: POINTERARG, EXPLICITREQ, INTERFACEDIFF.
+func TestPointerDummies(t *testing.T) {
+	// mod is a module of procedures with pointer dummies, and a program using
+	// it with pointers and targets of its own.
+	mod := func(lines ...string) []string {
+		decl := []string{"module m", "contains",
+			"subroutine s(p, a, c)", "integer, pointer :: p", "real, pointer :: a(:)", "character(len=*), pointer :: c",
+			"integer, target, save :: n", "real, target, save :: v(4)",
+			"p => n", "p = 3", "a => v(2:4)", "a = 1.0", "nullify (c)", "allocate (p, a(5))", "deallocate (a)",
+			"if (associated(p, n)) c = 'X'", "call t(p)", "end subroutine",
+			"subroutine t(q)", "integer, pointer :: q", "if (associated(q)) q = q + len('A')", "end subroutine",
+			"subroutine u(c8, o)", "character(len=8), pointer :: c8", "integer, pointer, optional :: o",
+			"if (present(o)) nullify (o)", "end subroutine",
+			"end module", "program main", "use m", "type h", "integer, pointer :: k", "real, pointer :: w(:)", "end type",
+			"type(h) :: r", "integer, pointer :: ip", "integer, target :: it", "real, pointer :: rp(:), rq(:, :)",
+			"real, target :: rt(3)", "character(len=8), pointer :: cp", "character(len=4), pointer :: c4"}
+
+		return append(append(decl, lines...), "end program")
+	}
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"every kind of actual", mod("call s(ip, rp, cp)", "call s(r%k, r%w, c4)", "call u(cp)", "call u(cp, ip)",
+			"call u(o=ip, c8=cp)", "call t(r%k)"), ""},
+		{"a target for a pointer dummy", mod("call t(it)"),
+			"POINTERARG: argument 1 of T, for the pointer dummy argument Q, must be a pointer to INTEGER"},
+		{"a pointer's target, an element", mod("call s(ip, rp(1), cp)"),
+			"POINTERARG: argument 2 of S, for the pointer dummy argument A, must be a pointer to an array of REAL"},
+		{"a pointer of another type", mod("call s(ip, rq, cp)"),
+			"POINTERARG: argument 2 of S, for the pointer dummy argument A, must be a pointer to an array of REAL"},
+		{"an expression", mod("call t(ip + 1)"),
+			"POINTERARG: argument 1 of T, for the pointer dummy argument Q, must be a pointer to INTEGER"},
+		{"a CHARACTER pointer of another length", mod("call u(c4)"),
+			"POINTERARG: argument 1 of U, for the pointer dummy argument C8, must be a pointer to CHARACTER*8"},
+		{"without an interface", []string{"subroutine s(p)", "integer, pointer :: p", "end subroutine",
+			"program main", "integer, pointer :: q", "call s(q)", "end program"},
+			"EXPLICITREQ: S has the pointer dummy argument P (line 1), so a reference to it needs an explicit interface"},
+		{"a TARGET dummy without an interface", []string{"subroutine s(p)", "integer, target :: p", "end subroutine",
+			"program main", "integer q", "call s(q)", "end program"},
+			"EXPLICITREQ: S has the TARGET dummy argument P (line 1), so a reference to it needs an explicit interface"},
+		{"an interface body without POINTER", []string{"subroutine s(p)", "integer, pointer :: p", "end subroutine",
+			"program main", "interface", "subroutine s(p)", "integer p", "end subroutine", "end interface", "end program"},
+			"INTERFACEDIFF: this interface body for S doesn't agree with its definition (line 1): its dummy argument 1 (P) is not a pointer here, a pointer there"},
+		{"POINTER and INTENT", []string{"subroutine s(p)", "integer, pointer, intent(in) :: p", "end subroutine"},
+			"ATTRPAIR: the POINTER and INTENT attributes can't go together"},
+		{"a CHARACTER pointer dummy of a length known when the program runs",
+			[]string{"subroutine s(p, n)", "integer n", "character(len=n), pointer :: p", "end subroutine"},
+			"NOTIMPL: a CHARACTER pointer whose length isn't constant is not implemented yet"},
+		{"a pointer result, subtask 6b's", []string{"function f()", "integer, pointer :: f", "end function"},
+			"NOTIMPL: a function whose result is a pointer is not implemented yet"},
 	}
 
 	for _, c := range cases {

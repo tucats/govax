@@ -671,6 +671,14 @@ const pointersModule = `module cursors
   real, pointer :: here
   character(len=3), pointer :: tag
   character(len=8), target :: name
+contains
+  subroutine aim (p, t, c)
+    real, pointer :: p
+    real, target :: t
+    character(len=*), pointer :: c
+    p => t
+    nullify (c)
+  end subroutine aim
 end module cursors`
 
 // pointersUser points the module's pointers and uses them.
@@ -681,6 +689,7 @@ const pointersUser = `program walk
   tag => name(1:3)
   tag = 'ABC'
   if (associated(here, slots(2))) print *, here, tag
+  call aim (here, slots(3), tag)
 end program walk`
 
 // TestModulePointers holds a module's pointers' text, and a user compiled
@@ -696,6 +705,9 @@ func TestModulePointers(t *testing.T) {
 		"!GOVAX$ AT HERE 16 4\n  REAL(KIND=4), POINTER :: HERE",
 		"!GOVAX$ AT TAG 20 8\n  CHARACTER(LEN=3), POINTER :: TAG",
 		"  REAL(KIND=4), TARGET :: SLOTS(1:4)",
+		"    REAL(KIND=4), POINTER :: P",
+		"    REAL(KIND=4), TARGET :: T",
+		"    CHARACTER(LEN=*), POINTER :: C",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("no %q in\n%s", want, text)
@@ -720,6 +732,7 @@ func TestModulePointers(t *testing.T) {
 		"\tMOVAL\tWALK.SLOTS+4,WALK.HERE",
 		"\tMOVL\t#^X00004080,@WALK.HERE",
 		"\tMOVAB\tWALK.NAME,WALK.TAG+4",
+		"\tMOVL\t#17694723,WALK.TAG\n\tPUSHAL\tWALK.TAG\n\tPUSHAL\tWALK.SLOTS+8\n\tPUSHAL\tWALK.HERE\n\tCALLS\t#3,G^CURSORS.AIM",
 	} {
 		if !strings.Contains(code, want) {
 			t.Errorf("no %q in\n%s", want, code)

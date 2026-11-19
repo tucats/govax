@@ -1144,7 +1144,7 @@ func checkLoop(t *testing.T, g *Graph, l *Loop) {
 // pointerRoutines are the golden programs of Phase 107's pointers, whose places
 // through a pointer are UnknownRegion until subtask 7's PointerRegion: their
 // unknown places are counted apart from the rest's.
-var pointerRoutines = map[string]bool{"F90PTR": true, "F90APTR": true, "F90PALLOC": true, "F90PCOMP": true, "F90PCARR": true}
+var pointerRoutines = map[string]bool{"F90PTR": true, "F90APTR": true, "F90PALLOC": true, "F90PCOMP": true, "F90PCARR": true, "F90PDUM": true, "F90PDUM.INNER": true}
 
 // TestStorageOnCorpus checks what must hold of every place in every routine: every
 // argument passed by reference is one a call may change or read-only, every region

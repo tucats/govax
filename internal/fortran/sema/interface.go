@@ -341,6 +341,13 @@ func dummyDifference(p, q *Symbol) string {
 
 	case p.Optional != q.Optional:
 		return "is " + optionalText(p.Optional) + " here, " + optionalText(q.Optional) + " there"
+
+	// POINTER and TARGET are characteristics of a dummy too (12.2.1.1).
+	case p.Pointer != q.Pointer:
+		return "is " + attributeText(p.Pointer, "a pointer") + " here, " + attributeText(q.Pointer, "a pointer") + " there"
+
+	case p.Target != q.Target:
+		return "is " + attributeText(p.Target, "a TARGET") + " here, " + attributeText(q.Target, "a TARGET") + " there"
 	}
 
 	for k := range p.Dims {
@@ -381,6 +388,16 @@ func optionalText(optional bool) string {
 	return "not OPTIONAL"
 }
 
+// attributeText says whether a dummy has an attribute, for INTERFACEDIFF:
+// "a pointer", or "not a pointer".
+func attributeText(has bool, what string) string {
+	if has {
+		return what
+	}
+
+	return "not " + what
+}
+
 // firstOptional is the routine's first OPTIONAL dummy argument, or nil.
 func firstOptional(params []*Symbol) *Symbol {
 	for _, p := range params {
@@ -398,7 +415,8 @@ func firstOptional(params []*Symbol) *Symbol {
 // either can't be compared. A scalar may go to an array dummy only if it is an
 // element, sequence association (12.4.1.4).
 func argumentMismatch(arg Arg, p *Symbol) (string, []any) {
-	if arg.Expr == nil || p.broken || arg.Mode != ByDefault || arg.Hollerith || arg.Typeless || p.DummyProcedure() {
+	// A pointer dummy's actual has been held to it already (pointerArg).
+	if arg.Expr == nil || p.broken || arg.Mode != ByDefault || arg.Hollerith || arg.Typeless || p.DummyProcedure() || arg.Pointer {
 		return "", nil
 	}
 

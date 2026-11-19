@@ -1,0 +1,74 @@
+routine F90PDUM subroutine
+  param IP      L  through $A1
+  param AP      F  through $A2
+  param CP      B  argument 3
+  param OP      L  through $A4
+  entry 1 F90PDUM OP=4 IP=1 AP=2
+  cell  N       L  $LOCAL+0    variable N
+  cell  V       F  $LOCAL+4    array V, 40 bytes
+  cell  S       B  $LOCAL+44   variable S
+  cell  $A4     L  $LOCAL+52   address of OP
+  cell  $A1     L  $LOCAL+56   address of IP, reached by an internal procedure
+  cell  $A2     L  $LOCAL+60   address of AP, reached by an internal procedure
+  cell  $I1     L  $LOCAL+64   an array statement's index
+  cell  $D1     L  $LOCAL+68   descriptor F NCA 4 (?)
+  $LOCAL is 100 bytes
+B1:
+  ; line 18
+  assign @(arg IP) = addr(N)
+  ; line 19
+  assign @(@(arg IP)) = add.L(@(@(arg IP)), 1)
+  ; line 20
+  assign @(arg AP)+4 = addr(V+4)
+  assign @(arg AP)+20 = 8
+  assign @(arg AP)+24 = 1
+  assign @(arg AP)+28 = 5
+  assign @(arg AP)+16 = sub.L(@(arg AP)+4, 8)
+  assign @(arg AP)+12 = 20
+  ; line 21
+  assign @(add.L(@(arg AP)+16, mul.L(2, @(arg AP)+20))) = @(add.L(@(arg AP)+16, @(arg AP)+20))
+  ; line 22
+  assign @(arg CP)+4 = addr(S)
+  ; line 23
+  call FTN$ALLOCATE(ref @(arg AP), val 2, val 1, val N)
+  ; line 24
+  call FTN$DEALLOCATE(ref @(arg AP), val 2)
+  ; line 25
+  branch ne.L(arg OP, 0) B2 B3
+B2:
+  assign @(arg OP) = 0
+  jump B3
+B3:
+  ; line 26
+  assign $D1+4 = addr(V)
+  assign $D1+20 = 4
+  assign $D1+24 = 1
+  assign $D1+28 = 10
+  assign $D1+16 = sub.L($D1+4, 4)
+  assign $D1+12 = 40
+  branch and.L(and.L(and.L(and.L(eq.L(@(arg AP)+4, $D1+4), ne.L(@(arg AP)+4, 0)), eq.L(@(arg AP)+20, $D1+20)), eq.L(sub.L(@(arg AP)+28, @(arg AP)+24), sub.L($D1+28, $D1+24))), gt.L($D1+12, 0)) B4 B5
+B4:
+  assign N = zext.WL(@(arg CP))
+  jump B5
+B5:
+  ; line 27
+  call local F90PDUM.INNER(ref @(arg IP), ref @(arg AP))
+  ; line 35
+  return
+routine F90PDUM.INNER subroutine, internal to F90PDUM
+  param JP      L  argument 1
+  param BP      F  argument 2
+  $LOCAL is 0 bytes
+B1:
+  ; line 32
+  assign @(arg JP) = @(arg IP)
+  ; line 33
+  assign @(arg BP)+4 = @(arg AP)+4
+  assign @(arg BP)+8 = @(arg AP)+8
+  assign @(arg BP)+12 = @(arg AP)+12
+  assign @(arg BP)+16 = @(arg AP)+16
+  assign @(arg BP)+20 = @(arg AP)+20
+  assign @(arg BP)+24 = @(arg AP)+24
+  assign @(arg BP)+28 = @(arg AP)+28
+  ; line 34
+  return

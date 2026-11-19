@@ -56,6 +56,11 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 		return Arg{Value: LongConst(0)}
 	}
 
+	// A pointer dummy's, the pointer itself (lowerpointer.go).
+	if a.Pointer {
+		return l.pointerActual(a.Expr)
+	}
+
 	// An assumed-shape dummy's, by a class NCA descriptor (lowershaped.go),
 	// the statement's after list held aside while a temporary's loops end
 	// blocks (holdingAfter): an earlier argument's dynamic string is the
