@@ -288,3 +288,64 @@ func TestDerivedResultCode(t *testing.T) {
 		t.Logf("the MACRO file:\n%s", text)
 	}
 }
+
+// TestComponentArgumentCode holds what a component with a rank is as an actual
+// argument (docs/planning/PHASE-105 - Fortran 90 derived types.md, subtask 5b):
+// to an assumed-shape dummy, a class NCA descriptor of the components where they
+// are, its POINTER the first one's address and its stride the type's size times
+// the section's step, with no copy; to an explicit-shape dummy, a temporary the
+// components are copied into and back out of.
+func TestComponentArgumentCode(t *testing.T) {
+	lines := []string{
+		"program p",
+		"  type point",
+		"    real :: x, y",
+		"  end type point",
+		"  type(point) :: path(6)",
+		"  call scale(path(2:6:2)%y)",
+		"  call old(path%x, 6)",
+		"contains",
+		"  subroutine scale(v)",
+		"    real :: v(:)",
+		"    v = 2.0 * v",
+		"  end subroutine scale",
+		"  subroutine old(v, n)",
+		"    integer :: n",
+		"    real :: v(n)",
+		"    v = 2.0 * v",
+		"  end subroutine old",
+		"end program",
+	}
+
+	opts := noF90Options("A")
+	opts.F90 = true
+	r := fortran.Compile(opts, fortran.File{Spec: "A.F90", Name: "A", Free: true, Lines: lines})
+
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+
+	for _, want := range []string{
+		// PATH(2)%Y is 8 bytes past PATH, plus Y's 4; each next is 16 on.
+		"MOVAL\tP.PATH+12,P.$D1+4\n\tMOVL\t#16,P.$D1+20\n\tMOVL\t#1,P.$D1+24\n\tMOVL\t#3,P.$D1+28",
+		"PUSHAQ\tP.$D1\n\tCALLS\t#1,P.SCALE",
+		// The components copied into a temporary, which is passed.
+		"MOVF\tP.PATH-8[R0],P.$W1-4[R1]",
+		"MOVAL\tP.$W1,R0\n\tPUSHL\tR0\n\tCALLS\t#2,P.OLD",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in the MACRO file", want)
+		}
+	}
+
+	if !strings.Contains(text, "CALLS\t#2,P.OLD") || !strings.Contains(text[strings.Index(text, "CALLS\t#2,P.OLD"):],
+		"MOVF\tP.$W1-4[R0],P.PATH-8[R1]") {
+		t.Errorf("the temporary isn't copied back after the call")
+	}
+
+	if t.Failed() {
+		t.Logf("the MACRO file:\n%s", text)
+	}
+}

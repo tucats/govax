@@ -329,11 +329,15 @@ func argumentMismatch(arg Arg, p *Symbol) (string, []any) {
 	}
 
 	given, wanted := arg.Expr.Type(), p.Type
-	if given.Kind == Invalid || wanted.Kind == Invalid || given.Kind == Record || wanted.Kind == Record {
+	if given.Kind == Invalid || wanted.Kind == Invalid {
 		return "", nil
 	}
 
-	if given.Kind != wanted.Kind || (given.Kind != Character && given.Size != wanted.Size) {
+	// A record's or a derived type's type is recordArguments' to compare
+	// (TYPEARG, RECORDARG); its rank is compared here, as any other's.
+	records := given.Kind == Record || wanted.Kind == Record
+
+	if !records && (given.Kind != wanted.Kind || (given.Kind != Character && given.Size != wanted.Size)) {
 		return "ARGTYPE", []any{article(given.String()), p.Name, article(wanted.String())}
 	}
 

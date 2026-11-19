@@ -121,6 +121,18 @@ func (f *FieldRef) At(subs []Expr) *FieldRef {
 	return &c
 }
 
+// wholeRanked is f, an array field without subscripts (WholeArray), as the
+// array reference every element of it is, the way PATH%X is written: ranked
+// in its last part, a triplet of its bounds per dimension.
+func (f *FieldRef) wholeRanked() *FieldRef {
+	c := *f
+	c.Path = append([]FieldStep(nil), f.Path...)
+	c.Ranked, c.whole = len(c.Path), true
+	c.Sections, c.S = wholeSections(f.Field().Dims, f.Pos, &c)
+
+	return &c
+}
+
 // Field is the field the reference names, its last.
 func (f *FieldRef) Field() *Field {
 	return f.Path[len(f.Path)-1].Field

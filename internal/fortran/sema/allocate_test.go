@@ -28,6 +28,10 @@ func TestAllocatable(t *testing.T) {
 		{"a recursive unit's", []string{"recursive subroutine r(n)", "real, allocatable :: w(:)", "allocate (w(n))",
 			"end subroutine"}, ""},
 		{"SAVE", prog("real, allocatable, save :: a(:)"), ""},
+		{"of records", prog("structure /s/", "integer i", "end structure", "record /s/ r(:)", "allocatable r",
+			"allocate (r(3))", "r.i = 1", "r(2).i = 2"), ""},
+		{"of a derived type", prog("type t", "real x", "end type", "type(t), allocatable :: r(:, :)",
+			"allocate (r(2, 2))", "r%x = 1.0", "r(1, 2) = t(2.0)"), ""},
 
 		{"a deferred shape not allocatable", prog("real a(:)"), "DEFERREDNOTALLOC: A has a deferred shape, (:), so it must be ALLOCATABLE"},
 		{"colons and bounds", prog("real, allocatable :: a(:, 3)"), "DEFERREDMIX: the bounds of A must be all colons or none"},
@@ -81,8 +85,6 @@ func TestAllocatable(t *testing.T) {
 			"STATSELF: the STAT= specifier can't use A, which the same statement allocates or deallocates"},
 		{"STAT= a DO variable", prog("real, allocatable :: a(:)", "do i = 1, 2", "allocate (a(3), stat=i)", "end do"),
 			"DOVARSET: I is the control variable of the DO loop at line 3, which can't change it"},
-		{"of records", prog("structure /s/", "integer i", "end structure", "record /s/ r(:)", "allocatable r"),
-			"NOTIMPL: an allocatable array of records is not implemented yet"},
 	}
 
 	for _, c := range cases {

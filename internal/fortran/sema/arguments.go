@@ -90,17 +90,13 @@ func (a *analyzer) argValue(e ast.Expr) Arg {
 		return Arg{Expr: v}
 
 	case *ast.FieldRef:
+		// PATH%X or T%COORD(1:3), an array whose elements may be a type's size
+		// apart, is an array value for its dummy to decide on: an
+		// assumed-shape dummy's descriptor by stride (shaped.go), an old
+		// dummy's copy (sequence.go).
 		v := a.field(x, true)
-		if rankOf(v) > 0 {
-			// Its elements are a type's size apart: an assumed-shape dummy's
-			// descriptor or an old dummy's copy, both subtask 5b's.
-			a.notImplForm(v.Position(), "a component of an array, or an array component's section, as an actual argument "+
-				"(docs/planning/PHASE-105 - Fortran 90 derived types.md, subtask 5b)")
 
-			return Arg{Expr: a.bad(v.Position())}
-		}
-
-		return Arg{Expr: v}
+		return Arg{Expr: v, expression: rankOf(v) > 0}
 
 	case *ast.HollerithConst:
 		c := &Const{exprBase: exprBase{T: Type{Kind: Character, Size: len(x.Value)}, Pos: x.Pos}, Text: x.Value}

@@ -28,8 +28,8 @@ import (
 // The constraints are the standard's (5.1, 5.2.6) and the HP manual's, which
 // gather them: an allocatable array is never a dummy argument nor a function's
 // value (Fortran 2003 allows both), and never in COMMON, EQUIVALENCE, DATA, or a
-// NAMELIST group, nor given an initial value. Its elements may be anything but a
-// record (an array of records as a whole is Phase 105's).
+// NAMELIST group, nor given an initial value. Its elements may be of any type, a
+// derived type's or a STRUCTURE's records among them.
 
 // Allocate is ALLOCATE, or DEALLOCATE if Deallocate is set (the standard's 6.3.1
 // and 6.3.3): each of Objects in turn. Stat is STAT='s INTEGER variable or array
@@ -97,17 +97,7 @@ func (a *analyzer) checkShapes() {
 
 			s.broken = true
 
-		case s.Allocatable && s.Struct != nil:
-			a.notImplForm(s.DimPos, "an allocatable array of records")
-
-			s.broken = true
-
 		case s.Allocatable:
-
-		case s.Dummy != 0 && s.Struct != nil:
-			a.notImplForm(s.DimPos, "an assumed-shape array of records")
-
-			s.broken = true
 
 		case s.Dummy != 0:
 			// An assumed shape (shaped.go).

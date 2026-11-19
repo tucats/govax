@@ -21,7 +21,9 @@ package sema
 //     copy;
 //   - any other section, or a whole assumed-shape array (whose elements may be a
 //     section of its caller's), is copied into a temporary of the statement's,
-//     which is passed, and copied back after the call returns;
+//     which is passed, and copied back after the call returns; so is a component
+//     with a rank, PATH%X, whose elements are a type's size apart
+//     (docs/planning/PHASE-105 - Fortran 90 derived types.md, finding 7);
 //   - an assumed-shape array, or a section of one, is first tested when the
 //     program runs: if its strides say its elements are one after another after
 //     all, it is passed with no copy (the author's answer 4);
@@ -58,11 +60,6 @@ func (a *analyzer) sequenced(arg Arg, p *Symbol) Arg {
 	switch {
 	case arg.Hollerith || arg.Typeless || arg.Mode != ByDefault:
 		return a.arrayChecked(Arg{Expr: v, expression: true})
-
-	case v.Type().Kind == Record:
-		a.notImplForm(v.Position(), "an array of records as a section or expression actual argument (Phase 105)")
-
-		return Arg{Expr: a.bad(v.Position())}
 	}
 
 	// A temporary's CHARACTER elements need a length, which a value whose

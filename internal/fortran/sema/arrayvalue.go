@@ -134,8 +134,6 @@ func (a *analyzer) checkArrayValue() {
 	switch {
 	case r.Type.Kind == Character && r.Type.Size == 0 && r.LengthExpr == nil:
 		a.report("STARARRAY", r.DimPos, r.Name)
-	case r.Struct != nil:
-		a.notImplForm(r.DimPos, "an array-valued function whose value is records")
 	default:
 		return
 	}

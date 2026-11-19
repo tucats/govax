@@ -1208,8 +1208,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   values, `Symbol.recordValues`; constructors' array components from arrays,
   `fillComponent`; a constant's component never defined, `constantComponent`;
   `testdata/fortran90`'s `typearrays.f90`, `typevalues.f90`,
-  `testdata/fortran/recarrays.for`); 5b, arguments and the dynamic kinds, is
-  next.
+  `testdata/fortran/recarrays.for`); subtask 5b (2026-11-18) is arguments and
+  the dynamic kinds (a ranked component to an assumed-shape dummy by a
+  descriptor of the type's stride, `sectionNCA`/`describeSection` taking a
+  FieldRef, `rankedStride`, `FieldRef.wholeRanked`; to an old dummy by a copy;
+  arrays of a type and of records to both; allocatable, automatic,
+  assumed-shape, and array-valued arrays of a type, and of records; records'
+  ranks checked by `argumentMismatch`; `testdata/fortran90`'s `typeargs.f90`,
+  `typedyn.f90`, `testdata/fortran/recdyn.for`); subtask 6, COMMON,
+  EQUIVALENCE, and DATA, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

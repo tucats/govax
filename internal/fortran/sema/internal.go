@@ -339,8 +339,15 @@ func equalInts(x, y []int) bool {
 // argumentRank is an actual argument's rank: a whole array's, passed as itself,
 // or an expression's.
 func argumentRank(e Expr) int {
-	if r, ok := e.(*ArrayRef); ok {
-		return len(r.Sym.Dims)
+	switch x := e.(type) {
+	case *ArrayRef:
+		return len(x.Sym.Dims)
+
+	case *FieldRef:
+		// An array field without subscripts is an array name reference.
+		if x.WholeArray() {
+			return len(x.Field().Dims)
+		}
 	}
 
 	return rankOf(e)

@@ -291,9 +291,15 @@ func (l *lowerer) shapedArg(a sema.Arg) Arg {
 	case *sema.Section:
 		return Arg{Ref: l.sectionNCA(e, nil)}
 
+	case *sema.FieldRef:
+		return Arg{Ref: l.sectionNCA(e, nil)}
+
 	case *sema.Substring:
-		if sec, ok := e.X.(*sema.Section); ok {
-			return Arg{Ref: l.sectionNCA(sec, e)}
+		switch x := e.X.(type) {
+		case *sema.Section:
+			return Arg{Ref: l.sectionNCA(x, e)}
+		case *sema.FieldRef:
+			return Arg{Ref: l.sectionNCA(x, e)}
 		}
 
 		return Arg{Ref: l.arrayNCA(e.X.(*sema.ArrayRef), e)}
@@ -389,6 +395,13 @@ func (l *lowerer) substringOf(s *sema.Symbol, sub *sema.Substring, pointer *Expr
 		return ncaElement{t: s.Type}
 	}
 
+	return l.substringIn(func() Expr { return l.charLength(s) }, sub, pointer)
+}
+
+// substringIn is substringOf for elements whose whole length full gives (asked
+// for only if the substring's upper bound is left out and its length isn't
+// known when compiling).
+func (l *lowerer) substringIn(full func() Expr, sub *sema.Substring, pointer *Expr) ncaElement {
 	lower := l.expr(sub.Lower)
 	*pointer = arith(Sub, Long, arith(Add, Long, *pointer, lower), LongConst(1))
 
@@ -396,9 +409,11 @@ func (l *lowerer) substringOf(s *sema.Symbol, sub *sema.Substring, pointer *Expr
 		return ncaElement{t: sub.T}
 	}
 
-	upper := l.charLength(s)
+	var upper Expr
 	if sub.Upper != nil {
 		upper = l.expr(sub.Upper)
+	} else {
+		upper = full()
 	}
 
 	m := l.temp(Long)
@@ -422,21 +437,35 @@ type ncaElement struct {
 // through the array, the dimension's stride times the triplet's. The section's
 // subscripts are computed once, as the scalarizer computes them (arrayNest), and
 // under /CHECK=BOUNDS the first and last subscript of each triplet are checked.
-func (l *lowerer) sectionNCA(e *sema.Section, sub *sema.Substring) *Mem {
+//
+// e may be a component with a rank instead (sema.FieldRef), PATH%X or
+// T%COORD(1:3), described the same way: its first element is the component of
+// the first element of its ranked part, and each step is that part's, an
+// element of the array of records (the type's size) or of the array component.
+// So PATH(2:6:2)%Y of POINT's 8 bytes has a stride of 16 and no copy is made:
+// the docs/planning/PHASE-105 - Fortran 90 derived types.md design note.
+func (l *lowerer) sectionNCA(e sema.Expr, sub *sema.Substring) *Mem {
 	return l.describeSection(e, sub, func(el ncaElement, pointer Expr, dims []ncaDim) *Mem {
-		return l.buildNCA(e.Sym, el, pointer, dims)
+		return l.buildNCA(sectionSymbol(e), el, pointer, dims)
 	})
+}
+
+// sectionSymbol is the array, or the record or array of records, that the
+// section or ranked component e is part of.
+func sectionSymbol(e sema.Expr) *sema.Symbol {
+	if f, ok := e.(*sema.FieldRef); ok {
+		return f.Sym
+	}
+
+	return e.(*sema.Section).Sym
 }
 
 // describeSection is sectionNCA's work: it computes the section e's (or the
 // substring sub's of each of its elements) first element's address and each
 // triplet's dimension, and gives them to describe, while the subscripts' cells
 // are still the section's.
-func (l *lowerer) describeSection(e *sema.Section, sub *sema.Substring, describe func(ncaElement, Expr, []ncaDim) *Mem) *Mem {
-	s := e.Sym
-	c := l.adjustableOf(s)
-
-	n := l.newNest(len(e.S), nil)
+func (l *lowerer) describeSection(e sema.Expr, sub *sema.Substring, describe func(ncaElement, Expr, []ncaDim) *Mem) *Mem {
+	n := l.newNest(len(e.Shape()), nil)
 	defer n.done()
 
 	n.prepare(e)
@@ -464,13 +493,49 @@ func (l *lowerer) describeSection(e *sema.Section, sub *sema.Substring, describe
 		subs[i] = sema.IntSum(d.stride, d.base)
 
 		extent := n.leafExtent(e, d.loop)
-		stride := arith(Mul, Long, l.baseStride(s, c, i), l.expr(d.stride))
+		stride := arith(Mul, Long, l.rankedStride(info, i), l.expr(d.stride))
 		dims = append(dims, ncaDim{LongConst(1), extent, extent, stride})
 	}
 
-	pointer := Expr(&Addr{l.mem(sema.NewElem(s, subs, inBounds, e.Pos))})
+	var (
+		first sema.Expr
+		full  func() Expr
+	)
 
-	return describe(l.substringOf(s, sub, &pointer), pointer, dims)
+	switch x := e.(type) {
+	case *sema.Section:
+		first = sema.NewElem(x.Sym, subs, inBounds, x.Pos)
+		full = func() Expr { return l.charLength(x.Sym) }
+
+	case *sema.FieldRef:
+		first = x.At(subs)
+		full = func() Expr { return LongConst(int32(x.T.Size)) }
+	}
+
+	pointer := Expr(&Addr{l.mem(first)})
+
+	el := ncaElement{t: e.Type()}
+	if sub != nil {
+		el = l.substringIn(full, sub, &pointer)
+	}
+
+	return describe(el, pointer, dims)
+}
+
+// rankedStride is the stride in bytes of dimension i of the array an array leaf
+// info ranges over: an array's (baseStride), or an array component's, its
+// element's size times its extents before i, which are constants.
+func (l *lowerer) rankedStride(info *arrayLeaf, i int) Expr {
+	if f := info.field; f != nil {
+		stride := f.ElementSize()
+		for _, d := range f.Dims[:i] {
+			stride *= d.Extent()
+		}
+
+		return LongConst(int32(stride))
+	}
+
+	return l.baseStride(info.sym, l.adjustableOf(info.sym), i)
 }
 
 // buildNCA is a class NCA descriptor, in a descriptor cell of the statement's,

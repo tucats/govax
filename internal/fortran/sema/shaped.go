@@ -96,28 +96,17 @@ func (a *analyzer) shaped(arg Arg) Arg {
 	v := arg.Expr
 	arg.expression = false
 
-	if f, ok := v.(*FieldRef); ok {
-		if argumentRank(f) > 0 {
-			a.notImplForm(f.Position(), "a record's array field as an assumed-shape dummy's actual argument (Phase 105)")
-
-			return Arg{Expr: a.bad(f.Position())}
-		}
-
-		return arg
+	// An array field without subscripts, T%COORD, is every element of it,
+	// as PATH%X is every element's X: described by stride, as a section is.
+	if f, ok := v.(*FieldRef); ok && f.WholeArray() {
+		v = f.wholeRanked()
+		arg.Expr = v
 	}
 
-	if r, ok := v.(*ArrayRef); ok {
-		switch {
-		case r.Sym.AssumedSize():
-			a.report("NOSHAPE", r.Pos, r.Sym.Name)
+	if r, ok := v.(*ArrayRef); ok && r.Sym.AssumedSize() {
+		a.report("NOSHAPE", r.Pos, r.Sym.Name)
 
-			return Arg{Expr: a.bad(r.Pos)}
-
-		case r.Sym.Struct != nil:
-			a.notImplForm(r.Pos, "an array of records as a whole")
-
-			return Arg{Expr: a.bad(r.Pos)}
-		}
+		return Arg{Expr: a.bad(r.Pos)}
 	}
 
 	if argumentRank(v) == 0 {
@@ -140,8 +129,10 @@ func (a *analyzer) shaped(arg Arg) Arg {
 
 // Described reports whether arg, the actual argument of an assumed-shape dummy,
 // is passed by a descriptor of its own elements where they are: a whole array, a
-// section without a vector subscript, or a substring of either, none in
-// parentheses. Any other's value goes in a temporary first.
+// section without a vector subscript, a component with a rank (PATH%X,
+// T%COORD(1:2)) without one, or a substring of any, none in parentheses. Any
+// other's value goes in a temporary first; so does a constant's component, which
+// is never given to a procedure to change.
 func Described(arg Arg) bool {
 	if arg.Copy {
 		return false
@@ -157,13 +148,21 @@ func Described(arg Arg) bool {
 		return true
 
 	case *Section:
-		for _, sub := range x.Subs {
-			if sub.Vector != nil {
-				return false
-			}
-		}
+		return !hasVector(x.Subs)
 
-		return true
+	case *FieldRef:
+		return x.S != nil && x.Sym.Class != Constant && !hasVector(x.Sections)
+	}
+
+	return false
+}
+
+// hasVector reports whether any of a section's subscripts is a vector.
+func hasVector(subs []SectionSub) bool {
+	for _, sub := range subs {
+		if sub.Vector != nil {
+			return true
+		}
 	}
 
 	return false

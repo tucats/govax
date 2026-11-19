@@ -8869,8 +8869,19 @@ one object (`Q = P`, every element), and an array constructor may hold objects o
 derived type has no default for), PACK, UNPACK, RESHAPE, TRANSPOSE, and the inquiries take
 arrays of any type. An array PARAMETER of a type, an array's initial value, and a structure
 constructor's array component (`POLY(3, V * 2.0)`, or one value for every element) are there
-too. Passing `PATH%X` or a section of a component as an actual argument is not there yet
-(`NOTIMPL`), nor allocatable, automatic, or assumed-shape arrays of a type.
+too.
+
+**Arrays of derived types as arguments, and dynamic ones.** `PATH%X`, `PATH(2:6:2)%Y`, or a
+whole array component `T%COORD` given to an assumed-shape dummy (`REAL :: V(:)`) is passed by a
+descriptor whose stride is the type's size, so the procedure works on the components where
+they are, with no copy. Given to an explicit-shape or assumed-size dummy (`REAL :: V(N)`), which
+needs its elements one after another, it is copied into a temporary first and copied back after
+the call, unless the dummy is INTENT(IN). A vector subscript's component (`PATH(IV)%X`) and a
+constant's are values, passed in a temporary and never copied back. Arrays of a type go the same
+ways: whole or as a section to an assumed-shape dummy of the type by descriptor, and to an old
+dummy in place when the section is contiguous, else by a copy. Allocatable arrays, automatic
+arrays, assumed-shape dummies, and array-valued functions may all be of a derived type, and the
+same holds for a STRUCTURE's records (`RECORD /ITEM/ RB(:)` with ALLOCATABLE RB).
 
 All of it together:
 

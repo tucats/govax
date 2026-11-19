@@ -448,7 +448,7 @@ all three.
    - 5b arguments and the dynamic kinds: a ranked component or an array of a
      type to assumed-shape dummies by stride and to old ones by copy;
      allocatable, automatic, assumed-shape, and array-valued arrays of a type,
-     and the same for records.
+     and the same for records (done 2026-11-18).
 6. **COMMON, EQUIVALENCE, DATA** with SEQUENCE types (finding 12).
 7. **I/O and NAMELIST:** the compiler's expansion, unformatted bytes and their
    pieces (finding 13); NAMELIST's entities and FTNRTL's names (finding 14).
@@ -764,3 +764,59 @@ object are never the same type, with a message naming both.
     in every mode. `recarrays.for` is in `testdata/ftn86`'s procedure
     (`gen.go` rerun) and `ftn86AwaitingVMS`, for the next VMS round; the
     `/NOF90` baseline has it too.
+- **2026-11-18, subtask 5b (done):** Arguments and the dynamic kinds.
+  - *A component with a rank as an actual argument* (finding 7). `argValue` marks
+    a ranked `FieldRef` an array value (`Arg.expression`), for its dummy to decide
+    on, as a section is. To an **assumed-shape** dummy (`shaped`) it is described
+    where it is: `Described` takes a ranked FieldRef with no vector subscript
+    (`hasVector`), and the IR's `sectionNCA`/`describeSection` now take one beside
+    a section, its first element the component of the ranked part's first
+    (`FieldRef.At`), each stride that part's (`rankedStride`: an array of records'
+    `baseStride`, the type's size or a descriptor's; an array component's element
+    size times its extents before), times the triplet's step. So
+    `CALL SCALE(PATH(2:6:2)%Y, 5.0)` is `MOVAL PATH+12,$D1+4`, `MOVL #16,$D1+20`,
+    and no copy, the plan's design note. A substring of one (`TAGS%NAME(2:3)`) moves
+    POINTER and the element length (`substringIn`, `substringOf`'s work for any
+    element length). An array field without subscripts, `T%COORD`, given to an
+    assumed-shape dummy is made the ranked reference of every element
+    (`FieldRef.wholeRanked`), described the same way; to an old dummy it is still
+    passed by address, as VAX FORTRAN passes it. To an **old** dummy (`sequenced`)
+    a ranked component is never taken as contiguous: `valueTemp`'s temporary,
+    copied back by `arrayNest` unless the dummy is INTENT(IN), with no change to
+    the IR. A vector subscript's component and a constant's (`PTS%X` of an array
+    PARAMETER, `Described` false for a Constant's FieldRef) are values, in a
+    temporary never copied back.
+  - *Arrays of a type, and of records, as arguments.* The NOTIMPLs in `shaped` and
+    `sequenced` are gone: whole arrays and sections of records are described (an
+    NCA's element type DTypeZ, its length the type's size), passed on from an
+    assumed-shape dummy (`wholeNCA`, `testedSequence`), contiguous sections in
+    place (`contiguousSection`), other sections and expressions (MERGE of a type)
+    through a temporary. `checkShapes` takes an assumed-shape dummy of records.
+    `fieldMem` reaches a component of an assumed-shape array's element through
+    `stridedElement`'s address, its strides not the type's size.
+  - *Ranks of records compared.* `argumentMismatch` left records out entirely;
+    their types are still `recordArguments'` to compare, but their ranks are now
+    checked as any other's (ARGRANK: an object to an assumed-shape dummy, an array
+    of a type to a scalar dummy). `argumentRank` counts an array field without
+    subscripts as its field's rank, so `T%COORD` to an array dummy through an
+    explicit interface is no longer taken for a scalar. TestNoF90Unchanged's
+    baseline gained only the new `recdyn.for`.
+  - *The dynamic kinds.* With the NOTIMPLs in `checkShapes` (allocatable) and
+    `checkArrayValue` (array-valued functions) gone, allocatable arrays of a type
+    or of records, automatic ones (`TYPE(POINT) :: WORK(SIZE(A))`,
+    `RECORD /ITEM/ W(SIZE(R))`), assumed-shape dummies, and functions whose values
+    are arrays of a type, of a constant and of a run-time shape, compiled and ran
+    with no further change: Phase 104's descriptors were already sized by the
+    element's type. A STRUCTURE's records can't be a function's value (RECORD
+    names no function), so that form is a derived type's only.
+  - *Tests:* `sema`'s `TestDerivedArguments` (arrays and components to
+    assumed-shape and old dummies, the two ARGRANKs) and `TestAllocatable` (an
+    allocatable array of records and of a type); `fortran`'s
+    `TestComponentArgumentCode` (the descriptor's POINTER and stride, the copy in
+    and back); `testdata/fortran90`'s `typeargs.f90` and `typedyn.f90` (in
+    `compare.py`, gfortran printing the same lines; worked through by hand), and
+    `testdata/fortran`'s `recdyn.for` (gfortran `-fdec` agreeing), in every mode
+    and with paging on; the three also ran once under `/CHECK=BOUNDS`. `recdyn.for`
+    is in `testdata/ftn86`'s procedure (`gen.go` rerun) and `ftn86AwaitingVMS`.
+    MANUAL.md's 14.13 has "Arrays of derived types as arguments, and dynamic ones".
+    Subtask 6, COMMON, EQUIVALENCE, and DATA, is next.
