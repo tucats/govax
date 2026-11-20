@@ -2,7 +2,8 @@
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Subtask 1, the survey and the milestone program's design (Part A),
-written 2026-11-20 for the author's review. Needs every phase from 99 to 110.
+done 2026-11-20 and accepted by the author the same day ("The author's
+answers"; A.8 adds vectors and matrices, A.6 the subtasks). Needs every phase from 99 to 110.
 
 ## Goal
 
@@ -224,28 +225,32 @@ fcalc ships on the system volume (Phase 87's table, `internal/sysvol`):
 
 ## A.6 The subtasks, revised
 
-1. **The survey and design** (this part).
+As revised by the author's answers (below), with vectors and matrices added:
+
+1. **The survey and design** (this part). (done 2026-11-20)
 2. **The core**: `fckinds`, `fcvalues`, `fclexer`, `fctree`, `fcsymbols`,
    `fceval`, and the main loop: expressions, operators, variables, the
    prompt, errors; `basics` and `complex` scripts. Compiler bugs found are
    fixed in subtasks of their own (2a, 2b, ...), each with a corpus program.
 3. **Functions**: the built-in table, special functions, list functions,
    user-defined functions and recursion; `functions`, `userfuncs`.
-4. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`.
-5. **Display and settings**: SET and SHOW, the formats and bases; `display`.
-6. **TABLE and PLOT**; `plot`.
-7. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
+4. **Vectors and matrices** (A.8): the values, literals, indexing, operators,
+   `fcmatrix`'s functions; `vectors`, `matrices`.
+5. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`.
+6. **Display and settings**: SET and SHOW, the formats and bases; `display`.
+7. **TABLE and PLOT**; `plot`.
+8. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
    `oneshot`, `errors`.
-8. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
-9. **gfortran's witness**.
-10. **The simh round**: `testdata/f90r`, run by the author on the simh VAX,
-    and its oracle.
-11. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
+9. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
+10. **gfortran's witness**.
+11. **The simh round**: `testdata/f90r`, fcalc and the whole Fortran 90
+    corpus, run by the author on the simh VAX, and its oracle.
+12. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
     symbol, HELP FCALC, MANUAL.md's section.
-12. **The manual's 14.13** finished.
-13. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
+13. **The manual's 14.13** finished.
+14. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
     whole program.
-14. **Close-out**: PLAN.md, CLAUDE.md, "Where things stand", and Phase 112's
+15. **Close-out**: PLAN.md, CLAUDE.md, "Where things stand", and Phase 112's
     go or no-go.
 
 ## A.7 Questions for the author
@@ -268,6 +273,61 @@ fcalc ships on the system volume (Phase 87's table, `internal/sysvol`):
 6. **The simh round** (A.4): run fcalc and the whole Fortran 90 corpus in it,
    or fcalc alone?
 
+## The author's answers (2026-11-20)
+
+1. **Keyword commands**, as A.1 has them (`SOLVE expr FOR x FROM a`).
+2. **Vectors and matrices** are in fcalc: A.8, subtask 4.
+3. **G_floating**: yes, fcalc is built `/G_FLOATING`.
+4. **Expected output**: worked by hand, and for plots and long tables checked
+   against gfortran's output, each difference resolved by hand.
+5. **Shipping** as A.5 proposes: an example on the system volume, sources in
+   `[SYSHLP.EXAMPLES.FCALC]` with `BUILDFCALC.COM`, the image built in and
+   committed, `FCALC` in the supplied SYLOGIN.COM.
+6. **The simh round** runs the whole Fortran 90 corpus beside fcalc: it will be
+   the largest exercise yet of the VAX CPU and MTHRTL, and may find what the
+   corpus alone hasn't.
+
+## A.8 Vectors and matrices
+
+A value has a rank, 0 (a scalar, as before), 1, or 2. `TYPE VALUE` keeps a
+scalar in place and an array's elements through a POINTER component to a
+rank-2 COMPLEX(8) array (a vector is n by 1 or 1 by n; Fortran 90 has no
+allocatable components). Ownership is explicit: each operation's result has
+storage of its own, a defined ASSIGNMENT(=) copies deeply, and the evaluator
+frees each operand it has finished with. A test counts the blocks in use after
+each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
+
+- **Literals**: `[1, 2, 3]` a row, `[1; 2; 3]` a column, `[1, 2; 3, 4]` a
+  matrix; elements are expressions.
+- **Indexing**: `v(2)`, `m(1, 2)`, sections `m(:, 1)`, `v(2:4)`, assignment
+  to an element or section (`m(2, :) = [0, 1]`).
+- **Operators**: `+` `-` element by element, with a scalar spread over an
+  array; `*` the matrix product (a scalar times an array element by element);
+  `.*` `./` `.^` element by element; `'` the conjugate transpose, `.'` the
+  transpose; `A \ b` the linear solve; `^` of a square matrix and an integer
+  by squaring (a negative power through the inverse); comparisons element by
+  element.
+- **Functions**: every elementary function element by element; `size rows
+  cols numel transpose trace det inv rank norm(v [,p]) dot cross kron reshape
+  diag eye(n) zeros(m,n) ones(m,n) linspace(a,b,n) range(a,b[,s]) cumsum
+  sort`; `eig(m)`, the eigenvalues by the shifted QR method on the Hessenberg
+  form (complex values allowed); the list functions (`sum mean max ...`) of an
+  array argument as well as of a list.
+- **Elsewhere**: ROOTS of a vector of coefficients, and `poly(r)` from roots;
+  `PLOT v` draws a vector against its index, `PLOT y VERSUS x` one vector
+  against another; TABLE of vectors as columns; SAVE writes arrays as
+  literals; a matrix prints in aligned columns, its digits by `SET DIGITS`.
+- **Module**: `fcmatrix.f90` (LU with partial pivoting, the determinant,
+  inverse, and solve from it; Householder reduction to Hessenberg and the QR
+  iteration; norms), exercising MATMUL, TRANSPOSE, SPREAD, MAXLOC, DOT_PRODUCT,
+  CSHIFT, RESHAPE of values, array sections with strides, assumed-shape
+  dummies, array-valued functions of a run-time shape, and pointer arrays (102,
+  104, 107, 108). About 1,500 more lines; the program's estimate is now 5,500
+  to 6,500.
+- **Numbers**: eigenvalues and inverses are where machines differ most; tests
+  choose well-conditioned matrices and show 10 digits, and `eig`'s values are
+  printed sorted so the order of convergence doesn't show.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -276,3 +336,8 @@ fcalc ships on the system volume (Phase 87's table, `internal/sysvol`):
   calculator with complex values, functions, numerics, ASCII plots, and saved
   state), with the subtasks revised (A.6) and six questions (A.7). The author
   offered a run on the simh VAX, now subtask 10.
+- **2026-11-20:** The author's answers: keyword commands, vectors and matrices
+  added (A.8, subtask 4, the later subtasks renumbered), `/G_FLOATING`, hand-
+  worked output checked against gfortran's, fcalc shipped as an example on the
+  system volume, and the simh round running the whole Fortran 90 corpus too.
+  Subtask 1 done.
