@@ -137,6 +137,6 @@ const stack89Signal = "HANDLER SAW %X00000484\n" +
 	"%TRACE-F-TRACEBACK, symbolic stack dump follows\n" +
 	"module name     routine name                     line       rel PC    abs PC\r\n" +
 	"\n" +
-	"SIGNAL          BIG                                        <code>\n" +
-	"SIGNAL          SIGNAL                                     <code>\n" +
+	"SIGNAL          BIG                                26      <code>\n" + // the FORTRAN lines
+	"SIGNAL          SIGNAL                             14      <code>\n" +
 	"  $STATUS == \"%X10000484\"\n"

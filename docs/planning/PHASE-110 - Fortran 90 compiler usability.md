@@ -337,7 +337,7 @@ marked so, and are unconfirmed.
      the entry code. (done 2026-11-20)
    - 7c. FORTRAN line numbers in a traceback (finding 11, added by the author 2026-11-20:
      `%TRACE-F-TRACEBACK`'s line column is empty for a FORTRAN routine, since MACRO's
-     traceback records carry no line numbers).
+     traceback records carry no line numbers). (done 2026-11-20)
 8. **The optimizer** (finding 10): the kernels, strength reduction for strided loops,
    fusion; the overlap test and Phase 104's list as the kernels say. (done 2026-11-20)
 9. **Close-out**: FORTRAN-INTERNALS.md, MANUAL.md (14.3's qualifiers, 14.7, 14.10,
@@ -721,3 +721,29 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   `TestFusable` and `TestFusableWhere` (`fusion_test.go`), `opt`'s `TestSteppedAddress`,
   `fortran`'s `TestFusedNests`, and the two corpus programs in every mode. MANUAL.md's 14.9
   says so. Subtask 7c, line numbers in a traceback, is next, then the close-out (9).
+- **2026-11-20:** Subtask 7c, FORTRAN line numbers in a traceback (finding 11). Three ways were put
+  to the author: a line table as data in a psect of the compiler's own, DST line records from govax's
+  MACRO, or line records only when `/OBJECT` runs MACRO; the author chose the second. The compiler
+  writes a marker comment after `.IDENT` unless `/DEBUG=NOTRACEBACK`, `dbgtable.TracebackMarker`
+  (`; TBT$ FORTRAN: ...`), and govax's MACRO, seeing it among the program's own lines
+  (`internal/asm/fortranline.go`'s `noteFortranLine`), numbers each line of code by the last FORTRAN
+  source comment before it (`dbgtable.FortranLine`), lays the rows out by the DBG table's rules
+  (`debug.go`'s `lineRows`, now over `rowsOf`), and writes the table as DSTLineNumbers records in the
+  traceback records after the routine begin records (`obj.LineNumberRecords`). LINK copies it into the
+  DST, where `dbgsym`'s `TraceName` finds it. Without the marker nothing changes, so a MACRO file
+  without one still assembles to VMS MACRO's object (`TestFortranMarkerChangesOnlyTraceback`), and
+  `testdata/ftn86`'s stored objects are unchanged. Under `/DEBUG` a module's one table must be the
+  MACRO file's, which the debugger needs, so no FORTRAN table is written; a traceback then (`RUN/NODEBUG`
+  of an image linked `/DEBUG`) maps the MACRO line to its FORTRAN line through the MACRO file's comments,
+  as the debugger's `fortranLineAt` does (`internal/machine/traceline.go`'s `fortranTraceLine`, only
+  for a file with the marker near its start), and an object assembled `/DEBUG` and linked without it
+  shows no lines, as before. A listed INCLUDE file's line is numbered by its own file's line, as its
+  comment is (unconfirmed what VAX FORTRAN shows). DEVIATIONS.md's new entry says so. Every compiled
+  file gains the marker, so `nof90.sum` was rewritten, and `testdata/fortran/directives.out`'s
+  traceback now has lines 90 and 45, `TestStack89Runaway`'s 26 and 14; `TestFTN86Oracle` blanks govax's
+  traceback lines before comparing (`withoutTraceLines`), since VMS's MACRO built its programs from the
+  same files without them. Tests: `asm`'s `TestFortranTracebackTable` (the table's bytes;
+  none without the marker or under `/DEBUG`), `TestFortranMarkerChangesOnlyTraceback`, `fortran`'s
+  `TestCompileSquares` (the header), and `internal/console`'s `TestFortranTracebackLines` (the usual
+  build, `/NOOPTIMIZE`, `/DEBUG` with LINK/DEBUG and RUN/NODEBUG, and a `/DEBUG` object linked plainly).
+  MANUAL.md's 14.3 ("Traceback lines") and HELP FORTRAN /DEBUG say so. The close-out (9) is next.

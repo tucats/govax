@@ -2065,3 +2065,19 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
     `sharedMessages` (subtask 11); COPY's facility number and its SEARCHFAIL's severity, an error, are unconfirmed.
 - **Status**: kept; the rest of the probe's job sections are held to VMS by `internal/console/batch_test.go`, and
   the reboot by `batchrestart_test.go`.
+
+### [Phase 110] A FORTRAN program's traceback lines through MACRO
+
+- **Where**: `internal/asm/fortranline.go`, `internal/fortran/debug.go`, `internal/machine/traceline.go`.
+- **What**: VAX FORTRAN's objects carry their FORTRAN line numbers in their traceback records, so a traceback names
+  each frame's FORTRAN line. govax's compiler writes MACRO, whose traceback records have none, so it marks its MACRO
+  file with a comment (`; TBT$ FORTRAN: ...`, `dbgtable.TracebackMarker`), and govax's MACRO, seeing it, gives the
+  object a line-number table of the FORTRAN lines in its traceback records (by the author's choice, subtask 7c). An
+  object made from such a file is not VMS MACRO's for it: VMS's MACRO reads the marker as a comment, and its object's
+  traceback shows no lines on VMS (`testdata/ftn86`'s objects, made from files without the marker, are unchanged).
+  Under `/DEBUG` the MACRO file's own table, which the debugger needs, is the module's one table, and none of
+  FORTRAN lines is written: a traceback (`RUN/NODEBUG` of an image linked `/DEBUG`) maps the MACRO line to its
+  FORTRAN line through the MACRO file's comments, as the debugger does, and shows none if the file can't be read; an
+  object assembled `/DEBUG` and linked without it shows none, as before. A line of an INCLUDE file listed with
+  `/LIST` is numbered as its comment is, by its own file's line (unconfirmed what VAX FORTRAN shows).
+- **Status**: kept, by design.

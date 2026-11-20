@@ -6908,6 +6908,25 @@ the default. `/DEBUG` doesn't turn the optimizer off, so under `/OPTIMIZE`, the 
 a variable may be in a register, its home out of date. To debug, say both, as the DCL Dictionary's examples do, and link
 with `/DEBUG` too, as [section 14.10](#1410-debugging-a-compiled-program) shows.
 
+**Traceback lines.** A traceback names each routine's FORTRAN line, the line of the statement that was running (for a
+routine that called another, the call's), as VAX FORTRAN's did:
+
+```text
+%SYSTEM-F-ABORT, abort
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TRACED          INNER                              14      00000047  00000673
+TRACED          OUTER                               9      00000018  0000062B
+TRACED          TRACED                              3      0000000F  0000060F
+```
+
+MACRO's traceback records carry no line numbers, so the compiler marks its MACRO file with a comment, `; TBT$ FORTRAN`,
+and govax's MACRO, seeing it, gives the object a table of the FORTRAN lines in its traceback records; any other MACRO
+reads the comment as a comment. Under `/DEBUG` the object's table is the MACRO file's, for the debugger, and a traceback
+(`RUN/NODEBUG`) finds the FORTRAN line through the MACRO file's comments; an object assembled `/DEBUG` and linked without
+it has no lines. `/DEBUG=NOTRACEBACK` writes no traceback records at all.
+
 **FORTRAN-66.** `/NOF77` reads a program as FORTRAN-66 did where FORTRAN-77 changed the
 meaning. The default is `/F77`:
 

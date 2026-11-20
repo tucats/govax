@@ -659,7 +659,8 @@
    (debugger records), and [NO]TRACEBACK (a traceback's names).  /DEBUG
    alone is ALL, so a plain MACRO then writes debugger records.
    /NODEBUG, the default, is traceback alone.  It doesn't turn the
-   optimizer off: give /NOOPTIMIZE as well to debug.
+   optimizer off: give /NOOPTIMIZE as well to debug.  With traceback
+   records, a traceback shows each routine's FORTRAN line.
 
 /EXTEND_SOURCE
 

@@ -263,6 +263,24 @@ func ftn86Lines(text string) string {
 	return strings.Join(lines, "\n")
 }
 
+// tracebackFrame is a traceback's line for a frame with a line number: the module, the
+// routine, the line in columns 48 to 53, then the two PCs.
+var tracebackFrame = regexp.MustCompile(`^(.{47})( {0,5}[0-9]+)(      [0-9A-F]{8}  [0-9A-F]{8})$`)
+
+// withoutTraceLines is govax's log with each traceback frame's line number blanked. govax's
+// MACRO gives a compiled FORTRAN program's traceback records the FORTRAN lines
+// (docs/planning/PHASE-110 - Fortran 90 compiler usability.md, subtask 7c), and VMS's MACRO,
+// which built the programs of VMS's log from the same files, reads the compiler's marker as
+// the comment it is, so VMS's tracebacks have none.
+func withoutTraceLines(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = tracebackFrame.ReplaceAllString(line, "${1}      ${3}")
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 // ftn86Statuses is a section's lines that show $STATUS, less the first newer of them: as
 // many as there are modules newer than the run the section is held to (every MACRO's
 // status is the same success, so which ones are left out doesn't matter).
@@ -339,7 +357,7 @@ func TestFTN86Oracle(t *testing.T) {
 		}
 
 		_, expected := ftn86VMSDifferences[base]
-		same := ftn86Lines(got[name]) == text
+		same := ftn86Lines(withoutTraceLines(got[name])) == text
 
 		switch {
 		case same && expected:
@@ -347,7 +365,7 @@ func TestFTN86Oracle(t *testing.T) {
 		case !same && expected:
 			seen[base] = true
 		case !same:
-			t.Errorf("%s printed:\n%s\nVMS's:\n%s", name, ftn86Lines(got[name]), text)
+			t.Errorf("%s printed:\n%s\nVMS's:\n%s", name, ftn86Lines(withoutTraceLines(got[name])), text)
 		}
 	}
 

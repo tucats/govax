@@ -214,6 +214,12 @@ type Assembler struct {
 	debugSeen bool
 	untyped   []*symbol
 	fileLines int
+	// fortranLines says the program's lines held the FORTRAN compiler's
+	// traceback marker (dbgtable.TracebackMarker), and fortranLine is the
+	// number of the last FORTRAN source line its comments gave
+	// (fortranline.go).
+	fortranLines bool
+	fortranLine  int
 	// packedDigits is the digit count of the .PACKED just assembled.
 	packedDigits int
 
@@ -454,6 +460,8 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.endErrors = nil
 	a.debugSeen = false
 	a.untyped = nil
+	a.fortranLines = false
+	a.fortranLine = 0
 	a.fileLines = strings.Count(source, "\n")
 
 	if source != "" && !strings.HasSuffix(source, "\n") {

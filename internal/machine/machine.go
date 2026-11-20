@@ -524,7 +524,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 		n := icbs[0].Debug.TraceName(pc, exact)
 
-		return corevms.TraceName{Module: n.Module, Routine: n.Routine, Rel: n.Rel, Line: n.Line}
+		return corevms.TraceName{Module: n.Module, Routine: n.Routine, Rel: n.Rel, Line: m.fortranTraceLine(pc, exact, n.Line)}
 	}
 
 	// An AST routine returns to EXE$ASTRET in S0, as on VMS, once the

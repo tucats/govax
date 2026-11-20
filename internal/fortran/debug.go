@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/codegen"
+	"github.com/tucats/govax/internal/fortran/dbgtable"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
 
@@ -89,5 +90,11 @@ func (d Debug) writeDirectives(w *codegen.Writer) {
 
 	if d.NoTraceback {
 		w.Statement("", ".DISABLE", "TRACEBACK", "")
+
+		return
 	}
+
+	// With traceback records, the marker that has govax's MACRO number them by the
+	// FORTRAN lines (dbgtable.TracebackMarker), a comment to any other MACRO.
+	w.Comment(strings.TrimPrefix(dbgtable.TracebackMarker, "; "))
 }

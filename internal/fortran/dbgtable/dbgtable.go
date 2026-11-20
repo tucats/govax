@@ -535,6 +535,15 @@ func (v *Var) DescriptorPassed() bool {
 	return v.Type == Char && !v.Pointer && (v.Place.Kind == Argument || v.Place.Kind == Through || v.Place.Kind == ThroughFrame)
 }
 
+// TracebackMarker is a comment line the compiler writes at the top of a MACRO file
+// unless /DEBUG=NOTRACEBACK (docs/planning/PHASE-110 - Fortran 90 compiler usability.md,
+// subtask 7c). govax's MACRO, seeing it among the program's own lines, gives the
+// object's traceback records a line-number table whose lines are the FORTRAN lines the
+// file's source comments (FortranLine) number, so that a traceback names the FORTRAN
+// line, as VAX FORTRAN's objects let it. Real MACRO reads it as the comment it is, and
+// so does govax's MACRO without it: an object then has VMS MACRO's records exactly.
+const TracebackMarker = "; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below"
+
 // FortranLinePrefix is how long the part before a source line's text is in a MACRO file.
 const FortranLinePrefix = 8
 

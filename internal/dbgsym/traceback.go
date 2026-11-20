@@ -35,8 +35,10 @@ const tracebackRoutineLimit = 0x400
 //     name in the routine column, Rel from the contribution's start.
 //  3. Otherwise nothing does.
 //
-// The line comes from the module's line-number table (an image linked
-// /DEBUG has one) whichever rule named the PC.
+// The line comes from the module's line-number table whichever rule
+// named the PC: an image linked /DEBUG has one, the MACRO file's lines,
+// and so does a compiled FORTRAN program's without /DEBUG, of the FORTRAN
+// lines, in its traceback records (internal/asm/fortranline.go).
 func (p *Program) TraceName(pc uint32, exact bool) TraceName {
 	name := TraceName{Rel: pc}
 

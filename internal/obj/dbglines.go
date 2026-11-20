@@ -220,3 +220,51 @@ func (t *LineTable) flush() *TIR {
 
 	return rec
 }
+
+// LineNumberRecords packs a line-number table's commands into DSTLineNumbers
+// records for traceback (TBT) records, which Builder.Traceback packs as it
+// does any DST records: each record at most lineRecordMax bytes, as the
+// length byte counts them, never splitting a command. govax's MACRO writes
+// such a table for a program the FORTRAN compiler wrote
+// (internal/asm/fortranline.go), as VAX FORTRAN's objects carry one; real
+// MACRO's traceback records have none.
+func LineNumberRecords(cmds []DSTItem) []DSTRecord {
+	var (
+		out  []DSTRecord
+		open []DSTItem
+		size int
+	)
+
+	flush := func() {
+		if len(open) == 0 {
+			return
+		}
+
+		rec := DSTRecord{Type: DSTLineNumbers}
+
+		for _, it := range open {
+			rec.Data = append(rec.Data, it.Bytes...)
+
+			if it.Address != nil {
+				rec.Addresses = append(rec.Addresses, DSTAddress{Offset: len(rec.Data), Commands: it.Address})
+				rec.Data = append(rec.Data, 0, 0, 0, 0)
+			}
+		}
+
+		out = append(out, rec)
+		open, size = nil, 0
+	}
+
+	for _, cmd := range cmds {
+		if size+cmd.size()+1 > lineRecordMax {
+			flush()
+		}
+
+		open = append(open, cmd)
+		size += cmd.size()
+	}
+
+	flush()
+
+	return out
+}

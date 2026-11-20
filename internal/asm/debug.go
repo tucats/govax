@@ -280,6 +280,16 @@ func (a *Assembler) noCallRoutines() []*section {
 // Code anywhere but where the last row's segment ends starts a new
 // segment: after a gap, or in another psect.
 func (a *Assembler) lineRows() []lineRow {
+	return a.rowsOf(func(l *listLine) (int, bool, bool) {
+		return l.debugLine, l.debugRepeat, l.debug
+	})
+}
+
+// rowsOf returns a line-number table's rows by lineRows' rules, from the
+// recorded lines that line takes, numbered as it says: a line, whether
+// it's a repeat block's, and whether the table takes it at all. A
+// FORTRAN program's table (fortranline.go) numbers its rows another way.
+func (a *Assembler) rowsOf(line func(*listLine) (number int, repeat, take bool)) []lineRow {
 	var (
 		end uint32 // where the last row's segment ends
 		// data says data ended the last row: an instruction of its
@@ -290,7 +300,8 @@ func (a *Assembler) lineRows() []lineRow {
 	rows := make([]lineRow, 0)
 
 	for _, l := range a.listLines {
-		if !l.debug || l.stmt == 0 || l.collected || l.skipped || l.endSect != l.sect || l.endLoc <= l.loc {
+		number, repeat, take := line(l)
+		if !take || l.stmt == 0 || l.collected || l.skipped || l.endSect != l.sect || l.endLoc <= l.loc {
 			continue
 		}
 
@@ -311,13 +322,13 @@ func (a *Assembler) lineRows() []lineRow {
 			continue
 		}
 
-		if n > 0 && data && !l.debugRepeat && rows[n-1].line == l.debugLine {
+		if n > 0 && data && !repeat && rows[n-1].line == number {
 			continue
 		}
 
 		data = false
 
-		if continues && !l.debugRepeat && rows[n-1].line == l.debugLine {
+		if continues && !repeat && rows[n-1].line == number {
 			end = l.endLoc
 			rows[n-1].size = end - rows[n-1].loc
 
@@ -325,7 +336,7 @@ func (a *Assembler) lineRows() []lineRow {
 		}
 
 		rows = append(rows, lineRow{
-			line: l.debugLine, repeat: l.debugRepeat, sect: l.sect, loc: l.loc,
+			line: number, repeat: repeat, sect: l.sect, loc: l.loc,
 			size: l.endLoc - l.loc, first: !continues, entry: l.op == ".ENTRY",
 		})
 		end = l.endLoc

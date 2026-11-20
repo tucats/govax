@@ -12,6 +12,6 @@ STORE AT      304
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-DIRECTIVES      CHANGE                                     00000002  00000B88
-DIRECTIVES      DIRECTIVES                                 000002BD  00000ABD
+DIRECTIVES      CHANGE                             90      00000002  00000B88
+DIRECTIVES      DIRECTIVES                         45      000002BD  00000ABD
   $STATUS == "%X1000000C"

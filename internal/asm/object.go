@@ -202,6 +202,13 @@ func (a *Assembler) traceback(b *obj.Builder) error {
 		}
 	}
 
+	// A FORTRAN program's line-number table (fortranline.go).
+	if lines := a.fortranLineRecords(); len(lines) > 0 {
+		if err := b.Traceback(lines...); err != nil {
+			return err
+		}
+	}
+
 	var psects []obj.DSTRecord
 
 	for _, s := range a.sections {

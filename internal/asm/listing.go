@@ -111,6 +111,9 @@ type listLine struct {
 	debug       bool
 	debugLine   int
 	debugRepeat bool
+	// fortranLine is the FORTRAN line a compiled program's line came
+	// from, 0 if none or if the program isn't one (fortranline.go).
+	fortranLine int
 }
 
 // listNote is an error or warning a recorded line's statement reported.
@@ -227,7 +230,11 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 
 	debug := a.dialect == DialectMACRO && a.debugging()
 
-	if (!a.listing && !debug) || f.kind == sourceLibrary || a.inLibrary() {
+	if len(a.sources) == 1 {
+		a.noteFortranLine(raw)
+	}
+
+	if (!a.listing && !debug && !a.fortranLines) || f.kind == sourceLibrary || a.inLibrary() {
 		a.listCur = nil
 
 		return nil
@@ -242,6 +249,8 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 		sect:  a.cur,
 		loc:   a.cur.loc,
 		show:  a.show,
+
+		fortranLine: a.fortranLine,
 	}
 
 	if debug {

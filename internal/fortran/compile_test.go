@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/fortran/dbgtable"
 	"github.com/tucats/govax/internal/fortran/source"
 )
 
@@ -44,6 +45,7 @@ func TestCompileSquares(t *testing.T) {
 	header := []string{
 		"\t.TITLE\tSQUARES",
 		"\t.IDENT\t/01/",
+		dbgtable.TracebackMarker,
 		";",
 		"; Compiled by GOVAX FORTRAN V1.0-1 on 29-OCT-2026 14:05:11.20",
 		"; from DUA0:[WORK]SQUARES.FOR;1",
