@@ -69,6 +69,7 @@ PROGRAMS90 = {
     "calendar": ["calendar.f90"],
     "edits": ["edits.f90"],
     "cplx16": ["cplx16.f90"],
+    "cplx16io": ["cplx16io.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],
     "kinds": ["kinds.f90"],
@@ -177,6 +178,26 @@ KNOWN = {
         # goes through a temporary (7.5.1.5), which gfortran leaves out.
         "outside F": "outside T",
         "overlap  1.0  2.0  3.0  2.0  4.0  6.0": "overlap  1.0  2.0  3.0  2.0  2.0  6.0",
+    },
+    "cplx16io": {
+        # List-directed and namelist output's layouts are the processor's (the standard's
+        # 10.8.2, 10.9.2): govax's are VMS's FORRTL's, G fields with d significant digits and
+        # DEC's $GROUP ... $END, a value on the record after its name when it won't fit there;
+        # gfortran's are 36 digits and Fortran 90's &GROUP ... / (Phase 109's subtask 6).
+        "(1.50000000000000000000000000000000,-2.00000000000000000000000000000000)":
+            "               (1.50000000000000000000000000000000000,-2.00000000000000000000000000000000000)",
+        "(1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)":
+            " (1.000000000000000000000000000000000035E-0100,-9.999999999999999999999999999999999627E+0099)",
+        " (1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)":
+            "  (1.000000000000000000000000000000000035E-0100,-9.999999999999999999999999999999999627E+0099)",
+        " $PAIR": "&PAIR",
+        " Z       =": [],
+        " (1.50000000000000000000000000000000,-2.00000000000000000000000000000000),":
+            " Z=(1.50000000000000000000000000000000000,-2.00000000000000000000000000000000000),",
+        " W       =": [],
+        " (0.250000000000000000000000000000000,1000.00000000000000000000000000000)":
+            " W=(0.250000000000000000000000000000000000,1000.00000000000000000000000000000000),",
+        " $END": " /",
     },
     "recursion": {
         # IEEE's negative zero, which the VAX's floating formats don't have.
@@ -287,7 +308,8 @@ def compare(name, work):
     got = printed(run.stdout)
     want = expected(main.with_suffix(".out"))
     known = KNOWN.get(name, {})
-    want = [known.get(line, line) for line in want]
+    # A known difference is a line, or a list of lines (none, for a line gfortran doesn't print).
+    want = [new for line in want for new in (lambda k: k if isinstance(k, list) else [k])(known.get(line, line))]
     if got == want:
         print(f"{name}: the same ({len(want)} lines" + (f", {len(known)} known difference)" if known else ")"))
         return True

@@ -7297,8 +7297,8 @@ FORTRAN run-time library, checked against it. Each value is in its type's format
 INTEGER\*2 in 7 columns (I7), an INTEGER\*4 in 12 (I12), a REAL as
 `1PG15.7E2`, a REAL\*8 as `1PG24.16E2` (`1PG24.15E3` in G_floating), a
 REAL\*16 as `1PG43.33E4`, a COMPLEX as its two parts in `1PG14.7E2`
-(`1PG23.16E2` for COMPLEX\*16, `1PG23.15E3` in G_floating) between `(`, `,`,
-and `)`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
+(`1PG23.16E2` for COMPLEX\*16, `1PG23.15E3` in G_floating, `1PG42.33E4` for
+Fortran 90's `COMPLEX(16)`) between `(`, `,`, and `)`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
 up to 10\*\*7 in fixed-point form, followed by 4 blanks; any other, zero
 included, with an exponent. The wider formats are the same with their own
 digits, and an exponent of 2, 3, or 4 digits:
@@ -8508,9 +8508,13 @@ would give `COMPLEX(16)`: write `CMPLX(X, KIND=16)` for that. Of the intrinsic f
 complex routines). A power `Z**N` with `N` a constant from 1 to 8 is written in line, the
 products of `Z`'s squares; any other `INTEGER` power calls `FTN$CHPOWJ`, which multiplies
 the same way, so the two give the same value, and a power to a `COMPLEX` (or `REAL`) one
-calls `FTN$CHPOW`, `EXP(Y * LOG(Z))`. `MERGE` takes `COMPLEX(16)` values too. Its I/O and
-the other intrinsic functions of one are not there yet (`%FORT-E-NOTIMPL`): print its
-parts, `REAL(Z)` and `AIMAG(Z)`.
+calls `FTN$CHPOW`, `EXP(Y * LOG(Z))`. `MERGE` takes `COMPLEX(16)` values too. It goes in
+I/O lists of every kind as the other complex types do: in a format, each part takes an edit
+descriptor of its own (`'(2F10.4)'`); list-directed, each part is `1PG42.33E4` without its
+blanks, a field of up to 86 bytes, which a record of its own holds whole, longer than the
+usual 81 (VMS's FORTRAN had no `COMPLEX*32`; govax's choice); in a NAMELIST group; and
+unformatted, its 32 bytes. The other intrinsic functions of one are not there yet
+(`%FORT-E-NOTIMPL`).
 
 **The kind and inquiry functions** (the standard's 13.7.1 and 13.13). `KIND(X)` is the kind
 of `X`'s type, and `SELECTED_INT_KIND(R)` and `SELECTED_REAL_KIND(P, R)` the kind of least
@@ -9919,14 +9923,7 @@ records; and a section as an internal file or ENCODE's buffer. Of the intrinsic 
 these are not there yet: a `BACK=` that is an array; `TRANSFER` to a `CHARACTER` `MOLD` of a
 length of zero or of one known only when the program runs; a derived type's component, or a
 function's value, of length zero; and `COMPLEX(16)` arguments to the functions not named above
-(`SUM`, `PRODUCT`, and the like) and in I/O lists. FTNRTL's formats have no `ES` or `EN` editing
-yet: a format that uses them ends its statement with `%FOR-F-SYNERRFOR` when the program runs
-(the compiler doesn't check a format written as a character constant, as VAX FORTRAN doesn't),
-so write `E` for now. A format written as a character constant may hold `"..."` constants under `/F90`
-(`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as
-it does a FORMAT statement's. A format in a variable, known only at run time, can't yet:
-FTNRTL refuses it with `%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write that one
-with apostrophes.
+(`SUM`, `PRODUCT`, and the like).
 
 ## 15. Appendices
 

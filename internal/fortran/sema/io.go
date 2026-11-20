@@ -311,8 +311,6 @@ func (a *analyzer) checkNamelists() {
 				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
 			case s.External || (s.Class != Variable && s.Class != Array):
 				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
-			case s.Type == complex32:
-				a.notImplForm(n.Pos, complex32IO)
 			case s.Class == Array:
 				r := &ArrayRef{exprBase{T: s.Type, Pos: n.Pos}, s}
 				n.Refs = append(n.Refs, r)
@@ -1060,16 +1058,6 @@ func (a *analyzer) ioList(list []ast.Expr, read bool) ([]*Item, bool) {
 		}
 
 		if v == nil {
-			ok = false
-
-			continue
-		}
-
-		if v.Type() == complex32 {
-			// FTNRTL has no H complex editing (subtask 7 of Phase 100;
-			// the author's answer 1).
-			a.notImplForm(e.Position(), complex32IO)
-
 			ok = false
 
 			continue

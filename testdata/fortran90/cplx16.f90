@@ -4,8 +4,9 @@
 ! differences, products, quotients (FTNRTL's FTN$DIVCH), negation, equality,
 ! conversions to and from COMPLEX(8), REAL(16), and INTEGER, CMPLX with
 ! KIND=16, REAL, AIMAG, and CONJG, KIND and PRECISION, arrays and their
-! elements with a subscript, a dummy array, and a function of the type. Its
-! I/O isn't there yet, so the values are printed by their parts.
+! elements with a subscript, a dummy array, and a function of the type. The
+! values are printed by their parts, as they were before the type's I/O
+! (cplx16io.f90, Phase 109).
 program cplx16
   implicit none
   integer, parameter :: q = 16

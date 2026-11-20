@@ -30,6 +30,8 @@
 ;	COMPLEX*16	(DSC$K_DTYPE_DC)	'(',1PG23.16E2,',',1PG23.16E2,')'
 ;	COMPLEX*16	(DSC$K_DTYPE_GC)	'(',1PG23.15E3,',',1PG23.15E3,')'
 ;						with /G_FLOATING
+;	COMPLEX*32	(DSC$K_DTYPE_HC)	'(',1PG42.33E4,',',1PG42.33E4,')'
+;						Fortran 90's COMPLEX(16)
 ;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
 ;
 ; A complex value is written "with no embedded spaces" (7.3.1.2): each
@@ -37,7 +39,11 @@
 ; before it, so (1.0,2.0) is " (1.000000,2.000000)". Its field is put as
 ; any other value's, never split across records, though the manual allows
 ; a split after the comma (govax's choice, unconfirmed: no case of VMS's
-; run needed one).
+; run needed one). A COMPLEX*32's field, up to 86 bytes, is longer than a
+; record of 81, and is written as a record of its own, longer than the
+; rest (VMS's FORTRAN had no COMPLEX*32; govax's choice, which a READ of
+; the record takes back whole), but in an internal file, where it is split
+; after its comma.
 ;
 ; The records are as VMS's FORTRAN run-time library lays them out (the
 ; probe, testdata/for80, round 1). A record is at most 81 bytes long, 80
@@ -319,8 +325,10 @@ FMT_D		= -140			;  its significant digits, d,
 FMT_E		= -144			;  its exponent's digits, e,
 FMT_KIND	= -148			;  and which OTS$$CVT_x_T_R8: 0 F,
 					;  1 D, 2 G, 3 H
-CTEXT		= -200			; a complex value's text, 52 bytes
-CTEXT_LEN	= -204			;  and its length so far
+CTEXT		= -236			; a complex value's text, 88 bytes: a
+					;  COMPLEX*32's " (", two parts of up
+					;  to 41, "," and ")"
+CTEXT_LEN	= -240			;  and its length so far
 ;
 ; The digit buffer, last in the frame. VMS's routine writes whole groups of nine
 ; digits, not stopping at the size it's given, which FORRTL makes the significant
@@ -348,7 +356,10 @@ FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
 2$:	CMPB	4(AP),#DSC$K_DTYPE_GC
 	BNEQ	3$
 	BRW	COMPLEX_G
-3$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
+3$:	CMPB	4(AP),#DSC$K_DTYPE_HC
+	BNEQ	4$
+	BRW	COMPLEX_H
+4$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
 10$:	.WORD	BYTE_I5-10$		; 2: BU
 	.WORD	LOGICAL-10$		; 3: WU
 	.WORD	LOGICAL-10$		; 4: LU
@@ -475,6 +486,12 @@ COMPLEX_G:
 	MOVL	#15,FMT_D(FP)
 	MOVL	#3,FMT_E(FP)
 	MOVL	#2,FMT_KIND(FP)
+	BRB	COMPLEX
+COMPLEX_H:
+	MOVL	#42,FMT_W(FP)		; 1PG42.33E4
+	MOVL	#33,FMT_D(FP)
+	MOVL	#4,FMT_E(FP)
+	MOVL	#3,FMT_KIND(FP)
 COMPLEX:
 	MOVW	#^A/ (/,CTEXT(FP)	; both characters in one word
 	MOVL	#2,CTEXT_LEN(FP)

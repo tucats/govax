@@ -74,13 +74,11 @@ func TestComplex16(t *testing.T) {
 }
 
 // TestComplex16NotImpl checks what COMPLEX(16) hasn't yet: the intrinsic
-// functions but ABS, SQRT, EXP, LOG, SIN, and COS (Phase 108), and I/O.
+// functions but ABS, SQRT, EXP, LOG, SIN, and COS (Phase 108). Its I/O
+// came in Phase 109 (subtask 3).
 func TestComplex16NotImpl(t *testing.T) {
 	cases := map[string]string{
-		"      H = SUM((/ Q, Q /))":  "an intrinsic function of a COMPLEX(16) argument",
-		"      PRINT *, Q":           "I/O of a COMPLEX(16) value",
-		"      READ *, I, Q":         "I/O of a COMPLEX(16) value",
-		"      WRITE (6) (Q, I=1,2)": "I/O of a COMPLEX(16) value",
+		"      H = SUM((/ Q, Q /))": "an intrinsic function of a COMPLEX(16) argument",
 	}
 
 	for text, want := range cases {
@@ -92,9 +90,24 @@ func TestComplex16NotImpl(t *testing.T) {
 		}
 	}
 
-	// A namelist with a COMPLEX(16) in it.
-	lines := append(append([]string{}, complex16Unit...), "      NAMELIST /G/ Q", "      WRITE (6, G)", "      END")
-	if _, ms := analyzeOpts(t, Options{F90: true}, lines...); len(ms) != 1 || ms[0].Ident != "NOTIMPL" {
-		t.Errorf("a namelist of a COMPLEX(16): got %v", ms)
+}
+
+// TestComplex16IO checks that COMPLEX(16) items and namelist entities are
+// accepted in every kind of statement (Phase 109, subtask 3).
+func TestComplex16IO(t *testing.T) {
+	for _, text := range []string{
+		"      PRINT *, Q",
+		"      READ *, I, Q",
+		"      WRITE (6) (Q, I=1,2)",
+		"      WRITE (6, '(2F10.3)') Q",
+		"      NAMELIST /G/ Q\n      WRITE (6, G)",
+	} {
+		lines := append([]string{}, complex16Unit...)
+		lines = append(lines, strings.Split(text, "\n")...)
+		lines = append(lines, "      END")
+
+		if _, ms := analyzeOpts(t, Options{F90: true}, lines...); len(ms) != 0 {
+			t.Errorf("%s: got %v", text, ms)
+		}
 	}
 }

@@ -387,6 +387,9 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	BEQL	15$
 	MOVL	#DSC$K_DTYPE_G,R8
 	CMPL	R6,#DSC$K_DTYPE_GC
+	BEQL	15$
+	MOVL	#DSC$K_DTYPE_H,R8	; Fortran 90's COMPLEX(16)
+	CMPL	R6,#DSC$K_DTYPE_HC
 	BNEQ	30$
 15$:	MOVL	R8,R6
 	DIVL2	#2,R4

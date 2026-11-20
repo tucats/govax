@@ -60,7 +60,6 @@ var complex32 = Type{Kind: Complex, Size: 32}
 
 // The forms of COMPLEX(16) that are NOTIMPL, as the messages name them.
 const (
-	complex32IO        = "I/O of a COMPLEX(16) value"
 	complex32Intrinsic = "an intrinsic function of a COMPLEX(16) argument"
 )
 

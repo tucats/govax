@@ -1355,7 +1355,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `C_B`, `C_EN`, `C_ES` after `C_Q`; `ftn_edit.mar`'s B, `ftn_float.mar`'s ES
   and `OUT_EN`; `testdata/fortran90/edits.f90`), and by the author's choice
   BLANK='NULL' for an internal file and an unopened unit under the flag
-  (`UB_BLANK` 3, "ZERO by default", VAX's ZERO without it).
+  (`UB_BLANK` 3, "ZERO by default", VAX's ZERO without it); subtask 3
+  (2026-11-20) is COMPLEX(16) I/O in every kind of statement (sema's
+  NOTIMPLs gone; FTNRTL's formatted, list-directed, and namelist modules
+  take DSC$K_DTYPE_HC, list-directed `1PG42.33E4` per part, a field past
+  81 bytes a record of its own; `testdata/fortran90/cplx16io.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -4,7 +4,7 @@
 Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
 accepted by the author the same day ("The author's answers"); its A.4 revises
 the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
-subtask 3 is next.
+subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4 is next.
 
 ## Goal
 
@@ -343,7 +343,7 @@ And where each change lands:
    units; `format.Options.F90` (B, EN, ES, `r/`); FTNRTL's B, EN, ES, `r/`, G of every type,
    and `"…"` in run-time formats under the flag (finding 1, 9); FTNRTL's operation codes and
    `format`'s renumbered together (done 2026-11-19).
-3. **COMPLEX(16) I/O** in every kind of statement (finding 10).
+3. **COMPLEX(16) I/O** in every kind of statement (finding 10) (done 2026-11-20).
 4. **OPEN and INQUIRE's new specifiers**, STATUS='REPLACE', re-OPEN's DELIM= and PAD=,
    IOLENGTH= (finding 7), and ACTION='WRITE''s condition.
 5. **Nonadvancing I/O**: ADVANCE= (constant and run-time, `FTN$ADVANCE`), SIZE= through
@@ -452,3 +452,25 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   'ZERO' for 3 (VAX's answer; unconfirmed whether a Fortran 90 program should see
   'NULL'). `edits.f90` reads `1.5E3` unjustified, and `12 3` by I5 as 123 and by
   `(BZ, I5)` as 12030, the same on gfortran. Subtask 3 (COMPLEX(16) I/O) is next.
+- **2026-11-20:** Subtask 3, COMPLEX(16) I/O. sema's two NOTIMPLs (`complex32IO`, an item and
+  a NAMELIST entity) are gone; the compiler already gave such an item a descriptor of
+  DSC$K_DTYPE_HC (30), so the work is FTNRTL's, with no new entry (GSMATCH stays 1,30).
+  `ftn_format.mar`'s FTN$$FMT_ITEM splits an HC item into two H parts, each taking an edit
+  descriptor, as it does the other complex types. `ftn_listout.mar` writes one in
+  `1PG42.33E4` per part (COMPLEX\*16's widths one narrower than its real's, as the table's
+  others are), between ` (`, `,`, and `)`; its text, up to 86 bytes, needed CTEXT widened
+  from 52 to 88, and a field longer than a record of 81 is written whole as a record of its
+  own (PUT_FIELD's rule already; VMS's FORTRAN had no COMPLEX\*32, so govax's choice,
+  unconfirmed, which a READ takes back whole), but split after its comma in an internal file
+  (the existing rule). `ftn_listin.mar`'s STORE takes HC (CONVERT's H, its VALUE grown to
+  32 bytes, a number's imaginary part of 0 cleared at 16 bytes); `ftn_namelist.mar` takes a
+  complex value for an HC entity, and its output frame's FIELD grew from 100 bytes to 120
+  for the 86-byte field. Unformatted I/O needed nothing: the item is its 32 bytes.
+  `testdata/fortran90/cplx16io.f90` runs every kind of statement in every mode; its output
+  worked by hand (F form's 33 significant digits, E form's 34 after 1P, the namelist's value
+  on the record after its name when it won't fit beside it). gfortran agrees but for
+  list-directed and namelist output's layouts, the processor's: `compare.py`'s KNOWN now
+  lets a line stand for a list of lines (none, for one gfortran doesn't print). MANUAL.md's
+  14.13 says what COMPLEX(16) I/O does, and its list of what isn't there lost the stale ES,
+  EN, and run-time `"…"` sentences subtask 2 had left. Subtask 4 (OPEN and INQUIRE's new
+  specifiers) is next.
