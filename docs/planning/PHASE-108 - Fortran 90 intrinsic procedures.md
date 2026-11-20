@@ -353,7 +353,8 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    2026-11-19).
 4. **Numeric functions and COMPLEX(16)** (findings 5, 6), GSMATCH 1,28 (done
    2026-11-19).
-5. **The model functions** in F, D, G, and H (finding 7).
+5. **The model functions** in F, D, G, and H (finding 7), GSMATCH 1,29 (done
+   2026-11-19).
 6. **TRANSFER** (finding 8).
 7. **The subroutines**: DATE_AND_TIME with `SYS$TIMEZONE_DIFFERENTIAL`,
    SYSTEM_CLOCK, RANDOM_NUMBER, RANDOM_SEED (findings 9 to 11).
@@ -556,3 +557,34 @@ The author read the survey and accepted every recommendation:
   runs it all in every mode, and gfortran prints the same (`compare.py`); `sema`'s
   `TestPhase108Numeric` holds the forms, the folding, and the messages. MANUAL.md's 14.13 and its
   FTNRTL table, and HELP FORTRAN, have them.
+- **2026-11-19:** Subtask 5, the model functions. EXPONENT, FRACTION, NEAREST, RRSPACING, SCALE,
+  SET_EXPONENT, and SPACING are `MODEL` rows, no longer LATER, read by `sema/model.go`'s
+  `modelFunction` before a row is chosen (their arguments' types differ: X a REAL, I an INTEGER
+  made INTEGER\*4, S a REAL of any kind left as it is, since only its sign bit, bit 15 of the
+  first word in every format, is read). Of constants all seven are folded (`constfuncs.go`'s
+  `constModel`) by vaxfloat's model functions (`model.go`: `Exponent`, `Fraction`, and
+  `Format`'s `Scale`, `SetExponent`, `Spacing`, `RRSpacing`, `Nearest`, exact on big.Float's
+  MantExp, held to the standard's examples and each format's edges by `TestModelFunctions`), a
+  result past the range REALRANGE. EXPONENT and FRACTION are written in line (new ops
+  `ExponentOp`, `FractionOp`; `ir/lowermodel.go`): X stored into a text temporary of its own,
+  whose first longword and word are then read and changed as integers, an EXTZV of the
+  exponent field less the bias (0 kept for 0), and for FRACTION a BICW and BISW of the field
+  where it isn't 0 (the bias's bits are ^X4000 in every format). **SET_EXPONENT is FTNRTL's**,
+  where finding 7 put it in line: it needs SCALE's range checks, and shares SCALE's code there
+  but for its base (the bias rather than X's field). The other five are `FTN$name_F`, `_D`, `_G`,
+  `_H` (`ftn_intrinsics.mar`, 20 entries at vector offsets 856 to 1008, GSMATCH 1,29): each entry
+  points R11 at its format's parameters (`FORMAT_F` ...: the field's position and size, the bias,
+  the largest field, the digits, the longwords) and branches to the function's code, which runs
+  in the entry's frame on X's longwords copied as integers (never a floating instruction on X, so
+  a reserved operand doesn't fault there; it is copied as it is or, by NEAREST and RRSPACING, as
+  any value with a field of 0). SCALE's I is kept within ±65,536 so the sum can't overflow. NEAREST
+  adds or takes 1 from the magnitude as a whole number of words, the most significant first, by
+  INCW and DECW with the carry; from 0 it is ±TINY, toward 0 from ±TINY 0. A result past the range
+  is a real overflow (`TOO_LARGE`: the largest exponent, X's sign, doubled by MULx2), so a handler
+  sees `SS$_FLTOVF_F` as from any instruction; below it, 0. `testdata/fortran90/model.f90` runs
+  the standard's examples folded, at run time, on arrays, and by keyword, of F, D, and H, in every
+  mode, and gfortran prints the same but D's two lines (`compare.py`'s KNOWN: 56 digits, not 53);
+  `modelvms.f90` is the VAX's edges, TINY and HUGE in F, D, G (a unit under `OPTIONS
+  /G_FLOATING`), and H, and every overflow, each caught by LIB$SIG_TO_RET as `%X000004B4`.
+  `sema`'s `TestPhase108Model` holds the forms, the folding, and the messages. MANUAL.md's 14.13
+  and its FTNRTL table, and HELP FORTRAN, have them.

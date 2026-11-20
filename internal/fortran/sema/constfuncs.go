@@ -74,6 +74,14 @@ var constFuncs = map[string]constFunc{
 	"CEILING":  {1, 1, "1 argument", wholeFunction(true)},
 	"FLOOR":    {1, 1, "1 argument", wholeFunction(false)},
 	"MODULO":   {2, 2, "2 arguments", constModulo},
+
+	"EXPONENT":     {1, 1, "1 argument", constModel},
+	"FRACTION":     {1, 1, "1 argument", constModel},
+	"RRSPACING":    {1, 1, "1 argument", constModel},
+	"SPACING":      {1, 1, "1 argument", constModel},
+	"NEAREST":      {2, 2, "2 arguments", constModel},
+	"SCALE":        {2, 2, "2 arguments", constModel},
+	"SET_EXPONENT": {2, 2, "2 arguments", constModel},
 }
 
 // apply is a function reference in a constant expression: one of
@@ -739,4 +747,60 @@ func constRepeat(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr)
 	}
 
 	return charConst(strings.Repeat(s.Text, int(n.Int)), e.Pos), nil
+}
+
+// constModel is one of the numeric model's functions of constants (model.go),
+// computed by vaxfloat's model of X's format: exact, so the value is the one
+// FTNRTL's routine or the in-line code computes. A result past the format's
+// range is RANGE's message, as any constant's.
+func constModel(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+	x := args[0]
+	if x.T.Kind != Real {
+		return nil, ev.badArg(e, "a REAL X", x)
+	}
+
+	f := ev.a.format(x.T)
+	c := &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}}
+
+	var (
+		v   vaxfloat.Value
+		err error
+	)
+
+	switch e.Name {
+	case "EXPONENT":
+		return &Const{exprBase: exprBase{T: ev.a.defaultInt, Pos: e.Pos}, Int: int32(vaxfloat.Exponent(x.Real))}, nil
+	case "FRACTION":
+		v = vaxfloat.Fraction(x.Real)
+	case "RRSPACING":
+		v = f.RRSpacing(x.Real)
+	case "SPACING":
+		v = f.Spacing(x.Real)
+	case "NEAREST":
+		s := args[1]
+		if s.T.Kind != Real {
+			return nil, ev.badArg(e, "a REAL S", s)
+		}
+
+		v, err = f.Nearest(x.Real, s.Real.Sign() >= 0)
+	default:
+		i := args[1]
+		if i.T.Kind != Integer {
+			return nil, ev.badArg(e, "an INTEGER I", i)
+		}
+
+		if e.Name == "SCALE" {
+			v, err = f.Scale(x.Real, int64(i.Int))
+		} else {
+			v, err = f.SetExponent(x.Real, int64(i.Int))
+		}
+	}
+
+	if err != nil {
+		return nil, ev.realRange(e.Pos, valueText, x.T)
+	}
+
+	c.Real = v
+
+	return c, nil
 }

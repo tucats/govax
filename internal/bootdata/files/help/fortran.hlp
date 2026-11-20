@@ -176,6 +176,11 @@
    CEILING, FLOOR, and MODULO are there: MODULO(A, P) is the
    remainder with P's sign, where MOD's has A's.
 
+   The model's functions EXPONENT, FRACTION, SCALE, SET_EXPONENT,
+   SPACING, RRSPACING, and NEAREST are there, exact in each VAX
+   format: TINY is the least value (there are no denormalized
+   numbers), and a SCALE past HUGE is a floating overflow.
+
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and
    CASE too); a named construct must be named at its end, and its name

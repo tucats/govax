@@ -126,6 +126,11 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.merge(e, args, shape)
 	}
 
+	if forms[0].how == "MODEL" {
+		// The model's functions, whose arguments' types differ (model.go).
+		return a.modelFunction(e, args, shape)
+	}
+
 	if characterFunctions[forms[0].how] || forms[0].how == "INDEX" && len(args) == 3 {
 		// Fortran 90's character functions, and INDEX with BACK (charfuncs.go).
 		return a.characterFunction(e, forms[0].how, args, shape)

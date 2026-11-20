@@ -860,4 +860,304 @@ SEARCH:	SUBL2	#256,SP			; the table
 40$:	MOVL	R6,R0
 	RET
 
+;
+; Fortran 90's numeric model (13.7.1 and 13.13; docs/planning/PHASE-108 -
+; Fortran 90 intrinsic procedures.md, finding 7): SCALE, SET_EXPONENT,
+; SPACING, RRSPACING, and NEAREST, a routine for each REAL format, F, D, G,
+; and H. Each VAX format is the model exactly: a nonzero value is 0.1f *
+; 2**e, its hidden bit the model's first digit, kept as a sign bit (bit 15
+; of the first word), an exponent field (e plus a bias), and the fraction's
+; other bits, the first word's low bits then each word after it, most
+; significant first:
+;
+;	F	bits 7 to 14, bias 128,   24 digits, 1 longword
+;	D	bits 7 to 14, bias 128,   56 digits, 2 longwords
+;	G	bits 4 to 14, bias 1024,  53 digits, 2 longwords
+;	H	bits 0 to 14, bias 16384, 113 digits, 4 longwords
+;
+; An exponent field of 0 is the value 0 (with the sign set, a reserved
+; operand). So each function is a change to the fields, done here on the
+; value's bits as integers, never by a floating instruction (which would
+; fault on a reserved operand) but where an overflow is wanted.
+;
+; X, I, and S are by reference. An F, D, or G value comes back in R0 (and
+; R1); an H value goes through a hidden first argument, the address of the
+; result's place, so its X is the second argument. Each entry points R11
+; at its format's parameters and goes to the function's code, which runs
+; in the entry's own frame and ends with RET.
+;
+; A result past the format's largest exponent is made a real overflow: the
+; value with the largest exponent, X's sign, doubled by MULx2, so that the
+; program's handlers see SS$_FLTOVF_F as from any instruction. One below the
+; least exponent is 0, as the VAX's underflow is with PSL<FU> clear.
+;
+; value = FTN$SCALE_F(x, i), and _D, _G; CALL FTN$SCALE_H(result, x, i)
+; value = FTN$SET_EXPONENT_F(x, i), and _D, _G; CALL FTN$SET_EXPONENT_H(...)
+;
+; SCALE (13.13.94), X * 2**I: X with I added to its exponent field.
+; SET_EXPONENT (13.13.99), FRACTION(X) * 2**I: X with the field the bias
+; plus I. Both are X itself for an X of 0. I is an INTEGER*4.
+;
+	.ENTRY	FTN$SCALE_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	SCALE
+	.ENTRY	FTN$SCALE_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	SCALE
+	.ENTRY	FTN$SCALE_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	SCALE
+	.ENTRY	FTN$SCALE_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	SCALE
+	.ENTRY	FTN$SET_EXPONENT_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	SET_EXPONENT
+	.ENTRY	FTN$SET_EXPONENT_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	SET_EXPONENT
+	.ENTRY	FTN$SET_EXPONENT_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	SET_EXPONENT
+	.ENTRY	FTN$SET_EXPONENT_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	SET_EXPONENT
+;
+; value = FTN$SPACING_F(x), and _D, _G; CALL FTN$SPACING_H(result, x)
+;
+; SPACING (13.13.103), 2**(e - p), one unit in the last place of X's
+; fraction: the field less p - 1, the fraction 0.1, the sign clear; TINY
+; (the field 1) for 0 or where that is below the range.
+;
+	.ENTRY	FTN$SPACING_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	SPACING
+	.ENTRY	FTN$SPACING_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	SPACING
+	.ENTRY	FTN$SPACING_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	SPACING
+	.ENTRY	FTN$SPACING_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	SPACING
+;
+; value = FTN$RRSPACING_F(x), and _D, _G; CALL FTN$RRSPACING_H(result, x)
+;
+; RRSPACING (13.13.89), |X * 2**-e| * 2**p, X's fraction's bits as a whole
+; number: X with the field the bias plus p and the sign clear; 0 for 0.
+;
+	.ENTRY	FTN$RRSPACING_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	RRSPACING
+	.ENTRY	FTN$RRSPACING_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	RRSPACING
+	.ENTRY	FTN$RRSPACING_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	RRSPACING
+	.ENTRY	FTN$RRSPACING_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	RRSPACING
+;
+; value = FTN$NEAREST_F(x, s), and _D, _G; CALL FTN$NEAREST_H(result, x, s)
+;
+; NEAREST (13.13.74), the value next to X in the direction of S's sign
+; (S of any REAL kind: bit 15 of its first word is its sign in every
+; format; an S of 0 is positive). X's bits, its sign apart, are a whole
+; number, the most significant word first, which grows by 1 (away from 0)
+; when X's and S's signs agree, else shrinks by 1. The next from 0 is
+; +-TINY; past HUGE is an overflow; toward 0 from +-TINY is 0.
+;
+	.ENTRY	FTN$NEAREST_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	NEAREST
+	.ENTRY	FTN$NEAREST_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	NEAREST
+	.ENTRY	FTN$NEAREST_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	NEAREST
+	.ENTRY	FTN$NEAREST_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	NEAREST
+;
+; Each format's parameters, as SETUP loads them: the exponent field's
+; position and size, the bias, the largest field, the digits, and the
+; longwords.
+;
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+FORMAT_F:
+	.LONG	7,8,128,255,24,1
+FORMAT_D:
+	.LONG	7,8,128,255,56,2
+FORMAT_G:
+	.LONG	4,11,1024,2047,53,2
+FORMAT_H:
+	.LONG	0,15,16384,32767,113,4
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+;
+; SETUP loads the parameters at R11 (R2 the field's position, R3 its size,
+; R4 the bias, R5 the largest field, R6 the digits, R7 the longwords),
+; points R8 at X and R9 at the second argument, and copies X's longwords to
+; the 16 bytes at R10, the rest clear. It changes R0 and R1.
+;
+SETUP:	MOVQ	(R11),R2
+	MOVQ	8(R11),R4
+	MOVQ	16(R11),R6
+	MOVQ	4(AP),R8		; X, and I or S
+	CMPL	R7,#4			; H: past the hidden argument
+	BNEQ	10$
+	MOVQ	8(AP),R8
+10$:	CLRO	(R10)
+	CLRL	R1
+20$:	MOVL	(R8)[R1],(R10)[R1]
+	AOBLSS	R7,R1,20$
+	RSB
+
+;
+; FINISH returns the value at R10: in R0 and R1, or for H through the
+; hidden argument.
+;
+FINISH:	CMPL	R7,#4
+	BEQL	10$
+	MOVQ	(R10),R0
+	RET
+10$:	MOVO	(R10),@4(AP)
+	RET
+
+SET_EXPONENT:
+	SUBL2	#16,SP			; the value's place
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0		; X's exponent field: 0 stays 0
+	BNEQ	5$
+	BRW	FINISH
+5$:
+	MOVL	R4,R0			; from the bias
+	BRB	NEW_FIELD
+
+SCALE:	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0		; from X's field; 0 stays 0
+	BNEQ	5$
+	BRW	FINISH
+5$:
+NEW_FIELD:
+	MOVL	(R9),R1			; I, kept within +-65536, past any
+	CMPL	R1,#65536		;  field's reach, so the sum can't
+	BLEQ	10$			;  overflow
+	MOVL	#65536,R1
+10$:	CMPL	R1,#-65536
+	BGEQ	20$
+	MOVL	#-65536,R1
+20$:	ADDL2	R1,R0			; the new field
+	BGTR	30$
+	CLRO	(R10)			; below the range: 0
+	BRW	FINISH
+30$:	CMPL	R0,R5
+	BGTR	40$
+	INSV	R0,R2,R3,(R10)
+	BRW	FINISH
+40$:	CLRL	R11			; past it: an overflow, of X's sign
+	BBC	#15,(R10),50$
+	INCL	R11
+50$:	BSBW	TOO_LARGE
+	BRW	FINISH
+
+SPACING:
+	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0		; the field
+	SUBL2	R6,R0			; less p - 1
+	INCL	R0
+	CMPL	R0,#1			; at least TINY's
+	BGEQ	10$
+	MOVL	#1,R0
+10$:	CLRO	(R10)
+	INSV	R0,R2,R3,(R10)
+	BRW	FINISH
+
+RRSPACING:
+	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0
+	BNEQ	10$
+	CLRO	(R10)			; 0 for 0
+	BRW	FINISH
+10$:	ADDL3	R4,R6,R0		; the bias plus p
+	INSV	R0,R2,R3,(R10)
+	BICW2	#^X8000,(R10)		; the sign clear
+	BRW	FINISH
+
+NEAREST:
+	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	#15,#1,(R10),R11	; X's sign
+	EXTZV	R2,R3,(R10),R0
+	BNEQ	10$
+	CLRO	(R10)			; from 0: TINY, of S's sign
+	MOVL	#1,R0
+	INSV	R0,R2,R3,(R10)
+	BBC	#15,(R9),5$
+	BISW2	#^X8000,(R10)
+5$:	BRW	FINISH
+10$:	BICW2	#^X8000,(R10)		; X's magnitude
+	EXTZV	#15,#1,(R9),R1		; S's sign
+	ASHL	#1,R7,R0		; the words
+	CMPL	R1,R11
+	BNEQ	30$
+20$:	DECL	R0			; the same: one more, the last word
+	INCW	(R10)[R0]		;  first, carrying up
+	BCC	40$
+	TSTL	R0
+	BGTR	20$
+	BRB	40$
+30$:	DECL	R0			; different: one less, borrowing up
+	DECW	(R10)[R0]
+	BCC	40$
+	TSTL	R0
+	BGTR	30$
+40$:	BBC	#15,(R10),50$		; past HUGE, into the sign bit:
+	BSBB	TOO_LARGE		;  an overflow
+	BRW	FINISH
+50$:	EXTZV	R2,R3,(R10),R0		; below TINY: 0
+	BNEQ	60$
+	CLRO	(R10)
+	BRW	FINISH
+60$:	BLBC	R11,70$			; X's sign again
+	BISW2	#^X8000,(R10)
+70$:	BRW	FINISH
+
+;
+; TOO_LARGE makes a floating overflow of the sign in R11's low bit: the
+; value at R10 made the largest exponent with a fraction of 0.1, then
+; doubled in its own format. If a handler goes on, the value is what the
+; instruction left. It changes R0.
+;
+TOO_LARGE:
+	CLRO	(R10)
+	INSV	R5,R2,R3,(R10)
+	BLBC	R11,10$
+	BISW2	#^X8000,(R10)
+10$:	CMPL	R7,#1
+	BNEQ	20$
+	MULF2	#2.0,(R10)
+	RSB
+20$:	CMPL	R7,#4
+	BNEQ	30$
+	MULH2	#2.0,(R10)
+	RSB
+30$:	CMPL	R3,#8
+	BNEQ	40$
+	MULD2	#2.0,(R10)
+	RSB
+40$:	MULG2	#2.0,(R10)
+	RSB
+
 	.END

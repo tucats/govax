@@ -303,8 +303,7 @@ func TestPhase108ZeroLengths(t *testing.T) {
 // /NOF90; and that the intrinsic subroutines take keywords, and are NOTIMPL
 // but MVBITS.
 func TestPhase108Names(t *testing.T) {
-	later := []string{"EXPONENT(X)", "FRACTION(X)",
-		"NEAREST(X, 1.0)", "RRSPACING(X)", "SCALE(X, 2)", "SET_EXPONENT(X, 2)", "SPACING(X)", "TRANSFER(X, 0)"}
+	later := []string{"TRANSFER(X, 0)"}
 
 	for _, text := range later {
 		_, ms := analyzeOpts(t, Options{F90: true}, fixed("CHARACTER*8 T", "PRINT *, "+text, "END")...)
@@ -392,4 +391,67 @@ func fixed(lines ...string) []string {
 	}
 
 	return out
+}
+
+// TestPhase108Model checks finding 7's model functions: folded of constants,
+// EXPONENT and FRACTION in line, the rest FTNRTL's routine by X's format, I
+// made an INTEGER*4 and S left as it is, and their messages.
+func TestPhase108Model(t *testing.T) {
+	cases := []struct {
+		opts       Options
+		text, want string
+	}{
+		{Options{F90: true}, "EXPONENT(10.0)", "4"},
+		{Options{F90: true}, "FRACTION(-10.0)", "-0.625"},
+		{Options{F90: true}, "SCALE(3.0, 2)", "12.0"},
+		{Options{F90: true}, "SET_EXPONENT(3.0, 1)", "1.5"},
+		{Options{F90: true}, "RRSPACING(-3.0)", "1.2582912E+07"},
+		{Options{F90: true}, "SCALE(1.0, -200)", "0.0"},
+		{Options{F90: true}, "EXPONENT(X)", "(exponent:INTEGER EXPONENT X)"},
+		{Options{F90: true, NoI4: true}, "EXPONENT(D)", "(exponent:INTEGER*2 EXPONENT D)"},
+		{Options{F90: true}, "FRACTION(X=H)", "(fraction:REAL*16 FRACTION H)"},
+		{Options{F90: true}, "SCALE(X, I2)", "(call:REAL FTN$SCALE_F X (INTEGER I2))"},
+		{Options{F90: true}, "SET_EXPONENT(I=1, X=D)", "(call:REAL*8 FTN$SET_EXPONENT_D D 1)"},
+		{Options{F90: true, GFloating: true}, "SPACING(D)", "(call:REAL*8 FTN$SPACING_G D)"},
+		{Options{F90: true}, "RRSPACING(H)", "(call:REAL*16 FTN$RRSPACING_H H)"},
+		{Options{F90: true}, "NEAREST(X, H)", "(call:REAL FTN$NEAREST_F X H)"},
+	}
+
+	for _, c := range cases {
+		lines := fixed("REAL X", "DOUBLE PRECISION D", "REAL*16 H", "INTEGER*2 I2", "PRINT *, "+c.text, "END")
+		prog, ms := analyzeOpts(t, c.opts, lines...)
+
+		if len(ms) != 0 {
+			t.Errorf("%s: %v", c.text, ms)
+
+			continue
+		}
+
+		p := prog.Units[0].Body[0].(*IO)
+		if got := DumpExpr(p.Items[0].Value); got != c.want {
+			t.Errorf("%s:\n got %s\nwant %s", c.text, got, c.want)
+		}
+	}
+
+	bad := map[string]string{
+		"EXPONENT(I2)":    "BADARG",
+		"SCALE(X, X)":     "BADARG",
+		"NEAREST(X, I2)":  "BADARG",
+		"SCALE(1.0, I2)":  "",
+		"SCALE(1.0)":      "INTRINARGS",
+		"SCALE(1.0, 200)": "REALRANGE",
+	}
+
+	for text, want := range bad {
+		_, ms := analyzeOpts(t, Options{F90: true}, fixed("REAL X", "INTEGER*2 I2", "PRINT *, "+text, "END")...)
+
+		got := ""
+		if len(ms) > 0 {
+			got = ms[0].Ident
+		}
+
+		if got != want {
+			t.Errorf("%s: %v, want %q", text, ms, want)
+		}
+	}
 }

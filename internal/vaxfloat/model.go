@@ -48,3 +48,133 @@ func (f Format) Tiny() Value {
 func (f Format) Epsilon() Value {
 	return newValue(new(big.Float).SetMantExp(big.NewFloat(1), 1-f.Digits()))
 }
+
+// The model's functions of a value (Fortran 90's 13.13.33, .39, .74, .89,
+// .94, .99, and .103), exact here because the format is the model. A nonzero
+// value v is m × 2**e with 0.5 <= |m| < 1, the m and e big.Float's MantExp
+// gives; the exponent field of v's bits is e plus the bias.
+
+// Exponent is the model's e of v (EXPONENT): 0 for 0.
+func Exponent(v Value) int {
+	if v.IsZero() {
+		return 0
+	}
+
+	return v.float().MantExp(nil)
+}
+
+// Fraction is v × 2**-e, its fraction with its sign (FRACTION): v's bits
+// with the exponent field the bias's. 0 for 0.
+func Fraction(v Value) Value {
+	if v.IsZero() {
+		return v
+	}
+
+	m := new(big.Float)
+	v.float().MantExp(m)
+
+	return newValue(m)
+}
+
+// Scale is v × 2**i in format f (SCALE): v's bits with i added to the
+// exponent field. A result past the format's largest exponent is
+// ErrOverflow; one below its least is 0, as the VAX's underflow is with
+// PSL<FU> clear.
+func (f Format) Scale(v Value, i int64) (Value, error) {
+	if v.IsZero() {
+		return v, nil
+	}
+
+	e := int64(Exponent(v)) + i
+
+	switch {
+	case e > int64(f.maxExp()):
+		return Value{}, ErrOverflow
+	case e < int64(f.minExp()):
+		return Value{}, nil
+	}
+
+	return newValue(new(big.Float).SetMantExp(v.float(), int(i))), nil
+}
+
+// SetExponent is v's fraction × 2**i in format f (SET_EXPONENT): v's bits
+// with the exponent field the bias plus i. Out of range as Scale's.
+func (f Format) SetExponent(v Value, i int64) (Value, error) {
+	return f.Scale(Fraction(v), i)
+}
+
+// Spacing is the distance between v and its neighbors in format f, 2**(e -
+// p) (SPACING): one unit in the last place of v's fraction. For 0, or where
+// that is below the format's range, it is TINY.
+func (f Format) Spacing(v Value) Value {
+	if v.IsZero() {
+		return f.Tiny()
+	}
+
+	// 2**(e - p) is 0.1 × 2**(e - p + 1), whose exponent must be in range.
+	e := Exponent(v) - f.Digits()
+	if e+1 < f.minExp() {
+		return f.Tiny()
+	}
+
+	return newValue(new(big.Float).SetMantExp(big.NewFloat(1), e))
+}
+
+// RRSpacing is the reciprocal of v's relative spacing in format f, |v ×
+// 2**-e| × 2**p (RRSPACING): v's fraction bits as a whole number, the
+// exponent field the bias plus p and the sign clear. 0 for 0.
+func (f Format) RRSpacing(v Value) Value {
+	if v.IsZero() {
+		return v
+	}
+
+	return newValue(new(big.Float).SetMantExp(Fraction(v).Abs().float(), f.Digits()))
+}
+
+// Nearest is the value of format f next to v, above it if up, else below
+// (NEAREST, up when S is positive): v's bits, sign apart, as a whole number
+// one more (away from 0) or one less (toward it). The next from 0 is ±TINY;
+// past HUGE is ErrOverflow; toward 0 from ±TINY is 0.
+func (f Format) Nearest(v Value, up bool) (Value, error) {
+	if v.IsZero() {
+		if up {
+			return f.Tiny(), nil
+		}
+
+		return f.Tiny().Neg(), nil
+	}
+
+	away := (v.Sign() > 0) == up
+	e := Exponent(v)
+	m := Fraction(v).Abs()
+	ulp := new(big.Float).SetMantExp(big.NewFloat(1), e-f.Digits())
+
+	if !away && m.Cmp(FromRat(big.NewRat(1, 2))) == 0 {
+		// At a power of 2 the values below are twice as close.
+		ulp.SetMantExp(ulp, -1)
+	}
+
+	prec := uint(f.Digits() + 2)
+	x := new(big.Float).SetPrec(prec).Abs(v.float())
+
+	if away {
+		x.Add(x, ulp)
+	} else {
+		x.Sub(x, ulp)
+	}
+
+	switch r := newValue(x); {
+	case r.IsZero():
+		return r, nil
+	case Exponent(r) > f.maxExp():
+		return Value{}, ErrOverflow
+	case Exponent(r) < f.minExp():
+		return Value{}, nil
+	default:
+		if v.Sign() < 0 {
+			return r.Neg(), nil
+		}
+
+		return r, nil
+	}
+}

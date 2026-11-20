@@ -153,7 +153,7 @@ func TestInquiryErrors(t *testing.T) {
 		"INT(X, 2, 3)":            "INTRINARGS: the intrinsic function INT takes 1 or 2 arguments, not 3",
 		"SELECTED_REAL_KIND()":    "MISSINGARG: the intrinsic function SELECTED_REAL_KIND needs its argument P or R",
 		"SELECTED_INT_KIND(X)":    "BADARG",
-		"EXPONENT(X)":             "NOTIMPL: the intrinsic function EXPONENT is not implemented yet",
+		"TRANSFER(X, 1)":          "NOTIMPL: the intrinsic function TRANSFER is not implemented yet",
 		"INDEX(T, S, 1)":          "BADARG",
 		"SELECTED_INT_KIND(1.5)":  "BADARG: the intrinsic function SELECTED_INT_KIND's arguments must be INTEGER, and this one is REAL",
 		"HUGE(C)":                 "BADARG: the intrinsic function HUGE's arguments must be INTEGER or REAL, and this one is COMPLEX",

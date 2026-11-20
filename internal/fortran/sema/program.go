@@ -1323,6 +1323,8 @@ const (
 	CeilingOp                          // CEILING(A): the least INTEGER not less than a REAL A
 	FloorOp                            // FLOOR(A): the greatest INTEGER not greater than a REAL A
 	ModuloOp                           // MODULO(A, P): A - FLOOR(A/P)*P; a REAL's remainder by Routine, MTHRTL's AMOD
+	ExponentOp                         // EXPONENT(X): a REAL's exponent field less its bias, 0 for 0
+	FractionOp                         // FRACTION(X): a REAL with its exponent field the bias's, 0 for 0
 )
 
 // String is the operation's name in the dump.
@@ -1330,7 +1332,7 @@ func (op IntrinsicOp) String() string {
 	return [...]string{"?", "abs", "max", "min", "dim", "sign", "mod", "nint", "zext", "imag", "cmplx",
 		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "len", "arraysize", "index",
 		"ichar", "char", "call", "merge", "len_trim", "scan", "verify", "trim", "adjustl", "adjustr",
-		"repeat", "ceiling", "floor", "modulo"}[op]
+		"repeat", "ceiling", "floor", "modulo", "exponent", "fraction"}[op]
 }
 
 // Arg is an actual argument. Expr is nil for a null argument (CALL

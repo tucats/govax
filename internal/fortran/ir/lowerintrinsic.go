@@ -65,6 +65,12 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	case sema.ModuloOp:
 		return l.modulo(e, t)
 
+	case sema.ExponentOp:
+		return l.exponent(e, t)
+
+	case sema.FractionOp:
+		return l.fraction(e)
+
 	case sema.NintOp:
 		// CVTRxL rounds to a longword; ININT's word is that, converted.
 		return convertTo(t, arith(Round, Long, l.expr(e.Args[0]), nil))

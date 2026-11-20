@@ -7264,6 +7264,10 @@ It has these routines, which MACRO programs can call too:
 | `FTN$CHABS(r, z)` | ABS of a `COMPLEX(16)` `z` (by reference): its modulus, a REAL\*16 at `r` |
 | `FTN$CHSQRT(r, z)`, `FTN$CHEXP`, `FTN$CHLOG`, `FTN$CHSIN`, `FTN$CHCOS` | SQRT (the root whose real part isn't negative), EXP, LOG (the principal value), SIN, and COS of a `COMPLEX(16)` `z`, the value at `r`, which may be `z` |
 | `FTN$CHPOWJ(r, z, n)`, `FTN$CHPOW(r, z, y)` | `z ** n` for an INTEGER\*4 `n`, by squaring (MTH$_UNDEXP for (0, 0) to a power of 0 or less), and `z ** y` for a `COMPLEX(16)` `y`, `EXP(y * LOG(z))`, at `r` |
+| `FTN$SCALE_F(x, i)`, `_D`, `_G`; `FTN$SCALE_H(r, x, i)` | SCALE of a REAL `x` of that format and an INTEGER\*4 `i`: `x` times 2 to the `i`, in R0 (and R1), an H value at `r`; 0 below the format's range, and past it a floating overflow (SS$_FLTOVF_F) made by doubling the largest exponent |
+| `FTN$SET_EXPONENT_F(x, i)`, and its kinds | SET_EXPONENT: `x`'s fraction times 2 to the `i`, its range as SCALE's |
+| `FTN$SPACING_F(x)`, `FTN$RRSPACING_F(x)`, and their kinds | SPACING, a unit in the last place of `x` (TINY for 0, or below the range), and RRSPACING, `x`'s fraction's bits as a whole number (0 for 0) |
+| `FTN$NEAREST_F(x, s)`, and its kinds | NEAREST: the value next to `x` toward `s`'s sign (`s` a REAL of any kind, its sign bit read): ±TINY from 0, 0 toward 0 from ±TINY, an overflow past HUGE |
 | `FTN$CHAR(result, i)` | CHAR: the character whose code is `i`'s low byte, into the string `result`'s descriptor describes |
 | `FTN$LLT(s, t)`, `FTN$LLE`, `FTN$LGT`, `FTN$LGE` | The lexical comparisons, the shorter string padded with blanks: -1 (.TRUE.) or 0 in R0 |
 | `FTN$BITEST(i, pos)`, `FTN$BJTEST(i, pos)` | BTEST of an INTEGER\*2 or \*4: -1 or 0 in R0 |
@@ -8564,6 +8568,19 @@ remainder with `P` added when the signs differ, in line for `INTEGER`s, through 
 constants all three are computed when compiling, in a `PARAMETER` too (of `REAL`
 arguments as well, as VAX FORTRAN allows `NINT` there, though the standard's
 initialization expressions take only `INTEGER` ones), and all three work on arrays.
+
+**The model's functions** (the standard's 13.7.1). Each VAX format is the standard's model
+of a real number exactly, `0.1f × 2**e` with the hidden bit the model's first digit, so
+`EXPONENT(X)` (the exponent, of the default `INTEGER` kind, 0 for 0), `FRACTION(X)`,
+`SCALE(X, I)`, `SET_EXPONENT(X, I)`, `SPACING(X)`, `RRSPACING(X)`, and `NEAREST(X, S)` are
+exact changes to a value's fields: `EXPONENT` and `FRACTION` are written in line, the
+others call FTNRTL's routine for `X`'s format, `FTN$SCALE_F` to `FTN$NEAREST_H`. A `REAL(8)`
+is D_floating (56 digits, F's range) or under `/G_FLOATING` G_floating (53 digits, exponents
+from -1023 to 1023), so `SPACING(3D0)` is 2\*\*-54 or 2\*\*-51; `TINY` is the least value, the VAX
+having no denormalized numbers: `NEAREST(0.0, 1.0)` is `TINY(1.0)`, `SPACING(0.0)` is
+`TINY(1.0)`, and `NEAREST(TINY(1.0), -1.0)` is 0. A `SCALE` or `SET_EXPONENT` below the range
+is 0; past it, or `NEAREST(HUGE(X), 1.0)`, is a floating overflow, `SS$_FLTOVF_F`, which a
+handler sees as from any instruction. Of constants all seven are computed when compiling.
 
 A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
 its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;

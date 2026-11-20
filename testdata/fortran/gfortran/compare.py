@@ -62,6 +62,7 @@ PROGRAMS90 = {
     "keywords": ["keywords.f90"],
     "charfns": ["charfns.f90"],
     "numfns": ["numfns.f90"],
+    "model": ["model.f90"],
     "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],
@@ -146,6 +147,13 @@ PROGRAMS90 = {
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.
 KNOWN = {
+    "model": {
+        # REAL(8) is D_floating, 56 digits, where gfortran's is IEEE's double, 53: a unit in the
+        # last place of 3 is 2**-54, not 2**-51 (PHASE-108's finding 7).
+        "D spacings:  5.5511151231257827E-17   54043195528445952.0":
+            "D spacings:  4.4408920985006262E-16    6755399441055744.0",
+        "D NEAREST:  5.5511151231257827E-17": "D NEAREST:  4.4408920985006262E-16",
+    },
     "inquire": {
         # The VAX's F, D, and H formats' models, where gfortran's are IEEE's: F's exponent
         # field biased by 128 with no denormals, and REAL(8) D_floating, whose range is F's,
