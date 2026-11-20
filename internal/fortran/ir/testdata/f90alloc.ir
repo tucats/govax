@@ -21,7 +21,7 @@ routine F90ALC main
   cell  $T10    L  $LOCAL+172  temporary
   cell  $T11    L  $LOCAL+176  temporary
   $LOCAL is 180 bytes
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D2     descriptor L S 4 $T5
   datum $D3     descriptor L S 4 $T10
 B1:

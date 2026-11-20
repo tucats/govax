@@ -59,7 +59,7 @@ routine TRANS subroutine
   cell  $C28    L  $LOCAL+352  array (line 15), dimension 1's count
   cell  $D1     L  $LOCAL+356  descriptor L S 4
   $LOCAL is 364 bytes
-  datum $IO1    control
+  datum $IO1    control F90
 B1:
   ; line 10
   assign $T1 = @N

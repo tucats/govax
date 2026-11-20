@@ -249,3 +249,64 @@ func TestQuotes(t *testing.T) {
 		}
 	}
 }
+
+// TestF90 holds Options.F90: Fortran 90's B, EN, ES, and r/ read, each with
+// the numbers it needs, and refused without the option, as VMS's FORRTL
+// refuses them; and B still taken as BN's or BZ's start.
+func TestF90(t *testing.T) {
+	cases := []struct{ text, want string }{
+		{"(B8, B12.10, 2B4)", "B8@1 B12.10@5 2B4@13"},
+		{"(EN12.3, ES10.2E3, 2EN9.1)", "EN12.3@1 ES10.2E3@9 2EN9.1@19"},
+		{"(I3, 3/, I3, 2 /I4)", "I3@1 3/@5 I3@9 2/@13 I4@16"},
+		{"(BN, BZ, B5, E N 9.2)", "BN@1 BZ@5 B5@9 EN9.2@13"},
+		{"(<K>/, I3)", "<1>/@1 I3@7"},
+		{"(G, I0, \"x\")", `G@1 I0@4 "x"@7`},
+	}
+
+	for _, c := range cases {
+		f, err := Parse(c.text, Options{F90: true})
+		if err != nil {
+			t.Errorf("%q: %v", c.text, err)
+
+			continue
+		}
+
+		if got := dump(f.Items); got != c.want {
+			t.Errorf("%q:\n got %s\nwant %s", c.text, got, c.want)
+		}
+	}
+
+	errs := []struct {
+		text   string
+		offset int
+		has    string
+	}{
+		{"(1X,B)", 5, "B needs a width"},
+		{"(1X,EN)", 6, "EN needs a width"},
+		{"(1X,ES12)", 8, "digits after the point"},
+		{"(1X 3/)", 4, "comma"},
+		{"(1X,0/)", 4, "at least 1"},
+		{"(1X,-2/)", 4, "sign"},
+	}
+
+	for _, c := range errs {
+		_, err := Parse(c.text, Options{F90: true})
+
+		e, ok := err.(*Error)
+		if !ok {
+			t.Errorf("%q: got %v, want an error", c.text, err)
+
+			continue
+		}
+
+		if e.Offset != c.offset || !strings.Contains(e.Text, c.has) {
+			t.Errorf("%q: got %d %q, want %d and %q", c.text, e.Offset, e.Text, c.offset, c.has)
+		}
+	}
+
+	for _, text := range []string{"(B8)", "(EN12.3)", "(ES10.2)", "(I3,3/)"} {
+		if _, err := Parse(text, Options{}); err == nil {
+			t.Errorf("%q was accepted without F90", text)
+		}
+	}
+}

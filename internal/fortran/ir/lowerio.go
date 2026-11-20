@@ -24,9 +24,10 @@ import (
 //	  sign $T1 B3 B3 L99			an error goes to 99
 //
 // The begin call's arguments are the control block (its flags: which of
-// ERR=, END=, and IOSTAT= the statement has, and whether its format is a
-// run-time one), the unit (a number, by value; an internal file's
-// descriptor; ENCODE's or DECODE's buffer's address), and the format (a
+// ERR=, END=, and IOSTAT= the statement has, whether its format is a
+// run-time one, and whether its unit was compiled /F90), the unit (a
+// number, by value; an internal file's descriptor; ENCODE's or DECODE's
+// buffer's address), and the format (a
 // FORMAT statement's block, the address an ASSIGNed variable holds, a
 // run-time format's descriptor, or a NAMELIST group's block); a
 // list-directed or unformatted statement has no format argument. ENCODE and DECODE have a
@@ -57,6 +58,10 @@ func (l *lowerer) io(s *sema.IO) {
 
 	if s.RunFormat != nil {
 		c.Flags |= ControlRunFormat
+	}
+
+	if l.unit.F90 {
+		c.Flags |= ControlF90
 	}
 
 	// An assumed-shape array as the internal file, the buffer, or the format

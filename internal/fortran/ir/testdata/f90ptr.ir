@@ -9,7 +9,7 @@ routine F90PTR main
   cell  $D2     L  $LOCAL+32   descriptor T S 2
   $LOCAL is 40 bytes
   datum $K1     text 'AB'
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D1     descriptor LU S 4 $T1
 B1:
   ; line 13

@@ -95,7 +95,7 @@ routine USE subroutine
   datum $D2     descriptor T S 2 $K1
   datum $K2     L 2
   datum $K3     text '!'
-  datum $IO1    control
+  datum $IO1    control F90
   datum $K4     text 'X'
   datum $D4     descriptor T S 1 $K4
   datum $K5     L 3

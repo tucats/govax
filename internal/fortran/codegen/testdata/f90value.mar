@@ -96,7 +96,7 @@ USE.$K1:
 	.LONG	4
 USE.$IO1:
 	.WORD	8			; an I/O statement's control block: its size
-	.WORD	^X0000			; flags: none
+	.WORD	^X0010			; flags: F90
 	.LONG	0			; (not used yet)
 USE.$K2:
 	.LONG	1

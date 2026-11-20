@@ -25,6 +25,12 @@
 // may itself be an item, a group, with a repeat count of its own:
 // 2(I3,F6.1).
 //
+// Under /F90 (Options.F90) Fortran 90's descriptors are read too: Bw[.m]
+// (an integer in binary), ENw.d[Ee] and ESw.d[Ee] (engineering and
+// scientific forms of a real), and r/, a slash repeated; each needs its
+// numbers, as the standard's 10.2.1 says. VMS's FORRTL refuses them all,
+// so without the option they are errors, as they always were.
+//
 // Blanks mean nothing in a format, outside a character constant and an
 // H's text: ( 1 X , I 3 ) is (1X,I3). Lowercase letters are capitals.
 //

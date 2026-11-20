@@ -270,7 +270,7 @@ func ControlText(flags int) string {
 	for _, f := range []struct {
 		bit  int
 		name string
-	}{{ControlErr, "ERR="}, {ControlEnd, "END="}, {ControlIOStat, "IOSTAT="}, {ControlRunFormat, "run-time format"}} {
+	}{{ControlErr, "ERR="}, {ControlEnd, "END="}, {ControlIOStat, "IOSTAT="}, {ControlRunFormat, "run-time format"}, {ControlF90, "F90"}} {
 		if flags&f.bit != 0 {
 			text += " " + f.name
 		}

@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
 accepted by the author the same day ("The author's answers"); its A.4 revises
-the subtasks below. Subtask 2 is next.
+the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
+subtask 3 is next.
 
 ## Goal
 
@@ -341,7 +342,7 @@ And where each change lands:
 2. **The F90 flag and the new edits**: control block bit 4 set by the compiler for `/F90`
    units; `format.Options.F90` (B, EN, ES, `r/`); FTNRTL's B, EN, ES, `r/`, G of every type,
    and `"…"` in run-time formats under the flag (finding 1, 9); FTNRTL's operation codes and
-   `format`'s renumbered together.
+   `format`'s renumbered together (done 2026-11-19).
 3. **COMPLEX(16) I/O** in every kind of statement (finding 10).
 4. **OPEN and INQUIRE's new specifiers**, STATUS='REPLACE', re-OPEN's DELIM= and PAD=,
    IOLENGTH= (finding 7), and ACTION='WRITE''s condition.
@@ -418,3 +419,36 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   thirteen findings, the subtasks revised into nine (A.4), six questions (A.5).
 - **2026-11-19:** The author accepted the plan and every recommendation ("The author's
   answers"). Subtask 1 is done; subtask 2 (the F90 flag and the new edits) is next.
+- **2026-11-19:** Subtask 2, the F90 flag and the new edits. The compiler sets the control
+  block's bit 4, `ir.ControlF90` (`F90` in IR dumps and the MACRO file's comment), for
+  every data transfer statement of a `/F90` unit (`ir/lowerio.go`); the `ir` and `codegen`
+  goldens of `/F90` units changed by that bit alone. `format.Options.F90` (implying
+  `Quotes`) reads `Bw[.m]`, `ENw.d[Ee]`, and `ESw.d[Ee]`, each needing its width (EN and ES
+  their d), and `r/` (`Item.Repeat` on a `Slash`, a comma needed before it, none after);
+  the codes are `B`, `EN`, `ES` after `A`, `Code.Data` "at most ES". FORMAT statements,
+  constant formats, and the `/STANDARD` walk (B, EN, ES, and a repeated slash are
+  extensions to FORTRAN-77) pass `F90`. FTNRTL: `ftn_format.mar`'s codes renumbered with
+  `C_B`, `C_EN`, `C_ES` after `C_Q` (10 to 12), so FTN_EDIT's and FTN_FLOAT's are unchanged;
+  PARSE takes a fifth argument, the flag (`EXTZV` of `CTX_FLAGS`'s bit), under which it
+  reads B, EN, ES, `r/`, and `"…"` (QUOTED's mark in R4); the walk's `/` ends `r` records;
+  EDIT's `GENERAL` makes G of an INTEGER (B, W, L), LOGICAL (BU, WU, LU, so BYTE too), or
+  CHARACTER item a copy of the operation as I, L, or A with w alone. `ftn_edit.mar`'s B is
+  O and Z's code with a digit of 1 bit, both ways. `ftn_float.mar`'s ES is E with the scale
+  factor 1; EN (`OUT_EN`) rounds to d+3 digits for the exponent, then to k+d, and a carry
+  there adds a digit before the point, the digits past the rounding zeros (`L_LIMIT`, which
+  SHOWN now honors); zero is `0.ddd` with exponent 0 (gfortran's). No new entry, so GSMATCH
+  stays 1,30. `testdata/fortran90/edits.f90`, its output worked by hand and the same on
+  gfortran, runs in every mode; the VMS oracles (`TestFor80Oracle`, `TestFor80InputOracle`,
+  `TestNML80Oracle`) and `TestNoF90Unchanged` are unchanged, the flag being clear for them.
+  Found on the way: an internal file's and an unopened unit's BLANK= was VAX FORTRAN's
+  'ZERO', where Fortran 90's default is 'NULL' (the standard's 9.3.4.9, 9.2.2.2); so
+  `'1.5E3   '` read by ES8.1 was `1.5E3000` and INPCONERR in a `/F90` program, where
+  gfortran reads 1500. **The author's answer (2026-11-19):** under `/F90`, the standard's
+  default, as gfortran. A unit's `UB_BLANK` has a third value, 3, "ZERO by default" (no
+  OPEN has said; a new unit block's), and an internal file's `CTX_UNITBLANK` is 3 too;
+  FTN$$UNIT_RECORD passes it on, and FTN$$FMT_START makes it ZERO for a statement
+  without the F90 flag and NULL with it. An OPEN already gave BLANK='NULL' by default
+  (sema's `openDefaults`, 'ZERO' under `/NOF77`). INQUIRE, having no flag, still answers
+  'ZERO' for 3 (VAX's answer; unconfirmed whether a Fortran 90 program should see
+  'NULL'). `edits.f90` reads `1.5E3` unjustified, and `12 3` by I5 as 123 and by
+  `(BZ, I5)` as 12030, the same on gfortran. Subtask 3 (COMPLEX(16) I/O) is next.

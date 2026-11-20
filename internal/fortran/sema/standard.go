@@ -523,7 +523,7 @@ func (x *extensions) values(list []*ast.DataValue) {
 // format looks at a FORMAT statement's edit descriptors. A format with an error has
 // its message already, and nothing to look at.
 func (x *extensions) format(s *ast.FormatStmt) {
-	f, err := format.Parse(s.Text, format.Options{Quotes: s.Quotes()})
+	f, err := format.Parse(s.Text, format.Options{F90: s.Quotes()})
 	if err != nil {
 		return
 	}
@@ -541,8 +541,12 @@ func (x *extensions) format(s *ast.FormatStmt) {
 	walk = func(items []*format.Item) {
 		for _, item := range items {
 			switch item.Code {
-			case format.O, format.Z, format.Q, format.Dollar:
+			case format.O, format.Z, format.Q, format.Dollar, format.B, format.EN, format.ES:
 				x.add(at(item), "the "+item.Code.String()+" edit descriptor")
+			case format.Slash:
+				if item.Repeat.Set || item.Repeat.VFE > 0 {
+					x.add(at(item), "a repeated slash edit descriptor")
+				}
 			case format.I, format.F, format.E, format.D, format.G, format.L:
 				if !item.W.Set && item.W.VFE == 0 {
 					x.add(at(item), "the "+item.Code.String()+" edit descriptor without a width")

@@ -110,7 +110,8 @@ UB_SIZE		= 32			; long: the longest record it may write
 UB_FORM		= 36			; byte: 1 FORMATTED, 2 UNFORMATTED, 0 not known
 					;  yet (a unit ENDFILE connected)
 UB_ACCESS	= 37			; byte: 1 DIRECT, 2 SEQUENTIAL, 3 APPEND, 4 KEYED
-UB_BLANK	= 38			; byte: 1 ZERO, 2 NULL
+UB_BLANK	= 38			; byte: 1 ZERO, 2 NULL, 3 ZERO by default (no
+					;  OPEN has said: Fortran 90's NULL, VAX's ZERO)
 UB_DISPOSE	= 39			; byte: 1 KEEP to 6 SUBMIT/DELETE
 UB_READONLY	= 40			; byte: 1 for READONLY
 UB_SCRATCH	= 41			; byte: 1 for STATUS='SCRATCH'
@@ -320,7 +321,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVL	#DEFAULT_RECL,UB_SIZE(R6)
 	MOVB	#1,UB_FORM(R6)
 	MOVB	#2,UB_ACCESS(R6)
-	MOVB	#1,UB_BLANK(R6)
+	MOVB	#3,UB_BLANK(R6)		; ZERO, until an OPEN says (8.3), but for
+					;  Fortran 90's statements NULL (9.3.4.9)
 	MOVB	#1,UB_DISPOSE(R6)
 	CLRB	UB_READONLY(R6)
 	CLRB	UB_SCRATCH(R6)
@@ -765,7 +767,8 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; is 0, its form (by value) 1 formatted, the default, or 2 unformatted, and
 ; direct (by value) 1 for a direct access statement: returns in R0 its record
 ; buffer, and puts at place the longest record it may write, then a longword, 1
-; if blanks in numbers are zeros. R1 is 0, or the FOR$_ condition if the
+; if blanks in numbers are zeros, 3 if they are only because no OPEN said
+; otherwise (zeros for VAX FORTRAN's statements, not for Fortran 90's), else 0. R1 is 0, or the FOR$_ condition if the
 ; statement can't use the unit: MIXFILACC for a statement of the other form, or
 ; a sequential one on a unit that is direct (a keyed unit may have one: testdata/for88's
 ; #280), WRIREAFIL for a write on a READONLY
@@ -788,10 +791,10 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	MOVL	#DEFAULT_SEG,UB_SIZE(R1)
 8$:	MOVL	8(AP),R2
 	MOVL	UB_SIZE(R1),(R2)+	; stored, and R2 on to the next longword
-	CLRL	(R2)
-	CMPB	UB_BLANK(R1),#1
-	BNEQ	10$
-	MOVL	#1,(R2)
+	CLRL	(R2)			; NULL: 0,
+	CMPB	UB_BLANK(R1),#2
+	BEQL	10$
+	MOVZBL	UB_BLANK(R1),(R2)	;  ZERO 1, ZERO by default 3
 10$:	MOVL	UB_RECP(R1),R0
 	CMPB	UB_FORM(R1),R3
 	BNEQ	30$

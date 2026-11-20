@@ -67,6 +67,7 @@ PROGRAMS90 = {
     "clockrand": ["clockrand.f90"],
     "textfmt": ["textfmt.f90"],
     "calendar": ["calendar.f90"],
+    "edits": ["edits.f90"],
     "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],

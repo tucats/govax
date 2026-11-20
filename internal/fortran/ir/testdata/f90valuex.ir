@@ -58,7 +58,7 @@ routine USE subroutine
   cell  $C3     L  $LOCAL+164  array (line 27), dimension 1's count
   cell  $D3     L  $LOCAL+168  descriptor F S 4
   $LOCAL is 176 bytes
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D1     descriptor F S 4 $T5
   datum $K1     L 2
 B1:

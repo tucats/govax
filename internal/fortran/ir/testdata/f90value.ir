@@ -40,7 +40,7 @@ routine USE subroutine
   cell  $C6     L  $LOCAL+136  array (line 26), dimension 1's count
   $LOCAL is 140 bytes
   datum $K1     L 4
-  datum $IO1    control
+  datum $IO1    control F90
   datum $K2     L 1
   datum $D3     descriptor F S 4 $T1
   datum $K3     text 'AB'

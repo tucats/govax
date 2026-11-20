@@ -9,18 +9,22 @@ import (
 // Code is an edit descriptor's kind.
 type Code int
 
-// The edit descriptors. The data descriptors come first, I to A, so
-// Code.Data can tell them by their place.
+// The edit descriptors. The data descriptors come first, I to ES, so
+// Code.Data can tell them by their place; B, EN, and ES, Fortran 90's, are
+// read only under Options.F90.
 const (
-	I Code = iota // Iw[.m]: an integer in decimal
-	O             // Ow[.m]: in octal
-	Z             // Zw[.m]: in hexadecimal
-	F             // Fw.d: a real, fixed point
-	E             // Ew.d[Ee]: a real with an exponent
-	D             // Dw.d: the same, D for E
-	G             // Gw.d[Ee]: F or E, by the value's size
-	L             // Lw: a logical
-	A             // Aw: characters
+	I  Code = iota // Iw[.m]: an integer in decimal
+	O              // Ow[.m]: in octal
+	Z              // Zw[.m]: in hexadecimal
+	F              // Fw.d: a real, fixed point
+	E              // Ew.d[Ee]: a real with an exponent
+	D              // Dw.d: the same, D for E
+	G              // Gw.d[Ee]: F or E, by the value's size
+	L              // Lw: a logical
+	A              // Aw: characters
+	B              // Bw[.m]: an integer in binary (Fortran 90)
+	EN             // ENw.d[Ee]: engineering, an exponent a multiple of 3 (Fortran 90)
+	ES             // ESw.d[Ee]: scientific, one digit before the point (Fortran 90)
 
 	Text   // 'text' or nH text: Item.Text
 	X      // nX: skip n columns
@@ -34,7 +38,7 @@ const (
 	SS     // SS: plus signs not written
 	BN     // BN: blanks in numeric input ignored
 	BZ     // BZ: blanks in numeric input zeros
-	Slash  // /: the record ends
+	Slash  // [r]/: the record ends (r times, under Options.F90: Item.Repeat)
 	Colon  // :: the format ends if no items are left
 	Dollar // $: no carriage return after the record
 	Group  // r(...): Item.Items, Repeat times
@@ -42,7 +46,7 @@ const (
 
 // names are the codes as a format writes them.
 var names = [...]string{
-	I: "I", O: "O", Z: "Z", F: "F", E: "E", D: "D", G: "G", L: "L", A: "A",
+	I: "I", O: "O", Z: "Z", F: "F", E: "E", D: "D", G: "G", L: "L", A: "A", B: "B", EN: "EN", ES: "ES",
 	Text: "'", X: "X", T: "T", TL: "TL", TR: "TR", P: "P", Q: "Q", S: "S", SP: "SP", SS: "SS",
 	BN: "BN", BZ: "BZ", Slash: "/", Colon: ":", Dollar: "$", Group: "(",
 }
@@ -50,7 +54,7 @@ var names = [...]string{
 func (c Code) String() string { return names[c] }
 
 // Data reports whether c takes an item from the I/O list.
-func (c Code) Data() bool { return c <= A }
+func (c Code) Data() bool { return c <= ES }
 
 // Value is one of a descriptor's numbers: N, or with VFE set the
 // variable format expression Format.VFEs[VFE-1], whose value the program
@@ -77,7 +81,7 @@ type Item struct {
 	Code Code
 
 	// Repeat is a data descriptor's or a group's repeat count, 1 when it
-	// is left out.
+	// is left out; and a slash's, r/ (Fortran 90), unset for / alone.
 	Repeat Value
 
 	// W, M, D, and E are a data descriptor's width, minimum digits,
@@ -134,6 +138,14 @@ type Options struct {
 	// VAX FORTRAN has no use for a quotation mark in a format, so nothing a
 	// format meant before changes.
 	Quotes bool
+
+	// F90 is set under /F90, and implies Quotes: Fortran 90's edit
+	// descriptors are read too, Bw[.m], ENw.d[Ee], ESw.d[Ee] (the standard's
+	// 10.2.1), each needing its width, and a repeated slash, r/. VMS's FORRTL
+	// refuses them all (testdata/for80, #375 for 3/), so without F90 they are
+	// errors, as they were. VAX FORTRAN's extensions stay accepted under F90:
+	// G and the rest with no width, Gw with no d, and I0 (Fortran 95's).
+	F90 bool
 }
 
 // Error is what's wrong with a format: Text, about the character at
@@ -177,6 +189,10 @@ const MaxDepth = 8
 // descent parser for it: list reads a parenthesized list of items, and a
 // group's item calls list again for its own list, so groups nest.
 func Parse(text string, opts Options) (*Format, error) {
+	if opts.F90 {
+		opts.Quotes = true
+	}
+
 	p := &parser{text: text, opts: opts}
 
 	f, err := p.parse()
@@ -493,6 +509,18 @@ func (p *parser) item(depth int) (item *Item, free bool) {
 	case 'H':
 		return p.hollerith(start, count, countAt), true
 
+	case '/':
+		// r/, Fortran 90's repeated slash: only with a count, since / alone
+		// is list's, and needing a comma before it as a data descriptor
+		// does (the standard's R1004), none after it.
+		if !p.opts.F90 {
+			break
+		}
+
+		p.pos++
+
+		return &Item{Code: Slash, Repeat: p.repeat(count, countAt), Offset: start}, true
+
 	case '(':
 		// A group: read its items with a recursive call of list, one
 		// level deeper, up to the nesting VMS was seen to accept
@@ -593,10 +621,29 @@ func (p *parser) repeat(count Value, at int) Value {
 }
 
 // code reads a descriptor's letters, from pos, past the ones that are
-// some other descriptor's prefix (T, S, B).
+// some other descriptor's prefix (T, S, B, and under F90 E).
 func (p *parser) code() (Code, bool) {
 	c := p.next()
 	p.pos++
+
+	// Fortran 90's EN and ES, which VAX FORTRAN reads as E and then an
+	// error; and B, which it reads only as BN's or BZ's start.
+	if p.opts.F90 {
+		second := p.next()
+
+		switch {
+		case c == 'E' && second == 'N':
+			p.pos++
+
+			return EN, true
+		case c == 'E' && second == 'S':
+			p.pos++
+
+			return ES, true
+		case c == 'B' && second != 'N' && second != 'Z':
+			return B, true
+		}
+	}
 
 	single := map[byte]Code{'I': I, 'O': O, 'Z': Z, 'F': F, 'E': E, 'D': D, 'G': G, 'L': L, 'A': A, 'Q': Q}
 	if code, ok := single[c]; ok {
@@ -642,12 +689,20 @@ func (p *parser) code() (Code, bool) {
 }
 
 // fields reads a data descriptor's numbers after its letter: w, then .m
-// for I, O, and Z, .d for the reals, and Ee for E and G. Each may be left
-// out, the whole field list (I alone, a default width) or, for E and G,
-// the exponent; but F, E, D, and G with a width need .d too.
+// for I, O, Z, and B, .d for the reals, and Ee for E, G, EN, and ES. Each
+// may be left out, the whole field list (I alone, a default width) or, for
+// E, G, EN, and ES, the exponent; but F, E, D, and G with a width need .d
+// too, and B, EN, and ES need their width (EN and ES their .d).
 func (p *parser) fields(item *Item) {
 	w, at := p.number()
 	if !w.Set && w.VFE == 0 {
+		switch item.Code {
+		case B:
+			p.fail(p.pos, "B needs a width, as in B8")
+		case EN, ES:
+			p.fail(p.pos, "%s needs a width and the digits after the point, as in %s12.3", item.Code, item.Code)
+		}
+
 		return
 	}
 
@@ -661,7 +716,7 @@ func (p *parser) fields(item *Item) {
 	case L, A:
 		return
 
-	case I, O, Z:
+	case I, O, Z, B:
 		if p.next() == '.' {
 			p.pos++
 			item.M = p.digits("m", "the fewest digits")
@@ -677,7 +732,7 @@ func (p *parser) fields(item *Item) {
 	p.pos++
 	item.D = p.digits("d", "the digits after the point")
 
-	if (item.Code == E || item.Code == G) && p.next() == 'E' {
+	if (item.Code == E || item.Code == G || item.Code == EN || item.Code == ES) && p.next() == 'E' {
 		p.pos++
 
 		// E with no digits after it is taken as no exponent field, as VMS

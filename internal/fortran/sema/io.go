@@ -168,7 +168,7 @@ func (a *analyzer) formatStatement(s *ast.FormatStmt) {
 		return
 	}
 
-	f, err := format.Parse(s.Text, format.Options{Quotes: s.Quotes()})
+	f, err := format.Parse(s.Text, format.Options{F90: s.Quotes()})
 
 	var e *format.Error
 	if errors.As(err, &e) {
@@ -195,7 +195,7 @@ func encodeFormat(s *ast.FormatStmt, f *format.Format) string {
 		return encoded
 	}
 
-	again, err := format.Parse(encoded, format.Options{Quotes: true})
+	again, err := format.Parse(encoded, format.Options{F90: true})
 	if err != nil {
 		// The numbers stand where expressions stood, so the text reads as
 		// the statement's did; this is only a guard.
@@ -951,7 +951,7 @@ func (a *analyzer) constantFormat(e Expr) Expr {
 		return e
 	}
 
-	f, err := format.Parse(c.Text, format.Options{Quotes: true, RunTime: true})
+	f, err := format.Parse(c.Text, format.Options{F90: true, RunTime: true})
 	if err != nil {
 		return e
 	}

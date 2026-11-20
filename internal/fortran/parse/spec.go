@@ -476,7 +476,7 @@ func parseFormat(p *parser) ast.Stmt {
 
 	s := &ast.FormatStmt{StmtBase: p.base(), Text: strings.TrimRight(text, " \t"), Offset: p.st.Body + len(raw) - len(text)}
 
-	f, err := format.Parse(s.Text, format.Options{Quotes: s.Quotes()})
+	f, err := format.Parse(s.Text, format.Options{F90: s.Quotes()})
 	if err != nil {
 		return s
 	}

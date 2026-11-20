@@ -29,7 +29,7 @@ routine AUTO subroutine
   cell  $T8     L  $LOCAL+284  temporary
   cell  $D5     L  $LOCAL+288  descriptor F S 4
   $LOCAL is 296 bytes
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D1     descriptor L S 4 $T2
   datum $D2     descriptor L S 4 $T4
   datum $D3     descriptor L S 4 $T6

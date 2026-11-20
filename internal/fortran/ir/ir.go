@@ -691,6 +691,14 @@ const (
 	ControlEnd       = 1 << 1 // END= is given
 	ControlIOStat    = 1 << 2 // IOSTAT= is given
 	ControlRunFormat = 1 << 3 // the format argument is a run-time format's descriptor
+
+	// ControlF90 is set for every data transfer statement of a unit compiled
+	// /F90: where Fortran 90 and VMS's FORRTL read the same text differently
+	// when the program runs (B, EN, ES, r/, and quotation marks in a run-time
+	// format; G of an INTEGER, LOGICAL, or CHARACTER item), FTNRTL reads it as
+	// Fortran 90 does. Without it nothing changes (docs/planning/PHASE-109 -
+	// Fortran 90 IO.md, finding 1).
+	ControlF90 = 1 << 4
 )
 
 // FormatBlock is a FORMAT statement's block in the routine's read-only

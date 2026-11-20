@@ -11,7 +11,7 @@ routine AUTOLEN subroutine
   cell  $D4     L  $LOCAL+56   descriptor T S 0
   cell  $D5     L  $LOCAL+64   descriptor T S 0
   $LOCAL is 72 bytes
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D1     descriptor L S 4 $T1
   datum $D2     descriptor L S 4 $T2
   datum $D3     descriptor L S 4 $T3

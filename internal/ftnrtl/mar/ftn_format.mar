@@ -104,10 +104,14 @@ FB_W_FLAGS	= 6
 FB_A_TEXT	= 8
 FB_A_VFE	= 12			; with flag bit 0: the expressions' routine
 
-; The control block's flag for a run-time format (FTN_STATEMENT's).
+; The control block's flags (FTN_STATEMENT's): ERR=, IOSTAT=, a run-time
+; format, and a statement of a unit compiled /F90, for which a format is read
+; as Fortran 90 reads it (below, "Fortran 90").
 FLAG_ERR	= 1
 FLAG_IOSTAT	= 4
 FLAG_RUNFMT	= 8
+FLAG_F90	= 16
+V_F90		= 4			; its bit, for EXTZV
 
 ; The statement's context: FTN_STATEMENT's fields, then this module's.
 CTX_FLAGS	= 12			; word: the control block's flags
@@ -147,7 +151,8 @@ CTX_VFE		= CTX_AP+4		; long: the format's expressions' routine, or 0
 CTX_RESOLVED	= CTX_VFE+4		; an operation with its expressions' values
 
 CTX_UNITMAX	= CTX_RECP+44		; long: the unit's longest record (FTN_STATEMENT)
-CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros
+CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros,
+					;  3 if by default, 0 if not (FTN_UNITS)
 
 ;
 ; A parsed format: its size (for LIB$FREE_VM), the address of the
@@ -199,9 +204,10 @@ V_N		= 7
 ; so a test for "a number was there" takes it as one.
 AN_EXPR		= 3
 
-; The codes. The data descriptors come first, I to Q, so that a code is
-; a data descriptor's if it is at most C_Q; the order is the format
-; package's.
+; The codes. The descriptors that take an item come first, I to ES, so that
+; a code is one of theirs if it is at most C_ES. Fortran 90's B, EN, and ES
+; come after VAX FORTRAN's, so that FTN_EDIT's and FTN_FLOAT's codes stay
+; as they were.
 C_I		= 0
 C_O		= 1
 C_Z		= 2
@@ -212,23 +218,26 @@ C_G		= 6
 C_L		= 7
 C_A		= 8
 C_Q		= 9
-C_TEXT		= 10			; 'text' or nH text
-C_X		= 11
-C_T		= 12
-C_TL		= 13
-C_TR		= 14
-C_P		= 15
-C_S		= 16
-C_SP		= 17
-C_SS		= 18
-C_BN		= 19
-C_BZ		= 20
-C_SLASH		= 21
-C_COLON		= 22
-C_DOLLAR	= 23
-C_GROUP		= 24			; r( : a group's start
-C_ENDGROUP	= 25			; ) : its end
-C_END		= 26			; the format's last parenthesis
+C_B		= 10			; Fortran 90's: Bw.m,
+C_EN		= 11			;  ENw.dEe,
+C_ES		= 12			;  and ESw.dEe
+C_TEXT		= 13			; 'text' or nH text
+C_X		= 14
+C_T		= 15
+C_TL		= 16
+C_TR		= 17
+C_P		= 18
+C_S		= 19
+C_SP		= 20
+C_SS		= 21
+C_BN		= 22
+C_BZ		= 23
+C_SLASH		= 24			; [r]/: its repeat count, 0 for / alone
+C_COLON		= 25
+C_DOLLAR	= 26
+C_GROUP		= 27			; r( : a group's start
+C_ENDGROUP	= 28			; ) : its end
+C_END		= 29			; the format's last parenthesis
 
 MAX_WIDTH	= 32767			; the largest repeat count, width, or count
 MAX_DIGITS	= 255			; the largest m, d, or e
@@ -263,8 +272,14 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CLRL	CTX_DEPTH(R6)
 	CLRL	CTX_SCALE(R6)
 	CLRB	CTX_SIGN(R6)
-	MOVB	CTX_UNITBLANK(R6),CTX_BLANK(R6) ; the unit's BLANK= (with no OPEN, or
-					;  an internal file, 'ZERO': 8.3)
+	MOVB	CTX_UNITBLANK(R6),CTX_BLANK(R6) ; the unit's BLANK=
+	CMPB	CTX_BLANK(R6),#3	; with no OPEN, or an internal file: 'ZERO'
+	BNEQ	12$			;  (VAX FORTRAN's 8.3), but 'NULL' for
+	MOVB	#1,CTX_BLANK(R6)	;  Fortran 90's statements (the standard's
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  9.3.4.9, 9.2.2.2, as gfortran's)
+	BEQL	12$
+	CLRB	CTX_BLANK(R6)
+12$:
 	CLRB	CTX_DOLLAR(R6)
 	CLRB	CTX_USED(R6)
 	CLRB	CTX_MISMATCH(R6)
@@ -285,14 +300,17 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVL	FB_A_VFE(R2),CTX_VFE(R6)
 15$:	MOVL	FB_A_CELL(R2),R3
 	MOVL	(R3),R0
-	BNEQ	30$
+	BEQL	16$
+	BRW	30$
+16$:	EXTZV	#V_F90,#1,CTX_FLAGS(R6),-(SP) ; whether it is read as Fortran 90's,
 	BICL3	#^C1,FB_W_FLAGS(R2),-(SP) ; whether it may have expressions,
 	PUSHAL	CTX_FREEFMT(R6)		; where the parsed format goes,
 	MOVZWL	FB_W_LENGTH(R2),-(SP)	;  the text's length,
 	PUSHL	FB_A_TEXT(R2)		;  and its address
-	CALLS	#4,PARSE
-	BLBC	R0,90$
-	$SETAST_S ENBFLG=#0
+	CALLS	#5,PARSE
+	BLBS	R0,165$
+	BRW	90$
+165$:	$SETAST_S ENBFLG=#0
 	MOVL	R0,R4			; SS$_WASSET if ASTs were enabled
 	TSTL	(R3)
 	BNEQ	17$			; parsed meanwhile: ours is this statement's
@@ -313,11 +331,12 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CMPB	DSC$B_CLASS(R2),#DSC$K_CLASS_A
 	BNEQ	25$
 	MOVL	DSC$L_ARSIZE(R2),R1
-25$:	CLRL	-(SP)			; a run-time format has no expressions
+25$:	EXTZV	#V_F90,#1,CTX_FLAGS(R6),-(SP) ; Fortran 90's reading, or not
+	CLRL	-(SP)			; a run-time format has no expressions
 	PUSHAL	CTX_FREEFMT(R6)
 	PUSHL	R1
 	PUSHL	DSC$A_POINTER(R2)
-	CALLS	#4,PARSE
+	CALLS	#5,PARSE
 	BLBC	R0,90$
 	MOVL	CTX_FREEFMT(R6),R0
 30$:	MOVL	R0,CTX_FORMAT(R6)
@@ -502,7 +521,7 @@ LOOP:	TSTL	CTX_STATUS(R6)
 10$:	MOVL	CTX_OP(R6),R2		; the next operation
 	MOVL	R2,R5
 	ADDL3	#OP_SIZE,R2,CTX_OP(R6)	; and the one after it
-	CMPB	OP_B_CODE(R2),#C_Q
+	CMPB	OP_B_CODE(R2),#C_ES
 	BLEQU	DATA
 	BITB	#F_VFE,OP_B_FLAGS(R2)
 	BEQL	15$
@@ -580,8 +599,12 @@ DO_BN:	CLRB	CTX_BLANK(R6)
 DO_BZ:	MOVB	#1,CTX_BLANK(R6)
 	BRW	LOOP
 
-SLASH:	PUSHL	R6			; the record ends
+SLASH:	MOVZWL	OP_W_REPEAT(R5),R3	; the record ends: r times for r/,
+	BNEQ	10$			;  once for / alone, whose count is 0
+	MOVL	#1,R3
+10$:	PUSHL	R6
 	CALLS	#1,NEW_RECORD
+	SOBGTR	R3,10$
 	BRW	LOOP
 
 COLON:	BLBC	8(AP),10$		; the end, if there are no more items
@@ -916,7 +939,13 @@ GET_CHARS:
 ;
 EDIT:	.WORD	^M<R2,R3,R4,R5>
 	MOVL	8(AP),R0
-	CASEB	OP_B_CODE(R0),#C_I,#<C_Q-C_I>
+	CMPB	OP_B_CODE(R0),#C_G
+	BNEQ	5$
+	MOVL	4(AP),R1
+	BITW	#FLAG_F90,CTX_FLAGS(R1)
+	BEQL	5$
+	BSBW	GENERAL			; Fortran 90's G of any type
+5$:	CASEB	OP_B_CODE(R0),#C_I,#<C_ES-C_I>
 10$:	.WORD	EDIT_INT-10$		; I
 	.WORD	EDIT_INT-10$		; O
 	.WORD	EDIT_INT-10$		; Z
@@ -927,12 +956,52 @@ EDIT:	.WORD	^M<R2,R3,R4,R5>
 	.WORD	EDIT_INT-10$		; L
 	.WORD	EDIT_A-10$		; A
 	.WORD	EDIT_Q-10$		; Q
+	.WORD	EDIT_INT-10$		; B
+	.WORD	EDIT_FLOAT-10$		; EN
+	.WORD	EDIT_FLOAT-10$		; ES
 EDIT_INT:				; (CALLG: EDIT's five arguments, passed on)
 	CALLG	(AP),FTN$$EDIT_INT	; FTN_EDIT
 	RET
 EDIT_FLOAT:
 	CALLG	(AP),FTN$$EDIT_FLOAT	; FTN_FLOAT
 	RET
+
+;
+; GENERAL: Fortran 90's G (the standard's 10.5.4.1.1 to .3), op at R0: an
+; INTEGER item is edited as by Iw, a LOGICAL one by Lw, a CHARACTER one by
+; Aw, d and e not used; a real or complex one by G as always. The operation
+; for the others is a copy made on the stack, in the routine's frame (RET
+; takes it back), whose address replaces op in EDIT's argument list, which
+; FTN_EDIT is given whole; R0 is left at it. VMS's FORRTL, with no Fortran
+; 90, edits such items as reals and fails with FOR$_FORVARMIS at the
+; statement's end (testdata/for80, #169), and a statement without the F90
+; flag still does. A BYTE is a LOGICAL*1 here, as its descriptor says.
+;
+GENERAL:
+	MOVZBL	20(AP),R1		; the item's type
+	MOVL	#C_I,R2
+	CMPL	R1,#DSC$K_DTYPE_B
+	BLSS	10$
+	CMPL	R1,#DSC$K_DTYPE_L
+	BLEQ	30$			; B, W, L: integers
+10$:	MOVL	#C_L,R2
+	CMPL	R1,#DSC$K_DTYPE_BU
+	BLSS	20$
+	CMPL	R1,#DSC$K_DTYPE_LU
+	BLEQ	30$			; BU, WU, LU: logicals
+20$:	MOVL	#C_A,R2
+	CMPL	R1,#DSC$K_DTYPE_T
+	BEQL	30$
+	RSB				; a real or complex part: G
+30$:	MOVL	(SP)+,R3		; the return address, from under the copy
+	SUBL2	#OP_SIZE,SP		; the copy, w with it
+	MOVQ	(R0),(SP)
+	MOVL	8(R0),8(SP)
+	MOVB	R2,OP_B_CODE(SP)
+	BICB2	#F_D!F_E,OP_B_FLAGS(SP)	; Iw: no m
+	MOVL	SP,8(AP)
+	MOVL	SP,R0
+	JMP	(R3)
 
 ;
 ; A (8.3.10): characters, of an item of any type, its bytes as they are
@@ -1024,12 +1093,17 @@ EDIT_Q:	MOVL	4(AP),R1		; the context
 90$:	RET
 
 ;
-; PARSE(text, length, result, expressions)
+; PARSE(text, length, result, expressions, f90)
 ;
 ; Parses the format whose text, length bytes, is at text into a parsed format,
 ; made with LIB$GET_VM, and stores its address in the longword at result.
 ; expressions is 1 if it may have <n>, a variable format expression's number;
-; a run-time format may not. Returns in R0 SS$_NORMAL, FOR$_SYNERRFOR if the
+; a run-time format may not. f90 is 1 for a statement of a unit compiled /F90:
+; then Fortran 90's descriptors are read too (Bw.m, ENw.dEe, ESw.dEe, and r/,
+; each needing its numbers as internal/fortran/format says), and a character
+; constant may be between quotation marks, a doubled one inside it one
+; character. VMS's FORRTL refuses each of them (testdata/for80, #375 for 3/),
+; and so does this routine without f90. Returns in R0 SS$_NORMAL, FOR$_SYNERRFOR if the
 ; format is wrong (and nothing is stored), or FOR$_INSVIRMEM.
 ;
 ; The block has room for an operation per character of the text, more
@@ -1107,11 +1181,15 @@ LIST:	JSB	NEXTCH
 	JSB	EMIT
 	CLRL	R5
 	BRB	LIST
-40$:	CMPB	R0,#^A/'/
+40$:	MOVL	R0,R4			; the mark, for QUOTED
+	CMPB	R0,#^A/'/
+	BEQL	45$
+	CMPB	R0,#^A/"/
 	BNEQ	50$
-	JSB	QUOTED			; 'text'
+	BLBC	20(AP),50$		; "text" only for Fortran 90
+45$:	JSB	QUOTED			; 'text' or "text"
 	CLRL	R5
-	BRB	LIST
+	BRW	LIST
 50$:	TSTL	R5			; anything else, after a comma
 	BEQL	ITEM			;  or an item that needs none,
 	JSB	AT_H			;  or an H constant
@@ -1167,13 +1245,19 @@ ITEM:	CLRL	R3			; the sign
 5$:	CMPB	R0,#^A/P/
 	BEQL	DO_PARSE_P
 	CMPB	R0,#^A/X/
-	BEQL	DO_PARSE_X
+	BNEQ	55$
+	BRW	DO_PARSE_X
+55$:
 	CMPB	R0,#^A/H/
 	BNEQ	6$
 	BRW	DO_PARSE_H
 6$:	CMPB	R0,#^A/(/
-	BNEQ	7$
+	BNEQ	65$
 	BRW	DO_PARSE_GROUP
+65$:	CMPB	R0,#^A\/\		; r/, Fortran 90's
+	BNEQ	7$
+	BLBC	20(AP),9$
+	BRW	DO_PARSE_SLASH
 7$:	CMPB	R0,#^A/'/		; a character constant with a count
 	BEQL	9$
 	BRW	LETTERS
@@ -1246,6 +1330,18 @@ DO_PARSE_H:				; nH and n characters
 	BRW	LIST
 20$:	BRW	SYNTAX
 
+DO_PARSE_SLASH:				; r/: a comma was needed before it,
+	INCL	R6			;  none is after it
+	JSB	REPEAT
+	MOVL	#C_SLASH,R0
+	JSB	EMIT
+	MOVW	R4,OP_W_REPEAT(R1)
+	CMPL	R2,#AN_EXPR
+	BNEQ	10$
+	BISB2	#F_VR,OP_B_FLAGS(R1)
+10$:	CLRL	R5
+	BRW	LIST
+
 DO_PARSE_GROUP:				; r( : a group, at most 8 deep
 	CMPL	R11,#MAX_DEPTH
 	BGEQ	20$
@@ -1268,12 +1364,35 @@ DO_PARSE_GROUP:				; r( : a group, at most 8 deep
 
 ;
 ; LETTERS: a descriptor's letters: one (I, O, Z, F, E, D, G, L, A, Q), or
-; T, TL, TR, S, SP, SS, BN, BZ, each read as the longest it can be.
+; T, TL, TR, S, SP, SS, BN, BZ, and for Fortran 90 B, EN, ES, each read as
+; the longest it can be.
 ;
 LETTERS:
 	INCL	R6
 	MOVL	R0,R1			; the letter
-	MOVAB	SINGLE,R3		; the one-letter descriptors' table
+	BLBC	20(AP),5$		; Fortran 90's EN, ES, and B first
+	JSB	NEXTCH			;  (the next letter, perhaps)
+	CMPB	R1,#^A/E/
+	BNEQ	2$
+	CMPB	R0,#^A/N/
+	BNEQ	1$
+	INCL	R6
+	MOVL	#C_EN,R0
+	BRW	DATA_ITEM
+1$:	CMPB	R0,#^A/S/
+	BNEQ	5$
+	INCL	R6
+	MOVL	#C_ES,R0
+	BRW	DATA_ITEM
+2$:	CMPB	R1,#^A/B/
+	BNEQ	5$
+	CMPB	R0,#^A/N/
+	BEQL	5$
+	CMPB	R0,#^A/Z/
+	BEQL	5$
+	MOVL	#C_B,R0
+	BRW	DATA_ITEM
+5$:	MOVAB	SINGLE,R3		; the one-letter descriptors' table
 	CLRL	R0
 10$:	CMPB	R1,(R3)[R0]
 	BNEQ	15$
@@ -1349,9 +1468,10 @@ ALONE:	TSTL	R2
 
 ;
 ; A data descriptor, its code in R0: its repeat count, then its fields:
-; w, then .m for I, O, and Z, .d for the others but L and A, and Ee for E
-; and G. The fields may be left out together (I alone: a default width),
-; and E and G's exponent alone; F, E, D, and G with a width need .d too.
+; w, then .m for I, O, Z, and B, .d for the others but L and A, and Ee for
+; E, G, EN, and ES. The fields may be left out together (I alone: a default
+; width), and the exponent alone; F, E, D, G, EN, and ES with a width need .d
+; too, and Fortran 90's B, EN, and ES their width.
 ;
 DATA_ITEM:
 	CMPL	R0,#C_Q
@@ -1370,7 +1490,10 @@ DATA_ITEM:
 8$:	MOVL	#1,R5
 	JSB	NUMBER			; w
 	BLBS	R0,10$
-	BRW	LIST
+	CMPB	OP_B_CODE(R3),#C_B	; B, EN, ES: w is needed
+	BLSSU	9$
+	BRW	SYNTAX
+9$:	BRW	LIST
 10$:	CMPL	R1,#MAX_WIDTH
 	BLEQ	15$
 	BRW	SYNTAX
@@ -1380,10 +1503,14 @@ DATA_ITEM:
 	BNEQ	17$
 	BISB2	#F_VW,OP_B_FLAGS(R3)
 17$:	CMPB	OP_B_CODE(R3),#C_L
-	BGEQU	90$			; L and A: nothing more
+	BEQL	90$			; L and A: nothing more
+	CMPB	OP_B_CODE(R3),#C_A
+	BEQL	90$
+	CMPB	OP_B_CODE(R3),#C_B
+	BEQL	18$
 	CMPB	OP_B_CODE(R3),#C_Z
 	BGTRU	20$
-	JSB	NEXTCH			; I, O, Z: .m, perhaps
+18$:	JSB	NEXTCH			; I, O, Z, B: .m, perhaps
 	CMPB	R0,#^A/./
 	BNEQ	90$
 	INCL	R6
@@ -1394,11 +1521,11 @@ DATA_ITEM:
 	BNEQ	80$
 	INCL	R6
 	JSB	FIELD_D
-	CMPB	OP_B_CODE(R3),#C_E
-	BEQL	30$
-	CMPB	OP_B_CODE(R3),#C_G
-	BNEQ	90$
-30$:	JSB	NEXTCH			; E, G: Ee, perhaps
+	CMPB	OP_B_CODE(R3),#C_F
+	BEQL	90$
+	CMPB	OP_B_CODE(R3),#C_D
+	BEQL	90$
+30$:	JSB	NEXTCH			; E, G, EN, ES: Ee, perhaps
 	CMPB	R0,#^A/E/
 	BNEQ	90$
 	INCL	R6
@@ -1554,22 +1681,23 @@ AT_H:	PUSHL	R6
 	RSB
 
 ;
-; QUOTED: a character constant, from its opening apostrophe at R6: its
-; text, each doubled apostrophe made one, an operation C_TEXT. It must
-; hold a character.
+; QUOTED: a character constant, from its opening mark at R6, which R4
+; holds (an apostrophe, or for Fortran 90 a quotation mark too): its text,
+; each doubled mark made one, an operation C_TEXT. It must hold a
+; character.
 ;
 QUOTED:	INCL	R6
 	MOVL	R9,R2			; where its text starts
 10$:	CMPL	R6,R7
-	BGEQU	40$			; no closing apostrophe
+	BGEQU	40$			; no closing mark
 	MOVB	(R6)+,R0
-	CMPB	R0,#^A/'/
+	CMPB	R0,R4
 	BEQL	20$
 15$:	MOVB	R0,(R9)+
 	BRB	10$
 20$:	CMPL	R6,R7
 	BGEQU	30$
-	CMPB	(R6),#^A/'/
+	CMPB	(R6),R4
 	BNEQ	30$
 	INCL	R6			; a doubled apostrophe
 	BRB	15$

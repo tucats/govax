@@ -220,7 +220,7 @@ USE.$K2:
 	.LONG	2
 USE.$IO1:
 	.WORD	8			; an I/O statement's control block: its size
-	.WORD	^X0000			; flags: none
+	.WORD	^X0010			; flags: F90
 	.LONG	0			; (not used yet)
 USE.$D4:
 	.WORD	1			; length

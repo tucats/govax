@@ -24,7 +24,7 @@ routine SHAPED subroutine
   cell  $T9     L  $LOCAL+168  temporary
   cell  $T10    L  $LOCAL+172  temporary
   $LOCAL is 176 bytes
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D2     descriptor L S 4 $T2
   datum $D3     descriptor L S 4 $T9
 B1:

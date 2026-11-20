@@ -77,7 +77,7 @@ F90ALC.$T11:
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 F90ALC.$IO1:
 	.WORD	8			; an I/O statement's control block: its size
-	.WORD	^X0000			; flags: none
+	.WORD	^X0010			; flags: F90
 	.LONG	0			; (not used yet)
 F90ALC.$D2:
 	.WORD	4			; length

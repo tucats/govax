@@ -30,6 +30,11 @@
 ;		and e digits (asterisks if it needs more); with no Ee it is
 ;		E+nn, or +nnn past 99, or asterisks past 999 (VMS's).
 ;
+;   ENw.dEe	Fortran 90's (the standard's 10.5.1.2.3 and .4): EN's exponent
+;   ESw.dEe	is a multiple of 3, with 1 to 3 digits before the point, ES's
+;		has one digit before it; d digits after it, the exponent as
+;		E's, and the scale factor not used. On input they are F.
+;
 ;   Gw.dEe	the digits rounded to d significant ones choose the form
 ;		(so 999.6 under G13.3 is E form): a magnitude from 0.1 to
 ;		under 10**d is F form with d significant digits and no scale
@@ -100,6 +105,8 @@ C_F		= 3			; the codes
 C_E		= 4
 C_D		= 5
 C_G		= 6
+C_EN		= 11			; Fortran 90's
+C_ES		= 12
 
 ;
 ; The routine's frame, below FP: OTS$$CVT_x_T_R8 reads its arguments and
@@ -128,7 +135,9 @@ L_FRAC		= -84			; the columns of digits after it
 L_TAIL		= -88			; the field's last columns, an exponent
 					;  or G's blanks
 L_DESC		= -96			; a descriptor of an input field
-FRAME_SIZE	= 96
+L_LIMIT		= -100			; how many of the buffer's digits are the
+					;  value's: past them, zeros (EN's carry)
+FRAME_SIZE	= 100
 
 ;
 ; VMS's OTS$$CVT_x_T_R8 writes whole groups of nine digits, so it doesn't stop at the
@@ -182,6 +191,7 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	ADDL2	R8,R0
 	ADDL2	#BUFFER_MORE,R0
 	MOVL	R0,L_SIZE(FP)
+	MOVL	R0,L_LIMIT(FP)		; every digit the value's, but after EN's carry
 	ADDL2	R9,R0			; the field after it
 	ADDL2	#BUFFER_SPARE,R0
 	ADDL2	#3,R0			; rounded up to a multiple of 4, so that
@@ -205,12 +215,64 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	MOVL	#4,R0
 20$:	MOVC3	R0,@12(AP),VALUE(FP)
 	MOVAB	VALUE(FP),R6
-30$:	CASEB	OP_B_CODE(R10),#C_F,#<C_G-C_F>
+30$:	CMPB	OP_B_CODE(R10),#C_EN
+	BNEQ	32$
+	BRW	OUT_EN
+32$:	CMPB	OP_B_CODE(R10),#C_ES
+	BNEQ	34$
+	MOVL	#1,R7			; ES: E with one digit before the point, the
+	BRW	OUT_E			;  scale factor not used
+34$:	CASEB	OP_B_CODE(R10),#C_F,#<C_G-C_F>
 40$:	.WORD	OUT_F-40$
 	.WORD	OUT_E-40$
 	.WORD	OUT_E-40$		; D is E, with its own letter
 	.WORD	OUT_G-40$
 	RET
+
+;
+; EN (the standard's 10.5.1.2.3): an exponent that is a multiple of 3, and
+; from 1 to 3 digits before the point, d after it; the scale factor isn't
+; used. How many come before the point depends on the exponent, and rounding
+; may change the exponent, so the digits are found twice. First rounded to
+; d+3, the most EN shows, for the exponent x (the value is 0.ddd times
+; 10**x): then k, the digits before the point, is what makes x-k a multiple
+; of 3, from 1 to 3. With k 3 that rounding was the right one. Otherwise they
+; are rounded again, to k+d; if that carries (9.9996 to 10.00 with d 3),
+; the value is now 10**x, 1 and zeros, and takes a digit more before the
+; point with the same exponent shown: the digits past those rounded are
+; zeros (L_LIMIT). Zero is 0.ddd with the exponent 0 (gfortran's, which the
+; standard leaves open).
+;
+OUT_EN:	CLRB	CVT_KIND(FP)
+	ADDL3	#3,R8,CVT_SIGNIF(FP)
+	BSBW	DIGITS			; R0: x
+	TSTL	CVT_SIGN(FP)
+	BNEQ	10$
+	MOVL	#1,L_INT(FP)		; zero
+	CLRL	R0
+	BRB	50$
+10$:	SUBL3	#1,R0,R1		; k: 1 more than (x-1) mod 3, the mod's
+	DIVL3	#3,R1,R2		;  value from 0 to 2 (DIVL truncates, so
+	MULL2	#3,R2			;  a negative remainder is made positive)
+	SUBL2	R2,R1
+	BGEQ	20$
+	ADDL2	#3,R1
+20$:	INCL	R1
+	MOVL	R1,L_INT(FP)
+	CMPL	R1,#3
+	BEQL	40$
+	MOVL	R0,L_SHIFT(FP)		; x, kept while the digits are found again
+	ADDL3	R1,R8,CVT_SIGNIF(FP)
+	BSBW	DIGITS
+	CMPL	R0,L_SHIFT(FP)
+	BEQL	40$
+	INCL	L_INT(FP)		; a carry: 10**x
+	MOVL	CVT_SIGNIF(FP),L_LIMIT(FP)
+40$:	SUBL2	L_INT(FP),R0		; the exponent shown
+50$:	MOVL	L_INT(FP),L_SHIFT(FP)
+	MOVL	R8,L_FRAC(FP)
+	BSBW	EXPONENT
+	BRW	LAYOUT
 
 ;
 ; F: rounded at d+n digits after the point. Zero's digits have no exponent,
@@ -525,10 +587,11 @@ DIGITS:	CLRL	CVT_SIGN(FP)
 SHOWN:	MOVL	#^A/0/,R0
 	TSTL	CVT_SIGN(FP)		; zero: VMS's routine leaves E's digits
 	BEQL	10$			;  as they were, and only says its sign
-	ADDL3	L_SHIFT(FP),R4,R1
+	ADDL3	L_SHIFT(FP),R4,R1	; which of the value's digits
+	BLSS	10$			;  (before the first: a 0)
+	CMPL	R1,L_LIMIT(FP)
+	BGEQ	10$			;  (past those rounded: a 0)
 	ADDL2	CVT_FIRST(FP),R1
-	CMPL	R1,CVT_FIRST(FP)
-	BLSS	10$
 	CMPL	R1,L_SIZE(FP)
 	BGEQ	10$
 	ADDL2	CVT_BUFFER(FP),R1

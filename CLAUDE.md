@@ -1345,6 +1345,17 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `internal/console`'s `TestFTNRTLIntrinsics`, every new FTNRTL entry from MACRO;
   a constant's substring under `/F90`); 9 the close-out, FORTRAN-INTERNALS.md's
   section 33 and HELP STARTUP TIME_ZONE.
+  Phase 109 (in progress; its Part A the survey, accepted by the author
+  2026-11-19, A.4 its subtasks) is Fortran 90's I/O: subtask 2 (2026-11-19)
+  is the F90 flag, control block bit 4 (`ir.ControlF90`), set for every data
+  transfer statement of a `/F90` unit, under which FTNRTL reads a format as
+  Fortran 90 does (B, EN, ES, `r/`, and `"…"` in run-time formats; G of an
+  INTEGER, LOGICAL, or CHARACTER item as I, L, or A; `ftn_format.mar`'s
+  `GENERAL`, PARSE's fifth argument), and the new edits (`format.Options.F90`;
+  `C_B`, `C_EN`, `C_ES` after `C_Q`; `ftn_edit.mar`'s B, `ftn_float.mar`'s ES
+  and `OUT_EN`; `testdata/fortran90/edits.f90`), and by the author's choice
+  BLANK='NULL' for an internal file and an unopened unit under the flag
+  (`UB_BLANK` 3, "ZERO by default", VAX's ZERO without it).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

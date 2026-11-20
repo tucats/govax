@@ -15,7 +15,7 @@ routine F90IO main
   cell  $C4     L  $LOCAL+120  array (line 12), dimension 1's count
   cell  $C5     L  $LOCAL+124  array (line 13), dimension 1's count
   $LOCAL is 128 bytes
-  datum $IO1    control
+  datum $IO1    control F90
   datum $D1     descriptor F A 4 (1:10) A
   datum $D3     descriptor F S 4 $T1
   datum $K1     L 0

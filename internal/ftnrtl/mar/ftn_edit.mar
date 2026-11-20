@@ -3,7 +3,9 @@
 ;
 ; The I, O, Z, and L edit descriptors (the 1988 VAX FORTRAN Language
 ; Reference Manual, 8.3.3 to 8.3.5 and 8.3.9; docs/PHASE-80 - FORTRAN
-; formatted IO.md, subtask 5), both ways. FTN_FORMAT's walk finds the data
+; formatted IO.md, subtask 5), both ways, and Fortran 90's B, which is O and
+; Z in binary (the standard's 10.5.1.1; docs/planning/PHASE-109 - Fortran 90
+; IO.md), its width always given. FTN_FORMAT's walk finds the data
 ; descriptor an item takes and calls FTN$$EDIT_INT with the statement's
 ; context, the descriptor's parsed operation, and the item. Where the
 ; manual leaves a rule open, VMS's own run-time library, run by the
@@ -82,6 +84,7 @@ C_I		= 0			; the codes
 C_O		= 1
 C_Z		= 2
 C_L		= 7
+C_B		= 10			; Fortran 90's
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -118,7 +121,10 @@ C_L		= 7
 	; jump from the table's start, and goes on past the table (30$) for
 	; a code outside them.
 	;
-10$:	CASEB	OP_B_CODE(R10),#C_I,#<C_L-C_I>
+10$:	CMPB	OP_B_CODE(R10),#C_B
+	BNEQ	15$
+	BRW	OUT_B
+15$:	CASEB	OP_B_CODE(R10),#C_I,#<C_L-C_I>
 20$:	.WORD	OUT_I-20$		; I
 	.WORD	OUT_O-20$		; O
 	.WORD	OUT_Z-20$		; Z
@@ -215,8 +221,10 @@ OUT_I:	JSB	INTEGER_TYPE
 	BRW	MISMATCH
 
 ;
-; O and Z on output: R6 the bits a digit stands for, 3 or 4.
+; B, O, and Z on output: R6 the bits a digit stands for, 1, 3, or 4.
 ;
+OUT_B:	MOVL	#1,R6
+	BRB	OUT_OZ
 OUT_O:	MOVL	#3,R6
 	BRB	OUT_OZ
 OUT_Z:	MOVL	#4,R6
@@ -421,7 +429,7 @@ BAD:	MOVC5	#0,(R2),#0,16(AP),@12(AP) ; a source of no bytes: all fill, 0
 	BRW	TYPED
 
 ;
-; O and Z on input: digits of R6 bits, 3 or 4, each shifted into the item
+; B, O, and Z on input: digits of R6 bits, 1, 3, or 4, each shifted into the item
 ; from its low end (SHIFT), the item set to zeros first. A field that can't be
 ; read makes it zeros, but if the condition was signaled and a handler went on
 ; from it, it is as it was before, which is kept on the stack meanwhile
@@ -433,12 +441,15 @@ IN_OZ:	SUBL2	16(AP),SP		; room on the stack for the item's length,
 	MOVL	#3,R6
 	CMPB	OP_B_CODE(R10),#C_O
 	BEQL	10$
+	MOVL	#1,R6
+	CMPB	OP_B_CODE(R10),#C_B
+	BEQL	10$
 	MOVL	#4,R6
 10$:	JSB	FIELD
 	JSB	LEADING
 20$:	JSB	NEXT_DIGIT
 	BLBC	R0,90$			; the field's end
-	ASHL	R6,#1,R0		; the digit's limit: 8 or 16
+	ASHL	R6,#1,R0		; the digit's limit: 2, 8, or 16
 	CMPL	R1,R0
 	BGEQU	BAD_OZ
 	MOVL	R1,R7
