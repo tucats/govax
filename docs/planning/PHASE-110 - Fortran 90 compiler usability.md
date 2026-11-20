@@ -325,6 +325,7 @@ marked so, and are unconfirmed.
    (question 1); source form under F90 (finding 3); the ASSIGN bug; the witness
    test over `PROGRAMS90`. (done 2026-11-20)
 3. **The obsolescent features** (finding 2) and the judgments by meaning (finding 4).
+   (done 2026-11-20)
 4. **`/WARNINGS`** (finding 5): INTENTOUTREF's position, the module's private
    names, HOSTHIDDEN, UNREAD.
 5. **Listings and cross references** (finding 6, (a) to (e)).
@@ -442,3 +443,34 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   which finds nothing under `/STANDARD=F90`; the same programs under `F77` give about
   9,000 findings, every Fortran 90 form among them. HELP FORTRAN's and MANUAL.md's
   `/STANDARD` say so. Subtask 3, the obsolescent features, is next.
+- **2026-11-20:** Subtask 3, the obsolescent features and the judgments by meaning. A
+  new message, `%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: %s`, informational. The
+  extensions list holds `finding`s, each an extension or an obsolescent feature
+  (`extensions.obsolete`, flagged only when judging by Fortran 90 with OBSOLESCENT on),
+  reported together in each unit's source order. The walk flags the arithmetic IF,
+  ASSIGN, and PAUSE by kind (`obsolescentStatements`), the assigned GO TO by its node, an
+  alternate return's `*` dummy, `*label` (`ast.AltReturn`), and `RETURN i`, and an H edit
+  descriptor in a FORMAT (a `format.Text` with no quote). Semantic analysis flags the
+  rest where it decides them: a REAL DO variable (`doVariable`), loops sharing a
+  terminal statement and a loop ending at anything but CONTINUE or END DO (`endLoops`),
+  a jump to END IF from outside its IF (`noteEndIf` records the IF on the END IF's label,
+  `Label.endIf`; `checkLabels` looks for it in the jump's path, `inConstruct`), and an
+  assigned format (`ioFormat`). Finding 4: the evaluator's `init`, set by `declEval` (a
+  declaration's expressions and CASE values; never an executable expression the compiler
+  folds), has `initRule` judge each intrinsic function computed: FORTRAN-77 has none in
+  a constant expression, Fortran 90 an elemental one only of INTEGER or CHARACTER
+  arguments and value ("a REAL argument to CEILING in a constant expression", "the
+  intrinsic function ABS of type REAL in a constant expression"); REPEAT and TRIM pass by
+  that rule, and the inquiry, SELECTED_, TRANSFER, and array functions aren't judged
+  (Fortran 90 has them there). A fix: `ALL` (and so a list that only takes things away,
+  as `/STANDARD=NOSYNTAX`) marked OBSOLESCENT as given, so it no longer followed SYNTAX;
+  now it does unless named, and `/STANDARD=(NOSYNTAX,OBSOLESCENT)` is the obsolescent
+  features alone. An internal procedure's findings come before its host's, as all its
+  messages do (it's analyzed first). The witness now collects both messages: under
+  `/STANDARD=F90` the corpus flags only obsolescent features, all genuine
+  (`witnessExtensions`: alternate returns in `allocstat` and `seqargs`, the standard's
+  8.1 examples' shared terminals in `examples`), and no constant expression. Tests:
+  `obsolescent_test.go` (`TestStandardObsolescent`, `TestStandardObsolescentQuiet`,
+  `TestStandardObsolescentSettings`, `TestStandardConstantExpressions`). HELP FORTRAN,
+  MANUAL.md's `/STANDARD`, and the one-shot's `--standard` description (still FORTRAN-77's
+  from Phase 85) say so. Subtask 4, `/WARNINGS`, is next.

@@ -77,9 +77,30 @@ func (m memoryModules) Find(name string) ([]string, string, bool, []string) {
 }
 
 // witnessExtensions are what /STANDARD=F90 flags in the corpus's programs that isn't
-// a mistake in its tables: DEC's extensions a program uses on purpose, each program's
-// findings as "file:line what". The obsolescent features are subtask 3's.
-var witnessExtensions = map[string][]string{}
+// a mistake in its tables, each program's findings as "file:line message": the
+// obsolescent features programs use on purpose (the standard's own 8.1 examples share
+// terminal statements; alternate returns are tested), which gfortran -std=f95 accepts
+// as it must.
+var witnessExtensions = map[string][]string{
+	"allocstat": {
+		"allocstat.f90:54 obsolescent in Fortran 90: an alternate return",
+		"allocstat.f90:154 obsolescent in Fortran 90: an alternate return",
+		"allocstat.f90:159 obsolescent in Fortran 90: an alternate return",
+	},
+	"examples": {
+		"examples.f90:167 obsolescent in Fortran 90: a DO loop ending at a CALL statement",
+		"examples.f90:208 obsolescent in Fortran 90: a terminal statement shared by DO loops",
+		"examples.f90:241 obsolescent in Fortran 90: a terminal statement shared by DO loops",
+		"examples.f90:241 obsolescent in Fortran 90: a DO loop ending at an assignment",
+		"examples.f90:250 obsolescent in Fortran 90: a terminal statement shared by DO loops",
+		"examples.f90:250 obsolescent in Fortran 90: a DO loop ending at an assignment",
+	},
+	"seqargs": {
+		"seqargs.f90:82 obsolescent in Fortran 90: an alternate return",
+		"seqargs.f90:145 obsolescent in Fortran 90: an alternate return",
+		"seqargs.f90:148 obsolescent in Fortran 90: an alternate return",
+	},
+}
 
 // TestStandardF90Witness compiles each program gfortran -std=f95 builds (compare.py's
 // PROGRAMS90) with /STANDARD=F90: it may flag only what witnessExtensions lists.
@@ -117,8 +138,8 @@ func TestStandardF90Witness(t *testing.T) {
 
 			for _, m := range r.Messages {
 				switch {
-				case m.Ident == "EXTENSION":
-					found = append(found, filepath.Base(f)+":"+strconv.Itoa(m.Pos.Line)+" "+strings.TrimPrefix(m.Text, "extension to Fortran 90: "))
+				case m.Ident == "EXTENSION", m.Ident == "OBSOLESCENT":
+					found = append(found, filepath.Base(f)+":"+strconv.Itoa(m.Pos.Line)+" "+m.Text)
 				case m.Severity >= diag.Error:
 					t.Errorf("%s: %s: %s %s", name, f, m.Ident, m.Text)
 				}

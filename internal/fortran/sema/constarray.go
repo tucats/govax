@@ -944,6 +944,10 @@ func (ev *evaluator) elemental(e *ast.Apply) (*ArrayConst, *constErr) {
 		}
 
 		c, err := fn.eval(ev, e, args)
+		if err == nil {
+			ev.initRule(e, args, c)
+		}
+
 		if err != nil || slots.kind == nil {
 			return c, err
 		}

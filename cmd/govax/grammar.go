@@ -577,7 +577,7 @@ var fortranGrammar = []cli.Option{
 	},
 	{
 		LongName:    "standard",
-		Description: "Flag what FORTRAN-77 doesn't have: all, none, [no]syntax, [no]source_form, separated by commas",
+		Description: "Flag what a standard doesn't have: all, none, f77, f90, [no]syntax, [no]source_form, [no]obsolescent, separated by commas",
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
 			fortran.standard, _ = c.String("standard")

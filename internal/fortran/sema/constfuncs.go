@@ -187,11 +187,51 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 	}
 
 	c, err := fn.eval(ev, e, args)
+	if err == nil {
+		ev.initRule(e, args, c)
+	}
+
 	if err != nil || slots.kind == nil {
 		return c, err
 	}
 
 	return ev.withKind(c, slots.kind)
+}
+
+// initRule is /STANDARD's judgment of an intrinsic function computed in a constant
+// expression, of value c. FORTRAN-77's constant expressions have no function
+// references at all (its 6.7). Fortran 90's initialization expressions have an elemental
+// function only of type INTEGER or CHARACTER, each argument INTEGER or CHARACTER, and of
+// the others REPEAT, TRIM, and the inquiry and SELECTED_ functions (its 7.1.6.1): so
+// CEILING(2.5) or MAX(1.0, X) there is in neither standard. govax computes every
+// function in constFuncs, as VAX FORTRAN computed its own, so it's a remark, never an
+// error. KIND= isn't among args, and an INTEGER kind is no matter.
+func (ev *evaluator) initRule(e *ast.Apply, args []*Const, c *Const) {
+	if ev.quiet || !ev.init {
+		return
+	}
+
+	textual := func(t Type) bool {
+		return t.Kind == Integer || t.Kind == Character
+	}
+
+	x := ev.a.extensions
+
+	if !textual(c.T) {
+		x.add(e.Pos, "the intrinsic function "+e.Name+" of type "+c.T.String()+" in a constant expression", 0)
+
+		return
+	}
+
+	for _, arg := range args {
+		if !textual(arg.T) {
+			x.add(arg.Pos, article(arg.T.String())+" argument to "+e.Name+" in a constant expression", 0)
+
+			return
+		}
+	}
+
+	x.add(e.Pos, "the intrinsic function "+e.Name+" in a constant expression", f90)
 }
 
 // withKind is c, a function's value, converted to the kind of its type that

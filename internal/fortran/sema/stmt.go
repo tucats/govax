@@ -171,6 +171,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	if label != 0 {
 		a.defineLabel(label, s, a.labelPath(s, path))
+		a.noteEndIf(label, s)
 
 		// A statement that may not end a DO loop (section 5.3.1) is
 		// reported here, and the loops it would end are left open.
@@ -566,6 +567,16 @@ func (a *analyzer) endLoops(label int, s ast.Stmt) {
 		l.loops = ended
 	}
 
+	// Fortran 90's B.2.3 and B.2.4: loops sharing a terminal statement, and a loop
+	// ending anywhere but at END DO or CONTINUE, are obsolescent.
+	if len(ended) > 1 {
+		a.extensions.obsolete(s.Position(), "a terminal statement shared by DO loops")
+	}
+
+	if kind := s.Base().Kind; len(ended) > 0 && kind != lex.Continue && kind != lex.EndDo {
+		a.extensions.obsolete(s.Position(), "a DO loop ending at "+aStatement(s))
+	}
+
 	for i := len(a.open) - 1; i >= 0; i-- {
 		c := a.open[i]
 		if !c.isDo() || c.label != label || c.reported {
@@ -774,7 +785,11 @@ func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 	case Invalid:
 		// No type (IMPLICIT NONE): NOTYPE says so.
 		return nil
-	case Integer, Real:
+	case Integer:
+	case Real:
+		// Fortran 90's B.2.2: a REAL or DOUBLE PRECISION DO variable is
+		// obsolescent, its trip count at the mercy of rounding.
+		a.extensions.obsolete(n.Pos, "a DO variable of type "+v.Sym.Type.String())
 	default:
 		a.report("DOVAR", n.Pos, n.Name, v.Sym.Type.String())
 

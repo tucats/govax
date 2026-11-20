@@ -22,10 +22,15 @@ import (
 // procedures. Each finding is a remark, so a program flagged still compiles with a good
 // status. The zero value flags nothing, the default.
 //
-// This is mostly syntax. What a program means is another matter, and isn't looked at: a
-// non-integer subscript, .AND. of integers, a character and a number in one common
-// block. VAX FORTRAN's own command kept those under a keyword of their own, which the
-// phase's goal leaves out.
+// This is mostly syntax, found by one walk over each unit's tree (extensions.unit).
+// Semantic analysis adds what only it can see, to the same list where it decides it: an
+// intrinsic function's reference (noteIntrinsic), an array section (sections.go), an
+// intrinsic function in a constant expression (initRule), and four of the obsolescent
+// features (a REAL DO variable and a DO's ending in stmt.go, a jump to END IF from
+// outside in labels.go, an assigned format in io.go). Otherwise what a program means
+// isn't looked at: a non-integer subscript, .AND. of integers, a character and a number
+// in one common block. VAX FORTRAN's own command kept those under a keyword of their
+// own, which the phase's goal leaves out.
 type Conformance struct {
 	// Syntax flags statements, constants, operators, specifiers, edit descriptors,
 	// names, and intrinsic functions.
@@ -114,9 +119,10 @@ var standardKeywords = map[string]standardKeyword{
 	"F90":           {func(s *Conformance) { s.Standard = StandardF90 }, false},
 }
 
-// setAll is ALL: everything looked at.
+// setAll is ALL: everything looked at, the obsolescent features following SYNTAX, so
+// that /STANDARD=NOSYNTAX (which starts from ALL) is the source form alone.
 func setAll(s *Conformance) {
-	s.Syntax, s.SourceForm, s.Obsolescent, s.ObsolescentGiven = true, true, true, true
+	s.Syntax, s.SourceForm, s.Obsolescent, s.ObsolescentGiven = true, true, false, false
 }
 
 // standardKeywordList says what the keywords are, for a message.
@@ -350,12 +356,19 @@ var f90Values = map[lex.Kind]map[string]map[string]bool{
 type extensions struct {
 	on    bool
 	judge judge
-	found []source.Mark
+	found []finding
 	seen  map[string]bool
 
 	// inData says the walk is in a DATA statement's values, where Fortran 90 has its
 	// B, O, and Z constants (the standard's R533).
 	inData bool
+}
+
+// finding is one of /STANDARD's findings: an extension, or with obsolescent set one of
+// Fortran 90's obsolescent features.
+type finding struct {
+	source.Mark
+	obsolescent bool
 }
 
 // newExtensions makes one for the setting, for a unit whose /F90 setting is f90.
@@ -370,19 +383,46 @@ func (x *extensions) add(pos diag.Position, what string, in source.Standards) {
 		return
 	}
 
-	key := fmt.Sprint(pos.Serial, ":", pos.Column, ":", what)
+	x.note(pos, what, false)
+}
+
+// obsolete notes one of Fortran 90's obsolescent features (the standard's B.2), which
+// is flagged only when judging by Fortran 90 with OBSOLESCENT on. FORTRAN-77 has no
+// obsolescent features: under it, each of these is simply part of the language.
+func (x *extensions) obsolete(pos diag.Position, what string) {
+	if x == nil || !x.judge.obsolescent {
+		return
+	}
+
+	x.note(pos, what, true)
+}
+
+// note keeps a finding, once.
+func (x *extensions) note(pos diag.Position, what string, obsolescent bool) {
+	key := fmt.Sprint(pos.Serial, ":", pos.Column, ":", what, ":", obsolescent)
 	if !x.seen[key] {
 		x.seen[key] = true
-		x.found = append(x.found, source.Mark{Pos: pos, What: what})
+		x.found = append(x.found, finding{Mark: source.Mark{Pos: pos, What: what}, obsolescent: obsolescent})
 	}
+}
+
+// looking reports whether the walk has anything to look for.
+func (x *extensions) looking() bool {
+	return x.on || x.judge.obsolescent
 }
 
 // report gives its messages, in the source's order.
 func (x *extensions) report(messages *diag.List) {
-	sortMarks(x.found)
+	slices.SortStableFunc(x.found, func(p, q finding) int {
+		return comparePositions(p.Pos, q.Pos)
+	})
 
-	for _, m := range x.found {
-		messages.Report("EXTENSION", m.Pos, x.judge.name(), m.What)
+	for _, f := range x.found {
+		if f.obsolescent {
+			messages.Report("OBSOLESCENT", f.Pos, f.What)
+		} else {
+			messages.Report("EXTENSION", f.Pos, x.judge.name(), f.What)
+		}
 	}
 
 	x.found = nil
@@ -422,7 +462,7 @@ func (x *extensions) name(name string, pos diag.Position) {
 // names and statements aren't the program's own to change.
 func (a *analyzer) reportExtensions(au *ast.Unit) {
 	x := a.extensions
-	if !x.on {
+	if !x.looking() {
 		return
 	}
 
@@ -475,6 +515,10 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.add(base.ConstructPos, "a construct name", f90)
 	}
 
+	if what, ok := obsolescentStatements[kind]; ok {
+		x.obsolete(s.Position(), what)
+	}
+
 	switch s := s.(type) {
 	case *ast.ProgramStmt:
 		x.name(s.Name, s.Pos)
@@ -482,6 +526,7 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.name(s.Name, s.Pos)
 	case *ast.SubroutineStmt:
 		x.name(s.Name, s.Pos)
+		x.altReturns(s.Params)
 
 		if s.Recursive {
 			x.add(s.Pos, "a RECURSIVE subprogram", f90)
@@ -491,6 +536,7 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.name(s.Name, s.Pos)
 	case *ast.EntryStmt:
 		x.name(s.Name, s.Pos)
+		x.altReturns(s.Params)
 
 		if s.Result != nil {
 			x.add(s.Result.Pos, "RESULT", f90)
@@ -641,6 +687,9 @@ func (x *extensions) statement(s ast.Stmt) {
 	case *ast.ComputedGotoStmt:
 		x.expr(s.Index)
 
+	case *ast.AssignedGotoStmt:
+		x.obsolete(s.Pos, "the assigned GO TO statement")
+
 	case *ast.IfStmt:
 		x.expr(s.Cond)
 		x.statement(s.Then)
@@ -672,6 +721,10 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.expr(s.Display)
 
 	case *ast.ReturnStmt:
+		if s.Alt != nil {
+			x.obsolete(s.Pos, "an alternate return")
+		}
+
 		x.expr(s.Alt)
 
 	case *ast.PrintStmt:
@@ -694,6 +747,27 @@ func (x *extensions) statement(s ast.Stmt) {
 
 		x.specifiers(s.Specs, kind)
 		x.exprs(s.Items)
+	}
+}
+
+// obsolescentStatements are the statements Fortran 90 calls obsolescent (its B.2), each
+// flagged wherever it is; the assigned GO TO, which shares GO TO's kind, is told by its
+// node. The rest of B.2's list is a statement's meaning, which semantic
+// analysis judges: a REAL DO variable and a DO's ending (stmt.go), a jump to END IF from
+// outside its IF (labels.go), an assigned format (io.go).
+var obsolescentStatements = map[lex.Kind]string{
+	lex.ArithmeticIf: "the arithmetic IF statement",
+	lex.Assign:       "the ASSIGN statement",
+	lex.Pause:        "the PAUSE statement",
+}
+
+// altReturns looks at a subprogram's dummy arguments for an alternate return's place,
+// a *.
+func (x *extensions) altReturns(params []*ast.Name) {
+	for _, p := range params {
+		if p.Name == "*" {
+			x.obsolete(p.Pos, "an alternate return")
+		}
 	}
 }
 
@@ -855,6 +929,11 @@ func (x *extensions) format(s *ast.FormatStmt) {
 				if !item.W.Set && item.W.VFE == 0 {
 					x.add(at(item), "the "+item.Code.String()+" edit descriptor without a width", 0)
 				}
+			case format.Text:
+				if item.Quote == 0 {
+					x.obsolete(at(item), "the H edit descriptor")
+				}
+
 			case format.Group:
 				walk(item.Items)
 			}
@@ -976,6 +1055,9 @@ func (x *extensions) expr(e ast.Expr) {
 	case *ast.KeywordArg:
 		x.add(e.Pos, "a keyword argument", f90)
 		x.expr(e.X)
+
+	case *ast.AltReturn:
+		x.obsolete(e.Pos, "an alternate return")
 
 	case *ast.ImpliedDo:
 		x.exprs(e.Items)

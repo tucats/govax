@@ -821,10 +821,17 @@
    letters, ! comments, debugging lines, past column 72, over 19
    continuation lines, free form; under Fortran 90 tabs, debugging
    lines, past column 72 or 132, over 19 or 39 continuation lines),
-   OBSOLESCENT (Fortran 90's obsolescent features; on with SYNTAX under
-   Fortran 90), ALL, NONE, and NOSYNTAX, NOSOURCE_FORM, and
-   NOOBSOLESCENT.  /STANDARD alone, or with only F77, F90, and NO
-   keywords, starts from ALL.  The default is /NOSTANDARD.
+   OBSOLESCENT (under Fortran 90 only, on with SYNTAX unless named:
+   the arithmetic IF, ASSIGN, the assigned GO TO, an assigned format,
+   PAUSE, alternate returns, H editing, a REAL DO variable, shared DO
+   termination, a DO ending other than at END DO or CONTINUE, and a
+   jump to END IF from outside its block), ALL, NONE, and NOSYNTAX,
+   NOSOURCE_FORM, and NOOBSOLESCENT.  /STANDARD alone, or with only
+   F77, F90, and NO keywords, starts from ALL.  SYNTAX also judges an
+   intrinsic function in a constant expression: none in FORTRAN-77,
+   and in Fortran 90 only an elemental one of INTEGER or CHARACTER
+   arguments and value, or REPEAT, TRIM, and the inquiry functions.
+   The default is /NOSTANDARD.
 
 /WARNINGS
 

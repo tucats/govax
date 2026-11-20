@@ -92,11 +92,17 @@ type evaluator struct {
 	quiet bool
 	moved bool
 	vars  map[string]int32
+
+	// init says the expression is one the standards hold to their rules for
+	// constant expressions (a declaration's, a CASE value's), which /STANDARD
+	// judges each intrinsic function in (initRule); an executable expression the
+	// compiler folds is under no such rule.
+	init bool
 }
 
 // declEval is the evaluator for declarations.
 func (a *analyzer) declEval() *evaluator {
-	return &evaluator{a: a}
+	return &evaluator{a: a, init: true}
 }
 
 // report reports a message, unless the evaluator is quiet, and returns

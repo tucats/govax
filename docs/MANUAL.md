@@ -6853,13 +6853,21 @@ program still compiles with a good `$STATUS`, and its code is the same:
 | --- | --- |
 | `SYNTAX` | DEC's statements (`TYPE`, `STRUCTURE`, `BYTE`, ...), `*n` lengths on types other than `CHARACTER`, initial values in slashes in a type statement, Hollerith, DEC's octal and hexadecimal, and RADIX-50 constants, `Q` exponents, `.XOR.`, a sign straight after an operator, `%LOC` and its kin, record fields with `.`, null arguments, control list specifiers and word values the standard lacks, `READ (u'r)`, the `Q` and `$` edit descriptors, a descriptor with no width, variable format expressions, names with `$`, and DEC's intrinsic functions. Under FORTRAN-77, also everything Fortran 90 added (`::` and attributes, kinds, modules, `USE`, derived types and `%`, `ALLOCATE`, pointers, `WHERE`, `SELECT CASE`, `EXIT`, `CYCLE`, construct names, sections, constructors, keyword arguments, defined operators, `==` and its kin, `"…"` constants, the `B`, `O`, `Z`, `EN`, and `ES` edit descriptors, its specifiers and intrinsics) and what it adopted from DEC (`DO WHILE`, `END DO`, a `DO` without a label, `IMPLICIT NONE`, `INCLUDE`, `NAMELIST`, `RECURSIVE`, names over six characters or with `_`) |
 | `SOURCE_FORM` | Under FORTRAN-77: tabs in the first six columns, small letters outside constants and comments, `!` comments, debugging lines, a statement past column 72 (under `/EXTEND_SOURCE`), more than 19 continuation lines, and free source form, once per file. Under Fortran 90: a tab anywhere, debugging lines, past column 72, more than 19 continuation lines in fixed form or 39 in free form, and a free-form comment line over 132 characters |
-| `OBSOLESCENT` | Fortran 90's obsolescent features (on with `SYNTAX` under Fortran 90) |
+| `OBSOLESCENT` | Under Fortran 90 only (on with `SYNTAX` unless named), the standard's obsolescent features (its B.2), each `%FORT-I-OBSOLESCENT`: the arithmetic `IF`, `ASSIGN`, the assigned `GO TO`, an assigned format (`PRINT K, X`), `PAUSE`, an alternate return (a `*` dummy, `*label` in a `CALL`, `RETURN i`), the `H` edit descriptor, a `REAL` or `DOUBLE PRECISION` `DO` variable, loops sharing a terminal statement, a loop ending anywhere but at `END DO` or `CONTINUE`, and a jump to `END IF` from outside its `IF` block |
 
 The keywords also come as `NOSYNTAX`, `NOSOURCE_FORM`, and `NOOBSOLESCENT`, with `ALL` and `NONE`, cut short if you
 like. `/STANDARD` alone, or with only `F77`, `F90`, and `NO` keywords, starts from `ALL`, and the default is
-`/NOSTANDARD`. `/WARNINGS=NOGENERAL` doesn't hold these back, since you asked for them. What a program *means* isn't
-looked at: a non-integer subscript, `.AND.` of integers, and a character variable beside a number in a common block
-aren't flagged, and neither is a bare `X`, or anything in a text library's module.
+`/NOSTANDARD`; `/STANDARD=(NOSYNTAX,OBSOLESCENT)` looks for the obsolescent features alone.
+`/WARNINGS=NOGENERAL` doesn't hold these back, since you asked for them.
+
+Under `SYNTAX` an intrinsic function in a constant expression (a `PARAMETER`'s value, an initial value, a bound, a
+kind, a `CASE` value) is judged too, though govax computes every function it can there, as VAX FORTRAN did:
+FORTRAN-77 has no function in a constant expression, and Fortran 90 only an elemental one whose arguments and value
+are `INTEGER` or `CHARACTER`, besides `REPEAT`, `TRIM`, and the inquiry and `SELECTED_` functions. So
+`PARAMETER (N = CEILING(2.5))` is `extension to Fortran 90: a REAL argument to CEILING in a constant expression`.
+Beyond that, what a program *means* isn't looked at: a non-integer subscript, `.AND.` of integers, and a character
+variable beside a number in a common block aren't flagged, and neither is a bare `X`, or anything in a text
+library's module.
 
 **Objects in one step.** `FORTRAN/OBJECT` runs MACRO on the MACRO file it wrote, so that `FORTRAN/OBJECT`, `LINK`, `RUN`
 works as it does on VMS. The MACRO file is kept, so `/OBJECT/NOMACRO` is refused. The object is the source's name with

@@ -731,6 +731,10 @@ type Label struct {
 	// loops are the DO loops that end at this statement, innermost
 	// first.
 	loops []int
+
+	// endIf is the IF block's construct, if the statement is that block's END IF;
+	// otherwise 0.
+	endIf int
 }
 
 // Stmt is an executable statement in the structured tree.

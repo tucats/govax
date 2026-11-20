@@ -78,6 +78,24 @@ func (a *analyzer) defineLabel(label int, s ast.Stmt, path []frame) {
 	a.noteLabel(label, s.Base().Source.LabelPosition(), RefDefined)
 }
 
+// noteEndIf records, if s is END IF and the label is its own, the IF block it ends, so
+// that a jump from outside the block can be found (Fortran 90's B.2.5 makes one
+// obsolescent).
+func (a *analyzer) noteEndIf(label int, s ast.Stmt) {
+	l := a.unit.Labels[label]
+	if _, ok := s.(*ast.EndIfStmt); !ok || l == nil || l.Stmt != s {
+		return
+	}
+
+	for i := len(a.open) - 1; i >= 0; i-- {
+		if a.open[i].isIf() {
+			l.endIf = a.open[i].id
+
+			return
+		}
+	}
+}
+
 // checkLabels checks every jump in the unit against the label it goes
 // to.
 func (a *analyzer) checkLabels() {
@@ -118,6 +136,9 @@ func (a *analyzer) checkLabels() {
 
 		case len(l.loops) > 1 && !inPath(r.path, frame{id: l.loops[0], do: true}):
 			a.report("SHAREDTERM", r.pos, r.label)
+
+		case l.endIf != 0 && !r.assign && !inConstruct(r.path, l.endIf):
+			a.extensions.obsolete(r.pos, "a jump to END IF from outside its IF block")
 		}
 	}
 }
@@ -159,6 +180,17 @@ func outside(path []frame, l *Label) *frame {
 func inPath(path []frame, f frame) bool {
 	for _, p := range path {
 		if p.id == f.id && (f.anyArm || p.arm == f.arm) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// inConstruct reports whether path is in the construct id, in any of its blocks.
+func inConstruct(path []frame, id int) bool {
+	for _, p := range path {
+		if p.id == id {
 			return true
 		}
 	}
