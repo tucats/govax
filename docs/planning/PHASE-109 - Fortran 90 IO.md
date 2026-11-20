@@ -6,8 +6,9 @@ accepted by the author the same day ("The author's answers"); its A.4 revises
 the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
 subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
 specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6,
-list-directed and namelist under the flag, is in two parts: 6a, the forms and DELIM=, done
-2026-11-20; 6b, sections and components in namelist names, next.
+list-directed and namelist under the flag, done 2026-11-20 in two parts: 6a, the forms and
+DELIM=, and 6b, sections and components in namelist names. Subtask 7, items by descriptor, is
+next.
 
 ## Goal
 
@@ -358,7 +359,7 @@ And where each change lands:
      namelist output, namelist's `&…/` forms and quoted values (done 2026-11-20).
    - 6b. Sections with strides and components in namelist input's names (`X(3:4)`,
      `K(2:4:2)`, `PTS(2)%X`), and arrays of derived types in NAMELIST groups (sema's
-     NOTIMPL, Phase 105's leftover).
+     NOTIMPL, Phase 105's leftover) (done 2026-11-20).
 7. **Items by descriptor** (FTN$IO_ITEM's class NCA loop) and sections as internal files
    and buffers (finding 11).
 8. **Programs end to end**, every mode, gfortran's witness (records compared byte for byte
@@ -605,3 +606,45 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   and `typenml`'s text undelimited. MANUAL.md's 14.13 has "List-directed and namelist I/O".
   FTNRTL's GSMATCH stays 1,31 (no new entry). Subtask 6b (sections and components in names) is
   next.
+- **2026-11-20:** Subtask 6b, sections and components in namelist names, and arrays of derived
+  types in NAMELIST groups; subtask 6 is done. **The compiler** (`sema/derivedio.go`): an array of
+  a derived type, or a component that is one, is no longer NOTIMPL. Its entities are as a scalar
+  object's (a header, then each component's, named by designator), but each is every element's
+  across the arrays it goes through: `NamelistEntity`'s new `Sym`, `Offset` (from the object's
+  start, every subscript at its lower bound), `Type`, and `Ranks` (`NamelistDim`s, the fastest
+  first: the component's own, then each enclosing array's, innermost first; `ranksOf`,
+  `namelistRanked`, `namelistArray`). An entity with no ranked part keeps its old `Ref`, so a
+  scalar object's block is unchanged. Lowering (`ir/lowerio.go`'s `namelistDescriptor`) makes a
+  ranked component a class NCA descriptor with constant strides (`ir.Descriptor.Strides`, written
+  by codegen's `writeStrided`, `Fixed` giving them to a frame cell, `describe` its A0 by
+  `NCAFirst`), and a ranked header a class Z descriptor whose pointer is its shape
+  (`Descriptor.Shape`), a class NCA descriptor of dtype Z with no address that FTNRTL reads the
+  rank, bounds, and strides from; a scalar object's header still points at nothing. FTNRTL's
+  frame limits are sema's: 15 dimensions in all and 8 objects deep (`namelistMaxRank`,
+  `namelistMaxDepth`; past them NOTIMPL). **FTNRTL** (`ftn_namelist.mar`): `DESIGNATOR` replaces
+  FIND_ENTITY and REFERENCE. A name is parts joined by `%`, each looked up as a prefix (the header
+  `PTS`, then `PTS%X`) before its subscripts are read; a part's own dimensions are those its
+  entity has past the prefix before it (`RANK_OF`, `DIM_INFO`). Subscripts fix an element's
+  bytes (`OFFSET`), a section (`SUBSCRIPTS` reads `lo:hi:stride` under the F90 flag only, so VMS's
+  syntax errors and INVREFVARs stand) and a part without subscripts walk theirs; the walk is up to
+  15 dimensions, the slowest first, and `ADDRESS` takes an element number apart into bytes. A name
+  of one element, every part's subscripts given and none a section, keeps VMS's rule, it and the
+  rest of its last part's array, which the oracles hold; `VS%V(1)` is a section. A name of an
+  object fills level by level (`NEXT_PART`, a stack of 8 `LEVELS`): a level's elements (the walk's
+  at the top, a nested array's next to each other below it), and in each its parts in turn, a
+  part that is a header a level of its own, so `PTS = ...` and `LS(1) = 'QRS', ...` go element by
+  element, each element's components in order. Output (`ENTITY_VALUES`, `ELEMENT_AT`) writes a
+  class NCA entity's elements in array element order, `PTS%X = 3*0.0000000E+00,` on its line;
+  `LS%ENDS%X` with LS(2) and ENDS(2) is LS(1)'s two, then LS(2)'s. Unconfirmed choices (ours): a
+  name with two ranked parts (`LS%ENDS%X`, which the standard's designators forbid and output
+  writes) is taken in input too, the rightmost part's dimensions fastest; an unknown name's message
+  shows the text from its start to the end of the word at the failure (`PTS(2)%Z`); a section is
+  checked against the bounds only at its first and last elements, and an empty one isn't checked.
+  `testdata/fortran90/nmlsect.f90` (with `nmlsect.in`) runs in every mode, a recursive routine's
+  frame array among them (`namelistCell`'s descriptors written each statement). gfortran isn't a
+  witness for it: it refuses `PTS%Y = 3*0.5` ("Repeat count too large", its own limit with a
+  component of an array of a derived type) and VMS's element rule; the first two lines agree.
+  `TestDerivedIO` now expects the arrays to compile and NOTIMPL past FTNRTL's limit; the VMS
+  oracles (`TestNML80Oracle`, `TestNML80Messages`, `TestNML80Prompt`, `TestFor80Oracle`) and
+  `typenml`, `listnml` are unchanged. MANUAL.md's 14.13 has the names and the arrays. FTNRTL's
+  GSMATCH stays 1,31 (no new entry). Subtask 7 (items by descriptor) is next.

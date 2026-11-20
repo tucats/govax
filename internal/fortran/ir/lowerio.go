@@ -618,13 +618,39 @@ func (l *lowerer) namelistCell(n *sema.Namelist) *Mem {
 
 // namelistDescriptor is a group entity's descriptor: an item's, or for an
 // object of a derived type's header, a class Z descriptor whose length is how
-// many entities after it are the object's (sema's derivedio.go).
+// many entities after it are the object's (sema's derivedio.go). An entity
+// under an array of a derived type is a class NCA descriptor of its elements
+// across the arrays, and its header's class Z descriptor points at its shape, a
+// class NCA descriptor of the object's elements without an address
+// (docs/planning/PHASE-109 - Fortran 90 IO.md, subtask 6b).
 func (l *lowerer) namelistDescriptor(e sema.NamelistEntity) *Mem {
-	if e.Ref == nil {
+	if e.Ref != nil {
+		return l.item(e.Ref)
+	}
+
+	if e.Ranks == nil {
 		return l.descriptor(&Descriptor{DType: DTypeZ, Class: ClassZ, Length: e.Parts})
 	}
 
-	return l.item(e.Ref)
+	d := &Descriptor{DType: l.dtypeOf(e.Type), Class: ClassNCA, Length: e.Type.Size}
+	if e.Type.Kind == sema.Record {
+		d.DType = DTypeZ
+	}
+
+	for _, r := range e.Ranks {
+		d.Dims = append(d.Dims, Bound{Lower: r.Lower, Upper: r.Upper})
+		d.Strides = append(d.Strides, r.Stride)
+	}
+
+	if e.Type.Kind == sema.Record {
+		return l.descriptor(&Descriptor{DType: DTypeZ, Class: ClassZ, Length: e.Parts, Shape: l.descriptor(d)})
+	}
+
+	m := l.symbolMem(e.Sym)
+	m.Offset += e.Offset
+	m.T = Byte
+
+	return l.describe(d, m)
 }
 
 // counted is the datum holding name as a counted string (.ASCIC): a byte

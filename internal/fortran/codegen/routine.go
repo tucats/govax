@@ -377,6 +377,8 @@ func descriptorFieldNote(d *ir.Descriptor, offset int) string {
 		return "its flags and dimensions"
 	case offset == ir.ArsizeOffset:
 		return "the array's size in bytes"
+	case offset < d.LowerOffset(0) && d.Strides != nil:
+		return fmt.Sprintf("dimension %d's stride", (offset-d.StrideOffset(0))/4+1)
 	case offset < d.LowerOffset(0):
 		return fmt.Sprintf("dimension %d's multiplier", (offset-d.MultiplierOffset(0))/4+1)
 	case (offset-d.LowerOffset(0))%8 == 0:

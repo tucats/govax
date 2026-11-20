@@ -16,8 +16,9 @@ var tagLines = []string{
 // TestDerivedIO checks derived types in I/O lists and NAMELIST groups
 // (docs/planning/PHASE-105 - Fortran 90 derived types.md, subtask 7): an object
 // may be in any statement's list, a STRUCTURE's record still only in an
-// unformatted one; a NAMELIST group takes a scalar object, not an array of a
-// type (Phase 109's), nor a record.
+// unformatted one; a NAMELIST group takes an object, or an array of them or with
+// arrays of them in it (docs/planning/PHASE-109 - Fortran 90 IO.md, subtask 6b)
+// up to FTNRTL's limits, but not a record.
 func TestDerivedIO(t *testing.T) {
 	with := func(lines ...string) []string {
 		return unit("program main", append(append([]string{}, tagLines...), lines...)...)
@@ -32,12 +33,15 @@ func TestDerivedIO(t *testing.T) {
 			"print *, t, ts", "write (*, '(a)') ts(1:2), t%at", "read *, t, ts(1)", "write (line, *) t", "read (line, *) ts",
 			"write (1) t, ts", "read (1) t, ts(2)", "write (*, '(2f5.1)') point(1.0, 2.0)"), ""},
 		{"a scalar object in a NAMELIST group", with("type(tag) :: t", "namelist /g/ t", "write (*, g)", "read (*, g)"), ""},
-		{"an array of a type in a NAMELIST group", with("type(point) :: ps(2)", "namelist /g/ ps"),
-			"NOTIMPL: an array of a derived type in a NAMELIST group is not implemented yet"},
+		{"an array of a type in a NAMELIST group", with("type(point) :: ps(2)", "namelist /g/ ps"), ""},
 		{"an array component of a type in a NAMELIST group", unit("program main",
 			"type point", "  real :: x, y", "end type point", "type path", "  type(point) :: steps(2)", "end type path",
-			"type(path) :: p", "namelist /g/ p"),
-			"NOTIMPL: an array of a derived type in a NAMELIST group is not implemented yet"},
+			"type(path) :: p, ps(3)", "namelist /g/ p, ps"), ""},
+		{"more dimensions than FTNRTL's NAMELIST input takes", unit("program main",
+			"type grid", "  real :: v(2,2,2,2,2,2,2)", "end type grid",
+			"type cube", "  type(grid) :: g(2,2,2,2,2,2,2)", "end type cube",
+			"type(cube) :: cs(2,2)", "namelist /n/ cs"),
+			"NOTIMPL: a NAMELIST object this deep in arrays and derived types is not implemented yet"},
 		{"a record in a formatted list", unit("program main", "structure /s/", "real :: x", "end structure",
 			"record /s/ r", "print *, r"),
 			"AGGREGATEIO: R is a record as a whole, which only an unformatted I/O list can hold"},

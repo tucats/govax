@@ -783,7 +783,17 @@ func (l *lowerer) control(c Control) *Mem {
 
 // descriptorKey is what a descriptor says, but for where its value is.
 func descriptorKey(d *Descriptor) string {
-	return fmt.Sprintf("%s %s %d %v", d.DType, d.Class, d.Length, d.Dims)
+	key := fmt.Sprintf("%s %s %d %v", d.DType, d.Class, d.Length, d.Dims)
+
+	if d.Strides != nil {
+		key += fmt.Sprintf(" strides %v", d.Strides)
+	}
+
+	if d.Shape != nil {
+		key += " shape " + memKey(d.Shape)
+	}
+
+	return key
 }
 
 // memKey identifies a place whose address the linker knows (a cell or

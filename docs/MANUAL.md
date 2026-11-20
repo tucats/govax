@@ -7233,7 +7233,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
 | `FTN$ENCODE(icb, buffer, format, count)`, `FTN$DECODE(icb, buffer, format, count)` | Start ENCODE or DECODE: one record of `count` characters (a longword, by value; negative is 0) at the address `buffer` |
-| `FTN$READ_SN(icb, unit, group)`, `FTN$WRITE_SN(icb, unit, group)` | A whole namelist READ or WRITE (it has no items; `FTN$IO_END` ends it): `group` is the group's block, the address of its name (a counted string, in capitals), a longword of how many entities, and for each the addresses of its name and of its descriptor (class S, or class A for an array) |
+| `FTN$READ_SN(icb, unit, group)`, `FTN$WRITE_SN(icb, unit, group)` | A whole namelist READ or WRITE (it has no items; `FTN$IO_END` ends it): `group` is the group's block, the address of its name (a counted string, in capitals), a longword of how many entities, and for each the addresses of its name and of its descriptor (class S, or class A for an array; for an object of a derived type a class Z header whose length is how many entities follow and whose pointer is 0 or its shape, then its components', class NCA under an array of a type) |
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler once called them, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
@@ -9066,8 +9066,12 @@ and ` $END`.)
 Input names a component (`P%X = 9.0`, `T%AT%Y = 5.5`, `T%MARKS(2) = 7`) or a whole object or
 component of a derived type, whose values go to its components in order (`P = 1.25, 2.5`,
 `T%AT = , 9.0`), nulls leaving a component as it was; a value past the last component is
-`FOR-F-TOOMANVAL`. An array of a derived type, or an array component of one, isn't there yet in
-a NAMELIST group (it is in I/O lists).
+`FOR-F-TOOMANVAL`. An array of a derived type, or an array component of one, is an entity for
+each component, every element's: `PTS%X` is each element's X, written on one line in array
+element order, and input may name an element's component (`PTS(2)%X = 5.0`), a component of
+every element or of a section (`PTS%Y = 3*0.5`, `PTS(1:3:2)%X = 2*9.0`), or the objects whole,
+element by element (`PTS = 1.0, 2.0, 3.0`). Sections in names are described under "List-directed
+and namelist I/O" below.
 
 All of it together:
 
@@ -9233,6 +9237,15 @@ as well as at `$` or `&`, and takes character values between quotation marks too
 A VAX FORTRAN unit's namelist statements read and write VMS's ` $GRP` ... ` $END`, with
 apostrophes around text as before, but for `DELIM='QUOTE'` (quotation marks) and
 `DELIM='NONE'` (none).
+
+A `/F90` unit's namelist input takes sections in names, with or without a stride, their elements
+in array element order: `X(3:4) = 2*1.5`, `K(2:6:2) = 7, 8, 9`, `K(5:1:-2) = 1, 2, 3`,
+`M(2,:) = 3*6`, and `C(1:3:2)(2:3) = 'XY', 'ZW'` (a substring of each element). A name of one
+element, every subscript given, keeps VMS's rule: its values go to that element and the ones
+after it in its array, so `K(5) = 1, 2` sets K(5) and K(6), and `VS(1)%V(2) = 2*4` V(2) and V(3)
+of VS(1); but `VS%V(1) = 5, 6` is a section, every element's V(1). A section out of bounds or
+with a stride of 0 is `FOR-F-INVREFVAR`, and an empty one takes no value. A VAX FORTRAN unit's
+name can't have a section, as VMS's can't.
 
 **Allocatable arrays** (the standard's 5.1.2.4.3, 5.2.6, and 6.3). An array declared
 ALLOCATABLE, with a colon for each of its dimensions, has a rank and nothing more until

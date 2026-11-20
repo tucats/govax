@@ -792,5 +792,11 @@ func (l *lowerer) describe(d *Descriptor, m *Mem) *Mem {
 		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: A0Offset, T: Long}, Src: &Addr{&a0}})
 	}
 
+	if d.Class == ClassNCA && d.Strides != nil {
+		a0 := *m
+		a0.Offset -= d.NCAFirst()
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: A0Offset, T: Long}, Src: &Addr{&a0}})
+	}
+
 	return &Mem{Cell: c, T: Long}
 }

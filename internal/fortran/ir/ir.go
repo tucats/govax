@@ -541,6 +541,31 @@ type Descriptor struct {
 
 	// Dims are an array's bounds.
 	Dims []Bound
+
+	// Strides are a class NCA descriptor's strides in bytes, one per
+	// dimension, when the compiler knows them: a NAMELIST entity's elements
+	// across an array of a derived type (lowerio.go's namelistDescriptor). nil
+	// for an allocatable array's or an assumed-shape dummy's, which the program
+	// fills in.
+	Strides []int
+
+	// Shape is a NAMELIST header's (class Z) shape, the class NCA descriptor of
+	// its object's elements with no address, whose rank, bounds, and strides
+	// FTNRTL reads; nil for a scalar object's header.
+	Shape *Mem
+}
+
+// NCAFirst is how far a class NCA descriptor's first element is from where
+// A0 points, the element with every subscript zero, in bytes: the sum of each
+// dimension's lower bound times its stride.
+func (d *Descriptor) NCAFirst() int {
+	first := 0
+
+	for i, b := range d.Dims {
+		first += b.Lower * d.Strides[i]
+	}
+
+	return first
 }
 
 // The places, in a descriptor, of the fields lowering stores or reads: the
@@ -628,6 +653,23 @@ func (d *Descriptor) Fixed() []FixedLong {
 		fixed = append(fixed, FixedLong{PointerOffset, 0})
 
 	case ClassNCA:
+		if d.Strides != nil {
+			// Everything but the addresses: no flags, the rank, the size, and
+			// each dimension's stride and bounds.
+			fixed = append(fixed,
+				FixedLong{8, uint32(len(d.Dims)) << 24},
+				FixedLong{ArsizeOffset, uint32(d.Elements() * d.Length)})
+
+			for i, b := range d.Dims {
+				fixed = append(fixed,
+					FixedLong{d.StrideOffset(i), uint32(int32(d.Strides[i]))},
+					FixedLong{d.LowerOffset(i), uint32(int32(b.Lower))},
+					FixedLong{d.LowerOffset(i) + 4, uint32(int32(b.Upper))})
+			}
+
+			break
+		}
+
 		// What ALLOCATE hasn't filled in yet: no flags (the Calling Standard
 		// gives class NCA none of class A's), the rank, and a POINTER of 0, which
 		// is what says an allocatable array isn't allocated.

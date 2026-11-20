@@ -1383,8 +1383,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   output, the unit's DELIM= 0 when not given (`UB_DELIM`), namelist's
   `&GRP` ... `/` both ways, read from column 1, and `"…"` values
   (`ftn_namelist.mar`'s `IS_END`, `TEXT_FORM`;
-  `testdata/fortran90/listnml.f90`), and 6b, next, sections and components
-  in namelist names.
+  `testdata/fortran90/listnml.f90`), and 6b (2026-11-20) sections and
+  components in namelist names and arrays of derived types in groups
+  (`sema/derivedio.go`'s `namelistRanked`: an entity under an array of a type
+  is every element's, `NamelistEntity.Ranks`, a class NCA descriptor with
+  constant strides, `ir.Descriptor.Strides`, a header's class Z pointing at
+  its shape, `Descriptor.Shape`; FTNRTL's `DESIGNATOR` reads `PTS(2)%X` and
+  `lo:hi:stride` under the flag into a walk, `ADDRESS`, and `NEXT_PART` fills
+  objects level by level; `testdata/fortran90/nmlsect.f90`); subtask 7, items
+  by descriptor, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

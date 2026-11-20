@@ -1206,7 +1206,19 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 		}
 
 		if d.Desc.Class == ir.ClassZ {
-			writeDescriptor(w, d.Desc, "0", "", "a NAMELIST object's header: its entities follow")
+			shape := "0"
+			if d.Desc.Shape != nil {
+				shape = g.target(d.Desc.Shape, 0)
+			}
+
+			writeDescriptor(w, d.Desc, shape, "", "a NAMELIST object's header: its entities follow")
+
+			return
+		}
+
+		if d.Desc.Target == nil {
+			// A NAMELIST header's shape: bounds and strides, no address.
+			writeDescriptor(w, d.Desc, "0", "0", "a NAMELIST object's shape")
 
 			return
 		}
@@ -1214,8 +1226,11 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 		pointer := g.target(d.Desc.Target, 0)
 		a0 := ""
 
-		if d.Desc.Class == ir.ClassA {
+		switch {
+		case d.Desc.Class == ir.ClassA:
 			a0 = g.target(d.Desc.Target, -firstOffset(d.Desc))
+		case d.Desc.Class == ir.ClassNCA && d.Desc.Strides != nil:
+			a0 = g.target(d.Desc.Target, -d.Desc.NCAFirst())
 		}
 
 		writeDescriptor(w, d.Desc, pointer, a0, "")
@@ -1314,6 +1329,12 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 	w.Statement("", ".BYTE", what, "")
 	w.Statement("", directive, pointer, note)
 
+	if d.Class == ir.ClassNCA && d.Strides != nil {
+		writeStrided(w, d, directive, a0)
+
+		return
+	}
+
 	if d.Class == ir.ClassNCA {
 		writeNCA(w, d)
 
@@ -1358,6 +1379,25 @@ func writeNCA(w *Writer, d *ir.Descriptor) {
 	w.Statement("", ".LONG", "0", "A0, where the element with zero subscripts would be")
 	w.Statement("", ".LONG", zeros(len(d.Dims)), "strides, in bytes")
 	w.Statement("", ".LONG", zeros(2*len(d.Dims)), "bounds")
+}
+
+// writeStrided writes the rest of a class NCA descriptor whose strides the
+// compiler knows (a NAMELIST entity's, ir.Descriptor.Strides): no flags, the
+// rank, the size, A0, and each dimension's stride and bounds.
+func writeStrided(w *Writer, d *ir.Descriptor, directive, a0 string) {
+	strides := make([]string, len(d.Dims))
+	bounds := make([]string, 0, 2*len(d.Dims))
+
+	for i, b := range d.Dims {
+		strides[i] = strconv.Itoa(d.Strides[i])
+		bounds = append(bounds, strconv.Itoa(b.Lower), strconv.Itoa(b.Upper))
+	}
+
+	w.Statement("", ".BYTE", fmt.Sprintf("0,0,0,%d", len(d.Dims)), "scale, digits, flags, dimensions")
+	w.Statement("", ".LONG", strconv.Itoa(d.Elements()*d.Length), "the elements' size in bytes")
+	w.Statement("", directive, a0, "A0, where the element with zero subscripts would be")
+	w.Statement("", ".LONG", strings.Join(strides, ","), "strides, in bytes")
+	w.Statement("", ".LONG", strings.Join(bounds, ","), "bounds")
 }
 
 // The I/O control block's layout (Decision 12 of docs/planning/PHASE-74 -
