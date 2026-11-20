@@ -755,6 +755,7 @@ func (a *analyzer) finishUnit() {
 	a.checkTypeNames()
 	a.untyped()
 	a.undeclared()
+	a.hostHidden()
 	a.reportUnused()
 	a.reportIntentOut()
 	a.reportExtensions(a.unit.AST)

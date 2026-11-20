@@ -327,7 +327,7 @@ marked so, and are unconfirmed.
 3. **The obsolescent features** (finding 2) and the judgments by meaning (finding 4).
    (done 2026-11-20)
 4. **`/WARNINGS`** (finding 5): INTENTOUTREF's position, the module's private
-   names, HOSTHIDDEN, UNREAD.
+   names, HOSTHIDDEN, UNREAD. (done 2026-11-20)
 5. **Listings and cross references** (finding 6, (a) to (e)).
 6. **`/CHECK=POINTERS`** (finding 7), FOR numbers 311 and 312, FTNRTL's two routines.
 7. **`/DEBUG` and the debugger** (finding 9), in two parts:
@@ -474,3 +474,41 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   `TestStandardObsolescentSettings`, `TestStandardConstantExpressions`). HELP FORTRAN,
   MANUAL.md's `/STANDARD`, and the one-shot's `--standard` description (still FORTRAN-77's
   from Phase 85) say so. Subtask 4, `/WARNINGS`, is next.
+- **2026-11-20:** Subtask 4, `/WARNINGS`. INTENTOUTREF already chose the use, but
+  kept the declaration's quoted line, so the message showed the SUBROUTINE statement:
+  a `Reference` keeps only a line's number and serial. Now `analyzer.note` records each
+  mentioned line (file, number, text) by serial in `Program.lines`, and
+  `analyzer.mention` makes a message's position from a mention, which UNREAD uses too.
+  The module's private names: every private *variable* was hidden, by any form of
+  PRIVATE, because `neverUsed` exempts a name in COMMON and a module's variables are in
+  the module's own block (`moduleBlock`); a PARAMETER, with no storage, was reported,
+  which is why Phase 106's test passed. A module's block (`CommonBlock.Module`) is no
+  longer exempt. HOSTHIDDEN (`hostHidden`, under DECLARATIONS, the author's answer 3):
+  each name an internal procedure declares, a dummy argument among them, that its host
+  (or its host's host, or a USE in either) has, the message naming the host and a USE's
+  module (`I is declared here, hiding P's I`, `... P's LIMIT (from CONSTS)`); not the
+  procedure's own name or result, a name the host has only as its own name, a name an
+  INCLUDE file or library declares, or a generic interface, which extends its host's
+  (14.1.2.3; the corpus's `generics.f90` found it). UNREAD (`neverRead`, under UNUSED,
+  answer 4; reported with the other UNUSED findings in source order): a variable or
+  array given a value (a `RefAssigned` mention: an assignment, DATA, READ, ALLOCATE, an
+  internal WRITE, a returned specifier) and with no `RefUsed` mention after `settled`,
+  at its first such mention. It goes by statements, not flow: `M = M + 1` reads M, and
+  a name passed as an argument counts as read. Left out: dummies, a function's value,
+  COMMON (the module's block too), EQUIVALENCE, NAMELIST items (`inNamelist`),
+  VOLATILE, pointers, TARGETs, USE, and DO and implied-DO variables (`Symbol.loopVariable`,
+  set by `doVariable`: `DO I = 1, 3 / CALL STEP` is an idiom, ours). Two places
+  where one mention both reads and sets were seen only as sets, `settled` keeping the
+  stronger kind: RAN's and RANDOM's seed and MVBITS's TO now say so
+  (`Unit.readsToo`, `noteReadsToo`). And an internal file READ from an element or
+  substring (`READ (DIGITS(K), ...)`), or DECODE's buffer, noted no mention at all,
+  `analyzer.target` noting nothing: now a read (`noteRead`, `notePlace`, which
+  `noteAssigned` shares; a `Section` is noted too). The corpus under `/WARNINGS=ALL`
+  then gives 59 findings, all genuine: status values kept and ignored
+  (`ST = LIB$STAT_VM(...)`, `I = SYS$DCLAST(...)`), internal files written and never
+  read, an array allocated only to test ALLOCATE, and internal procedures' own loop
+  indexes and dummies named as their hosts' variables. Tests: `warnings90_test.go`
+  (`TestWarningsIntentOutPosition`, `TestWarningsModulePrivate`,
+  `TestWarningsHostHidden`, `TestWarningsUnread`); `warnings_test.go`'s expectations
+  gain the UNREADs its programs have. HELP FORTRAN and MANUAL.md's `/WARNINGS` say so.
+  Subtask 5, listings and cross references, is next.

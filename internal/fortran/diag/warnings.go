@@ -12,14 +12,16 @@ import (
 // the default, as with every other qualifier's setting.
 type Warnings struct {
 	// Declarations warns of each name that takes its type from its first letter,
-	// which is what IMPLICIT NONE would refuse.
+	// which is what IMPLICIT NONE would refuse, and of each name an internal
+	// procedure declares that hides one of its host's (Phase 110).
 	Declarations bool
 
 	// NoGeneral holds back the warnings and informational messages no keyword of
 	// their own asks for. Errors can't be held back.
 	NoGeneral bool
 
-	// Unused warns of the names only declared and the labels nothing refers to.
+	// Unused warns of the names only declared and the labels nothing refers to,
+	// and of the variables given a value that nothing reads (Phase 110).
 	Unused bool
 
 	// Alignment is CDEC$ OPTIONS /WARN=ALIGNMENT from the start of each unit.
@@ -82,7 +84,7 @@ func (w Warnings) With(keywords []string) (Warnings, error) {
 // own CDEC$ OPTIONS /WARN=ALIGNMENT asks for the two ALIGN messages too, so they appear
 // even under /WARNINGS=NONE, which gives only the setting each unit starts with (ours).
 var askedFor = map[string]bool{
-	"UNDECLARED": true, "UNUSEDNAME": true, "UNUSEDDUMMY": true, "UNUSEDLABEL": true,
+	"UNDECLARED": true, "HOSTHIDDEN": true, "UNUSEDNAME": true, "UNREAD": true, "UNUSEDDUMMY": true, "UNUSEDLABEL": true,
 	"ALIGNFIELD": true, "ALIGNCOMMON": true, "EXTENSION": true, "ARGTYPEW": true, "ARGRANKW": true,
 }
 

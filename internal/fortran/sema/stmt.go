@@ -798,6 +798,7 @@ func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 
 	a.checkLoopVariable(v.Sym, n.Pos)
 	a.noteAssigned(v)
+	v.Sym.loopVariable = true
 
 	return v.Sym
 }

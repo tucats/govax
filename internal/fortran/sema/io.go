@@ -711,7 +711,9 @@ func (a *analyzer) codeStatement(s *ast.CodeStmt, path []frame) Stmt {
 		buffer = nil
 	}
 
-	if !io.Read {
+	if io.Read {
+		a.noteRead(buffer)
+	} else {
 		a.noteAssigned(buffer)
 	}
 
@@ -768,7 +770,9 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 
 		io.Unit, io.Internal = t, true
 
-		if !io.Read {
+		if io.Read {
+			a.noteRead(t)
+		} else {
 			a.noteAssigned(t)
 		}
 

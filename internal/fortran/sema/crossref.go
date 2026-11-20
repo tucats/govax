@@ -86,9 +86,29 @@ const (
 
 // note adds a mention to list. A statement from a text library's module makes none.
 func (a *analyzer) note(list *[]Reference, pos diag.Position, kind RefKind) {
-	if !a.inLibrary {
-		*list = append(*list, Reference{pos.Line, pos.Column, pos.Serial, kind})
+	if a.inLibrary {
+		return
 	}
+
+	*list = append(*list, Reference{pos.Line, pos.Column, pos.Serial, kind})
+
+	if a.prog.lines == nil {
+		a.prog.lines = map[int]diag.Position{}
+	}
+
+	if _, known := a.prog.lines[pos.Serial]; !known {
+		pos.Column = 0
+		a.prog.lines[pos.Serial] = pos
+	}
+}
+
+// mention is the position of the mention r, for a message about it: its file and
+// line, with the line's text to quote.
+func (a *analyzer) mention(r Reference) diag.Position {
+	pos := a.prog.lines[r.Serial]
+	pos.Line, pos.Column, pos.Serial = r.Line, r.Column, r.Serial
+
+	return pos
 }
 
 // declare is lookup for the name a specification statement says something about.
@@ -102,25 +122,38 @@ func (a *analyzer) declare(name string, pos diag.Position) *Symbol {
 
 // noteAssigned notes that the statement gives the place e a value.
 func (a *analyzer) noteAssigned(e Expr) {
+	a.notePlace(e, RefAssigned)
+}
+
+// noteRead notes that the statement reads the place e, for a place analyzed as a
+// target (analyzer.target), which notes nothing itself: an internal file READ reads.
+func (a *analyzer) noteRead(e Expr) {
+	a.notePlace(e, RefUsed)
+}
+
+// notePlace notes a mention of the kind given of the place e.
+func (a *analyzer) notePlace(e Expr, kind RefKind) {
 	// An array pointer component's symbol is in no table: its record is
 	// what the cross reference shows (pointercomp.go).
 	if s := baseOf(e); s != nil && s.Component != nil {
-		a.noteAssigned(s.Component)
+		a.notePlace(s.Component, kind)
 
 		return
 	}
 
 	switch e := e.(type) {
 	case *Var:
-		a.note(&e.Sym.refs, e.Pos, RefAssigned)
+		a.note(&e.Sym.refs, e.Pos, kind)
 	case *Elem:
-		a.note(&e.Sym.refs, e.Pos, RefAssigned)
+		a.note(&e.Sym.refs, e.Pos, kind)
 	case *ArrayRef:
-		a.note(&e.Sym.refs, e.Pos, RefAssigned)
+		a.note(&e.Sym.refs, e.Pos, kind)
+	case *Section:
+		a.note(&e.Sym.refs, e.Pos, kind)
 	case *FieldRef:
-		a.note(&e.Sym.refs, e.NamePos, RefAssigned)
+		a.note(&e.Sym.refs, e.NamePos, kind)
 	case *Substring:
-		a.noteAssigned(e.X)
+		a.notePlace(e.X, kind)
 	}
 }
 

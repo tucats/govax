@@ -81,6 +81,27 @@ func (a *analyzer) noteNotRead(pos diag.Position) {
 	a.unit.notRead[Reference{pos.Line, pos.Column, pos.Serial, RefUsed}] = true
 }
 
+// noteReadsToo notes that the place e, which the statement gives a value
+// (noteAssigned), it reads first: the mention noteAssigned made.
+func (a *analyzer) noteReadsToo(e Expr) {
+	pos := e.Position()
+
+	switch e := e.(type) {
+	case *FieldRef:
+		pos = e.NamePos
+	case *Substring:
+		a.noteReadsToo(e.X)
+
+		return
+	}
+
+	if a.unit.readsToo == nil {
+		a.unit.readsToo = map[Reference]bool{}
+	}
+
+	a.unit.readsToo[Reference{pos.Line, pos.Column, pos.Serial, RefAssigned}] = true
+}
+
 // notePassed notes an actual argument passed as itself, which the routine it
 // goes to may read or give a value.
 func (a *analyzer) notePassed(arg Arg) {
@@ -155,9 +176,7 @@ func (a *analyzer) intentOut(s *Symbol, limit int) {
 	}
 
 	if use != nil {
-		pos := s.Pos
-		pos.Line, pos.Column, pos.Serial = use.Line, use.Column, use.Serial
-		a.report("INTENTOUTREF", pos, s.Name)
+		a.report("INTENTOUTREF", a.mention(*use), s.Name)
 	}
 }
 

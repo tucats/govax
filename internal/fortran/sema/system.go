@@ -67,6 +67,7 @@ func (a *analyzer) systemFunction(e *ast.Apply, f systemFunction) Expr {
 
 	if f.place {
 		a.noteAssigned(arg.Expr)
+		a.noteReadsToo(arg.Expr)
 	}
 
 	sym := &Symbol{Name: f.routine, Class: Function, Type: RealType}

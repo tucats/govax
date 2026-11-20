@@ -19,6 +19,12 @@ type Program struct {
 	// HasIdent says it has one (directive.go).
 	Ident    string
 	HasIdent bool
+
+	// lines is each source line a mention was noted on (its file, number, and
+	// text), by its Serial, so that a message about a mention (a Reference, which
+	// keeps only the line's number and serial) can name and quote the line
+	// (analyzer.mention).
+	lines map[int]diag.Position
 }
 
 // Unit is one program unit: its symbol table, its storage, and its
@@ -208,6 +214,10 @@ type Unit struct {
 	// with, and PRESENT's argument (intent.go's reportIntentOut).
 	notRead map[Reference]bool
 
+	// readsToo are the mentions that give a name a value after reading it: RAN's
+	// and RANDOM's seed, MVBITS's TO (warnings.go's neverRead).
+	readsToo map[Reference]bool
+
 	// calls are the unit's references to routines, which Analyze checks
 	// against the file's other units once every unit is analyzed.
 	calls []routineRef
@@ -375,6 +385,10 @@ type Symbol struct {
 	// that no reference may be optimized away, which Phase 84's optimizer will
 	// ask.
 	Volatile bool
+
+	// loopVariable is set for a DO or implied-DO loop's variable, whose value a
+	// program may well never read (DO I = 1, 3: CALL STEP), so UNREAD leaves it be.
+	loopVariable bool
 
 	// Intent is a dummy argument's INTENT, IN, OUT, or INOUT, and Optional
 	// and Target its OPTIONAL and TARGET attributes: recorded, and meaning

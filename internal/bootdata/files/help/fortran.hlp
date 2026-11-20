@@ -839,8 +839,10 @@
 
    What the compiler says, beyond errors: ALL, NONE, [NO]GENERAL (its
    warnings and informational messages; on by default),
-   [NO]DECLARATIONS (each name with no type of its own), [NO]UNUSED
-   (names only declared, and labels nothing refers to),
+   [NO]DECLARATIONS (each name with no type of its own, and each name
+   an internal procedure declares that hides one of its host's),
+   [NO]UNUSED (names only declared, variables given a value nothing
+   reads, and labels nothing refers to),
    [NO]ALIGNMENT (fields and common names off their natural
    boundaries), and [NO]ARGUMENT_CHECKING (an argument whose type,
    kind, or rank isn't its dummy's, in a reference without an

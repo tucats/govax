@@ -139,6 +139,7 @@ func TestWarningsUnused(t *testing.T) {
 		"UNUSEDNAME 11 SIN is declared but never used",
 		"UNUSEDNAME 14 ST is declared but never used",
 		"UNUSEDNAME 15 ST2 is declared but never used",
+		"UNREAD 16 ASSIGNED is given a value here but never used",
 		"UNUSEDLABEL 21 statement label 300 is never used",
 	}
 
@@ -207,10 +208,10 @@ func TestWarningsGeneral(t *testing.T) {
 		{[]string{"NOGENERAL"}, nil},
 		{[]string{"NONE"}, nil},
 		{[]string{"NONE", "GENERAL"}, []string{"SUBSCRIPTRANGE"}},
-		{[]string{"NOGENERAL", "UNUSED"}, []string{"UNUSEDNAME"}},
-		{nil, []string{"SUBSCRIPTRANGE", "UNUSEDNAME"}},
+		{[]string{"NOGENERAL", "UNUSED"}, []string{"UNREAD", "UNUSEDNAME"}},
+		{nil, []string{"SUBSCRIPTRANGE", "UNREAD", "UNUSEDNAME"}},
 		{[]string{"ALL", "NOUNUSED"}, []string{"SUBSCRIPTRANGE"}},
-		{[]string{"NOGEN", "UNU"}, []string{"UNUSEDNAME"}},
+		{[]string{"NOGEN", "UNU"}, []string{"UNREAD", "UNUSEDNAME"}},
 	}
 
 	for _, c := range cases {

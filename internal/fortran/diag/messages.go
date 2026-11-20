@@ -33,6 +33,8 @@ var messages = map[string]kind{
 	"UNUSEDNAME":  {Warning, "%s is declared but never used"},
 	"UNUSEDDUMMY": {Warning, "the dummy argument %s is never used"},
 	"UNUSEDLABEL": {Warning, "statement label %s is never used"},
+	"UNREAD":      {Warning, "%s is given a value here but never used"},
+	"HOSTHIDDEN":  {Warning, "%s is declared here, hiding %s's %s"},
 
 	// EXTENSION is something in the program that the standard judged by
 	// (FORTRAN-77 or Fortran 90) doesn't have, as /STANDARD asks

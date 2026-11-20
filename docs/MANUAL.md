@@ -6825,8 +6825,8 @@ or without `/CHECK`, since the program is surely wrong even if it never reaches 
 | Keyword | Default | What's said |
 | --- | --- | --- |
 | `GENERAL` | on | Its warnings and informational messages that no keyword below asks for |
-| `DECLARATIONS` | off | `%FORT-W-UNDECLARED` for each name with no type of its own, the ones `IMPLICIT NONE` would refuse |
-| `UNUSED` | off | `%FORT-W-UNUSEDNAME` for a name only declared, `UNUSEDDUMMY` for a dummy argument never mentioned, and `UNUSEDLABEL` for a label nothing refers to |
+| `DECLARATIONS` | off | `%FORT-W-UNDECLARED` for each name with no type of its own, the ones `IMPLICIT NONE` would refuse, and `HOSTHIDDEN` for each name an internal procedure declares (a dummy argument among them) that its host has too, which the procedure then can't reach |
+| `UNUSED` | off | `%FORT-W-UNUSEDNAME` for a name only declared, `UNUSEDDUMMY` for a dummy argument never mentioned, `UNREAD` for a variable given a value that nothing reads, and `UNUSEDLABEL` for a label nothing refers to |
 | `ALIGNMENT` | off | `%FORT-I-ALIGNFIELD` and `ALIGNCOMMON`, as `CDEC$ OPTIONS /WARN=ALIGNMENT` does from each unit's start |
 | `ARGUMENT_CHECKING` | off | `%FORT-W-ARGTYPEW` and `ARGRANKW` for an argument, of a reference without an explicit interface to a routine of the same file, whose type, kind, or rank isn't its dummy argument's (the HP Fortran compiler's keyword; through an explicit interface these are errors) |
 
@@ -6835,10 +6835,15 @@ order to the default: `/WARNINGS=UNUSED` adds to it, and `/WARNINGS=(NONE,UNUSED
 `/WARNINGS` alone is `ALL`, and `/NOWARNINGS` is `NONE`. What isn't shown doesn't count: a compilation whose
 only warnings were held back ends with a good `$STATUS`, and a listing doesn't have them either.
 
-`UNUSED` means only declared: a variable given a value and never read isn't reported, and neither is one in a
-common block or an `EQUIVALENCE` list, one an `INCLUDE` file declares, an `EXTERNAL` name that isn't a dummy
+`UNUSEDNAME` means only declared, and isn't reported for a name in a
+common block or an `EQUIVALENCE` list (a module's private variables are reported: no user can reach them), one an `INCLUDE` file declares, an `EXTERNAL` name that isn't a dummy
 argument (naming a `BLOCK DATA` unit that way gets it linked), or one declared to type a statement function's
-dummy argument. After an error nothing is reported as unused, since the statement in error may have been the use.
+dummy argument. `UNREAD` goes by the order of the statements, not the order they run in, so a value read on
+any line of the unit, or passed as an argument, counts as read; and it isn't reported for a dummy argument, a
+function's value, a `DO` variable, or a name in a common block, an `EQUIVALENCE` list, or a `NAMELIST` group, or one
+that is `VOLATILE`, a pointer, a `TARGET`, or from a `USE`, since something other than the unit's own statements
+may read those. `HOSTHIDDEN` isn't reported for a generic interface, which extends its host's of the same name.
+After an error nothing is reported as unused, since the statement in error may have been the use.
 `DECLARATIONS` reports every name in an `INCLUDE` file too, used or not, in each unit including it, as
 `IMPLICIT NONE` would refuse them: a program that relies on implicit typing and shares its common blocks that way
 gets a great many.

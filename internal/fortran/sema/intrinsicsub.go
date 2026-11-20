@@ -153,6 +153,7 @@ func (a *analyzer) mvbits(s *ast.CallStmt, slots []ast.Expr) Stmt {
 	}
 
 	a.noteAssigned(to)
+	a.noteReadsToo(to)
 
 	t := to.Type()
 	if t.Kind != Integer {
