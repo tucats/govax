@@ -204,6 +204,10 @@ type Unit struct {
 	// (.CROSS., +, .EQ.) and "=" for ASSIGNMENT(=) (operators.go).
 	operators map[string]*Generic
 
+	// operatorsFrom are the operators and assignment a USE gave the unit, by
+	// name, with the module and the USE statement (crossref.go).
+	operatorsFrom map[string]operatorUse
+
 	// others and labelRefs are the mentions of the names that have no Symbol, and
 	// of the statement labels (crossref.go).
 	others    map[otherName][]Reference
@@ -526,6 +530,12 @@ type Symbol struct {
 	// module (a FROM line); nil for the text's module's own (modread.go).
 	from *entityOrigin
 
+	// through are the mentions of a specific procedure that a generic name, an
+	// operator, or defined assignment made: a use of the procedure, for the
+	// warnings, but the generic name's or the operator's in the cross reference,
+	// which doesn't list them under the procedure (crossref.go).
+	through []Reference
+
 	// moduleProc is set on a use-associated module procedure's copy (an
 	// internal procedure's Symbol has its Internal instead).
 	moduleProc bool
@@ -686,6 +696,32 @@ func (s *Symbol) TypeText() string {
 	}
 
 	return s.Type.String()
+}
+
+// Attributes are Fortran 90's attributes the name has, as the listing's storage map
+// and cross reference show them after its type (docs/planning/PHASE-110 - Fortran
+// 90 compiler usability.md, finding 6): ALLOCATABLE, POINTER, TARGET, INTENT(IN),
+// OPTIONAL, PRIVATE, in that order.
+func (s *Symbol) Attributes() []string {
+	var list []string
+
+	for _, a := range []struct {
+		has  bool
+		text string
+	}{
+		{s.Allocatable, "ALLOCATABLE"},
+		{s.Pointer, "POINTER"},
+		{s.Target, "TARGET"},
+		{s.Intent != "", "INTENT(" + s.Intent + ")"},
+		{s.Optional, "OPTIONAL"},
+		{s.private, "PRIVATE"},
+	} {
+		if a.has {
+			list = append(list, a.text)
+		}
+	}
+
+	return list
 }
 
 // Size is the storage the name takes, in bytes.

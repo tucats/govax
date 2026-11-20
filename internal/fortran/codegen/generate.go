@@ -767,7 +767,9 @@ func (g *routineGen) storageMap() []string {
 
 	for _, c := range g.r.Cells {
 		switch {
-		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Unmentioned():
+		// Cells of the compiler's own aren't the program's names, whatever symbol
+		// lowering gave them ($W, a WHERE mask's; $G, a value's).
+		case c.Sym == nil || c.Sym.UnusedFromLibrary() || c.Sym.Unmentioned() || strings.HasPrefix(c.Sym.Name, "$"):
 
 		case c.Register != 0:
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym), register(c.Register), register(c.Register), c.Sym.UseText()})
@@ -782,8 +784,12 @@ func (g *routineGen) storageMap() []string {
 				section = c.Common.Psect
 			}
 
-			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
-				section + "+" + strconv.Itoa(c.Offset), g.names.symbol(c.Name), c.Sym.UseText()})
+			where := section + "+" + strconv.Itoa(c.Offset)
+			if described(c.Sym) {
+				where = "descriptor at " + where
+			}
+
+			rows = append(rows, row{c.Sym.Name, typeText(c.Sym), where, g.names.symbol(c.Name), c.Sym.UseText()})
 		}
 	}
 
@@ -874,15 +880,23 @@ func structureLines(list []*sema.Structure) []string {
 	return lines
 }
 
+// described reports whether the name's own storage is a descriptor of where its
+// value is, not its value: an allocatable array's, an automatic object's, or an
+// array pointer's.
+func described(s *sema.Symbol) bool {
+	return s.Allocatable || s.AutomaticObject || s.ArrayPointer()
+}
+
 // typeText is a variable's type, with an array's bounds: INTEGER,
 // REAL (0:9), INTEGER (2,3), INTEGER (*), or for bounds computed when the
 // program runs REAL (?,3), REAL (?:?); a pointer's INTEGER, POINTER.
 func typeText(s *sema.Symbol) string {
 	text := s.TypeText()
 
-	// A pointer's storage is its target's address, or a descriptor of it.
-	if s.Pointer {
-		text += ", POINTER"
+	// Its attributes: a pointer's storage is its target's address, or a
+	// descriptor of it.
+	for _, a := range s.Attributes() {
+		text += ", " + a
 	}
 
 	if len(s.Dims) == 0 {

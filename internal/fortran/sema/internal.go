@@ -235,6 +235,7 @@ func (a *analyzer) defineInternal(iu *Unit) {
 	}
 
 	a.scope.enter(s)
+	a.note(&s.refs, pos, RefDefined)
 	a.unit.Contains = append(a.unit.Contains, iu)
 }
 

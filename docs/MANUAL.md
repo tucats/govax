@@ -9803,6 +9803,30 @@ A name a module passes on from another says that too (`from SHAPES, defined in G
 `USE` of a whole module gave; it does report a name an `ONLY` list or rename asked for and
 nothing uses.
 
+The rest of Fortran 90's procedures are in the listing too. A generic name is `generic`,
+and `OPERATOR(.PLUS.)` and `ASSIGNMENT(=)` are rows of their own (`operator`,
+`assignment`), defined by their `INTERFACE` statements, or by a `USE` (`from SHAPES`), and
+used wherever an operation or an assignment calls one of their procedures. That call is the
+operator's use, not the procedure's: a specific procedure that a unit reaches only through
+a generic name or an operator has no row there. A module procedure, like an internal one,
+is defined in its host's cross reference on its `FUNCTION` or `SUBROUTINE` line. Each
+name's attributes follow its type, in the map and the cross reference (`REAL, ALLOCATABLE
+(:)`, `REAL array, INTENT(IN), OPTIONAL`), and the map gives the address of an allocatable
+array, an automatic array, or an array pointer as `descriptor at $LOCAL+24`, since what is
+stored there is the descriptor and not the elements. An internal or module procedure's
+cross reference lists the names it uses from its host, marked `from PROBE` the way a
+`USE`'s names are marked `from SHAPES`:
+
+```text
+Cross reference for PROBE.SHOW              (D defined, A assigned, a blank is used)
+  I      INTEGER from PROBE                64A
+  LINE   INTEGER from PROBE                65A  65   67
+  W      REAL array, INTENT(IN), OPTIONAL  62D  63D  64   67
+  SIZE   intrinsic                         63
+```
+
+The host's own cross reference also includes those lines, because they mention its names.
+
 **Pointers** (the standard's 5.1.2.7, 5.1.2.8, 6.3.2, 7.5.2, and 13.13.13). A variable with
 the POINTER attribute holds not a value but where one is: it *points at* a variable, its
 *target*, and wherever a value or a variable is wanted (in an expression, on the left of

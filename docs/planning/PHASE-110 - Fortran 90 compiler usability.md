@@ -328,7 +328,7 @@ marked so, and are unconfirmed.
    (done 2026-11-20)
 4. **`/WARNINGS`** (finding 5): INTENTOUTREF's position, the module's private
    names, HOSTHIDDEN, UNREAD. (done 2026-11-20)
-5. **Listings and cross references** (finding 6, (a) to (e)).
+5. **Listings and cross references** (finding 6, (a) to (e)). (done 2026-11-20)
 6. **`/CHECK=POINTERS`** (finding 7), FOR numbers 311 and 312, FTNRTL's two routines.
 7. **`/DEBUG` and the debugger** (finding 9), in two parts:
    - 7a. Derived types and `%`; sections in EXAMINE.
@@ -512,3 +512,34 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   `TestWarningsHostHidden`, `TestWarningsUnread`); `warnings_test.go`'s expectations
   gain the UNREADs its programs have. HELP FORTRAN and MANUAL.md's `/WARNINGS` say so.
   Subtask 5, listings and cross references, is next.
+- **2026-11-20:** Subtask 5, listings and cross references. (a) A generic name's row says
+  `generic` (`describeKind`; `NAME function, generic` when it is also one of its own
+  specifics), defined at each INTERFACE statement (`declareGeneric` now notes it), and
+  `OPERATOR(op)` and `ASSIGNMENT(=)` are rows among the routines (`whatOperator`,
+  `whatAssign`), defined by `declareOperator` and used by each operation or assignment
+  that calls one of their procedures (`noteOperator`, named as the unit's `Generic` names
+  it, so `==` and `.EQ.` share a row). An operator a USE gave has a D on the USE line and
+  `from M` (`Unit.operatorsFrom`, recorded by `useOperator`). One used in a contained
+  procedure is that procedure's row, `from HOST`, and also its host's, as a name's
+  mentions are. A call made through a generic name, an operator, or assignment still
+  counts as a use of the specific procedure for the warnings, but it's recorded in
+  `Symbol.through`, and the cross reference (`shown`) leaves it out of the procedure's
+  row. So a use-associated specific that the unit reaches only that way has no row. (b)
+  `defineInternal` notes each internal or module procedure as defined, at its header, so
+  the module's DIST has a row. (c) `Symbol.Attributes` gives ALLOCATABLE, POINTER,
+  TARGET, INTENT(…), OPTIONAL, and PRIVATE, after the type in the cross reference and in
+  the map's type column (`typeText`; before, only POINTER, in the map). The map gives an
+  allocatable array's, an automatic object's, or an array pointer's address as
+  `descriptor at $LOCAL+24` (codegen's `described`). (d) The survey's `$W` was a WHERE
+  construct's mask, a run-time temporary whose cell `runtimeTemp` gives a `$W` symbol for
+  the optimizer. The map now passes over any symbol whose name starts with `$`, as the
+  `/DEBUG` table already did. (e) `Unit.hostNames`: an internal or module procedure's
+  cross reference has each host's name (its host's, then that host's host) that its own
+  lines mention and that it doesn't hide, with those mentions, `from HOST`, or the host's
+  `from M` for a use-associated one. "Its own lines" is `ownsLine`: between its header
+  and its END, but not inside a procedure it contains. The host's row keeps those
+  mentions. `recdyn.for`, fixed form with ALLOCATABLE, changed only its map's comment
+  lines, so `nof90.sum` was rewritten for it. Test: `listing90_test.go`
+  (`TestListing90`). MANUAL.md (after the modules' listing example) and HELP FORTRAN
+  /CROSS_REFERENCE say so. FORTRAN-INTERNALS.md is left for the close-out (subtask 9).
+  Subtask 6, `/CHECK=POINTERS`, is next.

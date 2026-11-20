@@ -82,7 +82,16 @@ const (
 	whatModule    = "module"
 	whatIntrinsic = "intrinsic"
 	whatSystem    = "system routine"
+	whatOperator  = "operator"
+	whatAssign    = "assignment"
 )
+
+// operatorUse is where a USE gave a unit an operator or assignment: the module
+// and the USE statement (use.go's useOperator).
+type operatorUse struct {
+	module string
+	pos    diag.Position
+}
 
 // note adds a mention to list. A statement from a text library's module makes none.
 func (a *analyzer) note(list *[]Reference, pos diag.Position, kind RefKind) {
@@ -99,6 +108,48 @@ func (a *analyzer) note(list *[]Reference, pos diag.Position, kind RefKind) {
 	if _, known := a.prog.lines[pos.Serial]; !known {
 		pos.Column = 0
 		a.prog.lines[pos.Serial] = pos
+	}
+}
+
+// noteThrough notes a use of the specific procedure s made by a generic name, an
+// operator, or defined assignment at pos (Symbol.through).
+func (a *analyzer) noteThrough(s *Symbol, pos diag.Position) {
+	if a.inLibrary {
+		return
+	}
+
+	a.note(&s.refs, pos, RefUsed)
+	s.through = append(s.through, s.refs[len(s.refs)-1])
+}
+
+// noteOperator notes a use of the operator or assignment key that called the
+// specific procedure spec: a row of this unit's, named as the interface block or
+// USE that has it names it, from that host if it isn't this unit's.
+func (a *analyzer) noteOperator(key string, spec *Symbol, pos diag.Position) {
+	what := whatOperator
+	if key == assignmentKey {
+		what = whatAssign
+	}
+
+	for u := a.unit; u != nil; u = u.Host {
+		if g := u.operators[key]; g != nil && slices.Contains(g.Specifics, spec) {
+			// The host's row has the use too, as a name's has its contained
+			// procedures' mentions.
+			if u != a.unit {
+				if u.others == nil {
+					u.others = map[otherName][]Reference{}
+				}
+
+				refs := u.others[otherName{what, g.Name}]
+				a.note(&refs, pos, RefUsed)
+				u.others[otherName{what, g.Name}] = refs
+				what += " from " + u.Path()
+			}
+
+			a.noteOther(what, g.Name, pos, RefUsed)
+
+			return
+		}
 	}
 }
 
@@ -214,30 +265,44 @@ func (u *Unit) CrossReference() []CrossName {
 	var rows []row
 
 	for _, s := range u.Symbols {
-		if refs := settled(s.refs); len(refs) > 0 && s.Class != UnitName && !s.Unmentioned() {
-			group, what := u.describeCross(s)
-			if from := s.UseText(); from != "" {
-				what += " " + from
-			}
-
-			rows = append(rows, row{group: group, name: CrossName{Name: s.Name, What: what, Refs: refs}})
+		refs := settled(shown(s))
+		if len(refs) == 0 || s.Class == UnitName || s.Use != nil && !s.listed && onlyDefined(refs) {
+			continue
 		}
+
+		group, what := u.describeCross(s)
+		if from := s.UseText(); from != "" {
+			what += " " + from
+		}
+
+		rows = append(rows, row{group: group, name: CrossName{Name: s.Name, What: what, Refs: refs}})
+	}
+
+	for _, r := range u.hostNames() {
+		rows = append(rows, row{group: r.group, name: r.name})
 	}
 
 	for key, list := range u.others {
 		if refs := settled(list); len(refs) > 0 {
-			group, name := crossOthers, key.name
+			group, name, what := crossOthers, key.name, key.what
 
 			switch key.what {
 			case whatIntrinsic, whatSystem:
 				group = crossRoutines
+			case whatOperator, whatAssign:
+				group = crossRoutines
+
+				if from, ok := u.operatorsFrom[name]; ok {
+					refs = settled(append(slices.Clone(list), Reference{from.pos.Line, from.pos.Column, from.pos.Serial, RefDefined}))
+					what += " from " + from.module
+				}
 			case whatCommon:
 				name = (&CommonBlock{Name: name}).String()
 			case whatStructure:
 				name = "/" + name + "/"
 			}
 
-			rows = append(rows, row{group: group, name: CrossName{Name: name, What: key.what, Refs: refs}})
+			rows = append(rows, row{group: group, name: CrossName{Name: name, What: what, Refs: refs}})
 		}
 	}
 
@@ -270,9 +335,130 @@ func (u *Unit) CrossReference() []CrossName {
 	return names
 }
 
-// describeCross is which group the name's row is in, and what it says the name is.
+// crossRow is a cross reference row and its group.
+type crossRow struct {
+	group int
+	name  CrossName
+}
+
+// hostNames are the rows for the names of the unit's hosts that its own
+// statements mention: each a host's name, which the unit doesn't hide, with
+// the mentions on the unit's own lines. A name a host has by USE says where it
+// came from as the host's row does; any other says which host it is.
+func (u *Unit) hostNames() []crossRow {
+	var rows []crossRow
+
+	seen := map[string]bool{}
+	for _, s := range u.Symbols {
+		seen[s.Name] = true
+	}
+
+	for h := u.Host; h != nil; h = h.Host {
+		for _, s := range h.Symbols {
+			if seen[s.Name] || s.Class == UnitName {
+				continue
+			}
+
+			var mine []Reference
+
+			for _, r := range shown(s) {
+				if u.ownsLine(r.Serial) {
+					mine = append(mine, r)
+				}
+			}
+
+			if len(mine) == 0 {
+				continue
+			}
+
+			seen[s.Name] = true
+
+			group, what := h.describeCross(s)
+			if from := s.UseText(); from != "" {
+				what += " " + from
+			} else {
+				what += " from " + h.Path()
+			}
+
+			rows = append(rows, crossRow{group, CrossName{Name: s.Name, What: what, Refs: settled(mine)}})
+		}
+	}
+
+	return rows
+}
+
+// ownsLine reports whether the line read with the serial number given is one of
+// the unit's own statements' lines: from its header to its END, but not an
+// internal procedure's. It answers only for a unit with a host, whose lines are
+// the ones its host's names may be mentioned on.
+func (u *Unit) ownsLine(serial int) bool {
+	if !u.spans(serial) {
+		return false
+	}
+
+	for _, c := range u.Contains {
+		if c.spans(serial) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// spans reports whether the line with the serial number given is between the
+// unit's header and its END, inclusive.
+func (u *Unit) spans(serial int) bool {
+	if u.AST == nil || u.AST.Header == nil || len(u.AST.Body) == 0 {
+		return false
+	}
+
+	return serial >= u.AST.Header.Base().Pos.Serial && serial <= u.AST.Body[len(u.AST.Body)-1].Base().Pos.Serial
+}
+
+// shown is the mentions of s its own row shows: all but those a generic name,
+// an operator, or defined assignment made (Symbol.through).
+func shown(s *Symbol) []Reference {
+	if len(s.through) == 0 {
+		return s.refs
+	}
+
+	var refs []Reference
+
+	for _, r := range s.refs {
+		if !slices.Contains(s.through, r) {
+			refs = append(refs, r)
+		}
+	}
+
+	return refs
+}
+
+// describeCross is which group the name's row is in, and what it says the name
+// is, with its attributes after it.
 func (u *Unit) describeCross(s *Symbol) (int, string) {
+	group, text := u.describeKind(s)
+
+	for _, a := range s.Attributes() {
+		text += ", " + a
+	}
+
+	return group, text
+}
+
+// describeKind is which group the name's row is in, and what it says the name is.
+func (u *Unit) describeKind(s *Symbol) (int, string) {
 	text := s.TypeText()
+
+	// A generic name, which may be one of its specific procedures' too.
+	if s.Generic != nil {
+		if slices.Contains(s.Generic.Specifics, s) && s.Class == Function {
+			return crossRoutines, text + " function, generic"
+		} else if slices.Contains(s.Generic.Specifics, s) {
+			return crossRoutines, "subroutine, generic"
+		}
+
+		return crossRoutines, "generic"
+	}
 
 	if s.Result {
 		return crossRoutines, text + " function"

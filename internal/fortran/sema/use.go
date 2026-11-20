@@ -509,6 +509,15 @@ func (a *analyzer) useOperator(ms *moduleScope, key string, g *Generic, copies m
 		a.unit.operators[key] = mine
 	}
 
+	// The cross reference's row says where it came from (crossref.go).
+	if a.unit.operatorsFrom == nil {
+		a.unit.operatorsFrom = map[string]operatorUse{}
+	}
+
+	if _, known := a.unit.operatorsFrom[mine.Name]; !known && !a.inLibrary {
+		a.unit.operatorsFrom[mine.Name] = operatorUse{ms.name, pos}
+	}
+
 	for _, p := range g.Specifics {
 		if c := a.useCopy(ms, p, copies, pos); !slices.Contains(mine.Specifics, c) {
 			mine.Specifics = append(mine.Specifics, c)

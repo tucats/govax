@@ -101,6 +101,7 @@ func (a *analyzer) declareGeneric(spec ast.GenericSpec, specifics []*Symbol) {
 		return
 	}
 
+	a.note(&old.refs, spec.Pos, RefDefined)
 	old.Generic.Specifics = append(old.Generic.Specifics, specifics...)
 
 	if old.Interface == nil && old.Class == Unclassified && len(old.Generic.Specifics) > 0 {
@@ -339,7 +340,7 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 				}
 			}
 
-			a.note(&spec.refs, pos, RefUsed)
+			a.noteThrough(spec, pos)
 
 			return spec, args, genericSpecific
 		}

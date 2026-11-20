@@ -61,6 +61,13 @@ func (a *analyzer) declareOperator(spec ast.GenericSpec, specifics []*Symbol) {
 		a.unit.operators[key] = g
 	}
 
+	what := whatOperator
+	if key == assignmentKey {
+		what = whatAssign
+	}
+
+	a.noteOther(what, g.Name, spec.Pos, RefDefined)
+
 	for _, s := range specifics {
 		if a.checkOperatorProcedure(key, g.Name, s) {
 			g.Specifics = append(g.Specifics, s)
@@ -279,11 +286,13 @@ func operandArgs(operands []Expr) []Arg {
 	return args
 }
 
-// operation is the reference to the function s for an operation at pos.
-func (a *analyzer) operation(s *Symbol, args []Arg, pos diag.Position) Expr {
+// operation is the reference to the function s for an operation by the operator
+// key at pos.
+func (a *analyzer) operation(key string, s *Symbol, args []Arg, pos diag.Position) Expr {
 	args = a.operandsTo(s, args)
 
-	a.note(&s.refs, pos, RefUsed)
+	a.noteThrough(s, pos)
+	a.noteOperator(key, s, pos)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: pos})
 
 	return a.funcRef(s, s.Type, args, pos)
@@ -338,7 +347,7 @@ func (a *analyzer) extendedOp(op ast.Op, pos diag.Position, operands ...Expr) (E
 		return nil, false
 	}
 
-	return a.operation(s, args, pos), true
+	return a.operation(op.String(), s, args, pos), true
 }
 
 // definedOp analyzes a defined operation, X .OP. Y or .OP. X: a reference to the
@@ -373,7 +382,7 @@ func (a *analyzer) definedOp(e *ast.DefinedOp) Expr {
 		return a.bad(e.Pos)
 	}
 
-	return a.operation(s, args, e.Pos)
+	return a.operation(e.Op, s, args, e.Pos)
 }
 
 // definedValue analyzes the value of an assignment to a scalar record when an
@@ -417,7 +426,8 @@ func (a *analyzer) definedAssignment(s *ast.AssignStmt, target, value Expr) Stmt
 
 	args = a.operandsTo(sub, args)
 
-	a.note(&sub.refs, s.Pos, RefUsed)
+	a.noteThrough(sub, s.Pos)
+	a.noteOperator(assignmentKey, sub, s.Pos)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: sub, args: args, pos: s.Pos})
 
 	return &Call{stmtBase: stmtBase{s}, Sub: sub, Args: args}

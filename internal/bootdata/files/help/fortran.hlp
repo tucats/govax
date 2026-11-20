@@ -635,7 +635,10 @@
    A listing follows each unit's map with where its names and labels
    are mentioned: a line number each, with D if the line defines the
    name and A if it assigns it; 1:3 is line 3 of a file included at
-   depth 1.  It is there after errors too.  Without /LIST it does
+   depth 1.  Generic names, OPERATOR(op), and ASSIGNMENT(=) have rows
+   of their own; each name's attributes follow its type; and an
+   internal or module procedure lists its host's names that it uses,
+   "from HOST".  It is there after errors too.  Without /LIST it does
    nothing but say so.  The default is /NOCROSS_REFERENCE.
 
 /D_LINES
