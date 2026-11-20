@@ -46,6 +46,11 @@ type fortranPlace struct {
 	// contiguous (an assumed-shape dummy given a section); nil for any other.
 	strides []int64
 	a0      uint32
+
+	// pointer says the place is a pointer's own storage, not yet followed (a pointer
+	// component in a record being shown whole): addr is the longword holding the
+	// target's address, and what's shown is that address.
+	pointer bool
 }
 
 // fortranTable is a module's table, read once.
@@ -123,7 +128,12 @@ func (d *Debugger) frameUnit(f fortranFrame) (*dbgtable.Unit, *dbgsym.Module, *d
 
 // findFortranVar finds what a name means: in the unit a dotted name says, or for a bare
 // name in the routine the program is in, or if that isn't FORTRAN's, the nearest
-// routine on the stack that is. path is a module to look in, if the item gave one.
+// routine on the stack that is, starting at the call level SET SCOPE chose. A name the
+// routine's unit doesn't have is looked for in its hosts in turn, an internal
+// procedure's (HOST.INNER's HOST) and a module procedure's module, as the program reaches
+// them (docs/planning/PHASE-110 - Fortran 90 compiler usability.md, subtask 7b); a host's
+// frame variable is then found in the host's nearest active call (fortranFrameOf). path
+// is a module to look in, if the item gave one.
 func (d *Debugger) findFortranVar(path, name string) (*dbgtable.Var, *dbgsym.Module, *dbgsym.Program, bool) {
 	name = strings.ToUpper(name)
 
@@ -156,11 +166,32 @@ func (d *Debugger) findFortranVar(path, name string) (*dbgtable.Var, *dbgsym.Mod
 		return nil, nil, nil, false
 	}
 
-	for _, f := range d.fortranFrames() {
-		if u, mod, prog := d.frameUnit(f); u != nil {
-			v, ok := u.Vars[name]
+	frames := d.fortranFrames()
+	if level, _, ok := d.registerPlace(d.callLevels()); ok && level < len(frames) {
+		frames = frames[level:]
+	}
 
-			return v, mod, prog, ok
+	for _, f := range frames {
+		u, mod, prog := d.frameUnit(f)
+		if u == nil {
+			continue
+		}
+
+		table := d.fortranTable(mod)
+
+		for unit := u.Name; ; {
+			if host := table.Units[unit]; host != nil {
+				if v, ok := host.Vars[name]; ok {
+					return v, mod, prog, true
+				}
+			}
+
+			i := strings.LastIndexByte(unit, '.')
+			if i <= 0 {
+				return nil, nil, nil, false
+			}
+
+			unit = unit[:i]
 		}
 	}
 
@@ -220,54 +251,15 @@ func (d *Debugger) long(addr uint32) (uint32, error) {
 func (d *Debugger) fortranBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) (addr, length uint32, err error) {
 	length = uint32(max(v.Size, 0))
 
-	symbol := func(name string) (uint32, error) {
-		if s, ok := prog.Lookup(mod.Name + `\` + name); ok {
-			return s.Value, nil
-		}
-
-		return 0, vmserrors.New(vmserrors.DBG_NOSYMBOL, name)
-	}
-
 	switch v.Place.Kind {
-	case dbgtable.Static:
-		addr, err = symbol(v.Place.Symbol)
-
-		return addr, length, err
-
-	case dbgtable.Through:
-		cell, err := symbol(v.Place.Symbol)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if addr, err = d.long(cell); err != nil {
-			return 0, 0, err
-		}
-
-	case dbgtable.Argument, dbgtable.Frame, dbgtable.ThroughFrame:
-		frame, ok := d.fortranFrameOf(v, mod)
-		if !ok {
-			return 0, 0, vmserrors.New(vmserrors.DBG_NOTACTIVE, v.Unit+"."+v.Name)
-		}
-
-		switch v.Place.Kind {
-		case dbgtable.Frame:
-			return frame.fp + uint32(int32(v.Place.N)), length, nil
-		case dbgtable.ThroughFrame:
-			addr, err = d.long(frame.fp + uint32(int32(v.Place.N)))
-		default:
-			addr, err = d.long(frame.ap + 4*uint32(v.Place.N))
-		}
-
-		if err != nil {
-			return 0, 0, err
-		}
-
 	case dbgtable.InRegister:
 		return uint32(v.Place.N), length, nil
-
 	case dbgtable.Described, dbgtable.DescribedFrame:
 		return d.describedBase(v, mod, prog)
+	}
+
+	if addr, err = d.storageAddr(v, mod, prog); err != nil {
+		return 0, 0, err
 	}
 
 	if v.DescriptorPassed() {
@@ -282,24 +274,49 @@ func (d *Debugger) fortranBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym
 	return addr, length, nil
 }
 
-// describedAt is the address of the descriptor that is a Described variable's own
-// storage: a symbol's, or a displacement from its routine's frame.
-func (d *Debugger) describedAt(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) (uint32, error) {
-	if v.Place.Kind == dbgtable.DescribedFrame {
+// storageAddr is the address of a variable's own storage, as its place says: its
+// value's, a CHARACTER dummy's descriptor's, a Described variable's descriptor's, or a
+// pointer's. A static symbol's address; at the address a cell, or a longword in the
+// frame, or the argument list holds; or a displacement from the routine's FP. A variable
+// in a register has none.
+func (d *Debugger) storageAddr(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) (uint32, error) {
+	symbol := func(name string) (uint32, error) {
+		if s, ok := prog.Lookup(mod.Name + `\` + name); ok {
+			return s.Value, nil
+		}
+
+		return 0, vmserrors.New(vmserrors.DBG_NOSYMBOL, name)
+	}
+
+	switch v.Place.Kind {
+	case dbgtable.Static, dbgtable.Described:
+		return symbol(v.Place.Symbol)
+
+	case dbgtable.Through:
+		cell, err := symbol(v.Place.Symbol)
+		if err != nil {
+			return 0, err
+		}
+
+		return d.long(cell)
+
+	case dbgtable.Argument, dbgtable.Frame, dbgtable.ThroughFrame, dbgtable.DescribedFrame:
 		frame, ok := d.fortranFrameOf(v, mod)
 		if !ok {
 			return 0, vmserrors.New(vmserrors.DBG_NOTACTIVE, v.Unit+"."+v.Name)
 		}
 
-		return frame.fp + uint32(int32(v.Place.N)), nil
+		switch v.Place.Kind {
+		case dbgtable.Frame, dbgtable.DescribedFrame:
+			return frame.fp + uint32(int32(v.Place.N)), nil
+		case dbgtable.ThroughFrame:
+			return d.long(frame.fp + uint32(int32(v.Place.N)))
+		}
+
+		return d.long(frame.ap + 4*uint32(v.Place.N))
 	}
 
-	s, ok := prog.Lookup(mod.Name + `\` + v.Place.Symbol)
-	if !ok {
-		return 0, vmserrors.New(vmserrors.DBG_NOSYMBOL, v.Place.Symbol)
-	}
-
-	return s.Value, nil
+	return 0, vmserrors.New(vmserrors.DBG_NOSYMBOL, v.Unit+"."+v.Name)
 }
 
 // describedBase is where a Described variable's first element is, its descriptor's
@@ -307,7 +324,7 @@ func (d *Debugger) describedAt(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym
 // PHASE-104 - Fortran 90 dynamic arrays.md, finding 14). A POINTER of 0 is an
 // allocatable array not allocated, or an automatic object of a routine not entered.
 func (d *Debugger) describedBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) (addr, length uint32, err error) {
-	at, err := d.describedAt(v, mod, prog)
+	at, err := d.storageAddr(v, mod, prog)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -340,7 +357,7 @@ func (d *Debugger) describedStrides(v *dbgtable.Var, mod *dbgsym.Module, prog *d
 		return nil, 0, nil
 	}
 
-	at, err := d.describedAt(v, mod, prog)
+	at, err := d.storageAddr(v, mod, prog)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -576,6 +593,14 @@ func (d *Debugger) fortranBytes(p fortranPlace) ([]byte, error) {
 
 // fortranText is a value as text, by its FORTRAN type.
 func (d *Debugger) fortranText(p fortranPlace, data []byte, radix int) string {
+	if p.pointer {
+		if target := binary.LittleEndian.Uint32(data); target != 0 {
+			return fmt.Sprintf("pointer to %08X", target)
+		}
+
+		return "pointer, not associated"
+	}
+
 	switch p.v.Type {
 	case dbgtable.Integer:
 		text, _ := d.fixedText(dataType{kind: typeInteger, size: uint32(len(data))}, data, radix)
@@ -801,6 +826,10 @@ func (d *Debugger) depositFortran(places []fortranPlace, t dataType, typed bool,
 
 // fortranValue is the bytes a value typed for a place makes.
 func (d *Debugger) fortranValue(p fortranPlace, t dataType, typed bool, value string) ([]byte, error) {
+	if p.pointer {
+		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+	}
+
 	if typed {
 		return d.depositBytes(p.addr, t, value)
 	}
@@ -859,7 +888,7 @@ func (d *Debugger) fortranName(name string) (uint32, bool) {
 
 	// A dotted name of a static variable is a MACRO label, whose contents the evaluator
 	// fetches itself.
-	label := strings.Contains(name, ".") && p.v.Place.Kind == dbgtable.Static
+	label := strings.Contains(name, ".") && p.v.Place.Kind == dbgtable.Static && !p.v.Pointer
 
 	if d.evaluating && !label && len(places) == 1 && p.size <= 4 {
 		data, err := d.fortranBytes(p)
@@ -898,4 +927,41 @@ func (d *Debugger) fortranLabel(name string) (uint32, bool) {
 	}
 
 	return 0, false
+}
+
+// routineStart is where a break at the routine whose entry mask is at entry stops: past
+// the mask, or for an entry point of a FORTRAN unit compiled /DEBUG, at its first
+// statement, after the code that starts the entry point, where its dummy arguments can
+// be read (the table's B line, docs/planning/PHASE-110 - Fortran 90 compiler
+// usability.md, subtask 7b).
+func (d *Debugger) routineStart(entry uint32) uint32 {
+	start := entry + 2
+
+	prog := d.Machine.DebugProgramAt(start)
+	if prog == nil {
+		return start
+	}
+
+	routine, mod, ok := prog.RoutineAt(start)
+	if !ok {
+		return start
+	}
+
+	table := d.fortranTable(mod)
+	if table == nil || table.Entries[routine.Name] == nil {
+		return start
+	}
+
+	u := table.Entries[routine.Name]
+
+	line, ok := u.Bodies[routine.Name]
+	if !ok {
+		return start
+	}
+
+	if s, ok := prog.Lookup(u.Name + ".$LINE" + strconv.Itoa(line)); ok {
+		return s.Value
+	}
+
+	return start
 }

@@ -46,11 +46,17 @@ func TestFortranScope(t *testing.T) {
 		}
 	}
 
-	// The program's own level has no activation of FACT.
+	// The program's own level has no activation of FACT, and a bare name there is the
+	// program's, so K isn't one, as a name not in the scope's routine is NOSYMBOL to
+	// VMS's debugger (testdata/dbg89's R); FACT.K is FACT's, with no frame from there out.
 	dispatch(t, c, "SET SCOPE 4")
 
-	if _, err := sayErr(c, "EXAMINE K"); err == nil || !strings.Contains(err.Error(), "no active call frame") {
-		t.Errorf("EXAMINE K in scope 4: %v, want NOTACTIVE", err)
+	if _, err := sayErr(c, "EXAMINE K"); err == nil || !strings.Contains(err.Error(), "is not in the symbol table") {
+		t.Errorf("EXAMINE K in scope 4: %v, want NOSYMBOL", err)
+	}
+
+	if _, err := sayErr(c, "EXAMINE FACT.K"); err == nil || !strings.Contains(err.Error(), "no active call frame") {
+		t.Errorf("EXAMINE FACT.K in scope 4: %v, want NOTACTIVE", err)
 	}
 }
 

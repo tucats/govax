@@ -106,3 +106,40 @@ func TestStructureLines(t *testing.T) {
 		t.Errorf("a plain REC: %+v", got)
 	}
 }
+
+// TestPointerAndBodyLines reads back pointers' lines, a variable's and a component's,
+// and a B line.
+func TestPointerAndBodyLines(t *testing.T) {
+	vars := []Var{
+		{Unit: "U", Name: "P", Type: RealF, Size: 4, Place: Place{Kind: Static, Symbol: "U.P"}, Pointer: true},
+		{Unit: "U", Name: "S", Type: Char, Size: 5, Place: Place{Kind: Frame, N: -8}, Pointer: true},
+		{Unit: "U", Name: "Q", Type: RealF, Size: 4, Place: Place{Kind: Described, Symbol: "U.Q"}, Bounds: []Bound{{}}, Pointer: true},
+		{Unit: "U", Name: "H", Type: Record, Struct: "NODE", Size: 12, Place: Place{Kind: Argument, N: 1}, Pointer: true},
+	}
+	next := &Component{Name: "NEXT", Offset: 4, Type: Record, Struct: "NODE", Size: 12, Pointer: true}
+
+	lines := []string{BodyLine("U", "U", 30), BodyLine("U", "OTHER", 41), ComponentLine("U", "NODE", next)}
+	for _, v := range vars {
+		lines = append(lines, v.Line())
+	}
+
+	u := Parse(lines).Units["U"]
+
+	for _, v := range vars {
+		if got := u.Vars[v.Name]; got == nil || !reflect.DeepEqual(*got, v) {
+			t.Errorf("%s: got %+v, want %+v, from %q", v.Name, got, v, v.Line())
+		}
+	}
+
+	if got := u.Structures["NODE"].Components; len(got) != 1 || !reflect.DeepEqual(got[0], next) {
+		t.Errorf("NEXT: %+v", got)
+	}
+
+	if u.Bodies["U"] != 30 || u.Bodies["OTHER"] != 41 {
+		t.Errorf("bodies: %v", u.Bodies)
+	}
+
+	if u.Vars["S"].DescriptorPassed() {
+		t.Error("a CHARACTER pointer's descriptor is its own storage, not passed")
+	}
+}

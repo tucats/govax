@@ -258,3 +258,250 @@ func TestFortranDescribedSections(t *testing.T) {
 		}
 	}
 }
+
+// pointerSource has a pointer of each kind (scalar, CHARACTER, an array pointer to a
+// section, one never associated, one to a record), a linked list through pointer
+// components, pointer dummies, a module's variables, and an internal procedure whose
+// host has static and frame variables.
+const pointerSource = `      OPTIONS /F90
+      MODULE STORE
+      INTEGER COUNT
+      TYPE NODE
+        INTEGER KEY
+        TYPE(NODE), POINTER :: NEXT
+        REAL, POINTER :: VALS(:)
+      END TYPE
+      END MODULE
+
+      OPTIONS /F90
+      PROGRAM PTRS
+      USE STORE
+      INTERFACE
+        SUBROUTINE TAKE(X, Y)
+        REAL, POINTER :: X, Y(:)
+        END SUBROUTINE
+      END INTERFACE
+      REAL, TARGET :: T(6)
+      REAL, POINTER :: P, Q(:), NONE
+      CHARACTER(LEN=5), TARGET :: W
+      CHARACTER(LEN=5), POINTER :: S
+      TYPE(NODE), TARGET :: N1, N2
+      TYPE(NODE), POINTER :: HEAD
+      INTEGER I
+      COUNT = 7
+      T = (/ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 /)
+      P => T(2)
+      Q => T(2:6:2)
+      NULLIFY (NONE)
+      W = 'HELLO'
+      S => W
+      N1%KEY = 1
+      N2%KEY = 2
+      N1%NEXT => N2
+      NULLIFY (N2%NEXT)
+      N1%VALS => T(5:6)
+      NULLIFY (N2%VALS)
+      HEAD => N1
+      I = 5
+      CALL TAKE(P, Q)
+      CALL INNER
+      CALL OUTER(3)
+      CONTAINS
+      SUBROUTINE INNER
+      INTEGER J
+      J = I + COUNT
+   10 CONTINUE
+      END SUBROUTINE
+      END
+
+      SUBROUTINE TAKE(X, Y)
+      REAL, POINTER :: X, Y(:)
+   20 CONTINUE
+      END
+
+      RECURSIVE SUBROUTINE OUTER(N)
+      INTEGER N, K
+      K = 10 * N
+      CALL DEEP
+      CONTAINS
+      SUBROUTINE DEEP
+   30 CONTINUE
+      END SUBROUTINE
+      END
+`
+
+// TestFortranPointers holds EXAMINE of pointers: each is what it points to, an array
+// pointer's elements by its descriptor's strides, and one not associated says so. In a
+// record shown whole a pointer component is where it points, not followed; named, it
+// is followed. A pointer dummy is the caller's pointer.
+func TestFortranPointers(t *testing.T) {
+	// The MACRO module is named for the file's first unit, STORE.
+	c := fortranSessionOf(t, pointerSource, "TAKE.L20")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE PTRS.P", "STORE\\PTRS.P:  2.000000\n"},
+		{"EXAMINE PTRS.Q", "STORE\\PTRS.Q(1):  2.000000\nSTORE\\PTRS.Q(2):  4.000000\nSTORE\\PTRS.Q(3):  6.000000\n"},
+		{"EXAMINE PTRS.Q(2:3)", "STORE\\PTRS.Q(2):  4.000000\nSTORE\\PTRS.Q(3):  6.000000\n"},
+		{"EXAMINE PTRS.S", "STORE\\PTRS.S:  'HELLO'\n"},
+		{"EXAMINE PTRS.S(2:3)", "STORE\\PTRS.S(2:3):  'EL'\n"},
+		{"EXAMINE PTRS.HEAD%KEY", "STORE\\PTRS.HEAD%KEY:  1\n"},
+		{"EXAMINE PTRS.HEAD%NEXT%KEY", "STORE\\PTRS.HEAD%NEXT%KEY:  2\n"},
+		{"EXAMINE PTRS.N1%VALS", "STORE\\PTRS.N1%VALS(1):  5.000000\nSTORE\\PTRS.N1%VALS(2):  6.000000\n"},
+		// A pointer dummy is the caller's pointer.
+		{"EXAMINE X", "STORE\\TAKE.X:  2.000000\n"},
+		{"EXAMINE Y(3)", "STORE\\TAKE.Y(3):  6.000000\n"},
+		{"EVALUATE PTRS.HEAD%KEY + 1", "2\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+
+	// A record shown whole: its pointers' addresses, or that they aren't associated.
+	out := variableOutput(t, c, "EXAMINE PTRS.N2")
+	if !strings.Contains(out, "STORE\\PTRS.N2%KEY:  2\n") || !strings.Contains(out, "STORE\\PTRS.N2%NEXT:  pointer, not associated\n") ||
+		!strings.Contains(out, "STORE\\PTRS.N2%VALS:  pointer, not associated\n") {
+		t.Errorf("EXAMINE PTRS.N2: %q", out)
+	}
+
+	if out := variableOutput(t, c, "EXAMINE PTRS.N1"); !strings.Contains(out, "STORE\\PTRS.N1%NEXT:  pointer to ") {
+		t.Errorf("EXAMINE PTRS.N1: %q", out)
+	}
+
+	for _, want := range []struct{ line, says string }{
+		{"EXAMINE PTRS.NONE", `pointer STORE\PTRS.NONE is not associated`},
+		{"EXAMINE PTRS.N2%NEXT%KEY", `pointer STORE\PTRS.N2%NEXT is not associated`},
+		{"EXAMINE PTRS.N2%VALS", `pointer STORE\PTRS.N2%VALS is not associated`},
+		{"EXAMINE PTRS.Q(4)", "subscript 1 is out of bounds, value is 4, bounds are 1:3"},
+	} {
+		if _, err := sayErr(c, want.line); err == nil || !strings.Contains(err.Error(), want.says) {
+			t.Errorf("%s: %v, want %q", want.line, err, want.says)
+		}
+	}
+
+	// A DEPOSIT through a pointer goes to its target; to a pointer shown whole, it can't.
+	dispatch(t, c, "DEPOSIT PTRS.P = 7.5")
+	dispatch(t, c, "DEPOSIT PTRS.HEAD%NEXT%KEY = 22")
+
+	for _, want := range []struct{ line, output string }{
+		{"EXAMINE PTRS.T(2)", "STORE\\PTRS.T(2):  7.500000\n"},
+		{"EXAMINE PTRS.N2%KEY", "STORE\\PTRS.N2%KEY:  22\n"},
+	} {
+		if got := variableOutput(t, c, want.line); got != want.output {
+			t.Errorf("%s: got %q, want %q", want.line, got, want.output)
+		}
+	}
+}
+
+// TestFortranHostNames: in an internal procedure a bare name the procedure lacks is its
+// host's, a static variable's or the host's frame's, and a module's variable is found
+// by the module's name or as the program sees it. SET SCOPE moves the routine whose
+// names a bare name means.
+func TestFortranHostNames(t *testing.T) {
+	c := fortranSessionOf(t, pointerSource, "PTRS.INNER.L10")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE J", "STORE\\PTRS.INNER.J:  12\n"},
+		{"EXAMINE I", "STORE\\PTRS.I:  5\n"},
+		{"EXAMINE T(3)", "STORE\\PTRS.T(3):  3.000000\n"},
+		{"EXAMINE P", "STORE\\PTRS.P:  2.000000\n"},
+		{"EXAMINE COUNT", "STORE\\PTRS.COUNT:  7\n"},
+		{"EXAMINE STORE.COUNT", "STORE\\STORE.COUNT:  7\n"},
+		// The host's own level: its names, and the procedure's not among them.
+		{"SET SCOPE 1", ""},
+		{"EXAMINE I", "STORE\\PTRS.I:  5\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+
+	if _, err := sayErr(c, "EXAMINE J"); err == nil || !strings.Contains(err.Error(), "is not in the symbol table") {
+		t.Errorf("EXAMINE J in scope 1: %v", err)
+	}
+
+	// A RECURSIVE host's variables are in its frame, found in its nearest active call.
+	c = fortranSessionOf(t, pointerSource, "OUTER.DEEP.L30")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE K", "STORE\\OUTER.K:  30\n"},
+		{"EXAMINE N", "STORE\\OUTER.N:  3\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+}
+
+// TestFortranRoutineBreak: a break at a FORTRAN routine stops at its first statement,
+// after the code that copies an assumed-shape dummy's descriptor, so the dummy can be
+// read at once; at an ENTRY point it stops at the statement after the ENTRY. CANCEL
+// BREAK of the routine finds it.
+func TestFortranRoutineBreak(t *testing.T) {
+	const source = `      OPTIONS /F90
+      PROGRAM RB
+      INTERFACE
+        SUBROUTINE SHOW(A)
+        INTEGER A(:)
+        END SUBROUTINE
+      END INTERFACE
+      INTEGER M(3)
+      M = (/ 4, 5, 6 /)
+      CALL SHOW(M)
+      CALL OTHER(9)
+      END
+
+      SUBROUTINE SHOW(A)
+      INTEGER A(:), K
+      K = A(1)
+      END
+
+      SUBROUTINE FIRST(N)
+      INTEGER N, L
+      L = N
+      RETURN
+      ENTRY OTHER(N)
+      L = N + 1
+      END
+`
+	c := fortranSessionOf(t, source, "SHOW")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	if got := variableOutput(t, c, "EXAMINE A"); got != "RB\\SHOW.A(1):  4\nRB\\SHOW.A(2):  5\nRB\\SHOW.A(3):  6\n" {
+		t.Errorf("EXAMINE A at the break: %q", got)
+	}
+
+	if got := say(t, c, "EXAMINE/INSTRUCTION .PC"); !strings.Contains(got, "SHOW.$LINE16") {
+		t.Errorf("the break at SHOW is at %q, want line 16's label", got)
+	}
+
+	if got := say(t, c, "SHOW BREAK"); !strings.Contains(got, "at routine RB\\SHOW") {
+		t.Errorf("SHOW BREAK: %q", got)
+	}
+
+	dispatch(t, c, "CANCEL BREAK SHOW")
+
+	if got := say(t, c, "SHOW BREAK"); strings.Contains(got, "SHOW") {
+		t.Errorf("after CANCEL BREAK SHOW: %q", got)
+	}
+
+	// An ENTRY point's break: the statement after the ENTRY, its dummy through the cell
+	// the entry point filled in.
+	dispatch(t, c, "SET BREAK OTHER")
+
+	out := say(t, c, "GO")
+	if !strings.Contains(out, "break at routine RB\\OTHER") || !strings.Contains(out, "FORTRAN line 24:") {
+		t.Errorf("GO to OTHER: %q", out)
+	}
+
+	if got := variableOutput(t, c, "EXAMINE N"); got != "RB\\FIRST.N:  9\n" {
+		t.Errorf("EXAMINE N at OTHER: %q", got)
+	}
+}

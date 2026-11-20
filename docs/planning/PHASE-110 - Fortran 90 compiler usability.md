@@ -334,7 +334,7 @@ marked so, and are unconfirmed.
 7. **`/DEBUG` and the debugger** (finding 9), in two parts:
    - 7a. Derived types and `%`; sections in EXAMINE. (done 2026-11-20)
    - 7b. Pointers, module variables (`M.X`), host names and the scope, the break after
-     the entry code.
+     the entry code. (done 2026-11-20)
 8. **The optimizer** (finding 10): the kernels, strength reduction for strided loops,
    fusion; the overlap test and Phase 104's list as the kernels say.
 9. **Close-out**: FORTRAN-INTERNALS.md, MANUAL.md (14.3's qualifiers, 14.7, 14.10,
@@ -628,3 +628,44 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   Subscripts, components in Expressions) and the debugger's HELP FORTRAN_Programs say so.
   Subtask 7b, pointers, module variables, host names and the scope, and the break after
   the entry code, is next.
+- **2026-11-20:** Subtask 7b, pointers, module variables, host names and the scope, and the
+  break after the entry code (the survey's D3 to D6). *Pointers* (D4): a pointer's line has
+  its target's type with `^` before it (`^RF`, `^CH`, `^REC:NODE`; `Var.Pointer`,
+  `Component.Pointer`), its place the pointer's own storage, as any place gives (a static
+  cell, the frame, a register, or a pointer dummy's argument, the caller's storage); an array
+  pointer's bounds are all `?:?` and a cell of one is Described, as an allocatable array's is.
+  The code generator no longer leaves pointers out (`codegen/debugtable.go`), but leaves out
+  located cells and component symbols, which aren't variables. The debugger follows a
+  pointer (`fortranref.go`'s `follow`): a longword address, a CHARACTER pointer's class S
+  descriptor, or an array pointer's class NCA descriptor, its bounds and strides read there
+  and its elements found as an assumed-shape dummy's are; an address of 0 is the new
+  `%DEBUG-W-NOTASSOC, pointer X is not associated` (`vmserrors.DBG_NOTASSOC`, govax's
+  wording). A pointer variable is followed first (`fortranChain`, then `fortranSteps`, the
+  chain walk split out of it), a pointer component when it's named (`fortranComponent`), and
+  in a record shown whole a pointer component is a leaf showing `pointer to` its address or
+  `pointer, not associated` (`recordLeaves`, `fortranPlace.pointer`): following it there
+  could go round a list forever, NODE's NEXT. DEPOSIT through a pointer changes its target;
+  to such a leaf, DEPOSIT isn't allowed. `fortranBase`'s place rules are now `storageAddr`,
+  which `describedAt` was a part of. *Module variables* (D5): `STORE.COUNT` already worked
+  once 7a's lookup tried a dotted name as a unit's variable first; a bare `COUNT` from an
+  internal procedure is the host's, which lists a used module's variables under its own name.
+  *Host names and the scope* (D3): `findFortranVar`'s bare name starts at the call level SET
+  SCOPE chose, as `fortranFrameOf` already did, and a name the unit lacks is looked for in
+  its hosts in turn (the unit's name less its last part: HOST.INNER's HOST, M.P's M); a
+  host's frame variable is found in the host's nearest active call from that level out, not
+  through the FP the internal procedure is given in R10, which is the same activation unless a
+  recursive host called itself again through the procedure (unconfirmed, and left so). So at
+  `SET SCOPE 4` in `TestFortranScope` a bare K is now NOSYMBOL (the program has no K), where
+  it was NOTACTIVE (FACT's K, with no frame): VMS's debugger looks a name up in the scope's
+  routine (testdata/dbg89's `R` at scope 4); `FACT.K` there is still NOTACTIVE. *The break*
+  (D6, the author's answer 7): the table's new B line, `;DBG$ B unit entry line`, says which
+  labeled line each entry point's code first reaches (`bodyLines`: breadth first over the IR's
+  blocks from the entry's first block, the first statement whose line has a `$LINE` label,
+  an ENTRY statement's own line not counting); SET BREAK and CANCEL BREAK of a routine use
+  `routineStart` (`debugger/fortran.go`), that label's address for a FORTRAN entry point with
+  a B line, else past the entry mask as before. The break is still "at routine SUB", the
+  FORTRAN line shown under it. Tests: `internal/debugger/fortran90_test.go`'s
+  `TestFortranPointers`, `TestFortranHostNames`, and `TestFortranRoutineBreak` (an ENTRY point
+  among them), `scope_test.go`'s scope 4 case, and `dbgtable`'s `TestPointerAndBodyLines`.
+  MANUAL.md's 14.10 (Names, Pointers, Breaks at routines) and the debugger's HELP
+  FORTRAN_Programs say so. Subtask 8, the optimizer, is next.

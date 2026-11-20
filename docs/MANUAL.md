@@ -8113,6 +8113,9 @@ WIDGETS    14.50000
   ```
 
 - **Names.** A bare name is the variable of the routine the program is in, and `UNIT.NAME` is a unit's from anywhere.
+  In an internal procedure a name it doesn't have is its host's, even one in a recursive host's frame, and in a module
+  procedure its module's; a module's variable is `MODULE.NAME`, or bare where the program uses it. After `SET SCOPE n` a
+  bare name is the routine's at call level `n`, so a name that routine lacks is `%DEBUG-E-NOSYMBOL`.
   A dummy argument is found through its routine's active call, so from a routine with no such call it's
   `%DEBUG-W-NOTACTIVE`. A register's name is the register, so `EXAMINE R1` isn't your variable `R1`, and `EXAMINE U.R1` is.
 - **Types.** Each is shown as what it is: a REAL as a number, a LOGICAL as `.TRUE.` or `.FALSE.`, a COMPLEX as `(re,im)`, and
@@ -8120,8 +8123,7 @@ WIDGETS    14.50000
 - **Records.** A derived type's object, or a DEC record, is shown a component at a time, each by its own type, and a
   component is named as FORTRAN names it: `PT%X` for a derived type (or `PT.X`), `D.TIME.H` for a DEC record, with
   subscripts anywhere along the way, `S%P(2)%Y`. A component of an array of records is that component of every element,
-  `PTS%Y`. `DEPOSIT PT%X = 9.5` reads the value as the component's type; a whole record takes no `DEPOSIT`. A pointer
-  component isn't shown yet. Stopped in a subroutine `WALK` of a program `GEO` that uses a module `SHAPES` (the MACRO
+  `PTS%Y`. `DEPOSIT PT%X = 9.5` reads the value as the component's type; a whole record takes no `DEPOSIT`. Stopped in a subroutine `WALK` of a program `GEO` that uses a module `SHAPES` (the MACRO
   module is named for the file's first unit), its dummy `Q(:)` given `PTS(1:5:2)`:
 
   ```
@@ -8136,6 +8138,11 @@ WIDGETS    14.50000
   SHAPES\WALK.Q(2)%X:     3.000000
   SHAPES\WALK.Q(3)%X:     5.000000
   ```
+- **Pointers.** A pointer is what it points to: `EXAMINE P` shows its target, an array pointer its target's elements (a
+  section's too, by its descriptor's strides), and `DEPOSIT P = 1.5` changes the target. A pointer not associated is
+  `%DEBUG-W-NOTASSOC`. A pointer component is followed when named (`HEAD%NEXT%KEY`), and in a record shown whole is shown
+  as `pointer to` an address, or `pointer, not associated`, since a record may point to itself. A pointer dummy is the
+  caller's pointer.
 - **Subscripts.** `M(2,1)` uses FORTRAN's bounds and order, and an array named alone is all its elements, but
   an assumed-size array's first only. An adjustable array's bounds are its current ones, and so are Fortran 90's
   allocatable, automatic, and assumed-shape arrays', read from their descriptors; an assumed-shape dummy given a section
@@ -8145,6 +8152,10 @@ WIDGETS    14.50000
   given). `S(2:4)` of a CHARACTER scalar is a substring, and `NAMES(1:2)(1:3)` a substring of each element. A
   subscript is read in the input radix: under the default, hexadecimal, `V(10)` is `V(16)`, which is why the session starts
   with `SET RADIX DECIMAL`. `V[1]` keeps MACRO's meaning, a zero-based element of the label.
+- **Breaks at routines.** `SET BREAK SUB` stops at `SUB`'s first statement, after the code that starts it (copying an
+  assumed-shape dummy's descriptor, filling in an ENTRY's dummies), so its dummy arguments can be read at once; an ENTRY
+  point's stops at the statement after its ENTRY statement. The break is still `at routine SUB`. A MACRO routine's stops
+  past its entry mask, as always.
 - **Statements.** `UNIT.$LINEn` is the first instruction of FORTRAN line `n`, or `$LINEn` in that routine; an included file's
   lines have no such label. A stop shows the FORTRAN line above the MACRO line, and `break at` may name another label at the
   same place, as above. `STEP` goes to the next FORTRAN line, and `STEP/INSTRUCTION` to the next instruction. `%LINE` and

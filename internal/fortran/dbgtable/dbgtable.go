@@ -33,6 +33,19 @@
 // bounds or -. A structure with no name of its own, DEC's nested one, is given one
 // beginning with $, which no FORTRAN name does.
 //
+// A Fortran 90 pointer's type, a variable's or a component's, is its target's with ^
+// before it, ^RF or ^REC:NODE (subtask 7b), and its place is where the pointer's own
+// storage is: a longword holding the target's address, 0 while it isn't associated; for
+// a CHARACTER pointer a class S descriptor; and for an array pointer, whose bounds are
+// all ?:?, a class NCA descriptor. A pointer dummy's storage is the caller's, at the
+// address its argument gives, as any dummy's value is.
+//
+// A B line says where a break at an entry point stops, after the code that starts the
+// entry point (copying descriptors, setting up its arguments): at the label of a line of
+// the unit, UNIT.$LINEn.
+//
+//	;DBG$ B SUB SUB 30
+//
 // A leaf package: the code generator writes the lines and the debugger reads them, and
 // neither should need the other.
 package dbgtable
@@ -145,24 +158,37 @@ type Var struct {
 	// Struct is a record's structure's name (Type is Record), "" for any other, or
 	// for a record whose layout the table doesn't give.
 	Struct string
+
+	// Pointer says the variable is a pointer: Type, Size, and Struct are its
+	// target's, and Place is where the pointer's own storage is.
+	Pointer bool
 }
 
-// typeText is a type as a line has it: a record's with its structure's name.
-func typeText(code, structure string) string {
+// typeText is a type as a line has it: a record's with its structure's name, and a
+// pointer's with ^ before its target's.
+func typeText(code, structure string, pointer bool) string {
+	text := code
 	if code == Record && structure != "" {
-		return Record + ":" + structure
+		text = Record + ":" + structure
 	}
 
-	return code
+	if pointer {
+		text = "^" + text
+	}
+
+	return text
 }
 
-// parseType splits a line's type into its code and a record's structure.
-func parseType(text string) (code, structure string) {
+// parseType splits a line's type into its code, a record's structure, and whether it
+// is a pointer's.
+func parseType(text string) (code, structure string, pointer bool) {
+	text, pointer = strings.CutPrefix(text, "^")
+
 	if name, ok := strings.CutPrefix(text, Record+":"); ok {
-		return Record, name
+		return Record, name, pointer
 	}
 
-	return text, ""
+	return text, "", pointer
 }
 
 // Structure is a record's layout: a derived type's or a DEC structure's.
@@ -205,6 +231,11 @@ type Component struct {
 	Struct string // a nested structure's name
 	Size   int    // an element's size
 	Bounds []Bound
+
+	// Pointer says the component is a pointer, Type, Struct, and Size its
+	// target's: its storage in the record is a longword address, a class S
+	// descriptor, or for an array pointer (Bounds all ?:?) a class NCA one.
+	Pointer bool
 }
 
 // StructureLine is a structure's S line.
@@ -220,7 +251,13 @@ func StructureLine(unit string, s *Structure) string {
 // ComponentLine is a component's C line.
 func ComponentLine(unit, structure string, c *Component) string {
 	return fmt.Sprintf("%sC %s %s %s %d %s %d %s", Prefix, unit, structure, c.Name, c.Offset,
-		typeText(c.Type, c.Struct), c.Size, boundsText(c.Bounds))
+		typeText(c.Type, c.Struct, c.Pointer), c.Size, boundsText(c.Bounds))
+}
+
+// BodyLine says that a break at the entry point entry of unit stops at the label of
+// the unit's line line.
+func BodyLine(unit, entry string, line int) string {
+	return fmt.Sprintf("%sB %s %s %d", Prefix, unit, entry, line)
 }
 
 // boundsText is a line's bounds, or - for none.
@@ -270,7 +307,7 @@ func (v Var) Line() string {
 		descriptor = v.Descriptor
 	}
 
-	return fmt.Sprintf("%sV %s %s %s %d %s %s %s", Prefix, v.Unit, v.Name, typeText(v.Type, v.Struct), v.Size, v.Place, bounds, descriptor)
+	return fmt.Sprintf("%sV %s %s %s %d %s %s %s", Prefix, v.Unit, v.Name, typeText(v.Type, v.Struct, v.Pointer), v.Size, v.Place, bounds, descriptor)
 }
 
 // EntryLine says the entry point entry is in unit.
@@ -293,6 +330,9 @@ type Unit struct {
 
 	// Structures are the layouts of the unit's records, by the structure's name.
 	Structures map[string]*Structure
+
+	// Bodies are, by entry point, the line of the unit a break at it stops at.
+	Bodies map[string]int
 }
 
 // Table is the units a MACRO file describes.
@@ -336,6 +376,10 @@ func Parse(lines []string) *Table {
 				s := t.unit(f[1]).structure(f[2])
 				s.Size, s.Derived = size, f[4] == "D"
 			}
+		case len(f) == 4 && f[0] == "B":
+			if n, err := strconv.Atoi(f[3]); err == nil {
+				t.unit(f[1]).Bodies[f[2]] = n
+			}
 		case len(f) == 8 && f[0] == "C":
 			if c, ok := parseComponent(f); ok {
 				s := t.unit(f[1]).structure(f[2])
@@ -350,7 +394,7 @@ func Parse(lines []string) *Table {
 func (t *Table) unit(name string) *Unit {
 	u := t.Units[name]
 	if u == nil {
-		u = &Unit{Name: name, Vars: map[string]*Var{}, Loops: map[string]int{}, Structures: map[string]*Structure{}}
+		u = &Unit{Name: name, Vars: map[string]*Var{}, Loops: map[string]int{}, Structures: map[string]*Structure{}, Bodies: map[string]int{}}
 		t.Units[name] = u
 	}
 
@@ -385,9 +429,9 @@ func parseComponent(f []string) (*Component, bool) {
 		return nil, false
 	}
 
-	code, structure := parseType(f[5])
+	code, structure, pointer := parseType(f[5])
 
-	return &Component{Name: f[3], Offset: offset, Type: code, Struct: structure, Size: size, Bounds: bounds}, true
+	return &Component{Name: f[3], Offset: offset, Type: code, Struct: structure, Size: size, Bounds: bounds, Pointer: pointer}, true
 }
 
 func parseVar(f []string) (*Var, bool) {
@@ -401,8 +445,8 @@ func parseVar(f []string) (*Var, bool) {
 		return nil, false
 	}
 
-	code, structure := parseType(f[3])
-	v := &Var{Unit: f[1], Name: f[2], Type: code, Struct: structure, Size: size, Place: place}
+	code, structure, pointer := parseType(f[3])
+	v := &Var{Unit: f[1], Name: f[2], Type: code, Struct: structure, Size: size, Place: place, Pointer: pointer}
 
 	if v.Bounds, ok = parseBounds(f[6]); !ok {
 		return nil, false
@@ -488,7 +532,7 @@ func parseBound(text string) (Bound, bool) {
 // DescriptorPassed reports whether what the place leads to is a descriptor of the
 // variable, not the variable: a CHARACTER dummy argument (Phase 78).
 func (v *Var) DescriptorPassed() bool {
-	return v.Type == Char && (v.Place.Kind == Argument || v.Place.Kind == Through || v.Place.Kind == ThroughFrame)
+	return v.Type == Char && !v.Pointer && (v.Place.Kind == Argument || v.Place.Kind == Through || v.Place.Kind == ThroughFrame)
 }
 
 // FortranLinePrefix is how long the part before a source line's text is in a MACRO file.

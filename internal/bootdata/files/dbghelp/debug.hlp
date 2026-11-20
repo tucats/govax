@@ -104,6 +104,8 @@
      EXAMINE PT         A record, a component at a time.
      EXAMINE PT%X       A derived type's component (or PT.X); a DEC
                         record's is D.TIME.H; PTS%X is every element's.
+     EXAMINE P          A pointer's target; NOTASSOC if it has none.
+     EXAMINE M.X        A module's variable.
      DEPOSIT X = 1.5    A value read as the variable's type.
      EVALUATE X         What it holds.
      SET BREAK UNIT.$LINE30
@@ -116,7 +118,10 @@
    FORTRAN's numbers.  Compile /NOOPTIMIZE for debugging: under
    /OPTIMIZE a variable may be in a register, and EXAMINE says so when
    it knows.  A recursive routine's variables are its frame's: SET SCOPE
-   picks the call level.
+   picks the call level, whose routine's names a bare name then means.
+   In an internal procedure a bare name it lacks is its host's.
+   SET BREAK of a FORTRAN routine stops at its first statement, after
+   the code that sets up its dummy arguments.
 
 2 Path_Names
 

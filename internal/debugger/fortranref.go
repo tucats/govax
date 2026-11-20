@@ -1,12 +1,14 @@
 package debugger
 
 import (
+	"encoding/binary"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/fortran/dbgtable"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -151,6 +153,31 @@ func (d *Debugger) fortranPlaces(item string) (places []fortranPlace, ok bool, e
 
 // fortranChain follows a variable's chain of subscripts, substrings, and components.
 func (d *Debugger) fortranChain(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program, chain []itemPart) ([]fortranPlace, bool, error) {
+	name := mod.Name + `\` + v.Unit + "." + v.Name
+
+	// A pointer is what it points to.
+	if v.Pointer {
+		p := fortranPlace{name: name, size: 4, v: v, module: mod, prog: prog, pointer: true}
+
+		if v.Place.Kind == dbgtable.InRegister {
+			p.addr, p.reg = uint32(v.Place.N), true
+		} else {
+			addr, err := d.storageAddr(v, mod, prog)
+			if err != nil {
+				return nil, true, err
+			}
+
+			p.addr = addr
+		}
+
+		o, err := d.follow(p, len(v.Bounds))
+		if err != nil {
+			return nil, true, err
+		}
+
+		return d.fortranSteps(o, chain)
+	}
+
 	base, length, err := d.fortranBase(v, mod, prog)
 	if err != nil {
 		return nil, true, err
@@ -168,14 +195,21 @@ func (d *Debugger) fortranChain(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsy
 	}
 
 	size := fortranElementSize(v, length)
-	name := mod.Name + `\` + v.Unit + "." + v.Name
 	place := fortranPlace{name: name, addr: base, size: size, v: v, reg: v.Place.Kind == dbgtable.InRegister, module: mod, prog: prog}
 
 	if place.strides, place.a0, err = d.describedStrides(v, mod, prog, bounds, size); err != nil {
 		return nil, true, err
 	}
 
-	objects := []fortranObject{{place, bounds}}
+	return d.fortranSteps(fortranObject{place, bounds}, chain)
+}
+
+// fortranSteps follows a chain of subscripts, substrings, and components from a thing,
+// and gives each place it ends at, an array's being each of its elements.
+func (d *Debugger) fortranSteps(start fortranObject, chain []itemPart) ([]fortranPlace, bool, error) {
+	var err error
+
+	objects := []fortranObject{start}
 
 	for i := 0; i < len(chain); i++ {
 		// A component is the separator and the name after it.
@@ -276,7 +310,116 @@ func (d *Debugger) fortranComponent(o fortranObject, name string) ([]fortranObje
 		return nil, vmserrors.New(vmserrors.DBG_NOSYMBOL, o.place.name+st.Separator()+name)
 	}
 
-	return []fortranObject{componentObject(o.place, st, c)}, nil
+	made := componentObject(o.place, st, c)
+	if c.Pointer {
+		followed, err := d.follow(made.place, len(c.Bounds))
+		if err != nil {
+			return nil, err
+		}
+
+		made = followed
+	}
+
+	return []fortranObject{made}, nil
+}
+
+// follow is what a pointer points to. p is the pointer's own storage: its address, or
+// for a scalar pointer the optimizer keeps in a register, p.reg and the register's number.
+// A scalar's storage holds its target's address, a CHARACTER one's is a class S
+// descriptor (the length, then the address), and an array pointer's (rank more than 0)
+// a class NCA descriptor, whose POINTER is the first element's address, its strides and
+// bounds the target's: an array pointer's elements are found as an assumed-shape
+// dummy's are. An address of 0 is a pointer not associated.
+func (d *Debugger) follow(p fortranPlace, rank int) (fortranObject, error) {
+	target := p
+	target.pointer, target.reg, target.strides = false, false, nil
+	target.size = uint32(max(p.v.Size, 0))
+
+	notAssociated := vmserrors.New(vmserrors.DBG_NOTASSOC, p.name)
+
+	switch {
+	case rank > 0:
+		head, err := d.Machine.ReadBytes(p.addr, 20)
+		if err != nil {
+			return fortranObject{}, err
+		}
+
+		if target.addr = binary.LittleEndian.Uint32(head[4:]); target.addr == 0 {
+			return fortranObject{}, notAssociated
+		}
+
+		if p.v.Type == dbgtable.Char {
+			target.size = uint32(binary.LittleEndian.Uint16(head))
+		}
+
+		bounds := make([]dbgtable.Bound, rank)
+		strides := make([]int64, rank)
+		contiguous, expect := true, int64(target.size)
+
+		for i := range bounds {
+			stride, err := d.long(p.addr + 20 + 4*uint32(i))
+			if err != nil {
+				return fortranObject{}, err
+			}
+
+			at := p.addr + 20 + 4*uint32(rank) + 8*uint32(i)
+
+			low, err := d.long(at)
+			if err != nil {
+				return fortranObject{}, err
+			}
+
+			high, err := d.long(at + 4)
+			if err != nil {
+				return fortranObject{}, err
+			}
+
+			bounds[i] = dbgtable.Bound{Lower: int(int32(low)), Upper: int(int32(high)), Known: true}
+			strides[i] = int64(int32(stride))
+			contiguous = contiguous && strides[i] == expect
+			expect *= int64(bounds[i].Upper - bounds[i].Lower + 1)
+		}
+
+		if !contiguous {
+			target.strides, target.a0 = strides, binary.LittleEndian.Uint32(head[16:])
+		}
+
+		return fortranObject{target, bounds}, nil
+
+	case p.reg:
+		view, err := d.registerView()
+		if err != nil {
+			return fortranObject{}, err
+		}
+
+		reg := registers.Reg(p.addr)
+		if target.addr, err = view.get(reg, registerName(reg)); err != nil {
+			return fortranObject{}, err
+		}
+
+	case p.v.Type == dbgtable.Char:
+		data, err := d.Machine.ReadBytes(p.addr, 8)
+		if err != nil {
+			return fortranObject{}, err
+		}
+
+		target.size = uint32(binary.LittleEndian.Uint16(data))
+		target.addr = binary.LittleEndian.Uint32(data[4:])
+
+	default:
+		addr, err := d.long(p.addr)
+		if err != nil {
+			return fortranObject{}, err
+		}
+
+		target.addr = addr
+	}
+
+	if target.addr == 0 {
+		return fortranObject{}, notAssociated
+	}
+
+	return fortranObject{place: target}, nil
 }
 
 // placeStructure is the layout of the record at a place, or nil if it isn't a record
@@ -297,8 +440,23 @@ func (d *Debugger) placeStructure(p fortranPlace) *dbgtable.Structure {
 // componentObject is a component of the record at p. Its Var is made for it: the unit's,
 // so its structure is found in the same table, with no place of its own, the place
 // being p's address and the component's offset. Its name is what the debugger shows.
+//
+// A pointer component's object is its storage, not yet followed (place.pointer), with
+// no bounds: follow has them from its descriptor.
 func componentObject(p fortranPlace, st *dbgtable.Structure, c *dbgtable.Component) fortranObject {
-	v := &dbgtable.Var{Unit: p.v.Unit, Name: p.v.Name + st.Separator() + c.Name, Type: c.Type, Struct: c.Struct, Size: c.Size}
+	v := &dbgtable.Var{Unit: p.v.Unit, Name: p.v.Name + st.Separator() + c.Name, Type: c.Type, Struct: c.Struct, Size: c.Size, Pointer: c.Pointer}
+
+	if c.Pointer {
+		return fortranObject{place: fortranPlace{
+			name:    p.name + st.Separator() + c.Name,
+			addr:    p.addr + uint32(c.Offset),
+			size:    4,
+			v:       v,
+			module:  p.module,
+			prog:    p.prog,
+			pointer: true,
+		}}
+	}
 
 	return fortranObject{
 		place: fortranPlace{
@@ -325,6 +483,19 @@ func (d *Debugger) recordLeaves(p fortranPlace) []fortranPlace {
 
 	for _, c := range st.Components {
 		o := componentObject(p, st, c)
+
+		// A pointer component is shown as where it points, not followed: a record
+		// may point to another of its type, or to itself. The address is the
+		// storage's first longword, or a descriptor's POINTER.
+		if c.Pointer {
+			if c.Type == dbgtable.Char || len(c.Bounds) > 0 {
+				o.place.addr += 4
+			}
+
+			leaves = append(leaves, o.place)
+
+			continue
+		}
 
 		elements := []fortranPlace{o.place}
 		if len(o.bounds) > 0 {

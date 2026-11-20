@@ -243,7 +243,7 @@ func (d *Debugger) setAddressBreaks(list *[]*Breakpoint, proto Breakpoint, targe
 		if d.Machine.RoutineEntry(addr) {
 			bp.Routine = true
 			bp.Name = d.locationText(addr)
-			bp.Addr = addr + 2
+			bp.Addr = d.routineStart(addr)
 		}
 
 		made = append(made, &bp)
@@ -560,7 +560,7 @@ func (d *Debugger) cancelAddressBreaks(list *[]*Breakpoint, target string) error
 		}
 
 		if d.Machine.RoutineEntry(addr) {
-			addr += 2
+			addr = d.routineStart(addr)
 		}
 
 		*list = slices.DeleteFunc(*list, func(bp *Breakpoint) bool {
