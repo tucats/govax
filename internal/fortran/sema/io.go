@@ -136,6 +136,16 @@ type IO struct {
 	Err, End int
 	IOStat   Expr
 
+	// Fortran 90's nonadvancing I/O (the standard's 9.2.1.3.1, 9.4.1.7 to
+	// 9.4.1.9). Nonadvancing is set for ADVANCE='NO', and Advance is ADVANCE='s
+	// value when only the program knows it, a CHARACTER value, else nil; Size
+	// is SIZE='s INTEGER variable or element, or nil; and EOR is EOR='s label,
+	// 0 when not given.
+	Nonadvancing bool
+	Advance      Expr
+	Size         Expr
+	EOR          int
+
 	// Items are the I/O list.
 	Items []*Item
 }
@@ -974,6 +984,11 @@ func isArrayPlace(e Expr) bool {
 func (a *analyzer) ioSpecs(io *IO, specs []*ast.IOSpec, path []frame) bool {
 	ok := true
 
+	// ADVANCE='s specifier, and SIZE='s and EOR='s, which need it.
+	var advance *ast.IOSpec
+
+	var needs []*ast.IOSpec
+
 	for _, s := range specs {
 		switch s.Keyword {
 		case "ERR", "END":
@@ -1009,8 +1024,111 @@ func (a *analyzer) ioSpecs(io *IO, specs []*ast.IOSpec, path []frame) bool {
 				io.IOStat = t
 			}
 
+		case "ADVANCE":
+			advance = s
+
+			if !a.advanceSpec(io, s) {
+				ok = false
+			}
+
+		case "SIZE":
+			needs = append(needs, s)
+
+			t := a.place(s.Value, false)
+
+			switch {
+			case t == nil:
+				a.report("BADSIZE", s.Pos)
+
+				ok = false
+			case t.Type().Kind == Invalid:
+				ok = false
+			case t.Type().Kind != Integer:
+				a.report("BADSIZE", s.Pos)
+
+				ok = false
+			default:
+				if v, isVar := t.(*Var); isVar {
+					a.checkLoopVariable(v.Sym, v.Pos)
+				}
+
+				a.noteAssigned(t)
+
+				io.Size = t
+			}
+
+		case "EOR":
+			needs = append(needs, s)
+
+			a.jumps([]ast.LabelRef{*s.Label}, path)
+			io.EOR = s.Label.Label
+
 		default:
 			a.notImplForm(s.Pos, "the "+s.Keyword+"= specifier")
+
+			ok = false
+		}
+	}
+
+	return a.checkAdvance(io, advance, needs) && ok
+}
+
+// advanceSpec analyzes ADVANCE= (the standard's 9.4.1.7): a scalar default
+// CHARACTER expression whose value is YES or NO, in either case, trailing
+// blanks not counting. A constant is checked now, and its NO marks the
+// statement nonadvancing; any other value is the program's, FTNRTL's
+// FTN$ADVANCE deciding when it runs (ir/lowerio.go).
+func (a *analyzer) advanceSpec(io *IO, s *ast.IOSpec) bool {
+	v := a.value(s.Value)
+
+	switch t := v.Type(); {
+	case t.Kind == Invalid:
+		return false
+	case t.Kind != Character:
+		a.report("KEYTEXT", s.Pos, s.Keyword, article(t.String())+" value")
+
+		return false
+	}
+
+	c, isConst := v.(*Const)
+	if !isConst {
+		io.Advance = v
+
+		return true
+	}
+
+	switch strings.ToUpper(strings.TrimRight(c.Text, " ")) {
+	case "YES":
+	case "NO":
+		io.Nonadvancing = true
+	default:
+		a.report("KEYCHOICE", s.Pos, c.Text, s.Keyword)
+
+		return false
+	}
+
+	return true
+}
+
+// checkAdvance holds a statement's ADVANCE=, SIZE=, and EOR= to the
+// standard's constraints (9.4.1): ADVANCE= only in a formatted sequential
+// statement with a format of its own (not list-directed, not namelist) on an
+// external unit (not an internal file, not ENCODE or DECODE, not by record
+// number or key, not REWRITE); SIZE= and EOR= only with ADVANCE=. The parser
+// has kept END=, EOR=, and SIZE= out of a WRITE.
+func (a *analyzer) checkAdvance(io *IO, advance *ast.IOSpec, needs []*ast.IOSpec) bool {
+	ok := true
+
+	if advance != nil && (io.Form != FormattedForm || io.Internal || io.Code || io.Rec != nil ||
+		io.Key != nil || io.Rewrite) {
+		a.report("ADVANCEFORM", advance.Pos)
+
+		ok = false
+	}
+
+	if advance == nil {
+		for _, s := range needs {
+			a.report("ADVANCENEEDED", s.Pos, s.Keyword)
 
 			ok = false
 		}

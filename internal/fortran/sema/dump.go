@@ -906,6 +906,21 @@ func dumpIO(s *IO) string {
 		control = append(control, "IOSTAT="+DumpExpr(s.IOStat))
 	}
 
+	switch {
+	case s.Advance != nil:
+		control = append(control, "ADVANCE="+DumpExpr(s.Advance))
+	case s.Nonadvancing:
+		control = append(control, "ADVANCE='NO'")
+	}
+
+	if s.Size != nil {
+		control = append(control, "SIZE="+DumpExpr(s.Size))
+	}
+
+	if s.EOR != 0 {
+		control = append(control, "EOR="+strconv.Itoa(s.EOR))
+	}
+
 	if _, ok := s.AST.(*ast.PrintStmt); ok {
 		text += " " + control[len(control)-1]
 	} else {

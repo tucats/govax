@@ -82,6 +82,30 @@
 ; (8.3.9.2); a run-time format's parsed copy goes at the statement's end,
 ; and with it what was read (8.7).
 ;
+;
+; Fortran 90's nonadvancing statements (ADVANCE='NO'; the standard's
+; 9.2.1.3.1, 9.4.4.4; docs/planning/PHASE-109 - Fortran 90 IO.md, findings 3 to
+; 5). Such a statement's last record isn't written, or passed over, at its
+; end: it is left in the unit's buffer, where it was built or read, with its
+; length and the position (FTN_UNITS's UB_OPENREC, UB_RECLEN, UB_RECPOS). The
+; next formatted statement of the same direction on the unit, advancing or
+; not, starts from there and reads no record (FTN$$FMT_START); the begin call
+; has ended the record for any other. Where it starts is its left tab limit
+; (10.6.1.1): T counts columns from it, and TL goes no further back. An item
+; of a nonadvancing READ whose field runs past the record's end, with no comma
+; ending it first, is the end-of-record condition: the item is edited from
+; the field padded with blanks (unless the unit is PAD='NO'), then the
+; statement stops with FOR$_EORDURREA, which FTN$IO_END returns as -2 to EOR=
+; or IOSTAT=, and the record is done. The characters the data edit
+; descriptors take from the record, padding not counted, are SIZE='s count
+; (CTX_COUNTED).
+;
+; PAD=. For an advancing READ of a Fortran 90 statement (the F90 flag), a
+; field the record's end cuts short is padded with blanks to its width, which
+; BZ makes zeros: '123' read by (BZ,I5) is 12300 (the standard's 9.4.4.4.2).
+; VAX FORTRAN's statements end the field at the record's end, 123, as VMS's
+; library does. On a PAD='NO' unit such a field is FOR$_RECTOOSHO.
+;
 ; The data descriptors that edit a value: A (8.3.10) and Q (8.3.13) are
 ; here; I, O, Z, and L are FTN_EDIT's (FTN$$EDIT_INT), which also uses
 ; this module's FTN$$FMT_PUT, FTN$$FMT_WRITE, FTN$$FMT_FAIL, and
@@ -112,6 +136,21 @@ FLAG_IOSTAT	= 4
 FLAG_RUNFMT	= 8
 FLAG_F90	= 16
 V_F90		= 4			; its bit, for EXTZV
+FLAG_NONADV	= 32			; nonadvancing: ADVANCE='NO' (below)
+
+; govax's own conditions (FTN_STATEMENT's): an end of record in a nonadvancing
+; READ (FOR number 307), and a record too short for an advancing READ of a
+; PAD='NO' unit (310).
+FOR$_EORDURREA	= ^X18899C
+FOR$_RECTOOSHO	= ^X1889B4
+
+; A unit's block's fields (FTN_UNITS's): PAD=, and the record a nonadvancing
+; statement left open.
+UB_PAD		= 620+41		; byte: 1 YES, 2 NO
+UB_OPENREC	= 620+43		; byte: 0 none, 1 output, 2 input
+UB_DOLLAR	= 620+44		; byte: 1 if a $ marked it
+UB_RECLEN	= 620+48		; long: its length
+UB_RECPOS	= 620+52		; long: where the next statement goes on
 
 ; The statement's context: FTN_STATEMENT's fields, then this module's.
 CTX_FLAGS	= 12			; word: the control block's flags
@@ -153,6 +192,12 @@ CTX_RESOLVED	= CTX_VFE+4		; an operation with its expressions' values
 CTX_UNITMAX	= CTX_RECP+44		; long: the unit's longest record (FTN_STATEMENT)
 CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros,
 					;  3 if by default, 0 if not (FTN_UNITS)
+CTX_LEFT	= CTX_RECP+88		; long: the left tab limit (below)
+CTX_COUNTED	= CTX_RECP+92		; long: the characters data edit descriptors
+					;  took from input records, SIZE='s count
+CTX_EOR		= CTX_RECP+96		; byte: 1 once an item's field ran past the
+					;  end of a nonadvancing READ's record
+CTX_PADNO	= CTX_RECP+97		; byte: 1 if the unit is PAD='NO'
 
 ;
 ; A parsed format: its size (for LIB$FREE_VM), the address of the
@@ -341,7 +386,22 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVL	CTX_FREEFMT(R6),R0
 30$:	MOVL	R0,CTX_FORMAT(R6)
 	MOVAB	FMT_OPS(R0),CTX_OP(R6)	; the walk starts at the first
-	BLBS	CTX_KIND(R6),40$	; a WRITE
+	CLRL	CTX_LEFT(R6)
+	TSTB	CTX_INTERNAL(R6)
+	BNEQ	35$
+	MOVL	CTX_STREAM(R6),R1	; a unit: its PAD=,
+	CMPB	UB_PAD(R1),#2
+	BNEQ	32$
+	MOVB	#1,CTX_PADNO(R6)
+32$:	TSTB	UB_OPENREC(R1)		;  and a record left open, which the begin
+	BEQL	35$			;  call left only for this direction: the
+	MOVL	UB_RECLEN(R1),CTX_RECLEN(R6) ; statement goes on with it, reading
+	MOVL	UB_RECPOS(R1),CTX_POS(R6) ;  none
+	MOVL	UB_RECPOS(R1),CTX_LEFT(R6)
+	MOVB	UB_DOLLAR(R1),CTX_DOLLAR(R6)
+	CLRB	UB_OPENREC(R1)
+	BRB	40$
+35$:	BLBS	CTX_KIND(R6),40$	; a WRITE
 	PUSHL	R6			; a READ: its first record
 	CALLS	#1,FTN$$FMT_READ
 	MOVL	CTX_STATUS(R6),R0
@@ -410,7 +470,12 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	PUSHL	R0			;  the operation,
 	PUSHL	R2			;  and the context
 	CALLS	#5,EDIT
-	ADDL2	R4,R5			; the next
+	TSTB	CTX_EOR(R2)		; its field ran past a nonadvancing READ's
+	BEQL	40$			;  record: the statement stops
+	PUSHL	#FOR$_EORDURREA
+	PUSHL	R2
+	CALLS	#2,FTN$$FMT_FAIL
+40$:	ADDL2	R4,R5			; the next
 	SOBGTR	R7,30$			; R7 less 1, and again while above 0
 90$:	MOVL	#SS$_NORMAL,R0
 	RET
@@ -432,7 +497,21 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	PUSHL	#1			; the statement's end
 	PUSHL	R2
 	CALLS	#2,WALK
-	BLBC	CTX_KIND(R2),40$	; a READ: nothing to write
+	TSTB	CTX_INTERNAL(R2)
+	BNEQ	20$
+	BITW	#FLAG_NONADV,CTX_FLAGS(R2)
+	BEQL	20$
+	TSTL	CTX_STATUS(R2)
+	BNEQ	40$
+	MOVL	CTX_STREAM(R2),R0	; nonadvancing, with no error: the record
+	MOVL	CTX_RECLEN(R2),UB_RECLEN(R0) ;  left open in the unit, an output
+	MOVL	CTX_POS(R2),UB_RECPOS(R0) ;  record 1 and an input one 2
+	MOVB	CTX_DOLLAR(R2),UB_DOLLAR(R0)
+	MOVB	#2,UB_OPENREC(R0)
+	BLBC	CTX_KIND(R2),40$
+	MOVB	#1,UB_OPENREC(R0)
+	BRB	40$
+20$:	BLBC	CTX_KIND(R2),40$	; a READ: nothing to write
 	PUSHL	R2
 	TSTB	CTX_INTERNAL(R2)
 	BNEQ	30$
@@ -583,11 +662,13 @@ TEXT:	MOVZWL	OP_W_REPEAT(R2),-(SP)	; the length
 
 DO_X:	ADDL2	OP_L_N(R5),CTX_POS(R6)
 	BRW	LOOP
-DO_T:	SUBL3	#1,OP_L_N(R5),CTX_POS(R6)
+DO_T:	SUBL3	#1,OP_L_N(R5),CTX_POS(R6) ; columns from the left tab limit
+	ADDL2	CTX_LEFT(R6),CTX_POS(R6)
 	BRW	LOOP
 DO_TL:	SUBL2	OP_L_N(R5),CTX_POS(R6)
+	CMPL	CTX_POS(R6),CTX_LEFT(R6)
 	BGEQ	10$
-	CLRL	CTX_POS(R6)		; no further than the first column
+	MOVL	CTX_LEFT(R6),CTX_POS(R6) ; no further than the left tab limit
 10$:	BRW	LOOP
 DO_P:	MOVL	OP_L_N(R5),CTX_SCALE(R6)
 	BRW	LOOP
@@ -794,6 +875,7 @@ NEW_RECORD:
 	CALLS	#2,FTN$$FMT_FAIL
 30$:	CLRL	CTX_RECLEN(R2)
 	CLRL	CTX_POS(R2)
+	CLRL	CTX_LEFT(R2)
 	CLRB	CTX_DOLLAR(R2)
 90$:	RET
 
@@ -815,6 +897,7 @@ NEW_RECORD:
 	BLBC	R0,80$
 	MOVL	R1,CTX_RECLEN(R2)
 	CLRL	CTX_POS(R2)
+	CLRL	CTX_LEFT(R2)
 	RET
 80$:	PUSHL	R0
 	PUSHL	R2
@@ -902,6 +985,37 @@ NEW_RECORD:
 	INCL	R5
 	MOVL	R5,CTX_RECLEN(R6)
 	BRB	105$
+
+;
+; FTN$$FMT_SHORT(context): an input item's field runs past the record's end,
+; no comma having ended it first (FTN_EDIT's FIELD, and A). In a nonadvancing
+; READ that is the end of record: the statement stops after this item
+; (CTX_EOR, FTN$$FMT_ITEM). An advancing READ of a Fortran 90 statement on a
+; PAD='NO' unit fails with FOR$_RECTOOSHO. R0 is 1 if the field is to be padded
+; with blanks to its width, as the standard has it: a nonadvancing READ's, or a
+; Fortran 90 statement's, on a unit that isn't PAD='NO'; else 0, VAX FORTRAN's
+; field ending at the record's end.
+;
+	.ENTRY	FTN$$FMT_SHORT,^M<>
+	MOVL	4(AP),R1
+	BITW	#FLAG_NONADV,CTX_FLAGS(R1)
+	BEQL	20$
+	MOVB	#1,CTX_EOR(R1)		; nonadvancing: the end of record
+	BRB	30$
+20$:	BITW	#FLAG_F90,CTX_FLAGS(R1)
+	BEQL	80$			; VAX FORTRAN's: no padding
+	TSTB	CTX_PADNO(R1)
+	BEQL	90$
+	PUSHL	#FOR$_RECTOOSHO		; advancing, PAD='NO'
+	PUSHL	R1
+	CALLS	#2,FTN$$FMT_FAIL
+	BRB	80$
+30$:	TSTB	CTX_PADNO(R1)
+	BNEQ	80$
+90$:	MOVL	#1,R0
+	RET
+80$:	CLRL	R0
+	RET
 
 ;
 ; GET_CHARS(context, address, length): copies length characters of the
@@ -1042,9 +1156,24 @@ EDIT_A:	MOVL	4(AP),R1		; the context
 	CALLS	#3,FTN$$FMT_PUT
 	RET
 	;
-	; Input.
+	; Input. The characters the record has for the field count for SIZE=,
+	; and a field past its end is FTN$$FMT_SHORT's to judge; A pads it with
+	; blanks whatever it says.
 	;
-50$:	TSTL	R3
+50$:	PUSHL	R3			; kept: w less the length
+	SUBL3	CTX_POS(R1),CTX_RECLEN(R1),R0 ; what the record has from the
+	BGEQ	52$			;  position
+	CLRL	R0
+52$:	CMPL	R0,R2
+	BGEQ	54$
+	ADDL2	R0,CTX_COUNTED(R1)	; short of w
+	PUSHL	R1
+	CALLS	#1,FTN$$FMT_SHORT
+	MOVL	4(AP),R1
+	BRB	56$
+54$:	ADDL2	R2,CTX_COUNTED(R1)	; all w
+56$:	MOVL	(SP)+,R3
+	TSTL	R3
 	BLSS	60$
 	ADDL2	R3,CTX_POS(R1)		; the field's last characters
 	PUSHL	16(AP)

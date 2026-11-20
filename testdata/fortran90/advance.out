@@ -1,0 +1,19 @@
+abcdefghi
+abc X
+abcZe
+xy
+A bad ADVANCE=: 308
+part
+list
+  123    45   678
+"ab   "   2  -2
+xy  2
+EOR= taken: z   1
+  12300
+A short record, PAD='NO': 310
+  2  -2
+END= taken
+onetwo
+Your name? Hello, Pat
+The end.
+  $STATUS == "%X00000001"

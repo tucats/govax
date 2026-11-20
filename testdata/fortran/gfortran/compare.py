@@ -142,6 +142,7 @@ PROGRAMS90 = {
     "geometry": ["geometry.f90"],
     "stock": ["stock.f90"],
     "accounts": ["accounts.f90"],
+    "advance": ["advance.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
     "standard": ["modules/standard/standard.f90", "modules/standard/globals.f90", "modules/standard/strings.f90",
                  "modules/standard/library.f90", "modules/standard/renames.f90", "modules/standard/users.f90",
@@ -216,6 +217,25 @@ KNOWN = {
         " (0.250000000000000000000000000000000,1000.00000000000000000000000000000)":
             " W=(0.250000000000000000000000000000000000,1000.00000000000000000000000000000000),",
         " $END": " /",
+    },
+    "advance": {
+        # IOSTAT='s value for an error is the processor's: govax's is the FOR number, 308 for a
+        # bad ADVANCE= (Phase 109's finding 8).
+        "A bad ADVANCE=: 308": "A bad ADVANCE=:5002",
+        # A list-directed statement on a unit a nonadvancing one left a record open in is the
+        # standard's undefined case: govax ends the record first (Phase 109's finding 4),
+        # gfortran goes on with it.
+        "part": "part list",
+        "list": [],
+        # An advancing READ that needs more than a PAD='NO' record holds breaks a rule of the
+        # standard's (9.4.4.4.2): govax's error is RECTOOSHO, FOR number 310; gfortran's is an
+        # end of record, Fortran 2003's rule. Then the nonadvancing READ's SIZE=: govax counts
+        # the characters A5 took from the record, gfortran none when it can't pad.
+        "A short record, PAD='NO': 310": "A short record, PAD='NO':  -2",
+        "  2  -2": "  0  -2",
+        # A record left open at the terminal is written as a prompt before the terminal is read
+        # (Phase 109's answer 4); gfortran keeps it until the next record, the PRINT's, ends it.
+        "Your name? Hello, Pat": "Your name?  Hello, Pat",
     },
     "recursion": {
         # IEEE's negative zero, which the VAX's floating formats don't have.

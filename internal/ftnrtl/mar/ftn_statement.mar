@@ -18,7 +18,10 @@
 ;	4(AP)	the statement's control block, made by the compiler:
 ;		+0  word  its size in bytes (8)
 ;		+2  word  flags: bit 0 ERR=, bit 1 END=, bit 2 IOSTAT= is
-;			  given; bit 3 the format is a run-time format
+;			  given; bit 3 the format is a run-time format; bit 4
+;			  a statement of a unit compiled /F90; bit 5
+;			  nonadvancing (ADVANCE='NO'); bit 6 EOR= is given;
+;			  bit 7 ADVANCE='s value was neither YES nor NO
 ;		+4  long  not used yet
 ;	8(AP)	the unit, by value; for an internal file, its descriptor;
 ;		for ENCODE and DECODE, the buffer's address
@@ -38,15 +41,26 @@
 ;		key's descriptor, the key's number by value, and which specifier
 ;
 ; FTN$IO_ITEM's argument is an item's descriptor; FTN$IO_END returns the
-; statement's status in R0: 0 for success, -1 at an end of file, or the
-; FOR number of the error (FOR$_INVLOGUNI is 32). A statement whose
+; statement's status in R0: 0 for success, -1 at an end of file, -2 at an end
+; of record, or the FOR number of the error (FOR$_INVLOGUNI is 32). A
+; nonadvancing READ with SIZE= gives FTN$IO_END the address of a longword, its
+; one argument, where it stores the count of characters the statement's data
+; edit descriptors took from the record (the standard's 9.4.1.8). A statement whose
 ; control block gives none of ERR=, END=, and IOSTAT= never sees a
 ; failure: FTN$IO_END signals the condition. By LIB$SIGNAL if a handler can
 ; go on from it, as VMS's library has it (testdata/for83's parts B and E):
 ; FOR$_INPCONERR, FOR$_OUTCONERR, and FOR$_FORVARMIS. Every other condition
 ; is by LIB$STOP, and ends the image however a handler answers. An end of
 ; file goes to END=, or ERR= without it, so either one, or IOSTAT=, takes it;
-; any other error is taken by ERR= or IOSTAT=.
+; an end of record (FOR$_EORDURREA, a nonadvancing READ's) only EOR= or
+; IOSTAT=; any other error is taken by ERR= or IOSTAT=.
+;
+; Fortran 90's nonadvancing statements (docs/planning/PHASE-109 - Fortran 90
+; IO.md, findings 2 to 4) leave their record open in the unit (FTN_UNITS's
+; UB_OPENREC). The begin call decides what happens to one it finds: a
+; formatted sequential statement of the same direction goes on with it
+; (FTN_FORMAT), and any other statement on the unit ends it first. A READ at
+; a terminal first writes the records left open at terminals as prompts.
 ;
 ; FOR$_INPCONERR with no specifier doesn't wait for the end: it is signaled
 ; at its item, the statement going on after it to its other items
@@ -126,6 +140,7 @@
 ; The MACRO and VAX conventions these lines rely on are explained once,
 ; in FTN_VECTOR.MAR's "Reading these sources".
 ;
+	$DSCDEF				; descriptors' fields
 	$FORDEF				; FORRTL's condition values
 	$RMSDEF
 	$SSDEF
@@ -136,6 +151,7 @@ UB_ACCESS	= 37
 UB_CURRENT	= 620+36
 UB_REWRITE	= 620+37
 UB_KEYED	= 620+38
+UB_OPENREC	= 620+43		; a record left open: 1 output, 2 input
 ACCESS_DIRECT	= 1
 ACCESS_KEYED	= 4
 
@@ -145,6 +161,19 @@ ICB_W_FLAGS	= 2
 FLAG_ERR	= 1
 FLAG_END	= 2
 FLAG_IOSTAT	= 4
+FLAG_NONADV	= 32			; nonadvancing
+FLAG_EOR	= 64			; EOR= is given
+FLAG_BADADV	= 128			; ADVANCE= was neither YES nor NO
+
+;
+; govax's own conditions, past VAX FORTRAN's numbers (docs/planning/PHASE-99 -
+; Fortran 90.md, Decision 15; PHASE-109's finding 8), severity F: an end of
+; record in a nonadvancing READ (FOR number 307), an ADVANCE= value neither YES
+; nor NO (308), and a nonadvancing statement on a unit with keyed access (309).
+;
+FOR$_EORDURREA	= ^X18899C
+FOR$_BADADVANCE	= ^X1889A4
+FOR$_NONADVUNIT	= ^X1889AC
 
 ; A statement's context. FTN_LISTOUT, FTN_LISTIN, and FTN_FORMAT use
 ; CTX_STREAM, CTX_RECLEN, CTX_RECP, and CTX_STATUS too, and define them
@@ -198,7 +227,12 @@ CTX_KEYED	= CTX_RECP+77		; byte: 1 for a keyed READ
 CTX_ITEMPC	= CTX_RECP+80		; long: where the begin call, or the last
 					;  item's FTN$IO_ITEM, returns
 CTX_FRAMEPC	= CTX_RECP+84		; long: the saved PC of CTX_FP's frame
-CTX_SIZE	= CTX_RECP+88
+CTX_LEFT	= CTX_RECP+88		; long: FTN_FORMAT's left tab limit
+CTX_COUNTED	= CTX_RECP+92		; long: the characters input's data edit
+					;  descriptors took, SIZE='s count
+CTX_EOR		= CTX_RECP+96		; byte: FTN_FORMAT's: an end of record
+CTX_PADNO	= CTX_RECP+97		; byte: 1 if the unit is PAD='NO'
+CTX_SIZE	= CTX_RECP+100
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -354,7 +388,11 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	MOVL	8(FP),R4		;  and AP
 	MOVL	4(AP),R5		; the control block
 	BSBW	PUSH_CONTEXT
-	;
+	BITW	#FLAG_BADADV,CTX_FLAGS(R3) ; an ADVANCE= value the statement can't
+	BEQL	35$			;  have: its error, before anything else
+	MOVL	#FOR$_BADADVANCE,R0
+	BRW	FAIL
+35$:	;
 	; A unit: its block (FTN$$UNIT_FIND, given the unit and OPEN_FLAGS),
 	; and no other statement in progress on it.
 	;
@@ -439,7 +477,47 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	BEQL	70$
 	MOVL	R1,R0			; the statement can't use the unit
 	BRW	FAIL
-70$:	TSTB	CTX_KEYED(R3)
+	;
+	; A record a nonadvancing statement left open in the unit: a formatted
+	; sequential statement of its direction goes on with it, and any other
+	; statement ends it first. A READ at a terminal first has the records
+	; left open at terminals written as prompts. A nonadvancing statement
+	; can't be on a unit with keyed access.
+	;
+70$:	MOVL	CTX_STREAM(R3),R1
+	BITW	#FLAG_NONADV,CTX_FLAGS(R3)
+	BEQL	71$
+	CMPB	UB_ACCESS(R1),#ACCESS_KEYED
+	BNEQ	71$
+	MOVL	#FOR$_NONADVUNIT,R0
+	BRW	FAIL
+71$:	BLBS	R6,72$			; a READ:
+	PUSHL	R1
+	CALLS	#1,FTN$$UNIT_PROMPT	; FTN_UNITS
+	MOVL	CTX_STREAM(R3),R1
+72$:	MOVZBL	UB_OPENREC(R1),R0
+	BEQL	74$			; none open
+	CMPL	R6,#K_WRITE_SF
+	BGTRU	73$			; not formatted
+	TSTB	CTX_DIRECT(R3)
+	BNEQ	73$
+	TSTB	CTX_REWRITE(R3)
+	BNEQ	73$
+	TSTB	CTX_KEYED(R3)
+	BNEQ	73$
+	BLBS	R6,725$
+	CMPL	R0,#2			; a READ goes on with an input record,
+	BEQL	74$
+	BRB	73$
+725$:	CMPL	R0,#1			;  a WRITE with an output record
+	BEQL	74$
+73$:	CLRL	-(SP)			; ended
+	PUSHL	R1
+	CALLS	#2,FTN$$UNIT_FLUSH	; FTN_UNITS
+	BLBS	R0,74$
+	MOVL	#FOR$_ERRDURWRI,R0
+	BRW	FAIL
+74$:	TSTB	CTX_KEYED(R3)
 	BEQL	75$
 	MOVZBL	(AP),R0			; a keyed READ: its last three arguments,
 	PUSHL	(AP)[R0]		; the specifier (the last, (AP)[count])
@@ -688,6 +766,8 @@ PUSH_CONTEXT:
 	MOVL	#3,CTX_UNITBLANK(R3)	; an internal file's: ZERO by default
 	CLRL	CTX_USERPC(R3)
 	CLRL	CTX_REASON(R3)
+	CLRQ	CTX_LEFT(R3)		; CTX_LEFT and CTX_COUNTED
+	CLRW	CTX_EOR(R3)		; CTX_EOR and CTX_PADNO
 	MOVL	16(FP),CTX_ITEMPC(R3)	; where the begin call returns (a BSBW
 					;  subroutine's FP is its caller's)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
@@ -852,11 +932,18 @@ REPORT		= -36			; the name's length and address, RMS's
 	PUSHL	R2
 	CALLS	#1,FTN$$LIST_END	; FTN_LISTOUT: the last record
 	;
+	; SIZE='s count, if FTN$IO_END was given a place for it.
+	;
 	; The statement is over, so its unit is free to a handler. An AST
 	; may have left a gone statement above it, in the calls just made.
 	; The context goes on the free list when it has been read (R7).
 	;
-10$:	MOVL	R2,R7
+10$:	TSTB	(AP)
+	BEQL	102$
+	MOVL	4(AP),R0
+	BEQL	102$
+	MOVL	CTX_COUNTED(R2),(R0)
+102$:	MOVL	R2,R7
 	PUSHL	R2
 	CALLS	#1,POP_TO
 	MOVL	CTX_STREAM(R2),R0	; a keyed READ that failed before its $GET
@@ -894,14 +981,20 @@ REPORT		= -36			; the name's length and address, RMS's
 20$:	SUBL2	#-REPORT,SP		; room below the frame, to REPORT(FP)
 	JSB	FAILURE_REPORT
 	;
-	; Returned if a specifier takes it: the FOR number, or -1 for an end
-	; of file.
+	; Returned if a specifier takes it: the FOR number, -1 for an end
+	; of file, or -2 for an end of record.
 	;
 	EXTZV	#3,#12,R3,R0
 	CMPL	R3,#FOR$_ENDDURREA
-	BNEQ	35$
+	BNEQ	32$
 	MNEGL	#1,R0
 	BITW	#FLAG_END!FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
+	BNEQ	38$
+	BRB	40$
+32$:	CMPL	R3,#FOR$_EORDURREA
+	BNEQ	35$
+	MNEGL	#2,R0
+	BITW	#FLAG_EOR!FLAG_IOSTAT,CTX_FLAGS(R2)
 	BNEQ	38$
 	BRB	40$
 35$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
@@ -1040,6 +1133,56 @@ SIGNAL_FAILURE:
 	CALLS	R6,G^LIB$STOP		; never returns (R6: the count pushed)
 60$:	CALLS	R6,G^LIB$SIGNAL
 	RSB
+
+;
+; FTN$ADVANCE(text)
+;
+; ADVANCE='s value when only the program knows it (docs/planning/PHASE-109 -
+; Fortran 90 IO.md, finding 2): R0 is 0 for YES and 1 for NO, in either case,
+; trailing blanks not counting, and 2 for anything else, which the compiler
+; gives a begin call that fails with FOR$_BADADVANCE. text is the value's
+; descriptor.
+;
+	.ENTRY	FTN$ADVANCE,^M<R2,R3>
+	MOVL	4(AP),R0
+	MOVZWL	DSC$W_LENGTH(R0),R3
+	MOVL	DSC$A_POINTER(R0),R2
+	ADDL3	R2,R3,R1		; past the last character
+10$:	TSTL	R3			; the trailing blanks taken off
+	BEQL	80$
+	CMPB	-(R1),#^A/ /		; (R1 less 1, then the byte there)
+	BNEQ	20$
+	DECL	R3
+	BRB	10$
+	;
+	; A letter made a capital by clearing its bit 5 (^X20), which makes
+	; nothing else a letter.
+	;
+20$:	CMPL	R3,#3
+	BNEQ	30$
+	BICB3	#^X20,(R2),R1
+	CMPB	R1,#^A/Y/
+	BNEQ	80$
+	BICB3	#^X20,1(R2),R1
+	CMPB	R1,#^A/E/
+	BNEQ	80$
+	BICB3	#^X20,2(R2),R1
+	CMPB	R1,#^A/S/
+	BNEQ	80$
+	CLRL	R0			; YES
+	RET
+30$:	CMPL	R3,#2
+	BNEQ	80$
+	BICB3	#^X20,(R2),R1
+	CMPB	R1,#^A/N/
+	BNEQ	80$
+	BICB3	#^X20,1(R2),R1
+	CMPB	R1,#^A/O/
+	BNEQ	80$
+	MOVL	#1,R0			; NO
+	RET
+80$:	MOVL	#2,R0			; neither
+	RET
 
 ;
 ; FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])

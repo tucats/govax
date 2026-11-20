@@ -62,6 +62,19 @@
 ; Image exit closes every unit by its disposition, through an exit handler
 ; declared when the first unit is connected (Decision 12).
 ;
+; A record left open. A Fortran 90 nonadvancing statement (ADVANCE='NO')
+; ends without ending its record: the record stays in the unit's buffer, and
+; UB_OPENREC, UB_RECLEN, and UB_RECPOS say what is there and where the next
+; statement goes on (docs/planning/PHASE-109 - Fortran 90 IO.md, finding 4).
+; The next formatted sequential statement of the same direction on the unit
+; takes it up (FTN_FORMAT's FTN$$FMT_START); anything else on the unit ends it
+; first (FTN$$UNIT_FLUSH): an output record is written, an input record passed.
+; So do CLOSE, REWIND, BACKSPACE, ENDFILE, and image exit. And a READ from a
+; terminal writes each open output record at a terminal as a prompt, with the
+; $ carriage control the $ edit descriptor gives one, so that what was asked
+; shows before the answer is typed (FTN$$UNIT_PROMPT); what the program writes
+; after it is a new record.
+;
 ; A direct access unit (ACCESS='DIRECT', or one DEFINE FILE described) reads
 ; and writes a record by its number, RMS's keyed $GET and $PUT on a file of
 ; fixed-length records (RAB$B_RAC KEY, RAB$L_KBF the unit's UB_KEY). Each
@@ -153,7 +166,14 @@ UB_PAD		= UB_ASV+41		; byte: PAD=: 1 YES, 2 NO
 UB_POSITION	= UB_ASV+42		; byte: where the file was put, INQUIRE's
 					;  POSITION=: 1 ASIS, 2 REWIND (and by a
 					;  REWIND statement), 3 APPEND
-UB_BLN		= UB_ASV+44
+UB_OPENREC	= UB_ASV+43		; byte: a record a nonadvancing statement left
+					;  open in the buffer: 0 none, 1 an output
+					;  record, 2 an input record
+UB_DOLLAR	= UB_ASV+44		; byte: 1 if a $ marked the open output record
+UB_RECLEN	= UB_ASV+48		; long: the open record's length
+UB_RECPOS	= UB_ASV+52		; long: and the position the next statement
+					;  goes on from, its left tab limit
+UB_BLN		= UB_ASV+56
 
 	; A check made when the module is assembled: .IIF (immediate if)
 	; assembles .ERROR, stopping the assembly, if UB_ASV isn't 620.
@@ -355,6 +375,7 @@ EXIT_DECLARED:	.LONG	0
 	MOVB	#3,UB_DELIM(R6)		;  manual's 12.6): READWRITE, NONE, YES,
 	MOVB	#1,UB_PAD(R6)		;  ASIS
 	MOVB	#1,UB_POSITION(R6)
+	CLRB	UB_OPENREC(R6)		; no record open
 	;
 	; The default names. R7 is the unit.
 	;
@@ -640,11 +661,14 @@ EXIT_DECLARED:	.LONG	0
 ; FTN$$UNIT_CLOSE(block, disposition)
 ;
 ; Closes a connected unit, disposition (by value) saying what happens to its
-; file, and frees its buffer. Returns SS$_NORMAL in R0, or FOR$_CLOERR, RMS's
+; file, and frees its buffer, ending a record left open first. Returns SS$_NORMAL in R0, or FOR$_CLOERR, RMS's
 ; status and value kept in the block.
 ;
 	.ENTRY	FTN$$UNIT_CLOSE,^M<R2,R3,R4>
 	MOVL	4(AP),R2
+	CLRL	-(SP)			; a record left open is ended first
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_FLUSH
 	MOVAB	UB_FAB(R2),R3
 	MOVL	8(AP),R0
 	BISL2	DISPOSITIONS[R0],FAB$L_FOP(R3)
@@ -1152,6 +1176,69 @@ SET_NEXT:
 
 ;
 ; FTN$$UNIT_TERMINAL(block)
+;
+; FTN$$UNIT_FLUSH(block, prompt)
+;
+; Ends a record a nonadvancing statement left open in the unit whose block is
+; given: an output record is written, an input record passed over (the unit is
+; at the next record already). With prompt (by value) 1, or if a $ marked it,
+; the output record is written as the $ edit descriptor writes one: a blank
+; first byte becomes $, no carriage return after it, and a + becomes NUL.
+; Returns RMS's status in R0, SS$_NORMAL if there was nothing to write.
+;
+	.ENTRY	FTN$$UNIT_FLUSH,^M<R2>
+	MOVL	4(AP),R2
+	MOVL	#SS$_NORMAL,R0
+	CMPB	UB_OPENREC(R2),#1
+	BEQL	10$
+	CLRB	UB_OPENREC(R2)		; none, or an input record
+	RET
+10$:	CLRB	UB_OPENREC(R2)
+	BLBS	8(AP),20$
+	BLBC	UB_DOLLAR(R2),40$
+20$:	TSTL	UB_RECLEN(R2)
+	BEQL	40$
+	CMPB	@UB_RECP(R2),#^A/ /
+	BNEQ	30$
+	MOVB	#^A/$/,@UB_RECP(R2)
+	BRB	40$
+30$:	CMPB	@UB_RECP(R2),#^A/+/
+	BNEQ	40$
+	CLRB	@UB_RECP(R2)
+40$:	PUSHL	UB_RECLEN(R2)
+	PUSHL	UB_RECP(R2)
+	PUSHL	R2
+	CALLS	#3,FTN$$UNIT_PUT
+	RET
+
+;
+; FTN$$UNIT_PROMPT(block)
+;
+; A READ of the unit whose block is given is about to read: if the unit is a
+; terminal, each connected unit at a terminal with an output record left open
+; has it written as a prompt (FTN$$UNIT_FLUSH's prompt), so that it shows
+; before the line is read. The rest of what the program writes on such a
+; unit is a new record. Returns SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$$UNIT_PROMPT,^M<R2,R3>
+	PUSHL	4(AP)
+	CALLS	#1,FTN$$UNIT_TERMINAL
+	BLBC	R0,90$
+	MOVAL	UNITS,R3
+	MOVL	#UNIT_HIGH-UNIT_LOW+1,R2
+10$:	MOVL	(R3)+,R0		; each unit's block in turn
+	BEQL	20$
+	BLBC	UB_OPEN(R0),20$
+	CMPB	UB_OPENREC(R0),#1
+	BNEQ	20$
+	BBC	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R0),20$
+	PUSHL	#1
+	PUSHL	R0
+	CALLS	#2,FTN$$UNIT_FLUSH
+20$:	SOBGTR	R2,10$
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
 ;
 ; R0's low bit is set if the unit whose block is given, connected, is a
 ; terminal (FTN_NAMELIST answers a ? only at one).

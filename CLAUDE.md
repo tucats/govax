@@ -1366,7 +1366,17 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (codes 53 to 59), the unit block's `UB_ACTION`, `UB_DELIM`, `UB_PAD`,
   `UB_POSITION`, a READ of an ACTION='WRITE' unit FOR number 306,
   REAWRIFIL, and INQUIRE (IOLENGTH=) the compiler's own sum
-  (`sema.IOLength`, `ir`'s `ioLength`; `testdata/fortran90/openings.f90`).
+  (`sema.IOLength`, `ir`'s `ioLength`; `testdata/fortran90/openings.f90`);
+  subtask 5 (2026-11-20) is nonadvancing I/O: ADVANCE=, SIZE=, EOR=
+  (`sema`'s `advanceSpec`, `checkAdvance`; control block bits 5 to 7,
+  `ir.ControlNonadvancing`, `ControlEOR`, `ControlBadAdvance`; a run-time
+  ADVANCE= by FTNRTL's `FTN$ADVANCE` and a `Switch` of three begin calls,
+  GSMATCH 1,31; SIZE= a longword FTN$IO_END fills; -2 at an end of record),
+  a record left open in the unit (`UB_OPENREC`, taken up by FTN$$FMT_START,
+  ended by `FTN$$UNIT_FLUSH`, written as a prompt at a terminal READ by
+  `FTN$$UNIT_PROMPT`), the left tab limit (`CTX_LEFT`), PAD='s padding for
+  `/F90` statements (`FTN$$FMT_SHORT`), FOR numbers 307 to 310
+  (`testdata/fortran90/advance.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

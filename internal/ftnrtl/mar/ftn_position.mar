@@ -104,7 +104,11 @@ START:	PUSHL	4(AP)			; the control block
 	CLRL	R0
 	TSTL	CTX_STATUS(R9)
 	BNEQ	10$
-	MOVL	#SS$_NORMAL,R0
+	BLBC	UB_OPEN(R7),5$		; a record a nonadvancing statement left
+	CLRL	-(SP)			;  open is ended first (FTN_UNITS)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FLUSH
+5$:	MOVL	#SS$_NORMAL,R0
 10$:	RSB
 
 ;

@@ -5,7 +5,8 @@ Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
 accepted by the author the same day ("The author's answers"); its A.4 revises
 the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
 subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
-specifiers, done 2026-11-20; subtask 5 is next.
+specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6
+is next.
 
 ## Goal
 
@@ -349,7 +350,8 @@ And where each change lands:
    IOLENGTH= (finding 7), and ACTION='WRITE''s condition (done 2026-11-20).
 5. **Nonadvancing I/O**: ADVANCE= (constant and run-time, `FTN$ADVANCE`), SIZE= through
    FTN$IO_END's argument, EOR= and -2, the record kept in the unit and the left tab limit,
-   the terminal's prompt, PAD= on input (findings 2 to 5), the new conditions (finding 8).
+   the terminal's prompt, PAD= on input (findings 2 to 5), the new conditions (finding 8)
+   (done 2026-11-20).
 6. **List-directed and namelist under the flag**: list-directed input's quoted and
    undelimited text, DELIM= on list-directed and namelist output, namelist's `&…/` forms,
    sections and components in names (finding 6).
@@ -518,3 +520,49 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   with no connection, and POSITION= after a write (compare.py's KNOWN). sema's TestErrors has the
   new checks. MANUAL.md's 14.13 has a paragraph on OPEN and INQUIRE. Subtask 5 (nonadvancing
   I/O) is next; it and subtask 6 give DELIM= and PAD= their effect.
+- **2026-11-20:** Subtask 5, nonadvancing I/O. The parser takes ADVANCE=, SIZE=, and EOR= in a
+  READ and ADVANCE= in a WRITE (`writeSpecs`), under either `/F90` setting as subtask 4's
+  keywords are (`/STANDARD` calls them extensions, from its table). sema (`io.go`'s
+  `advanceSpec`, `checkAdvance`): ADVANCE= a CHARACTER value, a constant YES or NO (any case,
+  trailing blanks off) checked now (KEYCHOICE, KEYTEXT) and its NO `IO.Nonadvancing`, any other
+  value `IO.Advance`; only a formatted sequential statement with a format on an external unit
+  (ADVANCEFORM: not list-directed, namelist, internal, ENCODE or DECODE, REC=, keyed, or
+  REWRITE); SIZE= an INTEGER place (BADSIZE), `IO.Size`; EOR= a label, `IO.EOR`; SIZE= and EOR=
+  only with ADVANCE= (ADVANCENEEDED). The IR: control block bits 5, 6, and 7,
+  `ControlNonadvancing`, `ControlEOR`, `ControlBadAdvance`; a run-time ADVANCE= is a call of
+  FTNRTL's new `FTN$ADVANCE` (0 YES, 1 NO, 2 neither) and a `Switch` to one of three begin calls,
+  each with its control block (`advanceBegin`; the statement's end work held, `holdingAfter`);
+  SIZE= a longword FTN$IO_END is given the address of, then stored in the variable with a
+  conversion (with the copies back); `ioFinish` takes EOR= and whether the READ may be
+  nonadvancing, and for -2 branches to EOR=, or with IOSTAT= alone past END= and ERR='s Sign
+  (`ir/testdata/f90advance`). FTNRTL: FTN$ADVANCE at 1096, GSMATCH 1,31. The unit block keeps a
+  record left open (`UB_OPENREC` 1 output or 2 input, `UB_DOLLAR`, `UB_RECLEN`, `UB_RECPOS`; UB_BLN
+  620+56) in the unit's buffer, where FTN_FORMAT built or read it. The begin call
+  (FTN_STATEMENT's 70$) leaves it for a formatted sequential statement of its direction (not
+  direct, REWRITE, or keyed) and ends it for any other (`FTN$$UNIT_FLUSH`: an output record
+  written, `$`'s rewrite if a `$` marked it, an input one passed); a READ first calls
+  `FTN$$UNIT_PROMPT`, which at a terminal writes each terminal unit's open output record as a
+  prompt (the author's answer 4); a nonadvancing statement on a keyed unit is NONADVUNIT. CLOSE
+  (and so the exit handler) and REWIND, BACKSPACE, and ENDFILE (FTN_POSITION's START) end it too.
+  FTN$$FMT_START takes it up, reading no record, its position the left tab limit (`CTX_LEFT`,
+  which T adds to and TL stops at; 0 again at each new record), and FTN$$FMT_END leaves a
+  nonadvancing statement's record in the unit if it had no error. Input: FTN_EDIT's FIELD and A
+  count the characters taken (`CTX_COUNTED`, SIZE='s) and give a field the record's end cut short
+  (no comma) to `FTN$$FMT_SHORT`: in a nonadvancing READ that sets `CTX_EOR`, and after the item
+  FTN$$FMT_ITEM fails the statement with EORDURREA, which FTN$IO_END returns as -2 to EOR= or
+  IOSTAT= and otherwise signals; an advancing F90 statement on a PAD='NO' unit is RECTOOSHO; and
+  where the standard pads (PAD YES, nonadvancing or F90) and BZ makes blanks count, FIELD pads the
+  field into the context's own CTX_RECORD (a unit's record is in the unit's buffer), at most 256
+  characters (finding 5; the author's answer 3). VAX FORTRAN's statements are unchanged: the VMS
+  oracles (`TestFor80Oracle`, `TestFor80InputOracle`, `TestNML80Oracle`) and `TestNoF90Unchanged`
+  pass. New conditions, `vmsdef/formessages.go`: EORDURREA 307, BADADVANCE 308, NONADVUNIT 309,
+  RECTOOSHO 310. The new context fields are past CTX_RECP+88 (CTX_SIZE CTX_RECP+100), cleared by
+  PUSH_CONTEXT. `testdata/fortran90/advance.f90` (with `advance.in`) runs in every mode;
+  gfortran agrees but for four of govax's choices, in compare.py's KNOWN: IOSTAT='s value for a bad
+  ADVANCE=, the prompt (gfortran continues the record), a list-directed statement after a
+  nonadvancing one (gfortran continues it; ours ends it, finding 4), and PAD='NO''s short record
+  (gfortran's end of record, Fortran 2003's rule; ours an error, with SIZE= counting what A took).
+  Unconfirmed choices: a field longer than 256 characters is padded only to 256; a record left open
+  at a unit that isn't a terminal stays open across a terminal READ; units 6 and `*` are distinct,
+  so a record open on one isn't continued by the other. MANUAL.md's 14.13 has "Nonadvancing I/O".
+  Subtask 6 (list-directed and namelist under the flag, DELIM=) is next.

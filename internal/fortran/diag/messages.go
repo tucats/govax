@@ -1459,6 +1459,19 @@ var messages = map[string]kind{
 	// type its answer has.
 	"KEYPLACE": {Error, "%s= must name a place to store %s value"},
 
+	// ADVANCEFORM is an ADVANCE= where the standard allows none (its
+	// 9.4.1): only a formatted sequential statement with a format, on an
+	// external unit, may be nonadvancing.
+	"ADVANCEFORM": {Error, "only a formatted sequential READ or WRITE of an external unit, with a format, may have ADVANCE="},
+
+	// ADVANCENEEDED is a SIZE= or EOR= in a READ without ADVANCE= (the
+	// standard's 9.4.1).
+	"ADVANCENEEDED": {Error, "%s= is only for a READ with ADVANCE="},
+
+	// BADSIZE is a SIZE= that doesn't name an INTEGER variable or array
+	// element.
+	"BADSIZE": {Error, "a SIZE= specifier must name an INTEGER variable or array element"},
+
 	// IOLENGTHFORM is an INQUIRE (IOLENGTH=n) with anything but its output
 	// list beside it, or an INQUIRE of another form with a list (the Fortran
 	// 90 standard's 9.6, R923).

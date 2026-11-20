@@ -72,6 +72,8 @@ CTX_BLANK	= CTX_SIGN+1		; byte: 1 if blanks are zeros (BZ)
 CTX_MISMATCH	= CTX_POS+108		; byte: 1 if the item's type doesn't suit
 CTX_TEXT	= CTX_RECP+36		; long: an input conversion error's text,
 					;  and its length (FTN_STATEMENT's message)
+CTX_COUNTED	= CTX_RECP+92		; long: the characters input fields took,
+					;  SIZE='s count (FTN_FORMAT)
 
 ; A parsed format's operation (FTN_FORMAT's).
 OP_B_CODE	= 0
@@ -586,6 +588,14 @@ INTEGER_TYPE:
 ; shows (FOR$_INVTEX, VMS's "invalid text is "ABC""). Uses R0, R1, and
 ; R4. FTN_FLOAT's input uses it too, with R9 and R11 the same.
 ;
+; The characters it takes from the record count for SIZE= (CTX_COUNTED). A
+; field the record's end cuts short, no comma having ended it, is FTN_FORMAT's
+; to judge (FTN$$FMT_SHORT): a nonadvancing READ's end of record, or Fortran
+; 90's padding, which matters only where BZ makes blanks zeros. Then the field
+; is a copy, padded with blanks to its width (at most 256 characters), in the
+; context's own record, which a unit's statement doesn't use (its record is
+; in the unit's buffer, an internal file's where the file is).
+;
 FTN$$EDIT_FIELD::
 FIELD:	MOVL	CTX_POS(R11),R4
 	BGEQ	5$
@@ -600,10 +610,29 @@ FIELD:	MOVL	CTX_POS(R11),R4
 	MOVL	R9,R3
 15$:	ADDL3	R4,R9,CTX_POS(R11)
 	LOCC	#^A/,/,R3,(R2)		; a comma? R1 its address if so
-	BEQL	20$			; no comma
+	BEQL	18$			; no comma
 	SUBL3	R2,R1,R3		; the characters before it,
 	ADDL3	R4,R3,R0
 	ADDL3	#1,R0,CTX_POS(R11)	;  and the position past it
+	ADDL2	R3,CTX_COUNTED(R11)
+	BRB	20$
+18$:	ADDL2	R3,CTX_COUNTED(R11)
+	CMPL	R3,R9
+	BGEQ	20$			; the whole width
+	PUSHL	R11
+	CALLS	#1,FTN$$FMT_SHORT	; FTN_FORMAT: padded?
+	BLBC	R0,20$
+	TSTB	CTX_BLANK(R11)
+	BEQL	20$			; BN: blanks are nothing anyway
+	MOVL	R9,R4			; the padded field's width
+	CMPL	R4,#RECORD_SIZE
+	BLEQ	19$
+	MOVL	#RECORD_SIZE,R4
+19$:	PUSHR	#^M<R4,R5>		; MOVC5 changes R0 to R5
+	MOVC5	R3,(R2),#^A/ /,R4,CTX_RECORD(R11)
+	POPR	#^M<R4,R5>
+	MOVAB	CTX_RECORD(R11),R2
+	MOVL	R4,R3
 20$:	MOVL	R2,CTX_TEXT(R11)	; the field, for a message
 	MOVL	R3,CTX_TEXT+4(R11)
 	RSB

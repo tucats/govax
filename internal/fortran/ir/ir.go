@@ -699,6 +699,17 @@ const (
 	// Fortran 90 does. Without it nothing changes (docs/planning/PHASE-109 -
 	// Fortran 90 IO.md, finding 1).
 	ControlF90 = 1 << 4
+
+	// Fortran 90's nonadvancing I/O (docs/planning/PHASE-109 - Fortran 90
+	// IO.md, findings 2 and 3). ControlNonadvancing is ADVANCE='NO': the
+	// statement leaves its record open in the unit for the next one.
+	// ControlEOR is EOR= given: an end of record is returned as -2 rather than
+	// signaled (as it is with IOSTAT= too). ControlBadAdvance is the begin call
+	// of a statement whose ADVANCE= value, known only when the program ran,
+	// was neither YES nor NO: the statement fails with FOR$_BADADVANCE.
+	ControlNonadvancing = 1 << 5
+	ControlEOR          = 1 << 6
+	ControlBadAdvance   = 1 << 7
 )
 
 // FormatBlock is a FORMAT statement's block in the routine's read-only

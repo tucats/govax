@@ -48,8 +48,9 @@ import (
 
 // The FTNRTL routines the I/O statements call.
 const (
-	ftnIOItem = "FTN$IO_ITEM"
-	ftnIOEnd  = "FTN$IO_END"
+	ftnIOItem  = "FTN$IO_ITEM"
+	ftnIOEnd   = "FTN$IO_END"
+	ftnAdvance = "FTN$ADVANCE"
 )
 
 // io lowers an I/O statement.
@@ -64,49 +65,125 @@ func (l *lowerer) io(s *sema.IO) {
 		c.Flags |= ControlF90
 	}
 
+	if s.Nonadvancing {
+		c.Flags |= ControlNonadvancing
+	}
+
+	if s.EOR != 0 {
+		c.Flags |= ControlEOR
+	}
+
 	// An assumed-shape array as the internal file, the buffer, or the format
 	// goes through a temporary unless its elements are one after another
 	// (lowersequence.go); the file's or buffer's is copied back once the
 	// statement is done.
 	var backs []func()
 
-	control := Arg{Ref: l.control(c)}
+	begin := func(c Control) {
+		control := Arg{Ref: l.control(c)}
 
-	unit, back := l.ioUnit(s)
-	if back != nil {
-		backs = append(backs, back)
-	}
-
-	args := []Arg{control, unit}
-
-	if s.Form != sema.ListForm && s.Form != sema.UnformattedForm {
-		args = append(args, l.ioFormat(s))
-	}
-
-	if s.Code {
-		args = append(args, Arg{Value: l.expr(s.Count)})
-	}
-
-	if s.Rec != nil {
-		args = append(args, Arg{Value: l.expr(s.Rec)})
-	}
-
-	if s.Key != nil {
-		var id Expr = LongConst(-1)
-		if s.KeyID != nil {
-			id = l.expr(s.KeyID)
+		unit, back := l.ioUnit(s)
+		if back != nil {
+			backs = append(backs, back)
 		}
 
-		args = append(args, Arg{Ref: l.item(s.Key)}, Arg{Value: id}, Arg{Value: LongConst(int32(s.KeyMatch))})
+		args := []Arg{control, unit}
+
+		if s.Form != sema.ListForm && s.Form != sema.UnformattedForm {
+			args = append(args, l.ioFormat(s))
+		}
+
+		if s.Code {
+			args = append(args, Arg{Value: l.expr(s.Count)})
+		}
+
+		if s.Rec != nil {
+			args = append(args, Arg{Value: l.expr(s.Rec)})
+		}
+
+		if s.Key != nil {
+			var id Expr = LongConst(-1)
+			if s.KeyID != nil {
+				id = l.expr(s.KeyID)
+			}
+
+			args = append(args, Arg{Ref: l.item(s.Key)}, Arg{Value: id}, Arg{Value: LongConst(int32(s.KeyMatch))})
+		}
+
+		l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
 	}
 
-	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
+	if s.Advance != nil {
+		l.advanceBegin(s.Advance, c, begin)
+	} else {
+		begin(c)
+	}
 
 	l.byComponents = s.Form != sema.UnformattedForm
 	l.ioItems(s.Items)
 	l.byComponents = false
 
-	l.ioFinish(&Call{origin: l.origin(), Routine: ftnIOEnd}, c, s.Err, s.End, s.IOStat, backs)
+	// SIZE='s count FTN$IO_END stores in a longword, which is then stored in
+	// the variable, of whatever INTEGER type it is, with the copies back.
+	end := &Call{origin: l.origin(), Routine: ftnIOEnd}
+
+	if s.Size != nil {
+		count := l.temp(Long)
+		end.Args = []Arg{{Ref: count}}
+
+		backs = append(backs, func() {
+			size := l.mem(s.Size)
+
+			var value Expr = &Load{count}
+			if size.T != Long {
+				value = arith(Cvt, size.T, value, nil)
+			}
+
+			l.emit(&Assign{origin: l.origin(), Dst: size, Src: value})
+		})
+	}
+
+	mayEOR := s.Read && (s.Nonadvancing || s.Advance != nil)
+
+	l.ioFinish(end, c, s.Err, s.End, s.IOStat, backs, s.EOR, mayEOR)
+}
+
+// advanceBegin begins a statement whose ADVANCE= only the program knows
+// (docs/planning/PHASE-109 - Fortran 90 IO.md, finding 2): FTNRTL's
+// FTN$ADVANCE reads the value, 0 for YES, 1 for NO, 2 for anything else, and a
+// Switch on it chooses one of three begin calls, each with a control block of
+// its own, so that FTNRTL knows from the start whether the statement continues
+// a record. The items and the end are the three's.
+//
+//	  call FTN$ADVANCE(<descriptor of the value>) -> $T1
+//	  switch $T1 base 0 [B2 B3] else B4
+//	B2: call FTN$READ_SF($IO1, ...)		advancing
+//	    jump B5
+//	B3: call FTN$READ_SF($IO2, ...)		nonadvancing
+//	    jump B5
+//	B4: call FTN$READ_SF($IO3, ...)		FOR$_BADADVANCE
+//	B5: ...the items
+func (l *lowerer) advanceBegin(advance sema.Expr, c Control, begin func(Control)) {
+	which := l.temp(Long)
+	l.emit(&Call{origin: l.origin(), Routine: ftnAdvance, Args: []Arg{{Ref: l.item(advance)}}, Result: which})
+
+	yes, no, bad, next := l.newBlock(), l.newBlock(), l.newBlock(), l.newBlock()
+
+	// The statement isn't over, so what is to be done at its end waits.
+	l.holdingAfter(func() {
+		l.terminate(&Switch{l.origin(), &Load{which}, 0, []*Block{yes, no}, bad})
+	})
+
+	for i, b := range []*Block{yes, no, bad} {
+		l.begin(b)
+		begin(Control{Flags: c.Flags | []int{0, ControlNonadvancing, ControlBadAdvance}[i]})
+
+		if b != bad {
+			l.holdingAfter(func() { l.jump(next) })
+		}
+	}
+
+	l.begin(next)
 }
 
 // controlFor is the control block of a statement with these specifiers.
@@ -130,21 +207,31 @@ func controlFor(errLabel, endLabel int, iostat sema.Expr) Control {
 
 // ioFinish emits the call that ends an I/O statement and returns its
 // status in R0, then backs (copies back to an assumed-shape array, done once
-// the statement is, lowersequence.go), and what the statement does with the
-// status: IOSTAT=, END=, and ERR=.
-func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat sema.Expr, backs []func()) {
-	if c.Flags&(ControlErr|ControlEnd|ControlIOStat) == 0 {
+// the statement is, lowersequence.go; SIZE='s count), and what the statement
+// does with the status: IOSTAT=, END=, ERR=, and EOR=.
+//
+// mayEOR is set for a READ that may be nonadvancing, whose status may be -2, an
+// end of record, which FTNRTL returns only when EOR= or IOSTAT= is given. It
+// goes to EOR=, or with IOSTAT= alone on to the next statement, never to END=
+// or ERR=, which the Sign would send a negative status to.
+func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat sema.Expr, backs []func(),
+	eorLabel int, mayEOR bool,
+) {
+	if c.Flags&(ControlErr|ControlEnd|ControlIOStat|ControlEOR) == 0 {
 		l.emit(end)
 		copyBack(backs)
 
 		return
 	}
 
+	// eorBranch is set when -2 needs a branch of its own.
+	eorBranch := mayEOR && (eorLabel != 0 || (iostat != nil && (errLabel != 0 || endLabel != 0)))
+
 	// The status, kept in a temporary while the IOSTAT variable is set
 	// and the statement's last work is done (both may use R0).
 	var status Expr = &CallValue{}
 
-	if iostat != nil || len(l.after) > 0 || len(backs) > 0 {
+	if iostat != nil || len(l.after) > 0 || len(backs) > 0 || eorBranch {
 		end.Result = l.temp(Long)
 		status = &Load{end.Result}
 	}
@@ -163,11 +250,34 @@ func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat 
 		l.emit(&Assign{origin: l.origin(), Dst: ios, Src: value})
 	}
 
-	if errLabel == 0 && endLabel == 0 {
+	if !eorBranch && errLabel == 0 && endLabel == 0 {
 		return
 	}
 
 	next := l.newBlock()
+
+	if eorBranch {
+		eor := next
+		if eorLabel != 0 {
+			eor = l.labelBlock(eorLabel)
+		}
+
+		rest := next
+		if errLabel != 0 || endLabel != 0 {
+			rest = l.newBlock()
+		}
+
+		l.branch(&Cmp{Op: Eq, X: status, Y: LongConst(-2)}, eor, rest)
+
+		if rest == next {
+			l.begin(next)
+
+			return
+		}
+
+		l.begin(rest)
+	}
+
 	neg, pos := next, next
 
 	switch {

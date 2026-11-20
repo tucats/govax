@@ -9133,9 +9133,9 @@ only for a formatted file; reading only can't make a file or append to one (each
 `%FORT-E-OPENCONFLICT`, or `FOR-F-INCOPECLO` when the program runs). `STATUS='REPLACE'` needs
 `FILE=` (`%FORT-E-NEEDFILE`): the file's highest version, if there is one, is deleted, and a new
 file made with its name, which takes the version deleted when that was the highest. An OPEN of
-a connected unit's own file may change `DELIM=` and `PAD=`, as it may `BLANK=`. What `DELIM=`
-and `PAD=` do to list-directed, namelist, and input records comes with the subtasks that use
-them; for now they are kept and answered.
+a connected unit's own file may change `DELIM=` and `PAD=`, as it may `BLANK=`. `PAD=` is
+formatted input's (below); what `DELIM=` does to list-directed and namelist output is still to
+come, and for now it is kept and answered.
 
 INQUIRE answers `ACTION=`, `POSITION=`, `READ=`, `WRITE=`, `READWRITE=`, `DELIM=`, and `PAD=` as
 the HP Fortran manual's 12.5 does: for a unit with no file, `ACTION=`, `POSITION=`, and `DELIM=`
@@ -9148,6 +9148,58 @@ REAL and `C` a CHARACTER\*8 array of 20, `INQUIRE (IOLENGTH=N) X, C` gives 41, a
 `OPEN (..., ACCESS='DIRECT', FORM='UNFORMATTED', RECL=N)`. The compiler adds up the items'
 bytes, with no call: a section's, an allocatable array's, or a passed-length dummy's when
 the program runs, and nothing in the list is evaluated but what says how long it is.
+
+**Nonadvancing I/O** (the standard's 9.2.1.3, 9.4.1.7 to 9.4.1.9, and 10.6.1.1). A formatted
+sequential READ or WRITE with a format of its own, on a unit rather than an internal file, may
+say `ADVANCE='NO'`: it ends without ending its record, and the next formatted statement on the
+unit going the same way, advancing or not, goes on with it. Any other statement may not
+(`%FORT-E-ADVANCEFORM`). `ADVANCE=` may be any CHARACTER value, `'YES'` or `'NO'` in either
+case: a constant is checked when compiling, and another value when the program runs, anything
+else then being `FOR-F-BADADVANCE`, "ADVANCE= value is neither YES nor NO", FOR number 308. Where
+a statement starts in a record is its left tab limit, from which T counts columns and past which
+TL goes no further back, so
+
+```fortran
+write (*, '(A)', advance='NO') ' abc'
+write (*, '(A)', advance='no') 'def'
+write (*, '(A)') 'ghi'
+write (*, '(1X, A)', advance='NO') 'abc'
+write (*, '(T2, A)') 'X'
+```
+
+prints
+
+```text
+abcdefghi
+abc X
+```
+
+A record left open is ended, written if it was being written and passed if it was being read,
+by any other statement on its unit (a list-directed one too), and by CLOSE, REWIND, BACKSPACE,
+ENDFILE, and the image's end. A READ at the terminal first writes each record left open at the
+terminal as a prompt, as the `$` edit descriptor does, so
+
+```fortran
+write (*, '(A)', advance='NO') ' Your name? '
+read (*, '(A)') name
+```
+
+asks before it waits; what the program writes after it starts a new record.
+
+On input, `SIZE=n` gives `n` the characters the statement's data edit descriptors took from the
+record, and a field that runs past the record's end, with no comma ending it first, is the end
+of record: the item is edited from the field padded with blanks, the statement ends, and the
+record is done. `EOR=label` goes to the label then, `IOSTAT=` is `-2` (an end of file is `-1`),
+and with neither the image ends with `FOR-F-EORDURREA`, "end-of-record during read", FOR number
+307. `SIZE=` and `EOR=` are only for a READ with `ADVANCE=` (`%FORT-E-ADVANCENEEDED`), and
+neither, nor `END=`, for a WRITE. A nonadvancing statement on a unit with keyed access is
+`FOR-F-NONADVUNIT` (309).
+
+`PAD=`'s padding is Fortran 90's for its statements: a field an advancing READ of a `/F90` unit
+finds cut short by the record's end is padded with blanks to its width, which BZ makes zeros,
+so `'123'` read by `(BZ, I5)` is 12300, where a VAX FORTRAN statement reads 123, as VMS's does.
+On a `PAD='NO'` unit such a field is an error, `FOR-F-RECTOOSHO` (310), and a nonadvancing READ's
+end of record pads nothing but what A always pads.
 
 **Allocatable arrays** (the standard's 5.1.2.4.3, 5.2.6, and 6.3). An array declared
 ALLOCATABLE, with a colon for each of its dimensions, has a rank and nothing more until

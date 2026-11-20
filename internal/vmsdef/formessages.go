@@ -103,4 +103,14 @@ var forMessages = map[uint32]Message{
 	// ACTION='WRITE' (FOR number 306; docs/planning/PHASE-109 - Fortran 90
 	// IO.md, finding 8): WRIREAFIL's other half.
 	0x00188990: {Facility: "FOR", Ident: "REAWRIFIL", Text: "read from a file opened ACTION='WRITE'!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+
+	// Fortran 90's nonadvancing I/O (FOR numbers 307 to 310; PHASE-109's
+	// finding 8): an end of record in a nonadvancing READ with neither EOR=
+	// nor IOSTAT=, an ADVANCE= value the program computed that is neither YES
+	// nor NO, a nonadvancing statement on a unit with keyed access, and a
+	// field past the record's end in an advancing READ of a PAD='NO' unit.
+	0x00188998: {Facility: "FOR", Ident: "EORDURREA", Text: "end-of-record during read!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001889A0: {Facility: "FOR", Ident: "BADADVANCE", Text: "ADVANCE= value is neither YES nor NO!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001889A8: {Facility: "FOR", Ident: "NONADVUNIT", Text: "nonadvancing I/O on a unit with keyed access!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001889B0: {Facility: "FOR", Ident: "RECTOOSHO", Text: "input record too short for its format, PAD='NO'!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
 }

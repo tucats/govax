@@ -96,7 +96,7 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		routine = "FTN$UNLOCK"
 	}
 
-	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat, nil)
+	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat, nil, 0, false)
 }
 
 // ioLength lowers INQUIRE (IOLENGTH=n) list (sema's IOLength): the items'

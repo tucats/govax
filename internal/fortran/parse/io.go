@@ -27,7 +27,13 @@ const (
 // which every statement that has them takes out of its list, by the
 // statement.
 var (
-	transferSpecs = map[string]specKind{"ERR": specLabel, "END": specLabel, "IOSTAT": specValue}
+	// READ's, with Fortran 90's nonadvancing input (the standard's 9.4.1.7
+	// to 9.4.1.9); WRITE's, with its ADVANCE=.
+	transferSpecs = map[string]specKind{
+		"ERR": specLabel, "END": specLabel, "IOSTAT": specValue,
+		"ADVANCE": specValue, "SIZE": specValue, "EOR": specLabel,
+	}
+	writeSpecs = map[string]specKind{"ERR": specLabel, "IOSTAT": specValue, "ADVANCE": specValue}
 	keyedSpecs    = map[string]specKind{
 		"KEY": specValue, "KEYEQ": specValue, "KEYGE": specValue, "KEYGT": specValue,
 		"KEYLE": specValue, "KEYLT": specValue, "KEYNXT": specValue, "KEYNXTNE": specValue,
@@ -77,7 +83,7 @@ type controlList struct {
 // controls is each statement's control list.
 var controls = map[lex.Kind]controlList{
 	lex.Read:      {specs: transferSpecs, format: true, rec: true, keyed: true, needsUnit: true},
-	lex.Write:     {specs: errorSpecs, format: true, rec: true, needsUnit: true},
+	lex.Write:     {specs: writeSpecs, format: true, rec: true, needsUnit: true},
 	lex.Rewrite:   {specs: errorSpecs, format: true, needsUnit: true},
 	lex.Open:      {specs: openSpecs},
 	lex.Close:     {specs: closeSpecs, needsUnit: true},
