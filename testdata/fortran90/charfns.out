@@ -1,0 +1,21 @@
+=-=-=-=-=|  Results|  6
+   7   7 [  to be]
+[to be       ] [       to be]
+[to be.]
+   4   4   6   7   3   7
+   5   5   7   4   2   0
+abab|  to be  to be  to be|
+   6 [------------]
+   4   4   0
+   3   0   0
+   4   4   0
+[   fig][  plum][      ]
+   0   4   0
+   6 [  plum] [  plum<]
+   0 [] [<]
+  12 [abc         ] [abc<]
+   0   0   0   0
+[] [] []
+   0   0   1   4  T
+[]
+  $STATUS == "%X00000001"

@@ -43,6 +43,17 @@ func (s *Symbol) PassedLength() bool {
 	return s.Type.Kind == Character && s.Type.Size == 0 && s.LengthExpr == nil
 }
 
+// ZeroLength reports whether s is CHARACTER of a declared length of zero, or
+// less, which is zero (finding 4 of docs/planning/PHASE-108 - Fortran 90
+// intrinsic procedures.md): a length known when compiling, but kept as one
+// known only when the program runs whose value is the constant 0, since a
+// type's size of 0 means a length not known. It has no storage.
+func (s *Symbol) ZeroLength() bool {
+	_, ok := s.LengthValue.(*Const)
+
+	return s.LengthExpr != nil && ok
+}
+
 // runtimeLength makes e, an expression that isn't constant, the CHARACTER
 // length of sym, which a type statement just declared: a dummy argument's, or
 // in a subprogram an automatic object's. A function's own value is one too,
@@ -50,6 +61,14 @@ func (s *Symbol) PassedLength() bool {
 // (12.3.1.1; ir/lowervalue.go); the function's name when RESULT names the
 // value is NOTIMPL.
 func (a *analyzer) runtimeLength(sym *Symbol, e ast.Expr) {
+	if _, kind := a.constInt(e); kind == constOK {
+		// A constant length, which characterType gives only for zero: no
+		// storage, nothing computed at entry, wherever the name is.
+		sym.LengthExpr, sym.LengthValue = e, IntConstAt(0, e.Position())
+
+		return
+	}
+
 	switch {
 	case sym.Class == UnitName:
 		a.notImplForm(e.Position(), "a function whose value has a CHARACTER length that isn't constant")
@@ -86,7 +105,7 @@ func (a *analyzer) runtimeLength(sym *Symbol, e ast.Expr) {
 // gives its length, or a procedure, whose length its callers must know.
 func (a *analyzer) checkLengths() {
 	for _, s := range a.unit.Symbols {
-		if s.LengthExpr == nil || s.broken {
+		if s.LengthExpr == nil || s.broken || s.ZeroLength() {
 			continue
 		}
 

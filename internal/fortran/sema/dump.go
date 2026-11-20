@@ -710,7 +710,7 @@ func DumpExpr(e Expr) string {
 
 		// The whole type, not its letter: which length was selected matters.
 		name := e.Name
-		if e.Op == CallOp {
+		if e.Routine != "" {
 			name = e.Routine
 		}
 

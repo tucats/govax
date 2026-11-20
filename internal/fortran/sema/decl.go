@@ -341,6 +341,13 @@ const maxCharLength = 65535
 func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type, bool) {
 	t, length, ok := a.entityType(spec, l, pos)
 	if length != nil {
+		if _, kind := a.constInt(length); kind == constOK {
+			// A length of zero, which only a type statement's entity takes.
+			a.notImplForm(length.Position(), "a CHARACTER length of zero here")
+
+			return invalid, false
+		}
+
 		if spec.Selector && l == spec.Len {
 			a.notImplForm(length.Position(), "a CHARACTER length that isn't constant")
 		} else {
@@ -431,10 +438,14 @@ func (a *analyzer) entityType(spec ast.TypeSpec, l ast.Len, pos diag.Position) (
 // A length, in either form (*(N) or LEN=N), may be a specification
 // expression, a dummy's N (the Fortran 90 standard's 5.1.1.5): its expression
 // is returned, with the type CHARACTER of length 0, and what may have one is
-// runtimeLength's to say. A constant length of zero or less, which means zero,
-// is NOTIMPL, named, until Phase 108.
+// runtimeLength's to say. Under /F90, a constant length of zero or less, which
+// means zero (the standard's 5.1.1.5), is returned the same way, an expression
+// whose value is 0, which runtimeLength makes a length of zero (finding 4 of
+// docs/planning/PHASE-108 - Fortran 90 intrinsic procedures.md); VAX FORTRAN
+// has no such length (BADCHARLEN).
 func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (Type, ast.Expr, bool) {
 	n := int64(l.Length)
+	length := l.LenExpr
 
 	switch {
 	case l.LenStar:
@@ -454,14 +465,12 @@ func (a *analyzer) characterType(l ast.Len, pos diag.Position, selector bool) (T
 
 		pos = l.LenExpr.Position()
 
-		if selector && n < 1 {
-			a.notImplForm(pos, "a CHARACTER length of zero")
-
-			return invalid, nil, false
-		}
-
 	case !l.HasLength():
 		n = 1
+	}
+
+	if n < 1 && (a.f90 || selector) {
+		return Type{Kind: Character, Size: 0}, length, true
 	}
 
 	if n < 1 || n > maxCharLength {

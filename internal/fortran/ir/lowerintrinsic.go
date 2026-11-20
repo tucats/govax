@@ -94,6 +94,9 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	case sema.IndexOp:
 		return l.index(e)
 
+	case sema.LenTrimOp, sema.ScanOp, sema.VerifyOp:
+		return l.searchFunction(e)
+
 	case sema.IcharOp:
 		// The first character's code, an unsigned byte.
 		x := l.chars(e.Args[0])
@@ -392,8 +395,13 @@ func (l *lowerer) index(e *sema.IntrinsicRef) Expr {
 // temporary (MOVB, which takes a longer value's low byte; Table D-3's
 // argument is from 0 to 255).
 func (l *lowerer) char(e *sema.IntrinsicRef) Text {
-	if e.Op == sema.MergeOp {
+	switch e.Op {
+	case sema.MergeOp:
 		return l.mergeText(e)
+	case sema.TrimOp:
+		return l.trim(e)
+	case sema.AdjustLOp, sema.AdjustROp, sema.RepeatOp:
+		return l.madeByRoutine(e)
 	}
 
 	v := l.temp(Byte)

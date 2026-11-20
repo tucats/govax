@@ -462,6 +462,9 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	}
 
 	switch {
+	case firstKnown && lastKnown && first > last && a.f90:
+		return a.emptySubstring(e, x, lower)
+
 	case firstKnown && lastKnown:
 		if first < 1 || first > last || last > t.Size {
 			a.report("SUBRANGE", e.Pos, first, last, name, t.Size)
@@ -483,6 +486,18 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	}
 
 	return &Substring{exprBase{T: Type{Kind: Character, Size: 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
+}
+
+// emptySubstring is X(Lower:Upper) with constant bounds, Lower past Upper:
+// under /F90 a substring of length zero (the standard's 6.1.1), whatever the
+// bounds are, no character of X being in it. Its Upper is Lower less 1, so its
+// length is the constant 0, and its type's size 0, as any length not given by
+// the type is (finding 4 of docs/planning/PHASE-108 - Fortran 90 intrinsic
+// procedures.md).
+func (a *analyzer) emptySubstring(e *ast.Substring, x, lower Expr) Expr {
+	first, _ := constantInt(lower)
+
+	return &Substring{exprBase{T: Type{Kind: Character}, Pos: e.Pos, S: x.Shape()}, x, lower, IntConstAt(first-1, e.Pos)}
 }
 
 // passedSubstring is a substring of a passed-length dummy argument, whose
@@ -507,6 +522,9 @@ func (a *analyzer) passedSubstring(e *ast.Substring, x, lower, upper Expr) Expr 
 		a.report("SUBLOW", e.Pos, last)
 
 		return a.bad(e.Pos)
+
+	case firstKnown && lastKnown && first > last && a.f90:
+		return a.emptySubstring(e, x, lower)
 
 	case firstKnown && lastKnown && first > last:
 		a.report("SUBORDER", e.Pos, first, last)

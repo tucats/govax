@@ -93,4 +93,9 @@ var forMessages = map[uint32]Message{
 	// it (FOR number 304; docs/planning/PHASE-107 - Fortran 90 pointers.md,
 	// finding 6).
 	0x00188980: {Facility: "FOR", Ident: "BADDEALLOC", Text: "the pointer's target was not made by ALLOCATE, or is not the whole of it", FAOCount: 0},
+
+	// FTNRTL's FTN$REPEAT, REPEAT with an NCOPIES less than 0 or a value
+	// longer than 65,535 characters (FOR number 305; docs/planning/PHASE-108 -
+	// Fortran 90 intrinsic procedures.md, the author's answer 6).
+	0x00188988: {Facility: "FOR", Ident: "BADREPEAT", Text: "REPEAT count negative or result too long", FAOCount: 0},
 }

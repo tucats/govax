@@ -3,8 +3,10 @@ package sema
 import (
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -55,6 +57,20 @@ var constFuncs = map[string]constFunc{
 	"LLE":   {2, 2, "2 arguments", lexical(func(o int) bool { return o <= 0 })},
 	"LLT":   {2, 2, "2 arguments", lexical(func(o int) bool { return o < 0 })},
 	"CHAR":  {1, 1, "1 argument", constChar},
+
+	// Fortran 90's, in its initialization expressions (the standard's
+	// 7.1.6.1), whose names are intrinsic only under /F90 (apply). INDEX is
+	// VAX FORTRAN's too, but not in its constant expressions (section 4.11).
+	"ACHAR":    {1, 1, "1 argument", constChar},
+	"IACHAR":   {1, 1, "1 argument", constIchar},
+	"LEN_TRIM": {1, 1, "1 argument", textFunction(func(s string, pos diag.Position) *Const { return IntConstAt(lenTrim(s), pos) })},
+	"TRIM":     {1, 1, "1 argument", textFunction(func(s string, pos diag.Position) *Const { return charConst(s[:lenTrim(s)], pos) })},
+	"ADJUSTL":  {1, 1, "1 argument", textFunction(func(s string, pos diag.Position) *Const { return charConst(adjustLeft(s), pos) })},
+	"ADJUSTR":  {1, 1, "1 argument", textFunction(func(s string, pos diag.Position) *Const { return charConst(adjustRight(s), pos) })},
+	"REPEAT":   {2, 2, "2 arguments", constRepeat},
+	"SCAN":     {2, 3, "2 or 3 arguments", searching(scanText)},
+	"VERIFY":   {2, 3, "2 or 3 arguments", searching(verifyText)},
+	"INDEX":    {2, 3, "2 or 3 arguments", searching(indexText)},
 }
 
 // apply is a function reference in a constant expression: one of
@@ -585,4 +601,62 @@ func constChar(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	}
 
 	return charConst(string([]byte{byte(x.Int)}), e.Pos), nil
+}
+
+// textFunction is a function of one CHARACTER argument, its value f's of the
+// argument's text.
+func textFunction(f func(string, diag.Position) *Const) func(*evaluator, *ast.Apply, []*Const) (*Const, *constErr) {
+	return func(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+		if args[0].T.Kind != Character {
+			return nil, ev.badArg(e, "CHARACTER", args[0])
+		}
+
+		return f(args[0].Text, e.Pos), nil
+	}
+}
+
+// searching is SCAN, VERIFY, or INDEX of constants: f's position, with BACK
+// (a LOGICAL) .FALSE. when it is left out.
+func searching(f func(s, set string, back bool) int) func(*evaluator, *ast.Apply, []*Const) (*Const, *constErr) {
+	return func(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+		if e.Name == "INDEX" && !ev.a.f90 {
+			return nil, notConst("the intrinsic function INDEX can't be computed when compiling", e.Pos)
+		}
+
+		for _, x := range args[:2] {
+			if x.T.Kind != Character {
+				return nil, ev.badArg(e, "CHARACTER", x)
+			}
+		}
+
+		back := false
+		if len(args) == 3 {
+			if args[2].T.Kind != Logical {
+				return nil, ev.badArg(e, "LOGICAL", args[2])
+			}
+
+			back = args[2].Truth()
+		}
+
+		return IntConstAt(f(args[0].Text, args[1].Text, back), e.Pos), nil
+	}
+}
+
+// constRepeat is REPEAT(s, n): n copies of s, n an INTEGER of 0 or more, the
+// value no longer than 65535 characters.
+func constRepeat(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+	s, n := args[0], args[1]
+
+	switch {
+	case s.T.Kind != Character:
+		return nil, ev.badArg(e, "CHARACTER", s)
+	case n.T.Kind != Integer:
+		return nil, ev.badArg(e, "INTEGER", n)
+	case n.Int < 0:
+		return nil, ev.report("BADARG", n.Pos, e.Name, "an NCOPIES of 0 or more", strconv.Itoa(int(n.Int)))
+	case int64(len(s.Text))*int64(n.Int) > maxCharLength:
+		return nil, ev.report("BADARG", e.Pos, e.Name, "a value of 65535 characters or fewer", "a longer one")
+	}
+
+	return charConst(strings.Repeat(s.Text, int(n.Int)), e.Pos), nil
 }

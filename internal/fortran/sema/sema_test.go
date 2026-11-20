@@ -362,7 +362,7 @@ func TestErrors(t *testing.T) {
 		{"LEN= and KIND= the other way round", []string{"CHARACTER(KIND=1, LEN=3) C", "C = 'ABC'", "END"}, ""},
 		{"a kind unnamed after LEN=", []string{"CHARACTER(LEN=3, 1) C", "END"}, "SYNTAX@1:24"},
 		{"a CHARACTER length that isn't constant", []string{"SUBROUTINE S(N)", "CHARACTER(LEN=N) C", "END"}, ""},
-		{"a CHARACTER length of zero", []string{"CHARACTER(0) C", "END"}, "NOTIMPL@1:17"},
+		{"a CHARACTER length of zero", []string{"CHARACTER(0) C", "END"}, ""},
 		{"a CHARACTER length too long", []string{"CHARACTER(LEN=70000) C", "END"}, "BADCHARLEN@1:21"},
 		{"a kind named by a PARAMETER", []string{"PARAMETER (K = 2)", "I = 7_K", "END"}, ""},
 		{"a kind naming no constant", []string{"X = 1.0_K", "END"}, "KINDNAME@1:11"},

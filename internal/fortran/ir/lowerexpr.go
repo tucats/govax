@@ -229,7 +229,7 @@ func (l *lowerer) chars(e sema.Expr) Text {
 		return l.stmtFuncText(e)
 
 	case *sema.IntrinsicRef:
-		// CHAR(I), the one intrinsic function with a CHARACTER value.
+		// CHAR(I), MERGE, and Fortran 90's TRIM, ADJUSTL, ADJUSTR, and REPEAT.
 		return l.char(e)
 
 	case *sema.Substring:
@@ -242,7 +242,13 @@ func (l *lowerer) chars(e sema.Expr) Text {
 		}
 
 		first, last := lower, upper
-		if l.unit.Checks.Bounds {
+
+		switch {
+		case !l.unit.Checks.Bounds:
+		case l.unit.F90:
+			first, last = l.checkedF90Substring(lower, upper, t.Len)
+			lower = first
+		default:
 			first, last = checkedSubstring(lower, upper, t.Len, e.Upper != nil)
 		}
 
@@ -251,7 +257,23 @@ func (l *lowerer) chars(e sema.Expr) Text {
 		m.Offset += int(k) - 1
 		m.Index = arith(Add, Long, m.Index, v)
 
-		return Text{&m, arith(Sub, Long, arith(Add, Long, last, LongConst(1)), lower)}
+		n := arith(Sub, Long, arith(Add, Long, last, LongConst(1)), lower)
+
+		// Fortran 90's substring past its upper bound is empty (6.1.1), not
+		// of a negative length: S(I:J) with J less than I-1, or S(I:I-3),
+		// whose length folds.
+		switch c, ok := n.(*Const); {
+		case !l.unit.F90:
+		case ok && c.Int() < 0:
+			n = LongConst(0)
+		case !ok:
+			v := l.temp(Long)
+			l.emit(&Assign{origin: l.origin(), Dst: v, Src: n})
+			l.choose(&Cmp{Lt, &Load{v}, LongConst(0)}, v, LongConst(0))
+			n = &Load{v}
+		}
+
+		return Text{&m, n}
 	}
 
 	panic("ir: a CHARACTER value semantic analysis left that lowering can't lower")

@@ -164,6 +164,14 @@
    time.  Under /NOF90 the new names are a program's own unless named
    INTRINSIC.
 
+   The character functions LEN_TRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT,
+   SCAN, and VERIFY are there, and INDEX, SCAN, and VERIFY take BACK=
+   to search from the end; of constants they are computed when
+   compiling, so they may give a PARAMETER its value.  TRIM's value
+   is its argument's own text, of a length known when the program
+   runs.  A CHARACTER length of zero (LEN=0) is a string with no
+   characters, and a substring S(I:J) with J below I is empty.
+
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and
    CASE too); a named construct must be named at its end, and its name

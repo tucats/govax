@@ -103,6 +103,40 @@ func checkedSubstring(first, last, length Expr, hasLast bool) (place, end Expr) 
 	return inRange(first, one, last), inRange(last, one, length)
 }
 
+// checkedF90Substring is checkedSubstring under /F90, where a substring whose
+// upper bound is less than its lower is empty, whatever the bounds are (the
+// standard's 6.1.1): the bounds are checked only when it isn't. Bounds known
+// when compiling are checked then, or not at all; others are kept in
+// temporaries, checked in a block of their own that an empty substring jumps
+// past. The bounds returned are the values to use, unchecked.
+func (l *lowerer) checkedF90Substring(first, last, length Expr) (Expr, Expr) {
+	cf, okf := first.(*Const)
+	cl, okl := last.(*Const)
+
+	switch {
+	case okf && okl && cl.Int() < cf.Int():
+		return first, last
+	case okf && okl:
+		return checkedSubstring(first, last, length, true)
+	}
+
+	f, t := l.temp(Long), l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: f, Src: first})
+	l.emit(&Assign{origin: l.origin(), Dst: t, Src: last})
+
+	check, next := l.newBlock(), l.newBlock()
+	l.divert(&Cmp{Lt, &Load{t}, &Load{f}}, next, check)
+	l.begin(check)
+
+	// INDEX's traps, their values not wanted.
+	scratch := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: scratch, Src: &InRange{&Load{f}, LongConst(1), &Load{t}}})
+	l.emit(&Assign{origin: l.origin(), Dst: scratch, Src: inRange(&Load{t}, LongConst(1), length)})
+	l.begin(next)
+
+	return &Load{f}, &Load{t}
+}
+
 // checkArrayBounds writes what an entry point does for the adjustable array s, whose
 // descriptor c its bounds are now in: an upper bound below its lower is FOR$_ADJARRDIM
 // at once, by FTNRTL (Decision 5, ours, the manuals not giving the rule). An assumed

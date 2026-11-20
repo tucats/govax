@@ -349,7 +349,8 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    transformational ranks, SELECTED_*_KIND of values (findings 1, 2, 5's last part,
    8's last part) (done 2026-11-19).
 3. **Character functions** and zero lengths (findings 3, 4), FTNRTL's entries,
-   GSMATCH 1,27 (subtask 2's FTN$BMVBITS took 1,26), condition 305.
+   GSMATCH 1,27 (subtask 2's FTN$BMVBITS took 1,26), condition 305 (done
+   2026-11-19).
 4. **Numeric functions and COMPLEX(16)** (findings 5, 6).
 5. **The model functions** in F, D, G, and H (finding 7).
 6. **TRANSFER** (finding 8).
@@ -477,3 +478,43 @@ The author read the survey and accepted every recommendation:
   for an INTEGER(1) TO, at vector offset 736, GSMATCH 1,26. `testdata/fortran90/
   keywords.f90` runs it all in every mode, and gfortran prints the same
   (`compare.py`); `sema`'s `intrinsics108_test.go` holds the dumps and messages.
+- **2026-11-19:** Subtask 3, the character functions and zero lengths. `sema/charfuncs.go`'s
+  `characterFunction` takes LEN_TRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT, SCAN, VERIFY, and INDEX with
+  a BACK (the table's rows `LENTRIM` to `VERIFY`, no longer LATER; subtask 2's `indexBack` is gone)
+  and picks each reference's form: of constants folded (`lenTrim`, `adjustLeft`, `scanText`,
+  ...; the same code is the evaluator's, `constfuncs.go`'s new rows, so a PARAMETER or an initial
+  value may use them, with ACHAR and IACHAR; INDEX there only under `/F90`, section 4.11 not having
+  it); LEN_TRIM, TRIM, and SCAN and VERIFY of one constant character with a constant BACK in line
+  (new ops `LenTrimOp`, `TrimOp`, `ScanOp`, `VerifyOp`; SCAN forward of one character is INDEX's
+  MATCHC); the rest FTNRTL's (`AdjustLOp`, `AdjustROp`, `RepeatOp` with their routine, and a
+  `CallOp` of `FTN$SCAN`, `FTN$VERIFY`, or `FTN$INDEX_BACK`). BACK goes **by reference**, a
+  default LOGICAL, `.FALSE.` when left out, where finding 3 said by value: `callIntrinsic`'s
+  arguments are all by reference, and FTNRTL's `BLBS @12(AP)` costs nothing; and
+  `FTN$INDEX_BACK` takes BACK too, searching forward (by `FTN$INDEX`) when it is false, so a
+  BACK not constant needs no branch in line. An array BACK is NOTIMPL, named. `ir/lowercharfuncs.go`:
+  `search` is one loop for LEN_TRIM, SCAN, and VERIFY in either direction, the string's address
+  and length in temporaries; TRIM is its argument's text with LEN_TRIM's length, no storage;
+  `madeByRoutine` gives ADJUSTL and ADJUSTR a `$Tn` of the string's length (a dynamic string when
+  that isn't known) and REPEAT a `$Tn` when its length is known, otherwise an empty class D
+  descriptor that FTN$REPEAT gives storage (LIB$SGET1_DD) once it has checked the count, freed
+  at the statement's end. FTNRTL's six routines are in `ftn_intrinsics.mar` (ADJUSTL by SKPC and
+  MOVC5, ADJUSTR by a backward count, SCAN and VERIFY by a 256-byte table on the stack and SCANC or
+  SPANC forward, a loop backward, INDEX_BACK by CMPC3 from the last place), at vector offsets 744
+  to 784, GSMATCH 1,27; `%FOR-F-BADREPEAT`, FOR number 305, is in `vmsdef/formessages.go`.
+  Zero lengths (finding 4): under `/F90` a constant length below 1 (`LEN=0`, `*0`, which the parser
+  now keeps as `*(0)` since `Len.Length` 0 means none, `*(-4)`) is a `LengthExpr` with the constant
+  0 as its `LengthValue`, `Symbol.ZeroLength`, no storage and nothing computed at entry
+  (`runtimeLength`, `prepareLength`, `charLength`, `lengthWord`); a PARAMETER of length zero
+  takes none of its value. `/NOF90` keeps BADCHARLEN (and `*0`, which used to be read as no
+  length, is now BADCHARLEN there too). A component, or a function's value, of length zero
+  is NOTIMPL, named ("a CHARACTER length of zero here"): a field's size of 0 means something
+  else to the structure code. A substring with constant bounds, the lower past the upper, is
+  empty under `/F90` (`emptySubstring`, its upper made the lower less 1; SUBRANGE and SUBORDER
+  under `/NOF90`), and under `/F90` a run-time substring's length below 0 is made 0, and
+  `/CHECK=BOUNDS` checks its bounds only when it isn't empty (`checkedF90Substring`, a block the
+  empty substring jumps past). `testdata/fortran90/charfns.f90` runs it all in every mode, and
+  gfortran prints the same (`compare.py`); `sema`'s `TestPhase108Characters` and
+  `TestPhase108ZeroLengths` hold the forms, the folding, and the messages. MANUAL.md's 14.13
+  (and two sentences subtask 2 left stale: SELECTED\_ of values, keywords to every function) and
+  its FTNRTL table, and HELP FORTRAN, have them. The MACRO test of FTNRTL's entries (finding 12's
+  `TestFTNRTLIntrinsics`) waits for subtask 8, the corpus calling each routine meanwhile.

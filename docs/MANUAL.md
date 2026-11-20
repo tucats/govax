@@ -7257,6 +7257,10 @@ It has these routines, which MACRO programs can call too:
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |
+| `FTN$ADJUSTL(r, s)`, `FTN$ADJUSTR(r, s)` | Fortran 90's ADJUSTL and ADJUSTR: `s` with its leading blanks moved to its end, or its trailing blanks to its start, into the string `r` describes, both by descriptor |
+| `FTN$REPEAT(r, s, n)` | REPEAT: `n` (an INTEGER\*4 by reference) copies of `s` into `r`, an empty dynamic string (class D) given its storage here, or a string of the value's length; BADREPEAT (FOR number 305) for an `n` below 0 or a value past 65,535 characters |
+| `FTN$SCAN(s, set, back)`, `FTN$VERIFY(s, set, back)` | SCAN and VERIFY: the position in `s` of the first (with `back` true, the last) character in `set`, or not in it, or 0, in R0; `back` a LOGICAL by reference |
+| `FTN$INDEX_BACK(s, t, back)` | INDEX with BACK: where `t` last starts in `s` (with `back` false, first), or 0 |
 | `FTN$CHAR(result, i)` | CHAR: the character whose code is `i`'s low byte, into the string `result`'s descriptor describes |
 | `FTN$LLT(s, t)`, `FTN$LLE`, `FTN$LGT`, `FTN$LGE` | The lexical comparisons, the shorter string padded with blanks: -1 (.TRUE.) or 0 in R0 |
 | `FTN$BITEST(i, pos)`, `FTN$BJTEST(i, pos)` | BTEST of an INTEGER\*2 or \*4: -1 or 0 in R0 |
@@ -8457,9 +8461,13 @@ with a `D` or `Q` exponent has its type already, and can't have a kind (`KINDEXP
 kind the type doesn't have is `NOSUCHKIND` (`REAL(3)`), and `DOUBLE PRECISION` and the other
 types that name one length take none (`NOKIND`). DEC's lengths go on working beside kinds,
 and a length after an entity's name replaces the statement's kind or length (`REAL(8) ::
-X*4`). A `CHARACTER` length of zero is not there yet; a length that isn't constant
-(`CHARACTER(LEN=N)` with `N` a dummy argument) is described below, under "Automatic
-arrays".
+X*4`). A `CHARACTER` length of zero (`CHARACTER(LEN=0)`, `CHARACTER*0`, or any length
+less than 1) is a string with no characters and no storage: assigning to it does nothing,
+and it prints, joins, and compares as `''`. A `PARAMETER` of length zero takes none of its
+value; a derived type's component of length zero, and a function's value, are not there yet.
+Under `/NOF90` such a length is still `BADCHARLEN`, as in VAX FORTRAN. A length that isn't
+constant (`CHARACTER(LEN=N)` with `N` a dummy argument) is described below, under
+"Automatic arrays".
 
 **INTEGER(1).** `INTEGER(1)`, which may also be written `INTEGER*1`, is a signed byte. An
 operation on two of them is done in a byte (`ADDB3`, `MULB3`, `CMPB`, ...); beside a wider
@@ -8511,7 +8519,7 @@ constant without a kind is of the default kind, so `KIND(0)` is 2 under `/NOI4`.
 range is F's, so without `/G_FLOATING` a request for more than 38 digits of range is kind 16,
 H: the common `SELECTED_REAL_KIND(15, 307)`, meaning "double precision" on an IEEE machine,
 is `REAL(16)` here, correct but slower; compile such a program `/G_FLOATING`, where it is
-`REAL(8)`. A `SELECTED_` function of a value that isn't constant is not there yet.
+`REAL(8)`.
 
 `INT`, `NINT`, `REAL`, `CMPLX`, `AINT`, `ANINT`, and the new `LOGICAL` take a `KIND`, the
 kind of their result: `INT(X, KIND=2)`, `REAL(N, 8)`, `CMPLX(X, Y, KIND=8)`, `LOGICAL(L, 1)`.
@@ -8519,9 +8527,29 @@ These functions, and the kind and inquiry functions, take their arguments by key
 by the standard's names: `SELECTED_REAL_KIND(R=40)`, `INT(A=X, KIND=1)`. An argument
 without a keyword can't follow one with (`KEYWORDORDER`); an unknown keyword is
 `KEYWORDNAME`, one given twice `KEYWORDTWICE`, and a required argument left out
-`MISSINGARG`. Keyword arguments to the other intrinsic functions are not there yet; a
-program's own procedures take them through an explicit interface. Under `/NOF90` these new names are a program's own functions,
+`MISSINGARG`. Every other intrinsic function takes keywords too, by the standard's names
+(`IAND(I=5, J=3)`, `INDEX(STRING=S, SUBSTRING='A')`); a program's own procedures take them
+through an explicit interface. Under `/NOF90` these new names are a program's own functions,
 as in VAX FORTRAN, unless an `INTRINSIC` statement names them.
+
+**The character functions** (the standard's 13.13). `LEN_TRIM(S)` is `S`'s length less its
+trailing blanks, and `TRIM(S)` is `S` without them, a value of a length known only when the
+program runs: it may be assigned, joined, printed, compared, or passed to a
+`CHARACTER*(*)` dummy. `ADJUSTL(S)` and `ADJUSTR(S)` move `S`'s leading blanks to its end,
+or its trailing blanks to its start, and `REPEAT(S, N)` is `N` copies of `S` one after
+another (an `N` below 0, or a value past 65,535 characters, is `%FOR-F-BADREPEAT`).
+`SCAN(S, SET)` is where in `S` a character of `SET` first is, `VERIFY(S, SET)` where a
+character not in it first is, and `INDEX(S, T)` where `T` first starts; each takes `BACK=`
+to look from the end instead, and gives 0 for none. Of constants they are computed when
+compiling, so they may give a `PARAMETER` its value; `LEN_TRIM`, `TRIM`, and `SCAN` and
+`VERIFY` of one constant character are a few instructions in line, and the rest call
+FTNRTL. All but `TRIM` and `REPEAT` work on arrays an element at a time. `ACHAR` and
+`IACHAR` are `CHAR` and `ICHAR`, the VAX's characters being ASCII.
+
+A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
+its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;
+under `/NOF90` such a substring is an error when its bounds are constants, as in VAX
+FORTRAN.
 
 **Writing for any processor.** A program that names its kinds by what it needs rather than
 by a size prints the same on govax and on an IEEE machine. Give each unit its kinds as

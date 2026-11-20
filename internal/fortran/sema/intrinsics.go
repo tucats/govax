@@ -51,12 +51,17 @@ import (
 //	         FORTRAN plan.md makes one process
 //	SIZEOF   the constant size of the argument
 //
-// Fortran 90's functions (fortran90Table, below) add three more:
+// Fortran 90's functions (fortran90Table, below) add more:
 //
 //	INQ      an inquiry about the argument's type, answered when compiling
 //	         (inquiry.go): KIND, HUGE, DIGITS, and the rest of the numeric
 //	         model's
 //	SIK, SRK SELECTED_INT_KIND and SELECTED_REAL_KIND, of constants
+//	LENTRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT, SCAN, VERIFY
+//	         the character functions (charfuncs.go): folded when their
+//	         arguments are constants, else LEN_TRIM, TRIM, and SCAN and VERIFY
+//	         of a one-character constant SET written in line, and the others
+//	         calls of FTNRTL's routines
 //
 // The last two columns are the function's class, E elemental, I inquiry, or T
 // transformational (Fortran 90's 13.2), and its dummy arguments' names
@@ -415,13 +420,13 @@ UBOUND             -  1,2 *   I4  ARRAY I ARRAY[],DIM?
 ACHAR              -  1   I2  CH1 CHAR E I
 ACHAR              -  1   I4  CH1 CHAR E I
 IACHAR             -  1   CH  I4  ICHAR E C
-ADJUSTL            -  1   CH  *   LATER E STRING
-ADJUSTR            -  1   CH  *   LATER E STRING
-LEN_TRIM           -  1   CH  *   LATER E STRING
-SCAN               -  2,3 CH  *   LATER E STRING,SET,BACK?
-VERIFY             -  2,3 CH  *   LATER E STRING,SET,BACK?
-TRIM               -  1   CH  *   LATER T STRING
-REPEAT             -  2   CH  *   LATER T STRING,NCOPIES
+ADJUSTL            -  1   CH  CH  ADJUSTL E STRING
+ADJUSTR            -  1   CH  CH  ADJUSTR E STRING
+LEN_TRIM           -  1   CH  I4  LENTRIM E STRING
+SCAN               -  2,3 CH  I4  SCAN E STRING,SET,BACK?
+VERIFY             -  2,3 CH  I4  VERIFY E STRING,SET,BACK?
+TRIM               -  1   CH  CH  TRIM T STRING
+REPEAT             -  2   CH  CH  REPEAT T STRING,NCOPIES
 
 CEILING            -  1   *   *   LATER E A
 FLOOR              -  1   *   *   LATER E A

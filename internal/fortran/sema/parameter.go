@@ -118,7 +118,12 @@ func (a *analyzer) defineParameter(sym *Symbol, s *ast.ParameterStmt, d *ast.Par
 		return
 	}
 
-	if t.Kind == Character && t.Size == 0 {
+	switch {
+	case sym.ZeroLength():
+		// CHARACTER(LEN=0): none of the value's characters.
+		c = charConst("", c.Pos)
+
+	case t.Kind == Character && t.Size == 0:
 		// CHARACTER*(*): the value's length (section 4.4.2's STRING).
 		sym.Type = c.T
 	}
@@ -192,10 +197,14 @@ func (a *analyzer) defineArrayParameter(sym *Symbol, d *ast.ParamDef) {
 			return
 		}
 
+		if sym.ZeroLength() {
+			cv = charConst("", cv.Pos)
+		}
+
 		values[i] = cv
 	}
 
-	if t.Kind == Character && t.Size == 0 && n > 0 {
+	if t.Kind == Character && t.Size == 0 && n > 0 && !sym.ZeroLength() {
 		t = values[0].T
 		sym.Type = t
 	}

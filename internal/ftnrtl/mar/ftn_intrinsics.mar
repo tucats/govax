@@ -23,6 +23,8 @@
 ; The MACRO and VAX conventions these lines rely on are explained once,
 ; in FTN_VECTOR.MAR's "Reading these sources".
 ;
+	$DSCDEF				; descriptors' fields
+
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
 ;
@@ -365,5 +367,198 @@ BIT_TEST:
 	DIVH3	(SP),16(SP),(R8)	; the real part
 	DIVH3	(SP),R0,16(R8)		; the imaginary part
 	RET				; (RET puts SP back)
+
+;
+; Fortran 90's character functions (docs/planning/PHASE-108 - Fortran 90
+; intrinsic procedures.md, finding 3): those the compiler doesn't write in
+; line. ADJUSTL, ADJUSTR, and REPEAT make a CHARACTER value, into the place
+; the first argument's descriptor describes: a temporary of the caller's of
+; the value's length, or, for a REPEAT whose length the compiler didn't
+; know, an empty dynamic string (class D) that FTN$REPEAT gives storage
+; to. SCAN, VERIFY, and INDEX searching back return a position, counted from
+; 1, or 0 for none. BACK is a LOGICAL by reference, its low bit the truth.
+;
+FOR$_BADREPEAT	= ^X18898C		; FOR number 305, severity F
+
+;
+; CALL FTN$ADJUSTL(result, string)
+;
+; ADJUSTL: STRING with its leading blanks moved to its end. SKPC passes
+; over the blanks, leaving in R0 the bytes after them and in R1 their
+; address; MOVC5 moves those to RESULT and fills the rest with blanks.
+;
+	.ENTRY	FTN$ADJUSTL,^M<R2,R3,R4,R5>
+	MOVL	8(AP),R2		; STRING's descriptor
+	SKPC	#^A/ /,(R2),@4(R2)	; past the leading blanks
+	MOVL	4(AP),R2		; RESULT's descriptor
+	MOVC5	R0,(R1),#^A/ /,(R2),@4(R2)
+	RET
+
+;
+; CALL FTN$ADJUSTR(result, string)
+;
+; ADJUSTR: STRING with its trailing blanks moved to its start. TRAILING
+; counts the characters before the trailing blanks; RESULT is blanks as
+; many as there were, then those characters.
+;
+	.ENTRY	FTN$ADJUSTR,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R6		; STRING's descriptor
+	MOVZWL	(R6),R0
+	MOVL	4(R6),R1
+	BSBB	TRAILING		; R0: the characters to keep
+	MOVL	R0,R6			;  kept a while
+	MOVL	4(AP),R2		; RESULT's descriptor
+	MOVZWL	(R2),R4
+	SUBL2	R6,R4			; the blanks
+	MOVC5	#0,(R2),#^A/ /,R4,@4(R2) ; the blanks; R3 -> the byte after them
+	MOVL	R3,R4
+	MOVL	8(AP),R2
+	MOVC3	R6,@4(R2),(R4)		; the characters
+	RET
+
+;
+; TRAILING is LEN_TRIM: the length R0 of the text at R1 less its trailing
+; blanks, in R0, from the end back.
+;
+TRAILING:
+10$:	TSTL	R0			; nothing left?
+	BEQL	20$
+	CMPB	-1(R1)[R0],#^A/ /	; the last character a blank?
+	BNEQ	20$
+	DECL	R0
+	BRB	10$
+20$:	RSB
+
+;
+; CALL FTN$REPEAT(result, string, ncopies)
+;
+; REPEAT: NCOPIES (an INTEGER*4) copies of STRING, one after another. An
+; NCOPIES less than 0, or a value longer than a descriptor's word can say,
+; 65,535 characters, is govax's BADREPEAT (FOR number 305). A dynamic
+; RESULT is given its storage, by LIB$SGET1_DD, once the length is known;
+; any other is as long as the value.
+;
+	.ENTRY	FTN$REPEAT,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	@12(AP),R7		; NCOPIES
+	BLSS	BAD_REPEAT
+	MOVL	8(AP),R2		; STRING's descriptor
+	MOVZWL	(R2),R8			; its length
+	EMUL	R7,R8,#0,R4		; the value's length, in R4:R5
+	TSTL	R5
+	BNEQ	BAD_REPEAT
+	CMPL	R4,#65535
+	BGTRU	BAD_REPEAT
+	MOVL	4(AP),R6		; RESULT's descriptor
+	CMPB	DSC$B_CLASS(R6),#DSC$K_CLASS_D
+	BNEQ	10$
+	PUSHL	R4			; a dynamic string: room for the value
+	PUSHL	R6
+	PUSHAW	4(SP)			;  (the length, a word, by reference)
+	CALLS	#2,G^LIB$SGET1_DD
+	ADDL2	#4,SP
+	BLBS	R0,10$
+	PUSHL	R0			; no room
+	CALLS	#1,G^LIB$STOP
+10$:	MOVL	DSC$A_POINTER(R6),R9	; where the next copy goes
+	MOVL	8(AP),R2
+	MOVL	DSC$A_POINTER(R2),R2	; STRING's text
+	MOVL	R2,R6
+20$:	TSTL	R7			; another copy?
+	BEQL	30$
+	MOVC3	R8,(R6),(R9)		; R3 -> the byte after it
+	MOVL	R3,R9
+	DECL	R7
+	BRB	20$
+30$:	RET
+BAD_REPEAT:
+	PUSHL	#FOR$_BADREPEAT
+	CALLS	#1,G^LIB$STOP
+	RET
+
+;
+; position = FTN$SCAN(string, set, back)
+; position = FTN$VERIFY(string, set, back)
+;
+; SCAN: where in STRING a character of SET first is, or with BACK last.
+; VERIFY: where a character not in SET first (or last) is. A table of 256
+; bytes on the stack, one per character, is 1 for SET's characters and 0
+; for the rest; SCANC finds the first byte whose entry is 1, SPANC the
+; first whose isn't, and from the back a loop looks at each in turn. The
+; two share SEARCH, told which by R9: 1 for SCAN, 0 for VERIFY.
+;
+	.ENTRY	FTN$SCAN,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	#1,R9
+	BRB	SEARCH
+
+	.ENTRY	FTN$VERIFY,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	CLRL	R9
+SEARCH:	SUBL2	#256,SP			; the table
+	MOVC5	#0,(SP),#0,#256,(SP)	; all 0
+	MOVL	8(AP),R2		; SET's descriptor
+	MOVZWL	(R2),R7
+	MOVL	DSC$A_POINTER(R2),R8
+10$:	TSTL	R7			; each of SET's characters
+	BEQL	20$
+	MOVZBL	(R8)+,R0
+	MOVB	#1,(SP)[R0]		;  is 1 in the table
+	DECL	R7
+	BRB	10$
+20$:	MOVL	4(AP),R2		; STRING's descriptor
+	MOVZWL	(R2),R6			; its length
+	MOVL	DSC$A_POINTER(R2),R7	; its text
+	BLBS	@12(AP),50$		; BACK?
+	TSTL	R9
+	BEQL	30$
+	SCANC	R6,(R7),(SP),#1		; SCAN: the first in SET
+	BRB	40$
+30$:	SPANC	R6,(R7),(SP),#1		; VERIFY: the first not in it
+40$:	TSTL	R0			; R0: the bytes from it on, 0 if none
+	BEQL	70$
+	SUBL3	R0,R6,R0		; the bytes before it,
+	INCL	R0			;  and 1, its position
+	RET				; (RET puts SP back)
+50$:	TSTL	R6			; from the back: position R6
+	BEQL	70$
+	MOVZBL	-1(R7)[R6],R0
+	MOVZBL	(SP)[R0],R0		; in SET?
+	CMPL	R0,R9			; SCAN wants 1, VERIFY 0
+	BEQL	60$
+	DECL	R6
+	BRB	50$
+60$:	MOVL	R6,R0
+	RET
+70$:	CLRL	R0			; none
+	RET
+
+;
+; position = FTN$INDEX_BACK(string, substring, back)
+;
+; INDEX with BACK (Fortran 90's 13.13.46): where SUBSTRING last starts in
+; STRING, or, if BACK is false, first (FTN$INDEX); 0 if nowhere. An empty
+; SUBSTRING is at LEN(STRING)+1. From the back, CMPC3 compares SUBSTRING
+; with each place it fits, the last first.
+;
+	.ENTRY	FTN$INDEX_BACK,^M<R2,R3,R6,R7,R8,R9>
+	BLBS	@12(AP),10$		; BACK?
+	MOVQ	4(AP),-(SP)		; no: FTN$INDEX(string, substring)
+	CALLS	#2,FTN$INDEX
+	RET
+10$:	MOVL	4(AP),R2		; STRING's descriptor
+	MOVZWL	(R2),R6
+	MOVL	DSC$A_POINTER(R2),R8
+	MOVL	8(AP),R2		; SUBSTRING's
+	MOVZWL	(R2),R7
+	MOVL	DSC$A_POINTER(R2),R9
+	SUBL2	R7,R6			; the last place it fits,
+	INCL	R6			;  counted from 1
+20$:	TSTL	R6			; none left?
+	BLEQ	30$
+	CMPC3	R7,-1(R8)[R6],(R9)
+	BEQL	40$
+	DECL	R6
+	BRB	20$
+30$:	CLRL	R6
+40$:	MOVL	R6,R0
+	RET
 
 	.END

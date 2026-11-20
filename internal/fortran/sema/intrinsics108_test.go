@@ -43,7 +43,8 @@ func TestPhase108Table(t *testing.T) {
 		{false, "ISHFT(I2, J)", "(call:INTEGER MTH$JISHFT (INTEGER I2) J)"},
 		{true, "ISHFT(B1, -2)", "(INTEGER*1 (shift:INTEGER*2 IISHFT (zext:INTEGER*2 ZEXT B1) -2))"},
 
-		{true, "ACHAR(66)", "(char:CHARACTER*1 ACHAR 66)"},
+		{true, "ACHAR(66)", "'B'"},
+		{true, "ACHAR(I)", "(char:CHARACTER*1 ACHAR I)"},
 		{true, "IACHAR(T(2:2))", "(ichar:INTEGER IACHAR T(2:2))"},
 
 		// SELECTED_INT_KIND and SELECTED_REAL_KIND of values.
@@ -80,13 +81,149 @@ func TestPhase108Table(t *testing.T) {
 	}
 }
 
+// TestPhase108Characters checks subtask 3's character functions: each folded
+// of constants, LEN_TRIM, TRIM, and SCAN and VERIFY of one constant character
+// and a constant BACK in line, the rest FTNRTL's routines, on arrays too, and
+// their messages.
+func TestPhase108Characters(t *testing.T) {
+	cases := []struct{ text, want string }{
+		{"LEN_TRIM('AB  ')", "2"},
+		{"TRIM(' AB  ')", "' AB'"},
+		{"TRIM('   ')", "''"},
+		{"ADJUSTL('  AB')", "'AB  '"},
+		{"ADJUSTR('AB  ')", "'  AB'"},
+		{"REPEAT('AB', 3)", "'ABABAB'"},
+		{"REPEAT('AB', 0)", "''"},
+		{"SCAN('ALPHA', 'PH')", "3"},
+		{"SCAN('ALPHA', 'PH', BACK=.TRUE.)", "4"},
+		{"VERIFY('AABBC', 'AB')", "5"},
+		{"VERIFY('AABBC', 'BC', .TRUE.)", "2"},
+		{"INDEX('BANANA', 'AN', .TRUE.)", "4"},
+		{"INDEX('ABC', '', BACK=.TRUE.)", "4"},
+
+		{"LEN_TRIM(T)", "(len_trim:INTEGER LEN_TRIM T)"},
+		{"LEN_TRIM(STRING=S)", "(len_trim:INTEGER LEN_TRIM S)"},
+		{"TRIM(T)", "(trim:CHARACTER*(*) TRIM T)"},
+		{"ADJUSTL(T)", "(adjustl:CHARACTER*8 FTN$ADJUSTL T)"},
+		{"ADJUSTR(S)", "(adjustr:CHARACTER*(*) FTN$ADJUSTR S)"},
+		{"REPEAT(T, 2)", "(repeat:CHARACTER*16 FTN$REPEAT T 2)"},
+		{"REPEAT(T, I)", "(repeat:CHARACTER*(*) FTN$REPEAT T I)"},
+		{"REPEAT(S, 2)", "(repeat:CHARACTER*(*) FTN$REPEAT S 2)"},
+		{"SCAN(T, 'A')", "(index:INTEGER SCAN T 'A')"},
+		{"SCAN(T, 'A', .TRUE.)", "(scan:INTEGER SCAN T 'A' .TRUE.)"},
+		{"VERIFY(T, ' ')", "(verify:INTEGER VERIFY T ' ' .FALSE.)"},
+		{"SCAN(T, 'AB')", "(call:INTEGER FTN$SCAN T 'AB' .FALSE.)"},
+		{"VERIFY(T, ' ', L)", "(call:INTEGER FTN$VERIFY T ' ' L)"},
+		{"VERIFY(T, S, BACK=L2)", "(call:INTEGER FTN$VERIFY T S (LOGICAL L2))"},
+		{"INDEX(T, 'A', .TRUE.)", "(call:INTEGER FTN$INDEX_BACK T 'A' .TRUE.)"},
+		{"INDEX(T, S, L)", "(call:INTEGER FTN$INDEX_BACK T S L)"},
+		{"LEN_TRIM(A)", "(len_trim:INTEGER LEN_TRIM A[])"},
+		{"ADJUSTR(A)", "(adjustr:CHARACTER*8 FTN$ADJUSTR A[])"},
+		{"T(5:4)", "T(5:4)"},
+	}
+
+	unit := []string{
+		"      SUBROUTINE E(S)",
+		"      INTEGER I",
+		"      LOGICAL L",
+		"      LOGICAL*2 L2",
+		"      CHARACTER*8 T, A(3)",
+		"      CHARACTER*(*) S",
+	}
+
+	for _, c := range cases {
+		lines := append(append([]string{}, unit...), "      PRINT *, "+c.text, "      END")
+		prog, ms := analyzeOpts(t, Options{F90: true}, lines...)
+
+		if len(ms) != 0 {
+			t.Errorf("%s: %v", c.text, ms)
+
+			continue
+		}
+
+		p := prog.Units[0].Body[0].(*IO)
+		if got := DumpExpr(p.Items[0].Value); got != c.want {
+			t.Errorf("%s:\n got %s\nwant %s", c.text, got, c.want)
+		}
+	}
+
+	bad := map[string]string{
+		"TRIM(A)":           "BADARG",
+		"REPEAT(A, 2)":      "BADARG",
+		"REPEAT(T, -1)":     "BADARG",
+		"REPEAT(T, 9000)":   "BADARG",
+		"REPEAT(T, X)":      "BADARG",
+		"LEN_TRIM(I)":       "BADARG",
+		"SCAN(T, 1)":        "BADARG",
+		"SCAN(T, 'A', 1)":   "BADARG",
+		"INDEX(T, 'A', LA)": "NOTIMPL",
+	}
+
+	for text, want := range bad {
+		lines := append(append([]string{}, unit...), "      REAL X", "      LOGICAL LA(3)", "      PRINT *, "+text, "      END")
+		if _, ms := analyzeOpts(t, Options{F90: true}, lines...); len(ms) == 0 || ms[0].Ident != want {
+			t.Errorf("%s: %v, want %s", text, ms, want)
+		}
+	}
+
+	// Of constants in a PARAMETER, under /F90; INDEX, VAX FORTRAN's own, not
+	// under /NOF90 (section 4.11).
+	prog, ms := analyzeOpts(t, Options{F90: true}, fixed(
+		"CHARACTER*(*) P, Q", "INTEGER N", "PARAMETER (P = TRIM(ADJUSTR('AB  ')), Q = REPEAT('-', 3))",
+		"PARAMETER (N = INDEX('ABAB', 'B', .TRUE.) + LEN_TRIM(P))", "END")...)
+	if len(ms) != 0 {
+		t.Fatalf("PARAMETER: %v", ms)
+	}
+
+	for name, want := range map[string]string{"P": "'  AB'", "Q": "'---'", "N": "8"} {
+		if got := DumpExpr(prog.Units[0].Lookup(name).Value); got != want {
+			t.Errorf("%s = %s, want %s", name, got, want)
+		}
+	}
+
+	if _, ms := analyzeOpts(t, Options{}, fixed("PARAMETER (N = INDEX('AB', 'B'))", "END")...); len(ms) != 1 || ms[0].Ident != "NOTCONST" {
+		t.Errorf("/NOF90 INDEX in a PARAMETER: %v", ms)
+	}
+}
+
+// TestPhase108ZeroLengths checks finding 4's lengths of zero: declared under
+// /F90 (BADCHARLEN under /NOF90), a PARAMETER's value cut to none, and a
+// substring past its upper bound (SUBRANGE and SUBORDER under /NOF90).
+func TestPhase108ZeroLengths(t *testing.T) {
+	for _, c := range []struct {
+		f90        bool
+		lines      []string
+		want, dump string
+	}{
+		{true, []string{"CHARACTER(LEN=0) Z", "PRINT *, Z"}, "", "Z"},
+		{true, []string{"CHARACTER*0 Z", "PRINT *, Z"}, "", "Z"},
+		{true, []string{"CHARACTER*(-4) Z", "PRINT *, Z"}, "", "Z"},
+		{false, []string{"CHARACTER*0 Z", "PRINT *, Z"}, "BADCHARLEN", ""},
+		{true, []string{"CHARACTER(LEN=0), PARAMETER :: Z = 'ABC'", "PRINT *, Z"}, "", "''"},
+		{true, []string{"CHARACTER*8 S", "PRINT *, S(5:4)"}, "", "S(5:4)"},
+		{true, []string{"CHARACTER*8 S", "PRINT *, S(20:3)"}, "", "S(20:19)"},
+		{false, []string{"CHARACTER*8 S", "PRINT *, S(5:4)"}, "SUBRANGE", ""},
+		{true, []string{"CHARACTER(LEN=0) FUNCTION F()", "F = ''"}, "NOTIMPL", ""},
+	} {
+		_, ms := analyzeOpts(t, Options{F90: c.f90}, fixed(append(c.lines, "END")...)...)
+
+		got := ""
+		if len(ms) > 0 {
+			got = ms[0].Ident
+		}
+
+		if got != c.want {
+			t.Errorf("%v (/F90 %t): %v, want %s", c.lines, c.f90, ms, c.want)
+		}
+	}
+}
+
 // TestPhase108Names checks that Fortran 90's new names are intrinsic under
 // /F90, NOTIMPL until their subtask, and the program's own functions under
 // /NOF90; and that the intrinsic subroutines take keywords, and are NOTIMPL
 // but MVBITS.
 func TestPhase108Names(t *testing.T) {
-	later := []string{"ADJUSTL(T)", "ADJUSTR(T)", "LEN_TRIM(T)", "SCAN(T, 'A')", "VERIFY(T, ' ', .TRUE.)",
-		"TRIM(T)", "REPEAT(T, 2)", "CEILING(X)", "FLOOR(X)", "MODULO(X, Y)", "EXPONENT(X)", "FRACTION(X)",
+	later := []string{"CEILING(X)", "FLOOR(X)", "MODULO(X, Y)", "EXPONENT(X)", "FRACTION(X)",
 		"NEAREST(X, 1.0)", "RRSPACING(X)", "SCALE(X, 2)", "SET_EXPONENT(X, 2)", "SPACING(X)", "TRANSFER(X, 0)"}
 
 	for _, text := range later {

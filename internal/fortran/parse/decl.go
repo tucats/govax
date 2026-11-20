@@ -176,6 +176,12 @@ func (p *parser) lengthSpec(character bool) ast.Len {
 			p.syntax("a length")
 		}
 
+		if n == 0 && character {
+			// CHARACTER*0, which Length can't say (0 is none written):
+			// *(0), a length of zero under /F90, BADCHARLEN under /NOF90.
+			return ast.Len{LenExpr: &ast.IntConst{ExprBase: ast.ExprBase{Pos: p.pos(t)}, Text: t.Text}}
+		}
+
 		return ast.Len{Length: n}
 
 	case character && p.accept("("):

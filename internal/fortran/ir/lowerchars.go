@@ -79,6 +79,10 @@ func (l *lowerer) charLength(s *sema.Symbol) Expr {
 		return LongConst(int32(s.Type.Size))
 	}
 
+	if s.ZeroLength() {
+		return LongConst(0)
+	}
+
 	if s.LengthValue != nil {
 		return l.runtimeLength(s)
 	}

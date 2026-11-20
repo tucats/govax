@@ -32,7 +32,7 @@ import (
 // prepareLength makes the cell of s's CHARACTER length if s is a dummy argument
 // whose length isn't constant, and reports whether it did.
 func (l *lowerer) prepareLength(s *sema.Symbol) bool {
-	if s.LengthValue == nil || s.Dummy == 0 {
+	if s.LengthValue == nil || s.Dummy == 0 || s.ZeroLength() {
 		return false
 	}
 
@@ -90,6 +90,8 @@ func (l *lowerer) lengthWord(s *sema.Symbol) Expr {
 	switch {
 	case s.PassedLength():
 		return &Load{descriptorField(l.paramOf(s), 0, Word)}
+	case s.ZeroLength():
+		return IntConst(Word, 0)
 	case s.LengthValue != nil && l.lengthOf(s) == nil:
 		return &Load{&Mem{Cell: l.adjustableOf(s), T: Word}}
 	}

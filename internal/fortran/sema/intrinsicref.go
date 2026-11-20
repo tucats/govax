@@ -125,11 +125,9 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.merge(e, args, shape)
 	}
 
-	if forms[0].how == "INDEX" && len(args) == 3 {
-		// INDEX's BACK: .FALSE. is today's search; any other, subtask 3's.
-		if args = a.indexBack(e, args); args == nil {
-			return a.bad(e.Pos)
-		}
+	if characterFunctions[forms[0].how] || forms[0].how == "INDEX" && len(args) == 3 {
+		// Fortran 90's character functions, and INDEX with BACK (charfuncs.go).
+		return a.characterFunction(e, forms[0].how, args, shape)
 	}
 
 	// I's kind (finding 1, the author's answer 3): under /F90 the bit
@@ -589,26 +587,6 @@ func (a *analyzer) argumentType(e *ast.Apply, forms []form, args []Expr) (Type, 
 // of an INTEGER*2 are INTEGER*4 (Table D-3) and an INTEGER*2 I beside an
 // INTEGER*4 argument is shifted as a longword (D.5.2).
 var iKindFunctions = map[string]bool{"IBITS": true, "IBCLR": true, "IBSET": true, "ISHFT": true, "ISHFTC": true}
-
-// indexBack is INDEX(STRING, SUBSTRING, BACK)'s arguments with BACK, a LOGICAL
-// scalar, taken out: .FALSE. searches forward, as INDEX always has. Any other
-// BACK is subtask 3's (NOTIMPL); nil after a message.
-func (a *analyzer) indexBack(e *ast.Apply, args []Expr) []Expr {
-	back := args[2]
-
-	switch c, ok := back.(*Const); {
-	case back.Type().Kind != Logical || rankOf(back) > 0:
-		a.report("BADARG", back.Position(), e.Name, "a LOGICAL scalar BACK", back.Type().String())
-
-		return nil
-	case !ok || c.Truth():
-		a.notImplForm(back.Position(), "INDEX's BACK other than .FALSE.")
-
-		return nil
-	}
-
-	return args[:2]
-}
 
 // intrinsicArgs are the arguments converted to the types the row takes: to
 // its argument type, or for CMPLX to its result's parts' type, the two
