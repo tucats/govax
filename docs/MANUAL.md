@@ -7261,6 +7261,9 @@ It has these routines, which MACRO programs can call too:
 | `FTN$REPEAT(r, s, n)` | REPEAT: `n` (an INTEGER\*4 by reference) copies of `s` into `r`, an empty dynamic string (class D) given its storage here, or a string of the value's length; BADREPEAT (FOR number 305) for an `n` below 0 or a value past 65,535 characters |
 | `FTN$SCAN(s, set, back)`, `FTN$VERIFY(s, set, back)` | SCAN and VERIFY: the position in `s` of the first (with `back` true, the last) character in `set`, or not in it, or 0, in R0; `back` a LOGICAL by reference |
 | `FTN$INDEX_BACK(s, t, back)` | INDEX with BACK: where `t` last starts in `s` (with `back` false, first), or 0 |
+| `FTN$CHABS(r, z)` | ABS of a `COMPLEX(16)` `z` (by reference): its modulus, a REAL\*16 at `r` |
+| `FTN$CHSQRT(r, z)`, `FTN$CHEXP`, `FTN$CHLOG`, `FTN$CHSIN`, `FTN$CHCOS` | SQRT (the root whose real part isn't negative), EXP, LOG (the principal value), SIN, and COS of a `COMPLEX(16)` `z`, the value at `r`, which may be `z` |
+| `FTN$CHPOWJ(r, z, n)`, `FTN$CHPOW(r, z, y)` | `z ** n` for an INTEGER\*4 `n`, by squaring (MTH$_UNDEXP for (0, 0) to a power of 0 or less), and `z ** y` for a `COMPLEX(16)` `y`, `EXP(y * LOG(z))`, at `r` |
 | `FTN$CHAR(result, i)` | CHAR: the character whose code is `i`'s low byte, into the string `result`'s descriptor describes |
 | `FTN$LLT(s, t)`, `FTN$LLE`, `FTN$LGT`, `FTN$LGE` | The lexical comparisons, the shorter string padded with blanks: -1 (.TRUE.) or 0 in R0 |
 | `FTN$BITEST(i, pos)`, `FTN$BJTEST(i, pos)` | BTEST of an INTEGER\*2 or \*4: -1 or 0 in R0 |
@@ -8490,9 +8493,14 @@ does a `REAL(16)` beside a `COMPLEX(4)` or `COMPLEX(8)` in an operation, where t
 would give `COMPLEX(16)`: write `CMPLX(X, KIND=16)` for that. Of the intrinsic functions,
 `INT`, `REAL` (whose result is a `REAL(16)`, the real part, as the standard has it),
 `DBLE`, `QEXT`, `CMPLX` (with `KIND=16` to make one), `DCMPLX`, `AIMAG`, and `CONJG` take a
-`COMPLEX(16)`. Its I/O, its powers (`**`), and the other intrinsic functions of one (`ABS`,
-`SQRT`, `EXP`, ...) are not there yet (`%FORT-E-NOTIMPL`): print its parts, `REAL(Z)` and
-`AIMAG(Z)`.
+`COMPLEX(16)`, and so do `ABS`, `SQRT`, `EXP`, `LOG`, `SIN`, and `COS`, which call FTNRTL's
+`FTN$CHABS` to `FTN$CHCOS` (built on MTHRTL's H_floating routines, MTHRTL having no H
+complex routines). A power `Z**N` with `N` a constant from 1 to 8 is written in line, the
+products of `Z`'s squares; any other `INTEGER` power calls `FTN$CHPOWJ`, which multiplies
+the same way, so the two give the same value, and a power to a `COMPLEX` (or `REAL`) one
+calls `FTN$CHPOW`, `EXP(Y * LOG(Z))`. `MERGE` takes `COMPLEX(16)` values too. Its I/O and
+the other intrinsic functions of one are not there yet (`%FORT-E-NOTIMPL`): print its
+parts, `REAL(Z)` and `AIMAG(Z)`.
 
 **The kind and inquiry functions** (the standard's 13.7.1 and 13.13). `KIND(X)` is the kind
 of `X`'s type, and `SELECTED_INT_KIND(R)` and `SELECTED_REAL_KIND(P, R)` the kind of least
@@ -8545,6 +8553,17 @@ compiling, so they may give a `PARAMETER` its value; `LEN_TRIM`, `TRIM`, and `SC
 `VERIFY` of one constant character are a few instructions in line, and the rest call
 FTNRTL. All but `TRIM` and `REPEAT` work on arrays an element at a time. `ACHAR` and
 `IACHAR` are `CHAR` and `ICHAR`, the VAX's characters being ASCII.
+
+**The numeric functions** (the standard's 13.13). `CEILING(A)` and `FLOOR(A)` are the
+least integer not less than a `REAL` `A` and the greatest not greater, of the default
+`INTEGER` kind, written in line (a truncation, then 1 added or taken away when that moved
+the value the wrong way). `MODULO(A, P)` is `A - FLOOR(A/P)*P`, the remainder with `P`'s
+sign where `MOD`'s has `A`'s: `MODULO(-8, 5)` is 2 and `MOD(-8, 5)` -3. It is `MOD`'s
+remainder with `P` added when the signs differ, in line for `INTEGER`s, through MTHRTL's
+`MTH$AMOD` and its kind for `REAL`s; a `P` of 0 divides by zero as `MOD`'s does. Of
+constants all three are computed when compiling, in a `PARAMETER` too (of `REAL`
+arguments as well, as VAX FORTRAN allows `NINT` there, though the standard's
+initialization expressions take only `INTEGER` ones), and all three work on arrays.
 
 A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
 its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;

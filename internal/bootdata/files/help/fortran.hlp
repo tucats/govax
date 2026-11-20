@@ -143,9 +143,10 @@
    INTEGER(1), also written INTEGER*1, is a signed byte, its
    operations done in bytes; BYTE is still LOGICAL*1.  COMPLEX(16),
    also written COMPLEX*32, has two REAL(16) parts: its arithmetic,
-   comparisons, and conversions are compiled, and INT, REAL, DBLE,
-   QEXT, CMPLX, DCMPLX, AIMAG, and CONJG take one, but its I/O, its
-   powers, and the other intrinsic functions of one are not there yet.
+   comparisons, conversions, and powers are compiled, and INT, REAL,
+   DBLE, QEXT, CMPLX, DCMPLX, AIMAG, CONJG, ABS, SQRT, EXP, LOG, SIN,
+   COS, and MERGE take one, but its I/O and the other intrinsic
+   functions of one are not there yet.
    (1.0_16, 0.0) is a COMPLEX(16) constant.  IMPLICIT takes kinds too:
    IMPLICIT REAL(8) (A-H, O-Z).
 
@@ -171,6 +172,9 @@
    is its argument's own text, of a length known when the program
    runs.  A CHARACTER length of zero (LEN=0) is a string with no
    characters, and a substring S(I:J) with J below I is empty.
+
+   CEILING, FLOOR, and MODULO are there: MODULO(A, P) is the
+   remainder with P's sign, where MOD's has A's.
 
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and

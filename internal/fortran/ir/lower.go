@@ -726,7 +726,9 @@ func (l *lowerer) datum(key string, build func() *Datum) *Datum {
 // constant is a datum holding the constant c, for passing it by
 // reference.
 func (l *lowerer) constant(c *Const) *Mem {
-	key := fmt.Sprintf("K %s %x %x", c.T, c.High, c.Bits)
+	// A COMPLEX*32's imaginary part is the last two words: two constants
+	// with one real part are different constants.
+	key := fmt.Sprintf("K %s %x %x %x %x", c.T, c.ImHigh, c.ImBits, c.High, c.Bits)
 
 	d := l.datum(key, func() *Datum {
 		l.konsts++

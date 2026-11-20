@@ -59,6 +59,12 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 
 		return arith(Sub, t, x, arith(Mul, t, arith(Div, t, x, y), y))
 
+	case sema.CeilingOp, sema.FloorOp:
+		return l.wholeNumber(e, t)
+
+	case sema.ModuloOp:
+		return l.modulo(e, t)
+
 	case sema.NintOp:
 		// CVTRxL rounds to a longword; ININT's word is that, converted.
 		return convertTo(t, arith(Round, Long, l.expr(e.Args[0]), nil))
@@ -126,7 +132,7 @@ func (l *lowerer) callIntrinsic(e *sema.IntrinsicRef) *Mem {
 	list, backs := l.args(args)
 	call := &Call{origin: l.origin(), Routine: e.Routine, Args: list}
 
-	if t == HFloat || t == Octa {
+	if t == HFloat || t == Octa || t == Hexa {
 		call.Args = append([]Arg{{Ref: result}}, call.Args...)
 	} else {
 		call.Result = result
@@ -136,6 +142,101 @@ func (l *lowerer) callIntrinsic(e *sema.IntrinsicRef) *Mem {
 	copyBack(backs)
 
 	return result
+}
+
+// wholeNumber is CEILING(A) or FLOOR(A), of the INTEGER type t (Fortran
+// 90's 13.13.17 and 13.13.38): A truncated toward zero by CVTxL, into a
+// longword temporary, then 1 added (CEILING) if that is less than A, or taken
+// away (FLOOR) if it is greater, which only a value that wasn't whole can be.
+// Made a REAL again for the comparison, the truncation is exact: a value too
+// large to have a fraction was whole already, and a smaller one's whole part
+// fits the format.
+func (l *lowerer) wholeNumber(e *sema.IntrinsicRef, t Type) Expr {
+	x := l.reusable(l.expr(e.Args[0]))
+	v := l.temp(Long)
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: convertTo(Long, x)})
+
+	op, step := Gt, Add
+	if e.Op == sema.FloorOp {
+		op, step = Lt, Sub
+	}
+
+	l.choose(&Cmp{op, x, convertTo(x.Type(), &Load{v})}, v, arith(step, Long, &Load{v}, LongConst(1)))
+
+	return convertTo(t, &Load{v})
+}
+
+// modulo is MODULO(A, P) of type t (Fortran 90's 13.13.68): MOD's remainder,
+// whose sign is A's, made P's by adding P when the two differ and the
+// remainder isn't 0. An INTEGER remainder is MOD's code; a REAL one is
+// MTHRTL's AMOD or its kind (e.Routine), called with A and P by reference
+// from temporaries, so that P, used again, is computed once.
+func (l *lowerer) modulo(e *sema.IntrinsicRef, t Type) Expr {
+	v := l.temp(t)
+
+	var p Expr
+
+	if t.Floating() {
+		x, y := l.value(l.expr(e.Args[0])), l.value(l.expr(e.Args[1]))
+		call := &Call{origin: l.origin(), Routine: e.Routine, Args: []Arg{{Ref: x}, {Ref: y}}}
+
+		if t == HFloat {
+			call.Args = append([]Arg{{Ref: v}}, call.Args...)
+		} else {
+			call.Result = v
+		}
+
+		l.emit(call)
+
+		p = &Load{y}
+	} else {
+		x, y := l.reusable(l.expr(e.Args[0])), l.reusable(l.expr(e.Args[1]))
+		l.emit(&Assign{origin: l.origin(), Dst: v, Src: arith(Sub, t, x, arith(Mul, t, arith(Div, t, x, y), y))})
+
+		p = y
+	}
+
+	l.giveSign(t, v, p)
+
+	return &Load{v}
+}
+
+// giveSign adds p to the remainder in v if v isn't 0 and its sign isn't p's:
+//
+//	B1: branch lt(V, 0) B4 B2
+//	B2: branch gt(V, 0) B3 B6       (V positive: wrong if P is negative)
+//	B3: branch lt(P, 0) B5 B6
+//	B4: branch gt(P, 0) B5 B6       (V negative: wrong if P is positive)
+//	B5: assign V = V + P
+//	B6:
+//
+// A constant P decides which sign is wrong now: one comparison.
+func (l *lowerer) giveSign(t Type, v *Mem, p Expr) {
+	fix := arith(Add, t, &Load{v}, p)
+
+	if c, ok := p.(*Const); ok {
+		op := Lt
+		if t.Integer() && c.Int() < 0 || t.Floating() && c.Real().Sign() < 0 {
+			op = Gt
+		}
+
+		l.choose(&Cmp{op, &Load{v}, zero(t)}, v, fix)
+
+		return
+	}
+
+	nonNegative, positive, negative, flip, join := l.newBlock(), l.newBlock(), l.newBlock(), l.newBlock(), l.newBlock()
+
+	l.divert(&Cmp{Lt, &Load{v}, zero(t)}, negative, nonNegative)
+	l.begin(nonNegative)
+	l.divert(&Cmp{Gt, &Load{v}, zero(t)}, positive, join)
+	l.begin(positive)
+	l.divert(&Cmp{Lt, p, zero(t)}, flip, join)
+	l.begin(negative)
+	l.divert(&Cmp{Gt, p, zero(t)}, flip, join)
+	l.begin(flip)
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: fix})
+	l.begin(join)
 }
 
 // divert ends the current block with a branch on cond, in the middle of a

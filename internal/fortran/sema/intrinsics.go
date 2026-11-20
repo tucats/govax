@@ -57,6 +57,14 @@ import (
 //	         (inquiry.go): KIND, HUGE, DIGITS, and the rest of the numeric
 //	         model's
 //	SIK, SRK SELECTED_INT_KIND and SELECTED_REAL_KIND, of constants
+//	CEIL, FLOOR
+//	         CEILING and FLOOR, written in line: a truncation, and 1 added
+//	         or taken away when that moved the value the wrong way
+//	MODULO   MOD's remainder, written in line for INTEGERs and by MTHRTL's
+//	         AMOD and its kind for REALs, given P's sign by adding P when
+//	         the signs differ
+//	FTNC     a call of FTNRTL's routine of a COMPLEX(16) function, FTN$CH
+//	         and the generic name
 //	LENTRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT, SCAN, VERIFY
 //	         the character functions (charfuncs.go): folded when their
 //	         arguments are constants, else LEN_TRIM, TRIM, and SCAN and VERIFY
@@ -355,9 +363,11 @@ ISHFTC JISHFTC  2,3 I4  I4  SHIFTC E I,SHIFT,SIZE?
 // compiler writes in line. REAL of one is its real part, a REAL*16, as the
 // standard has it (13.13.84: of a COMPLEX, the real kind of its own kind),
 // where Table D-3's REAL of a COMPLEX*16 is REAL*4; AIMAG is made generic for
-// it, its COMPLEX*8 row the specific AIMAG's. The functions of a COMPLEX(16)
-// that MTHRTL would compute (ABS, SQRT, EXP, ...) are NOTIMPL until Phases
-// 108 and 109 (the author's answer 1 to the survey).
+// it, its COMPLEX*8 row the specific AIMAG's. ABS, SQRT, EXP, LOG, SIN, and
+// COS of a COMPLEX(16), which MTHRTL has no routine for, are FTNC: calls of
+// FTNRTL's FTN$CHABS to FTN$CHCOS, by reference, the value through a hidden
+// first argument (docs/planning/PHASE-108 - Fortran 90 intrinsic
+// procedures.md, finding 6 and the author's answer 1).
 const fortran90Table = `
 LOGICAL            -  1   L1  L2  CVT E L,KIND?
 LOGICAL            -  1   L1  L4  CVT E L,KIND?
@@ -390,6 +400,12 @@ DCMPLX             -  1   C32 C16 CMPLX E X,Y?
 AIMAG              -  1   C8  R4  IMAG E Z
 AIMAG              -  1   C32 R16 IMAG E Z
 CONJG              -  1   C32 C32 CONJG E Z
+ABS                -  1   C32 R16 FTNC E A
+SQRT               -  1   C32 C32 FTNC E X
+EXP                -  1   C32 C32 FTNC E X
+LOG                -  1   C32 C32 FTNC E X
+SIN                -  1   C32 C32 FTNC E X
+COS                -  1   C32 C32 FTNC E X
 
 MERGE              -  3   *   *   MERGE E TSOURCE,FSOURCE,MASK
 
@@ -428,9 +444,23 @@ VERIFY             -  2,3 CH  I4  VERIFY E STRING,SET,BACK?
 TRIM               -  1   CH  CH  TRIM T STRING
 REPEAT             -  2   CH  CH  REPEAT T STRING,NCOPIES
 
-CEILING            -  1   *   *   LATER E A
-FLOOR              -  1   *   *   LATER E A
-MODULO             -  2   *   *   LATER E A,P
+CEILING            -  1   R4  I2  CEIL E A
+CEILING            -  1   R4  I4  CEIL E A
+CEILING            -  1   R8  I2  CEIL E A
+CEILING            -  1   R8  I4  CEIL E A
+CEILING            -  1   R16 I2  CEIL E A
+CEILING            -  1   R16 I4  CEIL E A
+FLOOR              -  1   R4  I2  FLOOR E A
+FLOOR              -  1   R4  I4  FLOOR E A
+FLOOR              -  1   R8  I2  FLOOR E A
+FLOOR              -  1   R8  I4  FLOOR E A
+FLOOR              -  1   R16 I2  FLOOR E A
+FLOOR              -  1   R16 I4  FLOOR E A
+MODULO             -  2   I2  I2  MODULO E A,P
+MODULO             -  2   I4  I4  MODULO E A,P
+MODULO             -  2   R4  R4  MODULO E A,P
+MODULO             -  2   R8  R8  MODULO E A,P
+MODULO             -  2   R16 R16 MODULO E A,P
 
 EXPONENT           -  1   *   *   LATER E X
 FRACTION           -  1   *   *   LATER E X

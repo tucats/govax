@@ -743,13 +743,6 @@ func (a *analyzer) power(e *ast.Binary) Expr {
 
 	t, base, exponent := a.powerTypes(x, y)
 
-	if t == complex32 {
-		// No OTS$ routine computes it (complex32).
-		a.notImplForm(e.Pos, complex32Power)
-
-		return a.bad(e.Pos)
-	}
-
 	if t == byteType {
 		// No OTS$ routine takes bytes: an INTEGER*1 power is done in
 		// INTEGER*2 and converted back, as an intrinsic is (byteResult).

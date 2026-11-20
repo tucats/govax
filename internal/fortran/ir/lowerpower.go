@@ -121,6 +121,10 @@ func (l *lowerer) inlinePower(t Type, x Expr, n int64) Expr {
 // its result's parts: OTS$POWCJ and its kind for an INTEGER exponent, given as
 // a longword, and OTS$POWCC and its kind for a COMPLEX one.
 func (l *lowerer) complexPower(e *sema.Binary, p Type) (re, im Expr) {
+	if p == HFloat {
+		return l.hexaPower(e)
+	}
+
 	a, b := l.complexParts(e.X)
 
 	if e.Y.Type().Kind == sema.Integer {
@@ -137,4 +141,70 @@ func (l *lowerer) complexPower(e *sema.Binary, p Type) (re, im Expr) {
 	c, d := l.complexParts(e.Y)
 
 	return l.complexCall(complexPowers[powerKey{p, p}], e.T, a, b, c, d)
+}
+
+// hexaPower lowers X ** Y for a COMPLEX*32 X, Fortran 90's COMPLEX(16), which
+// no OTS$ routine computes (docs/planning/PHASE-108 - Fortran 90 intrinsic
+// procedures.md, finding 6). An INTEGER exponent from 1 to maxInlinePower is
+// written in line, the products of X's squares as inlinePower makes them, each
+// a COMPLEX*32 product as complexBinary writes one; any other INTEGER exponent
+// calls FTNRTL's FTN$CHPOWJ, which computes the same products in the same order
+// (and for a negative exponent their reciprocals' by FTN$DIVCH), and a COMPLEX
+// one FTN$CHPOW, EXP(Y * LOG(X)). Both take their arguments by reference and
+// give the value through a hidden first argument.
+func (l *lowerer) hexaPower(e *sema.Binary) (re, im Expr) {
+	if n, ok := inlineExponent(e.Y); ok {
+		a, b := l.complexParts(e.X)
+
+		var r, i Expr
+
+		for {
+			if n > 1 {
+				a, b = l.reusable(a), l.reusable(b)
+			}
+
+			if n&1 != 0 {
+				if r == nil {
+					r, i = a, b
+				} else {
+					r, i = hexaProduct(l, r, i, a, b)
+				}
+			}
+
+			if n >>= 1; n == 0 {
+				return r, i
+			}
+
+			a, b = hexaProduct(l, a, b, a, b)
+		}
+	}
+
+	x := l.complexValue(e.X)
+	result := l.temp(Hexa)
+
+	var y *Mem
+
+	routine := "FTN$CHPOW"
+	if e.Y.Type().Kind == sema.Integer {
+		routine = "FTN$CHPOWJ"
+		y = l.value(convertTo(Long, l.expr(e.Y)))
+	} else {
+		y = l.complexValue(e.Y)
+	}
+
+	l.emit(&Call{origin: l.origin(), Routine: routine, Args: []Arg{{Ref: result}, {Ref: x}, {Ref: y}}})
+
+	r, i := parts(result, HFloat)
+
+	return &Load{r}, &Load{i}
+}
+
+// hexaProduct is (a, b) * (c, d) of H_floating parts, (ac - bd, ad + bc), each
+// product, sum, and difference rounded as the VAX's instructions round it: the
+// parts used twice computed once.
+func hexaProduct(l *lowerer, a, b, c, d Expr) (re, im Expr) {
+	a, b, c, d = l.reusable(a), l.reusable(b), l.reusable(c), l.reusable(d)
+
+	return arith(Sub, HFloat, arith(Mul, HFloat, a, c), arith(Mul, HFloat, b, d)),
+		arith(Add, HFloat, arith(Mul, HFloat, a, d), arith(Mul, HFloat, b, c))
 }

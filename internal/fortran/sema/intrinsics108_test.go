@@ -186,6 +186,86 @@ func TestPhase108Characters(t *testing.T) {
 	}
 }
 
+// TestPhase108Numeric checks subtask 4's functions: CEILING, FLOOR, and
+// MODULO folded or in line (a REAL MODULO's remainder by MTHRTL's AMOD and its
+// kind), in PARAMETERs too; and COMPLEX(16)'s functions and powers, FTNRTL's.
+func TestPhase108Numeric(t *testing.T) {
+	cases := []struct {
+		opts       Options
+		text, want string
+	}{
+		{Options{F90: true}, "CEILING(2.5)", "3"},
+		{Options{F90: true}, "FLOOR(-2.5)", "-3"},
+		{Options{F90: true}, "CEILING(-0.5)", "0"},
+		{Options{F90: true}, "MODULO(-8, 5)", "2"},
+		{Options{F90: true}, "MODULO(8, -5)", "-2"},
+		{Options{F90: true}, "MODULO(-8.5, 3.0)", "0.5"},
+		{Options{F90: true}, "CEILING(X)", "(ceiling:INTEGER CEILING X)"},
+		{Options{F90: true}, "FLOOR(A=D)", "(floor:INTEGER FLOOR D)"},
+		{Options{F90: true, NoI4: true}, "CEILING(X)", "(ceiling:INTEGER*2 CEILING X)"},
+		{Options{F90: true}, "MODULO(I, 5)", "(modulo:INTEGER MODULO I 5)"},
+		{Options{F90: true}, "MODULO(X, 2.0)", "(modulo:REAL MTH$AMOD X 2.0)"},
+		{Options{F90: true}, "MODULO(D, D)", "(modulo:REAL*8 MTH$DMOD D D)"},
+		{Options{F90: true, GFloating: true}, "MODULO(D, D)", "(modulo:REAL*8 MTH$GMOD D D)"},
+		{Options{F90: true}, "ABS(Q)", "(call:REAL*16 FTN$CHABS Q)"},
+		{Options{F90: true}, "AIMAG(SQRT(Q))", "(imag:REAL*16 AIMAG (call:COMPLEX*32 FTN$CHSQRT Q))"},
+		{Options{F90: true}, "AIMAG(COS(X=Q))", "(imag:REAL*16 AIMAG (call:COMPLEX*32 FTN$CHCOS Q))"},
+		{Options{F90: true}, "AIMAG(Q ** 2)", "(imag:REAL*16 AIMAG (**:X Q 2))"},
+		{Options{F90: true}, "AIMAG(Q ** Q)", "(imag:REAL*16 AIMAG (**:X Q Q))"},
+		{Options{F90: true}, "AIMAG(MERGE(Q, Q, .TRUE.))", "(imag:REAL*16 AIMAG (merge:COMPLEX*32 MERGE Q Q .TRUE.))"},
+	}
+
+	for _, c := range cases {
+		lines := fixed("REAL X", "DOUBLE PRECISION D", "INTEGER I", "COMPLEX(16) Q", "PRINT *, "+c.text, "END")
+		prog, ms := analyzeOpts(t, c.opts, lines...)
+
+		if len(ms) != 0 {
+			t.Errorf("%s: %v", c.text, ms)
+
+			continue
+		}
+
+		p := prog.Units[0].Body[0].(*IO)
+		if got := DumpExpr(p.Items[0].Value); got != c.want {
+			t.Errorf("%s:\n got %s\nwant %s", c.text, got, c.want)
+		}
+	}
+
+	// In a PARAMETER: of INTEGERs, as the standard's 7.1.6.1 has it, and of
+	// REALs too, as VAX FORTRAN's NINT and ABS are (section 4.11).
+	prog, ms := analyzeOpts(t, Options{F90: true}, fixed(
+		"INTEGER M, N, K", "REAL R", "PARAMETER (M = MODULO(-7, 3), N = CEILING(4.2), K = FLOOR(-4.2))",
+		"PARAMETER (R = MODULO(7.5, -2.0))", "END")...)
+	if len(ms) != 0 {
+		t.Fatalf("PARAMETER: %v", ms)
+	}
+
+	for name, want := range map[string]string{"M": "2", "N": "5", "K": "-5", "R": "-0.5"} {
+		if got := DumpExpr(prog.Units[0].Lookup(name).Value); got != want {
+			t.Errorf("%s = %s, want %s", name, got, want)
+		}
+	}
+
+	bad := map[string]string{
+		"CEILING(I)":                   "BADARG",
+		"MODULO(I, X)":                 "BADARG",
+		"CEILING(Q)":                   "BADARG",
+		"PARAMETER (N = MODULO(5, 0))": "DIVZERO",
+	}
+
+	for text, want := range bad {
+		stmt := "PRINT *, " + text
+		if strings.HasPrefix(text, "PARAMETER") {
+			stmt = text
+		}
+
+		_, ms := analyzeOpts(t, Options{F90: true}, fixed("REAL X", "INTEGER I, N", "COMPLEX(16) Q", stmt, "END")...)
+		if len(ms) == 0 || ms[0].Ident != want {
+			t.Errorf("%s: %v, want %s", text, ms, want)
+		}
+	}
+}
+
 // TestPhase108ZeroLengths checks finding 4's lengths of zero: declared under
 // /F90 (BADCHARLEN under /NOF90), a PARAMETER's value cut to none, and a
 // substring past its upper bound (SUBRANGE and SUBORDER under /NOF90).
@@ -223,7 +303,7 @@ func TestPhase108ZeroLengths(t *testing.T) {
 // /NOF90; and that the intrinsic subroutines take keywords, and are NOTIMPL
 // but MVBITS.
 func TestPhase108Names(t *testing.T) {
-	later := []string{"CEILING(X)", "FLOOR(X)", "MODULO(X, Y)", "EXPONENT(X)", "FRACTION(X)",
+	later := []string{"EXPONENT(X)", "FRACTION(X)",
 		"NEAREST(X, 1.0)", "RRSPACING(X)", "SCALE(X, 2)", "SET_EXPONENT(X, 2)", "SPACING(X)", "TRANSFER(X, 0)"}
 
 	for _, text := range later {
@@ -239,16 +319,16 @@ func TestPhase108Names(t *testing.T) {
 	}
 
 	subs := map[string]string{
-		"CALL DATE_AND_TIME(VALUES=IV)":     "NOTIMPL: the intrinsic subroutine DATE_AND_TIME",
-		"CALL SYSTEM_CLOCK(COUNT_RATE=I)":   "NOTIMPL",
-		"CALL RANDOM_NUMBER(X)":             "NOTIMPL",
-		"CALL RANDOM_SEED(SIZE=I)":          "NOTIMPL",
-		"CALL RANDOM_SEED(SEED=I)":          "KEYWORDNAME: the intrinsic subroutine RANDOM_SEED has no argument SEED; its arguments are SIZE, PUT, and GET",
+		"CALL DATE_AND_TIME(VALUES=IV)":      "NOTIMPL: the intrinsic subroutine DATE_AND_TIME",
+		"CALL SYSTEM_CLOCK(COUNT_RATE=I)":    "NOTIMPL",
+		"CALL RANDOM_NUMBER(X)":              "NOTIMPL",
+		"CALL RANDOM_SEED(SIZE=I)":           "NOTIMPL",
+		"CALL RANDOM_SEED(SEED=I)":           "KEYWORDNAME: the intrinsic subroutine RANDOM_SEED has no argument SEED; its arguments are SIZE, PUT, and GET",
 		"CALL DATE_AND_TIME(T, T, T, IV, I)": "INTRINSUBARGS: the intrinsic subroutine DATE_AND_TIME takes 0 to 4 arguments, not 5",
-		"CALL RANDOM_NUMBER()":              "INTRINSUBARGS: the intrinsic subroutine RANDOM_NUMBER takes 1 argument, not 0",
-		"CALL SYSTEM_CLOCK(I,,J)":           "NULLINTRINSUB",
-		"CALL MVBITS(FROM=I, 0, 2, J, 1)":  "KEYWORDORDER",
-		"CALL MVBITS(I, 0, 2, J, LEN=1)":    "KEYWORDTWICE",
+		"CALL RANDOM_NUMBER()":               "INTRINSUBARGS: the intrinsic subroutine RANDOM_NUMBER takes 1 argument, not 0",
+		"CALL SYSTEM_CLOCK(I,,J)":            "NULLINTRINSUB",
+		"CALL MVBITS(FROM=I, 0, 2, J, 1)":    "KEYWORDORDER",
+		"CALL MVBITS(I, 0, 2, J, LEN=1)":     "KEYWORDTWICE",
 	}
 
 	for text, want := range subs {

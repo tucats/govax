@@ -32,8 +32,8 @@ import (
 // whole value is a Hexa, 32 bytes, which no instruction moves: it is moved
 // as two octawords (moveHexa). Its product is written in line as a
 // COMPLEX*8's is, there being no OTS$ routine for it, and its quotient is
-// FTNRTL's FTN$DIVCH, called as a function with a hidden result. It has no
-// powers yet (semantic analysis refuses them).
+// FTNRTL's FTN$DIVCH, called as a function with a hidden result. Its powers
+// are FTNRTL's too, or in line for a small constant exponent (lowerpower.go).
 
 // The OTS$ routines for a product or quotient, by the parts' type.
 var (
@@ -323,6 +323,14 @@ func (l *lowerer) assignHexa(dst *Mem, e sema.Expr) {
 	switch e := e.(type) {
 	case *sema.Var, *sema.Elem, *sema.FieldRef, *sema.FuncRef, *sema.StmtFuncRef:
 		l.moveHexa(dst, l.complexValue(e))
+
+	case *sema.IntrinsicRef:
+		if e.Op == sema.CallOp || e.Op == sema.MergeOp {
+			// FTNRTL's value, or MERGE's temporary: moved whole.
+			l.moveHexa(dst, l.complexValue(e))
+		} else {
+			l.assignParts(dst, e, false)
+		}
 
 	case *sema.Const:
 		c := l.constOf(e)

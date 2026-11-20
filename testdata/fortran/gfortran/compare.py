@@ -61,6 +61,7 @@ PROGRAMS90 = {
     "bytes": ["bytes.f90"],
     "keywords": ["keywords.f90"],
     "charfns": ["charfns.f90"],
+    "numfns": ["numfns.f90"],
     "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],

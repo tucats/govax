@@ -103,8 +103,9 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 
 		array = array || rankOf(args[i]) > 0
 
-		if args[i].Type() == complex32 && !takesComplex32(forms) {
-			// Only the conversions and parts have rows for one (complex32).
+		if args[i].Type() == complex32 && !takesComplex32(forms) && takesComplex(forms) {
+			// A function of other COMPLEX kinds without COMPLEX(16)'s rows
+			// (complex32); one of no COMPLEX is BADARG, below.
 			a.notImplForm(e.Pos, complex32Intrinsic)
 
 			return a.bad(e.Pos)
@@ -276,20 +277,27 @@ func (a *analyzer) merge(e *ast.Apply, args []Expr, shape Shape) Expr {
 		a.report("BADARG", mask.Position(), "MERGE", "a LOGICAL MASK", mask.Type().String())
 
 		return a.bad(e.Pos)
-
-	case ts.Type() == complex32:
-		a.notImplForm(e.Pos, complex32Intrinsic)
-
-		return a.bad(e.Pos)
 	}
 
 	return &IntrinsicRef{exprBase{T: ts.Type(), Pos: e.Pos, S: shape}, "MERGE", MergeOp, args, ""}
 }
 
-// takesComplex32 reports whether any of the rows takes a COMPLEX*32.
+// takesComplex32 reports whether any of the rows takes a COMPLEX*32: MERGE
+// takes values of any type.
 func takesComplex32(forms []form) bool {
 	for _, f := range forms {
-		if f.arg == complex32 {
+		if f.arg == complex32 || f.how == "MERGE" {
+			return true
+		}
+	}
+
+	return false
+}
+
+// takesComplex reports whether any of the rows takes a COMPLEX value.
+func takesComplex(forms []form) bool {
+	for _, f := range forms {
+		if f.arg.Kind == Complex || f.arg.Kind == Invalid {
 			return true
 		}
 	}
@@ -618,6 +626,7 @@ var operations = map[string]IntrinsicOp{
 	"NINT": NintOp, "ZEXT": ZextOp, "IMAG": ImagOp, "CONJG": ConjgOp,
 	"SHIFT": ShiftOp, "BITS": BitsOp, "BSET": BitSetOp, "BCLR": BitClearOp, "BTEST": BitTestOp,
 	"LEN": LenOp, "INDEX": IndexOp, "ICHAR": IcharOp, "CHAR": CharOp,
+	"CEIL": CeilingOp, "FLOOR": FloorOp,
 }
 
 // lexicalOps are the lexical comparisons' relational operators (section
@@ -708,9 +717,42 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 
 	case "ONE":
 		return &Const{exprBase: exprBase{T: f.result, Pos: e.Pos}, Int: 1}
+
+	case "CEIL", "FLOOR", "MODULO":
+		return a.wholeOrModulo(e, f, args)
+
+	case "FTNC":
+		// COMPLEX(16)'s functions: FTNRTL's, MTHRTL having no H complex
+		// routines (finding 6).
+		return call("FTN$CH" + f.generic)
 	}
 
 	return ref(f.result, operations[f.how])
+}
+
+// wholeOrModulo is CEILING, FLOOR, or MODULO, the row f, of args: an
+// IntrinsicRef lowering writes in line (one of constants was folded already,
+// constfuncs.go). A REAL MODULO's remainder is MOD's routine's, MTHRTL's AMOD
+// or its kind (Routine), which lowering then gives P's sign.
+func (a *analyzer) wholeOrModulo(e *ast.Apply, f form, args []Expr) Expr {
+	ref := &IntrinsicRef{exprBase{T: f.result, Pos: e.Pos}, e.Name, ModuloOp, args, ""}
+
+	switch f.how {
+	case "CEIL":
+		ref.Op = CeilingOp
+	case "FLOOR":
+		ref.Op = FloorOp
+	default:
+		if f.arg.Kind == Real {
+			for _, m := range formsNamed("MOD") {
+				if m.arg == f.arg {
+					ref.Routine = a.routineOf(m)
+				}
+			}
+		}
+	}
+
+	return ref
 }
 
 // sizeOf is SIZEOF(X): the bytes X takes, a constant INTEGER*4. X may be

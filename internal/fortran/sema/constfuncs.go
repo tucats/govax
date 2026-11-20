@@ -71,6 +71,9 @@ var constFuncs = map[string]constFunc{
 	"SCAN":     {2, 3, "2 or 3 arguments", searching(scanText)},
 	"VERIFY":   {2, 3, "2 or 3 arguments", searching(verifyText)},
 	"INDEX":    {2, 3, "2 or 3 arguments", searching(indexText)},
+	"CEILING":  {1, 1, "1 argument", wholeFunction(true)},
+	"FLOOR":    {1, 1, "1 argument", wholeFunction(false)},
+	"MODULO":   {2, 2, "2 arguments", constModulo},
 }
 
 // apply is a function reference in a constant expression: one of
@@ -351,6 +354,83 @@ func constMod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 
 	q := new(big.Rat).Quo(x.Real.Rat(), y.Real.Rat())
 	whole := new(big.Int).Quo(q.Num(), q.Denom()) // truncated toward zero
+	rem := new(big.Rat).Sub(x.Real.Rat(), new(big.Rat).Mul(new(big.Rat).SetInt(whole), y.Real.Rat()))
+
+	v, rerr := round(ev.a.format(x.T), vaxfloat.FromRat(rem))
+	if rerr != nil {
+		return nil, ev.realRange(e.Pos, valueText, x.T)
+	}
+
+	c.Real = v
+
+	return c, nil
+}
+
+// wholeFunction makes CEILING (up) or FLOOR: the least integer not less
+// than a REAL, or the greatest not greater, of the unit's default integer
+// type (Fortran 90's 13.13.17 and 13.13.38).
+func wholeFunction(up bool) func(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+	return func(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+		x := args[0]
+		if x.T.Kind != Real {
+			return nil, ev.badArg(e, "REAL", x)
+		}
+
+		t := ev.a.defaultInt
+		lo, hi := t.intRange()
+
+		i := floorOf(x.Real.Rat())
+		if up && !x.Real.Rat().IsInt() {
+			i.Add(i, big.NewInt(1))
+		}
+
+		if !i.IsInt64() || i.Int64() < lo || i.Int64() > hi {
+			return nil, ev.intRange(e.Pos, valueText, t)
+		}
+
+		return &Const{exprBase: exprBase{T: t, Pos: e.Pos}, Int: int32(i.Int64())}, nil
+	}
+}
+
+// floorOf is the greatest integer not greater than r. big.Int's Div is
+// Euclidean division, whose quotient for a positive divisor (a Rat's
+// denominator is always positive) is the floor.
+func floorOf(r *big.Rat) *big.Int {
+	return new(big.Int).Div(r.Num(), r.Denom())
+}
+
+// constModulo is MODULO(a, p), a - FLOOR(a/p)*p (Fortran 90's 13.13.68): the
+// remainder with p's sign, where MOD's has a's. A REAL one is computed
+// exactly and rounded once.
+func constModulo(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
+	args, err := ev.alike(e, args, Integer, Real)
+	if err != nil {
+		return nil, err
+	}
+
+	x, y := args[0], args[1]
+	c := &Const{exprBase: exprBase{T: x.T, Pos: e.Pos}}
+
+	if x.T.Kind == Integer {
+		if y.Int == 0 {
+			return nil, ev.report("DIVZERO", e.Pos)
+		}
+
+		r := int64(x.Int) % int64(y.Int)
+		if r != 0 && (r < 0) != (y.Int < 0) {
+			r += int64(y.Int)
+		}
+
+		c.Int = int32(r)
+
+		return c, nil
+	}
+
+	if y.Real.IsZero() {
+		return nil, ev.report("DIVZERO", e.Pos)
+	}
+
+	whole := floorOf(new(big.Rat).Quo(x.Real.Rat(), y.Real.Rat()))
 	rem := new(big.Rat).Sub(x.Real.Rat(), new(big.Rat).Mul(new(big.Rat).SetInt(whole), y.Real.Rat()))
 
 	v, rerr := round(ev.a.format(x.T), vaxfloat.FromRat(rem))

@@ -73,14 +73,11 @@ func TestComplex16(t *testing.T) {
 	}
 }
 
-// TestComplex16NotImpl checks what COMPLEX(16) hasn't yet: its powers, the
-// intrinsic functions MTHRTL would compute, and I/O.
+// TestComplex16NotImpl checks what COMPLEX(16) hasn't yet: the intrinsic
+// functions but ABS, SQRT, EXP, LOG, SIN, and COS (Phase 108), and I/O.
 func TestComplex16NotImpl(t *testing.T) {
 	cases := map[string]string{
-		"      R = Q ** 2":           "a power of a COMPLEX(16) value",
-		"      R = Q ** Q":           "a power of a COMPLEX(16) value",
-		"      R = SQRT(Q)":          "an intrinsic function of a COMPLEX(16) argument",
-		"      H = ABS(Q)":           "an intrinsic function of a COMPLEX(16) argument",
+		"      H = SUM((/ Q, Q /))":  "an intrinsic function of a COMPLEX(16) argument",
 		"      PRINT *, Q":           "I/O of a COMPLEX(16) value",
 		"      READ *, I, Q":         "I/O of a COMPLEX(16) value",
 		"      WRITE (6) (Q, I=1,2)": "I/O of a COMPLEX(16) value",

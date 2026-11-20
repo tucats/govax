@@ -351,7 +351,8 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
 3. **Character functions** and zero lengths (findings 3, 4), FTNRTL's entries,
    GSMATCH 1,27 (subtask 2's FTN$BMVBITS took 1,26), condition 305 (done
    2026-11-19).
-4. **Numeric functions and COMPLEX(16)** (findings 5, 6).
+4. **Numeric functions and COMPLEX(16)** (findings 5, 6), GSMATCH 1,28 (done
+   2026-11-19).
 5. **The model functions** in F, D, G, and H (finding 7).
 6. **TRANSFER** (finding 8).
 7. **The subroutines**: DATE_AND_TIME with `SYS$TIMEZONE_DIFFERENTIAL`,
@@ -518,3 +519,40 @@ The author read the survey and accepted every recommendation:
   (and two sentences subtask 2 left stale: SELECTED\_ of values, keywords to every function) and
   its FTNRTL table, and HELP FORTRAN, have them. The MACRO test of FTNRTL's entries (finding 12's
   `TestFTNRTLIntrinsics`) waits for subtask 8, the corpus calling each routine meanwhile.
+- **2026-11-19:** Subtask 4, the numeric functions and COMPLEX(16). CEILING, FLOOR, and
+  MODULO are table rows (`CEIL`, `FLOOR`, `MODULO`; CEILING and FLOOR of each REAL kind, a row
+  per default integer as INT's, so `/NOI4` gives INTEGER\*2; MODULO of INTEGER\*2 and \*4,
+  INTEGER(1) through `byteResult`, and each REAL), new ops `CeilingOp`, `FloorOp`, and
+  `ModuloOp` (`sema`'s `wholeOrModulo`; a REAL MODULO's `Routine` is MOD's row's,
+  MTH$AMOD, DMOD, GMOD, or HMOD). `ir/lowerintrinsic.go`'s `wholeNumber` is CVTxL into a
+  longword temporary, then a comparison of A with it made REAL again and an add or
+  subtract of 1 (exact: a value too large for a fraction was whole); `modulo` is MOD's code,
+  or the MTHRTL call with both arguments from temporaries so P is computed once, then
+  `giveSign`, P added when the remainder isn't 0 and its sign isn't P's (one comparison for a
+  constant P). The evaluator folds all three (`constfuncs.go`'s `wholeFunction`,
+  `constModulo`, exactly and rounded once), so a reference of constants, in an executable
+  statement too, is a constant, and `MODULO(10, 0)` is DIVZERO as `MOD(10, 0)` is. **A
+  PARAMETER may use them with REAL arguments**, as VAX FORTRAN's section 4.11 has NINT and ABS,
+  though the standard's 7.1.6.1 takes only INTEGER and CHARACTER arguments to elemental
+  functions there (gfortran `-std=f95` refuses them), so the corpus program keeps to INTEGER
+  ones. COMPLEX(16) (finding 6): ABS, SQRT, EXP, LOG, SIN, and COS are `FTNC` rows, calls of
+  FTNRTL's `FTN$CHABS` to `FTN$CHCOS` (`ftn_intrinsics.mar`, over MTH$HSQRT, HEXP, HLOG,
+  HSINCOS, HSINH, HCOSH, and HATAN2: ABS as m·SQRT(1 + (n/m)²), SQRT by the half-angle formula
+  with each part halved first, LOG's imaginary part ATAN2's), the value through the hidden
+  first argument (`callIntrinsic` now passes one for a `Hexa`, and `assignHexa` moves such a
+  value, and MERGE's, as two octawords). Powers: **only a constant exponent from 1 to 8 is in
+  line** (`ir`'s `hexaPower`, `hexaProduct`), where finding 6 said any INTEGER exponent;
+  another INTEGER exponent calls `FTN$CHPOWJ (result, x, n)`, PowerBySquaring's order with
+  `CMUL`, the same five instructions as the in-line product, so the two agree to the bit (the
+  corpus compares them), a negative exponent each square's reciprocal by FTN$DIVCH, and (0, 0)
+  to a power of 0 or less MTH$_UNDEXP as OTS$POWCJ's; a COMPLEX (or REAL) exponent calls
+  `FTN$CHPOW`, EXP(Y × LOG(X)), (0, 0) MTH$HLOG's LOGZERNEG whatever Y is, as OTS$POWCC's.
+  FTNRTL's eight entries are at vector offsets 792 to 848, GSMATCH 1,28. MERGE of COMPLEX(16)
+  needed only sema's refusal gone. A COMPLEX(16) argument to a function with no COMPLEX rows at
+  all (TAN, CEILING) is now BADARG, not NOTIMPL (`takesComplex`); SUM and the other functions
+  with COMPLEX rows but not COMPLEX(16)'s stay NOTIMPL. A fix the corpus found: the constant
+  pool's key (`ir/lower.go`'s `constant`) left out a COMPLEX\*32's imaginary half, so `(0.0_16,
+  0.5_16)` and `(0.0_16, 1.0_16)` in one unit shared one datum. `testdata/fortran90/numfns.f90`
+  runs it all in every mode, and gfortran prints the same (`compare.py`); `sema`'s
+  `TestPhase108Numeric` holds the forms, the folding, and the messages. MANUAL.md's 14.13 and its
+  FTNRTL table, and HELP FORTRAN, have them.

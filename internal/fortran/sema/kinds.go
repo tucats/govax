@@ -53,14 +53,14 @@ type kindInfo struct {
 // routines have H complex routines, so by the author's answer 1 to the
 // survey its declarations, moves, sums, differences, products, comparisons,
 // and conversions are compiled in line, its quotient is FTNRTL's FTN$DIVCH,
-// and its I/O, powers, and intrinsic functions are NOTIMPL until Phases 108
-// and 109.
+// its powers and ABS, SQRT, EXP, LOG, SIN, and COS are FTNRTL's too (Phase
+// 108), and its I/O and the other intrinsic functions of one are NOTIMPL until
+// Phase 109.
 var complex32 = Type{Kind: Complex, Size: 32}
 
 // The forms of COMPLEX(16) that are NOTIMPL, as the messages name them.
 const (
 	complex32IO        = "I/O of a COMPLEX(16) value"
-	complex32Power     = "a power of a COMPLEX(16) value"
 	complex32Intrinsic = "an intrinsic function of a COMPLEX(16) argument"
 )
 
