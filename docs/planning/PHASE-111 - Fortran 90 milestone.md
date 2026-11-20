@@ -1,7 +1,8 @@
 # Phase 111 — Fortran 90: the milestone and close-out
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C), for review. Needs every phase from 99 to 110.
+Part C). Subtask 1, the survey and the milestone program's design (Part A),
+written 2026-11-20 for the author's review. Needs every phase from 99 to 110.
 
 ## Goal
 
@@ -19,7 +20,8 @@ Fortran 90 shown working on substantial programs, and the program documented:
 - **the old program unchanged**: DUNGEON and the FORTRAN-77 corpus give the same
   MACRO files under `/NOF90` as before Phase 99 (`TestNoF90Unchanged`), and play
   the same games;
-- **the optional VMS round**: VMS 7.1's MACRO and LINK build FTNRTL and the
+- **the VMS round** (no longer optional: the author offered the simh VAX
+  on 2026-11-20): VMS 7.1's MACRO and LINK build FTNRTL and the
   Fortran 90 corpus from govax's `.MAR` files and run them (`testdata/ftn86`'s
   pattern, a new `testdata/f90r`);
 - **documentation finished**: MANUAL.md's 14.13 as a finished section (with
@@ -27,7 +29,7 @@ Fortran 90 shown working on substantial programs, and the program documented:
   Fortran 90 sections finished and a revised map, HELP FORTRAN, PLAN.md's summary,
   CLAUDE.md.
 
-## Subtasks (provisional)
+## Subtasks (provisional; Part A's A.6 revises them)
 
 1. **The milestone program compiled**, whatever it finds fixed in subtasks of its
    own.
@@ -39,6 +41,238 @@ Fortran 90 shown working on substantial programs, and the program documented:
 7. **Close-out**: PLAN.md, CLAUDE.md, the follow-up list ("Where things stand"),
    and Phase 112's go or no-go (Phase 99's question 2).
 
+# Part A — the survey (subtask 1)
+
+Phase 99's question 7 asked for a milestone program; the author found none to
+use and asked (2026-11-20) for one of our own: **fcalc**, a scientific
+calculator at a prompt, which is to be both the Fortran 90 program's test and
+a tool a govax user would keep. This part designs it: what the user sees
+(A.1), how the program is built and which phase each piece exercises (A.2),
+the numerical rules that let govax, gfortran, and a real VAX print the same
+lines (A.3), how it is tested (A.4), how it ships as a tool (A.5), the
+subtasks revised (A.6), and the questions for the author (A.7).
+
+## A.1 fcalc as the user sees it
+
+fcalc reads lines at a `fcalc> ` prompt (nonadvancing output, so the cursor
+stays on the prompt's line) until `QUIT`, `EXIT`, or end of file. Keywords
+and names are case-insensitive, as DCL's are. A line is a command if it
+starts with one of the command words below; otherwise it is an **expression**,
+whose value is printed and kept as `ans`.
+
+**Values.** Every value is complex (COMPLEX(8)); one with no imaginary part
+prints as a real number, and one that is also a whole number of moderate size
+prints with no decimal point. Literals: `42`, `1.5e-3`, `2i`, `.5`. Built-in
+constants: `pi`, `e`, `i`, `ans`, `eps` (the machine epsilon), `huge`.
+
+**Operators**, loosest first: `or`, `and`, `not`; `==` `<>` `<` `<=` `>`
+`>=` (real parts compared; true is 1, false 0); `+` `-`; `*` `/` `mod`;
+unary `-` and `+`; `^` (right-associative); postfix `!` (factorial; the gamma
+function off the integers). Parentheses group.
+
+**Built-in functions** (a table, so adding one is one row):
+
+- elementary: `sqrt cbrt exp ln log10 log2 log(x,b)` (principal branches
+  for negative and complex arguments);
+- trigonometric and inverse, in the angle mode: `sin cos tan sec csc cot
+  asin acos atan atan2(y,x)`; hyperbolic and inverse: `sinh cosh tanh asinh
+  acosh atanh`;
+- complex: `re im abs arg conj polar(r,t) cis(t)`;
+- rounding and integers: `floor ceil round trunc frac sign gcd lcm isprime`,
+  `ncr(n,k) npr(n,k)`;
+- special: `gamma lgamma erf erfc beta(a,b)` (written in fcalc: Fortran 90
+  has none);
+- lists, of any number of arguments: `min max sum prod mean median var stdev`;
+- conditional, its arms evaluated only when chosen: `if(c, a, b)`;
+- `rand()` and `rand(a,b)`, from RANDOM_NUMBER, seeded by `SET SEED`.
+
+**Variables and functions.**
+
+```
+fcalc> r = 2.5                      assignment; prints r = 2.5
+fcalc> area = pi*r^2
+fcalc> f(x) = x^3 - 2*x - 5         a function of up to 8 parameters
+fcalc> g(x, y) = sqrt(x^2 + y^2)
+fcalc> f(2.1)
+```
+
+A function is kept as its parsed tree and its text; it may call other
+functions and itself (`fact(n) = if(n<2, 1, n*fact(n-1))`), to a depth limit
+fcalc reports.
+
+**Commands:**
+
+| Command | What it does |
+|---|---|
+| `SOLVE expr [= expr] FOR x [FROM a [TO b]]` | a root: the secant method from a, or bisection then Brent's method on a bracket |
+| `INTEGRATE expr FOR x FROM a TO b` | adaptive Simpson's rule, with an error estimate |
+| `DIFF expr FOR x AT a` | the derivative by Richardson extrapolation |
+| `ROOTS c0, c1, ..., cn` | every (complex) root of a polynomial, by Durand–Kerner, polished |
+| `TABLE expr[, expr...] FOR x FROM a TO b [STEP s]` | a table of values in columns |
+| `PLOT expr[, expr...] FOR x FROM a TO b [SIZE w,h] [Y lo,hi]` | an ASCII graph: axes, tick labels, a mark per curve, a legend |
+| `LIST [VARIABLES / FUNCTIONS / ALL]` | what is defined, in name order |
+| `CLEAR name... / CLEAR ALL` | forget names |
+| `SET DIGITS n`, `SET FORMAT AUTO/FIXED/SCIENTIFIC/ENGINEERING`, `SET ANGLE RADIANS/DEGREES/GRADS`, `SET BASE DECIMAL/HEX/OCTAL/BINARY`, `SET SEED n`, `SET [NO]ECHO` | the display and the settings; `SHOW SETTINGS` |
+| `SAVE file`, `LOAD file` | the state (settings, variables, functions) as a file of fcalc commands, which LOAD runs; a user can edit it |
+| `@file` (or `RUN file`) | run a file of commands, nesting to a limit |
+| `LOG file / LOG OFF` | a transcript of the session, appended |
+| `HELP [topic]` | help text built into the program |
+
+**Errors** name the problem and point at it: the line again with a `^`
+under the column (`%FCALC-E-DIVZERO, division by zero`), in VMS's message
+form. No input stops fcalc; nothing it computes may trap (A.3).
+
+**One-shot use.** `$ FCALC == "$SYS$SYSTEM:FCALC"` and `$ FCALC 2^10+1`
+prints the value and exits, through LIB$GET_FOREIGN (A.5); with no text, the
+prompt. `DEFINE/USER SYS$INPUT script` runs a script without prompts' noise.
+
+## A.2 The program and what each part exercises
+
+About 4,000 to 5,000 lines in nine modules and a main program, each file a
+module, compiled in the order of their USEs (and in the others
+`compiles.txt` allows):
+
+| File | Contents | Exercises (phase) |
+|---|---|---|
+| `fckinds.f90` | kinds by SELECTED_REAL_KIND, constants, limits from HUGE, EPSILON, TINY, RANGE | kinds, inquiry and model functions (100, 108) |
+| `fcvalues.f90` | `TYPE VALUE` (a COMPLEX(8) and an error code); `OPERATOR(+)` and the rest, generic, each guarding against overflow and division by zero; safe complex division (Smith's), powers, the formatting of a value | derived types, functions of a type past 8 bytes, generic names and defined operators, PRIVATE (103, 105, 106) |
+| `fclexer.f90` | the token stream: `TYPE TOKEN`, numbers by internal READ, names | character intrinsics (SCAN, VERIFY, INDEX, ADJUSTL, LEN_TRIM, IACHAR), internal files, SELECT CASE (101, 108, 109) |
+| `fctree.f90` | `TYPE NODE` with POINTER children; the recursive descent parser; copying and freeing trees | recursive types, ALLOCATE and DEALLOCATE of pointers, pointer results, RECURSIVE (89, 107) |
+| `fcsymbols.f90` | variables and functions in binary search trees of pointers; LIST in order | pointer components, module data, USE ONLY and renames (106, 107) |
+| `fcfuncs.f90` | the built-in table and the special functions (gamma by Lanczos, erf by series and continued fraction) | MTHRTL through the intrinsics, array constructors and PARAMETERs, assumed-shape list functions, SUM, PRODUCT, MAXVAL, PACK (77, 102, 104) |
+| `fceval.f90` | the evaluator, a frame of parameter values per call, the depth limit | RECURSIVE, automatic arrays, OPTIONAL and keyword arguments, INTENT (89, 103, 104) |
+| `fcnumeric.f90` | SOLVE, INTEGRATE, DIFF, ROOTS | allocatable arrays, array expressions and sections, WHERE, internal procedures, construct names with EXIT and CYCLE (101, 102, 103, 104) |
+| `fcplot.f90` | TABLE and PLOT: samples, scaling, the grid as an automatic CHARACTER array, axes and labels | array-valued functions, WHERE, MINVAL/MAXVAL with MASK=, run-time CHARACTER lengths, REPEAT, nonadvancing output (102, 104, 108, 109) |
+| `fcstate.f90` | SAVE, LOAD, `@`, LOG: OPEN with STATUS='REPLACE', ACTION=, POSITION='APPEND', INQUIRE (EXIST=), IOSTAT=, DATE_AND_TIME in the saved file's heading | Fortran 90's I/O and the intrinsic subroutines (108, 109) |
+| `fcalc.f90` | the main program: the prompt, the command words, dispatch, help | ADVANCE='NO', SIZE=, EOR= (109) |
+| `fcplatform.f90` | the one thing that differs by system: the foreign command's text (LIB$GET_FOREIGN on VMS) | calling an RTL routine from Fortran 90 (83) |
+
+`fcplatform.f90` has a twin for gfortran, `gfortran/fcplatform.f90`, which
+returns no text (A.4), so every other file is the same source on both.
+
+## A.3 Numbers: one output from three machines
+
+fcalc must print the same lines on govax, under gfortran on the host
+(IEEE arithmetic), and on the simh VAX. The rules that make that possible:
+
+- **G_floating.** fcalc is compiled `/G_FLOATING`, so REAL(8) has 53 bits of
+  significand and a range near 1e308, as IEEE double has. Under D_floating
+  (the default) the range is 1e38, and values IEEE prints would trap.
+- **Digits shown.** The default is 12 significant digits (`SET DIGITS` up
+  to 15). Round-half-away versus round-half-even, and a last bit from MTHRTL
+  versus the host's libm, rarely reach the twelfth digit; a test that finds
+  such a case changes the case, and A.4's witness lists any left.
+- **Nothing traps.** A VAX faults on floating overflow, divide by zero, and a
+  reserved operand where IEEE gives an infinity or NaN. Every operation and
+  function in `fcvalues` and `fcfuncs` checks its operands first (a product
+  by comparing exponents, EXP's argument against LOG(HUGE), a divisor against
+  zero, a function's domain), and reports `%FCALC-E-OVERFLOW` or the like
+  instead. Underflow gives zero on both (the VAX has no denormals; fcalc
+  flushes values below TINY to zero itself, so IEEE agrees).
+- **Random numbers** differ by generator: a test shows only properties
+  (`rand()` in [0,1), a seeded sequence repeated), never the values.
+- **The time** in a saved file's heading is a comment; a test compares files
+  without it.
+
+## A.4 Testing
+
+`testdata/fcalc/` holds the sources, `README.md`, and test scripts, each
+`name.in` with `name.out`: `basics`, `complex`, `functions`, `userfuncs`,
+`numeric`, `display`, `plot`, `state` (SAVE, CLEAR ALL, LOAD, `@`, LOG; the
+files on the volume), `errors` (every message), and `oneshot` (the foreign
+command, govax and VMS only).
+
+- **Expected output** is worked from the mathematics, the same rule as the
+  corpus: each value a known one (tables, identities, a second method), and
+  each plot drawn from its samples by hand. gfortran then witnesses it.
+- **The milestone test**, `TestFcalcMilestone` (`internal/console`), builds
+  fcalc in each of Phase 86's modes and Phase 111's goal (`/OPTIMIZE` both
+  ways, `/RECURSIVE` both ways, both paging modes, `/CHECK=ALL`, `/DEBUG`)
+  and runs every script in each, comparing with the `.out` files.
+- **The compiler's tools** on a real program: a `/LIST/CROSS_REFERENCE`
+  compile without failure, `/STANDARD=F90` and `/WARNINGS=ALL` with each
+  message explained or fixed, and a debugger session (`fcalc.dbg`: a break
+  in the evaluator, EXAMINE through a tree's pointers, SHOW CALLS of the
+  recursion) held to a log.
+- **gfortran's witness**: `compare.py` gains fcalc (the gfortran platform
+  file, `-std=f95` but for that file), running every script and comparing
+  every line, differences explained against the standard.
+- **The simh round** (the author's offer, 2026-11-20): `testdata/f90r/`, as
+  `testdata/ftn86` did: a volume with FTNRTL's sources and fcalc's (and the
+  Fortran 90 corpus's) MACRO files from govax, and a procedure where VMS
+  7.1's MACRO and LINK build FTNRTL and each program and run every script.
+  VMS's log becomes an oracle, `TestF90ROracle`. fcalc is the first program
+  to run all of Fortran 90's run-time library on a real VAX.
+- **Fast tests**: what can be tested below the console (the compile of every
+  file without messages, in `dclcmd` or `internal/fortran`), as the memory on
+  compiler tests asks.
+
+## A.5 fcalc as a tool
+
+fcalc ships on the system volume (Phase 87's table, `internal/sysvol`):
+
+- its sources in `SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]` (or wherever the author
+  prefers) with `BUILDFCALC.COM`, which compiles, links, and copies the image
+  to SYS$SYSTEM, as `BUILDFTN.COM` builds FTNRTL;
+- the image itself, built by govax's own build as FTNRTL's is (`mkftnrtl`'s
+  pattern: committed, embedded, checked by a test), so it is there on a first
+  start without a compile;
+- `FCALC` defined as a foreign command by the supplied SYLOGIN.COM;
+- `HELP FCALC` in HELPLIB.HLB, and fcalc's own HELP from the same text;
+- MANUAL.md: a section on fcalc as a tool, and in 14.13 as the example of a
+  Fortran 90 program.
+
+## A.6 The subtasks, revised
+
+1. **The survey and design** (this part).
+2. **The core**: `fckinds`, `fcvalues`, `fclexer`, `fctree`, `fcsymbols`,
+   `fceval`, and the main loop: expressions, operators, variables, the
+   prompt, errors; `basics` and `complex` scripts. Compiler bugs found are
+   fixed in subtasks of their own (2a, 2b, ...), each with a corpus program.
+3. **Functions**: the built-in table, special functions, list functions,
+   user-defined functions and recursion; `functions`, `userfuncs`.
+4. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`.
+5. **Display and settings**: SET and SHOW, the formats and bases; `display`.
+6. **TABLE and PLOT**; `plot`.
+7. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
+   `oneshot`, `errors`.
+8. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
+9. **gfortran's witness**.
+10. **The simh round**: `testdata/f90r`, run by the author on the simh VAX,
+    and its oracle.
+11. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
+    symbol, HELP FCALC, MANUAL.md's section.
+12. **The manual's 14.13** finished.
+13. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
+    whole program.
+14. **Close-out**: PLAN.md, CLAUDE.md, "Where things stand", and Phase 112's
+    go or no-go.
+
+## A.7 Questions for the author
+
+1. **The command language** in A.1: is this the calculator you meant? In
+   particular, is a keyword-first command form (`SOLVE ... FOR x FROM a`) right,
+   or would you rather have everything as functions (`solve(f(x), x, 1)`)?
+2. **Vectors and matrices** as values (`[1,2,3]`, element-wise operations,
+   `det`, `inv`, a linear solve) would exercise arrays further, at perhaps
+   1,500 more lines. In fcalc now, later, or not at all?
+3. **G_floating** (A.3): agreed that fcalc is built `/G_FLOATING`?
+4. **Expected output** (A.4): worked by hand from the mathematics, as the
+   corpus rule says, with gfortran as the witness. For plots and long tables,
+   may the hand-worked file be checked against gfortran's output, and the
+   differences resolved by hand, instead of every character drawn by hand
+   first?
+5. **Where it ships** (A.5): sources in `[SYSHLP.EXAMPLES.FCALC]`, the image
+   in SYS$SYSTEM built in and committed, and the `FCALC` symbol in the supplied
+   SYLOGIN.COM. Good, or another place?
+6. **The simh round** (A.4): run fcalc and the whole Fortran 90 corpus in it,
+   or fcalc alone?
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
+- **2026-11-20:** Subtask 1 written: Part A, the design of fcalc, the
+  milestone program the author asked for in place of one found (a scientific
+  calculator with complex values, functions, numerics, ASCII plots, and saved
+  state), with the subtasks revised (A.6) and six questions (A.7). The author
+  offered a run on the simh VAX, now subtask 10.
