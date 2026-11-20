@@ -141,6 +141,11 @@ func (w *walker) expr(e ir.Expr, moved, maybe bool) {
 		w.expr(e.Low, false, maybe)
 		w.expr(e.High, false, maybe)
 
+	case *ir.Guard:
+		for _, x := range e.Operands() {
+			w.expr(x, false, maybe)
+		}
+
 	case *ir.CharCmp:
 		w.text(e.X, maybe)
 		w.text(e.Y, maybe)
@@ -312,6 +317,11 @@ func (w *memWalker) expr(e ir.Expr) {
 		w.expr(e.X)
 		w.expr(e.Low)
 		w.expr(e.High)
+
+	case *ir.Guard:
+		for _, x := range e.Operands() {
+			w.expr(x)
+		}
 
 	case *ir.CharCmp:
 		w.text(e.X)

@@ -113,4 +113,11 @@ var forMessages = map[uint32]Message{
 	0x001889A0: {Facility: "FOR", Ident: "BADADVANCE", Text: "ADVANCE= value is neither YES nor NO!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
 	0x001889A8: {Facility: "FOR", Ident: "NONADVUNIT", Text: "nonadvancing I/O on a unit with keyed access!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
 	0x001889B0: {Facility: "FOR", Ident: "RECTOOSHO", Text: "input record too short for its format, PAD='NO'!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+
+	// FTNRTL's FTN$NOTASSOC and FTN$UNALLOCATED, /CHECK=POINTERS finding a
+	// pointer's target used while it isn't associated, and an allocatable
+	// array used while it isn't allocated (FOR numbers 311 and 312;
+	// docs/planning/PHASE-110 - Fortran 90 compiler usability.md, finding 7).
+	0x001889B8: {Facility: "FOR", Ident: "NOTASSOC", Text: "pointer is not associated", FAOCount: 0},
+	0x001889C0: {Facility: "FOR", Ident: "UNALLOCATED", Text: "allocatable array is not allocated", FAOCount: 0},
 }

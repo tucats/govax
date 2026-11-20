@@ -1,11 +1,11 @@
 	.TITLE	TEST
 
 ; Storage map for F90PCOMP, a RECURSIVE subroutine
-;   N     INTEGER              argument 1  @F90PCOMP.N(AP)
-;   H     TYPE(NODE), POINTER  FP-208      F90PCOMP.H(FP)
-;   R     TYPE(NODE)           FP-204      F90PCOMP.R(FP)
-;   RA    TYPE(NODE) (10)      FP-188      F90PCOMP.RA(FP)
-;   S     CHARACTER*4          FP-28       F90PCOMP.S(FP)
+;   N     INTEGER                  argument 1  @F90PCOMP.N(AP)
+;   H     TYPE(NODE), POINTER      FP-208      F90PCOMP.H(FP)
+;   R     TYPE(NODE), TARGET       FP-204      F90PCOMP.R(FP)
+;   RA    TYPE(NODE), TARGET (10)  FP-188      F90PCOMP.RA(FP)
+;   S     CHARACTER*4, TARGET      FP-28       F90PCOMP.S(FP)
 ;   Type NODE, 16 bytes
 ;     +0     V     INTEGER
 ;     +4     NEXT  TYPE(NODE), POINTER
@@ -14,7 +14,7 @@
 F90PCOMP.N = 4				; N is argument 1
 F90PCOMP.H = -208			; H, in the frame
 F90PCOMP.R = -204			; R, in the frame
-F90PCOMP.RA = -188			; RA, TYPE(NODE) (10), in the frame
+F90PCOMP.RA = -188			; RA, TYPE(NODE), TARGET (10), in the frame
 F90PCOMP.S = -28			; S, in the frame
 F90PCOMP.$T1 = -24			; temporary, in the frame
 F90PCOMP.$T2 = -20			; temporary, in the frame

@@ -515,6 +515,13 @@ func ExprText(e Expr) string {
 
 	case *InRange:
 		return "inrange(" + ExprText(e.X) + ", " + ExprText(e.Low) + ", " + ExprText(e.High) + ")"
+
+	case *Guard:
+		if e.Test == nil {
+			return "guard(" + ExprText(e.X) + ", " + e.Routine + ")"
+		}
+
+		return "guard(" + ExprText(e.X) + " if " + ExprText(e.Test) + ", " + e.Routine + ")"
 	}
 
 	return fmt.Sprintf("%T", e)

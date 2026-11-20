@@ -330,6 +330,7 @@ marked so, and are unconfirmed.
    names, HOSTHIDDEN, UNREAD. (done 2026-11-20)
 5. **Listings and cross references** (finding 6, (a) to (e)). (done 2026-11-20)
 6. **`/CHECK=POINTERS`** (finding 7), FOR numbers 311 and 312, FTNRTL's two routines.
+   (done 2026-11-20)
 7. **`/DEBUG` and the debugger** (finding 9), in two parts:
    - 7a. Derived types and `%`; sections in EXAMINE.
    - 7b. Pointers, module variables (`M.X`), host names and the scope, the break after
@@ -543,3 +544,48 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   (`TestListing90`). MANUAL.md (after the modules' listing example) and HELP FORTRAN
   /CROSS_REFERENCE say so. FORTRAN-INTERNALS.md is left for the close-out (subtask 9).
   Subtask 6, `/CHECK=POINTERS`, is next.
+- **2026-11-20:** Subtask 6, `/CHECK=POINTERS` (`sema.Checks.Pointers`, in `ALL`; one
+  keyword for pointers and allocatable arrays, the author's answer 5). The test is a new IR
+  expression, `ir.Guard`: X, once Test (or X itself) is found not to be 0, else a call of an
+  FTNRTL routine that doesn't come back. It goes inside the expression that reaches the
+  place, as `/CHECK=BOUNDS`'s InRange does, not ahead of the statement, so that
+  `IF (ASSOCIATED (P) .AND. P%KEY .GT. 0)` and `DO WHILE (ASSOCIATED (Q%NEXT) .AND. ...)`
+  keep working through the branch's short circuit. The code generator writes `TSTL`, `BNEQ`,
+  `CALLS #0,G^FTN$NOTASSOC`, a label (`routineGen.guard`; R0 and R1 needn't be kept, the call
+  not returning); a guard of a pointer's own cell stays deferrable, so the place is still
+  `@PROG.P`, and the TSTL is left out after a MOVAL to the cell. Every expression walker learned
+  it (`ir`'s check, dump, locate, `readsMemory`; `opt`'s effects, walkers, forwarding, which
+  drops a guard of a nonzero constant or an address, dead code, where it may fault as InRange
+  may, CSE, a candidate whose key names its routine, and `places.go`'s `allocatedBase` and
+  `shapedBase`, which look through it). What's guarded (`ir/lowerguard.go`): a scalar
+  pointer's target (`pointerTargetMem`), each pointer component on a reference's way
+  (`fieldPlace`), an array pointer's or allocatable array's element (`stridedElement`, and an
+  allocatable array of records), the whole array by reference (`allocatableBase`), in an I/O
+  list (`ncaAsClassA`), described for an assumed-shape dummy (`wholeNCA`'s
+  `checkDescribed`, a statement ahead, as the call's other arguments are) or as a pointer's
+  target (`wholeDims`: a pointer's allocatable target must be allocated, the standard's
+  7.5.2), and SIZE, LBOUND, and UBOUND of a whole one, computed ahead of the statement as
+  before but guarded where the value is read (`guardedInquiry`), so `ALLOCATED (A) .AND.
+  SIZE (A) .GT. 0` works. Not guarded: a pointer itself (=>, NULLIFY, ALLOCATE, DEALLOCATE,
+  ASSOCIATED, ALLOCATED, a pointer dummy's actual), an assumed-shape dummy (its actual was),
+  the compiler's own arrays (`$G`), SHAPE and LBOUND or UBOUND without DIM= (an array
+  temporary filled ahead), and a pointer whose target went some other way, which nothing in
+  the pointer says. FTNRTL's `FTN$NOTASSOC` and `FTN$UNALLOCATED` (`ftn_control.mar`, at 1104
+  and 1112, GSMATCH 1,32) signal govax's FOR numbers 311, NOTASSOC, "pointer is not
+  associated", and 312, UNALLOCATED, "allocatable array is not allocated" (`vmsdef`'s FOR
+  messages). The survey's names were FTN$NOTALLOC and NOTALLOC, but FOR's NOTALLOC is already
+  302, DEALLOCATE's of such an array, so 312's routine and condition are UNALLOCATED. Why SUM
+  after DEALLOCATE read the freed block (the survey's question): DEALLOCATE clears only
+  POINTER, an element is reached from A0, and the bounds stay, so the loop ran over the old
+  elements; now POINTER is tested first. The optimizer doesn't hoist a guard out of a DO body,
+  for the reason it doesn't hoist InRange: before rotation the body isn't surely reached on
+  the first trip. Also fixed: `codegen`'s golden `.mar` files, which subtask 5's map changes
+  left behind (only comment lines), and an allocatable array's descriptor comment, which said
+  "allocatable" twice once the type's text said ALLOCATABLE. Tests: `TestPointerCheckCode` and
+  `TestPointerCheckKeyword` (`internal/fortran/pointercheck_test.go`), and
+  `TestFortranCheckPointers` (`internal/console/fortranpointercheck_test.go`: 13 programs,
+  each run with the check and without, both optimizer settings, both paging modes, through
+  `runCheckPrograms`, now shared with `TestFortranCheck`). MANUAL.md's `/CHECK` table and
+  FTNRTL table, its list of what pointers lack, HELP FORTRAN /CHECK, and the one-shot's
+  `--check` say so. Subtask 7a, derived types and `%` in the debugger, and sections in
+  EXAMINE, is next.

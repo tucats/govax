@@ -8,8 +8,6 @@
 ;   N     INTEGER        argument 4  @TRANS.N(AP)
 ;   K     INTEGER        argument 5  @TRANS.K(AP)
 ;   W     INTEGER (3)    $LOCAL+0    TRANS.W
-;   $W    INTEGER (?,?)  $LOCAL+28   TRANS.$R1
-;   $W    INTEGER (?)    $LOCAL+212  TRANS.$R2
 ;
 TRANS.V = 4				; V is argument 1
 TRANS.M = 8				; M is argument 2
@@ -718,7 +716,6 @@ TRANS.$110:
 ;   M     INTEGER (3,3)  argument 1  @DIMS.M(AP)
 ;   K     INTEGER        argument 2  @DIMS.K(AP)
 ;   W     INTEGER (3)    argument 3  @DIMS.W(AP)
-;   $W    INTEGER (?)    $LOCAL+20   DIMS.$R1
 ;
 DIMS.M = 4				; M is argument 1
 DIMS.K = 8				; K is argument 2

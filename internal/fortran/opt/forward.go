@@ -442,6 +442,23 @@ func (f *forwarder) expr(e ir.Expr) ir.Expr {
 			return &ir.InRange{X: x, Low: low, High: high}
 		}
 
+	case *ir.Guard:
+		x := f.expr(e.X)
+
+		var test ir.Expr
+		if e.Test != nil {
+			test = f.expr(e.Test)
+		}
+
+		// A guard the facts prove passes is gone. One they prove will fail stays.
+		if tested := ir.Expr(test); nonZero(tested) || (test == nil && nonZero(x)) {
+			return x
+		}
+
+		if x != e.X || test != e.Test {
+			return e.With(x, test)
+		}
+
 	case *ir.CharCmp:
 		x, y := f.text(e.X), f.text(e.Y)
 		if x != e.X || y != e.Y {
@@ -465,6 +482,19 @@ func inRangeKnown(x, low, high ir.Expr) bool {
 	hi, ok3 := high.(*ir.Const)
 
 	return ok && ok2 && ok3 && v.Int() >= lo.Int() && v.Int() <= hi.Int()
+}
+
+// nonZero reports whether the Long e is surely not 0: a constant that isn't, or
+// an address (/CHECK=POINTERS's Guard, after P => N).
+func nonZero(e ir.Expr) bool {
+	switch e := e.(type) {
+	case *ir.Const:
+		return !e.IsZero()
+	case *ir.Addr:
+		return true
+	}
+
+	return false
 }
 
 // foldCompare is a comparison's value, a LOGICAL, if both operands are constants

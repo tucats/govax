@@ -353,6 +353,8 @@ func (l *lowerer) optionalNCA(e *sema.ArrayRef) Arg {
 // a new one (arrayNCA).
 func (l *lowerer) wholeNCA(e *sema.ArrayRef) *Mem {
 	if c := l.adjustableOf(e.Sym); c != nil && c.Desc.Class == ClassNCA {
+		l.checkDescribed(e.Sym, c)
+
 		return &Mem{Cell: c, T: Long}
 	}
 
@@ -387,7 +389,7 @@ func (l *lowerer) wholeDims(s *sema.Symbol) (Expr, []ncaDim) {
 
 	pointer := Expr(&Addr{l.symbolMem(s)})
 	if c != nil && c.Desc.Class == ClassNCA {
-		pointer = &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}
+		pointer = l.guardedElement(&Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, s, c)
 	}
 
 	return pointer, dims

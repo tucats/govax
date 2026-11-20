@@ -16,12 +16,7 @@ import (
 // is the riskiest part of it. checked is what it prints or signals compiled with
 // qualifier, and plain what it prints without; refused, if not empty, a condition it
 // must not raise compiled with qualifier.
-var checkPrograms = []struct {
-	name, qualifier string
-	checked, plain  string
-	refused         string
-	source          string
-}{
+var checkPrograms = []checkProgram{
 	{
 		// Forwarding finds the subscript is 7, which without the check becomes T.A+24.
 		name: "KNOWNBAD", qualifier: "/CHECK=BOUNDS", checked: "%SYSTEM-F-SUBRNG", plain: "AFTER",
@@ -478,13 +473,29 @@ var checkPrograms = []struct {
 	},
 }
 
+// checkProgram is a program of checkPrograms or pointerCheckPrograms.
+type checkProgram struct {
+	name, qualifier string
+	checked, plain  string
+	refused         string
+	source          string
+}
+
 // TestFortranCheck compiles and runs each of checkPrograms, with the check and without,
 // under both optimizer settings.
 func TestFortranCheck(t *testing.T) {
+	runCheckPrograms(t, checkPrograms)
+}
+
+// runCheckPrograms compiles and runs each of programs, with its check and without, under
+// both optimizer settings, in both paging modes.
+func runCheckPrograms(t *testing.T, programs []checkProgram) {
+	t.Helper()
+
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
-		for _, p := range checkPrograms {
+		for _, p := range programs {
 			t.Run(p.name, func(t *testing.T) {
 				if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + p.name + ".FOR"},
 					rms.TextRecords, splitSource(strings.TrimPrefix(p.source, "\n"))); err != nil {

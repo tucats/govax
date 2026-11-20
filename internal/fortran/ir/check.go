@@ -445,6 +445,21 @@ func (c *checker) expr(e Expr) error {
 			}
 		}
 
+	case *Guard:
+		if e.Routine == "" {
+			return fmt.Errorf("%s calls no routine", ExprText(e))
+		}
+
+		for _, x := range e.Operands() {
+			if err := c.expr(x); err != nil {
+				return err
+			}
+
+			if x.Type() != Long {
+				return fmt.Errorf("%s has a %s operand", ExprText(e), x.Type())
+			}
+		}
+
 	case *InRange:
 		for _, x := range []Expr{e.X, e.Low, e.High} {
 			if err := c.expr(x); err != nil {

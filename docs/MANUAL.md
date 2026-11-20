@@ -6798,6 +6798,8 @@ string changes nothing. So a directive on a program's first line doesn't head pa
 | | Two arrays' extents in one Fortran 90 array assignment, where they weren't known to be equal when compiling, and an array constructor's values against the section it is stored in | `%FOR-F-NOTCONFOR` (govax's own, FOR number 300) |
 | | An assumed-shape dummy's argument, at each entry point: a class NCA or class A descriptor of the dummy's rank, nothing else | `%FOR-F-BADARRDESC` (govax's own, FOR number 303) |
 | `OVERFLOW` | Integer arithmetic, each unit's entry masks setting the IV bit | `%SYSTEM-F-INTOVF` |
+| `POINTERS` | A Fortran 90 pointer's target, where it is used: the pointer must be associated (a pointer nullified, deallocated, or never assigned isn't) | `%FOR-F-NOTASSOC`, "pointer is not associated" (govax's own, FOR number 311) |
+| | An allocatable array's element, the whole array (an argument, an output list's item), or its bounds (`SIZE`, `LBOUND`, `UBOUND`), where it is used: the array must be allocated | `%FOR-F-UNALLOCATED`, "allocatable array is not allocated" (govax's own, FOR number 312) |
 | `UNDERFLOW` | Floating arithmetic, each entry point setting the PSW's FU bit | `%SYSTEM-F-FLTUND_F`, not a quiet zero |
 
 The keywords also come as `NOBOUNDS` and so on, with `ALL` and `NONE`, cut short if you
@@ -6819,6 +6821,16 @@ or bit function never does.
 
 A subscript that is a constant outside its array's bounds is `%FORT-W-SUBSCRIPTRANGE`, with
 or without `/CHECK`, since the program is surely wrong even if it never reaches the statement.
+
+`POINTERS` tests the longword that holds the target's address (a pointer's own, or the POINTER
+of an array pointer's or allocatable array's descriptor) where the place would be reached, so,
+as for `BOUNDS`, `IF (ASSOCIATED (P) .AND. P%KEY .GT. 0)` and `DO WHILE (ASSOCIATED (Q))` work
+as they read. Without it, a disassociated pointer's target is at address 0, an access
+violation, and an array after `DEALLOCATE` may be read from the memory it gave back. What it
+can't see is a pointer whose target has gone some other way: deallocated through another
+pointer, or a routine's local variable after the routine returned. A pointer itself (in `=>`,
+`NULLIFY`, `ALLOCATE`, `DEALLOCATE`, `ASSOCIATED`, or passed to a pointer dummy) isn't tested,
+and neither is an assumed-shape dummy, whose actual argument was.
 
 **Warnings.** `/WARNINGS` says what the compiler is to tell you, beyond errors, which it always does:
 
@@ -7242,6 +7254,8 @@ It has these routines, which MACRO programs can call too:
 | `FTN$NOTCONFOR()` | Signals `%FOR-F-NOTCONFOR`, severe, "array shapes do not conform": `/CHECK=BOUNDS` found two arrays of different shapes in a Fortran 90 array assignment. VAX FORTRAN had no such condition; it is govax's, FOR number 300 |
 | `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array or array pointer: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0 for an allocatable array), `flags` a longword (bit 0: STAT= given; bit 1: a pointer's, which is never already allocated, and whose block has an 8-byte header before it, a mark and the size, for DEALLOCATE to check; bit 2: the block cleared), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
 | `FTN$BADARRDESC()` | Signals `%FOR-F-BADARRDESC`, severe, "argument is not an array descriptor of the dummy argument's rank": `/CHECK=BOUNDS` found an assumed-shape dummy given something other than a class NCA or class A descriptor of its rank (a call without the routine's interface, or a MACRO caller's mistake). govax's own, FOR number 303 |
+| `FTN$NOTASSOC()` | Signals `%FOR-F-NOTASSOC`, severe, "pointer is not associated": `/CHECK=POINTERS` found a pointer's target about to be used while the pointer is disassociated. govax's own, FOR number 311. The compiled code calls it in the middle of an expression, keeping nothing in R0 and R1 |
+| `FTN$UNALLOCATED()` | Signals `%FOR-F-UNALLOCATED`, severe, "allocatable array is not allocated": the same for an allocatable array. govax's own, FOR number 312 (`NOTALLOC`, 302, is `DEALLOCATE`'s) |
 | `FTN$GET_TEMP(desc)` | The storage of an array the compiler makes when the program runs, on the heap: a statement's temporary past 64 KB, or the value of a function whose value's shape is known only when it runs. `desc` is a class A descriptor with its size (ARSIZE) filled in; takes that many bytes (8 at least) from `LIB$GET_VM` into its POINTER, or signals `%FOR-F-INSVIRMEM`. `FTN$DEALLOCATE` gives it back |
 | `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array or array pointer: gives its memory to `LIB$FREE_VM` and clears POINTER. With flag bit 1, a pointer's, the descriptor must describe the whole of a block `FTN$ALLOCATE` or `FTN$ALLOC_SCALAR` made for a pointer, in order. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC`; for a pointer's target that isn't such a block, 304, or `%FOR-F-BADDEALLOC` (govax's own) |
 | `FTN$ALLOC_SCALAR(cell, flags, size)` | Fortran 90's ALLOCATE of a scalar pointer: `cell` is the longword that holds its target's address (a CHARACTER pointer's descriptor's POINTER), `flags` `FTN$ALLOCATE`'s (bit 1 always set), `size` the target's size in bytes, by value. Takes the memory as `FTN$ALLOCATE` does for a pointer, and stores its address in `cell`. Returns 0 in R0, or 41 or `%FOR-F-INSVIRMEM` |
@@ -10107,10 +10121,10 @@ reach of one. Any call may change any pointer's target.
 
 Of pointers, these are not there yet: a CHARACTER pointer whose length is known only when the
 program runs (but `CHARACTER(LEN=*)` pointer dummies, above); `NULL()` and initial values for
-pointers and pointer components, which are Fortran 95's; `/CHECK=POINTERS`, which would catch
-the use of a disassociated pointer (today a disassociated pointer's target is at address 0,
-and using it is an access violation); and the debugger's EXAMINE of a pointer or through one,
-which leaves pointers out of the `/DEBUG` table for now.
+pointers and pointer components, which are Fortran 95's; and the debugger's EXAMINE of a
+pointer or through one, which leaves pointers out of the `/DEBUG` table for now. Without
+`/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's target
+is at address 0, and using it is an access violation.
 Procedure pointers and bounds remapping (`P(1:N) => A`) aren't Fortran 90 at all.
 
 Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have

@@ -394,7 +394,7 @@ func mayFault(e ir.Expr, overflow bool) bool {
 	case *ir.Addr:
 		return memMayFault(e.Mem, overflow)
 
-	case *ir.InRange:
+	case *ir.InRange, *ir.Guard:
 		return true
 
 	case *ir.Op:
@@ -575,6 +575,10 @@ func walkMems(r *ir.Routine, visit func(*ir.Mem)) {
 			expr(e.X)
 			expr(e.Low)
 			expr(e.High)
+		case *ir.Guard:
+			for _, x := range e.Operands() {
+				expr(x)
+			}
 		case *ir.CharCmp:
 			text(e.X)
 			text(e.Y)

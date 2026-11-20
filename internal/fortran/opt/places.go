@@ -520,6 +520,10 @@ func allocatedBase(e ir.Expr) *ir.Cell {
 		}
 
 		return allocatedBase(e.Y)
+
+	case *ir.Guard:
+		// /CHECK=POINTERS's test of the descriptor's POINTER: the address is X.
+		return allocatedBase(e.X)
 	}
 
 	return nil
@@ -546,6 +550,9 @@ func shapedBase(e ir.Expr) *ir.Cell {
 		}
 
 		return shapedBase(e.Y)
+
+	case *ir.Guard:
+		return shapedBase(e.X)
 	}
 
 	return nil

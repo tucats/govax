@@ -411,6 +411,11 @@ func (c *collector) expr(e ir.Expr) {
 		c.expr(e.Low)
 		c.expr(e.High)
 
+	case *ir.Guard:
+		for _, x := range e.Operands() {
+			c.expr(x)
+		}
+
 	case *ir.CharCmp:
 		c.textRead(e.X)
 		c.textRead(e.Y)

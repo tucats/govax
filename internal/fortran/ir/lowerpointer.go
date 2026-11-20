@@ -138,15 +138,17 @@ func charPointer(t sema.Type) bool {
 
 // pointerTargetMem is where the pointer s's target is: at the address its cell
 // holds. A disassociated pointer's is address 0, which is no place a program may
-// read or write (a reference to one is the program's error; /CHECK=POINTERS will
-// be Phase 110's).
+// read or write: a reference to one is the program's error, which
+// /CHECK=POINTERS finds (lowerguard.go).
 func (l *lowerer) pointerTargetMem(s *sema.Symbol) *Mem {
 	t := l.typeOf(s.Type)
 	if s.Type.Kind == sema.Character {
 		t = Byte
 	}
 
-	return &Mem{Ptr: &Load{l.pointerAddress(s)}, T: t, Volatile: s.Volatile, Pointee: pointee(s.Type)}
+	address := l.guardedAddress(&Load{l.pointerAddress(s)}, nil, ftnNotAssoc)
+
+	return &Mem{Ptr: address, T: t, Volatile: s.Volatile, Pointee: pointee(s.Type)}
 }
 
 // pointee is the Mem.Pointee of a place reached through a pointer to values of

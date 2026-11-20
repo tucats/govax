@@ -322,8 +322,9 @@ func (l *lowerer) allocated(e *sema.Allocated) Expr {
 func (l *lowerer) allocatableBase(s *sema.Symbol) *Mem {
 	c := l.adjustableOf(s)
 
-	return &Mem{Ptr: &Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, T: l.typeOf(s.Type), Volatile: s.Volatile,
-		Pointee: arrayPointee(s)}
+	pointer := l.guardedElement(&Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, s, c)
+
+	return &Mem{Ptr: pointer, T: l.typeOf(s.Type), Volatile: s.Volatile, Pointee: arrayPointee(s)}
 }
 
 // stridedElement is where the element e of the array whose class NCA
@@ -355,6 +356,8 @@ func (l *lowerer) stridedElement(e *sema.Elem, c *Cell) *Mem {
 		stride := &Load{&Mem{Cell: c, Offset: c.Desc.StrideOffset(i), T: Long}}
 		ptr = arith(Add, Long, ptr, arith(Mul, Long, subs[i], stride))
 	}
+
+	ptr = l.guardedElement(ptr, s, c)
 
 	base := &Mem{Ptr: ptr, T: l.typeOf(s.Type), Volatile: s.Volatile, Pointee: arrayPointee(s)}
 
@@ -388,7 +391,8 @@ func (l *lowerer) ncaAsClassA(s *sema.Symbol, c *Cell) *Mem {
 		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: a, T: Word}, Src: &Load{&Mem{Cell: c, T: Word}}})
 	}
 
-	copyField(PointerOffset)
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: a, Offset: PointerOffset, T: Long},
+		Src: l.guardedElement(&Load{&Mem{Cell: c, Offset: PointerOffset, T: Long}}, s, c)})
 	copyField(ArsizeOffset)
 	copyField(A0Offset)
 

@@ -390,7 +390,7 @@ func (c *cse) candidate(e ir.Expr) bool {
 			return false
 		}
 
-	case *ir.Op, *ir.Field, *ir.InRange:
+	case *ir.Op, *ir.Field, *ir.InRange, *ir.Guard:
 
 	default:
 		return false
@@ -419,6 +419,8 @@ func hasCallValue(e ir.Expr) bool {
 		return hasCallValue(e.X) || hasCallValue(e.Pos) || hasCallValue(e.Size)
 	case *ir.InRange:
 		return hasCallValue(e.X) || hasCallValue(e.Low) || hasCallValue(e.High)
+	case *ir.Guard:
+		return hasCallValue(e.X) || (e.Test != nil && hasCallValue(e.Test))
 	}
 
 	return false
@@ -588,7 +590,7 @@ func (r *replacer) terminator(t ir.Terminator) {
 // expr is e with the replacement made; e itself if it contains nothing to replace.
 func (r *replacer) expr(e ir.Expr) ir.Expr {
 	switch e.(type) {
-	case *ir.Load, *ir.Op, *ir.Field, *ir.InRange:
+	case *ir.Load, *ir.Op, *ir.Field, *ir.InRange, *ir.Guard:
 		if r.place == nil && exprKey(e) == r.key {
 			return r.with
 		}
@@ -633,6 +635,18 @@ func (r *replacer) expr(e ir.Expr) ir.Expr {
 		x, low, high := r.expr(e.X), r.expr(e.Low), r.expr(e.High)
 		if x != e.X || low != e.Low || high != e.High {
 			return &ir.InRange{X: x, Low: low, High: high}
+		}
+
+	case *ir.Guard:
+		x := r.expr(e.X)
+
+		var test ir.Expr
+		if e.Test != nil {
+			test = r.expr(e.Test)
+		}
+
+		if x != e.X || test != e.Test {
+			return e.With(x, test)
 		}
 
 	case *ir.CharCmp:
@@ -758,6 +772,13 @@ func exprKey(e ir.Expr) string {
 
 	case *ir.InRange:
 		return "inrange(" + exprKey(e.X) + "," + exprKey(e.Low) + "," + exprKey(e.High) + ")"
+
+	case *ir.Guard:
+		if e.Test == nil {
+			return "guard(" + exprKey(e.X) + "," + e.Routine + ")"
+		}
+
+		return "guard(" + exprKey(e.X) + "," + exprKey(e.Test) + "," + e.Routine + ")"
 	}
 
 	// The rest are never part of a candidate's value but as themselves.
@@ -794,7 +815,7 @@ func memKey(m *ir.Mem) string {
 // destination, by an operation, rather than read where it is.
 func computed(e ir.Expr) bool {
 	switch e.(type) {
-	case *ir.Op, *ir.Field, *ir.InRange, *ir.Cmp, *ir.Addr, *ir.LabelAddr, *ir.RoutineAddr:
+	case *ir.Op, *ir.Field, *ir.InRange, *ir.Guard, *ir.Cmp, *ir.Addr, *ir.LabelAddr, *ir.RoutineAddr:
 		return true
 	}
 
@@ -842,6 +863,16 @@ func costOf(e ir.Expr) price {
 
 	case *ir.InRange:
 		return costOf(e.X).add(costOf(e.Low)).add(costOf(e.High)).add(price{1, 0})
+
+	case *ir.Guard:
+		// The TSTL and BNEQ, and X's move to a register (a Guard's is always in
+		// one, but for a place reached through it, codegen's deferrable).
+		p := costOf(e.X).add(price{3, 0})
+		if e.Test != nil {
+			p = p.add(costOf(e.Test))
+		}
+
+		return p
 
 	case *ir.LabelAddr, *ir.RoutineAddr:
 		return price{1, 0}

@@ -617,7 +617,10 @@
    array's bounds: FOR$_ADJARRDIM; a section's first and last
    subscripts, and Fortran 90 array shapes known only at run time:
    FOR$_NOTCONFOR), [NO]OVERFLOW (integer overflow
-   traps), and [NO]UNDERFLOW (floating underflow faults).  /CHECK alone
+   traps), [NO]POINTERS (a Fortran 90 pointer's target used while the
+   pointer isn't associated: FOR$_NOTASSOC; an allocatable array, or its
+   bounds, used while it isn't allocated: FOR$_UNALLOCATED), and
+   [NO]UNDERFLOW (floating underflow faults).  /CHECK alone
    is ALL.  The default is /NOCHECK.  An OPTIONS statement before a unit
    may change it for that unit.
 

@@ -149,6 +149,15 @@ func need(e ir.Expr) int {
 	case *ir.InRange:
 		return inRangeNeed(e)
 
+	case *ir.Guard:
+		// Test is computed, tested, and let go before X is computed.
+		n := need(e.X)
+		if e.Test != nil {
+			n = max(n, need(e.Test))
+		}
+
+		return n
+
 	case *ir.LabelAddr, *ir.RoutineAddr:
 		// Its value, made by MOVAB.
 		return 1
@@ -216,6 +225,8 @@ func held(e ir.Expr) int {
 		return 1
 	case *ir.Load:
 		return memHeld(e.Mem)
+	case *ir.Guard:
+		return held(e.X)
 	}
 
 	return 0
@@ -294,6 +305,10 @@ func deferrable(e ir.Expr) bool {
 		return true
 	case *ir.Load:
 		return !inCell(e) && index(e.Mem) == nil && e.Mem.Param == nil && !direct(e.Mem)
+	case *ir.Guard:
+		// /CHECK=POINTERS's test of a pointer, which leaves its address where
+		// it is: @PROG.P after the TSTL.
+		return e.Test == nil && deferrable(e.X)
 	}
 
 	return false
@@ -435,6 +450,24 @@ func (g *routineGen) fit(e ir.Expr) ir.Expr {
 				n.Low = g.spill(n.Low)
 			default:
 				n.High = g.spill(n.High)
+			}
+		}
+
+		return n
+
+	case *ir.Guard:
+		var test ir.Expr
+		if e.Test != nil {
+			test = g.fit(e.Test)
+		}
+
+		n := e.With(g.fit(e.X), test)
+
+		for need(n) > budget {
+			if n.Test == nil || need(n.X) >= need(n.Test) {
+				n.X = g.spill(n.X)
+			} else {
+				n.Test = g.spill(n.Test)
 			}
 		}
 
@@ -757,6 +790,9 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.InRange:
 		return g.inRange(e)
+
+	case *ir.Guard:
+		return g.guard(e)
 	}
 
 	panic(fmt.Sprintf("codegen: an expression of type %T", e))
@@ -854,6 +890,41 @@ func (g *routineGen) inRange(e *ir.InRange) operand {
 	g.emit("INDEX", ir.Long, x.text, low.text, high.text, "#1", "#0", register(r))
 
 	return inRegister(r, ir.Long)
+}
+
+// guard writes /CHECK=POINTERS's test (ir.Guard): the address tested, then a
+// call of the FTNRTL routine that signals the condition if it is 0, which
+// doesn't come back, so that the registers it changes (R0 and R1) needn't be
+// kept. The value is X's, computed after the test when there's a Test.
+//
+//	TSTL    PROG.P
+//	BNEQ    PROG.$5
+//	CALLS   #0,G^FTN$NOTASSOC
+//	PROG.$5:
+func (g *routineGen) guard(e *ir.Guard) operand {
+	test := func(v operand) {
+		if g.set != v.text || g.setType != ir.Long {
+			g.emit("TSTL", ir.None, v.text)
+		}
+
+		ok := g.newLabel()
+		g.emit("BNEQ", ir.None, ok)
+		g.emit("CALLS", ir.None, "#0", "G^"+e.Routine)
+		g.label(ok, "")
+	}
+
+	if e.Test == nil {
+		x := g.eval(e.X)
+		test(x)
+
+		return x
+	}
+
+	t := g.eval(e.Test)
+	test(t)
+	g.free(t)
+
+	return g.eval(e.X)
 }
 
 // operate writes the instruction for e, whose operands are x and y (y

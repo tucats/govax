@@ -2,13 +2,13 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for F90PDUM, a subroutine
-;   IP    INTEGER, POINTER        an argument  @F90PDUM.$A1
-;   AP    REAL, POINTER (:)       an argument  @F90PDUM.$A2
-;   CP    CHARACTER*(*), POINTER  argument 3   @F90PDUM.CP(AP)
-;   OP    INTEGER, POINTER        an argument  @F90PDUM.$A4
-;   N     INTEGER                 $LOCAL+0     F90PDUM.N
-;   V     REAL (10)               $LOCAL+4     F90PDUM.V
-;   S     CHARACTER*8             $LOCAL+44    F90PDUM.S
+;   IP    INTEGER, POINTER            an argument  @F90PDUM.$A1
+;   AP    REAL, POINTER (:)           an argument  @F90PDUM.$A2
+;   CP    CHARACTER*(*), POINTER      argument 3   @F90PDUM.CP(AP)
+;   OP    INTEGER, POINTER, OPTIONAL  an argument  @F90PDUM.$A4
+;   N     INTEGER, TARGET             $LOCAL+0     F90PDUM.N
+;   V     REAL, TARGET (10)           $LOCAL+4     F90PDUM.V
+;   S     CHARACTER*8, TARGET         $LOCAL+44    F90PDUM.S
 ;
 F90PDUM.CP = 12				; CP is argument 3
 
@@ -16,7 +16,7 @@ F90PDUM.CP = 12				; CP is argument 3
 F90PDUM.N:
 	.BLKL	1			; N
 F90PDUM.V:
-	.BLKL	10			; V, REAL (10)
+	.BLKL	10			; V, REAL, TARGET (10)
 F90PDUM.S:
 	.BLKL	2			; S
 F90PDUM.$A4:

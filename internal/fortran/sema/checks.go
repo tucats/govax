@@ -25,11 +25,17 @@ type Checks struct {
 	// Underflow makes floating underflow a fault, not a quiet zero, which the VAX does
 	// when the PSW's FU bit is set.
 	Underflow bool
+
+	// Pointers checks that a pointer is associated, and an allocatable array
+	// allocated, where its target or an element is used (Fortran 90;
+	// docs/planning/PHASE-110 - Fortran 90 compiler usability.md, finding 7 and
+	// the author's answer 5: one keyword for both).
+	Pointers bool
 }
 
 // checkKeywords are /CHECK's keywords, each what it does to a setting.
 var checkKeywords = map[string]func(*Checks){
-	"ALL":         func(c *Checks) { *c = Checks{Bounds: true, Overflow: true, Underflow: true} },
+	"ALL":         func(c *Checks) { *c = Checks{Bounds: true, Overflow: true, Underflow: true, Pointers: true} },
 	"NONE":        func(c *Checks) { *c = Checks{} },
 	"BOUNDS":      func(c *Checks) { c.Bounds = true },
 	"NOBOUNDS":    func(c *Checks) { c.Bounds = false },
@@ -37,10 +43,12 @@ var checkKeywords = map[string]func(*Checks){
 	"NOOVERFLOW":  func(c *Checks) { c.Overflow = false },
 	"UNDERFLOW":   func(c *Checks) { c.Underflow = true },
 	"NOUNDERFLOW": func(c *Checks) { c.Underflow = false },
+	"POINTERS":    func(c *Checks) { c.Pointers = true },
+	"NOPOINTERS":  func(c *Checks) { c.Pointers = false },
 }
 
 // checkKeywordList says what the keywords are, for a message.
-const checkKeywordList = "ALL, NONE, [NO]BOUNDS, [NO]OVERFLOW, or [NO]UNDERFLOW"
+const checkKeywordList = "ALL, NONE, [NO]BOUNDS, [NO]OVERFLOW, [NO]POINTERS, or [NO]UNDERFLOW"
 
 // With is the setting with /CHECK's keywords applied in order. No keywords is /CHECK
 // alone, which the manual's example calls full checking: ALL. A keyword may be cut

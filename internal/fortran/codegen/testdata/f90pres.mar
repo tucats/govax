@@ -2,8 +2,8 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for SP, a REAL function
-;   V     REAL (10)      argument 1  @SP.V(AP)
-;   SP    REAL, POINTER  $LOCAL+0    SP.SP
+;   V     REAL, TARGET (10)  argument 1  @SP.V(AP)
+;   SP    REAL, POINTER      $LOCAL+0    SP.SP
 ;
 SP.V = 4				; V is argument 1
 
@@ -31,7 +31,7 @@ SP.SP:	.BLKL	1			; SP, the function's value
 	RET
 
 ; Storage map for CP, a CHARACTER*4 function
-;   S     CHARACTER*8           argument 1  @CP.S(AP)
+;   S     CHARACTER*8, TARGET   argument 1  @CP.S(AP)
 ;   CP    CHARACTER*4, POINTER  $LOCAL+0    CP.CP
 ;
 CP.S = 4				; S is argument 1
@@ -58,7 +58,7 @@ CP.CP:	.BLKL	2			; CP, the function's value
 
 ; Storage map for AP, a REAL function
 ;   AP    REAL, POINTER (:)  hidden argument 1  @AP.AP(AP)
-;   V     REAL (10)          argument 2         @AP.V(AP)
+;   V     REAL, TARGET (10)  argument 2         @AP.V(AP)
 ;   N     INTEGER            argument 3         @AP.N(AP)
 ;
 AP.AP = 4				; AP's value goes through hidden argument 1
@@ -118,12 +118,12 @@ AP.$3:
 	RET
 
 ; Storage map for USER, a subroutine
-;   V     REAL (10)             argument 1  @USER.V(AP)
-;   S     CHARACTER*8           argument 2  @USER.S(AP)
-;   X     REAL                  argument 3  @USER.X(AP)
-;   P     REAL, POINTER         $LOCAL+0    USER.P
-;   Q     REAL, POINTER (:)     $LOCAL+4    USER.Q
-;   C     CHARACTER*4, POINTER  $LOCAL+36   USER.C
+;   V     REAL, TARGET (10)     argument 1              @USER.V(AP)
+;   S     CHARACTER*8, TARGET   argument 2              @USER.S(AP)
+;   X     REAL                  argument 3              @USER.X(AP)
+;   P     REAL, POINTER         $LOCAL+0                USER.P
+;   Q     REAL, POINTER (:)     descriptor at $LOCAL+4  USER.Q
+;   C     CHARACTER*4, POINTER  $LOCAL+36               USER.C
 ;
 USER.V = 4				; V is argument 1
 USER.S = 8				; S is argument 2

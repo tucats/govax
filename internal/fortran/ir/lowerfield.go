@@ -122,7 +122,8 @@ func (l *lowerer) fieldPlace(e *sema.FieldRef, target bool) *Mem {
 		el := l.stridedElement(sema.NewElem(e.Sym, e.Subs, nil, e.NamePos), c)
 		base = &Mem{Ptr: el.Ptr, T: Byte, Volatile: e.Sym.Volatile, Pointee: el.Pointee}
 	} else if c != nil && e.Subs != nil {
-		base = &Mem{Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}, T: Byte, Volatile: e.Sym.Volatile}
+		a0 := l.guardedElement(&Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}, e.Sym, c)
+		base = &Mem{Ptr: a0, T: Byte, Volatile: e.Sym.Volatile}
 		v, k := split(l.adjustableIndex(e.Subs, e.Sym, c, nil))
 		offset += int(k) * e.Sym.Struct.Size
 
@@ -152,7 +153,8 @@ func (l *lowerer) fieldPlace(e *sema.FieldRef, target bool) *Mem {
 		}
 
 		address := finish(Long, Long.Size())
-		base = &Mem{Ptr: &Load{address}, T: Byte, Volatile: address.Volatile, Pointee: pointee(sema.FieldTargetType(s.Field))}
+		target := l.guardedAddress(&Load{address}, nil, ftnNotAssoc)
+		base = &Mem{Ptr: target, T: Byte, Volatile: address.Volatile, Pointee: pointee(sema.FieldTargetType(s.Field))}
 		offset, parts = 0, nil
 	}
 

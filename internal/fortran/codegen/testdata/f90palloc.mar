@@ -7,14 +7,14 @@ BLK.$BASE:
 	.BLKB	32
 
 ; Storage map for F90PALLOC, the main program
-;   P     INTEGER, POINTER        $LOCAL+0   F90PALLOC.P
-;   A     INTEGER, POINTER (:)    $LOCAL+4   F90PALLOC.A
-;   K     INTEGER, POINTER (:,:)  $LOCAL+36  F90PALLOC.K
-;   C     CHARACTER*6, POINTER    $LOCAL+80  F90PALLOC.C
-;   R     TYPE(PAIR), POINTER     $LOCAL+88  F90PALLOC.R
-;   S     REAL, POINTER (:)       BLK+0      F90PALLOC.S
-;   IS    INTEGER                 $LOCAL+92  F90PALLOC.IS
-;   N     INTEGER                 $LOCAL+96  F90PALLOC.N
+;   P     INTEGER, POINTER        $LOCAL+0                 F90PALLOC.P
+;   A     INTEGER, POINTER (:)    descriptor at $LOCAL+4   F90PALLOC.A
+;   K     INTEGER, POINTER (:,:)  descriptor at $LOCAL+36  F90PALLOC.K
+;   C     CHARACTER*6, POINTER    $LOCAL+80                F90PALLOC.C
+;   R     TYPE(PAIR), POINTER     $LOCAL+88                F90PALLOC.R
+;   S     REAL, POINTER (:)       descriptor at BLK+0      F90PALLOC.S
+;   IS    INTEGER                 $LOCAL+92                F90PALLOC.IS
+;   N     INTEGER                 $LOCAL+96                F90PALLOC.N
 ;   Type PAIR, 8 bytes
 ;     +0     I     INTEGER
 ;     +4     J     INTEGER

@@ -6,7 +6,7 @@
 ;   H     TYPE(HOLDER)           $LOCAL+0    F90PCARR.H
 ;   P     TYPE(HOLDER), POINTER  $LOCAL+36   F90PCARR.P
 ;   T     TYPE(TREE)             $LOCAL+40   F90PCARR.T
-;   A     INTEGER (10)           $LOCAL+76   F90PCARR.A
+;   A     INTEGER, TARGET (10)   $LOCAL+76   F90PCARR.A
 ;   Type HOLDER, 36 bytes
 ;     +0     K     INTEGER
 ;     +4     V     INTEGER, POINTER (:)
@@ -24,7 +24,7 @@ F90PCARR.P:
 F90PCARR.T:
 	.BLKL	9			; T
 F90PCARR.A:
-	.BLKL	10			; A, INTEGER (10)
+	.BLKL	10			; A, INTEGER, TARGET (10)
 F90PCARR.$T1:
 	.BLKL	1			; temporary
 F90PCARR.$I1:

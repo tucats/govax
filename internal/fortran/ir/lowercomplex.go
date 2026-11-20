@@ -399,6 +399,9 @@ func readsMemory(e Expr) bool {
 
 	case *InRange:
 		return readsMemory(e.X) || readsMemory(e.Low) || readsMemory(e.High)
+
+	case *Guard:
+		return readsMemory(e.X) || (e.Test != nil && readsMemory(e.Test))
 	}
 
 	return false

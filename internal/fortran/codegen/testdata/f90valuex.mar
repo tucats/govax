@@ -2,10 +2,10 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for RAMP, a REAL function
-;   $VALUE  REAL (0:?)  hidden argument 1  @RAMP.$VALUE(AP)
-;   N       INTEGER     argument 2         @RAMP.N(AP)
-;   RAMP    REAL (0:?)  $LOCAL+4           RAMP.RAMP
-;   I       INTEGER     $LOCAL+0           RAMP.I
+;   $VALUE  REAL (0:?)  hidden argument 1       @RAMP.$VALUE(AP)
+;   N       INTEGER     argument 2              @RAMP.N(AP)
+;   RAMP    REAL (0:?)  descriptor at $LOCAL+4  RAMP.RAMP
+;   I       INTEGER     $LOCAL+0                RAMP.I
 ;
 RAMP.$VALUE = 4				; $VALUE's value goes through hidden argument 1
 RAMP.N = 8				; N is argument 2
@@ -88,8 +88,6 @@ RAMP.$3:
 ; Storage map for USE, a subroutine
 ;   A     REAL (?)  argument 1  @USE.A(AP)
 ;   N     INTEGER   argument 2  @USE.N(AP)
-;   $G    REAL (:)  $LOCAL+40   USE.$G1
-;   $G    REAL (:)  $LOCAL+100  USE.$G2
 ;
 USE.A = 4				; A is argument 1
 USE.N = 8				; N is argument 2
@@ -367,9 +365,9 @@ USE.L10:
 	RET
 
 ; Storage map for USE.DOUBLE, a REAL function
-;   $VALUE  REAL (?)  hidden argument 1  @USE.DOUBLE.$VALUE(AP)
-;   V       REAL (:)  argument 2         @USE.DOUBLE.V(AP)
-;   DOUBLE  REAL (?)  $LOCAL+0           USE.DOUBLE.DOUBLE
+;   $VALUE  REAL (?)  hidden argument 1       @USE.DOUBLE.$VALUE(AP)
+;   V       REAL (:)  argument 2              @USE.DOUBLE.V(AP)
+;   DOUBLE  REAL (?)  descriptor at $LOCAL+0  USE.DOUBLE.DOUBLE
 ;
 USE.DOUBLE.$VALUE = 4			; $VALUE's value goes through hidden argument 1
 USE.DOUBLE.V = 8			; V is argument 2
@@ -506,7 +504,6 @@ USE.DOUBLE.$12:
 ;   $VALUE  INTEGER (?)  hidden argument 1  @TRI.$VALUE(AP)
 ;   N       INTEGER      argument 2         @TRI.N(AP)
 ;   R       INTEGER (?)  FP-88              TRI.R(FP)
-;   $G      INTEGER (:)  FP-48              TRI.$G1(FP)
 ;
 TRI.$VALUE = 4				; $VALUE's value goes through hidden argument 1
 TRI.N = 8				; N is argument 2

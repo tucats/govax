@@ -95,6 +95,10 @@ func locateExpr(e Expr) {
 		locateExpr(e.X)
 		locateExpr(e.Low)
 		locateExpr(e.High)
+	case *Guard:
+		for _, x := range e.Operands() {
+			locateExpr(x)
+		}
 	case *CharCmp:
 		locateText(e.X)
 		locateText(e.Y)

@@ -2,11 +2,11 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for AUTOLEN, a subroutine
-;   S     CHARACTER*(N)         argument 1  @AUTOLEN.S(AP)
-;   N     INTEGER               argument 2  @AUTOLEN.N(AP)
-;   C     CHARACTER*(*)         argument 3  @AUTOLEN.C(AP)
-;   T     CHARACTER*(LEN(C)+1)  $LOCAL+0    AUTOLEN.T
-;   W     CHARACTER*(N) (?)     $LOCAL+8    AUTOLEN.W
+;   S     CHARACTER*(N)         argument 1              @AUTOLEN.S(AP)
+;   N     INTEGER               argument 2              @AUTOLEN.N(AP)
+;   C     CHARACTER*(*)         argument 3              @AUTOLEN.C(AP)
+;   T     CHARACTER*(LEN(C)+1)  descriptor at $LOCAL+0  AUTOLEN.T
+;   W     CHARACTER*(N) (?)     descriptor at $LOCAL+8  AUTOLEN.W
 ;
 AUTOLEN.S = 4				; S is argument 1
 AUTOLEN.N = 8				; N is argument 2

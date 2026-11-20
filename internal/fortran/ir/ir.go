@@ -1299,6 +1299,24 @@ type (
 		X, Low, High Expr
 	}
 
+	// Guard is X, a Long, once Test, a Long, has been found not to be 0; nil
+	// Test is X itself. If it is 0, Routine is called, an FTNRTL routine that
+	// signals a severe condition and doesn't come back (/CHECK=POINTERS:
+	// lowerguard.go). X is a pointer's target's address, or an element's, and
+	// Test the pointer's or its descriptor's POINTER. The code generator writes
+	//
+	//	TSTL    PROG.P               (Test, or X)
+	//	BNEQ    PROG.$5
+	//	CALLS   #0,G^FTN$NOTASSOC
+	//	PROG.$5:
+	//
+	// before X's value. An optimizer may take it away only if it knows Test
+	// isn't 0: otherwise it counts as what can fault, as InRange does.
+	Guard struct {
+		X, Test Expr
+		Routine string
+	}
+
 	// Field is the bit field of X, a Long, Size bits from bit Pos (bit 0 the
 	// lowest), as an unsigned Long: EXTZV. Pos and Size are Longs, Pos from 0
 	// to 31 and Size from 0 to 32 with Pos+Size at most 32.
@@ -1364,6 +1382,33 @@ func (*InRange) Type() Type { return Long }
 // Type is Long: the field's value, zero-extended.
 func (*Field) Type() Type { return Long }
 
+// Type is Long: an address.
+func (*Guard) Type() Type { return Long }
+
+// Tested is what the guard g tests: Test, or X if there's no Test.
+func (g *Guard) Tested() Expr {
+	if g.Test == nil {
+		return g.X
+	}
+
+	return g.Test
+}
+
+// Operands are g's operands in the order they're computed: Test first, if
+// it has one, then X.
+func (g *Guard) Operands() []Expr {
+	if g.Test == nil {
+		return []Expr{g.X}
+	}
+
+	return []Expr{g.Test, g.X}
+}
+
+// With is g with its operands x and test, test nil if g has none.
+func (g *Guard) With(x, test Expr) *Guard {
+	return &Guard{X: x, Test: test, Routine: g.Routine}
+}
+
 // Type is Long: a position.
 func (*CharIndex) Type() Type { return Long }
 
@@ -1380,6 +1425,7 @@ func (*Cmp) exprNode()          {}
 func (*CharCmp) exprNode()      {}
 func (*Field) exprNode()        {}
 func (*InRange) exprNode()      {}
+func (*Guard) exprNode()        {}
 func (*CharIndex) exprNode()    {}
 
 // LongConst is the Long constant n.

@@ -2,18 +2,18 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for F90APTR, the main program
-;   A     INTEGER (0:9)           $LOCAL+0    F90APTR.A
-;   M     INTEGER (4,5)           $LOCAL+40   F90APTR.M
-;   P     INTEGER, POINTER (:)    $LOCAL+120  F90APTR.P
-;   Q     INTEGER, POINTER (:,:)  $LOCAL+152  F90APTR.Q
-;   R     INTEGER, POINTER (:)    $LOCAL+196  F90APTR.R
+;   A     INTEGER, TARGET (0:9)   $LOCAL+0                  F90APTR.A
+;   M     INTEGER, TARGET (4,5)   $LOCAL+40                 F90APTR.M
+;   P     INTEGER, POINTER (:)    descriptor at $LOCAL+120  F90APTR.P
+;   Q     INTEGER, POINTER (:,:)  descriptor at $LOCAL+152  F90APTR.Q
+;   R     INTEGER, POINTER (:)    descriptor at $LOCAL+196  F90APTR.R
 ;
 
 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
 F90APTR.A:
-	.BLKL	10			; A, INTEGER (0:9)
+	.BLKL	10			; A, INTEGER, TARGET (0:9)
 F90APTR.M:
-	.BLKL	20			; M, INTEGER (4,5)
+	.BLKL	20			; M, INTEGER, TARGET (4,5)
 F90APTR.P:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_NCA
@@ -194,7 +194,7 @@ F90APTR.$1:
 	RET
 
 ; Storage map for S, a RECURSIVE subroutine
-;   V     REAL (10)          argument 1  @S.V(AP)
+;   V     REAL, TARGET (10)  argument 1  @S.V(AP)
 ;   W     REAL, POINTER (:)  FP-48       S.W(FP)
 ;
 S.V = 4					; V is argument 1

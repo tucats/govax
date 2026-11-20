@@ -2,11 +2,11 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for S, a subroutine
-;   N     INTEGER        an argument  @S.$A1
-;   IS    INTEGER*2 (2)  an argument  @S.$A2
-;   A     REAL (:)       $LOCAL+0     S.A
-;   B     REAL (:)       $LOCAL+32    S.B
-;   K     REAL (:)       $LOCAL+64    S.K
+;   N     INTEGER                an argument              @S.$A1
+;   IS    INTEGER*2 (2)          an argument              @S.$A2
+;   A     REAL, ALLOCATABLE (:)  descriptor at $LOCAL+0   S.A
+;   B     REAL, ALLOCATABLE (:)  descriptor at $LOCAL+32  S.B
+;   K     REAL, ALLOCATABLE (:)  descriptor at $LOCAL+64  S.K
 ;
 
 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG

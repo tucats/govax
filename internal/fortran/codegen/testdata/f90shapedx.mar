@@ -2,9 +2,9 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for TAKE, a subroutine
-;   V     REAL (:)           argument 1   @TAKE.V(AP)
-;   C     CHARACTER*(*) (:)  argument 2   @TAKE.C(AP)
-;   O     REAL (:)           an argument  @TAKE.$A3
+;   V     REAL (:)            argument 1   @TAKE.V(AP)
+;   C     CHARACTER*(*) (:)   argument 2   @TAKE.C(AP)
+;   O     REAL, OPTIONAL (:)  an argument  @TAKE.$A3
 ;
 TAKE.V = 4				; V is argument 1
 TAKE.C = 8				; C is argument 2
@@ -210,13 +210,11 @@ TAKE.$20:
 	RET
 
 ; Storage map for GIVE, a subroutine
-;   A     REAL (?)         argument 1   @GIVE.A(AP)
-;   N     INTEGER          argument 2   @GIVE.N(AP)
-;   IV    INTEGER (3)      argument 3   @GIVE.IV(AP)
-;   S     CHARACTER*4 (5)  argument 4   @GIVE.S(AP)
-;   O     REAL (:)         an argument  @GIVE.$A5
-;   $W    REAL (?)         $LOCAL+160   GIVE.$R1
-;   $W    REAL (?)         $LOCAL+264   GIVE.$R2
+;   A     REAL (?)            argument 1   @GIVE.A(AP)
+;   N     INTEGER             argument 2   @GIVE.N(AP)
+;   IV    INTEGER (3)         argument 3   @GIVE.IV(AP)
+;   S     CHARACTER*4 (5)     argument 4   @GIVE.S(AP)
+;   O     REAL, OPTIONAL (:)  an argument  @GIVE.$A5
 ;
 GIVE.A = 4				; A is argument 1
 GIVE.N = 8				; N is argument 2

@@ -6,7 +6,6 @@
 ;   N     INTEGER          argument 2  @GIVE.N(AP)
 ;   S     CHARACTER*4 (5)  argument 3  @GIVE.S(AP)
 ;   X     REAL             $LOCAL+0    GIVE.X
-;   $W    REAL (?)         $LOCAL+100  GIVE.$R1
 ;
 GIVE.A = 4				; A is argument 1
 GIVE.N = 8				; N is argument 2
@@ -300,9 +299,6 @@ GIVE.$29:
 ; Storage map for SHAPED, a subroutine
 ;   W     REAL (:,:)       argument 1  @SHAPED.W(AP)
 ;   C     CHARACTER*8 (:)  argument 2  @SHAPED.C(AP)
-;   $W    REAL (?,?)       $LOCAL+104  SHAPED.$R1
-;   $W    REAL (?)         $LOCAL+228  SHAPED.$R2
-;   $W    CHARACTER*8 (?)  $LOCAL+276  SHAPED.$R3
 ;
 SHAPED.W = 4				; W is argument 1
 SHAPED.C = 8				; C is argument 2

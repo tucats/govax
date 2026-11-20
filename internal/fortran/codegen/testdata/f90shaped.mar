@@ -2,10 +2,10 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for SHAPED, a subroutine
-;   A     REAL (?:,:)        argument 1   @SHAPED.A(AP)
-;   N     INTEGER            argument 2   @SHAPED.N(AP)
-;   C     CHARACTER*(*) (:)  argument 3   @SHAPED.C(AP)
-;   O     REAL (:)           an argument  @SHAPED.$A4
+;   A     REAL (?:,:)         argument 1   @SHAPED.A(AP)
+;   N     INTEGER             argument 2   @SHAPED.N(AP)
+;   C     CHARACTER*(*) (:)   argument 3   @SHAPED.C(AP)
+;   O     REAL, OPTIONAL (:)  an argument  @SHAPED.$A4
 ;
 SHAPED.A = 4				; A is argument 1
 SHAPED.N = 8				; N is argument 2
@@ -386,11 +386,11 @@ SHAPED.$54:
 	RET
 
 ; Storage map for CALLER, a subroutine
-;   X     REAL (?,3)       argument 1  @CALLER.X(AP)
-;   M     INTEGER          argument 2  @CALLER.M(AP)
-;   Y     REAL (4,3)       $LOCAL+0    CALLER.Y
-;   H     REAL (:,:)       $LOCAL+48   CALLER.H
-;   S     CHARACTER*4 (6)  $LOCAL+92   CALLER.S
+;   X     REAL (?,3)               argument 1               @CALLER.X(AP)
+;   M     INTEGER                  argument 2               @CALLER.M(AP)
+;   Y     REAL (4,3)               $LOCAL+0                 CALLER.Y
+;   H     REAL, ALLOCATABLE (:,:)  descriptor at $LOCAL+48  CALLER.H
+;   S     CHARACTER*4 (6)          $LOCAL+92                CALLER.S
 ;
 CALLER.X = 4				; X is argument 1
 CALLER.M = 8				; M is argument 2

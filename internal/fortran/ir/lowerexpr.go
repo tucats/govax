@@ -52,7 +52,17 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.IntrinsicRef:
 		return l.intrinsic(e)
 
-	case *sema.ArrayFunc, *sema.ArrayFuncAt:
+	case *sema.ArrayFunc:
+		v := Expr(&Load{l.arrayFuncValue(e)})
+
+		switch e.Name {
+		case "SIZE", "LBOUND", "UBOUND":
+			v = l.guardedInquiry(e, v)
+		}
+
+		return v
+
+	case *sema.ArrayFuncAt:
 		return &Load{l.arrayFuncValue(e)}
 
 	case *sema.Loc:

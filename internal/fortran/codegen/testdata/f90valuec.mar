@@ -2,10 +2,10 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for REP, a CHARACTER*(*) function
-;   $VALUE  CHARACTER*(N*LEN(C))  hidden argument 1  @REP.$VALUE(AP)
-;   C       CHARACTER*(*)         argument 2         @REP.C(AP)
-;   N       INTEGER               argument 3         @REP.N(AP)
-;   REP     CHARACTER*(N*LEN(C))  $LOCAL+0           REP.REP
+;   $VALUE  CHARACTER*(N*LEN(C))  hidden argument 1       @REP.$VALUE(AP)
+;   C       CHARACTER*(*)         argument 2              @REP.C(AP)
+;   N       INTEGER               argument 3              @REP.N(AP)
+;   REP     CHARACTER*(N*LEN(C))  descriptor at $LOCAL+0  REP.REP
 ;
 REP.$VALUE = 4				; $VALUE's value goes through hidden argument 1
 REP.C = 8				; C is argument 2
@@ -55,10 +55,10 @@ REP.$1:
 	RET
 
 ; Storage map for TAGS, a CHARACTER*(*) function
-;   $VALUE  CHARACTER*(W) (?)  hidden argument 1  @TAGS.$VALUE(AP)
-;   N       INTEGER            argument 2         @TAGS.N(AP)
-;   W       INTEGER            argument 3         @TAGS.W(AP)
-;   TAGS    CHARACTER*(W) (?)  $LOCAL+0           TAGS.TAGS
+;   $VALUE  CHARACTER*(W) (?)  hidden argument 1       @TAGS.$VALUE(AP)
+;   N       INTEGER            argument 2              @TAGS.N(AP)
+;   W       INTEGER            argument 3              @TAGS.W(AP)
+;   TAGS    CHARACTER*(W) (?)  descriptor at $LOCAL+0  TAGS.TAGS
 ;
 TAGS.$VALUE = 4				; $VALUE's value goes through hidden argument 1
 TAGS.N = 8				; N is argument 2
@@ -158,9 +158,7 @@ TAGS.$7:
 	RET
 
 ; Storage map for USE, a subroutine
-;   S     CHARACTER*(*)      argument 1  @USE.S(AP)
-;   $G    CHARACTER*(*) (:)  $LOCAL+28   USE.$G1
-;   $G    CHARACTER*(*) (:)  $LOCAL+80   USE.$G2
+;   S     CHARACTER*(*)  argument 1  @USE.S(AP)
 ;
 USE.S = 4				; S is argument 1
 
@@ -435,10 +433,10 @@ SQ.$5:
 	BRW	SQ.$3
 
 ; Storage map for UP, a REAL function
-;   $VALUE  REAL (?)  a hidden argument  @UP.$A1
-;   N       INTEGER   an argument        @UP.$A2
-;   K       INTEGER   an argument        @UP.$A3
-;   UP      REAL (?)  $LOCAL+0           UP.UP
+;   $VALUE  REAL (?)  a hidden argument       @UP.$A1
+;   N       INTEGER   an argument             @UP.$A2
+;   K       INTEGER   an argument             @UP.$A3
+;   UP      REAL (?)  descriptor at $LOCAL+0  UP.UP
 ;
 
 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG

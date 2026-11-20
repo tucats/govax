@@ -7,15 +7,15 @@ SIZES.$BASE:
 	.BLKB	4
 
 ; Storage map for AUTO, a subroutine
-;   A     REAL (?,3)     argument 1  @AUTO.A(AP)
-;   N     INTEGER        argument 2  @AUTO.N(AP)
-;   C     CHARACTER*(*)  argument 3  @AUTO.C(AP)
-;   M     INTEGER        SIZES+0     AUTO.M
-;   W     REAL (?)       $LOCAL+0    AUTO.W
-;   V     REAL (?,2)     $LOCAL+32   AUTO.V
-;   X     REAL (0:?)     $LOCAL+76   AUTO.X
-;   Y     REAL (?)       $LOCAL+108  AUTO.Y
-;   W2    INTEGER (?)    $LOCAL+140  AUTO.W2
+;   A     REAL (?,3)     argument 1                @AUTO.A(AP)
+;   N     INTEGER        argument 2                @AUTO.N(AP)
+;   C     CHARACTER*(*)  argument 3                @AUTO.C(AP)
+;   M     INTEGER        SIZES+0                   AUTO.M
+;   W     REAL (?)       descriptor at $LOCAL+0    AUTO.W
+;   V     REAL (?,2)     descriptor at $LOCAL+32   AUTO.V
+;   X     REAL (0:?)     descriptor at $LOCAL+76   AUTO.X
+;   Y     REAL (?)       descriptor at $LOCAL+108  AUTO.Y
+;   W2    INTEGER (?)    descriptor at $LOCAL+140  AUTO.W2
 ;
 AUTO.A = 4				; A is argument 1
 AUTO.N = 8				; N is argument 2

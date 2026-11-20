@@ -7,7 +7,9 @@
 ; FTN$ADJARRDIM, /CHECK=BOUNDS finding an array's bounds wrong;
 ; FTN$NOTCONFOR, /CHECK=BOUNDS finding two arrays' shapes different; and
 ; FTN$BADARRDESC, /CHECK=BOUNDS finding an assumed-shape dummy argument
-; given something other than an array's descriptor of its rank.
+; given something other than an array's descriptor of its rank; and
+; FTN$NOTASSOC and FTN$UNALLOCATED, /CHECK=POINTERS finding a pointer not
+; associated or an allocatable array not allocated.
 ;
 ; Like every FTNRTL routine, each is called with CALLS or CALLG, by the
 ; VAX calling standard: AP points at the argument list, whose first byte
@@ -169,6 +171,36 @@ FOR$_BADARRDESC = ^X18897C		; FOR number 303, severity F
 
 	.ENTRY	FTN$BADARRDESC,^M<>
 	PUSHL	#FOR$_BADARRDESC
+	CALLS	#1,G^LIB$STOP
+	RET
+;
+; FTN$NOTASSOC
+;
+; A Fortran 90 routine compiled with /CHECK=POINTERS was about to use the
+; target of a pointer that isn't associated with one: nullified, never
+; assigned, or deallocated (docs/planning/PHASE-110 - Fortran 90 compiler
+; usability.md, finding 7). Its address, 0, is no place a program may read or
+; write. govax's own condition, FOR number 311, in govax's words. It is
+; severe, so this doesn't come back, and the compiled code, which calls it in
+; the middle of an expression, keeps nothing in R0 and R1 for after it.
+;
+FOR$_NOTASSOC = ^X1889BC		; FOR number 311, severity F
+
+	.ENTRY	FTN$NOTASSOC,^M<>
+	PUSHL	#FOR$_NOTASSOC
+	CALLS	#1,G^LIB$STOP
+	RET
+;
+; FTN$UNALLOCATED
+;
+; The same for an allocatable array that isn't allocated: an element of it,
+; the whole array, or its bounds (SIZE, LBOUND, UBOUND) about to be used. FOR
+; number 312; FOR's NOTALLOC (302) is DEALLOCATE's of such an array.
+;
+FOR$_UNALLOCATED = ^X1889C4		; FOR number 312, severity F
+
+	.ENTRY	FTN$UNALLOCATED,^M<>
+	PUSHL	#FOR$_UNALLOCATED
 	CALLS	#1,G^LIB$STOP
 	RET
 

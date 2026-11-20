@@ -7,10 +7,6 @@
 ;   C     CHARACTER*(*) (?)  argument 3  @RTEMP.C(AP)
 ;   IV    INTEGER (?)        argument 4  @RTEMP.IV(AP)
 ;   F     CHARACTER*4        argument 5  @RTEMP.F(AP)
-;   $W    REAL (?)           $LOCAL+112  RTEMP.$R1
-;   $W    LOGICAL (?)        $LOCAL+184  RTEMP.$R2
-;   $W    INTEGER (?)        $LOCAL+244  RTEMP.$R3
-;   $W    CHARACTER*(*) (?)  $LOCAL+304  RTEMP.$R4
 ;
 RTEMP.A = 4				; A is argument 1
 RTEMP.N = 8				; N is argument 2

@@ -557,7 +557,7 @@ var fortranGrammar = []cli.Option{
 	},
 	{
 		LongName:    "check",
-		Description: "What the compiled code looks out for: all, none, [no]bounds, [no]overflow, [no]underflow, separated by commas",
+		Description: "What the compiled code looks out for: all, none, [no]bounds, [no]overflow, [no]pointers, [no]underflow, separated by commas",
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
 			fortran.check, _ = c.String("check")

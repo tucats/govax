@@ -2,11 +2,11 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for F90ALC, the main program
-;   A     REAL (:)    $LOCAL+0   F90ALC.A
-;   B     REAL (:,:)  $LOCAL+32  F90ALC.B
-;   N     INTEGER     $LOCAL+76  F90ALC.N
-;   I     INTEGER     $LOCAL+80  F90ALC.I
-;   J     INTEGER     $LOCAL+84  F90ALC.J
+;   A     REAL, ALLOCATABLE (:)    descriptor at $LOCAL+0   F90ALC.A
+;   B     REAL, ALLOCATABLE (:,:)  descriptor at $LOCAL+32  F90ALC.B
+;   N     INTEGER                  $LOCAL+76                F90ALC.N
+;   I     INTEGER                  $LOCAL+80                F90ALC.I
+;   J     INTEGER                  $LOCAL+84                F90ALC.J
 ;
 
 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
@@ -198,11 +198,11 @@ F90ALC.$11:
 	RET
 
 ; Storage map for R, a RECURSIVE subroutine
-;   N     INTEGER      argument 1  @R.N(AP)
-;   W     INTEGER (:)  FP-32       R.W(FP)
+;   N     INTEGER                   argument 1  @R.N(AP)
+;   W     INTEGER, ALLOCATABLE (:)  FP-32       R.W(FP)
 ;
 R.N = 4					; N is argument 1
-R.W = -32				; W, INTEGER (:), allocatable: its descriptor, in the frame
+R.W = -32				; W, INTEGER, ALLOCATABLE (:): its descriptor, in the frame
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;   16        RECURSIVE SUBROUTINE R(N)

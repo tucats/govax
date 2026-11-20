@@ -2,11 +2,11 @@
 	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for F90PTR, the main program
-;   N     INTEGER               $LOCAL+0   F90PTR.N
-;   M     INTEGER               $LOCAL+4   F90PTR.M
+;   N     INTEGER, TARGET       $LOCAL+0   F90PTR.N
+;   M     INTEGER, TARGET       $LOCAL+4   F90PTR.M
 ;   P     INTEGER, POINTER      $LOCAL+8   F90PTR.P
 ;   Q     INTEGER, POINTER      $LOCAL+12  F90PTR.Q
-;   S     CHARACTER*4           $LOCAL+16  F90PTR.S
+;   S     CHARACTER*4, TARGET   $LOCAL+16  F90PTR.S
 ;   C     CHARACTER*2, POINTER  $LOCAL+20  F90PTR.C
 ;
 
@@ -107,7 +107,7 @@ F90PTR.$5:
 	RET
 
 ; Storage map for R, a RECURSIVE subroutine
-;   K     INTEGER           argument 1  @R.K(AP)
+;   K     INTEGER, TARGET   argument 1  @R.K(AP)
 ;   L     INTEGER, POINTER  FP-4        R.L(FP)
 ;
 R.K = 4					; K is argument 1
