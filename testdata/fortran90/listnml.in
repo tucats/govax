@@ -1,0 +1,8 @@
+'it''s' "say ""hi""" ISN'T_BOB'S, 2*xyz /
+plain "two
+words"
+123 4.5
+&OTHER I=9 /
+&GRP I=5, NM="a/b", X=2.5 /
+  $grp i = 6 $end
+&grp nm='x''y' x=3.0/

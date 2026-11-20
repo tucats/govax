@@ -61,6 +61,18 @@
 ; record of no bytes. A record that RMS can't write is the statement's
 ; error, FOR$_ERRDURWRI, and what is left of the statement writes nothing.
 ;
+; A unit opened with Fortran 90's DELIM= (FTN_UNITS's UB_DELIM) of APOSTROPHE
+; or QUOTE has its character values delimited (the standard's 10.8.2): a
+; blank, the delimiter, the text with each delimiter in it doubled, and the
+; delimiter again, so that a READ * takes the value back; the blank and the
+; next value's separate them. One that doesn't fit what is left of the record
+; begins the next, and one longer than a record fills as many as it needs,
+; each record after the first beginning with its continuation, not a blank
+; (the standard's rule, so the constant reads back whole; at a terminal the
+; carriage control takes that first character), a doubled delimiter never
+; split between two. Without DELIM=, with DELIM='NONE', and on an internal
+; file, the text is as above.
+;
 ; G editing (8.3.6.4, Table 8-2), Gw.dEe, writes a value whose magnitude,
 ; rounded to d significant digits, is from 0.1 up to 10**d in F form, in
 ; the field's first w-(e+2) columns with d significant digits, followed
@@ -108,6 +120,10 @@ CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context'
 CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
 CTX_NM_CAPTURE	= CTX_RECP+24		; long: FTN_NAMELIST's: where a field goes
 CTX_NM_CAPLEN	= CTX_RECP+28		;  instead of the record, and its length
+
+; The unit's block's DELIM= (FTN_UNITS's UB_DELIM): 0 not given, 1 APOSTROPHE,
+; 2 QUOTE, 3 NONE. CTX_STREAM is a unit's block.
+UB_DELIM	= 620+40
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -301,6 +317,79 @@ PUT_TEXT:
 90$:	RET
 
 ;
+; PUT_DELIMITED(context, address, length, delimiter): puts a character value
+; delimited, as the introduction says. R8 is the context, R6 and R7 the text
+; not yet put, and R5 the delimiter.
+;
+PUT_DELIMITED:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	4(AP),R8
+	MOVL	8(AP),R6
+	MOVL	12(AP),R7
+	MOVL	16(AP),R5
+	ADDL3	#3,R7,R4		; its length: the blank, the delimiters,
+	CLRL	R2			;  the text, and a second of each
+10$:	CMPL	R2,R7			;  delimiter in it
+	BGEQ	20$
+	CMPB	(R6)[R2],R5
+	BNEQ	15$
+	INCL	R4
+15$:	INCL	R2
+	BRB	10$
+20$:	ADDL2	CTX_RECLEN(R8),R4
+	CMPL	R4,CTX_RECMAX(R8)
+	BLEQ	30$			; it fits
+	CMPL	CTX_RECLEN(R8),#1
+	BLEQ	30$			; nothing in the record yet
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD		; a new record for it
+30$:	MOVZBL	#^A/ /,R1
+	JSB	DELIMITED_BYTE
+	MOVL	R5,R1
+	JSB	DELIMITED_BYTE
+40$:	DECL	R7			; each byte of the text
+	BLSS	60$
+	MOVZBL	(R6)+,R1
+	CMPB	R1,R5
+	BNEQ	50$
+	ADDL3	#2,CTX_RECLEN(R8),R0	; a doubled delimiter: both on one record
+	CMPL	R0,CTX_RECMAX(R8)
+	BLEQ	45$
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD
+45$:	MOVL	R5,R1
+	JSB	DELIMITED_BYTE
+	MOVL	R5,R1
+50$:	JSB	DELIMITED_BYTE
+	BRB	40$
+60$:	MOVL	R5,R1
+	JSB	DELIMITED_BYTE
+	RET
+
+;
+; DELIMITED_BYTE, a subroutine of PUT_DELIMITED (JSB, RSB): the byte in R1 at
+; the record's end, after writing the record first if it is full; a statement
+; that has failed returns from PUT_DELIMITED. Changes R0 and R1.
+;
+DELIMITED_BYTE:
+	TSTL	CTX_STATUS(R8)
+	BEQL	10$
+	RET				; PUT_DELIMITED's RET: no more
+10$:	CMPL	CTX_RECLEN(R8),CTX_RECMAX(R8)
+	BLSS	20$
+	PUSHL	R1			; (CALLS changes R0 and R1)
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD		; the record is full: the constant goes
+	MOVL	(SP)+,R1		;  on in the next, with no blank before
+	TSTL	CTX_STATUS(R8)
+	BEQL	20$
+	RET
+20$:	ADDL3	CTX_RECP(R8),CTX_RECLEN(R8),R0
+	MOVB	R1,(R0)
+	INCL	CTX_RECLEN(R8)
+	RSB
+
+;
 ; PUT_VALUE(type, address, length, context): puts one value, of data
 ; type type (a DSC$K_DTYPE_ code), length bytes at address, in its
 ; list-directed format, in the record of the statement whose context is
@@ -425,13 +514,30 @@ INTEGER:				; FIELD's descriptor: the length (R8) in
 	BRW	PUT_THE_FIELD
 
 ;
-; A character value: the text itself.
+; A character value: the text itself, or delimited by the unit's DELIM=.
 ;
 TEXT:
+	MOVL	16(AP),R0		; the context
+	TSTB	CTX_INTERNAL(R0)
+	BNEQ	10$			; an internal file's never are
+	MOVL	CTX_STREAM(R0),R1
+	BEQL	10$
+	MOVZBL	#^A/'/,R2
+	CMPB	UB_DELIM(R1),#1
+	BEQL	20$
+	MOVZBL	#^A/"/,R2
+	CMPB	UB_DELIM(R1),#2
+	BEQL	20$
+10$:	PUSHL	12(AP)
+	PUSHL	R6
+	PUSHL	R0
+	CALLS	#3,PUT_TEXT
+	RET
+20$:	PUSHL	R2			; the delimiter
 	PUSHL	12(AP)
 	PUSHL	R6
-	PUSHL	16(AP)			; the context
-	CALLS	#3,PUT_TEXT
+	PUSHL	R0
+	CALLS	#4,PUT_DELIMITED
 	RET
 
 ;

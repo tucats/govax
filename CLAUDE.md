@@ -1376,7 +1376,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   ended by `FTN$$UNIT_FLUSH`, written as a prompt at a terminal READ by
   `FTN$$UNIT_PROMPT`), the left tab limit (`CTX_LEFT`), PAD='s padding for
   `/F90` statements (`FTN$$FMT_SHORT`), FOR numbers 307 to 310
-  (`testdata/fortran90/advance.f90`).
+  (`testdata/fortran90/advance.f90`); subtask 6 is in two parts, 6a
+  (2026-11-20) list-directed and namelist forms under the flag: `"…"` and
+  undelimited text in list-directed input (`ftn_listin.mar`), DELIM= on
+  list-directed output (`ftn_listout.mar`'s `PUT_DELIMITED`) and namelist
+  output, the unit's DELIM= 0 when not given (`UB_DELIM`), namelist's
+  `&GRP` ... `/` both ways, read from column 1, and `"…"` values
+  (`ftn_namelist.mar`'s `IS_END`, `TEXT_FORM`;
+  `testdata/fortran90/listnml.f90`), and 6b, next, sections and components
+  in namelist names.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

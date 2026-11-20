@@ -1,0 +1,19 @@
+it's|say "hi"|ISN'T_BOB'S|xyz|xyz|  0
+plain|twowords|123| 4.50
+ 'it''s'           7 'ab'
+Records of the long constant: 2
+it's| 7|ab T
+ "say ""hi""" "x"
+say "hi"|x|
+ it'sab
+&GRP
+I       =          42,
+X       =   1.500000    ,
+NM      = it's
+/
+ NM      = 'it''s'
+ 42  1.50 it's
+  5  2.50 a/b
+  6  2.50 a/b
+  6  3.00 x'y
+  $STATUS == "%X00000001"

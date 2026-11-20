@@ -34,6 +34,10 @@
 ;	'text'		V_TEXT. '' is an apostrophe. It may run across
 ;			records, which add nothing to it: 'AB and CD' on the
 ;			next record are 'ABCD', blanks in either kept.
+;	"text"		V_TEXT too, in a Fortran 90 statement (the control
+;			block's F90 flag, FTN_STATEMENT's): "" is a quotation
+;			mark (the standard's 10.8.1). Without the flag a V_WORD,
+;			so FOR$_LISIO_SYN, as VMS's.
 ;	(re,im)		V_COMPLEX. Blanks and record ends may surround each
 ;			part. An empty part is FOR$_INPCONERR.
 ;	anything else	V_WORD: up to the next blank, tab, comma, slash, or
@@ -51,7 +55,9 @@
 ;	a complex item	a V_COMPLEX, or a V_WORD that is a number, the real
 ;			part, with an imaginary part of 0 (the manual says no;
 ;			VMS's run says yes).
-;	a character	a V_TEXT, padded with blanks or cut off.
+;	a character	a V_TEXT, padded with blanks or cut off. In a
+;			Fortran 90 statement a V_WORD too, undelimited text
+;			(10.8.1): ISN'T_BOB'S, its apostrophes its own.
 ;
 ; Any other pairing fails, but for two conditions, by VMS's: a V_WORD that
 ; can't start a number (a digit, a sign, or a period) is FOR$_LISIO_SYN
@@ -99,6 +105,12 @@ CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a new record starts:
 					;  0, or 1 for namelist input (FTN_NAMELIST)
 CTX_TEXT	= CTX_RECP+36		; long: an input conversion error's text,
 					;  and its length (FTN_STATEMENT's message)
+
+; The context's flags word and kind (FTN_STATEMENT's), and the F90 flag.
+CTX_FLAGS	= 12			; word: the control block's flags
+CTX_KIND	= 14			; byte: the statement's kind
+FLAG_F90	= 16			; a statement of a unit compiled /F90
+K_READ_SL	= 2			; a list-directed READ's kind
 
 V_NULL		= 0			; the forms of a value
 V_WORD		= 1
@@ -215,8 +227,12 @@ NEXT_VALUE:
 	JSB	IS_SEPARATOR
 	BLBS	R0,90$			; r*, then a separator: nulls
 	CMPB	R1,#^A/'/
-	BNEQ	40$
-	JSB	READ_TEXT
+	BEQL	35$
+	CMPB	R1,#^A/"/		; a quotation mark, in a Fortran 90
+	BNEQ	40$			;  statement
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BEQL	40$
+35$:	JSB	READ_TEXT
 	RET
 40$:	CMPB	R1,#^A/(/
 	BNEQ	50$
@@ -326,11 +342,15 @@ FTN$$LI_ADD::
 	RSB
 
 ;
-; READ_TEXT: a character constant, its opening apostrophe next.
+; READ_TEXT: a character constant, its opening delimiter next: an apostrophe,
+; or a quotation mark (only a Fortran 90 statement's caller sends one here).
+; Two delimiters together are one of them. Changes R0 to R3.
 ;
 READ_TEXT:
 FTN$$LI_TEXT::
 	MOVB	#V_TEXT,CTX_LI_KIND(R6)
+	MOVL	CTX_POS(R6),R3
+	MOVZBL	@CTX_RECP(R6)[R3],R3	; the delimiter
 	INCL	CTX_POS(R6)
 10$:	MOVL	CTX_POS(R6),R2
 	CMPL	R2,CTX_RECLEN(R6)
@@ -345,11 +365,11 @@ FTN$$LI_TEXT::
 20$:	MOVZBL	@CTX_RECP(R6)[R2],R1
 	INCL	R2
 	MOVL	R2,CTX_POS(R6)
-	CMPB	R1,#^A/'/
+	CMPB	R1,R3
 	BNEQ	30$
 	CMPL	R2,CTX_RECLEN(R6)	; two together are one of them
 	BGEQ	90$
-	CMPB	@CTX_RECP(R6)[R2],#^A/'/
+	CMPB	@CTX_RECP(R6)[R2],R3
 	BNEQ	90$
 	INCL	CTX_POS(R6)
 30$:	JSB	ADD_CHAR
@@ -532,8 +552,11 @@ IN_TEXT:
 	CMPB	CTX_LI_KIND(R6),#V_TEXT
 	BEQL	10$
 	CMPB	CTX_LI_KIND(R6),#V_WORD
-	BEQL	NOT_A_NUMBER
-	BRB	CANT_CONVERT
+	BNEQ	CANT_CONVERT
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	; undelimited text, in a Fortran 90
+	BEQL	NOT_A_NUMBER		;  list-directed READ (namelist's
+	CMPB	CTX_KIND(R6),#K_READ_SL	;  values are delimited, 10.9.1.3)
+	BNEQ	NOT_A_NUMBER
 10$:	MOVC5	R8,(R7),#^A/ /,16(AP),@12(AP)
 	RET
 

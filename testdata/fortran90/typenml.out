@@ -1,23 +1,23 @@
-$GRP
+&GRP
 N       =           1,
 P%X     =   1.500000    ,
 P%Y     =  -2.000000    ,
-T%NAME  = 'ABCD',
+T%NAME  = ABCD,
 T%AT%X  =   3.000000    ,
 T%AT%Y  =   4.000000    ,
 T%MARKS =           1,           2,           3
-$END
+/
  1  9.00 -2.00 wxyz  3.00  5.50  1  7  3
  1  1.25  2.50 QRST  6.00  7.00  4  5  6
  2  1.25  2.50 QRST  6.00  9.00  8  8  6
 18  1.00  2.00
-$GRP
+&GRP
 N       =           2,
 P%X     =   1.000000    ,
 P%Y     =   2.000000    ,
-T%NAME  = 'QRST',
+T%NAME  = QRST,
 T%AT%X  =   6.000000    ,
 T%AT%Y  =   9.000000    ,
 T%MARKS = 2*8,           6
-$END
+/
   $STATUS == "%X00000001"

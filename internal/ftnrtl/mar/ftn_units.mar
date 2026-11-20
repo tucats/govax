@@ -161,7 +161,8 @@ UB_KEYED	= UB_ASV+38		; byte: 1 from a keyed READ's start to its
 UB_ACTION	= UB_ASV+39		; byte: what the unit may do, Fortran 90's
 					;  ACTION=: 1 READ (READONLY too), 2 WRITE,
 					;  3 READWRITE
-UB_DELIM	= UB_ASV+40		; byte: DELIM=: 1 APOSTROPHE, 2 QUOTE, 3 NONE
+UB_DELIM	= UB_ASV+40		; byte: DELIM=: 0 not given, 1 APOSTROPHE,
+					;  2 QUOTE, 3 NONE
 UB_PAD		= UB_ASV+41		; byte: PAD=: 1 YES, 2 NO
 UB_POSITION	= UB_ASV+42		; byte: where the file was put, INQUIRE's
 					;  POSITION=: 1 ASIS, 2 REWIND (and by a
@@ -372,8 +373,9 @@ EXIT_DECLARED:	.LONG	0
 	CLRB	UB_REWRITE(R6)
 	CLRB	UB_KEYED(R6)
 	MOVB	#ACTION_BOTH,UB_ACTION(R6) ; Fortran 90's defaults (the HP Fortran
-	MOVB	#3,UB_DELIM(R6)		;  manual's 12.6): READWRITE, NONE, YES,
-	MOVB	#1,UB_PAD(R6)		;  ASIS
+	CLRB	UB_DELIM(R6)		;  manual's 12.6): READWRITE, NONE (0, not
+	MOVB	#1,UB_PAD(R6)		;  given, which FTN_NAMELIST tells from
+					;  NONE), YES, ASIS
 	MOVB	#1,UB_POSITION(R6)
 	CLRB	UB_OPENREC(R6)		; no record open
 	;

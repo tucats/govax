@@ -5,8 +5,9 @@ Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
 accepted by the author the same day ("The author's answers"); its A.4 revises
 the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
 subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
-specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6
-is next.
+specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6,
+list-directed and namelist under the flag, is in two parts: 6a, the forms and DELIM=, done
+2026-11-20; 6b, sections and components in namelist names, next.
 
 ## Goal
 
@@ -352,9 +353,12 @@ And where each change lands:
    FTN$IO_END's argument, EOR= and -2, the record kept in the unit and the left tab limit,
    the terminal's prompt, PAD= on input (findings 2 to 5), the new conditions (finding 8)
    (done 2026-11-20).
-6. **List-directed and namelist under the flag**: list-directed input's quoted and
-   undelimited text, DELIM= on list-directed and namelist output, namelist's `&…/` forms,
-   sections and components in names (finding 6).
+6. **List-directed and namelist under the flag** (finding 6), in two parts:
+   - 6a. List-directed input's quoted and undelimited text, DELIM= on list-directed and
+     namelist output, namelist's `&…/` forms and quoted values (done 2026-11-20).
+   - 6b. Sections with strides and components in namelist input's names (`X(3:4)`,
+     `K(2:4:2)`, `PTS(2)%X`), and arrays of derived types in NAMELIST groups (sema's
+     NOTIMPL, Phase 105's leftover).
 7. **Items by descriptor** (FTN$IO_ITEM's class NCA loop) and sections as internal files
    and buffers (finding 11).
 8. **Programs end to end**, every mode, gfortran's witness (records compared byte for byte
@@ -566,3 +570,38 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   at a unit that isn't a terminal stays open across a terminal READ; units 6 and `*` are distinct,
   so a record open on one isn't continued by the other. MANUAL.md's 14.13 has "Nonadvancing I/O".
   Subtask 6 (list-directed and namelist under the flag, DELIM=) is next.
+- **2026-11-20:** Subtask 6a, list-directed and namelist forms and DELIM=. Subtask 6 is split:
+  6a the forms (this entry), 6b sections and components in namelist names, which need arrays of
+  derived types in groups, still sema's NOTIMPL. No compiler change: the control block's F90
+  flag (subtask 2) already reached every list-directed and namelist statement, and FTNRTL reads
+  it from `CTX_FLAGS`. **List-directed input** (`ftn_listin.mar`): under the flag a quotation
+  mark opens a character constant as an apostrophe does (READ_TEXT, `FTN$$LI_TEXT`, takes its
+  delimiter from the record, so namelist shares it), and a V_WORD is undelimited text to a
+  CHARACTER item of a list-directed READ (`CTX_KIND` K_READ_SL; namelist's values must be
+  delimited, 10.9.1.3); without the flag both are VMS's LISIO_SYN still. **List-directed output**
+  (`ftn_listout.mar`'s `PUT_DELIMITED`): a unit whose `UB_DELIM` is APOSTROPHE or QUOTE has its
+  text delimited, doubled delimiters, a blank before; one that doesn't fit what's left of the
+  record starts the next, one longer than a record goes on in the next record's first column (the
+  standard's 10.8.2 rule, so a READ \* takes it back whole; at a terminal the carriage control
+  eats that character, unconfirmed choice), a doubled delimiter never split; an internal file never
+  delimits. This holds with or without the flag (finding 6: DELIM= honored if the program gave
+  it). **The unit's DELIM=** now starts at 0, not given (`ftn_units.mar`), which INQUIRE answers
+  NONE as before, so that a VAX FORTRAN statement can tell DEC's default from an explicit 'NONE'.
+  **Namelist** (`ftn_namelist.mar`): under the flag input reads from column 1 (`CTX_LI_COLUMN`
+  0, no carriage control), finds the group at a record's first byte that isn't a blank or a tab
+  (`&GRP` in column 1, as gfortran writes it), ends at a slash wherever a $ or an & would end it
+  (`IS_END`: between assignments, between values, after `r*`, ending a number), and takes `"…"`
+  values; output is ` &GRP` and ` /` (`TEXT_FORM`, `DELIMCH`, `CONTBLANK`), text undelimited
+  unless DELIM= is APOSTROPHE or QUOTE (the author's answer 2), commas kept between an array's
+  undelimited elements as the HP manual's example has them (unconfirmed: the standard says
+  adjacent undelimited values aren't separated), a delimited value continued in the next record's
+  first column, a doubled delimiter never split, and a comma at a full record's end starting the
+  next after a blank. Without the flag, VMS's output, but DELIM='QUOTE' writes quotation marks
+  and DELIM='NONE' none. The VMS oracles (`TestFor80Oracle`, `TestFor80InputOracle`,
+  `TestNML80Oracle`, `TestNML80Messages`, `TestNML80Prompt`) and `TestNoF90Unchanged` are
+  unchanged. `testdata/fortran90/listnml.f90` (with `listnml.in`) runs in every mode; gfortran
+  agrees on every value, its differences the records' length and namelist output's layout and
+  quotation marks (compare.py's KNOWN). `cplx16io.out` and `typenml.out` now show `&GRP` ... `/`
+  and `typenml`'s text undelimited. MANUAL.md's 14.13 has "List-directed and namelist I/O".
+  FTNRTL's GSMATCH stays 1,31 (no new entry). Subtask 6b (sections and components in names) is
+  next.

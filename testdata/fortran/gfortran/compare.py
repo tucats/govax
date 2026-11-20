@@ -143,6 +143,7 @@ PROGRAMS90 = {
     "stock": ["stock.f90"],
     "accounts": ["accounts.f90"],
     "advance": ["advance.f90"],
+    "listnml": ["listnml.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
     "standard": ["modules/standard/standard.f90", "modules/standard/globals.f90", "modules/standard/strings.f90",
                  "modules/standard/library.f90", "modules/standard/renames.f90", "modules/standard/users.f90",
@@ -200,23 +201,35 @@ KNOWN = {
     },
     "cplx16io": {
         # List-directed and namelist output's layouts are the processor's (the standard's
-        # 10.8.2, 10.9.2): govax's are VMS's FORRTL's, G fields with d significant digits and
-        # DEC's $GROUP ... $END, a value on the record after its name when it won't fit there;
-        # gfortran's are 36 digits and Fortran 90's &GROUP ... / (Phase 109's subtask 6).
+        # 10.8.2, 10.9.2): govax's are VMS's FORRTL's, G fields with d significant digits, a
+        # value on the record after its name when it won't fit there; gfortran's are 36 digits.
         "(1.50000000000000000000000000000000,-2.00000000000000000000000000000000)":
             "               (1.50000000000000000000000000000000000,-2.00000000000000000000000000000000000)",
         "(1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)":
             " (1.000000000000000000000000000000000035E-0100,-9.999999999999999999999999999999999627E+0099)",
         " (1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)":
             "  (1.000000000000000000000000000000000035E-0100,-9.999999999999999999999999999999999627E+0099)",
-        " $PAIR": "&PAIR",
+        # Its group's name starts in column 2, after a record's carriage control, where
+        # gfortran's starts in column 1 (10.9.2: both read back).
+        " &PAIR": "&PAIR",
         " Z       =": [],
         " (1.50000000000000000000000000000000,-2.00000000000000000000000000000000),":
             " Z=(1.50000000000000000000000000000000000,-2.00000000000000000000000000000000000),",
         " W       =": [],
         " (0.250000000000000000000000000000000,1000.00000000000000000000000000000)":
             " W=(0.250000000000000000000000000000000000,1000.00000000000000000000000000000000),",
-        " $END": " /",
+    },
+    "listnml": {
+        # A list-directed record's length is the processor's (10.8.2): govax's is VMS's 81
+        # bytes, so a delimited constant of 123 goes on in a second record; gfortran's are longer.
+        "Records of the long constant: 2": "Records of the long constant: 1",
+        # Namelist output's layout is the processor's (10.9.2): govax's is VMS's FORRTL's, a name
+        # padded to a column and list-directed output's fields; and its text undelimited without
+        # DELIM= (the standard's 10.9.2.1, the author's answer 2), where gfortran quotes it.
+        "I       =          42,": "I=42         ,",
+        "X       =   1.500000    ,": "X=  1.50000000    ,",
+        "NM      = it's": "NM=\"it's\",",
+        " NM      = 'it''s'": " NM='it''s',",
     },
     "advance": {
         # IOSTAT='s value for an error is the processor's: govax's is the FOR number, 308 for a

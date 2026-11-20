@@ -48,9 +48,9 @@ program cplx16io
   write (line, *) (1.0e-100_q, -1.0e100_q)
   write (*, '(1x, a)') trim(line)
 
-  ! NAMELIST output and input, through a file. DEC's form ($PAIR ... $END)
-  ! until Phase 109's subtask 6; each value too long for the record its name
-  ! is on goes on the next.
+  ! NAMELIST output and input, through a file, in Fortran 90's form (&PAIR
+  ! ... /, since Phase 109's subtask 6); each value too long for the record
+  ! its name is on goes on the next.
   z = (1.5_q, -2.0_q)
   w = (0.25_q, 1000.0_q)
   open (1, file='CPLX16IO.DAT', status='new')

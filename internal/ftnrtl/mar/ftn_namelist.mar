@@ -68,6 +68,14 @@
 ; record. At a terminal it also lists the group's names, or for =? the group as
 ; a WRITE would write it; and so does either in column 2 during the search.
 ;
+; A FORTRAN 90 STATEMENT (the control block's F90 flag, FTN_STATEMENT's) reads
+; the standard's forms (10.9.1) as well: a record has no carriage control, so
+; reading starts in column 1, and the group starts at its first byte that isn't
+; a blank or a tab, & or $ and the group's name ("&GRP" as other compilers
+; write it, " &GRP" as this module does); a slash ends the statement, as a $ or
+; an & does, wherever a name or a value could start or a value end; and a
+; character value may be between quotation marks, "" one of them.
+;
 ; OUTPUT. A record holds 81 bytes, its carriage control and 80 of text:
 ;
 ;	 $GRP
@@ -91,6 +99,17 @@
 ;	" '" or " r*'"	as a field
 ;	a text's bytes	fill the record, and go on after a blank on the next;
 ;			an apostrophe in the text is doubled.
+;
+; A Fortran 90 statement writes the standard's forms (10.9.2): " &GRP" and
+; " /" in place of " $GRP" and " $END", and its character values undelimited
+; unless the unit's DELIM= says APOSTROPHE or QUOTE (the author's answer 2 in
+; PHASE-109): " HELLO", its apostrophes single, a repeated one " 2*HELLO", the
+; commas kept as the HP Fortran manual's example keeps them. A delimited value
+; continued on the next record goes on in its first column, not after a blank,
+; and a doubled delimiter is never split (10.9.2.1, so the constant reads back
+; whole). A statement without the flag writes VMS's, with quotation marks for
+; DELIM='QUOTE' and no delimiters for DELIM='NONE' (only a unit opened so
+; says it: UB_DELIM's 0 is DELIM= not given).
 ;
 ; Unconfirmed, no case of the probe settling it: which record position a syntax
 ; error names, after a substring's parentheses; a doubled apostrophe split
@@ -130,6 +149,13 @@ CTX_NM_SHIFT	= CTX_LI_COLUMN		; the same long, which a WRITE doesn't
 					;  need: 1 to write each record after a
 					;  blank (FTN$$NML_WRITE's fourth argument)
 
+CTX_FLAGS	= 12			; word: the control block's flags
+FLAG_F90	= 16			; a statement of a unit compiled /F90
+
+; The unit's block's DELIM= (FTN_UNITS's UB_DELIM): 0 not given, 1 APOSTROPHE,
+; 2 QUOTE, 3 NONE. CTX_STREAM is a unit's block.
+UB_DELIM	= 620+40
+
 V_WORD		= 1			; the forms of a value (FTN_LISTIN's)
 V_TEXT		= 2
 V_COMPLEX	= 3
@@ -165,16 +191,17 @@ FRAME_SIZE	= 124
 	MOVL	4(AP),R6
 	MOVL	8(AP),R7
 	CLRL	CTX_LI_KIND(R6)
-	MOVL	#1,CTX_LI_COLUMN(R6)	; column 1 is carriage control
-	BSBW	FIND_GROUP
+	MOVL	#1,CTX_LI_COLUMN(R6)	; column 1 is carriage control,
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  but in a Fortran 90 statement
+	BEQL	5$
+	CLRL	CTX_LI_COLUMN(R6)
+5$:	BSBW	FIND_GROUP
 ASSIGNMENT:
 	JSB	FTN$$LI_SKIP		; FTN_LISTIN
 	BLBS	R0,10$
 	RET				; no more records
-10$:	CMPB	R1,#^A/$/
-	BEQL	80$
-	CMPB	R1,#^A/&/
-	BEQL	80$
+10$:	BSBW	IS_END
+	BLBS	R0,80$
 	BSBW	QUESTION
 	BLBS	R0,ASSIGNMENT
 	MOVL	CTX_POS(R6),R0
@@ -202,7 +229,7 @@ ASSIGNMENT:
 
 ;
 ; FIND_GROUP: reads records until one starts the group, leaving the position
-; after its name.
+; after its name. R8, which nothing holds yet, is where the name would start.
 ;
 FIND_GROUP:
 10$:	PUSHL	R6
@@ -210,26 +237,39 @@ FIND_GROUP:
 	TSTL	CTX_STATUS(R6)
 	BEQL	20$
 	RET				; the end of the file, or a failure
-20$:	CMPL	CTX_RECLEN(R6),#2
-	BLSS	10$
-	MOVL	CTX_RECP(R6),R2		; the record
-	MOVZBL	1(R2),R1		; its second column
+20$:	MOVL	CTX_RECP(R6),R2		; the record
+	MOVL	#1,R8			; its second column,
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  or in a Fortran 90 statement
+	BEQL	25$
+	CLRL	R8			;  its first that isn't a blank or a tab
+22$:	CMPL	R8,CTX_RECLEN(R6)
+	BGEQ	10$			; none: the next record
+	CMPB	(R2)[R8],#^A/ /
+	BEQL	23$
+	CMPB	(R2)[R8],#9
+	BNEQ	25$
+23$:	INCL	R8
+	BRB	22$
+25$:	CMPL	R8,CTX_RECLEN(R6)
+	BGEQ	10$
+	MOVZBL	(R2)[R8],R1
 	CMPB	R1,#^A/$/
 	BEQL	30$
 	CMPB	R1,#^A/&/
 	BEQL	30$
-	MOVL	#1,CTX_POS(R6)		; a question, in column 2
+	MOVL	R8,CTX_POS(R6)		; a question, there
 	BSBW	QUESTION
 	BRB	10$
-30$:	MOVL	NB_NAME(R7),R3		; the group's name, a counted string: its
+30$:	INCL	R8			; the name's first place
+	MOVL	NB_NAME(R7),R3		; the group's name, a counted string: its
 	MOVZBL	(R3)+,R4		;  length, a byte, then its text
-	ADDL3	#2,R4,R5		; where the name in the record ends
+	ADDL3	R8,R4,R5		; where the name in the record ends
 	CMPL	R5,CTX_RECLEN(R6)
 	BGTR	10$			; too short to hold it
 	CLRL	R0
 40$:	CMPL	R0,R4
 	BGEQ	50$
-	ADDL3	#2,R0,R1
+	ADDL3	R8,R0,R1
 	MOVZBL	(R2)[R1],R1
 	BSBW	UPPER
 	CMPB	R1,(R3)[R0]
@@ -284,6 +324,22 @@ QUESTION:
 	RSB
 70$:	CLRL	R0
 	RSB
+
+;
+; IS_END: R0's low bit is set if the byte in R1 ends the statement: a $ or an
+; &, or in a Fortran 90 statement a slash. Changes R0 alone.
+;
+IS_END:	MOVL	#1,R0
+	CMPB	R1,#^A/$/
+	BEQL	90$
+	CMPB	R1,#^A/&/
+	BEQL	90$
+	CMPB	R1,#^A./.
+	BNEQ	80$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	90$
+80$:	CLRL	R0
+90$:	RSB
 
 ;
 ; UPPER: the byte in R1, a capital if it was a small letter. IS_LETTER: R0's
@@ -662,10 +718,8 @@ NEXT_VALUE:
 	JSB	FTN$$LI_SKIP		; FTN_LISTIN
 	BLBS	R0,10$
 	RET
-10$:	CMPB	R1,#^A/$/
-	BEQL	20$
-	CMPB	R1,#^A/&/
-	BNEQ	30$
+10$:	BSBW	IS_END
+	BLBC	R0,30$
 20$:	RSB
 30$:	PUSHL	R1
 	BSBW	QUESTION
@@ -728,10 +782,8 @@ VALUE_AFTER_COUNT:
 	BEQL	65$
 	CMPB	R1,#^A/,/
 	BEQL	65$
-	CMPB	R1,#^A/$/
-	BEQL	65$
-	CMPB	R1,#^A/&/
-	BNEQ	67$
+	BSBW	IS_END
+	BLBC	R0,67$
 65$:	BSBW	NULLS
 	MOVB	#1,CTX_LI_AFTER(R6)
 	BRW	NEXT_VALUE
@@ -757,8 +809,12 @@ VALUE_AFTER_COUNT:
 ;
 BY_FIRST_BYTE:
 	CMPB	R1,#^A/'/
+	BEQL	71$
+	CMPB	R1,#^A/"/		; a Fortran 90 statement's quotation mark
 	BNEQ	75$
-	JSB	FTN$$LI_TEXT		; FTN_LISTIN
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BEQL	75$
+71$:	JSB	FTN$$LI_TEXT		; FTN_LISTIN
 	TSTL	CTX_STATUS(R6)
 	BEQL	72$
 	RET
@@ -823,12 +879,10 @@ BY_FIRST_BYTE:
 	BEQL	94$
 	CMPB	R1,#^A/,/
 	BEQL	94$
-	CMPB	R1,#^A/$/
-	BEQL	94$
-	CMPB	R1,#^A/&/
-	BEQL	94$
 	CMPB	R1,#^A/)/
 	BEQL	94$
+	BSBW	IS_END
+	BLBS	R0,94$
 	BRW	BAD_TOKEN
 94$:	MOVB	#V_WORD,CTX_LI_KIND(R6)
 	MOVL	CTX_POS(R6),R2
@@ -1115,7 +1169,10 @@ RUN		= -12			; long: how many elements are equal
 FIELD		= -132			; 120 bytes: a piece being made, a field
 					;  from FTN_LISTOUT at FIELD+16 (up to
 					;  86 bytes, a COMPLEX*32's)
-FRAME2_SIZE	= 132
+DELIMCH		= -136			; long: text's delimiter, or 0 for none
+CONTBLANK	= -140			; long: 1 if text continued on the next
+					;  record goes on after a blank
+FRAME2_SIZE	= 140
 
 	.ENTRY	FTN$$NML_WRITE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
 	SUBL2	#FRAME2_SIZE,SP
@@ -1124,10 +1181,14 @@ FRAME2_SIZE	= 132
 	CLRL	CTX_RECLEN(R6)
 	CLRL	CTX_NM_SHIFT(R6)
 	CMPB	(AP),#4
-	BLSS	5$
+	BLSS	1$
 	MOVL	16(AP),CTX_NM_SHIFT(R6)
-5$:	MOVW	#^A/ $/,FIELD(FP)	; " $GRP" (MOVC3 changes R0 to R5)
-	MOVL	NB_NAME(R7),R0
+1$:	BSBW	TEXT_FORM
+	MOVW	#^A/ $/,FIELD(FP)	; " $GRP" (MOVC3 changes R0 to R5),
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  or a Fortran 90 statement's " &GRP"
+	BEQL	5$
+	MOVW	#^A/ &/,FIELD(FP)
+5$:	MOVL	NB_NAME(R7),R0
 	MOVZBL	(R0)+,R2
 	PUSHL	R2
 	MOVC3	R2,(R0),FIELD+2(FP)
@@ -1154,10 +1215,47 @@ FRAME2_SIZE	= 132
 80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END": 4 characters in a longword,
 	MOVB	#^A/D/,FIELD+4(FP)	;  and the fifth
 	MOVL	#5,R0
-	MOVAB	FIELD(FP),R1
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	; a Fortran 90 statement's " /"
+	BEQL	85$
+	MOVW	#^A. /.,FIELD(FP)
+	MOVL	#2,R0
+85$:	MOVAB	FIELD(FP),R1
 	BSBW	PIECE
 	BSBW	FLUSH
 	RET
+
+;
+; TEXT_FORM: DELIMCH(FP) and CONTBLANK(FP) by the statement and the unit's
+; DELIM=, as the introduction says.
+;
+TEXT_FORM:
+	CLRL	DELIMCH(FP)
+	MOVL	#1,CONTBLANK(FP)
+	MOVL	CTX_STREAM(R6),R0
+	MOVZBL	UB_DELIM(R0),R1
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BEQL	20$
+	CMPL	R1,#1			; Fortran 90's: none but by DELIM=
+	BEQL	40$
+	CMPL	R1,#2
+	BEQL	50$
+	RSB
+20$:	CMPL	R1,#2			; VMS's: apostrophes but for DELIM=
+	BEQL	30$
+	CMPL	R1,#3
+	BNEQ	30$
+	RSB
+30$:	MOVZBL	#^A/'/,DELIMCH(FP)
+	BRB	60$
+40$:	MOVZBL	#^A/'/,DELIMCH(FP)
+	BRB	55$
+50$:	MOVZBL	#^A/"/,DELIMCH(FP)
+55$:	CLRL	CONTBLANK(FP)		; a Fortran 90 constant goes straight on
+	RSB
+60$:	CMPL	R1,#2
+	BNEQ	70$
+	MOVZBL	#^A/"/,DELIMCH(FP)
+70$:	RSB
 
 ;
 ; ENTITY_NAME: a record's " NAME", blanks, and "=": or for the names alone, all
@@ -1265,37 +1363,51 @@ FIELD_VALUE:
 
 ;
 ; TEXT_VALUE: the value at R10 as a character constant: " '" or " r*'" as a
-; field, then its bytes wherever they fall.
+; field (without the delimiter if DELIMCH(FP) says none), then its bytes
+; wherever they fall, each delimiter in them twice, and the delimiter again.
 ;
 TEXT_VALUE:
 	CMPL	RUN(FP),#1
 	BGTR	10$
-	MOVW	#^A/ '/,FIELD(FP)
-	MOVL	#2,R0
-	BRB	20$
+	MOVB	#^A/ /,FIELD(FP)
+	MOVL	#1,R0
+	BRB	15$
 10$:	BSBW	COUNT_TEXT
-	MOVAB	FIELD(FP),R1
-	MOVB	#^A/'/,(R1)[R3]
-	ADDL3	#1,R3,R0
+	MOVL	R3,R0
+15$:	TSTL	DELIMCH(FP)
+	BEQL	20$
+	MOVB	DELIMCH(FP),FIELD(FP)[R0]
+	INCL	R0
 20$:	MOVAB	FIELD(FP),R1
 	BSBW	PIECE
-	CLRL	R2			; each byte, an apostrophe twice
+	CLRL	R2			; each byte, a delimiter twice
 30$:	CMPL	R2,LENGTH(FP)
 	BGEQ	50$
 	MOVZBL	(R10)[R2],R1
-	CMPB	R1,#^A/'/
+	TSTL	DELIMCH(FP)
+	BEQL	40$
+	CMPB	R1,DELIMCH(FP)
 	BNEQ	40$
-	BSBB	ONE_BYTE
-	MOVZBL	#^A/'/,R1
+	TSTL	CONTBLANK(FP)		; a Fortran 90 statement keeps the two
+	BNEQ	35$			;  on one record
+	CMPL	CTX_RECLEN(R6),#RECORD_MAX-2
+	BLEQ	35$
+	PUSHL	R1
+	BSBW	FLUSH
+	MOVL	(SP)+,R1
+35$:	BSBB	ONE_BYTE
+	MOVZBL	DELIMCH(FP),R1
 40$:	BSBB	ONE_BYTE
 	INCL	R2
 	BRB	30$
-50$:	MOVZBL	#^A/'/,R1
+50$:	MOVL	DELIMCH(FP),R1
+	BEQL	60$
 	BRB	ONE_BYTE
+60$:	RSB
 
 ;
-; ONE_BYTE: adds the byte in R1 to the record, or if it is full to the next, after
-; a blank. Keeps R2.
+; ONE_BYTE: adds the byte in R1 to the record, or if it is full to the next,
+; after a blank if CONTBLANK(FP) says so. Keeps R2.
 ;
 ONE_BYTE:
 	MOVL	CTX_RECLEN(R6),R0
@@ -1303,18 +1415,27 @@ ONE_BYTE:
 	BLSS	10$
 	PUSHL	R1
 	BSBW	FLUSH
+	CLRL	R0
+	TSTL	CONTBLANK(FP)
+	BEQL	5$
 	MOVB	#^A/ /,CTX_RECORD(R6)
 	MOVL	#1,CTX_RECLEN(R6)
 	MOVL	#1,R0
-	MOVL	(SP)+,R1
+5$:	MOVL	(SP)+,R1
 10$:	MOVB	R1,CTX_RECORD(R6)[R0]
 	INCL	CTX_RECLEN(R6)
 	RSB
 
 ;
-; COMMA: a comma, which is a byte like any other.
+; COMMA: a comma: at the record's end, or if it is full the next's, after a
+; blank.
 ;
-COMMA:	MOVZBL	#^A/,/,R1
+COMMA:	CMPL	CTX_RECLEN(R6),#RECORD_MAX
+	BLSS	10$
+	BSBW	FLUSH
+	MOVB	#^A/ /,CTX_RECORD(R6)
+	MOVL	#1,CTX_RECLEN(R6)
+10$:	MOVZBL	#^A/,/,R1
 	BRB	ONE_BYTE
 
 ;

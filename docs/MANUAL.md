@@ -9050,15 +9050,18 @@ A NAMELIST group may hold a scalar object of a derived type. Output writes each 
 line of its own, named by its designator:
 
 ```text
- $GRP
+ &GRP
  P%X     =   1.500000    ,
  P%Y     =  -2.000000    ,
- T%NAME  = 'ABCD',
+ T%NAME  = ABCD,
  T%AT%X  =   3.000000    ,
  T%AT%Y  =   4.000000    ,
  T%MARKS =           1,           2,           3
- $END
+ /
 ```
+
+(Fortran 90's form, described below; a VAX FORTRAN unit's statement writes ` $GRP`, `'ABCD'`,
+and ` $END`.)
 
 Input names a component (`P%X = 9.0`, `T%AT%Y = 5.5`, `T%MARKS(2) = 7`) or a whole object or
 component of a derived type, whose values go to its components in order (`P = 1.25, 2.5`,
@@ -9134,8 +9137,7 @@ only for a formatted file; reading only can't make a file or append to one (each
 `FILE=` (`%FORT-E-NEEDFILE`): the file's highest version, if there is one, is deleted, and a new
 file made with its name, which takes the version deleted when that was the highest. An OPEN of
 a connected unit's own file may change `DELIM=` and `PAD=`, as it may `BLANK=`. `PAD=` is
-formatted input's (below); what `DELIM=` does to list-directed and namelist output is still to
-come, and for now it is kept and answered.
+formatted input's, and `DELIM=` list-directed and namelist output's (both below).
 
 INQUIRE answers `ACTION=`, `POSITION=`, `READ=`, `WRITE=`, `READWRITE=`, `DELIM=`, and `PAD=` as
 the HP Fortran manual's 12.5 does: for a unit with no file, `ACTION=`, `POSITION=`, and `DELIM=`
@@ -9200,6 +9202,37 @@ finds cut short by the record's end is padded with blanks to its width, which BZ
 so `'123'` read by `(BZ, I5)` is 12300, where a VAX FORTRAN statement reads 123, as VMS's does.
 On a `PAD='NO'` unit such a field is an error, `FOR-F-RECTOOSHO` (310), and a nonadvancing READ's
 end of record pads nothing but what A always pads.
+
+**List-directed and namelist I/O** (the standard's 10.8 and 10.9). A `/F90` unit's list-directed
+READ takes a character value between quotation marks as well as apostrophes (`"say ""hi"""`),
+or undelimited, ended by a blank, a comma, a slash, or the record's end, apostrophes and all
+(`ISN'T_BOB'S`); a VAX FORTRAN unit's still takes only apostrophes, as VMS's does. List-directed
+output to a unit opened with `DELIM='APOSTROPHE'` or `DELIM='QUOTE'` delimits its character
+values, doubling the delimiter inside them, so that a READ \* takes them back:
+
+```fortran
+open (10, file='LIST.DAT', delim='APOSTROPHE')
+write (10, *) 'it''s', 7, 'ab'
+```
+
+writes ` 'it''s'           7 'ab'`. A delimited value longer than what is left of a record goes
+on in the next record's first column, without the blank that starts the others; without
+`DELIM=`, with `'NONE'`, and on an internal file, character values are written as they are.
+
+A `/F90` unit's namelist output is Fortran 90's: ` &GRP`, each name and its values, and ` /`,
+its character values undelimited unless the unit says `DELIM=` (such a value can't be read back
+by a NAMELIST READ, as the HP Fortran manual warns). Its namelist input reads every column, with
+no carriage control, finds the group at the first character of a record that isn't a blank (`&`
+or `$` and the group's name, so `&GRP` in column 1, as other compilers write it), ends at a slash
+as well as at `$` or `&`, and takes character values between quotation marks too:
+
+```text
+&GRP I=5, NM="a/b", X=2.5 /
+```
+
+A VAX FORTRAN unit's namelist statements read and write VMS's ` $GRP` ... ` $END`, with
+apostrophes around text as before, but for `DELIM='QUOTE'` (quotation marks) and
+`DELIM='NONE'` (none).
 
 **Allocatable arrays** (the standard's 5.1.2.4.3, 5.2.6, and 6.3). An array declared
 ALLOCATABLE, with a colon for each of its dimensions, has a rank and nothing more until
