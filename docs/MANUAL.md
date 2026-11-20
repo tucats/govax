@@ -8637,7 +8637,10 @@ The integer arguments of all four are of the default kind by the standard; govax
 A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
 its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;
 under `/NOF90` such a substring is an error when its bounds are constants, as in VAX
-FORTRAN.
+FORTRAN. A constant may have a substring too, a named one's or an element's of an array
+constant (`C(2:4)`, `MONTHS(M)(1:3)`): with constant bounds it is itself a constant, usable
+where a constant is; it is never a variable, so it can't be assigned or given to an
+`INTENT(OUT)` dummy. Under `/NOF90` a constant can't have a substring, as in VAX FORTRAN.
 
 **Writing for any processor.** A program that names its kinds by what it needs rather than
 by a size prints the same on govax and on an IEEE machine. Give each unit its kinds as

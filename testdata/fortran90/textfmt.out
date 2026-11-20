@@ -1,0 +1,28 @@
+The Vax
+=======
+|The VAX was a 32-bit    |    The VAX was a 32-bit|  The VAX was a 32-bit  |
+|computer made by        |        computer made by|    computer made by    |
+|DIGITAL. It ran VMS.    |    DIGITAL. It ran VMS.|  DIGITAL. It ran VMS.  |
+last word: "VMS."
+
+A New Standard Of Fortran
+=========================
+|Fortran 90 added many   |   Fortran 90 added many| Fortran 90 added many  |
+|intrinsic functions,    |    intrinsic functions,|  intrinsic functions,  |
+|among them TRIM and     |     among them TRIM and|  among them TRIM and   |
+|REPEAT.                 |                 REPEAT.|        REPEAT.         |
+last word: "REPEAT."
+
+The End
+=======
+|Done.                   |                   Done.|         Done.          |
+last word: "Done."
+
+------------------------
+ #  words  chars  lines
+ 1     12     58      3
+ 2     11     70      4
+ 3      1      5      1
+------------------------
+       24    133      8
+  $STATUS == "%X00000001"

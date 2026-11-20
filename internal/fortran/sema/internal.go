@@ -427,9 +427,16 @@ func definable(e Expr) bool {
 	switch e := e.(type) {
 	case *Var:
 		return e.Sym.Class != Constant
-	case *Elem, *ArrayRef, *FieldRef:
+	case *Elem:
+		// An element of an array constant read when the program runs isn't.
+		return e.Sym.Class != Constant
+	case *ArrayRef, *FieldRef:
 		return true
 	case *Section:
+		if e.Sym != nil && e.Sym.Class == Constant {
+			return false
+		}
+
 		// One with a vector subscript isn't (12.4.1.1).
 		for _, sub := range e.Subs {
 			if sub.Vector != nil {

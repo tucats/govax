@@ -360,7 +360,7 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    SYSTEM_CLOCK, RANDOM_NUMBER, RANDOM_SEED (findings 9 to 11), GSMATCH 1,30
    (done 2026-11-19).
 8. **Programs end to end**, every mode, gfortran's witness but for random numbers,
-   times, and D's model (finding 12).
+   times, and D's model (finding 12) (done 2026-11-19).
 9. **Close-out**: FORTRAN-INTERNALS.md (a section on the intrinsic table, how each
    form is chosen, TRIM as a substring), MANUAL.md's 14.13, its FTNRTL table and
    Appendix B, HELP FORTRAN, HELP's `SYS$TIMEZONE_DIFFERENTIAL`.
@@ -663,3 +663,42 @@ The author read the survey and accepted every recommendation:
   every mode. `sema`'s `TestPhase108Clock` holds the routines, the arguments present, and the
   messages. MANUAL.md's 14.13 and its FTNRTL table, and HELP FORTRAN, have them; HELP's own topic
   for `SYS$TIMEZONE_DIFFERENTIAL` is subtask 9's.
+- **2026-11-19:** Subtask 8, programs end to end. Finding 12's MACRO test of FTNRTL's entries is
+  `internal/console`'s `TestFTNRTLIntrinsics` (`ftnrtlintrinsics_test.go`), in both paging modes:
+  a program made from a table of cases (`ftnrtlCases`: the code, how the value is shown, what it
+  must show), calling every routine the phase added, FTN$BMVBITS and the 44 at vector offsets 744
+  to 1088, each at its edges as the compiler never reaches them: ADJUSTL and ADJUSTR of blanks and
+  of an empty string, REPEAT into a static and a dynamic result, of an empty string, 0 times, and
+  BADREPEAT for a negative count and a value past 65,535; SCAN, VERIFY, and INDEX_BACK of empty
+  strings and sets; COMPLEX(16)'s functions at their exact points, (0, 1) to the powers 2 and -1,
+  (0, 0)\*\*0's UNDEXP and (0, 0)\*\*(1, 0)'s LOGZERNEG; the model's 20 entries at 1.0, 0, ±TINY,
+  and ±HUGE, every overflow a `SS$_FLTOVF_F` and every underflow 0, and NEAREST toward 0 from -TINY
+  0, not a reserved operand; SYSTEM_CLOCK's rate and maximum of each kind; the seed's size of each
+  kind, its first value, a draw MTH$RANDOM's own, the seed after one and after three draws (worked
+  from the formula), D's sequence repeated after PUT, G's and H's numbers within [0, 1), a seed put
+  as two words, and RANDOM_SEED with null arguments and with none restoring the first seed;
+  DATE_AND_TIME's zone defined, changed, nonsense, cut short and padded, and, once the process's
+  name is deleted, the system table's from the host's offset (the test works it from Go's), with
+  VALUES(4) of each kind, and an empty DATE. Each value is shown as its longwords by `$FAOL`, every
+  one worked from the formats by hand; two of the hand values were wrong (H's SPACING and RRSPACING
+  of 1.0 are fields ^X3F91 and ^X4071: the bias is 16,384, 1.0's field 16,385), and the routines
+  right. Two programs end to end in `testdata/fortran90`, both worked by hand and both printing the
+  same on gfortran (`compare.py`), in every mode and with paging on: `textfmt.f90`, a text
+  formatter over `textfmt.in` (blanks closed up by INDEX and an overlapping substring assignment,
+  words by VERIFY and SCAN, lines filled and printed flush left, by ADJUSTR, and centered by REPEAT,
+  titles capitalized by IACHAR and ACHAR, the last word by INDEX with BACK, a table of counts), and
+  `calendar.f90` (day numbers by the civil calendar's eras with MODULO, weekdays before 1970, weeks
+  by CEILING, whole months by FLOOR both ways, dates packed by MVBITS, turned by ISHFTC, unpacked by
+  IBITS, a name folded by TRANSFER and IEOR, two months laid out, the model's functions at powers of
+  two). They found two things. **A fix**: under `/F90` a substring of a constant, a named one's or
+  an array constant's element's (`MONTHS(11)(1:8)`, `INITIALS(I:I)`), is the standard's constant
+  subobject (R701, R702, R610's scalar-constant), where sema refused it with SUBSTR or BADUSE:
+  `substring` takes a CHARACTER `Const` as the parent, folds it when both bounds are constants, and
+  otherwise leaves a `Substring` of the constant, which ir's `chars` already reads from the
+  constant's datum; `target` refuses one as an assignment's target (BADUSE, `substringBase`), and
+  `definable` an element or section of an array constant for an INTENT(OUT) or INTENT(INOUT) dummy;
+  under `/NOF90` nothing changes (`sema`'s `TestConstantSubstrings`; MANUAL.md's 14.13). **Left for
+  Phase 109**: FTNRTL's format interpreter has no ES (or EN) editing, which ends a statement with
+  SYNERRFOR at run time (a character constant's format isn't checked when compiling, as VAX
+  FORTRAN's isn't); `calendar.f90` uses E instead. gfortran's witness over the whole Fortran 90
+  corpus: all 93 programs the same.

@@ -350,6 +350,15 @@ func (a *analyzer) target(e ast.Expr) Expr {
 		}
 
 	case *ast.Substring:
+		if s := substringBase(a, e); s != nil && s.Class == Constant {
+			// Fortran 90's substring of a constant (substring) is a value.
+			if !s.broken {
+				a.badUse(s, e.Pos, "be assigned a value")
+			}
+
+			return nil
+		}
+
 		t = a.substring(e)
 
 	case *ast.FieldRef:
@@ -504,4 +513,17 @@ func (a *analyzer) callStmt(s *ast.CallStmt, sub *Symbol, args []Arg, targets []
 	}
 
 	return c
+}
+
+// substringBase is the symbol a substring's parent names, a name's or an
+// element's, or nil for any other parent (a field's) or a name not declared.
+func substringBase(a *analyzer, e *ast.Substring) *Symbol {
+	switch x := e.X.(type) {
+	case *ast.Name:
+		return a.scope.find(x.Name)
+	case *ast.Apply:
+		return a.scope.find(x.Name)
+	}
+
+	return nil
 }

@@ -1,0 +1,41 @@
+      date     day  weekday   week  packed  turned    unpacked
+1970-01-01       0  Thursday     1    8C21    C218  1970-01-01
+1977-10-25    2854  Tuesday     43    9B59    B599  1977-10-25
+2000-02-29   11016  Tuesday      9    C85D    85DC  2000-02-29
+1900-03-01  -25508  Thursday     9    0061    0610  1900-03-01
+1600-01-01 -135140  Saturday     1    A821    821A  1984-01-01
+2026-11-19   20776  Thursday    47    FD73    D73F  2026-11-19
+
+whole months, 1977-10-25 to 2026-11-19:   588
+whole months, 2026-11-19 to 1977-10-25:  -589
+November as INTEGERs: 65766F4E 7265626D, folded 17130D23
+Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+S M T W T F S
+
+   November 2026
+Su Mo Tu We Th Fr Sa
+ 1  2  3  4  5  6  7
+ 8  9 10 11 12 13 14
+15 16 17 18 19 20 21
+22 23 24 25 26 27 28
+29 30
+
+   February 2000
+Su Mo Tu We Th Fr Sa
+       1  2  3  4  5
+ 6  7  8  9 10 11 12
+13 14 15 16 17 18 19
+20 21 22 23 24 25 26
+27 28 29
+
+  days  exponent  fraction     spacing  next
+    1.         1  0.500000  0.1192E-06     T
+    4.         3  0.500000  0.4768E-06     T
+   16.         5  0.500000  0.1907E-05     T
+   64.         7  0.500000  0.7629E-05     T
+  256.         9  0.500000  0.3052E-04     T
+ 1024.        11  0.500000  0.1221E-03     T
+ 4096.        13  0.500000  0.4883E-03     T
+16384.        15  0.500000  0.1953E-02     T
+20776.        15  0.634033  0.1953E-02
+  $STATUS == "%X00000001"

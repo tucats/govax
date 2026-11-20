@@ -381,6 +381,13 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 // subscript is). Lower left out is 1. A constant bound must be within X, 1 <=
 // Lower <= Upper <= X's length; one that isn't constant is checked only by
 // /CHECK=BOUNDS (Phase 85).
+//
+// Under /F90 X may also be a named constant, or an element of an array
+// constant (the standard's constant subobjects, R701, R702, and R610's
+// scalar-constant): a substring of a constant with constant bounds is folded
+// to the constant it is, and one with bounds known only when the program runs
+// reads the constant's text from its datum (ir's chars). A constant's
+// substring is never a variable (target, definable).
 func (a *analyzer) substring(e *ast.Substring) Expr {
 	var (
 		x    Expr
@@ -389,7 +396,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 
 	switch n := e.X.(type) {
 	case *ast.Name:
-		if s := a.scope.find(n.Name); s != nil && s.Class == Constant {
+		if s := a.scope.find(n.Name); s != nil && s.Class == Constant && (!a.f90 || s.Dims != nil) {
 			if !s.broken {
 				a.badUse(s, n.Pos, "have a substring")
 			}
@@ -416,10 +423,16 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 
 	t := x.Type()
 
-	switch x.(type) {
+	switch c := x.(type) {
 	case *Var, *Elem, *FieldRef, *Section:
 		// A section of a CHARACTER array may have a substring range, the same
 		// part of each element (Fortran 90's R609).
+	case *Const:
+		if !a.f90 || c.T.Kind != Character {
+			a.report("SUBSTR", e.Pos, name, "not a variable or an array element")
+
+			return a.bad(e.Pos)
+		}
 	default:
 		if t.Kind != Invalid {
 			// A function's value or a constant expression: section 2.2.4's
@@ -470,6 +483,11 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 			a.report("SUBRANGE", e.Pos, first, last, name, t.Size)
 
 			return a.bad(e.Pos)
+		}
+
+		if c, ok := x.(*Const); ok {
+			// A constant's: the constant it is.
+			return &Const{exprBase: exprBase{T: Type{Kind: Character, Size: last - first + 1}, Pos: e.Pos}, Text: c.Text[first-1 : last]}
 		}
 
 		return &Substring{exprBase{T: Type{Kind: Character, Size: last - first + 1}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
