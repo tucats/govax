@@ -357,7 +357,8 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    2026-11-19).
 6. **TRANSFER** (finding 8) (done 2026-11-19).
 7. **The subroutines**: DATE_AND_TIME with `SYS$TIMEZONE_DIFFERENTIAL`,
-   SYSTEM_CLOCK, RANDOM_NUMBER, RANDOM_SEED (findings 9 to 11).
+   SYSTEM_CLOCK, RANDOM_NUMBER, RANDOM_SEED (findings 9 to 11), GSMATCH 1,30
+   (done 2026-11-19).
 8. **Programs end to end**, every mode, gfortran's witness but for random numbers,
    times, and D's model (finding 12).
 9. **Close-out**: FORTRAN-INTERNALS.md (a section on the intrinsic table, how each
@@ -628,3 +629,37 @@ The author read the survey and accepted every recommendation:
   every mode; `sema`'s `TestPhase108Transfer` holds the forms, the folding, PARAMETERs, the
   messages, and `/NOF90`. The corpus README gained the rows subtasks 4 and 5 left out (`numfns`,
   `model`, `modelvms`). MANUAL.md's 14.13 and HELP FORTRAN have TRANSFER.
+- **2026-11-19:** Subtask 7, the subroutines. `sema/clocksubs.go` gives the intrinsic
+  subroutines' table its last four analyzers (`intrinsicsub.go`'s NOTIMPL is gone): each CALL is a
+  call of FTNRTL's routine for its arguments, chosen as the system subroutines' are, an argument
+  left out a null one (the longword 0). `DATE_AND_TIME` takes CHARACTER variables, elements, or
+  substrings by descriptor and VALUES, an integer array of rank 1 and at least eight elements, by
+  address; `SYSTEM_CLOCK` three integer variables or elements; `RANDOM_NUMBER` a REAL of any kind,
+  scalar or array (`Call.Shape`, ir's `elementalCall`, so an array is filled in array element
+  order), its routine by format, D or G by the unit; `RANDOM_SEED` at most one argument (a new
+  message, `SEEDARGS`), PUT any integer array value and GET a definable one. **Every integer
+  argument may be INTEGER\*2 or INTEGER\*4 under either `/I4` setting**, all of one length (SYSLEN),
+  where the standard says the default kind: the routine's `_W` form is for words. An array argument
+  goes as its elements one after another (`sequence.go`: a section that isn't is copied, and for
+  VALUES and GET copied back); a whole array named as an argument has no shape of its own, so
+  `argumentShape` takes its symbol's. FTNRTL's ten entries are in `ftn_system.mar` at vector
+  offsets 1016 to 1088, GSMATCH 1,30: `FTN$DATE_AND_TIME` and `_W` (`$NUMTIM`, the texts by a
+  digit writer, `DIGITS`, each moved as an assignment moves it; the zone by `$TRNLNM` of
+  `SYS$TIMEZONE_DIFFERENTIAL` **through LNM$FILE_DEV**, where finding 9 said the system table, so a
+  process may define its own and the corpus can fix it; an optional sign and digits, else blanks and
+  -HUGE of the kind), `FTN$SYSTEM_CLOCK` and `_W` (`$GETTIM`'s quadword over 100,000 in two EDIVs,
+  the high half's remainder less 50,000 when it is that or more, so the quotient fits a longword and
+  only its bit 31 changes; words modulo 2\*\*15), `FTN$RANDOM_F` to `_H` (MTH$RANDOM on `SEED`, a
+  longword in `$FTN_DATA`; D, G, and H join 3, 3, and 5 draws by Horner's rule from the last, the
+  last cut to 8, 5, or 17 bits, so every step is exact and none rounds to 1), and
+  `FTN$RANDOM_SEED` and `_W` (the seed's size 1 or 2; an INTEGER\*2 array's two words, low first,
+  are the longword's own bytes). **The first seed is 1234567**, govax's choice: the manual's
+  MTH$RANDOM suggests none, and the Language Reference Manual's RAN (D.4.7) asks only for "a large,
+  odd integer value". `lnm/timezone.go` defines `SYS$TIMEZONE_DIFFERENTIAL` in the system table,
+  executive mode, as the database is made, from the host's offset then (`TimeZoneDifferential`, no
+  `+` for a positive one, unconfirmed). `testdata/fortran90/clockrand.f90` prints only what any
+  processor must, and gfortran prints the same (`compare.py`); `clockvms.f90` is govax's own
+  answers, worked from the generator's formula, with the zone set by LIB$SET_LOGICAL; both run in
+  every mode. `sema`'s `TestPhase108Clock` holds the routines, the arguments present, and the
+  messages. MANUAL.md's 14.13 and its FTNRTL table, and HELP FORTRAN, have them; HELP's own topic
+  for `SYS$TIMEZONE_DIFFERENTIAL` is subtask 9's.

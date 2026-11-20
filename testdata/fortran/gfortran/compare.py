@@ -64,6 +64,7 @@ PROGRAMS90 = {
     "numfns": ["numfns.f90"],
     "model": ["model.f90"],
     "transfer": ["transfer.f90"],
+    "clockrand": ["clockrand.f90"],
     "cplx16": ["cplx16.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],

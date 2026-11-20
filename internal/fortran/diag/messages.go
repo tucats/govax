@@ -1006,6 +1006,9 @@ var messages = map[string]kind{
 	"INTRINSUBARGS": {Error, "the intrinsic subroutine %s takes %s, not %d"},
 	"NULLINTRINSUB": {Error, "an argument of the intrinsic subroutine %s can't be left out"},
 
+	// SEEDARGS is a CALL RANDOM_SEED given more than one argument (13.13.84).
+	"SEEDARGS": {Error, "the intrinsic subroutine RANDOM_SEED takes at most one of SIZE, PUT, and GET"},
+
 	// BADARG is an intrinsic function's argument of a type or value it
 	// doesn't take.
 	"BADARG": {Error, "the intrinsic function %s's arguments must be %s, and this one is %s"},

@@ -299,15 +299,11 @@ func TestPhase108ZeroLengths(t *testing.T) {
 	}
 }
 
-// TestPhase108Names checks that the intrinsic subroutines take keywords, and
-// are NOTIMPL but MVBITS. (Fortran 90's new function names, intrinsic under
+// TestPhase108Names checks that the intrinsic subroutines take keywords.
+// (Fortran 90's new function names, intrinsic under
 // /F90 and the program's own under /NOF90, are each subtask's test's.)
 func TestPhase108Names(t *testing.T) {
 	subs := map[string]string{
-		"CALL DATE_AND_TIME(VALUES=IV)":      "NOTIMPL: the intrinsic subroutine DATE_AND_TIME",
-		"CALL SYSTEM_CLOCK(COUNT_RATE=I)":    "NOTIMPL",
-		"CALL RANDOM_NUMBER(X)":              "NOTIMPL",
-		"CALL RANDOM_SEED(SIZE=I)":           "NOTIMPL",
 		"CALL RANDOM_SEED(SEED=I)":           "KEYWORDNAME: the intrinsic subroutine RANDOM_SEED has no argument SEED; its arguments are SIZE, PUT, and GET",
 		"CALL DATE_AND_TIME(T, T, T, IV, I)": "INTRINSUBARGS: the intrinsic subroutine DATE_AND_TIME takes 0 to 4 arguments, not 5",
 		"CALL RANDOM_NUMBER()":               "INTRINSUBARGS: the intrinsic subroutine RANDOM_NUMBER takes 1 argument, not 0",
@@ -332,7 +328,7 @@ func TestPhase108Names(t *testing.T) {
 	}
 
 	_, ms := analyzeOpts(t, Options{}, fixed("INTRINSIC DATE_AND_TIME", "CALL DATE_AND_TIME(I)", "END")...)
-	if len(ms) != 1 || ms[0].Ident != "NOTIMPL" {
+	if len(ms) != 1 || ms[0].Ident != "SYSARG" {
 		t.Errorf("INTRINSIC DATE_AND_TIME: %v", ms)
 	}
 
@@ -532,5 +528,106 @@ func TestPhase108Transfer(t *testing.T) {
 
 	if got := DumpExpr(prog.Units[0].Body[0].(*Assign).Value); !strings.Contains(got, "TRANSFER") || strings.Contains(got, "transfer:") {
 		t.Errorf("/NOF90: got %s", got)
+	}
+}
+
+// TestPhase108Clock checks DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER, and
+// RANDOM_SEED (findings 9 to 11): each a call of FTNRTL's routine for its
+// arguments' kinds or format, with an argument left out the longword 0, and
+// what each refuses.
+func TestPhase108Clock(t *testing.T) {
+	cases := []struct {
+		opts    Options
+		text    string
+		routine string
+		args    []bool // which arguments are present
+		shaped  bool
+	}{
+		{Options{F90: true}, "CALL DATE_AND_TIME(D8, T10, Z5, IV)", "FTN$DATE_AND_TIME", []bool{true, true, true, true}, false},
+		{Options{F90: true}, "CALL DATE_AND_TIME(VALUES=IV)", "FTN$DATE_AND_TIME", []bool{false, false, false, true}, false},
+		{Options{F90: true}, "CALL DATE_AND_TIME(ZONE=Z5(2:5))", "FTN$DATE_AND_TIME", []bool{false, false, true, false}, false},
+		{Options{F90: true}, "CALL DATE_AND_TIME(VALUES=IW)", "FTN$DATE_AND_TIME_W", []bool{false, false, false, true}, false},
+		{Options{F90: true}, "CALL DATE_AND_TIME()", "FTN$DATE_AND_TIME", []bool{false, false, false, false}, false},
+		{Options{F90: true}, "CALL SYSTEM_CLOCK(I, J, K)", "FTN$SYSTEM_CLOCK", []bool{true, true, true}, false},
+		{Options{F90: true}, "CALL SYSTEM_CLOCK(COUNT_MAX=I2)", "FTN$SYSTEM_CLOCK_W", []bool{false, false, true}, false},
+		{Options{F90: true, NoI4: true}, "CALL SYSTEM_CLOCK(COUNT_RATE=I)", "FTN$SYSTEM_CLOCK_W", []bool{false, true, false}, false},
+		{Options{F90: true}, "CALL RANDOM_NUMBER(X)", "FTN$RANDOM_F", []bool{true}, false},
+		{Options{F90: true}, "CALL RANDOM_NUMBER(D)", "FTN$RANDOM_D", []bool{true}, false},
+		{Options{F90: true, GFloating: true}, "CALL RANDOM_NUMBER(HARVEST=D)", "FTN$RANDOM_G", []bool{true}, false},
+		{Options{F90: true}, "CALL RANDOM_NUMBER(H)", "FTN$RANDOM_H", []bool{true}, false},
+		{Options{F90: true}, "CALL RANDOM_NUMBER(XA)", "FTN$RANDOM_F", []bool{true}, true},
+		{Options{F90: true}, "CALL RANDOM_NUMBER(XA(2:5:2))", "FTN$RANDOM_F", []bool{true}, true},
+		{Options{F90: true}, "CALL RANDOM_SEED()", "FTN$RANDOM_SEED", []bool{false, false, false}, false},
+		{Options{F90: true}, "CALL RANDOM_SEED(SIZE=N)", "FTN$RANDOM_SEED", []bool{true, false, false}, false},
+		{Options{F90: true}, "CALL RANDOM_SEED(PUT=IV)", "FTN$RANDOM_SEED", []bool{false, true, false}, false},
+		{Options{F90: true}, "CALL RANDOM_SEED(PUT=(/ 5 /))", "FTN$RANDOM_SEED", []bool{false, true, false}, false},
+		{Options{F90: true}, "CALL RANDOM_SEED(GET=IV(3:4))", "FTN$RANDOM_SEED", []bool{false, false, true}, false},
+		{Options{F90: true}, "CALL RANDOM_SEED(GET=IW)", "FTN$RANDOM_SEED_W", []bool{false, false, true}, false},
+		{Options{F90: true, NoI4: true}, "CALL RANDOM_SEED(SIZE=N)", "FTN$RANDOM_SEED_W", []bool{true, false, false}, false},
+	}
+
+	decls := []string{"CHARACTER D8*8, T10*10, Z5*5", "INTEGER IV(8)", "INTEGER*2 IW(8), I2",
+		"REAL X, XA(6)", "DOUBLE PRECISION D", "REAL*16 H"}
+
+	for _, c := range cases {
+		prog, ms := analyzeOpts(t, c.opts, fixed(append(append([]string{}, decls...), c.text, "END")...)...)
+		if len(ms) != 0 {
+			t.Errorf("%s: %v", c.text, ms)
+
+			continue
+		}
+
+		call, ok := prog.Units[0].Body[0].(*Call)
+		if !ok {
+			t.Errorf("%s: %T", c.text, prog.Units[0].Body[0])
+
+			continue
+		}
+
+		if call.Sub.Name != c.routine || len(call.Args) != len(c.args) || (call.Shape != nil) != c.shaped {
+			t.Errorf("%s: %s with %d arguments, shaped %t; want %s", c.text, call.Sub.Name, len(call.Args),
+				call.Shape != nil, c.routine)
+
+			continue
+		}
+
+		for i, present := range c.args {
+			if (call.Args[i].Expr != nil) != present {
+				t.Errorf("%s: argument %d present %t", c.text, i+1, !present)
+			}
+		}
+	}
+
+	bad := map[string]string{
+		"CALL DATE_AND_TIME(I)":              "SYSARG",
+		"CALL DATE_AND_TIME('ABCDEFGH')":     "SYSARG",
+		"CALL DATE_AND_TIME(VALUES=I)":       "SYSARG",
+		"CALL DATE_AND_TIME(VALUES=IV(1:7))": "SYSARG",
+		"CALL DATE_AND_TIME(VALUES=(IV))":    "SYSARG",
+		"CALL DATE_AND_TIME(VALUES=XA)":      "SYSARG",
+		"CALL SYSTEM_CLOCK(I, I2)":           "SYSLEN",
+		"CALL SYSTEM_CLOCK(5)":               "SYSARG",
+		"CALL SYSTEM_CLOCK(X)":               "SYSARG",
+		"CALL RANDOM_NUMBER(I)":              "SYSARG",
+		"CALL RANDOM_NUMBER(1.0)":            "SYSARG",
+		"CALL RANDOM_NUMBER(XA + 1.0)":       "SYSARG",
+		"CALL RANDOM_SEED(N, IV)":            "SEEDARGS",
+		"CALL RANDOM_SEED(PUT=I)":            "SYSARG",
+		"CALL RANDOM_SEED(GET=IW(1:1))":      "SYSARG",
+		"CALL RANDOM_SEED(GET=(/ 1, 2 /))":   "SYSARG",
+		"CALL RANDOM_SEED(SIZE=5)":           "SYSARG",
+	}
+
+	for text, want := range bad {
+		_, ms := analyzeOpts(t, Options{F90: true}, fixed(append(append([]string{}, decls...), text, "END")...)...)
+
+		got := ""
+		if len(ms) > 0 {
+			got = ms[0].Ident
+		}
+
+		if got != want {
+			t.Errorf("%s: %v, want %q", text, ms, want)
+		}
 	}
 }

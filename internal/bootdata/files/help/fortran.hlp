@@ -186,6 +186,15 @@
    bytes the value is zero.  The bytes are moved as bytes, so a
    reserved operand passes through without a fault.
 
+   The intrinsic subroutines DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER,
+   and RANDOM_SEED are there.  DATE_AND_TIME's zone is the logical
+   name SYS$TIMEZONE_DIFFERENTIAL, seconds east of UTC, which govax
+   defines at startup from the host's.  SYSTEM_CLOCK counts hundredths
+   of a second (COUNT_RATE 100).  RANDOM_NUMBER draws with MTH$RANDOM,
+   so a seed gives the same numbers on every host; RANDOM_SEED's seed
+   is one integer (two for INTEGER*2), and CALL RANDOM_SEED() sets it
+   back to the first.
+
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and
    CASE too); a named construct must be named at its end, and its name

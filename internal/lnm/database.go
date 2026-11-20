@@ -152,6 +152,9 @@ func NewDatabase(uic uint32) *Database {
 	db.newDTFormatTable()
 	db.defineDTFormatNames()
 
+	// The time zone's difference from UTC (timezone.go).
+	db.defineTimeZone()
+
 	return view
 }
 

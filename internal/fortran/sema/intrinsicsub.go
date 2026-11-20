@@ -38,7 +38,7 @@ type intrinsicSub struct {
 	dummies   []dummyArg
 
 	// analyze is what a CALL of it becomes, given its arguments in the
-	// dummies' order (nil for one left out); nil if it is NOTIMPL yet.
+	// dummies' order (nil for one left out).
 	analyze func(*analyzer, *ast.CallStmt, []ast.Expr) Stmt
 }
 
@@ -60,6 +60,10 @@ func readIntrinsicSubroutines() map[string]*intrinsicSub {
 	}
 
 	subs["MVBITS"].analyze = (*analyzer).mvbits
+	subs["DATE_AND_TIME"].analyze = (*analyzer).dateAndTime
+	subs["SYSTEM_CLOCK"].analyze = (*analyzer).systemClock
+	subs["RANDOM_NUMBER"].analyze = (*analyzer).randomNumber
+	subs["RANDOM_SEED"].analyze = (*analyzer).randomSeed
 
 	return subs
 }
@@ -96,13 +100,6 @@ func (a *analyzer) intrinsicCall(s *ast.CallStmt, sub *intrinsicSub, list []ast.
 	slots, ok := a.keywordSlots(s.NamePos, s.Name, true, list, sub.dummies, false,
 		func() string { return takesDummies(sub.dummies) }, false)
 	if !ok {
-		return nil
-	}
-
-	if sub.analyze == nil {
-		// Subtask 7's.
-		a.notImplForm(s.NamePos, "the intrinsic subroutine "+s.Name)
-
 		return nil
 	}
 

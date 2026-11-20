@@ -7254,6 +7254,10 @@ It has these routines, which MACRO programs can call too:
 | `FTN$SECNDS(x)` | SECNDS, a REAL\*4 in R0: the seconds since midnight less `x`, plus a day once if that is negative |
 | `FTN$EXIT([status])`, `FTN$EXIT_W([status])` | EXIT: `$EXIT` with a longword's or a word's status, SS$_NORMAL without one |
 | `FTN$IMVBITS(m, i, len, n, j)`, `FTN$JMVBITS(...)`, `FTN$BMVBITS(...)` | MVBITS: EXTZV and INSV, every argument a word's address, a longword's, or (for an `INTEGER(1)` TO) a byte's |
+| `FTN$DATE_AND_TIME(date, time, zone, values)`, `FTN$DATE_AND_TIME_W(...)` | Fortran 90's DATE_AND_TIME: `CCYYMMDD`, `hhmmss.sss`, and `+hhmm` into the strings the descriptors describe, and eight longwords (or words) at `values`; the zone from SYS$TIMEZONE_DIFFERENTIAL (blanks and -HUGE without it); an argument 0, or past the count, is absent |
+| `FTN$SYSTEM_CLOCK(count, rate, max)`, `FTN$SYSTEM_CLOCK_W(...)` | SYSTEM_CLOCK: the system time's hundredths modulo HUGE+1, 100, and HUGE, as longwords or words |
+| `FTN$RANDOM_F(x)`, `_D`, `_G`, `_H` | RANDOM_NUMBER of one element of that format: MTH$RANDOM's draws on FTNRTL's seed (one for F, three for D and G, five for H) |
+| `FTN$RANDOM_SEED(size, put, get)`, `FTN$RANDOM_SEED_W(...)` | RANDOM_SEED: the seed's size (1, or 2 words), set from `put`, given to `get`; with none of them the first seed, 1234567 |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |
@@ -8596,6 +8600,39 @@ it may give a `PARAMETER` its value; otherwise the bytes are moved by MOVC3, or 
 `OTS$MOVE5` when a length is known only when the program runs or is past 65,535 bytes. A
 `MOLD` of a `CHARACTER` length of zero, or of one known only when the program runs, isn't
 implemented yet.
+
+**The clock and random numbers** (the standard's 13.13.27, 13.13.83, 13.13.84, and
+13.13.105), four intrinsic subroutines under `/F90`, each argument optional but
+`RANDOM_NUMBER`'s, and each taking keywords. `CALL DATE_AND_TIME(DATE, TIME, ZONE, VALUES)`
+gives `DATE` the local date as `CCYYMMDD`, `TIME` the time as `hhmmss.sss`, `ZONE` the
+difference from UTC as `+hhmm` or `-hhmm`, each as an assignment would (cut short, or
+blanks after), and `VALUES` eight integers: the year, month, day, the difference in minutes,
+the hour, minute, second, and millisecond (the VAX's clock counts hundredths, so the
+milliseconds are a multiple of 10). The difference is the logical name
+`SYS$TIMEZONE_DIFFERENTIAL`, which govax defines in the system table at startup from the
+host's, as seconds east of UTC with a sign, as VMS writes it (`-18000` for five hours west);
+a process may define its own. If it isn't a number, `ZONE` is blanks and `VALUES(4)` is
+`-HUGE(0)`.
+
+`CALL SYSTEM_CLOCK(COUNT, COUNT_RATE, COUNT_MAX)` counts the system time's hundredths of a
+second: the rate is 100, the maximum `HUGE` of the arguments' kind, and the count the
+hundredths modulo the maximum plus 1. With the quantum clock (`vax.hardware.clock` false)
+the system time is the emulated one, so the counts follow the instructions run.
+
+`CALL RANDOM_NUMBER(HARVEST)` gives a `REAL` of any kind, or each element of an array of one
+in array element order, a number from 0 up to but not including 1, drawn by MTHRTL's
+`MTH$RANDOM` (the generator `RAN` uses) on a seed FTNRTL keeps, so a seed gives the same
+sequence on every host; `vax.runtime.random` makes it unpredictable, as it does `RAN`'s.
+A `REAL` is one draw's 24 bits; a `REAL(8)` joins three draws, a `REAL(16)` five, cut to the
+format's digits, so no number rounds up to 1. `CALL RANDOM_SEED(SIZE=N)` says the seed is 1
+integer (2 for `INTEGER*2`, the seed's two words, low first), `PUT=` sets it from an array,
+`GET=` gives it to one, and `CALL RANDOM_SEED()` sets it back to the one every image
+starts with, 1234567. The standard takes one argument at most.
+
+The integer arguments of all four are of the default kind by the standard; govax takes
+`INTEGER*2` or `INTEGER*4`, all of one length in a call. FTNRTL's routines are
+`FTN$DATE_AND_TIME`, `FTN$SYSTEM_CLOCK`, and `FTN$RANDOM_SEED` (each with a `_W` form for
+`INTEGER*2`), and `FTN$RANDOM_F` to `FTN$RANDOM_H`.
 
 A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
 its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;
