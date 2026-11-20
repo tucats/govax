@@ -437,6 +437,7 @@ func (x *extensions) statement(s ast.Stmt) {
 		}
 
 		x.specifiers(s.Specs, kind)
+		x.exprs(s.Items)
 	}
 }
 

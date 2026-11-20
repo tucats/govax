@@ -1459,6 +1459,15 @@ var messages = map[string]kind{
 	// type its answer has.
 	"KEYPLACE": {Error, "%s= must name a place to store %s value"},
 
+	// IOLENGTHFORM is an INQUIRE (IOLENGTH=n) with anything but its output
+	// list beside it, or an INQUIRE of another form with a list (the Fortran
+	// 90 standard's 9.6, R923).
+	"IOLENGTHFORM": {Error, "an INQUIRE (IOLENGTH=) takes an output list and no other specifier"},
+
+	// NEEDFILE is an OPEN with STATUS='REPLACE' and no FILE= (the Fortran
+	// 90 standard's 9.3.4).
+	"NEEDFILE": {Error, "an OPEN with STATUS='%s' needs FILE="},
+
 	// BADCOUNT is an ENCODE or DECODE count that isn't an INTEGER
 	// expression (appendix A.1).
 	"BADCOUNT": {Error, "%s's count of characters must be an INTEGER expression"},

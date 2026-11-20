@@ -668,6 +668,7 @@ type (
 		Unit  *UnitSpec
 		Rec   Expr
 		Specs []*IOSpec
+		Items []Expr // INQUIRE (IOLENGTH=n)'s output list
 	}
 
 	// DefineFileStmt is DEFINE FILE u(m,n,U,v)[,u(m,n,U,v)]... (appendix

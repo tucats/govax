@@ -275,6 +275,25 @@ func (l *lowerer) eachElement(value sema.Expr, body func(element sema.Expr)) {
 	n.done()
 }
 
+// elementCount is the number of elements of the array value, its extents'
+// product, computed when the statement reaches it (a section's from its
+// triplets, an allocatable array's from its descriptor), with no loop.
+func (l *lowerer) elementCount(value sema.Expr) Expr {
+	n := l.newNest(len(value.Shape()), nil)
+	defer n.done()
+
+	for _, leaf := range sema.Leaves(value) {
+		n.prepare(leaf)
+	}
+
+	var count Expr = LongConst(1)
+	for d := range value.Shape() {
+		count = arith(Mul, Long, count, l.expr(n.extent(d, value, value)))
+	}
+
+	return count
+}
+
 // indexCell is an index cell for the statement being lowered: one another
 // statement used and gave back, or a new one ($In).
 func (l *lowerer) indexCell() *Cell {

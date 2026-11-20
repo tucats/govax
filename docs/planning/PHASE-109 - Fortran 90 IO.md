@@ -4,7 +4,8 @@
 Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
 accepted by the author the same day ("The author's answers"); its A.4 revises
 the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
-subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4 is next.
+subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
+specifiers, done 2026-11-20; subtask 5 is next.
 
 ## Goal
 
@@ -345,7 +346,7 @@ And where each change lands:
    `format`'s renumbered together (done 2026-11-19).
 3. **COMPLEX(16) I/O** in every kind of statement (finding 10) (done 2026-11-20).
 4. **OPEN and INQUIRE's new specifiers**, STATUS='REPLACE', re-OPEN's DELIM= and PAD=,
-   IOLENGTH= (finding 7), and ACTION='WRITE''s condition.
+   IOLENGTH= (finding 7), and ACTION='WRITE''s condition (done 2026-11-20).
 5. **Nonadvancing I/O**: ADVANCE= (constant and run-time, `FTN$ADVANCE`), SIZE= through
    FTN$IO_END's argument, EOR= and -2, the record kept in the unit and the left tab limit,
    the terminal's prompt, PAD= on input (findings 2 to 5), the new conditions (finding 8).
@@ -474,3 +475,46 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   14.13 says what COMPLEX(16) I/O does, and its list of what isn't there lost the stale ES,
   EN, and run-time `"…"` sentences subtask 2 had left. Subtask 4 (OPEN and INQUIRE's new
   specifiers) is next.
+- **2026-11-20:** Subtask 4, OPEN and INQUIRE's new specifiers. The parser takes ACTION=,
+  POSITION=, DELIM=, and PAD= in OPEN, those and READ=, WRITE=, READWRITE=, and IOLENGTH= in
+  INQUIRE, and an output list after INQUIRE's control list (`ast.AuxIOStmt.Items`). sema's
+  table has finding 7's codes (OPEN's 49 to 52, INQUIRE's 53 to 59, STATUS='REPLACE' 5),
+  every new keyword accepted under either `/F90` setting (no valid old program changes; the
+  `/STANDARD` walk calls each an extension, from its table). `checkOpen` refuses, for constant
+  values, READONLY with another ACTION=, REPLACE with READONLY or ACCESS='APPEND', ACTION='READ'
+  with NEW, SCRATCH, REPLACE, or ACCESS='APPEND' (but not DISPOSE='DELETE': the HP manual's
+  12.6.24 makes that READONLY's difference), POSITION= with direct or keyed access,
+  POSITION='REWIND' with ACCESS='APPEND', and DELIM= or PAD= on an unformatted file (by FORM=,
+  or by direct or keyed access with no FORM=); REPLACE without FILE= is the new NEEDFILE (the
+  standard's 9.3.4; VAX's FORnnn default isn't offered for it). FTNRTL's FTN_OPEN does the same
+  at run time (INCOPECLO): CODES grew to 53, the choices' table to 52; READONLY is ACTION='READ'
+  inside it. The unit block gains `UB_ACTION`, `UB_DELIM`, `UB_PAD`, and `UB_POSITION` (UB_BLN
+  620+44), set by FTN$$UNIT_INIT to READWRITE, NONE, YES, ASIS. ACTION='READ' clears FAC (GET),
+  ACTION='WRITE' gives FAC PUT, DEL, TRN; FTN$$UNIT_RECORD's WRIREAFIL is now any unit of
+  ACTION READ (and FTN_RECORD's DELETE of an indexed one), and a read of an ACTION WRITE unit is
+  the new REAWRIFIL, FOR number 306 (`vmsdef/formessages.go`, `FOR$_REAWRIFIL` ^X188994 in
+  FTN_UNITS). POSITION='APPEND' is ACCESS='APPEND''s RAB$V_EOF and NEF cleared, an existing
+  file's UB_APPENDED set (BACKSPACE has no count); 'REWIND' and 'ASIS' need nothing, a new OPEN
+  putting the file at its start. STATUS='REPLACE' is a `$ERASE` of the FAB (RMS$_FNF passed
+  over), then the `$CREATE` NEW's; the new file takes the next version left, so the erased one's
+  number when it was the highest (unconfirmed, as finding 7 says; RMS's supersede would need the
+  version named). A re-OPEN of the same file changes DELIM= and PAD= beside BLANK=. FTN_INQUIRE's
+  table runs to 59: with no connection ACTION, POSITION, and DELIM are UNDEFINED, READ, WRITE,
+  and READWRITE UNKNOWN, PAD YES (Fortran 90's 9.6.1.21 and the HP manual; gfortran answers
+  Fortran 2003's UNDEFINED); DELIM is UNDEFINED for an unformatted unit, POSITION for a direct
+  or keyed one; POSITION is the OPEN's, or REWIND after a REWIND statement (FTN_POSITION sets
+  it), where the standard leaves a moved file's answer to the processor. No new entry, so
+  GSMATCH stays 1,30. IOLENGTH= is the compiler's, as finding 7 planned: `sema.IOLength` (the
+  IOLENGTHFORM message for a form mixed with others), lowered by `ir/lowerfile.go`'s `ioLength`
+  to a temporary that each item adds its bytes to, then `(n+3)/4` into the variable: a scalar's
+  type size, or its CHARACTER length when only the program knows it (`chars`); an array's
+  elements times their size, its element count `lowerarray.go`'s new `elementCount` (the
+  extents' product, no loop) when not known, an element at a time only for an array of a
+  run-time CHARACTER length; an implied DO a counted loop; a derived type's object its bytes, as
+  unformatted I/O writes it. Nothing else in the list is evaluated; the optimizer folds a list of
+  constant sizes. `testdata/fortran90/openings.f90` runs every new specifier, by constants and by
+  values, the two conditions by IOSTAT=, a re-OPEN, and IOLENGTH= of each kind of item, then as a
+  direct file's RECL=, in every mode; gfortran agrees but for IOLENGTH='s bytes (finding 13), PAD=
+  with no connection, and POSITION= after a write (compare.py's KNOWN). sema's TestErrors has the
+  new checks. MANUAL.md's 14.13 has a paragraph on OPEN and INQUIRE. Subtask 5 (nonadvancing
+  I/O) is next; it and subtask 6 give DELIM= and PAD= their effect.

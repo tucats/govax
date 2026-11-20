@@ -99,6 +99,86 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat, nil)
 }
 
+// ioLength lowers INQUIRE (IOLENGTH=n) list (sema's IOLength): the items'
+// bytes added up in a temporary, then rounded up to longwords. No call.
+//
+//	INQUIRE (IOLENGTH=N) X, C(1:K)        REAL X; CHARACTER*8 C(20)
+//
+//	  $T1 <- 0
+//	  $T1 <- add.L($T1, 4)
+//	  $T1 <- add.L($T1, mul.L(K, 8))       (C(1:K)'s extent, times 8)
+//	  N <- div.L(add.L($T1, 3), 4)
+//
+// An item whose bytes aren't a count of elements of a known length (an array
+// of a run-time CHARACTER length) is added an element at a time, through the
+// scalarizer's loops, as an output list's section is written; an implied DO
+// is a loop, as an output list's is. Without /OPTIMIZE a list of constant
+// lengths is still added up when the program runs; the optimizer folds it.
+func (l *lowerer) ioLength(s *sema.IOLength) {
+	total := l.temp(Long)
+
+	add := func(x Expr) {
+		l.emit(&Assign{origin: l.origin(), Dst: total, Src: arith(Add, Long, &Load{total}, x)})
+	}
+
+	l.emit(&Assign{origin: l.origin(), Dst: total, Src: LongConst(0)})
+
+	var items func([]*sema.Item)
+
+	items = func(list []*sema.Item) {
+		for _, it := range list {
+			if d := it.Loop; d != nil {
+				name := "the implied DO (line " + strconv.Itoa(d.Pos.Line) + ")"
+
+				l.countedLoop(name, d.Var, d.Start, d.Limit, d.Step, false, func(*Block) {
+					items(d.Items)
+				})
+
+				continue
+			}
+
+			l.itemLength(it.Value, add)
+		}
+	}
+
+	items(s.Items)
+
+	value := arith(Div, Long, arith(Add, Long, &Load{total}, LongConst(3)), LongConst(4))
+	dst := l.mem(s.Var)
+	l.emit(&Assign{origin: l.origin(), Dst: dst, Src: convertTo(dst.T, value)})
+}
+
+// itemLength adds the bytes of v, an IOLENGTH list's item, with add.
+func (l *lowerer) itemLength(v sema.Expr, add func(Expr)) {
+	v = sema.Shaped(v) // a whole array named in the list has its shape
+	t := v.Type()
+	shape := v.Shape()
+
+	if len(shape) == 0 {
+		if t.Kind == sema.Character && t.Size == 0 {
+			add(convertTo(Long, l.chars(v).Len))
+		} else {
+			add(LongConst(int32(t.Size)))
+		}
+
+		return
+	}
+
+	if t.Kind == sema.Character && t.Size == 0 {
+		l.eachElement(v, func(e sema.Expr) { l.itemLength(e, add) })
+
+		return
+	}
+
+	if n, known := shape.Size(); known {
+		add(LongConst(int32(n * t.Size)))
+
+		return
+	}
+
+	add(arith(Mul, Long, l.elementCount(v), LongConst(int32(t.Size))))
+}
+
 // A key's type in OPEN's key list block: a descriptor's type, with descending
 // added. These are VMS's FORRTL's (testdata/for88).
 const (

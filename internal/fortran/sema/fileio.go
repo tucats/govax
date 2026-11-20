@@ -41,7 +41,7 @@ type fileKeyword struct {
 
 // The choices. Each number is FORRTL's for that text.
 var (
-	statusChoices = map[string]int{"OLD": 1, "NEW": 2, "SCRATCH": 3, "UNKNOWN": 4}
+	statusChoices = map[string]int{"OLD": 1, "NEW": 2, "SCRATCH": 3, "UNKNOWN": 4, "REPLACE": 5}
 	disposeChoice = map[string]int{"KEEP": 1, "SAVE": 1, "DELETE": 2, "PRINT": 3, "SUBMIT": 4, "PRINT/DELETE": 5, "SUBMIT/DELETE": 6}
 	accessChoices = map[string]int{"DIRECT": 1, "SEQUENTIAL": 2, "APPEND": 3, "KEYED": 4}
 	formChoices   = map[string]int{"FORMATTED": 1, "UNFORMATTED": 2}
@@ -49,6 +49,15 @@ var (
 	orgChoices    = map[string]int{"SEQUENTIAL": 1, "RELATIVE": 2, "INDEXED": 3}
 	typeChoices   = map[string]int{"FIXED": 1, "VARIABLE": 2, "SEGMENTED": 3, "STREAM": 4, "STREAM_CR": 5, "STREAM_LF": 6}
 	blankChoices  = map[string]int{"ZERO": 1, "NULL": 2}
+
+	// Fortran 90's (the standard's 9.3.4.7 to 9.3.4.10). VMS's FORRTL has
+	// no such keywords (it refuses codes past 27 with FOR$_INVARGFOR), so
+	// their codes and numbers are govax's, past FORRTL's (PHASE-109's
+	// finding 7).
+	positionChoices = map[string]int{"ASIS": 1, "REWIND": 2, "APPEND": 3}
+	actionChoices   = map[string]int{"READ": 1, "WRITE": 2, "READWRITE": 3}
+	delimChoices    = map[string]int{"APOSTROPHE": 1, "QUOTE": 2, "NONE": 3}
+	padChoices      = map[string]int{"YES": 1, "NO": 2}
 
 	// convertChoices are CONVERT='s (the 2005 manual's; VMS 7.1's FORRTL has
 	// them, testdata/for81's round 2). NATIVE is 9 here, as FORRTL also takes
@@ -70,6 +79,10 @@ const (
 	codeType     = 20
 	codeKey      = 23
 	codeBlank    = 24
+	codePosition = 49
+	codeAction   = 50
+	codeDelim    = 51
+	codePad      = 52
 )
 
 // openKeywords are OPEN's keywords (Table 9-1), beside ERR= and IOSTAT=.
@@ -101,6 +114,10 @@ var openKeywords = map[string]fileKeyword{
 	"KEY":               {code: codeKey, kind: keysKeyword},
 	"BLANK":             {code: codeBlank, kind: choiceKeyword, choices: blankChoices},
 	"CONVERT":           {code: 27, kind: choiceKeyword, choices: convertChoices},
+	"POSITION":          {code: codePosition, kind: choiceKeyword, choices: positionChoices},
+	"ACTION":            {code: codeAction, kind: choiceKeyword, choices: actionChoices},
+	"DELIM":             {code: codeDelim, kind: choiceKeyword, choices: delimChoices},
+	"PAD":               {code: codePad, kind: choiceKeyword, choices: padChoices},
 }
 
 // closeKeywords are CLOSE's: STATUS is another name for DISPOSE here.
@@ -134,6 +151,15 @@ var inquireKeywords = map[string]fileKeyword{
 	"KEYED":           {code: 46, kind: textAnswer},
 	"CARRIAGECONTROL": {code: 47, kind: textAnswer},
 	"CONVERT":         {code: 48, kind: textAnswer},
+
+	// Fortran 90's (the standard's 9.6.1.15 to 9.6.1.21), govax's codes.
+	"POSITION":  {code: 53, kind: textAnswer},
+	"ACTION":    {code: 54, kind: textAnswer},
+	"READ":      {code: 55, kind: textAnswer},
+	"WRITE":     {code: 56, kind: textAnswer},
+	"READWRITE": {code: 57, kind: textAnswer},
+	"DELIM":     {code: 58, kind: textAnswer},
+	"PAD":       {code: 59, kind: textAnswer},
 }
 
 // codeUnit is the keyword INQUIRE passes its unit by, since by file it has none.
@@ -242,6 +268,16 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 		}
 	}
 
+	if s.Kind == lex.Inquire {
+		if st, isLength, good := a.ioLength(s); isLength || !good {
+			if !good {
+				return nil
+			}
+
+			return st
+		}
+	}
+
 	var control []*ast.IOSpec
 
 	byCode := map[int]*FileKey{}
@@ -303,6 +339,52 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 	}
 
 	return st
+}
+
+// IOLength is INQUIRE (IOLENGTH=n) list (the Fortran 90 standard's 9.6.3):
+// Var, an INTEGER place, is given the length an unformatted record of the
+// output list's items would have, in RECL='s units for an unformatted file,
+// longwords (PHASE-81's; the HP Fortran manual's 12.5, whose /ASSUME=BYTERECL
+// govax hasn't). It is the compiler's work, with no call: the items' bytes,
+// as an unformatted WRITE would write them (a derived type's object whole),
+// added up and rounded up to longwords. Nothing in the list is evaluated but
+// what says how long it is: a section's bounds, an implied DO's, a CHARACTER
+// value's length when its type doesn't give it.
+type IOLength struct {
+	stmtBase
+	Var   Expr
+	Items []*Item
+}
+
+// ioLength analyzes INQUIRE's IOLENGTH= form, if s is one (isLength): only
+// IOLENGTH= in the control list, and an output list after it. A list after
+// any other INQUIRE is an error too. good is false after an error.
+func (a *analyzer) ioLength(s *ast.AuxIOStmt) (st Stmt, isLength, good bool) {
+	var spec *ast.IOSpec
+
+	for _, sp := range s.Specs {
+		if sp.Keyword == "IOLENGTH" {
+			spec = sp
+		}
+	}
+
+	switch {
+	case spec == nil && len(s.Items) == 0:
+		return nil, false, true
+	case spec == nil || s.Unit != nil || len(s.Specs) != 1 || len(s.Items) == 0:
+		a.report("IOLENGTHFORM", s.Pos)
+
+		return nil, spec != nil, false
+	}
+
+	key, ok := a.fileAnswer(spec, fileKeyword{kind: numberAnswer})
+
+	items, good := a.ioList(s.Items, false)
+	if !ok || !good {
+		return nil, true, false
+	}
+
+	return &IOLength{stmtBase: stmtBase{s}, Var: key.Answer, Items: items}, true, true
 }
 
 // inquireTarget checks that an INQUIRE asks by a unit or by a file, the two
@@ -604,7 +686,46 @@ func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 		relative, indexed             = 2, 3
 	)
 
+	const (
+		replaceFile          = 5
+		readAction           = 1
+		positionRewind       = 2
+		unformatted, keyedTo = 2, 4
+	)
+
 	readOnly := keys[codeReadOnly] != nil
+
+	// Fortran 90's keywords (the standard's 9.3.4; PHASE-109's finding 7):
+	// ACTION='READ' reads only, as READONLY does, but may delete the file
+	// when it is closed (the HP Fortran manual's 12.6.24); POSITION= is for
+	// sequential access; DELIM= and PAD= are for formatted files.
+	byDirect := is(codeAccess, direct) || is(codeAccess, keyedTo)
+	unformattedFile := is(codeForm, unformatted) || (byDirect && !known(codeForm))
+
+	switch {
+	case readOnly && known(codeAction) && !is(codeAction, readAction):
+		return conflict(codeAction, "READONLY")
+	case readOnly && is(codeStatus, replaceFile):
+		return conflict(codeStatus, "READONLY")
+	case is(codeAction, readAction) && (is(codeStatus, newFile) || is(codeStatus, scratchFile) || is(codeStatus, replaceFile)):
+		return conflict(codeStatus, "ACTION='READ'")
+	case is(codeAction, readAction) && is(codeAccess, appendTo):
+		return conflict(codeAccess, "ACTION='READ'")
+	case is(codeAccess, appendTo) && is(codeStatus, replaceFile):
+		return conflict(codeStatus, "ACCESS='APPEND'")
+	case known(codePosition) && byDirect:
+		return conflict(codePosition, "ACCESS='"+keys[codeAccess].choiceText()+"'")
+	case is(codePosition, positionRewind) && is(codeAccess, appendTo):
+		return conflict(codePosition, "ACCESS='APPEND'")
+	case keys[codeDelim] != nil && unformattedFile:
+		return conflict(codeDelim, unformattedWhy(keys))
+	case keys[codePad] != nil && unformattedFile:
+		return conflict(codePad, unformattedWhy(keys))
+	case is(codeStatus, replaceFile) && keys[openKeywords["FILE"].code] == nil:
+		a.report("NEEDFILE", s.Pos, "REPLACE")
+
+		return false
+	}
 
 	switch {
 	case readOnly && is(codeStatus, newFile), readOnly && is(codeStatus, scratchFile):
@@ -649,6 +770,32 @@ func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 	}
 
 	return true
+}
+
+// choiceText is a choice's text, by its number: what the program wrote.
+func (k *FileKey) choiceText() string {
+	for _, kw := range openKeywords {
+		if kw.code != k.Code || kw.choices == nil {
+			continue
+		}
+
+		for text, n := range kw.choices {
+			if n == k.Number && (text != "SAVE" && text != "TYPE") {
+				return text
+			}
+		}
+	}
+
+	return ""
+}
+
+// unformattedWhy is what makes an OPEN's file unformatted, for a message.
+func unformattedWhy(keys map[int]*FileKey) string {
+	if keys[codeForm] != nil {
+		return "FORM='UNFORMATTED'"
+	}
+
+	return "ACCESS='" + keys[codeAccess].choiceText() + "'"
 }
 
 // openDefaults are the keywords an OPEN gets without giving them, which

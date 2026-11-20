@@ -98,4 +98,9 @@ var forMessages = map[uint32]Message{
 	// longer than 65,535 characters (FOR number 305; docs/planning/PHASE-108 -
 	// Fortran 90 intrinsic procedures.md, the author's answer 6).
 	0x00188988: {Facility: "FOR", Ident: "BADREPEAT", Text: "REPEAT count negative or result too long", FAOCount: 0},
+
+	// FTNRTL's I/O statements, a READ of a unit an OPEN connected with
+	// ACTION='WRITE' (FOR number 306; docs/planning/PHASE-109 - Fortran 90
+	// IO.md, finding 8): WRIREAFIL's other half.
+	0x00188990: {Facility: "FOR", Ident: "REAWRIFIL", Text: "read from a file opened ACTION='WRITE'!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
 }

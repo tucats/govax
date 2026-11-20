@@ -9120,6 +9120,35 @@ distance   3.0  2  1
 How a host is reached, how OPTIONAL arguments are passed, and how a generic reference is
 resolved are in FORTRAN-INTERNALS.md's section 28.
 
+**OPEN and INQUIRE's new specifiers** (the standard's 9.3.4 and 9.6). OPEN takes
+`ACTION=` (`'READ'`, `'WRITE'`, or `'READWRITE'`, the default), `POSITION=` (`'ASIS'`, the
+default, `'REWIND'`, or `'APPEND'`), `DELIM=` (`'APOSTROPHE'`, `'QUOTE'`, or `'NONE'`, the
+default), `PAD=` (`'YES'`, the default, or `'NO'`), and `STATUS='REPLACE'`, each a constant
+checked when compiling or a value FTNRTL checks when the program runs. `ACTION='READ'` is
+READONLY's access, but CLOSE may still delete the file; a WRITE of such a unit is
+`FOR-F-WRIREAFIL` (47), and a READ of an `ACTION='WRITE'` unit `FOR-F-REAWRIFIL`, "read from a
+file opened ACTION='WRITE'", govax's own, FOR number 306. `POSITION='APPEND'` is DEC's
+`ACCESS='APPEND'` for a sequential unit, and is only for sequential access; `DELIM=` and `PAD=`
+only for a formatted file; reading only can't make a file or append to one (each
+`%FORT-E-OPENCONFLICT`, or `FOR-F-INCOPECLO` when the program runs). `STATUS='REPLACE'` needs
+`FILE=` (`%FORT-E-NEEDFILE`): the file's highest version, if there is one, is deleted, and a new
+file made with its name, which takes the version deleted when that was the highest. An OPEN of
+a connected unit's own file may change `DELIM=` and `PAD=`, as it may `BLANK=`. What `DELIM=`
+and `PAD=` do to list-directed, namelist, and input records comes with the subtasks that use
+them; for now they are kept and answered.
+
+INQUIRE answers `ACTION=`, `POSITION=`, `READ=`, `WRITE=`, `READWRITE=`, `DELIM=`, and `PAD=` as
+the HP Fortran manual's 12.5 does: for a unit with no file, `ACTION=`, `POSITION=`, and `DELIM=`
+are `'UNDEFINED'`, `READ=`, `WRITE=`, and `READWRITE=` `'UNKNOWN'`, and `PAD=` `'YES'`;
+`DELIM=` is `'UNDEFINED'` for an unformatted unit and `POSITION=` for a direct or keyed one.
+`POSITION=` is where the OPEN put the file, or `'REWIND'` after a REWIND statement.
+`INQUIRE (IOLENGTH=N) list` gives `N` the length an unformatted record of the list's items
+would have, in RECL='s units for an unformatted file, longwords, rounded up: so with `X` a
+REAL and `C` a CHARACTER\*8 array of 20, `INQUIRE (IOLENGTH=N) X, C` gives 41, a RECL= for
+`OPEN (..., ACCESS='DIRECT', FORM='UNFORMATTED', RECL=N)`. The compiler adds up the items'
+bytes, with no call: a section's, an allocatable array's, or a passed-length dummy's when
+the program runs, and nothing in the list is evaluated but what says how long it is.
+
 **Allocatable arrays** (the standard's 5.1.2.4.3, 5.2.6, and 6.3). An array declared
 ALLOCATABLE, with a colon for each of its dimensions, has a rank and nothing more until
 ALLOCATE gives it bounds, which may be any INTEGER values the program computes;

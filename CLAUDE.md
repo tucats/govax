@@ -1359,7 +1359,14 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (2026-11-20) is COMPLEX(16) I/O in every kind of statement (sema's
   NOTIMPLs gone; FTNRTL's formatted, list-directed, and namelist modules
   take DSC$K_DTYPE_HC, list-directed `1PG42.33E4` per part, a field past
-  81 bytes a record of its own; `testdata/fortran90/cplx16io.f90`).
+  81 bytes a record of its own; `testdata/fortran90/cplx16io.f90`); subtask 4
+  (2026-11-20) is OPEN's ACTION=, POSITION=, DELIM=, PAD=, and
+  STATUS='REPLACE' (govax's codes 49 to 52 and 5; a `$ERASE`, then a
+  `$CREATE`), INQUIRE's answers to them and READ=, WRITE=, READWRITE=
+  (codes 53 to 59), the unit block's `UB_ACTION`, `UB_DELIM`, `UB_PAD`,
+  `UB_POSITION`, a READ of an ACTION='WRITE' unit FOR number 306,
+  REAWRIFIL, and INQUIRE (IOLENGTH=) the compiler's own sum
+  (`sema.IOLength`, `ir`'s `ioLength`; `testdata/fortran90/openings.f90`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

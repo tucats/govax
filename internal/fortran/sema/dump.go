@@ -477,6 +477,8 @@ func stmtText(list []Stmt) string {
 		return dumpIO(s)
 	case *FileStmt:
 		return dumpFile(s)
+	case *IOLength:
+		return "INQUIRE (IOLENGTH=" + DumpExpr(s.Var) + ") " + dumpItems(s.Items)
 	case *DefineFile:
 		files := make([]string, len(s.Files))
 		for i, f := range s.Files {

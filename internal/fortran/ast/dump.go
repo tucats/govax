@@ -629,7 +629,7 @@ func dumpIO(s Stmt) (string, bool) {
 
 		control = append(control, specs(s.Specs)...)
 
-		return s.Kind.String() + " (" + strings.Join(control, ", ") + ")", true
+		return s.Kind.String() + " (" + strings.Join(control, ", ") + ")" + items(s.Items), true
 
 	case *DefineFileStmt:
 		files := make([]string, len(s.Files))

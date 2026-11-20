@@ -1,0 +1,21 @@
+Unit 10 WRITE ASIS QUOTE NO NO YES NO
+A READ of a WRITE unit fails: T
+Unit 10 READWRITE APPEND NONE YES YES YES YES
+Unit 10 READ ASIS NONE YES YES NO NO
+Read: first
+Read: second
+A WRITE of a READ unit fails: T
+After REWIND: REWIND
+Read again: first
+Still there: F
+Unit 11 READWRITE ASIS APOSTROPHE YES YES YES YES
+Unit 11 READWRITE ASIS NONE NO YES YES YES
+Unit 12 UNDEFINED UNDEFINED UNDEFINED YES UNKNOWN UNKNOWN UNKNOWN
+Scalar and arrays:   61
+Section:   10
+Implied DO:    7
+Allocatable:    8
+Derived type:    6
+Passed length:    3
+Record 2:  2  3.00 record
+  $STATUS == "%X00000001"

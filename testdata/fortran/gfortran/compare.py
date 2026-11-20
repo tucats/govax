@@ -70,6 +70,7 @@ PROGRAMS90 = {
     "edits": ["edits.f90"],
     "cplx16": ["cplx16.f90"],
     "cplx16io": ["cplx16io.f90"],
+    "openings": ["openings.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],
     "kinds": ["kinds.f90"],
@@ -178,6 +179,23 @@ KNOWN = {
         # goes through a temporary (7.5.1.5), which gfortran leaves out.
         "outside F": "outside T",
         "overlap  1.0  2.0  3.0  2.0  4.0  6.0": "overlap  1.0  2.0  3.0  2.0  2.0  6.0",
+    },
+    "openings": {
+        # POSITION= after the file has moved since its OPEN is the processor's (the standard's
+        # 9.6.1.16): govax's is the OPEN's, gfortran's where the file is.
+        "Unit 10 WRITE ASIS QUOTE NO NO YES NO": "Unit 10 WRITE APPEND QUOTE NO NO YES NO",
+        # PAD= of a unit not connected is YES by Fortran 90's 9.6.1.21 and the HP Fortran
+        # manual's 12.5.20; gfortran answers Fortran 2003's UNDEFINED.
+        "Unit 12 UNDEFINED UNDEFINED UNDEFINED YES UNKNOWN UNKNOWN UNKNOWN":
+            "Unit 12 UNDEFINED UNDEFINED UNDEFINED UNDEFINED UNKNOWN UNKNOWN UNKNOWN",
+        # IOLENGTH= is in RECL='s units, longwords on VMS (PHASE-109's finding 13), bytes in
+        # gfortran.
+        "Scalar and arrays:   61": "Scalar and arrays:  244",
+        "Section:   10": "Section:   40",
+        "Implied DO:    7": "Implied DO:   28",
+        "Allocatable:    8": "Allocatable:   31",
+        "Derived type:    6": "Derived type:   24",
+        "Passed length:    3": "Passed length:    9",
     },
     "cplx16io": {
         # List-directed and namelist output's layouts are the processor's (the standard's

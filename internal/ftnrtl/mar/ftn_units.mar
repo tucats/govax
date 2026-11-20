@@ -145,11 +145,30 @@ UB_REWRITE	= UB_ASV+37		; byte: 1 while a REWRITE is in progress:
 					;  FTN$$UNIT_PUT updates the record
 UB_KEYED	= UB_ASV+38		; byte: 1 from a keyed READ's start to its
 					;  first $GET, which is by key
-UB_BLN		= UB_ASV+40
+UB_ACTION	= UB_ASV+39		; byte: what the unit may do, Fortran 90's
+					;  ACTION=: 1 READ (READONLY too), 2 WRITE,
+					;  3 READWRITE
+UB_DELIM	= UB_ASV+40		; byte: DELIM=: 1 APOSTROPHE, 2 QUOTE, 3 NONE
+UB_PAD		= UB_ASV+41		; byte: PAD=: 1 YES, 2 NO
+UB_POSITION	= UB_ASV+42		; byte: where the file was put, INQUIRE's
+					;  POSITION=: 1 ASIS, 2 REWIND (and by a
+					;  REWIND statement), 3 APPEND
+UB_BLN		= UB_ASV+44
 
 	; A check made when the module is assembled: .IIF (immediate if)
 	; assembles .ERROR, stopping the assembly, if UB_ASV isn't 620.
 	.IIF NE UB_ASV-620, .ERROR	; FTN_OPEN and FTN_DIRECT say 620
+
+ACTION_READ	= 1			; UB_ACTION's
+ACTION_WRITE	= 2
+ACTION_BOTH	= 3
+
+;
+; govax's own conditions, past VAX FORTRAN's numbers (docs/planning/PHASE-99
+; - Fortran 90.md, Decision 15): a READ of a unit opened ACTION='WRITE', FOR
+; number 306, severity F as WRIREAFIL's (PHASE-109's finding 8).
+;
+FOR$_REAWRIFIL	= ^X188994
 
 K_OUTPUT	= 1			; a unit on SYS$OUTPUT:
 K_INPUT		= 2			; a unit on SYS$INPUT:
@@ -332,6 +351,10 @@ EXIT_DECLARED:	.LONG	0
 	CLRB	UB_CURRENT(R6)
 	CLRB	UB_REWRITE(R6)
 	CLRB	UB_KEYED(R6)
+	MOVB	#ACTION_BOTH,UB_ACTION(R6) ; Fortran 90's defaults (the HP Fortran
+	MOVB	#3,UB_DELIM(R6)		;  manual's 12.6): READWRITE, NONE, YES,
+	MOVB	#1,UB_PAD(R6)		;  ASIS
+	MOVB	#1,UB_POSITION(R6)
 	;
 	; The default names. R7 is the unit.
 	;
@@ -771,8 +794,8 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; otherwise (zeros for VAX FORTRAN's statements, not for Fortran 90's), else 0. R1 is 0, or the FOR$_ condition if the
 ; statement can't use the unit: MIXFILACC for a statement of the other form, or
 ; a sequential one on a unit that is direct (a keyed unit may have one: testdata/for88's
-; #280), WRIREAFIL for a write on a READONLY
-; unit. (FTN$$UNIT_DIRECT has seen that a direct statement's unit is direct.) A
+; #280), WRIREAFIL for a write on a READONLY (or ACTION='READ')
+; unit, REAWRIFIL for a read on an ACTION='WRITE' one. (FTN$$UNIT_DIRECT has seen that a direct statement's unit is direct.) A
 ; unit with no form yet takes the statement's, and if unformatted, the size and
 ; segments of a unit connected for one.
 ;
@@ -803,10 +826,14 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	BLBS	20(AP),17$		; a direct statement
 15$:	CMPB	UB_ACCESS(R1),#1
 	BEQL	30$
-17$:	BLBC	12(AP),20$
-	TSTB	UB_READONLY(R1)
-	BEQL	20$
+17$:	BLBC	12(AP),18$		; a read
+	CMPB	UB_ACTION(R1),#ACTION_READ
+	BNEQ	20$
 	MOVL	#FOR$_WRIREAFIL,R1
+	RET
+18$:	CMPB	UB_ACTION(R1),#ACTION_WRITE
+	BNEQ	20$
+	MOVL	#FOR$_REAWRIFIL,R1
 	RET
 20$:	CLRL	R1
 	RET

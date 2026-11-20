@@ -43,6 +43,8 @@ var (
 		"NOSPANBLOCKS": specNone, "ORGANIZATION": specValue, "READONLY": specNone,
 		"RECL": specValue, "RECORDSIZE": specValue, "RECORDTYPE": specValue, "SHARED": specNone,
 		"STATUS": specValue, "TYPE": specValue, "USEROPEN": specValue,
+		// Fortran 90's (the standard's 9.3.4).
+		"ACTION": specValue, "DELIM": specValue, "PAD": specValue, "POSITION": specValue,
 	}
 	closeSpecs   = map[string]specKind{"STATUS": specValue, "DISPOSE": specValue, "DISP": specValue, "ERR": specLabel, "IOSTAT": specValue}
 	inquireSpecs = map[string]specKind{
@@ -52,6 +54,10 @@ var (
 		"NAME": specValue, "NAMED": specValue, "NEXTREC": specValue, "NUMBER": specValue,
 		"OPENED": specValue, "ORGANIZATION": specValue, "RECL": specValue,
 		"RECORDTYPE": specValue, "SEQUENTIAL": specValue, "UNFORMATTED": specValue,
+		// Fortran 90's (the standard's 9.6.1), and IOLENGTH='s form, which an
+		// output list follows (9.6.3).
+		"ACTION": specValue, "DELIM": specValue, "PAD": specValue, "POSITION": specValue,
+		"READ": specValue, "WRITE": specValue, "READWRITE": specValue, "IOLENGTH": specValue,
 	}
 )
 
@@ -383,6 +389,13 @@ func parseAuxIO(p *parser) ast.Stmt {
 	c := p.controlList()
 
 	s.Unit, s.Rec, s.Specs = c.unit, c.rec, c.specs
+
+	// INQUIRE (IOLENGTH=n) A, B: the only one with a list after it, which
+	// sema checks goes with IOLENGTH= alone.
+	if p.st.Kind == lex.Inquire && !p.atEnd() {
+		s.Items = p.ioList()
+	}
+
 	p.end()
 
 	return s
