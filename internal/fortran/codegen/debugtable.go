@@ -104,12 +104,105 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 		}
 	}
 
+	// The layouts of the records listed, and of the records in them: the list grows
+	// as each structure names a nested one.
+	for i := 0; i < len(g.debugStructs); i++ {
+		lines = append(lines, g.structureLines(g.debugStructs[i])...)
+	}
+
 	w.lines = append(w.lines, lines...)
+}
+
+// structName is a structure's name in the routine's table, which lists its layout
+// (structureLines) once the variables are written. A DEC structure nested without a
+// name is given one beginning with $, as is a structure whose name another structure
+// of the table has already (a host's type and an internal procedure's own, say).
+func (g *routineGen) structName(st *sema.Structure) string {
+	if st == nil {
+		return ""
+	}
+
+	if name, ok := g.debugStructNames[st]; ok {
+		return name
+	}
+
+	if g.debugStructNames == nil {
+		g.debugStructNames = map[*sema.Structure]string{}
+	}
+
+	name := st.Name
+	taken := func(name string) bool {
+		for _, n := range g.debugStructNames {
+			if n == name {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	if name == "" || taken(name) {
+		name = "$" + strconv.Itoa(len(g.debugStructs)+1)
+	}
+
+	g.debugStructNames[st] = name
+	g.debugStructs = append(g.debugStructs, st)
+
+	return name
+}
+
+// structureLines are a structure's S line and a C line for each component. A %FILL
+// field has no name to show, and a pointer component isn't followed by the debugger
+// yet (subtask 7b), so neither has a line.
+func (g *routineGen) structureLines(st *sema.Structure) []string {
+	name := g.structName(st)
+	unit := g.r.Name
+	lines := []string{dbgtable.StructureLine(unit, &dbgtable.Structure{Name: name, Size: st.Size, Derived: st.Derived})}
+
+	for _, f := range st.Fields {
+		if f.Name == "%FILL" || f.Pointer || f.Rank > 0 {
+			continue
+		}
+
+		c := &dbgtable.Component{Name: f.Name, Offset: f.Offset, Bounds: constantBounds(f.Dims)}
+
+		if f.Struct != nil {
+			c.Type, c.Struct, c.Size = dbgtable.Record, g.structName(f.Struct), f.Struct.Size
+		} else {
+			c.Type, c.Size = debugTypeOf(f.Type, g.r.Unit.GFloating), f.Type.Size
+		}
+
+		lines = append(lines, dbgtable.ComponentLine(unit, name, c))
+	}
+
+	return lines
+}
+
+// constantBounds are a field's dimensions, which are always constant.
+func constantBounds(dims []sema.Dim) []dbgtable.Bound {
+	var bounds []dbgtable.Bound
+
+	for _, d := range dims {
+		bounds = append(bounds, dbgtable.Bound{Lower: d.Lower, Upper: d.Upper, Known: true})
+	}
+
+	return bounds
 }
 
 // debugVar is a variable's entry in the table.
 func (g *routineGen) debugVar(name string, s *sema.Symbol, place dbgtable.Place) dbgtable.Var {
-	v := dbgtable.Var{Unit: g.r.Name, Name: name, Type: debugType(s, g.r.Unit.GFloating), Size: s.Type.Size, Place: place}
+	v := dbgtable.Var{Unit: g.r.Name, Name: name, Type: debugTypeOf(s.Type, g.r.Unit.GFloating), Size: s.Type.Size, Place: place}
+
+	// A record's structure, whose layout the table gives so that the debugger can show
+	// it a component at a time.
+	if v.Type == dbgtable.Record {
+		st := s.Type.Struct
+		if st == nil {
+			st = s.Struct
+		}
+
+		v.Struct = g.structName(st)
+	}
 
 	for _, d := range s.Dims {
 		bound := dbgtable.Bound{Lower: d.Lower, Upper: d.Upper, Known: d.LowerExpr == nil && d.UpperExpr == nil, Assumed: d.Assumed}
@@ -155,9 +248,9 @@ func (g *routineGen) describedVar(name string, s *sema.Symbol, c *ir.Cell) dbgta
 	return v
 }
 
-// debugType is a variable's type as the table has it.
-func debugType(s *sema.Symbol, gFloating bool) string {
-	switch s.Type.Kind {
+// debugTypeOf is a type as the table has it.
+func debugTypeOf(t sema.Type, gFloating bool) string {
+	switch t.Kind {
 	case sema.Integer:
 		return dbgtable.Integer
 	case sema.Logical:
@@ -166,9 +259,9 @@ func debugType(s *sema.Symbol, gFloating bool) string {
 		return dbgtable.Char
 	case sema.Real:
 		switch {
-		case s.Type.Size == 4:
+		case t.Size == 4:
 			return dbgtable.RealF
-		case s.Type.Size == 16:
+		case t.Size == 16:
 			return dbgtable.RealH
 		case gFloating:
 			return dbgtable.RealG
@@ -177,9 +270,9 @@ func debugType(s *sema.Symbol, gFloating bool) string {
 		return dbgtable.RealD
 	case sema.Complex:
 		switch {
-		case s.Type.Size == 8:
+		case t.Size == 8:
 			return dbgtable.ComplxF
-		case s.Type.Size == 32:
+		case t.Size == 32:
 			return dbgtable.ComplxH
 		case gFloating:
 			return dbgtable.ComplxG

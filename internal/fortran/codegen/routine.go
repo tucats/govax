@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/ir"
+	"github.com/tucats/govax/internal/fortran/sema"
 )
 
 // routineGen is the code generator's state for one routine.
@@ -29,6 +30,11 @@ type routineGen struct {
 	// lineLabels are the FORTRAN lines it has labeled so far.
 	debugTable bool
 	lineLabels map[int]bool
+
+	// debugStructs are the structures the routine's table describes, in the order
+	// first needed, and their names in it (debugtable.go's structName).
+	debugStructs     []*sema.Structure
+	debugStructNames map[*sema.Structure]string
 
 	// localAlign is the module's $LOCAL section's alignment (localAlignment).
 	localAlign int

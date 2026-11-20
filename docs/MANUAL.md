@@ -8116,12 +8116,33 @@ WIDGETS    14.50000
   A dummy argument is found through its routine's active call, so from a routine with no such call it's
   `%DEBUG-W-NOTACTIVE`. A register's name is the register, so `EXAMINE R1` isn't your variable `R1`, and `EXAMINE U.R1` is.
 - **Types.** Each is shown as what it is: a REAL as a number, a LOGICAL as `.TRUE.` or `.FALSE.`, a COMPLEX as `(re,im)`, and
-  CHARACTER as text. A qualifier still decides, as `EXAMINE/HEXADECIMAL/LONGWORD X` does. A record shows as longwords.
+  CHARACTER as text. A qualifier still decides, as `EXAMINE/HEXADECIMAL/LONGWORD X` does.
+- **Records.** A derived type's object, or a DEC record, is shown a component at a time, each by its own type, and a
+  component is named as FORTRAN names it: `PT%X` for a derived type (or `PT.X`), `D.TIME.H` for a DEC record, with
+  subscripts anywhere along the way, `S%P(2)%Y`. A component of an array of records is that component of every element,
+  `PTS%Y`. `DEPOSIT PT%X = 9.5` reads the value as the component's type; a whole record takes no `DEPOSIT`. A pointer
+  component isn't shown yet. Stopped in a subroutine `WALK` of a program `GEO` that uses a module `SHAPES` (the MACRO
+  module is named for the file's first unit), its dummy `Q(:)` given `PTS(1:5:2)`:
+
+  ```
+  DBG> EXAMINE GEO.PT
+  SHAPES\GEO.PT%X:        1.500000
+  SHAPES\GEO.PT%Y:        2.500000
+  DBG> EXAMINE GEO.S%P(2:3)%X
+  SHAPES\GEO.S%P(2)%X:    1.500000
+  SHAPES\GEO.S%P(3)%X:    0.0000000
+  DBG> EXAMINE Q%X
+  SHAPES\WALK.Q(1)%X:     1.000000
+  SHAPES\WALK.Q(2)%X:     3.000000
+  SHAPES\WALK.Q(3)%X:     5.000000
+  ```
 - **Subscripts.** `M(2,1)` uses FORTRAN's bounds and order, and an array named alone is all its elements, but
   an assumed-size array's first only. An adjustable array's bounds are its current ones, and so are Fortran 90's
   allocatable, automatic, and assumed-shape arrays', read from their descriptors; an assumed-shape dummy given a section
   shows the section's elements, by the descriptor's strides, and an allocatable array not allocated is
-  `%DEBUG-W-NOTALLOC`. `S(2:4)` is a substring. A
+  `%DEBUG-W-NOTALLOC`. A section is its elements, first subscript varying fastest: `V(2:5)`, `M(1:2,1)`, `V(1:9:2)`,
+  and `V(:3)` or `M(2,:)` with a bound left out for the array's (an assumed-size array's last upper bound must be
+  given). `S(2:4)` of a CHARACTER scalar is a substring, and `NAMES(1:2)(1:3)` a substring of each element. A
   subscript is read in the input radix: under the default, hexadecimal, `V(10)` is `V(16)`, which is why the session starts
   with `SET RADIX DECIMAL`. `V[1]` keeps MACRO's meaning, a zero-based element of the label.
 - **Statements.** `UNIT.$LINEn` is the first instruction of FORTRAN line `n`, or `$LINEn` in that routine; an included file's
@@ -8129,7 +8150,8 @@ WIDGETS    14.50000
   same place, as above. `STEP` goes to the next FORTRAN line, and `STEP/INSTRUCTION` to the next instruction. `%LINE` and
   `TYPE` still count the MACRO file's lines, in which the FORTRAN lines are comments.
 - **Expressions.** Within one a name stands as a MACRO label does: under `EVALUATE` for what it holds (`EVALUATE I + 1`), and
-  elsewhere for its address. `SET WATCH V(2)` watches that element.
+  elsewhere for its address. A component without subscripts may stand too (`EVALUATE D.TIME.H + 1`, `PT%X`). `SET WATCH V(2)`
+  watches that element.
 - **What it needs.** All this comes from a table the compiler writes in the MACRO file under `/DEBUG`, as comments, so keep the
   file where the object says it is, as you must to see source lines. Without it, or without `/DEBUG`, the debugger knows only
   what MACRO's records say: `EXAMINE SQUARES.I` is a longword, and a dummy's symbol is its place in the argument list.

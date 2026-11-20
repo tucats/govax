@@ -3,7 +3,6 @@ package debugger
 import (
 	"encoding/binary"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -48,10 +47,6 @@ type fortranPlace struct {
 	strides []int64
 	a0      uint32
 }
-
-// fortranItem is what a location that may be a FORTRAN variable looks like: a path, a name
-// that may have a unit, and up to two parts in parentheses. Anything else is an expression.
-var fortranItem = regexp.MustCompile(`^(?i)((?:[A-Z$_][A-Z0-9$_.]*\\)*)([A-Z$_][A-Z0-9$_.]*)(\([^()]*(?:\([^()]*\)[^()]*)*\))?(\([^()]*\))?$`)
 
 // fortranTable is a module's table, read once.
 func (d *Debugger) fortranTable(mod *dbgsym.Module) *dbgtable.Table {
@@ -445,124 +440,6 @@ func fortranElementSize(v *dbgtable.Var, length uint32) uint32 {
 	return uint32(v.Size)
 }
 
-// fortranPlaces says what a location means if it's a FORTRAN variable: ok is false if it
-// isn't one, and the location is anyone else's to read. A whole array is each of its
-// elements, first subscript varying fastest, as the program stores it.
-func (d *Debugger) fortranPlaces(item string) (places []fortranPlace, ok bool, err error) {
-	m := fortranItem.FindStringSubmatch(strings.TrimSpace(item))
-	if m == nil {
-		return nil, false, nil
-	}
-
-	v, mod, prog, found := d.findFortranVar(m[1], m[2])
-	if !found {
-		return nil, false, nil
-	}
-
-	base, length, err := d.fortranBase(v, mod, prog)
-	if err != nil {
-		return nil, true, err
-	}
-
-	bounds, err := d.fortranBounds(v, mod, prog)
-	if err != nil {
-		return nil, true, err
-	}
-
-	subscripts, substring := m[3], m[4]
-
-	// S(2:4) of a scalar is a substring, not a subscript.
-	if len(bounds) == 0 && substring == "" && strings.Contains(subscripts, ":") {
-		subscripts, substring = "", subscripts
-	}
-
-	if subscripts != "" && len(bounds) == 0 {
-		return nil, false, nil
-	}
-
-	size := fortranElementSize(v, length)
-	name := mod.Name + `\` + v.Unit + "." + v.Name
-	place := fortranPlace{name: name, addr: base, size: size, v: v, reg: v.Place.Kind == dbgtable.InRegister, module: mod, prog: prog}
-
-	if place.strides, place.a0, err = d.describedStrides(v, mod, prog, bounds, size); err != nil {
-		return nil, true, err
-	}
-
-	if len(bounds) == 0 {
-		if substring != "" {
-			return d.fortranSubstring(place, substring)
-		}
-
-		return []fortranPlace{place}, true, nil
-	}
-
-	if subscripts == "" {
-		return wholeArray(place, bounds), true, nil
-	}
-
-	element, err := d.fortranElement(place, bounds, subscripts)
-	if err != nil {
-		return nil, true, err
-	}
-
-	if substring != "" {
-		return d.fortranSubstring(element, substring)
-	}
-
-	return []fortranPlace{element}, true, nil
-}
-
-// fortranElement finds one element of an array, by FORTRAN's rule: the first subscript
-// varies fastest.
-func (d *Debugger) fortranElement(place fortranPlace, bounds []dbgtable.Bound, text string) (fortranPlace, error) {
-	words := strings.Split(strings.Trim(text, "()"), ",")
-
-	dimensions := strconv.Itoa(len(bounds)) + " dimension"
-	if len(bounds) != 1 {
-		dimensions += "s"
-	}
-
-	switch {
-	case len(words) > len(bounds):
-		return place, vmserrors.New(vmserrors.DBG_TOOMANSUB, dimensions)
-	case len(words) < len(bounds):
-		return place, vmserrors.New(vmserrors.DBG_TOOFEWSUB, dimensions)
-	}
-
-	offset, stride := int64(0), int64(1)
-	shown := make([]string, len(words))
-	strided := int64(place.a0)
-
-	for i, word := range words {
-		value, err := d.Machine.EvalWholeIn(d.inputRadix, strings.TrimSpace(word))
-		if err != nil {
-			return place, err
-		}
-
-		n, b := int(int32(value)), bounds[i]
-
-		if !b.Assumed && b.Known && (n < b.Lower || n > b.Upper) || b.Assumed && b.Known && n < b.Lower {
-			return place, vmserrors.New(vmserrors.DBG_SUBOUTBND, strconv.Itoa(i+1), strconv.Itoa(n), b.String())
-		}
-
-		shown[i] = strconv.Itoa(n)
-		offset += int64(n-b.Lower) * stride
-		stride *= int64(b.Upper - b.Lower + 1)
-
-		if place.strides != nil {
-			strided += int64(n) * place.strides[i]
-		}
-	}
-
-	place.addr = uint32(int64(place.addr) + offset*int64(place.size))
-	if place.strides != nil {
-		place.addr = uint32(strided)
-	}
-	place.name += "(" + strings.Join(shown, ",") + ")"
-
-	return place, nil
-}
-
 // fortranSubstring is part of a CHARACTER value, by its bounds, either of which may be
 // left out.
 func (d *Debugger) fortranSubstring(place fortranPlace, text string) ([]fortranPlace, bool, error) {
@@ -745,6 +622,12 @@ func (d *Debugger) examineFortran(r *dcl.Result, places []fortranPlace) error {
 		return err
 	}
 
+	// A record is each of its components, by its own type, unless a qualifier says
+	// how to show the bytes there.
+	if !typed {
+		places = d.leaves(places)
+	}
+
 	for _, p := range places {
 		if typed && !p.reg {
 			d.namedPlace = p.name
@@ -774,6 +657,17 @@ func (d *Debugger) examineFortran(r *dcl.Result, places []fortranPlace) error {
 	}
 
 	return nil
+}
+
+// leaves is each place a record's components (recordLeaves), anything else itself.
+func (d *Debugger) leaves(places []fortranPlace) []fortranPlace {
+	var all []fortranPlace
+
+	for _, p := range places {
+		all = append(all, d.recordLeaves(p)...)
+	}
+
+	return all
 }
 
 // showLoopRegister says when /OPTIMIZE keeps a variable in a register during a loop,
@@ -856,7 +750,7 @@ func (d *Debugger) showFortranLine(pc uint32) {
 
 // evaluateFortran is EVALUATE of a variable: what EXAMINE shows, without the name.
 func (d *Debugger) evaluateFortran(places []fortranPlace, radix int) error {
-	for _, p := range places {
+	for _, p := range d.leaves(places) {
 		data, err := d.fortranBytes(p)
 		if err != nil {
 			return err

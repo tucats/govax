@@ -332,7 +332,7 @@ marked so, and are unconfirmed.
 6. **`/CHECK=POINTERS`** (finding 7), FOR numbers 311 and 312, FTNRTL's two routines.
    (done 2026-11-20)
 7. **`/DEBUG` and the debugger** (finding 9), in two parts:
-   - 7a. Derived types and `%`; sections in EXAMINE.
+   - 7a. Derived types and `%`; sections in EXAMINE. (done 2026-11-20)
    - 7b. Pointers, module variables (`M.X`), host names and the scope, the break after
      the entry code.
 8. **The optimizer** (finding 10): the kernels, strength reduction for strided loops,
@@ -589,3 +589,42 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   FTNRTL table, its list of what pointers lack, HELP FORTRAN /CHECK, and the one-shot's
   `--check` say so. Subtask 7a, derived types and `%` in the debugger, and sections in
   EXAMINE, is next.
+- **2026-11-20:** Subtask 7a, derived types and `%` in the debugger, and sections in EXAMINE
+  (the survey's D1 and D2). The table (`dbgtable`) gains an S line per structure
+  (`;DBG$ S unit name size D|R`, D a derived type, whose components are shown with `%`, R a
+  DEC record's, with a period) and a C line per component (`;DBG$ C unit struct name offset
+  type size bounds`), and a record's V line has the type `REC:name` (`Var.Struct`; a plain
+  `REC`, as older files have it, still reads). The code generator (`codegen/debugtable.go`'s
+  `structName`, `structureLines`) writes the layout of every structure a listed variable
+  reaches, nested ones after the one naming them, each once per routine; DEC's nested
+  structure without a name, or a second structure of a name already taken, gets `$n`. A
+  `%FILL` field and pointer components (scalar or ranked) have no line: pointers are 7b's.
+  The debugger's location reader is new (`debugger/fortranref.go`): the regular expression
+  `fortranItem`, a name and at most two groups, gave way to `scanItem`, which splits a
+  location into names, periods, `%`s, and balanced groups, and `fortranChain`, which follows
+  them, each step turning a list of arrays or single values into another: a group is an
+  array's subscripts or section (`fortranSubscripts`, `subscriptList`: `lo:hi[:stride]`,
+  a bound left out the dimension's, an assumed-size array's last upper bound its lower, as
+  EXAMINE of the whole array already did; each element by `elementAt`, the old element
+  rule, strides and all), or a CHARACTER value's substring; `%` or a period then a name is a
+  record's component (`fortranComponent`, `componentObject`: a Var made for it, with the
+  unit's name so its structure is found in the same table), of every element for an array
+  of records (`PTS%Y`, as Fortran 90 reads it). A dotted name is tried as a unit's variable
+  first, the longest unit first, then as the current routine's variable with components
+  after it, so `UNIT.X` means what it did and `D.TIME.H` finds D's components. EXAMINE and
+  EVALUATE show a record a component at a time (`recordLeaves`), each by its type, unless a
+  type qualifier is given; a whole record still takes no DEPOSIT, a component does. D2 was
+  not the grammar, as the survey thought: the location is the rest of the line, and each
+  subscript was given to the evaluator, `1:2` included, whose error was the EXTRAPARAMETER.
+  In an expression (the machine's evaluator, `expr.go`'s `componentEnd`) a name followed by
+  `%name`s, or under SET LANGUAGE FORTRAN `.name`s, is offered whole to the debugger's names
+  first, so `EVALUATE D.TIME.H + 1` and `PT%X` work under either language; a component
+  after subscripts in an expression doesn't, EXAMINE being the way. Tests:
+  `internal/debugger/fortran90_test.go` (`TestFortranRecords`: a module's derived types,
+  nested, with an array component, an array of them, an allocatable array of them, an
+  assumed-shape dummy given a section of them, a DEC record with a nested structure;
+  `TestFortranRecordTable`; `TestFortranSections`; `TestFortranDescribedSections`), and
+  `dbgtable`'s `TestStructureLines`. MANUAL.md's 14.10 (a Records bullet, sections under
+  Subscripts, components in Expressions) and the debugger's HELP FORTRAN_Programs say so.
+  Subtask 7b, pointers, module variables, host names and the scope, and the break after
+  the entry code, is next.

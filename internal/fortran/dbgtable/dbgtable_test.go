@@ -59,3 +59,50 @@ func TestFortranLine(t *testing.T) {
 		}
 	}
 }
+
+// TestStructureLines reads back a record's layout: a derived type nesting another, a
+// DEC structure, and a variable of each, whatever order the lines come in.
+func TestStructureLines(t *testing.T) {
+	point := &Structure{Name: "POINT", Size: 8, Derived: true, Components: []*Component{
+		{Name: "X", Offset: 0, Type: RealF, Size: 4},
+		{Name: "Y", Offset: 4, Type: RealF, Size: 4},
+	}}
+	shape := &Structure{Name: "SHAPE", Size: 36, Derived: true, Components: []*Component{
+		{Name: "TAG", Offset: 0, Type: Char, Size: 4},
+		{Name: "P", Offset: 4, Type: Record, Struct: "POINT", Size: 8, Bounds: []Bound{{Lower: 1, Upper: 4, Known: true}}},
+	}}
+	date := &Structure{Name: "DATE", Size: 4, Components: []*Component{{Name: "DAY", Type: Integer, Size: 2}, {Name: "$1", Offset: 2, Type: Record, Struct: "$1", Size: 2}}}
+	v := Var{Unit: "U", Name: "S", Type: Record, Struct: "SHAPE", Size: 36, Place: Place{Kind: Static, Symbol: "U.S"}}
+
+	// A component's line before its structure's.
+	lines := []string{ComponentLine("U", "POINT", point.Components[0]), v.Line(), StructureLine("U", point),
+		ComponentLine("U", "POINT", point.Components[1])}
+
+	for _, s := range []*Structure{shape, date} {
+		lines = append(lines, StructureLine("U", s))
+		for _, c := range s.Components {
+			lines = append(lines, ComponentLine("U", s.Name, c))
+		}
+	}
+
+	u := Parse(lines).Units["U"]
+
+	for _, want := range []*Structure{point, shape, date} {
+		if got := u.Structures[want.Name]; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: got %+v, want %+v", want.Name, got, want)
+		}
+	}
+
+	if got := u.Vars["S"]; got == nil || !reflect.DeepEqual(*got, v) {
+		t.Errorf("S: got %+v, from %q", got, v.Line())
+	}
+
+	if point.Separator() != "%" || date.Separator() != "." || shape.Component("P") != shape.Components[1] || shape.Component("Q") != nil {
+		t.Error("Separator or Component")
+	}
+
+	// A plain REC, as files before the structure lines have it, is still read.
+	if got := Parse([]string{Prefix + "V U R REC 8 S:U.R - -"}).Units["U"].Vars["R"]; got == nil || got.Type != Record || got.Struct != "" {
+		t.Errorf("a plain REC: %+v", got)
+	}
+}

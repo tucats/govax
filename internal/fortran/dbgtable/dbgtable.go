@@ -17,6 +17,22 @@
 // it is (Place), its bounds or -, and the symbol of the descriptor holding the bounds
 // not known until the program runs, or -.
 //
+// A record's type is REC:name, the name of a structure the unit's S line describes, and
+// each of its components has a C line (docs/planning/PHASE-110 - Fortran 90 compiler
+// usability.md, subtask 7a):
+//
+//	;DBG$ S GEO POINT 8 D
+//	;DBG$ C GEO POINT X 0 RF 4 -
+//	;DBG$ C GEO POINT Y 4 RF 4 -
+//	;DBG$ V GEO PT REC:POINT 8 S:GEO.PT - -
+//
+// An S line has the unit, the structure's name, its size, and D for a Fortran 90 derived
+// type (whose components are named with %) or R for a DEC record structure (named with
+// a period). A C line has the unit, the structure, the component's name, its offset in
+// the record, its type (a nested structure's REC:name), its element's size, and its
+// bounds or -. A structure with no name of its own, DEC's nested one, is given one
+// beginning with $, which no FORTRAN name does.
+//
 // A leaf package: the code generator writes the lines and the debugger reads them, and
 // neither should need the other.
 package dbgtable
@@ -36,7 +52,7 @@ const (
 	Integer = "I"
 	Logical = "L"
 	Char    = "CH"
-	Record  = "REC"
+	Record  = "REC" // a record: REC:name in a line, the structure's name in Var.Struct
 	RealF   = "RF"
 	RealD   = "RD"
 	RealG   = "RG"
@@ -52,10 +68,10 @@ type PlaceKind byte
 
 // The kinds of place.
 const (
-	Static    PlaceKind = 'S' // at the address of Symbol
-	Argument  PlaceKind = 'A' // at the address in argument N of the routine's frame
-	Through   PlaceKind = 'T' // at the address in the cell Symbol, a routine with ENTRY statements
-	Frame     PlaceKind = 'F' // N bytes from the routine's FP: AUTOMATIC, or a RECURSIVE unit's local
+	Static     PlaceKind = 'S' // at the address of Symbol
+	Argument   PlaceKind = 'A' // at the address in argument N of the routine's frame
+	Through    PlaceKind = 'T' // at the address in the cell Symbol, a routine with ENTRY statements
+	Frame      PlaceKind = 'F' // N bytes from the routine's FP: AUTOMATIC, or a RECURSIVE unit's local
 	InRegister PlaceKind = 'R' // in register N
 
 	// ThroughFrame is Through in a RECURSIVE unit, whose ENTRY cells are in the frame: at
@@ -125,20 +141,125 @@ type Var struct {
 	Descriptor        string
 	DescriptorInFrame bool
 	DescriptorOffset  int
+
+	// Struct is a record's structure's name (Type is Record), "" for any other, or
+	// for a record whose layout the table doesn't give.
+	Struct string
+}
+
+// typeText is a type as a line has it: a record's with its structure's name.
+func typeText(code, structure string) string {
+	if code == Record && structure != "" {
+		return Record + ":" + structure
+	}
+
+	return code
+}
+
+// parseType splits a line's type into its code and a record's structure.
+func parseType(text string) (code, structure string) {
+	if name, ok := strings.CutPrefix(text, Record+":"); ok {
+		return Record, name
+	}
+
+	return text, ""
+}
+
+// Structure is a record's layout: a derived type's or a DEC structure's.
+type Structure struct {
+	Name    string
+	Size    int
+	Derived bool // a Fortran 90 derived type, its components named with %
+
+	// Components are in the order the lines give them, the order declared.
+	Components []*Component
+}
+
+// Separator is what comes between a record's name and its component's when the
+// debugger shows them: % for a derived type, a period for a DEC record.
+func (s *Structure) Separator() string {
+	if s.Derived {
+		return "%"
+	}
+
+	return "."
+}
+
+// Component finds a component by name, or nil.
+func (s *Structure) Component(name string) *Component {
+	for _, c := range s.Components {
+		if c.Name == name {
+			return c
+		}
+	}
+
+	return nil
+}
+
+// Component is one of a structure's components, at Offset bytes from the record's
+// start.
+type Component struct {
+	Name   string
+	Offset int
+	Type   string // a code, Record for a nested structure
+	Struct string // a nested structure's name
+	Size   int    // an element's size
+	Bounds []Bound
+}
+
+// StructureLine is a structure's S line.
+func StructureLine(unit string, s *Structure) string {
+	kind := "R"
+	if s.Derived {
+		kind = "D"
+	}
+
+	return fmt.Sprintf("%sS %s %s %d %s", Prefix, unit, s.Name, s.Size, kind)
+}
+
+// ComponentLine is a component's C line.
+func ComponentLine(unit, structure string, c *Component) string {
+	return fmt.Sprintf("%sC %s %s %s %d %s %d %s", Prefix, unit, structure, c.Name, c.Offset,
+		typeText(c.Type, c.Struct), c.Size, boundsText(c.Bounds))
+}
+
+// boundsText is a line's bounds, or - for none.
+func boundsText(bounds []Bound) string {
+	if len(bounds) == 0 {
+		return "-"
+	}
+
+	parts := make([]string, len(bounds))
+	for i, b := range bounds {
+		parts[i] = b.String()
+	}
+
+	return strings.Join(parts, ",")
+}
+
+// parseBounds reads a line's bounds.
+func parseBounds(text string) ([]Bound, bool) {
+	if text == "-" {
+		return nil, true
+	}
+
+	var bounds []Bound
+
+	for _, part := range strings.Split(text, ",") {
+		b, ok := parseBound(part)
+		if !ok {
+			return nil, false
+		}
+
+		bounds = append(bounds, b)
+	}
+
+	return bounds, true
 }
 
 // Line is the variable's line in the MACRO file.
 func (v Var) Line() string {
-	bounds := "-"
-
-	if len(v.Bounds) > 0 {
-		parts := make([]string, len(v.Bounds))
-		for i, b := range v.Bounds {
-			parts[i] = b.String()
-		}
-
-		bounds = strings.Join(parts, ",")
-	}
+	bounds := boundsText(v.Bounds)
 
 	descriptor := "-"
 
@@ -149,7 +270,7 @@ func (v Var) Line() string {
 		descriptor = v.Descriptor
 	}
 
-	return fmt.Sprintf("%sV %s %s %s %d %s %s %s", Prefix, v.Unit, v.Name, v.Type, v.Size, v.Place, bounds, descriptor)
+	return fmt.Sprintf("%sV %s %s %s %d %s %s %s", Prefix, v.Unit, v.Name, typeText(v.Type, v.Struct), v.Size, v.Place, bounds, descriptor)
 }
 
 // EntryLine says the entry point entry is in unit.
@@ -169,6 +290,9 @@ type Unit struct {
 
 	// Loops are the registers that hold a variable during a loop, by the variable's name.
 	Loops map[string]int
+
+	// Structures are the layouts of the unit's records, by the structure's name.
+	Structures map[string]*Structure
 }
 
 // Table is the units a MACRO file describes.
@@ -207,6 +331,16 @@ func Parse(lines []string) *Table {
 			if v, ok := parseVar(f); ok {
 				t.unit(v.Unit).Vars[v.Name] = v
 			}
+		case len(f) == 5 && f[0] == "S":
+			if size, err := strconv.Atoi(f[3]); err == nil {
+				s := t.unit(f[1]).structure(f[2])
+				s.Size, s.Derived = size, f[4] == "D"
+			}
+		case len(f) == 8 && f[0] == "C":
+			if c, ok := parseComponent(f); ok {
+				s := t.unit(f[1]).structure(f[2])
+				s.Components = append(s.Components, c)
+			}
 		}
 	}
 
@@ -216,11 +350,44 @@ func Parse(lines []string) *Table {
 func (t *Table) unit(name string) *Unit {
 	u := t.Units[name]
 	if u == nil {
-		u = &Unit{Name: name, Vars: map[string]*Var{}, Loops: map[string]int{}}
+		u = &Unit{Name: name, Vars: map[string]*Var{}, Loops: map[string]int{}, Structures: map[string]*Structure{}}
 		t.Units[name] = u
 	}
 
 	return u
+}
+
+// structure is the unit's structure of that name, made empty at its first mention: a
+// C line may come before its S line.
+func (u *Unit) structure(name string) *Structure {
+	s := u.Structures[name]
+	if s == nil {
+		s = &Structure{Name: name}
+		u.Structures[name] = s
+	}
+
+	return s
+}
+
+func parseComponent(f []string) (*Component, bool) {
+	offset, err := strconv.Atoi(f[4])
+	if err != nil {
+		return nil, false
+	}
+
+	size, err := strconv.Atoi(f[6])
+	if err != nil {
+		return nil, false
+	}
+
+	bounds, ok := parseBounds(f[7])
+	if !ok {
+		return nil, false
+	}
+
+	code, structure := parseType(f[5])
+
+	return &Component{Name: f[3], Offset: offset, Type: code, Struct: structure, Size: size, Bounds: bounds}, true
 }
 
 func parseVar(f []string) (*Var, bool) {
@@ -234,17 +401,11 @@ func parseVar(f []string) (*Var, bool) {
 		return nil, false
 	}
 
-	v := &Var{Unit: f[1], Name: f[2], Type: f[3], Size: size, Place: place}
+	code, structure := parseType(f[3])
+	v := &Var{Unit: f[1], Name: f[2], Type: code, Struct: structure, Size: size, Place: place}
 
-	if f[6] != "-" {
-		for _, text := range strings.Split(f[6], ",") {
-			b, ok := parseBound(text)
-			if !ok {
-				return nil, false
-			}
-
-			v.Bounds = append(v.Bounds, b)
-		}
+	if v.Bounds, ok = parseBounds(f[6]); !ok {
+		return nil, false
 	}
 
 	if offset, inFrame := strings.CutPrefix(f[7], "F:"); inFrame {
@@ -322,12 +483,6 @@ func parseBound(text string) (Bound, bool) {
 	b.Upper = upper
 
 	return b, true
-}
-
-// Sized reports whether the element size is the type's own: all but CHARACTER, whose
-// size may be 0, and a record, whose size is its structure's.
-func (v *Var) Sized() bool {
-	return v.Type != Char && v.Type != Record
 }
 
 // DescriptorPassed reports whether what the place leads to is a descriptor of the

@@ -98,7 +98,12 @@
                         an active call.
      EXAMINE M(2,3)     An element, by FORTRAN's bounds and order;
                         EXAMINE M shows them all.
+     EXAMINE V(2:5)     A section: V(1:9:2) by a stride, M(2,:) a bound
+                        left out for the array's.
      EXAMINE S(2:4)     A substring.
+     EXAMINE PT         A record, a component at a time.
+     EXAMINE PT%X       A derived type's component (or PT.X); a DEC
+                        record's is D.TIME.H; PTS%X is every element's.
      DEPOSIT X = 1.5    A value read as the variable's type.
      EVALUATE X         What it holds.
      SET BREAK UNIT.$LINE30

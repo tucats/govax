@@ -509,6 +509,17 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			}
 		}
 
+		// A FORTRAN record's component, PT%X, or under FieldDots R.F and D.TIME.H:
+		// the debugger's names (Names, which knows a FORTRAN program's variables)
+		// may know the whole of it, and then it's one name, whose value Names
+		// gives as it would a variable's (docs/planning/PHASE-110 - Fortran 90
+		// compiler usability.md, subtask 7a).
+		if j := e.componentEnd(s, i); j > i && e.Names != nil {
+			if v, ok := e.Names(s[:j]); ok {
+				return v, s[j:], nil
+			}
+		}
+
 		name, rest := s[:i], s[i:]
 
 		if e.FieldDots && len(rest) > 1 && rest[0] == '.' && isSymbolStart(rest[1]) {
@@ -1077,6 +1088,19 @@ func isSymbolChar(ch byte) bool {
 // character, or a period unless FieldDots makes it an operator.
 func (e *Evaluator) isNameChar(ch byte) bool {
 	return isSymbolChar(ch) || (ch == '.' && !e.FieldDots)
+}
+
+// componentEnd is where a chain of components after the name ending at i ends: each a
+// % or, under FieldDots, a period, then a name. It is i if none follows.
+func (e *Evaluator) componentEnd(s string, i int) int {
+	for i+1 < len(s) && (s[i] == '%' || s[i] == '.' && e.FieldDots) && isSymbolStart(s[i+1]) {
+		i += 2
+		for i < len(s) && isSymbolChar(s[i]) {
+			i++
+		}
+	}
+
+	return i
 }
 
 // component reads the rest of name.component, s starting at the component,
