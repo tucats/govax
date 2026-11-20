@@ -133,6 +133,7 @@ func (r *reader) freeLine(line *Line, open *freeStatement) *freeStatement {
 	case first < 0 || text[first] == '!' && !hasTag(text[first:], "!DEC$"):
 		line.Kind = Comment
 		r.add(line)
+		r.markFree(line)
 
 		return open
 
@@ -168,6 +169,7 @@ func (r *reader) freeLine(line *Line, open *freeStatement) *freeStatement {
 	}
 
 	r.add(line)
+	r.markFree(line)
 
 	// A line holding only an &: it neither continues a statement nor is
 	// continued (3.3.1.3). Whatever was open stays open.
@@ -189,6 +191,12 @@ func (r *reader) freeLine(line *Line, open *freeStatement) *freeStatement {
 	switch {
 	case open != nil:
 		open.continued++
+
+		// Fortran 90 allows 39 continuation lines (3.3.1.4), and /CONTINUATIONS
+		// may allow more.
+		if open.continued == DefaultFreeContinuations+1 {
+			r.mark(line, 1, "more than 39 continuation lines", InF77)
+		}
 
 		limit := r.form.freeContinuationLimit()
 		if open.continued == limit+1 {

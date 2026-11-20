@@ -397,6 +397,12 @@ func (o Op) String() string {
 		".NOT.", ".AND.", ".OR.", ".EQV.", ".NEQV.", ".XOR."}[o]
 }
 
+// Spelling is a relational operator as Fortran 90 spells it: ==, /=, <,
+// <=, >, >=.
+func (b *Binary) Spelling() string {
+	return [...]string{"==", "/=", "<", "<=", ">", ">="}[b.Op-EQ]
+}
+
 // Relational reports whether o compares two values (section 2.3.3).
 func (o Op) Relational() bool {
 	return o >= EQ && o <= GE
@@ -454,10 +460,13 @@ type (
 
 	// CharConst is a character constant; Value is its characters,
 	// without the apostrophes and with each doubled apostrophe made one
-	// (section 2.2.1.6).
+	// (section 2.2.1.6). Quoted says it was written between quotation
+	// marks, Fortran 90's other form (the standard's R420), which only
+	// /STANDARD asks about.
 	CharConst struct {
 		ExprBase
-		Value string
+		Value  string
+		Quoted bool
 	}
 
 	// HollerithConst is a Hollerith constant, nHtext (section 2.2.1.7):
@@ -531,11 +540,14 @@ type (
 		X  Expr
 	}
 
-	// Binary is an operation on two operands.
+	// Binary is an operation on two operands. Symbolic says a relational
+	// operator was written in Fortran 90's spelling, == rather than .EQ.
+	// (the standard's R714), which only /STANDARD asks about.
 	Binary struct {
 		ExprBase
-		Op   Op
-		X, Y Expr
+		Op       Op
+		X, Y     Expr
+		Symbolic bool
 	}
 
 	// DefinedOp is a Fortran 90 defined operation (the standard's R704 and

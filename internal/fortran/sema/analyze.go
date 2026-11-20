@@ -150,7 +150,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 	}
 
 	// What comes after the last unit is an extension as anywhere.
-	trailing := newExtensions(opts.Standard)
+	trailing := newExtensions(opts.Standard, opts.F90)
 	trailing.statements(file.Trailing)
 	trailing.report(messages)
 
@@ -592,7 +592,7 @@ func (a *analyzer) makeMaps() {
 	a.rejected = map[ast.Stmt]bool{}
 	a.pendingOpen = map[lex.Kind]int{}
 	a.boundVars = map[*Symbol]diag.Position{}
-	a.extensions = newExtensions(a.standard)
+	a.extensions = newExtensions(a.standard, a.f90)
 }
 
 // analyzeUnit analyzes one unit and its internal procedures, and returns them,

@@ -255,6 +255,8 @@ func (a *analyzer) sectionList(s *Symbol, name string, dims []Dim, pos diag.Posi
 				subs[i] = SectionSub{Vector: v}
 				shape = append(shape, v.Shape()[0])
 
+				a.extensions.add(v.Position(), "a vector subscript", f90)
+
 			default:
 				a.report("VECTORRANK", v.Position(), rankOf(v))
 
@@ -268,6 +270,9 @@ func (a *analyzer) sectionList(s *Symbol, name string, dims []Dim, pos diag.Posi
 		if !ok {
 			return nil, nil, false
 		}
+
+		// Only here is a triplet known to make a section, not a substring.
+		a.extensions.add(pos, "an array section", f90)
 
 		subs[i] = sub
 		shape = append(shape, a.tripletExtent(s, name, dims, sub, of, i))

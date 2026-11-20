@@ -1,6 +1,8 @@
 package parse
 
 import (
+	"strings"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
@@ -105,7 +107,8 @@ func (p *parser) binary(minPrec int) ast.Expr {
 			next = op.prec
 		}
 
-		x = &ast.Binary{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: op.op, X: x, Y: p.binary(next)}
+		x = &ast.Binary{ExprBase: ast.ExprBase{Pos: p.pos(*t)}, Op: op.op, X: x, Y: p.binary(next),
+			Symbolic: op.op.Relational() && !strings.HasPrefix(t.Text, ".")}
 	}
 }
 
@@ -298,7 +301,7 @@ func (p *parser) literal() ast.Expr {
 	case lex.LogicalConst:
 		e = &ast.LogicalConst{ExprBase: base, Value: t.Text == ".TRUE."}
 	case lex.CharConst:
-		e = &ast.CharConst{ExprBase: base, Value: t.Text}
+		e = &ast.CharConst{ExprBase: base, Value: t.Text, Quoted: p.quoted(*t)}
 	case lex.HollerithConst:
 		e = &ast.HollerithConst{ExprBase: base, Value: t.Text}
 	case lex.TypelessConst:
@@ -574,4 +577,17 @@ func (p *parser) constructorValue() ast.Expr {
 	}
 
 	return p.expr()
+}
+
+// quoted reports whether the character constant t was written between quotation
+// marks: the first mark at or after its start (past a kind parameter, K_"text") is one.
+func (p *parser) quoted(t lex.Token) bool {
+	if p.st.Source == nil || t.Offset < 0 || t.Offset >= len(p.st.Source.Text) {
+		return false
+	}
+
+	text := p.st.Source.Text[t.Offset:]
+	mark := strings.IndexAny(text, `'"`)
+
+	return mark >= 0 && text[mark] == '"'
 }

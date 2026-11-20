@@ -6843,19 +6843,23 @@ dummy argument. After an error nothing is reported as unused, since the statemen
 `IMPLICIT NONE` would refuse them: a program that relies on implicit typing and shares its common blocks that way
 gets a great many.
 
-**FORTRAN-77 conformance.** `/STANDARD` flags what a program does that FORTRAN-77 doesn't have, for a program
-meant to move to another compiler. Each finding is `%FORT-I-EXTENSION`, informational, so a flagged program still
-compiles with a good `$STATUS`, and its code is the same:
+**Conformance to a standard.** `/STANDARD` flags what a program does that a standard doesn't have, for a program
+meant to move to another compiler. `F77` judges by FORTRAN-77 and `F90` by Fortran 90; with neither, each unit is
+judged by its `/F90` setting: Fortran 90 for free form and `/F90`, FORTRAN-77 for `/NOF90`. Each finding is
+`%FORT-I-EXTENSION`, informational, naming the standard (`extension to Fortran 90: the BYTE statement`), so a flagged
+program still compiles with a good `$STATUS`, and its code is the same:
 
 | Keyword | What's flagged |
 | --- | --- |
-| `SYNTAX` | DEC's statements (`TYPE`, `STRUCTURE`, `DO WHILE`, `INCLUDE`, ...), `*n` lengths on types other than `CHARACTER`, a `DO` without a label, `IMPLICIT NONE`, initial values in a type statement, Hollerith, octal, hexadecimal, and RADIX-50 constants, `Q` exponents, `COMPLEX*16` constants, `.XOR.`, a sign straight after an operator, `%LOC` and its kin, record fields, null arguments, control list specifiers and word values FORTRAN-77 lacks, `READ (u'r)`, the `O`, `Z`, `Q`, and `$` edit descriptors, a descriptor with no width, variable format expressions, names over six characters or with `$` or `_`, and intrinsic functions FORTRAN-77 lacks |
-| `SOURCE_FORM` | Tabs in the first six columns, small letters outside constants and comments, `!` comments, debugging lines, a statement past column 72 (under `/EXTEND_SOURCE`), and more than 19 continuation lines |
+| `SYNTAX` | DEC's statements (`TYPE`, `STRUCTURE`, `BYTE`, ...), `*n` lengths on types other than `CHARACTER`, initial values in slashes in a type statement, Hollerith, DEC's octal and hexadecimal, and RADIX-50 constants, `Q` exponents, `.XOR.`, a sign straight after an operator, `%LOC` and its kin, record fields with `.`, null arguments, control list specifiers and word values the standard lacks, `READ (u'r)`, the `Q` and `$` edit descriptors, a descriptor with no width, variable format expressions, names with `$`, and DEC's intrinsic functions. Under FORTRAN-77, also everything Fortran 90 added (`::` and attributes, kinds, modules, `USE`, derived types and `%`, `ALLOCATE`, pointers, `WHERE`, `SELECT CASE`, `EXIT`, `CYCLE`, construct names, sections, constructors, keyword arguments, defined operators, `==` and its kin, `"…"` constants, the `B`, `O`, `Z`, `EN`, and `ES` edit descriptors, its specifiers and intrinsics) and what it adopted from DEC (`DO WHILE`, `END DO`, a `DO` without a label, `IMPLICIT NONE`, `INCLUDE`, `NAMELIST`, `RECURSIVE`, names over six characters or with `_`) |
+| `SOURCE_FORM` | Under FORTRAN-77: tabs in the first six columns, small letters outside constants and comments, `!` comments, debugging lines, a statement past column 72 (under `/EXTEND_SOURCE`), more than 19 continuation lines, and free source form, once per file. Under Fortran 90: a tab anywhere, debugging lines, past column 72, more than 19 continuation lines in fixed form or 39 in free form, and a free-form comment line over 132 characters |
+| `OBSOLESCENT` | Fortran 90's obsolescent features (on with `SYNTAX` under Fortran 90) |
 
-The keywords also come as `NOSYNTAX` and `NOSOURCE_FORM`, with `ALL` and `NONE`, cut short if you like. `/STANDARD`
-alone is `ALL`, and the default is `/NOSTANDARD`. `/WARNINGS=NOGENERAL` doesn't hold these back, since you asked for
-them. What a program *means* isn't looked at: a non-integer subscript, `.AND.` of integers, and a character variable
-beside a number in a common block aren't flagged, and neither is a bare `X`, or anything in a text library's module.
+The keywords also come as `NOSYNTAX`, `NOSOURCE_FORM`, and `NOOBSOLESCENT`, with `ALL` and `NONE`, cut short if you
+like. `/STANDARD` alone, or with only `F77`, `F90`, and `NO` keywords, starts from `ALL`, and the default is
+`/NOSTANDARD`. `/WARNINGS=NOGENERAL` doesn't hold these back, since you asked for them. What a program *means* isn't
+looked at: a non-integer subscript, `.AND.` of integers, and a character variable beside a number in a common block
+aren't flagged, and neither is a bare `X`, or anything in a text library's module.
 
 **Objects in one step.** `FORTRAN/OBJECT` runs MACRO on the MACRO file it wrote, so that `FORTRAN/OBJECT`, `LINK`, `RUN`
 works as it does on VMS. The MACRO file is kept, so `/OBJECT/NOMACRO` is refused. The object is the source's name with

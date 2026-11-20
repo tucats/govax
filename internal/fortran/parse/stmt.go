@@ -23,11 +23,21 @@ func parseAssignment(p *parser) ast.Stmt {
 	return s
 }
 
-// parseAssignLabel parses ASSIGN s TO v (section 3.5). Squeezed, ASSIGN
-// 10 TO I is ASSIGN10TOI, so the tokenizer makes 10 and a name TOI, from
-// which TO is taken here.
+// parseAssignLabel parses ASSIGN s TO v (section 3.5). The lexer makes TO a
+// keyword token after the label's digits; a statement it couldn't split (no
+// digits before TO) leaves a name TOI, from which TO is taken here, for the
+// message the label's absence gets.
 func parseAssignLabel(p *parser) ast.Stmt {
 	s := &ast.AssignLabelStmt{StmtBase: p.base(), Target: p.labelRef()}
+
+	if t := p.peek(); t != nil && t.Kind == lex.Keyword && t.Text == "TO" {
+		p.next()
+
+		s.Var = p.name("an integer variable")
+		p.end()
+
+		return s
+	}
 
 	t := p.peek()
 	if t == nil || t.Kind != lex.Name || len(t.Text) <= 2 || !strings.HasPrefix(t.Text, "TO") {

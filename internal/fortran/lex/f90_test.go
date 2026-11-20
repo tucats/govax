@@ -210,6 +210,9 @@ func TestFreeFormBlanks(t *testing.T) {
 		{"print *, 'a b' // 'c'", nil},
 		{"c = k_ 'text'", []string{"BLANKINNAME@008"}},
 		{"i = z '1f'", []string{"BLANKINNAME@007"}},
+		{"assign 10 to lab", nil},
+		{"assign 10 tolab", []string{"NEEDBLANK@013"}},
+		{"assign 10 t o lab", []string{"BLANKINNAME@013"}},
 	}
 
 	for _, c := range cases {

@@ -811,12 +811,20 @@
 
       /[NO]STANDARD[=(keyword[,...])]
 
-   Flags what FORTRAN-77 doesn't have, each an informational message, so
-   the program still compiles: SYNTAX (statements, constants, operators,
+   Flags what a standard doesn't have, each an informational message, so
+   the program still compiles.  F77 judges by FORTRAN-77 and F90 by
+   Fortran 90; with neither, each unit is judged by its /F90 setting
+   (Fortran 90 for free form and /F90, FORTRAN-77 for /NOF90).  What's
+   looked at: SYNTAX (statements, declarations, constants, operators,
    specifiers, edit descriptors, names, intrinsic functions),
-   SOURCE_FORM (tabs, small letters, ! comments, debugging lines, past
-   column 72, over 19 continuation lines), ALL, NONE, and NOSYNTAX and
-   NOSOURCE_FORM.  /STANDARD alone is ALL.  The default is /NOSTANDARD.
+   SOURCE_FORM (how lines are written: under FORTRAN-77 tabs, small
+   letters, ! comments, debugging lines, past column 72, over 19
+   continuation lines, free form; under Fortran 90 tabs, debugging
+   lines, past column 72 or 132, over 19 or 39 continuation lines),
+   OBSOLESCENT (Fortran 90's obsolescent features; on with SYNTAX under
+   Fortran 90), ALL, NONE, and NOSYNTAX, NOSOURCE_FORM, and
+   NOOBSOLESCENT.  /STANDARD alone, or with only F77, F90, and NO
+   keywords, starts from ALL.  The default is /NOSTANDARD.
 
 /WARNINGS
 

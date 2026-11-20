@@ -34,9 +34,10 @@ var messages = map[string]kind{
 	"UNUSEDDUMMY": {Warning, "the dummy argument %s is never used"},
 	"UNUSEDLABEL": {Warning, "statement label %s is never used"},
 
-	// EXTENSION is something in the program that FORTRAN-77 doesn't have, as
-	// /STANDARD asks (sema/standard.go): a remark, so a program flagged still compiles.
-	"EXTENSION": {Informational, "extension to FORTRAN-77: %s"},
+	// EXTENSION is something in the program that the standard judged by
+	// (FORTRAN-77 or Fortran 90) doesn't have, as /STANDARD asks
+	// (sema/standard.go): a remark, so a program flagged still compiles.
+	"EXTENSION": {Informational, "extension to %s: %s"},
 
 	// DEBUGOPTIMIZE is /DEBUG with /OPTIMIZE, which is allowed but may surprise.
 	"DEBUGOPTIMIZE": {Informational, "under /OPTIMIZE the debugger may find a variable out of date, its value in a register; use /NOOPTIMIZE to debug"},

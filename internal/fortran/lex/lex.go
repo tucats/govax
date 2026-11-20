@@ -357,6 +357,20 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 			st.Tokens = append(st.Tokens, Token{Kind: Keyword, Text: "DEFAULT", Offset: l.offset(p)})
 			st.Tokens = append(st.Tokens, l.tokenize(p+len("DEFAULT"), j, modeNone)...)
 
+		case k == Assign && l.assignTo(i+len(kw), j) > 0:
+			// ASSIGN s TO v: TO is a keyword, so that free form's blank
+			// between it and the variable isn't a blank in a name TOV.
+			p, q := i+len(kw), l.assignTo(i+len(kw), j)
+			st.Tokens = l.tokenize(p, q, modeLabel)
+
+			if l.src != nil && l.src.Free && !l.sq.gap[q] {
+				l.messages.Report("NEEDBLANK", l.src.Position(l.offset(q)), string(l.sq.text[p:q]), "TO")
+			}
+
+			l.keywordBlanks(q, "TO")
+			st.Tokens = append(st.Tokens, Token{Kind: Keyword, Text: "TO", Offset: l.offset(q)})
+			st.Tokens = append(st.Tokens, l.tokenize(q+len("TO"), j, modeNone)...)
+
 		case k != Format:
 			st.Tokens = l.tokenize(i+len(kw), j, modeFor(k))
 		}
@@ -747,4 +761,19 @@ func (t Token) short() string {
 	}
 
 	return t.Text
+}
+
+// assignTo returns where TO starts in an ASSIGN statement's text from i to j,
+// after the label's digits, or -1 if the text isn't digits followed by TO.
+func (l *lexer) assignTo(i, j int) int {
+	q := i
+	for q < j && isDigit(l.sq.text[q]) && !l.sq.lit[q] {
+		q++
+	}
+
+	if q == i || !l.hasPrefix(q, j, "TO") {
+		return -1
+	}
+
+	return q
 }

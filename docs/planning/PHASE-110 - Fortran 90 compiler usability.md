@@ -323,7 +323,7 @@ marked so, and are unconfirmed.
 2. **`/STANDARD=F90`**: the tables' column and the Fortran 90 rows (finding 1),
    so that the FORTRAN-77 reading also flags every new form; the keywords
    (question 1); source form under F90 (finding 3); the ASSIGN bug; the witness
-   test over `PROGRAMS90`.
+   test over `PROGRAMS90`. (done 2026-11-20)
 3. **The obsolescent features** (finding 2) and the judgments by meaning (finding 4).
 4. **`/WARNINGS`** (finding 5): INTENTOUTREF's position, the module's private
    names, HOSTHIDDEN, UNREAD.
@@ -404,3 +404,41 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   has eight questions.
 - **2026-11-20:** The author accepted the survey and every recommendation in A.5
   ("The author's answers"). Subtask 2, `/STANDARD=F90`, is next.
+- **2026-11-20:** Subtask 2, `/STANDARD=F90`. `sema.Conformance` gains `Standard`
+  (`StandardOfUnit`, `StandardF77`, `StandardF90`) and `Obsolescent`/`ObsolescentGiven`;
+  the keywords are `F77`, `F90`, `[NO]OBSOLESCENT` beside the old ones, and a list that
+  says nothing of what's looked at (none, or only `F77`, `F90`, and `NO` forms) starts
+  from `ALL`, so `/STANDARD=F90` looks at everything and `/STANDARD=NOSYNTAX` is now the
+  source form alone (before, nothing). `judging(f90)` resolves a unit's standard from
+  its `/F90` setting (the author's answer 2); OBSOLESCENT follows SYNTAX under Fortran 90
+  unless given, and its findings are subtask 3's. Every table has a column,
+  `source.Standards` (`InF77`, `InF90`): a `row` is a message's text and the standards
+  that have the thing, and `extensions.add` flags it when the standard judged by isn't
+  among them, so one walk serves both readings. `statementRows` has every Fortran 90
+  statement; `newIntrinsics` is chapter 13's names beyond FORTRAN-77's (sema's own
+  `f90Intrinsics` is only the names VAX FORTRAN lacked, which leaves out IAND and the
+  other bit functions Fortran 90 adopted); `f90Specifiers` and `f90Values` are Phase
+  109's keywords and words. The walker now descends into Fortran 90's statements
+  (ALLOCATE, `=>`, NULLIFY, CASE, WHERE, interface bodies, a derived type's components)
+  and notes `::`, attributes, selectors, `= value`, deferred and assumed shape, kind
+  parameters, `==` and its kin (`ast.Binary.Symbolic`, set by the parser), `"…"`
+  constants (`ast.CharConst.Quoted`, read from the source text at the token), `%`,
+  keyword arguments, constructors, defined operators, construct names, named ENDs, a DO
+  without loop control, and Fortran 90's B, O, and Z constants (in DATA only; elsewhere,
+  as DEC allows, an extension to both). Sections and vector subscripts are noted by
+  `sectionList`, which alone tells a section from a substring. The message is
+  `extension to %s: %s`, naming the standard. Source form: each `source.Mark` carries its
+  standards and the `/F90` setting in force (`Line.F90`, set as a line is added); under
+  Fortran 90 a tab anywhere, a free-form comment line over 132 characters, and more than
+  39 free-form continuations are flagged, and small letters, `!`, and INCLUDE aren't;
+  under FORTRAN-77 a free-form file is one mark, "free source form", at its first line.
+  The ASSIGN bug: the lexer now splits ASSIGN's TO off as a keyword token after the
+  label's digits (`assignTo`), with free form's blank rules on it, and the parser takes
+  it (the old `TOI` path kept for a statement without digits). Tests:
+  `TestStandardF90Flagged`, `TestStandardF90Quiet`, `TestStandardF77SeesF90`,
+  `TestStandardF90SourceForm`, `TestStandardWhichStandard`, and the witness,
+  `TestStandardF90Witness` (`standard90_test.go`: compare.py's `PROGRAMS90` read from
+  the script, each program's other files compiled first with their module texts kept),
+  which finds nothing under `/STANDARD=F90`; the same programs under `F77` give about
+  9,000 findings, every Fortran 90 form among them. HELP FORTRAN's and MANUAL.md's
+  `/STANDARD` say so. Subtask 3, the obsolescent features, is next.

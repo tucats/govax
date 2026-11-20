@@ -140,6 +140,7 @@ func (r *reader) add(lines ...*Line) {
 	for _, line := range lines {
 		r.serial++
 		line.Serial = r.serial
+		line.F90 = r.form.F90
 	}
 
 	r.program.Lines = append(r.program.Lines, lines...)
@@ -178,7 +179,7 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 			continued++
 
 			if continued == standardContinuations+1 {
-				r.mark(line, 1, "more than 19 continuation lines")
+				r.mark(line, 1, "more than 19 continuation lines", 0)
 			}
 
 			if continued == r.continuationLimit()+1 {
@@ -220,7 +221,9 @@ func (r *reader) complete(s *Statement) {
 	initial := r.program.Lines[s.First]
 
 	if spec, ok := r.include(s); ok {
-		r.program.Includes = append(r.program.Includes, Mark{s.Position(0), "the INCLUDE statement", initial.Library})
+		r.program.Includes = append(r.program.Includes, Mark{
+			Pos: s.Position(0), What: "the INCLUDE statement", In: InF90, F90: s.F90, Library: initial.Library,
+		})
 		r.includeFile(s, spec, s.Depth, initial)
 
 		return

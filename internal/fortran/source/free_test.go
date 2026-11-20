@@ -425,11 +425,15 @@ func TestFreeOptions(t *testing.T) {
 	}
 }
 
-// TestFreeLineMarks checks that /STANDARD's line marks pass over free-form
-// lines, which FORTRAN-77 has none of (Phase 110 is /STANDARD=F90).
+// TestFreeLineMarks checks that /STANDARD's line marks note a free-form file
+// once, at its first line, which only Fortran 90 has, and pass over its
+// lines' small letters and ! comments, which FORTRAN-77's reading judges a
+// free-form file by no further.
 func TestFreeLineMarks(t *testing.T) {
 	p, _ := readFreeForm(t, Form{}, nil, "do i = 1, 2", "! comment", "end do")
-	if marks := p.LineMarks(); len(marks) != 0 {
+
+	marks := p.LineMarks()
+	if len(marks) != 1 || marks[0].What != "free source form" || marks[0].Pos.Line != 1 || marks[0].In != InF90 {
 		t.Errorf("marks %v", marks)
 	}
 }

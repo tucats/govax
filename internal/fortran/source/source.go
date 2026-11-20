@@ -163,6 +163,10 @@ type Line struct {
 	// unused without cost (docs/planning/PHASE-83 - FORTRAN and VMS.md, Decision 5).
 	Library bool
 
+	// F90 is Form.F90 where the line is, as the OPTIONS statement before its unit
+	// left it: which standard /STANDARD judges it by unless it names one.
+	F90 bool
+
 	// Serial numbers the lines in the order the program has them, from 1, across
 	// every file. A file included twice has each line twice, and this tells them
 	// apart: a message's position has it, so a listing can put the message under the

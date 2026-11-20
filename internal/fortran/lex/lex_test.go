@@ -124,7 +124,7 @@ func TestClassify(t *testing.T) {
 		{text: "PARAMETERF(X) = X", want: "assignment: PARAMETERF ( X ) = X"},
 		{text: "CHARACTER*32 NAMES(100), SOCSEC(100)*9", want: "CHARACTER: * 32 NAMES ( 100 ) , SOCSEC ( 100 ) * 9"},
 		{text: "CHARACTER A(2)*8D1", want: "CHARACTER: A ( 2 ) * 8 D1"},
-		{text: "ASSIGN 10 TO I", want: "ASSIGN: 10 TOI"},
+		{text: "ASSIGN 10 TO I", want: "ASSIGN: 10 TO I"},
 		{text: "PROGRAM SQUARES", want: "PROGRAM: SQUARES", first: true},
 		{text: "SUBROUTINE CHECK(X,Y,*,*,C)", want: "SUBROUTINE: CHECK ( X , Y , * , * , C )", first: true},
 
