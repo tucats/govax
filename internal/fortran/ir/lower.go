@@ -12,12 +12,25 @@ import (
 // Lower lowers each program unit of a program semantic analysis found no
 // error in into a Routine, a unit's internal procedures after it.
 func Lower(p *sema.Program) []*Routine {
+	return LowerWith(p, Options{})
+}
+
+// Options are the choices lowering makes for the optimizer.
+type Options struct {
+	// Fuse has adjacent array assignments that sema finds may share one nest of
+	// loops lowered as one, and a WHERE construct's assignments as one nest
+	// testing the mask once (lowerfuse.go). /OPTIMIZE sets it.
+	Fuse bool
+}
+
+// LowerWith is Lower with options.
+func LowerWith(p *sema.Program, opts Options) []*Routine {
 	routines := make([]*Routine, 0, len(p.Units))
 
 	for _, u := range p.Units {
 		// An internal procedure is lowered with its host (lowerHost).
 		if u.Host == nil {
-			routines = append(routines, lowerHost(u, nil)...)
+			routines = append(routines, lowerHost(u, nil, opts)...)
 		}
 	}
 
@@ -35,6 +48,9 @@ type lowerer struct {
 	// byComponents is set while a formatted statement's items are lowered:
 	// an object of a derived type is then its components (objectItems).
 	byComponents bool
+
+	// opts are the choices LowerWith was given.
+	opts Options
 
 	unit *sema.Unit
 	r    *Routine
@@ -169,7 +185,7 @@ type lowerer struct {
 
 // newLowerer starts lowering the unit u, an internal procedure of the routine
 // host lowers if host isn't nil.
-func newLowerer(u *sema.Unit, host *lowerer) *lowerer {
+func newLowerer(u *sema.Unit, host *lowerer, opts Options) *lowerer {
 	r := &Routine{Name: u.Name, Unit: u, Checks: u.Checks, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials,
 		Reentrant: u.Recursive}
 
@@ -183,6 +199,7 @@ func newLowerer(u *sema.Unit, host *lowerer) *lowerer {
 	}
 
 	return &lowerer{
+		opts:        opts,
 		unit:        u,
 		r:           r,
 		host:        host,

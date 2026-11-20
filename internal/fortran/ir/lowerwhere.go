@@ -28,6 +28,15 @@ func (l *lowerer) where(s *sema.Where) {
 		return
 	}
 
+	// Under /OPTIMIZE, one nest for the whole construct where sema allows it
+	// (lowerfuse.go).
+	if l.fusing() && sema.FusableWhere(s) {
+		l.fusedWhere(s)
+		l.endWhere(s)
+
+		return
+	}
+
 	mask := s.Mask
 
 	if s.MaskTemp != nil {
@@ -58,6 +67,11 @@ func (l *lowerer) where(s *sema.Where) {
 		}
 	}
 
+	l.endWhere(s)
+}
+
+// endWhere ends a WHERE construct at its END WHERE, whose label a jump may name.
+func (l *lowerer) endWhere(s *sema.Where) {
 	if s.EndWhere != nil {
 		l.from = s.EndWhere
 

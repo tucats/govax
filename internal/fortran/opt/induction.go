@@ -108,7 +108,13 @@ func (a *allocator) findStepped() {
 
 		var inOrder []*candidate
 
-		walk := walker{visit: func(e ir.Expr, _, _ bool) bool {
+		// An element's computed address is looked at too: an assumed-shape dummy's or
+		// a pointer's, A0 plus the subscript times the stride, in memory, is the same
+		// sum as an index (docs/planning/PHASE-110 - Fortran 90 compiler usability.md,
+		// subtask 8). Its register is then where the element is, and the register's
+		// cell says which place that is (points), for the analyses after.
+		walk := walker{addresses: true}
+		walk.visit = func(e ir.Expr, _, _ bool) bool {
 			c := found[exprKey(e)]
 			if c == nil {
 				c = a.steppedCandidate(l, variables, e)
@@ -120,12 +126,16 @@ func (a *allocator) findStepped() {
 				inOrder = append(inOrder, c)
 			}
 
+			if m := walk.address; m != nil && m.Ptr == e && c.points == nil {
+				c.points = &ir.Mem{Ptr: m.Ptr, T: ir.Byte, Pointee: m.Pointee}
+			}
+
 			// Each use saves what computing it took, and a multiplication counts twice.
 			p := costOf(e)
 			c.gain += a.weight(l.Header) * (p.instructions + p.reads + multiplications(e))
 
 			return false
-		}}
+		}
 
 		for _, b := range l.Blocks {
 			if a.g.LoopOf(b) != l || a.expressions[b] {

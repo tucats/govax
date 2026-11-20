@@ -1163,7 +1163,7 @@ func (a *allocator) install(c *candidate) {
 	}
 	a.r.Cells = append(a.r.Cells, cell)
 
-	rep := &replacer{key: c.key, with: &ir.Load{Mem: &ir.Mem{Cell: cell, T: c.t}}}
+	rep := &replacer{key: c.key, with: &ir.Load{Mem: &ir.Mem{Cell: cell, T: c.t}}, addresses: c.kind == steppedCandidate}
 	if c.place != nil {
 		rep = &replacer{place: func(m *ir.Mem) *ir.Mem { return c.place(cell, m) }}
 	}

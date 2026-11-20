@@ -261,7 +261,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 		// only when analysis found no errors. The optimizer changes the
 		// routines in place; it returns nothing.
 		if !messages.Failed() {
-			routines = ir.Lower(prog)
+			routines = ir.LowerWith(prog, ir.Options{Fuse: opts.Optimize})
 			ident = prog.Ident
 
 			if opts.Optimize {

@@ -492,6 +492,10 @@ type replacer struct {
 	key   string
 	with  ir.Expr
 	place func(*ir.Mem) *ir.Mem
+
+	// addresses says a computed address may be replaced too, as a stepped one is
+	// (induction.go, the walker's addresses).
+	addresses bool
 }
 
 // rewrite replaces in the statements from first to last, the terminator being the
@@ -693,7 +697,7 @@ func (r *replacer) mem(m *ir.Mem) *ir.Mem {
 			n.Ptr, changed = &ir.Load{Mem: inner}, true
 		}
 	default:
-		if r.place != nil {
+		if r.place != nil || r.addresses {
 			if n.Ptr = r.expr(p); n.Ptr != m.Ptr {
 				changed = true
 			}

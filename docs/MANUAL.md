@@ -7996,7 +7996,25 @@ What the passes did, each named in the MACRO file's header:
   routine by its variables, compile it `/NOOPTIMIZE`.
 - **DO loops close with `AOBLEQ`,** `ACBL`, or `SOBGTR` on the variable, a test at
   the top of a loop moves to its bottom, and an index a multiplication computes is
-  kept in a register and stepped.
+  kept in a register and stepped. So is the address of an element of an assumed-shape
+  dummy or an array pointer, A0 plus the subscript times the stride: in `V = V + W`
+  of two such dummies each trip is four instructions, not six:
+
+  ```text
+  S.$15:					; array (line 4), dimension 1's body
+  	ADDF2	(R8),(R7)
+  	ADDL2	S.$B1+20,R7
+  	ADDL2	S.$B2+20,R8
+  	AOBLEQ	R9,R6,S.$15
+  ```
+
+- **Fortran 90's array statements share loops.** Array assignments one after another
+  of the same shape are one nest of loops when each reads the arrays the others write
+  only at the same element, or not at all: `A = B + 1.0` then `C = A * 2.0` is one loop
+  of three instructions a trip, not two of two. A WHERE construct's assignments are one
+  nest testing the mask once at each element, when none of them changes what the mask
+  reads. Not under `/CHECK=BOUNDS`, whose checks come before each statement's own loops.
+  `testdata/fortran90`'s `optfuse.f90` and `optstride.f90` measure them.
 
 **What the optimizer takes the language at its word on.** A correct program prints
 the same both ways. A program breaking these rules can print something different

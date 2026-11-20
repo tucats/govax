@@ -148,6 +148,8 @@ PROGRAMS90 = {
     "journal": ["journal.f90"],
     "wordcount": ["wordcount.f90"],
     "gradebook": ["gradebook.f90"],
+    "optfuse": ["optfuse.f90"],
+    "optstride": ["optstride.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
     "standard": ["modules/standard/standard.f90", "modules/standard/globals.f90", "modules/standard/strings.f90",
                  "modules/standard/library.f90", "modules/standard/renames.f90", "modules/standard/users.f90",

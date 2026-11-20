@@ -335,8 +335,11 @@ marked so, and are unconfirmed.
    - 7a. Derived types and `%`; sections in EXAMINE. (done 2026-11-20)
    - 7b. Pointers, module variables (`M.X`), host names and the scope, the break after
      the entry code. (done 2026-11-20)
+   - 7c. FORTRAN line numbers in a traceback (finding 11, added by the author 2026-11-20:
+     `%TRACE-F-TRACEBACK`'s line column is empty for a FORTRAN routine, since MACRO's
+     traceback records carry no line numbers).
 8. **The optimizer** (finding 10): the kernels, strength reduction for strided loops,
-   fusion; the overlap test and Phase 104's list as the kernels say.
+   fusion; the overlap test and Phase 104's list as the kernels say. (done 2026-11-20)
 9. **Close-out**: FORTRAN-INTERNALS.md, MANUAL.md (14.3's qualifiers, 14.7, 14.10,
    14.13), HELP FORTRAN.
 
@@ -669,3 +672,52 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   among them), `scope_test.go`'s scope 4 case, and `dbgtable`'s `TestPointerAndBodyLines`.
   MANUAL.md's 14.10 (Names, Pointers, Breaks at routines) and the debugger's HELP
   FORTRAN_Programs say so. Subtask 8, the optimizer, is next.
+- **2026-11-20:** Subtask 7c added by the author: a FORTRAN routine's line numbers in a
+  traceback (finding 11), which MACRO's traceback records don't carry. It follows subtask 8.
+- **2026-11-20:** Subtask 8, the optimizer (finding 10; the author's answer 8). *Strength
+  reduction for strided loops*: `induction.go` already stepped an index linear in a loop's
+  variable, a stride in memory among the factors it allows, but never saw an assumed-shape
+  dummy's or an array pointer's element, whose address is a computed `Mem.Ptr`
+  (`$B1+16 + $I1*$B1+20`), which the walker leaves alone ("an address stays as it is"). The
+  walker and the replacer gain an `addresses` mode (`walker.go`, `cse.go`'s `replacer`), which
+  only the stepped values' search (`findStepped`) and their install use: the address is a
+  candidate like an index, its register then the element's address, `@($R1)`, its cell's
+  `Points` the place it addresses, so the alias analysis after it (`throughPointer`'s
+  `Points`) still knows it reaches the dummy. `V = V + W` on two assumed-shape dummies is 4
+  instructions a trip, from 6 (`ADDF2 (R8),(R7)`, an `ADDL2` of each stride, `AOBLEQ`): the
+  survey's target. The strides stay memory operands, an `ADDL2 S.$B1+20,R7`: a register would
+  save a read, not an instruction, and would need a candidate of a new kind (a loop-invariant
+  operand); left out. *Fusion*: `sema/fusion.go`'s `Fusable` says whether an array assignment
+  may join the ones just before it in one nest (each plain: up, no temporary, fill, copied or
+  any vector subscript, no function or constructor, not CHARACTER or a record; across them,
+  each array one reads that another writes the same element or apart by `relate`, and no
+  scalar, bound, or subscript of one reading another's target, by `readsAny`; the same shape,
+  each extent the same constant or of the same text by `extentKey`: the same array's if its
+  bounds can change, else its bounds' text, computed at entry, or a triplet's), and
+  `FusableWhere` whether a WHERE construct's assignments may share one nest testing the mask
+  once (no `MaskTemp`, the mask's arrays the same element or apart from every target).
+  Lowering asks under `/OPTIMIZE` (`ir.LowerWith`, `Options.Fuse`; `ir.Lower` is
+  `Options{}`), not under `/CHECK=BOUNDS`, whose checks come before each statement's own
+  loops: `ir/lowerfuse.go`'s `fusedGroup` looks ahead in `stmts`, `fusedNest` prepares every
+  part's leaves, takes the first's extents, scalarizes each part under its own order, and
+  assigns each in turn in the loop, each part's statement its own so its source line comes
+  before its code; `fusedWhere` branches on the mask once. `A = B + 1.0` then `C = A * 2.0`
+  is one loop of 3 instructions a trip, from two of 2; the survey's WHERE kernel one loop
+  testing the mask once. The kernels are `testdata/fortran90`'s `optfuse.f90` and
+  `optstride.f90` (each with a loop over 1,000 elements fifty times, what the gain is
+  measured on; the same on gfortran): under `/OPTIMIZE`, OPTFUSE 352,246 instructions to
+  251,999 with this subtask (−28.5%; −78.5% from `/NOOPTIMIZE`), OPTSTRIDE 382,509 to
+  282,668 (−26.1%; −56.8%). The corpus's array programs gain with it: SORTER −42.9% from
+  `/NOOPTIMIZE` (the survey's −35.7%), SOLVER −38.2% (−36.8%). *The overlap test and Phase
+  104's list*: their kernels, read from the MACRO, show what each would save in the
+  statements it applies to, about half their loops' instructions: an overlap sema can't
+  decide (`A(I:I+999) = A(J:J+999) + 1.0`) is two loops of 2 a trip, the value into a
+  temporary and back, where a test when the program runs could choose one; `A = F(X)` of an
+  explicit-shape function is the function's loop and a copy loop of 2 a trip from `$W1`. Both
+  are rare in the corpus and need machinery of their own (a loop chosen by a run-time test;
+  proof that A can't be reached by F), so by the author's answer 8 they wait: "Where things
+  stand" is to list them with these numbers. `recdyn.for`'s `/OPTIMIZE` output changed (its
+  allocatable arrays' addresses stepped), so `nof90.sum` was rewritten. Tests: `sema`'s
+  `TestFusable` and `TestFusableWhere` (`fusion_test.go`), `opt`'s `TestSteppedAddress`,
+  `fortran`'s `TestFusedNests`, and the two corpus programs in every mode. MANUAL.md's 14.9
+  says so. Subtask 7c, line numbers in a traceback, is next, then the close-out (9).

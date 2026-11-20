@@ -283,3 +283,19 @@ func TestSteppedSameTwice(t *testing.T) {
 		}
 	}
 }
+
+// TestSteppedAddress: an assumed-shape dummy's element is reached at an address computed
+// as A0 plus the subscript times the stride, and in a loop that address is stepped by the
+// stride (docs/planning/PHASE-110 - Fortran 90 compiler usability.md, subtask 8): no
+// multiplication in the loop, an addition of each stride, the element through a register.
+func TestSteppedAddress(t *testing.T) {
+	text := allocatedMacro(t, "OPTIONS /F90", "SUBROUTINE S(V, W)", "REAL V(:), W(:)", "V = V + W", "END")
+
+	_, body, found := strings.Cut(text, "dimension 1's body")
+	body, _, _ = strings.Cut(body, "AOBLEQ")
+
+	if !found || strings.Contains(body, "MULL") || !strings.Contains(body, "ADDL2\tS.$B1+20,") ||
+		!strings.Contains(body, "ADDL2\tS.$B2+20,") || !strings.Contains(body, "ADDF2\t(R") {
+		t.Errorf("the loop's body:%s", body)
+	}
+}

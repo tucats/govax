@@ -25,6 +25,13 @@ type walker struct {
 	// moved to a destination, so that one in memory would take an instruction more;
 	// maybe says it's computed only some of the time. It says whether to go on inside.
 	visit func(e ir.Expr, moved, maybe bool) bool
+
+	// addresses says to look at a computed address too (a Mem's Ptr that is an
+	// expression, an element of a strided array: A0 plus each subscript times its
+	// stride), which the code generator computes into a register; induction.go steps
+	// it. While visit is told of one, address is the place it is the address of.
+	addresses bool
+	address   *ir.Mem
 }
 
 // stmt looks at what st computes before it stores anything.
@@ -165,10 +172,18 @@ func (w *walker) mem(m *ir.Mem, maybe bool) {
 	}
 
 	switch p := m.Ptr.(type) {
+	case nil:
 	case *ir.Addr:
 		w.mem(p.Mem, maybe)
 	case *ir.Load:
 		w.mem(p.Mem, maybe)
+	default:
+		if w.addresses {
+			outer := w.address
+			w.address = m
+			w.expr(p, true, maybe)
+			w.address = outer
+		}
 	}
 }
 

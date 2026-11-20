@@ -20,8 +20,15 @@ const (
 
 // stmts lowers a list of statements.
 func (l *lowerer) stmts(list []sema.Stmt) {
-	for _, s := range list {
-		l.stmt(s)
+	for i := 0; i < len(list); i++ {
+		if group := l.fusedGroup(list[i:]); len(group) > 1 {
+			l.fusedStmts(group)
+			i += len(group) - 1
+
+			continue
+		}
+
+		l.stmt(list[i])
 	}
 }
 

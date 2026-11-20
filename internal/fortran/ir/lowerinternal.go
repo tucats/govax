@@ -51,8 +51,8 @@ import (
 // procedures are lowered as its internal procedures are, each with internal
 // procedures of its own (Phase 106): a module has no frame, so they take no
 // hidden argument, and each is entered at its global .ENTRY, M.P.
-func lowerHost(u *sema.Unit, host *lowerer) []*Routine {
-	l := newLowerer(u, host)
+func lowerHost(u *sema.Unit, host *lowerer, opts Options) []*Routine {
+	l := newLowerer(u, host, opts)
 	l.prepare()
 
 	if len(u.Contains) == 0 {
@@ -65,12 +65,12 @@ func lowerHost(u *sema.Unit, host *lowerer) []*Routine {
 
 	for _, c := range u.Contains {
 		if u.Kind == ast.ModuleUnit {
-			inner = append(inner, lowerHost(c, l)...)
+			inner = append(inner, lowerHost(c, l, opts)...)
 
 			continue
 		}
 
-		il := newLowerer(c, l)
+		il := newLowerer(c, l, opts)
 		il.prepare()
 
 		if inFrame {
