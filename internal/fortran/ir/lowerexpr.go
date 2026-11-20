@@ -461,6 +461,11 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		}
 
 	case *sema.IntrinsicRef:
+		// TRANSFER of a record's type (lowertransfer.go).
+		if e.Op == sema.TransferOp {
+			return l.transferPlace(e)
+		}
+
 		// MERGE of records or a derived type's objects: FSOURCE moved to a
 		// temporary, which TSOURCE replaces where MASK holds.
 		if e.T.Kind == sema.Record && e.Op == sema.MergeOp {

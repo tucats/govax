@@ -119,6 +119,10 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 			r, i := parts(l.mergeComplex(e), p)
 
 			return &Load{r}, &Load{i}
+		case sema.TransferOp:
+			r, i := parts(l.transferPlace(e), p)
+
+			return &Load{r}, &Load{i}
 		}
 
 		re, im := l.complexParts(e.Args[0])
@@ -275,6 +279,8 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 			return l.callIntrinsic(e)
 		case sema.MergeOp:
 			return l.mergeComplex(e)
+		case sema.TransferOp:
+			return l.transferPlace(e)
 		}
 
 	case *sema.ArrayFunc, *sema.ArrayFuncAt:
@@ -297,7 +303,9 @@ func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 		return
 	}
 
-	if x, ok := e.(*sema.IntrinsicRef); ok && x.Op == sema.CallOp {
+	if x, ok := e.(*sema.IntrinsicRef); ok && (x.Op == sema.CallOp || x.Op == sema.TransferOp) {
+		// MTHRTL's value, or TRANSFER's bytes: moved whole, never as
+		// floating parts.
 		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: &Load{l.complexValue(e)}})
 
 		return
@@ -325,8 +333,8 @@ func (l *lowerer) assignHexa(dst *Mem, e sema.Expr) {
 		l.moveHexa(dst, l.complexValue(e))
 
 	case *sema.IntrinsicRef:
-		if e.Op == sema.CallOp || e.Op == sema.MergeOp {
-			// FTNRTL's value, or MERGE's temporary: moved whole.
+		if e.Op == sema.CallOp || e.Op == sema.MergeOp || e.Op == sema.TransferOp {
+			// FTNRTL's value, MERGE's temporary, or TRANSFER's: moved whole.
 			l.moveHexa(dst, l.complexValue(e))
 		} else {
 			l.assignParts(dst, e, false)

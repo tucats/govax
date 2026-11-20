@@ -1,0 +1,12 @@
+Folded:  1145258561 abcd   4   3
+Words:  1096175431   809059928
+Back:  GOVAXF90
+Chars: G O V A X F
+Halves:     4     3  1096175431   809059928
+Sizes:   4   2
+Section:  65   0  67   0     9
+Reals: T     1.50    -0.25  1000.00  -7.0
+Record:  11  22  11  22 T
+Big:  40000     14
+Passed:  1515804759  16961  17475
+  $STATUS == "%X00000001"

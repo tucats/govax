@@ -53,8 +53,11 @@ func (c *ArrayConst) extents() []int {
 }
 
 // arrayFunctions are Fortran 90's array inquiry and construction functions
-// the evaluator answers (fortran90Table's ARRAY rows).
-var arrayFunctions = map[string]bool{"RESHAPE": true, "SHAPE": true, "SIZE": true, "LBOUND": true, "UBOUND": true}
+// the evaluator answers (fortran90Table's ARRAY rows), and TRANSFER, which may
+// be a scalar or an array (transferConst).
+var arrayFunctions = map[string]bool{
+	"RESHAPE": true, "SHAPE": true, "SIZE": true, "LBOUND": true, "UBOUND": true, "TRANSFER": true,
+}
 
 // isArrayForm reports whether e, as a constant expression, would be an array:
 // an array constructor, an array constant's name, a section of one, RESHAPE,
@@ -105,6 +108,8 @@ func (ev *evaluator) isArrayForm(e ast.Expr) bool {
 			return true
 		case "LBOUND", "UBOUND":
 			return len(e.Args) == 1
+		case "TRANSFER":
+			return ev.transferIsArray(e)
 		}
 
 		if _, ok := constFuncs[e.Name]; ok {
@@ -178,6 +183,10 @@ func (ev *evaluator) evalArray(e ast.Expr) (*ArrayConst, *constErr) {
 			return ev.reshape(e)
 		case "SHAPE", "LBOUND", "UBOUND":
 			return ev.boundsArray(e)
+		case "TRANSFER":
+			_, arr, err := ev.transferConst(e)
+
+			return arr, err
 		}
 
 		return ev.elemental(e)

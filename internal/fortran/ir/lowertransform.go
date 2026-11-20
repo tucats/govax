@@ -37,6 +37,11 @@ func (l *lowerer) transformed(f *sema.ArrayFunc) *sema.ArrayRef {
 		return temp
 	}
 
+	if f.Name == "TRANSFER" {
+		// Its bytes, not its elements, are moved (lowertransfer.go).
+		return l.keepTransformed(f, l.transferArray(f))
+	}
+
 	extents, dim := l.transformExtents(f)
 
 	// A CHARACTER value of a length known only now is as long as its argument's
@@ -63,6 +68,11 @@ func (l *lowerer) transformed(f *sema.ArrayFunc) *sema.ArrayRef {
 		l.reshapeInto(f, temp, extents)
 	}
 
+	return l.keepTransformed(f, temp)
+}
+
+// keepTransformed records temp as the statement's value of f, and returns it.
+func (l *lowerer) keepTransformed(f *sema.ArrayFunc, temp *sema.ArrayRef) *sema.ArrayRef {
 	if l.runtime.funcs == nil {
 		l.runtime.funcs = map[*sema.ArrayFunc]*sema.ArrayRef{}
 	}

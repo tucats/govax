@@ -181,6 +181,11 @@
    format: TINY is the least value (there are no denormalized
    numbers), and a SCALE past HUGE is a floating overflow.
 
+   TRANSFER(SOURCE, MOLD [, SIZE]) is SOURCE's bytes taken as MOLD's
+   type: TRANSFER(1.0, 0) is 16512, F_floating's 1.0.  Past SOURCE's
+   bytes the value is zero.  The bytes are moved as bytes, so a
+   reserved operand passes through without a fault.
+
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and
    CASE too); a named construct must be named at its end, and its name

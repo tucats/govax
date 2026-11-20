@@ -1325,6 +1325,7 @@ const (
 	ModuloOp                           // MODULO(A, P): A - FLOOR(A/P)*P; a REAL's remainder by Routine, MTHRTL's AMOD
 	ExponentOp                         // EXPONENT(X): a REAL's exponent field less its bias, 0 for 0
 	FractionOp                         // FRACTION(X): a REAL with its exponent field the bias's, 0 for 0
+	TransferOp                         // TRANSFER(SOURCE, MOLD): SOURCE's bytes as a scalar of MOLD's type (transfer.go)
 )
 
 // String is the operation's name in the dump.
@@ -1332,7 +1333,7 @@ func (op IntrinsicOp) String() string {
 	return [...]string{"?", "abs", "max", "min", "dim", "sign", "mod", "nint", "zext", "imag", "cmplx",
 		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "len", "arraysize", "index",
 		"ichar", "char", "call", "merge", "len_trim", "scan", "verify", "trim", "adjustl", "adjustr",
-		"repeat", "ceiling", "floor", "modulo", "exponent", "fraction"}[op]
+		"repeat", "ceiling", "floor", "modulo", "exponent", "fraction", "transfer"}[op]
 }
 
 // Arg is an actual argument. Expr is nil for a null argument (CALL

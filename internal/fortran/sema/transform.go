@@ -39,11 +39,12 @@ import (
 // RESHAPE's SHAPE must have a size known when compiling (the standard's
 // constraint) and ORDER be constant (ours).
 
-// transformational reports whether name is one of the functions this file
-// analyzes.
+// transformational reports whether name is one of the functions whose array
+// value lowering computes whole into a temporary: this file's, and TRANSFER
+// (transfer.go).
 func transformational(name string) bool {
 	switch name {
-	case "SPREAD", "CSHIFT", "EOSHIFT", "PACK", "UNPACK", "RESHAPE":
+	case "SPREAD", "CSHIFT", "EOSHIFT", "PACK", "UNPACK", "RESHAPE", "TRANSFER":
 		return true
 	}
 

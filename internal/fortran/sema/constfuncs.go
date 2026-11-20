@@ -120,6 +120,15 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		return nil, named(e.Name+" is a function, not a constant", e.Pos)
 	}
 
+	if e.Name == "TRANSFER" && ev.a.intrinsicNamed(e.Name) {
+		// A scalar TRANSFER (isArrayForm said so).
+		ev.a.noteIntrinsic(e.Name, e.Pos)
+
+		c, _, err := ev.transferConst(e)
+
+		return c, err
+	}
+
 	if arrayFunctions[e.Name] && ev.a.intrinsicNamed(e.Name) {
 		// SIZE, and LBOUND and UBOUND with DIM=: RESHAPE, SHAPE, and the
 		// others are arrays (isArrayForm).

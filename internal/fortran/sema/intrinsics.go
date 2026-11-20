@@ -69,6 +69,8 @@ import (
 //	         other argument is an INTEGER or a REAL of any kind: EXPONENT
 //	         and FRACTION written in line, the others calls of FTNRTL's
 //	         routine for X's format, FTN$SCALE_F and the rest
+//	TRANSFER SOURCE's bytes as MOLD's type (transfer.go): folded of
+//	         constants, else moved as bytes, never as MOLD's type
 //	LENTRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT, SCAN, VERIFY
 //	         the character functions (charfuncs.go): folded when their
 //	         arguments are constants, else LEN_TRIM, TRIM, and SCAN and VERIFY
@@ -91,9 +93,6 @@ import (
 // takenByIntrinsic). KIND, the kind of the result (the standard's 13.13), is
 // never counted in the third column: a reference's KIND= is taken out before
 // its row is chosen, and makes the result that kind.
-//
-// LATER is a function the phase hasn't brought yet, NOTIMPL by name: its
-// argument and result types are left open (*), the rows to come.
 const intrinsicTable = `
 SQRT   SQRT     1   R4  R4  MTH    E X
 SQRT   DSQRT    1   R8  R8  MTH    E X
@@ -474,7 +473,7 @@ SCALE              -  2   *   *   MODEL E X,I
 SET_EXPONENT       -  2   *   *   MODEL E X,I
 SPACING            -  1   *   *   MODEL E X
 
-TRANSFER           -  2,3 *   *   LATER T SOURCE[*],MOLD[*],SIZE?
+TRANSFER           -  2,3 *   *   TRANSFER T SOURCE[*],MOLD[*],SIZE?
 `
 
 // form is one row of the table.

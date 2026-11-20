@@ -342,6 +342,13 @@ func (l *lowerer) store(dst *Mem, value sema.Expr) {
 		return
 	}
 
+	if x, ok := value.(*sema.IntrinsicRef); ok && x.Op == sema.TransferOp && dst.T.Floating() && dst.T == l.typeOf(x.T) {
+		// TRANSFER's bytes, moved as an integer (lowertransfer.go).
+		l.rawMove(dst, x)
+
+		return
+	}
+
 	if value.Type().Kind == sema.Complex {
 		l.assignComplex(dst, value)
 

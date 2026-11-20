@@ -8582,6 +8582,21 @@ having no denormalized numbers: `NEAREST(0.0, 1.0)` is `TINY(1.0)`, `SPACING(0.0
 is 0; past it, or `NEAREST(HUGE(X), 1.0)`, is a floating overflow, `SS$_FLTOVF_F`, which a
 handler sees as from any instruction. Of constants all seven are computed when compiling.
 
+**TRANSFER** (the standard's 13.13.108). `TRANSFER(SOURCE, MOLD)` is `SOURCE`'s bytes, as
+memory holds them, taken as a value of `MOLD`'s type: a scalar if `MOLD` is one, else an
+array of rank one with as few elements as hold all of `SOURCE`, or with `SIZE=` elements.
+Only `MOLD`'s type and rank matter, never its value. Where the result is longer than
+`SOURCE`, the rest of it (which the standard leaves undefined) is zero. The bytes are the
+VAX's, so `TRANSFER(1.0, 0)` is 16512 (^X4080, F_floating's 1.0), `TRANSFER('ABCD', 0)` is
+^X44434241, and `TRANSFER(1.0D0, (/ 0 /))` is `(/ 16512, 0 /)`. They are moved as bytes,
+never as `MOLD`'s floating type, so bits that are a reserved operand pass through
+`TRANSFER`, and an assignment of it to a `REAL` variable, without a fault (a later
+computation with them faults, as on any VAX). Of constants it is computed when compiling, so
+it may give a `PARAMETER` its value; otherwise the bytes are moved by MOVC3, or by LIBRTL's
+`OTS$MOVE5` when a length is known only when the program runs or is past 65,535 bytes. A
+`MOLD` of a `CHARACTER` length of zero, or of one known only when the program runs, isn't
+implemented yet.
+
 A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
 its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;
 under `/NOF90` such a substring is an error when its bounds are constants, as in VAX

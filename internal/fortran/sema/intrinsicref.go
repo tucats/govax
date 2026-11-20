@@ -36,17 +36,14 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	if forms[0].how == "LATER" {
-		// A function a later subtask of Phase 108 brings.
-		a.notImplForm(e.Pos, "the intrinsic function "+e.Name)
-
-		return a.bad(e.Pos)
-	}
-
 	if !argCountFits(forms, len(slots.args)) {
 		a.report("INTRINARGS", e.Pos, e.Name, takes(forms), len(slots.args))
 
 		return a.bad(e.Pos)
+	}
+
+	if forms[0].how == "TRANSFER" {
+		return a.transfer(e, slots.args)
 	}
 
 	switch inq, selected := isInquiry(e.Name); {

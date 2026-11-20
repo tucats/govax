@@ -62,6 +62,11 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	case sema.CeilingOp, sema.FloorOp:
 		return l.wholeNumber(e, t)
 
+	case sema.TransferOp:
+		// SOURCE's bytes, in a temporary read as MOLD's type
+		// (lowertransfer.go).
+		return &Load{l.transferPlace(e)}
+
 	case sema.ModuloOp:
 		return l.modulo(e, t)
 
@@ -509,6 +514,8 @@ func (l *lowerer) char(e *sema.IntrinsicRef) Text {
 		return l.trim(e)
 	case sema.AdjustLOp, sema.AdjustROp, sema.RepeatOp:
 		return l.madeByRoutine(e)
+	case sema.TransferOp:
+		return Text{l.transferPlace(e), LongConst(int32(e.T.Size))}
 	}
 
 	v := l.temp(Byte)

@@ -355,7 +355,7 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    2026-11-19).
 5. **The model functions** in F, D, G, and H (finding 7), GSMATCH 1,29 (done
    2026-11-19).
-6. **TRANSFER** (finding 8).
+6. **TRANSFER** (finding 8) (done 2026-11-19).
 7. **The subroutines**: DATE_AND_TIME with `SYS$TIMEZONE_DIFFERENTIAL`,
    SYSTEM_CLOCK, RANDOM_NUMBER, RANDOM_SEED (findings 9 to 11).
 8. **Programs end to end**, every mode, gfortran's witness but for random numbers,
@@ -588,3 +588,43 @@ The author read the survey and accepted every recommendation:
   /G_FLOATING`), and H, and every overflow, each caught by LIB$SIG_TO_RET as `%X000004B4`.
   `sema`'s `TestPhase108Model` holds the forms, the folding, and the messages. MANUAL.md's 14.13
   and its FTNRTL table, and HELP FORTRAN, have them.
+- **2026-11-19:** Subtask 6, TRANSFER. The table's row is `TRANSFER`, no longer LATER (the last
+  LATER row, so the mechanism is gone: `intrinsicRef`'s check and the table's paragraph).
+  `sema/transfer.go`'s `transfer` takes SOURCE and MOLD as `operand`s (any type, a record's too,
+  scalar or array; MOLD only for its type and rank) and SIZE as an INTEGER scalar; the result is a
+  scalar `IntrinsicRef` of the new `TransferOp` when MOLD is a scalar and SIZE is left out, else an
+  `ArrayFunc` named TRANSFER (`Array` SOURCE, `Other` SIZE), now among `transformational`'s, so
+  `Transformed`: its extent SIZE's if constant, else, with no SIZE, the bytes over MOLD's size if
+  SOURCE's size is known, else the function's own. Of a constant SOURCE (a `Const` or an
+  `ArrayConst`) and a constant or absent SIZE it is folded, whatever MOLD is, by `transferValue`
+  (the bytes by `valueBytes`, `constBytes` or a constant's `Raw`; each element by
+  `constFromBytes`, a REAL or COMPLEX whose bytes don't pack back from its value keeping them as
+  `Raw` with the value the VAX's arithmetic takes them as, 0 for a reserved operand or a zero with
+  fraction bits); the constant evaluator does the same (`transferIsArray`, `transferConst`;
+  TRANSFER among `arrayFunctions`), so a PARAMETER may use it. Folded only to a number, a LOGICAL,
+  or a CHARACTER value: a derived type's constant needs its components (`Const.Parts`), so TRANSFER
+  to a derived type is computed when running even of constants, and in a PARAMETER isn't constant
+  (unconfirmed: the standard allows it). A MOLD of a CHARACTER length known only when running, or
+  of zero, is NOTIMPL, named; so is a CHARACTER array SOURCE of a run-time length that isn't a
+  name's or a section's. `ir/lowertransfer.go`: the value is a temporary of the result's size,
+  SOURCE's bytes moved in, the rest cleared, then read as MOLD's type (`transferPlace` for a
+  scalar, through `intrinsic`, `char`, `mem`, `complexParts`, `complexValue`; `transferArray` for
+  an array, `transformed`'s TRANSFER case, `keepTransformed`). **Where finding 8 had the temporary
+  of the larger length**, only the result's is made: SOURCE's leading bytes are moved and the rest
+  of the result cleared (`moveFilled`: MOVC3 and `clearBytes`' CLRO to CLRB when both lengths are
+  constants of a word's length, else LIBRTL's `OTS$MOVE5` with a fill of 0, whose lengths are
+  longwords), which is the same value without a second copy. A scalar number or LOGICAL SOURCE is
+  stored in the temporary as itself (`storeSource`), a REAL or COMPLEX variable, element, or field as
+  an integer of its size; an array SOURCE is moved from where its elements are (a whole array that
+  isn't strided) or through `lowersequence.go`'s `sequence` (a strided section, or an array
+  expression, copied first); a record by its bytes; a CHARACTER value by `chars`. A scalar TRANSFER
+  assigned to a REAL variable of its type is moved as an integer (`store`'s `rawMove`), and one
+  assigned to a COMPLEX moved whole (`assignComplex`, `assignHexa`), so a reserved operand passes
+  through TRANSFER and the assignment without a fault; an array's elements are read as their type
+  by the statement's loops, where such bits fault as any REAL's would. Folding a reserved
+  operand's bits into an expression computed when compiling takes them as 0 (unconfirmed: the VAX
+  would fault). `testdata/fortran90`'s `transfer.f90` (gfortran prints the same, `compare.py`) and
+  `transfervms.f90` (the VAX's bits, the zero tail, a reserved operand through and back) run in
+  every mode; `sema`'s `TestPhase108Transfer` holds the forms, the folding, PARAMETERs, the
+  messages, and `/NOF90`. The corpus README gained the rows subtasks 4 and 5 left out (`numfns`,
+  `model`, `modelvms`). MANUAL.md's 14.13 and HELP FORTRAN have TRANSFER.

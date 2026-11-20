@@ -1,6 +1,7 @@
 package sema
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -298,25 +299,10 @@ func TestPhase108ZeroLengths(t *testing.T) {
 	}
 }
 
-// TestPhase108Names checks that Fortran 90's new names are intrinsic under
-// /F90, NOTIMPL until their subtask, and the program's own functions under
-// /NOF90; and that the intrinsic subroutines take keywords, and are NOTIMPL
-// but MVBITS.
+// TestPhase108Names checks that the intrinsic subroutines take keywords, and
+// are NOTIMPL but MVBITS. (Fortran 90's new function names, intrinsic under
+// /F90 and the program's own under /NOF90, are each subtask's test's.)
 func TestPhase108Names(t *testing.T) {
-	later := []string{"TRANSFER(X, 0)"}
-
-	for _, text := range later {
-		_, ms := analyzeOpts(t, Options{F90: true}, fixed("CHARACTER*8 T", "PRINT *, "+text, "END")...)
-		if len(ms) != 1 || ms[0].Ident != "NOTIMPL" || !strings.Contains(ms[0].Text, "the intrinsic function") {
-			t.Errorf("/F90 %s: %v", text, ms)
-		}
-
-		_, ms = analyzeOpts(t, Options{}, fixed("CHARACTER*8 T", "PRINT *, "+text, "END")...)
-		if len(ms) != 0 {
-			t.Errorf("/NOF90 %s: %v", text, ms)
-		}
-	}
-
 	subs := map[string]string{
 		"CALL DATE_AND_TIME(VALUES=IV)":      "NOTIMPL: the intrinsic subroutine DATE_AND_TIME",
 		"CALL SYSTEM_CLOCK(COUNT_RATE=I)":    "NOTIMPL",
@@ -453,5 +439,98 @@ func TestPhase108Model(t *testing.T) {
 		if got != want {
 			t.Errorf("%s: %v, want %q", text, ms, want)
 		}
+	}
+}
+
+// TestPhase108Transfer checks TRANSFER (finding 8): folded of constants, in
+// PARAMETERs too, and otherwise its forms, a scalar's an IntrinsicRef and an
+// array's an ArrayFunc of the right extent.
+func TestPhase108Transfer(t *testing.T) {
+	cases := []struct {
+		opts       Options
+		text, want string
+	}{
+		{Options{F90: true}, "TRANSFER(1.0, 0)", "16512"},
+		{Options{F90: true}, "TRANSFER('ABCD', 0)", "1145258561"},
+		{Options{F90: true}, "TRANSFER(16512, 1.0)", "1.0"},
+		{Options{F90: true}, "TRANSFER(1.0D0, (/0/))", "(/:I 16512 0 /) (2)"},
+		{Options{F90: true}, "TRANSFER((/1, 2, 3/), 0D0, 2)", "(/:R 0.0D0 0.0D0 /) (2)"},
+		{Options{F90: true}, "TRANSFER('AB', 'XYZ')", "'AB\\0'"},
+		{Options{F90: true}, "TRANSFER(65, 'Z')", "'A'"},
+		{Options{F90: true}, "TRANSFER((/65, 66/), 'Z', SIZE=3)", "(/:C 'A' '\\0' '\\0' /) (3)"},
+		{Options{F90: true}, "TRANSFER(1.0, I, 2)", "(/:I 16512 0 /) (2)"},
+		{Options{F90: true}, "TRANSFER(X, 0)", "(transfer:INTEGER TRANSFER X)"},
+		{Options{F90: true}, "TRANSFER(X, (/0/))", "TRANSFER(X) (1)"},
+		{Options{F90: true}, "TRANSFER(IA, 0D0)", "(transfer:REAL*8 TRANSFER IA[])"},
+		{Options{F90: true}, "TRANSFER(IA, 0D0, N)", "TRANSFER(IA[], N) (:)"},
+		{Options{F90: true}, "TRANSFER(IA(1:N), 'A')", "(transfer:CHARACTER*1 TRANSFER IA[1:N:1])"},
+		{Options{F90: true}, "TRANSFER(MOLD=1.0, SOURCE=I)", "(transfer:REAL TRANSFER I)"},
+	}
+
+	for _, c := range cases {
+		lines := fixed("REAL X", "INTEGER I, N, IA(5)", "PRINT *, "+c.text, "END")
+		prog, ms := analyzeOpts(t, c.opts, lines...)
+
+		if len(ms) != 0 {
+			t.Errorf("%s: %v", c.text, ms)
+
+			continue
+		}
+
+		p := prog.Units[0].Body[0].(*IO)
+		v := p.Items[0].Value
+		got := strings.ReplaceAll(DumpExpr(v), "\x00", "\\0")
+		if len(v.Shape()) > 0 {
+			got += fmt.Sprintf(" %v", v.Shape())
+		}
+
+		if got != c.want {
+			t.Errorf("%s:\n got %s\nwant %s", c.text, got, c.want)
+		}
+	}
+
+	// In a PARAMETER (7.1.6.1 (5)), a scalar and an array.
+	lines := fixed("INTEGER K, KA(2)", "PARAMETER (K = TRANSFER('ABCD', 0), KA = TRANSFER(1.0D0, (/0/)))",
+		"PRINT *, K, KA", "END")
+
+	prog, ms := analyzeOpts(t, Options{F90: true}, lines...)
+	if len(ms) != 0 {
+		t.Fatalf("PARAMETER: %v", ms)
+	}
+
+	items := prog.Units[0].Body[0].(*IO).Items
+	if got := DumpExpr(items[0].Value) + " " + DumpExpr(items[1].Value); got != "1145258561 (/:I 16512 0 /)" {
+		t.Errorf("PARAMETER: got %s", got)
+	}
+
+	bad := map[string]string{
+		"TRANSFER(X)":         "INTRINARGS",
+		"TRANSFER(X, 0, 1.0)": "BADARG",
+		"TRANSFER(X, C)":      "NOTIMPL",
+		"TRANSFER(X, 0, N)":   "",
+	}
+
+	for text, want := range bad {
+		_, ms := analyzeOpts(t, Options{F90: true}, fixed("SUBROUTINE S(C)", "CHARACTER*(*) C", "REAL X",
+			"INTEGER N", "PRINT *, "+text, "END")...)
+
+		got := ""
+		if len(ms) > 0 {
+			got = ms[0].Ident
+		}
+
+		if got != want {
+			t.Errorf("%s: %v, want %q", text, ms, want)
+		}
+	}
+
+	// Under /NOF90 it is the program's own function.
+	prog, ms = analyzeOpts(t, Options{}, fixed("X = TRANSFER(1.0, 0)", "END")...)
+	if len(ms) != 0 {
+		t.Fatalf("/NOF90: %v", ms)
+	}
+
+	if got := DumpExpr(prog.Units[0].Body[0].(*Assign).Value); !strings.Contains(got, "TRANSFER") || strings.Contains(got, "transfer:") {
+		t.Errorf("/NOF90: got %s", got)
 	}
 }
