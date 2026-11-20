@@ -8875,8 +8875,13 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   inside (`WHEREBODY`, `WHERETARGET`). A WHERE inside a WHERE, and ELSEWHERE with a mask of its
   own, are Fortran 95's (`F95ONLY`).
 - *I/O lists*: a section, an array expression, or a constructor in an output list is written,
-  and a section in an input list read, an element at a time in array element order. `READ *, N,
-  A(1:N)` uses the N it has just read.
+  and a section in an input list read, in array element order. A section of a variable (with no
+  vector subscript), an assumed-shape array, and an array pointer's target go to FTNRTL as one
+  item, by a class NCA descriptor it walks; anything else goes an element at a time, with the
+  same records. `READ *, N, A(1:N)` uses the N it has just read. A section may be an internal
+  file or ENCODE's or DECODE's buffer, its elements its records one after another: used where it
+  is if they are, else through a copy, put back after a WRITE or ENCODE; one with a vector
+  subscript can't (`VECTORFILE`).
 - *Checks*: under `/CHECK=BOUNDS` a section's first and last subscripts, and each value of a
   vector subscript, are checked as subscripts are, and two shapes that weren't known when
   compiling are compared when the program runs: a difference is `%FOR-F-NOTCONFOR`, "array
@@ -9443,7 +9448,7 @@ point copies it, with the dummy's own bounds, into a descriptor of the routine's
 `/CHECK=BOUNDS` refuses anything else, or a descriptor of another rank, with
 `%FOR-F-BADARRDESC`. Inside, an assumed-shape array is used as any other: by element, whole, by
 section, with SIZE, LBOUND, UBOUND, SHAPE, and the reductions, and passed on to another
-assumed-shape dummy whole or as a section; an output list takes it an element at a time.
+assumed-shape dummy whole or as a section; an I/O list takes it as one item, by its descriptor.
 An OPTIONAL one may be left out, and passed on to another OPTIONAL dummy is left out there
 too (so is an OPTIONAL explicit-shape one); an ENTRY may have one. Not there yet: a
 CHARACTER array expression whose length is known only when the program runs and isn't made
@@ -10033,9 +10038,8 @@ Of pointers, these are not there yet: a CHARACTER pointer whose length is known 
 program runs (but `CHARACTER(LEN=*)` pointer dummies, above); `NULL()` and initial values for
 pointers and pointer components, which are Fortran 95's; `/CHECK=POINTERS`, which would catch
 the use of a disassociated pointer (today a disassociated pointer's target is at address 0,
-and using it is an access violation); the debugger's EXAMINE of a pointer or through one,
-which leaves pointers out of the `/DEBUG` table for now; and an array pointer in an I/O list
-written by its descriptor (it is written an element at a time, which gives the same records).
+and using it is an access violation); and the debugger's EXAMINE of a pointer or through one,
+which leaves pointers out of the `/DEBUG` table for now.
 Procedure pointers and bounds remapping (`P(1:N) => A`) aren't Fortran 90 at all.
 
 Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have
@@ -10045,8 +10049,8 @@ module compiles); and govax's definition modules (`$SSDEF` and the rest) as modu
 which are still INCLUDE's. A fixed-form `/NOF90` unit may use a module, but VAX FORTRAN reads
 `A.B.C` as a field, so it can't use a module's defined operators. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
 gives no elements but govax still calls `BOUNDORDER`; a CHARACTER constructor whose first value's length is known only when the program
-runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of
-records; and a section as an internal file or ENCODE's buffer. Of the intrinsic procedures,
+runs and isn't a variable's, an array's, or a concatenation of them; and sections of arrays of
+records. Of the intrinsic procedures,
 these are not there yet: a `BACK=` that is an array; `TRANSFER` to a `CHARACTER` `MOLD` of a
 length of zero or of one known only when the program runs; a derived type's component, or a
 function's value, of length zero; and `COMPLEX(16)` arguments to the functions not named above

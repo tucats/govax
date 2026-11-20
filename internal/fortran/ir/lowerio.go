@@ -335,14 +335,18 @@ func beginRoutine(s *sema.IO) string {
 // default unit's from sema), an internal file's descriptor, or ENCODE's
 // or DECODE's buffer's address.
 //
-// An assumed-shape array as the internal file or buffer goes as its elements one
-// after another (lowersequence.go), and back is what copies them back when
-// the statement writes them; nil if nothing does.
+// An assumed-shape array or a section as the internal file or buffer goes as
+// its elements one after another (lowersequence.go: in place if they are, else
+// through a temporary), and back is what copies them back when the statement
+// writes them; nil if nothing does.
 func (l *lowerer) ioUnit(s *sema.IO) (unit Arg, back func()) {
-	if r, ok := s.Unit.(*sema.ArrayRef); ok && r.Sym.Strided() && (s.Code || s.Internal) {
-		seq := l.sequence(r, true, !s.Read, s.Internal)
+	if s.Code || s.Internal {
+		r, ok := s.Unit.(*sema.ArrayRef)
+		if ok && r.Sym.Strided() || !ok && len(s.Unit.Shape()) > 0 {
+			seq := l.sequence(s.Unit, true, !s.Read, s.Internal)
 
-		return Arg{Value: seq.value}, seq.back
+			return Arg{Value: seq.value}, seq.back
+		}
 	}
 
 	switch {
@@ -448,11 +452,12 @@ func (l *lowerer) ioItems(items []*sema.Item) {
 }
 
 // ioItem lowers one item of an I/O list. A scalar, or a whole array of the
-// program's (one class A descriptor, all of it in one call), is one call. Any
-// other array (a section, an array expression, an array constant) is a call
+// program's (one class A descriptor, all of it in one call), is one call; so is
+// a section or an assumed-shape array, by a class NCA descriptor (ncaItem). Any
+// other array (a vector subscript, an array expression, an array constant) is a call
 // for each element, in array element order, through the scalarizer's loops
 // (docs/planning/PHASE-102 - Fortran 90 array expressions.md, finding 14): an
-// input section's element is a place, read where it is, and an output
+// input element is a place, read where it is, and an output
 // expression's element a value computed into a temporary, as a scalar
 // expression's is. A constructor's values are items in turn, an implied DO of
 // it a loop around its own: the constructor is never built. The extents and
@@ -469,11 +474,10 @@ func (l *lowerer) ioItem(v sema.Expr) {
 		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: l.item(e)}}})
 	}
 
-	// An assumed-shape array's elements may not be one after another, which a
-	// class A descriptor says they are: an element at a time, as a section's
-	// (the list's whole array may have no shape of its own, sema's name).
-	if r, ok := v.(*sema.ArrayRef); ok && r.Sym.Strided() {
-		l.eachElement(sema.NewArrayRef(r.Sym, r.Pos), call)
+	// An array whose elements needn't be one after another is one call too,
+	// with a class NCA descriptor, which FTNRTL walks.
+	if d := l.ncaItem(v); d != nil {
+		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: d}}})
 
 		return
 	}
@@ -492,6 +496,54 @@ func (l *lowerer) ioItem(v sema.Expr) {
 	default:
 		l.eachElement(v, call)
 	}
+}
+
+// ncaItem is the class NCA descriptor of the I/O item v, or nil if v isn't
+// one an NCA descriptor gives (docs/planning/PHASE-109 - Fortran 90 IO.md,
+// finding 11): a whole assumed-shape array or array pointer's target (whose
+// elements may not be one after another, which a class A descriptor would say
+// they are), or a section, a ranked component, or a substring of either,
+// without a vector subscript, of an intrinsic type. FTN$IO_ITEM gives the
+// statement's module each element in array element order, as the element
+// calls did. A derived type's goes a component at a time (objectItems), and a
+// record's, a vector subscript's, or an expression's an element at a time.
+func (l *lowerer) ncaItem(v sema.Expr) *Mem {
+	// A whole array in a list may have no shape of its own (sema's name):
+	// whether it has a rank is its symbol's.
+	r, whole := v.(*sema.ArrayRef)
+	if whole && len(r.Sym.Dims) == 0 || !whole && len(v.Shape()) == 0 ||
+		v.Type().Kind == sema.Record || !sema.Described(sema.Arg{Expr: v}) {
+		return nil
+	}
+
+	sub, _ := v.(*sema.Substring)
+
+	base := v
+	if sub != nil {
+		base = sub.X
+	}
+
+	switch e := base.(type) {
+	case *sema.ArrayRef:
+		switch {
+		case sub != nil:
+			return l.arrayNCA(sema.NewArrayRef(e.Sym, e.Pos), sub)
+		case e.Sym.Strided():
+			return l.wholeNCA(sema.NewArrayRef(e.Sym, e.Pos))
+		}
+
+	case *sema.Section:
+		if e.Sym.Class != sema.Constant {
+			return l.sectionNCA(e, sub)
+		}
+
+	case *sema.FieldRef:
+		if sub != nil || !e.WholeArray() {
+			return l.sectionNCA(e, sub)
+		}
+	}
+
+	return nil
 }
 
 // objectItems lowers a formatted statement's item of a derived type (sema's

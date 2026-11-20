@@ -1,6 +1,7 @@
       OPTIONS /F90
 C     Arrays in I/O lists (Phase 102, subtask 11): a whole array, one
-C     call; a section and an expression, a call per element; a constructor,
+C     call; a section, one call with a class NCA descriptor (Phase 109);
+C     an expression and a vector subscript, a call per element; a constructor,
 C     its values in turn; reading into a section whose extent the same
 C     statement reads, and into a vector-subscripted one.
       PROGRAM F90IO

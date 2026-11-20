@@ -144,6 +144,7 @@ PROGRAMS90 = {
     "accounts": ["accounts.f90"],
     "advance": ["advance.f90"],
     "listnml": ["listnml.f90"],
+    "ioitems": ["ioitems.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
     "standard": ["modules/standard/standard.f90", "modules/standard/globals.f90", "modules/standard/strings.f90",
                  "modules/standard/library.f90", "modules/standard/renames.f90", "modules/standard/users.f90",

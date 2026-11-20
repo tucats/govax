@@ -1390,8 +1390,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   constant strides, `ir.Descriptor.Strides`, a header's class Z pointing at
   its shape, `Descriptor.Shape`; FTNRTL's `DESIGNATOR` reads `PTS(2)%X` and
   `lo:hi:stride` under the flag into a walk, `ADDRESS`, and `NEXT_PART` fills
-  objects level by level; `testdata/fortran90/nmlsect.f90`); subtask 7, items
-  by descriptor, is next.
+  objects level by level; `testdata/fortran90/nmlsect.f90`); subtask 7
+  (2026-11-20) is items by descriptor: FTN$IO_ITEM hands a class NCA item to
+  `ITEM_NCA`, which walks its strides and gives each element as class S
+  (`ftn_statement.mar`), and the compiler passes one for a strided whole array, a
+  section, or a ranked component of an intrinsic type (`ir/lowerio.go`'s
+  `ncaItem`); a section as an internal file or ENCODE's or DECODE's buffer goes
+  through `sequence` (`ioUnit`), VECTORFILE with a vector subscript
+  (`testdata/fortran90/ioitems.f90`, `ioitemsvms.f90`); subtask 8, programs end
+  to end, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

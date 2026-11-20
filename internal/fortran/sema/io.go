@@ -754,8 +754,8 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 
 	t := a.place(u.Expr, true)
 	if t != nil && t.Type().Kind == Invalid {
-		// A place with an error, reported (an array section, which can't
-		// be an internal file).
+		// A place with an error, reported (a section with a vector
+		// subscript, which can't be an internal file).
 		return false
 	}
 
@@ -836,10 +836,13 @@ func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 }
 
 // sectionPlace is t, a place, unless it is an array section (or a section's
-// substring): not a place where a scalar must be (nil), and as an internal
-// file or ENCODE's buffer, whose records are contiguous memory, not compiled
-// (a section's descriptor is Phase 109's). An input list's sections don't come
-// here (inputPlace).
+// substring, or a ranked component): not a place where a scalar must be (nil).
+// As an internal file or ENCODE's buffer (whole), whose records are its
+// elements one after another, a section is one (the IR's sequence: described
+// where it is if its elements are one after another, else through a copy,
+// docs/planning/PHASE-109 - Fortran 90 IO.md, finding 11), but not one with a
+// vector subscript (the standard's 9.2.2.1), VECTORFILE. An input list's
+// sections don't come here (inputPlace).
 func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
 	if t == nil || rankOf(t) == 0 {
 		return t
@@ -849,9 +852,13 @@ func (a *analyzer) sectionPlace(t Expr, whole bool) Expr {
 		return nil
 	}
 
-	a.notImplForm(t.Position(), "an array section as an internal file or buffer")
+	if t.Type().Kind != Invalid && !Described(Arg{Expr: t}) {
+		a.report("VECTORFILE", t.Position())
 
-	return a.bad(t.Position())
+		return a.bad(t.Position())
+	}
+
+	return t
 }
 
 // namelistNamed is the NAMELIST group a format given by position names

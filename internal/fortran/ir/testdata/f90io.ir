@@ -4,17 +4,16 @@ routine F90IO main
   cell  IV      L  $LOCAL+64   array IV, 12 bytes
   cell  N       L  $LOCAL+76   variable N
   cell  $I1     L  $LOCAL+80   an array statement's index
-  cell  $C1     L  $LOCAL+84   array (line 10), dimension 1's count
-  cell  $D2     L  $LOCAL+88   descriptor F S 4
-  cell  $I2     L  $LOCAL+96   an array statement's index
-  cell  $C2     L  $LOCAL+100  array (line 10), dimension 1's count
-  cell  $T1     F  $LOCAL+104  temporary
-  cell  $C3     L  $LOCAL+108  constructor (line 11), implied DO of I's count
-  cell  $T2     L  $LOCAL+112  temporary
-  cell  $T3     L  $LOCAL+116  temporary
-  cell  $C4     L  $LOCAL+120  array (line 12), dimension 1's count
-  cell  $C5     L  $LOCAL+124  array (line 13), dimension 1's count
-  $LOCAL is 128 bytes
+  cell  $D2     L  $LOCAL+84   descriptor F NCA 4 (?)
+  cell  $I2     L  $LOCAL+116  an array statement's index
+  cell  $C1     L  $LOCAL+120  array (line 11), dimension 1's count
+  cell  $T1     F  $LOCAL+124  temporary
+  cell  $C2     L  $LOCAL+128  constructor (line 12), implied DO of I's count
+  cell  $T2     L  $LOCAL+132  temporary
+  cell  $T3     L  $LOCAL+136  temporary
+  cell  $C3     L  $LOCAL+140  array (line 14), dimension 1's count
+  cell  $D7     L  $LOCAL+144  descriptor F S 4
+  $LOCAL is 152 bytes
   datum $IO1    control F90
   datum $D1     descriptor F A 4 (1:10) A
   datum $D3     descriptor F S 4 $T1
@@ -23,79 +22,73 @@ routine F90IO main
   datum $D5     descriptor L S 4 $I2
   datum $D6     descriptor L S 4 N
 B1:
-  ; line 9
+  ; line 10
   call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END()
-  ; line 10
+  ; line 11
   call FTN$WRITE_SL(ref $IO1, val -1)
-  assign $C1 = 5
-  assign $I1 = 1
-  jump B2
-B2:  ; array (line 10), dimension 1's body
-  assign $D2+4 = addr(A-8[mul.L($I1, 2)])
+  assign $D2+4 = addr(A)
+  assign $D2+20 = 8
+  assign $D2+24 = 1
+  assign $D2+28 = 5
+  assign $D2+16 = sub.L($D2+4, 8)
+  assign $D2+12 = 20
   call FTN$IO_ITEM(ref $D2)
-  assign $I1 = add.L($I1, 1)
+  assign $C1 = 3
+  assign $I2 = 1
+  jump B2
+B2:  ; array (line 11), dimension 1's body
+  assign $T1 = add.F(B-4[mul.L($I2, 2)], 1.0)
+  call FTN$IO_ITEM(ref $D3)
+  assign $I2 = add.L($I2, 1)
   assign $C1 = sub.L($C1, 1)
   branch gt.L($C1, 0) B2 B3
 B3:
-  assign $C2 = 3
+  call FTN$IO_END()
+  ; line 12
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  call FTN$IO_ITEM(ref $D4)
+  assign $C2 = N
   assign $I2 = 1
-  jump B4
-B4:  ; array (line 10), dimension 1's body
-  assign $T1 = add.F(B-4[mul.L($I2, 2)], 1.0)
-  call FTN$IO_ITEM(ref $D3)
+  branch le.L($C2, 0) B5 B4
+B4:  ; constructor (line 12), implied DO of I's body
+  call FTN$IO_ITEM(ref $D5)
   assign $I2 = add.L($I2, 1)
   assign $C2 = sub.L($C2, 1)
   branch gt.L($C2, 0) B4 B5
 B5:
   call FTN$IO_END()
-  ; line 11
-  call FTN$WRITE_SL(ref $IO1, val -1)
-  call FTN$IO_ITEM(ref $D4)
-  assign $C3 = N
-  assign $I2 = 1
-  branch le.L($C3, 0) B7 B6
-B6:  ; constructor (line 11), implied DO of I's body
-  call FTN$IO_ITEM(ref $D5)
-  assign $I2 = add.L($I2, 1)
-  assign $C3 = sub.L($C3, 1)
-  branch gt.L($C3, 0) B6 B7
-B7:
-  call FTN$IO_END()
-  ; line 12
+  ; line 13
   call FTN$READ_SL(ref $IO1, val -4)
   call FTN$IO_ITEM(ref $D6)
   assign $T2 = N
   assign $T3 = $T2
-  branch lt.L($T3, 0) B8 B9
-B8:
+  branch lt.L($T3, 0) B6 B7
+B6:
   assign $T3 = 0
-  jump B9
-B9:
-  assign $C4 = $T3
-  assign $I2 = 1
-  branch le.L($C4, 0) B11 B10
-B10:  ; array (line 12), dimension 1's body
-  assign $D2+4 = addr(A-4[$I2])
+  jump B7
+B7:
+  assign $D2+4 = addr(A)
+  assign $D2+20 = 4
+  assign $D2+24 = 1
+  assign $D2+28 = $T3
+  assign $D2+16 = sub.L($D2+4, 4)
+  assign $D2+12 = mul.L(4, $T3)
   call FTN$IO_ITEM(ref $D2)
-  assign $I2 = add.L($I2, 1)
-  assign $C4 = sub.L($C4, 1)
-  branch gt.L($C4, 0) B10 B11
-B11:
-  call FTN$IO_END()
-  ; line 13
-  call FTN$READ_SL(ref $IO1, val -4)
-  assign $C5 = 3
-  assign $I2 = 1
-  jump B12
-B12:  ; array (line 13), dimension 1's body
-  assign $D2+4 = addr(A-4[IV-4[$I2]])
-  call FTN$IO_ITEM(ref $D2)
-  assign $I2 = add.L($I2, 1)
-  assign $C5 = sub.L($C5, 1)
-  branch gt.L($C5, 0) B12 B13
-B13:
   call FTN$IO_END()
   ; line 14
+  call FTN$READ_SL(ref $IO1, val -4)
+  assign $C3 = 3
+  assign $I2 = 1
+  jump B8
+B8:  ; array (line 14), dimension 1's body
+  assign $D7+4 = addr(A-4[IV-4[$I2]])
+  call FTN$IO_ITEM(ref $D7)
+  assign $I2 = add.L($I2, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B8 B9
+B9:
+  call FTN$IO_END()
+  ; line 15
   return 1

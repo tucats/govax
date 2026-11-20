@@ -904,7 +904,10 @@ var messages = map[string]kind{
 	"SHAPEVALUE":    {Error, "%s has %d elements, and its value %d"},
 	"MERGEARGS":     {Error, "the TSOURCE and FSOURCE of MERGE must have one type and length, and they are %s and %s"},
 	"ARRAYRANK":     {Error, "%s's %s must be of rank %s, not %d"},
-	"MANYONE":       {Error, "the vector subscript of %s names element %d more than once, so the section can't be given values"},
+	// VECTORFILE: an internal file or ENCODE's or DECODE's buffer is records one
+	// after another, which a vector subscript's section isn't (9.2.2.1; Phase 109).
+	"VECTORFILE": {Error, "an array section with a vector subscript can't be an internal file or buffer"},
+	"MANYONE":    {Error, "the vector subscript of %s names element %d more than once, so the section can't be given values"},
 
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.
 	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},

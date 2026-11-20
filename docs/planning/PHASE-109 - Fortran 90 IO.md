@@ -7,8 +7,8 @@ the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
 subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
 specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6,
 list-directed and namelist under the flag, done 2026-11-20 in two parts: 6a, the forms and
-DELIM=, and 6b, sections and components in namelist names. Subtask 7, items by descriptor, is
-next.
+DELIM=, and 6b, sections and components in namelist names; subtask 7, items by descriptor, done
+2026-11-20. Subtask 8, programs end to end, is next.
 
 ## Goal
 
@@ -361,7 +361,7 @@ And where each change lands:
      `K(2:4:2)`, `PTS(2)%X`), and arrays of derived types in NAMELIST groups (sema's
      NOTIMPL, Phase 105's leftover) (done 2026-11-20).
 7. **Items by descriptor** (FTN$IO_ITEM's class NCA loop) and sections as internal files
-   and buffers (finding 11).
+   and buffers (finding 11) (done 2026-11-20).
 8. **Programs end to end**, every mode, gfortran's witness (records compared byte for byte
    where the standard fixes them), with derived types in the new forms (finding 12).
 9. **Close-out**: FORTRAN-INTERNALS.md (how a record stays open across statements; the F90
@@ -648,3 +648,37 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   oracles (`TestNML80Oracle`, `TestNML80Messages`, `TestNML80Prompt`, `TestFor80Oracle`) and
   `typenml`, `listnml` are unchanged. MANUAL.md's 14.13 has the names and the arrays. FTNRTL's
   GSMATCH stays 1,31 (no new entry). Subtask 7 (items by descriptor) is next.
+- **2026-11-20:** Subtask 7, items by descriptor. **FTNRTL** (`ftn_statement.mar`): FTN$IO_ITEM
+  sends a class NCA item to a routine of its own, `ITEM_NCA`, which walks the descriptor (its
+  POINTER the first element; each dimension's count its extent, the first dimension fastest, each
+  step its stride in bytes, a finished dimension stepped back by stride times extent) and gives each
+  element to the statement kind's module (`PASS_ITEM`) by a class S descriptor in its frame,
+  stopping at the statement's first failure; an empty dimension is no elements. So FTN_FORMAT,
+  FTN_LISTOUT, FTN_LISTIN, and FTN_UNFORMATTED are unchanged, and see what the element calls gave
+  them. The walk is a routine apart so that FTN$IO_ITEM's frame (`^M<R2>`) stays as it was for every
+  other item: a first try that saved R3 to R7 there changed what an old program's undefined value
+  read from the stack (`optforward.for`'s KEEP under `/RECURSIVE`, which `TestFTN86Oracle` holds to
+  VMS's 0). No new entry: GSMATCH stays 1,31. **The compiler** (`ir/lowerio.go`'s `ncaItem`): an item
+  that is a whole assumed-shape array or array pointer (`Symbol.Strided`, the dummy's or pointer's own
+  descriptor, `wholeNCA`), or a section, a ranked component (but a scalar record's whole array
+  component, still class A), or a substring of a section or array, with no vector subscript
+  (`sema.Described`), of an intrinsic type, and not a PARAMETER's, is one FTN$IO_ITEM call with a class
+  NCA descriptor (`sectionNCA`, `arrayNCA`); a contiguous whole array keeps its class A descriptor, and
+  a derived type's object (a component at a time), a record, a vector subscript, an expression, and a
+  constructor keep the element path. The descriptor is built at its item's call, so `READ *, N,
+  A(1:N)` still uses the N just read. **Sections as internal files and buffers**: sema's
+  `sectionPlace` NOTIMPL is gone; a section (or its substring, or a ranked component) as an internal
+  file or ENCODE's or DECODE's buffer goes through Phase 104's `sequence` (`ioUnit`): described where
+  it is if `sema.Contiguous`, tested when the program runs if it is an assumed-shape array's, else a
+  temporary, copied back after a WRITE or ENCODE. One with a vector subscript is the new VECTORFILE
+  (the standard's 9.2.2.1). The IR golden `f90io` now shows sections as one call;
+  `testdata/nof90.sum` was rewritten for `testdata/fortran`'s `recarrays.for` and `recdyn.for`, whose
+  ranked components in I/O lists are now one call each (no VAX FORTRAN 5.0 program has a section, so
+  the promise of Decision 16 stands). `testdata/fortran90/ioitems.f90` (with `ioitems.in`; strided
+  sections both ways in two dimensions, an array pointer, an assumed-shape dummy, formatted,
+  list-directed, unformatted, and nonadvancing, an empty section, an end of file part way through a
+  section, a ranked component, a substring of a section, sections as internal files written and read)
+  runs in every mode, and gfortran prints the same 16 lines; `ioitemsvms.f90` (ENCODE and DECODE on a
+  strided section, and an assumed-shape array's section as an internal file) is govax's only. MANUAL.md's
+  14.13 says how I/O lists take sections and that a section may be an internal file. Subtask 8
+  (programs end to end) is next.

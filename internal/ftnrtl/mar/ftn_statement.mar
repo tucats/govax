@@ -853,8 +853,11 @@ POP_GONE:	.WORD	^M<R2,R3>
 ; FTN$IO_ITEM(desc)
 ;
 ; One item of the statement in progress, described by desc: a scalar
-; (class S) or a whole array (class A). Does nothing after the
-; statement's first error. Returns SS$_NORMAL in R0.
+; (class S), a whole array (class A), or an array whose elements needn't be
+; one after another (class NCA: a section, an assumed-shape array, an array
+; pointer's target; docs/planning/PHASE-109 - Fortran 90 IO.md, finding 11),
+; which ITEM_NCA walks. Does nothing after the statement's first error.
+; Returns SS$_NORMAL in R0.
 ;
 	.ENTRY	FTN$IO_ITEM,^M<R2>
 	MOVL	STMT_TOP,R2
@@ -871,7 +874,12 @@ POP_GONE:	.WORD	^M<R2,R3>
 	MOVL	16(FP),CTX_ITEMPC(R2)	; where this call returns
 	PUSHL	4(AP)
 	PUSHL	R2
-	CMPB	CTX_KIND(R2),#K_WRITE_SF
+	MOVL	4(AP),R0
+	CMPB	DSC$B_CLASS(R0),#DSC$K_CLASS_NCA
+	BNEQ	7$
+	CALLS	#2,ITEM_NCA
+	BRB	90$
+7$:	CMPB	CTX_KIND(R2),#K_WRITE_SF
 	BGTRU	10$
 	CALLS	#2,FTN$$FMT_ITEM	; FTN_FORMAT
 	BRB	90$
@@ -888,6 +896,108 @@ POP_GONE:	.WORD	^M<R2,R3>
 	CALLS	#2,FTN$$LIST_ITEM	; FTN_LISTOUT
 90$:	MOVL	#SS$_NORMAL,R0
 	RET
+
+;
+; ITEM_NCA(context, desc): a class NCA item's elements, given to the statement
+; kind's module one at a time, in array element order, each by a class S
+; descriptor of its own, so the modules see what a section's element calls gave
+; them before: one call for the item in place of one for each element. Its own
+; routine, so that FTN$IO_ITEM's frame is what it was for every other item.
+;
+; It keeps, below FP, the element's class S descriptor and a count of what is
+; left of each dimension, the first (fastest) first:
+;
+ELEMENT_DESC	= -8			; the element's descriptor
+LEFT		= -8			; the counts go below it, LEFT-4*(i+1)
+
+ITEM_NCA:
+	.WORD	^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R2		; the context
+	MOVL	8(AP),R4		; R4 the descriptor, R5 the rank,
+	MOVZBL	DSC$B_DIMCT(R4),R5	;  R6 the element's address
+	BNEQ	5$
+	RET
+5$:
+	MOVL	DSC$A_POINTER(R4),R6
+	MOVZWL	DSC$W_LENGTH(R4),R0	; the elements' descriptor: their length
+	MOVZBL	DSC$B_DTYPE(R4),R1	;  and type, class S, and the address
+	ASHL	#16,R1,R1
+	BISL2	R1,R0
+	BISL2	#<DSC$K_CLASS_S@24>,R0
+	CLRL	-(SP)			; ELEMENT_DESC(FP)+4, its POINTER,
+	MOVL	R0,-(SP)		;  and ELEMENT_DESC(FP), the first longword
+	MOVAL	(SP),R3
+	;
+	; Each dimension's count starts at its extent; an empty one is no elements.
+	;
+	CLRL	R7			; dimension i
+25$:	MULL3	#8,R7,R0		; its bounds, past the strides
+	MOVAL	DSC$L_M1(R4)[R5],R1
+	ADDL2	R0,R1
+	SUBL3	(R1),4(R1),R0		; U - L + 1
+	INCL	R0
+	BGTR	27$
+	RET				; an empty dimension: no elements
+27$:	MOVL	R0,-(SP)		; LEFT-4*(i+1)(FP)
+	AOBLSS	R5,R7,25$
+	;
+	; Each element.
+	;
+30$:	MOVL	R6,DSC$A_POINTER(R3)
+	BSBW	PASS_ITEM
+	TSTL	CTX_STATUS(R2)
+	BEQL	32$
+	RET				; it failed: no more
+32$:	CLRL	R7
+35$:	ADDL2	DSC$L_M1(R4)[R7],R6	; the next along dimension i
+	MNEGL	R7,R0
+	DECL	LEFT-4(FP)[R0]
+	BGTR	30$
+	;
+	; Dimension i is done: back to its start, its count its extent again,
+	; and the next along dimension i+1.
+	;
+	MULL3	#8,R7,R0
+	MOVAL	DSC$L_M1(R4)[R5],R1
+	ADDL2	R0,R1
+	SUBL3	(R1),4(R1),R0
+	INCL	R0
+	MNEGL	R7,R1
+	MOVL	R0,LEFT-4(FP)[R1]
+	MULL2	DSC$L_M1(R4)[R7],R0
+	SUBL2	R0,R6
+	AOBLSS	R5,R7,35$
+90$:	RET
+
+;
+; PASS_ITEM: gives the item R3 describes to the module of the statement R2's
+; kind, as FTN$$FMT_ITEM(context, desc) and its like.
+;
+PASS_ITEM:
+	CMPB	CTX_KIND(R2),#K_WRITE_SF
+	BGTRU	10$
+	PUSHL	R3
+	PUSHL	R2
+	CALLS	#2,FTN$$FMT_ITEM	; FTN_FORMAT
+	RSB
+10$:	CMPB	CTX_KIND(R2),#K_READ_SU
+	BLSSU	15$
+	PUSHL	R3
+	PUSHL	R2
+	CALLS	#2,FTN$$UNF_ITEM	; FTN_UNFORMATTED
+	RSB
+15$:	CMPB	CTX_KIND(R2),#K_READ_SL
+	BNEQ	20$
+	PUSHL	R3
+	PUSHL	R2
+	CALLS	#2,FTN$$LISTIN_ITEM	; FTN_LISTIN
+	RSB
+20$:	CMPB	CTX_KIND(R2),#K_WRITE_SL
+	BNEQ	30$
+	PUSHL	R3
+	PUSHL	R2
+	CALLS	#2,FTN$$LIST_ITEM	; FTN_LISTOUT
+30$:	RSB
 
 ;
 ; FTN$IO_END()
