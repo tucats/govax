@@ -157,7 +157,7 @@ questions, and a progress log extended as that phase is worked.
 | 105 | [PHASE-105 - Fortran 90 derived types](PHASE-105%20-%20Fortran%2090%20derived%20types.md) | TYPE definitions on STRUCTURE's model, `%`, constructors, SEQUENCE, assignment, arguments and results, COMMON, I/O and NAMELIST of derived types — planned 2026-11-17; done 2026-11-18 |
 | 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17; done 2026-11-19 |
 | 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17; done 2026-11-19 |
-| 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17 |
+| 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17; done 2026-11-19 |
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17 |
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data — planned 2026-11-17 |
 | 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | A substantial Fortran 90 program in every mode, gfortran's witness, the optional VMS round, the documentation finished — planned 2026-11-17 |
@@ -1075,3 +1075,35 @@ is its target everywhere but where the program means the pointer itself.
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 32 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 108, intrinsic procedures.
+
+Phase 108 (done 2026-11-19) is the rest of the intrinsic procedures. Every one is a row of sema's
+one table, and each reference takes the cheapest of four forms its arguments allow: a constant
+(folded by the constant evaluator's code, so initialization expressions may call it), a few
+instructions in line, a call of FTNRTL, or a call of MTHRTL.
+
+- **The table and keywords** (`sema/intrinsics.go`, `intrinsickeys.go`, `intrinsicsub.go`): every
+  row's class and dummies (the standard's names, DEC's by the HP manual), `keywordSlots` one
+  ordering for functions and subroutines; the intrinsic subroutines' own table; MVBITS the
+  standard's and elemental; IBITS, IBCLR, and ISHFTC of I's kind under `/F90` only (the author's
+  answer 3); new names intrinsic under `/F90`, or by INTRINSIC.
+- **Character functions** (`sema/charfuncs.go`, `ir/lowercharfuncs.go`): LEN_TRIM, and SCAN and
+  VERIFY of one constant character, a loop in line; TRIM a substring of its argument, no storage;
+  ADJUSTL, ADJUSTR, REPEAT, SCAN, VERIFY, and INDEX with BACK FTNRTL's (BADREPEAT, FOR number
+  305); zero lengths as a run-time length of the constant 0 (the author's answer 7).
+- **Numbers**: CEILING, FLOOR, and MODULO in line (a REAL MODULO through MTHRTL's AMOD);
+  COMPLEX(16)'s ABS, SQRT, EXP, LOG, SIN, COS, and powers FTNRTL's over MTHRTL's H routines (the
+  author's answer 1); the model functions exact on each VAX format's fields, EXPONENT and FRACTION
+  in line, the rest FTNRTL's by format, an out-of-range result a real overflow.
+- **TRANSFER** (`sema/transfer.go`, `ir/lowertransfer.go`): bytes moved, never as MOLD's type, the
+  tail zero (the author's answer 5); folded of constants.
+- **Subroutines** (`sema/clocksubs.go`, `ftn_system.mar`): DATE_AND_TIME with
+  `SYS$TIMEZONE_DIFFERENTIAL` (`lnm/timezone.go`, the host's offset, the author's answer 4),
+  SYSTEM_CLOCK in hundredths, RANDOM_NUMBER on MTH$RANDOM with FTNRTL's seed, first 1234567, and
+  RANDOM_SEED (the author's answer 2). FTNRTL is at GSMATCH 1,30.
+- **Programs:** `testdata/fortran90`'s `keywords`, `charfns`, `numfns`, `model`, `transfer`,
+  `clockrand`, `textfmt`, and `calendar`, the same on gfortran (all 93 of the corpus); govax's own
+  `modelvms`, `transfervms`, and `clockvms`; FTNRTL's entries from MACRO by
+  `TestFTNRTLIntrinsics`.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 33 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 109, Fortran 90's I/O.

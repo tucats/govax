@@ -35,3 +35,24 @@
    (--system-file none, or one that can't be used), govax runs its
    built-in copy of STARTUP.COM instead.  See CONFIGURATION KEYS for the
    settings.
+
+2 Time_zone
+
+   govax's local time is the host's.  As it starts, it defines the
+   logical name SYS$TIMEZONE_DIFFERENTIAL in the system table, in
+   executive mode, as VMS V6 and later do: the local time's difference
+   from UTC, as a signed count of seconds east of Greenwich, from the
+   host's offset at that moment.  "-18000" is five hours west, US
+   Eastern standard time; an offset east of Greenwich has no "+".
+
+     $ SHOW LOGICAL SYS$TIMEZONE_DIFFERENTIAL
+        "SYS$TIMEZONE_DIFFERENTIAL" = "-18000" (LNM$SYSTEM_TABLE)
+
+   A change of the host's offset during a session (summer time) isn't
+   followed; redefine the name, or start govax again.  FORTRAN's
+   DATE_AND_TIME reads it through LNM$FILE_DEV for its ZONE and
+   VALUES(4), so a process may define its own:
+
+     $ DEFINE SYS$TIMEZONE_DIFFERENTIAL "3600"
+
+   Without a number there, DATE_AND_TIME's ZONE is blanks.

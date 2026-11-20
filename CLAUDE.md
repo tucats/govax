@@ -1319,6 +1319,32 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   and assignment's array operands, `operandsTo`, `definedValue`; ASSOCIATED of a
   pointer function's value, `pointerFunctionValue`); subtask 9 (2026-11-19) the
   close-out, FORTRAN-INTERNALS.md's section 32.
+  Phase 108 (done 2026-11-19; its Part A the survey, accepted by the author the
+  same day, "The author's answers"; its "Where things stand" is the follow-up list,
+  and PLAN.md summarizes it) is the rest of the intrinsic procedures, each a row of
+  sema's one table, each reference the cheapest of four forms: folded (the constant
+  evaluator's code, `constfuncs.go`), in line, FTNRTL, or MTHRTL. Subtask 2 is the
+  table's class and dummies columns (`readDummies`; `keywordSlots`, `dummiesOf`;
+  `iKindFunctions` under `/F90`; the intrinsic subroutines' table, `intrinsicsub.go`;
+  MVBITS elemental, `ir`'s `elementalCall`; FTN$BMVBITS, GSMATCH 1,26); 3 the
+  character functions (`sema/charfuncs.go`, `ir/lowercharfuncs.go`: LEN_TRIM and
+  one-character SCAN/VERIFY a loop in line, `search`; TRIM a substring; ADJUSTL,
+  ADJUSTR, REPEAT, SCAN, VERIFY, INDEX_BACK FTNRTL's, `madeByRoutine`; BADREPEAT, FOR
+  number 305; a declared zero length `Symbol.ZeroLength`, a run-time length of 0;
+  `emptySubstring`; GSMATCH 1,27); 4 CEILING, FLOOR, MODULO in line (`wholeNumber`,
+  `modulo`) and COMPLEX(16)'s functions and powers, `FTN$CHABS` to `FTN$CHPOW` over
+  MTHRTL's H routines (GSMATCH 1,28); 5 the model functions (`sema/model.go`,
+  `vaxfloat/model.go`, `ir/lowermodel.go`: EXPONENT and FRACTION in line, the rest
+  `FTN$SCALE_F` to `FTN$NEAREST_H`, R11 at a format's parameters; GSMATCH 1,29); 6
+  TRANSFER (`sema/transfer.go`, `ir/lowertransfer.go`: bytes into a temporary of the
+  result's size, `moveFilled`, `rawMove`, the tail zero); 7 the subroutines
+  (`sema/clocksubs.go`; `ftn_system.mar`'s DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_F to _H,
+  RANDOM_SEED, GSMATCH 1,30; `lnm/timezone.go`'s `SYS$TIMEZONE_DIFFERENTIAL`, the
+  host's offset in seconds, read through LNM$FILE_DEV; the first seed 1234567); 8
+  programs end to end (`testdata/fortran90`'s `textfmt`, `calendar`;
+  `internal/console`'s `TestFTNRTLIntrinsics`, every new FTNRTL entry from MACRO;
+  a constant's substring under `/F90`); 9 the close-out, FORTRAN-INTERNALS.md's
+  section 33 and HELP STARTUP TIME_ZONE.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

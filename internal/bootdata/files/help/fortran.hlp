@@ -189,7 +189,8 @@
    The intrinsic subroutines DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER,
    and RANDOM_SEED are there.  DATE_AND_TIME's zone is the logical
    name SYS$TIMEZONE_DIFFERENTIAL, seconds east of UTC, which govax
-   defines at startup from the host's.  SYSTEM_CLOCK counts hundredths
+   defines at startup from the host's (see STARTUP TIME_ZONE).
+   SYSTEM_CLOCK counts hundredths
    of a second (COUNT_RATE 100).  RANDOM_NUMBER draws with MTH$RANDOM,
    so a seed gives the same numbers on every host; RANDOM_SEED's seed
    is one integer (two for INTEGER*2), and CALL RANDOM_SEED() sets it
@@ -518,7 +519,9 @@
    or initial values for pointers.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
-   added.  A format written as a character constant may
+   added.  FTNRTL's formats have no ES or EN editing yet: one that
+   uses them ends its statement with %FOR-F-SYNERRFOR when the
+   program runs, so write E for now.  A format written as a character constant may
    hold "..." constants under /F90; one in a variable can't yet, and
    FTNRTL refuses it, %FOR-F-SYNERRFOR.
 

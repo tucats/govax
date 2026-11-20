@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), and pointers (section 32). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), pointers (section 32), and the rest of the intrinsic procedures (section 33). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -47,7 +47,8 @@ as values and the scalarizer; section 28 internal procedures, interfaces, and ho
 is resolved; section 29 descriptors, the stack and the heap, and the arrays they make
 possible; section 30 derived types; section 31 modules: what a module leaves behind for its
 users, how a USE reads it, and how separately compiled pieces are kept in step; section 32
-pointers, and the TARGET attribute that lets the optimizer reason about them.
+pointers, and the TARGET attribute that lets the optimizer reason about them; section 33
+the intrinsic procedures: one table, and how each reference chooses its form.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -5005,3 +5006,343 @@ value, and ASSOCIATED of a pointer function's value. Each is held by a test of i
 What waits: `/CHECK=POINTERS` and the debugger's EXAMINE of a pointer (Phase 110); a whole array
 pointer in an I/O list by its descriptor (Phase 109); `NULL()` and default initialization (Phase
 112); a CHARACTER pointer whose length is known only when the program runs.
+
+## 33. Fortran 90: the intrinsic procedures (Phase 108)
+
+VAX FORTRAN had about 160 intrinsic function names, nearly all of them one idea in several
+types: SQRT of a REAL\*4 is `MTH$SQRT`, of a REAL\*8 `MTH$DSQRT`, and a reference picks its
+row by its argument's type (section 11). Fortran 90 adds about sixty more names of a different
+kind. Some are trivial (`ACHAR` is `CHAR`), some are a loop (`LEN_TRIM`), some make a value of a
+length nobody knows until the program runs (`TRIM`, `REPEAT`), some are about a number's bits
+rather than its value (`EXPONENT`, `NEAREST`, `TRANSFER`), and four are subroutines that read
+the clock and draw random numbers. Every one may be given its arguments by keyword, and every
+elemental one works on arrays. The compiler's question for each reference is the same as
+before, *how should this be computed?*, but the answers now range from "it is a constant" to
+"it is a call that gives the program memory", and choosing well is most of the work.
+
+The section follows a short program:
+
+```fortran
+program tour
+  character(len=12) :: name = 'Ada   '
+  character(len=12) :: right
+  integer :: n, k
+  real :: x
+  n = len_trim(name)
+  print *, '[', trim(name), ']', n
+  right = adjustr(name)
+  print *, '[', right, ']'
+  x = 6.5
+  k = ceiling(x) + exponent(x)
+  print *, k, transfer(x, 0)
+end program tour
+```
+
+```text
+[Ada]           3
+[         Ada]
+         10       16848
+```
+
+6.5 is 0.8125 × 2\*\*3, so its EXPONENT is 3 and its CEILING 7; 16848 is ^X41D0, F_floating's
+6.5 read as an integer. Every compiled listing below is govax's own `/OPTIMIZE` output.
+
+### One table, read three ways
+
+Section 11's table (`sema/intrinsics.go`) is still the whole story: Fortran 90's names are more
+rows, in `fortran90Table`, not more code paths. A row now has eight columns:
+
+```text
+-      INDEX    2,3 CH  I4  INDEX  E STRING,SUBSTRING,BACK?
+ISHFTC JISHFTC  2,3 I4  I4  SHIFTC E I,SHIFT,SIZE?
+TRIM               -  1   CH  CH  TRIM T STRING
+SCALE              -  2   *   *   MODEL E X,I
+TRANSFER           -  2,3 *   *   TRANSFER T SOURCE[*],MOLD[*],SIZE?
+```
+
+The generic and specific names, the argument count, the types, and *how* are section 11's. The
+seventh column is the standard's class (E elemental, I inquiry, T transformational), and the
+eighth the dummy arguments' names, the standard's 13.13 for its functions and the HP Fortran
+manual's for DEC's (`SIND (X)`, `ZEXT (X)`). `?` marks an optional dummy, `...` after MAX's `A2`
+says more follow by position only, and a rank in brackets says what a transformational
+function's dummy takes (`MATRIX[2]`, `ARRAY[]` any array, `SOURCE[*]` anything). The table is
+read three ways:
+
+- **to type a reference**: the arguments' types pick a row, as before;
+- **to order keyword arguments**: `keywordSlots` (`intrinsickeys.go`) puts `IAND (J = 3, I =
+  5)` into the dummies' order, with a hole for an optional one left out. Phase 103 wrote the
+  same logic for a program's own procedures with an explicit interface; an intrinsic's
+  interface is its row. A specific name takes its generic's dummies (`dummiesOf`);
+- **to resolve a generic name that extends an intrinsic** (section 28): the ranks in the eighth
+  column tell `takenByIntrinsic` whether a program's specific `SUM` of a scalar can be told
+  apart from the intrinsic `SUM` of an array.
+
+The four intrinsic subroutines and MVBITS have a small table of their own (`intrinsicsub.go`),
+read by the same `keywordSlots`: `CALL DATE_AND_TIME (VALUES = V)` becomes a call with three null
+arguments and V fourth, and no explicit interface is asked for, since the table is one.
+
+Names only Fortran 90 has are intrinsic under `/F90` and, under `/NOF90`, only when an
+INTRINSIC statement names them: an old program with its own function called `TRIM` keeps it
+(`TestNoF90Unchanged`). Where VAX FORTRAN and the standard disagree on a result, the setting
+decides: IBITS, IBCLR, and ISHFTC of an INTEGER\*2 are INTEGER\*4 by the 1988 manual and of I's
+own kind by the standard, so `iKindFunctions` converts the other arguments to I's kind before a
+row is chosen under `/F90` only.
+
+### Four ways to compute an intrinsic
+
+Each row's *how* names one of four forms, and a reference may take a cheaper one than its row
+when its arguments allow:
+
+1. **A constant.** When every argument is constant the reference is folded, by the same Go code
+   the constant evaluator uses (`constfuncs.go`), so a PARAMETER, a type statement's initial
+   value, a DATA value, or a declared length may call it: `PARAMETER (N = LEN_TRIM (TITLE))`,
+   `CHARACTER (LEN = 3) :: RULE = REPEAT ('-', 3)`. The standard's 7.1.6.1 says which functions an
+   initialization expression may call; the folding is the same code in an executable statement,
+   so `LEN_TRIM ('AB  ')` there is the constant 2.
+2. **In line**, when a few instructions do it. `LEN_TRIM` is a backward loop (the VAX has no
+   SKPC that runs from the end), `CEILING` a truncation and a correction, `EXPONENT` an EXTZV.
+3. **A call of FTNRTL**, when the work is a real loop, needs memory, or must signal: `ADJUSTL`,
+   `REPEAT`, `SCAN` of a set, `NEAREST`, `DATE_AND_TIME`. FTNRTL's new routines are MACRO, like
+   the rest of it (section 14), and its transfer vector grew from GSMATCH 1,25 to 1,30.
+4. **A call of MTHRTL**, for a numeric function MTHRTL already has: a REAL `MODULO` is
+   `MTH$AMOD` (or its kind) and a correction. MTHRTL's vector is VMS's, so a function it lacks
+   (COMPLEX(16)'s SQRT, the model functions) is FTNRTL's, built on MTHRTL's H_floating routines:
+   `FTN$CHEXP` is `MTH$HEXP` and `MTH$HSINCOS`.
+
+`LEN_TRIM` in line is the program's line 6, the string's address in `$T1` and the length
+counting down in R6 until it reaches 0 or a character that isn't a blank:
+
+```text
+;    6    n = len_trim(name)
+	MOVAB	TOUR.NAME,TOUR.$T1
+	MOVL	#12,R6
+	BRB	TOUR.$1
+TOUR.$2:
+	SUBL3	#1,R6,R0
+	CMPB	@TOUR.$T1[R0],#32
+	BNEQ	TOUR.$3
+	DECL	R6
+TOUR.$1:
+	TSTL	R6			; from line 6
+	BNEQ	TOUR.$2
+TOUR.$3:
+	MOVL	R6,TOUR.N
+```
+
+The loop is `ir/lowercharfuncs.go`'s `search`, one routine for LEN_TRIM and for SCAN and VERIFY
+of a one-character constant SET in either direction: they differ only in the character compared,
+whether a match or a mismatch stops the loop, and which end it starts from.
+
+Line 11 shows something about forms that matters to the optimizer. CEILING is written as
+ordinary IR (a conversion to a longword, a comparison, an add), and EXPONENT reads X's bytes from
+memory. In the main program, where forwarding (section 16) knows X is 6.5, the first is folded and
+the second isn't:
+
+```text
+;   11    k = ceiling(x) + exponent(x)
+	MOVL	#7,TOUR.$T3
+	MOVL	#^X000041D0,TOUR.$T5	; 6.5
+	EXTZV	#7,#8,TOUR.$T5,R0
+	MOVL	R0,TOUR.$T1
+	BEQL	TOUR.$11
+	SUBL2	#128,TOUR.$T1
+TOUR.$11:
+	ADDL3	TOUR.$T1,#7,TOUR.K
+```
+
+In a subroutine, where X is a dummy, both are code:
+
+```text
+;    4    k = ceiling(x) + exponent(x)
+	CVTFL	@WHOLE.X(AP),R6
+	CVTLF	R6,R0
+	CMPF	@WHOLE.X(AP),R0
+	BLEQ	WHOLE.$1
+	INCL	R6
+WHOLE.$1:
+	MOVF	@WHOLE.X(AP),WHOLE.$T2
+	EXTZV	#7,#8,WHOLE.$T2,R0
+	MOVL	R0,R7
+	BEQL	WHOLE.$3
+	SUBL2	#128,R7
+WHOLE.$3:
+	ADDL3	R6,R7,@WHOLE.K(AP)
+```
+
+`CVTFL` truncates toward zero; if the result made a REAL again is below X, X had a fraction and
+was positive, so 1 is added. (A value too large to have a fraction converts back exactly, so the
+test is safe at every magnitude a longword holds.) EXPONENT is the exponent field, bits 7 to 14 of
+F_floating's first word, less the bias 128, with 0 left alone: the VAX's 0 is the one value whose
+field is 0. An operation the optimizer can see through can be folded, moved out of a loop, and
+shared; one that goes through memory, or calls a routine, usually can't. That is a reason to
+prefer IR operations when an intrinsic is cheap enough to write in them.
+
+### TRIM needs no storage
+
+`TRIM (S)` is a value of a length known only when the program runs. Phase 104 already had such
+values (section 29): concatenation of them makes a class D dynamic string, with memory from
+LIB$SGET1_DD freed at the statement's end. TRIM could be done that way, but it needn't be. `TRIM
+(S)` *is* `S (1 : LEN_TRIM (S))`, a substring, and everything that takes a CHARACTER value
+already takes a substring of run-time length: assignment, concatenation, comparison, an I/O item,
+an actual argument by descriptor. So lowering makes TRIM the argument's own text with LEN_TRIM's
+length, and no bytes move. Line 7's I/O item is the descriptor `$D2` filled in from the loop's
+count and NAME's address:
+
+```text
+	CVTLW	TOUR.$T3,TOUR.$D2
+	MOVAB	(R6),TOUR.$D2+4
+	PUSHAQ	TOUR.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+```
+
+ADJUSTL and ADJUSTR can't be done in place, since they move the blanks, but their result is the
+argument's length, so lowering gives them a `$Tn` temporary of that length when it is known
+(`madeByRoutine`) and FTNRTL writes into it:
+
+```text
+;    8    right = adjustr(name)
+	PUSHAQ	TOUR.$D6
+	PUSHAQ	TOUR.$D5
+	CALLS	#2,G^FTN$ADJUSTR
+	MOVC3	#12,TOUR.$T4,TOUR.RIGHT
+```
+
+REPEAT's length is `LEN (S) × N`, which is known when compiling only if both are constants. When
+it isn't, the caller passes an empty class D descriptor and `FTN$REPEAT` gets the storage itself,
+after checking N: a negative count, or a value past a descriptor's 65,535 characters, is a
+condition of govax's own, `%FOR-F-BADREPEAT`, FOR number 305. The descriptor is freed at the
+statement's end, as concatenation's are.
+
+### A length of zero
+
+Fortran 90 allows `CHARACTER (LEN = 0)`, and TRIM of blanks and `REPEAT (S, 0)` make zero lengths
+when running. The second kind needed no work: MOVC3, CMPC5, descriptors, LIB$SGET1_DD, and
+FTNRTL's I/O all take a length of 0. The first needed a decision, because inside sema a CHARACTER
+type of size 0 already meant "a length not known when compiling" (a passed-length dummy, a
+substring with variable bounds). Rather than add a third state beside "known" and "not known
+yet", a declared length of zero is a length *known only when running* whose expression happens to
+be the constant 0 (`Symbol.ZeroLength`, Phase 104's `LengthExpr`): every path that handles
+run-time lengths handles it, and it has no storage. A substring whose upper bound is below its
+lower is empty under `/F90` (`emptySubstring`), and `/CHECK=BOUNDS` checks a substring's bounds
+only when it isn't empty, as the standard says; under `/NOF90` both are still errors, as in VAX
+FORTRAN.
+
+### The model functions are about bits
+
+The standard describes a real number by a model, `s × 0.f1f2...fp × b**e`. Most processors'
+formats only approximate it (IEEE's denormals and infinities don't fit). The VAX's formats fit it
+exactly (`vaxfloat/model.go`): b is 2, the hidden bit is f1, e is the exponent field less the bias
+(128 for F and D, 1024 for G, 16384 for H), p is 24, 56, 53, or 113, and there is nothing below
+TINY and nothing above HUGE. So every model function is an exact change to a value's fields:
+EXPONENT reads the field, FRACTION replaces it with the bias, SCALE adds to it, NEAREST adds 1 to
+or takes 1 from the bits below the sign as one whole number.
+
+EXPONENT and FRACTION are short enough for line. The other five are FTNRTL routines, one entry
+per format (`FTN$SCALE_F`, `_D`, `_G`, `_H`, and so on: twenty entries), and the four entries of
+a function share its code: each points R11 at its format's parameters and branches to it.
+
+```text
+	.ENTRY	FTN$NEAREST_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	NEAREST
+	...
+FORMAT_F:
+	.LONG	7,8,128,255,24,1	; field position, size, bias, largest field,
+FORMAT_D:				; digits, longwords
+	.LONG	7,8,128,255,56,2
+FORMAT_G:
+	.LONG	4,11,1024,2047,53,2
+FORMAT_H:
+	.LONG	0,15,16384,32767,113,4
+```
+
+The code works on X's longwords copied as integers, never with a floating instruction, so a
+reserved operand can't fault inside the routine. A result past HUGE has to be an overflow the
+program can see, and the simplest honest way to make one is to do arithmetic that overflows: the
+routine builds the largest exponent with X's sign and doubles it with a MULx, so a handler sees
+`SS$_FLTOVF_F` exactly as from any instruction. A result below TINY is 0, as the VAX's own
+underflow is with FU clear. One more thing about the VAX's words: a floating value's longwords
+have their halves swapped (the sign and exponent are in the first *word*), so NEAREST's carry runs
+from word to word, most significant first, with INCW and DECW, rather than as a longword add.
+
+Because a REAL\*8 is D or G by the unit (`/G_FLOATING`), the D answers have 56 digits where an
+IEEE machine's have 53: `SPACING (3D0)` is 2\*\*-54 under D and 2\*\*-51 under G. gfortran is the
+witness for REAL\*4 and G only.
+
+### TRANSFER moves bytes, not values
+
+`TRANSFER (SOURCE, MOLD)` is SOURCE's bytes seen as MOLD's type. The compiler's job is to never
+look at the bytes *as* anything. The value is a temporary of the result's size: SOURCE's leading
+bytes are moved in and the rest cleared (`moveFilled`: MOVC3 and a CLRx when the lengths are
+small constants, LIBRTL's `OTS$MOVE5` with a fill of 0 when they aren't), and the temporary is
+then read as MOLD's type. The standard leaves the tail undefined; govax makes it zero. In the tour,
+`TRANSFER (X, 0)` is two MOVLs:
+
+```text
+	MOVL	TOUR.X,TOUR.$T5
+	MOVL	TOUR.$T5,TOUR.$T1
+```
+
+A REAL is moved with MOVL, not MOVF, so bits that are a reserved operand in MOLD's format pass
+through TRANSFER, and through an assignment of it to a REAL variable (`rawMove`), without a fault.
+A later computation with them faults, as on any VAX. Of constants TRANSFER is folded from
+vaxfloat's bits (`transferValue`), so it may give a PARAMETER its value.
+
+### The clock and random numbers
+
+The four subroutines are calls of FTNRTL, each with a `_W` form for INTEGER\*2 arguments:
+
+- **DATE_AND_TIME** writes the date and time from `$NUMTIM` (milliseconds are hundredths × 10)
+  and takes the zone from the logical name `SYS$TIMEZONE_DIFFERENTIAL`, as VMS V6 and later
+  define it: a signed count of seconds east of UTC, `"-18000"` for US Eastern standard time (the
+  author's check on VMS 7.1). govax defines it in the system table as the logical name database
+  is made, from the host's offset (`lnm/timezone.go`), and FTNRTL translates it through
+  LNM$FILE_DEV, so a process may define its own. Without a number there, ZONE is blanks and
+  VALUES(4) -HUGE.
+- **SYSTEM_CLOCK** counts the system time's hundredths (rate 100). `$GETTIM`'s 64-bit count of
+  100 ns units is divided by 100,000 in two EDIVs, the high half first, so the quotient fits a
+  longword.
+- **RANDOM_NUMBER** draws with MTHRTL's `MTH$RANDOM` on a longword seed FTNRTL keeps, so the
+  sequence is the same on every host and `vax.runtime.random` reaches it as it reaches RAN. One
+  draw has 24 bits, enough for F. D and G join three draws and H five, by Horner's rule from the
+  last, the last cut to the bits the format has left: each step is exact, so no number rounds up
+  to 1.0, which the standard forbids.
+- **RANDOM_SEED**'s seed is that one longword, N = 1 (2 for INTEGER\*2, its two words). Every image
+  starts at 1234567, govax's choice: the manuals suggest none, the 1988 manual's RAN asking only
+  for "a large, odd integer value". `CALL RANDOM_SEED ()` sets it back.
+
+MVBITS, VAX FORTRAN's already, became the standard's: FROM any integer expression, and
+*elemental*, so `CALL MVBITS (A, 0, 4, B, 4)` with arrays is a loop nest calling `FTN$JMVBITS` per
+element in array element order (`elementalCall`, the scalarizer's loops around a CALL).
+
+### What the programs found
+
+`testdata/fortran90` has a program per subtask, each worked by hand, run in every mode, and the
+same on gfortran (`compare.py`): `keywords.f90`, `charfns.f90`, `numfns.f90`, `model.f90`,
+`transfer.f90`, and `clockrand.f90` (only what any processor must print: the seed's size, a
+sequence repeated after PUT, a count that doesn't go backward); and govax's own answers in
+`modelvms.f90` (TINY and HUGE in each format, every overflow caught), `transfervms.f90` (the VAX's
+bits, the zero tail, a reserved operand through and back), and `clockvms.f90` (the generator's
+numbers worked from its formula, a zone set by LIB$SET_LOGICAL). The programs end to end are
+`textfmt.f90`, a text formatter built from INDEX, VERIFY, SCAN, ADJUSTR, REPEAT, and ACHAR, and
+`calendar.f90`, day numbers by MODULO, weeks by CEILING, dates packed by MVBITS and turned by
+ISHFTC. Over the whole Fortran 90 corpus, gfortran and govax print the same in all 93 programs.
+
+FTNRTL's 45 new entries are also called directly from MACRO by `TestFTNRTLIntrinsics`
+(`internal/console`), at the edges the compiler never reaches: zero lengths, ±TINY and ±HUGE in
+every format, (0, 0)\*\*0, a seed put as two words. Each expected value was worked from the formats
+by hand. Two of those hand values were wrong (H's SPACING and RRSPACING of 1.0: the bias is 16,384,
+so 1.0's field is 16,385), and the routines were right. Checking an answer against the formats from
+first principles, rather than against a run of the code, is what makes such a test worth having.
+
+Along the way the work found older seams: ISHFT of an INTEGER(1) sign-extended where it should
+zero-extend to the word it is shifted in; the constant pool's key left out a COMPLEX\*32's
+imaginary half, so `(0.0_16, 0.5_16)` and `(0.0_16, 1.0_16)` shared one datum; and a substring of a
+constant (`MONTHS(11)(1:8)`), which the standard allows and sema refused. Each is held by a test of
+its own.
+
+What waits: ES and EN editing in FTNRTL's formats (Phase 109); `/STANDARD`'s judgment of the new
+names and the debugger's EXAMINE of their values (Phase 110); Fortran 95's additions, CEILING's and
+FLOOR's KIND, NULL, and CPU_TIME (Phase 112). Not there, and in no phase yet: a BACK= that is an array, a TRANSFER to
+a CHARACTER MOLD of zero or run-time length, and a component or function value of length zero, each
+`%FORT-E-NOTIMPL`, named.

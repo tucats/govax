@@ -1,8 +1,9 @@
 # Phase 108 — Fortran 90: the intrinsic procedures
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey (Part A), done 2026-11-19 and accepted by the
-author the same day ("The author's answers").
+**Status:** done 2026-11-19. Planned 2026-11-17 with Phase 99 (`PHASE-99 -
+Fortran 90.md`, Part C). Subtask 1, the survey (Part A), done 2026-11-19 and
+accepted by the author the same day ("The author's answers"); subtasks 2 to 9
+done 2026-11-19. "Where things stand", at the end, is what the phase left.
 
 ## Goal
 
@@ -363,7 +364,8 @@ gfortran 16.2, `-std=f95`, the witness. There is no VMS probe: no VAX Fortran 90
    times, and D's model (finding 12) (done 2026-11-19).
 9. **Close-out**: FORTRAN-INTERNALS.md (a section on the intrinsic table, how each
    form is chosen, TRIM as a substring), MANUAL.md's 14.13, its FTNRTL table and
-   Appendix B, HELP FORTRAN, HELP's `SYS$TIMEZONE_DIFFERENTIAL`.
+   Appendix B, HELP FORTRAN, HELP's `SYS$TIMEZONE_DIFFERENTIAL` (done
+   2026-11-19).
 
 ## A.5 Questions for the author
 
@@ -702,3 +704,45 @@ The author read the survey and accepted every recommendation:
   SYNERRFOR at run time (a character constant's format isn't checked when compiling, as VAX
   FORTRAN's isn't); `calendar.f90` uses E instead. gfortran's witness over the whole Fortran 90
   corpus: all 93 programs the same.
+- **2026-11-19:** Subtask 9, the close-out. FORTRAN-INTERNALS.md's section 33, "Fortran 90: the
+  intrinsic procedures", follows a short program through the phase: the table's eight columns and
+  the three ways it is read (typing, `keywordSlots`, generic resolution), the four forms a reference
+  may take and how one is chosen, LEN_TRIM's loop, CEILING and EXPONENT side by side (the first
+  ordinary IR, which forwarding folds, the second through memory, which it doesn't), TRIM as a
+  substring needing no storage, ADJUSTR into a temporary and REPEAT's class D, a declared zero
+  length as a run-time length of 0, the model functions on the VAX formats' fields with FTNRTL's
+  per-format entries, TRANSFER as bytes, the four subroutines, and what the programs found; its
+  MACRO is govax's own `/OPTIMIZE` output. MANUAL.md's 14.13 names the intrinsic procedures in its
+  introduction, and its list of what isn't there loses "Fortran 90's other new intrinsic functions"
+  for what of them is still missing (an array BACK, TRANSFER to a CHARACTER MOLD of zero or run-time
+  length, a zero-length component or function value, COMPLEX(16) in SUM and the like and in I/O,
+  ES and EN editing); Appendix B has a paragraph on FTNRTL, pointing at 14.6's table. HELP STARTUP
+  has a TIME_ZONE topic for `SYS$TIMEZONE_DIFFERENTIAL` (its example checked on govax), which HELP
+  FORTRAN points to, and HELP FORTRAN says ES and EN aren't there; the help library rebuilt (`go
+  generate ./internal/bootdata`). PLAN.md and CLAUDE.md summarize the phase. Noticed, not changed:
+  EXPONENT and FRACTION store X in their temporary with MOVF, so a reserved operand faults there
+  where the FTNRTL model routines never do (any other use of such an X faults too).
+
+## Where things stand
+
+Phase 108 is done. What it left, and where each goes:
+
+- **Phase 109:** ES and EN editing in FTNRTL's format interpreter (today SYNERRFOR at run time;
+  `calendar.f90` uses E); COMPLEX(16) in I/O lists.
+- **Phase 110:** `/STANDARD=F90`'s judgment of the new names and forms (a REAL argument to
+  CEILING, FLOOR, or MODULO in a PARAMETER, which VAX FORTRAN's rules allow and the standard's
+  7.1.6.1 doesn't); the debugger's EXAMINE of their values.
+- **Phase 112:** Fortran 95's additions: CEILING's and FLOOR's KIND, MAXLOC's and MINLOC's DIM,
+  NULL, CPU_TIME.
+- **Not planned, ours (NOTIMPL, named):** a BACK= that is an array; TRANSFER to a CHARACTER MOLD of
+  zero or run-time length, or of a CHARACTER array SOURCE of a run-time length that isn't a name's
+  or a section's; a derived type's component, or a function's value, of length zero; SUM,
+  PRODUCT, and the other functions with COMPLEX rows but not COMPLEX(16)'s, of a COMPLEX(16).
+- **Noticed, not changed:** EXPONENT and FRACTION move X with MOVF into their temporary, so a
+  reserved operand faults there; TRANSFER to a derived type is computed when running even of
+  constants, so it can't give a PARAMETER its value.
+- **Unconfirmed choices of ours:** the first seed, 1234567; a positive
+  `SYS$TIMEZONE_DIFFERENTIAL` without a `+`; DATE_AND_TIME reading the name through LNM$FILE_DEV
+  rather than the system table alone; SELECTED_INT_KIND and SELECTED_REAL_KIND of values reading
+  an argument once per comparison; a reserved operand's bits folded into a constant expression as
+  0; INTEGER\*2 arguments to the four subroutines under either `/I4` setting.

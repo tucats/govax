@@ -8318,9 +8318,11 @@ values (sections, array expressions and assignment, constructors, WHERE, and the
 functions), with internal procedures, interface blocks, and keyword, optional, and generic
 arguments, with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
 array-valued functions, and the transformational functions), with derived types, with
-modules, compiled together or apart, and with pointers (scalar, CHARACTER, and array pointers,
-pointer components, dummies, and results); everything else Fortran 90
-adds is recognized and reported as not yet implemented.
+modules, compiled together or apart, with pointers (scalar, CHARACTER, and array pointers,
+pointer components, dummies, and results), and with the rest of the standard's intrinsic
+procedures (the character, numeric, model, and bit functions, TRANSFER, and the subroutines
+for the clock and random numbers); everything else Fortran 90 adds is recognized and reported
+as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -9913,9 +9915,14 @@ which are still INCLUDE's. A fixed-form `/NOF90` unit may use a module, but VAX 
 `A.B.C` as a field, so it can't use a module's defined operators. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
 gives no elements but govax still calls `BOUNDORDER`; a CHARACTER constructor whose first value's length is known only when the program
 runs and isn't a variable's, an array's, or a concatenation of them; sections of arrays of
-records; and a section as an internal file or ENCODE's buffer. Fortran 90's other new
-intrinsic functions aren't there yet; under `/F90` their names are still taken as a program's
-own. A format written as a character constant may hold `"..."` constants under `/F90`
+records; and a section as an internal file or ENCODE's buffer. Of the intrinsic procedures,
+these are not there yet: a `BACK=` that is an array; `TRANSFER` to a `CHARACTER` `MOLD` of a
+length of zero or of one known only when the program runs; a derived type's component, or a
+function's value, of length zero; and `COMPLEX(16)` arguments to the functions not named above
+(`SUM`, `PRODUCT`, and the like) and in I/O lists. FTNRTL's formats have no `ES` or `EN` editing
+yet: a format that uses them ends its statement with `%FOR-F-SYNERRFOR` when the program runs
+(the compiler doesn't check a format written as a character constant, as VAX FORTRAN doesn't),
+so write `E` for now. A format written as a character constant may hold `"..."` constants under `/F90`
 (`WRITE (*, '("Total:", I5)') N`): the compiler gives them to FTNRTL between apostrophes, as
 it does a FORMAT statement's. A format in a variable, known only at run time, can't yet:
 FTNRTL refuses it with `%FOR-F-SYNERRFOR`, as VMS's run-time library does. Write that one
@@ -10060,6 +10067,16 @@ the result in the mechanism array's R0 and R1, as the manual says. One differenc
 routine goes on from there, and some then fault on the reserved operand they were given, or
 store the corrected value in an H result. govax's return to the caller with what the signal
 left.
+
+#### The FORTRAN run-time library
+
+FTNRTL.EXE, which compiled FORTRAN programs call, is govax's own, written in MACRO-32 rather
+than Go, and any program may call it too: its routines, from I/O statements to the Fortran 90
+intrinsic procedures MTHRTL hasn't (`FTN$ADJUSTL`, `FTN$REPEAT`, `FTN$SCAN`, the `COMPLEX(16)`
+functions `FTN$CHABS` to `FTN$CHPOW`, the model functions `FTN$SCALE_F` to `FTN$NEAREST_H`,
+`FTN$DATE_AND_TIME`, `FTN$SYSTEM_CLOCK`, `FTN$RANDOM_F` to `_H`, and `FTN$RANDOM_SEED`), are in
+the table in [section 14.6](#146-ftnrtl-the-run-time-library). VMS's FORTRAN run-time library,
+FORRTL, isn't provided.
 
 ### Appendix C: Where govax differs from VMS
 
