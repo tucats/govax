@@ -7229,14 +7229,15 @@ It has these routines, which MACRO programs can call too:
 | `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array or array pointer: gives its memory to `LIB$FREE_VM` and clears POINTER. With flag bit 1, a pointer's, the descriptor must describe the whole of a block `FTN$ALLOCATE` or `FTN$ALLOC_SCALAR` made for a pointer, in order. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC`; for a pointer's target that isn't such a block, 304, or `%FOR-F-BADDEALLOC` (govax's own) |
 | `FTN$ALLOC_SCALAR(cell, flags, size)` | Fortran 90's ALLOCATE of a scalar pointer: `cell` is the longword that holds its target's address (a CHARACTER pointer's descriptor's POINTER), `flags` `FTN$ALLOCATE`'s (bit 1 always set), `size` the target's size in bytes, by value. Takes the memory as `FTN$ALLOCATE` does for a pointer, and stores its address in `cell`. Returns 0 in R0, or 41 or `%FOR-F-INSVIRMEM` |
 | `FTN$DEALLOC_SCALAR(cell, flags, size)` | Fortran 90's DEALLOCATE of a scalar pointer: the target at the address in `cell` must be a block made for a pointer, of `size` bytes; gives it back and clears `cell`. Returns 0 in R0; otherwise as `FTN$DEALLOCATE` for a pointer (302, `%FOR-F-NOTALLOC`; 304, `%FOR-F-BADDEALLOC`) |
-| `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
+| `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format, bit 4 a statement of a unit compiled `/F90` (Fortran 90's reading of formats, blanks, padding, and list-directed and namelist text), bit 5 nonadvancing (`ADVANCE='NO'`), bit 6 EOR=, bit 7 an ADVANCE= neither YES nor NO, which fails the statement with `BADADVANCE`; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
 | `FTN$ENCODE(icb, buffer, format, count)`, `FTN$DECODE(icb, buffer, format, count)` | Start ENCODE or DECODE: one record of `count` characters (a longword, by value; negative is 0) at the address `buffer` |
 | `FTN$READ_SN(icb, unit, group)`, `FTN$WRITE_SN(icb, unit, group)` | A whole namelist READ or WRITE (it has no items; `FTN$IO_END` ends it): `group` is the group's block, the address of its name (a counted string, in capitals), a longword of how many entities, and for each the addresses of its name and of its descriptor (class S, or class A for an array; for an object of a derived type a class Z header whose length is how many entities follow and whose pointer is 0 or its shape, then its components', class NCA under an array of a type) |
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler once called them, kept for programs linked then |
-| `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
-| `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
+| `FTN$ADVANCE(text)` | ADVANCE='s value when only the program knows it: 0 in R0 for YES, 1 for NO, 2 for anything else, its case and trailing blanks ignored. The compiler then makes one of three begin calls, the last with bit 7 of its control block |
+| `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S), a whole array (class A), or a section or strided array (class NCA, its elements in array element order) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), `COMPLEX*32` (`HC`), or text (`T`) |
+| `FTN$IO_END([size])` | Ends the statement, writing its last record (a nonadvancing statement's is left open in the unit), and returns its status in R0: 0, -1 at an end of file, -2 at an end of record, or the error's FOR number; signals the error if the control block names none of ERR=, END=, EOR=, and IOSTAT=. A nonadvancing READ with SIZE= passes the address of a longword, where the count of characters taken from the record is stored |
 | `FTN$READ_SU(icb, unit)`, `FTN$WRITE_SU(icb, unit)` | Start an unformatted sequential READ or WRITE |
 | `FTN$READ_DF(icb, unit, format, rec)`, `FTN$WRITE_DF`, `FTN$READ_DU(icb, unit, rec)`, `FTN$WRITE_DU` | Start a direct access READ or WRITE of record `rec` (by value), formatted or unformatted |
 | `FTN$RAB(unit)` | The address of a connected unit's RAB in R0, or 0: `unit` by reference |
@@ -9132,6 +9133,35 @@ distance   3.0  2  1
 How a host is reached, how OPTIONAL arguments are passed, and how a generic reference is
 resolved are in FORTRAN-INTERNALS.md's section 28.
 
+**Edit descriptors** (the standard's 10.5). A format may have Fortran 90's B, EN, and ES:
+`Bw` and `Bw.m` edit an integer in binary as O and Z do in octal and hexadecimal; `ESw.d[Ee]` is
+scientific notation, one digit before the point, and `ENw.d[Ee]` engineering notation, an
+exponent that is a multiple of 3 and one to three digits before the point, both ignoring the
+scale factor and reading as F does. G edits an INTEGER, LOGICAL, or CHARACTER item as Iw, Lw, or
+Aw, `d` not used, as well as a REAL. `r/` ends `r` records. So
+
+```fortran
+write (*, '(1x, es10.3, en12.3, b8.8)') 12345.6, 12345.6, 37
+write (*, '(1x, "|", g6.1, "|", g3.1, "|", g8.1, "|")') 42, .true., 'ABC'
+```
+
+prints
+
+```text
+ 1.235E+04  12.346E+0300100101
+|    42|  T|     ABC|
+```
+
+These, and quotation marks around a format's text, are read in a `/F90` unit's FORMAT
+statements and in its statements' formats, constant or held in a variable (which FTNRTL reads
+when the program runs). A VAX FORTRAN unit's run-time format refuses them, as VMS's FORRTL
+does, and an old program's FORMAT statements are read as before. A `/F90` unit's statements
+also take the standard's BLANK='NULL' for an internal file and a unit no OPEN described, so a
+blank in a number read there is nothing (`'12 3'` by I5 is 123, and 12030 after BZ), where VAX
+FORTRAN's default, which its statements keep, is ZERO. How FTNRTL tells the two kinds of
+statement apart, and how a nonadvancing record (below) is kept, are in FORTRAN-INTERNALS.md's
+section 34.
+
 **OPEN and INQUIRE's new specifiers** (the standard's 9.3.4 and 9.6). OPEN takes
 `ACTION=` (`'READ'`, `'WRITE'`, or `'READWRITE'`, the default), `POSITION=` (`'ASIS'`, the
 default, `'REWIND'`, or `'APPEND'`), `DELIM=` (`'APOSTROPHE'`, `'QUOTE'`, or `'NONE'`, the
@@ -10054,7 +10084,11 @@ records. Of the intrinsic procedures,
 these are not there yet: a `BACK=` that is an array; `TRANSFER` to a `CHARACTER` `MOLD` of a
 length of zero or of one known only when the program runs; a derived type's component, or a
 function's value, of length zero; and `COMPLEX(16)` arguments to the functions not named above
-(`SUM`, `PRODUCT`, and the like).
+(`SUM`, `PRODUCT`, and the like). Of I/O, every Fortran 90 statement and
+specifier is there; a NAMELIST object deeper than 8 levels of arrays and derived types, or with
+more than 15 dimensions in all, is `%FORT-E-NOTIMPL` (FTNRTL's limits), and Fortran 95's zero
+widths (`I0`, `F0.2`), which Fortran 90 doesn't have, write `%FOR-E-OUTCONERR`, a field too
+narrow for any value.
 
 ## 15. Appendices
 

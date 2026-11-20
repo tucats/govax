@@ -1,6 +1,7 @@
 # Phase 109 — Fortran 90: I/O
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
+**Status:** done 2026-11-20. "Where things stand", at the end, is what the phase
+left. Planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
 Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
 accepted by the author the same day ("The author's answers"); its A.4 revises
 the subtasks below. Subtask 2, the F90 flag and the new edits, done 2026-11-19;
@@ -8,7 +9,7 @@ subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
 specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6,
 list-directed and namelist under the flag, done 2026-11-20 in two parts: 6a, the forms and
 DELIM=, and 6b, sections and components in namelist names; subtask 7, items by descriptor, done
-2026-11-20; subtask 8, programs end to end, done 2026-11-20. Subtask 9, the close-out, is next.
+2026-11-20; subtask 8, programs end to end, done 2026-11-20; subtask 9, the close-out, done 2026-11-20.
 
 ## Goal
 
@@ -366,7 +367,7 @@ And where each change lands:
    where the standard fixes them), with derived types in the new forms (finding 12) (done
    2026-11-20).
 9. **Close-out**: FORTRAN-INTERNALS.md (how a record stays open across statements; the F90
-   flag), MANUAL.md's 14.13 and the FOR numbers 306 up, HELP FORTRAN.
+   flag), MANUAL.md's 14.13 and the FOR numbers 306 up, HELP FORTRAN (done 2026-11-20).
 
 The edits come before nonadvancing I/O (the skeleton had OPEN first) because the flag they
 introduce is what nonadvancing input's PAD= and the namelist subtask use.
@@ -717,3 +718,46 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   `typearrays`, `types`, `typevalues`), though the README says every program runs with paging on;
   they are on it now and pass. The README has rows for the three programs, and for `nmlsect`,
   `ioitems`, and `ioitemsvms`, which had none. Subtask 9, the close-out, is next.
+- **2026-11-20:** Subtask 9, the close-out; the phase is done. FORTRAN-INTERNALS.md's section 34,
+  "Fortran 90: I/O", follows a program through the new statements: the F90 flag (why per statement,
+  what it changes, why the new specifiers need none), the new edits as old code with a parameter,
+  the record kept in the unit across statements (`UB_OPENREC` and its three deciders, the left tab
+  limit, the prompt shared with `$`), the end of record as a condition (SIZE= through FTN$IO_END's
+  argument, FOR numbers 306 to 310), a run-time ADVANCE= by `FTN$ADVANCE` and three begin calls, a
+  section as one item (`ITEM_NCA`, and why it is a routine apart), OPEN, INQUIRE, and IOLENGTH=,
+  list-directed and namelist I/O, and what the programs found; its listings are govax's own
+  output. The stale forward references in sections 27, 32, and 33 and the introduction are
+  updated. MANUAL.md: 14.13 gains "Edit descriptors" (B, EN, ES, G of every type, `r/`, quotation
+  marks in run-time formats, BLANK='NULL' under `/F90`), which subtask 2 had left out; 14.6's
+  FTNRTL table has the control block's bits 4 to 7, `FTN$ADVANCE`, FTN$IO_ITEM's class NCA and
+  HC, and FTN$IO_END's SIZE= argument and -2; "Not there yet" says what of I/O isn't (FTNRTL's
+  NAMELIST limits; Fortran 95's zero widths, which FTNRTL takes for a field too narrow, OUTCONERR,
+  found by running the manual's example). HELP FORTRAN's Fortran_90 topic lost four stale passages
+  (COMPLEX(16) I/O, sections element by element, arrays of types in NAMELIST, no ES or EN) and has
+  a paragraph on Fortran 90's I/O; `helplib.hlb` rebuilt by `go generate`. PLAN.md's row and
+  summary.
+
+## Where things stand
+
+Phase 109 is done: every Fortran 90 I/O statement, specifier, and edit descriptor compiles and
+runs, VAX FORTRAN's statements unchanged (the VMS oracles and `TestNoF90Unchanged`). What it left,
+and where each goes:
+
+- **Phase 110:** `/STANDARD=F90`'s judgment of the new specifiers and edits (today each is called
+  an extension to FORTRAN-77 only); the debugger's EXAMINE of a unit's open record, and of the new
+  forms' values.
+- **Phase 112 (optional):** Fortran 95's I/O, zero widths (`I0`, `F0.d`), which FTNRTL today takes
+  for a field too narrow for any value (OUTCONERR).
+- **Not planned:** Fortran 2003's I/O (DECIMAL=, ROUND=, stream access, a short record's end on a
+  PAD='NO' unit as an end of record, which gfortran gives); a NAMELIST object past FTNRTL's limits,
+  8 levels of arrays and derived types or 15 dimensions in all (NOTIMPL, named).
+- **Unconfirmed choices (ours, logged above):** INQUIRE's BLANK= answers 'ZERO' for a unit no OPEN
+  described, having no F90 flag; STATUS='REPLACE''s new file takes the erased version's number
+  when it was the highest; a COMPLEX(16) list-directed field longer than a record is a record of
+  its own; a field padded under BZ is padded to 256 characters at most; a record left open on a
+  unit that isn't a terminal stays open across a terminal READ; units 6 and `*` are distinct, so a
+  record open on one isn't continued by the other; commas kept between an array's undelimited
+  namelist values; a delimited value continued in a record's first column loses that character to
+  the carriage control at a terminal; a namelist name with two ranked parts (`LS%ENDS%X`) taken in
+  input, the rightmost part fastest; a section in a namelist name checked against its bounds only
+  at its first and last elements.

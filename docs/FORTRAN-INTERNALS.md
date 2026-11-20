@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), pointers (section 32), and the rest of the intrinsic procedures (section 33). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), pointers (section 32), the rest of the intrinsic procedures (section 33), and its I/O (section 34). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -48,7 +48,9 @@ is resolved; section 29 descriptors, the stack and the heap, and the arrays they
 possible; section 30 derived types; section 31 modules: what a module leaves behind for its
 users, how a USE reads it, and how separately compiled pieces are kept in step; section 32
 pointers, and the TARGET attribute that lets the optimizer reason about them; section 33
-the intrinsic procedures: one table, and how each reference chooses its form.
+the intrinsic procedures: one table, and how each reference chooses its form; section 34
+Fortran 90's I/O: one flag for the language a statement speaks, and a record that outlives
+its statement.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -3550,8 +3552,8 @@ masked in both of its nests, so `SQRT` is never taken of an element the mask exc
 An output item that is a section or an array expression is a loop of `FTN$IO_ITEM` calls in
 array element order (`ioItem`), each value through a temporary as a scalar expression's is. An
 input section is a loop over its elements' places, and a constructor's values are items in turn,
-never built. A whole array keeps its single class A descriptor (section 14), and descriptors for
-sections are Phase 109's. The extents are computed when the list reaches the item, so `READ *, N,
+never built. A whole array keeps its single class A descriptor (section 14), and since Phase 109
+a section is one item with a class NCA descriptor (section 34). The extents are computed when the list reaches the item, so `READ *, N,
 A(1:N)` uses the N just read.
 
 Under `/CHECK=BOUNDS` a section's first and last subscripts are checked once, before the loops
@@ -5003,8 +5005,7 @@ pointer component, which changes only the target; and, in `sparse.f90`, a bound 
 dummy's component (`Y(A%N)`), a defined operator's array operand, a defined assignment's array
 value, and ASSOCIATED of a pointer function's value. Each is held by a test of its own.
 
-What waits: `/CHECK=POINTERS` and the debugger's EXAMINE of a pointer (Phase 110); a whole array
-pointer in an I/O list by its descriptor (Phase 109); `NULL()` and default initialization (Phase
+What waits: `/CHECK=POINTERS` and the debugger's EXAMINE of a pointer (Phase 110); `NULL()` and default initialization (Phase
 112); a CHARACTER pointer whose length is known only when the program runs.
 
 ## 33. Fortran 90: the intrinsic procedures (Phase 108)
@@ -5341,8 +5342,386 @@ imaginary half, so `(0.0_16, 0.5_16)` and `(0.0_16, 1.0_16)` shared one datum; a
 constant (`MONTHS(11)(1:8)`), which the standard allows and sema refused. Each is held by a test of
 its own.
 
-What waits: ES and EN editing in FTNRTL's formats (Phase 109); `/STANDARD`'s judgment of the new
+What waits: `/STANDARD`'s judgment of the new
 names and the debugger's EXAMINE of their values (Phase 110); Fortran 95's additions, CEILING's and
 FLOOR's KIND, NULL, and CPU_TIME (Phase 112). Not there, and in no phase yet: a BACK= that is an array, a TRANSFER to
 a CHARACTER MOLD of zero or run-time length, and a component or function value of length zero, each
 `%FORT-E-NOTIMPL`, named.
+
+## 34. Fortran 90: I/O (Phase 109)
+
+Fortran 90's chapters 9 and 10 change less than its other chapters do. The statements are
+FORTRAN-77's, and most of what is new is more of the same: a few edit descriptors, a few OPEN
+specifiers, a NAMELIST that VAX FORTRAN already had in another spelling. Two things are new in
+kind. A statement may end *without ending its record*, so that the next statement goes on where
+it stopped. And the same text may mean two things: a quotation mark, `3/` in a format, G
+editing an integer, are each an error to VMS's run-time library and a value to Fortran 90's. The
+first is a change to FTNRTL's idea of a record's life; the second is a change to how FTNRTL
+knows which language it is serving. Both had to leave every VAX FORTRAN program exactly as it
+was, since VMS's own runs (`testdata/for80`, `nml80`, `for88`) are what FTNRTL is held to.
+
+The section follows a short program:
+
+```fortran
+program ask
+  character(len=20) :: reply
+  integer :: n, ios
+  write (*, '(1x, a)', advance='no') 'Name? '
+  read (*, '(a)', advance='no', size=n, iostat=ios) reply
+  if (ios == -2) print '(1x, a, i2, 3a)', 'got', n, ' [', reply(1:n), ']'
+  write (*, '(1x, es10.3, en12.3, b8.8)') 12345.6, 12345.6, 37
+end program ask
+```
+
+At a terminal, typing `Ada`:
+
+```text
+Name? Ada
+got 3 [Ada]
+ 1.235E+04  12.346E+0300100101
+```
+
+The question stays on the line the answer is typed on; the READ asks for 20 characters and finds
+3 before the record ends, which is not an error but a condition the program asked to hear about
+(`IOSTAT=` is -2); SIZE= says how many characters it took. ES is scientific notation, one digit
+before the point; EN engineering notation, an exponent that is a multiple of 3; B binary.
+
+### One bit says which language a statement speaks
+
+FTNRTL can't see the program's source. Whatever it must know about a statement comes through the
+begin call's arguments, and the first of them is the statement's control block, a word of size
+and a word of flags (section 14). Phase 109 added a flag: bit 4 says *this statement belongs to
+a unit compiled `/F90`*. The compiler sets it for every data transfer statement of such a unit
+(`ir.ControlF90`, `ir/lowerio.go`), and the MACRO file's comment says so:
+
+```text
+ASK.$IO2:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X003C			; flags: IOSTAT= run-time format F90 nonadvancing
+	.LONG	0			; (not used yet)
+```
+
+Why a flag per statement rather than a different FTNRTL, or a different set of entries? The
+survey found that VMS's own library *refuses* things Fortran 90 accepts: `3/` in a format (case
+375 of Phase 80's run), G of an INTEGER item (case 169), `"ABC"` read by a list-directed READ
+(case 806). FTNRTL is held to those refusals, so it can't simply take Fortran 90's reading
+always. A second set of begin entries would have doubled the transfer vector for one bit of
+information. And the choice has to be per statement, not per image, because one image may link
+a `/F90` unit with an old one, each expecting its own reading. The flag costs a bit in a word
+the compiler already writes.
+
+Under the flag, FTNRTL reads:
+
+- a **format** with B, EN, ES, `r/`, and `"…"` (in a format held in a variable too, which the
+  compiler can't rewrite with apostrophes as it does a constant one), and G of an INTEGER,
+  LOGICAL, or CHARACTER item as I, L, or A (`ftn_format.mar`, PARSE's fifth argument and EDIT's
+  `GENERAL`);
+- **blanks in numbers** as nothing, BLANK='NULL', for an internal file and a unit no OPEN
+  described, where VAX FORTRAN's default was ZERO. A unit's `UB_BLANK` has a third value, 3,
+  "not said", which each statement makes ZERO or NULL by its flag, so one unit serves both
+  kinds of statement correctly;
+- a **field cut short** by the record's end as padded with blanks to its width (PAD='YES', the
+  standard's), so `123` read by `(BZ, I5)` is 12300; VAX FORTRAN ended the field at the record's
+  end, 123, and still does without the flag;
+- **list-directed input's** quotation marks and undelimited text, and **namelist's** `&GRP` …
+  `/` both ways (below).
+
+Not everything new needs the flag. A specifier the old language didn't have (ADVANCE=, DELIM=,
+ACTION=) can't appear in an old program, so FTNRTL honors it whenever it is given; the flag is
+only for texts both languages read.
+
+### New edit descriptors are old code with a parameter
+
+FTNRTL's format interpreter turns a format into a list of operations, each with a code (section
+14). Fortran 90's three new data descriptors got codes 10 to 12, after Q, which meant
+renumbering the control edits after them, in `ftn_format.mar` and in the compiler's
+`internal/fortran/format` together (the two parse the same grammar and are held to the same
+cases). The editing routines' codes were left alone, so FTN_EDIT and FTN_FLOAT didn't change.
+
+Each new descriptor is mostly an old one:
+
+- **B** is O and Z's code with a digit of one bit instead of three or four.
+- **ES** is E with a scale factor of 1, which E already knew how to do (`1PE10.3` and `ES10.3`
+  print the same digits).
+- **EN** is the only real newcomer: the exponent must be a multiple of 3, so the number has one
+  to three digits before the point. `OUT_EN` asks `OTS$$CVT_x_T_R8` for d+3 digits to find the
+  exponent, then rounds to the digits it will show; a carry from that rounding (999.96 to 1000.0)
+  can add a digit before the point and so change the exponent, which is why the rounding is done
+  twice.
+- **G** of an INTEGER, LOGICAL, or CHARACTER item makes a copy of its operation as I, L, or A
+  with w alone and edits with that.
+
+The compiler's `format` package learned the same grammar under `format.Options.F90`, and the
+`/STANDARD` walk calls each of them an extension to FORTRAN-77.
+
+### A record that outlives its statement
+
+In FORTRAN-77 a statement owns its records. The begin call starts one; the end call writes the
+last (or, reading, passes over the rest of it); the next statement starts afresh. Section 14's
+statement context, pushed by the begin call and popped by FTN$IO_END, holds the record being
+built a byte per column. `ADVANCE='NO'` breaks that: the record must outlive the context.
+
+So the record moves to the unit. A unit's block (`ftn_units.mar`) already had a buffer where
+each record was built or read (`CTX_RECP` points there), so leaving a record open costs only
+three fields to say what is there:
+
+```text
+UB_OPENREC	byte: 0 none, 1 an output record, 2 an input record
+UB_RECLEN	long: the record's length
+UB_RECPOS	long: the position the next statement goes on from
+UB_DOLLAR	byte: 1 if a $ edit descriptor marked it
+```
+
+Three places decide its fate:
+
+1. **FTN$$FMT_END**, at a nonadvancing statement's end with no error, doesn't write the record
+   (or pass over the rest of an input record): it copies its length and position into the unit
+   and sets `UB_OPENREC`.
+2. **The begin call** of the next statement on the unit looks first. A formatted sequential
+   statement of the same direction, advancing or not, will go on with the record. Anything else
+   (a list-directed statement, an unformatted one, a READ after a WRITE, a direct access
+   statement) must not see it, and `FTN$$UNIT_FLUSH` ends it first: an output record is written,
+   an input record forgotten (the unit is already past it). CLOSE, REWIND, BACKSPACE, ENDFILE,
+   and so the exit handler that closes every unit at image exit, end it the same way, so an
+   image whose last statement was nonadvancing still writes its line.
+3. **FTN$$FMT_START** of a statement going on reads no record: it takes the length and position
+   from the unit and clears `UB_OPENREC`. The position is also the statement's *left tab limit*
+   (`CTX_LEFT`, the standard's 10.6.1.1): `T5` counts five columns from where this statement
+   started, not from the record's start, and `TL` goes back no further than it. Without that rule
+   a statement couldn't know what columns its own format meant.
+
+The design note's open question was whether this should share a mechanism with VAX FORTRAN's `$`
+edit descriptor, the old way of leaving the cursor at a prompt's end. It does, in one place. `$`
+never kept a record open in FTNRTL: it writes the record at once with `$` as its carriage control,
+which tells RMS not to end the line (section 14's "Units and the terminal"). When a READ is about
+to read a terminal, `FTN$$UNIT_PROMPT` looks at every unit at a terminal with an output record
+open and writes it the way `$` would, so the question shows before the answer is typed:
+
+```text
+	.ENTRY	FTN$$UNIT_PROMPT,^M<R2,R3>
+	...
+10$:	MOVL	(R3)+,R0		; each unit's block in turn
+	BEQL	20$
+	BLBC	UB_OPEN(R0),20$
+	CMPB	UB_OPENREC(R0),#1
+	BNEQ	20$
+	BBC	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R0),20$
+	PUSHL	#1			; written as a prompt
+	PUSHL	R0
+	CALLS	#2,FTN$$UNIT_FLUSH
+20$:	SOBGTR	R2,10$
+```
+
+The standard's strict reading would keep the record whole until an output statement ended it,
+showing `Name?` only after the answer; DEC's terminals and gfortran both show it first, and the
+author chose that. The rest of the program's record after the READ is a new record. Why every
+terminal unit and not only the one being read? Because units 6 and `*` are different units on one
+terminal (section 14), and a program may ask on one and read on another.
+
+### The end of a record is a condition, not an error
+
+A nonadvancing READ that asks for more than the record holds hasn't failed: it has found the end
+of the record, which is how a program reads a line of unknown length. The standard calls it the
+*end-of-record condition*, and gives it EOR= and an IOSTAT= value of its own (-2 by the author's
+choice, gfortran's; -1 is still an end of file).
+
+The item whose field runs past the record's end (and no comma ended it first) is edited from what
+was there padded with blanks, so `reply` gets `Ada` and 17 blanks; then FTN$$FMT_ITEM stops the
+statement with the new condition `FOR$_EORDURREA`. FTN$IO_END turns that into -2 for EOR= or
+IOSTAT=, and with neither signals it. The input record is done: an end of record ends it. SIZE=
+is the characters the statement's data edit descriptors took from the record, padding not
+counted, kept in the context (`CTX_COUNTED`) as FIELD and A take them. The context is gone by
+the time the compiled code could ask, so FTN$IO_END takes one argument for a nonadvancing READ
+with SIZE=, the address of a longword it stores the count in:
+
+```text
+;    5    read (*, '(a)', advance='no', size=n, iostat=ios) reply
+	PUSHAQ	ASK.$D1
+	PUSHL	#-4
+	PUSHAB	ASK.$IO2
+	CALLS	#3,G^FTN$READ_SF
+	PUSHAQ	ASK.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAL	ASK.$T1
+	CALLS	#1,G^FTN$IO_END
+	MOVL	R0,R6
+	MOVL	ASK.$T1,ASK.N
+	MOVL	R6,ASK.IOS
+```
+
+The count goes through a longword temporary, not straight into N, because SIZE='s variable may
+be any INTEGER kind: FTNRTL always stores a longword, and the compiled code converts it, an
+INTEGER\*2's store a CVTLW.
+
+Fortran 90's new conditions take FOR numbers past VMS's, govax's own wording (Decision 15):
+`REAWRIFIL` (306, a READ of a unit opened ACTION='WRITE'), `EORDURREA` (307), `BADADVANCE` (308,
+an ADVANCE= neither YES nor NO), `NONADVUNIT` (309, a nonadvancing statement on a keyed unit), and
+`RECTOOSHO` (310, a short field on a PAD='NO' unit). Their texts are in `vmsdef/formessages.go`
+with VMS's, so `$GETMSG` and ERRSNS see them as any other.
+
+### ADVANCE= when only the program knows
+
+`ADVANCE='NO'` written as a constant is settled when compiling: the control block's bit 5. But
+ADVANCE='s value may be any CHARACTER expression, and the begin call needs the answer before the
+statement's first item. Rather than give every begin call another argument, the compiler asks
+FTNRTL first, with a small routine that only reads the text (`FTN$ADVANCE`: 0 for YES, 1 for NO,
+2 for anything else, blanks and case ignored), and then makes one of three begin calls, each with
+its own control block. A subroutine that writes a row of a matrix, and may or may not end the line:
+
+```fortran
+subroutine row(a, how)
+  real :: a(10, 10)
+  character(len=*) :: how
+  write (*, '(1x, 5f6.1)', advance=how) a(2, 1:9:2)
+end subroutine row
+```
+
+```text
+	PUSHAQ	ROW.$D1
+	CALLS	#1,G^FTN$ADVANCE
+	MOVL	R0,ROW.$T1
+	CASEL	ROW.$T1,#0,#1
+ROW.$1:
+	.WORD	ROW.$2-ROW.$1
+	.WORD	ROW.$3-ROW.$1
+	BRB	ROW.$4
+ROW.$2:
+	PUSHAQ	ROW.$D2
+	PUSHL	#-1
+	PUSHAB	ROW.$IO1		; F90
+	CALLS	#3,G^FTN$WRITE_SF
+	BRB	ROW.$5
+ROW.$3:
+	...
+	PUSHAB	ROW.$IO2		; F90 nonadvancing
+	...
+ROW.$4:
+	...
+	PUSHAB	ROW.$IO3		; F90 bad ADVANCE=
+	CALLS	#3,G^FTN$WRITE_SF
+ROW.$5:
+```
+
+The third block's bit 7 makes the statement fail at once with BADADVANCE, through the same
+ERR=/IOSTAT= path as any other failure, so a bad value is reported where the statement is and
+nothing is written. The items and FTN$IO_END follow the three calls once: only the begin call
+differs, so the switch is short. It is an IR `Switch`, section 12's computed GO TO.
+
+### A section is one item
+
+Section 27 made an array section in an I/O list a loop of FTN$IO_ITEM calls, an element at a
+time, which is correct but makes the compiled code as long as the loops. Phase 104 gave sections
+class NCA descriptors (section 29), so the item can be described once. The listing above passes
+`A(2, 1:9:2)` as one item, its descriptor filled in where the item stands:
+
+```text
+	MOVL	#1,R0
+	MOVAL	@ROW.A(AP)[R0],ROW.$D3+4	; the first element, A(2,1)
+	MOVL	#80,ROW.$D3+20			; its stride: two columns of 40 bytes
+	MOVL	#1,ROW.$D3+24			; bounds 1 to 5
+	MOVL	#5,ROW.$D3+28
+	SUBL3	#80,ROW.$D3+4,ROW.$D3+16	; A0, one stride before element 1
+	MOVL	#20,ROW.$D3+12			; 5 elements of 4 bytes
+	PUSHAQ	ROW.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+```
+
+FTN$IO_ITEM hands a class NCA item to `ITEM_NCA` (`ftn_statement.mar`), which walks the
+descriptor, the first dimension fastest, and gives each element to the statement kind's module
+by a class S descriptor in its own frame. So nothing downstream changed: the format interpreter,
+list-directed and namelist output, and unformatted records see exactly the element calls they
+saw before. The walk stops at the statement's first failure, so an end of file part way through
+a section leaves the rest of it alone, as the element calls did.
+
+`ITEM_NCA` is a routine of its own, rather than a loop inside FTN$IO_ITEM, for a reason worth
+knowing. A first try put the loop in FTN$IO_ITEM and saved R3 to R7 there; FTN$IO_ITEM's frame
+grew by 20 bytes, and an old program in the corpus that reads an undefined local (`optforward.for`
+under `/RECURSIVE`, where locals are in the stack frame) read a different leftover value from the
+stack, and no longer printed VMS's 0 (`TestFTN86Oracle`). The program is wrong, but VMS's run
+printed 0 and govax must too. Keeping FTN$IO_ITEM's frame as it was for every other item kept
+the stack as it was.
+
+The compiler passes a descriptor only where one helps: a whole assumed-shape array or array
+pointer (whose own descriptor it already has), a section, a ranked component, or a substring of
+a section, of an intrinsic type. A contiguous whole array keeps its class A descriptor (section
+14); a derived type's object is still a component at a time (section 30); a vector subscript,
+an expression, or a constructor is still an element at a time, since there is no place to
+describe. The descriptor is built when the list reaches the item, so `READ *, N, A(1:N)` uses
+the N just read.
+
+A section as an internal file, or as ENCODE's or DECODE's buffer, is the same problem as a
+section passed to an old dummy (section 29): FTNRTL wants a record per element of contiguous
+storage. It goes through Phase 104's `sequence`: described where it is if contiguous, tested at
+run time if it is an assumed-shape array's, otherwise copied to a temporary and, after a WRITE or
+ENCODE, back.
+
+### OPEN, INQUIRE, and IOLENGTH=
+
+OPEN's new specifiers are new keyword codes after VMS's (49 to 52, and 5 for STATUS='REPLACE'),
+INQUIRE's answers 53 to 59 (section 14's "OPEN and CLOSE"); FTN_OPEN's table grew and the unit
+block gained `UB_ACTION`, `UB_DELIM`, `UB_PAD`, and `UB_POSITION`. Each maps onto RMS: ACTION= is
+the FAB's FAC (READ is FAC GET, as READONLY always was), POSITION='APPEND' is ACCESS='APPEND''s
+RAB$V_EOF, and STATUS='REPLACE' is a `$ERASE` of the FAB, an RMS$_FNF passed over, then the
+`$CREATE` of STATUS='NEW'. The unit's DELIM= starts at 0, "not given", which INQUIRE answers
+NONE, so that list-directed output can tell DEC's default (no delimiters) from a program that
+asked for none.
+
+`INQUIRE (IOLENGTH = L) list` asks how long an unformatted record of the list would be, without
+doing any I/O. The plan considered a call of FTNRTL per item; but the length depends only on the
+items' types and counts, which the compiler knows or can compute without touching the values.
+So `ioLength` (`ir/lowerfile.go`) adds each item's bytes into a temporary (a scalar's size, an
+array's element count times its element size, an implied DO a counted loop of its body), then
+stores `(n+3)/4` (RECL= counts longwords for unformatted files on VMS). The optimizer folds a list
+of constant sizes to one constant. gfortran answers in bytes, a processor's choice the standard
+allows; the programs use the answer only as a RECL=, so both agree on what matters.
+
+### List-directed and namelist I/O
+
+Under the flag, list-directed input takes a constant between quotation marks as it takes one
+between apostrophes (READ_TEXT takes its delimiter from the record), and a word that isn't a
+number as undelimited text for a CHARACTER item. DELIM= on a unit delimits list-directed and
+namelist output's text, the delimiter doubled inside it; a delimited constant longer than what's
+left of the record starts the next, and one longer than a record goes on in the next record's
+first column, so a READ \* takes it back whole.
+
+Namelist under the flag is Fortran 90's form: ` &GRP` … ` /` on output, text undelimited unless
+DELIM= asks (so such output can't be read back by a NAMELIST READ, as the HP manual warns: the
+author chose the standard's rule), and on input `&GRP` from column 1, a slash ending the group
+wherever DEC's `$END` would. A name may be a designator with sections and components,
+`PTS(1:3:2)%X`, `BOOK(2:3)%CLEARED`. FTNRTL's `DESIGNATOR` reads the name a part at a time, each
+part looked up as a prefix in the group's entities, its subscripts fixing an element or opening
+a section, and the whole a walk over up to 15 dimensions, the slowest first; an object of a
+derived type is filled level by level, an element's components in order before the next element.
+The compiler's side is section 30's: an array of a derived type is an entity per component, each
+a class NCA descriptor with constant strides, under a class Z header that points at the array's
+shape.
+
+### What the programs found
+
+`testdata/fortran90` has a program per subtask, each worked by hand from the standard and run in
+every mode with paging off and on: `edits.f90`, `cplx16io.f90`, `openings.f90`, `advance.f90`
+(with a terminal's input), `listnml.f90`, `nmlsect.f90`, `ioitems.f90`, and govax's own
+`ioitemsvms.f90` (ENCODE and DECODE on sections). The programs end to end are `journal.f90` (an
+array of a derived type written by one reverting format with B, ES, and G, each record read back
+by nonadvancing READs whose SIZE= at EOR= gives its length, so the records are compared byte for
+byte where the standard fixes them, trailing blanks and all), `wordcount.f90` (the terminal read
+a character at a time, each line's end by EOR=), and `gradebook.f90` (files made by
+STATUS='REPLACE', appended by POSITION='APPEND', a test's column as one ranked component). The
+three print the same on gfortran; the earlier ones differ only where the standard leaves the
+layout to the processor (list-directed and namelist records, IOLENGTH='s unit), listed in
+`compare.py`'s KNOWN. The VMS oracles and `TestNoF90Unchanged` were unchanged throughout: the
+flag is clear for every statement they run.
+
+The programs found that the three wrong answers on the way were the programs': `MAXLOC (A, DIM=1)`
+is Fortran 95's, and Fortran 90's MAXLOC has no DIM=, so govax's BADARG was right; a hand-worked
+`A10` of a shorter constant had been written flush left, where the standard pads on the left; and
+gfortran refuses a repeat count on a component's section in namelist input (`BOOK(2:3)%CLEARED =
+2*T`), which the standard allows. Writing the answers from the standard before running either
+compiler is what made each of these a question rather than a silent agreement. The phase also
+found an internal file's BLANK= default wrong for Fortran 90 (VAX's ZERO, where the standard says
+NULL), and twelve programs from earlier phases that had never been run with paging on.
+
+What waits: Fortran 95's I/O (a zero width in `I0` and `F0.d`, which Fortran 90 doesn't have: FTNRTL
+takes it for a field too narrow for any value, OUTCONERR), for the optional Phase 112, and Fortran 2003's (DECIMAL=, ROUND=,
+stream access), which no phase plans; FTNRTL's limit of 15 dimensions and 8 levels in a NAMELIST object, past which the
+compiler says NOTIMPL; and the debugger's EXAMINE of the new forms (Phase 110).

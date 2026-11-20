@@ -158,7 +158,7 @@ questions, and a progress log extended as that phase is worked.
 | 106 | [PHASE-106 - Fortran 90 modules](PHASE-106%20-%20Fortran%2090%20modules.md) | MODULE and USE, PUBLIC and PRIVATE, module data and procedures, module files, separate compilation — planned 2026-11-17; done 2026-11-19 |
 | 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17; done 2026-11-19 |
 | 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17; done 2026-11-19 |
-| 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17 |
+| 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17; done 2026-11-20 |
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data — planned 2026-11-17 |
 | 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | A substantial Fortran 90 program in every mode, gfortran's witness, the optional VMS round, the documentation finished — planned 2026-11-17 |
 
@@ -1107,3 +1107,32 @@ instructions in line, a call of FTNRTL, or a call of MTHRTL.
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 33 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 109, Fortran 90's I/O.
+
+Phase 109 (done 2026-11-20) is Fortran 90's I/O, in the compiler and FTNRTL, with VAX FORTRAN's
+statements unchanged: the control block's bit 4, set for every data transfer statement of a `/F90`
+unit, is how FTNRTL knows which language's reading of a shared text a statement wants (the author's
+answer 1), since VMS's library, which the oracles hold FTNRTL to, refuses what Fortran 90 accepts.
+
+- **Edits** (`format`, `ftn_format.mar`, `ftn_edit.mar`, `ftn_float.mar`): B, EN, ES, `r/`, G of
+  every type, and `"…"` in run-time formats under the flag; BLANK='NULL' by default for an internal
+  file and an unopened unit under it.
+- **COMPLEX(16)** in every kind of statement.
+- **OPEN and INQUIRE**: ACTION=, POSITION=, DELIM=, PAD=, STATUS='REPLACE', READ=, WRITE=,
+  READWRITE=; INQUIRE (IOLENGTH=) the compiler's own sum (`sema.IOLength`, `ir`'s `ioLength`).
+- **Nonadvancing I/O**: ADVANCE= (a run-time value by `FTN$ADVANCE` and three begin calls; GSMATCH
+  1,31), SIZE= through FTN$IO_END's argument, EOR= and IOSTAT= -2; the record kept in the unit
+  (`UB_OPENREC`), taken up by the next statement of its direction, ended by any other, with the
+  left tab limit; a prompt at a terminal READ (the author's answer 4); PAD= by the flag (answer 3).
+- **List-directed and namelist**: quoted and undelimited text, DELIM=, `&GRP` … `/` (answer 2),
+  sections and components in namelist names, arrays of derived types in groups.
+- **Items by descriptor**: a section, a strided whole array, or a ranked component one FTN$IO_ITEM
+  call with a class NCA descriptor (`ITEM_NCA`); sections as internal files and buffers through
+  Phase 104's `sequence`.
+- **Conditions**: FOR numbers 306 to 310, govax's own (REAWRIFIL, EORDURREA, BADADVANCE,
+  NONADVUNIT, RECTOOSHO).
+- **Programs:** `testdata/fortran90`'s `edits`, `cplx16io`, `openings`, `advance`, `listnml`,
+  `nmlsect`, `ioitems`, `ioitemsvms`, and end to end `journal`, `wordcount`, and `gradebook`, every
+  corpus program now also with paging on.
+
+MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 34 describe it; the phase doc's "Where things
+stand" lists what it left. The next phase is 110, the compiler's usability for Fortran 90.

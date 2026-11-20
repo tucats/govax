@@ -1345,8 +1345,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `internal/console`'s `TestFTNRTLIntrinsics`, every new FTNRTL entry from MACRO;
   a constant's substring under `/F90`); 9 the close-out, FORTRAN-INTERNALS.md's
   section 33 and HELP STARTUP TIME_ZONE.
-  Phase 109 (in progress; its Part A the survey, accepted by the author
-  2026-11-19, A.4 its subtasks) is Fortran 90's I/O: subtask 2 (2026-11-19)
+  Phase 109 (done 2026-11-20; its Part A the survey, accepted by the author
+  2026-11-19, A.4 its subtasks; its "Where things stand" is the follow-up
+  list, and PLAN.md summarizes it) is Fortran 90's I/O: subtask 2 (2026-11-19)
   is the F90 flag, control block bit 4 (`ir.ControlF90`), set for every data
   transfer statement of a `/F90` unit, under which FTNRTL reads a format as
   Fortran 90 does (B, EN, ES, `r/`, and `"…"` in run-time formats; G of an
@@ -1400,7 +1401,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (`testdata/fortran90/ioitems.f90`, `ioitemsvms.f90`); subtask 8 (2026-11-20) is
   programs end to end (`testdata/fortran90`'s `journal`, `wordcount`, `gradebook`,
   each the same on gfortran; every corpus program now also runs with paging on);
-  subtask 9, the close-out, is next.
+  subtask 9 (2026-11-20) the close-out, FORTRAN-INTERNALS.md's section 34,
+  MANUAL.md's 14.13 "Edit descriptors" and 14.6's FTNRTL table, HELP FORTRAN.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
