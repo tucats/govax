@@ -1,8 +1,9 @@
 # Phase 109 — Fortran 90: I/O
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19, for
-review; its A.4 revises the subtasks below.
+Part C). Needs Phase 105. Subtask 1, the survey (Part A), done 2026-11-19 and
+accepted by the author the same day ("The author's answers"); its A.4 revises
+the subtasks below. Subtask 2 is next.
 
 ## Goal
 
@@ -71,7 +72,7 @@ and FTNRTL:
 Revised by the survey: A.4 is the list to follow.
 
 1. **Survey** (the standard's 9.2.1.3, 9.3.4, 9.6, 10.2, 10.5, 10.8, 10.9; the
-   Handbook's chapters 9 and 10), for review (done 2026-11-19; Part A).
+   Handbook's chapters 9 and 10) (done 2026-11-19; Part A, accepted).
 2. **The new edit descriptors** in `format` and FTNRTL.
 3. **Nonadvancing I/O**, SIZE=, EOR=.
 4. **OPEN and INQUIRE's new specifiers**, IOLENGTH=.
@@ -336,7 +337,7 @@ And where each change lands:
 
 ## A.4 The subtasks, revised
 
-1. **Survey** (this Part A), for review (done 2026-11-19).
+1. **Survey** (this Part A) (done 2026-11-19; accepted by the author the same day).
 2. **The F90 flag and the new edits**: control block bit 4 set by the compiler for `/F90`
    units; `format.Options.F90` (B, EN, ES, `r/`); FTNRTL's B, EN, ES, `r/`, G of every type,
    and `"…"` in run-time formats under the flag (finding 1, 9); FTNRTL's operation codes and
@@ -386,6 +387,26 @@ introduce is what nonadvancing input's PAD= and the namelist subtask use.
    working? **Recommendation:** keep it, small and in one place; sections as internal files
    through Phase 104's copies.
 
+## The author's answers (2026-11-19)
+
+The author read the survey, accepted the plan, and took every recommendation:
+
+1. **The F90 flag** (finding 1): control block bit 4, set for every data transfer
+   statement of a `/F90` unit, chooses Fortran 90's reading in FTNRTL; without it
+   nothing changes, and `format.Options.F90` does the same for FORMAT statements.
+2. **Namelist output under `/F90`**: `&GROUP … /`, character values undelimited unless
+   DELIM= is given (the standard's and the HP manual's rule).
+3. **PAD's padding** by the flag: standard padding for `/F90` statements, today's rule
+   otherwise; PAD='NO' as the standard says.
+4. **A record open across a terminal READ** is written first as a prompt (`$` carriage
+   control), the rest of it a new record.
+5. **IOSTAT=**: -1 at an end of file, -2 at an end of record.
+6. **Items by descriptor** stay (A.4's subtask 7): FTN$IO_ITEM's class NCA loop, the
+   element path kept for what has no descriptor; sections as internal files and buffers
+   through Phase 104's `sequence`.
+
+A.4's nine subtasks are the phase's list; subtask 2 is next.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -395,3 +416,5 @@ introduce is what nonadvancing input's PAD= and the namelist subtask use.
   own refusals found in Phase 80's run (`3/` #375, G of an INTEGER #169, `"ABC"` in
   list-directed input #806), which make a per-statement F90 flag necessary (finding 1);
   thirteen findings, the subtasks revised into nine (A.4), six questions (A.5).
+- **2026-11-19:** The author accepted the plan and every recommendation ("The author's
+  answers"). Subtask 1 is done; subtask 2 (the F90 flag and the new edits) is next.
