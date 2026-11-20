@@ -1397,8 +1397,10 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   section, or a ranked component of an intrinsic type (`ir/lowerio.go`'s
   `ncaItem`); a section as an internal file or ENCODE's or DECODE's buffer goes
   through `sequence` (`ioUnit`), VECTORFILE with a vector subscript
-  (`testdata/fortran90/ioitems.f90`, `ioitemsvms.f90`); subtask 8, programs end
-  to end, is next.
+  (`testdata/fortran90/ioitems.f90`, `ioitemsvms.f90`); subtask 8 (2026-11-20) is
+  programs end to end (`testdata/fortran90`'s `journal`, `wordcount`, `gradebook`,
+  each the same on gfortran; every corpus program now also runs with paging on);
+  subtask 9, the close-out, is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

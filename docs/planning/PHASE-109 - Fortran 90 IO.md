@@ -8,7 +8,7 @@ subtask 3, COMPLEX(16) I/O, done 2026-11-20; subtask 4, OPEN and INQUIRE's new
 specifiers, done 2026-11-20; subtask 5, nonadvancing I/O, done 2026-11-20; subtask 6,
 list-directed and namelist under the flag, done 2026-11-20 in two parts: 6a, the forms and
 DELIM=, and 6b, sections and components in namelist names; subtask 7, items by descriptor, done
-2026-11-20. Subtask 8, programs end to end, is next.
+2026-11-20; subtask 8, programs end to end, done 2026-11-20. Subtask 9, the close-out, is next.
 
 ## Goal
 
@@ -363,7 +363,8 @@ And where each change lands:
 7. **Items by descriptor** (FTN$IO_ITEM's class NCA loop) and sections as internal files
    and buffers (finding 11) (done 2026-11-20).
 8. **Programs end to end**, every mode, gfortran's witness (records compared byte for byte
-   where the standard fixes them), with derived types in the new forms (finding 12).
+   where the standard fixes them), with derived types in the new forms (finding 12) (done
+   2026-11-20).
 9. **Close-out**: FORTRAN-INTERNALS.md (how a record stays open across statements; the F90
    flag), MANUAL.md's 14.13 and the FOR numbers 306 up, HELP FORTRAN.
 
@@ -682,3 +683,37 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   strided section, and an assumed-shape array's section as an internal file) is govax's only. MANUAL.md's
   14.13 says how I/O lists take sections and that a section may be an internal file. Subtask 8
   (programs end to end) is next.
+- **2026-11-20:** Subtask 8, programs end to end. Three programs in `testdata/fortran90`, each
+  worked by hand from the standard, run in every mode (`/NOOPTIMIZE`, `/OPTIMIZE`, both
+  `/RECURSIVE`) with paging off and on, and once more under `/CHECK=BOUNDS`, and each printing the
+  same on gfortran (`compare.py`'s `PROGRAMS90`, no known differences). `journal.f90`: an array of a
+  derived type written to a file by one statement whose format reverts for each element (B, ES, L,
+  and G of a CHARACTER item); each record read back whole by a nonadvancing READ whose SIZE= at
+  EOR= gives its length, so the records are compared byte for byte where the standard fixes them
+  (trailing blanks and all); the file read back by the same format into a second array and
+  compared; a direct access file whose RECL= is INQUIRE's IOLENGTH= (the value itself never
+  printed, so the longwords and gfortran's bytes don't show), written last to first and read in
+  another order; NAMELIST output with DELIM='APOSTROPHE' read back, then a group of changes named
+  by sections and components (`BOOK(2:3)%CLEARED`, `BOOK(5)%MEMO` with a doubled apostrophe); a
+  report whose lines are built by nonadvancing statements with EN; components of every element
+  and of every other as list items. `wordcount.f90` (with `wordcount.in`): the terminal read a
+  character at a time by nonadvancing READs, each line's end by EOR= and the input's by END=, an
+  empty line and leading and repeated blanks among the lines; words in an array of a derived type,
+  sorted by swapping whole objects; a histogram whose bars are drawn a character at a time and
+  ended by `WRITE (*, '()')`; the words packed into lines of 40 columns. `gradebook.f90`: a type
+  with an array component through files made with STATUS='REPLACE', ACTION='WRITE', and
+  POSITION='APPEND' (asked by INQUIRE), read with ACTION='READ', a short record padded; a test's
+  column as one ranked component across the students in formatted and unformatted lists; names
+  written to an internal file that is a section with a stride. Nothing in govax needed changing:
+  the three differences on the way were the programs'. gfortran refuses a repeat count on a
+  component's section (`BOOK(2:3)%CLEARED = 2*T`, "Repeat count too large", as `nmlsect`'s notes
+  found), which the standard allows, so `journal` writes `T, T`; `wordcount` first used MAXLOC's
+  DIM=, which govax rightly refused (BADARG): it is Fortran 95's, and Fortran 90's MAXLOC has only
+  ARRAY and MASK (13.13.64), so it takes the subscript from a vector of one; and `gradebook`'s
+  hand-worked output had names flush left where A10 output of a shorter constant pads on the left
+  (10.5.4), on which both compilers agreed, so the program now writes the names by A and T11.
+  Twelve programs earlier subtasks and phases had left off `fortran90PagingPrograms` (`advance`,
+  `cplx16io`, `listnml`, `ptralias`, `ptrequiv`, `results`, `structs`, `transfer`, `transfervms`,
+  `typearrays`, `types`, `typevalues`), though the README says every program runs with paging on;
+  they are on it now and pass. The README has rows for the three programs, and for `nmlsect`,
+  `ioitems`, and `ioitemsvms`, which had none. Subtask 9, the close-out, is next.

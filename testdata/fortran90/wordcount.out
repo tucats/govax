@@ -1,0 +1,13 @@
+Lines:  5  words:  18  characters:  82
+Longest line, 26 characters: "  3 dogs and 12 foxes  ran"
+Longest word: quick
+ 1  1 |*
+ 2  1 |*
+ 3  7 |*******
+ 4  4 |****
+ 5  5 |*****
+100 12 3 and brown dog dogs fox foxes
+hills jumps lazy over quick ran the
+Repeated: over*2 the*2
+Numbers:  3  sum:   115
+  $STATUS == "%X00000001"
