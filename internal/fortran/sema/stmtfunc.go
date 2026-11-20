@@ -88,7 +88,7 @@ func (a *analyzer) stmtFuncDummy(n *ast.Name) *Symbol {
 
 	if s := a.scope.find(n.Name); s != nil {
 		d.Type, d.broken = s.Type, s.broken
-		s.typesDummy = true
+		s.typesEntity = true
 		untyped = s.untyped && !s.Typed
 	} else {
 		d.Type, untyped = a.scope.rules().typeOf(n.Name)

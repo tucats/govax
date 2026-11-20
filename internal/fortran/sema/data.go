@@ -792,6 +792,8 @@ func (a *analyzer) dataImpliedDo(e *ast.ImpliedDo, vars map[string]int32, vals *
 // array, can't be one.
 func (a *analyzer) integerName(name string) bool {
 	if s := a.scope.find(name); s != nil {
+		s.typesEntity = true
+
 		return s.Type.Kind == Integer && s.Class != Constant && s.Class != Array
 	}
 

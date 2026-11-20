@@ -352,7 +352,8 @@
 
    Under /DEBUG the debugger's EXAMINE reads allocatable, automatic, and
    assumed-shape arrays through their descriptors, a section by its
-   strides (%DEBUG-W-NOTALLOC for an array not allocated).
+   strides (%DEBUG-W-NOTALLOC for an array not allocated), and takes
+   sections itself: EXAMINE A(1:9:2).
 
    Derived types: TYPE name ... END TYPE defines one, its components
    declared as variables are (SEQUENCE first to make two units'
@@ -374,8 +375,9 @@
    object: output names each component (P%X =), and input takes P%X =
    or the whole object, P = 1.0, 2.0; an array of a type is an entity
    per component, every element's (PTS%X), and input may name
-   PTS(2)%X or PTS(1:3:2)%Y.  Default values for components (Fortran
-   95) are not there yet.
+   PTS(2)%X or PTS(1:3:2)%Y.  The debugger's EXAMINE shows an object a
+   component at a time, and takes PT%X and PTS(2)%Y.  Default values
+   for components (Fortran 95) are not there yet.
 
    A MODULE holds data, types, constants, interfaces, and procedures
    for the units that USE it:
@@ -516,9 +518,11 @@
    register across it; that is what TARGET is for.
 
    Using a disassociated pointer's target is an access violation at
-   address 0 (%SYSTEM-F-ACCVIO); /CHECK=POINTERS isn't there yet.  Nor
-   are CHARACTER pointers of a length known only at run time, NULL(),
-   or initial values for pointers.
+   address 0 (%SYSTEM-F-ACCVIO), or under /CHECK=POINTERS
+   %FOR-F-NOTASSOC (an unallocated array's element %FOR-F-UNALLOCATED).
+   The debugger's EXAMINE P shows P's target (%DEBUG-W-NOTASSOC if it
+   has none).  CHARACTER pointers of a length known only at run time,
+   NULL(), and initial values for pointers are not there yet.
 
    Fortran 90's I/O is there.  A format may have Bw.m (binary),
    ESw.d (scientific), ENw.d (engineering), r/, and G of an INTEGER,
@@ -539,6 +543,14 @@
    and its list-directed input takes "..." and undelimited text.
    Fortran 90's new run-time conditions are FOR numbers 306 to 310
    (REAWRIFIL, EORDURREA, BADADVANCE, NONADVUNIT, RECTOOSHO).
+
+   The compiler's tools know Fortran 90: /STANDARD=F90 judges a
+   program by it, its obsolescent features too; /WARNINGS reports a
+   host's name an internal procedure hides (HOSTHIDDEN) and a value
+   nothing reads (UNREAD); listings and cross references go by scope,
+   with attributes, generic names, and operators; and /OPTIMIZE steps
+   through assumed-shape arrays and fuses array assignments of one
+   shape into one loop.  See the qualifiers.
 
    What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
    added.

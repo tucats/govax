@@ -183,6 +183,7 @@ func (b *ctorBuilder) impliedDo(d *ast.ImpliedDo) (*CtorDo, bool) {
 	t, _ := a.scope.rules().typeOf(d.Var.Name)
 	if outer := a.scope.find(d.Var.Name); outer != nil {
 		t = outer.Type
+		outer.typesEntity = true
 	}
 
 	if t.Kind != Integer {

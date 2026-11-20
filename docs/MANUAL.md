@@ -6850,7 +6850,8 @@ only warnings were held back ends with a good `$STATUS`, and a listing doesn't h
 `UNUSEDNAME` means only declared, and isn't reported for a name in a
 common block or an `EQUIVALENCE` list (a module's private variables are reported: no user can reach them), one an `INCLUDE` file declares, an `EXTERNAL` name that isn't a dummy
 argument (naming a `BLOCK DATA` unit that way gets it linked), or one declared to type a statement function's
-dummy argument. `UNREAD` goes by the order of the statements, not the order they run in, so a value read on
+dummy argument or an implied DO's variable in `DATA` or an array constructor (under `IMPLICIT NONE` that
+declaration is the variable's type). `UNREAD` goes by the order of the statements, not the order they run in, so a value read on
 any line of the unit, or passed as an argument, counts as read; and it isn't reported for a dummy argument, a
 function's value, a `DO` variable, or a name in a common block, an `EQUIVALENCE` list, or a `NAMELIST` group, or one
 that is `VOLATILE`, a pointer, a `TARGET`, or from a `USE`, since something other than the unit's own statements
@@ -7457,17 +7458,27 @@ FORTRAN run-time library, which could be run:
 - `/NOCHECK` is the default. The manuals at hand don't state VAX FORTRAN's, which
   may have had `OVERFLOW` on: a program that counts on that says `/CHECK=OVERFLOW`.
   What a check does when it fails, a dummy's `(1)` being open-ended, and
-  `/CHECK=UNDERFLOW` being a severe condition are govax's choices.
-- `/WARNINGS`: of the keywords, only `DECLARATIONS` is in the manuals at hand. `UNUSED` and
-  `ALIGNMENT`, the default, what `/WARNINGS` alone means, and what each message says are govax's.
+  `/CHECK=UNDERFLOW` being a severe condition are govax's choices. So are `POINTERS`, its one
+  keyword for pointers and allocatable arrays, and its conditions, FOR numbers 311 (`NOTASSOC`) and
+  312 (`UNALLOCATED`), with their texts.
+- `/WARNINGS`: of the keywords, only `DECLARATIONS` is in the manuals at hand (`ARGUMENT_CHECKING` is
+  the HP Fortran compiler's). `UNUSED` and `ALIGNMENT`, the default, what `/WARNINGS` alone means, what
+  each message says, and `HOSTHIDDEN` and `UNREAD`, with the names each leaves out, are govax's.
   `/WARNINGS=NONE` gives only what each unit starts with, so a source's own
   `CDEC$ OPTIONS /WARN=ALIGNMENT` still gets its messages.
-- `/STANDARD`: the manuals at hand give the keywords' names and no more. What's flagged comes from the language
-  manual's blue print and FORTRAN-77's own rules, and the messages are govax's. No keyword covers what a program
-  means, nor does any OPTIONS statement take it.
+- `/STANDARD`: the manuals at hand give `SYNTAX` and `SOURCE_FORM` and no more. What's flagged comes from the
+  language manual's blue print, FORTRAN-77's own rules, and for `F90` the Fortran 90 standard (its numbered syntax
+  rules, section 3's source form, chapter 13's intrinsic procedures, and B.2's obsolescent features); `F77`, `F90`,
+  `OBSOLESCENT`, the standard each unit gets by default, and the messages are govax's. No keyword covers what a
+  program means but the few things `OBSOLESCENT` and a constant expression's intrinsic functions need it for, nor
+  does any OPTIONS statement take it.
 - The debugger: its language stays MACRO, unlike VAX FORTRAN's, which wrote debugger records of its own language, and
   what it knows of a variable it reads from the MACRO file, so it needs that file as it does for source lines.
-  `$LINEn`, the layouts, and the messages about subscripts are govax's.
+  `$LINEn`, the layouts, the messages about subscripts and pointers (`NOTALLOC`, `NOTASSOC`), and a break at a
+  routine stopping after its entry code are govax's.
+- A traceback's line numbers come from a table govax's MACRO writes when the MACRO file says it was compiled
+  (a `; TBT$ FORTRAN` comment after `.IDENT`); VMS's MACRO, assembling the same file, writes none, so its
+  traceback shows no lines ([section 14.3](#143-the-fortran-command)).
 - `/NOF77`: the four rules are the manual's. A dummy's name in EXTERNAL staying the dummy is govax's choice.
 - `/DEBUG`: the keywords are as remembered of VAX FORTRAN's and as MACRO's own, the manuals at hand giving none. VAX
   FORTRAN's `/OBJECT` was on by default; govax's is off, leaving the MACRO step visible.
@@ -8033,7 +8044,14 @@ What the passes did, each named in the MACRO file's header:
   of three instructions a trip, not two of two. A WHERE construct's assignments are one
   nest testing the mask once at each element, when none of them changes what the mask
   reads. Not under `/CHECK=BOUNDS`, whose checks come before each statement's own loops.
-  `testdata/fortran90`'s `optfuse.f90` and `optstride.f90` measure them.
+  "The same shape" is as the compiler sees it: extents of the same constant, of the same
+  bounds' text, or of the same array. Two allocatable arrays have bounds only the program
+  knows, so `B = A + 1.0` then `A = B * 2.0` on them keeps two loops.
+  `testdata/fortran90`'s `optfuse.f90` and `optstride.f90` measure them. Not done yet: an
+  assignment whose two sides may overlap in a way only the program can know
+  (`A(I:I+999) = A(J:J+999) + 1.0`) goes through a temporary rather than choosing its loop's
+  direction when it runs, and `A = F(X)` of an array-valued function goes through the
+  function's temporary and a copy rather than into A.
 
 **What the optimizer takes the language at its word on.** A correct program prints
 the same both ways. A program breaking these rules can print something different
@@ -8423,8 +8441,15 @@ array-valued functions, and the transformational functions), with derived types,
 modules, compiled together or apart, with pointers (scalar, CHARACTER, and array pointers,
 pointer components, dummies, and results), and with the rest of the standard's intrinsic
 procedures (the character, numeric, model, and bit functions, TRANSFER, and the subroutines
-for the clock and random numbers); everything else Fortran 90 adds is recognized and reported
-as not yet implemented.
+for the clock and random numbers), and with Fortran 90's I/O (nonadvancing records, the new
+specifiers and edit descriptors, and Fortran 90's NAMELIST). The compiler's tools know them all:
+`/STANDARD=F90` judges a program by Fortran 90 and its obsolescent features, `/WARNINGS` reports
+a host's name hidden and a value never read, listings and cross references go by scope,
+`/CHECK=POINTERS` looks for a pointer not associated and an array not allocated
+([section 14.3](#143-the-fortran-command)), the debugger reads derived types, sections, and
+pointers ([section 14.10](#1410-debugging-a-compiled-program)), and `/OPTIMIZE` steps
+through assumed-shape arrays and fuses array assignments ([section 14.9](#149-what-optimize-does)).
+Everything else Fortran 90 adds is recognized and reported as not yet implemented.
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -10191,8 +10216,7 @@ reach of one. Any call may change any pointer's target.
 
 Of pointers, these are not there yet: a CHARACTER pointer whose length is known only when the
 program runs (but `CHARACTER(LEN=*)` pointer dummies, above); `NULL()` and initial values for
-pointers and pointer components, which are Fortran 95's; and the debugger's EXAMINE of a
-pointer or through one, which leaves pointers out of the `/DEBUG` table for now. Without
+pointers and pointer components, which are Fortran 95's. Without
 `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's target
 is at address 0, and using it is an access violation.
 Procedure pointers and bounds remapping (`P(1:N) => A`) aren't Fortran 90 at all.

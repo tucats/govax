@@ -313,10 +313,11 @@ type Symbol struct {
 	// it is NOTYPE.
 	untyped bool
 
-	// typesDummy is set for a name a statement function's dummy argument shares,
-	// whose declaration gives that dummy its type, so is of some use even if nothing
-	// else mentions the name (neverUsed).
-	typesDummy bool
+	// typesEntity is set for a name a statement entity shares (a statement
+	// function's dummy argument, or the variable of an implied DO in DATA or an
+	// array constructor), whose declaration gives that entity its type, so is of
+	// some use even if nothing else mentions the name (neverUsed).
+	typesEntity bool
 
 	// included is set for a name first seen in a file INCLUDE brought in, in a
 	// declaration (neverUsed).

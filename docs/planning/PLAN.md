@@ -159,7 +159,7 @@ questions, and a progress log extended as that phase is worked.
 | 107 | [PHASE-107 - Fortran 90 pointers](PHASE-107%20-%20Fortran%2090%20pointers.md) | POINTER, TARGET, `=>`, NULLIFY, ASSOCIATED, array pointers and pointers to sections, pointer components, the optimizer's aliasing rules — planned 2026-11-17; done 2026-11-19 |
 | 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17; done 2026-11-19 |
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17; done 2026-11-20 |
-| 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data — planned 2026-11-17 |
+| 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data, traceback lines, stepped addresses and fused nests — planned 2026-11-17; done 2026-11-20 |
 | 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | A substantial Fortran 90 program in every mode, gfortran's witness, the optional VMS round, the documentation finished — planned 2026-11-17 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
@@ -1136,3 +1136,34 @@ answer 1), since VMS's library, which the oracles hold FTNRTL to, refuses what F
 
 MANUAL.md's 14.13 and FORTRAN-INTERNALS.md's section 34 describe it; the phase doc's "Where things
 stand" lists what it left. The next phase is 110, the compiler's usability for Fortran 90.
+
+Phase 110 (done 2026-11-20) is the compiler's tools taught Fortran 90: its survey found `/STANDARD`
+judging a Fortran 90 program by FORTRAN-77's tables and missing most of it, `/CHECK=BOUNDS` already
+covering sections and descriptors, and assumed-shape loops three times as long as explicit-shape ones.
+
+- **`/STANDARD`** (`sema/standard.go`): `F77` and `F90`, a unit judged by its `/F90` setting when
+  neither is given; one walk, each table row carrying the standards that have it
+  (`source.Standards`); Fortran 90's source form; `OBSOLESCENT`, B.2's nine features, the five the
+  tree shows found by the walk and the rest where sema decides them; a constant expression's
+  intrinsics judged by 7.1.6.1. gfortran's `-std=f95` builds of the corpus are the witness. ASSIGN's
+  TO in free form fixed.
+- **`/WARNINGS`**: INTENTOUTREF at the use; a module's private variables reported unused (its block
+  no longer exempt as COMMON); HOSTHIDDEN under DECLARATIONS; UNREAD under UNUSED, by the cross
+  reference's mentions (two missed mentions fixed); a name typing an implied DO's variable exempt.
+- **Listings**: attributes in the map and cross reference, an allocatable's descriptor named, no `$`
+  temporaries, generic names, `OPERATOR(op)`, `ASSIGNMENT(=)`, module procedures, and an internal
+  procedure's hosts' names `from HOST`.
+- **`/CHECK=POINTERS`**: `ir.Guard` inside the expression (so `.AND.`'s short circuit protects it),
+  FTNRTL's `FTN$NOTASSOC` and `FTN$UNALLOCATED`, FOR numbers 311 and 312 (GSMATCH 1,32).
+- **The debugger**: the `/DEBUG` table's S, C, and B lines and pointer types; a location scanner
+  (`debugger/fortranref.go`) for components, sections, and substrings; pointers followed
+  (`%DEBUG-W-NOTASSOC`); module and host names; a routine break after its entry code.
+- **Traceback lines**: the compiler's `; TBT$ FORTRAN` marker, and govax's MACRO writing FORTRAN
+  line records (`internal/asm/fortranline.go`); under `/DEBUG` the traceback maps MACRO lines through
+  the file (`machine/traceline.go`).
+- **The optimizer**: an assumed-shape or pointer element's address stepped by its stride (4
+  instructions a trip, from 6), and adjacent array assignments and a WHERE's arms of one shape fused
+  into one nest (`sema/fusion.go`, `ir/lowerfuse.go`); `optfuse.f90` and `optstride.f90` measure them.
+
+MANUAL.md's 14.3, 14.7, 14.9, 14.10, and 14.13 and FORTRAN-INTERNALS.md's section 35 describe it; the
+phase doc's "Where things stand" lists what it left. The next phase is 111, the Fortran 90 milestone.

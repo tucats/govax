@@ -151,3 +151,22 @@ func TestWarningsUnread(t *testing.T) {
 
 	sameWarnings(t, "the default", warned(t, []string{"GENERAL"}, program...), nil)
 }
+
+// TestWarningsImpliedDoVariable: a name whose only use is to type an implied DO's
+// variable in an array constructor or DATA is still needed (under IMPLICIT NONE its
+// declaration is the variable's type), so isn't UNUSEDNAME, as a statement
+// function's dummy's isn't.
+func TestWarningsImpliedDoVariable(t *testing.T) {
+	sameWarnings(t, "implied DO", warned(t, []string{"UNUSED"},
+		"subroutine s",
+		"  implicit none",
+		"  integer :: i, j, k",
+		"  real :: a(3), b(3)",
+		"  data (b(j), j = 1, 3) / 3*0.0 /",
+		"  a = (/ (real (i), i = 1, 3) /)",
+		"  print *, a, b",
+		"end subroutine s",
+	), []string{
+		"3:20 UNUSEDNAME K is declared but never used | integer :: i, j, k",
+	})
+}

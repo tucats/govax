@@ -28,7 +28,8 @@ import (
 // from the loops' (a MOD for CSHIFT, outside the array for EOSHIFT's boundary),
 // which the scalarizer's leaves don't take, and the argument may be any array
 // expression. One way for all of them, safe whatever the statement's target
-// overlaps, costs a copy; Phase 110 may make the simple ones elements again.
+// overlaps, costs a copy. Phase 110 weighed the copies on kernels and left them (rare
+// in the corpus); making the simple ones elements again waits.
 
 // transformed is the value of f, a function whose value is Transformed,
 // computed now into a temporary of its shape, unless the statement has already.

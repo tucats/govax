@@ -1,9 +1,14 @@
 # Phase 110 — Fortran 90: the compiler's usability
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Needs Phases 107 to 109. Subtask 1, the survey (Part A), done
-2026-11-20 and accepted by the author the same day ("The author's answers"); its
-A.4 revises the subtasks below.
+**Status:** done 2026-11-20. "Where things stand", at the end, is what the phase
+left. Planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`, Part C).
+Needs Phases 107 to 109. Subtask 1, the survey (Part A), done 2026-11-20 and
+accepted by the author the same day ("The author's answers"); its A.4 revises the
+subtasks below, all done 2026-11-20: 2, `/STANDARD=F90`; 3, the obsolescent
+features; 4, `/WARNINGS`; 5, listings and cross references; 6, `/CHECK=POINTERS`;
+7, the debugger, in three parts (7a derived types and sections, 7b pointers, module
+and host names, and the routine break, 7c traceback lines); 8, the optimizer; 9,
+the close-out.
 
 ## Goal
 
@@ -341,7 +346,7 @@ marked so, and are unconfirmed.
 8. **The optimizer** (finding 10): the kernels, strength reduction for strided loops,
    fusion; the overlap test and Phase 104's list as the kernels say. (done 2026-11-20)
 9. **Close-out**: FORTRAN-INTERNALS.md, MANUAL.md (14.3's qualifiers, 14.7, 14.10,
-   14.13), HELP FORTRAN.
+   14.13), HELP FORTRAN. (done 2026-11-20)
 
 ## A.5 Questions for the author
 
@@ -747,3 +752,55 @@ A.4's nine subtasks are the phase's list; subtask 2 is next.
   `TestCompileSquares` (the header), and `internal/console`'s `TestFortranTracebackLines` (the usual
   build, `/NOOPTIMIZE`, `/DEBUG` with LINK/DEBUG and RUN/NODEBUG, and a `/DEBUG` object linked plainly).
   MANUAL.md's 14.3 ("Traceback lines") and HELP FORTRAN /DEBUG say so. The close-out (9) is next.
+- **2026-11-20:** Subtask 9, the close-out; the phase is done. FORTRAN-INTERNALS.md's section 35,
+  "Fortran 90: the compiler's usability", follows one program (a module with a derived type and a
+  private variable, an internal procedure, allocatable TARGET arrays, a pointer used after NULLIFY)
+  through every tool: `/STANDARD`'s one walk with a standards column per row and the witness; the
+  obsolescent features found where sema decides them; warnings by scope (the module block's
+  exemption, HOSTHIDDEN, UNREAD and the missed mentions); listings with attributes and hosts'
+  names; `/CHECK=POINTERS` as `ir.Guard` inside the expression, and why not ahead of the
+  statement; the `/DEBUG` table's S, C, and B lines and the session they allow; traceback lines
+  from govax's MACRO; stepped addresses and fusion, with what fusion can't see (two allocatable
+  arrays' extents). Its listings and sessions are govax's own output. The stale forward references
+  to Phase 110 in sections 27, 32, 33, and 34 and the introduction are updated. Writing it found a
+  bug: a name declared only to type an implied DO's variable in an array constructor or DATA was
+  `UNUSEDNAME`, though under IMPLICIT NONE the declaration is that variable's type; such a name is
+  now exempt as a statement function dummy's always was (`Symbol.typesDummy` widened and renamed
+  `typesEntity`, set by `ctorBuilder.impliedDo` and `integerName`; `TestWarningsImpliedDoVariable`).
+  MANUAL.md: 14.3's UNUSEDNAME exemptions; 14.7's notes on `/CHECK`, `/WARNINGS`, `/STANDARD`, and
+  the debugger say what is govax's own (POINTERS and FOR numbers 311 and 312; HOSTHIDDEN and UNREAD;
+  `F77`, `F90`, and OBSOLESCENT; NOTASSOC and the routine break), and a new bullet the traceback's
+  lines; 14.9 says what fusion can't see and what waits; 14.13's introduction names Fortran 90's I/O
+  (Phase 109 had left it out) and the tools, and its "Not there yet" lost the pointers' debugger
+  passage. HELP FORTRAN's Fortran_90 topic lost "/CHECK=POINTERS isn't there yet" and gained the
+  debugger's records, sections, and pointers and a paragraph on the tools; `helplib.hlb` rebuilt by
+  `go generate`. `ir/lowertransform.go`'s comment on Phase 110 updated. PLAN.md's row and summary.
+
+## Where things stand
+
+Phase 110 is done: `/STANDARD` judges by either standard, with Fortran 90's obsolescent features;
+`/WARNINGS` knows scopes; listings and cross references show attributes, generics, operators, and
+hosts' names; `/CHECK=POINTERS` covers pointers and allocatable arrays; the debugger shows derived
+types, sections, pointers, module and host variables, and stops after a routine's entry code; a
+traceback has FORTRAN lines; and `/OPTIMIZE` steps assumed-shape addresses and fuses array
+assignments. What it left, and where each goes:
+
+- **Phase 111:** the milestone program, which will exercise these tools on something larger than
+  the corpus; the optional VMS round.
+- **Later, measured but not done (subtask 8):** a run-time test of two sections' overlap choosing
+  the loop's direction, where sema can't decide (`A(I:I+999) = A(J:J+999) + 1.0` is two loops of 2
+  instructions a trip, through a temporary); `A = F(X)` of an explicit-shape array-valued function
+  computed into A (the function's loop and a copy loop of 2 a trip from `$W1`); SPREAD and CSHIFT as
+  elements where used, and the copies of sections to old dummies (Phase 104's list); a whole-array
+  copy as MOVC3, which the instruction count can't judge. Fusion of arrays whose extents the
+  compiler can't prove equal (two allocatable arrays) would need a run-time test too.
+- **Later, the debugger:** `SET BREAK %LINE n` is still the MACRO file's line (`UNIT.$LINEn` is
+  FORTRAN's; the survey's D8); a component after subscripts in an expression (EXAMINE takes it);
+  the debugger's language stays MACRO.
+- **Unconfirmed choices (ours, logged above):** the keywords `F77`, `F90`, and OBSOLESCENT, the
+  standard each unit gets by default, and every message's text; HOSTHIDDEN and UNREAD, and the
+  names UNREAD leaves out (DO variables by idiom among them); FOR numbers 311 and 312, their names
+  and texts, and one keyword for pointers and allocatable arrays; a host's frame variable found in
+  the host's nearest active call rather than through the FP an internal procedure is given (the
+  same unless a recursive host called itself through the procedure); an INCLUDE file's lines in a
+  traceback numbered by its own file; the strides of a stepped address left as memory operands.

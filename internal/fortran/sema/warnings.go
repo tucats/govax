@@ -152,7 +152,7 @@ func (a *analyzer) neverUsed(s *Symbol) bool {
 		return s.listed && onlyDefined(s.refs)
 	}
 
-	if s.Class == UnitName || s.Result || s.Internal != nil || s.broken || s.library || s.included || s.typesDummy ||
+	if s.Class == UnitName || s.Result || s.Internal != nil || s.broken || s.library || s.included || s.typesEntity ||
 		(s.Common != nil && s.Common.Module == "") || s.Equivalenced || (s.External && s.Dummy == 0) {
 		return false
 	}

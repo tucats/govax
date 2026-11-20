@@ -28,7 +28,7 @@ and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
 too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), pointers (section 32), the rest of the intrinsic procedures (section 33), and its I/O (section 34). A real program, DUNGEON, builds and plays with it, and its
+free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), pointers (section 32), the rest of the intrinsic procedures (section 33), and its I/O (section 34), with the compiler's tools (`/STANDARD`, warnings, listings, `/CHECK`, the debugger, and the optimizer) taught the new language (section 35). A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -50,7 +50,8 @@ users, how a USE reads it, and how separately compiled pieces are kept in step; 
 pointers, and the TARGET attribute that lets the optimizer reason about them; section 33
 the intrinsic procedures: one table, and how each reference chooses its form; section 34
 Fortran 90's I/O: one flag for the language a statement speaks, and a record that outlives
-its statement.
+its statement; section 35 the compiler's tools on Fortran 90: two standards in one walk, warnings
+by scope, a check inside the expression, what the debugger is told, and two loop improvements.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -3586,9 +3587,10 @@ The inner loop is now six instructions: three induction variables, one per leaf,
 by the row's stride, and an `AOBLEQ`.
 
 Optimizing gains less on these programs, 6% to 10%, than on the old corpus's kernels, because
-each statement's nest is short and is the whole of the work. The phase doc lists what is left
-for Phase 110 to measure. The largest items are that the assignments of a WHERE construct are
-separate nests, never fused, and that a whole-array copy is a loop rather than a MOVC3.
+each statement's nest is short and is the whole of the work. Phase 110 measured what was left on
+kernels: adjacent assignments and a WHERE construct's arms now share one nest, and an assumed-shape
+element's address is stepped (section 35); a whole-array copy is still a loop rather than a MOVC3,
+which would be fewer instructions without being clearly faster.
 
 ## 28. Fortran 90: procedures and interfaces (Phase 103)
 
@@ -4904,7 +4906,8 @@ already written. A pointer makes the answer "maybe" more often: in `A = P + 1`, 
 A. `sema/overlap.go`'s `mayShare` learned that a pointer may share storage with another pointer,
 a TARGET (a dummy too), or anything in COMMON, of a type it may meet, and nothing else; so `A = P`
 gets a temporary when A is a TARGET and doesn't when it isn't. A run-time test of the two address
-ranges, cheaper than a temporary when they don't overlap, is Phase 110's (the author's answer 6).
+ranges, cheaper than a temporary when they don't overlap, was weighed in Phase 110 and left for
+later (section 35).
 
 ### Why TARGET exists
 
@@ -5005,7 +5008,7 @@ pointer component, which changes only the target; and, in `sparse.f90`, a bound 
 dummy's component (`Y(A%N)`), a defined operator's array operand, a defined assignment's array
 value, and ASSOCIATED of a pointer function's value. Each is held by a test of its own.
 
-What waits: `/CHECK=POINTERS` and the debugger's EXAMINE of a pointer (Phase 110); `NULL()` and default initialization (Phase
+What waits: `NULL()` and default initialization (Phase
 112); a CHARACTER pointer whose length is known only when the program runs.
 
 ## 33. Fortran 90: the intrinsic procedures (Phase 108)
@@ -5342,8 +5345,7 @@ imaginary half, so `(0.0_16, 0.5_16)` and `(0.0_16, 1.0_16)` shared one datum; a
 constant (`MONTHS(11)(1:8)`), which the standard allows and sema refused. Each is held by a test of
 its own.
 
-What waits: `/STANDARD`'s judgment of the new
-names and the debugger's EXAMINE of their values (Phase 110); Fortran 95's additions, CEILING's and
+What waits: Fortran 95's additions, CEILING's and
 FLOOR's KIND, NULL, and CPU_TIME (Phase 112). Not there, and in no phase yet: a BACK= that is an array, a TRANSFER to
 a CHARACTER MOLD of zero or run-time length, and a component or function value of length zero, each
 `%FORT-E-NOTIMPL`, named.
@@ -5724,4 +5726,464 @@ NULL), and twelve programs from earlier phases that had never been run with pagi
 What waits: Fortran 95's I/O (a zero width in `I0` and `F0.d`, which Fortran 90 doesn't have: FTNRTL
 takes it for a field too narrow for any value, OUTCONERR), for the optional Phase 112, and Fortran 2003's (DECIMAL=, ROUND=,
 stream access), which no phase plans; FTNRTL's limit of 15 dimensions and 8 levels in a NAMELIST object, past which the
-compiler says NOTIMPL; and the debugger's EXAMINE of the new forms (Phase 110).
+compiler says NOTIMPL.
+
+## 35. Fortran 90: the compiler's usability (Phase 110)
+
+Sections 24 to 34 taught the compiler Fortran 90's language. A compiler is more than its language,
+though: it is also what it tells you about your program (section 7's warnings and `/STANDARD`,
+section 19's listings), what the compiled code looks out for (`/CHECK`), what it leaves for the debugger
+(section 18), and how fast the code is (section 16). Phase 110 went through each of these for the
+new language, and found that the earlier phases had done less of this than they seemed to:
+`/STANDARD` judged a Fortran 90 program by FORTRAN-77's tables and missed most of it, a
+module's private variables were never reported unused, a WHERE mask's temporary was listed among
+the program's names, the debugger couldn't show a derived type or follow a pointer, and a loop over
+an assumed-shape dummy cost three times what an explicit-shape one did. None of this changes what
+a program computes, which is why it could wait; all of it changes what working on one is like.
+
+The section follows one program through the tools:
+
+```fortran
+module store
+  implicit none
+  type item
+     character(len=8) :: name
+     real :: price
+  end type item
+  integer, private :: lookups = 0
+contains
+  subroutine raise (v, w, f)
+    real, intent(inout) :: v(:)
+    real, intent(in) :: w(:)
+    real, intent(in) :: f
+    v = v + f * w
+  end subroutine raise
+end module store
+
+program tour
+  use store
+  implicit none
+  real, allocatable, target :: a(:), b(:)
+  real, pointer :: p
+  type(item) :: best
+  real*8 :: total
+  integer :: i, n, last
+  n = 6
+  allocate (a(n), b(n))
+  a = (/ (real (i), i = 1, n) /)
+  b = a + 1.0
+  a = b * 2.0
+  call raise (a(1:n:2), b(1:n:2), 0.5)
+  last = n
+  total = sum (a)
+  best = item ('PEAR', a(2))
+  p => a(3)
+  call show (n)
+  nullify (p)
+  print *, p
+contains
+  subroutine show (i)
+    integer, intent(in) :: i
+    print '(1x, 6f6.1, f8.1, 1x, a, f6.2)', a(1:i), total, best%name, p
+  end subroutine show
+end program tour
+```
+
+It prints `5.0 6.0 10.0 10.0 15.0 14.0 60.0 PEAR 10.00`, and then the last PRINT uses a pointer
+that points nowhere, a bug left in on purpose.
+
+### One walk, two standards
+
+`/STANDARD` (section 7) is one walk over the syntax tree, `sema/standard.go`, with tables of what
+FORTRAN-77 has: each statement kind, each declaration form, each intrinsic, each specifier, each
+edit descriptor. A row the table marked "not FORTRAN-77" became `%FORT-I-EXTENSION`. Fortran 90
+needed a second reading of the same tree, and the question was whether that should be a second
+walk. It shouldn't: almost every finding is the same kind of fact ("this program uses the CONTAINS
+statement"), and what differs between the two readings is only *which standards have it*. So each
+row gained a column, `source.Standards`, a bit for each standard that has the thing:
+
+```go
+lex.Contains:          {"the CONTAINS statement", f90},
+lex.Accept:            {"the ACCEPT statement", 0},
+```
+
+CONTAINS is Fortran 90's and not FORTRAN-77's; ACCEPT, DEC's, is neither's. The walk notes every
+row it meets, and `extensions.add` keeps the note only when the standard being judged by isn't
+among the row's bits. The same program under the two readings:
+
+```text
+$ FORTRAN/STANDARD=F77/NOMACRO TOUR.F90          50 findings, among them
+%FORT-I-EXTENSION, extension to FORTRAN-77: the CONTAINS statement
+%FORT-I-EXTENSION, extension to FORTRAN-77: a declaration with ::
+%FORT-I-EXTENSION, extension to FORTRAN-77: free source form
+
+$ FORTRAN/STANDARD=F90/NOMACRO TOUR.F90          one
+%FORT-I-EXTENSION, extension to Fortran 90: a length after REAL
+  at line 23 of TOUR.F90
+    real*8 :: total
+  --^
+```
+
+`REAL*8` is DEC's, an extension to both standards: Fortran 90 spells it `REAL(8)`. The message names
+the standard, since the same text now means two things. With no `F77` or `F90` keyword each unit
+is judged by its own `/F90` setting, so a free-form file is held to Fortran 90 and an old fixed-form
+file to FORTRAN-77 in one compilation.
+
+The walk had to learn Fortran 90's tree too. Before Phase 110 it only *descended through* the new
+statements (an interface body, a WHERE's arms) to judge what was inside them by the old tables,
+which is why it missed nearly everything. Now it notes `::`, each attribute, kind selectors,
+deferred and assumed shapes, `==` and its kin (the parser records that the operator was written
+symbolically, `ast.Binary.Symbolic`, since `==` and `.EQ.` are the same node otherwise), a
+character constant between quotation marks, `%`, keyword arguments, constructors, defined
+operators, construct names, and the rest. Two things only semantic analysis can tell: whether
+`A(2:5)` is a section or a substring (`sectionList`, which decides it, notes it), and the
+intrinsic names chapter 13 added (`noteIntrinsic`, as section 7 has it do for FORTRAN-77's). Both report
+to the walk's own list, so their findings come out in source order with the rest.
+
+Source form is the first pass's business (`source/standard.go`): a line's marks carry their
+standards as the rows do. Under Fortran 90 a tab, a `$` in a name, a line past 132 characters, and
+more than 39 continuation lines in free form are flagged, and small letters and `!` aren't. Under
+FORTRAN-77 a free-form file is one finding, "free source form", at its first line, not one per line.
+
+The tables are easy to get wrong in the quiet direction, flagging too little. What keeps them honest
+is a witness: every Fortran 90 program the corpus also builds with gfortran `-std=f95` (section 34's
+`compare.py`) must draw no EXTENSION under `/STANDARD=F90`. `TestStandardF90Witness` compiles them
+all; the same programs under `F77` draw about 9,000 findings, which is the other direction's check.
+
+### Obsolescent features need what a program means
+
+Fortran 90 deletes nothing from FORTRAN-77, but its appendix B.2 lists nine features that a later
+standard may delete. `/STANDARD=F90` reports them as `%FORT-I-OBSOLESCENT` (the `OBSOLESCENT`
+keyword, on with `SYNTAX` unless named):
+
+```fortran
+subroutine old (x, n)
+  real :: x, t
+  do 10 t = 1.0, 3.0
+     do 10 k = 1, n
+        if (x) 20, 10, 10
+10 x = x + t
+20 pause
+end subroutine old
+```
+
+```text
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: a DO variable of type REAL
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: the arithmetic IF statement
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: a terminal statement shared by DO loops
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: a DO loop ending at an assignment
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: the PAUSE statement
+```
+
+The arithmetic IF and PAUSE are visible in the tree, and the walk reports them as it does any
+statement. The other three aren't: the tree says `DO 10 T = ...`, but whether T is REAL, whether two
+loops end at label 10, and what label 10's statement is are facts semantic analysis works out
+(section 12's `endDo`, `labels.go`). So the checks live where those facts are decided (`doVariable`,
+`endLoops`, and for a jump to END IF from outside its block `checkLabels`), and report to the same
+list. That bends section 7's rule of one walk for `/STANDARD`, as `noteIntrinsic` already had;
+the alternative, recomputing in the walk what sema already knows, would be two answers to one
+question, which is worse.
+
+The same is true of constant expressions. Fortran 90 lets an initialization expression call an
+elemental intrinsic only of INTEGER or CHARACTER arguments (its 7.1.6.1). govax's constant
+evaluator (section 25) computes far more than that, which is useful, and is an extension to say
+so: the evaluator notes each intrinsic it computes while evaluating a declaration (`initRule`), not
+while folding an executable statement's expression, which the standard doesn't restrict.
+
+Writing the obsolescent checks found a lexer bug. `ASSIGN 10 TO LAB` in free form was
+`%FORT-E-BLANKINNAME`: the lexer read `TOLAB` as one squeezed token and then, quite correctly for a
+name, refused the blank inside it. The fix splits ASSIGN's `TO` off as a keyword after the label's
+digits, so free form's blank rules apply to it as to any keyword.
+
+### Warnings by scope
+
+`/WARNINGS` (section 7) works from the cross reference's mentions: each name's list of where it
+was declared, assigned, and used. Fortran 90 adds scopes, and two warnings are about them:
+
+```text
+$ FORTRAN/WARNINGS=ALL/NOMACRO TOUR.F90
+%FORT-W-UNUSEDNAME, LOOKUPS is declared but never used
+  at line 7 of TOUR.F90
+    integer, private :: lookups = 0
+  ----------------------^
+%FORT-W-HOSTHIDDEN, I is declared here, hiding TOUR's I
+  at line 39 of TOUR.F90
+    subroutine show (i)
+  -------------------^
+%FORT-W-UNREAD, LAST is given a value here but never used
+  at line 31 of TOUR.F90
+    last = n
+  --^
+```
+
+**A private module variable** is the only kind of module entity the compiler can call unused: a
+public one is for the module's users, whom it can't see. The code meant to report such names all
+along, and never did, for a reason worth knowing. UNUSEDNAME is never reported for a name in COMMON
+(another unit may use it), and section 31 gave a module's variables a common block of their own,
+`$MOD$STORE`. The exemption was right for COMMON and wrong for this block; the fix exempts a
+block only if it isn't a module's (`CommonBlock.Module`).
+
+**HOSTHIDDEN**: an internal procedure that declares a name its host has (here SHOW's dummy I) can't
+reach the host's. That's legal and usually meant (a loop index of its own), so it's a warning under
+`DECLARATIONS`, off by default. It isn't reported for a generic interface, which by the standard's
+14.1.2.3 extends its host's of the same name rather than hiding it.
+
+**UNREAD** is a variable given a value that nothing reads. "Nothing" is by the order of the
+statements, not their flow: the warning has the mentions, not a flow graph, so `M = M + 1` reads M
+and a name passed as an argument counts as read. It leaves out whatever something other than the
+unit's own statements may read: a dummy, a function's value, COMMON and module variables, an
+EQUIVALENCE, a NAMELIST group, VOLATILE, a pointer, a TARGET, and DO variables (`DO I = 1, 3` with a
+body that never mentions I is an idiom, not a mistake).
+
+UNREAD needed the mentions to be right, and two were wrong. A name that is both read and written by
+one mention (RANDOM_NUMBER's seed, MVBITS's TO) had been recorded as written only, so the seed was
+"never used"; and an internal file READ from an element, `READ (DIGITS(K), ...)`, recorded no
+mention at all. Both are fixed where mentions are recorded (`noteReadsToo`, `notePlace`), so the
+cross reference is right too.
+
+A third was found writing this section. The tour's I appears only as the implied DO's variable in
+`(/ (REAL (I), I = 1, N) /)`, and was reported "declared but never used". By the standard that
+variable is a *statement entity*, not the unit's I; but it takes I's type, and under IMPLICIT NONE
+the declaration is the only way to give it one, so deleting it as the warning suggested would make
+an error. A statement function's dummy argument has always been treated this way (section 7); an
+implied DO's variable in DATA or a constructor now is too (`Symbol.typesEntity`).
+
+### Listings that know scopes
+
+Phases 103 and 106 already gave each contained unit its own page, map, and cross reference. Phase
+110 filled in the rest:
+
+```text
+Storage map for TOUR, the main program
+  A      REAL, ALLOCATABLE, TARGET (:)  descriptor at $LOCAL+0   TOUR.A
+  B      REAL, ALLOCATABLE, TARGET (:)  descriptor at $LOCAL+32  TOUR.B
+  P      REAL, POINTER                  $LOCAL+64                TOUR.P
+  BEST   TYPE(ITEM)                     $LOCAL+68                TOUR.BEST
+  ...
+Cross reference for TOUR.SHOW               (D defined, A assigned, a blank is used)
+  A       REAL array, ALLOCATABLE, TARGET from TOUR  41
+  BEST    TYPE(ITEM) from TOUR                       41
+  I       INTEGER, INTENT(IN)                        39D  40D  41
+  P       REAL, POINTER from TOUR                    41
+  TOTAL   REAL*8 from TOUR                           41
+```
+
+Attributes (ALLOCATABLE, POINTER, TARGET, INTENT, OPTIONAL, PRIVATE) follow the type in both the map
+and the cross reference (`Symbol.Attributes`). An allocatable array's place is its *descriptor's*
+(section 29), and the map says so: `$LOCAL+0` alone would suggest the elements are there. The
+internal procedure's cross reference lists the host's names it uses, `from TOUR`, as a USE's names
+are listed `from STORE`; before, SHOW's page didn't mention A at all, and the host's row was the only
+record that SHOW reached it. Generic names, `OPERATOR(.op.)`, and `ASSIGNMENT(=)` have rows, used at
+each operation that calls one of their procedures; a module procedure has a row in its module's
+cross reference. And a symbol whose name starts with `$`, a compiler temporary such as a WHERE
+mask's `$W`, is never listed: the survey had found one in a program's map.
+
+### `/CHECK=POINTERS`: a test inside the expression
+
+The tour's last PRINT uses P after NULLIFY. A pointer is its target's address (section 32), and a
+disassociated one's is 0, so without a check the program reads address 0, an access violation far
+from the mistake. `/CHECK=POINTERS` tests the address where it is used:
+
+```text
+;   37    print *, p
+	...
+	TSTL	TOUR.P
+	BNEQ	TOUR.$37
+	CALLS	#0,G^FTN$NOTASSOC
+TOUR.$37:
+	MOVAL	@TOUR.P,TOUR.$D3+4
+```
+
+```text
+%FOR-F-NOTASSOC, pointer is not associated
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00001CB9  00001CB9
+STORE           TOUR                               37      00000304  00000A44
+```
+
+The same keyword covers allocatable arrays (an element of one not allocated is `%FOR-F-UNALLOCATED`):
+both are a descriptor or cell whose address may be 0, and two keywords for one test would only be
+two things to remember. The conditions are govax's own, FOR numbers 311 and 312, signaled by FTNRTL
+routines that never return, as section 29's NOTCONFOR is.
+
+Where the test goes is the interesting part. `/CHECK=BOUNDS` (section 19) puts its test, the IR's
+`InRange`, *inside* the expression that computes the subscript, not in a statement before it. The
+pointer check does the same, as a new IR expression, `ir.Guard`: "X, once the test is found not to
+be 0". Putting it ahead of the statement would have been simpler and wrong:
+
+```fortran
+if (associated (p) .and. p%key > 0) ...
+do while (associated (q%next) .and. q%next%key < k)
+```
+
+These are correct programs only because `.AND.` doesn't evaluate its right side when the left is
+false, section 19's reason for putting InRange where it is. A check hoisted to the statement's start would test P before
+ASSOCIATED had, and stop a correct program. Inside the expression, the guard runs only where the
+reference does. Every pass that walks expressions had to learn the new node, which is the cost:
+the optimizer treats a guard as something that can fault, as it does InRange, so it may drop one
+it can prove passes (of an address, or a nonzero constant) but never moves one ahead of the branch
+that protects it.
+
+The survey had also found that `SUM(A)` after `DEALLOCATE(A)` ran and printed a value read from the
+freed block. DEALLOCATE clears the descriptor's POINTER, but an element is reached from A0 and the
+bounds, which stay. Under the check POINTER is tested first; without it, using a deallocated array
+is still undefined, as the standard says.
+
+### What the debugger is told
+
+Section 18's `/DEBUG` table is comment lines in the MACRO file, which the debugger reads; MACRO's own
+debug records know only MACRO's labels. Phase 110 added three kinds of line:
+
+```text
+;DBG$ V TOUR P ^RF 4 S:TOUR.P - -
+;DBG$ V TOUR BEST REC:ITEM 12 S:TOUR.BEST - -
+;DBG$ B TOUR TOUR 25
+;DBG$ S TOUR ITEM 12 D
+;DBG$ C TOUR ITEM NAME 0 CH 8 -
+;DBG$ C TOUR ITEM PRICE 8 RF 4 -
+```
+
+An **S** line is a structure (its size, and D for a derived type, shown with `%`, or R for DEC's
+record, shown with `.`), and a **C** line each component (offset, type, size, bounds). A V line of a
+record names its structure, `REC:ITEM`, and a pointer's type has `^` before it, its place the
+pointer's own storage. A **B** line says which FORTRAN line each entry point's code reaches first.
+
+With those, the session the survey couldn't have:
+
+```text
+DBG> SET BREAK TOUR.SHOW
+DBG> GO
+break at routine STORE\TOUR.SHOW
+FORTRAN line 41: print '(1x, 6f6.1, f8.1, 1x, a, f6.2)', a(1:i), total, best%name, p
+DBG> EXAMINE BEST
+STORE\TOUR.BEST%NAME:   'PEAR    '
+STORE\TOUR.BEST%PRICE:  6.000000
+DBG> EXAMINE A(1:5:2)
+STORE\TOUR.A(1):        5.000000
+STORE\TOUR.A(3):        10.00000
+STORE\TOUR.A(5):        15.00000
+DBG> EXAMINE P
+STORE\TOUR.P:   10.00000
+DBG> EXAMINE TOTAL
+STORE\TOUR.TOTAL:       60.00000000000000
+```
+
+Four things made it work. The location reader (`debugger/fortranref.go`) used to be a regular
+expression for a name and at most two groups; it is now a small scanner that splits a location into
+names, `%`s, periods, and balanced parentheses, and a walk that takes each step in turn, a group
+being subscripts, a section, or a substring by what it follows. A section is just a list of elements,
+so `A(1:5:2)` came almost free once the walk could carry a list. A pointer is *followed*: its cell
+holds an address (or, for a CHARACTER or array pointer, a descriptor), and an address of 0 is
+`%DEBUG-W-NOTASSOC`. In a record shown whole a pointer component is shown as an address and not
+followed, since a list's NEXT can lead round forever. A bare name is looked for in the unit, then
+its hosts in turn: SHOW has no A, so A is TOUR's, the host's name being SHOW's less its last part.
+And the **B** line moves a break: `SET BREAK TOUR.SHOW` used to stop at SHOW's first instruction,
+before the entry code that copies an assumed-shape dummy's descriptor into its cell (section 29), so
+the dummy read as not allocated until a STEP. Now a break at a FORTRAN routine stops at the
+B line's statement, after that code.
+
+A module's variable is `STORE.LOOKUPS`, the same dotted path as any unit's: the module is a unit in
+the table like any other.
+
+### Traceback lines
+
+The traceback above says line 37. Before Phase 110 that column was empty for a FORTRAN routine,
+because a traceback's line numbers come from the image's debug symbol table, which LINK fills from
+the object's traceback records, and MACRO, assembling the compiler's MACRO file, had no FORTRAN
+lines to give it. VAX FORTRAN, writing objects itself, gave the FORTRAN line.
+
+Three ways were weighed: a table of lines as data in a psect of the compiler's own, read at
+traceback time; line records from govax's MACRO; or line records only when `/OBJECT` has the
+FORTRAN command run MACRO itself. The second was chosen. The compiler writes a marker after
+`.IDENT`,
+
+```text
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+```
+
+and govax's MACRO, seeing it, numbers each line of code by the last FORTRAN source comment before it
+and writes those numbers as line records among the traceback records (`internal/asm/fortranline.go`).
+LINK and the traceback (`dbgsym`'s `TraceName`) needed no change: they already read line records,
+which VMS's own compilers wrote. Without the marker MACRO does exactly what it did, so a MACRO file
+assembled by VMS's MACRO, which doesn't know the comment, still gives VMS's object, and the VMS
+rounds' stored objects (section 20) are unchanged.
+
+`/DEBUG` complicates it. An object has one line table, and under `/DEBUG` it must be the MACRO
+file's, since the debugger steps by MACRO lines and maps them to FORTRAN lines through the comments.
+So under `/DEBUG` MACRO writes no FORTRAN table, and a traceback in such an image (`RUN/NODEBUG`)
+does at traceback time what the debugger does: maps the MACRO line to its FORTRAN line through the
+file's comments (`internal/machine/traceline.go`).
+
+### Two loop improvements, measured
+
+Phase 104's assumed-shape dummies reach an element as A0 plus the subscript times the stride
+(section 29). The survey compiled small kernels and read their inner loops: an explicit-shape `A = B`
+is two instructions an element, but `V = V + W` on two assumed-shape dummies was six, a multiply and
+an add per operand recomputing each address every trip. Section 16's induction pass already turns
+"index times a constant" into "an index stepped by the constant", but it treated a computed address
+(`ir.Mem.Ptr`) as untouchable. It now takes an address as a candidate too, so the register holds the
+element's address and steps by the stride. RAISE, in the tour, compiled `/OPTIMIZE`:
+
+```text
+STORE.RAISE.$15:			; array (line 13), dimension 1's body
+	MULF3	R10,(R8),R0
+	ADDF2	R0,(R7)
+	ADDL2	STORE.RAISE.$B1+20,R7
+	ADDL2	STORE.RAISE.$B2+20,R8
+	AOBLEQ	R9,R6,STORE.RAISE.$15
+```
+
+F is loaded into R10 before the loop (section 16's invariant motion), and each operand's address is
+a register stepped by its descriptor's stride. The strides stay memory operands: in registers they
+would save a read, not an instruction. One subtlety: section 32's alias analysis must still know
+that `(R7)` is V's element, or a store through it could be moved past a read of V. So the stepped
+register's cell records the place it addresses (`Cell.Points`).
+
+The second improvement is **fusion**: adjacent array assignments of one shape become one loop nest,
+and a WHERE construct's arms one nest testing the mask once:
+
+```text
+;    3    b = a + 1.0
+	...
+FUSE.$1:				; array (line 3), dimension 1's body
+	ADDF3	-4(R8)[R6],FUSE.$KF1,-4(R7)[R6]
+;    4    c = b * 2.0
+	MULF3	-4(R7)[R6],FUSE.$KF2,-4(R9)[R6]
+	AOBLEQ	#1000,R6,FUSE.$1
+```
+
+Fusing is safe when each array one statement reads that another writes is read only at the same
+element, or not at all, which is section 27's overlap analysis asked across statements instead of
+within one (`sema/fusion.go`'s `Fusable`). The shapes must be the same *as the compiler can tell*: an
+extent of the same constant, the same bounds' text, or the same array. That is a stronger condition
+than the shapes being equal, and deliberately so. The tour's `B = A + 1.0` and `A = B * 2.0` don't
+fuse, though A and B are both N long, because they're allocatable: their bounds are whatever the
+program last allocated, and the compiler can't prove they agree. Lowering does the fusing
+(`ir/lowerfuse.go`), not the optimizer, because only lowering knows the nests are nests; each part
+keeps its own statement, so its source line and the debugger's line labels come out where they
+belong. It is skipped under `/CHECK=BOUNDS`, whose checks belong before each statement's own loops.
+
+Two kernels in `testdata/fortran90`, `optfuse.f90` and `optstride.f90`, measure them: under
+`/OPTIMIZE` the first ran 28.5% fewer instructions with fusion, the second 26.1% fewer with stepped
+addresses. Two other ideas were measured and left: choosing an overlapping assignment's loop direction
+at run time rather than copying through a temporary, and computing `A = F(X)` into A rather than
+through F's temporary. Each would save about half of its statement's loop, but both are rare in the
+corpus and each needs machinery of its own (a loop chosen by a test; proof that F can't reach A).
+
+### What the programs found
+
+The phase's programs are tests more than corpus programs: `standard90_test.go`'s witness,
+`obsolescent_test.go`, `warnings90_test.go`, `listing90_test.go`, `pointercheck_test.go` and the
+console's `TestFortranCheckPointers` (13 programs, each run with and without the check, both optimizer
+settings, both paging modes), the debugger's `fortran90_test.go`, `TestFortranTracebackLines`, and the
+two kernels. What they found was mostly in the earlier phases: the ASSIGN lexer bug, the module block
+exempting private variables, the two missed mentions, the implied DO's variable, a `$W` in the map,
+and SUM over a freed block. Each of them was the kind of thing that a program's output never shows,
+which is why sections 24 to 34's programs, which check output, didn't find them.
+
+What waits: the run-time overlap test and `A = F(X)` into A, above; a break at a FORTRAN line given
+as `%LINE n`, which is still the MACRO file's line (`UNIT.$LINEn` is the FORTRAN one); and the
+debugger's language, which stays MACRO, since the module it reads is MACRO's (section 18).

@@ -1403,6 +1403,34 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   each the same on gfortran; every corpus program now also runs with paging on);
   subtask 9 (2026-11-20) the close-out, FORTRAN-INTERNALS.md's section 34,
   MANUAL.md's 14.13 "Edit descriptors" and 14.6's FTNRTL table, HELP FORTRAN.
+  Phase 110 (done 2026-11-20; its Part A the survey, accepted by the author
+  the same day, A.4 its subtasks; its "Where things stand" is the follow-up
+  list, and PLAN.md summarizes it) is the compiler's tools on Fortran 90:
+  subtask 2 `/STANDARD=F90` (`sema.Conformance`'s `Standard`, `F77`/`F90`, a
+  unit judged by its `/F90` setting by default; each table row a text and its
+  `source.Standards`, `extensions.add` flagging what the judged standard lacks;
+  the walker into Fortran 90's statements and forms; source form under F90;
+  ASSIGN's TO in free form, `assignTo`; the witness, `TestStandardF90Witness`
+  over compare.py's `PROGRAMS90`); 3 `%FORT-I-OBSOLESCENT` (`extensions.obsolete`;
+  the walk's by kind and node, sema's in `doVariable`, `endLoops`, `checkLabels`,
+  `ioFormat`; a constant expression's intrinsics by `initRule`); 4 `/WARNINGS`
+  (INTENTOUTREF at the use, `analyzer.mention`; a module's block not exempt from
+  UNUSEDNAME; HOSTHIDDEN, `hostHidden`, under DECLARATIONS; UNREAD, `neverRead`,
+  under UNUSED; `noteReadsToo`, `notePlace`); 5 listings (generic, operator, and
+  assignment rows; `Symbol.Attributes`; `descriptor at`; no `$` names; an
+  internal procedure's hosts' names, `Unit.hostNames`); 6 `/CHECK=POINTERS`
+  (`ir.Guard`, `ir/lowerguard.go`; FTNRTL's `FTN$NOTASSOC` and
+  `FTN$UNALLOCATED`, FOR numbers 311 and 312, GSMATCH 1,32); 7a the debugger's
+  records and sections (`dbgtable`'s S and C lines, `REC:name`;
+  `debugger/fortranref.go`'s `scanItem` and `fortranChain`), 7b pointers (`^`
+  types, `follow`, `%DEBUG-W-NOTASSOC`), module and host names, and the routine
+  break after the entry code (the B line, `routineStart`), 7c traceback lines
+  (`dbgtable.TracebackMarker`, `internal/asm/fortranline.go`'s line records,
+  `machine/traceline.go` under `/DEBUG`); 8 the optimizer (stepped addresses,
+  the walker's `addresses` mode, `Cell.Points`; fusion, `sema/fusion.go`'s
+  `Fusable`/`FusableWhere`, `ir/lowerfuse.go`, `ir.LowerWith`; `optfuse.f90`,
+  `optstride.f90`); 9 the close-out, FORTRAN-INTERNALS.md's section 35, and a
+  name typing an implied DO's variable exempt from UNUSEDNAME (`typesEntity`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
