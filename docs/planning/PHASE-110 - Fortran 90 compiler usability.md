@@ -1,8 +1,9 @@
 # Phase 110 — Fortran 90: the compiler's usability
 
 **Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C), for review. Needs Phases 107 to 109. Subtask 1, the survey (Part A),
-done 2026-11-20, for review; its A.4 revises the subtasks below.
+Part C). Needs Phases 107 to 109. Subtask 1, the survey (Part A), done
+2026-11-20 and accepted by the author the same day ("The author's answers"); its
+A.4 revises the subtasks below.
 
 ## Goal
 
@@ -51,7 +52,7 @@ What Phase 85 gave FORTRAN-77, extended to Fortran 90:
 
 ## Subtasks (provisional)
 
-1. **Survey**, for review (done 2026-11-20; Part A).
+1. **Survey** (done 2026-11-20; Part A, accepted).
 2. **`/STANDARD=F90` and the obsolescent features.**
 3. **`/WARNINGS`** for the new constructs.
 4. **Listings and cross references** with scopes and modules.
@@ -60,7 +61,7 @@ What Phase 85 gave FORTRAN-77, extended to Fortran 90:
 7. **The optimizer measured** on the corpus; what's worth doing now done.
 8. **Close-out**: FORTRAN-INTERNALS.md, MANUAL.md, HELP FORTRAN.
 
-Revised by the survey: A.4 is the list to follow, for review.
+Revised by the survey: A.4 is the list to follow.
 
 # Part A — the survey (subtask 1)
 
@@ -318,7 +319,7 @@ marked so, and are unconfirmed.
 
 ## A.4 The subtasks, revised
 
-1. **Survey** (this Part A) (done 2026-11-20; for review).
+1. **Survey** (this Part A) (done 2026-11-20; accepted by the author the same day).
 2. **`/STANDARD=F90`**: the tables' column and the Fortran 90 rows (finding 1),
    so that the FORTRAN-77 reading also flags every new form; the keywords
    (question 1); source form under F90 (finding 3); the ASSIGN bug; the witness
@@ -368,6 +369,26 @@ marked so, and are unconfirmed.
    overlap test and Phase 104's list only if their kernels show a gain worth it?
    **Recommendation:** yes.
 
+## The author's answers (2026-11-20)
+
+The author read the survey, accepted the plan, and took every recommendation:
+
+1. **`/STANDARD`'s keywords:** `F77` and `F90` (which standard), `[NO]SYNTAX`,
+   `[NO]SOURCE_FORM`, `[NO]OBSOLESCENT` (meaningless under F77), `ALL`, and `NONE`;
+   `SEMANTIC` and `MIA` stay out.
+2. **The standard when none is named** follows the unit's `/F90` setting: F90 (with
+   OBSOLESCENT on) for free form and `/F90`, FORTRAN-77 for `/NOF90`.
+3. **HOSTHIDDEN** is under `/WARNINGS=DECLARATIONS`.
+4. **UNREAD** (a variable set and never read) is under `/WARNINGS=UNUSED`.
+5. **`/CHECK=POINTERS`** covers allocatable arrays too: one keyword.
+6. **A module's variable in the debugger** is `M.X`.
+7. **A break at a FORTRAN routine** (a unit with an E line) stops after its entry
+   code, at its first statement; MACRO routines are unchanged.
+8. **The optimizer:** strength reduction for strided loops and fusion in this phase;
+   the run-time overlap test and Phase 104's list only if their kernels show a gain.
+
+A.4's nine subtasks are the phase's list; subtask 2 is next.
+
 ## Progress log
 
 - **2026-11-17:** Planned with Phase 99.
@@ -381,3 +402,5 @@ marked so, and are unconfirmed.
   (BLANKINNAME), and a module's private names never reported by `/WARNINGS=UNUSED`.
   Also one mispositioned message (INTENTOUTREF). A.4 revises the subtasks, and A.5
   has eight questions.
+- **2026-11-20:** The author accepted the survey and every recommendation in A.5
+  ("The author's answers"). Subtask 2, `/STANDARD=F90`, is next.
