@@ -20,8 +20,15 @@ import (
 func newFortranContext(t *testing.T, files map[string][]string) (*Context, *bytes.Buffer) {
 	t.Helper()
 
+	return newFortranContextSized(t, files, 2000)
+}
+
+// newFortranContextSized is newFortranContext on a volume of the blocks given.
+func newFortranContextSized(t *testing.T, files map[string][]string, blocks uint32) (*Context, *bytes.Buffer) {
+	t.Helper()
+
 	path := filepath.Join(t.TempDir(), "ftn.dsk")
-	if err := rms.InitializeContainer(path, 2000, "FTN", 0, ""); err != nil {
+	if err := rms.InitializeContainer(path, blocks, "FTN", 0, ""); err != nil {
 		t.Fatal(err)
 	}
 

@@ -1,0 +1,238 @@
+! fcalc: the lexer, which turns a line into tokens.
+!
+! A token is a number (its value, and whether it was written with an i, so
+! imaginary), a name (in lowercase: fcalc's names are case-insensitive, as
+! DCL's are), an operator, or the end of the line. Each knows the column it
+! started in, for an error's pointer.
+module fclexer
+  use fckinds
+  use fcmessages
+  implicit none
+  private
+
+  public :: token, tokenize, t_end, t_number, t_name, t_operator
+
+  integer, parameter :: t_end = 0, t_number = 1, t_name = 2, t_operator = 3
+
+  type token
+    integer :: kind
+    integer :: column
+    character(len=name_length) :: text
+    real(rk) :: number
+    logical :: imaginary
+  end type token
+
+  ! The characters, by kind.
+  character(len=*), parameter :: letters = &
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  character(len=*), parameter :: digit_set = '0123456789'
+  character(len=*), parameter :: name_set = letters // digit_set // '_$'
+  character(len=*), parameter :: blanks = ' ' // achar(9)
+
+  ! The operators of two characters, then those of one.
+  character(len=2), parameter :: pairs(5) = (/ '==', '<>', '<=', '>=', '**' /)
+  character(len=*), parameter :: singles = '+-*/^!(),=<>[];'
+
+contains
+
+  ! TOKENIZE turns LINE into TOKENS(1:COUNT), the last of kind T_END. On an
+  ! error it calls FAIL and stops.
+  subroutine tokenize(line, tokens, count)
+    character(len=*), intent(in) :: line
+    type(token), intent(out) :: tokens(:)
+    integer, intent(out) :: count
+    integer :: at, last, k
+
+    count = 0
+    at = 1
+    last = len_trim(line)
+
+    do
+      ! Pass over blanks and tabs.
+      if (at <= last) then
+        k = verify(line(at:last), blanks)
+        if (k == 0) then
+          at = last + 1
+        else
+          at = at + k - 1
+        end if
+      end if
+
+      count = count + 1
+      tokens(count)%column = at
+      tokens(count)%text = ' '
+      tokens(count)%number = 0
+      tokens(count)%imaginary = .false.
+
+      if (at > last) then
+        tokens(count)%kind = t_end
+        return
+      end if
+
+      if (index(digit_set, line(at:at)) > 0 .or. &
+          (line(at:at) == '.' .and. next_is_digit(line, at + 1))) then
+        call number_token(line, at, tokens(count))
+      else if (index(letters, line(at:at)) > 0) then
+        call name_token(line, at, tokens(count))
+      else
+        call operator_token(line, at, tokens(count))
+      end if
+      if (failed()) return
+    end do
+  end subroutine tokenize
+
+  logical function next_is_digit(line, at)
+    character(len=*), intent(in) :: line
+    integer, intent(in) :: at
+
+    next_is_digit = .false.
+    if (at <= len(line)) next_is_digit = index(digit_set, line(at:at)) > 0
+  end function next_is_digit
+
+  ! NAME_TOKEN takes a name: a letter, then letters, digits, _, and $.
+  subroutine name_token(line, at, t)
+    character(len=*), intent(in) :: line
+    integer, intent(inout) :: at
+    type(token), intent(inout) :: t
+    integer :: k, length, c
+
+    k = verify(line(at:), name_set)
+    if (k == 0) then
+      length = len(line) - at + 1
+    else
+      length = k - 1
+    end if
+    if (length > name_length) then
+      call fail(e_namelong, at)
+      return
+    end if
+
+    t%kind = t_name
+    t%text = line(at:at + length - 1)
+    do k = 1, length
+      c = iachar(t%text(k:k))
+      if (c >= iachar('A') .and. c <= iachar('Z')) &
+        t%text(k:k) = achar(c - iachar('A') + iachar('a'))
+    end do
+    at = at + length
+  end subroutine name_token
+
+  ! NUMBER_TOKEN takes a number: digits with a point, or a point and
+  ! digits; an exponent, E and digits with a sign or none; and an i after
+  ! it all for an imaginary one. Its value is read by an internal READ,
+  ! after its size is checked, so a number no machine could hold is an
+  ! error and not a trap.
+  subroutine number_token(line, at, t)
+    character(len=*), intent(in) :: line
+    integer, intent(inout) :: at
+    type(token), intent(inout) :: t
+    integer :: first, k, lead, power, ios, c
+    logical :: point, seen
+
+    first = at
+    point = .false.
+    seen = .false.
+
+    ! LEAD is the power of ten of the first digit that isn't zero, counted
+    ! as the digits are read.
+    lead = 0
+    do while (at <= len(line))
+      c = index(digit_set, line(at:at)) - 1
+      if (c >= 0) then
+        if (c > 0 .and. .not. seen) then
+          seen = .true.
+          if (point) lead = lead - 1
+        else if (seen .and. .not. point) then
+          lead = lead + 1
+        else if (.not. seen .and. point) then
+          lead = lead - 1
+        end if
+      else if (line(at:at) == '.' .and. .not. point) then
+        point = .true.
+      else
+        exit
+      end if
+      at = at + 1
+    end do
+
+    ! An exponent, if the E is followed by digits.
+    power = 0
+    if (at <= len(line)) then
+      if (line(at:at) == 'e' .or. line(at:at) == 'E') then
+        k = at + 1
+        if (k <= len(line)) then
+          if (line(k:k) == '+' .or. line(k:k) == '-') k = k + 1
+        end if
+        if (next_is_digit(line, k)) then
+          do while (next_is_digit(line, k))
+            if (power < 100000) power = power * 10 + index(digit_set, line(k:k)) - 1
+            k = k + 1
+          end do
+          if (line(at + 1:at + 1) == '-') power = -power
+          at = k
+        end if
+      end if
+    end if
+
+    t%kind = t_number
+    t%text = ' '
+    if (seen) then
+      if (lead + power > 300) then
+        call fail(e_overflow, first)
+        return
+      end if
+      if (lead + power >= -301) then
+        read (line(first:at - 1), *, iostat=ios) t%number
+        if (ios /= 0) then
+          call fail(e_badnumber, first)
+          return
+        end if
+        if (abs(t%number) > limit) then
+          call fail(e_overflow, first)
+          return
+        end if
+        if (abs(t%number) < small) t%number = 0
+      end if
+    end if
+
+    ! An i makes the number imaginary, unless it starts a name.
+    if (at <= len(line)) then
+      if (line(at:at) == 'i' .or. line(at:at) == 'I') then
+        k = at + 1
+        if (k > len(line)) then
+          t%imaginary = .true.
+        else if (index(name_set, line(k:k)) == 0) then
+          t%imaginary = .true.
+        end if
+        if (t%imaginary) at = at + 1
+      end if
+    end if
+  end subroutine number_token
+
+  ! OPERATOR_TOKEN takes an operator, ** standing for ^.
+  subroutine operator_token(line, at, t)
+    character(len=*), intent(in) :: line
+    integer, intent(inout) :: at
+    type(token), intent(inout) :: t
+    integer :: k
+
+    t%kind = t_operator
+    if (at < len(line)) then
+      do k = 1, size(pairs)
+        if (line(at:at + 1) == pairs(k)) then
+          t%text = pairs(k)
+          if (t%text == '**') t%text = '^'
+          at = at + 2
+          return
+        end if
+      end do
+    end if
+
+    if (index(singles, line(at:at)) == 0) then
+      call fail(e_badchar, at)
+      return
+    end if
+    t%text = line(at:at)
+    at = at + 1
+  end subroutine operator_token
+end module fclexer

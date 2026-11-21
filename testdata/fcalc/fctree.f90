@@ -1,0 +1,464 @@
+! fcalc: expressions as trees, and the parser that builds them.
+!
+! A NODE is a number, a name, a function's call, or an operation. Its
+! operands, or a call's arguments, are a list: KID points to the first, and
+! each one's NEXT to the one after it. The parser is recursive descent, a
+! function for each level of the grammar, loosest first:
+!
+!     or-expr     and-expr { or and-expr }
+!     and-expr    not-expr { and not-expr }
+!     not-expr    not not-expr | comparison
+!     comparison  sum [ (== | <> | < | <= | > | >=) sum ]
+!     sum         term { (+ | -) term }
+!     term        unary { (* | / | mod) unary }
+!     unary       (- | +) unary | power
+!     power       postfix [ ^ unary ]
+!     postfix     primary { ! }
+!     primary     number | name | name ( [ or-expr { , or-expr } ] ) | ( or-expr )
+!
+! so ^ binds tighter than a sign (-2^2 is -4) but takes one after it (2^-1),
+! and is right-associative (2^3^2 is 2^9). Each function returns a tree, or
+! a null pointer after calling FAIL, having freed what it had built.
+module fctree
+  use fckinds
+  use fcmessages
+  use fcvalues
+  use fclexer
+  implicit none
+  private
+
+  ! VALUE and TOKEN are public here too: a public type's component, or a
+  ! public function's value, may not be of a type private in this module,
+  ! as the default PRIVATE would make them.
+  public :: value, token
+  public :: node, scan_line, parse_expression, free_tree, copy_tree
+  public :: token_at, token_count, kind_at, current_column, position, advance, at_end, is_operator
+  public :: n_number, n_name, n_call, n_operation
+  public :: op_add, op_sub, op_mul, op_div, op_mod, op_power, op_neg, op_plus, &
+    op_not, op_and, op_or, op_compare, op_factorial
+
+  integer, parameter :: n_number = 1, n_name = 2, n_call = 3, n_operation = 4
+
+  ! The operations. A comparison is OP_COMPARE plus its relation, 1 to 6
+  ! (V_COMPARE's).
+  integer, parameter :: op_add = 1, op_sub = 2, op_mul = 3, op_div = 4, &
+    op_mod = 5, op_power = 6, op_neg = 7, op_plus = 8, op_not = 9, &
+    op_and = 10, op_or = 11, op_factorial = 12, op_compare = 20
+
+  type node
+    integer :: kind
+    integer :: op
+    integer :: column
+    character(len=name_length) :: name
+    type(value) :: number
+    type(node), pointer :: kid
+    type(node), pointer :: next
+  end type node
+
+  ! How deeply expressions may nest.
+  integer, parameter :: depth_limit = 100
+
+  ! The line's tokens, and the parser's place in them.
+  type(token), save :: tokens(line_length + 1)
+  integer, save :: count = 0, pos = 1, depth = 0
+
+  character(len=2), parameter :: relations(6) = (/ '==', '<>', '< ', '<=', '> ', '>=' /)
+
+contains
+
+  ! ------------------------------------------------------------------
+  ! The tokens.
+
+  ! SCAN_LINE tokenizes a line for the parser, which starts at its first
+  ! token.
+  subroutine scan_line(line)
+    character(len=*), intent(in) :: line
+
+    call tokenize(line, tokens, count)
+    pos = 1
+    depth = 0
+  end subroutine scan_line
+
+  function token_at(k) result(t)
+    integer, intent(in) :: k
+    type(token) :: t
+
+    t = tokens(min(k, count))
+  end function token_at
+
+  ! KIND_AT is the kind of the Kth token.
+  integer function kind_at(k)
+    integer, intent(in) :: k
+
+    kind_at = tokens(min(k, count))%kind
+  end function kind_at
+
+  ! CURRENT_COLUMN is the column of the parser's current token.
+  integer function current_column()
+    current_column = tokens(pos)%column
+  end function current_column
+
+  integer function token_count()
+    token_count = count
+  end function token_count
+
+  integer function position()
+    position = pos
+  end function position
+
+  subroutine advance(k)
+    integer, intent(in) :: k
+
+    pos = min(pos + k, count)
+  end subroutine advance
+
+  logical function at_end()
+    at_end = tokens(pos)%kind == t_end
+  end function at_end
+
+  ! IS_OPERATOR: the current token is the operator TEXT.
+  logical function is_operator(text)
+    character(len=*), intent(in) :: text
+
+    is_operator = tokens(pos)%kind == t_operator .and. tokens(pos)%text == text
+  end function is_operator
+
+  ! IS_WORD: the current token is the name TEXT (or, and, not, mod).
+  logical function is_word(text)
+    character(len=*), intent(in) :: text
+
+    is_word = tokens(pos)%kind == t_name .and. tokens(pos)%text == text
+  end function is_word
+
+  ! ------------------------------------------------------------------
+  ! Nodes.
+
+  function new_node(kind, column) result(p)
+    integer, intent(in) :: kind, column
+    type(node), pointer :: p
+
+    allocate (p)
+    p%kind = kind
+    p%op = 0
+    p%column = column
+    p%name = ' '
+    p%number = real_value(0.0_rk)
+    nullify (p%kid, p%next)
+  end function new_node
+
+  ! OPERATION makes a node of an operation on LEFT (and RIGHT, if it is
+  ! given). If the parse has failed, it frees them instead and returns a
+  ! null pointer.
+  function operation(op, column, left, right) result(p)
+    integer, intent(in) :: op, column
+    type(node), pointer :: left
+    type(node), pointer, optional :: right
+    type(node), pointer :: p
+
+    if (failed()) then
+      call free_tree(left)
+      if (present(right)) call free_tree(right)
+      nullify (p)
+      return
+    end if
+
+    p => new_node(n_operation, column)
+    p%op = op
+    p%kid => left
+    if (present(right)) left%next => right
+  end function operation
+
+  ! FREE_TREE frees a tree and the trees after it in its list.
+  recursive subroutine free_tree(p)
+    type(node), pointer :: p
+    type(node), pointer :: following
+
+    do while (associated(p))
+      call free_tree(p%kid)
+      following => p%next
+      deallocate (p)
+      p => following
+    end do
+  end subroutine free_tree
+
+  ! COPY_TREE is a copy of the tree P (but not the trees after it).
+  recursive function copy_tree(p) result(q)
+    type(node), pointer :: p
+    type(node), pointer :: q
+    type(node), pointer :: from, last, made
+
+    nullify (q)
+    if (.not. associated(p)) return
+
+    allocate (q)
+    q = p
+    nullify (q%kid, q%next)
+
+    nullify (last)
+    from => p%kid
+    do while (associated(from))
+      made => copy_tree(from)
+      if (associated(last)) then
+        last%next => made
+      else
+        q%kid => made
+      end if
+      last => made
+      from => from%next
+    end do
+  end function copy_tree
+
+  ! ------------------------------------------------------------------
+  ! The parser.
+
+  ! PARSE_EXPRESSION parses an expression from the current token.
+  function parse_expression() result(p)
+    type(node), pointer :: p
+
+    p => parse_or()
+  end function parse_expression
+
+  recursive function parse_or() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: right
+    integer :: column
+
+    p => parse_and()
+    do while (.not. failed() .and. is_word('or'))
+      column = tokens(pos)%column
+      call advance(1)
+      right => parse_and()
+      p => operation(op_or, column, p, right)
+    end do
+  end function parse_or
+
+  recursive function parse_and() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: right
+    integer :: column
+
+    p => parse_not()
+    do while (.not. failed() .and. is_word('and'))
+      column = tokens(pos)%column
+      call advance(1)
+      right => parse_not()
+      p => operation(op_and, column, p, right)
+    end do
+  end function parse_and
+
+  recursive function parse_not() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: operand
+    integer :: column
+
+    if (is_word('not')) then
+      column = tokens(pos)%column
+      call advance(1)
+      operand => parse_not()
+      p => operation(op_not, column, operand)
+    else
+      p => parse_comparison()
+    end if
+  end function parse_not
+
+  recursive function parse_comparison() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: right
+    integer :: column, k
+
+    p => parse_sum()
+    if (failed()) return
+    do k = 1, size(relations)
+      if (is_operator(trim(relations(k)))) then
+        column = tokens(pos)%column
+        call advance(1)
+        right => parse_sum()
+        p => operation(op_compare + k, column, p, right)
+        return
+      end if
+    end do
+  end function parse_comparison
+
+  recursive function parse_sum() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: right
+    integer :: column, op
+
+    p => parse_term()
+    do while (.not. failed())
+      if (is_operator('+')) then
+        op = op_add
+      else if (is_operator('-')) then
+        op = op_sub
+      else
+        exit
+      end if
+      column = tokens(pos)%column
+      call advance(1)
+      right => parse_term()
+      p => operation(op, column, p, right)
+    end do
+  end function parse_sum
+
+  recursive function parse_term() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: right
+    integer :: column, op
+
+    p => parse_unary()
+    do while (.not. failed())
+      if (is_operator('*')) then
+        op = op_mul
+      else if (is_operator('/')) then
+        op = op_div
+      else if (is_word('mod')) then
+        op = op_mod
+      else
+        exit
+      end if
+      column = tokens(pos)%column
+      call advance(1)
+      right => parse_unary()
+      p => operation(op, column, p, right)
+    end do
+  end function parse_term
+
+  ! PARSE_UNARY is where the parser counts how deeply it has gone: every
+  ! parenthesis and every sign passes through here.
+  recursive function parse_unary() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: operand
+    integer :: column, op
+
+    nullify (p)
+    depth = depth + 1
+    if (depth > depth_limit) then
+      call fail(e_toodeep, tokens(pos)%column)
+    else if (is_operator('-') .or. is_operator('+')) then
+      op = op_neg
+      if (is_operator('+')) op = op_plus
+      column = tokens(pos)%column
+      call advance(1)
+      operand => parse_unary()
+      p => operation(op, column, operand)
+    else
+      p => parse_power()
+    end if
+    depth = depth - 1
+  end function parse_unary
+
+  recursive function parse_power() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: right
+    integer :: column
+
+    p => parse_postfix()
+    if (failed()) return
+    if (is_operator('^')) then
+      column = tokens(pos)%column
+      call advance(1)
+      right => parse_unary()
+      p => operation(op_power, column, p, right)
+    end if
+  end function parse_power
+
+  recursive function parse_postfix() result(p)
+    type(node), pointer :: p
+
+    p => parse_primary()
+    do while (.not. failed() .and. is_operator('!'))
+      p => operation(op_factorial, tokens(pos)%column, p)
+      call advance(1)
+    end do
+  end function parse_postfix
+
+  recursive function parse_primary() result(p)
+    type(node), pointer :: p
+    type(token) :: t
+
+    nullify (p)
+    t = tokens(pos)
+
+    select case (t%kind)
+    case (t_number)
+      p => new_node(n_number, t%column)
+      if (t%imaginary) then
+        p%number = complex_value(0.0_rk, t%number)
+      else
+        p%number = real_value(t%number)
+      end if
+      call advance(1)
+
+    case (t_name)
+      if (t%text == 'or' .or. t%text == 'and' .or. t%text == 'not' .or. &
+          t%text == 'mod') then
+        call fail(e_operand, t%column)
+        return
+      end if
+      call advance(1)
+      if (is_operator('(')) then
+        p => parse_call(t)
+      else
+        p => new_node(n_name, t%column)
+        p%name = t%text
+      end if
+
+    case (t_operator)
+      if (t%text /= '(') then
+        call fail(e_operand, t%column)
+        return
+      end if
+      call advance(1)
+      p => parse_or()
+      if (failed()) return
+      if (.not. is_operator(')')) then
+        call fail(e_rparen, tokens(pos)%column)
+        call free_tree(p)
+        return
+      end if
+      call advance(1)
+
+    case default
+      call fail(e_operand, t%column)
+    end select
+  end function parse_primary
+
+  ! PARSE_CALL parses a call's arguments, the current token its (.
+  recursive function parse_call(t) result(p)
+    type(token), intent(in) :: t
+    type(node), pointer :: p
+    type(node), pointer :: argument, last
+
+    p => new_node(n_call, t%column)
+    p%name = t%text
+    call advance(1)
+    if (is_operator(')')) then
+      call advance(1)
+      return
+    end if
+
+    nullify (last)
+    do
+      argument => parse_or()
+      if (failed()) then
+        call free_tree(p)
+        return
+      end if
+      if (associated(last)) then
+        last%next => argument
+      else
+        p%kid => argument
+      end if
+      last => argument
+      if (.not. is_operator(',')) exit
+      call advance(1)
+    end do
+
+    if (.not. is_operator(')')) then
+      call fail(e_rparen, tokens(pos)%column)
+      call free_tree(p)
+      return
+    end if
+    call advance(1)
+  end function parse_call
+end module fctree

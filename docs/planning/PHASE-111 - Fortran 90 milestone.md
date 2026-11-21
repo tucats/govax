@@ -232,6 +232,11 @@ As revised by the author's answers (below), with vectors and matrices added:
    `fceval`, and the main loop: expressions, operators, variables, the
    prompt, errors; `basics` and `complex` scripts. Compiler bugs found are
    fixed in subtasks of their own (2a, 2b, ...), each with a corpus program.
+   (done 2026-11-20)
+   - 2a. `REAL` and `AIMAG` of a COMPLEX(8) under `/F90`, and `CMPLX` of
+     constants with `KIND=`; `testdata/fortran90/cparts.f90`. (done 2026-11-20)
+   - 2b. An INTENT(IN) dummy as a READ's internal file or DECODE's buffer;
+     `testdata/fortran90/intentread.f90`. (done 2026-11-20)
 3. **Functions**: the built-in table, special functions, list functions,
    user-defined functions and recursion; `functions`, `userfuncs`.
 4. **Vectors and matrices** (A.8): the values, literals, indexing, operators,
@@ -341,3 +346,50 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   worked output checked against gfortran's, fcalc shipped as an example on the
   system volume, and the simh round running the whole Fortran 90 corpus too.
   Subtask 1 done.
+- **2026-11-20:** Subtask 2, the core, in `testdata/fcalc` (README.md):
+  `fcplatform`, `fckinds`, `fcmessages` (a module A.2 didn't have: output
+  and the messages), `fcvalues`, `fclexer`, `fctree`, `fcsymbols`,
+  `fceval`, and `fcalc`, about 2,100 lines; `compiles.txt` their order. The
+  `basics` and `complex` scripts, worked by hand, are printed alike by govax
+  (in every mode: `/[NO]OPTIMIZE`, `/RECURSIVE`, `/CHECK=ALL`,
+  `/DEBUG=ALL`) and by gfortran. `internal/console`'s `TestFcalc` builds
+  fcalc and runs every script; `internal/dclcmd`'s `TestFcalcCompiles`
+  compiles it without a console. What VMS made fcalc do, beside A.3's
+  arithmetic: carriage control (`fcplatform`'s `CC`, a blank on VMS and
+  nothing in gfortran's twin, so both print the same lines and `compare.py`
+  needn't normalize fcalc's); terminal records of at most 133 bytes
+  (OUTSTAOVE), so `SAY` writes a longer line in records of 132; input lines
+  of at most 199 characters (INPRECTOO), so fcalc's limit is 199, the error
+  caught by IOSTAT= as LINELONG, and a too-long line not echoed; Fortran 90
+  has no `I0` (gfortran's `-std=f95` took it; FTNRTL gave OUTCONERR); a
+  complex constant's parts must be constants, so values are made by `CMPLX`.
+  The design held, with three choices made here: `SET ECHO` (A.1's, needed
+  now for the scripts) echoes each line after its prompt, and the line that
+  set it; equality is to within 64 epsilons and the order is the real parts';
+  a part of a complex value smaller than the other by more than the digits
+  shown is shown as zero, which also keeps the machines' last bits out of
+  the output. Findings: subtasks 2a and 2b, below; and govax refused a
+  public type with a component of a type that is public where it is defined
+  but private in the using module by its default PRIVATE (ACCESSCOMPONENT,
+  ACCESSPROC), which gfortran accepts. That is Phase 106's reading (access
+  belongs to a name in a module), defensible under F90's 4.4.1 and 5.2.3, so
+  fcalc's modules name such types PUBLIC and the compiler is unchanged; a
+  question for the author. govax's terminal hands back a line past 256
+  bytes in pieces, as a VMS terminal read whose buffer fills does, and keeps
+  type-ahead between images, so the scripts have no line past 256 and
+  nothing after QUIT or EXIT.
+- **2026-11-20:** Subtask 2a: under `/F90`, `REAL(Z)` and `AIMAG(Z)` of a
+  COMPLEX*16 are REAL*8 (`sema`'s `fortran90Readings`, rows that stand for
+  Table D-3's under `/F90` only, chosen by `analyzer.formsFor`; under
+  `/NOF90` REAL of one is still a REAL*4 and AIMAG of one BADARG), a new
+  row of Phase 99's table of texts the two read differently and MANUAL.md's
+  14.13; and `CMPLX(X, Y, KIND)` of constants is computed in that kind
+  (`evaluator.complexType`, `kindOf`), where it was computed in COMPLEX*8
+  and converted, so `CMPLX(1D0/3D0, 0D0, 8)` lost all but 24 bits. Held by
+  `sema`'s `TestComplexParts` and `testdata/fortran90/cparts.f90` (also in
+  `compare.py`, the same on gfortran).
+- **2026-11-20:** Subtask 2b: a READ's internal file and DECODE's buffer are
+  read, not given a value, so an INTENT(IN) dummy's text may be either
+  (`sema`'s `sourcePlace`, `analyzer.readFrom`); a WRITE's or ENCODE's is
+  still INTENTIN. Held by `TestIntent`'s new cases and
+  `testdata/fortran90/intentread.f90` (DECODE's, so not in `compare.py`).
