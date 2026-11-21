@@ -10,15 +10,24 @@
 !     not-expr    not not-expr | comparison
 !     comparison  sum [ (== | <> | < | <= | > | >=) sum ]
 !     sum         term { (+ | -) term }
-!     term        unary { (* | / | mod) unary }
+!     term        unary { (* | / | mod | .* | ./ | \) unary }
 !     unary       (- | +) unary | power
-!     power       postfix [ ^ unary ]
-!     postfix     primary { ! }
-!     primary     number | name | name ( [ or-expr { , or-expr } ] ) | ( or-expr )
+!     power       postfix [ (^ | .^) unary ]
+!     postfix     primary { ! | ' | .' }
+!     primary     number | name | name ( [ argument { , argument } ] )
+!                 | ( or-expr ) | [ row { ; row } ]
+!     row         or-expr { , or-expr }
+!     argument    or-expr | [ or-expr ] : [ or-expr ] [ : or-expr ]
 !
 ! so ^ binds tighter than a sign (-2^2 is -4) but takes one after it (2^-1),
 ! and is right-associative (2^3^2 is 2^9). Each function returns a tree, or
 ! a null pointer after calling FAIL, having freed what it had built.
+!
+! A bracket makes a matrix, its rows parted by semicolons and the elements
+! of a row by commas: [1, 2; 3, 4]. An argument may be a range, lo:hi or
+! lo:hi:stride with any part left out, which only an index may have:
+! m(2, :) is the second row of m, v(1:5:2) every other element of v's first
+! five.
 !
 ! Recursive descent, briefly: each rule of the grammar above becomes a
 ! function that parses that rule, calling the functions of the rules it is
@@ -55,17 +64,27 @@ module fctree
   public :: value, token
   public :: node, scan_line, parse_expression, free_tree, copy_tree
   public :: token_at, token_count, kind_at, current_column, position, advance, at_end, is_operator
-  public :: n_number, n_name, n_call, n_operation
+  public :: n_number, n_name, n_call, n_operation, n_matrix, n_row, n_range
   public :: op_add, op_sub, op_mul, op_div, op_mod, op_power, op_neg, op_plus, &
-    op_not, op_and, op_or, op_compare, op_factorial
+    op_not, op_and, op_or, op_compare, op_factorial, op_emul, op_ediv, &
+    op_epower, op_solve, op_transpose, op_ctranspose
+  public :: range_lo, range_hi, range_stride, nodes_in_use
 
-  integer, parameter :: n_number = 1, n_name = 2, n_call = 3, n_operation = 4
+  ! The kinds of node. A matrix's operands are its rows, and a row's its
+  ! elements. A range's operands are the parts it was given, in order, and
+  ! its OP says which those are: RANGE_LO, RANGE_HI, and RANGE_STRIDE added
+  ! together, so 1:5 is 3 and :: 2 is 4.
+  integer, parameter :: n_number = 1, n_name = 2, n_call = 3, n_operation = 4, &
+    n_matrix = 5, n_row = 6, n_range = 7
+  integer, parameter :: range_lo = 1, range_hi = 2, range_stride = 4
 
   ! The operations. A comparison is OP_COMPARE plus its relation, 1 to 6
   ! (V_COMPARE's).
   integer, parameter :: op_add = 1, op_sub = 2, op_mul = 3, op_div = 4, &
     op_mod = 5, op_power = 6, op_neg = 7, op_plus = 8, op_not = 9, &
-    op_and = 10, op_or = 11, op_factorial = 12, op_compare = 20
+    op_and = 10, op_or = 11, op_factorial = 12, op_emul = 13, op_ediv = 14, &
+    op_epower = 15, op_solve = 16, op_transpose = 17, op_ctranspose = 18, &
+    op_compare = 20
 
   ! A node: what it is (KIND), its operation (OP, for an operation), the
   ! column it came from, a name's or call's NAME, a number's value, and its
@@ -88,6 +107,9 @@ module fctree
   ! The line's tokens, and the parser's place in them.
   type(token), save :: tokens(line_length + 1)
   integer, save :: count = 0, pos = 1, depth = 0
+
+  ! The nodes made and not yet freed, for SHOW MEMORY.
+  integer, save :: nodes = 0
 
   character(len=2), parameter :: relations(6) = (/ '==', '<>', '< ', '<=', '> ', '>=' /)
 
@@ -160,11 +182,16 @@ contains
   ! ------------------------------------------------------------------
   ! Nodes.
 
+  integer function nodes_in_use()
+    nodes_in_use = nodes
+  end function nodes_in_use
+
   function new_node(kind, column) result(p)
     integer, intent(in) :: kind, column
     type(node), pointer :: p
 
     allocate (p)
+    nodes = nodes + 1
     p%kind = kind
     p%op = 0
     p%column = column
@@ -207,6 +234,7 @@ contains
       call free_tree(p%kid)
       following => p%next
       deallocate (p)
+      nodes = nodes - 1
       p => following
     end do
   end subroutine free_tree
@@ -225,6 +253,7 @@ contains
     if (.not. associated(p)) return
 
     allocate (q)
+    nodes = nodes + 1
     q = p
     nullify (q%kid, q%next)
 
@@ -347,6 +376,12 @@ contains
         op = op_div
       else if (is_word('mod')) then
         op = op_mod
+      else if (is_operator('.*')) then
+        op = op_emul
+      else if (is_operator('./')) then
+        op = op_ediv
+      else if (is_operator(achar(92))) then
+        op = op_solve
       else
         exit
       end if
@@ -386,22 +421,36 @@ contains
     type(node), pointer :: right
     integer :: column
 
+    integer :: op
+
     p => parse_postfix()
     if (failed()) return
-    if (is_operator('^')) then
+    if (is_operator('^') .or. is_operator('.^')) then
+      op = op_power
+      if (is_operator('.^')) op = op_epower
       column = tokens(pos)%column
       call advance(1)
       right => parse_unary()
-      p => operation(op_power, column, p, right)
+      p => operation(op, column, p, right)
     end if
   end function parse_power
 
   recursive function parse_postfix() result(p)
     type(node), pointer :: p
+    integer :: op
 
     p => parse_primary()
-    do while (.not. failed() .and. is_operator('!'))
-      p => operation(op_factorial, tokens(pos)%column, p)
+    do while (.not. failed())
+      if (is_operator('!')) then
+        op = op_factorial
+      else if (is_operator("'")) then
+        op = op_ctranspose
+      else if (is_operator(".'")) then
+        op = op_transpose
+      else
+        exit
+      end if
+      p => operation(op, tokens(pos)%column, p)
       call advance(1)
     end do
   end function parse_postfix
@@ -438,6 +487,10 @@ contains
       end if
 
     case (t_operator)
+      if (t%text == '[') then
+        p => parse_matrix()
+        return
+      end if
       if (t%text /= '(') then
         call fail(e_operand, t%column)
         return
@@ -473,7 +526,7 @@ contains
 
     nullify (last)
     do
-      argument => parse_or()
+      argument => parse_argument()
       if (failed()) then
         call free_tree(p)
         return
@@ -495,4 +548,110 @@ contains
     end if
     call advance(1)
   end function parse_call
+
+  ! PARSE_ARGUMENT parses one of a call's arguments: an expression, or a
+  ! range, whose parts are each an expression or nothing.
+  recursive function parse_argument() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: r, part, last
+    integer :: column
+
+    nullify (p)
+    column = tokens(pos)%column
+    if (.not. is_operator(':')) then
+      p => parse_or()
+      if (failed() .or. .not. is_operator(':')) return
+    end if
+
+    ! A range: P, if there is one, is its first part.
+    r => new_node(n_range, column)
+    if (associated(p)) then
+      r%kid => p
+      r%op = range_lo
+    end if
+    last => p
+    call advance(1)
+
+    if (.not. (is_operator(',') .or. is_operator(')') .or. is_operator(':'))) then
+      part => parse_or()
+      call attach(range_hi)
+      if (failed()) return
+    end if
+    if (is_operator(':')) then
+      call advance(1)
+      part => parse_or()
+      call attach(range_stride)
+      if (failed()) return
+    end if
+    p => r
+
+  contains
+
+    ! ATTACH adds PART after LAST in R's operands, or frees R if the parse
+    ! has failed.
+    subroutine attach(which)
+      integer, intent(in) :: which
+
+      if (failed()) then
+        call free_tree(r)
+        nullify (p)
+        return
+      end if
+      if (associated(last)) then
+        last%next => part
+      else
+        r%kid => part
+      end if
+      last => part
+      r%op = r%op + which
+    end subroutine attach
+  end function parse_argument
+
+  ! PARSE_MATRIX parses [ row { ; row } ], the current token its [: a node
+  ! N_MATRIX whose operands are N_ROW nodes, each with its elements as its
+  ! operands.
+  recursive function parse_matrix() result(p)
+    type(node), pointer :: p
+    type(node), pointer :: row, element, last_row, last
+
+    p => new_node(n_matrix, tokens(pos)%column)
+    call advance(1)
+    nullify (last_row)
+    do
+      row => new_node(n_row, tokens(pos)%column)
+      if (associated(last_row)) then
+        last_row%next => row
+      else
+        p%kid => row
+      end if
+      last_row => row
+
+      nullify (last)
+      do
+        element => parse_or()
+        if (failed()) then
+          call free_tree(p)
+          return
+        end if
+        if (associated(last)) then
+          last%next => element
+        else
+          row%kid => element
+        end if
+        last => element
+        if (.not. is_operator(',')) exit
+        call advance(1)
+      end do
+
+      if (.not. is_operator(';')) exit
+      call advance(1)
+    end do
+
+    if (.not. is_operator(']')) then
+      call fail(e_rbracket, tokens(pos)%column)
+      call free_tree(p)
+      return
+    end if
+    call advance(1)
+  end function parse_matrix
 end module fctree

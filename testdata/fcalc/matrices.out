@@ -1,0 +1,418 @@
+fcalc> set echo
+fcalc> ! Matrices: rows parted by semicolons, elements by commas.
+fcalc> a = [1, 2; 3, 4]
+a =
+  1  2
+  3  4
+fcalc> b = [0, 1; 1, 0]
+b =
+  0  1
+  1  0
+fcalc> c = [1 + i, 2; 3, 4 - i]
+c =
+  1 + 1i       2
+       3  4 - 1i
+fcalc> [a, b]
+  1  2  0  1
+  3  4  1  0
+fcalc> [a; 5, 6]
+  1  2
+  3  4
+  5  6
+fcalc> [a, [5; 6]; 7, 8, 9]
+  1  2  5
+  3  4  6
+  7  8  9
+fcalc> eye(3)
+  1  0  0
+  0  1  0
+  0  0  1
+fcalc> zeros(2, 3)
+  0  0  0
+  0  0  0
+fcalc> ones(2)
+  1  1
+  1  1
+fcalc> diag([1, 2, 3])
+  1  0  0
+  0  2  0
+  0  0  3
+fcalc> diag([1, 2, 3; 4, 5, 6])
+  1
+  5
+fcalc> reshape(range(1, 6), 3, 2)
+  1  4
+  2  5
+  3  6
+fcalc> ! Elements, rows, columns, and blocks.
+fcalc> a(2, 1)
+3
+fcalc> a(2, :)
+  3  4
+fcalc> a(:, 2)
+  2
+  4
+fcalc> a(3)
+2
+fcalc> m = reshape(range(1, 12), 3, 4)
+m =
+  1  4  7  10
+  2  5  8  11
+  3  6  9  12
+fcalc> m(2:3, [1, 4])
+  2  11
+  3  12
+fcalc> m(:, 4:1:-1)
+  10  7  4  1
+  11  8  5  2
+  12  9  6  3
+fcalc> m(::2, ::3)
+  1  10
+  3  12
+fcalc> m([3, 1], 2)
+  6
+  4
+fcalc> m(2, :) = 0
+m =
+  1  4  7  10
+  0  0  0   0
+  3  6  9  12
+fcalc> m(:, 1) = [7; 8; 9]
+m =
+  7  4  7  10
+  8  0  0   0
+  9  6  9  12
+fcalc> m(1:2, 3:4) = [-1, -2; -3, -4]
+m =
+  7  4  -1  -2
+  8  0  -3  -4
+  9  6   9  12
+fcalc> ! Element by element, and with scalars.
+fcalc> a + b
+  1  3
+  4  4
+fcalc> a - 1
+  0  1
+  2  3
+fcalc> a .* b
+  0  2
+  3  0
+fcalc> a ./ a
+  1  1
+  1  1
+fcalc> a .^ 2
+  1   4
+  9  16
+fcalc> a mod 2
+  1  0
+  1  0
+fcalc> a > 2
+  0  0
+  1  1
+fcalc> 10 * a
+  10  20
+  30  40
+fcalc> a / 2
+  0.5  1
+  1.5  2
+fcalc> ! The matrix product, and the transposes: ' conjugates, .' doesn't.
+fcalc> a * b
+  2  1
+  4  3
+fcalc> b * a
+  3  4
+  1  2
+fcalc> a * [1; 1]
+  3
+  7
+fcalc> [1, 1] * a
+  4  6
+fcalc> a'
+  1  3
+  2  4
+fcalc> c'
+  1 - 1i       3
+       2  4 + 1i
+fcalc> c.'
+  1 + 1i       3
+       2  4 - 1i
+fcalc> m'
+   7   8   9
+   4   0   6
+  -1  -3   9
+  -2  -4  12
+fcalc> ! Powers: a square matrix's whole powers by squaring, negative ones
+fcalc> ! through the inverse.
+fcalc> a ^ 2
+   7  10
+  15  22
+fcalc> a ^ 3
+  37   54
+  81  118
+fcalc> a ^ 0
+  1  0
+  0  1
+fcalc> a ^ -1
+   -2     1
+  1.5  -0.5
+fcalc> b ^ 101
+  0  1
+  1  0
+fcalc> ! Determinants, inverses, and solving A x = b.
+fcalc> det(a)
+-2
+fcalc> det(c)
+-1 + 3i
+fcalc> det([2, 0, 1; 1, 3, 2; 1, 1, 1])
+0
+fcalc> det([1, 2, 3; 4, 5, 6; 7, 8, 9])
+0
+fcalc> det(eye(4) * 2)
+16
+fcalc> inv(a)
+   -2     1
+  1.5  -0.5
+fcalc> inv(c)
+  -0.7 - 1.1i  0.2 + 0.6i
+   0.3 + 0.9i  0.2 - 0.4i
+fcalc> a * inv(a)
+  1  0
+  0  1
+fcalc> inv([2, 1, 1; 1, 3, 2; 1, 0, 0])
+   0   0   1
+  -2   1   3
+   3  -1  -5
+fcalc> a \ [5; 6]
+   -4
+  4.5
+fcalc> a \ eye(2)
+   -2     1
+  1.5  -0.5
+fcalc> [4, 2, 0; 2, 5, 3; 0, 3, 6] \ [2; 1; 3]
+   0.8
+  -0.6
+   0.8
+fcalc> [5, 6] / a
+  -1  2
+fcalc> 3 \ a
+  0.333333333333  0.666666666667
+               1   1.33333333333
+fcalc> ! Trace, rank, norms, and the Kronecker product.
+fcalc> trace(a)
+5
+fcalc> trace(c)
+5
+fcalc> rank(a)
+2
+fcalc> rank([1, 2; 2, 4])
+1
+fcalc> rank([1, 2, 3; 4, 5, 6; 7, 8, 9])
+2
+fcalc> rank(zeros(2, 3))
+0
+fcalc> rank([1, 2, 3])
+1
+fcalc> norm(a)
+5.47722557505
+fcalc> norm(a, 1)
+6
+fcalc> norm(a, huge)
+7
+fcalc> kron(b, a)
+  0  0  1  2
+  0  0  3  4
+  1  2  0  0
+  3  4  0  0
+fcalc> kron([1, 2], [1; 1])
+  1  2
+  1  2
+fcalc> ! Functions apply to each element, and list functions take them all.
+fcalc> sqrt([4, 1; 9, 16])
+  2  1
+  3  4
+fcalc> abs(c)
+  1.41421356237              2
+              3  4.12310562562
+fcalc> sum(a)
+10
+fcalc> max(a)
+4
+fcalc> size(m)
+  3  4
+fcalc> numel(m)
+12
+fcalc> cumsum(a)
+  1  2
+  4  6
+fcalc> sort([3, 1; 2, 4])
+  2  1
+  3  4
+fcalc> ! Eigenvalues, sorted by real part, then imaginary part.
+fcalc> eig([2, 0; 0, 3])
+  2
+  3
+fcalc> eig([4, 1; 2, 3])
+  2
+  5
+fcalc> eig([0, -1; 1, 0])
+  -1i
+   1i
+fcalc> eig([2, -1, 0; -1, 2, -1; 0, -1, 2])
+  0.585786437627
+               2
+   3.41421356237
+fcalc> eig([1, 1; 0, 1])
+  1
+  1
+fcalc> eig(c)
+  -0.247378515352 + 0.545975005489i
+    5.24737851535 - 0.545975005489i
+fcalc> eig([1, 2, 3; 4, 5, 6; 7, 8, 10])
+  -0.905740179522
+   0.198246863397
+    16.7074933161
+fcalc> eig([0, 0, 1; 1, 0, 0; 0, 1, 0])
+  -0.5 - 0.866025403784i
+  -0.5 + 0.866025403784i
+                       1
+fcalc> eig(diag([5, -1, 3, 2]))
+  -1
+   2
+   3
+   5
+fcalc> eig([6, -11, 6; 1, 0, 0; 0, 1, 0])
+  1
+  2
+  3
+fcalc> eig(eye(3) * 1e100)
+  1e+100
+  1e+100
+  1e+100
+fcalc> set digits 10
+fcalc> eig([1, 2, 3; 4, 5, 6; 7, 8, 10])
+  -0.9057401795
+   0.1982468634
+    16.70749332
+fcalc> inv([4, 7; 2, 6])
+   0.6  -0.7
+  -0.2   0.4
+fcalc> set digits 12
+fcalc> ! A matrix's display shows each element beside the largest: digits the
+fcalc> ! matrix's scale can't show are shown as zero.
+fcalc> [1e20, 1; 2, 3]
+  1e+20  0
+      0  0
+fcalc> [1, 1e-20; 2, 3]
+  1  0
+  2  3
+fcalc> ! Out of the safe band, products are computed with guarded arithmetic.
+fcalc> [1e150, 0; 0, 1e150] * [1e100; 1e100]
+  1e+250
+  1e+250
+fcalc> [1e-150, 0; 0, 1e-150] * [1e-100, 0; 0, 2e-100]
+  1e-250       0
+       0  2e-250
+fcalc> ! Users' functions of matrices.
+fcalc> sym(x) = (x + x') / 2
+sym(x) = (x + x') / 2
+fcalc> sym(a)
+    1  2.5
+  2.5    4
+fcalc> quad(x, v) = v' * x * v
+quad(x, v) = v' * x * v
+fcalc> quad(a, [1; 1])
+10
+fcalc> commutator(x, y) = x * y - y * x
+commutator(x, y) = x * y - y * x
+fcalc> commutator(a, b)
+  -1  -3
+   3   1
+fcalc> list variables
+a = [1, 2; 3, 4]
+ans = [-1, -3; 3, 1]
+b = [0, 1; 1, 0]
+c = [1 + 1i, 2; 3, 4 - 1i]
+m = [7, 4, -1, -2; 8, 0, -3, -4; 9, 6, 9, 12]
+fcalc> clear all
+fcalc> ! The errors.
+fcalc> a = [1, 2; 3, 4]
+a =
+  1  2
+  3  4
+fcalc> [1, 2, 3] * a
+                 ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> a * [1, 2]
+         ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> [1, 2; 3, 4; 5, 6] ^ 2
+                          ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> a ^ 0.5
+         ^
+%FCALC-E-NOTWHOLE, operand must be a whole number
+fcalc> a ^ i
+         ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> a ^ [1, 2]
+         ^
+%FCALC-E-NOTSCALAR, operand must be a scalar
+fcalc> inv([1, 2; 2, 4])
+       ^
+%FCALC-E-SINGULAR, matrix is singular
+fcalc> [1, 2; 2, 4] \ [1; 1]
+                    ^
+%FCALC-E-SINGULAR, matrix is singular
+fcalc> a \ [1; 2; 3]
+         ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> [1, 2, 3] \ 1
+                 ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> 1 / a
+         ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> det([1, 2, 3])
+       ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> inv([1, 2])
+       ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> trace([1, 2; 3, 4; 5, 6])
+       ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> eig([1, 2])
+       ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> kron(ones(100), ones(2))
+       ^
+%FCALC-E-TOOBIG, array is too large
+fcalc> a(3, 1)
+       ^
+%FCALC-E-INDEX, index is out of range
+fcalc> a(1, 0)
+       ^
+%FCALC-E-INDEX, index is out of range
+fcalc> a(2, 3) = 1
+       ^
+%FCALC-E-INDEX, index is out of range
+fcalc> norm(a, 2)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> [1e200, 0; 0, 1] * [1e200, 0; 0, 1]
+                        ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> [1e300, 0; 0, 1] \ [1; 1e-300]
+                        ^
+%FCALC-E-SINGULAR, matrix is singular
+fcalc> [1e200, 0; 0, 1e200] ^ 2
+                            ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> show memory
+arrays in use: 1
+tree nodes in use: 0
+fcalc> clear all
+fcalc> show memory
+arrays in use: 0
+tree nodes in use: 0
+fcalc> quit

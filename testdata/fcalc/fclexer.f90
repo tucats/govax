@@ -37,9 +37,16 @@ module fclexer
   character(len=*), parameter :: name_set = letters // digit_set // '_$'
   character(len=*), parameter :: blanks = ' ' // achar(9)
 
-  ! The operators of two characters, then those of one.
-  character(len=2), parameter :: pairs(5) = (/ '==', '<>', '<=', '>=', '**' /)
-  character(len=*), parameter :: singles = '+-*/^!(),=<>[];'
+  ! The operators of two characters, then those of one. The element by
+  ! element operators start with a period (.* ./ .^), and .' is the
+  ! transpose; ' alone is the conjugate transpose, and \ the solve.
+  ! "'" is a character constant of one apostrophe (Fortran 90 lets a
+  ! character constant be written in either kind of quotes), and ACHAR(92)
+  ! is a backslash, written so because some compilers take a backslash in
+  ! a character constant as the start of an escape, as C does.
+  character(len=2), parameter :: pairs(9) = (/ '==', '<>', '<=', '>=', '**', &
+    '.*', './', '.^', ".'" /)
+  character(len=*), parameter :: singles = '+-*/^!(),=<>[];:' // "'" // achar(92)
 
 contains
 

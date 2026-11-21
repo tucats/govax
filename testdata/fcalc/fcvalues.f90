@@ -34,7 +34,7 @@ module fcvalues
   public :: format_real, is_real, is_whole, truth, logical_value
   public :: v_mod, v_factorial, v_compare, v_abs, c_abs
   public :: operator(+), operator(-), operator(*), operator(/), operator(**)
-  public :: digits, r_add, r_mul, r_div
+  public :: digits, r_add, r_mul, r_div, c_add, c_sub, c_mul, c_div, near_to
   public :: exp_real, exp_value, log_value, clean, angle_of
 
   ! A VALUE: Z, the number, and ERR, 0 or the code of the error that made
@@ -247,16 +247,103 @@ contains
   real(rk) function c_abs(z)
     complex(rk), intent(in) :: z
     real(rk) :: m, n, q
+    logical :: small_part
 
     m = max(abs(real(z, rk)), abs(aimag(z)))
     n = min(abs(real(z, rk)), abs(aimag(z)))
-    if (n <= m * 1.0e-17_rk) then
+    ! N is negligible beside M when N <= M * 1E-17; for M below 1 that
+    ! product could underflow, so the test is made as N * 1E17 <= M there.
+    if (m >= 1) then
+      small_part = n <= m * 1.0e-17_rk
+    else
+      small_part = n * 1.0e17_rk <= m
+    end if
+    if (small_part) then
       c_abs = m
     else
       q = n / m
       c_abs = m * sqrt(1 + q * q)
     end if
   end function c_abs
+
+  ! ------------------------------------------------------------------
+  ! The guarded operations on complex numbers, built on those on real
+  ! numbers. Each takes ERR as R_ADD does. The operators below apply them
+  ! to VALUEs; module FCMATRIX applies them to the elements of matrices,
+  ! where making a VALUE of each element would only be in the way.
+
+  complex(rk) function c_add(x, y, err)
+    complex(rk), intent(in) :: x, y
+    integer, intent(inout) :: err
+
+    c_add = cmplx(r_add(real(x, rk), real(y, rk), err), r_add(aimag(x), aimag(y), err), rk)
+  end function c_add
+
+  ! (Negating a number is exact, so X - Y is X + (-Y).)
+  complex(rk) function c_sub(x, y, err)
+    complex(rk), intent(in) :: x, y
+    integer, intent(inout) :: err
+
+    c_sub = c_add(x, -y, err)
+  end function c_sub
+
+  ! C_MUL: (p + qi)(r + si) = (pr - qs) + (ps + qr)i.
+  complex(rk) function c_mul(x, y, err)
+    complex(rk), intent(in) :: x, y
+    integer, intent(inout) :: err
+    real(rk) :: p, q, r, s
+
+    p = real(x, rk)
+    q = aimag(x)
+    r = real(y, rk)
+    s = aimag(y)
+    c_mul = cmplx(r_add(r_mul(p, r, err), -r_mul(q, s, err), err), &
+      r_add(r_mul(p, s, err), r_mul(q, r, err), err), rk)
+  end function c_mul
+
+  ! C_DIV divides by Smith's method, which scales by the divisor's larger
+  ! part so that no product is larger than it must be. The textbook
+  !     (p + qi) / (r + si) = ((pr + qs) + (qr - ps)i) / (r**2 + s**2)
+  ! squares the divisor's parts, which overflows for parts near 1E154 and
+  ! underflows near 1E-154, although the quotient may be ordinary. Smith
+  ! divides through by the larger of r and s first: with |r| >= |s| and
+  ! t = s/r (at most 1 in size), the denominator is r + s t, never larger
+  ! than 2|r|, and the numerators are p + q t and q - p t.
+  complex(rk) function c_div(x, y, err)
+    complex(rk), intent(in) :: x, y
+    integer, intent(inout) :: err
+    real(rk) :: p, q, r, s, ratio, den, a, b
+
+    p = real(x, rk)
+    q = aimag(x)
+    r = real(y, rk)
+    s = aimag(y)
+
+    if (s == 0) then
+      a = r_div(p, r, err)
+      b = r_div(q, r, err)
+    else if (r == 0) then
+      a = r_div(q, s, err)
+      b = -r_div(p, s, err)
+    else if (abs(r) >= abs(s)) then
+      ratio = s / r
+      den = r_add(r, r_mul(s, ratio, err), err)
+      a = r_div(r_add(p, r_mul(q, ratio, err), err), den, err)
+      b = r_div(r_add(q, -r_mul(p, ratio, err), err), den, err)
+    else
+      ratio = r / s
+      den = r_add(s, r_mul(r, ratio, err), err)
+      a = r_div(r_add(r_mul(p, ratio, err), q, err), den, err)
+      b = r_div(r_add(r_mul(q, ratio, err), -p, err), den, err)
+    end if
+
+    ! A part negated above may be an IEEE machine's -0, which a VAX hasn't:
+    ! assigning 0 makes it +0, so later functions (ATAN2's branch) agree on
+    ! both.
+    if (a == 0) a = 0
+    if (b == 0) b = 0
+    c_div = cmplx(a, b, rk)
+  end function c_div
 
   ! ------------------------------------------------------------------
   ! The operators.
@@ -286,8 +373,7 @@ contains
 
     if (pass_error(a, b, v)) return
     err = 0
-    v%z = cmplx(r_add(real(a%z, rk), real(b%z, rk), err), &
-      r_add(aimag(a%z), aimag(b%z), err), rk)
+    v%z = c_add(a%z, b%z, err)
     v%err = err
   end function v_add
 
@@ -301,59 +387,23 @@ contains
   function v_mul(a, b) result(v)
     type(value), intent(in) :: a, b
     type(value) :: v
-    real(rk) :: p, q, r, s
     integer :: err
 
     if (pass_error(a, b, v)) return
     err = 0
-    p = real(a%z, rk)
-    q = aimag(a%z)
-    r = real(b%z, rk)
-    s = aimag(b%z)
-    v%z = cmplx(r_add(r_mul(p, r, err), -r_mul(q, s, err), err), &
-      r_add(r_mul(p, s, err), r_mul(q, r, err), err), rk)
+    v%z = c_mul(a%z, b%z, err)
     v%err = err
   end function v_mul
 
-  ! V_DIV divides by Smith's method, which scales by the divisor's larger
-  ! part so that no product is larger than it must be. The textbook
-  !     (p + qi) / (r + si) = ((pr + qs) + (qr - ps)i) / (r**2 + s**2)
-  ! squares the divisor's parts, which overflows for parts near 1E154 and
-  ! underflows near 1E-154, although the quotient may be ordinary. Smith
-  ! divides through by the larger of r and s first: with |r| >= |s| and
-  ! t = s/r (at most 1 in size), the denominator is r + s t, never larger
-  ! than 2|r|, and the numerators are p + q t and q - p t.
+  ! V_DIV is A / B, by C_DIV.
   function v_div(a, b) result(v)
     type(value), intent(in) :: a, b
     type(value) :: v
-    real(rk) :: p, q, r, s, ratio, den
     integer :: err
 
     if (pass_error(a, b, v)) return
     err = 0
-    p = real(a%z, rk)
-    q = aimag(a%z)
-    r = real(b%z, rk)
-    s = aimag(b%z)
-
-    if (s == 0) then
-      v%z = cmplx(r_div(p, r, err), r_div(q, r, err), rk)
-    else if (r == 0) then
-      v%z = cmplx(r_div(q, s, err), -r_div(p, s, err), rk)
-    else if (abs(r) >= abs(s)) then
-      ratio = s / r
-      den = r_add(r, r_mul(s, ratio, err), err)
-      v%z = cmplx(r_div(r_add(p, r_mul(q, ratio, err), err), den, err), &
-        r_div(r_add(q, -r_mul(p, ratio, err), err), den, err), rk)
-    else
-      ratio = r / s
-      den = r_add(s, r_mul(r, ratio, err), err)
-      v%z = cmplx(r_div(r_add(r_mul(p, ratio, err), q, err), den, err), &
-        r_div(r_add(r_mul(q, ratio, err), -p, err), den, err), rk)
-    end if
-
-    ! A part negated above may be an IEEE machine's -0, which a VAX hasn't:
-    ! CLEAN makes it 0, so later functions (ATAN2's branch) agree on both.
+    v%z = c_div(a%z, b%z, err)
     if (err == 0) then
       v = clean(v%z)
     else
@@ -622,11 +672,26 @@ contains
 
   logical function near(x, y)
     real(rk), intent(in) :: x, y
-    real(rk) :: d
+
+    near = near_to(x, y, tolerance)
+  end function near
+
+  ! NEAR_TO: X and Y differ by no more than the part TOL of the larger.
+  ! (Values within LIMIT can't overflow in X - Y; TOL is well above EPS, so
+  ! TOL times the larger can't underflow but where both are near SMALL,
+  ! when the test is made as a quotient.)
+  logical function near_to(x, y, tol)
+    real(rk), intent(in) :: x, y, tol
+    real(rk) :: d, m
 
     d = abs(x - y)
-    near = d <= tolerance * max(abs(x), abs(y))
-  end function near
+    m = max(abs(x), abs(y))
+    if (m >= 1) then
+      near_to = d <= tol * m
+    else
+      near_to = d / tol <= m
+    end if
+  end function near_to
 
   ! PASS_ERROR: if A or B has an error, V is that value and the result is
   ! true.
@@ -715,17 +780,23 @@ contains
 
   ! FORMAT_VALUE shows a value: a real one as a number, a complex one as
   ! a + bi. A part smaller than the other by more than the digits shown
-  ! is shown as zero: what the digits can't show.
-  function format_value(v) result(text)
+  ! is shown as zero: what the digits can't show. BESIDE, if it is given,
+  ! is a magnitude the parts are shown beside, so a part smaller than it by
+  ! more than the digits is shown as zero too: an element of a matrix is
+  ! shown beside the matrix's largest (module FCARRAYS).
+  function format_value(v, beside) result(text)
     type(value), intent(in) :: v
+    real(rk), intent(in), optional :: beside
     character(len=72) :: text
-    real(rk) :: x, y, part
+    real(rk) :: x, y, part, big
 
     x = real(v%z, rk)
     y = aimag(v%z)
     part = 10.0_rk ** (-digits)
-    if (negligible(y, x)) y = 0
-    if (negligible(x, y)) x = 0
+    big = 0
+    if (present(beside)) big = beside
+    if (negligible(y, max(abs(x), big))) y = 0
+    if (negligible(x, max(abs(y), big))) x = 0
 
     if (y == 0) then
       text = format_real(x)

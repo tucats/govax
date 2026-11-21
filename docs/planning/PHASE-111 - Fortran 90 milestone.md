@@ -251,7 +251,7 @@ As revised by the author's answers (below), with vectors and matrices added:
      characters called by another name than its own;
      `testdata/fortran90/longhost.f90`. (done 2026-11-20)
 4. **Vectors and matrices** (A.8): the values, literals, indexing, operators,
-   `fcmatrix`'s functions; `vectors`, `matrices`.
+   `fcmatrix`'s functions; `vectors`, `matrices`. (done 2026-11-20)
 5. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`.
 6. **Display and settings**: SET and SHOW, the formats and bases; `display`.
 7. **TABLE and PLOT**; `plot`.
@@ -469,3 +469,66 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   nothing defined (FCVALUES' `FORMAT_VALUE.NEGLIGIBLE`, LINK's NUDFSYMS).
   The call now divides at the last period, an inner name having none. Held
   by `testdata/fortran90/longhost.f90` (also in `compare.py`).
+- **2026-11-20:** Subtask 4, vectors and matrices (A.8), in two new modules,
+  `fcarrays.f90` (after FCVALUES) and `fcmatrix.f90` (after FCFUNCS), with the
+  lexer, parser, symbols, evaluator, and main program extended; fcalc is now
+  about 7,400 lines with its comments. Two scripts, `vectors` and `matrices`,
+  worked by hand and in Python (characteristic polynomials' roots for the
+  eigenvalues, exact fractions for the inverses), are printed alike by
+  gfortran and by govax in every mode subtask 3 ran (`/[NO]OPTIMIZE`,
+  `/RECURSIVE`, `/CHECK=ALL`, `/NOOPTIMIZE/DEBUG=ALL`, paging on), and the
+  four earlier scripts are unchanged. This subtask found no compiler bug:
+  pointer components to rank-2 arrays, vector subscripts on them, automatic
+  arrays of a type with pointer components, array-valued functions of a
+  run-time shape, WHERE, CSHIFT, MAXLOC, MATMUL, DOT_PRODUCT, and strided
+  sections all compiled and ran as gfortran's.
+  Decisions made here, against A.8 or beyond it:
+  - **A QUANTITY beside VALUE.** A.8 put the array pointer in `TYPE VALUE`
+    with a deep-copying `ASSIGNMENT(=)`. In Fortran 90 that leaks every
+    function result (a result is itself a value with storage, which a copying
+    assignment copies and drops, and there are no FINAL procedures), and it
+    would have changed every scalar routine already tested. So `VALUE` stays
+    the scalar, and `FCARRAYS`' `TYPE QUANTITY` is a `VALUE` or ROWS by COLS
+    elements through a `COMPLEX(RK), POINTER :: E(:, :)`, with an explicit
+    ownership rule: a quantity made is its maker's caller's, assignment moves
+    it, `DUPLICATE` copies, `RELEASE` frees; variables take what they're given
+    and hand out copies. A count of arrays (and FCTREE's of nodes) in use is
+    `SHOW MEMORY`, which each script checks is 0 after `CLEAR ALL`.
+  - **No trap, three ways** (FCMATRIX's header): LU, solve, inverse,
+    determinant, and rank by guarded complex operations, `C_ADD`, `C_SUB`,
+    `C_MUL`, `C_DIV`, now FCVALUES' public helpers, which `V_ADD`, `V_MUL`,
+    and `V_DIV` are built on; MATMUL and DOT_PRODUCT only when every part is 0
+    or in 1E-100 to 1E100, a guarded loop otherwise; `eig` on the matrix
+    divided by its largest element, parts below 1E-50 set to zero as they
+    appear, plain complex arithmetic between. `C_ABS` and `NEAR` no longer
+    form a product that could underflow for values near SMALL.
+  - **Shapes.** A vector is 1 by n or n by 1; an array of one element is a
+    scalar (`[5]`, a row times a column); at most 10,000 elements (TOOBIG).
+    Elements may be arrays, joined (`[v, 4]`, `[m; 0, 0]`).
+  - **Indexes** are Fortran's: `lo:hi:stride`, any part left out, so
+    `v(5:1:-1)` reverses and `v(1:2:9)` is one element; a vector of numbers is
+    a vector subscript; one index counts in array element order. `NAME(...)`
+    is a built-in function, a parameter's index, a user's function, or a
+    variable's index, in that order; `NAME(...) =` assigns elements if NAME
+    holds an array and isn't a function, and defines a function otherwise.
+  - **Operators.** `*` is the matrix product between arrays, `/` and `\`
+    right and left division (A / B by B.' \ A.'), `^` a square matrix's whole
+    power; everything else element by element, a scalar with each element.
+    A pivot no larger than n EPS times the largest element is zero: `det` is
+    then 0, and `inv` and `\` SINGULAR. The list functions take every element
+    of every argument; FCFUNCS' other functions apply to each element.
+    `norm(m)` of a matrix is Frobenius's, `norm(m, 1)` and `norm(m, huge)` the
+    column and row sums; `norm(m, 2)` is DOMAIN (it needs an SVD).
+  - **Display.** Columns right-aligned, two blanks apart; a row longer than
+    132 is shown in groups under "columns j to k:"; each element beside the
+    largest (FORMAT_VALUE's new BESIDE), so rounding's noise shows as 0 on
+    both machines. LIST shows an array as the literal that makes it, written
+    a piece at a time (FCMESSAGES' `SAY_PART`, `SAY_END`). `sort` and `eig`
+    count real parts the same when they differ by less than the digits show,
+    then order by imaginary part, so conjugate pairs come out alike.
+  - **Borrowed from subtask 6:** `SET DIGITS n` (A.8's tests show 10 digits)
+    and `SHOW MEMORY`; SET and SHOW's other settings stay subtask 6's.
+  - **Left for later:** A.8's "Elsewhere": ROOTS of a vector and `poly(r)`
+    (subtask 5), `PLOT v`, `PLOT y VERSUS x`, and TABLE of vectors (subtask
+    7), SAVE writing arrays as literals (subtask 8; LIST already does).
+

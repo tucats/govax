@@ -2,9 +2,9 @@
 !
 ! fcalc reads lines at the prompt until QUIT, EXIT, or the end of the
 ! input. A line that starts with a command word is a command; NAME = EXPR
-! assigns a variable; F(X, Y) = EXPR defines a function; anything else is
-! an expression, whose value is shown and kept as ANS. A line starting with
-! ! is a comment.
+! assigns a variable; F(X, Y) = EXPR defines a function; V(I, J) = EXPR
+! assigns elements of an array; anything else is an expression, whose value
+! is shown and kept as ANS. A line starting with ! is a comment.
 !
 ! The modules each do one part of the work, and this program joins them:
 ! a line is read (READ_LINE), cut into tokens (FCLEXER, through SCAN_LINE),
@@ -20,6 +20,7 @@ program fcalc
   use fckinds
   use fcmessages
   use fcvalues
+  use fcarrays
   use fclexer
   use fctree
   use fceval
@@ -34,7 +35,7 @@ program fcalc
   echo = .false.
   done = .false.
   call start_symbols()
-  call set_variable('ans', real_value(0.0_rk))
+  call set_variable('ans', real_quantity(0.0_rk))
 
   do while (.not. done)
     call say_more('fcalc> ')
@@ -128,48 +129,115 @@ contains
       case ('set')
         call set_command()
         return
+      case ('show')
+        call show_command()
+        return
       end select
     end if
 
     if (first%kind == t_name .and. second%kind == t_operator .and. second%text == '=') then
       call assignment(first)
-    else if (is_definition()) then
+    else if (is_definition() .and. .not. indexes_array(first%text)) then
       call definition(text)
     else
-      call expression()
+      call statement()
     end if
   end subroutine execute
 
-  ! EXPRESSION shows an expression's value and keeps it as ANS.
-  subroutine expression()
-    type(value) :: v
+  ! INDEXES_ARRAY: NAME(...) = would assign elements of NAME, a variable
+  ! holding an array, rather than define a function: NAME isn't also a
+  ! function. So v(k) = 0 assigns an element of the array v, while f(x) =
+  ! x^2 defines f.
+  logical function indexes_array(name)
+    character(len=*), intent(in) :: name
 
-    if (.not. whole_expression(v)) return
+    indexes_array = holds_array(name)
+    if (indexes_array) indexes_array = .not. associated(find_function(name))
+  end function indexes_array
+
+  ! STATEMENT is an expression, whose value is shown and kept as ANS, or an
+  ! assignment to elements, V(...) = EXPR: which, the parse of the line's
+  ! start says, a call of V followed by =.
+  subroutine statement()
+    type(node), pointer :: tree
+    type(quantity) :: v
+
+    tree => parse_expression()
+    if (failed()) return
+    if (is_operator('=') .and. kind_at(1) == t_name .and. tree%kind == n_call) then
+      call element_assignment(tree)
+      return
+    end if
+    if (.not. at_end()) then
+      call fail(e_extra, current_column())
+      call free_tree(tree)
+      return
+    end if
+
+    v = evaluate(tree)
+    call free_tree(tree)
+    if (failed()) then
+      call release(v)
+      return
+    end if
+    call show_quantity(v, '')
     call set_variable('ans', v)
-    call say(trim(format_value(v)))
-  end subroutine expression
+  end subroutine statement
 
-  ! ASSIGNMENT is NAME = EXPR.
+  ! ASSIGNMENT is NAME = EXPR. The variable takes the value: it is shown
+  ! first, then given to SET_VARIABLE, which owns it from then on.
   subroutine assignment(name)
     type(token), intent(in) :: name
-    type(value) :: v
+    type(quantity) :: v
 
     if (.not. usable_name(name)) return
 
     call advance(2)
     if (.not. whole_expression(v)) return
+    call show_quantity(v, name%text)
     call set_variable(name%text, v)
-    call say(trim(name%text) // ' = ' // trim(format_value(v)))
   end subroutine assignment
 
+  ! ELEMENT_ASSIGNMENT is V(...) = EXPR, TARGET the tree of V(...): the
+  ! elements of the variable V that the indexes name are given EXPR's
+  ! value. The variable's value is copied, changed, and set again.
+  subroutine element_assignment(target)
+    type(node), pointer :: target
+    type(token) :: name
+    type(quantity) :: x, y
+
+    name = token_at(1)
+    if (.not. usable_name(name)) then
+      call free_tree(target)
+      return
+    end if
+    if (.not. find_variable(name%text, x)) then
+      call fail(e_undefined, name%column, name%text)
+      call free_tree(target)
+      return
+    end if
+
+    call advance(1)
+    if (whole_expression(y)) then
+      if (assign_into(x, target, y)) then
+        call show_quantity(x, name%text)
+        call set_variable(name%text, x)
+        x = real_quantity(0.0_rk)
+      end if
+    end if
+    call release(y)
+    call release(x)
+    call free_tree(target)
+  end subroutine element_assignment
+
   ! WHOLE_EXPRESSION parses and evaluates the rest of the line as an
-  ! expression: false after an error.
+  ! expression: false after an error, when V is released.
   logical function whole_expression(v)
-    type(value), intent(out) :: v
+    type(quantity), intent(out) :: v
     type(node), pointer :: tree
 
     whole_expression = .false.
-    v = real_value(0.0_rk)
+    v = real_quantity(0.0_rk)
     tree => parse_expression()
     if (failed()) return
     if (.not. at_end()) then
@@ -181,6 +249,7 @@ contains
     v = evaluate(tree)
     call free_tree(tree)
     whole_expression = .not. failed()
+    if (.not. whole_expression) call release(v)
   end function whole_expression
 
   ! IS_DEFINITION: the line starts f(x, y) =, a function's definition. A
@@ -225,7 +294,7 @@ contains
 
     name = token_at(1)
     if (.not. usable_name(name)) return
-    if (builtin_index(name%text) > 0) then
+    if (known_function(name%text)) then
       call fail(e_builtin, name%column, name%text)
       return
     end if
@@ -331,7 +400,7 @@ contains
     if (what%kind == t_name .and. what%text == 'all' .and. kind_at(3) == t_end) then
       call clear_variables()
       call clear_functions()
-      call set_variable('ans', real_value(0.0_rk))
+      call set_variable('ans', real_quantity(0.0_rk))
       return
     end if
 
@@ -358,7 +427,31 @@ contains
     end do
   end subroutine clear_command
 
-  ! SET [NO]ECHO, SET ANGLE RADIANS | DEGREES | GRADS
+  ! SHOW MEMORY: how many arrays and tree nodes are in use, so a leak shows.
+  subroutine show_command()
+    type(token) :: what
+    character(len=12) :: count
+
+    what = token_at(2)
+    if (what%kind /= t_name) then
+      call fail(e_badset, what%column)
+      return
+    end if
+    if (what%text /= 'memory') then
+      call fail(e_badset, what%column)
+      return
+    end if
+    if (kind_at(3) /= t_end) then
+      call fail(e_extra, token_column(3))
+      return
+    end if
+    write (count, '(I12)') arrays_in_use()
+    call say('arrays in use: ' // trim(adjustl(count)))
+    write (count, '(I12)') nodes_in_use()
+    call say('tree nodes in use: ' // trim(adjustl(count)))
+  end subroutine show_command
+
+  ! SET [NO]ECHO, SET ANGLE RADIANS | DEGREES | GRADS, SET DIGITS n
   subroutine set_command()
     type(token) :: what, how
 
@@ -396,6 +489,24 @@ contains
       case default
         call fail(e_badset, how%column)
       end select
+
+    case ('digits')
+      ! A whole number of significant digits, 1 to MAX_DIGITS.
+      how = token_at(3)
+      if (how%kind /= t_number .or. how%imaginary) then
+        call fail(e_badset, how%column)
+        return
+      end if
+      if (kind_at(4) /= t_end) then
+        call fail(e_extra, token_column(4))
+        return
+      end if
+      if (aint(how%number) /= how%number .or. how%number < 1 .or. &
+          how%number > max_digits) then
+        call fail(e_domain, how%column)
+        return
+      end if
+      digits = nint(how%number)
 
     case default
       call fail(e_badset, what%column)

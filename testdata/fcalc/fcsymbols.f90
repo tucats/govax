@@ -14,6 +14,10 @@
 ! are compared by LLT and LGT, which compare by ASCII on every machine,
 ! where < on strings uses the machine's own character order.
 !
+! A variable's value is a QUANTITY (module FCARRAYS), whose storage the
+! table owns: SET_VARIABLE takes the quantity it is given, and
+! FIND_VARIABLE gives the caller a copy of its own.
+!
 ! A dummy argument declared POINTER (as T in INSERT) is the caller's
 ! pointer itself, not a copy: when INSERT does ALLOCATE (T), the parent's
 ! LEFT or RIGHT, or ROOT, now points to the new entry. Such a dummy needs an
@@ -22,6 +26,7 @@ module fcsymbols
   use fckinds
   use fcmessages
   use fcvalues
+  use fcarrays
   ! ONLY names just what this module needs from FCTREE: a tree's NODE type,
   ! and FREE_TREE to give one back when a function is redefined or cleared.
   use fctree, only: node, free_tree
@@ -30,8 +35,8 @@ module fcsymbols
 
   ! VALUE is public here too: a public procedure's argument may not be of a
   ! type private in this module.
-  public :: value
-  public :: start_symbols, constant_value, is_constant, find_variable
+  public :: value, quantity
+  public :: start_symbols, constant_value, is_constant, find_variable, holds_array
   public :: set_variable, remove_variable, clear_variables, list_variables
   public :: node, function_entry, max_params
   public :: find_function, define_function, remove_function, clear_functions
@@ -39,7 +44,7 @@ module fcsymbols
 
   type variable
     character(len=name_length) :: name
-    type(value) :: v
+    type(quantity) :: q
     type(variable), pointer :: left
     type(variable), pointer :: right
   end type variable
@@ -109,54 +114,76 @@ contains
     end select
   end function constant_value
 
-  ! FIND_VARIABLE: if NAME is a variable, V is its value and the result is
-  ! true.
-  logical function find_variable(name, v)
+  ! FIND_VARIABLE: if NAME is a variable, Q is a copy of its value, the
+  ! caller's to release, and the result is true.
+  logical function find_variable(name, q)
     character(len=*), intent(in) :: name
-    type(value), intent(out) :: v
+    type(quantity), intent(out) :: q
+    type(variable), pointer :: p
+
+    p => lookup(name)
+    find_variable = associated(p)
+    if (find_variable) then
+      q = duplicate(p%q)
+    else
+      q = real_quantity(0.0_rk)
+    end if
+  end function find_variable
+
+  ! HOLDS_ARRAY: NAME is a variable whose value is an array.
+  logical function holds_array(name)
+    character(len=*), intent(in) :: name
+    type(variable), pointer :: p
+
+    p => lookup(name)
+    holds_array = .false.
+    if (associated(p)) holds_array = is_array(p%q)
+  end function holds_array
+
+  ! LOOKUP is NAME's entry, or a null pointer.
+  function lookup(name) result(p)
+    character(len=*), intent(in) :: name
     type(variable), pointer :: p
 
     p => root
     do while (associated(p))
-      if (name == p%name) then
-        v = p%v
-        find_variable = .true.
-        return
-      end if
+      if (name == p%name) return
       if (llt(name, p%name)) then
         p => p%left
       else
         p => p%right
       end if
     end do
-    v = real_value(0.0_rk)
-    find_variable = .false.
-  end function find_variable
+  end function lookup
 
-  subroutine set_variable(name, v)
+  ! SET_VARIABLE gives NAME the value Q, which the table takes: the caller
+  ! mustn't release it.
+  subroutine set_variable(name, q)
     character(len=*), intent(in) :: name
-    type(value), intent(in) :: v
+    type(quantity), intent(in) :: q
 
-    call insert(root, name, v)
+    call insert(root, name, q)
   end subroutine set_variable
 
-  ! INSERT puts NAME in the tree that T leads to, or changes its value.
-  recursive subroutine insert(t, name, v)
+  ! INSERT puts NAME in the tree that T leads to, or changes its value,
+  ! releasing the old one.
+  recursive subroutine insert(t, name, q)
     type(variable), pointer :: t
     character(len=*), intent(in) :: name
-    type(value), intent(in) :: v
+    type(quantity), intent(in) :: q
 
     if (.not. associated(t)) then
       allocate (t)
       t%name = name
-      t%v = v
+      t%q = q
       nullify (t%left, t%right)
     else if (name == t%name) then
-      t%v = v
+      call release(t%q)
+      t%q = q
     else if (llt(name, t%name)) then
-      call insert(t%left, name, v)
+      call insert(t%left, name, q)
     else
-      call insert(t%right, name, v)
+      call insert(t%right, name, q)
     end if
   end subroutine insert
 
@@ -166,34 +193,37 @@ contains
     character(len=*), intent(in) :: name
 
     remove_variable = .false.
-    call remove(root, name, remove_variable)
+    call remove(root, name, remove_variable, .true.)
   end function remove_variable
 
-  ! REMOVE takes NAME out of the tree that T leads to. An entry with two
-  ! children takes the place of its successor, the leftmost entry of its
-  ! right subtree, which is then removed instead.
-  recursive subroutine remove(t, name, found)
+  ! REMOVE takes NAME out of the tree that T leads to, releasing its value
+  ! if DROP is true. An entry with two children takes the place of its
+  ! successor, the leftmost entry of its right subtree, which is then
+  ! removed instead: its value has moved, so it is removed without DROP.
+  recursive subroutine remove(t, name, found, drop)
     type(variable), pointer :: t
     character(len=*), intent(in) :: name
     logical, intent(inout) :: found
+    logical, intent(in) :: drop
     type(variable), pointer :: gone, successor
     character(len=name_length) :: key
 
     if (.not. associated(t)) return
 
     if (llt(name, t%name)) then
-      call remove(t%left, name, found)
+      call remove(t%left, name, found, drop)
     else if (lgt(name, t%name)) then
-      call remove(t%right, name, found)
+      call remove(t%right, name, found, drop)
     else
       found = .true.
-      if (.not. associated(t%left)) then
+      if (.not. associated(t%left) .or. .not. associated(t%right)) then
         gone => t
-        t => t%right
-        deallocate (gone)
-      else if (.not. associated(t%right)) then
-        gone => t
-        t => t%left
+        if (associated(t%left)) then
+          t => t%left
+        else
+          t => t%right
+        end if
+        if (drop) call release(gone%q)
         deallocate (gone)
       else
         successor => t%right
@@ -202,9 +232,10 @@ contains
         end do
         ! The successor's name is copied first: the entry it is in goes.
         key = successor%name
+        if (drop) call release(t%q)
         t%name = key
-        t%v = successor%v
-        call remove(t%right, key, found)
+        t%q = successor%q
+        call remove(t%right, key, found, .false.)
       end if
     end if
   end subroutine remove
@@ -220,6 +251,7 @@ contains
     if (.not. associated(t)) return
     call chop(t%left)
     call chop(t%right)
+    call release(t%q)
     deallocate (t)
   end subroutine chop
 
@@ -233,7 +265,7 @@ contains
 
     if (.not. associated(t)) return
     call walk(t%left)
-    call say(trim(t%name) // ' = ' // trim(format_value(t%v)))
+    call list_quantity(t%name, t%q)
     call walk(t%right)
   end subroutine walk
 

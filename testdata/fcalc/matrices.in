@@ -1,0 +1,151 @@
+set echo
+! Matrices: rows parted by semicolons, elements by commas.
+a = [1, 2; 3, 4]
+b = [0, 1; 1, 0]
+c = [1 + i, 2; 3, 4 - i]
+[a, b]
+[a; 5, 6]
+[a, [5; 6]; 7, 8, 9]
+eye(3)
+zeros(2, 3)
+ones(2)
+diag([1, 2, 3])
+diag([1, 2, 3; 4, 5, 6])
+reshape(range(1, 6), 3, 2)
+! Elements, rows, columns, and blocks.
+a(2, 1)
+a(2, :)
+a(:, 2)
+a(3)
+m = reshape(range(1, 12), 3, 4)
+m(2:3, [1, 4])
+m(:, 4:1:-1)
+m(::2, ::3)
+m([3, 1], 2)
+m(2, :) = 0
+m(:, 1) = [7; 8; 9]
+m(1:2, 3:4) = [-1, -2; -3, -4]
+! Element by element, and with scalars.
+a + b
+a - 1
+a .* b
+a ./ a
+a .^ 2
+a mod 2
+a > 2
+10 * a
+a / 2
+! The matrix product, and the transposes: ' conjugates, .' doesn't.
+a * b
+b * a
+a * [1; 1]
+[1, 1] * a
+a'
+c'
+c.'
+m'
+! Powers: a square matrix's whole powers by squaring, negative ones
+! through the inverse.
+a ^ 2
+a ^ 3
+a ^ 0
+a ^ -1
+b ^ 101
+! Determinants, inverses, and solving A x = b.
+det(a)
+det(c)
+det([2, 0, 1; 1, 3, 2; 1, 1, 1])
+det([1, 2, 3; 4, 5, 6; 7, 8, 9])
+det(eye(4) * 2)
+inv(a)
+inv(c)
+a * inv(a)
+inv([2, 1, 1; 1, 3, 2; 1, 0, 0])
+a \ [5; 6]
+a \ eye(2)
+[4, 2, 0; 2, 5, 3; 0, 3, 6] \ [2; 1; 3]
+[5, 6] / a
+3 \ a
+! Trace, rank, norms, and the Kronecker product.
+trace(a)
+trace(c)
+rank(a)
+rank([1, 2; 2, 4])
+rank([1, 2, 3; 4, 5, 6; 7, 8, 9])
+rank(zeros(2, 3))
+rank([1, 2, 3])
+norm(a)
+norm(a, 1)
+norm(a, huge)
+kron(b, a)
+kron([1, 2], [1; 1])
+! Functions apply to each element, and list functions take them all.
+sqrt([4, 1; 9, 16])
+abs(c)
+sum(a)
+max(a)
+size(m)
+numel(m)
+cumsum(a)
+sort([3, 1; 2, 4])
+! Eigenvalues, sorted by real part, then imaginary part.
+eig([2, 0; 0, 3])
+eig([4, 1; 2, 3])
+eig([0, -1; 1, 0])
+eig([2, -1, 0; -1, 2, -1; 0, -1, 2])
+eig([1, 1; 0, 1])
+eig(c)
+eig([1, 2, 3; 4, 5, 6; 7, 8, 10])
+eig([0, 0, 1; 1, 0, 0; 0, 1, 0])
+eig(diag([5, -1, 3, 2]))
+eig([6, -11, 6; 1, 0, 0; 0, 1, 0])
+eig(eye(3) * 1e100)
+set digits 10
+eig([1, 2, 3; 4, 5, 6; 7, 8, 10])
+inv([4, 7; 2, 6])
+set digits 12
+! A matrix's display shows each element beside the largest: digits the
+! matrix's scale can't show are shown as zero.
+[1e20, 1; 2, 3]
+[1, 1e-20; 2, 3]
+! Out of the safe band, products are computed with guarded arithmetic.
+[1e150, 0; 0, 1e150] * [1e100; 1e100]
+[1e-150, 0; 0, 1e-150] * [1e-100, 0; 0, 2e-100]
+! Users' functions of matrices.
+sym(x) = (x + x') / 2
+sym(a)
+quad(x, v) = v' * x * v
+quad(a, [1; 1])
+commutator(x, y) = x * y - y * x
+commutator(a, b)
+list variables
+clear all
+! The errors.
+a = [1, 2; 3, 4]
+[1, 2, 3] * a
+a * [1, 2]
+[1, 2; 3, 4; 5, 6] ^ 2
+a ^ 0.5
+a ^ i
+a ^ [1, 2]
+inv([1, 2; 2, 4])
+[1, 2; 2, 4] \ [1; 1]
+a \ [1; 2; 3]
+[1, 2, 3] \ 1
+1 / a
+det([1, 2, 3])
+inv([1, 2])
+trace([1, 2; 3, 4; 5, 6])
+eig([1, 2])
+kron(ones(100), ones(2))
+a(3, 1)
+a(1, 0)
+a(2, 3) = 1
+norm(a, 2)
+[1e200, 0; 0, 1] * [1e200, 0; 0, 1]
+[1e300, 0; 0, 1] \ [1; 1e-300]
+[1e200, 0; 0, 1e200] ^ 2
+show memory
+clear all
+show memory
+quit

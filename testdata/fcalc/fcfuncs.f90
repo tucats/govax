@@ -50,14 +50,17 @@ module fcfuncs
   ! VALUE is public here too: a public procedure's argument may not be of a
   ! type private in this module.
   public :: value
-  public :: builtin_index, arity_ok, apply_builtin, factorial_value
+  public :: builtin_index, arity_ok, apply_builtin, factorial_value, takes_list
+  public :: builtin, many
   public :: angle_mode, a_radians, a_degrees, a_grads
 
   integer, parameter :: a_radians = 1, a_degrees = 2, a_grads = 3
   integer, save :: angle_mode = a_radians
 
+  ! (The type is public, as is MANY, so module FCMATRIX's table of the
+  ! matrix functions is made the same way.)
   type builtin
-    character(len=8) :: name
+    character(len=12) :: name
     integer :: least
     integer :: most
   end type builtin
@@ -156,6 +159,17 @@ contains
       b = more_builtins(id - size(builtins))
     end if
   end function row
+
+  ! TAKES_LIST: the function ID takes a list of any length, so the
+  ! evaluator gives it every element of an array argument (sum([1, 2, 3])
+  ! is sum(1, 2, 3)), where it applies any other function to each element.
+  logical function takes_list(id)
+    integer, intent(in) :: id
+    type(builtin) :: b
+
+    b = row(id)
+    takes_list = b%most == many
+  end function takes_list
 
   ! ARITY_OK: the function ID takes N arguments.
   logical function arity_ok(id, n)

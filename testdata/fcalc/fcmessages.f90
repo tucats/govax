@@ -31,7 +31,7 @@ module fcmessages
   private
 
   public :: say, say_more, fail, failed, clear_error, report, error_code
-  public :: indent
+  public :: indent, say_part, say_end
 
   ! The message codes, an index into MESSAGES.
   integer, parameter, public :: e_badchar = 1, e_badnumber = 2, e_operand = 3, &
@@ -40,7 +40,9 @@ module fcmessages
     e_toodeep = 13, e_linelong = 14, e_namelong = 15, e_notwhole = 16, &
     e_badset = 17, w_notdef = 18, e_badcmd = 19, e_namereq = 20, &
     e_reserved = 21, e_argcount = 22, e_builtin = 23, e_recursion = 24, &
-    e_params = 25, e_dupparam = 26
+    e_params = 25, e_dupparam = 26, e_notconform = 27, e_notsquare = 28, &
+    e_singular = 29, e_index = 30, e_notscalar = 31, e_noconverge = 32, &
+    e_badrange = 33, e_toobig = 34, e_rbracket = 35, e_notvector = 36
 
   ! Each message: its severity, its identifier, and its text, in which !AS
   ! stands for the text the error names (VMS's notation for "a string
@@ -48,7 +50,7 @@ module fcmessages
   ! named components; a component is reached with %, as messages(k)%text.
   type message
     character(len=1) :: severity
-    character(len=9) :: ident
+    character(len=10) :: ident
     character(len=40) :: text
   end type message
 
@@ -57,7 +59,7 @@ module fcmessages
   ! message('E', 'BADCHAR', ...), each giving the components in order. A
   ! shorter text is padded with blanks to the component's length. & at a
   ! line's end continues the statement on the next line.
-  type(message), parameter :: messages(26) = (/ &
+  type(message), parameter :: messages(36) = (/ &
     message('E', 'BADCHAR', 'invalid character'), &
     message('E', 'BADNUMBER', 'invalid number'), &
     message('E', 'OPERAND', 'operand expected'), &
@@ -83,7 +85,17 @@ module fcmessages
     message('E', 'BUILTIN', '!AS is a built-in function'), &
     message('E', 'RECURSION', 'functions call each other too deeply'), &
     message('E', 'PARAMS', 'too many parameters'), &
-    message('E', 'DUPPARAM', '!AS is already a parameter') /)
+    message('E', 'DUPPARAM', '!AS is already a parameter'), &
+    message('E', 'NOTCONFORM', 'shapes of the operands do not agree'), &
+    message('E', 'NOTSQUARE', 'matrix must be square'), &
+    message('E', 'SINGULAR', 'matrix is singular'), &
+    message('E', 'INDEX', 'index is out of range'), &
+    message('E', 'NOTSCALAR', 'operand must be a scalar'), &
+    message('E', 'NOCONVERGE', 'eigenvalues did not converge'), &
+    message('E', 'BADRANGE', 'a range is allowed only in an index'), &
+    message('E', 'TOOBIG', 'array is too large'), &
+    message('E', 'RBRACKET', 'missing right bracket'), &
+    message('E', 'NOTVECTOR', 'operand must be a vector') /)
 
   ! The error not yet reported: its code (0 for none), column (0 for none),
   ! and text. SAVE keeps a module variable's value from one call to the
@@ -98,6 +110,10 @@ module fcmessages
 
   ! The longest record SAY writes.
   integer, parameter :: width = 132
+
+  ! A line SAY_PART is building, and how much of it is filled.
+  character(len=width), save :: pending = ' '
+  integer, save :: filled = 0
 
   ! CONTAINS separates the module's declarations from its procedures, the
   ! module procedures, which see everything declared above it.
@@ -130,6 +146,34 @@ contains
 
     write (*, '(2A)', advance='NO') cc, text
   end subroutine say_more
+
+  ! SAY_PART adds text to a line being built a piece at a time, and SAY_END
+  ! writes what is left of it: together they write the same records SAY
+  ! would of the whole line, for a line too long to hold in one variable
+  ! (LIST's of a large matrix). Fortran 90 has no strings that grow, so a
+  ! long line is written as it is made: each time PENDING is full and more
+  ! comes, PENDING is written as a record.
+  subroutine say_part(text)
+    character(len=*), intent(in) :: text
+    integer :: at, k
+
+    at = 1
+    do while (at <= len(text))
+      if (filled == width) then
+        call say(pending)
+        filled = 0
+      end if
+      k = min(len(text) - at + 1, width - filled)
+      pending(filled + 1:filled + k) = text(at:at + k - 1)
+      filled = filled + k
+      at = at + k
+    end do
+  end subroutine say_part
+
+  subroutine say_end()
+    call say(pending(:filled))
+    filled = 0
+  end subroutine say_end
 
   ! FAIL records an error, unless one is already waiting: the first is the
   ! one reported.
