@@ -186,7 +186,18 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		return nil, err
 	}
 
+	// CMPLX computes in the type its KIND= asks for, not in COMPLEX*8 first:
+	// CMPLX(1D0/3D0, 0D0, 8) keeps every digit.
+	ev.complexType = Type{}
+	if slots.kind != nil && e.Name == "CMPLX" {
+		if ev.complexType, err = ev.kindOf(Complex, slots.kind); err != nil {
+			return nil, err
+		}
+	}
+
 	c, err := fn.eval(ev, e, args)
+	ev.complexType = Type{}
+
 	if err == nil {
 		ev.initRule(e, args, c)
 	}
@@ -238,25 +249,35 @@ func (ev *evaluator) initRule(e *ast.Apply, args []*Const, c *Const) {
 // the reference's KIND= asks for (intrinsickeys.go): NINT(X, KIND=2), CMPLX(X,
 // Y, 8).
 func (ev *evaluator) withKind(c *Const, kind ast.Expr) (*Const, *constErr) {
-	k, err := ev.eval(kind)
+	t, err := ev.kindOf(c.T.Kind, kind)
+	if err != nil {
+		return nil, err
+	}
+
+	return ev.convert(c, t, c.Pos)
+}
+
+// kindOf is the type of kind k that the KIND= expression kind names.
+func (ev *evaluator) kindOf(k Kind, kind ast.Expr) (Type, *constErr) {
+	n, err := ev.eval(kind)
 
 	switch {
 	case err != nil && err.kind == constFailed:
-		return nil, err
-	case err != nil, k.T.Kind != Integer, k.Int < 0:
-		return nil, ev.report("KINDNOTCONST", kind.Position())
+		return Type{}, err
+	case err != nil, n.T.Kind != Integer, n.Int < 0:
+		return Type{}, ev.report("KINDNOTCONST", kind.Position())
 	}
 
-	t, problem := kindType(baseTypes[c.T.Kind], int(k.Int))
+	t, problem := kindType(baseTypes[k], int(n.Int))
 	if problem != nil {
 		if !ev.quiet {
 			ev.a.reportKind(problem, kind.Position())
 		}
 
-		return nil, failed
+		return Type{}, failed
 	}
 
-	return ev.convert(c, t, c.Pos)
+	return t, nil
 }
 
 // badArg reports an argument of a type or value the function doesn't
@@ -599,9 +620,12 @@ func constDprod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 
 // constCmplx is CMPLX(x) or CMPLX(x, y): a COMPLEX*8 of one number (a
 // COMPLEX's value, or a real part with an imaginary part of zero) or of
-// two that aren't COMPLEX.
+// two that aren't COMPLEX; of the type KIND= asks for, if it does.
 func constCmplx(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	t := Type{Kind: Complex, Size: 8}
+	if ev.complexType.Kind == Complex {
+		t = ev.complexType
+	}
 
 	for _, arg := range args {
 		if !arg.T.numeric() || len(args) == 2 && arg.T.Kind == Complex {
@@ -623,12 +647,12 @@ func constCmplx(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 		return c.at(e.Pos), nil
 	}
 
-	re, err := ev.convert(args[0], RealType, e.Pos)
+	re, err := ev.convert(args[0], t.part(), e.Pos)
 	if err != nil {
 		return nil, err
 	}
 
-	im, err := ev.convert(args[1], RealType, e.Pos)
+	im, err := ev.convert(args[1], t.part(), e.Pos)
 	if err != nil {
 		return nil, err
 	}

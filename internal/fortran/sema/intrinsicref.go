@@ -27,7 +27,7 @@ import (
 func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 	a.noteIntrinsic(e.Name, e.Pos)
 
-	forms := formsNamed(e.Name)
+	forms := a.formsFor(e.Name)
 
 	// The arguments in the dummies' order, with KIND taken out
 	// (intrinsickeys.go).

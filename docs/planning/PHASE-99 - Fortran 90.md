@@ -155,6 +155,7 @@ it changes no existing program. A few texts mean one thing to each:
 | `TYPE FMT` (no comma, no list) | output with the format in FMT, an empty list | the start of a derived type FMT's definition | `/F90`; `TYPE *,…`, `TYPE 10,…`, and `TYPE f, list` are always output, `TYPE, …`, `TYPE ::`, and `TYPE(name)` always Fortran 90's (the HP manual's 10.6 keeps both) |
 | `X = SUM(A)` with SUM not declared | a call of an external function SUM | the intrinsic SUM | `/F90`: Fortran 90's new intrinsic names are intrinsic only under it, or by an INTRINSIC statement (Decision 2) |
 | `A.B.C` with A a record | DEC's field B, then its field C | A, the defined operator `.B.`, C | the symbols: a field of a record wins, as in the HP manual; settled in sema, where the parser keeps both readings possible |
+| `REAL(Z)`, `AIMAG(Z)` with Z a COMPLEX*16 | a REAL*4 (Table D-3); AIMAG not allowed | a REAL*8, Z's own kind (13.13.84, 13.13.6) | `/F90` (Phase 111, subtask 2a: `sema`'s `fortran90Readings`) |
 | `ENDDO`, `INTEGERX` in free form | (fixed form ignores blanks) | blanks are significant: `INTEGERX` is a name | the source form, not `/F90` (Decision 3) |
 
 Nothing else found: `/=`, `(/`, `=>`, `::`, `%name`, `;`, construct names

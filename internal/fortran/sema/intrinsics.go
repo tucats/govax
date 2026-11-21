@@ -351,6 +351,18 @@ ISHFTC JISHFTC  2,3 I4  I4  SHIFTC E I,SHIFT,SIZE?
 -      SIZEOF   1   *   I4  SIZEOF I X
 `
 
+// fortran90Readings are the rows where Table D-3 and the standard give one
+// reference two meanings, which /F90 settles (docs/planning/PHASE-99 -
+// Fortran 90.md's table of them, and docs/planning/PHASE-111 - Fortran 90
+// milestone.md, subtask 2a): a part of a COMPLEX*16 is a REAL*8 (the
+// standard's 13.13.84 and 13.13.6: a COMPLEX's parts are a REAL of its own
+// kind), where Table D-3's REAL of one is a REAL*4 and its AIMAG takes only a
+// COMPLEX*8. Under /NOF90 they are as they were.
+const fortran90Readings = `
+REAL               -  1   C16 R8  CVT E A,KIND?
+AIMAG              -  1   C16 R8  IMAG E Z
+`
+
 // fortran90Table is Fortran 90's intrinsic functions (the standard's 13.13)
 // that Table D-3 hasn't, in the same columns, as far as the phases have
 // brought them: LOGICAL, and the kind and numeric inquiry functions
@@ -497,6 +509,10 @@ type form struct {
 	class    byte
 	dummies  []dummyArg
 	variadic bool
+
+	// f90Only marks a row of fortran90Readings, which stands for a row of
+	// Table D-3 under /F90 only (formsFor).
+	f90Only bool
 }
 
 // dummyArg is an intrinsic procedure's dummy argument: its name, which a
@@ -519,6 +535,13 @@ var intrinsicForms, intrinsics, f90Intrinsics = readIntrinsics()
 func readIntrinsics() ([]form, map[string]bool, map[string]bool) {
 	forms, names := readTable(intrinsicTable, nil)
 	more, newNames := readTable(fortran90Table, names)
+
+	readings, _ := readTable(fortran90Readings, names)
+	for i := range readings {
+		readings[i].f90Only = true
+	}
+
+	more = append(more, readings...)
 
 	// PRESENT has no row: what it is given is an OPTIONAL dummy argument's
 	// name, never a value (optional.go).
@@ -674,10 +697,15 @@ func tableType(text string) Type {
 // formsNamed are the rows a reference to name selects from: a generic
 // name's, if name is one (a name both generic and specific, such as ABS, is
 // generic in a reference, section 6.3.1.1), or else a specific name's.
+// fortran90Readings' rows aren't among them (formsFor).
 func formsNamed(name string) []form {
 	var generic, specific []form
 
 	for _, r := range intrinsicForms {
+		if r.f90Only {
+			continue
+		}
+
 		if r.generic == name {
 			generic = append(generic, r)
 		}
@@ -692,6 +720,36 @@ func formsNamed(name string) []form {
 	}
 
 	return specific
+}
+
+// formsFor are the rows a reference to name in this unit selects from:
+// formsNamed's, and under /F90 fortran90Readings' in place of the rows that
+// take the same argument type, or beside them where none does.
+func (a *analyzer) formsFor(name string) []form {
+	forms := formsNamed(name)
+	if !a.f90 {
+		return forms
+	}
+
+	for _, r := range intrinsicForms {
+		if !r.f90Only || r.generic != name && r.specific != name {
+			continue
+		}
+
+		replaced := false
+
+		for i, f := range forms {
+			if f.arg == r.arg && f.min == r.min && f.max == r.max {
+				forms[i], replaced = r, true
+			}
+		}
+
+		if !replaced {
+			forms = append(forms, r)
+		}
+	}
+
+	return forms
 }
 
 // setOf is the set of the blank-separated names in list.

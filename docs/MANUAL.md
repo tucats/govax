@@ -8460,8 +8460,10 @@ looked for as `.FOR`, then `.F90`.
 
 **`/F90`.** A few texts mean one thing to VAX FORTRAN and another to Fortran 90. `/F90`
 takes Fortran 90's reading of them: `"..."` is a character constant, where VAX FORTRAN reads
-`"17` as an octal integer, and `TYPE name` alone starts a derived type's definition, where
-VAX FORTRAN reads it as an output statement. Everything else Fortran 90 adds needs no
+`"17` as an octal integer; `TYPE name` alone starts a derived type's definition, where
+VAX FORTRAN reads it as an output statement; and `REAL(Z)` and `AIMAG(Z)` of a
+`COMPLEX(8)` are `REAL(8)`, where VAX FORTRAN's `REAL` of a `COMPLEX*16` is a `REAL*4` and
+its `AIMAG` takes only a `COMPLEX*8`. Everything else Fortran 90 adds needs no
 qualifier, since VAX FORTRAN gives it no meaning. `/F90` is the default for a free-form
 source, `/NOF90` for a fixed-form one, so an old `.FOR` file means what it always meant.
 `OPTIONS /F90` or `OPTIONS /NOF90` before a unit changes it for that unit. From the host

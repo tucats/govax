@@ -98,6 +98,10 @@ type evaluator struct {
 	// judges each intrinsic function in (initRule); an executable expression the
 	// compiler folds is under no such rule.
 	init bool
+
+	// complexType is the type the CMPLX being computed is to have, its
+	// KIND='s, while constCmplx runs (evalIntrinsic).
+	complexType Type
 }
 
 // declEval is the evaluator for declarations.
