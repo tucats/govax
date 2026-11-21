@@ -36,6 +36,7 @@ module fcvalues
   public :: operator(+), operator(-), operator(*), operator(/), operator(**)
   public :: digits, r_add, r_mul, r_div, c_add, c_sub, c_mul, c_div, near_to
   public :: exp_real, exp_value, log_value, clean, angle_of
+  public :: number_format, number_base, f_auto, f_fixed, f_scientific, f_engineering
 
   ! A VALUE: Z, the number, and ERR, 0 or the code of the error that made
   ! it. A function whose result is a VALUE returns both at once.
@@ -44,8 +45,15 @@ module fcvalues
     integer :: err
   end type value
 
-  ! The significant digits a value is shown with (SET DIGITS).
+  ! The significant digits a value is shown with (SET DIGITS), or under
+  ! FIXED the places after the point.
   integer, save :: digits = 12
+
+  ! How a value is shown (SET FORMAT), and the base a whole number is shown
+  ! in (SET BASE): 10, 16, 8, or 2.
+  integer, parameter :: f_auto = 1, f_fixed = 2, f_scientific = 3, f_engineering = 4
+  integer, save :: number_format = f_auto
+  integer, save :: number_base = 10
 
   interface operator(+)
     module procedure v_add, v_plus
@@ -138,7 +146,7 @@ contains
     real(rk) :: x
 
     x = real(v%z, rk)
-    is_whole = is_real(v) .and. abs(x) < 4.0e15_rk
+    is_whole = is_real(v) .and. abs(x) < whole_limit
     if (is_whole) is_whole = aint(x) == x
   end function is_whole
 
@@ -713,45 +721,109 @@ contains
 
   ! ------------------------------------------------------------------
   ! Showing values.
-
-  ! FORMAT_REAL shows X to DIGITS significant digits, with no trailing
-  ! zeros: in fixed notation from 1E-5 up to where the digits run out, in
-  ! scientific notation outside that, as 1.5e-7 or 6.02214076e+23.
   !
-  ! The number is first written by Fortran's own conversion, to an
-  ! internal file: a WRITE whose unit is a CHARACTER variable writes into
-  ! the variable instead of to a device, and a READ from one reads it, so
-  ! these are Fortran's way to turn numbers into text and back. The format
-  ! is itself built at run time as text, (ESw.dE3): ES is scientific
-  ! notation with one digit before the point, w the field's width, d the
-  ! digits after the point, E3 a three-digit exponent. Fortran's conversion
-  ! rounds the decimal digits correctly, so FORMAT_REAL needn't; it only
-  ! rearranges them.
+  ! How a number is shown depends on three settings: DIGITS (SET DIGITS),
+  ! NUMBER_FORMAT (SET FORMAT), and NUMBER_BASE (SET BASE). The formats are
+  ! a scientific calculator's:
+  !
+  !   AUTO         DIGITS significant digits, trailing zeros dropped, in
+  !                fixed notation from 1E-5 up to where the digits run out,
+  !                scientific outside that: 2, 0.125, 6.02214076e+23
+  !   FIXED        DIGITS places after the point, every one shown: 2.0000
+  !   SCIENTIFIC   DIGITS significant digits, one before the point, every
+  !                one shown: 2.00000000000e+0
+  !   ENGINEERING  as SCIENTIFIC, but the exponent a multiple of 3, so one to
+  !                three digits before the point: 12.3456789012e+3
+  !
+  ! A whole number (a real value, or both parts of a complex one) shown in
+  ! another base (SET BASE) is written with a prefix, 0x, 0o, or 0b, as
+  ! fcalc reads it back; any other value is shown in decimal.
+
+  ! FORMAT_REAL shows X by the format. A negative number is shown with its
+  ! minus sign, unless it shows as all zeros (FIXED's 0.0000).
   function format_real(x) result(text)
     real(rk), intent(in) :: x
     character(len=32) :: text
+
+    select case (number_format)
+    case (f_fixed)
+      text = fixed_text(abs(x))
+    case (f_scientific)
+      text = scientific_text(abs(x), digits)
+    case (f_engineering)
+      text = engineering_text(abs(x))
+    case default
+      text = auto_text(abs(x))
+    end select
+
+    ! SCAN finds the first of a set of characters in a string (0 if none):
+    ! here, any digit that isn't zero.
+    if (x < 0 .and. scan(text, '123456789') > 0) text = '-' // trim(text)
+  end function format_real
+
+  ! DECIMAL_DIGITS writes A (positive) to N significant digits: D(1:N) the
+  ! digits, without the point, and EX the power of ten of the first.
+  !
+  ! The number is written by Fortran's own conversion, to an internal file:
+  ! a WRITE whose unit is a CHARACTER variable writes into the variable
+  ! instead of to a device, and a READ from one reads it, so these are
+  ! Fortran's way to turn numbers into text and back. The format is itself
+  ! built at run time as text, (ESw.dE3): ES is scientific notation with one
+  ! digit before the point, w the field's width, d the digits after the
+  ! point, E3 a three-digit exponent. Fortran's conversion rounds the decimal
+  ! digits correctly, so fcalc needn't; it only rearranges them. (Fortran 90
+  ! has no I0, which would write a number in as few characters as it needs:
+  ! I2 writes 1 as " 1", and a blank in a format is nothing.)
+  subroutine decimal_digits(a, n, d, ex)
+    real(rk), intent(in) :: a
+    integer, intent(in) :: n
+    character(len=max_digits), intent(out) :: d
+    integer, intent(out) :: ex
     character(len=40) :: buf
     character(len=20) :: form
-    character(len=max_digits) :: d
-    character(len=1) :: sign
-    integer :: k, ex, at
+    integer :: at
 
-    if (x == 0) then
+    write (form, '(A, I2, A, I2, A)') '(ES', n + 10, '.', n - 1, 'E3)'
+    write (buf, form) a
+    buf = adjustl(buf)
+
+    ! BUF is d.ddd...E+xxx (or d.E+xxx for one digit).
+    d = buf(1:1) // buf(3:n + 1)
+    at = index(buf, 'E')
+    read (buf(at + 1:at + 4), '(I4)') ex
+  end subroutine decimal_digits
+
+  ! EXPONENT_TEXT is e+7 or e-12: as few digits as the exponent needs.
+  function exponent_text(ex) result(text)
+    integer, intent(in) :: ex
+    character(len=6) :: text
+    character(len=4) :: buf
+
+    write (buf, '(I4)') abs(ex)
+    if (ex < 0) then
+      text = 'e-' // adjustl(buf)
+    else
+      text = 'e+' // adjustl(buf)
+    end if
+  end function exponent_text
+
+  ! AUTO_TEXT shows A (not negative) to DIGITS significant digits, with no
+  ! trailing zeros: in fixed notation from 1E-5 up to where the digits run
+  ! out, in scientific notation outside that, as 1.5e-7 or 6.02214076e+23.
+  function auto_text(a) result(text)
+    real(rk), intent(in) :: a
+    character(len=32) :: text
+    character(len=max_digits) :: d
+    integer :: k, ex
+
+    if (a == 0) then
       text = '0'
       return
     end if
 
-    ! (Fortran 90 has no I0: a blank in a format is nothing.)
-    write (form, '(A, I2, A, I2, A)') '(ES', digits + 10, '.', digits - 1, 'E3)'
-    write (buf, form) abs(x)
-    buf = adjustl(buf)
+    call decimal_digits(a, digits, d, ex)
 
-    ! BUF is d.ddd...E+xxx: the digits, without the point, and the
-    ! exponent.
-    d = buf(1:1) // buf(3:digits + 1)
-    at = index(buf, 'E')
-    read (buf(at + 1:at + 4), '(I4)') ex
-
+    ! K is the last digit that isn't a zero.
     k = digits
     do while (k > 1)
       if (d(k:k) /= '0') exit
@@ -769,45 +841,196 @@ contains
     else
       text = d(1:1)
       if (k > 1) text = d(1:1) // '.' // d(2:k)
-      sign = '+'
-      if (ex < 0) sign = '-'
-      write (buf, '(I3)') abs(ex)
-      text = trim(text) // 'e' // sign // trim(adjustl(buf))
+      text = trim(text) // exponent_text(ex)
+    end if
+  end function auto_text
+
+  ! SCIENTIFIC_TEXT shows A (not negative) to N significant digits, every
+  ! one shown, one before the point: 3.14159265359e+0. Zero is
+  ! 0.00000000000e+0, the same width as the rest.
+  function scientific_text(a, n) result(text)
+    real(rk), intent(in) :: a
+    integer, intent(in) :: n
+    character(len=32) :: text
+    character(len=max_digits) :: d
+    integer :: ex
+
+    if (a == 0) then
+      d = repeat('0', n)
+      ex = 0
+    else
+      call decimal_digits(a, n, d, ex)
+    end if
+    text = d(1:1)
+    if (n > 1) text = d(1:1) // '.' // d(2:n)
+    text = trim(text) // exponent_text(ex)
+  end function scientific_text
+
+  ! ENGINEERING_TEXT is SCIENTIFIC_TEXT with the exponent a multiple of 3
+  ! (the powers that have names: kilo, mega, milli, micro), so the point
+  ! moves right by MODULO(EX, 3), leaving one to three digits before it.
+  ! MODULO, unlike MOD, takes the sign of the divisor: MODULO(-7, 3) is 2,
+  ! so 1.5e-7 is 150e-9. With fewer digits than go before the point, zeros
+  ! fill the places: 1.5e+5 to two digits is 150e+3.
+  function engineering_text(a) result(text)
+    real(rk), intent(in) :: a
+    character(len=32) :: text
+    character(len=max_digits) :: d
+    integer :: ex, shift, lead
+
+    if (a == 0) then
+      d = repeat('0', digits)
+      ex = 0
+    else
+      call decimal_digits(a, digits, d, ex)
+    end if
+    shift = modulo(ex, 3)
+    lead = shift + 1
+
+    if (digits < lead) then
+      text = d(1:digits) // repeat('0', lead - digits)
+    else if (digits == lead) then
+      text = d(1:lead)
+    else
+      text = d(1:lead) // '.' // d(lead + 1:digits)
+    end if
+    text = trim(text) // exponent_text(ex - shift)
+  end function engineering_text
+
+  ! FIXED_TEXT shows A (not negative) with DIGITS places after the point,
+  ! by Fortran's F editing: (F40.4) writes 3.14159... as 3.1416, rounded.
+  ! A number too small to show any digit is all zeros, 0.0000. One so large
+  ! that its digits before the point and the places after would pass the
+  ! MAX_DIGITS the kind holds is shown in scientific notation instead, with
+  ! as many digits after the point, so no digit is shown that the machines'
+  ! last bits could make differ. Fortran may write a number below 1 with
+  ! no zero before the point (.5000), and fcalc puts one there.
+  function fixed_text(a) result(text)
+    real(rk), intent(in) :: a
+    character(len=32) :: text
+    character(len=40) :: buf
+    character(len=20) :: form
+
+    if (a < 0.5_rk * 10.0_rk ** (-digits)) then
+      text = '0.' // repeat('0', digits)
+      return
+    end if
+    if (a >= 10.0_rk ** (max_digits - digits)) then
+      text = scientific_text(a, min(digits + 1, max_digits))
+      return
     end if
 
+    write (form, '(A, I2, A)') '(F40.', digits, ')'
+    write (buf, form) a
+    buf = adjustl(buf)
+    if (buf(1:1) == '.') buf = '0' // trim(buf)
+    text = trim(buf)
+  end function fixed_text
+
+  ! IS_WHOLE_PART: X is a whole number fcalc may show in another base.
+  logical function is_whole_part(x)
+    real(rk), intent(in) :: x
+
+    is_whole_part = abs(x) < whole_limit
+    if (is_whole_part) is_whole_part = aint(x) == x
+  end function is_whole_part
+
+  ! BASED_TEXT shows the whole number X in NUMBER_BASE, with its prefix:
+  ! 0xFF, 0o377, 0b11111111; zero is 0 in every base. The digits come
+  ! last first, each the remainder of a division by the base. The bases
+  ! are powers of two, so on a binary machine each division, AINT, and
+  ! product here is exact: whole numbers below WHOLE_LIMIT need no integer
+  ! type wider than the 32 bits every Fortran 90 compiler has.
+  function based_text(x) result(text)
+    real(rk), intent(in) :: x
+    character(len=64) :: text
+    character(len=*), parameter :: hex = '0123456789ABCDEF'
+    character(len=56) :: shown
+    real(rk) :: a, q, b
+    integer :: k, r
+
+    if (x == 0) then
+      text = '0'
+      return
+    end if
+
+    b = number_base
+    a = abs(x)
+    k = len(shown) + 1
+    do
+      q = aint(a / b)
+      r = nint(a - q * b)
+      k = k - 1
+      shown(k:k) = hex(r + 1:r + 1)
+      a = q
+      if (a == 0) exit
+    end do
+
+    select case (number_base)
+    case (16)
+      text = '0x' // shown(k:)
+    case (8)
+      text = '0o' // shown(k:)
+    case default
+      text = '0b' // shown(k:)
+    end select
     if (x < 0) text = '-' // trim(text)
-  end function format_real
+  end function based_text
 
   ! FORMAT_VALUE shows a value: a real one as a number, a complex one as
   ! a + bi. A part smaller than the other by more than the digits shown
   ! is shown as zero: what the digits can't show. BESIDE, if it is given,
   ! is a magnitude the parts are shown beside, so a part smaller than it by
   ! more than the digits is shown as zero too: an element of a matrix is
-  ! shown beside the matrix's largest (module FCARRAYS).
+  ! shown beside the matrix's largest (module FCARRAYS). Under FIXED, a part
+  ! too small to show a digit is zero as well, so 1e-9 + 1e-6i is 0.0000.
+  ! A value whose parts are whole numbers is shown in NUMBER_BASE, exactly:
+  ! a whole number has no rounding to hide.
   function format_value(v, beside) result(text)
     type(value), intent(in) :: v
     real(rk), intent(in), optional :: beside
-    character(len=72) :: text
+    character(len=120) :: text
     real(rk) :: x, y, part, big
+    logical :: based
 
     x = real(v%z, rk)
     y = aimag(v%z)
-    part = 10.0_rk ** (-digits)
-    big = 0
-    if (present(beside)) big = beside
-    if (negligible(y, max(abs(x), big))) y = 0
-    if (negligible(x, max(abs(y), big))) x = 0
+    based = number_base /= 10 .and. is_whole_part(x) .and. is_whole_part(y)
+
+    if (.not. based) then
+      part = 10.0_rk ** (-digits)
+      big = 0
+      if (present(beside)) big = beside
+      if (negligible(y, max(abs(x), big))) y = 0
+      if (negligible(x, max(abs(y), big))) x = 0
+      if (number_format == f_fixed) then
+        if (abs(x) < 0.5_rk * part) x = 0
+        if (abs(y) < 0.5_rk * part) y = 0
+      end if
+    end if
 
     if (y == 0) then
-      text = format_real(x)
+      text = part_text(x)
     else if (x == 0) then
-      text = trim(format_real(y)) // 'i'
+      text = trim(part_text(y)) // 'i'
     else if (y < 0) then
-      text = trim(format_real(x)) // ' - ' // trim(format_real(-y)) // 'i'
+      text = trim(part_text(x)) // ' - ' // trim(part_text(-y)) // 'i'
     else
-      text = trim(format_real(x)) // ' + ' // trim(format_real(y)) // 'i'
+      text = trim(part_text(x)) // ' + ' // trim(part_text(y)) // 'i'
     end if
   contains
+
+    ! PART_TEXT shows one part, in the base or by the format.
+    function part_text(p) result(t)
+      real(rk), intent(in) :: p
+      character(len=64) :: t
+
+      if (based) then
+        t = based_text(p)
+      else
+        t = format_real(p)
+      end if
+    end function part_text
 
     ! NEGLIGIBLE: |A| < |B| * PART, A too small beside B to show. The
     ! product is never formed where it could underflow (B near SMALL),

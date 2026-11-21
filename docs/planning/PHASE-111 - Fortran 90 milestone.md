@@ -260,6 +260,7 @@ As revised by the author's answers (below), with vectors and matrices added:
      ADJARRDIM under `/CHECK=BOUNDS`; `TestFortranCheck`'s ADJZERO.
      (done 2026-11-20)
 6. **Display and settings**: SET and SHOW, the formats and bases; `display`.
+   (done 2026-11-21)
 7. **TABLE and PLOT**; `plot`.
 8. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
    `oneshot`, `errors`.
@@ -605,3 +606,48 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   for later: an extent below zero (X(N), N -3) isn't made zero (the
   descriptor's extent is still U - L + 1); nothing in fcalc or the corpus makes
   one.
+- **2026-11-21:** Subtask 6, display and settings. FCVALUES' showing of
+  values is now by three settings: SET DIGITS, SET FORMAT (AUTO, as before;
+  FIXED, DIGITS places after the point by F editing; SCIENTIFIC, every
+  significant digit shown; ENGINEERING, the exponent a multiple of 3, by
+  MODULO), and SET BASE (DECIMAL, HEX, OCTAL, BINARY: a value whose parts
+  are whole numbers below FCKINDS' new `WHOLE_LIMIT`, 4E15, is shown exactly
+  with a prefix, `0xFF`, `0o377`, `0b101`, its digits by division in
+  REAL(RK), exact for the powers of two, so no integer wider than 32 bits
+  is needed). FCLEXER reads the same literals (`BASED_NUMBER`, either case,
+  an `i` after for an imaginary one; BADNUMBER for a digit or letter run on,
+  OVERFLOW past `WHOLE_LIMIT`). SET SEED n (0 to 999,999,999) puts a seed
+  made of n through RANDOM_SEED, whose size is the compiler's (one on
+  govax, eight under gfortran), so an ALLOCATABLE seed of SIZE='s length.
+  SHOW SETTINGS, and SHOW DIGITS, FORMAT, ANGLE, BASE, SEED, or ECHO, show
+  each setting as the SET command that makes it, so the lines may be typed
+  back or run from a file (subtask 8's SAVE will write them); a seed never
+  given shows as a comment. The `display` script, worked by hand from these
+  rules, is printed alike by gfortran and by govax in every mode (`/[NO]OPTIMIZE`,
+  `/RECURSIVE`, `/CHECK=ALL`, `/NOOPTIMIZE/DEBUG=ALL`, paging on), as are
+  the eight earlier scripts. No compiler bug found: ES with no digits after
+  the point (`ES11.0E3`, SET DIGITS 1), F editing, MODULO of a negative
+  number, RANDOM_SEED's SIZE= and PUT= with an allocatable array, and an
+  implied DO in an array constructor all ran as gfortran's.
+  Decisions made here, beyond A.1:
+  - **FIXED's DIGITS are places**, a calculator's FIX n, where the other
+    formats' are significant digits: one setting, read by the format. A
+    value whose digits before the point and the places would pass 15 is
+    shown in scientific notation with as many places, so no digit shown is
+    one the machines' last bits could change; a part too small for a
+    place is zero (`1e-9 + 1e-6i` is `0.0000`), with no minus sign.
+  - **SCIENTIFIC and ENGINEERING show every digit**, trailing zeros too,
+    and zero as `0.000e+0`; AUTO alone drops them.
+  - **Bases show whole values only**: a value with a part that isn't whole
+    is shown in decimal by the format, and whole ones are never rounded or
+    zeroed beside a matrix's largest, having nothing to hide. Zero is `0`
+    in every base.
+  - **A quiet line**: one ending in `;` is run without showing its value,
+    assignment, or definition, as in MATLAB and Octave (fcalc's other
+    borrowing from them), so the script keeps a random value without
+    printing it.
+  - **Ties**: a decimal tie (12345 to four digits) rounds half to even
+    under gfortran, and may round half away on a VAX, so the script has
+    none; the README says so.
+  - **A minus sign** before SET DIGITS's or SET SEED's number is DOMAIN at
+    the sign: the sign is a token of its own.

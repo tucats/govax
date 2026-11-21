@@ -29,9 +29,19 @@ program fcalc
   use fcnumeric
   implicit none
 
+  ! The words SET and SHOW know, each list in the order of the settings'
+  ! codes (FCVALUES' F_AUTO to F_ENGINEERING, FCFUNCS' A_RADIANS to
+  ! A_GRADS), so a code is a word's place. The elements of an array
+  ! constructor must all have the same length, hence the blanks.
+  character(len=11), parameter :: format_names(4) = (/ 'auto       ', &
+    'fixed      ', 'scientific ', 'engineering' /)
+  character(len=7), parameter :: angle_names(3) = (/ 'radians', 'degrees', 'grads  ' /)
+  character(len=8), parameter :: settings(6) = (/ 'digits  ', 'format  ', &
+    'angle   ', 'base    ', 'seed    ', 'echo    ' /)
+
   character(len=line_length + 1) :: line
   integer :: length, status
-  logical :: echo, done, echoed
+  logical :: echo, done, echoed, quiet
 
   echo = .false.
   done = .false.
@@ -99,15 +109,28 @@ contains
 30  status = -1
   end subroutine read_line
 
-  ! EXECUTE runs one line.
-  subroutine execute(text)
+  ! EXECUTE runs one line. A line ending in ; is quiet: an expression's
+  ! value, an assignment, or a definition is made but not shown, as in
+  ! MATLAB and Octave (a ; in brackets separates a matrix's rows, but none
+  ! ends a line).
+  subroutine execute(line_text)
+    character(len=*), intent(in) :: line_text
+    integer :: k, last
+
+    if (len_trim(line_text) == 0) return
+    k = verify(line_text, ' ' // achar(9))
+    if (line_text(k:k) == '!') return
+
+    last = len_trim(line_text)
+    quiet = line_text(last:last) == ';'
+    if (quiet) last = last - 1
+    call run(line_text(:last))
+  end subroutine execute
+
+  ! RUN runs the line TEXT.
+  subroutine run(text)
     character(len=*), intent(in) :: text
     type(token) :: first, second
-    integer :: k
-
-    if (len_trim(text) == 0) return
-    k = verify(text, ' ' // achar(9))
-    if (text(k:k) == '!') return
 
     call scan_line(text)
     if (failed()) return
@@ -163,7 +186,7 @@ contains
     else
       call statement()
     end if
-  end subroutine execute
+  end subroutine run
 
   ! INDEXES_ARRAY: NAME(...) = would assign elements of NAME, a variable
   ! holding an array, rather than define a function: NAME isn't also a
@@ -201,7 +224,7 @@ contains
       call release(v)
       return
     end if
-    call show_quantity(v, '')
+    if (.not. quiet) call show_quantity(v, '')
     call set_variable('ans', v)
   end subroutine statement
 
@@ -215,7 +238,7 @@ contains
 
     call advance(2)
     if (.not. whole_expression(v)) return
-    call show_quantity(v, name%text)
+    if (.not. quiet) call show_quantity(v, name%text)
     call set_variable(name%text, v)
   end subroutine assignment
 
@@ -241,7 +264,7 @@ contains
     call advance(1)
     if (whole_expression(y)) then
       if (assign_into(x, target, y)) then
-        call show_quantity(x, name%text)
+        if (.not. quiet) call show_quantity(x, name%text)
         call set_variable(name%text, x)
         x = real_quantity(0.0_rk)
       end if
@@ -353,7 +376,7 @@ contains
 
     t = token_at(k + 1)
     call define_function(name%text, count, params, tree, trim(text(t%column:)))
-    call list_one(name%text)
+    if (.not. quiet) call list_one(name%text)
   end subroutine definition
 
   ! LIST_ONE shows the function NAME as LIST does.
@@ -450,16 +473,16 @@ contains
   end subroutine clear_command
 
   ! SHOW MEMORY: how many arrays and tree nodes are in use, so a leak shows.
+  ! SHOW SETTINGS: every setting, each as the SET command that makes it, so
+  ! the lines may be typed back, or kept in a file and run with @, to set
+  ! them again. SHOW DIGITS, FORMAT, ANGLE, BASE, SEED, or ECHO shows one.
   subroutine show_command()
     type(token) :: what
     character(len=12) :: count
+    integer :: k
 
     what = token_at(2)
     if (what%kind /= t_name) then
-      call fail(e_badset, what%column)
-      return
-    end if
-    if (what%text /= 'memory') then
       call fail(e_badset, what%column)
       return
     end if
@@ -467,15 +490,79 @@ contains
       call fail(e_extra, token_column(3))
       return
     end if
-    write (count, '(I12)') arrays_in_use()
-    call say('arrays in use: ' // trim(adjustl(count)))
-    write (count, '(I12)') nodes_in_use()
-    call say('tree nodes in use: ' // trim(adjustl(count)))
+
+    select case (what%text)
+    case ('memory')
+      write (count, '(I12)') arrays_in_use()
+      call say('arrays in use: ' // trim(adjustl(count)))
+      write (count, '(I12)') nodes_in_use()
+      call say('tree nodes in use: ' // trim(adjustl(count)))
+    case ('settings')
+      do k = 1, size(settings)
+        if (settings(k) == 'seed' .and. .not. seed_given) cycle
+        call say(trim(setting_line(settings(k))))
+      end do
+    case default
+      ! ANY of a comparison of a scalar with an array: is the word one of
+      ! the settings? The comparison is made element by element, giving an
+      ! array of LOGICALs, which ANY reduces to one.
+      if (.not. any(settings == what%text)) then
+        call fail(e_badset, what%column)
+        return
+      end if
+      call say(trim(setting_line(what%text)))
+    end select
   end subroutine show_command
 
-  ! SET [NO]ECHO, SET ANGLE RADIANS | DEGREES | GRADS, SET DIGITS n
+  ! SETTING_LINE is the SET command that makes the setting WHAT as it is
+  ! now: set digits 12. A seed never given is a comment, which fcalc
+  ! passes over if it is typed back.
+  function setting_line(what) result(text)
+    character(len=*), intent(in) :: what
+    character(len=40) :: text
+    character(len=12) :: number
+
+    select case (what)
+    case ('digits')
+      write (number, '(I12)') digits
+      text = 'set digits ' // adjustl(number)
+    case ('format')
+      text = 'set format ' // format_names(number_format)
+    case ('angle')
+      text = 'set angle ' // angle_names(angle_mode)
+    case ('base')
+      select case (number_base)
+      case (16)
+        text = 'set base hex'
+      case (8)
+        text = 'set base octal'
+      case (2)
+        text = 'set base binary'
+      case default
+        text = 'set base decimal'
+      end select
+    case ('seed')
+      if (seed_given) then
+        write (number, '(I12)') seed_number
+        text = 'set seed ' // adjustl(number)
+      else
+        text = '! no seed has been set'
+      end if
+    case default
+      if (echo) then
+        text = 'set echo'
+      else
+        text = 'set noecho'
+      end if
+    end select
+  end function setting_line
+
+  ! SET [NO]ECHO, SET DIGITS n, SET FORMAT AUTO | FIXED | SCIENTIFIC |
+  ! ENGINEERING, SET ANGLE RADIANS | DEGREES | GRADS, SET BASE DECIMAL |
+  ! HEX | OCTAL | BINARY, SET SEED n
   subroutine set_command()
     type(token) :: what, how
+    integer :: k, n
 
     what = token_at(2)
     if (what%kind /= t_name) then
@@ -492,48 +579,97 @@ contains
       echo = what%text == 'echo'
 
     case ('angle')
-      how = token_at(3)
-      if (how%kind /= t_name) then
-        call fail(e_badset, how%column)
-        return
-      end if
-      if (kind_at(4) /= t_end) then
-        call fail(e_extra, token_column(4))
-        return
-      end if
+      if (.not. word_argument(how)) return
+      k = word_index(how, angle_names)
+      if (k > 0) angle_mode = k
+
+    case ('format')
+      if (.not. word_argument(how)) return
+      k = word_index(how, format_names)
+      if (k > 0) number_format = k
+
+    case ('base')
+      if (.not. word_argument(how)) return
       select case (how%text)
-      case ('radians')
-        angle_mode = a_radians
-      case ('degrees')
-        angle_mode = a_degrees
-      case ('grads')
-        angle_mode = a_grads
+      case ('decimal')
+        number_base = 10
+      case ('hex', 'hexadecimal')
+        number_base = 16
+      case ('octal')
+        number_base = 8
+      case ('binary')
+        number_base = 2
       case default
         call fail(e_badset, how%column)
       end select
 
     case ('digits')
-      ! A whole number of significant digits, 1 to MAX_DIGITS.
-      how = token_at(3)
-      if (how%kind /= t_number .or. how%imaginary) then
-        call fail(e_badset, how%column)
-        return
-      end if
-      if (kind_at(4) /= t_end) then
-        call fail(e_extra, token_column(4))
-        return
-      end if
-      if (aint(how%number) /= how%number .or. how%number < 1 .or. &
-          how%number > max_digits) then
-        call fail(e_domain, how%column)
-        return
-      end if
-      digits = nint(how%number)
+      ! A whole number of significant digits (or, under FIXED, of places
+      ! after the point), 1 to MAX_DIGITS.
+      if (whole_argument(1, max_digits, n)) digits = n
+
+    case ('seed')
+      if (whole_argument(0, 999999999, n)) call seed_random(n)
 
     case default
       call fail(e_badset, what%column)
     end select
   end subroutine set_command
+
+  ! WORD_ARGUMENT: SET's third token is a word, HOW, and the line's last.
+  logical function word_argument(how)
+    type(token), intent(out) :: how
+
+    word_argument = .false.
+    how = token_at(3)
+    if (how%kind /= t_name) then
+      call fail(e_badset, how%column)
+    else if (kind_at(4) /= t_end) then
+      call fail(e_extra, token_column(4))
+    else
+      word_argument = .true.
+    end if
+  end function word_argument
+
+  ! WORD_INDEX is HOW's place among NAMES, or 0 after an error if it is
+  ! none of them.
+  integer function word_index(how, names)
+    type(token), intent(in) :: how
+    character(len=*), intent(in) :: names(:)
+    integer :: k
+
+    word_index = 0
+    do k = 1, size(names)
+      if (names(k) == how%text) word_index = k
+    end do
+    if (word_index == 0) call fail(e_badset, how%column)
+  end function word_index
+
+  ! WHOLE_ARGUMENT: SET's third token is a whole number from LOW to HIGH,
+  ! N, and the line's last. (A minus sign is a token of its own, so a
+  ! negative number is out of range at the sign.)
+  logical function whole_argument(low, high, n)
+    integer, intent(in) :: low, high
+    integer, intent(out) :: n
+    type(token) :: how
+
+    whole_argument = .false.
+    n = 0
+    how = token_at(3)
+    if (how%kind == t_operator .and. how%text == '-' .and. kind_at(4) == t_number) then
+      call fail(e_domain, how%column)
+    else if (how%kind /= t_number .or. how%imaginary) then
+      call fail(e_badset, how%column)
+    else if (kind_at(4) /= t_end) then
+      call fail(e_extra, token_column(4))
+    else if (aint(how%number) /= how%number .or. how%number < low .or. &
+        how%number > high) then
+      call fail(e_domain, how%column)
+    else
+      n = nint(how%number)
+      whole_argument = .true.
+    end if
+  end function whole_argument
 
   ! TOKEN_COLUMN is the column of the Kth token.
   integer function token_column(k)

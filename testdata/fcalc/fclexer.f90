@@ -159,6 +159,8 @@ contains
     integer :: first, k, lead, power, ios, c
     logical :: point, seen
 
+    if (based_number(line, at, t)) return
+
     first = at
     point = .false.
     seen = .false.
@@ -238,6 +240,92 @@ contains
       end if
     end if
   end subroutine number_token
+
+  ! BASED_NUMBER takes a whole number in another base, if LINE(AT:) starts
+  ! with one: 0x and hexadecimal digits, 0o and octal ones, or 0b and binary
+  ! ones (the prefix's letter in either case, as the digits A to F are), as
+  ! fcalc shows whole numbers under SET BASE. An i after it makes it
+  ! imaginary, as after any number. The value is added up a digit at a time
+  ! in REAL(RK), exact for whole numbers below WHOLE_LIMIT; a larger one is
+  ! an overflow, and a letter or digit run on after the digits (0b102) makes
+  ! the number invalid. The result is false, and nothing taken, if LINE(AT:)
+  ! isn't such a number: 0 followed by anything else is an ordinary number.
+  logical function based_number(line, at, t)
+    character(len=*), intent(in) :: line
+    integer, intent(inout) :: at
+    type(token), intent(inout) :: t
+    character(len=*), parameter :: hex = '0123456789abcdef'
+    integer :: rbase, k, first, c
+    real(rk) :: x
+
+    based_number = .false.
+    if (at + 2 > len(line)) return
+    if (line(at:at) /= '0') return
+    select case (line(at + 1:at + 1))
+    case ('x', 'X')
+      rbase = 16
+    case ('o', 'O')
+      rbase = 8
+    case ('b', 'B')
+      rbase = 2
+    case default
+      return
+    end select
+    if (digit_of(line(at + 2:at + 2)) < 0) return
+
+    based_number = .true.
+    first = at
+    t%kind = t_number
+    x = 0
+    k = at + 2
+    do while (k <= len(line))
+      c = digit_of(line(k:k))
+      if (c < 0) exit
+      ! The test before the product: X * RBASE + C stays below WHOLE_LIMIT.
+      if (x >= (whole_limit - c) / rbase) then
+        call fail(e_overflow, first)
+        return
+      end if
+      x = x * rbase + c
+      k = k + 1
+    end do
+    at = k
+    t%number = x
+
+    ! An i makes it imaginary, unless more of a name follows; anything else
+    ! of a name's characters run on is an error.
+    if (at <= len(line)) then
+      if (line(at:at) == 'i' .or. line(at:at) == 'I') then
+        if (at == len(line)) then
+          t%imaginary = .true.
+        else if (index(name_set, line(at + 1:at + 1)) == 0) then
+          t%imaginary = .true.
+        end if
+        if (t%imaginary) at = at + 1
+      end if
+    end if
+    if (at <= len(line)) then
+      if (index(name_set, line(at:at)) > 0) call fail(e_badnumber, first)
+    end if
+
+  contains
+
+    ! DIGIT_OF is the digit CH stands for in RBASE, the base, or -1 if it isn't one.
+    ! A capital letter is lowered first, by its ASCII code, as NAME_TOKEN
+    ! lowers a name.
+    integer function digit_of(ch)
+      character(len=1), intent(in) :: ch
+      character(len=1) :: low
+      integer :: code
+
+      low = ch
+      code = iachar(ch)
+      if (code >= iachar('A') .and. code <= iachar('Z')) &
+        low = achar(code - iachar('A') + iachar('a'))
+      digit_of = index(hex, low) - 1
+      if (digit_of >= rbase) digit_of = -1
+    end function digit_of
+  end function based_number
 
   ! OPERATOR_TOKEN takes an operator, ** standing for ^.
   subroutine operator_token(line, at, t)

@@ -5,6 +5,11 @@ milestone.md`; Part A is its design). fcalc reads lines at a `fcalc> ` prompt:
 an expression's value is shown and kept as `ans`, `name = expr` assigns a
 variable, and a line starting with a command word is a command. Every value is
 complex, `COMPLEX(8)`, or a vector or matrix of complex values: `[1, 2; 3, 4]`.
+A line ending in `;` is quiet, as in MATLAB and Octave: the value is kept, not
+shown. SET FORMAT, SET DIGITS, and SET BASE choose how values are shown
+(AUTO, FIXED, SCIENTIFIC, or ENGINEERING; whole numbers in hexadecimal, octal,
+or binary as `0xFF`, `0o377`, `0b11111111`, which fcalc also reads), and SHOW
+SETTINGS lists every setting as the SET command that makes it.
 
 ## The sources
 
@@ -16,9 +21,9 @@ Each file is a module but the last, the main program, compiled in the order
 | `fcplatform.f90` | what differs by system: VMS's carriage control (`gfortran/fcplatform.f90` is gfortran's twin) |
 | `fckinds.f90` | the kind `RK`, fcalc's limits (`LIMIT`, `SMALL`), the constants |
 | `fcmessages.f90` | output (`SAY`, which keeps records to 132 characters) and the messages, `%FCALC-E-...` |
-| `fcvalues.f90` | `TYPE VALUE`, its operators, guarded so nothing traps, and how a value is shown |
+| `fcvalues.f90` | `TYPE VALUE`, its operators, guarded so nothing traps, and how a value is shown (the formats and bases) |
 | `fcarrays.f90` | `TYPE QUANTITY`, a scalar or an array through a pointer, its ownership rule, and how an array is shown |
-| `fclexer.f90` | the tokens |
+| `fclexer.f90` | the tokens, numbers in other bases among them |
 | `fctree.f90` | `TYPE NODE`, a tree of pointers, and the recursive descent parser |
 | `fcsymbols.f90` | the variables and the user's functions, each a binary search tree, and the constants |
 | `fcfuncs.f90` | the built-in functions: their table, and each function, real and complex, guarded so nothing traps |
@@ -26,7 +31,7 @@ Each file is a module but the last, the main program, compiled in the order
 | `fcmatrix.f90` | the matrix product, LU (solve, inverse, determinant), powers, rank, norms, eigenvalues (Hessenberg and shifted QR), and the functions that make and rearrange arrays |
 | `fceval.f90` | the evaluator: element-by-element operations, matrix literals, indexes, and a frame of parameters for each call of a user's function |
 | `fcnumeric.f90` | the numerical commands: SOLVE (the secant method, or Brent's on a bracket), INTEGRATE (adaptive Gauss-Kronrod quadrature), DIFF (Ridders' extrapolation), and ROOTS |
-| `fcalc.f90` | the main program: the prompt, the commands, assignment, function definitions |
+| `fcalc.f90` | the main program: the prompt, the commands (SET and SHOW among them), assignment, function definitions |
 
 The sources are commented for a reader learning Fortran 90 and numerical
 programming: each Fortran 90 feature is explained where it is first used,
@@ -74,13 +79,15 @@ prompt, as a terminal does.
 | `vectors` | vectors: literals and joining, the functions that make them, indexes (ranges, vector subscripts), assigning elements, element-by-element operations and functions, list functions of arrays, sizes, reshape, cumsum, sort, dot, cross, norms, transposes, users' functions of vectors, long vectors' display and LIST, and the errors |
 | `matrices` | matrices: literals and blocks, sections, element-by-element and matrix products, transposes, powers, determinants, inverses, solves, trace, rank, norms, kron, eigenvalues (SET DIGITS 10 for some), the display beside the largest element, guarded products out of the safe band, users' functions of matrices, and the errors |
 | `numeric` | the numerical commands: SOLVE from a point (real and complex roots) and on a bracket, with = and users' functions, the variable after FOR left alone; INTEGRATE of smooth functions, a jump, singular ends, and one whose pieces run out (the warning INACCURATE); DIFF at real and complex points, and a jump's warning; ROOTS of real and complex coefficients, roots at zero, a double root (SET DIGITS 6), vectors of coefficients, roots(), poly, polyval; and each command's errors |
+| `display` | how values are shown: SHOW SETTINGS and each SHOW, SET DIGITS, each SET FORMAT (rounding, padding, the exponent a multiple of 3, FIXED's places and its turn to scientific notation past 15 digits), SET BASE (each base, negative and complex whole numbers, matrices, LIST, the literals typed in, and their errors), SHOW ANGLE, SET SEED (the same seed repeating a sequence, a quiet `;` line keeping a random value unshown), and SET's and SHOW's errors |
 
 The `functions` values were checked against Python's `math` and `cmath` as a
 second method; the `vectors` and `matrices` values by hand and in Python
 (characteristic polynomials' roots for the eigenvalues, exact fractions for
 the inverses); and the `numeric` values in Python (Newton's method for the
 roots, `erf` for the Gaussian integral, a model of Ridders' table for the
-warning's derivative). `vectors`, `matrices`, and `numeric` each end with
+warning's derivative). The `display` values follow from the rules above,
+by hand. `vectors`, `matrices`, `numeric`, and `display` each end with
 `SHOW MEMORY` after `CLEAR ALL`, which must count no arrays and no tree nodes
 in use: a leak, of an operation's operand or after an error, shows there.
 
@@ -110,3 +117,7 @@ in use: a leak, of an operation's operand or after an error, shows there.
   in `a * inv(a)`) is shown as zero on both; eigenvalues are sorted with
   real parts that differ only that much counted the same, so their order
   doesn't depend on either machine's last bits either.
+  Under SET FORMAT and fewer digits the rounding itself may differ: a
+  decimal tie (12345 to four digits) rounds half to even under gfortran and
+  may round half away from zero on a VAX, so the `display` script has no
+  exact tie.

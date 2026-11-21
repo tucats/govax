@@ -82,4 +82,10 @@ module fckinds
 
   ! The most significant digits a value is shown with.
   integer, parameter :: max_digits = 15
+
+  ! The largest whole number fcalc counts as one: below 2**52, where every
+  ! whole number of the kind is exact on both machines and the next one up
+  ! differs by 1. A value this large or larger is never shown in another
+  ! base or used as a count.
+  real(rk), parameter :: whole_limit = 4.0e15_rk
 end module fckinds

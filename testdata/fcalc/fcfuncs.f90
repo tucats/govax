@@ -57,6 +57,11 @@ module fcfuncs
   integer, parameter :: a_radians = 1, a_degrees = 2, a_grads = 3
   integer, save :: angle_mode = a_radians
 
+  ! SET SEED's number, once one has been given (SHOW SETTINGS shows it).
+  public :: seed_random, seed_given, seed_number
+  logical, save :: seed_given = .false.
+  integer, save :: seed_number = 0
+
   ! (The type is public, as is MANY, so module FCMATRIX's table of the
   ! matrix functions is made the same way.)
   type builtin
@@ -1400,4 +1405,28 @@ contains
       v = real_value(a) + real_value(b - a) * real_value(r)
     end select
   end function random_value
+
+  ! SEED_RANDOM is SET SEED N: RANDOM_NUMBER's sequence started again from
+  ! a seed made of N, so the same N gives the same numbers after it.
+  !
+  ! RANDOM_SEED is the intrinsic subroutine that reads or sets the random
+  ! number generator's state, a vector of default integers whose length is
+  ! the compiler's own choice (one on govax, eight under gfortran), which
+  ! SIZE= asks for. So the seed is an allocatable array of that size: each
+  ! element N plus a different amount, since some generators do poorly on
+  ! a seed whose elements are all alike. The sequences themselves differ
+  ! between compilers; only the repetition is the same everywhere.
+  subroutine seed_random(n)
+    integer, intent(in) :: n
+    integer, allocatable :: seed(:)
+    integer :: count, k
+
+    call random_seed(size=count)
+    allocate (seed(count))
+    seed = (/ (n + 7919 * k, k = 1, count) /)
+    call random_seed(put=seed)
+    deallocate (seed)
+    seed_given = .true.
+    seed_number = n
+  end subroutine seed_random
 end module fcfuncs

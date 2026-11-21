@@ -301,7 +301,7 @@ contains
     character(len=*), intent(in) :: name
     integer :: width(q%cols)
     character(len=line_width) :: line
-    character(len=72) :: text
+    character(len=120) :: text
     real(rk) :: big
     integer :: i, j, first, last, used
 

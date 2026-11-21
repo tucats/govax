@@ -1,0 +1,141 @@
+set echo
+! The settings as they start.
+show settings
+! AUTO, the default: 12 significant digits, trailing zeros dropped.
+pi
+1/3
+2^60
+1.5e-7
+0.00012
+set digits 4
+pi
+123456
+1/3
+2/3 + i/3
+show digits
+! SCIENTIFIC: every digit shown, one before the point.
+set format scientific
+pi
+0
+-2
+1e-7
+6.02214076e23
+3 + 4i
+[1, 20; 300, 4000]
+set digits 1
+pi
+-0.96
+! ENGINEERING: the exponent a multiple of 3.
+set format engineering
+12345
+set digits 4
+12346
+0.00015
+1.5e-7
+-0.001
+1e5
+999.96
+set digits 2
+1.5e5
+1234
+! FIXED: DIGITS places after the point.
+set format fixed
+set digits 4
+pi
+2
+-1/3
+123.456
+2.5 + 1.25i
+0.00001
+-0.00001
+1e-9 + 1e-6i
+1 + 1e-6i
+0.00006
+99999999999
+1e11
+1e12
+[1, 0.5; 0.25, 0.125]
+set digits 1
+pi
+show format
+set format auto
+set digits 12
+! Bases: a whole number is shown with its prefix, which may be typed.
+set base hex
+255
+-255
+0xff + 1
+0x1fi
+3 + 4i
+2.5
+0
+0b1010
+0o17
+2^51
+4e15
+[10, 11; 12, 255]
+n = 4096
+list variables
+show base
+set base binary
+10
+-5
+0.5
+0x7FFFFFFF
+set base octal
+64
+0xFF
+set base decimal
+0xff
+0XFF + 0B11 + 0O7
+0b11i
+0x
+0b102
+0xfffffffffffff
+0xFFFFFFFFFFFFFF
+clear n
+! Angles.
+set angle degrees
+show angle
+sin(30)
+set angle grads
+show angle
+set angle radians
+! Seeds: the same seed, the same numbers; only that is shown.
+show seed
+set seed 42
+a = rand();
+b = rand();
+a == b
+set seed 42
+rand() == a
+show seed
+set seed 43
+rand() == a
+! Errors.
+set format bogus
+set format
+set format auto extra
+set base 16
+set digits 0
+set digits 16
+set digits 2.5
+set seed -1
+set seed 1e10
+set seed x
+show bogus
+show settings now
+show
+set
+! Every setting changed, then shown.
+set digits 8
+set format engineering
+set angle degrees
+set base hex
+show settings
+set noecho
+show echo
+set echo
+clear all
+show memory
+quit
