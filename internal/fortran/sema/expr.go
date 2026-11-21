@@ -382,8 +382,8 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 // Lower <= Upper <= X's length; one that isn't constant is checked only by
 // /CHECK=BOUNDS (Phase 85).
 //
-// Under /F90 X may also be a named constant, or an element of an array
-// constant (the standard's constant subobjects, R701, R702, and R610's
+// Under /F90 X may also be a named or literal constant, or an element of an
+// array constant (the standard's constant subobjects, R701, R702, and R610's
 // scalar-constant): a substring of a constant with constant bounds is folded
 // to the constant it is, and one with bounds known only when the program runs
 // reads the constant's text from its datum (ir's chars). A constant's
@@ -414,6 +414,11 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 		if f, ok := x.(*FieldRef); ok {
 			name = "the field " + f.Text()
 		}
+
+	case *ast.CharConst, *ast.KindConst:
+		// A literal constant's substring, 'ABC'(K:K): the parser makes one
+		// only under /F90.
+		x, name = a.value(e.X), "the constant"
 
 	default:
 		a.notImplForm(e.X.Position(), formWhat(e.X))

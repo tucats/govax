@@ -1,0 +1,3 @@
+! deep1.fcalc runs deep2.fcalc, and each the next: deep8.fcalc, eight files
+! deep, runs a ninth, one too many.
+@deep2

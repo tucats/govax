@@ -1,0 +1,58 @@
+set echo
+! Every message fcalc gives, in the order of its table.
+2 # 3
+0b102
+2 *
+(1 + 2
+1 2
+nosuch + 1
+foo(1)
+pi = 3
+1/0
+1e301
+(-2)!
+(1+2i) mod 3
+----------------------------------------------------------------------------------------------------1
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------1
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1
+gcd(2.5, 5)
+set colour red
+clear nosuch
+list foo
+clear 3
+mod = 1
+var(5)
+sin(x) = x
+loop(n) = loop(n + 1)
+loop(1)
+k(a, b, c, d, e2, f2, g2, h2, j2) = 0
+f(x, x) = 0
+[1, 2] + [1, 2, 3]
+det([1, 2, 3])
+inv([1, 2; 2, 4])
+v = [1, 2, 3];
+v(4)
+solve [x, 1] for x from 1
+sin(1:2)
+kron(ones(100), ones(2))
+[1, 2
+roots [1, 2; 3, 4]
+table x for x to 1
+solve 1 for x
+solve x^2 + 1 for x from 0 to 1
+integrate x^-0.9 for x from 0 to 1
+table x for x from 0 to 1 step -0.5
+table x for x from 0 to 1 step 1e-6
+plot x for x from 1 to 0
+plot sqrt(x - 5) for x from 0 to 1
+save
+@nosuch
+@deep1
+@self
+log off
+! INFILE follows an error in a file. FILEERR (a file that can't be opened)
+! is the oneshot procedure's, on VMS; NOCONVERGE (eigenvalues that don't
+! converge) no matrix tried has given.
+show memory
+clear all
+show memory

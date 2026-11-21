@@ -40,7 +40,7 @@ module fcsymbols
   public :: set_variable, remove_variable, clear_variables, list_variables
   public :: node, function_entry, max_params
   public :: find_function, define_function, remove_function, clear_functions
-  public :: list_functions, heading
+  public :: list_functions, heading, each_variable, each_function
 
   type variable
     character(len=name_length) :: name
@@ -269,6 +269,39 @@ contains
     call walk(t%right)
   end subroutine walk
 
+  ! EACH_VARIABLE calls ACTION(NAME, Q) for each variable, in name order:
+  ! SAVE (module FCSTATE) writes each one to its file this way.
+  !
+  ! ACTION is a dummy procedure: the caller passes a procedure's name, and
+  ! each call of ACTION here calls that procedure. The INTERFACE block says
+  ! what arguments it takes, so each call is checked as a module
+  ! procedure's is. An interface body is a scope of its own that sees
+  ! nothing of the module around it (no host association), so it USEs the
+  ! module that defines QUANTITY itself. (Fortran 90 lets a module
+  ! procedure or an external one be passed, never an internal one.)
+  subroutine each_variable(action)
+    interface
+      subroutine action(name, q)
+        use fcarrays, only: quantity
+        character(len=*), intent(in) :: name
+        type(quantity), intent(in) :: q
+      end subroutine action
+    end interface
+
+    call visit(root)
+
+  contains
+
+    recursive subroutine visit(t)
+      type(variable), pointer :: t
+
+      if (.not. associated(t)) return
+      call visit(t%left)
+      call action(trim(t%name), t%q)
+      call visit(t%right)
+    end subroutine visit
+  end subroutine each_variable
+
   ! ------------------------------------------------------------------
   ! Functions.
 
@@ -436,6 +469,29 @@ contains
     end do
     text = trim(text) // ')'
   end function heading
+
+  ! EACH_FUNCTION calls ACTION(HEAD, TEXT) for each function, in name
+  ! order: HEAD is f(x, y), and TEXT the expression as it was typed.
+  subroutine each_function(action)
+    interface
+      subroutine action(head, text)
+        character(len=*), intent(in) :: head, text
+      end subroutine action
+    end interface
+
+    call visit(functions)
+
+  contains
+
+    recursive subroutine visit(t)
+      type(function_entry), pointer :: t
+
+      if (.not. associated(t)) return
+      call visit(t%left)
+      call action(trim(heading(t)), trim(t%text))
+      call visit(t%right)
+    end subroutine visit
+  end subroutine each_function
 
   recursive subroutine show(t)
     type(function_entry), pointer :: t

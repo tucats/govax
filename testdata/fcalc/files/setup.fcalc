@@ -1,0 +1,7 @@
+! setup.fcalc: a file of fcalc's commands, for the state script's @ and RUN.
+! Each line runs as if it were typed: a value is shown unless the line ends
+! in ;, and ! starts a comment.
+g = 9.80665
+fall(t) = g*t^2/2
+fall(2)
+dropped = fall(10);

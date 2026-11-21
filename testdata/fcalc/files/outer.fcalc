@@ -1,0 +1,4 @@
+! outer.fcalc runs inner.fcalc, whose third line fails: both files end there.
+before = 1
+@inner
+after = 2

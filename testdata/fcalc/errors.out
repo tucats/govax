@@ -1,0 +1,180 @@
+fcalc> set echo
+fcalc> ! Every message fcalc gives, in the order of its table.
+fcalc> 2 # 3
+         ^
+%FCALC-E-BADCHAR, invalid character
+fcalc> 0b102
+       ^
+%FCALC-E-BADNUMBER, invalid number
+fcalc> 2 *
+          ^
+%FCALC-E-OPERAND, operand expected
+fcalc> (1 + 2
+             ^
+%FCALC-E-RPAREN, missing right parenthesis
+fcalc> 1 2
+         ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> nosuch + 1
+       ^
+%FCALC-E-UNDEFINED, nosuch is not defined
+fcalc> foo(1)
+       ^
+%FCALC-E-NOFUNC, no function named foo
+fcalc> pi = 3
+       ^
+%FCALC-E-CONSTANT, pi is a constant
+fcalc> 1/0
+        ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> 1e301
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> (-2)!
+           ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> (1+2i) mod 3
+              ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> ----------------------------------------------------------------------------------------------------1
+                                                                                                           ^
+%FCALC-E-TOODEEP, expression is nested too deeply
+fcalc> %FCALC-E-LINELONG, line is too long
+fcalc> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1
+       ^
+%FCALC-E-NAMELONG, name is too long
+fcalc> gcd(2.5, 5)
+       ^
+%FCALC-E-NOTWHOLE, operand must be a whole number
+fcalc> set colour red
+           ^
+%FCALC-E-BADSET, unknown setting
+fcalc> clear nosuch
+             ^
+%FCALC-W-NOTDEF, nosuch was not defined
+fcalc> list foo
+            ^
+%FCALC-E-BADCMD, invalid command
+fcalc> clear 3
+             ^
+%FCALC-E-NAMEREQ, name expected
+fcalc> mod = 1
+       ^
+%FCALC-E-RESERVED, mod is a reserved word
+fcalc> var(5)
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for var
+fcalc> sin(x) = x
+       ^
+%FCALC-E-BUILTIN, sin is a built-in function
+fcalc> loop(n) = loop(n + 1)
+loop(n) = loop(n + 1)
+fcalc> loop(1)
+       ^
+%FCALC-E-RECURSION, functions call each other too deeply
+fcalc> k(a, b, c, d, e2, f2, g2, h2, j2) = 0
+                                     ^
+%FCALC-E-PARAMS, too many parameters
+fcalc> f(x, x) = 0
+            ^
+%FCALC-E-DUPPARAM, x is already a parameter
+fcalc> [1, 2] + [1, 2, 3]
+              ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> det([1, 2, 3])
+       ^
+%FCALC-E-NOTSQUARE, matrix must be square
+fcalc> inv([1, 2; 2, 4])
+       ^
+%FCALC-E-SINGULAR, matrix is singular
+fcalc> v = [1, 2, 3];
+fcalc> v(4)
+       ^
+%FCALC-E-INDEX, index is out of range
+fcalc> solve [x, 1] for x from 1
+             ^
+%FCALC-E-NOTSCALAR, operand must be a scalar
+fcalc> sin(1:2)
+           ^
+%FCALC-E-BADRANGE, a range is allowed only in an index
+fcalc> kron(ones(100), ones(2))
+       ^
+%FCALC-E-TOOBIG, array is too large
+fcalc> [1, 2
+            ^
+%FCALC-E-RBRACKET, missing right bracket
+fcalc> roots [1, 2; 3, 4]
+             ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> table x for x to 1
+                     ^
+%FCALC-E-KEYWORD, FROM expected
+fcalc> solve 1 for x
+             ^
+%FCALC-E-NOROOT, no root was found
+fcalc> solve x^2 + 1 for x from 0 to 1
+                           ^
+%FCALC-E-SAMESIGN, no change of sign between the bounds
+fcalc> integrate x^-0.9 for x from 0 to 1
+9.99999497967
+                 ^
+%FCALC-W-INACCURATE, error may be as large as 1e-6
+fcalc> table x for x from 0 to 1 step -0.5
+                                      ^
+%FCALC-E-BADSTEP, step does not lead from FROM to TO
+fcalc> table x for x from 0 to 1 step 1e-6
+                                      ^
+%FCALC-E-TOOMANY, too many rows
+fcalc> plot x for x from 1 to 0
+                              ^
+%FCALC-E-BADLIMITS, lower limit must be below upper limit
+fcalc> plot sqrt(x - 5) for x from 0 to 1
+            ^
+%FCALC-E-NOPOINTS, no point can be plotted
+fcalc> save
+           ^
+%FCALC-E-FILEREQ, file name expected
+fcalc> @nosuch
+        ^
+%FCALC-E-NOFILE, file nosuch.fcalc was not found
+fcalc> @deep1
+fcalc> ! deep1.fcalc runs deep2.fcalc, and each the next: deep8.fcalc, eight files
+fcalc> ! deep, runs a ninth, one too many.
+fcalc> @deep2
+fcalc> @deep3
+fcalc> @deep4
+fcalc> @deep5
+fcalc> @deep6
+fcalc> @deep7
+fcalc> @deep8
+fcalc> @deep9
+        ^
+%FCALC-E-NESTING, files are nested too deeply
+-FCALC-I-INFILE, in line 1 of deep8.fcalc
+-FCALC-I-INFILE, in line 1 of deep7.fcalc
+-FCALC-I-INFILE, in line 1 of deep6.fcalc
+-FCALC-I-INFILE, in line 1 of deep5.fcalc
+-FCALC-I-INFILE, in line 1 of deep4.fcalc
+-FCALC-I-INFILE, in line 1 of deep3.fcalc
+-FCALC-I-INFILE, in line 1 of deep2.fcalc
+-FCALC-I-INFILE, in line 3 of deep1.fcalc
+fcalc> @self
+fcalc> ! self.fcalc runs itself, which fcalc refuses.
+fcalc> @self
+        ^
+%FCALC-E-FILELOOP, file self.fcalc is already running
+-FCALC-I-INFILE, in line 2 of self.fcalc
+fcalc> log off
+           ^
+%FCALC-W-NOLOG, no log file is open
+fcalc> ! INFILE follows an error in a file. FILEERR (a file that can't be opened)
+fcalc> ! is the oneshot procedure's, on VMS; NOCONVERGE (eigenvalues that don't
+fcalc> ! converge) no matrix tried has given.
+fcalc> show memory
+arrays in use: 1
+tree nodes in use: 4
+fcalc> clear all
+fcalc> show memory
+arrays in use: 0
+tree nodes in use: 0
+fcalc> 

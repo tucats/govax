@@ -222,6 +222,12 @@ func (p *parser) primary() ast.Expr {
 	}
 
 	if c := p.literal(); c != nil {
+		// Fortran 90's substring of a literal character constant,
+		// 'ABCDEF'(K:K) (R609's parent string may be a scalar constant).
+		if p.f90() && isCharLiteral(c) && p.at("(") && p.substringAhead() {
+			return p.substring(c)
+		}
+
 		return c
 	}
 
@@ -274,6 +280,18 @@ func (p *parser) primary() ast.Expr {
 	p.syntax("an expression")
 
 	return nil
+}
+
+// isCharLiteral reports whether c is a character constant, 'ABC', or one
+// with a kind, 1_'ABC'.
+func isCharLiteral(c ast.Expr) bool {
+	if k, ok := c.(*ast.KindConst); ok {
+		c = k.X
+	}
+
+	_, ok := c.(*ast.CharConst)
+
+	return ok
 }
 
 // builtinArgs are the names after % of section 6.1.2's built-in

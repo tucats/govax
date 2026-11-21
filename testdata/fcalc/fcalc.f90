@@ -6,11 +6,16 @@
 ! assigns elements of an array; anything else is an expression, whose value
 ! is shown and kept as ANS. A line starting with ! is a comment.
 !
+! Run as a foreign command with text after its name ($ FCALC 2^10 + 1), it
+! runs that one line and ends.
+!
 ! The modules each do one part of the work, and this program joins them:
 ! a line is read (READ_LINE), cut into tokens (FCLEXER, through SCAN_LINE),
 ! classified by its first tokens (EXECUTE), parsed into a tree (FCTREE),
 ! and evaluated (FCEVAL); an error anywhere is recorded (FCMESSAGES) and
-! reported once the line is done.
+! reported once the line is done. @ (or RUN) and LOAD run a file's lines
+! the same way, a line at a time (RUN_FILE); FCSTATE reads the files, and
+! saves the state and keeps the log.
 !
 ! The procedures after CONTAINS are internal procedures of the program:
 ! they see the program's variables (LINE, ECHO, DONE, ...) by host
@@ -28,39 +33,64 @@ program fcalc
   use fcfuncs
   use fcnumeric
   use fcplot
+  use fcstate
+  use fcplatform, only: foreign_text
   implicit none
-
-  ! The words SET and SHOW know, each list in the order of the settings'
-  ! codes (FCVALUES' F_AUTO to F_ENGINEERING, FCFUNCS' A_RADIANS to
-  ! A_GRADS), so a code is a word's place. The elements of an array
-  ! constructor must all have the same length, hence the blanks.
-  character(len=11), parameter :: format_names(4) = (/ 'auto       ', &
-    'fixed      ', 'scientific ', 'engineering' /)
-  character(len=7), parameter :: angle_names(3) = (/ 'radians', 'degrees', 'grads  ' /)
-  character(len=8), parameter :: settings(6) = (/ 'digits  ', 'format  ', &
-    'angle   ', 'base    ', 'seed    ', 'echo    ' /)
 
   character(len=line_length + 1) :: line
   integer :: length, status
   logical :: echo, done, echoed, quiet
 
+  ! DEPTH is how many files of commands are running, one inside another;
+  ! LOADING is true while LOAD runs one, whose lines are all quiet;
+  ! ABANDON is true after an error in a file, while every file running
+  ! ends, each saying where it was.
+  integer :: depth
+  logical :: loading, abandon
+
   echo = .false.
   done = .false.
+  depth = 0
+  loading = .false.
+  abandon = .false.
   call start_symbols()
   call set_variable('ans', real_quantity(0.0_rk))
 
+  ! The foreign command's text, if there is any: that line alone, shown
+  ! (if it fails) with the pointer under it at the line's start, and then
+  ! fcalc is done. (Not STOP, which on VMS says FORTRAN STOP.)
+  call foreign_text(line, length)
+  if (length > 0) then
+    indent = 0
+    if (length > line_length) then
+      call fail(e_linelong, 0)
+      call report()
+    else
+      call execute(line(:length))
+      call report(line(:length))
+    end if
+    done = .true.
+  end if
+
   do while (.not. done)
     call say_more('fcalc> ')
-    call read_line(status)
+    call read_line(line, length, status)
     if (status < 0) then
       ! The end of the input: end the prompt's line.
       call say('')
       exit
     end if
 
-    ! A line too long isn't echoed: VMS's FORTRAN gives none of it.
+    ! A line too long isn't echoed: VMS's FORTRAN gives none of it. A line
+    ! the terminal shows itself (it echoes what is typed) goes to the log.
     echoed = echo .and. status == 0
-    if (echoed) call say(line(:length))
+    if (echoed) then
+      call say(line(:length))
+    else if (status == 0) then
+      call log_line(line(:length))
+    else
+      call log_line('')
+    end if
 
     if (status > 0) then
       call fail(e_linelong, 0)
@@ -72,49 +102,22 @@ program fcalc
     if (echo .and. .not. echoed .and. status == 0) call say(line(:length))
 
     call report()
+    abandon = .false.
   end do
 
 contains
-
-  ! READ_LINE reads the next line into LINE(:LENGTH), by nonadvancing
-  ! input: STATUS is 0, or 1 for a line too long (whose rest is passed
-  ! over), or -1 at the end of the input.
-  !
-  ! A nonadvancing READ (ADVANCE='NO') reads part of a record and leaves
-  ! the rest for the next READ. SIZE= gives how many characters it read,
-  ! so a line's length is known without counting trailing blanks; EOR=
-  ! names a statement label to go to when the record (the line) ends before
-  ! the variable is full, which is the usual case, and END= one for the end
-  ! of the input. These labels, 10, 20, and 30, are the old-fashioned GO TO
-  ! targets Fortran's I/O statements still use. A line too long for the system
-  ! to read (on VMS, past 199 characters) is an error the READ's IOSTAT=
-  ! catches, after which the next READ reads the next line.
-  subroutine read_line(status)
-    integer, intent(out) :: status
-    character(len=80) :: rest
-    integer :: ios
-
-    status = 0
-    length = 0
-    read (*, '(A)', advance='NO', size=length, eor=10, end=30, iostat=ios) line
-    status = 1
-    if (ios /= 0) return
-
-    ! The line filled LINE without ending: pass over the rest.
-    do
-      read (*, '(A)', advance='NO', eor=20, end=20, iostat=ios) rest
-      if (ios /= 0) return
-    end do
-10  if (length > line_length) status = 1
-20  return
-30  status = -1
-  end subroutine read_line
 
   ! EXECUTE runs one line. A line ending in ; is quiet: an expression's
   ! value, an assignment, or a definition is made but not shown, as in
   ! MATLAB and Octave (a ; in brackets separates a matrix's rows, but none
   ! ends a line).
-  subroutine execute(line_text)
+  !
+  ! EXECUTE, RUN, and RUN_FILE are RECURSIVE: a line may be @file, whose
+  ! lines EXECUTE runs while the first call is still active. Without
+  ! RECURSIVE, a compiler may keep a procedure's local variables in one
+  ! fixed place (the VAX's FORTRAN does), which a second, inner call would
+  ! overwrite.
+  recursive subroutine execute(line_text)
     character(len=*), intent(in) :: line_text
     integer :: k, last
 
@@ -125,13 +128,18 @@ contains
     last = len_trim(line_text)
     quiet = line_text(last:last) == ';'
     if (quiet) last = last - 1
+    if (loading) quiet = .true.
     call run(line_text(:last))
   end subroutine execute
 
   ! RUN runs the line TEXT.
-  subroutine run(text)
+  recursive subroutine run(text)
     character(len=*), intent(in) :: text
     type(token) :: first, second
+
+    ! The commands that name a file come first: a file's name isn't made
+    ! of fcalc's tokens (it may have [ ] and ; on VMS, / elsewhere).
+    if (file_command(text)) return
 
     call scan_line(text)
     if (failed()) return
@@ -194,6 +202,186 @@ contains
       call statement()
     end if
   end subroutine run
+
+  ! FILE_COMMAND runs TEXT and is true, if it is a command that names a
+  ! file: @file, RUN file, LOAD file, SAVE file, LOG file, or LOG OFF. As
+  ! with the other commands, a word followed by = or ( isn't one: RUN = 3
+  ! assigns a variable, and LOG(8, 2) is the logarithm.
+  recursive logical function file_command(text)
+    character(len=*), intent(in) :: text
+    character(len=8) :: word
+    integer :: at, next, k
+
+    file_command = .false.
+    at = verify(text, ' ' // achar(9))
+    if (at == 0) return
+
+    if (text(at:at) == '@') then
+      word = '@'
+      next = at + 1
+    else
+      ! The word: the letters from AT, lowercased.
+      next = at
+      do while (next <= len(text))
+        if (index('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', text(next:next)) == 0) exit
+        next = next + 1
+      end do
+      if (next - at > len(word)) return
+      word = lowercase(text(at:next - 1))
+      if (word /= 'run' .and. word /= 'load' .and. word /= 'save' .and. word /= 'log') return
+      ! The next character that isn't blank: = or ( makes the line no
+      ! command, and so does a word's going on (RUNNING = 1).
+      k = verify(text(next:), ' ' // achar(9))
+      if (k > 0) then
+        k = next + k - 1
+        if (text(k:k) == '=' .or. text(k:k) == '(') return
+        if (k == next .and. index('0123456789_$', text(k:k)) > 0) return
+      end if
+    end if
+
+    file_command = .true.
+    call file_argument(text, next, word)
+  end function file_command
+
+  ! FILE_ARGUMENT runs the command WORD, its file named in TEXT from NEXT:
+  ! one word, with nothing after it.
+  recursive subroutine file_argument(text, next, word)
+    character(len=*), intent(in) :: text, word
+    integer, intent(in) :: next
+    integer :: first, last, k
+
+    k = verify(text(next:), ' ' // achar(9))
+    if (k == 0) then
+      call fail(e_filereq, len(text) + 1)
+      return
+    end if
+    first = next + k - 1
+    last = scan(text(first:), ' ' // achar(9))
+    if (last == 0) then
+      last = len(text)
+    else
+      last = first + last - 2
+      k = verify(text(last + 1:), ' ' // achar(9))
+      if (k > 0) then
+        call fail(e_extra, last + k)
+        return
+      end if
+    end if
+
+    select case (word)
+    case ('@', 'run')
+      call run_file(trim(file_name(text(first:last))), first, .false.)
+    case ('load')
+      call run_file(trim(file_name(text(first:last))), first, .true.)
+    case ('save')
+      call save_state(trim(file_name(text(first:last))), first)
+    case default
+      if (lowercase(text(first:last)) == 'off') then
+        call close_log(first)
+      else
+        call open_log(trim(file_name(text(first:last))), first)
+      end if
+    end select
+  end subroutine file_argument
+
+  ! RUN_FILE runs the lines of the file NAME, named at COLUMN, as if each
+  ! were typed: for LOAD, the variables and functions are cleared first, and
+  ! every line is quiet. A line ending in an error ends the file, and every
+  ! file that ran it (ABANDON), each saying the line it was at: in the
+  ! innermost, the error is reported with the line itself, which the
+  ! terminal hasn't shown. QUIT or EXIT ends the file alone. Under SET ECHO
+  ! each line is shown after the prompt, as a typed line is (but not while
+  ! LOAD runs).
+  recursive subroutine run_file(name, column, load)
+    character(len=*), intent(in) :: name
+    integer, intent(in) :: column
+    logical, intent(in) :: load
+    character(len=line_length + 1) :: text
+    integer :: count, used, status
+    logical :: was_loading, shown
+
+    if (depth == max_depth) then
+      call fail(e_nesting, column)
+      return
+    end if
+    if (.not. open_input(name, depth + 1, column)) return
+    depth = depth + 1
+
+    was_loading = loading
+    if (load) then
+      call clear_variables()
+      call clear_functions()
+      call set_variable('ans', real_quantity(0.0_rk))
+      loading = .true.
+    end if
+
+    count = 0
+    do
+      call read_line(text, used, status, depth)
+      if (status < 0) exit
+      count = count + 1
+
+      shown = echo .and. .not. loading .and. status == 0
+      if (shown) call say('fcalc> ' // text(:used))
+      if (status > 0) then
+        call fail(e_linelong, 0)
+      else
+        call execute(text(:used))
+      end if
+
+      if (failed()) then
+        if (error_is_warning()) then
+          if (shown) then
+            call report()
+          else
+            call report(text(:used))
+          end if
+          cycle
+        end if
+        if (shown .or. status > 0) then
+          call report()
+        else
+          call report(text(:used))
+        end if
+        abandon = .true.
+      end if
+      if (abandon) then
+        call also(i_infile, trim(whole_number(count)) // ' of ' // name)
+        exit
+      end if
+      if (done) then
+        done = .false.
+        exit
+      end if
+    end do
+
+    call close_input(depth)
+    depth = depth - 1
+    loading = was_loading
+  end subroutine run_file
+
+  ! WHOLE_NUMBER is N in as few characters as it takes.
+  function whole_number(n) result(text)
+    integer, intent(in) :: n
+    character(len=12) :: text
+
+    write (text, '(I12)') n
+    text = adjustl(text)
+  end function whole_number
+
+  ! LOWERCASE is TEXT with its capital letters made small ones, by their
+  ! places in two strings (which works in any character set).
+  function lowercase(text) result(small)
+    character(len=*), intent(in) :: text
+    character(len=len(text)) :: small
+    integer :: k, at
+
+    small = text
+    do k = 1, len(text)
+      at = index('ABCDEFGHIJKLMNOPQRSTUVWXYZ', text(k:k))
+      if (at > 0) small(k:k) = 'abcdefghijklmnopqrstuvwxyz'(at:at)
+    end do
+  end function lowercase
 
   ! INDEXES_ARRAY: NAME(...) = would assign elements of NAME, a variable
   ! holding an array, rather than define a function: NAME isn't also a
@@ -506,64 +694,21 @@ contains
       write (count, '(I12)') nodes_in_use()
       call say('tree nodes in use: ' // trim(adjustl(count)))
     case ('settings')
-      do k = 1, size(settings)
-        if (settings(k) == 'seed' .and. .not. seed_given) cycle
-        call say(trim(setting_line(settings(k))))
+      do k = 1, size(setting_names)
+        if (setting_names(k) == 'seed' .and. .not. seed_given) cycle
+        call say(trim(setting_line(setting_names(k), echo)))
       end do
     case default
       ! ANY of a comparison of a scalar with an array: is the word one of
       ! the settings? The comparison is made element by element, giving an
       ! array of LOGICALs, which ANY reduces to one.
-      if (.not. any(settings == what%text)) then
+      if (.not. any(setting_names == what%text)) then
         call fail(e_badset, what%column)
         return
       end if
-      call say(trim(setting_line(what%text)))
+      call say(trim(setting_line(what%text, echo)))
     end select
   end subroutine show_command
-
-  ! SETTING_LINE is the SET command that makes the setting WHAT as it is
-  ! now: set digits 12. A seed never given is a comment, which fcalc
-  ! passes over if it is typed back.
-  function setting_line(what) result(text)
-    character(len=*), intent(in) :: what
-    character(len=40) :: text
-    character(len=12) :: number
-
-    select case (what)
-    case ('digits')
-      write (number, '(I12)') digits
-      text = 'set digits ' // adjustl(number)
-    case ('format')
-      text = 'set format ' // format_names(number_format)
-    case ('angle')
-      text = 'set angle ' // angle_names(angle_mode)
-    case ('base')
-      select case (number_base)
-      case (16)
-        text = 'set base hex'
-      case (8)
-        text = 'set base octal'
-      case (2)
-        text = 'set base binary'
-      case default
-        text = 'set base decimal'
-      end select
-    case ('seed')
-      if (seed_given) then
-        write (number, '(I12)') seed_number
-        text = 'set seed ' // adjustl(number)
-      else
-        text = '! no seed has been set'
-      end if
-    case default
-      if (echo) then
-        text = 'set echo'
-      else
-        text = 'set noecho'
-      end if
-    end select
-  end function setting_line
 
   ! SET [NO]ECHO, SET DIGITS n, SET FORMAT AUTO | FIXED | SCIENTIFIC |
   ! ENGINEERING, SET ANGLE RADIANS | DEGREES | GRADS, SET BASE DECIMAL |

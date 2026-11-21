@@ -11,6 +11,10 @@ shown. SET FORMAT, SET DIGITS, and SET BASE choose how values are shown
 or binary as `0xFF`, `0o377`, `0b11111111`, which fcalc also reads), and SHOW
 SETTINGS lists every setting as the SET command that makes it. TABLE shows
 expressions' values in columns, and PLOT draws them as a graph of characters.
+SAVE writes the settings, variables, and functions to a file of fcalc's own
+commands, which LOAD runs again; `@file` (or RUN) runs any such file, and LOG
+keeps a transcript. Run as a foreign command, `$ FCALC 2^10 + 1`, fcalc runs
+that one line and ends.
 
 ## The sources
 
@@ -19,7 +23,7 @@ Each file is a module but the last, the main program, compiled in the order
 
 | File | What it holds |
 |---|---|
-| `fcplatform.f90` | what differs by system: VMS's carriage control (`gfortran/fcplatform.f90` is gfortran's twin) |
+| `fcplatform.f90` | what differs by system: VMS's carriage control and the foreign command's text, from LIB$GET_FOREIGN (`gfortran/fcplatform.f90` is gfortran's twin, which has none) |
 | `fckinds.f90` | the kind `RK`, fcalc's limits (`LIMIT`, `SMALL`), the constants |
 | `fcmessages.f90` | output (`SAY`, which keeps records to 132 characters) and the messages, `%FCALC-E-...` |
 | `fcvalues.f90` | `TYPE VALUE`, its operators, guarded so nothing traps, and how a value is shown (the formats and bases) |
@@ -33,7 +37,8 @@ Each file is a module but the last, the main program, compiled in the order
 | `fceval.f90` | the evaluator: element-by-element operations, matrix literals, indexes, and a frame of parameters for each call of a user's function |
 | `fcnumeric.f90` | the numerical commands: SOLVE (the secant method, or Brent's on a bracket), INTEGRATE (adaptive Gauss-Kronrod quadrature), DIFF (Ridders' extrapolation), and ROOTS |
 | `fcplot.f90` | TABLE and PLOT: values at points or vectors side by side, and a graph's grid, axes, labels, and legend |
-| `fcalc.f90` | the main program: the prompt, the commands (SET and SHOW among them), assignment, function definitions |
+| `fcstate.f90` | the session's state and files: the settings' SET lines, SAVE (each number with the fewest digits that read back the same), reading files of commands a line at a time, and LOG |
+| `fcalc.f90` | the main program: the foreign command's line, the prompt, the commands (SET and SHOW among them), @ and LOAD running a file's lines, assignment, function definitions |
 
 The sources are commented for a reader learning Fortran 90 and numerical
 programming: each Fortran 90 feature is explained where it is first used,
@@ -55,7 +60,7 @@ $ FORTRAN/G_FLOATING FCKINDS
 $ MACRO FCPLATFORM
   ... each file ...
 $ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCARRAYS,FCLEXER,FCTREE,-
-       FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,FCNUMERIC,FCPLOT
+       FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,FCNUMERIC,FCPLOT,FCSTATE
 $ RUN FCALC
 ```
 
@@ -82,7 +87,18 @@ prompt, as a terminal does.
 | `matrices` | matrices: literals and blocks, sections, element-by-element and matrix products, transposes, powers, determinants, inverses, solves, trace, rank, norms, kron, eigenvalues (SET DIGITS 10 for some), the display beside the largest element, guarded products out of the safe band, users' functions of matrices, and the errors |
 | `numeric` | the numerical commands: SOLVE from a point (real and complex roots) and on a bracket, with = and users' functions, the variable after FOR left alone; INTEGRATE of smooth functions, a jump, singular ends, and one whose pieces run out (the warning INACCURATE); DIFF at real and complex points, and a jump's warning; ROOTS of real and complex coefficients, roots at zero, a double root (SET DIGITS 6), vectors of coefficients, roots(), poly, polyval; and each command's errors |
 | `display` | how values are shown: SHOW SETTINGS and each SHOW, SET DIGITS, each SET FORMAT (rounding, padding, the exponent a multiple of 3, FIXED's places and its turn to scientific notation past 15 digits), SET BASE (each base, negative and complex whole numbers, matrices, LIST, the literals typed in, and their errors), SHOW ANGLE, SET SEED (the same seed repeating a sequence, a quiet `;` line keeping a random value unshown), and SET's and SHOW's errors |
+| `state` | files of commands: @ and RUN of a file written by hand (`files/setup.fcalc`), RUN, LOAD, SAVE, and LOG as names when = or ( follows; SAVE of every kind of value and setting, the file shown by running it with echo on, LOAD clearing first and restoring each value exactly and the seed given, a name with a type of its own; LOG twice to one file; an error two files deep, EXIT and a warning in a file, a LOAD that fails |
+| `errors` | every message, in the order of fcalc's table, but FILEERR (the oneshot procedure's) and NOCONVERGE (which no matrix tried has given): eight files running each other (`files/deep1.fcalc` to `deep8.fcalc`) and a file running itself (`files/self.fcalc`) among them |
 | `plot` | TABLE: values at points with and without STEP, either way, a single point, a point that is 0, the variable after FOR left alone, a point's error shown by name, users' functions, the display's settings, vectors side by side, and the errors; PLOT: graphs of one and two curves, the axes, the default size, Y's range and the values outside it, points that fail or aren't real, constants, vectors against their index and VERSUS another, labels by the display's settings, and the errors |
+
+The files the scripts run are in `files/`, copied beside fcalc; the files
+`state` writes, SAVE's and LOG's, are held to `expected/`, the date and time
+in each heading written `YYYY-MM-DD hh:mm:ss` (and in the scripts' output too,
+where the state script shows the saved file). `oneshot.com` is a DCL procedure,
+for govax and VMS only (gfortran's fcalc never has a command line): FCALC as
+a foreign command with a line, with a line that fails, with `@setup`, with a
+SAVE that can't be made (FILEERR), and with no line, reading the procedure's
+data lines; `oneshot.out` is what it prints, and `$STATUS` after it.
 
 The `functions` values were checked against Python's `math` and `cmath` as a
 second method; the `vectors` and `matrices` values by hand and in Python
@@ -101,7 +117,8 @@ each end with
 `SHOW MEMORY` after `CLEAR ALL`, which must count no arrays and no tree nodes
 in use: a leak, of an operation's operand or after an error, shows there.
 
-`internal/console`'s `TestFcalc` builds fcalc and runs every script;
+`internal/console`'s `TestFcalc` builds fcalc, runs every script, checks the
+files written, and runs `oneshot.com`;
 `internal/dclcmd`'s `TestFcalcCompiles` compiles it, quickly, without a console.
 
 ## What the two systems make fcalc do
@@ -119,6 +136,18 @@ in use: a leak, of an operation's operand or after an error, shows there.
   Built under `/CHECK=UNDERFLOW` (in `/CHECK=ALL`), govax faults on floating
   underflow too, so no operation may compute a value below the VAX's smallest
   either; fcalc arranges its comparisons so none does.
+- **The command line.** Fortran 90 has no way to read the text after a
+  program's name. On VMS, LIB$GET_FOREIGN gives it (`fcplatform.f90`, with a
+  null argument for the prompt it isn't to give); gfortran's twin gives none.
+- **Files.** fcalc gives a file with no type of its own `.fcalc` itself
+  (`state` is `state.fcalc` on both systems; VAX FORTRAN would otherwise give
+  it `.DAT`), and asks INQUIRE's OPENED= whether a file is already running,
+  which each system answers however the name is spelled.
+- **Prompts.** FTNRTL ends a prompt's open record at a READ only from a
+  terminal; with its input from a procedure's data lines the record stays
+  open, so the next line written goes on in it, its carriage control's blank
+  with it: `oneshot.out`'s `fcalc>  set echo`. (The simh round, run on
+  FTNRTL, will show whether VMS's terminal driver sees it the same way.)
 - **Rounding.** Values are shown to 12 significant digits, where the two
   machines' last bits don't reach; a part of a complex value smaller than the
   other by more than the digits shown is shown as zero, and equality is to

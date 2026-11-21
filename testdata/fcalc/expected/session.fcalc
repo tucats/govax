@@ -1,0 +1,10 @@
+! fcalc log, opened YYYY-MM-DD hh:mm:ss
+fcalc> 1 + 1
+2
+fcalc> x = 7
+x = 7
+fcalc> log off
+! fcalc log, opened YYYY-MM-DD hh:mm:ss
+fcalc> x^2
+49
+fcalc> log off

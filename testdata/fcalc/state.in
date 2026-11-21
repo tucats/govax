@@ -1,0 +1,74 @@
+set echo
+! @ (or RUN) runs a file's lines as if they were typed.
+@setup
+fall(3)
+dropped
+run setup.fcalc
+! RUN, LOAD, SAVE, and LOG are commands only when a file follows: with = or (
+! after them, a variable or a function.
+run = 3
+log(8, 2)
+log10(1000)
+! SAVE writes every setting, variable, and function as a file of commands.
+set digits 8
+set format fixed
+set angle grads
+set seed 42
+third = 1/3
+z = -2.5 + 0.125i
+tiny = 1e-200
+big = 6.02214076e23
+m = [1, -2; 3.5, 4i]
+r = range(1, 30)
+h(x, y) = hypot(x, y) + fall(x)
+save saved
+! The file, shown by running it with echo on: each line ends in ; so nothing
+! else shows. A variable has as many digits as it takes to read back the same
+! number, whatever SET DIGITS shows; a long array is made a piece at a time.
+@saved
+! LOAD clears every variable and function, then runs the file quietly.
+clear all
+set digits 12
+set format auto
+set angle radians
+list
+load saved
+show settings
+set format auto
+set digits 12
+list
+! Each value is the very one saved.
+third - 1/3
+tiny / 1e-200
+big - 6.02214076e23
+h(3, 4)
+! The seed saved is the one given: the sequence starts again from it.
+a = rand();
+set seed 42
+b = rand();
+a == b
+! A name with a type of its own keeps it.
+save notes.txt
+load notes.txt
+show memory
+! LOG keeps a transcript, added to the file each time.
+log session
+1 + 1
+x = 7
+log off
+log session
+x^2
+log off
+! Errors in a file end it, and every file that ran it, each saying where.
+@outer
+before
+b
+d
+! EXIT ends a file, not fcalc; a warning doesn't end it.
+@early
+first
+! A LOAD that fails leaves everything as it was.
+load nosuch
+first
+clear all
+show memory

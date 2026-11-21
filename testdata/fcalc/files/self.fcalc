@@ -1,0 +1,2 @@
+! self.fcalc runs itself, which fcalc refuses.
+@self

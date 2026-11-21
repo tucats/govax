@@ -1,0 +1,5 @@
+! early.fcalc: EXIT ends the file, not fcalc.
+first = 1
+clear nosuch
+exit
+second = 2

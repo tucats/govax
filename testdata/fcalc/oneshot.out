@@ -1,0 +1,27 @@
+1025
+-2 + 2i
+1/0
+ ^
+%FCALC-E-DIVZERO, division by zero
+g = 9.80665
+fall(t) = g*t^2/2
+19.6133
+SAVE [NOSUCH]STATE
+     ^
+%FCALC-E-FILEERR, file [NOSUCH]STATE.fcalc could not be used
+fcalc>  set echo
+fcalc>  1 + 2
+3
+fcalc>  @setup
+fcalc> ! setup.fcalc: a file of fcalc's commands, for the state script's @ and RUN.
+fcalc> ! Each line runs as if it were typed: a value is shown unless the line ends
+fcalc> ! in ;, and ! starts a comment.
+fcalc> g = 9.80665
+g = 9.80665
+fcalc> fall(t) = g*t^2/2
+fall(t) = g*t^2/2
+fcalc> fall(2)
+19.6133
+fcalc> dropped = fall(10);
+fcalc>  
+  $STATUS == "%X10000001"
