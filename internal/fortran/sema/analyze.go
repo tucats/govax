@@ -382,6 +382,11 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 // (EQUIVALENCE, DATA, SAVE) can only be settled once every other is known,
 // so the first walk saves them in fields here for later.
 type analyzer struct {
+	// readFrom is set while a place an input statement reads from (a READ's
+	// internal file, DECODE's buffer) is analyzed: it isn't given a value, so
+	// it may be an INTENT(IN) dummy's (sourcePlace).
+	readFrom bool
+
 	// pendingOpen counts Fortran 90's constructs not compiled yet that are
 	// open, by the kind of their first statement (notimpl.go's
 	// unimplemented), so that only that statement is reported.

@@ -706,7 +706,7 @@ func (a *analyzer) codeStatement(s *ast.CodeStmt, path []frame) Stmt {
 
 	// Appendix A.1's buffer is a variable, an array, an element, or a substring:
 	// not an aggregate reference.
-	buffer := a.place(s.Buffer, true)
+	buffer := a.sourcePlace(s.Buffer, io.Read)
 	if buffer != nil && buffer.Type().Kind == Record {
 		buffer = nil
 	}
@@ -754,7 +754,7 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 		return true
 	}
 
-	t := a.place(u.Expr, true)
+	t := a.sourcePlace(u.Expr, io.Read)
 	if t != nil && t.Type().Kind == Invalid {
 		// A place with an error, reported (a section with a vector
 		// subscript, which can't be an internal file).
@@ -793,6 +793,17 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 	io.Unit = a.convert(v, IntegerType)
 
 	return true
+}
+
+// sourcePlace is place(e, true) for a statement's internal file or buffer,
+// which an input statement only reads from (read): an INTENT(IN) dummy's text may be
+// read with READ (TEXT, *) X (docs/planning/PHASE-111 - Fortran 90
+// milestone.md, subtask 2b).
+func (a *analyzer) sourcePlace(e ast.Expr, read bool) Expr {
+	a.readFrom = read
+	defer func() { a.readFrom = false }()
+
+	return a.place(e, true)
 }
 
 // place is e if it is a place a value can be stored in: a variable, an
