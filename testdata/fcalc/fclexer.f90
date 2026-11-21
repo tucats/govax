@@ -4,6 +4,14 @@
 ! imaginary), a name (in lowercase: fcalc's names are case-insensitive, as
 ! DCL's are), an operator, or the end of the line. Each knows the column it
 ! started in, for an error's pointer.
+!
+! A lexer (or scanner) is the first stage of reading a language: it groups
+! characters into tokens, so the parser (module FCTREE) deals in "the
+! number 2.5" and "the operator <=" rather than in characters. Fortran 90's
+! character intrinsics do most of the work here: INDEX(set, c) > 0 asks
+! whether the character C is in the string SET, VERIFY(text, set) finds the
+! first character of TEXT not in SET (0 if all are), and IACHAR and ACHAR
+! convert between a character and its ASCII code.
 module fclexer
   use fckinds
   use fcmessages
@@ -37,6 +45,11 @@ contains
 
   ! TOKENIZE turns LINE into TOKENS(1:COUNT), the last of kind T_END. On an
   ! error it calls FAIL and stops.
+  !
+  ! TOKENS(:) is an assumed-shape array: the dummy takes its size (and
+  ! shape) from the array the caller passes, which SIZE(TOKENS) would give.
+  ! Like an OPTIONAL argument it needs an explicit interface at the call,
+  ! which a module procedure has.
   subroutine tokenize(line, tokens, count)
     character(len=*), intent(in) :: line
     type(token), intent(out) :: tokens(:)
@@ -89,7 +102,10 @@ contains
     if (at <= len(line)) next_is_digit = index(digit_set, line(at:at)) > 0
   end function next_is_digit
 
-  ! NAME_TOKEN takes a name: a letter, then letters, digits, _, and $.
+  ! NAME_TOKEN takes a name: a letter, then letters, digits, _, and $. It is
+  ! lowercased a character at a time by its ASCII code: in ASCII the capital
+  ! letters are 65 to 90 and the small ones 97 to 122, the same distance
+  ! apart for every letter.
   subroutine name_token(line, at, t)
     character(len=*), intent(in) :: line
     integer, intent(inout) :: at
@@ -122,6 +138,13 @@ contains
   ! it all for an imaginary one. Its value is read by an internal READ,
   ! after its size is checked, so a number no machine could hold is an
   ! error and not a trap.
+  !
+  ! The size check counts LEAD, the power of ten of the number's first
+  ! digit that isn't zero (2 for 123.4, -3 for 0.00123), and adds the
+  ! exponent: the number is about 10**(LEAD + POWER), known before the
+  ! READ converts it. READ (text, *) is list-directed: it reads a value in
+  ! any form Fortran writes constants, and IOSTAT= gives a nonzero status
+  ! instead of stopping the program if it can't.
   subroutine number_token(line, at, t)
     character(len=*), intent(in) :: line
     integer, intent(inout) :: at

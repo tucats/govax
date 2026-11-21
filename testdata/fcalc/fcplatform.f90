@@ -1,6 +1,8 @@
 ! fcalc: what differs from one system to another, VMS's version. Every other
 ! file is the same source on VMS and under gfortran, whose twin of this file
-! is gfortran/fcplatform.f90.
+! is gfortran/fcplatform.f90. Keeping what differs in one small module is
+! the usual way to write a portable program: the build picks the module's
+! version for the system, and nothing else changes.
 module fcplatform
   implicit none
   public
@@ -9,5 +11,6 @@ module fcplatform
   ! terminal as carriage control, a blank meaning "on a new line", as the
   ! standard's printing rule (9.4.5) allows. Each line fcalc writes starts
   ! with CC, so a blank here and nothing in the twin print the same lines.
+  ! LEN=* takes the constant's length from its value: here, 1.
   character(len=*), parameter :: cc = ' '
 end module fcplatform

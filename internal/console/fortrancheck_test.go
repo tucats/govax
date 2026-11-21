@@ -207,6 +207,43 @@ var checkPrograms = []checkProgram{
       END`,
 	},
 	{
+		// A section of a scalar record's array component (Phase 111, subtask
+		// 3a: the record has no dimensions, and the check once asked for
+		// them), its last subscript past the component's end.
+		name: "COMPSECTION", qualifier: "/CHECK=BOUNDS", checked: "%SYSTEM-F-SUBRNG", plain: "AFTER",
+		source: `
+      OPTIONS /F90
+      TYPE E
+         INTEGER V(4)
+      END TYPE E
+      TYPE(E) T
+      INTEGER PAD(8), N
+      N = 5
+      T%V(2:N) = 7
+      PRINT *, 'AFTER'
+      END`,
+	},
+	{
+		// The same within the component's bounds, through a pointer to the
+		// record, as fcalc's FCSYMBOLS has it.
+		name: "COMPSECTIONOK", qualifier: "/CHECK=BOUNDS", checked: "4 7 7 0", plain: "4 7 7 0",
+		refused: "SUBRNG",
+		source: `
+      OPTIONS /F90
+      TYPE E
+         INTEGER V(4)
+      END TYPE E
+      TYPE(E), POINTER :: P
+      INTEGER N
+      ALLOCATE (P)
+      N = 3
+      P%V = 0
+      P%V(2:N) = 7
+      P%V(1) = 4
+      PRINT '(4I2)', P%V
+      END`,
+	},
+	{
 		name: "ADJUSTABLE", qualifier: "/CHECK=BOUNDS", checked: "%SYSTEM-F-SUBRNG", plain: "AFTER",
 		source: `
       INTEGER A(5)

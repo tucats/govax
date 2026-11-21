@@ -11,6 +11,19 @@
 ! zero for one below SMALL, without the machine ever overflowing or
 ! underflowing. So the same expression gives the same value, or the same
 ! error, on a VAX and on an IEEE machine, and nothing fcalc computes traps.
+!
+! The checks are cheap comparisons made before an operation, never after:
+! on a VAX the operation itself would already have stopped the program.
+! For a product x*y, |x*y| > LIMIT exactly when |y| > LIMIT/|x| (for |x| of
+! 1 or more), and LIMIT/|x| can't overflow; that rewriting of a test so it
+! is safe to compute is the main trick of the module.
+!
+! Fortran 90 lets a program give its own meaning to an operator for its
+! own types: INTERFACE OPERATOR(+) below names the functions + means for
+! VALUEs, so the evaluator writes a + b, and the compiler calls V_ADD(a, b).
+! Several functions may share one operator (or one generic name), each for
+! different argument types; the compiler picks by the arguments, as it
+! picks real or integer addition.
 module fcvalues
   use fckinds
   use fcmessages
@@ -22,7 +35,10 @@ module fcvalues
   public :: v_mod, v_factorial, v_compare, v_abs, c_abs
   public :: operator(+), operator(-), operator(*), operator(/), operator(**)
   public :: digits, r_add, r_mul, r_div
+  public :: exp_real, exp_value, log_value, clean, angle_of
 
+  ! A VALUE: Z, the number, and ERR, 0 or the code of the error that made
+  ! it. A function whose result is a VALUE returns both at once.
   type value
     complex(rk) :: z
     integer :: err
@@ -60,6 +76,11 @@ contains
   ! ------------------------------------------------------------------
   ! Making values.
 
+  ! A FUNCTION's RESULT clause names the variable that holds its value
+  ! (V here), so the function's own name needn't be used as one: needed
+  ! for a recursive function, and clearer anywhere. CMPLX(x, y, rk) makes a
+  ! complex number of kind RK; without the kind, CMPLX's result would be
+  ! the default kind, single precision, and digits would be lost.
   function real_value(x) result(v)
     real(rk), intent(in) :: x
     type(value) :: v
@@ -143,6 +164,14 @@ contains
   ! The guarded operations on real numbers. Each takes ERR, which it sets
   ! to E_OVERFLOW or E_DIVZERO if it is zero and the operation fails, and
   ! gives a result whose magnitude is zero or between SMALL and LIMIT.
+  ! Only the first error is kept (IF (ERR == 0)), so a chain of operations
+  ! can share one ERR and report what went wrong first.
+  !
+  ! A result smaller than SMALL becomes 0, as IEEE's gradual underflow and
+  ! a VAX's quiet zero would both nearly do, but alike on both. The
+  ! comparisons are arranged so the machine itself never computes a value
+  ! below its own smallest number: a VAX compiled /CHECK=UNDERFLOW faults
+  ! on that.
 
   real(rk) function r_add(x, y, err)
     real(rk), intent(in) :: x, y
@@ -287,7 +316,13 @@ contains
   end function v_mul
 
   ! V_DIV divides by Smith's method, which scales by the divisor's larger
-  ! part so that no product is larger than it must be.
+  ! part so that no product is larger than it must be. The textbook
+  !     (p + qi) / (r + si) = ((pr + qs) + (qr - ps)i) / (r**2 + s**2)
+  ! squares the divisor's parts, which overflows for parts near 1E154 and
+  ! underflows near 1E-154, although the quotient may be ordinary. Smith
+  ! divides through by the larger of r and s first: with |r| >= |s| and
+  ! t = s/r (at most 1 in size), the denominator is r + s t, never larger
+  ! than 2|r|, and the numerators are p + q t and q - p t.
   function v_div(a, b) result(v)
     type(value), intent(in) :: a, b
     type(value) :: v
@@ -316,13 +351,30 @@ contains
       v%z = cmplx(r_div(r_add(r_mul(p, ratio, err), q, err), den, err), &
         r_div(r_add(r_mul(q, ratio, err), -p, err), den, err), rk)
     end if
-    v%err = err
+
+    ! A part negated above may be an IEEE machine's -0, which a VAX hasn't:
+    ! CLEAN makes it 0, so later functions (ATAN2's branch) agree on both.
+    if (err == 0) then
+      v = clean(v%z)
+    else
+      v%err = err
+    end if
   end function v_div
 
   ! V_POWER is A ** B, fcalc's ^: a whole power by repeated squaring (so
   ! 2^10 is exactly 1024), a positive real number's real power by EXP and
   ! LOG, and anything else as EXP(B * LOG(A)) with LOG's principal branch,
   ! so (-8)^(1/3) is 1 + 1.73205080757i.
+  !
+  ! Repeated squaring computes a**n in about log2(n) multiplications rather
+  ! than n: n's binary digits are read from the lowest, BASE is squared at
+  ! each step (a, a**2, a**4, a**8, ...), and multiplied into the result
+  ! where a digit is 1. For n = 10 (binary 1010): a**2 * a**8.
+  !
+  ! RECURSIVE: V_POWER uses the operators *, /, which are other functions,
+  ! and (through EXP_VALUE and LOG_VALUE) may come back to itself; a
+  ! procedure that may be active twice at once must say RECURSIVE in
+  ! Fortran 90, so the compiler gives each activation its own variables.
   recursive function v_power(a, b) result(v)
     type(value), intent(in) :: a, b
     type(value) :: v
@@ -395,7 +447,8 @@ contains
     end if
   end function exp_real
 
-  ! EXP_VALUE is a complex value's exponential.
+  ! EXP_VALUE is a complex value's exponential, by Euler's formula:
+  !     exp(x + iy) = e**x (cos y + i sin y)
   function exp_value(a) result(v)
     type(value), intent(in) :: a
     type(value) :: v
@@ -420,13 +473,37 @@ contains
     v%err = err
   end function exp_value
 
-  ! LOG_VALUE is a nonzero value's principal logarithm.
+  ! LOG_VALUE is a nonzero value's principal logarithm,
+  !     ln z = ln |z| + i arg z,   arg z in (-pi, pi]
+  ! A complex number has infinitely many logarithms, 2 pi i apart; the
+  ! principal one takes the angle nearest zero, and the negative real axis,
+  ! where the angle jumps from pi to -pi, is its branch cut.
   function log_value(a) result(v)
     type(value), intent(in) :: a
     type(value) :: v
 
-    v = complex_value(log(c_abs(a%z)), atan2(aimag(a%z), real(a%z, rk)))
+    v = complex_value(log(c_abs(a%z)), angle_of(aimag(a%z), real(a%z, rk)))
   end function log_value
+
+  ! ANGLE_OF is ATAN2(Y, X) for a point other than the origin, where one
+  ! coordinate is so much smaller than the other that ATAN2 would
+  ! underflow, the angle to the axis it is on.
+  real(rk) function angle_of(y, x)
+    real(rk), intent(in) :: y, x
+
+    if (abs(y) < abs(x) * 1.0e-200_rk) then
+      angle_of = 0
+      if (x < 0) then
+        angle_of = pi
+        if (y < 0) angle_of = -pi
+      end if
+    else if (abs(x) < abs(y) * 1.0e-200_rk) then
+      angle_of = pi / 2
+      if (y < 0) angle_of = -pi / 2
+    else
+      angle_of = atan2(y, x)
+    end if
+  end function angle_of
 
   ! V_ABS is a value's magnitude.
   function v_abs(a) result(v)
@@ -575,6 +652,16 @@ contains
   ! FORMAT_REAL shows X to DIGITS significant digits, with no trailing
   ! zeros: in fixed notation from 1E-5 up to where the digits run out, in
   ! scientific notation outside that, as 1.5e-7 or 6.02214076e+23.
+  !
+  ! The number is first written by Fortran's own conversion, to an
+  ! internal file: a WRITE whose unit is a CHARACTER variable writes into
+  ! the variable instead of to a device, and a READ from one reads it, so
+  ! these are Fortran's way to turn numbers into text and back. The format
+  ! is itself built at run time as text, (ESw.dE3): ES is scientific
+  ! notation with one digit before the point, w the field's width, d the
+  ! digits after the point, E3 a three-digit exponent. Fortran's conversion
+  ! rounds the decimal digits correctly, so FORMAT_REAL needn't; it only
+  ! rearranges them.
   function format_real(x) result(text)
     real(rk), intent(in) :: x
     character(len=32) :: text
@@ -637,8 +724,8 @@ contains
     x = real(v%z, rk)
     y = aimag(v%z)
     part = 10.0_rk ** (-digits)
-    if (abs(y) < abs(x) * part) y = 0
-    if (abs(x) < abs(y) * part) x = 0
+    if (negligible(y, x)) y = 0
+    if (negligible(x, y)) x = 0
 
     if (y == 0) then
       text = format_real(x)
@@ -649,5 +736,23 @@ contains
     else
       text = trim(format_real(x)) // ' + ' // trim(format_real(y)) // 'i'
     end if
+  contains
+
+    ! NEGLIGIBLE: |A| < |B| * PART, A too small beside B to show. The
+    ! product is never formed where it could underflow (B near SMALL),
+    ! which a VAX compiled /CHECK=UNDERFLOW would fault on: for |B| below 1
+    ! the test is |A| / PART < |B|, whose quotient can't underflow, and an
+    ! A of 1 or more can't be smaller than such a B.
+    logical function negligible(a, b)
+      real(rk), intent(in) :: a, b
+
+      if (abs(b) >= 1) then
+        negligible = abs(a) < abs(b) * part
+      else if (abs(a) >= 1) then
+        negligible = .false.
+      else
+        negligible = abs(a) / part < abs(b)
+      end if
+    end function negligible
   end function format_value
 end module fcvalues

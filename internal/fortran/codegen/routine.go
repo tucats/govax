@@ -530,8 +530,14 @@ func (g *routineGen) call(s *ir.Call) {
 		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), m.text)
 		g.free(m)
 	} else if s.Local {
-		// An internal procedure of this module, at its local label.
-		host, inner, _ := strings.Cut(s.Routine, ".")
+		// An internal procedure of this module, at its local label. The
+		// host's name may have periods of its own (a module procedure's,
+		// M.P), and the inner's can't, so the last period divides them:
+		// the label must be made from the same two parts as the routine's
+		// own (newRoutineGen's), or a name past 31 characters, numbered,
+		// would be numbered differently here.
+		at := strings.LastIndexByte(s.Routine, '.')
+		host, inner := s.Routine[:at], s.Routine[at+1:]
 		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), g.bases.internal(host, inner))
 	} else {
 		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), "G^"+s.Routine)

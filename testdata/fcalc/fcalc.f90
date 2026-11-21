@@ -2,8 +2,20 @@
 !
 ! fcalc reads lines at the prompt until QUIT, EXIT, or the end of the
 ! input. A line that starts with a command word is a command; NAME = EXPR
-! assigns a variable; anything else is an expression, whose value is shown
-! and kept as ANS. A line starting with ! is a comment.
+! assigns a variable; F(X, Y) = EXPR defines a function; anything else is
+! an expression, whose value is shown and kept as ANS. A line starting with
+! ! is a comment.
+!
+! The modules each do one part of the work, and this program joins them:
+! a line is read (READ_LINE), cut into tokens (FCLEXER, through SCAN_LINE),
+! classified by its first tokens (EXECUTE), parsed into a tree (FCTREE),
+! and evaluated (FCEVAL); an error anywhere is recorded (FCMESSAGES) and
+! reported once the line is done.
+!
+! The procedures after CONTAINS are internal procedures of the program:
+! they see the program's variables (LINE, ECHO, DONE, ...) by host
+! association, as if declared in each of them, which is how they share
+! the state of the session without passing it around.
 program fcalc
   use fckinds
   use fcmessages
@@ -12,6 +24,7 @@ program fcalc
   use fctree
   use fceval
   use fcsymbols
+  use fcfuncs
   implicit none
 
   character(len=line_length + 1) :: line
@@ -52,7 +65,15 @@ contains
 
   ! READ_LINE reads the next line into LINE(:LENGTH), by nonadvancing
   ! input: STATUS is 0, or 1 for a line too long (whose rest is passed
-  ! over), or -1 at the end of the input. A line too long for the system
+  ! over), or -1 at the end of the input.
+  !
+  ! A nonadvancing READ (ADVANCE='NO') reads part of a record and leaves
+  ! the rest for the next READ. SIZE= gives how many characters it read,
+  ! so a line's length is known without counting trailing blanks; EOR=
+  ! names a statement label to go to when the record (the line) ends before
+  ! the variable is full, which is the usual case, and END= one for the end
+  ! of the input. These labels, 10, 20, and 30, are the old-fashioned GO TO
+  ! targets Fortran's I/O statements still use. A line too long for the system
   ! to read (on VMS, past 199 characters) is an error the READ's IOSTAT=
   ! catches, after which the next READ reads the next line.
   subroutine read_line(status)
@@ -112,6 +133,8 @@ contains
 
     if (first%kind == t_name .and. second%kind == t_operator .and. second%text == '=') then
       call assignment(first)
+    else if (is_definition()) then
+      call definition(text)
     else
       call expression()
     end if
@@ -131,14 +154,7 @@ contains
     type(token), intent(in) :: name
     type(value) :: v
 
-    if (is_reserved(name%text)) then
-      call fail(e_reserved, name%column, name%text)
-      return
-    end if
-    if (is_constant(name%text)) then
-      call fail(e_constant, name%column, name%text)
-      return
-    end if
+    if (.not. usable_name(name)) return
 
     call advance(2)
     if (.not. whole_expression(v)) return
@@ -167,19 +183,130 @@ contains
     whole_expression = .not. failed()
   end function whole_expression
 
+  ! IS_DEFINITION: the line starts f(x, y) =, a function's definition. A
+  ! call, f(2) or f(x + 1), has something other than names between its
+  ! parentheses, or no = after them.
+  logical function is_definition()
+    type(token) :: t
+    integer :: k
+
+    is_definition = .false.
+    if (kind_at(1) /= t_name) return
+    t = token_at(2)
+    if (t%kind /= t_operator .or. t%text /= '(') return
+
+    k = 3
+    t = token_at(k)
+    if (.not. (t%kind == t_operator .and. t%text == ')')) then
+      do
+        if (kind_at(k) /= t_name) return
+        t = token_at(k + 1)
+        if (t%kind /= t_operator) return
+        k = k + 2
+        if (t%text == ')') exit
+        if (t%text /= ',') return
+      end do
+      k = k - 1
+    end if
+
+    ! K is the ) token's place.
+    t = token_at(k + 1)
+    is_definition = t%kind == t_operator .and. t%text == '='
+  end function is_definition
+
+  ! DEFINITION is f(x, y) = expr: the function's name and parameters are
+  ! checked, the expression parsed, and the tree and the text kept.
+  subroutine definition(text)
+    character(len=*), intent(in) :: text
+    type(token) :: name, t
+    character(len=name_length) :: params(max_params)
+    type(node), pointer :: tree
+    integer :: count, k
+
+    name = token_at(1)
+    if (.not. usable_name(name)) return
+    if (builtin_index(name%text) > 0) then
+      call fail(e_builtin, name%column, name%text)
+      return
+    end if
+
+    ! The parameters: the names from the third token, each followed by a
+    ! comma or the ).
+    count = 0
+    k = 3
+    do while (kind_at(k) == t_name)
+      t = token_at(k)
+      if (.not. usable_name(t)) return
+      if (count == max_params) then
+        call fail(e_params, t%column)
+        return
+      end if
+      if (any(params(1:count) == t%text)) then
+        call fail(e_dupparam, t%column, t%text)
+        return
+      end if
+      count = count + 1
+      params(count) = t%text
+      k = k + 2
+    end do
+    if (count == 0) k = k + 1
+
+    ! K is the = token's place; the expression starts after it.
+    call advance(k)
+    tree => parse_expression()
+    if (failed()) return
+    if (.not. at_end()) then
+      call fail(e_extra, current_column())
+      call free_tree(tree)
+      return
+    end if
+
+    t = token_at(k + 1)
+    call define_function(name%text, count, params, tree, trim(text(t%column:)))
+    call list_one(name%text)
+  end subroutine definition
+
+  ! LIST_ONE shows the function NAME as LIST does.
+  subroutine list_one(name)
+    character(len=*), intent(in) :: name
+    type(function_entry), pointer :: fn
+
+    fn => find_function(name)
+    call say(trim(heading(fn)) // ' = ' // trim(fn%text))
+  end subroutine list_one
+
+  ! USABLE_NAME: the token T may name a variable, a function, or a
+  ! parameter: it isn't a reserved word or a constant.
+  logical function usable_name(t)
+    type(token), intent(in) :: t
+
+    usable_name = .false.
+    if (is_reserved(t%text)) then
+      call fail(e_reserved, t%column, t%text)
+    else if (is_constant(t%text)) then
+      call fail(e_constant, t%column, t%text)
+    else
+      usable_name = .true.
+    end if
+  end function usable_name
+
   logical function is_reserved(name)
     character(len=*), intent(in) :: name
 
     is_reserved = name == 'or' .or. name == 'and' .or. name == 'not' .or. name == 'mod'
   end function is_reserved
 
-  ! LIST [VARIABLES | ALL]
+  ! LIST [VARIABLES | FUNCTIONS | ALL]: with no word, ALL, the variables
+  ! and then the functions.
   subroutine list_command()
     type(token) :: what
+    character(len=name_length) :: which
 
+    which = 'all'
     what = token_at(2)
     if (what%kind == t_name) then
-      if (what%text /= 'variables' .and. what%text /= 'all') then
+      which = what%text
+      if (which /= 'variables' .and. which /= 'functions' .and. which /= 'all') then
         call fail(e_badcmd, what%column)
         return
       end if
@@ -190,17 +317,20 @@ contains
       call fail(e_extra, current_column())
       return
     end if
-    call list_variables()
+    if (which /= 'functions') call list_variables()
+    if (which /= 'variables') call list_functions()
   end subroutine list_command
 
   ! CLEAR name... | CLEAR ALL
   subroutine clear_command()
     type(token) :: what
     integer :: k
+    logical :: gone
 
     what = token_at(2)
     if (what%kind == t_name .and. what%text == 'all' .and. kind_at(3) == t_end) then
       call clear_variables()
+      call clear_functions()
       call set_variable('ans', real_value(0.0_rk))
       return
     end if
@@ -216,31 +346,68 @@ contains
         return
       end if
     end do
+    ! A name may be both a variable and a function: CLEAR forgets both.
     do k = 2, token_count() - 1
       what = token_at(k)
-      if (.not. remove_variable(what%text)) then
+      gone = remove_variable(what%text)
+      if (remove_function(what%text)) gone = .true.
+      if (.not. gone) then
         call fail(w_notdef, what%column, what%text)
         call report()
       end if
     end do
   end subroutine clear_command
 
-  ! SET [NO]ECHO
+  ! SET [NO]ECHO, SET ANGLE RADIANS | DEGREES | GRADS
   subroutine set_command()
-    type(token) :: what
+    type(token) :: what, how
 
     what = token_at(2)
-    if (what%kind /= t_name .or. kind_at(3) /= t_end) then
+    if (what%kind /= t_name) then
       call fail(e_badset, what%column)
       return
     end if
+
     select case (what%text)
-    case ('echo')
-      echo = .true.
-    case ('noecho')
-      echo = .false.
+    case ('echo', 'noecho')
+      if (kind_at(3) /= t_end) then
+        call fail(e_extra, token_column(3))
+        return
+      end if
+      echo = what%text == 'echo'
+
+    case ('angle')
+      how = token_at(3)
+      if (how%kind /= t_name) then
+        call fail(e_badset, how%column)
+        return
+      end if
+      if (kind_at(4) /= t_end) then
+        call fail(e_extra, token_column(4))
+        return
+      end if
+      select case (how%text)
+      case ('radians')
+        angle_mode = a_radians
+      case ('degrees')
+        angle_mode = a_degrees
+      case ('grads')
+        angle_mode = a_grads
+      case default
+        call fail(e_badset, how%column)
+      end select
+
     case default
       call fail(e_badset, what%column)
     end select
   end subroutine set_command
+
+  ! TOKEN_COLUMN is the column of the Kth token.
+  integer function token_column(k)
+    integer, intent(in) :: k
+    type(token) :: t
+
+    t = token_at(k)
+    token_column = t%column
+  end function token_column
 end program fcalc

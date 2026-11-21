@@ -239,6 +239,17 @@ As revised by the author's answers (below), with vectors and matrices added:
      `testdata/fortran90/intentread.f90`. (done 2026-11-20)
 3. **Functions**: the built-in table, special functions, list functions,
    user-defined functions and recursion; `functions`, `userfuncs`.
+   (done 2026-11-20)
+   - 3a. A section of a scalar record's array component under
+     `/CHECK=BOUNDS` (`T%V(1:N)`) crashed the compiler; `TestFortranCheck`'s
+     COMPSECTION and COMPSECTIONOK. (done 2026-11-20)
+   - 3b. `@(Rn)` operands' bound one byte short, so the optimizer made a byte
+     branch MACRO couldn't reach; `codegen`'s `TestOperandBounds`, and
+     `TestBoundsHold` over the Fortran 90 corpus and `/CHECK=ALL`.
+     (done 2026-11-20)
+   - 3c. An internal procedure of a module procedure whose name passes 31
+     characters called by another name than its own;
+     `testdata/fortran90/longhost.f90`. (done 2026-11-20)
 4. **Vectors and matrices** (A.8): the values, literals, indexing, operators,
    `fcmatrix`'s functions; `vectors`, `matrices`.
 5. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`.
@@ -393,3 +404,68 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   (`sema`'s `sourcePlace`, `analyzer.readFrom`); a WRITE's or ENCODE's is
   still INTENTIN. Held by `TestIntent`'s new cases and
   `testdata/fortran90/intentread.f90` (DECODE's, so not in `compare.py`).
+- **2026-11-20:** Subtask 3, functions. `fcfuncs.f90`, a new module between
+  FCSYMBOLS and FCEVAL: the built-in functions as a table (`BUILTINS` and
+  `MORE_BUILTINS`, two since a statement may have only 39 continuation
+  lines), each a CASE of `APPLY_BUILTIN`, all of A.1's list plus `hypot` and
+  `rand(n)`. A real argument in a function's real domain takes the
+  intrinsic (MTHRTL's routine on a VAX); anything else the principal value
+  of the complex function, from FCVALUES' guarded operators, with these
+  conventions: `asin z = -i ln(iz + sqrt(1 - z**2))`, `acos z = pi/2 -
+  asin z` (so `asin(2)` is `pi/2 - 1.317i`, `acos(2)` `1.317i`), `cbrt`
+  of a real number the real root, `arg(0)` 0, `atan2(0, 0)` and the poles
+  (`ln(0)`, `atanh(1)`, `gamma(0)`) DOMAIN. SET ANGLE (A.1's, needed now
+  for the trigonometric functions; SHOW SETTINGS stays subtask 6's):
+  degrees and grads reduced exactly to a turn, and exact at quarter turns.
+  The special functions take real arguments (NOTREAL otherwise; `beta`
+  positive ones): gamma by factorials at whole numbers and Lanczos (g = 7,
+  9 terms) elsewhere, through the reflection below 1/2; lgamma exactly 0 at
+  1 and 2; erf by its series of positive terms below 1.5 and erfc by its
+  continued fraction, 200 deep, above (the crossover chosen by a trial in
+  IEEE doubles against Python's: 1 - erf from the series loses digits past
+  2, 1e-12 of erfc at 2.5, and the fraction needs about 80 terms at 1.5). `!` off the whole numbers is now gamma(x + 1),
+  as A.1 says, so `basics`' `2.5!` became `(-2)!`. The list functions
+  exercise SUM, MINVAL, MAXVAL, WHERE, automatic arrays, and a quickselect
+  on PACK's results for the median. Users' functions: `f(x, y) = expr`, up to
+  8 parameters, kept in FCSYMBOLS as a second binary search tree (a name may
+  be a variable and a function; CLEAR forgets both; LIST with no word lists
+  both, functions after variables); each call has a FRAME of its parameters,
+  passed to EVALUATE as an OPTIONAL argument; an error inside a function is
+  reported at the column of the call typed (`FRAME%COLUMN`); calls nest at
+  most 200 deep (RECURSION). The `functions` values were checked against
+  Python's `math` and `cmath`; gfortran printed every line of both new
+  scripts as govax does, in every mode subtask 2 ran (`/[NO]OPTIMIZE`,
+  `/RECURSIVE`, `/CHECK=ALL`, `/NOOPTIMIZE/DEBUG=ALL`, paging on).
+  `TestFcalcCompiles` now also compiles `/CHECK=ALL`. /CHECK=ALL found that
+  fcalc must not underflow either (govax faults on it there): FCVALUES'
+  `FORMAT_VALUE` (subtask 2's) multiplied a value near 1E-300 by 1E-12, now
+  `NEGLIGIBLE`; ATAN2 is `ANGLE_OF`, which never asks it about a point
+  near an axis; `V_DIV` gives no IEEE -0, which ATAN2 would put on the
+  other side of the branch cut. Three compiler bugs found, 3a to 3c. And
+  subtask 2's `basics.out` and `complex.out` had never been committed (the
+  repository's `.gitignore` drops `*.out`): `testdata/fcalc/.gitignore`
+  keeps them, as the corpus's does. By the author's request (2026-11-20),
+  fcalc's sources are commented for a reader learning Fortran 90 and
+  numerical programming, every module's included.
+- **2026-11-20:** Subtask 3a: `ir`'s `checkSubscripts` asked the record's
+  symbol for the bounds of a section of its array component before seeing
+  that the dimensions were the field's (`T%V(1:N)` under `/CHECK=BOUNDS`,
+  FCSYMBOLS' `T%PARAMS(1:COUNT)`); a scalar record has none, and the
+  compiler panicked. Now the field's bounds are taken first. Held by
+  `TestFortranCheck`'s COMPSECTION (past the end, SUBRNG) and COMPSECTIONOK
+  (through a pointer, as fcalc's).
+- **2026-11-20:** Subtask 3b: `codegen`'s `operandBound` counted `@(Rn)` as
+  one byte; the VAX has no register deferred mode deferred again, and MACRO
+  assembles it as `@0(Rn)`, two bytes. The branch passes, adding bounds,
+  then made FCEVAL's `BGTR` a byte branch to a label 128 bytes on, and
+  MACRO refused it (`/OPTIMIZE/CHECK=ALL`). Held by `TestOperandBounds`;
+  `TestBoundsHold` now also reads the Fortran 90 corpus, free form, and
+  compiles each program `/CHECK=ALL` too (822 compilations), though no
+  corpus program makes `@(Rn)`.
+- **2026-11-20:** Subtask 3c: a call of an internal procedure divided its
+  name `M.HOST.INNER` at the first period, a routine's at the last; the two
+  halves rejoined to the same text while it fit 31 characters, but a longer
+  one was numbered from different prefixes, so the call named a symbol
+  nothing defined (FCVALUES' `FORMAT_VALUE.NEGLIGIBLE`, LINK's NUDFSYMS).
+  The call now divides at the last period, an inner name having none. Held
+  by `testdata/fortran90/longhost.f90` (also in `compare.py`).

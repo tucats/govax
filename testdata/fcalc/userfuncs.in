@@ -1,0 +1,82 @@
+set echo
+! Functions a user defines: f(params) = expression.
+f(x) = x^3 - 2*x - 5
+f(2)
+f(2.1)
+f(i)
+g(x, y) = sqrt(x^2 + y^2)
+g(3, 4)
+g(f(2), 0)
+answer() = 42
+answer()
+! A parameter hides a variable of its name; other names are the variables'.
+x = 100
+scale = 3
+h(x) = scale * x
+h(2)
+x
+scale = 10
+h(2)
+! A function may call others, defined before or after it.
+twice(n) = 2 * later(n)
+later(n) = n + 1
+twice(5)
+! Recursion: IF evaluates only the arm it chooses, so a function can stop.
+fact(n) = if(n < 2, 1, n * fact(n - 1))
+fact(5)
+fact(20)
+fact(0)
+fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+fib(10)
+fib(15)
+gcdr(a, b) = if(b == 0, abs(a), gcdr(b, a mod b))
+gcdr(1071, 462)
+even(n) = if(n == 0, 1, odd(n - 1))
+odd(n) = if(n == 0, 0, even(n - 1))
+even(10)
+odd(7)
+power(b, n) = if(n == 0, 1, b * power(b, n - 1))
+power(2, 10)
+power(i, 3)
+sumto(n) = if(n == 0, 0, n + sumto(n - 1))
+sumto(150)
+! Eight parameters, the most.
+mix(a, b, c, d, e2, f2, g2, h2) = a + 2*b + 3*c + 4*d + 5*e2 + 6*f2 + 7*g2 + 8*h2
+mix(1, 1, 1, 1, 1, 1, 1, 1)
+! A definition can be replaced; LIST shows each as it was typed.
+f(x) = x^2   +   1
+f(3)
+list functions
+list
+! A name may be a variable and a function at once; CLEAR forgets both.
+later = 7
+later(later)
+clear later
+later
+twice(5)
+list
+! Errors in a function are reported at the call typed.
+bad(x) = x / 0
+bad(1)
+uses(x) = x + nosuch
+uses(1)
+f(1, 2)
+f()
+nofunc(1)
+loop(n) = loop(n + 1)
+loop(1)
+sumto(250)
+fact(170)
+! Errors in definitions.
+sin(x) = x
+pi(x) = x
+k(pi) = pi
+k(x, x) = x
+k(a, b, c, d, e2, f2, g2, h2, j2) = 0
+k(x) = x +
+k(x) = (x
+or(x) = x
+k(x) = x
+clear all
+list
+quit

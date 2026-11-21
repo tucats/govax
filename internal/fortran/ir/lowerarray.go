@@ -831,11 +831,15 @@ func (n *arrayNest) checkSubscripts() {
 		}
 
 		for i, d := range info.dims {
-			low, high := n.lowerBound(info.sym, i), n.checkedUpper(info.sym, i)
+			// The dimensions are the field's when a component's part is the
+			// ranked one (T%V(1:N)), and its bounds constants; the symbol
+			// is then the record's, which may have no dimensions at all.
+			var low, high Expr
 			if info.field != nil {
-				// A field's bounds are constants.
 				dim := info.field.Dims[i]
 				low, high = LongConst(int32(dim.Lower)), LongConst(int32(dim.Upper))
+			} else {
+				low, high = n.lowerBound(info.sym, i), n.checkedUpper(info.sym, i)
 			}
 
 			switch {

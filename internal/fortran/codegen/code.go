@@ -256,9 +256,16 @@ func (c *Code) operandBound(text string) int {
 		text = text[:strings.LastIndexByte(text, '[')]
 	}
 
+	deferred := strings.HasPrefix(text, "@")
 	text = strings.TrimPrefix(text, "@")
 
 	switch {
+	case deferred && strings.HasPrefix(text, "(") && !strings.HasSuffix(text, ")+"):
+		// The VAX has no register deferred mode deferred again: MACRO
+		// assembles @(Rn) as @0(Rn), byte displacement deferred, a mode
+		// byte and a displacement byte. (@(Rn)+, autoincrement deferred,
+		// is a mode of its own, one byte.)
+		return n + 2
 	case isRegisterName(text), text == "-(SP)", strings.HasPrefix(text, "("):
 		return n + 1
 	case strings.HasPrefix(text, "#"):

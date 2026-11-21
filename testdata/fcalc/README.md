@@ -19,9 +19,16 @@ Each file is a module but the last, the main program, compiled in the order
 | `fcvalues.f90` | `TYPE VALUE`, its operators, guarded so nothing traps, and how a value is shown |
 | `fclexer.f90` | the tokens |
 | `fctree.f90` | `TYPE NODE`, a tree of pointers, and the recursive descent parser |
-| `fcsymbols.f90` | the variables, a binary search tree, and the constants |
-| `fceval.f90` | the evaluator |
-| `fcalc.f90` | the main program: the prompt, the commands, assignment |
+| `fcsymbols.f90` | the variables and the user's functions, each a binary search tree, and the constants |
+| `fcfuncs.f90` | the built-in functions: their table, and each function, real and complex, guarded so nothing traps |
+| `fceval.f90` | the evaluator, with a frame of parameters for each call of a user's function |
+| `fcalc.f90` | the main program: the prompt, the commands, assignment, function definitions |
+
+The sources are commented for a reader learning Fortran 90 and numerical
+programming: each Fortran 90 feature is explained where it is first used,
+and each numerical method where it is applied (guarding against overflow
+and underflow, principal branches, cancellation, series and continued
+fractions, Lanczos's gamma function).
 
 fcalc must be compiled `/G_FLOATING`: no kind of D_floating has the range of
 300 `SELECTED_REAL_KIND(15, 300)` asks for. On govax, on a volume holding the
@@ -33,7 +40,7 @@ $ FORTRAN/G_FLOATING FCKINDS
   ... each file in compiles.txt's order ...
 $ MACRO FCPLATFORM
   ... each file ...
-$ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCLEXER,FCTREE,FCSYMBOLS,FCEVAL
+$ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCLEXER,FCTREE,FCSYMBOLS,FCFUNCS,FCEVAL
 $ RUN FCALC
 ```
 
@@ -54,6 +61,11 @@ prompt, as a terminal does.
 |---|---|
 | `basics` | numbers and how they are shown, every operator and its precedence, the constants, variables and `ans`, LIST, CLEAR, SET [NO]ECHO, comments, and the messages |
 | `complex` | complex values: their display, arithmetic, comparisons, and powers |
+| `functions` | every built-in function: roots, exponentials, logarithms, trigonometry in each angle mode (SET ANGLE), hyperbolic functions, complex parts, rounding, whole numbers, the special functions, lists, IF, and random numbers (only their properties), with their errors |
+| `userfuncs` | functions the user defines: parameters and variables, calls between functions, recursion and its limit, redefinition, LIST and CLEAR, and the errors of definitions and calls |
+
+The `functions` values were checked against Python's `math` and `cmath` as a
+second method.
 
 `internal/console`'s `TestFcalc` builds fcalc and runs every script;
 `internal/dclcmd`'s `TestFcalcCompiles` compiles it, quickly, without a console.
@@ -70,6 +82,9 @@ prompt, as a terminal does.
 - **Arithmetic.** A VAX traps where IEEE makes an infinity, and its range is
   smaller: no value fcalc keeps is larger than 1e300 or, but for zero, smaller
   than 1e-300, and each operation checks its operands first (`fcvalues.f90`).
+  Built under `/CHECK=UNDERFLOW` (in `/CHECK=ALL`), govax faults on floating
+  underflow too, so no operation may compute a value below the VAX's smallest
+  either; fcalc arranges its comparisons so none does.
 - **Rounding.** Values are shown to 12 significant digits, where the two
   machines' last bits don't reach; a part of a complex value smaller than the
   other by more than the digits shown is shown as zero, and equality is to

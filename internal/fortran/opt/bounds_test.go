@@ -29,8 +29,9 @@ type probed struct {
 // compileProbed compiles a FORTRAN file with every instruction between two labels
 // of the test's own, which assemble to nothing, so that MACRO's symbol table says
 // how long each instruction came out. It reports false for a file the compiler
-// can't do alone, one with an INCLUDE, say.
-func compileProbed(t *testing.T, path string, optimized bool) ([]string, []probed, bool) {
+// can't do alone, one with an INCLUDE, say. A .f90 file is free form and /F90,
+// and checked compiles it /CHECK=ALL, whose guards and traps are code of their own.
+func compileProbed(t *testing.T, path string, optimized, checked bool) ([]string, []probed, bool) {
 	t.Helper()
 
 	data, err := os.ReadFile(path)
@@ -40,10 +41,17 @@ func compileProbed(t *testing.T, path string, optimized bool) ([]string, []probe
 
 	var messages diag.List
 
+	free := strings.HasSuffix(path, ".f90")
+	options := sema.Options{F90: free}
+
+	if checked {
+		options.Checks = sema.Checks{Bounds: true, Overflow: true, Underflow: true, Pointers: true}
+	}
+
 	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
-	program := source.Read(source.Form{}, &source.File{Spec: path, Lines: lines}, nil, &messages)
+	program := source.Read(source.Form{F90: free}, &source.File{Spec: path, Lines: lines, Free: free}, nil, &messages)
 	tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-	prog := sema.Analyze(tree, "T$MAIN", sema.Options{}, &messages)
+	prog := sema.Analyze(tree, "T$MAIN", options, &messages)
 
 	if messages.Failed() {
 		return nil, nil, false
@@ -95,7 +103,8 @@ func compileProbed(t *testing.T, path string, optimized bool) ([]string, []probe
 func TestBoundsHold(t *testing.T) {
 	var files []string
 
-	for _, pattern := range []string{"../codegen/testdata/*.for", "../../../testdata/fortran/*.for", "../../../testdata/opt84/kernels/*.for"} {
+	for _, pattern := range []string{"../codegen/testdata/*.for", "../../../testdata/fortran/*.for", "../../../testdata/opt84/kernels/*.for",
+		"../../../testdata/fortran90/*.f90"} {
 		found, err := filepath.Glob(pattern)
 		if err != nil {
 			t.Fatal(err)
@@ -107,8 +116,10 @@ func TestBoundsHold(t *testing.T) {
 	checked, instructions, bytesBound, bytesActual := 0, 0, 0, 0
 
 	for _, path := range files {
-		for _, optimized := range []bool{false, true} {
-			lines, list, ok := compileProbed(t, path, optimized)
+		for _, mode := range []struct{ optimized, checked bool }{{false, false}, {true, false}, {true, true}} {
+			optimized := mode.optimized
+
+			lines, list, ok := compileProbed(t, path, optimized, mode.checked)
 			if !ok {
 				continue
 			}

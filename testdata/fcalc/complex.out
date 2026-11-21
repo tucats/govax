@@ -1,0 +1,128 @@
+fcalc> set echo
+fcalc> ! Complex values: every value is complex, shown as a + bi.
+fcalc> i
+1i
+fcalc> 2i
+2i
+fcalc> -i
+-1i
+fcalc> 3 + 4i
+3 + 4i
+fcalc> 3 - 4i
+3 - 4i
+fcalc> -3 - 4i
+-3 - 4i
+fcalc> 2I^2
+-4
+fcalc> i * i
+-1
+fcalc> i^2
+-1
+fcalc> i^3
+-1i
+fcalc> i^4
+1
+fcalc> i^-1
+-1i
+fcalc> (1+i)^2
+2i
+fcalc> (1+2i)*(3+4i)
+-5 + 10i
+fcalc> (3+4i)*i
+-4 + 3i
+fcalc> (1+2i)/(3+4i)
+0.44 + 0.08i
+fcalc> (3+4i)/(1-2i)
+-1 + 2i
+fcalc> 1/i
+-1i
+fcalc> (0.1+0.2i)*10
+1 + 2i
+fcalc> (2+3i) - (2+3i)
+0
+fcalc> (2+3i) - 2
+3i
+fcalc> 5 - 5i + 5i
+5
+fcalc> ! A part too small for the digits shown is shown as zero.
+fcalc> 1 + 1e-13i
+1
+fcalc> 1 + 1e-11i
+1 + 1e-11i
+fcalc> 1e-13 + 1i
+1i
+fcalc> 1e-200i * 1e-200i
+0
+fcalc> ! Comparisons: == and <> the whole value, the order the real parts.
+fcalc> (1+i) == (1+i)
+1
+fcalc> (1+i) == 1
+0
+fcalc> (1+i) <> (1-i)
+1
+fcalc> (3+4i) < 5
+1
+fcalc> i and 1
+1
+fcalc> not i
+0
+fcalc> ! Powers: whole ones by multiplying, the rest by EXP and LOG.
+fcalc> 1.5^2.5
+2.75567596063
+fcalc> 10^0.5
+3.16227766017
+fcalc> (-1)^0.5
+1i
+fcalc> (-4)^0.5
+2i
+fcalc> (-8)^(1/3)
+1 + 1.73205080757i
+fcalc> (2+3i)^0.5
+1.67414922804 + 0.89597747613i
+fcalc> 2^i
+0.769238901364 + 0.638961276314i
+fcalc> i^i
+0.207879576351
+fcalc> (1+i)^(1+i)
+0.27395725383 + 0.583700758759i
+fcalc> e^(i*pi)
+-1
+fcalc> 0^0
+1
+fcalc> 0^0.5
+0
+fcalc> ! Variables hold complex values.
+fcalc> z = 2 - 3i
+z = 2 - 3i
+fcalc> z * z
+-5 - 12i
+fcalc> z / z
+1
+fcalc> w = z + 3i
+w = 2
+fcalc> list
+ans = 1
+w = 2
+z = 2 - 3i
+fcalc> ! Messages.
+fcalc> (1e200+1e200i)*(1e200+1e200i)
+                     ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> (1+2i) mod 3
+              ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> (1+i)!
+            ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> 0^i
+        ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> 2^(1000i)
+-0.413232017932 + 0.910625773496i
+fcalc> 2^(1e16i)
+        ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> 2i3
+        ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> quit

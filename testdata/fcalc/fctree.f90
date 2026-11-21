@@ -19,6 +19,28 @@
 ! so ^ binds tighter than a sign (-2^2 is -4) but takes one after it (2^-1),
 ! and is right-associative (2^3^2 is 2^9). Each function returns a tree, or
 ! a null pointer after calling FAIL, having freed what it had built.
+!
+! Recursive descent, briefly: each rule of the grammar above becomes a
+! function that parses that rule, calling the functions of the rules it is
+! made of. The order of the rules gives the precedence: PARSE_SUM calls
+! PARSE_TERM for its operands, so in 1 + 2 * 3 the 2 * 3 is a term, parsed
+! first and placed lower in the tree. A loop (the { } of a rule) makes an
+! operator left-associative: 2 - 3 - 4 is (2 - 3) - 4, each new operation
+! taking the tree so far as its left operand. A rule that calls itself for
+! its right operand, as POWER does through UNARY, makes it right-
+! associative. A parenthesis starts again at the loosest rule, OR-EXPR.
+!
+! Pointers in Fortran 90. A variable declared POINTER doesn't hold a value
+! itself: it is associated with (points to) a target, or is null.
+! ALLOCATE (p) makes a new target and points P at it; DEALLOCATE (p) gives
+! it back; NULLIFY (p) makes P null; ASSOCIATED(p) asks whether P points
+! anywhere; p => q makes P point where Q does (pointer assignment), while
+! p = q copies Q's value into P's target. A derived type may have
+! components that are pointers to its own type, which is how linked lists
+! and trees are built: a NODE here points to its first operand (KID) and to
+! the next node in its list (NEXT). Fortran 90 has no garbage collector:
+! each node ALLOCATEd must be DEALLOCATEd when it is no longer needed, by
+! FREE_TREE, or the memory is lost (a leak) until the program ends.
 module fctree
   use fckinds
   use fcmessages
@@ -45,6 +67,11 @@ module fctree
     op_mod = 5, op_power = 6, op_neg = 7, op_plus = 8, op_not = 9, &
     op_and = 10, op_or = 11, op_factorial = 12, op_compare = 20
 
+  ! A node: what it is (KIND), its operation (OP, for an operation), the
+  ! column it came from, a name's or call's NAME, a number's value, and its
+  ! operands or arguments (KID, then each one's NEXT). In Fortran 90 a
+  ! component can't be given an initial value (that came in Fortran 95), so
+  ! NEW_NODE sets every component, the pointers to null, as it makes one.
   type node
     integer :: kind
     integer :: op
@@ -168,7 +195,10 @@ contains
     if (present(right)) left%next => right
   end function operation
 
-  ! FREE_TREE frees a tree and the trees after it in its list.
+  ! FREE_TREE frees a tree and the trees after it in its list: each node's
+  ! operands first (recursively), then the node. NEXT is saved before the
+  ! node is deallocated, since the node's components are gone after. P is
+  ! null when it returns.
   recursive subroutine free_tree(p)
     type(node), pointer :: p
     type(node), pointer :: following
@@ -181,7 +211,11 @@ contains
     end do
   end subroutine free_tree
 
-  ! COPY_TREE is a copy of the tree P (but not the trees after it).
+  ! COPY_TREE is a copy of the tree P (but not the trees after it). Q = P
+  ! copies every component, the pointers too, so the copy's KID and NEXT are
+  ! nullified at once and the operands copied one by one: a copy must share
+  ! no node with the original, or freeing one would free part of the other.
+  ! A function whose result is a POINTER is used with =>, as q => copy_tree(p).
   recursive function copy_tree(p) result(q)
     type(node), pointer :: p
     type(node), pointer :: q

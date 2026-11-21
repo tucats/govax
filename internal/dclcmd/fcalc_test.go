@@ -41,22 +41,28 @@ func fcalcFiles(t *testing.T) (map[string][]string, []string) {
 }
 
 // TestFcalcCompiles compiles every fcalc module in order, /G_FLOATING as
-// fcalc must be, with and without /OPTIMIZE: the compiler must say nothing.
+// fcalc must be, with and without /OPTIMIZE, and /CHECK=ALL (whose checks
+// once crashed the compiler on FCSYMBOLS, Phase 111's subtask 3a): the
+// compiler must say nothing.
 func TestFcalcCompiles(t *testing.T) {
 	files, order := fcalcFiles(t)
 
-	for _, optimize := range []bool{false, true} {
+	for _, mode := range []struct {
+		optimize bool
+		check    []string
+	}{{false, nil}, {true, nil}, {true, []string{"ALL"}}} {
 		c, out := newFortranContextSized(t, files, 20000)
 
 		for _, name := range order {
-			err := c.Fortran(FortranOptions{Sources: FortranSources(name), GFloating: true, Optimize: optimize})
+			err := c.Fortran(FortranOptions{Sources: FortranSources(name), GFloating: true, Optimize: mode.optimize,
+				Check: mode.check, CheckGiven: mode.check != nil})
 			if err != nil || out.Len() != 0 {
-				t.Fatalf("/OPTIMIZE %v, FORTRAN %s: err %v, output:\n%s", optimize, name, err, out)
+				t.Fatalf("/OPTIMIZE %v /CHECK=%v, FORTRAN %s: err %v, output:\n%s", mode.optimize, mode.check, name, err, out)
 			}
 		}
 
 		if macro, _ := volumeFile(t, c, "FCALC.MAR"); len(macro) < 1000 {
-			t.Errorf("/OPTIMIZE %v: FCALC.MAR has %d lines", optimize, len(macro))
+			t.Errorf("/OPTIMIZE %v /CHECK=%v: FCALC.MAR has %d lines", mode.optimize, mode.check, len(macro))
 		}
 	}
 }

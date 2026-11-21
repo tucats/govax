@@ -1,0 +1,491 @@
+fcalc> set echo
+fcalc> ! fcalc's built-in functions.
+fcalc> ! Roots, exponentials, and logarithms.
+fcalc> sqrt(2)
+1.41421356237
+fcalc> sqrt(144)
+12
+fcalc> sqrt(-4)
+2i
+fcalc> sqrt(2i)
+1 + 1i
+fcalc> sqrt(-3 - 4i)
+1 - 2i
+fcalc> sqrt(0)
+0
+fcalc> cbrt(27)
+3
+fcalc> cbrt(-8)
+-2
+fcalc> cbrt(2)
+1.25992104989
+fcalc> cbrt(-8i)
+1.73205080757 - 1i
+fcalc> exp(1)
+2.71828182846
+fcalc> exp(-1)
+0.367879441171
+fcalc> exp(i*pi/2)
+1i
+fcalc> exp(700)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> exp(-700)
+0
+fcalc> ln(e)
+1
+fcalc> ln(10)
+2.30258509299
+fcalc> ln(-1)
+3.14159265359i
+fcalc> ln(i)
+1.57079632679i
+fcalc> ln(0)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> log10(1000)
+3
+fcalc> log10(2)
+0.301029995664
+fcalc> log10(-100)
+2 + 1.36437635384i
+fcalc> log2(1024)
+10
+fcalc> log2(0.125)
+-3
+fcalc> log2(10)
+3.32192809489
+fcalc> log(81, 3)
+4
+fcalc> log(8, 1)
+       ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> hypot(3, 4)
+5
+fcalc> hypot(1e300, 1e300)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> ! Trigonometry, in radians.
+fcalc> sin(1)
+0.841470984808
+fcalc> cos(1)
+0.540302305868
+fcalc> tan(1)
+1.55740772465
+fcalc> sin(pi/6)
+0.5
+fcalc> cos(pi/3)
+0.5
+fcalc> sin(0)
+0
+fcalc> cos(0)
+1
+fcalc> sec(0)
+1
+fcalc> csc(pi/2)
+1
+fcalc> cot(pi/4)
+1
+fcalc> cot(0)
+       ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> sin(1e16)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> asin(1)
+1.57079632679
+fcalc> acos(-1)
+3.14159265359
+fcalc> atan(1)
+0.785398163397
+fcalc> asin(0.5)
+0.523598775598
+fcalc> asin(2)
+1.57079632679 - 1.31695789692i
+fcalc> acos(2)
+1.31695789692i
+fcalc> atan(1 + i)
+1.0172219679 + 0.402359478109i
+fcalc> atan(i)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> atan2(1, 1)
+0.785398163397
+fcalc> atan2(-1, -1)
+-2.35619449019
+fcalc> atan2(0, -1)
+3.14159265359
+fcalc> atan2(0, 0)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> sin(i)
+1.17520119364i
+fcalc> cos(1 + i)
+0.833730025131 - 0.988897705763i
+fcalc> sin(1000i)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> ! In degrees: exact at quarter turns, and reduced to a turn first.
+fcalc> set angle degrees
+fcalc> sin(30)
+0.5
+fcalc> cos(60)
+0.5
+fcalc> tan(45)
+1
+fcalc> sin(90)
+1
+fcalc> sin(180)
+0
+fcalc> cos(180)
+-1
+fcalc> sin(270)
+-1
+fcalc> sin(-90)
+-1
+fcalc> cos(450)
+0
+fcalc> sin(3600030)
+0.5
+fcalc> tan(90)
+       ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> sec(90)
+       ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> asin(0.5)
+30
+fcalc> acos(0)
+90
+fcalc> atan(1)
+45
+fcalc> atan2(1, -1)
+135
+fcalc> arg(i)
+90
+fcalc> cis(90)
+1i
+fcalc> polar(2, 180)
+-2
+fcalc> set angle grads
+fcalc> sin(100)
+1
+fcalc> cos(200)
+-1
+fcalc> asin(1)
+100
+fcalc> set angle radians
+fcalc> sin(pi/2)
+1
+fcalc> ! Hyperbolic functions.
+fcalc> sinh(1)
+1.17520119364
+fcalc> cosh(1)
+1.54308063482
+fcalc> tanh(1)
+0.761594155956
+fcalc> tanh(50)
+1
+fcalc> tanh(-50)
+-1
+fcalc> sinh(-2)
+-3.62686040785
+fcalc> cosh(700)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> sinh(i)
+0.841470984808i
+fcalc> cosh(i*pi)
+-1
+fcalc> asinh(1)
+0.88137358702
+fcalc> asinh(-1e-10)
+-1e-10
+fcalc> asinh(1e200)
+461.210165779
+fcalc> acosh(1)
+0
+fcalc> acosh(2)
+1.31695789692
+fcalc> acosh(0.5)
+1.0471975512i
+fcalc> atanh(0.5)
+0.549306144334
+fcalc> atanh(1)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> atanh(2)
+0.549306144334 + 1.57079632679i
+fcalc> ! Complex numbers.
+fcalc> re(3 - 4i)
+3
+fcalc> im(3 - 4i)
+-4
+fcalc> abs(3 - 4i)
+5
+fcalc> abs(-7)
+7
+fcalc> arg(-1)
+3.14159265359
+fcalc> arg(1 + i)
+0.785398163397
+fcalc> arg(0)
+0
+fcalc> conj(3 - 4i)
+3 + 4i
+fcalc> polar(2, pi/2)
+2i
+fcalc> cis(pi)
+-1
+fcalc> cis(i)
+0.367879441171
+fcalc> ! Rounding: each part of a value.
+fcalc> floor(2.5)
+2
+fcalc> floor(-2.5)
+-3
+fcalc> ceil(2.5)
+3
+fcalc> ceil(-2.5)
+-2
+fcalc> round(2.5)
+3
+fcalc> round(-2.5)
+-3
+fcalc> round(2.4999)
+2
+fcalc> trunc(-2.7)
+-2
+fcalc> frac(-2.75)
+-0.75
+fcalc> floor(2.5 - 1.5i)
+2 - 2i
+fcalc> round(1e20)
+1e+20
+fcalc> sign(-3)
+-1
+fcalc> sign(0)
+0
+fcalc> sign(3 + 4i)
+0.6 + 0.8i
+fcalc> ! Whole numbers.
+fcalc> gcd(12, 18)
+6
+fcalc> gcd(-48, 36, 120)
+12
+fcalc> gcd(0, 5)
+5
+fcalc> lcm(4, 6)
+12
+fcalc> lcm(2, 3, 4, 5, 6, 7, 8, 9, 10)
+2520
+fcalc> lcm(0, 5)
+0
+fcalc> lcm(1e6, 999983)
+999983000000
+fcalc> lcm(1e9, 999999937)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> isprime(97)
+1
+fcalc> isprime(91)
+0
+fcalc> isprime(2)
+1
+fcalc> isprime(1)
+0
+fcalc> isprime(-7)
+0
+fcalc> isprime(1000000007)
+1
+fcalc> ncr(5, 2)
+10
+fcalc> ncr(52, 5)
+2598960
+fcalc> ncr(10, 0)
+1
+fcalc> ncr(3, 5)
+0
+fcalc> ncr(1000, 500)
+2.70288240945e+299
+fcalc> ncr(2000, 1000)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> npr(5, 2)
+20
+fcalc> npr(10, 10)
+3628800
+fcalc> gcd(2.5, 5)
+       ^
+%FCALC-E-NOTWHOLE, operand must be a whole number
+fcalc> gcd(1e16, 2)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> ncr(-1, 2)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> isprime(i)
+       ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> ! Special functions.
+fcalc> gamma(5)
+24
+fcalc> gamma(0.5)
+1.77245385091
+fcalc> gamma(2.5)
+1.32934038818
+fcalc> gamma(-0.5)
+-3.54490770181
+fcalc> gamma(-2.5)
+-0.945308720483
+fcalc> gamma(0.1)
+9.51350769867
+fcalc> gamma(171)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> gamma(0)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> gamma(-3)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> lgamma(1)
+0
+fcalc> lgamma(2)
+0
+fcalc> lgamma(10)
+12.8018274801
+fcalc> lgamma(0.5)
+0.572364942925
+fcalc> lgamma(100)
+359.13420537
+fcalc> lgamma(-0.5)
+1.26551212348
+fcalc> lgamma(1e10)
+220258509289
+fcalc> erf(0)
+0
+fcalc> erf(0.5)
+0.520499877813
+fcalc> erf(1)
+0.84270079295
+fcalc> erf(2)
+0.995322265019
+fcalc> erf(-1)
+-0.84270079295
+fcalc> erf(1e-10)
+1.1283791671e-10
+fcalc> erf(10)
+1
+fcalc> erfc(0)
+1
+fcalc> erfc(1)
+0.15729920705
+fcalc> erfc(3)
+0.0000220904969986
+fcalc> erfc(-1)
+1.84270079295
+fcalc> erfc(10)
+2.08848758376e-45
+fcalc> erfc(30)
+0
+fcalc> beta(2, 3)
+0.0833333333333
+fcalc> beta(0.5, 0.5)
+3.14159265359
+fcalc> beta(100, 100)
+2.2087606932e-61
+fcalc> beta(0, 1)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> 2.5!
+3.32335097045
+fcalc> 0.5!
+0.886226925453
+fcalc> (-0.5)!
+1.77245385091
+fcalc> gamma(1+i)
+       ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> ! Lists of any length.
+fcalc> min(3, 1, 2)
+1
+fcalc> max(3, 1, 2)
+3
+fcalc> max(-5)
+-5
+fcalc> sum(1, 2, 3, 4)
+10
+fcalc> sum(1, i, -1)
+1i
+fcalc> prod(1, 2, 3, 4, 5)
+120
+fcalc> prod(1e200, 1e200)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> mean(1, 2, 3, 4)
+2.5
+fcalc> mean(1, i)
+0.5 + 0.5i
+fcalc> median(5, 3, 1, 4, 2)
+3
+fcalc> median(4, 1, 3, 2)
+2.5
+fcalc> median(7, 7, 7, 1)
+7
+fcalc> var(2, 4, 4, 4, 5, 5, 7, 9)
+4.57142857143
+fcalc> stdev(2, 4, 4, 4, 5, 5, 7, 9)
+2.1380899353
+fcalc> var(1e300, -1e300)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> stdev(1e300, -1e300)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> stdev(1e-300, 3e-300)
+1.41421356237e-300
+fcalc> var(5)
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for var
+fcalc> min(1, i)
+       ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> ! Choosing: only the arm chosen is evaluated.
+fcalc> if(1 < 2, 10, 20)
+10
+fcalc> if(0, 1/0, 5)
+5
+fcalc> if(1, 5, 1/0)
+5
+fcalc> if(1, 2)
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for if
+fcalc> ! Random numbers: only their properties can be shown.
+fcalc> floor(rand())
+0
+fcalc> floor(rand(10, 20) / 10)
+1
+fcalc> ceil(rand(6) / 6)
+1
+fcalc> frac(rand(6))
+0
+fcalc> rand(0)
+       ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> ! Arguments and their errors.
+fcalc> sqrt()
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for sqrt
+fcalc> sqrt(1, 2)
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for sqrt
+fcalc> foo(1)
+       ^
+%FCALC-E-NOFUNC, no function named foo
+fcalc> sin(cos(0.5) + ln(2))
+0.999999997783
+fcalc> sqrt(1/0)
+             ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> quit

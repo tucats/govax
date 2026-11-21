@@ -71,6 +71,7 @@ PROGRAMS90 = {
     "cplx16": ["cplx16.f90"],
     "cplx16io": ["cplx16io.f90"],
     "cparts": ["cparts.f90"],
+    "longhost": ["longhost.f90"],
     "openings": ["openings.f90"],
     "declare": ["declare.f90"],
     "inquire": ["inquire.f90"],

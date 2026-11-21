@@ -1,0 +1,213 @@
+fcalc> set echo
+fcalc> ! Functions a user defines: f(params) = expression.
+fcalc> f(x) = x^3 - 2*x - 5
+f(x) = x^3 - 2*x - 5
+fcalc> f(2)
+-1
+fcalc> f(2.1)
+0.061
+fcalc> f(i)
+-5 - 3i
+fcalc> g(x, y) = sqrt(x^2 + y^2)
+g(x, y) = sqrt(x^2 + y^2)
+fcalc> g(3, 4)
+5
+fcalc> g(f(2), 0)
+1
+fcalc> answer() = 42
+answer() = 42
+fcalc> answer()
+42
+fcalc> ! A parameter hides a variable of its name; other names are the variables'.
+fcalc> x = 100
+x = 100
+fcalc> scale = 3
+scale = 3
+fcalc> h(x) = scale * x
+h(x) = scale * x
+fcalc> h(2)
+6
+fcalc> x
+100
+fcalc> scale = 10
+scale = 10
+fcalc> h(2)
+20
+fcalc> ! A function may call others, defined before or after it.
+fcalc> twice(n) = 2 * later(n)
+twice(n) = 2 * later(n)
+fcalc> later(n) = n + 1
+later(n) = n + 1
+fcalc> twice(5)
+12
+fcalc> ! Recursion: IF evaluates only the arm it chooses, so a function can stop.
+fcalc> fact(n) = if(n < 2, 1, n * fact(n - 1))
+fact(n) = if(n < 2, 1, n * fact(n - 1))
+fcalc> fact(5)
+120
+fcalc> fact(20)
+2.43290200818e+18
+fcalc> fact(0)
+1
+fcalc> fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+fcalc> fib(10)
+55
+fcalc> fib(15)
+610
+fcalc> gcdr(a, b) = if(b == 0, abs(a), gcdr(b, a mod b))
+gcdr(a, b) = if(b == 0, abs(a), gcdr(b, a mod b))
+fcalc> gcdr(1071, 462)
+21
+fcalc> even(n) = if(n == 0, 1, odd(n - 1))
+even(n) = if(n == 0, 1, odd(n - 1))
+fcalc> odd(n) = if(n == 0, 0, even(n - 1))
+odd(n) = if(n == 0, 0, even(n - 1))
+fcalc> even(10)
+1
+fcalc> odd(7)
+1
+fcalc> power(b, n) = if(n == 0, 1, b * power(b, n - 1))
+power(b, n) = if(n == 0, 1, b * power(b, n - 1))
+fcalc> power(2, 10)
+1024
+fcalc> power(i, 3)
+-1i
+fcalc> sumto(n) = if(n == 0, 0, n + sumto(n - 1))
+sumto(n) = if(n == 0, 0, n + sumto(n - 1))
+fcalc> sumto(150)
+11325
+fcalc> ! Eight parameters, the most.
+fcalc> mix(a, b, c, d, e2, f2, g2, h2) = a + 2*b + 3*c + 4*d + 5*e2 + 6*f2 + 7*g2 + 8*h2
+mix(a, b, c, d, e2, f2, g2, h2) = a + 2*b + 3*c + 4*d + 5*e2 + 6*f2 + 7*g2 + 8*h2
+fcalc> mix(1, 1, 1, 1, 1, 1, 1, 1)
+36
+fcalc> ! A definition can be replaced; LIST shows each as it was typed.
+fcalc> f(x) = x^2   +   1
+f(x) = x^2   +   1
+fcalc> f(3)
+10
+fcalc> list functions
+answer() = 42
+even(n) = if(n == 0, 1, odd(n - 1))
+f(x) = x^2   +   1
+fact(n) = if(n < 2, 1, n * fact(n - 1))
+fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+g(x, y) = sqrt(x^2 + y^2)
+gcdr(a, b) = if(b == 0, abs(a), gcdr(b, a mod b))
+h(x) = scale * x
+later(n) = n + 1
+mix(a, b, c, d, e2, f2, g2, h2) = a + 2*b + 3*c + 4*d + 5*e2 + 6*f2 + 7*g2 + 8*h2
+odd(n) = if(n == 0, 0, even(n - 1))
+power(b, n) = if(n == 0, 1, b * power(b, n - 1))
+sumto(n) = if(n == 0, 0, n + sumto(n - 1))
+twice(n) = 2 * later(n)
+fcalc> list
+ans = 10
+scale = 10
+x = 100
+answer() = 42
+even(n) = if(n == 0, 1, odd(n - 1))
+f(x) = x^2   +   1
+fact(n) = if(n < 2, 1, n * fact(n - 1))
+fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+g(x, y) = sqrt(x^2 + y^2)
+gcdr(a, b) = if(b == 0, abs(a), gcdr(b, a mod b))
+h(x) = scale * x
+later(n) = n + 1
+mix(a, b, c, d, e2, f2, g2, h2) = a + 2*b + 3*c + 4*d + 5*e2 + 6*f2 + 7*g2 + 8*h2
+odd(n) = if(n == 0, 0, even(n - 1))
+power(b, n) = if(n == 0, 1, b * power(b, n - 1))
+sumto(n) = if(n == 0, 0, n + sumto(n - 1))
+twice(n) = 2 * later(n)
+fcalc> ! A name may be a variable and a function at once; CLEAR forgets both.
+fcalc> later = 7
+later = 7
+fcalc> later(later)
+8
+fcalc> clear later
+fcalc> later
+       ^
+%FCALC-E-UNDEFINED, later is not defined
+fcalc> twice(5)
+       ^
+%FCALC-E-NOFUNC, no function named later
+fcalc> list
+ans = 8
+scale = 10
+x = 100
+answer() = 42
+even(n) = if(n == 0, 1, odd(n - 1))
+f(x) = x^2   +   1
+fact(n) = if(n < 2, 1, n * fact(n - 1))
+fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+g(x, y) = sqrt(x^2 + y^2)
+gcdr(a, b) = if(b == 0, abs(a), gcdr(b, a mod b))
+h(x) = scale * x
+mix(a, b, c, d, e2, f2, g2, h2) = a + 2*b + 3*c + 4*d + 5*e2 + 6*f2 + 7*g2 + 8*h2
+odd(n) = if(n == 0, 0, even(n - 1))
+power(b, n) = if(n == 0, 1, b * power(b, n - 1))
+sumto(n) = if(n == 0, 0, n + sumto(n - 1))
+twice(n) = 2 * later(n)
+fcalc> ! Errors in a function are reported at the call typed.
+fcalc> bad(x) = x / 0
+bad(x) = x / 0
+fcalc> bad(1)
+       ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> uses(x) = x + nosuch
+uses(x) = x + nosuch
+fcalc> uses(1)
+       ^
+%FCALC-E-UNDEFINED, nosuch is not defined
+fcalc> f(1, 2)
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for f
+fcalc> f()
+       ^
+%FCALC-E-ARGCOUNT, wrong number of arguments for f
+fcalc> nofunc(1)
+       ^
+%FCALC-E-NOFUNC, no function named nofunc
+fcalc> loop(n) = loop(n + 1)
+loop(n) = loop(n + 1)
+fcalc> loop(1)
+       ^
+%FCALC-E-RECURSION, functions call each other too deeply
+fcalc> sumto(250)
+       ^
+%FCALC-E-RECURSION, functions call each other too deeply
+fcalc> fact(170)
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> ! Errors in definitions.
+fcalc> sin(x) = x
+       ^
+%FCALC-E-BUILTIN, sin is a built-in function
+fcalc> pi(x) = x
+       ^
+%FCALC-E-CONSTANT, pi is a constant
+fcalc> k(pi) = pi
+         ^
+%FCALC-E-CONSTANT, pi is a constant
+fcalc> k(x, x) = x
+            ^
+%FCALC-E-DUPPARAM, x is already a parameter
+fcalc> k(a, b, c, d, e2, f2, g2, h2, j2) = 0
+                                     ^
+%FCALC-E-PARAMS, too many parameters
+fcalc> k(x) = x +
+                 ^
+%FCALC-E-OPERAND, operand expected
+fcalc> k(x) = (x
+                ^
+%FCALC-E-RPAREN, missing right parenthesis
+fcalc> or(x) = x
+       ^
+%FCALC-E-RESERVED, or is a reserved word
+fcalc> k(x) = x
+k(x) = x
+fcalc> clear all
+fcalc> list
+ans = 0
+fcalc> quit
