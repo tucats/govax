@@ -783,6 +783,7 @@ func (ev *evaluator) arrayBounds(e *ast.Apply, x ast.Expr) (lower, upper []int, 
 	if n, ok := x.(*ast.Name); ok {
 		if s := ev.a.scope.find(n.Name); s != nil && (s.Class == Array || s.ArrayValue != nil) {
 			ev.a.note(&s.refs, n.Pos, RefUsed)
+			ev.a.noteInquiredAt(n.Pos)
 
 			for _, d := range s.Dims {
 				if !d.known() {

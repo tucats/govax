@@ -166,16 +166,22 @@ func (a *analyzer) inquiryArgType(x ast.Expr) Type {
 		return t
 	}
 
+	var e Expr
+
 	switch x := a.substringForm(x).(type) {
 	case *ast.Name:
-		return a.name(x, true).Type()
+		e = a.name(x, true)
 	case *ast.Apply:
-		return a.apply(x).Type()
+		e = a.apply(x)
 	case *ast.FieldRef:
-		return a.field(x, true).Type()
+		e = a.field(x, true)
+	default:
+		return a.value(x).Type()
 	}
 
-	return a.value(x).Type()
+	a.noteInquired(e)
+
+	return e.Type()
 }
 
 // literalType is the type of an INTEGER or LOGICAL constant written without a

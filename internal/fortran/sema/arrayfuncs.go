@@ -86,6 +86,8 @@ func (a *analyzer) arrayFunction(e *ast.Apply, args []ast.Expr) Expr {
 			return a.bad(e.Pos)
 		}
 
+		a.noteInquired(f.Array)
+
 		f.T = IntegerType
 
 		if e.Name == "SHAPE" || arg(1) == nil {

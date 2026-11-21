@@ -3,8 +3,9 @@
 ! The matrix product, the linear solve (A \ B), the inverse and the
 ! determinant, a matrix's powers, rank, norms, and eigenvalues, and the
 ! functions that make and reshape arrays (eye, zeros, linspace, reshape,
-! diag, ...), as a table like FCFUNCS': a row for each function, and a CASE
-! in APPLY_MATRIX.
+! diag, ...), and the polynomials' roots, poly, and polyval (module FCPOLY
+! computes them), as a table like FCFUNCS': a row for each function, and a
+! CASE in APPLY_MATRIX.
 !
 ! Nothing here may trap, as nothing in FCVALUES may (module FCKINDS says
 ! why). Three ways of keeping to that are used, each where it fits:
@@ -39,6 +40,7 @@ module fcmatrix
   use fcvalues
   use fcarrays
   use fcfuncs, only: builtin, many
+  use fcpoly
   implicit none
   private
 
@@ -46,7 +48,7 @@ module fcmatrix
   public :: matrix_index, matrix_arity_ok, apply_matrix
   public :: matrix_product, solve, right_divide, matrix_power, transposed
 
-  type(builtin), parameter :: functions(23) = (/ &
+  type(builtin), parameter :: functions(26) = (/ &
     builtin('size', 1, 2), builtin('rows', 1, 1), builtin('cols', 1, 1), &
     builtin('numel', 1, 1), builtin('transpose', 1, 1), builtin('trace', 1, 1), &
     builtin('det', 1, 1), builtin('inv', 1, 1), builtin('rank', 1, 1), &
@@ -54,7 +56,8 @@ module fcmatrix
     builtin('kron', 2, 2), builtin('reshape', 3, 3), builtin('diag', 1, 1), &
     builtin('eye', 1, 1), builtin('zeros', 1, 2), builtin('ones', 1, 2), &
     builtin('linspace', 3, 3), builtin('range', 2, 3), builtin('cumsum', 1, 1), &
-    builtin('sort', 1, 1), builtin('eig', 1, 1) /)
+    builtin('sort', 1, 1), builtin('eig', 1, 1), builtin('roots', 1, 1), &
+    builtin('poly', 1, 1), builtin('polyval', 2, 2) /)
 
   ! The safe band for MATMUL and DOT_PRODUCT.
   real(rk), parameter :: band_low = 1.0e-100_rk, band_high = 1.0e100_rk
@@ -97,6 +100,7 @@ contains
     integer, intent(in) :: id
     type(quantity), intent(in) :: args(:)
     type(quantity) :: q
+    type(quantity) :: roots
     integer :: k
 
     select case (functions(id)%name)
@@ -153,6 +157,19 @@ contains
       q = cumulative(args(1))
     case ('sort')
       q = sorted(args(1))
+    case ('roots')
+      ! The roots in BEFORE's order, as eig's, so the order in which the
+      ! iteration found them doesn't show.
+      q = polynomial_roots(args(1))
+      if (is_array(q)) then
+        roots = sorted(q)
+        call release(q)
+        q = roots
+      end if
+    case ('poly')
+      q = polynomial_of(args(1))
+    case ('polyval')
+      q = polynomial_value(args(1), args(2))
     case default
       q = eigenvalues(args(1))
     end select

@@ -109,6 +109,11 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		}
 	}
 
+	if forms[0].how == "LEN" {
+		// LEN(C) asks C's length, not its value.
+		a.noteInquired(args[0])
+	}
+
 	// An elemental function of arrays is an array of their shape, a scalar
 	// argument standing for each element (Fortran 90's 13.2.1).
 	var shape Shape

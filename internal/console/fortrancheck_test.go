@@ -296,6 +296,24 @@ var checkPrograms = []checkProgram{
       END`,
 	},
 	{
+		// Under /F90 an upper bound below the lower makes an array of no
+		// elements, which is no error (Phase 111, subtask 5b: fcalc's FCEVAL
+		// makes ARGS(N) for a call with no arguments, N 0).
+		name: "ADJZERO", qualifier: "/CHECK=BOUNDS", checked: "SIZE 0 AFTER", plain: "SIZE 0 AFTER",
+		refused: "ADJARRDIM",
+		source: `
+      OPTIONS /F90
+      INTEGER A(5)
+      CALL SUB(A, 0)
+      PRINT '(1X, A)', 'AFTER'
+      END
+      OPTIONS /F90
+      SUBROUTINE SUB(X, N)
+      INTEGER N, X(N)
+      WRITE (*, '(1X, A, I2)', ADVANCE='NO') 'SIZE', SIZE(X)
+      END`,
+	},
+	{
 		// An assumed-size array has no upper bound to check, nor a dummy's (1).
 		name: "ASSUMED", qualifier: "/CHECK=BOUNDS", checked: "FINE", plain: "FINE",
 		refused: "SUBRNG",

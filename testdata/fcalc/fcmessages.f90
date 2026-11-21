@@ -42,7 +42,8 @@ module fcmessages
     e_reserved = 21, e_argcount = 22, e_builtin = 23, e_recursion = 24, &
     e_params = 25, e_dupparam = 26, e_notconform = 27, e_notsquare = 28, &
     e_singular = 29, e_index = 30, e_notscalar = 31, e_noconverge = 32, &
-    e_badrange = 33, e_toobig = 34, e_rbracket = 35, e_notvector = 36
+    e_badrange = 33, e_toobig = 34, e_rbracket = 35, e_notvector = 36, &
+    e_keyword = 37, e_noroot = 38, e_samesign = 39, w_inaccurate = 40
 
   ! Each message: its severity, its identifier, and its text, in which !AS
   ! stands for the text the error names (VMS's notation for "a string
@@ -58,8 +59,9 @@ module fcmessages
   ! constructor, (/ ... /), whose elements are structure constructors,
   ! message('E', 'BADCHAR', ...), each giving the components in order. A
   ! shorter text is padded with blanks to the component's length. & at a
-  ! line's end continues the statement on the next line.
-  type(message), parameter :: messages(36) = (/ &
+  ! line's end continues the statement on the next line; a statement may
+  ! have at most 39 continuation lines, so one line near the end holds two.
+  type(message), parameter :: messages(40) = (/ &
     message('E', 'BADCHAR', 'invalid character'), &
     message('E', 'BADNUMBER', 'invalid number'), &
     message('E', 'OPERAND', 'operand expected'), &
@@ -95,7 +97,10 @@ module fcmessages
     message('E', 'BADRANGE', 'a range is allowed only in an index'), &
     message('E', 'TOOBIG', 'array is too large'), &
     message('E', 'RBRACKET', 'missing right bracket'), &
-    message('E', 'NOTVECTOR', 'operand must be a vector') /)
+    message('E', 'NOTVECTOR', 'operand must be a vector'), &
+    message('E', 'KEYWORD', '!AS expected'), message('E', 'NOROOT', 'no root was found'), &
+    message('E', 'SAMESIGN', 'no change of sign between the bounds'), &
+    message('W', 'INACCURATE', 'error may be as large as !AS') /)
 
   ! The error not yet reported: its code (0 for none), column (0 for none),
   ! and text. SAVE keeps a module variable's value from one call to the

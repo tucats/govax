@@ -213,7 +213,7 @@ func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
 
 	// A0 is the first element's address, less the element number the lowest
 	// subscripts would have counting from all zeros.
-	if l.unit.Checks.Bounds {
+	if l.unit.Checks.Bounds && !l.unit.F90 {
 		l.checkArrayBounds(s, c)
 	}
 

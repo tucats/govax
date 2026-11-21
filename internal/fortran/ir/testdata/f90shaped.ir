@@ -228,11 +228,6 @@ B1:
   assign $B1+4 = addr(@X)
   assign $B1+32 = @M
   assign $B1+20 = $B1+32
-  branch lt.L($B1+32, 1) B2 B3
-B2:
-  call FTN$ADJARRDIM()
-  noreturn
-B3:
   assign $B1+16 = addr(@X-4[neg.L($B1+20)])
   assign $B1+12 = mul.L(mul.L(4, $B1+20), 3)
   assign H+4 = 0
@@ -312,9 +307,9 @@ B3:
   assign $D2+12 = 24
   call SHAPED(ref H, ref $K3, ref $D2, val 0)
   ; line 36
-  branch ne.L(H+4, 0) B4 B5
-B4:  ; deallocates H at the return
+  branch ne.L(H+4, 0) B2 B3
+B2:  ; deallocates H at the return
   call FTN$DEALLOCATE(ref H, val 0)
-  jump B5
-B5:
+  jump B3
+B3:
   return

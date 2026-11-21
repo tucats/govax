@@ -218,6 +218,11 @@ type Unit struct {
 	// with, and PRESENT's argument (intent.go's reportIntentOut).
 	notRead map[Reference]bool
 
+	// inquired are the mentions that ask only about a name's type, kind,
+	// length, or shape (SIZE(V), KIND(A), LEN(C)): neither a use of its value
+	// nor a definition (intent.go's reportIntentOut).
+	inquired map[Reference]bool
+
 	// readsToo are the mentions that give a name a value after reading it: RAN's
 	// and RANDOM's seed, MVBITS's TO (warnings.go's neverRead).
 	readsToo map[Reference]bool

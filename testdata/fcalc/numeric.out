@@ -1,0 +1,251 @@
+fcalc> set echo
+fcalc> ! The numerical commands: SOLVE, INTEGRATE, DIFF, and ROOTS.
+fcalc> ! SOLVE expr [= expr] FOR x [FROM a [TO b]] finds a root: from one point by
+fcalc> ! the secant method, between two where the expression changes sign by
+fcalc> ! Brent's method.
+fcalc> solve x^2 - 2 for x from 1
+x = 1.41421356237
+fcalc> solve x^2 = 2 for x from -1
+x = -1.41421356237
+fcalc> solve x^2 - 2 for x
+x = 1.41421356237
+fcalc> solve x^3 = 2*x + 5 for x from 2 to 3
+x = 2.09455148154
+fcalc> solve cos(t) = t for t from 0 to 1
+t = 0.739085133215
+fcalc> solve ln(x) for x from 0.5 to 3
+x = 1
+fcalc> solve sin(x) for x from -1 to 2
+x = 0
+fcalc> solve tan(x) - x for x from 4 to 4.6
+x = 4.49340945791
+fcalc> ! From a complex start the secant method finds complex roots.
+fcalc> solve x^2 + 1 for x from i
+x = 1i
+fcalc> solve x^2 + 2*x + 5 for x from -1 - i
+x = -1 - 2i
+fcalc> ! The answer is ANS; the variable named after FOR isn't changed, and stands
+fcalc> ! only for the point the method tries, hiding a variable of its name.
+fcalc> x = 5
+x = 5
+fcalc> solve x^2 - 9 for x from 1
+x = 3
+fcalc> ans
+3
+fcalc> x
+5
+fcalc> ! Variables and users' functions in the expression.
+fcalc> m = 1.5
+m = 1.5
+fcalc> solve k - 0.5*sin(k) = m for k from m
+k = 1.96218928758
+fcalc> f(x) = x^3 - x - 1
+f(x) = x^3 - x - 1
+fcalc> solve f(y) for y from 1 to 2
+y = 1.32471795724
+fcalc> solve f(y) for y from 1
+y = 1.32471795724
+fcalc> ! Errors.
+fcalc> solve x^2 + 1 for x from 1 to 2
+                           ^
+%FCALC-E-SAMESIGN, no change of sign between the bounds
+fcalc> solve x^2 - 2 for x from i to 2
+                                ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> solve sqrt(x) - 2i for x from -1 to 1
+             ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> solve 1 for x
+             ^
+%FCALC-E-NOROOT, no root was found
+fcalc> solve 1/x - 1 for x
+              ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> solve [x, 1] for x from 1
+             ^
+%FCALC-E-NOTSCALAR, operand must be a scalar
+fcalc> solve x^2 - 2 x from 1
+                     ^
+%FCALC-E-KEYWORD, FOR expected
+fcalc> solve x^2 - 2 for 3 from 1
+                         ^
+%FCALC-E-NAMEREQ, name expected
+fcalc> solve e - 2 for e from 1
+                       ^
+%FCALC-E-CONSTANT, e is a constant
+fcalc> solve x - 1 for x from 1 too
+                                ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> solve = 3
+       ^
+%FCALC-E-RESERVED, solve is a reserved word
+fcalc> ! INTEGRATE expr FOR x FROM a TO b, by adaptive Gauss-Kronrod quadrature.
+fcalc> integrate x^2 for x from 0 to 1
+0.333333333333
+fcalc> integrate x^2 for x from 1 to 0
+-0.333333333333
+fcalc> integrate x^2 for x from 2 to 2
+0
+fcalc> integrate sin(x) for x from 0 to pi
+2
+fcalc> integrate sin(x) for x from -1 to 1
+0
+fcalc> integrate 1/(1 + x^2) for x from 0 to 1
+0.785398163397
+fcalc> 4*ans
+3.14159265359
+fcalc> integrate exp(-x^2) for x from -3 to 3
+1.77241469652
+fcalc> integrate ln(t) for t from 1 to e
+1
+fcalc> integrate sqrt(1 - x^2) for x from -1 to 1
+1.57079632679
+fcalc> integrate exp(i*x) for x from 0 to pi
+2i
+fcalc> integrate f(x) for x from 0 to 1
+-1.25
+fcalc> ! The pieces crowd where the function is hard: at a jump, and at an end
+fcalc> ! where it is infinite, which the rule never evaluates.
+fcalc> integrate if(x < 1/3, 0, 1) for x from 0 to 1
+0.666666666667
+fcalc> integrate 1/sqrt(x) for x from 0 to 1
+2
+fcalc> integrate ln(x) for x from 0 to 1
+-1
+fcalc> ! When the pieces run out first, the warning says how far off the answer may
+fcalc> ! be (this one is 10).
+fcalc> integrate x^-0.9 for x from 0 to 1
+9.99999497967
+                 ^
+%FCALC-W-INACCURATE, error may be as large as 1e-6
+fcalc> ! Errors.
+fcalc> integrate 1/x for x from -1 to 1
+                  ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> integrate x for x from 0 to i
+                                   ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> integrate x for x to 1
+                         ^
+%FCALC-E-KEYWORD, FROM expected
+fcalc> integrate [x; 2*x] for x from 0 to 1
+                 ^
+%FCALC-E-NOTSCALAR, operand must be a scalar
+fcalc> ! DIFF expr FOR x AT a, the derivative by Ridders' method.
+fcalc> diff x^3 for x at 2
+12
+fcalc> diff sin(x) for x at 1
+0.540302305868
+fcalc> cos(1)
+0.540302305868
+fcalc> diff cos(x) for x at 0
+0
+fcalc> diff exp(x) for x at 1
+2.71828182846
+fcalc> diff ln(x) for x at 2
+0.5
+fcalc> diff x^2 for x at 1 + i
+2 + 2i
+fcalc> diff f(x) for x at 2
+11
+fcalc> diff (x + 1)^2 for x at 3
+8
+fcalc> diff if(x < 0, 0, 1) for x at 0
+9.08333333333
+            ^
+%FCALC-W-INACCURATE, error may be as large as 4.1
+fcalc> diff x for x on 1
+                    ^
+%FCALC-E-KEYWORD, AT expected
+fcalc> ! ROOTS c1, c2, ..., cn: every root of the polynomial, the coefficients the
+fcalc> ! highest power's first; the roots in order, as sort gives them, kept as ANS.
+fcalc> roots 1, -3, 2
+  1
+  2
+fcalc> roots 1, -6, 11, -6
+  1
+  2
+  3
+fcalc> roots 1, 0, 1
+  -1i
+   1i
+fcalc> roots 1, 2, 5
+  -1 - 2i
+  -1 + 2i
+fcalc> roots 1, -2 - i, 2i
+  1i
+   2
+fcalc> roots 0, 2, -1
+0.5
+fcalc> roots 1, 0, 0, 0, 0, -1
+  -0.809016994375 - 0.587785252292i
+  -0.809016994375 + 0.587785252292i
+   0.309016994375 - 0.951056516295i
+   0.309016994375 + 0.951056516295i
+                                  1
+fcalc> roots 1, -1, 0, 0
+  0
+  0
+  1
+fcalc> ! A vector of coefficients, or several joined, and roots() as a function.
+fcalc> p = [1, 0, -7, 6]
+p =
+  1  0  -7  6
+fcalc> roots p
+  -3
+   1
+   2
+fcalc> roots [1, 0], -7, 6
+  -3
+   1
+   2
+fcalc> roots(p)
+  -3
+   1
+   2
+fcalc> ! poly(r) is the polynomial whose roots are r, and polyval(p, x) its value.
+fcalc> poly([1, 2, 3])
+  1  -6  11  -6
+fcalc> poly(roots(p))
+  1  0  -7  6
+fcalc> poly(2)
+  1  -2
+fcalc> polyval(p, 2)
+0
+fcalc> polyval(p, [-3, 0, 1, 2])
+  0  6  0  0
+fcalc> w = range(1, 6)
+w =
+  1  2  3  4  5  6
+fcalc> roots(poly(w))
+  1
+  2
+  3
+  4
+  5
+  6
+fcalc> ! A double root has only about half the digits: shown to 6, it is 1.
+fcalc> set digits 6
+fcalc> roots 1, -2, 1
+  1
+  1
+fcalc> set digits 12
+fcalc> ! Errors.
+fcalc> roots 5
+             ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> roots 0, 0, 3
+             ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> roots [1, 2; 3, 4]
+             ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> roots 1, 2 x
+                  ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> ! Nothing is left in use.
+fcalc> clear all
+fcalc> show memory
+arrays in use: 0
+tree nodes in use: 0
+fcalc> 

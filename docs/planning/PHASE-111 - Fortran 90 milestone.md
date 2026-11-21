@@ -106,7 +106,7 @@ fcalc reports.
 | Command | What it does |
 |---|---|
 | `SOLVE expr [= expr] FOR x [FROM a [TO b]]` | a root: the secant method from a, or bisection then Brent's method on a bracket |
-| `INTEGRATE expr FOR x FROM a TO b` | adaptive Simpson's rule, with an error estimate |
+| `INTEGRATE expr FOR x FROM a TO b` | adaptive Gauss-Kronrod quadrature (adaptive Simpson's rule until subtask 5), with an error estimate |
 | `DIFF expr FOR x AT a` | the derivative by Richardson extrapolation |
 | `ROOTS c0, c1, ..., cn` | every (complex) root of a polynomial, by Durand–Kerner, polished |
 | `TABLE expr[, expr...] FOR x FROM a TO b [STEP s]` | a table of values in columns |
@@ -252,7 +252,13 @@ As revised by the author's answers (below), with vectors and matrices added:
      `testdata/fortran90/longhost.f90`. (done 2026-11-20)
 4. **Vectors and matrices** (A.8): the values, literals, indexing, operators,
    `fcmatrix`'s functions; `vectors`, `matrices`. (done 2026-11-20)
-5. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`.
+5. **Numerics**: SOLVE, INTEGRATE, DIFF, ROOTS; `numeric`. (done 2026-11-20)
+   - 5a. SIZE, LBOUND, UBOUND, SHAPE, LEN, KIND, and the other inquiries of
+     an INTENT(OUT) dummy were INTENTOUTREF; `TestIntent`'s cases and
+     `testdata/fortran90/inqout.f90`. (done 2026-11-20)
+   - 5b. Under `/F90` an adjustable array of no elements (ARGS(N), N 0) was
+     ADJARRDIM under `/CHECK=BOUNDS`; `TestFortranCheck`'s ADJZERO.
+     (done 2026-11-20)
 6. **Display and settings**: SET and SHOW, the formats and bases; `display`.
 7. **TABLE and PLOT**; `plot`.
 8. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
@@ -531,4 +537,71 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   - **Left for later:** A.8's "Elsewhere": ROOTS of a vector and `poly(r)`
     (subtask 5), `PLOT v`, `PLOT y VERSUS x`, and TABLE of vectors (subtask
     7), SAVE writing arrays as literals (subtask 8; LIST already does).
-
+- **2026-11-20:** Subtask 5, numerics, in two new modules: `fcpoly.f90`
+  (after FCFUNCS: roots by Durand-Kerner, each root polished by two of
+  Newton's steps kept only if they shrink |p|, zero roots taken out first;
+  poly; polyval) and `fcnumeric.f90` (after FCEVAL: SOLVE, INTEGRATE, DIFF,
+  and the ROOTS command). FCEVAL's `EVALUATE_WITH` evaluates a tree with one
+  name bound in a frame of its own, whose column 0 reports an error at the
+  node it arose in; `roots`, `poly`, and `polyval` are FCMATRIX's functions,
+  so `roots(p)` works in any expression and is sorted as `eig` is; four
+  messages (KEYWORD, NOROOT, SAMESIGN, and the warning INACCURATE); SOLVE,
+  INTEGRATE, and DIFF reserved words, so `DIFF (X + 1)^2 FOR X AT 3` reads as
+  the command. The `numeric` script, worked in Python (Newton's method, `erf`,
+  a model of Ridders' table), is printed alike by gfortran and by govax in
+  every mode subtask 4 ran (`/[NO]OPTIMIZE`, `/RECURSIVE`, `/CHECK=ALL`,
+  `/NOOPTIMIZE/DEBUG=ALL`, paging on), as are the six earlier scripts.
+  Decisions made here, against A.1 or beyond it:
+  - **INTEGRATE by Gauss-Kronrod**, not A.1's adaptive Simpson's rule.
+    Simpson's rule with Richardson's correction took 2,000 to 12,000 values
+    for ordinary integrals to 13 digits (5,385 for `exp(-x^2)` from -3 to 3,
+    11,961 for `sqrt(1 - x^2)` from -1 to 1), some 10 seconds of the emulated
+    VAX for three integrals. The 7-15 point rule, bisecting the piece with the
+    largest error (QUADPACK's QAG), takes 15 to 225 values for the same
+    smooth integrals and 1,485 for the circle; it never evaluates the ends,
+    so `1/sqrt(x)` and `ln(x)` from 0 are integrated (Simpson's rule
+    evaluates them, DIVZERO); and an interior singularity Simpson's model met
+    exactly at 1/3 is no longer a test case, since whether a point lands on
+    it is the machine's rounding. The tolerance is 10^-(DIGITS+1) of the
+    integral of |f|, no piece's error below 50 EPS of its own; at most 200
+    pieces, then the warning.
+  - **SOLVE's start** is 0 when FROM isn't given; the secant method's second
+    point is 0.001 times max(|a|, 1) on. A complex start finds a complex root.
+    The root is shown `x = root` and kept as ANS; the variable named after FOR
+    is unchanged (it is only the frame's parameter). Brent's method sets a root
+    within a rounding error of the bracket's ends' size to 0, as INTEGRATE's
+    and DIFF's answers set parts below their own error estimate to 0.
+  - **The warning** INACCURATE gives the error estimate to two digits, after
+    the answer. DIFF warns when its estimate is past SQRT(EPS) of the
+    derivative (or of 1).
+  - **Polynomials' coefficients** are the highest power's first, as MATLAB's
+    and Octave's, so `poly(roots(p))` is p. A double root has about half the
+    digits (the script shows it with SET DIGITS 6); the iteration stops when
+    its steps stop shrinking, if they are below 1E-3.
+  - **ROOTS's arguments** are joined, each a scalar or a vector (NOTVECTOR for
+    a matrix); `roots(p)` takes one vector.
+  Two compiler bugs found, 5a and 5b. And subtask 3's and 4's "every mode" had
+  missed one: under `/CHECK=ALL` the `functions` script stopped at `rand()` with
+  ADJARRDIM (5b), and the rest of its input ran on in the next script. Each
+  mode's run is now held to every script's whole output (in the tree from
+  subtask 9's milestone test).
+- **2026-11-20:** Subtask 5a: an inquiry function's argument (SIZE, LBOUND,
+  UBOUND, SHAPE, LEN, and the type inquiries KIND, DIGITS, HUGE, ...) asks
+  about a dummy's shape, length, or type, not its value, so an INTENT(OUT)
+  dummy may be one before it is given a value (FCPOLY's `N = SIZE(Z)`). Such a
+  mention is noted `inquired` (`sema`'s `noteInquired`, from `arrayFunction`,
+  the `inquiryArgType` of the INQ functions, LEN, and the constant evaluator's
+  `arrayBounds`) and is neither a use nor a definition to
+  `reportIntentOut`, so a use after it is still INTENTOUTREF. Held by
+  `TestIntent`'s five new cases and `testdata/fortran90/inqout.f90` (also in
+  `compare.py`). The corpus README now has rows for `cparts.f90` and
+  `intentread.f90`, which subtasks 2a and 2b left out.
+- **2026-11-20:** Subtask 5b: under `/F90` an upper bound below the lower makes
+  an array of no elements (the standard's 5.1.2.4.1), so `/CHECK=BOUNDS` no
+  longer calls FTN$ADJARRDIM for an adjustable array of a `/F90` unit
+  (`ir`'s `checkArrayBounds`); FCEVAL's `ARGS(N)` for `rand()`, N 0, stopped
+  fcalc. `/NOF90` keeps VAX FORTRAN's check (ADJDIM, ADJENTRY). Held by
+  `TestFortranCheck`'s ADJZERO; the golden `f90shaped` loses its check. Left
+  for later: an extent below zero (X(N), N -3) isn't made zero (the
+  descriptor's extent is still U - L + 1); nothing in fcalc or the corpus makes
+  one.

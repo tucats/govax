@@ -98,6 +98,15 @@ func TestIntent(t *testing.T) {
 			"INTENTOUTREF: V is an INTENT(OUT) dummy argument, used here before any statement gives it a value"},
 		{"OUT and PRESENT", []string{"subroutine s(a)", "real, intent(out), optional :: a", "if (present(a)) a = 1",
 			"end subroutine"}, ""},
+		// An inquiry of a dummy's shape, length, or kind isn't a use of its value
+		// (Phase 111, subtask 5a), nor does it give it one.
+		{"OUT's size asked", unit("intent(out) v", "n = size(v)", "v = 0"), ""},
+		{"OUT's bounds asked", unit("intent(out) v", "n = lbound(v, 1) + ubound(v, 1) + size(shape(v))", "v = 0"), ""},
+		{"OUT's kind asked", unit("intent(out) a", "n = kind(a) + digits(a)", "x = huge(a) + epsilon(a)", "a = 1"), ""},
+		{"OUT's length asked", []string{"subroutine s(c)", "character(len=*), intent(out) :: c", "n = len(c)", "c = 'x'",
+			"end subroutine"}, ""},
+		{"OUT used after its size", unit("intent(out) v", "n = size(v)", "print *, v(1)", "v = 0"),
+			"INTENTOUTREF: V is an INTENT(OUT) dummy argument, used here before any statement gives it a value"},
 		{"OUT set by an internal procedure", []string{"subroutine s(a)", "real, intent(out) :: a", "call t",
 			"print *, a", "contains", "subroutine t", "a = 1", "end subroutine", "end subroutine"}, ""},
 	}

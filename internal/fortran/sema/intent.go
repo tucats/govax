@@ -81,6 +81,37 @@ func (a *analyzer) noteNotRead(pos diag.Position) {
 	a.unit.notRead[Reference{pos.Line, pos.Column, pos.Serial, RefUsed}] = true
 }
 
+// noteInquired notes that the mention of e, a name or a part of one, is an
+// inquiry function's argument, asking only about its type, kind, length, or
+// shape: no use of its value, which may still be undefined (the standard's
+// 7.1.6.1 allows an inquiry of such an object in a specification expression,
+// and 14.7.5 says what makes a variable defined), and no definition either.
+// So SIZE(V) of an INTENT(OUT) V says nothing, and a use of V after it still
+// may (Phase 111, subtask 5a).
+func (a *analyzer) noteInquired(e Expr) {
+	var pos diag.Position
+
+	switch e := e.(type) {
+	case *Var, *Elem, *ArrayRef, *Section, *Substring:
+		pos = e.Position()
+	case *FieldRef:
+		pos = e.NamePos
+	default:
+		return
+	}
+
+	a.noteInquiredAt(pos)
+}
+
+// noteInquiredAt is noteInquired for the mention at pos.
+func (a *analyzer) noteInquiredAt(pos diag.Position) {
+	if a.unit.inquired == nil {
+		a.unit.inquired = map[Reference]bool{}
+	}
+
+	a.unit.inquired[Reference{pos.Line, pos.Column, pos.Serial, RefUsed}] = true
+}
+
 // noteReadsToo notes that the place e, which the statement gives a value
 // (noteAssigned), it reads first: the mention noteAssigned made.
 func (a *analyzer) noteReadsToo(e Expr) {
@@ -166,7 +197,8 @@ func (a *analyzer) intentOut(s *Symbol, limit int) {
 	var use *Reference
 
 	for i, r := range s.refs {
-		if r.Kind != RefUsed || a.unit.notRead[at(r)] || stronger[at(r)] || first >= 0 && r.Serial >= first {
+		if r.Kind != RefUsed || a.unit.notRead[at(r)] || a.unit.inquired[at(r)] || stronger[at(r)] ||
+			first >= 0 && r.Serial >= first {
 			continue
 		}
 

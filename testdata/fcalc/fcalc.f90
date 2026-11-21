@@ -26,6 +26,7 @@ program fcalc
   use fceval
   use fcsymbols
   use fcfuncs
+  use fcnumeric
   implicit none
 
   character(len=line_length + 1) :: line
@@ -131,6 +132,26 @@ contains
         return
       case ('show')
         call show_command()
+        return
+      case ('roots')
+        call roots_command()
+        return
+      end select
+    end if
+
+    ! SOLVE, INTEGRATE, and DIFF are reserved words, so they may be followed
+    ! by a parenthesis: DIFF (X + 1)^2 FOR X AT 1.
+    if (first%kind == t_name .and. .not. (second%kind == t_operator .and. &
+        second%text == '=')) then
+      select case (first%text)
+      case ('solve')
+        call solve_command()
+        return
+      case ('integrate')
+        call integrate_command()
+        return
+      case ('diff')
+        call diff_command()
         return
       end select
     end if
@@ -362,7 +383,8 @@ contains
   logical function is_reserved(name)
     character(len=*), intent(in) :: name
 
-    is_reserved = name == 'or' .or. name == 'and' .or. name == 'not' .or. name == 'mod'
+    is_reserved = name == 'or' .or. name == 'and' .or. name == 'not' .or. name == 'mod' .or. &
+      name == 'solve' .or. name == 'integrate' .or. name == 'diff'
   end function is_reserved
 
   ! LIST [VARIABLES | FUNCTIONS | ALL]: with no word, ALL, the variables

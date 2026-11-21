@@ -22,8 +22,10 @@ Each file is a module but the last, the main program, compiled in the order
 | `fctree.f90` | `TYPE NODE`, a tree of pointers, and the recursive descent parser |
 | `fcsymbols.f90` | the variables and the user's functions, each a binary search tree, and the constants |
 | `fcfuncs.f90` | the built-in functions: their table, and each function, real and complex, guarded so nothing traps |
+| `fcpoly.f90` | polynomials as vectors of coefficients: roots (Durand-Kerner, polished by Newton's method), poly, polyval |
 | `fcmatrix.f90` | the matrix product, LU (solve, inverse, determinant), powers, rank, norms, eigenvalues (Hessenberg and shifted QR), and the functions that make and rearrange arrays |
 | `fceval.f90` | the evaluator: element-by-element operations, matrix literals, indexes, and a frame of parameters for each call of a user's function |
+| `fcnumeric.f90` | the numerical commands: SOLVE (the secant method, or Brent's on a bracket), INTEGRATE (adaptive Gauss-Kronrod quadrature), DIFF (Ridders' extrapolation), and ROOTS |
 | `fcalc.f90` | the main program: the prompt, the commands, assignment, function definitions |
 
 The sources are commented for a reader learning Fortran 90 and numerical
@@ -31,7 +33,9 @@ programming: each Fortran 90 feature is explained where it is first used,
 and each numerical method where it is applied (guarding against overflow
 and underflow, principal branches, cancellation, series and continued
 fractions, Lanczos's gamma function, LU with partial pivoting, Householder
-reflections and the shifted QR iteration).
+reflections and the shifted QR iteration, the Durand-Kerner method, the
+secant and Brent's methods, Gauss-Kronrod quadrature, and Richardson's
+extrapolation).
 
 fcalc must be compiled `/G_FLOATING`: no kind of D_floating has the range of
 300 `SELECTED_REAL_KIND(15, 300)` asks for. On govax, on a volume holding the
@@ -43,7 +47,8 @@ $ FORTRAN/G_FLOATING FCKINDS
   ... each file in compiles.txt's order ...
 $ MACRO FCPLATFORM
   ... each file ...
-$ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCLEXER,FCTREE,FCSYMBOLS,FCFUNCS,FCEVAL
+$ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCARRAYS,FCLEXER,FCTREE,-
+       FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,FCNUMERIC
 $ RUN FCALC
 ```
 
@@ -68,13 +73,16 @@ prompt, as a terminal does.
 | `userfuncs` | functions the user defines: parameters and variables, calls between functions, recursion and its limit, redefinition, LIST and CLEAR, and the errors of definitions and calls |
 | `vectors` | vectors: literals and joining, the functions that make them, indexes (ranges, vector subscripts), assigning elements, element-by-element operations and functions, list functions of arrays, sizes, reshape, cumsum, sort, dot, cross, norms, transposes, users' functions of vectors, long vectors' display and LIST, and the errors |
 | `matrices` | matrices: literals and blocks, sections, element-by-element and matrix products, transposes, powers, determinants, inverses, solves, trace, rank, norms, kron, eigenvalues (SET DIGITS 10 for some), the display beside the largest element, guarded products out of the safe band, users' functions of matrices, and the errors |
+| `numeric` | the numerical commands: SOLVE from a point (real and complex roots) and on a bracket, with = and users' functions, the variable after FOR left alone; INTEGRATE of smooth functions, a jump, singular ends, and one whose pieces run out (the warning INACCURATE); DIFF at real and complex points, and a jump's warning; ROOTS of real and complex coefficients, roots at zero, a double root (SET DIGITS 6), vectors of coefficients, roots(), poly, polyval; and each command's errors |
 
 The `functions` values were checked against Python's `math` and `cmath` as a
-second method, and the `vectors` and `matrices` values by hand and in Python
+second method; the `vectors` and `matrices` values by hand and in Python
 (characteristic polynomials' roots for the eigenvalues, exact fractions for
-the inverses). Each of the two ends with `SHOW MEMORY` after `CLEAR ALL`,
-which must count no arrays and no tree nodes in use: a leak, of an
-operation's operand or after an error, shows there.
+the inverses); and the `numeric` values in Python (Newton's method for the
+roots, `erf` for the Gaussian integral, a model of Ridders' table for the
+warning's derivative). `vectors`, `matrices`, and `numeric` each end with
+`SHOW MEMORY` after `CLEAR ALL`, which must count no arrays and no tree nodes
+in use: a leak, of an operation's operand or after an error, shows there.
 
 `internal/console`'s `TestFcalc` builds fcalc and runs every script;
 `internal/dclcmd`'s `TestFcalcCompiles` compiles it, quickly, without a console.

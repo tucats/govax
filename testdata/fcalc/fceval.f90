@@ -55,10 +55,12 @@ module fceval
   ! procedure's argument and value may not be of a type private in this
   ! module.
   public :: node, value, quantity, frame
-  public :: evaluate, assign_into, known_function
+  public :: evaluate, evaluate_with, assign_into, known_function
 
   ! The values of one call's parameters, by name. VALUES(1:COUNT) are the
-  ! frame's to release when the call ends.
+  ! frame's to release when the call ends. COLUMN is where an error inside
+  ! the call is reported, or 0 to report it at the node it arose in (as
+  ! EVALUATE_WITH's frames do).
   type frame
     integer :: count
     integer :: column
@@ -82,13 +84,40 @@ contains
 
   ! COLUMN_OF is the column an error at the node P is reported at: P's own,
   ! or, inside a user's function, the call's.
+  !
+  ! (F is tested and used in two IF statements, not one: Fortran doesn't
+  ! promise to skip .AND.'s right operand when its left is false, so
+  ! PRESENT(F) .AND. F%COLUMN > 0 could touch an absent F.)
   integer function column_of(p, f)
     type(node), pointer :: p
     type(frame), intent(in), optional :: f
 
     column_of = p%column
-    if (present(f)) column_of = f%column
+    if (present(f)) then
+      if (f%column > 0) column_of = f%column
+    end if
   end function column_of
+
+  ! EVALUATE_WITH is the value of the tree P with NAME standing for X: the
+  ! numerical commands (module FCNUMERIC) evaluate an expression in a
+  ! variable they choose the values of, SOLVE X^2 - 2 FOR X, this way. The
+  ! name is a frame's one parameter, so it hides a variable of the same
+  ! name, and an error is reported at the node it arose in, in the line the
+  ! user typed (the frame's column is 0).
+  function evaluate_with(p, name, x) result(v)
+    type(node), pointer :: p
+    character(len=*), intent(in) :: name
+    type(value), intent(in) :: x
+    type(quantity) :: v
+    type(frame) :: f
+
+    f%count = 1
+    f%column = 0
+    f%names(1) = name
+    f%values(1) = scalar_quantity(x)
+    v = evaluate(p, f)
+    call release(f%values(1))
+  end function evaluate_with
 
   ! EVALUATE is the value of the tree P. F, the frame of the function call
   ! being evaluated, is an OPTIONAL argument: the main program leaves it

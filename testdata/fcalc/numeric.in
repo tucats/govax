@@ -1,0 +1,113 @@
+set echo
+! The numerical commands: SOLVE, INTEGRATE, DIFF, and ROOTS.
+! SOLVE expr [= expr] FOR x [FROM a [TO b]] finds a root: from one point by
+! the secant method, between two where the expression changes sign by
+! Brent's method.
+solve x^2 - 2 for x from 1
+solve x^2 = 2 for x from -1
+solve x^2 - 2 for x
+solve x^3 = 2*x + 5 for x from 2 to 3
+solve cos(t) = t for t from 0 to 1
+solve ln(x) for x from 0.5 to 3
+solve sin(x) for x from -1 to 2
+solve tan(x) - x for x from 4 to 4.6
+! From a complex start the secant method finds complex roots.
+solve x^2 + 1 for x from i
+solve x^2 + 2*x + 5 for x from -1 - i
+! The answer is ANS; the variable named after FOR isn't changed, and stands
+! only for the point the method tries, hiding a variable of its name.
+x = 5
+solve x^2 - 9 for x from 1
+ans
+x
+! Variables and users' functions in the expression.
+m = 1.5
+solve k - 0.5*sin(k) = m for k from m
+f(x) = x^3 - x - 1
+solve f(y) for y from 1 to 2
+solve f(y) for y from 1
+! Errors.
+solve x^2 + 1 for x from 1 to 2
+solve x^2 - 2 for x from i to 2
+solve sqrt(x) - 2i for x from -1 to 1
+solve 1 for x
+solve 1/x - 1 for x
+solve [x, 1] for x from 1
+solve x^2 - 2 x from 1
+solve x^2 - 2 for 3 from 1
+solve e - 2 for e from 1
+solve x - 1 for x from 1 too
+solve = 3
+! INTEGRATE expr FOR x FROM a TO b, by adaptive Gauss-Kronrod quadrature.
+integrate x^2 for x from 0 to 1
+integrate x^2 for x from 1 to 0
+integrate x^2 for x from 2 to 2
+integrate sin(x) for x from 0 to pi
+integrate sin(x) for x from -1 to 1
+integrate 1/(1 + x^2) for x from 0 to 1
+4*ans
+integrate exp(-x^2) for x from -3 to 3
+integrate ln(t) for t from 1 to e
+integrate sqrt(1 - x^2) for x from -1 to 1
+integrate exp(i*x) for x from 0 to pi
+integrate f(x) for x from 0 to 1
+! The pieces crowd where the function is hard: at a jump, and at an end
+! where it is infinite, which the rule never evaluates.
+integrate if(x < 1/3, 0, 1) for x from 0 to 1
+integrate 1/sqrt(x) for x from 0 to 1
+integrate ln(x) for x from 0 to 1
+! When the pieces run out first, the warning says how far off the answer may
+! be (this one is 10).
+integrate x^-0.9 for x from 0 to 1
+! Errors.
+integrate 1/x for x from -1 to 1
+integrate x for x from 0 to i
+integrate x for x to 1
+integrate [x; 2*x] for x from 0 to 1
+! DIFF expr FOR x AT a, the derivative by Ridders' method.
+diff x^3 for x at 2
+diff sin(x) for x at 1
+cos(1)
+diff cos(x) for x at 0
+diff exp(x) for x at 1
+diff ln(x) for x at 2
+diff x^2 for x at 1 + i
+diff f(x) for x at 2
+diff (x + 1)^2 for x at 3
+diff if(x < 0, 0, 1) for x at 0
+diff x for x on 1
+! ROOTS c1, c2, ..., cn: every root of the polynomial, the coefficients the
+! highest power's first; the roots in order, as sort gives them, kept as ANS.
+roots 1, -3, 2
+roots 1, -6, 11, -6
+roots 1, 0, 1
+roots 1, 2, 5
+roots 1, -2 - i, 2i
+roots 0, 2, -1
+roots 1, 0, 0, 0, 0, -1
+roots 1, -1, 0, 0
+! A vector of coefficients, or several joined, and roots() as a function.
+p = [1, 0, -7, 6]
+roots p
+roots [1, 0], -7, 6
+roots(p)
+! poly(r) is the polynomial whose roots are r, and polyval(p, x) its value.
+poly([1, 2, 3])
+poly(roots(p))
+poly(2)
+polyval(p, 2)
+polyval(p, [-3, 0, 1, 2])
+w = range(1, 6)
+roots(poly(w))
+! A double root has only about half the digits: shown to 6, it is 1.
+set digits 6
+roots 1, -2, 1
+set digits 12
+! Errors.
+roots 5
+roots 0, 0, 3
+roots [1, 2; 3, 4]
+roots 1, 2 x
+! Nothing is left in use.
+clear all
+show memory

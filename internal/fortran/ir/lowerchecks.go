@@ -140,7 +140,10 @@ func (l *lowerer) checkedF90Substring(first, last, length Expr) (Expr, Expr) {
 // checkArrayBounds writes what an entry point does for the adjustable array s, whose
 // descriptor c its bounds are now in: an upper bound below its lower is FOR$_ADJARRDIM
 // at once, by FTNRTL (Decision 5, ours, the manuals not giving the rule). An assumed
-// dimension has no upper bound to compare.
+// dimension has no upper bound to compare. Not under /F90: there an upper bound below
+// the lower makes an array of no elements (the standard's 5.1.2.4.1), as it does for
+// an automatic array, and a routine may be given one (fcalc's FCEVAL makes ARGS(N)
+// for a call with no arguments, N 0; Phase 111, subtask 5b).
 func (l *lowerer) checkArrayBounds(s *sema.Symbol, c *Cell) {
 	for i, dim := range s.Dims {
 		if sema.OpenEnded(s, s.Dims, i) || (dim.LowerExpr == nil && dim.UpperExpr == nil) {
