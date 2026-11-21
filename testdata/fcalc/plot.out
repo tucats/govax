@@ -1,0 +1,493 @@
+fcalc> set echo
+fcalc> ! TABLE: values at points, a column each.
+fcalc> table x^2, sqrt(x) for x from 0 to 1 step 0.25
+     x     x^2         sqrt(x)
+  ----  ------  --------------
+     0       0               0
+  0.25  0.0625             0.5
+   0.5    0.25  0.707106781187
+  0.75  0.5625  0.866025403784
+     1       1               1
+fcalc> table 2^x for x from 0 to 10 step 2
+   x   2^x
+  --  ----
+   0     1
+   2     4
+   4    16
+   6    64
+   8   256
+  10  1024
+fcalc> ! With no STEP, ten steps from FROM to TO, either way.
+fcalc> table x/2 for x from 0 to 1
+    x   x/2
+  ---  ----
+    0     0
+  0.1  0.05
+  0.2   0.1
+  0.3  0.15
+  0.4   0.2
+  0.5  0.25
+  0.6   0.3
+  0.7  0.35
+  0.8   0.4
+  0.9  0.45
+    1   0.5
+fcalc> table 10 - x for x from 3 to 1
+    x  10 - x
+  ---  ------
+    3       7
+  2.8     7.2
+  2.6     7.4
+  2.4     7.6
+  2.2     7.8
+    2       8
+  1.8     8.2
+  1.6     8.4
+  1.4     8.6
+  1.2     8.8
+    1       9
+fcalc> table x^3 for x from 2 to 2
+  x  x^3
+  -  ---
+  2    8
+fcalc> ! A point that is 0 is 0, not the rounding error A + K*S leaves.
+fcalc> table x for x from -0.3 to 0.3 step 0.1
+     x     x
+  ----  ----
+  -0.3  -0.3
+  -0.2  -0.2
+  -0.1  -0.1
+     0     0
+   0.1   0.1
+   0.2   0.2
+   0.3   0.3
+fcalc> ! The name after FOR stands for the point; a variable of the name is kept.
+fcalc> x = 7
+x = 7
+fcalc> table x + 1, x * i for x from 1 to 3
+    x  x + 1  x * i
+  ---  -----  -----
+    1      2     1i
+  1.2    2.2   1.2i
+  1.4    2.4   1.4i
+  1.6    2.6   1.6i
+  1.8    2.8   1.8i
+    2      3     2i
+  2.2    3.2   2.2i
+  2.4    3.4   2.4i
+  2.6    3.6   2.6i
+  2.8    3.8   2.8i
+    3      4     3i
+fcalc> x
+7
+fcalc> ! A point where an expression fails shows the error's name.
+fcalc> table 1/x, ln(x), sqrt(x) for x from -1 to 1 step 1
+   x      1/x           ln(x)  sqrt(x)
+  --  -------  --------------  -------
+  -1       -1  3.14159265359i       1i
+   0  DIVZERO          DOMAIN        0
+   1        1               0        1
+fcalc> table x! for x from -3 to 3 step 1
+   x      x!
+  --  ------
+  -3  DOMAIN
+  -2  DOMAIN
+  -1  DOMAIN
+   0       1
+   1       1
+   2       2
+   3       6
+fcalc> ! Users' functions, and the display's settings.
+fcalc> f(t) = t^2 - 2
+f(t) = t^2 - 2
+fcalc> table f(x), f(f(x)) for x from 0 to 2 step 0.5
+    x   f(x)  f(f(x))
+  ---  -----  -------
+    0     -2        2
+  0.5  -1.75   1.0625
+    1     -1       -1
+  1.5   0.25  -1.9375
+    2      2        2
+fcalc> set format fixed
+fcalc> set digits 3
+fcalc> table exp(x) for x from 0 to 2 step 0.5
+      x  exp(x)
+  -----  ------
+  0.000   1.000
+  0.500   1.649
+  1.000   2.718
+  1.500   4.482
+  2.000   7.389
+fcalc> set format auto
+fcalc> set digits 12
+fcalc> set base hex
+fcalc> table x^2 for x from 14 to 17 step 1
+     x    x^2
+  ----  -----
+   0xE   0xC4
+   0xF   0xE1
+  0x10  0x100
+  0x11  0x121
+fcalc> table x / 2 for x from 0 to 3 step 1
+    x  x / 2
+  ---  -----
+    0      0
+  0x1    0.5
+  0x2    0x1
+  0x3    1.5
+fcalc> set base decimal
+fcalc> set angle degrees
+fcalc> table sin(x), cos(x), tan(x) for x from 0 to 90 step 30
+   x          sin(x)          cos(x)         tan(x)
+  --  --------------  --------------  -------------
+   0               0               1              0
+  30             0.5  0.866025403784  0.57735026919
+  60  0.866025403784             0.5  1.73205080757
+  90               1               0        DIVZERO
+fcalc> set angle radians
+fcalc> ! TABLE of vectors, side by side.
+fcalc> table [1, 2, 3], [4; 5; 6], range(1, 3).^2
+  [1, 2, 3]  [4; 5; 6]  range(1, 3).^2
+  ---------  ---------  --------------
+          1          4               1
+          2          5               4
+          3          6               9
+fcalc> v = linspace(0, 1, 5);
+fcalc> table v, v.^2, 1 - v
+     v    v.^2  1 - v
+  ----  ------  -----
+     0       0      1
+  0.25  0.0625   0.75
+   0.5    0.25    0.5
+  0.75  0.5625   0.25
+     1       1      0
+fcalc> ! TABLE's errors.
+fcalc> table x for x from 0 to 1 step -0.5
+                                      ^
+%FCALC-E-BADSTEP, step does not lead from FROM to TO
+fcalc> table x for x from 0 to 1 step 0
+                                      ^
+%FCALC-E-BADSTEP, step does not lead from FROM to TO
+fcalc> table x for x from 0 to 1 step 1e-6
+                                      ^
+%FCALC-E-TOOMANY, too many rows
+fcalc> table x for x from 0 to 1 step
+                                     ^
+%FCALC-E-OPERAND, operand expected
+fcalc> table x from 0 to 1
+               ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> table x for 3 from 0 to 1
+                   ^
+%FCALC-E-NAMEREQ, name expected
+fcalc> table x for x to 1
+                     ^
+%FCALC-E-KEYWORD, FROM expected
+fcalc> table x for x from 0 by 1
+                            ^
+%FCALC-E-KEYWORD, TO expected
+fcalc> table x for x from 0 to 1i
+                               ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> table x for x from 0 to 1 step 0.5 extra
+                                          ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> table [x, x] for x from 0 to 1
+             ^
+%FCALC-E-NOTSCALAR, operand must be a scalar
+fcalc> table q for x from 0 to 1
+             ^
+%FCALC-E-UNDEFINED, q is not defined
+fcalc> table 1, 2, 3, 4, 5, 6, 7, 8, 9 for x from 0 to 1
+                                     ^
+%FCALC-E-TOOMANY, too many expressions
+fcalc> table [1, 2], [1, 2, 3]
+                     ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> table [1, 2; 3, 4]
+             ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> table 5
+             ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> table = 3
+       ^
+%FCALC-E-RESERVED, table is a reserved word
+fcalc> ! PLOT: a graph of each expression, its range the values'.
+fcalc> plot x^2 for x from -1 to 1 size 21, 6
+1 |*         |         *
+  | *        |        *
+  |  *       |       *
+  |   **     |     **
+  |     **   |   **
+0 |-------*******-------
+  +---------------------
+   -1        0         1
+   * x^2
+fcalc> plot (x + 1)^2 - 1 for x from -2 to 1 size 31, 8
+ 3 |                    |         *
+   |                    |       **
+   |                    |      *
+   |                    |    **
+   |                    | ***
+ 0 |*-------------------**---------
+   | ****           ****|
+-1 |     ***********    |
+   +-------------------------------
+    -2                  0         1
+    * (x + 1)^2 - 1
+fcalc> plot x^3 - x for x from -1.5 to 1.5 size 31, 9
+ 1.875 |               |              *
+       |               |             *
+       |               |            *
+       |       ******  |           *
+     0 |----***------*****------***----
+       |   *           |  ******
+       |  *            |
+       | *             |
+-1.875 |*              |
+       +-------------------------------
+        -1.5           0            1.5
+        * x^3 - x
+fcalc> ! Two curves: each has its mark, and a later one covers an earlier one.
+fcalc> plot sin(x), cos(x) for x from 0 to 2*pi size 41, 11
+ 1 |ooo     *****                         ooo
+   |   ooo**     ***                   ooo
+   |    * o         *                 o
+   |  **   oo        **             oo
+   | *       o         *           o
+ 0 |*---------o---------*---------o---------*
+   |           o         *       o         *
+   |            oo        **   oo        **
+   |              o         * o         *
+   |               ooo     ooo**     ***
+-1 |                  ooooo     *****
+   +-----------------------------------------
+    0                                 6.28319
+    * sin(x)   o cos(x)
+fcalc> ! The default size, 61 by 19.
+fcalc> plot exp(-x^2) for x from -3 to 3
+         1 |                             ***
+           |                            * | *
+           |                           *  |  *
+           |                          *   |   *
+           |                         *    |    *
+           |                        *     |     *
+           |                              |
+           |                       *      |      *
+           |                              |
+           |                      *       |       *
+           |                     *        |        *
+           |                    *         |         *
+           |                              |
+           |                   *          |          *
+           |                  *           |           *
+           |                **            |            **
+           |               *              |              *
+           |            ***               |               ***
+0.00012341 |************                  |                  ************
+           +-------------------------------------------------------------
+            -3                            0                             3
+            * exp(-x^2)
+fcalc> ! Y gives the range; a value outside it has no mark.
+fcalc> plot x^2 for x from -2 to 2 size 21, 5 y 0, 2
+2 |   *      |      *
+  |    *     |     *
+  |     *    |    *
+  |      **  |  **
+0 |--------*****--------
+  +---------------------
+   -2        0         2
+   * x^2
+fcalc> plot 1/x for x from -1 to 1 size 21, 9 y -6, 6
+ 6 |          |
+   |          | *
+   |          |  **
+   |          |    ******
+ 0 |----------+----------
+   |******    |
+   |      **  |
+   |        * |
+-6 |          |
+   +---------------------
+    -1        0         1
+    * 1/x
+fcalc> ! A point that fails or isn't real has no mark.
+fcalc> plot sqrt(x) for x from -1 to 1 size 21, 5
+1 |          |       ***
+  |          |   ****
+  |          | **
+  |          |*
+0 |----------*----------
+  +---------------------
+   -1        0         1
+   * sqrt(x)
+fcalc> plot ln(x) for x from 0 to 4 size 17, 9
+ 1.38629 |              ***
+         |          ****
+         |       ***
+         |     **
+       0 |----*------------
+         |   *
+         |  *
+         |
+-1.38629 | *
+         +-----------------
+          0               4
+          * ln(x)
+fcalc> ! A constant is drawn in the middle of a range around it.
+fcalc> plot 5 for x from 0 to 1 size 11, 5
+10 |
+   |
+   |***********
+   |
+ 0 |-----------
+   +-----------
+    0         1
+    * 5
+fcalc> plot 0 for x from -1 to 1 size 11, 5
+ 1 |     |
+   |     |
+ 0 |***********
+   |     |
+-1 |     |
+   +-----------
+    -1   0    1
+    * 0
+fcalc> ! Vectors against their index, and against another vector.
+fcalc> plot [1, 4, 9, 16, 25] size 13, 6
+25 |            *
+   |
+   |         *
+   |      *
+   |   *
+ 1 |*
+   +-------------
+    1           5
+    * [1, 4, 9, 16, 25]
+fcalc> plot [3, 1, 2], [1, 2, 3, 4, 5, 6] size 11, 6
+6 |          o
+  |        o
+  |      o
+  |*   o
+  |  o *
+1 |o *
+  +-----------
+   1         6
+   * [3, 1, 2]   o [1, 2, 3, 4, 5, 6]
+fcalc> plot [0, 1, 4, 9] versus [-3, -1, 1, 3] size 13, 5
+9 |      |     *
+  |      |
+  |      | *
+  |      |
+0 |*---*-+------
+  +-------------
+   -3    0     3
+   * [0, 1, 4, 9]
+fcalc> plot [1, 2i, 3] size 11, 5
+3 |          *
+  |
+  |
+  |
+1 |*
+  +-----------
+   1         3
+   * [1, 2i, 3]
+fcalc> s = range(0, 10);
+fcalc> plot s.^2 versus s size 21, 5 y 0, 50
+50 |              *
+   |            *
+   |          *
+   |      * *
+ 0 |*-*-*----------------
+   +---------------------
+    0                  10
+    * s.^2
+fcalc> plot [2, 2, 2] versus [1, 1, 1] size 11, 5
+4 |
+  |
+  |     *
+  |
+0 |-----------
+  +-----------
+   0         2
+   * [2, 2, 2]
+fcalc> ! The labels by the display's settings.
+fcalc> plot 1000 * x for x from 0 to 1 size 11, 3
+1000 |        ***
+     |   *****
+   0 |***--------
+     +-----------
+      0         1
+      * 1000 * x
+fcalc> set base hex
+fcalc> plot x^2 for x from 0 to 16 size 17, 5
+0x100 |               **
+      |             **
+      |          ***
+      |      ****
+    0 |******-----------
+      +-----------------
+       0            0x10
+       * x^2
+fcalc> set base decimal
+fcalc> ! PLOT's errors.
+fcalc> plot x for x from 1 to 0
+                              ^
+%FCALC-E-BADLIMITS, lower limit must be below upper limit
+fcalc> plot x for x from 0 to 1 y 1, 1
+                                     ^
+%FCALC-E-BADLIMITS, lower limit must be below upper limit
+fcalc> plot x for x from 0 to 1 size 5, 5
+                                     ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> plot x for x from 0 to 1 size 20.5, 5
+                                     ^
+%FCALC-E-NOTWHOLE, operand must be a whole number
+fcalc> plot x for x from 0 to 1 size 20, 61
+                                         ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> plot x for x from 0 to 1 size 20 5
+                                        ^
+%FCALC-E-KEYWORD, ',' expected
+fcalc> plot x for x from 0 to 1 y 0
+                                   ^
+%FCALC-E-KEYWORD, ',' expected
+fcalc> plot sqrt(x - 5) for x from 0 to 1
+            ^
+%FCALC-E-NOPOINTS, no point can be plotted
+fcalc> plot [1i, 2i]
+            ^
+%FCALC-E-NOPOINTS, no point can be plotted
+fcalc> plot [1, 2; 3, 4]
+            ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> plot 3
+            ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> plot [1, 2] versus [1, 2, 3]
+            ^
+%FCALC-E-NOTCONFORM, shapes of the operands do not agree
+fcalc> plot [1, 2] versus [1, 2i]
+                          ^
+%FCALC-E-NOTREAL, operand must be real
+fcalc> plot [1, 2] versus 3
+                          ^
+%FCALC-E-NOTVECTOR, operand must be a vector
+fcalc> plot y for x from 0 to 1
+            ^
+%FCALC-E-UNDEFINED, y is not defined
+fcalc> plot [x, x] for x from 0 to 1
+            ^
+%FCALC-E-NOTSCALAR, operand must be a scalar
+fcalc> plot x for x from 0 to 1 color 3
+                                ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> plot = 3
+       ^
+%FCALC-E-RESERVED, plot is a reserved word
+fcalc> clear all
+fcalc> show memory
+arrays in use: 0
+tree nodes in use: 0
+fcalc> 

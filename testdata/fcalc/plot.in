@@ -1,0 +1,105 @@
+set echo
+! TABLE: values at points, a column each.
+table x^2, sqrt(x) for x from 0 to 1 step 0.25
+table 2^x for x from 0 to 10 step 2
+! With no STEP, ten steps from FROM to TO, either way.
+table x/2 for x from 0 to 1
+table 10 - x for x from 3 to 1
+table x^3 for x from 2 to 2
+! A point that is 0 is 0, not the rounding error A + K*S leaves.
+table x for x from -0.3 to 0.3 step 0.1
+! The name after FOR stands for the point; a variable of the name is kept.
+x = 7
+table x + 1, x * i for x from 1 to 3
+x
+! A point where an expression fails shows the error's name.
+table 1/x, ln(x), sqrt(x) for x from -1 to 1 step 1
+table x! for x from -3 to 3 step 1
+! Users' functions, and the display's settings.
+f(t) = t^2 - 2
+table f(x), f(f(x)) for x from 0 to 2 step 0.5
+set format fixed
+set digits 3
+table exp(x) for x from 0 to 2 step 0.5
+set format auto
+set digits 12
+set base hex
+table x^2 for x from 14 to 17 step 1
+table x / 2 for x from 0 to 3 step 1
+set base decimal
+set angle degrees
+table sin(x), cos(x), tan(x) for x from 0 to 90 step 30
+set angle radians
+! TABLE of vectors, side by side.
+table [1, 2, 3], [4; 5; 6], range(1, 3).^2
+v = linspace(0, 1, 5);
+table v, v.^2, 1 - v
+! TABLE's errors.
+table x for x from 0 to 1 step -0.5
+table x for x from 0 to 1 step 0
+table x for x from 0 to 1 step 1e-6
+table x for x from 0 to 1 step
+table x from 0 to 1
+table x for 3 from 0 to 1
+table x for x to 1
+table x for x from 0 by 1
+table x for x from 0 to 1i
+table x for x from 0 to 1 step 0.5 extra
+table [x, x] for x from 0 to 1
+table q for x from 0 to 1
+table 1, 2, 3, 4, 5, 6, 7, 8, 9 for x from 0 to 1
+table [1, 2], [1, 2, 3]
+table [1, 2; 3, 4]
+table 5
+table = 3
+! PLOT: a graph of each expression, its range the values'.
+plot x^2 for x from -1 to 1 size 21, 6
+plot (x + 1)^2 - 1 for x from -2 to 1 size 31, 8
+plot x^3 - x for x from -1.5 to 1.5 size 31, 9
+! Two curves: each has its mark, and a later one covers an earlier one.
+plot sin(x), cos(x) for x from 0 to 2*pi size 41, 11
+! The default size, 61 by 19.
+plot exp(-x^2) for x from -3 to 3
+! Y gives the range; a value outside it has no mark.
+plot x^2 for x from -2 to 2 size 21, 5 y 0, 2
+plot 1/x for x from -1 to 1 size 21, 9 y -6, 6
+! A point that fails or isn't real has no mark.
+plot sqrt(x) for x from -1 to 1 size 21, 5
+plot ln(x) for x from 0 to 4 size 17, 9
+! A constant is drawn in the middle of a range around it.
+plot 5 for x from 0 to 1 size 11, 5
+plot 0 for x from -1 to 1 size 11, 5
+! Vectors against their index, and against another vector.
+plot [1, 4, 9, 16, 25] size 13, 6
+plot [3, 1, 2], [1, 2, 3, 4, 5, 6] size 11, 6
+plot [0, 1, 4, 9] versus [-3, -1, 1, 3] size 13, 5
+plot [1, 2i, 3] size 11, 5
+s = range(0, 10);
+plot s.^2 versus s size 21, 5 y 0, 50
+plot [2, 2, 2] versus [1, 1, 1] size 11, 5
+! The labels by the display's settings.
+plot 1000 * x for x from 0 to 1 size 11, 3
+set base hex
+plot x^2 for x from 0 to 16 size 17, 5
+set base decimal
+! PLOT's errors.
+plot x for x from 1 to 0
+plot x for x from 0 to 1 y 1, 1
+plot x for x from 0 to 1 size 5, 5
+plot x for x from 0 to 1 size 20.5, 5
+plot x for x from 0 to 1 size 20, 61
+plot x for x from 0 to 1 size 20 5
+plot x for x from 0 to 1 y 0
+plot sqrt(x - 5) for x from 0 to 1
+plot [1i, 2i]
+plot [1, 2; 3, 4]
+plot 3
+plot [1, 2] versus [1, 2, 3]
+plot [1, 2] versus [1, 2i]
+plot [1, 2] versus 3
+plot y for x from 0 to 1
+plot [x, x] for x from 0 to 1
+plot x for x from 0 to 1 color 3
+plot = 3
+clear all
+show memory

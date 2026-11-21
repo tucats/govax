@@ -31,7 +31,7 @@ module fcmessages
   private
 
   public :: say, say_more, fail, failed, clear_error, report, error_code
-  public :: indent, say_part, say_end
+  public :: indent, say_part, say_end, error_ident
 
   ! The message codes, an index into MESSAGES.
   integer, parameter, public :: e_badchar = 1, e_badnumber = 2, e_operand = 3, &
@@ -43,7 +43,8 @@ module fcmessages
     e_params = 25, e_dupparam = 26, e_notconform = 27, e_notsquare = 28, &
     e_singular = 29, e_index = 30, e_notscalar = 31, e_noconverge = 32, &
     e_badrange = 33, e_toobig = 34, e_rbracket = 35, e_notvector = 36, &
-    e_keyword = 37, e_noroot = 38, e_samesign = 39, w_inaccurate = 40
+    e_keyword = 37, e_noroot = 38, e_samesign = 39, w_inaccurate = 40, &
+    e_badstep = 41, e_toomany = 42, e_badlimits = 43, e_nopoints = 44
 
   ! Each message: its severity, its identifier, and its text, in which !AS
   ! stands for the text the error names (VMS's notation for "a string
@@ -60,14 +61,11 @@ module fcmessages
   ! message('E', 'BADCHAR', ...), each giving the components in order. A
   ! shorter text is padded with blanks to the component's length. & at a
   ! line's end continues the statement on the next line; a statement may
-  ! have at most 39 continuation lines, so one line near the end holds two.
-  type(message), parameter :: messages(40) = (/ &
-    message('E', 'BADCHAR', 'invalid character'), &
-    message('E', 'BADNUMBER', 'invalid number'), &
-    message('E', 'OPERAND', 'operand expected'), &
-    message('E', 'RPAREN', 'missing right parenthesis'), &
-    message('E', 'EXTRA', 'unexpected text'), &
-    message('E', 'UNDEFINED', '!AS is not defined'), &
+  ! have at most 39 continuation lines, so some lines hold two.
+  type(message), parameter :: messages(44) = (/ &
+    message('E', 'BADCHAR', 'invalid character'), message('E', 'BADNUMBER', 'invalid number'), &
+    message('E', 'OPERAND', 'operand expected'), message('E', 'RPAREN', 'missing right parenthesis'), &
+    message('E', 'EXTRA', 'unexpected text'), message('E', 'UNDEFINED', '!AS is not defined'), &
     message('E', 'NOFUNC', 'no function named !AS'), &
     message('E', 'CONSTANT', '!AS is a constant'), &
     message('E', 'DIVZERO', 'division by zero'), &
@@ -100,7 +98,10 @@ module fcmessages
     message('E', 'NOTVECTOR', 'operand must be a vector'), &
     message('E', 'KEYWORD', '!AS expected'), message('E', 'NOROOT', 'no root was found'), &
     message('E', 'SAMESIGN', 'no change of sign between the bounds'), &
-    message('W', 'INACCURATE', 'error may be as large as !AS') /)
+    message('W', 'INACCURATE', 'error may be as large as !AS'), &
+    message('E', 'BADSTEP', 'step does not lead from FROM to TO'), message('E', 'TOOMANY', 'too many !AS'), &
+    message('E', 'BADLIMITS', 'lower limit must be below upper limit'), &
+    message('E', 'NOPOINTS', 'no point can be plotted') /)
 
   ! The error not yet reported: its code (0 for none), column (0 for none),
   ! and text. SAVE keeps a module variable's value from one call to the
@@ -200,6 +201,15 @@ contains
     argument = ' '
     if (present(text)) argument = text
   end subroutine fail
+
+  ! ERROR_IDENT is the identifier of the message CODE, DIVZERO: TABLE shows
+  ! it in place of a value it couldn't compute.
+  function error_ident(what) result(ident)
+    integer, intent(in) :: what
+    character(len=10) :: ident
+
+    ident = messages(what)%ident
+  end function error_ident
 
   logical function failed()
     failed = code /= 0

@@ -261,7 +261,7 @@ As revised by the author's answers (below), with vectors and matrices added:
      (done 2026-11-20)
 6. **Display and settings**: SET and SHOW, the formats and bases; `display`.
    (done 2026-11-21)
-7. **TABLE and PLOT**; `plot`.
+7. **TABLE and PLOT**; `plot`. (done 2026-11-21)
 8. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
    `oneshot`, `errors`.
 9. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
@@ -651,3 +651,47 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
     none; the README says so.
   - **A minus sign** before SET DIGITS's or SET SEED's number is DOMAIN at
     the sign: the sign is a token of its own.
+- **2026-11-21:** Subtask 7, TABLE and PLOT, in a new module, `fcplot.f90`
+  (after FCNUMERIC, whose command readers, AT_WORD, READ_WORD, READ_NAME,
+  READ_BOUND, and AT_END_OF_LINE, are now public and taken by USE ... ONLY;
+  so is VALUE, which govax's ACCESSPROC asked for, READ_BOUND's argument
+  being one). TABLE and PLOT are reserved words, as SOLVE is; four messages
+  (BADSTEP, TOOMANY, BADLIMITS, NOPOINTS), four more lines of the table holding
+  two each to stay within 39 continuations. The `plot` script is printed alike
+  by gfortran and by govax in every mode (`/[NO]OPTIMIZE`, `/RECURSIVE`,
+  `/CHECK=ALL`, `/NOOPTIMIZE/DEBUG=ALL`, paging on), as are the nine earlier
+  scripts. No compiler bug found: an automatic CHARACTER array of a run-time
+  length and number (the graph), an array-valued function of a run-time size,
+  WHERE assigning its own mask, MINVAL and MAXVAL with MASK=, an array of a type
+  with a pointer component (the expressions' trees), LEN_TRIM of an array
+  section, an implied-DO constructor, and an internal procedure's function of a
+  run-time CHARACTER length all ran as gfortran's.
+  Decisions made here, beyond A.1 and A.8:
+  - **The forms.** `TABLE e, ... FOR x FROM a TO b [STEP s]` (ten steps if no
+    STEP, either way; one row if a = b); `TABLE v, ...` with no FOR, vectors of
+    one length side by side (A.8's TABLE of vectors); `PLOT e, ... FOR x FROM a
+    TO b`, `PLOT v, ...` against the index (lengths may differ), and `PLOT v,
+    ... VERSUS u` (A.8's `PLOT y VERSUS x`); SIZE w, h (10 to 100 by 3 to 60,
+    61 by 19 unless given) and Y lo, hi in any order. At most 8 expressions, a
+    mark each (`*o#x@%&$`), and 1,000 rows.
+  - **A table** has a heading over each column (the expression as typed) and a
+    rule of `-` under it, the columns right-aligned two blanks apart as a
+    matrix's are; values are shown as an expression's are, by the settings,
+    with no "beside" rule (a column of exp(-x) keeps its small values). A
+    point A + K*S within 64 epsilons of the larger end of 0 is 0.
+  - **A point's errors.** DIVZERO, OVERFLOW, DOMAIN, NOTREAL, NOTWHOLE,
+    SINGULAR, and NOCONVERGE at a point are its own: a table shows the
+    identifier in the cell, a graph no mark. Any other error (UNDEFINED,
+    NOTSCALAR, ...) stops the command. A value that isn't real has no mark.
+  - **A graph** marks each value in the nearest row and column by NINT, the
+    range's top and bottom labeled (six digits at most, by the format and
+    base), `0` beside the x axis and under the y axis where there's room; the
+    frame is the y axis when x = 0 is the left edge. A later curve's mark
+    covers an earlier one's; a range of one value is widened by max(1, |v|)
+    each way; Y's range drops the values outside it; NOPOINTS if no value is
+    real. No line joins the marks: a steep curve has gaps, as the default
+    `exp(-x^2)` shows.
+  - **Ties.** A value halfway between two rows rounds away from zero, but only
+    a value computed exactly is sure to be there on both machines; the script's
+    sizes and ranges were chosen, with a Python model of the rule, so no other
+    sample lies within a millionth of a row of a tie or on a Y range's edge.

@@ -27,6 +27,7 @@ program fcalc
   use fcsymbols
   use fcfuncs
   use fcnumeric
+  use fcplot
   implicit none
 
   ! The words SET and SHOW know, each list in the order of the settings'
@@ -162,8 +163,8 @@ contains
       end select
     end if
 
-    ! SOLVE, INTEGRATE, and DIFF are reserved words, so they may be followed
-    ! by a parenthesis: DIFF (X + 1)^2 FOR X AT 1.
+    ! SOLVE, INTEGRATE, DIFF, TABLE, and PLOT are reserved words, so they
+    ! may be followed by a parenthesis: DIFF (X + 1)^2 FOR X AT 1.
     if (first%kind == t_name .and. .not. (second%kind == t_operator .and. &
         second%text == '=')) then
       select case (first%text)
@@ -175,6 +176,12 @@ contains
         return
       case ('diff')
         call diff_command()
+        return
+      case ('table')
+        call table_command(text)
+        return
+      case ('plot')
+        call plot_command(text)
         return
       end select
     end if
@@ -407,7 +414,8 @@ contains
     character(len=*), intent(in) :: name
 
     is_reserved = name == 'or' .or. name == 'and' .or. name == 'not' .or. name == 'mod' .or. &
-      name == 'solve' .or. name == 'integrate' .or. name == 'diff'
+      name == 'solve' .or. name == 'integrate' .or. name == 'diff' .or. &
+      name == 'table' .or. name == 'plot'
   end function is_reserved
 
   ! LIST [VARIABLES | FUNCTIONS | ALL]: with no word, ALL, the variables

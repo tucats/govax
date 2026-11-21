@@ -9,7 +9,8 @@ A line ending in `;` is quiet, as in MATLAB and Octave: the value is kept, not
 shown. SET FORMAT, SET DIGITS, and SET BASE choose how values are shown
 (AUTO, FIXED, SCIENTIFIC, or ENGINEERING; whole numbers in hexadecimal, octal,
 or binary as `0xFF`, `0o377`, `0b11111111`, which fcalc also reads), and SHOW
-SETTINGS lists every setting as the SET command that makes it.
+SETTINGS lists every setting as the SET command that makes it. TABLE shows
+expressions' values in columns, and PLOT draws them as a graph of characters.
 
 ## The sources
 
@@ -31,6 +32,7 @@ Each file is a module but the last, the main program, compiled in the order
 | `fcmatrix.f90` | the matrix product, LU (solve, inverse, determinant), powers, rank, norms, eigenvalues (Hessenberg and shifted QR), and the functions that make and rearrange arrays |
 | `fceval.f90` | the evaluator: element-by-element operations, matrix literals, indexes, and a frame of parameters for each call of a user's function |
 | `fcnumeric.f90` | the numerical commands: SOLVE (the secant method, or Brent's on a bracket), INTEGRATE (adaptive Gauss-Kronrod quadrature), DIFF (Ridders' extrapolation), and ROOTS |
+| `fcplot.f90` | TABLE and PLOT: values at points or vectors side by side, and a graph's grid, axes, labels, and legend |
 | `fcalc.f90` | the main program: the prompt, the commands (SET and SHOW among them), assignment, function definitions |
 
 The sources are commented for a reader learning Fortran 90 and numerical
@@ -53,7 +55,7 @@ $ FORTRAN/G_FLOATING FCKINDS
 $ MACRO FCPLATFORM
   ... each file ...
 $ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCARRAYS,FCLEXER,FCTREE,-
-       FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,FCNUMERIC
+       FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,FCNUMERIC,FCPLOT
 $ RUN FCALC
 ```
 
@@ -80,6 +82,7 @@ prompt, as a terminal does.
 | `matrices` | matrices: literals and blocks, sections, element-by-element and matrix products, transposes, powers, determinants, inverses, solves, trace, rank, norms, kron, eigenvalues (SET DIGITS 10 for some), the display beside the largest element, guarded products out of the safe band, users' functions of matrices, and the errors |
 | `numeric` | the numerical commands: SOLVE from a point (real and complex roots) and on a bracket, with = and users' functions, the variable after FOR left alone; INTEGRATE of smooth functions, a jump, singular ends, and one whose pieces run out (the warning INACCURATE); DIFF at real and complex points, and a jump's warning; ROOTS of real and complex coefficients, roots at zero, a double root (SET DIGITS 6), vectors of coefficients, roots(), poly, polyval; and each command's errors |
 | `display` | how values are shown: SHOW SETTINGS and each SHOW, SET DIGITS, each SET FORMAT (rounding, padding, the exponent a multiple of 3, FIXED's places and its turn to scientific notation past 15 digits), SET BASE (each base, negative and complex whole numbers, matrices, LIST, the literals typed in, and their errors), SHOW ANGLE, SET SEED (the same seed repeating a sequence, a quiet `;` line keeping a random value unshown), and SET's and SHOW's errors |
+| `plot` | TABLE: values at points with and without STEP, either way, a single point, a point that is 0, the variable after FOR left alone, a point's error shown by name, users' functions, the display's settings, vectors side by side, and the errors; PLOT: graphs of one and two curves, the axes, the default size, Y's range and the values outside it, points that fail or aren't real, constants, vectors against their index and VERSUS another, labels by the display's settings, and the errors |
 
 The `functions` values were checked against Python's `math` and `cmath` as a
 second method; the `vectors` and `matrices` values by hand and in Python
@@ -87,7 +90,14 @@ second method; the `vectors` and `matrices` values by hand and in Python
 the inverses); and the `numeric` values in Python (Newton's method for the
 roots, `erf` for the Gaussian integral, a model of Ridders' table for the
 warning's derivative). The `display` values follow from the rules above,
-by hand. `vectors`, `matrices`, `numeric`, and `display` each end with
+by hand. The `plot` tables follow from the values, and each graph from its
+samples by the rule in `fcplot.f90`'s header (a mark in the nearest row and
+column, by NINT); the graphs were checked against a Python model of that rule,
+which also showed that no sample lies within a millionth of a row of halfway
+between two rows, or on a Y range's edge, unless its value is computed exactly,
+as 0 is: elsewhere the last bits of the two machines could
+choose different rows. `vectors`, `matrices`, `numeric`, `display`, and `plot`
+each end with
 `SHOW MEMORY` after `CLEAR ALL`, which must count no arrays and no tree nodes
 in use: a leak, of an operation's operand or after an error, shows there.
 

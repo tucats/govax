@@ -59,6 +59,12 @@ module fcnumeric
 
   public :: solve_command, integrate_command, diff_command, roots_command
 
+  ! The readers of the commands' parts, which module FCPLOT's commands use
+  ! too. VALUE is public here too: READ_BOUND's argument is one, and a
+  ! public procedure's argument may not be of a type private in this module.
+  public :: value
+  public :: at_word, read_word, read_name, read_bound, at_end_of_line
+
   ! How many steps the secant method and Brent's method may take.
   integer, parameter :: step_limit = 200
 
