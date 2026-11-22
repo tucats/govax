@@ -94,6 +94,28 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 	}
 }
 
+// TestConsolePurge_logNothingToPurge: PURGE/LOG with no version to delete says
+// NOFILPURG, as VMS 7.1's does; PURGE alone says nothing.
+func TestConsolePurge_logNothingToPurge(t *testing.T) {
+	c, buf := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, _ := c.Mounts.Lookup("DUA0")
+	createConsoleTestFile(t, vol, "FOO.TXT")
+
+	if err := c.cmd().Purge("FOO.TXT", 1, false); err != nil || buf.Len() != 0 {
+		t.Errorf("PURGE with nothing to purge: %v, %q, want nothing said", err, buf.String())
+	}
+
+	if err := c.cmd().Purge("FOO.TXT", 1, true); err != nil || buf.String() != "%PURGE-I-NOFILPURG, no files purged\n" {
+		t.Errorf("PURGE/LOG with nothing to purge: %v, %q, want NOFILPURG", err, buf.String())
+	}
+}
+
 // TestDispatch_purgeViaDCL exercises this subtask's own dispatch.go work
 // directly: parsing and dispatching a real "PURGE ..." command line through
 // the DCL grammar (internal/bootdata/files/evax.dcl's purge verb) into the
