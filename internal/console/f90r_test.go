@@ -70,7 +70,7 @@ var fcalcVariantsF90R = []string{"FCALC", "FCALCN", "FCALCR", "FCALCC"}
 // with no message, prints each script's name.out but for f90rFcalcDifferences, writes
 // the files testdata/fcalc/expected holds, and runs ONESHOT.COM as oneshot.out says.
 func TestF90RProcedure(t *testing.T) {
-	log, _, _ := runF90R(t)
+	log := sharedRoundLog(t, "f90r", runF90R)
 	sections := ftn86Sections(log)
 
 	if _, ok := sections["END"]; !ok {
@@ -253,7 +253,7 @@ func TestF90ROracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log, _, _ := runF90R(t)
+	log := sharedRoundLog(t, "f90r", runF90R)
 	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
 
 	awaiting := func(name string) bool {

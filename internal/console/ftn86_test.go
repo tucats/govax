@@ -120,6 +120,28 @@ func runVMSRound(t *testing.T, round string, size uint32, label string, space rm
 	return ftn86Log(t, d, label+".LOG"), c, d
 }
 
+// roundLogs keeps each VMS round's log on govax once it has run, for the tests
+// that read only the log (sharedRoundLog), so a round's procedure runs once per
+// test binary, not once per test.
+var roundLogs = map[string]string{}
+
+// sharedRoundLog is run's log, from roundLogs if an earlier test of this binary
+// ran it. A run that failed its test leaves nothing, and is run again.
+func sharedRoundLog(t *testing.T, round string, run func(*testing.T) (string, *Console, *Dispatcher)) string {
+	t.Helper()
+
+	if log, ok := roundLogs[round]; ok {
+		return log
+	}
+
+	log, _, _ := run(t)
+	if !t.Failed() {
+		roundLogs[round] = log
+	}
+
+	return log
+}
+
 // ftn86Log is a log as COPY brings it to the host, as VMS's was: its records by their
 // carriage control, so what a $ prompt left open goes on with the next record.
 func ftn86Log(t *testing.T, d *Dispatcher, name string) string {
@@ -156,7 +178,7 @@ func ftn86Sections(log string) map[string]string {
 // compared if recursiveDifferences lists it, since what it prints there may be the same by
 // chance (TestFortranPrograms').
 func TestFTN86Procedure(t *testing.T) {
-	log, _, _ := runFTN86(t)
+	log := sharedRoundLog(t, "ftn86", runFTN86)
 	sections := ftn86Sections(log)
 
 	if _, ok := sections["END"]; !ok {
@@ -327,7 +349,7 @@ func TestFTN86Oracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log, _, _ := runFTN86(t)
+	log := sharedRoundLog(t, "ftn86", runFTN86)
 	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
 
 	for _, name := range ftn86AwaitingVMS {
