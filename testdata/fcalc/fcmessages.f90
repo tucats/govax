@@ -20,7 +20,7 @@
 module fcmessages
   ! USE ... ONLY takes just the names listed, so a reader sees at once
   ! what this module needs from each other one.
-  use fcplatform, only: cc
+  use fcplatform, only: cc, record_room, prompt_ends
   use fckinds, only: line_length
   implicit none
 
@@ -134,6 +134,10 @@ module fcmessages
   ! A line SAY_PART is building, PENDING, and how much of it is filled.
   integer, save :: filled = 0
 
+  ! The length of the prompt SAY_MORE left open in its record, or 0 when
+  ! there is none.
+  integer, save :: open_prompt = 0
+
   character(len=line_length), save :: argument = ' '
   character(len=width), save :: pending = ' '
 
@@ -145,16 +149,43 @@ contains
   ! terminal records end at 133 bytes, the carriage control among them, and
   ! a longer one is an error. So a longer line goes on in the next record,
   ! on every system alike.
+  !
+  ! After a prompt, the line may go on in the prompt's record (PROMPT_ENDS
+  ! says when: reading a file, not a terminal). Then it has no carriage
+  ! control of its own, since its record already has one, and its first
+  ! piece is only as long as the record has room for after the prompt. The
+  ! log's records are always pieces of WIDTH, so the log is the same however
+  ! fcalc read its lines.
   subroutine say(text)
     character(len=*), intent(in) :: text
-    integer :: at
+    integer :: at, last, room
+    logical :: going_on
 
     ! WRITE (*, format) writes to the terminal; the format '(2A)' says two
     ! character items, each written as it is. TEXT(i:j) is a substring:
     ! the characters from i to j. A DO with no control loops until an EXIT.
+    going_on = open_prompt > 0
+    if (going_on) going_on = .not. prompt_ends()
+    room = width
+    if (going_on) room = min(width, record_room - open_prompt)
+    open_prompt = 0
+
     at = 1
     do
-      write (*, '(2A)') cc, text(at:min(len(text), at + width - 1))
+      last = min(len(text), at + room - 1)
+      if (going_on) then
+        write (*, '(A)') text(at:last)
+      else
+        write (*, '(2A)') cc, text(at:last)
+      end if
+      going_on = .false.
+      room = width
+      at = last + 1
+      if (at > len(text)) exit
+    end do
+
+    at = 1
+    do
       call log_line(text(at:min(len(text), at + width - 1)))
       at = at + width
       if (at > len(text)) exit
@@ -178,6 +209,7 @@ contains
 
     write (*, '(2A)', advance='NO') cc, text
     if (log_unit /= 0) write (log_unit, '(A)', advance='NO') text
+    open_prompt = len(text)
   end subroutine say_more
 
   ! SAY_PART adds text to a line being built a piece at a time, and SAY_END

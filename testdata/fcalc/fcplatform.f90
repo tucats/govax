@@ -14,7 +14,37 @@ module fcplatform
   ! LEN=* takes the constant's length from its value: here, 1.
   character(len=*), parameter :: cc = ' '
 
+  ! A record written to the terminal holds 133 bytes, the carriage control
+  ! among them: RECORD_ROOM is what is left for text.
+  integer, parameter :: record_room = 132
+
 contains
+
+  ! PROMPT_ENDS says whether a READ ends the record a prompt left open
+  ! (module FCMESSAGES's SAY_MORE). VMS's FORTRAN writes such a record as the
+  ! READ's prompt when it reads a terminal, and the next line is a record of
+  ! its own; reading anything else (a file, in a command procedure), it
+  ! leaves the record open, and the next WRITE goes on with it, as Fortran
+  ! 90's nonadvancing output says it should. So the answer is whether
+  ! SYS$INPUT is a terminal, which LIB$GETDVI tells: its arguments are the
+  ! item code (DVI$_TRM, 74 in VMS's $DVIDEF), no channel (a null argument
+  ! again), the device's name, and a longword for the answer, whose low bit
+  ! is set for a terminal. A SAVE'd variable keeps the answer, so VMS is
+  ! asked once.
+  logical function prompt_ends()
+    integer, parameter :: dvi_trm = 74
+    integer, save :: known = 0 ! 0 not yet asked, 1 a terminal, 2 not
+    integer :: status, terminal
+    integer, external :: lib$getdvi
+
+    if (known == 0) then
+      terminal = 0
+      status = lib$getdvi(dvi_trm, , 'SYS$INPUT', terminal)
+      known = 2
+      if (btest(status, 0) .and. btest(terminal, 0)) known = 1
+    end if
+    prompt_ends = known == 1
+  end function prompt_ends
 
   ! FOREIGN_TEXT gives the text typed after fcalc's name when it is run as
   ! a foreign command,

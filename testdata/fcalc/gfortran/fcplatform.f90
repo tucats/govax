@@ -8,7 +8,16 @@ module fcplatform
   ! control.
   character(len=*), parameter :: cc = ''
 
+  ! gfortran's records have no limit that fcalc's lines reach.
+  integer, parameter :: record_room = huge(1)
+
 contains
+
+  ! PROMPT_ENDS: gfortran leaves a prompt's record open whatever it reads,
+  ! a terminal or not, and the next WRITE goes on with it.
+  logical function prompt_ends()
+    prompt_ends = .false.
+  end function prompt_ends
 
   ! FOREIGN_TEXT: Fortran 95 has no way to read a program's command line
   ! (Fortran 2003's GET_COMMAND is one), so under gfortran there is never

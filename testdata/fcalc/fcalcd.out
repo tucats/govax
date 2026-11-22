@@ -2,10 +2,10 @@
          GOVAX DEBUG
 
 %DEBUG-I-INITIAL, Language: MACRO, Module: FCALC
-fcalc>  set echo
-fcalc>  fact(n) = if(n < 2, 1, n * fact(n - 1))
+fcalc> set echo
+fcalc> fact(n) = if(n < 2, 1, n * fact(n - 1))
 fact(n) = if(n < 2, 1, n * fact(n - 1))
-fcalc>  fact(3)
+fcalc> fact(3)
 %DEBUG-I-DYNMODSET, setting module FCEVAL
 break at routine FCEVAL\FCEVAL.CALL_USER
 FORTRAN line n: inner%count = fn%count
@@ -60,5 +60,5 @@ FORTRAN line n: inner%count = fn%count
 *FCALC           FCALC  line  rel-PC  abs-PC
 FCEVAL\FCEVAL.CALLS:    2
 6
-fcalc>  
+fcalc> 
 %DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'

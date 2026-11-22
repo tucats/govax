@@ -271,7 +271,8 @@ As revised by the author's answers (below), with vectors and matrices added:
    (done 2026-11-22)
 10. **gfortran's witness**. (done 2026-11-22)
 11. **The simh round**: `testdata/f90r`, fcalc and the whole Fortran 90
-    corpus, run by the author on the simh VAX, and its oracle.
+    corpus, run by the author on the simh VAX, and its oracle. (the probe
+    ready 2026-11-22; awaiting the VAX's run)
 12. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
     symbol, HELP FCALC, MANUAL.md's section.
 13. **The manual's 14.13** finished.
@@ -803,3 +804,44 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   difference to explain against the standard, and no fcalc or compiler change.
   The whole witness (the corpus and fcalc) passes, 147 comparisons. The fcalc
   README's new section "gfortran's witness" describes it.
+- **2026-11-22:** Subtask 11, the simh round, part 1: the probe, ready for the
+  author's run. `testdata/f90r` (README.md), `testdata/ftn86`'s pattern:
+  `gen.go` writes `exchange.cmd` (a volume with FTNRTL's sources, fcalc
+  compiled by govax `/G_FLOATING` four ways, `[FCALC]`, `[FCALCN]`
+  `/NOOPTIMIZE`, `[FCALCR]` `/RECURSIVE`, `[FCALCC]` `/CHECK=ALL`, and every
+  Fortran 90 corpus program three ways, a program of modules compiled in its
+  `compiles.txt`'s first order in a directory of its own with its module
+  files), `f90r.com` (VMS's MACRO and LINK build FTNRTL, then each fcalc build
+  runs every script in its name's order, shows the files the scripts wrote a
+  record at a time by a DCL READ loop, since TYPE would take their first
+  character for FORTRAN carriage control, and runs `ONESHOT.COM`; then each
+  corpus program), and `copyout.cmd` (the log, FTNRTL's objects, image, map,
+  and sources, and fcalc's plain build's `.MAR` files, objects, and image, for a
+  later comparison of govax's MACRO and LINK with VMS's on the compiler's own
+  output). The volume: 1,671 files, about 57,000 of RD54's blocks.
+  `TestF90RProcedure` (`internal/console/f90r_test.go`) rehearses it on govax
+  (`runFTN86`'s volume and run are now `runVMSRound`, shared): FTNRTL builds
+  with no message, every corpus program prints its `name.out` but ADVANCE (its
+  nonadvancing prompt stays in its record before a read of a file,
+  `f90rFileDifferences`), and every fcalc build prints every script's
+  `name.out`, writes `expected/`'s files, and runs `oneshot.com` as its `.out`
+  says (about 45 seconds).
+  The rehearsal found an fcalc bug: SAY wrote its carriage-control blank even
+  when continuing the record a prompt left open, which FTNRTL leaves open when
+  SYS$INPUT isn't a terminal (Fortran 90's rule; FTN$$UNIT_PROMPT ends it only
+  at a terminal READ), so every echoed line read from a file showed as `fcalc>
+  set echo` with two blanks (and `oneshot.out` had recorded it, its data lines
+  being no terminal), and a typed line longer than 125 characters overflowed the
+  133-byte record (OUTSTAOVE), ending fcalc in the middle of `basics`. Fixed in
+  fcalc: `fcplatform.f90` gains `prompt_ends` (LIB$GETDVI's DVI$_TRM of
+  SYS$INPUT, asked once) and `record_room` (132; gfortran's twin `.false.` and
+  `HUGE(1)`, so gfortran's output is unchanged), and SAY continues an open
+  prompt's record without the blank, its first piece the room the prompt left;
+  the log's records are pieces of 132 as before. The one difference left from a
+  terminal is where such a long line is split, which the test allows for
+  (`f90rFromFile`). `oneshot.out` and `fcalcd.out` corrected; `/STANDARD=F90`'s
+  two new EXTENSIONs (LIB$GETDVI's `$` and null argument) in
+  `fcalcToolMessages`; `TestFcalcMilestone`, `TestFcalcDebugger`,
+  `TestFcalcTools`, and gfortran's witness (all three builds) pass unchanged
+  otherwise. Next: the author's run, then `TestF90ROracle`, govax's run held to
+  VMS's log, and part 2's fixes.

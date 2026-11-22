@@ -9,10 +9,10 @@ fall(t) = g*t^2/2
 SAVE [NOSUCH]STATE
      ^
 %FCALC-E-FILEERR, file [NOSUCH]STATE.fcalc could not be used
-fcalc>  set echo
-fcalc>  1 + 2
+fcalc> set echo
+fcalc> 1 + 2
 3
-fcalc>  @setup
+fcalc> @setup
 fcalc> ! setup.fcalc: a file of fcalc's commands, for the state script's @ and RUN.
 fcalc> ! Each line runs as if it were typed: a value is shown unless the line ends
 fcalc> ! in ;, and ! starts a comment.
@@ -23,5 +23,5 @@ fall(t) = g*t^2/2
 fcalc> fall(2)
 19.6133
 fcalc> dropped = fall(10);
-fcalc>  
+fcalc> 
   $STATUS == "%X10000001"

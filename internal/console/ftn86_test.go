@@ -37,6 +37,19 @@ var ftn86FileDifferences = map[string]string{
 func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 	t.Helper()
 
+	// As from an earlier run in the same session. This doesn't test what that did on
+	// VMS: there LINK translates the name for FTNRTL/OPTIONS and looks for the image it
+	// is to make, and govax's LINK doesn't translate it (the phase doc's log).
+	return runVMSRound(t, "ftn86", 60000, "FTN86", "DEFINE/NOLOG FTNRTL DUA1:[FTN86]FTNRTL.EXE")
+}
+
+// runVMSRound builds a VMS round's volume, of size blocks with label, as
+// testdata/round/exchange.cmd does, and runs LABEL.COM on it after the commands before,
+// returning the log and the console, whose default directory is the volume's
+// [000000] on DUA1, as VMS has it.
+func runVMSRound(t *testing.T, round string, size uint32, label string, before ...string) (string, *Console, *Dispatcher) {
+	t.Helper()
+
 	c, buf := newTestConsole(t)
 	c.Paths = respath.New(nil, bootdata.FS)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
@@ -46,8 +59,8 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(t.TempDir(), "ftn86.dsk")
-	if err := c.cmd().InitializeContainer(path, 60000, "FTN86", 0, "RD54"); err != nil {
+	path := filepath.Join(t.TempDir(), round+".dsk")
+	if err := c.cmd().InitializeContainer(path, size, label, 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -57,7 +70,7 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 
 	t.Chdir(filepath.Join("..", ".."))
 
-	script, err := os.ReadFile(filepath.Join("testdata", "ftn86", "exchange.cmd"))
+	script, err := os.ReadFile(filepath.Join("testdata", round, "exchange.cmd"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,15 +106,15 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
 	buf.Reset()
 
-	// As from an earlier run in the same session. This doesn't test what that did on
-	// VMS: there LINK translates the name for FTNRTL/OPTIONS and looks for the image it
-	// is to make, and govax's LINK doesn't translate it (the phase doc's log).
-	shareFindRun(t, d, "DEFINE/NOLOG FTNRTL DUA1:[FTN86]FTNRTL.EXE")
-	shareFindRun(t, d, "@FTN86/OUTPUT=FTN86.LOG")
+	for _, command := range before {
+		shareFindRun(t, d, command)
+	}
+
+	shareFindRun(t, d, "@"+label+"/OUTPUT="+label+".LOG")
 
 	buf.Reset()
 
-	return ftn86Log(t, d, "FTN86.LOG"), c, d
+	return ftn86Log(t, d, label+".LOG"), c, d
 }
 
 // ftn86Log is a log as COPY brings it to the host, as VMS's was: its records by their

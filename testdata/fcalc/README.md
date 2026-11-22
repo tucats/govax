@@ -23,7 +23,7 @@ Each file is a module but the last, the main program, compiled in the order
 
 | File | What it holds |
 |---|---|
-| `fcplatform.f90` | what differs by system: VMS's carriage control and the foreign command's text, from LIB$GET_FOREIGN (`gfortran/fcplatform.f90` is gfortran's twin, which has none) |
+| `fcplatform.f90` | what differs by system: VMS's carriage control and record length, whether a READ ends a prompt's record (SYS$INPUT a terminal, from LIB$GETDVI), and the foreign command's text, from LIB$GET_FOREIGN (`gfortran/fcplatform.f90` is gfortran's twin, which has none) |
 | `fckinds.f90` | the kind `RK`, fcalc's limits (`LIMIT`, `SMALL`), the constants |
 | `fcmessages.f90` | output (`SAY`, which keeps records to 132 characters) and the messages, `%FCALC-E-...` |
 | `fcvalues.f90` | `TYPE VALUE`, its operators, guarded so nothing traps, and how a value is shown (the formats and bases) |
@@ -132,9 +132,9 @@ without a console.
 `/LIST/CROSS_REFERENCE`, which must say nothing, then `/STANDARD=F90` and
 `/WARNINGS=ALL`, which must say only these, each left for its reason:
 
-- **`/STANDARD=F90`**: two `EXTENSION`s in `fcplatform.f90`, LIB$GET_FOREIGN's
-  `$` and its null argument. That module is where fcalc keeps what only VMS
-  has.
+- **`/STANDARD=F90`**: four `EXTENSION`s in `fcplatform.f90`, LIB$GETDVI's and
+  LIB$GET_FOREIGN's `$`s and their null arguments. That module is where fcalc
+  keeps what only VMS has.
 - **`/WARNINGS=ALL`**: 13 `HOSTHIDDEN`s, each an internal procedure
   declaring a local (`K`, `E`, `H`, `V`, `WIDTH`, `STATUS`) whose name its host
   also uses, so as not to change the host's; and one `UNREAD`, `READ_LINE`'s
@@ -203,10 +203,15 @@ number reads back the same), and of the Gauss-Kronrod loop's `I / 2`, which
   it `.DAT`), and asks INQUIRE's OPENED= whether a file is already running,
   which each system answers however the name is spelled.
 - **Prompts.** FTNRTL ends a prompt's open record at a READ only from a
-  terminal; with its input from a procedure's data lines the record stays
-  open, so the next line written goes on in it, its carriage control's blank
-  with it: `oneshot.out`'s `fcalc>  set echo`. (The simh round, run on
-  FTNRTL, will show whether VMS's terminal driver sees it the same way.)
+  terminal; with its input from a file or a procedure's data lines the record
+  stays open, and the next line written goes on in it, as Fortran 90 says it
+  should (gfortran does the same, reading anything). So `SAY` writes such a
+  line without its carriage control's blank, the record having one already,
+  and fits its first piece in the 125 characters the prompt left; it asks
+  `fcplatform.f90`'s `prompt_ends`, which asks LIB$GETDVI whether SYS$INPUT
+  is a terminal. Until Phase 111's subtask 11 it didn't, and printed
+  `fcalc>  set echo` in `oneshot.out`, and a long typed line read from a file
+  overflowed its record (`testdata/f90r`'s README).
 - **Rounding.** Values are shown to 12 significant digits, where the two
   machines' last bits don't reach; a part of a complex value smaller than the
   other by more than the digits shown is shown as zero, and equality is to

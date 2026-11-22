@@ -1,0 +1,3 @@
+! F90R.OPT - links a compiled Fortran 90 program against FTNRTL, which F90R.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
