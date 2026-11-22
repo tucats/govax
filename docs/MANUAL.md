@@ -2259,10 +2259,16 @@ VAX> SHOW DEFAULT
 
 ```text
 INITIALIZE/CONTAINER "file" [label] [/DEVICE=type | /SIZE=blocks] [/CLUSTER=n]
+                     [/HEADERS=n] [/DIRECTORIES=n]
 ```
 
 Creates a new, empty ODS-2 volume in a host file. It isn't mounted; use
-`MOUNT`. Writing over a container that already exists needs the `VOLPRO`
+`MOUNT`. `/HEADERS` makes the index file with room for that many files and
+`/DIRECTORIES` the MFD with room for that many entries, as VMS's INITIALIZE
+does; each grows by itself when it must. A volume going to a VMS system that
+will hold many files should have headers for all of them: the index file
+grown past its header needs an extension header, and VMS 7.1's file system
+has failed on a volume where govax made one. Writing over a container that already exists needs the `VOLPRO`
 privilege, and with `vax.host.sysprv` on any container needs `SYSPRV`
 ([Who may use host files](#who-may-use-host-files)).
 
