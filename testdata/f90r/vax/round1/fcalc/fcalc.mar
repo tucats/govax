@@ -1,0 +1,4359 @@
+	.TITLE	FCALC
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 13:59:44.05
+; from DUA5:[FCALC]FCALC.F90;1
+; by the command FORTRAN/G_FLOATING FCALC
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; The module FCVALUES's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCVALUES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCVALUES.$BASE:
+	.BLKB	12
+
+; The module FCFUNCS's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCFUNCS,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCFUNCS.$BASE:
+	.BLKB	12
+
+; Storage map for FCALC, the main program
+;   INDENT         INTEGER        $MOD$FCMESSAGES+8  FCALC.INDENT         from FCMESSAGES
+;   DIGITS         INTEGER        $MOD$FCVALUES+0    FCALC.DIGITS         from FCVALUES
+;   NUMBER_FORMAT  INTEGER        $MOD$FCVALUES+4    FCALC.NUMBER_FORMAT  from FCVALUES
+;   NUMBER_BASE    INTEGER        $MOD$FCVALUES+8    FCALC.NUMBER_BASE    from FCVALUES
+;   ANGLE_MODE     INTEGER        $MOD$FCFUNCS+0     FCALC.ANGLE_MODE     from FCFUNCS
+;   SEED_GIVEN     LOGICAL        $MOD$FCFUNCS+4     FCALC.SEED_GIVEN     from FCFUNCS
+;   LINE           CHARACTER*200  $LOCAL+0           FCALC.LINE
+;   LENGTH         INTEGER        $LOCAL+200         FCALC.LENGTH
+;   STATUS         INTEGER        $LOCAL+204         FCALC.STATUS
+;   ECHO           LOGICAL        $LOCAL+208         FCALC.ECHO
+;   DONE           LOGICAL        $LOCAL+212         FCALC.DONE
+;   ECHOED         LOGICAL        $LOCAL+216         FCALC.ECHOED
+;   QUIET          LOGICAL        $LOCAL+220         FCALC.QUIET
+;   DEPTH          INTEGER        $LOCAL+224         FCALC.DEPTH
+;   LOADING        LOGICAL        $LOCAL+228         FCALC.LOADING
+;   ABANDON        LOGICAL        $LOCAL+232         FCALC.ABANDON
+;   R6 is $T2: temporary
+;   R7 is $R1: ECHOED, during a loop
+;
+FCALC.INDENT = $MOD$FCMESSAGES.$BASE+8	; INDENT, in module FCMESSAGES's variables
+FCALC.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+FCALC.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
+FCALC.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
+FCALC.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
+FCALC.ANGLE_MODE = $MOD$FCFUNCS.$BASE	; ANGLE_MODE, in module FCFUNCS's variables
+FCALC.SEED_GIVEN = $MOD$FCFUNCS.$BASE+4	; SEED_GIVEN, in module FCFUNCS's variables
+FCALC.SEED_NUMBER = $MOD$FCFUNCS.$BASE+8 ; SEED_NUMBER, in module FCFUNCS's variables
+; the stamps of the modules used
+	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCARRAYS.EE19C6D8,$MOD$FCLEXER.3BEEEE6E,$MOD$FCTREE.EC32573A,$MOD$FCEVAL.945175C1,$MOD$FCSYMBOLS.2A7739DD,$MOD$FCFUNCS.0679CFAC,$MOD$FCNUMERIC.457616FE,$MOD$FCPLOT.808B1030,$MOD$FCSTATE.E666EE1B,$MOD$FCPLATFORM.0DA80778
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCALC.LINE:
+	.BLKL	50			; LINE
+FCALC.LENGTH:
+	.BLKL	1			; LENGTH
+FCALC.STATUS:
+	.BLKL	1			; STATUS
+FCALC.ECHO:
+	.BLKL	1			; ECHO
+FCALC.DONE:
+	.BLKL	1			; DONE
+FCALC.ECHOED:
+	.BLKL	1			; ECHOED
+FCALC.QUIET:
+	.BLKL	1			; QUIET
+FCALC.DEPTH:
+	.BLKL	1			; DEPTH
+FCALC.LOADING:
+	.BLKL	1			; LOADING
+FCALC.ABANDON:
+	.BLKL	1			; ABANDON
+FCALC.$T1:
+	.BLKL	24			; characters, for one statement
+FCALC.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.$K1
+FCALC.$K2:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCALC.$D2:
+	.WORD	200			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.LINE
+FCALC.$K3:
+	.LONG	14
+FCALC.$K4:
+	.LONG	0
+FCALC.$D4:
+	.WORD	7			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.$K5
+FCALC.$D5:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.$K6
+FCALC.$K1:
+	.ASCII	/ans/
+FCALC.$K5:
+	.ASCII	/fcalc> /
+FCALC.$K6:
+	.ASCII
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  ! fcalc, a scientific calculator: the main program.
+;    2  !
+;    3  ! fcalc reads lines at the prompt until QUIT, EXIT, or the end of the
+;    4  ! input. A line that starts with a command word is a command; NAME = EXPR
+;    5  ! assigns a variable; F(X, Y) = EXPR defines a function; V(I, J) = EXPR
+;    6  ! assigns elements of an array; anything else is an expression, whose value
+;    7  ! is shown and kept as ANS. A line starting with ! is a comment.
+;    8  !
+;    9  ! Run as a foreign command with text after its name ($ FCALC 2^10 + 1), it
+;   10  ! runs that one line and ends.
+;   11  !
+;   12  ! The modules each do one part of the work, and this program joins them:
+;   13  ! a line is read (READ_LINE), cut into tokens (FCLEXER, through SCAN_LINE),
+;   14  ! classified by its first tokens (EXECUTE), parsed into a tree (FCTREE),
+;   15  ! and evaluated (FCEVAL); an error anywhere is recorded (FCMESSAGES) and
+;   16  ! reported once the line is done. @ (or RUN) and LOAD run a file's lines
+;   17  ! the same way, a line at a time (RUN_FILE); FCSTATE reads the files, and
+;   18  ! saves the state and keeps the log.
+;   19  !
+;   20  ! The procedures after CONTAINS are internal procedures of the program:
+;   21  ! they see the program's variables (LINE, ECHO, DONE, ...) by host
+;   22  ! association, as if declared in each of them, which is how they share
+;   23  ! the state of the session without passing it around.
+;   24  program fcalc
+	.ENTRY	FCALC,^M<R6,R7>
+;   25    use fckinds
+;   26    use fcmessages
+;   27    use fcvalues
+;   28    use fcarrays
+;   29    use fclexer
+;   30    use fctree
+;   31    use fceval
+;   32    use fcsymbols
+;   33    use fcfuncs
+;   34    use fcnumeric
+;   35    use fcplot
+;   36    use fcstate
+;   37    use fcplatform, only: foreign_text
+;   38    implicit none
+;   39
+;   40    character(len=line_length + 1) :: line
+;   41    integer :: length, status
+;   42    logical :: echo, done, echoed, quiet
+;   43
+;   44    ! DEPTH is how many files of commands are running, one inside another;
+;   45    ! LOADING is true while LOAD runs one, whose lines are all quiet;
+;   46    ! ABANDON is true after an error in a file, while every file running
+;   47    ! ends, each saying where it was.
+;   48    integer :: depth
+;   49    logical :: loading, abandon
+;   50
+;   51    echo = .false.
+	CLRL	FCALC.ECHO
+;   52    done = .false.
+	CLRL	FCALC.DONE
+;   53    depth = 0
+	CLRL	FCALC.DEPTH
+;   54    loading = .false.
+	CLRL	FCALC.LOADING
+;   55    abandon = .false.
+	CLRL	FCALC.ABANDON
+;   56    call start_symbols()
+	CALLS	#0,G^FCSYMBOLS.START_SYMBOLS
+;   57    call set_variable('ans', real_quantity(0.0_rk))
+	PUSHAG	FCALC.$K2
+	PUSHAB	FCALC.$T1
+	CALLS	#2,G^FCARRAYS.REAL_QUANTITY
+	PUSHAB	FCALC.$T1
+	PUSHAQ	FCALC.$D1
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;   58
+;   59    ! The foreign command's text, if there is any: that line alone, shown
+;   60    ! (if it fails) with the pointer under it at the line's start, and then
+;   61    ! fcalc is done. (Not STOP, which on VMS says FORTRAN STOP.)
+;   62    call foreign_text(line, length)
+	PUSHAL	FCALC.LENGTH
+	PUSHAQ	FCALC.$D2
+	CALLS	#2,G^FCPLATFORM.FOREIGN_TEXT
+;   63    if (length > 0) then
+	TSTL	FCALC.LENGTH
+	BGTR	FCALC.$2
+	BRW	FCALC.$1
+FCALC.$2:
+;   64      indent = 0
+	CLRL	FCALC.INDENT
+;   65      if (length > line_length) then
+	CMPL	FCALC.LENGTH,#199
+	BLEQ	FCALC.$3
+;   66        call fail(e_linelong, 0)
+	PUSHL	#0
+	PUSHAL	FCALC.$K4
+	PUSHAL	FCALC.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;   67        call report()
+	PUSHL	#0
+	CALLS	#1,G^FCMESSAGES.REPORT
+;   68      else
+	BRB	FCALC.$5
+FCALC.$3:
+;   69        call execute(line(:length))
+	MOVL	FCALC.LENGTH,R6
+	BGEQ	FCALC.$6
+	CLRL	R6
+FCALC.$6:
+	CVTLW	R6,FCALC.$D3
+	MOVAB	FCALC.LINE,FCALC.$D3+4
+	PUSHAQ	FCALC.$D3
+	CALLS	#1,FCALC.EXECUTE
+;   70        call report(line(:length))
+	MOVL	FCALC.LENGTH,R6
+	BGEQ	FCALC.$8
+	CLRL	R6
+FCALC.$8:
+	CVTLW	R6,FCALC.$D3
+	MOVAB	FCALC.LINE,FCALC.$D3+4
+	PUSHAQ	FCALC.$D3
+	CALLS	#1,G^FCMESSAGES.REPORT
+;   71      end if
+FCALC.$5:
+;   72      done = .true.
+	MOVL	#-1,FCALC.DONE
+;   73    end if
+FCALC.$1:
+;   74
+;   75    do while (.not. done)
+	MOVL	FCALC.ECHOED,R7
+	BRW	FCALC.$10
+FCALC.$11:				; DO (line 75)'s body
+;   76      call say_more('fcalc> ')
+	PUSHAQ	FCALC.$D4
+	CALLS	#1,G^FCMESSAGES.SAY_MORE
+;   77      call read_line(line, length, status)
+	PUSHL	#0
+	PUSHAL	FCALC.STATUS
+	PUSHAL	FCALC.LENGTH
+	PUSHAQ	FCALC.$D2
+	CALLS	#4,G^FCSTATE.READ_LINE
+;   78      if (status < 0) then
+	TSTL	FCALC.STATUS
+	BGEQ	FCALC.$12
+	MOVL	R7,FCALC.ECHOED
+;   79        ! The end of the input: end the prompt's line.
+;   80        call say('')
+	PUSHAQ	FCALC.$D5
+	CALLS	#1,G^FCMESSAGES.SAY
+;   81        exit
+	BRW	FCALC.$14
+FCALC.$12:
+;   82      end if
+;   83
+;   84      ! A line too long isn't echoed: VMS's FORTRAN gives none of it. A line
+;   85      ! the terminal shows itself (it echoes what is typed) goes to the log.
+;   86      echoed = echo .and. status == 0
+	CLRL	R0
+	TSTL	FCALC.STATUS
+	BNEQ	FCALC.$15
+	MNEGL	#1,R0
+FCALC.$15:
+	MCOML	R0,R0
+	BICL3	R0,FCALC.ECHO,R7
+;   87      if (echoed) then
+	BLBC	R7,FCALC.$16
+;   88        call say(line(:length))
+	MOVL	FCALC.LENGTH,R6
+	BGEQ	FCALC.$18
+	CLRL	R6
+FCALC.$18:
+	CVTLW	R6,FCALC.$D3
+	MOVAB	FCALC.LINE,FCALC.$D3+4
+	PUSHAQ	FCALC.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+;   89      else if (status == 0) then
+	BRB	FCALC.$20
+FCALC.$16:
+	TSTL	FCALC.STATUS
+	BNEQ	FCALC.$21
+;   90        call log_line(line(:length))
+	MOVL	FCALC.LENGTH,R6
+	BGEQ	FCALC.$23
+	CLRL	R6
+FCALC.$23:
+	CVTLW	R6,FCALC.$D3
+	MOVAB	FCALC.LINE,FCALC.$D3+4
+	PUSHAQ	FCALC.$D3
+	CALLS	#1,G^FCMESSAGES.LOG_LINE
+;   91      else
+	BRB	FCALC.$20
+FCALC.$21:
+;   92        call log_line('')
+	PUSHAQ	FCALC.$D5
+	CALLS	#1,G^FCMESSAGES.LOG_LINE
+;   93      end if
+FCALC.$20:
+;   94
+;   95      if (status > 0) then
+	TSTL	FCALC.STATUS
+	BLEQ	FCALC.$25
+;   96        call fail(e_linelong, 0)
+	PUSHL	#0
+	PUSHAL	FCALC.$K4
+	PUSHAL	FCALC.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;   97      else
+	BRB	FCALC.$27
+FCALC.$25:
+;   98        call execute(line(:length))
+	MOVL	FCALC.LENGTH,R6
+	BGEQ	FCALC.$28
+	CLRL	R6
+FCALC.$28:
+	CVTLW	R6,FCALC.$D3
+	MOVAB	FCALC.LINE,FCALC.$D3+4
+	PUSHAQ	FCALC.$D3
+	CALLS	#1,FCALC.EXECUTE
+;   99      end if
+FCALC.$27:
+;  100
+;  101      ! SET ECHO echoes the line that set it.
+;  102      if (echo .and. .not. echoed .and. status == 0) call say(line(:length))
+	BLBC	FCALC.ECHO,FCALC.$30
+	BLBS	R7,FCALC.$30
+	TSTL	FCALC.STATUS
+	BNEQ	FCALC.$30
+	MOVL	FCALC.LENGTH,R6
+	BGEQ	FCALC.$34
+	CLRL	R6
+FCALC.$34:
+	CVTLW	R6,FCALC.$D3
+	MOVAB	FCALC.LINE,FCALC.$D3+4
+	PUSHAQ	FCALC.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+FCALC.$30:
+;  103
+;  104      call report()
+	PUSHL	#0
+	CALLS	#1,G^FCMESSAGES.REPORT
+;  105      abandon = .false.
+	CLRL	FCALC.ABANDON
+;  106    end do
+FCALC.$10:				; DO (line 75)'s test
+	BLBS	FCALC.DONE,FCALC.$36	; from line 75
+	BRW	FCALC.$11
+FCALC.$36:
+	MOVL	R7,FCALC.ECHOED
+FCALC.$14:
+;  107
+;  108  contains
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for FCALC.EXECUTE, a RECURSIVE subroutine
+;   LINE_TEXT  CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.EXECUTE.LINE_TEXT(AP)
+;   K          INTEGER                    R9          R9
+;   LAST       INTEGER                    R8          R8
+;   R6 is $T1: temporary
+;   R7 is $T2: temporary
+;
+FCALC.EXECUTE.LINE_TEXT = 4		; LINE_TEXT is argument 1
+FCALC.EXECUTE.$D2 = -8			; a descriptor, written whole at each use, in the frame
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.EXECUTE.$D1:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.EXECUTE.$K1
+FCALC.EXECUTE.$K2:
+	.LONG	0
+FCALC.EXECUTE.$K1:
+	.ASCII	/ /<9>
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  109
+;  110    ! EXECUTE runs one line. A line ending in ; is quiet: an expression's
+;  111    ! value, an assignment, or a definition is made but not shown, as in
+;  112    ! MATLAB and Octave (a ; in brackets separates a matrix's rows, but none
+;  113    ! ends a line).
+;  114    !
+;  115    ! EXECUTE, RUN, and RUN_FILE are RECURSIVE: a line may be @file, whose
+;  116    ! lines EXECUTE runs while the first call is still active. Without
+;  117    ! RECURSIVE, a compiler may keep a procedure's local variables in one
+;  118    ! fixed place (the VAX's FORTRAN does), which a second, inner call would
+;  119    ! overwrite.
+;  120    recursive subroutine execute(line_text)
+FCALC.EXECUTE:
+	.WORD	^M<R2,R6,R7,R8,R9>	; internal procedure EXECUTE of FCALC
+	SUBL2	#16,SP			; this activation's own storage
+;  121      character(len=*), intent(in) :: line_text
+;  122      integer :: k, last
+;  123
+;  124      if (len_trim(line_text) == 0) return
+	MOVL	FCALC.EXECUTE.LINE_TEXT(AP),R0
+	MOVAB	@4(R0),R6
+	MOVZWL	@FCALC.EXECUTE.LINE_TEXT(AP),R7
+	BRB	FCALC.EXECUTE.$1
+FCALC.EXECUTE.$2:
+	CMPB	-1(R6)[R7],#32
+	BNEQ	FCALC.EXECUTE.$3
+	DECL	R7
+FCALC.EXECUTE.$1:
+	TSTL	R7			; from line 124
+	BNEQ	FCALC.EXECUTE.$2
+FCALC.EXECUTE.$3:
+	TSTL	R7
+	BNEQ	FCALC.EXECUTE.$6
+	RET
+FCALC.EXECUTE.$6:
+;  125      k = verify(line_text, ' ' // achar(9))
+	PUSHAL	FCALC.EXECUTE.$K2
+	PUSHAQ	FCALC.EXECUTE.$D1
+	PUSHL	FCALC.EXECUTE.LINE_TEXT(AP)
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,R7
+	MOVL	R7,R9
+;  126      if (line_text(k:k) == '!') return
+	MOVL	FCALC.EXECUTE.LINE_TEXT(AP),R0
+	SUBL3	#1,R9,R1
+	CMPB	@4(R0)[R1],#33
+	BNEQ	FCALC.EXECUTE.$8
+	RET
+FCALC.EXECUTE.$8:
+;  127
+;  128      last = len_trim(line_text)
+	MOVL	FCALC.EXECUTE.LINE_TEXT(AP),R0
+	MOVAB	@4(R0),R7
+	MOVZWL	@FCALC.EXECUTE.LINE_TEXT(AP),R6
+	BRB	FCALC.EXECUTE.$10
+FCALC.EXECUTE.$11:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCALC.EXECUTE.$12
+	DECL	R6
+FCALC.EXECUTE.$10:
+	TSTL	R6			; from line 128
+	BNEQ	FCALC.EXECUTE.$11
+FCALC.EXECUTE.$12:
+	MOVL	R6,R8
+;  129      quiet = line_text(last:last) == ';'
+	MOVL	FCALC.EXECUTE.LINE_TEXT(AP),R0
+	SUBL3	#1,R8,R1
+	CLRL	R2
+	CMPB	@4(R0)[R1],#59
+	BNEQ	FCALC.EXECUTE.$15
+	MNEGL	#1,R2
+FCALC.EXECUTE.$15:
+	MOVL	R2,FCALC.QUIET
+;  130      if (quiet) last = last - 1
+	BLBC	FCALC.QUIET,FCALC.EXECUTE.$16
+	DECL	R8
+FCALC.EXECUTE.$16:
+;  131      if (loading) quiet = .true.
+	BLBC	FCALC.LOADING,FCALC.EXECUTE.$18
+	MOVL	#-1,FCALC.QUIET
+FCALC.EXECUTE.$18:
+;  132      call run(line_text(:last))
+	MOVL	R8,R6
+	BGEQ	FCALC.EXECUTE.$20
+	CLRL	R6
+FCALC.EXECUTE.$20:
+	MOVL	#17694720,FCALC.EXECUTE.$D2(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R6,FCALC.EXECUTE.$D2(FP)
+	MOVL	FCALC.EXECUTE.LINE_TEXT(AP),R0
+	MOVAB	@4(R0),FCALC.EXECUTE.$D2+4(FP)
+	PUSHAQ	FCALC.EXECUTE.$D2(FP)
+	CALLS	#1,FCALC.RUN
+;  133    end subroutine execute
+	RET
+
+; Storage map for FCALC.RUN, a RECURSIVE subroutine
+;   TEXT    CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.RUN.TEXT(AP)
+;   FIRST   TYPE(TOKEN)                FP-180      FCALC.RUN.FIRST(FP)
+;   SECOND  TYPE(TOKEN)                FP-124      FCALC.RUN.SECOND(FP)
+;   R6 is $T1: temporary
+;
+FCALC.RUN.TEXT = 4			; TEXT is argument 1
+FCALC.RUN.FIRST = -180			; FIRST, in the frame
+FCALC.RUN.SECOND = -124			; SECOND, in the frame
+FCALC.RUN.$T2 = -68			; characters, for one statement, in the frame
+FCALC.RUN.$T3 = -12			; temporary, in the frame
+FCALC.RUN.$D1 = -8			; a descriptor, written whole at each use, in the frame
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.RUN.$K1:
+	.LONG	1
+FCALC.RUN.$K2:
+	.LONG	2
+FCALC.RUN.$K3:
+	.ASCII	/=/
+FCALC.RUN.$K4:
+	.ASCII	/(/
+FCALC.RUN.$K5:
+	.ASCII	/quit/
+FCALC.RUN.$K6:
+	.ASCII	/exit/
+FCALC.RUN.$K7:
+	.ASCII	/list/
+FCALC.RUN.$K8:
+	.ASCII	/clear/
+FCALC.RUN.$K9:
+	.ASCII	/set/
+FCALC.RUN.$K10:
+	.ASCII	/show/
+FCALC.RUN.$K11:
+	.ASCII	/roots/
+FCALC.RUN.$K12:
+	.ASCII	/solve/
+FCALC.RUN.$K13:
+	.ASCII	/integrate/
+FCALC.RUN.$K14:
+	.ASCII	/diff/
+FCALC.RUN.$K15:
+	.ASCII	/table/
+FCALC.RUN.$K16:
+	.ASCII	/plot/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  134
+;  135    ! RUN runs the line TEXT.
+;  136    recursive subroutine run(text)
+FCALC.RUN:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure RUN of FCALC
+	SUBL2	#180,SP			; this activation's own storage
+;  137      character(len=*), intent(in) :: text
+;  138      type(token) :: first, second
+;  139
+;  140      ! The commands that name a file come first: a file's name isn't made
+;  141      ! of fcalc's tokens (it may have [ ] and ; on VMS, / elsewhere).
+;  142      if (file_command(text)) return
+	PUSHL	FCALC.RUN.TEXT(AP)
+	CALLS	#1,FCALC.FILE_COMMAND
+	MOVL	R0,R6
+	BLBC	R6,FCALC.RUN.$1
+	RET
+FCALC.RUN.$1:
+;  143
+;  144      call scan_line(text)
+	PUSHL	FCALC.RUN.TEXT(AP)
+	CALLS	#1,G^FCTREE.SCAN_LINE
+;  145      if (failed()) return
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCALC.RUN.$3
+	RET
+FCALC.RUN.$3:
+;  146
+;  147      first = token_at(1)
+	PUSHAL	FCALC.RUN.$K1
+	PUSHAB	FCALC.RUN.$T2(FP)
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.RUN.$T2(FP),FCALC.RUN.FIRST(FP)
+;  148      second = token_at(2)
+	PUSHAL	FCALC.RUN.$K2
+	PUSHAB	FCALC.RUN.$T2(FP)
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.RUN.$T2(FP),FCALC.RUN.SECOND(FP)
+;  149
+;  150      if (first%kind == t_name .and. .not. (second%kind == t_operator .and. &
+;  151          (second%text == '=' .or. second%text == '('))) then
+	CMPL	FCALC.RUN.FIRST(FP),#2
+	BEQL	FCALC.RUN.$6
+	BRW	FCALC.RUN.$5
+FCALC.RUN.$6:
+	CMPL	FCALC.RUN.SECOND(FP),#3
+	BNEQ	FCALC.RUN.$7
+	CMPC5	#31,FCALC.RUN.SECOND+8(FP),#^A/ /,#1,FCALC.RUN.$K3
+	BNEQ	FCALC.RUN.$9
+	BRW	FCALC.RUN.$5
+FCALC.RUN.$9:
+	CMPC5	#31,FCALC.RUN.SECOND+8(FP),#^A/ /,#1,FCALC.RUN.$K4
+	BNEQ	FCALC.RUN.$10
+	BRW	FCALC.RUN.$5
+FCALC.RUN.$10:
+FCALC.RUN.$7:
+;  152        select case (first%text)
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#4,FCALC.RUN.$K5
+	BEQL	FCALC.RUN.$11
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#4,FCALC.RUN.$K6
+	BEQL	FCALC.RUN.$11
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#4,FCALC.RUN.$K7
+	BEQL	FCALC.RUN.$14
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#5,FCALC.RUN.$K8
+	BEQL	FCALC.RUN.$16
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#3,FCALC.RUN.$K9
+	BEQL	FCALC.RUN.$18
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#4,FCALC.RUN.$K10
+	BEQL	FCALC.RUN.$20
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#5,FCALC.RUN.$K11
+	BNEQ	FCALC.RUN.$24
+	BRB	FCALC.RUN.$22
+FCALC.RUN.$11:
+;  153        case ('quit', 'exit')
+;  154          done = .true.
+	MOVL	#-1,FCALC.DONE
+;  155          return
+	RET
+FCALC.RUN.$14:
+;  156        case ('list')
+;  157          call list_command()
+	CALLS	#0,FCALC.LIST_COMMAND
+;  158          return
+	RET
+FCALC.RUN.$16:
+;  159        case ('clear')
+;  160          call clear_command()
+	CALLS	#0,FCALC.CLEAR_COMMAND
+;  161          return
+	RET
+FCALC.RUN.$18:
+;  162        case ('set')
+;  163          call set_command()
+	CALLS	#0,FCALC.SET_COMMAND
+;  164          return
+	RET
+FCALC.RUN.$20:
+;  165        case ('show')
+;  166          call show_command()
+	CALLS	#0,FCALC.SHOW_COMMAND
+;  167          return
+	RET
+FCALC.RUN.$22:
+;  168        case ('roots')
+;  169          call roots_command()
+	CALLS	#0,G^FCNUMERIC.ROOTS_COMMAND
+;  170          return
+	RET
+FCALC.RUN.$24:
+;  171        end select
+;  172      end if
+FCALC.RUN.$5:
+;  173
+;  174      ! SOLVE, INTEGRATE, DIFF, TABLE, and PLOT are reserved words, so they
+;  175      ! may be followed by a parenthesis: DIFF (X + 1)^2 FOR X AT 1.
+;  176      if (first%kind == t_name .and. .not. (second%kind == t_operator .and. &
+;  177          second%text == '=')) then
+	CMPL	FCALC.RUN.FIRST(FP),#2
+	BEQL	FCALC.RUN.$26
+	BRW	FCALC.RUN.$25
+FCALC.RUN.$26:
+	CMPL	FCALC.RUN.SECOND(FP),#3
+	BNEQ	FCALC.RUN.$27
+	CMPC5	#31,FCALC.RUN.SECOND+8(FP),#^A/ /,#1,FCALC.RUN.$K3
+	BEQL	FCALC.RUN.$25
+FCALC.RUN.$27:
+;  178        select case (first%text)
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#5,FCALC.RUN.$K12
+	BEQL	FCALC.RUN.$30
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#9,FCALC.RUN.$K13
+	BEQL	FCALC.RUN.$32
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#4,FCALC.RUN.$K14
+	BEQL	FCALC.RUN.$34
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#5,FCALC.RUN.$K15
+	BEQL	FCALC.RUN.$36
+	CMPC5	#31,FCALC.RUN.FIRST+8(FP),#^A/ /,#4,FCALC.RUN.$K16
+	BNEQ	FCALC.RUN.$40
+	BRB	FCALC.RUN.$38
+FCALC.RUN.$30:
+;  179        case ('solve')
+;  180          call solve_command()
+	CALLS	#0,G^FCNUMERIC.SOLVE_COMMAND
+;  181          return
+	RET
+FCALC.RUN.$32:
+;  182        case ('integrate')
+;  183          call integrate_command()
+	CALLS	#0,G^FCNUMERIC.INTEGRATE_COMMAND
+;  184          return
+	RET
+FCALC.RUN.$34:
+;  185        case ('diff')
+;  186          call diff_command()
+	CALLS	#0,G^FCNUMERIC.DIFF_COMMAND
+;  187          return
+	RET
+FCALC.RUN.$36:
+;  188        case ('table')
+;  189          call table_command(text)
+	PUSHL	FCALC.RUN.TEXT(AP)
+	CALLS	#1,G^FCPLOT.TABLE_COMMAND
+;  190          return
+	RET
+FCALC.RUN.$38:
+;  191        case ('plot')
+;  192          call plot_command(text)
+	PUSHL	FCALC.RUN.TEXT(AP)
+	CALLS	#1,G^FCPLOT.PLOT_COMMAND
+;  193          return
+	RET
+FCALC.RUN.$40:
+;  194        end select
+;  195      end if
+FCALC.RUN.$25:
+;  196
+;  197      if (first%kind == t_name .and. second%kind == t_operator .and. second%text == '=') then
+	CMPL	FCALC.RUN.FIRST(FP),#2
+	BNEQ	FCALC.RUN.$41
+	CMPL	FCALC.RUN.SECOND(FP),#3
+	BNEQ	FCALC.RUN.$41
+	CMPC5	#31,FCALC.RUN.SECOND+8(FP),#^A/ /,#1,FCALC.RUN.$K3
+	BNEQ	FCALC.RUN.$41
+;  198        call assignment(first)
+	PUSHAB	FCALC.RUN.FIRST(FP)
+	CALLS	#1,FCALC.ASSIGNMENT
+;  199      else if (is_definition() .and. .not. indexes_array(first%text)) then
+	RET
+FCALC.RUN.$41:
+	CALLS	#0,FCALC.IS_DEFINITION
+	MOVL	R0,R6
+	MOVL	#17694751,FCALC.RUN.$D1(FP) ; the descriptor's length, 31, type, and class
+	MOVAB	FCALC.RUN.FIRST+8(FP),FCALC.RUN.$D1+4(FP)
+	PUSHAQ	FCALC.RUN.$D1(FP)
+	CALLS	#1,FCALC.INDEXES_ARRAY
+	MOVL	R0,FCALC.RUN.$T3(FP)
+	BLBC	R6,FCALC.RUN.$46
+	BLBS	FCALC.RUN.$T3(FP),FCALC.RUN.$46
+;  200        call definition(text)
+	PUSHL	FCALC.RUN.TEXT(AP)
+	CALLS	#1,FCALC.DEFINITION
+;  201      else
+	RET
+FCALC.RUN.$46:
+;  202        call statement()
+	CALLS	#0,FCALC.STATEMENT
+;  203      end if
+;  204    end subroutine run
+	RET
+
+; Storage map for FCALC.FILE_COMMAND, a RECURSIVE LOGICAL function
+;   TEXT          CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.FILE_COMMAND.TEXT(AP)
+;   FILE_COMMAND  LOGICAL                    FP-48       FCALC.FILE_COMMAND.FILE_COMMAND(FP)
+;   WORD          CHARACTER*8                FP-44       FCALC.FILE_COMMAND.WORD(FP)
+;   AT            INTEGER                    R10         R10
+;   NEXT          INTEGER                    FP-32       FCALC.FILE_COMMAND.NEXT(FP)
+;   K             INTEGER                    R6          R6
+;   R7 is $T1: temporary
+;   R7 is $T2: temporary
+;   R9 is $H1: a value computed before a loop
+;   R7 is $U1: temporary
+;   R6 is $R1: NEXT, during a loop
+;   R8 is $R2: TEXT's address
+;
+FCALC.FILE_COMMAND.TEXT = 4		; TEXT is argument 1
+FCALC.FILE_COMMAND.FILE_COMMAND = -48	; FILE_COMMAND, the function's value, in the frame
+FCALC.FILE_COMMAND.WORD = -44		; WORD, in the frame
+FCALC.FILE_COMMAND.NEXT = -32		; NEXT, in the frame
+FCALC.FILE_COMMAND.$D2 = -24		; a descriptor, written whole at each use, in the frame
+FCALC.FILE_COMMAND.$D3 = -16		; a descriptor, written whole at each use, in the frame
+FCALC.FILE_COMMAND.$D4 = -8		; a descriptor, written whole at each use, in the frame
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.FILE_COMMAND.$D1:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.FILE_COMMAND.$K1
+FCALC.FILE_COMMAND.$K2:
+	.LONG	0
+FCALC.FILE_COMMAND.$K1:
+	.ASCII	/ /<9>
+FCALC.FILE_COMMAND.$K3:
+	.ASCII	/@/
+FCALC.FILE_COMMAND.$K4:
+	.ASCII	/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/
+FCALC.FILE_COMMAND.$K5:
+	.ASCII	/run/
+FCALC.FILE_COMMAND.$K6:
+	.ASCII	/load/
+FCALC.FILE_COMMAND.$K7:
+	.ASCII	/save/
+FCALC.FILE_COMMAND.$K8:
+	.ASCII	/log/
+FCALC.FILE_COMMAND.$K11:
+	.ASCII	/0123456789_$/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  205
+;  206    ! FILE_COMMAND runs TEXT and is true, if it is a command that names a
+;  207    ! file: @file, RUN file, LOAD file, SAVE file, LOG file, or LOG OFF. As
+;  208    ! with the other commands, a word followed by = or ( isn't one: RUN = 3
+;  209    ! assigns a variable, and LOG(8, 2) is the logarithm.
+;  210    recursive logical function file_command(text)
+FCALC.FILE_COMMAND:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10> ; internal procedure FILE_COMMAND of FCALC
+	SUBL2	#48,SP			; this activation's own storage
+;  211      character(len=*), intent(in) :: text
+;  212      character(len=8) :: word
+;  213      integer :: at, next, k
+;  214
+;  215      file_command = .false.
+;  216      at = verify(text, ' ' // achar(9))
+	PUSHAL	FCALC.FILE_COMMAND.$K2
+	PUSHAQ	FCALC.FILE_COMMAND.$D1
+	PUSHL	FCALC.FILE_COMMAND.TEXT(AP)
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,R7
+	MOVL	R7,R10
+;  217      if (at == 0) return
+	BNEQ	FCALC.FILE_COMMAND.$1
+	CLRL	R0			; the function's value
+	RET
+FCALC.FILE_COMMAND.$1:
+;  218
+;  219      if (text(at:at) == '@') then
+	MOVL	FCALC.FILE_COMMAND.TEXT(AP),R0
+	SUBL3	#1,R10,R1
+	CMPB	@4(R0)[R1],#64
+	BNEQ	FCALC.FILE_COMMAND.$3
+;  220        word = '@'
+	MOVC5	#1,FCALC.FILE_COMMAND.$K3,#^A/ /,#8,FCALC.FILE_COMMAND.WORD(FP)
+;  221        next = at + 1
+	ADDL3	R10,#1,FCALC.FILE_COMMAND.NEXT(FP)
+;  222      else
+	BRW	FCALC.FILE_COMMAND.$5
+FCALC.FILE_COMMAND.$3:
+;  223        ! The word: the letters from AT, lowercased.
+;  224        next = at
+	MOVL	R10,FCALC.FILE_COMMAND.NEXT(FP)
+;  225        do while (next <= len(text))
+	MOVZWL	@FCALC.FILE_COMMAND.TEXT(AP),R9 ; from line 225
+	MOVL	FCALC.FILE_COMMAND.NEXT(FP),R6
+	MOVL	FCALC.FILE_COMMAND.TEXT(AP),R8
+	BRB	FCALC.FILE_COMMAND.$6
+FCALC.FILE_COMMAND.$7:			; DO (line 225)'s body
+;  226          if (index('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', text(next:next)) == 0) exit
+	SUBL3	#1,R6,R0
+	MATCHC	#1,@4(R8)[R0],#52,FCALC.FILE_COMMAND.$K4
+	BNEQ	FCALC.FILE_COMMAND.$8
+	SUBL3	R2,#52,R0
+	BRB	FCALC.FILE_COMMAND.$9
+FCALC.FILE_COMMAND.$8:
+	CLRL	R0
+FCALC.FILE_COMMAND.$9:
+	MOVL	R0,R7
+	BNEQ	FCALC.FILE_COMMAND.$11
+	BRW	FCALC.FILE_COMMAND.$10
+FCALC.FILE_COMMAND.$11:
+;  227          next = next + 1
+	INCL	R6
+;  228        end do
+FCALC.FILE_COMMAND.$6:			; DO (line 225)'s test
+	CMPL	R6,R9			; from line 225
+	BLEQ	FCALC.FILE_COMMAND.$7
+	MOVL	R6,FCALC.FILE_COMMAND.NEXT(FP)
+FCALC.FILE_COMMAND.$13:
+;  229        if (next - at > len(word)) return
+	SUBL3	R10,FCALC.FILE_COMMAND.NEXT(FP),R0
+	CMPL	R0,#8
+	BLEQ	FCALC.FILE_COMMAND.$14
+	CLRL	R0			; the function's value
+	RET
+FCALC.FILE_COMMAND.$14:
+;  230        word = lowercase(text(at:next - 1))
+	MOVL	#34471936,FCALC.FILE_COMMAND.$D2(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.FILE_COMMAND.$D2+4(FP) ; no string yet
+	SUBL3	R10,FCALC.FILE_COMMAND.NEXT(FP),R7
+	BGEQ	FCALC.FILE_COMMAND.$16
+	CLRL	R7
+FCALC.FILE_COMMAND.$16:
+	MOVL	#17694720,FCALC.FILE_COMMAND.$D3(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R7,FCALC.FILE_COMMAND.$D3(FP)
+	MOVL	FCALC.FILE_COMMAND.TEXT(AP),R0
+	SUBL3	#1,R10,R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_COMMAND.$D3+4(FP)
+	PUSHAQ	FCALC.FILE_COMMAND.$D3(FP)
+	PUSHAQ	FCALC.FILE_COMMAND.$D2(FP)
+	CALLS	#2,FCALC.LOWERCASE
+	MOVZWL	FCALC.FILE_COMMAND.$D2(FP),R0
+	MOVC5	R0,@FCALC.FILE_COMMAND.$D2+4(FP),#^A/ /,#8,FCALC.FILE_COMMAND.WORD(FP)
+	PUSHAQ	FCALC.FILE_COMMAND.$D2(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;  231        if (word /= 'run' .and. word /= 'load' .and. word /= 'save' .and. word /= 'log') return
+	CMPC5	#8,FCALC.FILE_COMMAND.WORD(FP),#^A/ /,#3,FCALC.FILE_COMMAND.$K5
+	BEQL	FCALC.FILE_COMMAND.$18
+	CMPC5	#8,FCALC.FILE_COMMAND.WORD(FP),#^A/ /,#4,FCALC.FILE_COMMAND.$K6
+	BEQL	FCALC.FILE_COMMAND.$18
+	CMPC5	#8,FCALC.FILE_COMMAND.WORD(FP),#^A/ /,#4,FCALC.FILE_COMMAND.$K7
+	BEQL	FCALC.FILE_COMMAND.$18
+	CMPC5	#8,FCALC.FILE_COMMAND.WORD(FP),#^A/ /,#3,FCALC.FILE_COMMAND.$K8
+	BEQL	FCALC.FILE_COMMAND.$18
+	CLRL	R0			; the function's value
+	RET
+FCALC.FILE_COMMAND.$18:
+;  232        ! The next character that isn't blank: = or ( makes the line no
+;  233        ! command, and so does a word's going on (RUNNING = 1).
+;  234        k = verify(text(next:), ' ' // achar(9))
+	MOVZWL	@FCALC.FILE_COMMAND.TEXT(AP),R0
+	SUBL2	FCALC.FILE_COMMAND.NEXT(FP),R0
+	ADDL3	R0,#1,R7
+	BGEQ	FCALC.FILE_COMMAND.$23
+	CLRL	R7
+FCALC.FILE_COMMAND.$23:
+	MOVL	#17694720,FCALC.FILE_COMMAND.$D3(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R7,FCALC.FILE_COMMAND.$D3(FP)
+	MOVL	FCALC.FILE_COMMAND.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_COMMAND.NEXT(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_COMMAND.$D3+4(FP)
+	PUSHAL	FCALC.FILE_COMMAND.$K2
+	PUSHAQ	FCALC.FILE_COMMAND.$D1
+	PUSHAQ	FCALC.FILE_COMMAND.$D3(FP)
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,R7
+	MOVL	R7,R6
+;  235        if (k > 0) then
+	BLEQ	FCALC.FILE_COMMAND.$25
+;  236          k = next + k - 1
+	ADDL3	FCALC.FILE_COMMAND.NEXT(FP),R6,R0
+	SUBL3	#1,R0,R6
+;  237          if (text(k:k) == '=' .or. text(k:k) == '(') return
+	MOVL	FCALC.FILE_COMMAND.TEXT(AP),R0
+	SUBL3	#1,R6,R1
+	MOVB	@4(R0)[R1],R7
+	CMPB	R7,#61
+	BEQL	FCALC.FILE_COMMAND.$28
+	CMPB	R7,#40
+	BNEQ	FCALC.FILE_COMMAND.$27
+FCALC.FILE_COMMAND.$28:
+	CLRL	R0			; the function's value
+	RET
+FCALC.FILE_COMMAND.$27:
+;  238          if (k == next .and. index('0123456789_$', text(k:k)) > 0) return
+	MOVL	FCALC.FILE_COMMAND.TEXT(AP),R0
+	SUBL3	#1,R6,R1
+	MATCHC	#1,@4(R0)[R1],#12,FCALC.FILE_COMMAND.$K11
+	BNEQ	FCALC.FILE_COMMAND.$31
+	SUBL3	R2,#12,R0
+	BRB	FCALC.FILE_COMMAND.$32
+FCALC.FILE_COMMAND.$31:
+	CLRL	R0
+FCALC.FILE_COMMAND.$32:
+	MOVL	R0,R7
+	CMPL	R6,FCALC.FILE_COMMAND.NEXT(FP)
+	BNEQ	FCALC.FILE_COMMAND.$33
+	TSTL	R7
+	BLEQ	FCALC.FILE_COMMAND.$33
+	CLRL	R0			; the function's value
+	RET
+FCALC.FILE_COMMAND.$33:
+;  239        end if
+FCALC.FILE_COMMAND.$25:
+;  240      end if
+FCALC.FILE_COMMAND.$5:
+;  241
+;  242      file_command = .true.
+;  243      call file_argument(text, next, word)
+	MOVL	#17694728,FCALC.FILE_COMMAND.$D4(FP) ; the descriptor's length, 8, type, and class
+	MOVAB	FCALC.FILE_COMMAND.WORD(FP),FCALC.FILE_COMMAND.$D4+4(FP)
+	PUSHAQ	FCALC.FILE_COMMAND.$D4(FP)
+	PUSHAL	FCALC.FILE_COMMAND.NEXT(FP)
+	PUSHL	FCALC.FILE_COMMAND.TEXT(AP)
+	CALLS	#3,FCALC.FILE_ARGUMENT
+;  244    end function file_command
+	MOVL	#-1,R0			; the function's value
+	RET
+FCALC.FILE_COMMAND.$10:			; leaving the loop
+	MOVL	R6,FCALC.FILE_COMMAND.NEXT(FP)
+	BRW	FCALC.FILE_COMMAND.$13
+
+; Storage map for FCALC.FILE_ARGUMENT, a RECURSIVE subroutine
+;   TEXT   CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.FILE_ARGUMENT.TEXT(AP)
+;   NEXT   INTEGER, INTENT(IN)        argument 2  @FCALC.FILE_ARGUMENT.NEXT(AP)
+;   WORD   CHARACTER*(*), INTENT(IN)  argument 3  @FCALC.FILE_ARGUMENT.WORD(AP)
+;   FIRST  INTEGER                    FP-40       FCALC.FILE_ARGUMENT.FIRST(FP)
+;   LAST   INTEGER                    R9          R9
+;   K      INTEGER                    R10         R10
+;   R6 is $T1: temporary
+;   R8 is $T3: temporary
+;   R7 is $T4: temporary
+;
+FCALC.FILE_ARGUMENT.TEXT = 4		; TEXT is argument 1
+FCALC.FILE_ARGUMENT.NEXT = 8		; NEXT is argument 2
+FCALC.FILE_ARGUMENT.WORD = 12		; WORD is argument 3
+FCALC.FILE_ARGUMENT.FIRST = -40		; FIRST, in the frame
+FCALC.FILE_ARGUMENT.$T2 = -28		; temporary, in the frame
+FCALC.FILE_ARGUMENT.$D1 = -24		; a descriptor, written whole at each use, in the frame
+FCALC.FILE_ARGUMENT.$D3 = -16		; a descriptor, written whole at each use, in the frame
+FCALC.FILE_ARGUMENT.$D4 = -8		; a descriptor, written whole at each use, in the frame
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.FILE_ARGUMENT.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.FILE_ARGUMENT.$K1
+FCALC.FILE_ARGUMENT.$K2:
+	.LONG	0
+FCALC.FILE_ARGUMENT.$K3:
+	.LONG	45
+FCALC.FILE_ARGUMENT.$K4:
+	.LONG	5
+FCALC.FILE_ARGUMENT.$K9:
+	.LONG	-1
+FCALC.FILE_ARGUMENT.$K1:
+	.ASCII	/ /<9>
+FCALC.FILE_ARGUMENT.$K5:
+	.ASCII	/@/
+FCALC.FILE_ARGUMENT.$K6:
+	.ASCII	/run/
+FCALC.FILE_ARGUMENT.$K7:
+	.ASCII	/load/
+FCALC.FILE_ARGUMENT.$K8:
+	.ASCII	/save/
+FCALC.FILE_ARGUMENT.$K10:
+	.ASCII	/off/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  245
+;  246    ! FILE_ARGUMENT runs the command WORD, its file named in TEXT from NEXT:
+;  247    ! one word, with nothing after it.
+;  248    recursive subroutine file_argument(text, next, word)
+FCALC.FILE_ARGUMENT:
+	.WORD	^M<R2,R3,R6,R7,R8,R9,R10> ; internal procedure FILE_ARGUMENT of FCALC
+	SUBL2	#40,SP			; this activation's own storage
+;  249      character(len=*), intent(in) :: text, word
+;  250      integer, intent(in) :: next
+;  251      integer :: first, last, k
+;  252
+;  253      k = verify(text(next:), ' ' // achar(9))
+	MOVZWL	@FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL2	@FCALC.FILE_ARGUMENT.NEXT(AP),R0
+	ADDL3	R0,#1,FCALC.FILE_ARGUMENT.$T2(FP)
+	BGEQ	FCALC.FILE_ARGUMENT.$1
+	CLRL	FCALC.FILE_ARGUMENT.$T2(FP)
+FCALC.FILE_ARGUMENT.$1:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	FCALC.FILE_ARGUMENT.$T2(FP),FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,@FCALC.FILE_ARGUMENT.NEXT(AP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K2
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D2
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,R6
+	MOVL	R6,R10
+;  254      if (k == 0) then
+	BNEQ	FCALC.FILE_ARGUMENT.$3
+;  255        call fail(e_filereq, len(text) + 1)
+	MOVZWL	@FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	ADDL3	R0,#1,FCALC.FILE_ARGUMENT.$T2(FP)
+	PUSHL	#0
+	PUSHAL	FCALC.FILE_ARGUMENT.$T2(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  256        return
+	RET
+FCALC.FILE_ARGUMENT.$3:
+;  257      end if
+;  258      first = next + k - 1
+	ADDL3	@FCALC.FILE_ARGUMENT.NEXT(AP),R10,R0
+	SUBL3	#1,R0,FCALC.FILE_ARGUMENT.FIRST(FP)
+;  259      last = scan(text(first:), ' ' // achar(9))
+	MOVZWL	@FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL2	FCALC.FILE_ARGUMENT.FIRST(FP),R0
+	ADDL3	R0,#1,R6
+	BGEQ	FCALC.FILE_ARGUMENT.$5
+	CLRL	R6
+FCALC.FILE_ARGUMENT.$5:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R6,FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_ARGUMENT.FIRST(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K2
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D2
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	CALLS	#3,G^FTN$SCAN
+	MOVL	R0,FCALC.FILE_ARGUMENT.$T2(FP)
+	MOVL	FCALC.FILE_ARGUMENT.$T2(FP),R9
+;  260      if (last == 0) then
+	BNEQ	FCALC.FILE_ARGUMENT.$7
+;  261        last = len(text)
+	MOVZWL	@FCALC.FILE_ARGUMENT.TEXT(AP),R9
+;  262      else
+	BRB	FCALC.FILE_ARGUMENT.$9
+FCALC.FILE_ARGUMENT.$7:
+;  263        last = first + last - 2
+	ADDL3	FCALC.FILE_ARGUMENT.FIRST(FP),R9,R0
+	SUBL3	#2,R0,R9
+;  264        k = verify(text(last + 1:), ' ' // achar(9))
+	MOVZWL	@FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	R9,R0,FCALC.FILE_ARGUMENT.$T2(FP)
+	BGEQ	FCALC.FILE_ARGUMENT.$10
+	CLRL	FCALC.FILE_ARGUMENT.$T2(FP)
+FCALC.FILE_ARGUMENT.$10:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	FCALC.FILE_ARGUMENT.$T2(FP),FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	MOVAB	@4(R0)[R9],FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K2
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D2
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,R6
+	MOVL	R6,R10
+;  265        if (k > 0) then
+	BLEQ	FCALC.FILE_ARGUMENT.$12
+;  266          call fail(e_extra, last + k)
+	ADDL3	R9,R10,FCALC.FILE_ARGUMENT.$T2(FP)
+	PUSHL	#0
+	PUSHAL	FCALC.FILE_ARGUMENT.$T2(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K4
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  267          return
+	RET
+FCALC.FILE_ARGUMENT.$12:
+;  268        end if
+;  269      end if
+FCALC.FILE_ARGUMENT.$9:
+;  270
+;  271      select case (word)
+	MOVL	FCALC.FILE_ARGUMENT.WORD(AP),R0
+	MOVAB	@4(R0),FCALC.FILE_ARGUMENT.$T2(FP)
+	MOVZWL	@FCALC.FILE_ARGUMENT.WORD(AP),R6
+	CMPC5	R6,@FCALC.FILE_ARGUMENT.$T2(FP),#^A/ /,#1,FCALC.FILE_ARGUMENT.$K5
+	BEQL	FCALC.FILE_ARGUMENT.$14
+	CMPC5	R6,@FCALC.FILE_ARGUMENT.$T2(FP),#^A/ /,#3,FCALC.FILE_ARGUMENT.$K6
+	BEQL	FCALC.FILE_ARGUMENT.$14
+	CMPC5	R6,@FCALC.FILE_ARGUMENT.$T2(FP),#^A/ /,#4,FCALC.FILE_ARGUMENT.$K7
+	BNEQ	FCALC.FILE_ARGUMENT.$18
+	BRW	FCALC.FILE_ARGUMENT.$17
+FCALC.FILE_ARGUMENT.$18:
+	CMPC5	R6,@FCALC.FILE_ARGUMENT.$T2(FP),#^A/ /,#4,FCALC.FILE_ARGUMENT.$K8
+	BNEQ	FCALC.FILE_ARGUMENT.$20
+	BRW	FCALC.FILE_ARGUMENT.$19
+FCALC.FILE_ARGUMENT.$20:
+	BRW	FCALC.FILE_ARGUMENT.$21
+FCALC.FILE_ARGUMENT.$14:
+;  272      case ('@', 'run')
+;  273        call run_file(trim(file_name(text(first:last))), first, .false.)
+	MOVL	#34471936,FCALC.FILE_ARGUMENT.$D3(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.FILE_ARGUMENT.$D3+4(FP) ; no string yet
+	SUBL3	FCALC.FILE_ARGUMENT.FIRST(FP),R9,R0
+	ADDL3	R0,#1,R6
+	BGEQ	FCALC.FILE_ARGUMENT.$22
+	CLRL	R6
+FCALC.FILE_ARGUMENT.$22:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R6,FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_ARGUMENT.FIRST(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#2,G^FCSTATE.FILE_NAME
+	MOVAB	@FCALC.FILE_ARGUMENT.$D3+4(FP),FCALC.FILE_ARGUMENT.$T2(FP)
+	MOVAB	@FCALC.FILE_ARGUMENT.$T2(FP),R8
+	MOVZWL	FCALC.FILE_ARGUMENT.$D3(FP),R7
+	BRB	FCALC.FILE_ARGUMENT.$24
+FCALC.FILE_ARGUMENT.$25:
+	CMPB	-1(R8)[R7],#32
+	BNEQ	FCALC.FILE_ARGUMENT.$26
+	DECL	R7
+FCALC.FILE_ARGUMENT.$24:
+	TSTL	R7			; from line 273
+	BNEQ	FCALC.FILE_ARGUMENT.$25
+FCALC.FILE_ARGUMENT.$26:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D4(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R7,FCALC.FILE_ARGUMENT.$D4(FP)
+	MOVAB	@FCALC.FILE_ARGUMENT.$T2(FP),FCALC.FILE_ARGUMENT.$D4+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K2
+	PUSHAL	FCALC.FILE_ARGUMENT.FIRST(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D4(FP)
+	CALLS	#3,FCALC.RUN_FILE
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;  274      case ('load')
+	RET
+FCALC.FILE_ARGUMENT.$17:
+;  275        call run_file(trim(file_name(text(first:last))), first, .true.)
+	MOVL	#34471936,FCALC.FILE_ARGUMENT.$D3(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.FILE_ARGUMENT.$D3+4(FP) ; no string yet
+	SUBL3	FCALC.FILE_ARGUMENT.FIRST(FP),R9,R0
+	ADDL3	R0,#1,R7
+	BGEQ	FCALC.FILE_ARGUMENT.$30
+	CLRL	R7
+FCALC.FILE_ARGUMENT.$30:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D4(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R7,FCALC.FILE_ARGUMENT.$D4(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_ARGUMENT.FIRST(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D4+4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#2,G^FCSTATE.FILE_NAME
+	MOVAB	@FCALC.FILE_ARGUMENT.$D3+4(FP),R8
+	MOVAB	(R8),FCALC.FILE_ARGUMENT.$T2(FP)
+	MOVZWL	FCALC.FILE_ARGUMENT.$D3(FP),R6
+	BRB	FCALC.FILE_ARGUMENT.$32
+FCALC.FILE_ARGUMENT.$33:
+	SUBL3	#1,R6,R0
+	CMPB	@FCALC.FILE_ARGUMENT.$T2(FP)[R0],#32
+	BNEQ	FCALC.FILE_ARGUMENT.$34
+	DECL	R6
+FCALC.FILE_ARGUMENT.$32:
+	TSTL	R6			; from line 275
+	BNEQ	FCALC.FILE_ARGUMENT.$33
+FCALC.FILE_ARGUMENT.$34:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R6,FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVAB	(R8),FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.$K9
+	PUSHAL	FCALC.FILE_ARGUMENT.FIRST(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	CALLS	#3,FCALC.RUN_FILE
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;  276      case ('save')
+	RET
+FCALC.FILE_ARGUMENT.$19:
+;  277        call save_state(trim(file_name(text(first:last))), first)
+	MOVL	#34471936,FCALC.FILE_ARGUMENT.$D3(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.FILE_ARGUMENT.$D3+4(FP) ; no string yet
+	SUBL3	FCALC.FILE_ARGUMENT.FIRST(FP),R9,R0
+	ADDL3	R0,#1,R6
+	BGEQ	FCALC.FILE_ARGUMENT.$37
+	CLRL	R6
+FCALC.FILE_ARGUMENT.$37:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R6,FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_ARGUMENT.FIRST(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#2,G^FCSTATE.FILE_NAME
+	MOVAB	@FCALC.FILE_ARGUMENT.$D3+4(FP),FCALC.FILE_ARGUMENT.$T2(FP)
+	MOVAB	@FCALC.FILE_ARGUMENT.$T2(FP),R8
+	MOVZWL	FCALC.FILE_ARGUMENT.$D3(FP),R7
+	BRB	FCALC.FILE_ARGUMENT.$39
+FCALC.FILE_ARGUMENT.$40:
+	CMPB	-1(R8)[R7],#32
+	BNEQ	FCALC.FILE_ARGUMENT.$41
+	DECL	R7
+FCALC.FILE_ARGUMENT.$39:
+	TSTL	R7			; from line 277
+	BNEQ	FCALC.FILE_ARGUMENT.$40
+FCALC.FILE_ARGUMENT.$41:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D4(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R7,FCALC.FILE_ARGUMENT.$D4(FP)
+	MOVAB	@FCALC.FILE_ARGUMENT.$T2(FP),FCALC.FILE_ARGUMENT.$D4+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.FIRST(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D4(FP)
+	CALLS	#2,G^FCSTATE.SAVE_STATE
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;  278      case default
+	RET
+FCALC.FILE_ARGUMENT.$21:
+;  279        if (lowercase(text(first:last)) == 'off') then
+	MOVL	#34471936,FCALC.FILE_ARGUMENT.$D3(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.FILE_ARGUMENT.$D3+4(FP) ; no string yet
+	SUBL3	FCALC.FILE_ARGUMENT.FIRST(FP),R9,R0
+	ADDL3	R0,#1,R7
+	BGEQ	FCALC.FILE_ARGUMENT.$44
+	CLRL	R7
+FCALC.FILE_ARGUMENT.$44:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D4(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R7,FCALC.FILE_ARGUMENT.$D4(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_ARGUMENT.FIRST(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D4+4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#2,FCALC.LOWERCASE
+	MOVZWL	FCALC.FILE_ARGUMENT.$D3(FP),R0
+	CMPC5	R0,@FCALC.FILE_ARGUMENT.$D3+4(FP),#^A/ /,#3,FCALC.FILE_ARGUMENT.$K10
+	BNEQ	FCALC.FILE_ARGUMENT.$46
+	MNEGL	#1,R0
+	BRB	FCALC.FILE_ARGUMENT.$47
+FCALC.FILE_ARGUMENT.$46:
+	CLRL	R0
+FCALC.FILE_ARGUMENT.$47:
+	MOVL	R0,R8
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+	BLBC	R8,FCALC.FILE_ARGUMENT.$48
+;  280          call close_log(first)
+	PUSHAL	FCALC.FILE_ARGUMENT.FIRST(FP)
+	CALLS	#1,G^FCSTATE.CLOSE_LOG
+;  281        else
+	RET
+FCALC.FILE_ARGUMENT.$48:
+;  282          call open_log(trim(file_name(text(first:last))), first)
+	MOVL	#34471936,FCALC.FILE_ARGUMENT.$D3(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.FILE_ARGUMENT.$D3+4(FP) ; no string yet
+	SUBL3	FCALC.FILE_ARGUMENT.FIRST(FP),R9,R0
+	ADDL3	R0,#1,R8
+	BGEQ	FCALC.FILE_ARGUMENT.$51
+	CLRL	R8
+FCALC.FILE_ARGUMENT.$51:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D4(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R8,FCALC.FILE_ARGUMENT.$D4(FP)
+	MOVL	FCALC.FILE_ARGUMENT.TEXT(AP),R0
+	SUBL3	#1,FCALC.FILE_ARGUMENT.FIRST(FP),R1
+	MOVAB	@4(R0)[R1],FCALC.FILE_ARGUMENT.$D4+4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D4(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#2,G^FCSTATE.FILE_NAME
+	MOVAB	@FCALC.FILE_ARGUMENT.$D3+4(FP),R7
+	MOVAB	(R7),FCALC.FILE_ARGUMENT.$T2(FP)
+	MOVZWL	FCALC.FILE_ARGUMENT.$D3(FP),R6
+	BRB	FCALC.FILE_ARGUMENT.$53
+FCALC.FILE_ARGUMENT.$54:
+	SUBL3	#1,R6,R0
+	CMPB	@FCALC.FILE_ARGUMENT.$T2(FP)[R0],#32
+	BNEQ	FCALC.FILE_ARGUMENT.$55
+	DECL	R6
+FCALC.FILE_ARGUMENT.$53:
+	TSTL	R6			; from line 282
+	BNEQ	FCALC.FILE_ARGUMENT.$54
+FCALC.FILE_ARGUMENT.$55:
+	MOVL	#17694720,FCALC.FILE_ARGUMENT.$D1(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R6,FCALC.FILE_ARGUMENT.$D1(FP)
+	MOVAB	(R7),FCALC.FILE_ARGUMENT.$D1+4(FP)
+	PUSHAL	FCALC.FILE_ARGUMENT.FIRST(FP)
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D1(FP)
+	CALLS	#2,G^FCSTATE.OPEN_LOG
+	PUSHAQ	FCALC.FILE_ARGUMENT.$D3(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;  283        end if
+;  284      end select
+;  285    end subroutine file_argument
+	RET
+
+; Storage map for FCALC.RUN_FILE, a RECURSIVE subroutine
+;   NAME         CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.RUN_FILE.NAME(AP)
+;   COLUMN       INTEGER, INTENT(IN)        argument 2  @FCALC.RUN_FILE.COLUMN(AP)
+;   LOAD         LOGICAL, INTENT(IN)        argument 3  @FCALC.RUN_FILE.LOAD(AP)
+;   TEXT         CHARACTER*200              FP-576      FCALC.RUN_FILE.TEXT(FP)
+;   COUNT        INTEGER                    FP-376      FCALC.RUN_FILE.COUNT(FP)
+;   USED         INTEGER                    FP-372      FCALC.RUN_FILE.USED(FP)
+;   STATUS       INTEGER                    FP-368      FCALC.RUN_FILE.STATUS(FP)
+;   WAS_LOADING  LOGICAL                    FP-364      FCALC.RUN_FILE.WAS_LOADING(FP)
+;   SHOWN        LOGICAL                    R7          R7
+;   R8 is $T1: temporary
+;   R6 is $T6: temporary
+;   R9 is $U1: temporary
+;   R10 is $U2: temporary
+;
+FCALC.RUN_FILE.NAME = 4			; NAME is argument 1
+FCALC.RUN_FILE.COLUMN = 8		; COLUMN is argument 2
+FCALC.RUN_FILE.LOAD = 12		; LOAD is argument 3
+FCALC.RUN_FILE.TEXT = -576		; TEXT, in the frame
+FCALC.RUN_FILE.COUNT = -376		; COUNT, in the frame
+FCALC.RUN_FILE.USED = -372		; USED, in the frame
+FCALC.RUN_FILE.STATUS = -368		; STATUS, in the frame
+FCALC.RUN_FILE.WAS_LOADING = -364	; WAS_LOADING, in the frame
+FCALC.RUN_FILE.$T2 = -356		; temporary, in the frame
+FCALC.RUN_FILE.$T3 = -352		; characters, for one statement, in the frame
+FCALC.RUN_FILE.$D2 = -256		; a descriptor, written whole at each use, in the frame
+FCALC.RUN_FILE.$T4 = -248		; characters, for one statement, in the frame
+FCALC.RUN_FILE.$D3 = -40		; a descriptor, written whole at each use, in the frame
+FCALC.RUN_FILE.$T5 = -32		; characters, for one statement, in the frame
+FCALC.RUN_FILE.$D4 = -20		; a descriptor, written whole at each use, in the frame
+FCALC.RUN_FILE.$D5 = -12		; a descriptor, written whole at each use, in the frame
+FCALC.RUN_FILE.$T7 = -4			; temporary, in the frame
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.RUN_FILE.$K1:
+	.LONG	48
+FCALC.RUN_FILE.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.RUN_FILE.$K2
+FCALC.RUN_FILE.$K3:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCALC.RUN_FILE.$K5:
+	.LONG	14
+FCALC.RUN_FILE.$K6:
+	.LONG	0
+FCALC.RUN_FILE.$K7:
+	.LONG	51
+FCALC.RUN_FILE.$K2:
+	.ASCII	/ans/
+FCALC.RUN_FILE.$K4:
+	.ASCII	/fcalc> /
+FCALC.RUN_FILE.$K8:
+	.ASCII	/ of /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  286
+;  287    ! RUN_FILE runs the lines of the file NAME, named at COLUMN, as if each
+;  288    ! were typed: for LOAD, the variables and functions are cleared first, and
+;  289    ! every line is quiet. A line ending in an error ends the file, and every
+;  290    ! file that ran it (ABANDON), each saying the line it was at: in the
+;  291    ! innermost, the error is reported with the line itself, which the
+;  292    ! terminal hasn't shown. QUIT or EXIT ends the file alone. Under SET ECHO
+;  293    ! each line is shown after the prompt, as a typed line is (but not while
+;  294    ! LOAD runs).
+;  295    recursive subroutine run_file(name, column, load)
+FCALC.RUN_FILE:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10> ; internal procedure RUN_FILE of FCALC
+	SUBL2	#576,SP			; this activation's own storage
+;  296      character(len=*), intent(in) :: name
+;  297      integer, intent(in) :: column
+;  298      logical, intent(in) :: load
+;  299      character(len=line_length + 1) :: text
+;  300      integer :: count, used, status
+;  301      logical :: was_loading, shown
+;  302
+;  303      if (depth == max_depth) then
+	CMPL	FCALC.DEPTH,#8
+	BNEQ	FCALC.RUN_FILE.$1
+;  304        call fail(e_nesting, column)
+	PUSHL	#0
+	PUSHAL	@FCALC.RUN_FILE.COLUMN(AP)
+	PUSHAL	FCALC.RUN_FILE.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  305        return
+	RET
+FCALC.RUN_FILE.$1:
+;  306      end if
+;  307      if (.not. open_input(name, depth + 1, column)) return
+	ADDL3	FCALC.DEPTH,#1,FCALC.RUN_FILE.$T2(FP)
+	PUSHAL	@FCALC.RUN_FILE.COLUMN(AP)
+	PUSHAL	FCALC.RUN_FILE.$T2(FP)
+	PUSHL	FCALC.RUN_FILE.NAME(AP)
+	CALLS	#3,G^FCSTATE.OPEN_INPUT
+	MOVL	R0,R8
+	BLBS	R8,FCALC.RUN_FILE.$3
+	RET
+FCALC.RUN_FILE.$3:
+;  308      depth = depth + 1
+	INCL	FCALC.DEPTH
+;  309
+;  310      was_loading = loading
+	MOVL	FCALC.LOADING,FCALC.RUN_FILE.WAS_LOADING(FP)
+;  311      if (load) then
+	BLBC	@FCALC.RUN_FILE.LOAD(AP),FCALC.RUN_FILE.$5
+;  312        call clear_variables()
+	CALLS	#0,G^FCSYMBOLS.CLEAR_VARIABLES
+;  313        call clear_functions()
+	CALLS	#0,G^FCSYMBOLS.CLEAR_FUNCTIONS
+;  314        call set_variable('ans', real_quantity(0.0_rk))
+	PUSHAG	FCALC.RUN_FILE.$K3
+	PUSHAB	FCALC.RUN_FILE.$T3(FP)
+	CALLS	#2,G^FCARRAYS.REAL_QUANTITY
+	PUSHAB	FCALC.RUN_FILE.$T3(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D1
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  315        loading = .true.
+	MOVL	#-1,FCALC.LOADING
+;  316      end if
+FCALC.RUN_FILE.$5:
+;  317
+;  318      count = 0
+	CLRL	FCALC.RUN_FILE.COUNT(FP)
+;  319      do
+	BRW	FCALC.RUN_FILE.$7
+FCALC.RUN_FILE.$8:
+;  320        call read_line(text, used, status, depth)
+;  321        if (status < 0) exit
+;  322        count = count + 1
+	INCL	FCALC.RUN_FILE.COUNT(FP)
+;  323
+;  324        shown = echo .and. .not. loading .and. status == 0
+	CLRL	R0
+	TSTL	FCALC.RUN_FILE.STATUS(FP)
+	BNEQ	FCALC.RUN_FILE.$9
+	MNEGL	#1,R0
+FCALC.RUN_FILE.$9:
+	MCOML	R0,R0
+	BICL3	FCALC.LOADING,FCALC.ECHO,R1
+	BICL3	R0,R1,R7
+;  325        if (shown) call say('fcalc> ' // text(:used))
+	BLBC	R7,FCALC.RUN_FILE.$10
+	MOVL	FCALC.RUN_FILE.USED(FP),FCALC.RUN_FILE.$T2(FP)
+	BGEQ	FCALC.RUN_FILE.$12
+	CLRL	FCALC.RUN_FILE.$T2(FP)
+FCALC.RUN_FILE.$12:
+	MOVC3	#7,FCALC.RUN_FILE.$K4,FCALC.RUN_FILE.$T4(FP)
+	MOVC3	FCALC.RUN_FILE.$T2(FP),FCALC.RUN_FILE.TEXT(FP),FCALC.RUN_FILE.$T4+7(FP)
+	MOVL	#17694720,FCALC.RUN_FILE.$D3(FP) ; the descriptor's length, 0, type, and class
+	ADDL3	FCALC.RUN_FILE.$T2(FP),#7,R0
+	CVTLW	R0,FCALC.RUN_FILE.$D3(FP)
+	MOVAB	FCALC.RUN_FILE.$T4(FP),FCALC.RUN_FILE.$D3+4(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D3(FP)
+	CALLS	#1,G^FCMESSAGES.SAY
+FCALC.RUN_FILE.$10:
+;  326        if (status > 0) then
+	TSTL	FCALC.RUN_FILE.STATUS(FP)
+	BLEQ	FCALC.RUN_FILE.$14
+;  327          call fail(e_linelong, 0)
+	PUSHL	#0
+	PUSHAL	FCALC.RUN_FILE.$K6
+	PUSHAL	FCALC.RUN_FILE.$K5
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  328        else
+	BRB	FCALC.RUN_FILE.$16
+FCALC.RUN_FILE.$14:
+;  329          call execute(text(:used))
+	MOVL	FCALC.RUN_FILE.USED(FP),FCALC.RUN_FILE.$T2(FP)
+	BGEQ	FCALC.RUN_FILE.$17
+	CLRL	FCALC.RUN_FILE.$T2(FP)
+FCALC.RUN_FILE.$17:
+	MOVL	#17694720,FCALC.RUN_FILE.$D3(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	FCALC.RUN_FILE.$T2(FP),FCALC.RUN_FILE.$D3(FP)
+	MOVAB	FCALC.RUN_FILE.TEXT(FP),FCALC.RUN_FILE.$D3+4(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D3(FP)
+	CALLS	#1,FCALC.EXECUTE
+;  330        end if
+FCALC.RUN_FILE.$16:
+;  331
+;  332        if (failed()) then
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,FCALC.RUN_FILE.$T2(FP)
+	BLBS	FCALC.RUN_FILE.$T2(FP),FCALC.RUN_FILE.$20
+	BRW	FCALC.RUN_FILE.$19
+FCALC.RUN_FILE.$20:
+;  333          if (error_is_warning()) then
+	CALLS	#0,G^FCMESSAGES.ERROR_IS_WARNING
+	MOVL	R0,FCALC.RUN_FILE.$T2(FP)
+	BLBC	FCALC.RUN_FILE.$T2(FP),FCALC.RUN_FILE.$21
+;  334            if (shown) then
+	BLBC	R7,FCALC.RUN_FILE.$23
+;  335              call report()
+	PUSHL	#0
+	CALLS	#1,G^FCMESSAGES.REPORT
+;  336            else
+	BRW	FCALC.RUN_FILE.$7
+FCALC.RUN_FILE.$23:
+;  337              call report(text(:used))
+	MOVL	FCALC.RUN_FILE.USED(FP),FCALC.RUN_FILE.$T2(FP)
+	BGEQ	FCALC.RUN_FILE.$26
+	CLRL	FCALC.RUN_FILE.$T2(FP)
+FCALC.RUN_FILE.$26:
+	MOVL	#17694720,FCALC.RUN_FILE.$D3(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	FCALC.RUN_FILE.$T2(FP),FCALC.RUN_FILE.$D3(FP)
+	MOVAB	FCALC.RUN_FILE.TEXT(FP),FCALC.RUN_FILE.$D3+4(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D3(FP)
+	CALLS	#1,G^FCMESSAGES.REPORT
+;  338            end if
+;  339            cycle
+	BRW	FCALC.RUN_FILE.$7
+FCALC.RUN_FILE.$21:
+;  340          end if
+;  341          if (shown .or. status > 0) then
+	BLBS	R7,FCALC.RUN_FILE.$29
+	TSTL	FCALC.RUN_FILE.STATUS(FP)
+	BLEQ	FCALC.RUN_FILE.$28
+FCALC.RUN_FILE.$29:
+;  342            call report()
+	PUSHL	#0
+	CALLS	#1,G^FCMESSAGES.REPORT
+;  343          else
+	BRB	FCALC.RUN_FILE.$32
+FCALC.RUN_FILE.$28:
+;  344            call report(text(:used))
+	MOVL	FCALC.RUN_FILE.USED(FP),FCALC.RUN_FILE.$T2(FP)
+	BGEQ	FCALC.RUN_FILE.$33
+	CLRL	FCALC.RUN_FILE.$T2(FP)
+FCALC.RUN_FILE.$33:
+	MOVL	#17694720,FCALC.RUN_FILE.$D3(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	FCALC.RUN_FILE.$T2(FP),FCALC.RUN_FILE.$D3(FP)
+	MOVAB	FCALC.RUN_FILE.TEXT(FP),FCALC.RUN_FILE.$D3+4(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D3(FP)
+	CALLS	#1,G^FCMESSAGES.REPORT
+;  345          end if
+FCALC.RUN_FILE.$32:
+;  346          abandon = .true.
+	MOVL	#-1,FCALC.ABANDON
+;  347        end if
+FCALC.RUN_FILE.$19:
+;  348        if (abandon) then
+	BLBS	FCALC.ABANDON,FCALC.RUN_FILE.$36
+	BRW	FCALC.RUN_FILE.$35
+FCALC.RUN_FILE.$36:
+;  349          call also(i_infile, trim(whole_number(count)) // ' of ' // name)
+	MOVL	#17694732,FCALC.RUN_FILE.$D4(FP) ; the descriptor's length, 12, type, and class
+	MOVAB	FCALC.RUN_FILE.$T5(FP),FCALC.RUN_FILE.$D4+4(FP)
+	PUSHAL	FCALC.RUN_FILE.COUNT(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D4(FP)
+	CALLS	#2,FCALC.WHOLE_NUMBER
+	MOVAB	FCALC.RUN_FILE.$T5(FP),FCALC.RUN_FILE.$T2(FP)
+	MOVAB	@FCALC.RUN_FILE.$T2(FP),R8
+	MOVL	#12,R6
+	BRB	FCALC.RUN_FILE.$37
+FCALC.RUN_FILE.$38:
+	CMPB	-1(R8)[R6],#32
+	BNEQ	FCALC.RUN_FILE.$39
+	DECL	R6
+FCALC.RUN_FILE.$37:
+	TSTL	R6			; from line 349
+	BNEQ	FCALC.RUN_FILE.$38
+FCALC.RUN_FILE.$39:
+	MOVL	#34471936,FCALC.RUN_FILE.$D5(FP) ; the descriptor's length, 0, type, and class
+	CLRL	FCALC.RUN_FILE.$D5+4(FP) ; no string yet
+	MOVZWL	@FCALC.RUN_FILE.NAME(AP),R9
+	ADDL3	R6,R9,R0
+	ADDL3	R0,#4,R10
+	CVTLW	R10,FCALC.RUN_FILE.$T7(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D5(FP)
+	PUSHAW	FCALC.RUN_FILE.$T7(FP)
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,@FCALC.RUN_FILE.$T2(FP),@FCALC.RUN_FILE.$D5+4(FP)
+	MOVC3	#4,FCALC.RUN_FILE.$K8,@FCALC.RUN_FILE.$D5+4(FP)[R6]
+	MOVL	FCALC.RUN_FILE.NAME(AP),R0
+	ADDL3	R6,#4,R1
+	MOVC3	R9,@4(R0),@FCALC.RUN_FILE.$D5+4(FP)[R1]
+	MOVL	#17694720,FCALC.RUN_FILE.$D3(FP) ; the descriptor's length, 0, type, and class
+	CVTLW	R10,FCALC.RUN_FILE.$D3(FP)
+	MOVAB	@FCALC.RUN_FILE.$D5+4(FP),FCALC.RUN_FILE.$D3+4(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D3(FP)
+	PUSHAL	FCALC.RUN_FILE.$K7
+	CALLS	#2,G^FCMESSAGES.ALSO
+	PUSHAQ	FCALC.RUN_FILE.$D5(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;  350          exit
+	BRB	FCALC.RUN_FILE.$42
+FCALC.RUN_FILE.$35:
+;  351        end if
+;  352        if (done) then
+	BLBC	FCALC.DONE,FCALC.RUN_FILE.$43
+;  353          done = .false.
+	CLRL	FCALC.DONE
+;  354          exit
+	BRB	FCALC.RUN_FILE.$42
+FCALC.RUN_FILE.$43:
+;  355        end if
+;  356      end do
+FCALC.RUN_FILE.$7:			; DO (line 319)'s body
+	MOVL	#17694920,FCALC.RUN_FILE.$D2(FP) ; the descriptor's length, 200, type, and class
+	MOVAB	FCALC.RUN_FILE.TEXT(FP),FCALC.RUN_FILE.$D2+4(FP)
+	PUSHAL	FCALC.DEPTH
+	PUSHAL	FCALC.RUN_FILE.STATUS(FP)
+	PUSHAL	FCALC.RUN_FILE.USED(FP)
+	PUSHAQ	FCALC.RUN_FILE.$D2(FP)
+	CALLS	#4,G^FCSTATE.READ_LINE
+	TSTL	FCALC.RUN_FILE.STATUS(FP)
+	BLSS	FCALC.RUN_FILE.$45
+	BRW	FCALC.RUN_FILE.$8
+FCALC.RUN_FILE.$45:
+FCALC.RUN_FILE.$42:
+;  357
+;  358      call close_input(depth)
+	PUSHAL	FCALC.DEPTH
+	CALLS	#1,G^FCSTATE.CLOSE_INPUT
+;  359      depth = depth - 1
+	DECL	FCALC.DEPTH
+;  360      loading = was_loading
+	MOVL	FCALC.RUN_FILE.WAS_LOADING(FP),FCALC.LOADING
+;  361    end subroutine run_file
+	RET
+
+; Storage map for FCALC.WHOLE_NUMBER, a CHARACTER*12 function
+;   TEXT  CHARACTER*12         hidden argument 1  @FCALC.WHOLE_NUMBER.TEXT(AP)
+;   N     INTEGER, INTENT(IN)  argument 2         @FCALC.WHOLE_NUMBER.N(AP)
+;
+FCALC.WHOLE_NUMBER.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCALC.WHOLE_NUMBER.N = 8		; N is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCALC.WHOLE_NUMBER.$D1:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCALC.WHOLE_NUMBER.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCALC.WHOLE_NUMBER.$T1:
+	.BLKL	3			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.WHOLE_NUMBER.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCALC.WHOLE_NUMBER.$D2:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.WHOLE_NUMBER.$K1
+FCALC.WHOLE_NUMBER.$D4:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.WHOLE_NUMBER.$T1
+FCALC.WHOLE_NUMBER.$K1:
+	.ASCII	/(I12)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  362
+;  363    ! WHOLE_NUMBER is N in as few characters as it takes.
+;  364    function whole_number(n) result(text)
+FCALC.WHOLE_NUMBER:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure WHOLE_NUMBER of FCALC
+;  365      integer, intent(in) :: n
+;  366      character(len=12) :: text
+;  367
+;  368      write (text, '(I12)') n
+	MOVL	FCALC.WHOLE_NUMBER.TEXT(AP),R0
+	MOVAB	@4(R0),FCALC.WHOLE_NUMBER.$D1+4
+	PUSHAQ	FCALC.WHOLE_NUMBER.$D2
+	PUSHAQ	FCALC.WHOLE_NUMBER.$D1
+	PUSHAB	FCALC.WHOLE_NUMBER.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAL	@FCALC.WHOLE_NUMBER.N(AP),FCALC.WHOLE_NUMBER.$D3+4
+	PUSHAQ	FCALC.WHOLE_NUMBER.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  369      text = adjustl(text)
+	MOVL	FCALC.WHOLE_NUMBER.TEXT(AP),R0
+	MOVAB	@4(R0),FCALC.WHOLE_NUMBER.$D1+4
+	PUSHAQ	FCALC.WHOLE_NUMBER.$D1
+	PUSHAQ	FCALC.WHOLE_NUMBER.$D4
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVL	FCALC.WHOLE_NUMBER.TEXT(AP),R0
+	MOVC3	#12,FCALC.WHOLE_NUMBER.$T1,@4(R0)
+;  370    end function whole_number
+	RET
+
+; Storage map for FCALC.LOWERCASE, a CHARACTER*(*) function
+;   $VALUE  CHARACTER*(LEN(TEXT))      hidden argument 1       @FCALC.LOWERCASE.$VALUE(AP)
+;   TEXT    CHARACTER*(*), INTENT(IN)  argument 2              @FCALC.LOWERCASE.TEXT(AP)
+;   SMALL   CHARACTER*(LEN(TEXT))      descriptor at $LOCAL+8  FCALC.LOWERCASE.SMALL
+;   K       INTEGER                    $LOCAL+0                FCALC.LOWERCASE.K
+;   AT      INTEGER                    $LOCAL+4                FCALC.LOWERCASE.AT
+;   R8 is $T1: temporary
+;   R10 is $L1: DO (line 380)'s limit
+;   R11 is $R1: an address in an array
+;   R6 is $R2: K, during a loop
+;   R7 is $R3: AT, during a loop
+;   R9 is $R4: TEXT's address
+;
+FCALC.LOWERCASE.$VALUE = 4		; $VALUE's value goes through hidden argument 1
+FCALC.LOWERCASE.TEXT = 8		; TEXT is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCALC.LOWERCASE.K:
+	.BLKL	1			; K
+FCALC.LOWERCASE.AT:
+	.BLKL	1			; AT
+FCALC.LOWERCASE.SMALL:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; SMALL: not allocated
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.LOWERCASE.$K1:
+	.ASCII	/ABCDEFGHIJKLMNOPQRSTUVWXYZ/
+FCALC.LOWERCASE.$K2:
+	.ASCII	/abcdefghijklmnopqrstuvwxyz/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  371
+;  372    ! LOWERCASE is TEXT with its capital letters made small ones, by their
+;  373    ! places in two strings (which works in any character set).
+;  374    function lowercase(text) result(small)
+FCALC.LOWERCASE:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11> ; internal procedure LOWERCASE of FCALC
+	MOVZWL	@FCALC.LOWERCASE.TEXT(AP),R8
+	BGEQ	FCALC.LOWERCASE.$1
+	CLRL	R8
+FCALC.LOWERCASE.$1:
+	CVTLW	R8,FCALC.LOWERCASE.SMALL
+	PUSHL	FCALC.LOWERCASE.$VALUE(AP)
+	PUSHAQ	FCALC.LOWERCASE.SMALL
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVL	FCALC.LOWERCASE.$VALUE(AP),R0
+	MOVL	4(R0),FCALC.LOWERCASE.SMALL+4
+;  375      character(len=*), intent(in) :: text
+;  376      character(len=len(text)) :: small
+;  377      integer :: k, at
+;  378
+;  379      small = text
+	MOVZWL	@FCALC.LOWERCASE.TEXT(AP),R0
+	MOVL	FCALC.LOWERCASE.TEXT(AP),R1
+	MOVZWL	FCALC.LOWERCASE.SMALL,R2
+	MOVC5	R0,@4(R1),#^A/ /,R2,@FCALC.LOWERCASE.SMALL+4
+;  380      do k = 1, len(text)
+	MOVZWL	@FCALC.LOWERCASE.TEXT(AP),R10 ; DO (line 380)'s limit
+	MOVL	#1,FCALC.LOWERCASE.K
+	CMPL	#1,R10
+	BGTR	FCALC.LOWERCASE.$3
+	MOVL	FCALC.LOWERCASE.TEXT(AP),R0
+	MOVL	4(R0),R11
+	MOVL	FCALC.LOWERCASE.K,R6
+	MOVL	FCALC.LOWERCASE.AT,R7
+	MOVL	FCALC.LOWERCASE.TEXT(AP),R9
+FCALC.LOWERCASE.$5:			; DO (line 380)'s body
+;  381        at = index('ABCDEFGHIJKLMNOPQRSTUVWXYZ', text(k:k))
+	MATCHC	#1,-1(R11)[R6],#26,FCALC.LOWERCASE.$K1
+	BNEQ	FCALC.LOWERCASE.$6
+	SUBL3	R2,#26,R0
+	BRB	FCALC.LOWERCASE.$7
+FCALC.LOWERCASE.$6:
+	CLRL	R0
+FCALC.LOWERCASE.$7:
+	MOVL	R0,R8
+	MOVL	R8,R7
+;  382        if (at > 0) small(k:k) = 'abcdefghijklmnopqrstuvwxyz'(at:at)
+	BLEQ	FCALC.LOWERCASE.$8
+	SUBL3	#1,R6,R0
+	MOVB	FCALC.LOWERCASE.$K2-1[R7],@FCALC.LOWERCASE.SMALL+4[R0]
+FCALC.LOWERCASE.$8:
+;  383      end do
+	AOBLEQ	R10,R6,FCALC.LOWERCASE.$5
+	MOVL	R6,FCALC.LOWERCASE.K
+	MOVL	R7,FCALC.LOWERCASE.AT
+FCALC.LOWERCASE.$3:
+;  384    end function lowercase
+	RET
+
+; Storage map for FCALC.INDEXES_ARRAY, a LOGICAL function
+;   NAME           CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.INDEXES_ARRAY.NAME(AP)
+;   INDEXES_ARRAY  LOGICAL                    R6          R6
+;
+FCALC.INDEXES_ARRAY.NAME = 4		; NAME is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCALC.INDEXES_ARRAY.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  385
+;  386    ! INDEXES_ARRAY: NAME(...) = would assign elements of NAME, a variable
+;  387    ! holding an array, rather than define a function: NAME isn't also a
+;  388    ! function. So v(k) = 0 assigns an element of the array v, while f(x) =
+;  389    ! x^2 defines f.
+;  390    logical function indexes_array(name)
+FCALC.INDEXES_ARRAY:
+	.WORD	^M<R6>			; internal procedure INDEXES_ARRAY of FCALC
+;  391      character(len=*), intent(in) :: name
+;  392
+;  393      indexes_array = holds_array(name)
+	PUSHL	FCALC.INDEXES_ARRAY.NAME(AP)
+	CALLS	#1,G^FCSYMBOLS.HOLDS_ARRAY
+	MOVL	R0,R6
+;  394      if (indexes_array) indexes_array = .not. associated(find_function(name))
+	BLBC	R6,FCALC.INDEXES_ARRAY.$1
+	PUSHL	FCALC.INDEXES_ARRAY.NAME(AP)
+	CALLS	#1,G^FCSYMBOLS.FIND_FUNCTION
+	MOVL	R0,FCALC.INDEXES_ARRAY.$T1
+	CLRL	R0
+	TSTL	FCALC.INDEXES_ARRAY.$T1
+	BEQL	FCALC.INDEXES_ARRAY.$3
+	MNEGL	#1,R0
+FCALC.INDEXES_ARRAY.$3:
+	MCOML	R0,R6
+FCALC.INDEXES_ARRAY.$1:
+;  395    end function indexes_array
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCALC.STATEMENT, a subroutine
+;   TREE  TYPE(NODE), POINTER  $LOCAL+0   FCALC.STATEMENT.TREE
+;   V     TYPE(QUANTITY)       $LOCAL+16  FCALC.STATEMENT.V
+;   R6 is $T1: temporary
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCALC.STATEMENT.TREE:
+	.BLKL	1			; TREE
+	.BLKB	12
+FCALC.STATEMENT.V:
+	.BLKL	24			; V
+FCALC.STATEMENT.$T2:
+	.BLKL	1			; temporary
+FCALC.STATEMENT.$T3:
+	.BLKL	24			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.STATEMENT.$D1:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.STATEMENT.$K1
+FCALC.STATEMENT.$K2:
+	.LONG	1
+FCALC.STATEMENT.$K3:
+	.LONG	5
+FCALC.STATEMENT.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.STATEMENT.$K4
+FCALC.STATEMENT.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.STATEMENT.$K5
+FCALC.STATEMENT.$K1:
+	.ASCII	/=/
+FCALC.STATEMENT.$K4:
+	.ASCII
+FCALC.STATEMENT.$K5:
+	.ASCII	/ans/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  396
+;  397    ! STATEMENT is an expression, whose value is shown and kept as ANS, or an
+;  398    ! assignment to elements, V(...) = EXPR: which, the parse of the line's
+;  399    ! start says, a call of V followed by =.
+;  400    subroutine statement()
+FCALC.STATEMENT:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure STATEMENT of FCALC
+;  401      type(node), pointer :: tree
+;  402      type(quantity) :: v
+;  403
+;  404      tree => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R6
+	MOVL	R6,FCALC.STATEMENT.TREE
+;  405      if (failed()) return
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCALC.STATEMENT.$1
+	RET
+FCALC.STATEMENT.$1:
+;  406      if (is_operator('=') .and. kind_at(1) == t_name .and. tree%kind == n_call) then
+	PUSHAQ	FCALC.STATEMENT.$D1
+	CALLS	#1,G^FCTREE.IS_OPERATOR
+	MOVL	R0,R6
+	PUSHAL	FCALC.STATEMENT.$K2
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.STATEMENT.$T2
+	BLBC	R6,FCALC.STATEMENT.$3
+	CMPL	FCALC.STATEMENT.$T2,#2
+	BNEQ	FCALC.STATEMENT.$3
+	CMPL	@FCALC.STATEMENT.TREE,#3
+	BNEQ	FCALC.STATEMENT.$3
+;  407        call element_assignment(tree)
+	PUSHAL	FCALC.STATEMENT.TREE
+	CALLS	#1,FCALC.ELEMENT_ASSIGNMENT
+;  408        return
+	RET
+FCALC.STATEMENT.$3:
+;  409      end if
+;  410      if (.not. at_end()) then
+	CALLS	#0,G^FCTREE.AT_END
+	MOVL	R0,FCALC.STATEMENT.$T2
+	BLBS	FCALC.STATEMENT.$T2,FCALC.STATEMENT.$7
+;  411        call fail(e_extra, current_column())
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCALC.STATEMENT.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.STATEMENT.$T2
+	PUSHAL	FCALC.STATEMENT.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  412        call free_tree(tree)
+	PUSHAL	FCALC.STATEMENT.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  413        return
+	RET
+FCALC.STATEMENT.$7:
+;  414      end if
+;  415
+;  416      v = evaluate(tree)
+	PUSHL	#0
+	PUSHAL	FCALC.STATEMENT.TREE
+	PUSHAB	FCALC.STATEMENT.$T3
+	CALLS	#3,G^FCEVAL.EVALUATE
+	MOVC3	#96,FCALC.STATEMENT.$T3,FCALC.STATEMENT.V
+;  417      call free_tree(tree)
+	PUSHAL	FCALC.STATEMENT.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  418      if (failed()) then
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,FCALC.STATEMENT.$T2
+	BLBC	FCALC.STATEMENT.$T2,FCALC.STATEMENT.$9
+;  419        call release(v)
+	PUSHAB	FCALC.STATEMENT.V
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  420        return
+	RET
+FCALC.STATEMENT.$9:
+;  421      end if
+;  422      if (.not. quiet) call show_quantity(v, '')
+	BLBS	FCALC.QUIET,FCALC.STATEMENT.$11
+	PUSHAQ	FCALC.STATEMENT.$D2
+	PUSHAB	FCALC.STATEMENT.V
+	CALLS	#2,G^FCARRAYS.SHOW_QUANTITY
+FCALC.STATEMENT.$11:
+;  423      call set_variable('ans', v)
+	PUSHAB	FCALC.STATEMENT.V
+	PUSHAQ	FCALC.STATEMENT.$D3
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  424    end subroutine statement
+	RET
+
+; Storage map for FCALC.ASSIGNMENT, a subroutine
+;   NAME  TYPE(TOKEN), INTENT(IN)  argument 1  @FCALC.ASSIGNMENT.NAME(AP)
+;   V     TYPE(QUANTITY)           $LOCAL+0    FCALC.ASSIGNMENT.V
+;   R6 is $T1: temporary
+;
+FCALC.ASSIGNMENT.NAME = 4		; NAME is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCALC.ASSIGNMENT.V:
+	.BLKL	24			; V
+FCALC.ASSIGNMENT.$D1:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.ASSIGNMENT.$K1:
+	.LONG	2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  425
+;  426    ! ASSIGNMENT is NAME = EXPR. The variable takes the value: it is shown
+;  427    ! first, then given to SET_VARIABLE, which owns it from then on.
+;  428    subroutine assignment(name)
+FCALC.ASSIGNMENT:
+	.WORD	^M<R6>			; internal procedure ASSIGNMENT of FCALC
+;  429      type(token), intent(in) :: name
+;  430      type(quantity) :: v
+;  431
+;  432      if (.not. usable_name(name)) return
+	PUSHAB	@FCALC.ASSIGNMENT.NAME(AP)
+	CALLS	#1,FCALC.USABLE_NAME
+	MOVL	R0,R6
+	BLBS	R6,FCALC.ASSIGNMENT.$1
+	RET
+FCALC.ASSIGNMENT.$1:
+;  433
+;  434      call advance(2)
+	PUSHAL	FCALC.ASSIGNMENT.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  435      if (.not. whole_expression(v)) return
+	PUSHAB	FCALC.ASSIGNMENT.V
+	CALLS	#1,FCALC.WHOLE_EXPRESSION
+	MOVL	R0,R6
+	BLBS	R6,FCALC.ASSIGNMENT.$3
+	RET
+FCALC.ASSIGNMENT.$3:
+;  436      if (.not. quiet) call show_quantity(v, name%text)
+	BLBS	FCALC.QUIET,FCALC.ASSIGNMENT.$5
+	MOVL	FCALC.ASSIGNMENT.NAME(AP),R0
+	MOVAB	8(R0),FCALC.ASSIGNMENT.$D1+4
+	PUSHAQ	FCALC.ASSIGNMENT.$D1
+	PUSHAB	FCALC.ASSIGNMENT.V
+	CALLS	#2,G^FCARRAYS.SHOW_QUANTITY
+FCALC.ASSIGNMENT.$5:
+;  437      call set_variable(name%text, v)
+	MOVL	FCALC.ASSIGNMENT.NAME(AP),R0
+	MOVAB	8(R0),FCALC.ASSIGNMENT.$D1+4
+	PUSHAB	FCALC.ASSIGNMENT.V
+	PUSHAQ	FCALC.ASSIGNMENT.$D1
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  438    end subroutine assignment
+	RET
+
+; Storage map for FCALC.ELEMENT_ASSIGNMENT, a subroutine
+;   TARGET  TYPE(NODE), POINTER  argument 1  @FCALC.ELEMENT_ASSIGNMENT.TARGET(AP)
+;   NAME    TYPE(TOKEN)          $LOCAL+0    FCALC.ELEMENT_ASSIGNMENT.NAME
+;   X       TYPE(QUANTITY)       $LOCAL+64   FCALC.ELEMENT_ASSIGNMENT.X
+;   Y       TYPE(QUANTITY)       $LOCAL+160  FCALC.ELEMENT_ASSIGNMENT.Y
+;   R6 is $T2: temporary
+;
+FCALC.ELEMENT_ASSIGNMENT.TARGET = 4	; TARGET is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCALC.ELEMENT_ASSIGNMENT.NAME:
+	.BLKL	14			; NAME
+	.BLKB	8
+FCALC.ELEMENT_ASSIGNMENT.X:
+	.BLKL	24			; X
+FCALC.ELEMENT_ASSIGNMENT.Y:
+	.BLKL	24			; Y
+FCALC.ELEMENT_ASSIGNMENT.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.ELEMENT_ASSIGNMENT.$T3:
+	.BLKL	24			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.ELEMENT_ASSIGNMENT.$K1:
+	.LONG	1
+FCALC.ELEMENT_ASSIGNMENT.$D1:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.ELEMENT_ASSIGNMENT.NAME+8
+FCALC.ELEMENT_ASSIGNMENT.$K2:
+	.LONG	6
+FCALC.ELEMENT_ASSIGNMENT.$K3:
+	.LONG	^X00000000,^X00000000	; 0D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  439
+;  440    ! ELEMENT_ASSIGNMENT is V(...) = EXPR, TARGET the tree of V(...): the
+;  441    ! elements of the variable V that the indexes name are given EXPR's
+;  442    ! value. The variable's value is copied, changed, and set again.
+;  443    subroutine element_assignment(target)
+FCALC.ELEMENT_ASSIGNMENT:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure ELEMENT_ASSIGNMENT of FCALC
+;  444      type(node), pointer :: target
+;  445      type(token) :: name
+;  446      type(quantity) :: x, y
+;  447
+;  448      name = token_at(1)
+	PUSHAL	FCALC.ELEMENT_ASSIGNMENT.$K1
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.ELEMENT_ASSIGNMENT.$T1,FCALC.ELEMENT_ASSIGNMENT.NAME
+;  449      if (.not. usable_name(name)) then
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.NAME
+	CALLS	#1,FCALC.USABLE_NAME
+	MOVL	R0,R6
+	BLBS	R6,FCALC.ELEMENT_ASSIGNMENT.$1
+;  450        call free_tree(target)
+	PUSHAL	@FCALC.ELEMENT_ASSIGNMENT.TARGET(AP)
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  451        return
+	RET
+FCALC.ELEMENT_ASSIGNMENT.$1:
+;  452      end if
+;  453      if (.not. find_variable(name%text, x)) then
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.X
+	PUSHAQ	FCALC.ELEMENT_ASSIGNMENT.$D1
+	CALLS	#2,G^FCSYMBOLS.FIND_VARIABLE
+	MOVL	R0,R6
+	BLBS	R6,FCALC.ELEMENT_ASSIGNMENT.$3
+;  454        call fail(e_undefined, name%column, name%text)
+	PUSHAQ	FCALC.ELEMENT_ASSIGNMENT.$D1
+	PUSHAL	FCALC.ELEMENT_ASSIGNMENT.NAME+4
+	PUSHAL	FCALC.ELEMENT_ASSIGNMENT.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  455        call free_tree(target)
+	PUSHAL	@FCALC.ELEMENT_ASSIGNMENT.TARGET(AP)
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  456        return
+	RET
+FCALC.ELEMENT_ASSIGNMENT.$3:
+;  457      end if
+;  458
+;  459      call advance(1)
+	PUSHAL	FCALC.ELEMENT_ASSIGNMENT.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  460      if (whole_expression(y)) then
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.Y
+	CALLS	#1,FCALC.WHOLE_EXPRESSION
+	MOVL	R0,R6
+	BLBC	R6,FCALC.ELEMENT_ASSIGNMENT.$5
+;  461        if (assign_into(x, target, y)) then
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.Y
+	PUSHAL	@FCALC.ELEMENT_ASSIGNMENT.TARGET(AP)
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.X
+	CALLS	#3,G^FCEVAL.ASSIGN_INTO
+	MOVL	R0,R6
+	BLBC	R6,FCALC.ELEMENT_ASSIGNMENT.$7
+;  462          if (.not. quiet) call show_quantity(x, name%text)
+	BLBS	FCALC.QUIET,FCALC.ELEMENT_ASSIGNMENT.$9
+	PUSHAQ	FCALC.ELEMENT_ASSIGNMENT.$D1
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.X
+	CALLS	#2,G^FCARRAYS.SHOW_QUANTITY
+FCALC.ELEMENT_ASSIGNMENT.$9:
+;  463          call set_variable(name%text, x)
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.X
+	PUSHAQ	FCALC.ELEMENT_ASSIGNMENT.$D1
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  464          x = real_quantity(0.0_rk)
+	PUSHAG	FCALC.ELEMENT_ASSIGNMENT.$K3
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.$T3
+	CALLS	#2,G^FCARRAYS.REAL_QUANTITY
+	MOVC3	#96,FCALC.ELEMENT_ASSIGNMENT.$T3,FCALC.ELEMENT_ASSIGNMENT.X
+;  465        end if
+FCALC.ELEMENT_ASSIGNMENT.$7:
+;  466      end if
+FCALC.ELEMENT_ASSIGNMENT.$5:
+;  467      call release(y)
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.Y
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  468      call release(x)
+	PUSHAB	FCALC.ELEMENT_ASSIGNMENT.X
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  469      call free_tree(target)
+	PUSHAL	@FCALC.ELEMENT_ASSIGNMENT.TARGET(AP)
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  470    end subroutine element_assignment
+	RET
+
+; Storage map for FCALC.WHOLE_EXPRESSION, a LOGICAL function
+;   V                 TYPE(QUANTITY), INTENT(OUT)  argument 1  @FCALC.WHOLE_EXPRESSION.V(AP)
+;   WHOLE_EXPRESSION  LOGICAL                      R6          R6
+;   TREE              TYPE(NODE), POINTER          $LOCAL+16   FCALC.WHOLE_EXPRESSION.TREE
+;
+FCALC.WHOLE_EXPRESSION.V = 4		; V is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+	.BLKB	16
+FCALC.WHOLE_EXPRESSION.TREE:
+	.BLKL	1			; TREE
+FCALC.WHOLE_EXPRESSION.$T1:
+	.BLKL	24			; characters, for one statement
+FCALC.WHOLE_EXPRESSION.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.WHOLE_EXPRESSION.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCALC.WHOLE_EXPRESSION.$K2:
+	.LONG	5
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  471
+;  472    ! WHOLE_EXPRESSION parses and evaluates the rest of the line as an
+;  473    ! expression: false after an error, when V is released.
+;  474    logical function whole_expression(v)
+FCALC.WHOLE_EXPRESSION:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure WHOLE_EXPRESSION of FCALC
+;  475      type(quantity), intent(out) :: v
+;  476      type(node), pointer :: tree
+;  477
+;  478      whole_expression = .false.
+;  479      v = real_quantity(0.0_rk)
+	PUSHAG	FCALC.WHOLE_EXPRESSION.$K1
+	PUSHAB	FCALC.WHOLE_EXPRESSION.$T1
+	CALLS	#2,G^FCARRAYS.REAL_QUANTITY
+	MOVC3	#96,FCALC.WHOLE_EXPRESSION.$T1,@FCALC.WHOLE_EXPRESSION.V(AP)
+;  480      tree => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,FCALC.WHOLE_EXPRESSION.$T2
+	MOVL	FCALC.WHOLE_EXPRESSION.$T2,FCALC.WHOLE_EXPRESSION.TREE
+;  481      if (failed()) return
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,FCALC.WHOLE_EXPRESSION.$T2
+	BLBC	FCALC.WHOLE_EXPRESSION.$T2,FCALC.WHOLE_EXPRESSION.$1
+	CLRL	R0			; the function's value
+	RET
+FCALC.WHOLE_EXPRESSION.$1:
+;  482      if (.not. at_end()) then
+	CALLS	#0,G^FCTREE.AT_END
+	MOVL	R0,FCALC.WHOLE_EXPRESSION.$T2
+	BLBS	FCALC.WHOLE_EXPRESSION.$T2,FCALC.WHOLE_EXPRESSION.$3
+;  483        call fail(e_extra, current_column())
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCALC.WHOLE_EXPRESSION.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.WHOLE_EXPRESSION.$T2
+	PUSHAL	FCALC.WHOLE_EXPRESSION.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  484        call free_tree(tree)
+	PUSHAL	FCALC.WHOLE_EXPRESSION.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  485        return
+	CLRL	R0			; the function's value
+	RET
+FCALC.WHOLE_EXPRESSION.$3:
+;  486      end if
+;  487
+;  488      v = evaluate(tree)
+	PUSHL	#0
+	PUSHAL	FCALC.WHOLE_EXPRESSION.TREE
+	PUSHAB	FCALC.WHOLE_EXPRESSION.$T1
+	CALLS	#3,G^FCEVAL.EVALUATE
+	MOVC3	#96,FCALC.WHOLE_EXPRESSION.$T1,@FCALC.WHOLE_EXPRESSION.V(AP)
+;  489      call free_tree(tree)
+	PUSHAL	FCALC.WHOLE_EXPRESSION.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  490      whole_expression = .not. failed()
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,FCALC.WHOLE_EXPRESSION.$T2
+	MCOML	FCALC.WHOLE_EXPRESSION.$T2,R6
+;  491      if (.not. whole_expression) call release(v)
+	BLBS	R6,FCALC.WHOLE_EXPRESSION.$5
+	PUSHAB	@FCALC.WHOLE_EXPRESSION.V(AP)
+	CALLS	#1,G^FCARRAYS.RELEASE
+FCALC.WHOLE_EXPRESSION.$5:
+;  492    end function whole_expression
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCALC.IS_DEFINITION, a LOGICAL function
+;   IS_DEFINITION  LOGICAL      $LOCAL+0   FCALC.IS_DEFINITION.$N1
+;   T              TYPE(TOKEN)  $LOCAL+8   FCALC.IS_DEFINITION.T
+;   K              INTEGER      $LOCAL+64  FCALC.IS_DEFINITION.K
+;   FCALC.IS_DEFINITION.$N1 is FCALC.IS_DEFINITION.IS_DEFINITION
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCALC.IS_DEFINITION.$N1:
+	.BLKL	1			; IS_DEFINITION, the function's value
+	.BLKB	4
+FCALC.IS_DEFINITION.T:
+	.BLKL	14			; T
+FCALC.IS_DEFINITION.K:
+	.BLKL	1			; K
+FCALC.IS_DEFINITION.$T1:
+	.BLKL	1			; temporary
+FCALC.IS_DEFINITION.$T2:
+	.BLKL	14			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.IS_DEFINITION.$K1:
+	.LONG	1
+FCALC.IS_DEFINITION.$K2:
+	.LONG	2
+FCALC.IS_DEFINITION.$K3:
+	.ASCII	/(/
+FCALC.IS_DEFINITION.$K4:
+	.ASCII	/)/
+FCALC.IS_DEFINITION.$K5:
+	.ASCII	/,/
+FCALC.IS_DEFINITION.$K6:
+	.ASCII	/=/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  493
+;  494    ! IS_DEFINITION: the line starts f(x, y) =, a function's definition. A
+;  495    ! call, f(2) or f(x + 1), has something other than names between its
+;  496    ! parentheses, or no = after them.
+;  497    logical function is_definition()
+FCALC.IS_DEFINITION:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure IS_DEFINITION of FCALC
+;  498      type(token) :: t
+;  499      integer :: k
+;  500
+;  501      is_definition = .false.
+;  502      if (kind_at(1) /= t_name) return
+	PUSHAL	FCALC.IS_DEFINITION.$K1
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.IS_DEFINITION.$T1
+	CMPL	FCALC.IS_DEFINITION.$T1,#2
+	BEQL	FCALC.IS_DEFINITION.$1
+	CLRL	R0			; the function's value
+	RET
+FCALC.IS_DEFINITION.$1:
+;  503      t = token_at(2)
+	PUSHAL	FCALC.IS_DEFINITION.$K2
+	PUSHAB	FCALC.IS_DEFINITION.$T2
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.IS_DEFINITION.$T2,FCALC.IS_DEFINITION.T
+;  504      if (t%kind /= t_operator .or. t%text /= '(') return
+	CMPL	FCALC.IS_DEFINITION.T,#3
+	BNEQ	FCALC.IS_DEFINITION.$4
+	CMPC5	#31,FCALC.IS_DEFINITION.T+8,#^A/ /,#1,FCALC.IS_DEFINITION.$K3
+	BEQL	FCALC.IS_DEFINITION.$3
+FCALC.IS_DEFINITION.$4:
+	CLRL	R0			; the function's value
+	RET
+FCALC.IS_DEFINITION.$3:
+;  505
+;  506      k = 3
+	MOVL	#3,FCALC.IS_DEFINITION.K
+;  507      t = token_at(k)
+	PUSHAL	FCALC.IS_DEFINITION.K
+	PUSHAB	FCALC.IS_DEFINITION.$T2
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.IS_DEFINITION.$T2,FCALC.IS_DEFINITION.T
+;  508      if (.not. (t%kind == t_operator .and. t%text == ')')) then
+	CMPL	FCALC.IS_DEFINITION.T,#3
+	BNEQ	FCALC.IS_DEFINITION.$11
+	CMPC5	#31,FCALC.IS_DEFINITION.T+8,#^A/ /,#1,FCALC.IS_DEFINITION.$K4
+	BNEQ	FCALC.IS_DEFINITION.$11
+	BRW	FCALC.IS_DEFINITION.$7
+;  509        do
+FCALC.IS_DEFINITION.$12:
+;  510          if (kind_at(k) /= t_name) return
+	CLRL	R0			; the function's value
+	RET
+FCALC.IS_DEFINITION.$13:
+;  511          t = token_at(k + 1)
+	ADDL3	FCALC.IS_DEFINITION.K,#1,FCALC.IS_DEFINITION.$T1
+	PUSHAL	FCALC.IS_DEFINITION.$T1
+	PUSHAB	FCALC.IS_DEFINITION.$T2
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.IS_DEFINITION.$T2,FCALC.IS_DEFINITION.T
+;  512          if (t%kind /= t_operator) return
+	CMPL	FCALC.IS_DEFINITION.T,#3
+	BEQL	FCALC.IS_DEFINITION.$14
+	CLRL	R0			; the function's value
+	RET
+FCALC.IS_DEFINITION.$14:
+;  513          k = k + 2
+	ADDL2	#2,FCALC.IS_DEFINITION.K
+;  514          if (t%text == ')') exit
+	CMPC5	#31,FCALC.IS_DEFINITION.T+8,#^A/ /,#1,FCALC.IS_DEFINITION.$K4
+	BEQL	FCALC.IS_DEFINITION.$16
+;  515          if (t%text /= ',') return
+	CMPC5	#31,FCALC.IS_DEFINITION.T+8,#^A/ /,#1,FCALC.IS_DEFINITION.$K5
+	BEQL	FCALC.IS_DEFINITION.$18
+	CLRL	R0			; the function's value
+	RET
+FCALC.IS_DEFINITION.$18:
+;  516        end do
+FCALC.IS_DEFINITION.$11:		; DO (line 509)'s body
+	PUSHAL	FCALC.IS_DEFINITION.K	; from line 510
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.IS_DEFINITION.$T1
+	CMPL	FCALC.IS_DEFINITION.$T1,#2
+	BEQL	FCALC.IS_DEFINITION.$13
+	BRW	FCALC.IS_DEFINITION.$12
+FCALC.IS_DEFINITION.$16:
+;  517        k = k - 1
+	DECL	FCALC.IS_DEFINITION.K
+;  518      end if
+FCALC.IS_DEFINITION.$7:
+;  519
+;  520      ! K is the ) token's place.
+;  521      t = token_at(k + 1)
+	ADDL3	FCALC.IS_DEFINITION.K,#1,FCALC.IS_DEFINITION.$T1
+	PUSHAL	FCALC.IS_DEFINITION.$T1
+	PUSHAB	FCALC.IS_DEFINITION.$T2
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.IS_DEFINITION.$T2,FCALC.IS_DEFINITION.T
+;  522      is_definition = t%kind == t_operator .and. t%text == '='
+	CMPC5	#31,FCALC.IS_DEFINITION.T+8,#^A/ /,#1,FCALC.IS_DEFINITION.$K6
+	BNEQ	FCALC.IS_DEFINITION.$21
+	MNEGL	#1,R0
+	BRB	FCALC.IS_DEFINITION.$22
+FCALC.IS_DEFINITION.$21:
+	CLRL	R0
+FCALC.IS_DEFINITION.$22:
+	MOVL	R0,FCALC.IS_DEFINITION.$T1
+;  523    end function is_definition
+	CLRL	R0			; the function's value
+	CMPL	FCALC.IS_DEFINITION.T,#3
+	BNEQ	FCALC.IS_DEFINITION.$23
+	MNEGL	#1,R0
+FCALC.IS_DEFINITION.$23:
+	MCOML	FCALC.IS_DEFINITION.$T1,R1
+	BICL2	R1,R0
+	RET
+
+; Storage map for FCALC.DEFINITION, a subroutine
+;   TEXT    CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.DEFINITION.TEXT(AP)
+;   NAME    TYPE(TOKEN)                $LOCAL+0    FCALC.DEFINITION.NAME
+;   T       TYPE(TOKEN)                $LOCAL+56   FCALC.DEFINITION.T
+;   PARAMS  CHARACTER*31 (8)           $LOCAL+112  FCALC.DEFINITION.PARAMS
+;   TREE    TYPE(NODE), POINTER        $LOCAL+368  FCALC.DEFINITION.TREE
+;   COUNT   INTEGER                    $LOCAL+372  FCALC.DEFINITION.COUNT
+;   K       INTEGER                    $LOCAL+376  FCALC.DEFINITION.K
+;   R6 is $T2: temporary
+;   R8 is $T3: temporary
+;   R7 is $T5: temporary
+;   R6 is $R1: an index stepped with $I1
+;
+FCALC.DEFINITION.TEXT = 4		; TEXT is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCALC.DEFINITION.NAME:
+	.BLKL	14			; NAME
+FCALC.DEFINITION.T:
+	.BLKL	14			; T
+FCALC.DEFINITION.PARAMS:
+	.BLKL	62			; PARAMS, CHARACTER*31 (8)
+	.BLKB	8
+FCALC.DEFINITION.TREE:
+	.BLKL	1			; TREE
+FCALC.DEFINITION.COUNT:
+	.BLKL	1			; COUNT
+FCALC.DEFINITION.K:
+	.BLKL	1			; K
+FCALC.DEFINITION.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.DEFINITION.$I1:
+	.BLKL	1			; an array statement's loop index
+FCALC.DEFINITION.$T4:
+	.BLKL	1			; temporary
+FCALC.DEFINITION.$L1:
+	.BLKL	1			; array (line 552), dimension 1's limit
+FCALC.DEFINITION.$D3:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCALC.DEFINITION.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.DEFINITION.$K1:
+	.LONG	1
+FCALC.DEFINITION.$D1:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.DEFINITION.NAME+8
+FCALC.DEFINITION.$K2:
+	.LONG	23
+FCALC.DEFINITION.$K3:
+	.LONG	25
+FCALC.DEFINITION.$K4:
+	.LONG	26
+FCALC.DEFINITION.$D2:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.DEFINITION.T+8
+FCALC.DEFINITION.$K5:
+	.LONG	5
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  524
+;  525    ! DEFINITION is f(x, y) = expr: the function's name and parameters are
+;  526    ! checked, the expression parsed, and the tree and the text kept.
+;  527    subroutine definition(text)
+FCALC.DEFINITION:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8> ; internal procedure DEFINITION of FCALC
+;  528      character(len=*), intent(in) :: text
+;  529      type(token) :: name, t
+;  530      character(len=name_length) :: params(max_params)
+;  531      type(node), pointer :: tree
+;  532      integer :: count, k
+;  533
+;  534      name = token_at(1)
+	PUSHAL	FCALC.DEFINITION.$K1
+	PUSHAB	FCALC.DEFINITION.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.DEFINITION.$T1,FCALC.DEFINITION.NAME
+;  535      if (.not. usable_name(name)) return
+	PUSHAB	FCALC.DEFINITION.NAME
+	CALLS	#1,FCALC.USABLE_NAME
+	MOVL	R0,R6
+	BLBS	R6,FCALC.DEFINITION.$1
+	RET
+FCALC.DEFINITION.$1:
+;  536      if (known_function(name%text)) then
+	PUSHAQ	FCALC.DEFINITION.$D1
+	CALLS	#1,G^FCEVAL.KNOWN_FUNCTION
+	MOVL	R0,R6
+	BLBC	R6,FCALC.DEFINITION.$3
+;  537        call fail(e_builtin, name%column, name%text)
+	PUSHAQ	FCALC.DEFINITION.$D1
+	PUSHAL	FCALC.DEFINITION.NAME+4
+	PUSHAL	FCALC.DEFINITION.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  538        return
+	RET
+FCALC.DEFINITION.$3:
+;  539      end if
+;  540
+;  541      ! The parameters: the names from the third token, each followed by a
+;  542      ! comma or the ).
+;  543      count = 0
+	CLRL	FCALC.DEFINITION.COUNT
+;  544      k = 3
+	MOVL	#3,FCALC.DEFINITION.K
+;  545      do while (kind_at(k) == t_name)
+	BRW	FCALC.DEFINITION.$5
+FCALC.DEFINITION.$6:			; DO (line 545)'s body
+;  546        t = token_at(k)
+	PUSHAL	FCALC.DEFINITION.K
+	PUSHAB	FCALC.DEFINITION.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.DEFINITION.$T1,FCALC.DEFINITION.T
+;  547        if (.not. usable_name(t)) return
+	PUSHAB	FCALC.DEFINITION.T
+	CALLS	#1,FCALC.USABLE_NAME
+	MOVL	R0,R6
+	BLBS	R6,FCALC.DEFINITION.$7
+	RET
+FCALC.DEFINITION.$7:
+;  548        if (count == max_params) then
+	CMPL	FCALC.DEFINITION.COUNT,#8
+	BNEQ	FCALC.DEFINITION.$9
+;  549          call fail(e_params, t%column)
+	PUSHL	#0
+	PUSHAL	FCALC.DEFINITION.T+4
+	PUSHAL	FCALC.DEFINITION.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  550          return
+	RET
+FCALC.DEFINITION.$9:
+;  551        end if
+;  552        if (any(params(1:count) == t%text)) then
+	MOVL	FCALC.DEFINITION.COUNT,R6
+	MOVL	R6,R8
+	BGEQ	FCALC.DEFINITION.$11
+	CLRL	R8
+FCALC.DEFINITION.$11:
+	CLRL	FCALC.DEFINITION.$T4
+	MOVL	R8,FCALC.DEFINITION.$L1	; array (line 552), dimension 1's limit
+	MOVL	#1,FCALC.DEFINITION.$I1
+	CMPL	#1,FCALC.DEFINITION.$L1
+	BGTR	FCALC.DEFINITION.$13
+	MULL3	FCALC.DEFINITION.$I1,#31,R6
+FCALC.DEFINITION.$15:			; array (line 552), dimension 1's body
+	CMPC3	#31,FCALC.DEFINITION.PARAMS-31[R6],FCALC.DEFINITION.T+8
+	BNEQ	FCALC.DEFINITION.$16
+	MOVL	#-1,FCALC.DEFINITION.$T4
+FCALC.DEFINITION.$16:
+	ADDL2	#31,R6
+	AOBLEQ	FCALC.DEFINITION.$L1,FCALC.DEFINITION.$I1,FCALC.DEFINITION.$15
+FCALC.DEFINITION.$13:
+	BLBC	FCALC.DEFINITION.$T4,FCALC.DEFINITION.$19
+;  553          call fail(e_dupparam, t%column, t%text)
+	PUSHAQ	FCALC.DEFINITION.$D2
+	PUSHAL	FCALC.DEFINITION.T+4
+	PUSHAL	FCALC.DEFINITION.$K4
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  554          return
+	RET
+FCALC.DEFINITION.$19:
+;  555        end if
+;  556        count = count + 1
+	INCL	FCALC.DEFINITION.COUNT
+;  557        params(count) = t%text
+	MULL3	FCALC.DEFINITION.COUNT,#31,R0
+	MOVC3	#31,FCALC.DEFINITION.T+8,FCALC.DEFINITION.PARAMS-31[R0]
+;  558        k = k + 2
+	ADDL2	#2,FCALC.DEFINITION.K
+;  559      end do
+FCALC.DEFINITION.$5:			; DO (line 545)'s test
+	PUSHAL	FCALC.DEFINITION.K	; from line 545
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,R6
+	CMPL	R6,#2
+	BNEQ	FCALC.DEFINITION.$21
+	BRW	FCALC.DEFINITION.$6
+FCALC.DEFINITION.$21:
+;  560      if (count == 0) k = k + 1
+	TSTL	FCALC.DEFINITION.COUNT
+	BNEQ	FCALC.DEFINITION.$22
+	INCL	FCALC.DEFINITION.K
+FCALC.DEFINITION.$22:
+;  561
+;  562      ! K is the = token's place; the expression starts after it.
+;  563      call advance(k)
+	PUSHAL	FCALC.DEFINITION.K
+	CALLS	#1,G^FCTREE.ADVANCE
+;  564      tree => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,FCALC.DEFINITION.$T4
+	MOVL	FCALC.DEFINITION.$T4,FCALC.DEFINITION.TREE
+;  565      if (failed()) return
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,FCALC.DEFINITION.$T4
+	BLBC	FCALC.DEFINITION.$T4,FCALC.DEFINITION.$24
+	RET
+FCALC.DEFINITION.$24:
+;  566      if (.not. at_end()) then
+	CALLS	#0,G^FCTREE.AT_END
+	MOVL	R0,FCALC.DEFINITION.$T4
+	BLBS	FCALC.DEFINITION.$T4,FCALC.DEFINITION.$26
+;  567        call fail(e_extra, current_column())
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCALC.DEFINITION.$T4
+	PUSHL	#0
+	PUSHAL	FCALC.DEFINITION.$T4
+	PUSHAL	FCALC.DEFINITION.$K5
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  568        call free_tree(tree)
+	PUSHAL	FCALC.DEFINITION.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  569        return
+	RET
+FCALC.DEFINITION.$26:
+;  570      end if
+;  571
+;  572      t = token_at(k + 1)
+	ADDL3	FCALC.DEFINITION.K,#1,FCALC.DEFINITION.$T4
+	PUSHAL	FCALC.DEFINITION.$T4
+	PUSHAB	FCALC.DEFINITION.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.DEFINITION.$T1,FCALC.DEFINITION.T
+;  573      call define_function(name%text, count, params, tree, trim(text(t%column:)))
+	MOVAB	FCALC.DEFINITION.PARAMS,FCALC.DEFINITION.$D3+4
+	MOVL	#31,FCALC.DEFINITION.$D3+20
+	MOVL	#1,FCALC.DEFINITION.$D3+24
+	MOVL	#8,FCALC.DEFINITION.$D3+28
+	SUBL3	#31,FCALC.DEFINITION.$D3+4,FCALC.DEFINITION.$D3+16
+	MOVL	#248,FCALC.DEFINITION.$D3+12
+	MOVZWL	@FCALC.DEFINITION.TEXT(AP),R0
+	SUBL2	FCALC.DEFINITION.T+4,R0
+	ADDL3	R0,#1,FCALC.DEFINITION.$T4
+	BGEQ	FCALC.DEFINITION.$28
+	CLRL	FCALC.DEFINITION.$T4
+FCALC.DEFINITION.$28:
+	MOVL	FCALC.DEFINITION.TEXT(AP),R0
+	SUBL3	#1,FCALC.DEFINITION.T+4,R1
+	MOVAB	@4(R0)[R1],R8
+	MOVAB	(R8),R6
+	MOVL	FCALC.DEFINITION.$T4,R7
+	BRB	FCALC.DEFINITION.$30
+FCALC.DEFINITION.$31:
+	CMPB	-1(R6)[R7],#32
+	BNEQ	FCALC.DEFINITION.$32
+	DECL	R7
+FCALC.DEFINITION.$30:
+	TSTL	R7			; from line 573
+	BNEQ	FCALC.DEFINITION.$31
+FCALC.DEFINITION.$32:
+	CVTLW	R7,FCALC.DEFINITION.$D4
+	MOVAB	(R8),FCALC.DEFINITION.$D4+4
+	PUSHAQ	FCALC.DEFINITION.$D4
+	PUSHAL	FCALC.DEFINITION.TREE
+	PUSHAQ	FCALC.DEFINITION.$D3
+	PUSHAL	FCALC.DEFINITION.COUNT
+	PUSHAQ	FCALC.DEFINITION.$D1
+	CALLS	#5,G^FCSYMBOLS.DEFINE_FUNCTION
+;  574      if (.not. quiet) call list_one(name%text)
+	BLBS	FCALC.QUIET,FCALC.DEFINITION.$35
+	PUSHAQ	FCALC.DEFINITION.$D1
+	CALLS	#1,FCALC.LIST_ONE
+FCALC.DEFINITION.$35:
+;  575    end subroutine definition
+	RET
+
+; Storage map for FCALC.LIST_ONE, a subroutine
+;   NAME  CHARACTER*(*), INTENT(IN)      argument 1  @FCALC.LIST_ONE.NAME(AP)
+;   FN    TYPE(FUNCTION_ENTRY), POINTER  $LOCAL+0    FCALC.LIST_ONE.FN
+;   R8 is $T1: temporary
+;   R7 is $T3: temporary
+;   R6 is $T4: temporary
+;
+FCALC.LIST_ONE.NAME = 4			; NAME is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCALC.LIST_ONE.FN:
+	.BLKL	1			; FN
+FCALC.LIST_ONE.$T2:
+	.BLKB	297			; characters, for one statement
+	.BLKB	3
+FCALC.LIST_ONE.$T5:
+	.BLKL	1			; temporary
+FCALC.LIST_ONE.$T6:
+	.BLKL	1			; temporary
+FCALC.LIST_ONE.$T7:
+	.BLKL	1			; temporary
+FCALC.LIST_ONE.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCALC.LIST_ONE.$T8:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCALC.LIST_ONE.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCALC.LIST_ONE.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.LIST_ONE.$D1:
+	.WORD	297			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.LIST_ONE.$T2
+FCALC.LIST_ONE.$K1:
+	.ASCII	/ = /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  576
+;  577    ! LIST_ONE shows the function NAME as LIST does.
+;  578    subroutine list_one(name)
+FCALC.LIST_ONE:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8> ; internal procedure LIST_ONE of FCALC
+;  579      character(len=*), intent(in) :: name
+;  580      type(function_entry), pointer :: fn
+;  581
+;  582      fn => find_function(name)
+	PUSHL	FCALC.LIST_ONE.NAME(AP)
+	CALLS	#1,G^FCSYMBOLS.FIND_FUNCTION
+	MOVL	R0,R8
+	MOVL	R8,FCALC.LIST_ONE.FN
+;  583      call say(trim(heading(fn)) // ' = ' // trim(fn%text))
+	PUSHAL	FCALC.LIST_ONE.FN
+	PUSHAQ	FCALC.LIST_ONE.$D1
+	CALLS	#2,G^FCSYMBOLS.HEADING
+	MOVAB	FCALC.LIST_ONE.$T2,R8
+	MOVAB	(R8),R7
+	MOVL	#297,R6
+	BRB	FCALC.LIST_ONE.$1
+FCALC.LIST_ONE.$2:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCALC.LIST_ONE.$3
+	DECL	R6
+FCALC.LIST_ONE.$1:
+	TSTL	R6			; from line 583
+	BNEQ	FCALC.LIST_ONE.$2
+FCALC.LIST_ONE.$3:
+	MOVL	FCALC.LIST_ONE.FN,R0
+	MOVAB	288(R0),FCALC.LIST_ONE.$T5
+	MOVAB	@FCALC.LIST_ONE.$T5,FCALC.LIST_ONE.$T6
+	MOVL	#199,FCALC.LIST_ONE.$T7
+	BRB	FCALC.LIST_ONE.$6
+FCALC.LIST_ONE.$7:
+	SUBL3	#1,FCALC.LIST_ONE.$T7,R0
+	CMPB	@FCALC.LIST_ONE.$T6[R0],#32
+	BNEQ	FCALC.LIST_ONE.$8
+	DECL	FCALC.LIST_ONE.$T7
+FCALC.LIST_ONE.$6:
+	TSTL	FCALC.LIST_ONE.$T7	; from line 583
+	BNEQ	FCALC.LIST_ONE.$7
+FCALC.LIST_ONE.$8:
+	ADDL3	R6,FCALC.LIST_ONE.$T7,R0
+	ADDL3	R0,#3,FCALC.LIST_ONE.$U1
+	CVTLW	FCALC.LIST_ONE.$U1,FCALC.LIST_ONE.$T8
+	PUSHAQ	FCALC.LIST_ONE.$D2
+	PUSHAW	FCALC.LIST_ONE.$T8
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,(R8),@FCALC.LIST_ONE.$D2+4
+	MOVC3	#3,FCALC.LIST_ONE.$K1,@FCALC.LIST_ONE.$D2+4[R6]
+	ADDL3	R6,#3,R0
+	MOVC3	FCALC.LIST_ONE.$T7,@FCALC.LIST_ONE.$T5,@FCALC.LIST_ONE.$D2+4[R0]
+	CVTLW	FCALC.LIST_ONE.$U1,FCALC.LIST_ONE.$D3
+	MOVAB	@FCALC.LIST_ONE.$D2+4,FCALC.LIST_ONE.$D3+4
+	PUSHAQ	FCALC.LIST_ONE.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+	PUSHAQ	FCALC.LIST_ONE.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  584    end subroutine list_one
+	RET
+
+; Storage map for FCALC.USABLE_NAME, a LOGICAL function
+;   T            TYPE(TOKEN), INTENT(IN)  argument 1  @FCALC.USABLE_NAME.T(AP)
+;   USABLE_NAME  LOGICAL                  R7          R7
+;   R6 is $T1: temporary
+;
+FCALC.USABLE_NAME.T = 4			; T is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCALC.USABLE_NAME.$D1:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.USABLE_NAME.$K1:
+	.LONG	21
+FCALC.USABLE_NAME.$K2:
+	.LONG	8
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  585
+;  586    ! USABLE_NAME: the token T may name a variable, a function, or a
+;  587    ! parameter: it isn't a reserved word or a constant.
+;  588    logical function usable_name(t)
+FCALC.USABLE_NAME:
+	.WORD	^M<R6,R7>		; internal procedure USABLE_NAME of FCALC
+;  589      type(token), intent(in) :: t
+;  590
+;  591      usable_name = .false.
+	CLRL	R7
+;  592      if (is_reserved(t%text)) then
+	MOVL	FCALC.USABLE_NAME.T(AP),R0
+	MOVAB	8(R0),FCALC.USABLE_NAME.$D1+4
+	PUSHAQ	FCALC.USABLE_NAME.$D1
+	CALLS	#1,FCALC.IS_RESERVED
+	MOVL	R0,R6
+	BLBC	R6,FCALC.USABLE_NAME.$1
+;  593        call fail(e_reserved, t%column, t%text)
+	MOVL	FCALC.USABLE_NAME.T(AP),R0
+	MOVAB	8(R0),FCALC.USABLE_NAME.$D1+4
+	PUSHAQ	FCALC.USABLE_NAME.$D1
+	MOVL	FCALC.USABLE_NAME.T(AP),R0
+	PUSHAL	4(R0)
+	PUSHAL	FCALC.USABLE_NAME.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  594      else if (is_constant(t%text)) then
+	BRB	FCALC.USABLE_NAME.$3
+FCALC.USABLE_NAME.$1:
+	MOVL	FCALC.USABLE_NAME.T(AP),R0
+	MOVAB	8(R0),FCALC.USABLE_NAME.$D1+4
+	PUSHAQ	FCALC.USABLE_NAME.$D1
+	CALLS	#1,G^FCSYMBOLS.IS_CONSTANT
+	MOVL	R0,R6
+	BLBC	R6,FCALC.USABLE_NAME.$4
+;  595        call fail(e_constant, t%column, t%text)
+	MOVL	FCALC.USABLE_NAME.T(AP),R0
+	MOVAB	8(R0),FCALC.USABLE_NAME.$D1+4
+	PUSHAQ	FCALC.USABLE_NAME.$D1
+	MOVL	FCALC.USABLE_NAME.T(AP),R0
+	PUSHAL	4(R0)
+	PUSHAL	FCALC.USABLE_NAME.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  596      else
+	BRB	FCALC.USABLE_NAME.$3
+FCALC.USABLE_NAME.$4:
+;  597        usable_name = .true.
+	MOVL	#-1,R7
+;  598      end if
+FCALC.USABLE_NAME.$3:
+;  599    end function usable_name
+	MOVL	R7,R0			; the function's value
+	RET
+
+; Storage map for FCALC.IS_RESERVED, a LOGICAL function
+;   NAME         CHARACTER*(*), INTENT(IN)  argument 1  @FCALC.IS_RESERVED.NAME(AP)
+;   IS_RESERVED  LOGICAL                    $LOCAL+0    FCALC.IS_RESERVED.IS_RESERVED
+;   R6 is $U1: temporary
+;
+FCALC.IS_RESERVED.NAME = 4		; NAME is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCALC.IS_RESERVED.IS_RESERVED:
+	.BLKL	1			; IS_RESERVED, the function's value
+FCALC.IS_RESERVED.$T1:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T2:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T3:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T4:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T5:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T6:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T7:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T8:
+	.BLKL	1			; temporary
+FCALC.IS_RESERVED.$T9:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.IS_RESERVED.$K1:
+	.ASCII	/or/
+FCALC.IS_RESERVED.$K2:
+	.ASCII	/and/
+FCALC.IS_RESERVED.$K3:
+	.ASCII	/not/
+FCALC.IS_RESERVED.$K4:
+	.ASCII	/mod/
+FCALC.IS_RESERVED.$K5:
+	.ASCII	/solve/
+FCALC.IS_RESERVED.$K6:
+	.ASCII	/integrate/
+FCALC.IS_RESERVED.$K7:
+	.ASCII	/diff/
+FCALC.IS_RESERVED.$K8:
+	.ASCII	/table/
+FCALC.IS_RESERVED.$K9:
+	.ASCII	/plot/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  600
+;  601    logical function is_reserved(name)
+FCALC.IS_RESERVED:
+	.WORD	^M<R2,R3,R6>		; internal procedure IS_RESERVED of FCALC
+;  602      character(len=*), intent(in) :: name
+;  603
+;  604      is_reserved = name == 'or' .or. name == 'and' .or. name == 'not' .or. name == 'mod' .or. &
+;  605        name == 'solve' .or. name == 'integrate' .or. name == 'diff' .or. &
+;  606        name == 'table' .or. name == 'plot'
+	MOVZWL	@FCALC.IS_RESERVED.NAME(AP),R6
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#2,FCALC.IS_RESERVED.$K1
+	BNEQ	FCALC.IS_RESERVED.$1
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$2
+FCALC.IS_RESERVED.$1:
+	CLRL	R0
+FCALC.IS_RESERVED.$2:
+	MOVL	R0,FCALC.IS_RESERVED.$T1
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#3,FCALC.IS_RESERVED.$K2
+	BNEQ	FCALC.IS_RESERVED.$3
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$4
+FCALC.IS_RESERVED.$3:
+	CLRL	R0
+FCALC.IS_RESERVED.$4:
+	MOVL	R0,FCALC.IS_RESERVED.$T2
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#3,FCALC.IS_RESERVED.$K3
+	BNEQ	FCALC.IS_RESERVED.$5
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$6
+FCALC.IS_RESERVED.$5:
+	CLRL	R0
+FCALC.IS_RESERVED.$6:
+	MOVL	R0,FCALC.IS_RESERVED.$T3
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#3,FCALC.IS_RESERVED.$K4
+	BNEQ	FCALC.IS_RESERVED.$7
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$8
+FCALC.IS_RESERVED.$7:
+	CLRL	R0
+FCALC.IS_RESERVED.$8:
+	MOVL	R0,FCALC.IS_RESERVED.$T4
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#5,FCALC.IS_RESERVED.$K5
+	BNEQ	FCALC.IS_RESERVED.$9
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$10
+FCALC.IS_RESERVED.$9:
+	CLRL	R0
+FCALC.IS_RESERVED.$10:
+	MOVL	R0,FCALC.IS_RESERVED.$T5
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#9,FCALC.IS_RESERVED.$K6
+	BNEQ	FCALC.IS_RESERVED.$11
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$12
+FCALC.IS_RESERVED.$11:
+	CLRL	R0
+FCALC.IS_RESERVED.$12:
+	MOVL	R0,FCALC.IS_RESERVED.$T6
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#4,FCALC.IS_RESERVED.$K7
+	BNEQ	FCALC.IS_RESERVED.$13
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$14
+FCALC.IS_RESERVED.$13:
+	CLRL	R0
+FCALC.IS_RESERVED.$14:
+	MOVL	R0,FCALC.IS_RESERVED.$T7
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#5,FCALC.IS_RESERVED.$K8
+	BNEQ	FCALC.IS_RESERVED.$15
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$16
+FCALC.IS_RESERVED.$15:
+	CLRL	R0
+FCALC.IS_RESERVED.$16:
+	MOVL	R0,FCALC.IS_RESERVED.$T8
+	MOVL	FCALC.IS_RESERVED.NAME(AP),R0
+	CMPC5	R6,@4(R0),#^A/ /,#4,FCALC.IS_RESERVED.$K9
+	BNEQ	FCALC.IS_RESERVED.$17
+	MNEGL	#1,R0
+	BRB	FCALC.IS_RESERVED.$18
+FCALC.IS_RESERVED.$17:
+	CLRL	R0
+FCALC.IS_RESERVED.$18:
+	MOVL	R0,FCALC.IS_RESERVED.$T9
+;  607    end function is_reserved
+	BISL3	FCALC.IS_RESERVED.$T1,FCALC.IS_RESERVED.$T2,R0 ; the function's value
+	BISL2	FCALC.IS_RESERVED.$T3,R0
+	BISL2	FCALC.IS_RESERVED.$T4,R0
+	BISL2	FCALC.IS_RESERVED.$T5,R0
+	BISL2	FCALC.IS_RESERVED.$T6,R0
+	BISL2	FCALC.IS_RESERVED.$T7,R0
+	BISL2	FCALC.IS_RESERVED.$T8,R0
+	BISL2	FCALC.IS_RESERVED.$T9,R0
+	RET
+
+; Storage map for FCALC.LIST_COMMAND, a subroutine
+;   WHAT   TYPE(TOKEN)   $LOCAL+0   FCALC.LIST_COMMAND.WHAT
+;   WHICH  CHARACTER*31  $LOCAL+56  FCALC.LIST_COMMAND.WHICH
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCALC.LIST_COMMAND.WHAT:
+	.BLKL	14			; WHAT
+FCALC.LIST_COMMAND.WHICH:
+	.BLKB	31			; WHICH
+	.BLKB	1
+FCALC.LIST_COMMAND.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.LIST_COMMAND.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.LIST_COMMAND.$K2:
+	.LONG	2
+FCALC.LIST_COMMAND.$K5:
+	.LONG	19
+FCALC.LIST_COMMAND.$K6:
+	.LONG	1
+FCALC.LIST_COMMAND.$K7:
+	.LONG	5
+FCALC.LIST_COMMAND.$K1:
+	.ASCII	/all/
+FCALC.LIST_COMMAND.$K3:
+	.ASCII	/variables/
+FCALC.LIST_COMMAND.$K4:
+	.ASCII	/functions/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  608
+;  609    ! LIST [VARIABLES | FUNCTIONS | ALL]: with no word, ALL, the variables
+;  610    ! and then the functions.
+;  611    subroutine list_command()
+FCALC.LIST_COMMAND:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure LIST_COMMAND of FCALC
+;  612      type(token) :: what
+;  613      character(len=name_length) :: which
+;  614
+;  615      which = 'all'
+	MOVC5	#3,FCALC.LIST_COMMAND.$K1,#^A/ /,#31,FCALC.LIST_COMMAND.WHICH
+;  616      what = token_at(2)
+	PUSHAL	FCALC.LIST_COMMAND.$K2
+	PUSHAB	FCALC.LIST_COMMAND.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.LIST_COMMAND.$T1,FCALC.LIST_COMMAND.WHAT
+;  617      if (what%kind == t_name) then
+	CMPL	FCALC.LIST_COMMAND.WHAT,#2
+	BNEQ	FCALC.LIST_COMMAND.$1
+;  618        which = what%text
+	MOVC3	#31,FCALC.LIST_COMMAND.WHAT+8,FCALC.LIST_COMMAND.WHICH
+;  619        if (which /= 'variables' .and. which /= 'functions' .and. which /= 'all') then
+	CMPC5	#31,FCALC.LIST_COMMAND.WHICH,#^A/ /,#9,FCALC.LIST_COMMAND.$K3
+	BEQL	FCALC.LIST_COMMAND.$3
+	CMPC5	#31,FCALC.LIST_COMMAND.WHICH,#^A/ /,#9,FCALC.LIST_COMMAND.$K4
+	BEQL	FCALC.LIST_COMMAND.$3
+	CMPC5	#31,FCALC.LIST_COMMAND.WHICH,#^A/ /,#3,FCALC.LIST_COMMAND.$K1
+	BEQL	FCALC.LIST_COMMAND.$3
+;  620          call fail(e_badcmd, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.LIST_COMMAND.WHAT+4
+	PUSHAL	FCALC.LIST_COMMAND.$K5
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  621          return
+	RET
+FCALC.LIST_COMMAND.$3:
+;  622        end if
+;  623        call advance(1)
+	PUSHAL	FCALC.LIST_COMMAND.$K6
+	CALLS	#1,G^FCTREE.ADVANCE
+;  624      end if
+FCALC.LIST_COMMAND.$1:
+;  625      call advance(1)
+	PUSHAL	FCALC.LIST_COMMAND.$K6
+	CALLS	#1,G^FCTREE.ADVANCE
+;  626      if (.not. at_end()) then
+	CALLS	#0,G^FCTREE.AT_END
+	MOVL	R0,FCALC.LIST_COMMAND.$T2
+	BLBS	FCALC.LIST_COMMAND.$T2,FCALC.LIST_COMMAND.$7
+;  627        call fail(e_extra, current_column())
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCALC.LIST_COMMAND.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.LIST_COMMAND.$T2
+	PUSHAL	FCALC.LIST_COMMAND.$K7
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  628        return
+	RET
+FCALC.LIST_COMMAND.$7:
+;  629      end if
+;  630      if (which /= 'functions') call list_variables()
+	CMPC5	#31,FCALC.LIST_COMMAND.WHICH,#^A/ /,#9,FCALC.LIST_COMMAND.$K4
+	BEQL	FCALC.LIST_COMMAND.$9
+	CALLS	#0,G^FCSYMBOLS.LIST_VARIABLES
+FCALC.LIST_COMMAND.$9:
+;  631      if (which /= 'variables') call list_functions()
+	CMPC5	#31,FCALC.LIST_COMMAND.WHICH,#^A/ /,#9,FCALC.LIST_COMMAND.$K3
+	BEQL	FCALC.LIST_COMMAND.$11
+	CALLS	#0,G^FCSYMBOLS.LIST_FUNCTIONS
+FCALC.LIST_COMMAND.$11:
+;  632    end subroutine list_command
+	RET
+
+; Storage map for FCALC.CLEAR_COMMAND, a subroutine
+;   WHAT  TYPE(TOKEN)  $LOCAL+0   FCALC.CLEAR_COMMAND.WHAT
+;   K     INTEGER      $LOCAL+56  FCALC.CLEAR_COMMAND.K
+;   GONE  LOGICAL      $LOCAL+60  FCALC.CLEAR_COMMAND.GONE
+;   R8 is $T2: temporary
+;   R6 is $C1: DO (line 652)'s count
+;   R6 is $C2: DO (line 660)'s count
+;   R7 is $R1: GONE, during a loop
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCALC.CLEAR_COMMAND.WHAT:
+	.BLKL	14			; WHAT
+FCALC.CLEAR_COMMAND.K:
+	.BLKL	1			; K
+FCALC.CLEAR_COMMAND.GONE:
+	.BLKL	1			; GONE
+FCALC.CLEAR_COMMAND.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.CLEAR_COMMAND.$T3:
+	.BLKL	24			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.CLEAR_COMMAND.$K1:
+	.LONG	2
+FCALC.CLEAR_COMMAND.$K3:
+	.LONG	3
+FCALC.CLEAR_COMMAND.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.CLEAR_COMMAND.$K4
+FCALC.CLEAR_COMMAND.$K5:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCALC.CLEAR_COMMAND.$K6:
+	.LONG	20
+FCALC.CLEAR_COMMAND.$D2:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.CLEAR_COMMAND.WHAT+8
+FCALC.CLEAR_COMMAND.$K7:
+	.LONG	18
+FCALC.CLEAR_COMMAND.$K2:
+	.ASCII	/all/
+FCALC.CLEAR_COMMAND.$K4:
+	.ASCII	/ans/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  633
+;  634    ! CLEAR name... | CLEAR ALL
+;  635    subroutine clear_command()
+FCALC.CLEAR_COMMAND:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8> ; internal procedure CLEAR_COMMAND of FCALC
+;  636      type(token) :: what
+;  637      integer :: k
+;  638      logical :: gone
+;  639
+;  640      what = token_at(2)
+	PUSHAL	FCALC.CLEAR_COMMAND.$K1
+	PUSHAB	FCALC.CLEAR_COMMAND.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.CLEAR_COMMAND.$T1,FCALC.CLEAR_COMMAND.WHAT
+;  641      if (what%kind == t_name .and. what%text == 'all' .and. kind_at(3) == t_end) then
+	PUSHAL	FCALC.CLEAR_COMMAND.$K3
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,R8
+	CMPL	FCALC.CLEAR_COMMAND.WHAT,#2
+	BNEQ	FCALC.CLEAR_COMMAND.$1
+	CMPC5	#31,FCALC.CLEAR_COMMAND.WHAT+8,#^A/ /,#3,FCALC.CLEAR_COMMAND.$K2
+	BNEQ	FCALC.CLEAR_COMMAND.$1
+	TSTL	R8
+	BNEQ	FCALC.CLEAR_COMMAND.$1
+;  642        call clear_variables()
+	CALLS	#0,G^FCSYMBOLS.CLEAR_VARIABLES
+;  643        call clear_functions()
+	CALLS	#0,G^FCSYMBOLS.CLEAR_FUNCTIONS
+;  644        call set_variable('ans', real_quantity(0.0_rk))
+	PUSHAG	FCALC.CLEAR_COMMAND.$K5
+	PUSHAB	FCALC.CLEAR_COMMAND.$T3
+	CALLS	#2,G^FCARRAYS.REAL_QUANTITY
+	PUSHAB	FCALC.CLEAR_COMMAND.$T3
+	PUSHAQ	FCALC.CLEAR_COMMAND.$D1
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  645        return
+	RET
+FCALC.CLEAR_COMMAND.$1:
+;  646      end if
+;  647
+;  648      if (what%kind /= t_name) then
+	CMPL	FCALC.CLEAR_COMMAND.WHAT,#2
+	BEQL	FCALC.CLEAR_COMMAND.$5
+;  649        call fail(e_namereq, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.CLEAR_COMMAND.WHAT+4
+	PUSHAL	FCALC.CLEAR_COMMAND.$K6
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  650        return
+	RET
+FCALC.CLEAR_COMMAND.$5:
+;  651      end if
+;  652      do k = 2, token_count() - 1
+	CALLS	#0,G^FCTREE.TOKEN_COUNT
+	MOVL	R0,R8
+	SUBL3	#2,R8,R6		; DO (line 652)'s count
+	MOVL	#2,FCALC.CLEAR_COMMAND.K
+	TSTL	R6
+	BLEQ	FCALC.CLEAR_COMMAND.$7
+FCALC.CLEAR_COMMAND.$9:			; DO (line 652)'s body
+;  653        what = token_at(k)
+	PUSHAL	FCALC.CLEAR_COMMAND.K
+	PUSHAB	FCALC.CLEAR_COMMAND.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.CLEAR_COMMAND.$T1,FCALC.CLEAR_COMMAND.WHAT
+;  654        if (what%kind /= t_name) then
+	CMPL	FCALC.CLEAR_COMMAND.WHAT,#2
+	BEQL	FCALC.CLEAR_COMMAND.$10
+;  655          call fail(e_namereq, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.CLEAR_COMMAND.WHAT+4
+	PUSHAL	FCALC.CLEAR_COMMAND.$K6
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  656          return
+	RET
+FCALC.CLEAR_COMMAND.$10:
+;  657        end if
+;  658      end do
+	INCL	FCALC.CLEAR_COMMAND.K
+	SOBGTR	R6,FCALC.CLEAR_COMMAND.$9 ; one pass fewer
+FCALC.CLEAR_COMMAND.$7:
+;  659      ! A name may be both a variable and a function: CLEAR forgets both.
+;  660      do k = 2, token_count() - 1
+	CALLS	#0,G^FCTREE.TOKEN_COUNT
+	MOVL	R0,R8
+	SUBL3	#2,R8,R6		; DO (line 660)'s count
+	MOVL	#2,FCALC.CLEAR_COMMAND.K
+	TSTL	R6
+	BGTR	FCALC.CLEAR_COMMAND.$14
+	RET
+FCALC.CLEAR_COMMAND.$14:
+	MOVL	FCALC.CLEAR_COMMAND.GONE,R7
+FCALC.CLEAR_COMMAND.$15:		; DO (line 660)'s body
+;  661        what = token_at(k)
+	PUSHAL	FCALC.CLEAR_COMMAND.K
+	PUSHAB	FCALC.CLEAR_COMMAND.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.CLEAR_COMMAND.$T1,FCALC.CLEAR_COMMAND.WHAT
+;  662        gone = remove_variable(what%text)
+	PUSHAQ	FCALC.CLEAR_COMMAND.$D2
+	CALLS	#1,G^FCSYMBOLS.REMOVE_VARIABLE
+	MOVL	R0,R7
+;  663        if (remove_function(what%text)) gone = .true.
+	PUSHAQ	FCALC.CLEAR_COMMAND.$D2
+	CALLS	#1,G^FCSYMBOLS.REMOVE_FUNCTION
+	MOVL	R0,R8
+	BLBC	R8,FCALC.CLEAR_COMMAND.$16
+	MOVL	#-1,R7
+FCALC.CLEAR_COMMAND.$16:
+;  664        if (.not. gone) then
+	BLBS	R7,FCALC.CLEAR_COMMAND.$18
+;  665          call fail(w_notdef, what%column, what%text)
+	PUSHAQ	FCALC.CLEAR_COMMAND.$D2
+	PUSHAL	FCALC.CLEAR_COMMAND.WHAT+4
+	PUSHAL	FCALC.CLEAR_COMMAND.$K7
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  666          call report()
+	PUSHL	#0
+	CALLS	#1,G^FCMESSAGES.REPORT
+;  667        end if
+FCALC.CLEAR_COMMAND.$18:
+;  668      end do
+	INCL	FCALC.CLEAR_COMMAND.K
+	SOBGTR	R6,FCALC.CLEAR_COMMAND.$15 ; one pass fewer
+	MOVL	R7,FCALC.CLEAR_COMMAND.GONE
+;  669    end subroutine clear_command
+	RET
+
+; Storage map for FCALC.SHOW_COMMAND, a subroutine
+;   WHAT   TYPE(TOKEN)   $LOCAL+0   FCALC.SHOW_COMMAND.WHAT
+;   COUNT  CHARACTER*12  $LOCAL+56  FCALC.SHOW_COMMAND.COUNT
+;   K      INTEGER       $LOCAL+68  FCALC.SHOW_COMMAND.K
+;   R6 is $T4: temporary
+;   R7 is $R1: an index stepped with K
+;   R6 is $R2: an index stepped with $I1
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCALC.SHOW_COMMAND.WHAT:
+	.BLKL	14			; WHAT
+FCALC.SHOW_COMMAND.COUNT:
+	.BLKL	3			; COUNT
+FCALC.SHOW_COMMAND.K:
+	.BLKL	1			; K
+FCALC.SHOW_COMMAND.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.SHOW_COMMAND.$T2:
+	.BLKL	1			; temporary
+FCALC.SHOW_COMMAND.$T3:
+	.BLKL	3			; characters, for one statement
+FCALC.SHOW_COMMAND.$T5:
+	.BLKL	1			; temporary
+FCALC.SHOW_COMMAND.$D5:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCALC.SHOW_COMMAND.$T6:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCALC.SHOW_COMMAND.$D6:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCALC.SHOW_COMMAND.$T7:
+	.BLKL	10			; characters, for one statement
+FCALC.SHOW_COMMAND.$D8:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCALC.SHOW_COMMAND.$I1:
+	.BLKL	1			; an array statement's loop index
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.SHOW_COMMAND.$K1:
+	.LONG	2
+FCALC.SHOW_COMMAND.$K2:
+	.LONG	17
+FCALC.SHOW_COMMAND.$K3:
+	.LONG	3
+FCALC.SHOW_COMMAND.$K4:
+	.LONG	5
+FCALC.SHOW_COMMAND.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCALC.SHOW_COMMAND.$D1:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.COUNT
+FCALC.SHOW_COMMAND.$D2:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.$K7
+FCALC.SHOW_COMMAND.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.$T2
+FCALC.SHOW_COMMAND.$D4:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.$T3
+FCALC.SHOW_COMMAND.$D7:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.$T5
+FCALC.SHOW_COMMAND.$D9:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.$T7
+FCALC.SHOW_COMMAND.$D10:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCALC.SHOW_COMMAND.WHAT+8
+FCALC.SHOW_COMMAND.$K5:
+	.ASCII	/memory/
+FCALC.SHOW_COMMAND.$K6:
+	.ASCII	/settings/
+FCALC.SHOW_COMMAND.$K7:
+	.ASCII	/(I12)/
+FCALC.SHOW_COMMAND.$K8:
+	.ASCII	/arrays in use: /
+FCALC.SHOW_COMMAND.$K9:
+	.ASCII	/tree nodes in use: /
+FCALC.SHOW_COMMAND.$K10:
+	.ASCII	/digits  format  angle   base    seed    echo    /
+FCALC.SHOW_COMMAND.$K11:
+	.ASCII	/seed/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  670
+;  671    ! SHOW MEMORY: how many arrays and tree nodes are in use, so a leak shows.
+;  672    ! SHOW SETTINGS: every setting, each as the SET command that makes it, so
+;  673    ! the lines may be typed back, or kept in a file and run with @, to set
+;  674    ! them again. SHOW DIGITS, FORMAT, ANGLE, BASE, SEED, or ECHO shows one.
+;  675    subroutine show_command()
+FCALC.SHOW_COMMAND:
+	.WORD	^M<R2,R3,R4,R5,R6,R7>	; internal procedure SHOW_COMMAND of FCALC
+;  676      type(token) :: what
+;  677      character(len=12) :: count
+;  678      integer :: k
+;  679
+;  680      what = token_at(2)
+	PUSHAL	FCALC.SHOW_COMMAND.$K1
+	PUSHAB	FCALC.SHOW_COMMAND.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.SHOW_COMMAND.$T1,FCALC.SHOW_COMMAND.WHAT
+;  681      if (what%kind /= t_name) then
+	CMPL	FCALC.SHOW_COMMAND.WHAT,#2
+	BEQL	FCALC.SHOW_COMMAND.$1
+;  682        call fail(e_badset, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.SHOW_COMMAND.WHAT+4
+	PUSHAL	FCALC.SHOW_COMMAND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  683        return
+	RET
+FCALC.SHOW_COMMAND.$1:
+;  684      end if
+;  685      if (kind_at(3) /= t_end) then
+	PUSHAL	FCALC.SHOW_COMMAND.$K3
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.SHOW_COMMAND.$T2
+	BEQL	FCALC.SHOW_COMMAND.$3
+;  686        call fail(e_extra, token_column(3))
+	PUSHAL	FCALC.SHOW_COMMAND.$K3
+	CALLS	#1,FCALC.TOKEN_COLUMN
+	MOVL	R0,FCALC.SHOW_COMMAND.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.SHOW_COMMAND.$T2
+	PUSHAL	FCALC.SHOW_COMMAND.$K4
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  687        return
+	RET
+FCALC.SHOW_COMMAND.$3:
+;  688      end if
+;  689
+;  690      select case (what%text)
+	CMPC5	#31,FCALC.SHOW_COMMAND.WHAT+8,#^A/ /,#6,FCALC.SHOW_COMMAND.$K5
+	BEQL	FCALC.SHOW_COMMAND.$5
+	CMPC5	#31,FCALC.SHOW_COMMAND.WHAT+8,#^A/ /,#8,FCALC.SHOW_COMMAND.$K6
+	BNEQ	FCALC.SHOW_COMMAND.$8
+	BRW	FCALC.SHOW_COMMAND.$7
+FCALC.SHOW_COMMAND.$8:
+	BRW	FCALC.SHOW_COMMAND.$9
+FCALC.SHOW_COMMAND.$5:
+;  691      case ('memory')
+;  692        write (count, '(I12)') arrays_in_use()
+	PUSHAQ	FCALC.SHOW_COMMAND.$D2
+	PUSHAQ	FCALC.SHOW_COMMAND.$D1
+	PUSHAB	FCALC.SHOW_COMMAND.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	CALLS	#0,G^FCARRAYS.ARRAYS_IN_USE
+	MOVL	R0,FCALC.SHOW_COMMAND.$T2
+	PUSHAQ	FCALC.SHOW_COMMAND.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  693        call say('arrays in use: ' // trim(adjustl(count)))
+	PUSHAQ	FCALC.SHOW_COMMAND.$D1
+	PUSHAQ	FCALC.SHOW_COMMAND.$D4
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVAB	FCALC.SHOW_COMMAND.$T3,FCALC.SHOW_COMMAND.$T2
+	MOVAB	@FCALC.SHOW_COMMAND.$T2,R6
+	MOVL	#12,FCALC.SHOW_COMMAND.$T5
+	BRB	FCALC.SHOW_COMMAND.$10
+FCALC.SHOW_COMMAND.$11:
+	MOVL	FCALC.SHOW_COMMAND.$T5,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCALC.SHOW_COMMAND.$12
+	DECL	FCALC.SHOW_COMMAND.$T5
+FCALC.SHOW_COMMAND.$10:
+	TSTL	FCALC.SHOW_COMMAND.$T5	; from line 693
+	BNEQ	FCALC.SHOW_COMMAND.$11
+FCALC.SHOW_COMMAND.$12:
+	ADDL3	FCALC.SHOW_COMMAND.$T5,#15,R0
+	CVTLW	R0,FCALC.SHOW_COMMAND.$T6
+	PUSHAQ	FCALC.SHOW_COMMAND.$D5
+	PUSHAW	FCALC.SHOW_COMMAND.$T6
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#15,FCALC.SHOW_COMMAND.$K8,@FCALC.SHOW_COMMAND.$D5+4
+	MOVL	FCALC.SHOW_COMMAND.$D5+4,R0
+	MOVC3	FCALC.SHOW_COMMAND.$T5,@FCALC.SHOW_COMMAND.$T2,15(R0)
+	ADDL3	FCALC.SHOW_COMMAND.$T5,#15,R0
+	CVTLW	R0,FCALC.SHOW_COMMAND.$D6
+	MOVAB	@FCALC.SHOW_COMMAND.$D5+4,FCALC.SHOW_COMMAND.$D6+4
+	PUSHAQ	FCALC.SHOW_COMMAND.$D6
+	CALLS	#1,G^FCMESSAGES.SAY
+	PUSHAQ	FCALC.SHOW_COMMAND.$D5
+	CALLS	#1,G^LIB$SFREE1_DD
+;  694        write (count, '(I12)') nodes_in_use()
+	PUSHAQ	FCALC.SHOW_COMMAND.$D2
+	PUSHAQ	FCALC.SHOW_COMMAND.$D1
+	PUSHAB	FCALC.SHOW_COMMAND.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	CALLS	#0,G^FCTREE.NODES_IN_USE
+	MOVL	R0,FCALC.SHOW_COMMAND.$T5
+	PUSHAQ	FCALC.SHOW_COMMAND.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  695        call say('tree nodes in use: ' // trim(adjustl(count)))
+	PUSHAQ	FCALC.SHOW_COMMAND.$D1
+	PUSHAQ	FCALC.SHOW_COMMAND.$D4
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVAB	FCALC.SHOW_COMMAND.$T3,FCALC.SHOW_COMMAND.$T5
+	MOVAB	@FCALC.SHOW_COMMAND.$T5,R6
+	MOVL	#12,FCALC.SHOW_COMMAND.$T2
+	BRB	FCALC.SHOW_COMMAND.$15
+FCALC.SHOW_COMMAND.$16:
+	MOVL	FCALC.SHOW_COMMAND.$T2,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCALC.SHOW_COMMAND.$17
+	DECL	FCALC.SHOW_COMMAND.$T2
+FCALC.SHOW_COMMAND.$15:
+	TSTL	FCALC.SHOW_COMMAND.$T2	; from line 695
+	BNEQ	FCALC.SHOW_COMMAND.$16
+FCALC.SHOW_COMMAND.$17:
+	ADDL3	FCALC.SHOW_COMMAND.$T2,#19,R0
+	CVTLW	R0,FCALC.SHOW_COMMAND.$T6
+	PUSHAQ	FCALC.SHOW_COMMAND.$D5
+	PUSHAW	FCALC.SHOW_COMMAND.$T6
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#19,FCALC.SHOW_COMMAND.$K9,@FCALC.SHOW_COMMAND.$D5+4
+	MOVL	FCALC.SHOW_COMMAND.$D5+4,R0
+	MOVC3	FCALC.SHOW_COMMAND.$T2,@FCALC.SHOW_COMMAND.$T5,19(R0)
+	ADDL3	FCALC.SHOW_COMMAND.$T2,#19,R0
+	CVTLW	R0,FCALC.SHOW_COMMAND.$D6
+	MOVAB	@FCALC.SHOW_COMMAND.$D5+4,FCALC.SHOW_COMMAND.$D6+4
+	PUSHAQ	FCALC.SHOW_COMMAND.$D6
+	CALLS	#1,G^FCMESSAGES.SAY
+	PUSHAQ	FCALC.SHOW_COMMAND.$D5
+	CALLS	#1,G^LIB$SFREE1_DD
+;  696      case ('settings')
+	RET
+FCALC.SHOW_COMMAND.$7:
+;  697        do k = 1, size(setting_names)
+	MOVL	#1,FCALC.SHOW_COMMAND.K
+	MULL3	FCALC.SHOW_COMMAND.K,#8,R7
+FCALC.SHOW_COMMAND.$21:			; DO (line 697)'s body
+;  698          if (setting_names(k) == 'seed' .and. .not. seed_given) cycle
+	CMPC5	#8,FCALC.SHOW_COMMAND.$K10-8[R7],#^A/ /,#4,FCALC.SHOW_COMMAND.$K11
+	BNEQ	FCALC.SHOW_COMMAND.$23
+	BLBC	FCALC.SEED_GIVEN,FCALC.SHOW_COMMAND.$22
+FCALC.SHOW_COMMAND.$23:
+;  699          call say(trim(setting_line(setting_names(k), echo)))
+	MOVAB	FCALC.SHOW_COMMAND.$K10-8[R7],FCALC.SHOW_COMMAND.$D8+4
+	PUSHAL	FCALC.ECHO
+	PUSHAQ	FCALC.SHOW_COMMAND.$D8
+	PUSHAQ	FCALC.SHOW_COMMAND.$D9
+	CALLS	#3,G^FCSTATE.SETTING_LINE
+	MOVAB	FCALC.SHOW_COMMAND.$T7,FCALC.SHOW_COMMAND.$T2
+	MOVAB	@FCALC.SHOW_COMMAND.$T2,R6
+	MOVL	#40,FCALC.SHOW_COMMAND.$T5
+	BRB	FCALC.SHOW_COMMAND.$26
+FCALC.SHOW_COMMAND.$27:
+	MOVL	FCALC.SHOW_COMMAND.$T5,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCALC.SHOW_COMMAND.$28
+	DECL	FCALC.SHOW_COMMAND.$T5
+FCALC.SHOW_COMMAND.$26:
+	TSTL	FCALC.SHOW_COMMAND.$T5	; from line 699
+	BNEQ	FCALC.SHOW_COMMAND.$27
+FCALC.SHOW_COMMAND.$28:
+	CVTLW	FCALC.SHOW_COMMAND.$T5,FCALC.SHOW_COMMAND.$D6
+	MOVAB	@FCALC.SHOW_COMMAND.$T2,FCALC.SHOW_COMMAND.$D6+4
+	PUSHAQ	FCALC.SHOW_COMMAND.$D6
+	CALLS	#1,G^FCMESSAGES.SAY
+FCALC.SHOW_COMMAND.$22:
+;  700        end do
+	ADDL2	#8,R7
+	ACBL	#6,#1,FCALC.SHOW_COMMAND.K,FCALC.SHOW_COMMAND.$21
+;  701      case default
+	RET
+FCALC.SHOW_COMMAND.$9:
+;  702        ! ANY of a comparison of a scalar with an array: is the word one of
+;  703        ! the settings? The comparison is made element by element, giving an
+;  704        ! array of LOGICALs, which ANY reduces to one.
+;  705        if (.not. any(setting_names == what%text)) then
+	CLRL	FCALC.SHOW_COMMAND.$T5
+	MOVL	#1,FCALC.SHOW_COMMAND.$I1
+	MULL3	FCALC.SHOW_COMMAND.$I1,#8,R6
+FCALC.SHOW_COMMAND.$32:			; array (line 705), dimension 1's body
+	CMPC5	#8,FCALC.SHOW_COMMAND.$K10-8[R6],#^A/ /,#31,FCALC.SHOW_COMMAND.WHAT+8
+	BNEQ	FCALC.SHOW_COMMAND.$33
+	MOVL	#-1,FCALC.SHOW_COMMAND.$T5
+FCALC.SHOW_COMMAND.$33:
+	ADDL2	#8,R6
+	AOBLEQ	#6,FCALC.SHOW_COMMAND.$I1,FCALC.SHOW_COMMAND.$32
+	BLBS	FCALC.SHOW_COMMAND.$T5,FCALC.SHOW_COMMAND.$36
+;  706          call fail(e_badset, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.SHOW_COMMAND.WHAT+4
+	PUSHAL	FCALC.SHOW_COMMAND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  707          return
+	RET
+FCALC.SHOW_COMMAND.$36:
+;  708        end if
+;  709        call say(trim(setting_line(what%text, echo)))
+	PUSHAL	FCALC.ECHO
+	PUSHAQ	FCALC.SHOW_COMMAND.$D10
+	PUSHAQ	FCALC.SHOW_COMMAND.$D9
+	CALLS	#3,G^FCSTATE.SETTING_LINE
+	MOVAB	FCALC.SHOW_COMMAND.$T7,FCALC.SHOW_COMMAND.$T5
+	MOVAB	@FCALC.SHOW_COMMAND.$T5,R6
+	MOVL	#40,FCALC.SHOW_COMMAND.$T2
+	BRB	FCALC.SHOW_COMMAND.$38
+FCALC.SHOW_COMMAND.$39:
+	MOVL	FCALC.SHOW_COMMAND.$T2,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCALC.SHOW_COMMAND.$40
+	DECL	FCALC.SHOW_COMMAND.$T2
+FCALC.SHOW_COMMAND.$38:
+	TSTL	FCALC.SHOW_COMMAND.$T2	; from line 709
+	BNEQ	FCALC.SHOW_COMMAND.$39
+FCALC.SHOW_COMMAND.$40:
+	CVTLW	FCALC.SHOW_COMMAND.$T2,FCALC.SHOW_COMMAND.$D6
+	MOVAB	@FCALC.SHOW_COMMAND.$T5,FCALC.SHOW_COMMAND.$D6+4
+	PUSHAQ	FCALC.SHOW_COMMAND.$D6
+	CALLS	#1,G^FCMESSAGES.SAY
+;  710      end select
+;  711    end subroutine show_command
+	RET
+
+; Storage map for FCALC.SET_COMMAND, a subroutine
+;   WHAT  TYPE(TOKEN)  $LOCAL+0    FCALC.SET_COMMAND.WHAT
+;   HOW   TYPE(TOKEN)  $LOCAL+56   FCALC.SET_COMMAND.HOW
+;   K     INTEGER      $LOCAL+112  FCALC.SET_COMMAND.K
+;   N     INTEGER      $LOCAL+116  FCALC.SET_COMMAND.N
+;   R7 is $I1: an array statement's loop index
+;   R6 is $U1: temporary
+;   R8 is $R1: an index stepped with $I1
+;   R8 is $R2: an index stepped with $I1
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCALC.SET_COMMAND.WHAT:
+	.BLKL	14			; WHAT
+FCALC.SET_COMMAND.HOW:
+	.BLKL	14			; HOW
+FCALC.SET_COMMAND.K:
+	.BLKL	1			; K
+FCALC.SET_COMMAND.N:
+	.BLKL	1			; N
+FCALC.SET_COMMAND.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.SET_COMMAND.$T2:
+	.BLKL	1			; temporary
+FCALC.SET_COMMAND.$W1:
+	.BLKB	21			; an array temporary of 21 bytes, for one statement
+	.BLKB	3
+FCALC.SET_COMMAND.$D1:
+	.WORD	7			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCALC.SET_COMMAND.$W2:
+	.BLKL	11			; an array temporary of 44 bytes, for one statement
+FCALC.SET_COMMAND.$D2:
+	.WORD	11			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.SET_COMMAND.$K1:
+	.LONG	2
+FCALC.SET_COMMAND.$K2:
+	.LONG	17
+FCALC.SET_COMMAND.$K10:
+	.LONG	3
+FCALC.SET_COMMAND.$K11:
+	.LONG	5
+FCALC.SET_COMMAND.$K19:
+	.LONG	1
+FCALC.SET_COMMAND.$K20:
+	.LONG	15
+FCALC.SET_COMMAND.$K21:
+	.LONG	0
+FCALC.SET_COMMAND.$K22:
+	.LONG	999999999
+FCALC.SET_COMMAND.$K3:
+	.ASCII	/echo/
+FCALC.SET_COMMAND.$K4:
+	.ASCII	/noecho/
+FCALC.SET_COMMAND.$K5:
+	.ASCII	/angle/
+FCALC.SET_COMMAND.$K6:
+	.ASCII	/format/
+FCALC.SET_COMMAND.$K7:
+	.ASCII	/base/
+FCALC.SET_COMMAND.$K8:
+	.ASCII	/digits/
+FCALC.SET_COMMAND.$K9:
+	.ASCII	/seed/
+FCALC.SET_COMMAND.$K12:
+	.ASCII	/radiansdegreesgrads  /
+FCALC.SET_COMMAND.$K13:
+	.ASCII	/auto       fixed      scientific engineering/
+FCALC.SET_COMMAND.$K14:
+	.ASCII	/decimal/
+FCALC.SET_COMMAND.$K15:
+	.ASCII	/hex/
+FCALC.SET_COMMAND.$K16:
+	.ASCII	/hexadecimal/
+FCALC.SET_COMMAND.$K17:
+	.ASCII	/octal/
+FCALC.SET_COMMAND.$K18:
+	.ASCII	/binary/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  712
+;  713    ! SET [NO]ECHO, SET DIGITS n, SET FORMAT AUTO | FIXED | SCIENTIFIC |
+;  714    ! ENGINEERING, SET ANGLE RADIANS | DEGREES | GRADS, SET BASE DECIMAL |
+;  715    ! HEX | OCTAL | BINARY, SET SEED n
+;  716    subroutine set_command()
+FCALC.SET_COMMAND:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8> ; internal procedure SET_COMMAND of FCALC
+;  717      type(token) :: what, how
+;  718      integer :: k, n
+;  719
+;  720      what = token_at(2)
+	PUSHAL	FCALC.SET_COMMAND.$K1
+	PUSHAB	FCALC.SET_COMMAND.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.SET_COMMAND.$T1,FCALC.SET_COMMAND.WHAT
+;  721      if (what%kind /= t_name) then
+	CMPL	FCALC.SET_COMMAND.WHAT,#2
+	BEQL	FCALC.SET_COMMAND.$1
+;  722        call fail(e_badset, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.SET_COMMAND.WHAT+4
+	PUSHAL	FCALC.SET_COMMAND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  723        return
+	RET
+FCALC.SET_COMMAND.$1:
+;  724      end if
+;  725
+;  726      select case (what%text)
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#4,FCALC.SET_COMMAND.$K3
+	BEQL	FCALC.SET_COMMAND.$3
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#6,FCALC.SET_COMMAND.$K4
+	BEQL	FCALC.SET_COMMAND.$3
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#5,FCALC.SET_COMMAND.$K5
+	BNEQ	FCALC.SET_COMMAND.$7
+	BRW	FCALC.SET_COMMAND.$6
+FCALC.SET_COMMAND.$7:
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#6,FCALC.SET_COMMAND.$K6
+	BNEQ	FCALC.SET_COMMAND.$9
+	BRW	FCALC.SET_COMMAND.$8
+FCALC.SET_COMMAND.$9:
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#4,FCALC.SET_COMMAND.$K7
+	BNEQ	FCALC.SET_COMMAND.$11
+	BRW	FCALC.SET_COMMAND.$10
+FCALC.SET_COMMAND.$11:
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#6,FCALC.SET_COMMAND.$K8
+	BNEQ	FCALC.SET_COMMAND.$13
+	BRW	FCALC.SET_COMMAND.$12
+FCALC.SET_COMMAND.$13:
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#4,FCALC.SET_COMMAND.$K9
+	BNEQ	FCALC.SET_COMMAND.$15
+	BRW	FCALC.SET_COMMAND.$14
+FCALC.SET_COMMAND.$15:
+	BRW	FCALC.SET_COMMAND.$16
+FCALC.SET_COMMAND.$3:
+;  727      case ('echo', 'noecho')
+;  728        if (kind_at(3) /= t_end) then
+	PUSHAL	FCALC.SET_COMMAND.$K10
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	BEQL	FCALC.SET_COMMAND.$17
+;  729          call fail(e_extra, token_column(3))
+	PUSHAL	FCALC.SET_COMMAND.$K10
+	CALLS	#1,FCALC.TOKEN_COLUMN
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.SET_COMMAND.$T2
+	PUSHAL	FCALC.SET_COMMAND.$K11
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  730          return
+	RET
+FCALC.SET_COMMAND.$17:
+;  731        end if
+;  732        echo = what%text == 'echo'
+	CMPC5	#31,FCALC.SET_COMMAND.WHAT+8,#^A/ /,#4,FCALC.SET_COMMAND.$K3
+	BNEQ	FCALC.SET_COMMAND.$19
+	MNEGL	#1,R0
+	BRB	FCALC.SET_COMMAND.$20
+FCALC.SET_COMMAND.$19:
+	CLRL	R0
+FCALC.SET_COMMAND.$20:
+	MOVL	R0,FCALC.ECHO
+;  733
+;  734      case ('angle')
+	RET
+FCALC.SET_COMMAND.$6:
+;  735        if (.not. word_argument(how)) return
+	PUSHAB	FCALC.SET_COMMAND.HOW
+	CALLS	#1,FCALC.WORD_ARGUMENT
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	BLBS	FCALC.SET_COMMAND.$T2,FCALC.SET_COMMAND.$22
+	RET
+FCALC.SET_COMMAND.$22:
+;  736        k = word_index(how, angle_names)
+	MOVL	#1,R7
+	MULL3	R7,#7,R8
+FCALC.SET_COMMAND.$24:			; array (line 736), dimension 1's body
+	MOVL	R8,R6
+	MOVC3	#7,FCALC.SET_COMMAND.$K12-7[R6],FCALC.SET_COMMAND.$W1-7[R6]
+	ADDL2	#7,R8
+	AOBLEQ	#3,R7,FCALC.SET_COMMAND.$24
+	MOVAB	FCALC.SET_COMMAND.$W1,FCALC.SET_COMMAND.$D1+4
+	MOVL	#7,FCALC.SET_COMMAND.$D1+20
+	MOVL	#1,FCALC.SET_COMMAND.$D1+24
+	MOVL	#3,FCALC.SET_COMMAND.$D1+28
+	SUBL3	#7,FCALC.SET_COMMAND.$D1+4,FCALC.SET_COMMAND.$D1+16
+	MOVL	#21,FCALC.SET_COMMAND.$D1+12
+	PUSHAQ	FCALC.SET_COMMAND.$D1
+	PUSHAB	FCALC.SET_COMMAND.HOW
+	CALLS	#2,FCALC.WORD_INDEX
+	MOVL	R0,FCALC.SET_COMMAND.K
+;  737        if (k > 0) angle_mode = k
+	BLEQ	FCALC.SET_COMMAND.$26
+	MOVL	FCALC.SET_COMMAND.K,FCALC.ANGLE_MODE
+FCALC.SET_COMMAND.$26:
+;  738
+;  739      case ('format')
+	RET
+FCALC.SET_COMMAND.$8:
+;  740        if (.not. word_argument(how)) return
+	PUSHAB	FCALC.SET_COMMAND.HOW
+	CALLS	#1,FCALC.WORD_ARGUMENT
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	BLBS	FCALC.SET_COMMAND.$T2,FCALC.SET_COMMAND.$28
+	RET
+FCALC.SET_COMMAND.$28:
+;  741        k = word_index(how, format_names)
+	MOVL	#1,R7
+	MULL3	R7,#11,R8
+FCALC.SET_COMMAND.$30:			; array (line 741), dimension 1's body
+	MOVL	R8,R6
+	MOVC3	#11,FCALC.SET_COMMAND.$K13-11[R6],FCALC.SET_COMMAND.$W2-11[R6]
+	ADDL2	#11,R8
+	AOBLEQ	#4,R7,FCALC.SET_COMMAND.$30
+	MOVAB	FCALC.SET_COMMAND.$W2,FCALC.SET_COMMAND.$D2+4
+	MOVL	#11,FCALC.SET_COMMAND.$D2+20
+	MOVL	#1,FCALC.SET_COMMAND.$D2+24
+	MOVL	#4,FCALC.SET_COMMAND.$D2+28
+	SUBL3	#11,FCALC.SET_COMMAND.$D2+4,FCALC.SET_COMMAND.$D2+16
+	MOVL	#44,FCALC.SET_COMMAND.$D2+12
+	PUSHAQ	FCALC.SET_COMMAND.$D2
+	PUSHAB	FCALC.SET_COMMAND.HOW
+	CALLS	#2,FCALC.WORD_INDEX
+	MOVL	R0,FCALC.SET_COMMAND.K
+;  742        if (k > 0) number_format = k
+	BLEQ	FCALC.SET_COMMAND.$32
+	MOVL	FCALC.SET_COMMAND.K,FCALC.NUMBER_FORMAT
+FCALC.SET_COMMAND.$32:
+;  743
+;  744      case ('base')
+	RET
+FCALC.SET_COMMAND.$10:
+;  745        if (.not. word_argument(how)) return
+	PUSHAB	FCALC.SET_COMMAND.HOW
+	CALLS	#1,FCALC.WORD_ARGUMENT
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	BLBS	FCALC.SET_COMMAND.$T2,FCALC.SET_COMMAND.$34
+	RET
+FCALC.SET_COMMAND.$34:
+;  746        select case (how%text)
+	CMPC5	#31,FCALC.SET_COMMAND.HOW+8,#^A/ /,#7,FCALC.SET_COMMAND.$K14
+	BEQL	FCALC.SET_COMMAND.$36
+	CMPC5	#31,FCALC.SET_COMMAND.HOW+8,#^A/ /,#3,FCALC.SET_COMMAND.$K15
+	BEQL	FCALC.SET_COMMAND.$38
+	CMPC5	#31,FCALC.SET_COMMAND.HOW+8,#^A/ /,#11,FCALC.SET_COMMAND.$K16
+	BEQL	FCALC.SET_COMMAND.$38
+	CMPC5	#31,FCALC.SET_COMMAND.HOW+8,#^A/ /,#5,FCALC.SET_COMMAND.$K17
+	BEQL	FCALC.SET_COMMAND.$41
+	CMPC5	#31,FCALC.SET_COMMAND.HOW+8,#^A/ /,#6,FCALC.SET_COMMAND.$K18
+	BNEQ	FCALC.SET_COMMAND.$45
+	BRB	FCALC.SET_COMMAND.$43
+FCALC.SET_COMMAND.$36:
+;  747        case ('decimal')
+;  748          number_base = 10
+	MOVL	#10,FCALC.NUMBER_BASE
+;  749        case ('hex', 'hexadecimal')
+	RET
+FCALC.SET_COMMAND.$38:
+;  750          number_base = 16
+	MOVL	#16,FCALC.NUMBER_BASE
+;  751        case ('octal')
+	RET
+FCALC.SET_COMMAND.$41:
+;  752          number_base = 8
+	MOVL	#8,FCALC.NUMBER_BASE
+;  753        case ('binary')
+	RET
+FCALC.SET_COMMAND.$43:
+;  754          number_base = 2
+	MOVL	#2,FCALC.NUMBER_BASE
+;  755        case default
+	RET
+FCALC.SET_COMMAND.$45:
+;  756          call fail(e_badset, how%column)
+	PUSHL	#0
+	PUSHAL	FCALC.SET_COMMAND.HOW+4
+	PUSHAL	FCALC.SET_COMMAND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  757        end select
+;  758
+;  759      case ('digits')
+	RET
+FCALC.SET_COMMAND.$12:
+;  760        ! A whole number of significant digits (or, under FIXED, of places
+;  761        ! after the point), 1 to MAX_DIGITS.
+;  762        if (whole_argument(1, max_digits, n)) digits = n
+	PUSHAL	FCALC.SET_COMMAND.N
+	PUSHAL	FCALC.SET_COMMAND.$K20
+	PUSHAL	FCALC.SET_COMMAND.$K19
+	CALLS	#3,FCALC.WHOLE_ARGUMENT
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	BLBC	FCALC.SET_COMMAND.$T2,FCALC.SET_COMMAND.$47
+	MOVL	FCALC.SET_COMMAND.N,FCALC.DIGITS
+FCALC.SET_COMMAND.$47:
+;  763
+;  764      case ('seed')
+	RET
+FCALC.SET_COMMAND.$14:
+;  765        if (whole_argument(0, 999999999, n)) call seed_random(n)
+	PUSHAL	FCALC.SET_COMMAND.N
+	PUSHAL	FCALC.SET_COMMAND.$K22
+	PUSHAL	FCALC.SET_COMMAND.$K21
+	CALLS	#3,FCALC.WHOLE_ARGUMENT
+	MOVL	R0,FCALC.SET_COMMAND.$T2
+	BLBC	FCALC.SET_COMMAND.$T2,FCALC.SET_COMMAND.$49
+	PUSHAL	FCALC.SET_COMMAND.N
+	CALLS	#1,G^FCFUNCS.SEED_RANDOM
+FCALC.SET_COMMAND.$49:
+;  766
+;  767      case default
+	RET
+FCALC.SET_COMMAND.$16:
+;  768        call fail(e_badset, what%column)
+	PUSHL	#0
+	PUSHAL	FCALC.SET_COMMAND.WHAT+4
+	PUSHAL	FCALC.SET_COMMAND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  769      end select
+;  770    end subroutine set_command
+	RET
+
+; Storage map for FCALC.WORD_ARGUMENT, a LOGICAL function
+;   HOW            TYPE(TOKEN), INTENT(OUT)  argument 1  @FCALC.WORD_ARGUMENT.HOW(AP)
+;   WORD_ARGUMENT  LOGICAL                   R6          R6
+;
+FCALC.WORD_ARGUMENT.HOW = 4		; HOW is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCALC.WORD_ARGUMENT.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.WORD_ARGUMENT.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.WORD_ARGUMENT.$K1:
+	.LONG	3
+FCALC.WORD_ARGUMENT.$K2:
+	.LONG	17
+FCALC.WORD_ARGUMENT.$K3:
+	.LONG	4
+FCALC.WORD_ARGUMENT.$K4:
+	.LONG	5
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  771
+;  772    ! WORD_ARGUMENT: SET's third token is a word, HOW, and the line's last.
+;  773    logical function word_argument(how)
+FCALC.WORD_ARGUMENT:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure WORD_ARGUMENT of FCALC
+;  774      type(token), intent(out) :: how
+;  775
+;  776      word_argument = .false.
+	CLRL	R6
+;  777      how = token_at(3)
+	PUSHAL	FCALC.WORD_ARGUMENT.$K1
+	PUSHAB	FCALC.WORD_ARGUMENT.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.WORD_ARGUMENT.$T1,@FCALC.WORD_ARGUMENT.HOW(AP)
+;  778      if (how%kind /= t_name) then
+	CMPL	@FCALC.WORD_ARGUMENT.HOW(AP),#2
+	BEQL	FCALC.WORD_ARGUMENT.$1
+;  779        call fail(e_badset, how%column)
+	PUSHL	#0
+	MOVL	FCALC.WORD_ARGUMENT.HOW(AP),R0
+	PUSHAL	4(R0)
+	PUSHAL	FCALC.WORD_ARGUMENT.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  780      else if (kind_at(4) /= t_end) then
+	BRB	FCALC.WORD_ARGUMENT.$3
+FCALC.WORD_ARGUMENT.$1:
+	PUSHAL	FCALC.WORD_ARGUMENT.$K3
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.WORD_ARGUMENT.$T2
+	BEQL	FCALC.WORD_ARGUMENT.$4
+;  781        call fail(e_extra, token_column(4))
+	PUSHAL	FCALC.WORD_ARGUMENT.$K3
+	CALLS	#1,FCALC.TOKEN_COLUMN
+	MOVL	R0,FCALC.WORD_ARGUMENT.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.WORD_ARGUMENT.$T2
+	PUSHAL	FCALC.WORD_ARGUMENT.$K4
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  782      else
+	BRB	FCALC.WORD_ARGUMENT.$3
+FCALC.WORD_ARGUMENT.$4:
+;  783        word_argument = .true.
+	MOVL	#-1,R6
+;  784      end if
+FCALC.WORD_ARGUMENT.$3:
+;  785    end function word_argument
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCALC.WORD_INDEX, an INTEGER function
+;   HOW         TYPE(TOKEN), INTENT(IN)        argument 1  @FCALC.WORD_INDEX.HOW(AP)
+;   NAMES       CHARACTER*(*), INTENT(IN) (:)  argument 2  @FCALC.WORD_INDEX.NAMES(AP)
+;   WORD_INDEX  INTEGER                        R9          R9
+;   K           INTEGER                        $LOCAL+4    FCALC.WORD_INDEX.K
+;   R6 is $T1: temporary
+;   R10 is $L1: DO (line 795)'s limit
+;   R11 is $H1: a value computed before a loop
+;   R6 is $R1: an index stepped with K
+;   R7 is $R2: K, during a loop
+;   R8 is $R3: HOW's address
+;
+FCALC.WORD_INDEX.HOW = 4		; HOW is argument 1
+FCALC.WORD_INDEX.NAMES = 8		; NAMES is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCALC.WORD_INDEX.K:
+	.BLKL	1			; K
+FCALC.WORD_INDEX.$B1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_NCA
+	.LONG	0			; NAMES's bounds: set at each entry point
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCALC.WORD_INDEX.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.WORD_INDEX.$K1:
+	.LONG	17
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  786
+;  787    ! WORD_INDEX is HOW's place among NAMES, or 0 after an error if it is
+;  788    ! none of them.
+;  789    integer function word_index(how, names)
+FCALC.WORD_INDEX:
+	.WORD	^M<R2,R3,R6,R7,R8,R9,R10,R11> ; internal procedure WORD_INDEX of FCALC
+	MOVW	@FCALC.WORD_INDEX.NAMES(AP),FCALC.WORD_INDEX.$B1
+	MOVL	FCALC.WORD_INDEX.NAMES(AP),R0
+	MOVL	4(R0),FCALC.WORD_INDEX.$B1+4
+	MOVL	FCALC.WORD_INDEX.NAMES(AP),R0
+	CMPB	3(R0),#4
+	BEQL	FCALC.WORD_INDEX.$1
+	MOVL	FCALC.WORD_INDEX.NAMES(AP),R0
+	MOVL	20(R0),FCALC.WORD_INDEX.$B1+20
+	MOVL	FCALC.WORD_INDEX.NAMES(AP),R0
+	MOVL	FCALC.WORD_INDEX.NAMES(AP),R1
+	SUBL3	24(R1),28(R0),R0
+	ADDL3	R0,#1,R6
+	BRB	FCALC.WORD_INDEX.$3
+FCALC.WORD_INDEX.$1:
+	MOVZWL	@FCALC.WORD_INDEX.NAMES(AP),FCALC.WORD_INDEX.$B1+20
+	MOVL	FCALC.WORD_INDEX.NAMES(AP),R0
+	MOVL	20(R0),R6
+FCALC.WORD_INDEX.$3:
+	MOVL	#1,FCALC.WORD_INDEX.$B1+24
+	TSTL	R6
+	BGEQ	FCALC.WORD_INDEX.$4
+	CLRL	R6
+FCALC.WORD_INDEX.$4:
+	MOVL	R6,FCALC.WORD_INDEX.$B1+28
+	SUBL3	FCALC.WORD_INDEX.$B1+20,FCALC.WORD_INDEX.$B1+4,FCALC.WORD_INDEX.$B1+16
+	MOVZWL	@FCALC.WORD_INDEX.NAMES(AP),R0
+	MULL3	R0,FCALC.WORD_INDEX.$B1+28,FCALC.WORD_INDEX.$B1+12
+;  790      type(token), intent(in) :: how
+;  791      character(len=*), intent(in) :: names(:)
+;  792      integer :: k
+;  793
+;  794      word_index = 0
+	CLRL	R9
+;  795      do k = 1, size(names)
+	MOVL	FCALC.WORD_INDEX.$B1+28,R6
+	BGEQ	FCALC.WORD_INDEX.$6
+	CLRL	R6
+FCALC.WORD_INDEX.$6:
+	MOVL	R6,FCALC.WORD_INDEX.$T2
+	MOVL	FCALC.WORD_INDEX.$T2,R10 ; DO (line 795)'s limit
+	MOVL	#1,FCALC.WORD_INDEX.K
+	CMPL	#1,R10
+	BGTR	FCALC.WORD_INDEX.$8
+	MOVZWL	@FCALC.WORD_INDEX.NAMES(AP),R11 ; from line 796
+	MULL3	FCALC.WORD_INDEX.K,FCALC.WORD_INDEX.$B1+20,R0
+	ADDL3	FCALC.WORD_INDEX.$B1+16,R0,R6
+	MOVL	FCALC.WORD_INDEX.K,R7
+	MOVL	FCALC.WORD_INDEX.HOW(AP),R8
+FCALC.WORD_INDEX.$10:			; DO (line 795)'s body
+;  796        if (names(k) == how%text) word_index = k
+	CMPC5	R11,(R6),#^A/ /,#31,8(R8)
+	BNEQ	FCALC.WORD_INDEX.$11
+	MOVL	R7,R9
+FCALC.WORD_INDEX.$11:
+;  797      end do
+	ADDL2	FCALC.WORD_INDEX.$B1+20,R6
+	AOBLEQ	R10,R7,FCALC.WORD_INDEX.$10
+	MOVL	R7,FCALC.WORD_INDEX.K
+FCALC.WORD_INDEX.$8:
+;  798      if (word_index == 0) call fail(e_badset, how%column)
+	TSTL	R9
+	BNEQ	FCALC.WORD_INDEX.$14
+	PUSHL	#0
+	MOVL	FCALC.WORD_INDEX.HOW(AP),R0
+	PUSHAL	4(R0)
+	PUSHAL	FCALC.WORD_INDEX.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+FCALC.WORD_INDEX.$14:
+;  799    end function word_index
+	MOVL	R9,R0			; the function's value
+	RET
+
+; Storage map for FCALC.WHOLE_ARGUMENT, a LOGICAL function
+;   LOW             INTEGER, INTENT(IN)   argument 1  @FCALC.WHOLE_ARGUMENT.LOW(AP)
+;   HIGH            INTEGER, INTENT(IN)   argument 2  @FCALC.WHOLE_ARGUMENT.HIGH(AP)
+;   N               INTEGER, INTENT(OUT)  argument 3  @FCALC.WHOLE_ARGUMENT.N(AP)
+;   WHOLE_ARGUMENT  LOGICAL               R6          R6
+;   HOW             TYPE(TOKEN)           $LOCAL+8    FCALC.WHOLE_ARGUMENT.HOW
+;
+FCALC.WHOLE_ARGUMENT.LOW = 4		; LOW is argument 1
+FCALC.WHOLE_ARGUMENT.HIGH = 8		; HIGH is argument 2
+FCALC.WHOLE_ARGUMENT.N = 12		; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+	.BLKB	8
+FCALC.WHOLE_ARGUMENT.HOW:
+	.BLKL	14			; HOW
+FCALC.WHOLE_ARGUMENT.$T1:
+	.BLKL	14			; characters, for one statement
+FCALC.WHOLE_ARGUMENT.$T2:
+	.BLKL	1			; temporary
+FCALC.WHOLE_ARGUMENT.$T3:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCALC.WHOLE_ARGUMENT.$K1:
+	.LONG	3
+FCALC.WHOLE_ARGUMENT.$K3:
+	.LONG	4
+FCALC.WHOLE_ARGUMENT.$K4:
+	.LONG	11
+FCALC.WHOLE_ARGUMENT.$K5:
+	.LONG	17
+FCALC.WHOLE_ARGUMENT.$K6:
+	.LONG	5
+FCALC.WHOLE_ARGUMENT.$K2:
+	.ASCII	/-/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  800
+;  801    ! WHOLE_ARGUMENT: SET's third token is a whole number from LOW to HIGH,
+;  802    ! N, and the line's last. (A minus sign is a token of its own, so a
+;  803    ! negative number is out of range at the sign.)
+;  804    logical function whole_argument(low, high, n)
+FCALC.WHOLE_ARGUMENT:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure WHOLE_ARGUMENT of FCALC
+;  805      integer, intent(in) :: low, high
+;  806      integer, intent(out) :: n
+;  807      type(token) :: how
+;  808
+;  809      whole_argument = .false.
+	CLRL	R6
+;  810      n = 0
+	CLRL	@FCALC.WHOLE_ARGUMENT.N(AP)
+;  811      how = token_at(3)
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K1
+	PUSHAB	FCALC.WHOLE_ARGUMENT.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.WHOLE_ARGUMENT.$T1,FCALC.WHOLE_ARGUMENT.HOW
+;  812      if (how%kind == t_operator .and. how%text == '-' .and. kind_at(4) == t_number) then
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K3
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.WHOLE_ARGUMENT.$T2
+	CMPL	FCALC.WHOLE_ARGUMENT.HOW,#3
+	BNEQ	FCALC.WHOLE_ARGUMENT.$1
+	CMPC5	#31,FCALC.WHOLE_ARGUMENT.HOW+8,#^A/ /,#1,FCALC.WHOLE_ARGUMENT.$K2
+	BNEQ	FCALC.WHOLE_ARGUMENT.$1
+	CMPL	FCALC.WHOLE_ARGUMENT.$T2,#1
+	BNEQ	FCALC.WHOLE_ARGUMENT.$1
+;  813        call fail(e_domain, how%column)
+	PUSHL	#0
+	PUSHAL	FCALC.WHOLE_ARGUMENT.HOW+4
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K4
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  814      else if (how%kind /= t_number .or. how%imaginary) then
+	BRW	FCALC.WHOLE_ARGUMENT.$5
+FCALC.WHOLE_ARGUMENT.$1:
+	CMPL	FCALC.WHOLE_ARGUMENT.HOW,#1
+	BNEQ	FCALC.WHOLE_ARGUMENT.$7
+	BLBC	FCALC.WHOLE_ARGUMENT.HOW+48,FCALC.WHOLE_ARGUMENT.$6
+FCALC.WHOLE_ARGUMENT.$7:
+;  815        call fail(e_badset, how%column)
+	PUSHL	#0
+	PUSHAL	FCALC.WHOLE_ARGUMENT.HOW+4
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K5
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  816      else if (kind_at(4) /= t_end) then
+	BRW	FCALC.WHOLE_ARGUMENT.$5
+FCALC.WHOLE_ARGUMENT.$6:
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K3
+	CALLS	#1,G^FCTREE.KIND_AT
+	MOVL	R0,FCALC.WHOLE_ARGUMENT.$T2
+	BEQL	FCALC.WHOLE_ARGUMENT.$10
+;  817        call fail(e_extra, token_column(4))
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K3
+	CALLS	#1,FCALC.TOKEN_COLUMN
+	MOVL	R0,FCALC.WHOLE_ARGUMENT.$T2
+	PUSHL	#0
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$T2
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K6
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  818      else if (aint(how%number) /= how%number .or. how%number < low .or. &
+;  819          how%number > high) then
+	BRB	FCALC.WHOLE_ARGUMENT.$5
+FCALC.WHOLE_ARGUMENT.$10:
+	PUSHAG	FCALC.WHOLE_ARGUMENT.HOW+40
+	CALLS	#1,G^MTH$GINT
+	MOVG	R0,FCALC.WHOLE_ARGUMENT.$T3
+	CMPG	FCALC.WHOLE_ARGUMENT.$T3,FCALC.WHOLE_ARGUMENT.HOW+40
+	BNEQ	FCALC.WHOLE_ARGUMENT.$13
+	CVTLG	@FCALC.WHOLE_ARGUMENT.LOW(AP),R0
+	CMPG	FCALC.WHOLE_ARGUMENT.HOW+40,R0
+	BLSS	FCALC.WHOLE_ARGUMENT.$13
+	CVTLG	@FCALC.WHOLE_ARGUMENT.HIGH(AP),R0
+	CMPG	FCALC.WHOLE_ARGUMENT.HOW+40,R0
+	BLEQ	FCALC.WHOLE_ARGUMENT.$12
+FCALC.WHOLE_ARGUMENT.$13:
+;  820        call fail(e_domain, how%column)
+	PUSHL	#0
+	PUSHAL	FCALC.WHOLE_ARGUMENT.HOW+4
+	PUSHAL	FCALC.WHOLE_ARGUMENT.$K4
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  821      else
+	BRB	FCALC.WHOLE_ARGUMENT.$5
+FCALC.WHOLE_ARGUMENT.$12:
+;  822        n = nint(how%number)
+	CVTRGL	FCALC.WHOLE_ARGUMENT.HOW+40,@FCALC.WHOLE_ARGUMENT.N(AP)
+;  823        whole_argument = .true.
+	MOVL	#-1,R6
+;  824      end if
+FCALC.WHOLE_ARGUMENT.$5:
+;  825    end function whole_argument
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCALC.TOKEN_COLUMN, an INTEGER function
+;   K             INTEGER, INTENT(IN)  argument 1  @FCALC.TOKEN_COLUMN.K(AP)
+;   TOKEN_COLUMN  INTEGER              $LOCAL+0    FCALC.TOKEN_COLUMN.TOKEN_COLUMN
+;   T             TYPE(TOKEN)          $LOCAL+8    FCALC.TOKEN_COLUMN.T
+;
+FCALC.TOKEN_COLUMN.K = 4		; K is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCALC.TOKEN_COLUMN.TOKEN_COLUMN:
+	.BLKL	1			; TOKEN_COLUMN, the function's value
+	.BLKB	4
+FCALC.TOKEN_COLUMN.T:
+	.BLKL	14			; T
+FCALC.TOKEN_COLUMN.$T1:
+	.BLKL	14			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  826
+;  827    ! TOKEN_COLUMN is the column of the Kth token.
+;  828    integer function token_column(k)
+FCALC.TOKEN_COLUMN:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure TOKEN_COLUMN of FCALC
+;  829      integer, intent(in) :: k
+;  830      type(token) :: t
+;  831
+;  832      t = token_at(k)
+	PUSHAL	@FCALC.TOKEN_COLUMN.K(AP)
+	PUSHAB	FCALC.TOKEN_COLUMN.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCALC.TOKEN_COLUMN.$T1,FCALC.TOKEN_COLUMN.T
+;  833      token_column = t%column
+;  834    end function token_column
+	MOVL	FCALC.TOKEN_COLUMN.T+4,R0 ; the function's value
+	RET
+;  835  end program fcalc
+
+	.END	FCALC

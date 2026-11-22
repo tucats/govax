@@ -1,0 +1,27 @@
+; TIRG.MAR - FCMATRIX's last $PDATA alone, lines 341 to 365 (written by testdata/tir111/gen.go)
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCMATRIX.APPLY_MATRIX.$K27:
+	.LONG	11
+FCMATRIX.APPLY_MATRIX.$K28:
+	.LONG	0
+FCMATRIX.APPLY_MATRIX.$K1:
+	.ASCII	/size        /<1><0><0><0><2><0><0><0>/rows        /<1><0><0><0>
+	.ASCII	<1><0><0><0>/cols        /<1><0><0><0><1><0><0><0>/numel       /<1>
+	.ASCII	<0><0><0><1><0><0><0>/transpose   /<1><0><0><0><1><0><0><0>/trace/
+	.ASCII	/       /<1><0><0><0><1><0><0><0>/det         /<1><0><0><0><1><0>
+	.ASCII	<0><0>/inv         /<1><0><0><0><1><0><0><0>/rank        /<1><0>
+	.ASCII	<0><0><1><0><0><0>/norm        /<1><0><0><0><2><0><0><0>/dot     /
+	.ASCII	/    /<2><0><0><0><2><0><0><0>/cross       /<2><0><0><0><2><0><0>
+	.ASCII	<0>/kron        /<2><0><0><0><2><0><0><0>/reshape     /<3><0><0>
+	.ASCII	<0><3><0><0><0>/diag        /<1><0><0><0><1><0><0><0>/eye        /
+	.ASCII	/ /<1><0><0><0><1><0><0><0>/zeros       /<1><0><0><0><2><0><0><0>
+	.ASCII	/ones        /<1><0><0><0><2><0><0><0>/linspace    /<3><0><0><0>
+	.ASCII	<3><0><0><0>/range       /<2><0><0><0><3><0><0><0>/cumsum      /<1>
+	.ASCII	<0><0><0><1><0><0><0>/sort        /<1><0><0><0><1><0><0><0>/eig  /
+	.ASCII	/       /<1><0><0><0><1><0><0><0>/roots       /<1><0><0><0><1><0>
+	.ASCII	<0><0>/poly        /<1><0><0><0><1><0><0><0>/polyval     /<2><0>
+	.ASCII	<0><0><2><0><0><0>
+FCMATRIX.APPLY_MATRIX.$K2:
+	.ASCII	/ones/
+FCMATRIX.APPLY_MATRIX.$K3:
+	.END

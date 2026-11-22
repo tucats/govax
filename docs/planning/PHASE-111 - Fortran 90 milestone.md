@@ -909,3 +909,32 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   The volume is rebuilt from the fixed compiler (round 1's kept as
   `testdata/disks/f90r-exchange-round1.dsk`), and `copyout.cmd` writes round 2
   to `vax/round2/`.
+- **2026-11-22:** Subtask 11, round 2 on VMS 7.1: every section of VMS's log
+  is what govax's run of the procedure prints. On the volume rebuilt from the
+  fixed compiler every program built with no message; all 366 corpus runs,
+  and fcalc in all four builds (its 11 scripts each, the files SAVE and LOG
+  wrote, ONESHOT), match govax's output (`TestF90ROracle`, fcalc's file times
+  masked; `f90rAwaitingVMS` empty). Round 2 is now `testdata/f90r/vax`, round
+  1 `vax/round1`. fcalc is the first program to run all of Fortran 90's
+  run-time library on a real VAX, under VMS's own LIBRTL, MTHRTL (G_floating),
+  and RMS, and it printed every line govax and gfortran print.
+  Round 2 also brought back VMS MACRO's objects of fcalc's 16 compiled `.MAR`
+  files, and `TestF90RObjects` holds govax's MACRO to them (GSD, TIR, and end
+  records; the header records differ by nature, the traceback records by
+  design, Phase 110's FORTRAN lines). It found govax storing a repetition
+  factor (`.LONG 0[2]`, which the compiler writes for zeroed locals) as
+  immediate bytes, where VMS's MACRO writes `STA_UB 0`, `STA_UB 2`, `STO_RL`:
+  fixed (`asm`'s `evRepeat`, `emitRepeated`; a known value with a count over
+  1; `TestObjectRepetition`), and govax's LINK, which had no `STO_RB`,
+  `STO_RW`, or `STO_RL`, now runs them (`link`'s `storeRepeated`). 14 objects
+  are now VMS's. FCFUNCS and FCMATRIX still differ (`f90rObjectDifferences`):
+  in three places VMS's MACRO stored one byte of a long run of immediate data
+  through the stack (`STA_UB 0`, `STO_B`), after 534, 498, and 321 bytes of
+  the run, at no point the source marks (the same table elsewhere in FCMATRIX
+  has none), so the rule is in VMS's record packing. `testdata/tir111` is a
+  probe for it, a module per question (the modules truncated, the tables
+  alone, shifted, re-split, and with other values; and repetition factors and
+  empty string directives of every kind); the author offered the VAX for it.
+  Also noted: govax's MACRO writes no object for a module with errors, where
+  VMS's writes one (round 1's LINK named "compilation errors" in it); TIRX
+  will show it. `go test ./...` passes.

@@ -27,6 +27,10 @@ const (
 	// evTransfer: .TRANSFER redefined sym at offset (the linker's
 	// OPR_REDEF), storing nothing.
 	evTransfer
+	// evRepeat: the size-byte constant value was stored count times from
+	// offset, by a repetition factor (.LONG 0[2]): real MACRO stacks the
+	// value and the count and stores them with STO_RB, STO_RW, or STO_RL.
+	evRepeat
 )
 
 // outEvent is one step of a MACRO-dialect assembly's output, in source
@@ -50,6 +54,8 @@ type outEvent struct {
 	// .ASCIC's count is patched.
 	signed    bool
 	immediate bool
+	// count is how many times an evRepeat stores its value.
+	count uint32
 }
 
 // logEvent records an output event, in the MACRO dialect only. A data

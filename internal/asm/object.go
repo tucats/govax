@@ -413,6 +413,13 @@ func (e *emitter) event(ev outEvent) error {
 		e.b.Emit(stackConstant(ev.value), store)
 		e.loc += ev.size
 
+	case evRepeat:
+		e.lineAt(ev.sect, ev.offset)
+
+		repeat := map[uint32]string{1: "STO_RB", 2: "STO_RW", 4: "STO_RL"}[ev.size]
+		e.b.Emit(stackConstant(ev.value), stackConstant(ev.count), obj.Command{Op: tirOp(repeat)})
+		e.loc += ev.size * ev.count
+
 	case evEntry:
 		e.lineAt(ev.sect, ev.offset)
 		e.b.Emit(stackConstant(ev.value))

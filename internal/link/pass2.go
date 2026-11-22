@@ -384,6 +384,9 @@ func (x *machine) command(c obj.Command) error {
 		// manual, 7.4). It touches neither the stack nor the location.
 		x.redefine(c.Name)
 
+	case "STO_RB", "STO_RW", "STO_RL":
+		return x.storeRepeated(map[string]int{"STO_RB": 1, "STO_RW": 2, "STO_RL": 4}[name])
+
 	case "STO_PICR":
 		if x.debug {
 			return fmt.Errorf("a general mode operand in a traceback record")
@@ -504,6 +507,39 @@ func (x *machine) store(st store) error {
 	}
 
 	x.loc += uint32(st.size)
+
+	return nil
+}
+
+// storeRepeated is STO_RB, STO_RW, and STO_RL: the top of the stack is a count,
+// the longword below it a value, stored size bytes wide that many times, as
+// VMS's MACRO writes a repetition factor (.LONG 0[2]: STA_UB 0, STA_UB 2,
+// STO_RL). Both must be absolute.
+func (x *machine) storeRepeated(size int) error {
+	count, err := x.pop()
+	if err != nil {
+		return err
+	}
+
+	a, err := x.pop()
+	if err != nil {
+		return err
+	}
+
+	if count.rel || count.img != "" || a.rel || a.img != "" {
+		return fmt.Errorf("a repeated store of a value that isn't absolute at %08X", x.loc)
+	}
+
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, a.v)
+
+	for range count.v {
+		if err := x.write(b[:size]); err != nil {
+			return err
+		}
+
+		x.loc += uint32(size)
+	}
 
 	return nil
 }

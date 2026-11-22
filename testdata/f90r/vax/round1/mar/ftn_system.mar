@@ -1,0 +1,726 @@
+	.TITLE	FTN_SYSTEM - FORTRAN's system subroutines
+	.IDENT	/V1.0/
+;
+; The system subroutines of the 1988 Language Reference Manual's appendix D
+; (D.4, D.5.3) that aren't about I/O: DATE, TIME, IDATE, SECNDS, EXIT, and
+; MVBITS. ERRSNS is FTN_STATEMENT's, and RAN is MTH$RANDOM itself. Then
+; Fortran 90's intrinsic subroutines of the clock and random numbers:
+; DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER, and RANDOM_SEED (the standard's
+; 13.13.27, 13.13.105, 13.13.83, and 13.13.84; docs/planning/PHASE-108 -
+; Fortran 90 intrinsic procedures.md, findings 9 to 11).
+;
+; A routine gets only addresses, with nothing of what they're the addresses of,
+; so where a subroutine takes arguments of several types there's a routine for
+; each, and the compiler chooses by the arguments it sees: a word's and a
+; longword's, or a descriptor's for a CHARACTER argument. What each does is held
+; to VMS's FORRTL.EXE, called as a black box (testdata/for83's part A), which is
+; where the things no manual says come from: what happens to a short buffer,
+; the order things are stored in, what a bad argument does. These routines
+; check nothing. A bad address faults in the routine, and the condition goes to
+; the caller's handlers.
+;
+; R0's value after a subroutine means nothing to a program, but it comes out as
+; FORRTL's does here, which lets the oracle compare it.
+;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
+	$DSCDEF				; descriptors' fields and codes
+	$LNMDEF				; LNM$_STRING
+	$SSDEF				; SS$_NORMAL
+
+BLANK		= ^A/ /			; what pads a long buffer
+
+; What $NUMTIM stores: seven words, of which these are used.
+NUM_YEAR	= 0
+NUM_MONTH	= 2
+NUM_DAY		= 4
+NUM_HOUR	= 6
+NUM_MINUTE	= 8
+NUM_SECOND	= 10
+NUM_HUNDREDTH	= 12
+NUM_SIZE	= 16			; its size, rounded up to a longword
+
+ASCTIM_DATE	= 11			; dd-mmm-yyyy, which $ASCTIM writes first
+DATE_LEN	= 9			; dd-mmm-yy, which DATE wants
+TIME_LEN	= 8			; hh:mm:ss, which TIME wants
+
+;
+; RANDOM_NUMBER's seed, MTH$RANDOM's: one longword, each process's own (the
+; section is NOSHR), set from the image when it is activated, so every run of a
+; program starts one sequence. MTH$RANDOM has no first seed of its own; the
+; Language Reference Manual (D.4.7, RAN) asks for "a large, odd integer
+; value", and this one is govax's choice. CALL RANDOM_SEED () sets it again.
+;
+FIRST_SEED	= 1234567
+
+	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
+SEED:	.LONG	FIRST_SEED
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+ZONE_NAME:	.ASCII	/SYS$TIMEZONE_DIFFERENTIAL/
+ZONE_LEN	= .-ZONE_NAME
+FILE_DEV:	.ASCII	/LNM$FILE_DEV/
+FILE_DEV_LEN	= .-FILE_DEV
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; DATE_TEXT: a local subroutine, reached by BSBW, that writes today's date as
+; DATE wants it to the buffer R2 points at, which has ASCTIM_DATE bytes of room.
+; $ASCTIM writes the year's four digits, and DATE wants the last two, so those
+; move back over the first two. R2 is kept; R0 and R1 aren't.
+;
+DATE_TEXT:
+	PUSHL	R2			; a descriptor of the buffer, on the
+	PUSHL	#ASCTIM_DATE		; stack: its address, then its length
+	MOVL	SP,R0			; (type and class don't matter)
+	;
+	; Given a buffer shorter than the whole date and time, $ASCTIM writes
+	; what fits and returns SS$_BUFFEROVF, which here is what's wanted.
+	;
+	$ASCTIM_S TIMBUF=(R0)
+	MOVW	<ASCTIM_DATE-2>(R2),<DATE_LEN-2>(R2)	; yyyy's last two digits
+	ADDL2	#8,SP			; the descriptor goes
+	RSB
+
+;
+; CALL DATE(buf), with buf not CHARACTER: FTN$DATE(address).
+;
+; Stores exactly DATE_LEN bytes at the address, whatever is there.
+;
+	.ENTRY	FTN$DATE,^M<R2,R3,R4,R5>
+	SUBL2	#ASCTIM_DATE+1,SP	; room for $ASCTIM's text
+	MOVL	SP,R2
+	BSBW	DATE_TEXT
+	MOVC3	#DATE_LEN,(R2),@4(AP)
+	RET
+
+;
+; CALL DATE(buf), with buf CHARACTER: FTN$DATE_T_DS(descriptor).
+;
+; Moves the date as FORTRAN assigns a character value, to the descriptor's
+; address for its length, cut short or filled with blanks. The class doesn't
+; matter: a dynamic string of no length gets nothing, a varying string's text
+; lands over its length word, an array descriptor gets one element, all as
+; FORRTL's does. With no argument it writes nothing.
+;
+	.ENTRY	FTN$DATE_T_DS,^M<R2,R3,R4,R5>
+	SUBL2	#ASCTIM_DATE+1,SP
+	MOVL	SP,R2
+	BSBW	DATE_TEXT
+	TSTB	(AP)			; a descriptor?
+	BEQL	10$
+	MOVL	4(AP),R1		; a null one is no argument too
+	BEQL	10$
+	MOVC5	#DATE_LEN,(R2),#BLANK,DSC$W_LENGTH(R1),@DSC$A_POINTER(R1)
+	RET
+10$:	MOVL	#DATE_LEN,R0		; what MOVC5 leaves when it moves nothing
+	RET
+
+;
+; CALL TIME(buf), with buf not CHARACTER: FTN$TIME(address).
+;
+; Stores exactly TIME_LEN bytes at the address. This is $ASCTIM itself, asked
+; for the time only, hh:mm:ss.cc, in a buffer that holds as far as the seconds,
+; so R0 is SS$_BUFFEROVF when all is well. A bad address is $ASCTIM's to find,
+; and so is a status in R0, where DATE's is a condition: FORRTL's differ so too.
+;
+	.ENTRY	FTN$TIME,^M<>
+	PUSHL	4(AP)			; a descriptor of the caller's bytes
+	PUSHL	#TIME_LEN
+	MOVL	SP,R0
+	$ASCTIM_S TIMBUF=(R0),CVTFLG=#1
+	RET
+
+;
+; CALL TIME(buf), with buf CHARACTER: FTN$TIME_T_DS(descriptor).
+;
+; To the descriptor's address for its length, as FTN$DATE_T_DS does. A length up
+; to TIME_LEN is the length $ASCTIM is given, and a longer one has the time
+; moved there with blanks after it.
+;
+	.ENTRY	FTN$TIME_T_DS,^M<R2,R3,R4,R5>
+	CLRL	R2			; no argument: a length of 0, and no address
+	CLRL	R3
+	TSTB	(AP)
+	BEQL	10$
+	MOVL	4(AP),R1
+	BEQL	10$
+	MOVZWL	DSC$W_LENGTH(R1),R2
+	MOVL	DSC$A_POINTER(R1),R3
+	CMPL	R2,#TIME_LEN		; longer than the time?
+	BGTR	20$
+10$:	PUSHL	R3			; a descriptor of the caller's bytes
+	PUSHL	R2
+	MOVL	SP,R0
+	$ASCTIM_S TIMBUF=(R0),CVTFLG=#1
+	RET
+20$:	SUBL2	#TIME_LEN,SP		; the time, in a buffer of its own
+	MOVL	SP,R4
+	PUSHL	R4
+	PUSHL	#TIME_LEN
+	MOVL	SP,R0
+	$ASCTIM_S TIMBUF=(R0),CVTFLG=#1
+	MOVC5	#TIME_LEN,(R4),#BLANK,R2,(R3)
+	RET
+
+;
+; CALL IDATE(i,j,k), all INTEGER*2: FTN$IDATE(i,j,k).
+; CALL IDATE(i,j,k), all INTEGER*4: FTN$JDATE(i,j,k).
+;
+; The month, the day, and the year's last two digits. The year goes first, then
+; the month, then the day, so that a bad address leaves the ones before it set,
+; as FORRTL's does. R0 ends up the year.
+;
+; EDIV divides a quadword, here R0 and R1, leaving the quotient (R1, unwanted)
+; and the remainder (R0).
+;
+	.ENTRY	FTN$IDATE,^M<R2>
+	SUBL2	#NUM_SIZE,SP
+	MOVL	SP,R2
+	$NUMTIM_S TIMBUF=(R2)
+	MOVZWL	NUM_YEAR(R2),R0
+	CLRL	R1
+	EDIV	#100,R0,R1,R0
+	MOVW	R0,@12(AP)
+	MOVW	NUM_MONTH(R2),@4(AP)
+	MOVW	NUM_DAY(R2),@8(AP)
+	RET
+
+	.ENTRY	FTN$JDATE,^M<R2>
+	SUBL2	#NUM_SIZE,SP
+	MOVL	SP,R2
+	$NUMTIM_S TIMBUF=(R2)
+	MOVZWL	NUM_YEAR(R2),R0
+	CLRL	R1
+	EDIV	#100,R0,R1,R0
+	MOVL	R0,@12(AP)
+	MOVZWL	NUM_MONTH(R2),@4(AP)
+	MOVZWL	NUM_DAY(R2),@8(AP)
+	RET
+
+;
+; y = SECNDS(x): FTN$SECNDS(x), a REAL*4 function, its value in R0.
+;
+; The seconds since midnight less x. If that's negative a day is added, once,
+; whatever x is: that is what makes an interval right across midnight. The time
+; is first counted in hundredths, which a REAL*4's 24 bits hold exactly (a day
+; is 8,640,000 of them), so that the division is the one place it rounds.
+;
+	.ENTRY	FTN$SECNDS,^M<R2>
+	SUBL2	#NUM_SIZE,SP
+	MOVL	SP,R2
+	$NUMTIM_S TIMBUF=(R2)
+	MOVZWL	NUM_HOUR(R2),R0
+	MULL2	#60,R0
+	MOVZWL	NUM_MINUTE(R2),R1
+	ADDL2	R1,R0
+	MULL2	#60,R0
+	MOVZWL	NUM_SECOND(R2),R1
+	ADDL2	R1,R0
+	MULL2	#100,R0
+	MOVZWL	NUM_HUNDREDTH(R2),R1
+	ADDL2	R1,R0
+	CVTLF	R0,R0			; the count made a REAL*4 (F_floating)
+	DIVF2	#100.0,R0		;  and divided, in floating point
+	SUBF2	@4(AP),R0
+	BGEQ	10$
+	ADDF2	#86400.0,R0
+10$:	RET
+
+;
+; CALL EXIT, CALL EXIT(status): FTN$EXIT([status]), with a longword's address.
+; CALL EXIT(status), INTEGER*2: FTN$EXIT_W([status]), with a word's, whose value
+; isn't sign-extended: -1 is the status %X0000FFFF.
+;
+; $EXIT runs the image's exit handlers, FTNRTL's own among them, which closes the
+; units. No status is SS$_NORMAL.
+;
+	.ENTRY	FTN$EXIT,^M<>
+	MOVL	#SS$_NORMAL,R0
+	TSTB	(AP)
+	BEQL	10$
+	MOVL	@4(AP),R0
+10$:	$EXIT_S	R0
+
+	.ENTRY	FTN$EXIT_W,^M<>
+	MOVL	#SS$_NORMAL,R0
+	TSTB	(AP)
+	BEQL	10$
+	MOVZWL	@4(AP),R0
+10$:	$EXIT_S	R0
+
+;
+; CALL MVBITS(m,i,len,n,j): FTN$IMVBITS with every argument a word's address,
+; FTN$JMVBITS with every one a longword's, and FTN$BMVBITS (Fortran 90's, for
+; an INTEGER(1) TO) with every one a byte's.
+;
+; EXTZV takes len bits from i up in m, and INSV puts them at j up in n; those
+; instructions are the whole of it, with their limits and nothing added. So a
+; length past 32 is their reserved operand fault, one past the variable's width
+; runs on into the next bytes, and a position past the variable, which the VAX
+; takes as a bit number from the variable's address, reaches into what's nearby.
+; Both instructions take a position that's a signed longword, so a negative one
+; counts back in FTN$JMVBITS; FTN$IMVBITS's words are unsigned, as FORRTL's are,
+; and so are FTN$BMVBITS's bytes.
+;
+	.ENTRY	FTN$BMVBITS,^M<R2,R3>
+	MOVZBL	@8(AP),R1		; i
+	MOVZBL	@12(AP),R2		; len
+	MOVZBL	@20(AP),R3		; j
+	EXTZV	R1,R2,@4(AP),R0
+	INSV	R0,R3,R2,@16(AP)
+	RET
+
+	.ENTRY	FTN$IMVBITS,^M<R2,R3>
+	MOVZWL	@8(AP),R1		; i
+	MOVZWL	@12(AP),R2		; len
+	MOVZWL	@20(AP),R3		; j
+	EXTZV	R1,R2,@4(AP),R0
+	INSV	R0,R3,R2,@16(AP)
+	RET
+
+	.ENTRY	FTN$JMVBITS,^M<>
+	MOVL	@12(AP),R0		; len
+	EXTZV	@8(AP),R0,@4(AP),R1
+	INSV	R1,@20(AP),R0,@16(AP)
+	RET
+
+;
+; The intrinsic subroutines' arguments are all optional, and the compiler
+; passes the longword 0 for one left out. A MACRO caller may also pass fewer:
+; an argument the count doesn't reach is absent too.
+;
+; ARGUMENT: a local subroutine, reached by BSBW, that leaves in R1 the
+; argument list's longword R0 (1 the first), or 0 if the count doesn't reach
+; it, with the condition codes set by it. (AP)[R0] is the longword R0 places
+; past AP: indexed mode multiplies the index by the operand's size.
+;
+ARGUMENT:
+	CLRL	R1
+	CMPB	(AP),R0
+	BLSSU	10$
+	MOVL	(AP)[R0],R1
+10$:	TSTL	R1			; so the caller's BEQL means "absent"
+	RSB
+
+;
+; PUT_INTEGER: stores R0 at R1 as the routine's integers are, a longword if R11
+; is 4 and a word if it is 2.
+;
+PUT_INTEGER:
+	CMPL	R11,#2
+	BEQL	10$
+	MOVL	R0,(R1)
+	RSB
+10$:	MOVW	R0,(R1)
+	RSB
+
+;
+; DIGITS: writes R0, not negative, as R1 decimal digits (leading zeros, the
+; high digits lost if it has more) at R3, and leaves R3 past them. EDIV divides
+; the quadword R4 and R5 (R5 cleared, so R4's value) by 10, the quotient back in
+; R0 and the remainder, the next digit from the right, in R4. R0, R1, R2, R4, and
+; R5 aren't kept.
+;
+DIGITS:	ADDL2	R1,R3			; past the last digit
+	MOVL	R3,R2
+10$:	MOVL	R0,R4
+	CLRL	R5
+	EDIV	#10,R4,R0,R4
+	ADDB3	#^A/0/,R4,-(R2)
+	SOBGTR	R1,10$
+	RSB
+
+;
+; CALL DATE_AND_TIME(date, time, zone, values):
+;	FTN$DATE_AND_TIME(date, time, zone, values), VALUES INTEGER*4
+;	FTN$DATE_AND_TIME_W(date, time, zone, values), VALUES INTEGER*2
+;
+; DATE, TIME, and ZONE by descriptor, each given CCYYMMDD, hhmmss.sss, and
+; Shhmm as FORTRAN assigns a character value (cut short, or blanks after);
+; VALUES by address, eight integers: the year, month, day, the difference from
+; UTC in minutes, the hour, minute, second, and millisecond. The time is
+; $NUMTIM's, the local time, to the hundredth: the milliseconds are hundredths
+; times 10. The zone is the logical name SYS$TIMEZONE_DIFFERENTIAL, seconds east
+; of UTC with an optional sign (VMS's form, "-18000"), translated through
+; LNM$FILE_DEV, so a process may define its own; if it isn't defined, or isn't a
+; number, ZONE is blanks and VALUES(4) -HUGE(0) of its kind, as the standard
+; says of a zone that isn't known. The word routine's values are the same,
+; stored as words.
+;
+; The values go first into a frame of longwords, the eight in VALUES' order
+; at V_YEAR on, which each text is then written from:
+;
+V_YEAR		= 0			; the values, as longwords
+V_MONTH		= 4
+V_DAY		= 8
+V_ZONE		= 12
+V_HOUR		= 16
+V_MINUTE	= 20
+V_SECOND	= 24
+V_MS		= 28
+V_KNOWN		= 32			; 1 if the zone is known
+V_NUM		= 36			; $NUMTIM's seven words
+V_TEXT		= 52			; a text being made, at most 10 bytes
+V_EQV		= 64			; the zone's translation
+V_EQV_SIZE	= 32
+V_EQV_LEN	= 96			; its length, a word
+V_ITEMS		= 100			; $TRNLNM's item list: one item, then 0
+V_NAME		= 116			; the name's descriptor
+V_TABLE		= 124			; the table's
+V_SIZE		= 132
+
+	.ENTRY	FTN$DATE_AND_TIME,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	#4,R11			; longwords
+	BRB	DATE_AND_TIME
+
+	.ENTRY	FTN$DATE_AND_TIME_W,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	#2,R11			; words
+
+DATE_AND_TIME:
+	SUBL2	#V_SIZE,SP
+	MOVL	SP,R10
+	$NUMTIM_S TIMBUF=V_NUM(R10)
+	MOVZWL	V_NUM+NUM_YEAR(R10),V_YEAR(R10)
+	MOVZWL	V_NUM+NUM_MONTH(R10),V_MONTH(R10)
+	MOVZWL	V_NUM+NUM_DAY(R10),V_DAY(R10)
+	MOVZWL	V_NUM+NUM_HOUR(R10),V_HOUR(R10)
+	MOVZWL	V_NUM+NUM_MINUTE(R10),V_MINUTE(R10)
+	MOVZWL	V_NUM+NUM_SECOND(R10),V_SECOND(R10)
+	MOVZWL	V_NUM+NUM_HUNDREDTH(R10),R0
+	MULL3	#10,R0,V_MS(R10)
+	;
+	; The zone: $TRNLNM of the name in LNM$FILE_DEV, its string into V_EQV.
+	;
+	CLRL	V_KNOWN(R10)
+	MOVL	#ZONE_LEN,V_NAME(R10)
+	MOVAB	ZONE_NAME,V_NAME+4(R10)
+	MOVL	#FILE_DEV_LEN,V_TABLE(R10)
+	MOVAB	FILE_DEV,V_TABLE+4(R10)
+	MOVW	#V_EQV_SIZE,V_ITEMS(R10)	; the buffer's size,
+	MOVW	#LNM$_STRING,V_ITEMS+2(R10)	;  the item's code,
+	MOVAB	V_EQV(R10),V_ITEMS+4(R10)	;  its address,
+	MOVAB	V_EQV_LEN(R10),V_ITEMS+8(R10)	;  where the length goes
+	CLRL	V_ITEMS+12(R10)			; the list's end
+	CLRW	V_EQV_LEN(R10)
+	$TRNLNM_S TABNAM=V_TABLE(R10),LOGNAM=V_NAME(R10),ITMLST=V_ITEMS(R10)
+	BLBC	R0,30$			; not defined
+	;
+	; A sign, then decimal digits, and nothing else: R6 the sign (1 for a
+	; minus), R7 the number, R8 the next character, R9 how many are left.
+	;
+	CLRL	R6
+	CLRL	R7
+	MOVAB	V_EQV(R10),R8
+	MOVZWL	V_EQV_LEN(R10),R9
+	BEQL	30$			; empty
+	CMPB	(R8),#^A/+/
+	BEQL	10$
+	CMPB	(R8),#^A/-/
+	BNEQ	15$
+	INCL	R6
+10$:	INCL	R8			; past the sign
+	DECL	R9
+	BEQL	30$			; a sign alone
+15$:	MOVZBL	(R8)+,R0
+	SUBL2	#^A/0/,R0
+	CMPL	R0,#9			; a digit? (unsigned: below 0 is large)
+	BGTRU	30$
+	MULL2	#10,R7
+	ADDL2	R0,R7
+	SOBGTR	R9,15$
+	DIVL2	#60,R7			; seconds to minutes
+	BLBC	R6,20$
+	MNEGL	R7,R7
+20$:	MOVL	R7,V_ZONE(R10)
+	MOVL	#1,V_KNOWN(R10)
+	BRB	40$
+30$:	MNEGL	#^X7FFFFFFF,V_ZONE(R10)	; -HUGE(0) of a longword,
+	CMPL	R11,#2
+	BNEQ	40$
+	MNEGL	#^X7FFF,V_ZONE(R10)	;  or of a word
+	;
+	; DATE: CCYYMMDD.
+	;
+40$:	MOVL	#1,R0
+	BSBW	ARGUMENT
+	BEQL	50$
+	PUSHL	R1			; the descriptor
+	MOVAB	V_TEXT(R10),R3
+	MOVL	V_YEAR(R10),R0
+	MOVL	#4,R1
+	BSBW	DIGITS
+	MOVL	V_MONTH(R10),R0
+	MOVL	#2,R1
+	BSBW	DIGITS
+	MOVL	V_DAY(R10),R0
+	MOVL	#2,R1
+	BSBW	DIGITS
+	MOVL	(SP)+,R1
+	MOVC5	#8,V_TEXT(R10),#BLANK,DSC$W_LENGTH(R1),@DSC$A_POINTER(R1)
+	;
+	; TIME: hhmmss.sss.
+	;
+50$:	MOVL	#2,R0
+	BSBW	ARGUMENT
+	BEQL	60$
+	PUSHL	R1
+	MOVAB	V_TEXT(R10),R3
+	MOVL	V_HOUR(R10),R0
+	MOVL	#2,R1
+	BSBW	DIGITS
+	MOVL	V_MINUTE(R10),R0
+	MOVL	#2,R1
+	BSBW	DIGITS
+	MOVL	V_SECOND(R10),R0
+	MOVL	#2,R1
+	BSBW	DIGITS
+	MOVB	#^A/./,(R3)+
+	MOVL	V_MS(R10),R0
+	MOVL	#3,R1
+	BSBW	DIGITS
+	MOVL	(SP)+,R1
+	MOVC5	#10,V_TEXT(R10),#BLANK,DSC$W_LENGTH(R1),@DSC$A_POINTER(R1)
+	;
+	; ZONE: Shhmm, or blanks.
+	;
+60$:	MOVL	#3,R0
+	BSBW	ARGUMENT
+	BEQL	80$
+	PUSHL	R1
+	CLRL	R6			; no text: all blanks
+	BLBC	V_KNOWN(R10),70$
+	MOVL	#5,R6
+	MOVAB	V_TEXT(R10),R3
+	MOVB	#^A/+/,(R3)+
+	MOVL	V_ZONE(R10),R7
+	BGEQ	65$
+	MOVB	#^A/-/,-1(R3)
+	MNEGL	R7,R7
+65$:	DIVL3	#60,R7,R0		; the hours
+	MULL3	#60,R0,R8
+	SUBL2	R8,R7			;  and the minutes left
+	MOVL	#2,R1
+	BSBW	DIGITS
+	MOVL	R7,R0
+	MOVL	#2,R1
+	BSBW	DIGITS
+70$:	MOVL	(SP)+,R1
+	MOVC5	R6,V_TEXT(R10),#BLANK,DSC$W_LENGTH(R1),@DSC$A_POINTER(R1)
+	;
+	; VALUES: the eight, each at its size.
+	;
+80$:	MOVL	#4,R0
+	BSBW	ARGUMENT
+	BEQL	90$
+	MOVL	R1,R6			; where the next goes
+	MOVL	R10,R7			; the next value
+	MOVL	#8,R8
+85$:	MOVL	(R7)+,R0
+	MOVL	R6,R1
+	BSBW	PUT_INTEGER
+	ADDL2	R11,R6
+	SOBGTR	R8,85$
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; CALL SYSTEM_CLOCK(count, rate, max):
+;	FTN$SYSTEM_CLOCK(count, rate, max), INTEGER*4
+;	FTN$SYSTEM_CLOCK_W(count, rate, max), INTEGER*2
+;
+; The clock counts the hundredths of a second of the system time ($GETTIM: 100
+; ns units since 17-Nov-1858), so the rate is 100, and wraps after HUGE(0) of
+; the arguments' kind, so the count is the hundredths modulo HUGE(0)+1 (2**31,
+; or 2**15 for words). With the quantum clock (vax.hardware.clock false) the
+; system time is the emulated one, so the counts follow the instructions run.
+;
+; The hundredths are the time over 100,000, a quadword over a longword, whose
+; quotient is too big for EDIV's longword. But only the quotient modulo 2**31
+; is wanted. The time is H*2**32 + L. H's remainder over 100,000, R, leaves the
+; quotient's low 32 bits the quotient of R*2**32 + L, and taking 50,000 from R
+; when it is 50,000 or more (50,000*2**32 is 2**31 times 100,000) changes only
+; the quotient's bit 31; then R*2**32 + L is under 2**31 times 100,000, and EDIV
+; takes it.
+;
+	.ENTRY	FTN$SYSTEM_CLOCK,^M<R2,R3,R4,R5,R11>
+	MOVL	#4,R11
+	BRB	SYSTEM_CLOCK
+
+	.ENTRY	FTN$SYSTEM_CLOCK_W,^M<R2,R3,R4,R5,R11>
+	MOVL	#2,R11
+
+SYSTEM_CLOCK:
+	MOVL	#1,R0			; COUNT
+	BSBW	ARGUMENT
+	BEQL	20$
+	MOVL	R1,R3
+	SUBL2	#8,SP			; the time, a quadword
+	MOVL	SP,R2
+	$GETTIM_S TIMADR=(R2)
+	MOVL	4(R2),R4		; H, in a quadword's low half
+	CLRL	R5
+	EDIV	#100000,R4,R0,R1	; R its remainder
+	CMPL	R1,#50000
+	BLSS	10$
+	SUBL2	#50000,R1
+10$:	MOVL	(R2),R4			; R*2**32 + L
+	MOVL	R1,R5
+	EDIV	#100000,R4,R0,R1	; the count, modulo 2**31
+	CMPL	R11,#2
+	BNEQ	15$
+	BICL2	#^XFFFF8000,R0		;  or 2**15
+15$:	MOVL	R3,R1
+	BSBW	PUT_INTEGER
+20$:	MOVL	#2,R0			; COUNT_RATE
+	BSBW	ARGUMENT
+	BEQL	30$
+	MOVL	#100,R0
+	BSBW	PUT_INTEGER
+30$:	MOVL	#3,R0			; COUNT_MAX
+	BSBW	ARGUMENT
+	BEQL	40$
+	MOVL	#^X7FFFFFFF,R0
+	CMPL	R11,#2
+	BNEQ	35$
+	MOVL	#^X7FFF,R0
+35$:	BSBW	PUT_INTEGER
+40$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; CALL RANDOM_NUMBER(harvest), one element:
+;	FTN$RANDOM_F(x), FTN$RANDOM_D(x), FTN$RANDOM_G(x), FTN$RANDOM_H(x)
+;
+; Each draws from MTH$RANDOM on SEED, so the sequence is the same on every host
+; (and unpredictable with vax.runtime.random, as RAN's is). One draw is a
+; REAL*4: 24 bits, a multiple of 2**-24 from 0 up to but not including 1. A
+; wider format joins several draws, the first the most significant: x = r1 +
+; r2/2**24 + r3/2**48 + ..., the last draw cut to the bits the format has left
+; (D's 56: 24 + 24 + 8; G's 53: 24 + 24 + 5; H's 113: four whole draws and 17
+; bits of a fifth), so every step is exact, nothing rounds, and x is never 1.
+; The sum is made from the last draw up, by Horner's rule: x = (x / 2**24) +
+; the draw before. A draw is cut by multiplying by 2**n, CVTxL's truncation,
+; and dividing again, all exact.
+;
+; The draws are stored on the stack in order, then read back last first.
+;
+	.ENTRY	FTN$RANDOM_F,^M<>
+	PUSHAL	SEED
+	CALLS	#1,G^MTH$RANDOM
+	MOVF	R0,@4(AP)
+	RET
+
+	.ENTRY	FTN$RANDOM_D,^M<R2,R3,R4,R5,R6>
+	MOVL	#3,R0
+	BSBW	DRAWS
+	MOVF	-(R6),R0		; r3, to 8 bits
+	MULF2	#256.0,R0
+	CVTFL	R0,R0
+	CVTLD	R0,R0
+	DIVD2	#256.0,R0
+	MOVL	#2,R2
+10$:	DIVD2	#16777216.0,R0
+	CVTFD	-(R6),R4
+	ADDD2	R4,R0
+	SOBGTR	R2,10$
+	MOVD	R0,@4(AP)
+	RET
+
+	.ENTRY	FTN$RANDOM_G,^M<R2,R3,R4,R5,R6>
+	MOVL	#3,R0
+	BSBW	DRAWS
+	MOVF	-(R6),R0		; r3, to 5 bits
+	MULF2	#32.0,R0
+	CVTFL	R0,R0
+	CVTLG	R0,R0
+	DIVG2	#32.0,R0
+	MOVL	#2,R2
+10$:	DIVG2	#16777216.0,R0
+	CVTFG	-(R6),R4
+	ADDG2	R4,R0
+	SOBGTR	R2,10$
+	MOVG	R0,@4(AP)
+	RET
+
+	.ENTRY	FTN$RANDOM_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	#5,R0
+	BSBW	DRAWS
+	MOVF	-(R6),R0		; r5, to 17 bits
+	MULF2	#131072.0,R0
+	CVTFL	R0,R0
+	CVTLH	R0,R0			; an H value is four registers, R0 to R3
+	DIVH2	#131072.0,R0
+	MOVL	#4,R11
+10$:	DIVH2	#16777216.0,R0
+	CVTFH	-(R6),R7		;  and this one R7 to R10, past R6
+	ADDH2	R7,R0
+	SOBGTR	R11,10$
+	MOVH	R0,@4(AP)
+	RET
+
+;
+; DRAWS: R0 draws from MTH$RANDOM, F values stored at the frame's bottom in
+; order, the first lowest; R6 is left past the last. The room is made below the
+; return address, so DRAWS takes it from the caller's frame for good: the RET
+; that ends the routine gives it back. R0 to R5 aren't kept.
+;
+DRAWS:	MOVL	(SP)+,R5		; the return address
+	ASHL	#2,R0,R1		; 4 bytes a draw
+	SUBL2	R1,SP
+	MOVL	SP,R6
+	MOVL	R0,R4
+10$:	PUSHAL	SEED
+	CALLS	#1,G^MTH$RANDOM
+	MOVF	R0,(R6)+
+	SOBGTR	R4,10$
+	JMP	(R5)
+
+;
+; CALL RANDOM_SEED(size, put, get):
+;	FTN$RANDOM_SEED(size, put, get), INTEGER*4: the seed is 1 longword
+;	FTN$RANDOM_SEED_W(size, put, get), INTEGER*2: the seed is 2 words, its
+;	low word first
+;
+; SIZE is given the seed's size, PUT sets the seed, GET is given it; with none
+; of them, the seed is FIRST_SEED again. The standard allows only one; given
+; more, each is done in that order.
+;
+	.ENTRY	FTN$RANDOM_SEED,^M<R2,R11>
+	MOVL	#4,R11
+	BRB	RANDOM_SEED
+
+	.ENTRY	FTN$RANDOM_SEED_W,^M<R2,R11>
+	MOVL	#2,R11
+
+RANDOM_SEED:
+	CLRL	R2			; none given yet
+	MOVL	#1,R0			; SIZE
+	BSBW	ARGUMENT
+	BEQL	20$
+	INCL	R2
+	MOVL	#1,R0			; a longword,
+	CMPL	R11,#2
+	BNEQ	10$
+	MOVL	#2,R0			;  or two words
+10$:	BSBW	PUT_INTEGER
+20$:	MOVL	#2,R0			; PUT
+	BSBW	ARGUMENT
+	BEQL	30$
+	INCL	R2
+	MOVL	(R1),SEED		; a longword, or two words low first:
+					;  the same four bytes
+30$:	MOVL	#3,R0			; GET
+	BSBW	ARGUMENT
+	BEQL	40$
+	INCL	R2
+	MOVL	SEED,(R1)
+40$:	TSTL	R2
+	BNEQ	50$
+	MOVL	#FIRST_SEED,SEED
+50$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+	.END

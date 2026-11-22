@@ -1,0 +1,28 @@
+; TIRR.MAR - repetition factors (written by testdata/tir111/gen.go)
+	.PSECT	R1,LONG
+	.BYTE	7[3]
+	.PSECT	R2,LONG
+	.WORD	7[3]
+	.PSECT	R3,LONG
+	.LONG	7[1]
+	.PSECT	R4,LONG
+	.LONG	300[2]
+	.PSECT	R5,LONG
+	.LONG	-1[2]
+	.PSECT	R6,LONG
+	.LONG	70000[2]
+	.PSECT	R7,LONG
+Y = 5
+	.LONG	Y[2]
+	.PSECT	R8,LONG
+	.LONG	Z[2]
+Z = 6
+	.PSECT	R9,LONG
+	.BYTE	0[5]
+	.PSECT	R10,LONG
+	.WORD	0[2],1,0[3]
+	.PSECT	R11,LONG
+	.LONG	1,0[2],2
+	.PSECT	R12,LONG
+	.LONG	R1[2]
+	.END

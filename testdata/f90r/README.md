@@ -42,7 +42,7 @@ exercise yet of VMS's MTHRTL under govax's code: fcalc is built `/G_FLOATING`.
 
 3. Copy the results back:
 
-       mkdir -p testdata/f90r/vax/round2/mar testdata/f90r/vax/round2/fcalc
+       mkdir -p testdata/f90r/vax/round3/mar testdata/f90r/vax/round3/fcalc
        ./govax --profile tbprobe --system-file none console < testdata/f90r/copyout.cmd
 
 `TestF90RProcedure` (`internal/console/f90r_test.go`) runs the same procedure on govax, so a
@@ -79,19 +79,24 @@ old volume is `testdata/disks/f90r-exchange-attempt1.dsk`.
 
 ## What came back
 
-`vax/` is round 1, the author's run on VMS 7.1, 22-NOV-2026: the log, FTNRTL's objects,
-image, map, and the sources VMS built (`vax/mar/`), and fcalc's `.MAR` files and objects
-(`vax/fcalc/`; no image, below). VMS read the volume made with `/HEADERS` cleanly, built
-FTNRTL with no message, and of the corpus's 366 runs, 351 printed what govax's run of the
-procedure prints. The other 15, AUTOLEN, AUTOS, CALENDAR, CHARFNS, and TEXTFMT in each
-variant, and every fcalc build, stopped at VMS's MACRO: `%MACRO-E-DIRSYNX` on a bare
-`.ASCII`, which the compiler wrote for an empty text (`''`) and govax's MACRO had accepted.
-Both are fixed (the phase doc's log). `TestF90ROracle` holds govax's run to the log, with
-those programs in `f90rAwaitingVMS` until round 2.
+`vax/` is round 2, the author's run on VMS 7.1, 22-NOV-2026, on a volume rebuilt after round
+1's fix: the log, FTNRTL's objects, image, map, and the sources VMS built (`vax/mar/`), and
+fcalc's plain build's `.MAR` files, objects, and image (`vax/fcalc/`). Every program built
+with no message, and **every section of the log is what govax's run of the procedure prints**:
+all 366 corpus runs, and fcalc in all four builds, its 11 scripts each, the files they saved,
+and ONESHOT (`TestF90ROracle`, fcalc's file times masked).
 
-Round 2 is the same procedure on a volume rebuilt from the fixed compiler; the round 1 volume
-is `testdata/disks/f90r-exchange-round1.dsk`. `copyout.cmd` writes round 2 to `vax/round2/`
-(make `vax/round2/mar` and `vax/round2/fcalc` first), beside round 1, until it's checked.
+`TestF90RObjects` holds govax's MACRO to VMS's on fcalc's 16 `.MAR` files, the compiler's own
+output: their GSD, TIR, and end records. 14 are VMS's; it found govax storing a repetition
+factor (`.LONG 0[2]`) byte by byte where VMS's MACRO writes `STA_UB 0`, `STA_UB 2`, `STO_RL`
+(fixed, with govax's LINK taught `STO_RB`, `STO_RW`, and `STO_RL`). FCFUNCS and FCMATRIX still
+differ where VMS stores one byte of a long run of immediate data through the stack;
+`testdata/tir111` is the probe to settle it.
+
+`vax/round1/` is round 1, 22-NOV-2026, whose volume (`testdata/disks/f90r-exchange-round1.dsk`)
+had the compiler's bare `.ASCII` for an empty text, which VMS's MACRO refused (DIRSYNX), so
+five programs and fcalc never built; the 351 runs that did printed what govax's do.
 
 The scripts use DUA5 on govax, since the author's startup mounts XFER on DUA2. Before a
-later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new one.
+later round, rename the old volume in `testdata/disks` (`exchange.cmd` makes a new one),
+and point `gen.go`'s `results` at `vax/round3`.

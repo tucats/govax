@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -239,9 +240,9 @@ func checkF90RFcalc(t *testing.T, sections map[string]string) {
 var f90rVMSDifferences = map[string]string{}
 
 // f90rAwaitingVMS are the sections VMS's last run didn't make as govax's run does, which
-// the next round is to, by prefix: in round 1 VMS's MACRO refused the bare .ASCII the
-// compiler wrote for an empty text (DIRSYNX), so these never built there.
-var f90rAwaitingVMS = []string{"FCALC", "AUTOLEN", "AUTOS", "CALENDAR", "CHARFNS", "TEXTFMT"}
+// the next round is to, by prefix. (Round 1's, testdata/f90r/vax/round1, had the five
+// programs and fcalc whose bare .ASCII VMS's MACRO refused; round 2 ran them all.)
+var f90rAwaitingVMS = []string{}
 
 // TestF90ROracle holds the procedure's run on govax to VMS 7.1's: Fortran 90 programs
 // govax's compiler made, assembled and linked by VMS's MACRO and LINK against an FTNRTL
@@ -253,8 +254,10 @@ func TestF90ROracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log := sharedRoundLog(t, "f90r", runF90R)
-	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
+	// fcalc's saved files are headed by the time they were written.
+	log := fcalcTime.ReplaceAllString(sharedRoundLog(t, "f90r", runF90R), fcalcTimeMask)
+	got := ftn86Sections(log)
+	want := ftn86Sections(ftn86Lines(fcalcTime.ReplaceAllString(string(vms), fcalcTimeMask)))
 
 	awaiting := func(name string) bool {
 		for _, prefix := range f90rAwaitingVMS {
@@ -309,6 +312,118 @@ func TestF90ROracle(t *testing.T) {
 	for name := range f90rVMSDifferences {
 		if !seen[name] {
 			t.Errorf("%s now matches VMS: take it out of f90rVMSDifferences", name)
+		}
+	}
+}
+
+// f90rObjectDifferences are fcalc's objects govax's MACRO doesn't make as VMS's did, with
+// why: testdata/tir111 is the probe to settle it.
+var f90rObjectDifferences = map[string]string{
+	"FCFUNCS":  "VMS stores one byte of a long run of immediate data by STA_UB and STO_B, at $PDATA+^X216 and ^X666",
+	"FCMATRIX": "the same, at $PDATA+^X551",
+}
+
+// TestF90RObjects holds govax's MACRO to VMS 7.1's on the FORTRAN compiler's own output:
+// round 2 copied back fcalc's .MAR files, which govax's compiler wrote, and the objects
+// VMS's MACRO made of them (testdata/f90r/vax/fcalc). govax's MACRO must make each
+// object's GSD, TIR, and end records as VMS's did. The header records (time, tool,
+// command) differ by nature, and the traceback and debugger records by design: govax's
+// MACRO gives a compiled FORTRAN program's traceback records its FORTRAN lines
+// (DEVIATIONS.md's "A FORTRAN program's traceback lines through MACRO").
+//
+// f90rObjectDifferences are the objects that still differ, with why.
+func TestF90RObjects(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "f90r", "vax", "fcalc")
+
+	sources, err := filepath.Glob(filepath.Join(dir, "*.mar"))
+	if err != nil || len(sources) == 0 {
+		t.Fatalf("no sources: %v", err)
+	}
+
+	// The object language's record types (obj's OBJ$C_ codes) compared.
+	compared := map[byte]string{1: "GSD", 2: "TIR", 3: "EOM", 7: "EOMW"}
+
+	kept := func(records [][]byte) [][]byte {
+		var out [][]byte
+
+		for _, r := range records {
+			if len(r) > 0 {
+				if _, ok := compared[r[0]]; ok {
+					out = append(out, r)
+				}
+			}
+		}
+
+		return out
+	}
+
+	d, c, buf := dungeonConsole(t, false)
+
+	for _, source := range sources {
+		abs, err := filepath.Abs(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		name := strings.ToUpper(strings.TrimSuffix(filepath.Base(source), ".mar"))
+		shareFindRun(t, d, `COPY/QUIET "`+abs+`"/HOST `+name+`.MAR`)
+		shareFindRun(t, d, "MACRO/NOLIST "+name)
+
+		if out := buf.String(); out != "" {
+			t.Fatalf("MACRO %s said: %s", name, out)
+		}
+
+		records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: name + ".OBJ"}, rms.VariableRecords)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		vmsObj, err := filepath.Abs(filepath.Join(dir, strings.ToLower(name)+".obj"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		vmsRecords, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Host: true, Name: vmsObj}, rms.VariableRecords)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got, want := kept(records), kept(vmsRecords)
+		_, differs := f90rObjectDifferences[name]
+		same := len(got) == len(want)
+
+		for i := 0; same && i < len(got); i++ {
+			same = bytes.Equal(got[i], want[i])
+		}
+
+		switch {
+		case differs && same:
+			t.Errorf("%s is now VMS's: take it out of f90rObjectDifferences", name)
+
+			continue
+		case differs:
+			continue
+		}
+
+		if len(got) != len(want) {
+			t.Errorf("%s has %d GSD, TIR, and end records, VMS's %d", name, len(got), len(want))
+
+			continue
+		}
+
+		for i := range got {
+			if !bytes.Equal(got[i], want[i]) {
+				at := 0
+				for at < min(len(got[i]), len(want[i])) && got[i][at] == want[i][at] {
+					at++
+				}
+
+				t.Errorf("%s's %s record %d differs from VMS's at byte %d of %d (VMS's %d):\n govax % x\n VMS   % x",
+					name, compared[got[i][0]], i, at, len(got[i]), len(want[i]),
+					got[i][max(0, at-16):min(len(got[i]), at+24)], want[i][max(0, at-16):min(len(want[i]), at+24)])
+
+				break
+			}
 		}
 	}
 }

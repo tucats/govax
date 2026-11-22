@@ -141,6 +141,20 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 			return err
 		}
 
+		// A known value stored more than once is one repeated store in the
+		// object, as real MACRO writes it: VMS 7.1's MACRO made .LONG 0[2]
+		// STA_UB 0, STA_UB 2, STO_RL (docs/planning/PHASE-111 - Fortran 90
+		// milestone.md, subtask 11). .BYTE's and .WORD's STO_RB and STO_RW
+		// are taken to follow (unconfirmed), and a count of 1 is stored as
+		// the plain value.
+		if x.known() && count > 1 && a.dialect == DialectMACRO {
+			if err := a.emitRepeated(v, scale, count); err != nil {
+				return err
+			}
+
+			continue
+		}
+
 		// Each copy of a value not known yet gets its own fixup.
 		for range count {
 			if !x.known() {

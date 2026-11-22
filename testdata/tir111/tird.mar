@@ -1,0 +1,280 @@
+; TIRD.MAR - TIRA with each of the table's .ASCII lines made two (written by testdata/tir111/gen.go)
+	.TITLE	FCFUNCS
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.51
+; from DUA5:[FCALC]FCFUNCS.F90;1
+; by the command FORTRAN/G_FLOATING FCFUNCS
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCFUNCS's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCFUNCS,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCFUNCS.$BASE:
+	.LONG	1			; ANGLE_MODE = A_RADIANS
+	.LONG	0[2]			; SEED_GIVEN to SEED_NUMBER = .FALSE.
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; The module FCVALUES's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCVALUES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCVALUES.$BASE:
+	.BLKB	12
+
+; Storage map for FCFUNCS, a module
+;   ANGLE_MODE   INTEGER  $MOD$FCFUNCS+0  FCFUNCS.ANGLE_MODE
+;   SEED_GIVEN   LOGICAL  $MOD$FCFUNCS+4  FCFUNCS.SEED_GIVEN
+;   SEED_NUMBER  INTEGER  $MOD$FCFUNCS+8  FCFUNCS.SEED_NUMBER
+;   Type BUILTIN, 20 bytes
+;     +0     NAME   CHARACTER*12
+;     +12    LEAST  INTEGER
+;     +16    MOST   INTEGER
+;
+FCFUNCS.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
+FCFUNCS.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+FCFUNCS.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
+FCFUNCS.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
+FCFUNCS.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
+FCFUNCS.ANGLE_MODE = $MOD$FCFUNCS.$BASE	; ANGLE_MODE, in module FCFUNCS's variables
+FCFUNCS.SEED_GIVEN = $MOD$FCFUNCS.$BASE+4 ; SEED_GIVEN, in module FCFUNCS's variables
+FCFUNCS.SEED_NUMBER = $MOD$FCFUNCS.$BASE+8 ; SEED_NUMBER, in module FCFUNCS's variables
+$MOD$FCFUNCS.0679CFAC == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B ; the stamps of the modules used
+
+;    1  ! fcalc: the built-in functions.
+;    2  !
+;    3  ! BUILTINS is the table of every built-in function: its name and how many
+;    4  ! arguments it takes, so adding a function is a row here and a CASE in
+;    5  ! APPLY_BUILTIN. The evaluator (module FCEVAL) evaluates a call's arguments
+;    6  ! into an array and gives it to APPLY_BUILTIN; IF, whose arms are evaluated
+;    7  ! only when chosen, is the evaluator's own, and is in the table only so its
+;    8  ! name is known.
+;    9  !
+;   10  ! Every function takes complex values. A real argument in a function's real
+;   11  ! domain takes the real path, the Fortran intrinsic (MTHRTL's routine on a
+;   12  ! VAX), so sqrt(2) and asin(0.5) are as exact as the machine can make them;
+;   13  ! anything else takes the principal branch of the complex function, built
+;   14  ! from FCVALUES' guarded arithmetic. As there, nothing traps: each function
+;   15  ! checks its argument before the intrinsic sees it (an EXP's argument, a
+;   16  ! sine's angle, a pole) and reports OVERFLOW, DOMAIN, or DIVZERO instead.
+;   17  !
+;   18  ! The trigonometric functions take and give angles in the angle mode
+;   19  ! (SET ANGLE): radians, degrees, or grads. In degrees and grads an angle is
+;   20  ! first reduced exactly to a turn, and a multiple of a quarter turn has its
+;   21  ! exact sine and cosine, so sin(180) is 0 and tan(90) a division by zero.
+;   22  !
+;   23  ! Some vocabulary of numerical programming used in the comments below:
+;   24  !
+;   25  ! - Cancellation. Subtracting two nearly equal numbers loses the digits
+;   26  !   they share: 1.0000001 - 1.0000000 keeps one significant digit of eight.
+;   27  !   A formula that does that for some arguments is rewritten for them (as
+;   28  !   LOG1P, ERF's series, and SIN_PI do).
+;   29  ! - Principal branch. Functions like the square root and the logarithm
+;   30  !   have several values for a complex argument; the principal one is a
+;   31  !   fixed, conventional choice, and the line where the choice jumps is the
+;   32  !   branch cut (the negative real axis for SQRT and LN).
+;   33  ! - Range reduction. A periodic function's argument is brought into one
+;   34  !   period before it is evaluated; done in floating point it loses the
+;   35  !   argument's low digits, so fcalc does it exactly where it can (in
+;   36  !   degrees, by MOD of whole numbers) and refuses angles so large in radians
+;   37  !   that no digit of their sine is meaningful.
+;   38  ! - Series and continued fractions. A function is often computed by summing
+;   39  !   a series until the terms stop mattering (ERF below 1.5), or by a
+;   40  !   continued fraction evaluated from a fixed depth back up (ERFC above it);
+;   41  !   each converges quickly in its own region, so a function switches
+;   42  !   between them at a crossover chosen by testing.
+;   43  module fcfuncs
+;   44    use fckinds
+;   45    use fcmessages
+;   46    use fcvalues
+;   47    implicit none
+;   48    private
+;   49
+;   50    ! VALUE is public here too: a public procedure's argument may not be of a
+;   51    ! type private in this module.
+;   52    public :: value
+;   53    public :: builtin_index, arity_ok, apply_builtin, factorial_value, takes_list
+;   54    public :: builtin, many
+;   55    public :: angle_mode, a_radians, a_degrees, a_grads
+;   56
+;   57    integer, parameter :: a_radians = 1, a_degrees = 2, a_grads = 3
+;   58    integer, save :: angle_mode = a_radians
+;   59
+;   60    ! SET SEED's number, once one has been given (SHOW SETTINGS shows it).
+;   61    public :: seed_random, seed_given, seed_number
+;   62    logical, save :: seed_given = .false.
+;   63    integer, save :: seed_number = 0
+;   64
+;   65    ! (The type is public, as is MANY, so module FCMATRIX's table of the
+;   66    ! matrix functions is made the same way.)
+;   67    type builtin
+;   68      character(len=12) :: name
+;   69      integer :: least
+;   70      integer :: most
+;   71    end type builtin
+;   72
+;   73    ! MOST for a function of any number of arguments.
+;   74    integer, parameter :: many = 1000
+;   75
+;   76    ! The table of built-in functions, a constant array of BUILTINs made by
+;   77    ! an array constructor of structure constructors (several to a line:
+;   78    ! Fortran 90 allows a statement 39 continuation lines).
+;   79    type(builtin), parameter :: builtins(50) = (/ &
+;   80      builtin('sqrt', 1, 1), builtin('cbrt', 1, 1), builtin('exp', 1, 1), &
+;   81      builtin('ln', 1, 1), builtin('log10', 1, 1), builtin('log2', 1, 1), &
+;   82      builtin('log', 2, 2), &
+;   83      builtin('sin', 1, 1), builtin('cos', 1, 1), builtin('tan', 1, 1), &
+;   84      builtin('sec', 1, 1), builtin('csc', 1, 1), builtin('cot', 1, 1), &
+;   85      builtin('asin', 1, 1), builtin('acos', 1, 1), builtin('atan', 1, 1), &
+;   86      builtin('atan2', 2, 2), &
+;   87      builtin('sinh', 1, 1), builtin('cosh', 1, 1), builtin('tanh', 1, 1), &
+;   88      builtin('asinh', 1, 1), builtin('acosh', 1, 1), builtin('atanh', 1, 1), &
+;   89      builtin('re', 1, 1), builtin('im', 1, 1), builtin('abs', 1, 1), &
+;   90      builtin('arg', 1, 1), builtin('conj', 1, 1), builtin('polar', 2, 2), &
+;   91      builtin('cis', 1, 1), &
+;   92      builtin('floor', 1, 1), builtin('ceil', 1, 1), builtin('round', 1, 1), &
+;   93      builtin('trunc', 1, 1), builtin('frac', 1, 1), builtin('sign', 1, 1), &
+;   94      builtin('gcd', 2, many), builtin('lcm', 2, many), builtin('isprime', 1, 1), &
+;   95      builtin('ncr', 2, 2), builtin('npr', 2, 2), &
+;   96      builtin('gamma', 1, 1), builtin('lgamma', 1, 1), builtin('erf', 1, 1), &
+;   97      builtin('erfc', 1, 1), builtin('beta', 2, 2), &
+;   98      builtin('min', 1, many), builtin('max', 1, many), builtin('sum', 1, many), &
+;   99      builtin('prod', 1, many) /)
+;  100
+;  101    ! The list functions and the rest, a second table: Fortran 90 allows a
+;  102    ! statement 39 continuation lines, and one table would need more.
+;  103    type(builtin), parameter :: more_builtins(7) = (/ &
+;  104      builtin('mean', 1, many), builtin('median', 1, many), &
+;  105      builtin('var', 2, many), builtin('stdev', 2, many), &
+;  106      builtin('if', 3, 3), builtin('rand', 0, 2), builtin('hypot', 2, 2) /)
+;  107
+;  108    ! The largest magnitude of which every real number is whole, and below
+;  109    ! which fcalc counts exactly: 4E15, under 2**52.
+;  110    real(rk), parameter :: counting = 4.0e15_rk
+;  111
+;  112    ! The largest angle in radians whose sine has significant digits.
+;  113    real(rk), parameter :: angle_limit = 1.0e15_rk
+;  114
+;  115    ! Past this a hyperbolic sine or cosine is past LIMIT.
+;  116    real(rk), parameter :: hyper_limit = 690.0_rk
+;  117
+;  118    real(rk), parameter :: ln2 = 0.693147180559945309417232121458_rk
+;  119    real(rk), parameter :: ln10 = 2.30258509299404568401799145468_rk
+;  120    real(rk), parameter :: half_log_2pi = 0.918938533204672741780329736406_rk
+;  121    real(rk), parameter :: sqrt_pi = 1.77245385090551602729816748334_rk
+;  122
+;  123    ! Lanczos's approximation of the gamma function, g = 7 and 9 terms, good
+;  124    ! to about 15 digits for arguments from 0.5 up.
+;  125    real(rk), parameter :: lanczos_g = 7.0_rk
+;  126    real(rk), parameter :: lanczos(0:8) = (/ 0.99999999999980993_rk, &
+;  127      676.5203681218851_rk, -1259.1392167224028_rk, 771.32342877765313_rk, &
+;  128      -176.61502916214059_rk, 12.507343278686905_rk, -0.13857109526572012_rk, &
+;  129      9.9843695780195716e-6_rk, 1.5056327351493116e-7_rk /)
+;  130
+;  131  contains
+
+; Storage map for FCFUNCS.BUILTIN_INDEX, an INTEGER function
+;   NAME           CHARACTER*(*), INTENT(IN)  argument 1  @FCFUNCS.BUILTIN_INDEX.NAME(AP)
+;   BUILTIN_INDEX  INTEGER                    $LOCAL+0    FCFUNCS.BUILTIN_INDEX.$N1
+;   K              INTEGER                    $LOCAL+4    FCFUNCS.BUILTIN_INDEX.K
+;   R9 is $H1: a value computed before a loop
+;   R9 is $H2: a value computed before a loop
+;   R7 is $R1: an index stepped with K
+;   R7 is $R2: an index stepped with K
+;   R10 is $R3: an address in an array
+;   R10 is $R4: an address in an array
+;   R6 is $R5: K, during a loop
+;   R6 is $R6: K, during a loop
+;   R8 is $R7: NAME's address
+;   R8 is $R8: NAME's address
+;   FCFUNCS.BUILTIN_INDEX.$N1 is FCFUNCS.BUILTIN_INDEX.BUILTIN_INDEX
+;
+FCFUNCS.BUILTIN_INDEX.NAME = 4		; NAME is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCFUNCS.BUILTIN_INDEX.$N1:
+	.BLKL	1			; BUILTIN_INDEX, the function's value
+FCFUNCS.BUILTIN_INDEX.K:
+	.BLKL	1			; K
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCFUNCS.BUILTIN_INDEX.$K1:
+	.ASCII	/sqrt        /<1><0><0><0><1><0>
+	.ASCII	<0><0>/cbrt        /<1><0><0><0>
+	.ASCII	<1><0><0><0>/exp         /<1><0>
+	.ASCII	<0><0><1><0><0><0>/ln          /<1>
+	.ASCII	<0><0><0><1><0><0><0>/log10       /
+	.ASCII	<1><0><0><0><1><0><0><0>/log2 /
+	.ASCII	/       /<1><0><0><0><1><0><0>
+	.ASCII	<0>/log         /<2><0><0><0><2><0>
+	.ASCII	<0><0>/sin         /<1><0><0><0>
+	.ASCII	<1><0><0><0>/cos         /<1><0>
+	.ASCII	<0><0><1><0><0><0>/tan         /<1>
+	.ASCII	<0><0><0><1><0><0><0>/sec     /
+	.ASCII	/    /<1><0><0><0><1><0><0>
+	.ASCII	<0>/csc         /<1><0><0><0><1><0><0>
+	.ASCII	<0>/cot         /<1><0><0><0><1>
+	.ASCII	<0><0><0>/asin        /<1><0><0>
+	.ASCII	<0><1><0><0><0>/acos        /<1>
+	.ASCII	<0><0><0><1><0><0><0>/atan       /
+	.ASCII	/ /<1><0><0><0><1><0><0><0>
+	.ASCII	/atan2       /<2><0><0><0><2><0><0><0>
+	.ASCII	/sinh        /<1><0><0><0><1><0>
+	.ASCII	<0><0>/cosh        /<1><0><0><0>
+	.ASCII	<1><0><0><0>/tanh        /<1><0>
+	.ASCII	<0><0><1><0><0><0>/asinh       /<1>
+	.ASCII	<0><0><0><1><0><0><0>/acosh       /
+	.ASCII	<1><0><0><0><1><0><0><0>/atanh/
+	.ASCII	/       /<1><0><0><0><1><0><0>
+	.ASCII	<0>/re          /<1><0><0><0><1><0>
+	.ASCII	<0><0>/im          /<1><0><0><0>
+	.ASCII	<1><0><0><0>/abs         /<1><0>
+	.ASCII	<0><0><1><0><0><0>/arg         /<1>
+	.ASCII	<0><0><0><1><0><0><0>/conj    /
+	.ASCII	/    /<1><0><0><0><1><0><0>
+	.ASCII	<0>/polar       /<2><0><0><0><2><0><0>
+	.ASCII	<0>/cis         /<1><0><0><0><1>
+	.ASCII	<0><0><0>/floor       /<1><0><0>
+	.ASCII	<0><1><0><0><0>/ceil        /<1>
+	.ASCII	<0><0><0><1><0><0><0>/round      /
+	.ASCII	/ /<1><0><0><0><1><0><0><0>
+	.ASCII	/trunc       /<1><0><0><0><1><0><0><0>
+	.ASCII	/frac        /<1><0><0><0><1><0>
+	.ASCII	<0><0>/sign        /<1><0><0><0>
+	.ASCII	<1><0><0><0>/gcd         /<2><0>
+	.ASCII	<0><0><232><3><0><0>/lcm         /
+	.ASCII	<2><0><0><0><232><3><0><0>
+	.ASCII	/isprime     /<1><0><0><0><1><0><0><0>
+	.ASCII	/ncr         /<2><0><0><0><2><0>
+	.ASCII	<0><0>/npr         /<2><0><0><0>
+	.ASCII	<2><0><0><0>/gamma       /<1><0>
+	.ASCII	<0><0><1><0><0><0>/lgamma      /<1>
+	.ASCII	<0><0><0><1><0><0><0>/erf         /
+	.ASCII	<1><0><0><0><1><0><0><0>/erfc /
+	.ASCII	/       /<1><0><0><0><1><0><0>
+	.ASCII	<0>/beta        /<2><0><0><0><2><0>
+	.ASCII	<0><0>/min         /<1><0><0><0>
+	.ASCII	<232><3><0><0>/max         /<1><0>
+	.ASCII	<0><0><232><3><0><0>/sum         /<1>
+	.ASCII	<0><0><0><232><3><0><0>/prod/
+	.ASCII	/        /<1><0><0>
+	.ASCII	<0><232><3><0><0>
+FCFUNCS.BUILTIN_INDEX.$K2:
+	.ASCII	/mean        /<1><0><0><0><232><3><0><0>/median      /<1><0><0><0>
+	.ASCII	<232><3><0><0>/var         /<2><0><0><0><232><3><0><0>/stdev     /
+	.ASCII	/  /<2><0><0><0><232><3><0><0>/if          /<3><0><0><0><3><0><0>
+	.ASCII	<0>/rand        /<0><0><0><0><2><0><0><0>/hypot       /<2><0><0>
+	.ASCII	<0><2><0><0><0>
+
+	.END

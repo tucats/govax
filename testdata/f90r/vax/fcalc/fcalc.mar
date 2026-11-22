@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 13:59:44.05
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.93
 ; from DUA5:[FCALC]FCALC.F90;1
 ; by the command FORTRAN/G_FLOATING FCALC
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -117,7 +117,6 @@ FCALC.$K1:
 FCALC.$K5:
 	.ASCII	/fcalc> /
 FCALC.$K6:
-	.ASCII
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;    1  ! fcalc, a scientific calculator: the main program.
@@ -1897,7 +1896,6 @@ FCALC.STATEMENT.$D3:
 FCALC.STATEMENT.$K1:
 	.ASCII	/=/
 FCALC.STATEMENT.$K4:
-	.ASCII
 FCALC.STATEMENT.$K5:
 	.ASCII	/ans/
 

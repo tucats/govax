@@ -104,6 +104,28 @@ func (a *Assembler) advanceData(n uint32) {
 	a.move(n)
 }
 
+// emitRepeated stores value, scale bytes wide, count times at the current
+// location, logging one evRepeat for the object rather than the bytes.
+func (a *Assembler) emitRepeated(value uint32, scale int, count uint32) error {
+	if err := a.output(); err != nil {
+		return err
+	}
+
+	a.logEvent(outEvent{kind: evRepeat, sect: a.cur, offset: a.cur.loc, size: uint32(scale), value: value, count: count})
+
+	for range count {
+		if err := a.storeScaled(a.pc(), value, scale); err != nil {
+			return err
+		}
+
+		a.claim(a.cur, a.cur.loc, uint32(scale))
+		a.listData(a.cur.loc, uint32(scale))
+		a.move(uint32(scale))
+	}
+
+	return nil
+}
+
 // move moves the current location counter forward n bytes, for a caller
 // that logs what it stored itself.
 func (a *Assembler) move(n uint32) {

@@ -1,5 +1,5 @@
 
-FTNRTL                                                          22-NOV-2026 14:02        Linker V11-39                    Page    1
+FTNRTL                                                          22-NOV-2026 14:16        Linker V11-39                    Page    1
 
                                              +------------------------+
                                              ! Object Module Synopsis !
@@ -7,27 +7,27 @@ FTNRTL                                                          22-NOV-2026 14:0
 
 Module Name     Ident              Bytes      File                                Creation Date      Creator
 -----------     -----              -----      -----                               -------------      -------
-FTN_VECTOR      V1.0                 1120 DUA1:[FTNRTL]FTN_VECTOR.OBJ;1        22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_CONTROL     V1.0                  238 DUA1:[FTNRTL]FTN_CONTROL.OBJ;1       22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_UNITS       V2.0                 3740 DUA1:[FTNRTL]FTN_UNITS.OBJ;1         22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_STATEMENT   V1.0                 2770 DUA1:[FTNRTL]FTN_STATEMENT.OBJ;1     22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_FORMAT      V1.0                 3964 DUA1:[FTNRTL]FTN_FORMAT.OBJ;1        22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_EDIT        V1.0                 1416 DUA1:[FTNRTL]FTN_EDIT.OBJ;1          22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_FLOAT       V1.0                 1223 DUA1:[FTNRTL]FTN_FLOAT.OBJ;1         22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_LISTOUT     V1.0                 1642 DUA1:[FTNRTL]FTN_LISTOUT.OBJ;1       22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_LISTIN      V1.0                 1585 DUA1:[FTNRTL]FTN_LISTIN.OBJ;1        22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_NAMELIST    V1.0                 4710 DUA1:[FTNRTL]FTN_NAMELIST.OBJ;1      22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_INTERNAL    V1.0                  290 DUA1:[FTNRTL]FTN_INTERNAL.OBJ;1      22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_OPEN        V1.0                 3014 DUA1:[FTNRTL]FTN_OPEN.OBJ;1          22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_INQUIRE     V1.0                 1686 DUA1:[FTNRTL]FTN_INQUIRE.OBJ;1       22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_POSITION    V1.0                  404 DUA1:[FTNRTL]FTN_POSITION.OBJ;1      22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_UNFORMATTED V1.0                  553 DUA1:[FTNRTL]FTN_UNFORMATTED.OBJ;1   22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_DIRECT      V1.0                  259 DUA1:[FTNRTL]FTN_DIRECT.OBJ;1        22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_RECORD      V1.0                  412 DUA1:[FTNRTL]FTN_RECORD.OBJ;1        22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_KEYED       V1.0                  358 DUA1:[FTNRTL]FTN_KEYED.OBJ;1         22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_INTRINSICS  V1.0                 2377 DUA1:[FTNRTL]FTN_INTRINSICS.OBJ;1    22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_SYSTEM      V1.0                 1561 DUA1:[FTNRTL]FTN_SYSTEM.OBJ;1        22-NOV-2026 14:02  VAX MACRO V5.4-3
-FTN_ALLOC       V1.0                  669 DUA1:[FTNRTL]FTN_ALLOC.OBJ;1         22-NOV-2026 14:02  VAX MACRO V5.4-3
+FTN_VECTOR      V1.0                 1120 DUA1:[FTNRTL]FTN_VECTOR.OBJ;1        22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_CONTROL     V1.0                  238 DUA1:[FTNRTL]FTN_CONTROL.OBJ;1       22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_UNITS       V2.0                 3740 DUA1:[FTNRTL]FTN_UNITS.OBJ;1         22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_STATEMENT   V1.0                 2770 DUA1:[FTNRTL]FTN_STATEMENT.OBJ;1     22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_FORMAT      V1.0                 3964 DUA1:[FTNRTL]FTN_FORMAT.OBJ;1        22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_EDIT        V1.0                 1416 DUA1:[FTNRTL]FTN_EDIT.OBJ;1          22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_FLOAT       V1.0                 1223 DUA1:[FTNRTL]FTN_FLOAT.OBJ;1         22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_LISTOUT     V1.0                 1642 DUA1:[FTNRTL]FTN_LISTOUT.OBJ;1       22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_LISTIN      V1.0                 1585 DUA1:[FTNRTL]FTN_LISTIN.OBJ;1        22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_NAMELIST    V1.0                 4710 DUA1:[FTNRTL]FTN_NAMELIST.OBJ;1      22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_INTERNAL    V1.0                  290 DUA1:[FTNRTL]FTN_INTERNAL.OBJ;1      22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_OPEN        V1.0                 3014 DUA1:[FTNRTL]FTN_OPEN.OBJ;1          22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_INQUIRE     V1.0                 1686 DUA1:[FTNRTL]FTN_INQUIRE.OBJ;1       22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_POSITION    V1.0                  404 DUA1:[FTNRTL]FTN_POSITION.OBJ;1      22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_UNFORMATTED V1.0                  553 DUA1:[FTNRTL]FTN_UNFORMATTED.OBJ;1   22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_DIRECT      V1.0                  259 DUA1:[FTNRTL]FTN_DIRECT.OBJ;1        22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_RECORD      V1.0                  412 DUA1:[FTNRTL]FTN_RECORD.OBJ;1        22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_KEYED       V1.0                  358 DUA1:[FTNRTL]FTN_KEYED.OBJ;1         22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_INTRINSICS  V1.0                 2377 DUA1:[FTNRTL]FTN_INTRINSICS.OBJ;1    22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_SYSTEM      V1.0                 1561 DUA1:[FTNRTL]FTN_SYSTEM.OBJ;1        22-NOV-2026 14:16  VAX MACRO V5.4-3
+FTN_ALLOC       V1.0                  669 DUA1:[FTNRTL]FTN_ALLOC.OBJ;1         22-NOV-2026 14:16  VAX MACRO V5.4-3
 FOR$MSGDEF      X-6                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 14:54  Message T02-12
 SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
 LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      24-NOV-1996 19:04  Linker V11-38
@@ -47,7 +47,7 @@ FTN_INQUIRE                             3  FTN_POSITION                         
 FTN_DIRECT                              4  FTN_RECORD                              4  FTN_KEYED                               2  
 FTN_INTRINSICS                         65  FTN_SYSTEM                             25  FTN_ALLOC                               9  
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    2
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    2
 
                                              +------------------------+
                                              ! Image Section Synopsis !
@@ -77,7 +77,7 @@ MTHRTL             3   337    00000000-R        0   0 READ ONLY                 
 		! P  - Protected     !
 		+--------------------+
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    3
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    3
 
                                             +--------------------------+
                                             ! Program Section Synopsis !
@@ -129,7 +129,7 @@ $FTN_DATA                       00008600 0000882B 0000022C (        556.) LONG  
                 FTN_STATEMENT   00008808 00008827 00000020 (         32.) LONG  2
                 FTN_SYSTEM      00008828 0000882B 00000004 (          4.) LONG  2
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    4
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    4
 
                                                 +-----------------+
                                                 ! Symbols By Name !
@@ -187,7 +187,7 @@ FTN$$UNIT_INIT                  00000F80-R                                      
 FTN$$UNIT_NAMED                 00001500-R                                              FTN$FIND                        000070A0-RU 
 FTN$$UNIT_OPEN                  00001186-R                                              FTN$GBLEQ                       00007579-RU 
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    5
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    5
 
 
 Symbol                          Value       Symbol                          Value       Symbol                          Value       
@@ -245,7 +245,7 @@ FTN$READ_IF                     00001A4C-RU                                     
 FTN$READ_IL                     00001A5C-RU                                             LIB$SGET1_DD                    00008A74-RX 
 FTN$READ_KF                     00001A34-RU                                             LIB$SIGNAL                      00008A7C-RX 
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    6
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    6
 
 
 Symbol                          Value       Symbol                          Value       Symbol                          Value       
@@ -292,7 +292,7 @@ SYS$SETAST                      7FFEDFF8
 SYS$TRNLNM                      7FFEE490                                                
 SYS$UPDATE                      7FFEE1A0                                                
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    7
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    7
 
                                                 +------------------+
                                                 ! Symbols By Value !
@@ -350,7 +350,7 @@ Value                                   Symbols...
 00001A64      R-FTN$WRITE_IL       
 00001A6C      R-FTN$DECODE         
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    8
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    8
 
 
 Value                                   Symbols...
@@ -408,7 +408,7 @@ Value                                   Symbols...
 00007043      R-FTN$DEF_FILE_W     
 000070A0      R-FTN$FIND           
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page    9
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page    9
 
 
 Value                                   Symbols...
@@ -466,7 +466,7 @@ Value                                   Symbols...
 00007A95      R-FTN$SCALE_H        
 00007AA1      R-FTN$SET_EXPONENT_F 
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page   10
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page   10
 
 
 Value                                   Symbols...
@@ -524,7 +524,7 @@ Value                                   Symbols...
 00008A68     RX-OTS$CVT_T_D        
 00008A6C     RX-LIB$PAUSE          
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page   11
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page   11
 
 
 Value                                   Symbols...
@@ -581,7 +581,7 @@ Value                                   Symbols...
 		! WK - Weak          !
 		+--------------------+
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page   12
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page   12
 
                                                  +----------------+
                                                  ! Image Synopsis !
@@ -608,15 +608,15 @@ Estimated map length:                             147. blocks
 
 Performance Indicators                            Page Faults	CPU Time	Elapsed Time
 ----------------------                            -----------	--------	------------
-    Command processing:                                   382	00:00:00.02	00:00:00.02
-    Pass 1:                                              1338	00:00:00.05	00:00:00.05
-    Allocation/Relocation:                                 74	00:00:00.00	00:00:00.00
-    Pass 2:                                               679	00:00:00.04	00:00:00.04
-    Map data after object module synopsis:                 80	00:00:00.01	00:00:00.01
-    Symbol table output:                                   14	00:00:00.00	00:00:00.00
-Total run values:                                        2567	00:00:00.12	00:00:00.12
+    Command processing:                                   419	00:00:00.02	00:00:00.02
+    Pass 1:                                              1760	00:00:00.05	00:00:00.05
+    Allocation/Relocation:                                117	00:00:00.00	00:00:00.00
+    Pass 2:                                              1160	00:00:00.04	00:00:00.04
+    Map data after object module synopsis:                115	00:00:00.01	00:00:00.01
+    Symbol table output:                                   19	00:00:00.01	00:00:00.01
+Total run values:                                        3590	00:00:00.13	00:00:00.13
 
-Using a working set limited to 1562 pages and 1856 pages of data storage (excluding image)
+Using a working set limited to 962 pages and 1856 pages of data storage (excluding image)
 
 Total number object records read (both passes):   2060
     of which 32 were in libraries and 68 were DEBUG data records containing 6312 bytes
@@ -639,7 +639,7 @@ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
 !	$ MACRO FTN_UNITS
 !	$ MACRO FTN_STATEMENT
 
-DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:02        Linker V11-39                    Page   13
+DUA1:[FTNRTL]FTNRTL.EXE;1                                       22-NOV-2026 14:16        Linker V11-39                    Page   13
 
 !	$ MACRO FTN_FORMAT
 !	$ MACRO FTN_EDIT

@@ -1,0 +1,14 @@
+; TIRX.MAR - string directives with nothing after them, and empty strings (written by testdata/tir111/gen.go)
+	.PSECT	X1,LONG
+	.ASCIZ
+	.PSECT	X2,LONG
+	.ASCIC
+	.PSECT	X3,LONG
+	.ASCID
+	.PSECT	X4,LONG
+	.ASCIZ	//
+	.PSECT	X5,LONG
+	.ASCIC	//
+	.PSECT	X6,LONG
+	.ASCID	//
+	.END

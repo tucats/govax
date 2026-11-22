@@ -1,0 +1,1506 @@
+	.TITLE	FCLEXER
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 13:59:43.59
+; from DUA5:[FCALC]FCLEXER.F90;1
+; by the command FORTRAN/G_FLOATING FCLEXER
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; Storage map for FCLEXER, a module
+;   (no variables)
+;   Type TOKEN, 56 bytes
+;     +0     KIND       INTEGER
+;     +4     COLUMN     INTEGER
+;     +8     TEXT       CHARACTER*31
+;     +40    NUMBER     REAL*8
+;     +48    IMAGINARY  LOGICAL
+;
+FCLEXER.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
+FCLEXER.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+$MOD$FCLEXER.3BEEEE6E == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.63F4C46F ; the stamps of the modules used
+
+;    1  ! fcalc: the lexer, which turns a line into tokens.
+;    2  !
+;    3  ! A token is a number (its value, and whether it was written with an i, so
+;    4  ! imaginary), a name (in lowercase: fcalc's names are case-insensitive, as
+;    5  ! DCL's are), an operator, or the end of the line. Each knows the column it
+;    6  ! started in, for an error's pointer.
+;    7  !
+;    8  ! A lexer (or scanner) is the first stage of reading a language: it groups
+;    9  ! characters into tokens, so the parser (module FCTREE) deals in "the
+;   10  ! number 2.5" and "the operator <=" rather than in characters. Fortran 90's
+;   11  ! character intrinsics do most of the work here: INDEX(set, c) > 0 asks
+;   12  ! whether the character C is in the string SET, VERIFY(text, set) finds the
+;   13  ! first character of TEXT not in SET (0 if all are), and IACHAR and ACHAR
+;   14  ! convert between a character and its ASCII code.
+;   15  module fclexer
+;   16    use fckinds
+;   17    use fcmessages
+;   18    implicit none
+;   19    private
+;   20
+;   21    public :: token, tokenize, t_end, t_number, t_name, t_operator
+;   22
+;   23    integer, parameter :: t_end = 0, t_number = 1, t_name = 2, t_operator = 3
+;   24
+;   25    type token
+;   26      integer :: kind
+;   27      integer :: column
+;   28      character(len=name_length) :: text
+;   29      real(rk) :: number
+;   30      logical :: imaginary
+;   31    end type token
+;   32
+;   33    ! The characters, by kind.
+;   34    character(len=*), parameter :: letters = &
+;   35      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+;   36    character(len=*), parameter :: digit_set = '0123456789'
+;   37    character(len=*), parameter :: name_set = letters // digit_set // '_$'
+;   38    character(len=*), parameter :: blanks = ' ' // achar(9)
+;   39
+;   40    ! The operators of two characters, then those of one. The element by
+;   41    ! element operators start with a period (.* ./ .^), and .' is the
+;   42    ! transpose; ' alone is the conjugate transpose, and \ the solve.
+;   43    ! "'" is a character constant of one apostrophe (Fortran 90 lets a
+;   44    ! character constant be written in either kind of quotes), and ACHAR(92)
+;   45    ! is a backslash, written so because some compilers take a backslash in
+;   46    ! a character constant as the start of an escape, as C does.
+;   47    character(len=2), parameter :: pairs(9) = (/ '==', '<>', '<=', '>=', '**', &
+;   48      '.*', './', '.^', ".'" /)
+;   49    character(len=*), parameter :: singles = '+-*/^!(),=<>[];:' // "'" // achar(92)
+;   50
+;   51  contains
+
+; Storage map for FCLEXER.TOKENIZE, a subroutine
+;   LINE    CHARACTER*(*), INTENT(IN)     argument 1  @FCLEXER.TOKENIZE.LINE(AP)
+;   TOKENS  TYPE(TOKEN), INTENT(OUT) (:)  argument 2  @FCLEXER.TOKENIZE.TOKENS(AP)
+;   COUNT   INTEGER, INTENT(OUT)          argument 3  @FCLEXER.TOKENIZE.COUNT(AP)
+;   AT      INTEGER                       $LOCAL+0    FCLEXER.TOKENIZE.AT
+;   LAST    INTEGER                       $LOCAL+4    FCLEXER.TOKENIZE.LAST
+;   K       INTEGER                       $LOCAL+8    FCLEXER.TOKENIZE.K
+;   R8 is $T1: temporary
+;   R6 is $T2: temporary
+;   R7 is $R1: COUNT's address
+;   R9 is $R2: LINE's address
+;   R10 is $R3: LAST, during a loop
+;   R11 is $R4: K, during a loop
+;
+FCLEXER.TOKENIZE.LINE = 4		; LINE is argument 1
+FCLEXER.TOKENIZE.TOKENS = 8		; TOKENS is argument 2
+FCLEXER.TOKENIZE.COUNT = 12		; COUNT is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCLEXER.TOKENIZE.AT:
+	.BLKL	1			; AT
+FCLEXER.TOKENIZE.LAST:
+	.BLKL	1			; LAST
+FCLEXER.TOKENIZE.K:
+	.BLKL	1			; K
+FCLEXER.TOKENIZE.$B1:
+	.WORD	56			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_NCA
+	.LONG	0			; TOKENS's bounds: set at each entry point
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCLEXER.TOKENIZE.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCLEXER.TOKENIZE.$T3:
+	.BLKL	1			; temporary
+FCLEXER.TOKENIZE.$H1:
+	.BLKL	1			; a value computed before a loop
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.TOKENIZE.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCLEXER.TOKENIZE.$K1
+FCLEXER.TOKENIZE.$K2:
+	.LONG	0
+FCLEXER.TOKENIZE.$K1:
+	.ASCII	/ /<9>
+FCLEXER.TOKENIZE.$K3:
+	.ASCII	/ /
+FCLEXER.TOKENIZE.$K4:
+	.ASCII	/0123456789/
+FCLEXER.TOKENIZE.$K6:
+	.ASCII	/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   52
+;   53    ! TOKENIZE turns LINE into TOKENS(1:COUNT), the last of kind T_END. On an
+;   54    ! error it calls FAIL and stops.
+;   55    !
+;   56    ! TOKENS(:) is an assumed-shape array: the dummy takes its size (and
+;   57    ! shape) from the array the caller passes, which SIZE(TOKENS) would give.
+;   58    ! Like an OPTIONAL argument it needs an explicit interface at the call,
+;   59    ! which a module procedure has.
+;   60    subroutine tokenize(line, tokens, count)
+	.ENTRY	FCLEXER.TOKENIZE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	FCLEXER.TOKENIZE.TOKENS(AP),R0
+	MOVL	4(R0),FCLEXER.TOKENIZE.$B1+4
+	MOVL	FCLEXER.TOKENIZE.TOKENS(AP),R0
+	CMPB	3(R0),#4
+	BEQL	FCLEXER.TOKENIZE.$1
+	MOVL	FCLEXER.TOKENIZE.TOKENS(AP),R0
+	MOVL	20(R0),FCLEXER.TOKENIZE.$B1+20
+	MOVL	FCLEXER.TOKENIZE.TOKENS(AP),R0
+	MOVL	FCLEXER.TOKENIZE.TOKENS(AP),R1
+	SUBL3	24(R1),28(R0),R0
+	ADDL3	R0,#1,R8
+	BRB	FCLEXER.TOKENIZE.$3
+FCLEXER.TOKENIZE.$1:
+	MOVL	#56,FCLEXER.TOKENIZE.$B1+20
+	MOVL	FCLEXER.TOKENIZE.TOKENS(AP),R0
+	MOVL	20(R0),R8
+FCLEXER.TOKENIZE.$3:
+	MOVL	#1,FCLEXER.TOKENIZE.$B1+24
+	TSTL	R8
+	BGEQ	FCLEXER.TOKENIZE.$4
+	CLRL	R8
+FCLEXER.TOKENIZE.$4:
+	MOVL	R8,FCLEXER.TOKENIZE.$B1+28
+	SUBL3	FCLEXER.TOKENIZE.$B1+20,FCLEXER.TOKENIZE.$B1+4,FCLEXER.TOKENIZE.$B1+16
+	MULL3	#56,FCLEXER.TOKENIZE.$B1+28,FCLEXER.TOKENIZE.$B1+12
+;   61      character(len=*), intent(in) :: line
+;   62      type(token), intent(out) :: tokens(:)
+;   63      integer, intent(out) :: count
+;   64      integer :: at, last, k
+;   65
+;   66      count = 0
+	CLRL	@FCLEXER.TOKENIZE.COUNT(AP)
+;   67      at = 1
+	MOVL	#1,FCLEXER.TOKENIZE.AT
+;   68      last = len_trim(line)
+	MOVL	FCLEXER.TOKENIZE.LINE(AP),R0
+	MOVAB	@4(R0),R8
+	MOVZWL	@FCLEXER.TOKENIZE.LINE(AP),R6
+	BRB	FCLEXER.TOKENIZE.$6
+FCLEXER.TOKENIZE.$7:
+	CMPB	-1(R8)[R6],#32
+	BNEQ	FCLEXER.TOKENIZE.$8
+	DECL	R6
+FCLEXER.TOKENIZE.$6:
+	TSTL	R6			; from line 68
+	BNEQ	FCLEXER.TOKENIZE.$7
+FCLEXER.TOKENIZE.$8:
+	MOVL	R6,FCLEXER.TOKENIZE.LAST
+;   69
+;   70      do
+	ADDL3	FCLEXER.TOKENIZE.LAST,#1,FCLEXER.TOKENIZE.$H1 ; from line 75
+	MOVL	FCLEXER.TOKENIZE.COUNT(AP),R7
+	MOVL	FCLEXER.TOKENIZE.LINE(AP),R9
+	MOVL	FCLEXER.TOKENIZE.LAST,R10
+	MOVL	FCLEXER.TOKENIZE.K,R11
+FCLEXER.TOKENIZE.$11:			; DO (line 70)'s body
+;   71        ! Pass over blanks and tabs.
+;   72        if (at <= last) then
+	CMPL	FCLEXER.TOKENIZE.AT,R10
+	BGTR	FCLEXER.TOKENIZE.$12
+;   73          k = verify(line(at:last), blanks)
+	SUBL3	FCLEXER.TOKENIZE.AT,R10,R0
+	ADDL3	R0,#1,R8
+	BGEQ	FCLEXER.TOKENIZE.$14
+	CLRL	R8
+FCLEXER.TOKENIZE.$14:
+	CVTLW	R8,FCLEXER.TOKENIZE.$D1
+	SUBL3	#1,FCLEXER.TOKENIZE.AT,R0
+	MOVAB	@4(R9)[R0],FCLEXER.TOKENIZE.$D1+4
+	PUSHAL	FCLEXER.TOKENIZE.$K2
+	PUSHAQ	FCLEXER.TOKENIZE.$D2
+	PUSHAQ	FCLEXER.TOKENIZE.$D1
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,R6
+	MOVL	R6,R11
+;   74          if (k == 0) then
+	BNEQ	FCLEXER.TOKENIZE.$16
+;   75            at = last + 1
+	MOVL	FCLEXER.TOKENIZE.$H1,FCLEXER.TOKENIZE.AT
+;   76          else
+	BRB	FCLEXER.TOKENIZE.$18
+FCLEXER.TOKENIZE.$16:
+;   77            at = at + k - 1
+	ADDL3	FCLEXER.TOKENIZE.AT,R11,R0
+	SUBL3	#1,R0,FCLEXER.TOKENIZE.AT
+;   78          end if
+FCLEXER.TOKENIZE.$18:
+;   79        end if
+FCLEXER.TOKENIZE.$12:
+;   80
+;   81        count = count + 1
+	INCL	(R7)
+;   82        tokens(count)%column = at
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	MOVL	FCLEXER.TOKENIZE.AT,4(R0)
+;   83        tokens(count)%text = ' '
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	MOVC5	#1,FCLEXER.TOKENIZE.$K3,#^A/ /,#31,8(R0)
+;   84        tokens(count)%number = 0
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	CLRG	40(R0)
+;   85        tokens(count)%imaginary = .false.
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	CLRL	48(R0)
+;   86
+;   87        if (at > last) then
+	CMPL	FCLEXER.TOKENIZE.AT,R10
+	BLEQ	FCLEXER.TOKENIZE.$19
+	MOVL	R11,FCLEXER.TOKENIZE.K
+;   88          tokens(count)%kind = t_end
+	MULL3	@FCLEXER.TOKENIZE.COUNT(AP),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	CLRL	(R0)
+;   89          return
+	RET
+FCLEXER.TOKENIZE.$19:
+;   90        end if
+;   91
+;   92        if (index(digit_set, line(at:at)) > 0 .or. &
+;   93            (line(at:at) == '.' .and. next_is_digit(line, at + 1))) then
+	SUBL3	#1,FCLEXER.TOKENIZE.AT,R0
+	MATCHC	#1,@4(R9)[R0],#10,FCLEXER.TOKENIZE.$K4
+	BNEQ	FCLEXER.TOKENIZE.$21
+	SUBL3	R2,#10,R0
+	BRB	FCLEXER.TOKENIZE.$22
+FCLEXER.TOKENIZE.$21:
+	CLRL	R0
+FCLEXER.TOKENIZE.$22:
+	MOVL	R0,R8
+	ADDL3	FCLEXER.TOKENIZE.AT,#1,FCLEXER.TOKENIZE.$T3
+	PUSHAL	FCLEXER.TOKENIZE.$T3
+	PUSHL	FCLEXER.TOKENIZE.LINE(AP)
+	CALLS	#2,G^FCLEXER.NEXT_IS_DIGIT
+	MOVL	R0,R6
+	TSTL	R8
+	BGTR	FCLEXER.TOKENIZE.$24
+	SUBL3	#1,FCLEXER.TOKENIZE.AT,R0
+	CMPB	@4(R9)[R0],#46
+	BNEQ	FCLEXER.TOKENIZE.$23
+	BLBC	R6,FCLEXER.TOKENIZE.$23
+FCLEXER.TOKENIZE.$24:
+;   94          call number_token(line, at, tokens(count))
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	PUSHAB	(R0)
+	PUSHAL	FCLEXER.TOKENIZE.AT
+	PUSHL	FCLEXER.TOKENIZE.LINE(AP)
+	CALLS	#3,G^FCLEXER.NUMBER_TOKEN
+;   95        else if (index(letters, line(at:at)) > 0) then
+	BRB	FCLEXER.TOKENIZE.$28
+FCLEXER.TOKENIZE.$23:
+	SUBL3	#1,FCLEXER.TOKENIZE.AT,R0
+	MATCHC	#1,@4(R9)[R0],#52,FCLEXER.TOKENIZE.$K6
+	BNEQ	FCLEXER.TOKENIZE.$29
+	SUBL3	R2,#52,R0
+	BRB	FCLEXER.TOKENIZE.$30
+FCLEXER.TOKENIZE.$29:
+	CLRL	R0
+FCLEXER.TOKENIZE.$30:
+	MOVL	R0,FCLEXER.TOKENIZE.$T3
+	BLEQ	FCLEXER.TOKENIZE.$31
+;   96          call name_token(line, at, tokens(count))
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	PUSHAB	(R0)
+	PUSHAL	FCLEXER.TOKENIZE.AT
+	PUSHL	FCLEXER.TOKENIZE.LINE(AP)
+	CALLS	#3,G^FCLEXER.NAME_TOKEN
+;   97        else
+	BRB	FCLEXER.TOKENIZE.$28
+FCLEXER.TOKENIZE.$31:
+;   98          call operator_token(line, at, tokens(count))
+	MULL3	(R7),FCLEXER.TOKENIZE.$B1+20,R0
+	ADDL2	FCLEXER.TOKENIZE.$B1+16,R0
+	PUSHAB	(R0)
+	PUSHAL	FCLEXER.TOKENIZE.AT
+	PUSHL	FCLEXER.TOKENIZE.LINE(AP)
+	CALLS	#3,G^FCLEXER.OPERATOR_TOKEN
+;   99        end if
+FCLEXER.TOKENIZE.$28:
+;  100        if (failed()) return
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,FCLEXER.TOKENIZE.$T3
+	BLBC	FCLEXER.TOKENIZE.$T3,FCLEXER.TOKENIZE.$33
+	MOVL	R11,FCLEXER.TOKENIZE.K
+	RET
+FCLEXER.TOKENIZE.$33:
+;  101      end do
+	BRW	FCLEXER.TOKENIZE.$11
+;  102    end subroutine tokenize
+
+; Storage map for FCLEXER.NEXT_IS_DIGIT, a LOGICAL function
+;   LINE           CHARACTER*(*), INTENT(IN)  argument 1  @FCLEXER.NEXT_IS_DIGIT.LINE(AP)
+;   AT             INTEGER, INTENT(IN)        argument 2  @FCLEXER.NEXT_IS_DIGIT.AT(AP)
+;   NEXT_IS_DIGIT  LOGICAL                    R6          R6
+;
+FCLEXER.NEXT_IS_DIGIT.LINE = 4		; LINE is argument 1
+FCLEXER.NEXT_IS_DIGIT.AT = 8		; AT is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+	.BLKB	4
+FCLEXER.NEXT_IS_DIGIT.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.NEXT_IS_DIGIT.$K1:
+	.ASCII	/0123456789/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  103
+;  104    logical function next_is_digit(line, at)
+	.ENTRY	FCLEXER.NEXT_IS_DIGIT,^M<R2,R3,R6>
+;  105      character(len=*), intent(in) :: line
+;  106      integer, intent(in) :: at
+;  107
+;  108      next_is_digit = .false.
+	CLRL	R6
+;  109      if (at <= len(line)) next_is_digit = index(digit_set, line(at:at)) > 0
+	MOVZWL	@FCLEXER.NEXT_IS_DIGIT.LINE(AP),R0
+	CMPL	@FCLEXER.NEXT_IS_DIGIT.AT(AP),R0
+	BGTR	FCLEXER.NEXT_IS_DIGIT.$1
+	MOVL	FCLEXER.NEXT_IS_DIGIT.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.NEXT_IS_DIGIT.AT(AP),R1
+	MATCHC	#1,@4(R0)[R1],#10,FCLEXER.NEXT_IS_DIGIT.$K1
+	BNEQ	FCLEXER.NEXT_IS_DIGIT.$3
+	SUBL3	R2,#10,R0
+	BRB	FCLEXER.NEXT_IS_DIGIT.$4
+FCLEXER.NEXT_IS_DIGIT.$3:
+	CLRL	R0
+FCLEXER.NEXT_IS_DIGIT.$4:
+	MOVL	R0,FCLEXER.NEXT_IS_DIGIT.$T1
+	CLRL	R0
+	TSTL	FCLEXER.NEXT_IS_DIGIT.$T1
+	BLEQ	FCLEXER.NEXT_IS_DIGIT.$5
+	MNEGL	#1,R0
+FCLEXER.NEXT_IS_DIGIT.$5:
+	MOVL	R0,R6
+FCLEXER.NEXT_IS_DIGIT.$1:
+;  110    end function next_is_digit
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCLEXER.NAME_TOKEN, a subroutine
+;   LINE    CHARACTER*(*), INTENT(IN)   argument 1  @FCLEXER.NAME_TOKEN.LINE(AP)
+;   AT      INTEGER, INTENT(INOUT)      argument 2  @FCLEXER.NAME_TOKEN.AT(AP)
+;   T       TYPE(TOKEN), INTENT(INOUT)  argument 3  @FCLEXER.NAME_TOKEN.T(AP)
+;   K       INTEGER                     $LOCAL+0    FCLEXER.NAME_TOKEN.K
+;   LENGTH  INTEGER                     $LOCAL+4    FCLEXER.NAME_TOKEN.LENGTH
+;   C       INTEGER                     $LOCAL+8    FCLEXER.NAME_TOKEN.C
+;   R6 is $T2: temporary
+;   R10 is $L1: DO (line 135)'s limit
+;   R9 is $T3: temporary
+;   R6 is $R1: K, during a loop
+;   R7 is $R2: T's address
+;   R8 is $R3: C, during a loop
+;
+FCLEXER.NAME_TOKEN.LINE = 4		; LINE is argument 1
+FCLEXER.NAME_TOKEN.AT = 8		; AT is argument 2
+FCLEXER.NAME_TOKEN.T = 12		; T is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCLEXER.NAME_TOKEN.K:
+	.BLKL	1			; K
+FCLEXER.NAME_TOKEN.LENGTH:
+	.BLKL	1			; LENGTH
+FCLEXER.NAME_TOKEN.C:
+	.BLKL	1			; C
+FCLEXER.NAME_TOKEN.$T1:
+	.BLKL	1			; temporary
+FCLEXER.NAME_TOKEN.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.NAME_TOKEN.$D2:
+	.WORD	64			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCLEXER.NAME_TOKEN.$K1
+FCLEXER.NAME_TOKEN.$K2:
+	.LONG	0
+FCLEXER.NAME_TOKEN.$K3:
+	.LONG	15
+FCLEXER.NAME_TOKEN.$K1:
+	.ASCII	/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  111
+;  112    ! NAME_TOKEN takes a name: a letter, then letters, digits, _, and $. It is
+;  113    ! lowercased a character at a time by its ASCII code: in ASCII the capital
+;  114    ! letters are 65 to 90 and the small ones 97 to 122, the same distance
+;  115    ! apart for every letter.
+;  116    subroutine name_token(line, at, t)
+	.ENTRY	FCLEXER.NAME_TOKEN,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
+;  117      character(len=*), intent(in) :: line
+;  118      integer, intent(inout) :: at
+;  119      type(token), intent(inout) :: t
+;  120      integer :: k, length, c
+;  121
+;  122      k = verify(line(at:), name_set)
+	MOVZWL	@FCLEXER.NAME_TOKEN.LINE(AP),R0
+	SUBL2	@FCLEXER.NAME_TOKEN.AT(AP),R0
+	ADDL3	R0,#1,R6
+	BGEQ	FCLEXER.NAME_TOKEN.$1
+	CLRL	R6
+FCLEXER.NAME_TOKEN.$1:
+	CVTLW	R6,FCLEXER.NAME_TOKEN.$D1
+	MOVL	FCLEXER.NAME_TOKEN.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.NAME_TOKEN.AT(AP),R1
+	MOVAB	@4(R0)[R1],FCLEXER.NAME_TOKEN.$D1+4
+	PUSHAL	FCLEXER.NAME_TOKEN.$K2
+	PUSHAQ	FCLEXER.NAME_TOKEN.$D2
+	PUSHAQ	FCLEXER.NAME_TOKEN.$D1
+	CALLS	#3,G^FTN$VERIFY
+	MOVL	R0,FCLEXER.NAME_TOKEN.$T1
+	MOVL	FCLEXER.NAME_TOKEN.$T1,FCLEXER.NAME_TOKEN.K
+;  123      if (k == 0) then
+	BNEQ	FCLEXER.NAME_TOKEN.$3
+;  124        length = len(line) - at + 1
+	MOVZWL	@FCLEXER.NAME_TOKEN.LINE(AP),R0
+	SUBL2	@FCLEXER.NAME_TOKEN.AT(AP),R0
+	ADDL3	R0,#1,FCLEXER.NAME_TOKEN.LENGTH
+;  125      else
+	BRB	FCLEXER.NAME_TOKEN.$5
+FCLEXER.NAME_TOKEN.$3:
+;  126        length = k - 1
+	SUBL3	#1,FCLEXER.NAME_TOKEN.K,FCLEXER.NAME_TOKEN.LENGTH
+;  127      end if
+FCLEXER.NAME_TOKEN.$5:
+;  128      if (length > name_length) then
+	CMPL	FCLEXER.NAME_TOKEN.LENGTH,#31
+	BLEQ	FCLEXER.NAME_TOKEN.$6
+;  129        call fail(e_namelong, at)
+	PUSHL	#0
+	PUSHAL	@FCLEXER.NAME_TOKEN.AT(AP)
+	PUSHAL	FCLEXER.NAME_TOKEN.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  130        return
+	RET
+FCLEXER.NAME_TOKEN.$6:
+;  131      end if
+;  132
+;  133      t%kind = t_name
+	MOVL	#2,@FCLEXER.NAME_TOKEN.T(AP)
+;  134      t%text = line(at:at + length - 1)
+	ADDL3	@FCLEXER.NAME_TOKEN.AT(AP),FCLEXER.NAME_TOKEN.LENGTH,R0
+	SUBL3	@FCLEXER.NAME_TOKEN.AT(AP),R0,R6
+	BGEQ	FCLEXER.NAME_TOKEN.$8
+	CLRL	R6
+FCLEXER.NAME_TOKEN.$8:
+	MOVL	FCLEXER.NAME_TOKEN.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.NAME_TOKEN.AT(AP),R1
+	MOVL	FCLEXER.NAME_TOKEN.T(AP),R2
+	MOVC5	R6,@4(R0)[R1],#^A/ /,#31,8(R2)
+;  135      do k = 1, length
+	MOVL	FCLEXER.NAME_TOKEN.LENGTH,R10 ; DO (line 135)'s limit
+	MOVL	#1,FCLEXER.NAME_TOKEN.K
+	CMPL	#1,R10
+	BGTR	FCLEXER.NAME_TOKEN.$10
+	MOVL	FCLEXER.NAME_TOKEN.K,R6
+	MOVL	FCLEXER.NAME_TOKEN.T(AP),R7
+	MOVL	FCLEXER.NAME_TOKEN.C,R8
+FCLEXER.NAME_TOKEN.$12:			; DO (line 135)'s body
+;  136        c = iachar(t%text(k:k))
+	MOVZBL	7(R7)[R6],R8
+;  137        if (c >= iachar('A') .and. c <= iachar('Z')) &
+;  138          t%text(k:k) = achar(c - iachar('A') + iachar('a'))
+	CMPL	R8,#65
+	BLSS	FCLEXER.NAME_TOKEN.$13
+	CMPL	R8,#90
+	BGTR	FCLEXER.NAME_TOKEN.$13
+	ADDL3	R8,#32,R0
+	MOVB	R0,R9
+	MOVB	R9,7(R7)[R6]
+FCLEXER.NAME_TOKEN.$13:
+;  139      end do
+	AOBLEQ	R10,R6,FCLEXER.NAME_TOKEN.$12
+	MOVL	R6,FCLEXER.NAME_TOKEN.K
+	MOVL	R8,FCLEXER.NAME_TOKEN.C
+FCLEXER.NAME_TOKEN.$10:
+;  140      at = at + length
+	ADDL2	FCLEXER.NAME_TOKEN.LENGTH,@FCLEXER.NAME_TOKEN.AT(AP)
+;  141    end subroutine name_token
+	RET
+
+; Storage map for FCLEXER.NUMBER_TOKEN, a subroutine
+;   LINE   CHARACTER*(*), INTENT(IN)   argument 1  @FCLEXER.NUMBER_TOKEN.LINE(AP)
+;   AT     INTEGER, INTENT(INOUT)      argument 2  @FCLEXER.NUMBER_TOKEN.AT(AP)
+;   T      TYPE(TOKEN), INTENT(INOUT)  argument 3  @FCLEXER.NUMBER_TOKEN.T(AP)
+;   FIRST  INTEGER                     $LOCAL+0    FCLEXER.NUMBER_TOKEN.FIRST
+;   K      INTEGER                     $LOCAL+4    FCLEXER.NUMBER_TOKEN.K
+;   LEAD   INTEGER                     $LOCAL+8    FCLEXER.NUMBER_TOKEN.LEAD
+;   POWER  INTEGER                     $LOCAL+12   FCLEXER.NUMBER_TOKEN.POWER
+;   IOS    INTEGER                     $LOCAL+16   FCLEXER.NUMBER_TOKEN.IOS
+;   C      INTEGER                     $LOCAL+20   FCLEXER.NUMBER_TOKEN.C
+;   POINT  LOGICAL                     $LOCAL+24   FCLEXER.NUMBER_TOKEN.POINT
+;   SEEN   LOGICAL                     $LOCAL+28   FCLEXER.NUMBER_TOKEN.SEEN
+;   R6 is $T1: temporary
+;   R6 is $T2: temporary
+;   R6 is $T3: temporary
+;   R6 is $U1: temporary
+;   R7 is $R1: LEAD, during a loop
+;   R8 is $R2: AT's address
+;   R9 is $R3: POINT, during a loop
+;   R10 is $R4: LINE's address
+;   R11 is $R5: SEEN, during a loop
+;   R7 is $R6: POWER, during a loop
+;   R8 is $R7: LINE's address
+;
+FCLEXER.NUMBER_TOKEN.LINE = 4		; LINE is argument 1
+FCLEXER.NUMBER_TOKEN.AT = 8		; AT is argument 2
+FCLEXER.NUMBER_TOKEN.T = 12		; T is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCLEXER.NUMBER_TOKEN.FIRST:
+	.BLKL	1			; FIRST
+FCLEXER.NUMBER_TOKEN.K:
+	.BLKL	1			; K
+FCLEXER.NUMBER_TOKEN.LEAD:
+	.BLKL	1			; LEAD
+FCLEXER.NUMBER_TOKEN.POWER:
+	.BLKL	1			; POWER
+FCLEXER.NUMBER_TOKEN.IOS:
+	.BLKL	1			; IOS
+FCLEXER.NUMBER_TOKEN.C:
+	.BLKL	1			; C
+FCLEXER.NUMBER_TOKEN.POINT:
+	.BLKL	1			; POINT
+FCLEXER.NUMBER_TOKEN.SEEN:
+	.BLKL	1			; SEEN
+FCLEXER.NUMBER_TOKEN.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCLEXER.NUMBER_TOKEN.$D2:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCLEXER.NUMBER_TOKEN.$H1:
+	.BLKL	1			; a value computed before a loop
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.NUMBER_TOKEN.$K8:
+	.LONG	10
+FCLEXER.NUMBER_TOKEN.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0014			; flags: IOSTAT= F90
+	.LONG	0			; (not used yet)
+FCLEXER.NUMBER_TOKEN.$K9:
+	.LONG	2
+FCLEXER.NUMBER_TOKEN.$KF1:
+	.LONG	^XE43C7E57,^X759C8800	; 1D300
+FCLEXER.NUMBER_TOKEN.$KF2:
+	.LONG	^X6E1F01C5,^XF359C2F8	; 1D-300
+FCLEXER.NUMBER_TOKEN.$K1:
+	.ASCII	/0123456789/
+FCLEXER.NUMBER_TOKEN.$K7:
+	.ASCII	/ /
+FCLEXER.NUMBER_TOKEN.$K12:
+	.ASCII	/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  142
+;  143    ! NUMBER_TOKEN takes a number: digits with a point, or a point and
+;  144    ! digits; an exponent, E and digits with a sign or none; and an i after
+;  145    ! it all for an imaginary one. Its value is read by an internal READ,
+;  146    ! after its size is checked, so a number no machine could hold is an
+;  147    ! error and not a trap.
+;  148    !
+;  149    ! The size check counts LEAD, the power of ten of the number's first
+;  150    ! digit that isn't zero (2 for 123.4, -3 for 0.00123), and adds the
+;  151    ! exponent: the number is about 10**(LEAD + POWER), known before the
+;  152    ! READ converts it. READ (text, *) is list-directed: it reads a value in
+;  153    ! any form Fortran writes constants, and IOSTAT= gives a nonzero status
+;  154    ! instead of stopping the program if it can't.
+;  155    subroutine number_token(line, at, t)
+	.ENTRY	FCLEXER.NUMBER_TOKEN,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+;  156      character(len=*), intent(in) :: line
+;  157      integer, intent(inout) :: at
+;  158      type(token), intent(inout) :: t
+;  159      integer :: first, k, lead, power, ios, c
+;  160      logical :: point, seen
+;  161
+;  162      if (based_number(line, at, t)) return
+	PUSHAB	@FCLEXER.NUMBER_TOKEN.T(AP)
+	PUSHAL	@FCLEXER.NUMBER_TOKEN.AT(AP)
+	PUSHL	FCLEXER.NUMBER_TOKEN.LINE(AP)
+	CALLS	#3,G^FCLEXER.BASED_NUMBER
+	MOVL	R0,R6
+	BLBC	R6,FCLEXER.NUMBER_TOKEN.$1
+	RET
+FCLEXER.NUMBER_TOKEN.$1:
+;  163
+;  164      first = at
+	MOVL	@FCLEXER.NUMBER_TOKEN.AT(AP),FCLEXER.NUMBER_TOKEN.FIRST
+;  165      point = .false.
+	CLRL	FCLEXER.NUMBER_TOKEN.POINT
+;  166      seen = .false.
+	CLRL	FCLEXER.NUMBER_TOKEN.SEEN
+;  167
+;  168      ! LEAD is the power of ten of the first digit that isn't zero, counted
+;  169      ! as the digits are read.
+;  170      lead = 0
+	CLRL	FCLEXER.NUMBER_TOKEN.LEAD
+;  171      do while (at <= len(line))
+	MOVZWL	@FCLEXER.NUMBER_TOKEN.LINE(AP),FCLEXER.NUMBER_TOKEN.$H1 ; from line 171
+	MOVL	FCLEXER.NUMBER_TOKEN.LEAD,R7
+	MOVL	FCLEXER.NUMBER_TOKEN.AT(AP),R8
+	MOVL	FCLEXER.NUMBER_TOKEN.POINT,R9
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R10
+	MOVL	FCLEXER.NUMBER_TOKEN.SEEN,R11
+	BRB	FCLEXER.NUMBER_TOKEN.$3
+FCLEXER.NUMBER_TOKEN.$4:		; DO (line 171)'s body
+;  172        c = index(digit_set, line(at:at)) - 1
+	SUBL3	#1,(R8),R0
+	MATCHC	#1,@4(R10)[R0],#10,FCLEXER.NUMBER_TOKEN.$K1
+	BNEQ	FCLEXER.NUMBER_TOKEN.$5
+	SUBL3	R2,#10,R0
+	BRB	FCLEXER.NUMBER_TOKEN.$6
+FCLEXER.NUMBER_TOKEN.$5:
+	CLRL	R0
+FCLEXER.NUMBER_TOKEN.$6:
+	MOVL	R0,R6
+	SUBL3	#1,R6,FCLEXER.NUMBER_TOKEN.C
+;  173        if (c >= 0) then
+	BLSS	FCLEXER.NUMBER_TOKEN.$7
+;  174          if (c > 0 .and. .not. seen) then
+	TSTL	FCLEXER.NUMBER_TOKEN.C
+	BLEQ	FCLEXER.NUMBER_TOKEN.$9
+	BLBS	R11,FCLEXER.NUMBER_TOKEN.$9
+;  175            seen = .true.
+	MOVL	#-1,R11
+;  176            if (point) lead = lead - 1
+	BLBC	R9,FCLEXER.NUMBER_TOKEN.$20
+	DECL	R7
+;  177          else if (seen .and. .not. point) then
+	BRB	FCLEXER.NUMBER_TOKEN.$20
+FCLEXER.NUMBER_TOKEN.$9:
+	BLBC	R11,FCLEXER.NUMBER_TOKEN.$15
+	BLBS	R9,FCLEXER.NUMBER_TOKEN.$15
+;  178            lead = lead + 1
+	INCL	R7
+;  179          else if (.not. seen .and. point) then
+	BRB	FCLEXER.NUMBER_TOKEN.$20
+FCLEXER.NUMBER_TOKEN.$15:
+	BLBS	R11,FCLEXER.NUMBER_TOKEN.$20
+	BLBC	R9,FCLEXER.NUMBER_TOKEN.$20
+;  180            lead = lead - 1
+	DECL	R7
+;  181          end if
+;  182        else if (line(at:at) == '.' .and. .not. point) then
+	BRB	FCLEXER.NUMBER_TOKEN.$20
+FCLEXER.NUMBER_TOKEN.$7:
+	SUBL3	#1,(R8),R0
+	CMPB	@4(R10)[R0],#46
+	BEQL	FCLEXER.NUMBER_TOKEN.$22
+	BRW	FCLEXER.NUMBER_TOKEN.$21
+FCLEXER.NUMBER_TOKEN.$22:
+	BLBC	R9,FCLEXER.NUMBER_TOKEN.$23
+	BRW	FCLEXER.NUMBER_TOKEN.$21
+FCLEXER.NUMBER_TOKEN.$23:
+;  183          point = .true.
+	MOVL	#-1,R9
+;  184        else
+;  185          exit
+FCLEXER.NUMBER_TOKEN.$20:
+;  186        end if
+;  187        at = at + 1
+	INCL	(R8)
+;  188      end do
+FCLEXER.NUMBER_TOKEN.$3:		; DO (line 171)'s test
+	CMPL	(R8),FCLEXER.NUMBER_TOKEN.$H1 ; from line 171
+	BLEQ	FCLEXER.NUMBER_TOKEN.$4
+	MOVL	R7,FCLEXER.NUMBER_TOKEN.LEAD
+	MOVL	R9,FCLEXER.NUMBER_TOKEN.POINT
+	MOVL	R11,FCLEXER.NUMBER_TOKEN.SEEN
+FCLEXER.NUMBER_TOKEN.$25:
+;  189
+;  190      ! An exponent, if the E is followed by digits.
+;  191      power = 0
+	CLRL	FCLEXER.NUMBER_TOKEN.POWER
+;  192      if (at <= len(line)) then
+	MOVZWL	@FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	CMPL	@FCLEXER.NUMBER_TOKEN.AT(AP),R0
+	BLEQ	FCLEXER.NUMBER_TOKEN.$28
+	BRW	FCLEXER.NUMBER_TOKEN.$27
+FCLEXER.NUMBER_TOKEN.$28:
+;  193        if (line(at:at) == 'e' .or. line(at:at) == 'E') then
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.NUMBER_TOKEN.AT(AP),R1
+	MOVB	@4(R0)[R1],R6
+	CMPB	R6,#101
+	BEQL	FCLEXER.NUMBER_TOKEN.$30
+	CMPB	R6,#69
+	BEQL	FCLEXER.NUMBER_TOKEN.$32
+	BRW	FCLEXER.NUMBER_TOKEN.$29
+FCLEXER.NUMBER_TOKEN.$32:
+FCLEXER.NUMBER_TOKEN.$30:
+;  194          k = at + 1
+	ADDL3	@FCLEXER.NUMBER_TOKEN.AT(AP),#1,FCLEXER.NUMBER_TOKEN.K
+;  195          if (k <= len(line)) then
+	MOVZWL	@FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	CMPL	FCLEXER.NUMBER_TOKEN.K,R0
+	BGTR	FCLEXER.NUMBER_TOKEN.$33
+;  196            if (line(k:k) == '+' .or. line(k:k) == '-') k = k + 1
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	SUBL3	#1,FCLEXER.NUMBER_TOKEN.K,R1
+	MOVB	@4(R0)[R1],R6
+	CMPB	R6,#43
+	BEQL	FCLEXER.NUMBER_TOKEN.$36
+	CMPB	R6,#45
+	BNEQ	FCLEXER.NUMBER_TOKEN.$35
+FCLEXER.NUMBER_TOKEN.$36:
+	INCL	FCLEXER.NUMBER_TOKEN.K
+FCLEXER.NUMBER_TOKEN.$35:
+;  197          end if
+FCLEXER.NUMBER_TOKEN.$33:
+;  198          if (next_is_digit(line, k)) then
+	PUSHAL	FCLEXER.NUMBER_TOKEN.K
+	PUSHL	FCLEXER.NUMBER_TOKEN.LINE(AP)
+	CALLS	#2,G^FCLEXER.NEXT_IS_DIGIT
+	MOVL	R0,R6
+	BLBS	R6,FCLEXER.NUMBER_TOKEN.$40
+	BRW	FCLEXER.NUMBER_TOKEN.$39
+FCLEXER.NUMBER_TOKEN.$40:
+;  199            do while (next_is_digit(line, k))
+	MOVL	FCLEXER.NUMBER_TOKEN.POWER,R7
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R8
+	BRB	FCLEXER.NUMBER_TOKEN.$41
+FCLEXER.NUMBER_TOKEN.$42:		; DO (line 199)'s body
+;  200              if (power < 100000) power = power * 10 + index(digit_set, line(k:k)) - 1
+	CMPL	R7,#100000
+	BGEQ	FCLEXER.NUMBER_TOKEN.$43
+	SUBL3	#1,FCLEXER.NUMBER_TOKEN.K,R0
+	MATCHC	#1,@4(R8)[R0],#10,FCLEXER.NUMBER_TOKEN.$K1
+	BNEQ	FCLEXER.NUMBER_TOKEN.$45
+	SUBL3	R2,#10,R0
+	BRB	FCLEXER.NUMBER_TOKEN.$46
+FCLEXER.NUMBER_TOKEN.$45:
+	CLRL	R0
+FCLEXER.NUMBER_TOKEN.$46:
+	MOVL	R0,R6
+	MULL3	R7,#10,R0
+	ADDL2	R6,R0
+	SUBL3	#1,R0,R7
+FCLEXER.NUMBER_TOKEN.$43:
+;  201              k = k + 1
+	INCL	FCLEXER.NUMBER_TOKEN.K
+;  202            end do
+FCLEXER.NUMBER_TOKEN.$41:		; DO (line 199)'s test
+	PUSHAL	FCLEXER.NUMBER_TOKEN.K	; from line 199
+	PUSHL	FCLEXER.NUMBER_TOKEN.LINE(AP)
+	CALLS	#2,G^FCLEXER.NEXT_IS_DIGIT
+	MOVL	R0,R6
+	BLBS	R6,FCLEXER.NUMBER_TOKEN.$42
+	MOVL	R7,FCLEXER.NUMBER_TOKEN.POWER
+;  203            if (line(at + 1:at + 1) == '-') power = -power
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	MOVL	@FCLEXER.NUMBER_TOKEN.AT(AP),R1
+	CMPB	@4(R0)[R1],#45
+	BNEQ	FCLEXER.NUMBER_TOKEN.$48
+	MNEGL	FCLEXER.NUMBER_TOKEN.POWER,FCLEXER.NUMBER_TOKEN.POWER
+FCLEXER.NUMBER_TOKEN.$48:
+;  204            at = k
+	MOVL	FCLEXER.NUMBER_TOKEN.K,@FCLEXER.NUMBER_TOKEN.AT(AP)
+;  205          end if
+FCLEXER.NUMBER_TOKEN.$39:
+;  206        end if
+FCLEXER.NUMBER_TOKEN.$29:
+;  207      end if
+FCLEXER.NUMBER_TOKEN.$27:
+;  208
+;  209      t%kind = t_number
+	MOVL	#1,@FCLEXER.NUMBER_TOKEN.T(AP)
+;  210      t%text = ' '
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	MOVC5	#1,FCLEXER.NUMBER_TOKEN.$K7,#^A/ /,#31,8(R0)
+;  211      if (seen) then
+	BLBS	FCLEXER.NUMBER_TOKEN.SEEN,FCLEXER.NUMBER_TOKEN.$51
+	BRW	FCLEXER.NUMBER_TOKEN.$50
+FCLEXER.NUMBER_TOKEN.$51:
+;  212        if (lead + power > 300) then
+	ADDL3	FCLEXER.NUMBER_TOKEN.LEAD,FCLEXER.NUMBER_TOKEN.POWER,R0
+	CMPL	R0,#300
+	BLEQ	FCLEXER.NUMBER_TOKEN.$52
+;  213          call fail(e_overflow, first)
+	PUSHL	#0
+	PUSHAL	FCLEXER.NUMBER_TOKEN.FIRST
+	PUSHAL	FCLEXER.NUMBER_TOKEN.$K8
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  214          return
+	RET
+FCLEXER.NUMBER_TOKEN.$52:
+;  215        end if
+;  216        if (lead + power >= -301) then
+	ADDL3	FCLEXER.NUMBER_TOKEN.LEAD,FCLEXER.NUMBER_TOKEN.POWER,R0
+	CMPL	R0,#-301
+	BGEQ	FCLEXER.NUMBER_TOKEN.$55
+	BRW	FCLEXER.NUMBER_TOKEN.$54
+FCLEXER.NUMBER_TOKEN.$55:
+;  217          read (line(first:at - 1), *, iostat=ios) t%number
+	SUBL3	FCLEXER.NUMBER_TOKEN.FIRST,@FCLEXER.NUMBER_TOKEN.AT(AP),R6
+	BGEQ	FCLEXER.NUMBER_TOKEN.$56
+	CLRL	R6
+FCLEXER.NUMBER_TOKEN.$56:
+	CVTLW	R6,FCLEXER.NUMBER_TOKEN.$D1
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	SUBL3	#1,FCLEXER.NUMBER_TOKEN.FIRST,R1
+	MOVAB	@4(R0)[R1],FCLEXER.NUMBER_TOKEN.$D1+4
+	PUSHAQ	FCLEXER.NUMBER_TOKEN.$D1
+	PUSHAB	FCLEXER.NUMBER_TOKEN.$IO1
+	CALLS	#2,G^FTN$READ_IL
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	MOVAG	40(R0),FCLEXER.NUMBER_TOKEN.$D2+4
+	PUSHAQ	FCLEXER.NUMBER_TOKEN.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	MOVL	R0,R6
+	MOVL	R6,FCLEXER.NUMBER_TOKEN.IOS
+;  218          if (ios /= 0) then
+	BEQL	FCLEXER.NUMBER_TOKEN.$58
+;  219            call fail(e_badnumber, first)
+	PUSHL	#0
+	PUSHAL	FCLEXER.NUMBER_TOKEN.FIRST
+	PUSHAL	FCLEXER.NUMBER_TOKEN.$K9
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  220            return
+	RET
+FCLEXER.NUMBER_TOKEN.$58:
+;  221          end if
+;  222          if (abs(t%number) > limit) then
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	MOVG	40(R0),R6
+	BGEQ	FCLEXER.NUMBER_TOKEN.$60
+	MNEGG	R6,R6
+FCLEXER.NUMBER_TOKEN.$60:
+	CMPG	R6,FCLEXER.NUMBER_TOKEN.$KF1
+	BLEQ	FCLEXER.NUMBER_TOKEN.$62
+;  223            call fail(e_overflow, first)
+	PUSHL	#0
+	PUSHAL	FCLEXER.NUMBER_TOKEN.FIRST
+	PUSHAL	FCLEXER.NUMBER_TOKEN.$K8
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  224            return
+	RET
+FCLEXER.NUMBER_TOKEN.$62:
+;  225          end if
+;  226          if (abs(t%number) < small) t%number = 0
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	MOVG	40(R0),R6
+	BGEQ	FCLEXER.NUMBER_TOKEN.$64
+	MNEGG	R6,R6
+FCLEXER.NUMBER_TOKEN.$64:
+	CMPG	R6,FCLEXER.NUMBER_TOKEN.$KF2
+	BGEQ	FCLEXER.NUMBER_TOKEN.$66
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	CLRG	40(R0)
+FCLEXER.NUMBER_TOKEN.$66:
+;  227        end if
+FCLEXER.NUMBER_TOKEN.$54:
+;  228      end if
+FCLEXER.NUMBER_TOKEN.$50:
+;  229
+;  230      ! An i makes the number imaginary, unless it starts a name.
+;  231      if (at <= len(line)) then
+	MOVZWL	@FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	CMPL	@FCLEXER.NUMBER_TOKEN.AT(AP),R0
+	BLEQ	FCLEXER.NUMBER_TOKEN.$69
+	RET
+FCLEXER.NUMBER_TOKEN.$69:
+;  232        if (line(at:at) == 'i' .or. line(at:at) == 'I') then
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.NUMBER_TOKEN.AT(AP),R1
+	MOVB	@4(R0)[R1],R6
+	CMPB	R6,#105
+	BEQL	FCLEXER.NUMBER_TOKEN.$71
+	CMPB	R6,#73
+	BNEQ	FCLEXER.NUMBER_TOKEN.$70
+FCLEXER.NUMBER_TOKEN.$71:
+;  233          k = at + 1
+	ADDL3	@FCLEXER.NUMBER_TOKEN.AT(AP),#1,FCLEXER.NUMBER_TOKEN.K
+;  234          if (k > len(line)) then
+	MOVZWL	@FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	CMPL	FCLEXER.NUMBER_TOKEN.K,R0
+	BLEQ	FCLEXER.NUMBER_TOKEN.$74
+;  235            t%imaginary = .true.
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	MOVL	#-1,48(R0)
+;  236          else if (index(name_set, line(k:k)) == 0) then
+	BRB	FCLEXER.NUMBER_TOKEN.$76
+FCLEXER.NUMBER_TOKEN.$74:
+	MOVL	FCLEXER.NUMBER_TOKEN.LINE(AP),R0
+	SUBL3	#1,FCLEXER.NUMBER_TOKEN.K,R1
+	MATCHC	#1,@4(R0)[R1],#64,FCLEXER.NUMBER_TOKEN.$K12
+	BNEQ	FCLEXER.NUMBER_TOKEN.$77
+	SUBL3	R2,#64,R0
+	BRB	FCLEXER.NUMBER_TOKEN.$78
+FCLEXER.NUMBER_TOKEN.$77:
+	CLRL	R0
+FCLEXER.NUMBER_TOKEN.$78:
+	MOVL	R0,R6
+	BNEQ	FCLEXER.NUMBER_TOKEN.$76
+;  237            t%imaginary = .true.
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	MOVL	#-1,48(R0)
+;  238          end if
+FCLEXER.NUMBER_TOKEN.$76:
+;  239          if (t%imaginary) at = at + 1
+	MOVL	FCLEXER.NUMBER_TOKEN.T(AP),R0
+	BLBC	48(R0),FCLEXER.NUMBER_TOKEN.$80
+	INCL	@FCLEXER.NUMBER_TOKEN.AT(AP)
+FCLEXER.NUMBER_TOKEN.$80:
+;  240        end if
+FCLEXER.NUMBER_TOKEN.$70:
+;  241      end if
+;  242    end subroutine number_token
+	RET
+FCLEXER.NUMBER_TOKEN.$21:		; leaving the loop
+	MOVL	R7,FCLEXER.NUMBER_TOKEN.LEAD
+	MOVL	R9,FCLEXER.NUMBER_TOKEN.POINT
+	MOVL	R11,FCLEXER.NUMBER_TOKEN.SEEN
+	BRW	FCLEXER.NUMBER_TOKEN.$25
+
+; Storage map for FCLEXER.BASED_NUMBER, a LOGICAL function
+;   LINE          CHARACTER*(*), INTENT(IN)   argument 1  @FCLEXER.BASED_NUMBER.LINE(AP)
+;   AT            INTEGER, INTENT(INOUT)      argument 2  @FCLEXER.BASED_NUMBER.AT(AP)
+;   T             TYPE(TOKEN), INTENT(INOUT)  argument 3  @FCLEXER.BASED_NUMBER.T(AP)
+;   BASED_NUMBER  LOGICAL                     $LOCAL+0    FCLEXER.BASED_NUMBER.$N1
+;   RBASE         INTEGER                     $LOCAL+4    FCLEXER.BASED_NUMBER.RBASE
+;   K             INTEGER                     $LOCAL+8    FCLEXER.BASED_NUMBER.K
+;   FIRST         INTEGER                     $LOCAL+12   FCLEXER.BASED_NUMBER.FIRST
+;   C             INTEGER                     $LOCAL+16   FCLEXER.BASED_NUMBER.C
+;   X             REAL*8                      $LOCAL+20   FCLEXER.BASED_NUMBER.X
+;   R6 is $T1: temporary
+;   R7 is $T2: temporary
+;   R6 is $R1: K, during a loop
+;   R7 is $R2: C, during a loop
+;   R8 is $R3: LINE's address
+;   R9 is $R4: X, during a loop
+;   FCLEXER.BASED_NUMBER.$N1 is FCLEXER.BASED_NUMBER.BASED_NUMBER
+;
+FCLEXER.BASED_NUMBER.LINE = 4		; LINE is argument 1
+FCLEXER.BASED_NUMBER.AT = 8		; AT is argument 2
+FCLEXER.BASED_NUMBER.T = 12		; T is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCLEXER.BASED_NUMBER.$N1:
+	.BLKL	1			; BASED_NUMBER, the function's value
+FCLEXER.BASED_NUMBER.RBASE:
+	.BLKL	1			; RBASE
+FCLEXER.BASED_NUMBER.K:
+	.BLKL	1			; K
+FCLEXER.BASED_NUMBER.FIRST:
+	.BLKL	1			; FIRST
+FCLEXER.BASED_NUMBER.C:
+	.BLKL	1			; C
+FCLEXER.BASED_NUMBER.X:
+	.BLKL	2			; X
+FCLEXER.BASED_NUMBER.$D1:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCLEXER.BASED_NUMBER.$H1:
+	.BLKL	1			; a value computed before a loop
+FCLEXER.BASED_NUMBER.$U1:
+	.BLKB	1			; temporary
+	.BLKB	3
+FCLEXER.BASED_NUMBER.$X1:
+	.BLKL	2			; a part of an expression, set aside
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.BASED_NUMBER.$K8:
+	.LONG	10
+FCLEXER.BASED_NUMBER.$K12:
+	.LONG	2
+FCLEXER.BASED_NUMBER.$KF1:
+	.LONG	^X6BF5434C,^X00002634	; 4D15
+FCLEXER.BASED_NUMBER.$K2:
+	.ASCII	/x/
+FCLEXER.BASED_NUMBER.$K3:
+	.ASCII	/X/
+FCLEXER.BASED_NUMBER.$K4:
+	.ASCII	/o/
+FCLEXER.BASED_NUMBER.$K5:
+	.ASCII	/O/
+FCLEXER.BASED_NUMBER.$K6:
+	.ASCII	/b/
+FCLEXER.BASED_NUMBER.$K7:
+	.ASCII	/B/
+FCLEXER.BASED_NUMBER.$K11:
+	.ASCII	/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  243
+;  244    ! BASED_NUMBER takes a whole number in another base, if LINE(AT:) starts
+;  245    ! with one: 0x and hexadecimal digits, 0o and octal ones, or 0b and binary
+;  246    ! ones (the prefix's letter in either case, as the digits A to F are), as
+;  247    ! fcalc shows whole numbers under SET BASE. An i after it makes it
+;  248    ! imaginary, as after any number. The value is added up a digit at a time
+;  249    ! in REAL(RK), exact for whole numbers below WHOLE_LIMIT; a larger one is
+;  250    ! an overflow, and a letter or digit run on after the digits (0b102) makes
+;  251    ! the number invalid. The result is false, and nothing taken, if LINE(AT:)
+;  252    ! isn't such a number: 0 followed by anything else is an ordinary number.
+;  253    logical function based_number(line, at, t)
+	.ENTRY	FCLEXER.BASED_NUMBER,^M<R2,R3,R6,R7,R8,R9,R10>
+;  254      character(len=*), intent(in) :: line
+;  255      integer, intent(inout) :: at
+;  256      type(token), intent(inout) :: t
+;  257      character(len=*), parameter :: hex = '0123456789abcdef'
+;  258      integer :: rbase, k, first, c
+;  259      real(rk) :: x
+;  260
+;  261      based_number = .false.
+	CLRL	FCLEXER.BASED_NUMBER.$N1
+;  262      if (at + 2 > len(line)) return
+	ADDL3	@FCLEXER.BASED_NUMBER.AT(AP),#2,R0
+	MOVZWL	@FCLEXER.BASED_NUMBER.LINE(AP),R1
+	CMPL	R0,R1
+	BLEQ	FCLEXER.BASED_NUMBER.$1
+	CLRL	R0			; the function's value
+	RET
+FCLEXER.BASED_NUMBER.$1:
+;  263      if (line(at:at) /= '0') return
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.BASED_NUMBER.AT(AP),R1
+	CMPB	@4(R0)[R1],#48
+	BEQL	FCLEXER.BASED_NUMBER.$3
+	CLRL	R0			; the function's value
+	RET
+FCLEXER.BASED_NUMBER.$3:
+;  264      select case (line(at + 1:at + 1))
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R0
+	MOVL	@FCLEXER.BASED_NUMBER.AT(AP),R1
+	MOVAB	@4(R0)[R1],R6
+	MOVL	#1,R7
+	CMPC3	#1,(R6),FCLEXER.BASED_NUMBER.$K2
+	BEQL	FCLEXER.BASED_NUMBER.$5
+	CMPC3	#1,(R6),FCLEXER.BASED_NUMBER.$K3
+	BEQL	FCLEXER.BASED_NUMBER.$5
+	CMPC3	#1,(R6),FCLEXER.BASED_NUMBER.$K4
+	BEQL	FCLEXER.BASED_NUMBER.$8
+	CMPC3	#1,(R6),FCLEXER.BASED_NUMBER.$K5
+	BEQL	FCLEXER.BASED_NUMBER.$8
+	CMPC3	#1,(R6),FCLEXER.BASED_NUMBER.$K6
+	BEQL	FCLEXER.BASED_NUMBER.$11
+	CMPC3	#1,(R6),FCLEXER.BASED_NUMBER.$K7
+	BNEQ	FCLEXER.BASED_NUMBER.$14
+	BRB	FCLEXER.BASED_NUMBER.$11
+FCLEXER.BASED_NUMBER.$5:
+;  265      case ('x', 'X')
+;  266        rbase = 16
+	MOVL	#16,FCLEXER.BASED_NUMBER.RBASE
+;  267      case ('o', 'O')
+	BRB	FCLEXER.BASED_NUMBER.$15
+FCLEXER.BASED_NUMBER.$8:
+;  268        rbase = 8
+	MOVL	#8,FCLEXER.BASED_NUMBER.RBASE
+;  269      case ('b', 'B')
+	BRB	FCLEXER.BASED_NUMBER.$15
+FCLEXER.BASED_NUMBER.$11:
+;  270        rbase = 2
+	MOVL	#2,FCLEXER.BASED_NUMBER.RBASE
+;  271      case default
+	BRB	FCLEXER.BASED_NUMBER.$15
+FCLEXER.BASED_NUMBER.$14:
+;  272        return
+	CLRL	R0			; the function's value
+	RET
+FCLEXER.BASED_NUMBER.$15:
+;  273      end select
+;  274      if (digit_of(line(at + 2:at + 2)) < 0) return
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R0
+	ADDL3	@FCLEXER.BASED_NUMBER.AT(AP),#1,R1
+	MOVAB	@4(R0)[R1],FCLEXER.BASED_NUMBER.$D1+4
+	PUSHAQ	FCLEXER.BASED_NUMBER.$D1
+	CALLS	#1,FCLEXER.BASED_NUMBER.DIGIT_OF
+	MOVL	R0,R7
+	BGEQ	FCLEXER.BASED_NUMBER.$16
+	CLRL	R0			; the function's value
+	RET
+FCLEXER.BASED_NUMBER.$16:
+;  275
+;  276      based_number = .true.
+;  277      first = at
+	MOVL	@FCLEXER.BASED_NUMBER.AT(AP),FCLEXER.BASED_NUMBER.FIRST
+;  278      t%kind = t_number
+	MOVL	#1,@FCLEXER.BASED_NUMBER.T(AP)
+;  279      x = 0
+	CLRG	FCLEXER.BASED_NUMBER.X
+;  280      k = at + 2
+	ADDL3	@FCLEXER.BASED_NUMBER.AT(AP),#2,FCLEXER.BASED_NUMBER.K
+;  281      do while (k <= len(line))
+	MOVZWL	@FCLEXER.BASED_NUMBER.LINE(AP),FCLEXER.BASED_NUMBER.$H1 ; from line 281
+	MOVL	FCLEXER.BASED_NUMBER.K,R6
+	MOVL	FCLEXER.BASED_NUMBER.C,R7
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R8
+	MOVQ	FCLEXER.BASED_NUMBER.X,R9
+	BRW	FCLEXER.BASED_NUMBER.$18
+FCLEXER.BASED_NUMBER.$19:		; DO (line 281)'s body
+;  282        c = digit_of(line(k:k))
+	SUBL3	#1,R6,R0
+	MOVAB	@4(R8)[R0],FCLEXER.BASED_NUMBER.$D1+4
+	PUSHAQ	FCLEXER.BASED_NUMBER.$D1
+	CALLS	#1,FCLEXER.BASED_NUMBER.DIGIT_OF
+	MOVL	R0,R7
+;  283        if (c < 0) exit
+	BGEQ	FCLEXER.BASED_NUMBER.$21
+	BRW	FCLEXER.BASED_NUMBER.$20
+FCLEXER.BASED_NUMBER.$21:
+;  284        ! The test before the product: X * RBASE + C stays below WHOLE_LIMIT.
+;  285        if (x >= (whole_limit - c) / rbase) then
+	CVTLG	R7,R0
+	SUBG3	R0,FCLEXER.BASED_NUMBER.$KF1,R0
+	CVTLG	FCLEXER.BASED_NUMBER.RBASE,R2
+	DIVG3	R2,R0,FCLEXER.BASED_NUMBER.$X1
+	CMPG	R9,FCLEXER.BASED_NUMBER.$X1
+	BLSS	FCLEXER.BASED_NUMBER.$22
+	MOVL	R6,FCLEXER.BASED_NUMBER.K
+	MOVL	R7,FCLEXER.BASED_NUMBER.C
+	MOVQ	R9,FCLEXER.BASED_NUMBER.X
+;  286          call fail(e_overflow, first)
+	PUSHL	#0
+	PUSHAL	FCLEXER.BASED_NUMBER.FIRST
+	PUSHAL	FCLEXER.BASED_NUMBER.$K8
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  287          return
+	MOVL	#-1,R0			; the function's value
+	RET
+FCLEXER.BASED_NUMBER.$22:
+;  288        end if
+;  289        x = x * rbase + c
+	CVTLG	FCLEXER.BASED_NUMBER.RBASE,R0
+	MULG2	R9,R0
+	CVTLG	R7,R2
+	ADDG3	R0,R2,R9
+;  290        k = k + 1
+	INCL	R6
+;  291      end do
+FCLEXER.BASED_NUMBER.$18:		; DO (line 281)'s test
+	CMPL	R6,FCLEXER.BASED_NUMBER.$H1 ; from line 281
+	BGTR	FCLEXER.BASED_NUMBER.$24
+	BRW	FCLEXER.BASED_NUMBER.$19
+FCLEXER.BASED_NUMBER.$24:
+	MOVL	R6,FCLEXER.BASED_NUMBER.K
+	MOVL	R7,FCLEXER.BASED_NUMBER.C
+	MOVQ	R9,FCLEXER.BASED_NUMBER.X
+FCLEXER.BASED_NUMBER.$25:
+;  292      at = k
+	MOVL	FCLEXER.BASED_NUMBER.K,@FCLEXER.BASED_NUMBER.AT(AP)
+;  293      t%number = x
+	MOVL	FCLEXER.BASED_NUMBER.T(AP),R0
+	MOVG	FCLEXER.BASED_NUMBER.X,40(R0)
+;  294
+;  295      ! An i makes it imaginary, unless more of a name follows; anything else
+;  296      ! of a name's characters run on is an error.
+;  297      if (at <= len(line)) then
+	MOVZWL	@FCLEXER.BASED_NUMBER.LINE(AP),R0
+	CMPL	@FCLEXER.BASED_NUMBER.AT(AP),R0
+	BLEQ	FCLEXER.BASED_NUMBER.$27
+	BRW	FCLEXER.BASED_NUMBER.$26
+FCLEXER.BASED_NUMBER.$27:
+;  298        if (line(at:at) == 'i' .or. line(at:at) == 'I') then
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.BASED_NUMBER.AT(AP),R1
+	MOVB	@4(R0)[R1],FCLEXER.BASED_NUMBER.$U1
+	CMPB	FCLEXER.BASED_NUMBER.$U1,#105
+	BEQL	FCLEXER.BASED_NUMBER.$29
+	CMPB	FCLEXER.BASED_NUMBER.$U1,#73
+	BNEQ	FCLEXER.BASED_NUMBER.$28
+FCLEXER.BASED_NUMBER.$29:
+;  299          if (at == len(line)) then
+	MOVZWL	@FCLEXER.BASED_NUMBER.LINE(AP),R0
+	CMPL	@FCLEXER.BASED_NUMBER.AT(AP),R0
+	BNEQ	FCLEXER.BASED_NUMBER.$32
+;  300            t%imaginary = .true.
+	MOVL	FCLEXER.BASED_NUMBER.T(AP),R0
+	MOVL	#-1,48(R0)
+;  301          else if (index(name_set, line(at + 1:at + 1)) == 0) then
+	BRB	FCLEXER.BASED_NUMBER.$34
+FCLEXER.BASED_NUMBER.$32:
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R0
+	MOVL	@FCLEXER.BASED_NUMBER.AT(AP),R1
+	MATCHC	#1,@4(R0)[R1],#64,FCLEXER.BASED_NUMBER.$K11
+	BNEQ	FCLEXER.BASED_NUMBER.$35
+	SUBL3	R2,#64,R0
+	BRB	FCLEXER.BASED_NUMBER.$36
+FCLEXER.BASED_NUMBER.$35:
+	CLRL	R0
+FCLEXER.BASED_NUMBER.$36:
+	MOVL	R0,R7
+	BNEQ	FCLEXER.BASED_NUMBER.$34
+;  302            t%imaginary = .true.
+	MOVL	FCLEXER.BASED_NUMBER.T(AP),R0
+	MOVL	#-1,48(R0)
+;  303          end if
+FCLEXER.BASED_NUMBER.$34:
+;  304          if (t%imaginary) at = at + 1
+	MOVL	FCLEXER.BASED_NUMBER.T(AP),R0
+	BLBC	48(R0),FCLEXER.BASED_NUMBER.$38
+	INCL	@FCLEXER.BASED_NUMBER.AT(AP)
+FCLEXER.BASED_NUMBER.$38:
+;  305        end if
+FCLEXER.BASED_NUMBER.$28:
+;  306      end if
+FCLEXER.BASED_NUMBER.$26:
+;  307      if (at <= len(line)) then
+	MOVZWL	@FCLEXER.BASED_NUMBER.LINE(AP),R0
+	CMPL	@FCLEXER.BASED_NUMBER.AT(AP),R0
+	BGTR	FCLEXER.BASED_NUMBER.$40
+;  308        if (index(name_set, line(at:at)) > 0) call fail(e_badnumber, first)
+	MOVL	FCLEXER.BASED_NUMBER.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.BASED_NUMBER.AT(AP),R1
+	MATCHC	#1,@4(R0)[R1],#64,FCLEXER.BASED_NUMBER.$K11
+	BNEQ	FCLEXER.BASED_NUMBER.$42
+	SUBL3	R2,#64,R0
+	BRB	FCLEXER.BASED_NUMBER.$43
+FCLEXER.BASED_NUMBER.$42:
+	CLRL	R0
+FCLEXER.BASED_NUMBER.$43:
+	MOVL	R0,R7
+	BLEQ	FCLEXER.BASED_NUMBER.$44
+	PUSHL	#0
+	PUSHAL	FCLEXER.BASED_NUMBER.FIRST
+	PUSHAL	FCLEXER.BASED_NUMBER.$K12
+	CALLS	#3,G^FCMESSAGES.FAIL
+FCLEXER.BASED_NUMBER.$44:
+;  309      end if
+FCLEXER.BASED_NUMBER.$40:
+;  310
+;  311    contains
+	MOVL	#-1,R0			; the function's value
+	RET
+FCLEXER.BASED_NUMBER.$20:		; leaving the loop
+	MOVL	R6,FCLEXER.BASED_NUMBER.K
+	MOVL	R7,FCLEXER.BASED_NUMBER.C
+	MOVQ	R9,FCLEXER.BASED_NUMBER.X
+	BRW	FCLEXER.BASED_NUMBER.$25
+
+; Storage map for FCLEXER.BASED_NUMBER.DIGIT_OF, an INTEGER function
+;   CH        CHARACTER*1, INTENT(IN)  argument 1  @FCLEXER.BASED_NUMBER.DIGIT_.$N2(AP)
+;   DIGIT_OF  INTEGER                  R6          R6
+;   LOW       CHARACTER*1              $LOCAL+4    FCLEXER.BASED_NUMBER.DIGIT_.$N3
+;   CODE      INTEGER                  $LOCAL+8    FCLEXER.BASED_NUMBER.DIGIT_.$N4
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N2 is FCLEXER.BASED_NUMBER.DIGIT_OF.CH
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N3 is FCLEXER.BASED_NUMBER.DIGIT_OF.LOW
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N4 is FCLEXER.BASED_NUMBER.DIGIT_OF.CODE
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N5 is FCLEXER.BASED_NUMBER.DIGIT_OF.$1
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N6 is FCLEXER.BASED_NUMBER.DIGIT_OF.$2
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N7 is FCLEXER.BASED_NUMBER.DIGIT_OF.$3
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N8 is FCLEXER.BASED_NUMBER.DIGIT_OF.$T1
+;   FCLEXER.BASED_NUMBER.DIGIT_.$N9 is FCLEXER.BASED_NUMBER.DIGIT_OF.$K1
+;   FCLEXER.BASED_NUMBER.DIGIT.$N10 is FCLEXER.BASED_NUMBER.DIGIT_OF.$4
+;   FCLEXER.BASED_NUMBER.DIGIT.$N11 is FCLEXER.BASED_NUMBER.DIGIT_OF.$5
+;   FCLEXER.BASED_NUMBER.DIGIT.$N12 is FCLEXER.BASED_NUMBER.DIGIT_OF.$T2
+;   FCLEXER.BASED_NUMBER.DIGIT.$N13 is FCLEXER.BASED_NUMBER.DIGIT_OF.$6
+;   FCLEXER.BASED_NUMBER.DIGIT.$N14 is FCLEXER.BASED_NUMBER.DIGIT_OF.$7
+;
+FCLEXER.BASED_NUMBER.DIGIT_.$N2 = 4	; CH is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+	.BLKB	4
+FCLEXER.BASED_NUMBER.DIGIT_.$N3:
+	.BLKB	1			; LOW
+	.BLKB	3
+FCLEXER.BASED_NUMBER.DIGIT_.$N4:
+	.BLKL	1			; CODE
+FCLEXER.BASED_NUMBER.DIGIT_.$N8:
+	.BLKB	1			; temporary
+	.BLKB	3
+FCLEXER.BASED_NUMBER.DIGIT.$N12:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.BASED_NUMBER.DIGIT_.$N9:
+	.ASCII	/0123456789abcdef/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  312
+;  313      ! DIGIT_OF is the digit CH stands for in RBASE, the base, or -1 if it isn't one.
+;  314      ! A capital letter is lowered first, by its ASCII code, as NAME_TOKEN
+;  315      ! lowers a name.
+;  316      integer function digit_of(ch)
+FCLEXER.BASED_NUMBER.DIGIT_OF:
+	.WORD	^M<R2,R3,R6>		; internal procedure DIGIT_OF of FCLEXER.BASED_NUMBER
+;  317        character(len=1), intent(in) :: ch
+;  318        character(len=1) :: low
+;  319        integer :: code
+;  320
+;  321        low = ch
+	MOVL	FCLEXER.BASED_NUMBER.DIGIT_.$N2(AP),R0
+	MOVB	@4(R0),FCLEXER.BASED_NUMBER.DIGIT_.$N3
+;  322        code = iachar(ch)
+	MOVZBL	FCLEXER.BASED_NUMBER.DIGIT_.$N3,FCLEXER.BASED_NUMBER.DIGIT_.$N4
+;  323        if (code >= iachar('A') .and. code <= iachar('Z')) &
+;  324          low = achar(code - iachar('A') + iachar('a'))
+	CMPL	FCLEXER.BASED_NUMBER.DIGIT_.$N4,#65
+	BLSS	FCLEXER.BASED_NUMBER.DIGIT_.$N5
+	CMPL	FCLEXER.BASED_NUMBER.DIGIT_.$N4,#90
+	BGTR	FCLEXER.BASED_NUMBER.DIGIT_.$N5
+	ADDL3	FCLEXER.BASED_NUMBER.DIGIT_.$N4,#32,R0
+	MOVB	R0,FCLEXER.BASED_NUMBER.DIGIT_.$N8
+	MOVB	FCLEXER.BASED_NUMBER.DIGIT_.$N8,FCLEXER.BASED_NUMBER.DIGIT_.$N3
+FCLEXER.BASED_NUMBER.DIGIT_.$N5:
+;  325        digit_of = index(hex, low) - 1
+	MATCHC	#1,FCLEXER.BASED_NUMBER.DIGIT_.$N3,#16,FCLEXER.BASED_NUMBER.DIGIT_.$N9
+	BNEQ	FCLEXER.BASED_NUMBER.DIGIT.$N10
+	SUBL3	R2,#16,R0
+	BRB	FCLEXER.BASED_NUMBER.DIGIT.$N11
+FCLEXER.BASED_NUMBER.DIGIT.$N10:
+	CLRL	R0
+FCLEXER.BASED_NUMBER.DIGIT.$N11:
+	MOVL	R0,FCLEXER.BASED_NUMBER.DIGIT.$N12
+	SUBL3	#1,FCLEXER.BASED_NUMBER.DIGIT.$N12,R6
+;  326        if (digit_of >= rbase) digit_of = -1
+	CMPL	R6,FCLEXER.BASED_NUMBER.RBASE
+	BLSS	FCLEXER.BASED_NUMBER.DIGIT.$N13
+	MOVL	#-1,R6
+FCLEXER.BASED_NUMBER.DIGIT.$N13:
+;  327      end function digit_of
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCLEXER.OPERATOR_TOKEN, a subroutine
+;   LINE  CHARACTER*(*), INTENT(IN)   argument 1  @FCLEXER.OPERATOR_TOKEN.LINE(AP)
+;   AT    INTEGER, INTENT(INOUT)      argument 2  @FCLEXER.OPERATOR_TOKEN.AT(AP)
+;   T     TYPE(TOKEN), INTENT(INOUT)  argument 3  @FCLEXER.OPERATOR_TOKEN.T(AP)
+;   K     INTEGER                     $LOCAL+0    FCLEXER.OPERATOR_TOKEN.K
+;   R7 is $H1: a value computed before a loop
+;   R8 is $R1: an index stepped with K
+;   R10 is $R2: an address in an array
+;   R6 is $R3: K, during a loop
+;   R9 is $R4: LINE's address
+;
+FCLEXER.OPERATOR_TOKEN.LINE = 4		; LINE is argument 1
+FCLEXER.OPERATOR_TOKEN.AT = 8		; AT is argument 2
+FCLEXER.OPERATOR_TOKEN.T = 12		; T is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCLEXER.OPERATOR_TOKEN.K:
+	.BLKL	1			; K
+FCLEXER.OPERATOR_TOKEN.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCLEXER.OPERATOR_TOKEN.$K5:
+	.LONG	1
+FCLEXER.OPERATOR_TOKEN.$K1:
+	.ASCII	"==<><=>=**.*./.^.'"
+FCLEXER.OPERATOR_TOKEN.$K2:
+	.ASCII	/**/
+FCLEXER.OPERATOR_TOKEN.$K3:
+	.ASCII	/^/
+FCLEXER.OPERATOR_TOKEN.$K4:
+	.ASCII	"+-*/^!(),=<>[];:'\"
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  328    end function based_number
+;  329
+;  330    ! OPERATOR_TOKEN takes an operator, ** standing for ^.
+;  331    subroutine operator_token(line, at, t)
+	.ENTRY	FCLEXER.OPERATOR_TOKEN,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
+;  332      character(len=*), intent(in) :: line
+;  333      integer, intent(inout) :: at
+;  334      type(token), intent(inout) :: t
+;  335      integer :: k
+;  336
+;  337      t%kind = t_operator
+	MOVL	#3,@FCLEXER.OPERATOR_TOKEN.T(AP)
+;  338      if (at < len(line)) then
+	MOVZWL	@FCLEXER.OPERATOR_TOKEN.LINE(AP),R0
+	CMPL	@FCLEXER.OPERATOR_TOKEN.AT(AP),R0
+	BLSS	FCLEXER.OPERATOR_TOKEN.$2
+	BRW	FCLEXER.OPERATOR_TOKEN.$1
+FCLEXER.OPERATOR_TOKEN.$2:
+;  339        do k = 1, size(pairs)
+	MOVL	#1,FCLEXER.OPERATOR_TOKEN.K
+	MOVL	@FCLEXER.OPERATOR_TOKEN.AT(AP),R7 ; from line 340
+	MULL3	FCLEXER.OPERATOR_TOKEN.K,#2,R8
+	MOVL	FCLEXER.OPERATOR_TOKEN.LINE(AP),R0
+	MOVL	4(R0),R10
+	MOVL	FCLEXER.OPERATOR_TOKEN.K,R6
+	MOVL	FCLEXER.OPERATOR_TOKEN.LINE(AP),R9
+FCLEXER.OPERATOR_TOKEN.$3:		; DO (line 339)'s body
+;  340          if (line(at:at + 1) == pairs(k)) then
+	CMPC3	#2,-1(R10)[R7],FCLEXER.OPERATOR_TOKEN.$K1-2[R8]
+	BNEQ	FCLEXER.OPERATOR_TOKEN.$4
+	MOVL	R6,FCLEXER.OPERATOR_TOKEN.K
+;  341            t%text = pairs(k)
+	MULL3	FCLEXER.OPERATOR_TOKEN.K,#2,R0
+	MOVL	FCLEXER.OPERATOR_TOKEN.T(AP),R1
+	MOVC5	#2,FCLEXER.OPERATOR_TOKEN.$K1-2[R0],#^A/ /,#31,8(R1)
+;  342            if (t%text == '**') t%text = '^'
+	MOVL	FCLEXER.OPERATOR_TOKEN.T(AP),R0
+	CMPC5	#31,8(R0),#^A/ /,#2,FCLEXER.OPERATOR_TOKEN.$K2
+	BNEQ	FCLEXER.OPERATOR_TOKEN.$6
+	MOVL	FCLEXER.OPERATOR_TOKEN.T(AP),R0
+	MOVC5	#1,FCLEXER.OPERATOR_TOKEN.$K3,#^A/ /,#31,8(R0)
+FCLEXER.OPERATOR_TOKEN.$6:
+;  343            at = at + 2
+	ADDL2	#2,@FCLEXER.OPERATOR_TOKEN.AT(AP)
+;  344            return
+	RET
+FCLEXER.OPERATOR_TOKEN.$4:
+;  345          end if
+;  346        end do
+	ADDL2	#2,R8
+	AOBLEQ	#9,R6,FCLEXER.OPERATOR_TOKEN.$3
+	MOVL	R6,FCLEXER.OPERATOR_TOKEN.K
+;  347      end if
+FCLEXER.OPERATOR_TOKEN.$1:
+;  348
+;  349      if (index(singles, line(at:at)) == 0) then
+	MOVL	FCLEXER.OPERATOR_TOKEN.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.OPERATOR_TOKEN.AT(AP),R1
+	MATCHC	#1,@4(R0)[R1],#18,FCLEXER.OPERATOR_TOKEN.$K4
+	BNEQ	FCLEXER.OPERATOR_TOKEN.$9
+	SUBL3	R2,#18,R0
+	BRB	FCLEXER.OPERATOR_TOKEN.$10
+FCLEXER.OPERATOR_TOKEN.$9:
+	CLRL	R0
+FCLEXER.OPERATOR_TOKEN.$10:
+	MOVL	R0,FCLEXER.OPERATOR_TOKEN.$T1
+	BNEQ	FCLEXER.OPERATOR_TOKEN.$11
+;  350        call fail(e_badchar, at)
+	PUSHL	#0
+	PUSHAL	@FCLEXER.OPERATOR_TOKEN.AT(AP)
+	PUSHAL	FCLEXER.OPERATOR_TOKEN.$K5
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  351        return
+	RET
+FCLEXER.OPERATOR_TOKEN.$11:
+;  352      end if
+;  353      t%text = line(at:at)
+	MOVL	FCLEXER.OPERATOR_TOKEN.LINE(AP),R0
+	SUBL3	#1,@FCLEXER.OPERATOR_TOKEN.AT(AP),R1
+	MOVL	FCLEXER.OPERATOR_TOKEN.T(AP),R2
+	MOVC5	#1,@4(R0)[R1],#^A/ /,#31,8(R2)
+;  354      at = at + 1
+	INCL	@FCLEXER.OPERATOR_TOKEN.AT(AP)
+;  355    end subroutine operator_token
+	RET
+;  356  end module fclexer
+
+	.END

@@ -182,6 +182,22 @@ func TestObjectOperands(t *testing.T) {
 		"STA_LW 0x12345678", "OPR_ADD", "STO_L")
 }
 
+// TestObjectRepetition checks that a known value with a repetition factor is
+// one repeated store, as VMS 7.1's MACRO wrote .LONG 0[2] in fcalc's objects
+// (STA_UB 0, STA_UB 2, STO_RL; docs/planning/PHASE-111 - Fortran 90
+// milestone.md, subtask 11), and that a count of 1 is the plain value.
+func TestObjectRepetition(t *testing.T) {
+	requireDump(t, objectDump(t, `.PSECT D,LONG
+	.LONG 1,0[2],7[1]
+	.BYTE 5[3]
+	.WORD 300[2]`),
+		"STO_IMM 4 bytes: 01 00 00 00",
+		"STA_UB 0x0", "STA_UB 0x2", "STO_RL",
+		"STO_IMM 4 bytes: 07 00 00 00",
+		"STA_UB 0x5", "STA_UB 0x3", "STO_RB",
+		"STA_UW 0x12c", "STA_UB 0x2", "STO_RW")
+}
+
 // TestObjectLongData checks that a long run of data is split into STORE
 // IMMEDIATE commands of at most 128 bytes, and records of at most 512.
 func TestObjectLongData(t *testing.T) {

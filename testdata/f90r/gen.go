@@ -27,7 +27,7 @@ const (
 
 	// results is where copyout.cmd puts VMS's run: vax/roundN, beside the run the
 	// tests read in vax/ (round 1's), until it's checked.
-	results = dir + "/vax/round2"
+	results = dir + "/vax/round3"
 
 	// headers and directories are INITIALIZE's /HEADERS and /DIRECTORIES: an
 	// index file with room for every file govax writes (about 1,700) and VMS's
