@@ -8,7 +8,7 @@ TestFortranPrograms and TestFortranModules. gfortran is a second opinion on the 
 outputs, never the reference: a line it prints differently is a question to look into, and the
 answers so far are in KNOWN below.
 
-    compare.py [--keep DIR] [program ...]      every program below if none is named
+    compare.py [--keep DIR] [program ...]      every program below, and fcalc, if none is named
 
 What's changed in gfortran's copy only says in its dialect what VAX FORTRAN says in its own:
 
@@ -26,6 +26,18 @@ given the rest first, then the main program's.
 
 What's normalized is only FORTRAN's carriage control: gfortran prints column 1 as text, and VMS
 acts on it; and the .out files' last line, SHOW SYMBOL's $STATUS.
+
+fcalc, the Fortran 90 milestone (testdata/fcalc; docs/planning/PHASE-111 - Fortran 90
+milestone.md, subtask 10), is a program of its own kind: built from compiles.txt's files with
+gfortran/fcplatform.f90 in place of VMS's (which calls LIB$GET_FOREIGN, and writes a blank of
+carriage control that gfortran's twin leaves out, so nothing is normalized), it runs every script
+in one directory holding files/, in the order of their names as TestFcalcMilestone runs them, and
+each script's output and each file in expected/ is compared with the date and time in a saved
+file's heading masked. oneshot.com is govax's and VMS's only. It is built three ways
+(FCALC_BUILDS): as the corpus is; optimized, where on an arm64 host fused multiply-adds change
+the last bits, which fcalc's output must not show (A.3); and checked, with every run-time check,
+a trap on each floating exception a VAX traps (underflow too, as /CHECK=UNDERFLOW does), and
+reals starting as signaling NaNs, so nothing undefined can pass as right.
 """
 import argparse
 import difflib
@@ -162,6 +174,17 @@ PROGRAMS90 = {
               "modules/polys/roots.f90", "modules/polys/report.f90", "modules/polys/table.for"],
     "concord": ["modules/concord/concord.f90", "modules/concord/words.f90", "modules/concord/lists.f90",
                 "modules/concord/trees.f90"],
+}
+
+# fcalc's directory, and the modules' order (compiles.txt) with gfortran's own platform module.
+FCALC = CORPUS.parent / "fcalc"
+FCALC_TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
+FCALC_TIME_MASK = "YYYY-MM-DD hh:mm:ss"
+FCALC_BUILDS = {
+    "": FLAGS90,
+    "optimized": "-std=f95 -O2".split(),
+    "checked": ("-std=f95 -O0 -g -fcheck=all,no-array-temps -ffpe-trap=invalid,zero,overflow,underflow "
+                "-finit-real=snan -finit-integer=-77777").split(),
 }
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.
@@ -333,8 +356,73 @@ def printed(stdout):
     return [line[1:] if line.startswith(" ") else line for line in stdout.splitlines()]
 
 
+def gfortran_env():
+    """The environment gfortran runs in: on macOS the SDK's path, without which its link can't
+    find library System."""
+    env = dict(os.environ)
+    if sys.platform == "darwin" and "SDKROOT" not in env:
+        env["SDKROOT"] = subprocess.run(["xcrun", "--show-sdk-path"], capture_output=True, text=True,
+                                        check=True).stdout.strip()
+    return env
+
+
+def same(label, want, got):
+    """Reports whether two lists of lines are the same, with a diff if they aren't."""
+    if got == want:
+        print(f"{label}: the same ({len(want)} lines)")
+        return True
+    print(f"{label}: differs")
+    sys.stdout.writelines(line + "\n" for line in difflib.unified_diff(want, got, "expected", "gfortran", lineterm=""))
+    return False
+
+
+def masked(text):
+    """Text's lines with each date and time fcalc writes in a saved file's heading masked."""
+    return [FCALC_TIME.sub(FCALC_TIME_MASK, line) for line in text.splitlines()]
+
+
+def compare_fcalc(work):
+    """Builds fcalc on gfortran each of FCALC_BUILDS' ways, each in a directory of work's."""
+    work.mkdir()
+    ok = True
+    for build, flags in FCALC_BUILDS.items():
+        ok &= compare_fcalc_build(work / (build or "plain"), " ".join(["fcalc", build]).strip(), flags)
+    return ok
+
+
+def compare_fcalc_build(work, label, flags):
+    """Builds fcalc on gfortran in work, runs every script there, and compares each script's
+    output and each file the scripts write with the expected ones (the docstring says how)."""
+    work.mkdir()
+    modules = (FCALC / "compiles.txt").read_text().split()
+    sources = [str(FCALC / "gfortran" / "fcplatform.f90") if module == "FCPLATFORM"
+               else str(FCALC / f"{module.lower()}.f90") for module in modules]
+    build = subprocess.run(["gfortran", *flags, "-o", "fcalc", *sources], cwd=work, env=gfortran_env(),
+                           capture_output=True, text=True)
+    if build.returncode != 0 or build.stderr:
+        print(f"{label}: gfortran failed or warned:\n{build.stderr}")
+        return False
+    for file in sorted((FCALC / "files").iterdir()):
+        shutil.copy(file, work / file.name)
+    ok = True
+    for script in sorted(FCALC.glob("*.in")):
+        run = subprocess.run([str(work / "fcalc")], cwd=work, input=script.read_text(), capture_output=True,
+                             text=True, timeout=120)
+        ok &= same(f"{label} {script.stem}", masked(script.with_suffix(".out").read_text()), masked(run.stdout))
+        if run.returncode != 0 or run.stderr:
+            print(f"{label} {script.stem}: ended with status {run.returncode}:\n{run.stderr}")
+            ok = False
+    for file in sorted((FCALC / "expected").iterdir()):
+        written = work / file.name
+        got = masked(written.read_text()) if written.exists() else [f"(no {file.name} written)"]
+        ok &= same(f"{label} {file.name}", masked(file.read_text()), got)
+    return ok
+
+
 def compare(name, work):
     """Builds one program on gfortran in work, runs it, and compares its output with the .out's."""
+    if name == "fcalc":
+        return compare_fcalc(work)
     work.mkdir()
     if name in PROGRAMS90:
         files = PROGRAMS90[name]
@@ -353,11 +441,7 @@ def compare(name, work):
             target.write_text(gfortran_copy(CORPUS / file))
             sources.append(target.name)
         flags = FLAGS
-    env = dict(os.environ)
-    if sys.platform == "darwin" and "SDKROOT" not in env:
-        env["SDKROOT"] = subprocess.run(["xcrun", "--show-sdk-path"], capture_output=True, text=True,
-                                        check=True).stdout.strip()
-    build = subprocess.run(["gfortran", *flags, "-o", name, *sources], cwd=work, env=env,
+    build = subprocess.run(["gfortran", *flags, "-o", name, *sources], cwd=work, env=gfortran_env(),
                            capture_output=True, text=True)
     if build.returncode != 0:
         print(f"{name}: gfortran failed:\n{build.stderr}")
@@ -382,7 +466,7 @@ def compare(name, work):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--keep", help="a directory to leave gfortran's copies and programs in")
-    parser.add_argument("programs", nargs="*", default=[*PROGRAMS, *PROGRAMS90])
+    parser.add_argument("programs", nargs="*", default=[*PROGRAMS, *PROGRAMS90, "fcalc"])
     args = parser.parse_args()
     if shutil.which("gfortran") is None:
         sys.exit("no gfortran on the PATH")

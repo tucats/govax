@@ -154,6 +154,32 @@ debugger a compiled program's lines are its MACRO file's, so SHOW CALLS's line
 column is the MACRO line, as `%LINE n` and TYPE take it. A break shows the
 FORTRAN line as well.
 
+## gfortran's witness
+
+`testdata/fortran/gfortran/compare.py fcalc` builds fcalc on gfortran from
+`compiles.txt`'s files, `gfortran/fcplatform.f90` in VMS's module's place, and
+runs every script in one directory holding `files/`, in the order of their
+names, as `TestFcalcMilestone` does; each script's output and each file in
+`expected/` must be the same line for line, the times in a saved file's heading
+masked. It builds fcalc three ways, and each prints the same lines:
+
+- **as the corpus is**, `-std=f95 -O0`;
+- **optimized**, `-O2`, where on an arm64 host gfortran fuses multiplies and
+  adds and so changes the last bits of many results, which fcalc's output must
+  not show (the rounding rules below);
+- **checked**: `-fcheck=all` (bounds, pointers, recursion, and the rest),
+  traps on invalid operations, division by zero, overflow, and underflow (what
+  a VAX traps, underflow as govax's `/CHECK=UNDERFLOW` does), and every real
+  starting as a signaling NaN and every integer as -77777, so that a value
+  used before it is set, or an operation fcalc's guards should have stopped,
+  ends the run instead of passing.
+
+With no program named, `compare.py` runs the corpus's programs and fcalc.
+gfortran's `-Wall -Wextra` warns only of fcalc's exact comparisons of reals,
+each deliberate (against zero, a whole number's test, SAVE's check that a
+number reads back the same), and of the Gauss-Kronrod loop's `I / 2`, which
+`MOD(I, 2) == 0` keeps from indexing at 0.
+
 ## What the two systems make fcalc do
 
 - **Carriage control.** VMS treats a terminal record's first character as

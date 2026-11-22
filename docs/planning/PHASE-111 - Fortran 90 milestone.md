@@ -269,7 +269,7 @@ As revised by the author's answers (below), with vectors and matrices added:
      (done 2026-11-21)
 9. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
    (done 2026-11-22)
-10. **gfortran's witness**.
+10. **gfortran's witness**. (done 2026-11-22)
 11. **The simh round**: `testdata/f90r`, fcalc and the whole Fortran 90
     corpus, run by the author on the simh VAX, and its oracle.
 12. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
@@ -781,3 +781,25 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   alone by FORTRAN lines would make it disagree with them. The session says SET
   RADIX DECIMAL, as the manual tells a FORTRAN user to (Phase 85: the language
   stays MACRO).
+- **2026-11-22:** Subtask 10, gfortran's witness. `compare.py` (in
+  `testdata/fortran/gfortran`) gains fcalc, run with the corpus when no
+  program is named: built from `compiles.txt` with `gfortran/fcplatform.f90`,
+  every script run in one directory holding `files/` in their names' order, as
+  `TestFcalcMilestone` runs them, and each script's output and each file in
+  `expected/` compared line for line, times masked. With nothing to normalize
+  (gfortran's twin writes no carriage control), it needs no `KNOWN` entries.
+  fcalc is built three ways (`FCALC_BUILDS`), and all 13 comparisons in each
+  are the same: `-std=f95 -O0`, as the corpus is; `-O2`, where on the arm64
+  host gfortran's fused multiply-adds change last bits, which A.3's rounding
+  rules must hide, and do; and checked, `-fcheck=all,no-array-temps`,
+  `-ffpe-trap=invalid,zero,overflow,underflow` (VAX traps, underflow as
+  `/CHECK=UNDERFLOW` traps it), `-finit-real=snan`, `-finit-integer=-77777`,
+  so a value used before it is set, an index or pointer out of place, or an
+  operation the guards should have stopped would end the run, and none does.
+  `-Wall -Wextra`'s 95 warnings are reviewed: 92 exact comparisons of reals,
+  each deliberate (against zero, whole-number tests, SAVE's check that a value
+  reads back the same), and three on the Gauss-Kronrod loop's `I / 2`, which
+  `MOD(I, 2) == 0` keeps from indexing at 0. No difference found, so no
+  difference to explain against the standard, and no fcalc or compiler change.
+  The whole witness (the corpus and fcalc) passes, 147 comparisons. The fcalc
+  README's new section "gfortran's witness" describes it.
