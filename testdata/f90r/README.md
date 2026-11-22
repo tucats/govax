@@ -42,7 +42,7 @@ exercise yet of VMS's MTHRTL under govax's code: fcalc is built `/G_FLOATING`.
 
 3. Copy the results back:
 
-       mkdir -p testdata/f90r/vax/mar testdata/f90r/vax/fcalc
+       mkdir -p testdata/f90r/vax/round2/mar testdata/f90r/vax/round2/fcalc
        ./govax --profile tbprobe --system-file none console < testdata/f90r/copyout.cmd
 
 `TestF90RProcedure` (`internal/console/f90r_test.go`) runs the same procedure on govax, so a
