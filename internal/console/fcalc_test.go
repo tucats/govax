@@ -44,6 +44,13 @@ func fcalcConsole(t *testing.T, paging bool) (*Dispatcher, *Console, *bytes.Buff
 // it, and links FCALC.EXE. Each step must say nothing.
 func buildFcalc(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, qualifiers string) {
 	t.Helper()
+	buildFcalcLinked(t, d, c, buf, qualifiers, "")
+}
+
+// buildFcalcLinked is buildFcalc with MACRO's and LINK's qualifiers too:
+// "/DEBUG" makes an image RUN starts under the debugger.
+func buildFcalcLinked(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, qualifiers, linked string) {
+	t.Helper()
 
 	order, err := os.ReadFile(filepath.Join(fcalcDirectory, "compiles.txt"))
 	if err != nil {
@@ -73,11 +80,11 @@ func buildFcalc(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, qual
 	}
 
 	for _, name := range modules {
-		commands = append(commands, "MACRO "+name)
+		commands = append(commands, "MACRO"+linked+" "+name)
 	}
 
 	// The main program first, so the image is named for it.
-	commands = append(commands, "LINK "+modules[len(modules)-1]+","+strings.Join(modules[:len(modules)-1], ","))
+	commands = append(commands, "LINK"+linked+" "+modules[len(modules)-1]+","+strings.Join(modules[:len(modules)-1], ","))
 
 	buf.Reset()
 
@@ -226,12 +233,47 @@ func runFcalcOneShot(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer)
 	}
 }
 
-// TestFcalc builds fcalc the usual way, /OPTIMIZE, and runs every script,
-// then checks the files they wrote and runs oneshot.com.
-func TestFcalc(t *testing.T) {
-	d, c, buf := fcalcConsole(t, false)
-	buildFcalc(t, d, c, buf, "")
-	runFcalcScripts(t, d, c, buf)
-	checkFcalcFiles(t, c)
-	runFcalcOneShot(t, d, c, buf)
+// fcalcModes are the ways TestFcalcMilestone builds fcalc beyond the corpus's
+// optimizerModes and recursiveModes, each with paging off: every check, and
+// /DEBUG's table with nothing optimized.
+var fcalcModes = []struct{ name, qualifier string }{
+	{"check", "/CHECK=ALL"},
+	{"debug", "/NOOPTIMIZE/DEBUG=ALL"},
+}
+
+// TestFcalcMilestone is the Fortran 90 program's milestone (Phase 111's
+// subtask 9): fcalc built in every mode, /OPTIMIZE both ways and /RECURSIVE
+// both ways with paging off and on, then /CHECK=ALL and /DEBUG, each run on
+// every script, the files they wrote checked, and oneshot.com run, each mode
+// printing the same lines. "-run TestFcalcMilestone/nopaging/opt" is the
+// usual build alone.
+func TestFcalcMilestone(t *testing.T) {
+	type mode struct {
+		name, qualifier string
+		paging          bool
+	}
+
+	var modes []mode
+
+	for _, paging := range []bool{false, true} {
+		for _, m := range append(optimizerModes, recursiveModes...) {
+			modes = append(modes, mode{m.name, m.qualifier, paging})
+		}
+	}
+
+	for _, m := range fcalcModes {
+		modes = append(modes, mode{m.name, m.qualifier, false})
+	}
+
+	for _, m := range modes {
+		name := map[bool]string{false: "nopaging", true: "paging"}[m.paging] + "/" + m.name
+
+		t.Run(name, func(t *testing.T) {
+			d, c, buf := fcalcConsole(t, m.paging)
+			buildFcalc(t, d, c, buf, m.qualifier)
+			runFcalcScripts(t, d, c, buf)
+			checkFcalcFiles(t, c)
+			runFcalcOneShot(t, d, c, buf)
+		})
+	}
 }

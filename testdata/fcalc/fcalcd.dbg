@@ -1,0 +1,42 @@
+! FCALCD.DBG: fcalc under the debugger, while it computes fact(3) with the
+! user's function fact(n) = if(n < 2, 1, n * fact(n - 1)). Each call of a
+! user's function is a call of FCEVAL.CALL_USER, so its break stops at each
+! level of the recursion; at each, the expression trees are walked through
+! their pointers (a node's KID, the first operand or argument, and its NEXT).
+SET LOG FCALCD.DLG
+SET OUTPUT LOG,VERIFY
+SET RADIX DECIMAL
+SET BREAK FCEVAL.CALL_USER
+! fact(3), typed: P is the call's node, FN the function, its BODY the tree of
+! if(...), a call (N_CALL, 3) whose first argument is the comparison n < 2
+! (N_OPERATION, 4; OP_COMPARE + 3, 23, < being the third relation).
+GO
+EXAMINE FN%NAME
+EXAMINE FN%COUNT
+EXAMINE FN%PARAMS(1)
+EXAMINE FN%BODY%KIND
+EXAMINE FN%BODY%NAME
+EXAMINE FN%BODY%KID%KIND
+EXAMINE FN%BODY%KID%OP
+EXAMINE FN%BODY%KID%KID%NAME
+! The argument 3, a number (N_NUMBER, 1), and the argument after it: none.
+EXAMINE P%KID%KIND
+EXAMINE P%KID%NUMBER
+EXAMINE P%KID%NEXT%KIND
+! fact(n - 1), from the body: its argument is n - 1 (OP_SUB, 2), whose
+! operands are the name n and the number 1. F is the caller's frame: n is 3.
+GO
+EXAMINE P%NAME
+EXAMINE P%KID%OP
+EXAMINE P%KID%KID%NAME
+EXAMINE P%KID%KID%NEXT%NUMBER%Z
+EXAMINE F%NAMES(1)
+EXAMINE CALLS
+! fact(n - 1) again, n 2: the stack holds three calls of CALL_USER, each
+! through EVALUATE, CALL_FUNCTION, IF's CHOOSE, and OPERATE's n * ...
+GO
+SHOW CALLS
+EXAMINE CALLS
+CANCEL BREAK/ALL
+GO
+EXIT

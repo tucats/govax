@@ -1,0 +1,64 @@
+
+         GOVAX DEBUG
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: FCALC
+fcalc>  set echo
+fcalc>  fact(n) = if(n < 2, 1, n * fact(n - 1))
+fact(n) = if(n < 2, 1, n * fact(n - 1))
+fcalc>  fact(3)
+%DEBUG-I-DYNMODSET, setting module FCEVAL
+break at routine FCEVAL\FCEVAL.CALL_USER
+FORTRAN line n: inner%count = fn%count
+  line: instruction
+FCEVAL\FCEVAL.CALL_USER.FN%NAME:        'fact                           '
+FCEVAL\FCEVAL.CALL_USER.FN%COUNT:       1
+FCEVAL\FCEVAL.CALL_USER.FN%PARAMS(1):   'n                              '
+FCEVAL\FCEVAL.CALL_USER.FN%BODY%KIND:   3
+FCEVAL\FCEVAL.CALL_USER.FN%BODY%NAME:   'if                             '
+FCEVAL\FCEVAL.CALL_USER.FN%BODY%KID%KIND:       4
+FCEVAL\FCEVAL.CALL_USER.FN%BODY%KID%OP: 23
+FCEVAL\FCEVAL.CALL_USER.FN%BODY%KID%KID%NAME:   'n                              '
+FCEVAL\FCEVAL.CALL_USER.P%KID%KIND:     1
+FCEVAL\FCEVAL.CALL_USER.P%KID%NUMBER%Z: (3.00000000000000,0.000000000000000)
+FCEVAL\FCEVAL.CALL_USER.P%KID%NUMBER%ERR:       0
+%DEBUG-W-NOTASSOC, pointer FCEVAL\FCEVAL.CALL_USER.P%KID%NEXT is not associated
+break at routine FCEVAL\FCEVAL.CALL_USER
+FORTRAN line n: inner%count = fn%count
+  line: instruction
+FCEVAL\FCEVAL.CALL_USER.P%NAME: 'fact                           '
+FCEVAL\FCEVAL.CALL_USER.P%KID%OP:       2
+FCEVAL\FCEVAL.CALL_USER.P%KID%KID%NAME: 'n                              '
+FCEVAL\FCEVAL.CALL_USER.P%KID%KID%NEXT%NUMBER%Z:        (1.00000000000000,0.000000000000000)
+FCEVAL\FCEVAL.CALL_USER.F%NAMES(1):     'n                              '
+FCEVAL\FCEVAL.CALLS:    1
+break at routine FCEVAL\FCEVAL.CALL_USER
+FORTRAN line n: inner%count = fn%count
+  line: instruction
+ module name     routine name      line                rel PC           abs PC
+*FCEVAL          FCEVAL.CALL_USER  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.OPERATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CHOOSE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_USER  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.OPERATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CHOOSE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_USER  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+*FCALC           FCALC.STATEMENT  line  rel-PC  abs-PC
+*FCALC           FCALC.RUN  line  rel-PC  abs-PC
+*FCALC           FCALC.EXECUTE  line  rel-PC  abs-PC
+*FCALC           FCALC  line  rel-PC  abs-PC
+FCEVAL\FCEVAL.CALLS:    2
+6
+fcalc>  
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'

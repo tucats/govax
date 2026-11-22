@@ -118,9 +118,41 @@ each end with
 `SHOW MEMORY` after `CLEAR ALL`, which must count no arrays and no tree nodes
 in use: a leak, of an operation's operand or after an error, shows there.
 
-`internal/console`'s `TestFcalc` builds fcalc, runs every script, checks the
-files written, and runs `oneshot.com`;
-`internal/dclcmd`'s `TestFcalcCompiles` compiles it, quickly, without a console.
+`internal/console`'s `TestFcalcMilestone` builds fcalc in every mode
+(`/NOOPTIMIZE` and `/OPTIMIZE`, each also `/RECURSIVE`, with paging off and on;
+then `/CHECK=ALL` and `/NOOPTIMIZE/DEBUG=ALL`), and in each runs every script,
+checks the files written, and runs `oneshot.com`;
+`go test -run TestFcalcMilestone/nopaging/opt ./internal/console` is the usual
+build alone. `internal/dclcmd`'s `TestFcalcCompiles` compiles it, quickly,
+without a console.
+
+## The compiler's tools on fcalc
+
+`internal/dclcmd`'s `TestFcalcTools` compiles every module
+`/LIST/CROSS_REFERENCE`, which must say nothing, then `/STANDARD=F90` and
+`/WARNINGS=ALL`, which must say only these, each left for its reason:
+
+- **`/STANDARD=F90`**: two `EXTENSION`s in `fcplatform.f90`, LIB$GET_FOREIGN's
+  `$` and its null argument. That module is where fcalc keeps what only VMS
+  has.
+- **`/WARNINGS=ALL`**: 13 `HOSTHIDDEN`s, each an internal procedure
+  declaring a local (`K`, `E`, `H`, `V`, `WIDTH`, `STATUS`) whose name its host
+  also uses, so as not to change the host's; and one `UNREAD`, `READ_LINE`'s
+  `REST`, which takes the rest of an overlong line only to drop it.
+
+`fcalcd.com` builds fcalc `/DEBUG` (FORTRAN `/NOOPTIMIZE/DEBUG=ALL`,
+MACRO/DEBUG, LINK/DEBUG) and runs it on `fact(3)` with DBG$INPUT naming
+`fcalcd.dbg`. That session breaks at each level of a user's function's
+recursion (`FCEVAL.CALL_USER`), walks the expression trees through their
+pointers (`FN%BODY%KID%KID%NAME`, `P%KID%NEXT` not associated), reads the
+caller's frame and a module's variable, and shows the calls, and it logs itself.
+`internal/console`'s `TestFcalcDebugger` holds the session's log to `fcalcd.dlg`
+and the procedure's to `fcalcd.out`, with SHOW CALLS's numbers, the MACRO line
+under a break, and its FORTRAN line number masked, since any change to fcalc or
+the compiler moves them (`FCALCD_WRITE=1` writes the files again). In the
+debugger a compiled program's lines are its MACRO file's, so SHOW CALLS's line
+column is the MACRO line, as `%LINE n` and TYPE take it. A break shows the
+FORTRAN line as well.
 
 ## What the two systems make fcalc do
 

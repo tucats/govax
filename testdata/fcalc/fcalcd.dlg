@@ -1,0 +1,89 @@
+SET RADIX DECIMAL
+SET BREAK FCEVAL.CALL_USER
+! fact(3), typed: P is the call's node, FN the function, its BODY the tree of
+! if(...), a call (N_CALL, 3) whose first argument is the comparison n < 2
+! (N_OPERATION, 4; OP_COMPARE + 3, 23, < being the third relation).
+GO
+!%DEBUG-I-DYNMODSET, setting module FCEVAL
+!break at routine FCEVAL\FCEVAL.CALL_USER
+!FORTRAN line n: inner%count = fn%count
+!  line: instruction
+EXAMINE FN%NAME
+!FCEVAL\FCEVAL.CALL_USER.FN%NAME:        'fact                           '
+EXAMINE FN%COUNT
+!FCEVAL\FCEVAL.CALL_USER.FN%COUNT:       1
+EXAMINE FN%PARAMS(1)
+!FCEVAL\FCEVAL.CALL_USER.FN%PARAMS(1):   'n                              '
+EXAMINE FN%BODY%KIND
+!FCEVAL\FCEVAL.CALL_USER.FN%BODY%KIND:   3
+EXAMINE FN%BODY%NAME
+!FCEVAL\FCEVAL.CALL_USER.FN%BODY%NAME:   'if                             '
+EXAMINE FN%BODY%KID%KIND
+!FCEVAL\FCEVAL.CALL_USER.FN%BODY%KID%KIND:       4
+EXAMINE FN%BODY%KID%OP
+!FCEVAL\FCEVAL.CALL_USER.FN%BODY%KID%OP: 23
+EXAMINE FN%BODY%KID%KID%NAME
+!FCEVAL\FCEVAL.CALL_USER.FN%BODY%KID%KID%NAME:   'n                              '
+! The argument 3, a number (N_NUMBER, 1), and the argument after it: none.
+EXAMINE P%KID%KIND
+!FCEVAL\FCEVAL.CALL_USER.P%KID%KIND:     1
+EXAMINE P%KID%NUMBER
+!FCEVAL\FCEVAL.CALL_USER.P%KID%NUMBER%Z: (3.00000000000000,0.000000000000000)
+!FCEVAL\FCEVAL.CALL_USER.P%KID%NUMBER%ERR:       0
+EXAMINE P%KID%NEXT%KIND
+!%DEBUG-W-NOTASSOC, pointer FCEVAL\FCEVAL.CALL_USER.P%KID%NEXT is not associated
+! fact(n - 1), from the body: its argument is n - 1 (OP_SUB, 2), whose
+! operands are the name n and the number 1. F is the caller's frame: n is 3.
+GO
+!break at routine FCEVAL\FCEVAL.CALL_USER
+!FORTRAN line n: inner%count = fn%count
+!  line: instruction
+EXAMINE P%NAME
+!FCEVAL\FCEVAL.CALL_USER.P%NAME: 'fact                           '
+EXAMINE P%KID%OP
+!FCEVAL\FCEVAL.CALL_USER.P%KID%OP:       2
+EXAMINE P%KID%KID%NAME
+!FCEVAL\FCEVAL.CALL_USER.P%KID%KID%NAME: 'n                              '
+EXAMINE P%KID%KID%NEXT%NUMBER%Z
+!FCEVAL\FCEVAL.CALL_USER.P%KID%KID%NEXT%NUMBER%Z:        (1.00000000000000,0.000000000000000)
+EXAMINE F%NAMES(1)
+!FCEVAL\FCEVAL.CALL_USER.F%NAMES(1):     'n                              '
+EXAMINE CALLS
+!FCEVAL\FCEVAL.CALLS:    1
+! fact(n - 1) again, n 2: the stack holds three calls of CALL_USER, each
+! through EVALUATE, CALL_FUNCTION, IF's CHOOSE, and OPERATE's n * ...
+GO
+!break at routine FCEVAL\FCEVAL.CALL_USER
+!FORTRAN line n: inner%count = fn%count
+!  line: instruction
+SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*FCEVAL          FCEVAL.CALL_USER  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.OPERATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CHOOSE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_USER  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.OPERATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CHOOSE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_USER  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.CALL_FUNCTION  line  rel-PC  abs-PC
+!*FCEVAL          FCEVAL.EVALUATE  line  rel-PC  abs-PC
+!*FCALC           FCALC.STATEMENT  line  rel-PC  abs-PC
+!*FCALC           FCALC.RUN  line  rel-PC  abs-PC
+!*FCALC           FCALC.EXECUTE  line  rel-PC  abs-PC
+!*FCALC           FCALC  line  rel-PC  abs-PC
+EXAMINE CALLS
+!FCEVAL\FCEVAL.CALLS:    2
+CANCEL BREAK/ALL
+GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+EXIT

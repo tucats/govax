@@ -268,6 +268,7 @@ As revised by the author's answers (below), with vectors and matrices added:
      (`'ABCDEF'(K:K)`, R609); `testdata/fortran90/constsub.f90`.
      (done 2026-11-21)
 9. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
+   (done 2026-11-22)
 10. **gfortran's witness**.
 11. **The simh round**: `testdata/f90r`, fcalc and the whole Fortran 90
     corpus, run by the author on the simh VAX, and its oracle.
@@ -743,3 +744,40 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
     `fcplatform.f90`'s LIB$GET_FOREIGN (gfortran's twin has none). An error
     in it is shown with the line it came from, since the terminal never
     echoed it.
+- **2026-11-22:** Subtask 9, every mode and the compiler's tools on fcalc.
+  `TestFcalcMilestone` (`internal/console/fcalc_test.go`) replaces
+  `TestFcalc` and the scratch `TestFcalcTry`: fcalc built `/NOOPTIMIZE`,
+  `/OPTIMIZE`, `/RECURSIVE/NOOPTIMIZE`, and `/RECURSIVE/OPTIMIZE` (the
+  corpus's `optimizerModes` and `recursiveModes`) with paging off and on, then
+  `/CHECK=ALL` and `/NOOPTIMIZE/DEBUG=ALL` with paging off, ten builds, each
+  running all eleven scripts, checking SAVE's and LOG's files, and running
+  `oneshot.com`; all print the same lines (about 66 seconds in all).
+  The compiler's tools, by `internal/dclcmd`'s `TestFcalcTools`:
+  `/LIST/CROSS_REFERENCE` of every module says nothing and writes its
+  listing (77 to 3,796 lines); `/STANDARD=F90` and `/WARNINGS=ALL` say only
+  `fcalcToolMessages`, each explained there and in the README. Fixed in fcalc:
+  ALIGNCOMMON three times in FCMESSAGES (INTEGERs declared after a 199-byte
+  CHARACTER, off their longwords; the CHARACTERs now come last, with a
+  comment on why), and UNUSEDNAME in FCMATRIX (MANY in a USE ... ONLY no
+  longer used). Explained and kept: FCPLATFORM's two EXTENSIONs
+  (LIB$GET_FOREIGN's `$` and null argument), 13 HOSTHIDDENs (internal
+  procedures declaring their own locals, as they should), and FCSTATE's
+  UNREAD (`REST`, read only to drop an overlong line's tail, now commented).
+  gfortran prints every script and file as before after these changes.
+  The debugger session: `testdata/fcalc/fcalcd.com` builds fcalc `/DEBUG`
+  (MACRO/DEBUG, LINK/DEBUG) and runs `fact(3)` with DBG$INPUT naming
+  `fcalcd.dbg`, which breaks at FCEVAL.CALL_USER at each level of the
+  recursion, walks the expression trees through their pointers (`FN%BODY%KID%OP`,
+  `P%KID%KID%NEXT%NUMBER%Z`, NOTASSOC for `P%KID%NEXT%KIND`), reads the
+  caller's frame (`F%NAMES(1)`) and a module variable (`CALLS`), and shows 23
+  calls three levels deep; `TestFcalcDebugger` (`internal/console`, beside
+  `runProbeProcedure`) holds the session's log to `fcalcd.dlg` and the
+  procedure's to `fcalcd.out`, masking what moves with any change (SHOW CALLS's
+  numbers, the MACRO line under a break, the FORTRAN line's number). No
+  compiler or debugger bug found. Observed, and left as it is: SHOW CALLS's line
+  column is the MACRO file's line, not the FORTRAN line a break shows, since
+  under `/DEBUG` the module's line table is the MACRO file's (Phase 110's 7c),
+  which `%LINE n`, TYPE, and EXAMINE/SOURCE also count; numbering SHOW CALLS
+  alone by FORTRAN lines would make it disagree with them. The session says SET
+  RADIX DECIMAL, as the manual tells a FORTRAN user to (Phase 85: the language
+  stays MACRO).

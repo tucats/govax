@@ -106,12 +106,18 @@ module fcmessages
     message('E', 'FILELOOP', 'file !AS is already running'), &
     message('W', 'NOLOG', 'no log file is open'), message('I', 'INFILE', 'in line !AS') /)
 
+  ! The module's variables are declared INTEGERs first, CHARACTERs last. A
+  ! compiler lays a module's variables out in the order declared, and a
+  ! CHARACTER variable's length is any number of bytes, so an INTEGER after
+  ! one may fall off its natural (longword) boundary, which a VAX reaches
+  ! more slowly: /WARNINGS=ALIGNMENT reports it as %FORT-I-ALIGNCOMMON.
+
   ! The error not yet reported: its code (0 for none), column (0 for none),
-  ! and text (a name, or a file's: as long as a line). SAVE keeps a module variable's value from one call to the
-  ! next (and = 0 gives its value when the program starts); without SAVE, a
-  ! module variable may lose its value when no active unit uses the module.
+  ! and text, ARGUMENT, below (a name, or a file's: as long as a line). SAVE
+  ! keeps a module variable's value from one call to the next (and = 0 gives
+  ! its value when the program starts); without SAVE, a module variable may
+  ! lose its value when no active unit uses the module.
   integer, save :: code = 0, column = 0
-  character(len=line_length), save :: argument = ' '
 
   ! How far right of the line's start the typed text begins: the prompt's
   ! width, so the pointer falls under the column.
@@ -125,9 +131,11 @@ module fcmessages
   ! without the carriage control, which a file's records don't have.
   integer, save :: log_unit = 0
 
-  ! A line SAY_PART is building, and how much of it is filled.
-  character(len=width), save :: pending = ' '
+  ! A line SAY_PART is building, PENDING, and how much of it is filled.
   integer, save :: filled = 0
+
+  character(len=line_length), save :: argument = ' '
+  character(len=width), save :: pending = ' '
 
   ! CONTAINS separates the module's declarations from its procedures, the
   ! module procedures, which see everything declared above it.

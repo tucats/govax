@@ -39,7 +39,7 @@ module fcmatrix
   use fcmessages
   use fcvalues
   use fcarrays
-  use fcfuncs, only: builtin, many
+  use fcfuncs, only: builtin
   use fcpoly
   implicit none
   private

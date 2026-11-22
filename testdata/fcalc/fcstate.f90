@@ -214,7 +214,10 @@ contains
     status = 1
     if (ios /= 0) return
 
-    ! The line filled TEXT without ending: pass over the rest.
+    ! The line filled TEXT without ending: pass over the rest, a piece at a
+    ! time. Each piece is read into REST only to be dropped (so /WARNINGS
+    ! reports REST as UNREAD): a nonadvancing READ with no item reads nothing,
+    ! so it would never reach the end of the record.
     do
       if (present(depth)) then
         read (input_unit + depth, '(A)', advance='NO', eor=20, end=20, iostat=ios) rest
