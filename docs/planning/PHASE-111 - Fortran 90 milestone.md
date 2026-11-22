@@ -845,3 +845,22 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   `TestFcalcTools`, and gfortran's witness (all three builds) pass unchanged
   otherwise. Next: the author's run, then `TestF90ROracle`, govax's run held to
   VMS's log, and part 2's fixes.
+- **2026-11-22:** Subtask 11, the first attempt: VMS 7.1 mounted the volume, and
+  `@F90R/OUTPUT=F90R.LOG` bug-checked the VAX at once (UNXSIGNAL, "Unexpected
+  signal name in ACP", in F11BXQP). The signal array the register dump points
+  at (R0) is SS$_ACCVIO, reason 1, virtual address `0000000C`, PC 818B5417:
+  the XQP read through a null pointer to one of its own blocks, offset 12, so
+  something on the volume wasn't where it looked. `tools/odscheck` (its own
+  module, outside govax's build; by the author's wish the start of an
+  ANALYZE/DISK_STRUCTURE/REPAIR for govax) checks the container from its raw
+  blocks: headers, checksums, maps, extension chains (INDEXF.SYS's too), back
+  links, directories' contiguity, records, order, and FIDs, free header slots,
+  and BITMAP.SYS by ods2's `AnalyzeDisk`. It finds no problem. What differs
+  from Phase 89's volume, which VMS extended without trouble: INDEXF.SYS has 10
+  free header slots left (1,681 in use) with an extension header (file 1279, no
+  ident area); and the MFD's 21 blocks are all in use (EOF 22/0), with
+  F90R.COM in a full block (508 bytes), so inserting F90R.LOG makes the XQP
+  split that block and extend the MFD; Phase 89's, as VMS left it, has a spare
+  block. Neither is wrong by ODS-2's rules; the cause is open. Next: VMS's own
+  view (SDA on the crash dump, ANALYZE/DISK_STRUCTURE on the volume mounted
+  /NOWRITE), from the author.
