@@ -263,7 +263,10 @@ As revised by the author's answers (below), with vectors and matrices added:
    (done 2026-11-21)
 7. **TABLE and PLOT**; `plot`. (done 2026-11-21)
 8. **State and files**: SAVE, LOAD, `@`, LOG, the foreign command; `state`,
-   `oneshot`, `errors`.
+   `oneshot`, `errors`. (done 2026-11-22)
+   - 8a. A substring of a literal character constant under `/F90`
+     (`'ABCDEF'(K:K)`, R609); `testdata/fortran90/constsub.f90`.
+     (done 2026-11-21)
 9. **Every mode**: `TestFcalcMilestone`, and the compiler's tools on fcalc.
 10. **gfortran's witness**.
 11. **The simh round**: `testdata/f90r`, fcalc and the whole Fortran 90
@@ -695,3 +698,48 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
     a value computed exactly is sure to be there on both machines; the script's
     sizes and ranges were chosen, with a Python model of the rule, so no other
     sample lies within a millionth of a row of a tie or on a Y range's edge.
+- **2026-11-22:** Subtask 8, state and files, in a new module, `fcstate.f90`
+  (after FCPLOT): SAVE, LOAD, `@` and RUN, LOG, and the foreign command.
+  The author committed the work in progress on 2026-11-21 before a system
+  upgrade; this entry closes it. Seven messages: FILEREQ, NOFILE, FILEERR,
+  NESTING, FILELOOP, the warning NOLOG, and INFILE, the `-` line that says
+  which line of which file a message came from. The `state` and `errors`
+  scripts and the files they write (`expected/saved.fcalc`,
+  `session.fcalc`) are printed alike by gfortran and by govax in every mode
+  (`/[NO]OPTIMIZE`, `/RECURSIVE`, `/CHECK=ALL`, `/NOOPTIMIZE/DEBUG=ALL`,
+  paging on), as are the ten earlier scripts; `oneshot.com` runs on govax
+  only. One compiler bug found, 8a: under `/F90` a substring of a literal
+  character constant, `'0123456789'(K:K)` (R609's parent string may be any
+  scalar constant), was a syntax error; the parser now takes one after a
+  character literal (`parse`'s `isCharLiteral`), and sema folds it or reads
+  the constant's datum as it does a named constant's. Held by
+  `testdata/fortran90/constsub.f90`, the same on gfortran. (gfortran's
+  witness now needs `SDKROOT=$(xcrun --show-sdk-path)` after the host's
+  upgrade, or its link can't find library `System`.)
+  Decisions made here, beyond A.1:
+  - **SAVE's file is fcalc's own commands**: a comment heading with the date
+    and time, each setting as SHOW SETTINGS writes it, then each variable and
+    function, every line ending in `;` so running the file shows nothing. A
+    number has as many digits as it takes to read back the very same value
+    (A.3), so LOAD restores it exactly; an array past `save_width` (100
+    characters) is made a piece at a time. A seed never given is a comment.
+  - **LOAD clears every variable and function first**, then runs the file
+    quietly; a LOAD whose file can't be opened leaves everything as it was.
+    `@file` and RUN run a file's lines as if typed, with nothing cleared.
+  - **File names**: a name with no type gets `.fcalc` (VAX FORTRAN would give
+    `.DAT`); one with a type keeps it. RUN, LOAD, SAVE, and LOG are commands
+    only when a file name follows: with `=` or `(` after them they are a
+    variable or a function (`run = 3`, `log(8, 2)`).
+  - **Nesting**: files may run each other 8 deep (`max_depth`), each on a unit
+    of its own (20 + depth), NESTING past that; a file that is already
+    running (asked by INQUIRE's OPENED=, so however its name is spelled) is
+    FILELOOP. EXECUTE, RUN, and RUN_FILE are RECURSIVE.
+  - **An error ends the file and every file that ran it**, each saying where
+    with an INFILE line; a warning doesn't; EXIT ends the file, not fcalc.
+  - **LOG** appends a transcript (what SAY writes, without carriage control)
+    to its file; LOG OFF closes it, NOLOG if none is open.
+  - **The foreign command**: `$ FCALC line` runs the one line and ends;
+    with no text fcalc reads lines as usual. Its text comes from
+    `fcplatform.f90`'s LIB$GET_FOREIGN (gfortran's twin has none). An error
+    in it is shown with the line it came from, since the terminal never
+    echoed it.

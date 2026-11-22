@@ -66,7 +66,8 @@ $ RUN FCALC
 
 On gfortran, with `gfortran/fcplatform.f90` in place of `fcplatform.f90`, in
 the same order: `gfortran -std=f95 gfortran/fcplatform.f90 fckinds.f90 ...
-fcalc.f90`. The sources keep to Fortran 90: nothing Fortran 95 added (`I0`,
+fcalc.f90` (on macOS, if the link can't find library `System`, set
+`SDKROOT=$(xcrun --show-sdk-path)` first). The sources keep to Fortran 90: nothing Fortran 95 added (`I0`,
 `NULL()`, default component values, `ELEMENTAL`, `PURE`, `FORALL`).
 
 ## The scripts
