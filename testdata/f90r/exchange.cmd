@@ -3,7 +3,7 @@
 !
 !     govax console < testdata/f90r/exchange.cmd
 !
-INITIALIZE/CONTAINER "testdata/disks/f90r-exchange.dsk" /DEVICE=RD54 F90R
+INITIALIZE/CONTAINER "testdata/disks/f90r-exchange.dsk" /DEVICE=RD54 /HEADERS=6000 /DIRECTORIES=800 F90R
 MOUNT/WRITE DUA5: "testdata/disks/f90r-exchange.dsk"
 SET DEFAULT DUA5:[000000]
 COPY/QUIET "testdata/f90r/f90r.com"/HOST F90R.COM

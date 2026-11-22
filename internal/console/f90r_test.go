@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/rms"
 )
 
 // The Fortran 90 program's VMS round (docs/planning/PHASE-111 - Fortran 90 milestone.md,
@@ -55,7 +57,8 @@ func f90rFromFile(out, in string) string {
 func runF90R(t *testing.T) (string, *Console, *Dispatcher) {
 	t.Helper()
 
-	return runVMSRound(t, "f90r", 200000, "F90R")
+	// gen.go's headers and directories.
+	return runVMSRound(t, "f90r", 200000, "F90R", rms.ContainerSpace{Headers: 6000, Directories: 800})
 }
 
 // fcalcVariantsF90R are fcalc's directories in F90R.COM: gen.go's fcalcVariants.

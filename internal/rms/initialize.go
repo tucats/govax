@@ -66,6 +66,28 @@ import (
 // status for the operator to see (docs/planning/PHASE-23.md's "Status-code / error
 // translation" design section).
 func InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+	return InitializeContainerWith(path, blocks, label, clusterSize, devType, ContainerSpace{})
+}
+
+// ContainerSpace is what a new volume's index file and MFD are made with,
+// VMS INITIALIZE's /HEADERS and /DIRECTORIES; zero is the default for each.
+//
+// Headers made up front keep the index file in one extent, as VMS's
+// INITIALIZE makes it, however many files the volume will hold: grown a
+// piece at a time, it ends up needing an extension header, which VMS 7.1's
+// file system couldn't read on a volume govax made (docs/planning/PHASE-111
+// - Fortran 90 milestone.md, subtask 11). Directories give the MFD room for
+// that many entries, so VMS can insert a name without extending it.
+type ContainerSpace struct {
+	Headers     uint32
+	Directories uint32
+}
+
+// InitializeContainerWith is InitializeContainer with the index file's and
+// the MFD's space given.
+func InitializeContainerWith(path string, blocks uint32, label string, clusterSize uint16, devType string,
+	space ContainerSpace,
+) error {
 	// If blocks were not specified, but a known device type was given, use it's max block
 	// size as the container size. If the device was specified but is invalid, complain that
 	// it's a bad device name. Otherwise, complain that SIZE was invalid/missing.
@@ -97,7 +119,10 @@ func InitializeContainer(path string, blocks uint32, label string, clusterSize u
 	// was writing" behavior.
 	defer func() { _ = c.Close() }()
 
-	if err := volume.Initialize(c, initializeOptions(label, clusterSize)); err != nil {
+	opts := initializeOptions(label, clusterSize)
+	opts.Headers, opts.Directories = space.Headers, space.Directories
+
+	if err := volume.Initialize(c, opts); err != nil {
 		return fmt.Errorf("rms: initializing %s: %w", path, err)
 	}
 

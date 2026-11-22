@@ -40,14 +40,17 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 	// As from an earlier run in the same session. This doesn't test what that did on
 	// VMS: there LINK translates the name for FTNRTL/OPTIONS and looks for the image it
 	// is to make, and govax's LINK doesn't translate it (the phase doc's log).
-	return runVMSRound(t, "ftn86", 60000, "FTN86", "DEFINE/NOLOG FTNRTL DUA1:[FTN86]FTNRTL.EXE")
+	return runVMSRound(t, "ftn86", 60000, "FTN86", rms.ContainerSpace{}, "DEFINE/NOLOG FTNRTL DUA1:[FTN86]FTNRTL.EXE")
 }
 
-// runVMSRound builds a VMS round's volume, of size blocks with label, as
-// testdata/round/exchange.cmd does, and runs LABEL.COM on it after the commands before,
+// runVMSRound builds a VMS round's volume, of size blocks with label and the index
+// file's and MFD's space, as testdata/round/exchange.cmd does, and runs LABEL.COM on
+// it after the commands before,
 // returning the log and the console, whose default directory is the volume's
 // [000000] on DUA1, as VMS has it.
-func runVMSRound(t *testing.T, round string, size uint32, label string, before ...string) (string, *Console, *Dispatcher) {
+func runVMSRound(t *testing.T, round string, size uint32, label string, space rms.ContainerSpace,
+	before ...string,
+) (string, *Console, *Dispatcher) {
 	t.Helper()
 
 	c, buf := newTestConsole(t)
@@ -60,7 +63,7 @@ func runVMSRound(t *testing.T, round string, size uint32, label string, before .
 	}
 
 	path := filepath.Join(t.TempDir(), round+".dsk")
-	if err := c.cmd().InitializeContainer(path, size, label, 0, "RD54"); err != nil {
+	if err := rms.InitializeContainerWith(path, size, label, 0, "RD54", space); err != nil {
 		t.Fatal(err)
 	}
 

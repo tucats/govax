@@ -24,7 +24,8 @@ exercise yet of VMS's MTHRTL under govax's code: fcalc is built `/G_FLOATING`.
 ## Running it
 
 1. Build the volume, from the repository root (it makes `testdata/disks/f90r-exchange.dsk`,
-   label F90R, RD54 size, about 57,000 of its 311,200 blocks used, 1,671 files):
+   label F90R, RD54 size, 1,680 files; INITIALIZE's `/HEADERS=6000` and
+   `/DIRECTORIES=800`, below):
 
        go build -o govax ./cmd/govax
        ./govax --profile tbprobe --system-file none console < testdata/f90r/exchange.cmd
@@ -63,6 +64,18 @@ The procedure's runs read their input from files, not a terminal, and two things
   middle of such a record (`fcalc>  set echo`), and overflowing it on a long line; the phase
   doc's log has the fix.
 - **ADVANCE's prompt**, likewise, stays in its record (`f90rFileDifferences`).
+
+## The first attempt, and /HEADERS
+
+The first volume, made with INITIALIZE's defaults, bug-checked VMS 7.1 at once: `@F90R`
+crashed in the file system (UNXSIGNAL, an access violation in F11BXQP), and so did a
+read-only `ANALYZE/DISK_STRUCTURE` (XQPERR). Its INDEXF.SYS had grown 18 blocks at a time
+to 98 pieces, more than its header holds, so the last 411 blocks were mapped by an
+extension header; the stack in the second crash held 1302, the blocks the primary header
+mapped. `tools/odscheck` found nothing wrong by ODS-2's rules, so the form VMS objects to
+is still open (the phase doc's log), but the volume is now made with an index file big
+enough for every file the round makes, in one piece, and an MFD with room to spare. The
+old volume is `testdata/disks/f90r-exchange-attempt1.dsk`.
 
 ## What came back
 

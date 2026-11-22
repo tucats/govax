@@ -2081,3 +2081,20 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   object assembled `/DEBUG` and linked without it shows none, as before. A line of an INCLUDE file listed with
   `/LIST` is numbered as its comment is, by its own file's line (unconfirmed what VAX FORTRAN shows).
 - **Status**: kept, by design.
+
+### [Phase 111] VMS 7.1's file system fails on an index file extension header ods2 made
+
+- **Where**: ods2's `volume/writeheader.go` (`ensureHeaderSlot`, the index file's growth), seen through
+  `testdata/f90r` (`docs/planning/PHASE-111 - Fortran 90 milestone.md`, subtask 11).
+- **What**: a volume govax made whose INDEXF.SYS had outgrown its header (98 pieces, the last 411 blocks mapped by
+  an extension header in file 1279) bug-checked VMS 7.1 twice: UNXSIGNAL (an access violation reading address
+  `0000000C` in F11BXQP) at `@F90R/OUTPUT=F90R.LOG`, and XQPERR at a read-only `ANALYZE/DISK_STRUCTURE`, whose
+  stack held 1,302, the blocks the primary header mapped. `tools/odscheck` finds the volume consistent by ODS-2's
+  rules (checksums, maps, the chain, the bitmaps). ods2's extension headers have their ident and map areas both at
+  word 40, no record attributes, and the primary's FID as their back link; what VMS writes in an index file
+  extension header, and which of these VMS objects to (or whether it reads one at all at mount), is unconfirmed:
+  no VMS-made one is at hand. Phase 89's log thought VMS had read such a header on its round's volume; the copy
+  VMS left suggests it never had one.
+- **Status**: open. Gone round, not fixed: a volume meant for VMS is made with INITIALIZE/CONTAINER's `/HEADERS`
+  big enough that its index file never grows (`testdata/f90r`'s `/HEADERS=6000`). A probe would settle it: let
+  VMS grow an index file past its header on a scratch volume, and compare its extension header with ods2's.

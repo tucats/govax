@@ -530,6 +530,12 @@ grammar console
                     /type=$integer
         qualifier   device/id=810               -
                     /type=$string
+        ! VMS INITIALIZE's /HEADERS and /DIRECTORIES (Phase 111, subtask
+        ! 11): the index file's headers and the MFD's entries made up front.
+        qualifier   headers/id=814              -
+                    /type=$integer
+        qualifier   directories/id=815          -
+                    /type=$integer
 
     ! INITIALIZE/MEMORY (was VMINIT) lays out virtual memory: the P0, P1,
     ! and S0 regions, the privileged modes' stacks, and the string pool,

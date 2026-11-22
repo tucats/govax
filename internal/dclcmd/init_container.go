@@ -62,7 +62,12 @@ func (c *Context) InitializeContainer(path string, blocks uint32, label string, 
 // nothing. The container is a host file, so with vax.host.sysprv on
 // either needs SYSPRV first (hostCommandPrivilege; docs/planning/PHASE-97
 // - host file access.md, Decision 2).
-func (c *Context) InitializeContainerCommand(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+//
+// space is /HEADERS and /DIRECTORIES: what the index file and the MFD are
+// made with, zero for INITIALIZE's defaults.
+func (c *Context) InitializeContainerCommand(path string, blocks uint32, label string, clusterSize uint16, devType string,
+	space rms.ContainerSpace,
+) error {
 	if err := c.hostCommandPrivilege(); err != nil {
 		return err
 	}
@@ -73,5 +78,9 @@ func (c *Context) InitializeContainerCommand(path string, blocks uint32, label s
 		}
 	}
 
-	return c.InitializeContainer(path, blocks, label, clusterSize, devType)
+	if err := rms.InitializeContainerWith(path, blocks, label, clusterSize, devType, space); err != nil {
+		return vmserrors.Wrap(vmserrors.CLI_INITFAIL, err, path)
+	}
+
+	return nil
 }

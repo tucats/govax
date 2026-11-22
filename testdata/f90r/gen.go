@@ -28,6 +28,15 @@ const (
 	// results is where copyout.cmd puts VMS's run. The first round goes to vax/ itself;
 	// a later one is to go to vax/roundN, beside the one the tests read, until it's checked.
 	results = dir + "/vax"
+
+	// headers and directories are INITIALIZE's /HEADERS and /DIRECTORIES: an
+	// index file with room for every file govax writes (about 1,700) and VMS's
+	// run adds (an object and an image per program, its files, the log), so it
+	// never needs an extension header, which VMS 7.1's file system failed on
+	// (the phase doc's log); and an MFD with room for the round's 382 names and
+	// more, so VMS needn't extend it to add F90R.LOG.
+	headers     = 6000
+	directories = 800
 )
 
 // variants are the ways every program of the corpus is compiled, each in a directory
@@ -100,14 +109,14 @@ func main() {
 !
 !     govax console < testdata/f90r/exchange.cmd
 !
-INITIALIZE/CONTAINER "%[1]s" /DEVICE=RD54 F90R
+INITIALIZE/CONTAINER "%[1]s" /DEVICE=RD54 /HEADERS=%[4]d /DIRECTORIES=%[5]d F90R
 MOUNT/WRITE %[2]s "%[1]s"
 SET DEFAULT %[2]s[000000]
 COPY/QUIET "%[3]s/f90r.com"/HOST F90R.COM
 CREATE/DIRECTORY %[2]s[FTNRTL]
 COPY/QUIET "internal/ftnrtl/ftnrtl.opt"/HOST %[2]s[FTNRTL]FTNRTL.OPT
 COPY/QUIET "%[3]s/f90r.opt"/HOST %[2]s[FTNRTL]F90R.OPT
-`, volume, device, dir)
+`, volume, device, dir, headers, directories)
 
 	for _, m := range modules {
 		copyFile(&ex, "internal/ftnrtl/mar/"+strings.ToLower(m)+".mar", device+"[FTNRTL]"+m+".MAR")

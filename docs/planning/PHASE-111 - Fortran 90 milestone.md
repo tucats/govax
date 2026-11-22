@@ -864,3 +864,26 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   block. Neither is wrong by ODS-2's rules; the cause is open. Next: VMS's own
   view (SDA on the crash dump, ANALYZE/DISK_STRUCTURE on the volume mounted
   /NOWRITE), from the author.
+- **2026-11-22:** Subtask 11, the second VAX crash and a way round it. No
+  crash dump (no SYSDUMP.DMP on the VAX). `MOUNT/NOWRITE` then
+  `ANALYZE/DISK_STRUCTURE DUA1:` bug-checked too (XQPERR, "Error detected by
+  file system XQP", in VERIFY.EXE), so reading the volume is enough: no create,
+  no MFD split. The stack held `00000516`, 1,302, the blocks INDEXF.SYS's
+  primary header maps; past them only govax's extension header (file 1279)
+  maps it. So the XQP fails on an index file extension header ods2 made. A
+  correction to Phase 89's log: the copy of its volume VMS left has INDEXF.SYS
+  in one header (72 extents), which the XQP can't have made from one with an
+  extension header, so that round's volume most likely never had one, and this
+  is the first govax index file extension header VMS has read. Every extension
+  header on the local volumes (all ods2-made) has file 1279's form: ident and
+  map areas both at word 40, no record attributes, the back link the primary's
+  FID; what VMS writes isn't known here (no VMS-made one is at hand), so which
+  field VMS objects to is open (DEVIATIONS.md). The round goes round it: govax's
+  INITIALIZE/CONTAINER gains VMS's `/HEADERS=n` and `/DIRECTORIES=n` (ods2's
+  `InitializeOptions` had both; `rms.ContainerSpace`, `InitializeContainerWith`;
+  HELP INITIALIZE /CONTAINER; `TestInitializeContainerWith_space`), and
+  `exchange.cmd` makes the volume `/HEADERS=6000 /DIRECTORIES=800`: INDEXF.SYS
+  6,024 blocks in one header, the MFD 51 blocks with 21 in use. `runVMSRound`
+  takes the space too, so the rehearsal's volume is the same. `odscheck` gains
+  `-extensions` (each extension header, raw). The crashed volume is kept as
+  `testdata/disks/f90r-exchange-attempt1.dsk`.

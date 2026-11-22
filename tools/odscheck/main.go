@@ -42,6 +42,8 @@ import (
 	"slices"
 	"sort"
 
+	"encoding/hex"
+
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -53,6 +55,8 @@ type checker struct {
 	blocks   uint32 // the container's size in blocks
 	cluster  uint32
 	problems int
+
+	showExtensions bool // -extensions
 }
 
 // block reads one logical block.
@@ -103,6 +107,7 @@ func (e extents) size() (n uint32) {
 func main() {
 	showFree := flag.Bool("free", false, "show the free header slots INDEXF.SYS maps")
 	showDirs := flag.Bool("dirs", false, "show each directory's header and its blocks' fill")
+	showExtensions := flag.Bool("extensions", false, "show every extension header, raw")
 	flag.Parse()
 
 	if flag.NArg() != 1 {
@@ -122,7 +127,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	c := &checker{disk: disk, blocks: uint32(info.Size() / 512)}
+	c := &checker{disk: disk, blocks: uint32(info.Size() / 512), showExtensions: *showExtensions}
 	c.check(*showFree, *showDirs)
 	c.checkBitmap(flag.Arg(0))
 
@@ -265,6 +270,11 @@ func (c *checker) readHeaders(home ondisk.HomeBlock, index extents, headerVBN fu
 		}
 
 		headers[n] = h
+
+		if c.showExtensions && h.SegmentNumber > 0 {
+			describe(fmt.Sprintf("extension header %d at LBN %d", n, lbn), h)
+			fmt.Printf("%s", hexDump(raw))
+		}
 
 		pointers, err := h.RetrievalPointers()
 		if err != nil {
@@ -499,4 +509,14 @@ func describe(what string, h ondisk.FileHeader) {
 	ra := h.RecordAttributes
 	fmt.Printf("    end of file block %d, first free byte %d, highest block %d\n",
 		ra.EndOfFileBlock, ra.FirstFreeByte, ra.HighestBlock)
+}
+
+// hexDump is a header's bytes up to its last nonzero one, 16 to a line.
+func hexDump(raw []byte) string {
+	end := len(raw) - 2 // the checksum
+	for end > 0 && raw[end-1] == 0 {
+		end--
+	}
+
+	return hex.Dump(raw[:end])
 }

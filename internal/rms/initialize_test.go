@@ -3,6 +3,8 @@ package rms
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/tucats/ods2/ondisk"
 )
 
 const testVolumnName = "TESTVOL"
@@ -135,5 +137,39 @@ func TestInitializeContainer_badPath(t *testing.T) {
 
 	if err := InitializeContainer(path, 400, testVolumnName, 0, "RD54"); err == nil {
 		t.Error("InitializeContainer with a nonexistent parent directory = nil error, want an error")
+	}
+}
+
+// TestInitializeContainerWith_space confirms /HEADERS and /DIRECTORIES reach the
+// new volume: an index file with that many headers past its bitmap, in one extent
+// (no extension header to grow into), and an MFD with a block for every 16
+// entries and one more.
+func TestInitializeContainerWith_space(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "new.dsk")
+
+	if err := InitializeContainerWith(path, 20000, testVolumnName, 0, "", ContainerSpace{Headers: 3000, Directories: 500}); err != nil {
+		t.Fatalf("InitializeContainerWith: %v", err)
+	}
+
+	mt := NewMountTable()
+	if err := mt.Mount("DUA0", path, true); err != nil {
+		t.Fatalf("Mount: %v", err)
+	}
+
+	vol, _ := mt.Lookup("DUA0")
+	dev := vol.Devices[0]
+	home := dev.Home
+
+	if got, want := dev.IndexFile.Blocks(), uint32(home.IndexBitmapVBN)+uint32(home.IndexBitmapSize)-1+3000; got < want {
+		t.Errorf("the index file has %d blocks, want at least %d", got, want)
+	}
+
+	mfd, err := vol.OpenFID(ondisk.Fid{Num: 4, Seq: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := mfd.Blocks(), uint32(500/16+1); got < want {
+		t.Errorf("the MFD has %d blocks, want at least %d", got, want)
 	}
 }

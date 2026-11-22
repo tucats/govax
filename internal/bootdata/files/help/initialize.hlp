@@ -54,6 +54,25 @@
    Sizes the volume as a DEC disk of this type, such as RX50, RD51,
    RD54, RA81, or RA92.  Either /DEVICE or /SIZE must be given.
 
+/DIRECTORIES
+
+      /DIRECTORIES=n
+
+   Makes the master file directory, [000000], with room for n
+   entries, 16 to a block.  The default is 16; the MFD grows when it
+   needs to.
+
+/HEADERS
+
+      /HEADERS=n
+
+   Makes the index file, INDEXF.SYS, with n file headers, one per file
+   the volume can hold before it grows.  The default is 16.  A volume
+   for a VMS system that will hold many files should be given enough
+   headers for all of them: grown a piece at a time, the index file
+   needs an extension header once it has many pieces, and VMS 7.1's
+   file system has failed on a volume where govax made one.
+
 /SIZE
 
       /SIZE=n
