@@ -20,9 +20,9 @@
    file.  A .F90 file is in free source form (Fortran 90's), any other
    in fixed form (VAX FORTRAN's), unless /SOURCE_FORM says otherwise.
    Free form is read (statements anywhere on a line, ! comments, ;
-   between statements, & to continue); see Fortran_90 for what of
-   Fortran 90 is compiled so far.  Files are found by MACRO's
-   rules (see MACRO Parameter); quote a host path to keep its case.
+   between statements, & to continue); see Fortran_90 for Fortran 90's
+   language.  Files are found by MACRO's rules (see MACRO Parameter);
+   quote a host path to keep its case.
 
 2 Description
 
@@ -101,15 +101,24 @@
 
 2 Fortran_90
 
-   Fortran 90 (ISO/IEC 1539:1991) is also supported by the same compiler.
-   This can be controlled by the /F90 compiler option, by compiling a
-   program with a .F90 extension, or by specifying OPTION values in the
-   source code.
+   The FORTRAN compiler compiles Fortran 90 (ISO/IEC 1539:1991) as well
+   as VAX FORTRAN, in one language: a program may use both, and Fortran
+   90's statements need no qualifier.  Where the two read the same text
+   differently (a "..." constant, TYPE name, and Fortran 90's new
+   intrinsic names), /F90 chooses Fortran 90's reading.  /F90 is the
+   default for a free-form source (a .F90 file) and /NOF90 for a
+   fixed-form one, so an old .FOR file compiles as it always has; an
+   OPTIONS /F90 statement sets it for one unit.
 
-3 Source_Format
-   A FORTRAN 90 program assumes "free form", based on the use of a .F90
-   file's type or /SOURCE_FORM=FREE. This supports source that does not
-   depend on column positions, and with Fortran 90's spellings:
+   Each subtopic describes one part of the language.  The few forms the
+   compiler does not compile draw %FORT-E-NOTIMPL, and each subtopic
+   names its own.  Fortran 95's additions (ELEMENTAL, PURE, FORALL,
+   NULL(), and default values for components) are not compiled.
+
+3 Source_Form
+
+   A .F90 file, or any file under /SOURCE_FORM=FREE, is in free source
+   form, where no column has a meaning of its own:
 
      program squares                ! ! starts a comment anywhere
        implicit none
@@ -120,96 +129,116 @@
                                          &it's ", i  ! & continues
      end program squares
 
-   That is: the relational operators ==, /=, <, <=, >, and >= (written
-   .EQ. and the rest in fixed form too); character constants between
-   quotation marks under /F90, in expressions and FORMAT statements;
-   B'101', O'17', and Z'1F'; END PROGRAM, END SUBROUTINE, and END
-   FUNCTION with or without the unit's name, which must be its own.  A
-   blank may not stand inside a name or a keyword in free form, and must
-   stand between two names (GOTO and GO TO are both allowed, as are the
-   standard's other compounds).  A statement may have 39 continuation
-   lines, and a line 132 characters.  Both forms may make up one
-   program, and an INCLUDE file is read in the form of its own type.
+   A blank may not stand inside a name or a keyword in free form, and
+   must stand between two names (GOTO and GO TO are both allowed, as are
+   the standard's other compounds).  A statement may have 39
+   continuation lines, and a line 132 characters.  Both forms may make
+   up one program, and an INCLUDE file is read in the form of its own
+   type.
 
-3 Types
+   In either form: the relational operators are also written ==, /=, <,
+   <=, >, and >=; under /F90 a character constant may stand between
+   quotation marks, in expressions and FORMAT statements; B'101',
+   O'17', and Z'1F' are binary, octal, and hexadecimal constants; and
+   END PROGRAM, END SUBROUTINE, and END FUNCTION may give the unit's
+   name, which must be its own.
 
-   Type declarations may have Fortran 90's :: form, with attributes and
-   values given with =:  INTEGER, PARAMETER :: N = 10 and REAL,
-   DIMENSION(N), SAVE :: X = 0.  PARAMETER, DIMENSION, SAVE, EXTERNAL,
-   INTRINSIC, VOLATILE, AUTOMATIC, INTENT, OPTIONAL, and STATIC are
-   compiled; TARGET is checked and tells the optimizer what a pointer
-   may change (see below); each has its own
-   statement, with or without ::.  A value given with = fills a whole
-   array and gives the name SAVE.
+3 Declarations
 
-   A type may have a kind in parentheses, a number of bytes:
+   A type declaration may take Fortran 90's :: form, with attributes,
+   and values given with =:
+
+     integer, parameter :: n = 10
+     real, dimension(n), save :: x = 0.0
+
+   The attributes are PARAMETER, DIMENSION, SAVE, EXTERNAL, INTRINSIC,
+   VOLATILE, AUTOMATIC, STATIC, INTENT, OPTIONAL, TARGET, POINTER, and
+   ALLOCATABLE; each also has a statement of its own, with or without
+   ::.  A value given with = fills a whole array and makes the name
+   SAVE.  TARGET tells the optimizer what a pointer may change (see
+   Pointers).
+
+   A type may have a kind in parentheses, its size in bytes:
    INTEGER(2) is INTEGER*2, REAL(KIND=8) is REAL*8, COMPLEX(8) (the
    parts' kind) is COMPLEX*16, and CHARACTER(LEN=10, KIND=1) is
-   CHARACTER*10.  A constant may have one too, digits or a constant's
-   name: 7_2, 1.5_DP (read at REAL*8's precision), .TRUE._1, 1_'TEXT'.
-   INTEGER(1), also written INTEGER*1, is a signed byte, its
-   operations done in bytes; BYTE is still LOGICAL*1.  COMPLEX(16),
-   also written COMPLEX*32, has two REAL(16) parts: its arithmetic,
-   comparisons, conversions, and powers are compiled, and INT, REAL,
-   DBLE, QEXT, CMPLX, DCMPLX, AIMAG, CONJG, ABS, SQRT, EXP, LOG, SIN,
-   COS, and MERGE take one, as does every kind of I/O statement; the
-   other intrinsic functions of one are not there yet.
-   (1.0_16, 0.0) is a COMPLEX(16) constant.  IMPLICIT takes kinds too:
-   IMPLICIT REAL(8) (A-H, O-Z).
+   CHARACTER*10.  IMPLICIT takes kinds too: IMPLICIT REAL(8) (A-H,
+   O-Z).  A constant may have a kind, digits or a constant's name: 7_2,
+   1.5_DP (read at REAL*8's precision), .TRUE._1, 1_'TEXT'.
 
-3 KIND_Functions
+   Two types are new.  INTEGER(1), also written INTEGER*1, is a signed
+   byte, its operations done in bytes; BYTE is still LOGICAL*1.
+   COMPLEX(16), also written COMPLEX*32, has two REAL(16) parts:
+   (1.0_16, 0.0) is a constant.  Its arithmetic, comparisons,
+   conversions, powers, and I/O are compiled, and INT, REAL, DBLE,
+   QEXT, CMPLX, DCMPLX, AIMAG, CONJG, ABS, SQRT, EXP, LOG, SIN, COS, and
+   MERGE take one.  SUM, PRODUCT, DOT_PRODUCT, and MATMUL of COMPLEX(16)
+   arrays draw %FORT-E-NOTIMPL.
+
+3 Intrinsics
+
+   Every intrinsic procedure of Fortran 90 is compiled, each in the
+   cheapest of four ways: computed when compiling, in line, by FTNRTL,
+   or by MTHRTL.  Every intrinsic function takes keyword arguments by
+   the standard's names: SELECTED_REAL_KIND(R=40), INT(X, KIND=2),
+   IAND(I=5, J=3).  INT, NINT, REAL, CMPLX, AINT, ANINT, CHAR, and
+   LOGICAL take KIND= for their result.  The array functions are
+   described under Arrays.
+
+   Under /NOF90 Fortran 90's new names are a program's own unless it
+   names them INTRINSIC.
+
+4 Kinds_and_Inquiries
 
    The kind functions KIND, SELECTED_INT_KIND, and SELECTED_REAL_KIND,
    and the numeric inquiries HUGE, TINY, EPSILON, DIGITS, PRECISION,
    RANGE, RADIX, MINEXPONENT, MAXEXPONENT, and BIT_SIZE, are answered
    when compiling, from the VAX formats' models, so they may name kinds
-   and PARAMETERs (SELECTED_INT_KIND and SELECTED_REAL_KIND of values
-   not constant are computed when the program runs).  Without
-   /G_FLOATING, SELECTED_REAL_KIND(15, 307) is 16 (H), since D's range
-   is F's.  INT, NINT, REAL, CMPLX, AINT, ANINT, CHAR, and LOGICAL take
-   a KIND for their result, and every intrinsic function takes keyword
-   arguments by the standard's names: SELECTED_REAL_KIND(R=40),
-   INT(X, KIND=2), IAND(I=5, J=3).  So does MVBITS, which takes any
-   integer expression for FROM and works on arrays an element at a
-   time.  Under /NOF90 the new names are a program's own unless named
-   INTRINSIC.
+   and give PARAMETERs their values.  SELECTED_INT_KIND and
+   SELECTED_REAL_KIND of values that aren't constant are computed when
+   the program runs.  Without /G_FLOATING, SELECTED_REAL_KIND(15, 307)
+   is 16 (H_floating), since D_floating's range is F_floating's.
 
-3 Character_Intrinsics
+4 Character
 
-   The character functions LEN_TRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT,
-   SCAN, and VERIFY are there, and INDEX, SCAN, and VERIFY take BACK=
-   to search from the end; of constants they are computed when
-   compiling, so they may give a PARAMETER its value.  TRIM's value
-   is its argument's own text, of a length known when the program
-   runs.  A CHARACTER length of zero (LEN=0) is a string with no
-   characters, and a substring S(I:J) with J below I is empty.
+   LEN_TRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT, SCAN, and VERIFY are
+   compiled, and INDEX, SCAN, and VERIFY take BACK= to search from the
+   end.  Of constants they are computed when compiling, so they may
+   give a PARAMETER its value.  TRIM's value is its argument's own text,
+   of a length known when the program runs.
 
-4 Numeric_Intrinsics
+   A CHARACTER length of zero (LEN=0) is a string with no characters,
+   and a substring S(I:J) with J below I is empty.  Under /F90 a
+   constant may have a substring: 'ABCDEF'(K:K).
 
-   CEILING, FLOOR, and MODULO are there: MODULO(A, P) is the
-   remainder with P's sign, where MOD's has A's.
+4 Numeric
+
+   CEILING and FLOOR are compiled in line, and so is MODULO: MODULO(A,
+   P) is the remainder with P's sign, where MOD's has A's.
 
    The model's functions EXPONENT, FRACTION, SCALE, SET_EXPONENT,
-   SPACING, RRSPACING, and NEAREST are there, exact in each VAX
-   format: TINY is the least value (there are no denormalized
-   numbers), and a SCALE past HUGE is a floating overflow.
+   SPACING, RRSPACING, and NEAREST are exact in each VAX format: TINY
+   is the least value (a VAX has no denormalized numbers), and a SCALE
+   past HUGE is a floating overflow.
 
    TRANSFER(SOURCE, MOLD [, SIZE]) is SOURCE's bytes taken as MOLD's
    type: TRANSFER(1.0, 0) is 16512, F_floating's 1.0.  Past SOURCE's
    bytes the value is zero.  The bytes are moved as bytes, so a
    reserved operand passes through without a fault.
 
-   The intrinsic subroutines DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER,
-   and RANDOM_SEED are there.  DATE_AND_TIME's zone is the logical
-   name SYS$TIMEZONE_DIFFERENTIAL, seconds east of UTC, which govax
-   defines at startup from the host's (see STARTUP TIME_ZONE).
-   SYSTEM_CLOCK counts hundredths
-   of a second (COUNT_RATE 100).  RANDOM_NUMBER draws with MTH$RANDOM,
-   so a seed gives the same numbers on every host; RANDOM_SEED's seed
-   is one integer (two for INTEGER*2), and CALL RANDOM_SEED() sets it
-   back to the first.
+4 Subroutines
 
-3 Control_Statements
+   DATE_AND_TIME's zone is the logical name SYS$TIMEZONE_DIFFERENTIAL,
+   seconds east of UTC, which govax defines at startup from the host's
+   (see STARTUP TIME_ZONE).  SYSTEM_CLOCK counts hundredths of a second
+   (COUNT_RATE 100).  RANDOM_NUMBER draws with MTH$RANDOM, so a seed
+   gives the same numbers on every host; RANDOM_SEED's seed is one
+   integer (two for INTEGER*2), and CALL RANDOM_SEED() sets it back to
+   the first.
+
+   MVBITS takes any integer expression for FROM, and works on arrays an
+   element at a time.
+
+3 Control_Constructs
 
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and
@@ -255,49 +284,26 @@
    left out (A(:, J), A(N:1:-1)), or vector subscripts, INTEGER arrays
    of subscripts (A(IV)).  Two arrays in one operation must have one
    shape (NOTCONFORM).  (/ 1, 2, (I, I = 3, N) /) is an array
-   constructor; a PARAMETER may be an array, of rank 2 by RESHAPE.  The
-   elemental functions (SQRT, MAX, MERGE, ...) take arrays; SUM,
+   constructor; a PARAMETER may be an array, of rank 2 by RESHAPE.
+
+   The elemental functions (SQRT, MAX, MERGE, ...) take arrays; SUM,
    PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT take MASK= and DIM=;
    MAXLOC, MINLOC, DOT_PRODUCT, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
-   and UBOUND are there too, and SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK,
-   and RESHAPE of any values.  WHERE is a statement or a construct with
-   ELSEWHERE.  A section in an I/O list is one item, by a class NCA
-   descriptor; an array expression is written an element at a time.
-   A statement that needs a temporary
-   array gets one of the size it needs, on the stack up to 64 KB and
-   from the heap past that, given back at the statement's end.  A
-   section may be passed to any procedure (below).
+   UBOUND, SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK, and RESHAPE take any
+   arrays.  WHERE is a statement, or a construct with ELSEWHERE.
 
-3 Declarations
+   A section in an I/O list is one item, passed by a class NCA
+   descriptor; an array expression is written an element at a time.  A
+   statement that needs a temporary array gets one of the size it
+   needs, on the stack up to 64 KB and from the heap past that, given
+   back at the statement's end.  A section may be passed to any
+   procedure (see Dynamic_Arrays).
 
-   A main program or subprogram may end with CONTAINS and internal
-   procedures (END SUBROUTINE, END FUNCTION), which use their host's
-   names: a name the host uses anywhere, even only in a DO, is the
-   host's unless the internal procedure declares its own.  An interface
-   block (INTERFACE ... END INTERFACE) describes external and dummy
-   procedures by their FUNCTION or SUBROUTINE statements and
-   declarations.  Through either explicit interface every reference is
-   checked (ARGCOUNT, ARGTYPE, ARGRANK, ARGLENGTH, NOTDEFINABLE), may
-   give arguments by keyword, and may leave out OPTIONAL dummies, which
-   PRESENT asks about; a left-out argument is passed as 0, and a shorter
-   argument list from a MACRO or old FORTRAN caller is understood.
-
-     call solve(x, n, tol=1.0e-6)
-     if (present(tol)) eps = tol
-
-   INTENT(IN) dummies can't be given values (INTENTIN), and an
-   INTENT(OUT) one used before anything sets it draws INTENTOUTREF.
-   INTERFACE name makes a generic name, each reference choosing the
-   specific its arguments fit exactly, by type, kind, and rank;
-   INTERFACE OPERATOR(.op.) and OPERATOR(+) give operators meanings for
-   operands Fortran gives none (or only VAX FORTRAN does), and
-   INTERFACE ASSIGNMENT(=) defines assignments Fortran doesn't.
-
-3 Storage 
+3 Dynamic_Arrays
 
    An ALLOCATABLE array, declared with a colon for each dimension, gets
-   its bounds and memory from ALLOCATE, gives them back by DEALLOCATE,
-   and ALLOCATED says which it is now:
+   its bounds and memory from ALLOCATE and gives them back by
+   DEALLOCATE; ALLOCATED says which it is now:
 
      real, allocatable :: g(:, :)
      allocate (g(n, 0:m))
@@ -318,30 +324,32 @@
    It can't be in COMMON, EQUIVALENCE, DATA, NAMELIST, SAVE, or STATIC
    (%FORT-E-AUTOATTR).
 
-   A CHARACTER length may be computed the same way, when the subprogram is
-   entered: a dummy argument's is the first N characters of its actual
-   argument, and the subprogram's own names with one are made on the stack.
+   A CHARACTER length may be computed the same way, when the subprogram
+   is entered: a dummy argument's is the first N characters of its
+   actual argument, and the subprogram's own names with one are made on
+   the stack.
 
      character(len=n) :: s
      character(len=len(c) + 1) :: t, w(n)
 
-   The same rules hold (%FORT-E-AUTOLENATTR), and a main program's lengths
-   must be constant (%FORT-E-LENNOTDUMMY).
+   The same rules hold (%FORT-E-AUTOLENATTR), and a main program's
+   lengths must be constant (%FORT-E-LENNOTDUMMY).
 
-   A dummy array declared with a colon for each dimension takes its
-   shape from its actual argument, a whole array or a section with any
-   steps; its lower bounds are its own, 1 or as declared:
+   A dummy array declared with a colon for each dimension is
+   assumed-shape: it takes its shape from its actual argument, a whole
+   array or a section with any steps, and its lower bounds are its own,
+   1 or as declared:
 
      real :: a(:, :), b(0:)
      call halve(x(1:9:2, :))
 
    It goes by a class NCA descriptor, so a reference needs an explicit
    interface (an internal procedure's, an interface block's;
-   %FORT-E-EXPLICITREQ otherwise), and the actual must be an array of its
-   rank (%FORT-E-ARGRANK).  An array expression, a section with a vector
-   subscript, or (A) is computed into a temporary, which is passed and
-   not copied back.  Under /CHECK=BOUNDS the routine refuses anything but
-   a class NCA or class A descriptor of the dummy's rank
+   %FORT-E-EXPLICITREQ otherwise), and the actual must be an array of
+   its rank (%FORT-E-ARGRANK).  An array expression, a section with a
+   vector subscript, or (A) is computed into a temporary, which is
+   passed and not copied back.  Under /CHECK=BOUNDS the routine refuses
+   anything but a class NCA or class A descriptor of the dummy's rank
    (%FOR-F-BADARRDESC).
 
    A section or array expression passed to a dummy that isn't
@@ -376,31 +384,73 @@
    strides (%DEBUG-W-NOTALLOC for an array not allocated), and takes
    sections itself: EXAMINE A(1:9:2).
 
-   Derived types: TYPE name ... END TYPE defines one, its components
-   declared as variables are (SEQUENCE first to make two units'
-   definitions of the same name and components one type), and
-   TYPE(name) declares objects of it, scalars or arrays of any kind.  A
-   component is P%X (or DEC's P.X); PATH%X of an array PATH is an array
-   whose elements are a type's size apart, and may be assigned, passed,
-   and used as any array.  POINT(1.0, 2.0) is a structure constructor:
-   a constant if its values are, usable as a PARAMETER, an initial
-   value, or in DATA.  A type has no operators but those an INTERFACE
-   OPERATOR block gives it (%FORT-E-NODERIVEDOP); assignment is a copy
-   unless an INTERFACE ASSIGNMENT(=) block takes it.  An object goes by
-   reference only to a dummy of its own type (%FORT-E-TYPEARG,
-   SEPARATEARG); a function's value of a type comes back in R0 and R1 up
-   to 8 bytes, else through a hidden first argument.  COMMON and
-   EQUIVALENCE take only SEQUENCE objects (%FORT-E-NOSEQUENCE).  In a
-   formatted or list-directed I/O list an object is its components in
-   order; unformatted, its bytes.  A NAMELIST group may hold a scalar
-   object: output names each component (P%X =), and input takes P%X =
-   or the whole object, P = 1.0, 2.0; an array of a type is an entity
-   per component, every element's (PTS%X), and input may name
-   PTS(2)%X or PTS(1:3:2)%Y.  The debugger's EXAMINE shows an object a
-   component at a time, and takes PT%X and PTS(2)%Y.  Default values
-   for components (Fortran 95) are not there yet.
+3 Procedures
 
-3 modules
+   A main program or subprogram may end with CONTAINS and internal
+   procedures (END SUBROUTINE, END FUNCTION), which use their host's
+   names: a name the host uses anywhere, even only in a DO, is the
+   host's unless the internal procedure declares its own.  An interface
+   block (INTERFACE ... END INTERFACE) describes external and dummy
+   procedures by their FUNCTION or SUBROUTINE statements and
+   declarations.
+
+   Through either explicit interface every reference is checked
+   (ARGCOUNT, ARGTYPE, ARGRANK, ARGLENGTH, NOTDEFINABLE), may give
+   arguments by keyword, and may leave out OPTIONAL dummies, which
+   PRESENT asks about.  A left-out argument is passed as 0, and a
+   shorter argument list from a MACRO or old FORTRAN caller is
+   understood.
+
+     call solve(x, n, tol=1.0e-6)
+     if (present(tol)) eps = tol
+
+   An INTENT(IN) dummy can't be given a value (INTENTIN), and an
+   INTENT(OUT) one used before anything sets it draws INTENTOUTREF.
+
+   INTERFACE name makes a generic name, each reference choosing the
+   specific its arguments fit exactly, by type, kind, and rank.
+   INTERFACE OPERATOR(.op.) and OPERATOR(+) give operators meanings for
+   operands Fortran gives none (or only VAX FORTRAN does), and
+   INTERFACE ASSIGNMENT(=) defines assignments Fortran doesn't.
+
+3 Derived_Types
+
+   TYPE name ... END TYPE defines a derived type, its components
+   declared as variables are, and TYPE(name) declares objects of it,
+   scalars or arrays of any kind.  SEQUENCE, first in the definition,
+   makes two units' definitions of the same name and components one
+   type.
+
+     type point
+       real :: x, y
+     end type point
+     type(point) :: p, path(100)
+     p = point(1.0, 2.0)
+     path%x = 0.0                   ! every element's X
+
+   A component is P%X (or DEC's P.X).  PATH%X of an array PATH is an
+   array whose elements are a type's size apart, and may be assigned,
+   passed, and used as any array.  POINT(1.0, 2.0) is a structure
+   constructor: a constant if its values are, usable as a PARAMETER, an
+   initial value, or in DATA.
+
+   A type has no operators but those an INTERFACE OPERATOR block gives
+   it (%FORT-E-NODERIVEDOP); assignment is a copy unless an INTERFACE
+   ASSIGNMENT(=) block takes it.  An object goes by reference only to a
+   dummy of its own type (%FORT-E-TYPEARG, SEPARATEARG); a function's
+   value of a type comes back in R0 and R1 up to 8 bytes, else through
+   a hidden first argument.  COMMON and EQUIVALENCE take only SEQUENCE
+   objects (%FORT-E-NOSEQUENCE).
+
+   In a formatted or list-directed I/O list an object is its components
+   in order; unformatted, its bytes.  A NAMELIST group may hold a scalar
+   object: output names each component (P%X =), and input takes P%X =
+   or the whole object, P = 1.0, 2.0.  An array of a type is an entity
+   per component, every element's (PTS%X), and input may name PTS(2)%X
+   or PTS(1:3:2)%Y.  The debugger's EXAMINE shows an object a component
+   at a time, and takes PT%X and PTS(2)%Y.
+
+3 Modules
 
    A MODULE holds data, types, constants, interfaces, and procedures
    for the units that USE it:
@@ -428,28 +478,29 @@
    names, OPERATOR(op), ASSIGNMENT(=)).  A name a USE gives may not be
    declared again in the unit (%FORT-E-USEATTR); two modules' entities
    of one name are an error only where the unit refers to the name
-   (%FORT-E-USEAMBIG), and generic names of one name join.  In a
-   module, PRIVATE alone makes names private by default, and PUBLIC ::
-   and PRIVATE :: lists (or the attributes) set them one by one; a
-   private specific is still called through its public generic name.
-   TYPE, PRIVATE :: T is a private type; a PRIVATE statement in a
-   type's definition makes its components private.
+   (%FORT-E-USEAMBIG), and generic names of one name join.
+
+   In a module, PRIVATE alone makes names private by default, and
+   PUBLIC :: and PRIVATE :: lists (or the attributes) set them one by
+   one; a private specific is still called through its public generic
+   name.  TYPE, PRIVATE :: T is a private type; a PRIVATE statement in
+   a type's definition makes its components private.
 
    Compiling a module writes its module file, NAME.F90$MOD, a Fortran
    text of what its users may reach, in the default directory or the
    one /MODULE names; a module file that would be no different is left
-   alone.  A USE finds a module earlier in the same compilation, or
-   else its module file: in the /MODULE directory (or the default 
-   directory), then the source's directory, then each of
-   /MODULE_PATH's directories, or with no /MODULE_PATH each translation
-   of FORT$MODULES (%FORT-E-MODNOTFOUND lists where it looked). A 
-   module is compiled before its users.  A user's object refers to a
-   symbol of the module's (its stamp), so linking it with the object
-   of a module compiled since from a changed source gives LINK's
-   undefined symbol $MOD$NAME.nnnnnnnn: compile the user again. 
-   
-   A module and its users must agree on /G_FLOATING if the module has
-   REAL*8 or COMPLEX*16 entities (%FORT-E-MODFORMAT).
+   alone.  A module is compiled before its users.  A USE finds a module
+   earlier in the same compilation, or else its module file: in the
+   /MODULE directory (or the default directory), then the source's
+   directory, then each of /MODULE_PATH's directories, or with no
+   /MODULE_PATH each translation of FORT$MODULES (%FORT-E-MODNOTFOUND
+   lists where it looked).
+
+   A user's object refers to a symbol of the module's (its stamp), so
+   linking it with the object of a module compiled since from a changed
+   source gives LINK's undefined symbol $MOD$NAME.nnnnnnnn: compile the
+   user again.  A module and its users must agree on /G_FLOATING if the
+   module has REAL*8 or COMPLEX*16 entities (%FORT-E-MODFORMAT).
 
 3 Pointers
 
@@ -469,7 +520,8 @@
    each entry (Fortran 95's rule; Fortran 90 leaves it undefined).  A
    target that isn't a TARGET is %FORT-E-NOTTARGET, one of another type
    %FORT-E-POINTERTYPE; a pointer may not be in DATA, NAMELIST, or
-   EQUIVALENCE, nor given a value (%FORT-E-POINTERATTR).
+   EQUIVALENCE, nor given an initial value (%FORT-E-POINTERATTR).  A
+   CHARACTER pointer whose length isn't constant draws %FORT-E-NOTIMPL.
 
    An array pointer, REAL, POINTER :: V(:), takes its shape and
    elements from its target, a whole array (and its bounds), a section
@@ -547,41 +599,44 @@
    address 0 (%SYSTEM-F-ACCVIO), or under /CHECK=POINTERS
    %FOR-F-NOTASSOC (an unallocated array's element %FOR-F-UNALLOCATED).
    The debugger's EXAMINE P shows P's target (%DEBUG-W-NOTASSOC if it
-   has none).  CHARACTER pointers of a length known only at run time,
-   NULL(), and initial values for pointers are not there yet.
+   has none).
 
 3 IO
 
-   Fortran 90's I/O extensions are suppored. A format may have Bw.m
-   (binary), ESw.d (scientific), ENw.d (engineering), r/, and G of an
-   INTEGER, LOGICAL, or CHARACTER item; a /F90 unit's statements read
-   these, and "..." constants, in a format held in a variable, and 
-   take BLANK='NULL' and PAD='YES' padding by default.  A formatted
-   sequential READ or WRITE may be nonadvancing:
+   A format may have Bw.m (binary), ESw.d (scientific), ENw.d
+   (engineering), r/, and G of an INTEGER, LOGICAL, or CHARACTER item.
+   A /F90 unit's statements read these, and "..." constants, in a
+   format held in a variable too, and take BLANK='NULL' and PAD='YES'
+   by default.
+
+   A formatted sequential READ or WRITE may be nonadvancing:
 
      write (*, '(1x, a)', advance='no') 'Name? '
      read (*, '(a)', advance='no', size=n, eor=10) reply
 
    The record stays open for the next statement on the unit; a READ
    at the terminal writes it first as a prompt.  An end of record is
-   EOR= or IOSTAT= -2, and SIZE= counts the characters taken.  OPEN
-   takes ACTION=, POSITION=, DELIM=, PAD=, and STATUS='REPLACE', and
-   INQUIRE answers them, with READ=, WRITE=, READWRITE=, and
+   EOR= or IOSTAT= -2, and SIZE= counts the characters taken.
+
+   OPEN takes ACTION=, POSITION=, DELIM=, PAD=, and STATUS='REPLACE',
+   and INQUIRE answers them, with READ=, WRITE=, READWRITE=, and
    INQUIRE (IOLENGTH=n) list.  A /F90 unit's NAMELIST is &GRP ... /,
    and its list-directed input takes "..." and undelimited text.
    Fortran 90's new run-time conditions are FOR numbers 306 to 310
    (REAWRIFIL, EORDURREA, BADADVANCE, NONADVUNIT, RECTOOSHO).
 
-   The compiler's tools know Fortran 90: /STANDARD=F90 judges a
-   program by it, its obsolescent features too; /WARNINGS reports a
-   host's name an internal procedure hides (HOSTHIDDEN) and a value
-   nothing reads (UNREAD); listings and cross references go by scope,
-   with attributes, generic names, and operators; and /OPTIMIZE steps
-   through assumed-shape arrays and fuses array assignments of one
-   shape into one loop.  See the qualifiers.
+3 Compiler_Tools
 
-   What else Fortran 90 adds draws %FORT-E-NOTIMPL until it is
-   added.
+   The compiler's tools know Fortran 90.  /STANDARD=F90 judges a
+   program by it, and reports its obsolescent features; /WARNINGS
+   reports a host's name an internal procedure hides (HOSTHIDDEN) and a
+   value nothing reads (UNREAD); listings and cross references go by
+   scope, with attributes, generic names, and operators; /CHECK=POINTERS
+   checks each use of a pointer or allocatable array; and /OPTIMIZE
+   steps through assumed-shape arrays and fuses array assignments of
+   one shape into one loop.  Under /DEBUG the debugger reads records,
+   sections, pointers, and module and host names, and traceback names
+   each frame's line.  See Qualifiers.
 
 2 Programs
 
@@ -731,9 +786,7 @@
    other syntax needs no qualifier.  The default is /F90 for a free-form
    source and /NOF90 for a fixed-form one, so an old .FOR file compiles
    as it always has.  An OPTIONS statement before a unit may change it
-   for that unit, written in full (/F is still /F77).  So far "..."
-   constants are read, in FORMAT statements too; derived types and the
-   new intrinsics are being added (see Fortran_90).
+   for that unit, written in full (/F is still /F77).  See Fortran_90.
 
 /G_FLOATING
 
