@@ -101,10 +101,15 @@
 
 2 Fortran_90
 
-   Fortran 90 (ISO/IEC 1539:1991) is being added to the same compiler,
-   a part at a time.  So far a program may be written in free form, by
-   a .F90 file's type or /SOURCE_FORM=FREE, and with Fortran 90's
-   spellings:
+   Fortran 90 (ISO/IEC 1539:1991) is also supported by the same compiler.
+   This can be controlled by the /F90 compiler option, by compiling a
+   program with a .F90 extension, or by specifying OPTION values in the
+   source code.
+
+3 Source_Format
+   A FORTRAN 90 program assumes "free form", based on the use of a .F90
+   file's type or /SOURCE_FORM=FREE. This supports source that does not
+   depend on column positions, and with Fortran 90's spellings:
 
      program squares                ! ! starts a comment anywhere
        implicit none
@@ -125,6 +130,8 @@
    standard's other compounds).  A statement may have 39 continuation
    lines, and a line 132 characters.  Both forms may make up one
    program, and an INCLUDE file is read in the form of its own type.
+
+3 Types
 
    Type declarations may have Fortran 90's :: form, with attributes and
    values given with =:  INTEGER, PARAMETER :: N = 10 and REAL,
@@ -150,6 +157,8 @@
    (1.0_16, 0.0) is a COMPLEX(16) constant.  IMPLICIT takes kinds too:
    IMPLICIT REAL(8) (A-H, O-Z).
 
+3 KIND_Functions
+
    The kind functions KIND, SELECTED_INT_KIND, and SELECTED_REAL_KIND,
    and the numeric inquiries HUGE, TINY, EPSILON, DIGITS, PRECISION,
    RANGE, RADIX, MINEXPONENT, MAXEXPONENT, and BIT_SIZE, are answered
@@ -165,6 +174,8 @@
    time.  Under /NOF90 the new names are a program's own unless named
    INTRINSIC.
 
+3 Character_Intrinsics
+
    The character functions LEN_TRIM, TRIM, ADJUSTL, ADJUSTR, REPEAT,
    SCAN, and VERIFY are there, and INDEX, SCAN, and VERIFY take BACK=
    to search from the end; of constants they are computed when
@@ -172,6 +183,8 @@
    is its argument's own text, of a length known when the program
    runs.  A CHARACTER length of zero (LEN=0) is a string with no
    characters, and a substring S(I:J) with J below I is empty.
+
+4 Numeric_Intrinsics
 
    CEILING, FLOOR, and MODULO are there: MODULO(A, P) is the
    remainder with P's sign, where MOD's has A's.
@@ -195,6 +208,8 @@
    so a seed gives the same numbers on every host; RANDOM_SEED's seed
    is one integer (two for INTEGER*2), and CALL RANDOM_SEED() sets it
    back to the first.
+
+3 Control_Statements
 
    A DO loop, block IF, or SELECT CASE construct may be named (OUTER:
    DO ... END DO OUTER, with the name allowed on ELSE IF, ELSE, and
@@ -225,6 +240,8 @@
    whichever suits its values.  A GO TO may jump to END IF from any
    block of its IF or from outside, under /NOF90 too.
 
+3 Arrays
+
    Arrays are values: a whole array or a section may stand in an
    expression or assignment wherever a scalar may, each element done in
    turn, and a scalar goes with any array.
@@ -251,6 +268,8 @@
    from the heap past that, given back at the statement's end.  A
    section may be passed to any procedure (below).
 
+3 Declarations
+
    A main program or subprogram may end with CONTAINS and internal
    procedures (END SUBROUTINE, END FUNCTION), which use their host's
    names: a name the host uses anywhere, even only in a DO, is the
@@ -273,6 +292,8 @@
    INTERFACE OPERATOR(.op.) and OPERATOR(+) give operators meanings for
    operands Fortran gives none (or only VAX FORTRAN does), and
    INTERFACE ASSIGNMENT(=) defines assignments Fortran doesn't.
+
+3 Storage 
 
    An ALLOCATABLE array, declared with a colon for each dimension, gets
    its bounds and memory from ALLOCATE, gives them back by DEALLOCATE,
@@ -379,6 +400,8 @@
    component at a time, and takes PT%X and PTS(2)%Y.  Default values
    for components (Fortran 95) are not there yet.
 
+3 modules
+
    A MODULE holds data, types, constants, interfaces, and procedures
    for the units that USE it:
 
@@ -412,20 +435,23 @@
    TYPE, PRIVATE :: T is a private type; a PRIVATE statement in a
    type's definition makes its components private.
 
-   Compiling a module writes its module
-   file, NAME.F90$MOD, a Fortran text of what its users may reach, in
-   the default directory or the one /MODULE names; a module file that
-   would be no different is left alone.  A USE finds a module earlier
-   in the same compilation, or else its module file: in the /MODULE
-   directory (or the default directory), then the source's directory,
-   then each of /MODULE_PATH's directories, or with no /MODULE_PATH
-   each translation of FORT$MODULES (%FORT-E-MODNOTFOUND lists where it
-   looked).  So a module is compiled before its users.  A user's object
-   refers to a symbol of the module's (its stamp), so linking it with
-   the object of a module compiled since from a changed source gives
-   LINK's undefined symbol $MOD$NAME.nnnnnnnn: compile the user again.
+   Compiling a module writes its module file, NAME.F90$MOD, a Fortran
+   text of what its users may reach, in the default directory or the
+   one /MODULE names; a module file that would be no different is left
+   alone.  A USE finds a module earlier in the same compilation, or
+   else its module file: in the /MODULE directory (or the default 
+   directory), then the source's directory, then each of
+   /MODULE_PATH's directories, or with no /MODULE_PATH each translation
+   of FORT$MODULES (%FORT-E-MODNOTFOUND lists where it looked). A 
+   module is compiled before its users.  A user's object refers to a
+   symbol of the module's (its stamp), so linking it with the object
+   of a module compiled since from a changed source gives LINK's
+   undefined symbol $MOD$NAME.nnnnnnnn: compile the user again. 
+   
    A module and its users must agree on /G_FLOATING if the module has
    REAL*8 or COMPLEX*16 entities (%FORT-E-MODFORMAT).
+
+3 Pointers
 
    A POINTER points at a TARGET variable (or a part of one, or another
    pointer's target) and stands for it wherever a value or variable is
@@ -524,11 +550,13 @@
    has none).  CHARACTER pointers of a length known only at run time,
    NULL(), and initial values for pointers are not there yet.
 
-   Fortran 90's I/O is there.  A format may have Bw.m (binary),
-   ESw.d (scientific), ENw.d (engineering), r/, and G of an INTEGER,
-   LOGICAL, or CHARACTER item; a /F90 unit's statements read these,
-   and "..." constants, in a format held in a variable too, and take
-   BLANK='NULL' and PAD='YES' padding by default.  A formatted
+3 IO
+
+   Fortran 90's I/O extensions are suppored. A format may have Bw.m
+   (binary), ESw.d (scientific), ENw.d (engineering), r/, and G of an
+   INTEGER, LOGICAL, or CHARACTER item; a /F90 unit's statements read
+   these, and "..." constants, in a format held in a variable, and 
+   take BLANK='NULL' and PAD='YES' padding by default.  A formatted
    sequential READ or WRITE may be nonadvancing:
 
      write (*, '(1x, a)', advance='no') 'Name? '
