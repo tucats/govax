@@ -111,7 +111,7 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 			return err
 		}
 
-		count, err := a.repetition(c)
+		count, repeated, err := a.repetition(c)
 		if err != nil {
 			return err
 		}
@@ -141,14 +141,15 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 			return err
 		}
 
-		// A known value stored more than once is one repeated store in the
-		// object, as real MACRO writes it: VMS 7.1's MACRO made .LONG 0[2]
-		// STA_UB 0, STA_UB 2, STO_RL (docs/planning/PHASE-111 - Fortran 90
-		// milestone.md, subtask 11). .BYTE's and .WORD's STO_RB and STO_RW
-		// are taken to follow (unconfirmed), and a count of 1 is stored as
-		// the plain value.
-		if x.known() && count > 1 && a.dialect == DialectMACRO {
-			if err := a.emitRepeated(v, scale, count); err != nil {
+		// A value with a repetition factor is one repeated store in the
+		// object, as real MACRO writes it (testdata/tir111, VMS 7.1): the
+		// value stacked as it was written (-1 is STA_UB 1, OPR_NEG), then the
+		// count, then STO_RB, STO_RW, or STO_RL, whatever the count, 1
+		// included. A value defined later (Z[2] before Z = 6) is the same,
+		// its symbols resolved when the object is written; the image's copies
+		// are filled in by fixups as any forward reference's are.
+		if repeated && a.dialect == DialectMACRO && (x.known() || !x.x.hasRelocation()) {
+			if err := a.emitRepeated(x, v, scale, count, fixup); err != nil {
 				return err
 			}
 
@@ -172,29 +173,29 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 // repetition reads a data item's optional repetition factor, MACRO-32's
 // "expression1[expression2]" (.BYTE, .WORD, .LONG): the number of times
 // to store the value, an absolute expression with no undefined symbols,
-// in square brackets. Without one the count is 1.
-func (a *Assembler) repetition(c *cursor) (uint32, error) {
+// in square brackets. Without one the count is 1, and repeated is false.
+func (a *Assembler) repetition(c *cursor) (count uint32, repeated bool, err error) {
 	save := c.pos
 	if c.skipBlanks(); c.peek() != '[' {
 		c.pos = save
 
-		return 1, nil
+		return 1, false, nil
 	}
 
 	c.next()
 
 	n, err := a.exprNoForward(c)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 
 	if c.skipBlanks(); c.peek() != ']' {
-		return 0, vmserrors.New(vmserrors.VAX_DIRSYNX)
+		return 0, false, vmserrors.New(vmserrors.VAX_DIRSYNX)
 	}
 
 	c.next()
 
-	return n, nil
+	return n, true, nil
 }
 
 // listSeparator is called before each item of a data directive's list

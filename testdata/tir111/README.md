@@ -47,3 +47,25 @@ See `modules.md` (written by `gen.go`).
        ./govax --profile tbprobe --system-file none console < testdata/tir111/copyout.cmd
 
    If VMS's MACRO wrote no TIRX.OBJ, its COPY says so; that is an answer too.
+
+## What came back
+
+`vax/` is the author's run on VMS 7.1, 22-NOV-2026: the log and every module's object.
+`TestTIR111Objects` and `TestTIR111Errors` (`internal/console/tir111_test.go`) hold govax's
+MACRO to them.
+
+- **The stacked byte.** TIRA, TIRE, and TIRF reproduce it, and TIRB, TIRC1 to TIRC8, TIRD,
+  and TIRG don't: VMS's objects for those are govax's record for record. So it needs the
+  module's earlier psects (TIRB has the same table at the same offsets, and the same record
+  packing, and none), the exact line structure (TIRD, the same bytes in other lines, has
+  none), and the exact offsets (shifting by 1 to 8 bytes removes it), but not the values
+  (TIRE). No rule found; the bytes stored are the same either way, so images don't differ.
+  Kept in `tir111Differences` and `f90rObjectDifferences`, and DEVIATIONS.md.
+- **Repetition factors** (TIRR): the value stacked as written (`-1` is `STA_UB 1`, `OPR_NEG`),
+  then the count, then `STO_RB`, `STO_RW`, or `STO_RL`, for any count, 1 included; a value
+  defined after the line stacked with its value in place. govax's MACRO now does all of it.
+  `.LONG R1[2]` is DIRSYNX, as govax now says too (R1 is a register name, and whether VMS's
+  error was for that or for repeating a symbol it can't resolve isn't settled).
+- **String directives with nothing after them** (TIRX): `.ASCIZ`, `.ASCIC`, and `.ASCID` are
+  DIRSYNX, as govax says; with `//` they assemble. VMS's MACRO still writes an object for a
+  module with errors (its end record's severity 2); govax's writes none (DEVIATIONS.md).

@@ -2098,3 +2098,31 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **Status**: open. Gone round, not fixed: a volume meant for VMS is made with INITIALIZE/CONTAINER's `/HEADERS`
   big enough that its index file never grows (`testdata/f90r`'s `/HEADERS=6000`). A probe would settle it: let
   VMS grow an index file past its header on a scratch volume, and compare its extension header with ods2's.
+
+### [Phase 111] VMS MACRO stores an occasional byte of a long immediate run through the stack
+
+- **Where**: `internal/asm/object.go` (the object's STORE IMMEDIATE runs); `testdata/tir111`,
+  `TestTIR111Objects`, `TestF90RObjects`.
+- **What**: in three places of fcalc's objects, and in testdata/tir111's TIRA, TIRE, and TIRF,
+  VMS 7.1's MACRO ended a run of immediate data, stored one byte of it by `STA_UB n`, `STO_B`,
+  and went on with the run, where govax's MACRO stores the run whole. The probe found it needs
+  the module's earlier psects, the exact source lines, and the exact offsets, and not the values;
+  no rule fits. The bytes stored are the same, so the linked image is.
+- **Status**: open; such objects differ from VMS's in that record alone (`tir111Differences`,
+  `f90rObjectDifferences`).
+
+### [Phase 111] MACRO writes no object for a module with errors
+
+- **Where**: `internal/dclcmd`'s MACRO, `internal/asm`.
+- **What**: VMS 7.1's MACRO writes an object for a module with errors, its end record's severity
+  saying so (2, testdata/tir111's TIRR and TIRX; LINK then names "compilation errors" in it, as
+  testdata/f90r's round 1 showed); govax's MACRO writes none ("no object file written").
+- **Status**: open.
+
+### [Phase 111] A register name in a data expression
+
+- **Where**: `internal/asm`'s expression evaluator.
+- **What**: govax's MACRO takes `.LONG R1` as a reference to a global symbol R1. VMS 7.1's MACRO
+  called `.LONG R1[2]` DIRSYNX (testdata/tir111's TIRR), which govax now does too, its repeated
+  value never defined; whether VMS refuses a register name in any data expression is unconfirmed.
+- **Status**: open.

@@ -104,16 +104,25 @@ func (a *Assembler) advanceData(n uint32) {
 	a.move(n)
 }
 
-// emitRepeated stores value, scale bytes wide, count times at the current
-// location, logging one evRepeat for the object rather than the bytes.
-func (a *Assembler) emitRepeated(value uint32, scale int, count uint32) error {
+// emitRepeated stores x, scale bytes wide, count times at the current
+// location, logging one evRepeat for the object rather than the bytes: its
+// tree, the shape it was written in, or for a value defined later its
+// symbols, which the object resolves. Such a value's copies in the image are
+// filled in by fixups of kind fixup.
+func (a *Assembler) emitRepeated(x exprVal, value uint32, scale int, count uint32, fixup fixupKind) error {
 	if err := a.output(); err != nil {
 		return err
 	}
 
-	a.logEvent(outEvent{kind: evRepeat, sect: a.cur, offset: a.cur.loc, size: uint32(scale), value: value, count: count})
+	a.logEvent(outEvent{kind: evRepeat, sect: a.cur, offset: a.cur.loc, size: uint32(scale), count: count, tree: x.tree()})
 
 	for range count {
+		if !x.known() {
+			a.queueFixup(a.pc(), fixup, x.x)
+			a.lastFixup.repeated = true
+			value = x.x.placeholder()
+		}
+
 		if err := a.storeScaled(a.pc(), value, scale); err != nil {
 			return err
 		}

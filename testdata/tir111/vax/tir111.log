@@ -1,0 +1,35 @@
+==== TIRA
+  $STATUS == "%X10000001"
+==== TIRB
+  $STATUS == "%X10000001"
+==== TIRC1
+  $STATUS == "%X10000001"
+==== TIRC2
+  $STATUS == "%X10000001"
+==== TIRC3
+  $STATUS == "%X10000001"
+==== TIRC4
+  $STATUS == "%X10000001"
+==== TIRC8
+  $STATUS == "%X10000001"
+==== TIRD
+  $STATUS == "%X10000001"
+==== TIRE
+  $STATUS == "%X10000001"
+==== TIRF
+  $STATUS == "%X10000001"
+==== TIRG
+  $STATUS == "%X10000001"
+==== TIRR
+                           00000000  0000    27 	.LONG	R1[2]
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+  $STATUS == "%X10000002"
+==== TIRX
+                                     0000     3 	.ASCIZ
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                 00' 0000     5 	.ASCIC
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                  00000008'010E0000' 0000     7 	.ASCID
+%MACRO-E-DIRSYNX, Directive syntax error               !
+  $STATUS == "%X10000002"
+==== END

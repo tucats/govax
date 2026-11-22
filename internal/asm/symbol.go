@@ -144,6 +144,10 @@ type fixup struct {
 	// statement stored over its field, so it's never applied (see claim).
 	stmt int
 	dead bool
+	// repeated marks a copy of a repetition factor's value (emitRepeated):
+	// the object stores it by STO_RB, STO_RW, or STO_RL, so the fixup only
+	// fills in the image, and never becomes a relocation.
+	repeated bool
 	// line and where are the line that queued the fixup (when it's
 	// listed) and its place in the source, in the MACRO dialect, for a
 	// value the fixup finds out of range (see fixupRange).

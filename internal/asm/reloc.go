@@ -62,6 +62,21 @@ func baseNode(s *section, offset uint32) *rexpr {
 	return &rexpr{op: rBase, sect: s, v: offset}
 }
 
+// hasRelocation reports whether t uses a section base or an entry mask: a
+// value the linker relocates, which a repetition factor can't repeat.
+func (t *rexpr) hasRelocation() bool {
+	switch t.op {
+	case rBase, rMask:
+		return true
+	case rNeg, rCom:
+		return t.l.hasRelocation()
+	case rBinary:
+		return t.l.hasRelocation() || t.r.hasRelocation()
+	}
+
+	return false
+}
+
 // hasSymbols reports whether t uses a symbol that wasn't yet defined.
 func (t *rexpr) hasSymbols() bool {
 	switch t.op {
@@ -379,6 +394,20 @@ func (a *Assembler) completeFixup(f *fixup) error {
 	}
 
 	switch {
+	case f.repeated && t.op == rConst:
+		return a.applyFixup(f, t.v)
+
+	case f.repeated:
+		// The linker can't repeat a value it must relocate, or one never
+		// defined: VMS's MACRO calls .LONG R1[2] a syntax error
+		// (testdata/tir111's TIRR), reported at the line.
+		err := error(vmserrors.New(vmserrors.VAX_DIRSYNX))
+		if f.where != nil {
+			err = f.where(err)
+		}
+
+		return err
+
 	case f.dead && t.op == rConst && f.kind != fixPICR && f.kind != fixAddress:
 		// A later statement stored over the field (see overwrite.go).
 		return nil

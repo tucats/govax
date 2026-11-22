@@ -182,20 +182,25 @@ func TestObjectOperands(t *testing.T) {
 		"STA_LW 0x12345678", "OPR_ADD", "STO_L")
 }
 
-// TestObjectRepetition checks that a known value with a repetition factor is
-// one repeated store, as VMS 7.1's MACRO wrote .LONG 0[2] in fcalc's objects
-// (STA_UB 0, STA_UB 2, STO_RL; docs/planning/PHASE-111 - Fortran 90
-// milestone.md, subtask 11), and that a count of 1 is the plain value.
+// TestObjectRepetition checks that a value with a repetition factor is one
+// repeated store, as VMS 7.1's MACRO writes it (testdata/tir111's TIRR): the
+// value as written (-1 a negation), the count (1 too), STO_RB, STO_RW, or
+// STO_RL; a value defined later is stacked as what it came to.
 func TestObjectRepetition(t *testing.T) {
 	requireDump(t, objectDump(t, `.PSECT D,LONG
 	.LONG 1,0[2],7[1]
 	.BYTE 5[3]
-	.WORD 300[2]`),
+	.WORD 300[2]
+	.LONG -1[2]
+	.LONG Z[2]
+Z = 6`),
 		"STO_IMM 4 bytes: 01 00 00 00",
 		"STA_UB 0x0", "STA_UB 0x2", "STO_RL",
-		"STO_IMM 4 bytes: 07 00 00 00",
+		"STA_UB 0x7", "STA_UB 0x1", "STO_RL",
 		"STA_UB 0x5", "STA_UB 0x3", "STO_RB",
-		"STA_UW 0x12c", "STA_UB 0x2", "STO_RW")
+		"STA_UW 0x12c", "STA_UB 0x2", "STO_RW",
+		"STA_UB 0x1", "OPR_NEG", "STA_UB 0x2", "STO_RL",
+		"STA_UB 0x6", "STA_UB 0x2", "STO_RL")
 }
 
 // TestObjectLongData checks that a long run of data is split into STORE

@@ -416,8 +416,21 @@ func (e *emitter) event(ev outEvent) error {
 	case evRepeat:
 		e.lineAt(ev.sect, ev.offset)
 
+		// A value written with symbols defined later is stacked with their
+		// values in place, unfolded, as real MACRO hands any forward
+		// reference to the linker (completeFixup); one known when it was read
+		// keeps the shape it was written in (-1 is STA_UB 1, OPR_NEG).
+		tree := ev.tree
+		if tree.hasSymbols() {
+			tree = tree.substituted()
+		}
+
+		if err := e.stackProgram(tree); err != nil {
+			return err
+		}
+
 		repeat := map[uint32]string{1: "STO_RB", 2: "STO_RW", 4: "STO_RL"}[ev.size]
-		e.b.Emit(stackConstant(ev.value), stackConstant(ev.count), obj.Command{Op: tirOp(repeat)})
+		e.b.Emit(stackConstant(ev.count), obj.Command{Op: tirOp(repeat)})
 		e.loc += ev.size * ev.count
 
 	case evEntry:

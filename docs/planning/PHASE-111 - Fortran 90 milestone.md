@@ -271,8 +271,9 @@ As revised by the author's answers (below), with vectors and matrices added:
    (done 2026-11-22)
 10. **gfortran's witness**. (done 2026-11-22)
 11. **The simh round**: `testdata/f90r`, fcalc and the whole Fortran 90
-    corpus, run by the author on the simh VAX, and its oracle. (the probe
-    ready 2026-11-22; awaiting the VAX's run)
+    corpus, run by the author on the simh VAX, and its oracle. (done
+    2026-11-22: round 2 matches VMS in every section; `testdata/tir111` the
+    MACRO probe it led to)
 12. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
     symbol, HELP FCALC, MANUAL.md's section.
 13. **The manual's 14.13** finished.
@@ -938,3 +939,22 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   Also noted: govax's MACRO writes no object for a module with errors, where
   VMS's writes one (round 1's LINK named "compilation errors" in it); TIRX
   will show it. `go test ./...` passes.
+- **2026-11-22:** Subtask 11, `testdata/tir111`'s run on VMS 7.1. The stacked
+  byte: TIRA, TIRE, and TIRF reproduce it; TIRB (the table alone, the same
+  offsets and record packing), TIRC1 to TIRC8 (shifted), TIRD (re-split), and
+  TIRG don't, and their objects are VMS's record for record. It needs the
+  earlier psects, the exact lines, and the exact offsets, but not the values;
+  no rule found (neither the record boundaries nor the source's block layout
+  explain it), and the bytes are the same, so it stays a known difference
+  (`tir111Differences`, `f90rObjectDifferences`; DEVIATIONS.md). Repetition
+  factors (TIRR): the value stacked as written, `-1` as `STA_UB 1`,
+  `OPR_NEG`, the count, any count, 1 included, a value defined later stacked
+  with its value in place, unfolded; govax's MACRO now does all of it
+  (`emitRepeated` takes the value's tree; a forward value's copies filled in by
+  fixups marked `repeated`, never relocations; `TestObjectRepetition`), and
+  `.LONG R1[2]` is DIRSYNX at its line as on VMS. TIRX: `.ASCIZ`, `.ASCIC`, and
+  `.ASCID` with nothing are DIRSYNX, as govax says. VMS's MACRO writes an object
+  for a module with errors where govax's writes none, and whether a register
+  name may stand in a data expression is unsettled: both in DEVIATIONS.md.
+  `TestTIR111Objects` and `TestTIR111Errors` hold govax to the run.
+  `go test ./...` passes.
