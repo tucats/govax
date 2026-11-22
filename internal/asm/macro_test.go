@@ -259,3 +259,15 @@ func TestDataRepetition(t *testing.T) {
 	requireCode(t, assembleErr(t, ".BYTE 1[3"), vmserrors.VAX_DIRSYNX)
 	requireCode(t, assembleErr(t, ".BYTE 256[2]"), vmserrors.VAX_DATARANGE)
 }
+
+// TestStringDirectiveWithNothing: a string directive with no operand is a
+// directive syntax error, as VMS 7.1's MACRO said of a bare .ASCII
+// (docs/planning/PHASE-111 - Fortran 90 milestone.md, subtask 11); an empty
+// string, .ASCII //, stores no bytes, as the author confirmed on VMS.
+func TestStringDirectiveWithNothing(t *testing.T) {
+	for _, directive := range []string{".ASCII", ".ASCIZ", ".ASCIC", ".ASCID", ".ASCII   "} {
+		requireCode(t, assembleErr(t, directive), vmserrors.VAX_DIRSYNX)
+	}
+
+	requireBytes(t, assembleBytes(t, ".ASCII //"))
+}

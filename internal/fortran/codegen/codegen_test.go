@@ -385,6 +385,7 @@ func TestTexts(t *testing.T) {
 		"TAB\tHERE":  {"/TAB/<9>/HERE/"},
 		"/\"|!#%&*+": {"?/\"|!#%&*+?"},
 		strings.Repeat("X", 100): {"/" + strings.Repeat("X", 64) + "/", "/" + strings.Repeat("X", 36) + "/"},
+		"":                       nil, // no .ASCII at all: MACRO refuses one with no operand
 	}
 
 	for text, want := range cases {

@@ -414,7 +414,19 @@ const (
 // asciiKind — a trailing NUL (.ASCIZ), a leading one-byte count (.ASCIC), or
 // a leading VMS string descriptor whose address field points at the string
 // data immediately following it (.ASCID).
+//
+// A directive with nothing after it is a syntax error, DIRSYNX, before
+// anything is stored: VMS 7.1's MACRO says so of a bare .ASCII
+// (docs/planning/PHASE-111 - Fortran 90 milestone.md, subtask 11, where the
+// FORTRAN compiler wrote one for an empty text). The other three share its
+// operand grammar, and are taken to say the same (unconfirmed).
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
+	c.skipBlanks()
+
+	if c.atEnd() {
+		return vmserrors.New(vmserrors.VAX_DIRSYNX)
+	}
+
 	if err := a.output(); err != nil {
 		return err
 	}

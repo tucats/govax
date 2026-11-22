@@ -1,0 +1,2518 @@
+	.TITLE	FCARRAYS
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 13:59:43.57
+; from DUA5:[FCALC]FCARRAYS.F90;1
+; by the command FORTRAN/G_FLOATING FCARRAYS
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCARRAYS's variables, 4 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCARRAYS,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCARRAYS.$BASE:
+	.LONG	0			; IN_USE = 0
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; The module FCVALUES's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCVALUES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCVALUES.$BASE:
+	.BLKB	12
+
+; Storage map for FCARRAYS, a module
+;   IN_USE  INTEGER, PRIVATE  $MOD$FCARRAYS+0  FCARRAYS.IN_USE
+;   Type QUANTITY, 96 bytes
+;     +0     ROWS  INTEGER
+;     +4     COLS  INTEGER
+;     +16    S     TYPE(VALUE)
+;     +48    E     COMPLEX*16, POINTER (:,:)
+;
+FCARRAYS.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
+FCARRAYS.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+FCARRAYS.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
+FCARRAYS.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
+FCARRAYS.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
+FCARRAYS.IN_USE = $MOD$FCARRAYS.$BASE	; IN_USE, in module FCARRAYS's variables
+$MOD$FCARRAYS.EE19C6D8 == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B ; the stamps of the modules used
+
+;    1  ! fcalc: quantities, the values the evaluator deals in: a scalar, or a
+;    2  ! vector or matrix of complex numbers.
+;    3  !
+;    4  ! A QUANTITY is a VALUE (module FCVALUES) when it is a scalar, and an array
+;    5  ! of ROWS by COLS complex elements when it is not; a vector is an array with
+;    6  ! one row or one column. An array has at least two elements: an operation
+;    7  ! whose result would have one gives a scalar instead, so [5] is 5 and a
+;    8  ! row times a column is a number.
+;    9  !
+;   10  ! The elements live in storage of their own, reached through a POINTER
+;   11  ! component, E. Fortran 90 has no allocatable components (they came in
+;   12  ! Fortran 2003), so a derived type that holds an array whose size is known
+;   13  ! only when the program runs holds a pointer to it, ALLOCATEd when it is
+;   14  ! made. And Fortran 90 has no destructors either: nothing frees that
+;   15  ! storage when a QUANTITY goes out of use, so fcalc keeps a rule of
+;   16  ! ownership, the way a C program does:
+;   17  !
+;   18  ! - Every function that makes a quantity gives it storage of its own. The
+;   19  !   caller owns it, and must either RELEASE it or pass it on to an owner.
+;   20  ! - Assignment (A = B) copies the pointer, not the elements: afterwards A
+;   21  !   and B share storage, and only one of them may be released. fcalc uses
+;   22  !   it only to move a quantity from one owner to another (as SET_VARIABLE
+;   23  !   takes the quantity it is given).
+;   24  ! - DUPLICATE makes a copy with storage of its own, when two owners are
+;   25  !   wanted (FIND_VARIABLE gives the caller a copy of the variable's value).
+;   26  !
+;   27  ! A defined ASSIGNMENT(=) that copied the elements would seem safer, but it
+;   28  ! would leak: the result of a function, F(X) on A = F(X)'s right, is itself
+;   29  ! a quantity with storage, which a copying assignment would copy and then
+;   30  ! drop. Fortran 95 added nothing here; Fortran 2003's allocatable
+;   31  ! components and FINAL procedures are the cure.
+;   32  !
+;   33  ! The module counts the arrays it has made and not yet released, so a leak
+;   34  ! shows: SHOW MEMORY reports the count, and the test scripts check it is 0
+;   35  ! once they have cleared their variables.
+;   36  !
+;   37  ! A quantity's error is its scalar's: an array operation that fails gives a
+;   38  ! scalar quantity with the error set, as a scalar operation does.
+;   39  module fcarrays
+;   40    use fckinds
+;   41    use fcmessages
+;   42    use fcvalues
+;   43    implicit none
+;   44    private
+;   45
+;   46    public :: value, quantity
+;   47    public :: scalar_quantity, real_quantity, failure, new_array, array_of
+;   48    public :: release, duplicate, is_array, is_vector, element, element_at
+;   49    public :: numel, same_shape, quantity_error, quantity_truth, elements_of
+;   50    public :: arrays_in_use, largest_magnitude, show_quantity, list_quantity
+;   51    public :: max_elements
+;   52
+;   53    type quantity
+;   54      integer :: rows
+;   55      integer :: cols
+;   56      type(value) :: s
+;   57      complex(rk), pointer :: e(:, :)
+;   58    end type quantity
+;   59
+;   60    ! The most elements an array may have.
+;   61    integer, parameter :: max_elements = 10000
+;   62
+;   63    ! The arrays made and not yet released.
+;   64    integer, save :: in_use = 0
+;   65
+;   66    ! The longest line a matrix is shown in: a line's columns past it go in
+;   67    ! a group of their own.
+;   68    integer, parameter :: line_width = 132
+;   69
+;   70  contains
+
+; Storage map for FCARRAYS.SCALAR_QUANTITY, a TYPE(QUANTITY) function
+;   Q     TYPE(QUANTITY)           hidden argument 1  @FCARRAYS.SCALAR_QUANTITY.Q(AP)
+;   V     TYPE(VALUE), INTENT(IN)  argument 2         @FCARRAYS.SCALAR_QUANTITY.V(AP)
+;   R6 is $T1: temporary
+;
+FCARRAYS.SCALAR_QUANTITY.Q = 4		; Q's value goes through hidden argument 1
+FCARRAYS.SCALAR_QUANTITY.V = 8		; V is argument 2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   71
+;   72    ! ------------------------------------------------------------------
+;   73    ! Making and releasing quantities.
+;   74
+;   75    ! SCALAR_QUANTITY is the scalar V as a quantity. Its pointer is
+;   76    ! nullified, so the quantity is defined in every part: a pointer that is
+;   77    ! neither associated nor nullified is undefined, and copying an undefined
+;   78    ! pointer is undefined too.
+;   79    function scalar_quantity(v) result(q)
+	.ENTRY	FCARRAYS.SCALAR_QUANTITY,^M<R2,R3,R4,R5,R6>
+;   80      type(value), intent(in) :: v
+;   81      type(quantity) :: q
+;   82
+;   83      q%rows = 1
+	MOVL	#1,@FCARRAYS.SCALAR_QUANTITY.Q(AP)
+;   84      q%cols = 1
+	MOVL	FCARRAYS.SCALAR_QUANTITY.Q(AP),R0
+	MOVL	#1,4(R0)
+;   85      q%s = v
+	MOVL	FCARRAYS.SCALAR_QUANTITY.Q(AP),R0
+	MOVC3	#32,@FCARRAYS.SCALAR_QUANTITY.V(AP),16(R0)
+;   86      nullify (q%e)
+	MOVL	FCARRAYS.SCALAR_QUANTITY.Q(AP),R0
+	MOVAL	48(R0),R6
+	CLRL	4(R6)
+;   87    end function scalar_quantity
+	RET
+
+; Storage map for FCARRAYS.REAL_QUANTITY, a TYPE(QUANTITY) function
+;   Q     TYPE(QUANTITY)      hidden argument 1  @FCARRAYS.REAL_QUANTITY.Q(AP)
+;   X     REAL*8, INTENT(IN)  argument 2         @FCARRAYS.REAL_QUANTITY.X(AP)
+;
+FCARRAYS.REAL_QUANTITY.Q = 4		; Q's value goes through hidden argument 1
+FCARRAYS.REAL_QUANTITY.X = 8		; X is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.REAL_QUANTITY.$T1:
+	.BLKL	24			; characters, for one statement
+FCARRAYS.REAL_QUANTITY.$T2:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   88
+;   89    function real_quantity(x) result(q)
+	.ENTRY	FCARRAYS.REAL_QUANTITY,^M<R2,R3,R4,R5>
+;   90      real(rk), intent(in) :: x
+;   91      type(quantity) :: q
+;   92
+;   93      q = scalar_quantity(real_value(x))
+	PUSHAG	@FCARRAYS.REAL_QUANTITY.X(AP)
+	PUSHAB	FCARRAYS.REAL_QUANTITY.$T2
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCARRAYS.REAL_QUANTITY.$T2
+	PUSHAB	FCARRAYS.REAL_QUANTITY.$T1
+	CALLS	#2,G^FCARRAYS.SCALAR_QUANTITY
+	MOVC3	#96,FCARRAYS.REAL_QUANTITY.$T1,@FCARRAYS.REAL_QUANTITY.Q(AP)
+;   94    end function real_quantity
+	RET
+
+; Storage map for FCARRAYS.FAILURE, a TYPE(QUANTITY) function
+;   Q     TYPE(QUANTITY)       hidden argument 1  @FCARRAYS.FAILURE.Q(AP)
+;   CODE  INTEGER, INTENT(IN)  argument 2         @FCARRAYS.FAILURE.CODE(AP)
+;
+FCARRAYS.FAILURE.Q = 4			; Q's value goes through hidden argument 1
+FCARRAYS.FAILURE.CODE = 8		; CODE is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.FAILURE.$T1:
+	.BLKL	24			; characters, for one statement
+FCARRAYS.FAILURE.$T2:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   95
+;   96    ! FAILURE is a quantity with the error CODE.
+;   97    function failure(code) result(q)
+	.ENTRY	FCARRAYS.FAILURE,^M<R2,R3,R4,R5>
+;   98      integer, intent(in) :: code
+;   99      type(quantity) :: q
+;  100
+;  101      q = scalar_quantity(error_value(code))
+	PUSHAL	@FCARRAYS.FAILURE.CODE(AP)
+	PUSHAB	FCARRAYS.FAILURE.$T2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	PUSHAB	FCARRAYS.FAILURE.$T2
+	PUSHAB	FCARRAYS.FAILURE.$T1
+	CALLS	#2,G^FCARRAYS.SCALAR_QUANTITY
+	MOVC3	#96,FCARRAYS.FAILURE.$T1,@FCARRAYS.FAILURE.Q(AP)
+;  102    end function failure
+	RET
+
+; Storage map for FCARRAYS.NEW_ARRAY, a TYPE(QUANTITY) function
+;   Q     TYPE(QUANTITY)       hidden argument 1  @FCARRAYS.NEW_ARRAY.Q(AP)
+;   M     INTEGER, INTENT(IN)  argument 2         @FCARRAYS.NEW_ARRAY.M(AP)
+;   N     INTEGER, INTENT(IN)  argument 3         @FCARRAYS.NEW_ARRAY.N(AP)
+;   R6 is $T2: temporary
+;
+FCARRAYS.NEW_ARRAY.Q = 4		; Q's value goes through hidden argument 1
+FCARRAYS.NEW_ARRAY.M = 8		; M is argument 2
+FCARRAYS.NEW_ARRAY.N = 12		; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.NEW_ARRAY.$T1:
+	.BLKL	24			; characters, for one statement
+FCARRAYS.NEW_ARRAY.$T3:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCARRAYS.NEW_ARRAY.$K1:
+	.LONG	34
+FCARRAYS.NEW_ARRAY.$K2:
+	.LONG	^X00000000,^X00000000	; 0D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  103
+;  104    ! NEW_ARRAY is an M by N array, M * N at least 2, its elements not yet
+;  105    ! given values: the caller fills Q%E. TOOBIG if it would be too large.
+;  106    function new_array(m, n) result(q)
+	.ENTRY	FCARRAYS.NEW_ARRAY,^M<R2,R3,R4,R5,R6>
+;  107      integer, intent(in) :: m, n
+;  108      type(quantity) :: q
+;  109
+;  110      if (m > max_elements / n) then
+	DIVL3	@FCARRAYS.NEW_ARRAY.N(AP),#10000,R0
+	CMPL	@FCARRAYS.NEW_ARRAY.M(AP),R0
+	BLEQ	FCARRAYS.NEW_ARRAY.$1
+;  111        q = failure(e_toobig)
+	PUSHAL	FCARRAYS.NEW_ARRAY.$K1
+	PUSHAB	FCARRAYS.NEW_ARRAY.$T1
+	CALLS	#2,G^FCARRAYS.FAILURE
+	MOVC3	#96,FCARRAYS.NEW_ARRAY.$T1,@FCARRAYS.NEW_ARRAY.Q(AP)
+;  112        return
+	RET
+FCARRAYS.NEW_ARRAY.$1:
+;  113      end if
+;  114      allocate (q%e(m, n))
+	MOVL	FCARRAYS.NEW_ARRAY.Q(AP),R0
+	MOVAL	48(R0),R6
+	MOVL	#169672720,(R6)
+	MOVL	#33554432,8(R6)
+	PUSHL	@FCARRAYS.NEW_ARRAY.N(AP)
+	PUSHL	#1
+	PUSHL	@FCARRAYS.NEW_ARRAY.M(AP)
+	PUSHL	#1
+	PUSHL	#2
+	PUSHAL	(R6)
+	CALLS	#6,G^FTN$ALLOCATE
+;  115      in_use = in_use + 1
+	INCL	FCARRAYS.IN_USE
+;  116      q%rows = m
+	MOVL	@FCARRAYS.NEW_ARRAY.M(AP),@FCARRAYS.NEW_ARRAY.Q(AP)
+;  117      q%cols = n
+	MOVL	FCARRAYS.NEW_ARRAY.Q(AP),R0
+	MOVL	@FCARRAYS.NEW_ARRAY.N(AP),4(R0)
+;  118      q%s = real_value(0.0_rk)
+	PUSHAG	FCARRAYS.NEW_ARRAY.$K2
+	PUSHAB	FCARRAYS.NEW_ARRAY.$T3
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVL	FCARRAYS.NEW_ARRAY.Q(AP),R0
+	MOVC3	#32,FCARRAYS.NEW_ARRAY.$T3,16(R0)
+;  119    end function new_array
+	RET
+
+; Storage map for FCARRAYS.ARRAY_OF, a TYPE(QUANTITY) function
+;   Q     TYPE(QUANTITY)                hidden argument 1  @FCARRAYS.ARRAY_OF.Q(AP)
+;   Z     COMPLEX*16, INTENT(IN) (:,:)  argument 2         @FCARRAYS.ARRAY_OF.Z(AP)
+;   V     TYPE(VALUE)                   $LOCAL+0           FCARRAYS.ARRAY_OF.V
+;   I     INTEGER                       $LOCAL+32          FCARRAYS.ARRAY_OF.I
+;   J     INTEGER                       $LOCAL+36          FCARRAYS.ARRAY_OF.J
+;   R9 is $T1: temporary
+;   R11 is $T3: temporary
+;   R10 is $L1: DO (line 141)'s limit
+;   R8 is $L2: DO (line 142)'s limit
+;   R6 is $R1: an index stepped with I
+;   R7 is $R2: Q's address
+;
+FCARRAYS.ARRAY_OF.Q = 4			; Q's value goes through hidden argument 1
+FCARRAYS.ARRAY_OF.Z = 8			; Z is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCARRAYS.ARRAY_OF.V:
+	.BLKL	8			; V
+FCARRAYS.ARRAY_OF.I:
+	.BLKL	1			; I
+FCARRAYS.ARRAY_OF.J:
+	.BLKL	1			; J
+FCARRAYS.ARRAY_OF.$B1:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_NCA
+	.LONG	0			; Z's bounds: set at each entry point
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+FCARRAYS.ARRAY_OF.$T2:
+	.BLKL	1			; temporary
+FCARRAYS.ARRAY_OF.$T4:
+	.BLKL	24			; characters, for one statement
+FCARRAYS.ARRAY_OF.$T5:
+	.BLKL	8			; characters, for one statement
+FCARRAYS.ARRAY_OF.$T6:
+	.BLKL	1			; temporary
+FCARRAYS.ARRAY_OF.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.ARRAY_OF.$T8:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  120
+;  121    ! ARRAY_OF is a quantity of the elements Z: a scalar if Z has one
+;  122    ! element, an array of Z's shape if it has more. Each element is made a
+;  123    ! value by CLEAN, so an element past LIMIT makes the whole an overflow,
+;  124    ! and one below SMALL is zero.
+;  125    !
+;  126    ! Z(:, :) is an assumed-shape array: SIZE(Z, 1) is its rows, SIZE(Z, 2)
+;  127    ! its columns. A caller may pass any rank-2 array expression, MATMUL(A, B)
+;  128    ! or RESHAPE(X, (/2, 3/)), and the compiler makes a temporary of it.
+;  129    function array_of(z) result(q)
+	.ENTRY	FCARRAYS.ARRAY_OF,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	4(R0),FCARRAYS.ARRAY_OF.$B1+4
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	CMPB	3(R0),#4
+	BEQL	FCARRAYS.ARRAY_OF.$1
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	20(R0),FCARRAYS.ARRAY_OF.$B1+20
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R1
+	SUBL3	28(R1),32(R0),R0
+	ADDL3	R0,#1,R9
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	24(R0),FCARRAYS.ARRAY_OF.$B1+24
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R1
+	SUBL3	36(R1),40(R0),R0
+	ADDL3	R0,#1,FCARRAYS.ARRAY_OF.$T2
+	BRB	FCARRAYS.ARRAY_OF.$3
+FCARRAYS.ARRAY_OF.$1:
+	MOVL	#16,FCARRAYS.ARRAY_OF.$B1+20
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	20(R0),R9
+	MULL3	#16,R9,FCARRAYS.ARRAY_OF.$B1+24
+	MOVL	FCARRAYS.ARRAY_OF.Z(AP),R0
+	MOVL	24(R0),FCARRAYS.ARRAY_OF.$T2
+FCARRAYS.ARRAY_OF.$3:
+	MOVL	#1,FCARRAYS.ARRAY_OF.$B1+28
+	TSTL	R9
+	BGEQ	FCARRAYS.ARRAY_OF.$4
+	CLRL	R9
+FCARRAYS.ARRAY_OF.$4:
+	MOVL	R9,FCARRAYS.ARRAY_OF.$B1+32
+	MOVL	#1,FCARRAYS.ARRAY_OF.$B1+36
+	TSTL	FCARRAYS.ARRAY_OF.$T2
+	BGEQ	FCARRAYS.ARRAY_OF.$6
+	CLRL	FCARRAYS.ARRAY_OF.$T2
+FCARRAYS.ARRAY_OF.$6:
+	MOVL	FCARRAYS.ARRAY_OF.$T2,FCARRAYS.ARRAY_OF.$B1+40
+	SUBL3	FCARRAYS.ARRAY_OF.$B1+20,FCARRAYS.ARRAY_OF.$B1+4,R0
+	SUBL3	FCARRAYS.ARRAY_OF.$B1+24,R0,FCARRAYS.ARRAY_OF.$B1+16
+	MULL3	#16,FCARRAYS.ARRAY_OF.$B1+32,R0
+	MULL3	R0,FCARRAYS.ARRAY_OF.$B1+40,FCARRAYS.ARRAY_OF.$B1+12
+;  130      complex(rk), intent(in) :: z(:, :)
+;  131      type(quantity) :: q
+;  132      type(value) :: v
+;  133      integer :: i, j
+;  134
+;  135      if (size(z) == 1) then
+	MOVL	FCARRAYS.ARRAY_OF.$B1+32,FCARRAYS.ARRAY_OF.$T2
+	BGEQ	FCARRAYS.ARRAY_OF.$8
+	CLRL	FCARRAYS.ARRAY_OF.$T2
+FCARRAYS.ARRAY_OF.$8:
+	MOVL	FCARRAYS.ARRAY_OF.$B1+40,R9
+	BGEQ	FCARRAYS.ARRAY_OF.$10
+	CLRL	R9
+FCARRAYS.ARRAY_OF.$10:
+	MULL3	FCARRAYS.ARRAY_OF.$T2,R9,R11
+	CMPL	R11,#1
+	BNEQ	FCARRAYS.ARRAY_OF.$12
+;  136        q = scalar_quantity(clean(z(1, 1)))
+	ADDL3	FCARRAYS.ARRAY_OF.$B1+16,FCARRAYS.ARRAY_OF.$B1+20,R0
+	ADDL2	FCARRAYS.ARRAY_OF.$B1+24,R0
+	PUSHAO	(R0)
+	PUSHAB	FCARRAYS.ARRAY_OF.$T5
+	CALLS	#2,G^FCVALUES.CLEAN
+	PUSHAB	FCARRAYS.ARRAY_OF.$T5
+	PUSHAB	FCARRAYS.ARRAY_OF.$T4
+	CALLS	#2,G^FCARRAYS.SCALAR_QUANTITY
+	MOVC3	#96,FCARRAYS.ARRAY_OF.$T4,@FCARRAYS.ARRAY_OF.Q(AP)
+;  137        return
+	RET
+FCARRAYS.ARRAY_OF.$12:
+;  138      end if
+;  139      q = new_array(size(z, 1), size(z, 2))
+	MOVL	FCARRAYS.ARRAY_OF.$B1+32,R11
+	BGEQ	FCARRAYS.ARRAY_OF.$14
+	CLRL	R11
+FCARRAYS.ARRAY_OF.$14:
+	MOVL	FCARRAYS.ARRAY_OF.$B1+40,R9
+	BGEQ	FCARRAYS.ARRAY_OF.$16
+	CLRL	R9
+FCARRAYS.ARRAY_OF.$16:
+	MOVL	R11,FCARRAYS.ARRAY_OF.$T2
+	MOVL	FCARRAYS.ARRAY_OF.$B1+32,FCARRAYS.ARRAY_OF.$T6
+	BGEQ	FCARRAYS.ARRAY_OF.$18
+	CLRL	FCARRAYS.ARRAY_OF.$T6
+FCARRAYS.ARRAY_OF.$18:
+	MOVL	FCARRAYS.ARRAY_OF.$B1+40,FCARRAYS.ARRAY_OF.$T7
+	BGEQ	FCARRAYS.ARRAY_OF.$20
+	CLRL	FCARRAYS.ARRAY_OF.$T7
+FCARRAYS.ARRAY_OF.$20:
+	MOVL	FCARRAYS.ARRAY_OF.$T7,FCARRAYS.ARRAY_OF.$T8
+	PUSHAL	FCARRAYS.ARRAY_OF.$T8
+	PUSHAL	FCARRAYS.ARRAY_OF.$T2
+	PUSHAB	FCARRAYS.ARRAY_OF.$T4
+	CALLS	#3,G^FCARRAYS.NEW_ARRAY
+	MOVC3	#96,FCARRAYS.ARRAY_OF.$T4,@FCARRAYS.ARRAY_OF.Q(AP)
+;  140      if (quantity_error(q) /= 0) return
+	PUSHAB	@FCARRAYS.ARRAY_OF.Q(AP)
+	CALLS	#1,G^FCARRAYS.QUANTITY_ERROR
+	MOVL	R0,FCARRAYS.ARRAY_OF.$T8
+	BEQL	FCARRAYS.ARRAY_OF.$22
+	RET
+FCARRAYS.ARRAY_OF.$22:
+;  141      do j = 1, q%cols
+	MOVL	FCARRAYS.ARRAY_OF.Q(AP),R0 ; DO (line 141)'s limit
+	MOVL	4(R0),R10
+	MOVL	#1,FCARRAYS.ARRAY_OF.J
+	CMPL	#1,R10
+	BLEQ	FCARRAYS.ARRAY_OF.$25
+	RET
+FCARRAYS.ARRAY_OF.$25:
+	MOVL	FCARRAYS.ARRAY_OF.Q(AP),R7
+FCARRAYS.ARRAY_OF.$26:			; DO (line 141)'s body
+;  142        do i = 1, q%rows
+	MOVL	(R7),R8			; DO (line 142)'s limit
+	MOVL	#1,FCARRAYS.ARRAY_OF.I
+	CMPL	#1,R8
+	BLEQ	FCARRAYS.ARRAY_OF.$28
+	BRW	FCARRAYS.ARRAY_OF.$27
+FCARRAYS.ARRAY_OF.$28:
+	MULL3	FCARRAYS.ARRAY_OF.I,FCARRAYS.ARRAY_OF.$B1+20,R0
+	ADDL2	FCARRAYS.ARRAY_OF.$B1+16,R0
+	MULL3	FCARRAYS.ARRAY_OF.J,FCARRAYS.ARRAY_OF.$B1+24,R1
+	ADDL3	R0,R1,R6
+FCARRAYS.ARRAY_OF.$29:			; DO (line 142)'s body
+;  143          v = clean(z(i, j))
+	PUSHAO	(R6)
+	PUSHAB	FCARRAYS.ARRAY_OF.$T5
+	CALLS	#2,G^FCVALUES.CLEAN
+	MOVC3	#32,FCARRAYS.ARRAY_OF.$T5,FCARRAYS.ARRAY_OF.V
+;  144          if (v%err /= 0) then
+	TSTL	FCARRAYS.ARRAY_OF.V+16
+	BEQL	FCARRAYS.ARRAY_OF.$30
+;  145            call release(q)
+	PUSHAB	@FCARRAYS.ARRAY_OF.Q(AP)
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  146            q = failure(v%err)
+	PUSHAL	FCARRAYS.ARRAY_OF.V+16
+	PUSHAB	FCARRAYS.ARRAY_OF.$T4
+	CALLS	#2,G^FCARRAYS.FAILURE
+	MOVC3	#96,FCARRAYS.ARRAY_OF.$T4,@FCARRAYS.ARRAY_OF.Q(AP)
+;  147            return
+	RET
+FCARRAYS.ARRAY_OF.$30:
+;  148          end if
+;  149          q%e(i, j) = v%z
+	MOVAL	48(R7),FCARRAYS.ARRAY_OF.$T8
+	MOVL	FCARRAYS.ARRAY_OF.$T8,R0
+	MOVL	FCARRAYS.ARRAY_OF.$T8,R1
+	MULL3	FCARRAYS.ARRAY_OF.I,20(R1),R1
+	ADDL3	16(R0),R1,R0
+	MOVL	FCARRAYS.ARRAY_OF.$T8,R1
+	MULL3	FCARRAYS.ARRAY_OF.J,24(R1),R1
+	ADDL2	R1,R0
+	MOVO	FCARRAYS.ARRAY_OF.V,(R0)
+;  150        end do
+	ADDL2	FCARRAYS.ARRAY_OF.$B1+20,R6
+	ACBL	R8,#1,FCARRAYS.ARRAY_OF.I,FCARRAYS.ARRAY_OF.$29
+FCARRAYS.ARRAY_OF.$27:
+;  151      end do
+	ACBL	R10,#1,FCARRAYS.ARRAY_OF.J,FCARRAYS.ARRAY_OF.$26
+;  152    end function array_of
+	RET
+
+; Storage map for FCARRAYS.RELEASE, a subroutine
+;   Q     TYPE(QUANTITY), INTENT(INOUT)  argument 1  @FCARRAYS.RELEASE.Q(AP)
+;   R6 is $T1: temporary
+;
+FCARRAYS.RELEASE.Q = 4			; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.RELEASE.$T2:
+	.BLKL	24			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCARRAYS.RELEASE.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  153
+;  154    ! RELEASE gives an array's storage back, leaving Q the scalar 0. A
+;  155    ! scalar has none to give.
+;  156    subroutine release(q)
+	.ENTRY	FCARRAYS.RELEASE,^M<R2,R3,R4,R5,R6>
+;  157      type(quantity), intent(inout) :: q
+;  158
+;  159      if (is_array(q)) then
+	PUSHAB	@FCARRAYS.RELEASE.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R6
+	BLBC	R6,FCARRAYS.RELEASE.$1
+;  160        deallocate (q%e)
+	MOVL	FCARRAYS.RELEASE.Q(AP),R0
+	MOVAL	48(R0),R6
+	PUSHL	#2
+	PUSHAL	(R6)
+	CALLS	#2,G^FTN$DEALLOCATE
+;  161        in_use = in_use - 1
+	DECL	FCARRAYS.IN_USE
+;  162      end if
+FCARRAYS.RELEASE.$1:
+;  163      q = real_quantity(0.0_rk)
+	PUSHAG	FCARRAYS.RELEASE.$K1
+	PUSHAB	FCARRAYS.RELEASE.$T2
+	CALLS	#2,G^FCARRAYS.REAL_QUANTITY
+	MOVC3	#96,FCARRAYS.RELEASE.$T2,@FCARRAYS.RELEASE.Q(AP)
+;  164    end subroutine release
+	RET
+
+; Storage map for FCARRAYS.DUPLICATE, a TYPE(QUANTITY) function
+;   R     TYPE(QUANTITY)              hidden argument 1  @FCARRAYS.DUPLICATE.R(AP)
+;   Q     TYPE(QUANTITY), INTENT(IN)  argument 2         @FCARRAYS.DUPLICATE.Q(AP)
+;   R8 is $T1: temporary
+;   R9 is $T3: temporary
+;   R7 is $R2: an index stepped with $I4
+;   R7 is $R3: an index stepped with $I6
+;   R6 is $R4: R's address
+;   R6 is $R5: Q's address
+;
+FCARRAYS.DUPLICATE.R = 4		; R's value goes through hidden argument 1
+FCARRAYS.DUPLICATE.Q = 8		; Q is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCARRAYS.DUPLICATE.$T2:
+	.BLKL	24			; characters, for one statement
+FCARRAYS.DUPLICATE.$I1:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.DUPLICATE.$I2:
+	.BLKL	1			; an array statement's loop index
+	.BLKB	4
+FCARRAYS.DUPLICATE.$T4:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T5:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T6:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T8:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T9:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T10:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$R1:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+FCARRAYS.DUPLICATE.$T11:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$I3:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.DUPLICATE.$I4:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.DUPLICATE.$T12:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T13:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T14:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T15:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T16:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T17:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$L1:
+	.BLKL	1			; array (line 176), dimension 2's limit
+FCARRAYS.DUPLICATE.$L2:
+	.BLKL	1			; array (line 176), dimension 1's limit
+FCARRAYS.DUPLICATE.$T18:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$I5:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.DUPLICATE.$I6:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.DUPLICATE.$T19:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T20:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T21:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T22:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T23:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T24:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T25:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$T26:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$L3:
+	.BLKL	1			; array (line 176), dimension 2's limit
+FCARRAYS.DUPLICATE.$L4:
+	.BLKL	1			; array (line 176), dimension 1's limit
+FCARRAYS.DUPLICATE.$T27:
+	.BLKL	1			; temporary
+FCARRAYS.DUPLICATE.$H1:
+	.BLKL	1			; a value computed before a loop
+FCARRAYS.DUPLICATE.$H2:
+	.BLKL	1			; a value computed before a loop
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  165
+;  166    ! DUPLICATE is a copy of Q with storage of its own.
+;  167    function duplicate(q) result(r)
+	.ENTRY	FCARRAYS.DUPLICATE,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+;  168      type(quantity), intent(in) :: q
+;  169      type(quantity) :: r
+;  170
+;  171      if (.not. is_array(q)) then
+	PUSHAB	@FCARRAYS.DUPLICATE.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R8
+	BLBS	R8,FCARRAYS.DUPLICATE.$1
+;  172        r = scalar_quantity(q%s)
+	MOVL	FCARRAYS.DUPLICATE.Q(AP),R0
+	PUSHAB	16(R0)
+	PUSHAB	FCARRAYS.DUPLICATE.$T2
+	CALLS	#2,G^FCARRAYS.SCALAR_QUANTITY
+	MOVC3	#96,FCARRAYS.DUPLICATE.$T2,@FCARRAYS.DUPLICATE.R(AP)
+;  173        return
+	RET
+FCARRAYS.DUPLICATE.$1:
+;  174      end if
+;  175      r = new_array(q%rows, q%cols)
+	MOVL	FCARRAYS.DUPLICATE.Q(AP),R0
+	PUSHAL	4(R0)
+	PUSHAL	@FCARRAYS.DUPLICATE.Q(AP)
+	PUSHAB	FCARRAYS.DUPLICATE.$T2
+	CALLS	#3,G^FCARRAYS.NEW_ARRAY
+	MOVC3	#96,FCARRAYS.DUPLICATE.$T2,@FCARRAYS.DUPLICATE.R(AP)
+;  176      if (quantity_error(r) == 0) r%e = q%e
+	PUSHAB	@FCARRAYS.DUPLICATE.R(AP)
+	CALLS	#1,G^FCARRAYS.QUANTITY_ERROR
+	MOVL	R0,R8
+	BEQL	FCARRAYS.DUPLICATE.$4
+	RET
+FCARRAYS.DUPLICATE.$4:
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),R9
+	SUBL3	#1,28(R9),FCARRAYS.DUPLICATE.$T4
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T5
+	MOVL	FCARRAYS.DUPLICATE.$T5,R0
+	SUBL3	#1,36(R0),FCARRAYS.DUPLICATE.$T6
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T7
+	MOVL	FCARRAYS.DUPLICATE.$T7,R0
+	MOVL	FCARRAYS.DUPLICATE.$T7,R1
+	SUBL3	28(R1),32(R0),R0
+	ADDL3	R0,#1,FCARRAYS.DUPLICATE.$T8
+	BGEQ	FCARRAYS.DUPLICATE.$5
+	CLRL	FCARRAYS.DUPLICATE.$T8
+FCARRAYS.DUPLICATE.$5:
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T9
+	MOVL	FCARRAYS.DUPLICATE.$T9,R0
+	MOVL	FCARRAYS.DUPLICATE.$T9,R1
+	SUBL3	36(R1),40(R0),R0
+	ADDL3	R0,#1,FCARRAYS.DUPLICATE.$T10
+	BGEQ	FCARRAYS.DUPLICATE.$7
+	CLRL	FCARRAYS.DUPLICATE.$T10
+FCARRAYS.DUPLICATE.$7:
+	MOVL	FCARRAYS.DUPLICATE.$T8,FCARRAYS.DUPLICATE.$R1+20
+	MOVL	FCARRAYS.DUPLICATE.$R1+20,FCARRAYS.DUPLICATE.$R1+32
+	MOVL	FCARRAYS.DUPLICATE.$T10,FCARRAYS.DUPLICATE.$R1+24
+	MOVL	FCARRAYS.DUPLICATE.$R1+24,FCARRAYS.DUPLICATE.$R1+40
+	MULL3	#16,FCARRAYS.DUPLICATE.$R1+20,R0
+	MULL3	R0,FCARRAYS.DUPLICATE.$R1+24,FCARRAYS.DUPLICATE.$R1+12
+	MOVL	SP,FCARRAYS.DUPLICATE.$T11 ; where the statement's storage starts
+	CMPL	FCARRAYS.DUPLICATE.$R1+12,#65536
+	BGTR	FCARRAYS.DUPLICATE.$9
+	SUBL2	FCARRAYS.DUPLICATE.$R1+12,SP ; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,FCARRAYS.DUPLICATE.$R1+4
+	BRB	FCARRAYS.DUPLICATE.$11
+FCARRAYS.DUPLICATE.$9:
+	PUSHAQ	FCARRAYS.DUPLICATE.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+FCARRAYS.DUPLICATE.$11:
+	MNEGL	FCARRAYS.DUPLICATE.$R1+20,R0
+	DECL	R0
+	MOVAO	@FCARRAYS.DUPLICATE.$R1+4[R0],FCARRAYS.DUPLICATE.$R1+16
+	MOVL	FCARRAYS.DUPLICATE.Q(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T12
+	MOVL	FCARRAYS.DUPLICATE.$T12,R0
+	SUBL3	#1,28(R0),FCARRAYS.DUPLICATE.$T13
+	MOVL	FCARRAYS.DUPLICATE.Q(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T14
+	MOVL	FCARRAYS.DUPLICATE.$T14,R0
+	SUBL3	#1,36(R0),FCARRAYS.DUPLICATE.$T15
+	MOVL	FCARRAYS.DUPLICATE.$R1+20,FCARRAYS.DUPLICATE.$T16
+	BGEQ	FCARRAYS.DUPLICATE.$12
+	CLRL	FCARRAYS.DUPLICATE.$T16
+FCARRAYS.DUPLICATE.$12:
+	MOVL	FCARRAYS.DUPLICATE.$R1+24,FCARRAYS.DUPLICATE.$T17
+	BGEQ	FCARRAYS.DUPLICATE.$14
+	CLRL	FCARRAYS.DUPLICATE.$T17
+FCARRAYS.DUPLICATE.$14:
+	MOVL	FCARRAYS.DUPLICATE.$T17,FCARRAYS.DUPLICATE.$L1 ; array (line 176), dimension 2's limit
+	MOVL	#1,FCARRAYS.DUPLICATE.$I4
+	CMPL	#1,FCARRAYS.DUPLICATE.$L1
+	BLEQ	FCARRAYS.DUPLICATE.$17
+	BRW	FCARRAYS.DUPLICATE.$16
+FCARRAYS.DUPLICATE.$17:
+	MULL3	FCARRAYS.DUPLICATE.$I4,FCARRAYS.DUPLICATE.$R1+20,R7
+FCARRAYS.DUPLICATE.$18:			; array (line 176), dimension 2's body
+	MOVL	FCARRAYS.DUPLICATE.$T16,FCARRAYS.DUPLICATE.$L2 ; array (line 176), dimension 1's limit
+	MOVL	#1,FCARRAYS.DUPLICATE.$I3
+	CMPL	#1,FCARRAYS.DUPLICATE.$L2
+	BGTR	FCARRAYS.DUPLICATE.$19
+	MOVL	R7,FCARRAYS.DUPLICATE.$H1 ; from line 176
+	MOVL	FCARRAYS.DUPLICATE.Q(AP),R6
+FCARRAYS.DUPLICATE.$21:			; array (line 176), dimension 1's body
+	MOVAL	48(R6),FCARRAYS.DUPLICATE.$T18
+	ADDL3	FCARRAYS.DUPLICATE.$I3,FCARRAYS.DUPLICATE.$T13,R0
+	MOVL	FCARRAYS.DUPLICATE.$T18,R1
+	MULL2	20(R1),R0
+	MOVL	FCARRAYS.DUPLICATE.$T18,R1
+	ADDL2	16(R1),R0
+	ADDL3	FCARRAYS.DUPLICATE.$I4,FCARRAYS.DUPLICATE.$T15,R1
+	MOVL	FCARRAYS.DUPLICATE.$T18,R2
+	MULL2	24(R2),R1
+	ADDL2	R1,R0
+	ADDL3	FCARRAYS.DUPLICATE.$H1,FCARRAYS.DUPLICATE.$I3,R1
+	MOVO	(R0),@FCARRAYS.DUPLICATE.$R1+16[R1]
+	AOBLEQ	FCARRAYS.DUPLICATE.$L2,FCARRAYS.DUPLICATE.$I3,FCARRAYS.DUPLICATE.$21
+FCARRAYS.DUPLICATE.$19:
+	ADDL2	FCARRAYS.DUPLICATE.$R1+20,R7
+	ACBL	FCARRAYS.DUPLICATE.$L1,#1,FCARRAYS.DUPLICATE.$I4,FCARRAYS.DUPLICATE.$18
+FCARRAYS.DUPLICATE.$16:
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T19
+	MOVL	FCARRAYS.DUPLICATE.$T19,R0
+	SUBL3	#1,28(R0),FCARRAYS.DUPLICATE.$T20
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T21
+	MOVL	FCARRAYS.DUPLICATE.$T21,R0
+	SUBL3	#1,36(R0),FCARRAYS.DUPLICATE.$T22
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T23
+	MOVL	FCARRAYS.DUPLICATE.$T23,R0
+	MOVL	FCARRAYS.DUPLICATE.$T23,R1
+	SUBL3	28(R1),32(R0),R0
+	ADDL3	R0,#1,FCARRAYS.DUPLICATE.$T24
+	BGEQ	FCARRAYS.DUPLICATE.$24
+	CLRL	FCARRAYS.DUPLICATE.$T24
+FCARRAYS.DUPLICATE.$24:
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R0
+	MOVAL	48(R0),FCARRAYS.DUPLICATE.$T25
+	MOVL	FCARRAYS.DUPLICATE.$T25,R0
+	MOVL	FCARRAYS.DUPLICATE.$T25,R1
+	SUBL3	36(R1),40(R0),R0
+	ADDL3	R0,#1,FCARRAYS.DUPLICATE.$T26
+	BGEQ	FCARRAYS.DUPLICATE.$26
+	CLRL	FCARRAYS.DUPLICATE.$T26
+FCARRAYS.DUPLICATE.$26:
+	MOVL	FCARRAYS.DUPLICATE.$T26,FCARRAYS.DUPLICATE.$L3 ; array (line 176), dimension 2's limit
+	MOVL	#1,FCARRAYS.DUPLICATE.$I6
+	CMPL	#1,FCARRAYS.DUPLICATE.$L3
+	BLEQ	FCARRAYS.DUPLICATE.$29
+	BRW	FCARRAYS.DUPLICATE.$28
+FCARRAYS.DUPLICATE.$29:
+	MULL3	FCARRAYS.DUPLICATE.$I6,FCARRAYS.DUPLICATE.$R1+20,R7
+FCARRAYS.DUPLICATE.$30:			; array (line 176), dimension 2's body
+	MOVL	FCARRAYS.DUPLICATE.$T24,FCARRAYS.DUPLICATE.$L4 ; array (line 176), dimension 1's limit
+	MOVL	#1,FCARRAYS.DUPLICATE.$I5
+	CMPL	#1,FCARRAYS.DUPLICATE.$L4
+	BGTR	FCARRAYS.DUPLICATE.$31
+	MOVL	R7,FCARRAYS.DUPLICATE.$H2 ; from line 176
+	MOVL	FCARRAYS.DUPLICATE.R(AP),R6
+FCARRAYS.DUPLICATE.$33:			; array (line 176), dimension 1's body
+	MOVAL	48(R6),FCARRAYS.DUPLICATE.$T27
+	ADDL3	FCARRAYS.DUPLICATE.$H2,FCARRAYS.DUPLICATE.$I5,R0
+	ADDL3	FCARRAYS.DUPLICATE.$I5,FCARRAYS.DUPLICATE.$T20,R1
+	MOVL	FCARRAYS.DUPLICATE.$T27,R2
+	MULL2	20(R2),R1
+	MOVL	FCARRAYS.DUPLICATE.$T27,R2
+	ADDL2	16(R2),R1
+	ADDL3	FCARRAYS.DUPLICATE.$I6,FCARRAYS.DUPLICATE.$T22,R2
+	MOVL	FCARRAYS.DUPLICATE.$T27,R3
+	MULL2	24(R3),R2
+	ADDL2	R2,R1
+	MOVO	@FCARRAYS.DUPLICATE.$R1+16[R0],(R1)
+	AOBLEQ	FCARRAYS.DUPLICATE.$L4,FCARRAYS.DUPLICATE.$I5,FCARRAYS.DUPLICATE.$33
+FCARRAYS.DUPLICATE.$31:
+	ADDL2	FCARRAYS.DUPLICATE.$R1+20,R7
+	ACBL	FCARRAYS.DUPLICATE.$L3,#1,FCARRAYS.DUPLICATE.$I6,FCARRAYS.DUPLICATE.$30
+FCARRAYS.DUPLICATE.$28:
+	CMPL	FCARRAYS.DUPLICATE.$R1+12,#65536
+	BLEQ	FCARRAYS.DUPLICATE.$36
+	PUSHL	#0
+	PUSHAQ	FCARRAYS.DUPLICATE.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+FCARRAYS.DUPLICATE.$36:
+	MOVL	FCARRAYS.DUPLICATE.$T11,SP ; the statement's storage given back
+;  177    end function duplicate
+	RET
+
+; Storage map for FCARRAYS.ARRAYS_IN_USE, an INTEGER function
+;   ARRAYS_IN_USE  INTEGER  $LOCAL+0  FCARRAYS.ARRAYS_IN_USE.$N1
+;   FCARRAYS.ARRAYS_IN_USE.$N1 is FCARRAYS.ARRAYS_IN_USE.ARRAYS_IN_USE
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.ARRAYS_IN_USE.$N1:
+	.BLKL	1			; ARRAYS_IN_USE, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  178
+;  179    integer function arrays_in_use()
+	.ENTRY	FCARRAYS.ARRAYS_IN_USE,^M<>
+;  180      arrays_in_use = in_use
+;  181    end function arrays_in_use
+	MOVL	FCARRAYS.IN_USE,R0	; the function's value
+	RET
+
+; Storage map for FCARRAYS.IS_ARRAY, a LOGICAL function
+;   Q         TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.IS_ARRAY.Q(AP)
+;   IS_ARRAY  LOGICAL                     $LOCAL+0    FCARRAYS.IS_ARRAY.IS_ARRAY
+;
+FCARRAYS.IS_ARRAY.Q = 4			; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.IS_ARRAY.IS_ARRAY:
+	.BLKL	1			; IS_ARRAY, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  182
+;  183    ! ------------------------------------------------------------------
+;  184    ! What a quantity is.
+;  185
+;  186    logical function is_array(q)
+	.ENTRY	FCARRAYS.IS_ARRAY,^M<>
+;  187      type(quantity), intent(in) :: q
+;  188
+;  189      is_array = q%rows * q%cols > 1
+;  190    end function is_array
+	MOVL	FCARRAYS.IS_ARRAY.Q(AP),R0 ; the function's value
+	MULL3	@FCARRAYS.IS_ARRAY.Q(AP),4(R0),R0
+	CLRL	R1
+	CMPL	R0,#1
+	BLEQ	FCARRAYS.IS_ARRAY.$1
+	MNEGL	#1,R1
+FCARRAYS.IS_ARRAY.$1:
+	MOVL	R1,R0
+	RET
+
+; Storage map for FCARRAYS.IS_VECTOR, a LOGICAL function
+;   Q          TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.IS_VECTOR.Q(AP)
+;   IS_VECTOR  LOGICAL                     $LOCAL+0    FCARRAYS.IS_VECTOR.IS_VECTOR
+;
+FCARRAYS.IS_VECTOR.Q = 4		; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.IS_VECTOR.IS_VECTOR:
+	.BLKL	1			; IS_VECTOR, the function's value
+FCARRAYS.IS_VECTOR.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  191
+;  192    ! IS_VECTOR: Q is an array of one row or one column.
+;  193    logical function is_vector(q)
+	.ENTRY	FCARRAYS.IS_VECTOR,^M<R2>
+;  194      type(quantity), intent(in) :: q
+;  195
+;  196      is_vector = is_array(q) .and. (q%rows == 1 .or. q%cols == 1)
+	PUSHAB	@FCARRAYS.IS_VECTOR.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,FCARRAYS.IS_VECTOR.$T1
+;  197    end function is_vector
+	CLRL	R0			; the function's value
+	CMPL	@FCARRAYS.IS_VECTOR.Q(AP),#1
+	BNEQ	FCARRAYS.IS_VECTOR.$1
+	MNEGL	#1,R0
+FCARRAYS.IS_VECTOR.$1:
+	MOVL	FCARRAYS.IS_VECTOR.Q(AP),R1
+	CLRL	R2
+	CMPL	4(R1),#1
+	BNEQ	FCARRAYS.IS_VECTOR.$2
+	MNEGL	#1,R2
+FCARRAYS.IS_VECTOR.$2:
+	BISL2	R2,R0
+	MCOML	R0,R0
+	BICL3	R0,FCARRAYS.IS_VECTOR.$T1,R0
+	RET
+
+; Storage map for FCARRAYS.NUMEL, an INTEGER function
+;   Q      TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.NUMEL.Q(AP)
+;   NUMEL  INTEGER                     $LOCAL+0    FCARRAYS.NUMEL.NUMEL
+;
+FCARRAYS.NUMEL.Q = 4			; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.NUMEL.NUMEL:
+	.BLKL	1			; NUMEL, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  198
+;  199    integer function numel(q)
+	.ENTRY	FCARRAYS.NUMEL,^M<>
+;  200      type(quantity), intent(in) :: q
+;  201
+;  202      numel = q%rows * q%cols
+;  203    end function numel
+	MOVL	FCARRAYS.NUMEL.Q(AP),R0	; the function's value
+	MULL3	@FCARRAYS.NUMEL.Q(AP),4(R0),R0
+	RET
+
+; Storage map for FCARRAYS.SAME_SHAPE, a LOGICAL function
+;   A           TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.SAME_SHAPE.A(AP)
+;   B           TYPE(QUANTITY), INTENT(IN)  argument 2  @FCARRAYS.SAME_SHAPE.B(AP)
+;   SAME_SHAPE  LOGICAL                     $LOCAL+0    FCARRAYS.SAME_SHAPE.SAME_SHAPE
+;
+FCARRAYS.SAME_SHAPE.A = 4		; A is argument 1
+FCARRAYS.SAME_SHAPE.B = 8		; B is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.SAME_SHAPE.SAME_SHAPE:
+	.BLKL	1			; SAME_SHAPE, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  204
+;  205    logical function same_shape(a, b)
+	.ENTRY	FCARRAYS.SAME_SHAPE,^M<R2>
+;  206      type(quantity), intent(in) :: a, b
+;  207
+;  208      same_shape = a%rows == b%rows .and. a%cols == b%cols
+;  209    end function same_shape
+	MOVL	FCARRAYS.SAME_SHAPE.A(AP),R0 ; the function's value
+	MOVL	FCARRAYS.SAME_SHAPE.B(AP),R1
+	CLRL	R2
+	CMPL	4(R0),4(R1)
+	BNEQ	FCARRAYS.SAME_SHAPE.$1
+	MNEGL	#1,R2
+FCARRAYS.SAME_SHAPE.$1:
+	MCOML	R2,R0
+	CLRL	R1
+	CMPL	@FCARRAYS.SAME_SHAPE.A(AP),@FCARRAYS.SAME_SHAPE.B(AP)
+	BNEQ	FCARRAYS.SAME_SHAPE.$2
+	MNEGL	#1,R1
+FCARRAYS.SAME_SHAPE.$2:
+	BICL3	R0,R1,R0
+	RET
+
+; Storage map for FCARRAYS.QUANTITY_ERROR, an INTEGER function
+;   Q               TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.QUANTITY_ERROR.Q(AP)
+;   QUANTITY_ERROR  INTEGER                     $LOCAL+0    FCARRAYS.QUANTITY_ERROR.$N2
+;   FCARRAYS.QUANTITY_ERROR.$N2 is FCARRAYS.QUANTITY_ERROR.QUANTITY_ERROR
+;
+FCARRAYS.QUANTITY_ERROR.Q = 4		; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.QUANTITY_ERROR.$N2:
+	.BLKL	1			; QUANTITY_ERROR, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  210
+;  211    integer function quantity_error(q)
+	.ENTRY	FCARRAYS.QUANTITY_ERROR,^M<>
+;  212      type(quantity), intent(in) :: q
+;  213
+;  214      quantity_error = q%s%err
+;  215    end function quantity_error
+	MOVL	FCARRAYS.QUANTITY_ERROR.Q(AP),R0 ; the function's value
+	MOVL	32(R0),R0
+	RET
+
+; Storage map for FCARRAYS.QUANTITY_TRUTH, a LOGICAL function
+;   Q               TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.QUANTITY_TRUTH.Q(AP)
+;   QUANTITY_TRUTH  LOGICAL                     $LOCAL+0    FCARRAYS.QUANTITY_TRUTH.$N3
+;   R7 is $T1: temporary
+;   R6 is $R1: Q's address
+;   FCARRAYS.QUANTITY_TRUTH.$N3 is FCARRAYS.QUANTITY_TRUTH.QUANTITY_TRUTH
+;
+FCARRAYS.QUANTITY_TRUTH.Q = 4		; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.QUANTITY_TRUTH.$N3:
+	.BLKL	1			; QUANTITY_TRUTH, the function's value
+FCARRAYS.QUANTITY_TRUTH.$I1:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.QUANTITY_TRUTH.$I2:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.QUANTITY_TRUTH.$T2:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T3:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T4:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T5:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T6:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T8:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$T9:
+	.BLKL	1			; temporary
+FCARRAYS.QUANTITY_TRUTH.$L1:
+	.BLKL	1			; array (line 223), dimension 2's limit
+FCARRAYS.QUANTITY_TRUTH.$L2:
+	.BLKL	1			; array (line 223), dimension 1's limit
+FCARRAYS.QUANTITY_TRUTH.$T10:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  216
+;  217    ! QUANTITY_TRUTH: a scalar is true if it isn't zero, and an array if no
+;  218    ! element is.
+;  219    logical function quantity_truth(q)
+	.ENTRY	FCARRAYS.QUANTITY_TRUTH,^M<R2,R6,R7>
+;  220      type(quantity), intent(in) :: q
+;  221
+;  222      if (is_array(q)) then
+	PUSHAB	@FCARRAYS.QUANTITY_TRUTH.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R7
+	BLBS	R7,FCARRAYS.QUANTITY_TRUTH.$2
+	BRW	FCARRAYS.QUANTITY_TRUTH.$1
+FCARRAYS.QUANTITY_TRUTH.$2:
+;  223        quantity_truth = all(q%e /= (0.0_rk, 0.0_rk))
+	MOVL	FCARRAYS.QUANTITY_TRUTH.Q(AP),R0
+	MOVAL	48(R0),R7
+	SUBL3	#1,28(R7),FCARRAYS.QUANTITY_TRUTH.$T2
+	MOVL	FCARRAYS.QUANTITY_TRUTH.Q(AP),R0
+	MOVAL	48(R0),FCARRAYS.QUANTITY_TRUTH.$T3
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T3,R0
+	SUBL3	#1,36(R0),FCARRAYS.QUANTITY_TRUTH.$T4
+	MOVL	FCARRAYS.QUANTITY_TRUTH.Q(AP),R0
+	MOVAL	48(R0),FCARRAYS.QUANTITY_TRUTH.$T5
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T5,R0
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T5,R1
+	SUBL3	28(R1),32(R0),R0
+	ADDL3	R0,#1,FCARRAYS.QUANTITY_TRUTH.$T6
+	BGEQ	FCARRAYS.QUANTITY_TRUTH.$3
+	CLRL	FCARRAYS.QUANTITY_TRUTH.$T6
+FCARRAYS.QUANTITY_TRUTH.$3:
+	MOVL	FCARRAYS.QUANTITY_TRUTH.Q(AP),R0
+	MOVAL	48(R0),FCARRAYS.QUANTITY_TRUTH.$T7
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T7,R0
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T7,R1
+	SUBL3	36(R1),40(R0),R0
+	ADDL3	R0,#1,FCARRAYS.QUANTITY_TRUTH.$T8
+	BGEQ	FCARRAYS.QUANTITY_TRUTH.$5
+	CLRL	FCARRAYS.QUANTITY_TRUTH.$T8
+FCARRAYS.QUANTITY_TRUTH.$5:
+	MOVL	#-1,FCARRAYS.QUANTITY_TRUTH.$T9
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T8,FCARRAYS.QUANTITY_TRUTH.$L1 ; array (line 223), dimension 2's limit
+	MOVL	#1,FCARRAYS.QUANTITY_TRUTH.$I2
+	CMPL	#1,FCARRAYS.QUANTITY_TRUTH.$L1
+	BLEQ	FCARRAYS.QUANTITY_TRUTH.$8
+	BRW	FCARRAYS.QUANTITY_TRUTH.$7
+FCARRAYS.QUANTITY_TRUTH.$8:
+FCARRAYS.QUANTITY_TRUTH.$9:		; array (line 223), dimension 2's body
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T6,FCARRAYS.QUANTITY_TRUTH.$L2 ; array (line 223), dimension 1's limit
+	MOVL	#1,FCARRAYS.QUANTITY_TRUTH.$I1
+	CMPL	#1,FCARRAYS.QUANTITY_TRUTH.$L2
+	BLEQ	FCARRAYS.QUANTITY_TRUTH.$11
+	BRW	FCARRAYS.QUANTITY_TRUTH.$10
+FCARRAYS.QUANTITY_TRUTH.$11:
+	MOVL	FCARRAYS.QUANTITY_TRUTH.Q(AP),R6
+FCARRAYS.QUANTITY_TRUTH.$12:		; array (line 223), dimension 1's body
+	MOVAL	48(R6),FCARRAYS.QUANTITY_TRUTH.$T10
+	ADDL3	FCARRAYS.QUANTITY_TRUTH.$I1,FCARRAYS.QUANTITY_TRUTH.$T2,R0
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T10,R1
+	MULL2	20(R1),R0
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T10,R1
+	ADDL2	16(R1),R0
+	ADDL3	FCARRAYS.QUANTITY_TRUTH.$I2,FCARRAYS.QUANTITY_TRUTH.$T4,R1
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T10,R2
+	MULL2	24(R2),R1
+	ADDL2	R1,R0
+	TSTG	(R0)
+	BNEQ	FCARRAYS.QUANTITY_TRUTH.$13
+	ADDL3	FCARRAYS.QUANTITY_TRUTH.$I1,FCARRAYS.QUANTITY_TRUTH.$T2,R0
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T10,R1
+	MULL2	20(R1),R0
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T10,R1
+	ADDL2	16(R1),R0
+	ADDL3	FCARRAYS.QUANTITY_TRUTH.$I2,FCARRAYS.QUANTITY_TRUTH.$T4,R1
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T10,R2
+	MULL2	24(R2),R1
+	ADDL2	R1,R0
+	TSTG	8(R0)
+	BNEQ	FCARRAYS.QUANTITY_TRUTH.$13
+	CLRL	FCARRAYS.QUANTITY_TRUTH.$T9
+FCARRAYS.QUANTITY_TRUTH.$13:
+	ACBL	FCARRAYS.QUANTITY_TRUTH.$L2,#1,FCARRAYS.QUANTITY_TRUTH.$I1,FCARRAYS.QUANTITY_TRUTH.$12
+FCARRAYS.QUANTITY_TRUTH.$10:
+	ACBL	FCARRAYS.QUANTITY_TRUTH.$L1,#1,FCARRAYS.QUANTITY_TRUTH.$I2,FCARRAYS.QUANTITY_TRUTH.$9
+FCARRAYS.QUANTITY_TRUTH.$7:
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$T9,FCARRAYS.QUANTITY_TRUTH.$N3
+;  224      else
+	BRB	FCARRAYS.QUANTITY_TRUTH.$18
+FCARRAYS.QUANTITY_TRUTH.$1:
+;  225        quantity_truth = truth(q%s)
+	MOVL	FCARRAYS.QUANTITY_TRUTH.Q(AP),R0
+	PUSHAB	16(R0)
+	CALLS	#1,G^FCVALUES.TRUTH
+	MOVL	R0,FCARRAYS.QUANTITY_TRUTH.$N3
+;  226      end if
+FCARRAYS.QUANTITY_TRUTH.$18:
+;  227    end function quantity_truth
+	MOVL	FCARRAYS.QUANTITY_TRUTH.$N3,R0 ; the function's value
+	RET
+
+; Storage map for FCARRAYS.ELEMENT, a TYPE(VALUE) function
+;   V     TYPE(VALUE)                 hidden argument 1  @FCARRAYS.ELEMENT.V(AP)
+;   Q     TYPE(QUANTITY), INTENT(IN)  argument 2         @FCARRAYS.ELEMENT.Q(AP)
+;   I     INTEGER, INTENT(IN)         argument 3         @FCARRAYS.ELEMENT.I(AP)
+;   J     INTEGER, INTENT(IN)         argument 4         @FCARRAYS.ELEMENT.J(AP)
+;   R6 is $T1: temporary
+;
+FCARRAYS.ELEMENT.V = 4			; V's value goes through hidden argument 1
+FCARRAYS.ELEMENT.Q = 8			; Q is argument 2
+FCARRAYS.ELEMENT.I = 12			; I is argument 3
+FCARRAYS.ELEMENT.J = 16			; J is argument 4
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  228
+;  229    ! ELEMENT is the element (I, J) as a value; a scalar's every element is
+;  230    ! itself, so a scalar combines with each element of an array.
+;  231    function element(q, i, j) result(v)
+	.ENTRY	FCARRAYS.ELEMENT,^M<R2,R3,R4,R5,R6>
+;  232      type(quantity), intent(in) :: q
+;  233      integer, intent(in) :: i, j
+;  234      type(value) :: v
+;  235
+;  236      if (is_array(q)) then
+	PUSHAB	@FCARRAYS.ELEMENT.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R6
+	BLBC	R6,FCARRAYS.ELEMENT.$1
+;  237        v%z = q%e(i, j)
+	MOVL	FCARRAYS.ELEMENT.Q(AP),R0
+	MOVAL	48(R0),R6
+	MULL3	@FCARRAYS.ELEMENT.I(AP),20(R6),R0
+	ADDL2	16(R6),R0
+	MULL3	@FCARRAYS.ELEMENT.J(AP),24(R6),R1
+	ADDL2	R1,R0
+	MOVO	(R0),@FCARRAYS.ELEMENT.V(AP)
+;  238        v%err = 0
+	MOVL	FCARRAYS.ELEMENT.V(AP),R0
+	CLRL	16(R0)
+;  239      else
+	RET
+FCARRAYS.ELEMENT.$1:
+;  240        v = q%s
+	MOVL	FCARRAYS.ELEMENT.Q(AP),R0
+	MOVC3	#32,16(R0),@FCARRAYS.ELEMENT.V(AP)
+;  241      end if
+;  242    end function element
+	RET
+
+; Storage map for FCARRAYS.ELEMENT_AT, a TYPE(VALUE) function
+;   V     TYPE(VALUE)                 hidden argument 1  @FCARRAYS.ELEMENT_AT.V(AP)
+;   Q     TYPE(QUANTITY), INTENT(IN)  argument 2         @FCARRAYS.ELEMENT_AT.Q(AP)
+;   K     INTEGER, INTENT(IN)         argument 3         @FCARRAYS.ELEMENT_AT.K(AP)
+;   R6 is $T2: temporary
+;   R7 is $U1: temporary
+;
+FCARRAYS.ELEMENT_AT.V = 4		; V's value goes through hidden argument 1
+FCARRAYS.ELEMENT_AT.Q = 8		; Q is argument 2
+FCARRAYS.ELEMENT_AT.K = 12		; K is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.ELEMENT_AT.$T1:
+	.BLKL	8			; characters, for one statement
+FCARRAYS.ELEMENT_AT.$T3:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENT_AT.$T4:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  243
+;  244    ! ELEMENT_AT is the Kth element in Fortran's array element order, down
+;  245    ! each column in turn, as RESHAPE and a single index count them.
+;  246    function element_at(q, k) result(v)
+	.ENTRY	FCARRAYS.ELEMENT_AT,^M<R2,R3,R4,R5,R6,R7>
+;  247      type(quantity), intent(in) :: q
+;  248      integer, intent(in) :: k
+;  249
+;  250      type(value) :: v
+;  251
+;  252      v = element(q, mod(k - 1, q%rows) + 1, (k - 1) / q%rows + 1)
+	SUBL3	#1,@FCARRAYS.ELEMENT_AT.K(AP),R6
+	DIVL3	@FCARRAYS.ELEMENT_AT.Q(AP),R6,R7
+	MULL3	R7,@FCARRAYS.ELEMENT_AT.Q(AP),R0
+	SUBL3	R0,R6,R0
+	ADDL3	R0,#1,FCARRAYS.ELEMENT_AT.$T3
+	ADDL3	R7,#1,FCARRAYS.ELEMENT_AT.$T4
+	PUSHAL	FCARRAYS.ELEMENT_AT.$T4
+	PUSHAL	FCARRAYS.ELEMENT_AT.$T3
+	PUSHAB	@FCARRAYS.ELEMENT_AT.Q(AP)
+	PUSHAB	FCARRAYS.ELEMENT_AT.$T1
+	CALLS	#4,G^FCARRAYS.ELEMENT
+	MOVC3	#32,FCARRAYS.ELEMENT_AT.$T1,@FCARRAYS.ELEMENT_AT.V(AP)
+;  253    end function element_at
+	RET
+
+; Storage map for FCARRAYS.ELEMENTS_OF, a COMPLEX*16 function
+;   $VALUE  COMPLEX*16 (?,?)            hidden argument 1       @FCARRAYS.ELEMENTS_OF.$VALUE(AP)
+;   Q       TYPE(QUANTITY), INTENT(IN)  argument 2              @FCARRAYS.ELEMENTS_OF.Q(AP)
+;   Z       COMPLEX*16 (?,?)            descriptor at $LOCAL+0  FCARRAYS.ELEMENTS_OF.Z
+;   R8 is $T1: temporary
+;   R7 is $R1: an index stepped with $I2
+;   R6 is $R2: Q's address
+;
+FCARRAYS.ELEMENTS_OF.$VALUE = 4		; $VALUE's value goes through hidden argument 1
+FCARRAYS.ELEMENTS_OF.Q = 8		; Q is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.ELEMENTS_OF.Z:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_A
+	.LONG	0			; Z: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+FCARRAYS.ELEMENTS_OF.$I1:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.ELEMENTS_OF.$I2:
+	.BLKL	1			; an array statement's loop index
+FCARRAYS.ELEMENTS_OF.$T2:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENTS_OF.$T3:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENTS_OF.$T4:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENTS_OF.$T5:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENTS_OF.$T6:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENTS_OF.$L1:
+	.BLKL	1			; array (line 264), dimension 2's limit
+FCARRAYS.ELEMENTS_OF.$L2:
+	.BLKL	1			; array (line 264), dimension 1's limit
+FCARRAYS.ELEMENTS_OF.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.ELEMENTS_OF.$H1:
+	.BLKL	1			; a value computed before a loop
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  254
+;  255    ! ELEMENTS_OF is Q's elements as an array of its shape, a scalar's as a
+;  256    ! 1 by 1 array. The result's shape comes from the argument's components:
+;  257    ! a function's result may be an array whose bounds are expressions of its
+;  258    ! arguments, as an automatic array's may.
+;  259    function elements_of(q) result(z)
+	.ENTRY	FCARRAYS.ELEMENTS_OF,^M<R2,R6,R7,R8>
+	MOVL	@FCARRAYS.ELEMENTS_OF.Q(AP),FCARRAYS.ELEMENTS_OF.Z+32
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+32,FCARRAYS.ELEMENTS_OF.Z+20
+	BGEQ	FCARRAYS.ELEMENTS_OF.$1
+	CLRL	FCARRAYS.ELEMENTS_OF.Z+20
+FCARRAYS.ELEMENTS_OF.$1:
+	MOVL	FCARRAYS.ELEMENTS_OF.Q(AP),R0
+	MOVL	4(R0),FCARRAYS.ELEMENTS_OF.Z+40
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+40,FCARRAYS.ELEMENTS_OF.Z+24
+	BGEQ	FCARRAYS.ELEMENTS_OF.$3
+	CLRL	FCARRAYS.ELEMENTS_OF.Z+24
+FCARRAYS.ELEMENTS_OF.$3:
+	MULL3	#16,FCARRAYS.ELEMENTS_OF.Z+20,R0
+	MULL3	R0,FCARRAYS.ELEMENTS_OF.Z+24,FCARRAYS.ELEMENTS_OF.Z+12
+	PUSHAQ	FCARRAYS.ELEMENTS_OF.Z
+	CALLS	#1,G^FTN$GET_TEMP
+	MNEGL	FCARRAYS.ELEMENTS_OF.Z+20,R0
+	DECL	R0
+	MOVAO	@FCARRAYS.ELEMENTS_OF.Z+4[R0],FCARRAYS.ELEMENTS_OF.Z+16
+	MOVL	#169672720,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)
+	MOVL	#2,R0
+	MOVL	#33554432,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#1,R0
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+4,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#3,R0
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+12,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#4,R0
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+16,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#5,R0
+	MOVL	#16,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#7,R0
+	MOVL	#1,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#8,R0
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+20,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#6,R0
+	MULL3	#16,FCARRAYS.ELEMENTS_OF.Z+20,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#9,R0
+	MOVL	#1,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+	MOVL	#10,R0
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+24,@FCARRAYS.ELEMENTS_OF.$VALUE(AP)[R0]
+;  260      type(quantity), intent(in) :: q
+;  261      complex(rk) :: z(q%rows, q%cols)
+;  262
+;  263      if (is_array(q)) then
+	PUSHAB	@FCARRAYS.ELEMENTS_OF.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R8
+	BLBS	R8,FCARRAYS.ELEMENTS_OF.$6
+	BRW	FCARRAYS.ELEMENTS_OF.$5
+FCARRAYS.ELEMENTS_OF.$6:
+;  264        z = q%e
+	MOVL	FCARRAYS.ELEMENTS_OF.Q(AP),R0
+	MOVAL	48(R0),R8
+	SUBL3	#1,28(R8),FCARRAYS.ELEMENTS_OF.$T2
+	MOVL	FCARRAYS.ELEMENTS_OF.Q(AP),R0
+	MOVAL	48(R0),FCARRAYS.ELEMENTS_OF.$T3
+	MOVL	FCARRAYS.ELEMENTS_OF.$T3,R0
+	SUBL3	#1,36(R0),FCARRAYS.ELEMENTS_OF.$T4
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+20,FCARRAYS.ELEMENTS_OF.$T5
+	BGEQ	FCARRAYS.ELEMENTS_OF.$7
+	CLRL	FCARRAYS.ELEMENTS_OF.$T5
+FCARRAYS.ELEMENTS_OF.$7:
+	MOVL	FCARRAYS.ELEMENTS_OF.Z+24,FCARRAYS.ELEMENTS_OF.$T6
+	BGEQ	FCARRAYS.ELEMENTS_OF.$9
+	CLRL	FCARRAYS.ELEMENTS_OF.$T6
+FCARRAYS.ELEMENTS_OF.$9:
+	MOVL	FCARRAYS.ELEMENTS_OF.$T6,FCARRAYS.ELEMENTS_OF.$L1 ; array (line 264), dimension 2's limit
+	MOVL	#1,FCARRAYS.ELEMENTS_OF.$I2
+	CMPL	#1,FCARRAYS.ELEMENTS_OF.$L1
+	BLEQ	FCARRAYS.ELEMENTS_OF.$12
+	RET
+FCARRAYS.ELEMENTS_OF.$12:
+	MULL3	FCARRAYS.ELEMENTS_OF.$I2,FCARRAYS.ELEMENTS_OF.Z+20,R7
+FCARRAYS.ELEMENTS_OF.$13:		; array (line 264), dimension 2's body
+	MOVL	FCARRAYS.ELEMENTS_OF.$T5,FCARRAYS.ELEMENTS_OF.$L2 ; array (line 264), dimension 1's limit
+	MOVL	#1,FCARRAYS.ELEMENTS_OF.$I1
+	CMPL	#1,FCARRAYS.ELEMENTS_OF.$L2
+	BGTR	FCARRAYS.ELEMENTS_OF.$14
+	MOVL	R7,FCARRAYS.ELEMENTS_OF.$H1 ; from line 264
+	MOVL	FCARRAYS.ELEMENTS_OF.Q(AP),R6
+FCARRAYS.ELEMENTS_OF.$16:		; array (line 264), dimension 1's body
+	MOVAL	48(R6),FCARRAYS.ELEMENTS_OF.$T7
+	ADDL3	FCARRAYS.ELEMENTS_OF.$I1,FCARRAYS.ELEMENTS_OF.$T2,R0
+	MOVL	FCARRAYS.ELEMENTS_OF.$T7,R1
+	MULL2	20(R1),R0
+	MOVL	FCARRAYS.ELEMENTS_OF.$T7,R1
+	ADDL2	16(R1),R0
+	ADDL3	FCARRAYS.ELEMENTS_OF.$I2,FCARRAYS.ELEMENTS_OF.$T4,R1
+	MOVL	FCARRAYS.ELEMENTS_OF.$T7,R2
+	MULL2	24(R2),R1
+	ADDL2	R1,R0
+	ADDL3	FCARRAYS.ELEMENTS_OF.$H1,FCARRAYS.ELEMENTS_OF.$I1,R1
+	MOVO	(R0),@FCARRAYS.ELEMENTS_OF.Z+16[R1]
+	AOBLEQ	FCARRAYS.ELEMENTS_OF.$L2,FCARRAYS.ELEMENTS_OF.$I1,FCARRAYS.ELEMENTS_OF.$16
+FCARRAYS.ELEMENTS_OF.$14:
+	ADDL2	FCARRAYS.ELEMENTS_OF.Z+20,R7
+	INCL	FCARRAYS.ELEMENTS_OF.$I2
+	CMPL	FCARRAYS.ELEMENTS_OF.$I2,FCARRAYS.ELEMENTS_OF.$L1
+	BGTR	FCARRAYS.ELEMENTS_OF.$19
+	BRW	FCARRAYS.ELEMENTS_OF.$13
+;  265      else
+FCARRAYS.ELEMENTS_OF.$5:
+;  266        z(1, 1) = q%s%z
+	MOVL	FCARRAYS.ELEMENTS_OF.Q(AP),R0
+	ADDL3	FCARRAYS.ELEMENTS_OF.Z+20,#1,R1
+	MOVO	16(R0),@FCARRAYS.ELEMENTS_OF.Z+16[R1]
+;  267      end if
+FCARRAYS.ELEMENTS_OF.$19:
+;  268    end function elements_of
+	RET
+
+; Storage map for FCARRAYS.LARGEST_MAGNITUDE, a REAL*8 function
+;   Q                  TYPE(QUANTITY), INTENT(IN)  argument 1  @FCARRAYS.LARGEST_MAGNITUDE.Q(AP)
+;   LARGEST_MAGNITUDE  REAL*8                      $LOCAL+0    FCARRAYS.LARGEST_MAGNITUDE.$N4
+;   I                  INTEGER                     $LOCAL+8    FCARRAYS.LARGEST_MAGNITUDE.I
+;   J                  INTEGER                     $LOCAL+12   FCARRAYS.LARGEST_MAGNITUDE.J
+;   R6 is $T1: temporary
+;   R11 is $L1: DO (line 280)'s limit
+;   R10 is $L2: DO (line 281)'s limit
+;   R8 is $T2: temporary
+;   R7 is $R1: Q's address
+;   FCARRAYS.LARGEST_MAGNITUDE.$N4 is FCARRAYS.LARGEST_MAGNITUDE.LARGEST_MAGNITUDE
+;
+FCARRAYS.LARGEST_MAGNITUDE.Q = 4	; Q is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.LARGEST_MAGNITUDE.$N4:
+	.BLKL	2			; LARGEST_MAGNITUDE, the function's value
+FCARRAYS.LARGEST_MAGNITUDE.I:
+	.BLKL	1			; I
+FCARRAYS.LARGEST_MAGNITUDE.J:
+	.BLKL	1			; J
+FCARRAYS.LARGEST_MAGNITUDE.$T3:
+	.BLKL	2			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  269
+;  270    ! LARGEST_MAGNITUDE is the largest of Q's elements' magnitudes.
+;  271    real(rk) function largest_magnitude(q)
+	.ENTRY	FCARRAYS.LARGEST_MAGNITUDE,^M<R6,R7,R8,R9,R10,R11>
+;  272      type(quantity), intent(in) :: q
+;  273      integer :: i, j
+;  274
+;  275      if (.not. is_array(q)) then
+	PUSHAB	@FCARRAYS.LARGEST_MAGNITUDE.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R6
+	BLBS	R6,FCARRAYS.LARGEST_MAGNITUDE.$1
+;  276        largest_magnitude = c_abs(q%s%z)
+	MOVL	FCARRAYS.LARGEST_MAGNITUDE.Q(AP),R0
+	PUSHAO	16(R0)
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCARRAYS.LARGEST_MAGNITUDE.$N4
+;  277        return
+	MOVG	FCARRAYS.LARGEST_MAGNITUDE.$N4,R0 ; the function's value
+	RET
+FCARRAYS.LARGEST_MAGNITUDE.$1:
+;  278      end if
+;  279      largest_magnitude = 0
+	CLRG	FCARRAYS.LARGEST_MAGNITUDE.$N4
+;  280      do j = 1, q%cols
+	MOVL	FCARRAYS.LARGEST_MAGNITUDE.Q(AP),R0 ; DO (line 280)'s limit
+	MOVL	4(R0),R11
+	MOVL	#1,FCARRAYS.LARGEST_MAGNITUDE.J
+	CMPL	#1,R11
+	BGTR	FCARRAYS.LARGEST_MAGNITUDE.$3
+	MOVL	FCARRAYS.LARGEST_MAGNITUDE.Q(AP),R7
+FCARRAYS.LARGEST_MAGNITUDE.$5:		; DO (line 280)'s body
+;  281        do i = 1, q%rows
+	MOVL	(R7),R10		; DO (line 281)'s limit
+	MOVL	#1,FCARRAYS.LARGEST_MAGNITUDE.I
+	CMPL	#1,R10
+	BGTR	FCARRAYS.LARGEST_MAGNITUDE.$6
+FCARRAYS.LARGEST_MAGNITUDE.$8:		; DO (line 281)'s body
+;  282          largest_magnitude = max(largest_magnitude, c_abs(q%e(i, j)))
+	MOVG	FCARRAYS.LARGEST_MAGNITUDE.$N4,R8
+	MOVAL	48(R7),R6
+	MULL3	FCARRAYS.LARGEST_MAGNITUDE.I,20(R6),R0
+	ADDL2	16(R6),R0
+	MULL3	FCARRAYS.LARGEST_MAGNITUDE.J,24(R6),R1
+	ADDL2	R1,R0
+	PUSHAO	(R0)
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCARRAYS.LARGEST_MAGNITUDE.$T3
+	CMPG	FCARRAYS.LARGEST_MAGNITUDE.$T3,R8
+	BLEQ	FCARRAYS.LARGEST_MAGNITUDE.$9
+	MOVG	FCARRAYS.LARGEST_MAGNITUDE.$T3,R8
+FCARRAYS.LARGEST_MAGNITUDE.$9:
+	MOVG	R8,FCARRAYS.LARGEST_MAGNITUDE.$N4
+;  283        end do
+	AOBLEQ	R10,FCARRAYS.LARGEST_MAGNITUDE.I,FCARRAYS.LARGEST_MAGNITUDE.$8
+FCARRAYS.LARGEST_MAGNITUDE.$6:
+;  284      end do
+	ACBL	R11,#1,FCARRAYS.LARGEST_MAGNITUDE.J,FCARRAYS.LARGEST_MAGNITUDE.$5
+FCARRAYS.LARGEST_MAGNITUDE.$3:
+;  285    end function largest_magnitude
+	MOVG	FCARRAYS.LARGEST_MAGNITUDE.$N4,R0 ; the function's value
+	RET
+
+; Storage map for FCARRAYS.SHOW_QUANTITY, a subroutine
+;   Q      TYPE(QUANTITY), INTENT(IN)  argument 1              @FCARRAYS.SHOW_QUANTITY.Q(AP)
+;   NAME   CHARACTER*(*), INTENT(IN)   argument 2              @FCARRAYS.SHOW_QUANTITY.NAME(AP)
+;   WIDTH  INTEGER (?)                 descriptor at $LOCAL+0  FCARRAYS.SHOW_QUANTITY.WIDTH
+;   LINE   CHARACTER*132               $LOCAL+32               FCARRAYS.SHOW_QUANTITY.LINE
+;   TEXT   CHARACTER*120               $LOCAL+164              FCARRAYS.SHOW_QUANTITY.TEXT
+;   BIG    REAL*8                      $LOCAL+284              FCARRAYS.SHOW_QUANTITY.BIG
+;   I      INTEGER                     $LOCAL+292              FCARRAYS.SHOW_QUANTITY.I
+;   J      INTEGER                     $LOCAL+296              FCARRAYS.SHOW_QUANTITY.J
+;   FIRST  INTEGER                     $LOCAL+300              FCARRAYS.SHOW_QUANTITY.FIRST
+;   LAST   INTEGER                     $LOCAL+304              FCARRAYS.SHOW_QUANTITY.LAST
+;   USED   INTEGER                     $LOCAL+308              FCARRAYS.SHOW_QUANTITY.USED
+;   R6 is $T1: temporary
+;   R6 is $R1: LAST, during a loop
+;   R8 is $R2: USED, during a loop
+;   R7 is $R3: Q's address
+;   R7 is $R4: Q's address
+;
+FCARRAYS.SHOW_QUANTITY.Q = 4		; Q is argument 1
+FCARRAYS.SHOW_QUANTITY.NAME = 8		; NAME is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.SHOW_QUANTITY.WIDTH:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; WIDTH: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+FCARRAYS.SHOW_QUANTITY.LINE:
+	.BLKL	33			; LINE
+FCARRAYS.SHOW_QUANTITY.TEXT:
+	.BLKL	30			; TEXT
+FCARRAYS.SHOW_QUANTITY.BIG:
+	.BLKL	2			; BIG
+FCARRAYS.SHOW_QUANTITY.I:
+	.BLKL	1			; I
+FCARRAYS.SHOW_QUANTITY.J:
+	.BLKL	1			; J
+FCARRAYS.SHOW_QUANTITY.FIRST:
+	.BLKL	1			; FIRST
+FCARRAYS.SHOW_QUANTITY.LAST:
+	.BLKL	1			; LAST
+FCARRAYS.SHOW_QUANTITY.USED:
+	.BLKL	1			; USED
+FCARRAYS.SHOW_QUANTITY.$T2:
+	.BLKL	1			; temporary
+FCARRAYS.SHOW_QUANTITY.$T3:
+	.BLKL	1			; temporary
+FCARRAYS.SHOW_QUANTITY.$T4:
+	.BLKL	30			; characters, for one statement
+FCARRAYS.SHOW_QUANTITY.$T5:
+	.BLKL	1			; temporary
+FCARRAYS.SHOW_QUANTITY.$T6:
+	.BLKL	1			; temporary
+FCARRAYS.SHOW_QUANTITY.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.SHOW_QUANTITY.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCARRAYS.SHOW_QUANTITY.$T8:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCARRAYS.SHOW_QUANTITY.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCARRAYS.SHOW_QUANTITY.$C1:
+	.BLKL	1			; DO (line 322)'s count
+FCARRAYS.SHOW_QUANTITY.$C2:
+	.BLKL	1			; DO (line 324)'s count
+FCARRAYS.SHOW_QUANTITY.$T9:
+	.BLKL	8			; characters, for one statement
+FCARRAYS.SHOW_QUANTITY.$T10:
+	.BLKL	10			; characters, for one statement
+FCARRAYS.SHOW_QUANTITY.$C3:
+	.BLKL	1			; DO (line 341)'s count
+FCARRAYS.SHOW_QUANTITY.$C4:
+	.BLKL	1			; DO (line 344)'s count
+FCARRAYS.SHOW_QUANTITY.$H1:
+	.BLKL	1			; a value computed before a loop
+FCARRAYS.SHOW_QUANTITY.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCARRAYS.SHOW_QUANTITY.$D1:
+	.WORD	120			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.SHOW_QUANTITY.$T4
+FCARRAYS.SHOW_QUANTITY.$D4:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.SHOW_QUANTITY.$T10
+FCARRAYS.SHOW_QUANTITY.$K1:
+	.ASCII	/ = /
+FCARRAYS.SHOW_QUANTITY.$K2:
+	.ASCII	/ =/
+FCARRAYS.SHOW_QUANTITY.$K3:
+	.ASCII	/ /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  286
+;  287    ! ------------------------------------------------------------------
+;  288    ! Showing quantities.
+;  289
+;  290    ! SHOW_QUANTITY shows Q: a scalar as a value, after NAME = if NAME isn't
+;  291    ! blank; an array after a line NAME = (if NAME isn't blank), a line for
+;  292    ! each row, the columns lined up at the right. Each element is shown
+;  293    ! beside the largest, so a part smaller than it by more than the digits
+;  294    ! shown is shown as 0: the last bits a computation leaves (1E-17 beside
+;  295    ! 1) differ between machines, and the digits can't show them anyway.
+;  296    !
+;  297    ! A row longer than a line is shown in groups of columns, each group
+;  298    ! under a heading naming its columns.
+;  299    subroutine show_quantity(q, name)
+	.ENTRY	FCARRAYS.SHOW_QUANTITY,^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	FCARRAYS.SHOW_QUANTITY.Q(AP),R0
+	MOVL	4(R0),FCARRAYS.SHOW_QUANTITY.WIDTH+28
+	MOVL	FCARRAYS.SHOW_QUANTITY.WIDTH+28,FCARRAYS.SHOW_QUANTITY.WIDTH+20
+	BGEQ	FCARRAYS.SHOW_QUANTITY.$1
+	CLRL	FCARRAYS.SHOW_QUANTITY.WIDTH+20
+FCARRAYS.SHOW_QUANTITY.$1:
+	MULL3	#4,FCARRAYS.SHOW_QUANTITY.WIDTH+20,FCARRAYS.SHOW_QUANTITY.WIDTH+12
+	SUBL2	FCARRAYS.SHOW_QUANTITY.WIDTH+12,SP ; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,FCARRAYS.SHOW_QUANTITY.WIDTH+4
+	MOVL	FCARRAYS.SHOW_QUANTITY.WIDTH+4,R0
+	MOVAL	-4(R0),FCARRAYS.SHOW_QUANTITY.WIDTH+16
+;  300      type(quantity), intent(in) :: q
+;  301      character(len=*), intent(in) :: name
+;  302      integer :: width(q%cols)
+;  303      character(len=line_width) :: line
+;  304      character(len=120) :: text
+;  305      real(rk) :: big
+;  306      integer :: i, j, first, last, used
+;  307
+;  308      if (.not. is_array(q)) then
+	PUSHAB	@FCARRAYS.SHOW_QUANTITY.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R6
+	BLBC	R6,FCARRAYS.SHOW_QUANTITY.$4
+	BRW	FCARRAYS.SHOW_QUANTITY.$3
+FCARRAYS.SHOW_QUANTITY.$4:
+;  309        if (len_trim(name) > 0) then
+	MOVL	FCARRAYS.SHOW_QUANTITY.NAME(AP),R0
+	MOVAB	@4(R0),R6
+	MOVZWL	@FCARRAYS.SHOW_QUANTITY.NAME(AP),FCARRAYS.SHOW_QUANTITY.$T2
+	BRB	FCARRAYS.SHOW_QUANTITY.$5
+FCARRAYS.SHOW_QUANTITY.$6:
+	MOVL	FCARRAYS.SHOW_QUANTITY.$T2,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$7
+	DECL	FCARRAYS.SHOW_QUANTITY.$T2
+FCARRAYS.SHOW_QUANTITY.$5:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T2 ; from line 309
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$6
+FCARRAYS.SHOW_QUANTITY.$7:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T2
+	BGTR	FCARRAYS.SHOW_QUANTITY.$11
+	BRW	FCARRAYS.SHOW_QUANTITY.$10
+FCARRAYS.SHOW_QUANTITY.$11:
+;  310          call say(trim(name) // ' = ' // trim(format_value(q%s)))
+	MOVL	FCARRAYS.SHOW_QUANTITY.NAME(AP),R0
+	MOVAB	@4(R0),FCARRAYS.SHOW_QUANTITY.$T2
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T2,R6
+	MOVZWL	@FCARRAYS.SHOW_QUANTITY.NAME(AP),FCARRAYS.SHOW_QUANTITY.$T3
+	BRB	FCARRAYS.SHOW_QUANTITY.$12
+FCARRAYS.SHOW_QUANTITY.$13:
+	MOVL	FCARRAYS.SHOW_QUANTITY.$T3,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$14
+	DECL	FCARRAYS.SHOW_QUANTITY.$T3
+FCARRAYS.SHOW_QUANTITY.$12:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T3 ; from line 310
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$13
+FCARRAYS.SHOW_QUANTITY.$14:
+	PUSHL	#0
+	MOVL	FCARRAYS.SHOW_QUANTITY.Q(AP),R0
+	PUSHAB	16(R0)
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVAB	FCARRAYS.SHOW_QUANTITY.$T4,FCARRAYS.SHOW_QUANTITY.$T5
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T5,FCARRAYS.SHOW_QUANTITY.$T6
+	MOVL	#120,FCARRAYS.SHOW_QUANTITY.$T7
+	BRB	FCARRAYS.SHOW_QUANTITY.$17
+FCARRAYS.SHOW_QUANTITY.$18:
+	SUBL3	#1,FCARRAYS.SHOW_QUANTITY.$T7,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T6[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$19
+	DECL	FCARRAYS.SHOW_QUANTITY.$T7
+FCARRAYS.SHOW_QUANTITY.$17:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T7 ; from line 310
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$18
+FCARRAYS.SHOW_QUANTITY.$19:
+	ADDL3	FCARRAYS.SHOW_QUANTITY.$T3,FCARRAYS.SHOW_QUANTITY.$T7,R0
+	ADDL3	R0,#3,FCARRAYS.SHOW_QUANTITY.$U1
+	CVTLW	FCARRAYS.SHOW_QUANTITY.$U1,FCARRAYS.SHOW_QUANTITY.$T8
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D2
+	PUSHAW	FCARRAYS.SHOW_QUANTITY.$T8
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCARRAYS.SHOW_QUANTITY.$T3,@FCARRAYS.SHOW_QUANTITY.$T2,@FCARRAYS.SHOW_QUANTITY.$D2+4
+	MOVL	FCARRAYS.SHOW_QUANTITY.$T3,R0
+	MOVC3	#3,FCARRAYS.SHOW_QUANTITY.$K1,@FCARRAYS.SHOW_QUANTITY.$D2+4[R0]
+	ADDL3	FCARRAYS.SHOW_QUANTITY.$T3,#3,R0
+	MOVC3	FCARRAYS.SHOW_QUANTITY.$T7,@FCARRAYS.SHOW_QUANTITY.$T5,@FCARRAYS.SHOW_QUANTITY.$D2+4[R0]
+	CVTLW	FCARRAYS.SHOW_QUANTITY.$U1,FCARRAYS.SHOW_QUANTITY.$D3
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$D2+4,FCARRAYS.SHOW_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  311        else
+	RET
+FCARRAYS.SHOW_QUANTITY.$10:
+;  312          call say(trim(format_value(q%s)))
+	PUSHL	#0
+	MOVL	FCARRAYS.SHOW_QUANTITY.Q(AP),R0
+	PUSHAB	16(R0)
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVAB	FCARRAYS.SHOW_QUANTITY.$T4,FCARRAYS.SHOW_QUANTITY.$T7
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T7,FCARRAYS.SHOW_QUANTITY.$T6
+	MOVL	#120,FCARRAYS.SHOW_QUANTITY.$T5
+	BRB	FCARRAYS.SHOW_QUANTITY.$23
+FCARRAYS.SHOW_QUANTITY.$24:
+	SUBL3	#1,FCARRAYS.SHOW_QUANTITY.$T5,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T6[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$25
+	DECL	FCARRAYS.SHOW_QUANTITY.$T5
+FCARRAYS.SHOW_QUANTITY.$23:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T5 ; from line 312
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$24
+FCARRAYS.SHOW_QUANTITY.$25:
+	CVTLW	FCARRAYS.SHOW_QUANTITY.$T5,FCARRAYS.SHOW_QUANTITY.$D3
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T7,FCARRAYS.SHOW_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+;  313        end if
+;  314        return
+	RET
+FCARRAYS.SHOW_QUANTITY.$3:
+;  315      end if
+;  316
+;  317      if (len_trim(name) > 0) call say(trim(name) // ' =')
+	MOVL	FCARRAYS.SHOW_QUANTITY.NAME(AP),R0
+	MOVAB	@4(R0),FCARRAYS.SHOW_QUANTITY.$T5
+	MOVZWL	@FCARRAYS.SHOW_QUANTITY.NAME(AP),FCARRAYS.SHOW_QUANTITY.$T6
+	BRB	FCARRAYS.SHOW_QUANTITY.$28
+FCARRAYS.SHOW_QUANTITY.$29:
+	SUBL3	#1,FCARRAYS.SHOW_QUANTITY.$T6,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T5[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$30
+	DECL	FCARRAYS.SHOW_QUANTITY.$T6
+FCARRAYS.SHOW_QUANTITY.$28:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T6 ; from line 317
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$29
+FCARRAYS.SHOW_QUANTITY.$30:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T6
+	BGTR	FCARRAYS.SHOW_QUANTITY.$34
+	BRW	FCARRAYS.SHOW_QUANTITY.$33
+FCARRAYS.SHOW_QUANTITY.$34:
+	MOVL	FCARRAYS.SHOW_QUANTITY.NAME(AP),R0
+	MOVAB	@4(R0),FCARRAYS.SHOW_QUANTITY.$T7
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T7,FCARRAYS.SHOW_QUANTITY.$T3
+	MOVZWL	@FCARRAYS.SHOW_QUANTITY.NAME(AP),R6
+	BRB	FCARRAYS.SHOW_QUANTITY.$35
+FCARRAYS.SHOW_QUANTITY.$36:
+	SUBL3	#1,R6,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T3[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$37
+	DECL	R6
+FCARRAYS.SHOW_QUANTITY.$35:
+	TSTL	R6			; from line 317
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$36
+FCARRAYS.SHOW_QUANTITY.$37:
+	ADDL3	R6,#2,R0
+	CVTLW	R0,FCARRAYS.SHOW_QUANTITY.$T8
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D2
+	PUSHAW	FCARRAYS.SHOW_QUANTITY.$T8
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,@FCARRAYS.SHOW_QUANTITY.$T7,@FCARRAYS.SHOW_QUANTITY.$D2+4
+	MOVC3	#2,FCARRAYS.SHOW_QUANTITY.$K2,@FCARRAYS.SHOW_QUANTITY.$D2+4[R6]
+	ADDL3	R6,#2,R0
+	CVTLW	R0,FCARRAYS.SHOW_QUANTITY.$D3
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$D2+4,FCARRAYS.SHOW_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+FCARRAYS.SHOW_QUANTITY.$33:
+;  318      big = largest_magnitude(q)
+	PUSHAB	@FCARRAYS.SHOW_QUANTITY.Q(AP)
+	CALLS	#1,G^FCARRAYS.LARGEST_MAGNITUDE
+	MOVG	R0,FCARRAYS.SHOW_QUANTITY.BIG
+;  319
+;  320      ! Each column's width is its widest element's. (WIDTH is an automatic
+;  321      ! array: its size is the argument's Q%COLS.)
+;  322      do j = 1, q%cols
+	MOVL	FCARRAYS.SHOW_QUANTITY.Q(AP),R0 ; DO (line 322)'s count
+	MOVL	4(R0),FCARRAYS.SHOW_QUANTITY.$C1
+	MOVL	#1,FCARRAYS.SHOW_QUANTITY.J
+	TSTL	FCARRAYS.SHOW_QUANTITY.$C1
+	BGTR	FCARRAYS.SHOW_QUANTITY.$41
+	BRW	FCARRAYS.SHOW_QUANTITY.$40
+FCARRAYS.SHOW_QUANTITY.$41:
+	MOVL	FCARRAYS.SHOW_QUANTITY.Q(AP),R7
+FCARRAYS.SHOW_QUANTITY.$42:		; DO (line 322)'s body
+;  323        width(j) = 0
+	MOVL	FCARRAYS.SHOW_QUANTITY.J,R0
+	CLRL	@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R0]
+;  324        do i = 1, q%rows
+	MOVL	(R7),FCARRAYS.SHOW_QUANTITY.$C2 ; DO (line 324)'s count
+	MOVL	#1,FCARRAYS.SHOW_QUANTITY.I
+	TSTL	FCARRAYS.SHOW_QUANTITY.$C2
+	BGTR	FCARRAYS.SHOW_QUANTITY.$44
+	BRW	FCARRAYS.SHOW_QUANTITY.$43
+FCARRAYS.SHOW_QUANTITY.$44:
+FCARRAYS.SHOW_QUANTITY.$45:		; DO (line 324)'s body
+;  325          width(j) = max(width(j), len_trim(format_value(element(q, i, j), big)))
+	MOVL	FCARRAYS.SHOW_QUANTITY.J,R0
+	MOVL	@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R0],R6
+	PUSHAL	FCARRAYS.SHOW_QUANTITY.J
+	PUSHAL	FCARRAYS.SHOW_QUANTITY.I
+	PUSHAB	(R7)
+	PUSHAB	FCARRAYS.SHOW_QUANTITY.$T9
+	CALLS	#4,G^FCARRAYS.ELEMENT
+	PUSHAG	FCARRAYS.SHOW_QUANTITY.BIG
+	PUSHAB	FCARRAYS.SHOW_QUANTITY.$T9
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVAB	FCARRAYS.SHOW_QUANTITY.$T4,FCARRAYS.SHOW_QUANTITY.$T3
+	MOVL	#120,FCARRAYS.SHOW_QUANTITY.$T7
+	BRB	FCARRAYS.SHOW_QUANTITY.$46
+FCARRAYS.SHOW_QUANTITY.$47:
+	SUBL3	#1,FCARRAYS.SHOW_QUANTITY.$T7,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T3[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$48
+	DECL	FCARRAYS.SHOW_QUANTITY.$T7
+FCARRAYS.SHOW_QUANTITY.$46:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T7 ; from line 325
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$47
+FCARRAYS.SHOW_QUANTITY.$48:
+	CMPL	FCARRAYS.SHOW_QUANTITY.$T7,R6
+	BLEQ	FCARRAYS.SHOW_QUANTITY.$51
+	MOVL	FCARRAYS.SHOW_QUANTITY.$T7,R6
+FCARRAYS.SHOW_QUANTITY.$51:
+	MOVL	FCARRAYS.SHOW_QUANTITY.J,R0
+	MOVL	R6,@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R0]
+;  326        end do
+	INCL	FCARRAYS.SHOW_QUANTITY.I
+	DECL	FCARRAYS.SHOW_QUANTITY.$C2 ; one pass fewer
+	BLEQ	FCARRAYS.SHOW_QUANTITY.$53
+	BRW	FCARRAYS.SHOW_QUANTITY.$45
+FCARRAYS.SHOW_QUANTITY.$53:
+FCARRAYS.SHOW_QUANTITY.$43:
+;  327      end do
+	INCL	FCARRAYS.SHOW_QUANTITY.J
+	DECL	FCARRAYS.SHOW_QUANTITY.$C1 ; one pass fewer
+	BLEQ	FCARRAYS.SHOW_QUANTITY.$54
+	BRW	FCARRAYS.SHOW_QUANTITY.$42
+FCARRAYS.SHOW_QUANTITY.$54:
+FCARRAYS.SHOW_QUANTITY.$40:
+;  328
+;  329      first = 1
+	MOVL	#1,FCARRAYS.SHOW_QUANTITY.FIRST
+;  330      do while (first <= q%cols)
+	MOVL	FCARRAYS.SHOW_QUANTITY.Q(AP),R7
+	BRW	FCARRAYS.SHOW_QUANTITY.$55
+FCARRAYS.SHOW_QUANTITY.$56:		; DO (line 330)'s body
+;  331        ! The columns that fit in a line, two blanks before each.
+;  332        last = first
+	MOVL	FCARRAYS.SHOW_QUANTITY.FIRST,FCARRAYS.SHOW_QUANTITY.LAST
+;  333        used = width(first) + 2
+	MOVL	FCARRAYS.SHOW_QUANTITY.FIRST,R0
+	ADDL3	@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R0],#2,FCARRAYS.SHOW_QUANTITY.USED
+;  334        do while (last < q%cols)
+	MOVL	4(R7),FCARRAYS.SHOW_QUANTITY.$H1 ; from line 334
+	MOVL	FCARRAYS.SHOW_QUANTITY.LAST,R6
+	MOVL	FCARRAYS.SHOW_QUANTITY.USED,R8
+	BRB	FCARRAYS.SHOW_QUANTITY.$57
+FCARRAYS.SHOW_QUANTITY.$58:		; DO (line 334)'s body
+;  335          if (used + width(last + 1) + 2 > line_width) exit
+	ADDL3	R6,#1,R0
+	ADDL3	R8,@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R0],R0
+	ADDL2	#2,R0
+	CMPL	R0,#132
+	BLEQ	FCARRAYS.SHOW_QUANTITY.$60
+	BRW	FCARRAYS.SHOW_QUANTITY.$59
+FCARRAYS.SHOW_QUANTITY.$60:
+;  336          last = last + 1
+	INCL	R6
+;  337          used = used + width(last) + 2
+	ADDL3	R8,@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R6],R0
+	ADDL3	R0,#2,R8
+;  338        end do
+FCARRAYS.SHOW_QUANTITY.$57:		; DO (line 334)'s test
+	CMPL	R6,FCARRAYS.SHOW_QUANTITY.$H1 ; from line 334
+	BLSS	FCARRAYS.SHOW_QUANTITY.$58
+	MOVL	R6,FCARRAYS.SHOW_QUANTITY.LAST
+	MOVL	R8,FCARRAYS.SHOW_QUANTITY.USED
+FCARRAYS.SHOW_QUANTITY.$62:
+;  339        if (first > 1 .or. last < q%cols) call say(trim(columns_heading(first, last)))
+	CMPL	FCARRAYS.SHOW_QUANTITY.FIRST,#1
+	BGTR	FCARRAYS.SHOW_QUANTITY.$64
+	CMPL	FCARRAYS.SHOW_QUANTITY.LAST,4(R7)
+	BGEQ	FCARRAYS.SHOW_QUANTITY.$63
+FCARRAYS.SHOW_QUANTITY.$64:
+	PUSHAL	FCARRAYS.SHOW_QUANTITY.LAST
+	PUSHAL	FCARRAYS.SHOW_QUANTITY.FIRST
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D4
+	CALLS	#3,G^FCARRAYS.COLUMNS_HEADING
+	MOVAB	FCARRAYS.SHOW_QUANTITY.$T10,FCARRAYS.SHOW_QUANTITY.$T7
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T7,FCARRAYS.SHOW_QUANTITY.$T3
+	MOVL	#40,R6
+	BRB	FCARRAYS.SHOW_QUANTITY.$67
+FCARRAYS.SHOW_QUANTITY.$68:
+	SUBL3	#1,R6,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T3[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$69
+	DECL	R6
+FCARRAYS.SHOW_QUANTITY.$67:
+	TSTL	R6			; from line 339
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$68
+FCARRAYS.SHOW_QUANTITY.$69:
+	CVTLW	R6,FCARRAYS.SHOW_QUANTITY.$D3
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T7,FCARRAYS.SHOW_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+FCARRAYS.SHOW_QUANTITY.$63:
+;  340
+;  341        do i = 1, q%rows
+	MOVL	(R7),FCARRAYS.SHOW_QUANTITY.$C3 ; DO (line 341)'s count
+	MOVL	#1,FCARRAYS.SHOW_QUANTITY.I
+	TSTL	FCARRAYS.SHOW_QUANTITY.$C3
+	BGTR	FCARRAYS.SHOW_QUANTITY.$73
+	BRW	FCARRAYS.SHOW_QUANTITY.$72
+FCARRAYS.SHOW_QUANTITY.$73:
+FCARRAYS.SHOW_QUANTITY.$74:		; DO (line 341)'s body
+;  342          line = ' '
+	MOVC5	#1,FCARRAYS.SHOW_QUANTITY.$K3,#^A/ /,#132,FCARRAYS.SHOW_QUANTITY.LINE
+;  343          used = 0
+	CLRL	FCARRAYS.SHOW_QUANTITY.USED
+;  344          do j = first, last
+	SUBL3	FCARRAYS.SHOW_QUANTITY.FIRST,FCARRAYS.SHOW_QUANTITY.LAST,R0 ; DO (line 344)'s count
+	ADDL3	R0,#1,FCARRAYS.SHOW_QUANTITY.$C4
+	MOVL	FCARRAYS.SHOW_QUANTITY.FIRST,FCARRAYS.SHOW_QUANTITY.J
+	TSTL	FCARRAYS.SHOW_QUANTITY.$C4
+	BGTR	FCARRAYS.SHOW_QUANTITY.$76
+	BRW	FCARRAYS.SHOW_QUANTITY.$75
+FCARRAYS.SHOW_QUANTITY.$76:
+FCARRAYS.SHOW_QUANTITY.$77:		; DO (line 344)'s body
+;  345            text = format_value(element(q, i, j), big)
+	PUSHAL	FCARRAYS.SHOW_QUANTITY.J
+	PUSHAL	FCARRAYS.SHOW_QUANTITY.I
+	PUSHAB	(R7)
+	PUSHAB	FCARRAYS.SHOW_QUANTITY.$T9
+	CALLS	#4,G^FCARRAYS.ELEMENT
+	PUSHAG	FCARRAYS.SHOW_QUANTITY.BIG
+	PUSHAB	FCARRAYS.SHOW_QUANTITY.$T9
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVC3	#120,FCARRAYS.SHOW_QUANTITY.$T4,FCARRAYS.SHOW_QUANTITY.TEXT
+;  346            used = used + 2 + width(j)
+	MOVL	FCARRAYS.SHOW_QUANTITY.J,R0
+	ADDL3	FCARRAYS.SHOW_QUANTITY.USED,@FCARRAYS.SHOW_QUANTITY.WIDTH+16[R0],R0
+	ADDL3	R0,#2,FCARRAYS.SHOW_QUANTITY.USED
+;  347            line(used - len_trim(text) + 1:used) = trim(text)
+	MOVAB	FCARRAYS.SHOW_QUANTITY.TEXT,R6
+	MOVL	#120,FCARRAYS.SHOW_QUANTITY.$T3
+	BRB	FCARRAYS.SHOW_QUANTITY.$78
+FCARRAYS.SHOW_QUANTITY.$79:
+	MOVL	FCARRAYS.SHOW_QUANTITY.$T3,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$80
+	DECL	FCARRAYS.SHOW_QUANTITY.$T3
+FCARRAYS.SHOW_QUANTITY.$78:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T3 ; from line 347
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$79
+FCARRAYS.SHOW_QUANTITY.$80:
+	SUBL3	FCARRAYS.SHOW_QUANTITY.$T3,FCARRAYS.SHOW_QUANTITY.USED,R0
+	SUBL3	R0,FCARRAYS.SHOW_QUANTITY.USED,FCARRAYS.SHOW_QUANTITY.$T7
+	BGEQ	FCARRAYS.SHOW_QUANTITY.$83
+	CLRL	FCARRAYS.SHOW_QUANTITY.$T7
+FCARRAYS.SHOW_QUANTITY.$83:
+	MOVAB	FCARRAYS.SHOW_QUANTITY.TEXT,FCARRAYS.SHOW_QUANTITY.$T6
+	MOVAB	@FCARRAYS.SHOW_QUANTITY.$T6,FCARRAYS.SHOW_QUANTITY.$T5
+	MOVL	#120,FCARRAYS.SHOW_QUANTITY.$T2
+	BRB	FCARRAYS.SHOW_QUANTITY.$85
+FCARRAYS.SHOW_QUANTITY.$86:
+	SUBL3	#1,FCARRAYS.SHOW_QUANTITY.$T2,R0
+	CMPB	@FCARRAYS.SHOW_QUANTITY.$T5[R0],#32
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$87
+	DECL	FCARRAYS.SHOW_QUANTITY.$T2
+FCARRAYS.SHOW_QUANTITY.$85:
+	TSTL	FCARRAYS.SHOW_QUANTITY.$T2 ; from line 347
+	BNEQ	FCARRAYS.SHOW_QUANTITY.$86
+FCARRAYS.SHOW_QUANTITY.$87:
+	SUBL3	FCARRAYS.SHOW_QUANTITY.$T3,FCARRAYS.SHOW_QUANTITY.USED,R0
+	MOVC5	FCARRAYS.SHOW_QUANTITY.$T2,@FCARRAYS.SHOW_QUANTITY.$T6,#^A/ /,FCARRAYS.SHOW_QUANTITY.$T7,FCARRAYS.SHOW_QUANTITY.LINE[R0]
+;  348          end do
+	INCL	FCARRAYS.SHOW_QUANTITY.J
+	DECL	FCARRAYS.SHOW_QUANTITY.$C4 ; one pass fewer
+	BLEQ	FCARRAYS.SHOW_QUANTITY.$90
+	BRW	FCARRAYS.SHOW_QUANTITY.$77
+FCARRAYS.SHOW_QUANTITY.$90:
+FCARRAYS.SHOW_QUANTITY.$75:
+;  349          call say(line(:used))
+	MOVL	FCARRAYS.SHOW_QUANTITY.USED,FCARRAYS.SHOW_QUANTITY.$T2
+	BGEQ	FCARRAYS.SHOW_QUANTITY.$91
+	CLRL	FCARRAYS.SHOW_QUANTITY.$T2
+FCARRAYS.SHOW_QUANTITY.$91:
+	CVTLW	FCARRAYS.SHOW_QUANTITY.$T2,FCARRAYS.SHOW_QUANTITY.$D3
+	MOVAB	FCARRAYS.SHOW_QUANTITY.LINE,FCARRAYS.SHOW_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.SHOW_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+;  350        end do
+	INCL	FCARRAYS.SHOW_QUANTITY.I
+	DECL	FCARRAYS.SHOW_QUANTITY.$C3 ; one pass fewer
+	BLEQ	FCARRAYS.SHOW_QUANTITY.$93
+	BRW	FCARRAYS.SHOW_QUANTITY.$74
+FCARRAYS.SHOW_QUANTITY.$93:
+FCARRAYS.SHOW_QUANTITY.$72:
+;  351        first = last + 1
+	ADDL3	FCARRAYS.SHOW_QUANTITY.LAST,#1,FCARRAYS.SHOW_QUANTITY.FIRST
+;  352      end do
+FCARRAYS.SHOW_QUANTITY.$55:		; DO (line 330)'s test
+	CMPL	FCARRAYS.SHOW_QUANTITY.FIRST,4(R7) ; from line 330
+	BGTR	FCARRAYS.SHOW_QUANTITY.$94
+	BRW	FCARRAYS.SHOW_QUANTITY.$56
+FCARRAYS.SHOW_QUANTITY.$94:
+;  353    end subroutine show_quantity
+	RET
+FCARRAYS.SHOW_QUANTITY.$59:		; leaving the loop
+	MOVL	R6,FCARRAYS.SHOW_QUANTITY.LAST
+	MOVL	R8,FCARRAYS.SHOW_QUANTITY.USED
+	BRW	FCARRAYS.SHOW_QUANTITY.$62
+
+; Storage map for FCARRAYS.COLUMNS_HEADING, a CHARACTER*40 function
+;   TEXT   CHARACTER*40         hidden argument 1  @FCARRAYS.COLUMNS_HEADING.TEXT(AP)
+;   FIRST  INTEGER, INTENT(IN)  argument 2         @FCARRAYS.COLUMNS_HEADING.FIRST(AP)
+;   LAST   INTEGER, INTENT(IN)  argument 3         @FCARRAYS.COLUMNS_HEADING.LAST(AP)
+;   A      CHARACTER*12         $LOCAL+0           FCARRAYS.COLUMNS_HEADING.A
+;   B      CHARACTER*12         $LOCAL+12          FCARRAYS.COLUMNS_HEADING.B
+;   R6 is $T2: temporary
+;   R8 is $T3: temporary
+;   R7 is $T4: temporary
+;
+FCARRAYS.COLUMNS_HEADING.TEXT = 4	; TEXT's value goes through hidden argument 1
+FCARRAYS.COLUMNS_HEADING.FIRST = 8	; FIRST is argument 2
+FCARRAYS.COLUMNS_HEADING.LAST = 12	; LAST is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.COLUMNS_HEADING.A:
+	.BLKL	3			; A
+FCARRAYS.COLUMNS_HEADING.B:
+	.BLKL	3			; B
+FCARRAYS.COLUMNS_HEADING.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCARRAYS.COLUMNS_HEADING.$T1:
+	.BLKL	3			; characters, for one statement
+FCARRAYS.COLUMNS_HEADING.$D6:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCARRAYS.COLUMNS_HEADING.$T5:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCARRAYS.COLUMNS_HEADING.$T6:
+	.BLKL	3			; characters, for one statement
+FCARRAYS.COLUMNS_HEADING.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.COLUMNS_HEADING.$T8:
+	.BLKL	1			; temporary
+FCARRAYS.COLUMNS_HEADING.$T9:
+	.BLKL	1			; temporary
+FCARRAYS.COLUMNS_HEADING.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCARRAYS.COLUMNS_HEADING.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCARRAYS.COLUMNS_HEADING.$D1:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.COLUMNS_HEADING.A
+FCARRAYS.COLUMNS_HEADING.$D2:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.COLUMNS_HEADING.$K1
+FCARRAYS.COLUMNS_HEADING.$D4:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.COLUMNS_HEADING.B
+FCARRAYS.COLUMNS_HEADING.$D5:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.COLUMNS_HEADING.$T1
+FCARRAYS.COLUMNS_HEADING.$D7:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.COLUMNS_HEADING.$T6
+FCARRAYS.COLUMNS_HEADING.$K1:
+	.ASCII	/(I12)/
+FCARRAYS.COLUMNS_HEADING.$K2:
+	.ASCII	/column /
+FCARRAYS.COLUMNS_HEADING.$K4:
+	.ASCII	/columns /
+FCARRAYS.COLUMNS_HEADING.$K5:
+	.ASCII	/ to /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  354
+;  355    ! COLUMNS_HEADING is "columns 1 to 9:" (or "column 10:").
+;  356    function columns_heading(first, last) result(text)
+	.ENTRY	FCARRAYS.COLUMNS_HEADING,^M<R2,R3,R4,R5,R6,R7,R8>
+;  357      integer, intent(in) :: first, last
+;  358      character(len=40) :: text
+;  359      character(len=12) :: a, b
+;  360
+;  361      write (a, '(I12)') first
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D2
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D1
+	PUSHAB	FCARRAYS.COLUMNS_HEADING.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAL	@FCARRAYS.COLUMNS_HEADING.FIRST(AP),FCARRAYS.COLUMNS_HEADING.$D3+4
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  362      write (b, '(I12)') last
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D2
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D4
+	PUSHAB	FCARRAYS.COLUMNS_HEADING.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAL	@FCARRAYS.COLUMNS_HEADING.LAST(AP),FCARRAYS.COLUMNS_HEADING.$D3+4
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  363      if (first == last) then
+	CMPL	@FCARRAYS.COLUMNS_HEADING.FIRST(AP),@FCARRAYS.COLUMNS_HEADING.LAST(AP)
+	BEQL	FCARRAYS.COLUMNS_HEADING.$2
+	BRW	FCARRAYS.COLUMNS_HEADING.$1
+FCARRAYS.COLUMNS_HEADING.$2:
+;  364        text = 'column ' // trim(adjustl(a)) // ':'
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D1
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D5
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVAB	FCARRAYS.COLUMNS_HEADING.$T1,R6
+	MOVAB	(R6),R8
+	MOVL	#12,R7
+	BRB	FCARRAYS.COLUMNS_HEADING.$3
+FCARRAYS.COLUMNS_HEADING.$4:
+	CMPB	-1(R8)[R7],#32
+	BNEQ	FCARRAYS.COLUMNS_HEADING.$5
+	DECL	R7
+FCARRAYS.COLUMNS_HEADING.$3:
+	TSTL	R7			; from line 364
+	BNEQ	FCARRAYS.COLUMNS_HEADING.$4
+FCARRAYS.COLUMNS_HEADING.$5:
+	ADDL3	R7,#8,R0
+	CVTLW	R0,FCARRAYS.COLUMNS_HEADING.$T5
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D6
+	PUSHAW	FCARRAYS.COLUMNS_HEADING.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#7,FCARRAYS.COLUMNS_HEADING.$K2,@FCARRAYS.COLUMNS_HEADING.$D6+4
+	MOVL	FCARRAYS.COLUMNS_HEADING.$D6+4,R0
+	MOVC3	R7,(R6),7(R0)
+	ADDL3	R7,#7,R0
+	MOVB	#58,@FCARRAYS.COLUMNS_HEADING.$D6+4[R0]
+	ADDL3	R7,#8,R0
+	MOVL	FCARRAYS.COLUMNS_HEADING.TEXT(AP),R1
+	MOVC5	R0,@FCARRAYS.COLUMNS_HEADING.$D6+4,#^A/ /,#40,@4(R1)
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D6
+	CALLS	#1,G^LIB$SFREE1_DD
+;  365      else
+	RET
+FCARRAYS.COLUMNS_HEADING.$1:
+;  366        text = 'columns ' // trim(adjustl(a)) // ' to ' // trim(adjustl(b)) // ':'
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D1
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D5
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVAB	FCARRAYS.COLUMNS_HEADING.$T1,R7
+	MOVAB	(R7),R8
+	MOVL	#12,R6
+	BRB	FCARRAYS.COLUMNS_HEADING.$9
+FCARRAYS.COLUMNS_HEADING.$10:
+	CMPB	-1(R8)[R6],#32
+	BNEQ	FCARRAYS.COLUMNS_HEADING.$11
+	DECL	R6
+FCARRAYS.COLUMNS_HEADING.$9:
+	TSTL	R6			; from line 366
+	BNEQ	FCARRAYS.COLUMNS_HEADING.$10
+FCARRAYS.COLUMNS_HEADING.$11:
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D4
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D7
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVAB	FCARRAYS.COLUMNS_HEADING.$T6,FCARRAYS.COLUMNS_HEADING.$T7
+	MOVAB	@FCARRAYS.COLUMNS_HEADING.$T7,FCARRAYS.COLUMNS_HEADING.$T8
+	MOVL	#12,FCARRAYS.COLUMNS_HEADING.$T9
+	BRB	FCARRAYS.COLUMNS_HEADING.$14
+FCARRAYS.COLUMNS_HEADING.$15:
+	SUBL3	#1,FCARRAYS.COLUMNS_HEADING.$T9,R0
+	CMPB	@FCARRAYS.COLUMNS_HEADING.$T8[R0],#32
+	BNEQ	FCARRAYS.COLUMNS_HEADING.$16
+	DECL	FCARRAYS.COLUMNS_HEADING.$T9
+FCARRAYS.COLUMNS_HEADING.$14:
+	TSTL	FCARRAYS.COLUMNS_HEADING.$T9 ; from line 366
+	BNEQ	FCARRAYS.COLUMNS_HEADING.$15
+FCARRAYS.COLUMNS_HEADING.$16:
+	ADDL3	R6,FCARRAYS.COLUMNS_HEADING.$T9,R0
+	ADDL3	R0,#13,FCARRAYS.COLUMNS_HEADING.$U1
+	CVTLW	FCARRAYS.COLUMNS_HEADING.$U1,FCARRAYS.COLUMNS_HEADING.$T5
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D6
+	PUSHAW	FCARRAYS.COLUMNS_HEADING.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#8,FCARRAYS.COLUMNS_HEADING.$K4,@FCARRAYS.COLUMNS_HEADING.$D6+4
+	MOVL	FCARRAYS.COLUMNS_HEADING.$D6+4,R0
+	MOVC3	R6,(R7),8(R0)
+	ADDL3	R6,#8,R0
+	MOVC3	#4,FCARRAYS.COLUMNS_HEADING.$K5,@FCARRAYS.COLUMNS_HEADING.$D6+4[R0]
+	ADDL3	R6,#12,R0
+	MOVC3	FCARRAYS.COLUMNS_HEADING.$T9,@FCARRAYS.COLUMNS_HEADING.$T7,@FCARRAYS.COLUMNS_HEADING.$D6+4[R0]
+	ADDL3	R6,FCARRAYS.COLUMNS_HEADING.$T9,R0
+	ADDL2	#12,R0
+	MOVB	#58,@FCARRAYS.COLUMNS_HEADING.$D6+4[R0]
+	MOVL	FCARRAYS.COLUMNS_HEADING.TEXT(AP),R0
+	MOVC5	FCARRAYS.COLUMNS_HEADING.$U1,@FCARRAYS.COLUMNS_HEADING.$D6+4,#^A/ /,#40,@4(R0)
+	PUSHAQ	FCARRAYS.COLUMNS_HEADING.$D6
+	CALLS	#1,G^LIB$SFREE1_DD
+;  367      end if
+;  368    end function columns_heading
+	RET
+
+; Storage map for FCARRAYS.LIST_QUANTITY, a subroutine
+;   NAME  CHARACTER*(*), INTENT(IN)   argument 1  @FCARRAYS.LIST_QUANTITY.NAME(AP)
+;   Q     TYPE(QUANTITY), INTENT(IN)  argument 2  @FCARRAYS.LIST_QUANTITY.Q(AP)
+;   BIG   REAL*8                      $LOCAL+0    FCARRAYS.LIST_QUANTITY.BIG
+;   I     INTEGER                     $LOCAL+8    FCARRAYS.LIST_QUANTITY.I
+;   J     INTEGER                     $LOCAL+12   FCARRAYS.LIST_QUANTITY.J
+;   R7 is $T1: temporary
+;   R6 is $R1: Q's address
+;
+FCARRAYS.LIST_QUANTITY.NAME = 4		; NAME is argument 1
+FCARRAYS.LIST_QUANTITY.Q = 8		; Q is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCARRAYS.LIST_QUANTITY.BIG:
+	.BLKL	2			; BIG
+FCARRAYS.LIST_QUANTITY.I:
+	.BLKL	1			; I
+FCARRAYS.LIST_QUANTITY.J:
+	.BLKL	1			; J
+FCARRAYS.LIST_QUANTITY.$T2:
+	.BLKL	1			; temporary
+FCARRAYS.LIST_QUANTITY.$T3:
+	.BLKL	1			; temporary
+FCARRAYS.LIST_QUANTITY.$T4:
+	.BLKL	30			; characters, for one statement
+FCARRAYS.LIST_QUANTITY.$T5:
+	.BLKL	1			; temporary
+FCARRAYS.LIST_QUANTITY.$T6:
+	.BLKL	1			; temporary
+FCARRAYS.LIST_QUANTITY.$T7:
+	.BLKL	1			; temporary
+FCARRAYS.LIST_QUANTITY.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCARRAYS.LIST_QUANTITY.$T8:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCARRAYS.LIST_QUANTITY.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCARRAYS.LIST_QUANTITY.$C1:
+	.BLKL	1			; DO (line 386)'s count
+FCARRAYS.LIST_QUANTITY.$C2:
+	.BLKL	1			; DO (line 388)'s count
+FCARRAYS.LIST_QUANTITY.$T9:
+	.BLKL	8			; characters, for one statement
+FCARRAYS.LIST_QUANTITY.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCARRAYS.LIST_QUANTITY.$D1:
+	.WORD	120			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.LIST_QUANTITY.$T4
+FCARRAYS.LIST_QUANTITY.$D4:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.LIST_QUANTITY.$K3
+FCARRAYS.LIST_QUANTITY.$D5:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.LIST_QUANTITY.$K4
+FCARRAYS.LIST_QUANTITY.$D6:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCARRAYS.LIST_QUANTITY.$K5
+FCARRAYS.LIST_QUANTITY.$K1:
+	.ASCII	/ = /
+FCARRAYS.LIST_QUANTITY.$K2:
+	.ASCII	/ = [/
+FCARRAYS.LIST_QUANTITY.$K3:
+	.ASCII	/; /
+FCARRAYS.LIST_QUANTITY.$K4:
+	.ASCII	/, /
+FCARRAYS.LIST_QUANTITY.$K5:
+	.ASCII	/]/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  369
+;  370    ! LIST_QUANTITY shows NAME = Q on one line, as LIST does: an array as the
+;  371    ! literal that makes it, [1, 2; 3, 4], which may be longer than any line
+;  372    ! variable could hold, so it is written a piece at a time (SAY_PART).
+;  373    subroutine list_quantity(name, q)
+	.ENTRY	FCARRAYS.LIST_QUANTITY,^M<R2,R3,R4,R5,R6,R7>
+;  374      character(len=*), intent(in) :: name
+;  375      type(quantity), intent(in) :: q
+;  376      real(rk) :: big
+;  377      integer :: i, j
+;  378
+;  379      if (.not. is_array(q)) then
+	PUSHAB	@FCARRAYS.LIST_QUANTITY.Q(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R7
+	BLBC	R7,FCARRAYS.LIST_QUANTITY.$2
+	BRW	FCARRAYS.LIST_QUANTITY.$1
+FCARRAYS.LIST_QUANTITY.$2:
+;  380        call say(trim(name) // ' = ' // trim(format_value(q%s)))
+	MOVL	FCARRAYS.LIST_QUANTITY.NAME(AP),R0
+	MOVAB	@4(R0),R7
+	MOVAB	(R7),FCARRAYS.LIST_QUANTITY.$T2
+	MOVZWL	@FCARRAYS.LIST_QUANTITY.NAME(AP),FCARRAYS.LIST_QUANTITY.$T3
+	BRB	FCARRAYS.LIST_QUANTITY.$3
+FCARRAYS.LIST_QUANTITY.$4:
+	SUBL3	#1,FCARRAYS.LIST_QUANTITY.$T3,R0
+	CMPB	@FCARRAYS.LIST_QUANTITY.$T2[R0],#32
+	BNEQ	FCARRAYS.LIST_QUANTITY.$5
+	DECL	FCARRAYS.LIST_QUANTITY.$T3
+FCARRAYS.LIST_QUANTITY.$3:
+	TSTL	FCARRAYS.LIST_QUANTITY.$T3 ; from line 380
+	BNEQ	FCARRAYS.LIST_QUANTITY.$4
+FCARRAYS.LIST_QUANTITY.$5:
+	PUSHL	#0
+	MOVL	FCARRAYS.LIST_QUANTITY.Q(AP),R0
+	PUSHAB	16(R0)
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVAB	FCARRAYS.LIST_QUANTITY.$T4,FCARRAYS.LIST_QUANTITY.$T5
+	MOVAB	@FCARRAYS.LIST_QUANTITY.$T5,FCARRAYS.LIST_QUANTITY.$T6
+	MOVL	#120,FCARRAYS.LIST_QUANTITY.$T7
+	BRB	FCARRAYS.LIST_QUANTITY.$8
+FCARRAYS.LIST_QUANTITY.$9:
+	SUBL3	#1,FCARRAYS.LIST_QUANTITY.$T7,R0
+	CMPB	@FCARRAYS.LIST_QUANTITY.$T6[R0],#32
+	BNEQ	FCARRAYS.LIST_QUANTITY.$10
+	DECL	FCARRAYS.LIST_QUANTITY.$T7
+FCARRAYS.LIST_QUANTITY.$8:
+	TSTL	FCARRAYS.LIST_QUANTITY.$T7 ; from line 380
+	BNEQ	FCARRAYS.LIST_QUANTITY.$9
+FCARRAYS.LIST_QUANTITY.$10:
+	ADDL3	FCARRAYS.LIST_QUANTITY.$T3,FCARRAYS.LIST_QUANTITY.$T7,R0
+	ADDL3	R0,#3,FCARRAYS.LIST_QUANTITY.$U1
+	CVTLW	FCARRAYS.LIST_QUANTITY.$U1,FCARRAYS.LIST_QUANTITY.$T8
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D2
+	PUSHAW	FCARRAYS.LIST_QUANTITY.$T8
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCARRAYS.LIST_QUANTITY.$T3,(R7),@FCARRAYS.LIST_QUANTITY.$D2+4
+	MOVL	FCARRAYS.LIST_QUANTITY.$T3,R0
+	MOVC3	#3,FCARRAYS.LIST_QUANTITY.$K1,@FCARRAYS.LIST_QUANTITY.$D2+4[R0]
+	ADDL3	FCARRAYS.LIST_QUANTITY.$T3,#3,R0
+	MOVC3	FCARRAYS.LIST_QUANTITY.$T7,@FCARRAYS.LIST_QUANTITY.$T5,@FCARRAYS.LIST_QUANTITY.$D2+4[R0]
+	CVTLW	FCARRAYS.LIST_QUANTITY.$U1,FCARRAYS.LIST_QUANTITY.$D3
+	MOVAB	@FCARRAYS.LIST_QUANTITY.$D2+4,FCARRAYS.LIST_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  381        return
+	RET
+FCARRAYS.LIST_QUANTITY.$1:
+;  382      end if
+;  383
+;  384      big = largest_magnitude(q)
+	PUSHAB	@FCARRAYS.LIST_QUANTITY.Q(AP)
+	CALLS	#1,G^FCARRAYS.LARGEST_MAGNITUDE
+	MOVG	R0,FCARRAYS.LIST_QUANTITY.BIG
+;  385      call say_part(trim(name) // ' = [')
+	MOVL	FCARRAYS.LIST_QUANTITY.NAME(AP),R0
+	MOVAB	@4(R0),FCARRAYS.LIST_QUANTITY.$T7
+	MOVAB	@FCARRAYS.LIST_QUANTITY.$T7,FCARRAYS.LIST_QUANTITY.$T6
+	MOVZWL	@FCARRAYS.LIST_QUANTITY.NAME(AP),FCARRAYS.LIST_QUANTITY.$T5
+	BRB	FCARRAYS.LIST_QUANTITY.$13
+FCARRAYS.LIST_QUANTITY.$14:
+	SUBL3	#1,FCARRAYS.LIST_QUANTITY.$T5,R0
+	CMPB	@FCARRAYS.LIST_QUANTITY.$T6[R0],#32
+	BNEQ	FCARRAYS.LIST_QUANTITY.$15
+	DECL	FCARRAYS.LIST_QUANTITY.$T5
+FCARRAYS.LIST_QUANTITY.$13:
+	TSTL	FCARRAYS.LIST_QUANTITY.$T5 ; from line 385
+	BNEQ	FCARRAYS.LIST_QUANTITY.$14
+FCARRAYS.LIST_QUANTITY.$15:
+	ADDL3	FCARRAYS.LIST_QUANTITY.$T5,#4,R0
+	CVTLW	R0,FCARRAYS.LIST_QUANTITY.$T8
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D2
+	PUSHAW	FCARRAYS.LIST_QUANTITY.$T8
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCARRAYS.LIST_QUANTITY.$T5,@FCARRAYS.LIST_QUANTITY.$T7,@FCARRAYS.LIST_QUANTITY.$D2+4
+	MOVL	FCARRAYS.LIST_QUANTITY.$T5,R0
+	MOVC3	#4,FCARRAYS.LIST_QUANTITY.$K2,@FCARRAYS.LIST_QUANTITY.$D2+4[R0]
+	ADDL3	FCARRAYS.LIST_QUANTITY.$T5,#4,R0
+	CVTLW	R0,FCARRAYS.LIST_QUANTITY.$D3
+	MOVAB	@FCARRAYS.LIST_QUANTITY.$D2+4,FCARRAYS.LIST_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY_PART
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  386      do i = 1, q%rows
+	MOVL	@FCARRAYS.LIST_QUANTITY.Q(AP),FCARRAYS.LIST_QUANTITY.$C1 ; DO (line 386)'s count
+	MOVL	#1,FCARRAYS.LIST_QUANTITY.I
+	TSTL	FCARRAYS.LIST_QUANTITY.$C1
+	BGTR	FCARRAYS.LIST_QUANTITY.$19
+	BRW	FCARRAYS.LIST_QUANTITY.$18
+FCARRAYS.LIST_QUANTITY.$19:
+	MOVL	FCARRAYS.LIST_QUANTITY.Q(AP),R6
+FCARRAYS.LIST_QUANTITY.$20:		; DO (line 386)'s body
+;  387        if (i > 1) call say_part('; ')
+	CMPL	FCARRAYS.LIST_QUANTITY.I,#1
+	BLEQ	FCARRAYS.LIST_QUANTITY.$21
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D4
+	CALLS	#1,G^FCMESSAGES.SAY_PART
+FCARRAYS.LIST_QUANTITY.$21:
+;  388        do j = 1, q%cols
+	MOVL	4(R6),FCARRAYS.LIST_QUANTITY.$C2 ; DO (line 388)'s count
+	MOVL	#1,FCARRAYS.LIST_QUANTITY.J
+	TSTL	FCARRAYS.LIST_QUANTITY.$C2
+	BGTR	FCARRAYS.LIST_QUANTITY.$24
+	BRW	FCARRAYS.LIST_QUANTITY.$23
+FCARRAYS.LIST_QUANTITY.$24:
+FCARRAYS.LIST_QUANTITY.$25:		; DO (line 388)'s body
+;  389          if (j > 1) call say_part(', ')
+	CMPL	FCARRAYS.LIST_QUANTITY.J,#1
+	BLEQ	FCARRAYS.LIST_QUANTITY.$26
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D5
+	CALLS	#1,G^FCMESSAGES.SAY_PART
+FCARRAYS.LIST_QUANTITY.$26:
+;  390          call say_part(trim(format_value(element(q, i, j), big)))
+	PUSHAL	FCARRAYS.LIST_QUANTITY.J
+	PUSHAL	FCARRAYS.LIST_QUANTITY.I
+	PUSHAB	(R6)
+	PUSHAB	FCARRAYS.LIST_QUANTITY.$T9
+	CALLS	#4,G^FCARRAYS.ELEMENT
+	PUSHAG	FCARRAYS.LIST_QUANTITY.BIG
+	PUSHAB	FCARRAYS.LIST_QUANTITY.$T9
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVAB	FCARRAYS.LIST_QUANTITY.$T4,FCARRAYS.LIST_QUANTITY.$T5
+	MOVAB	@FCARRAYS.LIST_QUANTITY.$T5,FCARRAYS.LIST_QUANTITY.$T6
+	MOVL	#120,FCARRAYS.LIST_QUANTITY.$T7
+	BRB	FCARRAYS.LIST_QUANTITY.$28
+FCARRAYS.LIST_QUANTITY.$29:
+	SUBL3	#1,FCARRAYS.LIST_QUANTITY.$T7,R0
+	CMPB	@FCARRAYS.LIST_QUANTITY.$T6[R0],#32
+	BNEQ	FCARRAYS.LIST_QUANTITY.$30
+	DECL	FCARRAYS.LIST_QUANTITY.$T7
+FCARRAYS.LIST_QUANTITY.$28:
+	TSTL	FCARRAYS.LIST_QUANTITY.$T7 ; from line 390
+	BNEQ	FCARRAYS.LIST_QUANTITY.$29
+FCARRAYS.LIST_QUANTITY.$30:
+	CVTLW	FCARRAYS.LIST_QUANTITY.$T7,FCARRAYS.LIST_QUANTITY.$D3
+	MOVAB	@FCARRAYS.LIST_QUANTITY.$T5,FCARRAYS.LIST_QUANTITY.$D3+4
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D3
+	CALLS	#1,G^FCMESSAGES.SAY_PART
+;  391        end do
+	INCL	FCARRAYS.LIST_QUANTITY.J
+	DECL	FCARRAYS.LIST_QUANTITY.$C2 ; one pass fewer
+	BLEQ	FCARRAYS.LIST_QUANTITY.$33
+	BRW	FCARRAYS.LIST_QUANTITY.$25
+FCARRAYS.LIST_QUANTITY.$33:
+FCARRAYS.LIST_QUANTITY.$23:
+;  392      end do
+	INCL	FCARRAYS.LIST_QUANTITY.I
+	DECL	FCARRAYS.LIST_QUANTITY.$C1 ; one pass fewer
+	BLEQ	FCARRAYS.LIST_QUANTITY.$34
+	BRW	FCARRAYS.LIST_QUANTITY.$20
+FCARRAYS.LIST_QUANTITY.$34:
+FCARRAYS.LIST_QUANTITY.$18:
+;  393      call say_part(']')
+	PUSHAQ	FCARRAYS.LIST_QUANTITY.$D6
+	CALLS	#1,G^FCMESSAGES.SAY_PART
+;  394      call say_end()
+	CALLS	#0,G^FCMESSAGES.SAY_END
+;  395    end subroutine list_quantity
+	RET
+;  396  end module fcarrays
+
+	.END

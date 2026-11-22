@@ -1,0 +1,3029 @@
+	.TITLE	FCSTATE
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 13:59:44.02
+; from DUA5:[FCALC]FCSTATE.F90;1
+; by the command FORTRAN/G_FLOATING FCSTATE
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; The module FCVALUES's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCVALUES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCVALUES.$BASE:
+	.BLKB	12
+
+; The module FCFUNCS's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCFUNCS,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCFUNCS.$BASE:
+	.BLKB	12
+
+; Storage map for FCSTATE, a module
+;   LOG_UNIT       INTEGER, PRIVATE  $MOD$FCMESSAGES+12  FCSTATE.LOG_UNIT       from FCMESSAGES
+;   DIGITS         INTEGER, PRIVATE  $MOD$FCVALUES+0     FCSTATE.DIGITS         from FCVALUES
+;   NUMBER_FORMAT  INTEGER, PRIVATE  $MOD$FCVALUES+4     FCSTATE.NUMBER_FORMAT  from FCVALUES
+;   NUMBER_BASE    INTEGER, PRIVATE  $MOD$FCVALUES+8     FCSTATE.NUMBER_BASE    from FCVALUES
+;   ANGLE_MODE     INTEGER, PRIVATE  $MOD$FCFUNCS+0      FCSTATE.ANGLE_MODE     from FCFUNCS
+;   SEED_GIVEN     LOGICAL, PRIVATE  $MOD$FCFUNCS+4      FCSTATE.SEED_GIVEN     from FCFUNCS
+;   SEED_NUMBER    INTEGER, PRIVATE  $MOD$FCFUNCS+8      FCSTATE.SEED_NUMBER    from FCFUNCS
+;
+FCSTATE.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
+FCSTATE.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+FCSTATE.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
+FCSTATE.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
+FCSTATE.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
+FCSTATE.ANGLE_MODE = $MOD$FCFUNCS.$BASE	; ANGLE_MODE, in module FCFUNCS's variables
+FCSTATE.SEED_GIVEN = $MOD$FCFUNCS.$BASE+4 ; SEED_GIVEN, in module FCFUNCS's variables
+FCSTATE.SEED_NUMBER = $MOD$FCFUNCS.$BASE+8 ; SEED_NUMBER, in module FCFUNCS's variables
+$MOD$FCSTATE.E666EE1B == 0		; this module's stamp, which its users' objects refer to
+; the stamps of the modules used
+	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCARRAYS.EE19C6D8,$MOD$FCSYMBOLS.2A7739DD,$MOD$FCFUNCS.0679CFAC
+
+;    1  ! fcalc: the state of a session, and files.
+;    2  !
+;    3  ! SAVE writes the state (the settings, the variables, the functions) to a
+;    4  ! file of fcalc's own commands, which LOAD runs again, and a user can read and
+;    5  ! change in an editor:
+;    6  !
+;    7  !     ! fcalc state, saved 2026-11-21 10:42:17
+;    8  !     set digits 12
+;    9  !     set format auto
+;   10  !     ...
+;   11  !     r = 2.5;
+;   12  !     v = [1, 2, 3];
+;   13  !     f(x) = x^3 - 2*x - 5;
+;   14  !
+;   15  ! Each line ends in ;, fcalc's quiet line, so running the file with @ shows
+;   16  ! nothing either. A variable's value is written with as many digits as it
+;   17  ! takes to read back the very same number (A.3 of the phase doc: no digit
+;   18  ! more), so LOAD restores it exactly, whatever SET DIGITS shows.
+;   19  !
+;   20  ! LOG writes a transcript of the session to a file, appended to what is
+;   21  ! there; module FCMESSAGES' SAY writes every line to it.
+;   22  !
+;   23  ! The files of commands that @ and LOAD run are read here, a line at a time,
+;   24  ! by the same nonadvancing READ as the terminal's lines. The main program
+;   25  ! runs each line, since only it knows the commands; it keeps a file open
+;   26  ! for each level of @ (a file may run another, up to MAX_DEPTH deep), each
+;   27  ! on a unit of its own.
+;   28  !
+;   29  ! Fortran's I/O is by unit number: OPEN connects a unit to a file, READ and
+;   30  ! WRITE name the unit, and CLOSE ends the connection. The units here are
+;   31  ! chosen clear of the terminal's (5 and 6 by custom; * is the terminal).
+;   32  ! IOSTAT= on an OPEN, READ, or WRITE gives 0 on success and something else on
+;   33  ! failure instead of stopping the program, so fcalc reports the failure as one
+;   34  ! of its own messages and goes on.
+;   35  module fcstate
+;   36    use fckinds
+;   37    use fcmessages
+;   38    use fcvalues, only: value, digits, number_format, number_base
+;   39    use fcarrays, only: quantity, is_array
+;   40    use fcsymbols, only: each_variable, each_function
+;   41    use fcfuncs, only: angle_mode, seed_given, seed_number
+;   42    implicit none
+;   43    private
+;   44
+;   45    public :: format_names, angle_names, setting_names, setting_line
+;   46    public :: file_name, open_input, close_input, read_line, max_depth
+;   47    public :: save_state, open_log, close_log
+;   48
+;   49    ! The words SET and SHOW know, each list in the order of the settings'
+;   50    ! codes (FCVALUES' F_AUTO to F_ENGINEERING, FCFUNCS' A_RADIANS to
+;   51    ! A_GRADS), so a code is a word's place. The elements of an array
+;   52    ! constructor must all have the same length, hence the blanks.
+;   53    character(len=11), parameter :: format_names(4) = (/ 'auto       ', &
+;   54      'fixed      ', 'scientific ', 'engineering' /)
+;   55    character(len=7), parameter :: angle_names(3) = (/ 'radians', 'degrees', 'grads  ' /)
+;   56    character(len=8), parameter :: setting_names(6) = (/ 'digits  ', 'format  ', &
+;   57      'angle   ', 'base    ', 'seed    ', 'echo    ' /)
+;   58
+;   59    ! How deep files of commands may run one another.
+;   60    integer, parameter :: max_depth = 8
+;   61
+;   62    ! The units: a file of commands at depth d is unit INPUT_UNIT + d, the log
+;   63    ! LOG_FILE, and a file being saved SAVE_FILE.
+;   64    integer, parameter :: input_unit = 20, log_file = 30, save_file = 31
+;   65
+;   66    ! The longest line SAVE writes: well within the 199 characters a line
+;   67    ! may have, and easy to read in an editor.
+;   68    integer, parameter :: save_width = 100
+;   69
+;   70  contains
+
+; Storage map for FCSTATE.SETTING_LINE, a CHARACTER*40 function
+;   TEXT  CHARACTER*40               hidden argument 1  @FCSTATE.SETTING_LINE.TEXT(AP)
+;   WHAT  CHARACTER*(*), INTENT(IN)  argument 2         @FCSTATE.SETTING_LINE.WHAT(AP)
+;   ECHO  LOGICAL, INTENT(IN)        argument 3         @FCSTATE.SETTING_LINE.ECHO(AP)
+;   R6 is $T1: temporary
+;   R7 is $T2: temporary
+;
+FCSTATE.SETTING_LINE.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCSTATE.SETTING_LINE.WHAT = 8		; WHAT is argument 2
+FCSTATE.SETTING_LINE.ECHO = 12		; ECHO is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.SETTING_LINE.$T3:
+	.BLKL	3			; characters, for one statement
+FCSTATE.SETTING_LINE.$T4:
+	.BLKB	23			; characters, for one statement
+	.BLKB	1
+FCSTATE.SETTING_LINE.$T5:
+	.BLKB	22			; characters, for one statement
+	.BLKB	2
+FCSTATE.SETTING_LINE.$T6:
+	.BLKB	17			; characters, for one statement
+	.BLKB	3
+FCSTATE.SETTING_LINE.$T7:
+	.BLKB	21			; characters, for one statement
+	.BLKB	3
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.SETTING_LINE.$D1:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SETTING_LINE.$T3
+FCSTATE.SETTING_LINE.$K1:
+	.ASCII	/digits/
+FCSTATE.SETTING_LINE.$K2:
+	.ASCII	/format/
+FCSTATE.SETTING_LINE.$K3:
+	.ASCII	/angle/
+FCSTATE.SETTING_LINE.$K4:
+	.ASCII	/base/
+FCSTATE.SETTING_LINE.$K5:
+	.ASCII	/seed/
+FCSTATE.SETTING_LINE.$K6:
+	.ASCII	/set digits /
+FCSTATE.SETTING_LINE.$K7:
+	.ASCII	/set format /
+FCSTATE.SETTING_LINE.$K8:
+	.ASCII	/auto       fixed      scientific engineering/
+FCSTATE.SETTING_LINE.$K9:
+	.ASCII	/set angle /
+FCSTATE.SETTING_LINE.$K10:
+	.ASCII	/radiansdegreesgrads  /
+FCSTATE.SETTING_LINE.$K11:
+	.ASCII	/set base hex/
+FCSTATE.SETTING_LINE.$K12:
+	.ASCII	/set base octal/
+FCSTATE.SETTING_LINE.$K13:
+	.ASCII	/set base binary/
+FCSTATE.SETTING_LINE.$K14:
+	.ASCII	/set base decimal/
+FCSTATE.SETTING_LINE.$K15:
+	.ASCII	/set seed /
+FCSTATE.SETTING_LINE.$K16:
+	.ASCII	/! no seed has been set/
+FCSTATE.SETTING_LINE.$K17:
+	.ASCII	/set echo/
+FCSTATE.SETTING_LINE.$K18:
+	.ASCII	/set noecho/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   71
+;   72    ! SETTING_LINE is the SET command that makes the setting WHAT as it is
+;   73    ! now: set digits 12. A seed never given is a comment, which fcalc
+;   74    ! passes over if it is typed back. ECHO is the main program's setting.
+;   75    function setting_line(what, echo) result(text)
+	.ENTRY	FCSTATE.SETTING_LINE,^M<R2,R3,R4,R5,R6,R7>
+;   76      character(len=*), intent(in) :: what
+;   77      logical, intent(in) :: echo
+;   78      character(len=40) :: text
+;   79
+;   80      select case (what)
+	MOVL	FCSTATE.SETTING_LINE.WHAT(AP),R0
+	MOVAB	@4(R0),R6
+	MOVZWL	@FCSTATE.SETTING_LINE.WHAT(AP),R7
+	CMPC5	R7,(R6),#^A/ /,#6,FCSTATE.SETTING_LINE.$K1
+	BEQL	FCSTATE.SETTING_LINE.$1
+	CMPC5	R7,(R6),#^A/ /,#6,FCSTATE.SETTING_LINE.$K2
+	BEQL	FCSTATE.SETTING_LINE.$3
+	CMPC5	R7,(R6),#^A/ /,#5,FCSTATE.SETTING_LINE.$K3
+	BNEQ	FCSTATE.SETTING_LINE.$6
+	BRW	FCSTATE.SETTING_LINE.$5
+FCSTATE.SETTING_LINE.$6:
+	CMPC5	R7,(R6),#^A/ /,#4,FCSTATE.SETTING_LINE.$K4
+	BNEQ	FCSTATE.SETTING_LINE.$8
+	BRW	FCSTATE.SETTING_LINE.$7
+FCSTATE.SETTING_LINE.$8:
+	CMPC5	R7,(R6),#^A/ /,#4,FCSTATE.SETTING_LINE.$K5
+	BNEQ	FCSTATE.SETTING_LINE.$10
+	BRW	FCSTATE.SETTING_LINE.$9
+FCSTATE.SETTING_LINE.$10:
+	BRW	FCSTATE.SETTING_LINE.$11
+FCSTATE.SETTING_LINE.$1:
+;   81      case ('digits')
+;   82        text = 'set digits ' // whole_text(digits)
+	PUSHAL	FCSTATE.DIGITS
+	PUSHAQ	FCSTATE.SETTING_LINE.$D1
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVC3	#11,FCSTATE.SETTING_LINE.$K6,FCSTATE.SETTING_LINE.$T4
+	MOVC3	#12,FCSTATE.SETTING_LINE.$T3,FCSTATE.SETTING_LINE.$T4+11
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#23,FCSTATE.SETTING_LINE.$T4,#^A/ /,#40,@4(R0)
+;   83      case ('format')
+	RET
+FCSTATE.SETTING_LINE.$3:
+;   84        text = 'set format ' // format_names(number_format)
+	MOVC3	#11,FCSTATE.SETTING_LINE.$K7,FCSTATE.SETTING_LINE.$T5
+	MULL3	FCSTATE.NUMBER_FORMAT,#11,R0
+	MOVC3	#11,FCSTATE.SETTING_LINE.$K8-11[R0],FCSTATE.SETTING_LINE.$T5+11
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#22,FCSTATE.SETTING_LINE.$T5,#^A/ /,#40,@4(R0)
+;   85      case ('angle')
+	RET
+FCSTATE.SETTING_LINE.$5:
+;   86        text = 'set angle ' // angle_names(angle_mode)
+	MOVC3	#10,FCSTATE.SETTING_LINE.$K9,FCSTATE.SETTING_LINE.$T6
+	MULL3	FCSTATE.ANGLE_MODE,#7,R0
+	MOVC3	#7,FCSTATE.SETTING_LINE.$K10-7[R0],FCSTATE.SETTING_LINE.$T6+10
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#17,FCSTATE.SETTING_LINE.$T6,#^A/ /,#40,@4(R0)
+;   87      case ('base')
+	RET
+FCSTATE.SETTING_LINE.$7:
+;   88        select case (number_base)
+	CMPL	FCSTATE.NUMBER_BASE,#16
+	BEQL	FCSTATE.SETTING_LINE.$13
+	CMPL	FCSTATE.NUMBER_BASE,#8
+	BEQL	FCSTATE.SETTING_LINE.$15
+	CMPL	FCSTATE.NUMBER_BASE,#2
+	BNEQ	FCSTATE.SETTING_LINE.$19
+	BRB	FCSTATE.SETTING_LINE.$17
+FCSTATE.SETTING_LINE.$13:
+;   89        case (16)
+;   90          text = 'set base hex'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#12,FCSTATE.SETTING_LINE.$K11,#^A/ /,#40,@4(R0)
+;   91        case (8)
+	RET
+FCSTATE.SETTING_LINE.$15:
+;   92          text = 'set base octal'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#14,FCSTATE.SETTING_LINE.$K12,#^A/ /,#40,@4(R0)
+;   93        case (2)
+	RET
+FCSTATE.SETTING_LINE.$17:
+;   94          text = 'set base binary'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#15,FCSTATE.SETTING_LINE.$K13,#^A/ /,#40,@4(R0)
+;   95        case default
+	RET
+FCSTATE.SETTING_LINE.$19:
+;   96          text = 'set base decimal'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#16,FCSTATE.SETTING_LINE.$K14,#^A/ /,#40,@4(R0)
+;   97        end select
+;   98      case ('seed')
+	RET
+FCSTATE.SETTING_LINE.$9:
+;   99        if (seed_given) then
+	BLBC	FCSTATE.SEED_GIVEN,FCSTATE.SETTING_LINE.$21
+;  100          text = 'set seed ' // whole_text(seed_number)
+	PUSHAL	FCSTATE.SEED_NUMBER
+	PUSHAQ	FCSTATE.SETTING_LINE.$D1
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVC3	#9,FCSTATE.SETTING_LINE.$K15,FCSTATE.SETTING_LINE.$T7
+	MOVC3	#12,FCSTATE.SETTING_LINE.$T3,FCSTATE.SETTING_LINE.$T7+9
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#21,FCSTATE.SETTING_LINE.$T7,#^A/ /,#40,@4(R0)
+;  101        else
+	RET
+FCSTATE.SETTING_LINE.$21:
+;  102          text = '! no seed has been set'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#22,FCSTATE.SETTING_LINE.$K16,#^A/ /,#40,@4(R0)
+;  103        end if
+;  104      case default
+	RET
+FCSTATE.SETTING_LINE.$11:
+;  105        if (echo) then
+	BLBC	@FCSTATE.SETTING_LINE.ECHO(AP),FCSTATE.SETTING_LINE.$24
+;  106          text = 'set echo'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#8,FCSTATE.SETTING_LINE.$K17,#^A/ /,#40,@4(R0)
+;  107        else
+	RET
+FCSTATE.SETTING_LINE.$24:
+;  108          text = 'set noecho'
+	MOVL	FCSTATE.SETTING_LINE.TEXT(AP),R0
+	MOVC5	#10,FCSTATE.SETTING_LINE.$K18,#^A/ /,#40,@4(R0)
+;  109        end if
+;  110      end select
+;  111    end function setting_line
+	RET
+
+; Storage map for FCSTATE.WHOLE_TEXT, a CHARACTER*12 function
+;   TEXT  CHARACTER*12         hidden argument 1  @FCSTATE.WHOLE_TEXT.TEXT(AP)
+;   N     INTEGER, INTENT(IN)  argument 2         @FCSTATE.WHOLE_TEXT.N(AP)
+;
+FCSTATE.WHOLE_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCSTATE.WHOLE_TEXT.N = 8		; N is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.WHOLE_TEXT.$D1:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.WHOLE_TEXT.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.WHOLE_TEXT.$T1:
+	.BLKL	3			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.WHOLE_TEXT.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.WHOLE_TEXT.$D2:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.WHOLE_TEXT.$K1
+FCSTATE.WHOLE_TEXT.$D4:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.WHOLE_TEXT.$T1
+FCSTATE.WHOLE_TEXT.$K1:
+	.ASCII	/(I12)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  112
+;  113    ! WHOLE_TEXT is N in as few characters as it takes: 12, -3. (Fortran 95's
+;  114    ! I0 edit descriptor does this; Fortran 90 has none, so the number is
+;  115    ! written in a field wide enough for any, and ADJUSTL moves it to the
+;  116    ! left, leaving the blanks for TRIM.)
+;  117    function whole_text(n) result(text)
+	.ENTRY	FCSTATE.WHOLE_TEXT,^M<R2,R3,R4,R5>
+;  118      integer, intent(in) :: n
+;  119      character(len=12) :: text
+;  120
+;  121      write (text, '(I12)') n
+	MOVL	FCSTATE.WHOLE_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),FCSTATE.WHOLE_TEXT.$D1+4
+	PUSHAQ	FCSTATE.WHOLE_TEXT.$D2
+	PUSHAQ	FCSTATE.WHOLE_TEXT.$D1
+	PUSHAB	FCSTATE.WHOLE_TEXT.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAL	@FCSTATE.WHOLE_TEXT.N(AP),FCSTATE.WHOLE_TEXT.$D3+4
+	PUSHAQ	FCSTATE.WHOLE_TEXT.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  122      text = adjustl(text)
+	MOVL	FCSTATE.WHOLE_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),FCSTATE.WHOLE_TEXT.$D1+4
+	PUSHAQ	FCSTATE.WHOLE_TEXT.$D1
+	PUSHAQ	FCSTATE.WHOLE_TEXT.$D4
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVL	FCSTATE.WHOLE_TEXT.TEXT(AP),R0
+	MOVC3	#12,FCSTATE.WHOLE_TEXT.$T1,@4(R0)
+;  123    end function whole_text
+	RET
+
+; Storage map for FCSTATE.FILE_NAME, a CHARACTER*(*) function
+;   $VALUE  CHARACTER*(LEN(TEXT)+6)    hidden argument 1       @FCSTATE.FILE_NAME.$VALUE(AP)
+;   TEXT    CHARACTER*(*), INTENT(IN)  argument 2              @FCSTATE.FILE_NAME.TEXT(AP)
+;   NAME    CHARACTER*(LEN(TEXT)+6)    descriptor at $LOCAL+4  FCSTATE.FILE_NAME.NAME
+;   K       INTEGER                    $LOCAL+0                FCSTATE.FILE_NAME.K
+;   R6 is $T1: temporary
+;   R6 is $U1: temporary
+;
+FCSTATE.FILE_NAME.$VALUE = 4		; $VALUE's value goes through hidden argument 1
+FCSTATE.FILE_NAME.TEXT = 8		; TEXT is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.FILE_NAME.K:
+	.BLKL	1			; K
+FCSTATE.FILE_NAME.NAME:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; NAME: not allocated
+FCSTATE.FILE_NAME.$T2:
+	.BLKL	1			; temporary
+FCSTATE.FILE_NAME.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.FILE_NAME.$T3:
+	.BLKB	2			; temporary
+	.BLKB	2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.FILE_NAME.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.FILE_NAME.$K1
+FCSTATE.FILE_NAME.$K2:
+	.LONG	-1
+FCSTATE.FILE_NAME.$K1:
+	.ASCII	"]>:/"
+FCSTATE.FILE_NAME.$K3:
+	.ASCII	/./
+FCSTATE.FILE_NAME.$K4:
+	.ASCII	/.fcalc/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  124
+;  125    ! FILE_NAME is the file TEXT names, with .fcalc after it if it has no type
+;  126    ! of its own: state is state.fcalc, notes.txt itself. The type is looked
+;  127    ! for after the directory, which ends in ] or > on VMS and / on Unix.
+;  128    ! The result's length depends on the argument's, LEN(TEXT) + 6: a
+;  129    ! function's result may have a length known only when it is called.
+;  130    function file_name(text) result(name)
+	.ENTRY	FCSTATE.FILE_NAME,^M<R2,R3,R4,R5,R6>
+	MOVZWL	@FCSTATE.FILE_NAME.TEXT(AP),R0
+	ADDL3	R0,#6,R6
+	BGEQ	FCSTATE.FILE_NAME.$1
+	CLRL	R6
+FCSTATE.FILE_NAME.$1:
+	CVTLW	R6,FCSTATE.FILE_NAME.NAME
+	PUSHL	FCSTATE.FILE_NAME.$VALUE(AP)
+	PUSHAQ	FCSTATE.FILE_NAME.NAME
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVL	FCSTATE.FILE_NAME.$VALUE(AP),R0
+	MOVL	4(R0),FCSTATE.FILE_NAME.NAME+4
+;  131      character(len=*), intent(in) :: text
+;  132      character(len=len(text) + 6) :: name
+;  133      integer :: k
+;  134
+;  135      ! SCAN with BACK=.TRUE. finds the last of the characters in the set.
+;  136      k = scan(text, ']>:/', back=.true.)
+	PUSHAL	FCSTATE.FILE_NAME.$K2
+	PUSHAQ	FCSTATE.FILE_NAME.$D1
+	PUSHL	FCSTATE.FILE_NAME.TEXT(AP)
+	CALLS	#3,G^FTN$SCAN
+	MOVL	R0,R6
+	MOVL	R6,FCSTATE.FILE_NAME.K
+;  137      name = text
+	MOVZWL	@FCSTATE.FILE_NAME.TEXT(AP),R6
+	MOVL	FCSTATE.FILE_NAME.TEXT(AP),R0
+	MOVZWL	FCSTATE.FILE_NAME.NAME,R1
+	MOVC5	R6,@4(R0),#^A/ /,R1,@FCSTATE.FILE_NAME.NAME+4
+;  138      if (index(text(k + 1:), '.') == 0) name = text // '.fcalc'
+	SUBL2	FCSTATE.FILE_NAME.K,R6
+	BGEQ	FCSTATE.FILE_NAME.$3
+	CLRL	R6
+FCSTATE.FILE_NAME.$3:
+	MOVL	FCSTATE.FILE_NAME.TEXT(AP),R0
+	MOVL	FCSTATE.FILE_NAME.K,R1
+	MATCHC	#1,FCSTATE.FILE_NAME.$K3,R6,@4(R0)[R1]
+	BNEQ	FCSTATE.FILE_NAME.$5
+	SUBL3	R2,R6,R0
+	BRB	FCSTATE.FILE_NAME.$6
+FCSTATE.FILE_NAME.$5:
+	CLRL	R0
+FCSTATE.FILE_NAME.$6:
+	MOVL	R0,FCSTATE.FILE_NAME.$T2
+	BNEQ	FCSTATE.FILE_NAME.$7
+	MOVZWL	@FCSTATE.FILE_NAME.TEXT(AP),R6
+	ADDL3	R6,#6,R0
+	CVTLW	R0,FCSTATE.FILE_NAME.$T3
+	PUSHAQ	FCSTATE.FILE_NAME.$D2
+	PUSHAW	FCSTATE.FILE_NAME.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVL	FCSTATE.FILE_NAME.TEXT(AP),R0
+	MOVC3	R6,@4(R0),@FCSTATE.FILE_NAME.$D2+4
+	MOVC3	#6,FCSTATE.FILE_NAME.$K4,@FCSTATE.FILE_NAME.$D2+4[R6]
+	ADDL3	R6,#6,R0
+	MOVZWL	FCSTATE.FILE_NAME.NAME,R1
+	MOVC5	R0,@FCSTATE.FILE_NAME.$D2+4,#^A/ /,R1,@FCSTATE.FILE_NAME.NAME+4
+	PUSHAQ	FCSTATE.FILE_NAME.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+FCSTATE.FILE_NAME.$7:
+;  139    end function file_name
+	RET
+
+; Storage map for FCSTATE.OPEN_INPUT, a LOGICAL function
+;   NAME        CHARACTER*(*), INTENT(IN)  argument 1  @FCSTATE.OPEN_INPUT.NAME(AP)
+;   DEPTH       INTEGER, INTENT(IN)        argument 2  @FCSTATE.OPEN_INPUT.DEPTH(AP)
+;   COLUMN      INTEGER, INTENT(IN)        argument 3  @FCSTATE.OPEN_INPUT.COLUMN(AP)
+;   OPEN_INPUT  LOGICAL                    $LOCAL+0    FCSTATE.OPEN_INPUT.OPEN_INPUT
+;   THERE       LOGICAL                    $LOCAL+4    FCSTATE.OPEN_INPUT.THERE
+;   RUNNING     LOGICAL                    $LOCAL+8    FCSTATE.OPEN_INPUT.RUNNING
+;   IOS         INTEGER                    $LOCAL+12   FCSTATE.OPEN_INPUT.IOS
+;   R6 is $T1: temporary
+;
+FCSTATE.OPEN_INPUT.NAME = 4		; NAME is argument 1
+FCSTATE.OPEN_INPUT.DEPTH = 8		; DEPTH is argument 2
+FCSTATE.OPEN_INPUT.COLUMN = 12		; COLUMN is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.OPEN_INPUT.OPEN_INPUT:
+	.BLKL	1			; OPEN_INPUT, the function's value
+FCSTATE.OPEN_INPUT.THERE:
+	.BLKL	1			; THERE
+FCSTATE.OPEN_INPUT.RUNNING:
+	.BLKL	1			; RUNNING
+FCSTATE.OPEN_INPUT.IOS:
+	.BLKL	1			; IOS
+FCSTATE.OPEN_INPUT.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.OPEN_INPUT.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0004			; flags: IOSTAT=
+	.LONG	0			; (not used yet)
+FCSTATE.OPEN_INPUT.$K1:
+	.LONG	46
+FCSTATE.OPEN_INPUT.$K2:
+	.LONG	49
+FCSTATE.OPEN_INPUT.$K3:
+	.LONG	47
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  140
+;  141    ! OPEN_INPUT opens the file NAME to read, at DEPTH (1 for the first): false
+;  142    ! after an error at COLUMN, NOFILE if there is no such file, FILELOOP if
+;  143    ! it is one already running (which would run itself forever: fcalc has no
+;  144    ! way to stop it). INQUIRE asks about a file without opening it: EXIST=
+;  145    ! says whether it is there, and OPENED= whether a unit is connected to it,
+;  146    ! which the system answers however the name is written (on VMS, x and
+;  147    ! X.FCALC;1 are one file). STATUS='OLD' opens one that must be there, and
+;  148    ! ACTION='READ' only to read it.
+;  149    logical function open_input(name, depth, column)
+	.ENTRY	FCSTATE.OPEN_INPUT,^M<R6>
+;  150      character(len=*), intent(in) :: name
+;  151      integer, intent(in) :: depth, column
+;  152      logical :: there, running
+;  153      integer :: ios
+;  154
+;  155      open_input = .false.
+;  156      inquire (file=name, exist=there, opened=running, iostat=ios)
+	MOVW	@FCSTATE.OPEN_INPUT.NAME(AP),FCSTATE.OPEN_INPUT.$D1
+	MOVL	FCSTATE.OPEN_INPUT.NAME(AP),R0
+	MOVAB	@4(R0),FCSTATE.OPEN_INPUT.$D1+4
+	PUSHAL	FCSTATE.OPEN_INPUT.RUNNING
+	PUSHL	#1311
+	PUSHAL	FCSTATE.OPEN_INPUT.THERE
+	PUSHL	#1310
+	PUSHAQ	FCSTATE.OPEN_INPUT.$D1
+	PUSHL	#1806
+	PUSHAB	FCSTATE.OPEN_INPUT.$IO1
+	CALLS	#7,G^FTN$INQUIRE
+	MOVL	R0,R6
+	MOVL	R6,FCSTATE.OPEN_INPUT.IOS
+;  157      if (ios /= 0 .or. .not. there) then
+	BNEQ	FCSTATE.OPEN_INPUT.$2
+	BLBS	FCSTATE.OPEN_INPUT.THERE,FCSTATE.OPEN_INPUT.$1
+FCSTATE.OPEN_INPUT.$2:
+;  158        call fail(e_nofile, column, name)
+	PUSHL	FCSTATE.OPEN_INPUT.NAME(AP)
+	PUSHAL	@FCSTATE.OPEN_INPUT.COLUMN(AP)
+	PUSHAL	FCSTATE.OPEN_INPUT.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  159        return
+	CLRL	R0			; the function's value
+	RET
+FCSTATE.OPEN_INPUT.$1:
+;  160      end if
+;  161      if (running) then
+	BLBC	FCSTATE.OPEN_INPUT.RUNNING,FCSTATE.OPEN_INPUT.$5
+;  162        call fail(e_fileloop, column, name)
+	PUSHL	FCSTATE.OPEN_INPUT.NAME(AP)
+	PUSHAL	@FCSTATE.OPEN_INPUT.COLUMN(AP)
+	PUSHAL	FCSTATE.OPEN_INPUT.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  163        return
+	CLRL	R0			; the function's value
+	RET
+FCSTATE.OPEN_INPUT.$5:
+;  164      end if
+;  165      open (unit=input_unit + depth, file=name, status='OLD', action='READ', iostat=ios)
+	MOVW	@FCSTATE.OPEN_INPUT.NAME(AP),FCSTATE.OPEN_INPUT.$D1
+	MOVL	FCSTATE.OPEN_INPUT.NAME(AP),R0
+	MOVAB	@4(R0),FCSTATE.OPEN_INPUT.$D1+4
+	PUSHL	#2
+	PUSHL	#1048
+	PUSHL	#1
+	PUSHL	#1074
+	PUSHL	#1
+	PUSHL	#1039
+	PUSHAQ	FCSTATE.OPEN_INPUT.$D1
+	PUSHL	#1806
+	ADDL3	@FCSTATE.OPEN_INPUT.DEPTH(AP),#20,R0
+	PUSHL	R0
+	PUSHAB	FCSTATE.OPEN_INPUT.$IO1
+	CALLS	#10,G^FTN$OPEN
+	MOVL	R0,R6
+	MOVL	R6,FCSTATE.OPEN_INPUT.IOS
+;  166      if (ios /= 0) then
+	BEQL	FCSTATE.OPEN_INPUT.$7
+;  167        call fail(e_fileerr, column, name)
+	PUSHL	FCSTATE.OPEN_INPUT.NAME(AP)
+	PUSHAL	@FCSTATE.OPEN_INPUT.COLUMN(AP)
+	PUSHAL	FCSTATE.OPEN_INPUT.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  168        return
+	CLRL	R0			; the function's value
+	RET
+FCSTATE.OPEN_INPUT.$7:
+;  169      end if
+;  170      open_input = .true.
+;  171    end function open_input
+	MOVL	#-1,R0			; the function's value
+	RET
+
+; Storage map for FCSTATE.CLOSE_INPUT, a subroutine
+;   DEPTH  INTEGER, INTENT(IN)  argument 1  @FCSTATE.CLOSE_INPUT.DEPTH(AP)
+;
+FCSTATE.CLOSE_INPUT.DEPTH = 4		; DEPTH is argument 1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.CLOSE_INPUT.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  172
+;  173    ! CLOSE_INPUT closes the file of commands at DEPTH.
+;  174    subroutine close_input(depth)
+	.ENTRY	FCSTATE.CLOSE_INPUT,^M<>
+;  175      integer, intent(in) :: depth
+;  176
+;  177      close (input_unit + depth)
+	ADDL3	@FCSTATE.CLOSE_INPUT.DEPTH(AP),#20,R0
+	PUSHL	R0
+	PUSHAB	FCSTATE.CLOSE_INPUT.$IO1
+	CALLS	#2,G^FTN$CLOSE
+;  178    end subroutine close_input
+	RET
+
+; Storage map for FCSTATE.READ_LINE, a subroutine
+;   TEXT    CHARACTER*(*), INTENT(OUT)     argument 1   @FCSTATE.READ_LINE.TEXT(AP)
+;   LENGTH  INTEGER, INTENT(OUT)           argument 2   @FCSTATE.READ_LINE.LENGTH(AP)
+;   STATUS  INTEGER, INTENT(OUT)           argument 3   @FCSTATE.READ_LINE.STATUS(AP)
+;   DEPTH   INTEGER, INTENT(IN), OPTIONAL  an argument  @FCSTATE.READ_LINE.$A4
+;   REST    CHARACTER*80                   $LOCAL+0     FCSTATE.READ_LINE.REST
+;   IOS     INTEGER                        $LOCAL+80    FCSTATE.READ_LINE.IOS
+;   R6 is $R1: IOS, during a loop
+;   R7 is $R2: DEPTH's address
+;
+FCSTATE.READ_LINE.TEXT = 4		; TEXT is argument 1
+FCSTATE.READ_LINE.LENGTH = 8		; LENGTH is argument 2
+FCSTATE.READ_LINE.STATUS = 12		; STATUS is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.READ_LINE.REST:
+	.BLKL	20			; REST
+FCSTATE.READ_LINE.IOS:
+	.BLKL	1			; IOS
+FCSTATE.READ_LINE.$A4:
+	.BLKL	1			; DEPTH's longword of the argument list, set at each entry point
+FCSTATE.READ_LINE.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.READ_LINE.$T1:
+	.BLKL	1			; temporary
+FCSTATE.READ_LINE.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.READ_LINE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X007E			; flags: END= IOSTAT= run-time format F90 nonadvancing EOR=
+	.LONG	0			; (not used yet)
+FCSTATE.READ_LINE.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.READ_LINE.$K1
+FCSTATE.READ_LINE.$D3:
+	.WORD	80			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.READ_LINE.REST
+FCSTATE.READ_LINE.$K1:
+	.ASCII	/(A)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  179
+;  180    ! READ_LINE reads the next line into TEXT(:LENGTH), from the terminal, or
+;  181    ! from the file of commands at DEPTH if it is given: STATUS is 0, or 1 for
+;  182    ! a line too long (whose rest is passed over), or -1 at the end of the
+;  183    ! input. TEXT's last character is room to tell a line too long from one
+;  184    ! that just fits.
+;  185    !
+;  186    ! A nonadvancing READ (ADVANCE='NO') reads part of a record and leaves
+;  187    ! the rest for the next READ. SIZE= gives how many characters it read,
+;  188    ! so a line's length is known without counting trailing blanks; EOR=
+;  189    ! names a statement label to go to when the record (the line) ends before
+;  190    ! the variable is full, which is the usual case, and END= one for the end
+;  191    ! of the input. These labels, 10, 20, and 30, are the old-fashioned GO TO
+;  192    ! targets Fortran's I/O statements still use. A line too long for the
+;  193    ! system to read (on VMS, a terminal's line past 199 characters) is an
+;  194    ! error the READ's IOSTAT= catches, after which the next READ reads the
+;  195    ! next line.
+;  196    !
+;  197    ! The terminal is unit *, which isn't a number, so each READ is written
+;  198    ! twice, once for each.
+;  199    subroutine read_line(text, length, status, depth)
+	.ENTRY	FCSTATE.READ_LINE,^M<R6,R7>
+	CLRL	FCSTATE.READ_LINE.$A4	; DEPTH is argument 4, if the caller passed it
+	CMPB	(AP),#4
+	BLSSU	FCSTATE.READ_LINE.$26
+	MOVL	16(AP),FCSTATE.READ_LINE.$A4
+FCSTATE.READ_LINE.$26:
+;  200      character(len=*), intent(out) :: text
+;  201      integer, intent(out) :: length, status
+;  202      integer, intent(in), optional :: depth
+;  203      character(len=80) :: rest
+;  204      integer :: ios
+;  205
+;  206      status = 0
+	CLRL	@FCSTATE.READ_LINE.STATUS(AP)
+;  207      length = 0
+	CLRL	@FCSTATE.READ_LINE.LENGTH(AP)
+;  208      if (present(depth)) then
+	TSTL	FCSTATE.READ_LINE.$A4
+	BNEQ	FCSTATE.READ_LINE.$2
+	BRW	FCSTATE.READ_LINE.$1
+FCSTATE.READ_LINE.$2:
+;  209        read (input_unit + depth, '(A)', advance='NO', size=length, eor=10, end=30, &
+;  210          iostat=ios) text
+	PUSHAQ	FCSTATE.READ_LINE.$D1
+	ADDL3	@FCSTATE.READ_LINE.$A4,#20,R0
+	PUSHL	R0
+	PUSHAB	FCSTATE.READ_LINE.$IO1
+	CALLS	#3,G^FTN$READ_SF
+	MOVW	@FCSTATE.READ_LINE.TEXT(AP),FCSTATE.READ_LINE.$D2
+	MOVL	FCSTATE.READ_LINE.TEXT(AP),R0
+	MOVAB	@4(R0),FCSTATE.READ_LINE.$D2+4
+	PUSHAQ	FCSTATE.READ_LINE.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAL	FCSTATE.READ_LINE.$T1
+	CALLS	#1,G^FTN$IO_END
+	MOVL	R0,FCSTATE.READ_LINE.$T2
+	MOVL	FCSTATE.READ_LINE.$T1,@FCSTATE.READ_LINE.LENGTH(AP)
+	MOVL	FCSTATE.READ_LINE.$T2,FCSTATE.READ_LINE.IOS
+	CMPL	FCSTATE.READ_LINE.$T2,#-2
+	BNEQ	FCSTATE.READ_LINE.$3
+	BRW	FCSTATE.READ_LINE.L10
+FCSTATE.READ_LINE.$3:
+	TSTL	FCSTATE.READ_LINE.$T2
+	BGEQ	FCSTATE.READ_LINE.$4
+	BRW	FCSTATE.READ_LINE.L30
+FCSTATE.READ_LINE.$4:
+;  211      else
+	BRB	FCSTATE.READ_LINE.$5
+FCSTATE.READ_LINE.$1:
+;  212        read (*, '(A)', advance='NO', size=length, eor=10, end=30, iostat=ios) text
+	PUSHAQ	FCSTATE.READ_LINE.$D1
+	PUSHL	#-4
+	PUSHAB	FCSTATE.READ_LINE.$IO1
+	CALLS	#3,G^FTN$READ_SF
+	MOVW	@FCSTATE.READ_LINE.TEXT(AP),FCSTATE.READ_LINE.$D2
+	MOVL	FCSTATE.READ_LINE.TEXT(AP),R0
+	MOVAB	@4(R0),FCSTATE.READ_LINE.$D2+4
+	PUSHAQ	FCSTATE.READ_LINE.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAL	FCSTATE.READ_LINE.$T2
+	CALLS	#1,G^FTN$IO_END
+	MOVL	R0,FCSTATE.READ_LINE.$T1
+	MOVL	FCSTATE.READ_LINE.$T2,@FCSTATE.READ_LINE.LENGTH(AP)
+	MOVL	FCSTATE.READ_LINE.$T1,FCSTATE.READ_LINE.IOS
+	CMPL	FCSTATE.READ_LINE.$T1,#-2
+	BNEQ	FCSTATE.READ_LINE.$6
+	BRW	FCSTATE.READ_LINE.L10
+FCSTATE.READ_LINE.$6:
+	TSTL	FCSTATE.READ_LINE.$T1
+	BGEQ	FCSTATE.READ_LINE.$7
+	BRW	FCSTATE.READ_LINE.L30
+FCSTATE.READ_LINE.$7:
+;  213      end if
+FCSTATE.READ_LINE.$5:
+;  214      status = 1
+	MOVL	#1,@FCSTATE.READ_LINE.STATUS(AP)
+;  215      if (ios /= 0) return
+	TSTL	FCSTATE.READ_LINE.IOS
+	BEQL	FCSTATE.READ_LINE.$8
+	RET
+FCSTATE.READ_LINE.$8:
+;  216
+;  217      ! The line filled TEXT without ending: pass over the rest, a piece at a
+;  218      ! time. Each piece is read into REST only to be dropped (so /WARNINGS
+;  219      ! reports REST as UNREAD): a nonadvancing READ with no item reads nothing,
+;  220      ! so it would never reach the end of the record.
+;  221      do
+	MOVL	FCSTATE.READ_LINE.IOS,R6
+	MOVL	FCSTATE.READ_LINE.$A4,R7
+FCSTATE.READ_LINE.$10:			; DO (line 221)'s body
+;  222        if (present(depth)) then
+	TSTL	FCSTATE.READ_LINE.$A4
+	BEQL	FCSTATE.READ_LINE.$11
+;  223          read (input_unit + depth, '(A)', advance='NO', eor=20, end=20, iostat=ios) rest
+	PUSHAQ	FCSTATE.READ_LINE.$D1
+	ADDL3	(R7),#20,R0
+	PUSHL	R0
+	PUSHAB	FCSTATE.READ_LINE.$IO1
+	CALLS	#3,G^FTN$READ_SF
+	PUSHAQ	FCSTATE.READ_LINE.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	MOVL	R0,FCSTATE.READ_LINE.$T1
+	MOVL	FCSTATE.READ_LINE.$T1,R6
+	CMPL	FCSTATE.READ_LINE.$T1,#-2
+	BNEQ	FCSTATE.READ_LINE.$14
+	BRW	FCSTATE.READ_LINE.$13
+FCSTATE.READ_LINE.$14:
+	TSTL	FCSTATE.READ_LINE.$T1
+	BGEQ	FCSTATE.READ_LINE.$17
+	BRW	FCSTATE.READ_LINE.$15
+;  224        else
+FCSTATE.READ_LINE.$11:
+;  225          read (*, '(A)', advance='NO', eor=20, end=20, iostat=ios) rest
+	PUSHAQ	FCSTATE.READ_LINE.$D1
+	PUSHL	#-4
+	PUSHAB	FCSTATE.READ_LINE.$IO1
+	CALLS	#3,G^FTN$READ_SF
+	PUSHAQ	FCSTATE.READ_LINE.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	MOVL	R0,FCSTATE.READ_LINE.$T1
+	MOVL	FCSTATE.READ_LINE.$T1,R6
+	CMPL	FCSTATE.READ_LINE.$T1,#-2
+	BEQL	FCSTATE.READ_LINE.$18
+	TSTL	FCSTATE.READ_LINE.$T1
+	BLSS	FCSTATE.READ_LINE.$20
+;  226        end if
+FCSTATE.READ_LINE.$17:
+;  227        if (ios /= 0) return
+	TSTL	R6
+	BEQL	FCSTATE.READ_LINE.$22
+	MOVL	R6,FCSTATE.READ_LINE.IOS
+	RET
+FCSTATE.READ_LINE.$22:
+;  228      end do
+	BRW	FCSTATE.READ_LINE.$10
+;  229  10  if (length > len(text) - 1) status = 1
+FCSTATE.READ_LINE.L10:
+	MOVZWL	@FCSTATE.READ_LINE.TEXT(AP),R0
+	DECL	R0
+	CMPL	@FCSTATE.READ_LINE.LENGTH(AP),R0
+	BLEQ	FCSTATE.READ_LINE.$24
+	MOVL	#1,@FCSTATE.READ_LINE.STATUS(AP)
+FCSTATE.READ_LINE.$24:
+;  230  20  return
+FCSTATE.READ_LINE.L20:
+	RET
+;  231  30  status = -1
+FCSTATE.READ_LINE.L30:
+	MOVL	#-1,@FCSTATE.READ_LINE.STATUS(AP)
+;  232    end subroutine read_line
+	RET
+FCSTATE.READ_LINE.$18:			; leaving the loop
+	MOVL	R6,FCSTATE.READ_LINE.IOS
+	RET
+FCSTATE.READ_LINE.$20:			; leaving the loop
+	MOVL	R6,FCSTATE.READ_LINE.IOS
+	RET
+FCSTATE.READ_LINE.$13:			; leaving the loop
+	MOVL	R6,FCSTATE.READ_LINE.IOS
+	RET
+FCSTATE.READ_LINE.$15:			; leaving the loop
+	MOVL	R6,FCSTATE.READ_LINE.IOS
+	RET
+
+; Storage map for FCSTATE.NOW, a CHARACTER*19 function
+;   TEXT  CHARACTER*19  hidden argument 1  @FCSTATE.NOW.TEXT(AP)
+;   DATE  CHARACTER*8   $LOCAL+0           FCSTATE.NOW.DATE
+;   TIME  CHARACTER*10  $LOCAL+8           FCSTATE.NOW.TIME
+;
+FCSTATE.NOW.TEXT = 4			; TEXT's value goes through hidden argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.NOW.DATE:
+	.BLKL	2			; DATE
+FCSTATE.NOW.TIME:
+	.BLKB	10			; TIME
+	.BLKB	2
+FCSTATE.NOW.$T1:
+	.BLKB	19			; characters, for one statement
+	.BLKB	1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.NOW.$D1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.NOW.DATE
+FCSTATE.NOW.$D2:
+	.WORD	10			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.NOW.TIME
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  233
+;  234    ! NOW is the date and time, 2026-11-21 10:42:17, from the intrinsic
+;  235    ! subroutine DATE_AND_TIME, whose DATE is CCYYMMDD and TIME hhmmss.sss.
+;  236    function now() result(text)
+	.ENTRY	FCSTATE.NOW,^M<R2,R3,R4,R5>
+;  237      character(len=19) :: text
+;  238      character(len=8) :: date
+;  239      character(len=10) :: time
+;  240
+;  241      call date_and_time(date, time)
+	PUSHL	#0
+	PUSHL	#0
+	PUSHAQ	FCSTATE.NOW.$D2
+	PUSHAQ	FCSTATE.NOW.$D1
+	CALLS	#4,G^FTN$DATE_AND_TIME
+;  242      text = date(1:4) // '-' // date(5:6) // '-' // date(7:8) // ' ' // &
+;  243        time(1:2) // ':' // time(3:4) // ':' // time(5:6)
+	MOVC3	#4,FCSTATE.NOW.DATE,FCSTATE.NOW.$T1
+	MOVB	#45,FCSTATE.NOW.$T1+4
+	MOVC3	#2,FCSTATE.NOW.DATE+4,FCSTATE.NOW.$T1+5
+	MOVB	#45,FCSTATE.NOW.$T1+7
+	MOVC3	#2,FCSTATE.NOW.DATE+6,FCSTATE.NOW.$T1+8
+	MOVB	#32,FCSTATE.NOW.$T1+10
+	MOVC3	#2,FCSTATE.NOW.TIME,FCSTATE.NOW.$T1+11
+	MOVB	#58,FCSTATE.NOW.$T1+13
+	MOVC3	#2,FCSTATE.NOW.TIME+2,FCSTATE.NOW.$T1+14
+	MOVB	#58,FCSTATE.NOW.$T1+16
+	MOVC3	#2,FCSTATE.NOW.TIME+4,FCSTATE.NOW.$T1+17
+	MOVL	FCSTATE.NOW.TEXT(AP),R0
+	MOVC3	#19,FCSTATE.NOW.$T1,@4(R0)
+;  244    end function now
+	RET
+
+; Storage map for FCSTATE.SAVE_STATE, a subroutine
+;   NAME    CHARACTER*(*), INTENT(IN)  argument 1  @FCSTATE.SAVE_STATE.NAME(AP)
+;   COLUMN  INTEGER, INTENT(IN)        argument 2  @FCSTATE.SAVE_STATE.COLUMN(AP)
+;   K       INTEGER                    $LOCAL+0    FCSTATE.SAVE_STATE.K
+;   IOS     INTEGER                    $LOCAL+4    FCSTATE.SAVE_STATE.IOS
+;   R8 is $T1: temporary
+;   R7 is $T4: temporary
+;   R6 is $T5: temporary
+;   R9 is $R1: an index stepped with K
+;
+FCSTATE.SAVE_STATE.NAME = 4		; NAME is argument 1
+FCSTATE.SAVE_STATE.COLUMN = 8		; COLUMN is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.SAVE_STATE.K:
+	.BLKL	1			; K
+FCSTATE.SAVE_STATE.IOS:
+	.BLKL	1			; IOS
+FCSTATE.SAVE_STATE.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.SAVE_STATE.$T2:
+	.BLKB	19			; characters, for one statement
+	.BLKB	1
+FCSTATE.SAVE_STATE.$T3:
+	.BLKL	10			; characters, for one statement
+FCSTATE.SAVE_STATE.$D6:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.SAVE_STATE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0004			; flags: IOSTAT=
+	.LONG	0			; (not used yet)
+FCSTATE.SAVE_STATE.$K1:
+	.LONG	47
+FCSTATE.SAVE_STATE.$IO2:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.SAVE_STATE.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_STATE.$K2
+FCSTATE.SAVE_STATE.$D3:
+	.WORD	21			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_STATE.$K3
+FCSTATE.SAVE_STATE.$D4:
+	.WORD	19			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_STATE.$T2
+FCSTATE.SAVE_STATE.$D5:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_STATE.$K4
+FCSTATE.SAVE_STATE.$K6:
+	.LONG	0
+FCSTATE.SAVE_STATE.$D7:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_STATE.$T3
+FCSTATE.SAVE_STATE.$IO3:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+FCSTATE.SAVE_STATE.$K2:
+	.ASCII	/(2A)/
+FCSTATE.SAVE_STATE.$K3:
+	.ASCII	/! fcalc state, saved /
+FCSTATE.SAVE_STATE.$K4:
+	.ASCII	/(A)/
+FCSTATE.SAVE_STATE.$K5:
+	.ASCII	/digits  format  angle   base    seed    echo    /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  245
+;  246    ! ------------------------------------------------------------------
+;  247    ! SAVE.
+;  248
+;  249    ! SAVE_STATE writes the state to the file NAME, replacing it: false after
+;  250    ! an error at COLUMN. STATUS='REPLACE' makes a new file whether or not
+;  251    ! there was one (on VMS, a new version of it), and ACTION='WRITE' opens it
+;  252    ! only to write. Echo isn't saved: it is how a session is shown, not part
+;  253    ! of what it computes.
+;  254    subroutine save_state(name, column)
+	.ENTRY	FCSTATE.SAVE_STATE,^M<R6,R7,R8,R9>
+;  255      character(len=*), intent(in) :: name
+;  256      integer, intent(in) :: column
+;  257      integer :: k, ios
+;  258
+;  259      open (unit=save_file, file=name, status='REPLACE', action='WRITE', iostat=ios)
+	MOVW	@FCSTATE.SAVE_STATE.NAME(AP),FCSTATE.SAVE_STATE.$D1
+	MOVL	FCSTATE.SAVE_STATE.NAME(AP),R0
+	MOVAB	@4(R0),FCSTATE.SAVE_STATE.$D1+4
+	PUSHL	#2
+	PUSHL	#1048
+	PUSHL	#2
+	PUSHL	#1074
+	PUSHL	#5
+	PUSHL	#1039
+	PUSHAQ	FCSTATE.SAVE_STATE.$D1
+	PUSHL	#1806
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_STATE.$IO1
+	CALLS	#10,G^FTN$OPEN
+	MOVL	R0,R8
+	MOVL	R8,FCSTATE.SAVE_STATE.IOS
+;  260      if (ios /= 0) then
+	BEQL	FCSTATE.SAVE_STATE.$1
+;  261        call fail(e_fileerr, column, name)
+	PUSHL	FCSTATE.SAVE_STATE.NAME(AP)
+	PUSHAL	@FCSTATE.SAVE_STATE.COLUMN(AP)
+	PUSHAL	FCSTATE.SAVE_STATE.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  262        return
+	RET
+FCSTATE.SAVE_STATE.$1:
+;  263      end if
+;  264
+;  265      write (save_file, '(2A)') '! fcalc state, saved ', now()
+	PUSHAQ	FCSTATE.SAVE_STATE.$D2
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_STATE.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	FCSTATE.SAVE_STATE.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCSTATE.SAVE_STATE.$D4
+	CALLS	#1,G^FCSTATE.NOW
+	PUSHAQ	FCSTATE.SAVE_STATE.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  266      do k = 1, size(setting_names) - 1
+	MOVL	#1,FCSTATE.SAVE_STATE.K
+	MULL3	FCSTATE.SAVE_STATE.K,#8,R9
+FCSTATE.SAVE_STATE.$3:			; DO (line 266)'s body
+;  267        write (save_file, '(A)') trim(setting_line(setting_names(k), .false.))
+	PUSHAQ	FCSTATE.SAVE_STATE.$D5
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_STATE.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVAB	FCSTATE.SAVE_STATE.$K5-8[R9],FCSTATE.SAVE_STATE.$D6+4
+	PUSHAL	FCSTATE.SAVE_STATE.$K6
+	PUSHAQ	FCSTATE.SAVE_STATE.$D6
+	PUSHAQ	FCSTATE.SAVE_STATE.$D7
+	CALLS	#3,G^FCSTATE.SETTING_LINE
+	MOVAB	FCSTATE.SAVE_STATE.$T3,R8
+	MOVAB	(R8),R7
+	MOVL	#40,R6
+	BRB	FCSTATE.SAVE_STATE.$4
+FCSTATE.SAVE_STATE.$5:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCSTATE.SAVE_STATE.$6
+	DECL	R6
+FCSTATE.SAVE_STATE.$4:
+	TSTL	R6			; from line 267
+	BNEQ	FCSTATE.SAVE_STATE.$5
+FCSTATE.SAVE_STATE.$6:
+	CVTLW	R6,FCSTATE.SAVE_STATE.$D1
+	MOVAB	(R8),FCSTATE.SAVE_STATE.$D1+4
+	PUSHAQ	FCSTATE.SAVE_STATE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  268      end do
+	ADDL2	#8,R9
+	ACBL	#5,#1,FCSTATE.SAVE_STATE.K,FCSTATE.SAVE_STATE.$3
+;  269
+;  270      ! SAVE_VARIABLE and SAVE_FUNCTION are passed as arguments: FCSYMBOLS
+;  271      ! calls them for each name in its trees.
+;  272      call each_variable(save_variable)
+	PUSHAB	G^FCSTATE.SAVE_VARIABLE
+	CALLS	#1,G^FCSYMBOLS.EACH_VARIABLE
+;  273      call each_function(save_function)
+	PUSHAB	G^FCSTATE.SAVE_FUNCTION
+	CALLS	#1,G^FCSYMBOLS.EACH_FUNCTION
+;  274      close (save_file)
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_STATE.$IO3
+	CALLS	#2,G^FTN$CLOSE
+;  275    end subroutine save_state
+	RET
+
+; Storage map for FCSTATE.SAVE_FUNCTION, a subroutine
+;   HEAD  CHARACTER*(*), INTENT(IN)  argument 1  @FCSTATE.SAVE_FUNCTION.HEAD(AP)
+;   TEXT  CHARACTER*(*), INTENT(IN)  argument 2  @FCSTATE.SAVE_FUNCTION.TEXT(AP)
+;   R7 is $U1: temporary
+;   R6 is $U2: temporary
+;   R8 is $U3: temporary
+;
+FCSTATE.SAVE_FUNCTION.HEAD = 4		; HEAD is argument 1
+FCSTATE.SAVE_FUNCTION.TEXT = 8		; TEXT is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.SAVE_FUNCTION.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.SAVE_FUNCTION.$T1:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCSTATE.SAVE_FUNCTION.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.SAVE_FUNCTION.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.SAVE_FUNCTION.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_FUNCTION.$K1
+FCSTATE.SAVE_FUNCTION.$K1:
+	.ASCII	/(A)/
+FCSTATE.SAVE_FUNCTION.$K2:
+	.ASCII	/ = /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  276
+;  277    ! SAVE_FUNCTION writes a function's definition, f(x) = x^2;
+;  278    subroutine save_function(head, text)
+	.ENTRY	FCSTATE.SAVE_FUNCTION,^M<R2,R3,R4,R5,R6,R7,R8>
+;  279      character(len=*), intent(in) :: head, text
+;  280
+;  281      write (save_file, '(A)') head // ' = ' // text // ';'
+	PUSHAQ	FCSTATE.SAVE_FUNCTION.$D1
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_FUNCTION.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVZWL	@FCSTATE.SAVE_FUNCTION.HEAD(AP),R6
+	MOVZWL	@FCSTATE.SAVE_FUNCTION.TEXT(AP),R8
+	ADDL3	R6,R8,R7
+	ADDL3	R7,#4,R0
+	CVTLW	R0,FCSTATE.SAVE_FUNCTION.$T1
+	PUSHAQ	FCSTATE.SAVE_FUNCTION.$D2
+	PUSHAW	FCSTATE.SAVE_FUNCTION.$T1
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVL	FCSTATE.SAVE_FUNCTION.HEAD(AP),R0
+	MOVC3	R6,@4(R0),@FCSTATE.SAVE_FUNCTION.$D2+4
+	MOVC3	#3,FCSTATE.SAVE_FUNCTION.$K2,@FCSTATE.SAVE_FUNCTION.$D2+4[R6]
+	MOVL	FCSTATE.SAVE_FUNCTION.TEXT(AP),R0
+	ADDL3	R6,#3,R1
+	MOVC3	R8,@4(R0),@FCSTATE.SAVE_FUNCTION.$D2+4[R1]
+	ADDL3	R7,#3,R0
+	MOVB	#59,@FCSTATE.SAVE_FUNCTION.$D2+4[R0]
+	ADDL3	R7,#4,R0
+	CVTLW	R0,FCSTATE.SAVE_FUNCTION.$D3
+	MOVAB	@FCSTATE.SAVE_FUNCTION.$D2+4,FCSTATE.SAVE_FUNCTION.$D3+4
+	PUSHAQ	FCSTATE.SAVE_FUNCTION.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	PUSHAQ	FCSTATE.SAVE_FUNCTION.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  282    end subroutine save_function
+	RET
+
+; Storage map for FCSTATE.SAVE_VARIABLE, a subroutine
+;   NAME    CHARACTER*(*), INTENT(IN)   an argument  @FCSTATE.SAVE_VARIABLE.$A1
+;   Q       TYPE(QUANTITY), INTENT(IN)  an argument  @FCSTATE.SAVE_VARIABLE.$A2
+;   ITEMS   CHARACTER*100               $LOCAL+0     FCSTATE.SAVE_VARIABLE.ITEMS
+;   ITEM    CHARACTER*60                $LOCAL+100   FCSTATE.SAVE_VARIABLE.ITEM
+;   ROW     CHARACTER*12                $LOCAL+160   FCSTATE.SAVE_VARIABLE.ROW
+;   FIRST   CHARACTER*12                $LOCAL+172   FCSTATE.SAVE_VARIABLE.FIRST
+;   LAST    CHARACTER*12                $LOCAL+184   FCSTATE.SAVE_VARIABLE.LAST
+;   I       INTEGER                     $LOCAL+196   FCSTATE.SAVE_VARIABLE.I
+;   J       INTEGER                     $LOCAL+200   FCSTATE.SAVE_VARIABLE.J
+;   K       INTEGER                     $LOCAL+204   FCSTATE.SAVE_VARIABLE.K
+;   ROOM    INTEGER                     $LOCAL+208   FCSTATE.SAVE_VARIABLE.ROOM
+;   FILLED  INTEGER                     $LOCAL+212   FCSTATE.SAVE_VARIABLE.FILLED
+;   R6 is $T3: temporary
+;   R7 is $T4: temporary
+;   R8 is $R1: Q's address
+;   R9 is $R2: NAME's address
+;   FCSTATE.SAVE_VARIABLE.$N1 is FCSTATE.SAVE_VARIABLE.LITERAL_FITS
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.SAVE_VARIABLE.ITEMS:
+	.BLKL	25			; ITEMS
+FCSTATE.SAVE_VARIABLE.ITEM:
+	.BLKL	15			; ITEM
+FCSTATE.SAVE_VARIABLE.ROW:
+	.BLKL	3			; ROW
+FCSTATE.SAVE_VARIABLE.FIRST:
+	.BLKL	3			; FIRST
+FCSTATE.SAVE_VARIABLE.LAST:
+	.BLKL	3			; LAST
+FCSTATE.SAVE_VARIABLE.I:
+	.BLKL	1			; I
+FCSTATE.SAVE_VARIABLE.J:
+	.BLKL	1			; J
+FCSTATE.SAVE_VARIABLE.K:
+	.BLKL	1			; K
+FCSTATE.SAVE_VARIABLE.ROOM:
+	.BLKL	1			; ROOM
+FCSTATE.SAVE_VARIABLE.FILLED:
+	.BLKL	1			; FILLED
+FCSTATE.SAVE_VARIABLE.$A1:
+	.BLKL	1			; NAME's longword of the argument list, set at each entry point
+FCSTATE.SAVE_VARIABLE.$A2:
+	.BLKL	1			; Q's longword of the argument list, set at each entry point
+FCSTATE.SAVE_VARIABLE.$T1:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$T2:
+	.BLKL	15			; characters, for one statement
+FCSTATE.SAVE_VARIABLE.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.SAVE_VARIABLE.$T5:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCSTATE.SAVE_VARIABLE.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.SAVE_VARIABLE.$T6:
+	.BLKL	3			; characters, for one statement
+FCSTATE.SAVE_VARIABLE.$T7:
+	.BLKL	3			; characters, for one statement
+FCSTATE.SAVE_VARIABLE.$T8:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$T9:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$T10:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$C1:
+	.BLKL	1			; DO (line 307)'s count
+FCSTATE.SAVE_VARIABLE.$T11:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$T12:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$T13:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$T14:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$U1:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$U2:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$U3:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$U4:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$U5:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.SAVE_VARIABLE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.SAVE_VARIABLE.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_VARIABLE.$K1
+FCSTATE.SAVE_VARIABLE.$D2:
+	.WORD	60			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_VARIABLE.$T2
+FCSTATE.SAVE_VARIABLE.$D5:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_VARIABLE.$T6
+FCSTATE.SAVE_VARIABLE.$D6:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_VARIABLE.$T7
+FCSTATE.SAVE_VARIABLE.$K1:
+	.ASCII	/(A)/
+FCSTATE.SAVE_VARIABLE.$K2:
+	.ASCII	/ = /
+FCSTATE.SAVE_VARIABLE.$K4:
+	.ASCII	/ = zeros(/
+FCSTATE.SAVE_VARIABLE.$K5:
+	.ASCII	/, /
+FCSTATE.SAVE_VARIABLE.$K6:
+	.ASCII	/);/
+FCSTATE.SAVE_VARIABLE.$K7:
+	.ASCII	/ /
+FCSTATE.SAVE_VARIABLE.$K10:
+	.ASCII	/) = [/
+FCSTATE.SAVE_VARIABLE.$K11:
+	.ASCII	/];/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  283
+;  284    ! SAVE_VARIABLE writes NAME = value;. An array is a literal, [1, 2; 3, 4],
+;  285    ! if it fits on a line; a larger one is made by zeros(rows, cols) and
+;  286    ! given its elements a piece of a row at a time, m(2, 1:6) = [...], each
+;  287    ! line at most SAVE_WIDTH characters.
+;  288    subroutine save_variable(name, q)
+	.ENTRY	FCSTATE.SAVE_VARIABLE,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	4(AP),FCSTATE.SAVE_VARIABLE.$A1 ; NAME is argument 1
+	MOVL	8(AP),FCSTATE.SAVE_VARIABLE.$A2 ; Q is argument 2
+;  289      character(len=*), intent(in) :: name
+;  290      type(quantity), intent(in) :: q
+;  291      character(len=save_width) :: items
+;  292      character(len=60) :: item
+;  293      character(len=12) :: row, first, last
+;  294      integer :: i, j, k, room, filled
+;  295
+;  296      if (.not. is_array(q)) then
+	PUSHAB	@FCSTATE.SAVE_VARIABLE.$A2
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,FCSTATE.SAVE_VARIABLE.$T1
+	BLBC	FCSTATE.SAVE_VARIABLE.$T1,FCSTATE.SAVE_VARIABLE.$2
+	BRW	FCSTATE.SAVE_VARIABLE.$1
+FCSTATE.SAVE_VARIABLE.$2:
+;  297        write (save_file, '(A)') name // ' = ' // trim(complex_text(q%s%z)) // ';'
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D1
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_VARIABLE.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVL	FCSTATE.SAVE_VARIABLE.$A2,R0
+	PUSHAO	16(R0)
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D2
+	CALLS	#2,G^FCSTATE.COMPLEX_TEXT
+	MOVAB	FCSTATE.SAVE_VARIABLE.$T2,FCSTATE.SAVE_VARIABLE.$T1
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$T1,R6
+	MOVL	#60,R7
+	BRB	FCSTATE.SAVE_VARIABLE.$3
+FCSTATE.SAVE_VARIABLE.$4:
+	CMPB	-1(R6)[R7],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$5
+	DECL	R7
+FCSTATE.SAVE_VARIABLE.$3:
+	TSTL	R7			; from line 297
+	BNEQ	FCSTATE.SAVE_VARIABLE.$4
+FCSTATE.SAVE_VARIABLE.$5:
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,R0
+	ADDL2	R7,R0
+	ADDL2	#4,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,FCSTATE.SAVE_VARIABLE.$U1
+	MOVL	FCSTATE.SAVE_VARIABLE.$A1,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$U1,@4(R0),@FCSTATE.SAVE_VARIABLE.$D3+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$U1,R0
+	MOVC3	#3,FCSTATE.SAVE_VARIABLE.$K2,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,#3,R0
+	MOVC3	R7,@FCSTATE.SAVE_VARIABLE.$T1,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,R7,R0
+	ADDL2	#3,R0
+	MOVB	#59,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,R7,R0
+	ADDL2	#4,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$D4
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$D3+4,FCSTATE.SAVE_VARIABLE.$D4+4
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+;  298        return
+	RET
+FCSTATE.SAVE_VARIABLE.$1:
+;  299      end if
+;  300
+;  301      ! The whole literal, if it fits: ROOM is what's left for the elements
+;  302      ! after NAME = [ and ];.
+;  303      if (literal_fits()) return
+	CALLS	#0,FCSTATE.SAVE_VARIABLE.$N1
+	MOVL	R0,R7
+	BLBC	R7,FCSTATE.SAVE_VARIABLE.$8
+	RET
+FCSTATE.SAVE_VARIABLE.$8:
+;  304
+;  305      write (save_file, '(A)') name // ' = zeros(' // trim(whole_text(q%rows)) // ', ' // &
+;  306        trim(whole_text(q%cols)) // ');'
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D1
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_VARIABLE.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAL	@FCSTATE.SAVE_VARIABLE.$A2
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D5
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVAB	FCSTATE.SAVE_VARIABLE.$T6,R7
+	MOVAB	(R7),R6
+	MOVL	#12,FCSTATE.SAVE_VARIABLE.$T1
+	BRB	FCSTATE.SAVE_VARIABLE.$10
+FCSTATE.SAVE_VARIABLE.$11:
+	MOVL	FCSTATE.SAVE_VARIABLE.$T1,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$12
+	DECL	FCSTATE.SAVE_VARIABLE.$T1
+FCSTATE.SAVE_VARIABLE.$10:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T1 ; from line 305
+	BNEQ	FCSTATE.SAVE_VARIABLE.$11
+FCSTATE.SAVE_VARIABLE.$12:
+	MOVL	FCSTATE.SAVE_VARIABLE.$A2,R0
+	PUSHAL	4(R0)
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D6
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVAB	FCSTATE.SAVE_VARIABLE.$T7,FCSTATE.SAVE_VARIABLE.$T8
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$T8,FCSTATE.SAVE_VARIABLE.$T9
+	MOVL	#12,FCSTATE.SAVE_VARIABLE.$T10
+	BRB	FCSTATE.SAVE_VARIABLE.$15
+FCSTATE.SAVE_VARIABLE.$16:
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.$T10,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$T9[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$17
+	DECL	FCSTATE.SAVE_VARIABLE.$T10
+FCSTATE.SAVE_VARIABLE.$15:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T10 ; from line 305
+	BNEQ	FCSTATE.SAVE_VARIABLE.$16
+FCSTATE.SAVE_VARIABLE.$17:
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,R0
+	ADDL2	FCSTATE.SAVE_VARIABLE.$T1,R0
+	ADDL2	FCSTATE.SAVE_VARIABLE.$T10,R0
+	ADDL2	#13,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,FCSTATE.SAVE_VARIABLE.$U1
+	MOVL	FCSTATE.SAVE_VARIABLE.$A1,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$U1,@4(R0),@FCSTATE.SAVE_VARIABLE.$D3+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$U1,R0
+	MOVC3	#9,FCSTATE.SAVE_VARIABLE.$K4,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,#9,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$T1,(R7),@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,FCSTATE.SAVE_VARIABLE.$T1,FCSTATE.SAVE_VARIABLE.$U2
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,#9,R0
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$K5,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,#11,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$T10,@FCSTATE.SAVE_VARIABLE.$T8,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,FCSTATE.SAVE_VARIABLE.$T10,R0
+	ADDL2	#11,R0
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$K6,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,FCSTATE.SAVE_VARIABLE.$T10,R0
+	ADDL2	#13,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$D4
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$D3+4,FCSTATE.SAVE_VARIABLE.$D4+4
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+;  307      do i = 1, q%rows
+	MOVL	@FCSTATE.SAVE_VARIABLE.$A2,FCSTATE.SAVE_VARIABLE.$C1 ; DO (line 307)'s count
+	MOVL	#1,FCSTATE.SAVE_VARIABLE.I
+	TSTL	FCSTATE.SAVE_VARIABLE.$C1
+	BGTR	FCSTATE.SAVE_VARIABLE.$21
+	RET
+FCSTATE.SAVE_VARIABLE.$21:
+FCSTATE.SAVE_VARIABLE.$22:		; DO (line 307)'s body
+;  308        row = whole_text(i)
+	PUSHAL	FCSTATE.SAVE_VARIABLE.I
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D6
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVC3	#12,FCSTATE.SAVE_VARIABLE.$T7,FCSTATE.SAVE_VARIABLE.ROW
+;  309        j = 1
+	MOVL	#1,FCSTATE.SAVE_VARIABLE.J
+;  310        do while (j <= q%cols)
+	MOVL	FCSTATE.SAVE_VARIABLE.$A2,R8
+	MOVL	FCSTATE.SAVE_VARIABLE.$A1,R9
+	BRW	FCSTATE.SAVE_VARIABLE.$23
+FCSTATE.SAVE_VARIABLE.$24:		; DO (line 310)'s body
+;  311          ! The piece from column J: as many elements as fit after
+;  312          ! NAME(I, J:K) = [ and before ];, with K as wide as the columns' count.
+;  313          first = whole_text(j)
+	PUSHAL	FCSTATE.SAVE_VARIABLE.J
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D6
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVC3	#12,FCSTATE.SAVE_VARIABLE.$T7,FCSTATE.SAVE_VARIABLE.FIRST
+;  314          room = save_width - len(name) - len_trim(row) - len_trim(first) - &
+;  315            len_trim(whole_text(q%cols)) - 12
+	MOVAB	FCSTATE.SAVE_VARIABLE.ROW,FCSTATE.SAVE_VARIABLE.$T10
+	MOVL	#12,FCSTATE.SAVE_VARIABLE.$T9
+	BRB	FCSTATE.SAVE_VARIABLE.$25
+FCSTATE.SAVE_VARIABLE.$26:
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.$T9,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$T10[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$27
+	DECL	FCSTATE.SAVE_VARIABLE.$T9
+FCSTATE.SAVE_VARIABLE.$25:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T9 ; from line 314
+	BNEQ	FCSTATE.SAVE_VARIABLE.$26
+FCSTATE.SAVE_VARIABLE.$27:
+	MOVAB	FCSTATE.SAVE_VARIABLE.FIRST,FCSTATE.SAVE_VARIABLE.$T8
+	MOVL	#12,FCSTATE.SAVE_VARIABLE.$T1
+	BRB	FCSTATE.SAVE_VARIABLE.$30
+FCSTATE.SAVE_VARIABLE.$31:
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.$T1,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$T8[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$32
+	DECL	FCSTATE.SAVE_VARIABLE.$T1
+FCSTATE.SAVE_VARIABLE.$30:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T1 ; from line 314
+	BNEQ	FCSTATE.SAVE_VARIABLE.$31
+FCSTATE.SAVE_VARIABLE.$32:
+	PUSHAL	4(R8)
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D6
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVAB	FCSTATE.SAVE_VARIABLE.$T7,R6
+	MOVL	#12,R7
+	BRB	FCSTATE.SAVE_VARIABLE.$35
+FCSTATE.SAVE_VARIABLE.$36:
+	CMPB	-1(R6)[R7],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$37
+	DECL	R7
+FCSTATE.SAVE_VARIABLE.$35:
+	TSTL	R7			; from line 314
+	BNEQ	FCSTATE.SAVE_VARIABLE.$36
+FCSTATE.SAVE_VARIABLE.$37:
+	MOVZWL	(R9),R0
+	SUBL3	R0,#100,R0
+	SUBL2	FCSTATE.SAVE_VARIABLE.$T9,R0
+	SUBL2	FCSTATE.SAVE_VARIABLE.$T1,R0
+	SUBL2	R7,R0
+	SUBL3	#12,R0,FCSTATE.SAVE_VARIABLE.ROOM
+;  316          items = ' '
+	MOVC5	#1,FCSTATE.SAVE_VARIABLE.$K7,#^A/ /,#100,FCSTATE.SAVE_VARIABLE.ITEMS
+;  317          filled = 0
+	CLRL	FCSTATE.SAVE_VARIABLE.FILLED
+;  318          k = j
+	MOVL	FCSTATE.SAVE_VARIABLE.J,FCSTATE.SAVE_VARIABLE.K
+;  319          do while (k <= q%cols)
+	BRW	FCSTATE.SAVE_VARIABLE.$40
+FCSTATE.SAVE_VARIABLE.$41:		; DO (line 319)'s body
+;  320            item = complex_text(q%e(i, k))
+	MOVAL	48(R8),R7
+	MULL3	FCSTATE.SAVE_VARIABLE.I,20(R7),R0
+	ADDL2	16(R7),R0
+	MULL3	FCSTATE.SAVE_VARIABLE.K,24(R7),R1
+	ADDL2	R1,R0
+	PUSHAO	(R0)
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D2
+	CALLS	#2,G^FCSTATE.COMPLEX_TEXT
+	MOVC3	#60,FCSTATE.SAVE_VARIABLE.$T2,FCSTATE.SAVE_VARIABLE.ITEM
+;  321            if (k > j) item = ', ' // trim(item)
+	CMPL	FCSTATE.SAVE_VARIABLE.K,FCSTATE.SAVE_VARIABLE.J
+	BGTR	FCSTATE.SAVE_VARIABLE.$43
+	BRW	FCSTATE.SAVE_VARIABLE.$42
+FCSTATE.SAVE_VARIABLE.$43:
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,R7
+	MOVAB	(R7),R6
+	MOVL	#60,FCSTATE.SAVE_VARIABLE.$T1
+	BRB	FCSTATE.SAVE_VARIABLE.$44
+FCSTATE.SAVE_VARIABLE.$45:
+	MOVL	FCSTATE.SAVE_VARIABLE.$T1,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$46
+	DECL	FCSTATE.SAVE_VARIABLE.$T1
+FCSTATE.SAVE_VARIABLE.$44:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T1 ; from line 321
+	BNEQ	FCSTATE.SAVE_VARIABLE.$45
+FCSTATE.SAVE_VARIABLE.$46:
+	ADDL3	FCSTATE.SAVE_VARIABLE.$T1,#2,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$K5,@FCSTATE.SAVE_VARIABLE.$D3+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$D3+4,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$T1,(R7),2(R0)
+	ADDL3	FCSTATE.SAVE_VARIABLE.$T1,#2,R0
+	MOVC5	R0,@FCSTATE.SAVE_VARIABLE.$D3+4,#^A/ /,#60,FCSTATE.SAVE_VARIABLE.ITEM
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+FCSTATE.SAVE_VARIABLE.$42:
+;  322            if (k > j .and. filled + len_trim(item) > room) exit
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,FCSTATE.SAVE_VARIABLE.$T1
+	MOVL	#60,R6
+	BRB	FCSTATE.SAVE_VARIABLE.$49
+FCSTATE.SAVE_VARIABLE.$50:
+	SUBL3	#1,R6,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$T1[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$51
+	DECL	R6
+FCSTATE.SAVE_VARIABLE.$49:
+	TSTL	R6			; from line 322
+	BNEQ	FCSTATE.SAVE_VARIABLE.$50
+FCSTATE.SAVE_VARIABLE.$51:
+	CMPL	FCSTATE.SAVE_VARIABLE.K,FCSTATE.SAVE_VARIABLE.J
+	BLEQ	FCSTATE.SAVE_VARIABLE.$55
+	ADDL3	FCSTATE.SAVE_VARIABLE.FILLED,R6,R0
+	CMPL	R0,FCSTATE.SAVE_VARIABLE.ROOM
+	BGTR	FCSTATE.SAVE_VARIABLE.$54
+FCSTATE.SAVE_VARIABLE.$55:
+;  323            items(filled + 1:) = item
+	SUBL3	FCSTATE.SAVE_VARIABLE.FILLED,#100,R6
+	BGEQ	FCSTATE.SAVE_VARIABLE.$58
+	CLRL	R6
+FCSTATE.SAVE_VARIABLE.$58:
+	MOVL	FCSTATE.SAVE_VARIABLE.FILLED,R0
+	MOVC5	#60,FCSTATE.SAVE_VARIABLE.ITEM,#^A/ /,R6,FCSTATE.SAVE_VARIABLE.ITEMS[R0]
+;  324            filled = filled + len_trim(item)
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,R6
+	MOVL	#60,FCSTATE.SAVE_VARIABLE.$T1
+	BRB	FCSTATE.SAVE_VARIABLE.$60
+FCSTATE.SAVE_VARIABLE.$61:
+	MOVL	FCSTATE.SAVE_VARIABLE.$T1,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$62
+	DECL	FCSTATE.SAVE_VARIABLE.$T1
+FCSTATE.SAVE_VARIABLE.$60:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T1 ; from line 324
+	BNEQ	FCSTATE.SAVE_VARIABLE.$61
+FCSTATE.SAVE_VARIABLE.$62:
+	ADDL2	FCSTATE.SAVE_VARIABLE.$T1,FCSTATE.SAVE_VARIABLE.FILLED
+;  325            k = k + 1
+	INCL	FCSTATE.SAVE_VARIABLE.K
+;  326          end do
+FCSTATE.SAVE_VARIABLE.$40:		; DO (line 319)'s test
+	CMPL	FCSTATE.SAVE_VARIABLE.K,4(R8) ; from line 319
+	BGTR	FCSTATE.SAVE_VARIABLE.$65
+	BRW	FCSTATE.SAVE_VARIABLE.$41
+FCSTATE.SAVE_VARIABLE.$65:
+FCSTATE.SAVE_VARIABLE.$54:
+;  327          last = whole_text(k - 1)
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.K,FCSTATE.SAVE_VARIABLE.$T1
+	PUSHAL	FCSTATE.SAVE_VARIABLE.$T1
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D6
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVC3	#12,FCSTATE.SAVE_VARIABLE.$T7,FCSTATE.SAVE_VARIABLE.LAST
+;  328          write (save_file, '(A)') name // '(' // trim(row) // ', ' // trim(first) // ':' // &
+;  329            trim(last) // ') = [' // items(:filled) // '];'
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D1
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_VARIABLE.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVAB	FCSTATE.SAVE_VARIABLE.ROW,FCSTATE.SAVE_VARIABLE.$T1
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$T1,R6
+	MOVL	#12,R7
+	BRB	FCSTATE.SAVE_VARIABLE.$66
+FCSTATE.SAVE_VARIABLE.$67:
+	CMPB	-1(R6)[R7],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$68
+	DECL	R7
+FCSTATE.SAVE_VARIABLE.$66:
+	TSTL	R7			; from line 328
+	BNEQ	FCSTATE.SAVE_VARIABLE.$67
+FCSTATE.SAVE_VARIABLE.$68:
+	MOVAB	FCSTATE.SAVE_VARIABLE.FIRST,FCSTATE.SAVE_VARIABLE.$T8
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$T8,FCSTATE.SAVE_VARIABLE.$T9
+	MOVL	#12,FCSTATE.SAVE_VARIABLE.$T10
+	BRB	FCSTATE.SAVE_VARIABLE.$71
+FCSTATE.SAVE_VARIABLE.$72:
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.$T10,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$T9[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$73
+	DECL	FCSTATE.SAVE_VARIABLE.$T10
+FCSTATE.SAVE_VARIABLE.$71:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T10 ; from line 328
+	BNEQ	FCSTATE.SAVE_VARIABLE.$72
+FCSTATE.SAVE_VARIABLE.$73:
+	MOVAB	FCSTATE.SAVE_VARIABLE.LAST,FCSTATE.SAVE_VARIABLE.$T11
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$T11,FCSTATE.SAVE_VARIABLE.$T12
+	MOVL	#12,FCSTATE.SAVE_VARIABLE.$T13
+	BRB	FCSTATE.SAVE_VARIABLE.$76
+FCSTATE.SAVE_VARIABLE.$77:
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.$T13,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$T12[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$78
+	DECL	FCSTATE.SAVE_VARIABLE.$T13
+FCSTATE.SAVE_VARIABLE.$76:
+	TSTL	FCSTATE.SAVE_VARIABLE.$T13 ; from line 328
+	BNEQ	FCSTATE.SAVE_VARIABLE.$77
+FCSTATE.SAVE_VARIABLE.$78:
+	MOVL	FCSTATE.SAVE_VARIABLE.FILLED,FCSTATE.SAVE_VARIABLE.$T14
+	BGEQ	FCSTATE.SAVE_VARIABLE.$81
+	CLRL	FCSTATE.SAVE_VARIABLE.$T14
+FCSTATE.SAVE_VARIABLE.$81:
+	MOVZWL	(R9),R0
+	ADDL2	R7,R0
+	ADDL2	FCSTATE.SAVE_VARIABLE.$T10,R0
+	ADDL2	FCSTATE.SAVE_VARIABLE.$T13,R0
+	ADDL2	FCSTATE.SAVE_VARIABLE.$T14,R0
+	ADDL2	#11,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	(R9),FCSTATE.SAVE_VARIABLE.$U3
+	MOVC3	FCSTATE.SAVE_VARIABLE.$U3,@4(R9),@FCSTATE.SAVE_VARIABLE.$D3+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$U3,R0
+	MOVB	#40,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U3,#1,R0
+	MOVC3	R7,@FCSTATE.SAVE_VARIABLE.$T1,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U3,R7,FCSTATE.SAVE_VARIABLE.$U2
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,#1,R0
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$K5,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,#3,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$T10,@FCSTATE.SAVE_VARIABLE.$T8,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U2,FCSTATE.SAVE_VARIABLE.$T10,FCSTATE.SAVE_VARIABLE.$U1
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,#3,R0
+	MOVB	#58,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,#4,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$T13,@FCSTATE.SAVE_VARIABLE.$T11,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U1,FCSTATE.SAVE_VARIABLE.$T13,FCSTATE.SAVE_VARIABLE.$U4
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U4,#4,R0
+	MOVC3	#5,FCSTATE.SAVE_VARIABLE.$K10,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U4,#9,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$T14,FCSTATE.SAVE_VARIABLE.ITEMS,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U4,FCSTATE.SAVE_VARIABLE.$T14,FCSTATE.SAVE_VARIABLE.$U5
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U5,#9,R0
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$K11,@FCSTATE.SAVE_VARIABLE.$D3+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$U5,#11,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$D4
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$D3+4,FCSTATE.SAVE_VARIABLE.$D4+4
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+;  330          j = k
+	MOVL	FCSTATE.SAVE_VARIABLE.K,FCSTATE.SAVE_VARIABLE.J
+;  331        end do
+FCSTATE.SAVE_VARIABLE.$23:		; DO (line 310)'s test
+	CMPL	FCSTATE.SAVE_VARIABLE.J,4(R8) ; from line 310
+	BGTR	FCSTATE.SAVE_VARIABLE.$83
+	BRW	FCSTATE.SAVE_VARIABLE.$24
+FCSTATE.SAVE_VARIABLE.$83:
+;  332      end do
+	INCL	FCSTATE.SAVE_VARIABLE.I
+	DECL	FCSTATE.SAVE_VARIABLE.$C1 ; one pass fewer
+	BLEQ	FCSTATE.SAVE_VARIABLE.$84
+	BRW	FCSTATE.SAVE_VARIABLE.$22
+FCSTATE.SAVE_VARIABLE.$84:
+;  333
+;  334    contains
+	RET
+
+; Storage map for FCSTATE.SAVE_VARIABLE.LITERAL_FITS, a LOGICAL function
+;   LITERAL_FITS  LOGICAL  $LOCAL+0   FCSTATE.SAVE_VARIABLE.$N1.$N2
+;   R             INTEGER  $LOCAL+4   FCSTATE.SAVE_VARIABLE.$N1.R
+;   C             INTEGER  $LOCAL+8   FCSTATE.SAVE_VARIABLE.$N1.C
+;   USED          INTEGER  $LOCAL+12  FCSTATE.SAVE_VARIABLE.$N1.USED
+;   R8 is $L1: DO (line 346)'s limit
+;   R7 is $L2: DO (line 347)'s limit
+;   R6 is $T2: temporary
+;   FCSTATE.SAVE_VARIABLE.$N1.$N2 is FCSTATE.SAVE_VARIABLE.LITERAL_FITS.LITERAL_FITS
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.SAVE_VARIABLE.$N1.$N2:
+	.BLKL	1			; LITERAL_FITS, the function's value
+FCSTATE.SAVE_VARIABLE.$N1.R:
+	.BLKL	1			; R
+FCSTATE.SAVE_VARIABLE.$N1.C:
+	.BLKL	1			; C
+FCSTATE.SAVE_VARIABLE.$N1.USED:
+	.BLKL	1			; USED
+FCSTATE.SAVE_VARIABLE.$N1.$T1:
+	.BLKL	15			; characters, for one statement
+FCSTATE.SAVE_VARIABLE.$N1.$T3:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$N1.$T4:
+	.BLKL	1			; temporary
+FCSTATE.SAVE_VARIABLE.$N1.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.SAVE_VARIABLE.$N1.$T5:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCSTATE.SAVE_VARIABLE.$N1.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.SAVE_VARIABLE.$N1.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.SAVE_VARIABLE.$N1.$D1:
+	.WORD	60			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_VARIABLE.$N1.$T1
+FCSTATE.SAVE_VARIABLE.$N1.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.SAVE_VARIABLE.$N1.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.SAVE_VARIABLE.$N1.$K4
+FCSTATE.SAVE_VARIABLE.$N1.$K1:
+	.ASCII	/ /
+FCSTATE.SAVE_VARIABLE.$N1.$K2:
+	.ASCII	/, /
+FCSTATE.SAVE_VARIABLE.$N1.$K3:
+	.ASCII	/; /
+FCSTATE.SAVE_VARIABLE.$N1.$K4:
+	.ASCII	/(A)/
+FCSTATE.SAVE_VARIABLE.$N1.$K5:
+	.ASCII	/ = [/
+FCSTATE.SAVE_VARIABLE.$N1.$K6:
+	.ASCII	/];/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  335
+;  336      ! LITERAL_FITS writes the array as one literal and is true, if it fits
+;  337      ! on a line. An internal procedure of a module procedure sees its
+;  338      ! host's arguments and variables, Q and ITEMS among them.
+;  339      logical function literal_fits()
+FCSTATE.SAVE_VARIABLE.$N1:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8> ; internal procedure LITERAL_FITS of FCSTATE.SAVE_VARIABLE
+;  340        integer :: r, c, used
+;  341
+;  342        literal_fits = .false.
+	CLRL	FCSTATE.SAVE_VARIABLE.$N1.$N2
+;  343        room = save_width - len(name) - 6
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,R0
+	SUBL3	R0,#100,R0
+	SUBL3	#6,R0,FCSTATE.SAVE_VARIABLE.ROOM
+;  344        items = ' '
+	MOVC5	#1,FCSTATE.SAVE_VARIABLE.$N1.$K1,#^A/ /,#100,FCSTATE.SAVE_VARIABLE.ITEMS
+;  345        used = 0
+	CLRL	FCSTATE.SAVE_VARIABLE.$N1.USED
+;  346        do r = 1, q%rows
+	MOVL	@FCSTATE.SAVE_VARIABLE.$A2,R8 ; DO (line 346)'s limit
+	MOVL	#1,FCSTATE.SAVE_VARIABLE.$N1.R
+	CMPL	#1,R8
+	BLEQ	FCSTATE.SAVE_VARIABLE.$N1.$2
+	BRW	FCSTATE.SAVE_VARIABLE.$N1.$1
+FCSTATE.SAVE_VARIABLE.$N1.$2:
+FCSTATE.SAVE_VARIABLE.$N1.$3:		; DO (line 346)'s body
+;  347          do c = 1, q%cols
+	MOVL	FCSTATE.SAVE_VARIABLE.$A2,R0 ; DO (line 347)'s limit
+	MOVL	4(R0),R7
+	MOVL	#1,FCSTATE.SAVE_VARIABLE.$N1.C
+	CMPL	#1,R7
+	BLEQ	FCSTATE.SAVE_VARIABLE.$N1.$5
+	BRW	FCSTATE.SAVE_VARIABLE.$N1.$4
+FCSTATE.SAVE_VARIABLE.$N1.$5:
+FCSTATE.SAVE_VARIABLE.$N1.$6:		; DO (line 347)'s body
+;  348            item = complex_text(q%e(r, c))
+	MOVL	FCSTATE.SAVE_VARIABLE.$A2,R0
+	MOVAL	48(R0),R6
+	MULL3	FCSTATE.SAVE_VARIABLE.$N1.R,20(R6),R0
+	ADDL2	16(R6),R0
+	MULL3	FCSTATE.SAVE_VARIABLE.$N1.C,24(R6),R1
+	ADDL2	R1,R0
+	PUSHAO	(R0)
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D1
+	CALLS	#2,G^FCSTATE.COMPLEX_TEXT
+	MOVC3	#60,FCSTATE.SAVE_VARIABLE.$N1.$T1,FCSTATE.SAVE_VARIABLE.ITEM
+;  349            if (c > 1) then
+	CMPL	FCSTATE.SAVE_VARIABLE.$N1.C,#1
+	BGTR	FCSTATE.SAVE_VARIABLE.$N1.$8
+	BRW	FCSTATE.SAVE_VARIABLE.$N1.$7
+FCSTATE.SAVE_VARIABLE.$N1.$8:
+;  350              item = ', ' // trim(item)
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,R6
+	MOVAB	(R6),FCSTATE.SAVE_VARIABLE.$N1.$T3
+	MOVL	#60,FCSTATE.SAVE_VARIABLE.$N1.$T4
+	BRB	FCSTATE.SAVE_VARIABLE.$N1.$9
+FCSTATE.SAVE_VARIABLE.$N1.$10:
+	SUBL3	#1,FCSTATE.SAVE_VARIABLE.$N1.$T4,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$N1.$T3[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$11
+	DECL	FCSTATE.SAVE_VARIABLE.$N1.$T4
+FCSTATE.SAVE_VARIABLE.$N1.$9:
+	TSTL	FCSTATE.SAVE_VARIABLE.$N1.$T4 ; from line 350
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$10
+FCSTATE.SAVE_VARIABLE.$N1.$11:
+	ADDL3	FCSTATE.SAVE_VARIABLE.$N1.$T4,#2,FCSTATE.SAVE_VARIABLE.$N1.$U1
+	CVTLW	FCSTATE.SAVE_VARIABLE.$N1.$U1,FCSTATE.SAVE_VARIABLE.$N1.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D2
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$N1.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$N1.$K2,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$N1.$D2+4,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$N1.$T4,(R6),2(R0)
+	MOVC5	FCSTATE.SAVE_VARIABLE.$N1.$U1,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4,#^A/ /,#60,FCSTATE.SAVE_VARIABLE.ITEM
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  351            else if (r > 1) then
+	BRW	FCSTATE.SAVE_VARIABLE.$N1.$14
+FCSTATE.SAVE_VARIABLE.$N1.$7:
+	CMPL	FCSTATE.SAVE_VARIABLE.$N1.R,#1
+	BGTR	FCSTATE.SAVE_VARIABLE.$N1.$15
+	BRW	FCSTATE.SAVE_VARIABLE.$N1.$14
+FCSTATE.SAVE_VARIABLE.$N1.$15:
+;  352              item = '; ' // trim(item)
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,FCSTATE.SAVE_VARIABLE.$N1.$T4
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$N1.$T4,FCSTATE.SAVE_VARIABLE.$N1.$T3
+	MOVL	#60,R6
+	BRB	FCSTATE.SAVE_VARIABLE.$N1.$16
+FCSTATE.SAVE_VARIABLE.$N1.$17:
+	SUBL3	#1,R6,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$N1.$T3[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$18
+	DECL	R6
+FCSTATE.SAVE_VARIABLE.$N1.$16:
+	TSTL	R6			; from line 352
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$17
+FCSTATE.SAVE_VARIABLE.$N1.$18:
+	ADDL3	R6,#2,FCSTATE.SAVE_VARIABLE.$N1.$U1
+	CVTLW	FCSTATE.SAVE_VARIABLE.$N1.$U1,FCSTATE.SAVE_VARIABLE.$N1.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D2
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$N1.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$N1.$K3,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$N1.$D2+4,R0
+	MOVC3	R6,@FCSTATE.SAVE_VARIABLE.$N1.$T4,2(R0)
+	MOVC5	FCSTATE.SAVE_VARIABLE.$N1.$U1,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4,#^A/ /,#60,FCSTATE.SAVE_VARIABLE.ITEM
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  353            end if
+FCSTATE.SAVE_VARIABLE.$N1.$14:
+;  354            if (used + len_trim(item) > room) return
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,R6
+	MOVL	#60,FCSTATE.SAVE_VARIABLE.$N1.$T3
+	BRB	FCSTATE.SAVE_VARIABLE.$N1.$21
+FCSTATE.SAVE_VARIABLE.$N1.$22:
+	MOVL	FCSTATE.SAVE_VARIABLE.$N1.$T3,R0
+	CMPB	-1(R6)[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$23
+	DECL	FCSTATE.SAVE_VARIABLE.$N1.$T3
+FCSTATE.SAVE_VARIABLE.$N1.$21:
+	TSTL	FCSTATE.SAVE_VARIABLE.$N1.$T3 ; from line 354
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$22
+FCSTATE.SAVE_VARIABLE.$N1.$23:
+	ADDL3	FCSTATE.SAVE_VARIABLE.$N1.USED,FCSTATE.SAVE_VARIABLE.$N1.$T3,R0
+	CMPL	R0,FCSTATE.SAVE_VARIABLE.ROOM
+	BLEQ	FCSTATE.SAVE_VARIABLE.$N1.$26
+	CLRL	R0			; the function's value
+	RET
+FCSTATE.SAVE_VARIABLE.$N1.$26:
+;  355            items(used + 1:) = item
+	SUBL3	FCSTATE.SAVE_VARIABLE.$N1.USED,#100,FCSTATE.SAVE_VARIABLE.$N1.$T3
+	BGEQ	FCSTATE.SAVE_VARIABLE.$N1.$28
+	CLRL	FCSTATE.SAVE_VARIABLE.$N1.$T3
+FCSTATE.SAVE_VARIABLE.$N1.$28:
+	MOVL	FCSTATE.SAVE_VARIABLE.$N1.USED,R0
+	MOVC5	#60,FCSTATE.SAVE_VARIABLE.ITEM,#^A/ /,FCSTATE.SAVE_VARIABLE.$N1.$T3,FCSTATE.SAVE_VARIABLE.ITEMS[R0]
+;  356            used = used + len_trim(item)
+	MOVAB	FCSTATE.SAVE_VARIABLE.ITEM,FCSTATE.SAVE_VARIABLE.$N1.$T3
+	MOVL	#60,R6
+	BRB	FCSTATE.SAVE_VARIABLE.$N1.$30
+FCSTATE.SAVE_VARIABLE.$N1.$31:
+	SUBL3	#1,R6,R0
+	CMPB	@FCSTATE.SAVE_VARIABLE.$N1.$T3[R0],#32
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$32
+	DECL	R6
+FCSTATE.SAVE_VARIABLE.$N1.$30:
+	TSTL	R6			; from line 356
+	BNEQ	FCSTATE.SAVE_VARIABLE.$N1.$31
+FCSTATE.SAVE_VARIABLE.$N1.$32:
+	ADDL2	R6,FCSTATE.SAVE_VARIABLE.$N1.USED
+;  357          end do
+	ACBL	R7,#1,FCSTATE.SAVE_VARIABLE.$N1.C,FCSTATE.SAVE_VARIABLE.$N1.$6
+FCSTATE.SAVE_VARIABLE.$N1.$4:
+;  358        end do
+	ACBL	R8,#1,FCSTATE.SAVE_VARIABLE.$N1.R,FCSTATE.SAVE_VARIABLE.$N1.$3
+FCSTATE.SAVE_VARIABLE.$N1.$1:
+;  359        write (save_file, '(A)') name // ' = [' // items(:used) // '];'
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D3
+	PUSHL	#31
+	PUSHAB	FCSTATE.SAVE_VARIABLE.$N1.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVL	FCSTATE.SAVE_VARIABLE.$N1.USED,R6
+	BGEQ	FCSTATE.SAVE_VARIABLE.$N1.$37
+	CLRL	R6
+FCSTATE.SAVE_VARIABLE.$N1.$37:
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,R0
+	ADDL2	R6,R0
+	ADDL2	#6,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$N1.$T5
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D2
+	PUSHAW	FCSTATE.SAVE_VARIABLE.$N1.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@FCSTATE.SAVE_VARIABLE.$A1,FCSTATE.SAVE_VARIABLE.$N1.$U1
+	MOVL	FCSTATE.SAVE_VARIABLE.$A1,R0
+	MOVC3	FCSTATE.SAVE_VARIABLE.$N1.$U1,@4(R0),@FCSTATE.SAVE_VARIABLE.$N1.$D2+4
+	MOVL	FCSTATE.SAVE_VARIABLE.$N1.$U1,R0
+	MOVC3	#4,FCSTATE.SAVE_VARIABLE.$N1.$K5,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$N1.$U1,#4,R0
+	MOVC3	R6,FCSTATE.SAVE_VARIABLE.ITEMS,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$N1.$U1,R6,R0
+	ADDL2	#4,R0
+	MOVC3	#2,FCSTATE.SAVE_VARIABLE.$N1.$K6,@FCSTATE.SAVE_VARIABLE.$N1.$D2+4[R0]
+	ADDL3	FCSTATE.SAVE_VARIABLE.$N1.$U1,R6,R0
+	ADDL2	#6,R0
+	CVTLW	R0,FCSTATE.SAVE_VARIABLE.$N1.$D4
+	MOVAB	@FCSTATE.SAVE_VARIABLE.$N1.$D2+4,FCSTATE.SAVE_VARIABLE.$N1.$D4+4
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	PUSHAQ	FCSTATE.SAVE_VARIABLE.$N1.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  360        literal_fits = .true.
+;  361      end function literal_fits
+	MOVL	#-1,R0			; the function's value
+	RET
+
+; Storage map for FCSTATE.COMPLEX_TEXT, a CHARACTER*60 function
+;   TEXT  CHARACTER*60            hidden argument 1  @FCSTATE.COMPLEX_TEXT.TEXT(AP)
+;   Z     COMPLEX*16, INTENT(IN)  argument 2         @FCSTATE.COMPLEX_TEXT.Z(AP)
+;   A     REAL*8                  $LOCAL+0           FCSTATE.COMPLEX_TEXT.A
+;   B     REAL*8                  $LOCAL+8           FCSTATE.COMPLEX_TEXT.B
+;
+FCSTATE.COMPLEX_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCSTATE.COMPLEX_TEXT.Z = 8		; Z is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.COMPLEX_TEXT.A:
+	.BLKL	2			; A
+FCSTATE.COMPLEX_TEXT.B:
+	.BLKL	2			; B
+FCSTATE.COMPLEX_TEXT.$T1:
+	.BLKB	30			; characters, for one statement
+	.BLKB	2
+FCSTATE.COMPLEX_TEXT.$T2:
+	.BLKL	1			; temporary
+FCSTATE.COMPLEX_TEXT.$T3:
+	.BLKL	1			; temporary
+FCSTATE.COMPLEX_TEXT.$T4:
+	.BLKL	1			; temporary
+FCSTATE.COMPLEX_TEXT.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.COMPLEX_TEXT.$T5:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCSTATE.COMPLEX_TEXT.$T6:
+	.BLKB	30			; characters, for one statement
+	.BLKB	2
+FCSTATE.COMPLEX_TEXT.$T7:
+	.BLKL	1			; temporary
+FCSTATE.COMPLEX_TEXT.$T8:
+	.BLKL	1			; temporary
+FCSTATE.COMPLEX_TEXT.$T9:
+	.BLKL	1			; temporary
+FCSTATE.COMPLEX_TEXT.$T10:
+	.BLKL	2			; temporary
+FCSTATE.COMPLEX_TEXT.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.COMPLEX_TEXT.$D1:
+	.WORD	30			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.COMPLEX_TEXT.$T1
+FCSTATE.COMPLEX_TEXT.$D3:
+	.WORD	30			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.COMPLEX_TEXT.$T6
+FCSTATE.COMPLEX_TEXT.$K2:
+	.ASCII	/ + /
+FCSTATE.COMPLEX_TEXT.$K3:
+	.ASCII	/ - /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  362    end subroutine save_variable
+;  363
+;  364    ! COMPLEX_TEXT is Z as fcalc reads it: 2.5, -3i, 1 + 0.5i, 2 - 1e-20i.
+;  365    function complex_text(z) result(text)
+	.ENTRY	FCSTATE.COMPLEX_TEXT,^M<R2,R3,R4,R5>
+;  366      complex(rk), intent(in) :: z
+;  367      character(len=60) :: text
+;  368      real(rk) :: a, b
+;  369
+;  370      a = real(z, rk)
+	MOVG	@FCSTATE.COMPLEX_TEXT.Z(AP),FCSTATE.COMPLEX_TEXT.A
+;  371      b = aimag(z)
+	MOVL	#1,R0
+	MOVG	@FCSTATE.COMPLEX_TEXT.Z(AP)[R0],FCSTATE.COMPLEX_TEXT.B
+;  372      if (b == 0) then
+	BNEQ	FCSTATE.COMPLEX_TEXT.$1
+;  373        text = exact_text(a)
+	PUSHAG	FCSTATE.COMPLEX_TEXT.A
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D1
+	CALLS	#2,G^FCSTATE.EXACT_TEXT
+	MOVL	FCSTATE.COMPLEX_TEXT.TEXT(AP),R0
+	MOVC5	#30,FCSTATE.COMPLEX_TEXT.$T1,#^A/ /,#60,@4(R0)
+;  374      else if (a == 0) then
+	RET
+FCSTATE.COMPLEX_TEXT.$1:
+	TSTG	FCSTATE.COMPLEX_TEXT.A
+	BEQL	FCSTATE.COMPLEX_TEXT.$5
+	BRW	FCSTATE.COMPLEX_TEXT.$4
+FCSTATE.COMPLEX_TEXT.$5:
+;  375        text = trim(exact_text(b)) // 'i'
+	PUSHAG	FCSTATE.COMPLEX_TEXT.B
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D1
+	CALLS	#2,G^FCSTATE.EXACT_TEXT
+	MOVAB	FCSTATE.COMPLEX_TEXT.$T1,FCSTATE.COMPLEX_TEXT.$T2
+	MOVAB	@FCSTATE.COMPLEX_TEXT.$T2,FCSTATE.COMPLEX_TEXT.$T3
+	MOVL	#30,FCSTATE.COMPLEX_TEXT.$T4
+	BRB	FCSTATE.COMPLEX_TEXT.$6
+FCSTATE.COMPLEX_TEXT.$7:
+	SUBL3	#1,FCSTATE.COMPLEX_TEXT.$T4,R0
+	CMPB	@FCSTATE.COMPLEX_TEXT.$T3[R0],#32
+	BNEQ	FCSTATE.COMPLEX_TEXT.$8
+	DECL	FCSTATE.COMPLEX_TEXT.$T4
+FCSTATE.COMPLEX_TEXT.$6:
+	TSTL	FCSTATE.COMPLEX_TEXT.$T4 ; from line 375
+	BNEQ	FCSTATE.COMPLEX_TEXT.$7
+FCSTATE.COMPLEX_TEXT.$8:
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T4,#1,R0
+	CVTLW	R0,FCSTATE.COMPLEX_TEXT.$T5
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D2
+	PUSHAW	FCSTATE.COMPLEX_TEXT.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCSTATE.COMPLEX_TEXT.$T4,@FCSTATE.COMPLEX_TEXT.$T2,@FCSTATE.COMPLEX_TEXT.$D2+4
+	MOVL	FCSTATE.COMPLEX_TEXT.$T4,R0
+	MOVB	#105,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T4,#1,R0
+	MOVL	FCSTATE.COMPLEX_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCSTATE.COMPLEX_TEXT.$D2+4,#^A/ /,#60,@4(R1)
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  376      else if (b > 0) then
+	RET
+FCSTATE.COMPLEX_TEXT.$4:
+	TSTG	FCSTATE.COMPLEX_TEXT.B
+	BGTR	FCSTATE.COMPLEX_TEXT.$12
+	BRW	FCSTATE.COMPLEX_TEXT.$11
+FCSTATE.COMPLEX_TEXT.$12:
+;  377        text = trim(exact_text(a)) // ' + ' // trim(exact_text(b)) // 'i'
+	PUSHAG	FCSTATE.COMPLEX_TEXT.A
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D1
+	CALLS	#2,G^FCSTATE.EXACT_TEXT
+	MOVAB	FCSTATE.COMPLEX_TEXT.$T1,FCSTATE.COMPLEX_TEXT.$T4
+	MOVAB	@FCSTATE.COMPLEX_TEXT.$T4,FCSTATE.COMPLEX_TEXT.$T3
+	MOVL	#30,FCSTATE.COMPLEX_TEXT.$T2
+	BRB	FCSTATE.COMPLEX_TEXT.$13
+FCSTATE.COMPLEX_TEXT.$14:
+	SUBL3	#1,FCSTATE.COMPLEX_TEXT.$T2,R0
+	CMPB	@FCSTATE.COMPLEX_TEXT.$T3[R0],#32
+	BNEQ	FCSTATE.COMPLEX_TEXT.$15
+	DECL	FCSTATE.COMPLEX_TEXT.$T2
+FCSTATE.COMPLEX_TEXT.$13:
+	TSTL	FCSTATE.COMPLEX_TEXT.$T2 ; from line 377
+	BNEQ	FCSTATE.COMPLEX_TEXT.$14
+FCSTATE.COMPLEX_TEXT.$15:
+	PUSHAG	FCSTATE.COMPLEX_TEXT.B
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D3
+	CALLS	#2,G^FCSTATE.EXACT_TEXT
+	MOVAB	FCSTATE.COMPLEX_TEXT.$T6,FCSTATE.COMPLEX_TEXT.$T7
+	MOVAB	@FCSTATE.COMPLEX_TEXT.$T7,FCSTATE.COMPLEX_TEXT.$T8
+	MOVL	#30,FCSTATE.COMPLEX_TEXT.$T9
+	BRB	FCSTATE.COMPLEX_TEXT.$18
+FCSTATE.COMPLEX_TEXT.$19:
+	SUBL3	#1,FCSTATE.COMPLEX_TEXT.$T9,R0
+	CMPB	@FCSTATE.COMPLEX_TEXT.$T8[R0],#32
+	BNEQ	FCSTATE.COMPLEX_TEXT.$20
+	DECL	FCSTATE.COMPLEX_TEXT.$T9
+FCSTATE.COMPLEX_TEXT.$18:
+	TSTL	FCSTATE.COMPLEX_TEXT.$T9 ; from line 377
+	BNEQ	FCSTATE.COMPLEX_TEXT.$19
+FCSTATE.COMPLEX_TEXT.$20:
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T2,FCSTATE.COMPLEX_TEXT.$T9,R0
+	ADDL3	R0,#4,FCSTATE.COMPLEX_TEXT.$U1
+	CVTLW	FCSTATE.COMPLEX_TEXT.$U1,FCSTATE.COMPLEX_TEXT.$T5
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D2
+	PUSHAW	FCSTATE.COMPLEX_TEXT.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCSTATE.COMPLEX_TEXT.$T2,@FCSTATE.COMPLEX_TEXT.$T4,@FCSTATE.COMPLEX_TEXT.$D2+4
+	MOVL	FCSTATE.COMPLEX_TEXT.$T2,R0
+	MOVC3	#3,FCSTATE.COMPLEX_TEXT.$K2,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T2,#3,R0
+	MOVC3	FCSTATE.COMPLEX_TEXT.$T9,@FCSTATE.COMPLEX_TEXT.$T7,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T2,FCSTATE.COMPLEX_TEXT.$T9,R0
+	ADDL2	#3,R0
+	MOVB	#105,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	MOVL	FCSTATE.COMPLEX_TEXT.TEXT(AP),R0
+	MOVC5	FCSTATE.COMPLEX_TEXT.$U1,@FCSTATE.COMPLEX_TEXT.$D2+4,#^A/ /,#60,@4(R0)
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  378      else
+	RET
+FCSTATE.COMPLEX_TEXT.$11:
+;  379        text = trim(exact_text(a)) // ' - ' // trim(exact_text(-b)) // 'i'
+	PUSHAG	FCSTATE.COMPLEX_TEXT.A
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D3
+	CALLS	#2,G^FCSTATE.EXACT_TEXT
+	MOVAB	FCSTATE.COMPLEX_TEXT.$T6,FCSTATE.COMPLEX_TEXT.$T9
+	MOVAB	@FCSTATE.COMPLEX_TEXT.$T9,FCSTATE.COMPLEX_TEXT.$T8
+	MOVL	#30,FCSTATE.COMPLEX_TEXT.$T7
+	BRB	FCSTATE.COMPLEX_TEXT.$23
+FCSTATE.COMPLEX_TEXT.$24:
+	SUBL3	#1,FCSTATE.COMPLEX_TEXT.$T7,R0
+	CMPB	@FCSTATE.COMPLEX_TEXT.$T8[R0],#32
+	BNEQ	FCSTATE.COMPLEX_TEXT.$25
+	DECL	FCSTATE.COMPLEX_TEXT.$T7
+FCSTATE.COMPLEX_TEXT.$23:
+	TSTL	FCSTATE.COMPLEX_TEXT.$T7 ; from line 379
+	BNEQ	FCSTATE.COMPLEX_TEXT.$24
+FCSTATE.COMPLEX_TEXT.$25:
+	MNEGG	FCSTATE.COMPLEX_TEXT.B,FCSTATE.COMPLEX_TEXT.$T10
+	PUSHAG	FCSTATE.COMPLEX_TEXT.$T10
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D1
+	CALLS	#2,G^FCSTATE.EXACT_TEXT
+	MOVAB	FCSTATE.COMPLEX_TEXT.$T1,FCSTATE.COMPLEX_TEXT.$T2
+	MOVAB	@FCSTATE.COMPLEX_TEXT.$T2,FCSTATE.COMPLEX_TEXT.$T3
+	MOVL	#30,FCSTATE.COMPLEX_TEXT.$T4
+	BRB	FCSTATE.COMPLEX_TEXT.$28
+FCSTATE.COMPLEX_TEXT.$29:
+	SUBL3	#1,FCSTATE.COMPLEX_TEXT.$T4,R0
+	CMPB	@FCSTATE.COMPLEX_TEXT.$T3[R0],#32
+	BNEQ	FCSTATE.COMPLEX_TEXT.$30
+	DECL	FCSTATE.COMPLEX_TEXT.$T4
+FCSTATE.COMPLEX_TEXT.$28:
+	TSTL	FCSTATE.COMPLEX_TEXT.$T4 ; from line 379
+	BNEQ	FCSTATE.COMPLEX_TEXT.$29
+FCSTATE.COMPLEX_TEXT.$30:
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T7,FCSTATE.COMPLEX_TEXT.$T4,R0
+	ADDL3	R0,#4,FCSTATE.COMPLEX_TEXT.$U1
+	CVTLW	FCSTATE.COMPLEX_TEXT.$U1,FCSTATE.COMPLEX_TEXT.$T5
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D2
+	PUSHAW	FCSTATE.COMPLEX_TEXT.$T5
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCSTATE.COMPLEX_TEXT.$T7,@FCSTATE.COMPLEX_TEXT.$T9,@FCSTATE.COMPLEX_TEXT.$D2+4
+	MOVL	FCSTATE.COMPLEX_TEXT.$T7,R0
+	MOVC3	#3,FCSTATE.COMPLEX_TEXT.$K3,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T7,#3,R0
+	MOVC3	FCSTATE.COMPLEX_TEXT.$T4,@FCSTATE.COMPLEX_TEXT.$T2,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	ADDL3	FCSTATE.COMPLEX_TEXT.$T7,FCSTATE.COMPLEX_TEXT.$T4,R0
+	ADDL2	#3,R0
+	MOVB	#105,@FCSTATE.COMPLEX_TEXT.$D2+4[R0]
+	MOVL	FCSTATE.COMPLEX_TEXT.TEXT(AP),R0
+	MOVC5	FCSTATE.COMPLEX_TEXT.$U1,@FCSTATE.COMPLEX_TEXT.$D2+4,#^A/ /,#60,@4(R0)
+	PUSHAQ	FCSTATE.COMPLEX_TEXT.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  380      end if
+;  381    end function complex_text
+	RET
+
+; Storage map for FCSTATE.EXACT_TEXT, a CHARACTER*30 function
+;   TEXT     CHARACTER*30        hidden argument 1  @FCSTATE.EXACT_TEXT.TEXT(AP)
+;   X        REAL*8, INTENT(IN)  argument 2         @FCSTATE.EXACT_TEXT.X(AP)
+;   WRITTEN  CHARACTER*30        $LOCAL+0           FCSTATE.EXACT_TEXT.WRITTEN
+;   D        CHARACTER*17        $LOCAL+30          FCSTATE.EXACT_TEXT.D
+;   FORM     CHARACTER*16        $LOCAL+47          FCSTATE.EXACT_TEXT.FORM
+;   BACK     REAL*8              $LOCAL+64          FCSTATE.EXACT_TEXT.BACK
+;   N        INTEGER             $LOCAL+72          FCSTATE.EXACT_TEXT.N
+;   EX       INTEGER             $LOCAL+76          FCSTATE.EXACT_TEXT.EX
+;   IOS      INTEGER             $LOCAL+80          FCSTATE.EXACT_TEXT.IOS
+;   K        INTEGER             $LOCAL+84          FCSTATE.EXACT_TEXT.K
+;   R6 is $R1: N, during a loop
+;   R6 is $R2: N, during a loop
+;   R7 is $R3: X's address
+;   R8 is $R4: IOS, during a loop
+;
+FCSTATE.EXACT_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCSTATE.EXACT_TEXT.X = 8		; X is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.EXACT_TEXT.WRITTEN:
+	.BLKB	30			; WRITTEN
+FCSTATE.EXACT_TEXT.D:
+	.BLKB	17			; D
+FCSTATE.EXACT_TEXT.FORM:
+	.BLKL	4			; FORM
+	.BLKB	1
+FCSTATE.EXACT_TEXT.BACK:
+	.BLKL	2			; BACK
+FCSTATE.EXACT_TEXT.N:
+	.BLKL	1			; N
+FCSTATE.EXACT_TEXT.EX:
+	.BLKL	1			; EX
+FCSTATE.EXACT_TEXT.IOS:
+	.BLKL	1			; IOS
+FCSTATE.EXACT_TEXT.K:
+	.BLKL	1			; K
+FCSTATE.EXACT_TEXT.$T1:
+	.BLKL	1			; temporary
+FCSTATE.EXACT_TEXT.$T2:
+	.BLKL	1			; temporary
+FCSTATE.EXACT_TEXT.$T3:
+	.BLKL	2			; temporary
+FCSTATE.EXACT_TEXT.$T4:
+	.BLKB	30			; characters, for one statement
+	.BLKB	2
+FCSTATE.EXACT_TEXT.$T5:
+	.BLKB	31			; characters, for one statement
+	.BLKB	1
+FCSTATE.EXACT_TEXT.$D12:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.EXACT_TEXT.$D14:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.EXACT_TEXT.$D16:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCSTATE.EXACT_TEXT.$T6:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCSTATE.EXACT_TEXT.$T7:
+	.BLKB	35			; characters, for one statement
+	.BLKB	1
+FCSTATE.EXACT_TEXT.$T8:
+	.BLKB	13			; characters, for one statement
+	.BLKB	3
+FCSTATE.EXACT_TEXT.$T9:
+	.BLKB	15			; characters, for one statement
+	.BLKB	1
+FCSTATE.EXACT_TEXT.$T10:
+	.BLKB	33			; characters, for one statement
+	.BLKB	3
+FCSTATE.EXACT_TEXT.$T11:
+	.BLKL	1			; temporary
+FCSTATE.EXACT_TEXT.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.EXACT_TEXT.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.EXACT_TEXT.$D1:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.FORM
+FCSTATE.EXACT_TEXT.$D2:
+	.WORD	13			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$K2
+FCSTATE.EXACT_TEXT.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$K3
+FCSTATE.EXACT_TEXT.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$T1
+FCSTATE.EXACT_TEXT.$D5:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$K4
+FCSTATE.EXACT_TEXT.$D6:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$T2
+FCSTATE.EXACT_TEXT.$D7:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$K5
+FCSTATE.EXACT_TEXT.$D8:
+	.WORD	30			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.WRITTEN
+FCSTATE.EXACT_TEXT.$D9:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$T3
+FCSTATE.EXACT_TEXT.$IO2:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0014			; flags: IOSTAT= F90
+	.LONG	0			; (not used yet)
+FCSTATE.EXACT_TEXT.$D10:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.BACK
+FCSTATE.EXACT_TEXT.$D11:
+	.WORD	30			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$T4
+FCSTATE.EXACT_TEXT.$IO3:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0010			; flags: F90
+	.LONG	0			; (not used yet)
+FCSTATE.EXACT_TEXT.$D13:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.EX
+FCSTATE.EXACT_TEXT.$D15:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$K1
+FCSTATE.EXACT_TEXT.$D17:
+	.WORD	13			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXACT_TEXT.$T8
+FCSTATE.EXACT_TEXT.$K1:
+	.ASCII	/0/
+FCSTATE.EXACT_TEXT.$K2:
+	.ASCII	/(A,I2,A,I2,A)/
+FCSTATE.EXACT_TEXT.$K3:
+	.ASCII	/(ES/
+FCSTATE.EXACT_TEXT.$K4:
+	.ASCII	/./
+FCSTATE.EXACT_TEXT.$K5:
+	.ASCII	/E3)/
+FCSTATE.EXACT_TEXT.$K6:
+	.ASCII	/E/
+FCSTATE.EXACT_TEXT.$K7:
+	.ASCII	/0./
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  382
+;  383    ! EXACT_TEXT is X in the fewest significant digits that read back as X
+;  384    ! itself: 2.5, 0.1, 0.3333333333333333, 1e-20, 6.02214076e+23, the
+;  385    ! exponent written as fcalc shows one.
+;  386    !
+;  387    ! A REAL(RK) has 53 bits, about 15.95 decimal digits: 15 digits don't
+;  388    ! always tell two neighboring values apart, and 17 always do. So X is
+;  389    ! written in scientific notation with 15 digits, then 16, then 17,
+;  390    ! until reading the digits back (by the same list-directed READ that
+;  391    ! FCLEXER uses for numbers typed) gives X again. Both machines convert
+;  392    ! decimal to binary and back with correct rounding, so both write the
+;  393    ! same digits for the same value.
+;  394    !
+;  395    ! ESw.dE3 writes a number with one digit before the point, d after it, and
+;  396    ! an exponent of three digits: 3.333E-001. The format itself is made at
+;  397    ! run time by an internal WRITE, since d changes: a format may be any
+;  398    ! character expression, not only a constant.
+;  399    function exact_text(x) result(text)
+	.ENTRY	FCSTATE.EXACT_TEXT,^M<R2,R3,R4,R5,R6,R7,R8>
+;  400      real(rk), intent(in) :: x
+;  401      character(len=30) :: text
+;  402      character(len=30) :: written
+;  403      character(len=17) :: d
+;  404      character(len=16) :: form
+;  405      real(rk) :: back
+;  406      integer :: n, ex, ios, k
+;  407
+;  408      text = '0'
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R0
+	MOVC5	#1,FCSTATE.EXACT_TEXT.$K1,#^A/ /,#30,@4(R0)
+;  409      if (x == 0) return
+	TSTG	@FCSTATE.EXACT_TEXT.X(AP)
+	BNEQ	FCSTATE.EXACT_TEXT.$1
+	RET
+FCSTATE.EXACT_TEXT.$1:
+;  410
+;  411      do n = 15, 17
+	MOVL	#15,FCSTATE.EXACT_TEXT.N
+	MOVL	FCSTATE.EXACT_TEXT.N,R6
+	MOVL	FCSTATE.EXACT_TEXT.X(AP),R7
+	MOVL	FCSTATE.EXACT_TEXT.IOS,R8
+FCSTATE.EXACT_TEXT.$3:			; DO (line 411)'s body
+;  412        write (form, '(A,I2,A,I2,A)') '(ES', n + 10, '.', n - 1, 'E3)'
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D2
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D1
+	PUSHAB	FCSTATE.EXACT_TEXT.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	ADDL3	R6,#10,FCSTATE.EXACT_TEXT.$T1
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,R6,FCSTATE.EXACT_TEXT.$T2
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D6
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  413        write (written, form) abs(x)
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D1
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D8
+	PUSHAB	FCSTATE.EXACT_TEXT.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVG	(R7),FCSTATE.EXACT_TEXT.$T3
+	BGEQ	FCSTATE.EXACT_TEXT.$4
+	MNEGG	FCSTATE.EXACT_TEXT.$T3,FCSTATE.EXACT_TEXT.$T3
+FCSTATE.EXACT_TEXT.$4:
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D9
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  414        read (written, *, iostat=ios) back
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D8
+	PUSHAB	FCSTATE.EXACT_TEXT.$IO2
+	CALLS	#2,G^FTN$READ_IL
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D10
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	MOVL	R0,FCSTATE.EXACT_TEXT.$T2
+	MOVL	FCSTATE.EXACT_TEXT.$T2,R8
+;  415        if (ios == 0 .and. back == abs(x)) exit
+	MOVG	(R7),FCSTATE.EXACT_TEXT.$T3
+	BGEQ	FCSTATE.EXACT_TEXT.$6
+	MNEGG	FCSTATE.EXACT_TEXT.$T3,FCSTATE.EXACT_TEXT.$T3
+FCSTATE.EXACT_TEXT.$6:
+	TSTL	R8
+	BNEQ	FCSTATE.EXACT_TEXT.$9
+	CMPG	FCSTATE.EXACT_TEXT.BACK,FCSTATE.EXACT_TEXT.$T3
+	BNEQ	FCSTATE.EXACT_TEXT.$11
+	BRW	FCSTATE.EXACT_TEXT.$8
+FCSTATE.EXACT_TEXT.$11:
+FCSTATE.EXACT_TEXT.$9:
+;  416      end do
+	ACBL	#17,#1,R6,FCSTATE.EXACT_TEXT.$3
+	MOVL	R6,FCSTATE.EXACT_TEXT.N
+	MOVL	R8,FCSTATE.EXACT_TEXT.IOS
+FCSTATE.EXACT_TEXT.$13:
+;  417
+;  418      ! The digits without the point, D, and the exponent, EX: the value is
+;  419      ! D(1).D(2:) times 10**EX. Trailing zeros are dropped.
+;  420      written = adjustl(written)
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D8
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D11
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVC3	#30,FCSTATE.EXACT_TEXT.$T4,FCSTATE.EXACT_TEXT.WRITTEN
+;  421      k = index(written, 'E')
+	MATCHC	#1,FCSTATE.EXACT_TEXT.$K6,#30,FCSTATE.EXACT_TEXT.WRITTEN
+	BNEQ	FCSTATE.EXACT_TEXT.$14
+	SUBL3	R2,#30,R0
+	BRB	FCSTATE.EXACT_TEXT.$15
+FCSTATE.EXACT_TEXT.$14:
+	CLRL	R0
+FCSTATE.EXACT_TEXT.$15:
+	MOVL	R0,FCSTATE.EXACT_TEXT.$T2
+	MOVL	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.K
+;  422      d = written(1:1) // written(3:k - 1)
+	SUBL3	#3,FCSTATE.EXACT_TEXT.K,FCSTATE.EXACT_TEXT.$T2
+	BGEQ	FCSTATE.EXACT_TEXT.$16
+	CLRL	FCSTATE.EXACT_TEXT.$T2
+FCSTATE.EXACT_TEXT.$16:
+	MOVB	FCSTATE.EXACT_TEXT.WRITTEN,FCSTATE.EXACT_TEXT.$T5
+	MOVC3	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.WRITTEN+2,FCSTATE.EXACT_TEXT.$T5+1
+	ADDL3	FCSTATE.EXACT_TEXT.$T2,#1,R0
+	MOVC5	R0,FCSTATE.EXACT_TEXT.$T5,#^A/ /,#17,FCSTATE.EXACT_TEXT.D
+;  423      read (written(k + 1:), *) ex
+	SUBL3	FCSTATE.EXACT_TEXT.K,#30,FCSTATE.EXACT_TEXT.$T2
+	BGEQ	FCSTATE.EXACT_TEXT.$18
+	CLRL	FCSTATE.EXACT_TEXT.$T2
+FCSTATE.EXACT_TEXT.$18:
+	CVTLW	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.$D12
+	MOVL	FCSTATE.EXACT_TEXT.K,R0
+	MOVAB	FCSTATE.EXACT_TEXT.WRITTEN[R0],FCSTATE.EXACT_TEXT.$D12+4
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D12
+	PUSHAB	FCSTATE.EXACT_TEXT.$IO3
+	CALLS	#2,G^FTN$READ_IL
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D13
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  424      n = len_trim(d)
+	MOVAB	FCSTATE.EXACT_TEXT.D,FCSTATE.EXACT_TEXT.$T2
+	MOVL	#17,FCSTATE.EXACT_TEXT.$T1
+	BRB	FCSTATE.EXACT_TEXT.$20
+FCSTATE.EXACT_TEXT.$21:
+	SUBL3	#1,FCSTATE.EXACT_TEXT.$T1,R0
+	CMPB	@FCSTATE.EXACT_TEXT.$T2[R0],#32
+	BNEQ	FCSTATE.EXACT_TEXT.$22
+	DECL	FCSTATE.EXACT_TEXT.$T1
+FCSTATE.EXACT_TEXT.$20:
+	TSTL	FCSTATE.EXACT_TEXT.$T1	; from line 424
+	BNEQ	FCSTATE.EXACT_TEXT.$21
+FCSTATE.EXACT_TEXT.$22:
+	MOVL	FCSTATE.EXACT_TEXT.$T1,FCSTATE.EXACT_TEXT.N
+;  425      do while (n > 1 .and. d(n:n) == '0')
+	MOVL	FCSTATE.EXACT_TEXT.N,R6
+	BRB	FCSTATE.EXACT_TEXT.$25
+FCSTATE.EXACT_TEXT.$26:			; DO (line 425)'s body
+;  426        n = n - 1
+	DECL	R6
+;  427      end do
+FCSTATE.EXACT_TEXT.$25:			; DO (line 425)'s test
+	CMPL	R6,#1			; from line 425
+	BLEQ	FCSTATE.EXACT_TEXT.$27
+	CMPB	FCSTATE.EXACT_TEXT.D-1[R6],#48
+	BEQL	FCSTATE.EXACT_TEXT.$26
+FCSTATE.EXACT_TEXT.$27:
+	MOVL	R6,FCSTATE.EXACT_TEXT.N
+;  428
+;  429      if (ex >= 0 .and. ex < 15) then
+	TSTL	FCSTATE.EXACT_TEXT.EX
+	BGEQ	FCSTATE.EXACT_TEXT.$31
+	BRW	FCSTATE.EXACT_TEXT.$30
+FCSTATE.EXACT_TEXT.$31:
+	CMPL	FCSTATE.EXACT_TEXT.EX,#15
+	BLSS	FCSTATE.EXACT_TEXT.$32
+	BRW	FCSTATE.EXACT_TEXT.$30
+FCSTATE.EXACT_TEXT.$32:
+;  430        ! Fixed notation, EX + 1 digits before the point: 2.5, 400.
+;  431        if (n <= ex + 1) then
+	ADDL3	FCSTATE.EXACT_TEXT.EX,#1,R0
+	CMPL	FCSTATE.EXACT_TEXT.N,R0
+	BLEQ	FCSTATE.EXACT_TEXT.$34
+	BRW	FCSTATE.EXACT_TEXT.$33
+FCSTATE.EXACT_TEXT.$34:
+;  432          text = d(1:n) // repeat('0', ex + 1 - n)
+	MOVL	FCSTATE.EXACT_TEXT.N,FCSTATE.EXACT_TEXT.$T1
+	BGEQ	FCSTATE.EXACT_TEXT.$35
+	CLRL	FCSTATE.EXACT_TEXT.$T1
+FCSTATE.EXACT_TEXT.$35:
+	SUBL3	FCSTATE.EXACT_TEXT.N,FCSTATE.EXACT_TEXT.EX,R0
+	ADDL3	R0,#1,FCSTATE.EXACT_TEXT.$T2
+	PUSHAL	FCSTATE.EXACT_TEXT.$T2
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D15
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D14
+	CALLS	#3,G^FTN$REPEAT
+	MOVZWL	FCSTATE.EXACT_TEXT.$D14,R0
+	ADDL2	FCSTATE.EXACT_TEXT.$T1,R0
+	CVTLW	R0,FCSTATE.EXACT_TEXT.$T6
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D16
+	PUSHAW	FCSTATE.EXACT_TEXT.$T6
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCSTATE.EXACT_TEXT.$T1,FCSTATE.EXACT_TEXT.D,@FCSTATE.EXACT_TEXT.$D16+4
+	MOVZWL	FCSTATE.EXACT_TEXT.$D14,FCSTATE.EXACT_TEXT.$U1
+	MOVL	FCSTATE.EXACT_TEXT.$T1,R0
+	MOVC3	FCSTATE.EXACT_TEXT.$U1,@FCSTATE.EXACT_TEXT.$D14+4,@FCSTATE.EXACT_TEXT.$D16+4[R0]
+	ADDL3	FCSTATE.EXACT_TEXT.$T1,FCSTATE.EXACT_TEXT.$U1,R0
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCSTATE.EXACT_TEXT.$D16+4,#^A/ /,#30,@4(R1)
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D14
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D16
+	CALLS	#1,G^LIB$SFREE1_DD
+;  433        else
+	BRW	FCSTATE.EXACT_TEXT.$42
+FCSTATE.EXACT_TEXT.$33:
+;  434          text = d(1:ex + 1) // '.' // d(ex + 2:n)
+	ADDL3	FCSTATE.EXACT_TEXT.EX,#1,FCSTATE.EXACT_TEXT.$T2
+	BGEQ	FCSTATE.EXACT_TEXT.$38
+	CLRL	FCSTATE.EXACT_TEXT.$T2
+FCSTATE.EXACT_TEXT.$38:
+	SUBL3	FCSTATE.EXACT_TEXT.EX,FCSTATE.EXACT_TEXT.N,R0
+	SUBL3	#1,R0,FCSTATE.EXACT_TEXT.$T1
+	BGEQ	FCSTATE.EXACT_TEXT.$40
+	CLRL	FCSTATE.EXACT_TEXT.$T1
+FCSTATE.EXACT_TEXT.$40:
+	MOVC3	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.D,FCSTATE.EXACT_TEXT.$T7
+	MOVL	FCSTATE.EXACT_TEXT.$T2,R0
+	MOVB	#46,FCSTATE.EXACT_TEXT.$T7[R0]
+	MOVL	FCSTATE.EXACT_TEXT.EX,R0
+	MOVL	FCSTATE.EXACT_TEXT.$T2,R1
+	MOVC3	FCSTATE.EXACT_TEXT.$T1,FCSTATE.EXACT_TEXT.D+1[R0],FCSTATE.EXACT_TEXT.$T7+1[R1]
+	ADDL3	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.$T1,R0
+	INCL	R0
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCSTATE.EXACT_TEXT.$T7,#^A/ /,#30,@4(R1)
+;  435        end if
+;  436      else if (ex < 0 .and. ex >= -5) then
+	BRW	FCSTATE.EXACT_TEXT.$42
+FCSTATE.EXACT_TEXT.$30:
+	TSTL	FCSTATE.EXACT_TEXT.EX
+	BLSS	FCSTATE.EXACT_TEXT.$44
+	BRW	FCSTATE.EXACT_TEXT.$43
+FCSTATE.EXACT_TEXT.$44:
+	CMPL	FCSTATE.EXACT_TEXT.EX,#-5
+	BGEQ	FCSTATE.EXACT_TEXT.$45
+	BRW	FCSTATE.EXACT_TEXT.$43
+FCSTATE.EXACT_TEXT.$45:
+;  437        ! Fixed notation, zeros after the point: 0.001.
+;  438        text = '0.' // repeat('0', -ex - 1) // d(1:n)
+	MNEGL	FCSTATE.EXACT_TEXT.EX,R0
+	SUBL3	#1,R0,FCSTATE.EXACT_TEXT.$T1
+	PUSHAL	FCSTATE.EXACT_TEXT.$T1
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D15
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D16
+	CALLS	#3,G^FTN$REPEAT
+	MOVL	FCSTATE.EXACT_TEXT.N,FCSTATE.EXACT_TEXT.$T2
+	BGEQ	FCSTATE.EXACT_TEXT.$46
+	CLRL	FCSTATE.EXACT_TEXT.$T2
+FCSTATE.EXACT_TEXT.$46:
+	MOVZWL	FCSTATE.EXACT_TEXT.$D16,R0
+	ADDL2	FCSTATE.EXACT_TEXT.$T2,R0
+	ADDL2	#2,R0
+	CVTLW	R0,FCSTATE.EXACT_TEXT.$T6
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D14
+	PUSHAW	FCSTATE.EXACT_TEXT.$T6
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#2,FCSTATE.EXACT_TEXT.$K7,@FCSTATE.EXACT_TEXT.$D14+4
+	MOVZWL	FCSTATE.EXACT_TEXT.$D16,FCSTATE.EXACT_TEXT.$U1
+	MOVL	FCSTATE.EXACT_TEXT.$D14+4,R0
+	MOVC3	FCSTATE.EXACT_TEXT.$U1,@FCSTATE.EXACT_TEXT.$D16+4,2(R0)
+	ADDL3	FCSTATE.EXACT_TEXT.$U1,#2,R0
+	MOVC3	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.D,@FCSTATE.EXACT_TEXT.$D14+4[R0]
+	ADDL3	FCSTATE.EXACT_TEXT.$U1,FCSTATE.EXACT_TEXT.$T2,R0
+	ADDL2	#2,R0
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCSTATE.EXACT_TEXT.$D14+4,#^A/ /,#30,@4(R1)
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D16
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D14
+	CALLS	#1,G^LIB$SFREE1_DD
+;  439      else if (n == 1) then
+	BRW	FCSTATE.EXACT_TEXT.$42
+FCSTATE.EXACT_TEXT.$43:
+	CMPL	FCSTATE.EXACT_TEXT.N,#1
+	BNEQ	FCSTATE.EXACT_TEXT.$48
+;  440        text = d(1:1) // 'e' // exponent_text(ex)
+	PUSHAL	FCSTATE.EXACT_TEXT.EX
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D17
+	CALLS	#2,G^FCSTATE.EXPONENT_TEXT
+	MOVB	FCSTATE.EXACT_TEXT.D,FCSTATE.EXACT_TEXT.$T9
+	MOVB	#101,FCSTATE.EXACT_TEXT.$T9+1
+	MOVC3	#13,FCSTATE.EXACT_TEXT.$T8,FCSTATE.EXACT_TEXT.$T9+2
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R0
+	MOVC5	#15,FCSTATE.EXACT_TEXT.$T9,#^A/ /,#30,@4(R0)
+;  441      else
+	BRW	FCSTATE.EXACT_TEXT.$42
+FCSTATE.EXACT_TEXT.$48:
+;  442        text = d(1:1) // '.' // d(2:n) // 'e' // exponent_text(ex)
+	SUBL3	#1,FCSTATE.EXACT_TEXT.N,FCSTATE.EXACT_TEXT.$T2
+	BGEQ	FCSTATE.EXACT_TEXT.$50
+	CLRL	FCSTATE.EXACT_TEXT.$T2
+FCSTATE.EXACT_TEXT.$50:
+	PUSHAL	FCSTATE.EXACT_TEXT.EX
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D17
+	CALLS	#2,G^FCSTATE.EXPONENT_TEXT
+	MOVB	FCSTATE.EXACT_TEXT.D,FCSTATE.EXACT_TEXT.$T10
+	MOVB	#46,FCSTATE.EXACT_TEXT.$T10+1
+	MOVC3	FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.D+1,FCSTATE.EXACT_TEXT.$T10+2
+	MOVL	FCSTATE.EXACT_TEXT.$T2,R0
+	MOVB	#101,FCSTATE.EXACT_TEXT.$T10+2[R0]
+	MOVL	FCSTATE.EXACT_TEXT.$T2,R0
+	MOVC3	#13,FCSTATE.EXACT_TEXT.$T8,FCSTATE.EXACT_TEXT.$T10+3[R0]
+	ADDL3	FCSTATE.EXACT_TEXT.$T2,#16,R0
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCSTATE.EXACT_TEXT.$T10,#^A/ /,#30,@4(R1)
+;  443      end if
+FCSTATE.EXACT_TEXT.$42:
+;  444      if (x < 0) text = '-' // trim(text)
+	TSTG	@FCSTATE.EXACT_TEXT.X(AP)
+	BLSS	FCSTATE.EXACT_TEXT.$53
+	RET
+FCSTATE.EXACT_TEXT.$53:
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),FCSTATE.EXACT_TEXT.$T2
+	MOVAB	@FCSTATE.EXACT_TEXT.$T2,FCSTATE.EXACT_TEXT.$T1
+	MOVL	#30,FCSTATE.EXACT_TEXT.$T11
+	BRB	FCSTATE.EXACT_TEXT.$54
+FCSTATE.EXACT_TEXT.$55:
+	SUBL3	#1,FCSTATE.EXACT_TEXT.$T11,R0
+	CMPB	@FCSTATE.EXACT_TEXT.$T1[R0],#32
+	BNEQ	FCSTATE.EXACT_TEXT.$56
+	DECL	FCSTATE.EXACT_TEXT.$T11
+FCSTATE.EXACT_TEXT.$54:
+	TSTL	FCSTATE.EXACT_TEXT.$T11	; from line 444
+	BNEQ	FCSTATE.EXACT_TEXT.$55
+FCSTATE.EXACT_TEXT.$56:
+	ADDL3	FCSTATE.EXACT_TEXT.$T11,#1,R0
+	CVTLW	R0,FCSTATE.EXACT_TEXT.$T6
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D14
+	PUSHAW	FCSTATE.EXACT_TEXT.$T6
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVB	#45,@FCSTATE.EXACT_TEXT.$D14+4
+	MOVL	FCSTATE.EXACT_TEXT.$D14+4,R0
+	MOVC3	FCSTATE.EXACT_TEXT.$T11,@FCSTATE.EXACT_TEXT.$T2,1(R0)
+	ADDL3	FCSTATE.EXACT_TEXT.$T11,#1,R0
+	MOVL	FCSTATE.EXACT_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCSTATE.EXACT_TEXT.$D14+4,#^A/ /,#30,@4(R1)
+	PUSHAQ	FCSTATE.EXACT_TEXT.$D14
+	CALLS	#1,G^LIB$SFREE1_DD
+;  445    end function exact_text
+	RET
+FCSTATE.EXACT_TEXT.$8:			; leaving the loop
+	MOVL	R6,FCSTATE.EXACT_TEXT.N
+	MOVL	R8,FCSTATE.EXACT_TEXT.IOS
+	BRW	FCSTATE.EXACT_TEXT.$13
+
+; Storage map for FCSTATE.EXPONENT_TEXT, a CHARACTER*13 function
+;   TEXT  CHARACTER*13         hidden argument 1  @FCSTATE.EXPONENT_TEXT.TEXT(AP)
+;   EX    INTEGER, INTENT(IN)  argument 2         @FCSTATE.EXPONENT_TEXT.EX(AP)
+;
+FCSTATE.EXPONENT_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCSTATE.EXPONENT_TEXT.EX = 8		; EX is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.EXPONENT_TEXT.$T1:
+	.BLKL	3			; characters, for one statement
+FCSTATE.EXPONENT_TEXT.$T2:
+	.BLKB	13			; characters, for one statement
+	.BLKB	3
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.EXPONENT_TEXT.$D1:
+	.WORD	12			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.EXPONENT_TEXT.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  446
+;  447    ! EXPONENT_TEXT is EX with its sign: +23, -7.
+;  448    function exponent_text(ex) result(text)
+	.ENTRY	FCSTATE.EXPONENT_TEXT,^M<R2,R3,R4,R5>
+;  449      integer, intent(in) :: ex
+;  450      character(len=13) :: text
+;  451
+;  452      if (ex < 0) then
+	TSTL	@FCSTATE.EXPONENT_TEXT.EX(AP)
+	BGEQ	FCSTATE.EXPONENT_TEXT.$1
+;  453        text = whole_text(ex)
+	PUSHAL	@FCSTATE.EXPONENT_TEXT.EX(AP)
+	PUSHAQ	FCSTATE.EXPONENT_TEXT.$D1
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVL	FCSTATE.EXPONENT_TEXT.TEXT(AP),R0
+	MOVC5	#12,FCSTATE.EXPONENT_TEXT.$T1,#^A/ /,#13,@4(R0)
+;  454      else
+	RET
+FCSTATE.EXPONENT_TEXT.$1:
+;  455        text = '+' // whole_text(ex)
+	PUSHAL	@FCSTATE.EXPONENT_TEXT.EX(AP)
+	PUSHAQ	FCSTATE.EXPONENT_TEXT.$D1
+	CALLS	#2,G^FCSTATE.WHOLE_TEXT
+	MOVB	#43,FCSTATE.EXPONENT_TEXT.$T2
+	MOVC3	#12,FCSTATE.EXPONENT_TEXT.$T1,FCSTATE.EXPONENT_TEXT.$T2+1
+	MOVL	FCSTATE.EXPONENT_TEXT.TEXT(AP),R0
+	MOVC3	#13,FCSTATE.EXPONENT_TEXT.$T2,@4(R0)
+;  456      end if
+;  457    end function exponent_text
+	RET
+
+; Storage map for FCSTATE.OPEN_LOG, a subroutine
+;   NAME    CHARACTER*(*), INTENT(IN)  argument 1  @FCSTATE.OPEN_LOG.NAME(AP)
+;   COLUMN  INTEGER, INTENT(IN)        argument 2  @FCSTATE.OPEN_LOG.COLUMN(AP)
+;   IOS     INTEGER                    $LOCAL+0    FCSTATE.OPEN_LOG.IOS
+;
+FCSTATE.OPEN_LOG.NAME = 4		; NAME is argument 1
+FCSTATE.OPEN_LOG.COLUMN = 8		; COLUMN is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCSTATE.OPEN_LOG.IOS:
+	.BLKL	1			; IOS
+FCSTATE.OPEN_LOG.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCSTATE.OPEN_LOG.$T1:
+	.BLKL	1			; temporary
+FCSTATE.OPEN_LOG.$T2:
+	.BLKB	19			; characters, for one statement
+	.BLKB	1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.OPEN_LOG.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0004			; flags: IOSTAT=
+	.LONG	0			; (not used yet)
+FCSTATE.OPEN_LOG.$K1:
+	.LONG	47
+FCSTATE.OPEN_LOG.$IO2:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCSTATE.OPEN_LOG.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.OPEN_LOG.$K2
+FCSTATE.OPEN_LOG.$D3:
+	.WORD	20			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.OPEN_LOG.$K3
+FCSTATE.OPEN_LOG.$D4:
+	.WORD	19			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCSTATE.OPEN_LOG.$T2
+FCSTATE.OPEN_LOG.$K2:
+	.ASCII	/(2A)/
+FCSTATE.OPEN_LOG.$K3:
+	.ASCII	/! fcalc log, opened /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  458
+;  459    ! ------------------------------------------------------------------
+;  460    ! LOG.
+;  461
+;  462    ! OPEN_LOG starts a transcript in the file NAME, closing any other first:
+;  463    ! everything SAY writes is added to it (module FCMESSAGES' LOG_UNIT),
+;  464    ! after a heading with the time. POSITION='APPEND' opens a file at its end,
+;  465    ! so a log is added to; STATUS='UNKNOWN' makes the file if there is none.
+;  466    subroutine open_log(name, column)
+	.ENTRY	FCSTATE.OPEN_LOG,^M<>
+;  467      character(len=*), intent(in) :: name
+;  468      integer, intent(in) :: column
+;  469      integer :: ios
+;  470
+;  471      if (log_unit /= 0) call close_log(column)
+	TSTL	FCSTATE.LOG_UNIT
+	BEQL	FCSTATE.OPEN_LOG.$1
+	PUSHAL	@FCSTATE.OPEN_LOG.COLUMN(AP)
+	CALLS	#1,G^FCSTATE.CLOSE_LOG
+FCSTATE.OPEN_LOG.$1:
+;  472      open (unit=log_file, file=name, status='UNKNOWN', action='WRITE', &
+;  473        position='APPEND', iostat=ios)
+	MOVW	@FCSTATE.OPEN_LOG.NAME(AP),FCSTATE.OPEN_LOG.$D1
+	MOVL	FCSTATE.OPEN_LOG.NAME(AP),R0
+	MOVAB	@4(R0),FCSTATE.OPEN_LOG.$D1+4
+	PUSHL	#2
+	PUSHL	#1048
+	PUSHL	#3
+	PUSHL	#1073
+	PUSHL	#2
+	PUSHL	#1074
+	PUSHL	#4
+	PUSHL	#1039
+	PUSHAQ	FCSTATE.OPEN_LOG.$D1
+	PUSHL	#1806
+	PUSHL	#30
+	PUSHAB	FCSTATE.OPEN_LOG.$IO1
+	CALLS	#12,G^FTN$OPEN
+	MOVL	R0,FCSTATE.OPEN_LOG.$T1
+	MOVL	FCSTATE.OPEN_LOG.$T1,FCSTATE.OPEN_LOG.IOS
+;  474      if (ios /= 0) then
+	BEQL	FCSTATE.OPEN_LOG.$3
+;  475        call fail(e_fileerr, column, name)
+	PUSHL	FCSTATE.OPEN_LOG.NAME(AP)
+	PUSHAL	@FCSTATE.OPEN_LOG.COLUMN(AP)
+	PUSHAL	FCSTATE.OPEN_LOG.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  476        return
+	RET
+FCSTATE.OPEN_LOG.$3:
+;  477      end if
+;  478      log_unit = log_file
+	MOVL	#30,FCSTATE.LOG_UNIT
+;  479      write (log_unit, '(2A)') '! fcalc log, opened ', now()
+	PUSHAQ	FCSTATE.OPEN_LOG.$D2
+	PUSHL	#30
+	PUSHAB	FCSTATE.OPEN_LOG.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	FCSTATE.OPEN_LOG.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCSTATE.OPEN_LOG.$D4
+	CALLS	#1,G^FCSTATE.NOW
+	PUSHAQ	FCSTATE.OPEN_LOG.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  480    end subroutine open_log
+	RET
+
+; Storage map for FCSTATE.CLOSE_LOG, a subroutine
+;   COLUMN  INTEGER, INTENT(IN)  argument 1  @FCSTATE.CLOSE_LOG.COLUMN(AP)
+;
+FCSTATE.CLOSE_LOG.COLUMN = 4		; COLUMN is argument 1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCSTATE.CLOSE_LOG.$K1:
+	.LONG	50
+FCSTATE.CLOSE_LOG.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  481
+;  482    ! CLOSE_LOG ends the transcript: LOG OFF, a warning at COLUMN if there was
+;  483    ! none.
+;  484    subroutine close_log(column)
+	.ENTRY	FCSTATE.CLOSE_LOG,^M<>
+;  485      integer, intent(in) :: column
+;  486
+;  487      if (log_unit == 0) then
+	TSTL	FCSTATE.LOG_UNIT
+	BNEQ	FCSTATE.CLOSE_LOG.$1
+;  488        call fail(w_nolog, column)
+	PUSHL	#0
+	PUSHAL	@FCSTATE.CLOSE_LOG.COLUMN(AP)
+	PUSHAL	FCSTATE.CLOSE_LOG.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  489        return
+	RET
+FCSTATE.CLOSE_LOG.$1:
+;  490      end if
+;  491      close (log_unit)
+	PUSHL	FCSTATE.LOG_UNIT
+	PUSHAB	FCSTATE.CLOSE_LOG.$IO1
+	CALLS	#2,G^FTN$CLOSE
+;  492      log_unit = 0
+	CLRL	FCSTATE.LOG_UNIT
+;  493    end subroutine close_log
+	RET
+;  494  end module fcstate
+
+	.END

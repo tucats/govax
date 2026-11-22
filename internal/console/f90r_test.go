@@ -232,3 +232,83 @@ func checkF90RFcalc(t *testing.T, sections map[string]string) {
 		}
 	}
 }
+
+// f90rVMSDifferences are the sections of VMS 7.1's log (testdata/f90r/vax/f90r.log) that
+// aren't what the same procedure prints on govax, with why. A name without a variant's
+// letter stands for the program's three runs.
+var f90rVMSDifferences = map[string]string{}
+
+// f90rAwaitingVMS are the sections VMS's last run didn't make as govax's run does, which
+// the next round is to, by prefix: in round 1 VMS's MACRO refused the bare .ASCII the
+// compiler wrote for an empty text (DIRSYNX), so these never built there.
+var f90rAwaitingVMS = []string{"FCALC", "AUTOLEN", "AUTOS", "CALENDAR", "CHARFNS", "TEXTFMT"}
+
+// TestF90ROracle holds the procedure's run on govax to VMS 7.1's: Fortran 90 programs
+// govax's compiler made, assembled and linked by VMS's MACRO and LINK against an FTNRTL
+// built there from its sources, on a real VAX's instruction set and VMS's own LIBRTL,
+// MTHRTL, and RMS.
+func TestF90ROracle(t *testing.T) {
+	vms, err := os.ReadFile(filepath.Join("..", "..", "testdata", "f90r", "vax", "f90r.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log, _, _ := runF90R(t)
+	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
+
+	awaiting := func(name string) bool {
+		for _, prefix := range f90rAwaitingVMS {
+			if strings.HasPrefix(name, prefix) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	if a, b := ftn86Statuses(got["FTNRTL"], 0), ftn86Statuses(want["FTNRTL"], 0); a != b {
+		t.Errorf("building FTNRTL ended with:\n%s\nVMS's:\n%s", a, b)
+	}
+
+	seen := map[string]bool{}
+
+	for name, text := range got {
+		if name == "FTNRTL" || awaiting(name) {
+			continue
+		}
+
+		vmsText, ok := want[name]
+		if !ok {
+			t.Errorf("%s isn't in VMS's log", name)
+
+			continue
+		}
+
+		base := name
+		if _, ok := f90rVMSDifferences[name]; !ok {
+			base = strings.TrimSuffix(strings.TrimSuffix(name, "N"), "R")
+		}
+
+		_, expected := f90rVMSDifferences[base]
+		same := ftn86Lines(withoutTraceLines(text)) == vmsText
+
+		switch {
+		case expected:
+			seen[base] = seen[base] || !same
+		case !same:
+			t.Errorf("%s printed:\n%s\nVMS's:\n%s", name, ftn86Lines(withoutTraceLines(text)), vmsText)
+		}
+	}
+
+	for name := range want {
+		if _, ok := got[name]; !ok && !awaiting(name) {
+			t.Errorf("VMS's log has %s, govax's doesn't", name)
+		}
+	}
+
+	for name := range f90rVMSDifferences {
+		if !seen[name] {
+			t.Errorf("%s now matches VMS: take it out of f90rVMSDifferences", name)
+		}
+	}
+}

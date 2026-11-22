@@ -79,8 +79,19 @@ old volume is `testdata/disks/f90r-exchange-attempt1.dsk`.
 
 ## What came back
 
-Nothing yet: this round awaits its run on VMS 7.1. When it comes back, `TestF90ROracle` is to
-hold govax's run of the procedure to VMS's log, as `TestFTN86Oracle` does.
+`vax/` is round 1, the author's run on VMS 7.1, 22-NOV-2026: the log, FTNRTL's objects,
+image, map, and the sources VMS built (`vax/mar/`), and fcalc's `.MAR` files and objects
+(`vax/fcalc/`; no image, below). VMS read the volume made with `/HEADERS` cleanly, built
+FTNRTL with no message, and of the corpus's 366 runs, 351 printed what govax's run of the
+procedure prints. The other 15, AUTOLEN, AUTOS, CALENDAR, CHARFNS, and TEXTFMT in each
+variant, and every fcalc build, stopped at VMS's MACRO: `%MACRO-E-DIRSYNX` on a bare
+`.ASCII`, which the compiler wrote for an empty text (`''`) and govax's MACRO had accepted.
+Both are fixed (the phase doc's log). `TestF90ROracle` holds govax's run to the log, with
+those programs in `f90rAwaitingVMS` until round 2.
 
-Before a later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new
-one. The scripts use DUA5 on govax, since the author's startup mounts XFER on DUA2.
+Round 2 is the same procedure on a volume rebuilt from the fixed compiler; the round 1 volume
+is `testdata/disks/f90r-exchange-round1.dsk`. `copyout.cmd` writes round 2 to `vax/round2/`
+(make `vax/round2/mar` and `vax/round2/fcalc` first), beside round 1, until it's checked.
+
+The scripts use DUA5 on govax, since the author's startup mounts XFER on DUA2. Before a
+later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new one.

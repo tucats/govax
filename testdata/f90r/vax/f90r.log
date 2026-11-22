@@ -1,0 +1,6941 @@
+==== FTNRTL
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+==== FCALC
+                                     016A  2407 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     0284  3525 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     02FA  4337 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     003A   120 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     01B0  1900 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module FCALC file DUA1:[FCALC]FCALC.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%LINK-E-ERRORS, compilation errors
+	in module FCNUMERIC file DUA1:[FCALC]FCNUMERIC.OBJ;1
+  $STATUS == "%X106482B2"
+==== FCALC.BASICS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.COMPLEX
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.DISPLAY
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.ERRORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.FUNCTIONS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.MATRICES
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.NUMERIC
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.PLOT
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.STATE
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.USERFUNCS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.VECTORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALC.SAVED
+%DCL-E-OPENIN, error opening DUA1:[FCALC]SAVED.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALC.SESSION
+%DCL-E-OPENIN, error opening DUA1:[FCALC]SESSION.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALC.ONESHOT
+%DCL-W-ACTIMAGE, error activating image DUA1:[FCALC]FCALC.EXE;
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN
+                                     016A  2567 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     0284  3844 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     02FA  4712 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     003A   118 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     01B4  2142 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module FCALC file DUA1:[FCALCN]FCALC.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%LINK-E-ERRORS, compilation errors
+	in module FCNUMERIC file DUA1:[FCALCN]FCNUMERIC.OBJ;1
+  $STATUS == "%X106482B2"
+==== FCALCN.BASICS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.COMPLEX
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.DISPLAY
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.ERRORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.FUNCTIONS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.MATRICES
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.NUMERIC
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.PLOT
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.STATE
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.USERFUNCS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.VECTORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCN.SAVED
+%DCL-E-OPENIN, error opening DUA1:[FCALCN]SAVED.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALCN.SESSION
+%DCL-E-OPENIN, error opening DUA1:[FCALCN]SESSION.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALCN.ONESHOT
+%DCL-W-ACTIMAGE, error activating image DUA1:[FCALCN]FCALC.EXE;
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCN]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR
+                                     014A  2237 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     025C  3254 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     02D2  3929 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     003A   120 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     01A8  1869 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module FCALC file DUA1:[FCALCR]FCALC.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%LINK-E-ERRORS, compilation errors
+	in module FCNUMERIC file DUA1:[FCALCR]FCNUMERIC.OBJ;1
+  $STATUS == "%X106482B2"
+==== FCALCR.BASICS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.COMPLEX
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.DISPLAY
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.ERRORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.FUNCTIONS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.MATRICES
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.NUMERIC
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.PLOT
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.STATE
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.USERFUNCS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.VECTORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCR.SAVED
+%DCL-E-OPENIN, error opening DUA1:[FCALCR]SAVED.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALCR.SESSION
+%DCL-E-OPENIN, error opening DUA1:[FCALCR]SESSION.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALCR.ONESHOT
+%DCL-W-ACTIMAGE, error activating image DUA1:[FCALCR]FCALC.EXE;
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCR]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC
+                                     016A  2422 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     0284  3740 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     02FA  4580 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     003A   123 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     01B4  2290 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module FCALC file DUA1:[FCALCC]FCALC.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%LINK-E-ERRORS, compilation errors
+	in module FCNUMERIC file DUA1:[FCALCC]FCNUMERIC.OBJ;1
+  $STATUS == "%X106482B2"
+==== FCALCC.BASICS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.COMPLEX
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.DISPLAY
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.ERRORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.FUNCTIONS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.MATRICES
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.NUMERIC
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.PLOT
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.STATE
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.USERFUNCS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.VECTORS
+%DCL-W-ACTIMAGE, error activating image FCALC
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== FCALCC.SAVED
+%DCL-E-OPENIN, error opening DUA1:[FCALCC]SAVED.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALCC.SESSION
+%DCL-E-OPENIN, error opening DUA1:[FCALCC]SESSION.FCALC; as input
+-RMS-E-FNF, file not found
+==== FCALCC.ONESHOT
+%DCL-W-ACTIMAGE, error activating image DUA1:[FCALCC]FCALC.EXE;
+-CLI-E-IMAGEFNF, image file not found DUA1:[FCALCC]FCALC.EXE;
+  $STATUS == "%X100388B2"
+==== ACCOUNTS
+ADAMS  101     29.75
+BAKER  102    300.00
+CLARK  103    135.50
+BAKER  102    300.00
+posts  3
+  $STATUS == "%X00000001"
+==== ACCOUNTSN
+ADAMS  101     29.75
+BAKER  102    300.00
+CLARK  103    135.50
+BAKER  102    300.00
+posts  3
+  $STATUS == "%X00000001"
+==== ACCOUNTSR
+ADAMS  101     29.75
+BAKER  102    300.00
+CLARK  103    135.50
+BAKER  102    300.00
+posts  3
+  $STATUS == "%X00000001"
+==== ADVANCE
+abcdefghi
+abc X
+abcZe
+xy
+A bad ADVANCE=: 308
+part
+list
+  123    45   678
+"ab   "   2  -2
+xy  2
+EOR= taken: z   1
+  12300
+A short record, PAD='NO': 310
+  2  -2
+END= taken
+onetwo
+Your name?  Hello, Pat
+The end.
+  $STATUS == "%X00000001"
+==== ADVANCEN
+abcdefghi
+abc X
+abcZe
+xy
+A bad ADVANCE=: 308
+part
+list
+  123    45   678
+"ab   "   2  -2
+xy  2
+EOR= taken: z   1
+  12300
+A short record, PAD='NO': 310
+  2  -2
+END= taken
+onetwo
+Your name?  Hello, Pat
+The end.
+  $STATUS == "%X00000001"
+==== ADVANCER
+abcdefghi
+abc X
+abcZe
+xy
+A bad ADVANCE=: 308
+part
+list
+  123    45   678
+"ab   "   2  -2
+xy  2
+EOR= taken: z   1
+  12300
+A short record, PAD='NO': 310
+  2  -2
+END= taken
+onetwo
+Your name?  Hello, Pat
+The end.
+  $STATUS == "%X00000001"
+==== ALLOCS
+allocated before: F
+allocated after:  T
+size, lbound, ubound of v:  6  1  6
+shape and lbound of m:      3  4   0 -1
+v:      1.   4.   9.  16.  25.  36.
+v:      2.   0.  10.   0.  26.   0.
+sum:    38.
+m(0,:):   -1.   0.   1.   2.
+m(1,:):    9.  10.  11.  12.
+m(2,:):   19.  20.  21.  22.
+col sums:  27.  30.  33.  36.
+total:   38.
+allocated v: F
+again: -2  2   5.
+k:      1   4   9  16
+empty: T  0  0   0
+levels:    30
+all gone: F F F
+  $STATUS == "%X00000001"
+==== ALLOCSN
+allocated before: F
+allocated after:  T
+size, lbound, ubound of v:  6  1  6
+shape and lbound of m:      3  4   0 -1
+v:      1.   4.   9.  16.  25.  36.
+v:      2.   0.  10.   0.  26.   0.
+sum:    38.
+m(0,:):   -1.   0.   1.   2.
+m(1,:):    9.  10.  11.  12.
+m(2,:):   19.  20.  21.  22.
+col sums:  27.  30.  33.  36.
+total:   38.
+allocated v: F
+again: -2  2   5.
+k:      1   4   9  16
+empty: T  0  0   0
+levels:    30
+all gone: F F F
+  $STATUS == "%X00000001"
+==== ALLOCSR
+allocated before: F
+allocated after:  T
+size, lbound, ubound of v:  6  1  6
+shape and lbound of m:      3  4   0 -1
+v:      1.   4.   9.  16.  25.  36.
+v:      2.   0.  10.   0.  26.   0.
+sum:    38.
+m(0,:):   -1.   0.   1.   2.
+m(1,:):    9.  10.  11.  12.
+m(2,:):   19.  20.  21.  22.
+col sums:  27.  30.  33.  36.
+total:   38.
+allocated v: F
+again: -2  2   5.
+k:      1   4   9  16
+empty: T  0  0   0
+levels:    30
+all gone: F F F
+  $STATUS == "%X00000001"
+==== ALLOCSTAT
+allocate:           0 T
+again fails:        T  3
+deallocate:         0 F
+again fails:        T
+stops at b:         T T T F  2
+both freed:         0 F F F
+zero-sized:         0 T  0
+work at entry:      4 F
+work sum:           4  10
+work at entry:      5 F
+work sum:           5  15
+keep allocates at:  1
+keep:               1  1  1
+keep:               2  3  2
+keep:               3  6  3
+early:                 0   35   -1
+outer at entry:     1 F
+outer filled:       1  1  2  3
+outer at entry:     2 F
+outer filled:       2  2  4  6  8
+mine at entry:      1 F
+mine sum:           1  0.5
+mine at entry:      2 F
+mine sum:           2  1.0
+nested:               30   55
+normal return:      1
+alternate return:   2
+both at entry:      3 F
+sum:                3  6.0
+second at entry:    4 F
+sum:                4  8.0
+both at entry:      2 F
+sum:                2  4.0
+  $STATUS == "%X00000001"
+==== ALLOCSTATN
+allocate:           0 T
+again fails:        T  3
+deallocate:         0 F
+again fails:        T
+stops at b:         T T T F  2
+both freed:         0 F F F
+zero-sized:         0 T  0
+work at entry:      4 F
+work sum:           4  10
+work at entry:      5 F
+work sum:           5  15
+keep allocates at:  1
+keep:               1  1  1
+keep:               2  3  2
+keep:               3  6  3
+early:                 0   35   -1
+outer at entry:     1 F
+outer filled:       1  1  2  3
+outer at entry:     2 F
+outer filled:       2  2  4  6  8
+mine at entry:      1 F
+mine sum:           1  0.5
+mine at entry:      2 F
+mine sum:           2  1.0
+nested:               30   55
+normal return:      1
+alternate return:   2
+both at entry:      3 F
+sum:                3  6.0
+second at entry:    4 F
+sum:                4  8.0
+both at entry:      2 F
+sum:                2  4.0
+  $STATUS == "%X00000001"
+==== ALLOCSTATR
+allocate:           0 T
+again fails:        T  3
+deallocate:         0 F
+again fails:        T
+stops at b:         T T T F  2
+both freed:         0 F F F
+zero-sized:         0 T  0
+work at entry:      4 F
+work sum:           4  10
+work at entry:      5 F
+work sum:           5  15
+keep allocates at:  1
+keep:               1  1  1
+keep:               2  3  2
+keep:               3  6  3
+early:                 0   35   -1
+outer at entry:     1 F
+outer filled:       1  1  2  3
+outer at entry:     2 F
+outer filled:       2  2  4  6  8
+mine at entry:      1 F
+mine sum:           1  0.5
+mine at entry:      2 F
+mine sum:           2  1.0
+nested:               30   55
+normal return:      1
+alternate return:   2
+both at entry:      3 F
+sum:                3  6.0
+second at entry:    4 F
+sum:                4  8.0
+both at entry:      2 F
+sum:                2  4.0
+  $STATUS == "%X00000001"
+==== ALLOCVMS
+ALREADYALLOC:  301
+NOTALLOC:      302
+INSVIRMEM:      41 F
+signaled:   %X0018896C
+signaled:   %X0018896C
+signaled:   %X00188974
+signaled:   %X0018814C
+unwound:    %X0000002C
+unwound:    %X0000002C
+a block left behind: T
+churn:    91
+bytes kept:     0
+  $STATUS == "%X00000001"
+==== ALLOCVMSN
+ALREADYALLOC:  301
+NOTALLOC:      302
+INSVIRMEM:      41 F
+signaled:   %X0018896C
+signaled:   %X0018896C
+signaled:   %X00188974
+signaled:   %X0018814C
+unwound:    %X0000002C
+unwound:    %X0000002C
+a block left behind: T
+churn:    91
+bytes kept:     0
+  $STATUS == "%X00000001"
+==== ALLOCVMSR
+ALREADYALLOC:  301
+NOTALLOC:      302
+INSVIRMEM:      41 F
+signaled:   %X0018896C
+signaled:   %X0018896C
+signaled:   %X00188974
+signaled:   %X0018814C
+unwound:    %X0000002C
+unwound:    %X0000002C
+a block left behind: T
+churn:    91
+bytes kept:     0
+  $STATUS == "%X00000001"
+==== ARRAYIO
+odd:       1.0  3.0  5.0  7.0
+down:      8.0  7.0  6.0  5.0  4.0  3.0  2.0  1.0
+sums:      6.0  8.0 10.0 12.0 14.0 16.0
+whole:     1.0  2.0  3.0  4.0  5.0  6.0
+row 2:     2.0  4.0  6.0
+col 3:     5.0  6.0
+corner:    3.0  4.0  5.0  6.0
+rows:      1.0  3.0  5.0  2.0  4.0  6.0
+turned:    1.0  3.0  5.0  2.0  4.0  6.0
+colsums:   3.0  7.0 11.0
+roots:     2.8  3.2
+primes:     2   3   5   7  11
+middle:     3   5   7
+squares:    4   9  25  49 121
+built:      0   1   4   9  16 100
+where:      2   3
+shape:      2   3
+cut:      bc fg jk
+joined:  ijkl!efgh!abcd!
+read:     3  9.5  8.5  7.5  4.0  5.0  6.0  7.0  8.0
+scatter:  20.0  0.0 30.0 10.0
+column:    1.0  2.0  1.5  2.5  5.0  6.0
+ends:     abWX efYZ ijUV
+internal:  11   7   5   3   2
+evens:     11   7   5
+records:   8.0  6.0  4.0  8.5  2  0  3  0  5  0
+  $STATUS == "%X00000001"
+==== ARRAYION
+odd:       1.0  3.0  5.0  7.0
+down:      8.0  7.0  6.0  5.0  4.0  3.0  2.0  1.0
+sums:      6.0  8.0 10.0 12.0 14.0 16.0
+whole:     1.0  2.0  3.0  4.0  5.0  6.0
+row 2:     2.0  4.0  6.0
+col 3:     5.0  6.0
+corner:    3.0  4.0  5.0  6.0
+rows:      1.0  3.0  5.0  2.0  4.0  6.0
+turned:    1.0  3.0  5.0  2.0  4.0  6.0
+colsums:   3.0  7.0 11.0
+roots:     2.8  3.2
+primes:     2   3   5   7  11
+middle:     3   5   7
+squares:    4   9  25  49 121
+built:      0   1   4   9  16 100
+where:      2   3
+shape:      2   3
+cut:      bc fg jk
+joined:  ijkl!efgh!abcd!
+read:     3  9.5  8.5  7.5  4.0  5.0  6.0  7.0  8.0
+scatter:  20.0  0.0 30.0 10.0
+column:    1.0  2.0  1.5  2.5  5.0  6.0
+ends:     abWX efYZ ijUV
+internal:  11   7   5   3   2
+evens:     11   7   5
+records:   8.0  6.0  4.0  8.5  2  0  3  0  5  0
+  $STATUS == "%X00000001"
+==== ARRAYIOR
+odd:       1.0  3.0  5.0  7.0
+down:      8.0  7.0  6.0  5.0  4.0  3.0  2.0  1.0
+sums:      6.0  8.0 10.0 12.0 14.0 16.0
+whole:     1.0  2.0  3.0  4.0  5.0  6.0
+row 2:     2.0  4.0  6.0
+col 3:     5.0  6.0
+corner:    3.0  4.0  5.0  6.0
+rows:      1.0  3.0  5.0  2.0  4.0  6.0
+turned:    1.0  3.0  5.0  2.0  4.0  6.0
+colsums:   3.0  7.0 11.0
+roots:     2.8  3.2
+primes:     2   3   5   7  11
+middle:     3   5   7
+squares:    4   9  25  49 121
+built:      0   1   4   9  16 100
+where:      2   3
+shape:      2   3
+cut:      bc fg jk
+joined:  ijkl!efgh!abcd!
+read:     3  9.5  8.5  7.5  4.0  5.0  6.0  7.0  8.0
+scatter:  20.0  0.0 30.0 10.0
+column:    1.0  2.0  1.5  2.5  5.0  6.0
+ends:     abWX efYZ ijUV
+internal:  11   7   5   3   2
+evens:     11   7   5
+records:   8.0  6.0  4.0  8.5  2  0  3  0  5  0
+  $STATUS == "%X00000001"
+==== ARRAYS
+a:       3.  6.  9. 12. 15. 18. 21. 24. 27. 30.
+l:      F F F F F T T T T T
+shift:   3.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+rev:     9.  8.  7.  6.  5.  4.  3.  2.  1.  3.
+c(1,:):  10. 10. 13. 10. 10. 10.
+c(2,:):  11. 11. 11. 11. 11. 11.
+c(3,:):  10. 10. 12. 10. 10. 10.
+c(4,:):  10. 10. 13. 10. 10. 10.
+a(1:n): 10.  8.  6.  4.  4.  5.  6.  7.  8.  9.
+empty:  10.  8.  6.  4.  4.  5.  6.  7.  8.  9.
+k:       -7   1  -7   1  -7
+names:  aXYd zXYd aXYd T F T
+d:       6.25  6.25  6.25
+z:      -3.0  4.0 -3.0  4.0
+scaled: 20. 17. 13.  9.  9. 11. 13. 15. 17. 19.
+  $STATUS == "%X00000001"
+==== ARRAYSN
+a:       3.  6.  9. 12. 15. 18. 21. 24. 27. 30.
+l:      F F F F F T T T T T
+shift:   3.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+rev:     9.  8.  7.  6.  5.  4.  3.  2.  1.  3.
+c(1,:):  10. 10. 13. 10. 10. 10.
+c(2,:):  11. 11. 11. 11. 11. 11.
+c(3,:):  10. 10. 12. 10. 10. 10.
+c(4,:):  10. 10. 13. 10. 10. 10.
+a(1:n): 10.  8.  6.  4.  4.  5.  6.  7.  8.  9.
+empty:  10.  8.  6.  4.  4.  5.  6.  7.  8.  9.
+k:       -7   1  -7   1  -7
+names:  aXYd zXYd aXYd T F T
+d:       6.25  6.25  6.25
+z:      -3.0  4.0 -3.0  4.0
+scaled: 20. 17. 13.  9.  9. 11. 13. 15. 17. 19.
+  $STATUS == "%X00000001"
+==== ARRAYSR
+a:       3.  6.  9. 12. 15. 18. 21. 24. 27. 30.
+l:      F F F F F T T T T T
+shift:   3.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+rev:     9.  8.  7.  6.  5.  4.  3.  2.  1.  3.
+c(1,:):  10. 10. 13. 10. 10. 10.
+c(2,:):  11. 11. 11. 11. 11. 11.
+c(3,:):  10. 10. 12. 10. 10. 10.
+c(4,:):  10. 10. 13. 10. 10. 10.
+a(1:n): 10.  8.  6.  4.  4.  5.  6.  7.  8.  9.
+empty:  10.  8.  6.  4.  4.  5.  6.  7.  8.  9.
+k:       -7   1  -7   1  -7
+names:  aXYd zXYd aXYd T F T
+d:       6.25  6.25  6.25
+z:      -3.0  4.0 -3.0  4.0
+scaled: 20. 17. 13.  9.  9. 11. 13. 15. 17. 19.
+  $STATUS == "%X00000001"
+==== AUTOHOST
+k=  1
+k=  5
+k= 14
+k= 30
+k:  30
+  $STATUS == "%X00000001"
+==== AUTOHOSTN
+k=  1
+k=  5
+k= 14
+k= 30
+k:  30
+  $STATUS == "%X00000001"
+==== AUTOHOSTR
+k=  1
+k=  5
+k= 14
+k= 30
+k:  30
+  $STATUS == "%X00000001"
+==== AUTOLEN
+                                     00D3   140 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module AUTOLEN file DUA1:[AUTOLEN]AUTOLEN.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image AUTOLEN
+-CLI-E-IMAGEFNF, image file not found DUA1:[AUTOLEN]AUTOLEN.EXE;
+  $STATUS == "%X100388B2"
+==== AUTOLENN
+                                     00D3   140 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module AUTOLEN file DUA1:[AUTOLENN]AUTOLEN.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image AUTOLEN
+-CLI-E-IMAGEFNF, image file not found DUA1:[AUTOLENN]AUTOLEN.EXE;
+  $STATUS == "%X100388B2"
+==== AUTOLENR
+                                     00D3   140 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module AUTOLEN file DUA1:[AUTOLENR]AUTOLEN.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image AUTOLEN
+-CLI-E-IMAGEFNF, image file not found DUA1:[AUTOLENR]AUTOLEN.EXE;
+  $STATUS == "%X100388B2"
+==== AUTOS
+                                     005B    99 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module AUTOS file DUA1:[AUTOS]AUTOS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image AUTOS
+-CLI-E-IMAGEFNF, image file not found DUA1:[AUTOS]AUTOS.EXE;
+  $STATUS == "%X100388B2"
+==== AUTOSN
+                                     005B    96 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module AUTOS file DUA1:[AUTOSN]AUTOS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image AUTOS
+-CLI-E-IMAGEFNF, image file not found DUA1:[AUTOSN]AUTOS.EXE;
+  $STATUS == "%X100388B2"
+==== AUTOSR
+                                     005B    99 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module AUTOS file DUA1:[AUTOSR]AUTOS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image AUTOS
+-CLI-E-IMAGEFNF, image file not found DUA1:[AUTOSR]AUTOS.EXE;
+  $STATUS == "%X100388B2"
+==== AVERAGE
+Your name?
+Numbers, and a negative one to end:
+Thank you, Ada.
+  3 numbers, average    5.917
+  $STATUS == "%X00000001"
+==== AVERAGEN
+Your name?
+Numbers, and a negative one to end:
+Thank you, Ada.
+  3 numbers, average    5.917
+  $STATUS == "%X00000001"
+==== AVERAGER
+Your name?
+Numbers, and a negative one to end:
+Thank you, Ada.
+  3 numbers, average    5.917
+  $STATUS == "%X00000001"
+==== BYTES
+  100  -27   73
+    7   14
+   14    2
+  30000  -2700000  12.500
+   27  100  -27  100  -27 -127
+   64 -101   -5
+  -27  127
+   81
+compared
+   123   777
+   1  -4   9 -16  25
+   1    6    9  -16   25
+  50
+ 100 144 64
+ -27 -128
+ -27 -128
+  $STATUS == "%X00000001"
+==== BYTESN
+  100  -27   73
+    7   14
+   14    2
+  30000  -2700000  12.500
+   27  100  -27  100  -27 -127
+   64 -101   -5
+  -27  127
+   81
+compared
+   123   777
+   1  -4   9 -16  25
+   1    6    9  -16   25
+  50
+ 100 144 64
+ -27 -128
+ -27 -128
+  $STATUS == "%X00000001"
+==== BYTESR
+  100  -27   73
+    7   14
+   14    2
+  30000  -2700000  12.500
+   27  100  -27  100  -27 -127
+   64 -101   -5
+  -27  127
+   81
+compared
+   123   777
+   1  -4   9 -16  25
+   1    6    9  -16   25
+  50
+ 100 144 64
+ -27 -128
+ -27 -128
+  $STATUS == "%X00000001"
+==== CALENDAR
+                                     04E6   921 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module CALENDAR file DUA1:[CALENDAR]CALENDAR.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image CALENDAR
+-CLI-E-IMAGEFNF, image file not found DUA1:[CALENDAR]CALENDAR.EXE;
+  $STATUS == "%X100388B2"
+==== CALENDARN
+                                     04E6   970 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module CALENDAR file DUA1:[CALENDARN]CALENDAR.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image CALENDAR
+-CLI-E-IMAGEFNF, image file not found DUA1:[CALENDARN]CALENDAR.EXE;
+  $STATUS == "%X100388B2"
+==== CALENDARR
+                                     04DE   870 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module CALENDAR file DUA1:[CALENDARR]CALENDAR.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image CALENDAR
+-CLI-E-IMAGEFNF, image file not found DUA1:[CALENDARR]CALENDAR.EXE;
+  $STATUS == "%X100388B2"
+==== CASES
+table16: 00100220000000000300
+chain17: 00100220000000000030
+chain7:  01023456700
+search8: 01023456780
+days:    -SMTWTFS-
+open2:   11002033040055
+small:   1120033
+squares: 21222333333444444444
+pairs:   0000312233124444
+skips:   9222119
+  $STATUS == "%X00000001"
+==== CASESN
+table16: 00100220000000000300
+chain17: 00100220000000000030
+chain7:  01023456700
+search8: 01023456780
+days:    -SMTWTFS-
+open2:   11002033040055
+small:   1120033
+squares: 21222333333444444444
+pairs:   0000312233124444
+skips:   9222119
+  $STATUS == "%X00000001"
+==== CASESR
+table16: 00100220000000000300
+chain17: 00100220000000000030
+chain7:  01023456700
+search8: 01023456780
+days:    -SMTWTFS-
+open2:   11002033040055
+small:   1120033
+squares: 21222333333444444444
+pairs:   0000312233124444
+skips:   9222119
+  $STATUS == "%X00000001"
+==== CHARFNS
+                                     02C4   377 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module CHARFNS file DUA1:[CHARFNS]CHARFNS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image CHARFNS
+-CLI-E-IMAGEFNF, image file not found DUA1:[CHARFNS]CHARFNS.EXE;
+  $STATUS == "%X100388B2"
+==== CHARFNSN
+                                     02C6   383 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module CHARFNS file DUA1:[CHARFNSN]CHARFNS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image CHARFNS
+-CLI-E-IMAGEFNF, image file not found DUA1:[CHARFNSN]CHARFNS.EXE;
+  $STATUS == "%X100388B2"
+==== CHARFNSR
+                                     02C4   377 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module CHARFNS file DUA1:[CHARFNSR]CHARFNS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image CHARFNS
+-CLI-E-IMAGEFNF, image file not found DUA1:[CHARFNSR]CHARFNS.EXE;
+  $STATUS == "%X100388B2"
+==== CLOCKRAND
+Seed size positive: T
+Repeated after PUT: T
+From 0 to 1: T
+Repeated after GET: T
+Matrix as vector: T
+Double from 0 to 1: T
+Double by element: T
+Rate and maximum positive: T T
+Counts in range: T
+Not backward: T
+Date digits: T
+Date agrees: T
+Month and day: T
+Time form: T
+Time agrees: T
+Time in range: T
+Zone agrees: T
+By keyword: T
+Done
+  $STATUS == "%X00000001"
+==== CLOCKRANDN
+Seed size positive: T
+Repeated after PUT: T
+From 0 to 1: T
+Repeated after GET: T
+Matrix as vector: T
+Double from 0 to 1: T
+Double by element: T
+Rate and maximum positive: T T
+Counts in range: T
+Not backward: T
+Date digits: T
+Date agrees: T
+Month and day: T
+Time form: T
+Time agrees: T
+Time in range: T
+Zone agrees: T
+By keyword: T
+Done
+  $STATUS == "%X00000001"
+==== CLOCKRANDR
+Seed size positive: T
+Repeated after PUT: T
+From 0 to 1: T
+Repeated after GET: T
+Matrix as vector: T
+Double from 0 to 1: T
+Double by element: T
+Rate and maximum positive: T T
+Counts in range: T
+Not backward: T
+Date digits: T
+Date agrees: T
+Month and day: T
+Time form: T
+Time agrees: T
+Time in range: T
+Zone agrees: T
+By keyword: T
+Done
+  $STATUS == "%X00000001"
+==== CLOCKVMS
+SIZE:  1  2
+First seed:     1234567
+Draws:  14320037   3428259   9600871   3116664
+Seed now:   797866051
+Restored:     1234567
+After 1:       269
+As words:    3534       1
+Words put:       269
+REAL(8):       269   1857923       195 T
+REAL(16):       269   1857923  12802359   3019530    118342 T
+Clock:         100  2147483647     100   32767
+Zone  -18000: "-0500"        -300
+Zone   19800: "+0530"         330
+Zone   +3600: "+0100"          60
+Zone       0: "+0000"           0
+Zone   -1800: "-0030"         -30
+Zone     ABC: "     " -2147483647
+Zone       -: "     " -2147483647
+Lengths: "+0530       " "+05"
+INTEGER(2) zone:     330
+INTEGER(2) none:  -32767
+  $STATUS == "%X00000001"
+==== CLOCKVMSN
+SIZE:  1  2
+First seed:     1234567
+Draws:  14320037   3428259   9600871   3116664
+Seed now:   797866051
+Restored:     1234567
+After 1:       269
+As words:    3534       1
+Words put:       269
+REAL(8):       269   1857923       195 T
+REAL(16):       269   1857923  12802359   3019530    118342 T
+Clock:         100  2147483647     100   32767
+Zone  -18000: "-0500"        -300
+Zone   19800: "+0530"         330
+Zone   +3600: "+0100"          60
+Zone       0: "+0000"           0
+Zone   -1800: "-0030"         -30
+Zone     ABC: "     " -2147483647
+Zone       -: "     " -2147483647
+Lengths: "+0530       " "+05"
+INTEGER(2) zone:     330
+INTEGER(2) none:  -32767
+  $STATUS == "%X00000001"
+==== CLOCKVMSR
+SIZE:  1  2
+First seed:     1234567
+Draws:  14320037   3428259   9600871   3116664
+Seed now:   797866051
+Restored:     1234567
+After 1:       269
+As words:    3534       1
+Words put:       269
+REAL(8):       269   1857923       195 T
+REAL(16):       269   1857923  12802359   3019530    118342 T
+Clock:         100  2147483647     100   32767
+Zone  -18000: "-0500"        -300
+Zone   19800: "+0530"         330
+Zone   +3600: "+0100"          60
+Zone       0: "+0000"           0
+Zone   -1800: "-0030"         -30
+Zone     ABC: "     " -2147483647
+Zone       -: "     " -2147483647
+Lengths: "+0530       " "+05"
+INTEGER(2) zone:     330
+INTEGER(2) none:  -32767
+  $STATUS == "%X00000001"
+==== CONSTANTS
+primes:    2   3   5   7  11  13
+sizes:     6   2   3
+squares:   1   4   9  16  25
+twice:    26  22  14  10   6   4
+sums:      3   5   8  11  16  19
+b(1,:):   10.  30.  50.
+b(2,:):   20.  40.  60.
+shape:     2   3
+a:        0.5  0.5  1.0  1.5  2.0 10.5
+j:         4
+filled:   0.5  3.0  5.0  7.0  2.0 10.5
+rotated: 10.5  0.5  3.0  5.0  7.0  2.0
+picked:   13   7   3  11  16  19
+days:    wed tue mon
+  $STATUS == "%X00000001"
+==== CONSTANTSN
+primes:    2   3   5   7  11  13
+sizes:     6   2   3
+squares:   1   4   9  16  25
+twice:    26  22  14  10   6   4
+sums:      3   5   8  11  16  19
+b(1,:):   10.  30.  50.
+b(2,:):   20.  40.  60.
+shape:     2   3
+a:        0.5  0.5  1.0  1.5  2.0 10.5
+j:         4
+filled:   0.5  3.0  5.0  7.0  2.0 10.5
+rotated: 10.5  0.5  3.0  5.0  7.0  2.0
+picked:   13   7   3  11  16  19
+days:    wed tue mon
+  $STATUS == "%X00000001"
+==== CONSTANTSR
+primes:    2   3   5   7  11  13
+sizes:     6   2   3
+squares:   1   4   9  16  25
+twice:    26  22  14  10   6   4
+sums:      3   5   8  11  16  19
+b(1,:):   10.  30.  50.
+b(2,:):   20.  40.  60.
+shape:     2   3
+a:        0.5  0.5  1.0  1.5  2.0 10.5
+j:         4
+filled:   0.5  3.0  5.0  7.0  2.0 10.5
+rotated: 10.5  0.5  3.0  5.0  7.0  2.0
+picked:   13   7   3  11  16  19
+days:    wed tue mon
+  $STATUS == "%X00000001"
+==== CONSTSUB
+bcd
+quo
+il
+OLLEH
+fortran nine
+704!
+0
+  $STATUS == "%X00000001"
+==== CONSTSUBN
+bcd
+quo
+il
+OLLEH
+fortran nine
+704!
+0
+  $STATUS == "%X00000001"
+==== CONSTSUBR
+bcd
+quo
+il
+OLLEH
+fortran nine
+704!
+0
+  $STATUS == "%X00000001"
+==== CPARTS
+variables:  0.1000000000000000  0.2000000000000000
+constants:  0.1000000000000000  0.2000000000000000
+parts:      0.1000000000000000  0.2000000000000000
+kinds:      8  8
+product:    0.3000000000000000
+part of a constant:  0.7000000000000000
+  $STATUS == "%X00000001"
+==== CPARTSN
+variables:  0.1000000000000000  0.2000000000000000
+constants:  0.1000000000000000  0.2000000000000000
+parts:      0.1000000000000000  0.2000000000000000
+kinds:      8  8
+product:    0.3000000000000000
+part of a constant:  0.7000000000000000
+  $STATUS == "%X00000001"
+==== CPARTSR
+variables:  0.1000000000000000  0.2000000000000000
+constants:  0.1000000000000000  0.2000000000000000
+parts:      0.1000000000000000  0.2000000000000000
+kinds:      8  8
+product:    0.3000000000000000
+part of a constant:  0.7000000000000000
+  $STATUS == "%X00000001"
+==== CPLX16
+KIND, PRECISION:  16  33
+Z + (0.5, 1)          2.000000   -1.000000
+Z - W                -0.500000   -1.000000
+Z * W                 1.000000   -5.500000
+Z / W                 1.000000   -0.500000
+-Z                   -1.500000    2.000000
+CONJG(Z)              1.500000    2.000000
+One third: 0.333333333333333333333333333333333
+Folded = computed: T
+COMPLEX(8)            1.500000   -2.000000
+REAL(16):   1.500
+INTEGER:   1
+CMPLX                 1.500000    3.000000
+From an INTEGER       7.000000    0.000000
+A(I)                  1.000000    1.000000
+A(I)                  2.000000    2.000000
+A(I)                  3.000000    3.000000
+A(I)                  4.000000    4.000000
+Equal: T T
+  $STATUS == "%X00000001"
+==== CPLX16N
+KIND, PRECISION:  16  33
+Z + (0.5, 1)          2.000000   -1.000000
+Z - W                -0.500000   -1.000000
+Z * W                 1.000000   -5.500000
+Z / W                 1.000000   -0.500000
+-Z                   -1.500000    2.000000
+CONJG(Z)              1.500000    2.000000
+One third: 0.333333333333333333333333333333333
+Folded = computed: T
+COMPLEX(8)            1.500000   -2.000000
+REAL(16):   1.500
+INTEGER:   1
+CMPLX                 1.500000    3.000000
+From an INTEGER       7.000000    0.000000
+A(I)                  1.000000    1.000000
+A(I)                  2.000000    2.000000
+A(I)                  3.000000    3.000000
+A(I)                  4.000000    4.000000
+Equal: T T
+  $STATUS == "%X00000001"
+==== CPLX16R
+KIND, PRECISION:  16  33
+Z + (0.5, 1)          2.000000   -1.000000
+Z - W                -0.500000   -1.000000
+Z * W                 1.000000   -5.500000
+Z / W                 1.000000   -0.500000
+-Z                   -1.500000    2.000000
+CONJG(Z)              1.500000    2.000000
+One third: 0.333333333333333333333333333333333
+Folded = computed: T
+COMPLEX(8)            1.500000   -2.000000
+REAL(16):   1.500
+INTEGER:   1
+CMPLX                 1.500000    3.000000
+From an INTEGER       7.000000    0.000000
+A(I)                  1.000000    1.000000
+A(I)                  2.000000    2.000000
+A(I)                  3.000000    3.000000
+A(I)                  4.000000    4.000000
+Equal: T T
+  $STATUS == "%X00000001"
+==== CPLX16IO
+    1.5000   -2.0000
+    0.25    1.0000E+03
+   0.150000E+001  -0.200000E+001
+   250.000E-03     1.000E+03
+  0.2500       1000.    
+   1.0  -1.0   2.0  -2.0   3.0  -3.0
+  0.333333333333333333333333333333333 -0.666666666666666666666666666666667
+            3.2500           -0.1250  10000000000.0000            2.5000
+(1.50000000000000000000000000000000,-2.00000000000000000000000000000000)
+(1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)
+    2.5000   -0.5000    7.0000    0.0000    0.0010    4.0000
+ (1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)
+ &PAIR
+ Z       =
+ (1.50000000000000000000000000000000,-2.00000000000000000000000000000000),
+ W       =
+ (0.250000000000000000000000000000000,1000.00000000000000000000000000000)
+ /
+    1.5000   -2.0000    0.2500 1000.0000
+   1.0  -1.0   2.0  -2.0   3.0  -3.0
+   0.0   1.0
+ T
+  $STATUS == "%X00000001"
+==== CPLX16ION
+    1.5000   -2.0000
+    0.25    1.0000E+03
+   0.150000E+001  -0.200000E+001
+   250.000E-03     1.000E+03
+  0.2500       1000.    
+   1.0  -1.0   2.0  -2.0   3.0  -3.0
+  0.333333333333333333333333333333333 -0.666666666666666666666666666666667
+            3.2500           -0.1250  10000000000.0000            2.5000
+(1.50000000000000000000000000000000,-2.00000000000000000000000000000000)
+(1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)
+    2.5000   -0.5000    7.0000    0.0000    0.0010    4.0000
+ (1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)
+ &PAIR
+ Z       =
+ (1.50000000000000000000000000000000,-2.00000000000000000000000000000000),
+ W       =
+ (0.250000000000000000000000000000000,1000.00000000000000000000000000000)
+ /
+    1.5000   -2.0000    0.2500 1000.0000
+   1.0  -1.0   2.0  -2.0   3.0  -3.0
+   0.0   1.0
+ T
+  $STATUS == "%X00000001"
+==== CPLX16IOR
+    1.5000   -2.0000
+    0.25    1.0000E+03
+   0.150000E+001  -0.200000E+001
+   250.000E-03     1.000E+03
+  0.2500       1000.    
+   1.0  -1.0   2.0  -2.0   3.0  -3.0
+  0.333333333333333333333333333333333 -0.666666666666666666666666666666667
+            3.2500           -0.1250  10000000000.0000            2.5000
+(1.50000000000000000000000000000000,-2.00000000000000000000000000000000)
+(1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)
+    2.5000   -0.5000    7.0000    0.0000    0.0010    4.0000
+ (1.000000000000000000000000000000000E-0100,-1.000000000000000000000000000000000E+0100)
+ &PAIR
+ Z       =
+ (1.50000000000000000000000000000000,-2.00000000000000000000000000000000),
+ W       =
+ (0.250000000000000000000000000000000,1000.00000000000000000000000000000)
+ /
+    1.5000   -2.0000    0.2500 1000.0000
+   1.0  -1.0   2.0  -2.0   3.0  -3.0
+   0.0   1.0
+ T
+  $STATUS == "%X00000001"
+==== DECLARE
+tallies  4 12
+bin   tallies  4  2  4  2
+ticks: 12
+weighted:  3.00
+  11.  21.  12.  22.  13.  23.
+done: T 0.50
+  $STATUS == "%X00000001"
+==== DECLAREN
+tallies  4 12
+bin   tallies  4  2  4  2
+ticks: 12
+weighted:  3.00
+  11.  21.  12.  22.  13.  23.
+done: T 0.50
+  $STATUS == "%X00000001"
+==== DECLARER
+tallies  4 12
+bin   tallies  4  2  4  2
+ticks: 12
+weighted:  3.00
+  11.  21.  12.  22.  13.  23.
+done: T 0.50
+  $STATUS == "%X00000001"
+==== EDITS
+|     101|  000101|    11111111|
+|1111111111111111|    |   0|
+|  12.346E+03|   1.235E+04|
+|   1.234E-03|   1.234E-03|
+|   1.000E+03|   1.000E+03|
+|  10.000E+00|   1.000E+01|
+|   0.000E+00|   0.000E+00|
+|-500.000E-03|  -5.000E-01|
+   1.000E+00   1.000E+00  100.00
+ 1.50E-020
+|    42|    42|  T|ABC     |   3.142    |
+  11  1500.0  42 T
+   123
+ 12030
+|X       ||        ||Y       ||--------|
+B=   110 EN=  1.23E+03 say "hi"
+P
+
+Q
+  $STATUS == "%X00000001"
+==== EDITSN
+|     101|  000101|    11111111|
+|1111111111111111|    |   0|
+|  12.346E+03|   1.235E+04|
+|   1.234E-03|   1.234E-03|
+|   1.000E+03|   1.000E+03|
+|  10.000E+00|   1.000E+01|
+|   0.000E+00|   0.000E+00|
+|-500.000E-03|  -5.000E-01|
+   1.000E+00   1.000E+00  100.00
+ 1.50E-020
+|    42|    42|  T|ABC     |   3.142    |
+  11  1500.0  42 T
+   123
+ 12030
+|X       ||        ||Y       ||--------|
+B=   110 EN=  1.23E+03 say "hi"
+P
+
+Q
+  $STATUS == "%X00000001"
+==== EDITSR
+|     101|  000101|    11111111|
+|1111111111111111|    |   0|
+|  12.346E+03|   1.235E+04|
+|   1.234E-03|   1.234E-03|
+|   1.000E+03|   1.000E+03|
+|  10.000E+00|   1.000E+01|
+|   0.000E+00|   0.000E+00|
+|-500.000E-03|  -5.000E-01|
+   1.000E+00   1.000E+00  100.00
+ 1.50E-020
+|    42|    42|  T|ABC     |   3.142    |
+  11  1500.0  42 T
+   123
+ 12030
+|X       ||        ||Y       ||--------|
+B=   110 EN=  1.23E+03 say "hi"
+P
+
+Q
+  $STATUS == "%X00000001"
+==== ELEMENTS
+abs:      2.5   1.5   0.5   0.5   1.5   2.5
+max:      0.0   0.0   0.0   1.0   3.0   5.0
+nint:      -5    -3    -1     1     3     5
+sqrt:   3.162 2.449 1.414 1.414 2.449 3.162
+mod:       -2     0    -1     1     0     2
+btest:      F     F     T     T     F     F
+merge:    2.5   1.5  -0.5   0.5  -1.5  -2.5
+c(1,:):  11.0  12.0  13.0
+c(2,:):  21.0  21.5  21.5
+ichar:      0     2     4     6
+names:  zz zz ef gh
+dble:     1.0   3.0   5.0
+  $STATUS == "%X00000001"
+==== ELEMENTSN
+abs:      2.5   1.5   0.5   0.5   1.5   2.5
+max:      0.0   0.0   0.0   1.0   3.0   5.0
+nint:      -5    -3    -1     1     3     5
+sqrt:   3.162 2.449 1.414 1.414 2.449 3.162
+mod:       -2     0    -1     1     0     2
+btest:      F     F     T     T     F     F
+merge:    2.5   1.5  -0.5   0.5  -1.5  -2.5
+c(1,:):  11.0  12.0  13.0
+c(2,:):  21.0  21.5  21.5
+ichar:      0     2     4     6
+names:  zz zz ef gh
+dble:     1.0   3.0   5.0
+  $STATUS == "%X00000001"
+==== ELEMENTSR
+abs:      2.5   1.5   0.5   0.5   1.5   2.5
+max:      0.0   0.0   0.0   1.0   3.0   5.0
+nint:      -5    -3    -1     1     3     5
+sqrt:   3.162 2.449 1.414 1.414 2.449 3.162
+mod:       -2     0    -1     1     0     2
+btest:      F     F     T     T     F     F
+merge:    2.5   1.5  -0.5   0.5  -1.5  -2.5
+c(1,:):  11.0  12.0  13.0
+c(2,:):  21.0  21.5  21.5
+ichar:      0     2     4     6
+names:  zz zz ef gh
+dble:     1.0   3.0   5.0
+  $STATUS == "%X00000001"
+==== EXAMPLES
+reset: 0 0 0
+QED
+proved at 2
+abcd:  2.0000  1.0000
+abcd: -0.3333 -1.0000
+abcd:  2.0000  0.0000
+signum: -1  0  1
+parens: (a(b)cd)
+parens: (()abcde
+MISSING RIGHT PARENTHESIS
+parens: ab)(cdef
+UNEXPECTED RIGHT PARENTHESIS
+silly 1: III
+silly 2: AAA
+selects: 0101110010
+example 2:  3  0   8.75
+example 3:  3  0   8.75
+example 7:  3  2   8.75
+example 4:  13.00  3  2
+example 8:  13.00  3  2
+example 5:  11  10   6   5  50
+example 6:  11  10   5   0
+example 9:  11  10   6   5  50
+example 10:  11  10   5   0
+  $STATUS == "%X00000001"
+==== EXAMPLESN
+reset: 0 0 0
+QED
+proved at 2
+abcd:  2.0000  1.0000
+abcd: -0.3333 -1.0000
+abcd:  2.0000  0.0000
+signum: -1  0  1
+parens: (a(b)cd)
+parens: (()abcde
+MISSING RIGHT PARENTHESIS
+parens: ab)(cdef
+UNEXPECTED RIGHT PARENTHESIS
+silly 1: III
+silly 2: AAA
+selects: 0101110010
+example 2:  3  0   8.75
+example 3:  3  0   8.75
+example 7:  3  2   8.75
+example 4:  13.00  3  2
+example 8:  13.00  3  2
+example 5:  11  10   6   5  50
+example 6:  11  10   5   0
+example 9:  11  10   6   5  50
+example 10:  11  10   5   0
+  $STATUS == "%X00000001"
+==== EXAMPLESR
+reset: 0 0 0
+QED
+proved at 2
+abcd:  2.0000  1.0000
+abcd: -0.3333 -1.0000
+abcd:  2.0000  0.0000
+signum: -1  0  1
+parens: (a(b)cd)
+parens: (()abcde
+MISSING RIGHT PARENTHESIS
+parens: ab)(cdef
+UNEXPECTED RIGHT PARENTHESIS
+silly 1: III
+silly 2: AAA
+selects: 0101110010
+example 2:  3  0   8.75
+example 3:  3  0   8.75
+example 7:  3  2   8.75
+example 4:  13.00  3  2
+example 8:  13.00  3  2
+example 5:  11  10   6   5  50
+example 6:  11  10   5   0
+example 9:  11  10   6   5  50
+example 10:  11  10   5   0
+  $STATUS == "%X00000001"
+==== FORMS
+FORMS  3  4 2
+Bytes:    7   -5  100 A
+Kinds:  4  8  8
+Reals: 1.500  2.2500  0.125
+Implicit REAL(8):  1.6250  8
+DOUBLE COMPLEX:  1.00 -1.00  8
+COMPLEX(16) squared: -3.750  2.000 16
+COMPLEX*8:  3.00 -3.00
+Logicals: T T 2
+Text: ABCD CD forms!
+COMMON:  11  1.0  5.5  2.0  2.0
+Tally:    3   45    7
+Twice:   14   5.0
+  $STATUS == "%X00000001"
+==== FORMSN
+FORMS  3  4 2
+Bytes:    7   -5  100 A
+Kinds:  4  8  8
+Reals: 1.500  2.2500  0.125
+Implicit REAL(8):  1.6250  8
+DOUBLE COMPLEX:  1.00 -1.00  8
+COMPLEX(16) squared: -3.750  2.000 16
+COMPLEX*8:  3.00 -3.00
+Logicals: T T 2
+Text: ABCD CD forms!
+COMMON:  11  1.0  5.5  2.0  2.0
+Tally:    3   45    7
+Twice:   14   5.0
+  $STATUS == "%X00000001"
+==== FORMSR
+FORMS  3  4 2
+Bytes:    7   -5  100 A
+Kinds:  4  8  8
+Reals: 1.500  2.2500  0.125
+Implicit REAL(8):  1.6250  8
+DOUBLE COMPLEX:  1.00 -1.00  8
+COMPLEX(16) squared: -3.750  2.000 16
+COMPLEX*8:  3.00 -3.00
+Logicals: T T 2
+Text: ABCD CD forms!
+COMMON:  11  1.0  5.5  2.0  2.0
+Tally:    3   45    7
+Twice:   14   5.0
+  $STATUS == "%X00000001"
+==== GENERICS
+swapped:  2.5  1.5  4  3 rite left
+twice:  42  2.50  2.5000
+norm:   2.0  13.0
+max: T F  7
+show: F T  2  1
+  $STATUS == "%X00000001"
+==== GENERICSN
+swapped:  2.5  1.5  4  3 rite left
+twice:  42  2.50  2.5000
+norm:   2.0  13.0
+max: T F  7
+show: F T  2  1
+  $STATUS == "%X00000001"
+==== GENERICSR
+swapped:  2.5  1.5  4  3 rite left
+twice:  42  2.50  2.5000
+norm:   2.0  13.0
+max: T F  7
+show: F T  2  1
+  $STATUS == "%X00000001"
+==== GEOMETRY
+area        6.000
+centroid    1.333   1.000
+perimeter  12.000
+polygon     3.000
+bounds      0.0   0.0   2.0   2.0
+  1.0 -1.0  3.0 -1.0  3.0  3.0  2.0  1.0  1.0  3.0
+  1.0  1.0  1.0  3.0 -3.0  3.0 -1.0  2.0 -3.0  1.0
+  -1.0  -2.0   0.000
+  $STATUS == "%X00000001"
+==== GEOMETRYN
+area        6.000
+centroid    1.333   1.000
+perimeter  12.000
+polygon     3.000
+bounds      0.0   0.0   2.0   2.0
+  1.0 -1.0  3.0 -1.0  3.0  3.0  2.0  1.0  1.0  3.0
+  1.0  1.0  1.0  3.0 -3.0  3.0 -1.0  2.0 -3.0  1.0
+  -1.0  -2.0   0.000
+  $STATUS == "%X00000001"
+==== GEOMETRYR
+area        6.000
+centroid    1.333   1.000
+perimeter  12.000
+polygon     3.000
+bounds      0.0   0.0   2.0   2.0
+  1.0 -1.0  3.0 -1.0  3.0  3.0  2.0  1.0  1.0  3.0
+  1.0  1.0  1.0  3.0 -3.0  3.0 -1.0  2.0 -3.0  1.0
+  -1.0  -2.0   0.000
+  $STATUS == "%X00000001"
+==== GRADEBOOK
+WRITE APPEND
+Ada         91  85  77  98
+Brook       68  74  80  71
+Chen        88  92  79   0
+Dana       100  95  90  85
+Eli         55  61  70  66
+Test 1:  91  68  88 100  55
+Test 2:  85  74  92  95  61
+Test 3:  77  80  79  90  70
+Test 4:  98  71   0  85  66
+Means:   80.40  81.40  79.20  64.00
+Totals:  351  293  259  370  252
+Best: Dana
+Last test, every other student:  98   0  66
+Read back:  77  80  79  90  70  -1
+|Ada   |------|Chen  |------|Eli   |------|
+  $STATUS == "%X00000001"
+==== GRADEBOOKN
+WRITE APPEND
+Ada         91  85  77  98
+Brook       68  74  80  71
+Chen        88  92  79   0
+Dana       100  95  90  85
+Eli         55  61  70  66
+Test 1:  91  68  88 100  55
+Test 2:  85  74  92  95  61
+Test 3:  77  80  79  90  70
+Test 4:  98  71   0  85  66
+Means:   80.40  81.40  79.20  64.00
+Totals:  351  293  259  370  252
+Best: Dana
+Last test, every other student:  98   0  66
+Read back:  77  80  79  90  70  -1
+|Ada   |------|Chen  |------|Eli   |------|
+  $STATUS == "%X00000001"
+==== GRADEBOOKR
+WRITE APPEND
+Ada         91  85  77  98
+Brook       68  74  80  71
+Chen        88  92  79   0
+Dana       100  95  90  85
+Eli         55  61  70  66
+Test 1:  91  68  88 100  55
+Test 2:  85  74  92  95  61
+Test 3:  77  80  79  90  70
+Test 4:  98  71   0  85  66
+Means:   80.40  81.40  79.20  64.00
+Totals:  351  293  259  370  252
+Best: Dana
+Last test, every other student:  98   0  66
+Read back:  77  80  79  90  70  -1
+|Ada   |------|Chen  |------|Eli   |------|
+  $STATUS == "%X00000001"
+==== HOSTOPT
+static:   165    55
+dummy:    75    80
+frame:     9
+optional:     3
+optional:    30
+  $STATUS == "%X00000001"
+==== HOSTOPTN
+static:   165    55
+dummy:    75    80
+frame:     9
+optional:     3
+optional:    30
+  $STATUS == "%X00000001"
+==== HOSTOPTR
+static:   165    55
+dummy:    75    80
+frame:     9
+optional:     3
+optional:    30
+  $STATUS == "%X00000001"
+==== HOSTS
+k:  2
+[cde]
+   4.0   8.0  12.0  16.0
+[XXcdefgh]
+mean:  10.000
+[   abc  ]
+  $STATUS == "%X00000001"
+==== HOSTSN
+k:  2
+[cde]
+   4.0   8.0  12.0  16.0
+[XXcdefgh]
+mean:  10.000
+[   abc  ]
+  $STATUS == "%X00000001"
+==== HOSTSR
+k:  2
+[cde]
+   4.0   8.0  12.0  16.0
+[XXcdefgh]
+mean:  10.000
+[   abc  ]
+  $STATUS == "%X00000001"
+==== INQOUT
+   1.0   2.0   3.0
+   2.0   3.0   4.0   5.0
+   3.0   4.0   5.0   6.0
+*****
+T
+  $STATUS == "%X00000001"
+==== INQOUTN
+   1.0   2.0   3.0
+   2.0   3.0   4.0   5.0
+   3.0   4.0   5.0   6.0
+*****
+T
+  $STATUS == "%X00000001"
+==== INQOUTR
+   1.0   2.0   3.0
+   2.0   3.0   4.0   5.0
+   3.0   4.0   5.0   6.0
+*****
+T
+  $STATUS == "%X00000001"
+==== INQUIRE
+Integer kinds:  1  2  4
+Real kinds:  4  8  8
+No such kind: -1
+KIND:  1  2  8  1
+HUGE:        127      32767 2147483647
+DIGITS:   7  15  31
+RANGE:   2   4   9
+BIT_SIZE:   8  16  32
+Real digits:  24  6
+Real range:  38
+Exponents: -127  127
+RADIX: 2
+EPSILON:  0.1192093E-06
+HUGE:  0.1701412E+39
+TINY:  0.2938736E-38
+Double:  56 16  38
+Its EPSILON:  0.2775558E-16
+INT and NINT:  2 -3
+Their kinds:  1  2  4
+REAL:  1.7500  8
+CMPLX:  1.50 -2.00  8
+LOGICAL:  1  4 T
+Wide enough: T
+Keywords:  4  4
+For 15 digits and 307: 16
+  $STATUS == "%X00000001"
+==== INQUIREN
+Integer kinds:  1  2  4
+Real kinds:  4  8  8
+No such kind: -1
+KIND:  1  2  8  1
+HUGE:        127      32767 2147483647
+DIGITS:   7  15  31
+RANGE:   2   4   9
+BIT_SIZE:   8  16  32
+Real digits:  24  6
+Real range:  38
+Exponents: -127  127
+RADIX: 2
+EPSILON:  0.1192093E-06
+HUGE:  0.1701412E+39
+TINY:  0.2938736E-38
+Double:  56 16  38
+Its EPSILON:  0.2775558E-16
+INT and NINT:  2 -3
+Their kinds:  1  2  4
+REAL:  1.7500  8
+CMPLX:  1.50 -2.00  8
+LOGICAL:  1  4 T
+Wide enough: T
+Keywords:  4  4
+For 15 digits and 307: 16
+  $STATUS == "%X00000001"
+==== INQUIRER
+Integer kinds:  1  2  4
+Real kinds:  4  8  8
+No such kind: -1
+KIND:  1  2  8  1
+HUGE:        127      32767 2147483647
+DIGITS:   7  15  31
+RANGE:   2   4   9
+BIT_SIZE:   8  16  32
+Real digits:  24  6
+Real range:  38
+Exponents: -127  127
+RADIX: 2
+EPSILON:  0.1192093E-06
+HUGE:  0.1701412E+39
+TINY:  0.2938736E-38
+Double:  56 16  38
+Its EPSILON:  0.2775558E-16
+INT and NINT:  2 -3
+Their kinds:  1  2  4
+REAL:  1.7500  8
+CMPLX:  1.50 -2.00  8
+LOGICAL:  1  4 T
+Wide enough: T
+Keywords:  4  4
+For 15 digits and 307: 16
+  $STATUS == "%X00000001"
+==== INTENTREAD
+  19.750
+  2024
+  $STATUS == "%X00000001"
+==== INTENTREADN
+  19.750
+  2024
+  $STATUS == "%X00000001"
+==== INTENTREADR
+  19.750
+  2024
+  $STATUS == "%X00000001"
+==== INTERFACES
+tally:   55
+root:  1.2599
+[item7]
+interfaces 10
+double:   6
+applied:   7
+  $STATUS == "%X00000001"
+==== INTERFACESN
+tally:   55
+root:  1.2599
+[item7]
+interfaces 10
+double:   6
+applied:   7
+  $STATUS == "%X00000001"
+==== INTERFACESR
+tally:   55
+root:  1.2599
+[item7]
+interfaces 10
+double:   6
+applied:   7
+  $STATUS == "%X00000001"
+==== INTERNAL
+sum:  7.00
+first:  5
+steps, i:   6   4
+twice(21):  42
+fact(10): 3628800
+tag: [host ]
+Host :  5
+tag: [Host ]
+[AL]
+calls:  6
+external twice(7):  21
+  $STATUS == "%X00000001"
+==== INTERNALN
+sum:  7.00
+first:  5
+steps, i:   6   4
+twice(21):  42
+fact(10): 3628800
+tag: [host ]
+Host :  5
+tag: [Host ]
+[AL]
+calls:  6
+external twice(7):  21
+  $STATUS == "%X00000001"
+==== INTERNALR
+sum:  7.00
+first:  5
+steps, i:   6   4
+twice(21):  42
+fact(10): 3628800
+tag: [host ]
+Host :  5
+tag: [Host ]
+[AL]
+calls:  6
+external twice(7):  21
+  $STATUS == "%X00000001"
+==== IOITEMS
+strided:   1.0  3.0  9.0 11.0 17.0 19.0
+pointer:   8.0  7.0  6.0  5.0 20.0 19.0 18.0 17.0
+dummy:    14.0 16.0 18.0 20.0
+         80          50          20
+filled:   1.5 0.0 0.0 2.5 0.0 0.0 3.5 0.0 0.0 4.5
+read2d:   91.0  6.0 92.0  8.0 93.0 10.0 94.0 12.0
+empty:
+unform:   17.0 20.0  1.0  4.0  80  10
+chars:    elt lph
+ys:       40.0 20.0
+xs:        7.0  2.0  8.0  4.0
+file:        11------    22------    33------
+back:      33  22  11
+recs:    ........abcdefghijklmnop........
+eof:      -1  9.5  0.0  0.0  0.0
+na: 11 22 33 99
+  $STATUS == "%X00000001"
+==== IOITEMSN
+strided:   1.0  3.0  9.0 11.0 17.0 19.0
+pointer:   8.0  7.0  6.0  5.0 20.0 19.0 18.0 17.0
+dummy:    14.0 16.0 18.0 20.0
+         80          50          20
+filled:   1.5 0.0 0.0 2.5 0.0 0.0 3.5 0.0 0.0 4.5
+read2d:   91.0  6.0 92.0  8.0 93.0 10.0 94.0 12.0
+empty:
+unform:   17.0 20.0  1.0  4.0  80  10
+chars:    elt lph
+ys:       40.0 20.0
+xs:        7.0  2.0  8.0  4.0
+file:        11------    22------    33------
+back:      33  22  11
+recs:    ........abcdefghijklmnop........
+eof:      -1  9.5  0.0  0.0  0.0
+na: 11 22 33 99
+  $STATUS == "%X00000001"
+==== IOITEMSR
+strided:   1.0  3.0  9.0 11.0 17.0 19.0
+pointer:   8.0  7.0  6.0  5.0 20.0 19.0 18.0 17.0
+dummy:    14.0 16.0 18.0 20.0
+         80          50          20
+filled:   1.5 0.0 0.0 2.5 0.0 0.0 3.5 0.0 0.0 4.5
+read2d:   91.0  6.0 92.0  8.0 93.0 10.0 94.0 12.0
+empty:
+unform:   17.0 20.0  1.0  4.0  80  10
+chars:    elt lph
+ys:       40.0 20.0
+xs:        7.0  2.0  8.0  4.0
+file:        11------    22------    33------
+back:      33  22  11
+recs:    ........abcdefghijklmnop........
+eof:      -1  9.5  0.0  0.0  0.0
+na: 11 22 33 99
+  $STATUS == "%X00000001"
+==== IOITEMSVMS
+encoded: 1234abcd................efgh....
+decoded:  1234
+cells:   ----   3----   2----   1
+  $STATUS == "%X00000001"
+==== IOITEMSVMSN
+encoded: 1234abcd................efgh....
+decoded:  1234
+cells:   ----   3----   2----   1
+  $STATUS == "%X00000001"
+==== IOITEMSVMSR
+encoded: 1234abcd................efgh....
+decoded:  1234
+cells:   ----   3----   2----   1
+  $STATUS == "%X00000001"
+==== JOURNAL
+ 46 |1990-01-05 00000101   1.250E+03 T Rent        |
+ 46 |1990-01-09 00001100  -3.750E+01 T Groceries   |
+ 46 |1990-01-15 00001001   1.250E-03 F Interest    |
+ 46 |1990-01-20 00000011  -1.000E+06 F House       |
+ 46 |1990-01-31 11111111   1.200E+01 T Pat's share |
+Same: T T T T
+Total read: -998775.49875
+1990-01-20   3  -1000000.00 F House       |
+1990-01-05   5      1250.00 T Rent        |
+First group: T -998775.49875
+1990-01-05 *      1.250E+03 Rent
+1990-01-09 *    -37.500E+00 Groceries
+1990-01-15 *      1.250E-03 Interest
+1990-01-20     -950.000E+03 House
+1990-01-31 *     12.000E+00 Pat's part
+Total:       -9.487755E+05
+00000101 00001100 00001001 00000011 11111111
+     1250.00        0.00       12.00
+T T T F T
+  $STATUS == "%X00000001"
+==== JOURNALN
+ 46 |1990-01-05 00000101   1.250E+03 T Rent        |
+ 46 |1990-01-09 00001100  -3.750E+01 T Groceries   |
+ 46 |1990-01-15 00001001   1.250E-03 F Interest    |
+ 46 |1990-01-20 00000011  -1.000E+06 F House       |
+ 46 |1990-01-31 11111111   1.200E+01 T Pat's share |
+Same: T T T T
+Total read: -998775.49875
+1990-01-20   3  -1000000.00 F House       |
+1990-01-05   5      1250.00 T Rent        |
+First group: T -998775.49875
+1990-01-05 *      1.250E+03 Rent
+1990-01-09 *    -37.500E+00 Groceries
+1990-01-15 *      1.250E-03 Interest
+1990-01-20     -950.000E+03 House
+1990-01-31 *     12.000E+00 Pat's part
+Total:       -9.487755E+05
+00000101 00001100 00001001 00000011 11111111
+     1250.00        0.00       12.00
+T T T F T
+  $STATUS == "%X00000001"
+==== JOURNALR
+ 46 |1990-01-05 00000101   1.250E+03 T Rent        |
+ 46 |1990-01-09 00001100  -3.750E+01 T Groceries   |
+ 46 |1990-01-15 00001001   1.250E-03 F Interest    |
+ 46 |1990-01-20 00000011  -1.000E+06 F House       |
+ 46 |1990-01-31 11111111   1.200E+01 T Pat's share |
+Same: T T T T
+Total read: -998775.49875
+1990-01-20   3  -1000000.00 F House       |
+1990-01-05   5      1250.00 T Rent        |
+First group: T -998775.49875
+1990-01-05 *      1.250E+03 Rent
+1990-01-09 *    -37.500E+00 Groceries
+1990-01-15 *      1.250E-03 Interest
+1990-01-20     -950.000E+03 House
+1990-01-31 *     12.000E+00 Pat's part
+Total:       -9.487755E+05
+00000101 00001100 00001001 00000011 11111111
+     1250.00        0.00       12.00
+T T T F T
+  $STATUS == "%X00000001"
+==== KEYWORDS
+     8     2     9    -4
+    20     7     3
+  0.0000    65     3
+ -2147483648           3
+  -32768      16
+  -128
+    15
+      15      15   32767
+  2  2  2  1
+Hi  122
+   1   1
+   4   2
+   7   4
+  40  -1
+    6   37    4    4    4
+   15   37    8    4    8
+   30 5000   16   -2   -2
+   40 5000   -1   -2   -3
+   112   241  4080   -64
+      1     32    768  16384
+      5     10     15      0
+      5     10     15
+      9     36    770  16385
+  $STATUS == "%X00000001"
+==== KEYWORDSN
+     8     2     9    -4
+    20     7     3
+  0.0000    65     3
+ -2147483648           3
+  -32768      16
+  -128
+    15
+      15      15   32767
+  2  2  2  1
+Hi  122
+   1   1
+   4   2
+   7   4
+  40  -1
+    6   37    4    4    4
+   15   37    8    4    8
+   30 5000   16   -2   -2
+   40 5000   -1   -2   -3
+   112   241  4080   -64
+      1     32    768  16384
+      5     10     15      0
+      5     10     15
+      9     36    770  16385
+  $STATUS == "%X00000001"
+==== KEYWORDSR
+     8     2     9    -4
+    20     7     3
+  0.0000    65     3
+ -2147483648           3
+  -32768      16
+  -128
+    15
+      15      15   32767
+  2  2  2  1
+Hi  122
+   1   1
+   4   2
+   7   4
+  40  -1
+    6   37    4    4    4
+   15   37    8    4    8
+   30 5000   16   -2   -2
+   40 5000   -1   -2   -3
+   112   241  4080   -64
+      1     32    768  16384
+      5     10     15      0
+      5     10     15
+      9     36    770  16385
+  $STATUS == "%X00000001"
+==== KINDS
+kinded 30000 3000000
+  1.100000023841858  1.100000000000000
+  2.7500
+  3.00 -4.00
+ T F
+ind kinds
+ 12.566371
+  $STATUS == "%X00000001"
+==== KINDSN
+kinded 30000 3000000
+  1.100000023841858  1.100000000000000
+  2.7500
+  3.00 -4.00
+ T F
+ind kinds
+ 12.566371
+  $STATUS == "%X00000001"
+==== KINDSR
+kinded 30000 3000000
+  1.100000023841858  1.100000000000000
+  2.7500
+  3.00 -4.00
+ T F
+ind kinds
+ 12.566371
+  $STATUS == "%X00000001"
+==== LAYOUT
+sum of 1 to 12:  78
+counted to   3
+stepped to   8
+two  blanks
+first and last:  13
+half is more
+a full line:1166
+  $STATUS == "%X00000001"
+==== LAYOUTN
+sum of 1 to 12:  78
+counted to   3
+stepped to   8
+two  blanks
+first and last:  13
+half is more
+a full line:1166
+  $STATUS == "%X00000001"
+==== LAYOUTR
+sum of 1 to 12:  78
+counted to   3
+stepped to   8
+two  blanks
+first and last:  13
+half is more
+a full line:1166
+  $STATUS == "%X00000001"
+==== LISTNML
+it's|say "hi"|ISN'T_BOB'S|xyz|xyz|  0
+plain|twowords|123| 4.50
+ 'it''s'           7 'ab'
+Records of the long constant: 2
+it's| 7|ab T
+ "say ""hi""" "x"
+say "hi"|x|
+ it'sab
+&GRP
+I       =          42,
+X       =   1.500000    ,
+NM      = it's
+/
+ NM      = 'it''s'
+ 42  1.50 it's
+  5  2.50 a/b
+  6  2.50 a/b
+  6  3.00 x'y
+  $STATUS == "%X00000001"
+==== LISTNMLN
+it's|say "hi"|ISN'T_BOB'S|xyz|xyz|  0
+plain|twowords|123| 4.50
+ 'it''s'           7 'ab'
+Records of the long constant: 2
+it's| 7|ab T
+ "say ""hi""" "x"
+say "hi"|x|
+ it'sab
+&GRP
+I       =          42,
+X       =   1.500000    ,
+NM      = it's
+/
+ NM      = 'it''s'
+ 42  1.50 it's
+  5  2.50 a/b
+  6  2.50 a/b
+  6  3.00 x'y
+  $STATUS == "%X00000001"
+==== LISTNMLR
+it's|say "hi"|ISN'T_BOB'S|xyz|xyz|  0
+plain|twowords|123| 4.50
+ 'it''s'           7 'ab'
+Records of the long constant: 2
+it's| 7|ab T
+ "say ""hi""" "x"
+say "hi"|x|
+ it'sab
+&GRP
+I       =          42,
+X       =   1.500000    ,
+NM      = it's
+/
+ NM      = 'it''s'
+ 42  1.50 it's
+  5  2.50 a/b
+  6  2.50 a/b
+  6  3.00 x'y
+  $STATUS == "%X00000001"
+==== LONGHOST
+scaled total:   100
+classes: -1  0  1
+  $STATUS == "%X00000001"
+==== LONGHOSTN
+scaled total:   100
+classes: -1  0  1
+  $STATUS == "%X00000001"
+==== LONGHOSTR
+scaled total:   100
+classes: -1  0  1
+  $STATUS == "%X00000001"
+==== LOOPS
+found:   4  3
+odd sum:  25, i = 10
+down:   7  15  -1
+rows:  29, i, j =  3  5
+primes: 15
+  2  3  5  7 11 13 17 19 23 29 31 37 41 43 47
+power: 1024 10
+collatz 6:  6  2
+collatz 7: 11  5
+sieve:  226, i =  24
+triangle: 15
+nest:   9  4  2  3
+  $STATUS == "%X00000001"
+==== LOOPSN
+found:   4  3
+odd sum:  25, i = 10
+down:   7  15  -1
+rows:  29, i, j =  3  5
+primes: 15
+  2  3  5  7 11 13 17 19 23 29 31 37 41 43 47
+power: 1024 10
+collatz 6:  6  2
+collatz 7: 11  5
+sieve:  226, i =  24
+triangle: 15
+nest:   9  4  2  3
+  $STATUS == "%X00000001"
+==== LOOPSR
+found:   4  3
+odd sum:  25, i = 10
+down:   7  15  -1
+rows:  29, i, j =  3  5
+primes: 15
+  2  3  5  7 11 13 17 19 23 29 31 37 41 43 47
+power: 1024 10
+collatz 6:  6  2
+collatz 7: 11  5
+sieve:  226, i =  24
+triangle: 15
+nest:   9  4  2  3
+  $STATUS == "%X00000001"
+==== MADETEXT
+[ababab      ]
+len:    6 -----|
+loop: + ++ +++ ++++
+same:  yes
+case:  zz
+show:   4 qqq!
+sub:   ..xyxyxy....
+stars: [****] 0
+size:  [12345]
+tags: #    ##   ### 
+pad:  <ab><ab><ab>
+plen:   6
+known:    9   16   25   27   64  125
+made:   1.0  2.0  3.0 -1.0 -2.0 -3.0 -4.0
+entry: [wor][-----]
+total:  4000
+  $STATUS == "%X00000001"
+==== MADETEXTN
+[ababab      ]
+len:    6 -----|
+loop: + ++ +++ ++++
+same:  yes
+case:  zz
+show:   4 qqq!
+sub:   ..xyxyxy....
+stars: [****] 0
+size:  [12345]
+tags: #    ##   ### 
+pad:  <ab><ab><ab>
+plen:   6
+known:    9   16   25   27   64  125
+made:   1.0  2.0  3.0 -1.0 -2.0 -3.0 -4.0
+entry: [wor][-----]
+total:  4000
+  $STATUS == "%X00000001"
+==== MADETEXTR
+[ababab      ]
+len:    6 -----|
+loop: + ++ +++ ++++
+same:  yes
+case:  zz
+show:   4 qqq!
+sub:   ..xyxyxy....
+stars: [****] 0
+size:  [12345]
+tags: #    ##   ### 
+pad:  <ab><ab><ab>
+plen:   6
+known:    9   16   25   27   64  125
+made:   1.0  2.0  3.0 -1.0 -2.0 -3.0 -4.0
+entry: [wor][-----]
+total:  4000
+  $STATUS == "%X00000001"
+==== MATRIX
+The matrix and its right side:
+   2.0   1.0  -1.0   3.0     14.0
+   4.0   1.0   0.0   2.0     12.0
+  -2.0   5.0   2.0  -1.0      3.0
+   1.0  -1.0   3.0   2.0      2.0
+Solution:      1.000   2.000  -1.000   3.000
+Row swaps:   3
+Reduced:
+   4.000   1.000   0.000   2.000
+   5.500   2.000   0.000
+   3.455   1.500
+   2.513
+Determinant: -191.000
+Residual small: T
+The inverse times 1000, rounded:
+   -215    351    -37    -47
+     63     68    157    -84
+   -173     63     68    230
+    398   -236     -5    136
+The matrix times its inverse, rounded:
+  1  0  0  0
+  0  1  0  0
+  0  0  1  0
+  0  0  0  1
+Its Gram matrix:
+   25   -5   -3   18
+   -5   28    6   -2
+   -3    6   14    1
+   18   -2    1   18
+Symmetric: T
+Trace:   85
+Row sums:       5    7    4    5
+Column sums:    5    6    4    6
+Largest:        4    5    3    3
+Its cube:
+    11    18    42    54
+    54     9    44    82
+    72    40    -5    58
+    20    60    34     1
+  $STATUS == "%X00000001"
+==== MATRIXN
+The matrix and its right side:
+   2.0   1.0  -1.0   3.0     14.0
+   4.0   1.0   0.0   2.0     12.0
+  -2.0   5.0   2.0  -1.0      3.0
+   1.0  -1.0   3.0   2.0      2.0
+Solution:      1.000   2.000  -1.000   3.000
+Row swaps:   3
+Reduced:
+   4.000   1.000   0.000   2.000
+   5.500   2.000   0.000
+   3.455   1.500
+   2.513
+Determinant: -191.000
+Residual small: T
+The inverse times 1000, rounded:
+   -215    351    -37    -47
+     63     68    157    -84
+   -173     63     68    230
+    398   -236     -5    136
+The matrix times its inverse, rounded:
+  1  0  0  0
+  0  1  0  0
+  0  0  1  0
+  0  0  0  1
+Its Gram matrix:
+   25   -5   -3   18
+   -5   28    6   -2
+   -3    6   14    1
+   18   -2    1   18
+Symmetric: T
+Trace:   85
+Row sums:       5    7    4    5
+Column sums:    5    6    4    6
+Largest:        4    5    3    3
+Its cube:
+    11    18    42    54
+    54     9    44    82
+    72    40    -5    58
+    20    60    34     1
+  $STATUS == "%X00000001"
+==== MATRIXR
+The matrix and its right side:
+   2.0   1.0  -1.0   3.0     14.0
+   4.0   1.0   0.0   2.0     12.0
+  -2.0   5.0   2.0  -1.0      3.0
+   1.0  -1.0   3.0   2.0      2.0
+Solution:      1.000   2.000  -1.000   3.000
+Row swaps:   3
+Reduced:
+   4.000   1.000   0.000   2.000
+   5.500   2.000   0.000
+   3.455   1.500
+   2.513
+Determinant: -191.000
+Residual small: T
+The inverse times 1000, rounded:
+   -215    351    -37    -47
+     63     68    157    -84
+   -173     63     68    230
+    398   -236     -5    136
+The matrix times its inverse, rounded:
+  1  0  0  0
+  0  1  0  0
+  0  0  1  0
+  0  0  0  1
+Its Gram matrix:
+   25   -5   -3   18
+   -5   28    6   -2
+   -3    6   14    1
+   18   -2    1   18
+Symmetric: T
+Trace:   85
+Row sums:       5    7    4    5
+Column sums:    5    6    4    6
+Largest:        4    5    3    3
+Its cube:
+    11    18    42    54
+    54     9    44    82
+    72    40    -5    58
+    20    60    34     1
+  $STATUS == "%X00000001"
+==== MODACCESS
+  3
+   4.0  2
+   3.0  0
+  3.25
+  2.5  1.5  2  1
+ 100
+   7
+  $STATUS == "%X00000001"
+==== MODACCESSN
+  3
+   4.0  2
+   3.0  0
+  3.25
+  2.5  1.5  2  1
+ 100
+   7
+  $STATUS == "%X00000001"
+==== MODACCESSR
+  3
+   4.0  2
+   3.0  0
+  3.25
+  2.5  1.5  2  1
+ 100
+   7
+  $STATUS == "%X00000001"
+==== MODDATA
+   3
+  1.50  3.00  4.50
+  2.0  3.0
+3.14159
+   6
+  $STATUS == "%X00000001"
+==== MODDATAN
+   3
+  1.50  3.00  4.50
+  2.0  3.0
+3.14159
+   6
+  $STATUS == "%X00000001"
+==== MODDATAR
+   3
+  1.50  3.00  4.50
+  2.0  3.0
+3.14159
+   6
+  $STATUS == "%X00000001"
+==== MODEL
+Folded:   4  0.7500  12.0   1.5
+Spacings:  2.384186E-07  12582912.0
+NEAREST:  3.00000024  0.99999994
+Run:   4  0.7500  12.0   1.5
+Spacings:  2.384186E-07  12582912.0
+NEAREST:  3.00000024  0.99999994
+EXPONENT:    2    4   -3    1    0    0
+FRACTION:  0.7500 -0.6250  0.8000  0.5000  0.0000 -0.7500
+SCALE:       6.00  -40.00    0.80    0.50    0.00   -0.19
+SET_EXP:   0.7500 -0.6250  0.8000  0.5000  0.0000 -0.7500
+RRSPACE:  12582912. 10485760. 13421773.  8388608.        0. 12582912.
+SPACING:   2.3842E-07  9.5367E-07  7.4506E-09  1.1921E-07  5.9605E-08
+NEAREST:   1.00000012 -0.74999994 -0.75000006
+Keywords:   6.0  0.99999994 -0.38  0.50
+Around 1:  0  0.99999994  1.0000  5.960464E-08
+Around 1:  1  1.00000000  0.5000  1.192093E-07
+Around 1:  1  1.00000012  0.5000  1.192093E-07
+D:   2  0.7500  12.0   1.5
+D spacings:  5.5511151231257827E-17   54043195528445952.0
+D NEAREST:  5.5511151231257827E-17
+H:   2  0.7500  12.0   1.5
+H SPACING:  3.8518598887744717E-34
+H RRSPACING:  7.7884452878022414E+33
+H NEAREST: -3.8518598887744717E-34
+H big:  1002 -0.7500
+  $STATUS == "%X00000001"
+==== MODELN
+Folded:   4  0.7500  12.0   1.5
+Spacings:  2.384186E-07  12582912.0
+NEAREST:  3.00000024  0.99999994
+Run:   4  0.7500  12.0   1.5
+Spacings:  2.384186E-07  12582912.0
+NEAREST:  3.00000024  0.99999994
+EXPONENT:    2    4   -3    1    0    0
+FRACTION:  0.7500 -0.6250  0.8000  0.5000  0.0000 -0.7500
+SCALE:       6.00  -40.00    0.80    0.50    0.00   -0.19
+SET_EXP:   0.7500 -0.6250  0.8000  0.5000  0.0000 -0.7500
+RRSPACE:  12582912. 10485760. 13421773.  8388608.        0. 12582912.
+SPACING:   2.3842E-07  9.5367E-07  7.4506E-09  1.1921E-07  5.9605E-08
+NEAREST:   1.00000012 -0.74999994 -0.75000006
+Keywords:   6.0  0.99999994 -0.38  0.50
+Around 1:  0  0.99999994  1.0000  5.960464E-08
+Around 1:  1  1.00000000  0.5000  1.192093E-07
+Around 1:  1  1.00000012  0.5000  1.192093E-07
+D:   2  0.7500  12.0   1.5
+D spacings:  5.5511151231257827E-17   54043195528445952.0
+D NEAREST:  5.5511151231257827E-17
+H:   2  0.7500  12.0   1.5
+H SPACING:  3.8518598887744717E-34
+H RRSPACING:  7.7884452878022414E+33
+H NEAREST: -3.8518598887744717E-34
+H big:  1002 -0.7500
+  $STATUS == "%X00000001"
+==== MODELR
+Folded:   4  0.7500  12.0   1.5
+Spacings:  2.384186E-07  12582912.0
+NEAREST:  3.00000024  0.99999994
+Run:   4  0.7500  12.0   1.5
+Spacings:  2.384186E-07  12582912.0
+NEAREST:  3.00000024  0.99999994
+EXPONENT:    2    4   -3    1    0    0
+FRACTION:  0.7500 -0.6250  0.8000  0.5000  0.0000 -0.7500
+SCALE:       6.00  -40.00    0.80    0.50    0.00   -0.19
+SET_EXP:   0.7500 -0.6250  0.8000  0.5000  0.0000 -0.7500
+RRSPACE:  12582912. 10485760. 13421773.  8388608.        0. 12582912.
+SPACING:   2.3842E-07  9.5367E-07  7.4506E-09  1.1921E-07  5.9605E-08
+NEAREST:   1.00000012 -0.74999994 -0.75000006
+Keywords:   6.0  0.99999994 -0.38  0.50
+Around 1:  0  0.99999994  1.0000  5.960464E-08
+Around 1:  1  1.00000000  0.5000  1.192093E-07
+Around 1:  1  1.00000012  0.5000  1.192093E-07
+D:   2  0.7500  12.0   1.5
+D spacings:  5.5511151231257827E-17   54043195528445952.0
+D NEAREST:  5.5511151231257827E-17
+H:   2  0.7500  12.0   1.5
+H SPACING:  3.8518598887744717E-34
+H RRSPACING:  7.7884452878022414E+33
+H NEAREST: -3.8518598887744717E-34
+H big:  1002 -0.7500
+  $STATUS == "%X00000001"
+==== MODELVMS
+EXPONENT: -127  127 -127    0
+FRACTION:  0.50000000 -0.99999994
+NEAREST(0):  2.93873588E-39 -2.93873588E-39
+Toward 0:  0.00000000E+00  0.00000000E+00
+SPACING:  2.93873588E-39  2.93873588E-39
+SPACING:  9.40395481E-38  1.01412048E+31
+Below:  0.00000000E+00  0.00000000E+00
+RRSPACING:    16777215.0     8388608.0
+Below HUGE: T  1.01412048E+31
+And back: T
+SCALE(HUGE, 1):     %X 000004B4
+SCALE(-1, 128):     %X 000004B4
+SCALE(1, 2**30):    %X 000004B4
+SET_EXPONENT(1, 128): %X 000004B4
+NEAREST(HUGE, 1):   %X 000004B4
+NEAREST(-HUGE, -1): %X 000004B4
+Within:             %X 00000000
+D: -127  127  2.9387358770557188E-39
+D RRSPACING:   72057594037927935.0
+D NEAREST(0): -2.9387358770557188E-39
+D NEAREST(HUGE, 1): %X 000004B4
+H: -16383  16383  8.4053E-4933
+H NEAREST(0):  8.4053E-4933  0.0000E+0000
+H: -0.5000  0.0000E+0000
+H SCALE(HUGE, 1):   %X 000004B4
+G: -1023  1023  0.7500  4.4408920985006262E-16
+G:  6755399441055744.0 -4.4408920985006262E-16
+G TINY:  5.5626846462680035-309  5.5626846462680035-309
+G SCALE:   1.5
+G SCALE(HUGE, 1):   %X 000004B4
+  $STATUS == "%X00000001"
+==== MODELVMSN
+EXPONENT: -127  127 -127    0
+FRACTION:  0.50000000 -0.99999994
+NEAREST(0):  2.93873588E-39 -2.93873588E-39
+Toward 0:  0.00000000E+00  0.00000000E+00
+SPACING:  2.93873588E-39  2.93873588E-39
+SPACING:  9.40395481E-38  1.01412048E+31
+Below:  0.00000000E+00  0.00000000E+00
+RRSPACING:    16777215.0     8388608.0
+Below HUGE: T  1.01412048E+31
+And back: T
+SCALE(HUGE, 1):     %X 000004B4
+SCALE(-1, 128):     %X 000004B4
+SCALE(1, 2**30):    %X 000004B4
+SET_EXPONENT(1, 128): %X 000004B4
+NEAREST(HUGE, 1):   %X 000004B4
+NEAREST(-HUGE, -1): %X 000004B4
+Within:             %X 00000000
+D: -127  127  2.9387358770557188E-39
+D RRSPACING:   72057594037927935.0
+D NEAREST(0): -2.9387358770557188E-39
+D NEAREST(HUGE, 1): %X 000004B4
+H: -16383  16383  8.4053E-4933
+H NEAREST(0):  8.4053E-4933  0.0000E+0000
+H: -0.5000  0.0000E+0000
+H SCALE(HUGE, 1):   %X 000004B4
+G: -1023  1023  0.7500  4.4408920985006262E-16
+G:  6755399441055744.0 -4.4408920985006262E-16
+G TINY:  5.5626846462680035-309  5.5626846462680035-309
+G SCALE:   1.5
+G SCALE(HUGE, 1):   %X 000004B4
+  $STATUS == "%X00000001"
+==== MODELVMSR
+EXPONENT: -127  127 -127    0
+FRACTION:  0.50000000 -0.99999994
+NEAREST(0):  2.93873588E-39 -2.93873588E-39
+Toward 0:  0.00000000E+00  0.00000000E+00
+SPACING:  2.93873588E-39  2.93873588E-39
+SPACING:  9.40395481E-38  1.01412048E+31
+Below:  0.00000000E+00  0.00000000E+00
+RRSPACING:    16777215.0     8388608.0
+Below HUGE: T  1.01412048E+31
+And back: T
+SCALE(HUGE, 1):     %X 000004B4
+SCALE(-1, 128):     %X 000004B4
+SCALE(1, 2**30):    %X 000004B4
+SET_EXPONENT(1, 128): %X 000004B4
+NEAREST(HUGE, 1):   %X 000004B4
+NEAREST(-HUGE, -1): %X 000004B4
+Within:             %X 00000000
+D: -127  127  2.9387358770557188E-39
+D RRSPACING:   72057594037927935.0
+D NEAREST(0): -2.9387358770557188E-39
+D NEAREST(HUGE, 1): %X 000004B4
+H: -16383  16383  8.4053E-4933
+H NEAREST(0):  8.4053E-4933  0.0000E+0000
+H: -0.5000  0.0000E+0000
+H SCALE(HUGE, 1):   %X 000004B4
+G: -1023  1023  0.7500  4.4408920985006262E-16
+G:  6755399441055744.0 -4.4408920985006262E-16
+G TINY:  5.5626846462680035-309  5.5626846462680035-309
+G SCALE:   1.5
+G SCALE(HUGE, 1):   %X 000004B4
+  $STATUS == "%X00000001"
+==== MODPROCS
+  2.0  1.0  4  3  2
+  4.0  6.0  10.0
+ 3628800
+  10.0  2.0  4.0  6.0  8.0
+  2.0
+  $STATUS == "%X00000001"
+==== MODPROCSN
+  2.0  1.0  4  3  2
+  4.0  6.0  10.0
+ 3628800
+  10.0  2.0  4.0  6.0  8.0
+  2.0
+  $STATUS == "%X00000001"
+==== MODPROCSR
+  2.0  1.0  4  3  2
+  4.0  6.0  10.0
+ 3628800
+  10.0  2.0  4.0  6.0  8.0
+  2.0
+  $STATUS == "%X00000001"
+==== NMLSECT
+  3  7  2  8  1  9   0  6  4  6  0  6
+  0.0  0.0  1.5  1.5  9.0 aXYd abcd aZWd
+&OBJ
+PTS%X   = 3*0.0000000E+00,
+PTS%Y   = 3*0.0000000E+00,
+L%TAG   = ABC,
+L%ENDS%X        =   1.000000    ,   3.000000    ,
+L%ENDS%Y        =   2.000000    ,   4.000000    
+/
+  9.0  0.5  5.0  0.5  9.0  0.5
+  1.0  2.0  3.0  0.5  7.0  8.0
+XYZ  6.0  2.0  7.0  4.5
+QRS  0.5  0.5  0.5  0.5 ABC  6.5  2.0  3.0  4.0
+  5  4  4  6  8  9
+&DEEP
+LS%TAG  = QRS, ABC,
+LS%ENDS%X       = 2*0.5000000    ,   6.500000    ,   3.000000    ,
+LS%ENDS%Y       = 2*0.5000000    ,   2.000000    ,   4.000000    ,
+VS%V    =           5, 2*4,           6,           8,           9
+/
+ 19
+ 19
+ 19
+ 19
+ 18
+ 18
+  3  7  2  8  1  2
+&FR
+Q%X     = 2*0.5000000    ,
+Q%Y     = 2*2.000000    
+/
+  $STATUS == "%X00000001"
+==== NMLSECTN
+  3  7  2  8  1  9   0  6  4  6  0  6
+  0.0  0.0  1.5  1.5  9.0 aXYd abcd aZWd
+&OBJ
+PTS%X   = 3*0.0000000E+00,
+PTS%Y   = 3*0.0000000E+00,
+L%TAG   = ABC,
+L%ENDS%X        =   1.000000    ,   3.000000    ,
+L%ENDS%Y        =   2.000000    ,   4.000000    
+/
+  9.0  0.5  5.0  0.5  9.0  0.5
+  1.0  2.0  3.0  0.5  7.0  8.0
+XYZ  6.0  2.0  7.0  4.5
+QRS  0.5  0.5  0.5  0.5 ABC  6.5  2.0  3.0  4.0
+  5  4  4  6  8  9
+&DEEP
+LS%TAG  = QRS, ABC,
+LS%ENDS%X       = 2*0.5000000    ,   6.500000    ,   3.000000    ,
+LS%ENDS%Y       = 2*0.5000000    ,   2.000000    ,   4.000000    ,
+VS%V    =           5, 2*4,           6,           8,           9
+/
+ 19
+ 19
+ 19
+ 19
+ 18
+ 18
+  3  7  2  8  1  2
+&FR
+Q%X     = 2*0.5000000    ,
+Q%Y     = 2*2.000000    
+/
+  $STATUS == "%X00000001"
+==== NMLSECTR
+  3  7  2  8  1  9   0  6  4  6  0  6
+  0.0  0.0  1.5  1.5  9.0 aXYd abcd aZWd
+&OBJ
+PTS%X   = 3*0.0000000E+00,
+PTS%Y   = 3*0.0000000E+00,
+L%TAG   = ABC,
+L%ENDS%X        =   1.000000    ,   3.000000    ,
+L%ENDS%Y        =   2.000000    ,   4.000000    
+/
+  9.0  0.5  5.0  0.5  9.0  0.5
+  1.0  2.0  3.0  0.5  7.0  8.0
+XYZ  6.0  2.0  7.0  4.5
+QRS  0.5  0.5  0.5  0.5 ABC  6.5  2.0  3.0  4.0
+  5  4  4  6  8  9
+&DEEP
+LS%TAG  = QRS, ABC,
+LS%ENDS%X       = 2*0.5000000    ,   6.500000    ,   3.000000    ,
+LS%ENDS%Y       = 2*0.5000000    ,   2.000000    ,   4.000000    ,
+VS%V    =           5, 2*4,           6,           8,           9
+/
+ 19
+ 19
+ 19
+ 19
+ 18
+ 18
+  3  7  2  8  1  2
+&FR
+Q%X     = 2*0.5000000    ,
+Q%Y     = 2*2.000000    
+/
+  $STATUS == "%X00000001"
+==== NUMBERS
+gcd    12
+lcm    60
+wide   7
+pi      3.14
+e    2.7183
+   1
+   1   1
+   1   2   1
+   1   3   3   1
+   1   4   6   4   1
+   1   5  10  10   5   1
+   1   6  15  20  15   6   1
+sums   127
+  $STATUS == "%X00000001"
+==== NUMBERSN
+gcd    12
+lcm    60
+wide   7
+pi      3.14
+e    2.7183
+   1
+   1   1
+   1   2   1
+   1   3   3   1
+   1   4   6   4   1
+   1   5  10  10   5   1
+   1   6  15  20  15   6   1
+sums   127
+  $STATUS == "%X00000001"
+==== NUMBERSR
+gcd    12
+lcm    60
+wide   7
+pi      3.14
+e    2.7183
+   1
+   1   1
+   1   2   1
+   1   3   3   1
+   1   4   6   4   1
+   1   5  10  10   5   1
+   1   6  15  20  15   6   1
+sums   127
+  $STATUS == "%X00000001"
+==== NUMFNS
+Folded:   5  -5   2  -2
+MODULO(-8.5, 3.0):  0.50
+CEILING:   3  -2   3  -3   1   0
+FLOOR:     2  -3   3  -3   0  -1
+Kinds:  -7  -8  123457  123456
+Whole:  16777216        -1
+MOD:        3  -3   3  -3
+MODULO:     3   2  -2  -3
+By 5, -5:   3   2  -2  -3
+Short:   2   2   0
+REAL:  2.50  0.50 -0.50 -2.50
+Kinds:  0.75  2.00
+ABS((3, 4))           5.000000
+ABS, scaled           5.000000
+SQRT((3, 4))          2.000000    1.000000
+SQRT((3, -4))         2.000000   -1.000000
+SQRT((-3, 4))         1.000000    2.000000
+SQRT((-3, -4))        1.000000   -2.000000
+SQRT((-4, 0))         0.000000    2.000000
+SQRT((0, 0))          0.000000    0.000000
+EXP((1, 0))           2.718282    0.000000
+EXP((0, 0.5))         0.877583    0.479426
+LOG((3, 4))           1.609438    0.927295
+LOG((-1, 0))          0.000000    3.141593
+LOG((0, 1))           0.000000    1.570796
+SIN((1, 1))           1.298458    0.634964
+COS((1, 1))           0.833730   -0.988898
+Z**2                  0.000000    2.000000
+Z**3                 -2.000000    2.000000
+Z**8                 16.000000    0.000000
+Z**10                 0.000000   32.000000
+Z**(-1)               0.500000   -0.500000
+Z**(-2)               0.000000   -0.500000
+Z**0                  1.000000    0.000000
+(2, 0)**(3, 0)        8.000000    0.000000
+(0, 1)**(0, 1)        0.207880    0.000000
+2.0**(0, 1)           0.769239    0.638961
+In line = called: T
+ABS(ZS)              5.000   2.000  13.000
+SQRT(ZS(N))           2.000000    1.000000
+SQRT(ZS(N))           1.000000   -1.000000
+SQRT(ZS(N))           3.000000    2.000000
+MERGE                 1.000000    1.000000
+MERGE                 1.100000    0.700000
+  $STATUS == "%X00000001"
+==== NUMFNSN
+Folded:   5  -5   2  -2
+MODULO(-8.5, 3.0):  0.50
+CEILING:   3  -2   3  -3   1   0
+FLOOR:     2  -3   3  -3   0  -1
+Kinds:  -7  -8  123457  123456
+Whole:  16777216        -1
+MOD:        3  -3   3  -3
+MODULO:     3   2  -2  -3
+By 5, -5:   3   2  -2  -3
+Short:   2   2   0
+REAL:  2.50  0.50 -0.50 -2.50
+Kinds:  0.75  2.00
+ABS((3, 4))           5.000000
+ABS, scaled           5.000000
+SQRT((3, 4))          2.000000    1.000000
+SQRT((3, -4))         2.000000   -1.000000
+SQRT((-3, 4))         1.000000    2.000000
+SQRT((-3, -4))        1.000000   -2.000000
+SQRT((-4, 0))         0.000000    2.000000
+SQRT((0, 0))          0.000000    0.000000
+EXP((1, 0))           2.718282    0.000000
+EXP((0, 0.5))         0.877583    0.479426
+LOG((3, 4))           1.609438    0.927295
+LOG((-1, 0))          0.000000    3.141593
+LOG((0, 1))           0.000000    1.570796
+SIN((1, 1))           1.298458    0.634964
+COS((1, 1))           0.833730   -0.988898
+Z**2                  0.000000    2.000000
+Z**3                 -2.000000    2.000000
+Z**8                 16.000000    0.000000
+Z**10                 0.000000   32.000000
+Z**(-1)               0.500000   -0.500000
+Z**(-2)               0.000000   -0.500000
+Z**0                  1.000000    0.000000
+(2, 0)**(3, 0)        8.000000    0.000000
+(0, 1)**(0, 1)        0.207880    0.000000
+2.0**(0, 1)           0.769239    0.638961
+In line = called: T
+ABS(ZS)              5.000   2.000  13.000
+SQRT(ZS(N))           2.000000    1.000000
+SQRT(ZS(N))           1.000000   -1.000000
+SQRT(ZS(N))           3.000000    2.000000
+MERGE                 1.000000    1.000000
+MERGE                 1.100000    0.700000
+  $STATUS == "%X00000001"
+==== NUMFNSR
+Folded:   5  -5   2  -2
+MODULO(-8.5, 3.0):  0.50
+CEILING:   3  -2   3  -3   1   0
+FLOOR:     2  -3   3  -3   0  -1
+Kinds:  -7  -8  123457  123456
+Whole:  16777216        -1
+MOD:        3  -3   3  -3
+MODULO:     3   2  -2  -3
+By 5, -5:   3   2  -2  -3
+Short:   2   2   0
+REAL:  2.50  0.50 -0.50 -2.50
+Kinds:  0.75  2.00
+ABS((3, 4))           5.000000
+ABS, scaled           5.000000
+SQRT((3, 4))          2.000000    1.000000
+SQRT((3, -4))         2.000000   -1.000000
+SQRT((-3, 4))         1.000000    2.000000
+SQRT((-3, -4))        1.000000   -2.000000
+SQRT((-4, 0))         0.000000    2.000000
+SQRT((0, 0))          0.000000    0.000000
+EXP((1, 0))           2.718282    0.000000
+EXP((0, 0.5))         0.877583    0.479426
+LOG((3, 4))           1.609438    0.927295
+LOG((-1, 0))          0.000000    3.141593
+LOG((0, 1))           0.000000    1.570796
+SIN((1, 1))           1.298458    0.634964
+COS((1, 1))           0.833730   -0.988898
+Z**2                  0.000000    2.000000
+Z**3                 -2.000000    2.000000
+Z**8                 16.000000    0.000000
+Z**10                 0.000000   32.000000
+Z**(-1)               0.500000   -0.500000
+Z**(-2)               0.000000   -0.500000
+Z**0                  1.000000    0.000000
+(2, 0)**(3, 0)        8.000000    0.000000
+(0, 1)**(0, 1)        0.207880    0.000000
+2.0**(0, 1)           0.769239    0.638961
+In line = called: T
+ABS(ZS)              5.000   2.000  13.000
+SQRT(ZS(N))           2.000000    1.000000
+SQRT(ZS(N))           1.000000   -1.000000
+SQRT(ZS(N))           3.000000    2.000000
+MERGE                 1.000000    1.000000
+MERGE                 1.100000    0.700000
+  $STATUS == "%X00000001"
+==== OPENINGS
+Unit 10 WRITE ASIS QUOTE NO NO YES NO
+A READ of a WRITE unit fails: T
+Unit 10 READWRITE APPEND NONE YES YES YES YES
+Unit 10 READ ASIS NONE YES YES NO NO
+Read: first
+Read: second
+A WRITE of a READ unit fails: T
+After REWIND: REWIND
+Read again: first
+Still there: F
+Unit 11 READWRITE ASIS APOSTROPHE YES YES YES YES
+Unit 11 READWRITE ASIS NONE NO YES YES YES
+Unit 12 UNDEFINED UNDEFINED UNDEFINED YES UNKNOWN UNKNOWN UNKNOWN
+Scalar and arrays:   61
+Section:   10
+Implied DO:    7
+Allocatable:    8
+Derived type:    6
+Passed length:    3
+Record 2:  2  3.00 record
+  $STATUS == "%X00000001"
+==== OPENINGSN
+Unit 10 WRITE ASIS QUOTE NO NO YES NO
+A READ of a WRITE unit fails: T
+Unit 10 READWRITE APPEND NONE YES YES YES YES
+Unit 10 READ ASIS NONE YES YES NO NO
+Read: first
+Read: second
+A WRITE of a READ unit fails: T
+After REWIND: REWIND
+Read again: first
+Still there: F
+Unit 11 READWRITE ASIS APOSTROPHE YES YES YES YES
+Unit 11 READWRITE ASIS NONE NO YES YES YES
+Unit 12 UNDEFINED UNDEFINED UNDEFINED YES UNKNOWN UNKNOWN UNKNOWN
+Scalar and arrays:   61
+Section:   10
+Implied DO:    7
+Allocatable:    8
+Derived type:    6
+Passed length:    3
+Record 2:  2  3.00 record
+  $STATUS == "%X00000001"
+==== OPENINGSR
+Unit 10 WRITE ASIS QUOTE NO NO YES NO
+A READ of a WRITE unit fails: T
+Unit 10 READWRITE APPEND NONE YES YES YES YES
+Unit 10 READ ASIS NONE YES YES NO NO
+Read: first
+Read: second
+A WRITE of a READ unit fails: T
+After REWIND: REWIND
+Read again: first
+Still there: F
+Unit 11 READWRITE ASIS APOSTROPHE YES YES YES YES
+Unit 11 READWRITE ASIS NONE NO YES YES YES
+Unit 12 UNDEFINED UNDEFINED UNDEFINED YES UNKNOWN UNKNOWN UNKNOWN
+Scalar and arrays:   61
+Section:   10
+Implied DO:    7
+Allocatable:    8
+Derived type:    6
+Passed length:    3
+Record 2:  2  3.00 record
+  $STATUS == "%X00000001"
+==== OPERATORS
+dist:  5.00
+sd:  3.00
+inv:  0.50
+plus: T F T
+cat: n=42        |
+and:   7   7
+assign: yes no 
+inner: yes
+  $STATUS == "%X00000001"
+==== OPERATORSN
+dist:  5.00
+sd:  3.00
+inv:  0.50
+plus: T F T
+cat: n=42        |
+and:   7   7
+assign: yes no 
+inner: yes
+  $STATUS == "%X00000001"
+==== OPERATORSR
+dist:  5.00
+sd:  3.00
+inv:  0.50
+plus: T F T
+cat: n=42        |
+and:   7   7
+assign: yes no 
+inner: yes
+  $STATUS == "%X00000001"
+==== OPTFUSE
+a   2.0   3.0   4.0   5.0   6.0   7.0   8.0   9.0
+c   4.0   6.0   8.0  10.0  12.0  14.0  16.0  18.0
+d   3.0   4.0   5.0   6.0   7.0   8.0   9.0  10.0
+a  20.0  30.0  40.0  50.0  60.0  70.0  80.0   9.0
+c  30.0  40.0  50.0  60.0  70.0  80.0   9.0  18.0
+c   9.0  10.0  11.0  12.0  13.0  14.0  15.0  16.0
+a   4.0   3.0   2.0   1.0   1.0   4.0   9.0  16.0
+c   0.0   0.0   0.0   0.0   2.0   5.0  10.0  17.0
+a   0.0   0.0   2.0   1.0   1.0   0.0   0.0   0.0
+c   1.0   1.0   0.0   0.0   2.0   1.0   1.0   1.0
+m    2.0    6.0   12.0   20.0   30.0   42.0
+   56.0   72.0   90.0  110.0  132.0  156.0
+c  -9.0  -6.0  -3.0   0.0   3.0   6.0   9.0  12.0
+d -12.0  -8.0  -4.0   0.0   4.0   8.0  12.0  16.0
+    1000.0    2000.0    2000.0
+  $STATUS == "%X00000001"
+==== OPTFUSEN
+a   2.0   3.0   4.0   5.0   6.0   7.0   8.0   9.0
+c   4.0   6.0   8.0  10.0  12.0  14.0  16.0  18.0
+d   3.0   4.0   5.0   6.0   7.0   8.0   9.0  10.0
+a  20.0  30.0  40.0  50.0  60.0  70.0  80.0   9.0
+c  30.0  40.0  50.0  60.0  70.0  80.0   9.0  18.0
+c   9.0  10.0  11.0  12.0  13.0  14.0  15.0  16.0
+a   4.0   3.0   2.0   1.0   1.0   4.0   9.0  16.0
+c   0.0   0.0   0.0   0.0   2.0   5.0  10.0  17.0
+a   0.0   0.0   2.0   1.0   1.0   0.0   0.0   0.0
+c   1.0   1.0   0.0   0.0   2.0   1.0   1.0   1.0
+m    2.0    6.0   12.0   20.0   30.0   42.0
+   56.0   72.0   90.0  110.0  132.0  156.0
+c  -9.0  -6.0  -3.0   0.0   3.0   6.0   9.0  12.0
+d -12.0  -8.0  -4.0   0.0   4.0   8.0  12.0  16.0
+    1000.0    2000.0    2000.0
+  $STATUS == "%X00000001"
+==== OPTFUSER
+a   2.0   3.0   4.0   5.0   6.0   7.0   8.0   9.0
+c   4.0   6.0   8.0  10.0  12.0  14.0  16.0  18.0
+d   3.0   4.0   5.0   6.0   7.0   8.0   9.0  10.0
+a  20.0  30.0  40.0  50.0  60.0  70.0  80.0   9.0
+c  30.0  40.0  50.0  60.0  70.0  80.0   9.0  18.0
+c   9.0  10.0  11.0  12.0  13.0  14.0  15.0  16.0
+a   4.0   3.0   2.0   1.0   1.0   4.0   9.0  16.0
+c   0.0   0.0   0.0   0.0   2.0   5.0  10.0  17.0
+a   0.0   0.0   2.0   1.0   1.0   0.0   0.0   0.0
+c   1.0   1.0   0.0   0.0   2.0   1.0   1.0   1.0
+m    2.0    6.0   12.0   20.0   30.0   42.0
+   56.0   72.0   90.0  110.0  132.0  156.0
+c  -9.0  -6.0  -3.0   0.0   3.0   6.0   9.0  12.0
+d -12.0  -8.0  -4.0   0.0   4.0   8.0  12.0  16.0
+    1000.0    2000.0    2000.0
+  $STATUS == "%X00000001"
+==== OPTIONAL
+-          1.5  1
+-          2.5  3
+keyed      3.5  1
+-          9.0  2
+all       55.0  1
+poly:   0.0   1.0   4.0   7.0
+fill:  1.0  2.0  3.0  4.0  7.0  7.0  7.0  7.0
+total:  10.0  38.0
+-          1.0  1
+relayed    1.0  1
+-          2.0  5
+relayed    2.0  5
+host has  9
+host has none
+  $STATUS == "%X00000001"
+==== OPTIONALN
+-          1.5  1
+-          2.5  3
+keyed      3.5  1
+-          9.0  2
+all       55.0  1
+poly:   0.0   1.0   4.0   7.0
+fill:  1.0  2.0  3.0  4.0  7.0  7.0  7.0  7.0
+total:  10.0  38.0
+-          1.0  1
+relayed    1.0  1
+-          2.0  5
+relayed    2.0  5
+host has  9
+host has none
+  $STATUS == "%X00000001"
+==== OPTIONALR
+-          1.5  1
+-          2.5  3
+keyed      3.5  1
+-          9.0  2
+all       55.0  1
+poly:   0.0   1.0   4.0   7.0
+fill:  1.0  2.0  3.0  4.0  7.0  7.0  7.0  7.0
+total:  10.0  38.0
+-          1.0  1
+relayed    1.0  1
+-          2.0  5
+relayed    2.0  5
+host has  9
+host has none
+  $STATUS == "%X00000001"
+==== OPTSTRIDE
+  3.0  5.0  7.0  9.0 11.0 13.0 15.0 17.0 19.0 21.0
+  5.0  5.0  7.0 13.0 11.0 13.0 21.0 17.0 19.0 29.0
+   11.0   10.5   31.0   20.5
+   12.0   22.0   32.0   42.0
+   13.0   11.5   33.0   21.5
+   14.0   24.0   34.0   44.0
+   15.0   12.5   35.0   22.5
+   16.0   26.0   36.0   46.0
+   1.0   2.0  10.0   4.0   5.0  37.0   7.0   8.0  82.0  10.0  11.0 145.0
+   50000.0
+  $STATUS == "%X00000001"
+==== OPTSTRIDEN
+  3.0  5.0  7.0  9.0 11.0 13.0 15.0 17.0 19.0 21.0
+  5.0  5.0  7.0 13.0 11.0 13.0 21.0 17.0 19.0 29.0
+   11.0   10.5   31.0   20.5
+   12.0   22.0   32.0   42.0
+   13.0   11.5   33.0   21.5
+   14.0   24.0   34.0   44.0
+   15.0   12.5   35.0   22.5
+   16.0   26.0   36.0   46.0
+   1.0   2.0  10.0   4.0   5.0  37.0   7.0   8.0  82.0  10.0  11.0 145.0
+   50000.0
+  $STATUS == "%X00000001"
+==== OPTSTRIDER
+  3.0  5.0  7.0  9.0 11.0 13.0 15.0 17.0 19.0 21.0
+  5.0  5.0  7.0 13.0 11.0 13.0 21.0 17.0 19.0 29.0
+   11.0   10.5   31.0   20.5
+   12.0   22.0   32.0   42.0
+   13.0   11.5   33.0   21.5
+   14.0   24.0   34.0   44.0
+   15.0   12.5   35.0   22.5
+   16.0   26.0   36.0   46.0
+   1.0   2.0  10.0   4.0   5.0  37.0   7.0   8.0  82.0  10.0  11.0 145.0
+   50000.0
+  $STATUS == "%X00000001"
+==== OVERLAP
+ahead:    2.  3.  4.  5.  6.  7.  8.  9. 10. 10.
+behind:   1.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+both:     1.  4.  6.  8. 10. 12. 14. 16. 18. 10.
+scaled:  0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+turned:  10.  9.  8.  7.  6.  5.  4.  3.  2.  1.
+by 2:     1.  2.  1.  4.  3.  6.  5.  8.  7. 10.
+equiv:    1.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+m(1,:):  11. 21. 22. 23.
+m(2,:):  21. 31. 32. 33.
+m(3,:):  31. 41. 42. 43.
+m(4,:):  41. 42. 43. 44.
+c:       eefg eefg eefg
+  $STATUS == "%X00000001"
+==== OVERLAPN
+ahead:    2.  3.  4.  5.  6.  7.  8.  9. 10. 10.
+behind:   1.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+both:     1.  4.  6.  8. 10. 12. 14. 16. 18. 10.
+scaled:  0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+turned:  10.  9.  8.  7.  6.  5.  4.  3.  2.  1.
+by 2:     1.  2.  1.  4.  3.  6.  5.  8.  7. 10.
+equiv:    1.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+m(1,:):  11. 21. 22. 23.
+m(2,:):  21. 31. 32. 33.
+m(3,:):  31. 41. 42. 43.
+m(4,:):  41. 42. 43. 44.
+c:       eefg eefg eefg
+  $STATUS == "%X00000001"
+==== OVERLAPR
+ahead:    2.  3.  4.  5.  6.  7.  8.  9. 10. 10.
+behind:   1.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+both:     1.  4.  6.  8. 10. 12. 14. 16. 18. 10.
+scaled:  0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+turned:  10.  9.  8.  7.  6.  5.  4.  3.  2.  1.
+by 2:     1.  2.  1.  4.  3.  6.  5.  8.  7. 10.
+equiv:    1.  1.  2.  3.  4.  5.  6.  7.  8.  9.
+m(1,:):  11. 21. 22. 23.
+m(2,:):  21. 31. 32. 33.
+m(3,:):  31. 41. 42. 43.
+m(4,:):  41. 42. 43. 44.
+c:       eefg eefg eefg
+  $STATUS == "%X00000001"
+==== PIDIGITS
+Pi to 50 decimal places:
+
+3.1415926535 8979323846 2643383279 5028841971 6939937510
+  $STATUS == "%X00000001"
+==== PIDIGITSN
+Pi to 50 decimal places:
+
+3.1415926535 8979323846 2643383279 5028841971 6939937510
+  $STATUS == "%X00000001"
+==== PIDIGITSR
+Pi to 50 decimal places:
+
+3.1415926535 8979323846 2643383279 5028841971 6939937510
+  $STATUS == "%X00000001"
+==== POINTERS
+F F
+T T F
+          5           5
+T T
+F F
+          7           2
+         40          50          60          70          80
+        100           2
+          3           5 T F
+ABCD  421234   42           4
+         42
+       1234
+          6
+        114         198
+          3           6
+         -7
+  $STATUS == "%X00000001"
+==== POINTERSN
+F F
+T T F
+          5           5
+T T
+F F
+          7           2
+         40          50          60          70          80
+        100           2
+          3           5 T F
+ABCD  421234   42           4
+         42
+       1234
+          6
+        114         198
+          3           6
+         -7
+  $STATUS == "%X00000001"
+==== POINTERSR
+F F
+T T F
+          5           5
+T T
+F F
+          7           2
+         40          50          60          70          80
+        100           2
+          3           5 T F
+ABCD  421234   42           4
+         42
+       1234
+          6
+        114         198
+          3           6
+         -7
+  $STATUS == "%X00000001"
+==== PRECISE
+Precise enough: T
+----------------------------
+SQRT(2) =  1.414213562373 after 6 tries
+Squares back: T
+PI =  3.141592654
+PI * 10**8 =  314159265
+----------------------------
+Payment:    88.85
+Month  4 owes cents:  67984
+Month  8 owes cents:  34668
+Month 12 owes cents:      0
+Paid off: T
+----------------------------
+Root 1:  -1.000   2.000
+Root 2:  -1.000  -2.000
+Their product:   5.000
+Half the months:  6
+  $STATUS == "%X00000001"
+==== PRECISEN
+Precise enough: T
+----------------------------
+SQRT(2) =  1.414213562373 after 6 tries
+Squares back: T
+PI =  3.141592654
+PI * 10**8 =  314159265
+----------------------------
+Payment:    88.85
+Month  4 owes cents:  67984
+Month  8 owes cents:  34668
+Month 12 owes cents:      0
+Paid off: T
+----------------------------
+Root 1:  -1.000   2.000
+Root 2:  -1.000  -2.000
+Their product:   5.000
+Half the months:  6
+  $STATUS == "%X00000001"
+==== PRECISER
+Precise enough: T
+----------------------------
+SQRT(2) =  1.414213562373 after 6 tries
+Squares back: T
+PI =  3.141592654
+PI * 10**8 =  314159265
+----------------------------
+Payment:    88.85
+Month  4 owes cents:  67984
+Month  8 owes cents:  34668
+Month 12 owes cents:      0
+Paid off: T
+----------------------------
+Root 1:  -1.000   2.000
+Root 2:  -1.000  -2.000
+Their product:   5.000
+Half the months:  6
+  $STATUS == "%X00000001"
+==== PTRALIAS
+target          14           5
+component          63          31
+two pointers          18          80
+common          33          40
+module          28          50
+host          84          60
+dummy          14           8
+allocated          14          90
+section          60          70
+section           3
+substring XY abXYef
+kept         302         201
+untouched          12           3          15          60          65
+other type         240          52
+  $STATUS == "%X00000001"
+==== PTRALIASN
+target          14           5
+component          63          31
+two pointers          18          80
+common          33          40
+module          28          50
+host          84          60
+dummy          14           8
+allocated          14          90
+section          60          70
+section           3
+substring XY abXYef
+kept         302         201
+untouched          12           3          15          60          65
+other type         240          52
+  $STATUS == "%X00000001"
+==== PTRALIASR
+target          14           5
+component          63          31
+two pointers          18          80
+common          33          40
+module          28          50
+host          84          60
+dummy          14           8
+allocated          14          90
+section          60          70
+section           3
+substring XY abXYef
+kept         302         201
+untouched          12           3          15          60          65
+other type         240          52
+  $STATUS == "%X00000001"
+==== PTRALLOC
+two targets:      11  22 F T
+one given back:   22 F T
+none left:       F
+other types:     0.3333333 HELLO ELL   3  12
+given back:      F F F
+array:             0   4   5   0   1   4   9  16
+section:           1   3   1   4   9
+through it:        0  -1  -4  -9  16
+given back:      F
+grid:              1  -1   2   1   9  19  10  20  11  21
+sums:             90  28  30  32
+grown:            16   3   6   9  12  15  18  21  24  27
+with STAT=:      0 T T
+deallocated:     0 F F
+disassociated:   T
+module:            4 101 102 103 104   2.5
+host:            T  99
+recursion:         150
+  $STATUS == "%X00000001"
+==== PTRALLOCN
+two targets:      11  22 F T
+one given back:   22 F T
+none left:       F
+other types:     0.3333333 HELLO ELL   3  12
+given back:      F F F
+array:             0   4   5   0   1   4   9  16
+section:           1   3   1   4   9
+through it:        0  -1  -4  -9  16
+given back:      F
+grid:              1  -1   2   1   9  19  10  20  11  21
+sums:             90  28  30  32
+grown:            16   3   6   9  12  15  18  21  24  27
+with STAT=:      0 T T
+deallocated:     0 F F
+disassociated:   T
+module:            4 101 102 103 104   2.5
+host:            T  99
+recursion:         150
+  $STATUS == "%X00000001"
+==== PTRALLOCR
+two targets:      11  22 F T
+one given back:   22 F T
+none left:       F
+other types:     0.3333333 HELLO ELL   3  12
+given back:      F F F
+array:             0   4   5   0   1   4   9  16
+section:           1   3   1   4   9
+through it:        0  -1  -4  -9  16
+given back:      F
+grid:              1  -1   2   1   9  19  10  20  11  21
+sums:             90  28  30  32
+grown:            16   3   6   9  12  15  18  21  24  27
+with STAT=:      0 T T
+deallocated:     0 F F
+disassociated:   T
+module:            4 101 102 103 104   2.5
+host:            T  99
+recursion:         150
+  $STATUS == "%X00000001"
+==== PTRALLOCVMS
+disassociated:       302
+a TARGET:            304 T
+allocatable array:   304 T
+a part:              304
+every other:         304
+reversed:            304
+the whole section:     0 F
+given back already:  304
+one element:           0 F
+part of a string:    304
+signaled:   %X00188984
+signaled:   %X00188974
+bytes kept:     0
+bytes lost:    16
+  $STATUS == "%X00000001"
+==== PTRALLOCVMSN
+disassociated:       302
+a TARGET:            304 T
+allocatable array:   304 T
+a part:              304
+every other:         304
+reversed:            304
+the whole section:     0 F
+given back already:  304
+one element:           0 F
+part of a string:    304
+signaled:   %X00188984
+signaled:   %X00188974
+bytes kept:     0
+bytes lost:    16
+  $STATUS == "%X00000001"
+==== PTRALLOCVMSR
+disassociated:       302
+a TARGET:            304 T
+allocatable array:   304 T
+a part:              304
+every other:         304
+reversed:            304
+the whole section:     0 F
+given back already:  304
+one element:           0 F
+part of a string:    304
+signaled:   %X00188984
+signaled:   %X00188974
+bytes kept:     0
+bytes lost:    16
+  $STATUS == "%X00000001"
+==== PTRARRAYS
+F F
+          0           9          10
+          0          90 T T
+          1           3           3
+         20          50          80
+          0          10          21          30          40
+         51          60          70          81          90
+F T T
+         51          81 T
+T           3
+         90          10           1
+         -1
+          0 T F
+F F
+          2           3           1           3
+         63          19          19
+          2           6          10          14           0
+          3           7           0          15           0
+       1251         953
+       1181         503
+          1           1           2           3           4
+          4           3           2           1           1
+          3           1          -1
+          4          -3          -2          -1           1
+          1           3           2           4           6
+         60
+          0           2           9
+          1           2           9
+          2
+TWOTEN
+ONETWOSIXNIL
+ TWO NIL ONE SIX
+  1.50  1.25  3.50  2.25  5.50  3.25
+        180
+          1
+  $STATUS == "%X00000001"
+==== PTRARRAYSN
+F F
+          0           9          10
+          0          90 T T
+          1           3           3
+         20          50          80
+          0          10          21          30          40
+         51          60          70          81          90
+F T T
+         51          81 T
+T           3
+         90          10           1
+         -1
+          0 T F
+F F
+          2           3           1           3
+         63          19          19
+          2           6          10          14           0
+          3           7           0          15           0
+       1251         953
+       1181         503
+          1           1           2           3           4
+          4           3           2           1           1
+          3           1          -1
+          4          -3          -2          -1           1
+          1           3           2           4           6
+         60
+          0           2           9
+          1           2           9
+          2
+TWOTEN
+ONETWOSIXNIL
+ TWO NIL ONE SIX
+  1.50  1.25  3.50  2.25  5.50  3.25
+        180
+          1
+  $STATUS == "%X00000001"
+==== PTRARRAYSR
+F F
+          0           9          10
+          0          90 T T
+          1           3           3
+         20          50          80
+          0          10          21          30          40
+         51          60          70          81          90
+F T T
+         51          81 T
+T           3
+         90          10           1
+         -1
+          0 T F
+F F
+          2           3           1           3
+         63          19          19
+          2           6          10          14           0
+          3           7           0          15           0
+       1251         953
+       1181         503
+          1           1           2           3           4
+          4           3           2           1           1
+          3           1          -1
+          4          -3          -2          -1           1
+          1           3           2           4           6
+         60
+          0           2           9
+          1           2           9
+          2
+TWOTEN
+ONETWOSIXNIL
+ TWO NIL ONE SIX
+  1.50  1.25  3.50  2.25  5.50  3.25
+        180
+          1
+  $STATUS == "%X00000001"
+==== PTRCARR
+none: F
+whole: T T   1  10  10
+more:   0   4   5   5   6   7   8   9
+element:   5   9
+section:   1   3   3   20   50   80
+same: T F
+data:  10  21  30  40   0  60  70  81  90 100
+copied: T   21    0   81
+record: T   21    0   81
+from b:   90  100  1
+reversed:    0   40   30   21   10
+section of it:   40   30   21   10   30    0
+allocated:  -2   2   4   1   0   1   4   10
+deallocated: F
+records:  11  21  22  31  32  33
+list:          31          32          33
+statement function:  21  31
+rank 2:  1  1  2  3  5.0  6.0  8.0  9.0 11.0 12.0
+plane:  54.0  2.0  0.0  0.0  0.0
+names: dog cat bee ant at
+chain:   30   40
+data(3):   99
+shaped:  1  5  10  99   0  70  90
+explicit:  12 101   2  72  92
+own: 100   0
+after calls:  12  21 101  40   2  60  72  81   0 100
+built:  3   6   7   8 T
+children:  11  12  13
+grandchildren:  100  200  200  300  300  300
+every other:  13  11   3   1
+named:  300  300  300
+empty shelf:   0
+shelf: top     10
+kept: 1  1
+kept: 2  2  2
+kept: 3  3  3  3
+  $STATUS == "%X00000001"
+==== PTRCARRN
+none: F
+whole: T T   1  10  10
+more:   0   4   5   5   6   7   8   9
+element:   5   9
+section:   1   3   3   20   50   80
+same: T F
+data:  10  21  30  40   0  60  70  81  90 100
+copied: T   21    0   81
+record: T   21    0   81
+from b:   90  100  1
+reversed:    0   40   30   21   10
+section of it:   40   30   21   10   30    0
+allocated:  -2   2   4   1   0   1   4   10
+deallocated: F
+records:  11  21  22  31  32  33
+list:          31          32          33
+statement function:  21  31
+rank 2:  1  1  2  3  5.0  6.0  8.0  9.0 11.0 12.0
+plane:  54.0  2.0  0.0  0.0  0.0
+names: dog cat bee ant at
+chain:   30   40
+data(3):   99
+shaped:  1  5  10  99   0  70  90
+explicit:  12 101   2  72  92
+own: 100   0
+after calls:  12  21 101  40   2  60  72  81   0 100
+built:  3   6   7   8 T
+children:  11  12  13
+grandchildren:  100  200  200  300  300  300
+every other:  13  11   3   1
+named:  300  300  300
+empty shelf:   0
+shelf: top     10
+kept: 1  1
+kept: 2  2  2
+kept: 3  3  3  3
+  $STATUS == "%X00000001"
+==== PTRCARRR
+none: F
+whole: T T   1  10  10
+more:   0   4   5   5   6   7   8   9
+element:   5   9
+section:   1   3   3   20   50   80
+same: T F
+data:  10  21  30  40   0  60  70  81  90 100
+copied: T   21    0   81
+record: T   21    0   81
+from b:   90  100  1
+reversed:    0   40   30   21   10
+section of it:   40   30   21   10   30    0
+allocated:  -2   2   4   1   0   1   4   10
+deallocated: F
+records:  11  21  22  31  32  33
+list:          31          32          33
+statement function:  21  31
+rank 2:  1  1  2  3  5.0  6.0  8.0  9.0 11.0 12.0
+plane:  54.0  2.0  0.0  0.0  0.0
+names: dog cat bee ant at
+chain:   30   40
+data(3):   99
+shaped:  1  5  10  99   0  70  90
+explicit:  12 101   2  72  92
+own: 100   0
+after calls:  12  21 101  40   2  60  72  81   0 100
+built:  3   6   7   8 T
+children:  11  12  13
+grandchildren:  100  200  200  300  300  300
+every other:  13  11   3   1
+named:  300  300  300
+empty shelf:   0
+shelf: top     10
+kept: 1  1
+kept: 2  2  2
+kept: 3  3  3  3
+  $STATUS == "%X00000001"
+==== PTRCLEAR
+allocated:   F F F
+array:         0
+nested:        0
+frames:        0   0
+automatic:     0
+  $STATUS == "%X00000001"
+==== PTRCLEARN
+allocated:   F F F
+array:         0
+nested:        0
+frames:        0   0
+automatic:     0
+  $STATUS == "%X00000001"
+==== PTRCLEARR
+allocated:   F F F
+array:         0
+nested:        0
+frames:        0   0
+automatic:     0
+  $STATUS == "%X00000001"
+==== PTRCOMPS
+empty:     0:
+pushed:    5:  50  40  30  20  10
+reversed:  5:  10  20  30  40  50
+chain:     10  20  30
+changed:   5:  10  20 -30  40  50
+inserted:  6:  10  20  25 -30  40  50
+fixed:    T T
+removed:   5:  10  20 -30  40  50
+copy:      99  10 T
+grown:     6:  10  20  33 -30  40  50
+given:    F
+back:      5:  10  20 -30  40  50
+cut:       4:  10  20 -30  40
+joined:    5:  10  20 -30  40  50
+refs:       1   2   3   4   5   9   2 AxyD AxyD
+built:      9 AxyD T T
+node():     5  10 T
+array:      5   4   3
+overlap:    4   5   6   7   8
+sorted:    20  30  35  40  50  60  65  70  80
+tree:       4  35  65
+dropped:   0:
+made:       5
+  $STATUS == "%X00000001"
+==== PTRCOMPSN
+empty:     0:
+pushed:    5:  50  40  30  20  10
+reversed:  5:  10  20  30  40  50
+chain:     10  20  30
+changed:   5:  10  20 -30  40  50
+inserted:  6:  10  20  25 -30  40  50
+fixed:    T T
+removed:   5:  10  20 -30  40  50
+copy:      99  10 T
+grown:     6:  10  20  33 -30  40  50
+given:    F
+back:      5:  10  20 -30  40  50
+cut:       4:  10  20 -30  40
+joined:    5:  10  20 -30  40  50
+refs:       1   2   3   4   5   9   2 AxyD AxyD
+built:      9 AxyD T T
+node():     5  10 T
+array:      5   4   3
+overlap:    4   5   6   7   8
+sorted:    20  30  35  40  50  60  65  70  80
+tree:       4  35  65
+dropped:   0:
+made:       5
+  $STATUS == "%X00000001"
+==== PTRCOMPSR
+empty:     0:
+pushed:    5:  50  40  30  20  10
+reversed:  5:  10  20  30  40  50
+chain:     10  20  30
+changed:   5:  10  20 -30  40  50
+inserted:  6:  10  20  25 -30  40  50
+fixed:    T T
+removed:   5:  10  20 -30  40  50
+copy:      99  10 T
+grown:     6:  10  20  33 -30  40  50
+given:    F
+back:      5:  10  20 -30  40  50
+cut:       4:  10  20 -30  40
+joined:    5:  10  20 -30  40  50
+refs:       1   2   3   4   5   9   2 AxyD AxyD
+built:      9 AxyD T T
+node():     5  10 T
+array:      5   4   3
+overlap:    4   5   6   7   8
+sorted:    20  30  35  40  50  60  65  70  80
+tree:       4  35  65
+dropped:   0:
+made:       5
+  $STATUS == "%X00000001"
+==== PTRDUM
+pushed  5:  50  40  30  20  10
+dropped 2nd  4:  50  30  20  10
+dropped 4th  3:  50  30  20
+found  30  2
+found 7 F F
+found 3  20
+none after last  3:  50  30  20
+freed F
+bag1  3:   8   9   7
+grown  0  5  1.0  2.0  3.0  0.0  0.0  0.0
+doubled  6  18.0
+doubled  1  6  1.0  2.0  3.0  2.0  4.0  6.0
+weights  4  0.5  1.5  0.0  0.0
+pick 5 [gamma]
+[gamma]
+pick 5 [beta ]
+[beta ]
+pick 5 [alpha]
+[alpha]
+ delta beta  gamma
+column 3 1  1.0  2.0  3.0
+column 3 1 10.0 11.0 12.0
+grid  45.0
+swap F T 24.0
+swapped 4  6
+shared  1.0  2.0  3.0  4.0
+shared again  2.0  4.0  6.0  8.0
+  $STATUS == "%X00000001"
+==== PTRDUMN
+pushed  5:  50  40  30  20  10
+dropped 2nd  4:  50  30  20  10
+dropped 4th  3:  50  30  20
+found  30  2
+found 7 F F
+found 3  20
+none after last  3:  50  30  20
+freed F
+bag1  3:   8   9   7
+grown  0  5  1.0  2.0  3.0  0.0  0.0  0.0
+doubled  6  18.0
+doubled  1  6  1.0  2.0  3.0  2.0  4.0  6.0
+weights  4  0.5  1.5  0.0  0.0
+pick 5 [gamma]
+[gamma]
+pick 5 [beta ]
+[beta ]
+pick 5 [alpha]
+[alpha]
+ delta beta  gamma
+column 3 1  1.0  2.0  3.0
+column 3 1 10.0 11.0 12.0
+grid  45.0
+swap F T 24.0
+swapped 4  6
+shared  1.0  2.0  3.0  4.0
+shared again  2.0  4.0  6.0  8.0
+  $STATUS == "%X00000001"
+==== PTRDUMR
+pushed  5:  50  40  30  20  10
+dropped 2nd  4:  50  30  20  10
+dropped 4th  3:  50  30  20
+found  30  2
+found 7 F F
+found 3  20
+none after last  3:  50  30  20
+freed F
+bag1  3:   8   9   7
+grown  0  5  1.0  2.0  3.0  0.0  0.0  0.0
+doubled  6  18.0
+doubled  1  6  1.0  2.0  3.0  2.0  4.0  6.0
+weights  4  0.5  1.5  0.0  0.0
+pick 5 [gamma]
+[gamma]
+pick 5 [beta ]
+[beta ]
+pick 5 [alpha]
+[alpha]
+ delta beta  gamma
+column 3 1  1.0  2.0  3.0
+column 3 1 10.0 11.0 12.0
+grid  45.0
+swap F T 24.0
+swapped 4  6
+shared  1.0  2.0  3.0  4.0
+shared again  2.0  4.0  6.0  8.0
+  $STATUS == "%X00000001"
+==== PTREQUIV
+same type          14           8
+another type  0.0000000E+00
+  $STATUS == "%X00000001"
+==== PTREQUIVN
+same type          14           8
+another type  0.0000000E+00
+  $STATUS == "%X00000001"
+==== PTREQUIVR
+same type          14           8
+another type  0.0000000E+00
+  $STATUS == "%X00000001"
+==== PTRRES
+largest  9.0
+table    3.0  0.0  4.0  1.0  7.0  2.0
+twice   14.0
+same    T F
+shown    7.0 T
+word   green
+words   red   GREEN blue 
+assoc   T F
+outside F
+third  blue ! 5
+root     4.0  3.0
+evens    2.0  4.0  6.0
+sum     12.0 3
+x        1.0 20.0  3.0 40.0  5.0 60.0
+bounds   1  3
+overlap  1.0  2.0  3.0  2.0  4.0  6.0
+ramp     0  3   0   1   4   9
+freed   F
+found   T  22
+gone    F
+second   99
+inner    30
+n       -10  20  30  41
+  $STATUS == "%X00000001"
+==== PTRRESN
+largest  9.0
+table    3.0  0.0  4.0  1.0  7.0  2.0
+twice   14.0
+same    T F
+shown    7.0 T
+word   green
+words   red   GREEN blue 
+assoc   T F
+outside F
+third  blue ! 5
+root     4.0  3.0
+evens    2.0  4.0  6.0
+sum     12.0 3
+x        1.0 20.0  3.0 40.0  5.0 60.0
+bounds   1  3
+overlap  1.0  2.0  3.0  2.0  4.0  6.0
+ramp     0  3   0   1   4   9
+freed   F
+found   T  22
+gone    F
+second   99
+inner    30
+n       -10  20  30  41
+  $STATUS == "%X00000001"
+==== PTRRESR
+largest  9.0
+table    3.0  0.0  4.0  1.0  7.0  2.0
+twice   14.0
+same    T F
+shown    7.0 T
+word   green
+words   red   GREEN blue 
+assoc   T F
+outside F
+third  blue ! 5
+root     4.0  3.0
+evens    2.0  4.0  6.0
+sum     12.0 3
+x        1.0 20.0  3.0 40.0  5.0 60.0
+bounds   1  3
+overlap  1.0  2.0  3.0  2.0  4.0  6.0
+ramp     0  3   0   1   4   9
+freed   F
+found   T  22
+gone    F
+second   99
+inner    30
+n       -10  20  30  41
+  $STATUS == "%X00000001"
+==== PTRSTD
+4.4.1 ref 12 1991 207 Programming Notes
+4.4.1 abstract 23 Pointers in Fortran 90.
+4.4.1 reversed sretnioP
+4.4.1 list  25   9  55
+5.1.2 chain   0  10  20  30
+5.1.2 in, out 100   9  110.0  -23.0
+5.1.2 swapped   9 100  -23.0  110.0
+6.3.1 allocated 0 -3  0  2  9  60
+6.3.1 values  1.5  3.0  4.5  6.0 -30  29  24
+6.3.3 deallocated F F
+6.3.1 zero-sized 0  0 T
+7.5.2 left  7  4 F F
+7.5.2 component  26  26
+7.5.2 row 5  31.  32.  33.  34.  35.
+7.5.2 window  13.  14.  15.    23.  24.  25.    33.  34.  35.
+7.5.2 window cleared   609.
+7.5.2 function  -6. T
+7.5.2 every other 5   1.   3.   5.   7.   9.
+7.5.2 vector  10.   2.  30.   4.  50.  -6.  70.   8.  90.
+13.13.13 current, head T
+13.13.13 a_part 8 T
+13.13.13 a_part 5 F
+13.13.13 cur, top T
+13.13.13 nullified F
+C.5.2 DYNAM_ITER  3  4 12
+C.5.2   1.001   2.001   2.999   4.006
+C.5.2   2.000   3.999   6.000   7.999
+C.5.2   3.000   5.998   9.000  11.997
+C.5.3 ITER 13 F T   6.007  11.999
+C.12.8 best  1008. T
+C.12.8 next  1008. T
+  $STATUS == "%X00000001"
+==== PTRSTDN
+4.4.1 ref 12 1991 207 Programming Notes
+4.4.1 abstract 23 Pointers in Fortran 90.
+4.4.1 reversed sretnioP
+4.4.1 list  25   9  55
+5.1.2 chain   0  10  20  30
+5.1.2 in, out 100   9  110.0  -23.0
+5.1.2 swapped   9 100  -23.0  110.0
+6.3.1 allocated 0 -3  0  2  9  60
+6.3.1 values  1.5  3.0  4.5  6.0 -30  29  24
+6.3.3 deallocated F F
+6.3.1 zero-sized 0  0 T
+7.5.2 left  7  4 F F
+7.5.2 component  26  26
+7.5.2 row 5  31.  32.  33.  34.  35.
+7.5.2 window  13.  14.  15.    23.  24.  25.    33.  34.  35.
+7.5.2 window cleared   609.
+7.5.2 function  -6. T
+7.5.2 every other 5   1.   3.   5.   7.   9.
+7.5.2 vector  10.   2.  30.   4.  50.  -6.  70.   8.  90.
+13.13.13 current, head T
+13.13.13 a_part 8 T
+13.13.13 a_part 5 F
+13.13.13 cur, top T
+13.13.13 nullified F
+C.5.2 DYNAM_ITER  3  4 12
+C.5.2   1.001   2.001   2.999   4.006
+C.5.2   2.000   3.999   6.000   7.999
+C.5.2   3.000   5.998   9.000  11.997
+C.5.3 ITER 13 F T   6.007  11.999
+C.12.8 best  1008. T
+C.12.8 next  1008. T
+  $STATUS == "%X00000001"
+==== PTRSTDR
+4.4.1 ref 12 1991 207 Programming Notes
+4.4.1 abstract 23 Pointers in Fortran 90.
+4.4.1 reversed sretnioP
+4.4.1 list  25   9  55
+5.1.2 chain   0  10  20  30
+5.1.2 in, out 100   9  110.0  -23.0
+5.1.2 swapped   9 100  -23.0  110.0
+6.3.1 allocated 0 -3  0  2  9  60
+6.3.1 values  1.5  3.0  4.5  6.0 -30  29  24
+6.3.3 deallocated F F
+6.3.1 zero-sized 0  0 T
+7.5.2 left  7  4 F F
+7.5.2 component  26  26
+7.5.2 row 5  31.  32.  33.  34.  35.
+7.5.2 window  13.  14.  15.    23.  24.  25.    33.  34.  35.
+7.5.2 window cleared   609.
+7.5.2 function  -6. T
+7.5.2 every other 5   1.   3.   5.   7.   9.
+7.5.2 vector  10.   2.  30.   4.  50.  -6.  70.   8.  90.
+13.13.13 current, head T
+13.13.13 a_part 8 T
+13.13.13 a_part 5 F
+13.13.13 cur, top T
+13.13.13 nullified F
+C.5.2 DYNAM_ITER  3  4 12
+C.5.2   1.001   2.001   2.999   4.006
+C.5.2   2.000   3.999   6.000   7.999
+C.5.2   3.000   5.998   9.000  11.997
+C.5.3 ITER 13 F T   6.007  11.999
+C.12.8 best  1008. T
+C.12.8 next  1008. T
+  $STATUS == "%X00000001"
+==== RAMPS
+ramp:   1.0  2.0  3.0  4.0  5.0
+plus:   2.0  4.0  6.0  8.0 10.0
+sum:    10.0  7
+none:   0  0.0
+loop:    1.0   3.0   6.0  10.0
+twice:  0.0  2.0  4.0  6.0  8.0 10.0
+lbnd:   1  5
+grid:  11.0 21.0 12.0 22.0 13.0 23.0
+max:   23.0  4  1
+shift:  0.0  1.0  2.0
+host:   3.0  3.0  3.0
+host:   1.0 -1.0
+count: 1000  200   30    4
+where:  1.0  2.0  0.0  0.0  0.0
+any:   yes
+old:    1.0  2.0  3.0
+shape: 11.0 21.0 12.0 22.0  2  2
+total:   8008.0
+  $STATUS == "%X00000001"
+==== RAMPSN
+ramp:   1.0  2.0  3.0  4.0  5.0
+plus:   2.0  4.0  6.0  8.0 10.0
+sum:    10.0  7
+none:   0  0.0
+loop:    1.0   3.0   6.0  10.0
+twice:  0.0  2.0  4.0  6.0  8.0 10.0
+lbnd:   1  5
+grid:  11.0 21.0 12.0 22.0 13.0 23.0
+max:   23.0  4  1
+shift:  0.0  1.0  2.0
+host:   3.0  3.0  3.0
+host:   1.0 -1.0
+count: 1000  200   30    4
+where:  1.0  2.0  0.0  0.0  0.0
+any:   yes
+old:    1.0  2.0  3.0
+shape: 11.0 21.0 12.0 22.0  2  2
+total:   8008.0
+  $STATUS == "%X00000001"
+==== RAMPSR
+ramp:   1.0  2.0  3.0  4.0  5.0
+plus:   2.0  4.0  6.0  8.0 10.0
+sum:    10.0  7
+none:   0  0.0
+loop:    1.0   3.0   6.0  10.0
+twice:  0.0  2.0  4.0  6.0  8.0 10.0
+lbnd:   1  5
+grid:  11.0 21.0 12.0 22.0 13.0 23.0
+max:   23.0  4  1
+shift:  0.0  1.0  2.0
+host:   3.0  3.0  3.0
+host:   1.0 -1.0
+count: 1000  200   30    4
+where:  1.0  2.0  0.0  0.0  0.0
+any:   yes
+old:    1.0  2.0  3.0
+shape: 11.0 21.0 12.0 22.0  2  2
+total:   8008.0
+  $STATUS == "%X00000001"
+==== RAMPVMS
+total:   125250.  599
+line:    21.   28.   36.    0.    1.
+big:      20000.
+chars:  1250
+heap given back: T
+  $STATUS == "%X00000001"
+==== RAMPVMSN
+total:   125250.  599
+line:    21.   28.   36.    0.    1.
+big:      20000.
+chars:  1250
+heap given back: T
+  $STATUS == "%X00000001"
+==== RAMPVMSR
+total:   125250.  599
+line:    21.   28.   36.    0.    1.
+big:      20000.
+chars:  1250
+heap given back: T
+  $STATUS == "%X00000001"
+==== RECURHOST
+level1:  10    10
+level2:  20    30
+level3:  30    60
+total:   60
+tri(5):      15
+  $STATUS == "%X00000001"
+==== RECURHOSTN
+level1:  10    10
+level2:  20    30
+level3:  30    60
+total:   60
+tri(5):      15
+  $STATUS == "%X00000001"
+==== RECURHOSTR
+level1:  10    10
+level2:  20    30
+level3:  30    60
+total:   60
+tri(5):      15
+  $STATUS == "%X00000001"
+==== REDUCE
+sum, masked:    78.   57.
+prod, max, min:  280.   12.    1.
+column sums:     6.   15.   24.   33.
+row sums:       22.   26.   30.
+row maxima:     10.   11.   12.
+count, any, all:     7  T  T  F
+any by column:  F  F  F  T
+maxloc:       3  4
+minloc:       1  1
+masked:       3  2
+none:         0  0
+empty sum, product:    0.    1.
+dot product:   32.
+complex dot:   15.    0.
+matmul a, c:   22.   26.   30.
+p(1,:):    1.    4.    7.   10.
+p(2,:):    5.   11.   17.   23.
+b(1,:):    1.    2.    3.
+b(2,:):    4.    5.    6.
+b(3,:):    7.    8.    9.
+b(4,:):   10.   11.   12.
+shares:  0.167  0.333  0.500
+size, shape, bounds:  12  3  4  0  1  2  4
+lower rows:    5.   11.   17.   23.
+  $STATUS == "%X00000001"
+==== REDUCEN
+sum, masked:    78.   57.
+prod, max, min:  280.   12.    1.
+column sums:     6.   15.   24.   33.
+row sums:       22.   26.   30.
+row maxima:     10.   11.   12.
+count, any, all:     7  T  T  F
+any by column:  F  F  F  T
+maxloc:       3  4
+minloc:       1  1
+masked:       3  2
+none:         0  0
+empty sum, product:    0.    1.
+dot product:   32.
+complex dot:   15.    0.
+matmul a, c:   22.   26.   30.
+p(1,:):    1.    4.    7.   10.
+p(2,:):    5.   11.   17.   23.
+b(1,:):    1.    2.    3.
+b(2,:):    4.    5.    6.
+b(3,:):    7.    8.    9.
+b(4,:):   10.   11.   12.
+shares:  0.167  0.333  0.500
+size, shape, bounds:  12  3  4  0  1  2  4
+lower rows:    5.   11.   17.   23.
+  $STATUS == "%X00000001"
+==== REDUCER
+sum, masked:    78.   57.
+prod, max, min:  280.   12.    1.
+column sums:     6.   15.   24.   33.
+row sums:       22.   26.   30.
+row maxima:     10.   11.   12.
+count, any, all:     7  T  T  F
+any by column:  F  F  F  T
+maxloc:       3  4
+minloc:       1  1
+masked:       3  2
+none:         0  0
+empty sum, product:    0.    1.
+dot product:   32.
+complex dot:   15.    0.
+matmul a, c:   22.   26.   30.
+p(1,:):    1.    4.    7.   10.
+p(2,:):    5.   11.   17.   23.
+b(1,:):    1.    2.    3.
+b(2,:):    4.    5.    6.
+b(3,:):    7.    8.    9.
+b(4,:):   10.   11.   12.
+shares:  0.167  0.333  0.500
+size, shape, bounds:  12  3  4  0  1  2  4
+lower rows:    5.   11.   17.   23.
+  $STATUS == "%X00000001"
+==== RESULTS
+   2.00    4.00
+     2      1
+zyx
+   2.00    4.00    5.00
+     7         700
+    -9        9000
+   1.00    2.00    3.00    4.00
+show    3.00    4.00
+   1.50    2.00
+   3.50    6.00
+  15.50   30.00
+     5         120
+apply   16.00   12.00
+  $STATUS == "%X00000001"
+==== RESULTSN
+   2.00    4.00
+     2      1
+zyx
+   2.00    4.00    5.00
+     7         700
+    -9        9000
+   1.00    2.00    3.00    4.00
+show    3.00    4.00
+   1.50    2.00
+   3.50    6.00
+  15.50   30.00
+     5         120
+apply   16.00   12.00
+  $STATUS == "%X00000001"
+==== RESULTSR
+   2.00    4.00
+     2      1
+zyx
+   2.00    4.00    5.00
+     7         700
+    -9        9000
+   1.00    2.00    3.00    4.00
+show    3.00    4.00
+   1.50    2.00
+   3.50    6.00
+  15.50   30.00
+     5         120
+apply   16.00   12.00
+  $STATUS == "%X00000001"
+==== RTEMPS
+ 6.0  5.0  4.0  3.0  2.0  1.0
+ 6.0  7.0  7.0  7.0  7.0  7.0
+         -1           0          -3           0          -5
+          1           2           1           2           1
+         60          10          20          30          40          50
+        101         102         103         104         105         106
+         21          36
+         13          11           9           7           5           3
+sum is 21
+case 21
+j is           3
+jklghidefabc
+klklklkl
+xyzghidefabc
+xyzabcdefabc
+UPxUPxUPxUPx
+UPxUPUPxUP
+aaaccccccaaa
+      20001           2   200030000
+ 100.0    1.0
+  $STATUS == "%X00000001"
+==== RTEMPSN
+ 6.0  5.0  4.0  3.0  2.0  1.0
+ 6.0  7.0  7.0  7.0  7.0  7.0
+         -1           0          -3           0          -5
+          1           2           1           2           1
+         60          10          20          30          40          50
+        101         102         103         104         105         106
+         21          36
+         13          11           9           7           5           3
+sum is 21
+case 21
+j is           3
+jklghidefabc
+klklklkl
+xyzghidefabc
+xyzabcdefabc
+UPxUPxUPxUPx
+UPxUPUPxUP
+aaaccccccaaa
+      20001           2   200030000
+ 100.0    1.0
+  $STATUS == "%X00000001"
+==== RTEMPSR
+ 6.0  5.0  4.0  3.0  2.0  1.0
+ 6.0  7.0  7.0  7.0  7.0  7.0
+         -1           0          -3           0          -5
+          1           2           1           2           1
+         60          10          20          30          40          50
+        101         102         103         104         105         106
+         21          36
+         13          11           9           7           5           3
+sum is 21
+case 21
+j is           3
+jklghidefabc
+klklklkl
+xyzghidefabc
+xyzabcdefabc
+UPxUPxUPxUPx
+UPxUPUPxUP
+aaaccccccaaa
+      20001           2   200030000
+ 100.0    1.0
+  $STATUS == "%X00000001"
+==== SELECTS
+table:  00100020000000000200033
+search: 335515511155455255255222
+short:  330011
+logic:  TF
+words:  11010200
+letters:  3  7  2  3
+pick:    1 2 2 0
+mode two or more
+sum: 12, i =  6
+  $STATUS == "%X00000001"
+==== SELECTSN
+table:  00100020000000000200033
+search: 335515511155455255255222
+short:  330011
+logic:  TF
+words:  11010200
+letters:  3  7  2  3
+pick:    1 2 2 0
+mode two or more
+sum: 12, i =  6
+  $STATUS == "%X00000001"
+==== SELECTSR
+table:  00100020000000000200033
+search: 335515511155455255255222
+short:  330011
+logic:  TF
+words:  11010200
+letters:  3  7  2  3
+pick:    1 2 2 0
+mode two or more
+sum: 12, i =  6
+  $STATUS == "%X00000001"
+==== SEQARGS
+column 2:  42.0  44.0  46.0  48.0
+column 3:  31.0  64.0  66.0  34.0
+a:  44.0  24.0  26.0  56.0  42.0  44.0  46.0  96.0  31.0  64.0  66.0  68.0
+row 1:  44.0  42.0  31.0
+totals:  234.0  132.0
+ 3  4 efgh|ijkl|mnop
+ 3  4 abcd|ijkl|qrst
+ 2  2 rs|vw
+ 3  4 ijkl|ZZZZ|ZZZZ
+ 2  5 qZZt!|uvwx!
+ZZZZ ZZZZ ijkl mnop qZZt uvwx
+whole:   607.0
+column:   228.0
+fmt: 12
+got: oldx oldx
+whole:   337.0
+column:   138.0
+FMT:   6
+got: rec4 rec3
+rec4 rec3 rec2 rec1
+a:  44.0  48.0  26.0 112.0  42.0  88.0  46.0 192.0  31.0 128.0  66.0 136.0
+al:  1.0  2.0  1.0  1.0  2.0  1.0
+alt:  -44.0   42.0   31.0
+bump:  267.0   49.0   89.0  129.0
+big:    200000.0    1024.0    1024.0
+abcdef abcdefabcdef  1.0  3.0  5.0
+  $STATUS == "%X00000001"
+==== SEQARGSN
+column 2:  42.0  44.0  46.0  48.0
+column 3:  31.0  64.0  66.0  34.0
+a:  44.0  24.0  26.0  56.0  42.0  44.0  46.0  96.0  31.0  64.0  66.0  68.0
+row 1:  44.0  42.0  31.0
+totals:  234.0  132.0
+ 3  4 efgh|ijkl|mnop
+ 3  4 abcd|ijkl|qrst
+ 2  2 rs|vw
+ 3  4 ijkl|ZZZZ|ZZZZ
+ 2  5 qZZt!|uvwx!
+ZZZZ ZZZZ ijkl mnop qZZt uvwx
+whole:   607.0
+column:   228.0
+fmt: 12
+got: oldx oldx
+whole:   337.0
+column:   138.0
+FMT:   6
+got: rec4 rec3
+rec4 rec3 rec2 rec1
+a:  44.0  48.0  26.0 112.0  42.0  88.0  46.0 192.0  31.0 128.0  66.0 136.0
+al:  1.0  2.0  1.0  1.0  2.0  1.0
+alt:  -44.0   42.0   31.0
+bump:  267.0   49.0   89.0  129.0
+big:    200000.0    1024.0    1024.0
+abcdef abcdefabcdef  1.0  3.0  5.0
+  $STATUS == "%X00000001"
+==== SEQARGSR
+column 2:  42.0  44.0  46.0  48.0
+column 3:  31.0  64.0  66.0  34.0
+a:  44.0  24.0  26.0  56.0  42.0  44.0  46.0  96.0  31.0  64.0  66.0  68.0
+row 1:  44.0  42.0  31.0
+totals:  234.0  132.0
+ 3  4 efgh|ijkl|mnop
+ 3  4 abcd|ijkl|qrst
+ 2  2 rs|vw
+ 3  4 ijkl|ZZZZ|ZZZZ
+ 2  5 qZZt!|uvwx!
+ZZZZ ZZZZ ijkl mnop qZZt uvwx
+whole:   607.0
+column:   228.0
+fmt: 12
+got: oldx oldx
+whole:   337.0
+column:   138.0
+FMT:   6
+got: rec4 rec3
+rec4 rec3 rec2 rec1
+a:  44.0  48.0  26.0 112.0  42.0  88.0  46.0 192.0  31.0 128.0  66.0 136.0
+al:  1.0  2.0  1.0  1.0  2.0  1.0
+alt:  -44.0   42.0   31.0
+bump:  267.0   49.0   89.0  129.0
+big:    200000.0    1024.0    1024.0
+abcdef abcdefabcdef  1.0  3.0  5.0
+  $STATUS == "%X00000001"
+==== SEQSHARE
+ABCDEFGH 44434241 48474645
+abcdEFGH abcd EFGH
+  $STATUS == "%X00000001"
+==== SEQSHAREN
+ABCDEFGH 44434241 48474645
+abcdEFGH abcd EFGH
+  $STATUS == "%X00000001"
+==== SEQSHARER
+ABCDEFGH 44434241 48474645
+abcdEFGH abcd EFGH
+  $STATUS == "%X00000001"
+==== SEQTYPES
+     P    5    6
+     S INIT    2    7    8
+     P    8    6
+     S INI!   20    8    6
+ORIGIN    0    0    1    2    3    4
+ LABEL LBL1    7    8    9
+     K    1   10    2   20    3   30
+     Q    1   10    2   99   -1   -2
+     K    1   10    2   99   -1   -2
+  $STATUS == "%X00000001"
+==== SEQTYPESN
+     P    5    6
+     S INIT    2    7    8
+     P    8    6
+     S INI!   20    8    6
+ORIGIN    0    0    1    2    3    4
+ LABEL LBL1    7    8    9
+     K    1   10    2   20    3   30
+     Q    1   10    2   99   -1   -2
+     K    1   10    2   99   -1   -2
+  $STATUS == "%X00000001"
+==== SEQTYPESR
+     P    5    6
+     S INIT    2    7    8
+     P    8    6
+     S INI!   20    8    6
+ORIGIN    0    0    1    2    3    4
+ LABEL LBL1    7    8    9
+     K    1   10    2   20    3   30
+     Q    1   10    2   99   -1   -2
+     K    1   10    2   99   -1   -2
+  $STATUS == "%X00000001"
+==== SEQVMS
+decoded: ....
+parts: abcd .... efgh .... .... ....
+decoded: abcd
+parts: abcd efgh efgh .... .... ....
+heap given back: T
+  $STATUS == "%X00000001"
+==== SEQVMSN
+decoded: ....
+parts: abcd .... efgh .... .... ....
+decoded: abcd
+parts: abcd efgh efgh .... .... ....
+heap given back: T
+  $STATUS == "%X00000001"
+==== SEQVMSR
+decoded: ....
+parts: abcd .... efgh .... .... ....
+decoded: abcd
+parts: abcd efgh efgh .... .... ....
+heap given back: T
+  $STATUS == "%X00000001"
+==== SHAPEARGS
+ 6  1   2.00   4.00   6.00   8.00  10.00  12.00
+ 3  1   6.00   1.00   3.00
+ 3  1   2.00   4.00   6.00
+ 4  1   4.00   5.41   6.73   8.00
+ 2  1   9.00   8.00
+ 4  1   4.00   6.00   6.00   4.00
+ 2  1   4.50   2.50
+lowest:  0  5   2.0   7.0
+ 3  2 fg|jk|no
+ 3  4 qrst|ijkl|abcd
+ 2  2 cd|kl
+ 3  5 abcd!|efgh!|ijkl!
+absent
+present: 3  15.00
+present: 6  10.50
+absent
+present: 3   6.00
+norm:   2.236   2.150
+norm:  30.414  10.000
+total:     52.0
+loop:  5005000.0
+  $STATUS == "%X00000001"
+==== SHAPEARGSN
+ 6  1   2.00   4.00   6.00   8.00  10.00  12.00
+ 3  1   6.00   1.00   3.00
+ 3  1   2.00   4.00   6.00
+ 4  1   4.00   5.41   6.73   8.00
+ 2  1   9.00   8.00
+ 4  1   4.00   6.00   6.00   4.00
+ 2  1   4.50   2.50
+lowest:  0  5   2.0   7.0
+ 3  2 fg|jk|no
+ 3  4 qrst|ijkl|abcd
+ 2  2 cd|kl
+ 3  5 abcd!|efgh!|ijkl!
+absent
+present: 3  15.00
+present: 6  10.50
+absent
+present: 3   6.00
+norm:   2.236   2.150
+norm:  30.414  10.000
+total:     52.0
+loop:  5005000.0
+  $STATUS == "%X00000001"
+==== SHAPEARGSR
+ 6  1   2.00   4.00   6.00   8.00  10.00  12.00
+ 3  1   6.00   1.00   3.00
+ 3  1   2.00   4.00   6.00
+ 4  1   4.00   5.41   6.73   8.00
+ 2  1   9.00   8.00
+ 4  1   4.00   6.00   6.00   4.00
+ 2  1   4.50   2.50
+lowest:  0  5   2.0   7.0
+ 3  2 fg|jk|no
+ 3  4 qrst|ijkl|abcd
+ 2  2 cd|kl
+ 3  5 abcd!|efgh!|ijkl!
+absent
+present: 3  15.00
+present: 6  10.50
+absent
+present: 3   6.00
+norm:   2.236   2.150
+norm:  30.414  10.000
+total:     52.0
+loop:  5005000.0
+  $STATUS == "%X00000001"
+==== SHAPED
+show: 10  1 10   1.   2.   3.   4.   5.   6.   7.   8.   9.  10.
+show:  3  1  3   2.   5.   8.
+show:  3  1  3  10.   6.   2.
+show:  0  1  0
+twice:   2.   2.   6.   4.  10.   6.  14.   8.  18.  10.
+total:  270.
+total:  108.
+corner:  0 -1  2  1  12.  34.
+show:  4  1  4 121. 122.  77. 124.
+show:  4  1  4   8.   6.   4.   2.
+words: 3  2 abefij
+words: 5  2 abcdefghij
+countdn:  23
+countdn:  11
+maybe:  10.0
+maybe:  10.0  14.0
+show:  4  1  4  31.  32.  33.  34.
+show:  4  1  4 121. 122.  77. 124.
+  $STATUS == "%X00000001"
+==== SHAPEDN
+show: 10  1 10   1.   2.   3.   4.   5.   6.   7.   8.   9.  10.
+show:  3  1  3   2.   5.   8.
+show:  3  1  3  10.   6.   2.
+show:  0  1  0
+twice:   2.   2.   6.   4.  10.   6.  14.   8.  18.  10.
+total:  270.
+total:  108.
+corner:  0 -1  2  1  12.  34.
+show:  4  1  4 121. 122.  77. 124.
+show:  4  1  4   8.   6.   4.   2.
+words: 3  2 abefij
+words: 5  2 abcdefghij
+countdn:  23
+countdn:  11
+maybe:  10.0
+maybe:  10.0  14.0
+show:  4  1  4  31.  32.  33.  34.
+show:  4  1  4 121. 122.  77. 124.
+  $STATUS == "%X00000001"
+==== SHAPEDR
+show: 10  1 10   1.   2.   3.   4.   5.   6.   7.   8.   9.  10.
+show:  3  1  3   2.   5.   8.
+show:  3  1  3  10.   6.   2.
+show:  0  1  0
+twice:   2.   2.   6.   4.  10.   6.  14.   8.  18.  10.
+total:  270.
+total:  108.
+corner:  0 -1  2  1  12.  34.
+show:  4  1  4 121. 122.  77. 124.
+show:  4  1  4   8.   6.   4.   2.
+words: 3  2 abefij
+words: 5  2 abcdefghij
+countdn:  23
+countdn:  11
+maybe:  10.0
+maybe:  10.0  14.0
+show:  4  1  4  31.  32.  33.  34.
+show:  4  1  4 121. 122.  77. 124.
+  $STATUS == "%X00000001"
+==== SHAPES
+stats:   6   0   5
+w:  -14.2  -11.2   -6.2    0.8    9.8   20.8
+ends:   1.0  36.0
+inner:   4.0
+stats:   3   5   7
+w:  -14.7   -2.7   17.3
+ends:   4.0  36.0
+inner:  16.0
+other:   6  -2   3
+w:   20.8    9.8    0.8   -6.2  -11.2  -14.2
+ends:  36.0   1.0
+inner:  25.0
+q:  111.  112.  121.  122.   31.   32.
+q:  211.  212.  121.  122.  131.  132.
+dot:  440.
+dot:76786.
+  $STATUS == "%X00000001"
+==== SHAPESN
+stats:   6   0   5
+w:  -14.2  -11.2   -6.2    0.8    9.8   20.8
+ends:   1.0  36.0
+inner:   4.0
+stats:   3   5   7
+w:  -14.7   -2.7   17.3
+ends:   4.0  36.0
+inner:  16.0
+other:   6  -2   3
+w:   20.8    9.8    0.8   -6.2  -11.2  -14.2
+ends:  36.0   1.0
+inner:  25.0
+q:  111.  112.  121.  122.   31.   32.
+q:  211.  212.  121.  122.  131.  132.
+dot:  440.
+dot:76786.
+  $STATUS == "%X00000001"
+==== SHAPESR
+stats:   6   0   5
+w:  -14.2  -11.2   -6.2    0.8    9.8   20.8
+ends:   1.0  36.0
+inner:   4.0
+stats:   3   5   7
+w:  -14.7   -2.7   17.3
+ends:   4.0  36.0
+inner:  16.0
+other:   6  -2   3
+w:   20.8    9.8    0.8   -6.2  -11.2  -14.2
+ends:  36.0   1.0
+inner:  25.0
+q:  111.  112.  121.  122.   31.   32.
+q:  211.  212.  121.  122.  131.  132.
+dot:  440.
+dot:76786.
+  $STATUS == "%X00000001"
+==== SIEVE
+  10:  4 primes
+   2   3   5   7
+bounds:    2   10
+  55: 16 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53
+bounds:    2   55
+ 100: 25 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53  59  61  67  71  73  79  83  89  97
+bounds:    2  100
+allocated: F
+allocated: T
+again failed: T  5
+total:  2510
+  $STATUS == "%X00000001"
+==== SIEVEN
+  10:  4 primes
+   2   3   5   7
+bounds:    2   10
+  55: 16 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53
+bounds:    2   55
+ 100: 25 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53  59  61  67  71  73  79  83  89  97
+bounds:    2  100
+allocated: F
+allocated: T
+again failed: T  5
+total:  2510
+  $STATUS == "%X00000001"
+==== SIEVER
+  10:  4 primes
+   2   3   5   7
+bounds:    2   10
+  55: 16 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53
+bounds:    2   55
+ 100: 25 primes
+   2   3   5   7  11  13  17  19  23  29  31  37  41  43  47
+  53  59  61  67  71  73  79  83  89  97
+bounds:    2  100
+allocated: F
+allocated: T
+again failed: T  5
+total:  2510
+  $STATUS == "%X00000001"
+==== SMOOTH
+The picture:
+  ............
+  ..........#.
+  ...######...
+  ...##.###...
+  ...######...
+  ...######...
+  .#..........
+  ............
+Neighbors:
+  000000000000
+  001233332200
+  002344453310
+  003578785300
+  003577785300
+  013355553200
+  002233332100
+  000000000000
+Cleaned:
+  ............
+  ............
+  ...######...
+  ...######...
+  ...######...
+  ...######...
+  ............
+  ............
+Smoothed in place the same: T
+Smoothed:
+   0 0 0 0 0 0 0 0 0 0 0 0
+   0 0 0 1 1 1 1 1 1 0 0 0
+   0 0 1 6 7 7 7 7 6 1 0 0
+   0 0 1 7 8 8 8 8 7 1 0 0
+   0 0 1 7 8 8 8 8 7 1 0 0
+   0 0 1 6 7 7 7 7 6 1 0 0
+   0 0 0 1 1 1 1 1 1 0 0 0
+   0 0 0 0 0 0 0 0 0 0 0 0
+In three levels:
+  ............   000000000000
+  ...++++++...   000111111000
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ...++++++...   000111111000
+  ............   000000000000
+Pixels by level:  52  20  24
+Edges:
+  |            |
+  |   ******   |
+  |  ********  |
+  |  **    **  |
+  |  **    **  |
+  |  ********  |
+  |   ******   |
+  |            |
+Steepest: 12.0 at  3  4
+Scaled to digits:
+  000000000000
+  000111111000
+  001788887100
+  001899998100
+  001899998100
+  001788887100
+  000111111000
+  000000000000
+Mean where lit:  4.91
+  $STATUS == "%X00000001"
+==== SMOOTHN
+The picture:
+  ............
+  ..........#.
+  ...######...
+  ...##.###...
+  ...######...
+  ...######...
+  .#..........
+  ............
+Neighbors:
+  000000000000
+  001233332200
+  002344453310
+  003578785300
+  003577785300
+  013355553200
+  002233332100
+  000000000000
+Cleaned:
+  ............
+  ............
+  ...######...
+  ...######...
+  ...######...
+  ...######...
+  ............
+  ............
+Smoothed in place the same: T
+Smoothed:
+   0 0 0 0 0 0 0 0 0 0 0 0
+   0 0 0 1 1 1 1 1 1 0 0 0
+   0 0 1 6 7 7 7 7 6 1 0 0
+   0 0 1 7 8 8 8 8 7 1 0 0
+   0 0 1 7 8 8 8 8 7 1 0 0
+   0 0 1 6 7 7 7 7 6 1 0 0
+   0 0 0 1 1 1 1 1 1 0 0 0
+   0 0 0 0 0 0 0 0 0 0 0 0
+In three levels:
+  ............   000000000000
+  ...++++++...   000111111000
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ...++++++...   000111111000
+  ............   000000000000
+Pixels by level:  52  20  24
+Edges:
+  |            |
+  |   ******   |
+  |  ********  |
+  |  **    **  |
+  |  **    **  |
+  |  ********  |
+  |   ******   |
+  |            |
+Steepest: 12.0 at  3  4
+Scaled to digits:
+  000000000000
+  000111111000
+  001788887100
+  001899998100
+  001899998100
+  001788887100
+  000111111000
+  000000000000
+Mean where lit:  4.91
+  $STATUS == "%X00000001"
+==== SMOOTHR
+The picture:
+  ............
+  ..........#.
+  ...######...
+  ...##.###...
+  ...######...
+  ...######...
+  .#..........
+  ............
+Neighbors:
+  000000000000
+  001233332200
+  002344453310
+  003578785300
+  003577785300
+  013355553200
+  002233332100
+  000000000000
+Cleaned:
+  ............
+  ............
+  ...######...
+  ...######...
+  ...######...
+  ...######...
+  ............
+  ............
+Smoothed in place the same: T
+Smoothed:
+   0 0 0 0 0 0 0 0 0 0 0 0
+   0 0 0 1 1 1 1 1 1 0 0 0
+   0 0 1 6 7 7 7 7 6 1 0 0
+   0 0 1 7 8 8 8 8 7 1 0 0
+   0 0 1 7 8 8 8 8 7 1 0 0
+   0 0 1 6 7 7 7 7 6 1 0 0
+   0 0 0 1 1 1 1 1 1 0 0 0
+   0 0 0 0 0 0 0 0 0 0 0 0
+In three levels:
+  ............   000000000000
+  ...++++++...   000111111000
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ..+######+..   001222222100
+  ...++++++...   000111111000
+  ............   000000000000
+Pixels by level:  52  20  24
+Edges:
+  |            |
+  |   ******   |
+  |  ********  |
+  |  **    **  |
+  |  **    **  |
+  |  ********  |
+  |   ******   |
+  |            |
+Steepest: 12.0 at  3  4
+Scaled to digits:
+  000000000000
+  000111111000
+  001788887100
+  001899998100
+  001899998100
+  001788887100
+  000111111000
+  000000000000
+Mean where lit:  4.91
+  $STATUS == "%X00000001"
+==== SOLVER
+n = 2 T  1.00000  2.00000
+residual small: T
+n = 3 T  1.00000  2.00000  3.00000
+residual small: T
+n = 4 T  1.00000  2.00000  3.00000  4.00000
+residual small: T
+n = 5 T  1.00000  2.00000  3.00000  4.00000  5.00000
+residual small: T
+singular solved: F
+bad of 1000:    0
+  $STATUS == "%X00000001"
+==== SOLVERN
+n = 2 T  1.00000  2.00000
+residual small: T
+n = 3 T  1.00000  2.00000  3.00000
+residual small: T
+n = 4 T  1.00000  2.00000  3.00000  4.00000
+residual small: T
+n = 5 T  1.00000  2.00000  3.00000  4.00000  5.00000
+residual small: T
+singular solved: F
+bad of 1000:    0
+  $STATUS == "%X00000001"
+==== SOLVERR
+n = 2 T  1.00000  2.00000
+residual small: T
+n = 3 T  1.00000  2.00000  3.00000
+residual small: T
+n = 4 T  1.00000  2.00000  3.00000  4.00000
+residual small: T
+n = 5 T  1.00000  2.00000  3.00000  4.00000  5.00000
+residual small: T
+singular solved: F
+bad of 1000:    0
+  $STATUS == "%X00000001"
+==== SORTER
+quick:  -4   0   1   7   7  12  15  21  33  33  56  98
+merge:  -4   0   1   7   7  12  15  21  33  33  56  98
+small:  0 98
+desc:    1   2   3
+ordered: T
+same:    T
+ends:    -16232   -328  16264
+sum:       -94362
+  $STATUS == "%X00000001"
+==== SORTERN
+quick:  -4   0   1   7   7  12  15  21  33  33  56  98
+merge:  -4   0   1   7   7  12  15  21  33  33  56  98
+small:  0 98
+desc:    1   2   3
+ordered: T
+same:    T
+ends:    -16232   -328  16264
+sum:       -94362
+  $STATUS == "%X00000001"
+==== SORTERR
+quick:  -4   0   1   7   7  12  15  21  33  33  56  98
+merge:  -4   0   1   7   7  12  15  21  33  33  56  98
+small:  0 98
+desc:    1   2   3
+ordered: T
+same:    T
+ends:    -16232   -328  16264
+sum:       -94362
+  $STATUS == "%X00000001"
+==== SPARSE
+A: 14 of 5 by 5
+      2.   -1.    0.    0.    7.
+     -1.    2.   -1.    0.    0.
+      0.   -1.    4.   -1.    0.
+      0.    0.   -1.    2.   -1.
+      0.    0.    0.   -1.    2.
+live: 14
+unlinked: 11 11   0.   0.  -1.
+found:   9. F
+row 3: 2  -1.
+row 3: 4  -1.
+A x:    0.    1.   -6.   50.    6.
+G = diagonal:  2 of 3 by 3
+      3.    0.    0.
+      0.    0.    0.
+      0.    0.    1.
+G:  5    1.    3.    5.    7.    9.
+B = transposed A: 11 of 5 by 5
+      2.    0.    0.    0.    0.
+     -1.    2.   -1.    0.    0.
+      0.   -1.    0.   -1.    0.
+      0.    0.   -1.    2.   -1.
+      0.    0.    0.    9.    2.
+S = A + B: 12 of 5 by 5
+      4.   -1.    0.    0.    0.
+     -1.    4.   -2.    0.    0.
+      0.   -2.    0.   -2.    0.
+      0.    0.   -2.    4.    8.
+      0.    0.    0.    8.    4.
+live: 34
+shared:  50.  50.  60. T
+D = A C: 11 of 5 by 3
+      0.    2.   -2.
+     -3.    0.    5.
+      0.   -4.   -2.
+     -3.    8.   46.
+      0.   -4.   10.
+D (1, 1, 1):    0.    2.   -6.   51.    6.
+(A C)' - C' A':  0 11
+live at the end:  0
+  $STATUS == "%X00000001"
+==== SPARSEN
+A: 14 of 5 by 5
+      2.   -1.    0.    0.    7.
+     -1.    2.   -1.    0.    0.
+      0.   -1.    4.   -1.    0.
+      0.    0.   -1.    2.   -1.
+      0.    0.    0.   -1.    2.
+live: 14
+unlinked: 11 11   0.   0.  -1.
+found:   9. F
+row 3: 2  -1.
+row 3: 4  -1.
+A x:    0.    1.   -6.   50.    6.
+G = diagonal:  2 of 3 by 3
+      3.    0.    0.
+      0.    0.    0.
+      0.    0.    1.
+G:  5    1.    3.    5.    7.    9.
+B = transposed A: 11 of 5 by 5
+      2.    0.    0.    0.    0.
+     -1.    2.   -1.    0.    0.
+      0.   -1.    0.   -1.    0.
+      0.    0.   -1.    2.   -1.
+      0.    0.    0.    9.    2.
+S = A + B: 12 of 5 by 5
+      4.   -1.    0.    0.    0.
+     -1.    4.   -2.    0.    0.
+      0.   -2.    0.   -2.    0.
+      0.    0.   -2.    4.    8.
+      0.    0.    0.    8.    4.
+live: 34
+shared:  50.  50.  60. T
+D = A C: 11 of 5 by 3
+      0.    2.   -2.
+     -3.    0.    5.
+      0.   -4.   -2.
+     -3.    8.   46.
+      0.   -4.   10.
+D (1, 1, 1):    0.    2.   -6.   51.    6.
+(A C)' - C' A':  0 11
+live at the end:  0
+  $STATUS == "%X00000001"
+==== SPARSER
+A: 14 of 5 by 5
+      2.   -1.    0.    0.    7.
+     -1.    2.   -1.    0.    0.
+      0.   -1.    4.   -1.    0.
+      0.    0.   -1.    2.   -1.
+      0.    0.    0.   -1.    2.
+live: 14
+unlinked: 11 11   0.   0.  -1.
+found:   9. F
+row 3: 2  -1.
+row 3: 4  -1.
+A x:    0.    1.   -6.   50.    6.
+G = diagonal:  2 of 3 by 3
+      3.    0.    0.
+      0.    0.    0.
+      0.    0.    1.
+G:  5    1.    3.    5.    7.    9.
+B = transposed A: 11 of 5 by 5
+      2.    0.    0.    0.    0.
+     -1.    2.   -1.    0.    0.
+      0.   -1.    0.   -1.    0.
+      0.    0.   -1.    2.   -1.
+      0.    0.    0.    9.    2.
+S = A + B: 12 of 5 by 5
+      4.   -1.    0.    0.    0.
+     -1.    4.   -2.    0.    0.
+      0.   -2.    0.   -2.    0.
+      0.    0.   -2.    4.    8.
+      0.    0.    0.    8.    4.
+live: 34
+shared:  50.  50.  60. T
+D = A C: 11 of 5 by 3
+      0.    2.   -2.
+     -3.    0.    5.
+      0.   -4.   -2.
+     -3.    8.   46.
+      0.   -4.   10.
+D (1, 1, 1):    0.    2.   -6.   51.    6.
+(A C)' - C' A':  0 11
+live at the end:  0
+  $STATUS == "%X00000001"
+==== SPELLINGS
+ T F T T F F
+ T F T T F F
+    5   15   31    7
+it's|say "hi"|say "hi"|it's
+continued
+ 1234
+  403
+not ! a comment|not & continued
+ T F T T
+twice 21 is  42
+  $STATUS == "%X00000001"
+==== SPELLINGSN
+ T F T T F F
+ T F T T F F
+    5   15   31    7
+it's|say "hi"|say "hi"|it's
+continued
+ 1234
+  403
+not ! a comment|not & continued
+ T F T T
+twice 21 is  42
+  $STATUS == "%X00000001"
+==== SPELLINGSR
+ T F T T F F
+ T F T T F F
+    5   15   31    7
+it's|say "hi"|say "hi"|it's
+continued
+ 1234
+  403
+not ! a comment|not & continued
+ T F T T
+twice 21 is  42
+  $STATUS == "%X00000001"
+==== SQUARES
+  n  n**2  n**3
+  1     1     1
+  2     4     8
+  3     9    27
+  4    16    64
+  5    25   125
+first square past 50:  8**2 =  64
+2 + 4 + ... + 10 =  30
+-1 is negative
+ 0 is zero
+ 1 is one
+ 2 is two or more
+sqrt(2) = 1.4142135624
+  $STATUS == "%X00000001"
+==== SQUARESN
+  n  n**2  n**3
+  1     1     1
+  2     4     8
+  3     9    27
+  4    16    64
+  5    25   125
+first square past 50:  8**2 =  64
+2 + 4 + ... + 10 =  30
+-1 is negative
+ 0 is zero
+ 1 is one
+ 2 is two or more
+sqrt(2) = 1.4142135624
+  $STATUS == "%X00000001"
+==== SQUARESR
+  n  n**2  n**3
+  1     1     1
+  2     4     8
+  3     9    27
+  4    16    64
+  5    25   125
+first square past 50:  8**2 =  64
+2 + 4 + ... + 10 =  30
+-1 is negative
+ 0 is zero
+ 1 is one
+ 2 is two or more
+sqrt(2) = 1.4142135624
+  $STATUS == "%X00000001"
+==== STATS
+Count: 20   lowest: 47   highest: 95
+Mean:  74.75   variance:  170.72   deviation: 13.07
+The highest is number  9
+The lowest is number 10
+Above the mean: 11
+Mean of those passing:  78.53
+Mean of those failing:  53.33
+Histogram:
+ 40 - 49  *
+ 50 - 59  **
+ 60 - 69  ****
+ 70 - 79  *****
+ 80 - 99  ********
+Every score counted: T
+Standard scores:
+ -0.21  0.78 -0.82  1.24 -1.28  0.17 -0.44  1.01  1.55 -2.12
+  0.48 -0.13 -0.67  0.33  0.71 -1.51  1.17 -0.98  0.10  0.63
+Their extremes: -2.12  1.55
+Sorted:
+  47  55  58  62  64  66  69  72  73  76
+  77  79  81  83  84  85  88  90  91  95
+Median:  76.5
+In order: T
+Moving averages of three:
+  73.7  80.0  71.0  75.3  68.0  78.0  84.0  76.7  74.3
+  67.0  73.3  72.7  76.3  72.7  76.3  69.0  76.0  73.7
+The same in place: T
+Five students, four tests:
+  1    72  77  81  55  total  285
+  2    85  69  73  90  total  317
+  3    64  88  66  62  total  280
+  4    91  95  79  76  total  341
+  5    58  47  84  83  total  272
+Test means:     74.0  75.2  76.6  73.2
+Test highs:       91    95    84    90
+By student:        4     4     5     2
+Student lows:    55   69   62   76   47
+Eighty up:        1    2    1    2    2
+Passed all:     F  T  T  T  F
+Someone failed:  T  T  F  T
+Top total, student  4
+Tests 1 and 2 correlate:  0.568
+  $STATUS == "%X00000001"
+==== STATSN
+Count: 20   lowest: 47   highest: 95
+Mean:  74.75   variance:  170.72   deviation: 13.07
+The highest is number  9
+The lowest is number 10
+Above the mean: 11
+Mean of those passing:  78.53
+Mean of those failing:  53.33
+Histogram:
+ 40 - 49  *
+ 50 - 59  **
+ 60 - 69  ****
+ 70 - 79  *****
+ 80 - 99  ********
+Every score counted: T
+Standard scores:
+ -0.21  0.78 -0.82  1.24 -1.28  0.17 -0.44  1.01  1.55 -2.12
+  0.48 -0.13 -0.67  0.33  0.71 -1.51  1.17 -0.98  0.10  0.63
+Their extremes: -2.12  1.55
+Sorted:
+  47  55  58  62  64  66  69  72  73  76
+  77  79  81  83  84  85  88  90  91  95
+Median:  76.5
+In order: T
+Moving averages of three:
+  73.7  80.0  71.0  75.3  68.0  78.0  84.0  76.7  74.3
+  67.0  73.3  72.7  76.3  72.7  76.3  69.0  76.0  73.7
+The same in place: T
+Five students, four tests:
+  1    72  77  81  55  total  285
+  2    85  69  73  90  total  317
+  3    64  88  66  62  total  280
+  4    91  95  79  76  total  341
+  5    58  47  84  83  total  272
+Test means:     74.0  75.2  76.6  73.2
+Test highs:       91    95    84    90
+By student:        4     4     5     2
+Student lows:    55   69   62   76   47
+Eighty up:        1    2    1    2    2
+Passed all:     F  T  T  T  F
+Someone failed:  T  T  F  T
+Top total, student  4
+Tests 1 and 2 correlate:  0.568
+  $STATUS == "%X00000001"
+==== STATSR
+Count: 20   lowest: 47   highest: 95
+Mean:  74.75   variance:  170.72   deviation: 13.07
+The highest is number  9
+The lowest is number 10
+Above the mean: 11
+Mean of those passing:  78.53
+Mean of those failing:  53.33
+Histogram:
+ 40 - 49  *
+ 50 - 59  **
+ 60 - 69  ****
+ 70 - 79  *****
+ 80 - 99  ********
+Every score counted: T
+Standard scores:
+ -0.21  0.78 -0.82  1.24 -1.28  0.17 -0.44  1.01  1.55 -2.12
+  0.48 -0.13 -0.67  0.33  0.71 -1.51  1.17 -0.98  0.10  0.63
+Their extremes: -2.12  1.55
+Sorted:
+  47  55  58  62  64  66  69  72  73  76
+  77  79  81  83  84  85  88  90  91  95
+Median:  76.5
+In order: T
+Moving averages of three:
+  73.7  80.0  71.0  75.3  68.0  78.0  84.0  76.7  74.3
+  67.0  73.3  72.7  76.3  72.7  76.3  69.0  76.0  73.7
+The same in place: T
+Five students, four tests:
+  1    72  77  81  55  total  285
+  2    85  69  73  90  total  317
+  3    64  88  66  62  total  280
+  4    91  95  79  76  total  341
+  5    58  47  84  83  total  272
+Test means:     74.0  75.2  76.6  73.2
+Test highs:       91    95    84    90
+By student:        4     4     5     2
+Student lows:    55   69   62   76   47
+Eighty up:        1    2    1    2    2
+Passed all:     F  T  T  T  F
+Someone failed:  T  T  F  T
+Top total, student  4
+Tests 1 and 2 correlate:  0.568
+  $STATUS == "%X00000001"
+==== STOCK
+BOLTS     120    0.10
+NUTS       80    0.05
+GEARS       4   12.50
+SPRINGS    30    0.75
+WIDGETS     2   99.00
+total      236    286.50
+WIDGETS     2   99.00    198.00
+GEARS       4   12.50     50.00
+SPRINGS    30    0.75     22.50
+BOLTS     120    0.10     12.00
+NUTS       80    0.05      4.00
+WIDGETS  reorder
+GEARS    reorder
+  $STATUS == "%X00000001"
+==== STOCKN
+BOLTS     120    0.10
+NUTS       80    0.05
+GEARS       4   12.50
+SPRINGS    30    0.75
+WIDGETS     2   99.00
+total      236    286.50
+WIDGETS     2   99.00    198.00
+GEARS       4   12.50     50.00
+SPRINGS    30    0.75     22.50
+BOLTS     120    0.10     12.00
+NUTS       80    0.05      4.00
+WIDGETS  reorder
+GEARS    reorder
+  $STATUS == "%X00000001"
+==== STOCKR
+BOLTS     120    0.10
+NUTS       80    0.05
+GEARS       4   12.50
+SPRINGS    30    0.75
+WIDGETS     2   99.00
+total      236    286.50
+WIDGETS     2   99.00    198.00
+GEARS       4   12.50     50.00
+SPRINGS    30    0.75     22.50
+BOLTS     120    0.10     12.00
+NUTS       80    0.05      4.00
+WIDGETS  reorder
+GEARS    reorder
+  $STATUS == "%X00000001"
+==== STRINGS
+joined: [Fortran Ninety]
+length: 20
+Ninety starts at  9
+reversed: [yteniN nartroF]
+upper: [FORTRAN NINETY]
+vowels:  4
+ T T T F
+He said "it's"  3
+He said "it's"  4
+  $STATUS == "%X00000001"
+==== STRINGSN
+joined: [Fortran Ninety]
+length: 20
+Ninety starts at  9
+reversed: [yteniN nartroF]
+upper: [FORTRAN NINETY]
+vowels:  4
+ T T T F
+He said "it's"  3
+He said "it's"  4
+  $STATUS == "%X00000001"
+==== STRINGSR
+joined: [Fortran Ninety]
+length: 20
+Ninety starts at  9
+reversed: [yteniN nartroF]
+upper: [FORTRAN NINETY]
+vowels:  4
+ T T T F
+He said "it's"  3
+He said "it's"  4
+  $STATUS == "%X00000001"
+==== STRUCTS
+  1.000   0.000   1.000
+  3.000   4.000
+start    7   7   7  -1.000   2.500
+  1.500   2.500
+  6.000   1.500
+  1.500   6.000
+  0.000   0.000
+  1.000   1.000   2.000   4.000   3.000   9.000
+marked   1   2   3   6.000  -6.000
+x     |   5   5   5   3.000   4.000
+  5.000   5.000
+T T F
+          1           2
+         20          20
+  $STATUS == "%X00000001"
+==== STRUCTSN
+  1.000   0.000   1.000
+  3.000   4.000
+start    7   7   7  -1.000   2.500
+  1.500   2.500
+  6.000   1.500
+  1.500   6.000
+  0.000   0.000
+  1.000   1.000   2.000   4.000   3.000   9.000
+marked   1   2   3   6.000  -6.000
+x     |   5   5   5   3.000   4.000
+  5.000   5.000
+T T F
+          1           2
+         20          20
+  $STATUS == "%X00000001"
+==== STRUCTSR
+  1.000   0.000   1.000
+  3.000   4.000
+start    7   7   7  -1.000   2.500
+  1.500   2.500
+  6.000   1.500
+  1.500   6.000
+  0.000   0.000
+  1.000   1.000   2.000   4.000   3.000   9.000
+marked   1   2   3   6.000  -6.000
+x     |   5   5   5   3.000   4.000
+  5.000   5.000
+T T F
+          1           2
+         20          20
+  $STATUS == "%X00000001"
+==== TEXTFMT
+                                     00BF   209 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     0136   922 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module TEXTFMT file DUA1:[TEXTFMT]TEXTFMT.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image TEXTFMT
+-CLI-E-IMAGEFNF, image file not found DUA1:[TEXTFMT]TEXTFMT.EXE;
+  $STATUS == "%X100388B2"
+==== TEXTFMTN
+                                     00BF   206 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     0137  1019 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module TEXTFMT file DUA1:[TEXTFMTN]TEXTFMT.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image TEXTFMT
+-CLI-E-IMAGEFNF, image file not found DUA1:[TEXTFMTN]TEXTFMT.EXE;
+  $STATUS == "%X100388B2"
+==== TEXTFMTR
+                                     00BF   209 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+                                     012E   872 	.ASCII
+%MACRO-E-DIRSYNX, Directive syntax error               !
+%LINK-E-ERRORS, compilation errors
+	in module TEXTFMT file DUA1:[TEXTFMTR]TEXTFMT.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%DCL-W-ACTIMAGE, error activating image TEXTFMT
+-CLI-E-IMAGEFNF, image file not found DUA1:[TEXTFMTR]TEXTFMT.EXE;
+  $STATUS == "%X100388B2"
+==== TOKENS
+line 1: x = alpha_1 + 42
+  name     x
+  operator =
+  name     alpha_1
+  operator +
+  integer  42
+line 2: y = (x ** 2 - 3.25) / z  ! a comment
+  name     y
+  operator =
+  punct    (
+  name     x
+  operator **
+  integer  2
+  operator -
+  real     3.25
+  punct    )
+  operator /
+  name     z
+line 3: if (name == 'it''s') n = n // "end"
+  name     if
+  punct    (
+  name     name
+  operator ==
+  string   'it''s'
+  punct    )
+  name     n
+  operator =
+  name     n
+  operator //
+  string   "end"
+line 4: a <= b >= c /= d < e > f, g * h # 7
+  name     a
+  operator <=
+  name     b
+  operator >=
+  name     c
+  operator /=
+  name     d
+  operator <
+  name     e
+  operator >
+  name     f
+  punct    ,
+  name     g
+  operator *
+  name     h
+  unknown  #
+  integer  7
+line 5: call f((1, 2)
+  name     call
+  name     f
+  punct    (
+  punct    (
+  integer  1
+  punct    ,
+  integer  2
+  punct    )
+  unbalanced 1
+line 6: s = 'open
+  name     s
+  operator =
+  error    'open
+lines: 6
+name     20
+integer   5
+real      1
+string    2
+operator 16
+punct     9
+error     1
+unknown   1
+  $STATUS == "%X00000001"
+==== TOKENSN
+line 1: x = alpha_1 + 42
+  name     x
+  operator =
+  name     alpha_1
+  operator +
+  integer  42
+line 2: y = (x ** 2 - 3.25) / z  ! a comment
+  name     y
+  operator =
+  punct    (
+  name     x
+  operator **
+  integer  2
+  operator -
+  real     3.25
+  punct    )
+  operator /
+  name     z
+line 3: if (name == 'it''s') n = n // "end"
+  name     if
+  punct    (
+  name     name
+  operator ==
+  string   'it''s'
+  punct    )
+  name     n
+  operator =
+  name     n
+  operator //
+  string   "end"
+line 4: a <= b >= c /= d < e > f, g * h # 7
+  name     a
+  operator <=
+  name     b
+  operator >=
+  name     c
+  operator /=
+  name     d
+  operator <
+  name     e
+  operator >
+  name     f
+  punct    ,
+  name     g
+  operator *
+  name     h
+  unknown  #
+  integer  7
+line 5: call f((1, 2)
+  name     call
+  name     f
+  punct    (
+  punct    (
+  integer  1
+  punct    ,
+  integer  2
+  punct    )
+  unbalanced 1
+line 6: s = 'open
+  name     s
+  operator =
+  error    'open
+lines: 6
+name     20
+integer   5
+real      1
+string    2
+operator 16
+punct     9
+error     1
+unknown   1
+  $STATUS == "%X00000001"
+==== TOKENSR
+line 1: x = alpha_1 + 42
+  name     x
+  operator =
+  name     alpha_1
+  operator +
+  integer  42
+line 2: y = (x ** 2 - 3.25) / z  ! a comment
+  name     y
+  operator =
+  punct    (
+  name     x
+  operator **
+  integer  2
+  operator -
+  real     3.25
+  punct    )
+  operator /
+  name     z
+line 3: if (name == 'it''s') n = n // "end"
+  name     if
+  punct    (
+  name     name
+  operator ==
+  string   'it''s'
+  punct    )
+  name     n
+  operator =
+  name     n
+  operator //
+  string   "end"
+line 4: a <= b >= c /= d < e > f, g * h # 7
+  name     a
+  operator <=
+  name     b
+  operator >=
+  name     c
+  operator /=
+  name     d
+  operator <
+  name     e
+  operator >
+  name     f
+  punct    ,
+  name     g
+  operator *
+  name     h
+  unknown  #
+  integer  7
+line 5: call f((1, 2)
+  name     call
+  name     f
+  punct    (
+  punct    (
+  integer  1
+  punct    ,
+  integer  2
+  punct    )
+  unbalanced 1
+line 6: s = 'open
+  name     s
+  operator =
+  error    'open
+lines: 6
+name     20
+integer   5
+real      1
+string    2
+operator 16
+punct     9
+error     1
+unknown   1
+  $STATUS == "%X00000001"
+==== TRANSFER
+Folded:  1145258561 abcd   4   3
+Words:  1096175431   809059928
+Back:  GOVAXF90
+Chars: G O V A X F
+Halves:     4     3  1096175431   809059928
+Sizes:   4   2
+Section:  65   0  67   0     9
+Reals: T     1.50    -0.25  1000.00  -7.0
+Record:  11  22  11  22 T
+Big:  40000     14
+Passed:  1515804759  16961  17475
+  $STATUS == "%X00000001"
+==== TRANSFERN
+Folded:  1145258561 abcd   4   3
+Words:  1096175431   809059928
+Back:  GOVAXF90
+Chars: G O V A X F
+Halves:     4     3  1096175431   809059928
+Sizes:   4   2
+Section:  65   0  67   0     9
+Reals: T     1.50    -0.25  1000.00  -7.0
+Record:  11  22  11  22 T
+Big:  40000     14
+Passed:  1515804759  16961  17475
+  $STATUS == "%X00000001"
+==== TRANSFERR
+Folded:  1145258561 abcd   4   3
+Words:  1096175431   809059928
+Back:  GOVAXF90
+Chars: G O V A X F
+Halves:     4     3  1096175431   809059928
+Sizes:   4   2
+Section:  65   0  67   0     9
+Reals: T     1.50    -0.25  1000.00  -7.0
+Record:  11  22  11  22 T
+Big:  40000     14
+Passed:  1515804759  16961  17475
+  $STATUS == "%X00000001"
+==== TRANSFERVMS
+F 1.0:  16512  16512
+D 1.0:  16512      0
+H 1.0:  16385      0      0      0
+G 1.0:  16400
+Array:  16512  16640
+Tails:  7  0  0  0  7  0   0
+Complex:  1.0  2.0  1.0  2.0
+Reserved:  -32768
+  $STATUS == "%X00000001"
+==== TRANSFERVMSN
+F 1.0:  16512  16512
+D 1.0:  16512      0
+H 1.0:  16385      0      0      0
+G 1.0:  16400
+Array:  16512  16640
+Tails:  7  0  0  0  7  0   0
+Complex:  1.0  2.0  1.0  2.0
+Reserved:  -32768
+  $STATUS == "%X00000001"
+==== TRANSFERVMSR
+F 1.0:  16512  16512
+D 1.0:  16512      0
+H 1.0:  16385      0      0      0
+G 1.0:  16400
+Array:  16512  16640
+Tails:  7  0  0  0  7  0   0
+Complex:  1.0  2.0  1.0  2.0
+Reserved:  -32768
+  $STATUS == "%X00000001"
+==== TRANSFORM
+spread:   2  2  2  3  3  3  4  4  4
+spread2:  2  3  4  2  3  4  2  3  4
+cshift:   3  4  5  6  1  2
+cshift-:  5  6  1  2  3  4
+cshift2:  3  5  7  1  6  8  2  4  9
+eoshift:  4  5  6  0  0  0
+eosh-9:   9  9  1  2  3  4
+eosh2:   B / G C D H * E I
+eosh-c:  D G   E H   F I  
+pack:     9  7
+packv:    9  7  3  4  5  6
+packall:  1  4  7  2  5  8  3  6  9
+packnot:  0
+unpack:   1  1  0  2  1  0  0  0  3
+unpack0:  0  4  0  5  0  0  0  0  6
+reshape:  1  5  2  6  3  0  4  0
+resh2:    1  2  3  4  5  6
+rshape:   2  3
+sum dim 1  12  15  18
+sum dim 2   6  15  24
+any:     F F T
+maxval:    7   5   9
+self:     2  3  4  5  6  1
+teosh:    4  5  6  7  8  9 -1 -1 -1
+shapes:   2  3  2  3  2  3  2  3
+rt sum:   4.0  8.0 12.0 16.0
+rt csh:   4.0  1.0  2.0  3.0
+rt eos:   2.0  3.0  4.0 -1.0
+rt pack:  3.0  4.0
+merge:  abc uvw
+cshc:   def abc
+ring:     1  2  3  4  5
+  $STATUS == "%X00000001"
+==== TRANSFORMN
+spread:   2  2  2  3  3  3  4  4  4
+spread2:  2  3  4  2  3  4  2  3  4
+cshift:   3  4  5  6  1  2
+cshift-:  5  6  1  2  3  4
+cshift2:  3  5  7  1  6  8  2  4  9
+eoshift:  4  5  6  0  0  0
+eosh-9:   9  9  1  2  3  4
+eosh2:   B / G C D H * E I
+eosh-c:  D G   E H   F I  
+pack:     9  7
+packv:    9  7  3  4  5  6
+packall:  1  4  7  2  5  8  3  6  9
+packnot:  0
+unpack:   1  1  0  2  1  0  0  0  3
+unpack0:  0  4  0  5  0  0  0  0  6
+reshape:  1  5  2  6  3  0  4  0
+resh2:    1  2  3  4  5  6
+rshape:   2  3
+sum dim 1  12  15  18
+sum dim 2   6  15  24
+any:     F F T
+maxval:    7   5   9
+self:     2  3  4  5  6  1
+teosh:    4  5  6  7  8  9 -1 -1 -1
+shapes:   2  3  2  3  2  3  2  3
+rt sum:   4.0  8.0 12.0 16.0
+rt csh:   4.0  1.0  2.0  3.0
+rt eos:   2.0  3.0  4.0 -1.0
+rt pack:  3.0  4.0
+merge:  abc uvw
+cshc:   def abc
+ring:     1  2  3  4  5
+  $STATUS == "%X00000001"
+==== TRANSFORMR
+spread:   2  2  2  3  3  3  4  4  4
+spread2:  2  3  4  2  3  4  2  3  4
+cshift:   3  4  5  6  1  2
+cshift-:  5  6  1  2  3  4
+cshift2:  3  5  7  1  6  8  2  4  9
+eoshift:  4  5  6  0  0  0
+eosh-9:   9  9  1  2  3  4
+eosh2:   B / G C D H * E I
+eosh-c:  D G   E H   F I  
+pack:     9  7
+packv:    9  7  3  4  5  6
+packall:  1  4  7  2  5  8  3  6  9
+packnot:  0
+unpack:   1  1  0  2  1  0  0  0  3
+unpack0:  0  4  0  5  0  0  0  0  6
+reshape:  1  5  2  6  3  0  4  0
+resh2:    1  2  3  4  5  6
+rshape:   2  3
+sum dim 1  12  15  18
+sum dim 2   6  15  24
+any:     F F T
+maxval:    7   5   9
+self:     2  3  4  5  6  1
+teosh:    4  5  6  7  8  9 -1 -1 -1
+shapes:   2  3  2  3  2  3  2  3
+rt sum:   4.0  8.0 12.0 16.0
+rt csh:   4.0  1.0  2.0  3.0
+rt eos:   2.0  3.0  4.0 -1.0
+rt pack:  3.0  4.0
+merge:  abc uvw
+cshc:   def abc
+ring:     1  2  3  4  5
+  $STATUS == "%X00000001"
+==== TYPEARGS
+    2.00    0.00    4.00    0.00    6.00    0.00
+    8.00    0.00   10.00    0.00   12.00    0.00
+    1   11  100    2   21  200    4   32  301    5   41  401
+T1! T2! T3! T4!
+   -1.00   10.00   -2.00    5.00   -3.00   10.00
+   -1.00   20.00   -2.00   10.00   -3.00   20.00
+   42.00
+    1.00    1.00    1.00    0.00    0.00    0.00
+  201  401  603  803
+T1! u2! u3! T4!
+peek    2.00    4.00    6.00    8.00   10.00   12.00
+   42.00
+   18.00
+show    0.00    1.00
+show    2.00    4.00
+    4.00
+names 2 1! 2! 3! 4!
+names 2 u2 u3 T4
+C1! C2! C3! C4!
+  103.00    3.00    5.00    3.00    7.00    4.00
+    9.00    4.00   11.00    5.00  113.00    8.00
+   -1.00   10.00   -2.00    5.00   -3.00   10.00
+   -0.75   21.00   -1.75   12.00   -2.75   23.00
+  103.00    3.00    5.00  -30.00 1007.00  -41.00
+ 1009.00  -42.00   11.00    5.00  113.00    8.00
+  103.00    3.00    5.00  -30.00 1007.00   41.00
+ 1009.00   42.00   11.00    5.00  113.00   -8.00
+   -1.00   10.00   -2.00   -5.00   -3.00   10.00
+   -0.75   21.00   -1.75  -12.00   -2.75   23.00
+tally  103.00   11.00 1007.00 1009.00    5.00  113.00
+  $STATUS == "%X00000001"
+==== TYPEARGSN
+    2.00    0.00    4.00    0.00    6.00    0.00
+    8.00    0.00   10.00    0.00   12.00    0.00
+    1   11  100    2   21  200    4   32  301    5   41  401
+T1! T2! T3! T4!
+   -1.00   10.00   -2.00    5.00   -3.00   10.00
+   -1.00   20.00   -2.00   10.00   -3.00   20.00
+   42.00
+    1.00    1.00    1.00    0.00    0.00    0.00
+  201  401  603  803
+T1! u2! u3! T4!
+peek    2.00    4.00    6.00    8.00   10.00   12.00
+   42.00
+   18.00
+show    0.00    1.00
+show    2.00    4.00
+    4.00
+names 2 1! 2! 3! 4!
+names 2 u2 u3 T4
+C1! C2! C3! C4!
+  103.00    3.00    5.00    3.00    7.00    4.00
+    9.00    4.00   11.00    5.00  113.00    8.00
+   -1.00   10.00   -2.00    5.00   -3.00   10.00
+   -0.75   21.00   -1.75   12.00   -2.75   23.00
+  103.00    3.00    5.00  -30.00 1007.00  -41.00
+ 1009.00  -42.00   11.00    5.00  113.00    8.00
+  103.00    3.00    5.00  -30.00 1007.00   41.00
+ 1009.00   42.00   11.00    5.00  113.00   -8.00
+   -1.00   10.00   -2.00   -5.00   -3.00   10.00
+   -0.75   21.00   -1.75  -12.00   -2.75   23.00
+tally  103.00   11.00 1007.00 1009.00    5.00  113.00
+  $STATUS == "%X00000001"
+==== TYPEARGSR
+    2.00    0.00    4.00    0.00    6.00    0.00
+    8.00    0.00   10.00    0.00   12.00    0.00
+    1   11  100    2   21  200    4   32  301    5   41  401
+T1! T2! T3! T4!
+   -1.00   10.00   -2.00    5.00   -3.00   10.00
+   -1.00   20.00   -2.00   10.00   -3.00   20.00
+   42.00
+    1.00    1.00    1.00    0.00    0.00    0.00
+  201  401  603  803
+T1! u2! u3! T4!
+peek    2.00    4.00    6.00    8.00   10.00   12.00
+   42.00
+   18.00
+show    0.00    1.00
+show    2.00    4.00
+    4.00
+names 2 1! 2! 3! 4!
+names 2 u2 u3 T4
+C1! C2! C3! C4!
+  103.00    3.00    5.00    3.00    7.00    4.00
+    9.00    4.00   11.00    5.00  113.00    8.00
+   -1.00   10.00   -2.00    5.00   -3.00   10.00
+   -0.75   21.00   -1.75   12.00   -2.75   23.00
+  103.00    3.00    5.00  -30.00 1007.00  -41.00
+ 1009.00  -42.00   11.00    5.00  113.00    8.00
+  103.00    3.00    5.00  -30.00 1007.00   41.00
+ 1009.00   42.00   11.00    5.00  113.00   -8.00
+   -1.00   10.00   -2.00   -5.00   -3.00   10.00
+   -0.75   21.00   -1.75  -12.00   -2.75   23.00
+tally  103.00   11.00 1007.00 1009.00    5.00  113.00
+  $STATUS == "%X00000001"
+==== TYPEARRAYS
+  1.0   2.0   2.0   4.0   3.0   6.0
+  4.0   8.0   5.0  10.0   6.0  12.0
+  2.0   0.0   6.0   0.0  10.0   0.0
+ 21.0  10.0
+  4.0   0.0   5.0  10.0   6.0   0.0
+  4.0   0.0   5.0  10.0   6.0   0.0
+  4.0   0.0   9.0   9.0   6.0   0.0
+  4.0   0.0   9.0   9.0  -1.0  -2.0
+  1.0   1.0   2.0   3.0   4.0   5.0
+  2.0   0.0   6.0   0.0  10.0   0.0
+  2.0   0.0  -6.0   0.0 -10.0   0.0
+  1.0  11.0  12.0
+  2.0  -6.0
+  1.5   3.0   2.5   5.0
+ONE  TXX  SXX  ON
+BOXA BOXA BOXA
+  5.0   5.0   0.0   1.5   2.5
+  $STATUS == "%X00000001"
+==== TYPEARRAYSN
+  1.0   2.0   2.0   4.0   3.0   6.0
+  4.0   8.0   5.0  10.0   6.0  12.0
+  2.0   0.0   6.0   0.0  10.0   0.0
+ 21.0  10.0
+  4.0   0.0   5.0  10.0   6.0   0.0
+  4.0   0.0   5.0  10.0   6.0   0.0
+  4.0   0.0   9.0   9.0   6.0   0.0
+  4.0   0.0   9.0   9.0  -1.0  -2.0
+  1.0   1.0   2.0   3.0   4.0   5.0
+  2.0   0.0   6.0   0.0  10.0   0.0
+  2.0   0.0  -6.0   0.0 -10.0   0.0
+  1.0  11.0  12.0
+  2.0  -6.0
+  1.5   3.0   2.5   5.0
+ONE  TXX  SXX  ON
+BOXA BOXA BOXA
+  5.0   5.0   0.0   1.5   2.5
+  $STATUS == "%X00000001"
+==== TYPEARRAYSR
+  1.0   2.0   2.0   4.0   3.0   6.0
+  4.0   8.0   5.0  10.0   6.0  12.0
+  2.0   0.0   6.0   0.0  10.0   0.0
+ 21.0  10.0
+  4.0   0.0   5.0  10.0   6.0   0.0
+  4.0   0.0   5.0  10.0   6.0   0.0
+  4.0   0.0   9.0   9.0   6.0   0.0
+  4.0   0.0   9.0   9.0  -1.0  -2.0
+  1.0   1.0   2.0   3.0   4.0   5.0
+  2.0   0.0   6.0   0.0  10.0   0.0
+  2.0   0.0  -6.0   0.0 -10.0   0.0
+  1.0  11.0  12.0
+  2.0  -6.0
+  1.5   3.0   2.5   5.0
+ONE  TXX  SXX  ON
+BOXA BOXA BOXA
+  5.0   5.0   0.0   1.5   2.5
+  $STATUS == "%X00000001"
+==== TYPEDYN
+  0  T  5  2  3
+    1.00    1.00    2.00    4.00    3.00    9.00
+    4.00   16.00    5.00   25.00
+    1.00    1.00    2.00   10.00    1.00    2.00
+    2.00   20.00    1.00    3.00    2.00   30.00
+M0     0.0   0.0   0 100 M1     1.0   0.5   1 101 M2     5.0  25.0   2 102
+    1.50    0.10    2.50    0.10    3.50    0.40
+    4.50    0.90    5.50    1.60
+    0.00    3.00   15.00
+    5.50    1.60    4.50    0.90    3.50    0.40
+    2.50    0.10    1.50    0.10
+    0.00    0.00    2.00    2.00   -1.00   -1.00
+    5.00    1.25    4.00    0.65    3.00    0.25
+show    5.00    4.00    3.00    2.00
+total    2.00    2.00
+  0  F  0  0  0
+    0.00    0.00    1.00    1.00
+  $STATUS == "%X00000001"
+==== TYPEDYNN
+  0  T  5  2  3
+    1.00    1.00    2.00    4.00    3.00    9.00
+    4.00   16.00    5.00   25.00
+    1.00    1.00    2.00   10.00    1.00    2.00
+    2.00   20.00    1.00    3.00    2.00   30.00
+M0     0.0   0.0   0 100 M1     1.0   0.5   1 101 M2     5.0  25.0   2 102
+    1.50    0.10    2.50    0.10    3.50    0.40
+    4.50    0.90    5.50    1.60
+    0.00    3.00   15.00
+    5.50    1.60    4.50    0.90    3.50    0.40
+    2.50    0.10    1.50    0.10
+    0.00    0.00    2.00    2.00   -1.00   -1.00
+    5.00    1.25    4.00    0.65    3.00    0.25
+show    5.00    4.00    3.00    2.00
+total    2.00    2.00
+  0  F  0  0  0
+    0.00    0.00    1.00    1.00
+  $STATUS == "%X00000001"
+==== TYPEDYNR
+  0  T  5  2  3
+    1.00    1.00    2.00    4.00    3.00    9.00
+    4.00   16.00    5.00   25.00
+    1.00    1.00    2.00   10.00    1.00    2.00
+    2.00   20.00    1.00    3.00    2.00   30.00
+M0     0.0   0.0   0 100 M1     1.0   0.5   1 101 M2     5.0  25.0   2 102
+    1.50    0.10    2.50    0.10    3.50    0.40
+    4.50    0.90    5.50    1.60
+    0.00    3.00   15.00
+    5.50    1.60    4.50    0.90    3.50    0.40
+    2.50    0.10    1.50    0.10
+    0.00    0.00    2.00    2.00   -1.00   -1.00
+    5.00    1.25    4.00    0.65    3.00    0.25
+show    5.00    4.00    3.00    2.00
+total    2.00    2.00
+  0  F  0  0  0
+    0.00    0.00    1.00    1.00
+  $STATUS == "%X00000001"
+==== TYPEIO
+ 1.50 -2.00
+ 1.0  2.0  2.0  4.0  3.0  6.0
+ 2.0  4.0  3.0  6.0
+ 3.0  6.0
+ 1.0  2.0
+ABCD  3.0  4.0  1  2  3
+ABCD  3.0  4.0  1  2  3
+WXYZ  1.5 -2.0  7  8  9
+WXYZ  1.5 -2.0  7  8  9
+ 7.0  8.0
+ 2.25  2.00
+MADE  1.5  3.0  0  0  0
+    1.50   -2.00
+ 1.50 -2.00
+PQRS  9.50 -1.25  4  5  6
+ 1.50 -2.00
+ 1.0  2.0  2.0  4.0  3.0  6.0
+ABCD  3.0  4.0  1  2  3
+ 11  99      1.0  20000.0
+  $STATUS == "%X00000001"
+==== TYPEION
+ 1.50 -2.00
+ 1.0  2.0  2.0  4.0  3.0  6.0
+ 2.0  4.0  3.0  6.0
+ 3.0  6.0
+ 1.0  2.0
+ABCD  3.0  4.0  1  2  3
+ABCD  3.0  4.0  1  2  3
+WXYZ  1.5 -2.0  7  8  9
+WXYZ  1.5 -2.0  7  8  9
+ 7.0  8.0
+ 2.25  2.00
+MADE  1.5  3.0  0  0  0
+    1.50   -2.00
+ 1.50 -2.00
+PQRS  9.50 -1.25  4  5  6
+ 1.50 -2.00
+ 1.0  2.0  2.0  4.0  3.0  6.0
+ABCD  3.0  4.0  1  2  3
+ 11  99      1.0  20000.0
+  $STATUS == "%X00000001"
+==== TYPEIOR
+ 1.50 -2.00
+ 1.0  2.0  2.0  4.0  3.0  6.0
+ 2.0  4.0  3.0  6.0
+ 3.0  6.0
+ 1.0  2.0
+ABCD  3.0  4.0  1  2  3
+ABCD  3.0  4.0  1  2  3
+WXYZ  1.5 -2.0  7  8  9
+WXYZ  1.5 -2.0  7  8  9
+ 7.0  8.0
+ 2.25  2.00
+MADE  1.5  3.0  0  0  0
+    1.50   -2.00
+ 1.50 -2.00
+PQRS  9.50 -1.25  4  5  6
+ 1.50 -2.00
+ 1.0  2.0  2.0  4.0  3.0  6.0
+ABCD  3.0  4.0  1  2  3
+ 11  99      1.0  20000.0
+  $STATUS == "%X00000001"
+==== TYPENML
+&GRP
+N       =           1,
+P%X     =   1.500000    ,
+P%Y     =  -2.000000    ,
+T%NAME  = ABCD,
+T%AT%X  =   3.000000    ,
+T%AT%Y  =   4.000000    ,
+T%MARKS =           1,           2,           3
+/
+ 1  9.00 -2.00 wxyz  3.00  5.50  1  7  3
+ 1  1.25  2.50 QRST  6.00  7.00  4  5  6
+ 2  1.25  2.50 QRST  6.00  9.00  8  8  6
+18  1.00  2.00
+&GRP
+N       =           2,
+P%X     =   1.000000    ,
+P%Y     =   2.000000    ,
+T%NAME  = QRST,
+T%AT%X  =   6.000000    ,
+T%AT%Y  =   9.000000    ,
+T%MARKS = 2*8,           6
+/
+  $STATUS == "%X00000001"
+==== TYPENMLN
+&GRP
+N       =           1,
+P%X     =   1.500000    ,
+P%Y     =  -2.000000    ,
+T%NAME  = ABCD,
+T%AT%X  =   3.000000    ,
+T%AT%Y  =   4.000000    ,
+T%MARKS =           1,           2,           3
+/
+ 1  9.00 -2.00 wxyz  3.00  5.50  1  7  3
+ 1  1.25  2.50 QRST  6.00  7.00  4  5  6
+ 2  1.25  2.50 QRST  6.00  9.00  8  8  6
+18  1.00  2.00
+&GRP
+N       =           2,
+P%X     =   1.000000    ,
+P%Y     =   2.000000    ,
+T%NAME  = QRST,
+T%AT%X  =   6.000000    ,
+T%AT%Y  =   9.000000    ,
+T%MARKS = 2*8,           6
+/
+  $STATUS == "%X00000001"
+==== TYPENMLR
+&GRP
+N       =           1,
+P%X     =   1.500000    ,
+P%Y     =  -2.000000    ,
+T%NAME  = ABCD,
+T%AT%X  =   3.000000    ,
+T%AT%Y  =   4.000000    ,
+T%MARKS =           1,           2,           3
+/
+ 1  9.00 -2.00 wxyz  3.00  5.50  1  7  3
+ 1  1.25  2.50 QRST  6.00  7.00  4  5  6
+ 2  1.25  2.50 QRST  6.00  9.00  8  8  6
+18  1.00  2.00
+&GRP
+N       =           2,
+P%X     =   1.000000    ,
+P%Y     =   2.000000    ,
+T%NAME  = QRST,
+T%AT%X  =   6.000000    ,
+T%AT%Y  =   9.000000    ,
+T%MARKS = 2*8,           6
+/
+  $STATUS == "%X00000001"
+==== TYPES
+  1.500000      -2.000000    
+  1.000000       1.500000       2.000000       3.000000       3.000000    
+  4.500000    
+  1.500000       4.500000       8.000000    
+Diagonal iag
+          9 Q           7
+  9.500000    
+show -0.5000000    
+  6.000000       4.000000    
+  $STATUS == "%X00000001"
+==== TYPESN
+  1.500000      -2.000000    
+  1.000000       1.500000       2.000000       3.000000       3.000000    
+  4.500000    
+  1.500000       4.500000       8.000000    
+Diagonal iag
+          9 Q           7
+  9.500000    
+show -0.5000000    
+  6.000000       4.000000    
+  $STATUS == "%X00000001"
+==== TYPESR
+  1.500000      -2.000000    
+  1.000000       1.500000       2.000000       3.000000       3.000000    
+  4.500000    
+  1.500000       4.500000       8.000000    
+Diagonal iag
+          9 Q           7
+  9.500000    
+show -0.5000000    
+  6.000000       4.000000    
+  $STATUS == "%X00000001"
+==== TYPEVALUES
+  0.0   1.0   1.0   1.0
+  1.0   8.0  10.0  -1.0  -1.0
+  0.0   1.0   1.0   5.0
+ 10.0  20.0  30.0  40.0
+  0.0   0.0  30.0  40.0
+  2.0   3.0   4.0   1.0
+  0.0   0.0   1.0   2.0
+  1.0   3.0   1.0   2.0
+  7.0   2.0   9.0   4.0
+  1.0   2.0   3.0   4.0   0.0   0.0
+  1.0   3.0   0.0
+ 10.0  10.0  10.0
+ 3   2.0   4.0   6.0
+ 1   4.5   4.5   4.5
+ 2   5.5   6.5   7.5
+ 9   7.5  2   5.5
+ 10.0  20.0  30.0  40.0
+  $STATUS == "%X00000001"
+==== TYPEVALUESN
+  0.0   1.0   1.0   1.0
+  1.0   8.0  10.0  -1.0  -1.0
+  0.0   1.0   1.0   5.0
+ 10.0  20.0  30.0  40.0
+  0.0   0.0  30.0  40.0
+  2.0   3.0   4.0   1.0
+  0.0   0.0   1.0   2.0
+  1.0   3.0   1.0   2.0
+  7.0   2.0   9.0   4.0
+  1.0   2.0   3.0   4.0   0.0   0.0
+  1.0   3.0   0.0
+ 10.0  10.0  10.0
+ 3   2.0   4.0   6.0
+ 1   4.5   4.5   4.5
+ 2   5.5   6.5   7.5
+ 9   7.5  2   5.5
+ 10.0  20.0  30.0  40.0
+  $STATUS == "%X00000001"
+==== TYPEVALUESR
+  0.0   1.0   1.0   1.0
+  1.0   8.0  10.0  -1.0  -1.0
+  0.0   1.0   1.0   5.0
+ 10.0  20.0  30.0  40.0
+  0.0   0.0  30.0  40.0
+  2.0   3.0   4.0   1.0
+  0.0   0.0   1.0   2.0
+  1.0   3.0   1.0   2.0
+  7.0   2.0   9.0   4.0
+  1.0   2.0   3.0   4.0   0.0   0.0
+  1.0   3.0   0.0
+ 10.0  10.0  10.0
+ 3   2.0   4.0   6.0
+ 1   4.5   4.5   4.5
+ 2   5.5   6.5   7.5
+ 9   7.5  2   5.5
+ 10.0  20.0  30.0  40.0
+  $STATUS == "%X00000001"
+==== VALUES
+cross:  0.00  0.00  1.00
+back:   1.00  1.00  0.00
+dot:    1.00
+unit:   0.60  0.00  0.80
+self:   0.60  0.00  0.80
+fib:      4181    6765
+iota:    3   6   9  12
+max:    12
+grid:   11.0  21.0  12.0  22.0  13.0  23.0
+mul:     9.0  12.0
+where: -1.00  1.00 -1.00
+all:   yes
+tags:  ab-  +ab 
+xyz- +xyz
+old:    1.00  2.00  1.00
+shape: 3 -0.27  0.53 -0.80
+apply:  30 -30
+pair:    7  -7  0.50  0.25
+total:   1501500.0
+  $STATUS == "%X00000001"
+==== VALUESN
+cross:  0.00  0.00  1.00
+back:   1.00  1.00  0.00
+dot:    1.00
+unit:   0.60  0.00  0.80
+self:   0.60  0.00  0.80
+fib:      4181    6765
+iota:    3   6   9  12
+max:    12
+grid:   11.0  21.0  12.0  22.0  13.0  23.0
+mul:     9.0  12.0
+where: -1.00  1.00 -1.00
+all:   yes
+tags:  ab-  +ab 
+xyz- +xyz
+old:    1.00  2.00  1.00
+shape: 3 -0.27  0.53 -0.80
+apply:  30 -30
+pair:    7  -7  0.50  0.25
+total:   1501500.0
+  $STATUS == "%X00000001"
+==== VALUESR
+cross:  0.00  0.00  1.00
+back:   1.00  1.00  0.00
+dot:    1.00
+unit:   0.60  0.00  0.80
+self:   0.60  0.00  0.80
+fib:      4181    6765
+iota:    3   6   9  12
+max:    12
+grid:   11.0  21.0  12.0  22.0  13.0  23.0
+mul:     9.0  12.0
+where: -1.00  1.00 -1.00
+all:   yes
+tags:  ab-  +ab 
+xyz- +xyz
+old:    1.00  2.00  1.00
+shape: 3 -0.27  0.53 -0.80
+apply:  30 -30
+pair:    7  -7  0.50  0.25
+total:   1501500.0
+  $STATUS == "%X00000001"
+==== VECTORS
+gather:    70.  20.  90.
+scatter:   10. -20.  30.  40.  50.  60. -70.  80. -90. 100.
+computed:  60. -60.  60.
+d(1,:):    14.  11.
+d(2,:):    24.  21.
+d(3,:):    34.  31.
+twice:     90.  70.  20.
+permuted:  70.  20.  90.  40.  50.  60.  70.  80.  90. 100.
+zeroed:    10.   0.  30.  40.  50.  60.   0.  80.   0. 100.
+  $STATUS == "%X00000001"
+==== VECTORSN
+gather:    70.  20.  90.
+scatter:   10. -20.  30.  40.  50.  60. -70.  80. -90. 100.
+computed:  60. -60.  60.
+d(1,:):    14.  11.
+d(2,:):    24.  21.
+d(3,:):    34.  31.
+twice:     90.  70.  20.
+permuted:  70.  20.  90.  40.  50.  60.  70.  80.  90. 100.
+zeroed:    10.   0.  30.  40.  50.  60.   0.  80.   0. 100.
+  $STATUS == "%X00000001"
+==== VECTORSR
+gather:    70.  20.  90.
+scatter:   10. -20.  30.  40.  50.  60. -70.  80. -90. 100.
+computed:  60. -60.  60.
+d(1,:):    14.  11.
+d(2,:):    24.  21.
+d(3,:):    34.  31.
+twice:     90.  70.  20.
+permuted:  70.  20.  90.  40.  50.  60.  70.  80.  90. 100.
+zeroed:    10.   0.  30.  40.  50.  60.   0.  80.   0. 100.
+  $STATUS == "%X00000001"
+==== WHERE
+roots:      2.0   0.0   3.0   0.0   0.0   4.0
+halves:     2.0  -1.0   4.5  -1.0  -1.0   8.0
+negated:   -4.0  -1.0  -9.0   0.0  -4.0 -16.0
+flags:      1.0  -1.0   1.0  -1.0  -1.0   1.0
+smeared:    1.0   1.0   0.0   2.0   2.0   0.0
+inverses:  0.00  1.00 -1.00  0.00 -0.50 -1.00
+picked:      10     1    30     1    50     1
+swapped:    6.0   2.0   4.0   4.0   2.0   6.0
+cleared:    0.0   2.0   0.0   0.0   2.0   0.0
+  $STATUS == "%X00000001"
+==== WHEREN
+roots:      2.0   0.0   3.0   0.0   0.0   4.0
+halves:     2.0  -1.0   4.5  -1.0  -1.0   8.0
+negated:   -4.0  -1.0  -9.0   0.0  -4.0 -16.0
+flags:      1.0  -1.0   1.0  -1.0  -1.0   1.0
+smeared:    1.0   1.0   0.0   2.0   2.0   0.0
+inverses:  0.00  1.00 -1.00  0.00 -0.50 -1.00
+picked:      10     1    30     1    50     1
+swapped:    6.0   2.0   4.0   4.0   2.0   6.0
+cleared:    0.0   2.0   0.0   0.0   2.0   0.0
+  $STATUS == "%X00000001"
+==== WHERER
+roots:      2.0   0.0   3.0   0.0   0.0   4.0
+halves:     2.0  -1.0   4.5  -1.0  -1.0   8.0
+negated:   -4.0  -1.0  -9.0   0.0  -4.0 -16.0
+flags:      1.0  -1.0   1.0  -1.0  -1.0   1.0
+smeared:    1.0   1.0   0.0   2.0   2.0   0.0
+inverses:  0.00  1.00 -1.00  0.00 -0.50 -1.00
+picked:      10     1    30     1    50     1
+swapped:    6.0   2.0   4.0   4.0   2.0   6.0
+cleared:    0.0   2.0   0.0   0.0   2.0   0.0
+  $STATUS == "%X00000001"
+==== WORDCOUNT
+Lines:  5  words:  18  characters:  82
+Longest line, 26 characters: "  3 dogs and 12 foxes  ran"
+Longest word: quick
+ 1  1 |*
+ 2  1 |*
+ 3  7 |*******
+ 4  4 |****
+ 5  5 |*****
+100 12 3 and brown dog dogs fox foxes
+hills jumps lazy over quick ran the
+Repeated: over*2 the*2
+Numbers:  3  sum:   115
+  $STATUS == "%X00000001"
+==== WORDCOUNTN
+Lines:  5  words:  18  characters:  82
+Longest line, 26 characters: "  3 dogs and 12 foxes  ran"
+Longest word: quick
+ 1  1 |*
+ 2  1 |*
+ 3  7 |*******
+ 4  4 |****
+ 5  5 |*****
+100 12 3 and brown dog dogs fox foxes
+hills jumps lazy over quick ran the
+Repeated: over*2 the*2
+Numbers:  3  sum:   115
+  $STATUS == "%X00000001"
+==== WORDCOUNTR
+Lines:  5  words:  18  characters:  82
+Longest line, 26 characters: "  3 dogs and 12 foxes  ran"
+Longest word: quick
+ 1  1 |*
+ 2  1 |*
+ 3  7 |*******
+ 4  4 |****
+ 5  5 |*****
+100 12 3 and brown dog dogs fox foxes
+hills jumps lazy over quick ran the
+Repeated: over*2 the*2
+Numbers:  3  sum:   115
+  $STATUS == "%X00000001"
+==== M_CONCORD
+ 5 lines, 37 words, 19 different, 32 line numbers
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LAZY          2:  1  2
+LEAVES        1:  5
+OVER          3:  1  4
+QUICK         1:  1
+RUNS          2:  3
+SLEEPS        1:  2
+SUN           2:  2  5
+THE           8:  1  2  3  4  5
+As read: 19 words, height 8, 32 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS SUN)) -)
+OVER: T OVER          3
+OVER now:  300 F
+Without SUN, a leaf: 18 words, height 8, 30 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS -)) -)
+Without LAZY, one subtree: 17 words, height 7, 28 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS(RUNS -)) -)
+Without QUICK, two subtrees: 16 words, height 7, 27 line numbers
+THE(RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS) -)
+Without the root, one subtree: 15 words, height 6, 22 line numbers
+RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS)
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LEAVES        1:  5
+OVER        300:  1  4
+RUNS          2:  3
+SLEEPS        1:  2
+Left:  0  0 F
+  $STATUS == "%X00000001"
+==== M_CONCORDN
+ 5 lines, 37 words, 19 different, 32 line numbers
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LAZY          2:  1  2
+LEAVES        1:  5
+OVER          3:  1  4
+QUICK         1:  1
+RUNS          2:  3
+SLEEPS        1:  2
+SUN           2:  2  5
+THE           8:  1  2  3  4  5
+As read: 19 words, height 8, 32 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS SUN)) -)
+OVER: T OVER          3
+OVER now:  300 F
+Without SUN, a leaf: 18 words, height 8, 30 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS -)) -)
+Without LAZY, one subtree: 17 words, height 7, 28 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS(RUNS -)) -)
+Without QUICK, two subtrees: 16 words, height 7, 27 line numbers
+THE(RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS) -)
+Without the root, one subtree: 15 words, height 6, 22 line numbers
+RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS)
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LEAVES        1:  5
+OVER        300:  1  4
+RUNS          2:  3
+SLEEPS        1:  2
+Left:  0  0 F
+  $STATUS == "%X00000001"
+==== M_CONCORDR
+ 5 lines, 37 words, 19 different, 32 line numbers
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LAZY          2:  1  2
+LEAVES        1:  5
+OVER          3:  1  4
+QUICK         1:  1
+RUNS          2:  3
+SLEEPS        1:  2
+SUN           2:  2  5
+THE           8:  1  2  3  4  5
+As read: 19 words, height 8, 32 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS SUN)) -)
+OVER: T OVER          3
+OVER now:  300 F
+Without SUN, a leaf: 18 words, height 8, 30 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LAZY(- LEAVES) -)))) SLEEPS(RUNS -)) -)
+Without LAZY, one subtree: 17 words, height 7, 28 line numbers
+THE(QUICK(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS(RUNS -)) -)
+Without QUICK, two subtrees: 16 words, height 7, 27 line numbers
+THE(RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS) -)
+Without the root, one subtree: 15 words, height 6, 22 line numbers
+RUNS(BROWN(A(- AND(- AUTUMN)) FOX(DOG(DALE FALL) JUMPS(IN(HILL -) OVER(LEAVES -)))) SLEEPS)
+A             1:  2
+AND           2:  3  4
+AUTUMN        1:  5
+BROWN         2:  1  5
+DALE          1:  4
+DOG           3:  1  2  3
+FALL          1:  5
+FOX           2:  1  3
+HILL          1:  4
+IN            2:  2  5
+JUMPS         1:  1
+LEAVES        1:  5
+OVER        300:  1  4
+RUNS          2:  3
+SLEEPS        1:  2
+Left:  0  0 F
+  $STATUS == "%X00000001"
+==== M_MIXED
+    1    4    9   16   25
+total   55 of  5 squares; at most  5
+  $STATUS == "%X00000001"
+==== M_MIXEDN
+    1    4    9   16   25
+total   55 of  5 squares; at most  5
+  $STATUS == "%X00000001"
+==== M_MIXEDR
+    1    4    9   16   25
+total   55 of  5 squares; at most  5
+  $STATUS == "%X00000001"
+==== M_POLYS
+P =  +1.0 X**2  +0.0 X**1  -2.0 X**0
+Q =  +1.0 X**1  +1.0 X**0
+P + Q =  +1.0 X**2  +1.0 X**1  -1.0 X**0
+P * Q =  +1.0 X**3  +1.0 X**2  -2.0 X**1  -2.0 X**0
+2 P =  +2.0 X**2  +0.0 X**1  -4.0 X**0
+P' =  +2.0 X**1  +0.0 X**0
+R =  +1.0 X**3  +1.0 X**2  +4.0 X**1  +0.0 X**0
+Degree 3, R(2) =  20.0, R(-1) =  -4.0
+Root of P near 1:  1.41421356 in 5 steps
+Root of P near -3:  -1.414
+Polynomials made: 13
+Report =  +1.0 X**4  +0.0 X**3  -4.0 X**2  +0.0 X**1  +4.0 X**0
+Degree 4; at 0 to 3:    4.0    1.0    4.0   49.0
+Made so far: 14
+Degree of the first 1 terms: 0
+Degree of the first 2 terms: 1
+Degree of the first 3 terms: 2
+Degree of the first 4 terms: 2
+T =  +0.5 X**2  -1.0 X**1  +3.0 X**0
+Polynomials made:119
+  $STATUS == "%X00000001"
+==== M_POLYSN
+P =  +1.0 X**2  +0.0 X**1  -2.0 X**0
+Q =  +1.0 X**1  +1.0 X**0
+P + Q =  +1.0 X**2  +1.0 X**1  -1.0 X**0
+P * Q =  +1.0 X**3  +1.0 X**2  -2.0 X**1  -2.0 X**0
+2 P =  +2.0 X**2  +0.0 X**1  -4.0 X**0
+P' =  +2.0 X**1  +0.0 X**0
+R =  +1.0 X**3  +1.0 X**2  +4.0 X**1  +0.0 X**0
+Degree 3, R(2) =  20.0, R(-1) =  -4.0
+Root of P near 1:  1.41421356 in 5 steps
+Root of P near -3:  -1.414
+Polynomials made: 13
+Report =  +1.0 X**4  +0.0 X**3  -4.0 X**2  +0.0 X**1  +4.0 X**0
+Degree 4; at 0 to 3:    4.0    1.0    4.0   49.0
+Made so far: 14
+Degree of the first 1 terms: 0
+Degree of the first 2 terms: 1
+Degree of the first 3 terms: 2
+Degree of the first 4 terms: 2
+T =  +0.5 X**2  -1.0 X**1  +3.0 X**0
+Polynomials made:119
+  $STATUS == "%X00000001"
+==== M_POLYSR
+P =  +1.0 X**2  +0.0 X**1  -2.0 X**0
+Q =  +1.0 X**1  +1.0 X**0
+P + Q =  +1.0 X**2  +1.0 X**1  -1.0 X**0
+P * Q =  +1.0 X**3  +1.0 X**2  -2.0 X**1  -2.0 X**0
+2 P =  +2.0 X**2  +0.0 X**1  -4.0 X**0
+P' =  +2.0 X**1  +0.0 X**0
+R =  +1.0 X**3  +1.0 X**2  +4.0 X**1  +0.0 X**0
+Degree 3, R(2) =  20.0, R(-1) =  -4.0
+Root of P near 1:  1.41421356 in 5 steps
+Root of P near -3:  -1.414
+Polynomials made: 13
+Report =  +1.0 X**4  +0.0 X**3  -4.0 X**2  +0.0 X**1  +4.0 X**0
+Degree 4; at 0 to 3:    4.0    1.0    4.0   49.0
+Made so far: 14
+Degree of the first 1 terms: 0
+Degree of the first 2 terms: 1
+Degree of the first 3 terms: 2
+Degree of the first 4 terms: 2
+T =  +0.5 X**2  -1.0 X**1  +3.0 X**0
+Polynomials made:119
+  $STATUS == "%X00000001"
+==== M_SHORTLIST
+opts 1.0 F F
+opts 2.0 T F
+  count  3
+opts 3.0 T T
+  count  4
+  label four
+opts 4.0 F T
+  label null
+  $STATUS == "%X00000001"
+==== M_SHORTLISTN
+opts 1.0 F F
+opts 2.0 T F
+  count  3
+opts 3.0 T T
+  count  4
+  label four
+opts 4.0 F T
+  label null
+  $STATUS == "%X00000001"
+==== M_SHORTLISTR
+opts 1.0 F F
+opts 2.0 T F
+  count  3
+opts 3.0 T T
+  count  4
+  label four
+opts 4.0 F T
+  label null
+  $STATUS == "%X00000001"
+==== M_STANDARD
+11.3.3.1:  3 values, total  17, from  -2.0 to  12.0
+History:   7.0  -2.0  12.0   0.0   0.0
+Seen by OLD_TALLY:  3  17  12.0
+11.3.3.2: I = 1, J = 10, B =  55.0, C(10,10) =  55.0, D(2,3) = ( 1.0, -1.0)
+Renamed: A =  9.0, D sum = ( 1.0, -1.0), I = 1
+11.3.3.3: (1,1)  2.5 (2,3) -1.0 (3,2)  4.0
+Dense:  2.5  0.0  0.0
+Dense:  0.0  0.0 -1.0
+Dense:  0.0  4.0  0.0
+11.3.3.4: N = 3, SIZE (C) = 54, sums  18.0  36.0  81.0
+Allocated after: F F F
+11.3.3.5: A = -3.0  4.0 -4.0, F =  4.0  2.0  3.0, FLAG = 2
+Columns 2 and 3: A =  4.0 -4.0, F =  2.0  3.0, FLAG = 1
+11.3.3.6: 17 characters: Module operators!
+Interval: [ 0.5, 4.0]
+11.3.3.8: JX = 11.0, KY = 2.0, KZ = 3.0
+The two JZs:  5.0 -5.0
+12.1.2.2.2: BX = 1.0, IX = 3, JX = 4, Q = -1.0, CX = 5.0
+X =  6.0, DY + DZ = 15.0, EX = 11.0, FX + GX = 19.0
+In A: DX = 12.0, Q = 2.0
+  $STATUS == "%X00000001"
+==== M_STANDARDN
+11.3.3.1:  3 values, total  17, from  -2.0 to  12.0
+History:   7.0  -2.0  12.0   0.0   0.0
+Seen by OLD_TALLY:  3  17  12.0
+11.3.3.2: I = 1, J = 10, B =  55.0, C(10,10) =  55.0, D(2,3) = ( 1.0, -1.0)
+Renamed: A =  9.0, D sum = ( 1.0, -1.0), I = 1
+11.3.3.3: (1,1)  2.5 (2,3) -1.0 (3,2)  4.0
+Dense:  2.5  0.0  0.0
+Dense:  0.0  0.0 -1.0
+Dense:  0.0  4.0  0.0
+11.3.3.4: N = 3, SIZE (C) = 54, sums  18.0  36.0  81.0
+Allocated after: F F F
+11.3.3.5: A = -3.0  4.0 -4.0, F =  4.0  2.0  3.0, FLAG = 2
+Columns 2 and 3: A =  4.0 -4.0, F =  2.0  3.0, FLAG = 1
+11.3.3.6: 17 characters: Module operators!
+Interval: [ 0.5, 4.0]
+11.3.3.8: JX = 11.0, KY = 2.0, KZ = 3.0
+The two JZs:  5.0 -5.0
+12.1.2.2.2: BX = 1.0, IX = 3, JX = 4, Q = -1.0, CX = 5.0
+X =  6.0, DY + DZ = 15.0, EX = 11.0, FX + GX = 19.0
+In A: DX = 12.0, Q = 2.0
+  $STATUS == "%X00000001"
+==== M_STANDARDR
+11.3.3.1:  3 values, total  17, from  -2.0 to  12.0
+History:   7.0  -2.0  12.0   0.0   0.0
+Seen by OLD_TALLY:  3  17  12.0
+11.3.3.2: I = 1, J = 10, B =  55.0, C(10,10) =  55.0, D(2,3) = ( 1.0, -1.0)
+Renamed: A =  9.0, D sum = ( 1.0, -1.0), I = 1
+11.3.3.3: (1,1)  2.5 (2,3) -1.0 (3,2)  4.0
+Dense:  2.5  0.0  0.0
+Dense:  0.0  0.0 -1.0
+Dense:  0.0  4.0  0.0
+11.3.3.4: N = 3, SIZE (C) = 54, sums  18.0  36.0  81.0
+Allocated after: F F F
+11.3.3.5: A = -3.0  4.0 -4.0, F =  4.0  2.0  3.0, FLAG = 2
+Columns 2 and 3: A =  4.0 -4.0, F =  2.0  3.0, FLAG = 1
+11.3.3.6: 17 characters: Module operators!
+Interval: [ 0.5, 4.0]
+11.3.3.8: JX = 11.0, KY = 2.0, KZ = 3.0
+The two JZs:  5.0 -5.0
+12.1.2.2.2: BX = 1.0, IX = 3, JX = 4, Q = -1.0, CX = 5.0
+X =  6.0, DY + DZ = 15.0, EX = 11.0, FX + GX = 19.0
+In A: DX = 12.0, Q = 2.0
+  $STATUS == "%X00000001"
+==== END

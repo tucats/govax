@@ -887,3 +887,25 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   takes the space too, so the rehearsal's volume is the same. `odscheck` gains
   `-extensions` (each extension header, raw). The crashed volume is kept as
   `testdata/disks/f90r-exchange-attempt1.dsk`.
+- **2026-11-22:** Subtask 11, round 1 on VMS 7.1, and its fix. VMS's
+  ANALYZE/DISK_STRUCTURE of the volume made `/HEADERS=6000 /DIRECTORIES=800`
+  found nothing but the missing QUOTA.SYS, and `@F90R` ran to its end: VMS's
+  MACRO and LINK built FTNRTL with no message, and of the corpus's 366 runs
+  351 printed what govax's run of the procedure prints (`TestF90ROracle`,
+  holding the rehearsal to `testdata/f90r/vax/f90r.log`). The rest, AUTOLEN,
+  AUTOS, CALENDAR, CHARFNS, and TEXTFMT in all three variants, and fcalc in
+  all four, stopped at `%MACRO-E-DIRSYNX` on a bare `.ASCII`: the compiler
+  wrote one for a zero-length text (`''`, a CHARACTER*0 initial value), its
+  `asciiPieces` giving an empty text one empty piece, and govax's MACRO took
+  it. Fixed both ways: `asciiPieces` gives an empty text no pieces, so a text
+  datum is its label alone and an initial value a comment
+  (`codegen`'s `TestTexts`); and govax's MACRO refuses a string directive
+  with nothing after it, DIRSYNX, before storing anything, as VMS's does
+  (`asm`'s `TestStringDirectiveWithNothing`; the author confirmed `.ASCII //`
+  is accepted on VMS and stores nothing; `.ASCIZ`, `.ASCIC`, and `.ASCID` with
+  nothing are taken to be DIRSYNX too, unconfirmed). Those programs are in
+  `f90rAwaitingVMS` until round 2. The corpora (every mode), fcalc's
+  milestone, `TestNoF90Unchanged`, and both rounds' rehearsal and oracle pass.
+  The volume is rebuilt from the fixed compiler (round 1's kept as
+  `testdata/disks/f90r-exchange-round1.dsk`), and `copyout.cmd` writes round 2
+  to `vax/round2/`.

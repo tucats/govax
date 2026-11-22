@@ -356,6 +356,12 @@ func writeInitial(w *Writer, first, last *sema.Initial, n int) {
 
 	if first.Type.Kind == sema.Character {
 		pieces := asciiPieces(string(first.Bytes))
+		if len(pieces) == 0 { // CHARACTER*0: no bytes, and no .ASCII (asciiPieces)
+			w.Comment(what + " (no characters)")
+
+			return
+		}
+
 		w.Statement("", ".ASCII", pieces[0], what)
 
 		for _, p := range pieces[1:] {
@@ -1200,6 +1206,11 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 
 	case ir.TextDatum:
 		pieces := asciiPieces(d.Text)
+		if len(pieces) == 0 { // '': the label alone (asciiPieces)
+			w.Label(label)
+
+			break
+		}
 
 		w.Statement(label, ".ASCII", pieces[0], "")
 
@@ -1467,7 +1478,9 @@ func (g *routineGen) writeNamelist(w *Writer, label string, n *ir.NamelistBlock)
 // asciiPieces is a text as .ASCII operands, each short enough for a
 // line: runs of printing characters between delimiters (a character the
 // run doesn't hold), and any other character as its code in angle
-// brackets: /IT'S/<9>/DONE/.
+// brackets: /IT'S/<9>/DONE/. An empty text is no pieces: MACRO refuses a
+// .ASCII with no operand (DIRSYNX, as VMS 7.1's MACRO showed), so a caller
+// writes no .ASCII for it.
 func asciiPieces(text string) []string {
 	const perLine = 64
 
@@ -1512,7 +1525,7 @@ func asciiPieces(text string) []string {
 
 	flushRun()
 
-	if b.Len() > 0 || len(pieces) == 0 {
+	if b.Len() > 0 {
 		pieces = append(pieces, b.String())
 	}
 

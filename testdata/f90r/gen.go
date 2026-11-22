@@ -25,9 +25,9 @@ const (
 	volume = "testdata/disks/f90r-exchange.dsk"
 	device = "DUA5:" // DUA2 is the author's XFER volume, mounted at startup
 
-	// results is where copyout.cmd puts VMS's run. The first round goes to vax/ itself;
-	// a later one is to go to vax/roundN, beside the one the tests read, until it's checked.
-	results = dir + "/vax"
+	// results is where copyout.cmd puts VMS's run: vax/roundN, beside the run the
+	// tests read in vax/ (round 1's), until it's checked.
+	results = dir + "/vax/round2"
 
 	// headers and directories are INITIALIZE's /HEADERS and /DIRECTORIES: an
 	// index file with room for every file govax writes (about 1,700) and VMS's
