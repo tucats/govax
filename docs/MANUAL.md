@@ -1887,8 +1887,9 @@ missing fields from the one before: `DELETE A.TXT;1,;2,B;1`.
 PURGE [/LIMIT=n] [/LOG] [file-spec]
 ```
 
-Deletes all but the newest `n` versions (default 1) of each file. `/LOG`
-names each file deleted in full, with its size.
+Deletes all but the newest `n` versions (default 1) of each file, saying
+nothing. `/LOG` names each file deleted in full, with its size, or says
+`%PURGE-I-NOFILPURG, no files purged` when there was nothing to delete.
 
 #### RENAME
 

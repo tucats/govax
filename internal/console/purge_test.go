@@ -58,9 +58,8 @@ func TestConsolePurge_badFileSpec(t *testing.T) {
 
 // TestConsolePurge_trimsVersionsAndPrintsConfirmation confirms the
 // Console-level wrapper's happy path: purging a name with several versions
-// leaves only the newest and prints the same "%PURGE-S-PURGED, ..."
-// confirmation line real VMS (and ods2's own cmdPurge, this command's
-// behavioral reference) would.
+// leaves only the newest and, without /LOG, says nothing, as VMS's PURGE
+// does.
 func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -81,8 +80,8 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 		t.Fatalf("Purge: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT;1 purged") {
-		t.Errorf("Purge output = %q, want a PURGE-S-PURGED confirmation", buf.String())
+	if buf.Len() != 0 {
+		t.Errorf("Purge output = %q, want nothing", buf.String())
 	}
 
 	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, false); !isDeleteSearchFail(err) {
@@ -95,7 +94,8 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 }
 
 // TestConsolePurge_logNothingToPurge: PURGE/LOG with no version to delete says
-// NOFILPURG, as VMS 7.1's does; PURGE alone says nothing.
+// NOFILPURG, as VMS 7.1's does; PURGE alone says nothing. With one version to
+// delete, PURGE/LOG names it, with no total.
 func TestConsolePurge_logNothingToPurge(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -113,6 +113,14 @@ func TestConsolePurge_logNothingToPurge(t *testing.T) {
 
 	if err := c.cmd().Purge("FOO.TXT", 1, true); err != nil || buf.String() != "%PURGE-I-NOFILPURG, no files purged\n" {
 		t.Errorf("PURGE/LOG with nothing to purge: %v, %q, want NOFILPURG", err, buf.String())
+	}
+
+	createConsoleTestFile(t, vol, "FOO.TXT")
+	buf.Reset()
+
+	if err := c.cmd().Purge("FOO.TXT", 1, true); err != nil || !strings.HasPrefix(buf.String(), "%PURGE-I-FILPURG, ") ||
+		strings.Contains(buf.String(), "TOTAL") {
+		t.Errorf("PURGE/LOG of one version: %v, %q, want one FILPURG line", err, buf.String())
 	}
 }
 
@@ -143,8 +151,12 @@ func TestDispatch_purgeViaDCL(t *testing.T) {
 		t.Fatalf("Dispatch PURGE FOO.TXT: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT;1 purged") {
-		t.Errorf("Dispatch PURGE output = %q, want a PURGE-S-PURGED confirmation", buf.String())
+	if buf.Len() != 0 {
+		t.Errorf("Dispatch PURGE output = %q, want nothing", buf.String())
+	}
+
+	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, false); !isDeleteSearchFail(err) {
+		t.Errorf("Delete of the purged-away version = %v, want SEARCHFAIL", err)
 	}
 }
 
@@ -174,8 +186,12 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 		t.Fatalf("Dispatch PURGE FOO.TXT/LIMIT=2: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT;1 purged") {
-		t.Errorf("Dispatch PURGE/LIMIT=2 output = %q, want a keeping-2 confirmation", buf.String())
+	if buf.Len() != 0 {
+		t.Errorf("Dispatch PURGE/LIMIT=2 output = %q, want nothing", buf.String())
+	}
+
+	if err := c.cmd().Delete([]string{"FOO.TXT;2"}, false); err != nil {
+		t.Errorf("Delete of a kept version = %v, want success", err)
 	}
 
 	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, false); !isDeleteSearchFail(err) {

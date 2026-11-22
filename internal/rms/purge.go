@@ -37,9 +37,8 @@ import (
 // Purge trims every distinct name specText matches down to its keep most
 // recent surviving versions (volume.PurgeVersions does the actual survivor
 // selection and deletion), and returns the distinct "NAME.TYPE" names it
-// touched -- enough for the console layer to print one "%PURGE-S-PURGED,
-// NAME.TYPE purged (keeping N version(s))" confirmation line per name,
-// matching ods2's own cmdPurge output.
+// deleted -- enough for PURGE/LOG to name each (internal/dclcmd's
+// showPurged; PURGE without /LOG says nothing, as VMS's does).
 //
 // An empty specText defaults to "*.*" (every name in the current default
 // directory), the same convenience default DIRECTORY itself uses. Whatever

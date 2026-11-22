@@ -29,7 +29,8 @@
       /LOG
 
    Shows each file deleted, by its full name, with its size, and a total
-   when there is more than one.
+   when there is more than one; or, when there is nothing to delete,
+   NOFILPURG.  Without /LOG, PURGE says nothing.
 
 2 Examples
 

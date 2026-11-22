@@ -170,8 +170,8 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 		t.Fatalf("Dispatch PURGE BAR.TXT: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, BAR.TXT;1 purged") {
-		t.Errorf("PURGE output = %q, want a %%PURGE-S-PURGED confirmation", buf.String())
+	if buf.Len() != 0 {
+		t.Errorf("PURGE output = %q, want nothing, as VMS's PURGE says without /LOG", buf.String())
 	}
 
 	// The default /LIMIT=1 keeps only the newest version (;2); the older

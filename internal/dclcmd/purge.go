@@ -25,10 +25,9 @@ import (
 // real operator would see for that exact condition.
 
 // Purge trims every name specText matches down to its keep most recent
-// surviving versions, printing one "%PURGE-S-PURGED, NAME.TYPE;N purged"
-// confirmation line per version actually deleted (none for a version kept) —
-// see internal/rms.Session.Purge's own doc comment for exactly how specText
-// is resolved, and why any version it carries is overridden rather than
+// surviving versions, saying nothing unless log is set (showPurged) — see
+// internal/rms.Session.Purge's own doc comment for exactly how specText is
+// resolved, and why any version it carries is overridden rather than
 // honored.
 //
 // Session.Purge's failures are told apart here so each is reported as the
@@ -96,32 +95,30 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 // its $STATUS).
 var purgeFilNotPur = deleteSearchFail&^0xFFFF | vmsdef.LibrarySymbols["SHR$_FILNOTPUR"]
 
-// showPurged writes what PURGE says of the files it purged: with log, each
-// with its blocks and a total, or NOFILPURG when there were none, as VMS
-// 7.1's PURGE/LOG says (seen by the author on the simh VAX, 2026-11-22;
-// without /LOG it says nothing then).
+// showPurged writes what PURGE says of the files it purged, as VMS 7.1's
+// PURGE does (seen by the author on the simh VAX, 2026-11-22): nothing
+// without log, whatever it deleted; with log, each file with its blocks and a
+// total when there is more than one, or NOFILPURG when there were none.
 func (c *Context) showPurged(purged []rms.DeletedFile, log bool) {
 	var blocks uint32
 
-	if log && len(purged) == 0 {
+	if !log {
+		return
+	}
+
+	if len(purged) == 0 {
 		c.Printf("%%PURGE-I-NOFILPURG, no files purged\n")
 
 		return
 	}
 
 	for _, d := range purged {
-		if !log {
-			c.Printf("%%PURGE-S-PURGED, %s.%s;%d purged\n", d.Name, d.Type, d.Version)
-
-			continue
-		}
-
 		c.Printf("%%PURGE-I-FILPURG, %s deleted (%d block%s)\n", d.Full, d.Blocks, plural(d.Blocks))
 
 		blocks += d.Blocks
 	}
 
-	if log && len(purged) > 1 {
+	if len(purged) > 1 {
 		c.Printf("%%PURGE-I-TOTAL, %d files deleted (%d block%s)\n", len(purged), blocks, plural(blocks))
 	}
 }
