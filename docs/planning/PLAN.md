@@ -161,7 +161,9 @@ questions, and a progress log extended as that phase is worked.
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17; done 2026-11-20 |
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data, traceback lines, stepped addresses and fused nests — planned 2026-11-17; done 2026-11-20 |
 | 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | fcalc, a scientific calculator of 11,000 lines, as the Fortran 90 milestone: every mode, gfortran's witness, the VMS round (fcalc and the whole corpus on VMS 7.1), shipped as SYS$SYSTEM:FCALC.EXE with HELP FCALC; the manual's 14.13 and Appendix E and FORTRAN-INTERNALS.md finished — planned 2026-11-17; done 2026-11-22 |
-| 112 | [PHASE-112 - Fortran errata](PHASE-112%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: every gap VAX FORTRAN, Fortran 90, FTNRTL, MACRO, LINK, and the debugger left, sorted into a whole to-do list, Fortran 95's additions among it, and what the author chooses done — planned 2026-11-22; the survey (subtask 1) done 2026-11-22 |
+| 112 | [PHASE-112 - Fortran 95](PHASE-112%20-%20Fortran%2095.md) | Fortran 95's additions under `/F90`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization, nested WHERE, the intrinsic changes, CPU_TIME, zero widths, zero-sized arrays, `/STANDARD=F90` widened — planned 2026-11-22, split from the errata at its survey's review |
+| 113 | [PHASE-113 - Fortran errata](PHASE-113%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: the survey's whole to-do list (Part A, done 2026-11-22) and what the author chose done (Part B), with a VMS probe round — planned 2026-11-22 |
+| 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -1203,4 +1205,6 @@ FORTRAN, `/NOF90` leaving every old program's MACRO unchanged; 117 corpus progra
 run in every mode, on gfortran, and on VMS. Its "Where things stand" is the program's follow-up
 list. At the close-out the author answered Phase 99's question 2 with a go, and widened Phase 112
 into the Fortran errata: a whole to-do list of what both Fortran programs and their tools left,
-Fortran 95's additions among it, with resolved items marked in the docs that still listed them.
+Fortran 95's additions among it, with resolved items marked in the docs that still listed them. At
+the survey's review the author split it: Fortran 95 is Phase 112, the errata Phase 113, and
+`CONVERT=` Phase 114.

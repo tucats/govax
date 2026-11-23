@@ -863,7 +863,7 @@ Phase 103 is done. What it left, and where each goes:
   own, headed HOST.INNER, and nothing more), the debugger's names through hosts,
   and `/STANDARD` for the phase's forms; and measuring what internal procedures
   cost the optimizer, which treats every host cell an internal procedure reaches
-  as changed by any call, with no inline expansion. *(Resolved in Phase 110, but for the measuring, Phase 112's A.5.4.)*
+  as changed by any call, with no inline expansion. *(Resolved in Phase 110, but for the measuring, Phase 113's A.5.4.)*
 - **Unconfirmed choices of ours:** a null argument (`CALL S(A,,B)`) through an
   explicit interface is accepted and passes 0, as for an absent OPTIONAL one;
   every internal procedure of a host in its frame gets the hidden FP, not only

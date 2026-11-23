@@ -905,7 +905,7 @@ What Phase 102 left, each for the phase named:
   name (Phase 104's sections to old dummies, with Phase 103's interfaces). *(Resolved in Phase 104.)*
 - **Array functions of a shape not known when compiling** (Phase 104): RESHAPE of values that
   aren't constants, a `DIM=` that isn't constant with ARRAY of rank above 1, and MERGE of
-  CHARACTER values of a length not constant. *(Resolved in Phase 104, but for CSHIFT's, EOSHIFT's, and SPREAD's DIM= and RESHAPE's ORDER=, Phase 112's A.3.1.)*
+  CHARACTER values of a length not constant. *(Resolved in Phase 104, but for CSHIFT's, EOSHIFT's, and SPREAD's DIM= and RESHAPE's ORDER=, Phase 113's A.3.1.)*
 - **CHARACTER values of a run-time length in an array expression** (a CHARACTER function's
   value, a concatenation with a passed-length dummy), which would be made at each element:
   NOTIMPL (`checkArrayParts`), for Phase 104's functions of run-time character length. *(Resolved in Phase 104, subtask 4c.)*
@@ -922,5 +922,5 @@ What Phase 102 left, each for the phase named:
   same subscripts are prepared twice, two induction variables stepping together; MINLOC and
   MAXLOC go through `$A1` and a one-trip loop into a target they don't overlap; a reduction's
   running value and found flag stay in memory; a whole-array copy is a loop, not a MOVC3; and
-  the run-time overlap test of open question 1, if measurements ask for it. *(Fusion resolved in Phase 110; the rest measured and left, Phase 112's A.5.)*
+  the run-time overlap test of open question 1, if measurements ask for it. *(Fusion resolved in Phase 110; the rest measured and left, Phase 113's A.5.)*
 - **`/STANDARD`** judges nothing new (Phase 110's `/STANDARD=F90`). *(Resolved in Phase 110.)*

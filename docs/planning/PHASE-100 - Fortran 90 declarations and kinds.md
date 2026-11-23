@@ -609,11 +609,11 @@ What Phase 100 left, each for the phase named:
 - **Arrays:** array constructors as initial values, array PARAMETERs, and
   assumed- or deferred-shape bounds (`A(:)`) are NOTIMPL (Phases 102 and 104). *(Resolved in Phases 102 and 104.)*
 - **CHARACTER** of length zero, or of a length that isn't constant in a
-  non-dummy's declaration, is NOTIMPL (Phase 108, answer 3). *(Resolved: a run-time length in Phase 104, length zero in Phase 108 but for a component or function value, Phase 112's A.3.1.)*
+  non-dummy's declaration, is NOTIMPL (Phase 108, answer 3). *(Resolved: a run-time length in Phase 104, length zero in Phase 108 but for a component or function value, Phase 113's A.3.1.)*
 - **COMPLEX(16)'s** I/O (Phase 109), powers, and intrinsic functions other
   than the conversions and parts (Phase 108). A REAL(16) beside a COMPLEX(4)
   or COMPLEX(8) gives COMPLEX\*16, VAX FORTRAN's rule, where the standard's
-  7.1.4.2 gives COMPLEX(16) (MANUAL.md's 14.13). *(I/O resolved in Phase 109, powers and functions in Phase 108, but for SUM and its kin, Phase 112's A.3.1.)*
+  7.1.4.2 gives COMPLEX(16) (MANUAL.md's 14.13). *(I/O resolved in Phase 109, powers and functions in Phase 108, but for SUM and its kin, Phase 113's A.3.1.)*
 - **SELECTED_INT_KIND and SELECTED_REAL_KIND of a value** that isn't constant
   are NOTIMPL (Phase 108). *(Resolved in Phase 108.)*
 - **Keyword arguments** to intrinsic functions whose rows don't name their

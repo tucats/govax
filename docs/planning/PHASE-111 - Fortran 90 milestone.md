@@ -1109,7 +1109,7 @@ the FORTRAN-77 corpus are unchanged under `/NOF90` (`TestNoF90Unchanged`). MANUA
 and Appendix E and FORTRAN-INTERNALS.md's sections 24 to 36 describe it. What it left, and
 where each goes:
 
-- **Phase 112, the Fortran errata (a go), whose list holds everything below; Fortran 95's
+- **Phase 112, the Fortran errata (a go; *split 2026-11-22: Fortran 95 is Phase 112, the errata Phase 113*), whose list holds everything below; Fortran 95's
   additions:** FORALL; PURE and ELEMENTAL procedures (module procedures
   among them); `NULL()`, `=> NULL()`, and default initialization of components (today
   NOTIMPL); CPU_TIME; a WHERE inside a WHERE and ELSEWHERE with a mask (F95ONLY); MAXLOC's

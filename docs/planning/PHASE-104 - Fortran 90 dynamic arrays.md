@@ -1251,7 +1251,7 @@ Phase 104 is done. What it left, and where each goes:
   old dummies (a copy is made for INTENT(OUT) too), `A = F(X)` into A directly when
   they can't overlap, a value passed to an old dummy copied from its temporary, and
   SPREAD, CSHIFT, and EOSHIFT computed where they're used instead of into a temporary;
-  `/STANDARD` for the phase's forms; the debugger's names through hosts. *(The stride, `/STANDARD`, and the debugger resolved in Phase 110; the rest measured and left, Phase 112's A.5.3.)*
+  `/STANDARD` for the phase's forms; the debugger's names through hosts. *(The stride, `/STANDARD`, and the debugger resolved in Phase 110; the rest measured and left, Phase 113's A.5.3.)*
 - **Not planned, ours:** the DIM= of SPREAD, CSHIFT, and EOSHIFT and RESHAPE's ORDER=
   must be constants; a CHARACTER argument to them, or to an assumed-shape or old
   dummy, of a run-time length must be made of names (`lengthFromNames`); `%REF`,

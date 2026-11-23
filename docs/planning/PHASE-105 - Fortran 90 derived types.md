@@ -984,4 +984,4 @@ Phase 105 is done. What it left, and where each goes:
   descriptor is class 0, govax's own convention, which no VMS run-time library
   reads.
 - **Awaiting the next VMS round:** `testdata/fortran`'s `recarrays.for` and
-  `recdyn.for`, in `testdata/ftn86`'s procedure and `ftn86AwaitingVMS`. *(Still awaiting: Phase 112's A.9.5.)*
+  `recdyn.for`, in `testdata/ftn86`'s procedure and `ftn86AwaitingVMS`. *(Still awaiting: Phase 113's A.9.5.)*

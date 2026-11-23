@@ -1,13 +1,15 @@
-# Phase 112 — Fortran errata
+# Phase 113 — Fortran errata
 
-**Status:** planned 2026-11-22 at Phase 111's close-out; subtask 1, the survey, done
-2026-11-22 (Part A), for the author's review. Phase 99's question 2
-left Fortran 95's additions to an optional Phase 112, and the author chose go
-(`PHASE-111 - Fortran 90 milestone.md`, "The author's answer on Phase 112"),
-then widened the phase the same day: it is the **errata** of both Fortran
-programs and the tools beside them. A skeletal doc: subtask 1, the survey,
-makes Part A's list whole and proposes what this phase does, reviewed before
-any implementation. Needs Phases 74 to 111.
+**Status:** planned 2026-11-22. Phase 111's close-out planned Phase 112 as the
+Fortran errata, Fortran 95's additions among them; subtask 1, the survey (Part A),
+was done the same day, and at its review the author split the phase
+("The author's answers", below): **Fortran 95 is Phase 112**
+(`PHASE-112 - Fortran 95.md`), and this doc, renamed from
+`PHASE-112 - Fortran errata.md` with its survey, is **Phase 113, the errata**:
+the rest of Part A's list. `CONVERT=` is **Phase 114**
+(`PHASE-114 - FORTRAN CONVERT.md`). Needs Phase 112, so its probe round checks
+both. Part A was written while this was Phase 112, so its **proposed: 112** marks
+mean this errata phase or Phase 112, as Part B sorts them.
 
 ## Goal
 
@@ -19,9 +21,8 @@ done as the author chooses:
   LIB$, the services);
 - **Fortran 90** (Phases 99 to 111): every NOTIMPL, every "measured, left for
   later", every unconfirmed choice;
-- **Fortran 95's additions**, the author's go: FORALL, PURE and ELEMENTAL,
-  `NULL()` and default initialization, CPU_TIME, nested WHERE, and the rest
-  (Part A's group D);
+- **Fortran 95's additions** were group D of the list; they are Phase 112's
+  now, and A.4 below only records them;
 - **the tools beside them**: MACRO, LINK, LIBRARY, ANALYZE, the debugger,
   and what the VMS rounds found in VMS's tools or ods2's volumes.
 
@@ -82,7 +83,7 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
    FORTRAN's conversions are between VAX formats and IEEE, IBM, CRAY, and big-endian
    integers, on unformatted records. **Own phase if wanted** (question 5): it is a library of
    conversions, unformatted I/O's every path, and no probe could check it (VMS's FORRTL could:
-   **probe** first).
+   **probe** first). *(Phase 114, the author's answer 5.)*
 2. A running program's files on the host (Phase 81's answer 3; MANUAL.md 14.7). RMS reaches
    only volumes; COPY brings a host file in. **Not planned**: govax's RMS is a volume's, and
    Phase 97's `vax.host.sysprv` is the host's one door.
@@ -211,6 +212,10 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
 
 ## A.4 Fortran 95's additions (the author's go)
 
+*Moved to Phase 112 at the review (`PHASE-112 - Fortran 95.md`, whose Part A starts from
+this list), with A.1.11, A.3.2's structures with initial values in a module's text, and
+A.3.5. Kept here as the survey found it.*
+
 Checked 2026-11-22 by compiling one program with all of them: none is in, each as listed. The
 HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 times, ELEMENTAL
 193, CPU_TIME 8, and its deleted-feature notes); the Fortran 90 texts at hand are no help.
@@ -304,7 +309,7 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
 
 1. Real FORTRAN debugger records, SET LANGUAGE FORTRAN (Phase 85's review, level C; Phases 74,
    99, 110). **Own phase if wanted** (question 6): it is the DST's language records in MACRO
-   or an object writer, and the debugger reading them.
+   or an object writer, and the debugger reading them. *(Not planned, the author's answer 6.)*
 2. `SET BREAK %LINE n`, SHOW CALLS's line column, TYPE, and EXAMINE/SOURCE counting the MACRO
    file's lines (Phases 110, 111). **Proposed: 112**: the `/DEBUG` table already maps lines
    both ways (`UNIT.$LINEn`, `showFortranLine`).
@@ -418,9 +423,10 @@ batch jobs (Phase 98); Phase 99's to 110's items for named later phases; DEVIATI
 console's `SET name=value`" entry, whose one point Phase 50 resolved, taken out of
 DEVIATIONS.md (DEVIATIONS-RESOLVED.md already had a copy, now marked resolved).
 
-## A.14 What the survey proposes for Phase 112
+## A.14 What the survey proposed
 
-For the author's review; question 1 decides. In the order the work would go:
+For the author's review; question 1 decided it ("The author's answers" below, and Part B,
+which replaces this list). As the survey wrote it: In the order the work would go:
 
 1. **Fortran 95** (A.4, all of it), with A.3.2's module text for default initialization, A.1.11's
    recovery, and A.3.5's zero-sized arrays under `/F90`. The bulk of the phase.
@@ -441,33 +447,116 @@ wanted), Phases 60 and 61 (A.2.2), ANALYZE/DISK_STRUCTURE/REPAIR (A.9.1), Phase 
 
 ## Open questions
 
+Note: any ANSWER that says "this phase" likely means the new PHASE 113 given the answer
+to the first question, which splits _this_ phase into A.14's list (and probably should
+be renamed to summarize it's work as "Fortran 95 extensions"), and moves everything
+else to the _next_ PHASE 113, which really is the "Errata" phase.
+
 1. **Scope**: A.14's list as this phase, or a part of it (Fortran 95 alone first, the rest a
-   Phase 113)?
+   Phase 113)? ANSWER: Let's separate the Fortran 95 as the first phase, and the rest moved
+   to a (new) PHASE 113. That will keep this document from growing unwieldy as we work though
+   what will doubtless be a _lot_ of subtasks.
 2. **Sources for Fortran 95**: the HP Fortran manual describes all of group D (FORALL, PURE,
    ELEMENTAL, NULL, default initialization, CPU_TIME, the deleted features), and gfortran
-   `-std=f95` is the witness, as for Fortran 90. Enough, or should a Fortran 95 text be found?
+   `-std=f95` is the witness, as for Fortran 90. Enough, or should a Fortran 95 text be found? 
    (The survey's view: enough; where the HP manual adds DEC's extensions, the standard's
    form is what gfortran `-std=f95` takes.)
-3. **A simh round** (A.12): yes, once, after implementation?
+   ANSWER: I am okay with using the HP Fortran manual with gfortran as verification
+   and/or backup. 
+3. **A simh round** (A.12): yes, once, after implementation? ANSWER: Yes, let's do a
+   probe round.
 4. **Phases 60 and 61**: left as planned phases (the survey's view: no FORTRAN program needs
    them), or LIB$INITIALIZE folded in here, since Phase 92 found a main image's
-   initialization routines never run?
-5. **`CONVERT=`**: a phase of its own, or not planned?
+   initialization routines never run? ANSWER: for completness let's fold in LIB$INITIALIZE.
+5. **`CONVERT=`**: a phase of its own, or not planned? ANSWER: A phase of it's own.
 6. **Real FORTRAN debugger records** (level C): a phase of its own, or not planned now that
-   the `/DEBUG` table covers names, types, sections, pointers, and lines?
-7. **STR$'s arithmetic** (A.2.1): in this phase, with a probe, or left?
+   the `/DEBUG` table covers names, types, sections, pointers, and lines? ANSWER: let's 
+   plan on not doing it; we don't have a good source for actual FORTRAN debug records and
+   risk deviating from code that could run on a real VMS system if we add our own debug
+   record types.
+7. **STR$'s arithmetic** (A.2.1): in this phase, with a probe, or left? ANSWER: let do
+   it in this phase.
 8. **Spellings and modes**: zero-sized explicit-shape arrays under `/F90` only (A.3.5)? And
    the definition modules to USE (A.3.3): `USE SSDEF`, `USE STARLET_SSDEF`, or another name,
-   since `$` can't start a module's name?
+   since `$` can't start a module's name? ANSWER: yes on zero-sized arrays. As for definition
+   modlues, lets use "STARLET_" as a prefix to make it unlikely to have a collision with
+   anything a user program would want/use for another purpose.
 9. **`/STANDARD=F95`** (A.4.8): does a `/F90` unit's default judgment become F95 (Fortran 95
    is a superset but for the deleted features), or stay F90 with F95 asked for?
+   ANSWER: let's let /F90 expand to encompass the F95 set we're implementing.
 10. **Housekeeping outside Fortran**: the grammar leftovers and the duplicated deviations (A.11.4,
-    A.11.5) in this phase, or left?
+    A.11.5) in this phase, or left? ANSWER: lets do them in this phase.
+
+## The author's answers (2026-11-22)
+
+Written into the questions above; what each decides:
+
+1. **Split.** Fortran 95 is Phase 112 (A.14's item 1: A.4, with A.1.11, A.3.2's
+   structures with initial values in a module's text, and A.3.5), so this doc doesn't grow
+   past use; everything else proposed is this phase, Phase 113. The author left the split's
+   lines to the survey's judgment.
+2. **Sources for Fortran 95**: the HP Fortran manual, gfortran `-std=f95` the witness and
+   backup (Phase 112's).
+3. **A probe round**: yes, once, here, after Phases 112 and 113's implementation (A.12),
+   then its fixes.
+4. **LIB$INITIALIZE** is folded in here (Phase 61 keeps the rest of its list, and Phase 60
+   its trees).
+5. **`CONVERT=`** is a phase of its own: Phase 114 (`PHASE-114 - FORTRAN CONVERT.md`).
+6. **Real FORTRAN debugger records: not planned.** No source describes VAX FORTRAN's own
+   records, and records of govax's invention would make objects VMS's debugger may not
+   read. The `/DEBUG` table stays the way (A.8.1).
+7. **STR$'s arithmetic** is done here, with probe cases (A.2.1).
+8. **Zero-sized explicit-shape arrays** under `/F90` only (Phase 112). **Definition modules
+   to USE** are `STARLET_` and the module's name without its `$`: `USE STARLET_SSDEF`
+   (A.3.3, here).
+9. **`/STANDARD`**: no F95 keyword. `/F90` takes in the Fortran 95 that Phase 112 adds, and
+   `/STANDARD=F90` judges by that widened language (Phase 112).
+10. **Housekeeping**: the duplicated deviations and the grammar's verbs with no handlers are
+    done here (A.11.4, A.11.5).
+
+# Part B — what Phase 113 does
+
+Part A's places, as the answers settle them. Everything marked **proposed: 112** in Part A
+but for A.4, A.1.11, A.3.2's module text, and A.3.5 is this phase's; A.1.1 is Phase 114's;
+A.8.1 is not planned.
+
+- **Fortran 90**: A.3.1's six NOTIMPLs marked 112 (DIM= and ORDER= not constant, an array
+  BACK=, COMPLEX(16) to SUM and its kin, CHARACTER length zero in a component or function
+  value, a statement function of a derived type, TRANSFER to a CHARACTER MOLD of run-time
+  length); A.3.3, `USE STARLET_SSDEF` and the rest; A.3.4's noticed items.
+- **The compiler**: A.1.4's two forms for `/STANDARD`, A.1.5 (a typed intrinsic's cell),
+  A.1.10 (floating short literals).
+- **The libraries**: STR$'s arithmetic (A.2.1); LIB$INITIALIZE (A.2.2): LINK building the
+  image's initialization list and the activator calling it, as VMS does, with probe cases;
+  `$GETCHN`, `$GETDEV`, and the UTC services (A.2.3); `astrace`'s 80,000 format parses
+  (A.2.5).
+- **The tools**: MACRO's positional library, an object with errors, every undefined symbol
+  (A.6.1, 2, 5); LINK's options file by logical name (A.7.1); `TestFTN86Objects`' symbol
+  tables (A.7.3); the debugger's FORTRAN lines and a component after subscripts (A.8.2, 3).
+- **The SHARE$LIBRTL fault** (A.9.2): found and fixed if it is govax's, else recorded.
+- **Housekeeping**: A.11.1 (a full volume's message, Ctrl/Y's continuation), COPY's message
+  (A.11.2), the 29 duplicated deviations (A.11.4), the grammar's verbs with no handlers
+  (A.11.5).
+- **The probe round** (A.12, with Phase 112's questions a VMS run can answer, if any) and
+  its fixes, the ods2 index file extension header among them (A.9.1).
 
 ## Subtasks (provisional)
 
-1. **The survey** (done 2026-11-22): Part A above.
-2. Onward: as the review of A.14 and the questions decides.
+1. **The survey** (done 2026-11-22): Part A; the author's answers the same day.
+2. Fortran 90's NOTIMPLs and noticed items (A.3.1, A.3.4).
+3. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
+4. MACRO (A.6.1, 2, 5).
+5. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2).
+6. STR$'s arithmetic (A.2.1).
+7. Services and FTNRTL's format parses (A.2.3, A.2.5).
+8. The debugger (A.8.2, 3).
+9. The SHARE$LIBRTL fault (A.9.2).
+10. Housekeeping (A.11.1, 2, 4, 5).
+11. The probe round (A.12): written, rehearsed on govax, run on VMS 7.1.
+12. Its fixes, the ods2 header among them.
+13. The close-out.
+
+Each subtask may begin with a survey of its own, as earlier phases' did.
 
 ## Progress log
 
@@ -494,3 +583,10 @@ wanted), Phases 60 and 61 (A.2.2), ANALYZE/DISK_STRUCTURE/REPAIR (A.9.1), Phase 
   (A.13), and DEVIATIONS.md's `SET name=value` entry taken out (its copy in DEVIATIONS-RESOLVED.md
   marked); 29 other entries found copied into DEVIATIONS-RESOLVED.md though open (A.11.4).
   Nothing implemented: the review of A.14 and the questions comes first.
+- **2026-11-22, the review:** the author's answers in "Open questions", summarized in "The
+  author's answers": the phase split, Fortran 95 becoming Phase 112 (`PHASE-112 - Fortran
+  95.md`, new) and this doc, renamed from `PHASE-112 - Fortran errata.md`, Phase 113;
+  `CONVERT=` Phase 114 (`PHASE-114 - FORTRAN CONVERT.md`, new); real debugger records not
+  planned; LIB$INITIALIZE, STR$'s arithmetic, `STARLET_` modules, and the housekeeping
+  here. Part B is the phase's scope and its subtasks. References to "Phase 112's A.n" in
+  Phases 78 to 107's docs now say Phase 113's.

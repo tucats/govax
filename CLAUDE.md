@@ -992,7 +992,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   the close-out: MANUAL.md's 6.7 "Batch queues" (6.7 to 6.9 now 6.8 to
   6.10), VAX-VMS-INTERNALS.md's 7.16, FORTRAN's `$QUIDEF`, `$SJCDEF`, and
   `$JBCMSGDEF` (`TestFortranQueues`).
-  Phases 99–111 (planned 2026-11-17, the plan accepted by the author the same day; Phase 112, the Fortran errata, a go) are the
+  Phases 99–111 (planned 2026-11-17, the plan accepted by the author the same day; Phase 112, Fortran 95, a go; Phase 113, the errata) are the
   Fortran 90 program: `PHASE-99 - Fortran 90.md`'s Part A is the survey,
   Part B the decisions, Part C the phases, each later phase a skeletal doc.
   Fortran 90 (ISO/IEC 1539:1991; `Fortran90.txt` and `Fortran 90
@@ -1446,12 +1446,19 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `/HEADERS=` and `/DIRECTORIES=`); fcalc shipped (SYS$SYSTEM:FCALC.EXE,
   SYLOGIN's `FCALC`, HELP FCALC); MANUAL.md's 14.13 and Appendix E and
   FORTRAN-INTERNALS.md's section 36. At its close-out the author answered
-  Phase 99's question 2 with a go, then widened Phase 112: it is the
-  **Fortran errata** (`PHASE-112 - Fortran errata.md`, planned 2026-11-22),
-  a whole to-do list of every gap VAX FORTRAN, Fortran 90, FTNRTL, MACRO,
-  LINK, and the debugger left, Fortran 95's additions among it, not all of
-  which need be done there; its subtask 1, the survey (done 2026-11-22), is its Part A,
-  with a proposal (A.14) and questions for the author's review. An item an old
+  Phase 99's question 2 with a go, then widened Phase 112 into the Fortran
+  errata. Its survey (2026-11-22, now `PHASE-113 - Fortran errata.md`'s
+  Part A) is a whole to-do list of every gap VAX FORTRAN, Fortran 90,
+  FTNRTL, MACRO, LINK, and the debugger left. At its review the author
+  split the phase: **Phase 112 is Fortran 95** (`PHASE-112 - Fortran
+  95.md`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization,
+  nested WHERE, the intrinsic changes, zero widths, all under `/F90`; its
+  subtask 1 a survey of the HP Fortran manual, gfortran `-std=f95` the
+  witness), **Phase 113 is the errata** (its Part B the scope: the cheap
+  Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
+  STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
+  round at its end), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN
+  CONVERT.md`); real FORTRAN debugger records are not planned. An item an old
   phase doc or DEVIATIONS.md still lists that a later phase did is marked
   where it was written, "*(Resolved in Phase N.)*" (the author's direction).
   Read the relevant phase doc

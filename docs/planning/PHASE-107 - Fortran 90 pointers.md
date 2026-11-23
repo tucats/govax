@@ -1087,7 +1087,7 @@ Phase 107 is done. What it left, and where each goes:
   address 0); a run-time overlap test in place of a temporary for an array assignment
   that may meet itself through a pointer (the author's answer 6); the debugger's EXAMINE
   of a pointer and through one (the `/DEBUG` table leaves pointers out); `/STANDARD` for
-  the phase's forms. *(Resolved in Phase 110, but for the run-time overlap test, Phase 112's A.5.3.)*
+  the phase's forms. *(Resolved in Phase 110, but for the run-time overlap test, Phase 113's A.5.3.)*
 - **Phase 112:** `NULL()`, `=> NULL()` initialization, and default initialization of
   components (Fortran 95).
 - **Not planned, ours (NOTIMPL):** a CHARACTER pointer whose length is known only when the

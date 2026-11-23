@@ -673,7 +673,8 @@ The author read the plan and accepted every recommendation:
    looked for as `.FOR`, then `.F90`.
 2. Fortran 95's additions are an optional **Phase 112**, decided at Phase
    111's close-out. *(Decided 2026-11-22: a go, Phase 112 widened by the author
-   to the Fortran errata, Fortran 95's additions one group of its list.)*
+   to the Fortran errata, Fortran 95's additions one group of its list; split at the errata's
+   review: Fortran 95 is Phase 112, the errata Phase 113.)*
 3. Module files are our own readable text, `name.F90$MOD` (Decision 10).
 4. Allocatable locals are deallocated at return (Decision 8).
 5. NCA descriptors for every run-time array (Decision 7).
