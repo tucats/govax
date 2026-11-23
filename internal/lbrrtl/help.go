@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"path"
 	"strings"
 
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/lbr"
@@ -275,11 +277,19 @@ func outputHelp(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if main == "" {
+	defaulted := main == ""
+	if defaulted {
 		main = "SYS$HELP:HELPLIB"
 	}
 
 	lib, _, err := openHelpLibrary(env, main)
+	if err != nil && defaulted {
+		// As DCL's HELP does (internal/dclcmd's help.go), a request for the
+		// main library when SYS$HELP has none reads the one built into govax
+		// (a deviation: VMS always has the file).
+		lib, err = builtinHelpLibrary()
+	}
+
 	if err != nil {
 		stateOf(env).stv = ssNoFile
 
@@ -433,6 +443,21 @@ func openHelpLibrary(env *corevms.Environment, spec string) (help.Library, strin
 	}
 
 	return help.NewLBRLibrary(lib), fileName(found.Name), nil
+}
+
+// builtinHelpLibrary is govax's own HELPLIB.HLB (internal/bootdata).
+func builtinHelpLibrary() (help.Library, error) {
+	data, err := fs.ReadFile(bootdata.FS, bootdata.HelpLibrary)
+	if err != nil {
+		return nil, err
+	}
+
+	lib, err := lbr.Open(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return help.NewLBRLibrary(lib), nil
 }
 
 // fileName is a file specification's name alone.

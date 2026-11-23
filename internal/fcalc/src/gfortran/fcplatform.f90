@@ -29,4 +29,13 @@ contains
     text = ' '
     length = 0
   end subroutine foreign_text
+
+  ! SHOW_HELP: fcalc's help is a topic of VMS's help library, which gfortran's
+  ! systems don't have, so there is none to show.
+  logical function show_help(request, writer)
+    character(len=*), intent(in) :: request
+    integer, external :: writer
+
+    show_help = .false.
+  end function show_help
 end module fcplatform

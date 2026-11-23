@@ -32,7 +32,7 @@ module fcmessages
 
   public :: say, say_more, fail, failed, clear_error, report, error_code
   public :: indent, say_part, say_end, error_ident, error_is_warning
-  public :: also, log_unit, log_line
+  public :: also, log_unit, log_line, help_line
 
   ! The message codes, an index into MESSAGES.
   integer, parameter, public :: e_badchar = 1, e_badnumber = 2, e_operand = 3, &
@@ -47,7 +47,7 @@ module fcmessages
     e_keyword = 37, e_noroot = 38, e_samesign = 39, w_inaccurate = 40, &
     e_badstep = 41, e_toomany = 42, e_badlimits = 43, e_nopoints = 44, &
     e_filereq = 45, e_nofile = 46, e_fileerr = 47, e_nesting = 48, &
-    e_fileloop = 49, w_nolog = 50, i_infile = 51
+    e_fileloop = 49, w_nolog = 50, i_infile = 51, e_nohelp = 52
 
   ! Each message: its severity, its identifier, and its text, in which !AS
   ! stands for the text the error names (VMS's notation for "a string
@@ -65,7 +65,7 @@ module fcmessages
   ! shorter text is padded with blanks to the component's length. & at a
   ! line's end continues the statement on the next line; a statement may
   ! have at most 39 continuation lines, so some lines hold two.
-  type(message), parameter :: messages(51) = (/ &
+  type(message), parameter :: messages(52) = (/ &
     message('E', 'BADCHAR', 'invalid character'), message('E', 'BADNUMBER', 'invalid number'), &
     message('E', 'OPERAND', 'operand expected'), message('E', 'RPAREN', 'missing right parenthesis'), &
     message('E', 'EXTRA', 'unexpected text'), message('E', 'UNDEFINED', '!AS is not defined'), &
@@ -102,9 +102,9 @@ module fcmessages
     message('E', 'NOPOINTS', 'no point can be plotted'), &
     message('E', 'FILEREQ', 'file name expected'), message('E', 'NOFILE', 'file !AS was not found'), &
     message('E', 'FILEERR', 'file !AS could not be used'), &
-    message('E', 'NESTING', 'files are nested too deeply'), &
-    message('E', 'FILELOOP', 'file !AS is already running'), &
-    message('W', 'NOLOG', 'no log file is open'), message('I', 'INFILE', 'in line !AS') /)
+    message('E', 'NESTING', 'files are nested too deeply'), message('E', 'FILELOOP', 'file !AS is already running'), &
+    message('W', 'NOLOG', 'no log file is open'), message('I', 'INFILE', 'in line !AS'), &
+    message('E', 'NOHELP', 'no help is available') /)
 
   ! The module's variables are declared INTEGERs first, CHARACTERs last. A
   ! compiler lays a module's variables out in the order declared, and a
@@ -320,6 +320,18 @@ contains
 
     call say('-' // trim(message_text(what, text)))
   end subroutine also
+
+  ! HELP_LINE writes one line of help text (module FCPLATFORM's SHOW_HELP
+  ! passes it to the librarian, which calls it for each line), and gives a
+  ! VMS status, 1 for success: the librarian stops at a failure. A function
+  ! passed as an argument must be a module procedure or an external one,
+  ! never an internal procedure, which Fortran 90 doesn't allow there.
+  integer function help_line(text)
+    character(len=*), intent(in) :: text
+
+    call say(text)
+    help_line = 1
+  end function help_line
 
   ! MESSAGE_TEXT is the message WHAT naming TEXT, without its first
   ! character: FCALC-E-NOFILE, file x.fcalc was not found.

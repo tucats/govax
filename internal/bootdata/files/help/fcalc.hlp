@@ -1,0 +1,663 @@
+1 FCALC
+
+   A scientific calculator: numbers, complex values, vectors and
+   matrices, the functions of a scientific calculator and some of a
+   statistician's, functions of your own, and commands that solve
+   equations, integrate, differentiate, find a polynomial's roots, and
+   show values in tables and graphs.
+
+   fcalc is a Fortran 90 program, and govax's example of a whole
+   program: its sources are in SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC].
+   The supplied SYLOGIN.COM defines FCALC as a foreign command for
+   SYS$SYSTEM:FCALC.EXE.
+
+   Format
+
+     FCALC [line]
+
+   With a line, fcalc runs it and ends: "FCALC 2^10 + 1" prints 1025.
+   Without one, fcalc reads lines at its prompt, "fcalc> ", until EXIT,
+   QUIT, or end of file (Ctrl/Z). Inside fcalc, HELP shows this text, and
+   HELP topic shows a topic below it ("HELP COMMANDS SOLVE").
+
+   Each line is an expression, whose value fcalc shows and keeps as ans;
+   an assignment, name = expression; a definition of a function,
+   name(x, ...) = expression; or a command. Case doesn't matter, a line
+   ending in ; is quiet (the value is kept, not shown), and a line
+   starting with ! is a comment.
+
+2 Expressions
+
+   Numbers are written as in Fortran or C: 42, 1.5e-3, .5. A number
+   followed by i is imaginary: 2i, 1.5e3i. Whole numbers may also be
+   written in hexadecimal (0xFF), octal (0o377), or binary (0b1011).
+
+   Every value is complex. One with no imaginary part is shown as a real
+   number, and a whole number with no decimal point:
+
+     fcalc> (1 + 2i) * (3 - i)
+     5 + 5i
+
+   The constants are pi, e, i, eps (the machine's epsilon, the distance
+   from 1 to the next larger number), and huge (the largest number fcalc
+   keeps, 1e300). ans is the last value shown.
+
+   fcalc never stops on an arithmetic error: a division by zero, a result
+   too large, or a function's argument out of its range is a message, and
+   the line has no value. See Messages.
+
+2 Operators
+
+   From the loosest to the tightest:
+
+     or                    either is true (not zero)
+     and                   both are true
+     not                   true if the operand is false
+     ==  <>  <  <=  >  >=  comparisons, of the real parts; true is 1,
+                           false 0; == and <> are to within 64 epsilons
+     +  -                  addition, subtraction
+     *  /  mod             multiplication, division, remainder
+     -  +                  sign
+     ^  **                 power, right to left: 2^3^2 is 2^9
+     !                     factorial, after its operand: 5! is 120
+
+   Parentheses group. -2^2 is -4, as in mathematics. A power of a
+   negative or complex number, and a fractional power, is the principal
+   value: (-8)^(1/3) is 1 + 1.73205080757i.
+
+   On vectors and matrices + and - work element by element, and * is the
+   matrix product; .*, ./, and .^ work element by element, ' is the
+   conjugate transpose, .' the transpose, and A \ b solves A*x = b. See
+   Vectors_and_matrices.
+
+2 Variables
+
+   A name is a letter followed by letters, digits, and underscores, up to
+   31 characters; case doesn't matter. An assignment shows the value:
+
+     fcalc> r = 2.5
+     r = 2.5
+     fcalc> area = pi * r^2
+     area = 19.6349540849
+
+   A name must be given a value before it is used, and may not be one of
+   the constants, a built-in function's name, or one of the words or,
+   and, not, mod, solve, integrate, diff, table, and plot.
+
+   An element or a section of a vector or matrix may be assigned:
+   v(2) = 0, m(1, :) = [1, 2].
+
+   LIST VARIABLES shows the variables and their values, and CLEAR name
+   (or CLEAR ALL) forgets them.
+
+2 User_functions
+
+   A function of up to 8 parameters is defined by a line naming it with
+   its parameters, an = sign, and its value, and fcalc shows the
+   definition as it keeps it:
+
+     fcalc> f(x) = x^3 - 2*x - 5
+     f(x) = x^3 - 2*x - 5
+     fcalc> g(x, y) = sqrt(x^2 + y^2)
+     g(x, y) = sqrt(x^2 + y^2)
+     fcalc> f(2)
+     -1
+     fcalc> g(3, 4)
+     5
+
+   The expression may use the parameters, the variables (their values
+   when the function is called, not when it was defined), the built-in
+   functions, and other functions of your own, defined before or after.
+
+   A function may call itself, through if(), whose arms are evaluated
+   only when chosen:
+
+     fcalc> fact(n) = if(n < 2, 1, n * fact(n - 1))
+     fact(n) = if(n < 2, 1, n * fact(n - 1))
+     fcalc> fact(10)
+     3628800
+
+   Calls may go 200 deep. Defining a function again replaces it. LIST
+   FUNCTIONS shows the definitions, and CLEAR name forgets one.
+
+2 Functions
+
+   The built-in functions are listed by kind in the topics below. Every
+   function of one argument works on each element of a vector or matrix;
+   the list functions also take a vector or matrix as their list.
+   Functions of an angle use the angle mode (SET ANGLE).
+
+3 Elementary
+
+     sqrt(x)      square root           cbrt(x)       cube root
+     exp(x)       e to the power x      ln(x)         natural logarithm
+     log10(x)     common logarithm      log2(x)       base 2 logarithm
+     log(x, b)    logarithm to base b   hypot(x, y)   sqrt(x^2 + y^2)
+
+   Each takes a complex argument and gives the principal value: sqrt(-4)
+   is 2i, ln(-1) is pi*i (3.14159265359i).
+
+3 Trigonometric
+
+     sin(x)   cos(x)   tan(x)   sec(x)   csc(x)   cot(x)
+     asin(x)  acos(x)  atan(x)  atan2(y, x)
+     sinh(x)  cosh(x)  tanh(x)  asinh(x) acosh(x) atanh(x)
+
+   The trigonometric functions take and give angles in the angle mode,
+   radians, degrees, or grads (SET ANGLE); the hyperbolic functions
+   don't depend on it. atan2(y, x) is the angle of the point (x, y), from
+   -pi to pi. Every one takes complex arguments: asin(2) is
+   1.57079632679 - 1.31695789692i.
+
+3 Complex
+
+     re(z)        real part             im(z)         imaginary part
+     abs(z)       magnitude             arg(z)        angle, -pi to pi
+     conj(z)      complex conjugate
+     polar(r, t)  r * (cos(t) + i*sin(t)), from a magnitude and an angle
+     cis(t)       cos(t) + i*sin(t)
+
+   arg, polar, and cis use the angle mode.
+
+3 Integers
+
+     floor(x)     the largest whole number not above x
+     ceil(x)      the smallest whole number not below x
+     round(x)     the nearest whole number, halves away from zero
+     trunc(x)     x with its fraction dropped
+     frac(x)      x - trunc(x)
+     sign(x)      -1, 0, or 1
+     gcd(a, b, ...), lcm(a, b, ...)   greatest common divisor, least
+                                      common multiple
+     isprime(n)   1 if n is prime, 0 if not
+     ncr(n, k)    combinations, n! / (k! (n-k)!)
+     npr(n, k)    permutations, n! / (n-k)!
+
+   gcd, lcm, isprime, ncr, and npr need whole numbers.
+
+3 Special
+
+     gamma(x)     the gamma function; gamma(n + 1) is n!
+     lgamma(x)    the logarithm of abs(gamma(x))
+     erf(x)       the error function
+     erfc(x)      1 - erf(x), accurate where erf(x) is near 1
+     beta(a, b)   gamma(a) gamma(b) / gamma(a + b)
+
+   These take real arguments. x! is gamma(x + 1), so 0.5! is
+   0.886226925453.
+
+3 Lists
+
+     min(...)     max(...)     the smallest and largest
+     sum(...)     prod(...)    the sum and product
+     mean(...)    median(...)  the mean and median
+     var(...)     stdev(...)   the sample variance and standard deviation
+                               (at least two values)
+
+   Each takes any number of arguments, or a vector or matrix whose
+   elements are the list: mean(1, 2, 3, 4) and mean([1, 2, 3, 4]) are both
+   2.5. min and max compare real parts.
+
+3 Arrays
+
+     size(a)  size(a, d)  rows(a)  cols(a)  numel(a)
+     zeros(m, n)  ones(m, n)  eye(n)  diag(v)  linspace(a, b, n)
+     range(a, b)  range(a, b, step)  reshape(a, m, n)
+     transpose(a)  trace(m)  det(m)  inv(m)  rank(m)  eig(m)
+     norm(v)  norm(v, p)  dot(u, v)  cross(u, v)  kron(a, b)
+     cumsum(v)  sort(v)  roots(c)  poly(r)  polyval(c, x)
+
+   See Vectors_and_matrices Functions for what each does.
+
+3 Other
+
+     if(c, a, b)  a if c is true (not zero), else b; only the arm chosen
+                  is evaluated, so a function may call itself through it
+     rand()       a random number from 0 to 1
+     rand(a, b)   a random number from a to b
+
+   SET SEED n starts rand's sequence again from n.
+
+2 Vectors_and_matrices
+
+   A value may be a vector or a matrix of complex numbers. Brackets make
+   one: commas separate the elements of a row, and semicolons the rows.
+
+     [1, 2, 3]          a row vector
+     [1; 2; 3]          a column vector
+     [1, 2; 3, 4]       a 2 by 2 matrix
+     [v, 4]  [m; v]     joined: the parts must fit
+
+   Elements may be any expressions. A matrix is shown in rows, its
+   columns aligned, each element to the digits of the largest:
+
+     fcalc> m = [2, 1; 1, 3]
+     m =
+       2  1
+       1  3
+
+   Arrays may hold up to 10,000 elements. See the topics below.
+
+3 Indexing
+
+   v(k) is a vector's kth element, and m(i, j) a matrix's element in row
+   i and column j, counting from 1. An index may be a range, a:b, or :
+   for all, or a vector of indexes:
+
+     m(2, :)          the second row
+     m(:, 1)          the first column
+     v(2:4)           the second to fourth elements
+     v([3, 1])        the third and the first
+
+   end isn't a word here: use size, rows, or cols (v(numel(v))).
+
+   Assigning to an element or a section changes it: v(1) = 10,
+   m(:, 2) = [0; 0].
+
+3 Operators
+
+     a + b, a - b     element by element; a scalar is spread over an array
+     a * b            the matrix product; with a scalar, element by element
+     a .* b, a ./ b   element by element
+     a .^ b           element by element power
+     m ^ n            a square matrix to a whole power; a negative power
+                      through the inverse
+     a'               the conjugate transpose
+     a.'              the transpose
+     A \ b            the solution x of A*x = b
+     comparisons      element by element, giving 1s and 0s
+
+   Shapes must agree: a 2 by 3 matrix plus a 3 by 2 one is NOTCONFORM.
+
+3 Functions
+
+     size(a), size(a, d)   [rows, columns], or the size of dimension d
+     rows(a), cols(a), numel(a)   rows, columns, elements
+     zeros(m, n), ones(m, n), eye(n)   arrays of 0s and 1s, the identity
+     diag(v)               a square matrix with v down its diagonal, or a
+                           square matrix's diagonal as a vector
+     linspace(a, b, n)     n values from a to b, equally spaced
+     range(a, b[, s])      a, a+s, ... up to b (s is 1 if not given)
+     reshape(a, m, n)      a's elements, column by column, as m by n
+     cumsum(v), sort(v)    running sums; sorted by real part
+     dot(u, v), cross(u, v), kron(a, b)   products
+     norm(v[, p])          the p-norm (2 if not given)
+     transpose(a), trace(m), det(m), inv(m), rank(m)
+     eig(m)                the eigenvalues, sorted, by the QR method
+     roots(c), poly(r), polyval(c, x)   see Commands ROOTS
+
+2 Commands
+
+   A line that starts with one of these words is a command. Each topic
+   below describes one. RUN, LOAD, SAVE, LOG, and HELP followed by = or
+   ( aren't commands: RUN = 3 assigns a variable, and LOG(8, 2) is a
+   logarithm.
+
+3 SOLVE
+
+   Finds a root of an equation.
+
+     SOLVE expr [= expr] FOR x [FROM a [TO b]]
+
+   x is a name standing for the unknown; a variable of that name is left
+   alone. With FROM a alone, fcalc starts the secant method at a (at 0 if
+   FROM is left out), and from a complex start can find complex roots.
+   With FROM a TO b, the expression must change sign between a and b,
+   and fcalc narrows the bracket by Brent's method, which always
+   converges.
+
+     fcalc> solve x^2 = 2 for x from 1
+     x = 1.41421356237
+     fcalc> solve cos(t) = t for t from 0 to 1
+     t = 0.739085133215
+
+   NOROOT if the secant method finds none; SAMESIGN if the bracket's ends
+   have values of the same sign.
+
+3 INTEGRATE
+
+   Integrates an expression between two limits.
+
+     INTEGRATE expr FOR x FROM a TO b
+
+   fcalc uses adaptive Gauss-Kronrod quadrature: each piece of the
+   interval is integrated by rules of 7 and 15 points, whose difference
+   estimates the error, and the piece with the largest error is cut in
+   two, until the pieces' errors add up to little enough. The pieces
+   shrink where the expression is hard to integrate, so a jump, or a
+   singularity at an end that has a finite integral, is handled too.
+
+     fcalc> integrate exp(-x^2) for x from 0 to 3
+     0.88620734826
+
+   If the pieces (200) run out before the estimate is small, the value comes
+   with %FCALC-W-INACCURATE, naming how large the error may be.
+
+3 DIFF
+
+   Differentiates an expression at a point.
+
+     DIFF expr FOR x AT a
+
+   fcalc uses Ridders' method, Richardson extrapolation of central
+   differences, which gives about 10 digits for a smooth function. a may
+   be complex.
+
+     fcalc> diff sin(x) for x at 0
+     1
+
+   At a point where the function isn't smooth, the value comes with
+   %FCALC-W-INACCURATE.
+
+3 ROOTS
+
+   Finds every root, real and complex, of a polynomial.
+
+     ROOTS c1, c2, ..., cn
+     ROOTS v
+
+   The coefficients are given from the highest power down, or as a
+   vector: ROOTS 1, 0, -1 is x^2 - 1. fcalc uses the Durand-Kerner
+   method, then polishes each root by Newton's method, and shows the
+   roots as a column, kept as ans:
+
+     fcalc> roots 1, -6, 11, -6
+       1
+       2
+       3
+
+   The functions roots(c) (the same, as a value), poly(r) (the
+   coefficients of the polynomial with roots r), and polyval(c, x) (its
+   value at x) go with it.
+
+3 TABLE
+
+   Shows expressions' values in columns.
+
+     TABLE expr[, expr...] FOR x FROM a TO b [STEP s]
+     TABLE v[, w...]
+
+   With FOR, each expression is evaluated at a, a + s, ... up to b (s is
+   (b - a)/10 if STEP is left out), a row for each point, up to 1,000. A
+   point where an expression has no value shows the error's name,
+   DIVZERO, say. Without FOR, each expression is a vector, all of one
+   length, shown side by side. Up to 8 expressions. See Examples
+   Table_and_plot.
+
+3 PLOT
+
+   Draws expressions' values as a graph of characters.
+
+     PLOT expr[, expr...] FOR x FROM a TO b [SIZE w, h] [Y lo, hi]
+     PLOT v[, w...] [VERSUS u] [SIZE w, h] [Y lo, hi]
+
+   With FOR, each expression is evaluated at as many points as the graph
+   is wide. Without FOR, each expression is a vector, drawn against its
+   index, or, after VERSUS, against the vector u.
+
+   The graph is 61 characters wide and 19 high unless SIZE says otherwise
+   (10 to 100 wide, 3 to 60 high). Its vertical range is the values'
+   unless Y gives one; values outside it aren't drawn. Each curve has a
+   mark, *, o, #, x, @, %, &, and $ in turn, named under the graph. The
+   axes are drawn where zero is in range. Points where a value can't be
+   computed, or isn't real, are left out. See Examples Table_and_plot.
+
+3 LIST
+
+     LIST [VARIABLES | FUNCTIONS | ALL]
+
+   Shows the variables and their values, the functions and their
+   definitions, or both (ALL, the default), in the order of their names.
+
+3 CLEAR
+
+     CLEAR name ...
+     CLEAR ALL
+
+   Forgets the variables and functions named, or every one. A name not
+   defined is %FCALC-W-NOTDEF.
+
+3 SET
+
+     SET DIGITS n
+     SET FORMAT AUTO | FIXED | SCIENTIFIC | ENGINEERING
+     SET BASE DECIMAL | HEX | OCTAL | BINARY
+     SET ANGLE RADIANS | DEGREES | GRADS
+     SET SEED n
+     SET ECHO | NOECHO
+
+   DIGITS, FORMAT, and BASE choose how values are shown (see Display).
+   ANGLE is the unit the trigonometric functions use (radians unless
+   set). SEED starts the random numbers again from n, so a sequence can
+   be repeated. ECHO shows each line read after the prompt, as a terminal
+   does, which makes a transcript of a file of commands (NOECHO unless
+   set).
+
+3 SHOW
+
+     SHOW SETTINGS
+     SHOW DIGITS | FORMAT | BASE | ANGLE | SEED | ECHO
+     SHOW MEMORY
+
+   SHOW SETTINGS shows each setting as the SET command that makes it;
+   SHOW and a setting's name shows that one. SHOW MEMORY counts the
+   arrays and expression trees in use, which CLEAR ALL should bring to 0.
+
+3 SAVE
+
+     SAVE file
+
+   Writes the settings, variables, and functions to the file, as fcalc's
+   own commands: SET lines, assignments (each number with the fewest
+   digits that read back exactly), and definitions. You can read and
+   edit it. A file name with no type is given .fcalc.
+
+3 LOAD
+
+     LOAD file
+
+   Clears every variable and function, then runs the file's lines
+   quietly, as SAVE wrote them: the session SAVE saved, exactly.
+
+3 @
+
+     @file
+     RUN file
+
+   Runs the lines of a file of commands as if typed, with their output
+   shown. A file may run another, up to 8 deep. An error ends the file,
+   and every file that ran it, each saying the line it was at. EXIT or
+   QUIT in a file ends that file only. A name with no type is given
+   .fcalc.
+
+3 LOG
+
+     LOG file
+     LOG OFF
+
+   Keeps a transcript: each line typed, and everything fcalc shows, is
+   added to the end of the file until LOG OFF.
+
+3 HELP
+
+     HELP [topic ...]
+
+   Shows this help, the FCALC topic of the system's help library,
+   SYS$HELP:HELPLIB.HLB: the same text as DCL's HELP FCALC. HELP COMMANDS
+   SOLVE shows the topic SOLVE under Commands.
+
+3 EXIT
+
+     EXIT
+     QUIT
+
+   Ends fcalc, or the file of commands it is running. End of file
+   (Ctrl/Z at a terminal) ends fcalc too.
+
+2 Display
+
+   Values are shown to 12 significant digits, in fixed notation from
+   1e-5 to 1e11 and scientific notation outside it (SET FORMAT AUTO).
+   Fixed notation drops trailing zeros: 1/4 is 0.25.
+
+     SET DIGITS n          significant digits, 1 to 15 (12 unless set);
+                           under FIXED, places after the point
+     SET FORMAT FIXED      always fixed, with exactly DIGITS places
+     SET FORMAT SCIENTIFIC always d.ddd...e+nn
+     SET FORMAT ENGINEERING  scientific with the exponent a multiple of 3
+     SET BASE HEX          whole numbers in hexadecimal, 0xFF; also OCTAL
+                           (0o377), BINARY (0b11111111), and DECIMAL
+
+   Under SET BASE, a value that isn't a whole number is shown in decimal.
+   A part of a complex value smaller than the other by more than the
+   digits shown is shown as zero, so 1e-20 + 1 is 1. An array's elements
+   are shown to the digits of its largest.
+
+   SHOW SETTINGS shows the settings as SET commands.
+
+2 Messages
+
+   An error is shown with the line, a ^ under the place it found, and a
+   message in VMS's form:
+
+     fcalc> 1 / (2 - 2)
+              ^
+     %FCALC-E-DIVZERO, division by zero
+
+   An error (E) leaves the line with no value and ends a file of
+   commands; a warning (W) gives the value and goes on. In a file, a
+   second message says where:
+
+     -FCALC-I-INFILE, in line 3 of setup.fcalc
+
+   No input ends fcalc, and nothing it computes stops it: every operation
+   checks its operands first, so that nothing overflows or traps.
+
+2 Building
+
+   fcalc's sources are in SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC], 16 files,
+   each a Fortran 90 module but FCALC.F90, the main program. They are
+   commented for a reader learning Fortran 90 and numerical programming.
+   BUILDFCALC.COM, beside them, compiles each module (/G_FLOATING: fcalc
+   needs G_floating's range), assembles and links them:
+
+     $ @SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]BUILDFCALC INSTALL
+
+   builds FCALC.EXE there and, with INSTALL, copies it to SYS$SYSTEM. To
+   change fcalc, copy the directory to one of your own and run the copy
+   of BUILDFCALC.COM there; then define the symbol for your image:
+
+     $ FCALC :== $DUA1:[ME.FCALC]FCALC
+
+   govax's manual, chapter 14, describes fcalc as a program.
+
+2 Examples
+
+   Each topic below is a session, shown as a terminal shows it.
+
+3 Arithmetic
+
+     fcalc> 2^10 + 1
+     1025
+     fcalc> sqrt(2)
+     1.41421356237
+     fcalc> 1 / 3 + 1 / 6
+     0.5
+     fcalc> e^(i*pi)
+     -1
+     fcalc> (3 + 4i) / (1 - 2i)
+     -1 + 2i
+     fcalc> 20!
+     2.43290200818e+18
+     fcalc> set angle degrees
+     fcalc> sin(30)
+     0.5
+     fcalc> atan2(1, -1)
+     135
+     fcalc> set base hex
+     fcalc> 255 + 1
+     0x100
+
+3 Functions_of_your_own
+
+     fcalc> f(x) = x^3 - 2*x - 5
+     f(x) = x^3 - 2*x - 5
+     fcalc> solve f(x) for x from 2
+     x = 2.09455148154
+     fcalc> diff f(x) for x at ans
+     11.1614377265
+     fcalc> fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+     fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+     fcalc> fib(15)
+     610
+     fcalc> list functions
+     f(x) = x^3 - 2*x - 5
+     fib(n) = if(n < 2, n, fib(n - 1) + fib(n - 2))
+
+3 Matrices
+
+     fcalc> a = [4, -2; 1, 1]
+     a =
+       4  -2
+       1   1
+     fcalc> det(a)
+     6
+     fcalc> inv(a)
+        0.166666666667  0.333333333333
+       -0.166666666667  0.666666666667
+     fcalc> eig(a)
+       2
+       3
+     fcalc> a \ [2; 3]
+       1.33333333333
+       1.66666666667
+     fcalc> v = range(1, 5)
+     v =
+       1  2  3  4  5
+     fcalc> v .^ 2
+       1  4  9  16  25
+     fcalc> mean(v)
+     3
+     fcalc> stdev(v)
+     1.58113883008
+
+3 Numerics
+
+     fcalc> integrate 4 / (1 + x^2) for x from 0 to 1
+     3.14159265359
+     fcalc> integrate sin(x) / x for x from 0 to pi
+     1.85193705198
+     fcalc> roots 1, 0, 0, -1
+       -0.5 - 0.866025403784i
+       -0.5 + 0.866025403784i
+                            1
+     fcalc> solve x = cos(x) for x from 0 to 1
+     x = 0.739085133215
+
+3 Table_and_plot
+
+     fcalc> table x^2, sqrt(x) for x from 1 to 5 step 1
+       x  x^2        sqrt(x)
+       -  ---  -------------
+       1    1              1
+       2    4  1.41421356237
+       3    9  1.73205080757
+       4   16              2
+       5   25   2.2360679775
+     fcalc> plot sin(x), cos(x) for x from 0 to 2*pi size 50, 13 y -1, 1
+      1 |oooo      ******                              oooo
+        |    oo ***      **                          oo
+        |     *oo          **                      oo
+        |    *   o           **                   o
+        |  **     oo           *                oo
+        | *         o           *              o
+      0 |*-----------o-----------**-----------o-----------*
+        |             oo           *        oo           *
+        |               o           *      o           **
+        |                oo          **  oo           *
+        |                  o           *o           **
+        |                   ooo      ooo **      ***
+     -1 |                      oooooo      ******
+        +--------------------------------------------------
+         0                                          6.28319
+         * sin(x)   o cos(x)

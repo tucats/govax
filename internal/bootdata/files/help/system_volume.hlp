@@ -7,13 +7,15 @@
 
 2 Contents
 
-     [SYSTEM.SYSEXE]   SYS$SYSTEM     DEFAULT.ROM, PAGEFILE.SYS
+     [SYSTEM.SYSEXE]   SYS$SYSTEM     DEFAULT.ROM, FCALC.EXE (see
+                                      FCALC), PAGEFILE.SYS
      [SYSTEM.SYSMGR]   SYS$MANAGER    STARTUP.COM, SYSTARTUP_VMS.COM,
                                       SYLOGIN.COM, CONSOLE.DCL,
                                       DEBUG.DCL
      [SYSTEM.SYSHLP]   SYS$HELP       HELPLIB.HLB, DBG$HELP.HLB
      [.SOURCES]                       the help libraries' .HLP files
      [.SOURCES.DEBUG]                 the debugger's DEBUG.HLP
+     [.EXAMPLES.FCALC]                fcalc's sources, BUILDFCALC.COM
      [SYSTEM.SYSLIB]   SYS$LIBRARY,   STARLET.MLB, FORSYSDEF.TLB,
                        SYS$SHARE      FTNRTL.EXE
      [SYSTEM.SOURCES]  SYS$SOURCES    KERNEL.ASM, SSDEF.ASM, FTNRTL's

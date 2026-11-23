@@ -17,6 +17,13 @@ $!
 $!     $ dir :== directory/size/date
 $!     $ if f$mode() .eqs. "INTERACTIVE" then write sys$output "Welcome to govax"
 $!
+$!  FCALC, a scientific calculator (HELP FCALC), as a foreign command, so
+$!  "FCALC 2^10 + 1" prints 1025, and FCALC alone reads lines at its own
+$!  prompt. Its image is SYS$SYSTEM:FCALC.EXE, and its sources are in
+$!  SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC].
+$!
+$ fcalc :== $sys$system:fcalc
+$!
 $!  A scratch directory for each account on the RAM disk SYSTARTUP_VMS.COM
 $!  makes (its "scratch volume" lines): when MDA0: is mounted, the lines
 $!  between the two marks below give the account a directory there,

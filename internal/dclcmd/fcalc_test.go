@@ -13,10 +13,10 @@ import (
 // compiler that breaks it shows quickly; internal/console's
 // TestFcalcMilestone builds and runs it.
 
-// fcalcSources is fcalc's directory.
-var fcalcSources = filepath.Join("..", "..", "testdata", "fcalc")
+// fcalcSources is fcalc's sources' directory, internal/fcalc/src.
+var fcalcSources = filepath.Join("..", "fcalc", "src")
 
-// fcalcFiles are fcalc's sources by name, NAME.F90, read from testdata/fcalc,
+// fcalcFiles are fcalc's sources by name, NAME.F90, read from internal/fcalc/src,
 // and the order compiles.txt compiles them in, a FORTRAN command each.
 func fcalcFiles(t *testing.T) (map[string][]string, []string) {
 	t.Helper()
@@ -73,9 +73,10 @@ func TestFcalcCompiles(t *testing.T) {
 // (Phase 111's subtask 9; the rest were fixed).
 var fcalcToolMessages = map[string]map[string][]string{
 	// FCPLATFORM is where fcalc keeps what only VMS has: LIB$GETDVI (Phase
-	// 111's subtask 11) and LIB$GET_FOREIGN, whose names have a $, each called
-	// with a null argument (its channel, its prompt).
-	"F90": {"FCPLATFORM": {"EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION"}},
+	// 111's subtask 11), LIB$GET_FOREIGN, and LBR$OUTPUT_HELP (subtask 12),
+	// whose names have a $, each called with a null argument (its channel,
+	// its prompt, its width and library: one message a statement).
+	"F90": {"FCPLATFORM": {"EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION"}},
 
 	// HOSTHIDDEN: each internal procedure declares the locals it uses (K, E,
 	// H, V, WIDTH, STATUS) so as not to change its host's; the warning is for

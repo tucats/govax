@@ -14,18 +14,25 @@ expressions' values in columns, and PLOT draws them as a graph of characters.
 SAVE writes the settings, variables, and functions to a file of fcalc's own
 commands, which LOAD runs again; `@file` (or RUN) runs any such file, and LOG
 keeps a transcript. Run as a foreign command, `$ FCALC 2^10 + 1`, fcalc runs
-that one line and ends.
+that one line and ends. HELP shows the FCALC topic of the system's help
+library (`internal/bootdata/files/help/fcalc.hlp`), the text DCL's HELP FCALC
+shows.
+
+Since Phase 111's subtask 12 fcalc is also a tool govax ships: its sources
+are in `internal/fcalc/src` (the package embeds them, with BUILDFCALC.COM and
+the committed image, `internal/fcalc/fcalc.exe`, for the system volume), and
+this directory holds the scripts and what they print.
 
 ## The sources
 
 Each file is a module but the last, the main program, compiled in the order
-`compiles.txt` gives, a FORTRAN command each:
+`internal/fcalc/src/compiles.txt` gives, a FORTRAN command each:
 
 | File | What it holds |
 |---|---|
-| `fcplatform.f90` | what differs by system: VMS's carriage control and record length, whether a READ ends a prompt's record (SYS$INPUT a terminal, from LIB$GETDVI), and the foreign command's text, from LIB$GET_FOREIGN (`gfortran/fcplatform.f90` is gfortran's twin, which has none) |
+| `fcplatform.f90` | what differs by system: VMS's carriage control and record length, whether a READ ends a prompt's record (SYS$INPUT a terminal, from LIB$GETDVI), the foreign command's text, from LIB$GET_FOREIGN, and HELP, by LBR$OUTPUT_HELP (`gfortran/fcplatform.f90` is gfortran's twin, which has neither) |
 | `fckinds.f90` | the kind `RK`, fcalc's limits (`LIMIT`, `SMALL`), the constants |
-| `fcmessages.f90` | output (`SAY`, which keeps records to 132 characters) and the messages, `%FCALC-E-...` |
+| `fcmessages.f90` | output (`SAY`, which keeps records to 132 characters, and `HELP_LINE`, which the librarian calls with each line of help) and the messages, `%FCALC-E-...` |
 | `fcvalues.f90` | `TYPE VALUE`, its operators, guarded so nothing traps, and how a value is shown (the formats and bases) |
 | `fcarrays.f90` | `TYPE QUANTITY`, a scalar or an array through a pointer, its ownership rule, and how an array is shown |
 | `fclexer.f90` | the tokens, numbers in other bases among them |
@@ -38,7 +45,7 @@ Each file is a module but the last, the main program, compiled in the order
 | `fcnumeric.f90` | the numerical commands: SOLVE (the secant method, or Brent's on a bracket), INTEGRATE (adaptive Gauss-Kronrod quadrature), DIFF (Ridders' extrapolation), and ROOTS |
 | `fcplot.f90` | TABLE and PLOT: values at points or vectors side by side, and a graph's grid, axes, labels, and legend |
 | `fcstate.f90` | the session's state and files: the settings' SET lines, SAVE (each number with the fewest digits that read back the same), reading files of commands a line at a time, and LOG |
-| `fcalc.f90` | the main program: the foreign command's line, the prompt, the commands (SET and SHOW among them), @ and LOAD running a file's lines, assignment, function definitions |
+| `fcalc.f90` | the main program: the foreign command's line, the prompt, the commands (SET, SHOW, and HELP among them), @ and LOAD running a file's lines, assignment, function definitions |
 
 The sources are commented for a reader learning Fortran 90 and numerical
 programming: each Fortran 90 feature is explained where it is first used,
@@ -51,7 +58,7 @@ extrapolation).
 
 fcalc must be compiled `/G_FLOATING`: no kind of D_floating has the range of
 300 `SELECTED_REAL_KIND(15, 300)` asks for. On govax, on a volume holding the
-sources as `NAME.F90`:
+sources as `NAME.F90` (as `BUILDFCALC.COM` does, on the system volume):
 
 ```
 $ FORTRAN/G_FLOATING FCPLATFORM
@@ -64,7 +71,7 @@ $ LINK FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,FCARRAYS,FCLEXER,FCTREE,-
 $ RUN FCALC
 ```
 
-On gfortran, with `gfortran/fcplatform.f90` in place of `fcplatform.f90`, in
+On gfortran, in `internal/fcalc/src`, with `gfortran/fcplatform.f90` in place of `fcplatform.f90`, in
 the same order: `gfortran -std=f95 gfortran/fcplatform.f90 fckinds.f90 ...
 fcalc.f90` (on macOS, if the link can't find library `System`, set
 `SDKROOT=$(xcrun --show-sdk-path)` first). The sources keep to Fortran 90: nothing Fortran 95 added (`I0`,
@@ -89,7 +96,7 @@ prompt, as a terminal does.
 | `numeric` | the numerical commands: SOLVE from a point (real and complex roots) and on a bracket, with = and users' functions, the variable after FOR left alone; INTEGRATE of smooth functions, a jump, singular ends, and one whose pieces run out (the warning INACCURATE); DIFF at real and complex points, and a jump's warning; ROOTS of real and complex coefficients, roots at zero, a double root (SET DIGITS 6), vectors of coefficients, roots(), poly, polyval; and each command's errors |
 | `display` | how values are shown: SHOW SETTINGS and each SHOW, SET DIGITS, each SET FORMAT (rounding, padding, the exponent a multiple of 3, FIXED's places and its turn to scientific notation past 15 digits), SET BASE (each base, negative and complex whole numbers, matrices, LIST, the literals typed in, and their errors), SHOW ANGLE, SET SEED (the same seed repeating a sequence, a quiet `;` line keeping a random value unshown), and SET's and SHOW's errors |
 | `state` | files of commands: @ and RUN of a file written by hand (`files/setup.fcalc`), RUN, LOAD, SAVE, and LOG as names when = or ( follows; SAVE of every kind of value and setting, the file shown by running it with echo on, LOAD clearing first and restoring each value exactly and the seed given, a name with a type of its own; LOG twice to one file; an error two files deep, EXIT and a warning in a file, a LOAD that fails |
-| `errors` | every message, in the order of fcalc's table, but FILEERR (the oneshot procedure's) and NOCONVERGE (which no matrix tried has given): eight files running each other (`files/deep1.fcalc` to `deep8.fcalc`) and a file running itself (`files/self.fcalc`) among them |
+| `errors` | every message, in the order of fcalc's table, but FILEERR (the oneshot procedure's), NOCONVERGE (which no matrix tried has given), and NOHELP (no help library, which only gfortran's build has, and no script runs HELP, its text being the help library's, which `internal/console`'s `TestFcalcHelpExamples` checks): eight files running each other (`files/deep1.fcalc` to `deep8.fcalc`) and a file running itself (`files/self.fcalc`) among them |
 | `plot` | TABLE: values at points with and without STEP, either way, a single point, a point that is 0, the variable after FOR left alone, a point's error shown by name, users' functions, the display's settings, vectors side by side, and the errors; PLOT: graphs of one and two curves, the axes, the default size, Y's range and the values outside it, points that fail or aren't real, constants, vectors against their index and VERSUS another, labels by the display's settings, and the errors |
 
 The files the scripts run are in `files/`, copied beside fcalc; the files
@@ -132,8 +139,8 @@ without a console.
 `/LIST/CROSS_REFERENCE`, which must say nothing, then `/STANDARD=F90` and
 `/WARNINGS=ALL`, which must say only these, each left for its reason:
 
-- **`/STANDARD=F90`**: four `EXTENSION`s in `fcplatform.f90`, LIB$GETDVI's and
-  LIB$GET_FOREIGN's `$`s and their null arguments. That module is where fcalc
+- **`/STANDARD=F90`**: six `EXTENSION`s in `fcplatform.f90`, LIB$GETDVI's,
+  LIB$GET_FOREIGN's, and LBR$OUTPUT_HELP's `$`s and their null arguments. That module is where fcalc
   keeps what only VMS has.
 - **`/WARNINGS=ALL`**: 13 `HOSTHIDDEN`s, each an internal procedure
   declaring a local (`K`, `E`, `H`, `V`, `WIDTH`, `STATUS`) whose name its host
@@ -157,7 +164,7 @@ FORTRAN line as well.
 ## gfortran's witness
 
 `testdata/fortran/gfortran/compare.py fcalc` builds fcalc on gfortran from
-`compiles.txt`'s files, `gfortran/fcplatform.f90` in VMS's module's place, and
+`internal/fcalc/src/compiles.txt`'s files, `gfortran/fcplatform.f90` in VMS's module's place, and
 runs every script in one directory holding `files/`, in the order of their
 names, as `TestFcalcMilestone` does; each script's output and each file in
 `expected/` must be the same line for line, the times in a saved file's heading
@@ -177,8 +184,9 @@ masked. It builds fcalc three ways, and each prints the same lines:
 With no program named, `compare.py` runs the corpus's programs and fcalc.
 gfortran's `-Wall -Wextra` warns only of fcalc's exact comparisons of reals,
 each deliberate (against zero, a whole number's test, SAVE's check that a
-number reads back the same), and of the Gauss-Kronrod loop's `I / 2`, which
-`MOD(I, 2) == 0` keeps from indexing at 0.
+number reads back the same), of the Gauss-Kronrod loop's `I / 2`, which
+`MOD(I, 2) == 0` keeps from indexing at 0, and of the twin's `SHOW_HELP`'s two
+unused arguments (it has no help to show).
 
 ## What the two systems make fcalc do
 

@@ -23,8 +23,12 @@ import (
 // the scripts wrote are held to testdata/fcalc/expected, and oneshot.com runs
 // fcalc as a foreign command.
 
-// fcalcDirectory is fcalc's directory.
-var fcalcDirectory = filepath.Join("..", "..", "testdata", "fcalc")
+// fcalcDirectory is fcalc's directory of scripts, and fcalcSourceDirectory
+// its sources' (internal/fcalc, which ships fcalc on the system volume).
+var (
+	fcalcDirectory       = filepath.Join("..", "..", "testdata", "fcalc")
+	fcalcSourceDirectory = filepath.Join("..", "fcalc", "src")
+)
 
 // fcalcConsole is a console with a volume large enough for fcalc's files on
 // DUA3:, the default directory.
@@ -52,7 +56,7 @@ func buildFcalc(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, qual
 func buildFcalcLinked(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, qualifiers, linked string) {
 	t.Helper()
 
-	order, err := os.ReadFile(filepath.Join(fcalcDirectory, "compiles.txt"))
+	order, err := os.ReadFile(filepath.Join(fcalcSourceDirectory, "compiles.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +64,7 @@ func buildFcalcLinked(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer
 	modules := strings.Fields(string(order))
 
 	for _, name := range modules {
-		text, err := os.ReadFile(filepath.Join(fcalcDirectory, strings.ToLower(name)+".f90"))
+		text, err := os.ReadFile(filepath.Join(fcalcSourceDirectory, strings.ToLower(name)+".f90"))
 		if err != nil {
 			t.Fatal(err)
 		}

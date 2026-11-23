@@ -155,6 +155,21 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	return append(sources, ftn, govax), nil
 }
 
+// BuiltinSources returns LINK's symbol sources for a link made with no
+// volume or host to search, as govax's own builds of its images are
+// (internal/fcalc/build): FTNRTL's symbols from the image built into govax,
+// then govax's own tables (GovaxSymbols), as LinkSources gives them where
+// there are no system libraries.
+func BuiltinSources(shims []corevms.ShimLink) []link.SymbolSource {
+	ftn := &ftnrtlSource{open: func() (link.SymbolSource, error) {
+		data, _ := ftnrtl.Image(ftnrtl.Name)
+
+		return sharedImageSource(data, rms.BuiltinSpec(ftnrtl.Name), ftnrtl.Name)
+	}}
+
+	return []link.SymbolSource{ftn, GovaxSymbols(shims)}
+}
+
 // ftnrtlSource is FTNRTL's symbols, as a source among the system's: the
 // global symbol table of the image the locator finds (openSharedImage).
 // It is read only when a link looks for one of FTNRTL's routines, all

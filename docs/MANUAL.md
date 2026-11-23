@@ -1434,9 +1434,9 @@ sparse host file, taking only the space its files use.
 
 | Directory | Logical name | Files |
 | --- | --- | --- |
-| `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the page file, with paging on |
+| `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `FCALC.EXE`, the calculator (see [FCALC](#fcalc-a-calculator)); `PAGEFILE.SYS`, the page file, with paging on |
 | `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, `ADDUSER.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
-| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB`, `DBG$HELP.HLB`, and `UAFHELP.HLB`, DCL's, the debugger's, and AUTHORIZE's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`, AUTHORIZE's `AUTHORIZE.HLP` in `[.SOURCES.AUTHORIZE]`) |
+| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB`, `DBG$HELP.HLB`, and `UAFHELP.HLB`, DCL's, the debugger's, and AUTHORIZE's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`, AUTHORIZE's `AUTHORIZE.HLP` in `[.SOURCES.AUTHORIZE]`); in `[.EXAMPLES.FCALC]`, fcalc's Fortran 90 sources and `BUILDFCALC.COM` |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
 | `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM`; `BUILDHELP.COM`, which rebuilds the help libraries |
 | `[SYSTEM]` | `SYS$SYSROOT:[000000]` | `GOVAX$FILES.DAT`, the list of files govax supplied; `GOVAX$UPDATE.LOG`, the log of what each start updated |
@@ -2466,6 +2466,47 @@ VAX> ECHO :== $DUA1:[TOOLS]ECHO.EXE
 VAX> ECHO one   two "Three"
 ONE TWO "Three"
 ```
+
+#### FCALC, a calculator
+
+```text
+FCALC [line]
+```
+
+fcalc is a scientific calculator, a Fortran 90 program govax ships on the
+system volume as `SYS$SYSTEM:FCALC.EXE`; the supplied `SYLOGIN.COM` defines
+`FCALC` as a foreign command for it. Every value is complex, or a vector or
+matrix of complex values; it has the functions of a scientific calculator,
+functions you define (recursive ones too), and commands that solve
+equations (SOLVE), integrate (INTEGRATE), differentiate (DIFF), find a
+polynomial's roots (ROOTS), and show values in columns (TABLE) and as a
+graph of characters (PLOT). SAVE and LOAD keep a session in a file of
+fcalc's own commands, `@file` runs any such file, and LOG keeps a
+transcript. With a line, fcalc runs it and ends; without one, it reads lines
+at its prompt until EXIT or end of file.
+
+```text
+VAX> FCALC 2^10 + 1
+1025
+VAX> FCALC
+fcalc> f(x) = x^3 - 2*x - 5
+f(x) = x^3 - 2*x - 5
+fcalc> solve f(x) for x from 2
+x = 2.09455148154
+fcalc> integrate exp(-x^2) for x from 0 to 3
+0.88620734826
+fcalc> exit
+VAX>
+```
+
+`HELP FCALC` describes it, a topic for each function group and command, and
+inside fcalc `HELP` shows the same text (it calls `LBR$OUTPUT_HELP` on
+`SYS$HELP:HELPLIB.HLB`). Its 16 source files are in
+`SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]`, commented for a reader learning
+Fortran 90 and numerical programming, with `BUILDFCALC.COM`, which compiles,
+assembles, and links them (`@SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]BUILDFCALC
+INSTALL` also copies the image to `SYS$SYSTEM`). [14.13](#1413-fortran-90)
+describes fcalc as a program.
 
 #### SPAWN, ATTACH, and LOGOUT
 

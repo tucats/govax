@@ -275,7 +275,7 @@ As revised by the author's answers (below), with vectors and matrices added:
     2026-11-22: round 2 matches VMS in every section; `testdata/tir111` the
     MACRO probe it led to)
 12. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
-    symbol, HELP FCALC, MANUAL.md's section.
+    symbol, HELP FCALC, MANUAL.md's section. (done 2026-11-22)
 13. **The manual's 14.13** finished.
 14. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
     whole program.
@@ -958,3 +958,47 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   name may stand in a data expression is unsettled: both in DEVIATIONS.md.
   `TestTIR111Objects` and `TestTIR111Errors` hold govax to the run.
   `go test ./...` passes.
+- **2026-11-22:** Subtask 12, fcalc as a tool. fcalc's sources moved from
+  `testdata/fcalc` to `internal/fcalc/src` (gfortran's twin to `src/gfortran`),
+  so a package can embed them; `testdata/fcalc` keeps the scripts, and every
+  user follows (`TestFcalcCompiles`, `TestFcalcMilestone`, `TestFcalcDebugger`,
+  which gathers its files in a directory of its own, `testdata/f90r`'s `gen.go`
+  and `exchange.cmd`, only paths changed, and `compare.py`'s `FCALC_SOURCES`).
+  `internal/fcalc` embeds the sources, `buildfcalc.com`, and `fcalc.exe`, the
+  committed image; `internal/fcalc/build` compiles each module (`/G_FLOATING
+  /OPTIMIZE`, its module text kept in memory for the next USE, a
+  `sema.ModuleFinder` of its own), assembles, and links, times and tool names
+  fixed, its symbols `dclcmd.BuiltinSources` (new: FTNRTL from the built-in
+  image, then govax's tables), in about a second; `go generate
+  ./internal/fcalc` (`mkfcalc`) writes the image, `TestCommittedImage` holds it
+  to the sources, `TestImageShape` checks its name and libraries. The system
+  volume gains `[SYSTEM.SYSHLP.EXAMPLES]` and `[.FCALC]` (the 16 sources and
+  BUILDFCALC.COM, in compiles.txt's order) and `SYS$SYSTEM:FCALC.EXE`
+  (`sysvol`'s `Examples`, `FcalcExamples`). BUILDFCALC.COM builds in its own
+  directory (`F$ENVIRONMENT("PROCEDURE")`), deletes the `.MAR`, `.OBJ`, and
+  `.F90$MOD` files, and with INSTALL copies the image to SYS$SYSTEM (COPY/QUIET,
+  govax's COPY confirming by default). The supplied SYLOGIN.COM defines
+  `FCALC :== $SYS$SYSTEM:FCALC` (seeded, so a volume made before keeps its
+  copy). HELP FCALC is `bootdata/files/help/fcalc.hlp`: a topic per subject,
+  function group, and command, each under 40 lines by the author's direction
+  (`TestFcalcHelpTopicsShort`), but Examples' sessions, which may be longer;
+  every example in it is run on the shipped image and held to the text
+  (`TestFcalcHelpExamples`, whose `FCALC_HELP_WRITE=1` writes the Examples
+  topics from fcalc's output; it found five of the draft's claims wrong).
+  fcalc gains HELP [topic ...]: FCPLATFORM's `show_help` calls
+  LBR$OUTPUT_HELP with FCMESSAGES' `help_line` as its output routine (a
+  module procedure passed on as a dummy procedure), no flags, the library
+  defaulted, so its help goes through SAY and the log and is DCL's HELP FCALC
+  line for line (`TestFcalcOnSystemVolume`, against HELP/NOPROMPT); gfortran's
+  twin has none, and fcalc says `%FCALC-E-NOHELP` (message 52, two of the
+  table's lines joined to stay within 39 continuations; not in the `errors`
+  script, since no script runs HELP and VMS's round is unchanged). HELP is read
+  with the file commands, since its topics needn't be fcalc's tokens.
+  LBR$OUTPUT_HELP with its library defaulted and no SYS$HELP:HELPLIB.HLB now
+  reads govax's built-in one, as DCL's HELP does (DEVIATIONS.md).
+  `fcalcToolMessages` has LBR$OUTPUT_HELP's two EXTENSIONs. MANUAL.md's 6.6
+  "FCALC, a calculator", its system volume table, and HELP SYSTEM_VOLUME name
+  the new files. `TestFcalcOnSystemVolume` runs SYLOGIN.COM, then `FCALC 2^10
+  + 1`, fcalc's HELP beside DCL's for four requests, and BUILDFCALC INSTALL,
+  whose image runs `basics` as the milestone's build does. The fcalc tests,
+  gfortran's witness (all three builds), and `TestF90R*` pass.

@@ -2,7 +2,7 @@
 
 Does a Fortran 90 program govax's compiler made run on a real VMS, if FTNRTL goes with it?
 (`docs/planning/PHASE-111 - Fortran 90 milestone.md`, subtask 11.) This is `testdata/ftn86`'s
-pattern, for fcalc (`testdata/fcalc`, the milestone program) and the whole Fortran 90 corpus
+pattern, for fcalc (`testdata/fcalc` and its sources, `internal/fcalc/src`, the milestone program) and the whole Fortran 90 corpus
 (`testdata/fortran90`). There's no Fortran 90 compiler on the VAX, and none is needed: the
 compiler's output is MACRO-32, and FTNRTL is MACRO-32 too, so VMS's MACRO and LINK build
 everything here from source. Nothing of govax's runs on the VAX but its compiler's output.

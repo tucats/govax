@@ -176,8 +176,10 @@ PROGRAMS90 = {
                 "modules/concord/trees.f90"],
 }
 
-# fcalc's directory, and the modules' order (compiles.txt) with gfortran's own platform module.
+# fcalc's directory of scripts, its sources' (internal/fcalc/src), and the modules' order
+# (compiles.txt) with gfortran's own platform module.
 FCALC = CORPUS.parent / "fcalc"
+FCALC_SOURCES = CORPUS.parent.parent / "internal" / "fcalc" / "src"
 FCALC_TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
 FCALC_TIME_MASK = "YYYY-MM-DD hh:mm:ss"
 FCALC_BUILDS = {
@@ -394,9 +396,9 @@ def compare_fcalc_build(work, label, flags):
     """Builds fcalc on gfortran in work, runs every script there, and compares each script's
     output and each file the scripts write with the expected ones (the docstring says how)."""
     work.mkdir()
-    modules = (FCALC / "compiles.txt").read_text().split()
-    sources = [str(FCALC / "gfortran" / "fcplatform.f90") if module == "FCPLATFORM"
-               else str(FCALC / f"{module.lower()}.f90") for module in modules]
+    modules = (FCALC_SOURCES / "compiles.txt").read_text().split()
+    sources = [str(FCALC_SOURCES / "gfortran" / "fcplatform.f90") if module == "FCPLATFORM"
+               else str(FCALC_SOURCES / f"{module.lower()}.f90") for module in modules]
     build = subprocess.run(["gfortran", *flags, "-o", "fcalc", *sources], cwd=work, env=gfortran_env(),
                            capture_output=True, text=True)
     if build.returncode != 0 or build.stderr:

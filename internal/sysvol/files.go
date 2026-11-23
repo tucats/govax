@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/fortran/sysdef"
+	"github.com/tucats/govax/internal/fcalc"
 	"github.com/tucats/govax/internal/ftnrtl"
 )
 
@@ -43,9 +44,18 @@ const (
 	UAFHelpSources   = "[SYSTEM.SYSHLP.SOURCES.AUTHORIZE]"
 )
 
+// Examples holds example programs, and FcalcExamples, below it, fcalc's
+// sources (internal/fcalc), with BUILDFCALC.COM, which builds the
+// SYS$SYSTEM:FCALC.EXE the volume also has (Phase 111's subtask 12).
+const (
+	Examples      = "[SYSTEM.SYSHLP.EXAMPLES]"
+	FcalcExamples = "[SYSTEM.SYSHLP.EXAMPLES.FCALC]"
+)
+
 // Directories lists every directory on the volume, each after its parent,
 // the order they are made in.
-var Directories = []string{Root, SysExe, SysMgr, SysHlp, HelpSources, DebugHelpSources, UAFHelpSources, SysLib, Sources}
+var Directories = []string{Root, SysExe, SysMgr, SysHlp, HelpSources, DebugHelpSources, UAFHelpSources,
+	Examples, FcalcExamples, SysLib, Sources}
 
 // PageFile is the default page file's place on the volume, by directory
 // and name (Decision 8). It isn't one of Files(): the page file's own
@@ -147,6 +157,7 @@ var definitionTime = time.Date(2026, time.November, 3, 0, 0, 0, 0, time.UTC)
 func Files() []File {
 	files := []File{
 		{Directory: SysExe, Name: "DEFAULT.ROM", Format: Binary, read: boot("default.rom")},
+		{Directory: SysExe, Name: "FCALC.EXE", Format: Binary, read: fcalcFile(fcalc.ImageFile)},
 
 		{Directory: SysMgr, Name: "STARTUP.COM", Format: Text, read: boot("startup.com")},
 		{Directory: SysMgr, Name: "SYSTARTUP_VMS.COM", Format: Text, Kind: Seeded, read: boot("systartup_vms.com")},
@@ -170,6 +181,18 @@ func Files() []File {
 	files = append(files, helpSources(HelpSources, bootdata.HelpSourceDir)...)
 	files = append(files, helpSources(DebugHelpSources, bootdata.DebugHelpSourceDir)...)
 	files = append(files, helpSources(UAFHelpSources, bootdata.UAFHelpSourceDir)...)
+
+	// fcalc's sources, and the procedure that builds FCALC.EXE from them.
+	for _, name := range fcalcSources() {
+		files = append(files, File{
+			Directory: FcalcExamples,
+			Name:      strings.ToUpper(path.Base(name)),
+			Format:    Text,
+			read:      fcalcFile(name),
+		})
+	}
+
+	files = append(files, File{Directory: FcalcExamples, Name: "BUILDFCALC.COM", Format: Text, read: fcalcFile(fcalc.ProcedureFile)})
 
 	// FTNRTL's sources: every module, then the options that link them, and
 	// the procedure that builds the library from them.
@@ -262,6 +285,27 @@ func Lookup(spec string) (File, bool) {
 // boot returns a reader of one of internal/bootdata's files.
 func boot(name string) func() ([]byte, error) {
 	return func() ([]byte, error) { return fs.ReadFile(bootdata.FS, name) }
+}
+
+// fcalcFile returns a reader of one of internal/fcalc's files.
+func fcalcFile(name string) func() ([]byte, error) {
+	return func() ([]byte, error) { return fcalc.Files.ReadFile(name) }
+}
+
+// fcalcSources returns the names, in fcalc.Files, of fcalc's sources, in
+// the order they are compiled (BUILDFCALC.COM's).
+func fcalcSources() []string {
+	modules, err := fcalc.Modules(fcalc.Files)
+	if err != nil {
+		panic("sysvol: " + err.Error()) // embedded, so there by construction
+	}
+
+	names := make([]string, len(modules))
+	for i, m := range modules {
+		names[i] = fcalc.SourceFile(m)
+	}
+
+	return names
 }
 
 // ftnrtlFile returns a reader of one of internal/ftnrtl's files.

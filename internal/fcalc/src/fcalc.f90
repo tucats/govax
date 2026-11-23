@@ -9,6 +9,9 @@
 ! Run as a foreign command with text after its name ($ FCALC 2^10 + 1), it
 ! runs that one line and ends.
 !
+! HELP shows the FCALC topic of VMS's help library, SYS$HELP:HELPLIB.HLB,
+! the text DCL's HELP FCALC shows, through FCPLATFORM's SHOW_HELP.
+!
 ! The modules each do one part of the work, and this program joins them:
 ! a line is read (READ_LINE), cut into tokens (FCLEXER, through SCAN_LINE),
 ! classified by its first tokens (EXECUTE), parsed into a tree (FCTREE),
@@ -34,7 +37,7 @@ program fcalc
   use fcnumeric
   use fcplot
   use fcstate
-  use fcplatform, only: foreign_text
+  use fcplatform, only: foreign_text, show_help
   implicit none
 
   character(len=line_length + 1) :: line
@@ -228,7 +231,8 @@ contains
       end do
       if (next - at > len(word)) return
       word = lowercase(text(at:next - 1))
-      if (word /= 'run' .and. word /= 'load' .and. word /= 'save' .and. word /= 'log') return
+      if (word /= 'run' .and. word /= 'load' .and. word /= 'save' .and. word /= 'log' .and. &
+        word /= 'help') return
       ! The next character that isn't blank: = or ( makes the line no
       ! command, and so does a word's going on (RUNNING = 1).
       k = verify(text(next:), ' ' // achar(9))
@@ -240,8 +244,22 @@ contains
     end if
 
     file_command = .true.
-    call file_argument(text, next, word)
+    if (word == 'help') then
+      call help_command(text(next:))
+    else
+      call file_argument(text, next, word)
+    end if
   end function file_command
+
+  ! HELP_COMMAND is HELP [topic ...]: the help library's FCALC topic, or a
+  ! topic under it (HELP COMMANDS SOLVE), shown as DCL's HELP FCALC shows it
+  ! (module FCPLATFORM's SHOW_HELP). HELP is with the commands that name a
+  ! file because its topics needn't be fcalc's tokens (HELP @).
+  subroutine help_command(topics)
+    character(len=*), intent(in) :: topics
+
+    if (.not. show_help('FCALC ' // trim(adjustl(topics)), help_line)) call fail(e_nohelp, 0)
+  end subroutine help_command
 
   ! FILE_ARGUMENT runs the command WORD, its file named in TEXT from NEXT:
   ! one word, with nothing after it.

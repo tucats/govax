@@ -76,4 +76,29 @@ contains
     length = short
     if (.not. btest(status, 0)) length = 0
   end subroutine foreign_text
+
+  ! SHOW_HELP shows the help text REQUEST names, "FCALC" and the topics
+  ! after it, and is false if there is none to show. fcalc's help is the
+  ! FCALC topic of the system's help library, SYS$HELP:HELPLIB.HLB, the text
+  ! DCL's HELP FCALC shows, so it is written once, in VMS's help format, and
+  ! the library is its one copy. LBR$OUTPUT_HELP, a routine of VMS's
+  ! librarian, finds the topics and lays the text out, as HELP does: its
+  ! arguments are a routine to write each line, the line's width (left out:
+  ! 80), the request, the library (left out: SYS$HELP:HELPLIB), and flags
+  ! (0: no prompting for more topics, and no user libraries). It doesn't
+  ! write the lines itself: it calls WRITER with each, as a CHARACTER
+  ! argument, so they go where all of fcalc's output goes (module
+  ! FCMESSAGES's HELP_LINE). A procedure passed as an argument this way is
+  ! a dummy procedure: INTEGER, EXTERNAL says WRITER is a function, and
+  ! here it is passed on to LBR$OUTPUT_HELP as it came.
+  logical function show_help(request, writer)
+    character(len=*), intent(in) :: request
+    integer, external :: writer
+    integer, parameter :: no_flags = 0
+    integer :: status
+    integer, external :: lbr$output_help
+
+    status = lbr$output_help(writer, , request, , no_flags)
+    show_help = btest(status, 0)
+  end function show_help
 end module fcplatform

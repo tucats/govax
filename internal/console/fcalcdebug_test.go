@@ -32,18 +32,36 @@ var fcalcDebugMasks = []struct {
 // instead.
 func TestFcalcDebugger(t *testing.T) {
 	dir := filepath.Join("..", "..", "testdata", "fcalc")
+	fcalcSources := filepath.Join("..", "fcalc", "src")
 
-	order, err := os.ReadFile(filepath.Join(dir, "compiles.txt"))
+	order, err := os.ReadFile(filepath.Join(fcalcSources, "compiles.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// The procedure and the session (testdata/fcalc) and the sources
+	// (internal/fcalc/src), gathered in one directory for runProbeProcedure.
+	gathered := t.TempDir()
 	sources := []string{"fcalcd.com", "fcalcd.dbg"}
+	from := map[string]string{"fcalcd.com": dir, "fcalcd.dbg": dir}
+
 	for name := range strings.FieldsSeq(string(order)) {
 		sources = append(sources, strings.ToLower(name)+".f90")
+		from[strings.ToLower(name)+".f90"] = fcalcSources
 	}
 
-	out := runProbeProcedure(t, dir, sources, "FCALCD", []string{"fcalcd"})
+	for _, name := range sources {
+		data, err := os.ReadFile(filepath.Join(from[name], name))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(filepath.Join(gathered, name), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	out := runProbeProcedure(t, gathered, sources, "FCALCD", []string{"fcalcd"})
 
 	for _, file := range []struct{ made, held string }{
 		{"fcalcd.dlg", "fcalcd.dlg"},

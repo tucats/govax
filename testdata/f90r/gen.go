@@ -306,7 +306,7 @@ func exists(path string) bool {
 
 // fcalcModules are fcalc's modules in compiles.txt's order, the main program last.
 func fcalcModules() []string {
-	return strings.Fields(read("testdata/fcalc/compiles.txt"))
+	return strings.Fields(read("internal/fcalc/src/compiles.txt"))
 }
 
 // writeFcalc writes fcalc's part: each variant in a directory of its own, with the
@@ -331,7 +331,7 @@ func writeFcalc(ex, com *strings.Builder) {
 		fmt.Fprintf(ex, "CREATE/DIRECTORY %[1]s[%[2]s]\nSET DEFAULT %[1]s[%[2]s]\n", device, d)
 
 		for _, m := range modules {
-			copyFile(ex, fc+"/"+strings.ToLower(m)+".f90", m+".F90")
+			copyFile(ex, "internal/fcalc/src/"+strings.ToLower(m)+".f90", m+".F90")
 		}
 
 		for _, file := range append(append(scripts, files...), fc+"/oneshot.com") {

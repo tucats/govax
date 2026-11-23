@@ -3154,6 +3154,19 @@ expect adjustment as phases land):
   `DEFINE FTNRTL` to an image of one's own takes precedence; the
   console's `TestFTNRTL` links and runs a MACRO program against both,
   in both paging modes.
+- `internal/fcalc` — FCALC.EXE, the Fortran 90 milestone's scientific
+  calculator (Phase 111) as a tool govax ships: its sources (`src/*.f90`,
+  `src/compiles.txt`; gfortran's twin of FCPLATFORM in `src/gfortran/`),
+  `buildfcalc.com`, and the committed image `fcalc.exe`, embedded (`Files`,
+  `Image`). `fcalc/build` compiles, assembles, and links it in Go, times and
+  tool names fixed, its symbols `dclcmd.BuiltinSources`; `go generate
+  ./internal/fcalc` (`mkfcalc`) rewrites the image, and `TestCommittedImage`
+  checks it. The system volume (`internal/sysvol`) has it as
+  SYS$SYSTEM:FCALC.EXE and the sources in `[SYSTEM.SYSHLP.EXAMPLES.FCALC]`;
+  SYLOGIN.COM defines FCALC; HELP FCALC is `bootdata/files/help/fcalc.hlp`,
+  which fcalc's own HELP shows through LBR$OUTPUT_HELP (its examples run by
+  `internal/console`'s `TestFcalcHelpExamples`). `testdata/fcalc` holds its
+  scripts.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,

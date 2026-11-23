@@ -2126,3 +2126,13 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   called `.LONG R1[2]` DIRSYNX (testdata/tir111's TIRR), which govax now does too, its repeated
   value never defined; whether VMS refuses a register name in any data expression is unconfirmed.
 - **Status**: open.
+
+### [Phase 111] LBR$OUTPUT_HELP with no SYS$HELP:HELPLIB.HLB
+
+- **Where**: `internal/lbrrtl/help.go`'s `outputHelp`.
+- **What**: called with no library (the main library defaulted to SYS$HELP:HELPLIB), and with
+  no such file, govax's LBR$OUTPUT_HELP reads the HELPLIB.HLB built into govax, as DCL's HELP
+  does (`internal/dclcmd/help.go`), where VMS's would return RMS$_FNF; a VMS system always has
+  the file. fcalc's HELP (Phase 111's subtask 12) relies on it when govax runs without a system
+  volume. A library named explicitly that can't be opened is RMS$_FNF, as on VMS.
+- **Status**: by choice.
