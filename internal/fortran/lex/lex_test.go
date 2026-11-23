@@ -227,14 +227,14 @@ func TestTokenKinds(t *testing.T) {
 	}
 }
 
-// TestRecursiveRefused checks the RECURSIVE forms that are no statement: twice,
-// away from a unit's start, and before what isn't a header.
+// TestRecursiveRefused checks the RECURSIVE forms that are no statement: away
+// from a unit's start, and before what isn't a header. (RECURSIVE twice is
+// DUPPREFIX since Phase 112, the header kept: TestF95Prefixes.)
 func TestRecursiveRefused(t *testing.T) {
 	cases := []struct {
 		text  string
 		first bool
 	}{
-		{"RECURSIVE INTEGER RECURSIVE FUNCTION F(N)", true},
 		{"RECURSIVE SUBROUTINE WALK(NODE)", false},
 		{"RECURSIVE X", true},
 		{"RECURSIVE PROGRAM P", true},

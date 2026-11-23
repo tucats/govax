@@ -307,6 +307,11 @@ type Declarator struct {
 	// value there; nil if none. ValuePos is where the expression starts.
 	Value    Expr
 	ValuePos diag.Position
+
+	// PointerInit says Value came after => rather than =: Fortran 95's
+	// pointer initialization, P => NULL() (the HP Fortran manual's 3.3.1;
+	// docs/planning/PHASE-112 - Fortran 95.md).
+	PointerInit bool
 }
 
 // Bound is one dimension's bounds in an array declarator, [dl:]du.

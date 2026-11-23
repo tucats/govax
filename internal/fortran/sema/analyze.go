@@ -787,6 +787,7 @@ func (a *analyzer) header(au *ast.Unit) {
 		s.Result = true
 		u.Result = s
 		u.Recursive = h.Recursive || a.recursive
+		a.pendingPrefixes(h.Pos, h.Pure, h.Elemental)
 
 		// With RESULT the function's name is the routine's alone, and RESULT's
 		// variable is the value, with the header's type (8.5.2.1). A RESULT
@@ -819,6 +820,7 @@ func (a *analyzer) header(au *ast.Unit) {
 		s := a.declare(h.Name, h.Pos)
 		s.Class = UnitName
 		u.Recursive = h.Recursive || a.recursive
+		a.pendingPrefixes(h.Pos, h.Pure, h.Elemental)
 
 		a.params(h.Params, &u.AltPlaces)
 

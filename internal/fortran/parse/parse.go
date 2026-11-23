@@ -216,6 +216,11 @@ func init() {
 		lex.Use:               parseUse,
 		lex.Where:             parseWhere,
 		lex.WhereBlock:        parseWhereBlock,
+
+		// Fortran 95's (f95.go).
+		lex.Forall:      parseForall,
+		lex.ForallBlock: parseForallBlock,
+		lex.EndForall:   parseEndForall,
 	}
 }
 

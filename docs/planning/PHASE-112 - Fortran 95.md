@@ -1,7 +1,8 @@
 # Phase 112 — Fortran 95
 
 **Status:** planned 2026-11-22; subtask 1, the survey (Part A), done 2026-11-22 and
-accepted by the author the same day ("The author's answers"); subtask 2 is next. Phase 99's question 2 left Fortran 95's additions to an
+accepted by the author the same day ("The author's answers"); subtask 2, recovery and syntax,
+done 2026-11-23; subtask 3 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -280,7 +281,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 ### A.4 The subtasks, revised
 
 1. The survey (this Part A).
-2. **Recovery and syntax**: an unrecognized statement kept without breaking its unit
+2. **Recovery and syntax** (done 2026-11-23): an unrecognized statement kept without breaking its unit
    (A.3's 1); PURE and ELEMENTAL prefixes with RECURSIVE and a type in any order (lexer,
    `ast.FunctionStmt`/`SubroutineStmt`, interface bodies); FORALL's statement and construct
    parsed (`ast.ForallStmt`, END FORALL, names); END INTERFACE's generic name; WHERE's
@@ -379,3 +380,41 @@ with every recommendation of A.5:
   same fifteen, with A.3's items placed), A.5 six questions with recommendations.
 - **2026-11-22:** The author accepted Part A, A.4's subtasks, and every recommendation of
   A.5 ("The author's answers"). Subtask 2, recovery and syntax, is next.
+- **2026-11-23:** Subtask 2, recovery and syntax. **The lexer** (`lex/f95stmt.go`):
+  PURE and ELEMENTAL are prefixes beside RECURSIVE (`Statement.Pure`, `Elemental`), any
+  of the three in any order, before the type or between it and FUNCTION
+  (`headerPrefixes`, `prefixWords`, and `typedFunction`'s loop); a prefix given twice is
+  DUPPREFIX with the header kept (RECURSIVE twice was UNRECSTMT; `TestRecursiveRefused`
+  lost that case). The recovery, `lostHeader`: a unit's first statement that would be
+  unrecognized but has words before a prefix, FUNCTION, or SUBROUTINE (free form: words
+  ending at a blank) is UNRECPREFIX and read as the header from the known word on, so
+  IMPURE ELEMENTAL SUBROUTINE S keeps its unit and its ELEMENTAL. FORALL is told apart as
+  WHERE is (`forallStatement`: `Forall` with its statement as `Then`, `ForallBlock`
+  alone; `EndForall`, END FORALL's blank in `keywordSplits`); a construct name may stand
+  on a WHERE or FORALL construct (NOTCONSTRUCT's text widened). Prefix words are looked
+  for only at a unit's start, where squeezed fixed form could also read `INTEGER
+  PUREFUNCTIONX` as a header, as it already read `RECURSIVEFUNCTIONX`. **The parser**
+  (`parse/f95.go`): `ast.ForallStmt`, `ForallBlockStmt`, `EndForallStmt`, and
+  `ForallHeader` (indexes, each a name = lower : upper [: stride], then a mask, last; an
+  item is an index if it is a name followed by =); a FORALL statement executes an
+  assignment or a pointer assignment, else BADFORALLSTMT; ELSEWHERE and END WHERE take
+  their construct's name (`constructAfter`); END INTERFACE takes a generic specification
+  (`genericSpec`, shared with INTERFACE), checked against the block's by the unit stack
+  (`checkEndInterface`, ENDINTERFACE); `=> expr` after a declared entity is
+  `Declarator.PointerInit`. **Semantic analysis**: named WHERE constructs are done, not
+  NOTIMPL, since `push` already names a construct: `elseWhere` and `endWhere` call
+  `checkName` (WRONGNAME, MISSINGNAME; subtask 10 is left nesting and masked
+  ELSEWHERE). PURE and ELEMENTAL headers are NOTIMPL (`pendingPrefixes`), as is `=>`
+  initialization (`f90Entity`; a component's `=> NULL()` is the component default's
+  NOTIMPL already); FORALL's statement and construct are NOTIMPL once, through
+  `notimpl.go`'s pending constructs, the construct's statements passed over quietly
+  (`pendingBodies`, `quietBody`) so its indexes cause nothing under IMPLICIT NONE, a nested
+  FORALL counted but not reported. Tests: `lex`'s `TestF95Prefixes`,
+  `TestF95PrefixErrors`, `TestForall`; `parse`'s `TestF95Forms` and `TestF95Probes`
+  (every probe of `testdata/f95` parses without a message); `sema`'s `TestF95Pending` and
+  `TestWhere`'s named cases. The probes compiled by govax now give only NOTIMPLs and their
+  own subtasks' messages (`pure` and `forall` 7 NOTIMPLs each where they had 40 and 17
+  messages; `nullinit`'s NOTYPEDEFs follow from its module's NOTIMPL). Left for later: a
+  module's text doesn't carry PURE or ELEMENTAL yet (subtask 6, when such a module first
+  compiles); ELEMENTAL with RECURSIVE, which Fortran 95 forbids, is subtask 7's check.
+

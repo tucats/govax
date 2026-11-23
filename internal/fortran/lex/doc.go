@@ -168,6 +168,18 @@
 // selector, INTEGER(4) FUNCTION F, which the parser reads into the
 // header's type.
 //
+// # Fortran 95's statements
+//
+// Fortran 95 (docs/planning/PHASE-112 - Fortran 95.md) adds FORALL, told
+// apart as WHERE is (FORALL (header) alone starts a construct, anything after
+// the header is the statement it controls), and two prefixes beside
+// RECURSIVE, PURE and ELEMENTAL, which a FUNCTION or SUBROUTINE statement at
+// a unit's start may give in any order, before its type or after it
+// (f95stmt.go). There too is a recovery: a unit's first statement with words
+// the lexer doesn't know before a prefix, FUNCTION, or SUBROUTINE is reported
+// and still read as the header, so the parser doesn't lose the units' nesting
+// over one unknown word.
+//
 // # What this pass hands on
 //
 // Lex returns a Statement for each statement: its Kind, its Label, and

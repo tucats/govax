@@ -246,6 +246,7 @@ func notInBody(k lex.Kind) bool {
 func (u *unitStack) inInterface(f *openFrame, s ast.Stmt, k lex.Kind) {
 	switch k {
 	case lex.EndInterface:
+		checkEndInterface(f.iface, s, u.messages)
 		f.iface.End = s
 		f.iface = nil
 
@@ -457,29 +458,36 @@ func parseInterface(p *parser) ast.Stmt {
 		return s
 	}
 
-	s.Generic.Pos = p.here()
+	s.Generic = p.genericSpec()
+	p.end()
+
+	return s
+}
+
+// genericSpec reads a generic specification (R1206): a generic name,
+// OPERATOR(op), or ASSIGNMENT(=).
+func (p *parser) genericSpec() ast.GenericSpec {
+	g := ast.GenericSpec{Pos: p.here()}
 	n := p.name("a generic name, OPERATOR, or ASSIGNMENT")
 
 	switch {
 	case n.Name == "OPERATOR" && p.at("("), n.Name == "OPERATOR" && p.at("(/"):
-		s.Generic.Kind = ast.GenericOp
-		s.Generic.Op = p.genericOperator()
+		g.Kind = ast.GenericOp
+		g.Op = p.genericOperator()
 
 	case n.Name == "ASSIGNMENT" && p.at("("):
-		s.Generic.Kind = ast.GenericAssign
+		g.Kind = ast.GenericAssign
 
 		p.next()
 		p.expect("=")
 		p.expect(")")
 
 	default:
-		s.Generic.Kind = ast.GenericName
-		s.Generic.Name = n.Name
+		g.Kind = ast.GenericName
+		g.Name = n.Name
 	}
 
-	p.end()
-
-	return s
+	return g
 }
 
 // relationalSpellings are Fortran 90's spellings of the relational
@@ -534,9 +542,15 @@ func (p *parser) genericOperator() string {
 	return op
 }
 
-// parseEndInterface parses END INTERFACE (R1203).
+// parseEndInterface parses END INTERFACE [generic-spec] (R1203; the generic
+// specification is Fortran 95's), which inInterface checks against the block's.
 func parseEndInterface(p *parser) ast.Stmt {
 	s := &ast.EndInterfaceStmt{StmtBase: p.base()}
+
+	if !p.atEnd() {
+		s.Generic = p.genericSpec()
+	}
+
 	p.end()
 
 	return s
@@ -558,4 +572,21 @@ func parseModuleProcedure(p *parser) ast.Stmt {
 	p.end()
 
 	return s
+}
+
+// checkEndInterface checks END INTERFACE's generic specification, if it has
+// one, against its block's (Fortran 95's R1203 constraint): the same name,
+// operator, or assignment, and none for a block without one (ENDINTERFACE).
+func checkEndInterface(b *ast.InterfaceBlock, s ast.Stmt, messages *diag.List) {
+	end, ok := s.(*ast.EndInterfaceStmt)
+	if !ok || end.Generic.Kind == ast.NoGeneric || end.Generic.String() == b.Generic.String() {
+		return
+	}
+
+	what := "has none"
+	if g := b.Generic.String(); g != "" {
+		what = "is " + g
+	}
+
+	messages.Report("ENDINTERFACE", end.Generic.Pos, end.Generic.String(), b.Position().Line, what)
 }

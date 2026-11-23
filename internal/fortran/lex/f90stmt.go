@@ -166,7 +166,7 @@ func (l *lexer) endStatement(st *Statement, i, j int) *Statement {
 var keywordSplits = map[string]int{
 	"BLOCKDATA": 5, "DOUBLEPRECISION": 6, "DOUBLECOMPLEX": 6, "ELSEIF": 4, "ELSEWHERE": 4,
 	"ENDDO": 3, "ENDFILE": 3, "ENDIF": 3, "ENDINTERFACE": 3, "ENDSELECT": 3, "ENDTYPE": 3,
-	"ENDWHERE": 3, "ENDMAP": 3, "ENDSTRUCTURE": 3, "ENDUNION": 3, "GOTO": 2, "SELECTCASE": 6,
+	"ENDWHERE": 3, "ENDFORALL": 3, "ENDMAP": 3, "ENDSTRUCTURE": 3, "ENDUNION": 3, "GOTO": 2, "SELECTCASE": 6,
 	"DEFINEFILE": 6, "MODULEPROCEDURE": 6,
 }
 

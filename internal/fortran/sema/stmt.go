@@ -193,7 +193,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	a.beforeFirstCase(s)
 
-	if a.whereBody(s) {
+	if a.whereBody(s) || a.quietBody(s) {
 		return
 	}
 

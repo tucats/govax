@@ -142,6 +142,13 @@ const (
 	Where      // WHERE (mask) assignment
 	WhereBlock // WHERE (mask), starting a WHERE construct
 
+	// Fortran 95's statements (docs/planning/PHASE-112 - Fortran 95.md,
+	// subtask 2). PURE and ELEMENTAL are a FUNCTION's or SUBROUTINE's
+	// prefixes (Statement.Pure, Statement.Elemental), not kinds.
+	Forall      // FORALL (header) assignment
+	ForallBlock // FORALL (header), starting a FORALL construct
+	EndForall
+
 	// numKinds isn't a kind: being last, its value is the number of kinds
 	// before it, which sizes the kinds table below.
 	numKinds
@@ -282,6 +289,10 @@ var kinds = [numKinds]kindInfo{
 	Use:               {name: "USE", keyword: "USE"},
 	Where:             {name: "WHERE", executable: true},
 	WhereBlock:        {name: "block WHERE", executable: true},
+
+	Forall:      {name: "FORALL", executable: true},
+	ForallBlock: {name: "block FORALL", executable: true},
+	EndForall:   {name: "END FORALL", keyword: "ENDFORALL", executable: true},
 }
 
 // String is the statement's name, as messages show it: "GO TO".

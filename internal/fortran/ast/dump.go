@@ -301,6 +301,15 @@ func DumpStmt(s Stmt) string {
 	case *EndWhereStmt:
 		return "END WHERE"
 
+	case *ForallStmt:
+		return "FORALL " + s.Header.String() + " " + DumpStmt(s.Then)
+
+	case *ForallBlockStmt:
+		return "FORALL " + s.Header.String()
+
+	case *EndForallStmt:
+		return "END FORALL"
+
 	case *ContainsStmt:
 		return "CONTAINS"
 
@@ -320,6 +329,10 @@ func DumpStmt(s Stmt) string {
 		return "MODULE PROCEDURE " + strings.Join(names, ", ")
 
 	case *EndInterfaceStmt:
+		if g := s.Generic.String(); g != "" {
+			return "END INTERFACE " + g
+		}
+
 		return "END INTERFACE"
 
 	case *UseStmt:
@@ -407,18 +420,10 @@ func dumpSpec(s Stmt) (string, bool) {
 			text = s.Type.String() + " " + text
 		}
 
-		if s.Recursive {
-			text = "RECURSIVE " + text
-		}
-
-		return text, true
+		return prefixText(s.Recursive, s.Pure, s.Elemental) + text, true
 
 	case *SubroutineStmt:
-		if s.Recursive {
-			return "RECURSIVE SUBROUTINE " + s.Name + names(s.Params), true
-		}
-
-		return "SUBROUTINE " + s.Name + names(s.Params), true
+		return prefixText(s.Recursive, s.Pure, s.Elemental) + "SUBROUTINE " + s.Name + names(s.Params), true
 
 	case *BlockDataStmt:
 		return strings.TrimSpace("BLOCK DATA " + s.Name), true
@@ -859,7 +864,10 @@ func (d *Declarator) String() string {
 		text += " " + values(d.Init)
 	}
 
-	if d.Value != nil {
+	switch {
+	case d.Value != nil && d.PointerInit:
+		text += " => " + DumpExpr(d.Value)
+	case d.Value != nil:
 		text += " = " + DumpExpr(d.Value)
 	}
 
@@ -1027,4 +1035,41 @@ func CaseRangeText(low, high string, colon bool) string {
 	}
 
 	return low + ":" + high
+}
+
+// prefixText is a header's prefixes as a dump shows them, each followed by a
+// blank: "RECURSIVE PURE ".
+func prefixText(recursive, pure, elemental bool) string {
+	text := ""
+
+	for _, p := range []struct {
+		given bool
+		word  string
+	}{{recursive, "RECURSIVE "}, {pure, "PURE "}, {elemental, "ELEMENTAL "}} {
+		if p.given {
+			text += p.word
+		}
+	}
+
+	return text
+}
+
+// String is the header as a dump shows it: (I=1:N:2, J=1:M, mask).
+func (h ForallHeader) String() string {
+	parts := make([]string, 0, len(h.Indexes)+1)
+
+	for _, x := range h.Indexes {
+		part := x.Name + "=" + DumpExpr(x.Lower) + ":" + DumpExpr(x.Upper)
+		if x.Stride != nil {
+			part += ":" + DumpExpr(x.Stride)
+		}
+
+		parts = append(parts, part)
+	}
+
+	if h.Mask != nil {
+		parts = append(parts, DumpExpr(h.Mask))
+	}
+
+	return "(" + strings.Join(parts, ", ") + ")"
 }

@@ -1455,7 +1455,10 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   nested WHERE, the intrinsic changes, zero widths, all under `/F90`; its
   subtask 1 a survey of the HP Fortran manual, gfortran `-std=f95` the
   witness, done 2026-11-22: its Part A, with the probes in `testdata/f95`,
-  accepted by the author with every recommendation, "The author's answers"), **Phase 113 is the errata** (its Part B the scope: the cheap
+  accepted by the author with every recommendation, "The author's answers"; subtask 2,
+  done 2026-11-23, the syntax: PURE and ELEMENTAL prefixes, FORALL parsed
+  (`lex/f95stmt.go`, `parse/f95.go`), named WHERE, END INTERFACE's name, and a unit's
+  header recovered past unknown prefix words, UNRECPREFIX), **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
   round at its end), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN

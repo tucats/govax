@@ -226,7 +226,8 @@ func badIfStatement(k lex.Kind) string {
 	case lex.Unknown:
 		return "" // the lexer reported it
 	case lex.Do, lex.DoWhile, lex.EndDo, lex.IfThen, lex.ElseIf, lex.Else, lex.EndIf, lex.End,
-		lex.SelectCase, lex.Case, lex.EndSelect, lex.WhereBlock, lex.ElseWhere, lex.EndWhere:
+		lex.SelectCase, lex.Case, lex.EndSelect, lex.WhereBlock, lex.ElseWhere, lex.EndWhere,
+		lex.ForallBlock, lex.EndForall:
 		return article(k.String()) + " " + k.String() + " statement"
 	}
 

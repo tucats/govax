@@ -142,9 +142,20 @@ var messages = map[string]kind{
 	"BADKIND": {Error, "a kind parameter after _ must be digits or a name"},
 
 	// NOTCONSTRUCT is a construct name (NAME:) before a statement that
-	// starts no construct: only DO, DO WHILE, a block IF, and SELECT CASE
-	// may have one (the standard's 8.1).
-	"NOTCONSTRUCT": {Error, "only a DO, block IF, or SELECT CASE statement may have a construct name, not this %s statement"},
+	// starts no construct: only DO, DO WHILE, a block IF, SELECT CASE, and
+	// the WHERE and FORALL constructs may have one (the standard's 8.1,
+	// Fortran 95's R739 and R750).
+	"NOTCONSTRUCT": {Error, "only a DO, block IF, SELECT CASE, WHERE, or FORALL statement may have a construct name, not this %s statement"},
+
+	// DUPPREFIX is a prefix (RECURSIVE, PURE, ELEMENTAL) a FUNCTION or
+	// SUBROUTINE statement gives twice (the standard's R1219's constraint).
+	"DUPPREFIX": {Error, "the prefix %s is given twice"},
+
+	// UNRECPREFIX is a unit's first statement in which words the lexer doesn't
+	// know stand before FUNCTION or SUBROUTINE (IMPURE SUBROUTINE S): reported,
+	// and the rest read as the header, so that the unit's structure isn't lost
+	// (docs/planning/PHASE-112 - Fortran 95.md, subtask 2).
+	"UNRECPREFIX": {Error, "%s is not a prefix FORTRAN knows; the rest is read as a %s statement"},
 
 	// The parser's messages (internal/fortran/parse).
 
@@ -189,6 +200,10 @@ var messages = map[string]kind{
 	// NOINTERFACEEND is an interface block its unit's END reaches.
 	"NOINTERFACEEND": {Error, "this interface block has no END INTERFACE statement"},
 
+	// ENDINTERFACE is END INTERFACE with a generic specification that isn't
+	// its block's (Fortran 95's R1203).
+	"ENDINTERFACE": {Error, "this END INTERFACE statement names %s, but the interface block at line %d %s"},
+
 	// NOINTERFACE is END INTERFACE with no interface block open.
 	"NOINTERFACE": {Error, "this END INTERFACE statement ends no interface block"},
 
@@ -226,6 +241,10 @@ var messages = map[string]kind{
 	// BADWHERESTMT is a WHERE statement whose statement isn't an assignment
 	// (Fortran 90's R740: only an assignment may be masked).
 	"BADWHERESTMT": {Error, "a WHERE statement can execute only an assignment, not %s"},
+
+	// BADFORALLSTMT is a FORALL statement whose statement is neither an
+	// assignment nor a pointer assignment (Fortran 95's R756).
+	"BADFORALLSTMT": {Error, "a FORALL statement can execute only an assignment or a pointer assignment, not %s"},
 
 	// BADSPECIFIER is a keyword specifier the statement doesn't take:
 	// WRITE (6, END=10).

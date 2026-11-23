@@ -193,6 +193,12 @@ func (p *parser) entityValue(d *ast.Declarator) {
 	case p.accept("="):
 		d.ValuePos = p.here()
 		d.Value = p.expr()
+
+	case p.accept("=>"):
+		// Fortran 95's pointer initialization, P => NULL().
+		d.ValuePos = p.here()
+		d.Value = p.expr()
+		d.PointerInit = true
 	}
 }
 
@@ -376,7 +382,8 @@ func parseWhereBlock(p *parser) ast.Stmt {
 }
 
 // parseElseWhere parses ELSEWHERE (R743), and Fortran 95's ELSEWHERE
-// (mask), for semantic analysis to refuse.
+// (mask), for semantic analysis to refuse; either may end with its
+// construct's name (Fortran 95's R745).
 func parseElseWhere(p *parser) ast.Stmt {
 	s := &ast.ElseWhereStmt{StmtBase: p.base()}
 
@@ -384,14 +391,16 @@ func parseElseWhere(p *parser) ast.Stmt {
 		s.Mask = p.condition()
 	}
 
+	p.constructAfter(s)
 	p.end()
 
 	return s
 }
 
-// parseEndWhere parses END WHERE (R744).
+// parseEndWhere parses END WHERE [name] (R744; the name Fortran 95's R746).
 func parseEndWhere(p *parser) ast.Stmt {
 	s := &ast.EndWhereStmt{StmtBase: p.base()}
+	p.constructAfter(s)
 	p.end()
 
 	return s

@@ -40,6 +40,12 @@ type Statement struct {
 	// reentrant FORTRAN.md). The keyword is no token.
 	Recursive bool
 
+	// Pure and Elemental are Fortran 95's prefixes, PURE and ELEMENTAL, on a
+	// FUNCTION or SUBROUTINE statement, set as Recursive is: any of the
+	// three in any order, before the type or between it and FUNCTION (the
+	// HP Fortran manual's 8.5.1; docs/planning/PHASE-112 - Fortran 95.md).
+	Pure, Elemental bool
+
 	// Construct is the construct name a DO, DO WHILE, block IF, or SELECT
 	// CASE statement's text starts with (OUTER: DO I = 1, N; the standard's
 	// 8.1), or "" for none, and ConstructOffset is where it starts. The name
@@ -207,7 +213,7 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		inner.Construct, inner.ConstructOffset = string(l.sq.text[i:colon]), st.Offset
 
 		switch inner.Kind {
-		case Do, DoWhile, IfThen, SelectCase, Unknown:
+		case Do, DoWhile, IfThen, SelectCase, WhereBlock, ForallBlock, Unknown:
 		default:
 			l.messages.Report("NOTCONSTRUCT", l.src.Position(st.Offset), inner.Kind.String())
 			inner.Construct = ""
@@ -220,7 +226,7 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 	// closing parenthesis says which. If it is =, the "IF" is an array
 	// named IF, and the statement is an assignment to one of its
 	// elements. Fortran 90's WHERE is told apart the same way.
-	for _, kw := range []string{"IF(", "ELSEIF(", "WHERE("} {
+	for _, kw := range []string{"IF(", "ELSEIF(", "WHERE(", "FORALL("} {
 		if !l.hasPrefix(i, j, kw) {
 			continue
 		}
@@ -234,8 +240,11 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 
 		l.keywordBlanks(i, kw[:len(kw)-1])
 
-		if kw == "WHERE(" {
+		switch kw {
+		case "WHERE(":
 			return l.whereStatement(st, open, close, j)
+		case "FORALL(":
+			return l.forallStatement(st, open, close, j)
 		}
 
 		return l.ifStatement(st, kw == "ELSEIF(", open, close, j)
@@ -286,15 +295,12 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		return st
 	}
 
-	// RECURSIVE FUNCTION F(N), RECURSIVE INTEGER*2 FUNCTION F(N), RECURSIVE
+	// RECURSIVE FUNCTION F(N), PURE INTEGER*2 FUNCTION F(N), ELEMENTAL
 	// SUBROUTINE S: a unit's header, which only a unit's first statement can be.
-	// No statement's keyword starts with RECURSIVE, and the = test above has
+	// No statement's keyword starts with a prefix, and the = test above has
 	// already taken RECURSIVE = 1.
-	if unitStart && l.hasPrefix(i, j, recursive) {
-		if fn := l.classify(i+len(recursive), j, true); (fn.Kind == Function || fn.Kind == Subroutine) && !fn.Recursive {
-			fn.Recursive = true
-			fn.Offset = st.Offset
-
+	if unitStart {
+		if fn := l.headerPrefixes(st, i, j); fn != nil {
 			return fn
 		}
 	}
@@ -409,6 +415,12 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		return st
 	}
 
+	if unitStart {
+		if fn := l.lostHeader(st, i, j); fn != nil {
+			return fn
+		}
+	}
+
 	st.Kind = Unknown
 
 	return st
@@ -499,8 +511,6 @@ func (l *lexer) oldParameter(i, eq int) bool {
 	return true
 }
 
-// recursive is the keyword that makes a subprogram recursive (Statement.Recursive).
-const recursive = "RECURSIVE"
 
 // typedFunction recognizes a typed FUNCTION statement (INTEGER FUNCTION
 // F(X), REAL*8 FUNCTION G, CHARACTER*(*) FUNCTION H(S), INTEGER RECURSIVE
@@ -546,16 +556,17 @@ func (l *lexer) typedFunction(st *Statement, k Kind, i, j int) *Statement {
 
 	length := p
 
-	if l.hasPrefix(p, j, recursive+fn) {
-		p += len(recursive)
-		st.Recursive = true
-	}
+	// INTEGER RECURSIVE FUNCTION F, REAL PURE ELEMENTAL FUNCTION G: the
+	// prefixes between the type and FUNCTION.
+	var given prefixSet
+
+	p = l.prefixWords(p, j, &given)
 
 	if !l.hasPrefix(p, j, fn) || p+len(fn) >= j || !isLetter(l.sq.text[p+len(fn)]) {
-		st.Recursive = false
-
 		return nil
 	}
+
+	given.apply(st, l)
 
 	st.Kind = Function
 	st.FunctionType = k
@@ -707,6 +718,14 @@ func Dump(s *Statement) string {
 
 	if s.Recursive {
 		b.WriteString(" (recursive)")
+	}
+
+	if s.Pure {
+		b.WriteString(" (pure)")
+	}
+
+	if s.Elemental {
+		b.WriteString(" (elemental)")
 	}
 
 	b.WriteString(":")

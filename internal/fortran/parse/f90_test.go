@@ -451,7 +451,7 @@ func TestArrayForms(t *testing.T) {
 		{"X = (/ /)", "SYNTAX"},
 		{"WHERE (A > 0) GO TO 10", "BADWHERESTMT"},
 		{"WHERE (A > 0) CALL S", "BADWHERESTMT"},
-		{"END WHERE X", "EXTRATEXT"},
+		{"END WHERE X, Y", "EXTRATEXT"},
 	}
 
 	for _, e := range errors {

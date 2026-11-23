@@ -30,7 +30,7 @@ func parseProgram(p *parser) ast.Stmt {
 // semantic analysis to report. A CHARACTER function may have a length in
 // only one of the two places (section 6.2.2.2).
 func parseFunction(p *parser) ast.Stmt {
-	s := &ast.FunctionStmt{StmtBase: p.base(), Recursive: p.st.Recursive}
+	s := &ast.FunctionStmt{StmtBase: p.base(), Recursive: p.st.Recursive, Pure: p.st.Pure, Elemental: p.st.Elemental}
 
 	if p.st.FunctionType == lex.TypeDecl {
 		spec := p.derivedSpec()
@@ -76,7 +76,8 @@ func parseFunction(p *parser) ast.Stmt {
 // parseSubroutine parses [RECURSIVE] SUBROUTINE name [([p[,p]...])] (section
 // 6.2.3; the lexer has taken RECURSIVE, Statement.Recursive).
 func parseSubroutine(p *parser) ast.Stmt {
-	s := &ast.SubroutineStmt{StmtBase: p.base(), Name: p.name("the subroutine's name").Name, Recursive: p.st.Recursive}
+	s := &ast.SubroutineStmt{StmtBase: p.base(), Name: p.name("the subroutine's name").Name, Recursive: p.st.Recursive,
+		Pure: p.st.Pure, Elemental: p.st.Elemental}
 	s.Params = p.params()
 
 	if s.Params != nil && p.atName("RESULT") {

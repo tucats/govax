@@ -52,6 +52,13 @@ func statementWhat(s ast.Stmt) string {
 		return interfaceWhat(b)
 	}
 
+	switch s.(type) {
+	case *ast.ForallBlockStmt:
+		return "the FORALL construct"
+	case *ast.EndForallStmt:
+		return "the END FORALL statement"
+	}
+
 	return "the " + s.Base().Kind.String() + " statement"
 }
 
@@ -104,8 +111,11 @@ func (a *analyzer) unimplemented(s ast.Stmt) {
 	}
 
 	if quiet, ok := pendingInner[kind]; ok && a.pendingOpen[quiet] > 0 {
-		if pendingClosers[kind] {
+		switch {
+		case pendingClosers[kind]:
 			a.pendingOpen[quiet]--
+		case pendingOpeners[kind]:
+			a.pendingOpen[kind]++
 		}
 
 		a.brokenStatement(kind, s)
@@ -121,16 +131,35 @@ func (a *analyzer) unimplemented(s ast.Stmt) {
 	a.brokenStatement(kind, s)
 }
 
-// pendingOpeners, pendingInner, and pendingClosers are Fortran 90's
-// constructs not compiled yet, for unimplemented: the statement that opens
-// each, the statements inside it named by the one that opens their construct,
-// and of those the ones that close it. None is left since Phase 102 compiled
-// WHERE; the mechanism stays for the next construct a phase adds.
+// pendingOpeners, pendingInner, and pendingClosers are the constructs not
+// compiled yet, for unimplemented: the statement that opens each, the
+// statements inside it named by the one that opens their construct (a nested
+// opener among them, counted but not reported again), and of those the ones
+// that close it. pendingBodies are the constructs whose every statement is
+// passed over quietly (quietBody), since what they mean depends on the
+// construct: a FORALL's assignments use its indexes (docs/planning/PHASE-112 -
+// Fortran 95.md, subtask 2, until subtask 9 compiles the construct).
 var (
-	pendingOpeners = map[lex.Kind]bool{}
-	pendingInner   = map[lex.Kind]lex.Kind{}
-	pendingClosers = map[lex.Kind]bool{}
+	pendingOpeners = map[lex.Kind]bool{lex.ForallBlock: true}
+	pendingInner   = map[lex.Kind]lex.Kind{lex.ForallBlock: lex.ForallBlock, lex.Forall: lex.ForallBlock, lex.EndForall: lex.ForallBlock}
+	pendingClosers = map[lex.Kind]bool{lex.EndForall: true}
+	pendingBodies  = map[lex.Kind]bool{lex.ForallBlock: true}
 )
+
+// quietBody reports whether s, a statement semantic analysis compiles, is
+// inside a construct of pendingBodies, and if so keeps its part in the block
+// structure without analyzing it.
+func (a *analyzer) quietBody(s ast.Stmt) bool {
+	for k := range pendingBodies {
+		if a.pendingOpen[k] > 0 && handled(s) {
+			a.brokenStatement(s.Base().Kind, s)
+
+			return true
+		}
+	}
+
+	return false
+}
 
 // formWhat names an expression's form that semantic analysis doesn't
 // compile yet, as a NOTIMPL message does ("an implied-DO list"), or ""
@@ -158,4 +187,17 @@ func formWhat(e ast.Expr) string {
 	}
 
 	return ""
+}
+
+// pendingPrefixes reports a header's Fortran 95 prefixes, PURE and ELEMENTAL,
+// which the parser reads (docs/planning/PHASE-112 - Fortran 95.md, subtask 2)
+// and later subtasks compile: PURE's constraints are subtask 6's, ELEMENTAL's
+// references subtask 7's.
+func (a *analyzer) pendingPrefixes(pos diag.Position, pure, elemental bool) {
+	switch {
+	case elemental:
+		a.notImplForm(pos, "an ELEMENTAL procedure")
+	case pure:
+		a.notImplForm(pos, "a PURE procedure")
+	}
 }

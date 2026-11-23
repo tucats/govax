@@ -210,6 +210,8 @@ func (a *analyzer) elseWhere(s *ast.ElseWhereStmt) {
 		return
 	}
 
+	a.checkName(c, s, false)
+
 	if s.Mask != nil {
 		a.report("F95ONLY", s.Mask.Position(), "ELSEWHERE with a mask")
 	}
@@ -231,6 +233,8 @@ func (a *analyzer) endWhere(s *ast.EndWhereStmt) {
 	if c == nil {
 		return
 	}
+
+	a.checkName(c, s, true)
 
 	a.pop()
 

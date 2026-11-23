@@ -34,6 +34,11 @@ type (
 		// 8.5.2.1; docs/planning/PHASE-89 - reentrant FORTRAN.md).
 		Recursive bool
 		Result    *Name
+
+		// Pure and Elemental are Fortran 95's prefixes, PURE and ELEMENTAL
+		// (the HP Fortran manual's 8.5.1.2 and 8.5.1.3; docs/planning/
+		// PHASE-112 - Fortran 95.md).
+		Pure, Elemental bool
 	}
 
 	// SubroutineStmt is SUBROUTINE name [([p[,p]...])]. A dummy written *
@@ -44,6 +49,8 @@ type (
 		Name      string
 		Params    []*Name
 		Recursive bool // as FunctionStmt's
+		Pure      bool // as FunctionStmt's
+		Elemental bool // as FunctionStmt's
 	}
 
 	// BlockDataStmt is BLOCK DATA [name]; Name is "" without one.
@@ -721,17 +728,59 @@ type (
 
 	// ElseWhereStmt is ELSEWHERE. Mask is nil but for Fortran 95's
 	// ELSEWHERE (mask), which the parser reads for semantic analysis to
-	// refuse.
+	// refuse. A construct name after it (Fortran 95's R745) is its base's
+	// Construct, as END DO's is.
 	ElseWhereStmt struct {
 		StmtBase
 		Mask Expr
 	}
 
-	// EndWhereStmt is END WHERE.
+	// EndWhereStmt is END WHERE, its construct name (Fortran 95's R746) its
+	// base's Construct.
 	EndWhereStmt struct {
 		StmtBase
 	}
 )
+
+// The FORALL statements (Fortran 95's 7.5.4; the HP Fortran manual's 4.2.5;
+// docs/planning/PHASE-112 - Fortran 95.md).
+type (
+	// ForallStmt is the FORALL statement, FORALL (header) Then: Then is the
+	// assignment or pointer assignment it controls, which has no label of
+	// its own.
+	ForallStmt struct {
+		StmtBase
+		Header ForallHeader
+		Then   Stmt
+	}
+
+	// ForallBlockStmt is FORALL (header) alone, which starts a FORALL
+	// construct; a construct name before it is its base's Construct.
+	ForallBlockStmt struct {
+		StmtBase
+		Header ForallHeader
+	}
+
+	// EndForallStmt is END FORALL, its construct name its base's Construct.
+	EndForallStmt struct {
+		StmtBase
+	}
+)
+
+// ForallHeader is a FORALL's parenthesized header (R750's forall-header): its
+// index triplets, and the mask after them, nil if none.
+type ForallHeader struct {
+	Indexes []*ForallIndex
+	Mask    Expr
+}
+
+// ForallIndex is one index-name = lower : upper [: stride] of a FORALL's
+// header (R751): Stride is nil if none.
+type ForallIndex struct {
+	Name                 string
+	Pos                  diag.Position
+	Lower, Upper, Stride Expr
+}
 
 // Fortran 90's procedures (docs/planning/PHASE-103 - Fortran 90 procedures and
 // interfaces.md).
@@ -763,9 +812,12 @@ type (
 		Names []*Name
 	}
 
-	// EndInterfaceStmt is END INTERFACE.
+	// EndInterfaceStmt is END INTERFACE, with Fortran 95's generic
+	// specification after it (R1203), which must be its INTERFACE's; its Kind
+	// is NoGeneric without one.
 	EndInterfaceStmt struct {
 		StmtBase
+		Generic GenericSpec
 	}
 )
 
