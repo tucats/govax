@@ -400,12 +400,23 @@ func (a *analyzer) boundComponent(adj *adjustableArray, e *ast.FieldRef) bool {
 // boundFunction checks a function reference in a bound that isn't constant: an
 // intrinsic function the unit hasn't made something else, one of the inquiry
 // functions or elemental functions of integers a specification expression may use
-// (7.1.6.2). An inquiry's first argument is a name, which may be an array's.
+// (7.1.6.2), or Fortran 95's specification function (specificationFunction). An inquiry's first argument is a name, which may be an array's.
 func (a *analyzer) boundFunction(adj *adjustableArray, e *ast.Apply) bool {
 	s := a.scope.find(e.Name)
 	free := s == nil || (s.Class == Unclassified && s.Dummy == 0 && !s.External) || s.Class == Intrinsic
 
 	switch {
+	case a.specificationFunction(s):
+		// A PURE function's value (the Fortran 95 standard's 7.1.6.1; pure.go),
+		// its arguments a bound's expressions themselves.
+		ok := true
+
+		for _, arg := range e.Args {
+			ok = a.boundOperands(adj, unkeyed(arg)) && ok
+		}
+
+		return ok
+
 	case !free || !a.intrinsicNamed(e.Name) || len(e.Args) == 0:
 	case boundInquiries[e.Name]:
 		n, ok := e.Args[0].(*ast.Name)

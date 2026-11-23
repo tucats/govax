@@ -8,7 +8,8 @@ import (
 // TestF95Pending checks that Fortran 95's forms, which the parser builds since
 // Phase 112's subtask 2, are NOTIMPL by name until their subtasks, each once,
 // with nothing else said: a FORALL construct's statements are passed over, and
-// a unit with a PURE or ELEMENTAL header keeps its structure.
+// a unit with an ELEMENTAL header keeps its structure. PURE is compiled since
+// subtask 6 (pure_test.go).
 func TestF95Pending(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -19,7 +20,7 @@ func TestF95Pending(t *testing.T) {
 			"module m", "contains",
 			"  pure integer function sq(x)", "    integer, intent(in) :: x", "    sq = x * x", "  end function sq",
 			"end module m"},
-			"NOTIMPL: a PURE procedure is not implemented yet"},
+			""},
 		{"ELEMENTAL", []string{
 			"program p", "  print *, inc(1)", "contains",
 			"  elemental integer function inc(k)", "    integer, intent(in) :: k", "    inc = k + 1", "  end function inc",

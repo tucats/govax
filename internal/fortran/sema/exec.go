@@ -12,8 +12,17 @@ import (
 
 // executable analyzes one executable statement; path is the constructs
 // open at it, for its jumps. It returns nil for a statement with nothing
-// to execute or an error.
+// to execute or an error. In a PURE procedure it reports the statements one
+// may not have (pure.go).
 func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
+	st := a.executableStmt(s, path)
+	a.pureStatement(st)
+
+	return st
+}
+
+// executableStmt is executable's analysis.
+func (a *analyzer) executableStmt(s ast.Stmt, path []frame) Stmt {
 	switch s := s.(type) {
 	case *ast.AssignStmt:
 		return a.assignment(s)
@@ -439,6 +448,7 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 		// A system subroutine, unless the file has one of its own.
 		if system := systemSubroutines[s.Name]; system != nil && a.units[s.Name] == nil && len(targets) == 0 {
 			a.noteSystem(s.Name, s.NamePos)
+			a.pureSystem("the system subroutine", s.Name, s.NamePos, "be called")
 
 			return system(a, s, list)
 		}

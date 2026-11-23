@@ -1685,6 +1685,19 @@ var messages = map[string]kind{
 	"COMPSLASH":   {Error, "a component's default value is given after =, or after => as NULL() for a pointer, not between slashes"},
 	"DEFAULTINIT": {Error, "%s is of the type %s, whose components have default values, so it can't %s"},
 
+	// PURE procedures (docs/planning/PHASE-112 - Fortran 95.md, subtask 6; the
+	// Fortran 95 standard's 12.6, sema/pure.go). NOTPURE is what a PURE
+	// procedure may not do: give a value to (or make a pointer's target of)
+	// what isn't its own, external I/O, STOP or PAUSE, a local saved or given
+	// an initial value, a reference to a procedure not declared PURE.
+	// PUREINTENT is a dummy argument without the INTENT it must say: IN for a
+	// function's, any for a subroutine's (pointers and procedures exempt).
+	// PUREACTUAL is a procedure not declared PURE given to a PURE dummy
+	// procedure.
+	"NOTPURE":    {Error, "%s can't %s in a PURE procedure"},
+	"PUREINTENT": {Error, "%s, a dummy argument of the PURE %s %s, must be declared %s"},
+	"PUREACTUAL": {Error, "%s isn't declared PURE, so it can't be passed to %s, a PURE dummy procedure"},
+
 	// Pointer components (docs/planning/PHASE-107 - Fortran 90 pointers.md,
 	// finding 7). POINTERPART is an object of a type with a pointer component,
 	// at any depth, where 4.4.1, 5.5.1, 5.4, 9.4.2, and 5.2.10 forbid one: an

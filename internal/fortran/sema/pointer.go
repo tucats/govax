@@ -539,6 +539,8 @@ func (a *analyzer) pointerAssignment(s *ast.PointerAssignStmt) Stmt {
 		return nil
 	}
 
+	a.pureDefines(pointerOwner(ptr), s.Pointer.Position(), "be given a pointer association")
+
 	// P => NULL() is NULLIFY (P) (null.go).
 	if app, ok := a.nullReference(s.Target); ok {
 		if a.nullValue(app, pointerName(ptr), ptr.Type(), targetRank(ptr)) == nil {
@@ -551,6 +553,10 @@ func (a *analyzer) pointerAssignment(s *ast.PointerAssignStmt) Stmt {
 	t := a.pointerTarget(ptr, s.Target)
 	if t == nil {
 		return nil
+	}
+
+	if _, function := t.(*FuncRef); !function {
+		a.pureDefines(targetBase(t), s.Target.Position(), "be a pointer's target")
 	}
 
 	return &PointerAssign{stmtBase: stmtBase{s}, Pointer: ptr, Target: t}
@@ -569,6 +575,8 @@ func (a *analyzer) nullify(s *ast.NullifyStmt) Stmt {
 
 			continue
 		}
+
+		a.pureDefines(pointerOwner(p), x.Position(), "be nullified")
 
 		st.Pointers = append(st.Pointers, p)
 	}

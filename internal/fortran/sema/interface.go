@@ -279,10 +279,16 @@ func interfaceDifferences(prog *Program, units map[string]*fileUnit, messages *d
 // their dummy arguments' number and alternate returns, a function's type, and
 // each dummy's type, rank and constant extents, INTENT, OPTIONAL, and whether
 // it is a procedure, and an array's kind (assumed-shape, assumed-size, or
-// explicit-shape). The dummies' names may differ (12.3.2.1).
+// explicit-shape); and PURE said of a procedure that isn't. The dummies' names may differ (12.3.2.1).
 func interfaceDifference(body *Unit, fu *fileUnit) string {
 	if fu.kind != body.Kind {
 		return "it is " + article(body.Kind.String()) + " here, " + article(fu.kind.String()) + " there"
+	}
+
+	// A procedure that isn't PURE can't be declared PURE (the Fortran 95
+	// standard's 12.3.2.1); a PURE one may have an interface that doesn't say so.
+	if body.Pure && fu.unit != nil && !fu.unit.Pure {
+		return "it is PURE here, not there"
 	}
 
 	params := fu.params()

@@ -159,6 +159,10 @@ func (a *analyzer) intrinsic(item *ast.AttrItem) {
 func (a *analyzer) saves() {
 	for _, st := range a.saveStmts {
 		if len(st.Items) == 0 {
+			if !a.saveAll {
+				a.saveAllPos = st.Pos
+			}
+
 			a.saveAll = true
 		}
 

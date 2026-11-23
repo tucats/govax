@@ -229,6 +229,8 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 		obj := &Allocation{Sym: sym}
 		st.Objects = append(st.Objects, obj)
 
+		a.pureDefines(sym, d.Pos, "be "+map[bool]string{false: "allocated", true: "deallocated"}[st.Deallocate])
+
 		if st.Deallocate {
 			continue
 		}

@@ -619,6 +619,14 @@ func (w *moduleWriter) procedure(pu *Unit, depth int, name string) {
 		prefix = "RECURSIVE "
 	}
 
+	// What a reference may count on (pure.go): ELEMENTAL says PURE too.
+	switch {
+	case pu.Elemental:
+		prefix += "ELEMENTAL "
+	case pu.Pure:
+		prefix += "PURE "
+	}
+
 	word := "SUBROUTINE"
 	header := name + "(" + strings.Join(args, ", ") + ")"
 	result := name

@@ -970,3 +970,65 @@ func TestModuleDefaults(t *testing.T) {
 		t.Errorf("no defaults set at entry:\n%s", routine(apart.MACRO))
 	}
 }
+
+// TestModulePure holds a module's PURE procedures through its module file
+// (Phase 112's subtask 6): the text says PURE, and a unit compiled apart may
+// call them from a PURE procedure and use one as a specification function, as
+// one compiled with the module may, with the same code; an impure one is
+// refused from either.
+func TestModulePure(t *testing.T) {
+	module := strings.Join([]string{
+		"module pm",
+		"  implicit none",
+		"contains",
+		"  pure integer function width(n)",
+		"    integer, intent(in) :: n",
+		"    width = 2 * n",
+		"  end function width",
+		"  integer function loud(n)",
+		"    integer, intent(in) :: n",
+		"    loud = n",
+		"  end function loud",
+		"end module pm",
+	}, "\n")
+	user := strings.Join([]string{
+		"pure integer function show(n)",
+		"  use pm",
+		"  integer, intent(in) :: n",
+		"  character(len=width(n)) :: s",
+		"  s = ' '",
+		"  show = len(s) + width(n)",
+		"end function show",
+	}, "\n")
+
+	alone := compileFree("PM", module, nil)
+	text := strings.Join(moduleText(t, alone, "PM"), "\n")
+
+	if !strings.Contains(text, "PURE FUNCTION WIDTH(N)") || strings.Contains(text, "PURE FUNCTION LOUD") {
+		t.Errorf("PURE not as the module has it in\n%s", text)
+	}
+
+	both := compileFree("SHOW", module+"\n"+user, nil)
+	apart := compileFree("SHOW", user, moduleFiles{"PM": moduleText(t, alone, "PM")})
+
+	for _, r := range []fortran.Result{both, apart} {
+		if r.Errors != 0 {
+			t.Fatalf("messages: %v", messageList(r))
+		}
+	}
+
+	routine := func(lines []string) string { return routineCode(lines, "SHOW") }
+	if routine(both.MACRO) != routine(apart.MACRO) {
+		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(apart.MACRO))
+	}
+
+	impure := strings.Replace(user, "+ width(n)", "+ loud(n)", 1)
+	for _, r := range []fortran.Result{
+		compileFree("SHOW", module+"\n"+impure, nil),
+		compileFree("SHOW", impure, moduleFiles{"PM": moduleText(t, alone, "PM")}),
+	} {
+		if got := fmt.Sprint(messageList(r)); !strings.Contains(got, "LOUD, not declared PURE, can't be referenced") {
+			t.Errorf("an impure reference: %s", got)
+		}
+	}
+}

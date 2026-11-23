@@ -558,6 +558,10 @@ type analyzer struct {
 	// variable and array of the unit that can be saved (section 4.14).
 	saveAll bool
 
+	// saveAllPos is where the first such SAVE statement is, for a PURE
+	// procedure's message (pure.go).
+	saveAllPos diag.Position
+
 	// associated are the unit's files' associated variables (OPEN's
 	// ASSOCIATEVARIABLE=, DEFINE FILE's last), each checked for a place in
 	// the frame once the storage rule has run (checkAssociated).
@@ -764,6 +768,7 @@ func (a *analyzer) finishUnit() {
 	a.hostHidden()
 	a.reportUnused()
 	a.reportIntentOut()
+	a.checkPure()
 	a.reportExtensions(a.unit.AST)
 	a.checkLengths()
 	a.passedLengths()
@@ -789,7 +794,8 @@ func (a *analyzer) header(au *ast.Unit) {
 		s.Result = true
 		u.Result = s
 		u.Recursive = h.Recursive || a.recursive
-		a.pendingPrefixes(h.Pos, h.Pure, h.Elemental)
+		u.Pure, u.Elemental = h.Pure || h.Elemental, h.Elemental
+		a.pendingPrefixes(h.Pos, h.Elemental)
 
 		// With RESULT the function's name is the routine's alone, and RESULT's
 		// variable is the value, with the header's type (8.5.2.1). A RESULT
@@ -822,7 +828,8 @@ func (a *analyzer) header(au *ast.Unit) {
 		s := a.declare(h.Name, h.Pos)
 		s.Class = UnitName
 		u.Recursive = h.Recursive || a.recursive
-		a.pendingPrefixes(h.Pos, h.Pure, h.Elemental)
+		u.Pure, u.Elemental = h.Pure || h.Elemental, h.Elemental
+		a.pendingPrefixes(h.Pos, h.Elemental)
 
 		a.params(h.Params, &u.AltPlaces)
 

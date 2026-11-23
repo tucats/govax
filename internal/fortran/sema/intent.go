@@ -65,11 +65,14 @@ func definedSymbol(e Expr) *Symbol {
 }
 
 // checkIntentIn reports INTENTIN if s is an INTENT(IN) dummy argument, about to
-// be given a value at pos.
+// be given a value at pos; and in a PURE procedure, NOTPURE if s is a global
+// (pure.go).
 func (a *analyzer) checkIntentIn(s *Symbol, pos diag.Position) {
 	if s != nil && !a.readFrom && s.Dummy != 0 && s.Intent == "IN" && !s.broken {
 		a.report("INTENTIN", pos, s.Name)
 	}
+
+	a.pureDefines(s, pos, "be given a value")
 }
 
 // noteNotRead notes that the mention at pos neither reads nor defines its name.

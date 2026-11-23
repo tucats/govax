@@ -95,6 +95,10 @@ func (a *analyzer) intrinsicCall(s *ast.CallStmt, sub *intrinsicSub, list []ast.
 		a.noteSystem(s.Name, s.NamePos)
 	} else {
 		a.noteOther(whatIntrinsic, s.Name, s.NamePos, RefUsed)
+
+		// Of the intrinsic subroutines only MVBITS is PURE (the Fortran 95
+		// standard's 13.1).
+		a.pureSystem("the intrinsic subroutine", s.Name, s.NamePos, "be called")
 	}
 
 	slots, ok := a.keywordSlots(s.NamePos, s.Name, true, list, sub.dummies, false,

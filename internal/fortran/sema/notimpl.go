@@ -189,15 +189,11 @@ func formWhat(e ast.Expr) string {
 	return ""
 }
 
-// pendingPrefixes reports a header's Fortran 95 prefixes, PURE and ELEMENTAL,
-// which the parser reads (docs/planning/PHASE-112 - Fortran 95.md, subtask 2)
-// and later subtasks compile: PURE's constraints are subtask 6's, ELEMENTAL's
-// references subtask 7's.
-func (a *analyzer) pendingPrefixes(pos diag.Position, pure, elemental bool) {
-	switch {
-	case elemental:
+// pendingPrefixes reports a header's ELEMENTAL prefix, which the parser reads
+// (docs/planning/PHASE-112 - Fortran 95.md, subtask 2) and subtask 7 compiles.
+// PURE is compiled (pure.go).
+func (a *analyzer) pendingPrefixes(pos diag.Position, elemental bool) {
+	if elemental {
 		a.notImplForm(pos, "an ELEMENTAL procedure")
-	case pure:
-		a.notImplForm(pos, "a PURE procedure")
 	}
 }

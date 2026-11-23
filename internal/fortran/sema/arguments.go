@@ -149,7 +149,7 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 
 	case s.LinkName != "" && s.Generic == nil:
 		// A module procedure is global (module.go), and may be passed.
-		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Routine: s.LinkName}
+		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Routine: s.LinkName, Sym: s}
 
 	case s.Internal != nil:
 		// Called only from its host and its host's other internal procedures,
@@ -169,12 +169,12 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 		return a.procedure(n)
 
 	case s.DummyProcedure():
-		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Dummy: s}
+		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Dummy: s, Sym: s}
 
 	case s.External:
 		s.passed = true
 
-		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Routine: s.Name}
+		return &Procedure{exprBase: exprBase{T: s.Type, Pos: n.Pos}, Name: s.Name, Routine: s.Name, Sym: s}
 	}
 
 	return a.name(n, true)

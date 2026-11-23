@@ -80,6 +80,13 @@ type Unit struct {
 	// entry points. A main program or block data subprogram never is.
 	Recursive bool
 
+	// Pure is set for a PURE procedure (the Fortran 95 standard's 12.6; the HP
+	// Fortran manual's 8.5.1.2; pure.go), and for an ELEMENTAL one, which is
+	// PURE too; Elemental for an ELEMENTAL one (8.5.1.3). An interface body
+	// has them as its header says, and a reference may count on a procedure
+	// being pure only through an explicit interface that says so.
+	Pure, Elemental bool
+
 	// Body is the unit's executable statements, END last. IF blocks and
 	// DO loops hold the statements inside them.
 	Body []Stmt
@@ -1301,6 +1308,11 @@ type (
 		Name    string
 		Routine string
 		Dummy   *Symbol
+
+		// Sym is the procedure's name in the unit, for what its interface
+		// says (a PURE dummy procedure's actual must be PURE, pure.go); nil
+		// for an intrinsic function, which is pure.
+		Sym *Symbol
 	}
 
 	// Loc is %LOC(X), the address of a variable, an array, an array element,

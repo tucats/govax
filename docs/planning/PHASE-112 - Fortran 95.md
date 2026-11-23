@@ -3,7 +3,8 @@
 **Status:** planned 2026-11-22; subtask 1, the survey (Part A), done 2026-11-22 and
 accepted by the author the same day ("The author's answers"); subtask 2, recovery and syntax,
 done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL()`, done
-2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6 is next. Phase 99's question 2 left Fortran 95's additions to an
+2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
+subtask 7 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -104,7 +105,7 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 3. Zero-sized explicit-shape arrays under `/F90` (done 2026-11-23).
 4. `NULL()` and pointer initialization.
 5. Default initialization of components, the module text among it (done 2026-11-23).
-6. PURE: the constraints.
+6. PURE: the constraints (done 2026-11-23).
 7. ELEMENTAL procedures and their references.
 8. FORALL, the statement.
 9. FORALL, the construct (nesting, WHERE inside, PURE references).
@@ -291,7 +292,8 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 4. **NULL()** (A.3's 3): every context of A.1's 6, pointer initialization (A.1's 8),
    DATA (done 2026-11-23; a component's `=> NULL()` default is subtask 5's).
 5. **Default initialization** (A.3's 4), the module text with it (done 2026-11-23).
-6. **PURE**: the constraints (A.3's 8), PURE interfaces, specification functions (A.3's 5).
+6. **PURE**: the constraints (A.3's 8), PURE interfaces, specification functions (A.3's 5)
+   (done 2026-11-23).
 7. **ELEMENTAL** procedures and references (A.3's 7), elemental defined assignment and
    operators in array assignments and WHERE.
 8. **FORALL, the statement** (A.3's 6).
@@ -544,3 +546,56 @@ with every recommendation of A.5:
   paragraph and its closing list loses the item; HELP FORTRAN DERIVED_TYPES the same; Phase
   113's A.1's 3 and A.3.2 are marked resolved. Not done here: a STRUCTURE with initial values
   in a module's text (`modwrite.go` still refuses it; Phase 113's A.3.2). Subtask 6, PURE, is next.
+- **2026-11-23:** Subtask 6, PURE. **The header**: `Unit.Pure` and `Unit.Elemental` (an
+  ELEMENTAL unit is PURE too), set by `header` for subprograms and interface bodies alike;
+  PURE is no longer NOTIMPL (`pendingPrefixes` keeps ELEMENTAL's). **The constraints**
+  (`sema/pure.go`, its comment the list), each where the analysis already sees the thing it
+  judges: `checkPure`, from `finishUnit`, checks the dummies (PUREINTENT: a function's
+  INTENT(IN), a subroutine's any INTENT; pointers and dummy procedures exempt; interface bodies
+  get this check alone), the locals (NOTPURE for one saved, STATIC, or given an initial value by
+  `=`, `=> NULL()`, DATA, or a record's value, and a SAVE with no list, `saveAllPos`), and
+  `unit.calls`, every reference the unit makes (each must reach a PURE procedure through an
+  explicit interface, `interfaceOf`, so an external one without an interface body, a dummy
+  procedure without one, and a generic's or defined operator's or assignment's specific that
+  isn't PURE are NOTPURE; and an actual to an INTENT(OUT), INTENT(INOUT), or pointer dummy may not
+  be a global). A **global** (`globalWhy`) is a module's variable (by USE, or a module
+  procedure's own module's by host association), a host's, or one in a common block; an
+  INTENT(IN) dummy stays INTENTIN's. Definitions go through `checkIntentIn`, which now also
+  calls `pureDefines`, so every place INTENTIN is checked (assignment, DO and implied DO, input
+  items, specifiers, a pointer component's ALLOCATE) is checked for globals too; pointer
+  assignment (the pointer and its target), NULLIFY, and ALLOCATE/DEALLOCATE of a named object
+  call it themselves (`pointerOwner`). Statements: `executable` is now a wrapper of
+  `executableStmt` that hands each result to `pureStatement` (STOP, PAUSE, an `IO` that isn't
+  an internal file, ENCODE, or DECODE, `FileStmt`, `DefineFile`, and `IOLength`). Routines with
+  no explicit interface: the system subroutines and functions, and every intrinsic subroutine
+  but MVBITS (`pureSystem`); intrinsic functions are pure and never reach `calls`. New messages:
+  NOTPURE ("%s can't %s in a PURE procedure", the subject saying why: "G, a variable of the
+  module M,"), PUREINTENT, PUREACTUAL. **PURE interfaces**: `interfaceDifference` adds "it is PURE
+  here, not there" (a PURE procedure may still have an interface that doesn't say so), and
+  `checkInterface`'s `pureProcedureArgument` reports PUREACTUAL for a procedure not declared PURE
+  given to a dummy procedure whose interface is PURE (`Procedure.Sym`, new, names it). **The
+  module text** writes PURE (or ELEMENTAL) before a procedure's FUNCTION or SUBROUTINE, read back
+  by the compiler's own passes. **Specification functions** (A.3's 5): `boundFunction` takes a
+  function `specificationFunction` accepts (PURE by an explicit interface already given, a
+  module procedure's or an interface body's, scalar, not internal or a dummy), its arguments a
+  bound's expressions, for an automatic array's bounds and a CHARACTER length alike
+  (`charlength.go` shares `boundOperands`); lowering needed nothing, the reference computed at
+  entry with the other bounds. The standard's "not recursive" is left out, by our choice
+  (unconfirmed): `/RECURSIVE` makes every unit recursive and a module's text says so, so the rule
+  would let a compiling option change what is legal; the corpus program failed exactly so under
+  `recursiveModes` before the rule was dropped. Not done: storage association (an EQUIVALENCE
+  partner of a global), a pointer component's target reached through a global or an INTENT(IN)
+  dummy (`X%P = 1`, which INTENTIN doesn't judge either), a structure constructor's pointer
+  component given a global, and the rule that an internal procedure of a PURE one be PURE (its
+  references are checked, which is what matters). Tests: `sema`'s `TestPure` (each rule, the
+  messages, PURE interfaces, PUREACTUAL, specification functions and what isn't one),
+  `TestF95Pending`'s PURE case now clean, `fortran`'s `TestModulePure` (the text, a unit compiled
+  apart using PURE and a specification function with the same code, an impure reference refused
+  both ways), and `testdata/fortran90/pures.f90` (module, internal, and external PURE procedures,
+  a PURE recursive function, a PURE dummy procedure, an internal file, specification functions;
+  every mode, paging too; gfortran `-std=f95` prints the same). The survey's `misc95.f90` now
+  compiles without a message, and `pure.f90` gives only ELEMENTAL's NOTIMPLs. `testdata/f90r`
+  regenerated, PURES added to `f90rAwaitingVMS`. MANUAL.md's "Procedures and interfaces" has a
+  "PURE procedures" paragraph and its closing list loses PURE; HELP FORTRAN FORTRAN_90
+  PROCEDURES the same; Phase 113's A.4's 2 is marked resolved in part. Subtask 7, ELEMENTAL, is
+  next.

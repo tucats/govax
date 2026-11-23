@@ -9240,6 +9240,46 @@ a derived type takes every assignment of that type, `P = POINT(1.0, 2.0)` too. A
 body has no host, so it defines the type again; only a SEQUENCE type's two definitions, with
 the same name and components, are one type.
 
+**PURE procedures** (Fortran 95's 12.6; under `/NOF90` too). `PURE` before FUNCTION or
+SUBROUTINE, beside RECURSIVE and a type in any order, says the procedure has no side effects
+a caller could see, and the compiler holds it to that. Every dummy argument says its INTENT,
+and a function's says IN; a pointer or a dummy procedure need not (`PUREINTENT`). What it may
+not do is `NOTPURE`, which says what and why:
+
+```text
+%FORT-E-NOTPURE, TOTAL, a variable of the module STATS, can't be given a value in a PURE procedure
+  at line 11 of DUA1:[WORK]STATS.F90;1
+        total = total + x
+  ------^
+```
+
+A PURE procedure saves no local and gives none an initial value (by `=`, `=> NULL()`, or
+DATA), and has no SAVE without a list. It never gives a value to, allocates, nullifies, or
+points at a variable of a common block, a module, or its host, nor passes one to an
+INTENT(OUT), INTENT(INOUT), or pointer dummy. It has no STOP, PAUSE, or external I/O (READ or
+WRITE of a unit, PRINT, TYPE, ACCEPT, OPEN, CLOSE, INQUIRE, and the positioning statements);
+an internal file, ENCODE, and DECODE are its own. Every procedure it references must be
+declared PURE by an explicit interface: one of its module's or a module's it uses, an
+internal procedure, an interface body, or itself. Every intrinsic function is PURE, and of
+the intrinsic subroutines MVBITS; the system routines (DATE, RAN, SECNDS, ...) aren't. An
+interface body that says PURE for a procedure the file defines without it is
+`INTERFACEDIFF`, and a procedure not declared PURE given to a dummy procedure whose
+interface says PURE is `PUREACTUAL`. A module's file carries PURE.
+
+A PURE function with an explicit interface the declarations have already given (a module
+procedure, or an interface body before the declaration), neither internal nor a dummy, may
+give an automatic array's bound or a CHARACTER length, a *specification function*; it is
+called at each entry, as other such bounds are computed. The standard also forbids one that
+is recursive; govax allows it, since `/RECURSIVE` makes every procedure recursive:
+
+```fortran
+subroutine show(n)
+  use sizes                          ! PURE INTEGER FUNCTION WIDTH(N)
+  integer, intent(in) :: n
+  character(len=width(n)) :: s
+  integer :: w(width(n) - 1)
+```
+
 #### Derived types
 
 **Definitions, components, and constructors** (the standard's 4.4). A *derived type* is a
@@ -10576,8 +10616,8 @@ naming what it is:
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
 and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
-and "Derived types"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
-too narrow for any value); FORALL, PURE, and ELEMENTAL (`%FORT-E-NOTIMPL`, read but not yet
+and "Derived types", and PURE under "Procedures and interfaces"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
+too narrow for any value); FORALL and ELEMENTAL (`%FORT-E-NOTIMPL`, read but not yet
 compiled); and procedure pointers and bounds remapping (`P(1:N) => A`).
 
 ## 15. Appendices
