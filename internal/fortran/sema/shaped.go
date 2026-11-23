@@ -51,8 +51,10 @@ import (
 func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 	var params []*Symbol
 
+	elemental := false
+
 	if target := a.interfaceOf(s); target != nil && !target.incomplete && !s.broken {
-		params = target.Params
+		params, elemental = target.Params, target.Elemental
 	}
 
 	args := make([]Arg, len(list))
@@ -68,6 +70,10 @@ func (a *analyzer) argsTo(s *Symbol, list []ast.Expr) []Arg {
 			args[i] = a.pointerArg(e, i, s, p)
 		case p != nil && p.AssumedShape():
 			args[i] = a.shaped(a.argValue(e))
+		case elemental && p != nil && len(p.Dims) == 0:
+			// An array goes to an elemental procedure's scalar dummy an
+			// element at a time (elemental.go).
+			args[i] = a.elementalArg(a.argValue(e))
 		default:
 			args[i] = a.sequenced(a.argValue(e), p)
 		}

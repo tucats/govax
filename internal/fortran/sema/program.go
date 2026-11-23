@@ -883,10 +883,17 @@ type (
 		AltReturns []int
 
 		// Shape is an elemental subroutine's call on arrays (Fortran 90's
-		// MVBITS, intrinsicsub.go): the arrays' shape, the call made once for
-		// each element, a scalar argument standing for every one. Nil for
-		// any other call.
+		// MVBITS, intrinsicsub.go; an ELEMENTAL subroutine's, elemental.go):
+		// the arrays' shape, the call made once for each element, a scalar
+		// argument standing for every one. Nil for any other call.
 		Shape Shape
+
+		// Order is a defined assignment's by an elemental subroutine
+		// (operators.go's definedAssignment): how its calls must run so that
+		// the value, argument 2, is the whole value before the target,
+		// argument 1, changes, as an array assignment's Order says. Nil for
+		// any other call, which runs in array element order.
+		Order *ArrayOrder
 	}
 
 	// Goto is GO TO Label.
@@ -1263,6 +1270,11 @@ type (
 		Args    []Arg
 		Made    bool
 		Pointer bool
+
+		// Elemental is set for a reference to an elemental function with
+		// arrays among its arguments (elemental.go): its shape is theirs, and
+		// the scalarizer makes it a reference at each element (Scalarize).
+		Elemental bool
 
 		// through stands for the storage a pointer value reaches, for
 		// overlap (baseSymbol).

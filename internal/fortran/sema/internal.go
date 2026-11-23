@@ -334,7 +334,15 @@ func checkInterface(r routineRef, target *Unit, messages *diag.List) {
 	for i, arg := range r.args {
 		p := target.Params[i]
 
-		if ident, rest := argumentMismatch(arg, p); ident != "" {
+		ident, rest := argumentMismatch(arg, p)
+
+		// An elemental procedure's scalar dummy takes an array an element at a
+		// time (elemental.go).
+		if ident == "ARGRANK" && target.Elemental && len(p.Dims) == 0 {
+			ident = ""
+		}
+
+		if ident != "" {
 			messages.Report(ident, arg.Expr.Position(), append(append([]any{i + 1, r.sym.Name}, rest...), line)...)
 
 			continue

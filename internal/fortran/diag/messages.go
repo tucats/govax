@@ -1164,12 +1164,15 @@ var messages = map[string]kind{
 	// isn't an assignment (R742); WHEREMASK a mask that isn't a LOGICAL
 	// array; WHERETARGET an assignment in a WHERE to a scalar;
 	// ELSEWHEREORDER a second ELSEWHERE; F95ONLY a form Fortran 95 added
-	// (a WHERE inside a WHERE, ELSEWHERE with a mask), Phase 112's.
+	// (a WHERE inside a WHERE, ELSEWHERE with a mask), Phase 112's;
+	// WHEREDEFINED a defined assignment there by a subroutine that isn't
+	// ELEMENTAL (the Fortran 95 standard's 7.5.3).
 	"NOWHERE":        {Error, "this %s statement is not in a WHERE construct"},
 	"NOENDWHERE":     {Error, "this WHERE construct has no END WHERE statement"},
 	"WHEREBODY":      {Error, "only assignments may be in a WHERE construct, not %s"},
 	"WHEREMASK":      {Error, "a WHERE's mask must be a LOGICAL array, and this one is %s"},
 	"WHERETARGET":    {Error, "an assignment in a WHERE must be to an array of the mask's shape, not to a scalar"},
+	"WHEREDEFINED":   {Error, "a defined assignment in a WHERE must be by an ELEMENTAL subroutine, and %s isn't one"},
 	"ELSEWHEREORDER": {Error, "this WHERE construct has an ELSEWHERE statement already, at line %d"},
 	"F95ONLY":        {Error, "%s is Fortran 95's, not Fortran 90's, and isn't compiled yet (Phase 112)"},
 
@@ -1697,6 +1700,21 @@ var messages = map[string]kind{
 	"NOTPURE":    {Error, "%s can't %s in a PURE procedure"},
 	"PUREINTENT": {Error, "%s, a dummy argument of the PURE %s %s, must be declared %s"},
 	"PUREACTUAL": {Error, "%s isn't declared PURE, so it can't be passed to %s, a PURE dummy procedure"},
+
+	// ELEMENTAL procedures (docs/planning/PHASE-112 - Fortran 95.md, subtask 7;
+	// the Fortran 95 standard's 12.7, sema/elemental.go). ELEMDUMMY,
+	// ELEMRESULT, and ELEMRETURN are a definition's or interface body's dummy
+	// argument, value, or alternate return that 12.7.1 forbids; ELEMRECURSIVE
+	// both prefixes (12.5.2.2). ELEMOUT is a scalar given to an INTENT(OUT) or
+	// INTENT(INOUT) dummy where another actual is an array (12.4.3).
+	// EXPLICITELEMENTAL is a reference through an implicit interface to a
+	// procedure of the file that is ELEMENTAL (12.3.1.1).
+	"ELEMDUMMY":         {Error, "%s, a dummy argument of the ELEMENTAL %s %s, can't be %s"},
+	"ELEMRESULT":        {Error, "the value of the ELEMENTAL function %s can't be %s"},
+	"ELEMRETURN":        {Error, "the ELEMENTAL subroutine %s can't have an alternate return"},
+	"ELEMRECURSIVE":     {Error, "%s can't be both ELEMENTAL and RECURSIVE"},
+	"ELEMOUT":           {Error, "argument %d of %s must be an array, since another is and its dummy argument %s is INTENT(%s)"},
+	"EXPLICITELEMENTAL": {Error, "%s (line %d) is ELEMENTAL, so a reference to it needs an explicit interface"},
 
 	// Pointer components (docs/planning/PHASE-107 - Fortran 90 pointers.md,
 	// finding 7). POINTERPART is an object of a type with a pointer component,

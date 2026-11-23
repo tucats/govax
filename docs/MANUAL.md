@@ -9280,6 +9280,39 @@ subroutine show(n)
   integer :: w(width(n) - 1)
 ```
 
+**ELEMENTAL procedures** (Fortran 95's 12.7; under `/NOF90` too). `ELEMENTAL` before
+FUNCTION or SUBROUTINE says the procedure is written for scalars and may be referenced with
+arrays, as the elemental intrinsic functions are. It is PURE too, and held to PURE's rules.
+Its dummy arguments are scalars, not pointers or dummy procedures, with no alternate return,
+and a function's value is a scalar, not a pointer (`ELEMDUMMY`, `ELEMRESULT`,
+`ELEMRETURN`); it can't also be RECURSIVE (`ELEMRECURSIVE`). A reference needs an explicit
+interface (`EXPLICITELEMENTAL` without one). Through one, any argument may be an array, a
+section, or an array expression; the arrays must conform, and the reference is made once for
+each element, each array argument's element there and each scalar argument as it is:
+
+```fortran
+module limits
+contains
+  elemental real function clip(x, lo, hi)
+    real, intent(in) :: x, lo, hi
+    clip = max(lo, min(hi, x))
+  end function clip
+end module limits
+...
+  r(2:5) = clip(r(1:4), -1.0, 2.0)     ! an array of R(1:4)'s shape
+  print *, sum(clip(r, 0.0, 1.0))
+```
+
+A function's reference with arrays is an array value of their shape, anywhere an array
+expression may be; with none it is an ordinary reference. A subroutine's CALL with arrays is
+a call for each element in array element order, and an actual given to an INTENT(OUT) or
+INTENT(INOUT) dummy must then be an array (`ELEMOUT`). A generic name or operator chooses an
+elemental specific for arrays only when no specific fits them exactly. An elemental
+subroutine of an `INTERFACE ASSIGNMENT(=)` block assigns arrays element by element, in an
+array assignment or a WHERE (where any other defined assignment is `WHEREDEFINED`), its
+value computed whole before the target changes; an elemental function of an `INTERFACE
+OPERATOR` block makes an elemental operator. A module's file carries ELEMENTAL.
+
 #### Derived types
 
 **Definitions, components, and constructors** (the standard's 4.4). A *derived type* is a
@@ -10616,8 +10649,8 @@ naming what it is:
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
 and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
-and "Derived types", and PURE under "Procedures and interfaces"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
-too narrow for any value); FORALL and ELEMENTAL (`%FORT-E-NOTIMPL`, read but not yet
+and "Derived types", and PURE and ELEMENTAL under "Procedures and interfaces"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
+too narrow for any value); FORALL (`%FORT-E-NOTIMPL`, read but not yet
 compiled); and procedure pointers and bounds remapping (`P(1:N) => A`).
 
 ## 15. Appendices

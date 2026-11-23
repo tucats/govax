@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/tucats/govax/internal/fortran/diag"
@@ -905,19 +906,48 @@ func (n *arrayNest) check(e Expr) {
 }
 
 // elementalCall lowers an elemental subroutine's call on arrays (Fortran 90's
-// MVBITS; sema's Call.Shape): a nest of loops over their shape, the leftmost
-// dimension innermost, calling the subroutine once for each element with each
-// array argument's element there and each scalar one as it is, a scalar that
-// isn't a variable or a constant computed once before the loops. The calls go
-// in array element order, which is what the standard asks when the argument
-// TO is FROM itself or overlaps it (13.11). The first array argument is the
+// MVBITS and Fortran 95's ELEMENTAL subroutines; sema's Call.Shape): a nest of
+// loops over their shape, the leftmost dimension innermost, calling the
+// subroutine once for each element with each array argument's element there and
+// each scalar one as it is, a scalar that isn't a variable or a constant
+// computed once before the loops. The calls go in array element order, which is
+// what the standard asks (Fortran 95's 12.4.3; for MVBITS when TO is FROM
+// itself or overlaps it, Fortran 90's 13.11). The first array argument is the
 // one whose extents the loops take where none is known when compiling.
 func (l *lowerer) elementalCall(s *sema.Call) {
+	l.maskedCall(s, nil)
+}
+
+// maskedCall is elementalCall where mask holds (an elemental defined
+// assignment in a WHERE), or everywhere for a nil mask. A defined assignment's
+// calls run as its Order says: with a temporary the value, argument 2, is
+// computed into one first, where the mask holds, and the calls take its
+// elements; otherwise its loops run in the order's directions, a scalar value
+// that reads the target computed once before them (sema's ArrayOrder.Hoisted).
+func (l *lowerer) maskedCall(s *sema.Call, mask *whereMask) {
+	call := *s
+	call.Args = slices.Clone(s.Args)
+	order := s.Order
+
+	if order != nil && order.Temporary {
+		value := call.Args[1].Expr
+		t, length := l.tempType(value, value)
+		temp := l.shapeTemp(t, order.TempShape, l.knownShape(s.Shape, value.Shape()), length)
+
+		l.arrayNest(temp, value, nil, mask)
+		call.Args[1].Expr = temp
+		order = nil
+	}
+
 	var target sema.Expr
 
 	var leaves []sema.Expr
 
-	for _, a := range s.Args {
+	for _, a := range call.Args {
+		if a.Expr == nil {
+			continue
+		}
+
 		if len(a.Expr.Shape()) > 0 && target == nil {
 			target = a.Expr
 		}
@@ -925,7 +955,11 @@ func (l *lowerer) elementalCall(s *sema.Call) {
 		leaves = append(leaves, sema.Leaves(a.Expr)...)
 	}
 
-	n := l.newNest(len(s.Shape), nil)
+	if mask != nil {
+		leaves = append(leaves, sema.Leaves(mask.expr)...)
+	}
+
+	n := l.newNest(len(s.Shape), order)
 	rank := len(n.index)
 
 	for _, leaf := range leaves {
@@ -937,7 +971,11 @@ func (l *lowerer) elementalCall(s *sema.Call) {
 	for d := range rank {
 		n.extents[d] = n.extent(d, target, target)
 
-		for _, a := range s.Args {
+		for _, a := range call.Args {
+			if a.Expr == nil {
+				continue
+			}
+
 			if sh := a.Expr.Shape(); d < len(sh) && sh[d].Known {
 				n.extents[d] = sema.IntConstAt(sh[d].Size, l.here())
 
@@ -951,15 +989,24 @@ func (l *lowerer) elementalCall(s *sema.Call) {
 		n.checkSubscripts()
 	}
 
-	each := *s
-	each.Shape = nil
-	each.Args = make([]sema.Arg, len(s.Args))
+	each := call
+	each.Shape, each.Order = nil, nil
+	each.Args = make([]sema.Arg, len(call.Args))
 
-	for i, a := range s.Args {
+	for i, a := range call.Args {
 		each.Args[i] = a
-		each.Args[i].Expr = sema.Scalarize(a.Expr, n.element, n.hoist)
+		if a.Expr != nil {
+			each.Args[i].Expr = sema.Scalarize(a.Expr, n.element, n.hoist)
+		}
 	}
 
-	n.loops(rank-1, func() { l.call(&each) })
+	if mask == nil {
+		n.loops(rank-1, func() { l.call(&each) })
+	} else {
+		m := sema.Scalarize(mask.expr, n.element, n.hoist)
+
+		n.loops(rank-1, func() { l.maskedBy(m, mask.negate, func() { l.call(&each) }) })
+	}
+
 	n.done()
 }

@@ -90,11 +90,11 @@ func NewElem(s *Symbol, subs []Expr, inBounds []bool, pos diag.Position) *Elem {
 func (e *Elem) Checked(i int) bool { return i >= len(e.InBounds) || !e.InBounds[i] }
 
 // Scalarize is the array-valued expression e made a scalar one: each array it
-// reads (an *ArrayRef, a *Section, an *ArrayConst, a *Constructor, or an array
-// *FieldRef, a leaf)
+// reads (an *ArrayRef, a *Section, an *ArrayConst, a *Constructor, an
+// *ArrayFunc, an array-valued *FuncRef, or an array *FieldRef, a leaf)
 // replaced by element(leaf), each
 // scalar part of it by scalar(part), and each elemental operation between
-// them copied without a shape. scalar is how a value computed once before the
+// them (an elemental function's reference among them) copied without a shape. scalar is how a value computed once before the
 // loops stands for itself in them.
 func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Expr {
 	if rankOf(e) == 0 {
@@ -104,9 +104,28 @@ func Scalarize(e Expr, element func(leaf Expr) Expr, scalar func(Expr) Expr) Exp
 	walk := func(x Expr) Expr { return Scalarize(x, element, scalar) }
 
 	switch e := e.(type) {
-	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc, *FuncRef, *FieldRef:
-		// A FuncRef here is an array-valued function's (arrayvalue.go), a
-		// FieldRef a component's with a ranked part (record.go).
+	case *FuncRef:
+		if !e.Elemental {
+			// An array-valued function's (arrayvalue.go).
+			return element(e)
+		}
+
+		// An elemental function's, its reference at each element made with
+		// its arguments' elements (elemental.go).
+		c := *e
+		c.S, c.Elemental, c.Args = nil, false, make([]Arg, len(e.Args))
+
+		for i, arg := range e.Args {
+			c.Args[i] = arg
+			if arg.Expr != nil {
+				c.Args[i].Expr = walk(arg.Expr)
+			}
+		}
+
+		return &c
+
+	case *ArrayRef, *Section, *ArrayConst, *Constructor, *ArrayFunc, *FieldRef:
+		// A FieldRef here is a component's with a ranked part (record.go).
 		return element(e)
 
 	case *Unary:

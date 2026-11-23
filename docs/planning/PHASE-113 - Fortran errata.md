@@ -228,8 +228,9 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
 2. PURE and ELEMENTAL procedures, module and internal ones among them: UNRECSTMT. PURE's
    constraints checked; an ELEMENTAL reference with array arguments scalarized as an
    intrinsic elemental is (`ir`'s `elementalCall`); a PURE procedure allowed in FORALL and
-   specification expressions. **Proposed: 112.** *(Resolved in Phase 112 in part: PURE, its
-   constraints, and specification functions in subtask 6; ELEMENTAL is subtask 7's.)*
+   specification expressions. **Proposed: 112.** *(Resolved in Phase 112: PURE, its
+   constraints, and specification functions in subtask 6; ELEMENTAL in subtask 7. FORALL's
+   use of PURE procedures is subtask 9's.)*
 3. `NULL()` and `=> NULL()` initialization; default initialization of components (NOTIMPL,
    `derived.go`): a variable of such a type is initialized at its storage's start (static:
    `$LOCAL`'s bytes; frame, automatic, allocated: at entry or ALLOCATE, as pointer components

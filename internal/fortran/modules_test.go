@@ -1032,3 +1032,62 @@ func TestModulePure(t *testing.T) {
 		}
 	}
 }
+
+// TestModuleElemental holds an ELEMENTAL procedure in a module's text (Phase
+// 112's subtask 7): written ELEMENTAL, never RECURSIVE even under /RECURSIVE
+// (ELEMRECURSIVE would refuse the text), and read back so that a unit compiled
+// apart references it with arrays and gets the same code as one compiled with
+// the module, in both settings.
+func TestModuleElemental(t *testing.T) {
+	module := strings.Join([]string{
+		"module em",
+		"  implicit none",
+		"contains",
+		"  elemental integer function cube(k)",
+		"    integer, intent(in) :: k",
+		"    cube = k * k * k",
+		"  end function cube",
+		"  elemental subroutine order(a, b)",
+		"    integer, intent(inout) :: a, b",
+		"    integer :: t",
+		"    if (a > b) then",
+		"      t = a; a = b; b = t",
+		"    end if",
+		"  end subroutine order",
+		"end module em",
+	}, "\n")
+	user := strings.Join([]string{
+		"subroutine use(p, q)",
+		"  use em",
+		"  integer, intent(inout) :: p(4), q(4)",
+		"  call order(p, q)",
+		"  p = cube(p) + cube(q(4:1:-1))",
+		"end subroutine use",
+	}, "\n")
+
+	for _, recursive := range []bool{false, true} {
+		options := func(o *fortran.Options) { o.Recursive = recursive }
+
+		alone := compileFree("EM", module, nil, options)
+		text := strings.Join(moduleText(t, alone, "EM"), "\n")
+
+		if !strings.Contains(text, "ELEMENTAL FUNCTION CUBE(K)") || !strings.Contains(text, "ELEMENTAL SUBROUTINE ORDER(A, B)") ||
+			strings.Contains(text, "RECURSIVE") {
+			t.Errorf("ELEMENTAL not as the module has it (recursive %v) in\n%s", recursive, text)
+		}
+
+		both := compileFree("USE", module+"\n"+user, nil, options)
+		apart := compileFree("USE", user, moduleFiles{"EM": moduleText(t, alone, "EM")}, options)
+
+		for _, r := range []fortran.Result{both, apart} {
+			if r.Errors != 0 {
+				t.Fatalf("messages: %v", messageList(r))
+			}
+		}
+
+		routine := func(lines []string) string { return routineCode(lines, "USE") }
+		if routine(both.MACRO) != routine(apart.MACRO) {
+			t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(apart.MACRO))
+		}
+	}
+}

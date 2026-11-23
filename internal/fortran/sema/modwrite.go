@@ -614,8 +614,11 @@ func (w *moduleWriter) procedure(pu *Unit, depth int, name string) {
 		}
 	}
 
+	// An ELEMENTAL procedure is never RECURSIVE by its prefix (ELEMRECURSIVE);
+	// one /RECURSIVE made so keeps its storage on the stack, which a
+	// reference needn't know.
 	prefix := ""
-	if pu.Recursive {
+	if pu.Recursive && !pu.Elemental {
 		prefix = "RECURSIVE "
 	}
 

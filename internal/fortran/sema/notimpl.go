@@ -188,12 +188,3 @@ func formWhat(e ast.Expr) string {
 
 	return ""
 }
-
-// pendingPrefixes reports a header's ELEMENTAL prefix, which the parser reads
-// (docs/planning/PHASE-112 - Fortran 95.md, subtask 2) and subtask 7 compiles.
-// PURE is compiled (pure.go).
-func (a *analyzer) pendingPrefixes(pos diag.Position, elemental bool) {
-	if elemental {
-		a.notImplForm(pos, "an ELEMENTAL procedure")
-	}
-}

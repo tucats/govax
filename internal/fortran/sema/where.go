@@ -163,9 +163,11 @@ func (a *analyzer) whereAssignment(c *construct, s *ast.AssignStmt) Stmt {
 // whereAssign analyzes an assignment the Where w masks (w nil after an error in
 // its mask, when the assignment is only checked): its target an array of the
 // mask's shape (WHERETARGET, NOTCONFORM). Its order is finishWhere's, when the
-// construct's every assignment is known. Nil after an error.
-func (a *analyzer) whereAssign(w *Where, s *ast.AssignStmt) *Assign {
-	target, value := a.assignParts(s)
+// construct's every assignment is known. A defined assignment is a Call, which
+// only an elemental subroutine may make there (4.2.4; WHEREDEFINED;
+// elemental.go). Nil after an error.
+func (a *analyzer) whereAssign(w *Where, s *ast.AssignStmt) Stmt {
+	target, value := a.assignOperands(s)
 	if target == nil {
 		return nil
 	}
@@ -176,6 +178,27 @@ func (a *analyzer) whereAssign(w *Where, s *ast.AssignStmt) *Assign {
 		return nil
 	}
 
+	st, defined := a.definedAssignment(s, target, value)
+
+	switch {
+	case defined && st == nil:
+		return nil
+
+	case defined:
+		if c := st.(*Call); c.Shape == nil {
+			a.report("WHEREDEFINED", s.Pos, c.Sub.Name)
+
+			return nil
+		}
+
+	default:
+		if target, value = a.finishAssign(s, target, value); target == nil {
+			return nil
+		}
+
+		st = &Assign{stmtBase: stmtBase{s}, Target: target, Value: value}
+	}
+
 	if w == nil {
 		return nil
 	}
@@ -184,7 +207,7 @@ func (a *analyzer) whereAssign(w *Where, s *ast.AssignStmt) *Assign {
 		return nil
 	}
 
-	return &Assign{stmtBase: stmtBase{s}, Target: target, Value: value}
+	return st
 }
 
 // matchWhere finds the WHERE construct an ELSEWHERE or END WHERE statement
@@ -257,12 +280,21 @@ func (a *analyzer) endWhere(s *ast.EndWhereStmt) {
 // first. False after NOTIMPL.
 func (a *analyzer) finishWhere(w *Where, pos diag.Position) bool {
 	a.noFill = true
+	calls := false
 
 	for _, arm := range w.arms() {
 		kept := arm.Body[:0]
 
 		for _, st := range arm.Body {
-			s := st.(*Assign)
+			s, ok := st.(*Assign)
+			if !ok {
+				// An elemental defined assignment, its order its own
+				// (elemental.go).
+				calls = true
+				kept = append(kept, st)
+
+				continue
+			}
 
 			order, ok := a.arrayOrder(s.AST.Position(), s.Target, s.Value)
 			if !ok {
@@ -277,6 +309,14 @@ func (a *analyzer) finishWhere(w *Where, pos diag.Position) bool {
 	}
 
 	a.noFill = false
+
+	// A subroutine's call may change anything it can reach: the mask is
+	// computed first, once.
+	if calls {
+		w.MaskTemp = tempShape(w.Mask.Shape())
+
+		return true
+	}
 
 	if downs, ok := a.maskInLoops(w); ok {
 		for s, need := range downs {

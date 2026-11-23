@@ -253,17 +253,21 @@ func (a *analyzer) operatorFor(key string) []*Generic {
 }
 
 // resolveOperator is the procedure for the operator key whose dummies the
-// operands fit exactly, by position (generic.go's fits), or nil.
+// operands fit exactly, by position (generic.go's fits), or failing that an elemental one's element by element, or nil.
 func (a *analyzer) resolveOperator(key string, operands []Arg) *Symbol {
 	slots := make([]int, len(operands))
 	for i := range slots {
 		slots[i] = i
 	}
 
-	for _, g := range a.operatorFor(key) {
-		for _, s := range g.Specifics {
-			if u := explicitInterface(s); len(u.Params) == len(operands) && fits(slots, operands, u) {
-				return s
+	// A specific that fits exactly first, then an elemental one that fits
+	// element by element (14.1.2.4.1; elemental.go).
+	for _, elementwise := range []bool{false, true} {
+		for _, g := range a.operatorFor(key) {
+			for _, s := range g.Specifics {
+				if u := explicitInterface(s); len(u.Params) == len(operands) && fits(slots, operands, u, elementwise) {
+					return s
+				}
 			}
 		}
 	}
@@ -312,6 +316,8 @@ func (a *analyzer) operandsTo(s *Symbol, args []Arg) []Arg {
 		case i >= len(args) || p.broken:
 		case p.AssumedShape():
 			args[i] = a.shaped(args[i])
+		case target.Elemental && len(p.Dims) == 0:
+			args[i] = a.elementalArg(args[i])
 		default:
 			args[i] = a.sequenced(args[i], p)
 		}
@@ -399,10 +405,11 @@ func (a *analyzer) definedValue(e ast.Expr) Expr {
 
 // definedAssignment is the assignment target = value as an interface block for
 // ASSIGNMENT(=) defines it, CALL S(target, (value)), when Fortran gives it no
-// meaning and a subroutine of the block fits; nil otherwise.
-func (a *analyzer) definedAssignment(s *ast.AssignStmt, target, value Expr) Stmt {
+// meaning and a subroutine of the block fits. defined is false where none does;
+// the statement is nil after an error in one that does.
+func (a *analyzer) definedAssignment(s *ast.AssignStmt, target, value Expr) (st Stmt, defined bool) {
 	if len(a.operatorFor(assignmentKey)) == 0 || intrinsicAssignment(target.Type(), value.Type()) {
-		return nil
+		return nil, false
 	}
 
 	// The value is (value): an array in parentheses an expression, as
@@ -421,7 +428,7 @@ func (a *analyzer) definedAssignment(s *ast.AssignStmt, target, value Expr) Stmt
 
 	sub := a.resolveOperator(assignmentKey, args)
 	if sub == nil {
-		return nil
+		return nil, false
 	}
 
 	args = a.operandsTo(sub, args)
@@ -430,5 +437,46 @@ func (a *analyzer) definedAssignment(s *ast.AssignStmt, target, value Expr) Stmt
 	a.noteOperator(assignmentKey, sub, s.Pos)
 	a.unit.calls = append(a.unit.calls, routineRef{sym: sub, args: args, pos: s.Pos})
 
-	return &Call{stmtBase: stmtBase{s}, Sub: sub, Args: args}
+	c := &Call{stmtBase: stmtBase{s}, Sub: sub, Args: args}
+	if !a.elementalAssignment(c, s.Pos) {
+		return nil, true
+	}
+
+	return c, true
+}
+
+// elementalAssignment gives c, a defined assignment's CALL, its shape and order
+// if its subroutine is elemental and the target an array (elemental.go): the
+// value, in parentheses, is the whole value before the target changes, so the
+// calls run as an array assignment's loops would, or the value goes into a
+// temporary first (Call.Order). False after an error, reported.
+func (a *analyzer) elementalAssignment(c *Call, pos diag.Position) bool {
+	if !a.elementalCallShape(c, pos) {
+		return false
+	}
+
+	if c.Shape == nil {
+		return true
+	}
+
+	// A constructor isn't filled into the target: each element of it goes to a
+	// call of its own.
+	saved := a.noFill
+	a.noFill = true
+	order, ok := a.arrayOrder(pos, c.Args[0].Expr, c.Args[1].Expr)
+	a.noFill = saved
+
+	c.Order = order
+
+	// The temporary's CHARACTER elements need a length (Constructor.LengthOf's
+	// rule, as an assignment's).
+	if value := c.Args[1].Expr; ok && order.Temporary {
+		if vt := value.Type(); vt.Kind == Character && vt.Size == 0 && !lengthFromNames(value) {
+			a.notImplForm(pos, "an elemental defined assignment of a CHARACTER array expression of a length known only when the program runs, overlapping its target")
+
+			return false
+		}
+	}
+
+	return ok
 }

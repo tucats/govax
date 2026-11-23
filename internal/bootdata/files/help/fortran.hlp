@@ -112,9 +112,9 @@
 
    Each subtopic describes one part of the language.  The few forms the
    compiler does not compile draw %FORT-E-NOTIMPL, and each subtopic
-   names its own.  Of Fortran 95's additions, NULL() (see Pointers) and
-   default values for components (see Derived_Types), and PURE (see
-   Procedures) are compiled; ELEMENTAL and FORALL are not yet.
+   names its own.  Of Fortran 95's additions, NULL() (see Pointers),
+   default values for components (see Derived_Types), and PURE and
+   ELEMENTAL (see Procedures) are compiled; FORALL is not yet.
 
 3 Source_Form
 
@@ -424,6 +424,17 @@
    body, may give an automatic array's bound or a CHARACTER length:
 
      character(len=width(n)) :: s
+
+   ELEMENTAL (Fortran 95) marks a PURE procedure written for scalars
+   that may be referenced with arrays: its dummies and value are
+   scalars, not pointers.  Through an explicit interface any argument
+   may be an array; the arrays must conform, and the reference is made
+   for each element, a function's an array of their shape, a CALL's in
+   array element order.  A generic or operator chooses an elemental
+   specific for arrays only when no other fits, and an elemental
+   ASSIGNMENT(=) subroutine assigns arrays, in a WHERE too:
+
+     r(2:5) = clip(r(1:4), -1.0, 2.0)
 
 3 Derived_Types
 

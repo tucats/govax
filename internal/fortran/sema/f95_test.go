@@ -25,7 +25,7 @@ func TestF95Pending(t *testing.T) {
 			"program p", "  print *, inc(1)", "contains",
 			"  elemental integer function inc(k)", "    integer, intent(in) :: k", "    inc = k + 1", "  end function inc",
 			"end program p"},
-			"NOTIMPL: an ELEMENTAL procedure is not implemented yet"},
+			""},
 		{"FORALL statement", []string{
 			"program p", "  implicit none", "  integer :: a(4)", "  forall (i = 1:4) a(i) = i", "end program p"},
 			"NOTIMPL: the FORALL statement is not implemented yet"},

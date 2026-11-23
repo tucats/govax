@@ -4,7 +4,7 @@
 accepted by the author the same day ("The author's answers"); subtask 2, recovery and syntax,
 done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL()`, done
 2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
-subtask 7 is next. Phase 99's question 2 left Fortran 95's additions to an
+subtask 7, ELEMENTAL, done 2026-11-23; subtask 8 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -295,7 +295,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 6. **PURE**: the constraints (A.3's 8), PURE interfaces, specification functions (A.3's 5)
    (done 2026-11-23).
 7. **ELEMENTAL** procedures and references (A.3's 7), elemental defined assignment and
-   operators in array assignments and WHERE.
+   operators in array assignments and WHERE (done 2026-11-23).
 8. **FORALL, the statement** (A.3's 6).
 9. **FORALL, the construct**: nesting, WHERE inside, pointer assignment, PURE references.
 10. **WHERE** in WHERE, masked ELSEWHERE, named WHERE (A.3's 9); F95ONLY retired.
@@ -598,4 +598,60 @@ with every recommendation of A.5:
   regenerated, PURES added to `f90rAwaitingVMS`. MANUAL.md's "Procedures and interfaces" has a
   "PURE procedures" paragraph and its closing list loses PURE; HELP FORTRAN FORTRAN_90
   PROCEDURES the same; Phase 113's A.4's 2 is marked resolved in part. Subtask 7, ELEMENTAL, is
+  next.
+- **2026-11-23:** Subtask 7, ELEMENTAL (`sema/elemental.go`, its comment the whole design).
+  **Definitions**: `checkElemental`, from `finishUnit` beside `checkPure` (an ELEMENTAL unit is
+  PURE and gets PURE's checks too), holds each dummy to a scalar, not a pointer or a dummy
+  procedure (ELEMDUMMY), no alternate return (ELEMRETURN), a function's value a scalar, not a
+  pointer (ELEMRESULT); ELEMRECURSIVE for the two prefixes together, from the header's own
+  prefix only (`elementalPrefixes`), since `/RECURSIVE` makes every unit recursive, and a
+  module's text writes no RECURSIVE before ELEMENTAL (`modwrite.go`), else a unit compiled
+  `/RECURSIVE` couldn't read its own module back. `pendingPrefixes` is gone. **References**:
+  through an explicit interface that says ELEMENTAL (`elementalTarget`), `argsTo`,
+  `operandsTo`, and `resolveGeneric` give a scalar dummy its actual as it is
+  (`elementalArg`: no sequence association, and a whole array given its shape, NOSHAPE for an
+  assumed-size one); `checkInterface` lets such a dummy take an array (no ARGRANK).
+  `funcRef` (now returning an `Expr`) makes a function's reference with arrays a `FuncRef` with
+  their shape and `Elemental` set (`elementalShape`: the arrays conform, NOTCONFORM; an
+  INTENT(OUT) or INTENT(INOUT) dummy's actual an array when any is, ELEMOUT), and
+  `Scalarize` reaches into its arguments as into an elemental intrinsic's, so it is no leaf of
+  the scalarizer: the reference is made at each element (and `Leaves` gives overlap the
+  arrays its arguments read, so `R(2:5) = CLIP(R(1:4), ...)` runs down).
+  `FuncRef.HiddenValue` leaves it out. A CALL's `callStmt` gives it `Call.Shape`
+  (`elementalCallShape`), which lowering already made a call per element in array element
+  order (MVBITS's `elementalCall`), as Fortran 95's 12.4.3 asks. A reference through an
+  implicit interface to a procedure of the file that is ELEMENTAL is EXPLICITELEMENTAL.
+  **Generics and operators**: `fits` takes `elementwise`; `resolveGeneric` and
+  `resolveOperator` try every specific exactly first, then an elemental one element by element
+  (14.1.2.4.1), so a generic with a vector specific and an elemental one picks the vector's for
+  a rank-1 array and the elemental one for a scalar or a matrix. **Defined assignment**:
+  `assignOperands` lets an ASSIGNMENT(=) interface take an array of records too;
+  `definedAssignment` returns whether it took the statement (so an elemental one's error isn't
+  followed by the intrinsic assignment's); `elementalAssignment` gives the CALL its shape and
+  `Call.Order`, new, the array assignment's order between target and value (no fill from a
+  constructor), since the value is in parentheses and so whole before the target changes.
+  Lowering's `maskedCall` (`elementalCall` is it unmasked) computes the value into a temporary
+  first when the order says so, else runs the nest in the order's directions with
+  `ArrayOrder.Hoisted`'s scalars; a CHARACTER value of a run-time length through a temporary
+  is NOTIMPL. **WHERE**: `whereAssign` returns a `Stmt`, a defined assignment's `Call` when an
+  elemental subroutine takes it (WHEREDEFINED for one that isn't elemental), and
+  `finishWhere` computes the mask into its temporary first for a construct with such a call
+  (a subroutine may change what the mask reads); `ir/lowerwhere.go` lowers a `Call` arm
+  statement by `maskedCall` with the mask; fusion already left such constructs alone.
+  `assignParts`, unused after this, is gone. Not done: the standard's rule that an elemental
+  procedure's dummy appear in its specification expressions only as an inquiry's argument
+  (12.7.1; a bound of a local from a dummy is accepted). Tests: `sema`'s
+  `TestElementalProcedures` (`elementalproc_test.go`: references, each definition rule,
+  NOTCONFORM and ELEMOUT, EXPLICITELEMENTAL, generics, WHEREDEFINED), `TestF95Pending`'s
+  ELEMENTAL case now clean, `fortran`'s `TestModuleElemental` (the text, never RECURSIVE under
+  `/RECURSIVE`, and a unit compiled apart with the same code), and
+  `testdata/fortran90/elementals.f90` (module, internal, and external elemental functions and
+  subroutines with arrays, sections, expressions, a reduction, an overlapping target, a
+  CHARACTER value, an I/O list; a generic's two specifics; an elemental defined operator; an
+  elemental defined assignment over its own target and in a WHERE with ELSEWHERE; every mode,
+  paging too; gfortran `-std=f95` prints the same). The survey's `pure.f90` now gives only
+  FORALL's NOTIMPL, and `elemasg.f90` compiles and prints gfortran's line. `testdata/f90r`
+  regenerated, ELEMENTALS added to `f90rAwaitingVMS`. MANUAL.md's "Procedures and interfaces"
+  has an "ELEMENTAL procedures" paragraph and its closing list loses ELEMENTAL; HELP FORTRAN
+  the same; Phase 113's A.4's 2 is marked resolved. Subtask 8, the FORALL statement, is
   next.

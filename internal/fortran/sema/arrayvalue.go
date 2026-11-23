@@ -66,7 +66,9 @@ func (f *FuncRef) HiddenValue() bool {
 		return len(f.S) > 0
 	}
 
-	return f.T.HiddenResult() || len(f.S) > 0
+	// An elemental function's reference with arrays is many references, each
+	// of a scalar value.
+	return f.T.HiddenResult() || len(f.S) > 0 && !f.Elemental
 }
 
 // resultShape is the shape of a value of the function s, from its explicit
@@ -115,10 +117,22 @@ func valueShape(r *Symbol) Shape {
 }
 
 // funcRef is a reference to the function s, its value of type t, with its
-// arguments: of the shape its interface gives an array value.
-func (a *analyzer) funcRef(s *Symbol, t Type, args []Arg, pos diag.Position) *FuncRef {
+// arguments: of the shape its interface gives an array value, or an elemental
+// function's of its array arguments' shape (elemental.go).
+func (a *analyzer) funcRef(s *Symbol, t Type, args []Arg, pos diag.Position) Expr {
 	f := &FuncRef{exprBase: exprBase{T: t, Pos: pos}, Fn: s, Args: args}
 	f.S = a.resultShape(s)
+
+	if target := a.elementalTarget(s); target != nil {
+		shape, ok := a.elementalShape(target, s.Name, args, pos)
+		if !ok {
+			return a.bad(pos)
+		}
+
+		f.S, f.Elemental = shape, shape != nil
+
+		return f
+	}
 	f.Made = a.madeValue(s)
 
 	// A pointer's target, an array the function describes in the caller's

@@ -147,7 +147,7 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	if call := a.definedAssignment(s, target, value); call != nil {
+	if call, defined := a.definedAssignment(s, target, value); defined {
 		return call
 	}
 
@@ -168,17 +168,6 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	return &Assign{stmtBase: stmtBase{s}, Target: target, Value: value, Order: order, InPlace: inPlace(target, value)}
 }
 
-// assignParts analyzes an assignment's target and value, the value converted
-// for the target, its shape checked; nils after an error.
-func (a *analyzer) assignParts(s *ast.AssignStmt) (Expr, Expr) {
-	target, value := a.assignOperands(s)
-	if target == nil {
-		return nil, nil
-	}
-
-	return a.finishAssign(s, target, value)
-}
-
 // assignOperands analyzes an assignment's target and value as they are; nils
 // after an error. Between them and finishAssign a defined assignment may take
 // the statement (operators.go).
@@ -188,13 +177,13 @@ func (a *analyzer) assignOperands(s *ast.AssignStmt) (Expr, Expr) {
 
 	// A target with an error says nothing of what its value may be. A record's
 	// value may be an array when an ASSIGNMENT(=) interface may take it, as
-	// FILL (M, X(:)) does M = (/ 1.0, 2.0 /); if none does, finishAssign's
-	// shapes refuse it.
+	// FILL (M, X(:)) does M = (/ 1.0, 2.0 /), and an array of records' a value
+	// of any type an elemental one takes (elemental.go); if none does,
+	// finishAssign's shapes refuse it.
 	var value Expr
 
 	switch {
-	case target != nil && target.Type().Kind == Record && rankOf(target) == 0 &&
-		len(a.operatorFor(assignmentKey)) != 0:
+	case target != nil && target.Type().Kind == Record && len(a.operatorFor(assignmentKey)) != 0:
 		value = a.definedValue(s.Value)
 	case target == nil || target.Type().Kind == Record:
 		value = a.aggregateValue(s.Value, target != nil && rankOf(target) > 0)
@@ -520,6 +509,10 @@ func (a *analyzer) callStmt(s *ast.CallStmt, sub *Symbol, args []Arg, targets []
 	c := &Call{stmtBase: stmtBase{s}, Sub: sub, Args: args}
 	for _, t := range targets {
 		c.AltReturns = append(c.AltReturns, t.Label)
+	}
+
+	if !a.elementalCallShape(c, s.NamePos) {
+		return nil
 	}
 
 	return c

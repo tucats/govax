@@ -331,34 +331,44 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 
 	var chosenSlots []int
 
-	for g := s; g != nil; g = g.Generic.Host {
-		for _, spec := range g.Generic.Specifics {
-			target := explicitInterface(spec)
-			if target == nil || target.incomplete || spec.broken || (spec.Class == Function) != function {
-				continue
-			}
-
-			slots, fault := argumentOrder(spec.Name, target, list, places, pos)
-			if fault != nil || !fits(slots, analyzed, target) {
-				continue
-			}
-
-			if chosen != nil {
-				// A second fits only by an open NULL().
-				a.report("NULLMOLD", pos, s.Name, chosen.Name, spec.Name)
-
-				return nil, nil, genericFailed
-			}
-
-			chosen, chosenSlots = spec, slots
-
-			if !open {
-				break
-			}
+	// A specific that fits exactly first, then, only if none does, an
+	// elemental one that fits element by element (14.1.2.4.1; elemental.go).
+	for _, elementwise := range []bool{false, true} {
+		if chosen != nil {
+			break
 		}
 
-		if chosen != nil && !open {
-			break
+		chosen, chosenSlots = nil, nil
+
+		for g := s; g != nil; g = g.Generic.Host {
+			for _, spec := range g.Generic.Specifics {
+				target := explicitInterface(spec)
+				if target == nil || target.incomplete || spec.broken || (spec.Class == Function) != function {
+					continue
+				}
+
+				slots, fault := argumentOrder(spec.Name, target, list, places, pos)
+				if fault != nil || !fits(slots, analyzed, target, elementwise) {
+					continue
+				}
+
+				if chosen != nil {
+					// A second fits only by an open NULL().
+					a.report("NULLMOLD", pos, s.Name, chosen.Name, spec.Name)
+
+					return nil, nil, genericFailed
+				}
+
+				chosen, chosenSlots = spec, slots
+
+				if !open {
+					break
+				}
+			}
+
+			if chosen != nil && !open {
+				break
+			}
 		}
 	}
 
@@ -378,6 +388,8 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 				// An array to an assumed-shape dummy goes by descriptor
 				// (shaped.go).
 				args[j] = a.shaped(analyzed[i])
+			case target.Elemental && len(p.Dims) == 0:
+				args[j] = a.elementalArg(analyzed[i])
 			default:
 				args[j] = a.sequenced(analyzed[i], p)
 			}
@@ -400,7 +412,14 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 // fits reports whether the arguments analyzed, put in place by slots, fit the
 // interface target exactly: each given to a dummy has its type, kind, and rank (a
 // procedure for a dummy procedure), and a null one goes only to an OPTIONAL dummy.
-func fits(slots []int, analyzed []Arg, target *Unit) bool {
+// With elementwise set, the reference fits as an elemental procedure's:
+// target is elemental, and an array of a scalar dummy's type and kind
+// fits it too, each element in turn (elemental.go).
+func fits(slots []int, analyzed []Arg, target *Unit, elementwise bool) bool {
+	if elementwise && !target.Elemental {
+		return false
+	}
+
 	for j, i := range slots {
 		p := target.Params[j]
 
@@ -426,6 +445,10 @@ func fits(slots []int, analyzed []Arg, target *Unit) bool {
 			return false
 		case proc || p.DummyProcedure():
 			if proc != p.DummyProcedure() {
+				return false
+			}
+		case elementwise && len(p.Dims) == 0:
+			if differ(dummyShape{t: arg.Expr.Type()}, dummyShape{t: p.Type}) {
 				return false
 			}
 		case differ(actualShape(arg), dummyShape{t: p.Type, rank: len(p.Dims)}):

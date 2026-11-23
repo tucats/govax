@@ -769,6 +769,7 @@ func (a *analyzer) finishUnit() {
 	a.reportUnused()
 	a.reportIntentOut()
 	a.checkPure()
+	a.checkElemental()
 	a.reportExtensions(a.unit.AST)
 	a.checkLengths()
 	a.passedLengths()
@@ -795,7 +796,7 @@ func (a *analyzer) header(au *ast.Unit) {
 		u.Result = s
 		u.Recursive = h.Recursive || a.recursive
 		u.Pure, u.Elemental = h.Pure || h.Elemental, h.Elemental
-		a.pendingPrefixes(h.Pos, h.Elemental)
+		a.elementalPrefixes(h.Pos, h.Name, h.Elemental, h.Recursive)
 
 		// With RESULT the function's name is the routine's alone, and RESULT's
 		// variable is the value, with the header's type (8.5.2.1). A RESULT
@@ -829,7 +830,7 @@ func (a *analyzer) header(au *ast.Unit) {
 		s.Class = UnitName
 		u.Recursive = h.Recursive || a.recursive
 		u.Pure, u.Elemental = h.Pure || h.Elemental, h.Elemental
-		a.pendingPrefixes(h.Pos, h.Elemental)
+		a.elementalPrefixes(h.Pos, h.Name, h.Elemental, h.Recursive)
 
 		a.params(h.Params, &u.AltPlaces)
 
@@ -1137,6 +1138,13 @@ func checkReferences(prog *Program, units map[string]*fileUnit, warnings diag.Wa
 			// A routine with an OPTIONAL or assumed-shape dummy has to be
 			// referenced through an explicit interface (12.3.1.1); its own
 			// interface is explicit in a recursive routine's reference to itself.
+			// So does an ELEMENTAL procedure (elemental.go).
+			if fu.unit.Elemental && fu.unit != u {
+				messages.Report("EXPLICITELEMENTAL", r.pos, r.sym.Name, fu.pos.Line)
+
+				continue
+			}
+
 			if p, kind := explicitDummy(fu.params()); p != nil && fu.unit != u {
 				messages.Report("EXPLICITREQ", r.pos, r.sym.Name, kind, p.Name, fu.pos.Line)
 

@@ -1466,7 +1466,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `Unit.Defaults` set at each entry by `ir/lowerdefaults.go`, static objects' initial values,
   ALLOCATE's, and the module text; subtask 6, done 2026-11-23, PURE: `sema/pure.go`'s
   constraints, NOTPURE, PUREINTENT, PUREACTUAL, PURE interfaces, the module text's prefix, and
-  specification functions in bounds and lengths),
+  specification functions in bounds and lengths; subtask 7, done 2026-11-23, ELEMENTAL:
+  `sema/elemental.go`'s rules, a reference with arrays a `FuncRef` with `Elemental` set that
+  `Scalarize` reaches into or a `Call` with `Shape`, generics' and operators' elemental
+  specifics chosen only when none fits exactly, and elemental defined assignment with
+  `Call.Order` in array assignments and WHERE, `ir`'s `maskedCall`),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

@@ -53,8 +53,7 @@ func (l *lowerer) where(s *sema.Where) {
 		}
 
 		for _, st := range arm.Body {
-			a := st.(*sema.Assign)
-			l.from = a.Source()
+			l.from = st.Source()
 
 			if n := l.from.Base().Label; n != 0 {
 				// No jump reaches it (sema's INTOBLOCK), but an ASSIGN may
@@ -62,7 +61,16 @@ func (l *lowerer) where(s *sema.Where) {
 				l.startLabel(n)
 			}
 
-			l.maskedAssign(a, &whereMask{expr: mask, negate: arm == s.Else})
+			m := &whereMask{expr: mask, negate: arm == s.Else}
+
+			switch st := st.(type) {
+			case *sema.Assign:
+				l.maskedAssign(st, m)
+			case *sema.Call:
+				// An elemental defined assignment (sema's elemental.go).
+				l.maskedCall(st, m)
+			}
+
 			l.flush()
 		}
 	}
