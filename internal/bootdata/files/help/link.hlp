@@ -183,9 +183,9 @@
 
    Writes the image (the default).  Without a file name, the image has
    the first object's name, with the type EXE in the same case as the
-   object's type, in the default directory (see SPECIFY Output_files).  A name that is only a directory gets that
-   name in it.  /NOEXECUTABLE links and reports any errors, but writes
-   no image.
+   object's type, in the default directory (see SPECIFY Output_files).
+   A name that is only a directory gets that name in it.  /NOEXECUTABLE 
+   links and reports any errors, but writes no image.
 
 /FULL
 
