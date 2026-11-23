@@ -272,11 +272,13 @@ grammar console
     ! LOGOUT ends a subprocess's DCL, and so the process (docs/PHASE-50,
     ! subtask 19); in process 1 it ends govax. /BRIEF is the one line,
     ! /FULL the accounting report too; an interactive process's default
-    ! is /BRIEF, a batch job's /FULL.
+    ! is /BRIEF, a batch job's /FULL. The two are one setting, as in VMS's
+    ! CLD: the last one given wins, so LO*GOUT := LOGOUT/FULL then LO/BRIEF
+    ! is brief, and /NOFULL is /BRIEF, /NOBRIEF /FULL.
     verb logout/id=3186
-        qualifier   brief/id=3187/nonegatable
-        qualifier   full/id=3188/nonegatable
-        disallow    brief and full
+        qualifier   brief/id=3187
+        qualifier   full/id=3188
+        synonym     brief nofull
 
     ! LO is LOGOUT, as on VMS, though LOAD begins with it too.
     verb lo/alias=logout

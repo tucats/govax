@@ -16,8 +16,8 @@ import (
 // files "console.dcl" and "help.dcl".
 //
 // The dialect supports "grammar", "verb", "syntax",
-// "type", "keyword", "qualifier, "parameter", "disallow"
-// statements. It supports "!" for line comments, and "-"
+// "type", "keyword", "qualifier, "parameter", "disallow", and
+// "synonym" statements. It supports "!" for line comments, and "-"
 // as a line-continutation operator.
 func ParseGrammar(text string) (*Grammar, error) {
 	var (
@@ -251,6 +251,18 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 			cur.Disallows = append(cur.Disallows, d...)
 
+		case synonymTOKEN:
+			if cur == nil {
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, synonymTOKEN, "a VERB/SYNTAX")
+			}
+
+			s, err := parseSynonym(name)
+			if err != nil {
+				return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
+			}
+
+			cur.Synonyms = append(cur.Synonyms, s)
+
 		default:
 			return nil, vmserrors.New(vmserrors.CLI_BADDIRECTIVE, lineNo+1, directive)
 		}
@@ -333,6 +345,14 @@ func tokenizeStatement(stmt string) (directive, name string, switches map[string
 	fields := strings.SplitN(head, " ", 2)
 
 	directive = upcase(fields[0])
+	if directive == synonymTOKEN {
+		if len(fields) < 2 {
+			return "", "", nil, vmserrors.New(vmserrors.CLI_BADSYNONYM, "")
+		}
+
+		return directive, strings.TrimSpace(fields[1]), nil, nil
+	}
+
 	if directive == disallowTOKEN {
 		if len(fields) < 2 {
 			return "", "", nil, vmserrors.New(vmserrors.CLI_DISALLOWEXPR)
@@ -516,6 +536,24 @@ func parseDisallow(expr string) ([]*Disallow, error) {
 	q2, neg2 := splitNegated(upcase(fields[2]))
 
 	return []*Disallow{{Qual1: q1, Negated1: neg1, Qual2: q2, Negated2: neg2}}, nil
+}
+
+// parseSynonym parses a SYNONYM statement's text, "Q1 NOQ2": two
+// qualifier names, the second in its NO form, since a synonym says that
+// one qualifier is the other's negation. (Two names for the same
+// meaning are a qualifier's /alias=.)
+func parseSynonym(expr string) (*Synonym, error) {
+	fields := strings.Fields(upcase(expr))
+	if len(fields) != 2 || strings.HasPrefix(fields[0], "/") {
+		return nil, vmserrors.New(vmserrors.CLI_BADSYNONYM, expr)
+	}
+
+	q2, negated := splitNegated(fields[1])
+	if !negated || q2 == fields[0] {
+		return nil, vmserrors.New(vmserrors.CLI_BADSYNONYM, expr)
+	}
+
+	return &Synonym{Qual1: fields[0], Qual2: q2}, nil
 }
 
 func splitNegated(name string) (string, bool) {

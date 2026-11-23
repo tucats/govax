@@ -246,6 +246,11 @@ const (
 	// docs/planning/PHASE-106 - Fortran 90 modules.md: FORTRAN's /MODULE and
 	// /MODULE_PATH.
 	cliForModuleDir
+
+	// The grammar's SYNONYM statement: two qualifiers that are one
+	// setting, the last given winning (LOGOUT's /BRIEF and /FULL).
+	cliBadSynonym
+	cliSynonymNotFound
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -331,6 +336,12 @@ const (
 	CLI_TYPENOTFOUND          = CLIFacility<<FacilityPosition | cliTypeNotFound<<MessagePosition | StatusError
 	CLI_SYNTAXNOTFOUND        = CLIFacility<<FacilityPosition | cliSyntaxNotFound<<MessagePosition | StatusError
 	CLI_DISALLOWNOTFOUND      = CLIFacility<<FacilityPosition | cliDisallowNotFound<<MessagePosition | StatusError
+
+	// CLI_BADSYNONYM is a grammar's SYNONYM statement not of the form
+	// "Q1 NOQ2"; CLI_SYNONYMNOTFOUND one naming a qualifier its entry
+	// lacks, or one that takes a value.
+	CLI_BADSYNONYM      = CLIFacility<<FacilityPosition | cliBadSynonym<<MessagePosition | StatusError
+	CLI_SYNONYMNOTFOUND = CLIFacility<<FacilityPosition | cliSynonymNotFound<<MessagePosition | StatusError
 	CLI_KEYWORDSYNTAXNOTFOUND = CLIFacility<<FacilityPosition | cliKeywordSyntaxNotFound<<MessagePosition | StatusError
 	CLI_EMPTYCOMMAND          = CLIFacility<<FacilityPosition | cliEmptyCommand<<MessagePosition | StatusError
 	CLI_EXTRAPARAMETER        = CLIFacility<<FacilityPosition | cliExtraParameter<<MessagePosition | StatusError
@@ -725,6 +736,8 @@ func init() {
 	DefineMessage(CLI_QUALALIASNOTFOUND, CLIFacility, "QUALALIASNOTFOUND", "Qualifier !Q: alias target !Q not found")
 	DefineMessage(CLI_TYPENOTFOUND, CLIFacility, "TYPENOTFOUND", "!S !Q: type !Q not found")
 	DefineMessage(CLI_SYNTAXNOTFOUND, CLIFacility, "SYNTAXNOTFOUND", "Qualifier !Q: syntax !Q not found")
+	DefineMessage(CLI_BADSYNONYM, CLIFacility, "BADSYNONYM", `Malformed SYNONYM !Q (want "Q1 NOQ2")`)
+	DefineMessage(CLI_SYNONYMNOTFOUND, CLIFacility, "SYNONYMNOTFOUND", "Entry !Q: synonym qualifier !Q not found, or it takes a value")
 	DefineMessage(CLI_DISALLOWNOTFOUND, CLIFacility, "DISALLOWNOTFOUND", "Entry !Q: disallow qualifier !Q not found")
 	DefineMessage(CLI_KEYWORDSYNTAXNOTFOUND, CLIFacility, "KEYWORDSYNTAXNOTFOUND", "Type !Q: keyword !Q: syntax !Q not found")
 	DefineMessage(CLI_EMPTYCOMMAND, CLIFacility, "EMPTYCOMMAND", "Empty command")

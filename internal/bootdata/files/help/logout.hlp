@@ -16,7 +16,10 @@
    followed in its log by the accounting information: the process's I/O
    counts, page faults, peak working set and page file sizes, CPU time,
    and elapsed time.  /BRIEF and /FULL choose the short and long forms;
-   an interactive process's default is /BRIEF, any other's /FULL.
+   an interactive process's default is /BRIEF, any other's /FULL.  They
+   are one setting: /NOFULL is /BRIEF and /NOBRIEF is /FULL, and if both
+   are given the last one counts, so after LO*GOUT := LOGOUT/FULL the
+   command LO/BRIEF writes the short form.
 
    In the console's own process LOGOUT ends govax, from the terminal or
    from inside a command procedure: the report is written, mounted
@@ -28,13 +31,20 @@
 
 /BRIEF
 
+      /BRIEF
+      /NOBRIEF
+
    Writes only the line that says the process logged out.  The default
-   for an interactive process.
+   for an interactive process.  /NOBRIEF is /FULL.
 
 /FULL
 
+      /FULL
+      /NOFULL
+
    Writes the accounting information after that line.  The default for
-   a process that isn't interactive, such as a batch job.
+   a process that isn't interactive, such as a batch job.  /NOFULL is
+   /BRIEF.
 
 2 Examples
 

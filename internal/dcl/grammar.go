@@ -219,6 +219,19 @@ type Disallow struct {
 	Negated2 bool
 }
 
+// Synonym records one grammar "synonym" statement, "synonym A NOB": the
+// switch qualifiers A and B are two ways of giving one setting, /A meaning
+// /NOB (LOGOUT's /BRIEF and /FULL). Unlike a DISALLOW pair, both may be on
+// a command line, and the last one given is the one that counts: the
+// other is forgotten, so "LO*GOUT := LOGOUT/FULL" followed by "LO/BRIEF"
+// is a brief logout, as on VMS, where the CLD makes them one value. A
+// negated one is its partner given plainly (/NOFULL is /BRIEF), so a
+// handler sees only the positive form that came last.
+type Synonym struct {
+	Qual1 string
+	Qual2 string // the qualifier /Qual1 is the negation of
+}
+
 // Entry is a verb or a syntax — a verb is a grammar-top-level "verb" statement;
 // a syntax is a "syntax" statement, reachable only via a Qualifier's or Keyword's
 // Syntax redirect.
@@ -237,6 +250,7 @@ type Entry struct {
 	Parameters []*Parameter
 	Qualifiers []*Qualifier
 	Disallows  []*Disallow
+	Synonyms   []*Synonym
 
 	aliasRef *Entry // resolved by validate()
 }

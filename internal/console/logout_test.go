@@ -7,8 +7,10 @@ import (
 
 // TestLogout_processOne: LOGOUT in the console's own process ends govax,
 // and the session's end writes its report: by default (and /BRIEF) the one
-// line, with /FULL the accounting information too. EXIT, and a LOGOUT
-// taken back (Resume, a No to ending batch jobs), write nothing.
+// line, with /FULL the accounting information too. /BRIEF and /FULL are
+// one setting, as on VMS: the last given counts, /NOFULL is /BRIEF, and
+// /NOBRIEF is /FULL. EXIT, and a LOGOUT taken back (Resume, a No to
+// ending batch jobs), write nothing.
 func TestLogout_processOne(t *testing.T) {
 	cases := []struct {
 		command string
@@ -19,6 +21,10 @@ func TestLogout_processOne(t *testing.T) {
 		{"LOGOUT/BRIEF", false, true},
 		{"LOGOUT/FULL", true, true},
 		{"LO/FULL", true, true},
+		{"LOGOUT/BRIEF/FULL", true, true},
+		{"LO/FULL/BR", false, true}, // LO*GOUT := LOGOUT/FULL, then LO/BR
+		{"LOGOUT/NOFULL", false, true},
+		{"LOGOUT/NOBRIEF", true, true},
 		{"EXIT", false, false},
 	}
 
@@ -67,9 +73,5 @@ func TestLogout_processOne(t *testing.T) {
 
 	if strings.Contains(buf.String(), "logged out") {
 		t.Errorf("LOGOUT taken back: %q, want no report", buf.String())
-	}
-
-	if err := d.Dispatch("LOGOUT/BRIEF/FULL"); err == nil || !c.Running() {
-		t.Errorf("LOGOUT/BRIEF/FULL: %v, running %v; want refused", err, c.Running())
 	}
 }

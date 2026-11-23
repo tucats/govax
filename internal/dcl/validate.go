@@ -51,6 +51,18 @@ func (g *Grammar) validate() error {
 			return err
 		}
 
+		// A synonym's two names must be the entry's own switch
+		// qualifiers, spelled in full, since the parse forgets one by
+		// the other's name.
+		for _, s := range e.Synonyms {
+			for _, name := range []string{s.Qual1, s.Qual2} {
+				q, negated, err := e.qualifier(name)
+				if err != nil || negated || q.Name != name || q.hasValue() || q.aliasRef != nil {
+					return vmserrors.New(vmserrors.CLI_SYNONYMNOTFOUND, e.Name, name)
+				}
+			}
+		}
+
 		for _, d := range e.Disallows {
 			if _, _, err := e.qualifier(d.Qual1); err != nil {
 				return vmserrors.New(vmserrors.CLI_DISALLOWNOTFOUND, e.Name, d.Qual1)

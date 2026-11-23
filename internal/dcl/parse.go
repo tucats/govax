@@ -178,6 +178,46 @@ func (r *Result) markPresent(name string, id int64, negated bool) {
 	r.values[upcase(name)] = &matchedValue{id: id, present: true, negated: negated}
 }
 
+// synonymFor returns, for a negated switch qualifier a grammar SYNONYM
+// pairs, its partner given plainly: /NOFULL is /BRIEF and /NOBRIEF is
+// /FULL, as VMS's LOGOUT takes them. Any other qualifier comes back as
+// it was, still negated.
+func (e *Entry) synonymFor(q *Qualifier) (*Qualifier, bool) {
+	for _, s := range e.Synonyms {
+		var partner string
+
+		switch q.Name {
+		case s.Qual1:
+			partner = s.Qual2
+		case s.Qual2:
+			partner = s.Qual1
+		default:
+			continue
+		}
+
+		if p, _, err := e.qualifier(partner); err == nil {
+			return p, false
+		}
+	}
+
+	return q, true
+}
+
+// forgetSynonyms drops what the command line said before of the qualifier
+// a grammar SYNONYM pairs name with: the two are one setting, and the
+// one given last counts (LOGOUT/FULL/BRIEF is brief). The handler sees
+// only the qualifier it was last given, in the form it was given.
+func (r *Result) forgetSynonyms(active *Entry, name string) {
+	for _, s := range active.Synonyms {
+		switch name {
+		case s.Qual1:
+			delete(r.values, s.Qual2)
+		case s.Qual2:
+			delete(r.values, s.Qual1)
+		}
+	}
+}
+
 // paramValue looks up the recorded match (if any) for a parameter-scoped
 // qualifier, keyed first by the owning parameter's name and then by the
 // qualifier's own name. Both names are upcased before lookup, matching every
@@ -731,7 +771,12 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 		if scopeParam != nil {
 			r.markParamPresent(scopeParam.Name, q.Name, q.ID, negated)
 		} else {
+			if negated {
+				q, negated = active.synonymFor(q)
+			}
+
 			r.markPresent(q.Name, q.ID, negated)
+			r.forgetSynonyms(active, q.Name)
 		}
 
 		if q.Syntax != "" {

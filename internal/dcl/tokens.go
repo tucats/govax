@@ -22,6 +22,7 @@ const (
 	qualifierTOKEN   = "QUALIFIER"
 	separatorTOKEN   = "SEPARATOR"
 	singleTOKEN      = "SINGLE"
+	synonymTOKEN     = "SYNONYM"
 	syntaxTOKEN      = "SYNTAX"
 	typeTOKEN        = "TYPE"
 	valueTOKEN       = "VALUE"
