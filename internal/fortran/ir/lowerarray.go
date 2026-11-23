@@ -177,10 +177,64 @@ type arrayTempKey struct {
 
 // whereMask is a WHERE's mask as an assignment's loops test it: the LOGICAL
 // array, or its temporary, and whether the elements are assigned where it is
-// false (ELSEWHERE's).
+// false (ELSEWHERE's). In a Fortran 95 construct (lowerwhere.go's
+// generalWhere) a statement's control mask is a chain of them, outer the
+// mask tested first: an element is assigned only where every one holds.
 type whereMask struct {
 	expr   sema.Expr
 	negate bool
+	outer  *whereMask
+}
+
+// terms are the masks of the chain m, outer first.
+func (m *whereMask) terms() []*whereMask {
+	if m == nil {
+		return nil
+	}
+
+	return append(m.outer.terms(), m)
+}
+
+// leaves are the array leaves of every mask of the chain m, for a nest to
+// prepare.
+func (m *whereMask) leaves() []sema.Expr {
+	var list []sema.Expr
+
+	for _, t := range m.terms() {
+		list = append(list, sema.Leaves(t.expr)...)
+	}
+
+	return list
+}
+
+// scalarMask is a mask of a chain as one element of a nest tests it.
+type scalarMask struct {
+	expr   sema.Expr
+	negate bool
+}
+
+// scalarMasks are the chain m's masks as the nest n's elements, outer first,
+// made before n's loops so that what they hoist goes before them.
+func (n *arrayNest) scalarMasks(m *whereMask) []scalarMask {
+	var list []scalarMask
+
+	for _, t := range m.terms() {
+		list = append(list, scalarMask{sema.Scalarize(t.expr, n.element, n.hoist), t.negate})
+	}
+
+	return list
+}
+
+// maskedByAll lowers body where every one of masks holds, each tested only
+// where those before it hold.
+func (l *lowerer) maskedByAll(masks []scalarMask, body func()) {
+	if len(masks) == 0 {
+		body()
+
+		return
+	}
+
+	l.maskedBy(masks[0].expr, masks[0].negate, func() { l.maskedByAll(masks[1:], body) })
 }
 
 // arrayNest lowers target = value as one nest of loops, run as order says
@@ -191,9 +245,7 @@ func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder, mas
 	rank := len(n.index)
 
 	leaves := append(sema.Leaves(target), sema.Leaves(value)...)
-	if mask != nil {
-		leaves = append(leaves, sema.Leaves(mask.expr)...)
-	}
+	leaves = append(leaves, mask.leaves()...)
 
 	for _, leaf := range leaves {
 		n.prepare(leaf)
@@ -212,13 +264,9 @@ func (l *lowerer) arrayNest(target, value sema.Expr, order *sema.ArrayOrder, mas
 	t := sema.Scalarize(target, n.element, n.hoist)
 	v := sema.Scalarize(value, n.element, n.hoist)
 
-	if mask == nil {
-		n.loops(rank-1, func() { l.assignScalar(t, v) })
-	} else {
-		m := sema.Scalarize(mask.expr, n.element, n.hoist)
+	m := n.scalarMasks(mask)
 
-		n.loops(rank-1, func() { l.maskedBy(m, mask.negate, func() { l.assignScalar(t, v) }) })
-	}
+	n.loops(rank-1, func() { l.maskedByAll(m, func() { l.assignScalar(t, v) }) })
 
 	n.done()
 }
@@ -955,9 +1003,7 @@ func (l *lowerer) maskedCall(s *sema.Call, mask *whereMask) {
 		leaves = append(leaves, sema.Leaves(a.Expr)...)
 	}
 
-	if mask != nil {
-		leaves = append(leaves, sema.Leaves(mask.expr)...)
-	}
+	leaves = append(leaves, mask.leaves()...)
 
 	n := l.newNest(len(s.Shape), order)
 	rank := len(n.index)
@@ -1000,13 +1046,9 @@ func (l *lowerer) maskedCall(s *sema.Call, mask *whereMask) {
 		}
 	}
 
-	if mask == nil {
-		n.loops(rank-1, func() { l.call(&each) })
-	} else {
-		m := sema.Scalarize(mask.expr, n.element, n.hoist)
+	m := n.scalarMasks(mask)
 
-		n.loops(rank-1, func() { l.maskedBy(m, mask.negate, func() { l.call(&each) }) })
-	}
+	n.loops(rank-1, func() { l.maskedByAll(m, func() { l.call(&each) }) })
 
 	n.done()
 }

@@ -371,6 +371,10 @@ func stepReads(s Stmt) []Expr {
 	case *Where:
 		reads := []Expr{s.Mask}
 
+		for _, m := range s.Masked {
+			reads = append(reads, m.Mask)
+		}
+
 		for _, arm := range s.arms() {
 			for _, st := range arm.Body {
 				reads = append(reads, stepReads(st)...)

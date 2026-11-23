@@ -319,7 +319,7 @@ and FTNRTL do today.
    nest, unmasked, as the standard says. A labeled statement inside a WHERE
    construct is not a branch target (`labels.go`: the construct is a block
    whose only target is its WHERE). A WHERE inside a WHERE, or `ELSEWHERE
-   (mask)`, is Fortran 95's: F95ONLY, naming Phase 112.
+   (mask)`, is Fortran 95's: F95ONLY, naming Phase 112. *(Resolved in Phase 112.)*
 9. **Elemental intrinsics.** Table D-3's rows gain class E (all of them are
    elemental in Fortran 90; SIZEOF and NWORKERS, DEC's, aren't, and stay
    scalar), and an elemental row given an array argument is an element map,
@@ -916,7 +916,7 @@ What Phase 102 left, each for the phase named:
 - **A section as an internal file or ENCODE's buffer**, and sections as one I/O item by
   descriptor (Phase 109). *(Resolved in Phases 104 and 109.)*
 - **A WHERE inside a WHERE, ELSEWHERE with a mask, and MAXLOC's `DIM=`**: Fortran 95's
-  (F95ONLY; Phase 112, if it comes).
+  (F95ONLY; Phase 112, if it comes). *(The WHERE forms resolved in Phase 112.)*
 - **The optimizer's cases** (Phase 110, to be measured): a WHERE construct's assignments are
   separate nests, never fused, nor are adjacent array statements; a target and a leaf with the
   same subscripts are prepared twice, two induction variables stepping together; MINLOC and

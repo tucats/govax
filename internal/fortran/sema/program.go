@@ -1014,19 +1014,35 @@ type (
 	}
 
 	// Where is a WHERE construct, or the WHERE statement as a construct of
-	// one assignment (where.go): Mask a LOGICAL array; Then the assignments
-	// done where it is true, Else ELSEWHERE's, where it is false (nil for
-	// none), each an *Assign to an array of the mask's shape; EndWhere the
-	// END WHERE statement (nil for the WHERE statement). MaskTemp is the
-	// mask's extents when it is computed once into a temporary before the
-	// assignments, nil when each assignment's loops compute it.
+	// one assignment (where.go): Mask a LOGICAL array; Then the statements
+	// done where it is true, Masked the masked ELSEWHEREs' in order (Fortran
+	// 95's), each where its own mask holds and none before it did, and Else
+	// the plain ELSEWHERE's, where no mask held (nil for none). A block's
+	// statements are assignments to arrays of the mask's shape (an *Assign,
+	// or an elemental defined assignment's *Call) and, in Fortran 95, WHEREs
+	// nested in it, which take the block's mask as theirs to begin from.
+	// EndWhere is the END WHERE statement (nil for the WHERE statement).
+	// MaskTemp is the mask's extents when it is computed once into a
+	// temporary, nil when each assignment's loops compute it; in a General
+	// construct every mask goes into a temporary.
 	Where struct {
 		stmtBase
 		Mask     Expr
 		Then     *Arm
+		Masked   []*MaskedArm
 		Else     *Arm
 		EndWhere ast.Stmt
 		MaskTemp []int // each extent, or -1 for one known only when the program runs (tempShape)
+	}
+
+	// MaskedArm is a masked ELSEWHERE's block (Fortran 95's ELSEWHERE
+	// (mask)): Mask is computed when the ELSEWHERE is reached, only where
+	// every mask before it in the construct failed, into a temporary of
+	// MaskTemp's extents.
+	MaskedArm struct {
+		*Arm
+		Mask     Expr
+		MaskTemp []int
 	}
 
 	// Forall is the FORALL statement or construct (forall.go): each statement

@@ -1163,13 +1163,12 @@ var messages = map[string]kind{
 	// construct the unit's END reaches; WHEREBODY a statement in one that
 	// isn't an assignment (R742); WHEREMASK a mask that isn't a LOGICAL
 	// array; WHERETARGET an assignment in a WHERE to a scalar;
-	// ELSEWHEREORDER a second ELSEWHERE; F95ONLY a form Fortran 95 added
-	// (a WHERE inside a WHERE, ELSEWHERE with a mask), Phase 112's;
-	// WHEREDEFINED a defined assignment there by a subroutine that isn't
+	// ELSEWHEREORDER an ELSEWHERE after the plain one (Fortran 95 allows
+	// masked ones before it); WHEREDEFINED a defined assignment there by a subroutine that isn't
 	// ELEMENTAL (the Fortran 95 standard's 7.5.3).
 	"NOWHERE":        {Error, "this %s statement is not in a WHERE construct"},
 	"NOENDWHERE":     {Error, "this WHERE construct has no END WHERE statement"},
-	"WHEREBODY":      {Error, "only assignments may be in a WHERE construct, not %s"},
+	"WHEREBODY":      {Error, "only assignments and WHEREs may be in a WHERE construct, not %s"},
 	"WHEREMASK":      {Error, "a WHERE's mask must be a LOGICAL array, and this one is %s"},
 	"WHERETARGET":    {Error, "an assignment in a WHERE must be to an array of the mask's shape, not to a scalar"},
 	"WHEREDEFINED":   {Error, "a defined assignment in a WHERE must be by an ELEMENTAL subroutine, and %s isn't one"},
@@ -1199,7 +1198,6 @@ var messages = map[string]kind{
 	"NOENDFORALL":  {Error, "this FORALL construct has no END FORALL statement"},
 	"FORALLBODY":   {Error, "only assignments, pointer assignments, WHERE, and FORALL may be in a FORALL construct, not %s"},
 	"FORALLOUTER":  {Error, "%s is an index of a FORALL around this one already"},
-	"F95ONLY":      {Error, "%s is Fortran 95's, not Fortran 90's, and isn't compiled yet (Phase 112)"},
 
 	// CASEFIRST is a statement between SELECT CASE and the construct's first
 	// CASE, where the standard's R808 has no place for one.

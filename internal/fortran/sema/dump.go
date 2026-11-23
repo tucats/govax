@@ -270,6 +270,11 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 			line(b, s.AST, depth, mask)
 			dumpStmts(b, s.Then.Body, depth+1)
 
+			for _, m := range s.Masked {
+				line(b, m.AST, depth, "ELSEWHERE "+DumpExpr(m.Mask)+"  [mask in a temporary]")
+				dumpStmts(b, m.Body, depth+1)
+			}
+
 			if s.Else != nil {
 				line(b, s.Else.AST, depth, "ELSEWHERE")
 				dumpStmts(b, s.Else.Body, depth+1)

@@ -2,7 +2,6 @@ package sema
 
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
-	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
 )
 
@@ -19,8 +18,28 @@ import (
 // LOGICAL array; each assignment's target an array of the mask's shape, its
 // value a scalar or an array of that shape too. An assignment's elements are
 // assigned only where the mask is true, after ELSEWHERE only where it is false.
-// Only assignments may be in the construct (WHEREBODY); a WHERE inside a WHERE,
-// and ELSEWHERE (mask), are Fortran 95's (F95ONLY).
+// Only assignments and WHEREs may be in the construct (WHEREBODY).
+//
+// Fortran 95 (its 7.5.3; the HP Fortran manual's 4.2.4) adds a WHERE inside a
+// WHERE, and ELSEWHERE (mask), any number before a plain ELSEWHERE:
+//
+//	WHERE (A > 0)                     ! m1
+//	   WHERE (MOD(A, 2) == 0) B = 2   ! m1 .AND. m2
+//	ELSEWHERE (A < -1)                ! .NOT. m1 .AND. m3
+//	   B = -2
+//	ELSEWHERE                         ! .NOT. m1 .AND. .NOT. m3
+//	   B = -1
+//	END WHERE
+//
+// Each statement is done in turn under its control mask: the masks of the
+// blocks around it, each WHERE's mask true for its first block, the masks
+// before a block false. A mask is computed once, when its statement is
+// reached (so a masked ELSEWHERE's after the block before it), and only where
+// its own control mask holds, so a nested WHERE (A /= 0) guards a 1 / A in its
+// own mask. Such a construct is General: every mask in it goes into a LOGICAL
+// temporary as it is reached, and each statement's loops test the temporaries
+// of its control mask in turn, each only where those before it hold
+// (ir/lowerwhere.go). Fortran 90's constructs keep the rules below.
 //
 // WHERE opens a construct on the analyzer's stack, as IF THEN does, with the
 // WHERE's assignments one arm and ELSEWHERE's another, so add and the paths of
@@ -41,12 +60,6 @@ import (
 // whereStatement analyzes the WHERE statement, WHERE (mask) assignment: a
 // construct of one assignment.
 func (a *analyzer) whereStatement(s *ast.WhereStmt) Stmt {
-	if a.inWhere() {
-		a.report("F95ONLY", s.Pos, "a WHERE statement inside a WHERE construct")
-
-		return nil
-	}
-
 	w := a.newWhere(s, s.Mask)
 	assign, _ := s.Then.(*ast.AssignStmt)
 
@@ -58,7 +71,7 @@ func (a *analyzer) whereStatement(s *ast.WhereStmt) Stmt {
 		w.Then.Body = append(w.Then.Body, st)
 	}
 
-	if w == nil || !a.finishWhere(w, s.Pos) {
+	if w == nil || !a.finishWhere(w, a.inWhere()) {
 		return nil
 	}
 
@@ -67,15 +80,6 @@ func (a *analyzer) whereStatement(s *ast.WhereStmt) Stmt {
 
 // whereBlock analyzes WHERE (mask), which opens a WHERE construct.
 func (a *analyzer) whereBlock(s *ast.WhereBlockStmt) {
-	if a.inWhere() {
-		// The construct is kept, with no Where, so its statements are matched
-		// and its END WHERE closes it.
-		a.report("F95ONLY", s.Pos, "a WHERE construct inside a WHERE construct")
-		a.push(&construct{whereStart: s, arm: &Arm{AST: s}, reported: true})
-
-		return
-	}
-
 	w := a.newWhere(s, s.Mask)
 	c := &construct{where: w, whereStart: s, arm: &Arm{AST: s}}
 
@@ -88,8 +92,21 @@ func (a *analyzer) whereBlock(s *ast.WhereBlockStmt) {
 }
 
 // newWhere is the Where of a WHERE statement s with its mask, or nil after an
-// error in the mask (WHEREMASK if it isn't a LOGICAL or INTEGER array).
+// error in the mask.
 func (a *analyzer) newWhere(s ast.Stmt, mask ast.Expr) *Where {
+	m := a.whereMask(mask)
+	if m == nil {
+		return nil
+	}
+
+	return &Where{stmtBase: stmtBase{s}, Mask: m, Then: &Arm{AST: s}}
+}
+
+// whereMask analyzes a WHERE's or masked ELSEWHERE's mask: a LOGICAL or
+// INTEGER array (WHEREMASK), an INTEGER taken by its bit 0, and inside a WHERE
+// construct of the shape of that construct's mask (NOTCONFORM). Nil after an
+// error.
+func (a *analyzer) whereMask(mask ast.Expr) Expr {
 	m := a.arrayValue(mask)
 
 	switch t := m.Type(); {
@@ -111,7 +128,25 @@ func (a *analyzer) newWhere(s ast.Stmt, mask ast.Expr) *Where {
 		return nil
 	}
 
-	return &Where{stmtBase: stmtBase{s}, Mask: m, Then: &Arm{AST: s}}
+	if outer := a.openWhere(); outer != nil {
+		if _, ok := a.conform(mask.Position(), outer.Mask.Shape(), m.Shape()); !ok {
+			return nil
+		}
+	}
+
+	return m
+}
+
+// openWhere is the Where of the innermost WHERE construct open, or nil for
+// none or one whose WHERE had an error.
+func (a *analyzer) openWhere() *Where {
+	for i := len(a.open) - 1; i >= 0; i-- {
+		if c := a.open[i]; c.isWhere() {
+			return c.where
+		}
+	}
+
+	return nil
 }
 
 // inWhere reports whether a WHERE construct is open.
@@ -127,7 +162,7 @@ func (a *analyzer) inWhere() bool {
 
 // whereBody reports a statement in a WHERE construct that may not be there,
 // WHEREBODY: anything but an assignment, ELSEWHERE, END WHERE, and the WHERE
-// statements (which are F95ONLY, reported by their own analysis). It keeps the
+// statements (Fortran 95's, inside a construct). It keeps the
 // statement's part in the block structure, and reports whether it did.
 func (a *analyzer) whereBody(s ast.Stmt) bool {
 	c := a.top()
@@ -235,18 +270,29 @@ func (a *analyzer) elseWhere(s *ast.ElseWhereStmt) {
 
 	a.checkName(c, s, false)
 
-	if s.Mask != nil {
-		a.report("F95ONLY", s.Mask.Position(), "ELSEWHERE with a mask")
-	}
-
+	// A plain ELSEWHERE is the construct's last block: nothing may follow it,
+	// a masked one no more than a plain one.
 	if c.elseAt != nil {
 		a.report("ELSEWHEREORDER", s.Pos, c.elseAt.Position().Line)
 	}
 
-	c.arm, c.elseAt = &Arm{AST: s}, s
+	c.arm = &Arm{AST: s}
 
-	if c.where != nil {
-		c.where.Else = c.arm
+	if s.Mask == nil {
+		c.elseAt = s
+
+		if c.where != nil {
+			c.where.Else = c.arm
+		}
+
+		return
+	}
+
+	// The mask is the construct's shape (whereMask, c's the innermost open).
+	m := a.whereMask(s.Mask)
+
+	if c.where != nil && m != nil {
+		c.where.Masked = append(c.where.Masked, &MaskedArm{Arm: c.arm, Mask: m})
 	}
 }
 
@@ -264,21 +310,25 @@ func (a *analyzer) endWhere(s *ast.EndWhereStmt) {
 	if c.where != nil {
 		c.where.EndWhere = s
 
-		if !a.finishWhere(c.where, s.Pos) {
+		if !a.finishWhere(c.where, a.inWhere()) {
 			// The construct's code is left out: its NOTIMPL is reported.
 			c.where.Then.Body, c.where.Mask = nil, nil
-			if c.where.Else != nil {
-				c.where.Else.Body = nil
+			for _, arm := range c.where.arms() {
+				arm.Body = nil
 			}
+
+			c.where.Masked = nil
 		}
 	}
 }
 
-// finishWhere decides how the Where w runs, once its assignments are known:
+// finishWhere decides how the Where w runs, once its statements are known:
 // each assignment's order (arrayOrder, never filled from a constructor, which
 // the mask may skip parts of), and whether the mask goes into a temporary
-// first. False after NOTIMPL.
-func (a *analyzer) finishWhere(w *Where, pos diag.Position) bool {
+// first. A WHERE nested in another (nested), or one with WHEREs nested in it
+// or a masked ELSEWHERE, is General: every mask of it goes into a temporary,
+// its nested ones' too, each finished at its own end. False after NOTIMPL.
+func (a *analyzer) finishWhere(w *Where, nested bool) bool {
 	a.noFill = true
 	calls := false
 
@@ -289,8 +339,11 @@ func (a *analyzer) finishWhere(w *Where, pos diag.Position) bool {
 			s, ok := st.(*Assign)
 			if !ok {
 				// An elemental defined assignment, its order its own
-				// (elemental.go).
-				calls = true
+				// (elemental.go), or a nested WHERE, finished already.
+				if _, call := st.(*Call); call {
+					calls = true
+				}
+
 				kept = append(kept, st)
 
 				continue
@@ -309,6 +362,16 @@ func (a *analyzer) finishWhere(w *Where, pos diag.Position) bool {
 	}
 
 	a.noFill = false
+
+	if nested || w.General() {
+		w.MaskTemp = tempShape(w.Mask.Shape())
+
+		for _, m := range w.Masked {
+			m.MaskTemp = tempShape(m.Mask.Shape())
+		}
+
+		return true
+	}
 
 	// A subroutine's call may change anything it can reach: the mask is
 	// computed first, once.
@@ -450,13 +513,39 @@ func callsProcedure(e Expr) bool {
 	return found
 }
 
-// arms are the Where's blocks: the WHERE's, then ELSEWHERE's if it has one.
+// arms are the Where's blocks in order: the WHERE's, each masked ELSEWHERE's,
+// then the plain ELSEWHERE's if it has one.
 func (w *Where) arms() []*Arm {
-	if w.Else == nil {
-		return []*Arm{w.Then}
+	list := []*Arm{w.Then}
+
+	for _, m := range w.Masked {
+		list = append(list, m.Arm)
 	}
 
-	return []*Arm{w.Then, w.Else}
+	if w.Else != nil {
+		list = append(list, w.Else)
+	}
+
+	return list
+}
+
+// General reports whether the WHERE construct w has Fortran 95's forms in it,
+// a masked ELSEWHERE or a WHERE nested in one of its blocks, and so has every
+// mask in a temporary, tested in turn (where.go's introduction).
+func (w *Where) General() bool {
+	if len(w.Masked) > 0 {
+		return true
+	}
+
+	for _, arm := range w.arms() {
+		for _, st := range arm.Body {
+			if _, ok := st.(*Where); ok {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // brokenWhere keeps the block structure of a WHERE construct's statement

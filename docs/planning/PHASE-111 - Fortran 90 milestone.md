@@ -1112,7 +1112,7 @@ where each goes:
 - **Phase 112, the Fortran errata (a go; *split 2026-11-22: Fortran 95 is Phase 112, the errata Phase 113*), whose list holds everything below; Fortran 95's
   additions:** FORALL; PURE and ELEMENTAL procedures (module procedures
   among them); `NULL()`, `=> NULL()`, and default initialization of components (today
-  NOTIMPL); CPU_TIME; a WHERE inside a WHERE and ELSEWHERE with a mask (F95ONLY); MAXLOC's
+  NOTIMPL); CPU_TIME; a WHERE inside a WHERE and ELSEWHERE with a mask (F95ONLY; *resolved in Phase 112*); MAXLOC's
   and MINLOC's `DIM=`; CEILING's and FLOOR's `KIND=`; zero widths, `I0` and `F0.d` (today
   OUTCONERR); and `/STANDARD=F95` beside `F77` and `F90`.
 - **Measured, left for later (Phase 110's subtask 8, Phase 104's list):** a run-time test

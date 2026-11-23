@@ -1478,7 +1478,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   construct, its statements in a construct on the analyzer's stack whose scope holds its indexes,
   nested FORALLs, WHERE, pointer and defined assignments, judged by the outermost's
   `finishForall` (`sema/forallorder.go`: each step over every level's indexes, a mask its steps
-  change in a temporary, `Forall.MaskTemp`), lowered by `ir/lowerforall.go`'s levels),
+  change in a temporary, `Forall.MaskTemp`), lowered by `ir/lowerforall.go`'s levels; subtask 10,
+  done 2026-11-23, WHERE in WHERE and masked ELSEWHERE, `Where.Masked`'s `MaskedArm`s and nested
+  `Where`s in a block's `Body`, a `General` construct's every mask in a temporary computed when
+  reached under its control mask, a chain of `whereMask`s, `ir/lowerwhere.go`'s `generalWhere`;
+  F95ONLY retired),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

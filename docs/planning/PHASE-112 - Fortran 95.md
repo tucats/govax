@@ -5,7 +5,8 @@ accepted by the author the same day ("The author's answers"); subtask 2, recover
 done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL()`, done
 2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
 subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 2026-11-23;
-subtask 9, the FORALL construct, done 2026-11-23; subtask 10 is next. Phase 99's question 2 left Fortran 95's additions to an
+subtask 9, the FORALL construct, done 2026-11-23; subtask 10, WHERE in WHERE, done 2026-11-23;
+subtask 11 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -300,7 +301,8 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 8. **FORALL, the statement** (A.3's 6) (done 2026-11-23).
 9. **FORALL, the construct**: nesting, WHERE inside, pointer assignment, PURE references
    (done 2026-11-23).
-10. **WHERE** in WHERE, masked ELSEWHERE, named WHERE (A.3's 9); F95ONLY retired.
+10. **WHERE** in WHERE, masked ELSEWHERE, named WHERE (A.3's 9); F95ONLY retired (done
+    2026-11-23).
 11. **The intrinsics** (A.3's 10): MAXLOC/MINLOC DIM=, CEILING/FLOOR KIND=, CPU_TIME.
 12. **FTNRTL**: zero widths, namelist comments (A.3's 11).
 13. **`/STANDARD=F90`** widened, Fortran 95's deleted and obsolescent lists (A.3's 12,
@@ -754,3 +756,35 @@ with every recommendation of A.5:
   `f90rAwaitingVMS`. MANUAL.md's "Arrays as values" FORALL item describes the construct and the
   closing list loses it; HELP FORTRAN (the introduction and ARRAYS) the same; Phase 113's A.1's
   1 is marked resolved. Subtask 10, WHERE in WHERE, is next.
+- **2026-11-23:** Subtask 10, WHERE in WHERE. Named WHERE constructs already compiled
+  (subtask 2's names, `nameConstruct`'s rules). **Analysis** (`sema/where.go`, its introduction
+  the design): a WHERE statement or construct inside a WHERE's block is a `Where` in that block's
+  `Body`; `ELSEWHERE (mask)` is a `MaskedArm` in `Where.Masked`, between `Then` and `Else`, the
+  plain ELSEWHERE last (ELSEWHEREORDER for any ELSEWHERE after it). Every mask is `whereMask`'s:
+  WHEREMASK as before, and inside a construct NOTCONFORM against the innermost open one's mask
+  (`openWhere`). A construct with either form, and every WHERE nested in one, is `General`: at
+  its end `finishWhere` (now told whether it is nested) gives each assignment its order and puts
+  every mask in a temporary (`MaskTemp`, `MaskedArm.MaskTemp`); Fortran 90's constructs keep
+  their rules (`maskInLoops`, fusion). F95ONLY is gone from `diag`; WHEREBODY's text now says
+  "assignments and WHEREs". The dump writes a masked ELSEWHERE as `ELSEWHERE mask  [mask in a
+  temporary]`. A FORALL's step that is a WHERE reads its masked ELSEWHEREs' masks too
+  (`stepReads`). **Lowering** (`ir/lowerwhere.go`'s `generalWhere`): a statement's control mask
+  is a chain of `whereMask`s (`outer` tested first), each a temporary and whether it is negated;
+  each mask is computed into its temporary when its statement is reached, by a nest under the
+  control mask that statement is under (`maskTemp`), so a nested mask is computed only where the
+  masks around it hold and a masked ELSEWHERE's after the block before it (the standard's
+  7.5.3.2, the HP manual's 4.2.4); each block's statements are lowered in turn under the chain
+  (`whereArm`), a nested WHERE recursively. `arrayNest` and `maskedCall` test a chain's masks in
+  turn, each only where those before it hold (`scalarMasks`, `maskedByAll`); with one mask, or
+  none, the code is what it was. Tests: `sema`'s `TestWhere` (the F95ONLY cases now compiled,
+  and the new errors) and `TestWhere95` (nesting in each kind of block, masked ELSEWHEREs, names,
+  a WHERE with a masked ELSEWHERE in a FORALL); `testdata/fortran90/wheres.f90` (the survey's
+  probe; a nested mask dividing by what the outer one tested, which would end the program if
+  computed everywhere; a masked ELSEWHERE's mask reading what the block before it wrote; a
+  block's statements in turn; a nested WHERE in each kind of block on assumed-shape arrays,
+  temporaries of run-time size; named constructs in a FORALL; every mode, paging too; gfortran
+  `-std=f95` prints the same, `compare.py`). The survey's `where95.f90` is WHERES's first case.
+  `testdata/f90r` regenerated, WHERES added to `f90rAwaitingVMS`. MANUAL.md's WHERE item under
+  "Arrays as values" describes the forms, with an example; HELP FORTRAN ARRAYS the same. Phase
+  113's A.1's 5 is marked resolved, as are Phase 102's and 111's mentions of F95ONLY. Subtask 11,
+  the intrinsics, is next.

@@ -9126,9 +9126,25 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
 - *WHERE*: `WHERE (mask) A = expr`, or a construct of WHERE, assignments, an optional
   ELSEWHERE and its assignments, and END WHERE, assigns only the elements where the mask is
   true (false after ELSEWHERE). The mask is computed once, at the WHERE, and nothing is
-  computed for an element that isn't assigned. Only assignments of the mask's shape may stand
-  inside (`WHEREBODY`, `WHERETARGET`). A WHERE inside a WHERE, and ELSEWHERE with a mask of its
-  own, are Fortran 95's (`F95ONLY`).
+  computed for an element that isn't assigned. Only assignments of the mask's shape, and WHEREs,
+  may stand inside (`WHEREBODY`, `WHERETARGET`). Fortran 95's forms (under `/NOF90` too) are a
+  WHERE statement or construct inside a WHERE's or ELSEWHERE's block, any number of `ELSEWHERE
+  (mask)` blocks before the plain ELSEWHERE (`ELSEWHEREORDER` after it), and a construct name,
+  `NAME: WHERE (mask)`, which ELSEWHERE may and END WHERE must repeat. Each statement is done in
+  turn where its control mask holds: the mask of each block around it true, and every mask
+  before its block in the same construct false. Each mask is computed once, when its statement
+  is reached (a masked ELSEWHERE's after the block before it has run), and only where its own
+  control mask holds, so a nested mask may divide by what the outer one tested:
+
+  ```fortran
+  where (x /= 0.0)
+    where (1.0 / x > 0.4) y = 1.0 / x     ! 1/X only where X isn't 0
+  elsewhere (x < -1.0)
+    y = -1.0
+  elsewhere
+    y = 0.0
+  end where
+  ```
 - *FORALL* (Fortran 95's 7.5.4; under `/NOF90` too): `FORALL (I = 1:N, J = 1:N, mask) target
   = expr` assigns the target for every tuple of the indexes' values (each `lower:upper` or
   `lower:upper:stride`, a stride never zero, `FORALLSTRIDE`) for which the mask, if there is one,

@@ -241,7 +241,7 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    5.)*
 4. CPU_TIME (a subroutine; `$GETJPI`'s CPUTIM in FTNRTL). **Proposed: 112.**
 5. A WHERE inside a WHERE, and ELSEWHERE with a mask (F95ONLY, `sema/where.go`, three sites).
-   **Proposed: 112.**
+   **Proposed: 112.** *(Resolved in Phase 112, subtask 10.)*
 6. MAXLOC's and MINLOC's `DIM=` (KEYWORDNAME today), CEILING's and FLOOR's `KIND=`
    (KEYWORDNAME today), and Fortran 95's other intrinsic changes: SIGN of a negative zero (no
    such thing on the VAX: nothing to do), `KIND=` on others the HP manual lists, and NULL's

@@ -292,7 +292,9 @@
    PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT take MASK= and DIM=;
    MAXLOC, MINLOC, DOT_PRODUCT, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
    UBOUND, SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK, and RESHAPE take any
-   arrays.  WHERE is a statement, or a construct with ELSEWHERE.
+   arrays.  WHERE is a statement, or a construct with ELSEWHERE; in
+   Fortran 95 a WHERE may be inside another, ELSEWHERE may have a mask
+   of its own (ELSEWHERE (A < 0.0)), and a construct may be named.
 
    FORALL (Fortran 95) assigns a target for each tuple of its own
    indexes' values where its mask holds, every value computed before
