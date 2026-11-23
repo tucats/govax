@@ -1113,7 +1113,7 @@ Supplemental entries, after the phase was done.
 What Phase 95 left, for later phases:
 
 - **Remote and other logins**: only process 1 logs in, once, at govax's
-  start. A detached LOGINOUT process by username, batch jobs (SUBMIT),
+  start. A detached LOGINOUT process by username, batch jobs (SUBMIT; *resolved in Phase 98*),
   and logins over a network wait for the remote-login phase, which
   `uaf.CheckPassword` and the password rule were made ready for. An
   account with no password can't then be allowed in remotely.

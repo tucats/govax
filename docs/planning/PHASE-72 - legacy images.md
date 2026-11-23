@@ -46,7 +46,9 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
   number 00188134` where VMS shows `%FOR-F-ERRDURWRI`), the debugger's
   `DBG$INPUT`, keyed `$PUT`, OTS$'s
   packed and `$$CVT_MUL` routines, the trace trap (PSL<T>), and SHOW
-  CALLS's naming of unset modules' and shareable images' frames. The
+  CALLS's naming of unset modules' and shareable images' frames. *(FOR's
+  messages resolved in Phase 80, `DBG$INPUT` and the trace trap in Phase 73,
+  keyed `$PUT` in Phase 81; OTS$'s packed routines are still missing.)* The
   items below are the record of how it got here.
 
 - **Done**: subtasks 1 to 5 (see the progress log). RUN DUNGEON and

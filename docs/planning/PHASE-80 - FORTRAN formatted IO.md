@@ -1702,11 +1702,11 @@ later:
 
 - **Phase 81:** OPEN and CLOSE and the other units (0 to 119, now NOTIMP), with
   their default names (FOR$READ, FOR$PRINT, FORnnn.DAT), BLANK='NULL' after OPEN,
-  unformatted and direct access I/O (which DUNGEON's data base needs).
+  unformatted and direct access I/O (which DUNGEON's data base needs). *(Resolved in Phase 81.)*
 - **Phase 83:** the system routines DUNGEON calls (EXIT, IDATE, RAN), and ERRSNS
-  after a math library error.
+  after a math library error. *(Resolved in Phase 83.)*
 - **Phase 86:** DUNGEON itself. Its terminal statements already compile and run as
-  this phase's tests use them.
+  this phase's tests use them. *(Resolved in Phase 86.)*
 - **Unconfirmed on VMS,** each a choice recorded above: the record limits at a
   terminal; reading unit 6 at a terminal; a `+` record after an ended line, which
   starts a line of its own on govax's line-at-a-time terminal where VMS's

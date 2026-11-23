@@ -662,7 +662,7 @@ review after each.
 - **Installed shareable images as global sections** shared between
   processes.
 - **Per-process working set settings after creation:** SET
-  WORKING_SET /QUOTA /EXTENT, and quotas from an authorization file.
+  WORKING_SET /QUOTA /EXTENT, and quotas from an authorization file. *(SET WORKING_SET resolved in Phase 63, an authorization file's quotas in Phase 95.)*
 - **Automatic working set adjustment** (PFRATL/PFRATH, WSINC/WSDEC).
 - **Paged page tables, more than one page file, and a SYSGEN command.**
 

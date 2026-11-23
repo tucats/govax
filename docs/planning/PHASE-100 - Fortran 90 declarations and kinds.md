@@ -605,19 +605,19 @@ What Phase 100 left, each for the phase named:
 - **POINTER and ALLOCATABLE** are NOTIMPL (Phases 107 and 104); **INTENT,
   OPTIONAL, and TARGET** are recorded on the `Symbol` and change nothing:
   INTENT's checks and PRESENT are Phase 103's, TARGET's meaning Phase 107's.
-  **PUBLIC and PRIVATE** are NOTINMODULE until modules (Phase 106).
+  **PUBLIC and PRIVATE** are NOTINMODULE until modules (Phase 106). *(Resolved in Phases 103, 104, 106, and 107.)*
 - **Arrays:** array constructors as initial values, array PARAMETERs, and
-  assumed- or deferred-shape bounds (`A(:)`) are NOTIMPL (Phases 102 and 104).
+  assumed- or deferred-shape bounds (`A(:)`) are NOTIMPL (Phases 102 and 104). *(Resolved in Phases 102 and 104.)*
 - **CHARACTER** of length zero, or of a length that isn't constant in a
-  non-dummy's declaration, is NOTIMPL (Phase 108, answer 3).
+  non-dummy's declaration, is NOTIMPL (Phase 108, answer 3). *(Resolved: a run-time length in Phase 104, length zero in Phase 108 but for a component or function value, Phase 112's A.3.1.)*
 - **COMPLEX(16)'s** I/O (Phase 109), powers, and intrinsic functions other
   than the conversions and parts (Phase 108). A REAL(16) beside a COMPLEX(4)
   or COMPLEX(8) gives COMPLEX\*16, VAX FORTRAN's rule, where the standard's
-  7.1.4.2 gives COMPLEX(16) (MANUAL.md's 14.13).
+  7.1.4.2 gives COMPLEX(16) (MANUAL.md's 14.13). *(I/O resolved in Phase 109, powers and functions in Phase 108, but for SUM and its kin, Phase 112's A.3.1.)*
 - **SELECTED_INT_KIND and SELECTED_REAL_KIND of a value** that isn't constant
-  are NOTIMPL (Phase 108).
+  are NOTIMPL (Phase 108). *(Resolved in Phase 108.)*
 - **Keyword arguments** to intrinsic functions whose rows don't name their
-  dummies (Phase 108), and to a program's own procedures (Phase 103).
+  dummies (Phase 108), and to a program's own procedures (Phase 103). *(Resolved in Phases 103 and 108.)*
 - **The scope chain** has hosts only for statement functions; internal and
-  module procedures give it its use (Phase 103).
-- **`/STANDARD`** judges nothing new (finding 14; Phase 110).
+  module procedures give it its use (Phase 103). *(Resolved in Phases 103 and 106.)*
+- **`/STANDARD`** judges nothing new (finding 14; Phase 110). *(Resolved in Phase 110.)*

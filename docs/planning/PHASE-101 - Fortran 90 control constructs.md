@@ -498,10 +498,10 @@ Every recommendation accepted:
 What Phase 101 left, each for the phase named:
 
 - **A run-time format in a variable** holding `"…"` is still FTNRTL's
-  SYNERRFOR; a constant's is rewritten (subtask 5). Phase 109's goal lists it.
+  SYNERRFOR; a constant's is rewritten (subtask 5). Phase 109's goal lists it. *(Resolved in Phase 109.)*
 - **`/STANDARD`** judges nothing new: construct names, EXIT, CYCLE, and
   SELECT CASE are Fortran 90's, not FORTRAN-77's, and `/STANDARD=F90` is
-  Phase 110's (finding 12).
+  Phase 110's (finding 12). *(Resolved in Phase 110.)*
 - **`caseForm`'s thresholds** are the author's answer 6, unmeasured: the
   programs of subtask 5 run too briefly for a difference to show. A program
   that dispatches in a hot loop (Phase 111's milestone, perhaps) can measure

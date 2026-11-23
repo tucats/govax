@@ -786,7 +786,7 @@ traceback has FORTRAN lines; and `/OPTIMIZE` steps assumed-shape addresses and f
 assignments. What it left, and where each goes:
 
 - **Phase 111:** the milestone program, which will exercise these tools on something larger than
-  the corpus; the optional VMS round.
+  the corpus; the optional VMS round. *(Resolved in Phase 111.)*
 - **Later, measured but not done (subtask 8):** a run-time test of two sections' overlap choosing
   the loop's direction, where sema can't decide (`A(I:I+999) = A(J:J+999) + 1.0` is two loops of 2
   instructions a trip, through a temporary); `A = F(X)` of an explicit-shape array-valued function

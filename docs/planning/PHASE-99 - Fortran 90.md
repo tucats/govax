@@ -1004,12 +1004,12 @@ Left, for the phases named or by choice:
 - **Everything Fortran 90 adds to what a program computes**: Phases 100 to 111, in Part C's
   order. Each starts with a survey that may change its skeletal doc.
 - **A `"…"` constant in a format given at run time** (a character constant or variable as the
-  format) is still FTNRTL's SYNERRFOR; listed in Phase 109's goal.
+  format) is still FTNRTL's SYNERRFOR; listed in Phase 109's goal. *(Resolved in Phase 109.)*
 - **Fortran 90's intrinsic names under `/F90`**: `/F90` is to make them intrinsic, but none is
   in the table yet, so they are still a program's own names (Phase 108; some with Phases 100,
-  102, and 104).
+  102, and 104). *(Resolved in Phase 108.)*
 - **`/STANDARD`** flags none of Fortran 90's spellings or free form; Phase 110's
-  `/STANDARD=F90` is to judge both forms.
+  `/STANDARD=F90` is to judge both forms. *(Resolved in Phase 110.)*
 - **A token split by `&` without the second `&`** is read as one token, not reported (subtask
   3's choice): the source pass can't tell a split token, and gfortran can.
 - **Comment lines past 132 characters** aren't reported (subtask 3's choice; the standard says

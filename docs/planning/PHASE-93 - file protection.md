@@ -2355,7 +2355,7 @@ What Phase 93 left, for later phases:
 - **Identities other than SYSTEM** (the phase's purpose): a user
   authorization file and AUTHORIZE, LOGINOUT using them, and logins;
   until then `corevms.AddUser` and `AddIdentifier` stand for AUTHORIZE in
-  the tests, and `$CHECK_ACCESS` reads that table.
+  the tests, and `$CHECK_ACCESS` reads that table. *(Resolved in Phase 95.)*
 - **Out of scope by the review**: volume protection (shown, not
   enforced), the ACL editor, auditing and alarms (their ACEs kept and
   shown), and protection of devices, queues, and logical name tables

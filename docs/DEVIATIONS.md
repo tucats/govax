@@ -881,11 +881,12 @@ choices no fixture has confirmed yet.
   handler called" lines; (8) `SET MODE NOLINE` and the other display modes
   are recorded and shown but don't change the output; (9) the `ACCVIO`
   message's text is `PS=` and mask `02` where VMS 7.3's run prints `PSL=`
-  and `00` (the text is generated from VMS's definition files);
+  and `00` (the text is generated from VMS's definition files) *(resolved in
+  Phase 55, subtask 8: `$GETMSG`'s table has VMS 7.1's text, `PSL=`)*;
   (10) SHOW's sizes and image lists (VMS's own tables and images), and
   addresses on VMS's stack and heap, are of course not govax's.
 - **Status**: deferred (each is logged in the phase doc and in the test);
-  (9) is a message-table question for a later phase.
+  (9) was resolved in Phase 55.
 
 ### [Phase 42] Debugger rules chosen without a probe or a manual to settle them
 
@@ -906,19 +907,10 @@ choices no fixture has confirmed yet.
   `/OPERANDS=FULL` equal to brief, and the layout of operands that name
   no register or memory; `SHOW SYMBOL` with both `/ADDRESS` and `/TYPE`
   and multi-dimension array bounds; `SHOW SCOPE`'s numbering past two
-  levels of one routine; `SHOW LANGUAGE`'s `UNKNOWN`; `SET SOURCE`/`SHOW
+  levels of one routine *(held to VMS 7.1's logs since Phase 89, `testdata/dbg89`)*; `SHOW LANGUAGE`'s `UNKNOWN`; `SET SOURCE`/`SHOW
   SOURCE` wording and `%DEBUG-E-NOSUCHMODULE`; a source record over 144
   columns; `EXIT` and `QUIT` being alike.
 - **Status**: deferred, for a later simh round.
-
-### [Phase 42] The console's `SET name=value` still assigns a register
-
-- **Where**: `internal/console/set.go` (`SetSymbolQualified`).
-- **What**: the plan moved register assignment to the debugger
-  (`DEPOSIT R0 = 5`). The console's `SET R=5` still assigns, since the
-  assignment form is shared with symbols and an assignment wins over a
-  keyword it abbreviates; taking registers out would add a special case.
-- **Status**: deliberate (2026-10-05, Phase 42 subtask 14).
 
 ### [Phase 47] File sharing and lock rules chosen without a manual or probe
 

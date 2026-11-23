@@ -980,4 +980,5 @@ COMPLEX\*16, and CHARACTER types and calls through dummy procedures (Phase
 79, with adjustable arrays and statement functions), Hollerith arguments
 (Phase 79), `/CHECK` (Phase 85), and the optimizer's clean-ups of what this
 phase writes, such as multiplying by 0.0 and 1.0 or widening a value only to
-round it back (Phase 84).
+round it back (Phase 84). *(Resolved in Phases 79 and 85, but for the clean-ups,
+which Phase 84 didn't take up: Phase 112's A.1.9.)*

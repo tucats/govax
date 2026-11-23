@@ -23,7 +23,7 @@ STARTUP and CONFIG KEYS, CLAUDE.md, and PLAN.md.
 - **Rooted directories.** RMS pastes a logical name's equivalence in as
   text, so `SYS$SYSROOT` is a plain name and `SYS$SYSROOT:[SYSLIB]` isn't
   `[SYSTEM.SYSLIB]` (subtask 5). Doing it as VMS does means placing the
-  root after the default directory and changing how expanded names show.
+  root after the default directory and changing how expanded names show. *(Resolved in Phase 91.)*
 - **SAVE/ROM and SAVE/NVRAM to a volume** (subtask 6): LOAD reads volume
   files, SAVE still writes host files only.
 - **`vax.library`'s macro library comes after the volume's.** STARTUP.COM's
@@ -36,7 +36,7 @@ STARTUP and CONFIG KEYS, CLAUDE.md, and PLAN.md.
   neither digest, kept as the user's with SYSKEPT (subtask 4);
   `--system-initialize` or a DELETE of the version is the cure.
 - **Unconfirmed against VMS:** the attributes of SYS$SYSDEVICE and
-  SYS$SYSROOT (govax's aren't concealed), and DISMOUNT's second line,
+  SYS$SYSROOT (govax's aren't concealed; *concealed since Phase 91*), and DISMOUNT's second line,
   `%DISM-W-SYSDISK`'s wording.
 - **COPY's message.** govax's COPY shows `%COPY-S-COPIED` without `/LOG`,
   as it always has, so BUILDFTN.COM and BUILDSTARLET.COM show one; VMS's

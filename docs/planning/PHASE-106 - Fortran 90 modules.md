@@ -736,10 +736,10 @@ Definition modules as module files stay for later (the plan's open question 2).
 
 Phase 106 is done. What it left, and where each goes:
 
-- **Phase 107:** POINTER module variables and components.
+- **Phase 107:** POINTER module variables and components. *(Resolved in Phase 107.)*
 - **Phase 110:** the debugger's EXAMINE of a module's variable as `M.X` from a
   user (the `/DEBUG` table lists a user's use-associated variables under its own
-  names until then); `/STANDARD` for the phase's forms.
+  names until then); `/STANDARD` for the phase's forms. *(Resolved in Phase 110.)*
 - **Phase 112:** PURE and ELEMENTAL module procedures (Fortran 95).
 - **Later, if wanted (the plan's open question 2):** govax's definition modules
   (`$SSDEF` and the rest) as module files to USE, beside INCLUDE's.

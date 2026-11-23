@@ -294,7 +294,7 @@ Phase 38's object options.
 - **A shareable image's GST.** A shareable image's global symbol table is
   object-language GSD records; if ANALYZE/IMAGE shows them, it would be in
   ANALYZE/OBJECT's style, and `anl`'s object analyzer can describe them.
-  No fixture shows it, and govax's LINK doesn't write shareable images yet.
+  No fixture shows it, and govax's LINK doesn't write shareable images yet. *(LINK/SHAREABLE came in Phase 68; ANALYZE/IMAGE still shows no GST.)*
 - `/INTERACTIVE` isn't planned.
 
 ## Page layout

@@ -900,21 +900,21 @@ What Phase 102 left, each for the phase named:
 - **Temporaries of a size not known when compiling** (Phase 104): an assignment the
   overlap test sends through a temporary (`X(1:N) = X(N:1:-1)`), a constructor that isn't
   stored straight into its target, and a WHERE mask kept in a temporary, each NOTIMPL when
-  the extents aren't constants.
+  the extents aren't constants. *(Resolved in Phase 104.)*
 - **Arrays as actual arguments** to a program's own procedures, other than a whole array's
-  name (Phase 104's sections to old dummies, with Phase 103's interfaces).
+  name (Phase 104's sections to old dummies, with Phase 103's interfaces). *(Resolved in Phase 104.)*
 - **Array functions of a shape not known when compiling** (Phase 104): RESHAPE of values that
   aren't constants, a `DIM=` that isn't constant with ARRAY of rank above 1, and MERGE of
-  CHARACTER values of a length not constant.
+  CHARACTER values of a length not constant. *(Resolved in Phase 104, but for CSHIFT's, EOSHIFT's, and SPREAD's DIM= and RESHAPE's ORDER=, Phase 112's A.3.1.)*
 - **CHARACTER values of a run-time length in an array expression** (a CHARACTER function's
   value, a concatenation with a passed-length dummy), which would be made at each element:
-  NOTIMPL (`checkArrayParts`), for Phase 104's functions of run-time character length.
+  NOTIMPL (`checkArrayParts`), for Phase 104's functions of run-time character length. *(Resolved in Phase 104, subtask 4c.)*
 - **A vector subscript in the target that reads the target** (`IV(IV) = 1`): NOTIMPL, the
-  subscripts needing to be copied first (Phase 104, with its temporaries).
-- **COMPLEX(16)** arrays in MERGE (Phase 108, with the rest of COMPLEX(16)'s intrinsics).
-- **Sections of arrays of records**, and vector subscripts in record fields (Phase 105).
+  subscripts needing to be copied first (Phase 104, with its temporaries). *(Resolved in Phase 104, subtask 4c.)*
+- **COMPLEX(16)** arrays in MERGE (Phase 108, with the rest of COMPLEX(16)'s intrinsics). *(Resolved in Phase 108.)*
+- **Sections of arrays of records**, and vector subscripts in record fields (Phase 105). *(Resolved in Phase 105.)*
 - **A section as an internal file or ENCODE's buffer**, and sections as one I/O item by
-  descriptor (Phase 109).
+  descriptor (Phase 109). *(Resolved in Phases 104 and 109.)*
 - **A WHERE inside a WHERE, ELSEWHERE with a mask, and MAXLOC's `DIM=`**: Fortran 95's
   (F95ONLY; Phase 112, if it comes).
 - **The optimizer's cases** (Phase 110, to be measured): a WHERE construct's assignments are
@@ -922,5 +922,5 @@ What Phase 102 left, each for the phase named:
   same subscripts are prepared twice, two induction variables stepping together; MINLOC and
   MAXLOC go through `$A1` and a one-trip loop into a target they don't overlap; a reduction's
   running value and found flag stay in memory; a whole-array copy is a loop, not a MOVC3; and
-  the run-time overlap test of open question 1, if measurements ask for it.
-- **`/STANDARD`** judges nothing new (Phase 110's `/STANDARD=F90`).
+  the run-time overlap test of open question 1, if measurements ask for it. *(Fusion resolved in Phase 110; the rest measured and left, Phase 112's A.5.)*
+- **`/STANDARD`** judges nothing new (Phase 110's `/STANDARD=F90`). *(Resolved in Phase 110.)*

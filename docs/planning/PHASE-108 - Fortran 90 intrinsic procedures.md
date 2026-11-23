@@ -728,10 +728,10 @@ The author read the survey and accepted every recommendation:
 Phase 108 is done. What it left, and where each goes:
 
 - **Phase 109:** ES and EN editing in FTNRTL's format interpreter (today SYNERRFOR at run time;
-  `calendar.f90` uses E); COMPLEX(16) in I/O lists.
+  `calendar.f90` uses E); COMPLEX(16) in I/O lists. *(Resolved in Phase 109.)*
 - **Phase 110:** `/STANDARD=F90`'s judgment of the new names and forms (a REAL argument to
   CEILING, FLOOR, or MODULO in a PARAMETER, which VAX FORTRAN's rules allow and the standard's
-  7.1.6.1 doesn't); the debugger's EXAMINE of their values.
+  7.1.6.1 doesn't); the debugger's EXAMINE of their values. *(Resolved in Phase 110.)*
 - **Phase 112:** Fortran 95's additions: CEILING's and FLOOR's KIND, MAXLOC's and MINLOC's DIM,
   NULL, CPU_TIME.
 - **Not planned, ours (NOTIMPL, named):** a BACK= that is an array; TRANSFER to a CHARACTER MOLD of

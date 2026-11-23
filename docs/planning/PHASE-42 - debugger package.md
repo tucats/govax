@@ -627,23 +627,24 @@ for a later phase:
   `/PACKED:n`, `/F_FLOAT`, `/D_FLOAT`, `/G_FLOAT`, `/H_FLOAT`,
   `/OCTAWORD`, `/DATE_TIME`, `/CONDITION_VALUE`, `/PSW`, `/TYPE=`,
   `/SOURCE`, and `SET TYPE`/`SHOW TYPE`/`CANCEL TYPE` for untyped
-  locations. `vaxfloat` and `decimal.go` already have the conversions.
+  locations. `vaxfloat` and `decimal.go` already have the conversions. *(Done in
+  subtask 18; `/SOURCE` in Phase 85, subtask 10c.)*
 - **`DEPOSIT/INSTRUCTION`**: assemble one instruction in place with
   `internal/asm`.
 - **Built-in symbols**: `%CURLOC`, `%NEXTLOC`, `%PREVLOC`, `^` (previous
   location), `\` (last value), Return to examine the next location, and
-  `%ADDR`/`%NAME` forms.
+  `%ADDR`/`%NAME` forms. *(Done in subtask 20.)*
 - **`DEFINE`** (`/ADDRESS`, `/COMMAND`, `/VALUE`), `DELETE`, and
   `SHOW DEFINE`: debugger symbols and command abbreviations.
 - **Control structures**: `IF`, `FOR`, `WHILE`, `REPEAT`, `EXITLOOP`,
   and `DO` clauses on tracepoints and watchpoints.
 - **Logging**: `SET LOG`, `SET OUTPUT [NO]LOG/[NO]VERIFY/[NO]TERMINAL`,
-  so a govax session can be logged like the probe's.
+  so a govax session can be logged like the probe's. *(Resolved in Phase 73, subtask 5.)*
 - **Scope**: `SET SCOPE`/`CANCEL SCOPE` (by path and call level),
   `SET MODULE`/`CANCEL MODULE` with on-demand loading, and
-  `SHOW SYMBOL/DEFINED`.
+  `SHOW SYMBOL/DEFINED`. *(SET SCOPE and CANCEL SCOPE resolved in Phase 89, subtask 10b.)*
 - **Source commands**: `TYPE`, `SEARCH`, `SET/SHOW MARGINS`,
-  `SET/SHOW MAX_SOURCE_FILES`, `EXAMINE/SOURCE`.
+  `SET/SHOW MAX_SOURCE_FILES`, `EXAMINE/SOURCE`. *(TYPE and EXAMINE/SOURCE resolved in Phase 85, subtask 10c.)*
 - **Exceptions**: stepping into a handler from an exception break,
   `GO` resignaling, and `SHOW EXIT_HANDLERS`.
 - **`CALL` argument forms**: `%VAL`, `%REF`, `%DESCR`.
@@ -651,7 +652,7 @@ for a later phase:
 - **`SPAWN`**: run one console command from `DBG>` without ending the
   session.
 - **`SET WATCH` details**: `/AFTER`, `/TEMPORARY`, `/INTO`, `/OVER`,
-  watching registers, and aggregates.
+  watching registers, and aggregates. *(`/AFTER` and `/TEMPORARY` done in subtask 13.)*
 
 ## Part B — the future features (2026-10-11)
 

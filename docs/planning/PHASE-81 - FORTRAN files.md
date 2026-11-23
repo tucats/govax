@@ -944,9 +944,9 @@ the rest. Left for later:
 - **Host files:** FORTRAN's files are volume files (Answer 3); a host file comes in by COPY.
 - **Phase 83:** the system subroutines (EXIT, IDATE, RAN) and calling RTL routines and
   services by name; a USEROPEN routine in FORTRAN already calls `SYS$CREATE`
-  (`testdata/fortran/useropen.for`).
+  (`testdata/fortran/useropen.for`). *(Resolved in Phase 83.)*
 - **Phase 86:** DUNGEON, whose data base is a direct access file of fixed-length records,
-  as these statements now read it.
+  as these statements now read it. *(Resolved in Phase 86.)*
 - **Unconfirmed on VMS,** each a choice recorded in the progress log: the current record
   after REWIND, BACKSPACE, ENDFILE, and UNLOCK; DELETE by number on a unit not open and on
   a sequential-access relative unit; the associated variable after DELETE by number; the

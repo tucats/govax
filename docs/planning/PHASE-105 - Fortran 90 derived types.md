@@ -963,15 +963,15 @@ object are never the same type, with a message naming both.
 Phase 105 is done. What it left, and where each goes:
 
 - **Phase 106:** PRIVATE components and access-specs, and types shared by USE (a
-  module's type is one type everywhere, SEQUENCE or not).
+  module's type is one type everywhere, SEQUENCE or not). *(Resolved in Phase 106.)*
 - **Phase 107:** POINTER components, a type pointing to itself, and the I/O
-  refusals they bring.
+  refusals they bring. *(Resolved in Phase 107.)*
 - **Phase 109:** an array of a derived type, or an array component of one, in a
   NAMELIST group (NOTIMPL: FTNRTL would read an element's subscripts inside a
-  name, `PTS(2)%X`), with Fortran 90's NAMELIST form.
+  name, `PTS(2)%X`), with Fortran 90's NAMELIST form. *(Resolved in Phase 109.)*
 - **Phase 110:** the debugger's EXAMINE of `P%X` and `R.F` (an object is shown as a
   record's longwords until then), with the rest of the `/DEBUG` table's growth;
-  `/STANDARD` for the phase's forms.
+  `/STANDARD` for the phase's forms. *(Resolved in Phase 110.)*
 - **Phase 112:** default initialization of components (NOTIMPL), Fortran 95's.
 - **Not planned, ours:** a statement function of a derived type (NOTIMPL); a section
   in DATA's component designators (NOTIMPL, as for an array); RECORDIOSIZE for a
@@ -984,4 +984,4 @@ Phase 105 is done. What it left, and where each goes:
   descriptor is class 0, govax's own convention, which no VMS run-time library
   reads.
 - **Awaiting the next VMS round:** `testdata/fortran`'s `recarrays.for` and
-  `recdyn.for`, in `testdata/ftn86`'s procedure and `ftn86AwaitingVMS`.
+  `recdyn.for`, in `testdata/ftn86`'s procedure and `ftn86AwaitingVMS`. *(Still awaiting: Phase 112's A.9.5.)*

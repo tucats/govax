@@ -1112,7 +1112,7 @@ What Phase 94 left, for later phases:
   user authorization file and AUTHORIZE, LOGINOUT using them, and logins,
   so a process's AUTHPRIV comes from its account. Until then a process
   of another UIC comes from `$CREPRC` (or the tests' `priv94Identity`),
-  with the privileges it's given as its authorized ones.
+  with the privileges it's given as its authorized ones. *(Resolved in Phase 95.)*
 - **Out of scope by the review**: `$SETIME` and SET TIME (question 3;
   govax's clock is the host's or counts instructions, so setting it means
   keeping an offset); `$MOUNT`, `$DISMOU`, and the rights and UAF

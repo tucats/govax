@@ -745,7 +745,7 @@ and where each goes:
 
 - **Phase 110:** `/STANDARD=F90`'s judgment of the new specifiers and edits (today each is called
   an extension to FORTRAN-77 only); the debugger's EXAMINE of a unit's open record, and of the new
-  forms' values.
+  forms' values. *(Resolved in Phase 110.)*
 - **Phase 112 (optional):** Fortran 95's I/O, zero widths (`I0`, `F0.d`), which FTNRTL today takes
   for a field too narrow for any value (OUTCONERR).
 - **Not planned:** Fortran 2003's I/O (DECIMAL=, ROUND=, stream access, a short record's end on a

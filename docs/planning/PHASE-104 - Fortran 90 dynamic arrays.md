@@ -1238,20 +1238,20 @@ Phase 104 is done. What it left, and where each goes:
 
 - **Phase 105:** arrays of records: an allocatable or automatic array of them, a
   section of one as an argument, and an array-valued function whose value is records
-  (each NOTIMPL).
-- **Phase 106:** an allocatable array in a module.
+  (each NOTIMPL). *(Resolved in Phase 105.)*
+- **Phase 106:** an allocatable array in a module. *(Resolved in Phase 106.)*
 - **Phase 107:** POINTER arrays, on this phase's class NCA descriptors and
-  `FTN$ALLOCATE`, and TARGET.
+  `FTN$ALLOCATE`, and TARGET. *(Resolved in Phase 107.)*
 - **Phase 108:** the intrinsic functions this phase's transformational ones don't
-  cover, and keyword arguments for those whose table rows lack their dummies' names.
+  cover, and keyword arguments for those whose table rows lack their dummies' names. *(Resolved in Phase 108.)*
 - **Phase 109:** a whole array or section in an I/O list by its descriptor rather than
-  an element at a time; a section as an internal file or ENCODE's buffer.
+  an element at a time; a section as an internal file or ENCODE's buffer. *(Resolved in Phases 104 and 109.)*
 - **Phase 110:** what the programs measured (subtask 9's log): the second stride
   multiply for an assumed-shape dummy's first dimension, the copies for sections to
   old dummies (a copy is made for INTENT(OUT) too), `A = F(X)` into A directly when
   they can't overlap, a value passed to an old dummy copied from its temporary, and
   SPREAD, CSHIFT, and EOSHIFT computed where they're used instead of into a temporary;
-  `/STANDARD` for the phase's forms; the debugger's names through hosts.
+  `/STANDARD` for the phase's forms; the debugger's names through hosts. *(The stride, `/STANDARD`, and the debugger resolved in Phase 110; the rest measured and left, Phase 112's A.5.3.)*
 - **Not planned, ours:** the DIM= of SPREAD, CSHIFT, and EOSHIFT and RESHAPE's ORDER=
   must be constants; a CHARACTER argument to them, or to an assumed-shape or old
   dummy, of a run-time length must be made of names (`lengthFromNames`); `%REF`,

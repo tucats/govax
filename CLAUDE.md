@@ -1450,7 +1450,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   **Fortran errata** (`PHASE-112 - Fortran errata.md`, planned 2026-11-22),
   a whole to-do list of every gap VAX FORTRAN, Fortran 90, FTNRTL, MACRO,
   LINK, and the debugger left, Fortran 95's additions among it, not all of
-  which need be done there; its subtask 1 is the survey. An item an old
+  which need be done there; its subtask 1, the survey (done 2026-11-22), is its Part A,
+  with a proposal (A.14) and questions for the author's review. An item an old
   phase doc or DEVIATIONS.md still lists that a later phase did is marked
   where it was written, "*(Resolved in Phase N.)*" (the author's direction).
   Read the relevant phase doc

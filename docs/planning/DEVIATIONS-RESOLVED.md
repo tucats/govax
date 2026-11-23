@@ -2110,6 +2110,10 @@ widened."
   assignment form is shared with symbols and an assignment wins over a
   keyword it abbreviates; taking registers out would add a special case.
 - **Status**: deliberate (2026-10-05, Phase 42 subtask 14).
+  *(Resolved in Phase 50: DCL's assignments replaced the console's SET
+  name=value form, and `internal/console/set.go` is gone; registers are
+  assigned only by the debugger's DEPOSIT. Phase 112's survey took the
+  entry's copy out of DEVIATIONS.md.)*
 
 ### [Performance, Study 1 R3] PROBE could hit a TB entry cached for another mode
 

@@ -40,7 +40,7 @@ author's answers, Part C the subtasks, and the progress log the work.
    blank over govax's RMS (Phase 81's "Open").
 8. **Left out by the author's answers:** Prologs 1 and 2, collating keys, RU journaling, statistics monitoring, DECnet;
    EDIT/FDL, CONVERT/RECLAIM, ANALYZE/RMS_FILE/INTERACTIVE. `$SPACE` isn't there for any organization.
-9. **Small gaps found on the way:** DIRECTORY/TOTAL; ods2's `Spec` can't tell a null type given from none, so RMS reads it
+9. **Small gaps found on the way:** DIRECTORY/TOTAL *(resolved in Phase 91)*; ods2's `Spec` can't tell a null type given from none, so RMS reads it
    from the text (`rms.ExplicitNullType`), which could move into ods2; `TestAttentionStdin_ctrlYAtPrompt` in `cmd/govax` once
    failed under the full suite's load, and passes alone (not this phase's code).
 

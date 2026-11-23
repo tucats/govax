@@ -584,12 +584,12 @@ is no VAX FORTRAN to check them against, so `testdata/fortran`'s `records`, `agg
 sections is VMS's (`testdata/link82`). Left for later:
 
 - **Phase 83:** the item list of `itemlist.for` handed to `$GETJPIW`; this phase checked
-  only its bytes.
+  only its bytes. *(Resolved in Phase 83.)*
 - **Phase 84:** VOLATILE's meaning: `Mem.Volatile` is carried in the IR and nothing reads
-  it until there is an optimizer to tell.
+  it until there is an optimizer to tell. *(Resolved in Phase 84.)*
 - **Phase 85:** TITLE and SUBTITLE's listing (the syntax tree keeps them); OPTIONS's `/CHECK`,
   `/EXTEND_SOURCE`, and `/F77`, still NOTIMPL, where `/ALIGN` on OPTIONS also lands, refused by
-  answer 3; the command's `/WARNINGS`, so `/WARN=ALIGNMENT` is only CDEC$ OPTIONS's.
+  answer 3; the command's `/WARNINGS`, so `/WARN=ALIGNMENT` is only CDEC$ OPTIONS's. *(Resolved in Phase 85.)*
 - **A later phase, not yet defined:** routines really reentrant (answer 1): AUTOMATIC's frame
   is its groundwork, and the compiler's temporaries are what stays in `$LOCAL`. *(Resolved in Phase 89: RECURSIVE and `/RECURSIVE`, every compiler's cell in the frame.)*
 - **Staying out:** DICTIONARY (NOTIMPL, as govax has no Common Data Dictionary), CDEC$ PACK.

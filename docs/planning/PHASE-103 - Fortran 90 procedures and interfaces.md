@@ -850,20 +850,20 @@ Phase 103 is done. What it left, and where each goes:
 
 - **Phase 104:** a FUNCTION whose result is an array or has a run-time
   CHARACTER length, an assumed-shape dummy (`A(:)`), and a section or array
-  expression as an actual argument; each is NOTIMPL naming it.
+  expression as an actual argument; each is NOTIMPL naming it. *(Resolved in Phase 104.)*
 - **Phase 105:** derived types, which defined operators and assignment are for;
-  until then their operands are FORTRAN's own types, scalars.
+  until then their operands are FORTRAN's own types, scalars. *(Resolved in Phase 105.)*
 - **Phase 106:** MODULE PROCEDURE in an interface block (NOTIMPL), USE in an
-  interface body, and module procedures' explicit interfaces.
-- **Phase 107:** POINTER and TARGET dummies (TARGET is recorded, nothing more).
+  interface body, and module procedures' explicit interfaces. *(Resolved in Phase 106.)*
+- **Phase 107:** POINTER and TARGET dummies (TARGET is recorded, nothing more). *(Resolved in Phase 107.)*
 - **Phase 108:** keyword arguments to the intrinsic functions whose table rows
   have no dummies' names; the transformational intrinsics' own ranks in
-  GENERICINTRINSIC's check, which now takes them as scalars.
+  GENERICINTRINSIC's check, which now takes them as scalars. *(Resolved in Phase 108.)*
 - **Phase 110:** scopes in the cross reference (an internal procedure has its
   own, headed HOST.INNER, and nothing more), the debugger's names through hosts,
   and `/STANDARD` for the phase's forms; and measuring what internal procedures
   cost the optimizer, which treats every host cell an internal procedure reaches
-  as changed by any call, with no inline expansion.
+  as changed by any call, with no inline expansion. *(Resolved in Phase 110, but for the measuring, Phase 112's A.5.4.)*
 - **Unconfirmed choices of ours:** a null argument (`CALL S(A,,B)`) through an
   explicit interface is accepted and passes 0, as for an absent OPTIONAL one;
   every internal procedure of a host in its frame gets the hidden FP, not only
